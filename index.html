@@ -2267,36 +2267,36 @@ function watchNotices() {
 
 
 
-function handleInternalAttendance() {
-    // 1. 변수에 의존하지 않고, 지금 휴대폰 주소창에 적힌 방 번호를 즉시 읽습니다.
+function handleInternalAttendance(room) {
     const urlParams = new URLSearchParams(window.location.search);
-    const roomFromUrl = urlParams.get('room');
     const isCheckIn = urlParams.get('checkin') === 'true';
+    const targetRoom = room || urlParams.get('room');
 
-    // 2. 주소창에 방 번호가 없거나 출결 모드가 아니면 작동 중단
-    if (!isCheckIn || !roomFromUrl) return;
+    if (!isCheckIn || !targetRoom) return;
+
+    // 1. 현재 이 기기에 로그인된 정보(성함/번호)를 가져옴
+    const myName = (localStorage.getItem('kac_user_name') || "").trim();
+    const myPhone = (localStorage.getItem('kac_user_phone') || "").trim();
+    const uToken = localStorage.getItem('uToken'); // 예: 장두석_3126
+
+    // 2. [중요] 이름 정보가 없으면 출결을 진행하지 않고 등록창을 기다림
+    if (!uToken || !myName || myPhone.length !== 4) return;
 
     const d = new Date();
     const today = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
     
-    // 3. 방 번호를 주소창에서 가져온 값(roomFromUrl)으로 박아버립니다.
-    const storageKey = `kac_attended_${roomFromUrl}_${today}`; 
+    // 3. [핵심 수정] 이름표에 '방번호'와 '사용자토큰'을 모두 포함시킴
+    // 예: kac_attended_1_날짜_장두석_3126  <-- 이런 식으로 만들어짐
+    const storageKey = `kac_attended_${targetRoom}_${today}_${uToken}`; 
 
     if (localStorage.getItem(storageKey)) {
-        // 여기서 보여주는 방 번호도 주소창 기준입니다.
-        alert(`알림: 오늘 [Room ${roomFromUrl}]의 출석 처리는 이미 완료되었습니다.`);
-        cleanUrlAndGo(roomFromUrl);
+        alert(`알림: 오늘 [Room ${targetRoom}]의 ${myName}님 출석 처리는 이미 완료되었습니다.`);
+        cleanUrlAndGo(targetRoom);
         return;
     }
 
-    const myName = (localStorage.getItem('kac_user_name') || "").trim();
-    const myPhone = (localStorage.getItem('kac_user_phone') || "").trim();
-
-    // 정보가 없으면 등록을 기다림
-    if (!myName || myPhone.length !== 4) return;
-
-    // 실제 서버 저장 실행 (roomFromUrl 사용)
-    executeAttendanceRecord(roomFromUrl, myName, myPhone, today, storageKey);
+    // 4. 서버 저장 실행
+    executeAttendanceRecord(targetRoom, myName, myPhone, today, storageKey);
 }
 
 
@@ -2307,7 +2307,6 @@ function handleInternalAttendance() {
 
 function executeAttendanceRecord(room, name, phone, dateStr, storageKey) {
     const attendanceKey = `${name}_${phone}`;
-    // 서버의 해당 강의실 폴더로 정확히 전송
     const attendRef = firebase.database().ref(`courses/${room}/internal_attendance/${dateStr}/${attendanceKey}`);
 
     const currentTime = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
@@ -2320,7 +2319,7 @@ function executeAttendanceRecord(room, name, phone, dateStr, storageKey) {
         authId: authId,
         timestamp: firebase.database.ServerValue.TIMESTAMP
     }).then(() => {
-        // [중요] 해당 방(storageKey)에 대해서만 완료 마킹!
+        // [핵심] 방금 만든 '나만의 독립된 이름표'로 완료 마킹
         localStorage.setItem(storageKey, "true");
         alert(`✅ [Room ${room}] 출석 완료!\n${name}님, 정상 처리되었습니다.`);
         cleanUrlAndGo(room);
