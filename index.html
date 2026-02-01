@@ -710,13 +710,7 @@ function sendAns(idx) {
         return;
     }
 
-    // [수정] 방이 바뀌면 이전 방의 모든 흔적(입장권, 이름, 전번)을 완전히 지웁니다.
-    const lastRoom = localStorage.getItem('kac_last_visited_room');
-    if (lastRoom && lastRoom !== currentRoom) {
-        localStorage.removeItem('uToken');
-        localStorage.removeItem('kac_user_name');
-        localStorage.removeItem('kac_user_phone');
-    }
+
     localStorage.setItem('kac_last_visited_room', currentRoom);
 
     document.getElementById('roomBadge').innerText = `Room ${currentRoom}`;
@@ -2307,27 +2301,39 @@ function handleInternalAttendance(room) {
 // [실제 저장] 파이어베이스에 데이터를 쓰고 브라우저에 완료 마킹을 함
 function executeAttendanceRecord(room, name, phone, dateStr, storageKey) {
     const attendanceKey = `${name}_${phone}`;
+    
+    // 1. 출결 기록 경로
     const attendRef = firebase.database().ref(`courses/${room}/internal_attendance/${dateStr}/${attendanceKey}`);
+    // 2. 학생 명단 경로 (자동 등록을 위해 추가)
+    const studentRef = firebase.database().ref(`courses/${room}/students/${attendanceKey}`);
 
     const currentTime = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
     const authId = "KAC-" + Math.random().toString(36).substr(2, 5).toUpperCase();
 
-    attendRef.set({
+    // 출결 정보와 학생 정보를 동시에 업데이트
+    const updates = {};
+    updates[`courses/${room}/internal_attendance/${dateStr}/${attendanceKey}`] = {
         name: name,
         phone: phone,
         time: currentTime,
         authId: authId,
         timestamp: firebase.database.ServerValue.TIMESTAMP
-    }).then(() => {
-        // [핵심] 방금 만든 '나만의 독립된 이름표'로 완료 마킹
+    };
+    updates[`courses/${room}/students/${attendanceKey}`] = {
+        name: name,
+        phone: phone,
+        joinedAt: firebase.database.ServerValue.TIMESTAMP,
+        isOnline: true
+    };
+
+    firebase.database().ref().update(updates).then(() => {
         localStorage.setItem(storageKey, "true");
         alert(`✅ [Room ${room}] 출석 완료!\n${name}님, 정상 처리되었습니다.`);
-        cleanUrlAndGo(room);
+        cleanUrlAndGo(room); // 주소창 정리 및 메인 이동
     }).catch(e => {
         alert("출석 처리 중 오류가 발생했습니다.");
     });
 }
-
 
 
 
