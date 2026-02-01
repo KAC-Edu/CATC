@@ -724,7 +724,7 @@ function sendAns(idx) {
     }
     localStorage.setItem('kac_last_visited_room', currentRoom);
 
-    // 3. [핵심] DB 경로를 객체 형태로 안전하게 생성
+    // 3. [순서 변경] DB 경로를 먼저 완벽하게 생성 (중요)
     const db = firebase.database();
     const rPath = `courses/${currentRoom}`;
     dbRef = { 
@@ -736,11 +736,11 @@ function sendAns(idx) {
         connections: db.ref(`${rPath}/connections`) 
     };
 
-    // 4. UI 업데이트 (배지부터 표시)
+    // 4. UI 업데이트
     document.getElementById('roomBadge').innerText = `Room ${currentRoom}`;
     document.getElementById('landingBadge').innerText = `ROOM ${currentRoom}`;
 
-    // 5. 데이터 수신 가동 (Loading 해결을 위해 setupListeners 실행)
+    // 5. 데이터 수신 가동 (Loading 해결을 위해 여기서 호출)
     setupListeners(); 
     
     // 6. 출결 체크 실행
@@ -749,7 +749,6 @@ function sendAns(idx) {
     checkCooldown(); 
     initKeyboardFix();
 })();
-
 
 
 
@@ -984,27 +983,29 @@ function startPresence() {
 
 
 function setupListeners() {
-    // 안전장치: DB 경로가 아직 설정되지 않았다면 함수를 종료하여 에러 방지
+    // [안전장치] DB 경로가 잡히지 않았으면 실행하지 않음
     if (!dbRef || !dbRef.settings) return;
 
     // 1. 서버 시간 동기화
-    firebase.database().ref(".info/serverTimeOffset").off();
-    firebase.database().ref(".info/serverTimeOffset").on("value", (snap) => {
+    const offsetRef = firebase.database().ref(".info/serverTimeOffset");
+    offsetRef.off();
+    offsetRef.on("value", (snap) => {
         serverTimeOffset = snap.val() || 0;
     });
 
     watchNotices(); 
 
-    // 2. [핵심 수정] 과정명 및 기본 설정 감시 (에러 방지 안전장치 적용)
+    // 2. [핵심] 과정명 및 기본 설정 감시 (입장 페이지 Loading 해결)
     dbRef.settings.off();
     dbRef.settings.on('value', s => { 
         if(!currentRoom) return;
         const val = s.val() || {}; 
         const title = val.courseName || `Course ${currentRoom}`; 
         
-        // 대시보드와 입장 페이지 제목을 동시에 업데이트
+        // 메인 화면 제목과 입장 페이지(Landing) 제목을 동시에 즉시 업데이트
         const titleEl = document.getElementById('roomTitle');
         const landingEl = document.getElementById('landingTitle');
+        
         if(titleEl) titleEl.innerText = title; 
         if(landingEl) landingEl.innerText = title; // 여기서 Loading...이 실제 이름으로 바뀝니다.
     });
@@ -1013,6 +1014,7 @@ function setupListeners() {
     dbRef.qa.off();
     dbRef.qa.on('value', snap => renderList(snap.val() || {}));
 
+    // 질문 리스트 1분 자동 새로고침 (수정 버튼 제어용)
     if (window.qaRefreshInterval) clearInterval(window.qaRefreshInterval);
     window.qaRefreshInterval = setInterval(() => {
         if(dbRef.qa) {
@@ -1035,11 +1037,12 @@ function setupListeners() {
         sel.innerHTML = html;
     });
 
-    // 5. 강의실 상태 감시 (중복 퇴출 버그 수정 버전)
+    // 5. 강의실 상태 감시 (리셋, 퇴출, 퀴즈모드 전환)
     dbRef.status.off();
     dbRef.status.on('value', snap => {
         const st = snap.val() || {};
 
+        // [A] 리셋 및 삭제 체크
         const serverResetKey = st.resetKey || 'init';
         const myLocalKey = localStorage.getItem(`kac_resetKey_${currentRoom}`);
 
@@ -1052,6 +1055,7 @@ function setupListeners() {
             return;
         }
 
+        // [B] 강제 퇴출 로직 (정상 접속 중일 때만)
         const uToken = localStorage.getItem('uToken');
         if (uToken && st.roomStatus === 'active') {
             firebase.database().ref(`courses/${currentRoom}/students/${uToken}`).once('value', sSnap => {
@@ -1063,25 +1067,33 @@ function setupListeners() {
             });
         }
 
+        // [C] 강사 상태 체크
         if (st.roomStatus !== 'active') {
             forceCloseQuiz();
             return;
         }
 
-        if (st.mode === 'quiz' && st.quizStep !== 'summary') {
-            document.getElementById('quizOverlay').style.display = 'flex';
-        } else if (st.mode !== 'quiz') {
+        // [D] 퀴즈 모드 전환
+        if (st.mode === 'quiz') {
+            if (st.quizStep !== 'summary') {
+                document.getElementById('quizOverlay').style.display = 'flex';
+            }
+        } else {
             forceCloseQuiz();
         }
         
-        if (st.quizStep === 'summary' && !hasClosedSummary) showFinalRanking(); 
+        // [E] 퀴즈 결과 발표 체크
+        if (st.quizStep === 'summary') { 
+            if(!hasClosedSummary) showFinalRanking(); 
+        }
     });
 
-    // 6. 퀴즈 상세 감시
+    // 6. 퀴즈 세부 진행 감시
     dbRef.quiz.off();
     dbRef.quiz.on('value', s => {
         const q = s.val(); if(!q) return;
 
+        // 새 문제 등장 시 상태 초기화
         if (currentQuizId !== q.id) {
             currentQuizId = q.id;
             myLastChoiceIdx = null;
@@ -1105,6 +1117,7 @@ function setupListeners() {
             const msgBox = document.getElementById('quizStatusMsg');
             const feedBox = document.getElementById('quizFeedback');
 
+            // 일시정지 상태
             if(q.status === 'pause') {
                 canAnswer = false; 
                 if(msgBox) msgBox.innerText = "설명을 위해 잠시 멈췄습니다.";
@@ -1116,6 +1129,7 @@ function setupListeners() {
                 return; 
             }
 
+            // 결과 발표 상태
             if (q.status === 'result') { 
                 document.getElementById('btnGroupMultiple').style.display = 'none';
                 document.getElementById('btnGroupOX').style.display = 'none';
@@ -1135,6 +1149,7 @@ function setupListeners() {
                 return; 
             }
 
+            // 시작 대기/진행/마감 상태
             if(q.status === 'ready') {
                 canAnswer = false; 
                 if(msgBox) msgBox.innerText = "강사님의 시작을 기다리고 있습니다...";
@@ -1184,9 +1199,10 @@ function setupListeners() {
         });
     });
 
-    // 7. 입력창 자동 높이 조절
+    // 7. 입력창 자동 높이 조절 및 글자수 제한
     const qInputEl = document.getElementById('qInput');
     if(qInputEl) {
+        // 기존 리스너 중복 방지를 위한 클론 처리
         const new_qInputEl = qInputEl.cloneNode(true);
         qInputEl.parentNode.replaceChild(new_qInputEl, qInputEl);
         new_qInputEl.addEventListener('input', function() {
@@ -1199,7 +1215,6 @@ function setupListeners() {
         });
     }
 }
-
 
 
 

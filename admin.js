@@ -1502,9 +1502,8 @@ loadAttendanceView: function() {
 // [최종] 출석 카운팅 매칭 버그 수정본
 loadInternalAttendance: function() {
     if(!state.room) return;
-
     const roomAtInvoke = state.room; 
-    const today = getTodayString();
+    const today = getTodayString(); // YYYY-MM-DD
     const listDiv = document.getElementById('internalAttendanceList');
     
     const studentsRef = firebase.database().ref(`courses/${roomAtInvoke}/students`);
@@ -1522,7 +1521,8 @@ loadInternalAttendance: function() {
         Object.keys(students).forEach(key => {
             const s = students[key];
             if (s.name && s.name !== "undefined") {
-                const cleanPhone = (s.phone || "0000").trim();
+                // [카운팅 해결 포인트] 휴대폰 뒷 4자리만 정확히 추출
+                const cleanPhone = String(s.phone || "0000").slice(-4);
                 const identifier = `${s.name.trim()}_${cleanPhone}`;
                 uniqueStudentsMap.set(identifier, { name: s.name.trim(), phone: cleanPhone });
             }
@@ -1530,7 +1530,7 @@ loadInternalAttendance: function() {
 
         const sortedList = Array.from(uniqueStudentsMap.values()).sort((a,b) => a.name.localeCompare(b.name));
 
-        // 2. 출석 데이터와 대조
+        // 2. 출석 데이터와 대조하여 숫자 계산
         attendanceRef.on('value', attendSnap => {
             if (state.room !== roomAtInvoke) return;
             const attendees = attendSnap.val() || {};
@@ -1539,7 +1539,6 @@ loadInternalAttendance: function() {
             if(listDiv) listDiv.innerHTML = "";
 
             sortedList.forEach(s => {
-                // [수정 포인트] 학생이 저장한 key 형식(이름_번호)과 100% 일치하도록 대조합니다.
                 const attendKey = `${s.name}_${s.phone}`;
                 const isAttended = attendees[attendKey] ? true : false;
                 
@@ -1551,24 +1550,18 @@ loadInternalAttendance: function() {
                 const icon = isAttended ? '<i class="fa-solid fa-circle-check"></i>' : '<i class="fa-regular fa-circle"></i>';
 
                 if(listDiv) {
-                    listDiv.innerHTML += `
-                        <div style="background:${bgColor}; color:${textColor}; border:1.5px solid ${borderColor}; padding:10px; border-radius:10px; text-align:center; font-size:14px; font-weight:800;">
-                            <div style="font-size:16px;">${icon}</div>
-                            <div>${s.name}</div>
-                        </div>
-                    `;
+                    listDiv.innerHTML += `<div style="background:${bgColor}; color:${textColor}; border:1.5px solid ${borderColor}; padding:10px; border-radius:10px; text-align:center; font-size:14px; font-weight:800;"><div>${icon}</div><div>${s.name}</div></div>`;
                 }
             });
 
-            // 3. 화면에 카운팅 업데이트 (이 부분이 사진의 0을 숫자로 바꿔줍니다)
-            const totalEl = document.getElementById('totalMemberCount');
-            const checkInEl = document.getElementById('checkInCount');
+            // 3. 화면의 카운팅 텍스트 업데이트
+            const totalEl = document.getElementById('totalMemberCount'); // 전체 인원 분모
+            const checkInEl = document.getElementById('checkInCount');   // 출석 완료 분자
             if(totalEl) totalEl.innerText = sortedList.length;
-            if(checkInEl) checkInEl.innerText = attendCount;
+            if(checkInEl) checkInEl.innerText = attendCount; // 여기서 0이 1로 바뀝니다.
         });
     });
 },
-
 
 
 
