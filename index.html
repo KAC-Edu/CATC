@@ -653,7 +653,22 @@ let confirmCallback = null;
 
 
 
-let currentRoom = null; let dbRef = {}; let myQs = {}; let myLikes = {}; let lastPostTimeMap = {}; let editingKey = null; let currentSort = 'new'; let currentQuizId = null; let canAnswer = false; let myLastChoice = null; let myLastChoiceIdx = null; let hasClosedSummary = false; let rankingListener = null; let studentTimerInterval = null; let currentFilter = "공통질문"; let serverTimeOffset = 0;
+let currentRoom = null;
+let dbRef = {};
+let myQs = {};
+let myLikes = {};
+let lastPostTimeMap = {};
+let editingKey = null;
+let currentSort = 'new';
+let currentQuizId = null;
+let canAnswer = false;
+let myLastChoice = null;
+let myLastChoiceIdx = null;
+let hasClosedSummary = false;
+let rankingListener = null;
+let studentTimerInterval = null;
+let currentFilter = "공통질문";
+let serverTimeOffset = 0;
 
 
 function sendAns(idx) {
@@ -705,28 +720,27 @@ function sendAns(idx) {
     const directRoom = params.get('room'); 
     const code = params.get('code');
 
-    if (directRoom) {
-        currentRoom = directRoom;
-    } else if (code) {
-        currentRoom = await resolveRoomFromCode(code);
-    }
+    if (directRoom) { currentRoom = directRoom; } 
+    else if (code) { currentRoom = await resolveRoomFromCode(code); }
 
     if (!currentRoom) {
         alert("강의실 정보가 없습니다. QR 코드를 다시 스캔해주세요.");
         return;
     }
 
-    // 1. 방 번호 확정 즉시 전역 안테나 주소 연결
+    // 1. [순서 보정] 방 번호를 알자마자 DB 주소(Ref)부터 꽉 잡습니다.
     const db = firebase.database();
     const rPath = `courses/${currentRoom}`;
-    dbRef.qa = db.ref(`${rPath}/questions`);
-    dbRef.quiz = db.ref(`${rPath}/activeQuiz`);
-    dbRef.ans = db.ref(`${rPath}/quizAnswers`);
-    dbRef.settings = db.ref(`${rPath}/settings`);
-    dbRef.status = db.ref(`${rPath}/status`);
-    dbRef.connections = db.ref(`${rPath}/connections`);
+    dbRef = { 
+        qa: db.ref(`${rPath}/questions`), 
+        quiz: db.ref(`${rPath}/activeQuiz`), 
+        ans: db.ref(`${rPath}/quizAnswers`), 
+        settings: db.ref(`${rPath}/settings`), 
+        status: db.ref(`${rPath}/status`), 
+        connections: db.ref(`${rPath}/connections`) 
+    };
 
-    // 2. 방이 바뀌었을 때 세션 정리
+    // 2. 방 변경 감지 및 세션 정리
     const lastRoom = localStorage.getItem('kac_last_visited_room');
     if (lastRoom && lastRoom !== currentRoom) {
         localStorage.removeItem('uToken');
@@ -735,13 +749,18 @@ function sendAns(idx) {
     }
     localStorage.setItem('kac_last_visited_room', currentRoom);
 
-    // 3. UI 업데이트 (Room ID 표시)
+    // 3. UI 업데이트 (배지 표시)
     document.getElementById('roomBadge').innerText = `Room ${currentRoom}`;
     document.getElementById('landingBadge').innerText = `ROOM ${currentRoom}`;
 
-    // 4. 데이터 수신 가동 (Loading 해결)
-    setupListeners(); 
+    // 4. 로컬 기록 불러오기
+    myLikes = JSON.parse(localStorage.getItem(`likes_${currentRoom}`) || '{}'); 
+    myQs = JSON.parse(localStorage.getItem(`myqs_${currentRoom}`) || '{}'); 
+    lastPostTimeMap = JSON.parse(localStorage.getItem(`lastTimeMap_${currentRoom}`) || '{}');
+
+    // 5. 출결 체크와 리스너 가동 (setupListeners를 마지막에 호출하여 로딩 방지)
     handleInternalAttendance(); 
+    setupListeners(); 
 
     checkCooldown(); 
     initKeyboardFix();
@@ -980,23 +999,10 @@ function startPresence() {
 
 
 function setupListeners() {
+    // dbRef가 없으면 아직 방 번호가 안 잡힌 것이므로 중단
     if (!dbRef || !dbRef.settings) return;
 
-    // 1. 과정명 가져오기 (입장 페이지 Loading 해결 핵심)
-    dbRef.settings.off();
-    dbRef.settings.on('value', s => { 
-        if(!currentRoom) return;
-        const val = s.val() || {}; 
-        const title = val.courseName || `Course ${currentRoom}`; 
-        
-        // 메인 화면과 입장 화면의 제목을 모두 업데이트
-        const titleEl = document.getElementById('roomTitle');
-        const landingEl = document.getElementById('landingTitle');
-        if(titleEl) titleEl.innerText = title; 
-        if(landingEl) landingEl.innerText = title; 
-    });
-
-    // 2. 서버 시간 동기화
+    // 1. 서버 시간 동기화
     firebase.database().ref(".info/serverTimeOffset").off();
     firebase.database().ref(".info/serverTimeOffset").on("value", (snap) => {
         serverTimeOffset = snap.val() || 0;
@@ -1004,25 +1010,55 @@ function setupListeners() {
 
     watchNotices(); 
 
-    // 3. 질문 리스트 실시간 감시
+    // 2. 과정명 가져오기 (입장 페이지 'Loading' 해결 핵심)
+    dbRef.settings.off();
+    dbRef.settings.on('value', s => { 
+        // [보정] currentRoom 변수가 없으면 주소창에서라도 가져옴
+        const roomID = currentRoom || new URLSearchParams(window.location.search).get('room');
+        const val = s.val() || {}; 
+        const title = val.courseName || `Course ${roomID}`; 
+        
+        const titleEl = document.getElementById('roomTitle');
+        const landingEl = document.getElementById('landingTitle');
+        if(titleEl) titleEl.innerText = title; 
+        if(landingEl) landingEl.innerText = title; 
+    });
+
+    // 3. 질문 리스트
     dbRef.qa.off();
     dbRef.qa.on('value', snap => renderList(snap.val() || {}));
 
-    // 4. 강의실 상태 감시 (리셋 및 퇴출)
+    // 4. 과목 리스트 (dbRef 경로 활용으로 수정)
+    dbRef.settings.child('subjects').off();
+    dbRef.settings.child('subjects').on('value', s => {
+        const data = s.val() || {};
+        const sel = document.getElementById('subjectSelect');
+        if(!sel) return;
+        let html = '<option value="공통질문">질문 대상 선택 (기본: 공통질문)</option>';
+        Object.values(data).forEach(name => {
+            html += `<option value="${name}">${name}</option>`;
+        });
+        sel.innerHTML = html;
+    });
+
+    // 5. 강의실 상태 감시 (dbRef 경로 활용으로 수정)
     dbRef.status.off();
     dbRef.status.on('value', snap => {
         const st = snap.val() || {};
+        const roomID = currentRoom || new URLSearchParams(window.location.search).get('room');
+        
         const serverResetKey = st.resetKey || 'init';
-        const myLocalKey = localStorage.getItem(`kac_resetKey_${currentRoom}`);
+        const myLocalKey = localStorage.getItem(`kac_resetKey_${roomID}`);
         if (!myLocalKey) {
-            localStorage.setItem(`kac_resetKey_${currentRoom}`, serverResetKey);
+            localStorage.setItem(`kac_resetKey_${roomID}`, serverResetKey);
         } else if (myLocalKey !== serverResetKey) {
             localStorage.clear(); alert("강의실 정보가 초기화되었습니다."); location.reload(); return;
         }
 
         const uToken = localStorage.getItem('uToken');
         if (uToken && st.roomStatus === 'active') {
-            firebase.database().ref(`courses/${currentRoom}/students/${uToken}`).once('value', sSnap => {
+            // 내 정보 확인 시에도 확정된 경로 사용
+            firebase.database().ref(`courses/${roomID}/students/${uToken}`).once('value', sSnap => {
                 if (document.getElementById('mainApp').style.display === 'flex' && !sSnap.exists()) {
                     localStorage.removeItem('uToken');
                     alert("정보가 갱신되었거나 삭제되었습니다.");
@@ -1037,7 +1073,7 @@ function setupListeners() {
         if (st.quizStep === 'summary' && !hasClosedSummary) showFinalRanking(); 
     });
 
-    // 5. 퀴즈 상세 감시 (사용자님 기존 로직 그대로 유지)
+    // 6. 퀴즈 상세 감시
     dbRef.quiz.off();
     dbRef.quiz.on('value', s => {
         const q = s.val(); if(!q) return;
@@ -1062,11 +1098,13 @@ function setupListeners() {
                 document.querySelectorAll('.quiz-opt-btn').forEach(b => b.classList.add('locked'));
                 return;
             }
-
+            // (결과 발표, 시작 대기 등 나머지 로직 동일...)
             if (q.status === 'result') { 
                 document.getElementById('btnGroupMultiple').style.display = 'none';
                 document.getElementById('btnGroupOX').style.display = 'none';
                 const correctAns = q.correct;
+                const msgBox = document.getElementById('quizStatusMsg');
+                const feedBox = document.getElementById('quizFeedback');
                 if (q.isSurvey) {
                     msgBox.innerText = "📋 설문 결과 요약";
                     feedBox.innerHTML = `<span style="color:#3b82f6; font-size:18px;">${q.surveyResult || "집계 완료"}</span>`;
@@ -1081,32 +1119,28 @@ function setupListeners() {
                 }
                 return; 
             }
-
             if(q.status === 'ready') {
                 canAnswer = false; 
-                msgBox.innerText = "강사님의 시작을 기다리고 있습니다...";
+                document.getElementById('quizStatusMsg').innerText = "강사님의 시작을 기다리고 있습니다...";
                 document.getElementById('btnGroupMultiple').style.display = 'none';
                 document.getElementById('btnGroupOX').style.display = 'none';
-                feedBox.innerText = "";
+                document.getElementById('quizFeedback').innerText = "";
             } 
             else if(q.status === 'open') {
                 canAnswer = true; 
-                msgBox.innerText = "정답을 선택하세요!";
-                
+                document.getElementById('quizStatusMsg').innerText = "정답을 선택하세요!";
                 if(q.endTime && sTimerBox) {
                     sTimerBox.style.display = 'flex';
                     studentTimerInterval = setInterval(() => {
                         const remain = Math.ceil((q.endTime - (Date.now() + serverTimeOffset)) / 1000);
                         const display = remain < 0 ? 0 : remain;
-                        sTimerText.innerText = `00:${display < 10 ? '0' + display : display}`;
+                        document.getElementById('studentTimer').innerText = `00:${display < 10 ? '0' + display : display}`;
                         if(remain <= 0) clearInterval(studentTimerInterval);
                     }, 200);
                 }
-
                 if(q.isOX) {
                     document.getElementById('btnGroupMultiple').style.display = 'none';
-                    const oxArea = document.getElementById('btnGroupOX');
-                    oxArea.style.display = 'flex';
+                    document.getElementById('btnGroupOX').style.display = 'flex';
                     document.querySelectorAll('.ox-btn').forEach((btn, i) => {
                         btn.classList.remove('locked', 'selected');
                         if((i + 1) === myLastChoiceIdx) btn.classList.add('selected');
@@ -1127,7 +1161,7 @@ function setupListeners() {
             else if(q.status === 'close') {
                 canAnswer = false;
                 document.querySelectorAll('.quiz-opt-btn').forEach(b => b.classList.add('locked'));
-                msgBox.innerText = myLastChoice ? "제출 완료" : "미제출 마감";
+                document.getElementById('quizStatusMsg').innerText = myLastChoice ? "제출 완료" : "미제출 마감";
             }
         });
     });
@@ -1147,7 +1181,6 @@ function setupListeners() {
         });
     }
 }
-
 
 
 
@@ -1938,15 +1971,17 @@ async function saveProfile() {
     }
     
     const newUToken = `${name}_${phone}`;
-    // 현재 주소창의 방 번호를 가장 먼저 믿습니다.
-    const activeRoom = new URLSearchParams(window.location.search).get('room') || currentRoom;
+    // [보정] 주소창의 방 번호를 가장 우선적으로 가져와서 변수 꼬임을 방지합니다.
+    const urlParams = new URLSearchParams(window.location.search);
+    const targetRoom = urlParams.get('room') || currentRoom;
 
     try {
         localStorage.setItem('kac_user_name', name);
         localStorage.setItem('kac_user_phone', phone);
         localStorage.setItem('uToken', newUToken);
 
-        await firebase.database().ref(`courses/${activeRoom}/students/${newUToken}`).update({
+        // 확정된 targetRoom 경로에 저장
+        await firebase.database().ref(`courses/${targetRoom}/students/${newUToken}`).update({
             name: name,
             phone: phone,
             joinedAt: firebase.database.ServerValue.TIMESTAMP,
@@ -1956,7 +1991,7 @@ async function saveProfile() {
         startPresence(); 
         document.getElementById('profileOverlay').style.display = 'none';
         
-        // 이름을 저장하자마자 즉시 출결 로직을 한 번 더 실행시킵니다.
+        // 이름을 저장하자마자 즉시 출결 체크 시도
         handleInternalAttendance(); 
         
         if (!window.location.search.includes('checkin=true')) {
