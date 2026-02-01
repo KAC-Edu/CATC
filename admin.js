@@ -1503,7 +1503,7 @@ loadAttendanceView: function() {
 loadInternalAttendance: function() {
     if(!state.room) return;
     const roomAtInvoke = state.room; 
-    const today = getTodayString(); // YYYY-MM-DD
+    const today = getTodayString();
     const listDiv = document.getElementById('internalAttendanceList');
     
     const studentsRef = firebase.database().ref(`courses/${roomAtInvoke}/students`);
@@ -1515,33 +1515,27 @@ loadInternalAttendance: function() {
     studentsRef.on('value', studentSnap => {
         if (state.room !== roomAtInvoke) return;
         const students = studentSnap.val() || {};
-        
-        // 1. 현재 강의실의 모든 수강생 정리
         const uniqueStudentsMap = new Map();
         Object.keys(students).forEach(key => {
             const s = students[key];
             if (s.name && s.name !== "undefined") {
-                // [카운팅 해결 포인트] 휴대폰 뒷 4자리만 정확히 추출
-                const cleanPhone = String(s.phone || "0000").slice(-4);
+                const cleanPhone = (s.phone || "0000").trim();
                 const identifier = `${s.name.trim()}_${cleanPhone}`;
                 uniqueStudentsMap.set(identifier, { name: s.name.trim(), phone: cleanPhone });
             }
         });
-
         const sortedList = Array.from(uniqueStudentsMap.values()).sort((a,b) => a.name.localeCompare(b.name));
 
-        // 2. 출석 데이터와 대조하여 숫자 계산
         attendanceRef.on('value', attendSnap => {
             if (state.room !== roomAtInvoke) return;
             const attendees = attendSnap.val() || {};
             let attendCount = 0;
-            
             if(listDiv) listDiv.innerHTML = "";
 
             sortedList.forEach(s => {
+                // [수정 포인트] 학생이 저장한 '이름_번호' 형식과 정확히 일치시켜서 숫자를 올립니다.
                 const attendKey = `${s.name}_${s.phone}`;
                 const isAttended = attendees[attendKey] ? true : false;
-                
                 if(isAttended) attendCount++;
 
                 const bgColor = isAttended ? "#ecfdf5" : "#ffffff";
@@ -1554,15 +1548,14 @@ loadInternalAttendance: function() {
                 }
             });
 
-            // 3. 화면의 카운팅 텍스트 업데이트
-            const totalEl = document.getElementById('totalMemberCount'); // 전체 인원 분모
-            const checkInEl = document.getElementById('checkInCount');   // 출석 완료 분자
+            // 상단 카운트 정보 업데이트 (이제 숫자가 올라갑니다)
+            const totalEl = document.getElementById('totalMemberCount');
+            const checkInEl = document.getElementById('checkInCount');
             if(totalEl) totalEl.innerText = sortedList.length;
-            if(checkInEl) checkInEl.innerText = attendCount; // 여기서 0이 1로 바뀝니다.
+            if(checkInEl) checkInEl.innerText = attendCount;
         });
     });
 },
-
 
 
 
