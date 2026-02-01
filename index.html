@@ -695,8 +695,11 @@ function sendAns(idx) {
 
 
 
+
+
+
+
         
-// [수정] index.html의 최하단 (async function init() { ... })
 (async function init() {
     const params = new URLSearchParams(window.location.search);
     const directRoom = params.get('room'); 
@@ -714,7 +717,16 @@ function sendAns(idx) {
         return;
     }
 
-    // 2. [핵심 수정] 방 번호가 2번으로 확정된 '지금' 데이터를 불러옵니다.
+    // [추가된 핵심 코드] 방이 바뀌었을 때 이전 방의 기억을 지워야 카운팅이 안 꼬입니다.
+    const lastRoom = localStorage.getItem('kac_last_visited_room');
+    if (lastRoom && lastRoom !== currentRoom) {
+        localStorage.removeItem('uToken');
+        localStorage.removeItem('kac_user_name');
+        localStorage.removeItem('kac_user_phone');
+    }
+    localStorage.setItem('kac_last_visited_room', currentRoom);
+
+    // 2. 방 번호 확정 후 데이터 불러오기
     myLikes = JSON.parse(localStorage.getItem(`likes_${currentRoom}`) || '{}'); 
     myQs = JSON.parse(localStorage.getItem(`myqs_${currentRoom}`) || '{}'); 
     lastPostTimeMap = JSON.parse(localStorage.getItem(`lastTimeMap_${currentRoom}`) || '{}');
@@ -734,13 +746,18 @@ function sendAns(idx) {
         connections: db.ref(`${rPath}/connections`) 
     };
 
-    // 4. 출결 체크 실행
+    // 4. 출결 체크 및 리스너 가동 (순서 중요: setupListeners가 먼저 실행되어야 과정명이 뜹니다)
+    setupListeners(); 
     handleInternalAttendance(); 
 
-    setupListeners(); 
     checkCooldown(); 
     initKeyboardFix();
 })();
+
+
+
+
+
 
 
 

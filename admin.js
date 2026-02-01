@@ -1499,29 +1499,25 @@ loadAttendanceView: function() {
 
 
 // [최종 수정] 자체 출석부 실시간 리스트 (방 이동 시 데이터 꼬임 방지 강화)
+// [최종] 출석 카운팅 매칭 버그 수정본
 loadInternalAttendance: function() {
     if(!state.room) return;
 
-    // 1. 현재 실행 시점의 방 번호를 상수에 고정
     const roomAtInvoke = state.room; 
     const today = getTodayString();
     const listDiv = document.getElementById('internalAttendanceList');
     
-    // 2. [중요] 새로운 리스너를 걸기 전에 이전 방의 안테나를 완전히 제거
     const studentsRef = firebase.database().ref(`courses/${roomAtInvoke}/students`);
     const attendanceRef = firebase.database().ref(`courses/${roomAtInvoke}/internal_attendance/${today}`);
     
     studentsRef.off();
     attendanceRef.off();
 
-    // (1) 해당 방의 전체 수강생 명단 가져오기
     studentsRef.on('value', studentSnap => {
-        // [방 검증] 데이터가 도착했을 때, 관리자가 이미 다른 방으로 이동했다면 실행 중단
         if (state.room !== roomAtInvoke) return;
-
         const students = studentSnap.val() || {};
         
-        // 중복 데이터 방지를 위해 이름+번호 조합으로 정리
+        // 1. 현재 강의실의 모든 수강생 정리
         const uniqueStudentsMap = new Map();
         Object.keys(students).forEach(key => {
             const s = students[key];
@@ -1534,22 +1530,21 @@ loadInternalAttendance: function() {
 
         const sortedList = Array.from(uniqueStudentsMap.values()).sort((a,b) => a.name.localeCompare(b.name));
 
-        // (2) 오늘 해당 방의 출석 체크 데이터 가져오기
+        // 2. 출석 데이터와 대조
         attendanceRef.on('value', attendSnap => {
-            // [방 검증] 2차 체크
             if (state.room !== roomAtInvoke) return;
-
             const attendees = attendSnap.val() || {};
             let attendCount = 0;
             
             if(listDiv) listDiv.innerHTML = "";
 
             sortedList.forEach(s => {
+                // [수정 포인트] 학생이 저장한 key 형식(이름_번호)과 100% 일치하도록 대조합니다.
                 const attendKey = `${s.name}_${s.phone}`;
                 const isAttended = attendees[attendKey] ? true : false;
+                
                 if(isAttended) attendCount++;
 
-                // 출석 여부에 따른 디자인 설정
                 const bgColor = isAttended ? "#ecfdf5" : "#ffffff";
                 const textColor = isAttended ? "#10b981" : "#94a3b8";
                 const borderColor = isAttended ? "#10b981" : "#e2e8f0";
@@ -1565,7 +1560,7 @@ loadInternalAttendance: function() {
                 }
             });
 
-            // 상단 카운트 정보 업데이트 (현재 방의 인원만 계산됨)
+            // 3. 화면에 카운팅 업데이트 (이 부분이 사진의 0을 숫자로 바꿔줍니다)
             const totalEl = document.getElementById('totalMemberCount');
             const checkInEl = document.getElementById('checkInCount');
             if(totalEl) totalEl.innerText = sortedList.length;
