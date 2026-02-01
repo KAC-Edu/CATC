@@ -2328,14 +2328,13 @@ function executeAttendanceRecord(room, name, phone, dateStr, storageKey) {
 
 // 주소창 정리 함수
 function cleanUrlAndGo(r) {
-    // 주소창에서 출결 파라미터(&checkin=true)를 제거하여 새로고침 시 중복 방지
     const newUrl = window.location.pathname + `?room=${r}`;
     window.history.replaceState({}, '', newUrl);
-    
     if(document.getElementById('landingPage')) document.getElementById('landingPage').style.display = 'none';
     if(document.getElementById('mainApp')) document.getElementById('mainApp').style.display = 'flex';
     startPresence();
 }
+
 
 
 
