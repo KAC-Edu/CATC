@@ -988,11 +988,19 @@ function setupListeners() {
     // 2. 과정명 및 기본 설정 감시 (이전 안테나 정리)
     dbRef.settings.off();
     dbRef.settings.on('value', s => { 
-        if(!currentRoom) return;
-        const val = s.val() || {}; 
-        const title = val.courseName || `Course ${currentRoom}`; 
-        document.getElementById('roomTitle').innerText = title; 
-        document.getElementById('landingBadge').innerText = `ROOM ${currentRoom}`; 
+    if(!currentRoom) return;
+    const val = s.val() || {}; 
+    const title = val.courseName || `Course ${currentRoom}`; 
+    
+    // 1. 메인 앱 화면의 상단 제목 업데이트
+    document.getElementById('roomTitle').innerText = title; 
+    
+    // 2. 입장 화면(Landing Page)의 과정명 업데이트 (이 줄이 핵심입니다!)
+    const lt = document.getElementById('landingTitle');
+    if(lt) lt.innerText = title;
+
+    // 3. 배지 업데이트
+    document.getElementById('landingBadge').innerText = `ROOM ${currentRoom}`; 
     });
 
     // 3. 질문 리스트 실시간 감시 (이전 안테나 정리)
@@ -1976,14 +1984,6 @@ async function saveProfileWithCheck() {
 
 
 
-
-
-
-
-
-
-
-
 // [최종 수정] 프로필 저장 및 자동 출석 연결 로직
 async function saveProfile() {
     const name = document.getElementById('userName').value.trim();
@@ -1995,34 +1995,42 @@ async function saveProfile() {
     }
     
     const newUToken = `${name}_${phone}`;
-    // 현재 주소창에 적힌 방 번호를 가장 우선적으로 믿습니다.
-    const activeRoom = new URLSearchParams(window.location.search).get('room') || currentRoom;
 
     try {
         localStorage.setItem('kac_user_name', name);
         localStorage.setItem('kac_user_phone', phone);
         localStorage.setItem('uToken', newUToken);
 
-        await firebase.database().ref(`courses/${activeRoom}/students/${newUToken}`).update({
+        await firebase.database().ref(`courses/${currentRoom}/students/${newUToken}`).update({
             name: name,
             phone: phone,
             joinedAt: firebase.database.ServerValue.TIMESTAMP,
             isOnline: true
         });
 
-        document.getElementById('profileOverlay').style.display = 'none';
         startPresence(); 
+        document.getElementById('profileOverlay').style.display = 'none';
         
-        // 이름을 등록하자마자 "현재 이 방" 번호를 들고 출결 함수로 점프
-        handleInternalAttendance(activeRoom); 
+        // [핵심 연결] 이름을 저장하자마자 즉시 출결 함수를 호출합니다.
+        handleInternalAttendance(currentRoom); 
         
+        // 출결이 아닌 일반 접속일 때만 대시보드 표시
         if (!window.location.search.includes('checkin=true')) {
             showMainDashboard();
+            alert(`${name}님, 환영합니다!`);
         }
+        
     } catch (e) {
+        console.error("SaveProfile Error:", e);
         alert("등록 중 오류가 발생했습니다.");
     }
 }
+
+
+
+
+
+
 
 
 
