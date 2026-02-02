@@ -355,10 +355,10 @@ enterAsObserver: function() {
 
 
 forceEnterRoom: async function(room) {
-    // [핵심 수정 1] 이전 방에 연결되어 있던 모든 실시간 감시(Listener)를 강제로 종료합니다.
-    // 이 작업이 없으면 방을 옮겨도 이전 방의 질문이나 학생 수가 계속 업데이트되는 버그가 발생합니다.
+    // [핵심 수정 1] 이전 방(state.room)에 걸려있던 모든 리스너를 전역적으로 강제 종료
     if (state.room) {
         const oldPath = `courses/${state.room}`;
+        // 해당 경로의 모든 하위 리스너를 완전히 연결 해제 (.off() 호출)
         firebase.database().ref(oldPath).off();
         firebase.database().ref(`${oldPath}/settings`).off();
         firebase.database().ref(`${oldPath}/status`).off();
@@ -366,6 +366,7 @@ forceEnterRoom: async function(room) {
         firebase.database().ref(`${oldPath}/students`).off();
         firebase.database().ref(`${oldPath}/activeQuiz`).off();
         firebase.database().ref(`${oldPath}/quizAnswers`).off();
+        firebase.database().ref(`${oldPath}/internal_attendance`).off(); // 자체 출결 리스너 제거
         firebase.database().ref(`${oldPath}/shuttle/departure`).off();
         firebase.database().ref(`${oldPath}/shuttle/requests`).off();
         firebase.database().ref(`${oldPath}/notice`).off();
@@ -373,14 +374,14 @@ forceEnterRoom: async function(room) {
         firebase.database().ref(`${oldPath}/attendanceQR`).off();
     }
 
-    // 1. 옵저버(눈팅 전용) 상태인지 체크 (세션 저장소 확인)
+    // 1. 옵저버 상태 복구 (세션 저장소 확인)
     if (sessionStorage.getItem('kac_observer_room') === room) {
         state.isObserver = true;
     } else {
         state.isObserver = false;
     }
 
-    // 2. 강사 입장 시 제어권 체크 (다른 강사가 사용 중인지 확인)
+    // 2. 강사 입장 시 제어권 체크 (옵저버는 통과)
     if (!state.isObserver) {
         const snap = await firebase.database().ref(`courses/${room}/status`).get();
         const st = snap.val() || {};
@@ -394,14 +395,14 @@ forceEnterRoom: async function(room) {
         }
     }
 
-    // 3. 현재 방 정보를 업데이트하고 브라우저에 저장
+    // 3. 현재 방 상태 저장 및 UI 업데이트
     state.room = room; 
     localStorage.setItem('kac_last_room', room); 
     const roomSelect = document.getElementById('roomSelect');
     if(roomSelect) roomSelect.value = room;
     document.querySelector('.mode-tabs').style.display = 'flex';
 
-    // 4. 새로운 방의 데이터 경로를 전역 참조(dbRef)에 연결
+    // 4. 데이터베이스 경로 재설정 (현시점 방 번호 반영)
     const rPath = `courses/${room}`;
     dbRef.settings = firebase.database().ref(`${rPath}/settings`);
     dbRef.qa = firebase.database().ref(`${rPath}/questions`);
@@ -409,43 +410,65 @@ forceEnterRoom: async function(room) {
     dbRef.ans = firebase.database().ref(`${rPath}/quizAnswers`);
     dbRef.status = firebase.database().ref(`${rPath}/status`);
 
-    // 5. 상단 제목 및 버튼 모양 갱신
     ui.updateHeaderRoom(room);
     ui.updateObserverButton();
     
-    // 6. 새로운 방의 데이터 감시 시작 (방 번호 검증 로직 포함)
+    // 모듈 초기화 (방 번호가 바뀌었으므로 새로 감시 시작)
+    subjectMgr.init();
+    
+    // 5. [중요] 실시간 감시 시작 시 '방 번호 검증' 로직 추가
+    // (리스너가 작동할 때 여전히 그 방을 보고 있는지 확인하여 꼬임 방지)
+
     dbRef.settings.on('value', s => {
-        if(state.room !== room) return; // 방이 이미 바뀌었다면 무시
-        ui.renderSettings(s.val() || {}); 
+        if(state.room !== room) return; // [방 검증] 방이 바뀌었다면 무시
+        const val = s.val() || {};
+        ui.renderSettings(val); 
         if(localStorage.getItem('kac_last_mode') === 'dashboard') ui.loadDashboardStats();
     });
 
     dbRef.status.on('value', s => {
-        if(state.room !== room) return;
+        if(state.room !== room) return; // [방 검증]
         const statusData = s.val() || {};
         ui.renderRoomStatus(statusData.roomStatus || 'idle'); 
 
         if (!state.isObserver) {
-            ui.checkLockStatus(statusData);
+            if (statusData.roomStatus === 'active' && statusData.ownerSessionId !== state.sessionId) {
+                ui.checkLockStatus(statusData);
+                state.pendingRoom = room;
+                document.getElementById('takeoverModal').style.display = 'flex';
+            } else {
+                ui.checkLockStatus(statusData);
+            }
         } else {
-            document.getElementById('statusOverlay').style.display = 'none';
+            const overlay = document.getElementById('statusOverlay');
+            if(overlay) overlay.style.display = 'none';
         }
     });
 
-    // 해당 방의 실시간 질문 목록 감시
+    firebase.database().ref(`courses/${room}/students`).on('value', s => {
+        if(state.room !== room) return; // [방 검증]
+        const data = s.val() || {};
+        const validUsers = Object.values(data).filter(user => user.name && user.name !== "undefined");
+        const activeUsers = validUsers.filter(user => user.isOnline === true).length;
+        
+        const quizEl = document.getElementById('currentJoinCount');
+        if(quizEl) quizEl.innerText = activeUsers;
+        const dashCount = document.getElementById('dashStudentCount');
+        if(dashCount) dashCount.innerText = activeUsers + "명";
+    });
+
     dbRef.qa.on('value', s => { 
-        if(state.room !== room) return;
+        if(state.room !== room) return; // [방 검증]
         state.qaData = s.val() || {}; 
         ui.renderQaList('all'); 
     });
 
-    // 7. 페이지 초기화 및 QR코드 생성
+    // 6. 페이지 상태 복구 및 모듈 리셋
     this.fetchCodeAndRenderQr(room);
     const lastMode = localStorage.getItem('kac_last_mode') || 'dashboard';
     ui.setMode(lastMode);
     
-    // 과목 필터 및 가이드 초기화
-    subjectMgr.init();
+    // 가이드 및 다른 모듈 재로딩 (init 내부에서 이전 리스너를 끄도록 설계되어야 함)
     guideMgr.init();
 },
 
@@ -546,54 +569,53 @@ updateQa: function(action) {
 
 // [최종 수정] 리셋 시 교육생 퇴출용 resetKey를 포함한 초기화 로직
 resetCourse: function() {
-    // 1. 현재 강의실이 선택되어 있는지 확인
-    if (!state.room) {
-        ui.showAlert("⚠️ 초기화할 강의실을 먼저 선택해야 합니다.");
-        return;
-    }
 
-    // 2. 옵저버(단순 관람) 모드일 때는 초기화 금지
+    // [보안 추가] 옵저버는 함수 실행 자체를 차단
     if (state.isObserver) {
         ui.showAlert("👁️ 옵저버 모드에서는 과정을 초기화할 수 없습니다.");
         return;
     }
 
-    if(confirm(`🚨 [위험] Room ${state.room}의 모든 데이터를 초기화하시겠습니까?\n이름, 질문, 신청 내역 등 모든 정보가 삭제되며 되돌릴 수 없습니다.`)) {
-        const rPath = `courses/${state.room}`;
-        const updates = {};
+        if (!state.room) {
+            ui.showAlert("⚠️ 강의실을 먼저 선택해야 초기화가 가능합니다.");
+            return;
+        }
+        if(confirm("🚨 경고: [입교안내 가이드]를 제외한 모든 데이터(과정명, 교수, 학생, 각종 신청 내역 등)를 삭제하고 초기화하시겠습니까?")) {
+            const rPath = `courses/${state.room}`;
+            const updates = {};
 
-        // [격리 초기화] 해당 방 번호 밑에 있는 데이터들만 콕 집어서 삭제(null) 처리
-        updates[`${rPath}/questions`] = null;
-        updates[`${rPath}/students`] = null;
-        updates[`${rPath}/expectedStudents`] = null; 
-        updates[`${rPath}/activeQuiz`] = null;
-        updates[`${rPath}/quizAnswers`] = null;
-        updates[`${rPath}/quizFinalResults`] = null;
-        updates[`${rPath}/admin_actions`] = null;
-        updates[`${rPath}/dinner_skips`] = null;
-        updates[`${rPath}/shuttle`] = null;
-        updates[`${rPath}/notice`] = null;
-        updates[`${rPath}/coordNotice`] = null;
-        updates[`${rPath}/internal_attendance`] = null;
+            // 데이터 삭제 항목들
+            updates[`${rPath}/questions`] = null;
+            updates[`${rPath}/students`] = null;
+            updates[`${rPath}/expectedStudents`] = null; 
+            updates[`${rPath}/activeQuiz`] = null;
+            updates[`${rPath}/quizAnswers`] = null;
+            updates[`${rPath}/quizFinalResults`] = null;
+            updates[`${rPath}/admin_actions`] = null;
+            updates[`${rPath}/dinner_skips`] = null;
+            updates[`${rPath}/shuttle`] = null;
+            updates[`${rPath}/notice`] = null;
+            updates[`${rPath}/attendanceQR`] = null;
+            updates[`${rPath}/connections`] = null;
+            updates[`${rPath}/internal_attendance`] = null;
 
-        // 과정 기본값 재설정
-        updates[`${rPath}/settings/courseName`] = "";
-        updates[`${rPath}/status/professorName`] = "";
-        updates[`${rPath}/status/roomStatus`] = "idle"; // 비어있음으로 전환
-        updates[`${rPath}/status/ownerSessionId`] = null; // 제어권 해제
-        
-        // 학생들에게 초기화 신호를 보내 강제 퇴출시킴
-        updates[`${rPath}/status/resetKey`] = "reset_" + Date.now();
+            // 기본값 설정 항목들
+            updates[`${rPath}/settings/courseName`] = "";
+            updates[`${rPath}/settings/subjects`] = null;
+            updates[`${rPath}/status/professorName`] = "";
+            updates[`${rPath}/status/ownerSessionId`] = null;
+            updates[`${rPath}/status/mode`] = "qa";
 
-        firebase.database().ref().update(updates).then(() => {
-            ui.showAlert(`✅ Room ${state.room}이 성공적으로 초기화되었습니다.`);
-            // 화면 새로고침하여 대기 상태로 복귀
-            setTimeout(() => location.reload(), 800);
-        }).catch(err => {
-            ui.showAlert("초기화 실패: " + err.message);
-        });
-    }
-},
+            // [중요] 리셋 시 상태를 무조건 '비어있음'으로 변경
+            updates[`${rPath}/status/roomStatus`] = "idle";
+            updates[`${rPath}/status/resetKey`] = "reset_" + Date.now();
+
+            firebase.database().ref().update(updates).then(() => {
+                ui.showAlert("✅ 초기화되었습니다. 모든 교육생이 퇴출됩니다.");
+                setTimeout(() => location.reload(), 500);
+            });
+        }
+    },
 
 // [추가] 공지사항 관리창 열기
     openNoticeManage: async function() {
@@ -1170,155 +1192,157 @@ const ui = {
 
 
 loadDashboardStats: function() {
-    if(!state.room) return;
-    const room = state.room; // [중요] 함수 시작 시점의 방 번호를 고정
-    const today = getTodayString();
+        if(!state.room) return;
+        const room = state.room; // 현재 방 번호를 변수에 고정
+        const today = getTodayString();
 
-    // 1. 과정 기본 정보 감시 (과정명, 기간, 장소, 담당자)
-    const settingsRef = firebase.database().ref(`courses/${room}/settings`);
-    settingsRef.off(); // 이전 연결 청소
-    settingsRef.on('value', snap => {
-        if(state.room !== room) return; // 방 검증
-        const s = snap.val() || {};
-        if(document.getElementById('dashCourseTitle')) document.getElementById('dashCourseTitle').innerText = s.courseName || "과정명을 설정해주세요.";
-        if(document.getElementById('dashPeriod')) document.getElementById('dashPeriod').innerText = s.period || "기간 미설정";
-        if(document.getElementById('dashRoomDetail')) document.getElementById('dashRoomDetail').innerText = s.roomDetailName || "장소 미설정";
-        if(document.getElementById('dashCoordName')) document.getElementById('dashCoordName').innerText = s.coordinatorName || "미지정";
-    });
-
-    // 2. 담임 교수 공지 로드
-    const noticeRef = firebase.database().ref(`courses/${room}/notice`);
-    noticeRef.off();
-    noticeRef.on('value', s => {
-        if(state.room !== room) return;
-        const el = document.getElementById('dashNoticeInst');
-        if(el) el.innerText = s.val() || "작성된 담임 교수 공지가 없습니다.";
-    });
-
-    // 3. 운영부 과정 공지 로드
-    const coordNoticeRef = firebase.database().ref(`courses/${room}/coordNotice`);
-    coordNoticeRef.off();
-    coordNoticeRef.on('value', s => {
-        if(state.room !== room) return;
-        const el = document.getElementById('dashNoticeAdmin');
-        if(el) el.innerText = s.val() || "등록된 운영부 과정 공지가 없습니다.";
-    });
-
-    // 4. 센터 전체 공지 로드
-    const globalNoticeRef = firebase.database().ref(`system/globalNotice`);
-    globalNoticeRef.off();
-    globalNoticeRef.on('value', s => {
-        // 센터 공지는 공통 데이터이므로 방 번호 검증 없이 로드
-        const el = document.getElementById('dashNoticeGlobal');
-        if(el) el.innerText = s.val() || "현재 게시된 센터 전체 공지가 없습니다.";
-    });
-
-    // 5. 담당 교수님 성함 로드
-    const statusRef = firebase.database().ref(`courses/${room}/status`);
-    statusRef.off();
-    statusRef.on('value', snap => {
-        if(state.room !== room) return;
-        const st = snap.val() || {};
-        const profOnlyEl = document.getElementById('dashProfNameOnly');
-        if(profOnlyEl) profOnlyEl.innerText = st.professorName || "미지정";
-    });
-
-    // 6. 수강생 입교 현황 감시
-    const expectedRef = firebase.database().ref(`courses/${room}/expectedStudents`);
-    const actualRef = firebase.database().ref(`courses/${room}/students`);
-    expectedRef.off();
-    actualRef.off();
-    expectedRef.on('value', expSnap => {
-        const expectedNames = expSnap.val() || [];
-        actualRef.on('value', snap => {
-            if(state.room !== room) return;
-            const data = snap.val() || {};
-            const actualStudents = Object.values(data).filter(s => s.name && s.name !== "undefined");
-            const actualNames = actualStudents.map(s => s.name);
-            const combinedNames = Array.from(new Set([...expectedNames, ...actualNames]));
-            const total = combinedNames.length;
-            let arrived = 0;
-            combinedNames.forEach(name => { if (actualNames.includes(name)) arrived++; });
-            const arrivedEl = document.getElementById('dashArrivedCount');
-            const totalEl = document.getElementById('dashTotalCount');
-            if(arrivedEl) arrivedEl.innerText = arrived;
-            if(totalEl) totalEl.innerText = total;
+        // 1. 과정 기본 정보 감시 (과정명, 기간, 장소, 담당자)
+        const settingsRef = firebase.database().ref(`courses/${room}/settings`);
+        settingsRef.off(); // 이전 방의 연결이 있다면 끊기
+        settingsRef.on('value', snap => {
+            if(state.room !== room) return; // 방이 바뀌었다면 실행 취소
+            const s = snap.val() || {};
+            if(document.getElementById('dashCourseTitle')) document.getElementById('dashCourseTitle').innerText = s.courseName || "과정명을 설정해주세요.";
+            if(document.getElementById('dashPeriod')) document.getElementById('dashPeriod').innerText = s.period || "기간 미설정";
+            if(document.getElementById('dashRoomDetail')) document.getElementById('dashRoomDetail').innerText = s.roomDetailName || "장소 미설정";
+            if(document.getElementById('dashCoordName')) document.getElementById('dashCoordName').innerText = s.coordinatorName || "미지정";
         });
-    });
 
-    // 7. 외출/외박 신청자 카운트
-    const actionRef = firebase.database().ref(`courses/${room}/admin_actions/${today}`);
-    actionRef.off();
-    actionRef.on('value', s => {
-        if(state.room !== room) return;
-        const count = Object.keys(s.val() || {}).length;
-        if(document.getElementById('dashActionCount')) document.getElementById('dashActionCount').innerText = count;
-    });
+        // 2. 담임 교수 공지 로드
+        const noticeRef = firebase.database().ref(`courses/${room}/notice`);
+        noticeRef.off();
+        noticeRef.on('value', s => {
+            if(state.room !== room) return;
+            const el = document.getElementById('dashNoticeInst');
+            if(el) el.innerText = s.val() || "작성된 담임 교수 공지가 없습니다.";
+        });
 
-    // 8. 석식 제외 신청자 카운트
-    const dinnerRef = firebase.database().ref(`courses/${room}/dinner_skips/${today}`);
-    dinnerRef.off();
-    dinnerRef.on('value', s => {
-        if(state.room !== room) return;
-        const count = Object.keys(s.val() || {}).length;
-        const skipEl = document.getElementById('dashDinnerSkipCount');
-        if(skipEl) skipEl.innerText = count;
-    });
+        // 3. 운영부 과정 공지 로드
+        const coordNoticeRef = firebase.database().ref(`courses/${room}/coordNotice`);
+        coordNoticeRef.off();
+        coordNoticeRef.on('value', s => {
+            if(state.room !== room) return;
+            const el = document.getElementById('dashNoticeAdmin');
+            if(el) el.innerText = s.val() || "등록된 운영부 과정 공지가 없습니다.";
+        });
 
-    // 9. 출발시간 및 기사 공지 연동
-    const departureRef = firebase.database().ref(`courses/${room}/shuttle/departure`);
-    departureRef.off();
-    departureRef.on('value', snap => {
-        if(state.room !== room) return; 
-        const dep = snap.val();
-        const bar = document.getElementById('dashShuttleNotice');
-        const txt = document.getElementById('dashShuttleNoticeTxt');
-        if(!bar || !txt) return;
+        // 4. 센터 전체 공지 로드
+        const globalNoticeRef = firebase.database().ref(`system/globalNotice`);
+        globalNoticeRef.off();
+        globalNoticeRef.on('value', s => {
+            const el = document.getElementById('dashNoticeGlobal');
+            if(el) el.innerText = s.val() || "현재 게시된 센터 전체 공지가 없습니다.";
+        });
 
-        if (dep && dep.time) {
-            bar.style.display = "block";
-            txt.innerText = `퇴교차량 출발 예정: ${dep.date} [${dep.time}]`;
-        } else {
-            firebase.database().ref('system/shuttle_notice').once('value', s => {
-                const msg = s.val();
-                if(msg) { bar.style.display = "block"; txt.innerText = msg; }
-                else { bar.style.display = "none"; }
+        // 5. 담당 교수님 성함 로드
+        const statusRef = firebase.database().ref(`courses/${room}/status`);
+        statusRef.off();
+        statusRef.on('value', snap => {
+            if(state.room !== room) return;
+            const st = snap.val() || {};
+            const profOnlyEl = document.getElementById('dashProfNameOnly');
+            if(profOnlyEl) profOnlyEl.innerText = st.professorName || "미지정";
+        });
+
+        // 6. 수강생 입교 현황 감시
+        const expectedRef = firebase.database().ref(`courses/${room}/expectedStudents`);
+        const actualRef = firebase.database().ref(`courses/${room}/students`);
+        expectedRef.off();
+        actualRef.off();
+        expectedRef.on('value', expSnap => {
+            const expectedNames = expSnap.val() || [];
+            actualRef.on('value', snap => {
+                if(state.room !== room) return;
+                const data = snap.val() || {};
+                const actualStudents = Object.values(data).filter(s => s.name && s.name !== "undefined");
+                const actualNames = actualStudents.map(s => s.name);
+                const combinedNames = Array.from(new Set([...expectedNames, ...actualNames]));
+                const total = combinedNames.length;
+                let arrived = 0;
+                combinedNames.forEach(name => { if (actualNames.includes(name)) arrived++; });
+                const arrivedEl = document.getElementById('dashArrivedCount');
+                const totalEl = document.getElementById('dashTotalCount');
+                if(arrivedEl) arrivedEl.innerText = arrived;
+                if(totalEl) totalEl.innerText = total;
             });
-        }
-    });
+        });
 
-    // 10. 실시간 질문(Q&A) 건수 카운트
-    const qaCountRef = firebase.database().ref(`courses/${room}/questions`);
-    qaCountRef.off();
-    qaCountRef.on('value', s => {
-        if(state.room !== room) return;
-        const data = s.val() || {};
-        const count = Object.values(data).filter(q => q.status !== 'delete').length;
-        const qaEl = document.getElementById('dashQaCount');
-        if(qaEl) qaEl.innerText = count;
-    });
+        // 7. 외출/외박 신청자 카운트
+        const actionRef = firebase.database().ref(`courses/${room}/admin_actions/${today}`);
+        actionRef.off();
+        actionRef.on('value', s => {
+            if(state.room !== room) return;
+            const count = Object.keys(s.val() || {}).length;
+            if(document.getElementById('dashActionCount')) document.getElementById('dashActionCount').innerText = count;
+        });
 
-    // 11. 셔틀 탑승 수요 통합 카운트 (상세 목적지 포함)
-    const shuttleReqRef = firebase.database().ref(`courses/${room}/shuttle/requests`);
-    shuttleReqRef.off();
-    shuttleReqRef.on('value', s => {
-        if(state.room !== room) return;
-        const data = s.val() || {};
-        const items = Object.values(data);
-        const osong = items.filter(i => i.type === 'osong').length;
-        const term = items.filter(i => i.type === 'terminal').length;
-        const air = items.filter(i => i.type === 'airport').length;
-        const car = items.filter(i => i.type === 'car').length;
-        
-        if(document.getElementById('total-osong')) document.getElementById('total-osong').innerText = osong;
-        if(document.getElementById('total-term')) document.getElementById('total-term').innerText = term;
-        if(document.getElementById('total-air')) document.getElementById('total-air').innerText = air;
-        if(document.getElementById('total-car')) document.getElementById('total-car').innerText = car;
-        
-        const totalSum = items.length;
-        if(document.getElementById('dashShuttleTotal')) document.getElementById('dashShuttleTotal').innerText = totalSum + "명";
-    });
-},
+        // 8. 석식 제외 신청자 카운트
+        const dinnerRef = firebase.database().ref(`courses/${room}/dinner_skips/${today}`);
+        dinnerRef.off();
+        dinnerRef.on('value', s => {
+            if(state.room !== room) return;
+            const count = Object.keys(s.val() || {}).length;
+            const skipEl = document.getElementById('dashDinnerSkipCount');
+            if(skipEl) skipEl.innerText = count;
+        });
+
+// 9. 출발시간 및 기사 공지 연동 (경로 간섭 차단 버전)
+        const departureRef = firebase.database().ref(`courses/${room}/shuttle/departure`);
+        departureRef.off(); // [핵심] 이전에 붙어있던 감시자를 먼저 제거함
+        departureRef.on('value', snap => {
+            // 현재 선택된 방(state.room)과 로드하려는 방(room)이 다르면 무시
+            if(state.room !== room) return; 
+            
+            const dep = snap.val();
+            const bar = document.getElementById('dashShuttleNotice');
+            const txt = document.getElementById('dashShuttleNoticeTxt');
+            if(!bar || !txt) return;
+
+            if (dep && dep.time) {
+                bar.style.display = "block";
+                // 기사님이 저장한 해당 과정의 퇴교 예정 날짜와 시간을 표시
+                txt.innerText = `퇴교차량 출발 예정: ${dep.date} [${dep.time}]`;
+            } else {
+                // 설정된 시간이 없을 때만 기본 공지사항 확인
+                firebase.database().ref('system/shuttle_notice').once('value', s => {
+                    const msg = s.val();
+                    if(msg) { bar.style.display = "block"; txt.innerText = msg; }
+                    else { bar.style.display = "none"; }
+                });
+            }
+        });
+
+        // 10. 실시간 질문(Q&A) 건수 카운트
+        const qaCountRef = firebase.database().ref(`courses/${room}/questions`);
+        qaCountRef.off();
+        qaCountRef.on('value', s => {
+            if(state.room !== room) return;
+            const data = s.val() || {};
+            const count = Object.values(data).filter(q => q.status !== 'delete').length;
+            const qaEl = document.getElementById('dashQaCount');
+            if(qaEl) qaEl.innerText = count;
+        });
+
+        // 11. 셔틀 탑승 수요 통합 카운트
+        const shuttleReqRef = firebase.database().ref(`courses/${room}/shuttle/requests`);
+        shuttleReqRef.off();
+        shuttleReqRef.on('value', s => {
+            if(state.room !== room) return;
+            const data = s.val() || {};
+            const items = Object.values(data);
+            const osong = items.filter(i => i.type === 'osong').length;
+            const term = items.filter(i => i.type === 'terminal').length;
+            const air = items.filter(i => i.type === 'airport').length;
+            const car = items.filter(i => i.type === 'car').length;
+            if(document.getElementById('total-osong')) document.getElementById('total-osong').innerText = osong;
+            if(document.getElementById('total-term')) document.getElementById('total-term').innerText = term;
+            if(document.getElementById('total-air')) document.getElementById('total-air').innerText = air;
+            if(document.getElementById('total-car')) document.getElementById('total-car').innerText = car;
+            const totalSum = items.length;
+            if(document.getElementById('dashShuttleTotal')) document.getElementById('dashShuttleTotal').innerText = totalSum + "명";
+        });
+    },
+
 
 
 
@@ -1392,38 +1416,33 @@ loadDashboardStats: function() {
 
 
 // [교체 및 추가] 출결 게시판 통합 관리 (공식 QR + 자체 출석부)
-loadAttendanceView: function() {
-    if(!state.room) return;
-    const room = state.room; // 현재 방 번호 고정
-
-    // 1. 공식 QR 이미지 경로 리스너 정리 및 새로 연결
-    const qrRef = firebase.database().ref(`courses/${room}/attendanceQR`);
-    qrRef.off(); // 이전 방 안테나 제거
-    
-    qrRef.on('value', snap => {
-        if(state.room !== room) return; // 방 번호 검증
-        const qrData = snap.val();
-        const imgMain = document.getElementById('attendanceQrImgMain');
-        const msgMain = document.getElementById('noAttendanceQrMsgMain');
+    loadAttendanceView: function() {
+        if(!state.room) return;
         
-        if(qrData) {
-            if(imgMain) {
-                imgMain.src = qrData;
-                imgMain.style.display = 'block';
+        // 1. [기존 기능 유지] 공식 E-HRD QR 이미지 실시간 감시
+        firebase.database().ref(`courses/${state.room}/attendanceQR`).on('value', snap => {
+            const qrData = snap.val();
+            const imgMain = document.getElementById('attendanceQrImgMain');
+            const msgMain = document.getElementById('noAttendanceQrMsgMain');
+            
+            if(qrData) {
+                if(imgMain) {
+                    imgMain.src = qrData;
+                    imgMain.style.display = 'block';
+                }
+                if(msgMain) msgMain.style.display = 'none';
+            } else {
+                if(imgMain) imgMain.style.display = 'none';
+                if(msgMain) {
+                    msgMain.style.display = 'block';
+                    msgMain.innerText = "등록된 QR 이미지가 없습니다. (운영부 업로드 필요)";
+                }
             }
-            if(msgMain) msgMain.style.display = 'none';
-        } else {
-            if(imgMain) imgMain.style.display = 'none';
-            if(msgMain) {
-                msgMain.style.display = 'block';
-                msgMain.innerText = "등록된 QR 이미지가 없습니다. (운영부 업로드 필요)";
-            }
-        }
-    });
+        });
 
-    // 2. 자체 출석체크 실시간 감시 함수 호출
-    this.loadInternalAttendance();
-},
+        // 2. [신규 기능] 자체 출석체크 실시간 감시 시작
+        this.loadInternalAttendance();
+    },
 
     // [신규] 출결 모드 전환 (공식 QR <-> 자체 출석체크)
     toggleAttendanceMode: function(mode) {
@@ -1496,25 +1515,43 @@ loadAttendanceView: function() {
     },
 
 
+// 전체 출석부(관리대장) 새창 열기
+    openFullAttendanceSheet: function() {
+        if(!state.room) return;
+        // 별도의 attendance_sheet.html 파일을 새창으로 엽니다.
+        const url = `attendance_sheet.html?room=${state.room}`;
+        window.open(url, '_blank', 'width=1200,height=900,scrollbars=yes');
+    },
+
+
+
+
 
 
 // [최종 수정] 자체 출석부 실시간 리스트 (방 이동 시 데이터 꼬임 방지 강화)
-// [최종] 출석 카운팅 매칭 버그 수정본
 loadInternalAttendance: function() {
     if(!state.room) return;
+
+    // 1. 현재 실행 시점의 방 번호를 상수에 고정
     const roomAtInvoke = state.room; 
     const today = getTodayString();
     const listDiv = document.getElementById('internalAttendanceList');
     
+    // 2. [중요] 새로운 리스너를 걸기 전에 해당 경로의 이전 리스너를 완전히 제거
     const studentsRef = firebase.database().ref(`courses/${roomAtInvoke}/students`);
     const attendanceRef = firebase.database().ref(`courses/${roomAtInvoke}/internal_attendance/${today}`);
     
     studentsRef.off();
     attendanceRef.off();
 
+    // (1) 수강생 명단 가져오기
     studentsRef.on('value', studentSnap => {
+        // [방 검증] 데이터가 도착했을 때, 관리자가 이미 다른 방으로 이동했다면 실행 중단
         if (state.room !== roomAtInvoke) return;
+
         const students = studentSnap.val() || {};
+        
+        // 이름+번호가 같으면 동일인물로 취급하여 중복 제거
         const uniqueStudentsMap = new Map();
         Object.keys(students).forEach(key => {
             const s = students[key];
@@ -1524,16 +1561,20 @@ loadInternalAttendance: function() {
                 uniqueStudentsMap.set(identifier, { name: s.name.trim(), phone: cleanPhone });
             }
         });
+
         const sortedList = Array.from(uniqueStudentsMap.values()).sort((a,b) => a.name.localeCompare(b.name));
 
+        // (2) 오늘 출석 데이터 가져오기
         attendanceRef.on('value', attendSnap => {
+            // [방 검증] 2차 체크
             if (state.room !== roomAtInvoke) return;
+
             const attendees = attendSnap.val() || {};
             let attendCount = 0;
+            
             if(listDiv) listDiv.innerHTML = "";
 
             sortedList.forEach(s => {
-                // [수정 포인트] 학생이 저장한 '이름_번호' 형식과 정확히 일치시켜서 숫자를 올립니다.
                 const attendKey = `${s.name}_${s.phone}`;
                 const isAttended = attendees[attendKey] ? true : false;
                 if(isAttended) attendCount++;
@@ -1544,11 +1585,16 @@ loadInternalAttendance: function() {
                 const icon = isAttended ? '<i class="fa-solid fa-circle-check"></i>' : '<i class="fa-regular fa-circle"></i>';
 
                 if(listDiv) {
-                    listDiv.innerHTML += `<div style="background:${bgColor}; color:${textColor}; border:1.5px solid ${borderColor}; padding:10px; border-radius:10px; text-align:center; font-size:14px; font-weight:800;"><div>${icon}</div><div>${s.name}</div></div>`;
+                    listDiv.innerHTML += `
+                        <div style="background:${bgColor}; color:${textColor}; border:1.5px solid ${borderColor}; padding:10px; border-radius:10px; text-align:center; font-size:14px; font-weight:800;">
+                            <div style="font-size:16px;">${icon}</div>
+                            <div>${s.name}</div>
+                        </div>
+                    `;
                 }
             });
 
-            // 상단 카운트 정보 업데이트 (이제 숫자가 올라갑니다)
+            // 상단 카운트 정보 업데이트
             const totalEl = document.getElementById('totalMemberCount');
             const checkInEl = document.getElementById('checkInCount');
             if(totalEl) totalEl.innerText = sortedList.length;
@@ -1556,6 +1602,8 @@ loadInternalAttendance: function() {
         });
     });
 },
+
+
 
 
 
@@ -2443,31 +2491,27 @@ cancelIndividualShuttle: function(waveId, locId, token, name) {
 loadStudentList: function() {
     if(!state.room) return;
 
-    // 1. 이전 방의 감시자(Listener)를 끄고 현재 방 명단만 감시 시작
+    // 1. 기존 리스너 정리
     const expectedRef = firebase.database().ref(`courses/${state.room}/expectedStudents`);
     const actualRef = firebase.database().ref(`courses/${state.room}/students`);
     expectedRef.off();
     actualRef.off();
 
+    // 2. 데이터 감시 시작
     expectedRef.on('value', expSnap => {
         const expectedNames = expSnap.val() || [];
         
         actualRef.on('value', snap => {
-            // 방이 바뀌는 도중에 이전 데이터가 들어오는 것 방지
-            if(!state.room) return; 
-
             const data = snap.val() || {};
             const tbody = document.getElementById('studentListTableBody');
             if(!tbody) return;
 
-            // 실제 입장한 학생 데이터 가공
             const actualStudents = Object.keys(data).map(key => ({
                 token: key,
                 ...data[key]
             })).filter(s => s.name && s.name !== "undefined");
 
             const actualNames = actualStudents.map(s => s.name);
-            // 업로드한 예정 명단과 실제 입장 명단을 합쳐서 정렬
             const combinedNames = Array.from(new Set([...expectedNames, ...actualNames])).sort((a,b) => a.localeCompare(b));
 
             tbody.innerHTML = ""; 
@@ -2476,11 +2520,22 @@ loadStudentList: function() {
             combinedNames.forEach((name, idx) => {
                 const sList = actualStudents.filter(student => student.name === name);
                 const isArrived = sList.length > 0;
+                const isExpected = expectedNames.includes(name); // 명단에 있는지 확인
                 
-                // 입장 경로 아이콘 결정
-                let joinTypeIcon = isArrived 
-                    ? (expectedNames.includes(name) ? '<i class="fa-solid fa-user-check" style="color:#3b82f6;"></i>' : '<i class="fa-solid fa-qrcode" style="color:#10b981;"></i>')
-                    : '<i class="fa-solid fa-user-clock" style="color:#cbd5e1;"></i>';
+                // [복구] 입장 경로 아이콘 판별
+                let joinTypeIcon = "";
+                if (isArrived) {
+                    if (isExpected) {
+                        // 명단에 있는 사람이 입장 (파란색 체크 유저)
+                        joinTypeIcon = '<i class="fa-solid fa-user-check" style="color:#3b82f6; margin-right:8px;" title="명단 내 입장"></i>';
+                    } else {
+                        // 명단에 없는데 QR로 들어옴 (초록색 QR 아이콘)
+                        joinTypeIcon = '<i class="fa-solid fa-qrcode" style="color:#10b981; margin-right:8px;" title="QR 직접 입장"></i>';
+                    }
+                } else {
+                    // 미입장 (회색 대기 아이콘)
+                    joinTypeIcon = '<i class="fa-solid fa-user-clock" style="color:#cbd5e1; margin-right:8px;" title="입장 대기"></i>';
+                }
 
                 const studentData = isArrived ? sList[0] : null;
                 const isOnline = isArrived && studentData.isOnline === true;
@@ -2488,14 +2543,21 @@ loadStudentList: function() {
 
                 if(isArrived) arrivedCount++;
 
+                const leaderBtnStyle = isLeader 
+                    ? "background:#3b82f6; color:white; border:none;" 
+                    : "background:#f1f5f9; color:#64748b; border:1px solid #cbd5e1;";
+                const leaderBtnText = isLeader ? "해제" : "학생장";
+
                 tbody.innerHTML += `
                     <tr class="${isLeader ? 'is-leader-row' : ''}">
                         <td>${idx + 1}</td>
+                        <!-- 중앙 정렬 및 아이콘 배치를 위해 td 스타일 수정 -->
                         <td style="text-align:center;">
-                            <div style="display:inline-flex; align-items:center; gap:8px;">
+                            <div style="display:inline-flex; align-items:center; justify-content:center; min-width:150px;">
                                 ${joinTypeIcon}
-                                <span style="color:${isOnline ? '#22c55e' : '#cbd5e1'};">●</span>
-                                <span style="font-weight:800;">${name}</span>
+                                <span style="color:${isOnline ? '#22c55e' : '#cbd5e1'}; margin-right:8px; font-size:12px;">●</span>
+                                <span style="font-weight:800; color:#1e293b;">${name}</span>
+                                ${isLeader ? '<span style="color:#3b82f6; margin-left:6px; font-size:14px; font-weight:bold;">[학생장 👑]</span>' : ''}
                             </div>
                         </td>
                         <td><span class="status-badge ${isArrived ? 'status-arrived' : 'status-wait'}">${isArrived ? '입교 완료' : '미입교'}</span></td>
@@ -2504,9 +2566,13 @@ loadStudentList: function() {
                             ${isArrived ? `
                                 <div style="display:flex; gap:5px; justify-content:center;">
                                     <button class="btn-table-action" onclick="dataMgr.toggleLeader('${studentData.token}', '${name}')" 
-                                            style="padding:4px 8px; font-size:11px;">${isLeader ? "해제" : "학생장"}</button>
+                                            style="${leaderBtnStyle} padding:4px 10px; font-size:11px; border-radius:6px; font-weight:bold;">
+                                        ${leaderBtnText}
+                                    </button>
                                     <button class="btn-table-action" onclick="dataMgr.deleteStudent('${studentData.token}')" 
-                                            style="background:#ef4444; color:white; padding:4px 8px; font-size:11px;">삭제</button>
+                                            style="background:#ef4444; color:white; padding:4px 10px; font-size:11px; border-radius:6px; border:none; font-weight:bold;">
+                                        삭제
+                                    </button>
                                 </div>
                             ` : `-`}
                         </td>
@@ -2520,13 +2586,6 @@ loadStudentList: function() {
         });
     });
 },
-
-
-
-
-
-
-
 
 // [추가 1] 생활관 중복 제거 및 데이터 로드 함수
 loadDormitoryData: function() {
@@ -2790,9 +2849,8 @@ resetShuttleRequests: function() {
 
 // --- 4. Quiz Logic ---
 const quizMgr = {
-loadFile: function(e) {
-        // [수정] 이벤트 객체에서 파일 입력창을 정확히 가져오도록 개선
-        const fileInput = e.target; 
+    loadFile: function(e) {
+        const fileInput = e.target; // 파일 입력창 요소 저장
         const f = fileInput.files[0]; 
         if (!f) return;
 
@@ -2820,13 +2878,14 @@ loadFile: function(e) {
 
             state.isExternalFileLoaded = true;
             
+            // 제목 입력 시 현재 시간을 기본으로 넣어 중복 제목 방지
             const now = new Date();
             const defaultTitle = `${f.name.split('.')[0]}_${now.getHours()}${now.getMinutes()}${now.getSeconds()}`;
             const quizTitle = prompt("이 퀴즈 세트의 이름을 입력해주세요:", defaultTitle);
             
             if (!quizTitle) { 
                 alert("업로드가 취소되었습니다."); 
-                fileInput.value = ""; 
+                fileInput.value = ""; // 취소 시에도 초기화
                 return; 
             }
 
@@ -2837,6 +2896,9 @@ loadFile: function(e) {
             }).then(() => { 
                 ui.showAlert("✅ 퀴즈가 성공적으로 업로드되었습니다."); 
                 quizMgr.loadSavedQuizList(); 
+                
+                // [핵심] 업로드 완료 후 파일 입력창을 완전히 비웁니다.
+                // 이렇게 해야 같은 파일명을 또 선택해도 'onchange' 이벤트가 정상 작동합니다.
                 fileInput.value = ""; 
             });
 
@@ -2847,6 +2909,22 @@ loadFile: function(e) {
             this.showQuiz();
         };
         r.readAsText(f);
+    },
+    
+    addManualQuiz: function() {
+        const q = document.getElementById('manualQ').value;
+        const a = document.getElementById('manualAns').value;
+        const opts = [1,2,3,4].map(i => document.getElementById('manualO'+i).value).filter(v => v);
+        if(!q || !a) return ui.showAlert("Fill fields");
+        state.quizList.push({ 
+            text: q, 
+            options: opts, 
+            correct: parseInt(a), 
+            checked: true, 
+            isOX: opts.length === 2, 
+            isSurvey: false 
+        });
+        this.renderMiniList();
     },
     
     renderMiniList: function() {
