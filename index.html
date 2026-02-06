@@ -703,6 +703,7 @@ function sendAns(idx) {
     const directRoom = params.get('room'); 
     const code = params.get('code');
 
+    // 1. 룸ID 확정 (URL에서 가져옴)
     if (directRoom) {
         currentRoom = directRoom;
     } else if (code) {
@@ -710,25 +711,24 @@ function sendAns(idx) {
     }
 
     if (!currentRoom) {
-        alert("강의실 정보가 없습니다.");
+        alert("강의실 정보가 없습니다. 다시 QR을 스캔해주세요.");
         return;
     }
 
-    // [수정 포인트] 입장 전 랜딩페이지에서 과정명 미리 표시
+    // 2. 과정명 미리 로드 (Loading 방지)
     firebase.database().ref(`courses/${currentRoom}/settings/courseName`).once('value', snap => {
         const cName = snap.val() || "Course " + currentRoom;
-        document.getElementById('landingTitle').innerText = cName; // 랜딩페이지 제목
-        document.getElementById('roomTitle').innerText = cName;    // 메인 상단 제목
+        document.getElementById('landingTitle').innerText = cName;
+        document.getElementById('roomTitle').innerText = cName;
     });
 
     document.getElementById('roomBadge').innerText = `Room ${currentRoom}`;
     document.getElementById('landingBadge').innerText = `ROOM ${currentRoom}`;
 
-    // 해당 룸 전용 리스너 설정
+    // 3. 리스너 및 출결체크 함수 실행
     setupListeners(); 
-    handleInternalAttendance(currentRoom); // 출석 체크 실행
+    handleInternalAttendance(currentRoom); // 룸 번호를 넘겨주며 실행
 })();
-
 
 
 
@@ -2293,28 +2293,31 @@ function handleInternalAttendance(room) {
 
     if (!isCheckIn || !room) return;
 
+    // 오늘 날짜 생성 (YYYY-MM-DD)
     const d = new Date();
     const today = d.getFullYear() + "-" + (d.getMonth() + 1).toString().padStart(2, '0') + "-" + d.getDate().toString().padStart(2, '0');
     
-    // [핵심] 룸ID와 날짜를 조합하여 이 방에 오늘 출석했는지 확인
+    // 이 룸에 오늘 출석했는지 체크하는 전용 키
     const storageKey = `kac_attended_${room}_${today}`; 
 
     if (localStorage.getItem(storageKey)) {
-        alert(`이미 [Room ${room}] 출석 처리가 완료된 상태입니다.`);
-        cleanUrlAndGo(room);
+        alert(`알림: 오늘 [Room ${room}]의 출석 처리는 이미 완료되었습니다.`);
+        cleanUrlAndGo(room); // 메인으로 이동
         return;
     }
 
+    // 내 정보가 저장되어 있는지 확인
     const myName = (localStorage.getItem('kac_user_name') || "").trim();
     const myPhone = (localStorage.getItem('kac_user_phone') || "").trim();
 
     if (!myName || myPhone.length !== 4) {
-        alert(`[Room ${room}] 출석을 위해 본인 정보를 먼저 등록해주세요.`);
+        // 정보가 없으면 입교 등록 팝업을 강제로 띄움
+        alert(`[Room ${room}] 출석을 위해 성함과 번호 확인이 필요합니다.`);
         document.getElementById('profileOverlay').style.display = 'flex';
         return;
     }
 
-    // 실제 데이터베이스 룸별 경로에 저장
+    // 모든 조건이 맞으면 서버에 기록하러 이동
     executeAttendanceRecord(room, myName, myPhone, today, storageKey);
 }
 
@@ -2328,11 +2331,11 @@ function handleInternalAttendance(room) {
 
 // [실제 저장] 파이어베이스에 데이터를 쓰고 브라우저에 완료 마킹을 함
 function executeAttendanceRecord(room, name, phone, dateStr, storageKey) {
-    const attendanceKey = `${name}_${phone}`;
+    const attendanceKey = `${name}_${phone}`; // 이름_번호 형식으로 저장
     const attendRef = firebase.database().ref(`courses/${room}/internal_attendance/${dateStr}/${attendanceKey}`);
 
     const currentTime = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-    const authId = "KAC-" + Math.random().toString(36).substr(2, 5).toUpperCase();
+    const authId = "KAC-" + Math.random().toString(36).substr(2, 5).toUpperCase(); // 가짜 인증번호 생성
 
     attendRef.set({
         name: name,
@@ -2341,11 +2344,15 @@ function executeAttendanceRecord(room, name, phone, dateStr, storageKey) {
         authId: authId,
         timestamp: firebase.database.ServerValue.TIMESTAMP
     }).then(() => {
-        // 해당 강의실+오늘날짜 전용 출석 완료 마킹 (중요!)
+        // 성공 시 로컬스토리지에 마킹 (다시 찍기 방지)
         localStorage.setItem(storageKey, "true");
-        alert(`✅ [Room ${room}] 출석 완료!\n${name}님, 확인되었습니다.`);
-        cleanUrlAndGo(room);
+        
+        // ★ 여기서 팝업 출력 ★
+        alert(`✅ [Room ${room}] 출석 완료!\n${name}님, 정상 처리되었습니다.`);
+        
+        cleanUrlAndGo(room); // 주소창 정리 후 메인 화면으로
     }).catch(e => {
+        console.error("Attendance Error:", e);
         alert("출석 처리 중 오류가 발생했습니다. 인터넷 연결을 확인하세요.");
     });
 }
