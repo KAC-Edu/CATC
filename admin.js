@@ -355,7 +355,7 @@ enterAsObserver: function() {
 
 
 forceEnterRoom: async function(room) {
-    // [1] 이전 방의 모든 리스너를 완전히 청소 (데이터 혼선 방지 핵심)
+    // [1] 이전 방에 연결되어 있던 모든 실시간 감시(Listener)를 강제로 종료 (데이터 간섭 방지)
     if (state.room) {
         const oldPath = `courses/${state.room}`;
         firebase.database().ref(oldPath).off();
@@ -368,14 +368,13 @@ forceEnterRoom: async function(room) {
         firebase.database().ref(`${oldPath}/admin_actions`).off();
     }
 
-    // 1. 옵저버(눈팅 전용) 상태 체크
+    // 1. 옵저버(눈팅 전용) 상태인지 체크
     state.isObserver = (sessionStorage.getItem('kac_observer_room') === room);
 
-    // 2. 강사 제어권 체크 (다른 강사 점유 여부 확인)
+    // 2. 강사 입장 시 제어권 체크 (다른 강사 사용 중인지 확인)
     if (!state.isObserver) {
         const snap = await firebase.database().ref(`courses/${room}/status`).get();
         const st = snap.val() || {};
-        // 사용중인데 내 세션ID가 아니면 비밀번호 입력창 표시
         if (st.roomStatus === 'active' && st.ownerSessionId !== state.sessionId) {
             state.pendingRoom = room;
             document.getElementById('takeoverPwInput').value = "";
@@ -386,13 +385,14 @@ forceEnterRoom: async function(room) {
         }
     }
 
-    // 3. 현재 방 상태 확정 및 전역 변수 저장
+    // 3. 현재 방 정보를 업데이트하고 브라우저에 저장
     state.room = room; 
     localStorage.setItem('kac_last_room', room); 
     const roomSelect = document.getElementById('roomSelect');
     if(roomSelect) roomSelect.value = room;
+    document.querySelector('.mode-tabs').style.display = 'flex';
 
-    // 4. 데이터베이스 참조 경로 설정 (rPath 기반 최적화)
+    // 4. 데이터베이스 참조 경로 설정
     const rPath = `courses/${room}`;
     dbRef.settings = firebase.database().ref(`${rPath}/settings`);
     dbRef.qa = firebase.database().ref(`${rPath}/questions`);
@@ -400,22 +400,18 @@ forceEnterRoom: async function(room) {
     dbRef.ans = firebase.database().ref(`${rPath}/quizAnswers`);
     dbRef.status = firebase.database().ref(`${rPath}/status`);
 
-    // 5. UI 초기화 및 상단바 갱신
+    // 5. 상단 제목 및 버튼 모양 갱신
     ui.updateHeaderRoom(room);
     ui.updateObserverButton();
-    document.querySelector('.mode-tabs').style.display = 'flex';
-
+    
     // 6. [실시간 동기화 엔진] 데이터 감시 시작
     
     // (A) 강의실 설정 감시 (과정명 등)
     dbRef.settings.on('value', s => {
-        if(state.room !== room) return; // 방 이동 시 무시
+        if(state.room !== room) return;
         const data = s.val() || {};
         ui.renderSettings(data); 
-        // 현재 화면이 대시보드면 통계치 실시간 갱신
-        if(document.getElementById('view-dashboard').style.display !== 'none') {
-            ui.loadDashboardStats();
-        }
+        if(document.getElementById('view-dashboard').style.display !== 'none') ui.loadDashboardStats();
     });
 
     // (B) 강의실 상태 감시 (잠금, 모드 전환 등)
@@ -433,31 +429,35 @@ forceEnterRoom: async function(room) {
 
     // (C) [실시간 질문 갱신 핵심] 질문 목록 감시 및 강제 렌더링
     dbRef.qa.on('value', s => { 
-        if(state.room !== room) return; // 방 번호가 다르면 실행 안 함
+        if(state.room !== room) return;
+        state.qaData = s.val() || {}; 
         
-        state.qaData = s.val() || {}; // 최신 데이터 전역 저장
-        console.log(`[Real-time] Room ${room} Questions Updated`);
-
-        // 현재 Q&A 탭을 보고 있거나, 질문 모달이 열려 있지 않을 때 리스트를 즉시 다시 그립니다.
-        // 특정 모드일 때만 그리는 것이 아니라, 데이터가 오면 일단 메모리에 적재하고 화면을 갱신합니다.
+        console.log(`[실시간] Room ${room} 데이터 수신`);
         ui.renderQaList('all'); 
         
-        // 대시보드 숫자를 실시간으로 올리기 위해 호출
         if(document.getElementById('view-dashboard').style.display !== 'none') {
             ui.loadDashboardStats();
         }
     });
 
-    // 7. QR코드 생성 및 이전 작업 모드 복구
+    // 7. QR코드 생성 및 모드 복구
     this.fetchCodeAndRenderQr(room);
     const lastMode = localStorage.getItem('kac_last_mode') || 'dashboard';
     ui.setMode(lastMode);
     
-    // 8. 기타 관리 매니저 실시간 연동 시작
+    // 8. 기타 관리 매니저 초기화
     subjectMgr.init();
     guideMgr.init();
-},
 
+    // 9. [NEW 배지 자동 제거 타이머] 1분마다 리스트를 재검토하여 강조 효과 제거
+    if (window.adminQaRefreshInterval) clearInterval(window.adminQaRefreshInterval);
+    window.adminQaRefreshInterval = setInterval(() => {
+        if(state.qaData && Object.keys(state.qaData).length > 0) {
+            console.log("[자동 갱신] 질문 강조 시간 만료 체크 중...");
+            ui.renderQaList('all'); 
+        }
+    }, 60000); 
+},
 
 
 
