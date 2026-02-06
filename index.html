@@ -1326,9 +1326,9 @@ function handleSubjectChange() {
     checkCooldown();
     
     // 4. 리스트 새로고침 (필터 적용된 renderList 호출)
-    dbRef.qa.once('value', snap => {
-        renderList(snap.val() || {});
-    });
+dbRef.qa.on('value', snap => {
+    renderList(snap.val() || {});
+});
 }
 
 
