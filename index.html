@@ -382,7 +382,9 @@
                 <textarea id="qInput" class="real-input" rows="1" 
           placeholder="✎ 질문 입력 (무례한 표현은 삼가주세요)" 
           maxlength="100" ...></textarea>
-                <button id="submitBtn" class="send-btn" onclick="submitQ()"><i class="fa-solid fa-paper-plane"></i></button>
+<button id="submitBtn" class="send-btn" onpointerdown="submitQ()">
+    <i class="fa-solid fa-paper-plane"></i>
+</button>
             </div>
             <div class="input-info-row"><span id="coolTimer" class="cooldown-text"></span><span id="charCount" class="char-counter">0 / 100</span></div>
         </div>
@@ -2221,11 +2223,14 @@ function initKeyboardFix() {
         }, 300);
     });
 
-    qInput.addEventListener('blur', () => {
+qInput.addEventListener('blur', () => {
+    // setTimeout을 사용해 버튼이 바로 도망가지 못하게 0.1초 지연시킵니다.
+    setTimeout(() => {
         inputDock.style.bottom = '0px';
         scrollContainer.style.paddingBottom = '150px';
         window.scrollTo(0, 0);
-    });
+    }, 100); 
+});
 }
 
 
