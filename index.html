@@ -33,11 +33,16 @@
         .q-card { background: var(--card-bg); border-radius: 16px; padding: 16px; margin-bottom: 12px; display: flex; gap: 12px; align-items: flex-start; box-shadow: 0 4px 6px rgba(0,0,0,0.1); position: relative; }
 
 
-/* [수정] 내가 작성한 질문 카드 스타일 (녹색 -> 인디고 계열로 변경) */
+/* [수정] 내가 작성한 질문 카드 스타일 (정렬 보정 추가) */
 .q-card.my-q { 
-    border: 2px solid #6366f1; /* 세련된 인디고 블루 */
-    background: #f5f7ff;       /* 아주 연한 보라빛 블루 배경 */
+    border: 2px solid #6366f1; 
+    background: #f5f7ff;       
     box-shadow: 0 4px 12px rgba(99, 102, 241, 0.15); 
+    
+    /* 여기 아래 두 줄이 정렬을 왼쪽으로 잡아줍니다 */
+    text-align: left !important;
+    display: flex;
+    align-items: flex-start;
 }
 
 /* 내가 작성한 카드의 아바타(아이콘) 배경색 */
@@ -46,7 +51,7 @@
     color: white; 
 }
 
-/* [추가] "내 질문" 임을 확실히 알려주는 텍스트 배지 스타일 (선택사항) */
+/* [추가] "내 질문" 임을 확실히 알려주는 텍스트 배지 스타일 */
 .my-q-badge {
     font-size: 10px;
     background: #6366f1;
@@ -56,6 +61,11 @@
     font-weight: 800;
     margin-right: 8px;
     vertical-align: middle;
+}
+
+/* 추가: 카드 내 글자 영역도 왼쪽 정렬 강제 */
+.my-q .q-content, .my-q .q-text {
+    text-align: left !important;
 }
 
 
@@ -1245,27 +1255,23 @@ function setupListeners() {
 
 
 
-// [최종 수정] 질문 목록 렌더링 (내가 쓴 글 인디고 블루 강조 및 배지 추가)
+// [최종 수정] 질문 목록 렌더링 (정렬 및 레이아웃 보정 버전)
 function renderList(data) {
     const list = document.getElementById('qList'); 
     list.innerHTML = ""; 
     
-    // 1. 전체 데이터를 배열로 변환
     let items = Object.keys(data).map(k => ({id:k, ...data[k]}));
     
-    // 2. 강사별 필터링 로직
     if (currentFilter !== "공통질문") {
         items = items.filter(item => item.subject === currentFilter);
     }
     
-    // 3. 정렬 로직
     if(currentSort === 'like') {
         items.sort((a,b) => (b.likes||0) - (a.likes||0) || b.timestamp - a.timestamp); 
     } else {
         items.sort((a,b) => b.timestamp - a.timestamp);
     }
 
-    // 4. 질문이 없을 때 안내 문구
     if (items.length === 0) {
         const emptyMsg = currentFilter === "공통질문" 
             ? "등록된 질문이 없습니다." 
@@ -1274,15 +1280,13 @@ function renderList(data) {
         return;
     }
 
-    // 5. 질문 카드 그리기
     items.forEach(item => {
         if(item.status === 'delete') return;
         
-        const isMine = myQs[item.id] ? true : false; // 내가 쓴 글인지 판단
-        const myQClass = isMine ? 'my-q' : '';       // CSS 클래스 적용
+        const isMine = myQs[item.id] ? true : false; 
+        const myQClass = isMine ? 'my-q' : '';       
         const likedClass = myLikes[item.id] ? 'active' : '';
         
-        // 강사 성함 호칭 정리
         let targetName = item.subject || '공통질문';
         let displayName = "";
         const positions = ["본부장", "공항장", "센터장", "부장", "차장", "과장", "주임", "교수"];
@@ -1291,41 +1295,43 @@ function renderList(data) {
         else if (targetName !== '일반' && targetName !== '공통질문') displayName = targetName + " 강사님";
         else displayName = targetName;
 
-        // [핵심 수정] 내가 쓴 글이면 인디고(Indigo) 테마, 아니면 기본 파란색 테마 적용
-        const tagBg = isMine ? "#e0e7ff" : "#eff6ff";    // 연한 보라블루 vs 연한 하늘색
-        const tagColor = isMine ? "#4338ca" : "#3b82f6"; // 진한 인디고 vs 파란색
+        // 색상 테마 설정 (인디고 vs 블루)
+        const tagBg = isMine ? "#e0e7ff" : "#eff6ff";
+        const tagColor = isMine ? "#4338ca" : "#3b82f6";
         const tagBorder = isMine ? "#c7d2fe" : "#dbeafe";
 
-        // 내가 쓴 글일 때만 보여줄 [내 질문] 배지
         const myIdentityBadge = isMine ? `<span style="background:#4338ca; color:white; font-size:10px; padding:1px 5px; border-radius:4px; margin-right:5px; font-weight:800; vertical-align:middle;">내 질문</span>` : "";
-
         const instructorTag = `<span style="display:inline-block; background:${tagBg}; color:${tagColor}; font-size:10px; padding:1px 6px; border-radius:4px; margin-right:6px; border:1px solid ${tagBorder}; font-weight:800; vertical-align:middle;">To. ${displayName}</span>`;
 
-        let metaHtml = `<div class="q-meta"><span>${formatTime(item.timestamp)}</span>`;
-        
-        // 내가 쓴 글이고 + 작성한 지 5분(300,000ms)이 안 지났을 때만 수정/삭제 버튼 노출
+        let metaHtml = `<div class="q-meta" style="justify-content: flex-start;"><span>${formatTime(item.timestamp)}</span>`;
         if(isMine && (Date.now() - myQs[item.id] < 300000)) {
             metaHtml += `<span class="btn-mini" onclick="editQ('${item.id}')">수정</span><span class="btn-mini" onclick="deleteQ('${item.id}')" style="color:#ef4444">삭제</span>`;
         }
         metaHtml += `</div>`;
 
         list.innerHTML += `
-            <div class="q-card ${myQClass}">
-                <div class="q-avatar"><i class="fa-solid fa-user"></i></div>
-                <div class="q-content">
-                    <div class="q-text" style="font-size:15px; color:#1e293b; line-height:1.4;">
+            <div class="q-card ${myQClass}" style="display: flex; align-items: flex-start; text-align: left;">
+                <!-- 아바타 고정 -->
+                <div class="q-avatar" style="flex-shrink: 0; width: 36px; height: 36px; background: #f1f5f9; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #94a3b8; margin-top: 2px;">
+                    <i class="fa-solid fa-user"></i>
+                </div>
+                
+                <!-- 내용 영역: 왼쪽 정렬 강제 -->
+                <div class="q-content" style="flex-grow: 1; min-width: 0; padding-left: 4px; text-align: left;">
+                    <div class="q-text" style="font-size:15px; color:#1e293b; line-height:1.5; text-align: left; word-break: break-all;">
                         ${myIdentityBadge}${instructorTag}<span>${escapeHtml(item.text)}</span>
                     </div>
                     ${metaHtml}
                 </div>
-                <div class="q-like-area">
+                
+                <!-- 좋아요 영역: 우측 고정 -->
+                <div class="q-like-area" style="flex-shrink: 0; margin-left: 8px;">
                     <div class="like-btn ${likedClass}" onclick="toggleLike('${item.id}')"><i class="fa-solid fa-thumbs-up"></i></div>
                     <span class="like-count">${item.likes||0}</span>
                 </div>
             </div>`;
     });
 }
-
 
 
 
