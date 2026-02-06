@@ -382,7 +382,9 @@
                 <textarea id="qInput" class="real-input" rows="1" 
           placeholder="✎ 질문 입력 (무례한 표현은 삼가주세요)" 
           maxlength="100" ...></textarea>
-                <button id="submitBtn" class="send-btn" onclick="submitQ()"><i class="fa-solid fa-paper-plane"></i></button>
+<button id="submitBtn" class="send-btn" onmousedown="event.preventDefault();" onclick="submitQ()">
+    <i class="fa-solid fa-paper-plane"></i>
+</button>
             </div>
             <div class="input-info-row"><span id="coolTimer" class="cooldown-text"></span><span id="charCount" class="char-counter">0 / 100</span></div>
         </div>
@@ -1348,47 +1350,69 @@ function handleSubjectChange() {
 
 
 function submitQ() {
-    const txt = document.getElementById('qInput').value.trim();
+    const inputEl = document.getElementById('qInput');
+    const txt = inputEl.value.trim();
+    
+    // [핵심 수정] 버튼 클릭 즉시 키보드를 강제로 닫음 (두 번 클릭 현상 방지)
+    inputEl.blur();
+
     if(!txt) return;
 
     const subject = document.getElementById('subjectSelect').value;
     const now = Date.now();
     
-    // [수정] 선택한 강사(대상)에 대한 마지막 질문 시간 체크
+    // 선택한 강사(대상)에 대한 마지막 질문 시간 체크
     const lastTimeForSubject = lastPostTimeMap[subject] || 0;
 
+    // 수정 모드일 때 로직
     if(editingKey) {
         dbRef.qa.child(editingKey).update({ text: txt, subject: subject }).then(() => { 
-            alert("수정 완료"); 
+            alert("질문이 수정되었습니다."); 
             resetInput(); 
         });
         return;
     }
 
-    // [수정] 해당 강사에게 2분이 지났는지 확인
+    // 도배 방지 체크 (2분)
     if(now - lastTimeForSubject < 120000) { 
         alert(`'${subject}'님께는 잠시 후 다시 질문해주세요.`); 
+        // 전송 실패 시 키보드가 다시 올라오지 않게 그대로 둡니다.
         return; 
     }
 
+    // 데이터 전송 및 저장
     const ref = dbRef.qa.push();
     ref.set({
         text: txt,
         subject: subject,
         likes: 0,
         timestamp: firebase.database.ServerValue.TIMESTAMP
+    }).then(() => {
+        // 전송 완료 후 처리
+        resetInput();
+        // 질문이 전송되면 리스트 최하단으로 부드럽게 이동
+        setTimeout(() => {
+            const container = document.getElementById('scrollContainer');
+            if(container) container.scrollTop = container.scrollHeight;
+        }, 100);
     });
 
+    // 로컬 스토리지 데이터 업데이트
     myQs[ref.key] = now;
     localStorage.setItem(`myqs_${currentRoom}`, JSON.stringify(myQs));
     
-    // [수정] 해당 강사에 대한 질문 시간만 업데이트하여 저장
     lastPostTimeMap[subject] = now;
     localStorage.setItem(`lastTimeMap_${currentRoom}`, JSON.stringify(lastPostTimeMap));
     
-    resetInput();
     checkCooldown();
 }
+
+
+
+
+
+
+
 
 
 
@@ -1417,7 +1441,18 @@ function submitQ() {
             });
         }
         function deleteQ(key) { if(confirm("삭제하시겠습니까?")) dbRef.qa.child(key).remove(); }
-        function resetInput() { const el = document.getElementById('qInput'); el.value = ""; el.style.height = '24px'; el.focus(); document.getElementById('charCount').innerText = "0 / 100"; document.getElementById('charCount').classList.remove('limit'); document.getElementById('submitBtn').classList.remove('editing'); document.getElementById('submitBtn').innerHTML = '<i class="fa-solid fa-paper-plane"></i>'; editingKey = null; checkCooldown(); }
+function resetInput() {
+    const el = document.getElementById('qInput');
+    el.value = "";
+    el.style.height = '24px'; // 높이 초기화
+    // el.focus(); // 이 줄을 주석 처리하거나 삭제하세요. (전송 후 키보드가 다시 올라오는 현상 방지)
+    document.getElementById('charCount').innerText = "0 / 100";
+    document.getElementById('charCount').classList.remove('limit');
+    document.getElementById('submitBtn').classList.remove('editing');
+    document.getElementById('submitBtn').innerHTML = '<i class="fa-solid fa-paper-plane"></i>';
+    editingKey = null;
+    checkCooldown();
+}
 
 
 
