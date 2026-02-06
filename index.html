@@ -33,19 +33,30 @@
         .q-card { background: var(--card-bg); border-radius: 16px; padding: 16px; margin-bottom: 12px; display: flex; gap: 12px; align-items: flex-start; box-shadow: 0 4px 6px rgba(0,0,0,0.1); position: relative; }
 
 
-/* 내가 작성한 질문 카드 스타일 (녹색으로 변경) */
+/* [수정] 내가 작성한 질문 카드 스타일 (녹색 -> 인디고 계열로 변경) */
 .q-card.my-q { 
-    border: 2px solid #10b981; /* 녹색 테두리 */
-    background: #f0fdf4;       /* 연한 녹색 배경 */
-    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.1); 
+    border: 2px solid #6366f1; /* 세련된 인디고 블루 */
+    background: #f5f7ff;       /* 아주 연한 보라빛 블루 배경 */
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.15); 
 }
+
 /* 내가 작성한 카드의 아바타(아이콘) 배경색 */
 .my-q .q-avatar { 
-    background: #10b981; 
+    background: #6366f1; 
     color: white; 
 }
 
-
+/* [추가] "내 질문" 임을 확실히 알려주는 텍스트 배지 스타일 (선택사항) */
+.my-q-badge {
+    font-size: 10px;
+    background: #6366f1;
+    color: white;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-weight: 800;
+    margin-right: 8px;
+    vertical-align: middle;
+}
 
 
         .q-content { flex-grow: 1; min-width: 0; }
@@ -1231,7 +1242,10 @@ function setupListeners() {
 
 
 
-// [최종 수정] 질문 목록 렌더링 (내가 쓴 글 녹색 강조 로직 포함)
+
+
+
+// [최종 수정] 질문 목록 렌더링 (내가 쓴 글 인디고 블루 강조 및 배지 추가)
 function renderList(data) {
     const list = document.getElementById('qList'); 
     list.innerHTML = ""; 
@@ -1277,10 +1291,13 @@ function renderList(data) {
         else if (targetName !== '일반' && targetName !== '공통질문') displayName = targetName + " 강사님";
         else displayName = targetName;
 
-        // [핵심 수정] 내가 쓴 글이면 녹색 배지 색상, 아니면 파란색 배지 색상 적용
-        const tagBg = isMine ? "#d1fae5" : "#eff6ff";
-        const tagColor = isMine ? "#059669" : "#3b82f6";
-        const tagBorder = isMine ? "#a7f3d0" : "#dbeafe";
+        // [핵심 수정] 내가 쓴 글이면 인디고(Indigo) 테마, 아니면 기본 파란색 테마 적용
+        const tagBg = isMine ? "#e0e7ff" : "#eff6ff";    // 연한 보라블루 vs 연한 하늘색
+        const tagColor = isMine ? "#4338ca" : "#3b82f6"; // 진한 인디고 vs 파란색
+        const tagBorder = isMine ? "#c7d2fe" : "#dbeafe";
+
+        // 내가 쓴 글일 때만 보여줄 [내 질문] 배지
+        const myIdentityBadge = isMine ? `<span style="background:#4338ca; color:white; font-size:10px; padding:1px 5px; border-radius:4px; margin-right:5px; font-weight:800; vertical-align:middle;">내 질문</span>` : "";
 
         const instructorTag = `<span style="display:inline-block; background:${tagBg}; color:${tagColor}; font-size:10px; padding:1px 6px; border-radius:4px; margin-right:6px; border:1px solid ${tagBorder}; font-weight:800; vertical-align:middle;">To. ${displayName}</span>`;
 
@@ -1296,7 +1313,9 @@ function renderList(data) {
             <div class="q-card ${myQClass}">
                 <div class="q-avatar"><i class="fa-solid fa-user"></i></div>
                 <div class="q-content">
-                    <div class="q-text" style="font-size:15px; color:#1e293b; line-height:1.4;">${instructorTag}<span>${escapeHtml(item.text)}</span></div>
+                    <div class="q-text" style="font-size:15px; color:#1e293b; line-height:1.4;">
+                        ${myIdentityBadge}${instructorTag}<span>${escapeHtml(item.text)}</span>
+                    </div>
                     ${metaHtml}
                 </div>
                 <div class="q-like-area">
@@ -1306,6 +1325,16 @@ function renderList(data) {
             </div>`;
     });
 }
+
+
+
+
+
+
+
+
+
+
 
 
 
