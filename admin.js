@@ -1532,27 +1532,42 @@ loadDashboardStats: function() {
 loadInternalAttendance: function() {
     if(!state.room) return;
 
-    // 1. 현재 실행 시점의 방 번호를 상수에 고정
+    // 1. 현재 실행 시점의 방 번호를 상수에 고정 (룸 꼬임 방지)
     const roomAtInvoke = state.room; 
     const today = getTodayString();
     const listDiv = document.getElementById('internalAttendanceList');
     
-    // 2. [중요] 새로운 리스너를 걸기 전에 해당 경로의 이전 리스너를 완전히 제거
+    // [보안/개별관리 추가] 시작 전 화면을 비우고 카운트를 0으로 초기화합니다.
+    if(listDiv) listDiv.innerHTML = "<div style='padding:20px; color:#94a3b8; text-align:center;'>데이터를 불러오는 중...</div>";
+    document.getElementById('totalMemberCount').innerText = "0";
+    document.getElementById('checkInCount').innerText = "0";
+
+    // [Loading 해결 추가] 현재 방의 실제 과정명을 가져와서 상단 제목을 즉시 교체합니다.
+    firebase.database().ref(`courses/${roomAtInvoke}/settings/courseName`).once('value', nameSnap => {
+        if (state.room !== roomAtInvoke) return;
+        const realName = nameSnap.val() || "Course " + roomAtInvoke;
+        // 강사 화면의 상단 제목 ID가 displayCourseTitle인 경우 업데이트
+        const titleEl = document.getElementById('displayCourseTitle');
+        if(titleEl) titleEl.innerText = realName;
+    });
+
+    // 2. 경로 설정 (이 코드는 이제 확실히 해당 룸의 폴더만 봅니다)
     const studentsRef = firebase.database().ref(`courses/${roomAtInvoke}/students`);
     const attendanceRef = firebase.database().ref(`courses/${roomAtInvoke}/internal_attendance/${today}`);
     
+    // 기존에 걸려있던 감시자(Listener)를 모두 제거하여 중복 실행 방지
     studentsRef.off();
     attendanceRef.off();
 
     // (1) 수강생 명단 가져오기
     studentsRef.on('value', studentSnap => {
-        // [방 검증] 데이터가 도착했을 때, 관리자가 이미 다른 방으로 이동했다면 실행 중단
+        // [방 검증] 방을 이동했다면 데이터 처리를 무시함
         if (state.room !== roomAtInvoke) return;
 
         const students = studentSnap.val() || {};
-        
-        // 이름+번호가 같으면 동일인물로 취급하여 중복 제거
         const uniqueStudentsMap = new Map();
+
+        // 이름+번호가 같으면 동일인물로 취급하여 중복 제거
         Object.keys(students).forEach(key => {
             const s = students[key];
             if (s.name && s.name !== "undefined") {
@@ -1566,13 +1581,18 @@ loadInternalAttendance: function() {
 
         // (2) 오늘 출석 데이터 가져오기
         attendanceRef.on('value', attendSnap => {
-            // [방 검증] 2차 체크
             if (state.room !== roomAtInvoke) return;
 
             const attendees = attendSnap.val() || {};
             let attendCount = 0;
             
             if(listDiv) listDiv.innerHTML = "";
+
+            // 명단이 아무도 없을 때의 처리
+            if(sortedList.length === 0) {
+                listDiv.innerHTML = "<div style='padding:50px; color:#94a3b8; text-align:center;'>현재 입교한 수강생이 없습니다.</div>";
+                return;
+            }
 
             sortedList.forEach(s => {
                 const attendKey = `${s.name}_${s.phone}`;
@@ -1583,12 +1603,14 @@ loadInternalAttendance: function() {
                 const textColor = isAttended ? "#10b981" : "#94a3b8";
                 const borderColor = isAttended ? "#10b981" : "#e2e8f0";
                 const icon = isAttended ? '<i class="fa-solid fa-circle-check"></i>' : '<i class="fa-regular fa-circle"></i>';
+                const statusText = isAttended ? "출석완료" : "미출석";
 
                 if(listDiv) {
                     listDiv.innerHTML += `
-                        <div style="background:${bgColor}; color:${textColor}; border:1.5px solid ${borderColor}; padding:10px; border-radius:10px; text-align:center; font-size:14px; font-weight:800;">
-                            <div style="font-size:16px;">${icon}</div>
-                            <div>${s.name}</div>
+                        <div style="background:${bgColor}; color:${textColor}; border:1.5px solid ${borderColor}; padding:15px 10px; border-radius:12px; text-align:center; transition: 0.3s;">
+                            <div style="font-size:20px; margin-bottom:5px;">${icon}</div>
+                            <div style="font-size:15px; font-weight:800; color:#1e293b;">${s.name}</div>
+                            <div style="font-size:11px; opacity:0.8;">${statusText}</div>
                         </div>
                     `;
                 }
@@ -1602,7 +1624,6 @@ loadInternalAttendance: function() {
         });
     });
 },
-
 
 
 
