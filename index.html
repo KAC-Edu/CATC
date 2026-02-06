@@ -700,49 +700,33 @@ function sendAns(idx) {
 // [수정] index.html의 최하단 (async function init() { ... })
 (async function init() {
     const params = new URLSearchParams(window.location.search);
-    const directRoom = params.get('room'); // 새로 찍은 QR의 방 (예: C)
+    const directRoom = params.get('room'); 
     const code = params.get('code');
 
-    // [강력 로직 1] URL에 방 번호가 있으면 무조건 그 방을 현재 방으로 확정
     if (directRoom) {
         currentRoom = directRoom;
     } else if (code) {
         currentRoom = await resolveRoomFromCode(code);
     }
 
-    // [강력 로직 2] 방 번호가 바뀌었는지 확인하고, 데이터 경로 리셋
     if (!currentRoom) {
-        alert("강의실 정보가 없습니다. QR 코드를 다시 스캔해주세요.");
+        alert("강의실 정보가 없습니다.");
         return;
     }
 
-    // UI 즉시 업데이트 (이전 방 이름이 보이지 않게)
+    // [수정 포인트] 입장 전 랜딩페이지에서 과정명 미리 표시
+    firebase.database().ref(`courses/${currentRoom}/settings/courseName`).once('value', snap => {
+        const cName = snap.val() || "Course " + currentRoom;
+        document.getElementById('landingTitle').innerText = cName; // 랜딩페이지 제목
+        document.getElementById('roomTitle').innerText = cName;    // 메인 상단 제목
+    });
+
     document.getElementById('roomBadge').innerText = `Room ${currentRoom}`;
     document.getElementById('landingBadge').innerText = `ROOM ${currentRoom}`;
 
-    // 해당 방(currentRoom) 전용 데이터 저장소 연결
-    myLikes = JSON.parse(localStorage.getItem(`likes_${currentRoom}`) || '{}'); 
-    myQs = JSON.parse(localStorage.getItem(`myqs_${currentRoom}`) || '{}'); 
-    lastPostTimeMap = JSON.parse(localStorage.getItem(`lastTimeMap_${currentRoom}`) || '{}');
-
-    const db = firebase.database();
-    const rPath = `courses/${currentRoom}`;
-    dbRef = { 
-        qa: db.ref(`${rPath}/questions`), 
-        quiz: db.ref(`${rPath}/activeQuiz`), 
-        ans: db.ref(`${rPath}/quizAnswers`), 
-        settings: db.ref(`${rPath}/settings`), 
-        status: db.ref(`${rPath}/status`), 
-        connections: db.ref(`${rPath}/connections`) 
-    };
-
-    // [중요] 출석 체크 함수 호출 (이때 room은 새로 찍은 'C'여야 함)
-    handleInternalAttendance(currentRoom); 
-
-    // 리스너 및 키보드 보정 실행
+    // 해당 룸 전용 리스너 설정
     setupListeners(); 
-    checkCooldown(); 
-    initKeyboardFix();
+    handleInternalAttendance(currentRoom); // 출석 체크 실행
 })();
 
 
@@ -2012,12 +1996,12 @@ async function saveProfile() {
         localStorage.removeItem('kac_old_uToken'); // 백업 데이터 삭제
 
         // 4. 서버(Firebase) 수강생 명단 업데이트
-        await firebase.database().ref(`courses/${currentRoom}/students/${newUToken}`).update({
-            name: name,
-            phone: phone,
-            joinedAt: firebase.database.ServerValue.TIMESTAMP,
-            isOnline: true
-        });
+await firebase.database().ref(`courses/${currentRoom}/students/${newUToken}`).update({
+    name: name,
+    phone: phone,
+    joinedAt: firebase.database.ServerValue.TIMESTAMP,
+    isOnline: true
+});
 
         // 5. 접속 상태 감시 시작 및 UI 정리
         startPresence(); 
@@ -2310,30 +2294,27 @@ function handleInternalAttendance(room) {
     if (!isCheckIn || !room) return;
 
     const d = new Date();
-    const today = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    const today = d.getFullYear() + "-" + (d.getMonth() + 1).toString().padStart(2, '0') + "-" + d.getDate().toString().padStart(2, '0');
     
-    // [확인] storageKey가 kac_attended_C_2026-01-25 처럼 생성됨
+    // [핵심] 룸ID와 날짜를 조합하여 이 방에 오늘 출석했는지 확인
     const storageKey = `kac_attended_${room}_${today}`; 
 
     if (localStorage.getItem(storageKey)) {
-        // 이미 해당 방에 출석한 기록이 브라우저에 있다면
-        alert(`알림: 오늘 [Room ${room}]의 출석 처리는 이미 완료되었습니다.`);
+        alert(`이미 [Room ${room}] 출석 처리가 완료된 상태입니다.`);
         cleanUrlAndGo(room);
         return;
     }
 
-    // 이름/번호가 브라우저에 저장되어 있는지 확인
     const myName = (localStorage.getItem('kac_user_name') || "").trim();
     const myPhone = (localStorage.getItem('kac_user_phone') || "").trim();
 
     if (!myName || myPhone.length !== 4) {
-        // 정보가 없으면 입교 등록창부터 띄움
-        alert(`[Room ${room}] 출석을 위해 성함과 번호 확인이 필요합니다.`);
+        alert(`[Room ${room}] 출석을 위해 본인 정보를 먼저 등록해주세요.`);
         document.getElementById('profileOverlay').style.display = 'flex';
         return;
     }
 
-    // 실제 데이터베이스 기록 실행
+    // 실제 데이터베이스 룸별 경로에 저장
     executeAttendanceRecord(room, myName, myPhone, today, storageKey);
 }
 
