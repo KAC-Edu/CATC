@@ -30,44 +30,52 @@
         .sort-chip.active { background: var(--accent-color); color: white; border-color: var(--accent-color); }
         .scroll-container { flex-grow: 1; overflow-y: auto; position: relative; padding: 0 15px 120px 15px; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
         .scroll-container::-webkit-scrollbar { display: none; }
+
+
+/* 질문 카드 전체 설정 */
 .q-card { 
     background: var(--card-bg); 
     border-radius: 16px; 
     padding: 16px; 
     margin-bottom: 12px; 
-    display: flex;
+    display: flex !important;           
     gap: 12px; 
-    align-items: flex-start;
+    align-items: flex-start !important; /* 모든 요소를 위쪽 정렬 */
+    justify-content: flex-start !important; 
     box-shadow: 0 4px 10px rgba(0,0,0,0.05); 
-    position: relative;
-    text-align: left;
+    position: relative; 
 }
 
-/* 왼쪽 아이콘(아바타) 디자인 추가 */
-.q-avatar {
-    width: 36px;
-    height: 36px;
-    background: #f1f5f9;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #94a3b8;
-    flex-shrink: 0; /* 아이콘 크기 고정 */
-    margin-top: 2px;
-}
-/* 내가 작성한 카드 스타일 (인디고 블루 테마) */
+/* 내가 작성한 카드 스타일 */
 .q-card.my-q { 
     border: 2px solid #6366f1 !important; 
     background: #f5f7ff !important; 
     box-shadow: 0 4px 12px rgba(99, 102, 241, 0.15) !important; 
 }
 
-/* 내용 영역 (텍스트가 들어가는 부분) */
+/* 왼쪽 아이콘(아바타) 설정 */
+.q-avatar {
+    width: 40px;
+    height: 40px;
+    background: #f1f5f9;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #94a3b8;
+    flex-shrink: 0; /* 크기 고정 */
+    margin-top: 2px;
+}
+
+/* [핵심수정] 내용 영역: 글자와 시간을 세로로 쌓음 */
 .q-content { 
-    flex: 1 !important;                 /* 남은 공간을 꽉 채워야 왼쪽 정렬이 유지됨 */
+    flex: 1 !important;                 
     min-width: 0; 
-    text-align: left !important; 
+    display: flex !important;
+    flex-direction: column !important; /* 위아래로 배치 */
+    align-items: flex-start !important; /* 왼쪽 정렬 */
+    text-align: left !important;
+    gap: 6px; /* 글자와 시간 사이 간격 */
 }
 
 /* 실제 질문 텍스트 스타일 */
@@ -75,12 +83,11 @@
     font-size: 15px; 
     line-height: 1.5; 
     color: var(--text-color); 
-    margin-bottom: 8px; 
-    word-break: break-all;              /* 긴 단어도 카드 밖으로 안 나가게 함 */
-    font-weight: 500; 
+    word-break: break-all;              
+    font-weight: 600; /* 글자를 조금 더 선명하게 */
     white-space: pre-wrap; 
-    text-align: left !important; 
     display: block;
+    margin: 0 !important; /* 불필요한 여백 제거 */
 }
 
 /* 하단 정보 (시간, 수정 버튼) */
@@ -90,10 +97,10 @@
     display: flex; 
     gap: 8px; 
     align-items: center; 
-    justify-content: flex-start !important; 
+    margin: 0 !important;
 }
 
-/* 내가 쓴 카드일 때 아바타 색상 변경 */
+/* 내가 쓴 카드일 때 아바타 색상 */
 .my-q .q-avatar { background: #6366f1 !important; color: white !important; }
 
 /* "내 질문" 배지 스타일 */
@@ -103,42 +110,51 @@
     margin-right: 5px; font-weight: 800; vertical-align: middle;
 }
 
-/* --- 좋아요 및 기타 버튼 스타일 --- */
-.btn-mini { 
-    cursor: pointer; 
-    padding: 4px 10px; 
-    background: #f1f5f9; 
-    border-radius: 6px; 
-    font-weight: 700;
-    color: #64748b;
-    border: 1px solid #e2e8f0;
-    margin-right: 5px;
+/* --- 좋아요 영역 --- */
+.q-like-area { 
+    display: flex; 
+    flex-direction: column; 
+    align-items: center; 
+    justify-content: center; 
+    min-width: 44px; 
+    flex-shrink: 0; 
+    gap: 4px; 
 }
-.btn-mini:active { background: #e2e8f0; }
 
-.q-like-area { display: flex; flex-direction: column; align-items: center; justify-content: center; min-width: 44px; flex-shrink: 0; gap: 4px; }
-
-.like-btn { width: 44px; height: 44px; border-radius: 12px; background: #f1f5f9; display: flex; align-items: center; justify-content: center; color: #cbd5e1; font-size: 18px; cursor: pointer; transition: 0.2s; }
-.like-btn.active { background: #fee2e2; color: #ef4444; transform: scale(1.05); }
-
+.like-btn { 
+    width: 40px; 
+    height: 40px; 
+    border-radius: 12px; 
+    background: #f1f5f9; 
+    display: flex; 
+    align-items: center; 
+    justify-content: center; 
+    color: #cbd5e1; 
+    font-size: 18px; 
+    cursor: pointer; 
+    transition: 0.2s; 
+}
+.like-btn.active { background: #fee2e2; color: #ef4444; }
 .like-count { font-size: 12px; font-weight: 700; color: #64748b; }
-.like-btn.active + .like-count { color: #ef4444; }
-        
-        .input-dock { 
-    position: fixed; /* absolute에서 fixed로 변경 */
+
+/* --- 하단 입력창 영역 --- */
+.input-dock { 
+    position: fixed; 
     bottom: 0; 
     left: 0; 
     width: 100%; 
     background: var(--input-bg); 
     border-top-left-radius: 20px; 
     border-top-right-radius: 20px; 
-    padding: 10px 15px calc(15px + var(--safe-area-bottom)) 15px; /* 패딩 살짝 증가 */
+    padding: 10px 15px calc(15px + var(--safe-area-bottom)) 15px; 
     box-shadow: 0 -4px 20px rgba(0,0,0,0.1); 
-    z-index: 1000; /* 레이어 순위 높임 */
+    z-index: 1000; 
     display: flex; 
     flex-direction: column; 
     gap: 4px;
 }
+
+
 
 
 /* 미니 공지 바 스타일 */
@@ -1355,23 +1371,24 @@ function renderList(data) {
         metaHtml += `</div>`;
 
 // [수정본] 질문 카드 생성 코드 (인디고 배지 + 왼쪽 정렬 최적화)
-        list.innerHTML += `
+list.innerHTML += `
             <div class="q-card ${myQClass}">
-                <!-- 1. 아바타 영역 -->
+                <!-- 1. 왼쪽 아이콘 -->
                 <div class="q-avatar">
                     <i class="fa-solid fa-user"></i>
                 </div>
                 
-                <!-- 2. 내용 영역 (가운데 정렬 상속 방지를 위해 내부 구조 최적화) -->
+                <!-- 2. 내용 묶음 (여기가 중요! 글자와 시간을 하나로 묶음) -->
                 <div class="q-content">
                     <div class="q-text">
-                        ${myIdentityBadge}${instructorTag}<span style="vertical-align:middle;">${escapeHtml(item.text)}</span>
+                        ${myIdentityBadge}${instructorTag}
+                        <span>${escapeHtml(item.text)}</span>
                     </div>
-                    <!-- 시간 및 수정/삭제 버튼 -->
+                    <!-- 3. 시간 및 버튼 (글자 바로 아래에 붙음) -->
                     ${metaHtml}
                 </div>
                 
-                <!-- 3. 좋아요 영역 (우측 고정) -->
+                <!-- 4. 우측 좋아요 -->
                 <div class="q-like-area">
                     <div class="like-btn ${likedClass}" onclick="toggleLike('${item.id}')">
                         <i class="fa-solid fa-thumbs-up"></i>
