@@ -1311,8 +1311,7 @@ loadDashboardStats: function() {
     const room = state.room;
     const today = getTodayString();
 
-    // [중요] 기존처럼 모든 리스너를 .off()로 죽이지 않습니다. 
-    // 대신 대시보드 전용 참조 변수들을 정의합니다.
+    // 1. 데이터베이스 안테나(참조) 설정
     const refs = {
         settings: firebase.database().ref(`courses/${room}/settings`),
         notice: firebase.database().ref(`courses/${room}/notice`),
@@ -1327,7 +1326,7 @@ loadDashboardStats: function() {
         shuttleReq: firebase.database().ref(`courses/${room}/shuttle/requests`)
     };
 
-    // 1. 과정 정보 및 장소 업데이트
+    // 2. 과정 정보 및 장소 실시간 업데이트
     refs.settings.on('value', snap => {
         if (state.room !== room) return;
         const s = snap.val() || {};
@@ -1337,25 +1336,23 @@ loadDashboardStats: function() {
         if (document.getElementById('dashCoordName')) document.getElementById('dashCoordName').innerText = s.coordinatorName || "미지정";
     });
 
-    // 2. 공지사항 피드 업데이트
+    // 3. 공지사항 피드 실시간 업데이트
     refs.notice.on('value', s => {
         if (state.room !== room) return;
         const el = document.getElementById('dashNoticeInst');
         if (el) el.innerText = s.val() || "작성된 담임 교수 공지가 없습니다.";
     });
-
     refs.coordNotice.on('value', s => {
         if (state.room !== room) return;
         const el = document.getElementById('dashNoticeAdmin');
         if (el) el.innerText = s.val() || "등록된 운영부 과정 공지가 없습니다.";
     });
-
     refs.globalNotice.on('value', s => {
         const el = document.getElementById('dashNoticeGlobal');
         if (el) el.innerText = s.val() || "현재 게시된 센터 전체 공지가 없습니다.";
     });
 
-    // 3. 교수 성함 업데이트
+    // 4. 교수 성함 실시간 업데이트
     refs.status.on('value', snap => {
         if (state.room !== room) return;
         const st = snap.val() || {};
@@ -1363,33 +1360,34 @@ loadDashboardStats: function() {
         if (profOnlyEl) profOnlyEl.innerText = st.professorName || "미지정";
     });
 
-    // 4. 수강생 입교 현황 (현재 접속자 실시간 연동 수정됨)
+    // 5. ★핵심★ 실시간 접속자 현황 집계 (대시보드 + 퀴즈창 동시 업데이트)
     refs.actual.on('value', snap => {
         if (state.room !== room) return;
         const data = snap.val() || {};
         
-        // ★ 핵심: 현재 스마트폰으로 접속 중인(isOnline: true) 사람만 정확히 필터링
+        // 현재 앱을 켜고 있는(isOnline: true) 학생만 필터링해서 카운트
         const activeStudents = Object.values(data).filter(s => s.name && s.isOnline === true);
-        const count = activeStudents.length;
+        const onlineCount = activeStudents.length;
 
-        // (A) 대시보드 화면 숫자 업데이트
-        if (document.getElementById('dashArrivedCount')) document.getElementById('dashArrivedCount').innerText = count;
+        // (A) 대시보드 "입교 인원" 숫자 업데이트
+        const dashArrivedEl = document.getElementById('dashArrivedCount');
+        if (dashArrivedEl) dashArrivedEl.innerText = onlineCount;
         
-        // (B) ★ 퀴즈 화면의 인원수(사진 속 0명 부분) 실시간 업데이트 ★
+        // (B) 퀴즈 화면 상단 "0명" 숫자 강제 업데이트
         const quizJoinCountEl = document.getElementById('currentJoinCount');
         if (quizJoinCountEl) {
-            quizJoinCountEl.innerText = count;
+            quizJoinCountEl.innerText = onlineCount;
             
-            // 전체 접속 인원이 바뀌었으므로 '대기 인원'도 즉시 다시 계산
+            // 대기자 수(전체 접속자 - 제출자) 자동 계산
             const answeredCount = parseInt(document.getElementById('answeredCount').innerText || 0);
             const pendingCountEl = document.getElementById('pendingCount');
             if (pendingCountEl) {
-                pendingCountEl.innerText = Math.max(0, count - answeredCount);
+                pendingCountEl.innerText = Math.max(0, onlineCount - answeredCount);
             }
         }
     });
 
-    // 전체 명단(분모) 계산
+    // 6. 전체 명단(분모) 계산
     refs.expected.on('value', expSnap => {
         const expectedNames = expSnap.val() || [];
         firebase.database().ref(`courses/${room}/students`).once('value', snap => {
@@ -1400,20 +1398,19 @@ loadDashboardStats: function() {
         });
     });
 
-    // 5. 행정 신청 현황 (외출/외박/석식)
+    // 7. 행정 신청(외출/석식) 실시간 카운트
     refs.action.on('value', s => {
         if (state.room !== room) return;
         const count = Object.keys(s.val() || {}).length;
         if (document.getElementById('dashActionCount')) document.getElementById('dashActionCount').innerText = count;
     });
-
     refs.dinner.on('value', s => {
         if (state.room !== room) return;
         const count = Object.keys(s.val() || {}).length;
         if (document.getElementById('dashDinnerSkipCount')) document.getElementById('dashDinnerSkipCount').innerText = count;
     });
 
-    // 6. 셔틀 공지 및 차량 수요
+    // 8. 셔틀 정보 및 차량 수요 실시간 업데이트
     refs.departure.on('value', snap => {
         if (state.room !== room) return; 
         const dep = snap.val();
@@ -1427,7 +1424,6 @@ loadDashboardStats: function() {
             bar.style.display = "none";
         }
     });
-
     refs.shuttleReq.on('value', s => {
         if (state.room !== room) return;
         const data = s.val() || {};
@@ -1439,9 +1435,14 @@ loadDashboardStats: function() {
         if (document.getElementById('dashShuttleTotal')) document.getElementById('dashShuttleTotal').innerText = items.length + "명";
     });
 
-    // 7. 질문 카운트 업데이트
+    // 9. 질문 카운트 업데이트
     this.updateQaCountBadge();
 },
+
+
+
+
+
 
 // 질문 배지만 별도로 업데이트하는 헬퍼 함수 (필요시 호출)
 updateQaCountBadge: function() {
@@ -3298,13 +3299,24 @@ startAnswerMonitor: function() {
         const answers = snap.val() || {};
         const answeredCount = Object.keys(answers).length;
         
-        // ★ 현재 화면에 표시된 전체 인원 숫자를 실시간으로 가져와서 뺄셈함 ★
+        // ★ 현재 화면에 표시된 전체 인원 숫자(currentJoinCount)를 실시간으로 가져와서 계산 ★
         const totalCount = parseInt(document.getElementById('currentJoinCount').innerText || 0);
 
+        // 제출자 수 업데이트
         if(ansCntEl) ansCntEl.innerText = answeredCount;
-        if(pendCntEl) pendCntEl.innerText = Math.max(0, totalCount - answeredCount);
+        
+        // 대기자 수 업데이트 (전체 - 제출)
+        if(pendCntEl) {
+            pendCntEl.innerText = Math.max(0, totalCount - answeredCount);
+        }
     });
 },
+
+
+
+
+
+
     
 action: function(act) {
         // [옵저버 제어 차단]
