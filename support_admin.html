@@ -296,15 +296,34 @@
         if(isShuttle) updateShuttleStatus();
     }
 
-    function updateShuttleStatus() {
+
+
+
+function updateShuttleStatus() {
         db.ref('courses').on('value', snap => {
             const data = snap.val() || {};
             const tbody = document.getElementById('shuttleSummaryTableBody');
             let total = { osong: 0, terminal: 0, airport: 0, car: 0, all: 0 };
             tbody.innerHTML = "";
 
+            // 오늘 날짜 구하기 (YYYY-MM-DD 형식)
+            const now = new Date();
+            const todayStr = now.getFullYear() + '-' + 
+                           String(now.getMonth() + 1).padStart(2, '0') + '-' + 
+                           String(now.getDate()).padStart(2, '0');
+
             Object.keys(data).forEach(rid => {
                 const room = data[rid];
+                const settings = room.settings || {};
+
+                // [날짜 필터링 추가] 종료일이 오늘보다 이전인 지난주 과정은 리스트에서 제외
+                if (settings.period && settings.period.includes(" ~ ")) {
+                    const endDate = settings.period.split(" ~ ")[1]; // 종료일 추출
+                    if (endDate < todayStr) {
+                        return; // 종료일이 과거면 이번 바퀴(rid)는 그냥 패스!
+                    }
+                }
+
                 const requests = room.shuttle?.requests || {};
                 const items = Object.values(requests);
                 
@@ -319,7 +338,7 @@
 
                     tbody.innerHTML += `
                         <tr>
-                            <td style="text-align:left; padding-left:15px; font-weight:800;">${room.settings?.courseName || rid}</td>
+                            <td style="text-align:left; padding-left:15px; font-weight:800;">${settings.courseName || rid}</td>
                             <td style="color:#ef4444;">${rO}</td>
                             <td style="color:#3b82f6;">${rT}</td>
                             <td style="color:#10b981;">${rA}</td>
