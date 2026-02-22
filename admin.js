@@ -402,7 +402,7 @@ forceEnterRoom: async function(room) {
     ui.updateHeaderRoom(room);
     ui.updateObserverButton();
     
-    // 7. 실시간 감시 시작
+    // 7. 실시간 감시 시작 (리스너 중첩 방지 위해 .off() 후 .on())
     dbRef.settings.off();
     dbRef.settings.on('value', s => {
         if (state.room !== room) return; 
@@ -424,12 +424,12 @@ forceEnterRoom: async function(room) {
         }
     });
 
-    // [핵심 수정] 리스너가 데이터를 받으면 ui.renderQaList()를 인자 없이 호출하여 현재 필터를 유지함
     dbRef.qa.off();
     dbRef.qa.on('value', s => { 
         if (state.room !== room) return;
         state.qaData = s.val() || {}; 
-        console.log("실시간 데이터 수신됨:", room);
+        
+        // [수정 핵심] 데이터가 들어오면 필터를 유지한 상태로 즉시 다시 그림
         ui.renderQaList(); 
         
         if (document.getElementById('view-dashboard').style.display !== 'none') {
@@ -453,7 +453,6 @@ forceEnterRoom: async function(room) {
         }
     }, 60000); 
 },
-
 
 
 
@@ -546,22 +545,18 @@ deactivateAllRooms: async function() {
 
 
 updateQa: function(action) {
-    // 현재 시스템이 인식하는 방 번호를 즉시 고정
     const activeRoom = state.room;
-    
-    if(state.isObserver) return ui.showAlert("👁️ 옵저버 모드에서는 질문을 관리할 수 없습니다.");
-    if(!state.activeQaKey || !activeRoom) {
-        ui.showAlert("⚠️ 대상을 찾을 수 없습니다. 다시 시도해 주세요.");
+    if (state.isObserver) return ui.showAlert("👁️ 옵저버 모드에서는 질문을 관리할 수 없습니다.");
+    if (!state.activeQaKey || !activeRoom) {
+        ui.showAlert("⚠️ 대상을 찾을 수 없습니다. 강의실 선택 상태를 확인해 주세요.");
         return;
     }
-
-    // 절대 경로 생성 (꼬임 방지 핵심)
     const targetRef = firebase.database().ref(`courses/${activeRoom}/questions/${state.activeQaKey}`);
-
     if (action === 'delete') { 
-        if(confirm("이 질문을 완전히 삭제하시겠습니까?")) { 
+        if (confirm("이 질문을 완전히 삭제하시겠습니까?")) { 
             targetRef.remove()
             .then(() => {
+                console.log(`[삭제 성공] Room: ${activeRoom}`);
                 ui.closeQaModal(); 
             })
             .catch(err => ui.showAlert("삭제 실패: " + err.message));
@@ -569,23 +564,17 @@ updateQa: function(action) {
     } else {
         const currentItem = state.qaData[state.activeQaKey] || {};
         let nextStatus = action;
+        if (currentItem.status === action) nextStatus = 'normal';
+        else if (action === 'done' && currentItem.status === 'pin') nextStatus = 'pin-done';
         
-        // 토글 로직
-        if(currentItem.status === action) {
-            nextStatus = 'normal';
-        } 
-        else if(action === 'done' && currentItem.status === 'pin') {
-            nextStatus = 'pin-done';
-        }
-
         targetRef.update({ status: nextStatus })
         .then(() => {
+            console.log(`[상태변경: ${nextStatus}] Room: ${activeRoom}`);
             ui.closeQaModal(); 
         })
         .catch(err => ui.showAlert("상태 변경 실패: " + err.message));
     }
 },
-
 
 
 
@@ -2164,9 +2153,9 @@ renderQaList: function(f) {
     const list = document.getElementById('qaList'); 
     if(!list) return;
 
-    // 현재 보고 있는 필터 상태 저장 (실시간 업데이트 시 유지하기 위함)
-    if (f) state.currentFilter = f;
-    else f = state.currentFilter || 'all';
+    // 만약 f(필터) 인자가 들어오면 그걸로 바꾸고, 아니면 기존에 보던 걸 유지함
+    if (f) state.currentQaFilter = f;
+    else f = state.currentQaFilter || 'all';
 
     list.innerHTML = "";
     let items = Object.keys(state.qaData).map(k => ({id:k, ...state.qaData[k]}));
@@ -2192,7 +2181,7 @@ renderQaList: function(f) {
     });
 
     items.forEach(i => {
-        // 필터링 적용
+        // 현재 선택된 필터에 맞지 않는 질문은 건너뜀
         if(f==='pin' && i.status!=='pin') return;
         if(f==='later' && i.status!=='later') return;
         
