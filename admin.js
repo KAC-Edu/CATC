@@ -405,41 +405,36 @@ enterAsObserver: function() {
 
 
 forceEnterRoom: async function(room) {
-    const cleanRoom = room.toUpperCase(); // 방 ID 대문자 고정
+    const cleanRoom = room.toUpperCase();
 
-    // 1. [강력한 초기화] 기존의 모든 리스너(안테나)를 확실히 뽑음
+    // 1. [철저한 초기화] 이전 방에서 작동하던 모든 리스너(안테나)를 뽑습니다.
     if (window.dbRef) {
         Object.values(window.dbRef).forEach(ref => {
             if (ref && typeof ref.off === 'function') ref.off();
         });
     }
 
+    // 전역적인 경로 청소 (A-Z 루프를 돌며 혹시 남아있을지 모를 리스너 제거)
     for (let i = 65; i <= 90; i++) {
         const char = String.fromCharCode(i);
         const path = `courses/${char}`;
         firebase.database().ref(path).off();
-        firebase.database().ref(`${path}/settings`).off();
-        firebase.database().ref(`${path}/status`).off();
         firebase.database().ref(`${path}/questions`).off();
+        firebase.database().ref(`${path}/status`).off();
+        firebase.database().ref(`${path}/settings`).off();
     }
 
-    // 2. 현재 방 데이터 및 화면 초기화
-    state.qaData = {}; 
-    state.activeQaKey = null; 
-    const qaListEl = document.getElementById('qaList');
-    if (qaListEl) qaListEl.innerHTML = ""; 
-
-    // 3. 현재 방 정보 업데이트 및 저장
+    // 2. 현재 방 데이터 및 UI 초기 상태 설정
     state.room = cleanRoom; 
+    state.qaData = {};      // 메모리 데이터 초기화
+    state.activeQaKey = null; 
     localStorage.setItem('kac_last_room', cleanRoom); 
     state.isObserver = (sessionStorage.getItem('kac_observer_room') === cleanRoom);
 
-    // 4. UI 초기화
-    const roomSelect = document.getElementById('roomSelect');
-    if (roomSelect) roomSelect.value = cleanRoom;
-    document.querySelector('.mode-tabs').style.display = 'flex';
+    const qaListEl = document.getElementById('qaList');
+    if (qaListEl) qaListEl.innerHTML = "<div style='text-align:center; padding:20px; color:#94a3b8;'>연결 중...</div>";
 
-    // 5. 데이터베이스 참조 경로 재설정
+    // 3. 참조 경로 재설정 (window.dbRef와 dbRef 동기화)
     const rPath = `courses/${cleanRoom}`;
     window.dbRef = {
         settings: firebase.database().ref(`${rPath}/settings`),
@@ -450,20 +445,40 @@ forceEnterRoom: async function(room) {
     };
     dbRef = window.dbRef; 
 
+    // 상단바 배지 및 버튼 갱신
     ui.updateHeaderRoom(cleanRoom);
     ui.updateObserverButton();
-    
-    // 6. 설정 실시간 감시
-    dbRef.settings.off();
-    dbRef.settings.on('value', s => {
-        if (state.room !== cleanRoom) return; 
-        const data = s.val() || {};
-        ui.renderSettings(data); 
-        if (document.getElementById('view-dashboard').style.display !== 'none') ui.loadDashboardStats();
+    document.querySelector('.mode-tabs').style.display = 'flex';
+
+    // 4. [가장 중요] Q&A 실시간 감시 ( .on('value', ...) )
+    // .off()를 먼저 호출한 뒤 .on()을 걸어 중복 수신을 방지합니다.
+    dbRef.qa.off(); 
+    dbRef.qa.on('value', snap => { 
+        // 다른 방으로 이동한 직후에 이전 방의 콜백이 실행되는 것을 방지
+        if (state.room !== cleanRoom) return;
+        
+        try {
+            const rawData = snap.val() || {};
+            state.qaData = rawData; // 전역 state 업데이트
+            
+            // 질문 목록 UI 즉시 갱신
+            ui.renderQaList(); 
+            
+            // 대시보드가 열려 있다면 통계 숫자도 실시간 갱신
+            if (document.getElementById('view-dashboard').style.display !== 'none') {
+                ui.loadDashboardStats();
+            }
+        } catch (e) {
+            console.error("실시간 Q&A 업데이트 오류:", e);
+        }
     });
 
-    // 7. 방 상태 실시간 감시
-    dbRef.status.off();
+    // 5. 설정 및 상태 실시간 감시
+    dbRef.settings.on('value', s => {
+        if (state.room !== cleanRoom) return; 
+        ui.renderSettings(s.val() || {}); 
+    });
+
     dbRef.status.on('value', s => {
         if (state.room !== cleanRoom) return;
         const statusData = s.val() || {};
@@ -476,28 +491,7 @@ forceEnterRoom: async function(room) {
         }
     });
 
-    // 8. [가장 중요] Q&A 실시간 리스너: 데이터 수신 즉시 renderQaList 호출
-    dbRef.qa.off(); // 꽂기 전 다시 한번 뽑음
-    dbRef.qa.on('value', s => { 
-        if (state.room !== cleanRoom) return;
-        
-        try {
-            // DB 데이터를 state에 실시간 저장
-            state.qaData = s.val() || {}; 
-            
-            // 현재 선택된 필터에 맞춰 즉시 화면 렌더링 (에러 방어 포함)
-            ui.renderQaList(); 
-            
-            // 대시보드 통계 숫자도 실시간 업데이트
-            if (document.getElementById('view-dashboard').style.display !== 'none') {
-                ui.loadDashboardStats();
-            }
-        } catch (e) {
-            console.error("실시간 Q&A 업데이트 중 오류 발생:", e);
-        }
-    });
-
-    // 9. 기타 서비스 복구
+    // 6. 기타 부가 서비스 및 모드 복구
     this.fetchCodeAndRenderQr(cleanRoom);
     const lastMode = localStorage.getItem('kac_last_mode') || 'dashboard';
     ui.setMode(lastMode);
@@ -505,10 +499,10 @@ forceEnterRoom: async function(room) {
     subjectMgr.init();
     guideMgr.init();
 
-    // 10. 1분 간격 강제 리프레시 (NEW 배지 시간 계산용)
+    // 7. 1분 간격 강제 리프레시 (NEW 배지 제거용)
     if (window.adminQaRefreshInterval) clearInterval(window.adminQaRefreshInterval);
     window.adminQaRefreshInterval = setInterval(() => {
-        if (state.room === cleanRoom && state.qaData && Object.keys(state.qaData).length > 0) {
+        if (state.room === cleanRoom) {
             ui.renderQaList(); 
         }
     }, 60000); 
@@ -2306,23 +2300,26 @@ filterQa: function(f, event) {
 
 
 
-    
-// [6.21차 최종] 실시간 수신 실패 제로 성능 최적화 버전
+    // [6.22차 최종] 실시간 최적화 및 렌더링 안정화 버전
 renderQaList: function(f) {
     const list = document.getElementById('qaList'); 
-    if(!list) return;
+    if (!list) return;
 
-    // 현재 필터 상태 결정
+    // 1. 현재 필터 상태 동기화 (전달인자가 있으면 우선 적용)
     if (f) state.currentQaFilter = f;
     const currentFilter = state.currentQaFilter || 'all';
 
-    // 데이터가 아예 없으면 비우고 종료
+    // 2. 데이터 유무 확인 (데이터가 없거나 null인 경우 대응)
     if (!state.qaData || Object.keys(state.qaData).length === 0) {
-        list.innerHTML = "<div style='text-align:center; padding:100px 0; color:#94a3b8; font-weight:700;'>질문이 없습니다.</div>";
+        list.innerHTML = `
+            <div style="text-align:center; padding:100px 0; color:#94a3b8;">
+                <i class="fa-regular fa-comment-dots" style="font-size:40px; margin-bottom:15px; opacity:0.3;"></i>
+                <p style="font-weight:700;">아직 도착한 질문이 없습니다.</p>
+            </div>`;
         return;
     }
 
-    // 1. 유효 데이터 가공 (데이터 누락 방지 극대화)
+    // 3. 데이터 가공 (필터링 및 정렬 준비)
     let items = Object.keys(state.qaData)
         .map(k => {
             const item = state.qaData[k];
@@ -2331,75 +2328,85 @@ renderQaList: function(f) {
                 id: k, 
                 text: item.text, 
                 status: item.status || "normal", 
-                likes: item.likes || 0,
-                timestamp: item.timestamp || Date.now(), // 시간 없으면 현재 시간으로 방어
+                likes: parseInt(item.likes || 0),
+                timestamp: item.timestamp || Date.now(),
                 subject: item.subject || "공통질문"
             };
         })
         .filter(i => i !== null && i.status !== 'delete'); 
 
-    // 2. 강사 필터링
-    if(subjectMgr.selectedFilter && subjectMgr.selectedFilter !== 'all') {
+    // 4. [필터 1] 과목/강사 필터 (subjectMgr 연동)
+    if (subjectMgr.selectedFilter && subjectMgr.selectedFilter !== 'all') {
         items = items.filter(x => x.subject === subjectMgr.selectedFilter);
     }
+
+    // 5. [필터 2] 상단 상태 탭 필터 (All, Pinned, Later)
+    if (currentFilter === 'pin') {
+        items = items.filter(i => i.status === 'pin' || i.status === 'pin-done');
+    } else if (currentFilter === 'later') {
+        items = items.filter(i => i.status === 'later');
+    }
     
-    // 3. 정렬 로직 (안전한 비교 연산)
+    // 6. 정렬 로직 (고정 질문 > 나중에 답변 > 좋아요 순 > 최신 순)
     items.sort((a, b) => {
-        const getWeight = (item) => {
-            const s = item.status;
+        const getWeight = (s) => {
             if (s === 'pin') return 3;
             if (s === 'later') return 2;
-            if (s === 'done' || s === 'pin-done') return 0;
-            return 1;
+            if (s === 'normal') return 1;
+            return 0; // done, pin-done
         };
-        const weightA = getWeight(a);
-        const weightB = getWeight(b);
-        if (weightA !== weightB) return weightB - weightA;
-        if (b.likes !== a.likes) return (b.likes || 0) - (a.likes || 0);
-        return (b.timestamp || 0) - (a.timestamp || 0);
+        const weightDiff = getWeight(b.status) - getWeight(a.status);
+        if (weightDiff !== 0) return weightDiff;
+        if (b.likes !== a.likes) return b.likes - a.likes;
+        return b.timestamp - a.timestamp;
     });
 
-    // 4. [최적화] htmlBuffer 생성
+    // 7. HTML 빌드 (메모리 내에서 한 번에 조립)
     let htmlBuffer = "";
+    const now = Date.now();
 
     items.forEach(i => {
         try {
             const s = i.status;
+            const isDone = (s === 'done' || s === 'pin-done');
+            
+            // 클래스 및 아이콘 설정
+            let cls = "";
+            let icon = "";
+            if (s === 'pin' || s === 'pin-done') { cls = "status-pin"; icon = "📌 "; }
+            else if (s === 'later') { cls = "status-later"; icon = "⚠️ "; }
+            else if (isDone) { cls = "status-done"; icon = "✅ "; }
 
-            // 상단 탭 필터링 적용
-            if(currentFilter === 'pin' && !(s === 'pin' || s === 'pin-done')) return;
-            if(currentFilter === 'later' && s !== 'later') return;
-            
-            let isDone = (s === 'done' || s === 'pin-done');
-            let cls = s === 'pin' ? 'status-pin' : (s === 'later' ? 'status-later' : (isDone ? 'status-done' : ''));
-            const icon = (String(s).indexOf('pin') !== -1) ? '📌 ' : (s === 'later' ? '⚠️ ' : (isDone ? '✅ ' : ''));
-            
-            const isNew = (Date.now() - i.timestamp) < 120000;
+            // 신규 질문 강조 (2분 이내)
+            const isNew = (now - i.timestamp) < 120000;
             const newClass = isNew ? 'is-new' : '';
             const newBadge = isNew ? '<span class="new-badge-icon">NEW</span>' : '';
 
-            let rawSubject = String(i.subject);
-            let displayName = "";
-            const positions = ["본부장", "공항장", "센터장", "부장", "차장", "과장", "주임", "교수"];
-            const foundPos = positions.find(pos => rawSubject.indexOf(pos) !== -1);
+            // 강사 라벨 이름 처리
+            let targetName = String(i.subject);
+            let displayName = targetName;
+            const titles = ["본부장", "공항장", "센터장", "부장", "차장", "과장", "주임", "교수", "강사"];
+            const hasTitle = titles.some(t => targetName.includes(t));
             
-            if (foundPos) {
-                displayName = rawSubject.indexOf("님") !== -1 ? rawSubject : rawSubject + "님";
-            } else if (rawSubject !== '일반' && rawSubject !== '공통질문') {
-                displayName = rawSubject + " 강사님";
-            } else {
-                displayName = rawSubject;
+            if (targetName !== '공통질문' && targetName !== '일반' && !hasTitle) {
+                displayName = targetName + " 강사님";
+            } else if (hasTitle && !targetName.includes("님")) {
+                displayName = targetName + "님";
             }
 
             htmlBuffer += `
-            <div class="q-card ${cls} ${newClass}" data-ts="${i.timestamp}" onclick="ui.openQaModal('${i.id}')">
+            <div class="q-card ${cls} ${newClass}" onclick="ui.openQaModal('${i.id}')">
                 <div class="q-content">
                     ${newBadge}
-                    <span style="display:inline-block; background:#eff6ff; color:#3b82f6; font-size:10px; padding:2px 6px; border-radius:4px; margin-right:8px; vertical-align:middle; border:1px solid #dbeafe; font-weight:800;">
+                    <span style="display:inline-block; background:#eff6ff; color:#3b82f6; font-size:10px; padding:2px 7px; border-radius:4px; margin-right:8px; vertical-align:middle; border:1px solid #dbeafe; font-weight:800;">
                         To. ${displayName}
                     </span>
-                    ${icon}${i.text}
-                    <button class="btn-translate" onclick="event.stopPropagation(); ui.translateQa('${i.id}')" title="번역"><i class="fa-solid fa-language"></i> 번역</button>
+                    <span style="${isDone ? 'text-decoration:line-through; opacity:0.6;' : ''}">
+                        ${icon}${i.text}
+                    </span>
+                    <button class="btn-translate" onclick="event.stopPropagation(); ui.translateQa('${i.id}')" title="번역">
+                        <i class="fa-solid fa-language"></i> 번역
+                    </button>
                 </div>
                 <div class="q-meta">
                     <div class="q-like-badge">👍 ${i.likes}</div>
@@ -2407,15 +2414,16 @@ renderQaList: function(f) {
                 </div>
             </div>`;
         } catch (err) {
-            // 특정 아이템에서 에러나도 무시하고 다음 질문 그림
-            console.warn("아이템 렌더링 오류 무시:", err);
+            console.error("개별 카드 렌더링 에러:", err);
         }
     });
 
-    // 5. 최종 렌더링 (단 한 번의 DOM 조작)
-    list.innerHTML = htmlBuffer || "<div style='text-align:center; padding:100px 0; color:#94a3b8; font-weight:700;'>해당 조건에 맞는 질문이 없습니다.</div>";
+    // 8. 최종 반영
+    list.innerHTML = htmlBuffer || `
+        <div style="text-align:center; padding:80px 0; color:#94a3b8;">
+            <p>조건에 맞는 질문이 없습니다.</p>
+        </div>`;
 },
-
 
 
 
