@@ -536,24 +536,47 @@ deactivateAllRooms: async function() {
     },
     
 updateQa: function(action) {
-        // [옵저버 제한]
+        // 1. 옵저버(눈팅 모드)인지 먼저 확인
         if(state.isObserver) return ui.showAlert("👁️ 옵저버 모드에서는 질문을 관리(삭제/고정)할 수 없습니다.");
         
-        if(!state.activeQaKey) return;
+        // 2. 현재 선택된 질문 번호(Key)가 있는지 확인
+        if(!state.activeQaKey || !state.room) {
+            ui.showAlert("⚠️ 대상을 찾을 수 없습니다. 다시 시도해 주세요.");
+            return;
+        }
+
         const item = state.qaData[state.activeQaKey];
+        // 만약 데이터가 이미 삭제되었다면 중단
+        if(!item && action !== 'delete') return;
+
+        // 3. 삭제 버튼을 눌렀을 때
         if (action === 'delete') { 
-            if(confirm("정말 삭제하시겠습니까?")) { 
-                dbRef.qa.child(state.activeQaKey).remove(); 
-                ui.closeQaModal(); 
+            if(confirm("이 질문을 완전히 삭제하시겠습니까?")) { 
+                // [강력한 삭제 로직] 경로를 직접 지정하여 삭제를 보장함
+                firebase.database().ref(`courses/${state.room}/questions/${state.activeQaKey}`).remove()
+                .then(() => {
+                    ui.closeQaModal(); // 성공하면 창 닫기
+                })
+                .catch(err => {
+                    ui.showAlert("삭제 실패: " + err.message);
+                });
             }
-        } else {
+        } 
+        // 4. 고정(Pin)이나 답변 완료(Done)를 눌렀을 때
+        else {
             let ns = action;
-            if(item.status === action) ns = 'normal';
+            if(item.status === action) ns = 'normal'; // 이미 눌린 걸 또 누르면 해제
             else if(action === 'done' && item.status==='pin') ns = 'pin-done';
-            dbRef.qa.child(state.activeQaKey).update({ status: ns });
-            ui.closeQaModal();
+
+            firebase.database().ref(`courses/${state.room}/questions/${state.activeQaKey}`).update({ status: ns })
+            .then(() => {
+                ui.closeQaModal();
+            });
         }
     },
+
+
+
 
 // [최종 수정] 리셋 시 교육생 퇴출용 resetKey를 포함한 초기화 로직
 resetCourse: function() {
