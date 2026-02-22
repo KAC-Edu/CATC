@@ -412,7 +412,6 @@ forceEnterRoom: async function(room) {
         if (document.getElementById('view-dashboard').style.display !== 'none') ui.loadDashboardStats();
     });
 
-    // 8. 방 상태 실시간 감시
     dbRef.status.off();
     dbRef.status.on('value', s => {
         if (state.room !== room) return;
@@ -426,20 +425,24 @@ forceEnterRoom: async function(room) {
         }
     });
 
-    // [핵심 수정] 실시간 리스너: 데이터 수신 시 즉시 렌더링
+    // [핵심 수정] 리스너 내부에서 발생하는 렌더링 에러가 리스너를 죽이지 않도록 try-catch 적용
     dbRef.qa.off();
     dbRef.qa.on('value', s => { 
         if (state.room !== room) return;
         
-        // 1. DB 데이터를 state에 저장
-        state.qaData = s.val() || {}; 
-        
-        // 2. 현재 선택된 필터로 다시 그리기
-        ui.renderQaList(); 
-        
-        // 3. 대시보드 숫자 업데이트
-        if (document.getElementById('view-dashboard').style.display !== 'none') {
-            ui.loadDashboardStats();
+        try {
+            // 1. DB 데이터를 state에 저장
+            state.qaData = s.val() || {}; 
+            
+            // 2. 현재 선택된 필터로 다시 그리기 (여기서 에러가 나도 리스너는 살려야 함)
+            ui.renderQaList(); 
+            
+            // 3. 대시보드 숫자 업데이트
+            if (document.getElementById('view-dashboard').style.display !== 'none') {
+                ui.loadDashboardStats();
+            }
+        } catch (e) {
+            console.error("실시간 Q&A 렌더링 중 오류 발생 (무시하고 계속 감시):", e);
         }
     });
 
@@ -459,7 +462,6 @@ forceEnterRoom: async function(room) {
         }
     }, 60000); 
 },
-
 
 
 
@@ -2254,43 +2256,43 @@ filterQa: function(f, event) {
 
 
     
-// [6.20차 최종] 성능 최적화 및 실시간 수신 완벽 보정 버전
+// [6.21차 최종] 실시간 수신 실패 제로 성능 최적화 버전
 renderQaList: function(f) {
     const list = document.getElementById('qaList'); 
     if(!list) return;
 
-    // 현재 필터 상태 유지
+    // 현재 필터 상태 결정
     if (f) state.currentQaFilter = f;
     const currentFilter = state.currentQaFilter || 'all';
 
-    // 데이터가 아예 없으면 종료
+    // 데이터가 아예 없으면 비우고 종료
     if (!state.qaData || Object.keys(state.qaData).length === 0) {
         list.innerHTML = "<div style='text-align:center; padding:100px 0; color:#94a3b8; font-weight:700;'>질문이 없습니다.</div>";
         return;
     }
 
-    // 1. 유효 데이터 추출 (데이터 누락 방지 강화)
+    // 1. 유효 데이터 가공 (데이터 누락 방지 극대화)
     let items = Object.keys(state.qaData)
         .map(k => {
             const item = state.qaData[k];
-            if (!item) return null;
+            if (!item || !item.text) return null;
             return { 
                 id: k, 
-                text: item.text || "", 
-                status: item.status || "normal", // status가 없으면 기본값 부여
+                text: item.text, 
+                status: item.status || "normal", 
                 likes: item.likes || 0,
-                timestamp: item.timestamp || Date.now(),
+                timestamp: item.timestamp || Date.now(), // 시간 없으면 현재 시간으로 방어
                 subject: item.subject || "공통질문"
             };
         })
-        .filter(i => i !== null && i.text && i.status !== 'delete'); 
+        .filter(i => i !== null && i.status !== 'delete'); 
 
     // 2. 강사 필터링
     if(subjectMgr.selectedFilter && subjectMgr.selectedFilter !== 'all') {
         items = items.filter(x => x.subject === subjectMgr.selectedFilter);
     }
     
-    // 3. 정렬 로직 (고정 > 나중에 > 미완료 > 좋아요 > 시간)
+    // 3. 정렬 로직 (안전한 비교 연산)
     items.sort((a, b) => {
         const getWeight = (item) => {
             const s = item.status;
@@ -2302,62 +2304,66 @@ renderQaList: function(f) {
         const weightA = getWeight(a);
         const weightB = getWeight(b);
         if (weightA !== weightB) return weightB - weightA;
-        if (b.likes !== a.likes) return b.likes - a.likes;
-        return b.timestamp - a.timestamp;
+        if (b.likes !== a.likes) return (b.likes || 0) - (a.likes || 0);
+        return (b.timestamp || 0) - (a.timestamp || 0);
     });
 
     // 4. [최적화] htmlBuffer 생성
     let htmlBuffer = "";
 
     items.forEach(i => {
-        const s = i.status;
+        try {
+            const s = i.status;
 
-        // 상단 탭 필터링 적용
-        if(currentFilter === 'pin' && !(s === 'pin' || s === 'pin-done')) return;
-        if(currentFilter === 'later' && s !== 'later') return;
-        
-        let isDone = (s === 'done' || s === 'pin-done');
-        let cls = s === 'pin' ? 'status-pin' : (s === 'later' ? 'status-later' : (isDone ? 'status-done' : ''));
-        const icon = (String(s).indexOf('pin') !== -1) ? '📌 ' : (s === 'later' ? '⚠️ ' : (isDone ? '✅ ' : ''));
-        
-        const isNew = (Date.now() - (i.timestamp || 0)) < 120000;
-        const newClass = isNew ? 'is-new' : '';
-        const newBadge = isNew ? '<span class="new-badge-icon">NEW</span>' : '';
+            // 상단 탭 필터링 적용
+            if(currentFilter === 'pin' && !(s === 'pin' || s === 'pin-done')) return;
+            if(currentFilter === 'later' && s !== 'later') return;
+            
+            let isDone = (s === 'done' || s === 'pin-done');
+            let cls = s === 'pin' ? 'status-pin' : (s === 'later' ? 'status-later' : (isDone ? 'status-done' : ''));
+            const icon = (String(s).indexOf('pin') !== -1) ? '📌 ' : (s === 'later' ? '⚠️ ' : (isDone ? '✅ ' : ''));
+            
+            const isNew = (Date.now() - i.timestamp) < 120000;
+            const newClass = isNew ? 'is-new' : '';
+            const newBadge = isNew ? '<span class="new-badge-icon">NEW</span>' : '';
 
-        let rawSubject = String(i.subject);
-        let displayName = "";
-        const positions = ["본부장", "공항장", "센터장", "부장", "차장", "과장", "주임", "교수"];
-        const foundPos = positions.find(pos => rawSubject.indexOf(pos) !== -1);
-        
-        if (foundPos) {
-            displayName = rawSubject.indexOf("님") !== -1 ? rawSubject : rawSubject + "님";
-        } else if (rawSubject !== '일반' && rawSubject !== '공통질문') {
-            displayName = rawSubject + " 강사님";
-        } else {
-            displayName = rawSubject;
+            let rawSubject = String(i.subject);
+            let displayName = "";
+            const positions = ["본부장", "공항장", "센터장", "부장", "차장", "과장", "주임", "교수"];
+            const foundPos = positions.find(pos => rawSubject.indexOf(pos) !== -1);
+            
+            if (foundPos) {
+                displayName = rawSubject.indexOf("님") !== -1 ? rawSubject : rawSubject + "님";
+            } else if (rawSubject !== '일반' && rawSubject !== '공통질문') {
+                displayName = rawSubject + " 강사님";
+            } else {
+                displayName = rawSubject;
+            }
+
+            htmlBuffer += `
+            <div class="q-card ${cls} ${newClass}" data-ts="${i.timestamp}" onclick="ui.openQaModal('${i.id}')">
+                <div class="q-content">
+                    ${newBadge}
+                    <span style="display:inline-block; background:#eff6ff; color:#3b82f6; font-size:10px; padding:2px 6px; border-radius:4px; margin-right:8px; vertical-align:middle; border:1px solid #dbeafe; font-weight:800;">
+                        To. ${displayName}
+                    </span>
+                    ${icon}${i.text}
+                    <button class="btn-translate" onclick="event.stopPropagation(); ui.translateQa('${i.id}')" title="번역"><i class="fa-solid fa-language"></i> 번역</button>
+                </div>
+                <div class="q-meta">
+                    <div class="q-like-badge">👍 ${i.likes}</div>
+                    <div class="q-time">${new Date(i.timestamp).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</div>
+                </div>
+            </div>`;
+        } catch (err) {
+            // 특정 아이템에서 에러나도 무시하고 다음 질문 그림
+            console.warn("아이템 렌더링 오류 무시:", err);
         }
-
-        htmlBuffer += `
-        <div class="q-card ${cls} ${newClass}" data-ts="${i.timestamp}" onclick="ui.openQaModal('${i.id}')">
-            <div class="q-content">
-                ${newBadge}
-                <span style="display:inline-block; background:#eff6ff; color:#3b82f6; font-size:10px; padding:2px 6px; border-radius:4px; margin-right:8px; vertical-align:middle; border:1px solid #dbeafe; font-weight:800;">
-                    To. ${displayName}
-                </span>
-                ${icon}${i.text}
-                <button class="btn-translate" onclick="event.stopPropagation(); ui.translateQa('${i.id}')" title="번역"><i class="fa-solid fa-language"></i> 번역</button>
-            </div>
-            <div class="q-meta">
-                <div class="q-like-badge">👍 ${i.likes}</div>
-                <div class="q-time">${new Date(i.timestamp).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</div>
-            </div>
-        </div>`;
     });
 
-    // 5. 최종 렌더링
+    // 5. 최종 렌더링 (단 한 번의 DOM 조작)
     list.innerHTML = htmlBuffer || "<div style='text-align:center; padding:100px 0; color:#94a3b8; font-weight:700;'>해당 조건에 맞는 질문이 없습니다.</div>";
 },
-
 
 
 
