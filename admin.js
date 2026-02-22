@@ -53,6 +53,7 @@ const state = {
     currentQuizIdx: 0,
     activeQaKey: null,
     qaData: {},
+    currentQaFilter: 'all', // 이 줄을 추가하여 기본 필터값 보장
     timerInterval: null,
     pendingRoom: null,
     timerAudio: null,
@@ -424,15 +425,19 @@ forceEnterRoom: async function(room) {
         }
     });
 
-    // [중요 수정] 리스너가 데이터를 받으면 인자 없이 renderQaList()를 호출해 현재 상태를 유지함
+    // [핵심 수정] 실시간 리스너 보강: 데이터가 변경될 때마다 state 동기화 후 즉시 렌더링
     dbRef.qa.off();
     dbRef.qa.on('value', s => { 
         if (state.room !== room) return;
+        
+        // 실시간 DB 데이터를 state에 즉시 반영
         state.qaData = s.val() || {}; 
         
-        // 현재 내가 보고 있는 필터(전체/핀/나중에) 상태 그대로 다시 그리기 실행
+        // 현재 선택된 필터(state.currentQaFilter)를 기준으로 리스트를 즉시 다시 그림
+        // 인자 없이 호출해도 내부적으로 state.currentQaFilter를 쓰도록 renderQaList가 설계되어야 함
         ui.renderQaList(); 
         
+        // 대시보드 통계도 실시간 갱신
         if (document.getElementById('view-dashboard').style.display !== 'none') {
             ui.loadDashboardStats();
         }
@@ -446,7 +451,7 @@ forceEnterRoom: async function(room) {
     subjectMgr.init();
     guideMgr.init();
 
-    // 9. 타이머 설정
+    // 9. 타이머 설정 (1분마다 강제 리프레시 - NEW 배지 갱신용)
     if (window.adminQaRefreshInterval) clearInterval(window.adminQaRefreshInterval);
     window.adminQaRefreshInterval = setInterval(() => {
         if (state.room === room && state.qaData && Object.keys(state.qaData).length > 0) {
@@ -454,6 +459,10 @@ forceEnterRoom: async function(room) {
         }
     }, 60000); 
 },
+
+
+
+
 
 
 
@@ -556,24 +565,36 @@ updateQa: function(action) {
         ui.showAlert("⚠️ 대상을 찾을 수 없습니다. 강의실 선택 상태를 확인해 주세요.");
         return;
     }
+
     const targetRef = firebase.database().ref(`courses/${activeRoom}/questions/${state.activeQaKey}`);
+
     if (action === 'delete') { 
         if (confirm("이 질문을 완전히 삭제하시겠습니까?")) { 
             targetRef.remove()
             .then(() => {
-                ui.closeQaModal(); 
+                ui.closeQaModal();
+                // 삭제 즉시 로컬 데이터에서도 제거 (실시간성 확보)
+                delete state.qaData[state.activeQaKey];
+                ui.renderQaList();
             })
             .catch(err => ui.showAlert("삭제 실패: " + err.message));
         }
     } else {
         const currentItem = state.qaData[state.activeQaKey] || {};
         let nextStatus = action;
+
+        // 토글 및 pin-done 로직
         if (currentItem.status === action) nextStatus = 'normal';
         else if (action === 'done' && currentItem.status === 'pin') nextStatus = 'pin-done';
         
         targetRef.update({ status: nextStatus })
         .then(() => {
-            ui.closeQaModal(); 
+            ui.closeQaModal();
+            // DB 리스너가 작동하기 전, 로컬 데이터를 먼저 수정해서 즉각 반영
+            if (state.qaData[state.activeQaKey]) {
+                state.qaData[state.activeQaKey].status = nextStatus;
+                ui.renderQaList(); 
+            }
         })
         .catch(err => ui.showAlert("상태 변경 실패: " + err.message));
     }
@@ -2164,22 +2185,27 @@ renderQaList: function(f) {
     const list = document.getElementById('qaList'); 
     if(!list) return;
 
-    // 현재 선택한 필터 상태를 전역 state에 저장하고 유지함
+    // 현재 선택한 필터 상태 유지
     if (f) state.currentQaFilter = f;
     else f = state.currentQaFilter || 'all';
 
     list.innerHTML = "";
+    
+    if (!state.qaData) return;
+
     let items = Object.keys(state.qaData).map(k => ({id:k, ...state.qaData[k]}));
 
+    // 강사 필터 적용
     if(subjectMgr.selectedFilter !== 'all') {
         items = items.filter(x => x.subject === subjectMgr.selectedFilter);
     }
     
-    // 정렬 우선순위: 핀 고정 > 추후 답변 > 좋아요 > 최신순
+    // 정렬 로직 보정
     items.sort((a, b) => {
         const getWeight = (item) => {
             if (item.status === 'pin') return 3;
             if (item.status === 'later') return 2;
+            if (item.status === 'done' || item.status === 'pin-done') return 0; // 완료된 건 맨 아래로
             return 1;
         };
         const weightA = getWeight(a);
@@ -2188,18 +2214,20 @@ renderQaList: function(f) {
         const likesA = a.likes || 0;
         const likesB = b.likes || 0;
         if (likesA !== likesB) return likesB - likesA;
-        return b.timestamp - a.timestamp;
+        return (b.timestamp || 0) - (a.timestamp || 0);
     });
 
     items.forEach(i => {
-        // 현재 선택된 필터(all/pin/later)와 일치하는 것만 그림
-        if(f==='pin' && i.status!=='pin') return;
+        // [수정] 필터 로직: pin-done 상태도 Pinned 필터에서 보여야 함
+        if(f==='pin' && !(i.status==='pin' || i.status==='pin-done')) return;
         if(f==='later' && i.status!=='later') return;
         
-        let cls = i.status==='pin'?'status-pin':(i.status==='later'?'status-later':(i.status==='done'?'status-done':''));
-        const icon = i.status==='pin'?'📌 ':(i.status==='later'?'⚠️ ':(i.status==='done'?'✅ ':''));
+        // [수정] pin-done 상태일 때도 완료(gray) 스타일이 적용되도록 수정
+        let isDone = (i.status === 'done' || i.status === 'pin-done');
+        let cls = i.status === 'pin' ? 'status-pin' : (i.status === 'later' ? 'status-later' : (isDone ? 'status-done' : ''));
+        const icon = i.status.includes('pin') ? '📌 ' : (i.status === 'later' ? '⚠️ ' : (isDone ? '✅ ' : ''));
         
-        const isNew = (Date.now() - i.timestamp) < 120000;
+        const isNew = (Date.now() - (i.timestamp || 0)) < 120000;
         const newClass = isNew ? 'is-new' : '';
         const newBadge = isNew ? '<span class="new-badge-icon">NEW</span>' : '';
 
@@ -2224,12 +2252,11 @@ renderQaList: function(f) {
             </div>
             <div class="q-meta">
                 <div class="q-like-badge">👍 ${i.likes||0}</div>
-                <div class="q-time">${new Date(i.timestamp).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</div>
+                <div class="q-time">${new Date(i.timestamp || Date.now()).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</div>
             </div>
         </div>`;
     });
 },
-
 
 
 
