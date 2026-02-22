@@ -1930,11 +1930,11 @@ const coordMgr = {
 
 
 
-// [3. 전체 현황판 실시간 집계 및 명단 팝업] - 기간 지난 과정 제외 버전
+// [3. 전체 현황판 실시간 집계 및 명단 팝업] - 모든 통계에 기간 필터링 완벽 적용
 function updateGlobalStatus() {
     let globalList = []; 
     let todayA = 0; 
-    let totalShuttle = 0; // 교육생 퇴교 인원 합계
+    let totalShuttle = 0; 
     const tStr = getTodayString();
 
     // 오늘 날짜 구하기 (YYYY-MM-DD 형식)
@@ -1949,60 +1949,73 @@ function updateGlobalStatus() {
         const settings = room.settings || {};
         const cName = settings.courseName || `[미설정] Room ${rid}`;
         
-        // [날짜 필터링] 교육 종료일이 오늘보다 이전인 과정은 통계에서 완전히 제외
+        // [날짜 필터링] 종료일이 오늘보다 이전인 과거 과정은 통계에서 제외
         if (settings.period && settings.period.includes(" ~ ")) {
             const endDate = settings.period.split(" ~ ")[1];
             if (endDate < todayStr) {
-                return; // 과거 과정이면 아래 집계 로직을 타지 않고 다음 방으로 넘어감
+                return; // 과거 과정이면 집계 안 함
             }
         }
 
-        // [항기원 전체 교육생 집계] - 진행 중인 과정만 포함됨
+        // 수강생 집계 (진행중인 과정만)
         if (room.students) { 
             Object.values(room.students).forEach(s => {
                 if (s && s.name && s.name !== "undefined" && s.name.trim() !== "") {
                     const cleanPhone = (s.phone || "0000").replace(/[^0-9]/g, "");
                     const last4 = cleanPhone.length >= 4 ? cleanPhone.slice(-4) : cleanPhone;
-                    globalList.push({
-                        courseName: cName,
-                        name: s.name.trim(),
-                        phone: last4
-                    });
+                    globalList.push({ courseName: cName, name: s.name.trim(), phone: last4 });
                 }
             });
         }
         
-        // [금일 외출/외박 건수 집계] - 진행 중인 과정만 포함됨
+        // 외출/외박 집계 (진행중인 과정만)
         if (room.admin_actions?.[tStr]) {
             todayA += Object.keys(room.admin_actions[tStr]).length;
         }
 
-        // [교육생 퇴교 신청 총 인원 집계] - 진행 중인 과정만 포함됨
+        // 교육생 퇴교 셔틀 집계 (진행중인 과정만)
         if (room.shuttle?.requests) {
             totalShuttle += Object.keys(room.shuttle.requests).length;
         }
     });
 
-    // 2. 중복 제거 (이름 + 뒷자리 기준) - 진행 중인 교육생만 대상으로 함
+    // 2. 수강생 중복 제거
     const uniqueSet = new Set();
     globalList.forEach(item => {
         const id = `${item.name}_${item.phone}`;
         uniqueSet.add(id);
     });
 
-    // 3. 강사 픽업 요청 건수 가져오기 (전역 데이터) - 3번 버튼용
+    // 3. [핵심 수정] 강사 픽업 요청 건수도 기간 필터링하여 집계
     firebase.database().ref('system/transport_requests').once('value', snap => {
         const pickupData = snap.val() || {};
-        const pickupCount = Object.keys(pickupData).length;
+        let validPickupCount = 0;
+
+        Object.values(pickupData).forEach(req => {
+            const rid = req.courseRID; // 해당 요청의 방ID
+            const room = globalAllData[rid];
+            
+            // 해당 방이 있고, 사용 중이며, 종료일이 오늘보다 이후인 경우만 카운트
+            if (room && room.status?.roomStatus === 'active') {
+                const settings = room.settings || {};
+                if (settings.period && settings.period.includes(" ~ ")) {
+                    const endDate = settings.period.split(" ~ ")[1];
+                    // 종료일이 오늘이거나 미래인 경우 + 취소되지 않은 건만 카운트
+                    if (endDate >= todayStr && req.status !== 'cancelled') {
+                        validPickupCount++;
+                    }
+                }
+            }
+        });
         
         // 화면 숫자 업데이트
         if(document.getElementById('g-total-students')) document.getElementById('g-total-students').innerText = uniqueSet.size;
         if(document.getElementById('g-today-actions')) document.getElementById('g-today-actions').innerText = todayA;
-        if(document.getElementById('g-pickup-count')) document.getElementById('g-pickup-count').innerText = pickupCount;
+        if(document.getElementById('g-pickup-count')) document.getElementById('g-pickup-count').innerText = validPickupCount;
         if(document.getElementById('g-shuttle-count')) document.getElementById('g-shuttle-count').innerText = totalShuttle;
     });
 
-    // 4. [1번 버튼 클릭 이벤트] - 전체 교육생 명단 팝업 유지
+    // 4. [1번 버튼 클릭 이벤트]
     const studentBtn = document.getElementById('g-total-students')?.closest('.dashboard-card-btn');
     if(studentBtn) {
         studentBtn.onclick = function() {
