@@ -176,10 +176,12 @@ saveInstructorNoticeMain: function() {
         }
     },
     
-    initSystem: function() {
+// dataMgr 객체 내부의 initSystem과 loadInitialData를 아래로 교체
+initSystem: function() {
         firebase.auth().onAuthStateChanged(user => {
             if (user) { 
                 document.getElementById('loginOverlay').style.display = 'none'; 
+                // 로그인이 확인되면 즉시 데이터 로드 및 방 복구 프로세스 시작
                 this.loadInitialData(); 
             } else { 
                 document.getElementById('loginOverlay').style.display = 'flex'; 
@@ -187,40 +189,87 @@ saveInstructorNoticeMain: function() {
         });
     },
     
-// [최종] 초기 데이터 로드 및 삭제된 버튼 오류 방지 + QR 클릭 복구
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// [최종] 초기 데이터 로드 및 실시간 리스너 충돌 방지 버전
 loadInitialData: function() {
-    const lastRoom = localStorage.getItem('kac_last_room');
+    // 1. 방 선택창(Dropdown) 목록 초기화
     ui.initRoomSelect();
 
-    if (lastRoom) {
-        this.forceEnterRoom(lastRoom);
+    // 2. [실시간 핵심] 자동 복구 로직: 마지막 방 번호를 대문자로 가져옴
+    // null이나 문자열 "null"이 저장되어 있을 경우를 대비한 방어막 추가
+    const lastRoom = localStorage.getItem('kac_last_room');
+
+    if (lastRoom && lastRoom !== "null" && lastRoom !== "") {
+        // [중요] forceEnterRoom을 여기서 "딱 한 번만" 실행하여 리스너를 고정함
+        console.log("기존 접속 강의실 자동 복구 시작:", lastRoom);
+        this.forceEnterRoom(lastRoom.toUpperCase());
     } else {
+        // 기록이 없으면 대기실 표시
         ui.showWaitingRoom();
     }
 
+    // 3. 기본 퀴즈 설정 초기화
     state.quizList = DEFAULT_QUIZ_DATA;
     state.isExternalFileLoaded = false;
     quizMgr.renderMiniList();
 
-    // 1. 강의실 선택 이벤트 연결
+    // 4. 강의실 선택 이벤트 바인딩 (대문자 강제)
     const roomSel = document.getElementById('roomSelect');
     if(roomSel) {
         roomSel.onchange = (e) => { 
-            if(e.target.value) this.switchRoomAttempt(e.target.value); 
+            if(e.target.value) {
+                this.switchRoomAttempt(e.target.value.toUpperCase()); 
+            }
         };
     }
 
-    // 2. [중요] 삭제된 quizFile/guideFile 관련 코드는 여기서 제거하여 오류를 방지함
-
-    // 3. [복구] 사이드바 작은 QR 코드를 클릭하면 크게 띄우기
+    // 5. 사이드바 작은 QR 코드를 클릭하면 크게 띄우기 (이벤트 복구)
     const qrEl = document.getElementById('qrcode'); 
     if(qrEl) {
-        qrEl.style.cursor = "pointer"; // 마우스 손가락 모양
+        qrEl.style.cursor = "pointer";
         qrEl.onclick = function() { 
             ui.openQrModal(); 
         };
     }
 },
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     
 // [수정] 방 이동 시 제어권이 없으면 무조건 비번 창을 띄우고, 실패 시 입장을 원천 차단
 switchRoomAttempt: async function(newRoom) {
@@ -356,7 +405,9 @@ enterAsObserver: function() {
 
 
 forceEnterRoom: async function(room) {
-    // 1. [강력한 초기화] 모든 강의실 실시간 연결 차단
+    const cleanRoom = room.toUpperCase(); // 방 ID 대문자 고정
+
+    // 1. [강력한 초기화] 기존의 모든 리스너(안테나)를 확실히 뽑음
     if (window.dbRef) {
         Object.values(window.dbRef).forEach(ref => {
             if (ref && typeof ref.off === 'function') ref.off();
@@ -379,17 +430,17 @@ forceEnterRoom: async function(room) {
     if (qaListEl) qaListEl.innerHTML = ""; 
 
     // 3. 현재 방 정보 업데이트 및 저장
-    state.room = room; 
-    localStorage.setItem('kac_last_room', room); 
-    state.isObserver = (sessionStorage.getItem('kac_observer_room') === room);
+    state.room = cleanRoom; 
+    localStorage.setItem('kac_last_room', cleanRoom); 
+    state.isObserver = (sessionStorage.getItem('kac_observer_room') === cleanRoom);
 
-    // 4. UI 초기화 (탭 표시 및 선택창 동기화)
+    // 4. UI 초기화
     const roomSelect = document.getElementById('roomSelect');
-    if (roomSelect) roomSelect.value = room;
+    if (roomSelect) roomSelect.value = cleanRoom;
     document.querySelector('.mode-tabs').style.display = 'flex';
 
-    // 5. 데이터베이스 참조 통로 강제 업데이트
-    const rPath = `courses/${room}`;
+    // 5. 데이터베이스 참조 경로 재설정
+    const rPath = `courses/${cleanRoom}`;
     window.dbRef = {
         settings: firebase.database().ref(`${rPath}/settings`),
         qa: firebase.database().ref(`${rPath}/questions`),
@@ -399,22 +450,22 @@ forceEnterRoom: async function(room) {
     };
     dbRef = window.dbRef; 
 
-    // 6. 상단 제목 즉시 갱신
-    ui.updateHeaderRoom(room);
+    ui.updateHeaderRoom(cleanRoom);
     ui.updateObserverButton();
     
-    // 7. 설정 실시간 감시
+    // 6. 설정 실시간 감시
     dbRef.settings.off();
     dbRef.settings.on('value', s => {
-        if (state.room !== room) return; 
+        if (state.room !== cleanRoom) return; 
         const data = s.val() || {};
         ui.renderSettings(data); 
         if (document.getElementById('view-dashboard').style.display !== 'none') ui.loadDashboardStats();
     });
 
+    // 7. 방 상태 실시간 감시
     dbRef.status.off();
     dbRef.status.on('value', s => {
-        if (state.room !== room) return;
+        if (state.room !== cleanRoom) return;
         const statusData = s.val() || {};
         ui.renderRoomStatus(statusData.roomStatus || 'idle'); 
 
@@ -425,39 +476,39 @@ forceEnterRoom: async function(room) {
         }
     });
 
-    // [핵심 수정] 리스너 내부에서 발생하는 렌더링 에러가 리스너를 죽이지 않도록 try-catch 적용
-    dbRef.qa.off();
+    // 8. [가장 중요] Q&A 실시간 리스너: 데이터 수신 즉시 renderQaList 호출
+    dbRef.qa.off(); // 꽂기 전 다시 한번 뽑음
     dbRef.qa.on('value', s => { 
-        if (state.room !== room) return;
+        if (state.room !== cleanRoom) return;
         
         try {
-            // 1. DB 데이터를 state에 저장
+            // DB 데이터를 state에 실시간 저장
             state.qaData = s.val() || {}; 
             
-            // 2. 현재 선택된 필터로 다시 그리기 (여기서 에러가 나도 리스너는 살려야 함)
+            // 현재 선택된 필터에 맞춰 즉시 화면 렌더링 (에러 방어 포함)
             ui.renderQaList(); 
             
-            // 3. 대시보드 숫자 업데이트
+            // 대시보드 통계 숫자도 실시간 업데이트
             if (document.getElementById('view-dashboard').style.display !== 'none') {
                 ui.loadDashboardStats();
             }
         } catch (e) {
-            console.error("실시간 Q&A 렌더링 중 오류 발생 (무시하고 계속 감시):", e);
+            console.error("실시간 Q&A 업데이트 중 오류 발생:", e);
         }
     });
 
-    // 9. 기타 시스템 복구
-    this.fetchCodeAndRenderQr(room);
+    // 9. 기타 서비스 복구
+    this.fetchCodeAndRenderQr(cleanRoom);
     const lastMode = localStorage.getItem('kac_last_mode') || 'dashboard';
     ui.setMode(lastMode);
     
     subjectMgr.init();
     guideMgr.init();
 
-    // 10. 타이머 설정
+    // 10. 1분 간격 강제 리프레시 (NEW 배지 시간 계산용)
     if (window.adminQaRefreshInterval) clearInterval(window.adminQaRefreshInterval);
     window.adminQaRefreshInterval = setInterval(() => {
-        if (state.room === room && state.qaData && Object.keys(state.qaData).length > 0) {
+        if (state.room === cleanRoom && state.qaData && Object.keys(state.qaData).length > 0) {
             ui.renderQaList(); 
         }
     }, 60000); 
@@ -4025,24 +4076,23 @@ subjectMgr.addSubjectInModal = function() {
 
 
 
-// 2. [실행] 페이지 로드 시 초기화 통합
+// 파일 맨 아래 window.onload 부분도 이렇게 깔끔하게 바꿔야 실시간이 작동합니다!
 window.onload = function() { 
     dataMgr.checkMobile(); 
-    dataMgr.initSystem(); 
     profMgr.init();   
-    coordMgr.init(); // 과정 담당자 초기화 추가
+    coordMgr.init(); 
     guideMgr.init();
 
-    // 새로고침 시 기존 접속 강의실 자동 복구
-    const lastRoom = localStorage.getItem('kac_last_room');
-    if (lastRoom) {
-        setTimeout(() => {
-            if (firebase.auth().currentUser) {
-                dataMgr.forceEnterRoom(lastRoom);
-            }
-        }, 500);
-    }
+    // [중요] 여기서 forceEnterRoom을 또 부르면 안테나가 두 개 꽂혀서 실시간이 안 됩니다.
+    // dataMgr.initSystem()이 로그인 체크 후 위에서 고친 loadInitialData를 한 번만 실행합니다.
+    dataMgr.initSystem(); 
 };
+
+
+
+
+
+
 
 window.onclick = function(event) {
     // 1. 메뉴 드롭다운 외 클릭 시 닫기
