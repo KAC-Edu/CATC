@@ -392,13 +392,25 @@ forceEnterRoom: async function(room) {
     if(roomSelect) roomSelect.value = room;
     document.querySelector('.mode-tabs').style.display = 'flex';
 
+
+
+
+
     // 4. 데이터베이스 참조 경로 설정
-    const rPath = `courses/${room}`;
-    dbRef.settings = firebase.database().ref(`${rPath}/settings`);
-    dbRef.qa = firebase.database().ref(`${rPath}/questions`);
-    dbRef.quiz = firebase.database().ref(`${rPath}/activeQuiz`);
-    dbRef.ans = firebase.database().ref(`${rPath}/quizAnswers`);
-    dbRef.status = firebase.database().ref(`${rPath}/status`);
+const rPath = `courses/${room}`;
+    window.dbRef = {
+        settings: firebase.database().ref(`${rPath}/settings`),
+        qa: firebase.database().ref(`${rPath}/questions`),
+        quiz: firebase.database().ref(`${rPath}/activeQuiz`),
+        ans: firebase.database().ref(`${rPath}/quizAnswers`),
+        status: firebase.database().ref(`${rPath}/status`)
+    };
+    dbRef = window.dbRef;
+
+
+
+
+
 
     // 5. 상단 제목 및 버튼 모양 갱신
     ui.updateHeaderRoom(room);
@@ -536,44 +548,49 @@ deactivateAllRooms: async function() {
     },
     
 updateQa: function(action) {
-        // 1. 옵저버(눈팅 모드)인지 먼저 확인
-        if(state.isObserver) return ui.showAlert("👁️ 옵저버 모드에서는 질문을 관리(삭제/고정)할 수 없습니다.");
-        
-        // 2. 현재 선택된 질문 번호(Key)가 있는지 확인
-        if(!state.activeQaKey || !state.room) {
-            ui.showAlert("⚠️ 대상을 찾을 수 없습니다. 다시 시도해 주세요.");
-            return;
-        }
+    // 1. 권한 및 대상 체크
+    if(state.isObserver) return ui.showAlert("👁️ 옵저버 모드에서는 질문을 관리할 수 없습니다.");
+    if(!state.activeQaKey || !state.room) return ui.showAlert("⚠️ 대상 질문을 찾을 수 없습니다.");
 
-        const item = state.qaData[state.activeQaKey];
-        // 만약 데이터가 이미 삭제되었다면 중단
-        if(!item && action !== 'delete') return;
+    // 2. [핵심] 변수를 거치지 않고 실시간 방 경로를 직접 생성
+    const targetRef = firebase.database().ref(`courses/${state.room}/questions/${state.activeQaKey}`);
 
-        // 3. 삭제 버튼을 눌렀을 때
-        if (action === 'delete') { 
-            if(confirm("이 질문을 완전히 삭제하시겠습니까?")) { 
-                // [강력한 삭제 로직] 경로를 직접 지정하여 삭제를 보장함
-                firebase.database().ref(`courses/${state.room}/questions/${state.activeQaKey}`).remove()
-                .then(() => {
-                    ui.closeQaModal(); // 성공하면 창 닫기
-                })
-                .catch(err => {
-                    ui.showAlert("삭제 실패: " + err.message);
-                });
-            }
-        } 
-        // 4. 고정(Pin)이나 답변 완료(Done)를 눌렀을 때
-        else {
-            let ns = action;
-            if(item.status === action) ns = 'normal'; // 이미 눌린 걸 또 누르면 해제
-            else if(action === 'done' && item.status==='pin') ns = 'pin-done';
-
-            firebase.database().ref(`courses/${state.room}/questions/${state.activeQaKey}`).update({ status: ns })
+    // 3. 삭제 로직
+    if (action === 'delete') { 
+        if(confirm("이 질문을 완전히 삭제하시겠습니까?")) { 
+            targetRef.remove()
             .then(() => {
-                ui.closeQaModal();
+                ui.closeQaModal(); // 삭제 성공 시 즉시 팝업 닫기
+            })
+            .catch(err => {
+                ui.showAlert("삭제 실패: " + err.message);
             });
         }
-    },
+    } 
+    // 4. 상태 업데이트 로직 (핀 고정, 나중에 답변, 완료)
+    else {
+        // 현재 상태를 확인하여 토글(On/Off) 처리
+        const currentItem = state.qaData[state.activeQaKey] || {};
+        let nextStatus = action;
+        
+        // 이미 해당 상태라면 일반(normal)으로 되돌림 (토글 기능)
+        if(currentItem.status === action) {
+            nextStatus = 'normal';
+        } 
+        // 핀 고정된 상태에서 완료를 누른 경우 처리
+        else if(action === 'done' && currentItem.status === 'pin') {
+            nextStatus = 'pin-done';
+        }
+
+        targetRef.update({ status: nextStatus })
+        .then(() => {
+            ui.closeQaModal(); // 업데이트 성공 시 즉시 팝업 닫기
+        })
+        .catch(err => {
+            ui.showAlert("처리 실패: " + err.message);
+        });
+    }
+},
 
 
 
