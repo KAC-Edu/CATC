@@ -2200,31 +2200,27 @@ filterQa: function(f, event) {
 
 
     
-// [6.16차] 실시간 반응성 및 에러 완벽 해결 버전
+// [6.17차] 대용량 데이터 대응 성능 최적화 버전
 renderQaList: function(f) {
     const list = document.getElementById('qaList'); 
     if(!list) return;
 
-    // 현재 선택한 필터 상태 유지 (All, Pinned, Later)
     if (f) state.currentQaFilter = f;
     const currentFilter = state.currentQaFilter || 'all';
 
-    list.innerHTML = "";
-    
-    // 데이터가 없으면 종료
     if (!state.qaData) return;
 
-    // 1. 배열 변환 (null 데이터 방어)
+    // 1. 유효 데이터 추출 및 배열 변환
     let items = Object.keys(state.qaData)
         .map(k => (state.qaData[k] ? { id: k, ...state.qaData[k] } : null))
-        .filter(i => i !== null && i.text); 
+        .filter(i => i !== null && i.text && i.status !== 'delete'); 
 
-    // 2. 강사/과목 필터링 (전체가 아니면 필터 적용)
+    // 2. 강사 필터링
     if(subjectMgr.selectedFilter && subjectMgr.selectedFilter !== 'all') {
         items = items.filter(x => x.subject === subjectMgr.selectedFilter);
     }
     
-    // 3. 정렬 (Pin > Later > Done > Like > Time)
+    // 3. 정렬 로직 (고정 > 나중에 > 미완료 > 좋아요 > 시간)
     items.sort((a, b) => {
         const getWeight = (item) => {
             const s = item.status || 'normal';
@@ -2242,26 +2238,24 @@ renderQaList: function(f) {
         return (b.timestamp || 0) - (a.timestamp || 0);
     });
 
-    // 4. 리스트 생성
+    // 4. [핵심 최적화] innerHTML 대신 문자열 버퍼(htmlBuffer) 사용
+    // 루프 안에서 DOM에 접근하지 않고 메모리에서 글자만 합칩니다.
+    let htmlBuffer = "";
+
     items.forEach(i => {
         const s = i.status || 'normal';
 
-        // 상단 탭 필터링 로직
         if(currentFilter === 'pin' && !(s === 'pin' || s === 'pin-done')) return;
         if(currentFilter === 'later' && s !== 'later') return;
-        if(s === 'delete') return; 
         
         let isDone = (s === 'done' || s === 'pin-done');
         let cls = s === 'pin' ? 'status-pin' : (s === 'later' ? 'status-later' : (isDone ? 'status-done' : ''));
-        
-        // 아이콘 결정 (안전하게 문자열 체크)
         const icon = (String(s).indexOf('pin') !== -1) ? '📌 ' : (s === 'later' ? '⚠️ ' : (isDone ? '✅ ' : ''));
         
         const isNew = (Date.now() - (i.timestamp || 0)) < 120000;
         const newClass = isNew ? 'is-new' : '';
         const newBadge = isNew ? '<span class="new-badge-icon">NEW</span>' : '';
 
-        // 대상 이름 결정 (To. 강사님 등)
         let rawSubject = String(i.subject || '공통질문');
         let displayName = "";
         const positions = ["본부장", "공항장", "센터장", "부장", "차장", "과장", "주임", "교수"];
@@ -2275,7 +2269,8 @@ renderQaList: function(f) {
             displayName = rawSubject;
         }
 
-        list.innerHTML += `
+        // 문자열을 버퍼에 쌓음
+        htmlBuffer += `
         <div class="q-card ${cls} ${newClass}" data-ts="${i.timestamp}" onclick="ui.openQaModal('${i.id}')">
             <div class="q-content">
                 ${newBadge}
@@ -2291,8 +2286,14 @@ renderQaList: function(f) {
             </div>
         </div>`;
     });
-},
 
+    // 5. 루프가 다 끝나고 단 한 번만 화면을 교체합니다. (성함 60개 기준 수십 배 빠름)
+    if (htmlBuffer === "") {
+        list.innerHTML = "<div style='text-align:center; padding:100px 0; color:#94a3b8; font-weight:700;'>질문이 없습니다.</div>";
+    } else {
+        list.innerHTML = htmlBuffer;
+    }
+},
 
 
 
