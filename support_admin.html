@@ -167,10 +167,6 @@
         <main class="app-content">
             <!-- [구역 1] 생활관 관리 (기존 내용) -->
             <div id="view-dorm">
-                <div class="period-banner">
-                    <div><i class="fa-solid fa-clock-rotate-left"></i> 서버 배정표 유효기간</div>
-                    <b id="display-period">로딩 중...</b>
-                </div>
 
                 <div class="section-card">
                     <div class="section-title"><i class="fa-solid fa-file-pdf"></i> 배정표 PDF 신규 업로드</div>
@@ -200,7 +196,10 @@
                 </div>
 
                 <div class="section-card" style="margin-bottom:50px;">
-                    <div class="section-title"><i class="fa-solid fa-list-check"></i> 실시간 배정 명단 (클릭 시 수정)</div>
+<div class="section-title" style="display: flex; justify-content: space-between; align-items: center;">
+    <span><i class="fa-solid fa-list-check"></i> 실시간 배정 명단 (클릭 시 수정)</span>
+    <span id="dorm-count-badge" style="background: var(--blue-main); color: white; padding: 2px 10px; border-radius: 20px; font-size: 12px; font-weight: 800;">0명</span>
+</div>
                     <div style="overflow-x: auto;">
                         <table class="navy-table">
                             <thead><tr><th>성함</th><th>생활관</th><th>호실</th><th width="40"></th></tr></thead>
@@ -366,7 +365,17 @@
             setInterval(runClock, 1000); runClock();
         };
 
-        function loadPeriod() { db.ref('system/dormitory_metadata').on('value', s => { const d = s.val(); document.getElementById('display-period').innerText = d ? d.period : "미설정"; }); }
+function loadPeriod() { 
+    db.ref('system/dormitory_metadata').on('value', s => { 
+        const d = s.val(); 
+        if (d && d.period) {
+            // "2026-02-23 ~ 2026-02-27" 형태를 잘라서 입력창에 넣어줌
+            const dates = d.period.split(" ~ ");
+            document.getElementById('period-start').value = dates[0];
+            document.getElementById('period-end').value = dates[1];
+        }
+    }); 
+}
         
         async function addManual() {
             const name = document.getElementById('manual-name').value.trim();
@@ -473,6 +482,7 @@
         function loadDormList() {
             db.ref('system/dormitory_assignments').on('value', snap => {
                 const data = snap.val() || {};
+                document.getElementById('dorm-count-badge').innerText = Object.keys(data).length + "명 배정됨";
                 const tbody = document.getElementById('dormTableBody');
                 tbody.innerHTML = Object.keys(data).sort().map(name => `
                     <tr onclick="openEdit('${name}', '${data[name].building}', '${data[name].room}')" style="cursor:pointer;">
