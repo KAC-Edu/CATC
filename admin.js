@@ -355,8 +355,12 @@ enterAsObserver: function() {
 
 
 forceEnterRoom: async function(room) {
-    // 1. [강력한 초기화] 모든 강의실(A~Z)의 실시간 연결을 완전히 차단합니다.
-    // 방을 옮길 때 이전 방의 잔상이 남지 않도록 싹 청소하는 과정입니다.
+    // 1. [강력한 초기화] 모든 강의실 실시간 연결 차단
+    // 기존 루프를 유지하되, 글로벌 dbRef 자체도 명시적으로 끕니다.
+    if (window.dbRef) {
+        Object.values(window.dbRef).forEach(ref => ref.off());
+    }
+
     for (let i = 65; i <= 90; i++) {
         const char = String.fromCharCode(i);
         const path = `courses/${char}`;
@@ -367,21 +371,22 @@ forceEnterRoom: async function(room) {
     }
 
     // 2. 현재 방 데이터 및 화면 초기화
-    state.qaData = {}; // 메모리에 남은 이전 질문 삭제
+    state.qaData = {}; 
+    state.activeQaKey = null; // ★추가: 활성화된 키 초기화
     const qaListEl = document.getElementById('qaList');
-    if(qaListEl) qaListEl.innerHTML = ""; // 화면에 떠있는 이전 질문 삭제
+    if(qaListEl) qaListEl.innerHTML = ""; 
 
     // 3. 현재 방 정보 업데이트 및 저장
     state.room = room; 
     localStorage.setItem('kac_last_room', room); 
     state.isObserver = (sessionStorage.getItem('kac_observer_room') === room);
 
-    // 4. UI 초기화 (탭 표시 및 선택창 동기화)
+    // 4. UI 초기화
     const roomSelect = document.getElementById('roomSelect');
     if(roomSelect) roomSelect.value = room;
     document.querySelector('.mode-tabs').style.display = 'flex';
 
-    // 5. [출결 로직과 동기화] 데이터베이스 참조 통로(dbRef)를 현재 방으로 강제 업데이트
+    // 5. [참조 통로 업데이트] 
     const rPath = `courses/${room}`;
     window.dbRef = {
         settings: firebase.database().ref(`${rPath}/settings`),
@@ -390,40 +395,34 @@ forceEnterRoom: async function(room) {
         ans: firebase.database().ref(`${rPath}/quizAnswers`),
         status: firebase.database().ref(`${rPath}/status`)
     };
-    dbRef = window.dbRef; // 시스템 공통 변수 갱신
+    dbRef = window.dbRef; 
 
-    // 6. 상단 제목 즉시 갱신
+    // 6. 제목 갱신
     ui.updateHeaderRoom(room);
     ui.updateObserverButton();
     
-    // 7. [실시간 감시 시작] 현재 방(room)에 대해서만 정확하게 리스너 연결
-    // (A) 강의실 설정 감시
+    // 7. [실시간 리스너 연결] - if(state.room !== room) 검증 유지
     dbRef.settings.on('value', s => {
-        if(state.room !== room) return; // 현재 내가 있는 방이 아니면 무시
+        if(state.room !== room) return;
         const data = s.val() || {};
         ui.renderSettings(data); 
         if(document.getElementById('view-dashboard').style.display !== 'none') ui.loadDashboardStats();
     });
 
-    // (B) 강의실 상태 감시
     dbRef.status.on('value', s => {
         if(state.room !== room) return;
         const statusData = s.val() || {};
         ui.renderRoomStatus(statusData.roomStatus || 'idle'); 
 
-        if (!state.isObserver) {
-            ui.checkLockStatus(statusData);
-        } else {
-            document.getElementById('statusOverlay').style.display = 'none';
-        }
+        if (!state.isObserver) ui.checkLockStatus(statusData);
+        else document.getElementById('statusOverlay').style.display = 'none';
     });
 
-    // (C) [Q&A 리얼타임 엔진] 질문 목록 감시 및 강제 렌더링
+    // [Q&A 리스너] 가장 중요한 부분
     dbRef.qa.on('value', s => { 
         if(state.room !== room) return;
         state.qaData = s.val() || {}; 
-        
-        console.log(`[실시간 동기화 완료] Room ${room}`);
+        console.log(`[데이터 수신] Room ${room}, 질문수: ${Object.keys(state.qaData).length}`);
         ui.renderQaList('all'); 
         
         if(document.getElementById('view-dashboard').style.display !== 'none') {
@@ -436,17 +435,21 @@ forceEnterRoom: async function(room) {
     const lastMode = localStorage.getItem('kac_last_mode') || 'dashboard';
     ui.setMode(lastMode);
     
+    // 매니저 초기화 전 기존 리스너 해제 로직이 Mgr 내부에 없다면 중복 실행될 수 있음
     subjectMgr.init();
     guideMgr.init();
 
     // 9. 타이머 설정
     if (window.adminQaRefreshInterval) clearInterval(window.adminQaRefreshInterval);
     window.adminQaRefreshInterval = setInterval(() => {
-        if(state.qaData && Object.keys(state.qaData).length > 0) {
+        if(state.room === room && state.qaData && Object.keys(state.qaData).length > 0) {
             ui.renderQaList('all'); 
         }
     }, 60000); 
 },
+
+
+
 
 
 
