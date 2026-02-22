@@ -424,12 +424,13 @@ forceEnterRoom: async function(room) {
         }
     });
 
+    // [중요 수정] 리스너가 데이터를 받으면 인자 없이 renderQaList()를 호출해 현재 상태를 유지함
     dbRef.qa.off();
     dbRef.qa.on('value', s => { 
         if (state.room !== room) return;
         state.qaData = s.val() || {}; 
         
-        // [수정 핵심] 데이터가 들어오면 필터를 유지한 상태로 즉시 다시 그림
+        // 현재 내가 보고 있는 필터(전체/핀/나중에) 상태 그대로 다시 그리기 실행
         ui.renderQaList(); 
         
         if (document.getElementById('view-dashboard').style.display !== 'none') {
@@ -453,6 +454,10 @@ forceEnterRoom: async function(room) {
         }
     }, 60000); 
 },
+
+
+
+
 
 
 
@@ -556,7 +561,6 @@ updateQa: function(action) {
         if (confirm("이 질문을 완전히 삭제하시겠습니까?")) { 
             targetRef.remove()
             .then(() => {
-                console.log(`[삭제 성공] Room: ${activeRoom}`);
                 ui.closeQaModal(); 
             })
             .catch(err => ui.showAlert("삭제 실패: " + err.message));
@@ -569,7 +573,6 @@ updateQa: function(action) {
         
         targetRef.update({ status: nextStatus })
         .then(() => {
-            console.log(`[상태변경: ${nextStatus}] Room: ${activeRoom}`);
             ui.closeQaModal(); 
         })
         .catch(err => ui.showAlert("상태 변경 실패: " + err.message));
@@ -2141,11 +2144,19 @@ showShuttleListModal: function(waveId, waveName, locName, members) {
 
 
 
-    filterQa: function(f, event) { 
-        document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active')); 
-        if(event && event.target) event.target.classList.add('active'); 
-        this.renderQaList(f); 
-    },
+filterQa: function(f, event) { 
+    // 1. 모든 필터 칩에서 활성화 색상 제거
+    document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active')); 
+    
+    // 2. 내가 클릭한 칩에만 활성화 색상 부여
+    if(event && event.target) event.target.classList.add('active'); 
+    
+    // 3. 현재 어떤 필터를 선택했는지 전역 state에 저장 (실시간 갱신용)
+    state.currentQaFilter = f;
+    
+    // 4. 목록 다시 그리기
+    this.renderQaList(f); 
+},
 
     
 // [6.13차 수정] Q&A 리스트 렌더링 (최신 질문 2분 강조 기능 복구)
@@ -2153,7 +2164,7 @@ renderQaList: function(f) {
     const list = document.getElementById('qaList'); 
     if(!list) return;
 
-    // 만약 f(필터) 인자가 들어오면 그걸로 바꾸고, 아니면 기존에 보던 걸 유지함
+    // 현재 선택한 필터 상태를 전역 state에 저장하고 유지함
     if (f) state.currentQaFilter = f;
     else f = state.currentQaFilter || 'all';
 
@@ -2181,7 +2192,7 @@ renderQaList: function(f) {
     });
 
     items.forEach(i => {
-        // 현재 선택된 필터에 맞지 않는 질문은 건너뜀
+        // 현재 선택된 필터(all/pin/later)와 일치하는 것만 그림
         if(f==='pin' && i.status!=='pin') return;
         if(f==='later' && i.status!=='later') return;
         
@@ -2218,6 +2229,18 @@ renderQaList: function(f) {
         </div>`;
     });
 },
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
