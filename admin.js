@@ -561,31 +561,49 @@ deactivateAllRooms: async function() {
 updateQa: function(action) {
     const activeRoom = state.room;
     if (state.isObserver) return ui.showAlert("👁️ 옵저버 모드에서는 질문을 관리할 수 없습니다.");
-    if (!state.activeQaKey || !activeRoom) return;
+    if (!state.activeQaKey || !activeRoom) {
+        ui.showAlert("⚠️ 대상을 찾을 수 없습니다.");
+        return;
+    }
 
     const targetRef = firebase.database().ref(`courses/${activeRoom}/questions/${state.activeQaKey}`);
 
     if (action === 'delete') { 
         if (confirm("이 질문을 완전히 삭제하시겠습니까?")) { 
             targetRef.remove()
-            .then(() => ui.closeQaModal())
+            .then(() => {
+                ui.closeQaModal();
+                // [실시간 보정] 삭제 즉시 로컬 데이터에서 제거하고 화면 갱신
+                if (state.qaData) delete state.qaData[state.activeQaKey];
+                ui.renderQaList();
+            })
             .catch(err => ui.showAlert("삭제 실패: " + err.message));
         }
     } else {
-        // 기존 데이터를 안전하게 가져옴
         const currentItem = state.qaData[state.activeQaKey] || {};
         const currentStatus = currentItem.status || 'normal';
         let nextStatus = action;
 
-        // 토글 로직
         if (currentStatus === action) nextStatus = 'normal';
         else if (action === 'done' && currentStatus === 'pin') nextStatus = 'pin-done';
         
         targetRef.update({ status: nextStatus })
-        .then(() => ui.closeQaModal())
+        .then(() => {
+            ui.closeQaModal();
+            // [실시간 보정] 서버 응답을 기다리지 않고 로컬 데이터를 즉시 수정 후 화면 갱신
+            if (state.qaData && state.qaData[state.activeQaKey]) {
+                state.qaData[state.activeQaKey].status = nextStatus;
+                ui.renderQaList(); 
+            }
+        })
         .catch(err => ui.showAlert("상태 변경 실패: " + err.message));
     }
 },
+
+
+
+
+
 
 
 
@@ -2166,38 +2184,50 @@ filterQa: function(f, event) {
     this.renderQaList(f); 
 },
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     
-// [6.15차 최종] 실시간 갱신 버그 완벽 수정 버전
+// [6.16차] 실시간 반응성 및 에러 완벽 해결 버전
 renderQaList: function(f) {
     const list = document.getElementById('qaList'); 
     if(!list) return;
 
-    // 현재 선택한 필터 상태 유지
+    // 현재 선택한 필터 상태 유지 (All, Pinned, Later)
     if (f) state.currentQaFilter = f;
-    else f = state.currentQaFilter || 'all';
+    const currentFilter = state.currentQaFilter || 'all';
 
     list.innerHTML = "";
     
-    // 데이터가 아예 없거나 null인 경우 안전하게 종료
-    if (!state.qaData || typeof state.qaData !== 'object') {
-        list.innerHTML = "<div style='text-align:center; padding:100px 0; color:#94a3b8; font-weight:700;'>질문이 없습니다.</div>";
-        return;
-    }
+    // 데이터가 없으면 종료
+    if (!state.qaData) return;
 
-    // 1. 객체를 배열로 변환 및 유효하지 않은 데이터(null 등) 필터링
+    // 1. 배열 변환 (null 데이터 방어)
     let items = Object.keys(state.qaData)
         .map(k => (state.qaData[k] ? { id: k, ...state.qaData[k] } : null))
-        .filter(i => i !== null && i.text); // 내용이 있는 유효한 질문만 추출
+        .filter(i => i !== null && i.text); 
 
-    // 2. 강사/과목 필터링 적용
+    // 2. 강사/과목 필터링 (전체가 아니면 필터 적용)
     if(subjectMgr.selectedFilter && subjectMgr.selectedFilter !== 'all') {
         items = items.filter(x => x.subject === subjectMgr.selectedFilter);
     }
     
-    // 3. 정렬 로직 (에러 방지를 위해 속성 존재 여부 체크)
+    // 3. 정렬 (Pin > Later > Done > Like > Time)
     items.sort((a, b) => {
         const getWeight = (item) => {
-            const s = item.status || 'normal'; 
+            const s = item.status || 'normal';
             if (s === 'pin') return 3;
             if (s === 'later') return 2;
             if (s === 'done' || s === 'pin-done') return 0;
@@ -2212,62 +2242,65 @@ renderQaList: function(f) {
         return (b.timestamp || 0) - (a.timestamp || 0);
     });
 
-    // 4. HTML 생성 루프
+    // 4. 리스트 생성
     items.forEach(i => {
-        try {
-            const s = i.status || 'normal';
+        const s = i.status || 'normal';
 
-            // 상단 탭 필터링 (All, Pinned, Later)
-            if(f === 'pin' && !(s === 'pin' || s === 'pin-done')) return;
-            if(f === 'later' && s !== 'later') return;
-            if(s === 'delete') return; // 삭제된 항목 패스
-            
-            let isDone = (s === 'done' || s === 'pin-done');
-            let cls = s === 'pin' ? 'status-pin' : (s === 'later' ? 'status-later' : (isDone ? 'status-done' : ''));
-            
-            // 아이콘 결정 (indexOf로 안전하게 체크)
-            const icon = (s && s.indexOf('pin') !== -1) ? '📌 ' : (s === 'later' ? '⚠️ ' : (isDone ? '✅ ' : ''));
-            
-            // NEW 배지 시간 계산
-            const isNew = (Date.now() - (i.timestamp || 0)) < 120000;
-            const newClass = isNew ? 'is-new' : '';
-            const newBadge = isNew ? '<span class="new-badge-icon">NEW</span>' : '';
+        // 상단 탭 필터링 로직
+        if(currentFilter === 'pin' && !(s === 'pin' || s === 'pin-done')) return;
+        if(currentFilter === 'later' && s !== 'later') return;
+        if(s === 'delete') return; 
+        
+        let isDone = (s === 'done' || s === 'pin-done');
+        let cls = s === 'pin' ? 'status-pin' : (s === 'later' ? 'status-later' : (isDone ? 'status-done' : ''));
+        
+        // 아이콘 결정 (안전하게 문자열 체크)
+        const icon = (String(s).indexOf('pin') !== -1) ? '📌 ' : (s === 'later' ? '⚠️ ' : (isDone ? '✅ ' : ''));
+        
+        const isNew = (Date.now() - (i.timestamp || 0)) < 120000;
+        const newClass = isNew ? 'is-new' : '';
+        const newBadge = isNew ? '<span class="new-badge-icon">NEW</span>' : '';
 
-            // 강사명/대상 표기 로직 (에러 방지를 위해 String 강제 변환)
-            let rawSubject = String(i.subject || '공통질문');
-            let displayName = "";
-            const positions = ["본부장", "공항장", "센터장", "부장", "차장", "과장", "주임", "교수"];
-            const foundPos = positions.find(pos => rawSubject.indexOf(pos) !== -1);
-            
-            if (foundPos) {
-                displayName = rawSubject.indexOf("님") !== -1 ? rawSubject : rawSubject + "님";
-            } else if (rawSubject !== '일반' && rawSubject !== '공통질문') {
-                displayName = rawSubject + " 강사님";
-            } else {
-                displayName = rawSubject;
-            }
-
-            list.innerHTML += `
-            <div class="q-card ${cls} ${newClass}" data-ts="${i.timestamp}" onclick="ui.openQaModal('${i.id}')">
-                <div class="q-content">
-                    ${newBadge}
-                    <span style="display:inline-block; background:#eff6ff; color:#3b82f6; font-size:10px; padding:2px 6px; border-radius:4px; margin-right:8px; vertical-align:middle; border:1px solid #dbeafe; font-weight:800;">
-                        To. ${displayName}
-                    </span>
-                    ${icon}${i.text}
-                    <button class="btn-translate" onclick="event.stopPropagation(); ui.translateQa('${i.id}')" title="번역"><i class="fa-solid fa-language"></i> 번역</button>
-                </div>
-                <div class="q-meta">
-                    <div class="q-like-badge">👍 ${i.likes||0}</div>
-                    <div class="q-time">${new Date(i.timestamp || Date.now()).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</div>
-                </div>
-            </div>`;
-        } catch (e) {
-            console.error("Rendering error for item:", i, e);
-            // 개별 아이템 에러 시 멈추지 않고 다음 아이템으로 넘어가도록 예외처리
+        // 대상 이름 결정 (To. 강사님 등)
+        let rawSubject = String(i.subject || '공통질문');
+        let displayName = "";
+        const positions = ["본부장", "공항장", "센터장", "부장", "차장", "과장", "주임", "교수"];
+        const foundPos = positions.find(pos => rawSubject.indexOf(pos) !== -1);
+        
+        if (foundPos) {
+            displayName = rawSubject.indexOf("님") !== -1 ? rawSubject : rawSubject + "님";
+        } else if (rawSubject !== '일반' && rawSubject !== '공통질문') {
+            displayName = rawSubject + " 강사님";
+        } else {
+            displayName = rawSubject;
         }
+
+        list.innerHTML += `
+        <div class="q-card ${cls} ${newClass}" data-ts="${i.timestamp}" onclick="ui.openQaModal('${i.id}')">
+            <div class="q-content">
+                ${newBadge}
+                <span style="display:inline-block; background:#eff6ff; color:#3b82f6; font-size:10px; padding:2px 6px; border-radius:4px; margin-right:8px; vertical-align:middle; border:1px solid #dbeafe; font-weight:800;">
+                    To. ${displayName}
+                </span>
+                ${icon}${i.text}
+                <button class="btn-translate" onclick="event.stopPropagation(); ui.translateQa('${i.id}')" title="번역"><i class="fa-solid fa-language"></i> 번역</button>
+            </div>
+            <div class="q-meta">
+                <div class="q-like-badge">👍 ${i.likes||0}</div>
+                <div class="q-time">${new Date(i.timestamp || Date.now()).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</div>
+            </div>
+        </div>`;
     });
 },
+
+
+
+
+
+
+
+
+
 
 
 
