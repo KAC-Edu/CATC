@@ -403,7 +403,7 @@ forceEnterRoom: async function(room) {
     ui.updateHeaderRoom(room);
     ui.updateObserverButton();
     
-    // 7. 실시간 감시 시작 (리스너 중첩 방지 위해 .off() 후 .on())
+    // 7. 설정 실시간 감시
     dbRef.settings.off();
     dbRef.settings.on('value', s => {
         if (state.room !== room) return; 
@@ -412,6 +412,7 @@ forceEnterRoom: async function(room) {
         if (document.getElementById('view-dashboard').style.display !== 'none') ui.loadDashboardStats();
     });
 
+    // 8. 방 상태 실시간 감시
     dbRef.status.off();
     dbRef.status.on('value', s => {
         if (state.room !== room) return;
@@ -425,25 +426,24 @@ forceEnterRoom: async function(room) {
         }
     });
 
-    // [핵심 수정] 실시간 리스너 보강: 데이터가 변경될 때마다 state 동기화 후 즉시 렌더링
+    // [핵심 수정] 실시간 리스너: 데이터 수신 시 즉시 렌더링
     dbRef.qa.off();
     dbRef.qa.on('value', s => { 
         if (state.room !== room) return;
         
-        // 실시간 DB 데이터를 state에 즉시 반영
+        // 1. DB 데이터를 state에 저장
         state.qaData = s.val() || {}; 
         
-        // 현재 선택된 필터(state.currentQaFilter)를 기준으로 리스트를 즉시 다시 그림
-        // 인자 없이 호출해도 내부적으로 state.currentQaFilter를 쓰도록 renderQaList가 설계되어야 함
+        // 2. 현재 선택된 필터로 다시 그리기
         ui.renderQaList(); 
         
-        // 대시보드 통계도 실시간 갱신
+        // 3. 대시보드 숫자 업데이트
         if (document.getElementById('view-dashboard').style.display !== 'none') {
             ui.loadDashboardStats();
         }
     });
 
-    // 8. 기타 시스템 복구
+    // 9. 기타 시스템 복구
     this.fetchCodeAndRenderQr(room);
     const lastMode = localStorage.getItem('kac_last_mode') || 'dashboard';
     ui.setMode(lastMode);
@@ -451,7 +451,7 @@ forceEnterRoom: async function(room) {
     subjectMgr.init();
     guideMgr.init();
 
-    // 9. 타이머 설정 (1분마다 강제 리프레시 - NEW 배지 갱신용)
+    // 10. 타이머 설정
     if (window.adminQaRefreshInterval) clearInterval(window.adminQaRefreshInterval);
     window.adminQaRefreshInterval = setInterval(() => {
         if (state.room === room && state.qaData && Object.keys(state.qaData).length > 0) {
@@ -2254,19 +2254,35 @@ filterQa: function(f, event) {
 
 
     
-// [6.17차] 대용량 데이터 대응 성능 최적화 버전
+// [6.20차 최종] 성능 최적화 및 실시간 수신 완벽 보정 버전
 renderQaList: function(f) {
     const list = document.getElementById('qaList'); 
     if(!list) return;
 
+    // 현재 필터 상태 유지
     if (f) state.currentQaFilter = f;
     const currentFilter = state.currentQaFilter || 'all';
 
-    if (!state.qaData) return;
+    // 데이터가 아예 없으면 종료
+    if (!state.qaData || Object.keys(state.qaData).length === 0) {
+        list.innerHTML = "<div style='text-align:center; padding:100px 0; color:#94a3b8; font-weight:700;'>질문이 없습니다.</div>";
+        return;
+    }
 
-    // 1. 유효 데이터 추출 및 배열 변환
+    // 1. 유효 데이터 추출 (데이터 누락 방지 강화)
     let items = Object.keys(state.qaData)
-        .map(k => (state.qaData[k] ? { id: k, ...state.qaData[k] } : null))
+        .map(k => {
+            const item = state.qaData[k];
+            if (!item) return null;
+            return { 
+                id: k, 
+                text: item.text || "", 
+                status: item.status || "normal", // status가 없으면 기본값 부여
+                likes: item.likes || 0,
+                timestamp: item.timestamp || Date.now(),
+                subject: item.subject || "공통질문"
+            };
+        })
         .filter(i => i !== null && i.text && i.status !== 'delete'); 
 
     // 2. 강사 필터링
@@ -2277,7 +2293,7 @@ renderQaList: function(f) {
     // 3. 정렬 로직 (고정 > 나중에 > 미완료 > 좋아요 > 시간)
     items.sort((a, b) => {
         const getWeight = (item) => {
-            const s = item.status || 'normal';
+            const s = item.status;
             if (s === 'pin') return 3;
             if (s === 'later') return 2;
             if (s === 'done' || s === 'pin-done') return 0;
@@ -2286,19 +2302,17 @@ renderQaList: function(f) {
         const weightA = getWeight(a);
         const weightB = getWeight(b);
         if (weightA !== weightB) return weightB - weightA;
-        const likesA = a.likes || 0;
-        const likesB = b.likes || 0;
-        if (likesA !== likesB) return likesB - likesA;
-        return (b.timestamp || 0) - (a.timestamp || 0);
+        if (b.likes !== a.likes) return b.likes - a.likes;
+        return b.timestamp - a.timestamp;
     });
 
-    // 4. [핵심 최적화] innerHTML 대신 문자열 버퍼(htmlBuffer) 사용
-    // 루프 안에서 DOM에 접근하지 않고 메모리에서 글자만 합칩니다.
+    // 4. [최적화] htmlBuffer 생성
     let htmlBuffer = "";
 
     items.forEach(i => {
-        const s = i.status || 'normal';
+        const s = i.status;
 
+        // 상단 탭 필터링 적용
         if(currentFilter === 'pin' && !(s === 'pin' || s === 'pin-done')) return;
         if(currentFilter === 'later' && s !== 'later') return;
         
@@ -2310,7 +2324,7 @@ renderQaList: function(f) {
         const newClass = isNew ? 'is-new' : '';
         const newBadge = isNew ? '<span class="new-badge-icon">NEW</span>' : '';
 
-        let rawSubject = String(i.subject || '공통질문');
+        let rawSubject = String(i.subject);
         let displayName = "";
         const positions = ["본부장", "공항장", "센터장", "부장", "차장", "과장", "주임", "교수"];
         const foundPos = positions.find(pos => rawSubject.indexOf(pos) !== -1);
@@ -2323,7 +2337,6 @@ renderQaList: function(f) {
             displayName = rawSubject;
         }
 
-        // 문자열을 버퍼에 쌓음
         htmlBuffer += `
         <div class="q-card ${cls} ${newClass}" data-ts="${i.timestamp}" onclick="ui.openQaModal('${i.id}')">
             <div class="q-content">
@@ -2335,20 +2348,15 @@ renderQaList: function(f) {
                 <button class="btn-translate" onclick="event.stopPropagation(); ui.translateQa('${i.id}')" title="번역"><i class="fa-solid fa-language"></i> 번역</button>
             </div>
             <div class="q-meta">
-                <div class="q-like-badge">👍 ${i.likes||0}</div>
-                <div class="q-time">${new Date(i.timestamp || Date.now()).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</div>
+                <div class="q-like-badge">👍 ${i.likes}</div>
+                <div class="q-time">${new Date(i.timestamp).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</div>
             </div>
         </div>`;
     });
 
-    // 5. 루프가 다 끝나고 단 한 번만 화면을 교체합니다. (성함 60개 기준 수십 배 빠름)
-    if (htmlBuffer === "") {
-        list.innerHTML = "<div style='text-align:center; padding:100px 0; color:#94a3b8; font-weight:700;'>질문이 없습니다.</div>";
-    } else {
-        list.innerHTML = htmlBuffer;
-    }
+    // 5. 최종 렌더링
+    list.innerHTML = htmlBuffer || "<div style='text-align:center; padding:100px 0; color:#94a3b8; font-weight:700;'>해당 조건에 맞는 질문이 없습니다.</div>";
 },
-
 
 
 
