@@ -402,7 +402,7 @@ forceEnterRoom: async function(room) {
     ui.updateHeaderRoom(room);
     ui.updateObserverButton();
     
-    // 7. 실시간 감시 시작 (리스너 중첩 방지 위해 .off() 후 .on())
+    // 7. 실시간 감시 시작
     dbRef.settings.off();
     dbRef.settings.on('value', s => {
         if (state.room !== room) return; 
@@ -424,18 +424,20 @@ forceEnterRoom: async function(room) {
         }
     });
 
+    // [핵심 수정] 리스너가 데이터를 받으면 ui.renderQaList()를 인자 없이 호출하여 현재 필터를 유지함
     dbRef.qa.off();
     dbRef.qa.on('value', s => { 
         if (state.room !== room) return;
         state.qaData = s.val() || {}; 
-        ui.renderQaList('all'); 
+        console.log("실시간 데이터 수신됨:", room);
+        ui.renderQaList(); 
         
         if (document.getElementById('view-dashboard').style.display !== 'none') {
             ui.loadDashboardStats();
         }
     });
 
-    // 8. 기타 시스템 복구 (새로고침 없이도 리스너를 새로 잡도록 보정)
+    // 8. 기타 시스템 복구
     this.fetchCodeAndRenderQr(room);
     const lastMode = localStorage.getItem('kac_last_mode') || 'dashboard';
     ui.setMode(lastMode);
@@ -447,11 +449,10 @@ forceEnterRoom: async function(room) {
     if (window.adminQaRefreshInterval) clearInterval(window.adminQaRefreshInterval);
     window.adminQaRefreshInterval = setInterval(() => {
         if (state.room === room && state.qaData && Object.keys(state.qaData).length > 0) {
-            ui.renderQaList('all'); 
+            ui.renderQaList(); 
         }
     }, 60000); 
 },
-
 
 
 
@@ -545,18 +546,22 @@ deactivateAllRooms: async function() {
 
 
 updateQa: function(action) {
+    // 현재 시스템이 인식하는 방 번호를 즉시 고정
     const activeRoom = state.room;
-    if (state.isObserver) return ui.showAlert("👁️ 옵저버 모드에서는 질문을 관리할 수 없습니다.");
-    if (!state.activeQaKey || !activeRoom) {
-        ui.showAlert("⚠️ 대상을 찾을 수 없습니다. 강의실 선택 상태를 확인해 주세요.");
+    
+    if(state.isObserver) return ui.showAlert("👁️ 옵저버 모드에서는 질문을 관리할 수 없습니다.");
+    if(!state.activeQaKey || !activeRoom) {
+        ui.showAlert("⚠️ 대상을 찾을 수 없습니다. 다시 시도해 주세요.");
         return;
     }
+
+    // 절대 경로 생성 (꼬임 방지 핵심)
     const targetRef = firebase.database().ref(`courses/${activeRoom}/questions/${state.activeQaKey}`);
+
     if (action === 'delete') { 
-        if (confirm("이 질문을 완전히 삭제하시겠습니까?")) { 
+        if(confirm("이 질문을 완전히 삭제하시겠습니까?")) { 
             targetRef.remove()
             .then(() => {
-                console.log(`[삭제 성공] Room: ${activeRoom}`);
                 ui.closeQaModal(); 
             })
             .catch(err => ui.showAlert("삭제 실패: " + err.message));
@@ -564,11 +569,17 @@ updateQa: function(action) {
     } else {
         const currentItem = state.qaData[state.activeQaKey] || {};
         let nextStatus = action;
-        if (currentItem.status === action) nextStatus = 'normal';
-        else if (action === 'done' && currentItem.status === 'pin') nextStatus = 'pin-done';
+        
+        // 토글 로직
+        if(currentItem.status === action) {
+            nextStatus = 'normal';
+        } 
+        else if(action === 'done' && currentItem.status === 'pin') {
+            nextStatus = 'pin-done';
+        }
+
         targetRef.update({ status: nextStatus })
         .then(() => {
-            console.log(`[상태변경: ${nextStatus}] Room: ${activeRoom}`);
             ui.closeQaModal(); 
         })
         .catch(err => ui.showAlert("상태 변경 실패: " + err.message));
@@ -2149,71 +2160,75 @@ showShuttleListModal: function(waveId, waveName, locName, members) {
 
     
 // [6.13차 수정] Q&A 리스트 렌더링 (최신 질문 2분 강조 기능 복구)
-    renderQaList: function(f) {
-        const list = document.getElementById('qaList'); 
-        if(!list) return;
-        list.innerHTML = "";
-        let items = Object.keys(state.qaData).map(k => ({id:k, ...state.qaData[k]}));
+renderQaList: function(f) {
+    const list = document.getElementById('qaList'); 
+    if(!list) return;
 
-        if(subjectMgr.selectedFilter !== 'all') {
-            items = items.filter(x => x.subject === subjectMgr.selectedFilter);
-        }
+    // 현재 보고 있는 필터 상태 저장 (실시간 업데이트 시 유지하기 위함)
+    if (f) state.currentFilter = f;
+    else f = state.currentFilter || 'all';
+
+    list.innerHTML = "";
+    let items = Object.keys(state.qaData).map(k => ({id:k, ...state.qaData[k]}));
+
+    if(subjectMgr.selectedFilter !== 'all') {
+        items = items.filter(x => x.subject === subjectMgr.selectedFilter);
+    }
+    
+    // 정렬 우선순위: 핀 고정 > 추후 답변 > 좋아요 > 최신순
+    items.sort((a, b) => {
+        const getWeight = (item) => {
+            if (item.status === 'pin') return 3;
+            if (item.status === 'later') return 2;
+            return 1;
+        };
+        const weightA = getWeight(a);
+        const weightB = getWeight(b);
+        if (weightA !== weightB) return weightB - weightA;
+        const likesA = a.likes || 0;
+        const likesB = b.likes || 0;
+        if (likesA !== likesB) return likesB - likesA;
+        return b.timestamp - a.timestamp;
+    });
+
+    items.forEach(i => {
+        // 필터링 적용
+        if(f==='pin' && i.status!=='pin') return;
+        if(f==='later' && i.status!=='later') return;
         
-        // 정렬 우선순위: 핀 고정 > 추후 답변 > 좋아요 > 최신순
-        items.sort((a, b) => {
-            const getWeight = (item) => {
-                if (item.status === 'pin') return 3;
-                if (item.status === 'later') return 2;
-                return 1;
-            };
-            const weightA = getWeight(a);
-            const weightB = getWeight(b);
-            if (weightA !== weightB) return weightB - weightA;
-            const likesA = a.likes || 0;
-            const likesB = b.likes || 0;
-            if (likesA !== likesB) return likesB - likesA;
-            return b.timestamp - a.timestamp;
-        });
+        let cls = i.status==='pin'?'status-pin':(i.status==='later'?'status-later':(i.status==='done'?'status-done':''));
+        const icon = i.status==='pin'?'📌 ':(i.status==='later'?'⚠️ ':(i.status==='done'?'✅ ':''));
+        
+        const isNew = (Date.now() - i.timestamp) < 120000;
+        const newClass = isNew ? 'is-new' : '';
+        const newBadge = isNew ? '<span class="new-badge-icon">NEW</span>' : '';
 
-        items.forEach(i => {
-            if(f==='pin' && i.status!=='pin') return;
-            if(f==='later' && i.status!=='later') return;
-            
-            let cls = i.status==='pin'?'status-pin':(i.status==='later'?'status-later':(i.status==='done'?'status-done':''));
-            const icon = i.status==='pin'?'📌 ':(i.status==='later'?'⚠️ ':(i.status==='done'?'✅ ':''));
-            
-            // --- [신규/복구] 최신 질문 강조 로직 (2분 = 120,000ms) ---
-            const isNew = (Date.now() - i.timestamp) < 120000;
-            const newClass = isNew ? 'is-new' : '';
-            const newBadge = isNew ? '<span class="new-badge-icon">NEW</span>' : '';
-            // ---------------------------------------------------
+        let targetName = i.subject || '공통질문';
+        let displayName = "";
+        const positions = ["본부장", "공항장", "센터장", "부장", "차장", "과장", "주임", "교수"];
+        const foundPos = positions.find(pos => targetName.includes(pos));
+        
+        if (foundPos) displayName = targetName.includes("님") ? targetName : targetName + "님";
+        else if (targetName !== '일반' && targetName !== '공통질문') displayName = targetName + " 강사님";
+        else displayName = targetName;
 
-            let targetName = i.subject || '공통질문';
-            let displayName = "";
-            const positions = ["본부장", "공항장", "센터장", "부장", "차장", "과장", "주임", "교수"];
-            const foundPos = positions.find(pos => targetName.includes(pos));
-            
-            if (foundPos) displayName = targetName.includes("님") ? targetName : targetName + "님";
-            else if (targetName !== '일반' && targetName !== '공통질문') displayName = targetName + " 강사님";
-            else displayName = targetName;
-
-            list.innerHTML += `
-            <div class="q-card ${cls} ${newClass}" data-ts="${i.timestamp}" onclick="ui.openQaModal('${i.id}')">
-                <div class="q-content">
-                    ${newBadge}
-                    <span style="display:inline-block; background:#eff6ff; color:#3b82f6; font-size:10px; padding:2px 6px; border-radius:4px; margin-right:8px; vertical-align:middle; border:1px solid #dbeafe; font-weight:800;">
-                        To. ${displayName}
-                    </span>
-                    ${icon}${i.text}
-                    <button class="btn-translate" onclick="event.stopPropagation(); ui.translateQa('${i.id}')" title="번역"><i class="fa-solid fa-language"></i> 번역</button>
-                </div>
-                <div class="q-meta">
-                    <div class="q-like-badge">👍 ${i.likes||0}</div>
-                    <div class="q-time">${new Date(i.timestamp).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</div>
-                </div>
-            </div>`;
-        });
-    },
+        list.innerHTML += `
+        <div class="q-card ${cls} ${newClass}" data-ts="${i.timestamp}" onclick="ui.openQaModal('${i.id}')">
+            <div class="q-content">
+                ${newBadge}
+                <span style="display:inline-block; background:#eff6ff; color:#3b82f6; font-size:10px; padding:2px 6px; border-radius:4px; margin-right:8px; vertical-align:middle; border:1px solid #dbeafe; font-weight:800;">
+                    To. ${displayName}
+                </span>
+                ${icon}${i.text}
+                <button class="btn-translate" onclick="event.stopPropagation(); ui.translateQa('${i.id}')" title="번역"><i class="fa-solid fa-language"></i> 번역</button>
+            </div>
+            <div class="q-meta">
+                <div class="q-like-badge">👍 ${i.likes||0}</div>
+                <div class="q-time">${new Date(i.timestamp).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</div>
+            </div>
+        </div>`;
+    });
+},
 
 
 
