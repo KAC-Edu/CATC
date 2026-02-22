@@ -35,15 +35,27 @@
     border-radius: 16px; 
     padding: 16px; 
     margin-bottom: 12px; 
-    display: flex !important;           /* 플렉스 박스 강제 */
+    display: flex;
     gap: 12px; 
-    align-items: flex-start !important; /* 위쪽 정렬 */
-    justify-content: flex-start !important; 
-    text-align: left !important;         /* 부모로부터 상속받는 가운데 정렬 차단 */
-    box-shadow: 0 4px 6px rgba(0,0,0,0.1); 
-    position: relative; 
+    align-items: flex-start;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.05); 
+    position: relative;
+    text-align: left;
 }
 
+/* 왼쪽 아이콘(아바타) 디자인 추가 */
+.q-avatar {
+    width: 36px;
+    height: 36px;
+    background: #f1f5f9;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #94a3b8;
+    flex-shrink: 0; /* 아이콘 크기 고정 */
+    margin-top: 2px;
+}
 /* 내가 작성한 카드 스타일 (인디고 블루 테마) */
 .q-card.my-q { 
     border: 2px solid #6366f1 !important; 
@@ -92,7 +104,17 @@
 }
 
 /* --- 좋아요 및 기타 버튼 스타일 --- */
-.btn-mini { cursor: pointer; padding: 4px 8px; background: rgba(0,0,0,0.05); border-radius: 4px; }
+.btn-mini { 
+    cursor: pointer; 
+    padding: 4px 10px; 
+    background: #f1f5f9; 
+    border-radius: 6px; 
+    font-weight: 700;
+    color: #64748b;
+    border: 1px solid #e2e8f0;
+    margin-right: 5px;
+}
+.btn-mini:active { background: #e2e8f0; }
 
 .q-like-area { display: flex; flex-direction: column; align-items: center; justify-content: center; min-width: 44px; flex-shrink: 0; gap: 4px; }
 
