@@ -861,11 +861,12 @@ async function confirmDepartureNotice() {
   if(!pendingDepartureData) return;
   
   const { rid, time } = pendingDepartureData;
-  const depDate = allCourses[rid].shuttle?.departure?.date || new Date().toISOString().split('T')[0];
+  // 기존 날짜를 확인하지 않고 무조건 현재 날짜(오늘)를 생성합니다.
+  const depDate = new Date().toISOString().split('T')[0];
   
   await firebase.database().ref(`courses/${rid}/shuttle/departure`).update({ 
     time, 
-    date: depDate,
+    date: depDate, // 이제 무조건 오늘 날짜가 들어갑니다.
     announced: true 
   });
   
