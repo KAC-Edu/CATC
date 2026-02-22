@@ -407,34 +407,31 @@ enterAsObserver: function() {
 forceEnterRoom: async function(room) {
     const cleanRoom = room.toUpperCase();
 
-    // 1. [철저한 초기화] 이전 방에서 작동하던 모든 리스너(안테나)를 뽑습니다.
+    // 1. [기존 안테나 정밀 제거] 
+    // 전역 루프(.off())는 부하가 크므로, 이전에 저장된 참조(window.dbRef)를 이용해 
+    // 현재 활성화된 리스너만 확실히 끊습니다.
     if (window.dbRef) {
         Object.values(window.dbRef).forEach(ref => {
             if (ref && typeof ref.off === 'function') ref.off();
         });
     }
 
-    // 전역적인 경로 청소 (A-Z 루프를 돌며 혹시 남아있을지 모를 리스너 제거)
-    for (let i = 65; i <= 90; i++) {
-        const char = String.fromCharCode(i);
-        const path = `courses/${char}`;
-        firebase.database().ref(path).off();
-        firebase.database().ref(`${path}/questions`).off();
-        firebase.database().ref(`${path}/status`).off();
-        firebase.database().ref(`${path}/settings`).off();
-    }
+    // 혹시 남아있을지 모를 다른 리스너들도 최소한으로 청소합니다.
+    firebase.database().ref(`courses/${cleanRoom}/questions`).off();
+    firebase.database().ref(`courses/${cleanRoom}/status`).off();
+    firebase.database().ref(`courses/${cleanRoom}/settings`).off();
 
-    // 2. 현재 방 데이터 및 UI 초기 상태 설정
+    // 2. [데이터 및 상태 초기화]
     state.room = cleanRoom; 
-    state.qaData = {};      // 메모리 데이터 초기화
+    state.qaData = {};      // 이전 방 데이터 잔상 제거
     state.activeQaKey = null; 
     localStorage.setItem('kac_last_room', cleanRoom); 
     state.isObserver = (sessionStorage.getItem('kac_observer_room') === cleanRoom);
 
     const qaListEl = document.getElementById('qaList');
-    if (qaListEl) qaListEl.innerHTML = "<div style='text-align:center; padding:20px; color:#94a3b8;'>연결 중...</div>";
+    if (qaListEl) qaListEl.innerHTML = "<div style='text-align:center; padding:20px; color:#94a3b8;'>실시간 엔진 연결 중...</div>";
 
-    // 3. 참조 경로 재설정 (window.dbRef와 dbRef 동기화)
+    // 3. [참조 경로 재설정]
     const rPath = `courses/${cleanRoom}`;
     window.dbRef = {
         settings: firebase.database().ref(`${rPath}/settings`),
@@ -445,35 +442,32 @@ forceEnterRoom: async function(room) {
     };
     dbRef = window.dbRef; 
 
-    // 상단바 배지 및 버튼 갱신
+    // 상단바 및 공통 UI 갱신
     ui.updateHeaderRoom(cleanRoom);
     ui.updateObserverButton();
-    document.querySelector('.mode-tabs').style.display = 'flex';
 
-    // 4. [가장 중요] Q&A 실시간 감시 ( .on('value', ...) )
-    // .off()를 먼저 호출한 뒤 .on()을 걸어 중복 수신을 방지합니다.
-    dbRef.qa.off(); 
+    // 4. 🔥 [가장 중요: Q&A 실시간 리스너 단일화]
+    // 여기서 안테나를 한 번만 꽂습니다. 이 리스너는 질문 목록과 대시보드 숫자를 동시에 관리합니다.
     dbRef.qa.on('value', snap => { 
-        // 다른 방으로 이동한 직후에 이전 방의 콜백이 실행되는 것을 방지
-        if (state.room !== cleanRoom) return;
+        if (state.room !== cleanRoom) return; // 방이 바뀌면 동작 차단
         
         try {
             const rawData = snap.val() || {};
-            state.qaData = rawData; // 전역 state 업데이트
+            state.qaData = rawData; 
             
-            // 질문 목록 UI 즉시 갱신
+            // (1) 질문 리스트 즉시 갱신
             ui.renderQaList(); 
             
-            // 대시보드가 열려 있다면 통계 숫자도 실시간 갱신
+            // (2) 대시보드가 켜져 있다면, 질문 개수 카운트도 여기서 실시간 갱신 (별도 리스너 불필요)
             if (document.getElementById('view-dashboard').style.display !== 'none') {
-                ui.loadDashboardStats();
+                ui.updateQaCountBadge(); 
             }
         } catch (e) {
-            console.error("실시간 Q&A 업데이트 오류:", e);
+            console.error("Q&A 실시간 엔진 오류:", e);
         }
     });
 
-    // 5. 설정 및 상태 실시간 감시
+    // 5. [설정 및 상태 실시간 리스너]
     dbRef.settings.on('value', s => {
         if (state.room !== cleanRoom) return; 
         ui.renderSettings(s.val() || {}); 
@@ -491,20 +485,20 @@ forceEnterRoom: async function(room) {
         }
     });
 
-    // 6. 기타 부가 서비스 및 모드 복구
+    // 6. [화면 복구 및 부가 서비스]
     this.fetchCodeAndRenderQr(cleanRoom);
+    
+    // 이전에 보고 있던 모드로 이동 (여기서 loadDashboardStats가 호출됨)
     const lastMode = localStorage.getItem('kac_last_mode') || 'dashboard';
-    ui.setMode(lastMode);
+    ui.setMode(lastMode); 
     
     subjectMgr.init();
     guideMgr.init();
 
-    // 7. 1분 간격 강제 리프레시 (NEW 배지 제거용)
+    // 7. [1분 간격 UI 리프레시] (NEW 배지 시간 계산용)
     if (window.adminQaRefreshInterval) clearInterval(window.adminQaRefreshInterval);
     window.adminQaRefreshInterval = setInterval(() => {
-        if (state.room === cleanRoom) {
-            ui.renderQaList(); 
-        }
+        if (state.room === cleanRoom) ui.renderQaList(); 
     }, 60000); 
 },
 
@@ -1317,7 +1311,8 @@ loadDashboardStats: function() {
     const room = state.room;
     const today = getTodayString();
 
-    // 1. 모든 참조 경로 정의 및 기존 리스너 제거 (.off())
+    // [중요] 기존처럼 모든 리스너를 .off()로 죽이지 않습니다. 
+    // 대신 대시보드 전용 참조 변수들을 정의합니다.
     const refs = {
         settings: firebase.database().ref(`courses/${room}/settings`),
         notice: firebase.database().ref(`courses/${room}/notice`),
@@ -1329,14 +1324,11 @@ loadDashboardStats: function() {
         action: firebase.database().ref(`courses/${room}/admin_actions/${today}`),
         dinner: firebase.database().ref(`courses/${room}/dinner_skips/${today}`),
         departure: firebase.database().ref(`courses/${room}/shuttle/departure`),
-        qa: firebase.database().ref(`courses/${room}/questions`),
         shuttleReq: firebase.database().ref(`courses/${room}/shuttle/requests`)
+        // qa 리스너는 forceEnterRoom에서 관리하므로 여기서 별도로 off()하거나 생성하지 않습니다.
     };
 
-    // 기존에 붙어있을지 모르는 모든 안테나 청소
-    Object.values(refs).forEach(ref => ref.off());
-
-    // 2. 새로운 리스너 연결
+    // 1. 과정 정보 및 장소 업데이트
     refs.settings.on('value', snap => {
         if (state.room !== room) return;
         const s = snap.val() || {};
@@ -1346,6 +1338,7 @@ loadDashboardStats: function() {
         if (document.getElementById('dashCoordName')) document.getElementById('dashCoordName').innerText = s.coordinatorName || "미지정";
     });
 
+    // 2. 공지사항 피드 업데이트
     refs.notice.on('value', s => {
         if (state.room !== room) return;
         const el = document.getElementById('dashNoticeInst');
@@ -1363,6 +1356,7 @@ loadDashboardStats: function() {
         if (el) el.innerText = s.val() || "현재 게시된 센터 전체 공지가 없습니다.";
     });
 
+    // 3. 교수 성함 업데이트
     refs.status.on('value', snap => {
         if (state.room !== room) return;
         const st = snap.val() || {};
@@ -1370,6 +1364,7 @@ loadDashboardStats: function() {
         if (profOnlyEl) profOnlyEl.innerText = st.professorName || "미지정";
     });
 
+    // 4. 수강생 입교 현황 (예정 vs 실제)
     refs.expected.on('value', expSnap => {
         const expectedNames = expSnap.val() || [];
         refs.actual.on('value', snap => {
@@ -1386,6 +1381,7 @@ loadDashboardStats: function() {
         });
     });
 
+    // 5. 행정 신청 현황 (외출/외박/석식)
     refs.action.on('value', s => {
         if (state.room !== room) return;
         const count = Object.keys(s.val() || {}).length;
@@ -1398,6 +1394,7 @@ loadDashboardStats: function() {
         if (document.getElementById('dashDinnerSkipCount')) document.getElementById('dashDinnerSkipCount').innerText = count;
     });
 
+    // 6. 셔틀 공지 및 차량 수요
     refs.departure.on('value', snap => {
         if (state.room !== room) return; 
         const dep = snap.val();
@@ -1408,19 +1405,8 @@ loadDashboardStats: function() {
             bar.style.display = "block";
             txt.innerText = `퇴교차량 출발 예정: ${dep.date} [${dep.time}]`;
         } else {
-            firebase.database().ref('system/shuttle_notice').once('value', s => {
-                const msg = s.val();
-                if (msg) { bar.style.display = "block"; txt.innerText = msg; }
-                else { bar.style.display = "none"; }
-            });
+            bar.style.display = "none";
         }
-    });
-
-    refs.qa.on('value', s => {
-        if (state.room !== room) return;
-        const data = s.val() || {};
-        const count = Object.values(data).filter(q => q.status !== 'delete').length;
-        if (document.getElementById('dashQaCount')) document.getElementById('dashQaCount').innerText = count;
     });
 
     refs.shuttleReq.on('value', s => {
@@ -1431,13 +1417,49 @@ loadDashboardStats: function() {
         const term = items.filter(i => i.type === 'terminal').length;
         const air = items.filter(i => i.type === 'airport').length;
         const car = items.filter(i => i.type === 'car').length;
+        
         if (document.getElementById('total-osong')) document.getElementById('total-osong').innerText = osong;
         if (document.getElementById('total-term')) document.getElementById('total-term').innerText = term;
         if (document.getElementById('total-air')) document.getElementById('total-air').innerText = air;
         if (document.getElementById('total-car')) document.getElementById('total-car').innerText = car;
         if (document.getElementById('dashShuttleTotal')) document.getElementById('dashShuttleTotal').innerText = items.length + "명";
     });
+
+    // 7. [핵심] 질문 카운트 업데이트
+    // 새로운 리스너를 걸지 않고 forceEnterRoom에서 이미 수신 중인 state.qaData를 활용합니다.
+    this.updateQaCountBadge();
 },
+
+// 질문 배지만 별도로 업데이트하는 헬퍼 함수 (필요시 호출)
+updateQaCountBadge: function() {
+    if (state.qaData) {
+        const count = Object.values(state.qaData).filter(q => q && q.status !== 'delete').length;
+        const el = document.getElementById('dashQaCount');
+        if (el) el.innerText = count;
+    }
+},
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
