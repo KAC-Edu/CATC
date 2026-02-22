@@ -355,7 +355,7 @@ enterAsObserver: function() {
 
 
 forceEnterRoom: async function(room) {
-    // [1] 이전 방에 연결되어 있던 모든 실시간 감시(Listener)를 강제로 종료 (데이터 간섭 방지)
+    // 1. [철저한 초기화] 이전 방과 관련된 모든 실시간 연결(Listener)을 완전히 차단합니다.
     if (state.room) {
         const oldPath = `courses/${state.room}`;
         firebase.database().ref(oldPath).off();
@@ -364,40 +364,20 @@ forceEnterRoom: async function(room) {
         firebase.database().ref(`${oldPath}/questions`).off();
         firebase.database().ref(`${oldPath}/students`).off();
         firebase.database().ref(`${oldPath}/activeQuiz`).off();
-        firebase.database().ref(`${oldPath}/shuttle/requests`).off();
-        firebase.database().ref(`${oldPath}/admin_actions`).off();
     }
 
-    // 1. 옵저버(눈팅 전용) 상태인지 체크
-    state.isObserver = (sessionStorage.getItem('kac_observer_room') === room);
-
-    // 2. 강사 입장 시 제어권 체크 (다른 강사 사용 중인지 확인)
-    if (!state.isObserver) {
-        const snap = await firebase.database().ref(`courses/${room}/status`).get();
-        const st = snap.val() || {};
-        if (st.roomStatus === 'active' && st.ownerSessionId !== state.sessionId) {
-            state.pendingRoom = room;
-            document.getElementById('takeoverPwInput').value = "";
-            document.getElementById('takeoverModal').style.display = 'flex';
-            document.getElementById('takeoverPwInput').focus();
-            ui.showWaitingRoom();
-            return;
-        }
-    }
-
-    // 3. 현재 방 정보를 업데이트하고 브라우저에 저장
+    // 2. 현재 방 정보 업데이트 및 저장
     state.room = room; 
     localStorage.setItem('kac_last_room', room); 
+    state.isObserver = (sessionStorage.getItem('kac_observer_room') === room);
+
+    // 3. UI 초기화 (탭 표시 및 선택창 동기화)
     const roomSelect = document.getElementById('roomSelect');
     if(roomSelect) roomSelect.value = room;
     document.querySelector('.mode-tabs').style.display = 'flex';
 
-
-
-
-
-    // 4. 데이터베이스 참조 경로 설정
-const rPath = `courses/${room}`;
+    // 4. [가장 중요] 데이터베이스 참조 통로(dbRef)를 현재 방으로 전역 업데이트
+    const rPath = `courses/${room}`;
     window.dbRef = {
         settings: firebase.database().ref(`${rPath}/settings`),
         qa: firebase.database().ref(`${rPath}/questions`),
@@ -405,28 +385,23 @@ const rPath = `courses/${room}`;
         ans: firebase.database().ref(`${rPath}/quizAnswers`),
         status: firebase.database().ref(`${rPath}/status`)
     };
+    // 시스템이 사용하는 모든 dbRef 변수를 강제로 갱신
     dbRef = window.dbRef;
 
-
-
-
-
-
-    // 5. 상단 제목 및 버튼 모양 갱신
+    // 5. 상단 제목 및 버튼 모양 즉시 갱신
     ui.updateHeaderRoom(room);
     ui.updateObserverButton();
     
-    // 6. [실시간 동기화 엔진] 데이터 감시 시작
-    
-    // (A) 강의실 설정 감시 (과정명 등)
+    // 6. [실시간 동기화] 현재 방에 대한 감시 시작
+    // (A) 강의실 설정 감시
     dbRef.settings.on('value', s => {
-        if(state.room !== room) return;
+        if(state.room !== room) return; // 방 번호 검증 (꼬임 방지)
         const data = s.val() || {};
         ui.renderSettings(data); 
         if(document.getElementById('view-dashboard').style.display !== 'none') ui.loadDashboardStats();
     });
 
-    // (B) 강의실 상태 감시 (잠금, 모드 전환 등)
+    // (B) 강의실 상태(잠금/모드) 감시
     dbRef.status.on('value', s => {
         if(state.room !== room) return;
         const statusData = s.val() || {};
@@ -439,12 +414,12 @@ const rPath = `courses/${room}`;
         }
     });
 
-    // (C) [실시간 질문 갱신 핵심] 질문 목록 감시 및 강제 렌더링
+    // (C) [Q&A 리얼타임 엔진] 질문 목록 감시
     dbRef.qa.on('value', s => { 
         if(state.room !== room) return;
         state.qaData = s.val() || {}; 
         
-        console.log(`[실시간] Room ${room} 데이터 수신`);
+        console.log(`[실시간] Room ${room} 데이터 동기화 완료`);
         ui.renderQaList('all'); 
         
         if(document.getElementById('view-dashboard').style.display !== 'none') {
@@ -452,25 +427,22 @@ const rPath = `courses/${room}`;
         }
     });
 
-    // 7. QR코드 생성 및 모드 복구
+    // 7. 시스템 초기화 및 복구
     this.fetchCodeAndRenderQr(room);
     const lastMode = localStorage.getItem('kac_last_mode') || 'dashboard';
     ui.setMode(lastMode);
     
-    // 8. 기타 관리 매니저 초기화
     subjectMgr.init();
     guideMgr.init();
 
-    // 9. [NEW 배지 자동 제거 타이머] 1분마다 리스트를 재검토하여 강조 효과 제거
+    // 8. 타이머 설정
     if (window.adminQaRefreshInterval) clearInterval(window.adminQaRefreshInterval);
     window.adminQaRefreshInterval = setInterval(() => {
         if(state.qaData && Object.keys(state.qaData).length > 0) {
-            console.log("[자동 갱신] 질문 강조 시간 만료 체크 중...");
             ui.renderQaList('all'); 
         }
     }, 60000); 
 },
-
 
 
 
@@ -547,47 +519,56 @@ deactivateAllRooms: async function() {
         if(state.room) this.forceEnterRoom(state.room);
     },
     
-updateQa: function(action) {
-    // 1. 권한 및 대상 체크
-    if(state.isObserver) return ui.showAlert("👁️ 옵저버 모드에서는 질문을 관리할 수 없습니다.");
-    if(!state.activeQaKey || !state.room) return ui.showAlert("⚠️ 대상 질문을 찾을 수 없습니다.");
 
-    // 2. [핵심] 변수를 거치지 않고 실시간 방 경로를 직접 생성
+
+
+updateQa: function(action) {
+    // 1. 권한 및 유효성 체크 (현재 활성화된 방 번호가 있는지 확인)
+    if(state.isObserver) return ui.showAlert("👁️ 옵저버 모드에서는 질문을 관리할 수 없습니다.");
+    if(!state.activeQaKey || !state.room) {
+        ui.showAlert("⚠️ 대상을 찾을 수 없습니다. 강의실을 다시 선택해 주세요.");
+        return;
+    }
+
+    // 2. [가장 중요] 클릭한 시점에 시스템이 알고 있는 '현재 방(state.room)' 주소로 직접 찾아감
+    // 이 방식이 새로고침 없이 방을 옮겨도 즉시 작동하게 만드는 핵심입니다.
     const targetRef = firebase.database().ref(`courses/${state.room}/questions/${state.activeQaKey}`);
 
-    // 3. 삭제 로직
+    // 3. 삭제(Delete) 처리
     if (action === 'delete') { 
         if(confirm("이 질문을 완전히 삭제하시겠습니까?")) { 
             targetRef.remove()
             .then(() => {
-                ui.closeQaModal(); // 삭제 성공 시 즉시 팝업 닫기
+                console.log(`[삭제 완료] Room: ${state.room}, Key: ${state.activeQaKey}`);
+                ui.closeQaModal(); // 성공 시 팝업 닫기
             })
             .catch(err => {
                 ui.showAlert("삭제 실패: " + err.message);
             });
         }
     } 
-    // 4. 상태 업데이트 로직 (핀 고정, 나중에 답변, 완료)
+    // 4. 상태 업데이트 처리 (Pin, Later, Done)
     else {
-        // 현재 상태를 확인하여 토글(On/Off) 처리
+        // 현재 질문의 상태를 확인하여 토글(켰다 끄기) 로직 적용
         const currentItem = state.qaData[state.activeQaKey] || {};
         let nextStatus = action;
         
-        // 이미 해당 상태라면 일반(normal)으로 되돌림 (토글 기능)
+        // 이미 해당 상태인 버튼을 또 누르면 일반(normal) 상태로 되돌림
         if(currentItem.status === action) {
             nextStatus = 'normal';
         } 
-        // 핀 고정된 상태에서 완료를 누른 경우 처리
+        // 핀 고정된 상태에서 '답변 완료'를 누른 경우 특수 상태(pin-done) 부여
         else if(action === 'done' && currentItem.status === 'pin') {
             nextStatus = 'pin-done';
         }
 
         targetRef.update({ status: nextStatus })
         .then(() => {
-            ui.closeQaModal(); // 업데이트 성공 시 즉시 팝업 닫기
+            console.log(`[상태변경: ${nextStatus}] Room: ${state.room}, Key: ${state.activeQaKey}`);
+            ui.closeQaModal(); // 성공 시 팝업 닫기
         })
         .catch(err => {
-            ui.showAlert("처리 실패: " + err.message);
+            ui.showAlert("상태 변경 실패: " + err.message);
         });
     }
 },
