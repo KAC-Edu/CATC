@@ -797,6 +797,12 @@ function renderTraineeGrid() {
   const container = document.getElementById('trainee-list-body');
   let html = "";
   
+  // 오늘 날짜 구하기 (YYYY-MM-DD 형식)
+  const now = new Date();
+  const todayStr = now.getFullYear() + '-' + 
+                 String(now.getMonth() + 1).padStart(2, '0') + '-' + 
+                 String(now.getDate()).padStart(2, '0');
+
   if (Object.keys(allCourses).length === 0) {
     container.innerHTML = `<div style="text-align:center; padding:50px; color:#94a3b8; font-size:13px; font-weight:700;">현재 진행 중인 교육 과정이 없습니다.</div>`;
     return;
@@ -805,6 +811,15 @@ function renderTraineeGrid() {
   Object.keys(allCourses).forEach(rid => {
     const room = allCourses[rid]; 
     if(room.status?.roomStatus !== 'active') return;
+    
+    // [날짜 필터링 추가] 종료일이 어제 날짜 이전인 지난주 과정은 기사님 리스트에서도 제외
+    const settings = room.settings || {};
+    if (settings.period && settings.period.includes(" ~ ")) {
+      const endDate = settings.period.split(" ~ ")[1];
+      if (endDate < todayStr) {
+        return; // 종료일이 과거면 표시하지 않고 다음 과정으로 넘어감
+      }
+    }
     
     const dep = room.shuttle?.departure || { time: "", announced: false };
     const total = Object.values(room.shuttle?.requests || {}).filter(r => r.type !== 'car').length;
@@ -818,7 +833,7 @@ function renderTraineeGrid() {
     html += `
       <div class="course-row">
         <div class="t-cell" style="text-align:left; padding-left:10px; font-size:11px; line-height:1.3;">
-          ${room.settings?.courseName || '과정명 없음'}
+          ${settings.courseName || rid}
         </div>
         <div class="t-cell">
           <span class="count-badge">${total}명</span>
@@ -836,7 +851,27 @@ function renderTraineeGrid() {
       </div>`;
   });
   container.innerHTML = html;
+  
+  // 만약 필터링 후에 아무 과정도 남지 않았다면 안내 문구 표시
+  if (html === "") {
+    container.innerHTML = `<div style="text-align:center; padding:50px; color:#94a3b8; font-size:13px; font-weight:700;">이번 주 예정된 퇴교 수송 과정이 없습니다.</div>`;
+  }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 function confirmDepartureTime(rid, time) {
   if(!time) return;
