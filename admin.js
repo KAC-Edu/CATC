@@ -562,7 +562,7 @@ updateQa: function(action) {
     const activeRoom = state.room;
     if (state.isObserver) return ui.showAlert("👁️ 옵저버 모드에서는 질문을 관리할 수 없습니다.");
     if (!state.activeQaKey || !activeRoom) {
-        ui.showAlert("⚠️ 대상을 찾을 수 없습니다. 강의실 선택 상태를 확인해 주세요.");
+        ui.showAlert("⚠️ 대상을 찾을 수 없습니다.");
         return;
     }
 
@@ -571,31 +571,19 @@ updateQa: function(action) {
     if (action === 'delete') { 
         if (confirm("이 질문을 완전히 삭제하시겠습니까?")) { 
             targetRef.remove()
-            .then(() => {
-                ui.closeQaModal();
-                // 삭제 즉시 로컬 데이터에서도 제거 (실시간성 확보)
-                delete state.qaData[state.activeQaKey];
-                ui.renderQaList();
-            })
+            .then(() => ui.closeQaModal())
             .catch(err => ui.showAlert("삭제 실패: " + err.message));
         }
     } else {
         const currentItem = state.qaData[state.activeQaKey] || {};
+        const currentStatus = currentItem.status || 'normal';
         let nextStatus = action;
 
-        // 토글 및 pin-done 로직
-        if (currentItem.status === action) nextStatus = 'normal';
-        else if (action === 'done' && currentItem.status === 'pin') nextStatus = 'pin-done';
+        if (currentStatus === action) nextStatus = 'normal';
+        else if (action === 'done' && currentStatus === 'pin') nextStatus = 'pin-done';
         
         targetRef.update({ status: nextStatus })
-        .then(() => {
-            ui.closeQaModal();
-            // DB 리스너가 작동하기 전, 로컬 데이터를 먼저 수정해서 즉각 반영
-            if (state.qaData[state.activeQaKey]) {
-                state.qaData[state.activeQaKey].status = nextStatus;
-                ui.renderQaList(); 
-            }
-        })
+        .then(() => ui.closeQaModal())
         .catch(err => ui.showAlert("상태 변경 실패: " + err.message));
     }
 },
@@ -2180,12 +2168,11 @@ filterQa: function(f, event) {
 },
 
     
-// [6.13차 수정] Q&A 리스트 렌더링 (최신 질문 2분 강조 기능 복구)
+// [6.14차 최종 수정] 에러 방지 및 기존 데이터 완벽 복구
 renderQaList: function(f) {
     const list = document.getElementById('qaList'); 
     if(!list) return;
 
-    // 현재 선택한 필터 상태 유지
     if (f) state.currentQaFilter = f;
     else f = state.currentQaFilter || 'all';
 
@@ -2200,12 +2187,13 @@ renderQaList: function(f) {
         items = items.filter(x => x.subject === subjectMgr.selectedFilter);
     }
     
-    // 정렬 로직 보정
+    // 정렬 로직
     items.sort((a, b) => {
         const getWeight = (item) => {
-            if (item.status === 'pin') return 3;
-            if (item.status === 'later') return 2;
-            if (item.status === 'done' || item.status === 'pin-done') return 0; // 완료된 건 맨 아래로
+            const s = item.status || 'normal'; // status가 없으면 normal로 간주
+            if (s === 'pin') return 3;
+            if (s === 'later') return 2;
+            if (s === 'done' || s === 'pin-done') return 0;
             return 1;
         };
         const weightA = getWeight(a);
@@ -2218,14 +2206,18 @@ renderQaList: function(f) {
     });
 
     items.forEach(i => {
-        // [수정] 필터 로직: pin-done 상태도 Pinned 필터에서 보여야 함
-        if(f==='pin' && !(i.status==='pin' || i.status==='pin-done')) return;
-        if(f==='later' && i.status!=='later') return;
+        const s = i.status || 'normal'; // 안전장치: status가 없으면 normal
+
+        // 필터링 로직
+        if(f==='pin' && !(s==='pin' || s==='pin-done')) return;
+        if(f==='later' && s!=='later') return;
+        if(s === 'delete') return; // 삭제된 건 건너뜀
         
-        // [수정] pin-done 상태일 때도 완료(gray) 스타일이 적용되도록 수정
-        let isDone = (i.status === 'done' || i.status === 'pin-done');
-        let cls = i.status === 'pin' ? 'status-pin' : (i.status === 'later' ? 'status-later' : (isDone ? 'status-done' : ''));
-        const icon = i.status.includes('pin') ? '📌 ' : (i.status === 'later' ? '⚠️ ' : (isDone ? '✅ ' : ''));
+        let isDone = (s === 'done' || s === 'pin-done');
+        let cls = s === 'pin' ? 'status-pin' : (s === 'later' ? 'status-later' : (isDone ? 'status-done' : ''));
+        
+        // [수정 핵심] .includes() 에러 방지
+        const icon = s.indexOf('pin') !== -1 ? '📌 ' : (s === 'later' ? '⚠️ ' : (isDone ? '✅ ' : ''));
         
         const isNew = (Date.now() - (i.timestamp || 0)) < 120000;
         const newClass = isNew ? 'is-new' : '';
