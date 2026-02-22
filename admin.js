@@ -784,7 +784,20 @@ resetCourse: function() {
                     ui.showAlert("✅ 예정 명단이 초기화되었습니다.");
                 });
         }
+    },
+
+    downloadStudentSample: function() {
+        const content = "홍길동\n김철수\n이영희\n박사임";
+        const blob = new Blob([content], { type: "text/plain" });
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = "student_sample_list.txt";
+        a.click();
+        URL.revokeObjectURL(a.href);
     }
+
+
+
 }; // <--- dataMgr 객체 진짜 마감
 
 // --- [수정된 profMgr] 교수님 명단 관리 ---

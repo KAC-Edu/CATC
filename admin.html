@@ -788,6 +788,9 @@
         
         <div class="list-upload-footer" style="display: flex; justify-content: center; gap: 12px; margin-top: 30px; padding-top: 20px; border-top: 1px dashed #e2e8f0;">
             <input type="file" id="studentFile" accept=".txt" style="display:none;" onchange="dataMgr.uploadStudentNames(this)">
+<button class="btn-list-clear" onclick="dataMgr.downloadStudentSample()" style="background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; padding: 10px 20px; border-radius: 12px; font-weight: 700; cursor: pointer; font-size: 13px;">
+    <i class="fa-solid fa-download"></i> 양식 샘플 다운
+</button>
             <label for="studentFile" class="btn-list-upload" style="background: #003366; color: white; padding: 10px 25px; border-radius: 12px; font-weight: 800; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; font-size: 14px;">
                 <i class="fa-solid fa-file-import"></i> 예정 명단(.txt) 업로드
             </label>
