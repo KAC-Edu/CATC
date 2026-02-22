@@ -489,16 +489,30 @@ forceEnterRoom: async function(room) {
 
 
 
-    fetchCodeAndRenderQr: function(room) {
-        const pathArr = window.location.pathname.split('/'); 
-        pathArr.pop(); 
-        const baseUrl = window.location.origin + pathArr.join('/');
-        firebase.database().ref('public_codes').orderByValue().equalTo(room).once('value', s => {
-            const d = s.val();
-            const url = d ? `${baseUrl}/index.html?code=${Object.keys(d)[0]}` : `${baseUrl}/index.html?room=${room}`;
-            ui.renderQr(url);
-        });
-    },
+fetchCodeAndRenderQr: function(room) {
+    if (!room) return;
+    
+    // 1. 현재 접속한 주소에서 파일명(admin.html)만 떼어내고 기본 경로(Base URL) 잡기
+    const path = window.location.pathname;
+    const directory = path.substring( path.lastIndexOf('/'), 0);
+    const baseUrl = window.location.origin + directory + "/"; // 끝에 / 를 강제로 붙임
+
+    firebase.database().ref('public_codes').orderByValue().equalTo(room).once('value', s => {
+        const d = s.val();
+        let finalUrl = "";
+        
+        if (d) {
+            // 단축 코드가 있는 경우
+            const shortCode = Object.keys(d)[0];
+            finalUrl = `${baseUrl}index.html?code=${shortCode}`;
+        } else {
+            // 단축 코드가 없는 경우 (기본 방식)
+            finalUrl = `${baseUrl}index.html?room=${room}`;
+        }
+        
+        ui.renderQr(finalUrl);
+    });
+},
 
 
 
@@ -1768,32 +1782,46 @@ initRoomSelect: function() {
 
 
 
-    toggleMiniQR: function() {
-        const qrBox = document.getElementById('floatingQR');
-        if (!state.room) {
-            this.showAlert("좌측 상단에서 강의실을 먼저 선택해 주세요.");
-            return;
-        }
-        if (qrBox.style.display === 'flex') {
-            qrBox.style.display = 'none';
-        } else {
-            qrBox.style.display = 'flex';
-            const target = document.getElementById('miniQRElement');
-            const label = document.querySelector('.qr-label');
-            target.innerHTML = ""; 
-            const pathArr = window.location.pathname.split('/'); 
-            pathArr.pop();
-            const baseUrl = window.location.origin + pathArr.join('/');
-            const forcedUrl = `${baseUrl}/index.html?room=${state.room}`;
-            label.innerText = `Room ${state.room} Join`;
-            new QRCode(target, {
-                text: forcedUrl,
-                width: 140,
-                height: 140,
-                correctLevel: QRCode.CorrectLevel.H
-            });
-        }
-    },
+toggleMiniQR: function() {
+    const qrBox = document.getElementById('floatingQR');
+    
+    // [보안] 강의실 선택 확인
+    if (!state.room || state.room === 'null') {
+        ui.showAlert("⚠️ 좌측 상단에서 강의실(Room)을 먼저 선택해 주세요.");
+        return;
+    }
+
+    if (qrBox.style.display === 'flex') {
+        qrBox.style.display = 'none';
+    } else {
+        qrBox.style.display = 'flex';
+        const target = document.getElementById('miniQRElement');
+        const label = document.querySelector('.qr-label');
+        if(!target) return;
+
+        target.innerHTML = ""; 
+        
+        // 경로 계산 보정
+        const path = window.location.pathname;
+        const directory = path.substring( path.lastIndexOf('/'), 0);
+        const baseUrl = window.location.origin + directory + "/";
+        const forcedUrl = `${baseUrl}index.html?room=${state.room}`;
+        
+        label.innerText = `Room ${state.room} Join`;
+        
+        // QR 생성
+        new QRCode(target, {
+            text: forcedUrl,
+            width: 140,
+            height: 140,
+            correctLevel: QRCode.CorrectLevel.H
+        });
+    }
+},
+
+
+
+
     
     checkLockStatus: function(st) {
         const overlay = document.getElementById('statusOverlay');
@@ -1900,30 +1928,56 @@ renderRoomStatus: function(st) {
         } catch(e) {}
     },
     
-// [확인 및 교체] 큰 QR 팝업창 열기 함수
-    openQrModal: function() {
-        const url = document.getElementById('studentLink').value; 
-        if(!url) return; // 링크가 없으면 중단
 
-        const modal = document.getElementById('qrModal');
-        const target = document.getElementById('qrBigTarget');
+
+
+
+
+
+
+
+// [6.18차 최종] QR 인식률 향상 및 주소 오류 차단 버전
+openQrModal: function() {
+    const urlEl = document.getElementById('studentLink');
+    const url = urlEl ? urlEl.value : "";
+
+    // [1. 방어 코드] 주소가 비어있거나 'null'이라는 글자가 포함된 경우 차단
+    if(!url || url.indexOf('null') !== -1) {
+        ui.showAlert("⚠️ 올바른 강의실 주소가 없습니다. 방을 다시 선택해 주세요.");
+        return;
+    }
+
+    const modal = document.getElementById('qrModal');
+    const target = document.getElementById('qrBigTarget');
+    
+    if(modal && target) {
+        modal.style.display = 'flex'; // 팝업창 열기
+        target.innerHTML = "";        // 이전 QR 흔적 삭제
         
-        if(modal && target) {
-            modal.style.display = 'flex'; // 팝업창 보이기
-            target.innerHTML = ""; // 기존에 그려진 QR 삭제
-            
-            // 팝업창이 뜨는 애니메이션 시간을 고려해 0.05초 뒤에 QR 생성
-            setTimeout(() => {
+        // [2. 인식률 최적화] 팝업이 뜨는 애니메이션 시간을 고려해 0.1초 뒤 생성
+        setTimeout(() => {
+            try {
                 new QRCode(target, { 
                     text: url, 
                     width: 350, 
-                    height: 350 
+                    height: 350,
+                    // [핵심 추가] 인식 성능을 최대(High)로 설정 (카메라가 멀리서 찍어도 잘 인식됨)
+                    correctLevel: QRCode.CorrectLevel.H 
                 });
-            }, 50);
-        } else {
-            alert("QR 팝업용 HTML 요소가 없습니다.");
-        }
-    }, // <-- 함수가 끝나고 콤마(,)가 있는지 꼭 확인하세요!
+            } catch (e) {
+                console.error("QR 생성 실패:", e);
+            }
+        }, 100);
+    } else {
+        alert("QR 팝업용 HTML 요소가 없습니다.");
+    }
+},
+
+
+
+
+
+
     
     closeQrModal: function() { 
         document.getElementById('qrModal').style.display = 'none'; 
