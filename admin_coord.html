@@ -1930,19 +1930,34 @@ const coordMgr = {
 
 
 
-// [3. 전체 현황판 실시간 집계 및 명단 팝업] - 4개 버튼 수치 모두 반영
+// [3. 전체 현황판 실시간 집계 및 명단 팝업] - 기간 지난 과정 제외 버전
 function updateGlobalStatus() {
     let globalList = []; 
     let todayA = 0; 
     let totalShuttle = 0; // 교육생 퇴교 인원 합계
     const tStr = getTodayString();
 
+    // 오늘 날짜 구하기 (YYYY-MM-DD 형식)
+    const now = new Date();
+    const todayStr = now.getFullYear() + '-' + 
+                   String(now.getMonth() + 1).padStart(2, '0') + '-' + 
+                   String(now.getDate()).padStart(2, '0');
+
     // 1. 교육과정 데이터를 돌며 학생수, 외출건수, 퇴교신청수 집계
     Object.keys(globalAllData).forEach(rid => {
         const room = globalAllData[rid];
-        const cName = room.settings?.courseName || `[미설정] Room ${rid}`;
+        const settings = room.settings || {};
+        const cName = settings.courseName || `[미설정] Room ${rid}`;
         
-        // [항기원 전체 교육생 집계]
+        // [날짜 필터링] 교육 종료일이 오늘보다 이전인 과정은 통계에서 완전히 제외
+        if (settings.period && settings.period.includes(" ~ ")) {
+            const endDate = settings.period.split(" ~ ")[1];
+            if (endDate < todayStr) {
+                return; // 과거 과정이면 아래 집계 로직을 타지 않고 다음 방으로 넘어감
+            }
+        }
+
+        // [항기원 전체 교육생 집계] - 진행 중인 과정만 포함됨
         if (room.students) { 
             Object.values(room.students).forEach(s => {
                 if (s && s.name && s.name !== "undefined" && s.name.trim() !== "") {
@@ -1957,24 +1972,22 @@ function updateGlobalStatus() {
             });
         }
         
-        // [금일 외출/외박 건수 집계]
+        // [금일 외출/외박 건수 집계] - 진행 중인 과정만 포함됨
         if (room.admin_actions?.[tStr]) {
             todayA += Object.keys(room.admin_actions[tStr]).length;
         }
 
-        // [교육생 퇴교 신청 총 인원 집계]
+        // [교육생 퇴교 신청 총 인원 집계] - 진행 중인 과정만 포함됨
         if (room.shuttle?.requests) {
             totalShuttle += Object.keys(room.shuttle.requests).length;
         }
     });
 
-    // 2. 중복 제거 (이름 + 뒷자리 기준) - 1번 버튼용
+    // 2. 중복 제거 (이름 + 뒷자리 기준) - 진행 중인 교육생만 대상으로 함
     const uniqueSet = new Set();
-    const filteredList = globalList.filter(item => {
+    globalList.forEach(item => {
         const id = `${item.name}_${item.phone}`;
-        if(uniqueSet.has(id)) return false;
         uniqueSet.add(id);
-        return true;
     });
 
     // 3. 강사 픽업 요청 건수 가져오기 (전역 데이터) - 3번 버튼용
@@ -1982,7 +1995,7 @@ function updateGlobalStatus() {
         const pickupData = snap.val() || {};
         const pickupCount = Object.keys(pickupData).length;
         
-        // 화면 숫자 업데이트 (ID 기준)
+        // 화면 숫자 업데이트
         if(document.getElementById('g-total-students')) document.getElementById('g-total-students').innerText = uniqueSet.size;
         if(document.getElementById('g-today-actions')) document.getElementById('g-today-actions').innerText = todayA;
         if(document.getElementById('g-pickup-count')) document.getElementById('g-pickup-count').innerText = pickupCount;
@@ -1993,11 +2006,10 @@ function updateGlobalStatus() {
     const studentBtn = document.getElementById('g-total-students')?.closest('.dashboard-card-btn');
     if(studentBtn) {
         studentBtn.onclick = function() {
-            showTotalStudentList(); // 페이지 전환 함수 호출
+            showTotalStudentList(); 
         };
     }
 } // updateGlobalStatus 끝
-
 
 
 
@@ -2482,24 +2494,40 @@ function renderCourseSelectors() {
     list.innerHTML = "";
     setupRoom.innerHTML = '<option value="">강의실 선택 (A~Z)</option>';
 
+    // 오늘 날짜 구하기 (YYYY-MM-DD 형식)
+    const now = new Date();
+    const todayStr = now.getFullYear() + '-' + 
+                   String(now.getMonth() + 1).padStart(2, '0') + '-' + 
+                   String(now.getDate()).padStart(2, '0');
+
     // 과정별로 부여할 컬러 배열
     const barColors = ['#0ea5e9', '#10b981', '#6366f1', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
 
     for (let i = 65; i <= 90; i++) {
         const rid = String.fromCharCode(i);
         const room = globalAllData[rid];
+        const settings = room?.settings || {};
 
-        // 1. 설정창용 드롭다운 옵션 생성
+        // 1. 설정창용 드롭다운 옵션 생성 (이건 모든 방이 다 보여야 하므로 필터 안 함)
         let label = `Room ${rid}`;
         if (room?.status?.roomStatus === 'active') {
             label += ` [사용중 - ${room.status.professorName || '미정'}]`;
         }
         setupRoom.add(new Option(label, rid));
 
-        // 2. 메인 리스트 아이템 생성 (사용중인 방만)
+        // 2. 메인 리스트 아이템 생성 (사용중인 방만 + 기간이 안 지난 것만)
         if (room?.status?.roomStatus === 'active') {
-            const cName = room.settings?.courseName || rid;
-            const coordName = room.settings?.coordinatorName || "담당 미지정";
+            
+            // [날짜 필터링 추가] 종료일이 오늘보다 이전이면 리스트에서 제외
+            if (settings.period && settings.period.includes(" ~ ")) {
+                const endDate = settings.period.split(" ~ ")[1];
+                if (endDate < todayStr) {
+                    continue; // 기간이 지났으면 이번 방(rid)은 건너뜀
+                }
+            }
+
+            const cName = settings.courseName || rid;
+            const coordName = settings.coordinatorName || "담당 미지정";
             const color = barColors[i % barColors.length]; // 알파벳 순서대로 컬러 배정
 
             const card = document.createElement('div');
@@ -2526,7 +2554,6 @@ function renderCourseSelectors() {
         }
     }
 }
-
 
 
 
@@ -3307,20 +3334,37 @@ function renderPickupTable() {
 
 
 
-// [수정] 교육생 퇴교차량 통합 테이블 (총원 음영 제거 완료)
+// [수정] 교육생 퇴교차량 통합 테이블 (기간 지난 과정 제외 필터 추가)
 function renderShuttleTotalTable() {
     const tbody = document.getElementById('shuttleTotalTableBody');
     if(!tbody) return;
+
+    // 오늘 날짜 구하기 (YYYY-MM-DD 형식)
+    const now = new Date();
+    const todayStr = now.getFullYear() + '-' + 
+                   String(now.getMonth() + 1).padStart(2, '0') + '-' + 
+                   String(now.getDate()).padStart(2, '0');
 
     let html = "";
     for (let i = 65; i <= 90; i++) {
         const rid = String.fromCharCode(i);
         const room = globalAllData[rid];
+        
         if (room?.status?.roomStatus === 'active') {
+            const settings = room.settings || {};
+
+            // [날짜 필터링 추가] 종료일이 오늘보다 이전인 지난 과정은 제외
+            if (settings.period && settings.period.includes(" ~ ")) {
+                const endDate = settings.period.split(" ~ ")[1];
+                if (endDate < todayStr) {
+                    continue; // 기간이 지났으면 리스트에 넣지 않고 다음 방으로 패스
+                }
+            }
+
             const requests = room.shuttle?.requests || {};
             const items = Object.values(requests);
             
-            const cName = room.settings?.courseName || rid;
+            const cName = settings.courseName || rid;
             const rO = items.filter(i => i.type === 'osong').length;
             const rT = items.filter(i => i.type === 'terminal').length;
             const rA = items.filter(i => i.type === 'airport').length;
@@ -3329,7 +3373,6 @@ function renderShuttleTotalTable() {
             html += `
                 <tr onclick="showShuttleApplicationDetails('${rid}')" style="cursor:pointer;" class="shuttle-row-hover">
                     <td style="text-align:left; padding-left:15px; font-weight:800; color:var(--blue-deep);">${cName}</td>
-                    <!-- 🚩 여기 td에서 background 스타일을 삭제했습니다 -->
                     <td style="font-weight:900;">${items.length}</td> 
                     <td style="color:#ef4444; font-weight:800;">${rO}</td>
                     <td style="color:#3b82f6; font-weight:800;">${rT}</td>
@@ -3338,8 +3381,10 @@ function renderShuttleTotalTable() {
                 </tr>`;
         }
     }
-    tbody.innerHTML = html || '<tr><td colspan="6" style="padding:40px; color:#94a3b8;">운영 중인 과정의 신청 내역이 없습니다.</td></tr>';
+    tbody.innerHTML = html || '<tr><td colspan="6" style="padding:40px; color:#94a3b8; text-align:center;">현재 진행 중인 과정의 신청 내역이 없습니다.</td></tr>';
 }
+
+
 
 
 
