@@ -355,28 +355,33 @@ enterAsObserver: function() {
 
 
 forceEnterRoom: async function(room) {
-    // 1. [철저한 초기화] 이전 방과 관련된 모든 실시간 연결(Listener)을 완전히 차단합니다.
-    if (state.room) {
-        const oldPath = `courses/${state.room}`;
-        firebase.database().ref(oldPath).off();
-        firebase.database().ref(`${oldPath}/settings`).off();
-        firebase.database().ref(`${oldPath}/status`).off();
-        firebase.database().ref(`${oldPath}/questions`).off();
-        firebase.database().ref(`${oldPath}/students`).off();
-        firebase.database().ref(`${oldPath}/activeQuiz`).off();
+    // 1. [강력한 초기화] 모든 강의실(A~Z)의 실시간 연결을 완전히 차단합니다.
+    // 방을 옮길 때 이전 방의 잔상이 남지 않도록 싹 청소하는 과정입니다.
+    for (let i = 65; i <= 90; i++) {
+        const char = String.fromCharCode(i);
+        const path = `courses/${char}`;
+        firebase.database().ref(path).off();
+        firebase.database().ref(`${path}/settings`).off();
+        firebase.database().ref(`${path}/status`).off();
+        firebase.database().ref(`${path}/questions`).off();
     }
 
-    // 2. 현재 방 정보 업데이트 및 저장
+    // 2. 현재 방 데이터 및 화면 초기화
+    state.qaData = {}; // 메모리에 남은 이전 질문 삭제
+    const qaListEl = document.getElementById('qaList');
+    if(qaListEl) qaListEl.innerHTML = ""; // 화면에 떠있는 이전 질문 삭제
+
+    // 3. 현재 방 정보 업데이트 및 저장
     state.room = room; 
     localStorage.setItem('kac_last_room', room); 
     state.isObserver = (sessionStorage.getItem('kac_observer_room') === room);
 
-    // 3. UI 초기화 (탭 표시 및 선택창 동기화)
+    // 4. UI 초기화 (탭 표시 및 선택창 동기화)
     const roomSelect = document.getElementById('roomSelect');
     if(roomSelect) roomSelect.value = room;
     document.querySelector('.mode-tabs').style.display = 'flex';
 
-    // 4. [가장 중요] 데이터베이스 참조 통로(dbRef)를 현재 방으로 전역 업데이트
+    // 5. [출결 로직과 동기화] 데이터베이스 참조 통로(dbRef)를 현재 방으로 강제 업데이트
     const rPath = `courses/${room}`;
     window.dbRef = {
         settings: firebase.database().ref(`${rPath}/settings`),
@@ -385,23 +390,22 @@ forceEnterRoom: async function(room) {
         ans: firebase.database().ref(`${rPath}/quizAnswers`),
         status: firebase.database().ref(`${rPath}/status`)
     };
-    // 시스템이 사용하는 모든 dbRef 변수를 강제로 갱신
-    dbRef = window.dbRef;
+    dbRef = window.dbRef; // 시스템 공통 변수 갱신
 
-    // 5. 상단 제목 및 버튼 모양 즉시 갱신
+    // 6. 상단 제목 즉시 갱신
     ui.updateHeaderRoom(room);
     ui.updateObserverButton();
     
-    // 6. [실시간 동기화] 현재 방에 대한 감시 시작
+    // 7. [실시간 감시 시작] 현재 방(room)에 대해서만 정확하게 리스너 연결
     // (A) 강의실 설정 감시
     dbRef.settings.on('value', s => {
-        if(state.room !== room) return; // 방 번호 검증 (꼬임 방지)
+        if(state.room !== room) return; // 현재 내가 있는 방이 아니면 무시
         const data = s.val() || {};
         ui.renderSettings(data); 
         if(document.getElementById('view-dashboard').style.display !== 'none') ui.loadDashboardStats();
     });
 
-    // (B) 강의실 상태(잠금/모드) 감시
+    // (B) 강의실 상태 감시
     dbRef.status.on('value', s => {
         if(state.room !== room) return;
         const statusData = s.val() || {};
@@ -414,12 +418,12 @@ forceEnterRoom: async function(room) {
         }
     });
 
-    // (C) [Q&A 리얼타임 엔진] 질문 목록 감시
+    // (C) [Q&A 리얼타임 엔진] 질문 목록 감시 및 강제 렌더링
     dbRef.qa.on('value', s => { 
         if(state.room !== room) return;
         state.qaData = s.val() || {}; 
         
-        console.log(`[실시간] Room ${room} 데이터 동기화 완료`);
+        console.log(`[실시간 동기화 완료] Room ${room}`);
         ui.renderQaList('all'); 
         
         if(document.getElementById('view-dashboard').style.display !== 'none') {
@@ -427,7 +431,7 @@ forceEnterRoom: async function(room) {
         }
     });
 
-    // 7. 시스템 초기화 및 복구
+    // 8. 기타 시스템 복구
     this.fetchCodeAndRenderQr(room);
     const lastMode = localStorage.getItem('kac_last_mode') || 'dashboard';
     ui.setMode(lastMode);
@@ -435,7 +439,7 @@ forceEnterRoom: async function(room) {
     subjectMgr.init();
     guideMgr.init();
 
-    // 8. 타이머 설정
+    // 9. 타이머 설정
     if (window.adminQaRefreshInterval) clearInterval(window.adminQaRefreshInterval);
     window.adminQaRefreshInterval = setInterval(() => {
         if(state.qaData && Object.keys(state.qaData).length > 0) {
@@ -443,6 +447,8 @@ forceEnterRoom: async function(room) {
         }
     }, 60000); 
 },
+
+
 
 
 
@@ -523,23 +529,26 @@ deactivateAllRooms: async function() {
 
 
 updateQa: function(action) {
-    // 1. 권한 및 유효성 체크 (현재 활성화된 방 번호가 있는지 확인)
+    // 1. 현재 시스템이 인식하고 있는 '진짜' 방 번호를 즉시 가져옵니다.
+    const activeRoom = state.room;
+    
+    // 2. 권한 및 대상 체크
     if(state.isObserver) return ui.showAlert("👁️ 옵저버 모드에서는 질문을 관리할 수 없습니다.");
-    if(!state.activeQaKey || !state.room) {
-        ui.showAlert("⚠️ 대상을 찾을 수 없습니다. 강의실을 다시 선택해 주세요.");
+    if(!state.activeQaKey || !activeRoom) {
+        ui.showAlert("⚠️ 대상을 찾을 수 없습니다. 강의실 선택 상태를 확인해 주세요.");
         return;
     }
 
-    // 2. [가장 중요] 클릭한 시점에 시스템이 알고 있는 '현재 방(state.room)' 주소로 직접 찾아감
-    // 이 방식이 새로고침 없이 방을 옮겨도 즉시 작동하게 만드는 핵심입니다.
-    const targetRef = firebase.database().ref(`courses/${state.room}/questions/${state.activeQaKey}`);
+    // 3. [가장 중요] 클릭한 시점에 'activeRoom' 변수에 담긴 주소로 직접 명령을 쏩니다.
+    // 변수를 거치지 않고 직접 경로를 생성하므로 새로고침 없이 방 이동 시 즉각 반응합니다.
+    const targetRef = firebase.database().ref(`courses/${activeRoom}/questions/${state.activeQaKey}`);
 
-    // 3. 삭제(Delete) 처리
+    // 4. 삭제 로직
     if (action === 'delete') { 
         if(confirm("이 질문을 완전히 삭제하시겠습니까?")) { 
             targetRef.remove()
             .then(() => {
-                console.log(`[삭제 완료] Room: ${state.room}, Key: ${state.activeQaKey}`);
+                console.log(`[삭제 성공] Room: ${activeRoom}, ID: ${state.activeQaKey}`);
                 ui.closeQaModal(); // 성공 시 팝업 닫기
             })
             .catch(err => {
@@ -547,24 +556,24 @@ updateQa: function(action) {
             });
         }
     } 
-    // 4. 상태 업데이트 처리 (Pin, Later, Done)
+    // 5. 상태 업데이트 로직 (Pin, Later, Done)
     else {
-        // 현재 질문의 상태를 확인하여 토글(켰다 끄기) 로직 적용
+        // 현재 메모리에 로드된 질문 데이터 확인 (토글용)
         const currentItem = state.qaData[state.activeQaKey] || {};
         let nextStatus = action;
         
-        // 이미 해당 상태인 버튼을 또 누르면 일반(normal) 상태로 되돌림
+        // 이미 같은 상태라면 일반(normal)으로 되돌리는 토글 기능
         if(currentItem.status === action) {
             nextStatus = 'normal';
         } 
-        // 핀 고정된 상태에서 '답변 완료'를 누른 경우 특수 상태(pin-done) 부여
+        // 핀 고정된 상태에서 '완료'를 누르면 특수 상태(pin-done) 부여
         else if(action === 'done' && currentItem.status === 'pin') {
             nextStatus = 'pin-done';
         }
 
         targetRef.update({ status: nextStatus })
         .then(() => {
-            console.log(`[상태변경: ${nextStatus}] Room: ${state.room}, Key: ${state.activeQaKey}`);
+            console.log(`[상태변경: ${nextStatus}] Room: ${activeRoom}`);
             ui.closeQaModal(); // 성공 시 팝업 닫기
         })
         .catch(err => {
