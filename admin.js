@@ -1325,7 +1325,6 @@ loadDashboardStats: function() {
         dinner: firebase.database().ref(`courses/${room}/dinner_skips/${today}`),
         departure: firebase.database().ref(`courses/${room}/shuttle/departure`),
         shuttleReq: firebase.database().ref(`courses/${room}/shuttle/requests`)
-        // qa 리스너는 forceEnterRoom에서 관리하므로 여기서 별도로 off()하거나 생성하지 않습니다.
     };
 
     // 1. 과정 정보 및 장소 업데이트
@@ -1364,20 +1363,40 @@ loadDashboardStats: function() {
         if (profOnlyEl) profOnlyEl.innerText = st.professorName || "미지정";
     });
 
-    // 4. 수강생 입교 현황 (예정 vs 실제)
+    // 4. 수강생 입교 현황 (현재 접속자 실시간 연동 수정됨)
+    refs.actual.on('value', snap => {
+        if (state.room !== room) return;
+        const data = snap.val() || {};
+        
+        // ★ 핵심: 현재 스마트폰으로 접속 중인(isOnline: true) 사람만 정확히 필터링
+        const activeStudents = Object.values(data).filter(s => s.name && s.isOnline === true);
+        const count = activeStudents.length;
+
+        // (A) 대시보드 화면 숫자 업데이트
+        if (document.getElementById('dashArrivedCount')) document.getElementById('dashArrivedCount').innerText = count;
+        
+        // (B) ★ 퀴즈 화면의 인원수(사진 속 0명 부분) 실시간 업데이트 ★
+        const quizJoinCountEl = document.getElementById('currentJoinCount');
+        if (quizJoinCountEl) {
+            quizJoinCountEl.innerText = count;
+            
+            // 전체 접속 인원이 바뀌었으므로 '대기 인원'도 즉시 다시 계산
+            const answeredCount = parseInt(document.getElementById('answeredCount').innerText || 0);
+            const pendingCountEl = document.getElementById('pendingCount');
+            if (pendingCountEl) {
+                pendingCountEl.innerText = Math.max(0, count - answeredCount);
+            }
+        }
+    });
+
+    // 전체 명단(분모) 계산
     refs.expected.on('value', expSnap => {
         const expectedNames = expSnap.val() || [];
-        refs.actual.on('value', snap => {
-            if (state.room !== room) return;
+        firebase.database().ref(`courses/${room}/students`).once('value', snap => {
             const data = snap.val() || {};
-            const actualStudents = Object.values(data).filter(s => s.name && s.name !== "undefined");
-            const actualNames = actualStudents.map(s => s.name);
+            const actualNames = Object.values(data).map(s => s.name);
             const combinedNames = Array.from(new Set([...expectedNames, ...actualNames]));
-            const total = combinedNames.length;
-            let arrived = 0;
-            combinedNames.forEach(name => { if (actualNames.includes(name)) arrived++; });
-            if (document.getElementById('dashArrivedCount')) document.getElementById('dashArrivedCount').innerText = arrived;
-            if (document.getElementById('dashTotalCount')) document.getElementById('dashTotalCount').innerText = total;
+            if (document.getElementById('dashTotalCount')) document.getElementById('dashTotalCount').innerText = combinedNames.length;
         });
     });
 
@@ -1413,20 +1432,14 @@ loadDashboardStats: function() {
         if (state.room !== room) return;
         const data = s.val() || {};
         const items = Object.values(data);
-        const osong = items.filter(i => i.type === 'osong').length;
-        const term = items.filter(i => i.type === 'terminal').length;
-        const air = items.filter(i => i.type === 'airport').length;
-        const car = items.filter(i => i.type === 'car').length;
-        
-        if (document.getElementById('total-osong')) document.getElementById('total-osong').innerText = osong;
-        if (document.getElementById('total-term')) document.getElementById('total-term').innerText = term;
-        if (document.getElementById('total-air')) document.getElementById('total-air').innerText = air;
-        if (document.getElementById('total-car')) document.getElementById('total-car').innerText = car;
+        if (document.getElementById('total-osong')) document.getElementById('total-osong').innerText = items.filter(i => i.type === 'osong').length;
+        if (document.getElementById('total-term')) document.getElementById('total-term').innerText = items.filter(i => i.type === 'terminal').length;
+        if (document.getElementById('total-air')) document.getElementById('total-air').innerText = items.filter(i => i.type === 'airport').length;
+        if (document.getElementById('total-car')) document.getElementById('total-car').innerText = items.filter(i => i.type === 'car').length;
         if (document.getElementById('dashShuttleTotal')) document.getElementById('dashShuttleTotal').innerText = items.length + "명";
     });
 
-    // 7. [핵심] 질문 카운트 업데이트
-    // 새로운 리스너를 걸지 않고 forceEnterRoom에서 이미 수신 중인 state.qaData를 활용합니다.
+    // 7. 질문 카운트 업데이트
     this.updateQaCountBadge();
 },
 
@@ -3275,21 +3288,23 @@ loadFile: function(e) {
         if(guide) guide.innerText = ""; 
     },
     
-    startAnswerMonitor: function() {
-        const id = `Q${state.currentQuizIdx}`;
-        const joinCntEl = document.getElementById('currentJoinCount');
-        const ansCntEl = document.getElementById('answeredCount');
-        const pendCntEl = document.getElementById('pendingCount');
+startAnswerMonitor: function() {
+    const id = `Q${state.currentQuizIdx}`;
+    const ansCntEl = document.getElementById('answeredCount');
+    const pendCntEl = document.getElementById('pendingCount');
 
-        if (state.ansListener) dbRef.ans.child(id).off();
-        state.ansListener = dbRef.ans.child(id).on('value', snap => {
-            const answers = snap.val() || {};
-            const answeredCount = Object.keys(answers).length;
-            const totalCount = parseInt(joinCntEl ? joinCntEl.innerText : 0) || 0;
-            if(ansCntEl) ansCntEl.innerText = answeredCount;
-            if(pendCntEl) pendCntEl.innerText = Math.max(0, totalCount - answeredCount);
-        });
-    },
+    if (state.ansListener) dbRef.ans.child(id).off();
+    state.ansListener = dbRef.ans.child(id).on('value', snap => {
+        const answers = snap.val() || {};
+        const answeredCount = Object.keys(answers).length;
+        
+        // ★ 현재 화면에 표시된 전체 인원 숫자를 실시간으로 가져와서 뺄셈함 ★
+        const totalCount = parseInt(document.getElementById('currentJoinCount').innerText || 0);
+
+        if(ansCntEl) ansCntEl.innerText = answeredCount;
+        if(pendCntEl) pendCntEl.innerText = Math.max(0, totalCount - answeredCount);
+    });
+},
     
 action: function(act) {
         // [옵저버 제어 차단]
