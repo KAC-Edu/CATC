@@ -22,6 +22,7 @@
       --text-main: #1e293b;
       --text-muted: #64748b;
       --card-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05);
+      --emerald: #10b981;
     }
 
     * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -36,7 +37,7 @@
       box-shadow: 0 0 40px rgba(0,0,0,0.08);
     }
 
-    /* --- 인증 레이어 (산뜻한 화이트/인디고 디자인) --- */
+    /* --- 인증 레이어 --- */
     #authOverlay {
       position: absolute; top: 0; left: 0; width: 100%; height: 100%;
       background: #fff; z-index: 2000;
@@ -78,7 +79,6 @@
     /* --- 메인 콘텐츠 영역 --- */
     .app-content { flex: 1; margin-top: 64px; margin-bottom: 56px; padding: 20px; display: none; background: #f8fafc; }
 
-    /* 카드 스타일 */
     .section-card {
       background: #fff; border-radius: 24px; padding: 20px; margin-bottom: 20px;
       border: 1px solid #f1f5f9; box-shadow: var(--card-shadow);
@@ -88,12 +88,10 @@
       margin-bottom: 15px; display: flex; align-items: center; gap: 8px;
     }
 
-    /* 과정 정보 헤더 */
     .course-header { text-align: center; padding: 10px 0; }
     #displayCourseName { font-size: 22px; font-weight: 900; color: var(--navy-dark); display: block; }
     #displayProfName { font-size: 14px; color: var(--text-muted); font-weight: 600; margin-top: 4px; display: block; }
 
-    /* 명단 아이템 */
     .list-item {
       display: flex; justify-content: space-between; align-items: center;
       padding: 16px; background: #fff; border-radius: 18px; 
@@ -109,6 +107,7 @@
     }
     .badge-outing { background: #fff7ed; color: #ea580c; }
     .badge-overnight { background: #fef2f2; color: #dc2626; }
+    .badge-dinner { background: #ecfdf5; color: var(--emerald); }
     .badge-normal { background: #f0fdf4; color: #10b981; }
 
     .empty-msg { text-align: center; padding: 40px 0; color: #cbd5e1; font-size: 14px; font-weight: 600; }
@@ -119,7 +118,6 @@
 <body>
 
   <div class="app-container">
-    <!-- 학생장 인증 오버레이 -->
     <div id="authOverlay">
         <div style="width: 70px; height: 70px; background: var(--indigo-soft); border-radius: 22px; display: flex; align-items: center; justify-content: center; margin-bottom: 24px;">
             <i class="fa-solid fa-crown" style="font-size: 32px; color: var(--indigo-main);"></i>
@@ -133,17 +131,15 @@
         </div>
         
         <button class="auth-btn" onclick="verifyLeaderAccess()">권한 확인 및 입장</button>
-        <div id="authError" style="margin-top: 20px; color: var(--danger); font-size: 13px; font-weight: 700; display: none;"></div>
+        <div id="authError" style="margin-top: 20px; color: #ef4444; font-size: 13px; font-weight: 700; display: none;"></div>
     </div>
 
-    <!-- 상단바 -->
     <header class="app-header">
       <button class="header-btn" onclick="location.reload()"><i class="fa-solid fa-power-off"></i></button>
       <div class="header-title">Student Leader Dashboard</div>
       <button class="header-btn"><i class="fa-solid fa-bars"></i></button>
     </header>
 
-    <!-- 메인 콘텐츠 -->
     <main id="mainContent" class="app-content">
       
       <!-- 1. 과정 정보 -->
@@ -154,7 +150,15 @@
           </div>
       </div>
 
-      <!-- 2. 외출/외박 현황 (연락처 필수 노출) -->
+      <!-- 2. 석식 제외 현황 (신규 추가) -->
+      <div class="section-card">
+          <div class="card-label" style="color: var(--emerald);"><i class="fa-solid fa-utensils"></i> 금일 석식 제외 신청자</div>
+          <div id="dinnerSkipList">
+              <div class="empty-msg">데이터를 불러오고 있습니다.</div>
+          </div>
+      </div>
+
+      <!-- 3. 외출/외박 현황 -->
       <div class="section-card">
           <div class="card-label"><i class="fa-solid fa-person-walking-arrow-right"></i> 외출/외박 신청자 (연락처 포함)</div>
           <div id="actionList">
@@ -162,17 +166,14 @@
           </div>
       </div>
 
-      <!-- 3. 수강생 입실 현황 -->
+      <!-- 4. 수강생 입실 현황 -->
       <div class="section-card">
           <div class="card-label"><i class="fa-solid fa-users"></i> 우리 과정 수강생 입실 명부</div>
-          <div id="studentList">
-              <!-- 명단 삽입 -->
-          </div>
+          <div id="studentList"></div>
       </div>
 
     </main>
 
-    <!-- 하단바 -->
     <footer class="app-footer">
       <div id="footer-date">0000년 00월 00일 (요일) 00:00</div>
       <div class="footer-logo"><img src="logo.png" alt="KAC Logo"></div>
@@ -183,7 +184,12 @@
   <script>
     let myRoomID = null;
 
-    // --- 시계 설정 ---
+    // 날짜 헬퍼 함수
+    function getTodayString() {
+        const today = new Date();
+        return `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+    }
+
     function runClock() {
         const now = new Date();
         const week = ['일','월','화','수','목','금','토'];
@@ -192,13 +198,17 @@
     }
     setInterval(runClock, 1000); runClock();
 
-    // --- [중요] 학생장 권한 검증 로직 ---
+
+
+
+
+// --- [수정] 학생장 권한 검증 로직 (전화번호 뒷자리 비교 방식) ---
     async function verifyLeaderAccess() {
         const name = document.getElementById('leaderName').value.trim();
-        const phone = document.getElementById('leaderPhone').value.trim();
+        const inputPhone = document.getElementById('leaderPhone').value.trim(); // 사용자가 입력한 4자리
         const errorEl = document.getElementById('authError');
 
-        if(!name || !phone) return alert("정보를 모두 입력해주세요.");
+        if(!name || inputPhone.length !== 4) return alert("성함과 전화번호 뒷자리 4자리를 정확히 입력해주세요.");
 
         errorEl.style.display = "none";
         const btn = document.querySelector('.auth-btn');
@@ -217,15 +227,20 @@
                     const studentKeys = Object.keys(room.students);
                     for (const sKey of studentKeys) {
                         const student = room.students[sKey];
-                        // 이름과 번호가 맞고, isLeader 권한이 있는지 체크
-                        if (student.name === name && student.phone === phone) {
+                        
+                        // DB에 저장된 전화번호에서 숫자만 추출 후 마지막 4자리 가져오기
+                        // 예: "010-1234-5678" -> "01012345678" -> "5678"
+                        const dbFullPhone = String(student.phone || "").replace(/[^0-9]/g, ""); 
+                        const dbLast4 = dbFullPhone.slice(-4);
+
+                        // 이름이 일치하고, 추출한 뒷 4자리가 입력값과 일치하는지 체크
+                        if (student.name === name && dbLast4 === inputPhone) {
                             if (student.isLeader === true) {
                                 myRoomID = rid;
                                 isLeaderFound = true;
                                 break;
                             } else {
-                                // 정보는 맞지만 권한이 없는 경우
-                                alert("교수님에 의해 학생장으로 지정되지 않았습니다.\n권한 부여 후 다시 시도해 주세요.");
+                                alert("교수님에 의해 학생장으로 지정되지 않았습니다.\n강사 플랫폼에서 학생장 권한 부여를 확인해 주세요.");
                                 resetBtn(btn);
                                 return;
                             }
@@ -240,32 +255,50 @@
                 document.getElementById('mainContent').style.display = 'block';
                 loadLeaderData();
             } else {
-                errorEl.innerText = "일치하는 교육생 정보가 없습니다.";
+                errorEl.innerText = "정보가 일치하지 않거나 권한이 없습니다.";
                 errorEl.style.display = "block";
                 resetBtn(btn);
             }
         } catch(e) {
+            console.error(e);
             alert("연결 오류가 발생했습니다.");
             resetBtn(btn);
         }
     }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
     function resetBtn(btn) {
         btn.innerText = "권한 확인 및 입장";
         btn.disabled = false;
     }
 
-    // --- 데이터 바인딩 ---
     function loadLeaderData() {
         if(!myRoomID) return;
+        const today = getTodayString();
 
-        // 과정 기본 정보
+        // 1. 과정 기본 정보 및 수강생 명부
         firebase.database().ref(`courses/${myRoomID}`).on('value', snap => {
             const data = snap.val() || {};
             document.getElementById('displayCourseName').innerText = data.settings?.courseName || `과정명 미지정`;
             document.getElementById('displayProfName').innerText = `담당교수: ${data.status?.professorName || '미지정'}`;
             
-            // 전체 수강생 명부
             const sContainer = document.getElementById('studentList');
             sContainer.innerHTML = "";
             if(data.students) {
@@ -277,14 +310,40 @@
                                 <span class="user-phone muted">뒷번호: ${s.phone}</span>
                             </div>
                             <span class="status-badge badge-normal">입실 중</span>
-                        </div>
-                    `;
+                        </div>`;
                 });
             }
         });
 
-        // 실시간 외출/외박 명단
-        const today = getTodayString();
+        // 2. 실시간 석식 제외 명단 (추가 로직)
+        firebase.database().ref(`courses/${myRoomID}/dinner_skips/${today}`).on('value', snap => {
+            const dContainer = document.getElementById('dinnerSkipList');
+            dContainer.innerHTML = "";
+            const data = snap.val() || {};
+            const entries = Object.entries(data);
+
+            if(entries.length === 0) {
+                dContainer.innerHTML = `<div class="empty-msg">오늘 석식 제외 신청자가 없습니다.</div>`;
+                return;
+            }
+
+            entries.forEach(([token, info]) => {
+                // info 형식: "이름(뒷번호)"
+                let name = info.split('(')[0];
+                let phone = info.split('(')[1]?.replace(')', '') || '0000';
+
+                dContainer.innerHTML += `
+                    <div class="list-item">
+                        <div class="user-info">
+                            <span class="user-name">${name}</span>
+                            <span class="user-phone">뒷번호: ${phone}</span>
+                        </div>
+                        <span class="status-badge badge-dinner">석식제외</span>
+                    </div>`;
+            });
+        });
+
+        // 3. 실시간 외출/외박 명단
         firebase.database().ref(`courses/${myRoomID}/admin_actions/${today}`).on('value', snap => {
             const aContainer = document.getElementById('actionList');
             aContainer.innerHTML = "";
@@ -305,8 +364,7 @@
                             <span class="user-phone">${item.phone}</span>
                         </div>
                         <span class="status-badge ${isOut ? 'badge-outing' : 'badge-overnight'}">${isOut ? '외출' : '외박'}</span>
-                    </div>
-                `;
+                    </div>`;
             });
         });
     }
