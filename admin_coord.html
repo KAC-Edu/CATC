@@ -2001,9 +2001,9 @@ function updateGlobalStatus() {
                 if (settings.period && settings.period.includes(" ~ ")) {
                     const endDate = settings.period.split(" ~ ")[1];
                     // 종료일이 오늘이거나 미래인 경우 + 취소되지 않은 건만 카운트
-                    if (endDate >= todayStr && req.status !== 'cancelled') {
-                        validPickupCount++;
-                    }
+if (endDate >= todayStr && (req.status === 'pending' || req.status === 'approved')) {
+    validPickupCount++;
+}
                 }
             }
         });
@@ -3192,20 +3192,20 @@ function renderPickupTable() {
         const updates = {};
         let hasUpdates = false;
 
-        // 1. 데이터 배열화 및 마감 로직
-        const items = Object.keys(data).map(k => {
-            const item = { id: k, ...data[k] };
-            if (item.status === 'approved' && item.date && item.time) {
-                const scheduledTime = new Date(item.date + ' ' + item.time);
-                const limitTime = new Date(scheduledTime.getTime() + 2 * 60 * 60 * 1000); 
-                if (now > limitTime && !isNaN(scheduledTime.getTime())) {
-                    updates[`system/transport_requests/${k}/status`] = 'finished';
-                    item.status = 'finished';
-                    hasUpdates = true;
-                }
-            }
-            return item;
-        });
+// 1. 데이터 배열화 및 마감 로직
+const items = Object.keys(data).map(k => {
+    const item = { id: k, ...data[k] };
+    if (item.status === 'approved' && item.date && item.time) {
+        const scheduledTime = new Date(item.date + ' ' + item.time);
+        const limitTime = new Date(scheduledTime.getTime() + 2 * 60 * 60 * 1000); 
+        if (now > limitTime && !isNaN(scheduledTime.getTime())) {
+            updates[`system/transport_requests/${k}/status`] = 'finished'; // 2시간 지나면 자동 종료 처리
+            item.status = 'finished';
+            hasUpdates = true;
+        }
+    }
+    return item;
+});
 
         if (hasUpdates) firebase.database().ref().update(updates);
 
