@@ -2087,7 +2087,9 @@ function updateIndividualView() {
         </tr>`;
     }).join('') : '<tr><td colspan="4" style="padding:20px; color:#94a3b8; text-align:center;">신청 명단 없음</td></tr>';
     
-    document.getElementById('courseNotice').value = room.coordNotice || ""; 
+if (document.activeElement !== document.getElementById('courseNotice')) {
+    document.getElementById('courseNotice').value = room.coordNotice || "";
+}
 }
 
 
@@ -3016,7 +3018,15 @@ function openCenterQrModal() {
 
 
     function checkLocationDirect(v) { document.getElementById('setup-location-direct').style.display = (v === 'direct') ? "block" : "none"; }
-    function saveCourseNotice() { if(currentRID) firebase.database().ref(`courses/${currentRID}/coordNotice`).set(document.getElementById('courseNotice').value).then(()=>alert("저장 완료")); }
+function saveCourseNotice() { 
+    if(!currentRID) return alert("과정을 선택해주세요.");
+    const noticeText = document.getElementById('courseNotice').value;
+    // 위치를 확실히 고정해서 저장함
+    firebase.database().ref('courses/' + currentRID + '/coordNotice').set(noticeText)
+    .then(() => {
+        alert("공지가 서버에 정상적으로 업데이트되었습니다.");
+    });
+}
     function saveGlobalNotice() { firebase.database().ref(`system/globalNotice`).set(document.getElementById('globalNotice').value).then(()=>alert("저장 완료")); }
     async function handleQRUpload(input) { const reader = new FileReader(); reader.onload = async (e) => { await firebase.database().ref(`courses/${currentRID}/attendanceQR`).set(e.target.result); alert("QR 저장 완료"); updateQRPreview(); }; reader.readAsDataURL(input.files[0]); }
     function updateQRPreview() { const room = globalAllData[currentRID]; const img = document.getElementById('qrPreview'); const empty = document.getElementById('qrEmpty'); if(room?.attendanceQR) { img.src = room.attendanceQR; img.style.display = "block"; empty.style.display = "none"; } else { img.style.display = "none"; empty.style.display = "block"; } }

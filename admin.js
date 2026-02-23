@@ -273,33 +273,39 @@ loadInitialData: function() {
     
 // [수정] 방 이동 시 제어권이 없으면 무조건 비번 창을 띄우고, 실패 시 입장을 원천 차단
 switchRoomAttempt: async function(newRoom) {
-        localStorage.setItem('kac_last_mode', 'dashboard');
+    localStorage.setItem('kac_last_mode', 'dashboard');
+    
+    // [수정] 방 이동 시 무조건 옵저버 상태를 먼저 끄고 시작
+    state.isObserver = false;
+
+    // 이동하려는 방이 내가 과거에 옵저버로 들어갔던 방인지 확인
+    if(sessionStorage.getItem('kac_observer_room') === newRoom) {
+        state.isObserver = true;
+    }
+
+    if (localStorage.getItem('last_owned_room') === newRoom && !state.isObserver) {
+        this.forceEnterRoom(newRoom);
+        return;
+    }
+
+    const snapshot = await firebase.database().ref(`courses/${newRoom}/status`).get();
+    const st = snapshot.val() || {};
+
+    if (st.roomStatus === 'active' && st.ownerSessionId !== state.sessionId && !state.isObserver) {
+        state.pendingRoom = newRoom;
         
-        // [수정] 방 이동 시 무조건 옵저버 상태를 먼저 끄고 시작
-        state.isObserver = false;
-
-        // 이동하려는 방이 내가 과거에 옵저버로 들어갔던 방인지 확인
-        if(sessionStorage.getItem('kac_observer_room') === newRoom) {
-            state.isObserver = true;
+        // ★ 추가된 부분: 비밀번호 창 띄우기 전에 배경 잠금화면(statusOverlay)을 먼저 숨깁니다.
+        if(document.getElementById('statusOverlay')) {
+            document.getElementById('statusOverlay').style.display = 'none';
         }
 
-        if (localStorage.getItem('last_owned_room') === newRoom && !state.isObserver) {
-            this.forceEnterRoom(newRoom);
-            return;
-        }
-
-        const snapshot = await firebase.database().ref(`courses/${newRoom}/status`).get();
-        const st = snapshot.val() || {};
-
-        if (st.roomStatus === 'active' && st.ownerSessionId !== state.sessionId && !state.isObserver) {
-            state.pendingRoom = newRoom;
-            document.getElementById('takeoverPwInput').value = "";
-            document.getElementById('takeoverModal').style.display = 'flex';
-            document.getElementById('takeoverPwInput').focus();
-        } else {
-            this.forceEnterRoom(newRoom);
-        }
-    },
+        document.getElementById('takeoverPwInput').value = "";
+        document.getElementById('takeoverModal').style.display = 'flex';
+        document.getElementById('takeoverPwInput').focus();
+    } else {
+        this.forceEnterRoom(newRoom);
+    }
+},
 
     
      // [수정] 인증 성공 시에만 세션 ID를 서버에 등록하여 '정식 주인'으로 인정
@@ -1905,15 +1911,18 @@ toggleMiniQR: function() {
 
 
 
+
     
-    checkLockStatus: function(st) {
-        const overlay = document.getElementById('statusOverlay');
-        if (st.roomStatus === 'active' && st.ownerSessionId === state.sessionId) {
-            overlay.style.display = 'none';
-        } else {
-            overlay.style.display = 'flex';
-        }
-    },
+checkLockStatus: function(st) {
+    const overlay = document.getElementById('statusOverlay');
+    // 방 상태가 idle(비어있음)일 때만 잠금 화면을 보여줌
+    if (st.roomStatus === 'idle') {
+        overlay.style.display = 'flex';
+    } else {
+        // 사용 중이라면 잠금 화면을 치우고, 주인이 다르면 비번 창을 띄우는 로직으로 연결됨
+        overlay.style.display = 'none';
+    }
+},
     
 // [수정] 무서운 눈 이모지를 깔끔한 아이콘으로 교체
 updateHeaderRoom: function(r) { 
