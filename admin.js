@@ -1915,11 +1915,18 @@ toggleMiniQR: function() {
     
 checkLockStatus: function(st) {
     const overlay = document.getElementById('statusOverlay');
-    // 방 상태가 idle(비어있음)일 때만 잠금 화면을 보여줌
+    const takeoverModal = document.getElementById('takeoverModal');
+
+    // 비번 입력창이 열려있다면 잠금 화면은 무조건 숨김
+    if (takeoverModal && takeoverModal.style.display === 'flex') {
+        overlay.style.display = 'none';
+        return;
+    }
+
+    // 방이 비어있을 때만 잠금 화면 표시
     if (st.roomStatus === 'idle') {
         overlay.style.display = 'flex';
     } else {
-        // 사용 중이라면 잠금 화면을 치우고, 주인이 다르면 비번 창을 띄우는 로직으로 연결됨
         overlay.style.display = 'none';
     }
 },

@@ -2076,7 +2076,6 @@ function updateIndividualView() {
         const btnStyle = isSigned ? "background:#94a3b8; color:#fff; border:none;" : "background:var(--blue-main); color:#fff; border:none;";
         const dataStr = encodeURIComponent(JSON.stringify(a));
         
-        // 버튼을 제외한 행 전체를 클릭 영역으로 설정
         const rowClickAction = `onclick="showActionDetail('${dataStr}')" style="cursor:pointer;"`;
 
         return `<tr>
@@ -2087,9 +2086,12 @@ function updateIndividualView() {
         </tr>`;
     }).join('') : '<tr><td colspan="4" style="padding:20px; color:#94a3b8; text-align:center;">신청 명단 없음</td></tr>';
     
-if (document.activeElement !== document.getElementById('courseNotice')) {
-    document.getElementById('courseNotice').value = room.coordNotice || "";
-}
+    // [가장 중요 - 이 부분 때문에 글자가 되돌아갔던 것임]
+    // 사용자가 입력창(courseNotice)에 글을 쓰고 있거나 마우스를 클릭한 상태라면 서버 데이터를 덮어쓰지 않음
+    const noticeEl = document.getElementById('courseNotice');
+    if (document.activeElement !== noticeEl) {
+        noticeEl.value = room.coordNotice || "";
+    }
 }
 
 
@@ -3019,12 +3021,14 @@ function openCenterQrModal() {
 
     function checkLocationDirect(v) { document.getElementById('setup-location-direct').style.display = (v === 'direct') ? "block" : "none"; }
 function saveCourseNotice() { 
-    if(!currentRID) return alert("과정을 선택해주세요.");
+    if(!currentRID) return alert("과정을 먼저 선택해주세요.");
     const noticeText = document.getElementById('courseNotice').value;
-    // 위치를 확실히 고정해서 저장함
+    // 서버의 정확한 위치(coordNotice)에 저장
     firebase.database().ref('courses/' + currentRID + '/coordNotice').set(noticeText)
     .then(() => {
-        alert("공지가 서버에 정상적으로 업데이트되었습니다.");
+        alert("✅ 공지가 교육생 플랫폼에 즉시 반영되었습니다.");
+    }).catch((err) => {
+        alert("오류 발생: " + err.message);
     });
 }
     function saveGlobalNotice() { firebase.database().ref(`system/globalNotice`).set(document.getElementById('globalNotice').value).then(()=>alert("저장 완료")); }
