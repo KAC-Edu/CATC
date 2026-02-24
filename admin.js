@@ -271,41 +271,55 @@ loadInitialData: function() {
 
 
     
-// [수정] 방 이동 시 제어권이 없으면 무조건 비번 창을 띄우고, 실패 시 입장을 원천 차단
-switchRoomAttempt: async function(newRoom) {
-    localStorage.setItem('kac_last_mode', 'dashboard');
-    
-    // [수정] 방 이동 시 무조건 옵저버 상태를 먼저 끄고 시작
-    state.isObserver = false;
+// [수정] 방 이동 시도 시 인증 전이라도 UI를 먼저 잠금 상태로 표시
+    switchRoomAttempt: async function(newRoom) {
+        localStorage.setItem('kac_last_mode', 'dashboard');
+        state.isObserver = false;
 
-    // 이동하려는 방이 내가 과거에 옵저버로 들어갔던 방인지 확인
-    if(sessionStorage.getItem('kac_observer_room') === newRoom) {
-        state.isObserver = true;
-    }
-
-    if (localStorage.getItem('last_owned_room') === newRoom && !state.isObserver) {
-        this.forceEnterRoom(newRoom);
-        return;
-    }
-
-    const snapshot = await firebase.database().ref(`courses/${newRoom}/status`).get();
-    const st = snapshot.val() || {};
-
-    if (st.roomStatus === 'active' && st.ownerSessionId !== state.sessionId && !state.isObserver) {
-        state.pendingRoom = newRoom;
-        
-        // ★ 추가된 부분: 비밀번호 창 띄우기 전에 배경 잠금화면(statusOverlay)을 먼저 숨깁니다.
-        if(document.getElementById('statusOverlay')) {
-            document.getElementById('statusOverlay').style.display = 'none';
+        if(sessionStorage.getItem('kac_observer_room') === newRoom) {
+            state.isObserver = true;
         }
 
-        document.getElementById('takeoverPwInput').value = "";
-        document.getElementById('takeoverModal').style.display = 'flex';
-        document.getElementById('takeoverPwInput').focus();
-    } else {
-        this.forceEnterRoom(newRoom);
-    }
-},
+        const snapshot = await firebase.database().ref(`courses/${newRoom}/status`).get();
+        const st = snapshot.val() || {};
+
+        // --- [추가] 인증 전이라도 사이드바 버튼을 미리 잠금 상태로 표시 ---
+        const setupBtn = document.getElementById('btnSetupModal');
+        if (setupBtn) {
+            if (st.roomStatus === 'active' && st.ownerSessionId !== state.sessionId && !state.isObserver) {
+                setupBtn.style.setProperty('background', '#64748b', 'important');
+                setupBtn.style.setProperty('opacity', '0.6', 'important');
+                setupBtn.innerHTML = '<i class="fa-solid fa-lock"></i> 과정 잠김 (인증 필요)';
+            }
+        }
+        // ---------------------------------------------------------
+
+        if (localStorage.getItem('last_owned_room') === newRoom && !state.isObserver) {
+            this.forceEnterRoom(newRoom);
+            return;
+        }
+
+        if (st.roomStatus === 'active' && st.ownerSessionId !== state.sessionId && !state.isObserver) {
+            state.pendingRoom = newRoom;
+            if(document.getElementById('statusOverlay')) {
+                document.getElementById('statusOverlay').style.display = 'none';
+            }
+            document.getElementById('takeoverPwInput').value = "";
+            document.getElementById('takeoverModal').style.display = 'flex';
+            document.getElementById('takeoverPwInput').focus();
+        } else {
+            this.forceEnterRoom(newRoom);
+        }
+    },
+
+
+
+
+
+
+
+
+
 
     
      // [수정] 인증 성공 시에만 세션 ID를 서버에 등록하여 '정식 주인'으로 인정
@@ -410,108 +424,110 @@ enterAsObserver: function() {
 
 
 
+
+
+
+
+
+
+
+
+
+
 forceEnterRoom: async function(room) {
-    const cleanRoom = room.toUpperCase();
+        const cleanRoom = room.toUpperCase();
 
-    // 1. 기존 리스너 제거
-    if (window.dbRef) {
-        Object.values(window.dbRef).forEach(ref => {
-            if (ref && typeof ref.off === 'function') ref.off();
+        if (window.dbRef) {
+            Object.values(window.dbRef).forEach(ref => {
+                if (ref && typeof ref.off === 'function') ref.off();
+            });
+        }
+
+        firebase.database().ref(`courses/${cleanRoom}/questions`).off();
+        firebase.database().ref(`courses/${cleanRoom}/status`).off();
+        firebase.database().ref(`courses/${cleanRoom}/settings`).off();
+
+        state.room = cleanRoom; 
+        state.qaData = {};      
+        state.activeQaKey = null; 
+        localStorage.setItem('kac_last_room', cleanRoom); 
+        state.isObserver = (sessionStorage.getItem('kac_observer_room') === cleanRoom);
+
+        const qaListEl = document.getElementById('qaList');
+        if (qaListEl) qaListEl.innerHTML = "<div style='text-align:center; padding:20px; color:#94a3b8;'>실시간 엔진 연결 중...</div>";
+
+        const rPath = `courses/${cleanRoom}`;
+        window.dbRef = {
+            settings: firebase.database().ref(`${rPath}/settings`),
+            qa: firebase.database().ref(`${rPath}/questions`),
+            quiz: firebase.database().ref(`${rPath}/activeQuiz`),
+            ans: firebase.database().ref(`${rPath}/quizAnswers`),
+            status: firebase.database().ref(`${rPath}/status`)
+        };
+        dbRef = window.dbRef; 
+
+        ui.updateHeaderRoom(cleanRoom);
+        ui.updateObserverButton();
+
+        dbRef.qa.on('value', snap => { 
+            if (state.room !== cleanRoom) return; 
+            try {
+                const rawData = snap.val() || {};
+                state.qaData = rawData; 
+                ui.renderQaList(); 
+                if (document.getElementById('view-dashboard').style.display !== 'none') {
+                    ui.updateQaCountBadge(); 
+                }
+            } catch (e) {
+                console.error("Q&A 실시간 엔진 오류:", e);
+            }
         });
-    }
 
-    firebase.database().ref(`courses/${cleanRoom}/questions`).off();
-    firebase.database().ref(`courses/${cleanRoom}/status`).off();
-    firebase.database().ref(`courses/${cleanRoom}/settings`).off();
+        dbRef.settings.on('value', s => {
+            if (state.room !== cleanRoom) return; 
+            ui.renderSettings(s.val() || {}); 
+        });
 
-    // 2. 상태 초기화
-    state.room = cleanRoom; 
-    state.qaData = {};      
-    state.activeQaKey = null; 
-    localStorage.setItem('kac_last_room', cleanRoom); 
-    state.isObserver = (sessionStorage.getItem('kac_observer_room') === cleanRoom);
+        dbRef.status.on('value', s => {
+            if (state.room !== cleanRoom) return;
+            const statusData = s.val() || {};
+            ui.renderRoomStatus(statusData.roomStatus || 'idle'); 
 
-    const qaListEl = document.getElementById('qaList');
-    if (qaListEl) qaListEl.innerHTML = "<div style='text-align:center; padding:20px; color:#94a3b8;'>실시간 엔진 연결 중...</div>";
+            // 환경 설정 버튼 상태 업데이트
+            const setupBtn = document.getElementById('btnSetupModal');
+            if (setupBtn) {
+                const isOwner = (statusData.ownerSessionId === state.sessionId);
+                const isActive = (statusData.roomStatus === 'active');
 
-    // 3. 경로 설정
-    const rPath = `courses/${cleanRoom}`;
-    window.dbRef = {
-        settings: firebase.database().ref(`${rPath}/settings`),
-        qa: firebase.database().ref(`${rPath}/questions`),
-        quiz: firebase.database().ref(`${rPath}/activeQuiz`),
-        ans: firebase.database().ref(`${rPath}/quizAnswers`),
-        status: firebase.database().ref(`${rPath}/status`)
-    };
-    dbRef = window.dbRef; 
-
-    ui.updateHeaderRoom(cleanRoom);
-    ui.updateObserverButton();
-
-    // 4. Q&A 리스너
-    dbRef.qa.on('value', snap => { 
-        if (state.room !== cleanRoom) return; 
-        try {
-            const rawData = snap.val() || {};
-            state.qaData = rawData; 
-            ui.renderQaList(); 
-            if (document.getElementById('view-dashboard').style.display !== 'none') {
-                ui.updateQaCountBadge(); 
+                if (isActive && !isOwner && !state.isObserver) {
+                    setupBtn.style.setProperty('background', '#64748b', 'important');
+                    setupBtn.style.setProperty('opacity', '0.6', 'important');
+                    setupBtn.innerHTML = '<i class="fa-solid fa-lock"></i> 과정 잠김 (인증 필요)';
+                } else {
+                    setupBtn.style.setProperty('background', 'linear-gradient(135deg, #3b82f6 0%, #1e40af 100%)', 'important');
+                    setupBtn.style.setProperty('opacity', '1', 'important');
+                    setupBtn.innerHTML = '<i class="fa-solid fa-gears"></i> 교육과정 환경 설정 (통합)';
+                }
             }
-        } catch (e) {
-            console.error("Q&A 실시간 엔진 오류:", e);
-        }
-    });
 
-    // 5. 설정 리스너
-    dbRef.settings.on('value', s => {
-        if (state.room !== cleanRoom) return; 
-        ui.renderSettings(s.val() || {}); 
-    });
-
-    // 6. 상태 리스너 (여기서 버튼 색상을 강력하게 바꿉니다)
-    dbRef.status.on('value', s => {
-        if (state.room !== cleanRoom) return;
-        const statusData = s.val() || {};
-        ui.renderRoomStatus(statusData.roomStatus || 'idle'); 
-
-        // 환경 설정 버튼 찾기
-        const setupBtn = document.getElementById('btnSetupModal');
-        if (setupBtn) {
-            const isOwner = (statusData.ownerSessionId === state.sessionId);
-            const isActive = (statusData.roomStatus === 'active');
-
-            if (isActive && !isOwner && !state.isObserver) {
-                // 제어권이 없는 남의 방일 때 -> 회색으로 강제 변경
-                setupBtn.style.setProperty('background', '#64748b', 'important');
-                setupBtn.style.setProperty('opacity', '0.6', 'important');
-                setupBtn.innerHTML = '<i class="fa-solid fa-lock"></i> 과정 잠김 (인증 필요)';
+            if (!state.isObserver) {
+                ui.checkLockStatus(statusData);
             } else {
-                // 내 방이거나 비어있을 때 -> 파란색으로 강제 변경
-                setupBtn.style.setProperty('background', 'linear-gradient(135deg, #3b82f6 0%, #1e40af 100%)', 'important');
-                setupBtn.style.setProperty('opacity', '1', 'important');
-                setupBtn.innerHTML = '<i class="fa-solid fa-gears"></i> 교육과정 환경 설정 (통합)';
+                document.getElementById('statusOverlay').style.display = 'none';
             }
-        }
+        });
 
-        if (!state.isObserver) {
-            ui.checkLockStatus(statusData);
-        } else {
-            document.getElementById('statusOverlay').style.display = 'none';
-        }
-    });
+        this.fetchCodeAndRenderQr(cleanRoom);
+        const lastMode = localStorage.getItem('kac_last_mode') || 'dashboard';
+        ui.setMode(lastMode); 
+        subjectMgr.init();
+        guideMgr.init();
 
-    this.fetchCodeAndRenderQr(cleanRoom);
-    const lastMode = localStorage.getItem('kac_last_mode') || 'dashboard';
-    ui.setMode(lastMode); 
-    subjectMgr.init();
-    guideMgr.init();
-
-    if (window.adminQaRefreshInterval) clearInterval(window.adminQaRefreshInterval);
-    window.adminQaRefreshInterval = setInterval(() => {
-        if (state.room === cleanRoom) ui.renderQaList(); 
-    }, 60000); 
-},
+        if (window.adminQaRefreshInterval) clearInterval(window.adminQaRefreshInterval);
+        window.adminQaRefreshInterval = setInterval(() => {
+            if (state.room === cleanRoom) ui.renderQaList(); 
+        }, 60000); 
+    },
 
 
 
