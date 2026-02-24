@@ -411,103 +411,107 @@ enterAsObserver: function() {
 
 
 forceEnterRoom: async function(room) {
-        const cleanRoom = room.toUpperCase();
+    const cleanRoom = room.toUpperCase();
 
-        if (window.dbRef) {
-            Object.values(window.dbRef).forEach(ref => {
-                if (ref && typeof ref.off === 'function') ref.off();
-            });
+    // 1. 기존 리스너 제거
+    if (window.dbRef) {
+        Object.values(window.dbRef).forEach(ref => {
+            if (ref && typeof ref.off === 'function') ref.off();
+        });
+    }
+
+    firebase.database().ref(`courses/${cleanRoom}/questions`).off();
+    firebase.database().ref(`courses/${cleanRoom}/status`).off();
+    firebase.database().ref(`courses/${cleanRoom}/settings`).off();
+
+    // 2. 상태 초기화
+    state.room = cleanRoom; 
+    state.qaData = {};      
+    state.activeQaKey = null; 
+    localStorage.setItem('kac_last_room', cleanRoom); 
+    state.isObserver = (sessionStorage.getItem('kac_observer_room') === cleanRoom);
+
+    const qaListEl = document.getElementById('qaList');
+    if (qaListEl) qaListEl.innerHTML = "<div style='text-align:center; padding:20px; color:#94a3b8;'>실시간 엔진 연결 중...</div>";
+
+    // 3. 경로 설정
+    const rPath = `courses/${cleanRoom}`;
+    window.dbRef = {
+        settings: firebase.database().ref(`${rPath}/settings`),
+        qa: firebase.database().ref(`${rPath}/questions`),
+        quiz: firebase.database().ref(`${rPath}/activeQuiz`),
+        ans: firebase.database().ref(`${rPath}/quizAnswers`),
+        status: firebase.database().ref(`${rPath}/status`)
+    };
+    dbRef = window.dbRef; 
+
+    ui.updateHeaderRoom(cleanRoom);
+    ui.updateObserverButton();
+
+    // 4. Q&A 리스너
+    dbRef.qa.on('value', snap => { 
+        if (state.room !== cleanRoom) return; 
+        try {
+            const rawData = snap.val() || {};
+            state.qaData = rawData; 
+            ui.renderQaList(); 
+            if (document.getElementById('view-dashboard').style.display !== 'none') {
+                ui.updateQaCountBadge(); 
+            }
+        } catch (e) {
+            console.error("Q&A 실시간 엔진 오류:", e);
+        }
+    });
+
+    // 5. 설정 리스너
+    dbRef.settings.on('value', s => {
+        if (state.room !== cleanRoom) return; 
+        ui.renderSettings(s.val() || {}); 
+    });
+
+    // 6. 상태 리스너 (여기서 버튼 색상을 강력하게 바꿉니다)
+    dbRef.status.on('value', s => {
+        if (state.room !== cleanRoom) return;
+        const statusData = s.val() || {};
+        ui.renderRoomStatus(statusData.roomStatus || 'idle'); 
+
+        // 환경 설정 버튼 찾기
+        const setupBtn = document.getElementById('btnSetupModal');
+        if (setupBtn) {
+            const isOwner = (statusData.ownerSessionId === state.sessionId);
+            const isActive = (statusData.roomStatus === 'active');
+
+            if (isActive && !isOwner && !state.isObserver) {
+                // 제어권이 없는 남의 방일 때 -> 회색으로 강제 변경
+                setupBtn.style.setProperty('background', '#64748b', 'important');
+                setupBtn.style.setProperty('opacity', '0.6', 'important');
+                setupBtn.innerHTML = '<i class="fa-solid fa-lock"></i> 과정 잠김 (인증 필요)';
+            } else {
+                // 내 방이거나 비어있을 때 -> 파란색으로 강제 변경
+                setupBtn.style.setProperty('background', 'linear-gradient(135deg, #3b82f6 0%, #1e40af 100%)', 'important');
+                setupBtn.style.setProperty('opacity', '1', 'important');
+                setupBtn.innerHTML = '<i class="fa-solid fa-gears"></i> 교육과정 환경 설정 (통합)';
+            }
         }
 
-        firebase.database().ref(`courses/${cleanRoom}/questions`).off();
-        firebase.database().ref(`courses/${cleanRoom}/status`).off();
-        firebase.database().ref(`courses/${cleanRoom}/settings`).off();
+        if (!state.isObserver) {
+            ui.checkLockStatus(statusData);
+        } else {
+            document.getElementById('statusOverlay').style.display = 'none';
+        }
+    });
 
-        state.room = cleanRoom; 
-        state.qaData = {};      
-        state.activeQaKey = null; 
-        localStorage.setItem('kac_last_room', cleanRoom); 
-        state.isObserver = (sessionStorage.getItem('kac_observer_room') === cleanRoom);
+    this.fetchCodeAndRenderQr(cleanRoom);
+    const lastMode = localStorage.getItem('kac_last_mode') || 'dashboard';
+    ui.setMode(lastMode); 
+    subjectMgr.init();
+    guideMgr.init();
 
-        const qaListEl = document.getElementById('qaList');
-        if (qaListEl) qaListEl.innerHTML = "<div style='text-align:center; padding:20px; color:#94a3b8;'>실시간 엔진 연결 중...</div>";
-
-        const rPath = `courses/${cleanRoom}`;
-        window.dbRef = {
-            settings: firebase.database().ref(`${rPath}/settings`),
-            qa: firebase.database().ref(`${rPath}/questions`),
-            quiz: firebase.database().ref(`${rPath}/activeQuiz`),
-            ans: firebase.database().ref(`${rPath}/quizAnswers`),
-            status: firebase.database().ref(`${rPath}/status`)
-        };
-        dbRef = window.dbRef; 
-
-        ui.updateHeaderRoom(cleanRoom);
-        ui.updateObserverButton();
-
-        dbRef.qa.on('value', snap => { 
-            if (state.room !== cleanRoom) return; 
-            try {
-                const rawData = snap.val() || {};
-                state.qaData = rawData; 
-                ui.renderQaList(); 
-                if (document.getElementById('view-dashboard').style.display !== 'none') {
-                    ui.updateQaCountBadge(); 
-                }
-            } catch (e) {
-                console.error("Q&A 실시간 엔진 오류:", e);
-            }
-        });
-
-        dbRef.settings.on('value', s => {
-            if (state.room !== cleanRoom) return; 
-            ui.renderSettings(s.val() || {}); 
-        });
-
-        dbRef.status.on('value', s => {
-            if (state.room !== cleanRoom) return;
-            const statusData = s.val() || {};
-            ui.renderRoomStatus(statusData.roomStatus || 'idle'); 
-
-            // --- [핵심 수정] 제어권에 따른 환경설정 버튼 시각적 제어 ---
-            const setupBtn = document.querySelector('button[onclick*="setupMgr.openSetupModal"]');
-            if (setupBtn) {
-                const isOwner = (statusData.ownerSessionId === state.sessionId);
-                const isActive = (statusData.roomStatus === 'active');
-
-                if (isActive && !isOwner && !state.isObserver) {
-                    // 남이 사용 중이고, 아직 내가 비번을 안 넣은 상태 -> 회색 자물쇠 버튼
-                    setupBtn.style.background = "#64748b"; 
-                    setupBtn.style.boxShadow = "none";
-                    setupBtn.innerHTML = '<i class="fa-solid fa-lock"></i> 과정 잠김 (인증 필요)';
-                } else {
-                    // 내가 주인이거나, 방이 비어있어서 누구든 설정 가능한 상태 -> 파란색 정상 버튼
-                    setupBtn.style.background = "linear-gradient(135deg, #3b82f6 0%, #1e40af 100%)";
-                    setupBtn.style.boxShadow = "0 4px 12px rgba(59, 130, 246, 0.3)";
-                    setupBtn.innerHTML = '<i class="fa-solid fa-gears"></i> 교육과정 환경 설정 (통합)';
-                }
-            }
-
-            if (!state.isObserver) {
-                ui.checkLockStatus(statusData);
-            } else {
-                document.getElementById('statusOverlay').style.display = 'none';
-            }
-        });
-
-        this.fetchCodeAndRenderQr(cleanRoom);
-        
-        const lastMode = localStorage.getItem('kac_last_mode') || 'dashboard';
-        ui.setMode(lastMode); 
-        
-        subjectMgr.init();
-        guideMgr.init();
-
-        if (window.adminQaRefreshInterval) clearInterval(window.adminQaRefreshInterval);
-        window.adminQaRefreshInterval = setInterval(() => {
-            if (state.room === cleanRoom) ui.renderQaList(); 
-        }, 60000); 
-    },
+    if (window.adminQaRefreshInterval) clearInterval(window.adminQaRefreshInterval);
+    window.adminQaRefreshInterval = setInterval(() => {
+        if (state.room === cleanRoom) ui.renderQaList(); 
+    }, 60000); 
+},
 
 
 
