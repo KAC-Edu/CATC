@@ -494,26 +494,23 @@ forceEnterRoom: async function(room) {
             const statusData = s.val() || {};
             ui.renderRoomStatus(statusData.roomStatus || 'idle'); 
 
-            // --- [핵심 수정] 제어권에 따른 버튼의 운명 결정 ---
             const setupBtn = document.getElementById('btnSetupModal');
             if (setupBtn) {
                 const isOwner = (statusData.ownerSessionId === state.sessionId);
                 const isActive = (statusData.roomStatus === 'active');
 
                 if (isActive && !isOwner && !state.isObserver) {
-                    // 권한 없음: 회색 + 클릭 금지
                     setupBtn.style.setProperty('background', '#64748b', 'important');
                     setupBtn.style.setProperty('opacity', '0.6', 'important');
-                    setupBtn.style.pointerEvents = 'none'; // 클릭 완전 차단
-                    setupBtn.disabled = true; 
                     setupBtn.innerHTML = '<i class="fa-solid fa-lock"></i> 과정 잠김 (인증 필요)';
+                    setupBtn.style.pointerEvents = 'none';
+                    setupBtn.disabled = true;
                 } else {
-                    // 권한 있음: 파란색 + 클릭 허용
                     setupBtn.style.setProperty('background', 'linear-gradient(135deg, #3b82f6 0%, #1e40af 100%)', 'important');
                     setupBtn.style.setProperty('opacity', '1', 'important');
-                    setupBtn.style.pointerEvents = 'auto'; // 클릭 허용
-                    setupBtn.disabled = false;
                     setupBtn.innerHTML = '<i class="fa-solid fa-gears"></i> 교육과정 환경 설정 (통합)';
+                    setupBtn.style.pointerEvents = 'auto';
+                    setupBtn.disabled = false;
                 }
             }
 
@@ -534,8 +531,9 @@ forceEnterRoom: async function(room) {
         window.adminQaRefreshInterval = setInterval(() => {
             if (state.room === cleanRoom) ui.renderQaList(); 
         }, 60000); 
-        // ★ 바로 여기에 추가하세요! ★
-        this.initRoomSelect(); 
+
+        // ★ [핵심 추가] 방 입장이 완료되면 현황판 테이블을 즉시 다시 그려서 파란 테두리를 옮김
+        ui.initRoomSelect(); 
     },
 
 
@@ -1814,87 +1812,85 @@ showAlert: function(msg) {
 
 
 
-// [수정] 사이드바 선택과 현황판 하이라이트를 완벽하게 동기화
+// [수정] 실시간 감시와 화면 그리기를 동시에 처리하는 함수
     initRoomSelect: function() {
-        firebase.database().ref('courses').on('value', s => {
-            const d = s.val() || {};
-            const sel = document.getElementById('roomSelect');
-            const tableBody = document.getElementById('statusTableBody');
-            
-            // 현재 시스템이 인식하고 있는 방 번호 (state.room)
-            const currentSelectedRoom = state.room; 
-            
-            if(sel) sel.innerHTML = '<option value="" disabled>Select Room ▾</option>';
-            if(tableBody) tableBody.innerHTML = "";
+        const sel = document.getElementById('roomSelect');
+        const tableBody = document.getElementById('statusTableBody');
+        
+        // 1. Firebase 실시간 리스너 (한 번만 등록)
+        if (!window.isRoomListenerSet) {
+            firebase.database().ref('courses').on('value', s => {
+                window.latestCoursesData = s.val() || {}; // 전역에 데이터 저장
+                window.isRoomListenerSet = true;
+                this.initRoomSelect(); // 데이터가 오면 화면을 다시 그림
+            });
+            return;
+        }
 
-            let count = 1;
-            for(let i=65; i<=90; i++) {
-                const c = String.fromCharCode(i);
-                const roomData = d[c] || {};
-                const st = roomData.status || {};
-                const settings = roomData.settings || {};
-                const studentObj = roomData.students || {};
-                const validStudents = Object.values(studentObj).filter(s => s.name && s.name !== "undefined");
-                const uniqueNames = new Set(validStudents.map(s => s.name)); 
-                const userCount = uniqueNames.size;
-                const isRoomActive = (st.roomStatus === 'active');
-                
-                const courseName = settings.courseName ? settings.courseName : "-";
-                const profName = st.professorName ? st.professorName : "-";
+        // 2. 실제 화면 그리기 로직
+        const d = window.latestCoursesData || {};
+        const currentSelectedRoom = state.room; // 현재 내가 선택한 방 (가장 중요)
 
-                // 내가 제어권을 가진 방인지 확인
-                const isRealMyRoom = isRoomActive && (st.ownerSessionId === state.sessionId);
+        if(sel) sel.innerHTML = '<option value="" disabled>Select Room ▾</option>';
+        if(tableBody) tableBody.innerHTML = "";
 
-                // 1. 좌측 사이드바 드롭다운 갱신
-                if(sel) {
-                    const opt = document.createElement('option');
-                    opt.value = c;
-                    if(isRealMyRoom) {
-                        opt.innerText = `Room ${c} (🔵 내 강의실 - ${profName})`;
-                        opt.style.color = '#3b82f6';
-                    } else if(isRoomActive) {
-                        opt.innerText = `Room ${c} (🔴 사용중 - ${profName})`;
-                        opt.style.color = '#ef4444';
-                    } else {
-                        opt.innerText = `Room ${c} (⚪ 대기)`;
-                    }
-                    // 현재 선택된 방이면 드롭다운에서도 선택 상태로 표시
-                    if(c === currentSelectedRoom) opt.selected = true;
-                    sel.appendChild(opt);
-                }
+        let count = 1;
+        for(let i=65; i<=90; i++) {
+            const c = String.fromCharCode(i);
+            const roomData = d[c] || {};
+            const st = roomData.status || {};
+            const settings = roomData.settings || {};
+            const studentObj = roomData.students || {};
+            const validStudents = Object.values(studentObj).filter(s => s.name && s.name !== "undefined");
+            const uniqueNames = new Set(validStudents.map(s => s.name)); 
+            const userCount = uniqueNames.size;
+            const isRoomActive = (st.roomStatus === 'active');
+            const courseName = settings.courseName ? settings.courseName : "-";
+            const profName = st.professorName ? st.professorName : "-";
+            const isRealMyRoom = isRoomActive && (st.ownerSessionId === state.sessionId);
 
-                // 2. 우측 현황판 테이블 갱신
-                if(tableBody) {
-                    const row = document.createElement('tr');
-                    
-                    // [핵심] 현재 사이드바에 선택된 방(currentSelectedRoom)과 테이블의 방(c)이 일치하면 강조 클래스 추가
-                    if (c === currentSelectedRoom) {
-                        row.classList.add('is-my-room'); 
-                    }
-                    
-                    const statusBadge = isRoomActive 
-                        ? '<span class="badge-status badge-active">🟢 사용 중</span>' 
-                        : '<span class="badge-status badge-idle">⚪ 비어 있음</span>';
-
-                    row.innerHTML = `
-                        <td>${count++}</td>
-                        <td style="font-weight:900; color:#3b82f6;">
-                            Room ${c}
-                            ${isRealMyRoom ? '<span class="my-room-badge">MY</span>' : ''}
-                        </td>
-                        <td><div class="td-course-name" title="${courseName}">${courseName}</div></td>
-                        <td style="font-weight:600;">${profName}</td>
-                        <td>${statusBadge}</td>
-                        <td style="font-weight:700;">${userCount}명</td>
-                        <td style="color:#94a3b8; font-size:14px;">-</td>
-                        <td>
-                            <button class="btn-table-action" onclick="dataMgr.switchRoomAttempt('${c}')">입장하기</button>
-                        </td>
-                    `;
-                    tableBody.appendChild(row);
-                }
+            // 사이드바 드롭다운 갱신
+            if(sel) {
+                const opt = document.createElement('option');
+                opt.value = c;
+                if(isRealMyRoom) opt.innerText = `Room ${c} (🔵 내 강의실 - ${profName})`;
+                else if(isRoomActive) opt.innerText = `Room ${c} (🔴 사용중 - ${profName})`;
+                else opt.innerText = `Room ${c} (⚪ 대기)`;
+                if(c === currentSelectedRoom) opt.selected = true;
+                sel.appendChild(opt);
             }
-        });
+
+            // 우측 현황판 테이블 갱신
+            if(tableBody) {
+                const row = document.createElement('tr');
+                
+                // [핵심] 새로고침 없이도 현재 선택된 방이면 즉시 파란색 하이라이트 적용
+                if (c === currentSelectedRoom) {
+                    row.classList.add('is-my-room');
+                }
+                
+                const statusBadge = isRoomActive 
+                    ? '<span class="badge-status badge-active">🟢 사용 중</span>' 
+                    : '<span class="badge-status badge-idle">⚪ 비어 있음</span>';
+
+                row.innerHTML = `
+                    <td>${count++}</td>
+                    <td style="font-weight:900; color:#3b82f6;">
+                        Room ${c}
+                        ${isRealMyRoom ? '<span class="my-room-badge">MY</span>' : ''}
+                    </td>
+                    <td><div class="td-course-name" title="${courseName}">${courseName}</div></td>
+                    <td style="font-weight:600;">${profName}</td>
+                    <td>${statusBadge}</td>
+                    <td style="font-weight:700;">${userCount}명</td>
+                    <td style="color:#94a3b8; font-size:14px;">-</td>
+                    <td>
+                        <button class="btn-table-action" onclick="dataMgr.switchRoomAttempt('${c}')">입장하기</button>
+                    </td>
+                `;
+                tableBody.appendChild(row);
+            }
+        }
     },
 
 
