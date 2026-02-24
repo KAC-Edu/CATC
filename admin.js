@@ -411,102 +411,103 @@ enterAsObserver: function() {
 
 
 forceEnterRoom: async function(room) {
-    const cleanRoom = room.toUpperCase();
+        const cleanRoom = room.toUpperCase();
 
-    // 1. [기존 안테나 정밀 제거] 
-    // 전역 루프(.off())는 부하가 크므로, 이전에 저장된 참조(window.dbRef)를 이용해 
-    // 현재 활성화된 리스너만 확실히 끊습니다.
-    if (window.dbRef) {
-        Object.values(window.dbRef).forEach(ref => {
-            if (ref && typeof ref.off === 'function') ref.off();
-        });
-    }
+        if (window.dbRef) {
+            Object.values(window.dbRef).forEach(ref => {
+                if (ref && typeof ref.off === 'function') ref.off();
+            });
+        }
 
-    // 혹시 남아있을지 모를 다른 리스너들도 최소한으로 청소합니다.
-    firebase.database().ref(`courses/${cleanRoom}/questions`).off();
-    firebase.database().ref(`courses/${cleanRoom}/status`).off();
-    firebase.database().ref(`courses/${cleanRoom}/settings`).off();
+        firebase.database().ref(`courses/${cleanRoom}/questions`).off();
+        firebase.database().ref(`courses/${cleanRoom}/status`).off();
+        firebase.database().ref(`courses/${cleanRoom}/settings`).off();
 
-    // 2. [데이터 및 상태 초기화]
-    state.room = cleanRoom; 
-    state.qaData = {};      // 이전 방 데이터 잔상 제거
-    state.activeQaKey = null; 
-    localStorage.setItem('kac_last_room', cleanRoom); 
-    state.isObserver = (sessionStorage.getItem('kac_observer_room') === cleanRoom);
+        state.room = cleanRoom; 
+        state.qaData = {};      
+        state.activeQaKey = null; 
+        localStorage.setItem('kac_last_room', cleanRoom); 
+        state.isObserver = (sessionStorage.getItem('kac_observer_room') === cleanRoom);
 
-    const qaListEl = document.getElementById('qaList');
-    if (qaListEl) qaListEl.innerHTML = "<div style='text-align:center; padding:20px; color:#94a3b8;'>실시간 엔진 연결 중...</div>";
+        const qaListEl = document.getElementById('qaList');
+        if (qaListEl) qaListEl.innerHTML = "<div style='text-align:center; padding:20px; color:#94a3b8;'>실시간 엔진 연결 중...</div>";
 
-    // 3. [참조 경로 재설정]
-    const rPath = `courses/${cleanRoom}`;
-    window.dbRef = {
-        settings: firebase.database().ref(`${rPath}/settings`),
-        qa: firebase.database().ref(`${rPath}/questions`),
-        quiz: firebase.database().ref(`${rPath}/activeQuiz`),
-        ans: firebase.database().ref(`${rPath}/quizAnswers`),
-        status: firebase.database().ref(`${rPath}/status`)
-    };
-    dbRef = window.dbRef; 
+        const rPath = `courses/${cleanRoom}`;
+        window.dbRef = {
+            settings: firebase.database().ref(`${rPath}/settings`),
+            qa: firebase.database().ref(`${rPath}/questions`),
+            quiz: firebase.database().ref(`${rPath}/activeQuiz`),
+            ans: firebase.database().ref(`${rPath}/quizAnswers`),
+            status: firebase.database().ref(`${rPath}/status`)
+        };
+        dbRef = window.dbRef; 
 
-    // 상단바 및 공통 UI 갱신
-    ui.updateHeaderRoom(cleanRoom);
-    ui.updateObserverButton();
+        ui.updateHeaderRoom(cleanRoom);
+        ui.updateObserverButton();
 
-    // 4. 🔥 [가장 중요: Q&A 실시간 리스너 단일화]
-    // 여기서 안테나를 한 번만 꽂습니다. 이 리스너는 질문 목록과 대시보드 숫자를 동시에 관리합니다.
-    dbRef.qa.on('value', snap => { 
-        if (state.room !== cleanRoom) return; // 방이 바뀌면 동작 차단
-        
-        try {
-            const rawData = snap.val() || {};
-            state.qaData = rawData; 
-            
-            // (1) 질문 리스트 즉시 갱신
-            ui.renderQaList(); 
-            
-            // (2) 대시보드가 켜져 있다면, 질문 개수 카운트도 여기서 실시간 갱신 (별도 리스너 불필요)
-            if (document.getElementById('view-dashboard').style.display !== 'none') {
-                ui.updateQaCountBadge(); 
+        dbRef.qa.on('value', snap => { 
+            if (state.room !== cleanRoom) return; 
+            try {
+                const rawData = snap.val() || {};
+                state.qaData = rawData; 
+                ui.renderQaList(); 
+                if (document.getElementById('view-dashboard').style.display !== 'none') {
+                    ui.updateQaCountBadge(); 
+                }
+            } catch (e) {
+                console.error("Q&A 실시간 엔진 오류:", e);
             }
-        } catch (e) {
-            console.error("Q&A 실시간 엔진 오류:", e);
-        }
-    });
+        });
 
-    // 5. [설정 및 상태 실시간 리스너]
-    dbRef.settings.on('value', s => {
-        if (state.room !== cleanRoom) return; 
-        ui.renderSettings(s.val() || {}); 
-    });
+        dbRef.settings.on('value', s => {
+            if (state.room !== cleanRoom) return; 
+            ui.renderSettings(s.val() || {}); 
+        });
 
-    dbRef.status.on('value', s => {
-        if (state.room !== cleanRoom) return;
-        const statusData = s.val() || {};
-        ui.renderRoomStatus(statusData.roomStatus || 'idle'); 
+        dbRef.status.on('value', s => {
+            if (state.room !== cleanRoom) return;
+            const statusData = s.val() || {};
+            ui.renderRoomStatus(statusData.roomStatus || 'idle'); 
 
-        if (!state.isObserver) {
-            ui.checkLockStatus(statusData);
-        } else {
-            document.getElementById('statusOverlay').style.display = 'none';
-        }
-    });
+            // --- [핵심 추가] 환경 설정 버튼 권한별 시각화 제어 ---
+            const setupBtn = document.querySelector('button[onclick*="setupMgr.openSetupModal"]');
+            if (setupBtn) {
+                const isOwner = (statusData.ownerSessionId === state.sessionId);
+                const isActive = (statusData.roomStatus === 'active');
 
-    // 6. [화면 복구 및 부가 서비스]
-    this.fetchCodeAndRenderQr(cleanRoom);
-    
-    // 이전에 보고 있던 모드로 이동 (여기서 loadDashboardStats가 호출됨)
-    const lastMode = localStorage.getItem('kac_last_mode') || 'dashboard';
-    ui.setMode(lastMode); 
-    
-    subjectMgr.init();
-    guideMgr.init();
+                if (isActive && !isOwner && !state.isObserver) {
+                    // 남이 사용 중이고, 내가 아직 인증 안 한 상태 -> 버튼 잠금
+                    setupBtn.style.background = "#64748b"; // 무거운 회색
+                    setupBtn.style.opacity = "0.7";
+                    setupBtn.innerHTML = '<i class="fa-solid fa-lock"></i> 과정 잠김 (인증 필요)';
+                } else {
+                    // 내가 주인이거나, 방이 비어있거나, 옵저버일 때 -> 정상 버튼
+                    setupBtn.style.background = "linear-gradient(135deg, #3b82f6 0%, #1e40af 100%)";
+                    setupBtn.style.opacity = "1";
+                    setupBtn.innerHTML = '<i class="fa-solid fa-gears"></i> 교육과정 환경 설정 (통합)';
+                }
+            }
 
-    // 7. [1분 간격 UI 리프레시] (NEW 배지 시간 계산용)
-    if (window.adminQaRefreshInterval) clearInterval(window.adminQaRefreshInterval);
-    window.adminQaRefreshInterval = setInterval(() => {
-        if (state.room === cleanRoom) ui.renderQaList(); 
-    }, 60000); 
-},
+            if (!state.isObserver) {
+                ui.checkLockStatus(statusData);
+            } else {
+                document.getElementById('statusOverlay').style.display = 'none';
+            }
+        });
+
+        this.fetchCodeAndRenderQr(cleanRoom);
+        
+        const lastMode = localStorage.getItem('kac_last_mode') || 'dashboard';
+        ui.setMode(lastMode); 
+        
+        subjectMgr.init();
+        guideMgr.init();
+
+        if (window.adminQaRefreshInterval) clearInterval(window.adminQaRefreshInterval);
+        window.adminQaRefreshInterval = setInterval(() => {
+            if (state.room === cleanRoom) ui.renderQaList(); 
+        }, 60000); 
+    },
 
 
 
@@ -3924,10 +3925,31 @@ occupiedLocations: [], // 이 줄을 추가하세요
 
 
 
-// [수정] 와이드 레이아웃 설정 모달 오픈 및 상태 로드
-openSetupModal: async function() {
 
 
+
+
+
+
+
+
+
+// [수정] 권한 체크가 강화된 설정 모달 오픈 함수
+    openSetupModal: async function() {
+        if(!state.room) return ui.showAlert("강의실을 먼저 선택하세요.");
+        
+        // 1. 보안 체크: 현재 강의실의 소유권 확인
+        const statusSnap = await firebase.database().ref(`courses/${state.room}/status`).get();
+        const st = statusSnap.val() || {};
+
+        // 사용 중인 방인데, 주인이 내가 아닐 경우 (인증 전) 진입 원천 차단
+        if (st.roomStatus === 'active' && st.ownerSessionId !== state.sessionId && !state.isObserver) {
+            ui.showAlert("⚠️ 제어권이 없습니다. 비밀번호를 입력하여 강의실에 먼저 입장해주세요.");
+            dataMgr.switchRoomAttempt(state.room); // 비밀번호 입력 팝업 강제 호출
+            return;
+        }
+
+        // 2. 다른 방에서 사용 중인 장소 체크 (기존 로직)
         const allCoursesSnap = await firebase.database().ref('courses').get();
         const allCourses = allCoursesSnap.val() || {};
         this.occupiedLocations = [];
@@ -3938,50 +3960,38 @@ openSetupModal: async function() {
             }
         });
 
+        // 3. 데이터 로드 및 모달 표시
+        let profOptions = '<option value="">(선택 안함)</option>';
+        profMgr.list.forEach(p => { profOptions += `<option value="${p.name}">${p.name} 교수</option>`; });
+        document.getElementById('setup-prof-select').innerHTML = profOptions;
 
-
-
-
-
-    if(!state.room) return ui.showAlert("강의실을 먼저 선택하세요.");
-    
-    const statusSnap = await firebase.database().ref(`courses/${state.room}/status`).get();
-    const st = statusSnap.val() || {};
-
-    if (st.roomStatus === 'active' && st.ownerSessionId !== state.sessionId) {
-        ui.showAlert("⚠️ 현재 다른 강사님이 운영 중인 과정입니다. 제어권 인증(비번)을 먼저 완료해주세요.");
-        dataMgr.switchRoomAttempt(state.room); 
-        return;
-    }
-
-    // 교수 리스트 로드
-    let profOptions = '<option value="">(선택 안함)</option>';
-    profMgr.list.forEach(p => { profOptions += `<option value="${p.name}">${p.name} 교수</option>`; });
-    document.getElementById('setup-prof-select').innerHTML = profOptions;
-
-    // 담당자 리스트 로드
-    firebase.database().ref('system/coordinators').once('value', snap => {
-        const coords = snap.val() || {};
-        let coordOptions = '<option value="">--- 담당자 선택 ---</option>';
-        Object.values(coords).forEach(c => { coordOptions += `<option value="${c.name}">${c.name}</option>`; });
-        document.getElementById('setup-coord-select').innerHTML = coordOptions;
-        
-        // 가이드 등록 상태 체크
-        firebase.database().ref(`system/sharedGuide`).once('value', gSnap => {
-            const el = document.getElementById('modalGuideStatus');
-            if(el) {
-                if(gSnap.exists()) {
-                    el.innerHTML = '<i class="fa-solid fa-circle-check"></i> 가이드 PDF가 등록되어 있습니다.';
-                    el.style.color = "#10b981";
-                } else {
-                    el.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> 등록된 가이드 파일이 없습니다.';
-                    el.style.color = "#ef4444";
+        firebase.database().ref('system/coordinators').once('value', snap => {
+            const coords = snap.val() || {};
+            let coordOptions = '<option value="">--- 담당자 선택 ---</option>';
+            Object.values(coords).forEach(c => { coordOptions += `<option value="${c.name}">${c.name}</option>`; });
+            document.getElementById('setup-coord-select').innerHTML = coordOptions;
+            
+            firebase.database().ref(`system/sharedGuide`).once('value', gSnap => {
+                const el = document.getElementById('modalGuideStatus');
+                if(el) {
+                    if(gSnap.exists()) {
+                        el.innerHTML = '<i class="fa-solid fa-circle-check"></i> 가이드 PDF가 등록되어 있습니다.';
+                        el.style.color = "#10b981";
+                    } else {
+                        el.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> 등록된 가이드 파일이 없습니다.';
+                        el.style.color = "#ef4444";
+                    }
                 }
-            }
-            this.loadCurrentSettings(); // 나머지 정보 로드
+                this.loadCurrentSettings(); 
+            });
         });
-    });
-},
+    },
+
+
+
+
+
+
 
 
 
