@@ -469,21 +469,21 @@ forceEnterRoom: async function(room) {
             const statusData = s.val() || {};
             ui.renderRoomStatus(statusData.roomStatus || 'idle'); 
 
-            // --- [핵심 추가] 환경 설정 버튼 권한별 시각화 제어 ---
+            // --- [핵심 수정] 제어권에 따른 환경설정 버튼 시각적 제어 ---
             const setupBtn = document.querySelector('button[onclick*="setupMgr.openSetupModal"]');
             if (setupBtn) {
                 const isOwner = (statusData.ownerSessionId === state.sessionId);
                 const isActive = (statusData.roomStatus === 'active');
 
                 if (isActive && !isOwner && !state.isObserver) {
-                    // 남이 사용 중이고, 내가 아직 인증 안 한 상태 -> 버튼 잠금
-                    setupBtn.style.background = "#64748b"; // 무거운 회색
-                    setupBtn.style.opacity = "0.7";
+                    // 남이 사용 중이고, 아직 내가 비번을 안 넣은 상태 -> 회색 자물쇠 버튼
+                    setupBtn.style.background = "#64748b"; 
+                    setupBtn.style.boxShadow = "none";
                     setupBtn.innerHTML = '<i class="fa-solid fa-lock"></i> 과정 잠김 (인증 필요)';
                 } else {
-                    // 내가 주인이거나, 방이 비어있거나, 옵저버일 때 -> 정상 버튼
+                    // 내가 주인이거나, 방이 비어있어서 누구든 설정 가능한 상태 -> 파란색 정상 버튼
                     setupBtn.style.background = "linear-gradient(135deg, #3b82f6 0%, #1e40af 100%)";
-                    setupBtn.style.opacity = "1";
+                    setupBtn.style.boxShadow = "0 4px 12px rgba(59, 130, 246, 0.3)";
                     setupBtn.innerHTML = '<i class="fa-solid fa-gears"></i> 교육과정 환경 설정 (통합)';
                 }
             }
@@ -508,7 +508,6 @@ forceEnterRoom: async function(room) {
             if (state.room === cleanRoom) ui.renderQaList(); 
         }, 60000); 
     },
-
 
 
 
@@ -3938,14 +3937,14 @@ occupiedLocations: [], // 이 줄을 추가하세요
     openSetupModal: async function() {
         if(!state.room) return ui.showAlert("강의실을 먼저 선택하세요.");
         
-        // 1. 보안 체크: 현재 강의실의 소유권 확인
+        // 1. 보안 체크: 현재 선택된 방의 실제 소유주인지 확인
         const statusSnap = await firebase.database().ref(`courses/${state.room}/status`).get();
         const st = statusSnap.val() || {};
 
-        // 사용 중인 방인데, 주인이 내가 아닐 경우 (인증 전) 진입 원천 차단
+        // 사용 중인 방인데, 내 세션ID와 서버의 주인 ID가 다르면 진입 차단
         if (st.roomStatus === 'active' && st.ownerSessionId !== state.sessionId && !state.isObserver) {
-            ui.showAlert("⚠️ 제어권이 없습니다. 비밀번호를 입력하여 강의실에 먼저 입장해주세요.");
-            dataMgr.switchRoomAttempt(state.room); // 비밀번호 입력 팝업 강제 호출
+            ui.showAlert("⚠️ 해당 강의실의 제어권이 없습니다. 비밀번호를 입력하여 먼저 입장해주세요.");
+            dataMgr.switchRoomAttempt(state.room); // 비밀번호 입력창 강제 호출
             return;
         }
 
@@ -3960,7 +3959,7 @@ occupiedLocations: [], // 이 줄을 추가하세요
             }
         });
 
-        // 3. 데이터 로드 및 모달 표시
+        // 3. 권한이 확인된 경우에만 데이터 로드 시작
         let profOptions = '<option value="">(선택 안함)</option>';
         profMgr.list.forEach(p => { profOptions += `<option value="${p.name}">${p.name} 교수</option>`; });
         document.getElementById('setup-prof-select').innerHTML = profOptions;
@@ -3982,7 +3981,7 @@ occupiedLocations: [], // 이 줄을 추가하세요
                         el.style.color = "#ef4444";
                     }
                 }
-                this.loadCurrentSettings(); 
+                this.loadCurrentSettings(); // 여기서 실제 현재 방의 데이터를 불러옵니다.
             });
         });
     },
