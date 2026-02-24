@@ -272,7 +272,7 @@ loadInitialData: function() {
 
     
 // [수정] 방 이동 시도 시 인증 전이라도 UI를 먼저 잠금 상태로 표시
-    switchRoomAttempt: async function(newRoom) {
+switchRoomAttempt: async function(newRoom) {
         localStorage.setItem('kac_last_mode', 'dashboard');
         state.isObserver = false;
 
@@ -283,16 +283,17 @@ loadInitialData: function() {
         const snapshot = await firebase.database().ref(`courses/${newRoom}/status`).get();
         const st = snapshot.val() || {};
 
-        // --- [추가] 인증 전이라도 사이드바 버튼을 미리 잠금 상태로 표시 ---
+        // --- [핵심 수정] 인증 전 버튼 클릭 기능을 물리적으로 파괴 ---
         const setupBtn = document.getElementById('btnSetupModal');
         if (setupBtn) {
             if (st.roomStatus === 'active' && st.ownerSessionId !== state.sessionId && !state.isObserver) {
                 setupBtn.style.setProperty('background', '#64748b', 'important');
                 setupBtn.style.setProperty('opacity', '0.6', 'important');
+                setupBtn.style.pointerEvents = 'none'; // 클릭 무시
+                setupBtn.disabled = true;             // 버튼 비활성화
                 setupBtn.innerHTML = '<i class="fa-solid fa-lock"></i> 과정 잠김 (인증 필요)';
             }
         }
-        // ---------------------------------------------------------
 
         if (localStorage.getItem('last_owned_room') === newRoom && !state.isObserver) {
             this.forceEnterRoom(newRoom);
@@ -493,19 +494,25 @@ forceEnterRoom: async function(room) {
             const statusData = s.val() || {};
             ui.renderRoomStatus(statusData.roomStatus || 'idle'); 
 
-            // 환경 설정 버튼 상태 업데이트
+            // --- [핵심 수정] 제어권에 따른 버튼의 운명 결정 ---
             const setupBtn = document.getElementById('btnSetupModal');
             if (setupBtn) {
                 const isOwner = (statusData.ownerSessionId === state.sessionId);
                 const isActive = (statusData.roomStatus === 'active');
 
                 if (isActive && !isOwner && !state.isObserver) {
+                    // 권한 없음: 회색 + 클릭 금지
                     setupBtn.style.setProperty('background', '#64748b', 'important');
                     setupBtn.style.setProperty('opacity', '0.6', 'important');
+                    setupBtn.style.pointerEvents = 'none'; // 클릭 완전 차단
+                    setupBtn.disabled = true; 
                     setupBtn.innerHTML = '<i class="fa-solid fa-lock"></i> 과정 잠김 (인증 필요)';
                 } else {
+                    // 권한 있음: 파란색 + 클릭 허용
                     setupBtn.style.setProperty('background', 'linear-gradient(135deg, #3b82f6 0%, #1e40af 100%)', 'important');
                     setupBtn.style.setProperty('opacity', '1', 'important');
+                    setupBtn.style.pointerEvents = 'auto'; // 클릭 허용
+                    setupBtn.disabled = false;
                     setupBtn.innerHTML = '<i class="fa-solid fa-gears"></i> 교육과정 환경 설정 (통합)';
                 }
             }
@@ -3954,21 +3961,20 @@ occupiedLocations: [], // 이 줄을 추가하세요
 
 
 // [수정] 권한 체크가 강화된 설정 모달 오픈 함수
-    openSetupModal: async function() {
+openSetupModal: async function() {
         if(!state.room) return ui.showAlert("강의실을 먼저 선택하세요.");
         
-        // 1. 보안 체크: 현재 선택된 방의 실제 소유주인지 확인
+        // 1. 보안 체크: 인증되지 않은 사용자는 실행 중단
         const statusSnap = await firebase.database().ref(`courses/${state.room}/status`).get();
         const st = statusSnap.val() || {};
 
-        // 사용 중인 방인데, 내 세션ID와 서버의 주인 ID가 다르면 진입 차단
         if (st.roomStatus === 'active' && st.ownerSessionId !== state.sessionId && !state.isObserver) {
-            ui.showAlert("⚠️ 해당 강의실의 제어권이 없습니다. 비밀번호를 입력하여 먼저 입장해주세요.");
-            dataMgr.switchRoomAttempt(state.room); // 비밀번호 입력창 강제 호출
+            // 이 메시지가 보인다는 건 클릭 차단 로직이 뚫렸다는 뜻입니다.
+            dataMgr.switchRoomAttempt(state.room); 
             return;
         }
 
-        // 2. 다른 방에서 사용 중인 장소 체크 (기존 로직)
+        // 2. 권한 확인된 경우만 모달 데이터 로드 (기존 로직 유지)
         const allCoursesSnap = await firebase.database().ref('courses').get();
         const allCourses = allCoursesSnap.val() || {};
         this.occupiedLocations = [];
@@ -3979,7 +3985,6 @@ occupiedLocations: [], // 이 줄을 추가하세요
             }
         });
 
-        // 3. 권한이 확인된 경우에만 데이터 로드 시작
         let profOptions = '<option value="">(선택 안함)</option>';
         profMgr.list.forEach(p => { profOptions += `<option value="${p.name}">${p.name} 교수</option>`; });
         document.getElementById('setup-prof-select').innerHTML = profOptions;
@@ -4001,11 +4006,10 @@ occupiedLocations: [], // 이 줄을 추가하세요
                         el.style.color = "#ef4444";
                     }
                 }
-                this.loadCurrentSettings(); // 여기서 실제 현재 방의 데이터를 불러옵니다.
+                this.loadCurrentSettings(); 
             });
         });
     },
-
 
 
 
