@@ -207,40 +207,44 @@ initSystem: function() {
 
 
 
-// [최종] 초기 데이터 로드 및 실시간 리스너 충돌 방지 버전
+// [수정 완료] 초기 데이터 로드 및 보안 검증 자동화 버전
 loadInitialData: function() {
-    // 1. 방 선택창(Dropdown) 목록 초기화
+    // 1. 방 선택창(Dropdown) 및 실시간 강의실 현황판 초기화
     ui.initRoomSelect();
 
-    // 2. [실시간 핵심] 자동 복구 로직: 마지막 방 번호를 대문자로 가져옴
-    // null이나 문자열 "null"이 저장되어 있을 경우를 대비한 방어막 추가
+    // 2. [보안 핵심] 새로고침 시 자동 복구 로직 수정
     const lastRoom = localStorage.getItem('kac_last_room');
 
     if (lastRoom && lastRoom !== "null" && lastRoom !== "") {
-        // [중요] forceEnterRoom을 여기서 "딱 한 번만" 실행하여 리스너를 고정함
-        console.log("기존 접속 강의실 자동 복구 시작:", lastRoom);
-        this.forceEnterRoom(lastRoom.toUpperCase());
+        // [중요 수정] forceEnterRoom을 바로 부르면 데이터 리스너가 즉시 꽂혀서 내용이 보입니다.
+        // 대신 switchRoomAttempt를 호출하여 '내 세션ID가 주인인지' 먼저 확인하고, 
+        // 주인이 아니면 비밀번호 입력창을 띄우도록 유도합니다.
+        console.log("기존 접속 강의실 보안 검증 및 복구 시도:", lastRoom);
+        
+        // ★ 핵심 변경: forceEnterRoom -> switchRoomAttempt
+        this.switchRoomAttempt(lastRoom.toUpperCase());
     } else {
-        // 기록이 없으면 대기실 표시
+        // 이전에 들어간 방 기록이 없으면 대기실(전체 현황판) 표시
         ui.showWaitingRoom();
     }
 
-    // 3. 기본 퀴즈 설정 초기화
+    // 3. 기본 퀴즈 데이터셋 설정
     state.quizList = DEFAULT_QUIZ_DATA;
     state.isExternalFileLoaded = false;
     quizMgr.renderMiniList();
 
-    // 4. 강의실 선택 이벤트 바인딩 (대문자 강제)
+    // 4. 강의실 선택 드롭다운 이벤트 바인딩 (보안 검증 로직 연결)
     const roomSel = document.getElementById('roomSelect');
     if(roomSel) {
         roomSel.onchange = (e) => { 
             if(e.target.value) {
+                // 사용자가 방을 클릭할 때마다 보안 검증(switchRoomAttempt) 실행
                 this.switchRoomAttempt(e.target.value.toUpperCase()); 
             }
         };
     }
 
-    // 5. 사이드바 작은 QR 코드를 클릭하면 크게 띄우기 (이벤트 복구)
+    // 5. 사이드바 작은 QR 코드를 클릭하면 크게 띄우기
     const qrEl = document.getElementById('qrcode'); 
     if(qrEl) {
         qrEl.style.cursor = "pointer";
@@ -435,107 +439,126 @@ enterAsObserver: function() {
 
 
 
+// [수정] 진입 시 잠금을 기본값으로 설정하고 권한에 따라 해제하는 버전
 forceEnterRoom: async function(room) {
-        const cleanRoom = room.toUpperCase();
+    const cleanRoom = room.toUpperCase();
 
-        if (window.dbRef) {
-            Object.values(window.dbRef).forEach(ref => {
-                if (ref && typeof ref.off === 'function') ref.off();
-            });
+    // [핵심 추가] 입장 시작과 동시에 화면을 잠금 상태로 강제 전환
+    // 데이터가 로드되어 내가 주인임이 확인되기 전까지는 아무것도 볼 수 없어야 함
+    const overlay = document.getElementById('statusOverlay');
+    if (overlay) overlay.style.display = 'flex';
+
+    if (window.dbRef) {
+        Object.values(window.dbRef).forEach(ref => {
+            if (ref && typeof ref.off === 'function') ref.off();
+        });
+    }
+
+    firebase.database().ref(`courses/${cleanRoom}/questions`).off();
+    firebase.database().ref(`courses/${cleanRoom}/status`).off();
+    firebase.database().ref(`courses/${cleanRoom}/settings`).off();
+
+    state.room = cleanRoom; 
+    state.qaData = {};      
+    state.activeQaKey = null; 
+    localStorage.setItem('kac_last_room', cleanRoom); 
+    state.isObserver = (sessionStorage.getItem('kac_observer_room') === cleanRoom);
+
+    const qaListEl = document.getElementById('qaList');
+    if (qaListEl) qaListEl.innerHTML = "<div style='text-align:center; padding:20px; color:#94a3b8;'>실시간 엔진 연결 중...</div>";
+
+    const rPath = `courses/${cleanRoom}`;
+    window.dbRef = {
+        settings: firebase.database().ref(`${rPath}/settings`),
+        qa: firebase.database().ref(`${rPath}/questions`),
+        quiz: firebase.database().ref(`${rPath}/activeQuiz`),
+        ans: firebase.database().ref(`${rPath}/quizAnswers`),
+        status: firebase.database().ref(`${rPath}/status`)
+    };
+    dbRef = window.dbRef; 
+
+    ui.updateHeaderRoom(cleanRoom);
+    ui.updateObserverButton();
+
+    dbRef.qa.on('value', snap => { 
+        if (state.room !== cleanRoom) return; 
+        try {
+            const rawData = snap.val() || {};
+            state.qaData = rawData; 
+            ui.renderQaList(); 
+            if (document.getElementById('view-dashboard').style.display !== 'none') {
+                ui.updateQaCountBadge(); 
+            }
+        } catch (e) {
+            console.error("Q&A 실시간 엔진 오류:", e);
+        }
+    });
+
+    dbRef.settings.on('value', s => {
+        if (state.room !== cleanRoom) return; 
+        ui.renderSettings(s.val() || {}); 
+    });
+
+    dbRef.status.on('value', s => {
+        if (state.room !== cleanRoom) return;
+        const statusData = s.val() || {};
+        ui.renderRoomStatus(statusData.roomStatus || 'idle'); 
+
+        const isOwner = (statusData.ownerSessionId === state.sessionId);
+        const isActive = (statusData.roomStatus === 'active');
+
+        // [중요] 권한 검증 로직 및 모달 트리거
+        if (!state.isObserver) {
+            if (isActive && !isOwner) {
+                // 방이 사용 중인데 내가 주인이 아님 -> 잠금 유지 및 비번 입력창 유도
+                overlay.style.display = 'flex';
+                state.pendingRoom = cleanRoom;
+                document.getElementById('takeoverModal').style.display = 'flex';
+            } else if (!isActive) {
+                // 방이 비어있음 -> 잠금 유지
+                overlay.style.display = 'flex';
+            } else {
+                // 내가 정당한 주인이 확인됨 -> 잠금 해제
+                overlay.style.display = 'none';
+                document.getElementById('takeoverModal').style.display = 'none';
+            }
+        } else {
+            // 옵저버 모드는 잠금 없이 관람 허용
+            overlay.style.display = 'none';
         }
 
-        firebase.database().ref(`courses/${cleanRoom}/questions`).off();
-        firebase.database().ref(`courses/${cleanRoom}/status`).off();
-        firebase.database().ref(`courses/${cleanRoom}/settings`).off();
-
-        state.room = cleanRoom; 
-        state.qaData = {};      
-        state.activeQaKey = null; 
-        localStorage.setItem('kac_last_room', cleanRoom); 
-        state.isObserver = (sessionStorage.getItem('kac_observer_room') === cleanRoom);
-
-        const qaListEl = document.getElementById('qaList');
-        if (qaListEl) qaListEl.innerHTML = "<div style='text-align:center; padding:20px; color:#94a3b8;'>실시간 엔진 연결 중...</div>";
-
-        const rPath = `courses/${cleanRoom}`;
-        window.dbRef = {
-            settings: firebase.database().ref(`${rPath}/settings`),
-            qa: firebase.database().ref(`${rPath}/questions`),
-            quiz: firebase.database().ref(`${rPath}/activeQuiz`),
-            ans: firebase.database().ref(`${rPath}/quizAnswers`),
-            status: firebase.database().ref(`${rPath}/status`)
-        };
-        dbRef = window.dbRef; 
-
-        ui.updateHeaderRoom(cleanRoom);
-        ui.updateObserverButton();
-
-        dbRef.qa.on('value', snap => { 
-            if (state.room !== cleanRoom) return; 
-            try {
-                const rawData = snap.val() || {};
-                state.qaData = rawData; 
-                ui.renderQaList(); 
-                if (document.getElementById('view-dashboard').style.display !== 'none') {
-                    ui.updateQaCountBadge(); 
-                }
-            } catch (e) {
-                console.error("Q&A 실시간 엔진 오류:", e);
-            }
-        });
-
-        dbRef.settings.on('value', s => {
-            if (state.room !== cleanRoom) return; 
-            ui.renderSettings(s.val() || {}); 
-        });
-
-        dbRef.status.on('value', s => {
-            if (state.room !== cleanRoom) return;
-            const statusData = s.val() || {};
-            ui.renderRoomStatus(statusData.roomStatus || 'idle'); 
-
-            const setupBtn = document.getElementById('btnSetupModal');
-            if (setupBtn) {
-                const isOwner = (statusData.ownerSessionId === state.sessionId);
-                const isActive = (statusData.roomStatus === 'active');
-
-                if (isActive && !isOwner && !state.isObserver) {
-                    setupBtn.style.setProperty('background', '#64748b', 'important');
-                    setupBtn.style.setProperty('opacity', '0.6', 'important');
-                    setupBtn.innerHTML = '<i class="fa-solid fa-lock"></i> 과정 잠김 (인증 필요)';
-                    setupBtn.style.pointerEvents = 'none';
-                    setupBtn.disabled = true;
-                } else {
-                    setupBtn.style.setProperty('background', 'linear-gradient(135deg, #3b82f6 0%, #1e40af 100%)', 'important');
-                    setupBtn.style.setProperty('opacity', '1', 'important');
-                    setupBtn.innerHTML = '<i class="fa-solid fa-gears"></i> 교육과정 환경 설정 (통합)';
-                    setupBtn.style.pointerEvents = 'auto';
-                    setupBtn.disabled = false;
-                }
-            }
-
-            if (!state.isObserver) {
-                ui.checkLockStatus(statusData);
+        // 설정 버튼 상태 제어
+        const setupBtn = document.getElementById('btnSetupModal');
+        if (setupBtn) {
+            if (isActive && !isOwner && !state.isObserver) {
+                setupBtn.style.setProperty('background', '#64748b', 'important');
+                setupBtn.style.setProperty('opacity', '0.6', 'important');
+                setupBtn.innerHTML = '<i class="fa-solid fa-lock"></i> 과정 잠김 (인증 필요)';
+                setupBtn.style.pointerEvents = 'none';
+                setupBtn.disabled = true;
             } else {
-                document.getElementById('statusOverlay').style.display = 'none';
+                setupBtn.style.setProperty('background', 'linear-gradient(135deg, #3b82f6 0%, #1e40af 100%)', 'important');
+                setupBtn.style.setProperty('opacity', '1', 'important');
+                setupBtn.innerHTML = '<i class="fa-solid fa-gears"></i> 교육과정 환경 설정 (통합)';
+                setupBtn.style.pointerEvents = 'auto';
+                setupBtn.disabled = false;
             }
-        });
+        }
+    });
 
-        this.fetchCodeAndRenderQr(cleanRoom);
-        const lastMode = localStorage.getItem('kac_last_mode') || 'dashboard';
-        ui.setMode(lastMode); 
-        subjectMgr.init();
-        guideMgr.init();
+    this.fetchCodeAndRenderQr(cleanRoom);
+    const lastMode = localStorage.getItem('kac_last_mode') || 'dashboard';
+    ui.setMode(lastMode); 
+    subjectMgr.init();
+    guideMgr.init();
 
-        if (window.adminQaRefreshInterval) clearInterval(window.adminQaRefreshInterval);
-        window.adminQaRefreshInterval = setInterval(() => {
-            if (state.room === cleanRoom) ui.renderQaList(); 
-        }, 60000); 
+    if (window.adminQaRefreshInterval) clearInterval(window.adminQaRefreshInterval);
+    window.adminQaRefreshInterval = setInterval(() => {
+        if (state.room === cleanRoom) ui.renderQaList(); 
+    }, 60000); 
 
-        // ★ [핵심 추가] 방 입장이 완료되면 현황판 테이블을 즉시 다시 그려서 파란 테두리를 옮김
-        ui.initRoomSelect(); 
-    },
-
+    ui.initRoomSelect(); 
+},
 
 
 

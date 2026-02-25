@@ -120,7 +120,7 @@ body {
     background: rgba(15, 23, 42, 0.7); 
     backdrop-filter: blur(12px); 
     z-index: 5000 !important; 
-    display: none; 
+    display: flex; /* none에서 flex로 변경 (기본적으로 가려둠) */
     justify-content: center; 
     align-items: center; 
     flex-direction: column; 
