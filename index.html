@@ -693,11 +693,21 @@
     </div>
 
 
-<!-- [신규] 식단표 이미지 팝업 -->
-<div id="mealMenuModal" class="menu-overlay" style="display:none; z-index: 8000;" onclick="this.style.display='none'">
-    <div style="width:90%; max-width:500px; background:white; border-radius:20px; padding:10px; position:relative;">
-        <img id="mealMenuImage" src="" style="width:100%; border-radius:15px; display:block;" alt="식단표 준비중">
-        <p style="margin-top:10px; font-weight:bold; color:#64748b;">(화면을 터치하면 닫힙니다)</p>
+<!-- [수정] 식단표 이미지 팝업 (확대/축소 및 닫기 로직 개선) -->
+<div id="mealMenuModal" class="menu-overlay" style="display:none; z-index: 8000;" onclick="if(event.target==this) closeMealMenu()">
+    <div style="width:95%; max-width:600px; background:white; border-radius:20px; padding:10px; position:relative; overflow:hidden;">
+        <!-- 상단 안내 및 닫기 버튼 -->
+        <div style="display:flex; justify-content:space-between; align-items:center; padding:5px 10px 10px 10px;">
+            <span style="font-size:12px; font-weight:800; color:#3b82f6;"><i class="fa-solid fa-magnifying-glass-plus"></i> 두 손가락으로 확대 가능</span>
+            <i class="fa-solid fa-circle-xmark" style="font-size:24px; color:#64748b; cursor:pointer;" onclick="closeMealMenu()"></i>
+        </div>
+
+        <!-- 이미지 영역: 확대/축소를 위해 컨테이너 추가 -->
+        <div id="mealImageContainer" style="width:100%; overflow:hidden; border-radius:15px; background:#f1f5f9; touch-action: none;">
+            <img id="mealMenuImage" src="" style="width:100%; display:block; transition: transform 0.1s ease-out; transform-origin: center;" alt="식단표 로딩 중">
+        </div>
+        
+        <p style="margin-top:10px; font-size:11px; text-align:center; color:#94a3b8;">배경을 터치하거나 우측 상단 X를 누르면 닫힙니다.</p>
     </div>
 </div>
 
@@ -734,6 +744,47 @@ let confirmCallback = null;
 
 let currentRoom = null; 
 let dbRef = {}; let myQs = {}; let myLikes = {}; let lastPostTimeMap = {}; let editingKey = null; let currentSort = 'new'; let currentQuizId = null; let canAnswer = false; let myLastChoice = null; let myLastChoiceIdx = null; let hasClosedSummary = false; let rankingListener = null; let studentTimerInterval = null; let currentFilter = "공통질문";
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 function sendAns(idx) {
@@ -2473,6 +2524,74 @@ function cleanUrlAndGo(r) {
     if(document.getElementById('mainApp')) document.getElementById('mainApp').style.display = 'flex';
     startPresence();
 }
+
+
+
+
+
+
+
+/* --- 식단표 확대/축소(Pinch Zoom) 및 팝업 제어 스크립트 --- */
+let zoomScale = 1;
+let initialDistance = 0;
+
+// 식단표 닫기 함수 (확대 상태 초기화 포함)
+function closeMealMenu() {
+    zoomScale = 1;
+    const img = document.getElementById('mealMenuImage');
+    if(img) img.style.transform = `scale(1)`;
+    document.getElementById('mealMenuModal').style.display = 'none';
+}
+
+// 핀치 줌 로직 구현
+const imageContainer = document.getElementById('mealImageContainer');
+const mealImg = document.getElementById('mealMenuImage');
+
+if (imageContainer && mealImg) {
+    imageContainer.addEventListener('touchstart', (e) => {
+        if (e.touches.length === 2) {
+            // 두 손가락 사이의 거리 측정
+            initialDistance = Math.hypot(
+                e.touches[0].pageX - e.touches[1].pageX,
+                e.touches[0].pageY - e.touches[1].pageY
+            );
+        }
+    });
+
+    imageContainer.addEventListener('touchmove', (e) => {
+        if (e.touches.length === 2) {
+            e.preventDefault(); // 스크롤 방지
+            const currentDistance = Math.hypot(
+                e.touches[0].pageX - e.touches[1].pageX,
+                e.touches[0].pageY - e.touches[1].pageY
+            );
+
+            // 확대 배율 계산
+            const delta = currentDistance / initialDistance;
+            let newScale = zoomScale * delta;
+
+            // 최소 1배 ~ 최대 4배 제한
+            if (newScale < 1) newScale = 1;
+            if (newScale > 4) newScale = 4;
+
+            mealImg.style.transform = `scale(${newScale})`;
+        }
+    });
+
+    imageContainer.addEventListener('touchend', (e) => {
+        if (e.touches.length < 2) {
+            // 마지막 확대 배율 저장
+            const transformMatrix = window.getComputedStyle(mealImg).transform;
+            if (transformMatrix !== 'none') {
+                zoomScale = parseFloat(transformMatrix.split(',')[0].replace('matrix(', ''));
+            }
+        }
+    });
+}
+
+// 기존 viewMealMenu 함수가 이 closeMealMenu를 사용하도록 연동하거나, 
+// HTML 내 onclick 이벤트가 제대로 작동하도록 확인해 주세요.
+
 
 
 
