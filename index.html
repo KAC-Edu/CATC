@@ -693,24 +693,33 @@
     </div>
 
 
-<!-- [수정] 식단표 이미지 팝업 (확대/축소 및 닫기 로직 개선) -->
+
+
+
+<!-- [수정] 식단표 이미지 팝업 (로딩 레이어 추가) -->
 <div id="mealMenuModal" class="menu-overlay" style="display:none; z-index: 8000;" onclick="if(event.target==this) closeMealMenu()">
     <div style="width:95%; max-width:600px; background:white; border-radius:20px; padding:10px; position:relative; overflow:hidden;">
-        <!-- 상단 안내 및 닫기 버튼 -->
+        
         <div style="display:flex; justify-content:space-between; align-items:center; padding:5px 10px 10px 10px;">
             <span style="font-size:12px; font-weight:800; color:#3b82f6;"><i class="fa-solid fa-magnifying-glass-plus"></i> 두 손가락으로 확대 가능</span>
             <i class="fa-solid fa-circle-xmark" style="font-size:24px; color:#64748b; cursor:pointer;" onclick="closeMealMenu()"></i>
         </div>
 
-        <!-- 이미지 영역: 확대/축소를 위해 컨테이너 추가 -->
-        <div id="mealImageContainer" style="width:100%; overflow:hidden; border-radius:15px; background:#f1f5f9; touch-action: none;">
-            <img id="mealMenuImage" src="" style="width:100%; display:block; transition: transform 0.1s ease-out; transform-origin: center;" alt="식단표 로딩 중">
+        <div id="mealImageContainer" style="width:100%; min-height:200px; overflow:hidden; border-radius:15px; background:#f1f5f9; touch-action: none; position:relative; display:flex; align-items:center; justify-content:center;">
+            
+            <!-- [신규] 로딩 스피너 구역 -->
+            <div id="mealLoading" style="position:absolute; display:flex; flex-direction:column; align-items:center; gap:10px; color:#64748b; z-index:2;">
+                <i class="fa-solid fa-circle-notch fa-spin" style="font-size:40px; color:#3b82f6;"></i>
+                <span style="font-size:14px; font-weight:bold;">사진 불러오는 중...</span>
+            </div>
+
+            <!-- 이미지 (초기에는 숨김 display:none) -->
+            <img id="mealMenuImage" src="" style="width:100%; display:none; transition: transform 0.1s ease-out; transform-origin: center; z-index:1;" alt="식단표">
         </div>
         
-        <p style="margin-top:10px; font-size:11px; text-align:center; color:#94a3b8;">배경을 터치하거나 우측 상단 X를 누르면 닫힙니다.</p>
+        <p style="margin-top:10px; font-size:11px; text-align:center; color:#94a3b8;">배경을 터치하거나 X를 누르면 닫힙니다.</p>
     </div>
 </div>
-
 
 
 
@@ -2238,20 +2247,51 @@ function showMainDashboard() {
 
 
 
-// [신규] 식단표 보기 기능
+// [수정] 식단표 보기 (로딩 표시 기능 포함)
 async function viewMealMenu() {
+    // 메뉴 팝업 닫기
     document.getElementById('menuModal').style.display = 'none';
-    const snap = await firebase.database().ref('system/nutrition_menu').once('value');
-    const imageUrl = snap.val();
     
-    if (!imageUrl) {
-        alert("등록된 식단표 사진이 없습니다.");
-        return;
+    const modal = document.getElementById('mealMenuModal');
+    const loader = document.getElementById('mealLoading');
+    const img = document.getElementById('mealMenuImage');
+
+    // 1. 먼저 팝업창과 로딩 화면을 보여줍니다.
+    modal.style.display = 'flex';
+    loader.style.display = 'flex';
+    img.style.display = 'none'; // 이전 이미지가 보이지 않게 숨김
+
+    try {
+        // 2. 파이어베이스에서 데이터를 가져옵니다.
+        const snap = await firebase.database().ref('system/nutrition_menu').once('value');
+        const imageUrl = snap.val();
+        
+        if (!imageUrl) {
+            alert("등록된 식단표 사진이 없습니다.");
+            modal.style.display = 'none';
+            return;
+        }
+
+        // 3. 이미지 주소를 넣고, 브라우저가 사진 렌더링을 끝낼 때까지 기다립니다.
+        img.src = imageUrl;
+        
+        img.onload = function() {
+            // 4. 사진 로딩이 완전히 끝나면 스피너를 숨기고 사진을 보여줍니다.
+            loader.style.display = 'none';
+            img.style.display = 'block';
+        };
+
+    } catch (e) {
+        console.error(e);
+        alert("사진을 불러오는 중 오류가 발생했습니다.");
+        modal.style.display = 'none';
     }
-    
-    document.getElementById('mealMenuImage').src = imageUrl;
-    document.getElementById('mealMenuModal').style.display = 'flex';
 }
+
+
+
+
+
 
 
 
