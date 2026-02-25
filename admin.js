@@ -275,47 +275,68 @@ loadInitialData: function() {
 
 
     
-// [수정] 방 이동 시도 시 인증 전이라도 UI를 먼저 잠금 상태로 표시
+// [수정 완료] 보안 검증 강화 및 데이터 유출 차단 로직
 switchRoomAttempt: async function(newRoom) {
-        localStorage.setItem('kac_last_mode', 'dashboard');
-        state.isObserver = false;
+    // 1. 시각적 즉시 차단: 서버 데이터를 가져오기도 전에 화면부터 가립니다.
+    // 새로고침 시 데이터가 보이는 찰나의 순간을 방지합니다.
+    const overlay = document.getElementById('statusOverlay');
+    if (overlay) overlay.style.display = 'flex';
 
-        if(sessionStorage.getItem('kac_observer_room') === newRoom) {
-            state.isObserver = true;
-        }
+    localStorage.setItem('kac_last_mode', 'dashboard');
+    
+    // 해당 방에 대한 옵저버 모드 여부 확인
+    state.isObserver = (sessionStorage.getItem('kac_observer_room') === newRoom);
 
-        const snapshot = await firebase.database().ref(`courses/${newRoom}/status`).get();
-        const st = snapshot.val() || {};
+    // 2. 서버의 실시간 상태를 조회 (ownerSessionId 확인)
+    const snapshot = await firebase.database().ref(`courses/${newRoom}/status`).get();
+    const st = snapshot.val() || {};
 
-        // --- [핵심 수정] 인증 전 버튼 클릭 기능을 물리적으로 파괴 ---
-        const setupBtn = document.getElementById('btnSetupModal');
-        if (setupBtn) {
-            if (st.roomStatus === 'active' && st.ownerSessionId !== state.sessionId && !state.isObserver) {
-                setupBtn.style.setProperty('background', '#64748b', 'important');
-                setupBtn.style.setProperty('opacity', '0.6', 'important');
-                setupBtn.style.pointerEvents = 'none'; // 클릭 무시
-                setupBtn.disabled = true;             // 버튼 비활성화
-                setupBtn.innerHTML = '<i class="fa-solid fa-lock"></i> 과정 잠김 (인증 필요)';
-            }
-        }
+    const isActive = (st.roomStatus === 'active');
+    const isOwner = (st.ownerSessionId === state.sessionId);
 
-        if (localStorage.getItem('last_owned_room') === newRoom && !state.isObserver) {
-            this.forceEnterRoom(newRoom);
-            return;
-        }
-
-        if (st.roomStatus === 'active' && st.ownerSessionId !== state.sessionId && !state.isObserver) {
-            state.pendingRoom = newRoom;
-            if(document.getElementById('statusOverlay')) {
-                document.getElementById('statusOverlay').style.display = 'none';
-            }
-            document.getElementById('takeoverPwInput').value = "";
-            document.getElementById('takeoverModal').style.display = 'flex';
-            document.getElementById('takeoverPwInput').focus();
+    // 3. [보안 핵심] 인증 전 버튼 및 기능 물리적 잠금
+    const setupBtn = document.getElementById('btnSetupModal');
+    if (setupBtn) {
+        if (isActive && !isOwner && !state.isObserver) {
+            // 권한이 없는 사용자가 접속했을 때 버튼 상태
+            setupBtn.style.setProperty('background', '#64748b', 'important');
+            setupBtn.style.setProperty('opacity', '0.6', 'important');
+            setupBtn.style.pointerEvents = 'none'; 
+            setupBtn.disabled = true;
+            setupBtn.innerHTML = '<i class="fa-solid fa-lock"></i> 과정 잠김 (인증 필요)';
         } else {
-            this.forceEnterRoom(newRoom);
+            // 본인 소유이거나 비어있는 방일 때 버튼 상태 복구
+            setupBtn.style.setProperty('background', '', '');
+            setupBtn.style.setProperty('opacity', '1', '');
+            setupBtn.style.pointerEvents = 'auto';
+            setupBtn.disabled = false;
+            setupBtn.innerHTML = '<i class="fa-solid fa-gears"></i> 교육과정 환경 설정 (통합)';
         }
-    },
+    }
+
+    // 4. [분기 처리] 권한 여부에 따른 입장 통제
+    
+    // (A) 방이 사용 중인데 내가 주인이 아니고, 옵저버도 아님 -> 데이터 차단
+    if (isActive && !isOwner && !state.isObserver) {
+        console.log(`[권한 차단] Room ${newRoom}에 대한 소유권이 없습니다.`);
+        state.pendingRoom = newRoom;
+        
+        // 중요: forceEnterRoom을 실행하지 않고 여기서 중단합니다. (데이터 리스너 실행 방지)
+        document.getElementById('takeoverPwInput').value = "";
+        document.getElementById('takeoverModal').style.display = 'flex';
+        document.getElementById('takeoverPwInput').focus();
+        
+        // overlay는 flex 상태를 유지하여 뒷배경 데이터를 가립니다.
+        return; 
+    }
+
+    // (B) 내가 주인이거나, 옵저버이거나, 혹은 방이 비어있는 경우 -> 입장 허용
+    console.log(`[인증 성공] Room ${newRoom} 데이터 로드를 시작합니다.`);
+    this.forceEnterRoom(newRoom);
+    
+    // [참고] forceEnterRoom 내부 리스너에서 소유권이 최종 확인되면 
+    // 그 때 overlay를 none으로 바꿔 화면을 보여주게 됩니다.
+},
 
 
 
