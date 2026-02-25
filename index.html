@@ -2247,47 +2247,36 @@ function showMainDashboard() {
 
 
 
-// [수정] 식단표 보기 (로딩 표시 기능 포함)
+// 식단표 보기 함수 (시작 시 위치 초기화 추가)
 async function viewMealMenu() {
-    // 메뉴 팝업 닫기
     document.getElementById('menuModal').style.display = 'none';
     
     const modal = document.getElementById('mealMenuModal');
     const loader = document.getElementById('mealLoading');
     const img = document.getElementById('mealMenuImage');
 
-    // 1. 먼저 팝업창과 로딩 화면을 보여줍니다.
+    // 위치 변수 리셋 (중앙 정렬)
+    scale = 1; lastScale = 1; posX = 0; posY = 0; 
+    img.style.transform = `translate(0px, 0px) scale(1)`;
+
     modal.style.display = 'flex';
     loader.style.display = 'flex';
-    img.style.display = 'none'; // 이전 이미지가 보이지 않게 숨김
+    img.style.display = 'none';
 
     try {
-        // 2. 파이어베이스에서 데이터를 가져옵니다.
         const snap = await firebase.database().ref('system/nutrition_menu').once('value');
         const imageUrl = snap.val();
-        
-        if (!imageUrl) {
-            alert("등록된 식단표 사진이 없습니다.");
-            modal.style.display = 'none';
-            return;
-        }
+        if (!imageUrl) { alert("식단표가 없습니다."); modal.style.display = 'none'; return; }
 
-        // 3. 이미지 주소를 넣고, 브라우저가 사진 렌더링을 끝낼 때까지 기다립니다.
         img.src = imageUrl;
-        
         img.onload = function() {
-            // 4. 사진 로딩이 완전히 끝나면 스피너를 숨기고 사진을 보여줍니다.
             loader.style.display = 'none';
             img.style.display = 'block';
         };
-
     } catch (e) {
-        console.error(e);
-        alert("사진을 불러오는 중 오류가 발생했습니다.");
         modal.style.display = 'none';
     }
 }
-
 
 
 
@@ -2571,26 +2560,37 @@ function cleanUrlAndGo(r) {
 
 
 
-/* --- 식단표 확대/축소(Pinch Zoom) 및 팝업 제어 스크립트 --- */
-let zoomScale = 1;
+/* --- 식단표 확대/축소(Pinch Zoom) 및 이동(Pan) 로직 --- */
+let scale = 1;
+let lastScale = 1;
+let posX = 0;
+let posY = 0;
+let lastPosX = 0;
+let lastPosY = 0;
+let startX = 0;
+let startY = 0;
 let initialDistance = 0;
 
-// 식단표 닫기 함수 (확대 상태 초기화 포함)
+// 1. 식단표 닫기 (모든 상태 초기화)
 function closeMealMenu() {
-    zoomScale = 1;
+    scale = 1; lastScale = 1;
+    posX = 0; posY = 0; lastPosX = 0; lastPosY = 0;
     const img = document.getElementById('mealMenuImage');
-    if(img) img.style.transform = `scale(1)`;
+    if(img) img.style.transform = `translate(0px, 0px) scale(1)`;
     document.getElementById('mealMenuModal').style.display = 'none';
 }
 
-// 핀치 줌 로직 구현
 const imageContainer = document.getElementById('mealImageContainer');
 const mealImg = document.getElementById('mealMenuImage');
 
 if (imageContainer && mealImg) {
     imageContainer.addEventListener('touchstart', (e) => {
-        if (e.touches.length === 2) {
-            // 두 손가락 사이의 거리 측정
+        if (e.touches.length === 1) {
+            // 이동(Pan)을 위한 시작점 저장
+            startX = e.touches[0].pageX - posX;
+            startY = e.touches[0].pageY - posY;
+        } else if (e.touches.length === 2) {
+            // 확대(Zoom)를 위한 초기 거리 측정
             initialDistance = Math.hypot(
                 e.touches[0].pageX - e.touches[1].pageX,
                 e.touches[0].pageY - e.touches[1].pageY
@@ -2599,38 +2599,48 @@ if (imageContainer && mealImg) {
     });
 
     imageContainer.addEventListener('touchmove', (e) => {
-        if (e.touches.length === 2) {
-            e.preventDefault(); // 스크롤 방지
+        e.preventDefault(); // 브라우저 스크롤 방지
+
+        if (e.touches.length === 1 && scale > 1) {
+            // [이동 로직] 확대된 상태에서만 이동 가능
+            posX = e.touches[0].pageX - startX;
+            posY = e.touches[0].pageY - startY;
+            
+            // 이미지 움직임 적용
+            mealImg.style.transform = `translate(${posX}px, ${posY}px) scale(${scale})`;
+            
+        } else if (e.touches.length === 2) {
+            // [확대 로직]
             const currentDistance = Math.hypot(
                 e.touches[0].pageX - e.touches[1].pageX,
                 e.touches[0].pageY - e.touches[1].pageY
             );
 
-            // 확대 배율 계산
             const delta = currentDistance / initialDistance;
-            let newScale = zoomScale * delta;
+            let newScale = lastScale * delta;
 
-            // 최소 1배 ~ 최대 4배 제한
+            // 1배 ~ 4배 제한
             if (newScale < 1) newScale = 1;
             if (newScale > 4) newScale = 4;
 
-            mealImg.style.transform = `scale(${newScale})`;
+            scale = newScale;
+            
+            // 배율이 1배가 되면 위치도 중앙으로 강제 복구
+            if (scale === 1) {
+                posX = 0; posY = 0;
+            }
+
+            mealImg.style.transform = `translate(${posX}px, ${posY}px) scale(${scale})`;
         }
-    });
+    }, { passive: false });
 
     imageContainer.addEventListener('touchend', (e) => {
-        if (e.touches.length < 2) {
-            // 마지막 확대 배율 저장
-            const transformMatrix = window.getComputedStyle(mealImg).transform;
-            if (transformMatrix !== 'none') {
-                zoomScale = parseFloat(transformMatrix.split(',')[0].replace('matrix(', ''));
-            }
-        }
+        // 마지막 배율 및 위치 저장
+        lastScale = scale;
+        lastPosX = posX;
+        lastPosY = posY;
     });
 }
-
-// 기존 viewMealMenu 함수가 이 closeMealMenu를 사용하도록 연동하거나, 
-// HTML 내 onclick 이벤트가 제대로 작동하도록 확인해 주세요.
 
 
 
