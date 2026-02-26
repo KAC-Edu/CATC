@@ -913,15 +913,36 @@ async function confirmDepartureNotice() {
   const { rid, time } = pendingDepartureData;
   const room = allCourses[rid];
   
-  // [날짜 로직 수정] 과정 종료일을 퇴교 날짜로 지정
-  let depDate = new Date().toISOString().split('T')[0]; // 기본값은 오늘
+  // 기본값은 오늘 날짜
+  let depDate = new Date().toISOString().split('T')[0]; 
+
   if (room.settings?.period && room.settings.period.includes(" ~ ")) {
-    depDate = room.settings.period.split(" ~ ")[1]; // "2026-02-27" 같은 종료일 추출
+    const parts = room.settings.period.split(" ~ ");
+    const startDate = new Date(parts[0]); // 교육 시작일
+    const endDate = new Date(parts[1]);   // 교육 종료일
+    const today = new Date();             // 오늘
+
+    // [로직 추가] 1주차 금요일 계산
+    // 시작일(월요일 등)로부터 해당 주의 금요일 날짜를 구합니다.
+    let firstFriday = new Date(startDate);
+    let dayToFri = (5 - startDate.getDay() + 7) % 7; 
+    firstFriday.setDate(startDate.getDate() + dayToFri);
+
+    // 오늘이 1주차 금요일(밤 12시 기준) 이전이거나 당일이면 -> 1주차 금요일로 공지
+    // 오늘이 1주차 금요일을 지났으면 -> 최종 교육 종료일로 공지
+    const compareToday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    const compareFirstFriday = new Date(firstFriday.getFullYear(), firstFriday.getMonth(), firstFriday.getDate());
+
+    if (compareToday <= compareFirstFriday) {
+      depDate = firstFriday.toISOString().split('T')[0];
+    } else {
+      depDate = parts[1]; // 최종 교육 종료일 (2주차 금요일)
+    }
   }
   
   await firebase.database().ref(`courses/${rid}/shuttle/departure`).update({ 
     time, 
-    date: depDate, // 이제 오늘이 아닌 과정 종료일이 저장됨
+    date: depDate, 
     announced: true 
   });
   
