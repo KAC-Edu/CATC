@@ -3179,6 +3179,31 @@ resetShuttleRequests: function() {
         }
     },
 
+// [강사 플랫폼: 로고 클릭 시 초기 현황판으로 이동]
+    goHome: function() {
+        if(state.room) {
+            if(confirm("현재 강의실에서 나가 초기 현황판 화면으로 이동하시겠습니까?")) {
+                // 1. 현재 강의실 정보 초기화
+                state.room = null;
+                localStorage.removeItem('kac_last_room');
+                
+                // 2. 초기 현황판 화면(Waiting Room) 보여주기
+                ui.showWaitingRoom();
+                
+                // 3. 열려있을지 모르는 유관 시스템 메뉴 닫기
+                const familyMenu = document.getElementById('familySiteMenu');
+                if(familyMenu) familyMenu.style.display = 'none';
+                
+                // 4. 주소창 깔끔하게 정리 (선택 사항)
+                window.history.replaceState({}, '', 'admin.html');
+            }
+        } else {
+            // 이미 현황판이면 새로고침 효과
+            location.reload();
+        }
+    },
+
+
 // [강사 플랫폼 전용: 보안 하이패스 함수]
     goFamilySite: function(role, url) {
         // 해당 역할의 보안 키를 생성 (포털에서 PIN 친 것과 동일한 효과)
