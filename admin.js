@@ -4132,7 +4132,7 @@ openSetupModal: async function() {
 
 
 
-    // 설정을 불러오는 내부 함수 분리
+// 설정을 불러오는 내부 함수 분리 (날짜 초기화 로직 보강)
     loadCurrentSettings: function() {
         firebase.database().ref(`courses/${state.room}`).once('value', snap => {
             const data = snap.val() || {};
@@ -4146,21 +4146,19 @@ openSetupModal: async function() {
 
             const roomSelect = document.getElementById('setup-room-select');
             Array.from(roomSelect.options).forEach(opt => {
-                // 1. 처음 이름(예: 관제동 1층)을 임시로 저장해둡니다.
                 if (!opt.dataset.originalText) opt.dataset.originalText = opt.text;
                 
-                // 2. 만약 다른 방에서 사용 중이라면
                 if (this.occupiedLocations.includes(opt.value)) {
                     opt.text = opt.dataset.originalText + " (이미 사용 중)";
                     opt.disabled = true;
-                    opt.style.color = "#cbd5e1"; // 흐릿하게
+                    opt.style.color = "#cbd5e1"; 
                 } else {
-                    // 3. 사용 중이 아니면 원래 이름으로 돌려놓습니다.
                     opt.text = opt.dataset.originalText;
                     opt.disabled = false;
-                    opt.style.color = ""; // 원래 색으로
+                    opt.style.color = ""; 
                 }
             });
+
             const roomDirect = document.getElementById('setup-room-direct');
             const currentRoomValue = s.roomDetailName || "";
 
@@ -4181,16 +4179,33 @@ openSetupModal: async function() {
                 roomDirect.style.display = "none";
             }
 
+            // --- 날짜 설정 로직 수정 시작 ---
+            // config.js에 정의된 getTodayString() 함수를 사용하여 오늘 날짜(YYYY-MM-DD)를 가져옵니다.
+            const todayStr = typeof getTodayString === 'function' ? getTodayString() : new Date().toISOString().split('T')[0];
+
             if(s.period && s.period.includes(" ~ ")) {
+                // 기존 데이터가 있는 경우
                 const dates = s.period.split(" ~ ");
                 document.getElementById('setup-start-date').value = dates[0];
                 document.getElementById('setup-end-date').value = dates[1];
+            } else {
+                // 비어있는 방인 경우 오늘 날짜로 자동 세팅
+                document.getElementById('setup-start-date').value = todayStr;
+                document.getElementById('setup-end-date').value = todayStr;
             }
+            // --- 날짜 설정 로직 수정 끝 ---
             
             subjectMgr.renderListInModal();
             document.getElementById('courseSetupModal').style.display = 'flex';
         });
     },
+
+
+
+
+
+
+
 
     // 선택창 값 변경 감지 함수
     checkDirectInput: function(val) {
