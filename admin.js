@@ -1856,7 +1856,7 @@ showAlert: function(msg) {
 
 
 
-// [수정] 실시간 감시와 화면 그리기를 동시에 처리하는 함수
+// [강사 플랫폼: 룸 선택 메뉴 렌더링 및 선택 초기화 보강 버전]
     initRoomSelect: function() {
         const sel = document.getElementById('roomSelect');
         const tableBody = document.getElementById('statusTableBody');
@@ -1871,11 +1871,11 @@ showAlert: function(msg) {
             return;
         }
 
-        // 2. 실제 화면 그리기 로직
         const d = window.latestCoursesData || {};
-        const currentSelectedRoom = state.room; // 현재 내가 선택한 방 (가장 중요)
+        const currentSelectedRoom = state.room; // 현재 내가 선택한 방 (홈으로 가면 null)
 
-        if(sel) sel.innerHTML = '<option value="" disabled>Select Room ▾</option>';
+        // [수정] placeholder에서 disabled를 제거하여 자바스크립트로 선택(리셋)이 가능하게 함
+        if(sel) sel.innerHTML = '<option value="">Select Room ▾</option>';
         if(tableBody) tableBody.innerHTML = "";
 
         let count = 1;
@@ -1900,6 +1900,8 @@ showAlert: function(msg) {
                 if(isRealMyRoom) opt.innerText = `Room ${c} (🔵 내 강의실 - ${profName})`;
                 else if(isRoomActive) opt.innerText = `Room ${c} (🔴 사용중 - ${profName})`;
                 else opt.innerText = `Room ${c} (⚪ 대기)`;
+                
+                // [중요] 현재 방에 있을 때만 해당 항목을 선택 상태로 표시
                 if(c === currentSelectedRoom) opt.selected = true;
                 sel.appendChild(opt);
             }
@@ -1908,7 +1910,7 @@ showAlert: function(msg) {
             if(tableBody) {
                 const row = document.createElement('tr');
                 
-                // [핵심] 새로고침 없이도 현재 선택된 방이면 즉시 파란색 하이라이트 적용
+                // 현재 선택된 방이면 즉시 파란색 하이라이트 적용
                 if (c === currentSelectedRoom) {
                     row.classList.add('is-my-room');
                 }
@@ -1934,6 +1936,11 @@ showAlert: function(msg) {
                 `;
                 tableBody.appendChild(row);
             }
+        }
+
+        // [핵심 추가] 현재 선택된 방 정보가 없다면(홈 화면) 메뉴를 "Select Room"으로 강제 리셋
+        if(!currentSelectedRoom && sel) {
+            sel.value = "";
         }
     },
 
@@ -2618,31 +2625,37 @@ renderQaList: function(f) {
         window.open(url, 'googleTranslatePopup', 'width=1000,height=600');
     },
     
-// [강사 플랫폼: 초기 대기 화면 설정]
+// [강사 플랫폼: 초기 대기 화면 설정 - 흐릿한 배경 완벽 제거 버전]
     showWaitingRoom: function() {
-        state.room = null;
+        state.room = null; // 메모리상 방 정보 완전 삭제
         
-        // 상단 바 텍스트 및 배지 초기화
+        // 1. 흐릿한 잠금 화면(overlay) 강제 숨김
+        const overlay = document.getElementById('statusOverlay');
+        if (overlay) overlay.style.setProperty('display', 'none', 'important');
+        
+        // 2. 인증 팝업창 닫기
+        const takeoverModal = document.getElementById('takeoverModal');
+        if (takeoverModal) takeoverModal.style.display = 'none';
+
+        // 3. 상단 바 텍스트 및 배지 초기화
         const roomNameEl = document.getElementById('displayRoomName');
         if(roomNameEl) roomNameEl.innerText = "Instructor Waiting Room";
         document.querySelectorAll('.room-badge-global').forEach(b => b.innerText = "");
         
-        // 탭 메뉴 숨기기
+        // 4. 탭 메뉴 숨기기
         const tabs = document.querySelector('.mode-tabs');
         if(tabs) tabs.style.display = 'none'; 
         
-        // [중요] 모든 뷰(대시보드, Q&A 등)를 먼저 싹 숨깁니다.
+        // 5. 모든 뷰 숨기고 현황판만 표시
         document.querySelectorAll('[id^="view-"]').forEach(v => { 
             v.style.display = 'none'; 
         });
-        
-        // 실시간 현황판(Waiting Room)만 보이게 설정
         const viewWait = document.getElementById('view-waiting');
         if(viewWait) viewWait.style.display = 'block'; 
-        
-        // 룸 선택 셀렉트박스를 "Select Room ▾"으로 초기화
-        const statusSel = document.getElementById('roomSelect');
-        if(statusSel) statusSel.value = "";
+
+        // 6. 왼쪽 룸 선택 메뉴 "Select Room"으로 강제 고정
+        const sel = document.getElementById('roomSelect');
+        if(sel) sel.value = "";
     },
 
 
