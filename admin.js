@@ -2193,166 +2193,154 @@ openQrModal: function() {
 
 
 
-setMode: function(mode) {
-        // [추가] 플로팅 홈 버튼 제어
+// [전체 교체] 화면 모드 전환 및 데이터 로드 함수
+    setMode: function(mode) {
+        // 1. 상단 탭 메뉴(버튼들)가 사라지지 않도록 강제로 보여줌
+        const tabs = document.querySelector('.mode-tabs');
+        if (tabs) tabs.style.display = 'flex'; 
+
+        // 2. 하단 중앙 '홈으로' 버튼 제어 (대시보드일 때는 숨김)
         const homeBtn = document.getElementById('floatingHomeBtn');
         if (homeBtn) {
             homeBtn.style.display = (mode === 'dashboard') ? 'none' : 'flex';
         }
 
-        // 1. 모든 view- 로 시작하는 구역을 일단 숨김
+        // 3. 모든 view- 로 시작하는 구역을 일단 숨김
         document.querySelectorAll('[id^="view-"]').forEach(v => { 
             v.style.display = 'none'; 
         });
 
-        // [핵심 추가] 강사 모드일 때 옵저버에 의해 숨겨진 버튼들을 다시 보이게 초기화
-if (!state.isObserver) {
-    const allAdminBtns = document.querySelectorAll('.btn-action, .m-btn-done, .navy-btn, #btnReset, button.btn-danger');
-    allAdminBtns.forEach(btn => {
-        if (btn.id !== 'quizFile' && btn.id !== 'studentFile') {
-            btn.style.display = ''; 
-            
-            // --- 아래 3줄을 추가하여 비활성화 상태를 해제합니다 ---
-            btn.disabled = false;            // 잠금 해제
-            btn.style.opacity = '1';         // 투명도 복구
-            btn.style.cursor = 'pointer';    // 마우스 커서 복구
+        // 4. 강사 모드일 때 (옵저버 아님) 숨겨졌던 버튼들을 다시 복구
+        if (!state.isObserver) {
+            const allAdminBtns = document.querySelectorAll('.btn-action, .m-btn-done, .navy-btn, #btnReset, button.btn-danger');
+            allAdminBtns.forEach(btn => {
+                if (btn.id !== 'quizFile' && btn.id !== 'studentFile') {
+                    btn.style.display = ''; 
+                    btn.disabled = false;
+                    btn.style.opacity = '1';
+                    btn.style.cursor = 'pointer';
+                }
+            });
+            const quizCtrl = document.getElementById('quizControls');
+            if(quizCtrl) quizCtrl.style.display = 'flex';
         }
-    });
-    const quizCtrl = document.getElementById('quizControls');
-    if(quizCtrl) quizCtrl.style.display = 'flex';
-}
         
-        // 2. 현재 선택한 모드에 맞는 구역 ID 결정
-        const targetView = (mode === 'admin-action') ? 'view-admin-action' : (mode === 'dinner-skip') ? 'view-dinner-skip' : `view-${mode}`;
-        const targetEl = document.getElementById(targetView);
+        // 5. 현재 선택한 모드 구역 ID 결정 및 화면 표시 방식 설정
+        const targetViewId = (mode === 'admin-action') ? 'view-admin-action' : (mode === 'dinner-skip') ? 'view-dinner-skip' : `view-${mode}`;
+        const targetEl = document.getElementById(targetViewId);
         
-        // 3. 화면 표시 방식 결정 (모달형은 flex, 일반은 block)
         if(targetEl) {
-            if(mode === 'prof-presentation' || mode === 'quiz' || mode === 'qa') {
+            // 레이아웃 유지를 위해 대부분의 뷰는 flex를 사용
+            if(['prof-presentation', 'quiz', 'qa', 'guide', 'attendance', 'dormitory', 'shuttle', 'admin-action', 'dinner-skip', 'students'].includes(mode)) {
                 targetEl.style.display = 'flex';
-            } else if(mode === 'waiting' || mode === 'dashboard') {
-                targetEl.style.display = 'block';
             } else {
-                targetEl.style.display = 'flex'; // 기본값
+                targetEl.style.display = 'block'; 
             }
         }
 
-        // 4. 상단 탭 활성화 표시
+        // 6. 상단 탭 버튼들 중 현재 선택된 것에만 'active' 색상 적용
         document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
         const targetTab = document.getElementById(`tab-${mode}`);
         if(targetTab) targetTab.classList.add('active');
 
+        // 마지막 모드 기억
         localStorage.setItem('kac_last_mode', mode);
 
-        // 5. 각 모드별 데이터 로드
+        // 7. 강의실(Room)에 접속된 상태일 때만 데이터 로드 시작
         if (state.room) {
+            // [퀴즈 모드 전용 로직] 이미 문제를 불러왔다면 팝업 없이 바로 보여줌
             if (mode === 'quiz') {
-                document.getElementById('quizSelectModal').style.display = 'flex'; 
-                quizMgr.loadSavedQuizList(); 
+                const quizModal = document.getElementById('quizSelectModal');
+                if (state.quizList && state.quizList.length > 0) {
+                    // 이미 문제가 로드되어 있으면 팝업창을 닫음 (무한루프 방지)
+                    if(quizModal) quizModal.style.display = 'none';
+                } else {
+                    // 문제가 없으면 팝업창을 띄우고 목록을 불러옴
+                    if(quizModal) quizModal.style.display = 'flex'; 
+                    quizMgr.loadSavedQuizList(); 
+                }
             }
 
+            // [학생 화면 동기화] 강사가 보고 있는 화면에 맞춰 학생 앱 화면도 변경
             let studentMode = (['waiting', 'shuttle', 'admin-action', 'dinner-skip', 'students', 'dashboard', 'notice', 'attendance', 'guide', 'dormitory'].includes(mode)) ? 'qa' : mode;
-            
-            // [옵저버 제한] 옵저버는 교육생 화면 모드를 원격으로 바꿀 수 없음
             if (!state.isObserver) {
                 firebase.database().ref(`courses/${state.room}/status/mode`).set(studentMode);
             }
             
+            // 각 모드별 상세 데이터 불러오기 함수 호출
             if (mode === 'dashboard') ui.loadDashboardStats(); 
             if (mode === 'notice') ui.loadNoticeView(); 
             if (mode === 'attendance') ui.loadAttendanceView();
-
-            if (mode === 'shuttle') {
-                this.loadShuttleData();
-                const badge = document.getElementById('shuttleNewBadge');
-                if(badge) badge.style.display = 'none';
-                firebase.database().ref(`courses/${state.room}/shuttle/departure`).once('value', snap => {
-                    const dep = snap.val();
-                    if(dep && dep.time) {
-                        localStorage.setItem(`last_seen_shuttle_${state.room}`, `${dep.date} ${dep.time}`);
-                    }
-                });
-            }
+            if (mode === 'shuttle') this.loadShuttleData();
             if (mode === 'admin-action') ui.loadAdminActionData();
             if (mode === 'dinner-skip') ui.loadDinnerSkipData();
             if (mode === 'students') ui.loadStudentList();
             
-            // [기숙사/생활관 정밀 매칭 로직 유지]
+            // [생활관/기숙사 정밀 매칭 로직]
             if (mode === 'dormitory') {
                 const tbody = document.getElementById('dormitoryTableBody');
-                if(!tbody) return;
-                tbody.innerHTML = "<tr><td colspan='5' style='padding:50px; color:#94a3b8;'>데이터를 매칭 중입니다...</td></tr>";
+                if(tbody) {
+                    tbody.innerHTML = "<tr><td colspan='5' style='padding:50px; color:#94a3b8;'>데이터를 매칭 중입니다...</td></tr>";
+                    Promise.all([
+                        firebase.database().ref(`courses/${state.room}/students`).once('value'),
+                        firebase.database().ref(`system/dormitory_assignments`).once('value')
+                    ]).then(([studentSnap, dormSnap]) => {
+                        const students = studentSnap.val() || {};
+                        const dormData = dormSnap.val() || {}; 
+                        tbody.innerHTML = "";
+                        const studentList = Object.values(students).filter(s => s.name && s.name !== "undefined").sort((a, b) => a.name.localeCompare(b.name));
 
-                Promise.all([
-                    firebase.database().ref(`courses/${state.room}/students`).once('value'),
-                    firebase.database().ref(`system/dormitory_assignments`).once('value')
-                ]).then(([studentSnap, dormSnap]) => {
-                    const students = studentSnap.val() || {};
-                    const dormData = dormSnap.val() || {}; 
-                    tbody.innerHTML = "";
-                    const studentList = Object.values(students).filter(s => s.name && s.name !== "undefined").sort((a, b) => a.name.localeCompare(b.name));
+                        if (studentList.length === 0) {
+                            tbody.innerHTML = "<tr><td colspan='5' style='padding:50px; color:#94a3b8;'>현재 입실한 수강생이 없습니다.</td></tr>";
+                        } else {
+                            studentList.forEach((s, idx) => {
+                                const sName = s.name;
+                                const sPhone = s.phone ? s.phone.slice(-4) : "0000"; 
+                                let assignedInfo = dormData[`${sName}_${sPhone}`] || dormData[sName] || { building: "-", room: "미배정" };
 
-                    if (studentList.length === 0) {
-                        tbody.innerHTML = "<tr><td colspan='5' style='padding:50px; color:#94a3b8;'>현재 입실한 수강생이 없습니다.</td></tr>";
-                        return;
-                    }
+                                const bName = assignedInfo.building;
+                                const rNo = assignedInfo.room + (assignedInfo.room === "미배정" ? "" : "호");
+                                const statusColor = assignedInfo.building !== "-" ? "#3b82f6" : "#94a3b8";
 
-                    studentList.forEach((s, idx) => {
-                        const sName = s.name;
-                        const sPhone = s.phone ? s.phone.slice(-4) : ""; 
-                        let assignedInfo = null;
-
-                        if (dormData[`${sName}_${sPhone}`]) {
-                            assignedInfo = dormData[`${sName}_${sPhone}`];
-                        } 
-                        else if (dormData[sName]) {
-                            assignedInfo = dormData[sName];
+                                tbody.innerHTML += `
+                                    <tr>
+                                        <td>${idx + 1}</td>
+                                        <td style="font-weight:bold;">${sName}</td>
+                                        <td>${sPhone}</td>
+                                        <td style="color:${statusColor}; font-weight:800;">${bName}</td>
+                                        <td style="color:${statusColor}; font-weight:800;">${rNo}</td>
+                                    </tr>`;
+                            });
                         }
-
-                        const bName = assignedInfo ? assignedInfo.building : "-";
-                        const rNo = assignedInfo ? assignedInfo.room + "호" : "미배정";
-                        const statusColor = assignedInfo ? "#3b82f6" : "#94a3b8";
-
-                        tbody.innerHTML += `
-                            <tr>
-                                <td>${idx + 1}</td>
-                                <td style="font-weight:bold;">${sName}</td>
-                                <td>${sPhone || "-"}</td>
-                                <td style="color:${statusColor}; font-weight:800;">${bName}</td>
-                                <td style="color:${statusColor}; font-weight:800;">${rNo}</td>
-                            </tr>`;
                     });
-                });
+                }
             }
         }
 
-        // [옵저버 전용 보안 로직 추가] 탭 이동할 때마다 버튼 숨기기 실행
+        // 8. [옵저버 전용 권한 제한] 탭을 바꿀 때마다 중요 버튼들 다시 숨김
         if (state.isObserver) {
-            // 1. 리셋, 초기화, 삭제 관련 버튼 숨기기
-            const dangerBtns = document.querySelectorAll('#btnReset, .btn-danger, .btn-del-mini');
-            dangerBtns.forEach(b => b.style.display = 'none');
+            // 삭제/리셋 버튼 완전 숨김
+            document.querySelectorAll('#btnReset, .btn-danger, .btn-del-mini').forEach(b => b.style.display = 'none');
 
-            // 2. 저장, 게시, 적용, 등록 버튼 숨기기
-            const saveBtns = document.querySelectorAll('.btn-action, .m-btn-done, .navy-btn');
-            saveBtns.forEach(b => {
+            // 저장/적용/게시 관련 버튼들 텍스트로 찾아서 숨김
+            document.querySelectorAll('.btn-action, .m-btn-done, .navy-btn').forEach(b => {
                 const t = b.innerText;
                 if(t.includes('저장') || t.includes('적용') || t.includes('게시') || t.includes('등록') || t.includes('확인')) {
                     b.style.display = 'none';
                 }
             });
 
-            // 3. 퀴즈 컨트롤 영역 숨기기
+            // 퀴즈 컨트롤 숨김
             const quizCtrl = document.getElementById('quizControls');
             if(quizCtrl) quizCtrl.style.display = 'none';
 
-            // 4. 상단바에 옵저버 상태 표시
+            // 상단바 옵저버 표시
             const roomNameEl = document.getElementById('displayRoomName');
             if(roomNameEl && !roomNameEl.innerHTML.includes('fa-eye')) {
-                roomNameEl.innerHTML = "Room #" + state.room + ` <span style="font-size:14px; margin-left:8px; color:#94a3b8; font-weight:normal;">(<i class="fa-solid fa-eye" style="font-size:12px;"></i> 옵저버)</span>`;
+                roomNameEl.innerHTML = `Room #${state.room} <span style="font-size:14px; margin-left:8px; color:#94a3b8; font-weight:normal;">(<i class="fa-solid fa-eye" style="font-size:12px;"></i> 옵저버)</span>`;
             }
         }
-    },
-
+    }, // <-- 여기까지가 setMode 함수 끝입니다.
 
 
 
@@ -2627,37 +2615,74 @@ renderQaList: function(f) {
         window.open(url, 'googleTranslatePopup', 'width=1000,height=600');
     },
     
-// [강사 플랫폼: 초기 대기 화면 설정 - 흐릿한 배경 완벽 제거 버전]
+// [강사 플랫폼: 초기 대기 화면 설정 - 흐릿한 배경 및 데이터 잔상 완벽 제거]
     showWaitingRoom: function() {
-        state.room = null; // 메모리상 방 정보 완전 삭제
+        // 1. 메모리 및 상태 완전 초기화
+        state.room = null; 
+        state.pendingRoom = null;
+        state.isObserver = false;
         
-        // 1. 흐릿한 잠금 화면(overlay) 강제 숨김
+        // 2. 흐릿한 잠금 화면(overlay) 및 모든 팝업 강제 종료
         const overlay = document.getElementById('statusOverlay');
-        if (overlay) overlay.style.setProperty('display', 'none', 'important');
+        if (overlay) {
+            overlay.style.display = 'none';
+            overlay.style.setProperty('display', 'none', 'important');
+        }
         
-        // 2. 인증 팝업창 닫기
         const takeoverModal = document.getElementById('takeoverModal');
         if (takeoverModal) takeoverModal.style.display = 'none';
+        
+        const qaModal = document.getElementById('qaModal');
+        if (qaModal) qaModal.style.display = 'none';
 
-        // 3. 상단 바 텍스트 및 배지 초기화
+        // 3. 상단바 및 배지 초기화
         const roomNameEl = document.getElementById('displayRoomName');
         if(roomNameEl) roomNameEl.innerText = "Instructor Waiting Room";
+        
+        const courseTitleEl = document.getElementById('displayCourseTitle');
+        if(courseTitleEl) courseTitleEl.innerText = "";
+        
         document.querySelectorAll('.room-badge-global').forEach(b => b.innerText = "");
         
-        // 4. 탭 메뉴 숨기기
+        // 4. 탭 메뉴 및 하단 홈 버튼 숨기기
         const tabs = document.querySelector('.mode-tabs');
         if(tabs) tabs.style.display = 'none'; 
         
-        // 5. 모든 뷰 숨기고 현황판만 표시
+        const homeBtn = document.getElementById('floatingHomeBtn');
+        if(homeBtn) homeBtn.style.display = 'none';
+
+        // 5. 모든 서브 뷰 숨기고 "강의실 실시간 현황판"만 표시
         document.querySelectorAll('[id^="view-"]').forEach(v => { 
             v.style.display = 'none'; 
         });
         const viewWait = document.getElementById('view-waiting');
         if(viewWait) viewWait.style.display = 'block'; 
 
-        // 6. 왼쪽 룸 선택 메뉴 "Select Room"으로 강제 고정
+        // 6. 사이드바 UI 리셋 (메뉴 선택 및 버튼 비활성화)
         const sel = document.getElementById('roomSelect');
-        if(sel) sel.value = "";
+        if(sel) sel.value = ""; // "Select Room"으로 복구
+
+        const statusSel = document.getElementById('roomStatusSelect');
+        if(statusSel) {
+            statusSel.value = "idle";
+            statusSel.disabled = true;
+            statusSel.style.color = "#94a3b8";
+        }
+
+        // 7. 강의실 전용 버튼들 잠금 (방에 들어가지 않았으므로)
+        const setupBtn = document.getElementById('btnSetupModal');
+        if(setupBtn) {
+            setupBtn.disabled = true;
+            setupBtn.style.opacity = '0.5';
+            setupBtn.style.cursor = 'not-allowed';
+        }
+
+        // 8. 현황판 테이블에서 '내 강의실' 하이라이트 제거
+        document.querySelectorAll('.is-my-room').forEach(row => {
+            row.classList.remove('is-my-room');
+        });
+
+        console.log("현황판(Home) 화면으로 모든 상태가 초기화되었습니다.");
     },
 
 
@@ -3598,10 +3623,10 @@ action: function(act) {
         }
     },
     
-showFinalSummary: async function() {
-        // [옵저버 종료 차단]
+// [수정] 퀴즈 종료 및 최종 리포트 출력 함수
+    showFinalSummary: async function() {
         if(state.isObserver) {
-            ui.showAlert("👁️ 옵저버는 퀴즈를 종료하거나 결과를 발표할 수 없습니다.");
+            ui.showAlert("👁️ 옵저버는 퀴즈를 종료할 수 없습니다.");
             return;
         }
 
@@ -3611,7 +3636,6 @@ showFinalSummary: async function() {
         let totalQuestions = 0; 
         let totalCorrect = 0; 
         let totalAnswerCount = 0;
-        let questionStats = []; 
         const userScoreMap = {};
         
         state.quizList.forEach((q, idx) => {
@@ -3630,13 +3654,6 @@ showFinalSummary: async function() {
                     userScoreMap[k].score++; 
                 }
             });
-            if(keys.length > 0) { 
-                const corrCnt = keys.filter(k => answers[k].choice === q.correct).length; 
-                questionStats.push({ 
-                    title: q.text, 
-                    accuracy: (corrCnt / keys.length) * 100 
-                }); 
-            }
         });
         
         const sortedUsers = Object.keys(userScoreMap)
@@ -3648,29 +3665,52 @@ showFinalSummary: async function() {
         let rank = 1;
         sortedUsers.forEach((u, i) => { 
             if (i > 0 && u.score < sortedUsers[i - 1].score) rank = i + 1; 
-            finalRankingData[u.token] = { 
-                score: u.score, 
-                rank: rank, 
-                total: sortedUsers.length 
-            }; 
+            finalRankingData[u.token] = { score: u.score, rank: rank, total: sortedUsers.length }; 
         });
         
+        // 서버에 결과 데이터 전송
         await firebase.database().ref(`courses/${state.room}/quizFinalResults`).set(finalRankingData);
         await firebase.database().ref(`courses/${state.room}/status`).update({ quizStep: 'summary' });
         
+        // 강사 화면 리포트 생성
         const grid = document.getElementById('summaryStats');
         if(grid) {
             const avgAcc = totalAnswerCount > 0 ? Math.round((totalCorrect / totalAnswerCount) * 100) : 0;
             grid.innerHTML = `
-                <div class="summary-card"><span>총 인원</span><b>${totalParticipants.size}명</b></div>
+                <div class="summary-card"><span>참여 인원</span><b>${totalParticipants.size}명</b></div>
                 <div class="summary-card"><span>평균 정답률</span><b>${avgAcc}%</b></div>
-                <div class="summary-card"><span>문항 수</span><b>${totalQuestions}개</b></div>
-                <div class="summary-card"><span>전체 제출</span><b>${totalAnswerCount}건</b></div>
+                <div class="summary-card"><span>푼 문항 수</span><b>${totalQuestions}개</b></div>
+                <div class="summary-card"><span>총 제출 건수</span><b>${totalAnswerCount}건</b></div>
             `;
         }
         
+        // 리포트 팝업 띄우기
         const summaryOverlay = document.getElementById('quizSummaryOverlay');
         if(summaryOverlay) summaryOverlay.style.display = 'flex';
+
+        // [중요] 학생 화면을 '결과 보기' 모드로 강제 전환
+        firebase.database().ref(`courses/${state.room}/activeQuiz/status`).set('result');
+    },
+
+    // [신규] 리포트 창을 닫으면서 퀴즈 모드를 완전히 빠져나가는 함수
+    closeSummaryAndExit: function() {
+        document.getElementById('quizSummaryOverlay').style.display = 'none';
+        
+        // 퀴즈 데이터 초기화 (모든 변수 비우기)
+        state.currentQuizIdx = 0; 
+        state.quizList = [];
+        state.isExternalFileLoaded = false;
+        
+        // 서버 데이터 정리 및 일반 Q&A 모드로 전환
+        firebase.database().ref(`courses/${state.room}/activeQuiz`).set(null);
+        firebase.database().ref(`courses/${state.room}/status`).update({ 
+            mode: 'qa', 
+            quizStep: 'none' 
+        });
+
+        // 화면 이동
+        ui.setMode('qa');
+        ui.showAlert("✅ 퀴즈가 종료되었습니다. Q&A 현황으로 이동합니다.");
     },
     
     renderChart: function(id, corr) {
@@ -3712,36 +3752,47 @@ showFinalSummary: async function() {
 
 
 
-// [최종 복구] 퀴즈 모드 종료 시도 (옵저버 여부 체크 포함)
+// [여기부터 복사하세요]
+    // 1. 퀴즈 모드 종료 시도 함수
     closeQuizMode: function() { 
-        // 옵저버는 데이터에 영향이 없으므로 그냥 나갑니다.
+        // 옵저버(단순 관람) 모드인 경우
         if(state.isObserver) {
-            ui.setMode('qa');
-            return;
+            ui.setMode('qa'); // 그냥 질문 화면으로 이동
+            return; // 함수 종료
         }
-        // 강사는 팝업창을 띄워 선택하게 합니다.
+        
+        // 강사인 경우 종료 선택 팝업창 띄우기
         const exitModal = document.getElementById('quizExitModal');
-        if(exitModal) exitModal.style.display = 'flex'; 
-    },
-    
-    // [최종 복구] 팝업창 버튼 클릭 시 실행 로직 (이어서 하기 / 초기화)
-    confirmExitQuiz: function(type) {
-        const exitModal = document.getElementById('quizExitModal');
-        if(exitModal) exitModal.style.display = 'none';
+        if(exitModal) {
+            exitModal.style.display = 'flex'; 
+        }
+    }, // <-- closeQuizMode 함수 끝 (콤마 필수)
 
+    // 2. 팝업창 버튼 클릭 시 실제 실행되는 함수
+    confirmExitQuiz: function(type) {
+        // 팝업창 닫기
+        const exitModal = document.getElementById('quizExitModal');
+        if(exitModal) {
+            exitModal.style.display = 'none';
+        }
+
+        // [A] '완전 초기화(처음부터)'를 선택한 경우
         if(type === 'reset') {
-            // 1. [완전 초기화] 모든 진행 데이터 삭제
+            // 강사 쪽 메모리 변수 싹 비우기
             state.currentQuizIdx = 0; 
             state.isExternalFileLoaded = false; 
             state.quizList = [];
             
-            // 서버 데이터 싹 비우기
+            // 서버(Firebase) 데이터 싹 지우기 (학생 화면에서도 퀴즈 종료됨)
             firebase.database().ref(`courses/${state.room}/activeQuiz`).set(null);
-            firebase.database().ref(`courses/${state.room}/status/quizStep`).set('none');
+            firebase.database().ref(`courses/${state.room}/status`).update({
+                mode: 'qa',
+                quizStep: 'none'
+            });
             firebase.database().ref(`courses/${state.room}/quizAnswers`).set(null);
             firebase.database().ref(`courses/${state.room}/quizFinalResults`).set(null);
             
-            // 강사 화면 리셋
+            // 강사 화면 UI 리셋
             quizMgr.renderMiniList();
             const qTxt = document.getElementById('d-qtext');
             const oDiv = document.getElementById('d-options');
@@ -3750,12 +3801,19 @@ showFinalSummary: async function() {
             
             ui.showAlert("✅ 퀴즈가 완전히 초기화되었습니다.");
         } 
-        // 'resume' (이어서 하기)의 경우 데이터를 지우지 않고 화면만 이동합니다.
+        // [B] '일시 중단(이어서 하기)'를 선택한 경우
+        else {
+            // 데이터는 그대로 두고 학생 화면만 질문(QA) 모드로 바꿈
+            if (!state.isObserver) {
+                firebase.database().ref(`courses/${state.room}/status/mode`).set('qa');
+            }
+            ui.showAlert("⌛ 퀴즈가 중단되었습니다. 나중에 다시 들어오면 이어서 가능합니다.");
+        }
 
-        // 공통: Q&A 게시판으로 화면 전환
+        // 공통: 강사 화면을 질문(QA) 게시판으로 전환
         ui.setMode('qa'); 
-    }
-};
+    } // <-- confirmExitQuiz 함수 끝
+    // [여기까지 복사하세요]
 
 
 

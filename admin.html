@@ -146,7 +146,7 @@
                         <a href="javascript:void(0)" onclick="ui.goFamilySite('support', 'support_admin.html')"><i class="fa-solid fa-hotel"></i> 교육지원부 (생활관)</a>
                         <a href="javascript:void(0)" onclick="ui.goFamilySite('driver', 'driver.html')"><i class="fa-solid fa-bus"></i> 기사 전용 (수송)</a>
                         <a href="javascript:void(0)" onclick="ui.goFamilySite('meal', 'nutritionist.html')"><i class="fa-solid fa-utensils"></i> 영양사 전용 (식단)</a>
-                        <a href="student_leader.html" target="_blank"><i class="fa-solid fa-crown"></i> 학생장 전용</a>
+                        <a href="javascript:void(0)" onclick="ui.goFamilySite('none', 'student_leader.html')"><i class="fa-solid fa-crown"></i> 학생장 전용</a>
                     </div>
                     <button class="btn-action btn-dark" onclick="ui.toggleFamilySites()" style="background: #334155; height: 42px;">
                         <i class="fa-solid fa-layer-group"></i> 유관 시스템 바로가기 <i class="fa-solid fa-chevron-up" id="familyChevron" style="margin-left: auto; font-size: 10px;"></i>
@@ -1051,7 +1051,7 @@
                 <h2 style="font-size:32px; font-weight:800; color:var(--accent-color); margin-bottom:30px;">QUIZ REPORT</h2>
                 <div id="summaryStats" style="display:grid; grid-template-columns: 1fr 1fr; gap:15px; margin-bottom:30px;"></div>
                 <div id="mostMissedArea" style="background:#fff1f2; border:1px solid #fecaca; padding:15px; border-radius:12px; margin-bottom:30px; display:none;"><h4 style="margin:0 0 10px 0; color:#e11d48;">🔥 오답률이 가장 높았던 문제</h4><p id="mostMissedText" style="margin:0; font-weight:bold;"></p></div>
-                <button class="btn-action btn-primary" onclick="document.getElementById('quizSummaryOverlay').style.display='none'">닫기</button>
+                <button class="btn-action btn-primary" onclick="quizMgr.closeSummaryAndExit()">리포트 확인 및 퀴즈 종료</button>
             </div>
         </div>
        
