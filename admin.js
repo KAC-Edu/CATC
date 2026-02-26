@@ -1436,7 +1436,7 @@ loadDashboardStats: function() {
         if (profOnlyEl) profOnlyEl.innerText = st.professorName || "미지정";
     });
 
-    // 5. ★핵심★ 실시간 접속자 현황 집계 (대시보드 + 퀴즈창 동시 업데이트)
+// 5. ★핵심★ 실시간 접속자 현황 집계 (대시보드 + 퀴즈창 동시 업데이트)
     refs.actual.on('value', snap => {
         if (state.room !== room) return;
         const data = snap.val() || {};
@@ -1462,6 +1462,8 @@ loadDashboardStats: function() {
             }
         }
     });
+
+
 
     // 6. 전체 명단(분모) 계산
     refs.expected.on('value', expSnap => {
