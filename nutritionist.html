@@ -272,33 +272,56 @@
     }
     setInterval(updateCountdown, 1000);
 
-    // --- [핵심 수정] 데이터 로드 (입교 완료된 사람만 총원으로 계산) ---
+
+
+
+
+// --- [수정] 데이터 로드 (종료된 과정 필터링 추가) ---
     function fetchMealData() {
         const today = getTodayString();
+        // 비교를 위한 오늘 날짜 (YYYY-MM-DD)
+        const now = new Date();
+        const todayStr = now.getFullYear() + '-' + 
+                       String(now.getMonth() + 1).padStart(2, '0') + '-' + 
+                       String(now.getDate()).padStart(2, '0');
+
         firebase.database().ref('courses').on('value', snap => {
             const data = snap.val() || {};
             allCourseData = data;
             const tbody = document.getElementById('roomTableBody');
             tbody.innerHTML = "";
-            let grandTotalArrived = 0; // 실제 입교 완료 총원
+            
+            let grandTotalArrived = 0; 
             let grandTotalSkips = 0;
 
             Object.keys(data).forEach(rid => {
                 const room = data[rid];
+                const settings = room.settings || {};
+
+                // [필터링 로직 추가] 
+                // 1. 방 상태가 'active'(사용중)여야 함
                 if (room.status && room.status.roomStatus === 'active') {
                     
-                    // (변경) 총원 계산: 명단에 관계없이 앱에 접속한 '실제 인원'만 추출
+                    // 2. 날짜 체크: 종료일이 오늘보다 이전인 과거 과정은 무시
+                    if (settings.period && settings.period.includes(" ~ ")) {
+                        const endDate = settings.period.split(" ~ ")[1];
+                        if (endDate < todayStr) {
+                            return; // 과거 과정이면 이 루프를 건너뜁니다.
+                        }
+                    }
+
+                    // 실제 접속한 교육생 인원 추출
                     const actualStudents = Object.values(room.students || {}).filter(s => s.name && s.name !== "undefined");
-                    const actualNames = Array.from(new Set(actualStudents.map(s => s.name))); // 중복 기기 제거
+                    const actualNames = Array.from(new Set(actualStudents.map(s => s.name))); 
                     
-                    const roomArrived = actualNames.length; // 이 강의실의 실제 입교 인원
+                    const roomArrived = actualNames.length; 
                     const roomSkips = room.dinner_skips && room.dinner_skips[today] ? Object.keys(room.dinner_skips[today]).length : 0;
                     
                     if (roomArrived > 0) {
                         grandTotalArrived += roomArrived;
                         grandTotalSkips += roomSkips;
 
-                        const cName = room.settings?.courseName || `강의실 ${rid}`;
+                        const cName = settings.courseName || `강의실 ${rid}`;
                         tbody.innerHTML += `
                             <tr onclick="showRoomDetails('${rid}', '${cName}')">
                                 <td class="course-name">${cName}</td>
@@ -309,11 +332,22 @@
                     }
                 }
             });
-            // 식사 예정 = 실제 입교 인원 - 제외 신청자
+            
             document.getElementById('grandTotalNet').innerHTML = (grandTotalArrived - grandTotalSkips) + "<span>명</span>";
             document.getElementById('grandTotalSkips').innerText = grandTotalSkips + "명";
+
+            // 만약 표시할 과정이 하나도 없다면 안내 문구 출력
+            if (tbody.innerHTML === "") {
+                tbody.innerHTML = "<tr><td colspan='4' style='padding:50px; color:#94a3b8; text-align:center;'>현재 진행 중인 교육 과정이 없습니다.</td></tr>";
+            }
         });
     }
+
+
+
+
+
+
 
     function showRoomDetails(rid, cName) {
         const today = getTodayString();
