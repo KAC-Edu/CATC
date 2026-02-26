@@ -3177,6 +3177,19 @@ resetShuttleRequests: function() {
             menu.style.display = 'flex';
             chevron.classList.replace('fa-chevron-up', 'fa-chevron-down');
         }
+    },
+
+// [강사 플랫폼 전용: 보안 하이패스 함수]
+    goFamilySite: function(role, url) {
+        // 해당 역할의 보안 키를 생성 (포털에서 PIN 친 것과 동일한 효과)
+        const sessionKey = 'kac_session_' + role;
+        const sessionData = { time: Date.now() };
+        
+        // 로컬 스토리지에 보안 세션 강제 주입
+        localStorage.setItem(sessionKey, JSON.stringify(sessionData));
+        
+        // 페이지 이동
+        window.open(url, '_blank');
     }
 
 
