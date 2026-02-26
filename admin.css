@@ -3029,3 +3029,44 @@ body.night-mode .status-badge.status-arrived {
     background-color: #065f46;
     color: #34d399;
 }
+
+
+/* 가족 페이지 메뉴 스타일 */
+.family-site-menu {
+    display: none;
+    flex-direction: column;
+    background: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 12px;
+    padding: 6px;
+    position: absolute;
+    bottom: 50px; /* 버튼 위에 위치 */
+    left: 0;
+    width: 100%;
+    z-index: 1000;
+    box-shadow: 0 -10px 25px rgba(0,0,0,0.3);
+}
+
+.family-site-menu a {
+    padding: 12px 15px;
+    color: #94a3b8;
+    text-decoration: none;
+    font-size: 13px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    border-radius: 8px;
+    transition: 0.2s;
+}
+
+.family-site-menu a:hover {
+    background: #0f172a;
+    color: #3b82f6;
+}
+
+.family-site-menu a i {
+    width: 18px;
+    text-align: center;
+    font-size: 14px;
+}

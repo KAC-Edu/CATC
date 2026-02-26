@@ -3162,7 +3162,29 @@ resetShuttleRequests: function() {
             .catch(e => {
                 ui.showAlert("오류 발생: " + e.message);
             });
+    },
+
+// [가족 사이트 토글 함수]
+    toggleFamilySites: function() {
+        const menu = document.getElementById('familySiteMenu');
+        const chevron = document.getElementById('familyChevron');
+        const isOpen = menu.style.display === 'flex';
+
+        if (isOpen) {
+            menu.style.display = 'none';
+            chevron.classList.replace('fa-chevron-down', 'fa-chevron-up');
+        } else {
+            menu.style.display = 'flex';
+            chevron.classList.replace('fa-chevron-up', 'fa-chevron-down');
+        }
     }
+
+
+
+
+
+
+
 }; // <--- ui 객체를 닫아주는 아주 중요한 괄호입니다!
 
 
