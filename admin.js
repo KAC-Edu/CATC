@@ -2618,40 +2618,36 @@ renderQaList: function(f) {
         window.open(url, 'googleTranslatePopup', 'width=1000,height=600');
     },
     
+// [강사 플랫폼: 초기 대기 화면 설정]
     showWaitingRoom: function() {
-        if (!state.room) {
         state.room = null;
-        }
+        
+        // 상단 바 텍스트 및 배지 초기화
         const roomNameEl = document.getElementById('displayRoomName');
         if(roomNameEl) roomNameEl.innerText = "Instructor Waiting Room";
+        document.querySelectorAll('.room-badge-global').forEach(b => b.innerText = "");
         
+        // 탭 메뉴 숨기기
         const tabs = document.querySelector('.mode-tabs');
         if(tabs) tabs.style.display = 'none'; 
         
-        const viewQa = document.getElementById('view-qa');
-        const viewQuiz = document.getElementById('view-quiz');
-        const viewStatus = document.getElementById('statusOverlay');
+        // [중요] 모든 뷰(대시보드, Q&A 등)를 먼저 싹 숨깁니다.
+        document.querySelectorAll('[id^="view-"]').forEach(v => { 
+            v.style.display = 'none'; 
+        });
+        
+        // 실시간 현황판(Waiting Room)만 보이게 설정
         const viewWait = document.getElementById('view-waiting');
+        if(viewWait) viewWait.style.display = 'block'; 
         
-        if(viewQa) viewQa.style.display = 'none';
-        if(viewQuiz) viewQuiz.style.display = 'none';
-        if(viewStatus) viewStatus.style.display = 'none'; 
-        if(viewWait) viewWait.style.display = 'flex'; 
-        
-        const statusSel = document.getElementById('roomStatusSelect');
-        if(statusSel) {
-            statusSel.value = 'waiting';
-            statusSel.disabled = true;
-
-        const btnReset = document.getElementById('btnReset');
-        if(btnReset) {
-            btnReset.disabled = true; // 버튼 클릭 차단
-            btnReset.style.opacity = '0.5'; // 반투명하게 (잠긴 것처럼 보이게)
-            btnReset.style.cursor = 'not-allowed'; // 마우스 올리면 금지 표시
-        }
-
-        }
+        // 룸 선택 셀렉트박스를 "Select Room ▾"으로 초기화
+        const statusSel = document.getElementById('roomSelect');
+        if(statusSel) statusSel.value = "";
     },
+
+
+
+
 
     loadAdminActionData: function() {
         if(!state.room) return;
@@ -3179,21 +3175,17 @@ resetShuttleRequests: function() {
         }
     },
 
-// [강사 플랫폼: 로고 클릭 시 초기 현황판으로 이동]
+// [강사 플랫폼: 로고 클릭 시 모든 정보를 초기화하고 현황판으로 이동]
     goHome: function() {
-        if(state.room) {
-            if(confirm("현재 강의실에서 나가 초기 현황판 화면으로 이동하시겠습니까?")) {
-                // 1. 마지막 방문 룸 기록 삭제 (자동 재입장 방지)
-                localStorage.removeItem('kac_last_room');
-                
-                // 2. [핵심 수정] 페이지를 'admin.html'로 완전히 다시 불러옵니다.
-                // 2번 눌러야 하던 이유는 배경의 실시간 리스너들이 화면을 계속 붙잡고 있었기 때문인데,
-                // 이렇게 새로고침을 해주면 1번 클릭으로 즉시 초기 화면이 뜹니다.
-                location.href = 'admin.html';
-            }
-        } else {
-            // 이미 현황판이면 새로고침 효과
-            location.reload();
+        if(confirm("현재 강의실에서 나가 초기 현황판 화면으로 이동하시겠습니까?")) {
+            // 1. 로컬 저장소의 모든 방 접속 정보 삭제 (초기화 핵심)
+            localStorage.removeItem('kac_last_room');
+            localStorage.removeItem('kac_last_mode');
+            state.room = null;
+
+            // 2. 주소창의 파라미터를 제거하고 깨끗하게 새로고침
+            // 이렇게 하면 다시 접속했을 때 아무 방도 선택되지 않은 초기 상태가 됩니다.
+            location.href = 'admin.html';
         }
     },
 
