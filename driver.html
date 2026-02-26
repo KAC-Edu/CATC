@@ -803,7 +803,7 @@ function renderTraineeGrid() {
   const container = document.getElementById('trainee-list-body');
   let html = "";
   
-  // 오늘 날짜 구하기 (YYYY-MM-DD 형식)
+  // 오늘 날짜 구하기
   const now = new Date();
   const todayStr = now.getFullYear() + '-' + 
                  String(now.getMonth() + 1).padStart(2, '0') + '-' + 
@@ -818,12 +818,35 @@ function renderTraineeGrid() {
     const room = allCourses[rid]; 
     if(room.status?.roomStatus !== 'active') return;
     
-    // [날짜 필터링 추가] 종료일이 어제 날짜 이전인 지난주 과정은 기사님 리스트에서도 제외
     const settings = room.settings || {};
+    let displayEndDate = "미정";
+
+    // [날짜 계산 로직 추가]
     if (settings.period && settings.period.includes(" ~ ")) {
-      const endDate = settings.period.split(" ~ ")[1];
-      if (endDate < todayStr) {
-        return; // 종료일이 과거면 표시하지 않고 다음 과정으로 넘어감
+      const parts = settings.period.split(" ~ ");
+      const startDate = new Date(parts[0]);
+      const finalEndDateStr = parts[1];
+      const finalEndDate = new Date(finalEndDateStr);
+
+      // 오늘 날짜가 최종 종료일보다 이미 지났으면 리스트에서 제외
+      if (new Date(todayStr) > finalEndDate) {
+        return; 
+      }
+
+      // 1주차 금요일 계산
+      let firstFriday = new Date(startDate);
+      let dayToFri = (5 - startDate.getDay() + 7) % 7; 
+      firstFriday.setDate(startDate.getDate() + dayToFri);
+
+      // 비교용 날짜 생성
+      const compareToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const compareFirstFriday = new Date(firstFriday.getFullYear(), firstFriday.getMonth(), firstFriday.getDate());
+
+      // 오늘이 1주차 금요일 전이면 1주차 금요일 표시, 지났으면 최종 종료일 표시
+      if (compareToday <= compareFirstFriday) {
+        displayEndDate = firstFriday.toISOString().split('T')[0];
+      } else {
+        displayEndDate = finalEndDateStr;
       }
     }
     
@@ -836,14 +859,11 @@ function renderTraineeGrid() {
       timeOptions += `<option value="${t}" ${dep.time===t?'selected':''}>${t}</option>`;
     }
 
-// 종료일 추출
-    const endDate = (settings.period && settings.period.includes(" ~ ")) ? settings.period.split(" ~ ")[1] : "미정";
-
     html += `
       <div class="course-row">
         <div class="t-cell" style="text-align:left; padding-left:10px; font-size:11px; line-height:1.3;">
           <div style="font-weight:800;">${settings.courseName || rid}</div>
-          <div style="color:#ef4444; font-size:10px;">퇴교일: ${endDate}</div>
+          <div style="color:#ef4444; font-size:10px;">퇴교일: ${displayEndDate}</div>
         </div>
         <div class="t-cell">
           <span class="count-badge">${total}명</span>
@@ -862,12 +882,10 @@ function renderTraineeGrid() {
   });
   container.innerHTML = html;
   
-  // 만약 필터링 후에 아무 과정도 남지 않았다면 안내 문구 표시
   if (html === "") {
     container.innerHTML = `<div style="text-align:center; padding:50px; color:#94a3b8; font-size:13px; font-weight:700;">이번 주 예정된 퇴교 수송 과정이 없습니다.</div>`;
   }
 }
-
 
 
 
