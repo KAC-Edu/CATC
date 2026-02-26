@@ -685,7 +685,8 @@
     <!-- [신규] 출결 QR 확인 팝업 -->
     <div id="qrModal" class="menu-overlay" style="display:none; z-index: 9001;" onclick="if(event.target==this)this.style.display='none'">
         <div class="menu-box">
-            <h3 style="margin-bottom:15px;">출결 QR (고용노동부)</h3>
+            <h3 style="margin-bottom:15px;">출
+결 QR (고용노동부)</h3>
             <img id="qrImage" src="" class="qr-img-full" style="display:none;">
             <div id="qrEmptyMsg" style="padding:40px 0; color:#94a3b8; font-weight:bold; display:none;">등록된 QR이 없습니다.</div>
             <button onclick="document.getElementById('qrModal').style.display='none'" style="margin-top:20px; width:100%; padding:12px; border:none; border-radius:8px; background:#e2e8f0; font-weight:bold;">닫기</button>
@@ -714,7 +715,7 @@
             </div>
 
             <!-- 이미지 (초기에는 숨김 display:none) -->
-            <img id="mealMenuImage" src="" style="width:100%; display:none; transition: transform 0.1s ease-out; transform-origin: center; z-index:1;" alt="식단표">
+            <img id="mealMenuImage" src="" style="width:100%; display:none; transform-origin: center; z-index:1; will-change: transform; cursor: grab;" alt="식단표">
         </div>
         
         <p style="margin-top:10px; font-size:11px; text-align:center; color:#94a3b8;">배경을 터치하거나 X를 누르면 닫힙니다.</p>
@@ -2560,24 +2561,26 @@ function cleanUrlAndGo(r) {
 
 
 
-/* --- 식단표 확대/축소(Pinch Zoom) 및 이동(Pan) 로직 --- */
+/* --- 식단표 확대/축소(Pinch Zoom) 및 이동(Pan) 로직 (깜빡임 방지 개선판) --- */
 let scale = 1;
 let lastScale = 1;
 let posX = 0;
 let posY = 0;
-let lastPosX = 0;
-let lastPosY = 0;
 let startX = 0;
 let startY = 0;
 let initialDistance = 0;
 
-// 1. 식단표 닫기 (모든 상태 초기화)
 function closeMealMenu() {
     scale = 1; lastScale = 1;
-    posX = 0; posY = 0; lastPosX = 0; lastPosY = 0;
+    posX = 0; posY = 0;
     const img = document.getElementById('mealMenuImage');
-    if(img) img.style.transform = `translate(0px, 0px) scale(1)`;
-    document.getElementById('mealMenuModal').style.display = 'none';
+    if(img) {
+        img.style.transition = "transform 0.3s ease-out"; // 닫을때만 부드럽게
+        img.style.transform = `translate(0px, 0px) scale(1)`;
+    }
+    setTimeout(() => {
+        document.getElementById('mealMenuModal').style.display = 'none';
+    }, 100);
 }
 
 const imageContainer = document.getElementById('mealImageContainer');
@@ -2585,60 +2588,53 @@ const mealImg = document.getElementById('mealMenuImage');
 
 if (imageContainer && mealImg) {
     imageContainer.addEventListener('touchstart', (e) => {
+        // 터치가 시작되면 애니메이션(transition)을 즉시 제거해서 깜빡임 방지
+        mealImg.style.transition = "none";
+
         if (e.touches.length === 1) {
-            // 이동(Pan)을 위한 시작점 저장
             startX = e.touches[0].pageX - posX;
             startY = e.touches[0].pageY - posY;
         } else if (e.touches.length === 2) {
-            // 확대(Zoom)를 위한 초기 거리 측정
             initialDistance = Math.hypot(
                 e.touches[0].pageX - e.touches[1].pageX,
                 e.touches[0].pageY - e.touches[1].pageY
             );
         }
-    });
+    }, { passive: false });
 
     imageContainer.addEventListener('touchmove', (e) => {
-        e.preventDefault(); // 브라우저 스크롤 방지
+        e.preventDefault(); 
 
         if (e.touches.length === 1 && scale > 1) {
-            // [이동 로직] 확대된 상태에서만 이동 가능
             posX = e.touches[0].pageX - startX;
             posY = e.touches[0].pageY - startY;
-            
-            // 이미지 움직임 적용
             mealImg.style.transform = `translate(${posX}px, ${posY}px) scale(${scale})`;
-            
         } else if (e.touches.length === 2) {
-            // [확대 로직]
             const currentDistance = Math.hypot(
                 e.touches[0].pageX - e.touches[1].pageX,
                 e.touches[0].pageY - e.touches[1].pageY
             );
-
             const delta = currentDistance / initialDistance;
             let newScale = lastScale * delta;
 
-            // 1배 ~ 4배 제한
             if (newScale < 1) newScale = 1;
             if (newScale > 4) newScale = 4;
 
             scale = newScale;
-            
-            // 배율이 1배가 되면 위치도 중앙으로 강제 복구
-            if (scale === 1) {
-                posX = 0; posY = 0;
-            }
+            if (scale === 1) { posX = 0; posY = 0; }
 
             mealImg.style.transform = `translate(${posX}px, ${posY}px) scale(${scale})`;
         }
     }, { passive: false });
 
     imageContainer.addEventListener('touchend', (e) => {
-        // 마지막 배율 및 위치 저장
         lastScale = scale;
-        lastPosX = posX;
-        lastPosY = posY;
+        // 다시 축소했을 때 중앙으로 부드럽게 정렬되도록 함
+        if (scale <= 1.1) {
+            mealImg.style.transition = "transform 0.2s ease-out";
+            posX = 0; posY = 0; scale = 1; lastScale = 1;
+            mealImg.style.transform = `translate(0px, 0px) scale(1)`;
+        }
     });
 }
 
