@@ -2248,7 +2248,7 @@ function showMainDashboard() {
 
 
 
-// 식단표 보기 함수 (시작 시 위치 초기화 추가)
+// 식단표 보기 함수 (성능 최적화 버전)
 async function viewMealMenu() {
     document.getElementById('menuModal').style.display = 'none';
     
@@ -2256,28 +2256,42 @@ async function viewMealMenu() {
     const loader = document.getElementById('mealLoading');
     const img = document.getElementById('mealMenuImage');
 
-    // 위치 변수 리셋 (중앙 정렬)
+    // 위치 및 배율 초기화
     scale = 1; lastScale = 1; posX = 0; posY = 0; 
     img.style.transform = `translate(0px, 0px) scale(1)`;
+    img.style.display = 'none'; // 새 사진 불러올 때까지 일단 숨김
+    loader.style.display = 'flex'; // 로딩 스피너 보이기
 
     modal.style.display = 'flex';
-    loader.style.display = 'flex';
-    img.style.display = 'none';
 
     try {
+        // 데이터베이스에서 주소 가져오기
         const snap = await firebase.database().ref('system/nutrition_menu').once('value');
         const imageUrl = snap.val();
-        if (!imageUrl) { alert("식단표가 없습니다."); modal.style.display = 'none'; return; }
+        
+        if (!imageUrl) { 
+            alert("등록된 식단표가 없습니다."); 
+            modal.style.display = 'none'; 
+            return; 
+        }
 
+        // 이미지 로딩을 기다리는 이벤트 추가
         img.src = imageUrl;
         img.onload = function() {
-            loader.style.display = 'none';
-            img.style.display = 'block';
+            loader.style.display = 'none'; // 사진 로드 완료되면 로딩 숨김
+            img.style.display = 'block';   // 사진 보여주기
         };
     } catch (e) {
+        console.error("식단 로딩 에러:", e);
         modal.style.display = 'none';
     }
 }
+
+
+
+
+
+
 
 
 

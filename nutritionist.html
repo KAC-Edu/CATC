@@ -385,17 +385,60 @@
         });
     }
 
+// 사진을 압축하고 용량을 줄이는 함수 (추가)
+    function compressImage(file, callback) {
+        const reader = new FileReader();
+        reader.onload = function (e) {
+            const img = new Image();
+            img.onload = function () {
+                const canvas = document.createElement('canvas');
+                let width = img.width;
+                let height = img.height;
+
+                // 최대 가로 크기를 1000px로 제한 (용량 최적화 핵심)
+                const MAX_WIDTH = 1000;
+                if (width > MAX_WIDTH) {
+                    height *= MAX_WIDTH / width;
+                    width = MAX_WIDTH;
+                }
+
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, width, height);
+
+                // 이미지 품질을 70%로 낮춰서 용량을 대폭 줄임
+                const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+                callback(dataUrl);
+            };
+            img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+    }
+
+    // 기존의 업로드 함수를 압축 기능이 포함된 버전으로 교체
     async function handleFileUpload(input) {
         const file = input.files[0];
         if (!file) return;
-        const reader = new FileReader();
-        reader.onload = async (e) => {
-            const base64 = e.target.result;
-            await firebase.database().ref('system/nutrition_menu').set(base64);
-            document.getElementById('menuPreview').src = base64;
-            alert("식단표 업로드가 완료되었습니다.");
-        };
-        reader.readAsDataURL(file);
+
+        // 로딩 시작 알림 (선택사항)
+        const btn = document.querySelector('.upload-btn');
+        const originalText = btn.innerHTML;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 압축 중...';
+        btn.disabled = true;
+
+        compressImage(file, async function(compressedData) {
+            try {
+                await firebase.database().ref('system/nutrition_menu').set(compressedData);
+                document.getElementById('menuPreview').src = compressedData;
+                alert("식단표가 압축되어 업로드되었습니다. 이제 학생들이 아주 빠르게 볼 수 있습니다.");
+            } catch (error) {
+                alert("업로드 실패: " + error.message);
+            } finally {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
+        });
     }
 
     fetchMealData();
