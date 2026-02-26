@@ -3183,19 +3183,13 @@ resetShuttleRequests: function() {
     goHome: function() {
         if(state.room) {
             if(confirm("현재 강의실에서 나가 초기 현황판 화면으로 이동하시겠습니까?")) {
-                // 1. 현재 강의실 정보 초기화
-                state.room = null;
+                // 1. 마지막 방문 룸 기록 삭제 (자동 재입장 방지)
                 localStorage.removeItem('kac_last_room');
                 
-                // 2. 초기 현황판 화면(Waiting Room) 보여주기
-                ui.showWaitingRoom();
-                
-                // 3. 열려있을지 모르는 유관 시스템 메뉴 닫기
-                const familyMenu = document.getElementById('familySiteMenu');
-                if(familyMenu) familyMenu.style.display = 'none';
-                
-                // 4. 주소창 깔끔하게 정리 (선택 사항)
-                window.history.replaceState({}, '', 'admin.html');
+                // 2. [핵심 수정] 페이지를 'admin.html'로 완전히 다시 불러옵니다.
+                // 2번 눌러야 하던 이유는 배경의 실시간 리스너들이 화면을 계속 붙잡고 있었기 때문인데,
+                // 이렇게 새로고침을 해주면 1번 클릭으로 즉시 초기 화면이 뜹니다.
+                location.href = 'admin.html';
             }
         } else {
             // 이미 현황판이면 새로고침 효과
@@ -3204,19 +3198,21 @@ resetShuttleRequests: function() {
     },
 
 
-// [강사 플랫폼 전용: 보안 하이패스 함수]
+// [강사 플랫폼 전용: 유관 시스템 보안 하이패스 함수]
     goFamilySite: function(role, url) {
-        // 해당 역할의 보안 키를 생성 (포털에서 PIN 친 것과 동일한 효과)
-        const sessionKey = 'kac_session_' + role;
-        const sessionData = { time: Date.now() };
+        // 1. 해당 역할의 보안 키를 생성 (포털에서 PIN 친 것과 동일한 효과)
+        if(role !== 'none') {
+            const sessionKey = 'kac_session_' + role;
+            const sessionData = { time: Date.now() };
+            localStorage.setItem(sessionKey, JSON.stringify(sessionData));
+        }
         
-        // 로컬 스토리지에 보안 세션 강제 주입
-        localStorage.setItem(sessionKey, JSON.stringify(sessionData));
-        
-        // 페이지 이동
+        // 2. 페이지 이동 (새 창)
         window.open(url, '_blank');
-    }
 
+        // 3. [핵심 추가] 클릭 후 펼쳐진 메뉴를 자동으로 다시 접기
+        this.toggleFamilySites();
+    }
 
 
 
