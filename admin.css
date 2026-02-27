@@ -3070,3 +3070,23 @@ body.night-mode .status-badge.status-arrived {
     text-align: center;
     font-size: 14px;
 }
+
+
+/* 커스텀 달력 디자인 보강 */
+.flatpickr-calendar {
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2) !important;
+    border: 2px solid #3b82f6 !important; /* 파란색 테두리로 강조 */
+}
+.flatpickr-current-month {
+    font-size: 1.5rem !important; /* "3월 2026" 이 부분 글자 크기 확대 */
+    font-weight: 800 !important;
+    color: #003366 !important;
+}
+.flatpickr-weekday {
+    color: #64748b !important;
+    font-weight: bold !important;
+}
+.flatpickr-day.selected {
+    background: #3b82f6 !important;
+    border-color: #3b82f6 !important;
+}

@@ -4118,6 +4118,20 @@ openSetupModal: async function() {
                     }
                 }
                 this.loadCurrentSettings(); 
+// [추가] 고대비/대화면 달력 적용
+        const calendarConfig = {
+            locale: "ko",
+            dateFormat: "Y-m-d",
+            disableMobile: "true", // 모바일에서도 커스텀 달력 사용
+            onReady: function(selectedDates, dateStr, instance) {
+                // 달력 상단 월/년도 글자 크기 대폭 확대
+                instance.calendarContainer.style.fontSize = "16px";
+                instance.calendarContainer.style.fontWeight = "bold";
+            }
+        };
+        flatpickr("#setup-start-date", calendarConfig);
+        flatpickr("#setup-end-date", calendarConfig);
+
             });
         });
     },
