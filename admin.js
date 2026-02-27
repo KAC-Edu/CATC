@@ -3442,15 +3442,17 @@ loadFile: function(e) {
 renderScreen: function(q) {
         const qText = document.getElementById('d-qtext');
         const qNum = document.getElementById('quizNumberLabel');
-        if(qText) qText.innerText = q.text;
-        if(qNum) qNum.innerText = `Q${state.currentQuizIdx + 1}`;
+        
+        // 질문 텍스트 앞에 Q 번호를 붙여서 출력
+        if(qText) qText.innerHTML = `<span style="color:#3b82f6; margin-right:10px;">Q${state.currentQuizIdx + 1}.</span>${q.text}`;
+        
+        if(qNum) qNum.innerText = `문항 ${state.currentQuizIdx + 1}`;
         
         const oDiv = document.getElementById('d-options'); 
         if(oDiv) {
             oDiv.style.display = 'flex';
             oDiv.innerHTML = "";
             q.options.forEach((o, i) => {
-                // 구조를 최대한 단순화하여 높이 차지 최소화
                 oDiv.innerHTML += `
                     <div class="quiz-opt ${q.isOX ? 'ox-mode' : ''}" id="opt-${i+1}">
                         <div style="display:flex; align-items:center; flex:1;">
@@ -3462,8 +3464,6 @@ renderScreen: function(q) {
             });
         }
         document.getElementById('d-chart').style.display = 'none';
-        const guide = document.getElementById('quizGuideArea');
-        if(guide) guide.innerText = ""; 
     },
 
 
