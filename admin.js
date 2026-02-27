@@ -3673,6 +3673,44 @@ showFinalSummary: async function() {
         const summaryOverlay = document.getElementById('quizSummaryOverlay');
         if(summaryOverlay) summaryOverlay.style.display = 'flex';
     },
+
+
+
+// [수정본] 퀴즈 리포트 창을 닫고 모든 데이터를 초기화하며 종료하는 함수
+    closeSummaryAndExit: function() {
+        // 1. 화면의 리포트 레이어(하얀 창) 숨기기
+        const summaryOverlay = document.getElementById('quizSummaryOverlay');
+        if (summaryOverlay) summaryOverlay.style.display = 'none';
+
+        // 2. 서버 데이터 정리 (교육생들에게도 종료 신호 전송)
+        if (state.room) {
+            firebase.database().ref(`courses/${state.room}/activeQuiz`).set(null);
+            firebase.database().ref(`courses/${state.room}/status/quizStep`).set('none');
+            firebase.database().ref(`courses/${state.room}/quizAnswers`).set(null);
+            firebase.database().ref(`courses/${state.room}/quizFinalResults`).set(null);
+        }
+
+        // 3. 강사 PC 내부 데이터 초기화
+        state.currentQuizIdx = 0;
+        state.isExternalFileLoaded = false;
+        state.quizList = [];
+        
+        // 4. 타이머 중단
+        this.stopTimer();
+
+        // 5. 강사 화면 정리 (질문 게시판 탭으로 자동 복귀)
+        ui.setMode('qa');
+
+        // 6. 확인 알림
+        alert("퀴즈가 종료되었습니다. 데이터가 초기화되고 Q&A 화면으로 이동합니다.");
+    },
+
+
+
+
+
+
+
     
     renderChart: function(id, corr) {
         const div = document.getElementById('d-chart'); 
