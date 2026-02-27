@@ -2206,7 +2206,7 @@ setMode: function(mode) {
             v.style.display = 'none'; 
         });
 
-        // [유지] 강사 모드일 때 버튼 비활성화 해제 로직 (교육생 플랫폼 회색 음영 방지 관련)
+        // [유지] 강사 모드일 때 버튼 비활성화 해제 로직 (교육생 플랫폼 회색 음영 방지 관련 - 절대 수정 금지)
         if (!state.isObserver) {
             const allAdminBtns = document.querySelectorAll('.btn-action, .m-btn-done, .navy-btn, #btnReset, button.btn-danger');
             allAdminBtns.forEach(btn => {
@@ -2243,17 +2243,29 @@ setMode: function(mode) {
 
         localStorage.setItem('kac_last_mode', mode);
 
-        // 5. [핵심 수정] 각 모드별 데이터 로드 및 퀴즈 이어하기 판별
+        // 5. [핵심 수정] 각 모드별 데이터 로드 및 퀴즈 이어하기/새로고침 복구 판별
         if (state.room) {
             if (mode === 'quiz') {
+                // [추가] 퀴즈 탭 진입 시 리포트 오버레이(종료화면)가 떠있다면 강제로 닫기
+                const summaryOverlay = document.getElementById('quizSummaryOverlay');
+                if (summaryOverlay) summaryOverlay.style.display = 'none';
+
                 // 이미 불러온 퀴즈 데이터가 있다면 (중단 후 다시 들어온 경우)
                 if (state.quizList && state.quizList.length > 0) {
-                    document.getElementById('quizSelectModal').style.display = 'none'; // 파일 선택창 숨김
-                    quizMgr.showQuiz(); // 현재 풀던 번호의 문제 화면 즉시 로드
+                    document.getElementById('quizSelectModal').style.display = 'none'; 
+                    quizMgr.showQuiz(); 
                 } else {
-                    // 퀴즈 데이터가 없다면 처음이므로 파일 선택창 표시
-                    document.getElementById('quizSelectModal').style.display = 'flex'; 
-                    quizMgr.loadSavedQuizList(); 
+                    // 새로고침 등으로 데이터가 없다면 서버 상태 확인 후 분기
+                    firebase.database().ref(`courses/${state.room}/status/quizStep`).once('value', snap => {
+                        const currentStep = snap.val();
+                        // 서버가 'summary' 상태여서 리포트가 뜨는 것이라면 'none'으로 강제 복구
+                        if (currentStep === 'summary') {
+                            firebase.database().ref(`courses/${state.room}/status/quizStep`).set('none');
+                        }
+                        // 퀴즈 보관함 열기
+                        document.getElementById('quizSelectModal').style.display = 'flex'; 
+                        quizMgr.loadSavedQuizList(); 
+                    });
                 }
             }
 
