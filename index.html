@@ -518,6 +518,7 @@
             <div class="menu-item" onclick="openShuttleApply()"><i class="fa-solid fa-bus"></i> 차량 신청</div>
             <div class="menu-item" onclick="openAdminAction()"><i class="fa-solid fa-file-signature"></i> 외출·외박 / 석식제외</div>
             <div class="menu-item" onclick="openAttendanceQR()"><i class="fa-solid fa-qrcode" style="color: #3b82f6;"></i> 출결 QR 확인</div>
+            <div class="menu-item" onclick="openCnsPlatform()"><i class="fa-solid fa-tower-broadcast" style="color: #6366f1;"></i> 교보재 플랫폼(통신전자)</div>
             <button onclick="document.getElementById('menuModal').style.display='none'" style="margin-top:15px; width:100%; padding:12px; border:none; border-radius:12px; background:#f1f5f9; font-weight:900; color:#475569;">닫기</button>
         </div>
     </div>
@@ -2392,6 +2393,38 @@ async function openAttendanceQR() {
         else { msg.style.display = 'block'; }
     } catch (e) { msg.innerText = "연결 오류"; msg.style.display = 'block'; }
 }
+
+
+
+
+
+async function openCnsPlatform() {
+    // 비밀번호 'catc1234'를 암호화(Base64)하여 저장한 값입니다.
+    const secretKey = "Y2F0YzEyMzQ="; 
+    
+    const userInput = prompt("보안 구역입니다. 접근 비밀번호를 입력하세요.");
+    
+    if (!userInput) return; // 취소 시 중단
+
+    // 입력한 값을 암호화하여 대조 (보안성 강화)
+    const encryptedInput = btoa(userInput);
+
+    if (encryptedInput === secretKey) {
+        alert("✅ 인증되었습니다. CNS 플랫폼으로 이동합니다.");
+        // 메뉴 모달 닫기
+        document.getElementById('menuModal').style.display = 'none';
+        // 지정된 주소로 새 창 열기
+        window.open("https://jds0616-boop.github.io/kac-cns-platform/index.html", "_blank");
+    } else {
+        alert("❌ 비밀번호가 올바르지 않습니다. 접근이 거부되었습니다.");
+    }
+}
+
+
+
+
+
+
 
 
 
