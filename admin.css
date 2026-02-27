@@ -3072,41 +3072,68 @@ body.night-mode .status-badge.status-arrived {
 }
 
 
-/* 커스텀 달력 디자인 보강 */
+
+/* 1. 달력 전체 외곽 및 그림자 보강 */
 .flatpickr-calendar {
-    box-shadow: 0 10px 30px rgba(0,0,0,0.2) !important;
-    border: 2px solid #3b82f6 !important; /* 파란색 테두리로 강조 */
+    box-shadow: 0 10px 40px rgba(0,0,0,0.25) !important;
+    border: 2px solid #3b82f6 !important;
+    border-radius: 15px !important;
 }
+
+/* 2. 2개월 모드일 때 가로폭 강제 고정 */
+.flatpickr-calendar.rangeMode {
+    width: 600px !important; 
+}
+
+/* 3. 상단 월/년도 정보 시안성 확대 */
 .flatpickr-current-month {
-    font-size: 1.5rem !important; /* "3월 2026" 이 부분 글자 크기 확대 */
+    font-size: 1.5rem !important; 
     font-weight: 800 !important;
     color: #003366 !important;
-}
-.flatpickr-weekday {
-    color: #64748b !important;
-    font-weight: bold !important;
-}
-.flatpickr-day.selected {
-    background: #3b82f6 !important;
-    border-color: #3b82f6 !important;
-}
-
-
-/* 호텔 예약 스타일: 선택된 기간 연결 바 디자인 */
-.flatpickr-day.selected, .flatpickr-day.startRange, .flatpickr-day.endRange {
-    background: #3b82f6 !important;
-    border-color: #3b82f6 !important;
-    color: #fff !important;
-}
-.flatpickr-day.inRange {
-    background: #eff6ff !important; /* 연결되는 부드러운 하늘색 라인 */
-    border-color: transparent !important;
-    box-shadow: -5px 0 0 #eff6ff, 5px 0 0 #eff6ff !important;
-}
-.flatpickr-calendar.rangeMode {
-    width: 600px !important; /* 2개월 모드를 위해 가로 확대 */
 }
 .flatpickr-months .flatpickr-month {
     color: #003366 !important;
     fill: #003366 !important;
+}
+
+/* 4. 요일 폰트 강조 */
+.flatpickr-weekday {
+    color: #64748b !important;
+    font-weight: bold !important;
+}
+
+/* 5. [핵심 수정] 시작일, 종료일, 그리고 사이 날짜(inRange) 색상 완전 통일 */
+.flatpickr-day.selected, 
+.flatpickr-day.startRange, 
+.flatpickr-day.endRange, 
+.flatpickr-day.inRange,
+.flatpickr-day.today.inRange {
+    background: #3b82f6 !important;  /* 모두 동일한 진한 파랑 */
+    border-color: #3b82f6 !important;
+    color: #fff !important;          /* 글자색 흰색 고정 */
+    border-radius: 0;                /* 연결 부위를 사각형으로 이어지게 처리 */
+}
+
+/* 6. 시작일과 종료일의 양쪽 끝만 둥글게 처리 (바 형태 완성) */
+.flatpickr-day.startRange {
+    border-top-left-radius: 50px !important;
+    border-bottom-left-radius: 50px !important;
+}
+.flatpickr-day.endRange {
+    border-top-right-radius: 50px !important;
+    border-bottom-right-radius: 50px !important;
+}
+
+/* 7. 시작일이자 동시에 종료일인 경우 (날짜 하나만 클릭했을 때) */
+.flatpickr-day.startRange.endRange {
+    border-radius: 50px !important;
+}
+
+/* 8. 마우스 호버 시 색상 (조금 더 진한 파랑) */
+.flatpickr-day.inRange:hover,
+.flatpickr-day.selected:hover,
+.flatpickr-day.startRange:hover,
+.flatpickr-day.endRange:hover {
+    background: #2563eb !important;
+    border-color: #2563eb !important;
 }
