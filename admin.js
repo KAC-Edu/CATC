@@ -1436,29 +1436,29 @@ loadDashboardStats: function() {
         if (profOnlyEl) profOnlyEl.innerText = st.professorName || "미지정";
     });
 
-    // 5. ★핵심★ 실시간 접속자 현황 집계 (대시보드 + 퀴즈창 동시 업데이트)
+    // 5. ★핵심 수정★ 실시간 입교 완료 현황 집계 (온라인 여부 상관없이 전체 카운트)
     refs.actual.on('value', snap => {
         if (state.room !== room) return;
         const data = snap.val() || {};
         
-        // 현재 앱을 켜고 있는(isOnline: true) 학생만 필터링해서 카운트
-        const activeStudents = Object.values(data).filter(s => s.name && s.isOnline === true);
-        const onlineCount = activeStudents.length;
+        // 온라인(isOnline) 여부와 상관없이 이름이 등록된 모든 학생 필터링
+        const arrivedStudents = Object.values(data).filter(s => s.name && s.name !== "undefined");
+        const arrivedCount = arrivedStudents.length;
 
-        // (A) 대시보드 "입교 인원" 숫자 업데이트
+        // (A) 대시보드 "수강생 입교 현황" 좌측 숫자 업데이트
         const dashArrivedEl = document.getElementById('dashArrivedCount');
-        if (dashArrivedEl) dashArrivedEl.innerText = onlineCount;
+        if (dashArrivedEl) dashArrivedEl.innerText = arrivedCount;
         
-        // (B) 퀴즈 화면 상단 "0명" 숫자 강제 업데이트
+        // (B) 퀴즈 화면 상단 인원 숫자도 함께 업데이트
         const quizJoinCountEl = document.getElementById('currentJoinCount');
         if (quizJoinCountEl) {
-            quizJoinCountEl.innerText = onlineCount;
+            quizJoinCountEl.innerText = arrivedCount;
             
-            // 대기자 수(전체 접속자 - 제출자) 자동 계산
+            // 대기자 수 자동 재계산 (전체 입교자 - 퀴즈 제출자)
             const answeredCount = parseInt(document.getElementById('answeredCount').innerText || 0);
             const pendingCountEl = document.getElementById('pendingCount');
             if (pendingCountEl) {
-                pendingCountEl.innerText = Math.max(0, onlineCount - answeredCount);
+                pendingCountEl.innerText = Math.max(0, arrivedCount - answeredCount);
             }
         }
     });
@@ -1514,6 +1514,9 @@ loadDashboardStats: function() {
     // 9. 질문 카운트 업데이트
     this.updateQaCountBadge();
 },
+
+
+
 
 
 
