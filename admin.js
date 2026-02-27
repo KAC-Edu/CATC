@@ -829,38 +829,28 @@ resetCourse: function() {
     },
 
 // [최종 수정] 학생장 지정 및 해제 (옵저버 차단 포함)
-    toggleLeader: function(token, currentName) {
-        // 1. 옵저버 권한 체크 (변경 권한 차단)
-        if(state.isObserver) {
-            ui.showAlert("👁️ 옵저버 모드에서는 학생장 권한을 수정할 수 없습니다.");
-            return;
-        }
-
+toggleLeader: function(token, currentName) {
+        if(state.isObserver) return ui.showAlert("👁️ 옵저버는 권한을 수정할 수 없습니다.");
         if(!state.room) return;
 
         firebase.database().ref(`courses/${state.room}/students/${token}`).once('value', snap => {
             const student = snap.val();
             if(!student) return;
 
-            const isNowLeader = !student.isLeader; 
-
-            if(isNowLeader) {
-                // 학생장으로 지정할 때
-                const phone = prompt(`[${currentName}] 학생을 학생장으로 지정합니다.\n비상 연락망 관리를 위해 전체 전화번호를 입력하세요.`, "010-0000-0000");
-                if(!phone) return; // 취소 누르면 중단
+            if(!student.isLeader) {
+                // 학생장으로 지정할 때: 전체 전화번호 입력
+                const phone = prompt(`[${currentName}] 교육생을 학생장으로 지정합니다.\n비상 연락망(전체 번호)을 입력해주세요.`, "010-0000-0000");
+                if(!phone) return;
                 
                 firebase.database().ref(`courses/${state.room}/students/${token}`).update({
                     isLeader: true,
-                    phone: phone 
+                    phone: phone // 전체 번호 서버 저장
                 });
-                ui.showAlert(`👑 [${currentName}] 학생이 학생장으로 지정되었습니다.`);
+                ui.showAlert(`👑 [${currentName}] 교육생이 학생장으로 지정되었습니다.`);
             } else {
-                // 학생장 권한을 해제할 때
-                if(confirm(`[${currentName}] 학생의 학생장 권한을 해제할까요?`)) {
-                    firebase.database().ref(`courses/${state.room}/students/${token}`).update({
-                        isLeader: false
-                    });
-                    ui.showAlert(`✅ 학생장 권한이 해제되었습니다.`);
+                // 이미 학생장인 경우 클릭하면 해제
+                if(confirm(`[${currentName}] 교육생의 학생장 권한을 해제하시겠습니까?`)) {
+                    firebase.database().ref(`courses/${state.room}/students/${token}`).update({ isLeader: false });
                 }
             }
         });
@@ -2880,86 +2870,74 @@ cancelIndividualShuttle: function(waveId, locId, token, name) {
 
 
 loadStudentList: function() {
-    if(!state.room) return;
+        if(!state.room) return;
+        const expectedRef = firebase.database().ref(`courses/${state.room}/expectedStudents`);
+        const actualRef = firebase.database().ref(`courses/${state.room}/students`);
+        expectedRef.off(); actualRef.off();
 
-    // 1. 이전 방의 감시자(Listener)를 끄고 현재 방 명단만 감시 시작
-    const expectedRef = firebase.database().ref(`courses/${state.room}/expectedStudents`);
-    const actualRef = firebase.database().ref(`courses/${state.room}/students`);
-    expectedRef.off();
-    actualRef.off();
+        expectedRef.on('value', expSnap => {
+            const expectedNames = expSnap.val() || [];
+            actualRef.on('value', snap => {
+                if(!state.room) return; 
+                const data = snap.val() || {};
+                const tbody = document.getElementById('studentListTableBody');
+                if(!tbody) return;
 
-    expectedRef.on('value', expSnap => {
-        const expectedNames = expSnap.val() || [];
-        
-        actualRef.on('value', snap => {
-            // 방이 바뀌는 도중에 이전 데이터가 들어오는 것 방지
-            if(!state.room) return; 
+                const actualStudents = Object.keys(data).map(key => ({ token: key, ...data[key] }))
+                                             .filter(s => s.name && s.name !== "undefined");
+                const actualNames = actualStudents.map(s => s.name);
+                const combinedNames = Array.from(new Set([...expectedNames, ...actualNames])).sort((a,b) => a.localeCompare(b));
 
-            const data = snap.val() || {};
-            const tbody = document.getElementById('studentListTableBody');
-            if(!tbody) return;
+                tbody.innerHTML = ""; 
+                let arrivedCount = 0;
 
-            // 실제 입장한 학생 데이터 가공
-            const actualStudents = Object.keys(data).map(key => ({
-                token: key,
-                ...data[key]
-            })).filter(s => s.name && s.name !== "undefined");
+                combinedNames.forEach((name, idx) => {
+                    const sList = actualStudents.filter(student => student.name === name);
+                    const isArrived = sList.length > 0;
+                    const studentData = isArrived ? sList[0] : null;
+                    const isOnline = isArrived && studentData.isOnline === true;
+                    const isLeader = isArrived && studentData.isLeader === true;
 
-            const actualNames = actualStudents.map(s => s.name);
-            // 업로드한 예정 명단과 실제 입장 명단을 합쳐서 정렬
-            const combinedNames = Array.from(new Set([...expectedNames, ...actualNames])).sort((a,b) => a.localeCompare(b));
+                    if(isArrived) arrivedCount++;
 
-            tbody.innerHTML = ""; 
-            let arrivedCount = 0;
+                    // [수정] 학생장 여부에 따른 버튼 스타일 정의
+                    const leaderBtnStyle = isLeader 
+                        ? 'background: #3b82f6; color: white; border: none; font-weight: 800;' // 활성 (파랑)
+                        : 'background: #f1f5f9; color: #94a3b8; border: 1px solid #e2e8f0; font-weight: 500;'; // 비활성 (회색)
 
-            combinedNames.forEach((name, idx) => {
-                const sList = actualStudents.filter(student => student.name === name);
-                const isArrived = sList.length > 0;
-                
-                // 입장 경로 아이콘 결정
-                let joinTypeIcon = isArrived 
-                    ? (expectedNames.includes(name) ? '<i class="fa-solid fa-user-check" style="color:#3b82f6;"></i>' : '<i class="fa-solid fa-qrcode" style="color:#10b981;"></i>')
-                    : '<i class="fa-solid fa-user-clock" style="color:#cbd5e1;"></i>';
-
-                const studentData = isArrived ? sList[0] : null;
-                const isOnline = isArrived && studentData.isOnline === true;
-                const isLeader = isArrived && studentData.isLeader === true;
-
-                if(isArrived) arrivedCount++;
-
-                tbody.innerHTML += `
-                    <tr class="${isLeader ? 'is-leader-row' : ''}">
-                        <td>${idx + 1}</td>
-                        <td style="text-align:center;">
-                            <div style="display:inline-flex; align-items:center; gap:8px;">
-                                ${joinTypeIcon}
-                                <span style="color:${isOnline ? '#22c55e' : '#cbd5e1'};">●</span>
-                                <span style="font-weight:800;">${name}</span>
-                            </div>
-                        </td>
-                        <td><span class="status-badge ${isArrived ? 'status-arrived' : 'status-wait'}">${isArrived ? '입교 완료' : '미입교'}</span></td>
-                        <td style="color:#94a3b8; font-size:13px;">${isArrived ? (isOnline ? '접속 중' : '오프라인') : '-'}</td>
-                        <td>
-                            ${isArrived ? `
-                                <div style="display:flex; gap:5px; justify-content:center;">
-                                    <button class="btn-table-action" onclick="dataMgr.toggleLeader('${studentData.token}', '${name}')" 
-                                            style="padding:4px 8px; font-size:11px;">${isLeader ? "해제" : "학생장"}</button>
-                                    <button class="btn-table-action" onclick="dataMgr.deleteStudent('${studentData.token}')" 
-                                            style="background:#ef4444; color:white; padding:4px 8px; font-size:11px;">삭제</button>
+                    tbody.innerHTML += `
+                        <tr class="${isLeader ? 'is-leader-row' : ''}">
+                            <td>${idx + 1}</td>
+                            <td style="text-align:center;">
+                                <div style="display:inline-flex; align-items:center; gap:8px;">
+                                    <span style="color:${isOnline ? '#22c55e' : '#cbd5e1'};">●</span>
+                                    <span style="font-weight:800;">${isLeader ? '👑 ' : ''}${name}</span>
                                 </div>
-                            ` : `-`}
-                        </td>
-                    </tr>`;
+                            </td>
+                            <td><span class="status-badge ${isArrived ? 'status-arrived' : 'status-wait'}">${isArrived ? '입교 완료' : '미입교'}</span></td>
+                            <td style="color:#94a3b8; font-size:13px;">${isArrived ? (isOnline ? '접속 중' : '오프라인') : '-'}</td>
+                            <td>
+                                ${isArrived ? `
+                                    <div style="display:flex; gap:5px; justify-content:center;">
+                                        <!-- 클릭 시 toggleLeader 함수 실행 -->
+                                        <button class="btn-table-action" onclick="dataMgr.toggleLeader('${studentData.token}', '${name}')" 
+                                                style="padding:5px 10px; font-size:11px; border-radius:6px; cursor:pointer; ${leaderBtnStyle}">
+                                            학생장
+                                        </button>
+                                        <button class="btn-table-action" onclick="dataMgr.deleteStudent('${studentData.token}')" 
+                                                style="background:#ef4444; color:white; padding:5px 10px; border-radius:6px; font-size:11px; border:none; cursor:pointer;">삭제</button>
+                                    </div>
+                                ` : `-`}
+                            </td>
+                        </tr>`;
+                });
+                const total = combinedNames.length;
+                const percent = total > 0 ? Math.round((arrivedCount / total) * 100) : 0;
+                const statusEl = document.getElementById('arrivalStatusSmall');
+                if(statusEl) statusEl.innerText = `${arrivedCount} / ${total} 명 (${percent}%)`;
             });
-
-            const total = combinedNames.length;
-            const percent = total > 0 ? Math.round((arrivedCount / total) * 100) : 0;
-            const statusEl = document.getElementById('arrivalStatusSmall');
-            if(statusEl) statusEl.innerText = `${arrivedCount} / ${total} 명 (${percent}%)`;
         });
-    });
-},
-
+    },
 
 
 

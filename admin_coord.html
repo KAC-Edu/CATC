@@ -2060,7 +2060,7 @@ function deleteActionRow(rid, date, token, name) {
 
 
 
-// [최종 수정본] 버튼 크기를 동일하게 맞춘 상세 뷰 함수
+// [최종 수정본] 학생장 전체번호 반영 및 버튼 크기 균형을 맞춘 상세 뷰 함수
 function updateIndividualView() {
     const room = globalAllData[currentRID]; 
     if (!room) return;
@@ -2075,6 +2075,7 @@ function updateIndividualView() {
         endDate = dates[1];
     }
 
+    // 2. 상단 기본 정보 업데이트
     document.getElementById('ind-room-id').innerText = currentRID;
     document.getElementById('ind-course-name').innerText = room.settings?.courseName || "과정명 미설정";
     document.getElementById('ind-period').innerText = periodStr;
@@ -2082,6 +2083,20 @@ function updateIndividualView() {
     document.getElementById('ind-coord').innerText = room.settings?.coordinatorName || "-";
     document.getElementById('ind-room-loc').innerText = room.settings?.roomDetailName || "-";
 
+    // 3. [핵심 추가] 학생장 정보 표시 (성함 + 강사가 입력한 전체 전화번호)
+    let leaderTxt = "지정된 학생장 없음";
+    if (room.students) {
+        // 학생장(isLeader: true)인 사람만 골라내기
+        const leaders = Object.values(room.students).filter(s => s.isLeader === true);
+        if (leaders.length > 0) {
+            // 이름 (010-XXXX-XXXX) 형식으로 출력
+            leaderTxt = leaders.map(l => `${l.name} (${l.phone || '연락처 미등록'})`).join(' / ');
+        }
+    }
+    const leaderEl = document.getElementById('ind-leader');
+    if (leaderEl) leaderEl.innerText = leaderTxt;
+
+    // 4. 외출/외박 신청 명단 렌더링
     const actionTbody = document.getElementById('indActionTableBody');
     actionTbody.innerHTML = "";
 
@@ -2104,7 +2119,7 @@ function updateIndividualView() {
     } else {
         actionTbody.innerHTML = actionItems.map(a => {
             const isSigned = a.confirmed === true;
-            const btnText = isSigned ? "취소" : "서명"; // 글자수를 맞춰서 더 깔끔하게 함
+            const btnText = isSigned ? "취소" : "서명"; 
             const btnStyle = isSigned ? "background:#94a3b8;" : "background:#3b82f6;";
             const dataStr = encodeURIComponent(JSON.stringify(a));
             
@@ -2120,12 +2135,12 @@ function updateIndividualView() {
                 </td>
                 <td style="text-align:center;">
                     <div style="display:flex; gap:6px; justify-content:center; align-items:center;">
-                        <!-- 서명 버튼: 너비 55px, 높이 34px 고정 -->
+                        <!-- 서명 버튼: 55px * 34px 고정 -->
                         <button onclick="toggleConfirm('${currentRID}', '${a.date}', '${a.token}', ${isSigned})" 
                                 style="${btnStyle} color:#fff; border:none; border-radius:6px; width:55px; height:34px; font-weight:800; cursor:pointer; font-size:12px;">
                             ${btnText}
                         </button>
-                        <!-- 삭제 버튼: 너비 55px, 높이 34px 고정 -->
+                        <!-- 삭제 버튼: 55px * 34px 고정 -->
                         <button onclick="deleteActionRow('${currentRID}', '${a.date}', '${a.token}', '${a.name}')" 
                                 style="background:#ef4444; color:#fff; border:none; border-radius:6px; width:55px; height:34px; font-weight:800; cursor:pointer; font-size:12px;">
                             삭제
@@ -2136,6 +2151,7 @@ function updateIndividualView() {
         }).join('');
     }
 
+    // 5. 공지사항 업데이트
     const noticeEl = document.getElementById('courseNotice');
     if (document.activeElement !== noticeEl) {
         noticeEl.value = room.coordNotice || "";
