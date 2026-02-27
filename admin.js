@@ -4071,152 +4071,154 @@ occupiedLocations: [], // 이 줄을 추가하세요
 
 
 
-// [수정] 권한 체크가 강화된 설정 모달 오픈 함수
+// [최종 수정] 권한 체크 + 호텔 예약 방식(Range) 달력이 적용된 설정 모달 오픈 함수
 openSetupModal: async function() {
-        if(!state.room) return ui.showAlert("강의실을 먼저 선택하세요.");
-        
-        // 1. 보안 체크: 인증되지 않은 사용자는 실행 중단
-        const statusSnap = await firebase.database().ref(`courses/${state.room}/status`).get();
-        const st = statusSnap.val() || {};
+    if(!state.room) return ui.showAlert("강의실을 먼저 선택하세요.");
+    
+    // 1. 보안 체크: 인증되지 않은 사용자는 실행 중단
+    const statusSnap = await firebase.database().ref(`courses/${state.room}/status`).get();
+    const st = statusSnap.val() || {};
 
-        if (st.roomStatus === 'active' && st.ownerSessionId !== state.sessionId && !state.isObserver) {
-            // 이 메시지가 보인다는 건 클릭 차단 로직이 뚫렸다는 뜻입니다.
-            dataMgr.switchRoomAttempt(state.room); 
-            return;
+    if (st.roomStatus === 'active' && st.ownerSessionId !== state.sessionId && !state.isObserver) {
+        // 소유권이 없으면 다시 인증 시도 유도
+        dataMgr.switchRoomAttempt(state.room); 
+        return;
+    }
+
+    // 2. 권한 확인된 경우만 모달 데이터 로드
+    const allCoursesSnap = await firebase.database().ref('courses').get();
+    const allCourses = allCoursesSnap.val() || {};
+    this.occupiedLocations = [];
+    Object.keys(allCourses).forEach(r => {
+        if (r !== state.room && allCourses[r].status?.roomStatus === 'active') {
+            const loc = allCourses[r].settings?.roomDetailName;
+            if (loc) this.occupiedLocations.push(loc);
+        }
+    });
+
+    // 교수님 선택지 구성
+    let profOptions = '<option value="">(선택 안함)</option>';
+    profMgr.list.forEach(p => { profOptions += `<option value="${p.name}">${p.name} 교수</option>`; });
+    document.getElementById('setup-prof-select').innerHTML = profOptions;
+
+    // 담당자 및 가이드 상태 로드
+    firebase.database().ref('system/coordinators').once('value', snap => {
+        const coords = snap.val() || {};
+        let coordOptions = '<option value="">--- 담당자 선택 ---</option>';
+        Object.values(coords).forEach(c => { coordOptions += `<option value="${c.name}">${c.name}</option>`; });
+        document.getElementById('setup-coord-select').innerHTML = coordOptions;
+        
+        firebase.database().ref(`system/sharedGuide`).once('value', gSnap => {
+            const el = document.getElementById('modalGuideStatus');
+            if(el) {
+                if(gSnap.exists()) {
+                    el.innerHTML = '<i class="fa-solid fa-circle-check"></i> 가이드 PDF가 등록되어 있습니다.';
+                    el.style.color = "#10b981";
+                } else {
+                    el.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> 등록된 가이드 파일이 없습니다.';
+                    el.style.color = "#ef4444";
+                }
+            }
+
+            // 기존에 저장된 데이터(과정명, 장소 등)를 입력창에 세팅
+            this.loadCurrentSettings(); 
+
+            // [핵심 추가] 호텔 예약 방식(Range) 및 2개월 대화면 달력 적용
+            flatpickr("#setup-period-range", {
+                mode: "range",    // 호텔 예약처럼 범위 선택
+                locale: "ko",      // 한국어
+                dateFormat: "Y-m-d",
+                showMonths: 2,    // 2개월 달력을 동시에 보여줌 (시안성 극대화)
+                disableMobile: "true", // 모바일에서도 이 커스텀 디자인 유지
+                onReady: function(selectedDates, dateStr, instance) {
+                    // 달력 컨테이너 디자인 보정
+                    instance.calendarContainer.style.width = "600px"; // 가로폭 대폭 확대
+                    instance.calendarContainer.style.fontSize = "16px";
+                    instance.calendarContainer.style.fontWeight = "bold";
+                }
+            });
+        });
+    });
+},
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// [최종 수정] 통합 날짜(Range) 입력 방식에 맞춘 설정 데이터 로드 함수
+loadCurrentSettings: function() {
+    firebase.database().ref(`courses/${state.room}`).once('value', snap => {
+        const data = snap.val() || {};
+        const s = data.settings || {};
+        const st = data.status || {};
+        
+        // 1. 기본 정보 세팅
+        document.getElementById('setup-course-name').value = s.courseName || "";
+        document.getElementById('setup-room-pw').value = s.password ? atob(s.password) : "7777";
+        document.getElementById('setup-prof-select').value = st.professorName || "";
+        document.getElementById('setup-coord-select').value = s.coordinatorName || "";
+
+        // 2. 강의실 선택 및 중복 체크 로직
+        const roomSelect = document.getElementById('setup-room-select');
+        Array.from(roomSelect.options).forEach(opt => {
+            if (!opt.dataset.originalText) opt.dataset.originalText = opt.text;
+            
+            if (this.occupiedLocations.includes(opt.value)) {
+                opt.text = opt.dataset.originalText + " (이미 사용 중)";
+                opt.disabled = true;
+                opt.style.color = "#cbd5e1"; 
+            } else {
+                opt.text = opt.dataset.originalText;
+                opt.disabled = false;
+                opt.style.color = ""; 
+            }
+        });
+
+        // 3. 강의실 상세 위치 (직접 입력 대응)
+        const roomDirect = document.getElementById('setup-room-direct');
+        const currentRoomValue = s.roomDetailName || "";
+        let found = false;
+        for (let i = 0; i < roomSelect.options.length; i++) {
+            if (roomSelect.options[i].value === currentRoomValue) {
+                roomSelect.value = currentRoomValue;
+                found = true;
+                break;
+            }
+        }
+        if (!found && currentRoomValue) {
+            roomSelect.value = "direct";
+            roomDirect.value = currentRoomValue;
+            roomDirect.style.display = "block";
+        } else {
+            roomDirect.style.display = "none";
         }
 
-        // 2. 권한 확인된 경우만 모달 데이터 로드 (기존 로직 유지)
-        const allCoursesSnap = await firebase.database().ref('courses').get();
-        const allCourses = allCoursesSnap.val() || {};
-        this.occupiedLocations = [];
-        Object.keys(allCourses).forEach(r => {
-            if (r !== state.room && allCourses[r].status?.roomStatus === 'active') {
-                const loc = allCourses[r].settings?.roomDetailName;
-                if (loc) this.occupiedLocations.push(loc);
-            }
-        });
+        // 4. ★핵심 수정★ 날짜 범위 로직 (Range Picker 대응)
+        const rangeInput = document.getElementById('setup-period-range');
+        const todayStr = typeof getTodayString === 'function' ? getTodayString() : new Date().toISOString().split('T')[0];
 
-        let profOptions = '<option value="">(선택 안함)</option>';
-        profMgr.list.forEach(p => { profOptions += `<option value="${p.name}">${p.name} 교수</option>`; });
-        document.getElementById('setup-prof-select').innerHTML = profOptions;
-
-        firebase.database().ref('system/coordinators').once('value', snap => {
-            const coords = snap.val() || {};
-            let coordOptions = '<option value="">--- 담당자 선택 ---</option>';
-            Object.values(coords).forEach(c => { coordOptions += `<option value="${c.name}">${c.name}</option>`; });
-            document.getElementById('setup-coord-select').innerHTML = coordOptions;
-            
-            firebase.database().ref(`system/sharedGuide`).once('value', gSnap => {
-                const el = document.getElementById('modalGuideStatus');
-                if(el) {
-                    if(gSnap.exists()) {
-                        el.innerHTML = '<i class="fa-solid fa-circle-check"></i> 가이드 PDF가 등록되어 있습니다.';
-                        el.style.color = "#10b981";
-                    } else {
-                        el.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> 등록된 가이드 파일이 없습니다.';
-                        el.style.color = "#ef4444";
-                    }
-                }
-                this.loadCurrentSettings(); 
-// [추가] 고대비/대화면 달력 적용
-        const calendarConfig = {
-            locale: "ko",
-            dateFormat: "Y-m-d",
-            disableMobile: "true", // 모바일에서도 커스텀 달력 사용
-            onReady: function(selectedDates, dateStr, instance) {
-                // 달력 상단 월/년도 글자 크기 대폭 확대
-                instance.calendarContainer.style.fontSize = "16px";
-                instance.calendarContainer.style.fontWeight = "bold";
-            }
-        };
-        flatpickr("#setup-start-date", calendarConfig);
-        flatpickr("#setup-end-date", calendarConfig);
-
-            });
-        });
-    },
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-// 설정을 불러오는 내부 함수 분리 (날짜 초기화 로직 보강)
-    loadCurrentSettings: function() {
-        firebase.database().ref(`courses/${state.room}`).once('value', snap => {
-            const data = snap.val() || {};
-            const s = data.settings || {};
-            const st = data.status || {};
-            
-            document.getElementById('setup-course-name').value = s.courseName || "";
-            document.getElementById('setup-room-pw').value = s.password ? atob(s.password) : "7777";
-            document.getElementById('setup-prof-select').value = st.professorName || "";
-            document.getElementById('setup-coord-select').value = s.coordinatorName || "";
-
-            const roomSelect = document.getElementById('setup-room-select');
-            Array.from(roomSelect.options).forEach(opt => {
-                if (!opt.dataset.originalText) opt.dataset.originalText = opt.text;
-                
-                if (this.occupiedLocations.includes(opt.value)) {
-                    opt.text = opt.dataset.originalText + " (이미 사용 중)";
-                    opt.disabled = true;
-                    opt.style.color = "#cbd5e1"; 
-                } else {
-                    opt.text = opt.dataset.originalText;
-                    opt.disabled = false;
-                    opt.style.color = ""; 
-                }
-            });
-
-            const roomDirect = document.getElementById('setup-room-direct');
-            const currentRoomValue = s.roomDetailName || "";
-
-            let found = false;
-            for (let i = 0; i < roomSelect.options.length; i++) {
-                if (roomSelect.options[i].value === currentRoomValue) {
-                    roomSelect.value = currentRoomValue;
-                    found = true;
-                    break;
-                }
-            }
-
-            if (!found && currentRoomValue) {
-                roomSelect.value = "direct";
-                roomDirect.value = currentRoomValue;
-                roomDirect.style.display = "block";
-            } else {
-                roomDirect.style.display = "none";
-            }
-
-            // --- 날짜 설정 로직 수정 시작 ---
-            // config.js에 정의된 getTodayString() 함수를 사용하여 오늘 날짜(YYYY-MM-DD)를 가져옵니다.
-            const todayStr = typeof getTodayString === 'function' ? getTodayString() : new Date().toISOString().split('T')[0];
-
-            if(s.period && s.period.includes(" ~ ")) {
-                // 기존 데이터가 있는 경우
-                const dates = s.period.split(" ~ ");
-                document.getElementById('setup-start-date').value = dates[0];
-                document.getElementById('setup-end-date').value = dates[1];
-            } else {
-                // 비어있는 방인 경우 오늘 날짜로 자동 세팅
-                document.getElementById('setup-start-date').value = todayStr;
-                document.getElementById('setup-end-date').value = todayStr;
-            }
-            // --- 날짜 설정 로직 수정 끝 ---
-            
-            subjectMgr.renderListInModal();
-            document.getElementById('courseSetupModal').style.display = 'flex';
-        });
-    },
-
+        if(s.period && s.period.includes(" ~ ")) {
+            // 기존에 "2026-03-03 ~ 2026-03-13" 형태의 데이터가 있다면 그대로 입력
+            rangeInput.value = s.period;
+        } else {
+            // 데이터가 없으면 "오늘 ~ 오늘" 형태를 기본값으로 세팅
+            rangeInput.value = `${todayStr} ~ ${todayStr}`;
+        }
+        
+        // 5. 모달 표시 및 과목 리스트 출력
+        subjectMgr.renderListInModal();
+        document.getElementById('courseSetupModal').style.display = 'flex';
+    });
+},
 
 
 
@@ -4239,33 +4241,43 @@ openSetupModal: async function() {
         document.getElementById('courseSetupModal').style.display = 'none';
     },
 
+
+
+
 saveAll: function() {
         // [옵저버 제한]
         if(state.isObserver) return ui.showAlert("👁️ 옵저버 모드에서는 환경설정을 변경할 수 없습니다.");
 
         const name = document.getElementById('setup-course-name').value.trim();
         const rawPw = document.getElementById('setup-room-pw').value.trim();
-        const sDate = document.getElementById('setup-start-date').value;
-        const eDate = document.getElementById('setup-end-date').value;
+        
+        // ★ 수정: 두 개의 날짜 대신 통합된 범위 입력창에서 값을 가져옵니다.
+        const periodRange = document.getElementById('setup-period-range').value.trim();
+        
         const profName = document.getElementById('setup-prof-select').value;
         const coordName = document.getElementById('setup-coord-select').value;
 
         const roomSelectVal = document.getElementById('setup-room-select').value;
         const roomName = (roomSelectVal === "direct") ? document.getElementById('setup-room-direct').value.trim() : roomSelectVal;
 
-        if(!name || !sDate || !eDate || !rawPw || !roomName) {
-        if (this.occupiedLocations.includes(roomName)) {
-            ui.showAlert(`🚫 '${roomName}'은(는) 이미 사용 중인 장소입니다.`);
+        // ★ 유효성 검사 수정 (periodRange가 비어있는지 확인)
+        if(!name || !periodRange || !rawPw || !roomName) {
+            alert("모든 필수 항목(과정명, 암호, 교육기간, 장소)을 입력해주세요.");
             return;
         }
-            alert("모든 필수 항목(과정명, 암호, 기간, 장소)을 입력해주세요.");
+
+        if (this.occupiedLocations.includes(roomName)) {
+            ui.showAlert(`🚫 '${roomName}'은(는) 이미 사용 중인 장소입니다.`);
             return;
         }
 
         const updates = {};
         updates[`courses/${state.room}/settings/courseName`] = name;
         updates[`courses/${state.room}/settings/password`] = btoa(rawPw);
-        updates[`courses/${state.room}/settings/period`] = `${sDate} ~ ${eDate}`;
+        
+        // ★ 수정: 호텔 예약 방식으로 선택된 날짜 범위 ("시작일 ~ 종료일")를 그대로 저장합니다.
+        updates[`courses/${state.room}/settings/period`] = periodRange;
+        
         updates[`courses/${state.room}/settings/roomDetailName`] = roomName;
         updates[`courses/${state.room}/settings/coordinatorName`] = coordName;
         updates[`courses/${state.room}/status/professorName`] = profName;
@@ -4288,6 +4300,16 @@ saveAll: function() {
         });
     }
 }; // <--- setupMgr 객체를 닫아주는 아주 중요한 마침표입니다.
+
+
+
+
+
+
+
+
+
+
 
 // [신규] 팝업 내부 전용 과목 관리 기능 (이 함수들이 점선 아래로 들어가야 합니다)
 subjectMgr.renderListInModal = function() {

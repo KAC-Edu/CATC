@@ -1180,11 +1180,11 @@
                 </div>
 
 <div class="setup-group" style="margin-bottom:20px;">
-                        <label style="display:block; font-size:12px; font-weight:800; color:#64748b; margin-bottom:8px;">교육 기간 (시작일 ~ 종료일)</label>
-                        <div style="display:flex; gap:10px; align-items:center;">
-                            <input type="text" id="setup-start-date" class="setup-input" placeholder="시작일 선택" style="background:#fff; cursor:pointer;"> 
-                            <span style="font-weight:bold;">~</span>
-                            <input type="text" id="setup-end-date" class="setup-input" placeholder="종료일 선택" style="background:#fff; cursor:pointer;">
+                        <label style="display:block; font-size:12px; font-weight:800; color:#64748b; margin-bottom:8px;">교육 기간 (시작일 ~ 종료일 선택)</label>
+                        <div style="position: relative;">
+                            <!-- 두 칸을 하나로 합쳐서 호텔 예약 방식으로 변경 -->
+                            <input type="text" id="setup-period-range" class="setup-input" placeholder="날짜 범위를 선택하세요" style="background:#fff; cursor:pointer; width:100%; text-align:center; font-size:16px; font-weight:bold; height:50px;"> 
+                            <i class="fa-solid fa-calendar-days" style="position:absolute; right:15px; top:17px; color:#3b82f6;"></i>
                         </div>
                     </div>
 

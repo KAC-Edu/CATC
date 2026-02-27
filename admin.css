@@ -3090,3 +3090,23 @@ body.night-mode .status-badge.status-arrived {
     background: #3b82f6 !important;
     border-color: #3b82f6 !important;
 }
+
+
+/* 호텔 예약 스타일: 선택된 기간 연결 바 디자인 */
+.flatpickr-day.selected, .flatpickr-day.startRange, .flatpickr-day.endRange {
+    background: #3b82f6 !important;
+    border-color: #3b82f6 !important;
+    color: #fff !important;
+}
+.flatpickr-day.inRange {
+    background: #eff6ff !important; /* 연결되는 부드러운 하늘색 라인 */
+    border-color: transparent !important;
+    box-shadow: -5px 0 0 #eff6ff, 5px 0 0 #eff6ff !important;
+}
+.flatpickr-calendar.rangeMode {
+    width: 600px !important; /* 2개월 모드를 위해 가로 확대 */
+}
+.flatpickr-months .flatpickr-month {
+    color: #003366 !important;
+    fill: #003366 !important;
+}
