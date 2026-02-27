@@ -4123,24 +4123,23 @@ openSetupModal: async function() {
             // 기존에 저장된 데이터(과정명, 장소 등)를 입력창에 세팅
             this.loadCurrentSettings(); 
 
-// [최종 최적화] 자동 닫힘 방지 + 대화면 달력 적용
-            flatpickr("#setup-period-range", {
-                mode: "range",
-                locale: "ko",
-                dateFormat: "Y-m-d",
-                showMonths: 2,         // 2개월 동시 보기
-                closeOnSelect: false,  // ★ 두 번째 날짜 클릭해도 안 닫힘 (확인 후 바깥 클릭 시 닫힘)
-                disableMobile: "true",
-                onReady: function(selectedDates, dateStr, instance) {
-                    // 가로폭을 800px로 넉넉하게 늘려 3월과 4월 겹침 현상 해결
-                    instance.calendarContainer.style.width = "800px"; 
-                    instance.calendarContainer.style.fontSize = "16px";
-                },
-                onChange: function(selectedDates, dateStr, instance) {
-                    // 날짜를 선택할 때마다 너비가 유지되도록 보정
-                    instance.calendarContainer.style.width = "800px";
-                }
-            });
+// [최종 수정] 4월 달력 노출 + 자동 닫힘 방지 적용
+flatpickr("#setup-period-range", {
+    mode: "range",
+    locale: "ko",
+    dateFormat: "Y-m-d",
+    showMonths: 2,         // 2개월 동시 보기
+    closeOnSelect: false,  // ★ 두 번째 날짜를 찍어도 안 닫히게 설정 (확인용)
+    disableMobile: "true",
+    onReady: function(selectedDates, dateStr, instance) {
+        // CSS와 일치하도록 가로폭 850px 강제 지정
+        instance.calendarContainer.style.width = "850px"; 
+    },
+    onChange: function(selectedDates, dateStr, instance) {
+        // 날짜 선택 시에도 가로폭 유지
+        instance.calendarContainer.style.width = "850px";
+    }
+});
         });
     });
 },
