@@ -2208,7 +2208,13 @@ openQrModal: function() {
 
 
 setMode: function(mode) {
-        // [수정] 플로팅 홈 버튼 제어: 대시보드(dashboard) 또는 퀴즈(quiz) 모드일 때 숨김
+        // [추가] 강의실에 입장한 상태라면 숨겨졌던 메뉴 탭(mode-tabs)을 다시 보여줍니다.
+        const tabs = document.querySelector('.mode-tabs');
+        if (state.room && tabs) {
+            tabs.style.display = 'flex'; 
+        }
+
+        // [유지] 플로팅 홈 버튼 제어: 대시보드(dashboard) 또는 퀴즈(quiz) 모드일 때 숨김
         const homeBtn = document.getElementById('floatingHomeBtn');
         if (homeBtn) {
             if (mode === 'dashboard' || mode === 'quiz') {
@@ -2263,16 +2269,15 @@ setMode: function(mode) {
         // 5. 각 모드별 데이터 로드 및 퀴즈 이어하기/새로고침 복구 판별
         if (state.room) {
             if (mode === 'quiz') {
-                // [추가] 퀴즈 탭 진입 시 리포트 오버레이(종료화면)가 떠있다면 강제로 닫기
+                // 퀴즈 탭 진입 시 리포트 오버레이(종료화면)가 떠있다면 강제로 닫기
                 const summaryOverlay = document.getElementById('quizSummaryOverlay');
                 if (summaryOverlay) summaryOverlay.style.display = 'none';
 
-                // [추가] 브라우저에 저장된 마지막 문제 번호 가져오기
+                // 브라우저에 저장된 마지막 문제 번호 가져오기
                 const savedIdx = localStorage.getItem(`kac_quiz_idx_${state.room}`);
 
                 // (A) 이미 퀴즈 데이터가 메모리에 있는 경우 (탭 이동 후 복귀)
                 if (state.quizList && state.quizList.length > 0) {
-                    // 저장된 번호가 있다면 복구
                     if (savedIdx !== null) {
                         state.currentQuizIdx = parseInt(savedIdx);
                     }
@@ -2283,11 +2288,9 @@ setMode: function(mode) {
                 else {
                     firebase.database().ref(`courses/${state.room}/status/quizStep`).once('value', snap => {
                         const currentStep = snap.val();
-                        // 서버가 'summary' 상태여서 리포트가 뜨는 것이라면 'none'으로 강제 복구
                         if (currentStep === 'summary') {
                             firebase.database().ref(`courses/${state.room}/status/quizStep`).set('none');
                         }
-                        // 퀴즈 보관함 열어서 파일 선택 유도
                         document.getElementById('quizSelectModal').style.display = 'flex'; 
                         quizMgr.loadSavedQuizList(); 
                     });
@@ -2385,7 +2388,6 @@ setMode: function(mode) {
             }
         }
     },
-
 
 
 
