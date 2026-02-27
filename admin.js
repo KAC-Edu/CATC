@@ -3446,28 +3446,25 @@ renderScreen: function(q) {
         if(qNum) qNum.innerText = `Q${state.currentQuizIdx + 1}`;
         
         const oDiv = document.getElementById('d-options'); 
-        const cDiv = document.getElementById('d-chart');
-        
         if(oDiv) {
             oDiv.style.display = 'flex';
             oDiv.innerHTML = "";
             q.options.forEach((o, i) => {
-                // 좌측: 번호+텍스트(flex:1) / 우측: 카운트라벨(고정너비) 구조
+                // 구조를 최대한 단순화하여 높이 차지 최소화
                 oDiv.innerHTML += `
                     <div class="quiz-opt ${q.isOX ? 'ox-mode' : ''}" id="opt-${i+1}">
                         <div style="display:flex; align-items:center; flex:1;">
-                            <div class="opt-num">${q.isOX ? (i===0?'O':'X') : (i+1)}</div>
+                            ${q.isOX ? '' : `<div class="opt-num">${i+1}</div>`}
                             <div class="opt-text">${o}</div>
                         </div>
                         <div class="opt-count-label" id="count-${i+1}"></div>
                     </div>`;
             });
         }
-        if(cDiv) cDiv.style.display = 'none';
+        document.getElementById('d-chart').style.display = 'none';
         const guide = document.getElementById('quizGuideArea');
         if(guide) guide.innerText = ""; 
     },
-    
 
 
 

@@ -3195,58 +3195,67 @@ body.night-mode .status-badge.status-arrived {
 
 
 
-/* 퀴즈 문항 공통 스타일: 좌측 정렬로 통일 */
-.quiz-opt {
-    display: flex !important;
-    align-items: center !important;
-    justify-content: flex-start !important; /* 모든 내용을 왼쪽부터 배치 */
-    position: relative;
-    padding: 0 25px !important; /* 좌우 여백 확보 */
-    overflow: hidden;
-    z-index: 1;
-    min-height: 80px;
-    margin-bottom: 12px;
-}
 
-/* 문항 텍스트: 왼쪽 정렬 및 남은 공간 다 차지 */
-.opt-text {
-    flex: 1 !important;
-    text-align: left !important;
-    font-size: 32px;
-    font-weight: 800;
-    color: #1e293b;
-    padding-left: 10px;
-}
 
-/* 번호 박스: 고정 크기 */
-.opt-num {
-    width: 55px;
-    height: 55px;
-    background: #f1f5f9;
-    border-radius: 12px;
+/* 퀴즈 전체 컨텐츠 영역: 슬라이드바 제거 */
+#quizContent {
+    flex-grow: 1;
+    padding: 20px 40px !important;
     display: flex;
-    align-items: center;
+    flex-direction: column;
+    overflow: hidden !important; /* 슬라이드바 강제 제거 */
+}
+
+/* 질문 텍스트 영역: 공간 최적화 */
+.quiz-question-area {
+    margin-bottom: 20px !important;
+    min-height: 80px;
+}
+.quiz-question {
+    font-size: 36px !important; /* 질문 크기 */
+    font-weight: 900;
+    line-height: 1.2;
+}
+
+/* 문항 컨테이너: 간격 좁힘 */
+.quiz-options {
+    gap: 8px !important; /* 문항 사이 간격 최소화 */
+    display: flex;
+    flex-direction: column;
     justify-content: center;
-    font-size: 26px;
-    font-weight: 900;
-    flex-shrink: 0;
 }
 
-/* 결과 모드일 때 우측에 붙는 숫자 라벨 */
+/* 퀴즈 문항 공통: 높이 조절 및 정렬 */
+.quiz-opt {
+    min-height: 70px !important; /* 4문항이 한 화면에 들어오도록 높이 조절 */
+    margin-bottom: 0 !important;
+    padding: 0 20px !important;
+}
+
+/* 문항 텍스트: 글자 크기 복구 및 확대 */
+.opt-text {
+    font-size: 38px !important; /* 4지선다 글자 크기 대폭 확대 */
+    font-weight: 800;
+    padding-left: 15px;
+}
+
+/* 번호 박스 */
+.opt-num {
+    width: 50px;
+    height: 50px;
+    font-size: 24px !important;
+}
+
+/* O, X 전용 글자 크기 (더 크게) */
+.quiz-opt.ox-mode .opt-text {
+    font-size: 60px !important; /* O, X는 훨씬 크게 */
+    font-weight: 900;
+    text-align: center;
+    width: 100%;
+}
+
+/* 결과 숫자 라벨 */
 .opt-count-label {
-    min-width: 120px;
-    text-align: right !important; /* 숫자만 우측 정렬 */
-    font-size: 28px;
-    font-weight: 900;
-    color: #3b82f6;
-    z-index: 2;
-}
-
-/* 배경에 깔리는 그래프 바 */
-.opt-result-bar {
-    position: absolute;
-    left: 0; top: 0; height: 100%;
-    background: rgba(59, 130, 246, 0.1);
-    z-index: -1;
-    transition: width 1s ease-in-out;
+    font-size: 32px !important; /* 결과 숫자 크기 확대 */
+    min-width: 130px;
 }
