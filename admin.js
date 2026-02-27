@@ -2206,22 +2206,20 @@ setMode: function(mode) {
             v.style.display = 'none'; 
         });
 
-        // [핵심 추가] 강사 모드일 때 옵저버에 의해 숨겨진 버튼들을 다시 보이게 초기화
-if (!state.isObserver) {
-    const allAdminBtns = document.querySelectorAll('.btn-action, .m-btn-done, .navy-btn, #btnReset, button.btn-danger');
-    allAdminBtns.forEach(btn => {
-        if (btn.id !== 'quizFile' && btn.id !== 'studentFile') {
-            btn.style.display = ''; 
-            
-            // --- 아래 3줄을 추가하여 비활성화 상태를 해제합니다 ---
-            btn.disabled = false;            // 잠금 해제
-            btn.style.opacity = '1';         // 투명도 복구
-            btn.style.cursor = 'pointer';    // 마우스 커서 복구
+        // [유지] 강사 모드일 때 버튼 비활성화 해제 로직 (교육생 플랫폼 회색 음영 방지 관련)
+        if (!state.isObserver) {
+            const allAdminBtns = document.querySelectorAll('.btn-action, .m-btn-done, .navy-btn, #btnReset, button.btn-danger');
+            allAdminBtns.forEach(btn => {
+                if (btn.id !== 'quizFile' && btn.id !== 'studentFile') {
+                    btn.style.display = ''; 
+                    btn.disabled = false;            // 잠금 해제 유지
+                    btn.style.opacity = '1';         // 투명도 복구 유지
+                    btn.style.cursor = 'pointer';    // 마우스 커서 복구 유지
+                }
+            });
+            const quizCtrl = document.getElementById('quizControls');
+            if(quizCtrl) quizCtrl.style.display = 'flex';
         }
-    });
-    const quizCtrl = document.getElementById('quizControls');
-    if(quizCtrl) quizCtrl.style.display = 'flex';
-}
         
         // 2. 현재 선택한 모드에 맞는 구역 ID 결정
         const targetView = (mode === 'admin-action') ? 'view-admin-action' : (mode === 'dinner-skip') ? 'view-dinner-skip' : `view-${mode}`;
@@ -2245,11 +2243,18 @@ if (!state.isObserver) {
 
         localStorage.setItem('kac_last_mode', mode);
 
-        // 5. 각 모드별 데이터 로드
+        // 5. [핵심 수정] 각 모드별 데이터 로드 및 퀴즈 이어하기 판별
         if (state.room) {
             if (mode === 'quiz') {
-                document.getElementById('quizSelectModal').style.display = 'flex'; 
-                quizMgr.loadSavedQuizList(); 
+                // 이미 불러온 퀴즈 데이터가 있다면 (중단 후 다시 들어온 경우)
+                if (state.quizList && state.quizList.length > 0) {
+                    document.getElementById('quizSelectModal').style.display = 'none'; // 파일 선택창 숨김
+                    quizMgr.showQuiz(); // 현재 풀던 번호의 문제 화면 즉시 로드
+                } else {
+                    // 퀴즈 데이터가 없다면 처음이므로 파일 선택창 표시
+                    document.getElementById('quizSelectModal').style.display = 'flex'; 
+                    quizMgr.loadSavedQuizList(); 
+                }
             }
 
             let studentMode = (['waiting', 'shuttle', 'admin-action', 'dinner-skip', 'students', 'dashboard', 'notice', 'attendance', 'guide', 'dormitory'].includes(mode)) ? 'qa' : mode;
@@ -2327,13 +2332,11 @@ if (!state.isObserver) {
             }
         }
 
-        // [옵저버 전용 보안 로직 추가] 탭 이동할 때마다 버튼 숨기기 실행
+        // [옵저버 전용 보안 로직 유지]
         if (state.isObserver) {
-            // 1. 리셋, 초기화, 삭제 관련 버튼 숨기기
             const dangerBtns = document.querySelectorAll('#btnReset, .btn-danger, .btn-del-mini');
             dangerBtns.forEach(b => b.style.display = 'none');
 
-            // 2. 저장, 게시, 적용, 등록 버튼 숨기기
             const saveBtns = document.querySelectorAll('.btn-action, .m-btn-done, .navy-btn');
             saveBtns.forEach(b => {
                 const t = b.innerText;
@@ -2342,17 +2345,29 @@ if (!state.isObserver) {
                 }
             });
 
-            // 3. 퀴즈 컨트롤 영역 숨기기
             const quizCtrl = document.getElementById('quizControls');
             if(quizCtrl) quizCtrl.style.display = 'none';
 
-            // 4. 상단바에 옵저버 상태 표시
             const roomNameEl = document.getElementById('displayRoomName');
             if(roomNameEl && !roomNameEl.innerHTML.includes('fa-eye')) {
                 roomNameEl.innerHTML = "Room #" + state.room + ` <span style="font-size:14px; margin-left:8px; color:#94a3b8; font-weight:normal;">(<i class="fa-solid fa-eye" style="font-size:12px;"></i> 옵저버)</span>`;
             }
         }
     },
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -3763,38 +3778,44 @@ showFinalSummary: async function() {
         if(exitModal) exitModal.style.display = 'flex'; 
     },
     
-    // [최종 복구] 팝업창 버튼 클릭 시 실행 로직 (이어서 하기 / 초기화)
+
+
+
+
+// [최종 복구] 팝업창 버튼 클릭 시 실행 로직 (이어서 하기 / 초기화)
     confirmExitQuiz: function(type) {
         const exitModal = document.getElementById('quizExitModal');
-        if(exitModal) exitModal.style.display = 'none';
+        if (exitModal) exitModal.style.display = 'none';
 
-        if(type === 'reset') {
+        if (type === 'reset') {
             // 1. [완전 초기화] 모든 진행 데이터 삭제
             state.currentQuizIdx = 0; 
             state.isExternalFileLoaded = false; 
             state.quizList = [];
             
-            // 서버 데이터 싹 비우기
-            firebase.database().ref(`courses/${state.room}/activeQuiz`).set(null);
-            firebase.database().ref(`courses/${state.room}/status/quizStep`).set('none');
-            firebase.database().ref(`courses/${state.room}/quizAnswers`).set(null);
-            firebase.database().ref(`courses/${state.room}/quizFinalResults`).set(null);
+            // 2. 서버 데이터 싹 비우기 (데이터가 있는 경우에만 실행)
+            if (state.room) {
+                firebase.database().ref(`courses/${state.room}/activeQuiz`).set(null);
+                firebase.database().ref(`courses/${state.room}/status/quizStep`).set('none');
+                firebase.database().ref(`courses/${state.room}/quizAnswers`).set(null);
+                firebase.database().ref(`courses/${state.room}/quizFinalResults`).set(null);
+            }
             
-            // 강사 화면 리셋
-            quizMgr.renderMiniList();
+            // 3. 강사 화면 UI 리셋
+            this.renderMiniList();
             const qTxt = document.getElementById('d-qtext');
             const oDiv = document.getElementById('d-options');
-            if(qTxt) qTxt.innerText = "Ready?"; 
-            if(oDiv) oDiv.innerHTML = "";
+            if (qTxt) qTxt.innerText = "Ready?"; 
+            if (oDiv) oDiv.innerHTML = "";
             
             ui.showAlert("✅ 퀴즈가 완전히 초기화되었습니다.");
         } 
-        // 'resume' (이어서 하기)의 경우 데이터를 지우지 않고 화면만 이동합니다.
+        // 'resume' (이어서 하기)의 경우 데이터를 지우지 않고 그대로 둔 채 화면만 이동합니다.
 
-        // 공통: Q&A 게시판으로 화면 전환
+        // 4. 공통: Q&A 게시판으로 화면 전환 (이때 state.quizList가 살아있어야 이어서 하기가 됨)
         ui.setMode('qa'); 
     }
-};
+}; // <--- quizMgr 객체를 닫는 마침표입니다. 절대 지우지 마세요.
 
 
 
