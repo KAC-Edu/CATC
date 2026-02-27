@@ -3439,25 +3439,50 @@ loadFile: function(e) {
         this.startAnswerMonitor();
     },
     
-    renderScreen: function(q) {
+renderScreen: function(q) {
         const qText = document.getElementById('d-qtext');
         const qNum = document.getElementById('quizNumberLabel');
         if(qText) qText.innerText = q.text;
         if(qNum) qNum.innerText = `Q${state.currentQuizIdx + 1}`;
+        
         const oDiv = document.getElementById('d-options'); 
         const cDiv = document.getElementById('d-chart');
-        if(oDiv) oDiv.style.display = 'flex'; 
-        if(cDiv) cDiv.style.display = 'none';
+        
         if(oDiv) {
+            oDiv.style.display = 'flex';
             oDiv.innerHTML = "";
             q.options.forEach((o, i) => {
-                oDiv.innerHTML += `<div class="quiz-opt ${q.isOX?'ox-mode':''}" id="opt-${i+1}"><div class="opt-num">${i+1}</div><div class="opt-text">${o}</div></div>`;
+                // 좌측: 번호+텍스트(flex:1) / 우측: 카운트라벨(고정너비) 구조
+                oDiv.innerHTML += `
+                    <div class="quiz-opt ${q.isOX ? 'ox-mode' : ''}" id="opt-${i+1}">
+                        <div style="display:flex; align-items:center; flex:1;">
+                            <div class="opt-num">${q.isOX ? (i===0?'O':'X') : (i+1)}</div>
+                            <div class="opt-text">${o}</div>
+                        </div>
+                        <div class="opt-count-label" id="count-${i+1}"></div>
+                    </div>`;
             });
         }
+        if(cDiv) cDiv.style.display = 'none';
         const guide = document.getElementById('quizGuideArea');
         if(guide) guide.innerText = ""; 
     },
     
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 startAnswerMonitor: function() {
     const id = `Q${state.currentQuizIdx}`;
     const ansCntEl = document.getElementById('answeredCount');
@@ -3761,7 +3786,7 @@ showFinalSummary: async function() {
 
 
 
-// [신규] 문항 화면 위에 실시간 투표 결과를 얹어주는 함수
+// [수정본] 문항 화면 우측에 실시간 투표 결과를 정렬하여 주입하는 함수
     renderResultsOnOptions: function(id, corr) {
         const q = state.quizList[state.currentQuizIdx];
         
@@ -3774,28 +3799,31 @@ showFinalSummary: async function() {
                 if(v.choice >= 1 && v.choice <= q.options.length) cnt[v.choice-1]++; 
             });
 
-            // 각 문항 엘리먼트를 찾아서 결과 주입
+            // 각 문항 엘리먼트를 찾아서 데이터 업데이트
             q.options.forEach((optText, i) => {
                 const optEl = document.getElementById(`opt-${i+1}`);
-                if (optEl) {
+                const countEl = document.getElementById(`count-${i+1}`); // renderScreen에서 만든 우측 공간
+                
+                if (optEl && countEl) {
                     const count = cnt[i];
                     const percent = total > 0 ? Math.round((count / total) * 100) : 0;
                     const isCorrect = (i + 1) === corr && !q.isSurvey;
 
-                    // 1. 정답인 경우 클래스 추가
+                    // 1. 정답인 경우 강조 클래스 추가
                     if (isCorrect) optEl.classList.add('is-correct');
 
-                    // 2. 결과 바와 숫자 라벨 주입
-                    optEl.innerHTML = `
-                        <div style="display:flex; align-items:center; flex:1;">
-                            <div class="opt-num">${q.isOX ? (i===0?'O':'X') : (i+1)}</div>
-                            <div class="opt-text">${optText}</div>
-                        </div>
-                        <div class="opt-count-label">
-                            ${count}명 <span style="font-size:14px; opacity:0.6;">(${percent}%)</span>
-                        </div>
-                        <div class="opt-result-bar" style="width: ${percent}%;"></div>
-                    `;
+                    // 2. 우측 라벨에 숫자와 퍼센트 주입 (우측 정렬됨)
+                    countEl.innerHTML = `${count}명 <span style="font-size:16px; opacity:0.6;">(${percent}%)</span>`;
+
+                    // 3. 배경 그래프 바 생성 및 애니메이션
+                    let bar = optEl.querySelector('.opt-result-bar');
+                    if(!bar) {
+                        bar = document.createElement('div');
+                        bar.className = 'opt-result-bar';
+                        optEl.appendChild(bar);
+                    }
+                    // 자연스러운 차오름 효과를 위해 아주 짧은 지연 후 너비 적용
+                    setTimeout(() => { bar.style.width = percent + "%"; }, 50);
                 }
             });
         });
