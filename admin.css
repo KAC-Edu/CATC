@@ -3184,3 +3184,50 @@ body.night-mode .status-badge.status-arrived {
 .flatpickr-innerContainer + .flatpickr-innerContainer {
     margin-left: 0 !important;
 }
+
+
+
+
+
+
+
+/* 퀴즈 문항 내 결과 표시를 위한 정렬 스타일 */
+.quiz-opt {
+    display: flex !important;
+    justify-content: space-between !important; /* 번호+텍스트는 왼쪽, 결과는 오른쪽 */
+    align-items: center !important;
+    position: relative;
+    overflow: hidden;
+    z-index: 1;
+}
+
+/* 문항 내부에 배경으로 깔리는 결과 바(그래프) */
+.opt-result-bar {
+    position: absolute;
+    left: 0;
+    top: 0;
+    height: 100%;
+    background: rgba(59, 130, 246, 0.1); /* 연한 파란색 바 */
+    z-index: -1; /* 글자 뒤로 배치 */
+    transition: width 1s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* 우측에 표시될 투표수 숫자 */
+.opt-count-label {
+    min-width: 80px; /* 숫자가 들어갈 공간 고정 (위아래 정렬 핵심) */
+    text-align: right;
+    font-size: 24px;
+    font-weight: 900;
+    color: #3b82f6;
+    margin-left: 15px;
+}
+
+/* 정답인 문항을 강조하는 스타일 */
+.quiz-opt.is-correct {
+    border: 4px solid #10b981 !important; /* 초록색 굵은 테두리 */
+    background-color: #ecfdf5 !important;
+}
+.quiz-opt.is-correct .opt-num {
+    background-color: #10b981 !important;
+    color: white !important;
+}

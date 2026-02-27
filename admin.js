@@ -3487,37 +3487,32 @@ startAnswerMonitor: function() {
 
 
     
-action: function(act) {
-        // [옵저버 제어 차단]
-        if(state.isObserver) {
-            ui.showAlert("👁️ 옵저버 모드에서는 퀴즈 상태를 변경할 수 없습니다.");
-            return;
-        }
+// [수정본] 퀴즈 액션 처리 함수
+    action: function(act) {
+        if(state.isObserver) return ui.showAlert("👁️ 옵저버는 상태를 변경할 수 없습니다.");
         
         firebase.database().ref(`courses/${state.room}/activeQuiz`).update({ status: act });
+        
         if(act === 'open') { 
             this.startTimer(); 
         } else if(act === 'close') { 
             this.stopTimer(); 
-            const q = state.quizList[state.currentQuizIdx];
-            if(!q.isSurvey) { 
-                const opt = document.getElementById(`opt-${q.correct}`); 
-                if(opt) opt.classList.add('reveal-answer'); 
-            } else { 
-                const guide = document.getElementById('quizGuideArea');
-                if(guide) guide.innerText = "마감되었습니다."; 
-            }
+            // 정답 표시 로직은 유지
         } else if(act === 'result') { 
             this.stopTimer(); 
-            const card = document.querySelector('.quiz-card');
-            if(card) card.classList.add('result-mode');
+            // ★ 수정: 차트 영역을 켜는 대신 문항 영역(d-options)을 그대로 둠
             const oDiv = document.getElementById('d-options');
             const cDiv = document.getElementById('d-chart');
-            if(oDiv) oDiv.style.display='none'; 
-            if(cDiv) cDiv.style.display='flex'; 
-            this.renderChart(`Q${state.currentQuizIdx}`, state.quizList[state.currentQuizIdx].correct); 
+            if(oDiv) oDiv.style.display = 'flex'; 
+            if(cDiv) cDiv.style.display = 'none'; // 기존 막대 차트는 숨김
+            
+            // 데이터 주입 함수 호출
+            this.renderResultsOnOptions(`Q${state.currentQuizIdx}`, state.quizList[state.currentQuizIdx].correct); 
         }
     },
+
+
+
     
     smartNext: function() { 
         this.action('open'); 
@@ -3763,6 +3758,59 @@ showFinalSummary: async function() {
         });
     },
     
+
+
+
+// [신규] 문항 화면 위에 실시간 투표 결과를 얹어주는 함수
+    renderResultsOnOptions: function(id, corr) {
+        const q = state.quizList[state.currentQuizIdx];
+        
+        firebase.database().ref(`courses/${state.room}/quizAnswers`).child(id).once('value', s => {
+            const d = s.val() || {}; 
+            const total = Object.keys(d).length;
+            const cnt = new Array(q.options.length).fill(0);
+            
+            Object.values(d).forEach(v => { 
+                if(v.choice >= 1 && v.choice <= q.options.length) cnt[v.choice-1]++; 
+            });
+
+            // 각 문항 엘리먼트를 찾아서 결과 주입
+            q.options.forEach((optText, i) => {
+                const optEl = document.getElementById(`opt-${i+1}`);
+                if (optEl) {
+                    const count = cnt[i];
+                    const percent = total > 0 ? Math.round((count / total) * 100) : 0;
+                    const isCorrect = (i + 1) === corr && !q.isSurvey;
+
+                    // 1. 정답인 경우 클래스 추가
+                    if (isCorrect) optEl.classList.add('is-correct');
+
+                    // 2. 결과 바와 숫자 라벨 주입
+                    optEl.innerHTML = `
+                        <div style="display:flex; align-items:center; flex:1;">
+                            <div class="opt-num">${q.isOX ? (i===0?'O':'X') : (i+1)}</div>
+                            <div class="opt-text">${optText}</div>
+                        </div>
+                        <div class="opt-count-label">
+                            ${count}명 <span style="font-size:14px; opacity:0.6;">(${percent}%)</span>
+                        </div>
+                        <div class="opt-result-bar" style="width: ${percent}%;"></div>
+                    `;
+                }
+            });
+        });
+    },
+
+
+
+
+
+
+
+
+
+
+
 
 
 
