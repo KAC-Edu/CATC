@@ -2060,15 +2060,15 @@ function deleteActionRow(rid, date, token, name) {
 
 
 
-// [수정본] 개별 과정 상세 뷰: 현재 설정된 기간 내의 데이터만 노출 + 삭제 기능 추가
+// [최종 수정본] 버튼 크기를 동일하게 맞춘 상세 뷰 함수
 function updateIndividualView() {
     const room = globalAllData[currentRID]; 
     if (!room) return;
 
-    // 현재 설정된 교육 기간 가져오기 (예: "2026-03-03 ~ 2026-03-13")
+    // 1. 교육 기간 설정 파악
     const periodStr = room.settings?.period || "";
-    let startDate = "";
-    let endDate = "";
+    let startDate = "0000-00-00"; 
+    let endDate = "9999-99-99";
     if (periodStr.includes(" ~ ")) {
         const dates = periodStr.split(" ~ ");
         startDate = dates[0];
@@ -2077,7 +2077,7 @@ function updateIndividualView() {
 
     document.getElementById('ind-room-id').innerText = currentRID;
     document.getElementById('ind-course-name').innerText = room.settings?.courseName || "과정명 미설정";
-    document.getElementById('ind-period').innerText = periodStr || "-";
+    document.getElementById('ind-period').innerText = periodStr;
     document.getElementById('ind-prof').innerText = (room.status?.professorName || "-") + " 교수";
     document.getElementById('ind-coord').innerText = room.settings?.coordinatorName || "-";
     document.getElementById('ind-room-loc').innerText = room.settings?.roomDetailName || "-";
@@ -2085,11 +2085,9 @@ function updateIndividualView() {
     const actionTbody = document.getElementById('indActionTableBody');
     actionTbody.innerHTML = "";
 
-    // 모든 날짜의 데이터를 확인하지만, 현재 교육 기간 내의 데이터만 필터링
     let actionItems = [];
     if (room.admin_actions) {
         Object.keys(room.admin_actions).forEach(date => {
-            // 기간 체크 로직: 시작일보다 크거나 같고, 종료일보다 작거나 같은 날짜만 수집
             if (date >= startDate && date <= endDate) {
                 const dayActions = room.admin_actions[date];
                 Object.keys(dayActions).forEach(token => {
@@ -2102,12 +2100,12 @@ function updateIndividualView() {
     actionItems.sort((a, b) => a.timestamp - b.timestamp);
     
     if (actionItems.length === 0) {
-        actionTbody.innerHTML = '<tr><td colspan="4" style="padding:20px; color:#94a3b8; text-align:center;">해당 교육 기간 내 신청 명단 없음</td></tr>';
+        actionTbody.innerHTML = '<tr><td colspan="4" style="padding:20px; color:#94a3b8; text-align:center;">해당 교육 기간 내 신청 내역 없음</td></tr>';
     } else {
         actionTbody.innerHTML = actionItems.map(a => {
             const isSigned = a.confirmed === true;
-            const btnText = isSigned ? "서명취소" : "서명";
-            const btnStyle = isSigned ? "background:#94a3b8;" : "background:var(--blue-main);";
+            const btnText = isSigned ? "취소" : "서명"; // 글자수를 맞춰서 더 깔끔하게 함
+            const btnStyle = isSigned ? "background:#94a3b8;" : "background:#3b82f6;";
             const dataStr = encodeURIComponent(JSON.stringify(a));
             
             return `<tr>
@@ -2120,14 +2118,16 @@ function updateIndividualView() {
                 <td style="text-align:center;">
                     ${new Date(a.timestamp).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}
                 </td>
-                <td>
-                    <div style="display:flex; gap:4px;">
+                <td style="text-align:center;">
+                    <div style="display:flex; gap:6px; justify-content:center; align-items:center;">
+                        <!-- 서명 버튼: 너비 55px, 높이 34px 고정 -->
                         <button onclick="toggleConfirm('${currentRID}', '${a.date}', '${a.token}', ${isSigned})" 
-                                style="${btnStyle} color:#fff; border:none; border-radius:5px; flex:2; height:35px; font-weight:800; cursor:pointer; font-size:11px;">
+                                style="${btnStyle} color:#fff; border:none; border-radius:6px; width:55px; height:34px; font-weight:800; cursor:pointer; font-size:12px;">
                             ${btnText}
                         </button>
+                        <!-- 삭제 버튼: 너비 55px, 높이 34px 고정 -->
                         <button onclick="deleteActionRow('${currentRID}', '${a.date}', '${a.token}', '${a.name}')" 
-                                style="background:#ef4444; color:#fff; border:none; border-radius:5px; flex:1; height:35px; font-weight:800; cursor:pointer; font-size:11px;">
+                                style="background:#ef4444; color:#fff; border:none; border-radius:6px; width:55px; height:34px; font-weight:800; cursor:pointer; font-size:12px;">
                             삭제
                         </button>
                     </div>
