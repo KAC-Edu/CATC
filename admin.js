@@ -2195,7 +2195,7 @@ openQrModal: function() {
 
 
 setMode: function(mode) {
-        // [추가] 플로팅 홈 버튼 제어
+        // [유지] 플로팅 홈 버튼 제어
         const homeBtn = document.getElementById('floatingHomeBtn');
         if (homeBtn) {
             homeBtn.style.display = (mode === 'dashboard') ? 'none' : 'flex';
@@ -2250,19 +2250,27 @@ setMode: function(mode) {
                 const summaryOverlay = document.getElementById('quizSummaryOverlay');
                 if (summaryOverlay) summaryOverlay.style.display = 'none';
 
-                // 이미 불러온 퀴즈 데이터가 있다면 (중단 후 다시 들어온 경우)
+                // [추가] 브라우저에 저장된 마지막 문제 번호 가져오기
+                const savedIdx = localStorage.getItem(`kac_quiz_idx_${state.room}`);
+
+                // (A) 이미 퀴즈 데이터가 메모리에 있는 경우 (탭 이동 후 복귀)
                 if (state.quizList && state.quizList.length > 0) {
+                    // 저장된 번호가 있다면 복구
+                    if (savedIdx !== null) {
+                        state.currentQuizIdx = parseInt(savedIdx);
+                    }
                     document.getElementById('quizSelectModal').style.display = 'none'; 
                     quizMgr.showQuiz(); 
-                } else {
-                    // 새로고침 등으로 데이터가 없다면 서버 상태 확인 후 분기
+                } 
+                // (B) 새로고침 등으로 메모리가 비었을 때 (서버 상태 확인 후 복구)
+                else {
                     firebase.database().ref(`courses/${state.room}/status/quizStep`).once('value', snap => {
                         const currentStep = snap.val();
                         // 서버가 'summary' 상태여서 리포트가 뜨는 것이라면 'none'으로 강제 복구
                         if (currentStep === 'summary') {
                             firebase.database().ref(`courses/${state.room}/status/quizStep`).set('none');
                         }
-                        // 퀴즈 보관함 열기
+                        // 퀴즈 보관함 열어서 파일 선택 유도
                         document.getElementById('quizSelectModal').style.display = 'flex'; 
                         quizMgr.loadSavedQuizList(); 
                     });
@@ -2295,7 +2303,6 @@ setMode: function(mode) {
             if (mode === 'dinner-skip') ui.loadDinnerSkipData();
             if (mode === 'students') ui.loadStudentList();
             
-            // [기숙사/생활관 정밀 매칭 로직 유지]
             if (mode === 'dormitory') {
                 const tbody = document.getElementById('dormitoryTableBody');
                 if(!tbody) return;
@@ -2319,13 +2326,8 @@ setMode: function(mode) {
                         const sName = s.name;
                         const sPhone = s.phone ? s.phone.slice(-4) : ""; 
                         let assignedInfo = null;
-
-                        if (dormData[`${sName}_${sPhone}`]) {
-                            assignedInfo = dormData[`${sName}_${sPhone}`];
-                        } 
-                        else if (dormData[sName]) {
-                            assignedInfo = dormData[sName];
-                        }
+                        if (dormData[`${sName}_${sPhone}`]) assignedInfo = dormData[`${sName}_${sPhone}`];
+                        else if (dormData[sName]) assignedInfo = dormData[sName];
 
                         const bName = assignedInfo ? assignedInfo.building : "-";
                         const rNo = assignedInfo ? assignedInfo.room + "호" : "미배정";
@@ -2366,7 +2368,6 @@ setMode: function(mode) {
             }
         }
     },
-
 
 
 
@@ -3411,7 +3412,7 @@ loadFile: function(e) {
         }
     },
     
-    prevNext: function(d) {
+prevNext: function(d) {
         let n = state.currentQuizIdx + d;
         if (n < 0 || n >= state.quizList.length) {
             return ui.showAlert(n < 0 ? "첫 번째 문항입니다." : "마지막 문항입니다.");
@@ -3422,8 +3423,21 @@ loadFile: function(e) {
             return; 
         }
         state.currentQuizIdx = n;
+
+        // [추가] 새로고침 대비: 현재 문제 번호를 브라우저에 저장
+        if (state.room) {
+            localStorage.setItem(`kac_quiz_idx_${state.room}`, state.currentQuizIdx);
+        }
         this.showQuiz();
     },
+
+
+
+
+
+
+
+
     
     showQuiz: function() {
         const card = document.querySelector('.quiz-card');
@@ -3752,31 +3766,24 @@ showFinalSummary: async function() {
 
 
 // [수정본] 퀴즈 리포트 창을 닫고 모든 데이터를 초기화하며 종료하는 함수
-    closeSummaryAndExit: function() {
-        // 1. 화면의 리포트 레이어(하얀 창) 숨기기
+closeSummaryAndExit: function() {
         const summaryOverlay = document.getElementById('quizSummaryOverlay');
         if (summaryOverlay) summaryOverlay.style.display = 'none';
 
-        // 2. 서버 데이터 정리 (교육생들에게도 종료 신호 전송)
         if (state.room) {
+            // [추가] 종료 시 문제 번호 기록 삭제
+            localStorage.removeItem(`kac_quiz_idx_${state.room}`);
             firebase.database().ref(`courses/${state.room}/activeQuiz`).set(null);
             firebase.database().ref(`courses/${state.room}/status/quizStep`).set('none');
             firebase.database().ref(`courses/${state.room}/quizAnswers`).set(null);
             firebase.database().ref(`courses/${state.room}/quizFinalResults`).set(null);
         }
 
-        // 3. 강사 PC 내부 데이터 초기화
         state.currentQuizIdx = 0;
         state.isExternalFileLoaded = false;
         state.quizList = [];
-        
-        // 4. 타이머 중단
         this.stopTimer();
-
-        // 5. 강사 화면 정리 (질문 게시판 탭으로 자동 복귀)
         ui.setMode('qa');
-
-        // 6. 확인 알림
         alert("퀴즈가 종료되었습니다. 데이터가 초기화되고 Q&A 화면으로 이동합니다.");
     },
 
@@ -3917,31 +3924,34 @@ showFinalSummary: async function() {
         if (exitModal) exitModal.style.display = 'none';
 
         if (type === 'reset') {
-            // 1. [완전 초기화] 모든 진행 데이터 삭제
+            // 1. [완전 초기화] 모든 내부 진행 데이터 삭제
             state.currentQuizIdx = 0; 
             state.isExternalFileLoaded = false; 
             state.quizList = [];
             
-            // 2. 서버 데이터 싹 비우기 (데이터가 있는 경우에만 실행)
+            // 2. 브라우저에 저장된 문제 번호 기록 삭제 (새로고침 복구용 데이터 삭제)
             if (state.room) {
+                localStorage.removeItem(`kac_quiz_idx_${state.room}`);
+                
+                // 3. 서버 데이터 싹 비우기 (교육생 화면 리셋용)
                 firebase.database().ref(`courses/${state.room}/activeQuiz`).set(null);
                 firebase.database().ref(`courses/${state.room}/status/quizStep`).set('none');
                 firebase.database().ref(`courses/${state.room}/quizAnswers`).set(null);
                 firebase.database().ref(`courses/${state.room}/quizFinalResults`).set(null);
             }
             
-            // 3. 강사 화면 UI 리셋
+            // 4. 강사 화면 UI 리셋
             this.renderMiniList();
             const qTxt = document.getElementById('d-qtext');
             const oDiv = document.getElementById('d-options');
             if (qTxt) qTxt.innerText = "Ready?"; 
             if (oDiv) oDiv.innerHTML = "";
             
-            ui.showAlert("✅ 퀴즈가 완전히 초기화되었습니다.");
+            ui.showAlert("✅ 퀴즈 데이터가 완전히 초기화되었습니다.");
         } 
-        // 'resume' (이어서 하기)의 경우 데이터를 지우지 않고 그대로 둔 채 화면만 이동합니다.
+        // 'resume' (이어서 하기)의 경우 데이터를 지우지 않고 메모리와 로컬스토리지에 둔 채 화면만 이동합니다.
 
-        // 4. 공통: Q&A 게시판으로 화면 전환 (이때 state.quizList가 살아있어야 이어서 하기가 됨)
+        // 5. 공통: Q&A 게시판으로 화면 전환
         ui.setMode('qa'); 
     }
 }; // <--- quizMgr 객체를 닫는 마침표입니다. 절대 지우지 마세요.
