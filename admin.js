@@ -3460,7 +3460,7 @@ renderScreen: function(q) {
         const qNum = document.getElementById('quizNumberLabel');
         const startBtn = document.getElementById('btnSmartNext');
 
-        // [수정] 시작 버튼 다시 활성화 (다음 문제 이동 시)
+        // 1. [유지] 시작 버튼 상태 초기화 (다음 문제 이동 시 파란색으로 복구)
         if(startBtn) {
             startBtn.disabled = false;
             startBtn.style.background = ""; 
@@ -3470,27 +3470,30 @@ renderScreen: function(q) {
             startBtn.innerHTML = '현재 퀴즈 시작 <i class="fa-solid fa-play" style="margin-left:10px;"></i>';
         }
 
-        // [수정] 질문 텍스트에서 'Qn.' 제거 (순수 질문 내용만 표시)
-        if(qText) qText.innerText = q.text;
-        
-        // [수정] 상단 파란색 레이블을 '문항 n' 대신 'Qn'으로 변경
+        // 2. [수정] 질문 텍스트 및 상단 Q 번호 레이블 설정
+        if(qText) qText.innerText = q.text; // 중복 방지를 위해 Qn. 제거된 순수 텍스트만 표시
         if(qNum) qNum.innerText = `Q${state.currentQuizIdx + 1}`;
         
+        // 3. [핵심 수정] 문항 영역 구조 고정 (좌측 텍스트 / 우측 숫자 정렬용)
         const oDiv = document.getElementById('d-options'); 
         if(oDiv) {
             oDiv.style.display = 'flex';
             oDiv.innerHTML = "";
             q.options.forEach((o, i) => {
+                // opt-text-wrapper에 flex:1을 주어 우측 숫자를 끝으로 밀어내는 구조입니다.
                 oDiv.innerHTML += `
                     <div class="quiz-opt ${q.isOX ? 'ox-mode' : ''}" id="opt-${i+1}">
-                        <div style="display:flex; align-items:center; flex:1; justify-content:${q.isOX ? 'center' : 'flex-start'};">
+                        <div class="opt-text-wrapper">
                             ${q.isOX ? '' : `<div class="opt-num">${i+1}</div>`}
                             <div class="opt-text">${o}</div>
                         </div>
+                        <!-- 결과 숫자가 정렬되어 들어갈 자리 미리 생성 -->
                         <div class="opt-count-label" id="count-${i+1}"></div>
                     </div>`;
             });
         }
+
+        // 4. [유지] 기타 화면 정리
         document.getElementById('d-chart').style.display = 'none';
         const guide = document.getElementById('quizGuideArea');
         if(guide) guide.innerText = ""; 
@@ -3823,7 +3826,11 @@ showFinalSummary: async function() {
 
 
 
-// [수정본] 문항 화면 우측에 실시간 투표 결과를 정렬하여 주입하는 함수
+
+
+
+
+// [최종 수정본] 문항별 투표 결과를 우측에 정렬하고 그래프 바를 애니메이션으로 출력하는 함수
     renderResultsOnOptions: function(id, corr) {
         const q = state.quizList[state.currentQuizIdx];
         
@@ -3832,35 +3839,44 @@ showFinalSummary: async function() {
             const total = Object.keys(d).length;
             const cnt = new Array(q.options.length).fill(0);
             
+            // 1. 제출된 답안 집계
             Object.values(d).forEach(v => { 
                 if(v.choice >= 1 && v.choice <= q.options.length) cnt[v.choice-1]++; 
             });
 
-            // 각 문항 엘리먼트를 찾아서 데이터 업데이트
+            // 2. 각 문항(Option)별로 결과 데이터 주입
             q.options.forEach((optText, i) => {
                 const optEl = document.getElementById(`opt-${i+1}`);
-                const countEl = document.getElementById(`count-${i+1}`); // renderScreen에서 만든 우측 공간
+                const countEl = document.getElementById(`count-${i+1}`); // renderScreen에서 생성한 우측 숫자 공간
                 
                 if (optEl && countEl) {
                     const count = cnt[i];
                     const percent = total > 0 ? Math.round((count / total) * 100) : 0;
                     const isCorrect = (i + 1) === corr && !q.isSurvey;
 
-                    // 1. 정답인 경우 강조 클래스 추가
-                    if (isCorrect) optEl.classList.add('is-correct');
+                    // [정답 표시] 정답 문항인 경우 초록색 테두리 및 배경 강조
+                    if (isCorrect) {
+                        optEl.classList.add('is-correct');
+                    }
 
-                    // 2. 우측 라벨에 숫자와 퍼센트 주입 (우측 정렬됨)
-                    countEl.innerHTML = `${count}명 <span style="font-size:16px; opacity:0.6;">(${percent}%)</span>`;
+                    // [숫자 주입] 우측 끝 고정된 라벨에 "n명 (n%)" 표시
+                    countEl.innerHTML = `
+                        <span style="font-weight:900;">${count}명</span> 
+                        <span style="font-size:18px; opacity:0.6; margin-left:5px;">(${percent}%)</span>
+                    `;
 
-                    // 3. 배경 그래프 바 생성 및 애니메이션
+                    // [그래프 바 생성 및 갱신] 문항 배경에 차오르는 파란색 막대
                     let bar = optEl.querySelector('.opt-result-bar');
                     if(!bar) {
                         bar = document.createElement('div');
                         bar.className = 'opt-result-bar';
-                        optEl.appendChild(bar);
+                        optEl.appendChild(bar); // 문항 박스 내부에 삽입
                     }
-                    // 자연스러운 차오름 효과를 위해 아주 짧은 지연 후 너비 적용
-                    setTimeout(() => { bar.style.width = percent + "%"; }, 50);
+                    
+                    // 자연스러운 애니메이션 효과를 위해 지연 후 너비 적용
+                    setTimeout(() => { 
+                        bar.style.width = percent + "%"; 
+                    }, 50);
                 }
             });
         });
