@@ -1195,15 +1195,12 @@ function setupListeners() {
             return;
         }
 
-        // 퀴즈 모드 진입 판단
         if (st.mode === 'quiz') {
-            // 결과 요약 페이지가 아닐 때만 퀴즈 창을 활성화
             if (st.quizStep !== 'summary') {
                 document.getElementById('quizOverlay').style.display = 'flex';
                 document.getElementById('quizActiveBox').style.display = 'block';
                 document.getElementById('quizResultBox').style.display = 'none';
             } else {
-                // 결과 요약 단계일 때
                 if(!hasClosedSummary) showFinalRanking(); 
             }
         } else {
@@ -1217,17 +1214,15 @@ function setupListeners() {
         const q = s.val(); 
         if(!q) return;
 
-        // 문제 ID가 바뀌면 초기화
         if (currentQuizId !== q.id) {
             currentQuizId = q.id;
             myLastChoiceIdx = null;
             myLastChoice = null;
             canAnswer = false;
-            // 버튼 상태 초기화
-            document.querySelectorAll('.quiz-opt-btn').forEach(b => b.classList.remove('selected', 'locked'));
+            // 퀴즈 전용 버튼들만 선택 해제
+            document.querySelectorAll('#quizActiveBox .quiz-opt-btn').forEach(b => b.classList.remove('selected', 'locked'));
         }
 
-        // 타이머 초기화
         if(studentTimerInterval) clearInterval(studentTimerInterval);
         const sTimerBox = document.getElementById('studentQuizTimerBox');
         const sTimerText = document.getElementById('studentTimer');
@@ -1238,7 +1233,6 @@ function setupListeners() {
         const oxArea = document.getElementById('btnGroupOX');
         const multArea = document.getElementById('btnGroupMultiple');
 
-        // [퀴즈 상태별 로직]
         if(q.status === 'ready') {
             canAnswer = false;
             msgBox.innerText = "강사님이 퀴즈를 시작하기를 기다리고 있습니다...";
@@ -1249,8 +1243,6 @@ function setupListeners() {
         else if(q.status === 'open') {
             canAnswer = true;
             msgBox.innerText = "정답을 선택하세요!";
-            
-            // 타이머 작동
             if(q.endTime && sTimerBox) {
                 sTimerBox.style.display = 'flex';
                 studentTimerInterval = setInterval(() => {
@@ -1258,18 +1250,14 @@ function setupListeners() {
                     const remain = Math.ceil((q.endTime - now) / 1000);
                     const display = remain < 0 ? 0 : remain;
                     sTimerText.innerText = `00:${display < 10 ? '0' + display : display}`;
-                    if(remain <= 0) {
-                        clearInterval(studentTimerInterval);
-                        canAnswer = false; // 시간 종료 시 선택 불가
-                    }
+                    if(remain <= 0) clearInterval(studentTimerInterval);
                 }, 200);
             }
 
-            // 문제 유형별 버튼 노출
             if(q.isOX) {
                 multArea.style.display = 'none';
                 oxArea.style.display = 'flex';
-                document.querySelectorAll('.ox-btn').forEach((btn, i) => {
+                document.querySelectorAll('#btnGroupOX .quiz-opt-btn').forEach((btn, i) => {
                     btn.classList.remove('locked');
                     if((i + 1) === myLastChoiceIdx) btn.classList.add('selected');
                 });
@@ -1289,17 +1277,14 @@ function setupListeners() {
         else if(q.status === 'pause') {
             canAnswer = false; 
             msgBox.innerText = "설명을 위해 잠시 멈췄습니다.";
-            document.querySelectorAll('.quiz-opt-btn').forEach(b => b.classList.add('locked'));
-            // 일시정지 시 타이머 고정 표시
-            if(sTimerBox && q.remainingTime !== undefined) {
-                sTimerBox.style.display = 'flex';
-                sTimerText.innerText = `00:${q.remainingTime < 10 ? '0' + q.remainingTime : q.remainingTime}`;
-            }
+            // 퀴즈 버튼만 잠금
+            document.querySelectorAll('#quizActiveBox .quiz-opt-btn').forEach(b => b.classList.add('locked'));
         }
         else if(q.status === 'close') {
             canAnswer = false;
             msgBox.innerText = myLastChoice ? "제출 완료" : "시간 초과 (미제출)";
-            document.querySelectorAll('.quiz-opt-btn').forEach(b => b.classList.add('locked'));
+            // 퀴즈 버튼만 잠금
+            document.querySelectorAll('#quizActiveBox .quiz-opt-btn').forEach(b => b.classList.add('locked'));
         }
         else if(q.status === 'result') {
             canAnswer = false;
@@ -1317,22 +1302,18 @@ function setupListeners() {
         }
     });
 
-    // 7. 입력창 자동 높이 조절
     const qInputEl = document.getElementById('qInput');
     if(qInputEl) {
         const new_qInputEl = qInputEl.cloneNode(true);
         qInputEl.parentNode.replaceChild(new_qInputEl, qInputEl);
-        
         new_qInputEl.addEventListener('input', function() {
             const len = this.value.length; 
             document.getElementById('charCount').innerText = `${len} / 100`;
-            this.classList.toggle('limit', len >= 90);
             this.style.height = '1px'; 
             this.style.height = (this.scrollHeight) + 'px';
         });
     }
 }
-
 
 
 
@@ -1666,11 +1647,19 @@ function resetInput() {
 
 
 function forceCloseQuiz() {
-    hasClosedSummary = false; canAnswer = false;
-    if (rankingListener) { const myToken = localStorage.getItem('uToken'); firebase.database().ref(`courses/${currentRoom}/quizFinalResults/${myToken}`).off(); rankingListener = null; }
-    document.getElementById('quizResultBox').style.display = 'none'; document.getElementById('quizActiveBox').style.display = 'block'; document.getElementById('quizOverlay').style.display = 'none'; document.getElementById('quizKingStamp').style.display = 'none';
+    hasClosedSummary = false; 
+    canAnswer = false;
+    if (rankingListener) { 
+        const myToken = localStorage.getItem('uToken'); 
+        firebase.database().ref(`courses/${currentRoom}/quizFinalResults/${myToken}`).off(); 
+        rankingListener = null; 
+    }
+    document.getElementById('quizResultBox').style.display = 'none'; 
+    document.getElementById('quizActiveBox').style.display = 'block'; 
+    document.getElementById('quizOverlay').style.display = 'none'; 
+    document.getElementById('quizKingStamp').style.display = 'none';
 
-    // [추가] 퀴즈 종료 시 모든 버튼의 잠금 클래스(locked)를 강제로 제거
+    // 모든 버튼의 잠금(locked) 클래스를 제거하여 외출/퇴교 버튼을 즉시 활성화
     document.querySelectorAll('.locked').forEach(el => el.classList.remove('locked'));
 }
 
