@@ -3448,18 +3448,21 @@ renderScreen: function(q) {
         const qNum = document.getElementById('quizNumberLabel');
         const startBtn = document.getElementById('btnSmartNext');
 
-        // ★ [추가] 다음 문제로 가면 시작 버튼 다시 활성화 (파란색)
+        // [수정] 시작 버튼 다시 활성화 (다음 문제 이동 시)
         if(startBtn) {
             startBtn.disabled = false;
-            startBtn.style.background = ""; // 기본 파란색 CSS로 복구
+            startBtn.style.background = ""; 
             startBtn.style.color = "";
             startBtn.style.cursor = "pointer";
             startBtn.style.boxShadow = "";
             startBtn.innerHTML = '현재 퀴즈 시작 <i class="fa-solid fa-play" style="margin-left:10px;"></i>';
         }
 
-        if(qText) qText.innerHTML = `<span style="color:#3b82f6; margin-right:10px;">Q${state.currentQuizIdx + 1}.</span>${q.text}`;
-        if(qNum) qNum.innerText = `문항 ${state.currentQuizIdx + 1}`;
+        // [수정] 질문 텍스트에서 'Qn.' 제거 (순수 질문 내용만 표시)
+        if(qText) qText.innerText = q.text;
+        
+        // [수정] 상단 파란색 레이블을 '문항 n' 대신 'Qn'으로 변경
+        if(qNum) qNum.innerText = `Q${state.currentQuizIdx + 1}`;
         
         const oDiv = document.getElementById('d-options'); 
         if(oDiv) {
@@ -3468,7 +3471,7 @@ renderScreen: function(q) {
             q.options.forEach((o, i) => {
                 oDiv.innerHTML += `
                     <div class="quiz-opt ${q.isOX ? 'ox-mode' : ''}" id="opt-${i+1}">
-                        <div style="display:flex; align-items:center; flex:1;">
+                        <div style="display:flex; align-items:center; flex:1; justify-content:${q.isOX ? 'center' : 'flex-start'};">
                             ${q.isOX ? '' : `<div class="opt-num">${i+1}</div>`}
                             <div class="opt-text">${o}</div>
                         </div>
@@ -3477,6 +3480,8 @@ renderScreen: function(q) {
             });
         }
         document.getElementById('d-chart').style.display = 'none';
+        const guide = document.getElementById('quizGuideArea');
+        if(guide) guide.innerText = ""; 
     },
 
 
