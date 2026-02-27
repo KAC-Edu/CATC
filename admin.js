@@ -2195,10 +2195,14 @@ openQrModal: function() {
 
 
 setMode: function(mode) {
-        // [유지] 플로팅 홈 버튼 제어
+        // [수정] 플로팅 홈 버튼 제어: 대시보드(dashboard) 또는 퀴즈(quiz) 모드일 때 숨김
         const homeBtn = document.getElementById('floatingHomeBtn');
         if (homeBtn) {
-            homeBtn.style.display = (mode === 'dashboard') ? 'none' : 'flex';
+            if (mode === 'dashboard' || mode === 'quiz') {
+                homeBtn.style.display = 'none';
+            } else {
+                homeBtn.style.display = 'flex';
+            }
         }
 
         // 1. 모든 view- 로 시작하는 구역을 일단 숨김
@@ -2243,7 +2247,7 @@ setMode: function(mode) {
 
         localStorage.setItem('kac_last_mode', mode);
 
-        // 5. [핵심 수정] 각 모드별 데이터 로드 및 퀴즈 이어하기/새로고침 복구 판별
+        // 5. 각 모드별 데이터 로드 및 퀴즈 이어하기/새로고침 복구 판별
         if (state.room) {
             if (mode === 'quiz') {
                 // [추가] 퀴즈 탭 진입 시 리포트 오버레이(종료화면)가 떠있다면 강제로 닫기
