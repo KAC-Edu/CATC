@@ -4582,8 +4582,9 @@ window.onload = function() {
 
 
 
+// [최종 수정] 바깥 영역 클릭 시 모든 드롭다운 및 모달 자동 닫기 기능
 window.onclick = function(event) {
-    // 1. 메뉴 드롭다운 외 클릭 시 닫기
+    // 1. 교육 관리 드롭다운 메뉴 외 클릭 시 닫기
     if (!event.target.matches('.dropdown-trigger') && !event.target.closest('.dropdown-trigger')) {
         const dropdowns = document.getElementsByClassName("dropdown-content");
         for (let i = 0; i < dropdowns.length; i++) {
@@ -4593,13 +4594,31 @@ window.onclick = function(event) {
         }
     }
 
-    // 2. [추가] 알림창 배경 클릭 시 닫기
+    // 2. [추가된 로직] 유관 시스템 바로가기 메뉴 외 클릭 시 접기
+    const familyMenu = document.getElementById('familySiteMenu');
+    const familyChevron = document.getElementById('familyChevron');
+    
+    // 메뉴가 열려있는 상태인지 확인
+    if (familyMenu && familyMenu.style.display === 'flex') {
+        // 클릭한 대상이 '메뉴 버튼'도 아니고 '메뉴 내부'도 아니라면 닫기 실행
+        const isClickInsideButton = event.target.closest('button[onclick*="toggleFamilySites"]');
+        const isClickInsideMenu = familyMenu.contains(event.target);
+
+        if (!isClickInsideButton && !isClickInsideMenu) {
+            familyMenu.style.display = 'none';
+            if (familyChevron) {
+                familyChevron.classList.replace('fa-chevron-down', 'fa-chevron-up');
+            }
+        }
+    }
+
+    // 3. 알림창 배경 클릭 시 닫기
     const alertModal = document.getElementById('customAlertModal');
     if (event.target === alertModal) {
         ui.closeAlert();
     }
     
-    // 3. [추가] Q&A 상세창 배경 클릭 시 닫기
+    // 4. Q&A 상세창 배경 클릭 시 닫기
     const qaModal = document.getElementById('qaModal');
     if (event.target === qaModal) {
         ui.closeQaModal();
