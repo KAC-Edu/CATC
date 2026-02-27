@@ -4123,18 +4123,22 @@ openSetupModal: async function() {
             // 기존에 저장된 데이터(과정명, 장소 등)를 입력창에 세팅
             this.loadCurrentSettings(); 
 
-            // [핵심 추가] 호텔 예약 방식(Range) 및 2개월 대화면 달력 적용
+// [최종 수정] 호텔 예약 방식(Range) 및 650px 대화면 달력 적용
             flatpickr("#setup-period-range", {
-                mode: "range",    // 호텔 예약처럼 범위 선택
-                locale: "ko",      // 한국어
+                mode: "range",         // 호텔 예약처럼 범위 선택
+                locale: "ko",           // 한국어 설정
                 dateFormat: "Y-m-d",
-                showMonths: 2,    // 2개월 달력을 동시에 보여줌 (시안성 극대화)
-                disableMobile: "true", // 모바일에서도 이 커스텀 디자인 유지
+                showMonths: 2,         // 2개월 달력을 동시에 표시
+                disableMobile: "true",  // 모바일에서도 커스텀 디자인 유지
                 onReady: function(selectedDates, dateStr, instance) {
-                    // 달력 컨테이너 디자인 보정
-                    instance.calendarContainer.style.width = "600px"; // 가로폭 대폭 확대
+                    // [핵심 보정] 달력 가로폭을 650px로 늘려 잘림 현상 방지
+                    instance.calendarContainer.style.width = "650px"; 
                     instance.calendarContainer.style.fontSize = "16px";
                     instance.calendarContainer.style.fontWeight = "bold";
+                },
+                // 날짜가 변경될 때마다 디자인이 깨지지 않도록 다시 계산 (선택 사항)
+                onValueUpdate: function(selectedDates, dateStr, instance) {
+                    instance.calendarContainer.style.width = "650px";
                 }
             });
         });

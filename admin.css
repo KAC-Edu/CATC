@@ -3072,20 +3072,17 @@ body.night-mode .status-badge.status-arrived {
 }
 
 
-
-/* 1. 달력 전체 외곽 및 그림자 보강 */
+/* 1. 달력 전체 외곽 및 그림자 (가로폭을 650px로 확대하여 잘림 방지) */
 .flatpickr-calendar {
     box-shadow: 0 10px 40px rgba(0,0,0,0.25) !important;
     border: 2px solid #3b82f6 !important;
     border-radius: 15px !important;
 }
-
-/* 2. 2개월 모드일 때 가로폭 강제 고정 */
 .flatpickr-calendar.rangeMode {
-    width: 600px !important; 
+    width: 650px !important; /* 기존 600px에서 650px로 확대 */
 }
 
-/* 3. 상단 월/년도 정보 시안성 확대 */
+/* 2. 상단 월/년도 정보 시안성 확대 */
 .flatpickr-current-month {
     font-size: 1.5rem !important; 
     font-weight: 800 !important;
@@ -3096,25 +3093,37 @@ body.night-mode .status-badge.status-arrived {
     fill: #003366 !important;
 }
 
-/* 4. 요일 폰트 강조 */
+/* 3. 요일 폰트 강조 */
 .flatpickr-weekday {
     color: #64748b !important;
     font-weight: bold !important;
 }
 
-/* 5. [핵심 수정] 시작일, 종료일, 그리고 사이 날짜(inRange) 색상 완전 통일 */
+/* 4. [핵심 수정] 날짜 사이의 틈새 제거 및 연속성 부여 */
+.flatpickr-day {
+    margin: 0 !important;           /* 날짜 사이 여백 제거 */
+    border: none !important;         /* 테두리 제거로 회색선 차단 */
+    max-width: none !important;      /* 너비 제한 해제 */
+    flex-basis: 14.2857% !important; /* 7일 등분을 정확하게 일치시킴 */
+    height: 39px !important;         /* 높이 고정으로 어긋남 방지 */
+    line-height: 39px !important;
+}
+
+/* 5. 선택된 모든 범위 색상 통일 (끊김 없는 파란색 바) */
 .flatpickr-day.selected, 
 .flatpickr-day.startRange, 
 .flatpickr-day.endRange, 
 .flatpickr-day.inRange,
-.flatpickr-day.today.inRange {
-    background: #3b82f6 !important;  /* 모두 동일한 진한 파랑 */
+.flatpickr-day.today.inRange,
+.flatpickr-day.prevMonthDay.inRange,
+.flatpickr-day.nextMonthDay.inRange {
+    background: #3b82f6 !important;
     border-color: #3b82f6 !important;
-    color: #fff !important;          /* 글자색 흰색 고정 */
-    border-radius: 0;                /* 연결 부위를 사각형으로 이어지게 처리 */
+    color: #fff !important;
+    border-radius: 0 !important;    /* 중간 날짜들은 사각형으로 연결 */
 }
 
-/* 6. 시작일과 종료일의 양쪽 끝만 둥글게 처리 (바 형태 완성) */
+/* 6. 시작일과 종료일의 양쪽 끝만 둥글게 처리 */
 .flatpickr-day.startRange {
     border-top-left-radius: 50px !important;
     border-bottom-left-radius: 50px !important;
@@ -3124,16 +3133,20 @@ body.night-mode .status-badge.status-arrived {
     border-bottom-right-radius: 50px !important;
 }
 
-/* 7. 시작일이자 동시에 종료일인 경우 (날짜 하나만 클릭했을 때) */
+/* 7. 날짜 하나만 클릭했을 때 처리 */
 .flatpickr-day.startRange.endRange {
     border-radius: 50px !important;
 }
 
-/* 8. 마우스 호버 시 색상 (조금 더 진한 파랑) */
+/* 8. 마우스 호버 시 색상 보정 */
 .flatpickr-day.inRange:hover,
 .flatpickr-day.selected:hover,
 .flatpickr-day.startRange:hover,
 .flatpickr-day.endRange:hover {
     background: #2563eb !important;
-    border-color: #2563eb !important;
+}
+
+/* 9. 달력 내부 컨테이너 간격 정렬 */
+.flatpickr-innerContainer {
+    padding: 0 5px !important;
 }
