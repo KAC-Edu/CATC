@@ -3439,13 +3439,26 @@ loadFile: function(e) {
         this.startAnswerMonitor();
     },
     
+
+
+
+
 renderScreen: function(q) {
         const qText = document.getElementById('d-qtext');
         const qNum = document.getElementById('quizNumberLabel');
-        
-        // 질문 텍스트 앞에 Q 번호를 붙여서 출력
+        const startBtn = document.getElementById('btnSmartNext');
+
+        // ★ [추가] 다음 문제로 가면 시작 버튼 다시 활성화 (파란색)
+        if(startBtn) {
+            startBtn.disabled = false;
+            startBtn.style.background = ""; // 기본 파란색 CSS로 복구
+            startBtn.style.color = "";
+            startBtn.style.cursor = "pointer";
+            startBtn.style.boxShadow = "";
+            startBtn.innerHTML = '현재 퀴즈 시작 <i class="fa-solid fa-play" style="margin-left:10px;"></i>';
+        }
+
         if(qText) qText.innerHTML = `<span style="color:#3b82f6; margin-right:10px;">Q${state.currentQuizIdx + 1}.</span>${q.text}`;
-        
         if(qNum) qNum.innerText = `문항 ${state.currentQuizIdx + 1}`;
         
         const oDiv = document.getElementById('d-options'); 
@@ -3510,25 +3523,35 @@ startAnswerMonitor: function() {
 
     
 // [수정본] 퀴즈 액션 처리 함수
-    action: function(act) {
+action: function(act) {
         if(state.isObserver) return ui.showAlert("👁️ 옵저버는 상태를 변경할 수 없습니다.");
         
         firebase.database().ref(`courses/${state.room}/activeQuiz`).update({ status: act });
         
+        const startBtn = document.getElementById('btnSmartNext');
+
         if(act === 'open') { 
             this.startTimer(); 
         } else if(act === 'close') { 
             this.stopTimer(); 
-            // 정답 표시 로직은 유지
         } else if(act === 'result') { 
             this.stopTimer(); 
-            // ★ 수정: 차트 영역을 켜는 대신 문항 영역(d-options)을 그대로 둠
+            
+            // ★ [추가] 시작 버튼 비활성화 (회색 처리)
+            if(startBtn) {
+                startBtn.disabled = true;
+                startBtn.style.background = "#cbd5e1"; // 회색
+                startBtn.style.color = "#94a3b8";
+                startBtn.style.cursor = "default";
+                startBtn.style.boxShadow = "none";
+                startBtn.innerHTML = '해설 및 결과 모드 <i class="fa-solid fa-lock"></i>';
+            }
+
             const oDiv = document.getElementById('d-options');
             const cDiv = document.getElementById('d-chart');
             if(oDiv) oDiv.style.display = 'flex'; 
-            if(cDiv) cDiv.style.display = 'none'; // 기존 막대 차트는 숨김
+            if(cDiv) cDiv.style.display = 'none';
             
-            // 데이터 주입 함수 호출
             this.renderResultsOnOptions(`Q${state.currentQuizIdx}`, state.quizList[state.currentQuizIdx].correct); 
         }
     },
