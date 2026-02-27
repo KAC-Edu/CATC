@@ -3079,69 +3079,76 @@ body.night-mode .status-badge.status-arrived {
 
 
 
-/* 1. 달력 전체 외곽 및 가로폭 보정 (850px로 확대하여 3월/4월 가로 배치 강제) */
+/* 1. 달력 전체 외곽 및 가로폭 보정 (대칭 균형을 위해 820px로 정밀 조정) */
 .flatpickr-calendar {
-    box-shadow: 0 15px 50px rgba(0,0,0,0.3) !important;
-    border: 2px solid #3b82f6 !important;
+    box-shadow: 0 15px 50px rgba(0,0,0,0.2) !important;
+    border: 1px solid #e2e8f0 !important;
     border-radius: 20px !important;
     background: #fff !important;
-    width: 850px !important; /* 가로폭 대폭 확대 */
+    width: 820px !important; 
+    padding: 10px 0 !important;
+}
+.flatpickr-calendar.rangeMode {
+    width: 820px !important;
 }
 
-/* 2. 상단 월/년도 정보 시안성 확대 및 좌우 배치 */
+/* 2. 상단 월/년도 정보 (대칭 배치를 위해 좌우 여백 균등 분배) */
 .flatpickr-months {
     display: flex !important;
     justify-content: space-around !important;
+    padding: 10px 0 !important;
 }
 .flatpickr-current-month {
-    font-size: 1.5rem !important; 
+    font-size: 1.4rem !important; 
     font-weight: 800 !important;
     color: #003366 !important;
 }
 
-/* 3. 요일 폰트 강조 및 정렬 */
+/* 3. 요일 폰트 및 정렬 (가운데 정렬 강제) */
 .flatpickr-weekdays {
     display: flex !important;
-    width: 100% !important;
+    justify-content: space-around !important;
+    padding: 0 15px !important;
 }
 .flatpickr-weekday {
-    color: #64748b !important;
+    color: #94a3b8 !important;
     font-weight: bold !important;
-    font-size: 14px !important;
+    font-size: 13px !important;
 }
 
-/* 4. [핵심] 날짜 영역 가로 배치 강제 (이게 없으면 아래로 숨음) */
+/* 4. [핵심 수정] 달력 배치 부자연스러움 해결 (Flex 정렬로 양쪽 균형 맞춤) */
 .flatpickr-innerContainer {
     display: flex !important;
-    width: 100% !important;
+    justify-content: center !important; /* 양쪽 달력을 중앙으로 모음 */
+    padding: 0 10px !important;
 }
 .flatpickr-days {
     width: 100% !important;
     display: flex !important;
-    align-items: flex-start !important;
+    justify-content: center !important;
+    border: none !important;
 }
 .dayContainer {
-    width: 350px !important; /* 각 달의 너비 고정 */
-    min-width: 350px !important;
-    max-width: 350px !important;
-    display: flex !important;
-    flex-wrap: wrap !important;
-    justify-content: flex-start !important;
+    width: 385px !important; /* 양쪽 달력 크기를 똑같이 385px로 고정 */
+    min-width: 385px !important;
+    max-width: 385px !important;
+    padding: 0 !important;
+    margin: 0 5px !important; /* 두 달력 사이 미세 간격 */
 }
 
-/* 5. 날짜 개별 칸 사이의 모든 틈새(Gap) 제거 */
+/* 5. 날짜 칸 사이의 회색 틈새/빈 공간 완전 제거 */
 .flatpickr-day {
     margin: 0 !important;
     border: 0 !important;
     max-width: none !important;
-    flex-basis: 14.2857% !important; 
-    height: 45px !important;
-    line-height: 45px !important;
-    border-radius: 0 !important; /* 연결을 위해 사각형 유지 */
+    flex-basis: 14.2857% !important; /* 7등분 정밀 계산 */
+    height: 48px !important; /* 높이를 살짝 키워 더 시원하게 배치 */
+    line-height: 48px !important;
+    border-radius: 0 !important;
     box-shadow: none !important;
 }
 
-/* 6. 선택된 모든 범위 색상 통일 (끊김 없는 매끄러운 파란색 바) */
+/* 6. 선택된 기간 색상 통일 (연속적인 파란색 바 구현) */
 .flatpickr-day.inRange, 
 .flatpickr-day.selected, 
 .flatpickr-day.startRange, 
@@ -3150,27 +3157,30 @@ body.night-mode .status-badge.status-arrived {
     background: #3b82f6 !important;
     border-color: #3b82f6 !important;
     color: #fff !important;
+    box-shadow: -1px 0 0 #3b82f6, 1px 0 0 #3b82f6 !important; /* 좌우 미세 틈새까지 색으로 메움 */
 }
 
-/* 7. 시작일과 종료일의 바깥쪽 끝만 둥글게 처리 (캡슐 바 완성) */
+/* 7. 시작일과 종료일만 끝부분 곡선 처리 (바 형태 완성) */
 .flatpickr-day.startRange {
-    border-top-left-radius: 25px !important;
-    border-bottom-left-radius: 25px !important;
+    border-top-left-radius: 30px !important;
+    border-bottom-left-radius: 30px !important;
 }
 .flatpickr-day.endRange {
-    border-top-right-radius: 25px !important;
-    border-bottom-right-radius: 25px !important;
+    border-top-right-radius: 30px !important;
+    border-bottom-right-radius: 30px !important;
 }
 .flatpickr-day.startRange.endRange {
-    border-radius: 25px !important;
+    border-radius: 30px !important;
 }
 
-/* 8. 마우스 호버 시 색상 및 범위 외 날짜 흐리게 */
-.flatpickr-day:hover { background: #e2e8f0 !important; }
+/* 8. 마우스 호버 시 효과 보정 */
+.flatpickr-day:hover { background: #f1f5f9 !important; }
 .flatpickr-day.inRange:hover { background: #2563eb !important; }
-.flatpickr-day.prevMonthDay, .flatpickr-day.nextMonthDay { opacity: 0.3; }
+.flatpickr-day.prevMonthDay, .flatpickr-day.nextMonthDay { 
+    color: #e2e8f0 !important; /* 지난달/다음달 날짜는 더 흐리게 */
+}
 
-/* 9. 달력 내부 컨테이너 정렬 및 겹침 방지 여백 */
-.flatpickr-month + .flatpickr-month {
-    margin-left: 50px !important;
+/* 9. 달력 내부 정렬 및 간격 최종 보정 */
+.flatpickr-innerContainer + .flatpickr-innerContainer {
+    margin-left: 0 !important;
 }

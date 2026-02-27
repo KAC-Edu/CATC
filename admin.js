@@ -4123,23 +4123,23 @@ openSetupModal: async function() {
             // 기존에 저장된 데이터(과정명, 장소 등)를 입력창에 세팅
             this.loadCurrentSettings(); 
 
-// [최종 수정] 4월 달력 노출 + 자동 닫힘 방지 적용
+// [최종 수정] 완벽한 대칭형 820px 달력 적용
 flatpickr("#setup-period-range", {
     mode: "range",
     locale: "ko",
     dateFormat: "Y-m-d",
-    showMonths: 2,         // 2개월 동시 보기
-    closeOnSelect: false,  // ★ 두 번째 날짜를 찍어도 안 닫히게 설정 (확인용)
+    showMonths: 2,         
+    closeOnSelect: false,  
     disableMobile: "true",
     onReady: function(selectedDates, dateStr, instance) {
-        // CSS와 일치하도록 가로폭 850px 강제 지정
-        instance.calendarContainer.style.width = "850px"; 
+        // 가로폭을 820px로 고정하여 양쪽 달력 균형 확보
+        instance.calendarContainer.style.width = "820px"; 
     },
     onChange: function(selectedDates, dateStr, instance) {
-        // 날짜 선택 시에도 가로폭 유지
-        instance.calendarContainer.style.width = "850px";
+        instance.calendarContainer.style.width = "820px";
     }
 });
+
         });
     });
 },
