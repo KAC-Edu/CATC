@@ -2031,63 +2031,111 @@ if (endDate >= todayStr && (req.status === 'pending' || req.status === 'approved
 
 
 
-// [수정] 개별 과정 상세 뷰: 행 전체 클릭 범위 확대 및 UI 보정
+// [신규 추가] 외출/외박 기록을 개별적으로 완전히 삭제하는 함수
+function deleteActionRow(rid, date, token, name) {
+    if (!confirm(`🚨 [주의] ${name}님의 ${date} 기록을 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.`)) return;
+
+    firebase.database().ref(`courses/${rid}/admin_actions/${date}/${token}`).remove()
+        .then(() => {
+            alert("정상적으로 삭제되었습니다.");
+            // 삭제 후 화면이 자동으로 갱신되지만, 즉각적인 반응을 위해 상세 뷰를 다시 부름
+            updateIndividualView();
+        })
+        .catch(err => alert("삭제 실패: " + err.message));
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// [수정본] 개별 과정 상세 뷰: 현재 설정된 기간 내의 데이터만 노출 + 삭제 기능 추가
 function updateIndividualView() {
     const room = globalAllData[currentRID]; 
     if (!room) return;
 
+    // 현재 설정된 교육 기간 가져오기 (예: "2026-03-03 ~ 2026-03-13")
+    const periodStr = room.settings?.period || "";
+    let startDate = "";
+    let endDate = "";
+    if (periodStr.includes(" ~ ")) {
+        const dates = periodStr.split(" ~ ");
+        startDate = dates[0];
+        endDate = dates[1];
+    }
+
     document.getElementById('ind-room-id').innerText = currentRID;
     document.getElementById('ind-course-name').innerText = room.settings?.courseName || "과정명 미설정";
-    document.getElementById('ind-period').innerText = room.settings?.period || "-";
+    document.getElementById('ind-period').innerText = periodStr || "-";
     document.getElementById('ind-prof').innerText = (room.status?.professorName || "-") + " 교수";
     document.getElementById('ind-coord').innerText = room.settings?.coordinatorName || "-";
     document.getElementById('ind-room-loc').innerText = room.settings?.roomDetailName || "-";
 
-    let leaderTxt = "지정된 학생장 없음";
-    if(room.students) {
-        const leaders = Object.values(room.students).filter(s => s.isLeader === true);
-        if(leaders.length > 0) {
-            leaderTxt = leaders.map(l => `${l.name} [${l.phone || '연락처 미등록'}]`).join(' / ');
-        }
-    }
-    document.getElementById('ind-leader').innerText = leaderTxt;
-
-    const students = Object.values(room.students || {}).filter(s => s.name && s.name !== "undefined");
-    const uniqueSize = (new Set(students.map(s => `${s.name.trim()}_${(s.phone||"").replace(/-/g,'').trim()}`))).size;
-    document.getElementById('ind-entry-cnt').innerHTML = `${uniqueSize}<span>명</span>`;
-    
-    const requests = room.shuttle?.requests || {};
-    const items = Object.values(requests);
-    document.getElementById('ind-shuttle-total').innerText = items.length;
-    document.getElementById('ind-osong').innerText = items.filter(i => i.type === 'osong').length;
-    document.getElementById('ind-term').innerText = items.filter(i => i.type === 'terminal').length;
-    document.getElementById('ind-air').innerText = items.filter(i => i.type === 'airport').length;
-    document.getElementById('ind-car').innerText = items.filter(i => i.type === 'car').length;
-
     const actionTbody = document.getElementById('indActionTableBody');
-    const today = getTodayString();
-    const actions = room.admin_actions?.[today] || {};
-    const actionItems = Object.keys(actions).map(k=>({...actions[k], token:k})).sort((a,b)=>a.timestamp-b.timestamp);
-    
-    actionTbody.innerHTML = actionItems.length ? actionItems.map(a => {
-        const isSigned = a.confirmed === true;
-        const returnBadge = a.returned ? `<span style="display:inline-block; background:#10b981; color:white; padding:2px 8px; border-radius:4px; font-size:10px; margin-left:5px; font-weight:800; vertical-align:middle;">복귀완료</span>` : "";
-        const btnText = isSigned ? "서명취소" : "서명";
-        const btnStyle = isSigned ? "background:#94a3b8; color:#fff; border:none;" : "background:var(--blue-main); color:#fff; border:none;";
-        const dataStr = encodeURIComponent(JSON.stringify(a));
-        
-        const rowClickAction = `onclick="showActionDetail('${dataStr}')" style="cursor:pointer;"`;
+    actionTbody.innerHTML = "";
 
-        return `<tr>
-            <td ${rowClickAction} style="font-weight:800; text-align:center;">${a.name}${returnBadge}</td>
-            <td ${rowClickAction} style="color:${a.type==='outing'?'#ea580c':'#dc2626'}; font-weight:800; text-align:center;">${a.type==='outing'?'외출':'외박'}</td>
-            <td ${rowClickAction} style="text-align:center;">${new Date(a.timestamp).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</td>
-            <td><button onclick="toggleConfirm('${currentRID}', '${today}', '${a.token}', ${isSigned})" style="${btnStyle} border-radius:5px; width:100%; height:35px; display:flex; align-items:center; justify-content:center; font-weight:800; cursor:pointer; font-size:11px; margin: 0 auto;">${btnText}</button></td>
-        </tr>`;
-    }).join('') : '<tr><td colspan="4" style="padding:20px; color:#94a3b8; text-align:center;">신청 명단 없음</td></tr>';
+    // 모든 날짜의 데이터를 확인하지만, 현재 교육 기간 내의 데이터만 필터링
+    let actionItems = [];
+    if (room.admin_actions) {
+        Object.keys(room.admin_actions).forEach(date => {
+            // 기간 체크 로직: 시작일보다 크거나 같고, 종료일보다 작거나 같은 날짜만 수집
+            if (date >= startDate && date <= endDate) {
+                const dayActions = room.admin_actions[date];
+                Object.keys(dayActions).forEach(token => {
+                    actionItems.push({ ...dayActions[token], token: token, date: date });
+                });
+            }
+        });
+    }
+
+    actionItems.sort((a, b) => a.timestamp - b.timestamp);
     
-    // [가장 중요 - 이 부분 때문에 글자가 되돌아갔던 것임]
-    // 사용자가 입력창(courseNotice)에 글을 쓰고 있거나 마우스를 클릭한 상태라면 서버 데이터를 덮어쓰지 않음
+    if (actionItems.length === 0) {
+        actionTbody.innerHTML = '<tr><td colspan="4" style="padding:20px; color:#94a3b8; text-align:center;">해당 교육 기간 내 신청 명단 없음</td></tr>';
+    } else {
+        actionTbody.innerHTML = actionItems.map(a => {
+            const isSigned = a.confirmed === true;
+            const btnText = isSigned ? "서명취소" : "서명";
+            const btnStyle = isSigned ? "background:#94a3b8;" : "background:var(--blue-main);";
+            const dataStr = encodeURIComponent(JSON.stringify(a));
+            
+            return `<tr>
+                <td onclick="showActionDetail('${dataStr}')" style="cursor:pointer; font-weight:800; text-align:center;">
+                    ${a.date.substring(5)} ${a.name}
+                </td>
+                <td style="color:${a.type==='outing'?'#ea580c':'#dc2626'}; font-weight:800; text-align:center;">
+                    ${a.type==='outing'?'외출':'외박'}
+                </td>
+                <td style="text-align:center;">
+                    ${new Date(a.timestamp).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}
+                </td>
+                <td>
+                    <div style="display:flex; gap:4px;">
+                        <button onclick="toggleConfirm('${currentRID}', '${a.date}', '${a.token}', ${isSigned})" 
+                                style="${btnStyle} color:#fff; border:none; border-radius:5px; flex:2; height:35px; font-weight:800; cursor:pointer; font-size:11px;">
+                            ${btnText}
+                        </button>
+                        <button onclick="deleteActionRow('${currentRID}', '${a.date}', '${a.token}', '${a.name}')" 
+                                style="background:#ef4444; color:#fff; border:none; border-radius:5px; flex:1; height:35px; font-weight:800; cursor:pointer; font-size:11px;">
+                            삭제
+                        </button>
+                    </div>
+                </td>
+            </tr>`;
+        }).join('');
+    }
+
     const noticeEl = document.getElementById('courseNotice');
     if (document.activeElement !== noticeEl) {
         noticeEl.value = room.coordNotice || "";
