@@ -1486,20 +1486,37 @@ loadDashboardStats: function() {
         if (document.getElementById('dashDinnerSkipCount')) document.getElementById('dashDinnerSkipCount').innerText = count;
     });
 
-    // 8. 셔틀 정보 및 차량 수요 실시간 업데이트
+// 8. 셔틀 정보 및 차량 수요 실시간 업데이트
     refs.departure.on('value', snap => {
         if (state.room !== room) return; 
         const dep = snap.val();
         const bar = document.getElementById('dashShuttleNotice');
         const txt = document.getElementById('dashShuttleNoticeTxt');
         if (!bar || !txt) return;
+
         if (dep && dep.time) {
             bar.style.display = "block";
-            txt.innerText = `퇴교차량 출발 예정: ${dep.date} [${dep.time}]`;
+            bar.style.padding = "15px 10px"; // 박스 상하 여백 확대
+            bar.style.textAlign = "center";   // 중앙 정렬
+
+            // 날짜 변환 (2026-03-06 -> 2026년 3월 6일)
+            const dateParts = dep.date.split('-');
+            const formattedDate = `${dateParts[0]}년 ${parseInt(dateParts[1])}월 ${parseInt(dateParts[2])}일`;
+            
+            // 두 줄 레이아웃 및 디자인 적용
+            txt.innerHTML = `
+                <div style="font-size:13px; font-weight:800; margin-bottom:5px; color:#92400e;">퇴교차량 출발 예정 시간</div>
+                <div style="font-size:19px; font-weight:900; color:#b91c1c; letter-spacing:-0.5px;">${formattedDate} (${dep.time})</div>
+            `;
+            
+            // 기존 아이콘(확성기)은 텍스트 정렬을 위해 숨김 처리
+            const icon = bar.querySelector('i');
+            if(icon) icon.style.display = "none";
         } else {
             bar.style.display = "none";
         }
     });
+
     refs.shuttleReq.on('value', s => {
         if (state.room !== room) return;
         const data = s.val() || {};
