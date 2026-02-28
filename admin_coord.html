@@ -2030,100 +2030,112 @@ function init() {
 
 
 
-// [3. 전체 현황판 실시간 집계 및 명단 팝업] - 모든 통계에 기간 필터링 완벽 적용
+// [3. 전체 현황판 실시간 집계 및 명단 팝업] - 기간 및 방 상태 필터링 완벽 적용본
 function updateGlobalStatus() {
     let globalList = []; 
     let todayA = 0; 
     let totalShuttle = 0; 
-    const tStr = getTodayString();
+    const tStr = getTodayString(); // 오늘 날짜 (YYYY-MM-DD)
 
-    // 오늘 날짜 구하기 (YYYY-MM-DD 형식)
+    // 비교용 오늘 날짜 객체 생성
     const now = new Date();
     const todayStr = now.getFullYear() + '-' + 
                    String(now.getMonth() + 1).padStart(2, '0') + '-' + 
                    String(now.getDate()).padStart(2, '0');
 
-    // 1. 교육과정 데이터를 돌며 학생수, 외출건수, 퇴교신청수 집계
+    // 1. 교육과정 데이터를 돌며 유효한 데이터만 집계
     Object.keys(globalAllData).forEach(rid => {
         const room = globalAllData[rid];
         const settings = room.settings || {};
-        const cName = settings.courseName || `[미설정] Room ${rid}`;
+        const status = room.status || {};
         
-        // [날짜 필터링] 종료일이 오늘보다 이전인 과거 과정은 통계에서 제외
+        // [필터 1] 방 상태가 'active'(사용중)가 아니면 무조건 제외
+        if (status.roomStatus !== 'active') return;
+
+        // [필터 2] 교육 기간이 설정된 경우, 종료일이 오늘보다 이전이면 제외
         if (settings.period && settings.period.includes(" ~ ")) {
             const endDate = settings.period.split(" ~ ")[1];
-            if (endDate < todayStr) {
-                return; // 과거 과정이면 집계 안 함
-            }
+            if (endDate < todayStr) return; 
         }
 
-        // 수강생 집계 (진행중인 과정만)
+        // --- 여기서부터는 필터를 통과한 '진행 중인 과정'만 처리됨 ---
+
+        // 수강생 집계 (이름이 있는 유효한 학생만)
         if (room.students) { 
             Object.values(room.students).forEach(s => {
                 if (s && s.name && s.name !== "undefined" && s.name.trim() !== "") {
                     const cleanPhone = (s.phone || "0000").replace(/[^0-9]/g, "");
                     const last4 = cleanPhone.length >= 4 ? cleanPhone.slice(-4) : cleanPhone;
-                    globalList.push({ courseName: cName, name: s.name.trim(), phone: last4 });
+                    // 중복 제거를 위해 리스트에 수집
+                    globalList.push({ name: s.name.trim(), phone: last4 });
                 }
             });
         }
         
-        // 외출/외박 집계 (진행중인 과정만)
+        // 오늘 날짜 외출/외박 신청 건수
         if (room.admin_actions?.[tStr]) {
             todayA += Object.keys(room.admin_actions[tStr]).length;
         }
 
-        // 교육생 퇴교 셔틀 집계 (진행중인 과정만)
+        // 교육생 퇴교 셔틀 신청 인원 (자차 제외 여부는 기획에 맞게 조정 가능, 여기선 전체 신청자 카운트)
         if (room.shuttle?.requests) {
             totalShuttle += Object.keys(room.shuttle.requests).length;
         }
     });
 
-    // 2. 수강생 중복 제거
+    // 2. 수강생 중복 제거 (성함_뒷4자리 기준)
     const uniqueSet = new Set();
     globalList.forEach(item => {
         const id = `${item.name}_${item.phone}`;
         uniqueSet.add(id);
     });
 
-    // 3. [핵심 수정] 강사 픽업 요청 건수도 기간 필터링하여 집계
+    // 3. 강사 픽업 요청 건수 집계 (비동기 처리)
     firebase.database().ref('system/transport_requests').once('value', snap => {
         const pickupData = snap.val() || {};
         let validPickupCount = 0;
 
         Object.values(pickupData).forEach(req => {
-            const rid = req.courseRID; // 해당 요청의 방ID
+            const rid = req.courseRID;
             const room = globalAllData[rid];
             
-            // 해당 방이 있고, 사용 중이며, 종료일이 오늘보다 이후인 경우만 카운트
+            // 요청된 픽업의 해당 강의실이 현재 'active' 상태인지 확인
             if (room && room.status?.roomStatus === 'active') {
                 const settings = room.settings || {};
+                
+                // 해당 과정의 기간이 지나지 않았는지 확인
                 if (settings.period && settings.period.includes(" ~ ")) {
                     const endDate = settings.period.split(" ~ ")[1];
-                    // 종료일이 오늘이거나 미래인 경우 + 취소되지 않은 건만 카운트
-if (endDate >= todayStr && (req.status === 'pending' || req.status === 'approved')) {
-    validPickupCount++;
-}
+                    if (endDate >= todayStr) {
+                        // 취소되지 않은(대기 또는 승인) 유효한 요청만 카운트
+                        if (req.status === 'pending' || req.status === 'approved') {
+                            validPickupCount++;
+                        }
+                    }
                 }
             }
         });
         
-        // 화면 숫자 업데이트
-        if(document.getElementById('g-total-students')) document.getElementById('g-total-students').innerText = uniqueSet.size;
-        if(document.getElementById('g-today-actions')) document.getElementById('g-today-actions').innerText = todayA;
-        if(document.getElementById('g-pickup-count')) document.getElementById('g-pickup-count').innerText = validPickupCount;
-        if(document.getElementById('g-shuttle-count')) document.getElementById('g-shuttle-count').innerText = totalShuttle;
+        // 4. 최종 화면 숫자 업데이트 (존재하는 ID만 안전하게 업데이트)
+        const updateText = (id, value) => {
+            const el = document.getElementById(id);
+            if (el) el.innerText = value;
+        };
+
+        updateText('g-total-students', uniqueSet.size);
+        updateText('g-today-actions', todayA);
+        updateText('g-pickup-count', validPickupCount);
+        updateText('g-shuttle-count', totalShuttle);
     });
 
-    // 4. [1번 버튼 클릭 이벤트]
+    // 5. 버튼 클릭 이벤트 (전체 교육생 명단 보기)
     const studentBtn = document.getElementById('g-total-students')?.closest('.dashboard-card-btn');
     if(studentBtn) {
         studentBtn.onclick = function() {
             showTotalStudentList(); 
         };
     }
-} // updateGlobalStatus 끝
-
+}
 
 
 
@@ -2688,26 +2700,30 @@ function renderCourseSelectors() {
         const rid = String.fromCharCode(i);
         const room = globalAllData[rid];
         const settings = room?.settings || {};
+        const status = room?.status || {};
 
-        // 1. 설정창용 드롭다운 옵션 생성 (이건 모든 방이 다 보여야 하므로 필터 안 함)
+        // 1. 설정창용 드롭다운 옵션 생성 (모든 방 노출 - 관리를 위해 필터링하지 않음)
         let label = `Room ${rid}`;
-        if (room?.status?.roomStatus === 'active') {
-            label += ` [사용중 - ${room.status.professorName || '미정'}]`;
+        if (status.roomStatus === 'active') {
+            label += ` [사용중 - ${status.professorName || '미정'}]`;
         }
         setupRoom.add(new Option(label, rid));
 
         // 2. 메인 리스트 아이템 생성 (사용중인 방만 + 기간이 안 지난 것만)
-        if (room?.status?.roomStatus === 'active') {
+        if (status.roomStatus === 'active') {
             
-            // [날짜 필터링 추가] 종료일이 오늘보다 이전이면 리스트에서 제외
+            // [날짜 필터링 강화] 종료일이 오늘보다 이전이면 리스트에서 제외
             if (settings.period && settings.period.includes(" ~ ")) {
-                const endDate = settings.period.split(" ~ ")[1];
-                if (endDate < todayStr) {
-                    continue; // 기간이 지났으면 이번 방(rid)은 건너뜀
+                const dates = settings.period.split(" ~ ");
+                // .trim()을 추가하여 "2026-03-13 " 같은 공백 포함 문자열의 비교 오류 방지
+                const endDate = dates[1] ? dates[1].trim() : ""; 
+                
+                if (endDate && endDate < todayStr) {
+                    continue; // 기간이 지난 과정이면 리스트 카드 생성 건너뜀
                 }
             }
 
-            const cName = settings.courseName || rid;
+            const cName = settings.courseName || `Room ${rid}`;
             const coordName = settings.coordinatorName || "담당 미지정";
             const color = barColors[i % barColors.length]; // 알파벳 순서대로 컬러 배정
 
@@ -2734,7 +2750,17 @@ function renderCourseSelectors() {
             list.appendChild(card);
         }
     }
+
+    // 만약 필터링 후 활성화된 과정이 하나도 없다면 안내 메시지 표시 (선택사항)
+    if (list.innerHTML === "") {
+        list.innerHTML = `<div style="text-align:center; padding:30px; color:#94a3b8; font-size:13px; font-weight:600;">현재 진행 중인 과정이 없습니다.</div>`;
+    }
 }
+
+
+
+
+
 
 
 
@@ -3809,30 +3835,51 @@ async function showTotalStudentList() {
 
 async function loadAllStudentData() {
     const tbody = document.getElementById('allStudentTableBody');
-    tbody.innerHTML = '<tr><td colspan="4" style="padding:50px;">데이터를 통합 중입니다...</td></tr>';
+    if (tbody) tbody.innerHTML = '<tr><td colspan="4" style="padding:50px;">데이터를 통합 중입니다...</td></tr>';
     
-    const today = getTodayString();
+    // 1. 비교를 위한 오늘 날짜 구하기 (YYYY-MM-DD)
+    const now = new Date();
+    const todayStr = now.getFullYear() + '-' + 
+                   String(now.getMonth() + 1).padStart(2, '0') + '-' + 
+                   String(now.getDate()).padStart(2, '0');
+
     masterStudentList = [];
 
+    // 생활관 배정 정보 가져오기
     const dormSnap = await firebase.database().ref('system/dormitory_assignments').once('value');
     const dormData = dormSnap.val() || {};
 
     Object.keys(globalAllData).forEach(rid => {
         const room = globalAllData[rid];
-        const courseName = room.settings?.courseName || `Room ${rid}`;
+        const settings = room.settings || {};
+        const status = room.status || {};
+
+        // ★ [핵심 필터 1] 방 상태가 'active'(사용중)가 아니면 제외
+        if (status.roomStatus !== 'active') return;
+
+        // ★ [핵심 필터 2] 교육 기간이 종료된 과정(종료일 < 오늘)은 제외
+        if (settings.period && settings.period.includes(" ~ ")) {
+            const endDate = settings.period.split(" ~ ")[1];
+            if (endDate < todayStr) {
+                return; // 기간이 지난 과정이면 이 루프를 건너뜀
+            }
+        }
+
+        const courseName = settings.courseName || `Room ${rid}`;
         if (!room.students) return;
 
         Object.keys(room.students).forEach(stoken => {
             const s = room.students[stoken];
-            if (!s.name || s.name === "undefined") return;
+            if (!s.name || s.name === "undefined" || s.name.trim() === "") return;
 
             const phoneSuffix = s.phone ? s.phone.slice(-4) : "0000";
             const sKey = `${s.name.trim()}_${phoneSuffix}`;
 
+            // 생활관 매칭 (정밀 키 또는 이름 기준)
             let assigned = dormData[sKey] || dormData[s.name.trim()];
             const dorm = assigned || { building: "-", room: "미배정" };
             
-            // 퇴교 차량 정보
+            // 퇴교 차량 정보 추출
             const shuttleReq = room.shuttle?.requests?.[stoken];
             let shuttleText = "-";
             let shuttleClass = "";
@@ -3844,14 +3891,15 @@ async function loadAllStudentData() {
                 shuttleType = shuttleReq.type;
             }
 
+            // 마스터 리스트에 유효한 학생 데이터 추가
             masterStudentList.push({
-                rid,      // 과정ID 추가
-                stoken,   // 학생토큰 추가
+                rid,
+                stoken,
                 courseName,
                 name: s.name,
                 phone: phoneSuffix,
                 dormBuilding: dorm.building,
-                dormRoom: dorm.room !== '미배정' ? `${dorm.room}호` : "미배정",
+                dormRoom: dorm.room !== '미배정' ? (dorm.room.includes('호') ? dorm.room : `${dorm.room}호`) : "미배정",
                 shuttleText,
                 shuttleClass,
                 shuttleType,
@@ -3860,9 +3908,9 @@ async function loadAllStudentData() {
         });
     });
 
+    // 화면에 테이블 렌더링
     renderStudentTable(masterStudentList);
 }
-
 
 
 
