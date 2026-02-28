@@ -3,171 +3,217 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>미화/시설 관리판</title>
+    <title>미화/시설 관리 플랫폼</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <script src="config.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" rel="stylesheet">
     <style>
-        :root { --navy: #0f172a; --green: #10b981; --gray: #94a3b8; }
-        body { margin: 0; background: #f1f5f9; font-family: 'Pretendard'; color: #1e293b; }
+        :root { --navy: #0f172a; --blue: #3b82f6; --green: #10b981; --red: #ef4444; --gray: #64748b; }
+        body { margin: 0; background: #f1f5f9; font-family: 'Pretendard'; color: #1e293b; -webkit-tap-highlight-color: transparent; }
         
-        /* 상단 헤더 및 필터 */
+        /* 헤더 및 통계 바 */
         .header { background: var(--navy); color: white; padding: 15px; position: sticky; top: 0; z-index: 100; }
-        .filter-bar { display: flex; gap: 8px; overflow-x: auto; padding-top: 10px; scrollbar-width: none; }
+        .stats-grid { 
+            display: grid; grid-template-columns: 1.2fr 1fr 1fr 1fr 1fr; gap: 5px; 
+            background: rgba(255,255,255,0.1); padding: 10px; border-radius: 10px; margin-top: 10px; font-size: 11px; text-align: center;
+        }
+        .stat-item b { display: block; font-size: 14px; color: #facc15; }
+
+        /* 필터 바 */
+        .filter-bar { display: flex; gap: 8px; overflow-x: auto; padding: 12px 15px; background: white; border-bottom: 1px solid #e2e8f0; scrollbar-width: none; }
         .filter-bar::-webkit-scrollbar { display: none; }
-        .chip { 
-            flex-shrink: 0; padding: 6px 15px; background: rgba(255,255,255,0.1); 
-            border-radius: 20px; font-size: 13px; font-weight: 700; cursor: pointer; 
-        }
-        .chip.active { background: white; color: var(--navy); }
+        .chip { flex-shrink: 0; padding: 6px 14px; background: #f1f5f9; border-radius: 20px; font-size: 13px; font-weight: 700; cursor: pointer; color: var(--gray); }
+        .chip.active { background: var(--blue); color: white; }
 
-        /* 리스트 컨테이너 */
+        /* 리스트 아이템 (한 줄 처리) */
         .container { padding: 10px; }
-
-        /* 요청 한 줄 아이템 */
-        .req-item {
-            background: white; border-radius: 8px; padding: 12px; margin-bottom: 8px;
-            display: flex; flex-direction: column; gap: 10px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-            border: 1px solid #e2e8f0;
+        .req-row {
+            background: white; border-radius: 10px; padding: 12px 15px; margin-bottom: 8px;
+            display: flex; align-items: center; justify-content: space-between; gap: 10px;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05); border: 1px solid #e2e8f0;
         }
+        .req-row.unread { border-left: 5px solid var(--green); }
+        .req-row.done { background: #e2e8f0; opacity: 0.7; }
 
-        /* [핵심] 미확인 건 - 녹색 테두리 */
-        .status-wait-border { border: 2.5px solid var(--green) !important; }
+        .info-group { display: flex; align-items: center; gap: 10px; flex: 1; overflow: hidden; }
+        .date { font-size: 12px; color: var(--gray); font-weight: 600; white-space: nowrap; }
+        .dorm-room { font-size: 14px; font-weight: 800; color: var(--navy); white-space: nowrap; }
+        .request-text { font-size: 14px; font-weight: 700; color: #334155; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-        /* [핵심] 처리 완료 - 회색 음영 */
-        .status-done-bg { background: #e2e8f0 !important; opacity: 0.8; }
-
-        .info-row { display: flex; align-items: center; font-size: 14px; gap: 8px; font-weight: 800; }
-        .date { color: var(--gray); font-size: 12px; min-width: 40px; }
-        .dorm { color: var(--navy); min-width: 90px; }
-        .text { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #334155; }
-
-        /* 하단 버튼 영역 */
-        .btn-row { display: flex; gap: 6px; }
-        .btn { 
-            flex: 1; padding: 10px 0; border: none; border-radius: 6px; 
-            font-size: 13px; font-weight: 800; cursor: pointer; 
+        /* 상태 버튼 */
+        .status-btn { 
+            padding: 8px 12px; border-radius: 6px; font-size: 12px; font-weight: 800; border: none; cursor: pointer; min-width: 70px; text-align: center;
         }
-        .btn-confirm { background: #dbeafe; color: #1e40af; }
-        .btn-done { background: #d1fae5; color: #065f46; }
-        .btn-reject { background: #fee2e2; color: #b91c1c; }
+        .btn-대기 { background: #fee2e2; color: var(--red); }
+        .btn-확인 { background: #dbeafe; color: var(--blue); }
+        .btn-처리완료 { background: #f1f5f9; color: var(--gray); }
+        .btn-처리불가 { background: #1e293b; color: white; }
+
+        /* 팝업 모달 */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 1000; display: none; align-items: center; justify-content: center; padding: 20px; }
+        .modal-box { background: white; width: 100%; max-width: 350px; border-radius: 20px; padding: 25px; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
+        .modal-box h3 { margin: 0 0 10px 0; font-size: 18px; font-weight: 900; }
+        .modal-box p { font-size: 14px; color: var(--gray); margin-bottom: 20px; line-height: 1.4; }
         
-        .status-label { font-size: 11px; padding: 2px 6px; border-radius: 4px; background: #eee; }
-        .badge-대기 { background: #fee2e2; color: #ef4444; }
-        .badge-확인 { background: #dbeafe; color: #3b82f6; }
-        .badge-처리완료 { background: #d1fae5; color: #10b981; }
+        .modal-btn-group { display: flex; flex-direction: column; gap: 10px; }
+        .m-btn { padding: 15px; border: none; border-radius: 12px; font-size: 16px; font-weight: 800; cursor: pointer; }
+        .m-btn-done { background: var(--green); color: white; }
+        .m-btn-reject { background: #fff1f2; color: var(--red); }
+        .m-btn-cancel { background: #f1f5f9; color: var(--gray); font-size: 14px; }
+
+        @keyframes fadeIn { from { opacity:0; transform: translateY(5px); } to { opacity:1; transform: translateY(0); } }
+        .req-row { animation: fadeIn 0.3s ease-out; }
     </style>
 </head>
 <body>
     <div class="header">
-        <div style="font-weight: 900; font-size: 18px; text-align: center;">🧹 미화/시설 비품요청</div>
-        <div class="filter-bar" id="filterBar">
-            <div class="chip active" onclick="setFilter('전체', this)">전체</div>
-            <div class="chip" onclick="setFilter('청렴관', this)">청렴관</div>
-            <div class="chip" onclick="setFilter('국제동', this)">국제동</div>
-            <div class="chip" onclick="setFilter('상생관', this)">상생관</div>
+        <div style="font-weight: 900; font-size: 18px; text-align: center;">🧹 미화/시설 관리 데스크</div>
+        <div class="stats-grid">
+            <div class="stat-item">금일요청<b id="stat-today">0</b></div>
+            <div class="stat-item">미확인<b id="stat-wait">0</b></div>
+            <div class="stat-item">확인<b id="stat-confirm">0</b></div>
+            <div class="stat-item">처리완료<b id="stat-done">0</b></div>
+            <div class="stat-item">불가<b id="stat-reject">0</b></div>
         </div>
     </div>
 
+    <div class="filter-bar">
+        <div class="chip active" onclick="setFilter('전체', this)">전체</div>
+        <div class="chip" onclick="setFilter('청렴관', this)">청렴관</div>
+        <div class="chip" onclick="setFilter('국제동', this)">국제동</div>
+        <div class="chip" onclick="setFilter('상생관', this)">상생관</div>
+    </div>
+
     <div class="container" id="requestList">
-        <p style="text-align:center; color:var(--gray); margin-top:50px;">데이터 로딩 중...</p>
+        <p style="text-align:center; color:var(--gray); margin-top:50px;">데이터를 연결 중입니다...</p>
+    </div>
+
+    <!-- 처리 팝업 -->
+    <div id="statusModal" class="modal-overlay">
+        <div class="modal-box">
+            <h3 id="modalDorm">국제동 101호</h3>
+            <p id="modalText">요청내용 표시 영역</p>
+            <div class="modal-btn-group">
+                <button class="m-btn m-btn-done" onclick="executeStatusUpdate('처리완료')">처리 완료</button>
+                <button class="m-btn m-btn-reject" onclick="executeStatusUpdate('처리불가')">처리 불가</button>
+                <button class="m-btn m-btn-cancel" onclick="closeModal()">닫기</button>
+            </div>
+        </div>
     </div>
 
     <script>
         let currentFilter = '전체';
+        let selectedKey = null;
         const db = firebase.database().ref('system/facility_requests');
 
         function setFilter(building, el) {
             currentFilter = building;
             document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
             el.classList.add('active');
-            fetchRequests(); // 필터 변경 시 다시 그리기
+            renderList();
         }
 
-        function fetchRequests() {
+        function renderList() {
             db.on('value', (snap) => {
                 const data = snap.val();
                 const listDiv = document.getElementById('requestList');
                 if (!data) {
-                    listDiv.innerHTML = '<p style="text-align:center; color:var(--gray); margin-top:50px;">접수된 요청이 없습니다.</p>';
+                    listDiv.innerHTML = '<p style="text-align:center; color:var(--gray); margin-top:50px;">현재 요청이 없습니다.</p>';
                     return;
                 }
 
-                // 1. 데이터 가공 및 정렬
+                const todayStr = new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD
+                let stats = { today: 0, wait: 0, confirm: 0, done: 0, reject: 0 };
                 let items = Object.keys(data).map(key => ({ id: key, ...data[key] }));
 
-                // 2. [핵심] 처리완료 건은 하단 배치, 나머지는 최신순 상단 배치
-                items.sort((a, b) => {
-                    if (a.status === '처리완료' && b.status !== '처리완료') return 1;
-                    if (a.status !== '처리완료' && b.status === '처리완료') return -1;
-                    return b.timestamp - a.timestamp; // 최신순
+                // 통계 계산
+                items.forEach(item => {
+                    const itemDate = new Date(item.timestamp).toLocaleDateString('en-CA');
+                    if (itemDate === todayStr) stats.today++;
+                    if (item.status === '대기') stats.wait++;
+                    if (item.status === '확인') stats.confirm++;
+                    if (item.status === '처리완료') stats.done++;
+                    if (item.status === '처리불가') stats.reject++;
                 });
 
-                // 3. 필터링 (생활관 명칭 포함 여부 확인)
+                // 필터링 및 정렬
                 if (currentFilter !== '전체') {
-                    items = items.filter(item => item.dorm.includes(currentFilter));
+                    items = items.filter(i => i.dorm.includes(currentFilter));
                 }
+
+                items.sort((a, b) => {
+                    const priority = { '대기': 0, '확인': 1, '처리완료': 2, '처리불가': 2 };
+                    if (priority[a.status] !== priority[b.status]) return priority[a.status] - priority[b.status];
+                    return b.timestamp - a.timestamp;
+                });
 
                 let html = "";
                 items.forEach(req => {
                     const date = new Date(req.timestamp);
                     const dateStr = (date.getMonth() + 1) + '/' + date.getDate();
-                    
-                    // [핵심] 상태별 클래스 적용
-                    const isUnread = (req.status === "대기"); // 미확인 건
-                    const isDone = (req.status === "처리완료");
+                    const displayStatus = req.status === '대기' ? '미확인' : req.status;
+                    const isDone = (req.status === '처리완료' || req.status === '처리불가');
 
                     html += `
-                        <div class="req-item ${isUnread ? 'status-wait-border' : ''} ${isDone ? 'status-done-bg' : ''}">
-                            <div class="info-row">
+                        <div class="req-row ${req.status === '대기' ? 'unread' : ''} ${isDone ? 'done' : ''}">
+                            <div class="info-group">
                                 <span class="date">${dateStr}</span>
-                                <span class="dorm">${req.dorm}</span>
-                                <span class="text">요청: ${req.text}</span>
-                                <span class="status-label badge-${req.status}">${req.status}</span>
+                                <span class="dorm-room">${req.dorm}</span>
+                                <span class="request-text">요청 : ${req.text}</span>
                             </div>
-                            
-                            ${!isDone ? `
-                            <div class="btn-row">
-                                <button class="btn btn-confirm" onclick="updateStatus('${req.id}', '확인')">확인 및 처리중</button>
-                                <button class="btn btn-done" onclick="updateStatus('${req.id}', '처리완료')">완료</button>
-                                <button class="btn btn-reject" onclick="rejectStatus('${req.id}')">불가</button>
-                            </div>
-                            ` : `
-                            <div style="text-align:right;">
-                                <button class="btn" style="width:80px; padding:5px; background:#fff;" onclick="updateStatus('${req.id}', '대기')">되돌리기</button>
-                            </div>
-                            `}
-
-                            ${req.reason ? `<div style="font-size:12px; color:#ef4444; font-weight:700;">ㄴ 사유: ${req.reason}</div>` : ""}
+                            <button class="status-btn btn-${req.status}" onclick="handleStatusClick('${req.id}', '${req.status}', '${req.dorm}', '${req.text}')">
+                                ${displayStatus}
+                            </button>
                         </div>
                     `;
                 });
+
                 listDiv.innerHTML = html;
+                document.getElementById('stat-today').innerText = stats.today + "건";
+                document.getElementById('stat-wait').innerText = stats.wait;
+                document.getElementById('stat-confirm').innerText = stats.confirm;
+                document.getElementById('stat-done').innerText = stats.done;
+                document.getElementById('stat-reject').innerText = stats.reject;
             });
         }
 
-        function updateStatus(key, newStatus) {
-            firebase.database().ref('system/facility_requests/' + key).update({ 
-                status: newStatus,
-                reason: null 
-            });
-        }
-
-        function rejectStatus(key) {
-            const reason = prompt("처리 불가 사유를 입력하세요 (예: 방문 시 부재, 비품 부족)");
-            if (reason) {
-                firebase.database().ref('system/facility_requests/' + key).update({ 
-                    status: "처리불가",
-                    reason: reason
-                });
+        // 상태 버튼 클릭 시
+        function handleStatusClick(key, status, dorm, text) {
+            selectedKey = key;
+            
+            // 미확인(대기) 상태에서 클릭 시 즉시 '확인'으로 변경 후 팝업
+            if (status === '대기') {
+                firebase.database().ref('system/facility_requests/' + key).update({ status: '확인' });
             }
+
+            // 팝업 데이터 셋팅 및 오픈
+            document.getElementById('modalDorm').innerText = dorm;
+            document.getElementById('modalText').innerText = "요청사항: " + text;
+            document.getElementById('statusModal').style.display = 'flex';
         }
 
-        // 초기 실행
-        fetchRequests();
+        function executeStatusUpdate(newStatus) {
+            let updateData = { status: newStatus };
+            
+            if (newStatus === '처리불가') {
+                const reason = prompt("처리 불가 사유를 입력하세요 (생략 가능)");
+                if (reason !== null) updateData.reason = reason;
+            }
+
+            firebase.database().ref('system/facility_requests/' + selectedKey).update(updateData)
+                .then(() => closeModal());
+        }
+
+        function closeModal() {
+            document.getElementById('statusModal').style.display = 'none';
+            selectedKey = null;
+        }
+
+        function renderStats() {} // 기존 통계 함수 통합됨
+
+        renderList();
     </script>
 </body>
 </html>
