@@ -529,22 +529,39 @@
 
 
 
-<!-- 생활관 비품 요청 모달 -->
+<!-- 생활관 비품 요청 모달 (실시간 현황 확인 기능 포함) -->
 <div id="facilityModal" class="menu-overlay" style="display:none; z-index: 8500;" onclick="if(event.target==this)closeFacilityModal()">
-    <div class="menu-box" style="width:90%; max-width:400px; padding:25px;">
-        <h3 style="margin-bottom:15px; font-weight:900;"><i class="fa-solid fa-hand-holding-medical"></i> 생활관 비품 요청</h3>
+    <div class="menu-box" style="width:95%; max-width:400px; padding:25px; border-radius: 24px;">
+        <h3 style="margin-bottom:20px; font-weight:900; color:#1e293b; text-align:center;">
+            <i class="fa-solid fa-hand-holding-medical" style="color:#10b981;"></i> 생활관 비품 요청
+        </h3>
         
-        <!-- 내 정보 자동 표시 -->
-        <div style="background:#f8fafc; padding:15px; border-radius:12px; border:1px solid #e2e8f0; text-align:left; margin-bottom:15px;">
-            <p style="margin:0; font-size:12px; color:#64748b; font-weight:800;">📍 나의 생활관 정보</p>
+        <!-- 1. 내 정보 표시 -->
+        <div style="background:#f8fafc; padding:15px; border-radius:12px; border:1px solid #e2e8f0; text-align:left; margin-bottom:12px;">
+            <p style="margin:0; font-size:11px; color:#64748b; font-weight:800;">📍 나의 생활관 정보</p>
             <p id="reqDormInfo" style="margin:5px 0 0 0; font-size:16px; font-weight:900; color:#1e293b;">정보 확인 중...</p>
         </div>
 
-        <p style="font-size:13px; color:#64748b; margin-bottom:10px; text-align:left;">요청 사항 (샴푸, 치약, 수건 등)</p>
-        <textarea id="facilityReqText" placeholder="추가 요청 사항에 대해 기재해주세요." style="width:100%; height:100px; border:2px solid #e2e8f0; border-radius:12px; padding:12px; font-size:15px; outline:none; resize:none; margin-bottom:15px;"></textarea>
+        <!-- 2. 실시간 처리 현황 (요청 내역이 있을 때만 자바스크립트로 표시됨) -->
+        <div id="myFacilityStatus" style="display:none; background:#f0f9ff; padding:15px; border-radius:12px; border:1.5px solid #3b82f6; text-align:left; margin-bottom:15px;">
+            <p style="margin:0; font-size:11px; color:#3b82f6; font-weight:800;">🔔 최근 요청 처리 현황</p>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-top:8px;">
+                <span id="statusText" style="font-size:14px; font-weight:700; color:#1e293b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 70%;">요청 내용 불러오는 중...</span>
+                <span id="statusBadge" class="status-badge" style="margin:0; padding:4px 8px; font-size:11px;">확인중</span>
+            </div>
+            <!-- 반려 사유 (처리불가 시에만 노출) -->
+            <p id="rejectReason" style="display:none; margin:10px 0 0 0; font-size:12px; color:#ef4444; background:#fff1f2; padding:10px; border-radius:8px; font-weight:700; line-height:1.4; border: 1px solid #fecaca;"></p>
+        </div>
 
-        <button onclick="submitFacilityRequest()" style="width:100%; padding:15px; background:#10b981; color:white; border:none; border-radius:12px; font-size:17px; font-weight:900; cursor:pointer;">요청 제출하기</button>
-        <button onclick="closeFacilityModal()" style="margin-top:10px; width:100%; padding:12px; border:none; border-radius:12px; background:#f1f5f9; color:#475569; font-weight:800; cursor:pointer;">닫기</button>
+        <!-- 3. 요청 입력창 -->
+        <div style="text-align:left;">
+            <label style="font-size:12px; font-weight:800; color:#64748b; margin-left:5px;">새로운 요청 사항</label>
+            <textarea id="facilityReqText" placeholder="수건, 샴푸, 휴지 등 필요한 물품이나 요청사항을 기재해주세요." style="width:100%; height:100px; border:2px solid #e2e8f0; border-radius:15px; padding:15px; font-size:15px; outline:none; resize:none; margin-top:5px; margin-bottom:15px; background:#fff; line-height:1.5;"></textarea>
+        </div>
+
+        <!-- 4. 하단 버튼 -->
+        <button onclick="submitFacilityRequest()" style="width:100%; padding:16px; background:#10b981; color:white; border:none; border-radius:15px; font-size:17px; font-weight:900; cursor:pointer; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);">요청 제출하기</button>
+        <button onclick="closeFacilityModal()" style="margin-top:10px; width:100%; padding:12px; border:none; border-radius:15px; background:#f1f5f9; color:#475569; font-weight:800; cursor:pointer;">닫기</button>
     </div>
 </div>
 
@@ -2420,15 +2437,54 @@ async function openNotice() {
 
 
 
-// 생활관 비품 요청 팝업 열기
+// 생활관 비품 요청 팝업 열기 (현황 확인 로직 추가)
 function openFacilityRequest() {
-    document.getElementById('menuModal').style.display = 'none'; // 메뉴창 닫기
-    document.getElementById('facilityModal').style.display = 'flex'; // 요청창 열기
+    document.getElementById('menuModal').style.display = 'none';
+    document.getElementById('facilityModal').style.display = 'flex';
     
-    // 내 생활관 정보 가져오기 (기존에 작성된 dormTextEl 로직 활용)
     const dormInfo = document.getElementById('displayMyDorm').innerText;
     document.getElementById('reqDormInfo').innerText = dormInfo;
-    document.getElementById('facilityReqText').value = ""; // 초기화
+    document.getElementById('facilityReqText').value = ""; 
+
+    // 내 상태 불러오기
+    const userPhone = localStorage.getItem('kac_user_phone');
+    const userName = localStorage.getItem('kac_user_name');
+
+    // 내 전화번호와 이름이 일치하는 가장 최근 요청 1개를 감시함
+    firebase.database().ref('system/facility_requests')
+        .orderByChild('phone').equalTo(userPhone)
+        .limitToLast(1)
+        .on('value', (snap) => {
+            const statusArea = document.getElementById('myFacilityStatus');
+            const data = snap.val();
+            
+            if (data) {
+                const key = Object.keys(data)[0];
+                const req = data[key];
+
+                // 내 이름과도 일치하는지 확인 (다른 과정 동명이인 방지)
+                if (req.name === userName) {
+                    statusArea.style.display = 'block';
+                    document.getElementById('statusText').innerText = req.text;
+                    document.getElementById('statusBadge').innerText = req.status;
+                    
+                    // 상태별 색상 변경
+                    const badge = document.getElementById('statusBadge');
+                    badge.className = 'status-badge badge-' + req.status;
+
+                    // 반려 사유 표시
+                    const reasonEl = document.getElementById('rejectReason');
+                    if (req.status === "처리불가" && req.reason) {
+                        reasonEl.innerText = "🚩 사유: " + req.reason;
+                        reasonEl.style.display = 'block';
+                    } else {
+                        reasonEl.style.display = 'none';
+                    }
+                }
+            } else {
+                statusArea.style.display = 'none'; // 요청 기록 없으면 안 보임
+            }
+        });
 }
 
 function closeFacilityModal() {
