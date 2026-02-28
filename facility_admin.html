@@ -3,208 +3,161 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>미화/시설 비품요청 관리자</title>
+    <title>미화/시설 관리판</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <script src="config.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" rel="stylesheet">
     <style>
-        :root {
-            --kac-navy: #0f172a;
-            --kac-blue: #3b82f6;
-            --status-wait: #ef4444;    /* 대기: 빨강 */
-            --status-confirm: #f59e0b; /* 확인: 주황 */
-            --status-done: #10b981;    /* 완료: 녹색 */
-            --bg-gray: #f1f5f9;
+        :root { --navy: #0f172a; --green: #10b981; --gray: #94a3b8; }
+        body { margin: 0; background: #f1f5f9; font-family: 'Pretendard'; color: #1e293b; }
+        
+        /* 상단 헤더 및 필터 */
+        .header { background: var(--navy); color: white; padding: 15px; position: sticky; top: 0; z-index: 100; }
+        .filter-bar { display: flex; gap: 8px; overflow-x: auto; padding-top: 10px; scrollbar-width: none; }
+        .filter-bar::-webkit-scrollbar { display: none; }
+        .chip { 
+            flex-shrink: 0; padding: 6px 15px; background: rgba(255,255,255,0.1); 
+            border-radius: 20px; font-size: 13px; font-weight: 700; cursor: pointer; 
         }
+        .chip.active { background: white; color: var(--navy); }
 
-        body { 
-            margin: 0; background: var(--bg-gray); 
-            font-family: 'Pretendard', sans-serif; 
-            color: #1e293b;
-            padding-bottom: 40px;
-        }
+        /* 리스트 컨테이너 */
+        .container { padding: 10px; }
 
-        /* 헤더 디자인 */
-        .header { 
-            background: var(--kac-navy); color: white; 
-            padding: 25px 20px; text-align: center; 
-            position: sticky; top: 0; z-index: 100;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-        }
-        .header h2 { margin: 0; font-size: 20px; font-weight: 900; letter-spacing: -0.5px; }
-        .stats-bar { 
-            display: inline-flex; gap: 15px; margin-top: 10px; 
-            font-size: 13px; font-weight: 600; opacity: 0.9;
-        }
-        .stat-item b { color: #facc15; }
-
-        /* 카드 컨테이너 */
-        .container { max-width: 600px; margin: 0 auto; padding: 15px; }
-
-        /* 요청 카드 디자인 */
-        .req-card { 
-            background: white; border-radius: 20px; 
-            padding: 20px; margin-bottom: 15px; 
-            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+        /* 요청 한 줄 아이템 */
+        .req-item {
+            background: white; border-radius: 8px; padding: 12px; margin-bottom: 8px;
+            display: flex; flex-direction: column; gap: 10px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
             border: 1px solid #e2e8f0;
-            position: relative;
-            transition: all 0.2s;
-        }
-        
-        /* 상태별 왼쪽 강조 선 */
-        .req-card::before {
-            content: ''; position: absolute; left: 0; top: 20px; bottom: 20px;
-            width: 5px; border-radius: 0 5px 5px 0;
-        }
-        .req-card.status-대기::before { background: var(--status-wait); }
-        .req-card.status-확인::before { background: var(--status-confirm); }
-        .req-card.status-처리완료::before { background: var(--status-done); }
-        .req-card.status-처리완료 { opacity: 0.7; background: #f8fafc; }
-
-        /* 카드 상단 정보 */
-        .card-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; }
-        .dorm-box { display: flex; flex-direction: column; gap: 2px; }
-        .dorm-name { font-size: 18px; font-weight: 900; color: var(--kac-navy); }
-        .course-name { font-size: 12px; color: #64748b; font-weight: 600; }
-
-        /* 상태 배지 */
-        .badge { 
-            padding: 4px 10px; border-radius: 8px; font-size: 11px; font-weight: 800; 
-            text-transform: uppercase;
-        }
-        .badge-대기 { background: #fee2e2; color: var(--status-wait); }
-        .badge-확인 { background: #fef3c7; color: var(--status-confirm); }
-        .badge-처리완료 { background: #d1fae5; color: var(--status-done); }
-        .badge-처리불가 { background: #f1f5f9; color: #64748b; }
-
-        /* 요청 본문 */
-        .req-body { 
-            background: #f8fafc; border: 1px solid #f1f5f9;
-            padding: 15px; border-radius: 12px; 
-            margin: 15px 0; font-size: 16px; font-weight: 700; 
-            line-height: 1.5; color: #334155;
-            white-space: pre-line;
         }
 
-        /* 하단 메타 정보 (시간, 이름) */
-        .card-footer { display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: #94a3b8; font-weight: 600; }
-        .requester { color: #64748b; }
+        /* [핵심] 미확인 건 - 녹색 테두리 */
+        .status-wait-border { border: 2.5px solid var(--green) !important; }
 
-        /* 버튼 그룹 */
-        .btn-group { display: flex; gap: 8px; margin-top: 20px; }
+        /* [핵심] 처리 완료 - 회색 음영 */
+        .status-done-bg { background: #e2e8f0 !important; opacity: 0.8; }
+
+        .info-row { display: flex; align-items: center; font-size: 14px; gap: 8px; font-weight: 800; }
+        .date { color: var(--gray); font-size: 12px; min-width: 40px; }
+        .dorm { color: var(--navy); min-width: 90px; }
+        .text { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #334155; }
+
+        /* 하단 버튼 영역 */
+        .btn-row { display: flex; gap: 6px; }
         .btn { 
-            flex: 1; height: 45px; border: none; border-radius: 12px; 
-            font-weight: 800; cursor: pointer; font-size: 14px;
-            display: flex; align-items: center; justify-content: center; gap: 6px;
-            transition: all 0.2s;
+            flex: 1; padding: 10px 0; border: none; border-radius: 6px; 
+            font-size: 13px; font-weight: 800; cursor: pointer; 
         }
-        .btn:active { transform: scale(0.95); }
+        .btn-confirm { background: #dbeafe; color: #1e40af; }
+        .btn-done { background: #d1fae5; color: #065f46; }
+        .btn-reject { background: #fee2e2; color: #b91c1c; }
         
-        .btn-check { background: #eff6ff; color: #3b82f6; border: 1px solid #dbeafe; }
-        .btn-done { background: #10b981; color: white; box-shadow: 0 4px 10px rgba(16,185,129,0.2); }
-        .btn-no { background: #fff1f2; color: #ef4444; }
-
-        /* 반려 사유 스타일 */
-        .reason-box {
-            margin-top: 10px; padding: 10px; background: #fff1f2; 
-            border-radius: 10px; color: #b91c1c; font-size: 12px; font-weight: 700;
-        }
-
-        /* 애니메이션 */
-        @keyframes fadeIn { from { opacity:0; transform: translateY(10px); } to { opacity:1; transform: translateY(0); } }
-        .req-card { animation: fadeIn 0.4s ease-out; }
+        .status-label { font-size: 11px; padding: 2px 6px; border-radius: 4px; background: #eee; }
+        .badge-대기 { background: #fee2e2; color: #ef4444; }
+        .badge-확인 { background: #dbeafe; color: #3b82f6; }
+        .badge-처리완료 { background: #d1fae5; color: #10b981; }
     </style>
 </head>
 <body>
     <div class="header">
-        <h2>🧹 비품요청 관리 센터</h2>
-        <div class="stats-bar">
-            <div class="stat-item">미확인 <b id="waitCnt">0</b></div>
-            <div class="stat-item">확인 <b id="checkCnt">0</b></div>
-            <div class="stat-item">완료 <b id="doneCnt">0</b></div>
+        <div style="font-weight: 900; font-size: 18px; text-align: center;">🧹 미화/시설 비품요청</div>
+        <div class="filter-bar" id="filterBar">
+            <div class="chip active" onclick="setFilter('전체', this)">전체</div>
+            <div class="chip" onclick="setFilter('청렴관', this)">청렴관</div>
+            <div class="chip" onclick="setFilter('국제동', this)">국제동</div>
+            <div class="chip" onclick="setFilter('상생관', this)">상생관</div>
         </div>
     </div>
 
     <div class="container" id="requestList">
-        <p style="text-align:center; color:#94a3b8; margin-top:100px; font-weight:600;">요청 내역을 불러오는 중...</p>
+        <p style="text-align:center; color:var(--gray); margin-top:50px;">데이터 로딩 중...</p>
     </div>
 
     <script>
+        let currentFilter = '전체';
         const db = firebase.database().ref('system/facility_requests');
 
-        db.on('value', (snap) => {
-            const listDiv = document.getElementById('requestList');
-            const data = snap.val();
-            if (!data) {
-                listDiv.innerHTML = '<div style="text-align:center; color:#94a3b8; margin-top:100px;"><i class="fa-regular fa-folder-open" style="font-size:40px; margin-bottom:10px;"></i><p>접수된 요청이 없습니다.</p></div>';
-                return;
-            }
+        function setFilter(building, el) {
+            currentFilter = building;
+            document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+            el.classList.add('active');
+            fetchRequests(); // 필터 변경 시 다시 그리기
+        }
 
-            let html = "";
-            let counts = { 대기: 0, 확인: 0, 처리완료: 0 };
+        function fetchRequests() {
+            db.on('value', (snap) => {
+                const data = snap.val();
+                const listDiv = document.getElementById('requestList');
+                if (!data) {
+                    listDiv.innerHTML = '<p style="text-align:center; color:var(--gray); margin-top:50px;">접수된 요청이 없습니다.</p>';
+                    return;
+                }
 
-            const keys = Object.keys(data).reverse();
-            keys.forEach(key => {
-                const req = data[key];
-                if(counts[req.status] !== undefined) counts[req.status]++;
+                // 1. 데이터 가공 및 정렬
+                let items = Object.keys(data).map(key => ({ id: key, ...data[key] }));
 
-                const date = new Date(req.timestamp);
-                const timeStr = date.toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' }) + ' ' +
-                                date.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
-                
-                html += `
-                    <div class="req-card status-${req.status}">
-                        <div class="card-top">
-                            <div class="dorm-box">
-                                <span class="dorm-name">${req.dorm}</span>
-                                <span class="course-name">${req.courseName}</span>
+                // 2. [핵심] 처리완료 건은 하단 배치, 나머지는 최신순 상단 배치
+                items.sort((a, b) => {
+                    if (a.status === '처리완료' && b.status !== '처리완료') return 1;
+                    if (a.status !== '처리완료' && b.status === '처리완료') return -1;
+                    return b.timestamp - a.timestamp; // 최신순
+                });
+
+                // 3. 필터링 (생활관 명칭 포함 여부 확인)
+                if (currentFilter !== '전체') {
+                    items = items.filter(item => item.dorm.includes(currentFilter));
+                }
+
+                let html = "";
+                items.forEach(req => {
+                    const date = new Date(req.timestamp);
+                    const dateStr = (date.getMonth() + 1) + '/' + date.getDate();
+                    
+                    // [핵심] 상태별 클래스 적용
+                    const isUnread = (req.status === "대기"); // 미확인 건
+                    const isDone = (req.status === "처리완료");
+
+                    html += `
+                        <div class="req-item ${isUnread ? 'status-wait-border' : ''} ${isDone ? 'status-done-bg' : ''}">
+                            <div class="info-row">
+                                <span class="date">${dateStr}</span>
+                                <span class="dorm">${req.dorm}</span>
+                                <span class="text">요청: ${req.text}</span>
+                                <span class="status-label badge-${req.status}">${req.status}</span>
                             </div>
-                            <span class="badge badge-${req.status}">${req.status}</span>
-                        </div>
-
-                        <div class="req-body">
-                            ${req.text}
-                        </div>
-
-                        ${req.reason ? `
-                        <div class="reason-box">
-                            <i class="fa-solid fa-circle-exclamation"></i> 반려사유: ${req.reason}
-                        </div>` : ""}
-
-                        <div class="card-footer">
-                            <span class="requester"><i class="fa-solid fa-user"></i> ${req.name}</span>
-                            <span>${timeStr}</span>
-                        </div>
-
-                        <div class="btn-group">
-                            ${req.status !== '확인' && req.status !== '처리완료' ? 
-                                `<button class="btn btn-check" onclick="updateStatus('${key}', '확인')"><i class="fa-solid fa-eye"></i> 확인함</button>` : ""}
                             
-                            ${req.status !== '처리완료' ? 
-                                `<button class="btn btn-done" onclick="updateStatus('${key}', '처리완료')"><i class="fa-solid fa-check"></i> 완료</button>
-                                 <button class="btn btn-no" onclick="rejectStatus('${key}')"><i class="fa-solid fa-xmark"></i> 불가</button>` : 
-                                `<button class="btn btn-check" style="flex:1" onclick="updateStatus('${key}', '대기')"><i class="fa-solid fa-rotate-left"></i> 되돌리기</button>`}
+                            ${!isDone ? `
+                            <div class="btn-row">
+                                <button class="btn btn-confirm" onclick="updateStatus('${req.id}', '확인')">확인 및 처리중</button>
+                                <button class="btn btn-done" onclick="updateStatus('${req.id}', '처리완료')">완료</button>
+                                <button class="btn btn-reject" onclick="rejectStatus('${req.id}')">불가</button>
+                            </div>
+                            ` : `
+                            <div style="text-align:right;">
+                                <button class="btn" style="width:80px; padding:5px; background:#fff;" onclick="updateStatus('${req.id}', '대기')">되돌리기</button>
+                            </div>
+                            `}
+
+                            ${req.reason ? `<div style="font-size:12px; color:#ef4444; font-weight:700;">ㄴ 사유: ${req.reason}</div>` : ""}
                         </div>
-                    </div>
-                `;
+                    `;
+                });
+                listDiv.innerHTML = html;
             });
-            listDiv.innerHTML = html;
-            document.getElementById('waitCnt').innerText = counts.대기;
-            document.getElementById('checkCnt').innerText = counts.확인;
-            document.getElementById('doneCnt').innerText = counts.처리완료;
-        });
+        }
 
         function updateStatus(key, newStatus) {
             firebase.database().ref('system/facility_requests/' + key).update({ 
                 status: newStatus,
-                reason: null // 상태 변경 시 사유 초기화
+                reason: null 
             });
         }
 
         function rejectStatus(key) {
-            const reason = prompt("처리 불가 사유를 입력해주세요\n(예: 재고없음, 방문필요 등)");
+            const reason = prompt("처리 불가 사유를 입력하세요 (예: 방문 시 부재, 비품 부족)");
             if (reason) {
                 firebase.database().ref('system/facility_requests/' + key).update({ 
                     status: "처리불가",
@@ -212,6 +165,9 @@
                 });
             }
         }
+
+        // 초기 실행
+        fetchRequests();
     </script>
 </body>
 </html>
