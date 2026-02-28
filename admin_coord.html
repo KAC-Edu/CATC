@@ -2793,34 +2793,88 @@ function closeOutingManager() {
 }
 
 // [기존 유지] 설정 모달 핸들링
-function openSetupModal() { toggleMenu(false); document.getElementById('setupModal').style.display = "flex"; }
+function openSetupModal() { 
+    toggleMenu(false); 
+    
+    // ★ 추가: 모달 열기 직전에 담당자 리스트를 렌더링
+    if(coordMgr && typeof coordMgr.renderSelects === 'function') {
+        coordMgr.renderSelects();
+    }
+    
+    document.getElementById('setupModal').style.display = "flex"; 
+}
 function openSetupModalFromIndividual() { document.getElementById('setup-room-select').value = currentRID; loadRoomSettings(currentRID); toggleMenu(false); document.getElementById('setupModal').style.display = "flex"; }
+
+
+
+
+
+
+
+
+
+
 
 async function loadRoomSettings(rid) { 
     const room = globalAllData[rid]; 
     if(!room) return; 
+
+    // 1. [핵심 수정] 담당자 Select 박스의 옵션들을 먼저 최신 데이터로 그려줍니다.
+    // 이 작업이 먼저 완료되어야 아래에서 coordinatorName을 대입했을 때 정상적으로 선택됩니다.
+    if (coordMgr && typeof coordMgr.renderSelects === 'function') {
+        coordMgr.renderSelects();
+    }
+
+    // 2. 기본 정보 채우기
     document.getElementById('setup-course-name').value = room.settings?.courseName || ""; 
     document.getElementById('setup-prof-select').value = room.status?.professorName || ""; 
+    
+    // 3. 담당자 선택 (Select 박스에 옵션이 채워진 후 실행)
     document.getElementById('setup-coord-select').value = room.settings?.coordinatorName || ""; 
+
+    // 4. 교육 기간 처리 (데이터가 없을 경우 공백 처리 추가)
     if(room.settings?.period?.includes(" ~ ")) { 
         const p = room.settings.period.split(" ~ "); 
-        document.getElementById('setup-start').value = p[0]; 
-        document.getElementById('setup-end').value = p[1]; 
-    } 
+        document.getElementById('setup-start').value = p[0] || ""; 
+        document.getElementById('setup-end').value = p[1] || ""; 
+    } else {
+        document.getElementById('setup-start').value = "";
+        document.getElementById('setup-end').value = "";
+    }
+
+    // 5. 강의실 상세 위치 및 직접 입력 로직
     const loc = room.settings?.roomDetailName || ""; 
     const dropdown = document.getElementById('setup-room-dropdown'); 
+    const directInput = document.getElementById('setup-location-direct');
+    
     let found = false; 
     for(let i=0; i<dropdown.options.length; i++) { 
-        if(dropdown.options[i].value === loc) { dropdown.selectedIndex = i; found = true; break; } 
+        if(dropdown.options[i].value === loc) { 
+            dropdown.selectedIndex = i; 
+            found = true; 
+            break; 
+        } 
     } 
+
     if(!found && loc) { 
         dropdown.value = "direct"; 
-        document.getElementById('setup-location-direct').value = loc; 
-        document.getElementById('setup-location-direct').style.display = "block"; 
+        directInput.value = loc; 
+        directInput.style.display = "block"; 
     } else { 
-        document.getElementById('setup-location-direct').style.display = "none"; 
+        // 직접 입력 값이 아니면 입력창을 초기화하고 숨김
+        directInput.value = "";
+        directInput.style.display = "none"; 
     } 
 }
+
+
+
+
+
+
+
+
+
 
 async function saveIntegratedSettings() { 
     const rid = document.getElementById('setup-room-select').value; 
