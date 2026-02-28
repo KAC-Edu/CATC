@@ -3330,3 +3330,15 @@ body.night-mode .status-badge.status-arrived {
     z-index: 10;
     margin-left: 20px;
 }
+
+/* 팝업창 내 입력창 시인성 개선 */
+.modal-box .setting-input {
+    background-color: white !important;
+    color: #1e293b !important;
+    border: 1px solid #cbd5e1 !important;
+}
+
+/* 입력창 안의 설명글(Placeholder) 색상 조절 */
+.modal-box .setting-input::placeholder {
+    color: #94a3b8 !important;
+}
