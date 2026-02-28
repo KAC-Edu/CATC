@@ -1730,82 +1730,63 @@ const RouteManager = {
 
 
 
-// [최종 보강 완료] 과정 운영 담당자(행정) 및 서명 관리 객체
+// [최종 보강] 과정 운영 담당자(행정) 및 서명 관리 객체 (수정 기능 추가 버전)
 const coordMgr = {
     list: [],
     tempSign: "",
-    editingKey: null,
-
-    // 초기화: 페이지 접속 시 파이어베이스 자료를 한 번 가져와서 계속 감시함
+    editingKey: null, // 현재 수정 중인 담당자의 고유 키 저장
+    
+    // 1. 초기화
     init: async function() {
         const ref = firebase.database().ref('system/coordinators');
-        
-        // 데이터 유무 확인 및 기본값 세팅 (최초 1회만 실행됨)
         const snap = await ref.once('value');
         if (!snap.exists()) {
             const initial = ["백유민 과장", "주영미 과장", "장영근 과장", "채유란 주임", "김지은 주임", "박찬미 주임"];
             for (let name of initial) { await ref.push({ name: name, sign: "" }); }
         }
-
-        // 실시간 리스너: 파이어베이스 자료가 바뀌면 즉시 내 리스트(this.list)를 갱신
         ref.on('value', s => {
             const data = s.val() || {};
-            this.list = Object.keys(data)
-                .map(k => ({ key: k, ...data[k] }))
-                .sort((a, b) => a.name.localeCompare(b.name));
-
-            // 데이터가 오면 드롭다운과 관리 리스트를 즉시 그림
+            this.list = Object.keys(data).map(k => ({ key: k, ...data[k] }));
             this.renderSelects();    
             this.renderManageList(); 
         });
     },
 
-    // [중요] 설정창 드롭다운에 파이어베이스 자료를 채워넣는 함수
+    // 2. 설정창 드롭다운 갱신
     renderSelects: function() {
         const sel = document.getElementById('setup-coord-select'); 
         if(!sel) return;
-        
-        // 현재 선택된 이름을 잠시 보관 (목록 갱신 시 풀림 방지)
-        const savedValue = sel.value;
-        
+        const curValue = sel.value;
         sel.innerHTML = '<option value="">--- 담당자 선택 ---</option>';
         this.list.forEach(c => {
-            const opt = document.createElement('option');
-            opt.value = c.name;
-            opt.innerText = c.name;
-            sel.appendChild(opt);
+            const opt = new Option(c.name, c.name);
+            if(c.name === curValue) opt.selected = true;
+            sel.add(opt);
         });
-
-        // 아까 보관한 이름이 목록에 있다면 다시 선택해줌
-        if(savedValue) sel.value = savedValue;
     },
 
-    // 관리 팝업 내부 리스트 그리기
+    // 3. 관리창 리스트 그리기 (클릭 시 수정 모드 연결)
     renderManageList: function() {
         const div = document.getElementById('coordListContainer'); 
         if(!div) return;
-        
         if(this.list.length === 0) {
-            div.innerHTML = "<div style='text-align:center; padding:30px; color:#94a3b8;'>자료를 불러오는 중입니다...</div>";
+            div.innerHTML = "<div style='text-align:center; padding:20px; color:#94a3b8;'>등록된 담당자가 없습니다.</div>";
             return;
         }
 
-        div.innerHTML = this.list.map(c => {
-            const isEditing = this.editingKey === c.key;
-            return `
-            <div style="display:flex; justify-content:space-between; padding:12px; border-bottom:1px solid #eee; align-items:center; background:${isEditing ? '#eff6ff' : '#fff'}; margin-bottom:5px; border-radius:8px; cursor:pointer; border:${isEditing ? '2px solid #3b82f6' : '1px solid #eee'}" 
+        div.innerHTML = this.list.map(c => `
+            <div style="display:flex; justify-content:space-between; padding:12px; border-bottom:1px solid #eee; align-items:center; background:#fff; margin-bottom:5px; border-radius:8px; cursor:pointer; border:${this.editingKey === c.key ? '2px solid var(--blue-main)' : '1px solid #eee'}" 
                  onclick="coordMgr.startEdit('${c.key}')">
                 <div style="display:flex; align-items:center; gap:12px; flex:1;">
                     <span style="font-weight:800; color:var(--navy-dark);">${c.name}</span>
-                    ${c.sign ? `<img src="${c.sign}" style="height:35px; mix-blend-mode:multiply; border:1px solid #f1f5f9;">` : `<span style="font-size:10px; color:#cbd5e1;">(서명 미등록)</span>`}
+                    ${c.sign ? `<img src="${c.sign}" style="height:35px; mix-blend-mode:multiply; border:1px solid #eee; border-radius:4px;">` : `<span style="font-size:10px; color:#94a3b8;">(서명 미등록)</span>`}
                 </div>
-                <i class="fa-solid fa-circle-xmark" style="color:#ef4444; cursor:pointer; font-size:20px; padding:5px;" 
+                <i class="fa-solid fa-circle-xmark" style="color:var(--danger); cursor:pointer; font-size:20px; padding:5px;" 
                    onclick="event.stopPropagation(); coordMgr.delete('${c.key}')"></i>
-            </div>`;
-        }).join('');
+            </div>`).join('');
     },
 
-    // 수정 모드 진입
+    // 4. 수정 모드 시작 (이름 클릭 시 호출)
     startEdit: function(key) {
         const item = this.list.find(c => c.key === key);
         if(!item) return;
@@ -1813,12 +1794,11 @@ const coordMgr = {
         this.editingKey = key;
         document.getElementById('newCoordInput').value = item.name;
         
-        const regBtn = document.getElementById('coordRegBtn');
-        if(regBtn) {
-            regBtn.innerHTML = '<i class="fa-solid fa-check"></i> 수정완료';
-            regBtn.style.background = "#10b981";
-        }
+        // 버튼 텍스트 변경
+        document.getElementById('coordRegBtn').innerHTML = '<i class="fa-solid fa-check"></i> 수정완료';
+        document.getElementById('coordRegBtn').style.background = "var(--green-save)";
 
+        // 기존 서명이 있다면 미리보기 표시
         if(item.sign) {
             this.tempSign = item.sign;
             document.getElementById('tempSignPreview').src = item.sign;
@@ -1828,24 +1808,23 @@ const coordMgr = {
             document.getElementById('signPreviewArea').style.display = 'none';
         }
         
-        this.renderManageList();
+        this.renderManageList(); // 선택된 항목 강조를 위해 재랜더링
         document.getElementById('newCoordInput').focus();
     },
 
+    // 5. 입력값 초기화
     resetFields: function() {
         this.editingKey = null;
         this.tempSign = "";
-        const input = document.getElementById('newCoordInput');
-        if(input) input.value = "";
-        const regBtn = document.getElementById('coordRegBtn');
-        if(regBtn) { regBtn.innerHTML = '등록하기'; regBtn.style.background = "var(--blue-main)"; }
-        const previewArea = document.getElementById('signPreviewArea');
-        if(previewArea) previewArea.style.display = 'none';
-        const fileInput = document.getElementById('coordSignFile');
-        if(fileInput) fileInput.value = "";
+        document.getElementById('newCoordInput').value = "";
+        document.getElementById('coordRegBtn').innerHTML = '등록하기';
+        document.getElementById('coordRegBtn').style.background = "var(--blue-main)";
+        document.getElementById('signPreviewArea').style.display = 'none';
+        document.getElementById('coordSignFile').value = "";
         this.renderManageList();
     },
 
+    // 6. 파일 선택 처리
     handleFile: function(input) {
         const file = input.files[0]; 
         if(!file) return;
@@ -1858,33 +1837,40 @@ const coordMgr = {
         reader.readAsDataURL(file);
     },
 
+    // 7. 등록 또는 수정 실행
     add: async function() {
         const name = document.getElementById('newCoordInput').value.trim();
         if(!name) return alert("성함을 입력해 주세요.");
+        
         try {
             const data = { name: name, sign: this.tempSign };
+            
             if(this.editingKey) {
+                // 수정 모드
                 await firebase.database().ref(`system/coordinators/${this.editingKey}`).update(data);
                 alert("수정되었습니다.");
             } else {
+                // 신규 등록 모드
                 await firebase.database().ref('system/coordinators').push(data);
                 alert("등록되었습니다.");
             }
             this.resetFields();
-        } catch(e) { alert("저장 오류: " + e.message); }
+        } catch(e) {
+            alert("저장 오류: " + e.message);
+        }
     },
 
+    // 8. 삭제 처리
     delete: async function(k) {
-        if(confirm("이 담당자를 삭제할까요?")) {
+        if(confirm("이 담당자를 명단에서 삭제할까요?")) {
             await firebase.database().ref(`system/coordinators/${k}`).remove();
             if(this.editingKey === k) this.resetFields();
         }
     },
 
     openManage: function() {
-        this.resetFields();
-        const modal = document.getElementById('coordManageModal');
-        if(modal) modal.style.display = 'flex';
+        this.resetFields(); // 열 때마다 초기화
+        document.getElementById('coordManageModal').style.display = 'flex';
     }
 };
 
@@ -2806,28 +2792,8 @@ function closeOutingManager() {
     document.getElementById('outingManagerView').style.display = 'none'; 
 }
 
-
-
-
-
-
-
-// 설정창 열기 함수 (목록을 강제로 그려주는 명령 추가)
-function openSetupModal() { 
-    toggleMenu(false); 
-    document.getElementById('setupModal').style.display = "flex"; 
-    
-    // 창이 열리는 즉시 파이어베이스에서 가져온 담당자 명단을 목록에 뿌려줌
-    if(typeof coordMgr !== 'undefined') {
-        coordMgr.renderSelects(); 
-    }
-}
-
-
-
-
-
-
+// [기존 유지] 설정 모달 핸들링
+function openSetupModal() { toggleMenu(false); document.getElementById('setupModal').style.display = "flex"; }
 function openSetupModalFromIndividual() { document.getElementById('setup-room-select').value = currentRID; loadRoomSettings(currentRID); toggleMenu(false); document.getElementById('setupModal').style.display = "flex"; }
 
 async function loadRoomSettings(rid) { 
