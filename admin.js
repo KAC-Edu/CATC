@@ -1143,13 +1143,13 @@ const profMgr = {
 
 
 
-// [최종 수정] 직급순 정렬 및 실시간 UI 동기화가 보강된 과정 운영 담당자 관리 객체
+// [최종 최적화] 직급순 정렬 및 실시간 UI 동기화 과정 운영 담당자 관리 객체
 const coordMgr = {
     list: [],
     tempSign: "",
     editingKey: null,
     
-    // 1. 직급별 우선순위 정의 (낮을수록 리스트 상단)
+    // 1. 직급별 우선순위 (수정 불필요 - 완벽함)
     rankPriority: {
         "차장": 1,
         "과장": 2,
@@ -1158,45 +1158,45 @@ const coordMgr = {
         "사원": 5
     },
 
-    // 이름 문자열에서 직급 가중치를 반환하는 함수
+    // 이름 문자열에서 직급 가중치를 반환
     getPriority: function(name) {
         if (!name) return 99;
-        const ranks = Object.keys(coordMgr.rankPriority);
-        for (let i = 0; i < ranks.length; i++) {
-            if (name.includes(ranks[i])) {
-                return coordMgr.rankPriority[ranks[i]];
-            }
+        // 직급 키워드 매칭
+        for (const rank in coordMgr.rankPriority) {
+            if (name.includes(rank)) return coordMgr.rankPriority[rank];
         }
-        return 99; // 직급이 명시되지 않은 경우 가장 아래로
+        return 99; 
     },
 
     // 초기화 및 실시간 리스너 설정
     init: function() {
+        console.log("운영담당자 리스너 가동...");
         const ref = firebase.database().ref('system/coordinators');
         
         ref.on('value', s => {
             const data = s.val() || {};
             
-            // 데이터를 배열로 변환
-            let items = Object.keys(data).map(k => ({ key: k, ...data[k] }));
+            // 데이터를 배열로 변환 및 유효성 검사
+            let items = Object.keys(data).map(k => ({ 
+                key: k, 
+                name: data[k].name || "이름 없음", 
+                sign: data[k].sign || "" 
+            }));
 
-            // 직급순 정렬 (1순위: 직급, 2순위: 가나다)
+            // 직급순 정렬 (1순위: 직급 점수, 2순위: 이름 가나다)
             items.sort((a, b) => {
                 const pA = coordMgr.getPriority(a.name);
                 const pB = coordMgr.getPriority(b.name);
 
-                if (pA !== pB) {
-                    return pA - pB; 
-                }
+                if (pA !== pB) return pA - pB; 
                 return a.name.localeCompare(b.name, 'ko'); 
             });
 
-            // 정렬된 리스트 저장 및 UI 업데이트
             coordMgr.list = items;
+            
+            // UI 업데이트 실행
             coordMgr.renderSelects();    
             coordMgr.renderManageList(); 
-            
-            console.log("담당자 명단 동기화 완료 (직급순 정렬)");
         });
     },
 
@@ -1205,7 +1205,7 @@ const coordMgr = {
         const sel = document.getElementById('setup-coord-select'); 
         if (!sel) return;
         
-        const curValue = sel.value; // 현재 선택된 값 보관
+        const curValue = sel.value; // 현재 선택 값 보관
         sel.innerHTML = '<option value="">--- 담당자 선택 ---</option>';
         
         coordMgr.list.forEach(c => {
@@ -1215,7 +1215,7 @@ const coordMgr = {
             sel.appendChild(opt);
         });
 
-        // 기존 선택값 복구 (리스트에 여전히 존재할 경우)
+        // 리스트 갱신 후 선택값 복구
         if (curValue) sel.value = curValue;
     },
 
@@ -1225,7 +1225,7 @@ const coordMgr = {
         if (!div) return;
         
         if (coordMgr.list.length === 0) {
-            div.innerHTML = "<div style='text-align:center; padding:30px; color:#94a3b8; font-size:14px;'>등록된 담당자가 없습니다.</div>";
+            div.innerHTML = "<div style='text-align:center; padding:30px; color:#94a3b8;'>등록된 담당자가 없습니다.</div>";
             return;
         }
 
@@ -1233,7 +1233,7 @@ const coordMgr = {
             <div style="display:flex; justify-content:space-between; padding:12px; border-bottom:1px solid #f1f5f9; align-items:center; background:#fff; margin-bottom:5px; border-radius:10px; cursor:pointer; transition:0.2s; border:${coordMgr.editingKey === c.key ? '2px solid #3b82f6' : '1px solid #eee'}" 
                  onclick="coordMgr.startEdit('${c.key}')">
                 <div style="display:flex; align-items:center; gap:12px; flex:1;">
-                    <span style="font-weight:800; color:#1e293b; font-size:15px;">${c.name}</span>
+                    <span style="font-weight:800; color:#1e293b;">${c.name}</span>
                     ${c.sign ? `<img src="${c.sign}" style="height:35px; mix-blend-mode:multiply; border:1px solid #f8fafc; border-radius:4px;">` : `<span style="font-size:11px; color:#cbd5e1;">(서명 미등록)</span>`}
                 </div>
                 <i class="fa-solid fa-circle-xmark" style="color:#ff4d4f; cursor:pointer; font-size:22px; padding:5px;" 
@@ -1241,7 +1241,7 @@ const coordMgr = {
             </div>`).join('');
     },
 
-    // 수정 모드 진입
+    // 수정 모드 시작
     startEdit: function(key) {
         const item = coordMgr.list.find(c => c.key === key);
         if (!item) return;
@@ -1255,35 +1255,44 @@ const coordMgr = {
             regBtn.style.background = "#10b981";
         }
 
+        const previewImg = document.getElementById('tempSignPreview');
         if (item.sign) {
             coordMgr.tempSign = item.sign;
-            document.getElementById('tempSignPreview').src = item.sign;
+            if (previewImg) previewImg.src = item.sign;
             document.getElementById('signPreviewArea').style.display = 'block';
         } else {
             coordMgr.tempSign = "";
+            if (previewImg) previewImg.src = "";
             document.getElementById('signPreviewArea').style.display = 'none';
         }
         coordMgr.renderManageList();
         document.getElementById('newCoordInput').focus();
     },
 
-    // 필드 초기화
+    // 필드 초기화 (보강됨)
     resetFields: function() {
         coordMgr.editingKey = null; 
         coordMgr.tempSign = "";
-        document.getElementById('newCoordInput').value = "";
+        const input = document.getElementById('newCoordInput');
+        if(input) input.value = "";
+        
         const regBtn = document.getElementById('coordRegBtn');
         if (regBtn) { 
-            regBtn.innerHTML = '등록하기'; 
+            regBtn.innerHTML = '등록'; 
             regBtn.style.background = "#3b82f6"; 
         }
+        
+        // 미리보기 이미지까지 완벽 초기화
+        const previewImg = document.getElementById('tempSignPreview');
+        if (previewImg) previewImg.src = "";
         document.getElementById('signPreviewArea').style.display = 'none';
+        
         const fileInput = document.getElementById('coordSignFile');
         if (fileInput) fileInput.value = "";
+        
         coordMgr.renderManageList();
     },
 
-    // 서명 파일 선택 처리
     handleFile: function(input) {
         const file = input.files[0];
         if (!file) return;
@@ -1297,28 +1306,25 @@ const coordMgr = {
         reader.readAsDataURL(file);
     },
 
-    // 추가 또는 수정 실행
     add: async function() {
         const name = document.getElementById('newCoordInput').value.trim();
         if (!name) return alert("성함과 직급을 입력하세요.");
         
         try {
             const data = { name: name, sign: coordMgr.tempSign };
+            const db = firebase.database();
             if (coordMgr.editingKey) {
-                await firebase.database().ref(`system/coordinators/${coordMgr.editingKey}`).update(data);
-                alert("수정되었습니다.");
+                await db.ref(`system/coordinators/${coordMgr.editingKey}`).update(data);
             } else {
-                await firebase.database().ref('system/coordinators').push(data);
-                alert("등록되었습니다.");
+                await db.ref('system/coordinators').push(data);
             }
             coordMgr.resetFields();
         } catch (e) {
-            console.error(e);
-            alert("데이터 저장 중 오류가 발생했습니다.");
+            console.error("Save Error:", e);
+            alert("저장 실패");
         }
     },
 
-    // 삭제 실행
     delete: async function(k) {
         if (!confirm("해당 담당자를 삭제하시겠습니까?")) return;
         try {
@@ -1329,12 +1335,14 @@ const coordMgr = {
         }
     },
 
-    // 관리 모달 열기
     openManage: function() {
         coordMgr.resetFields();
         document.getElementById('coordManageModal').style.display = 'flex';
     }
 };
+
+
+
 
 
 
