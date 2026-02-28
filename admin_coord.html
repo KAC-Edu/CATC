@@ -2811,20 +2811,17 @@ function closeOutingManager() {
 
 
 
-// [기존 유지] 설정 모달 핸들링
+
+// 설정창 열기 함수 (목록을 강제로 그려주는 명령 추가)
 function openSetupModal() { 
-    // 사이드 메뉴 닫기
-    const sideMenu = document.getElementById('sideMenu');
-    if(sideMenu) sideMenu.classList.remove('open');
-    document.getElementById('menuOverlay').style.display = 'none';
-
-    // 설정창 팝업 띄우기
+    toggleMenu(false); 
     document.getElementById('setupModal').style.display = "flex"; 
-
-    // [핵심] 창이 열리는 순간, 메모리에 로드된 담당자 명단을 드롭다운에 즉시 뿌림
-    coordMgr.renderSelects(); 
+    
+    // 창이 열리는 즉시 파이어베이스에서 가져온 담당자 명단을 목록에 뿌려줌
+    if(typeof coordMgr !== 'undefined') {
+        coordMgr.renderSelects(); 
+    }
 }
-
 
 
 
