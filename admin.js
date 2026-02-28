@@ -1145,10 +1145,11 @@ const profMgr = {
 
 
 
-// [최종 고도화] 과정 담당자(행정) 및 서명 관리 객체 (강사 플랫폼용)
+// [최종 수정] 드롭다운과 관리창 모두 직급순 정렬 강제 적용 버전
 const coordMgr = {
     list: [],
     tempSign: "",
+    editingKey: null,
     
     // 1. 직급별 우선순위 정의 (낮을수록 상단)
     rankPriority: {
@@ -1159,58 +1160,69 @@ const coordMgr = {
         "사원": 5
     },
 
-    // 이름 문자열에서 직급 가중치를 계산하는 함수
+    // 이름 문자열에서 직급을 찾아 점수를 반환
     getPriority: function(name) {
         if (!name) return 99;
-        for (let rank in this.rankPriority) {
-            if (name.includes(rank)) return this.rankPriority[rank];
+        const ranks = Object.keys(this.rankPriority);
+        for (let i = 0; i < ranks.length; i++) {
+            if (name.includes(ranks[i])) {
+                return this.rankPriority[ranks[i]];
+            }
         }
-        return 99; // 직급이 명시되지 않은 경우 가장 아래로 배정
+        return 99; // 직급이 없으면 가장 아래로
     },
 
     init: function() {
         const ref = firebase.database().ref('system/coordinators');
+        
+        // 데이터가 변경될 때마다 실행되는 리스너
         ref.on('value', s => {
             const data = s.val() || {};
             
-            // 2. 객체를 배열로 변환
-            let unsortedList = Object.keys(data).map(k => ({ key: k, ...data[k] }));
+            // 데이터를 배열로 변환
+            let items = Object.keys(data).map(k => ({ key: k, ...data[k] }));
 
-            // 3. [직급순 -> 이름순] 정렬 로직 적용
-            unsortedList.sort((a, b) => {
-                const prioA = this.getPriority(a.name);
-                const prioB = this.getPriority(b.name);
+            // 2. [직급 정렬 핵심] 데이터를 직급순으로 미리 정렬하여 저장
+            items.sort((a, b) => {
+                const pA = coordMgr.getPriority(a.name); // coordMgr 직접 참조로 안전성 확보
+                const pB = coordMgr.getPriority(b.name);
 
-                if (prioA !== prioB) {
-                    return prioA - prioB; // 직급 우선순위 비교
+                if (pA !== pB) {
+                    return pA - pB; // 직급 순 (1, 2, 3...)
                 }
-                return a.name.localeCompare(b.name); // 직급이 같으면 가나다순 비교
+                return a.name.localeCompare(b.name); // 이름 가나다 순
             });
 
-            this.list = unsortedList;
+            // 정렬된 데이터를 객체 리스트에 저장
+            this.list = items;
+
+            // 3. [중요] 정렬된 리스트를 드롭다운과 관리창 양쪽에 즉시 반영
             this.renderSelects();    
             this.renderManageList(); 
+            
+            console.log("담당자 정렬 및 렌더링 완료");
         });
     },
 
-    // 설정창 내 담당자 드롭다운(Select) 갱신
+    // 설정창 내 드롭다운(Select) 렌더링
     renderSelects: function() {
         const sel = document.getElementById('setup-coord-select'); 
         if(!sel) return;
         
-        const curValue = sel.value; // 현재 선택된 값 보존
+        const curValue = sel.value; // 현재 사용자가 선택하고 있던 값 보관
         sel.innerHTML = '<option value="">--- 담당자 선택 ---</option>';
         
+        // 정렬이 이미 끝난 this.list를 그대로 순회하여 드롭다운 생성
         this.list.forEach(c => {
             const opt = new Option(c.name, c.name);
             sel.add(opt);
         });
 
-        // 리스트가 다시 그려져도 기존에 선택되어 있던 값이 있다면 다시 선택해줌
+        // 갱신 전 선택되어 있던 값이 목록에 있으면 다시 선택 상태로 복구
         if(curValue) sel.value = curValue;
     },
 
-    // 관리 모달 내 담당자 리스트 렌더링 (수정/삭제용)
+    // 톱니바퀴 모달 내 관리 리스트 렌더링
     renderManageList: function() {
         const div = document.getElementById('coordListContainer'); 
         if(!div) return;
@@ -1220,54 +1232,76 @@ const coordMgr = {
             return;
         }
 
+        // 정렬된 this.list를 그대로 사용하여 UI 생성
         div.innerHTML = this.list.map(c => `
-            <div style="display:flex; justify-content:space-between; padding:10px; border-bottom:1px solid #eee; align-items:center; background:#fff; margin-bottom:5px; border-radius:8px;">
-                <div style="display:flex; align-items:center; gap:12px;">
+            <div style="display:flex; justify-content:space-between; padding:12px; border-bottom:1px solid #eee; align-items:center; background:#fff; margin-bottom:5px; border-radius:8px; cursor:pointer; border:${this.editingKey === c.key ? '2px solid #3b82f6' : '1px solid #eee'}" 
+                 onclick="coordMgr.startEdit('${c.key}')">
+                <div style="display:flex; align-items:center; gap:12px; flex:1;">
                     <span style="font-weight:800; color:#1e293b;">${c.name}</span>
                     ${c.sign ? `<img src="${c.sign}" style="height:35px; mix-blend-mode:multiply; border:1px solid #eee; border-radius:4px;">` : `<span style="font-size:10px; color:#94a3b8;">(미등록)</span>`}
                 </div>
-                <i class="fa-solid fa-circle-xmark" style="color:#ef4444; cursor:pointer; font-size:20px;" onclick="coordMgr.delete('${c.key}')"></i>
+                <i class="fa-solid fa-circle-xmark" style="color:#ef4444; cursor:pointer; font-size:20px; padding:5px;" 
+                   onclick="event.stopPropagation(); coordMgr.delete('${c.key}')"></i>
             </div>`).join('');
     },
 
+    // 이하 기존 보조 함수들은 동일 (startEdit, resetFields, handleFile, add, delete, openManage)
+    startEdit: function(key) {
+        const item = this.list.find(c => c.key === key);
+        if (!item) return;
+        this.editingKey = key;
+        document.getElementById('newCoordInput').value = item.name;
+        const regBtn = document.getElementById('coordRegBtn');
+        if(regBtn) {
+            regBtn.innerHTML = '<i class="fa-solid fa-check"></i> 수정완료';
+            regBtn.style.background = "#10b981";
+        }
+        if (item.sign) {
+            this.tempSign = item.sign;
+            document.getElementById('tempSignPreview').src = item.sign;
+            document.getElementById('signPreviewArea').style.display = 'block';
+        } else {
+            this.tempSign = "";
+            document.getElementById('signPreviewArea').style.display = 'none';
+        }
+        this.renderManageList();
+        document.getElementById('newCoordInput').focus();
+    },
+    resetFields: function() {
+        this.editingKey = null; this.tempSign = "";
+        document.getElementById('newCoordInput').value = "";
+        const regBtn = document.getElementById('coordRegBtn');
+        if(regBtn) { regBtn.innerHTML = '등록하기'; regBtn.style.background = "#3b82f6"; }
+        document.getElementById('signPreviewArea').style.display = 'none';
+        document.getElementById('coordSignFile').value = "";
+        this.renderManageList();
+    },
     handleFile: function(input) {
-        const file = input.files[0]; 
-        if(!file) return;
+        const file = input.files[0]; if (!file) return;
         const reader = new FileReader();
-        reader.onload = (e) => { 
-            this.tempSign = e.target.result; 
+        reader.onload = (e) => {
+            this.tempSign = e.target.result;
             document.getElementById('tempSignPreview').src = e.target.result;
             document.getElementById('signPreviewArea').style.display = 'block';
         };
         reader.readAsDataURL(file);
     },
-
     add: async function() {
-        const input = document.getElementById('newCoordInput'); 
-        const name = input.value.trim();
-        if(!name) return alert("성함과 직급을 입력해 주세요. (예: 홍길동 과장)");
-
+        const name = document.getElementById('newCoordInput').value.trim();
+        if (!name) return alert("성함과 직급을 입력해 주세요.");
         try {
-            await firebase.database().ref('system/coordinators').push({ name: name, sign: this.tempSign });
-            input.value = ""; 
-            this.tempSign = "";
-            document.getElementById('signPreviewArea').style.display = 'none';
-            alert("정상적으로 등록되었습니다.");
-        } catch(e) { 
-            alert("저장 오류: " + e.message); 
-        }
+            const data = { name: name, sign: this.tempSign };
+            if (this.editingKey) await firebase.database().ref(`system/coordinators/${this.editingKey}`).update(data);
+            else await firebase.database().ref('system/coordinators').push(data);
+            this.resetFields();
+        } catch (e) { alert("저장 실패"); }
     },
-
     delete: async function(k) {
-        if(confirm("이 담당자를 명단에서 삭제하시겠습니까?")) {
-            await firebase.database().ref(`system/coordinators/${k}`).remove();
-        }
+        if (!confirm("삭제하시겠습니까?")) return;
+        await firebase.database().ref(`system/coordinators/${k}`).remove();
     },
-
     openManage: function() {
-        // 관리창을 열기 전에 기존 입력값들을 초기화
-        document.getElementById('newCoordInput').value = "";
-        document.getElementById('signPreviewArea').style.display = 'none';
+        this.resetFields();
         document.getElementById('coordManageModal').style.display = 'flex';
     }
 };
