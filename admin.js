@@ -1642,37 +1642,47 @@ loadDashboardStats: function() {
 
 
 // 8. 셔틀 정보 및 차량 수요 실시간 업데이트
-    refs.departure.on('value', snap => {
-        if (state.room !== room) return; 
-        const dep = snap.val();
-        const bar = document.getElementById('dashShuttleNotice');
-        const txt = document.getElementById('dashShuttleNoticeTxt');
-        if (!bar || !txt) return;
+refs.departure.on('value', snap => {
+    if (state.room !== room) return; 
+    const dep = snap.val();
+    const bar = document.getElementById('dashShuttleNotice');
+    const txt = document.getElementById('dashShuttleNoticeTxt');
+    if (!bar || !txt) return;
 
-        if (dep && dep.time) {
-            bar.style.display = "block"; // 노란 박스 보이기
+    if (dep && dep.time) {
+        bar.style.display = "block"; // 노란 박스 보이기
 
-            // 날짜 변환 (2026-03-06 -> 2026년 3월 6일)
-            const dateParts = dep.date.split('-');
-            const formattedDate = `${dateParts[0]}년 ${parseInt(dateParts[1])}월 ${parseInt(dateParts[2])}일`;
-            
-            // 요청하신 대로 제목과 일시를 두 줄로 표시 (아이콘 등 기존 스타일 유지)
-            txt.innerHTML = `퇴교차량 출발 예정 시간<br><b>${formattedDate} (${dep.time})</b>`;
-        } else {
-            bar.style.display = "none";
-        }
-    });
+        // 날짜 변환 (2026-03-06 -> 2026년 3월 6일)
+        const dateParts = dep.date.split('-');
+        const formattedDate = `${dateParts[0]}년 ${parseInt(dateParts[1])}월 ${parseInt(dateParts[2])}일`;
+        
+        // [시인성 개선] 제목은 작고 갈색톤으로, 실제 데이터(날짜/시간)는 딥블루 + 굵게 강조
+        txt.innerHTML = `
+            <span style="color: #92400e; font-size: 12px; font-weight: 700; opacity: 0.8;">퇴교차량 출발 예정 시간</span><br>
+            <span style="color: #003366; font-size: 19px; font-weight: 900; letter-spacing: -0.5px;">${formattedDate} (${dep.time})</span>
+        `;
+    } else {
+        bar.style.display = "none";
+    }
+});
 
-    refs.shuttleReq.on('value', s => {
-        if (state.room !== room) return;
-        const data = s.val() || {};
-        const items = Object.values(data);
-        if (document.getElementById('total-osong')) document.getElementById('total-osong').innerText = items.filter(i => i.type === 'osong').length;
-        if (document.getElementById('total-term')) document.getElementById('total-term').innerText = items.filter(i => i.type === 'terminal').length;
-        if (document.getElementById('total-air')) document.getElementById('total-air').innerText = items.filter(i => i.type === 'airport').length;
-        if (document.getElementById('total-car')) document.getElementById('total-car').innerText = items.filter(i => i.type === 'car').length;
-        if (document.getElementById('dashShuttleTotal')) document.getElementById('dashShuttleTotal').innerText = items.length + "명";
-    });
+refs.shuttleReq.on('value', s => {
+    if (state.room !== room) return;
+    const data = s.val() || {};
+    const items = Object.values(data);
+    
+    // 카운트 업데이트 (Deep Blue 숫자는 CSS에서 이미 적용됨)
+    if (document.getElementById('total-osong')) document.getElementById('total-osong').innerText = items.filter(i => i.type === 'osong').length;
+    if (document.getElementById('total-term')) document.getElementById('total-term').innerText = items.filter(i => i.type === 'terminal').length;
+    if (document.getElementById('total-air')) document.getElementById('total-air').innerText = items.filter(i => i.type === 'airport').length;
+    if (document.getElementById('total-car')) document.getElementById('total-car').innerText = items.filter(i => i.type === 'car').length;
+    
+    const totalEl = document.getElementById('dashShuttleTotal');
+    if (totalEl) {
+        totalEl.innerText = items.length + "명";
+        totalEl.style.color = "#003366"; // 총원 색상도 남색으로 통일
+    }
+});
 
     // 9. 질문 카운트 업데이트
     this.updateQaCountBadge();

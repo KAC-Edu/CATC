@@ -3342,3 +3342,17 @@ body.night-mode .status-badge.status-arrived {
 .modal-box .setting-input::placeholder {
     color: #94a3b8 !important;
 }
+
+/* admin.css 내 해당 부분 보정 */
+#dashShuttleNotice {
+    display: none;
+    font-size: 12px;
+    background: #fffbeb;
+    padding: 12px 15px; /* 패딩을 살짝 늘려 가독성 확보 */
+    border-radius: 12px;
+    color: #92400e;
+    margin-bottom: 12px;
+    border: 1px solid #fef3c7;
+    border-left: 5px solid #facc15; /* 왼쪽 포인트 바 추가 */
+    line-height: 1.5;
+}
