@@ -515,6 +515,7 @@
             <h3 style="margin-bottom:15px; font-size:16px; color:#64748b;">메뉴 서비스</h3>
             <div class="menu-item" onclick="openNotice()"><i class="fa-solid fa-bullhorn" style="color: #facc15;"></i> 공지사항 </div>
             <div class="menu-item" onclick="viewMealMenu()"><i class="fa-solid fa-utensils"></i> 금주 식단보기</div>
+            <div class="menu-item" onclick="openFacilityRequest()"><i class="fa-solid fa-soap" style="color: #10b981;"></i> 생활관 비품 요청</div>
             <div class="menu-item" onclick="openShuttleApply()"><i class="fa-solid fa-bus"></i> 차량 신청</div>
             <div class="menu-item" onclick="openAdminAction()"><i class="fa-solid fa-file-signature"></i> 외출·외박 / 석식제외</div>
             <div class="menu-item" onclick="openAttendanceQR()"><i class="fa-solid fa-qrcode" style="color: #3b82f6;"></i> 출결 QR 확인</div>
@@ -522,6 +523,42 @@
             <button onclick="document.getElementById('menuModal').style.display='none'" style="margin-top:15px; width:100%; padding:12px; border:none; border-radius:12px; background:#f1f5f9; font-weight:900; color:#475569;">닫기</button>
         </div>
     </div>
+
+
+
+
+
+
+<!-- 생활관 비품 요청 모달 -->
+<div id="facilityModal" class="menu-overlay" style="display:none; z-index: 8500;" onclick="if(event.target==this)closeFacilityModal()">
+    <div class="menu-box" style="width:90%; max-width:400px; padding:25px;">
+        <h3 style="margin-bottom:15px; font-weight:900;"><i class="fa-solid fa-hand-holding-medical"></i> 생활관 비품 요청</h3>
+        
+        <!-- 내 정보 자동 표시 -->
+        <div style="background:#f8fafc; padding:15px; border-radius:12px; border:1px solid #e2e8f0; text-align:left; margin-bottom:15px;">
+            <p style="margin:0; font-size:12px; color:#64748b; font-weight:800;">📍 나의 생활관 정보</p>
+            <p id="reqDormInfo" style="margin:5px 0 0 0; font-size:16px; font-weight:900; color:#1e293b;">정보 확인 중...</p>
+        </div>
+
+        <p style="font-size:13px; color:#64748b; margin-bottom:10px; text-align:left;">요청 사항 (샴푸, 치약, 수건 등)</p>
+        <textarea id="facilityReqText" placeholder="추가 요청 사항에 대해 기재해주세요." style="width:100%; height:100px; border:2px solid #e2e8f0; border-radius:12px; padding:12px; font-size:15px; outline:none; resize:none; margin-bottom:15px;"></textarea>
+
+        <button onclick="submitFacilityRequest()" style="width:100%; padding:15px; background:#10b981; color:white; border:none; border-radius:12px; font-size:17px; font-weight:900; cursor:pointer;">요청 제출하기</button>
+        <button onclick="closeFacilityModal()" style="margin-top:10px; width:100%; padding:12px; border:none; border-radius:12px; background:#f1f5f9; color:#475569; font-weight:800; cursor:pointer;">닫기</button>
+    </div>
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -2375,6 +2412,92 @@ async function openNotice() {
         container.innerHTML = "<div style='text-align:center; padding:20px; color:red;'>공지사항을 불러오는 중 오류가 발생했습니다.</div>";
     }
 }
+
+
+
+
+
+
+
+
+// 생활관 비품 요청 팝업 열기
+function openFacilityRequest() {
+    document.getElementById('menuModal').style.display = 'none'; // 메뉴창 닫기
+    document.getElementById('facilityModal').style.display = 'flex'; // 요청창 열기
+    
+    // 내 생활관 정보 가져오기 (기존에 작성된 dormTextEl 로직 활용)
+    const dormInfo = document.getElementById('displayMyDorm').innerText;
+    document.getElementById('reqDormInfo').innerText = dormInfo;
+    document.getElementById('facilityReqText').value = ""; // 초기화
+}
+
+function closeFacilityModal() {
+    document.getElementById('facilityModal').style.display = 'none';
+}
+
+// 비품 요청 서버 업로드
+async function submitFacilityRequest() {
+    const reqText = document.getElementById('facilityReqText').value.trim();
+    const dormInfo = document.getElementById('displayMyDorm').innerText;
+    const userName = localStorage.getItem('kac_user_name');
+    const userPhone = localStorage.getItem('kac_user_phone');
+
+    if (!reqText) {
+        alert("요청 사항을 입력해 주세요.");
+        return;
+    }
+
+    if (dormInfo.includes("확인 중")) {
+        alert("생활관 정보가 확인되지 않습니다. 관리실에 문의하세요.");
+        return;
+    }
+
+    const requestData = {
+        name: userName,
+        phone: userPhone,
+        dorm: dormInfo,
+        text: reqText,
+        status: "대기", // 대기, 확인, 처리완료, 처리불가
+        timestamp: firebase.database.ServerValue.TIMESTAMP,
+        courseName: document.getElementById('roomTitle').innerText // 어느 과정 학생인지 확인용
+    };
+
+    try {
+        // system/facility_requests 경로에 저장 (미화 담당자가 한꺼번에 보기 위함)
+        await firebase.database().ref('system/facility_requests').push(requestData);
+        alert("✅ 요청이 전달되었습니다. 담당자 확인 후 처리됩니다.");
+        closeFacilityModal();
+    } catch (e) {
+        alert("전송 실패: " + e.message);
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

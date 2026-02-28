@@ -169,6 +169,16 @@
             <div class="icon-circle"><i class="fa-solid fa-hotel"></i></div>
             <span class="menu-name">교육지원<br>(생활관)</span>
         </a>
+
+<!-- 추가할 미화 담당 카드 -->
+<a href="javascript:void(0)" onclick="goWithPin('facility_admin.html', 'facility')" class="menu-card m-support">
+    <div class="icon-circle" style="background: #ecfdf5; color: #10b981;"><i class="fa-solid fa-broom"></i></div>
+    <span class="menu-name">미화/시설<br>(비품관리)</span>
+</a>
+
+
+
+
         <!-- 5. 학생장 (가로 전체 차지) -->
         <a href="student_leader.html" class="menu-card m-leader full-btn">
             <div class="icon-circle"><i class="fa-solid fa-crown"></i></div>
@@ -191,6 +201,7 @@
       <input type="password" id="new_meal" class="input-box" placeholder="영양사 PIN">
       <input type="password" id="new_coord" class="input-box" placeholder="교육운영 PIN">
       <input type="password" id="new_support" class="input-box" placeholder="교육지원 PIN">
+      <input type="password" id="new_facility" class="input-box" placeholder="미화/시설 PIN">
       <button class="save-btn" onclick="saveNewPins()">설정 저장</button>
       <button class="save-btn close-btn" onclick="closeModal()">닫기</button>
     </div>
@@ -251,7 +262,7 @@
     }
 
     async function saveNewPins() {
-      const roles = ['driver', 'meal', 'coord', 'support'];
+      const roles = ['driver', 'meal', 'coord', 'support', 'facility'];
       for(const r of roles) {
         const val = document.getElementById(`new_${r}`).value;
         if(val) {
