@@ -1126,40 +1126,100 @@ const profMgr = {
 }; // <--- 중요!! profMgr라는 큰 바구니를 여기서 완전히 닫습니다. (콤마 없음)
 
 
-// 과정 담당자(행정) 및 서명 관리 객체 (강사 플랫폼용)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// [최종 고도화] 과정 담당자(행정) 및 서명 관리 객체 (강사 플랫폼용)
 const coordMgr = {
     list: [],
     tempSign: "",
     
+    // 1. 직급별 우선순위 정의 (낮을수록 상단)
+    rankPriority: {
+        "차장": 1,
+        "과장": 2,
+        "대리": 3,
+        "주임": 4,
+        "사원": 5
+    },
+
+    // 이름 문자열에서 직급 가중치를 계산하는 함수
+    getPriority: function(name) {
+        if (!name) return 99;
+        for (let rank in this.rankPriority) {
+            if (name.includes(rank)) return this.rankPriority[rank];
+        }
+        return 99; // 직급이 명시되지 않은 경우 가장 아래로 배정
+    },
+
     init: function() {
         const ref = firebase.database().ref('system/coordinators');
         ref.on('value', s => {
             const data = s.val() || {};
-            this.list = Object.keys(data).map(k => ({ key: k, ...data[k] }));
+            
+            // 2. 객체를 배열로 변환
+            let unsortedList = Object.keys(data).map(k => ({ key: k, ...data[k] }));
+
+            // 3. [직급순 -> 이름순] 정렬 로직 적용
+            unsortedList.sort((a, b) => {
+                const prioA = this.getPriority(a.name);
+                const prioB = this.getPriority(b.name);
+
+                if (prioA !== prioB) {
+                    return prioA - prioB; // 직급 우선순위 비교
+                }
+                return a.name.localeCompare(b.name); // 직급이 같으면 가나다순 비교
+            });
+
+            this.list = unsortedList;
             this.renderSelects();    
             this.renderManageList(); 
         });
     },
 
+    // 설정창 내 담당자 드롭다운(Select) 갱신
     renderSelects: function() {
         const sel = document.getElementById('setup-coord-select'); 
         if(!sel) return;
-        const curValue = sel.value; 
+        
+        const curValue = sel.value; // 현재 선택된 값 보존
         sel.innerHTML = '<option value="">--- 담당자 선택 ---</option>';
+        
         this.list.forEach(c => {
             const opt = new Option(c.name, c.name);
-            if(c.name === curValue) opt.selected = true;
             sel.add(opt);
         });
+
+        // 리스트가 다시 그려져도 기존에 선택되어 있던 값이 있다면 다시 선택해줌
+        if(curValue) sel.value = curValue;
     },
 
+    // 관리 모달 내 담당자 리스트 렌더링 (수정/삭제용)
     renderManageList: function() {
         const div = document.getElementById('coordListContainer'); 
         if(!div) return;
+        
         if(this.list.length === 0) {
             div.innerHTML = "<div style='text-align:center; padding:20px; color:#94a3b8;'>등록된 담당자가 없습니다.</div>";
             return;
         }
+
         div.innerHTML = this.list.map(c => `
             <div style="display:flex; justify-content:space-between; padding:10px; border-bottom:1px solid #eee; align-items:center; background:#fff; margin-bottom:5px; border-radius:8px;">
                 <div style="display:flex; align-items:center; gap:12px;">
@@ -1185,24 +1245,33 @@ const coordMgr = {
     add: async function() {
         const input = document.getElementById('newCoordInput'); 
         const name = input.value.trim();
-        if(!name) return alert("성함을 입력해 주세요.");
+        if(!name) return alert("성함과 직급을 입력해 주세요. (예: 홍길동 과장)");
+
         try {
             await firebase.database().ref('system/coordinators').push({ name: name, sign: this.tempSign });
-            input.value = ""; this.tempSign = "";
+            input.value = ""; 
+            this.tempSign = "";
             document.getElementById('signPreviewArea').style.display = 'none';
-        } catch(e) { alert("오류: " + e.message); }
+            alert("정상적으로 등록되었습니다.");
+        } catch(e) { 
+            alert("저장 오류: " + e.message); 
+        }
     },
 
     delete: async function(k) {
-        if(confirm("이 담당자를 삭제할까요?")) {
+        if(confirm("이 담당자를 명단에서 삭제하시겠습니까?")) {
             await firebase.database().ref(`system/coordinators/${k}`).remove();
         }
     },
 
     openManage: function() {
+        // 관리창을 열기 전에 기존 입력값들을 초기화
+        document.getElementById('newCoordInput').value = "";
+        document.getElementById('signPreviewArea').style.display = 'none';
         document.getElementById('coordManageModal').style.display = 'flex';
     }
 };
+
 
 
 
