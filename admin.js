@@ -4652,6 +4652,8 @@ occupiedLocations: [], // 이 줄을 추가하세요
 // [최종 수정] 권한 체크 + 호텔 예약 방식(Range) 달력이 적용된 설정 모달 오픈 함수
 openSetupModal: async function() {
     if(!state.room) return ui.showAlert("강의실을 먼저 선택하세요.");
+    // [수정] 모달 열릴 때 현재 방을 고정 → 저장 중 SELECT ROOM 변경해도 영향 없음
+    this._lockedRoom = state.room;
     
     // 1. 보안 체크: 인증되지 않은 사용자는 실행 중단
     const statusSnap = await firebase.database().ref(`courses/${state.room}/status`).get();
@@ -4711,10 +4713,8 @@ window._periodPicker = flatpickr("#setup-period-range", {
     showMonths: 2,
     closeOnSelect: false,
     disableMobile: "true",
-    minDate: "today",
     onReady: function(selectedDates, dateStr, instance) {
         instance.calendarContainer.style.width = "820px";
-        // 달력을 오늘 날짜가 있는 달로 강제 이동
         if (!selectedDates.length) {
             instance.jumpToDate(new Date());
         }
@@ -4812,9 +4812,12 @@ loadCurrentSettings: function() {
                 window._periodPicker.setDate([todayStr, todayStr], false);
             }
         }
-        // 달력 뷰를 항상 오늘이 포함된 달로 이동
+        // 달력 뷰: 기존 기간이 있으면 시작일 달로, 없으면 오늘로 이동
         if (window._periodPicker) {
-            window._periodPicker.jumpToDate(new Date());
+            const jumpTarget = (s.period && s.period.includes(' ~ '))
+                ? new Date(s.period.split(' ~ ')[0].trim())
+                : new Date();
+            window._periodPicker.jumpToDate(jumpTarget);
         }
         
         // 5. 모달 표시 및 과목 리스트 출력
@@ -4851,14 +4854,18 @@ loadCurrentSettings: function() {
 
     closeSetupModal: function() {
         document.getElementById('courseSetupModal').style.display = 'none';
+        this._lockedRoom = null; // 잠금 해제
     },
 
 
 
 
 saveAll: function() {
-        // [옵저버 제한]
         if(state.isObserver) return ui.showAlert("👁️ 옵저버 모드에서는 환경설정을 변경할 수 없습니다.");
+
+        // [수정] 모달 열릴 때 고정된 방 사용 → SELECT ROOM 변경해도 올바른 방에 저장
+        const targetRoom = this._lockedRoom || state.room;
+        if (!targetRoom) return ui.showAlert("저장할 강의실 정보가 없습니다. 모달을 닫고 다시 시도해 주세요.");
 
         const name = document.getElementById('setup-course-name').value.trim();
         const rawPw = document.getElementById('setup-room-pw').value.trim();
@@ -4884,31 +4891,31 @@ saveAll: function() {
         }
 
         const updates = {};
-        updates[`courses/${state.room}/settings/courseName`] = name;
-        updates[`courses/${state.room}/settings/password`] = btoa(rawPw);
+        updates[`courses/${targetRoom}/settings/courseName`] = name;
+        updates[`courses/${targetRoom}/settings/password`] = btoa(rawPw);
         
         // ★ 수정: 호텔 예약 방식으로 선택된 날짜 범위 ("시작일 ~ 종료일")를 그대로 저장합니다.
-        updates[`courses/${state.room}/settings/period`] = periodRange;
+        updates[`courses/${targetRoom}/settings/period`] = periodRange;
         
-        updates[`courses/${state.room}/settings/roomDetailName`] = roomName;
-        updates[`courses/${state.room}/settings/coordinatorName`] = coordName;
-        updates[`courses/${state.room}/status/professorName`] = profName;
-        updates[`courses/${state.room}/status/roomStatus`] = 'active';
-        updates[`courses/${state.room}/status/ownerSessionId`] = state.sessionId;
+        updates[`courses/${targetRoom}/settings/roomDetailName`] = roomName;
+        updates[`courses/${targetRoom}/settings/coordinatorName`] = coordName;
+        updates[`courses/${targetRoom}/status/professorName`] = profName;
+        updates[`courses/${targetRoom}/status/roomStatus`] = 'active';
+        updates[`courses/${targetRoom}/status/ownerSessionId`] = state.sessionId;
 
         // 메뉴 기능 ON/OFF 저장
-        updates[`courses/${state.room}/settings/menuFeatures/facility`]     = document.getElementById('feat-facility')?.checked !== false;
-        updates[`courses/${state.room}/settings/menuFeatures/shuttle`]      = document.getElementById('feat-shuttle')?.checked !== false;
-        updates[`courses/${state.room}/settings/menuFeatures/adminAction`]  = document.getElementById('feat-admin-action')?.checked !== false;
-        updates[`courses/${state.room}/settings/menuFeatures/meal`]         = document.getElementById('feat-meal')?.checked !== false;
-        updates[`courses/${state.room}/settings/menuFeatures/attendanceQr`] = document.getElementById('feat-attendance-qr')?.checked !== false;
-        updates[`courses/${state.room}/settings/menuFeatures/cns`]          = document.getElementById('feat-cns')?.checked !== false;
+        updates[`courses/${targetRoom}/settings/menuFeatures/facility`]     = document.getElementById('feat-facility')?.checked !== false;
+        updates[`courses/${targetRoom}/settings/menuFeatures/shuttle`]      = document.getElementById('feat-shuttle')?.checked !== false;
+        updates[`courses/${targetRoom}/settings/menuFeatures/adminAction`]  = document.getElementById('feat-admin-action')?.checked !== false;
+        updates[`courses/${targetRoom}/settings/menuFeatures/meal`]         = document.getElementById('feat-meal')?.checked !== false;
+        updates[`courses/${targetRoom}/settings/menuFeatures/attendanceQr`] = document.getElementById('feat-attendance-qr')?.checked !== false;
+        updates[`courses/${targetRoom}/settings/menuFeatures/cns`]          = document.getElementById('feat-cns')?.checked !== false;
 
         firebase.database().ref().update(updates).then(() => {
             document.getElementById('courseNameInput').value = name;
             document.getElementById('roomPw').value = rawPw;
             document.getElementById('displayCourseTitle').innerText = name;
-            localStorage.setItem('last_owned_room', state.room);
+            localStorage.setItem('last_owned_room', targetRoom);
             
             ui.showAlert("✅ 설정이 저장되었습니다.");
             
@@ -4916,7 +4923,7 @@ saveAll: function() {
             this.closeSetupModal();
 
             // 2. [핵심 추가] 즉시 방에 다시 입장하여 잠금 화면을 치우고 대시보드를 보여줌
-            dataMgr.forceEnterRoom(state.room);
+            dataMgr.forceEnterRoom(targetRoom);
         });
     }
 ,
