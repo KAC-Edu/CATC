@@ -2045,10 +2045,15 @@ showAlert: function(msg) {
         
         // 1. Firebase 실시간 리스너 (한 번만 등록)
         if (!window.isRoomListenerSet) {
+            window.isRoomListenerSet = true; // 플래그를 먼저 세워 중복 등록 방지
             firebase.database().ref('courses').on('value', s => {
-                window.latestCoursesData = s.val() || {}; // 전역에 데이터 저장
-                window.isRoomListenerSet = true;
-                this.initRoomSelect(); // 데이터가 오면 화면을 다시 그림
+                window.latestCoursesData = s.val() || {};
+                ui.initRoomSelect(); // [수정] this → ui 명시로 컨텍스트 손실 방지
+            }, err => {
+                // Firebase 읽기 권한 오류 시 명시적 안내
+                console.error('courses 읽기 권한 오류:', err.message);
+                const sel = document.getElementById('roomSelect');
+                if (sel) sel.innerHTML = '<option value="">⚠️ 권한 오류 - 재로그인 필요</option>';
             });
             return;
         }
