@@ -1458,81 +1458,26 @@ init: function() {
 const ui = {
 
 
-// [단체회식] 모달 열기
-    openGroupDinnerModal: function() {
-        if (!state.room) return ui.showAlert("강의실을 먼저 선택해 주세요.");
-        if (state.isObserver) return ui.showAlert("👁️ 옵저버 모드에서는 사용할 수 없습니다.");
-        // 시간 기본값: 현재 시각 기준
-        const now = new Date();
-        const pad = n => String(n).padStart(2, '0');
-        document.getElementById('gd-start-time').value = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
-        document.getElementById('gd-end-time').value = '';
-        document.getElementById('gd-destination').value = '';
-        document.getElementById('gd-phone').value = '';
-        document.getElementById('gd-reason').value = '과정 단체 회식';
-        document.getElementById('groupDinnerModal').style.display = 'flex';
-    },
-
-    // [단체회식] 실제 적용 (석식제외 + admin_actions 단체 행 등록)
-    applyGroupDinner: async function() {
-        if (state.isObserver) return ui.showAlert("👁️ 옵저버 모드에서는 사용할 수 없습니다.");
-        if (!state.room) return;
-
-        const destination = document.getElementById('gd-destination').value.trim();
-        const startTime   = document.getElementById('gd-start-time').value.trim();
-        const endTime     = document.getElementById('gd-end-time').value.trim();
-        const phone       = document.getElementById('gd-phone').value.trim();
-        const reason      = document.getElementById('gd-reason').value.trim() || '과정 단체 회식';
-
-        if (!destination || !startTime || !endTime || !phone) {
-            return ui.showAlert("⚠️ 행선지, 외출·복귀 시간, 대표 연락처는 필수 입력입니다.");
-        }
-        if (startTime >= endTime) {
-            return ui.showAlert("⚠️ 복귀 시간이 외출 시간보다 빠를 수 없습니다.");
-        }
-
-        document.getElementById('groupDinnerModal').style.display = 'none';
-
-        const snap = await firebase.database().ref(`courses/${state.room}/students`).once('value');
-        const students = snap.val() || {};
-        const today = getTodayString();
-        const updates = {};
-        const rPath = `courses/${state.room}`;
-        const ts = Date.now();
-
-        // 수강생 목록에서 중복 제거 (이름+전화 기준)
-        const seen = new Set();
-        const validStudents = [];
-        Object.keys(students).forEach(token => {
-            const s = students[token];
-            if (!s.name || s.name === 'undefined') return;
-            const key = `${s.name.trim()}_${(s.phone||'').trim()}`;
-            if (!seen.has(key)) { seen.add(key); validStudents.push({ token, ...s }); }
+// [신규] 단체 회식 적용 (전원 석식 제외)
+    applyGroupDinner: function() {
+        if(!confirm("현재 명단의 모든 수강생을 '석식 제외'로 등록하시겠습니까?\n(단체 회식 시 사용)")) return;
+        
+        firebase.database().ref(`courses/${state.room}/students`).once('value', snap => {
+            const students = snap.val() || {};
+            const today = getTodayString();
+            const updates = {};
+            
+            Object.keys(students).forEach(token => {
+                const s = students[token];
+                if(s.name) {
+                    updates[`courses/${state.room}/dinner_skips/${today}/${token}`] = `${s.name}(${s.phone ? s.phone.slice(-4) : '0000'})`;
+                }
+            });
+            
+            firebase.database().ref().update(updates).then(() => {
+                ui.showAlert("✅ 전원 석식 제외 처리가 완료되었습니다.");
+            });
         });
-
-        validStudents.forEach((s, idx) => {
-            // (1) 석식 제외 등록
-            updates[`${rPath}/dinner_skips/${today}/${s.token}`] =
-                `${s.name}(${s.phone ? s.phone.slice(-4) : '0000'})`;
-
-            // (2) admin_actions에 단체외출 행 등록 (token별로 각각)
-            //     type: 'group_outing' 으로 구분 → 대장에서 [단체] 표시
-            updates[`${rPath}/admin_actions/${today}/${s.token}`] = {
-                name:        s.name,
-                dept:        s.dept || '',
-                phone:       phone,            // 대표 연락처 공통
-                destination: destination,
-                startTime:   startTime,
-                endTime:     endTime,
-                reason:      reason,
-                type:        'group_outing',   // 단체 구분 플래그
-                timestamp:   ts + idx,         // 동일 ts 방지
-                returned:    false
-            };
-        });
-
-        await firebase.database().ref().update(updates);
-        ui.showAlert(`✅ 총 ${validStudents.length}명 석식 제외 및 단체 외출 등록 완료\n행선지: ${destination} / ${startTime}~${endTime}`);
     },
 
     // [신규] 석식 제외 초기화
@@ -2534,6 +2479,11 @@ setMode: function(mode) {
                     }
                 });
             }
+            if (mode === 'guide') {
+                // PDF 탭 클릭 시: pdfDoc 없으면 init 재시도, 있으면 바로 렌더링
+                if (!guideMgr.pdfDoc) { guideMgr.init(); }
+                else { guideMgr.renderPage(guideMgr.pageNum); }
+            }
             if (mode === 'admin-action') ui.loadAdminActionData();
             if (mode === 'dinner-skip') ui.loadDinnerSkipData();
             if (mode === 'students') ui.loadStudentList();
@@ -2984,9 +2934,7 @@ function renderAdminList(todayData, yesterdayData) {
             });
 
             function appendRow(item, isYesterday, token) {
-                const typeNm = item.type === 'group_outing' ?
-                    '<span style="background:#7c3aed;color:white;padding:2px 7px;border-radius:6px;font-size:11px;font-weight:800;">단체외출</span>' :
-                    item.type === 'outing' ? 
+                const typeNm = item.type === 'outing' ? 
                     '<span style="color:#f59e0b; font-weight:bold;">외출</span>' : 
                     '<span style="color:#ef4444; font-weight:bold;">외박</span>';
                 
@@ -4193,7 +4141,8 @@ const guideMgr = {
     // 1. 초기화 (기존 로직 + 리사이즈 감시 추가)
 init: function() {
     if (!state.room) return;
-    if (window['pdfjs-dist/build/pdf']) {
+    // CDN 방식 로드 시 pdfjsLib 전역 객체로 체크
+    if (typeof pdfjsLib !== 'undefined') {
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
     }
     const guideRef = firebase.database().ref(`system/sharedGuide`);
