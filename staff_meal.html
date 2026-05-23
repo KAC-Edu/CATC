@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>KAC 식당 식사 체크인</title>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <script src="config.js"></script>
+    <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" rel="stylesheet">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Pretendard', sans-serif; -webkit-tap-highlight-color: transparent; }
+        body { min-height: 100dvh; background: #0f172a; display: flex; align-items: center; justify-content: center; padding: 20px; }
+
+        .card {
+            background: white; border-radius: 24px; padding: 36px 28px;
+            width: 100%; max-width: 360px; text-align: center;
+            box-shadow: 0 25px 60px rgba(0,0,0,0.4);
+            animation: fadeUp 0.35s ease;
+        }
+        @keyframes fadeUp { from{opacity:0;transform:translateY(18px)} to{opacity:1;transform:translateY(0)} }
+
+        .logo { font-size: 42px; margin-bottom: 8px; }
+        .title { font-size: 13px; font-weight: 800; color: #94a3b8; letter-spacing: 1px; margin-bottom: 28px; }
+
+        /* 등록 폼 */
+        .reg-label { font-size: 17px; font-weight: 900; color: #0f172a; margin-bottom: 6px; }
+        .reg-desc  { font-size: 13px; color: #64748b; margin-bottom: 22px; line-height: 1.5; }
+        .reg-input {
+            width: 100%; padding: 14px 16px; border: 2px solid #e2e8f0;
+            border-radius: 12px; font-size: 16px; font-weight: 700;
+            outline: none; margin-bottom: 10px; transition: border-color .2s;
+            -webkit-appearance: none;
+        }
+        .reg-input:focus { border-color: #10b981; }
+        .reg-btn {
+            width: 100%; padding: 15px; background: #10b981; color: white;
+            border: none; border-radius: 13px; font-size: 16px; font-weight: 900;
+            cursor: pointer; margin-bottom: 10px;
+        }
+        .reg-btn:active { opacity: 0.85; }
+        .reg-skip { font-size: 12px; color: #94a3b8; cursor: pointer; text-decoration: underline; }
+
+        /* 결과 화면 */
+        .result-icon { font-size: 56px; margin-bottom: 10px; }
+        .result-name { font-size: 24px; font-weight: 900; color: #0f172a; margin-bottom: 4px; }
+        .result-dept { font-size: 13px; color: #64748b; margin-bottom: 20px; }
+        .result-box {
+            padding: 18px 20px; border-radius: 14px; margin-bottom: 20px;
+            font-size: 15px; font-weight: 700; line-height: 1.7;
+        }
+        .ok  { background: #ecfdf5; color: #059669; border: 2px solid #a7f3d0; }
+        .dup { background: #fff7ed; color: #c2410c; border: 2px solid #fed7aa; }
+        .time-big { font-size: 34px; font-weight: 900; color: #0f172a; margin: 6px 0; }
+        .close-btn {
+            width: 100%; padding: 15px; background: #0f172a; color: white;
+            border: none; border-radius: 13px; font-size: 15px; font-weight: 800; cursor: pointer;
+        }
+        .reset-link { font-size: 11px; color: #cbd5e1; margin-top: 12px; cursor: pointer; text-decoration: underline; display: block; }
+
+        .loading { padding: 30px 0; color: #94a3b8; font-size: 15px; }
+    </style>
+</head>
+<body>
+<div class="card" id="card">
+    <div class="loading">
+        <div style="font-size:38px; margin-bottom:10px;">🍽️</div>
+        잠시만 기다려 주세요...
+    </div>
+</div>
+
+<script>
+// ── 로컬스토리지 키 (이 기기에서 한 번 등록한 정보를 기억)
+const LS_KEY = 'kac_staff_meal_profile';
+const db = firebase.database();
+
+// ── 날짜 문자열 생성
+function getToday() {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+function getNow() {
+    return new Date().toLocaleTimeString('ko-KR', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
+}
+
+// ── 초기화: 이 기기에 저장된 프로필이 있는지 확인
+window.addEventListener('load', () => {
+    const saved = localStorage.getItem(LS_KEY);
+    if (saved) {
+        try {
+            const profile = JSON.parse(saved);
+            // 저장된 프로필로 바로 체크인 처리
+            processCheckIn(profile.name, profile.dept || '');
+        } catch(e) {
+            showRegisterForm();
+        }
+    } else {
+        showRegisterForm();
+    }
+});
+
+// ── 이름 등록 화면
+function showRegisterForm() {
+    document.getElementById('card').innerHTML = `
+        <div class="logo">🍽️</div>
+        <div class="title">KAC 항공기술훈련원 식당</div>
+        <div class="reg-label">처음 오셨나요?</div>
+        <div class="reg-desc">이름을 한 번만 등록하시면<br>다음부터는 QR 스캔만으로 자동 기록됩니다.</div>
+        <input id="nameInput" class="reg-input" type="text" placeholder="성명 (예: 홍길동)" maxlength="10"
+               onkeyup="if(event.key==='Enter') document.getElementById('deptInput').focus()">
+        <input id="deptInput" class="reg-input" type="text" placeholder="부서 / 직책 (선택)" maxlength="20"
+               onkeyup="if(event.key==='Enter') doRegister()">
+        <button class="reg-btn" onclick="doRegister()">등록하고 식사 체크인</button>
+        <span class="reg-skip" onclick="doRegister(true)">이름 없이 1회 기록만 하기</span>
+    `;
+    setTimeout(() => {
+        const input = document.getElementById('nameInput');
+        if (input) input.focus();
+    }, 300);
+}
+
+// ── 등록 처리
+function doRegister(anonymous) {
+    if (anonymous) {
+        processCheckIn('(익명)', '');
+        return;
+    }
+    const name = (document.getElementById('nameInput')?.value || '').trim();
+    const dept = (document.getElementById('deptInput')?.value || '').trim();
+    if (!name) {
+        document.getElementById('nameInput').style.borderColor = '#ef4444';
+        document.getElementById('nameInput').focus();
+        return;
+    }
+    // 이 기기에 프로필 저장
+    localStorage.setItem(LS_KEY, JSON.stringify({ name, dept }));
+    processCheckIn(name, dept);
+}
+
+// ── 체크인 처리 (Firebase 기록)
+async function processCheckIn(name, dept) {
+    // 기기 고유 ID (없으면 생성하여 저장)
+    let deviceId = localStorage.getItem('kac_staff_device_id');
+    if (!deviceId) {
+        deviceId = 'D' + Date.now().toString(36).toUpperCase() + Math.random().toString(36).slice(2,5).toUpperCase();
+        localStorage.setItem('kac_staff_device_id', deviceId);
+    }
+
+    const today   = getToday();
+    const timeStr = getNow();
+    const logPath = `system/staff_meal_log/${deviceId}/${today}`;
+
+    try {
+        const snap = await db.ref(logPath).once('value');
+        const card = document.getElementById('card');
+
+        if (snap.exists()) {
+            // 오늘 이미 체크인
+            const prev = snap.val();
+            card.innerHTML = `
+                <div class="result-icon">☑️</div>
+                <div class="result-name">${prev.name || name}</div>
+                <div class="result-dept">${prev.dept || dept}</div>
+                <div class="result-box dup">
+                    오늘 이미 식사 처리되었습니다.<br>
+                    <span style="font-size:13px; color:#9a3412;">체크인 시각: ${prev.time || '-'}</span>
+                </div>
+                <button class="close-btn" onclick="window.close()">닫기</button>
+                <span class="reset-link" onclick="resetProfile()">다른 사람으로 변경</span>`;
+        } else {
+            // 신규 체크인
+            await db.ref(logPath).set({
+                name, dept,
+                time: timeStr,
+                timestamp: firebase.database.ServerValue.TIMESTAMP
+            });
+
+            card.innerHTML = `
+                <div class="result-icon">✅</div>
+                <div class="result-name">${name}</div>
+                <div class="result-dept">${dept}</div>
+                <div class="result-box ok">
+                    식사가 정상 기록되었습니다!
+                    <div class="time-big">${timeStr}</div>
+                    <div style="font-size:13px; color:#047857;">${today}</div>
+                </div>
+                <button class="close-btn" onclick="window.close()">확인</button>
+                <span class="reset-link" onclick="resetProfile()">다른 사람으로 변경</span>`;
+        }
+    } catch(e) {
+        document.getElementById('card').innerHTML = `
+            <div class="result-icon">⚠️</div>
+            <div class="result-name">연결 오류</div>
+            <div class="result-dept" style="margin-bottom:20px;">인터넷 연결을 확인해 주세요.</div>
+            <button class="close-btn" onclick="location.reload()">다시 시도</button>`;
+    }
+}
+
+// ── 프로필 초기화 (다른 사람이 같은 폰 쓸 때)
+function resetProfile() {
+    if (!confirm('저장된 이름 정보를 초기화하고 다시 등록하시겠습니까?')) return;
+    localStorage.removeItem(LS_KEY);
+    localStorage.removeItem('kac_staff_device_id');
+    showRegisterForm();
+}
+</script>
+</body>
+</html>

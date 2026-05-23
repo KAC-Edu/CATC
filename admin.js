@@ -520,6 +520,24 @@ forceEnterRoom: async function(room) {
         ui.renderSettings(s.val() || {}); 
     });
 
+    // [신규] 교육운영담당자 공지 변경 감지 → 강사 실시간 알림
+    firebase.database().ref(`courses/${cleanRoom}/coordNotice`).on('value', snap => {
+        if (state.room !== cleanRoom) return;
+        const newMsg = snap.val() || '';
+        const lastSeen = localStorage.getItem(`kac_coord_notice_seen_${cleanRoom}`) || '';
+
+        // 공지 탭 NEW 배지 업데이트
+        ui.updateCoordNoticeBadge(newMsg, lastSeen);
+
+        // 메시지가 있고 이전에 본 내용과 다를 때 팝업 알림
+        if (newMsg && newMsg !== lastSeen && newMsg.trim() !== '') {
+            // 처음 입장 시(lastSeen이 비어있음)는 팝업 없이 배지만 표시
+            if (lastSeen !== '') {
+                ui.showCoordNoticeAlert(newMsg);
+            }
+        }
+    });
+
     dbRef.status.on('value', s => {
         if (state.room !== cleanRoom) return;
         const statusData = s.val() || {};
@@ -1737,6 +1755,14 @@ updateQaCountBadge: function() {
 // [완성형 디자인] 운영부 공지사항 출력 (한 줄 정렬 및 가변 높이 적용)
     loadNoticeView: async function() {
         if(!state.room) return;
+
+        // [신규] 공지 탭 진입 시 coordNotice 읽음 처리
+        const coordSnap = await firebase.database().ref(`courses/${state.room}/coordNotice`).once('value');
+        const coordMsg = coordSnap.val() || '';
+        if (coordMsg) {
+            localStorage.setItem(`kac_coord_notice_seen_${state.room}`, coordMsg);
+            ui.updateCoordNoticeBadge(coordMsg, coordMsg); // 읽었으므로 배지 제거
+        }
         
         // 1. 좌측 영역: 강사 본인 공지
         const snap = await firebase.database().ref(`courses/${state.room}/notice`).once('value');
@@ -3372,6 +3398,76 @@ resetShuttleRequests: function() {
     },
 
 // [가족 사이트 토글 함수]
+    // [신규] 교육운영담당자 공지 NEW 배지 업데이트
+    updateCoordNoticeBadge: function(currentMsg, lastSeenMsg) {
+        const tab = document.getElementById('tab-notice');
+        const dashBadge = document.getElementById('coordNoticeBadge');
+        const hasNew = currentMsg && currentMsg !== lastSeenMsg && currentMsg.trim() !== '';
+
+        // 공지 탭 상단 배지
+        if (tab) {
+            let badge = tab.querySelector('.notice-new-dot');
+            if (hasNew) {
+                if (!badge) {
+                    badge = document.createElement('span');
+                    badge.className = 'notice-new-dot';
+                    badge.style.cssText = 'display:inline-block; width:8px; height:8px; background:#ef4444; border-radius:50%; margin-left:5px; vertical-align:middle; animation: pulseDot 1.5s infinite;';
+                    tab.appendChild(badge);
+                }
+            } else {
+                if (badge) badge.remove();
+            }
+        }
+
+        // 대시보드 공지 피드 운영 배지
+        if (dashBadge) dashBadge.style.display = hasNew ? 'inline-flex' : 'none';
+    },
+
+    // [신규] 교육운영담당자 신규 공지 팝업
+    showCoordNoticeAlert: function(msg) {
+        // 이미 팝업이 열려있으면 중복 방지
+        if (document.getElementById('coordNoticeAlertModal')) return;
+
+        const overlay = document.createElement('div');
+        overlay.id = 'coordNoticeAlertModal';
+        overlay.style.cssText = 'position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:99999; display:flex; align-items:center; justify-content:center; padding:20px;';
+
+        overlay.innerHTML = `
+            <div style="background:white; border-radius:20px; max-width:420px; width:100%; overflow:hidden; box-shadow:0 20px 50px rgba(0,0,0,0.3); animation: slideUp 0.3s ease;">
+                <div style="background:linear-gradient(135deg,#003366,#0055aa); padding:20px 25px; color:white;">
+                    <div style="display:flex; align-items:center; gap:10px;">
+                        <div style="background:rgba(255,255,255,0.2); width:36px; height:36px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:18px;">📢</div>
+                        <div>
+                            <div style="font-size:11px; opacity:0.8; font-weight:700;">교육운영부 새 공지</div>
+                            <div style="font-size:16px; font-weight:900;">신규 공지사항이 등록되었습니다</div>
+                        </div>
+                    </div>
+                </div>
+                <div style="padding:25px;">
+                    <div style="background:#f0f7ff; border-radius:12px; border-left:5px solid #3b82f6; padding:15px 18px; font-size:15px; font-weight:600; line-height:1.7; color:#1e3a8a; white-space:pre-line; max-height:200px; overflow-y:auto;">${msg}</div>
+                    <div style="display:flex; gap:10px; margin-top:20px;">
+                        <button onclick="document.getElementById('coordNoticeAlertModal').remove(); ui.setMode('notice');"
+                            style="flex:2; padding:14px; background:#003366; color:white; border:none; border-radius:12px; font-weight:900; cursor:pointer; font-size:14px;">
+                            공지 탭에서 확인
+                        </button>
+                        <button onclick="localStorage.setItem('kac_coord_notice_seen_${state.room}', ${JSON.stringify(msg)}); ui.updateCoordNoticeBadge('',''); document.getElementById('coordNoticeAlertModal').remove();"
+                            style="flex:1; padding:14px; background:#f1f5f9; color:#64748b; border:none; border-radius:12px; font-weight:700; cursor:pointer; font-size:14px;">
+                            닫기
+                        </button>
+                    </div>
+                </div>
+            </div>`;
+
+        document.body.appendChild(overlay);
+
+        // 공지 탭 읽음 처리 (닫기 버튼 클릭 전 공지 탭으로 이동 시)
+        const confirmBtn = overlay.querySelector('button:first-child');
+        confirmBtn.addEventListener('click', () => {
+            if(state.room) localStorage.setItem(\`kac_coord_notice_seen_\${state.room}\`, msg);
+            ui.updateCoordNoticeBadge(msg, msg);
+        });
+    },
+
     toggleFamilySites: function() {
         const menu = document.getElementById('familySiteMenu');
         const chevron = document.getElementById('familyChevron');
@@ -4584,25 +4680,6 @@ loadCurrentSettings: function() {
         
         // 5. 모달 표시 및 과목 리스트 출력
         subjectMgr.renderListInModal();
-
-        // 6. 메뉴 기능 ON/OFF 상태 로드
-        const features = s.menuFeatures || {};
-        const featureMap = {
-            'feat-facility':      features.facility      !== false,
-            'feat-shuttle':       features.shuttle       !== false,
-            'feat-admin-action':  features.adminAction   !== false,
-            'feat-meal':          features.meal          !== false,
-            'feat-attendance-qr': features.attendanceQr  !== false,
-            'feat-cns':           features.cns           !== false,
-        };
-        Object.entries(featureMap).forEach(([id, val]) => {
-            const el = document.getElementById(id);
-            if (el) el.checked = val;
-        });
-
-        // 7. 식단 상태 표시
-        setupMgr.refreshMealStatus();
-
         document.getElementById('courseSetupModal').style.display = 'flex';
     });
 },
@@ -4671,14 +4748,6 @@ saveAll: function() {
         updates[`courses/${state.room}/status/roomStatus`] = 'active';
         updates[`courses/${state.room}/status/ownerSessionId`] = state.sessionId;
 
-        // 메뉴 기능 ON/OFF 저장
-        updates[`courses/${state.room}/settings/menuFeatures/facility`]     = document.getElementById('feat-facility')?.checked !== false;
-        updates[`courses/${state.room}/settings/menuFeatures/shuttle`]      = document.getElementById('feat-shuttle')?.checked !== false;
-        updates[`courses/${state.room}/settings/menuFeatures/adminAction`]  = document.getElementById('feat-admin-action')?.checked !== false;
-        updates[`courses/${state.room}/settings/menuFeatures/meal`]         = document.getElementById('feat-meal')?.checked !== false;
-        updates[`courses/${state.room}/settings/menuFeatures/attendanceQr`] = document.getElementById('feat-attendance-qr')?.checked !== false;
-        updates[`courses/${state.room}/settings/menuFeatures/cns`]          = document.getElementById('feat-cns')?.checked !== false;
-
         firebase.database().ref().update(updates).then(() => {
             document.getElementById('courseNameInput').value = name;
             document.getElementById('roomPw').value = rawPw;
@@ -4686,86 +4755,14 @@ saveAll: function() {
             localStorage.setItem('last_owned_room', state.room);
             
             ui.showAlert("✅ 설정이 저장되었습니다.");
+            
+            // 1. 팝업창 닫기
             this.closeSetupModal();
+
+            // 2. [핵심 추가] 즉시 방에 다시 입장하여 잠금 화면을 치우고 대시보드를 보여줌
             dataMgr.forceEnterRoom(state.room);
         });
-    },
-
-    // 식단 이미지 업로드 (만료일 7일 후 자동 설정)
-    uploadMealImage: function(input) {
-        const file = input.files[0];
-        if (!file) return;
-        if (!file.type.startsWith('image/')) {
-            ui.showAlert('이미지 파일만 업로드 가능합니다.');
-            input.value = '';
-            return;
-        }
-
-        const btn = input.previousElementSibling || document.querySelector('[onclick*="modalMealInput"]');
-        const expireDate = new Date();
-        expireDate.setDate(expireDate.getDate() + 7);
-        const expireStr = expireDate.toISOString().split('T')[0];
-
-        // 이미지 압축
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            const img = new Image();
-            img.onload = () => {
-                const canvas = document.createElement('canvas');
-                let w = img.width, h = img.height;
-                if (w > 1200) { h = h * 1200 / w; w = 1200; }
-                canvas.width = w; canvas.height = h;
-                canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-                const compressed = canvas.toDataURL('image/jpeg', 0.75);
-
-                firebase.database().ref('system/nutrition_menu').set({
-                    image: compressed,
-                    uploadedAt: getTodayString(),
-                    expireAt: expireStr
-                }).then(() => {
-                    ui.showAlert(`✅ 식단 이미지가 업로드되었습니다.\n만료일: ${expireStr}`);
-                    setupMgr.refreshMealStatus();
-                    input.value = '';
-                }).catch(e => ui.showAlert('업로드 실패: ' + e.message));
-            };
-            img.src = e.target.result;
-        };
-        reader.readAsDataURL(file);
-    },
-
-    clearMealImage: function() {
-        if (!confirm('등록된 식단 이미지를 삭제하시겠습니까?')) return;
-        firebase.database().ref('system/nutrition_menu').remove().then(() => {
-            ui.showAlert('✅ 식단 이미지가 삭제되었습니다.');
-            setupMgr.refreshMealStatus();
-        });
-    },
-
-    refreshMealStatus: function() {
-        const el = document.getElementById('modalMealStatus');
-        if (!el) return;
-        firebase.database().ref('system/nutrition_menu').once('value', snap => {
-            const d = snap.val();
-            if (!d) {
-                el.innerText = '❌ 등록된 식단 없음';
-                el.style.color = '#ef4444';
-            } else if (typeof d === 'string') {
-                // 구버전 (기존 영양사 업로드: 문자열)
-                el.innerText = '✅ 식단 등록됨 (날짜 정보 없음)';
-                el.style.color = '#10b981';
-            } else {
-                const today = getTodayString();
-                if (d.expireAt < today) {
-                    el.innerText = `⚠️ 만료됨 (${d.expireAt})`;
-                    el.style.color = '#f59e0b';
-                } else {
-                    el.innerText = `✅ 등록됨 | 만료: ${d.expireAt}`;
-                    el.style.color = '#10b981';
-                }
-            }
-        });
     }
-
 }; // <--- setupMgr 객체를 닫아주는 아주 중요한 마침표입니다.
 
 
