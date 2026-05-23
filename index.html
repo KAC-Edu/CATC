@@ -626,7 +626,6 @@
 <!-- [최종 수정] 외출/외박 신청 및 복귀 시스템 팝업 -->
 <div id="adminActionModal" class="menu-overlay" style="display:none; z-index: 7000;">
     <div class="menu-box" style="width:95%; padding: 20px; border-radius: 20px; max-width: 450px;">
-        <!-- 단체회식 안내 배너 -->
         <div id="groupDinnerBanner" style="display:none; background:#f5f3ff; border:1.5px solid #7c3aed; border-radius:10px; padding:10px 14px; margin-bottom:12px; font-size:13px; color:#5b21b6; font-weight:700;">
             <i class="fa-solid fa-users-rectangle" style="margin-right:6px;"></i>
             오늘 <b>단체 회식(석식 제외)</b>이 적용되어 있습니다.<br>
@@ -801,6 +800,7 @@
 
             <!-- 이미지 (초기에는 숨김 display:none) -->
             <img id="mealMenuImage" src="" style="width:100%; display:none; transform-origin: center; z-index:1; will-change: transform; cursor: grab;" alt="식단표">
+        <div id="mealEmptyMsg" style="display:none; padding:60px 20px; text-align:center; color:#94a3b8; font-size:15px; font-weight:700;"></div>
         </div>
         
         <p style="margin-top:10px; font-size:11px; text-align:center; color:#94a3b8;">배경을 터치하거나 X를 누르면 닫힙니다.</p>
@@ -1195,6 +1195,24 @@ function startPresence() {
 
 
 
+// 메뉴 항목 ON/OFF 처리
+function applyMenuFeatures(features) {
+    const menuMap = [
+        { key: 'facility',     selector: '[onclick="openFacilityRequest()"]' },
+        { key: 'shuttle',      selector: '[onclick="openShuttleApply()"]' },
+        { key: 'adminAction',  selector: '[onclick="openAdminAction()"]' },
+        { key: 'meal',         selector: '[onclick="viewMealMenu()"]' },
+        { key: 'attendanceQr', selector: '[onclick="openAttendanceQR()"]' },
+        { key: 'cns',          selector: '[onclick="openCnsPlatform()"]' },
+    ];
+    menuMap.forEach(({ key, selector }) => {
+        const el = document.querySelector(selector);
+        if (!el) return;
+        const enabled = features[key] !== false; // 기본값: true
+        el.style.display = enabled ? '' : 'none';
+    });
+}
+
 function setupListeners() {
     // 1. 서버 시간 동기화 (이전 안테나 정리)
     const offsetRef = firebase.database().ref(".info/serverTimeOffset");
@@ -1215,7 +1233,10 @@ function setupListeners() {
         document.getElementById('roomTitle').innerText = title; 
         const lt = document.getElementById('landingTitle');
         if(lt) lt.innerText = title;
-        document.getElementById('landingBadge').innerText = `ROOM ${currentRoom}`; 
+        document.getElementById('landingBadge').innerText = `ROOM ${currentRoom}`;
+
+        // [메뉴 기능 ON/OFF] settings.menuFeatures 값에 따라 메뉴 항목 표시/숨김
+        applyMenuFeatures(val.menuFeatures || {});
     });
 
     // 3. 질문 리스트 실시간 감시
@@ -1780,25 +1801,18 @@ async function openShuttleApply() {
     
     const uToken = localStorage.getItem('uToken');
 
-    // [수정] 리스너 중복 방지: 기존 리스너 제거 후 재등록
-    if (window._shuttleDepartureRef) {
-        window._shuttleDepartureRef.off('value', window._shuttleDepartureHandler);
-    }
+    if (window._shuttleDepartureRef) window._shuttleDepartureRef.off();
     window._shuttleDepartureRef = firebase.database().ref(`courses/${currentRoom}/shuttle/departure`);
-    window._shuttleDepartureHandler = window._shuttleDepartureRef.on('value', snap => {
+    window._shuttleDepartureRef.on('value', snap => {
         const dep = snap.val();
         const timeEl = document.getElementById('departureTimeText');
         if (!timeEl) return;
-
         const today = getTodayString();
-
         if (dep && dep.time && dep.date) {
-            // [수정] 날짜가 오늘 이후인 경우만 표시 (지난 날짜는 숨김)
             if (dep.date >= today) {
                 timeEl.innerText = `${dep.date} [ ${dep.time} ] 출발 예정`;
                 timeEl.style.color = "#ef4444";
             } else {
-                // 지난 날짜 일정은 표시하지 않음
                 timeEl.innerText = "출발 일정이 없습니다.";
                 timeEl.style.color = "#94a3b8";
             }
@@ -1923,17 +1937,14 @@ async function openAdminAction() {
     if (!existingData) {
         document.getElementById('adminActionForm').style.display = 'flex';
         document.getElementById('adminStatusArea').style.display = 'none';
-
         document.getElementById('userDept').value = "";
         document.getElementById('startTime').value = "";
         document.getElementById('endTime').value = "";
         document.getElementById('destination').value = "";
         document.getElementById('outingReason').value = "";
-        document.getElementById('skipDinner').checked = hasDinnerSkip; // 단체회식 시 자동 체크
+        document.getElementById('skipDinner').checked = hasDinnerSkip;
         selectedAdminType = 'none';
         updateAdminTypeButtons();
-
-        // 단체회식으로 석식 제외된 경우 안내 배너
         const groupBanner = document.getElementById('groupDinnerBanner');
         if (groupBanner) groupBanner.style.display = hasDinnerSkip ? 'block' : 'none';
     } 
@@ -2293,22 +2304,14 @@ async function saveProfile() {
         startPresence(); 
         document.getElementById('profileOverlay').style.display = 'none';
         
-        // [핵심 연결] 이름을 저장하자마자 즉시 출결 함수를 호출합니다.
         handleInternalAttendance(currentRoom);
-
-        // [수정] checkin 여부와 관계없이 항상 메인 화면 표시
-        // (출결 처리는 handleInternalAttendance 내에서 alert + cleanUrlAndGo로 처리됨)
         if (!window.location.search.includes('checkin=true')) {
             showMainDashboard();
             alert(`${name}님, 환영합니다!`);
         } else {
-            // 출결 QR 접속: handleInternalAttendance가 완료되면 cleanUrlAndGo가 mainApp을 열음
-            // 혹시 uToken이 없어서 처리 안됐을 경우 대비해 직접 호출
             setTimeout(() => {
-                if (document.getElementById('mainApp').style.display === 'none' ||
-                    document.getElementById('mainApp').style.display === '') {
-                    showMainDashboard();
-                }
+                const app = document.getElementById('mainApp');
+                if (!app || app.style.display === 'none' || app.style.display === '') showMainDashboard();
             }, 1500);
         }
         
@@ -2327,33 +2330,22 @@ async function saveProfile() {
 
 
 
-// [수정] 프로필 체크 - 다른 방 입교 이력 있으면 현재 방에 자동 등록
 async function checkProfile() {
     const uToken = localStorage.getItem('uToken');
     if (uToken) {
         try {
             const snap = await firebase.database().ref(`courses/${currentRoom}/students/${uToken}`).once('value');
-            if (snap.exists()) {
-                showMainDashboard();
-                return;
-            }
-            // 다른 방에서 이미 등록된 교육생 → 현재 방에 자동 등록 후 입장
-            const savedName  = localStorage.getItem('kac_user_name');
+            if (snap.exists()) { showMainDashboard(); return; }
+            const savedName = localStorage.getItem('kac_user_name');
             const savedPhone = localStorage.getItem('kac_user_phone');
             if (savedName && savedPhone && savedPhone.length === 4) {
                 await firebase.database().ref(`courses/${currentRoom}/students/${uToken}`).update({
-                    name: savedName,
-                    phone: savedPhone,
-                    joinedAt: firebase.database.ServerValue.TIMESTAMP,
-                    isOnline: true
+                    name: savedName, phone: savedPhone,
+                    joinedAt: firebase.database.ServerValue.TIMESTAMP, isOnline: true
                 });
-                startPresence();
-                showMainDashboard();
-                return;
+                startPresence(); showMainDashboard(); return;
             }
-        } catch (e) {
-            console.error('checkProfile error:', e);
-        }
+        } catch (e) { console.error('checkProfile error:', e); }
     }
     document.getElementById('userName').value = "";
     document.getElementById('userPhone').value = "";
@@ -2393,24 +2385,42 @@ async function viewMealMenu() {
     modal.style.display = 'flex';
 
     try {
-        // 데이터베이스에서 주소 가져오기
         const snap = await firebase.database().ref('system/nutrition_menu').once('value');
-        const imageUrl = snap.val();
-        
-        if (!imageUrl) { 
-            alert("등록된 식단표가 없습니다."); 
-            modal.style.display = 'none'; 
-            return; 
+        const data = snap.val();
+
+        if (!data) {
+            loader.style.display = 'none';
+            const msg = document.getElementById('mealEmptyMsg');
+            if (msg) { msg.style.display = 'block'; msg.innerText = '아직 식단표가 업로드되지 않았습니다.'; }
+            else { alert('아직 식단표가 업로드되지 않았습니다.'); modal.style.display = 'none'; }
+            return;
         }
 
-        // 이미지 로딩을 기다리는 이벤트 추가
+        // [수정] 신규 구조(object)와 구버전(string) 모두 대응
+        let imageUrl = '';
+        if (typeof data === 'string') {
+            imageUrl = data; // 구버전: 영양사 앱 직접 업로드
+        } else {
+            // 신규 구조: { image, uploadedAt, expireAt }
+            const today = getTodayString();
+            if (data.expireAt && data.expireAt < today) {
+                loader.style.display = 'none';
+                const msg = document.getElementById('mealEmptyMsg');
+                if (msg) { msg.style.display = 'block'; msg.innerText = `식단표 기간이 만료되었습니다.\n(${data.expireAt} 까지)`; }
+                else { alert(`식단표 기간이 만료되었습니다. (${data.expireAt} 까지)`); modal.style.display = 'none'; }
+                return;
+            }
+            imageUrl = data.image;
+        }
+
         img.src = imageUrl;
-        img.onload = function() {
-            loader.style.display = 'none'; // 사진 로드 완료되면 로딩 숨김
-            img.style.display = 'block';   // 사진 보여주기
+        img.onload = function() { loader.style.display = 'none'; img.style.display = 'block'; };
+        img.onerror = function() {
+            loader.style.display = 'none';
+            alert('이미지를 불러오는데 실패했습니다.'); modal.style.display = 'none';
         };
     } catch (e) {
-        console.error("식단 로딩 에러:", e);
+        console.error('식단 로딩 에러:', e);
         modal.style.display = 'none';
     }
 }
@@ -2801,21 +2811,14 @@ function executeAttendanceRecord(room, name, phone, dateStr, storageKey) {
 
     const updates = {};
     updates[`courses/${room}/internal_attendance/${dateStr}/${attendanceKey}`] = {
-        name: name,
-        phone: phone,
-        time: currentTime,
-        authId: authId,
-        timestamp: firebase.database.ServerValue.TIMESTAMP
+        name: name, phone: phone, time: currentTime,
+        authId: authId, timestamp: firebase.database.ServerValue.TIMESTAMP
     };
-
-    // [수정] 해당 방 students에 없을 때만 등록 (다른 방 기록 덮어쓰기 방지)
     firebase.database().ref(`courses/${room}/students/${attendanceKey}`).once('value').then(snap => {
         if (!snap.exists()) {
             updates[`courses/${room}/students/${attendanceKey}`] = {
-                name: name,
-                phone: phone,
-                joinedAt: firebase.database.ServerValue.TIMESTAMP,
-                isOnline: true
+                name: name, phone: phone,
+                joinedAt: firebase.database.ServerValue.TIMESTAMP, isOnline: true
             };
         }
         return firebase.database().ref().update(updates);
@@ -2823,9 +2826,7 @@ function executeAttendanceRecord(room, name, phone, dateStr, storageKey) {
         localStorage.setItem(storageKey, "true");
         alert(`✅ [Room ${room}] 출석 완료!\n${name}님, 정상 처리되었습니다.`);
         cleanUrlAndGo(room);
-    }).catch(e => {
-        alert("출석 처리 중 오류가 발생했습니다.");
-    });
+    }).catch(e => { alert("출석 처리 중 오류가 발생했습니다."); });
 }
 
 

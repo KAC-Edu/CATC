@@ -415,7 +415,12 @@
     function fetchCurrentMenu() {
         firebase.database().ref('system/nutrition_menu').once('value', snap => {
             const imgEl = document.getElementById('menuPreview');
-            imgEl.src = snap.exists() ? snap.val() : "https://via.placeholder.com/300x400?text=No+Image";
+            if (!snap.exists()) {
+                imgEl.src = "https://via.placeholder.com/300x400?text=No+Image";
+                return;
+            }
+            const d = snap.val();
+            imgEl.src = (typeof d === 'string') ? d : (d.image || "");
         });
     }
 

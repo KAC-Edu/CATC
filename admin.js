@@ -2479,10 +2479,6 @@ setMode: function(mode) {
                     }
                 });
             }
-            if (mode === 'guide') {
-                if (!guideMgr.pdfDoc) { guideMgr.init(); }
-                else { guideMgr.renderPage(guideMgr.pageNum); }
-            }
             if (mode === 'admin-action') ui.loadAdminActionData();
             if (mode === 'dinner-skip') ui.loadDinnerSkipData();
             if (mode === 'students') ui.loadStudentList();
@@ -4140,7 +4136,7 @@ const guideMgr = {
     // 1. 초기화 (기존 로직 + 리사이즈 감시 추가)
 init: function() {
     if (!state.room) return;
-    if (typeof pdfjsLib !== 'undefined') {
+    if (window['pdfjs-dist/build/pdf']) {
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
     }
     const guideRef = firebase.database().ref(`system/sharedGuide`);
@@ -4588,6 +4584,25 @@ loadCurrentSettings: function() {
         
         // 5. 모달 표시 및 과목 리스트 출력
         subjectMgr.renderListInModal();
+
+        // 6. 메뉴 기능 ON/OFF 상태 로드
+        const features = s.menuFeatures || {};
+        const featureMap = {
+            'feat-facility':      features.facility      !== false,
+            'feat-shuttle':       features.shuttle       !== false,
+            'feat-admin-action':  features.adminAction   !== false,
+            'feat-meal':          features.meal          !== false,
+            'feat-attendance-qr': features.attendanceQr  !== false,
+            'feat-cns':           features.cns           !== false,
+        };
+        Object.entries(featureMap).forEach(([id, val]) => {
+            const el = document.getElementById(id);
+            if (el) el.checked = val;
+        });
+
+        // 7. 식단 상태 표시
+        setupMgr.refreshMealStatus();
+
         document.getElementById('courseSetupModal').style.display = 'flex';
     });
 },
@@ -4656,6 +4671,14 @@ saveAll: function() {
         updates[`courses/${state.room}/status/roomStatus`] = 'active';
         updates[`courses/${state.room}/status/ownerSessionId`] = state.sessionId;
 
+        // 메뉴 기능 ON/OFF 저장
+        updates[`courses/${state.room}/settings/menuFeatures/facility`]     = document.getElementById('feat-facility')?.checked !== false;
+        updates[`courses/${state.room}/settings/menuFeatures/shuttle`]      = document.getElementById('feat-shuttle')?.checked !== false;
+        updates[`courses/${state.room}/settings/menuFeatures/adminAction`]  = document.getElementById('feat-admin-action')?.checked !== false;
+        updates[`courses/${state.room}/settings/menuFeatures/meal`]         = document.getElementById('feat-meal')?.checked !== false;
+        updates[`courses/${state.room}/settings/menuFeatures/attendanceQr`] = document.getElementById('feat-attendance-qr')?.checked !== false;
+        updates[`courses/${state.room}/settings/menuFeatures/cns`]          = document.getElementById('feat-cns')?.checked !== false;
+
         firebase.database().ref().update(updates).then(() => {
             document.getElementById('courseNameInput').value = name;
             document.getElementById('roomPw').value = rawPw;
@@ -4663,14 +4686,86 @@ saveAll: function() {
             localStorage.setItem('last_owned_room', state.room);
             
             ui.showAlert("✅ 설정이 저장되었습니다.");
-            
-            // 1. 팝업창 닫기
             this.closeSetupModal();
-
-            // 2. [핵심 추가] 즉시 방에 다시 입장하여 잠금 화면을 치우고 대시보드를 보여줌
             dataMgr.forceEnterRoom(state.room);
         });
+    },
+
+    // 식단 이미지 업로드 (만료일 7일 후 자동 설정)
+    uploadMealImage: function(input) {
+        const file = input.files[0];
+        if (!file) return;
+        if (!file.type.startsWith('image/')) {
+            ui.showAlert('이미지 파일만 업로드 가능합니다.');
+            input.value = '';
+            return;
+        }
+
+        const btn = input.previousElementSibling || document.querySelector('[onclick*="modalMealInput"]');
+        const expireDate = new Date();
+        expireDate.setDate(expireDate.getDate() + 7);
+        const expireStr = expireDate.toISOString().split('T')[0];
+
+        // 이미지 압축
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const img = new Image();
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                let w = img.width, h = img.height;
+                if (w > 1200) { h = h * 1200 / w; w = 1200; }
+                canvas.width = w; canvas.height = h;
+                canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+                const compressed = canvas.toDataURL('image/jpeg', 0.75);
+
+                firebase.database().ref('system/nutrition_menu').set({
+                    image: compressed,
+                    uploadedAt: getTodayString(),
+                    expireAt: expireStr
+                }).then(() => {
+                    ui.showAlert(`✅ 식단 이미지가 업로드되었습니다.\n만료일: ${expireStr}`);
+                    setupMgr.refreshMealStatus();
+                    input.value = '';
+                }).catch(e => ui.showAlert('업로드 실패: ' + e.message));
+            };
+            img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+    },
+
+    clearMealImage: function() {
+        if (!confirm('등록된 식단 이미지를 삭제하시겠습니까?')) return;
+        firebase.database().ref('system/nutrition_menu').remove().then(() => {
+            ui.showAlert('✅ 식단 이미지가 삭제되었습니다.');
+            setupMgr.refreshMealStatus();
+        });
+    },
+
+    refreshMealStatus: function() {
+        const el = document.getElementById('modalMealStatus');
+        if (!el) return;
+        firebase.database().ref('system/nutrition_menu').once('value', snap => {
+            const d = snap.val();
+            if (!d) {
+                el.innerText = '❌ 등록된 식단 없음';
+                el.style.color = '#ef4444';
+            } else if (typeof d === 'string') {
+                // 구버전 (기존 영양사 업로드: 문자열)
+                el.innerText = '✅ 식단 등록됨 (날짜 정보 없음)';
+                el.style.color = '#10b981';
+            } else {
+                const today = getTodayString();
+                if (d.expireAt < today) {
+                    el.innerText = `⚠️ 만료됨 (${d.expireAt})`;
+                    el.style.color = '#f59e0b';
+                } else {
+                    el.innerText = `✅ 등록됨 | 만료: ${d.expireAt}`;
+                    el.style.color = '#10b981';
+                }
+            }
+        });
     }
+
 }; // <--- setupMgr 객체를 닫아주는 아주 중요한 마침표입니다.
 
 
