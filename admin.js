@@ -141,13 +141,15 @@ logout: async function() {
 // --- 2. Data & Room Logic ---
 const dataMgr = {
 saveInstructorNoticeMain: function() {
-        // [옵저버 제한]
         if(state.isObserver) return ui.showAlert("👁️ 옵저버 모드에서는 공지사항을 수정할 수 없습니다.");
-        
         if(!state.room) return;
         const msg = document.getElementById('instNoticeInputMain').value;
-        firebase.database().ref(`courses/${state.room}/notice`).set(msg).then(() => {
-            ui.showAlert("✅ 강사 공지사항이 교육생에게 게시되었습니다.");
+        const now = new Date();
+        const ts  = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+        // 구조: { text, updatedAt } - 기존 string과 호환 유지
+        const data = msg ? { text: msg, updatedAt: ts } : null;
+        firebase.database().ref(`courses/${state.room}/notice`).set(data).then(() => {
+            ui.showAlert(msg ? "✅ 공지사항이 교육생에게 게시되었습니다." : "🗑️ 공지가 삭제되었습니다.");
         });
     },
 
@@ -1836,40 +1838,94 @@ updateQaCountBadge: function() {
     loadNoticeView: async function() {
         if(!state.room) return;
 
-        // [신규] 공지 탭 진입 시 coordNotice 읽음 처리
+        // coordNotice 읽음 처리
         const coordSnap = await firebase.database().ref(`courses/${state.room}/coordNotice`).once('value');
         const coordMsg = coordSnap.val() || '';
         if (coordMsg) {
-            localStorage.setItem(`kac_coord_notice_seen_${state.room}`, coordMsg);
-            ui.updateCoordNoticeBadge(coordMsg, coordMsg); // 읽었으므로 배지 제거
+            const coordText = typeof coordMsg === 'object' ? (coordMsg.text || '') : coordMsg;
+            localStorage.setItem(`kac_coord_notice_seen_${state.room}`, coordText);
+            ui.updateCoordNoticeBadge(coordText, coordText);
         }
-        
-        // 1. 좌측 영역: 강사 본인 공지
-        const snap = await firebase.database().ref(`courses/${state.room}/notice`).once('value');
-        document.getElementById('instNoticeInputMain').value = snap.val() || "";
 
-        // 2. 우측 영역: 통합 공지 조회
-        const globalRef = firebase.database().ref('system/globalNotice');
-        const coordRef = firebase.database().ref(`courses/${state.room}/coordNotice`);
+        // 담임교수 공지 로드
+        const noticeSnap = await firebase.database().ref(`courses/${state.room}/notice`).once('value');
+        const noticeData = noticeSnap.val();
+        let noticeText = '', noticeMeta = '게시된 공지 없음';
+        if (noticeData) {
+            if (typeof noticeData === 'object') {
+                noticeText = noticeData.text || '';
+                noticeMeta = noticeData.updatedAt ? `게시: ${noticeData.updatedAt}` : '게시됨';
+            } else {
+                noticeText = noticeData;
+                noticeMeta = '게시됨';
+            }
+        }
+        const inputEl = document.getElementById('instNoticeInputMain');
+        if (inputEl) inputEl.value = noticeText;
+        const metaEl = document.getElementById('prof-notice-meta');
+        if (metaEl) metaEl.innerText = noticeMeta;
+        const previewEl = document.getElementById('prof-notice-preview');
+        if (previewEl) {
+            previewEl.innerHTML = noticeText
+                ? `<span style="color:#1e293b;">${noticeText.replace(/\n/g,'<br>')}</span>`
+                : `<span style="color:#94a3b8; font-style:italic;">등록된 공지가 없습니다.</span>`;
+        }
 
-        // 교육운영부 공지 (coordNotice) 실시간 표시
-        coordRef.on('value', snap => {
-            const msg = snap.val();
-            const el = document.getElementById('coordNoticeDisplay');
-            if (!el) return;
-            el.innerHTML = msg
-                ? `<span style="color:#0f172a;">${msg.replace(/\n/g,'<br>')}</span>`
-                : `<span style="color:#94a3b8; font-style:italic; font-weight:500;">등록된 공지가 없습니다.</span>`;
+        // 담임교수 공지 실시간 감시 (다른 기기에서 변경 시 반영)
+        firebase.database().ref(`courses/${state.room}/notice`).on('value', snap => {
+            const d = snap.val();
+            let txt = '', meta = '게시된 공지 없음';
+            if (d) {
+                if (typeof d === 'object') { txt = d.text || ''; meta = d.updatedAt ? `게시: ${d.updatedAt}` : '게시됨'; }
+                else { txt = d; meta = '게시됨'; }
+            }
+            const pr = document.getElementById('prof-notice-preview');
+            if (pr) pr.innerHTML = txt ? `<span style="color:#1e293b;">${txt.replace(/\n/g,'<br>')}</span>` : `<span style="color:#94a3b8; font-style:italic;">등록된 공지가 없습니다.</span>`;
+            const me = document.getElementById('prof-notice-meta');
+            if (me) me.innerText = meta;
         });
 
-        // 항기원 전체 공지 (globalNotice) 실시간 표시
-        globalRef.on('value', snap => {
-            const msg = snap.val();
+        // 교육운영부 공지 실시간
+        const coordRef = firebase.database().ref(`courses/${state.room}/coordNotice`);
+        coordRef.on('value', snap => {
+            const d = snap.val();
+            let txt = '', meta = '등록된 공지 없음';
+            if (d) {
+                if (typeof d === 'object') { txt = d.text || ''; meta = d.updatedAt ? `등록: ${d.updatedAt}` : '등록됨'; }
+                else { txt = d; meta = '등록됨'; }
+            }
+            const el = document.getElementById('coordNoticeDisplay');
+            if (el) {
+                el.innerHTML = txt
+                    ? `<span style="color:#0f172a;">${txt.replace(/\n/g,'<br>')}</span>`
+                    : `<span style="color:#94a3b8; font-style:italic;">등록된 공지가 없습니다.</span>`;
+                el.style.webkitLineClamp = '3';
+                const btn = document.getElementById('coord-expand-btn');
+                if (btn) btn.style.display = txt && txt.split('\n').length > 3 ? 'block' : 'none';
+            }
+            const me = document.getElementById('coord-notice-meta');
+            if (me) me.innerText = meta;
+        });
+
+        // 항기원 전체 공지 실시간
+        firebase.database().ref('system/globalNotice').on('value', snap => {
+            const d = snap.val();
+            let txt = '', meta = '항기원 공통 공지';
+            if (d) {
+                if (typeof d === 'object') { txt = d.text || ''; meta = d.updatedAt ? `등록: ${d.updatedAt}` : '등록됨'; }
+                else { txt = d; meta = '등록됨'; }
+            }
             const el = document.getElementById('globalNoticeDisplay');
-            if (!el) return;
-            el.innerHTML = msg
-                ? `<span style="color:#334155;">${msg.replace(/\n/g,'<br>')}</span>`
-                : `<span style="color:#94a3b8; font-style:italic; font-weight:500;">등록된 공지가 없습니다.</span>`;
+            if (el) {
+                el.innerHTML = txt
+                    ? `<span style="color:#334155;">${txt.replace(/\n/g,'<br>')}</span>`
+                    : `<span style="color:#94a3b8; font-style:italic;">등록된 공지가 없습니다.</span>`;
+                el.style.webkitLineClamp = '3';
+                const btn = document.getElementById('global-expand-btn');
+                if (btn) btn.style.display = txt && txt.split('\n').length > 3 ? 'block' : 'none';
+            }
+            const me = document.getElementById('global-notice-meta');
+            if (me) me.innerText = meta;
         });
     },
 
@@ -3528,6 +3584,28 @@ resetShuttleRequests: function() {
             if(state.room) localStorage.setItem(`kac_coord_notice_seen_\${state.room}`, msg);
             ui.updateCoordNoticeBadge(msg, msg);
         });
+    },
+
+    // 공지 섹션 아코디언 토글
+    toggleNoticeSection: function(type) {
+        const section  = document.getElementById(`notice-section-${type}`);
+        const chevron  = document.getElementById(`notice-chevron-${type}`);
+        if (!section) return;
+        const isOpen = section.style.display !== 'none';
+        section.style.display = isOpen ? 'none' : 'block';
+        if (chevron) chevron.style.transform = isOpen ? '' : 'rotate(180deg)';
+    },
+
+    // 공지 전체 보기
+    expandNotice: function(type) {
+        const el  = document.getElementById(type === 'coord' ? 'coordNoticeDisplay' : 'globalNoticeDisplay');
+        const btn = document.getElementById(`${type}-expand-btn`);
+        if (!el) return;
+        const isExpanded = el.style.webkitLineClamp === 'unset';
+        el.style.webkitLineClamp  = isExpanded ? '3' : 'unset';
+        el.style.display          = 'block';
+        el.style.webkitBoxOrient  = isExpanded ? 'vertical' : '';
+        if (btn) btn.innerText = isExpanded ? '전체 보기 ▼' : '접기 ▲';
     },
 
     toggleFamilySites: function() {

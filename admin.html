@@ -163,7 +163,13 @@
                 </div>
 
 
-            <div class="dev-info">(Developed by DooSeok, Jang)</div>
+            <a href="mailto:jds0616@gmail.com" class="dev-info" style="display:block; text-align:center; color:#64748b; font-size:10px; margin-top:10px; text-decoration:none; cursor:pointer; transition:color 0.2s; line-height:1.6;"
+               onmouseover="this.style.color='#3b82f6'" onmouseout="this.style.color='#64748b'">
+                <span style="font-weight:800; color:#94a3b8;">KAC Training Platform</span><br>
+                개발 : 장두석 교수 (항공정보통신시설 담당)<br>
+                문의 : jds0616@gmail.com<br>
+                <span style="font-size:9px; color:#94a3b8;">Ver. 20260524-V1</span>
+            </a>
         </div>
     </div> <!-- 사이드바 끝 -->
 
@@ -467,92 +473,105 @@
 <!-- [6.20차 최종] 공지사항 관리 섹션 - 박스 크기 및 헤더 높이 완벽 통일 -->
 <div id="view-notice" style="display:none; width:100%; flex-direction:column; align-items:center;">
 
-    <div class="view-header" style="margin-bottom:0; padding-bottom:20px;">
+    <div class="view-header" style="margin-bottom:0; padding-bottom:16px;">
         <h1><i class="fa-solid fa-bullhorn"></i> 공지사항 관리 <span class="header-room-badge room-badge-global"></span></h1>
         <p>교육생 앱에 실시간으로 노출됩니다.</p>
     </div>
 
-    <div style="width:100%; max-width:1200px; margin:0 auto 50px auto; padding:0 10px; display:flex; flex-direction:column; gap:20px;">
+    <div style="width:100%; max-width:1100px; margin:0 auto 60px auto; padding:0 16px; display:flex; flex-direction:column; gap:16px;">
 
-        <!-- 강사 공지 작성 (상단 전체 폭) -->
-        <div style="background:white; border-radius:20px; overflow:hidden; box-shadow:0 4px 20px rgba(0,51,102,0.1); border:1.5px solid #e2e8f0;">
-            <!-- 헤더 -->
-            <div style="background:linear-gradient(135deg,#003366,#0055aa); padding:18px 24px; display:flex; align-items:center; justify-content:space-between;">
-                <div>
-                    <div style="font-size:17px; font-weight:900; color:white; display:flex; align-items:center; gap:10px;">
-                        <div style="background:rgba(255,255,255,0.2); width:34px; height:34px; border-radius:10px; display:flex; align-items:center; justify-content:center;">
-                            <i class="fa-solid fa-pen-to-square"></i>
-                        </div>
-                        강사 공지 작성
+        <!-- ① 담임교수 공지 (작성 + 현황) -->
+        <div style="background:white; border-radius:18px; overflow:hidden; box-shadow:0 2px 12px rgba(0,51,102,0.08); border:1.5px solid #dbeafe;">
+            <!-- 섹션 헤더 -->
+            <div style="background:linear-gradient(135deg,#003366,#1d4ed8); padding:14px 20px; display:flex; align-items:center; justify-content:space-between; cursor:pointer;" onclick="ui.toggleNoticeSection('prof')">
+                <div style="display:flex; align-items:center; gap:10px; color:white;">
+                    <div style="width:30px; height:30px; background:rgba(255,255,255,0.2); border-radius:8px; display:flex; align-items:center; justify-content:center;"><i class="fa-solid fa-chalkboard-teacher"></i></div>
+                    <div>
+                        <div style="font-size:15px; font-weight:900;">담임교수 공지</div>
+                        <div id="prof-notice-meta" style="font-size:11px; opacity:0.7;">불러오는 중...</div>
                     </div>
-                    <div style="font-size:12px; color:rgba(255,255,255,0.7); margin-top:4px; padding-left:44px;">교육생 앱에 즉시 반영됩니다. 게시 버튼을 눌러야 적용됩니다.</div>
                 </div>
-                <span id="noticeCharCount" style="font-size:12px; color:rgba(255,255,255,0.5); font-weight:700;"></span>
+                <i class="fa-solid fa-chevron-down" id="notice-chevron-prof" style="color:rgba(255,255,255,0.6); transition:0.2s;"></i>
             </div>
-            <!-- 입력 -->
-            <div style="padding:20px 24px;">
-                <textarea id="instNoticeInputMain"
-                    oninput="const c=this.value.length; document.getElementById('noticeCharCount').innerText=c?c+'자':'';"
-                    style="width:100%; min-height:120px; max-height:240px; padding:16px 18px; font-size:15px; border:2px solid #f1f5f9; border-radius:14px; outline:none; background:#fafcff; resize:vertical; box-sizing:border-box; line-height:1.7; font-family:inherit; color:#1e293b; transition:border-color 0.2s;"
-                    onfocus="this.style.borderColor='#3b82f6';" onblur="this.style.borderColor='#f1f5f9';"
-                    placeholder="교육생에게 전달할 공지 내용을 입력하세요.&#10;예) 내일 오전 9시 외부강사 특강이 있습니다."></textarea>
-                <div style="display:flex; gap:10px; margin-top:12px;">
-                    <button onclick="dataMgr.saveInstructorNoticeMain()"
-                        style="flex:1; height:50px; background:linear-gradient(135deg,#f59e0b,#d97706); color:white; border:none; border-radius:12px; font-size:16px; font-weight:900; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; box-shadow:0 4px 12px rgba(245,158,11,0.35); transition:0.2s;">
-                        <i class="fa-solid fa-paper-plane"></i> 교육생에게 공지 게시하기
-                    </button>
-                    <button onclick="if(confirm('공지를 삭제하시겠습니까?')){document.getElementById('instNoticeInputMain').value=''; dataMgr.saveInstructorNoticeMain();}"
-                        style="height:50px; width:120px; background:#f1f5f9; color:#64748b; border:1.5px solid #e2e8f0; border-radius:12px; font-size:13px; font-weight:800; cursor:pointer;">
-                        <i class="fa-solid fa-trash"></i> 삭제
-                    </button>
+            <!-- 펼쳐지는 내용 -->
+            <div id="notice-section-prof" style="display:block;">
+                <!-- 현재 공지 미리보기 -->
+                <div id="prof-notice-preview" style="padding:14px 20px; background:#f8fafc; border-bottom:1px solid #f1f5f9; font-size:14px; color:#334155; line-height:1.6; min-height:54px; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden;">
+                    <span style="color:#94a3b8; font-style:italic;">등록된 공지가 없습니다.</span>
+                </div>
+                <!-- 작성 폼 -->
+                <div style="padding:16px 20px; background:white;">
+                    <textarea id="instNoticeInputMain"
+                        oninput="const c=this.value.length; document.getElementById('noticeCharCount').innerText=c?c+'자':'';"
+                        style="width:100%; height:90px; padding:12px 14px; font-size:14px; border:2px solid #e2e8f0; border-radius:10px; outline:none; background:#fafcff; resize:none; box-sizing:border-box; line-height:1.7; font-family:inherit; color:#1e293b; transition:border-color 0.2s;"
+                        onfocus="this.style.borderColor='#3b82f6';" onblur="this.style.borderColor='#e2e8f0';"
+                        placeholder="교육생에게 전달할 공지를 작성하세요."></textarea>
+                    <div style="display:flex; gap:8px; margin-top:10px; align-items:center;">
+                        <span id="noticeCharCount" style="font-size:12px; color:#94a3b8; font-weight:700; min-width:40px;"></span>
+                        <button onclick="dataMgr.saveInstructorNoticeMain()"
+                            style="flex:1; height:42px; background:#003366; color:white; border:none; border-radius:10px; font-size:14px; font-weight:900; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:7px;">
+                            <i class="fa-solid fa-paper-plane"></i> 게시하기
+                        </button>
+                        <button onclick="if(confirm('공지를 삭제하시겠습니까?')){document.getElementById('instNoticeInputMain').value=''; dataMgr.saveInstructorNoticeMain();}"
+                            style="height:42px; padding:0 16px; background:#f1f5f9; color:#ef4444; border:1.5px solid #fca5a5; border-radius:10px; font-size:13px; font-weight:800; cursor:pointer;">
+                            <i class="fa-solid fa-trash"></i>
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <!-- 하단: 운영부 공지 + 전체 공지 나란히 -->
-        <div style="display:flex; gap:20px; align-items:stretch;">
-
-            <!-- 교육운영부 공지 (coordNotice) -->
-            <div style="flex:1; background:white; border-radius:20px; overflow:hidden; box-shadow:0 4px 16px rgba(0,0,0,0.06); border:1.5px solid #e0f2fe;">
-                <div style="background:linear-gradient(135deg,#0ea5e9,#0284c7); padding:16px 20px; display:flex; align-items:center; gap:12px;">
-                    <div style="background:rgba(255,255,255,0.2); width:32px; height:32px; border-radius:9px; display:flex; align-items:center; justify-content:center; color:white; font-size:15px; flex-shrink:0;">
-                        <i class="fa-solid fa-user-tie"></i>
-                    </div>
+        <!-- ② 교육운영부 공지 -->
+        <div style="background:white; border-radius:18px; overflow:hidden; box-shadow:0 2px 12px rgba(0,0,0,0.06); border:1.5px solid #e0f2fe;">
+            <div style="background:linear-gradient(135deg,#0ea5e9,#0284c7); padding:14px 20px; display:flex; align-items:center; justify-content:space-between; cursor:pointer;" onclick="ui.toggleNoticeSection('coord')">
+                <div style="display:flex; align-items:center; gap:10px; color:white;">
+                    <div style="width:30px; height:30px; background:rgba(255,255,255,0.2); border-radius:8px; display:flex; align-items:center; justify-content:center;"><i class="fa-solid fa-user-tie"></i></div>
                     <div>
-                        <div style="font-size:15px; font-weight:900; color:white;">교육운영부 공지</div>
-                        <div style="font-size:11px; color:rgba(255,255,255,0.75);">담당자가 남긴 공지사항</div>
+                        <div style="font-size:15px; font-weight:900;">교육운영부 공지</div>
+                        <div id="coord-notice-meta" style="font-size:11px; opacity:0.75;">불러오는 중...</div>
                     </div>
-                    <span id="coordNoticeBadge" style="display:none; margin-left:auto; background:#ef4444; color:white; font-size:10px; font-weight:900; padding:3px 8px; border-radius:20px; animation:pulseDot 1.5s infinite;">NEW</span>
                 </div>
-                <div style="padding:18px 20px; min-height:120px; max-height:200px; overflow-y:auto;">
-                    <div id="coordNoticeDisplay" style="font-size:14px; line-height:1.7; color:#0f172a; white-space:pre-line; font-weight:600;">
-                        <span style="color:#94a3b8; font-style:italic;">등록된 공지가 없습니다.</span>
-                    </div>
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <span id="coordNoticeBadge" style="display:none; background:#ef4444; color:white; font-size:10px; font-weight:900; padding:2px 8px; border-radius:12px; animation:pulseDot 1.5s infinite;">NEW</span>
+                    <i class="fa-solid fa-chevron-down" id="notice-chevron-coord" style="color:rgba(255,255,255,0.6); transition:0.2s;"></i>
                 </div>
             </div>
-
-            <!-- 항기원 전체 공지 (globalNotice) -->
-            <div style="flex:1; background:white; border-radius:20px; overflow:hidden; box-shadow:0 4px 16px rgba(0,0,0,0.06); border:1.5px solid #e2e8f0;">
-                <div style="background:#1e293b; padding:16px 20px; display:flex; align-items:center; gap:12px;">
-                    <div style="background:rgba(255,255,255,0.1); width:32px; height:32px; border-radius:9px; display:flex; align-items:center; justify-content:center; color:#60a5fa; font-size:15px; flex-shrink:0;">
-                        <i class="fa-solid fa-bullhorn"></i>
-                    </div>
-                    <div>
-                        <div style="font-size:15px; font-weight:900; color:white;">항기원 전체 공지</div>
-                        <div style="font-size:11px; color:rgba(255,255,255,0.45);">센터 공통 공지사항</div>
-                    </div>
-                    <div style="margin-left:auto; display:flex; align-items:center; gap:5px;">
-                        <span style="width:6px; height:6px; background:#22c55e; border-radius:50%; display:inline-block; animation:pulseDot 2s infinite;"></span>
-                        <span style="font-size:10px; color:rgba(255,255,255,0.4); font-weight:700;">실시간</span>
-                    </div>
+            <div id="notice-section-coord" style="display:none;">
+                <div id="coordNoticeDisplay" style="padding:16px 20px; font-size:14px; line-height:1.7; color:#0f172a; min-height:60px; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; white-space:pre-line;">
+                    <span style="color:#94a3b8; font-style:italic;">등록된 공지가 없습니다.</span>
                 </div>
-                <div style="padding:18px 20px; min-height:120px; max-height:200px; overflow-y:auto;">
-                    <div id="globalNoticeDisplay" style="font-size:14px; line-height:1.7; color:#334155; white-space:pre-line; font-weight:600;">
-                        정보를 불러오는 중...
-                    </div>
+                <div style="padding:0 20px 14px; display:flex; justify-content:flex-end;">
+                    <button onclick="ui.expandNotice('coord')" id="coord-expand-btn" style="display:none; font-size:12px; color:#0ea5e9; background:none; border:none; font-weight:800; cursor:pointer;">전체 보기 ▼</button>
                 </div>
             </div>
         </div>
+
+        <!-- ③ 항기원 전체 공지 -->
+        <div style="background:white; border-radius:18px; overflow:hidden; box-shadow:0 2px 12px rgba(0,0,0,0.06); border:1.5px solid #e2e8f0;">
+            <div style="background:#1e293b; padding:14px 20px; display:flex; align-items:center; justify-content:space-between; cursor:pointer;" onclick="ui.toggleNoticeSection('global')">
+                <div style="display:flex; align-items:center; gap:10px; color:white;">
+                    <div style="width:30px; height:30px; background:rgba(255,255,255,0.1); border-radius:8px; display:flex; align-items:center; justify-content:center; color:#60a5fa;"><i class="fa-solid fa-bullhorn"></i></div>
+                    <div>
+                        <div style="font-size:15px; font-weight:900;">항기원 전체 공지</div>
+                        <div id="global-notice-meta" style="font-size:11px; color:rgba(255,255,255,0.45);">센터 공통 공지사항</div>
+                    </div>
+                </div>
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <span style="width:6px; height:6px; background:#22c55e; border-radius:50%; display:inline-block; animation:pulseDot 2s infinite;"></span>
+                    <span style="font-size:10px; color:rgba(255,255,255,0.35); font-weight:700;">실시간</span>
+                    <i class="fa-solid fa-chevron-down" id="notice-chevron-global" style="color:rgba(255,255,255,0.4); margin-left:4px; transition:0.2s;"></i>
+                </div>
+            </div>
+            <div id="notice-section-global" style="display:none;">
+                <div id="globalNoticeDisplay" style="padding:16px 20px; font-size:14px; line-height:1.7; color:#334155; min-height:60px; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; white-space:pre-line;">
+                    정보를 불러오는 중...
+                </div>
+                <div style="padding:0 20px 14px; display:flex; justify-content:flex-end;">
+                    <button onclick="ui.expandNotice('global')" id="global-expand-btn" style="display:none; font-size:12px; color:#64748b; background:none; border:none; font-weight:800; cursor:pointer;">전체 보기 ▼</button>
+                </div>
+            </div>
+        </div>
+
     </div>
 </div>
 
