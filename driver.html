@@ -115,7 +115,7 @@
 
     #view-0 { background: var(--bg); min-height: 100%; }
     #view-1 { background: var(--bg); min-height: 100%; }
-    #view-2 { background: #abc1d1; min-height: 100%; } 
+    #view-2 { background: #f1f5f9; min-height: 100%; } 
     #view-3 { background: var(--bg); min-height: 100%; }
 
 
@@ -143,6 +143,93 @@
     }
     #floatingHomeBtn:active { transform: translateX(-50%) scale(0.9); }
     #floatingHomeBtn i { font-size: 22px; }
+
+    /* ── 강사수송 리스트 카드 스타일 ── */
+    .req-list-wrap { padding: 10px; display: flex; flex-direction: column; gap: 10px; }
+
+    .req-list-filter {
+        display: flex; gap: 6px; margin-bottom: 4px; flex-wrap: wrap;
+    }
+    .filter-chip {
+        padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 800;
+        border: 1.5px solid #e2e8f0; background: white; color: #64748b; cursor: pointer;
+        transition: 0.15s;
+    }
+    .filter-chip.on { background: var(--navy); color: white; border-color: var(--navy); }
+
+    .req-list-card {
+        background: white; border-radius: 16px; overflow: hidden;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        border: 2px solid #e2e8f0;
+        transition: transform 0.15s;
+    }
+    .req-list-card:active { transform: scale(0.99); }
+    .req-list-card.status-pending  { border-color: #ef4444; }
+    .req-list-card.status-approved { border-color: #22c55e; }
+    .req-list-card.status-finished { border-color: #94a3b8; opacity: 0.65; }
+    .req-list-card.status-cancelled{ border-color: #cbd5e1; opacity: 0.5; }
+
+    .card-status-bar {
+        padding: 6px 14px; font-size: 11px; font-weight: 900; letter-spacing: 0.3px;
+        display: flex; align-items: center; justify-content: space-between;
+    }
+    .card-status-bar.pending  { background: #ef4444; color: white; }
+    .card-status-bar.approved { background: #22c55e; color: white; }
+    .card-status-bar.finished { background: #64748b; color: white; }
+    .card-status-bar.cancelled{ background: #94a3b8; color: white; }
+
+    .card-body { padding: 14px 16px; }
+
+    .card-name { font-size: 18px; font-weight: 900; color: #0f172a; margin-bottom: 10px;
+                 display: flex; align-items: center; gap: 8px; }
+    .card-name .dir-badge {
+        font-size: 10px; font-weight: 800; padding: 3px 8px; border-radius: 6px;
+    }
+    .dir-badge.arr { background: #fee2e2; color: #991b1b; }
+    .dir-badge.dep { background: #e0f2fe; color: #075985; }
+
+    .card-info-grid {
+        display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px;
+    }
+    .card-info-item {
+        background: #f8fafc; border-radius: 10px; padding: 8px 12px;
+    }
+    .card-info-label { font-size: 10px; color: #94a3b8; font-weight: 800; margin-bottom: 2px; }
+    .card-info-value { font-size: 14px; font-weight: 900; color: #1e293b; }
+    .card-route {
+        background: #f0f9ff; border-radius: 10px; padding: 10px 12px;
+        font-size: 14px; font-weight: 800; color: #0369a1; margin-bottom: 10px;
+        display: flex; align-items: center; gap: 8px;
+    }
+    .card-phone {
+        font-size: 13px; font-weight: 700; color: var(--blue); margin-bottom: 10px;
+        display: flex; align-items: center; gap: 6px;
+    }
+    .card-conflict {
+        background: #fff1f2; border: 1px solid #fda4af; color: #be123c;
+        border-radius: 8px; padding: 8px 12px; font-size: 11px; font-weight: 800;
+        margin-bottom: 10px; display: flex; gap: 6px; align-items: flex-start;
+        line-height: 1.5;
+    }
+    .card-passengers {
+        background: #f0fdf4; border-radius: 8px; padding: 7px 12px;
+        font-size: 11px; color: #166534; font-weight: 700; margin-bottom: 10px;
+    }
+    .card-actions { display: flex; gap: 8px; margin-top: 4px; }
+    .card-btn {
+        flex: 1; padding: 12px; border-radius: 11px; border: none;
+        font-size: 14px; font-weight: 900; cursor: pointer; transition: 0.15s;
+    }
+    .card-btn:active { opacity: 0.8; transform: scale(0.97); }
+    .card-btn.approve { background: #22c55e; color: white; }
+    .card-btn.reject  { background: #f1f5f9; color: #ef4444; border: 1.5px solid #fca5a5; }
+    .card-btn.cancel  { background: #f1f5f9; color: #64748b; font-size: 12px; }
+    .card-btn.complete{ background: #0ea5e9; color: white; }
+
+    .req-empty {
+        text-align: center; padding: 60px 20px; color: #94a3b8;
+        font-size: 14px; font-weight: 700;
+    }
 
 
 
@@ -228,11 +315,24 @@
     </div>
 
     <div id="view-2" style="display: none; height:100%; flex-direction:column;">
-      <div style="padding: 5px; background: #fff; border-bottom: 1px solid #ddd; display:flex; justify-content:flex-end; flex-shrink:0;">
-        <button class="mini-btn" onclick="clearFinished()"><i class="fa-solid fa-broom"></i> 완료목록 정리</button>
+      <!-- 필터 + 정리 버튼 -->
+      <div style="padding:10px 10px 4px 10px; background:#fff; border-bottom:1px solid #e2e8f0; flex-shrink:0;">
+        <div class="req-list-filter">
+          <button class="filter-chip on"  id="chip-all"       onclick="setReqFilter('all',this)">전체</button>
+          <button class="filter-chip"     id="chip-pending"   onclick="setReqFilter('pending',this)">🔴 신규</button>
+          <button class="filter-chip"     id="chip-approved"  onclick="setReqFilter('approved',this)">✅ 승인</button>
+          <button class="filter-chip"     id="chip-done"      onclick="setReqFilter('done',this)">완료/취소</button>
+        </div>
       </div>
-      <div style="flex:1; overflow-y:auto; background:#abc1d1;">
-        <div class="chat-container" id="chat-list-inner"></div>
+      <!-- 리스트 -->
+      <div style="flex:1; overflow-y:auto; background:#f1f5f9;">
+        <div class="req-list-wrap" id="req-list-inner"></div>
+      </div>
+      <!-- 하단 정리 버튼 -->
+      <div style="padding:8px 10px; background:#fff; border-top:1px solid #e2e8f0; flex-shrink:0;">
+        <button class="mini-btn" style="width:100%; height:38px;" onclick="clearFinished()">
+          <i class="fa-solid fa-broom"></i> 완료·취소 목록 정리
+        </button>
       </div>
     </div>
 
@@ -635,160 +735,153 @@ function renderTodayTimeline() {
 
 
 
-function renderInstructorChat() {
-  if(currentTab !== 2) return;
-  const box = document.getElementById('chat-list-inner');
-  let html = "";
-  let firstUnreadIndex = -1;
-  
-  profReqs.forEach((r, idx) => {
-    const isPending = r.status === 'pending';
-    const isApproved = r.status === 'approved';
-    const isCancelled = r.status === 'cancelled';
-    const isFinished = r.status === 'finished';
-    
-    if(firstUnreadIndex === -1 && isPending) firstUnreadIndex = idx;
+let reqFilter = 'all';
 
-    // --- [추가] 실시간 중복 검사 로직 ---
-    let conflictHtml = "";
-    if (isPending && r.date && r.time) {
-        let conflicts = [];
-        const currentMin = parseInt(r.time.split(':')[0]) * 60 + parseInt(r.time.split(':')[1]);
-
-        // 1. 다른 강사 수송 일정과 중복 체크 (60분 이내)
-        profReqs.forEach(other => {
-            if (other.id !== r.id && other.date === r.date && (other.status === 'approved' || other.status === 'finished') && other.prof !== '운행중단') {
-                const otherMin = parseInt(other.time.split(':')[0]) * 60 + parseInt(other.time.split(':')[1]);
-                if (Math.abs(currentMin - otherMin) < 60) {
-                    conflicts.push(`<i class="fa-solid fa-user-tie"></i> ${other.time} ${other.prof} 강사님 일정과 중복`);
-                }
-            }
-        });
-
-        // 2. 퇴교 수송 일정과 중복 체크 (120분 이내)
-        for (let rid in allCourses) {
-            const dep = allCourses[rid].shuttle?.departure;
-            if (dep && dep.date === r.date && dep.time && dep.announced) {
-                const depMin = parseInt(dep.time.split(':')[0]) * 60 + parseInt(dep.time.split(':')[1]);
-                if (Math.abs(currentMin - depMin) < 120) {
-                    const cName = allCourses[rid].settings?.courseName || "퇴교수송";
-                    conflicts.push(`<i class="fa-solid fa-bus"></i> ${dep.time} 퇴교수송(${cName.substring(0,8)}..) 중복`);
-                }
-            }
-        }
-
-        if (conflicts.length > 0) {
-            conflictHtml = `
-                <div style="background: #fff1f2; border: 1px solid #fda4af; color: #e11d48; padding: 10px; border-radius: 8px; font-size: 11px; font-weight: 800; margin-bottom: 10px; line-height: 1.5;">
-                    <div style="margin-bottom: 4px;"><i class="fa-solid fa-triangle-exclamation"></i> 배차 주의 (시간 중복)</div>
-                    ${conflicts.map(msg => `<div style="font-size: 10px; opacity: 0.9;">${msg}</div>`).join('')}
-                </div>
-            `;
-        }
-    }
-    // ----------------------------------
-    
-    // 1. 상태별 디자인 설정 (색상 및 라벨)
-    let bgColor = "#fff";
-    let borderColor = "#ddd";
-    let statusLabel = "";
-    let opacity = "1";
-
-    if (isPending) {
-      bgColor = "#fff"; 
-      // 중복이 있으면 테두리를 더 진한 빨강으로 강조
-      borderColor = conflictHtml ? "#e11d48" : "#ef4444"; 
-      statusLabel = `<span style="background:#ef4444; color:#fff; padding:2px 6px; border-radius:4px; font-size:10px; font-weight:900;">● 신규요청</span>`;
-    } else if (isApproved) {
-      bgColor = "#dcfce7"; 
-      borderColor = "#22c55e"; 
-      statusLabel = `<span style="background:#22c55e; color:#fff; padding:2px 6px; border-radius:4px; font-size:10px; font-weight:900;">✓ 승인완료</span>`;
-    } else if (isCancelled) {
-      bgColor = "#f1f5f9"; 
-      borderColor = "#cbd5e1";
-      statusLabel = `<span style="background:#94a3b8; color:#fff; padding:2px 6px; border-radius:4px; font-size:10px; font-weight:900;">✕ 취소됨</span>`;
-      opacity = "0.7";
-    } else if (isFinished) {
-      bgColor = "#e5e5e5"; 
-      borderColor = "#94a3b8";
-      statusLabel = `<span style="background:#475569; color:#fff; padding:2px 6px; border-radius:4px; font-size:10px; font-weight:900;">운행종료</span>`;
-      opacity = "0.6";
-    }
-
-    if(isCancelled) {
-      html += `<div class="cancel-notice" style="margin:10px 0;"><span><i class="fa-solid fa-ban"></i> ${r.prof || '강사'} 수송 요청이 취소되었습니다</span></div>`;
-    } else {
-      html += `
-        <div class="req-card" 
-             style="background:${bgColor}; border:1.5px solid ${borderColor}; opacity:${opacity}; margin-bottom:12px; 
-                    width:auto; max-width:75%; /* 가로폭을 내용에 맞게 줄이고 최대 75%로 제한 */
-                    align-self:${isPending ? 'flex-start' : 'flex-end'}; position:relative;" 
-             data-id="${r.id}" oncontextmenu="showContextMenu(event, '${r.id}')">
-          
-          <div style="margin-bottom:8px;">${statusLabel}</div>
-
-          <!-- 중복 경고 메시지 삽입 위치 -->
-          ${conflictHtml}
-          
-          <div style="font-weight:900; font-size:15px; margin-bottom:5px; color:#0f172a;">
-            ${r.prof || '이름없음'} 강사님
-          </div>
-          
-          <div style="font-size:12px; font-weight:700; color:#475569; margin-bottom:3px;">
-            <i class="fa-solid fa-calendar-day"></i> ${r.date || '날짜없음'} 
-            <span style="margin-left:5px;"><i class="fa-solid fa-clock"></i> ${r.time || '--:--'}</span>
-          </div>
-          
-          <div style="font-size:12px; font-weight:800; color:var(--blue-deep); margin-bottom:3px;">
-            <i class="fa-solid fa-route"></i> ${r.dir || '구간 정보 없음'}
-          </div>
-          
-          <div style="font-size:10px; color:#047857; font-weight:700; margin-bottom:8px; background:rgba(255,255,255,0.5); display:inline-block; padding:2px 5px; border-radius:3px;">
-            예상도착: ${calculateETA(r.time, r.dir)}
-          </div>
-
-          <div style="font-size:11px; font-weight:600; color:#64748b; margin-bottom:10px;">
-            ${r.phone ? 
-              `<a href="tel:${r.phone}" style="color:var(--blue); text-decoration:none;"><i class="fa-solid fa-phone"></i> ${r.phone}</a>` 
-              : `<span style="color:#999; font-size:9px;">(연락처 없음)</span>`
-            }
-          </div>
-
-          ${isPending ? `
-            <div class="req-btn-group" style="display:flex; gap:5px; margin-top:8px;">
-              <button class="mini-btn primary" onclick="approveRequest('${r.id}')" style="flex:1; height:35px; background:#22c55e; border:none; color:#fff; padding: 0 15px;">승인</button>
-              <button class="mini-btn" onclick="cancelRequest('${r.id}')" style="flex:1; height:35px; background:#f1f5f9; border:1px solid #ddd; padding: 0 15px;">불가</button>
-            </div>
-          ` : isApproved ? `
-            <div style="text-align:center; margin-top:8px; border-top:1px dashed rgba(0,0,0,0.1); padding-top:8px;">
-              <div style="font-size:11px; color:#166534; font-weight:bold; margin-bottom:5px;">기사님이 배차를 확인했습니다.</div>
-              <button class="mini-btn" onclick="if(confirm('이미 승인된 배차입니다. 정말 취소할까요?')) cancelRequest('${r.id}')" 
-                      style="width:100%; height:32px; background:transparent; color:#ef4444; border:none; font-size:11px; font-weight:800; text-decoration:underline;">배차 취소하기</button>
-            </div>
-          ` : `
-            <div style="font-size:11px; color:#64748b; font-weight:bold; border-top:1px dashed rgba(0,0,0,0.1); margin-top:8px; padding-top:8px; text-align:center;">
-              ${isFinished ? '운행이 완료된 건입니다.' : '처리가 완료되었습니다.'}
-            </div>
-          `}
-        </div>`;
-    }
-  });
-  
-  box.innerHTML = html;
-  
-  if(currentTab === 2) {
-    setTimeout(() => {
-      if(firstUnreadIndex >= 0) {
-        const firstUnread = box.querySelector(`[data-id="${profReqs[firstUnreadIndex].id}"]`);
-        if(firstUnread) firstUnread.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      } else {
-        box.parentElement.scrollTop = box.parentElement.scrollHeight;
-      }
-    }, 100);
-  }
+function setReqFilter(f, el) {
+    reqFilter = f;
+    document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('on'));
+    el.classList.add('on');
+    renderInstructorChat();
 }
 
+function renderInstructorChat() {
+    if (currentTab !== 2) return;
+    const box = document.getElementById('req-list-inner');
+    if (!box) return;
 
+    // 필터 적용
+    let list = [...profReqs];
+    if (reqFilter === 'pending')  list = list.filter(r => r.status === 'pending');
+    else if (reqFilter === 'approved') list = list.filter(r => r.status === 'approved');
+    else if (reqFilter === 'done') list = list.filter(r => r.status === 'finished' || r.status === 'cancelled');
+    else list = list.filter(r => r.status !== 'cancelled' || reqFilter === 'all');
+
+    if (reqFilter === 'all') list = list.filter(r => r.status !== 'cancelled');
+
+    if (list.length === 0) {
+        box.innerHTML = `<div class="req-empty"><i class="fa-solid fa-inbox" style="font-size:36px; margin-bottom:12px; display:block; opacity:0.3;"></i>해당하는 요청이 없습니다.</div>`;
+        return;
+    }
+
+    box.innerHTML = list.map(r => {
+        const isPending   = r.status === 'pending';
+        const isApproved  = r.status === 'approved';
+        const isFinished  = r.status === 'finished';
+        const isCancelled = r.status === 'cancelled';
+
+        // 상태 라벨
+        const statusLabel = isPending ? '● 신규 요청' : isApproved ? '✓ 승인 완료' : isFinished ? '운행 종료' : '✕ 취소됨';
+        const statusClass = isPending ? 'pending' : isApproved ? 'approved' : isFinished ? 'finished' : 'cancelled';
+
+        // 방향 뱃지
+        const dir = r.dir || '';
+        let dirBadge = '';
+        if (dir.includes('→항기원'))      dirBadge = '<span class="dir-badge arr">도착편</span>';
+        else if (dir.includes('항기원→')) dirBadge = '<span class="dir-badge dep">출발편</span>';
+
+        // 예상도착
+        const eta = calculateETA(r.time, dir);
+
+        // 중복 경고
+        let conflictHtml = '';
+        if (isPending && r.date && r.time) {
+            const conflicts = [];
+            const rMin = parseInt(r.time.split(':')[0])*60 + parseInt(r.time.split(':')[1]);
+            profReqs.forEach(o => {
+                if (o.id !== r.id && o.date === r.date && (o.status==='approved'||o.status==='finished') && o.prof !== '운행중단') {
+                    const oMin = parseInt(o.time.split(':')[0])*60 + parseInt(o.time.split(':')[1]);
+                    if (Math.abs(rMin-oMin) < 60) conflicts.push(`${o.time} ${o.prof} 강사 일정`);
+                }
+            });
+            for (let rid in allCourses) {
+                const dep = allCourses[rid].shuttle?.departure;
+                if (dep && dep.date === r.date && dep.time && dep.announced) {
+                    const dMin = parseInt(dep.time.split(':')[0])*60 + parseInt(dep.time.split(':')[1]);
+                    if (Math.abs(rMin-dMin) < 120) conflicts.push(`${dep.time} 퇴교수송 중복`);
+                }
+            }
+            if (conflicts.length) conflictHtml = `
+                <div class="card-conflict">
+                    <i class="fa-solid fa-triangle-exclamation" style="margin-top:2px;"></i>
+                    <div>${conflicts.join('<br>')}</div>
+                </div>`;
+        }
+
+        // 동승객
+        const passengerHtml = r.passengers?.length
+            ? `<div class="card-passengers"><i class="fa-solid fa-users" style="margin-right:5px;"></i>동승: ${r.passengers.join(', ')}</div>`
+            : '';
+
+        // 액션 버튼
+        let actionsHtml = '';
+        if (isPending) {
+            actionsHtml = `
+                <div class="card-actions">
+                    <button class="card-btn approve" onclick="approveRequest('${r.id}')">
+                        <i class="fa-solid fa-check"></i> 승인
+                    </button>
+                    <button class="card-btn reject" onclick="cancelRequest('${r.id}')">
+                        <i class="fa-solid fa-xmark"></i> 불가
+                    </button>
+                </div>`;
+        } else if (isApproved) {
+            actionsHtml = `
+                <div class="card-actions">
+                    <button class="card-btn complete" onclick="toggleComplete('${r.id}')">
+                        <i class="fa-solid fa-flag-checkered"></i> 운행 완료
+                    </button>
+                    <button class="card-btn cancel" onclick="if(confirm('승인된 배차를 취소할까요?')) cancelRequest('${r.id}')">
+                        취소
+                    </button>
+                </div>`;
+        } else if (isFinished) {
+            actionsHtml = `
+                <div class="card-actions">
+                    <button class="card-btn cancel" onclick="toggleComplete('${r.id}')">
+                        <i class="fa-solid fa-rotate-left"></i> 승인 상태로 되돌리기
+                    </button>
+                </div>`;
+        }
+
+        return `
+        <div class="req-list-card status-${statusClass}" data-id="${r.id}" oncontextmenu="showContextMenu(event,'${r.id}')">
+            <div class="card-status-bar ${statusClass}">
+                <span>${statusLabel}</span>
+                <span style="opacity:0.8; font-weight:700; font-size:10px;">${r.date||''}</span>
+            </div>
+            <div class="card-body">
+                <div class="card-name">
+                    <i class="fa-solid fa-user-tie"></i>
+                    ${r.prof||'이름 없음'} 강사님
+                    ${dirBadge}
+                </div>
+                <div class="card-info-grid">
+                    <div class="card-info-item">
+                        <div class="card-info-label">⏰ 출발 시각</div>
+                        <div class="card-info-value">${r.time||'--:--'}</div>
+                    </div>
+                    <div class="card-info-item">
+                        <div class="card-info-label">🏁 예상 도착</div>
+                        <div class="card-info-value">${eta}</div>
+                    </div>
+                </div>
+                <div class="card-route">
+                    <i class="fa-solid fa-route"></i> ${dir||'구간 정보 없음'}
+                </div>
+                ${r.phone ? `<div class="card-phone"><i class="fa-solid fa-phone"></i><a href="tel:${r.phone}" style="color:inherit; text-decoration:none;">${r.phone}</a></div>` : ''}
+                ${conflictHtml}
+                ${passengerHtml}
+                ${actionsHtml}
+            </div>
+        </div>`;
+    }).join('');
+
+    // 신규 요청이 있으면 맨 위로 스크롤
+    if (reqFilter === 'all' || reqFilter === 'pending') {
+        const firstPending = box.querySelector('.status-pending');
+        if (firstPending) setTimeout(() => firstPending.scrollIntoView({behavior:'smooth', block:'start'}), 100);
+    }
+}
 
 
 
