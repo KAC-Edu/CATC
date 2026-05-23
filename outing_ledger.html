@@ -102,6 +102,11 @@
     <script>
         const params = new URLSearchParams(window.location.search);
         const room = params.get('room');
+        // room 파라미터 없을 시 안내 처리
+        if (!room) {
+            document.querySelector('.page').innerHTML = '<div style="text-align:center; padding:80px 20px; color:#64748b; font-family:sans-serif;"><h2>⚠️ 강의실 정보가 없습니다</h2><p>올바른 경로로 접속해 주세요.<br>관리자에게 문의하거나 강사 플랫폼에서 다시 접속해 주세요.</p></div>';
+            return;
+        }
         const db = firebase.database();
 
 

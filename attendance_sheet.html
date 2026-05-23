@@ -5,6 +5,7 @@
     <title>항기원 교육생 출석 관리대장</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <script src="config.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         body { font-family: 'Malgun Gothic', sans-serif; padding: 20px; background: #f1f5f9; }
@@ -87,16 +88,13 @@
         </table>
     </div>
 
-    <script src="config.js"></script>
-
 
 <script>
     const params = new URLSearchParams(window.location.search);
-    const room = params.get('room');
     let courseInfo = {};
     let dateArray = [];
 
-    // 파이어베이스 데이터베이스 참조
+    // 파이어베이스 데이터베이스 참조 (config.js 로드 후 사용 가능)
     const db = firebase.database();
 
 
@@ -108,7 +106,7 @@ async function init() {
     const roomFromUrl = params.get('room');
 
     if (!roomFromUrl) {
-        alert("강의실 정보가 없습니다.");
+        document.getElementById('print-area').innerHTML = '<div style="text-align:center; padding:80px 20px; color:#64748b;"><h2>⚠️ 강의실 정보가 없습니다</h2><p>올바른 경로로 접속해 주세요.<br>강사 플랫폼의 [출석부 관리/인쇄] 버튼을 통해 접속해 주세요.</p></div>';
         return;
     }
 

@@ -107,76 +107,82 @@
         let currentFilter = '전체';
         let selectedKey = null;
         const db = firebase.database().ref('system/facility_requests');
+        let cachedData = null; // 최신 데이터 캐시
 
         function setFilter(building, el) {
             currentFilter = building;
             document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
             el.classList.add('active');
-            renderList();
+            if (cachedData !== null) renderList(cachedData); // 리스너 재등록 없이 캐시 데이터로 재렌더링
         }
 
-        function renderList() {
+        // 리스너는 한 번만 등록 (중복 방지)
+        function initListener() {
             db.on('value', (snap) => {
-                const data = snap.val();
-                const listDiv = document.getElementById('requestList');
-                if (!data) {
-                    listDiv.innerHTML = '<p style="text-align:center; color:var(--gray); margin-top:50px;">현재 요청이 없습니다.</p>';
-                    return;
-                }
-
-                const todayStr = new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD
-                let stats = { today: 0, wait: 0, confirm: 0, done: 0, reject: 0 };
-                let items = Object.keys(data).map(key => ({ id: key, ...data[key] }));
-
-                // 통계 계산
-                items.forEach(item => {
-                    const itemDate = new Date(item.timestamp).toLocaleDateString('en-CA');
-                    if (itemDate === todayStr) stats.today++;
-                    if (item.status === '대기') stats.wait++;
-                    if (item.status === '확인') stats.confirm++;
-                    if (item.status === '처리완료') stats.done++;
-                    if (item.status === '처리불가') stats.reject++;
-                });
-
-                // 필터링 및 정렬
-                if (currentFilter !== '전체') {
-                    items = items.filter(i => i.dorm.includes(currentFilter));
-                }
-
-                items.sort((a, b) => {
-                    const priority = { '대기': 0, '확인': 1, '처리완료': 2, '처리불가': 2 };
-                    if (priority[a.status] !== priority[b.status]) return priority[a.status] - priority[b.status];
-                    return b.timestamp - a.timestamp;
-                });
-
-                let html = "";
-                items.forEach(req => {
-                    const date = new Date(req.timestamp);
-                    const dateStr = (date.getMonth() + 1) + '/' + date.getDate();
-                    const displayStatus = req.status === '대기' ? '미확인' : req.status;
-                    const isDone = (req.status === '처리완료' || req.status === '처리불가');
-
-                    html += `
-                        <div class="req-row ${req.status === '대기' ? 'unread' : ''} ${isDone ? 'done' : ''}">
-                            <div class="info-group">
-                                <span class="date">${dateStr}</span>
-                                <span class="dorm-room">${req.dorm}</span>
-                                <span class="request-text">요청 : ${req.text}</span>
-                            </div>
-                            <button class="status-btn btn-${req.status}" onclick="handleStatusClick('${req.id}', '${req.status}', '${req.dorm}', '${req.text}')">
-                                ${displayStatus}
-                            </button>
-                        </div>
-                    `;
-                });
-
-                listDiv.innerHTML = html;
-                document.getElementById('stat-today').innerText = stats.today + "건";
-                document.getElementById('stat-wait').innerText = stats.wait;
-                document.getElementById('stat-confirm').innerText = stats.confirm;
-                document.getElementById('stat-done').innerText = stats.done;
-                document.getElementById('stat-reject').innerText = stats.reject;
+                cachedData = snap.val();
+                renderList(cachedData);
             });
+        }
+
+        function renderList(data) {
+            const listDiv = document.getElementById('requestList');
+            if (!data) {
+                listDiv.innerHTML = '<p style="text-align:center; color:var(--gray); margin-top:50px;">현재 요청이 없습니다.</p>';
+                return;
+            }
+
+            const todayStr = new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD
+            let stats = { today: 0, wait: 0, confirm: 0, done: 0, reject: 0 };
+            let items = Object.keys(data).map(key => ({ id: key, ...data[key] }));
+
+            // 통계 계산
+            items.forEach(item => {
+                const itemDate = new Date(item.timestamp).toLocaleDateString('en-CA');
+                if (itemDate === todayStr) stats.today++;
+                if (item.status === '대기') stats.wait++;
+                if (item.status === '확인') stats.confirm++;
+                if (item.status === '처리완료') stats.done++;
+                if (item.status === '처리불가') stats.reject++;
+            });
+
+            // 필터링 및 정렬
+            if (currentFilter !== '전체') {
+                items = items.filter(i => i.dorm.includes(currentFilter));
+            }
+
+            items.sort((a, b) => {
+                const priority = { '대기': 0, '확인': 1, '처리완료': 2, '처리불가': 2 };
+                if (priority[a.status] !== priority[b.status]) return priority[a.status] - priority[b.status];
+                return b.timestamp - a.timestamp;
+            });
+
+            let html = "";
+            items.forEach(req => {
+                const date = new Date(req.timestamp);
+                const dateStr = (date.getMonth() + 1) + '/' + date.getDate();
+                const displayStatus = req.status === '대기' ? '미확인' : req.status;
+                const isDone = (req.status === '처리완료' || req.status === '처리불가');
+
+                html += `
+                    <div class="req-row ${req.status === '대기' ? 'unread' : ''} ${isDone ? 'done' : ''}">
+                        <div class="info-group">
+                            <span class="date">${dateStr}</span>
+                            <span class="dorm-room">${req.dorm}</span>
+                            <span class="request-text">요청 : ${req.text}</span>
+                        </div>
+                        <button class="status-btn btn-${req.status}" onclick="handleStatusClick('${req.id}', '${req.status}', '${req.dorm}', '${req.text}')">
+                            ${displayStatus}
+                        </button>
+                    </div>
+                `;
+            });
+
+            listDiv.innerHTML = html;
+            document.getElementById('stat-today').innerText = stats.today + "건";
+            document.getElementById('stat-wait').innerText = stats.wait;
+            document.getElementById('stat-confirm').innerText = stats.confirm;
+            document.getElementById('stat-done').innerText = stats.done;
+            document.getElementById('stat-reject').innerText = stats.reject;
         }
 
         // 상태 버튼 클릭 시
@@ -213,7 +219,7 @@
 
         function renderStats() {} // 기존 통계 함수 통합됨
 
-        renderList();
+        initListener();
     </script>
 </body>
 </html>
