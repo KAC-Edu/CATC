@@ -1376,20 +1376,76 @@
 <!-- 단체회식 외출 정보 입력 모달 -->
 <div id="groupDinnerModal" class="modal-overlay" style="z-index: 6000;">
     <div class="modal-box" style="width: 480px;">
-        <div class="modal-header"><h3><i class="fa-solid fa-users-rectangle"></i> 단체 회식 외출 정보 입력</h3></div>
-        <p style="font-size:13px; color:#64748b; margin-bottom:20px; line-height:1.6;">전원 석식 제외와 함께 외출 대장에 단체 기록이 남습니다.</p>
-        <div class="setting-container">
-            <div class="setting-group"><label class="setting-label">행선지 <span style="color:#ef4444;">*</span></label><input type="text" id="gd-destination" class="setting-input" placeholder="예: 청주 OO식당"></div>
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:15px;">
-                <div class="setting-group"><label class="setting-label">외출 시간 <span style="color:#ef4444;">*</span></label><input type="time" id="gd-start-time" class="setting-input"></div>
-                <div class="setting-group"><label class="setting-label">복귀 시간 <span style="color:#ef4444;">*</span></label><input type="time" id="gd-end-time" class="setting-input"></div>
-            </div>
-            <div class="setting-group"><label class="setting-label">대표 연락처 <span style="color:#ef4444;">*</span></label><input type="text" id="gd-phone" class="setting-input" placeholder="예: 010-0000-0000"></div>
-            <div class="setting-group"><label class="setting-label">사유</label><input type="text" id="gd-reason" class="setting-input" value="과정 단체 회식"></div>
+        <div class="modal-header"><h3><i class="fa-solid fa-users-rectangle"></i> 단체 외출 정보 입력</h3></div>
+        <p style="font-size:13px; color:#64748b; margin-bottom:16px; line-height:1.6;">전원 석식 제외와 함께 외출 대장에 단체 기록이 남습니다.</p>
+
+        <!-- 외출/외박 선택 -->
+        <div style="display:flex; gap:8px; margin-bottom:16px;">
+            <button id="gd-btn-outing" onclick="ui.selectGroupDinnerType('outing')"
+                style="flex:1; padding:12px; border-radius:10px; border:2px solid #3b82f6; background:#3b82f6; color:white; font-weight:900; font-size:14px; cursor:pointer;">
+                🌆 외출 (당일)
+            </button>
+            <button id="gd-btn-overnight" onclick="ui.selectGroupDinnerType('overnight')"
+                style="flex:1; padding:12px; border-radius:10px; border:2px solid #e2e8f0; background:white; color:#64748b; font-weight:900; font-size:14px; cursor:pointer;">
+                🌙 외박 (익일)
+            </button>
         </div>
-        <div class="modal-actions" style="margin-top:25px; justify-content:center; gap:10px;">
+
+        <div class="setting-container">
+            <div class="setting-group">
+                <label class="setting-label">행선지 <span style="color:#ef4444;">*</span></label>
+                <input type="text" id="gd-destination" class="setting-input" placeholder="예: 청주 OO식당">
+            </div>
+
+            <!-- 외출 시간 영역 -->
+            <div id="gd-outing-time" style="display:grid; grid-template-columns:1fr 1fr; gap:15px;">
+                <div class="setting-group">
+                    <label class="setting-label">외출 시간</label>
+                    <div style="padding:10px 12px; background:#e0f2fe; border-radius:8px; font-weight:900; color:#0369a1; text-align:center; font-size:14px;">
+                        18:00 (수업 종료)
+                    </div>
+                    <input type="hidden" id="gd-start-time" value="18:00">
+                </div>
+                <div class="setting-group">
+                    <label class="setting-label">복귀 시간 <span style="color:#ef4444;">*</span></label>
+                    <select id="gd-end-time" class="setting-input" style="font-size:15px; font-weight:800;">
+                        <option value="18:30">18:30</option>
+                        <option value="19:00">19:00</option>
+                        <option value="19:30">19:30</option>
+                        <option value="20:00">20:00</option>
+                        <option value="20:30">20:30</option>
+                        <option value="21:00">21:00</option>
+                        <option value="21:30">21:30</option>
+                        <option value="22:00" selected>22:00</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- 외박 날짜 영역 (외박 선택 시 표시) -->
+            <div id="gd-overnight-area" style="display:none;">
+                <div class="setting-group">
+                    <label class="setting-label">외출 날짜 <span style="color:#ef4444;">*</span></label>
+                    <input type="date" id="gd-return-date" class="setting-input">
+                </div>
+                <div style="background:#fff1f2; border-radius:10px; padding:10px 14px; font-size:12px; font-weight:700; color:#dc2626; line-height:1.7;">
+                    출발: 18:00 (수업 종료) &nbsp;|&nbsp; 복귀: 익일 08:00 자동 설정
+                </div>
+            </div>
+
+            <div class="setting-group">
+                <label class="setting-label">대표 연락처 <span style="color:#ef4444;">*</span></label>
+                <input type="text" id="gd-phone" class="setting-input" placeholder="예: 010-0000-0000 (인솔자 또는 강사)">
+            </div>
+            <div class="setting-group">
+                <label class="setting-label">사유</label>
+                <input type="text" id="gd-reason" class="setting-input" value="과정 단체 회식">
+            </div>
+        </div>
+        <div class="modal-actions" style="margin-top:20px; justify-content:center; gap:10px;">
             <button class="m-btn m-btn-later" onclick="document.getElementById('groupDinnerModal').style.display='none'" style="background:#64748b; color:white; min-width:90px; justify-content:center;">취소</button>
-            <button class="m-btn m-btn-done" onclick="ui.openGroupDinnerModal()" style="min-width:180px; justify-content:center;"><i class="fa-solid fa-check"></i> 적용 (전원 석식제외 + 외출 등록)</button>
+            <button class="m-btn m-btn-done" onclick="ui.applyGroupDinner()" style="min-width:180px; justify-content:center;">
+                <i class="fa-solid fa-check"></i> 적용 (전원 석식제외 + 외출 등록)
+            </button>
         </div>
     </div>
 </div>

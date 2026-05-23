@@ -1485,63 +1485,97 @@ const ui = {
     openGroupDinnerModal: function() {
         if (!state.room) return ui.showAlert("강의실을 먼저 선택해 주세요.");
         if (state.isObserver) return ui.showAlert("옵저버 모드에서는 사용할 수 없습니다.");
-        const now = new Date(); const pad = n=>String(n).padStart(2,'0');
-        document.getElementById('gd-start-time').value = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
-        document.getElementById('gd-end-time').value = '';
         document.getElementById('gd-destination').value = '';
-        document.getElementById('gd-phone').value = '';
-        document.getElementById('gd-reason').value = '과정 단체 회식';
+        document.getElementById('gd-phone').value       = '';
+        document.getElementById('gd-reason').value      = '과정 단체 회식';
+        ui.selectGroupDinnerType('outing'); // 외출로 초기화
         document.getElementById('groupDinnerModal').style.display = 'flex';
     },
 
-// [신규] 단체 회식 적용 (전원 석식 제외)
+    // 단체 외출/외박 타입 전환
+    selectGroupDinnerType: function(type) {
+        const outingArea    = document.getElementById('gd-outing-time');
+        const overnightArea = document.getElementById('gd-overnight-area');
+        const btnOuting     = document.getElementById('gd-btn-outing');
+        const btnOvernight  = document.getElementById('gd-btn-overnight');
+
+        if (type === 'overnight') {
+            if (outingArea)    outingArea.style.display    = 'none';
+            if (overnightArea) overnightArea.style.display = 'block';
+            const today = getTodayString();
+            const retDateEl = document.getElementById('gd-return-date');
+            if (retDateEl && !retDateEl.value) retDateEl.value = today;
+            document.getElementById('gd-start-time').value = '18:00';
+            document.getElementById('gd-end-time').value   = '08:00';
+            if (btnOuting)    { btnOuting.style.background='white'; btnOuting.style.color='#64748b'; btnOuting.style.borderColor='#e2e8f0'; }
+            if (btnOvernight) { btnOvernight.style.background='#dc2626'; btnOvernight.style.color='white'; btnOvernight.style.borderColor='#dc2626'; }
+        } else {
+            if (outingArea)    outingArea.style.display    = 'grid';
+            if (overnightArea) overnightArea.style.display = 'none';
+            document.getElementById('gd-start-time').value = '18:00';
+            document.getElementById('gd-end-time').value   = '22:00';
+            if (btnOuting)    { btnOuting.style.background='#3b82f6'; btnOuting.style.color='white'; btnOuting.style.borderColor='#3b82f6'; }
+            if (btnOvernight) { btnOvernight.style.background='white'; btnOvernight.style.color='#64748b'; btnOvernight.style.borderColor='#e2e8f0'; }
+        }
+        ui._gdType = type;
+    },
+
+    // 단체 회식 적용 (석식제외 + admin_actions 단체 행 등록)
     applyGroupDinner: async function() {
         if (state.isObserver) return ui.showAlert("옵저버 모드에서는 사용할 수 없습니다.");
         if (!state.room) return;
+
+        const gdType      = ui._gdType || 'outing';
         const destination = document.getElementById('gd-destination').value.trim();
-        const startTime   = document.getElementById('gd-start-time').value.trim();
-        const endTime     = document.getElementById('gd-end-time').value.trim();
+        const startTime   = '18:00';
         const phone       = document.getElementById('gd-phone').value.trim();
         const reason      = document.getElementById('gd-reason').value.trim() || '과정 단체 회식';
-        if (!destination || !startTime || !endTime || !phone) return ui.showAlert("⚠️ 행선지, 외출·복귀 시간, 대표 연락처는 필수입니다.");
-        if (startTime >= endTime) return ui.showAlert("⚠️ 복귀 시간이 외출 시간보다 빠를 수 없습니다.");
+
+        let endTime    = '22:00';
+        let returnDate = getTodayString();
+
+        if (gdType === 'overnight') {
+            endTime    = '08:00';
+            returnDate = document.getElementById('gd-return-date')?.value || getTodayString();
+            if (!returnDate) return ui.showAlert("⚠️ 외출 날짜를 선택해주세요.");
+        } else {
+            endTime = document.getElementById('gd-end-time').value || '22:00';
+        }
+
+        if (!destination || !phone) {
+            return ui.showAlert("⚠️ 행선지와 대표 연락처는 필수 입력입니다.");
+        }
+
         document.getElementById('groupDinnerModal').style.display = 'none';
+
         const snap = await firebase.database().ref(`courses/${state.room}/students`).once('value');
         const students = snap.val() || {};
         const today = getTodayString();
         const updates = {}; const ts = Date.now();
         const seen = new Set(); const valid = [];
+
         Object.keys(students).forEach(token => {
             const s = students[token];
-            if(!s.name||s.name==='undefined') return;
+            if (!s.name || s.name === 'undefined') return;
             const key = `${s.name.trim()}_${(s.phone||'').trim()}`;
-            if(!seen.has(key)){seen.add(key);valid.push({token,...s});}
+            if (!seen.has(key)) { seen.add(key); valid.push({token, ...s}); }
         });
-        valid.forEach((s,i)=>{
-            updates[`courses/${state.room}/dinner_skips/${today}/${s.token}`] = `${s.name}(${s.phone?s.phone.slice(-4):'0000'})`;
-            updates[`courses/${state.room}/admin_actions/${today}/${s.token}`] = {name:s.name,dept:s.dept||'',phone,destination,startTime,endTime,reason,type:'group_outing',timestamp:ts+i,returned:false};
+
+        valid.forEach((s, i) => {
+            updates[`courses/${state.room}/dinner_skips/${today}/${s.token}`] =
+                `${s.name}(${s.phone ? s.phone.slice(-4) : '0000'})`;
+            updates[`courses/${state.room}/admin_actions/${today}/${s.token}`] = {
+                name: s.name, dept: s.dept || '', phone, destination,
+                startTime, endTime,
+                returnDate: gdType === 'overnight' ? returnDate : today,
+                reason, type: 'group_outing', outingType: gdType,
+                timestamp: ts + i, returned: false
+            };
         });
+
         await firebase.database().ref().update(updates);
-        ui.showAlert(`✅ ${valid.length}명 석식 제외 및 단체 외출 등록 완료\n행선지: ${destination} / ${startTime}~${endTime}`);
-        return;
-        if(!confirm("현재 명단의 모든 수강생을 '석식 제외'로 등록하시겠습니까?\n(단체 회식 시 사용)")) return;
-        
-        firebase.database().ref(`courses/${state.room}/students`).once('value', snap => {
-            const students = snap.val() || {};
-            const today = getTodayString();
-            const updates = {};
-            
-            Object.keys(students).forEach(token => {
-                const s = students[token];
-                if(s.name) {
-                    updates[`courses/${state.room}/dinner_skips/${today}/${token}`] = `${s.name}(${s.phone ? s.phone.slice(-4) : '0000'})`;
-                }
-            });
-            
-            firebase.database().ref().update(updates).then(() => {
-                ui.showAlert("✅ 전원 석식 제외 처리가 완료되었습니다.");
-            });
-        });
+        const typeLabel = gdType === 'overnight' ? `외박 (${returnDate} 출발)` : `외출 (~${endTime})`;
+        ui.showAlert(`✅ ${valid.length}명 석식 제외 및 단체 ${typeLabel} 등록 완료\n행선지: ${destination}`);
     },
 
     // [신규] 석식 제외 초기화
