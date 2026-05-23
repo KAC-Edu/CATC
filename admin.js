@@ -1880,52 +1880,48 @@ updateQaCountBadge: function() {
                 else { txt = d; meta = '게시됨'; }
             }
             const pr = document.getElementById('prof-notice-preview');
-            if (pr) pr.innerHTML = txt ? `<span style="color:#1e293b;">${txt.replace(/\n/g,'<br>')}</span>` : `<span style="color:#94a3b8; font-style:italic;">등록된 공지가 없습니다.</span>`;
+            if (pr) pr.innerHTML = txt
+                ? txt
+                : `<span style="opacity:0.45; font-style:italic;">— 게시된 공지 없음. 클릭하여 작성하세요.</span>`;
             const me = document.getElementById('prof-notice-meta');
             if (me) me.innerText = meta;
         });
 
-        // 교육운영부 공지 실시간
+        // 교육운영부 공지 실시간 — 헤더 안 흰색 미리보기
         const coordRef = firebase.database().ref(`courses/${state.room}/coordNotice`);
         coordRef.on('value', snap => {
-            const d = snap.val();
-            let txt = '', meta = '등록된 공지 없음';
+            const d   = snap.val();
+            let txt = '', meta = '';
             if (d) {
-                if (typeof d === 'object') { txt = d.text || ''; meta = d.updatedAt ? `등록: ${d.updatedAt}` : '등록됨'; }
-                else { txt = d; meta = '등록됨'; }
+                if (typeof d === 'object') { txt = d.text || ''; meta = d.updatedAt || ''; }
+                else { txt = d; }
             }
             const el = document.getElementById('coordNoticeDisplay');
             if (el) {
                 el.innerHTML = txt
-                    ? `<span style="color:#0f172a;">${txt.replace(/\n/g,'<br>')}</span>`
-                    : `<span style="color:#94a3b8; font-style:italic;">등록된 공지가 없습니다.</span>`;
-                el.style.webkitLineClamp = '3';
-                const btn = document.getElementById('coord-expand-btn');
-                if (btn) btn.style.display = txt && txt.split('\n').length > 3 ? 'block' : 'none';
+                    ? txt.replace(/\n/g,'\n')   // white-space:pre-wrap이 줄바꿈 처리
+                    : `<span style="opacity:0.45; font-style:italic;">— 등록된 공지 없음</span>`;
             }
             const me = document.getElementById('coord-notice-meta');
             if (me) me.innerText = meta;
         });
 
-        // 항기원 전체 공지 실시간
+        // 항기원 전체 공지 실시간 — 헤더 안 흰색 미리보기
         firebase.database().ref('system/globalNotice').on('value', snap => {
-            const d = snap.val();
-            let txt = '', meta = '항기원 공통 공지';
+            const d   = snap.val();
+            let txt = '', meta = '';
             if (d) {
-                if (typeof d === 'object') { txt = d.text || ''; meta = d.updatedAt ? `등록: ${d.updatedAt}` : '등록됨'; }
-                else { txt = d; meta = '등록됨'; }
+                if (typeof d === 'object') { txt = d.text || ''; meta = d.updatedAt || ''; }
+                else { txt = d; }
             }
             const el = document.getElementById('globalNoticeDisplay');
             if (el) {
                 el.innerHTML = txt
-                    ? `<span style="color:#334155;">${txt.replace(/\n/g,'<br>')}</span>`
-                    : `<span style="color:#94a3b8; font-style:italic;">등록된 공지가 없습니다.</span>`;
-                el.style.webkitLineClamp = '3';
-                const btn = document.getElementById('global-expand-btn');
-                if (btn) btn.style.display = txt && txt.split('\n').length > 3 ? 'block' : 'none';
+                    ? txt.replace(/\n/g,'\n')
+                    : `<span style="opacity:0.4; font-style:italic;">— 등록된 공지 없음</span>`;
             }
             const me = document.getElementById('global-notice-meta');
-            if (me) me.innerText = meta;
+            if (me) me.innerText = meta ? meta : '센터 공통';
         });
     },
 
