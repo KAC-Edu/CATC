@@ -2193,8 +2193,12 @@ function updateIndividualView() {
         // 학생장(isLeader: true)인 사람만 골라내기
         const leaders = Object.values(room.students).filter(s => s.isLeader === true);
         if (leaders.length > 0) {
-            // 이름 (010-XXXX-XXXX) 형식으로 출력
-            leaderTxt = leaders.map(l => `${l.name} (${l.phone || '연락처 미등록'})`).join(' / ');
+            // leaderPhone(전체번호 우선) → 없으면 phone, 그것도 없으면 미등록
+            leaderTxt = leaders.map(l => {
+                const phone = l.leaderPhone || l.phone || '';
+                const displayPhone = phone.length > 4 ? phone : (phone ? `(뒷자리: ${phone})` : '연락처 미등록');
+                return `${l.name}  ${displayPhone}`;
+            }).join('  /  ');
         }
     }
     const leaderEl = document.getElementById('ind-leader');

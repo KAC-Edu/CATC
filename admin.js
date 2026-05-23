@@ -141,15 +141,13 @@ logout: async function() {
 // --- 2. Data & Room Logic ---
 const dataMgr = {
 saveInstructorNoticeMain: function() {
+        // [옵저버 제한]
         if(state.isObserver) return ui.showAlert("👁️ 옵저버 모드에서는 공지사항을 수정할 수 없습니다.");
+        
         if(!state.room) return;
         const msg = document.getElementById('instNoticeInputMain').value;
-        const now = new Date();
-        const ts  = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
-        // 구조: { text, updatedAt } - 기존 string과 호환 유지
-        const data = msg ? { text: msg, updatedAt: ts } : null;
-        firebase.database().ref(`courses/${state.room}/notice`).set(data).then(() => {
-            ui.showAlert(msg ? "✅ 공지사항이 교육생에게 게시되었습니다." : "🗑️ 공지가 삭제되었습니다.");
+        firebase.database().ref(`courses/${state.room}/notice`).set(msg).then(() => {
+            ui.showAlert("✅ 강사 공지사항이 교육생에게 게시되었습니다.");
         });
     },
 
@@ -631,7 +629,7 @@ fetchCodeAndRenderQr: function(room) {
     
     // 1. 현재 접속한 주소에서 파일명(admin.html)만 떼어내고 기본 경로(Base URL) 잡기
     const path = window.location.pathname;
-    const directory = path.substring(0, path.lastIndexOf('/'));
+    const directory = path.substring( path.lastIndexOf('/'), 0);
     const baseUrl = window.location.origin + directory + "/"; // 끝에 / 를 강제로 붙임
 
     firebase.database().ref('public_codes').orderByValue().equalTo(room).once('value', s => {
@@ -797,18 +795,12 @@ resetCourse: function() {
         updates[`${rPath}/notice`] = null;
         updates[`${rPath}/coordNotice`] = null;
         updates[`${rPath}/internal_attendance`] = null;
-        updates[`${rPath}/attendanceQR`] = null;    // 고용노동부 출결 QR 초기화
-        updates[`${rPath}/quizBank`] = null;        // 퀴즈 문제 은행 초기화
 
         // 과정 기본값 재설정
         updates[`${rPath}/settings/courseName`] = "";
-        updates[`${rPath}/settings/coordinatorName`] = "";  // 과정운영담당자 초기화
-        updates[`${rPath}/settings/subjects`] = null;         // 출강강사 리스트 초기화
-        updates[`${rPath}/settings/period`] = "";           // 교육 기간 초기화
-        updates[`${rPath}/settings/menuFeatures`] = null;     // 메뉴 설정 초기화
         updates[`${rPath}/status/professorName`] = "";
-        updates[`${rPath}/status/roomStatus`] = "idle";
-        updates[`${rPath}/status/ownerSessionId`] = null;
+        updates[`${rPath}/status/roomStatus`] = "idle"; // 비어있음으로 전환
+        updates[`${rPath}/status/ownerSessionId`] = null; // 제어권 해제
         
         // 학생들에게 초기화 신호를 보내 강제 퇴출시킴
         updates[`${rPath}/status/resetKey`] = "reset_" + Date.now();
@@ -870,7 +862,8 @@ toggleLeader: function(token, currentName) {
                 
                 firebase.database().ref(`courses/${state.room}/students/${token}`).update({
                     isLeader: true,
-                    phone: phone // 전체 번호 서버 저장
+                    leaderPhone: phone  // 비상연락망 전체번호 (별도 필드)
+                    // phone은 기존 뒷4자리 유지 — 출결/명단 식별에 사용됨
                 });
                 ui.showAlert(`👑 [${currentName}] 교육생이 학생장으로 지정되었습니다.`);
             } else {
@@ -1484,100 +1477,26 @@ init: function() {
 const ui = {
 
 
-    openGroupDinnerModal: function() {
-        if (!state.room) return ui.showAlert("강의실을 먼저 선택해 주세요.");
-        if (state.isObserver) return ui.showAlert("옵저버 모드에서는 사용할 수 없습니다.");
-        document.getElementById('gd-destination').value = '';
-        document.getElementById('gd-phone').value       = '';
-        document.getElementById('gd-reason').value      = '과정 단체 회식';
-        ui.selectGroupDinnerType('outing'); // 외출로 초기화
-        document.getElementById('groupDinnerModal').style.display = 'flex';
-    },
-
-    // 단체 외출/외박 타입 전환
-    selectGroupDinnerType: function(type) {
-        const outingArea    = document.getElementById('gd-outing-time');
-        const overnightArea = document.getElementById('gd-overnight-area');
-        const btnOuting     = document.getElementById('gd-btn-outing');
-        const btnOvernight  = document.getElementById('gd-btn-overnight');
-
-        if (type === 'overnight') {
-            if (outingArea)    outingArea.style.display    = 'none';
-            if (overnightArea) overnightArea.style.display = 'block';
+// [신규] 단체 회식 적용 (전원 석식 제외)
+    applyGroupDinner: function() {
+        if(!confirm("현재 명단의 모든 수강생을 '석식 제외'로 등록하시겠습니까?\n(단체 회식 시 사용)")) return;
+        
+        firebase.database().ref(`courses/${state.room}/students`).once('value', snap => {
+            const students = snap.val() || {};
             const today = getTodayString();
-            const retDateEl = document.getElementById('gd-return-date');
-            if (retDateEl && !retDateEl.value) retDateEl.value = today;
-            document.getElementById('gd-start-time').value = '18:00';
-            document.getElementById('gd-end-time').value   = '08:00';
-            if (btnOuting)    { btnOuting.style.background='white'; btnOuting.style.color='#64748b'; btnOuting.style.borderColor='#e2e8f0'; }
-            if (btnOvernight) { btnOvernight.style.background='#dc2626'; btnOvernight.style.color='white'; btnOvernight.style.borderColor='#dc2626'; }
-        } else {
-            if (outingArea)    outingArea.style.display    = 'grid';
-            if (overnightArea) overnightArea.style.display = 'none';
-            document.getElementById('gd-start-time').value = '18:00';
-            document.getElementById('gd-end-time').value   = '22:00';
-            if (btnOuting)    { btnOuting.style.background='#3b82f6'; btnOuting.style.color='white'; btnOuting.style.borderColor='#3b82f6'; }
-            if (btnOvernight) { btnOvernight.style.background='white'; btnOvernight.style.color='#64748b'; btnOvernight.style.borderColor='#e2e8f0'; }
-        }
-        ui._gdType = type;
-    },
-
-    // 단체 회식 적용 (석식제외 + admin_actions 단체 행 등록)
-    applyGroupDinner: async function() {
-        if (state.isObserver) return ui.showAlert("옵저버 모드에서는 사용할 수 없습니다.");
-        if (!state.room) return;
-
-        const gdType      = ui._gdType || 'outing';
-        const destination = document.getElementById('gd-destination').value.trim();
-        const startTime   = '18:00';
-        const phone       = document.getElementById('gd-phone').value.trim();
-        const reason      = document.getElementById('gd-reason').value.trim() || '과정 단체 회식';
-
-        let endTime    = '22:00';
-        let returnDate = getTodayString();
-
-        if (gdType === 'overnight') {
-            endTime    = '08:00';
-            returnDate = document.getElementById('gd-return-date')?.value || getTodayString();
-            if (!returnDate) return ui.showAlert("⚠️ 외출 날짜를 선택해주세요.");
-        } else {
-            endTime = document.getElementById('gd-end-time').value || '22:00';
-        }
-
-        if (!destination || !phone) {
-            return ui.showAlert("⚠️ 행선지와 대표 연락처는 필수 입력입니다.");
-        }
-
-        document.getElementById('groupDinnerModal').style.display = 'none';
-
-        const snap = await firebase.database().ref(`courses/${state.room}/students`).once('value');
-        const students = snap.val() || {};
-        const today = getTodayString();
-        const updates = {}; const ts = Date.now();
-        const seen = new Set(); const valid = [];
-
-        Object.keys(students).forEach(token => {
-            const s = students[token];
-            if (!s.name || s.name === 'undefined') return;
-            const key = `${s.name.trim()}_${(s.phone||'').trim()}`;
-            if (!seen.has(key)) { seen.add(key); valid.push({token, ...s}); }
+            const updates = {};
+            
+            Object.keys(students).forEach(token => {
+                const s = students[token];
+                if(s.name) {
+                    updates[`courses/${state.room}/dinner_skips/${today}/${token}`] = `${s.name}(${s.phone ? s.phone.slice(-4) : '0000'})`;
+                }
+            });
+            
+            firebase.database().ref().update(updates).then(() => {
+                ui.showAlert("✅ 전원 석식 제외 처리가 완료되었습니다.");
+            });
         });
-
-        valid.forEach((s, i) => {
-            updates[`courses/${state.room}/dinner_skips/${today}/${s.token}`] =
-                `${s.name}(${s.phone ? s.phone.slice(-4) : '0000'})`;
-            updates[`courses/${state.room}/admin_actions/${today}/${s.token}`] = {
-                name: s.name, dept: s.dept || '', phone, destination,
-                startTime, endTime,
-                returnDate: gdType === 'overnight' ? returnDate : today,
-                reason, type: 'group_outing', outingType: gdType,
-                timestamp: ts + i, returned: false
-            };
-        });
-
-        await firebase.database().ref().update(updates);
-        const typeLabel = gdType === 'overnight' ? `외박 (${returnDate} 출발)` : `외출 (~${endTime})`;
-        ui.showAlert(`✅ ${valid.length}명 석식 제외 및 단체 ${typeLabel} 등록 완료\n행선지: ${destination}`);
     },
 
     // [신규] 석식 제외 초기화
@@ -1838,91 +1757,68 @@ updateQaCountBadge: function() {
     loadNoticeView: async function() {
         if(!state.room) return;
 
-        // coordNotice 읽음 처리
+        // [신규] 공지 탭 진입 시 coordNotice 읽음 처리
         const coordSnap = await firebase.database().ref(`courses/${state.room}/coordNotice`).once('value');
         const coordMsg = coordSnap.val() || '';
         if (coordMsg) {
-            const coordText = typeof coordMsg === 'object' ? (coordMsg.text || '') : coordMsg;
-            localStorage.setItem(`kac_coord_notice_seen_${state.room}`, coordText);
-            ui.updateCoordNoticeBadge(coordText, coordText);
+            localStorage.setItem(`kac_coord_notice_seen_${state.room}`, coordMsg);
+            ui.updateCoordNoticeBadge(coordMsg, coordMsg); // 읽었으므로 배지 제거
         }
+        
+        // 1. 좌측 영역: 강사 본인 공지
+        const snap = await firebase.database().ref(`courses/${state.room}/notice`).once('value');
+        document.getElementById('instNoticeInputMain').value = snap.val() || "";
 
-        // 담임교수 공지 로드
-        const noticeSnap = await firebase.database().ref(`courses/${state.room}/notice`).once('value');
-        const noticeData = noticeSnap.val();
-        let noticeText = '', noticeMeta = '게시된 공지 없음';
-        if (noticeData) {
-            if (typeof noticeData === 'object') {
-                noticeText = noticeData.text || '';
-                noticeMeta = noticeData.updatedAt ? `게시: ${noticeData.updatedAt}` : '게시됨';
-            } else {
-                noticeText = noticeData;
-                noticeMeta = '게시됨';
-            }
-        }
-        const inputEl = document.getElementById('instNoticeInputMain');
-        if (inputEl) inputEl.value = noticeText;
-        const metaEl = document.getElementById('prof-notice-meta');
-        if (metaEl) metaEl.innerText = noticeMeta;
-        const previewEl = document.getElementById('prof-notice-preview');
-        if (previewEl) {
-            previewEl.innerHTML = noticeText
-                ? `<span style="color:#1e293b;">${noticeText.replace(/\n/g,'<br>')}</span>`
-                : `<span style="color:#94a3b8; font-style:italic;">등록된 공지가 없습니다.</span>`;
-        }
-
-        // 담임교수 공지 실시간 감시 (다른 기기에서 변경 시 반영)
-        firebase.database().ref(`courses/${state.room}/notice`).on('value', snap => {
-            const d = snap.val();
-            let txt = '', meta = '게시된 공지 없음';
-            if (d) {
-                if (typeof d === 'object') { txt = d.text || ''; meta = d.updatedAt ? `게시: ${d.updatedAt}` : '게시됨'; }
-                else { txt = d; meta = '게시됨'; }
-            }
-            const pr = document.getElementById('prof-notice-preview');
-            if (pr) pr.innerHTML = txt
-                ? txt
-                : `<span style="opacity:0.45; font-style:italic;">— 게시된 공지 없음. 클릭하여 작성하세요.</span>`;
-            const me = document.getElementById('prof-notice-meta');
-            if (me) me.innerText = meta;
-        });
-
-        // 교육운영부 공지 실시간 — 헤더 안 흰색 미리보기
+        // 2. 우측 영역: 통합 공지 조회
+        const globalRef = firebase.database().ref('system/globalNotice');
         const coordRef = firebase.database().ref(`courses/${state.room}/coordNotice`);
-        coordRef.on('value', snap => {
-            const d   = snap.val();
-            let txt = '', meta = '';
-            if (d) {
-                if (typeof d === 'object') { txt = d.text || ''; meta = d.updatedAt || ''; }
-                else { txt = d; }
-            }
-            const el = document.getElementById('coordNoticeDisplay');
-            if (el) {
-                el.innerHTML = txt
-                    ? txt.replace(/\n/g,'\n')   // white-space:pre-wrap이 줄바꿈 처리
-                    : `<span style="opacity:0.45; font-style:italic;">— 등록된 공지 없음</span>`;
-            }
-            const me = document.getElementById('coord-notice-meta');
-            if (me) me.innerText = meta;
-        });
 
-        // 항기원 전체 공지 실시간 — 헤더 안 흰색 미리보기
-        firebase.database().ref('system/globalNotice').on('value', snap => {
-            const d   = snap.val();
-            let txt = '', meta = '';
-            if (d) {
-                if (typeof d === 'object') { txt = d.text || ''; meta = d.updatedAt || ''; }
-                else { txt = d; }
-            }
-            const el = document.getElementById('globalNoticeDisplay');
-            if (el) {
-                el.innerHTML = txt
-                    ? txt.replace(/\n/g,'\n')
-                    : `<span style="opacity:0.4; font-style:italic;">— 등록된 공지 없음</span>`;
-            }
-            const me = document.getElementById('global-notice-meta');
-            if (me) me.innerText = meta ? meta : '센터 공통';
-        });
+        const updateRightNotice = () => {
+            Promise.all([globalRef.once('value'), coordRef.once('value')]).then(([gSnap, cSnap]) => {
+                const globalMsg = gSnap.val();
+                const coordMsg = cSnap.val();
+                const display = document.getElementById('globalNoticeDisplay');
+                
+                let html = "";
+                
+                // (1) 과정 운영 공지
+                if (coordMsg) {
+                    html += `
+                        <div style="margin-bottom:15px; padding:15px 20px; background:#f0f7ff; border-radius:12px; border:1px solid #dbeafe; border-left:8px solid #3b82f6;">
+                            <div style="display:flex; align-items:center; gap:8px; margin-bottom:10px;">
+                                <span style="background:#3b82f6; color:white; font-size:10px; font-weight:900; padding:2px 6px; border-radius:4px; line-height:1.2;">ADMIN</span>
+                                <span style="color:#3b82f6; font-size:13px; font-weight:800;">과정 운영 공지</span>
+                            </div>
+                            <div style="font-size:14.5px; color:#1e3a8a; font-weight:600; line-height:1.5; white-space: pre-line;">${coordMsg}</div>
+                        </div>`;
+                }
+                
+                // (2) 항기원 전체 공지
+                if (globalMsg) {
+                    html += `
+                        <div style="margin-bottom:15px; padding:15px 20px; background:#f8fafc; border-radius:12px; border:1px solid #e2e8f0; border-left:8px solid #64748b;">
+                            <div style="display:flex; align-items:center; gap:8px; margin-bottom:10px;">
+                                <span style="background:#64748b; color:white; font-size:10px; font-weight:900; padding:2px 6px; border-radius:4px; line-height:1.2;">CENTER</span>
+                                <span style="color:#64748b; font-size:13px; font-weight:800;">항기원 전체 공지</span>
+                            </div>
+                            <div style="font-size:14.5px; color:#475569; font-weight:600; line-height:1.5; white-space: pre-line;">${globalMsg}</div>
+                        </div>`;
+                }
+
+                if (!coordMsg && !globalMsg) {
+                    display.innerHTML = `
+                        <div style="padding:50px 0; text-align:center; color:#cbd5e1;">
+                            <i class="fa-solid fa-envelope-open" style="font-size:35px; margin-bottom:12px; opacity:0.5;"></i>
+                            <p style="font-size:14px; font-weight:700;">현재 등록된 운영부 공지가 없습니다.</p>
+                        </div>`;
+                } else {
+                    display.innerHTML = html;
+                }
+            });
+        };
+
+        globalRef.on('value', updateRightNotice);
+        coordRef.on('value', updateRightNotice);
     },
 
 
@@ -2118,11 +2014,6 @@ showAlert: function(msg) {
 
 
     
-    openFullAttendanceSheet: function() {
-        if (!state.room) return ui.showAlert("강의실을 먼저 선택해 주세요.");
-        window.open(`attendance_sheet.html?room=${state.room}`, '_blank');
-    },
-
     requestAdminAuth: function(type) {
         if(type === 'pw') state.adminCallback = () => ui.openPwModal();
         else if(type === 'idle') state.adminCallback = () => dataMgr.deactivateAllRooms();
@@ -2175,10 +2066,10 @@ showAlert: function(msg) {
         
         // 1. Firebase 실시간 리스너 (한 번만 등록)
         if (!window.isRoomListenerSet) {
-            window.isRoomListenerSet = true;
             firebase.database().ref('courses').on('value', s => {
-                window.latestCoursesData = s.val() || {};
-                ui.initRoomSelect();
+                window.latestCoursesData = s.val() || {}; // 전역에 데이터 저장
+                window.isRoomListenerSet = true;
+                this.initRoomSelect(); // 데이터가 오면 화면을 다시 그림
             });
             return;
         }
@@ -2285,7 +2176,7 @@ toggleMiniQR: function() {
         
         // 경로 계산 보정
         const path = window.location.pathname;
-        const directory = path.substring(0, path.lastIndexOf('/'));
+        const directory = path.substring( path.lastIndexOf('/'), 0);
         const baseUrl = window.location.origin + directory + "/";
         const forcedUrl = `${baseUrl}index.html?room=${state.room}`;
         
@@ -2614,10 +2505,6 @@ setMode: function(mode) {
                         localStorage.setItem(`last_seen_shuttle_${state.room}`, `${dep.date} ${dep.time}`);
                     }
                 });
-            }
-            if (mode === 'guide') {
-                if (!guideMgr.pdfDoc) { guideMgr.init(); }
-                else { guideMgr.renderPage(guideMgr.pageNum); }
             }
             if (mode === 'admin-action') ui.loadAdminActionData();
             if (mode === 'dinner-skip') ui.loadDinnerSkipData();
@@ -3222,6 +3109,7 @@ loadStudentList: function() {
                                 <div style="display:inline-flex; align-items:center; gap:8px;">
                                     <span style="color:${isOnline ? '#22c55e' : '#cbd5e1'};">●</span>
                                     <span style="font-weight:800;">${isLeader ? '👑 ' : ''}${name}</span>
+                                    ${isLeader && studentData.leaderPhone ? `<span style="font-size:11px; color:#64748b; font-weight:600; margin-left:4px;">${studentData.leaderPhone}</span>` : ''}
                                 </div>
                             </td>
                             <td><span class="status-badge ${isArrived ? 'status-arrived' : 'status-wait'}">${isArrived ? '입교 완료' : '미입교'}</span></td>
@@ -3580,28 +3468,6 @@ resetShuttleRequests: function() {
             if(state.room) localStorage.setItem(`kac_coord_notice_seen_\${state.room}`, msg);
             ui.updateCoordNoticeBadge(msg, msg);
         });
-    },
-
-    // 공지 섹션 아코디언 토글
-    toggleNoticeSection: function(type) {
-        const section  = document.getElementById(`notice-section-${type}`);
-        const chevron  = document.getElementById(`notice-chevron-${type}`);
-        if (!section) return;
-        const isOpen = section.style.display !== 'none';
-        section.style.display = isOpen ? 'none' : 'block';
-        if (chevron) chevron.style.transform = isOpen ? '' : 'rotate(180deg)';
-    },
-
-    // 공지 전체 보기
-    expandNotice: function(type) {
-        const el  = document.getElementById(type === 'coord' ? 'coordNoticeDisplay' : 'globalNoticeDisplay');
-        const btn = document.getElementById(`${type}-expand-btn`);
-        if (!el) return;
-        const isExpanded = el.style.webkitLineClamp === 'unset';
-        el.style.webkitLineClamp  = isExpanded ? '3' : 'unset';
-        el.style.display          = 'block';
-        el.style.webkitBoxOrient  = isExpanded ? 'vertical' : '';
-        if (btn) btn.innerText = isExpanded ? '전체 보기 ▼' : '접기 ▲';
     },
 
     toggleFamilySites: function() {
@@ -4367,33 +4233,21 @@ const guideMgr = {
 
     // 1. 초기화 (기존 로직 + 리사이즈 감시 추가)
 init: function() {
-    // sharedGuide는 system 경로 → room 없어도 로드 가능
-    if (typeof pdfjsLib === 'undefined') {
-        console.warn('pdf.js 미로드'); return;
+    if (!state.room) return;
+    if (window['pdfjs-dist/build/pdf']) {
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
     }
-    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
     const guideRef = firebase.database().ref(`system/sharedGuide`);
-    guideRef.off();
+    guideRef.off(); // 이전 안테나 제거
     guideRef.on('value', snap => {
         const data = snap.val();
         const badge = document.getElementById('guideStatusBadge');
-        const canvas = document.getElementById('guideCanvas');
         if (data) {
             if (badge) { badge.innerText = "✅ 가이드 등록 완료"; badge.style.color = "#10b981"; }
             guideMgr.pageNum = 1;
             guideMgr.loadPDF(data);
         } else {
             if (badge) { badge.innerText = "❌ 등록된 파일 없음"; badge.style.color = "#ef4444"; }
-            if (canvas) {
-                canvas.width = 600; canvas.height = 160;
-                const ctx = canvas.getContext('2d');
-                ctx.fillStyle = '#f8fafc'; ctx.fillRect(0,0,600,160);
-                ctx.fillStyle = '#94a3b8'; ctx.textAlign = 'center';
-                ctx.font = 'bold 15px sans-serif';
-                ctx.fillText('등록된 입교안내 PDF가 없습니다.', 300, 70);
-                ctx.font = '12px sans-serif';
-                ctx.fillText('교육과정 환경설정에서 PDF를 업로드해 주세요.', 300, 95);
-            }
         }
     });
     window.addEventListener('resize', () => {
@@ -4441,10 +4295,8 @@ init: function() {
     // 3. PDF 로드 (기존 로직 유지)
     loadPDF: async function(base64) {
         try {
-            // data:application/pdf;base64, 형식과 순수 base64 모두 처리
-            const b64 = base64.includes(',') ? base64.split(',')[1] : base64;
-            const raw = atob(b64);
-            const array = new Uint8Array(raw.length);
+            const raw = atob(base64.split(',')[1]);
+            const array = new Uint8Array(new ArrayBuffer(raw.length));
             for (let i = 0; i < raw.length; i++) array[i] = raw.charCodeAt(i);
             
             const loadingTask = pdfjsLib.getDocument({data: array});
@@ -4452,20 +4304,6 @@ init: function() {
             guideMgr.renderPage(guideMgr.pageNum);
         } catch (err) {
             console.error("PDF 로딩 실패:", err);
-            const canvas = document.getElementById('guideCanvas');
-            if (canvas) {
-                canvas.width = 600; canvas.height = 200;
-                const ctx = canvas.getContext('2d');
-                ctx.fillStyle = '#fff1f2';
-                ctx.fillRect(0, 0, 600, 200);
-                ctx.fillStyle = '#ef4444';
-                ctx.font = 'bold 15px sans-serif';
-                ctx.textAlign = 'center';
-                ctx.fillText('PDF 파일을 불러오지 못했습니다.', 300, 90);
-                ctx.fillStyle = '#94a3b8';
-                ctx.font = '12px sans-serif';
-                ctx.fillText('파일을 다시 업로드해 주세요.', 300, 115);
-            }
         }
     },
 
@@ -4699,8 +4537,6 @@ occupiedLocations: [], // 이 줄을 추가하세요
 // [최종 수정] 권한 체크 + 호텔 예약 방식(Range) 달력이 적용된 설정 모달 오픈 함수
 openSetupModal: async function() {
     if(!state.room) return ui.showAlert("강의실을 먼저 선택하세요.");
-    // [수정] 모달 열릴 때 현재 방을 고정 → 저장 중 SELECT ROOM 변경해도 영향 없음
-    this._lockedRoom = state.room;
     
     // 1. 보안 체크: 인증되지 않은 사용자는 실행 중단
     const statusSnap = await firebase.database().ref(`courses/${state.room}/status`).get();
@@ -4751,20 +4587,16 @@ openSetupModal: async function() {
             this.loadCurrentSettings(); 
 
 // [최종 수정] 완벽한 대칭형 820px 달력 적용
-// flatpickr 인스턴스가 이미 있으면 제거 후 재생성
-if (window._periodPicker) { window._periodPicker.destroy(); }
-window._periodPicker = flatpickr("#setup-period-range", {
+flatpickr("#setup-period-range", {
     mode: "range",
     locale: "ko",
     dateFormat: "Y-m-d",
-    showMonths: 2,
-    closeOnSelect: false,
+    showMonths: 2,         
+    closeOnSelect: false,  
     disableMobile: "true",
     onReady: function(selectedDates, dateStr, instance) {
-        instance.calendarContainer.style.width = "820px";
-        if (!selectedDates.length) {
-            instance.jumpToDate(new Date());
-        }
+        // 가로폭을 820px로 고정하여 양쪽 달력 균형 확보
+        instance.calendarContainer.style.width = "820px"; 
     },
     onChange: function(selectedDates, dateStr, instance) {
         instance.calendarContainer.style.width = "820px";
@@ -4841,43 +4673,15 @@ loadCurrentSettings: function() {
         const todayStr = typeof getTodayString === 'function' ? getTodayString() : new Date().toISOString().split('T')[0];
 
         if(s.period && s.period.includes(" ~ ")) {
-            // 기존 날짜 세팅 - flatpickr 인스턴스가 있으면 setDate로 달력도 이동
-            const parts = s.period.split(" ~ ");
-            const startDate = parts[0].trim();
-            const endDate   = parts[1].trim();
-            // 시작일이 오늘보다 과거면 오늘로 대체해서 달력이 현재 달에 열리게 함
-            if (window._periodPicker) {
-                // 달력에 날짜 세팅 (표시용) - minDate 제약으로 과거 선택은 막되 표시는 허용
-                window._periodPicker.setDate([startDate, endDate], false);
-            } else {
-                rangeInput.value = s.period;
-            }
+            // 기존에 "2026-03-03 ~ 2026-03-13" 형태의 데이터가 있다면 그대로 입력
+            rangeInput.value = s.period;
         } else {
-            // 데이터가 없으면 오늘~오늘 기본값
+            // 데이터가 없으면 "오늘 ~ 오늘" 형태를 기본값으로 세팅
             rangeInput.value = `${todayStr} ~ ${todayStr}`;
-            if (window._periodPicker) {
-                window._periodPicker.setDate([todayStr, todayStr], false);
-            }
-        }
-        // 달력 뷰: 기존 기간이 있으면 시작일 달로, 없으면 오늘로 이동
-        if (window._periodPicker) {
-            const jumpTarget = (s.period && s.period.includes(' ~ '))
-                ? new Date(s.period.split(' ~ ')[0].trim())
-                : new Date();
-            window._periodPicker.jumpToDate(jumpTarget);
         }
         
         // 5. 모달 표시 및 과목 리스트 출력
         subjectMgr.renderListInModal();
-
-        // 6. 메뉴 기능 ON/OFF 로드
-        const features = s.menuFeatures || {};
-        const fm = {'feat-facility':features.facility!==false,'feat-shuttle':features.shuttle!==false,'feat-admin-action':features.adminAction!==false,'feat-meal':features.meal!==false,'feat-attendance-qr':features.attendanceQr!==false,'feat-cns':features.cns!==false};
-        Object.entries(fm).forEach(([id,val])=>{ const el=document.getElementById(id); if(el) el.checked=val; });
-
-        // 7. 식단 상태 표시
-        setupMgr.refreshMealStatus();
-
         document.getElementById('courseSetupModal').style.display = 'flex';
     });
 },
@@ -4901,18 +4705,14 @@ loadCurrentSettings: function() {
 
     closeSetupModal: function() {
         document.getElementById('courseSetupModal').style.display = 'none';
-        this._lockedRoom = null; // 잠금 해제
     },
 
 
 
 
 saveAll: function() {
+        // [옵저버 제한]
         if(state.isObserver) return ui.showAlert("👁️ 옵저버 모드에서는 환경설정을 변경할 수 없습니다.");
-
-        // [수정] 모달 열릴 때 고정된 방 사용 → SELECT ROOM 변경해도 올바른 방에 저장
-        const targetRoom = this._lockedRoom || state.room;
-        if (!targetRoom) return ui.showAlert("저장할 강의실 정보가 없습니다. 모달을 닫고 다시 시도해 주세요.");
 
         const name = document.getElementById('setup-course-name').value.trim();
         const rawPw = document.getElementById('setup-room-pw').value.trim();
@@ -4938,31 +4738,23 @@ saveAll: function() {
         }
 
         const updates = {};
-        updates[`courses/${targetRoom}/settings/courseName`] = name;
-        updates[`courses/${targetRoom}/settings/password`] = btoa(rawPw);
+        updates[`courses/${state.room}/settings/courseName`] = name;
+        updates[`courses/${state.room}/settings/password`] = btoa(rawPw);
         
         // ★ 수정: 호텔 예약 방식으로 선택된 날짜 범위 ("시작일 ~ 종료일")를 그대로 저장합니다.
-        updates[`courses/${targetRoom}/settings/period`] = periodRange;
+        updates[`courses/${state.room}/settings/period`] = periodRange;
         
-        updates[`courses/${targetRoom}/settings/roomDetailName`] = roomName;
-        updates[`courses/${targetRoom}/settings/coordinatorName`] = coordName;
-        updates[`courses/${targetRoom}/status/professorName`] = profName;
-        updates[`courses/${targetRoom}/status/roomStatus`] = 'active';
-        updates[`courses/${targetRoom}/status/ownerSessionId`] = state.sessionId;
-
-        // 메뉴 기능 ON/OFF 저장
-        updates[`courses/${targetRoom}/settings/menuFeatures/facility`]     = document.getElementById('feat-facility')?.checked !== false;
-        updates[`courses/${targetRoom}/settings/menuFeatures/shuttle`]      = document.getElementById('feat-shuttle')?.checked !== false;
-        updates[`courses/${targetRoom}/settings/menuFeatures/adminAction`]  = document.getElementById('feat-admin-action')?.checked !== false;
-        updates[`courses/${targetRoom}/settings/menuFeatures/meal`]         = document.getElementById('feat-meal')?.checked !== false;
-        updates[`courses/${targetRoom}/settings/menuFeatures/attendanceQr`] = document.getElementById('feat-attendance-qr')?.checked !== false;
-        updates[`courses/${targetRoom}/settings/menuFeatures/cns`]          = document.getElementById('feat-cns')?.checked !== false;
+        updates[`courses/${state.room}/settings/roomDetailName`] = roomName;
+        updates[`courses/${state.room}/settings/coordinatorName`] = coordName;
+        updates[`courses/${state.room}/status/professorName`] = profName;
+        updates[`courses/${state.room}/status/roomStatus`] = 'active';
+        updates[`courses/${state.room}/status/ownerSessionId`] = state.sessionId;
 
         firebase.database().ref().update(updates).then(() => {
             document.getElementById('courseNameInput').value = name;
             document.getElementById('roomPw').value = rawPw;
             document.getElementById('displayCourseTitle').innerText = name;
-            localStorage.setItem('last_owned_room', targetRoom);
+            localStorage.setItem('last_owned_room', state.room);
             
             ui.showAlert("✅ 설정이 저장되었습니다.");
             
@@ -4970,55 +4762,9 @@ saveAll: function() {
             this.closeSetupModal();
 
             // 2. [핵심 추가] 즉시 방에 다시 입장하여 잠금 화면을 치우고 대시보드를 보여줌
-            dataMgr.forceEnterRoom(targetRoom);
+            dataMgr.forceEnterRoom(state.room);
         });
     }
-,
-
-    uploadMealImage: function(input) {
-        const file = input.files[0];
-        if (!file || !file.type.startsWith('image/')) { ui.showAlert('이미지 파일만 업로드 가능합니다.'); input.value=''; return; }
-        const expireDate = new Date(); expireDate.setDate(expireDate.getDate()+7);
-        const expireStr = expireDate.toISOString().split('T')[0];
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            const img = new Image();
-            img.onload = () => {
-                const canvas = document.createElement('canvas');
-                let w=img.width, h=img.height;
-                if(w>1200){h=h*1200/w;w=1200;}
-                canvas.width=w; canvas.height=h;
-                canvas.getContext('2d').drawImage(img,0,0,w,h);
-                const compressed = canvas.toDataURL('image/jpeg', 0.75);
-                firebase.database().ref('system/nutrition_menu').set({image:compressed,uploadedAt:getTodayString(),expireAt:expireStr})
-                    .then(()=>{ ui.showAlert(`✅ 식단 이미지 업로드 완료\n만료일: ${expireStr}`); setupMgr.refreshMealStatus(); input.value=''; })
-                    .catch(e=>ui.showAlert('업로드 실패: '+e.message));
-            };
-            img.src = e.target.result;
-        };
-        reader.readAsDataURL(file);
-    },
-
-    clearMealImage: function() {
-        if(!confirm('등록된 식단 이미지를 삭제하시겠습니까?')) return;
-        firebase.database().ref('system/nutrition_menu').remove().then(()=>{ ui.showAlert('삭제되었습니다.'); setupMgr.refreshMealStatus(); });
-    },
-
-    refreshMealStatus: function() {
-        const el = document.getElementById('modalMealStatus');
-        if(!el) return;
-        firebase.database().ref('system/nutrition_menu').once('value', snap => {
-            const d = snap.val();
-            if(!d){ el.innerText='❌ 등록된 식단 없음'; el.style.color='#ef4444'; }
-            else if(typeof d==='string'){ el.innerText='✅ 식단 등록됨 (날짜 정보 없음)'; el.style.color='#10b981'; }
-            else {
-                const today = getTodayString();
-                if(d.expireAt < today){ el.innerText=`⚠️ 만료됨 (${d.expireAt})`; el.style.color='#f59e0b'; }
-                else { el.innerText=`✅ 등록됨 | 만료: ${d.expireAt}`; el.style.color='#10b981'; }
-            }
-        });
-    }
-
 }; // <--- setupMgr 객체를 닫아주는 아주 중요한 마침표입니다.
 
 
