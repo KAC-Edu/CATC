@@ -665,30 +665,50 @@
                 <datalist id="deptHistory"></datalist> <!-- 소속 저장소 -->
             </div>
 
-            <!-- 시간 선택 드롭다운 영역 -->
-            <div style="background: #f8fafc; padding: 12px; border-radius: 12px; border: 1px solid #e2e8f0; display: flex; flex-direction: column; gap: 10px;">
-                <div style="display: flex; align-items: center; justify-content: space-between;">
-                    <label style="font-size:13px; font-weight:800; color:#64748b;">외출 시간</label>
-                    <select id="startTime" style="width:60%; padding:10px; border:1px solid #cbd5e1; border-radius:8px; font-size:15px; background:white; outline:none;">
-                        <option value="18:00">18:00</option>
+            <!-- 시간 선택 영역 (외출/외박 분기) -->
+
+            <!-- 외출 시간 영역 -->
+            <div id="outingTimeArea" style="background:#f8fafc; padding:14px; border-radius:12px; border:1px solid #e2e8f0; display:flex; flex-direction:column; gap:10px;">
+                <div style="font-size:11px; font-weight:900; color:#3b82f6; margin-bottom:2px;">
+                    🕕 수업 종료(18:00) 후 외출 기준
+                </div>
+                <div style="display:flex; align-items:center; justify-content:space-between;">
+                    <label style="font-size:13px; font-weight:800; color:#64748b;">외출 시작</label>
+                    <!-- 외출은 18:00 고정 표시 -->
+                    <div style="width:60%; padding:10px; background:#e0f2fe; border-radius:8px; font-size:15px; font-weight:900; color:#0369a1; text-align:center;">
+                        18:00 (수업 종료)
+                    </div>
+                    <input type="hidden" id="startTime" value="18:00">
+                </div>
+                <div style="display:flex; align-items:center; justify-content:space-between;">
+                    <label style="font-size:13px; font-weight:800; color:#64748b;">복귀 시간</label>
+                    <select id="endTime" style="width:60%; padding:10px; border:1.5px solid #cbd5e1; border-radius:8px; font-size:16px; font-weight:800; background:white; outline:none; color:#0f172a;">
                         <option value="18:30">18:30</option>
                         <option value="19:00">19:00</option>
                         <option value="19:30">19:30</option>
-                        <option value="20:00">20:00</option>
-                    </select>
-                </div>
-                <div style="display: flex; align-items: center; justify-content: space-between;">
-                    <label style="font-size:13px; font-weight:800; color:#64748b;">예상 복귀시간</label>
-                    <select id="endTime" style="width:60%; padding:10px; border:1px solid #cbd5e1; border-radius:8px; font-size:15px; background:white; outline:none;">
-                        <option value="19:00">19:00</option>
-                        <option value="20:00">20:00</option>
+                        <option value="20:00" selected>20:00</option>
+                        <option value="20:30">20:30</option>
                         <option value="21:00">21:00</option>
+                        <option value="21:30">21:30</option>
                         <option value="22:00">22:00</option>
                     </select>
                 </div>
-                <div id="returnDateArea" style="display:none; border-top: 1px dashed #cbd5e1; padding-top:10px; display: flex; align-items: center; justify-content: space-between;">
-                    <label style="font-size:13px; font-weight:800; color:#e11d48;">복귀 날짜</label>
-                    <input type="date" id="returnDate" style="width:60%; padding:8px; border:1px solid #fda4af; border-radius:8px; font-size:14px;">
+            </div>
+
+            <!-- 외박 날짜 영역 (외박 선택 시만 표시) -->
+            <div id="overnightArea" style="display:none; background:#fff1f2; padding:14px; border-radius:12px; border:1px solid #fecaca; flex-direction:column; gap:10px;">
+                <div style="font-size:11px; font-weight:900; color:#dc2626; margin-bottom:2px;">
+                    🌙 외박 — 수업 종료 후 출발, 익일 08:00 복귀 기준
+                </div>
+                <div style="display:flex; align-items:center; justify-content:space-between;">
+                    <label style="font-size:13px; font-weight:800; color:#64748b;">외출 날짜</label>
+                    <input type="date" id="returnDate" style="width:60%; padding:10px; border:1.5px solid #fca5a5; border-radius:8px; font-size:14px; font-weight:800; outline:none;">
+                </div>
+                <div style="display:flex; justify-content:space-between; font-size:12px; font-weight:700; color:#64748b;">
+                    <span>출발</span><span style="font-weight:900; color:#dc2626;">18:00 (수업 종료)</span>
+                </div>
+                <div style="display:flex; justify-content:space-between; font-size:12px; font-weight:700; color:#64748b;">
+                    <span>복귀</span><span style="font-weight:900; color:#059669;">익일 08:00 자동 설정</span>
                 </div>
             </div>
 
@@ -962,17 +982,40 @@ function sendAns(idx) {
 
 
 async function enterApp() {
-    // 1. 강사의 강의실 상태를 먼저 확인합니다.
     const statusSnap = await firebase.database().ref(`courses/${currentRoom}/status/roomStatus`).once('value');
-    const roomStatus = statusSnap.val();
-
-    // 2. 'active'(사용중)가 아니면 입장을 막습니다.
-    if (roomStatus !== 'active') {
+    if (statusSnap.val() !== 'active') {
         alert("⚠️ 강사님이 아직 강의를 시작하지 않았거나 준비 중입니다.\n잠시 후 다시 시도해 주세요.");
-        return; // 여기서 함수 종료 (입장 안 됨)
+        return;
     }
-
-    // 3. 'active'일 때만 기존 입장 로직 실행
+    const settingsSnap = await firebase.database().ref(`courses/${currentRoom}/settings`).once('value');
+    const settings = settingsSnap.val() || {};
+    const period = settings.period || '';
+    if (period.includes(' ~ ')) {
+        const [startStr, endStr] = period.split(' ~ ').map(s => s.trim());
+        const today = getTodayString();
+        if (today < startStr || today > endStr) {
+            alert(`⚠️ 현재 교육 기간이 아닙니다.\n교육 기간: ${startStr} ~ ${endStr}\n\n해당 과정의 교육생이 아니시거나 교육 기간이 종료된 과정입니다.`);
+            return;
+        }
+    }
+    const expectedSnap = await firebase.database().ref(`courses/${currentRoom}/expectedStudents`).once('value');
+    const expectedList = expectedSnap.val();
+    if (expectedList && typeof expectedList === 'object') {
+        const uToken = localStorage.getItem('uToken');
+        const savedName  = localStorage.getItem('kac_user_name') || '';
+        const savedPhone = localStorage.getItem('kac_user_phone') || '';
+        if (uToken && savedName) {
+            const found = Object.values(expectedList).some(e => {
+                const eName = (e.name || '').trim();
+                const ePhone = (e.phone || '').trim().slice(-4);
+                return eName === savedName.trim() && (ePhone === savedPhone.trim() || !ePhone);
+            });
+            if (!found) {
+                alert(`⚠️ 등록된 명단에 없는 교육생입니다.\n이름: ${savedName}\n\n본인이 맞다면 강사에게 문의해 주세요.`);
+                return;
+            }
+        }
+    }
     const doc = document.documentElement;
     if (doc.requestFullscreen) doc.requestFullscreen().catch(e=>{});
     await checkProfile();
@@ -1205,7 +1248,6 @@ function applyMenuFeatures(features) {
         el.style.display = features[key] !== false ? '' : 'none';
     });
 }
-
 function setupListeners() {
     // 1. 서버 시간 동기화 (이전 안테나 정리)
     const offsetRef = firebase.database().ref(".info/serverTimeOffset");
@@ -1793,22 +1835,25 @@ async function openShuttleApply() {
     const uToken = localStorage.getItem('uToken');
 
     // [핵심 연동] 기사님이 driver.html에서 설정한 시간을 실시간으로 감시하여 표시합니다.
-    firebase.database().ref(`courses/${currentRoom}/shuttle/departure`).on('value', snap => {
+    if (window._shuttleDepartureRef) window._shuttleDepartureRef.off();
+    window._shuttleDepartureRef = firebase.database().ref(`courses/${currentRoom}/shuttle/departure`);
+    window._shuttleDepartureRef.on('value', snap => {
         const dep = snap.val();
         const timeEl = document.getElementById('departureTimeText');
-        if(!timeEl) return;
-
-        if (dep && dep.time) {
-            // 기사님이 시간을 설정한 경우 (예: 2026-01-23 15:00)
-            // 날짜 부분은 빼고 시간만 깔끔하게 보고 싶다면 ${dep.time}만 남겨도 됩니다.
-            timeEl.innerText = `${dep.date} [ ${dep.time} ] 출발 예정`;
-            timeEl.style.color = "#ef4444"; // 눈에 잘 띄게 빨간색 계열로 강조
+        if (!timeEl) return;
+        const today = getTodayString();
+        if (dep && dep.time && dep.date) {
+            if (dep.date >= today) {
+                timeEl.innerText = `${dep.date} [ ${dep.time} ] 출발 예정`;
+                timeEl.style.color = "#ef4444";
+            } else {
+                timeEl.innerText = "출발 일정이 없습니다.";
+                timeEl.style.color = "#94a3b8";
+            }
         } else {
-            // 기사님이 아직 시간을 설정하지 않았을 경우
             firebase.database().ref('system/shuttle_notice').once('value', s => {
-                // system/shuttle_notice에 값이 있으면 그걸 보여주고, 없으면 대기 문구 출력
                 timeEl.innerText = s.val() || "기사님이 출발 시간을 설정 중입니다.";
-                timeEl.style.color = "#64748b"; 
+                timeEl.style.color = "#64748b";
             });
         }
     });
@@ -1923,19 +1968,24 @@ async function openAdminAction() {
     const hasDinnerSkip = dinnerSnap.exists();
 
     // 1. 아무것도 신청 안 했을 때
-    if (!existingData) {
+    if (!existingData && !hasDinnerSkip) {
         document.getElementById('adminActionForm').style.display = 'flex';
         document.getElementById('adminStatusArea').style.display = 'none';
+        
+        // 입력값 초기화
         document.getElementById('userDept').value = "";
-        document.getElementById('startTime').value = "";
-        document.getElementById('endTime').value = "";
-        document.getElementById('destination').value = "";
+        document.getElementById('startTime').value = '18:00';
+        document.getElementById('endTime').value   = '20:00';
+        document.getElementById('destination').value  = "";
         document.getElementById('outingReason').value = "";
-        document.getElementById('skipDinner').checked = hasDinnerSkip;
+        document.getElementById('skipDinner').checked = false;
         selectedAdminType = 'none';
         updateAdminTypeButtons();
-        const groupBanner = document.getElementById('groupDinnerBanner');
-        if (groupBanner) groupBanner.style.display = hasDinnerSkip ? 'block' : 'none';
+        // 초기 상태: 외출 시간 영역 표시
+        const oa = document.getElementById('outingTimeArea');
+        const on = document.getElementById('overnightArea');
+        if (oa) oa.style.display = 'flex';
+        if (on) on.style.display = 'none';
     } 
     // 2. 신청 내역이 있을 때
     else {
@@ -2028,19 +2078,32 @@ async function undoReturnAction() {
 
 
 
-// 1. 외출/외박 타입 선택 시 날짜창 제어
+// 외출/외박 타입 선택
 function selectAdminType(type) {
     selectedAdminType = type;
     updateAdminTypeButtons();
-    const returnDateArea = document.getElementById('returnDateArea');
-    if(type === 'overnight') {
-        returnDateArea.style.display = 'block';
-        // 복귀 날짜 기본값을 내일로 설정
-        const tomorrow = new Date();
-        tomorrow.setDate(tomorrow.getDate() + 1);
-        document.getElementById('returnDate').value = tomorrow.toISOString().substring(0, 10);
+
+    const outingArea   = document.getElementById('outingTimeArea');
+    const overnightArea = document.getElementById('overnightArea');
+
+    if (type === 'overnight') {
+        // 외박: 날짜 영역만 표시, 시간은 고정
+        if (outingArea)    outingArea.style.display   = 'none';
+        if (overnightArea) overnightArea.style.display = 'flex';
+
+        // 날짜 기본값: 오늘
+        const today = new Date();
+        document.getElementById('returnDate').value = today.toISOString().substring(0, 10);
+        // 시작/종료 고정
+        document.getElementById('startTime').value = '18:00';
+        document.getElementById('endTime').value   = '08:00';
     } else {
-        returnDateArea.style.display = 'none';
+        // 외출: 시간 영역 표시
+        if (outingArea)    outingArea.style.display    = 'flex';
+        if (overnightArea) overnightArea.style.display = 'none';
+        // 시작 고정, 종료 기본값 20:00
+        document.getElementById('startTime').value = '18:00';
+        document.getElementById('endTime').value   = '20:00';
     }
 }
 
@@ -2086,8 +2149,15 @@ async function submitAdminAction() {
 
     // 2. 입력된 값들 가져오기
     const dept = document.getElementById('userDept').value.trim();
-    const startTime = document.getElementById('startTime').value; // 드롭다운 값
-    const endTime = document.getElementById('endTime').value;     // 드롭다운 값 (예상 복귀시간)
+    // 외박은 시간 고정 자동 설정
+    let startTime = '18:00';
+    let endTime   = '20:00';
+    if (selectedAdminType === 'overnight') {
+        startTime = '18:00';
+        endTime   = '08:00'; // 익일 08:00
+    } else {
+        endTime = document.getElementById('endTime').value || '20:00';
+    }
     const returnDate = document.getElementById('returnDate').value;
     const dest = document.getElementById('destination').value.trim();
     const reason = document.getElementById('outingReason').value.trim();
@@ -2100,21 +2170,31 @@ async function submitAdminAction() {
         return;
     }
 
-    // 4. 외출/외박 선택 시 필수 입력 및 시간 유효성 검사
+    // 4. 외출/외박 선택 시 필수 입력 검사
     if (selectedAdminType !== 'none') {
         if (!dept || !dest || !reason || !fullPhone) {
             alert("외출·외박 대장 기록을 위해 모든 항목을 입력해주세요.");
             return;
         }
 
-        // 시간 비교 로직 (드롭다운 "18:00" 형태 대응)
-        const retDateStr = (selectedAdminType === 'overnight' ? returnDate : today);
-        const outFullTime = new Date(`${today}T${startTime}:00`);
-        const returnFullTime = new Date(`${retDateStr}T${endTime}:00`);
-
-        if (returnFullTime <= outFullTime) {
-            alert("⚠️ 복귀 시간이 외출 시간보다 빠를 수 없습니다.\n날짜와 시간을 다시 확인해주세요.");
-            return;
+        if (selectedAdminType === 'overnight') {
+            // 외박: 날짜 선택 여부만 확인 (시간은 자동 고정)
+            if (!returnDate) {
+                alert("외출 날짜를 선택해주세요.");
+                return;
+            }
+            if (returnDate < today) {
+                alert("외출 날짜는 오늘 이후여야 합니다.");
+                return;
+            }
+        } else {
+            // 외출: 복귀 시간이 출발 시간보다 늦은지 확인
+            const outFullTime    = new Date(`${today}T${startTime}:00`);
+            const returnFullTime = new Date(`${today}T${endTime}:00`);
+            if (returnFullTime <= outFullTime) {
+                alert("⚠️ 복귀 시간이 외출 시간보다 빠릅니다.");
+                return;
+            }
         }
     }
 
@@ -2254,10 +2334,8 @@ async function saveProfileWithCheck() {
         return;
     }
 
-    // [명단 검증] expectedStudents가 있으면 이름+번호 대조
     const expectedSnap = await firebase.database().ref(`courses/${currentRoom}/expectedStudents`).once('value');
     const expectedList = expectedSnap.val();
-
     if (expectedList && typeof expectedList === 'object') {
         const found = Object.values(expectedList).some(e => {
             const eName  = (e.name  || '').trim();
@@ -2269,20 +2347,16 @@ async function saveProfileWithCheck() {
             return;
         }
     }
-
-    // [기간 검증] 오늘이 교육 기간 안인지 재확인
-    const settingsSnap = await firebase.database().ref(`courses/${currentRoom}/settings`).once('value');
-    const period = (settingsSnap.val() || {}).period || '';
-    if (period.includes(' ~ ')) {
-        const [startStr, endStr] = period.split(' ~ ').map(s => s.trim());
+    const settingsSnap2 = await firebase.database().ref(`courses/${currentRoom}/settings`).once('value');
+    const period2 = (settingsSnap2.val() || {}).period || '';
+    if (period2.includes(' ~ ')) {
+        const [startStr, endStr] = period2.split(' ~ ').map(s => s.trim());
         const today = getTodayString();
         if (today < startStr || today > endStr) {
             alert(`⚠️ 교육 기간이 아닙니다. (${startStr} ~ ${endStr})`);
             return;
         }
     }
-
-    // 모든 조건 충족 시 저장 실행
     saveProfile(); 
 }
 
@@ -2416,8 +2490,8 @@ async function viewMealMenu() {
             if (data.expireAt && data.expireAt < today) {
                 loader.style.display = 'none';
                 const msg = document.getElementById('mealEmptyMsg');
-                if (msg) { msg.style.display = 'block'; msg.innerText = `식단표 기간이 만료되었습니다.\n(${data.expireAt} 까지)`; }
-                else { alert(`식단표 기간이 만료되었습니다.`); modal.style.display = 'none'; }
+                if (msg) { msg.style.display = 'block'; msg.innerText = `식단표 기간이 만료되었습니다.`; }
+                else { alert('식단표 기간이 만료되었습니다.'); modal.style.display = 'none'; }
                 return;
             }
             imageUrl = data.image;
