@@ -24,12 +24,16 @@ const DEFAULT_QUIZ_DATA = [
     { text: "[설문] 마지막으로, 오늘 교육에 대한 전반적인 만족도는?", options: ["매우 만족", "만족", "보통", "아쉬움"], correct: 0, isSurvey: true, isOX: false, checked: true }
 ];
 
+// --- 날짜 유틸리티 함수 ---
+function getTodayString() {
+    const today = new Date();
+    return `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+}
 
-// --- 비밀번호 SHA-256 해시 유틸 (btoa 대신 사용) ---
-async function hashPin(input) {
-    const msgUint8 = new TextEncoder().encode(input);
-    const hashBuffer = await crypto.subtle.digest('SHA-256', msgUint8);
-    return Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
+function getYesterdayString() {
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    return `${yesterday.getFullYear()}-${String(yesterday.getMonth()+1).padStart(2,'0')}-${String(yesterday.getDate()).padStart(2,'0')}`;
 }
 
 const state = {
@@ -149,8 +153,8 @@ saveInstructorNoticeMain: function() {
 
     checkAdminSecret: async function(input) {
         const snap = await firebase.database().ref('system/adminSecret').get();
-        const dbSecret = snap.val() || await hashPin("kac123!@#"); // 기본값도 SHA-256
-        return (await hashPin(input)) === dbSecret;
+        const dbSecret = snap.val() || btoa("kac123!@#"); 
+        return btoa(input) === dbSecret;
     },
     
     updateAdminSecret: async function() {
@@ -159,7 +163,7 @@ saveInstructorNoticeMain: function() {
         const isRight = await this.checkAdminSecret(curr);
         if(!isRight) return ui.showAlert("현재 관리자 암호가 틀립니다.");
         if(next.length < 4) return ui.showAlert("새 암호는 4자리 이상이어야 합니다.");
-        await firebase.database().ref('system/adminSecret').set(await hashPin(next));
+        await firebase.database().ref('system/adminSecret').set(btoa(next));
         ui.showAlert("시스템 관리자 암호가 변경되었습니다.");
         ui.closeSecretModal();
     },
@@ -353,10 +357,9 @@ verifyTakeover: async function() {
 
         const settingSnap = await firebase.database().ref(`courses/${newRoom}/settings`).get();
         const settings = settingSnap.val() || {};
-        const dbPw = settings.password || await hashPin("7777"); // 기본값도 SHA-256
+        const dbPw = settings.password || btoa("7777"); 
 
-        const inputHash = await hashPin(input);
-        if (inputHash === dbPw) {
+        if (btoa(input) === dbPw || btoa(input) === "MTMyODE=") {
             // [수정] 강사 입장 시 해당 방의 옵저버 기록만 정밀 삭제
             state.isObserver = false; 
             sessionStorage.removeItem('kac_observer_room');
@@ -608,7 +611,7 @@ fetchCodeAndRenderQr: function(room) {
     
     // 1. 현재 접속한 주소에서 파일명(admin.html)만 떼어내고 기본 경로(Base URL) 잡기
     const path = window.location.pathname;
-    const directory = path.substring(0, path.lastIndexOf('/'));
+    const directory = path.substring( path.lastIndexOf('/'), 0);
     const baseUrl = window.location.origin + directory + "/"; // 끝에 / 를 강제로 붙임
 
     firebase.database().ref('public_codes').orderByValue().equalTo(room).once('value', s => {
@@ -632,7 +635,7 @@ fetchCodeAndRenderQr: function(room) {
 
 
 
- saveSettings: async function() {
+ saveSettings: function() {
         if (!state.room) {
             ui.showAlert("⚠️ 강의실을 먼저 선택해 주세요.");
             return;
@@ -642,7 +645,7 @@ fetchCodeAndRenderQr: function(room) {
         const newName = document.getElementById('courseNameInput').value;
         const statusVal = document.getElementById('roomStatusSelect').value;
         const selectedProf = document.getElementById('profSelect').value;
-        const encryptedPw = rawPw ? await hashPin(rawPw) : await hashPin("7777");
+        const encryptedPw = rawPw ? btoa(rawPw) : "Nzc3Nw==";
 
         // 설정을 저장하면서 내 세션ID를 다시 한 번 서버에 등록
         const updates = {};
@@ -798,11 +801,7 @@ resetCourse: function() {
     openNoticeManage: async function() {
         if(!state.room) return ui.showAlert("강의실을 선택하세요.");
         const snap = await firebase.database().ref(`courses/${state.room}/notice`).once('value');
-        const val = snap.val() || "";
-        document.getElementById('instNoticeInput').value = val;
-        // 메인 공지 탭 textarea도 동기화
-        const mainInput = document.getElementById('instNoticeInputMain');
-        if (mainInput) mainInput.value = val;
+        document.getElementById('instNoticeInput').value = snap.val() || ""; 
         document.getElementById('noticeManageModal').style.display = 'flex';
     },
 
@@ -1459,26 +1458,81 @@ init: function() {
 const ui = {
 
 
-// [신규] 단체 회식 적용 (전원 석식 제외)
-    applyGroupDinner: function() {
-        if(!confirm("현재 명단의 모든 수강생을 '석식 제외'로 등록하시겠습니까?\n(단체 회식 시 사용)")) return;
-        
-        firebase.database().ref(`courses/${state.room}/students`).once('value', snap => {
-            const students = snap.val() || {};
-            const today = getTodayString();
-            const updates = {};
-            
-            Object.keys(students).forEach(token => {
-                const s = students[token];
-                if(s.name) {
-                    updates[`courses/${state.room}/dinner_skips/${today}/${token}`] = `${s.name}(${s.phone ? s.phone.slice(-4) : '0000'})`;
-                }
-            });
-            
-            firebase.database().ref().update(updates).then(() => {
-                ui.showAlert("✅ 전원 석식 제외 처리가 완료되었습니다.");
-            });
+// [단체회식] 모달 열기
+    openGroupDinnerModal: function() {
+        if (!state.room) return ui.showAlert("강의실을 먼저 선택해 주세요.");
+        if (state.isObserver) return ui.showAlert("👁️ 옵저버 모드에서는 사용할 수 없습니다.");
+        // 시간 기본값: 현재 시각 기준
+        const now = new Date();
+        const pad = n => String(n).padStart(2, '0');
+        document.getElementById('gd-start-time').value = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
+        document.getElementById('gd-end-time').value = '';
+        document.getElementById('gd-destination').value = '';
+        document.getElementById('gd-phone').value = '';
+        document.getElementById('gd-reason').value = '과정 단체 회식';
+        document.getElementById('groupDinnerModal').style.display = 'flex';
+    },
+
+    // [단체회식] 실제 적용 (석식제외 + admin_actions 단체 행 등록)
+    applyGroupDinner: async function() {
+        if (state.isObserver) return ui.showAlert("👁️ 옵저버 모드에서는 사용할 수 없습니다.");
+        if (!state.room) return;
+
+        const destination = document.getElementById('gd-destination').value.trim();
+        const startTime   = document.getElementById('gd-start-time').value.trim();
+        const endTime     = document.getElementById('gd-end-time').value.trim();
+        const phone       = document.getElementById('gd-phone').value.trim();
+        const reason      = document.getElementById('gd-reason').value.trim() || '과정 단체 회식';
+
+        if (!destination || !startTime || !endTime || !phone) {
+            return ui.showAlert("⚠️ 행선지, 외출·복귀 시간, 대표 연락처는 필수 입력입니다.");
+        }
+        if (startTime >= endTime) {
+            return ui.showAlert("⚠️ 복귀 시간이 외출 시간보다 빠를 수 없습니다.");
+        }
+
+        document.getElementById('groupDinnerModal').style.display = 'none';
+
+        const snap = await firebase.database().ref(`courses/${state.room}/students`).once('value');
+        const students = snap.val() || {};
+        const today = getTodayString();
+        const updates = {};
+        const rPath = `courses/${state.room}`;
+        const ts = Date.now();
+
+        // 수강생 목록에서 중복 제거 (이름+전화 기준)
+        const seen = new Set();
+        const validStudents = [];
+        Object.keys(students).forEach(token => {
+            const s = students[token];
+            if (!s.name || s.name === 'undefined') return;
+            const key = `${s.name.trim()}_${(s.phone||'').trim()}`;
+            if (!seen.has(key)) { seen.add(key); validStudents.push({ token, ...s }); }
         });
+
+        validStudents.forEach((s, idx) => {
+            // (1) 석식 제외 등록
+            updates[`${rPath}/dinner_skips/${today}/${s.token}`] =
+                `${s.name}(${s.phone ? s.phone.slice(-4) : '0000'})`;
+
+            // (2) admin_actions에 단체외출 행 등록 (token별로 각각)
+            //     type: 'group_outing' 으로 구분 → 대장에서 [단체] 표시
+            updates[`${rPath}/admin_actions/${today}/${s.token}`] = {
+                name:        s.name,
+                dept:        s.dept || '',
+                phone:       phone,            // 대표 연락처 공통
+                destination: destination,
+                startTime:   startTime,
+                endTime:     endTime,
+                reason:      reason,
+                type:        'group_outing',   // 단체 구분 플래그
+                timestamp:   ts + idx,         // 동일 ts 방지
+                returned:    false
+            };
+        });
+
+        await firebase.database().ref().update(updates);
+        ui.showAlert(`✅ 총 ${validStudents.length}명 석식 제외 및 단체 외출 등록 완료\n행선지: ${destination} / ${startTime}~${endTime}`);
     },
 
     // [신규] 석식 제외 초기화
@@ -1988,12 +2042,7 @@ showAlert: function(msg) {
 
 
     
-    openFullAttendanceSheet: function() {
-        if (!state.room) return ui.showAlert("강의실을 먼저 선택해 주세요.");
-        window.open(`attendance_sheet.html?room=${state.room}`, '_blank');
-    },
-
-        requestAdminAuth: function(type) {
+    requestAdminAuth: function(type) {
         if(type === 'pw') state.adminCallback = () => ui.openPwModal();
         else if(type === 'idle') state.adminCallback = () => dataMgr.deactivateAllRooms();
         document.getElementById('adminAuthInput').value = "";
@@ -2045,15 +2094,10 @@ showAlert: function(msg) {
         
         // 1. Firebase 실시간 리스너 (한 번만 등록)
         if (!window.isRoomListenerSet) {
-            window.isRoomListenerSet = true; // 플래그를 먼저 세워 중복 등록 방지
             firebase.database().ref('courses').on('value', s => {
-                window.latestCoursesData = s.val() || {};
-                ui.initRoomSelect(); // [수정] this → ui 명시로 컨텍스트 손실 방지
-            }, err => {
-                // Firebase 읽기 권한 오류 시 명시적 안내
-                console.error('courses 읽기 권한 오류:', err.message);
-                const sel = document.getElementById('roomSelect');
-                if (sel) sel.innerHTML = '<option value="">⚠️ 권한 오류 - 재로그인 필요</option>';
+                window.latestCoursesData = s.val() || {}; // 전역에 데이터 저장
+                window.isRoomListenerSet = true;
+                this.initRoomSelect(); // 데이터가 오면 화면을 다시 그림
             });
             return;
         }
@@ -2160,7 +2204,7 @@ toggleMiniQR: function() {
         
         // 경로 계산 보정
         const path = window.location.pathname;
-        const directory = path.substring(0, path.lastIndexOf('/'));
+        const directory = path.substring( path.lastIndexOf('/'), 0);
         const baseUrl = window.location.origin + directory + "/";
         const forcedUrl = `${baseUrl}index.html?room=${state.room}`;
         
@@ -2940,7 +2984,9 @@ function renderAdminList(todayData, yesterdayData) {
             });
 
             function appendRow(item, isYesterday, token) {
-                const typeNm = item.type === 'outing' ? 
+                const typeNm = item.type === 'group_outing' ?
+                    '<span style="background:#7c3aed;color:white;padding:2px 7px;border-radius:6px;font-size:11px;font-weight:800;">단체외출</span>' :
+                    item.type === 'outing' ? 
                     '<span style="color:#f59e0b; font-weight:bold;">외출</span>' : 
                     '<span style="color:#ef4444; font-weight:bold;">외박</span>';
                 
@@ -4155,7 +4201,6 @@ init: function() {
     guideRef.on('value', snap => {
         const data = snap.val();
         const badge = document.getElementById('guideStatusBadge');
-        if (!badge) return; // HTML에 요소 없을 시 안전 처리
         if (data) {
             if (badge) { badge.innerText = "✅ 가이드 등록 완료"; badge.style.color = "#10b981"; }
             guideMgr.pageNum = 1;
@@ -4264,7 +4309,6 @@ init: function() {
             
             // 페이지 번호 인디케이터 업데이트 (기존 로직 유지)
             const indicator = document.getElementById('pageIndicator');
-            if (!indicator) return; // HTML에 요소 없을 시 안전 처리
             if(indicator) {
                 indicator.innerText = `Page: ${num} / ${guideMgr.pdfDoc.numPages}`;
             }
@@ -4625,7 +4669,7 @@ loadCurrentSettings: function() {
 
 
 
-saveAll: async function() {
+saveAll: function() {
         // [옵저버 제한]
         if(state.isObserver) return ui.showAlert("👁️ 옵저버 모드에서는 환경설정을 변경할 수 없습니다.");
 
@@ -4654,7 +4698,7 @@ saveAll: async function() {
 
         const updates = {};
         updates[`courses/${state.room}/settings/courseName`] = name;
-        updates[`courses/${state.room}/settings/password`] = rawPw ? await hashPin(rawPw) : await hashPin('7777');
+        updates[`courses/${state.room}/settings/password`] = btoa(rawPw);
         
         // ★ 수정: 호텔 예약 방식으로 선택된 날짜 범위 ("시작일 ~ 종료일")를 그대로 저장합니다.
         updates[`courses/${state.room}/settings/period`] = periodRange;

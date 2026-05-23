@@ -2239,8 +2239,10 @@ function updateIndividualView() {
                 <td onclick="showActionDetail('${dataStr}')" style="cursor:pointer; font-weight:800; text-align:center;">
                     ${a.date.substring(5)} ${a.name}
                 </td>
-                <td style="color:${a.type==='outing'?'#ea580c':'#dc2626'}; font-weight:800; text-align:center;">
-                    ${a.type==='outing'?'외출':'외박'}
+                <td style="font-weight:800; text-align:center; color:${a.type==='group_outing'?'#7c3aed':a.type==='outing'?'#ea580c':'#dc2626'};">
+                    ${a.type==='group_outing'
+                        ? '<span style=\"background:#7c3aed;color:white;padding:2px 7px;border-radius:5px;font-size:11px;\">단체외출</span>'
+                        : a.type==='outing' ? '외출' : '외박'}
                 </td>
                 <td style="text-align:center;">
                     ${new Date(a.timestamp).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}
@@ -3378,7 +3380,11 @@ function showActionDetail(dataJson) {
     const data = JSON.parse(decodeURIComponent(dataJson));
     const content = document.getElementById('actionDetailContent');
     
-    const typeNm = data.type === 'outing' ? '<span style="color:#ea580c;">외출(당일)</span>' : '<span style="color:#dc2626;">외박(익일)</span>';
+    const typeNm = data.type === 'group_outing'
+        ? '<span style="background:#7c3aed;color:white;padding:2px 8px;border-radius:6px;font-size:12px;font-weight:800;">단체 외출</span>'
+        : data.type === 'outing'
+            ? '<span style="color:#ea580c;">외출(당일)</span>'
+            : '<span style="color:#dc2626;">외박(익일)</span>';
     const returnStatus = data.returned ? `<b style="color:#10b981;">[복귀보고 완료: ${data.returnReportTime}]</b>` : `<b style="color:#ef4444;">[미복귀 / 외출중]</b>`;
 
     content.innerHTML = `

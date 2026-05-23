@@ -89,7 +89,7 @@
             </div>
             <div class="modal-actions" style="margin-top:25px; justify-content:center; gap:10px;">
                 <button class="m-btn m-btn-later" onclick="printMgr.closeInputModal()" style="background:#64748b; color:white;">취소</button>
-                <button class="m-btn m-btn-done" onclick="printMgr.confirmPrint()">미리보기 생성</button>
+                <button class="m-btn m-btn-done" onclick="printMgr.confirmPrint(false)">미리보기 생성</button>
             </div>
         </div>
     </div>
@@ -761,7 +761,7 @@
 
     <!-- 3. 버튼 영역 (표 바로 아래에 배치) -->
     <div style="margin-top: 25px; display: flex; gap: 15px; justify-content: center; padding-bottom: 50px;">
-        <button class="btn-action btn-primary" onclick="ui.applyGroupDinner()" style="width: auto; padding: 10px 20px;">
+        <button class="btn-action btn-primary" onclick="ui.openGroupDinnerModal()" style="width: auto; padding: 10px 20px;">
             <i class="fa-solid fa-users-rectangle"></i> 단체 회식 적용 (전원 석식 제외)
         </button>
         <button class="btn-action btn-secondary" onclick="ui.resetDinnerSkip()" style="width: auto; padding: 10px 20px; background: #64748b;">
@@ -1347,6 +1347,50 @@
 
 
 
+
+<!-- [단체회식] 외출 정보 입력 모달 -->
+<div id="groupDinnerModal" class="modal-overlay" style="z-index: 6000;">
+    <div class="modal-box" style="width: 480px;">
+        <div class="modal-header">
+            <h3><i class="fa-solid fa-users-rectangle"></i> 단체 회식 외출 정보 입력</h3>
+        </div>
+        <p style="font-size:13px; color:#64748b; margin-bottom:20px; line-height:1.6;">
+            전원 석식 제외와 함께 외출 대장에 단체 기록이 남습니다.<br>
+            대표 연락처와 외출 정보를 입력해 주세요.
+        </p>
+        <div class="setting-container">
+            <div class="setting-group">
+                <label class="setting-label">행선지 <span style="color:#ef4444;">*</span></label>
+                <input type="text" id="gd-destination" class="setting-input" placeholder="예: 청주 OO식당">
+            </div>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:15px;">
+                <div class="setting-group">
+                    <label class="setting-label">외출 시간 <span style="color:#ef4444;">*</span></label>
+                    <input type="time" id="gd-start-time" class="setting-input">
+                </div>
+                <div class="setting-group">
+                    <label class="setting-label">복귀 시간 <span style="color:#ef4444;">*</span></label>
+                    <input type="time" id="gd-end-time" class="setting-input">
+                </div>
+            </div>
+            <div class="setting-group">
+                <label class="setting-label">대표 연락처 <span style="color:#ef4444;">*</span></label>
+                <input type="text" id="gd-phone" class="setting-input" placeholder="예: 010-0000-0000 (인솔자 또는 강사)">
+            </div>
+            <div class="setting-group">
+                <label class="setting-label">사유</label>
+                <input type="text" id="gd-reason" class="setting-input" placeholder="예: 과정 단체 회식" value="과정 단체 회식">
+            </div>
+        </div>
+        <div class="modal-actions" style="margin-top:25px; justify-content:center; gap:10px;">
+            <button class="m-btn m-btn-later" onclick="document.getElementById('groupDinnerModal').style.display='none'" style="background:#64748b; color:white; min-width:90px; justify-content:center;">취소</button>
+            <button class="m-btn m-btn-done" onclick="ui.applyGroupDinner()" style="min-width:180px; justify-content:center;">
+                <i class="fa-solid fa-check"></i> 적용 (전원 석식제외 + 외출 등록)
+            </button>
+        </div>
+    </div>
+</div>
+
 <!-- [신규 추가] 교육과정 결과 보고서 미리보기 모달창 -->
 <div id="printPreviewModal" class="modal-overlay" style="z-index: 5000; display: none; align-items: center; justify-content: center; background: rgba(0,0,0,0.8);">
     <div class="print-preview-box" style="width: 90%; max-width: 1000px; background: #525659; height: 90vh; border-radius: 12px; display: flex; flex-direction: column; overflow: hidden; position: relative;">
@@ -1385,6 +1429,9 @@
 
 
 
+
+
+</body>
 
 
 </body>
