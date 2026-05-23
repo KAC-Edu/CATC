@@ -626,11 +626,6 @@
 <!-- [최종 수정] 외출/외박 신청 및 복귀 시스템 팝업 -->
 <div id="adminActionModal" class="menu-overlay" style="display:none; z-index: 7000;">
     <div class="menu-box" style="width:95%; padding: 20px; border-radius: 20px; max-width: 450px;">
-        <div id="groupDinnerBanner" style="display:none; background:#f5f3ff; border:1.5px solid #7c3aed; border-radius:10px; padding:10px 14px; margin-bottom:12px; font-size:13px; color:#5b21b6; font-weight:700;">
-            <i class="fa-solid fa-users-rectangle" style="margin-right:6px;"></i>
-            오늘 <b>단체 회식(석식 제외)</b>이 적용되어 있습니다.<br>
-            <span style="font-weight:500; color:#7c3aed;">추가로 외출·외박 신청이 필요하시면 아래에 작성해 주세요.</span>
-        </div>
         <h3 style="margin-bottom: 5px; font-weight:900;">외출·외박 신청서 작성</h3>
         <p id="adminActionDate" style="font-size:12px; color:#94a3b8; margin-bottom:15px;">오늘 날짜: 2026-01-20</p>
 
@@ -770,7 +765,8 @@
     <!-- [신규] 출결 QR 확인 팝업 -->
     <div id="qrModal" class="menu-overlay" style="display:none; z-index: 9001;" onclick="if(event.target==this)this.style.display='none'">
         <div class="menu-box">
-            <h3 style="margin-bottom:15px;">출결 QR (고용노동부 E-HRD)</h3>
+            <h3 style="margin-bottom:15px;">출
+결 QR (고용노동부)</h3>
             <img id="qrImage" src="" class="qr-img-full" style="display:none;">
             <div id="qrEmptyMsg" style="padding:40px 0; color:#94a3b8; font-weight:bold; display:none;">등록된 QR이 없습니다.</div>
             <button onclick="document.getElementById('qrModal').style.display='none'" style="margin-top:20px; width:100%; padding:12px; border:none; border-radius:8px; background:#e2e8f0; font-weight:bold;">닫기</button>
@@ -800,7 +796,6 @@
 
             <!-- 이미지 (초기에는 숨김 display:none) -->
             <img id="mealMenuImage" src="" style="width:100%; display:none; transform-origin: center; z-index:1; will-change: transform; cursor: grab;" alt="식단표">
-        <div id="mealEmptyMsg" style="display:none; padding:60px 20px; text-align:center; color:#94a3b8; font-size:15px; font-weight:700;"></div>
         </div>
         
         <p style="margin-top:10px; font-size:11px; text-align:center; color:#94a3b8;">배경을 터치하거나 X를 누르면 닫힙니다.</p>
@@ -1195,7 +1190,6 @@ function startPresence() {
 
 
 
-// 메뉴 항목 ON/OFF 처리
 function applyMenuFeatures(features) {
     const menuMap = [
         { key: 'facility',     selector: '[onclick="openFacilityRequest()"]' },
@@ -1208,8 +1202,7 @@ function applyMenuFeatures(features) {
     menuMap.forEach(({ key, selector }) => {
         const el = document.querySelector(selector);
         if (!el) return;
-        const enabled = features[key] !== false; // 기본값: true
-        el.style.display = enabled ? '' : 'none';
+        el.style.display = features[key] !== false ? '' : 'none';
     });
 }
 
@@ -1234,9 +1227,7 @@ function setupListeners() {
         const lt = document.getElementById('landingTitle');
         if(lt) lt.innerText = title;
         document.getElementById('landingBadge').innerText = `ROOM ${currentRoom}`;
-
-        // [메뉴 기능 ON/OFF] settings.menuFeatures 값에 따라 메뉴 항목 표시/숨김
-        applyMenuFeatures(val.menuFeatures || {});
+        applyMenuFeatures(val.menuFeatures || {}); 
     });
 
     // 3. 질문 리스트 실시간 감시
@@ -1801,25 +1792,23 @@ async function openShuttleApply() {
     
     const uToken = localStorage.getItem('uToken');
 
-    if (window._shuttleDepartureRef) window._shuttleDepartureRef.off();
-    window._shuttleDepartureRef = firebase.database().ref(`courses/${currentRoom}/shuttle/departure`);
-    window._shuttleDepartureRef.on('value', snap => {
+    // [핵심 연동] 기사님이 driver.html에서 설정한 시간을 실시간으로 감시하여 표시합니다.
+    firebase.database().ref(`courses/${currentRoom}/shuttle/departure`).on('value', snap => {
         const dep = snap.val();
         const timeEl = document.getElementById('departureTimeText');
-        if (!timeEl) return;
-        const today = getTodayString();
-        if (dep && dep.time && dep.date) {
-            if (dep.date >= today) {
-                timeEl.innerText = `${dep.date} [ ${dep.time} ] 출발 예정`;
-                timeEl.style.color = "#ef4444";
-            } else {
-                timeEl.innerText = "출발 일정이 없습니다.";
-                timeEl.style.color = "#94a3b8";
-            }
+        if(!timeEl) return;
+
+        if (dep && dep.time) {
+            // 기사님이 시간을 설정한 경우 (예: 2026-01-23 15:00)
+            // 날짜 부분은 빼고 시간만 깔끔하게 보고 싶다면 ${dep.time}만 남겨도 됩니다.
+            timeEl.innerText = `${dep.date} [ ${dep.time} ] 출발 예정`;
+            timeEl.style.color = "#ef4444"; // 눈에 잘 띄게 빨간색 계열로 강조
         } else {
+            // 기사님이 아직 시간을 설정하지 않았을 경우
             firebase.database().ref('system/shuttle_notice').once('value', s => {
+                // system/shuttle_notice에 값이 있으면 그걸 보여주고, 없으면 대기 문구 출력
                 timeEl.innerText = s.val() || "기사님이 출발 시간을 설정 중입니다.";
-                timeEl.style.color = "#64748b";
+                timeEl.style.color = "#64748b"; 
             });
         }
     });
@@ -1933,7 +1922,7 @@ async function openAdminAction() {
     const existingData = actionSnap.val();
     const hasDinnerSkip = dinnerSnap.exists();
 
-    // 1. 외출/외박 신청이 없을 때 → 석식 제외만 있어도 폼 열기
+    // 1. 아무것도 신청 안 했을 때
     if (!existingData) {
         document.getElementById('adminActionForm').style.display = 'flex';
         document.getElementById('adminStatusArea').style.display = 'none';
@@ -2265,7 +2254,35 @@ async function saveProfileWithCheck() {
         return;
     }
 
-    // 모든 조건 충족 시 기존 저장 로직 실행
+    // [명단 검증] expectedStudents가 있으면 이름+번호 대조
+    const expectedSnap = await firebase.database().ref(`courses/${currentRoom}/expectedStudents`).once('value');
+    const expectedList = expectedSnap.val();
+
+    if (expectedList && typeof expectedList === 'object') {
+        const found = Object.values(expectedList).some(e => {
+            const eName  = (e.name  || '').trim();
+            const ePhone = (e.phone || '').trim().slice(-4);
+            return eName === name && (ePhone === phone || !ePhone);
+        });
+        if (!found) {
+            alert(`⚠️ 등록된 명단에 없는 교육생입니다.\n이름: ${name} / 번호: ${phone}\n\n입력 정보를 다시 확인하시거나 강사에게 문의해 주세요.`);
+            return;
+        }
+    }
+
+    // [기간 검증] 오늘이 교육 기간 안인지 재확인
+    const settingsSnap = await firebase.database().ref(`courses/${currentRoom}/settings`).once('value');
+    const period = (settingsSnap.val() || {}).period || '';
+    if (period.includes(' ~ ')) {
+        const [startStr, endStr] = period.split(' ~ ').map(s => s.trim());
+        const today = getTodayString();
+        if (today < startStr || today > endStr) {
+            alert(`⚠️ 교육 기간이 아닙니다. (${startStr} ~ ${endStr})`);
+            return;
+        }
+    }
+
+    // 모든 조건 충족 시 저장 실행
     saveProfile(); 
 }
 
@@ -2304,7 +2321,9 @@ async function saveProfile() {
         startPresence(); 
         document.getElementById('profileOverlay').style.display = 'none';
         
-        handleInternalAttendance(currentRoom);
+        // [핵심 연결] 이름을 저장하자마자 즉시 출결 함수를 호출합니다.
+        handleInternalAttendance(currentRoom); 
+        
         if (!window.location.search.includes('checkin=true')) {
             showMainDashboard();
             alert(`${name}님, 환영합니다!`);
@@ -2330,22 +2349,17 @@ async function saveProfile() {
 
 
 
+// [최종 수정] 서버 명단 대조 방식의 엄격한 프로필 체크
 async function checkProfile() {
     const uToken = localStorage.getItem('uToken');
     if (uToken) {
         try {
             const snap = await firebase.database().ref(`courses/${currentRoom}/students/${uToken}`).once('value');
-            if (snap.exists()) { showMainDashboard(); return; }
-            const savedName = localStorage.getItem('kac_user_name');
-            const savedPhone = localStorage.getItem('kac_user_phone');
-            if (savedName && savedPhone && savedPhone.length === 4) {
-                await firebase.database().ref(`courses/${currentRoom}/students/${uToken}`).update({
-                    name: savedName, phone: savedPhone,
-                    joinedAt: firebase.database.ServerValue.TIMESTAMP, isOnline: true
-                });
-                startPresence(); showMainDashboard(); return;
+            if (snap.exists()) {
+                showMainDashboard();
+                return;
             }
-        } catch (e) { console.error('checkProfile error:', e); }
+        } catch (e) {}
     }
     document.getElementById('userName').value = "";
     document.getElementById('userPhone').value = "";
@@ -2385,9 +2399,9 @@ async function viewMealMenu() {
     modal.style.display = 'flex';
 
     try {
+        // 데이터베이스에서 주소 가져오기
         const snap = await firebase.database().ref('system/nutrition_menu').once('value');
         const data = snap.val();
-
         if (!data) {
             loader.style.display = 'none';
             const msg = document.getElementById('mealEmptyMsg');
@@ -2395,32 +2409,23 @@ async function viewMealMenu() {
             else { alert('아직 식단표가 업로드되지 않았습니다.'); modal.style.display = 'none'; }
             return;
         }
-
-        // [수정] 신규 구조(object)와 구버전(string) 모두 대응
         let imageUrl = '';
-        if (typeof data === 'string') {
-            imageUrl = data; // 구버전: 영양사 앱 직접 업로드
-        } else {
-            // 신규 구조: { image, uploadedAt, expireAt }
+        if (typeof data === 'string') { imageUrl = data; }
+        else {
             const today = getTodayString();
             if (data.expireAt && data.expireAt < today) {
                 loader.style.display = 'none';
                 const msg = document.getElementById('mealEmptyMsg');
                 if (msg) { msg.style.display = 'block'; msg.innerText = `식단표 기간이 만료되었습니다.\n(${data.expireAt} 까지)`; }
-                else { alert(`식단표 기간이 만료되었습니다. (${data.expireAt} 까지)`); modal.style.display = 'none'; }
+                else { alert(`식단표 기간이 만료되었습니다.`); modal.style.display = 'none'; }
                 return;
             }
             imageUrl = data.image;
         }
-
         img.src = imageUrl;
         img.onload = function() { loader.style.display = 'none'; img.style.display = 'block'; };
-        img.onerror = function() {
-            loader.style.display = 'none';
-            alert('이미지를 불러오는데 실패했습니다.'); modal.style.display = 'none';
-        };
     } catch (e) {
-        console.error('식단 로딩 에러:', e);
+        console.error("식단 로딩 에러:", e);
         modal.style.display = 'none';
     }
 }
