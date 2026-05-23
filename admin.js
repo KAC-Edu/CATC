@@ -4635,16 +4635,22 @@ openSetupModal: async function() {
             this.loadCurrentSettings(); 
 
 // [최종 수정] 완벽한 대칭형 820px 달력 적용
-flatpickr("#setup-period-range", {
+// flatpickr 인스턴스가 이미 있으면 제거 후 재생성
+if (window._periodPicker) { window._periodPicker.destroy(); }
+window._periodPicker = flatpickr("#setup-period-range", {
     mode: "range",
     locale: "ko",
     dateFormat: "Y-m-d",
-    showMonths: 2,         
-    closeOnSelect: false,  
+    showMonths: 2,
+    closeOnSelect: false,
     disableMobile: "true",
+    minDate: "today",
     onReady: function(selectedDates, dateStr, instance) {
-        // 가로폭을 820px로 고정하여 양쪽 달력 균형 확보
-        instance.calendarContainer.style.width = "820px"; 
+        instance.calendarContainer.style.width = "820px";
+        // 달력을 오늘 날짜가 있는 달로 강제 이동
+        if (!selectedDates.length) {
+            instance.jumpToDate(new Date());
+        }
     },
     onChange: function(selectedDates, dateStr, instance) {
         instance.calendarContainer.style.width = "820px";
@@ -4721,11 +4727,27 @@ loadCurrentSettings: function() {
         const todayStr = typeof getTodayString === 'function' ? getTodayString() : new Date().toISOString().split('T')[0];
 
         if(s.period && s.period.includes(" ~ ")) {
-            // 기존에 "2026-03-03 ~ 2026-03-13" 형태의 데이터가 있다면 그대로 입력
-            rangeInput.value = s.period;
+            // 기존 날짜 세팅 - flatpickr 인스턴스가 있으면 setDate로 달력도 이동
+            const parts = s.period.split(" ~ ");
+            const startDate = parts[0].trim();
+            const endDate   = parts[1].trim();
+            // 시작일이 오늘보다 과거면 오늘로 대체해서 달력이 현재 달에 열리게 함
+            if (window._periodPicker) {
+                // 달력에 날짜 세팅 (표시용) - minDate 제약으로 과거 선택은 막되 표시는 허용
+                window._periodPicker.setDate([startDate, endDate], false);
+            } else {
+                rangeInput.value = s.period;
+            }
         } else {
-            // 데이터가 없으면 "오늘 ~ 오늘" 형태를 기본값으로 세팅
+            // 데이터가 없으면 오늘~오늘 기본값
             rangeInput.value = `${todayStr} ~ ${todayStr}`;
+            if (window._periodPicker) {
+                window._periodPicker.setDate([todayStr, todayStr], false);
+            }
+        }
+        // 달력 뷰를 항상 오늘이 포함된 달로 이동
+        if (window._periodPicker) {
+            window._periodPicker.jumpToDate(new Date());
         }
         
         // 5. 모달 표시 및 과목 리스트 출력
