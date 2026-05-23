@@ -798,9 +798,13 @@ resetCourse: function() {
 
         // 과정 기본값 재설정
         updates[`${rPath}/settings/courseName`] = "";
+        updates[`${rPath}/settings/coordinatorName`] = "";  // 과정운영담당자 초기화
+        updates[`${rPath}/settings/subjects`] = null;         // 출강강사 리스트 초기화
+        updates[`${rPath}/settings/period`] = "";           // 교육 기간 초기화
+        updates[`${rPath}/settings/menuFeatures`] = null;     // 메뉴 설정 초기화
         updates[`${rPath}/status/professorName`] = "";
-        updates[`${rPath}/status/roomStatus`] = "idle"; // 비어있음으로 전환
-        updates[`${rPath}/status/ownerSessionId`] = null; // 제어권 해제
+        updates[`${rPath}/status/roomStatus`] = "idle";
+        updates[`${rPath}/status/ownerSessionId`] = null;
         
         // 학생들에게 초기화 신호를 보내 강제 퇴출시킴
         updates[`${rPath}/status/resetKey`] = "reset_" + Date.now();
