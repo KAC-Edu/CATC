@@ -626,6 +626,12 @@
 <!-- [최종 수정] 외출/외박 신청 및 복귀 시스템 팝업 -->
 <div id="adminActionModal" class="menu-overlay" style="display:none; z-index: 7000;">
     <div class="menu-box" style="width:95%; padding: 20px; border-radius: 20px; max-width: 450px;">
+        <!-- 단체회식 안내 배너 -->
+        <div id="groupDinnerBanner" style="display:none; background:#f5f3ff; border:1.5px solid #7c3aed; border-radius:10px; padding:10px 14px; margin-bottom:12px; font-size:13px; color:#5b21b6; font-weight:700;">
+            <i class="fa-solid fa-users-rectangle" style="margin-right:6px;"></i>
+            오늘 <b>단체 회식(석식 제외)</b>이 적용되어 있습니다.<br>
+            <span style="font-weight:500; color:#7c3aed;">추가로 외출·외박 신청이 필요하시면 아래에 작성해 주세요.</span>
+        </div>
         <h3 style="margin-bottom: 5px; font-weight:900;">외출·외박 신청서 작성</h3>
         <p id="adminActionDate" style="font-size:12px; color:#94a3b8; margin-bottom:15px;">오늘 날짜: 2026-01-20</p>
 
@@ -1775,23 +1781,32 @@ async function openShuttleApply() {
     
     const uToken = localStorage.getItem('uToken');
 
-    // [핵심 연동] 기사님이 driver.html에서 설정한 시간을 실시간으로 감시하여 표시합니다.
-    firebase.database().ref(`courses/${currentRoom}/shuttle/departure`).on('value', snap => {
+    // [수정] 리스너 중복 방지: 기존 리스너 제거 후 재등록
+    if (window._shuttleDepartureRef) {
+        window._shuttleDepartureRef.off('value', window._shuttleDepartureHandler);
+    }
+    window._shuttleDepartureRef = firebase.database().ref(`courses/${currentRoom}/shuttle/departure`);
+    window._shuttleDepartureHandler = window._shuttleDepartureRef.on('value', snap => {
         const dep = snap.val();
         const timeEl = document.getElementById('departureTimeText');
-        if(!timeEl) return;
+        if (!timeEl) return;
 
-        if (dep && dep.time) {
-            // 기사님이 시간을 설정한 경우 (예: 2026-01-23 15:00)
-            // 날짜 부분은 빼고 시간만 깔끔하게 보고 싶다면 ${dep.time}만 남겨도 됩니다.
-            timeEl.innerText = `${dep.date} [ ${dep.time} ] 출발 예정`;
-            timeEl.style.color = "#ef4444"; // 눈에 잘 띄게 빨간색 계열로 강조
+        const today = getTodayString();
+
+        if (dep && dep.time && dep.date) {
+            // [수정] 날짜가 오늘 이후인 경우만 표시 (지난 날짜는 숨김)
+            if (dep.date >= today) {
+                timeEl.innerText = `${dep.date} [ ${dep.time} ] 출발 예정`;
+                timeEl.style.color = "#ef4444";
+            } else {
+                // 지난 날짜 일정은 표시하지 않음
+                timeEl.innerText = "출발 일정이 없습니다.";
+                timeEl.style.color = "#94a3b8";
+            }
         } else {
-            // 기사님이 아직 시간을 설정하지 않았을 경우
             firebase.database().ref('system/shuttle_notice').once('value', s => {
-                // system/shuttle_notice에 값이 있으면 그걸 보여주고, 없으면 대기 문구 출력
                 timeEl.innerText = s.val() || "기사님이 출발 시간을 설정 중입니다.";
-                timeEl.style.color = "#64748b"; 
+                timeEl.style.color = "#64748b";
             });
         }
     });
@@ -1905,20 +1920,23 @@ async function openAdminAction() {
     const existingData = actionSnap.val();
     const hasDinnerSkip = dinnerSnap.exists();
 
-    // 1. 아무것도 신청 안 했을 때
-    if (!existingData && !hasDinnerSkip) {
+    // 1. 외출/외박 신청이 없을 때 → 석식 제외만 있어도 폼 열기
+    if (!existingData) {
         document.getElementById('adminActionForm').style.display = 'flex';
         document.getElementById('adminStatusArea').style.display = 'none';
-        
-        // 입력값 초기화
+
         document.getElementById('userDept').value = "";
         document.getElementById('startTime').value = "";
         document.getElementById('endTime').value = "";
         document.getElementById('destination').value = "";
         document.getElementById('outingReason').value = "";
-        document.getElementById('skipDinner').checked = false;
+        document.getElementById('skipDinner').checked = hasDinnerSkip; // 단체회식 시 자동 체크
         selectedAdminType = 'none';
         updateAdminTypeButtons();
+
+        // 단체회식으로 석식 제외된 경우 안내 배너
+        const groupBanner = document.getElementById('groupDinnerBanner');
+        if (groupBanner) groupBanner.style.display = hasDinnerSkip ? 'block' : 'none';
     } 
     // 2. 신청 내역이 있을 때
     else {
@@ -2310,8 +2328,7 @@ async function checkProfile() {
                 showMainDashboard();
                 return;
             }
-            // [수정] 이 방 students에 없지만 uToken(이름+번호)이 있는 경우
-            // → 다른 방에서 이미 등록된 교육생 → 현재 방에 자동 등록 후 입장
+            // 다른 방에서 이미 등록된 교육생 → 현재 방에 자동 등록 후 입장
             const savedName  = localStorage.getItem('kac_user_name');
             const savedPhone = localStorage.getItem('kac_user_phone');
             if (savedName && savedPhone && savedPhone.length === 4) {
@@ -2325,7 +2342,9 @@ async function checkProfile() {
                 showMainDashboard();
                 return;
             }
-        } catch (e) {}
+        } catch (e) {
+            console.error('checkProfile error:', e);
+        }
     }
     document.getElementById('userName').value = "";
     document.getElementById('userPhone').value = "";
@@ -2771,7 +2790,6 @@ function executeAttendanceRecord(room, name, phone, dateStr, storageKey) {
     const currentTime = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
     const authId = "KAC-" + Math.random().toString(36).substr(2, 5).toUpperCase();
 
-    // 출결 기록 저장
     const updates = {};
     updates[`courses/${room}/internal_attendance/${dateStr}/${attendanceKey}`] = {
         name: name,
@@ -2781,7 +2799,7 @@ function executeAttendanceRecord(room, name, phone, dateStr, storageKey) {
         timestamp: firebase.database.ServerValue.TIMESTAMP
     };
 
-    // [수정] students는 해당 방에 아직 없을 때만 등록 (다른 방 입교 기록 덮어쓰기 방지)
+    // [수정] 해당 방 students에 없을 때만 등록 (다른 방 기록 덮어쓰기 방지)
     firebase.database().ref(`courses/${room}/students/${attendanceKey}`).once('value').then(snap => {
         if (!snap.exists()) {
             updates[`courses/${room}/students/${attendanceKey}`] = {

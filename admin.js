@@ -2480,7 +2480,6 @@ setMode: function(mode) {
                 });
             }
             if (mode === 'guide') {
-                // PDF 탭 클릭 시: pdfDoc 없으면 init 재시도, 있으면 바로 렌더링
                 if (!guideMgr.pdfDoc) { guideMgr.init(); }
                 else { guideMgr.renderPage(guideMgr.pageNum); }
             }
@@ -4141,7 +4140,6 @@ const guideMgr = {
     // 1. 초기화 (기존 로직 + 리사이즈 감시 추가)
 init: function() {
     if (!state.room) return;
-    // CDN 방식 로드 시 pdfjsLib 전역 객체로 체크
     if (typeof pdfjsLib !== 'undefined') {
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
     }
