@@ -144,87 +144,72 @@
     #floatingHomeBtn:active { transform: translateX(-50%) scale(0.9); }
     #floatingHomeBtn i { font-size: 22px; }
 
-    /* ── 강사수송 리스트 카드 스타일 ── */
-    .req-list-wrap { padding: 10px; display: flex; flex-direction: column; gap: 10px; }
-
-    .req-list-filter {
-        display: flex; gap: 6px; margin-bottom: 4px; flex-wrap: wrap;
-    }
+    /* ── 강사수송 게시판 테이블 스타일 ── */
     .filter-chip {
-        padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 800;
+        padding: 5px 12px; border-radius: 16px; font-size: 12px; font-weight: 800;
         border: 1.5px solid #e2e8f0; background: white; color: #64748b; cursor: pointer;
-        transition: 0.15s;
     }
     .filter-chip.on { background: var(--navy); color: white; border-color: var(--navy); }
 
-    .req-list-card {
-        background: white; border-radius: 16px; overflow: hidden;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-        border: 2px solid #e2e8f0;
-        transition: transform 0.15s;
+    /* 게시판 테이블 */
+    .brd-table { width: 100%; border-collapse: collapse; }
+    .brd-table thead tr { background: #f1f5f9; border-bottom: 2px solid #e2e8f0; }
+    .brd-table th {
+        padding: 10px 8px; font-size: 11px; font-weight: 800;
+        color: #64748b; text-align: center; white-space: nowrap;
     }
-    .req-list-card:active { transform: scale(0.99); }
-    .req-list-card.status-pending  { border-color: #ef4444; }
-    .req-list-card.status-approved { border-color: #22c55e; }
-    .req-list-card.status-finished { border-color: #94a3b8; opacity: 0.65; }
-    .req-list-card.status-cancelled{ border-color: #cbd5e1; opacity: 0.5; }
+    .brd-table tbody tr {
+        border-bottom: 1px solid #f1f5f9; cursor: pointer;
+        transition: background 0.1s;
+    }
+    .brd-table tbody tr:active { background: #f8fafc; }
+    .brd-table td {
+        padding: 10px 6px; font-size: 13px; font-weight: 700;
+        color: #1e293b; text-align: center; vertical-align: middle;
+    }
 
-    .card-status-bar {
-        padding: 6px 14px; font-size: 11px; font-weight: 900; letter-spacing: 0.3px;
-        display: flex; align-items: center; justify-content: space-between;
+    /* 상태 뱃지 */
+    .st-badge {
+        display: inline-block; padding: 3px 7px; border-radius: 6px;
+        font-size: 10px; font-weight: 900; white-space: nowrap;
     }
-    .card-status-bar.pending  { background: #ef4444; color: white; }
-    .card-status-bar.approved { background: #22c55e; color: white; }
-    .card-status-bar.finished { background: #64748b; color: white; }
-    .card-status-bar.cancelled{ background: #94a3b8; color: white; }
+    .st-pending  { background: #fef2f2; color: #dc2626; border: 1px solid #fca5a5; }
+    .st-approved { background: #f0fdf4; color: #16a34a; border: 1px solid #86efac; }
+    .st-finished { background: #f8fafc; color: #64748b; border: 1px solid #cbd5e1; }
+    .st-cancelled{ background: #f8fafc; color: #94a3b8; border: 1px solid #e2e8f0; }
 
-    .card-body { padding: 14px 16px; }
+    /* 방향 뱃지 */
+    .dir-arr { color: #991b1b; font-size: 11px; font-weight: 800; }
+    .dir-dep { color: #075985; font-size: 11px; font-weight: 800; }
 
-    .card-name { font-size: 18px; font-weight: 900; color: #0f172a; margin-bottom: 10px;
-                 display: flex; align-items: center; gap: 8px; }
-    .card-name .dir-badge {
-        font-size: 10px; font-weight: 800; padding: 3px 8px; border-radius: 6px;
+    /* 상세 드로어 */
+    .brd-drawer {
+        background: #f8fafc; border-bottom: 2px solid #e2e8f0;
+        padding: 12px 14px; display: none;
     }
-    .dir-badge.arr { background: #fee2e2; color: #991b1b; }
-    .dir-badge.dep { background: #e0f2fe; color: #075985; }
-
-    .card-info-grid {
-        display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px;
+    .brd-drawer.open { display: block; }
+    .drawer-row { display: flex; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
+    .drawer-item {
+        background: white; border-radius: 8px; padding: 7px 12px;
+        font-size: 12px; flex: 1; min-width: 110px;
     }
-    .card-info-item {
-        background: #f8fafc; border-radius: 10px; padding: 8px 12px;
-    }
-    .card-info-label { font-size: 10px; color: #94a3b8; font-weight: 800; margin-bottom: 2px; }
-    .card-info-value { font-size: 14px; font-weight: 900; color: #1e293b; }
-    .card-route {
-        background: #f0f9ff; border-radius: 10px; padding: 10px 12px;
-        font-size: 14px; font-weight: 800; color: #0369a1; margin-bottom: 10px;
-        display: flex; align-items: center; gap: 8px;
-    }
-    .card-phone {
-        font-size: 13px; font-weight: 700; color: var(--blue); margin-bottom: 10px;
-        display: flex; align-items: center; gap: 6px;
-    }
-    .card-conflict {
+    .drawer-label { font-size: 10px; color: #94a3b8; font-weight: 800; margin-bottom: 2px; }
+    .drawer-val   { font-weight: 900; color: #0f172a; }
+    .drawer-conflict {
         background: #fff1f2; border: 1px solid #fda4af; color: #be123c;
         border-radius: 8px; padding: 8px 12px; font-size: 11px; font-weight: 800;
-        margin-bottom: 10px; display: flex; gap: 6px; align-items: flex-start;
-        line-height: 1.5;
+        margin-bottom: 8px; line-height: 1.5;
     }
-    .card-passengers {
-        background: #f0fdf4; border-radius: 8px; padding: 7px 12px;
-        font-size: 11px; color: #166534; font-weight: 700; margin-bottom: 10px;
+    .drawer-actions { display: flex; gap: 8px; margin-top: 4px; }
+    .d-btn {
+        flex: 1; padding: 10px; border-radius: 10px; border: none;
+        font-size: 13px; font-weight: 900; cursor: pointer;
     }
-    .card-actions { display: flex; gap: 8px; margin-top: 4px; }
-    .card-btn {
-        flex: 1; padding: 12px; border-radius: 11px; border: none;
-        font-size: 14px; font-weight: 900; cursor: pointer; transition: 0.15s;
-    }
-    .card-btn:active { opacity: 0.8; transform: scale(0.97); }
-    .card-btn.approve { background: #22c55e; color: white; }
-    .card-btn.reject  { background: #f1f5f9; color: #ef4444; border: 1.5px solid #fca5a5; }
-    .card-btn.cancel  { background: #f1f5f9; color: #64748b; font-size: 12px; }
-    .card-btn.complete{ background: #0ea5e9; color: white; }
+    .d-btn.approve  { background: #22c55e; color: white; }
+    .d-btn.reject   { background: #fff; color: #ef4444; border: 1.5px solid #fca5a5; }
+    .d-btn.complete { background: #0ea5e9; color: white; }
+    .d-btn.revert   { background: #f1f5f9; color: #64748b; font-size: 12px; }
+    .d-btn.cancel   { background: #f1f5f9; color: #64748b; font-size: 12px; }
 
     .req-empty {
         text-align: center; padding: 60px 20px; color: #94a3b8;
@@ -315,24 +300,32 @@
     </div>
 
     <div id="view-2" style="display: none; height:100%; flex-direction:column;">
-      <!-- 필터 + 정리 버튼 -->
-      <div style="padding:10px 10px 4px 10px; background:#fff; border-bottom:1px solid #e2e8f0; flex-shrink:0;">
-        <div class="req-list-filter">
-          <button class="filter-chip on"  id="chip-all"       onclick="setReqFilter('all',this)">전체</button>
-          <button class="filter-chip"     id="chip-pending"   onclick="setReqFilter('pending',this)">🔴 신규</button>
-          <button class="filter-chip"     id="chip-approved"  onclick="setReqFilter('approved',this)">✅ 승인</button>
-          <button class="filter-chip"     id="chip-done"      onclick="setReqFilter('done',this)">완료/취소</button>
+      <!-- 필터 바 -->
+      <div style="padding:8px 10px; background:#fff; border-bottom:1px solid #e2e8f0; flex-shrink:0; display:flex; gap:6px; align-items:center; justify-content:space-between;">
+        <div style="display:flex; gap:5px;">
+          <button class="filter-chip on" id="chip-all"      onclick="setReqFilter('all',this)">전체</button>
+          <button class="filter-chip"    id="chip-pending"  onclick="setReqFilter('pending',this)">🔴 신규</button>
+          <button class="filter-chip"    id="chip-approved" onclick="setReqFilter('approved',this)">✅ 승인</button>
+          <button class="filter-chip"    id="chip-done"     onclick="setReqFilter('done',this)">완료</button>
         </div>
-      </div>
-      <!-- 리스트 -->
-      <div style="flex:1; overflow-y:auto; background:#f1f5f9;">
-        <div class="req-list-wrap" id="req-list-inner"></div>
-      </div>
-      <!-- 하단 정리 버튼 -->
-      <div style="padding:8px 10px; background:#fff; border-top:1px solid #e2e8f0; flex-shrink:0;">
-        <button class="mini-btn" style="width:100%; height:38px;" onclick="clearFinished()">
-          <i class="fa-solid fa-broom"></i> 완료·취소 목록 정리
+        <button class="mini-btn" style="white-space:nowrap;" onclick="clearFinished()">
+          <i class="fa-solid fa-broom"></i>
         </button>
+      </div>
+      <!-- 게시판 테이블 -->
+      <div style="flex:1; overflow-y:auto; background:#fff;">
+        <table class="brd-table">
+          <thead>
+            <tr>
+              <th style="width:52px;">상태</th>
+              <th style="width:58px;">날짜</th>
+              <th style="width:44px;">시간</th>
+              <th>강사명</th>
+              <th>경로</th>
+            </tr>
+          </thead>
+          <tbody id="req-list-inner"></tbody>
+        </table>
       </div>
     </div>
 
@@ -736,161 +729,147 @@ function renderTodayTimeline() {
 
 
 let reqFilter = 'all';
+let openDrawerId = null;
 
 function setReqFilter(f, el) {
     reqFilter = f;
+    openDrawerId = null;
     document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('on'));
     el.classList.add('on');
     renderInstructorChat();
 }
 
+function toggleDrawer(id) {
+    openDrawerId = openDrawerId === id ? null : id;
+    renderInstructorChat();
+}
+
 function renderInstructorChat() {
     if (currentTab !== 2) return;
-    const box = document.getElementById('req-list-inner');
-    if (!box) return;
+    const tbody = document.getElementById('req-list-inner');
+    if (!tbody) return;
 
-    // 필터 적용
+    // 필터
     let list = [...profReqs];
-    if (reqFilter === 'pending')  list = list.filter(r => r.status === 'pending');
+    if      (reqFilter === 'pending')  list = list.filter(r => r.status === 'pending');
     else if (reqFilter === 'approved') list = list.filter(r => r.status === 'approved');
-    else if (reqFilter === 'done') list = list.filter(r => r.status === 'finished' || r.status === 'cancelled');
-    else list = list.filter(r => r.status !== 'cancelled' || reqFilter === 'all');
-
-    if (reqFilter === 'all') list = list.filter(r => r.status !== 'cancelled');
+    else if (reqFilter === 'done')     list = list.filter(r => r.status === 'finished' || r.status === 'cancelled');
+    else /* all */                     list = list.filter(r => r.status !== 'cancelled');
 
     if (list.length === 0) {
-        box.innerHTML = `<div class="req-empty"><i class="fa-solid fa-inbox" style="font-size:36px; margin-bottom:12px; display:block; opacity:0.3;"></i>해당하는 요청이 없습니다.</div>`;
+        tbody.innerHTML = `<tr><td colspan="5"><div class="req-empty"><i class="fa-solid fa-inbox" style="font-size:30px;display:block;margin-bottom:10px;opacity:0.3;"></i>해당 요청이 없습니다.</div></td></tr>`;
         return;
     }
 
-    box.innerHTML = list.map(r => {
+    let html = '';
+    list.forEach(r => {
         const isPending   = r.status === 'pending';
         const isApproved  = r.status === 'approved';
         const isFinished  = r.status === 'finished';
         const isCancelled = r.status === 'cancelled';
+        const isOpen      = openDrawerId === r.id;
 
-        // 상태 라벨
-        const statusLabel = isPending ? '● 신규 요청' : isApproved ? '✓ 승인 완료' : isFinished ? '운행 종료' : '✕ 취소됨';
-        const statusClass = isPending ? 'pending' : isApproved ? 'approved' : isFinished ? 'finished' : 'cancelled';
+        // 상태 뱃지
+        const stBadge = isPending   ? `<span class="st-badge st-pending">신규</span>`
+                      : isApproved  ? `<span class="st-badge st-approved">승인</span>`
+                      : isFinished  ? `<span class="st-badge st-finished">종료</span>`
+                      :               `<span class="st-badge st-cancelled">취소</span>`;
 
-        // 방향 뱃지
+        // 날짜 짧게 (MM/DD)
+        const dateShort = r.date ? r.date.substring(5).replace('-','/') : '--';
+
+        // 경로 짧게
         const dir = r.dir || '';
-        let dirBadge = '';
-        if (dir.includes('→항기원'))      dirBadge = '<span class="dir-badge arr">도착편</span>';
-        else if (dir.includes('항기원→')) dirBadge = '<span class="dir-badge dep">출발편</span>';
+        const dirShort = dir.includes('→항기원')
+            ? `<span class="dir-arr">↓도착</span>`
+            : dir.includes('항기원→')
+            ? `<span class="dir-dep">↑출발</span>`
+            : `<span style="font-size:11px;color:#94a3b8;">-</span>`;
 
-        // 예상도착
-        const eta = calculateETA(r.time, dir);
+        // 경로 텍스트 (오송역, 청주공항 등만)
+        const routeTxt = dir.replace('→항기원','').replace('항기원→','').trim();
 
-        // 중복 경고
-        let conflictHtml = '';
+        // 강사명 (중복 있으면 ⚠️ 표시)
+        let hasConflict = false;
         if (isPending && r.date && r.time) {
-            const conflicts = [];
             const rMin = parseInt(r.time.split(':')[0])*60 + parseInt(r.time.split(':')[1]);
             profReqs.forEach(o => {
-                if (o.id !== r.id && o.date === r.date && (o.status==='approved'||o.status==='finished') && o.prof !== '운행중단') {
+                if (o.id!==r.id && o.date===r.date && (o.status==='approved'||o.status==='finished') && o.prof!=='운행중단') {
                     const oMin = parseInt(o.time.split(':')[0])*60 + parseInt(o.time.split(':')[1]);
-                    if (Math.abs(rMin-oMin) < 60) conflicts.push(`${o.time} ${o.prof} 강사 일정`);
+                    if (Math.abs(rMin-oMin) < 60) hasConflict = true;
                 }
             });
             for (let rid in allCourses) {
                 const dep = allCourses[rid].shuttle?.departure;
-                if (dep && dep.date === r.date && dep.time && dep.announced) {
+                if (dep && dep.date===r.date && dep.time && dep.announced) {
                     const dMin = parseInt(dep.time.split(':')[0])*60 + parseInt(dep.time.split(':')[1]);
-                    if (Math.abs(rMin-dMin) < 120) conflicts.push(`${dep.time} 퇴교수송 중복`);
+                    if (Math.abs(rMin-dMin) < 120) hasConflict = true;
                 }
             }
-            if (conflicts.length) conflictHtml = `
-                <div class="card-conflict">
-                    <i class="fa-solid fa-triangle-exclamation" style="margin-top:2px;"></i>
-                    <div>${conflicts.join('<br>')}</div>
-                </div>`;
         }
+        const nameCell = `${hasConflict ? '⚠️ ' : ''}${r.prof||'미입력'}`;
 
-        // 동승객
-        const passengerHtml = r.passengers?.length
-            ? `<div class="card-passengers"><i class="fa-solid fa-users" style="margin-right:5px;"></i>동승: ${r.passengers.join(', ')}</div>`
-            : '';
+        // ── 행
+        html += `<tr onclick="toggleDrawer('${r.id}')" style="${isOpen ? 'background:#f0f9ff;' : ''}${isCancelled||isFinished ? 'opacity:0.55;' : ''}">
+            <td>${stBadge}</td>
+            <td style="font-size:12px; color:#64748b;">${dateShort}</td>
+            <td style="font-weight:900; color:var(--blue-deep);">${r.time||'--:--'}</td>
+            <td style="text-align:left; padding-left:8px; font-weight:800;">${nameCell}</td>
+            <td style="text-align:left;">${dirShort} <span style="font-size:11px; color:#475569;">${routeTxt}</span></td>
+        </tr>`;
 
-        // 액션 버튼
-        let actionsHtml = '';
-        if (isPending) {
-            actionsHtml = `
-                <div class="card-actions">
-                    <button class="card-btn approve" onclick="approveRequest('${r.id}')">
-                        <i class="fa-solid fa-check"></i> 승인
-                    </button>
-                    <button class="card-btn reject" onclick="cancelRequest('${r.id}')">
-                        <i class="fa-solid fa-xmark"></i> 불가
-                    </button>
-                </div>`;
-        } else if (isApproved) {
-            actionsHtml = `
-                <div class="card-actions">
-                    <button class="card-btn complete" onclick="toggleComplete('${r.id}')">
-                        <i class="fa-solid fa-flag-checkered"></i> 운행 완료
-                    </button>
-                    <button class="card-btn cancel" onclick="if(confirm('승인된 배차를 취소할까요?')) cancelRequest('${r.id}')">
-                        취소
-                    </button>
-                </div>`;
-        } else if (isFinished) {
-            actionsHtml = `
-                <div class="card-actions">
-                    <button class="card-btn cancel" onclick="toggleComplete('${r.id}')">
-                        <i class="fa-solid fa-rotate-left"></i> 승인 상태로 되돌리기
-                    </button>
-                </div>`;
+        // ── 드로어 (클릭 시 펼쳐지는 상세)
+        if (isOpen) {
+            // 중복 경고 텍스트
+            let conflictLines = [];
+            if (isPending && r.date && r.time) {
+                const rMin = parseInt(r.time.split(':')[0])*60 + parseInt(r.time.split(':')[1]);
+                profReqs.forEach(o => {
+                    if (o.id!==r.id && o.date===r.date && (o.status==='approved'||o.status==='finished') && o.prof!=='운행중단') {
+                        const oMin = parseInt(o.time.split(':')[0])*60 + parseInt(o.time.split(':')[1]);
+                        if (Math.abs(rMin-oMin) < 60) conflictLines.push(`${o.time} ${o.prof} 강사 일정과 1시간 이내 중복`);
+                    }
+                });
+                for (let rid in allCourses) {
+                    const dep = allCourses[rid].shuttle?.departure;
+                    if (dep && dep.date===r.date && dep.time && dep.announced) {
+                        const dMin = parseInt(dep.time.split(':')[0])*60 + parseInt(dep.time.split(':')[1]);
+                        if (Math.abs(rMin-dMin) < 120) conflictLines.push(`${dep.time} 퇴교수송과 2시간 이내 중복`);
+                    }
+                }
+            }
+
+            // 버튼
+            let btns = '';
+            if (isPending) {
+                btns = `<button class="d-btn approve" onclick="event.stopPropagation();approveRequest('${r.id}')"><i class="fa-solid fa-check"></i> 승인</button>
+                        <button class="d-btn reject"  onclick="event.stopPropagation();cancelRequest('${r.id}')"><i class="fa-solid fa-xmark"></i> 불가</button>`;
+            } else if (isApproved) {
+                btns = `<button class="d-btn complete" onclick="event.stopPropagation();toggleComplete('${r.id}')"><i class="fa-solid fa-flag-checkered"></i> 운행 완료</button>
+                        <button class="d-btn cancel"   onclick="event.stopPropagation();if(confirm('배차를 취소할까요?'))cancelRequest('${r.id}')">취소</button>`;
+            } else if (isFinished) {
+                btns = `<button class="d-btn revert" onclick="event.stopPropagation();toggleComplete('${r.id}')"><i class="fa-solid fa-rotate-left"></i> 승인으로 되돌리기</button>`;
+            }
+
+            html += `<tr><td colspan="5" style="padding:0;">
+                <div class="brd-drawer open">
+                    ${conflictLines.length ? `<div class="drawer-conflict"><i class="fa-solid fa-triangle-exclamation"></i> ${conflictLines.join('<br>')}</div>` : ''}
+                    <div class="drawer-row">
+                        <div class="drawer-item"><div class="drawer-label">경로</div><div class="drawer-val">${dir||'-'}</div></div>
+                        <div class="drawer-item"><div class="drawer-label">예상 도착</div><div class="drawer-val">${calculateETA(r.time,dir)}</div></div>
+                    </div>
+                    <div class="drawer-row">
+                        ${r.phone ? `<div class="drawer-item"><div class="drawer-label">연락처</div><div class="drawer-val"><a href="tel:${r.phone}" style="color:var(--blue);text-decoration:none;">${r.phone}</a></div></div>` : ''}
+                        ${r.passengers?.length ? `<div class="drawer-item"><div class="drawer-label">동승객</div><div class="drawer-val">${r.passengers.join(', ')}</div></div>` : ''}
+                    </div>
+                    ${btns ? `<div class="drawer-actions">${btns}</div>` : ''}
+                </div>
+            </td></tr>`;
         }
+    });
 
-        return `
-        <div class="req-list-card status-${statusClass}" data-id="${r.id}" oncontextmenu="showContextMenu(event,'${r.id}')">
-            <div class="card-status-bar ${statusClass}">
-                <span>${statusLabel}</span>
-                <span style="opacity:0.8; font-weight:700; font-size:10px;">${r.date||''}</span>
-            </div>
-            <div class="card-body">
-                <div class="card-name">
-                    <i class="fa-solid fa-user-tie"></i>
-                    ${r.prof||'이름 없음'} 강사님
-                    ${dirBadge}
-                </div>
-                <div class="card-info-grid">
-                    <div class="card-info-item">
-                        <div class="card-info-label">⏰ 출발 시각</div>
-                        <div class="card-info-value">${r.time||'--:--'}</div>
-                    </div>
-                    <div class="card-info-item">
-                        <div class="card-info-label">🏁 예상 도착</div>
-                        <div class="card-info-value">${eta}</div>
-                    </div>
-                </div>
-                <div class="card-route">
-                    <i class="fa-solid fa-route"></i> ${dir||'구간 정보 없음'}
-                </div>
-                ${r.phone ? `<div class="card-phone"><i class="fa-solid fa-phone"></i><a href="tel:${r.phone}" style="color:inherit; text-decoration:none;">${r.phone}</a></div>` : ''}
-                ${conflictHtml}
-                ${passengerHtml}
-                ${actionsHtml}
-            </div>
-        </div>`;
-    }).join('');
-
-    // 신규 요청이 있으면 맨 위로 스크롤
-    if (reqFilter === 'all' || reqFilter === 'pending') {
-        const firstPending = box.querySelector('.status-pending');
-        if (firstPending) setTimeout(() => firstPending.scrollIntoView({behavior:'smooth', block:'start'}), 100);
-    }
+    tbody.innerHTML = html;
 }
-
-
-
-
-
-
-
-
-
 
 function renderTraineeGrid() {
   const container = document.getElementById('trainee-list-body');
