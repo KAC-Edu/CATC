@@ -629,7 +629,7 @@ fetchCodeAndRenderQr: function(room) {
     
     // 1. 현재 접속한 주소에서 파일명(admin.html)만 떼어내고 기본 경로(Base URL) 잡기
     const path = window.location.pathname;
-    const directory = path.substring( path.lastIndexOf('/'), 0);
+    const directory = path.substring(0, path.lastIndexOf('/'));
     const baseUrl = window.location.origin + directory + "/"; // 끝에 / 를 강제로 붙임
 
     firebase.database().ref('public_codes').orderByValue().equalTo(room).once('value', s => {
@@ -1476,8 +1476,48 @@ init: function() {
 const ui = {
 
 
+    openGroupDinnerModal: function() {
+        if (!state.room) return ui.showAlert("강의실을 먼저 선택해 주세요.");
+        if (state.isObserver) return ui.showAlert("옵저버 모드에서는 사용할 수 없습니다.");
+        const now = new Date(); const pad = n=>String(n).padStart(2,'0');
+        document.getElementById('gd-start-time').value = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
+        document.getElementById('gd-end-time').value = '';
+        document.getElementById('gd-destination').value = '';
+        document.getElementById('gd-phone').value = '';
+        document.getElementById('gd-reason').value = '과정 단체 회식';
+        document.getElementById('groupDinnerModal').style.display = 'flex';
+    },
+
 // [신규] 단체 회식 적용 (전원 석식 제외)
-    applyGroupDinner: function() {
+    applyGroupDinner: async function() {
+        if (state.isObserver) return ui.showAlert("옵저버 모드에서는 사용할 수 없습니다.");
+        if (!state.room) return;
+        const destination = document.getElementById('gd-destination').value.trim();
+        const startTime   = document.getElementById('gd-start-time').value.trim();
+        const endTime     = document.getElementById('gd-end-time').value.trim();
+        const phone       = document.getElementById('gd-phone').value.trim();
+        const reason      = document.getElementById('gd-reason').value.trim() || '과정 단체 회식';
+        if (!destination || !startTime || !endTime || !phone) return ui.showAlert("⚠️ 행선지, 외출·복귀 시간, 대표 연락처는 필수입니다.");
+        if (startTime >= endTime) return ui.showAlert("⚠️ 복귀 시간이 외출 시간보다 빠를 수 없습니다.");
+        document.getElementById('groupDinnerModal').style.display = 'none';
+        const snap = await firebase.database().ref(`courses/${state.room}/students`).once('value');
+        const students = snap.val() || {};
+        const today = getTodayString();
+        const updates = {}; const ts = Date.now();
+        const seen = new Set(); const valid = [];
+        Object.keys(students).forEach(token => {
+            const s = students[token];
+            if(!s.name||s.name==='undefined') return;
+            const key = `${s.name.trim()}_${(s.phone||'').trim()}`;
+            if(!seen.has(key)){seen.add(key);valid.push({token,...s});}
+        });
+        valid.forEach((s,i)=>{
+            updates[`courses/${state.room}/dinner_skips/${today}/${s.token}`] = `${s.name}(${s.phone?s.phone.slice(-4):'0000'})`;
+            updates[`courses/${state.room}/admin_actions/${today}/${s.token}`] = {name:s.name,dept:s.dept||'',phone,destination,startTime,endTime,reason,type:'group_outing',timestamp:ts+i,returned:false};
+        });
+        await firebase.database().ref().update(updates);
+        ui.showAlert(`✅ ${valid.length}명 석식 제외 및 단체 외출 등록 완료\n행선지: ${destination} / ${startTime}~${endTime}`);
+        return;
         if(!confirm("현재 명단의 모든 수강생을 '석식 제외'로 등록하시겠습니까?\n(단체 회식 시 사용)")) return;
         
         firebase.database().ref(`courses/${state.room}/students`).once('value', snap => {
@@ -2013,6 +2053,11 @@ showAlert: function(msg) {
 
 
     
+    openFullAttendanceSheet: function() {
+        if (!state.room) return ui.showAlert("강의실을 먼저 선택해 주세요.");
+        window.open(`attendance_sheet.html?room=${state.room}`, '_blank');
+    },
+
     requestAdminAuth: function(type) {
         if(type === 'pw') state.adminCallback = () => ui.openPwModal();
         else if(type === 'idle') state.adminCallback = () => dataMgr.deactivateAllRooms();
@@ -2065,10 +2110,10 @@ showAlert: function(msg) {
         
         // 1. Firebase 실시간 리스너 (한 번만 등록)
         if (!window.isRoomListenerSet) {
+            window.isRoomListenerSet = true;
             firebase.database().ref('courses').on('value', s => {
-                window.latestCoursesData = s.val() || {}; // 전역에 데이터 저장
-                window.isRoomListenerSet = true;
-                this.initRoomSelect(); // 데이터가 오면 화면을 다시 그림
+                window.latestCoursesData = s.val() || {};
+                ui.initRoomSelect();
             });
             return;
         }
@@ -2175,7 +2220,7 @@ toggleMiniQR: function() {
         
         // 경로 계산 보정
         const path = window.location.pathname;
-        const directory = path.substring( path.lastIndexOf('/'), 0);
+        const directory = path.substring(0, path.lastIndexOf('/'));
         const baseUrl = window.location.origin + directory + "/";
         const forcedUrl = `${baseUrl}index.html?room=${state.room}`;
         
@@ -2504,6 +2549,10 @@ setMode: function(mode) {
                         localStorage.setItem(`last_seen_shuttle_${state.room}`, `${dep.date} ${dep.time}`);
                     }
                 });
+            }
+            if (mode === 'guide') {
+                if (!guideMgr.pdfDoc) { guideMgr.init(); }
+                else { guideMgr.renderPage(guideMgr.pageNum); }
             }
             if (mode === 'admin-action') ui.loadAdminActionData();
             if (mode === 'dinner-skip') ui.loadDinnerSkipData();
@@ -3463,7 +3512,7 @@ resetShuttleRequests: function() {
         // 공지 탭 읽음 처리 (닫기 버튼 클릭 전 공지 탭으로 이동 시)
         const confirmBtn = overlay.querySelector('button:first-child');
         confirmBtn.addEventListener('click', () => {
-            if(state.room) localStorage.setItem(\`kac_coord_notice_seen_\${state.room}\`, msg);
+            if(state.room) localStorage.setItem(`kac_coord_notice_seen_\${state.room}`, msg);
             ui.updateCoordNoticeBadge(msg, msg);
         });
     },
@@ -4232,7 +4281,7 @@ const guideMgr = {
     // 1. 초기화 (기존 로직 + 리사이즈 감시 추가)
 init: function() {
     if (!state.room) return;
-    if (window['pdfjs-dist/build/pdf']) {
+    if (typeof pdfjsLib !== 'undefined') {
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
     }
     const guideRef = firebase.database().ref(`system/sharedGuide`);
@@ -4240,6 +4289,7 @@ init: function() {
     guideRef.on('value', snap => {
         const data = snap.val();
         const badge = document.getElementById('guideStatusBadge');
+        if (!badge) return;
         if (data) {
             if (badge) { badge.innerText = "✅ 가이드 등록 완료"; badge.style.color = "#10b981"; }
             guideMgr.pageNum = 1;
@@ -4680,6 +4730,15 @@ loadCurrentSettings: function() {
         
         // 5. 모달 표시 및 과목 리스트 출력
         subjectMgr.renderListInModal();
+
+        // 6. 메뉴 기능 ON/OFF 로드
+        const features = s.menuFeatures || {};
+        const fm = {'feat-facility':features.facility!==false,'feat-shuttle':features.shuttle!==false,'feat-admin-action':features.adminAction!==false,'feat-meal':features.meal!==false,'feat-attendance-qr':features.attendanceQr!==false,'feat-cns':features.cns!==false};
+        Object.entries(fm).forEach(([id,val])=>{ const el=document.getElementById(id); if(el) el.checked=val; });
+
+        // 7. 식단 상태 표시
+        setupMgr.refreshMealStatus();
+
         document.getElementById('courseSetupModal').style.display = 'flex';
     });
 },
@@ -4748,6 +4807,14 @@ saveAll: function() {
         updates[`courses/${state.room}/status/roomStatus`] = 'active';
         updates[`courses/${state.room}/status/ownerSessionId`] = state.sessionId;
 
+        // 메뉴 기능 ON/OFF 저장
+        updates[`courses/${state.room}/settings/menuFeatures/facility`]     = document.getElementById('feat-facility')?.checked !== false;
+        updates[`courses/${state.room}/settings/menuFeatures/shuttle`]      = document.getElementById('feat-shuttle')?.checked !== false;
+        updates[`courses/${state.room}/settings/menuFeatures/adminAction`]  = document.getElementById('feat-admin-action')?.checked !== false;
+        updates[`courses/${state.room}/settings/menuFeatures/meal`]         = document.getElementById('feat-meal')?.checked !== false;
+        updates[`courses/${state.room}/settings/menuFeatures/attendanceQr`] = document.getElementById('feat-attendance-qr')?.checked !== false;
+        updates[`courses/${state.room}/settings/menuFeatures/cns`]          = document.getElementById('feat-cns')?.checked !== false;
+
         firebase.database().ref().update(updates).then(() => {
             document.getElementById('courseNameInput').value = name;
             document.getElementById('roomPw').value = rawPw;
@@ -4763,6 +4830,52 @@ saveAll: function() {
             dataMgr.forceEnterRoom(state.room);
         });
     }
+,
+
+    uploadMealImage: function(input) {
+        const file = input.files[0];
+        if (!file || !file.type.startsWith('image/')) { ui.showAlert('이미지 파일만 업로드 가능합니다.'); input.value=''; return; }
+        const expireDate = new Date(); expireDate.setDate(expireDate.getDate()+7);
+        const expireStr = expireDate.toISOString().split('T')[0];
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const img = new Image();
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                let w=img.width, h=img.height;
+                if(w>1200){h=h*1200/w;w=1200;}
+                canvas.width=w; canvas.height=h;
+                canvas.getContext('2d').drawImage(img,0,0,w,h);
+                const compressed = canvas.toDataURL('image/jpeg', 0.75);
+                firebase.database().ref('system/nutrition_menu').set({image:compressed,uploadedAt:getTodayString(),expireAt:expireStr})
+                    .then(()=>{ ui.showAlert(`✅ 식단 이미지 업로드 완료\n만료일: ${expireStr}`); setupMgr.refreshMealStatus(); input.value=''; })
+                    .catch(e=>ui.showAlert('업로드 실패: '+e.message));
+            };
+            img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+    },
+
+    clearMealImage: function() {
+        if(!confirm('등록된 식단 이미지를 삭제하시겠습니까?')) return;
+        firebase.database().ref('system/nutrition_menu').remove().then(()=>{ ui.showAlert('삭제되었습니다.'); setupMgr.refreshMealStatus(); });
+    },
+
+    refreshMealStatus: function() {
+        const el = document.getElementById('modalMealStatus');
+        if(!el) return;
+        firebase.database().ref('system/nutrition_menu').once('value', snap => {
+            const d = snap.val();
+            if(!d){ el.innerText='❌ 등록된 식단 없음'; el.style.color='#ef4444'; }
+            else if(typeof d==='string'){ el.innerText='✅ 식단 등록됨 (날짜 정보 없음)'; el.style.color='#10b981'; }
+            else {
+                const today = getTodayString();
+                if(d.expireAt < today){ el.innerText=`⚠️ 만료됨 (${d.expireAt})`; el.style.color='#f59e0b'; }
+                else { el.innerText=`✅ 등록됨 | 만료: ${d.expireAt}`; el.style.color='#10b981'; }
+            }
+        });
+    }
+
 }; // <--- setupMgr 객체를 닫아주는 아주 중요한 마침표입니다.
 
 

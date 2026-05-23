@@ -93,7 +93,7 @@
             </div>
             <div class="modal-actions" style="margin-top:25px; justify-content:center; gap:10px;">
                 <button class="m-btn m-btn-later" onclick="printMgr.closeInputModal()" style="background:#64748b; color:white;">취소</button>
-                <button class="m-btn m-btn-done" onclick="printMgr.confirmPrint(false)">미리보기 생성</button>
+                <button class="m-btn m-btn-done" onclick="printMgr.confirmPrint()">미리보기 생성</button>
             </div>
         </div>
     </div>
@@ -769,7 +769,7 @@
 
     <!-- 3. 버튼 영역 (표 바로 아래에 배치) -->
     <div style="margin-top: 25px; display: flex; gap: 15px; justify-content: center; padding-bottom: 50px;">
-        <button class="btn-action btn-primary" onclick="ui.applyGroupDinner()" style="width: auto; padding: 10px 20px;">
+        <button class="btn-action btn-primary" onclick="ui.openGroupDinnerModal()" style="width: auto; padding: 10px 20px;">
             <i class="fa-solid fa-users-rectangle"></i> 단체 회식 적용 (전원 석식 제외)
         </button>
         <button class="btn-action btn-secondary" onclick="ui.resetDinnerSkip()" style="width: auto; padding: 10px 20px; background: #64748b;">
@@ -1292,10 +1292,27 @@
                     </div>
                 </div>
 
-                <div style="margin-top:auto; padding:15px; background:#f1f5f9; border-radius:12px; font-size:11px; color:#64748b; line-height:1.6;">
-                    <i class="fa-solid fa-circle-info"></i> <b>관리 팁:</b><br>
-                    - 가이드 PDF는 교육생 앱 메인에 즉시 노출됩니다.<br>
-                    - 퀴즈 파일은 업로드 후 '퀴즈 모드'에서 선택하여 진행할 수 있습니다.
+                <!-- 식단표 업로드 -->
+                <div style="margin-bottom:16px; padding:14px; background:#ecfdf5; border-radius:12px; border:1px solid #a7f3d0;">
+                    <span style="display:block; font-size:12px; font-weight:800; color:#059669; margin-bottom:6px;"><i class="fa-solid fa-utensils"></i> 금주 식단표 (이미지)</span>
+                    <div id="modalMealStatus" style="font-size:11px; color:#64748b; font-weight:700; margin-bottom:8px;">상태 확인 중...</div>
+                    <div style="display:flex; gap:6px;">
+                        <input type="file" id="modalMealInput" accept="image/*" style="display:none;" onchange="setupMgr.uploadMealImage(this)">
+                        <button class="btn-action" onclick="document.getElementById('modalMealInput').click()" style="flex:2; height:38px; font-size:12px; background:#10b981; color:white; border:none; border-radius:8px; font-weight:800; cursor:pointer;"><i class="fa-solid fa-image"></i> 식단 이미지 업로드</button>
+                        <button class="btn-action btn-dark" onclick="setupMgr.clearMealImage()" style="flex:1; height:38px; font-size:12px;">삭제</button>
+                    </div>
+                </div>
+                <!-- 교육생 앱 메뉴 ON/OFF -->
+                <div style="padding:14px; background:#f8fafc; border-radius:12px; border:1px solid #e2e8f0;">
+                    <span style="display:block; font-size:12px; font-weight:900; color:#003366; margin-bottom:10px;"><i class="fa-solid fa-toggle-on"></i> 교육생 앱 메뉴 활성화</span>
+                    <div style="display:flex; flex-direction:column; gap:8px;">
+                        <label style="display:flex; align-items:center; justify-content:space-between; font-size:13px; font-weight:700; cursor:pointer;"><span><i class="fa-solid fa-soap" style="color:#10b981; margin-right:6px;"></i>생활관 비품 요청</span><input type="checkbox" id="feat-facility" style="width:18px; height:18px;" checked></label>
+                        <label style="display:flex; align-items:center; justify-content:space-between; font-size:13px; font-weight:700; cursor:pointer;"><span><i class="fa-solid fa-bus" style="color:#3b82f6; margin-right:6px;"></i>차량 신청</span><input type="checkbox" id="feat-shuttle" style="width:18px; height:18px;" checked></label>
+                        <label style="display:flex; align-items:center; justify-content:space-between; font-size:13px; font-weight:700; cursor:pointer;"><span><i class="fa-solid fa-file-signature" style="color:#f59e0b; margin-right:6px;"></i>외출·외박 / 석식제외</span><input type="checkbox" id="feat-admin-action" style="width:18px; height:18px;" checked></label>
+                        <label style="display:flex; align-items:center; justify-content:space-between; font-size:13px; font-weight:700; cursor:pointer;"><span><i class="fa-solid fa-utensils" style="color:#059669; margin-right:6px;"></i>금주 식단보기</span><input type="checkbox" id="feat-meal" style="width:18px; height:18px;" checked></label>
+                        <label style="display:flex; align-items:center; justify-content:space-between; font-size:13px; font-weight:700; cursor:pointer;"><span><i class="fa-solid fa-qrcode" style="color:#3b82f6; margin-right:6px;"></i>출결 QR 확인</span><input type="checkbox" id="feat-attendance-qr" style="width:18px; height:18px;" checked></label>
+                        <label style="display:flex; align-items:center; justify-content:space-between; font-size:13px; font-weight:700; cursor:pointer;"><span><i class="fa-solid fa-tower-broadcast" style="color:#6366f1; margin-right:6px;"></i>CNS 플랫폼</span><input type="checkbox" id="feat-cns" style="width:18px; height:18px;" checked></label>
+                    </div>
                 </div>
             </div>
         </div>
@@ -1354,6 +1371,28 @@
 
 
 
+
+
+<!-- 단체회식 외출 정보 입력 모달 -->
+<div id="groupDinnerModal" class="modal-overlay" style="z-index: 6000;">
+    <div class="modal-box" style="width: 480px;">
+        <div class="modal-header"><h3><i class="fa-solid fa-users-rectangle"></i> 단체 회식 외출 정보 입력</h3></div>
+        <p style="font-size:13px; color:#64748b; margin-bottom:20px; line-height:1.6;">전원 석식 제외와 함께 외출 대장에 단체 기록이 남습니다.</p>
+        <div class="setting-container">
+            <div class="setting-group"><label class="setting-label">행선지 <span style="color:#ef4444;">*</span></label><input type="text" id="gd-destination" class="setting-input" placeholder="예: 청주 OO식당"></div>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:15px;">
+                <div class="setting-group"><label class="setting-label">외출 시간 <span style="color:#ef4444;">*</span></label><input type="time" id="gd-start-time" class="setting-input"></div>
+                <div class="setting-group"><label class="setting-label">복귀 시간 <span style="color:#ef4444;">*</span></label><input type="time" id="gd-end-time" class="setting-input"></div>
+            </div>
+            <div class="setting-group"><label class="setting-label">대표 연락처 <span style="color:#ef4444;">*</span></label><input type="text" id="gd-phone" class="setting-input" placeholder="예: 010-0000-0000"></div>
+            <div class="setting-group"><label class="setting-label">사유</label><input type="text" id="gd-reason" class="setting-input" value="과정 단체 회식"></div>
+        </div>
+        <div class="modal-actions" style="margin-top:25px; justify-content:center; gap:10px;">
+            <button class="m-btn m-btn-later" onclick="document.getElementById('groupDinnerModal').style.display='none'" style="background:#64748b; color:white; min-width:90px; justify-content:center;">취소</button>
+            <button class="m-btn m-btn-done" onclick="ui.openGroupDinnerModal()" style="min-width:180px; justify-content:center;"><i class="fa-solid fa-check"></i> 적용 (전원 석식제외 + 외출 등록)</button>
+        </div>
+    </div>
+</div>
 
 <!-- [신규 추가] 교육과정 결과 보고서 미리보기 모달창 -->
 <div id="printPreviewModal" class="modal-overlay" style="z-index: 5000; display: none; align-items: center; justify-content: center; background: rgba(0,0,0,0.8);">
