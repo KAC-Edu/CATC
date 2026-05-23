@@ -1315,6 +1315,36 @@ body.modal-open .app-content {
           </div>
           </div>
 
+<!-- 퇴교 시간 공지 (신규) -->
+<div class="section-card" style="margin-bottom:0; background:linear-gradient(135deg,#1e3a8a,#1d4ed8); color:white; padding:16px;">
+    <div class="section-title" style="color:white; margin-bottom:12px;">
+        <i class="fa-solid fa-bus"></i> 퇴교차량 출발 시간 공지
+    </div>
+    <div id="coord-departure-status" style="font-size:12px; font-weight:700; color:rgba(255,255,255,0.7); margin-bottom:12px;">
+        상태 확인 중...
+    </div>
+    <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+        <select id="coord-departure-time" style="flex:1; padding:10px 12px; border-radius:10px; border:none; font-size:15px; font-weight:800; color:#1e3a8a; outline:none; min-width:110px;">
+            <option value="">시간 선택</option>
+            <option value="13:00">13:00</option>
+            <option value="13:30">13:30</option>
+            <option value="14:00">14:00</option>
+            <option value="14:30">14:30</option>
+            <option value="15:00">15:00</option>
+            <option value="15:30">15:30</option>
+            <option value="16:00">16:00</option>
+            <option value="16:30">16:30</option>
+            <option value="17:00">17:00</option>
+        </select>
+        <button onclick="coordSetDepartureTime()" style="flex:1; padding:10px 14px; background:#22c55e; color:white; border:none; border-radius:10px; font-size:14px; font-weight:900; cursor:pointer; min-width:90px;">
+            <i class="fa-solid fa-bullhorn"></i> 공지
+        </button>
+        <button onclick="coordCancelDeparture()" style="padding:10px 12px; background:rgba(255,255,255,0.15); color:white; border:1px solid rgba(255,255,255,0.3); border-radius:10px; font-size:13px; font-weight:700; cursor:pointer;">
+            취소
+        </button>
+    </div>
+</div>
+
 <div class="section-card notice-card-fill"> <!-- 🚩 클래스명 추가 -->
     <div class="section-title" style="color: #1e40af;">
         <i class="fa-solid fa-comment-dots"></i> 담당 과정 공지 (해당 과정 교육생 공지)
@@ -2239,10 +2269,8 @@ function updateIndividualView() {
                 <td onclick="showActionDetail('${dataStr}')" style="cursor:pointer; font-weight:800; text-align:center;">
                     ${a.date.substring(5)} ${a.name}
                 </td>
-                <td style="font-weight:800; text-align:center; color:${a.type==='group_outing'?'#7c3aed':a.type==='outing'?'#ea580c':'#dc2626'};">
-                    ${a.type==='group_outing'
-                        ? '<span style=\"background:#7c3aed;color:white;padding:2px 7px;border-radius:5px;font-size:11px;\">단체외출</span>'
-                        : a.type==='outing' ? '외출' : '외박'}
+                <td style="color:${a.type==='outing'?'#ea580c':'#dc2626'}; font-weight:800; text-align:center;">
+                    ${a.type==='outing'?'외출':'외박'}
                 </td>
                 <td style="text-align:center;">
                     ${new Date(a.timestamp).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}
@@ -2269,6 +2297,23 @@ function updateIndividualView() {
     const noticeEl = document.getElementById('courseNotice');
     if (document.activeElement !== noticeEl) {
         noticeEl.value = room.coordNotice || "";
+    }
+
+    // 퇴교 공지 상태 표시
+    const dep = room.shuttle?.departure;
+    const depStatusEl = document.getElementById('coord-departure-status');
+    const depTimeEl   = document.getElementById('coord-departure-time');
+    if (depStatusEl) {
+        if (dep && dep.announced && dep.time) {
+            depStatusEl.innerHTML = `<i class="fa-solid fa-circle-check" style="color:#4ade80;margin-right:5px;"></i>공지 완료 &mdash; <b style="color:white;">${dep.date || ''} ${dep.time}</b> 출발 공지됨`;
+            if (depTimeEl) depTimeEl.value = dep.time;
+        } else if (dep && dep.time) {
+            depStatusEl.innerHTML = `<i class="fa-solid fa-clock" style="color:#fbbf24;margin-right:5px;"></i>시간 설정됨 &mdash; <b style="color:white;">${dep.time}</b> (공지 미완료)`;
+            if (depTimeEl) depTimeEl.value = dep.time;
+        } else {
+            depStatusEl.innerHTML = `<i class="fa-solid fa-circle-minus" style="color:rgba(255,255,255,0.4);margin-right:5px;"></i>퇴교 시간 미설정`;
+            if (depTimeEl) depTimeEl.value = '';
+        }
     }
 }
 
@@ -3107,6 +3152,50 @@ async function resetIndividualCourse() {
   
 
 // 외출외박 대장 새창 열기 함수
+// 퇴교 시간 공지 (교육운영부 담당자)
+async function coordSetDepartureTime() {
+    if (!currentRID) { alert("과정을 먼저 선택해주세요."); return; }
+    const time = document.getElementById('coord-departure-time').value;
+    if (!time) { alert("출발 시간을 선택해주세요."); return; }
+
+    const room = globalAllData[currentRID];
+    const period = room?.settings?.period || '';
+    let depDate = getTodayString();
+
+    // driver.html과 동일한 날짜 계산 로직
+    if (period.includes(' ~ ')) {
+        const [startStr, endStr] = period.split(' ~ ').map(s => s.trim());
+        const startDate  = new Date(startStr);
+        const today      = new Date();
+
+        let firstFriday = new Date(startDate);
+        const dayToFri  = (5 - startDate.getDay() + 7) % 7;
+        firstFriday.setDate(startDate.getDate() + dayToFri);
+
+        const cmpToday  = new Date(today.getFullYear(),  today.getMonth(),  today.getDate());
+        const cmpFriday = new Date(firstFriday.getFullYear(), firstFriday.getMonth(), firstFriday.getDate());
+
+        depDate = (cmpToday <= cmpFriday)
+            ? firstFriday.toISOString().split('T')[0]
+            : endStr;
+    }
+
+    const courseName = room?.settings?.courseName || currentRID;
+    if (!confirm(`[${courseName}] 퇴교 시간을 공지할까요?\n\n출발일: ${depDate}\n출발시간: ${time}`)) return;
+
+    await firebase.database().ref(`courses/${currentRID}/shuttle/departure`).update({
+        time, date: depDate, announced: true
+    });
+    alert(`✅ 퇴교 공지 완료!\n${depDate} ${time} 출발`);
+}
+
+async function coordCancelDeparture() {
+    if (!currentRID) return;
+    if (!confirm("퇴교 공지를 취소하시겠습니까?")) return;
+    await firebase.database().ref(`courses/${currentRID}/shuttle/departure`).update({ announced: false });
+    alert("퇴교 공지가 취소되었습니다.");
+}
+
 function openOutingLedger() {
     if(!currentRID) {
         alert("먼저 왼쪽 리스트에서 교육 과정을 선택해주세요.");
@@ -3380,11 +3469,7 @@ function showActionDetail(dataJson) {
     const data = JSON.parse(decodeURIComponent(dataJson));
     const content = document.getElementById('actionDetailContent');
     
-    const typeNm = data.type === 'group_outing'
-        ? '<span style="background:#7c3aed;color:white;padding:2px 8px;border-radius:6px;font-size:12px;font-weight:800;">단체 외출</span>'
-        : data.type === 'outing'
-            ? '<span style="color:#ea580c;">외출(당일)</span>'
-            : '<span style="color:#dc2626;">외박(익일)</span>';
+    const typeNm = data.type === 'outing' ? '<span style="color:#ea580c;">외출(당일)</span>' : '<span style="color:#dc2626;">외박(익일)</span>';
     const returnStatus = data.returned ? `<b style="color:#10b981;">[복귀보고 완료: ${data.returnReportTime}]</b>` : `<b style="color:#ef4444;">[미복귀 / 외출중]</b>`;
 
     content.innerHTML = `
