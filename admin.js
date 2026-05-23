@@ -795,6 +795,8 @@ resetCourse: function() {
         updates[`${rPath}/notice`] = null;
         updates[`${rPath}/coordNotice`] = null;
         updates[`${rPath}/internal_attendance`] = null;
+        updates[`${rPath}/attendanceQR`] = null;    // 고용노동부 출결 QR 초기화
+        updates[`${rPath}/quizBank`] = null;        // 퀴즈 문제 은행 초기화
 
         // 과정 기본값 재설정
         updates[`${rPath}/settings/courseName`] = "";
@@ -4284,22 +4286,33 @@ const guideMgr = {
 
     // 1. 초기화 (기존 로직 + 리사이즈 감시 추가)
 init: function() {
-    if (!state.room) return;
-    if (typeof pdfjsLib !== 'undefined') {
-        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+    // sharedGuide는 system 경로 → room 없어도 로드 가능
+    if (typeof pdfjsLib === 'undefined') {
+        console.warn('pdf.js 미로드'); return;
     }
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
     const guideRef = firebase.database().ref(`system/sharedGuide`);
-    guideRef.off(); // 이전 안테나 제거
+    guideRef.off();
     guideRef.on('value', snap => {
         const data = snap.val();
         const badge = document.getElementById('guideStatusBadge');
-        if (!badge) return;
+        const canvas = document.getElementById('guideCanvas');
         if (data) {
             if (badge) { badge.innerText = "✅ 가이드 등록 완료"; badge.style.color = "#10b981"; }
             guideMgr.pageNum = 1;
             guideMgr.loadPDF(data);
         } else {
             if (badge) { badge.innerText = "❌ 등록된 파일 없음"; badge.style.color = "#ef4444"; }
+            if (canvas) {
+                canvas.width = 600; canvas.height = 160;
+                const ctx = canvas.getContext('2d');
+                ctx.fillStyle = '#f8fafc'; ctx.fillRect(0,0,600,160);
+                ctx.fillStyle = '#94a3b8'; ctx.textAlign = 'center';
+                ctx.font = 'bold 15px sans-serif';
+                ctx.fillText('등록된 입교안내 PDF가 없습니다.', 300, 70);
+                ctx.font = '12px sans-serif';
+                ctx.fillText('교육과정 환경설정에서 PDF를 업로드해 주세요.', 300, 95);
+            }
         }
     });
     window.addEventListener('resize', () => {
@@ -4347,8 +4360,10 @@ init: function() {
     // 3. PDF 로드 (기존 로직 유지)
     loadPDF: async function(base64) {
         try {
-            const raw = atob(base64.split(',')[1]);
-            const array = new Uint8Array(new ArrayBuffer(raw.length));
+            // data:application/pdf;base64, 형식과 순수 base64 모두 처리
+            const b64 = base64.includes(',') ? base64.split(',')[1] : base64;
+            const raw = atob(b64);
+            const array = new Uint8Array(raw.length);
             for (let i = 0; i < raw.length; i++) array[i] = raw.charCodeAt(i);
             
             const loadingTask = pdfjsLib.getDocument({data: array});
@@ -4356,6 +4371,20 @@ init: function() {
             guideMgr.renderPage(guideMgr.pageNum);
         } catch (err) {
             console.error("PDF 로딩 실패:", err);
+            const canvas = document.getElementById('guideCanvas');
+            if (canvas) {
+                canvas.width = 600; canvas.height = 200;
+                const ctx = canvas.getContext('2d');
+                ctx.fillStyle = '#fff1f2';
+                ctx.fillRect(0, 0, 600, 200);
+                ctx.fillStyle = '#ef4444';
+                ctx.font = 'bold 15px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('PDF 파일을 불러오지 못했습니다.', 300, 90);
+                ctx.fillStyle = '#94a3b8';
+                ctx.font = '12px sans-serif';
+                ctx.fillText('파일을 다시 업로드해 주세요.', 300, 115);
+            }
         }
     },
 
