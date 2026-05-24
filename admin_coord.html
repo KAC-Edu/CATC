@@ -2280,6 +2280,22 @@ function updateIndividualView() {
         noticeEl.value = room.coordNotice || "";
     }
 
+    // 차량 신청 인원 실시간 업데이트
+    const requests = room.shuttle?.requests || {};
+    const reqEntries = Object.values(requests).filter(r => r && r.location);
+    const osongCnt    = reqEntries.filter(r => r.location === 'osong').length;
+    const terminalCnt = reqEntries.filter(r => r.location === 'terminal').length;
+    const airportCnt  = reqEntries.filter(r => r.location === 'airport').length;
+    const carCnt      = reqEntries.filter(r => r.location === 'car').length;
+    const totalCnt    = reqEntries.length;
+
+    const setEl = (id, val) => { const el=document.getElementById(id); if(el) el.innerText=val; };
+    setEl('ind-shuttle-total', totalCnt);
+    setEl('ind-osong', osongCnt);
+    setEl('ind-term',  terminalCnt);
+    setEl('ind-air',   airportCnt);
+    setEl('ind-car',   carCnt);
+
     // 퇴교 공지 상태 표시
     const dep = room.shuttle?.departure;
     const depStatusEl = document.getElementById('coord-departure-status');
@@ -3133,6 +3149,50 @@ async function resetIndividualCourse() {
   
 
 // 외출외박 대장 새창 열기 함수
+// ── 교육운영부 퇴교 시간 공지
+async function coordSetDepartureTime() {
+    if (!currentRID) { alert("과정을 먼저 선택해주세요."); return; }
+    const timeEl = document.getElementById('coord-departure-time');
+    const time = timeEl ? timeEl.value : '';
+    if (!time) { alert("출발 시간을 선택해주세요."); return; }
+
+    const room = globalAllData[currentRID];
+    const period = room?.settings?.period || '';
+    let depDate = getTodayString();
+
+    if (period.includes(' ~ ')) {
+        const [startStr, endStr] = period.split(' ~ ').map(s => s.trim());
+        const startDate = new Date(startStr);
+        let firstFriday = new Date(startDate);
+        const dayToFri = (5 - startDate.getDay() + 7) % 7;
+        firstFriday.setDate(startDate.getDate() + dayToFri);
+        const cmpToday  = new Date(); cmpToday.setHours(0,0,0,0);
+        const cmpFriday = new Date(firstFriday); cmpFriday.setHours(0,0,0,0);
+        depDate = cmpToday <= cmpFriday ? firstFriday.toISOString().split('T')[0] : endStr;
+    }
+
+    const courseName = room?.settings?.courseName || currentRID;
+    if (!confirm(`[${courseName}] 퇴교 공지\n출발일: ${depDate} / 시간: ${time}\n\n교육생·강사·기사 플랫폼에 즉시 전달됩니다.`)) return;
+
+    await firebase.database().ref(`courses/${currentRID}/shuttle/departure`).update({
+        time, date: depDate, announced: true
+    });
+    // system/shuttle_notice도 함께 저장 (모든 플랫폼 fallback)
+    await firebase.database().ref('system/shuttle_notice').set(`${depDate} ${time} 퇴교차량 출발 예정`);
+
+    alert(`✅ 퇴교 공지 완료! ${depDate} ${time} 출발`);
+    updateIndividualView();
+}
+
+async function coordCancelDeparture() {
+    if (!currentRID) return;
+    if (!confirm("퇴교 공지를 취소하시겠습니까?")) return;
+    await firebase.database().ref(`courses/${currentRID}/shuttle/departure`).update({ announced: false });
+    await firebase.database().ref('system/shuttle_notice').remove();
+    alert("퇴교 공지가 취소되었습니다.");
+    updateIndividualView();
+}
+
 function openOutingLedger() {
     if(!currentRID) {
         alert("먼저 왼쪽 리스트에서 교육 과정을 선택해주세요.");
