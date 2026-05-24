@@ -332,8 +332,9 @@ switchRoomAttempt: async function(newRoom) {
 
     // 4. [분기 처리] 권한 여부에 따른 입장 통제
 
-    // [수정] 이미 내 방으로 현재 입장해 있으면 제어권 모달 없이 바로 재입장
-    if (newRoom === state.room && isOwner) {
+    // [수정] 이미 현재 입장해있는 방을 SELECT ROOM에서 다시 선택한 경우
+    // → isOwner 체크 없이 무조건 바로 재입장 (세션ID 불일치 문제 방지)
+    if (newRoom === state.room) {
         dataMgr.forceEnterRoom(newRoom);
         return;
     }
@@ -588,15 +589,17 @@ forceEnterRoom: async function(room) {
         // [중요] 권한 검증 로직 및 모달 트리거
         if (!state.isObserver) {
             if (isActive && !isOwner) {
-                // 방이 사용 중인데 내가 주인이 아님 -> 잠금 유지 및 비번 입력창 유도
+                // 방이 사용 중인데 내가 주인이 아님 → 비밀번호 입력 안내
                 overlay.style.display = 'flex';
+                ui.showOverlayMessage('locked');
                 state.pendingRoom = cleanRoom;
                 dataMgr.openTakeoverModal();
             } else if (!isActive) {
-                // 방이 비어있음 -> 잠금 유지
+                // 방이 비어있음 → 환경설정 버튼 누르라는 안내
                 overlay.style.display = 'flex';
+                ui.showOverlayMessage('idle');
             } else {
-                // 내가 정당한 주인이 확인됨 -> 잠금 해제
+                // 내가 정당한 주인으로 확인됨 → 잠금 해제
                 overlay.style.display = 'none';
                 document.getElementById('takeoverModal').style.display = 'none';
             }
@@ -3580,6 +3583,49 @@ toggleMenuDropdown: function() {
             if(state.room) localStorage.setItem(`kac_coord_notice_seen_\${state.room}`, msg);
             ui.updateCoordNoticeBadge(msg, msg);
         });
+    },
+
+    // statusOverlay 메시지 상황별 전환
+    showOverlayMessage: function(type) {
+        const el = document.getElementById('overlayContent');
+        if (!el) return;
+        if (type === 'idle') {
+            // 신규 개설 안내 - 환경설정 버튼 깜빡임
+            el.innerHTML = `
+                <i class="fa-solid fa-door-open" style="font-size:36px; color:#94a3b8; margin-bottom:14px; display:block; text-align:center;"></i>
+                <h3 style="font-size:18px; font-weight:900; color:#1e293b; margin-bottom:8px; text-align:center;">신규 과정을 개설하시나요?</h3>
+                <p style="font-size:13px; color:#64748b; line-height:1.7; margin-bottom:20px; text-align:center;">
+                    이 강의실은 <b>비어있는 상태</b>입니다.<br>
+                    좌측 버튼을 눌러 과정을 개설해 주세요.
+                </p>
+                <div style="display:flex; align-items:center; justify-content:center; gap:14px; flex-wrap:wrap;">
+                    <div style="display:flex; align-items:center; gap:8px; background:#fff3cd; border:2px solid #f59e0b; border-radius:12px; padding:10px 16px; font-size:13px; font-weight:800; color:#92400e;">
+                        <i class="fa-solid fa-arrow-left" style="animation:bounceLeft 0.8s ease-in-out infinite;"></i>
+                        교육과정 환경 설정 (통합) 버튼을 눌러주세요
+                    </div>
+                </div>
+                <div style="margin-top:14px; text-align:center; font-size:11px; color:#94a3b8;">
+                    이미 사용 중인 방이라면 잠시 후 비밀번호 입력창이 나타납니다.
+                </div>`;
+        } else {
+            // 제어권 인증 안내 - 비밀번호 버튼 깜빡임
+            el.innerHTML = `
+                <i class="fa-solid fa-lock" style="font-size:36px; color:#94a3b8; margin-bottom:14px; display:block; text-align:center;"></i>
+                <h3 style="font-size:18px; font-weight:900; color:#1e293b; margin-bottom:8px; text-align:center;">강의실 입장 확인</h3>
+                <p style="font-size:13px; color:#64748b; line-height:1.6; margin-bottom:20px; text-align:center;">
+                    현재 이 강의실은 <b>사용 중</b>입니다.<br>
+                    강사라면 비밀번호를 입력해 제어권을 획득하세요.
+                </p>
+                <button class="pulse-btn"
+                    onclick="dataMgr.openTakeoverModal();"
+                    style="background:#3b82f6; color:white; border:none; border-radius:14px;
+                           padding:14px 32px; font-size:16px; font-weight:900; cursor:pointer;
+                           display:flex; align-items:center; gap:10px; margin:0 auto 12px auto;">
+                    <i class="fa-solid fa-lock-open"></i>
+                    비밀번호 입력하기
+                </button>
+                <div style="text-align:center; font-size:11px; color:#94a3b8;">단순 모니터링은 좌측 옵저버 모드를 이용하세요.</div>`;
+        }
     },
 
     toggleFamilySites: function() {

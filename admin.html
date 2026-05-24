@@ -23,6 +23,10 @@
     50% { box-shadow: 0 0 0 12px rgba(59,130,246,0); transform: scale(1.03); }
 }
 .pulse-btn { animation: pulseBtn 1.8s ease-in-out infinite; }
+@keyframes bounceLeft {
+    0%,100% { transform: translateX(0); }
+    50% { transform: translateX(-6px); }
+}
 </style>
 </head>
 <body class="day-mode">
@@ -235,23 +239,11 @@
 
 <!-- 디자인은 유지하되, 비밀번호 창과 겹치지 않게 우선순위(z-index)를 낮춘 버전 -->
 <div id="statusOverlay" class="status-overlay" style="z-index: 5000 !important;">
-    <div class="lock-message">
-        <i class="fa-solid fa-lock" style="font-size:36px; color:#94a3b8; margin-bottom:12px;"></i>
-        <h3 style="font-size:18px; font-weight:900; color:#1e293b; margin-bottom:8px;">강의실 입장 확인</h3>
-        <p style="font-size:13px; color:#64748b; line-height:1.6; margin-bottom:20px;">
-            현재 이 강의실은 <b>'비어있음'</b> 상태이거나 <b>'제어권'</b>이 없는 상태입니다.<br>
-            이미 사용 중인 방이라면 아래 버튼을 눌러 입장하세요.
-        </p>
-        <!-- 깜빡이는 안내 버튼 -->
-        <button class="pulse-btn"
-            onclick="dataMgr.openTakeoverModal();"
-            style="background:#3b82f6; color:white; border:none; border-radius:14px;
-                   padding:14px 32px; font-size:16px; font-weight:900; cursor:pointer;
-                   display:flex; align-items:center; gap:10px; margin:0 auto 12px auto;">
-            <i class="fa-solid fa-lock-open"></i>
-            비밀번호 입력하기
-        </button>
-        <div style="font-size:11px; color:#94a3b8;">강의실을 처음 개설하는 경우 Select Room에서 방을 선택하세요.</div>
+    <div class="lock-message" id="overlayContent">
+        <!-- 초기값 - showOverlayMessage()로 동적 교체됨 -->
+        <i class="fa-solid fa-lock" style="font-size:36px; color:#94a3b8; margin-bottom:12px; display:block; text-align:center;"></i>
+        <h3 style="font-size:18px; font-weight:900; color:#1e293b; margin-bottom:8px; text-align:center;">강의실 확인 중...</h3>
+        <p style="font-size:13px; color:#64748b; text-align:center;">잠시만 기다려 주세요.</p>
     </div>
 </div>
 <header class="header">
