@@ -2201,14 +2201,14 @@ showAlert: function(msg) {
             const isRoomActive = (st.roomStatus === 'active');
             const courseName = settings.courseName ? settings.courseName : "-";
             const profName = st.professorName ? st.professorName : "-";
-            const myOwnedRoom = (localStorage.getItem('last_owned_room') || '').toUpperCase();
-            const isRealMyRoom = isRoomActive && (st.ownerSessionId === state.sessionId || (c === myOwnedRoom && c === state.room));
+            // isRealMyRoom: 오직 현재 세션ID 기준 (last_owned_room 제거 - 방 혼동 원인)
+            const isRealMyRoom = isRoomActive && st.ownerSessionId === state.sessionId;
 
             // 사이드바 드롭다운 갱신
             if(sel) {
                 const opt = document.createElement('option');
                 opt.value = c;
-                if(isRealMyRoom) opt.innerText = `Room ${c} (🔵 내 강의실 - ${profName})`;
+                if(c === state.room) opt.innerText = `Room ${c} (🔵 내 강의실 - ${profName})`;
                 else if(isRoomActive) opt.innerText = `Room ${c} (🔴 사용중 - ${profName})`;
                 else opt.innerText = `Room ${c} (⚪ 대기)`;
                 
@@ -2230,7 +2230,7 @@ showAlert: function(msg) {
                     <td>${rowNum}</td>
                     <td style="font-weight:900; color:#3b82f6;">
                         Room ${c}
-                        ${isRealMyRoom ? '<span class="my-room-badge">MY</span>' : ''}
+                        ${c === state.room ? '<span class="my-room-badge">MY</span>' : ''}
                     </td>
                     <td><div class="td-course-name" title="${courseName}">${courseName}</div></td>
                     <td style="font-weight:600;">${profName}</td>
@@ -4471,7 +4471,8 @@ init: function() {
         });
         document.addEventListener('fullscreenchange', () => {
             guideMgr.isRendering = false;
-            setTimeout(() => guideMgr.renderPage(guideMgr.pageNum), 200);
+            // CSS 전환 후 pdfWrapper 크기가 확정된 다음 renderPage
+            setTimeout(() => guideMgr.renderPage(guideMgr.pageNum), 350);
         });
     }
 },
@@ -5015,11 +5016,19 @@ loadCurrentSettings: function() {
         }
         
         // 5. menuFeatures 체크박스 상태 로드
+        // 기본값: 차량신청(shuttle) + 외출/외박(adminAction)만 ON, 나머지는 OFF
         const features = s.menuFeatures || {};
+        const defaultOn = ['shuttle', 'adminAction'];
         const featureKeys = ['facility','shuttle','adminAction','meal','attendanceQr','cns'];
         featureKeys.forEach(key => {
             const el = document.getElementById(`feat-${key}`);
-            if (el) el.checked = (features[key] !== false); // 기본값 true
+            if (!el) return;
+            if (Object.keys(features).length === 0) {
+                // DB에 저장된 값 없으면 기본값 적용
+                el.checked = defaultOn.includes(key);
+            } else {
+                el.checked = (features[key] !== false);
+            }
         });
 
         // 6. 모달 표시 및 과목 리스트 출력
