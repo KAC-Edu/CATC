@@ -393,7 +393,7 @@ verifyTakeover: async function() {
                 ownerSessionId: state.sessionId,
                 roomStatus: 'active'
             });
-            localStorage.setItem(`last_owned_room`, newRoom);
+            localStorage.setItem('last_owned_room', newRoom.toUpperCase());
             document.getElementById('takeoverModal').style.display = 'none';
             this.forceEnterRoom(newRoom);
             ui.showAlert("✅ 제어권을 획득했습니다.");
@@ -590,18 +590,17 @@ forceEnterRoom: async function(room) {
 
         // [핵심] 이전에 이 방을 소유했던 기록이 있으면(last_owned_room)
         // 새로고침으로 sessionId가 바뀌어도 자동으로 소유권 재획득
-        const wasMyRoom = localStorage.getItem('last_owned_room') === cleanRoom;
+        const wasMyRoom = (localStorage.getItem('last_owned_room') || '').toUpperCase() === cleanRoom;
 
         if (!state.isObserver) {
             if (isActive && !isOwner && wasMyRoom) {
-                // 내 방인데 세션 만료 → ownerSessionId 자동 갱신 후 입장
+                // 내 방인데 세션 만료 → ownerSessionId 즉시 갱신 + overlay 즉시 닫기
                 firebase.database().ref(`courses/${cleanRoom}/status`).update({
                     ownerSessionId: state.sessionId
-                }).then(() => {
-                    overlay.style.display = 'none';
-                    document.getElementById('takeoverModal').style.display = 'none';
                 });
-                return; // 갱신 완료 후 on() 재발동으로 처리
+                overlay.style.display = 'none';
+                document.getElementById('takeoverModal').style.display = 'none';
+                return;
             } else if (isActive && !isOwner) {
                 // 다른 사람 방 → 비밀번호 입력 안내
                 overlay.style.display = 'flex';
@@ -730,7 +729,7 @@ fetchCodeAndRenderQr: function(room) {
         updates[`courses/${state.room}/status/ownerSessionId`] = (statusVal === 'active' ? state.sessionId : null);
 
         firebase.database().ref().update(updates).then(() => {
-            localStorage.setItem('last_owned_room', state.room);
+            localStorage.setItem('last_owned_room', (state.room||'').toUpperCase());
             ui.showAlert("✅ 설정이 저장되었습니다.");
         });
 
@@ -4927,7 +4926,7 @@ saveAll: function() {
             document.getElementById('courseNameInput').value = name;
             document.getElementById('roomPw').value = rawPw;
             document.getElementById('displayCourseTitle').innerText = name;
-            localStorage.setItem('last_owned_room', state.room);
+            localStorage.setItem('last_owned_room', (state.room||'').toUpperCase());
             
             ui.showAlert("✅ 설정이 저장되었습니다.");
             
