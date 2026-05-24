@@ -3406,29 +3406,30 @@ resetShuttleRequests: function() {
         const dashBadge = document.getElementById('coordNoticeBadge');
         const hasNew = currentMsg && currentMsg !== lastSeenMsg && currentMsg.trim() !== '';
 
-        // 공지 탭 상단 배지
+        // 공지 탭 옆 말풍선 NEW 뱃지
         if (tab) {
-            let badge = tab.querySelector('.notice-new-dot');
+            let badge = tab.querySelector('.notice-new-bubble');
             if (hasNew) {
                 if (!badge) {
                     badge = document.createElement('span');
-                    badge.className = 'notice-new-dot';
-                    badge.style.cssText = 'display:inline-block; width:8px; height:8px; background:#ef4444; border-radius:50%; margin-left:5px; vertical-align:middle; animation: pulseDot 1.5s infinite;';
+                    badge.className = 'notice-new-bubble';
+                    badge.style.cssText = 'display:inline-flex;align-items:center;background:#ef4444;color:white;font-size:9px;font-weight:900;padding:2px 6px;border-radius:10px;margin-left:5px;vertical-align:middle;';
+                    badge.innerHTML = '<i class="fa-solid fa-comment" style="margin-right:3px;font-size:8px;"></i>NEW';
                     tab.appendChild(badge);
                 }
             } else {
                 if (badge) badge.remove();
             }
         }
-
-        // 대시보드 공지 피드 운영 배지
         if (dashBadge) dashBadge.style.display = hasNew ? 'inline-flex' : 'none';
     },
 
     // [신규] 교육운영담당자 신규 공지 팝업
     showCoordNoticeAlert: function(msg) {
-        // 이미 팝업이 열려있으면 중복 방지
         if (document.getElementById('coordNoticeAlertModal')) return;
+        // Q&A 탭 활성 중에는 팝업 차단
+        const qaView = document.getElementById('view-qa');
+        if (qaView && qaView.style.display !== 'none') return;
 
         const overlay = document.createElement('div');
         overlay.id = 'coordNoticeAlertModal';
@@ -4311,6 +4312,8 @@ init: function() {
     renderPage: async function(num) {
         if(!guideMgr.pdfDoc || guideMgr.isRendering) return;
         guideMgr.isRendering = true;
+        const pageInfo = document.getElementById('guidePageInfo');
+        if (pageInfo) pageInfo.innerText = `${num} / ${guideMgr.pdfDoc.numPages}`;
 
         try {
             const page = await guideMgr.pdfDoc.getPage(num);

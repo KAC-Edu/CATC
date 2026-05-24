@@ -351,6 +351,13 @@ body.night-mode .q-card.status-pin {
     justify-content: center; 
     backdrop-filter: blur(10px) !important; 
 }
+/* 전체화면 시 모달 오버레이 사이드바 없이 전체 덮기 */
+:fullscreen .modal-overlay,
+:-webkit-full-screen .modal-overlay,
+:-moz-full-screen .modal-overlay {
+    left: 0 !important;
+    width: 100% !important;
+}
 .modal-box { background: var(--card-bg); width: 600px; padding: 30px; border-radius: 20px; box-shadow: 0 25px 50px rgba(0,0,0,0.2); animation: popIn 0.3s; }
 .modal-header { margin-bottom: 20px; text-align: center; color: var(--text-color); }
 .modal-header h3 { margin: 0; font-size: 22px; font-weight: 800; }
@@ -1191,8 +1198,7 @@ body.night-mode .badge-idle {
 /* 3. 카드 내부 테이블 스타일 통일 */
 .modern-white-card table {
     width: 100%;
-    border-collapse: separate;   /* collapse → separate: is-my-room border-top 짤림 방지 */
-    border-spacing: 0 2px;        /* 행 간 2px 간격: 첫 행 border-top이 thead에 가려지지 않게 */
+    border-collapse: collapse;
 }
 .modern-white-card th {
     padding: 30px;
@@ -1216,27 +1222,21 @@ body.night-mode .badge-idle {
 
 /* --- 내 강의실(강조) 스타일 --- */
 .modern-table tr.is-my-room td {
-    background-color: #eff6ff !important;
-    border-top: 2px solid #3b82f6 !important;
-    border-bottom: 2px solid #3b82f6 !important;
+    background-color: #eff6ff !important; /* 연한 파란색 배경 */
+    border-top: 2px solid #3b82f6 !important; /* 위쪽 파란 선 */
+    border-bottom: 2px solid #3b82f6 !important; /* 아래쪽 파란 선 */
 }
+
+/* 첫 번째 칸과 마지막 칸의 옆면 테두리까지 둘러서 '파란 네모' 완성 */
 .modern-table tr.is-my-room td:first-child {
     border-left: 2px solid #3b82f6 !important;
     border-top-left-radius: 10px;
     border-bottom-left-radius: 10px;
-    /* thead 바로 아래 첫 행일 때도 border-top이 보이도록 */
-    position: relative;
-    z-index: 1;
 }
 .modern-table tr.is-my-room td:last-child {
     border-right: 2px solid #3b82f6 !important;
     border-top-right-radius: 10px;
     border-bottom-right-radius: 10px;
-}
-/* border-separate 환경에서 모든 td에 z-index 부여해 thead 위로 올라오게 */
-.modern-table tr.is-my-room td {
-    position: relative;
-    z-index: 1;
 }
 
 /* "관리 중" 뱃지 디자인 */
