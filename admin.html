@@ -1446,14 +1446,14 @@
 </div>
 
 
-<!-- [코디 공지 알림] 실시간 운영부 공지 변경 알림 팝업 -->
+<!-- [공지 알림] 운영부/센터 공지 변경 알림 팝업 -->
 <div id="coordNoticeAlertModal" class="modal-overlay" style="z-index: 9500; display:none;">
-    <div class="modal-box" style="width:420px; text-align:center;">
-        <div style="font-size:40px; margin-bottom:10px;">🔔</div>
-        <h3 style="margin:0 0 8px 0; color:#1d4ed8;">운영부 공지가 업데이트되었습니다</h3>
-        <div id="coordNoticeAlertContent" style="background:#eff6ff; border:1px solid #bfdbfe; border-radius:10px; padding:14px; margin:14px 0; font-size:14px; color:#1e3a8a; font-weight:600; line-height:1.6; text-align:left; white-space:pre-line;"></div>
+    <div class="modal-box" style="width:440px; text-align:center;">
+        <div style="font-size:36px; margin-bottom:8px;">🔔</div>
+        <h3 id="coordNoticeAlertTitle" style="margin:0 0 8px 0; color:#1d4ed8; font-size:16px;">공지가 업데이트되었습니다</h3>
+        <div id="coordNoticeAlertContent" style="background:#eff6ff; border:1px solid #bfdbfe; border-radius:10px; padding:14px; margin:12px 0; font-size:14px; color:#1e3a8a; font-weight:600; line-height:1.6; text-align:left; white-space:pre-line; max-height:200px; overflow-y:auto;"></div>
         <div class="modal-actions" style="justify-content:center; gap:10px; margin-top:10px;">
-            <button class="m-btn m-btn-later" onclick="document.getElementById('coordNoticeAlertModal').style.display='none'; ui.setMode('notice');"
+            <button class="m-btn m-btn-later" onclick="document.getElementById('coordNoticeAlertModal').style.display='none'; ui.clearCoordNoticeBadge(); ui.setMode('notice');"
                 style="background:#3b82f6; color:white;">
                 <i class="fa-solid fa-bullhorn"></i> 공지 탭에서 확인
             </button>

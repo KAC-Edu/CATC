@@ -612,6 +612,17 @@ forceEnterRoom: async function(room) {
     });
 
     this.fetchCodeAndRenderQr(cleanRoom);
+
+    // 퀴즈 모드가 DB에 잘못 남아있으면 자동 복구 (교육생 화면 보호)
+    firebase.database().ref(`courses/${cleanRoom}/status`).once('value', snap => {
+        const st = snap.val() || {};
+        if (st.mode === 'quiz' && !state.isObserver) {
+            // 강사가 퀴즈 탭에 없는데 mode=quiz이면 qa로 복원
+            firebase.database().ref(`courses/${cleanRoom}/status/mode`).set('qa');
+            console.log('[자동복구] quiz mode → qa 복원');
+        }
+    });
+
     const lastMode = localStorage.getItem('kac_last_mode') || 'dashboard';
     ui.setMode(lastMode); 
     subjectMgr.init();
@@ -622,10 +633,25 @@ forceEnterRoom: async function(room) {
     firebase.database().ref(`courses/${cleanRoom}/coordNotice`).on('value', snap => {
         if (state.room !== cleanRoom) return;
         const newMsg = snap.val() || '';
-        const lastSeen = localStorage.getItem(`kac_coord_notice_seen_${cleanRoom}`) || '';
-        ui.updateCoordNoticeBadge(newMsg, lastSeen);
-        if (newMsg && newMsg !== lastSeen && newMsg.trim() !== '') {
-            if (lastSeen !== '') ui.showCoordNoticeAlert(newMsg);
+        const seenKey = `kac_coord_notice_seen_${cleanRoom}`;
+        const lastSeen = localStorage.getItem(seenKey) || '';
+        ui.updateCoordNoticeBadge(newMsg, lastSeen, 'coord');
+        // lastSeen 조건 제거 - 공지가 있고 변경됐으면 항상 팝업 표시
+        if (newMsg && newMsg.trim() !== '' && newMsg !== lastSeen) {
+            ui.showCoordNoticeAlert(newMsg, 'coord');
+        }
+    });
+
+    // [센터 전체 공지 변경 감지] globalNotice → 강사 실시간 알림
+    firebase.database().ref('system/globalNotice').off();
+    firebase.database().ref('system/globalNotice').on('value', snap => {
+        if (state.room !== cleanRoom) return;
+        const newMsg = snap.val() || '';
+        const seenKey = `kac_global_notice_seen`;
+        const lastSeen = localStorage.getItem(seenKey) || '';
+        ui.updateCoordNoticeBadge(newMsg, lastSeen, 'global');
+        if (newMsg && newMsg.trim() !== '' && newMsg !== lastSeen) {
+            ui.showCoordNoticeAlert(newMsg, 'global');
         }
     });
 
@@ -845,6 +871,9 @@ resetCourse: function() {
         
         // 학생들에게 초기화 신호를 보내 강제 퇴출시킴
         updates[`${rPath}/status/resetKey`] = "reset_" + Date.now();
+        // 퀴즈 모드 강제 초기화 (교육생 화면에 퀴즈 화면이 남아있지 않도록)
+        updates[`${rPath}/status/mode`] = 'qa';
+        updates[`${rPath}/status/quizStep`] = 'none';
 
         firebase.database().ref().update(updates).then(() => {
             ui.showAlert(`✅ Room ${state.room}이 성공적으로 초기화되었습니다.`);
@@ -2616,10 +2645,15 @@ setMode: function(mode) {
                 }
             }
 
-            let studentMode = (['waiting', 'shuttle', 'admin-action', 'dinner-skip', 'students', 'dashboard', 'notice', 'attendance', 'guide', 'dormitory'].includes(mode)) ? 'qa' : mode;
+            // quiz/prof-presentation 탭은 강사 전용 - 교육생에게 quiz 신호 보내면 안 됨
+            // 실제 퀴즈 모드는 quizMgr.showQuiz()에서만 status/mode='quiz'를 씀
+            const safeStudentModes = ['waiting', 'shuttle', 'admin-action', 'dinner-skip', 'students', 'dashboard', 'notice', 'attendance', 'guide', 'dormitory'];
+            const blockModes = ['quiz', 'prof-presentation', 'qa']; // 강사 전용 탭 - 교육생 화면 건드리지 않음
+            let studentMode = (safeStudentModes.includes(mode)) ? 'qa' : (blockModes.includes(mode) ? null : mode);
             
             // [옵저버 제한] 옵저버는 교육생 화면 모드를 원격으로 바꿀 수 없음
-            if (!state.isObserver) {
+            // studentMode가 null이면 교육생 화면을 건드리지 않음 (퀴즈탭 등 강사 전용)
+            if (!state.isObserver && studentMode !== null) {
                 firebase.database().ref(`courses/${state.room}/status/mode`).set(studentMode);
             }
             
@@ -4243,6 +4277,10 @@ closeSummaryAndExit: function() {
         state.isExternalFileLoaded = false;
         state.quizList = [];
         this.stopTimer();
+        // 퀴즈 종료 시 교육생 화면을 qa 모드로 복원
+        if (state.room) {
+            firebase.database().ref(`courses/${state.room}/status/mode`).set('qa');
+        }
         ui.setMode('qa');
         alert("퀴즈가 종료되었습니다. 데이터가 초기화되고 Q&A 화면으로 이동합니다.");
     },
@@ -4477,40 +4515,60 @@ init: function() {
     }
 },
 
-    // 코디 공지 배지 업데이트 (공지탭 + Q&A탭 동시 업데이트)
-    updateCoordNoticeBadge: function(newMsg, lastSeen) {
-        const badge = document.getElementById('coordNoticeBadge');
-        const qaBadge = document.getElementById('qaNoticeBadge');
+    // 코디/센터 공지 배지 업데이트 (공지탭 NEW + Q&A탭 공지 배지)
+    updateCoordNoticeBadge: function(newMsg, lastSeen, type) {
         const hasNew = newMsg && newMsg !== lastSeen;
-        if(badge) badge.style.display = hasNew ? 'inline-block' : 'none';
-        if(qaBadge) qaBadge.style.display = hasNew ? 'inline-block' : 'none';
+        if (hasNew) {
+            const badge = document.getElementById('coordNoticeBadge');
+            const qaBadge = document.getElementById('qaNoticeBadge');
+            if(badge) badge.style.display = 'inline-block';
+            if(qaBadge) qaBadge.style.display = 'inline-block';
+        }
+        // 새 공지 없을 때는 양쪽 다 없는 경우만 숨김
+        if (!hasNew) {
+            const noCoord = !localStorage.getItem(`kac_coord_notice_seen_${state.room}`) || 
+                            (firebase.database && false); // 보수적으로 유지
+            // 배지 숨김은 clearCoordNoticeBadge에서만 처리
+        }
     },
 
-    // 공지 탭 진입 시 배지 숨기고 읽음 처리 (Q&A 탭 배지도 같이 클리어)
+    // 공지 탭 진입 시 배지 숨기고 읽음 처리 (coord + global 모두)
     clearCoordNoticeBadge: function() {
         const badge = document.getElementById('coordNoticeBadge');
         const qaBadge = document.getElementById('qaNoticeBadge');
         if(badge) badge.style.display = 'none';
         if(qaBadge) qaBadge.style.display = 'none';
         if(state.room) {
+            // 운영부 공지 읽음 처리
             firebase.database().ref(`courses/${state.room}/coordNotice`).once('value', snap => {
-                const msg = snap.val() || '';
-                localStorage.setItem(`kac_coord_notice_seen_${state.room}`, msg);
+                localStorage.setItem(`kac_coord_notice_seen_${state.room}`, snap.val() || '');
+            });
+            // 센터 전체 공지 읽음 처리
+            firebase.database().ref('system/globalNotice').once('value', snap => {
+                localStorage.setItem('kac_global_notice_seen', snap.val() || '');
             });
         }
     },
 
-    // 코디 공지 변경 알림 팝업 (Q&A 탭에서는 팝업 안 띄우고 배지만)
-    showCoordNoticeAlert: function(msg) {
-        // Q&A 탭에 있을 때는 팝업 차단 → Q&A 탭 배지만 표시
-        if(state.currentMode === 'qa') {
-            const qaBadge = document.getElementById('qaNoticeBadge');
-            if(qaBadge) qaBadge.style.display = 'inline-block';
-            return;
-        }
+    // 공지 알림 팝업 (Q&A 탭에서는 배지만, 나머지 탭에서는 팝업)
+    showCoordNoticeAlert: function(msg, type) {
+        const badge = document.getElementById('coordNoticeBadge');
+        const qaBadge = document.getElementById('qaNoticeBadge');
+        if(badge) badge.style.display = 'inline-block';
+        if(qaBadge) qaBadge.style.display = 'inline-block';
+
+        // Q&A 탭에 있을 때는 팝업 차단 → 배지만
+        if(state.currentMode === 'qa') return;
+
         const modal = document.getElementById('coordNoticeAlertModal');
+        const titleEl = document.getElementById('coordNoticeAlertTitle');
         const content = document.getElementById('coordNoticeAlertContent');
         if(!modal || !content) return;
+
+        // 공지 종류별 제목 표시
+        if(titleEl) {
+            titleEl.innerText = type === 'global' ? '🏢 항기원 전체 공지가 업데이트되었습니다' : '📋 운영부 과정 공지가 업데이트되었습니다';
+        }
         content.innerText = msg;
         modal.style.display = 'flex';
     },
