@@ -2581,6 +2581,7 @@ setMode: function(mode) {
         if(targetTab) targetTab.classList.add('active');
 
         localStorage.setItem('kac_last_mode', mode);
+        state.currentMode = mode; // 현재 탭 추적 (공지 팝업 차단용)
 
         // 5. 각 모드별 데이터 로드 및 퀴즈 이어하기/새로고침 복구 판별
         if (state.room) {
@@ -4397,21 +4398,21 @@ init: function() {
     });
 },
 
-    // 코디 공지 배지 업데이트
+    // 코디 공지 배지 업데이트 (공지탭 + Q&A탭 동시 업데이트)
     updateCoordNoticeBadge: function(newMsg, lastSeen) {
         const badge = document.getElementById('coordNoticeBadge');
-        if(!badge) return;
-        if(newMsg && newMsg !== lastSeen) {
-            badge.style.display = 'inline-block';
-        } else {
-            badge.style.display = 'none';
-        }
+        const qaBadge = document.getElementById('qaNoticeBadge');
+        const hasNew = newMsg && newMsg !== lastSeen;
+        if(badge) badge.style.display = hasNew ? 'inline-block' : 'none';
+        if(qaBadge) qaBadge.style.display = hasNew ? 'inline-block' : 'none';
     },
 
-    // 공지 탭 진입 시 배지 숨기고 읽음 처리
+    // 공지 탭 진입 시 배지 숨기고 읽음 처리 (Q&A 탭 배지도 같이 클리어)
     clearCoordNoticeBadge: function() {
         const badge = document.getElementById('coordNoticeBadge');
+        const qaBadge = document.getElementById('qaNoticeBadge');
         if(badge) badge.style.display = 'none';
+        if(qaBadge) qaBadge.style.display = 'none';
         if(state.room) {
             firebase.database().ref(`courses/${state.room}/coordNotice`).once('value', snap => {
                 const msg = snap.val() || '';
@@ -4420,8 +4421,14 @@ init: function() {
         }
     },
 
-    // 코디 공지 변경 알림 팝업
+    // 코디 공지 변경 알림 팝업 (Q&A 탭에서는 팝업 안 띄우고 배지만)
     showCoordNoticeAlert: function(msg) {
+        // Q&A 탭에 있을 때는 팝업 차단 → Q&A 탭 배지만 표시
+        if(state.currentMode === 'qa') {
+            const qaBadge = document.getElementById('qaNoticeBadge');
+            if(qaBadge) qaBadge.style.display = 'inline-block';
+            return;
+        }
         const modal = document.getElementById('coordNoticeAlertModal');
         const content = document.getElementById('coordNoticeAlertContent');
         if(!modal || !content) return;
@@ -4529,26 +4536,18 @@ init: function() {
             if(!canvas) return;
             const ctx = canvas.getContext('2d');
             
-            // --- [핵심 수정: 동적 크기 계산] ---
-            // 현재 화면(브라우저 창)의 너비와 높이를 가져옴
-            const winW = window.innerWidth;
-            const winH = window.innerHeight;
-
-            // PDF 원본 크기 정보를 가져옴
+            // 스케일 계산: pdfWrapper 실제 너비 기준 (항상 안정적으로 맞춤)
             const unscaledViewport = page.getViewport({scale: 1.0});
+            const wrapper = document.getElementById('pdfWrapper');
+            const containerW = wrapper ? wrapper.clientWidth : window.innerWidth * 0.9;
 
-            // 화면에 꽉 차도록(하지만 잘리지 않게 98% 비율로) 계산
-            const ratioW = (winW * 0.98) / unscaledViewport.width;
-            const ratioH = (winH * 0.98) / unscaledViewport.height;
+            let dynamicScale = containerW / unscaledViewport.width;
 
-            // 가로와 세로 중 더 작은 비율을 선택해야 화면 밖으로 안 나감 (Fit-to-Screen)
-            let dynamicScale = Math.min(ratioW, ratioH);
-
-            // 전체화면이 아닐 때는 일반 뷰이므로 너무 커지지 않게 최대 1.5배로 제한
-            if (!document.fullscreenElement) {
-                dynamicScale = Math.min(dynamicScale, 1.5);
+            // 전체화면일 때는 화면 높이도 고려
+            if (document.fullscreenElement) {
+                const ratioH = (window.innerHeight * 0.95) / unscaledViewport.height;
+                dynamicScale = Math.min(dynamicScale, ratioH);
             }
-            // ---------------------------------
 
             const viewport = page.getViewport({scale: dynamicScale}); 
             ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -4562,10 +4561,10 @@ init: function() {
             await page.render({canvasContext: ctx, viewport: viewport}).promise;
             guideMgr.isRendering = false;
             
-            // 페이지 번호 인디케이터 업데이트 (기존 로직 유지)
-            const indicator = document.getElementById('pageIndicator');
+            // 페이지 번호 업데이트
+            const indicator = document.getElementById('guidePageInfo');
             if(indicator) {
-                indicator.innerText = `Page: ${num} / ${guideMgr.pdfDoc.numPages}`;
+                indicator.innerText = `${num} / ${guideMgr.pdfDoc.numPages}`;
             }
         } catch (err) {
             console.error("PDF 렌더링 오류:", err);

@@ -3357,3 +3357,8 @@ body.night-mode .status-badge.status-arrived {
     border-left: 5px solid #facc15; /* 왼쪽 포인트 바 추가 */
     line-height: 1.5;
 }
+/* 공지 배지 펄스 애니메이션 */
+@keyframes badgePulse {
+    0%, 100% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.15); opacity: 0.85; }
+}
