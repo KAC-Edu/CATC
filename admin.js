@@ -1726,24 +1726,27 @@ loadDashboardStats: function() {
         const newMsg = s.val() || '';
         const el = document.getElementById('dashNoticeAdmin');
         if (el) el.innerText = newMsg || "등록된 운영부 과정 공지가 없습니다.";
-        // 변경 감지 시 팝업 + 배지 표시
         const seenKey = `kac_coord_notice_seen_${room}`;
         const lastSeen = localStorage.getItem(seenKey) || '';
         if (newMsg && newMsg.trim() !== '' && newMsg !== lastSeen) {
-            ui.showCoordNoticeAlert(newMsg, 'coord');
-            localStorage.setItem(seenKey, newMsg); // 즉시 읽음 처리 (다음 on에서 중복 방지)
+            localStorage.setItem(seenKey, newMsg); // 먼저 읽음처리 (중복 방지)
+            // 공지탭에 있으면 배지/팝업 없이 바로 읽음처리만
+            if (state.currentMode !== 'notice') {
+                ui.showCoordNoticeAlert(newMsg, 'coord');
+            }
         }
     });
     refs.globalNotice.on('value', s => {
         const newMsg = s.val() || '';
         const el = document.getElementById('dashNoticeGlobal');
         if (el) el.innerText = newMsg || "현재 게시된 센터 전체 공지가 없습니다.";
-        // 변경 감지 시 팝업 + 배지 표시
         const seenKey = 'kac_global_notice_seen';
         const lastSeen = localStorage.getItem(seenKey) || '';
         if (newMsg && newMsg.trim() !== '' && newMsg !== lastSeen) {
-            ui.showCoordNoticeAlert(newMsg, 'global');
             localStorage.setItem(seenKey, newMsg);
+            if (state.currentMode !== 'notice') {
+                ui.showCoordNoticeAlert(newMsg, 'global');
+            }
         }
     });
 
@@ -2217,7 +2220,7 @@ showAlert: function(msg) {
         }
 
         const d = window.latestCoursesData || {};
-        const currentSelectedRoom = state.room; // 현재 내가 선택한 방 (홈으로 가면 null)
+        // state.room을 변수로 캡처하지 않음 - 루프 안에서 직접 참조 (캡처 시점 불일치 방지)
 
         // [수정] placeholder에서 disabled를 제거하여 자바스크립트로 선택(리셋)이 가능하게 함
         if(sel) sel.innerHTML = '<option value="">Select Room ▾</option>';
@@ -2249,7 +2252,7 @@ showAlert: function(msg) {
                 else opt.innerText = `Room ${c} (⚪ 대기)`;
                 
                 // [중요] 현재 방에 있을 때만 해당 항목을 선택 상태로 표시
-                if(c === currentSelectedRoom) opt.selected = true;
+                if(c === state.room) opt.selected = true;
                 sel.appendChild(opt);
             }
 
@@ -2279,7 +2282,7 @@ showAlert: function(msg) {
                 `;
 
                 // innerHTML 설정 후에 class 추가 (innerHTML이 class를 덮어쓰는 문제 방지)
-                if (c === currentSelectedRoom) {
+                if (c === state.room) {
                     row.classList.add('is-my-room');
                 }
 
@@ -2288,7 +2291,7 @@ showAlert: function(msg) {
         }
 
         // [핵심 추가] 현재 선택된 방 정보가 없다면(홈 화면) 메뉴를 "Select Room"으로 강제 리셋
-        if(!currentSelectedRoom && sel) {
+        if(!state.room && sel) {
             sel.value = "";
         }
     },
@@ -4564,8 +4567,8 @@ init: function() {
         if(badge) badge.style.display = 'inline-block';
         if(qaBadge) qaBadge.style.display = 'inline-block';
 
-        // Q&A 탭에 있을 때는 팝업 차단 → 배지만
-        if(state.currentMode === 'qa') return;
+        // 퀴즈 탭에서는 팝업 차단 (퀴즈 진행 방해 금지)
+        if(state.currentMode === 'quiz') return;
 
         const modal = document.getElementById('coordNoticeAlertModal');
         const titleEl = document.getElementById('coordNoticeAlertTitle');
