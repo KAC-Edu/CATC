@@ -3517,8 +3517,7 @@ autoResetShuttleIfNeeded: function(room) {
             return d.getDay() !== 5 || d < new Date(now.setHours(18,0,0,0));
         });
         if(anyOld && !state.isObserver) {
-            ui.showAlert("📢 금요일 18시가 지났습니다.
-차량 신청 명단이 자동으로 초기화되었습니다.");
+            ui.showAlert("📢 금요일 18시가 지났습니다.\n차량 신청 명단이 자동으로 초기화되었습니다.");
             firebase.database().ref(`courses/${room}/shuttle/requests`).set(null);
             localStorage.setItem(resetKey, 'done');
         }
@@ -4585,7 +4584,7 @@ init: function() {
         } else {
             document.exitFullscreen();
         }
-,
+    },
 
     // 퀴즈 수동 문항 추가 (텍스트 입력)
     addManualQuiz: function() {
