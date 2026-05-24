@@ -555,18 +555,16 @@ forceEnterRoom: async function(room) {
         if (state.room !== cleanRoom) return;
         const newMsg = snap.val() || '';
         const lastSeen = localStorage.getItem(`kac_coord_notice_seen_${cleanRoom}`) || '';
-
-        // 공지 탭 NEW 배지 업데이트
         ui.updateCoordNoticeBadge(newMsg, lastSeen);
-
-        // 메시지가 있고 이전에 본 내용과 다를 때 팝업 알림
         if (newMsg && newMsg !== lastSeen && newMsg.trim() !== '') {
-            // 처음 입장 시(lastSeen이 비어있음)는 팝업 없이 배지만 표시
             if (lastSeen !== '') {
                 ui.showCoordNoticeAlert(newMsg);
             }
         }
     });
+
+    // 차량 수요조사 자동 리셋: 금요일 18시 이후 지난 데이터 정리
+    dataMgr.autoResetShuttleIfNeeded(cleanRoom);
 
     dbRef.status.on('value', s => {
         if (state.room !== cleanRoom) return;
@@ -3413,7 +3411,44 @@ toggleMenuDropdown: function() {
 
 
 // [신규] 차량 신청 명단 전체 초기화 (옵저버 차단 포함)
-resetShuttleRequests: function() {
+// 차량 수요조사 자동 리셋 (금요일 18시 이후 → 당일 자정까지 유효, 이후 자동 삭제)
+    autoResetShuttleIfNeeded: async function(room) {
+        if (!room) return;
+        const now = new Date();
+        const day = now.getDay(); // 0=일,1=월,...,5=금,6=토
+        const hour = now.getHours();
+
+        // 금요일 18시 이후 or 토요일 or 일요일이면 데이터 정리
+        const shouldReset = (day === 5 && hour >= 18) || day === 6 || day === 0;
+        if (!shouldReset) return;
+
+        // 마지막 리셋 날짜 확인 (같은 주에 이미 리셋했으면 스킵)
+        const resetKey = `kac_shuttle_reset_${room}`;
+        const lastReset = localStorage.getItem(resetKey) || '';
+
+        // 이번 주 금요일 날짜 계산
+        const thisMonday = new Date(now);
+        thisMonday.setDate(now.getDate() - (day === 0 ? 6 : day - 1));
+        const thisFriday = new Date(thisMonday);
+        thisFriday.setDate(thisMonday.getDate() + 4);
+        const fridayStr = `${thisFriday.getFullYear()}-${String(thisFriday.getMonth()+1).padStart(2,'0')}-${String(thisFriday.getDate()).padStart(2,'0')}`;
+
+        if (lastReset === fridayStr) return; // 이미 이번 주 리셋함
+
+        // 실제 데이터 확인 후 삭제
+        const snap = await firebase.database().ref(`courses/${room}/shuttle/requests`).once('value');
+        if (snap.exists()) {
+            await firebase.database().ref(`courses/${room}/shuttle/requests`).remove();
+            // departure도 초기화 (지난주 공지 제거)
+            await firebase.database().ref(`courses/${room}/shuttle/departure`).update({ announced: false });
+            localStorage.setItem(resetKey, fridayStr);
+            console.log(`[자동리셋] ${room} 차량 수요조사 초기화 (${fridayStr} 이후)`);
+        } else {
+            localStorage.setItem(resetKey, fridayStr);
+        }
+    },
+
+    resetShuttleRequests: function() {
     // 1. 옵저버 권한 체크
     if (state.isObserver) {
         ui.showAlert("👁️ 옵저버 모드에서는 명단을 초기화할 수 없습니다.");
