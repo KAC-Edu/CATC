@@ -25,6 +25,21 @@ const DEFAULT_QUIZ_DATA = [
 ];
 
 // --- 날짜 유틸리티 함수 ---
+// 소유 방 목록에 추가 (최대 26개)
+function addOwnedRoom(room) {
+    if (!room) return;
+    const key = 'kac_owned_rooms';
+    let rooms = [];
+    try { rooms = JSON.parse(localStorage.getItem(key) || '[]'); } catch(e) { rooms = []; }
+    const upper = room.toUpperCase();
+    if (!rooms.map(r => r.toUpperCase()).includes(upper)) {
+        rooms.push(upper);
+        if (rooms.length > 26) rooms.shift(); // 최대 26개
+    }
+    localStorage.setItem(key, JSON.stringify(rooms));
+    localStorage.setItem('last_owned_room', upper); // 기존 호환 유지
+}
+
 // 전화번호 하이픈 자동 포맷 (010-1234-5678)
 function formatPhone(raw) {
     if (!raw) return '';
@@ -361,7 +376,7 @@ switchRoomAttempt: async function(newRoom) {
 
     // (B) 내가 주인이거나, 옵저버이거나, 혹은 방이 비어있는 경우 -> 입장 허용
     console.log(`[인증 성공] Room ${newRoom} 데이터 로드를 시작합니다.`);
-    if (isOwner) localStorage.setItem('last_owned_room', newRoom.toUpperCase());
+    if (isOwner) addOwnedRoom(newRoom);
     this.forceEnterRoom(newRoom);
     
     // [참고] forceEnterRoom 내부 리스너에서 소유권이 최종 확인되면 
@@ -398,7 +413,7 @@ verifyTakeover: async function() {
                 ownerSessionId: state.sessionId,
                 roomStatus: 'active'
             });
-            localStorage.setItem('last_owned_room', (newRoom||'').toUpperCase());
+            addOwnedRoom(newRoom);
             document.getElementById('takeoverModal').style.display = 'none';
             this.forceEnterRoom(newRoom);
             ui.showAlert("✅ 제어권을 획득했습니다.");
@@ -531,7 +546,8 @@ forceEnterRoom: async function(room) {
     state.room = cleanRoom; 
     state.qaData = {};      
     state.activeQaKey = null; 
-    localStorage.setItem('kac_last_room', cleanRoom); 
+    localStorage.setItem('kac_last_room', cleanRoom);
+    addOwnedRoom(cleanRoom); // 방 소유 기록 추가 
     state.isObserver = (sessionStorage.getItem('kac_observer_room') === cleanRoom);
 
     const qaListEl = document.getElementById('qaList');
@@ -595,7 +611,11 @@ forceEnterRoom: async function(room) {
 
         // [핵심] 이전에 이 방을 소유했던 기록이 있으면(last_owned_room)
         // 새로고침으로 sessionId가 바뀌어도 자동으로 소유권 재획득
-        const wasMyRoom = (localStorage.getItem('last_owned_room')||'').toUpperCase() === cleanRoom.toUpperCase();
+        // 내가 소유했던 방 목록 (여러 방 기억)
+        let ownedRooms = [];
+        try { ownedRooms = JSON.parse(localStorage.getItem('kac_owned_rooms') || '[]'); } catch(e) { ownedRooms = []; }
+        const wasMyRoom = ownedRooms.map(r => r.toUpperCase()).includes(cleanRoom.toUpperCase())
+            || (localStorage.getItem('last_owned_room')||'').toUpperCase() === cleanRoom.toUpperCase();
 
         if (!state.isObserver) {
             if (isActive && !isOwner && wasMyRoom) {
@@ -740,7 +760,7 @@ fetchCodeAndRenderQr: function(room) {
         updates[`courses/${state.room}/status/ownerSessionId`] = (statusVal === 'active' ? state.sessionId : null);
 
         firebase.database().ref().update(updates).then(() => {
-            localStorage.setItem('last_owned_room', (state.room||'').toUpperCase());
+            addOwnedRoom(state.room);
             ui.showAlert("✅ 설정이 저장되었습니다.");
         });
 
@@ -4945,7 +4965,7 @@ saveAll: function() {
             document.getElementById('courseNameInput').value = name;
             document.getElementById('roomPw').value = rawPw;
             document.getElementById('displayCourseTitle').innerText = name;
-            localStorage.setItem('last_owned_room', (state.room||'').toUpperCase());
+            addOwnedRoom(state.room);
             
             ui.showAlert("✅ 설정이 저장되었습니다.");
             
