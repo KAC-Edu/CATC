@@ -332,10 +332,12 @@ switchRoomAttempt: async function(newRoom) {
 
     // 4. [분기 처리] 권한 여부에 따른 입장 통제
 
-    // [수정] 이미 현재 입장해있는 방을 SELECT ROOM에서 다시 선택한 경우
-    // → isOwner 체크 없이 무조건 바로 재입장 (세션ID 불일치 문제 방지)
+    // 이미 입장해있는 내 방을 다시 선택한 경우 → overlay만 닫고 끝
     if (newRoom === state.room) {
-        dataMgr.forceEnterRoom(newRoom);
+        const ov = document.getElementById('statusOverlay');
+        const tm = document.getElementById('takeoverModal');
+        if (ov) ov.style.display = 'none';
+        if (tm) tm.style.display = 'none';
         return;
     }
     
@@ -586,25 +588,36 @@ forceEnterRoom: async function(room) {
         const isOwner = (statusData.ownerSessionId === state.sessionId);
         const isActive = (statusData.roomStatus === 'active');
 
-        // [중요] 권한 검증 로직 및 모달 트리거
+        // [핵심] 이전에 이 방을 소유했던 기록이 있으면(last_owned_room)
+        // 새로고침으로 sessionId가 바뀌어도 자동으로 소유권 재획득
+        const wasMyRoom = localStorage.getItem('last_owned_room') === cleanRoom;
+
         if (!state.isObserver) {
-            if (isActive && !isOwner) {
-                // 방이 사용 중인데 내가 주인이 아님 → 비밀번호 입력 안내
+            if (isActive && !isOwner && wasMyRoom) {
+                // 내 방인데 세션 만료 → ownerSessionId 자동 갱신 후 입장
+                firebase.database().ref(`courses/${cleanRoom}/status`).update({
+                    ownerSessionId: state.sessionId
+                }).then(() => {
+                    overlay.style.display = 'none';
+                    document.getElementById('takeoverModal').style.display = 'none';
+                });
+                return; // 갱신 완료 후 on() 재발동으로 처리
+            } else if (isActive && !isOwner) {
+                // 다른 사람 방 → 비밀번호 입력 안내
                 overlay.style.display = 'flex';
                 ui.showOverlayMessage('locked');
                 state.pendingRoom = cleanRoom;
                 dataMgr.openTakeoverModal();
             } else if (!isActive) {
-                // 방이 비어있음 → 환경설정 버튼 누르라는 안내
+                // 비어있는 방 → 환경설정 안내
                 overlay.style.display = 'flex';
                 ui.showOverlayMessage('idle');
             } else {
-                // 내가 정당한 주인으로 확인됨 → 잠금 해제
+                // 정당한 주인 확인 → 잠금 해제
                 overlay.style.display = 'none';
                 document.getElementById('takeoverModal').style.display = 'none';
             }
         } else {
-            // 옵저버 모드는 잠금 없이 관람 허용
             overlay.style.display = 'none';
         }
 
