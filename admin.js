@@ -629,29 +629,19 @@ forceEnterRoom: async function(room) {
     guideMgr.init();
 
     // [코디 공지 변경 감지] 교육운영 담당자 공지 → 강사 실시간 알림
+    // forceEnterRoom 리스너는 배지 표시만 담당 (팝업은 loadDashboardStats 리스너가 처리)
     firebase.database().ref(`courses/${cleanRoom}/coordNotice`).off();
     firebase.database().ref(`courses/${cleanRoom}/coordNotice`).on('value', snap => {
         if (state.room !== cleanRoom) return;
         const newMsg = snap.val() || '';
         const seenKey = `kac_coord_notice_seen_${cleanRoom}`;
         const lastSeen = localStorage.getItem(seenKey) || '';
-        ui.updateCoordNoticeBadge(newMsg, lastSeen, 'coord');
-        // lastSeen 조건 제거 - 공지가 있고 변경됐으면 항상 팝업 표시
-        if (newMsg && newMsg.trim() !== '' && newMsg !== lastSeen) {
-            ui.showCoordNoticeAlert(newMsg, 'coord');
-        }
-    });
-
-    // [센터 전체 공지 변경 감지] globalNotice → 강사 실시간 알림
-    firebase.database().ref('system/globalNotice').off();
-    firebase.database().ref('system/globalNotice').on('value', snap => {
-        if (state.room !== cleanRoom) return;
-        const newMsg = snap.val() || '';
-        const seenKey = `kac_global_notice_seen`;
-        const lastSeen = localStorage.getItem(seenKey) || '';
-        ui.updateCoordNoticeBadge(newMsg, lastSeen, 'global');
-        if (newMsg && newMsg.trim() !== '' && newMsg !== lastSeen) {
-            ui.showCoordNoticeAlert(newMsg, 'global');
+        // 배지만 업데이트 (팝업 중복 방지)
+        if (newMsg && newMsg !== lastSeen) {
+            const badge = document.getElementById('coordNoticeBadge');
+            const qaBadge = document.getElementById('qaNoticeBadge');
+            if(badge) badge.style.display = 'inline-block';
+            if(qaBadge) qaBadge.style.display = 'inline-block';
         }
     });
 
@@ -1733,12 +1723,28 @@ loadDashboardStats: function() {
     });
     refs.coordNotice.on('value', s => {
         if (state.room !== room) return;
+        const newMsg = s.val() || '';
         const el = document.getElementById('dashNoticeAdmin');
-        if (el) el.innerText = s.val() || "등록된 운영부 과정 공지가 없습니다.";
+        if (el) el.innerText = newMsg || "등록된 운영부 과정 공지가 없습니다.";
+        // 변경 감지 시 팝업 + 배지 표시
+        const seenKey = `kac_coord_notice_seen_${room}`;
+        const lastSeen = localStorage.getItem(seenKey) || '';
+        if (newMsg && newMsg.trim() !== '' && newMsg !== lastSeen) {
+            ui.showCoordNoticeAlert(newMsg, 'coord');
+            localStorage.setItem(seenKey, newMsg); // 즉시 읽음 처리 (다음 on에서 중복 방지)
+        }
     });
     refs.globalNotice.on('value', s => {
+        const newMsg = s.val() || '';
         const el = document.getElementById('dashNoticeGlobal');
-        if (el) el.innerText = s.val() || "현재 게시된 센터 전체 공지가 없습니다.";
+        if (el) el.innerText = newMsg || "현재 게시된 센터 전체 공지가 없습니다.";
+        // 변경 감지 시 팝업 + 배지 표시
+        const seenKey = 'kac_global_notice_seen';
+        const lastSeen = localStorage.getItem(seenKey) || '';
+        if (newMsg && newMsg.trim() !== '' && newMsg !== lastSeen) {
+            ui.showCoordNoticeAlert(newMsg, 'global');
+            localStorage.setItem(seenKey, newMsg);
+        }
     });
 
     // 4. 교수 성함 실시간 업데이트
@@ -2237,8 +2243,9 @@ showAlert: function(msg) {
             if(sel) {
                 const opt = document.createElement('option');
                 opt.value = c;
+                // 내가 선택한 방이면 무조건 파란색 (ownerSessionId 불일치 무관)
                 if(c === state.room) opt.innerText = `Room ${c} (🔵 내 강의실 - ${profName})`;
-                else if(isRoomActive) opt.innerText = `Room ${c} (🔴 사용중 - ${profName})`;
+                else if(isRoomActive) opt.innerText = `Room ${c} (🟠 사용중 - ${profName})`;
                 else opt.innerText = `Room ${c} (⚪ 대기)`;
                 
                 // [중요] 현재 방에 있을 때만 해당 항목을 선택 상태로 표시
