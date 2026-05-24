@@ -2220,12 +2220,7 @@ showAlert: function(msg) {
             // 우측 현황판 테이블 갱신
             if(tableBody) {
                 const row = document.createElement('tr');
-                
-                // 현재 선택된 방이면 즉시 파란색 하이라이트 적용
-                if (c === currentSelectedRoom) {
-                    row.classList.add('is-my-room');
-                }
-                
+
                 const statusBadge = isRoomActive 
                     ? '<span class="badge-status badge-active">🟢 사용 중</span>' 
                     : '<span class="badge-status badge-idle">⚪ 비어 있음</span>';
@@ -2245,6 +2240,12 @@ showAlert: function(msg) {
                         <button class="btn-table-action" onclick="dataMgr.switchRoomAttempt('${c}')">입장하기</button>
                     </td>
                 `;
+
+                // innerHTML 설정 후에 class 추가 (innerHTML이 class를 덮어쓰는 문제 방지)
+                if (c === currentSelectedRoom) {
+                    row.classList.add('is-my-room');
+                }
+
                 tableBody.appendChild(row);
             }
         }
@@ -4669,10 +4670,10 @@ init: function() {
 
     // 6. 진짜 전체화면 모드 (기존 로직 유지)
     toggleFullScreen: function() {
-        const elem = document.getElementById('view-guide');
         if (!document.fullscreenElement) {
-            elem.requestFullscreen().catch(err => {
-                alert(`전체화면 모드를 실행할 수 없습니다: ${err.message}`);
+            // 전체 페이지를 fullscreen으로 (캔버스가 화면 꽉 채우도록)
+            document.documentElement.requestFullscreen().catch(err => {
+                console.warn("전체화면 실패:", err);
             });
         } else {
             document.exitFullscreen();
