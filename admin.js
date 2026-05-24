@@ -293,8 +293,15 @@ loadInitialData: function() {
     
 // [수정 완료] 보안 검증 강화 및 데이터 유출 차단 로직
 switchRoomAttempt: async function(newRoom) {
-    // 1. 시각적 즉시 차단: 서버 데이터를 가져오기도 전에 화면부터 가립니다.
-    // 새로고침 시 데이터가 보이는 찰나의 순간을 방지합니다.
+    // [수정] SELECT ROOM 변경 시 모든 열려있는 모달/설정창 즉시 닫기
+    document.querySelectorAll('.modal-overlay, .setup-modal').forEach(m => {
+        m.style.display = 'none';
+    });
+    // 설정창도 닫기
+    const courseSetup = document.getElementById('courseSetupModal');
+    if (courseSetup) courseSetup.style.display = 'none';
+
+    // 1. 시각적 즉시 차단
     const overlay = document.getElementById('statusOverlay');
     if (overlay) overlay.style.display = 'flex';
 
@@ -393,7 +400,7 @@ verifyTakeover: async function() {
                 ownerSessionId: state.sessionId,
                 roomStatus: 'active'
             });
-            localStorage.setItem('last_owned_room', newRoom.toUpperCase());
+            localStorage.setItem('last_owned_room', (newRoom||'').toUpperCase());
             document.getElementById('takeoverModal').style.display = 'none';
             this.forceEnterRoom(newRoom);
             ui.showAlert("✅ 제어권을 획득했습니다.");
@@ -590,16 +597,15 @@ forceEnterRoom: async function(room) {
 
         // [핵심] 이전에 이 방을 소유했던 기록이 있으면(last_owned_room)
         // 새로고침으로 sessionId가 바뀌어도 자동으로 소유권 재획득
-        const wasMyRoom = (localStorage.getItem('last_owned_room') || '').toUpperCase() === cleanRoom;
+        const wasMyRoom = (localStorage.getItem('last_owned_room')||'').toUpperCase() === cleanRoom.toUpperCase();
 
         if (!state.isObserver) {
             if (isActive && !isOwner && wasMyRoom) {
-                // 내 방인데 세션 만료 → ownerSessionId 즉시 갱신 + overlay 즉시 닫기
-                firebase.database().ref(`courses/${cleanRoom}/status`).update({
-                    ownerSessionId: state.sessionId
-                });
+                // 내 방인데 세션 갱신 → ownerSessionId 갱신 + 즉시 overlay 닫기
+                firebase.database().ref(`courses/${cleanRoom}/status`).update({ ownerSessionId: state.sessionId });
                 overlay.style.display = 'none';
-                document.getElementById('takeoverModal').style.display = 'none';
+                const tm = document.getElementById('takeoverModal');
+                if (tm) tm.style.display = 'none';
                 return;
             } else if (isActive && !isOwner) {
                 // 다른 사람 방 → 비밀번호 입력 안내
@@ -4759,16 +4765,21 @@ openSetupModal: async function() {
             this.loadCurrentSettings(); 
 
 // [최종 수정] 완벽한 대칭형 820px 달력 적용
-flatpickr("#setup-period-range", {
+window._periodPicker = flatpickr("#setup-period-range", {
     mode: "range",
     locale: "ko",
     dateFormat: "Y-m-d",
-    showMonths: 2,         
-    closeOnSelect: false,  
+    showMonths: 2,
+    closeOnSelect: false,
     disableMobile: "true",
     onReady: function(selectedDates, dateStr, instance) {
-        // 가로폭을 820px로 고정하여 양쪽 달력 균형 확보
-        instance.calendarContainer.style.width = "820px"; 
+        instance.calendarContainer.style.width = "820px";
+        // 기존 선택된 날짜가 있으면 해당 달로 이동, 없으면 오늘
+        if (selectedDates.length > 0) {
+            instance.jumpToDate(selectedDates[0]);
+        } else {
+            instance.jumpToDate(new Date());
+        }
     },
     onChange: function(selectedDates, dateStr, instance) {
         instance.calendarContainer.style.width = "820px";
@@ -4845,11 +4856,20 @@ loadCurrentSettings: function() {
         const todayStr = typeof getTodayString === 'function' ? getTodayString() : new Date().toISOString().split('T')[0];
 
         if(s.period && s.period.includes(" ~ ")) {
-            // 기존에 "2026-03-03 ~ 2026-03-13" 형태의 데이터가 있다면 그대로 입력
             rangeInput.value = s.period;
+            // 달력을 기존 시작일 달로 이동
+            if (window._periodPicker) {
+                const parts = s.period.split(' ~ ');
+                const startDate = parts[0].trim();
+                window._periodPicker.setDate([startDate, parts[1].trim()], false);
+                window._periodPicker.jumpToDate(new Date(startDate));
+            }
         } else {
-            // 데이터가 없으면 "오늘 ~ 오늘" 형태를 기본값으로 세팅
             rangeInput.value = `${todayStr} ~ ${todayStr}`;
+            if (window._periodPicker) {
+                window._periodPicker.setDate([todayStr, todayStr], false);
+                window._periodPicker.jumpToDate(new Date());
+            }
         }
         
         // 5. 모달 표시 및 과목 리스트 출력
