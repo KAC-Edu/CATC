@@ -4372,30 +4372,48 @@ init: function() {
     if (typeof pdfjsLib !== 'undefined') {
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
     }
+
+    // 리스너 중복 방지: 이미 등록됐으면 재등록 안 함
+    if (window._guideListenerSet) return;
+    window._guideListenerSet = true;
+
     const guideRef = firebase.database().ref(`system/sharedGuide`);
-    guideRef.off(); // 이전 안테나 제거
+    guideRef.off();
     guideRef.on('value', snap => {
         const data = snap.val();
         const badge = document.getElementById('guideStatusBadge');
         if (data) {
             if (badge) { badge.innerText = "✅ 가이드 등록 완료"; badge.style.color = "#10b981"; }
+            // 이미 같은 PDF가 로드된 경우 재로드 안 함 (버벅임 방지)
+            if (guideMgr._loadedData === data) return;
+            guideMgr._loadedData = data;
             guideMgr.pageNum = 1;
             guideMgr.loadPDF(data);
         } else {
+            guideMgr._loadedData = null;
+            guideMgr.pdfDoc = null;
             if (badge) { badge.innerText = "❌ 등록된 파일 없음"; badge.style.color = "#ef4444"; }
         }
     });
-    window.addEventListener('resize', () => {
-        const vg = document.getElementById('view-guide');
-        if (vg && vg.style.display !== 'none') {
+
+    // resize 디바운스 (300ms) - 연속 호출 방지
+    if (!window._guideResizeSet) {
+        window._guideResizeSet = true;
+        let resizeTimer = null;
+        window.addEventListener('resize', () => {
+            clearTimeout(resizeTimer);
+            resizeTimer = setTimeout(() => {
+                if (guideMgr.pdfDoc) {
+                    guideMgr.isRendering = false;
+                    guideMgr.renderPage(guideMgr.pageNum);
+                }
+            }, 300);
+        });
+        document.addEventListener('fullscreenchange', () => {
             guideMgr.isRendering = false;
-            guideMgr.renderPage(guideMgr.pageNum);
-        }
-    });
-    document.addEventListener('fullscreenchange', () => {
-        guideMgr.isRendering = false;
-        setTimeout(() => guideMgr.renderPage(guideMgr.pageNum), 200);
-    });
+            setTimeout(() => guideMgr.renderPage(guideMgr.pageNum), 200);
+        });
+    }
 },
 
     // 코디 공지 배지 업데이트 (공지탭 + Q&A탭 동시 업데이트)
@@ -4442,6 +4460,8 @@ init: function() {
             guideMgr.isRendering = false;
             guideMgr.renderPage(guideMgr.pageNum);
         } else {
+            // _guideListenerSet은 유지하고 로드만 재시도
+            window._guideListenerSet = false;
             guideMgr.init();
         }
     },
@@ -4525,7 +4545,7 @@ init: function() {
         }
     },
 
-    // 4. 화면 렌더링 (동적 스케일 계산 적용 및 인디케이터 업데이트 포함)
+    // 4. 화면 렌더링
     renderPage: async function(num) {
         if(!guideMgr.pdfDoc || guideMgr.isRendering) return;
         guideMgr.isRendering = true;
@@ -4533,41 +4553,48 @@ init: function() {
         try {
             const page = await guideMgr.pdfDoc.getPage(num);
             const canvas = document.getElementById('guideCanvas');
-            if(!canvas) return;
+            if(!canvas) { guideMgr.isRendering = false; return; }
             const ctx = canvas.getContext('2d');
-            
-            // 스케일 계산: pdfWrapper 실제 너비 기준 (항상 안정적으로 맞춤)
+
+            // 스케일: pdfWrapper 너비 기준, devicePixelRatio 반영 (선명도)
             const unscaledViewport = page.getViewport({scale: 1.0});
             const wrapper = document.getElementById('pdfWrapper');
-            const containerW = wrapper ? wrapper.clientWidth : window.innerWidth * 0.9;
+            const containerW = (wrapper ? wrapper.clientWidth : window.innerWidth) - 2;
+            const dpr = window.devicePixelRatio || 1;
 
-            let dynamicScale = containerW / unscaledViewport.width;
-
-            // 전체화면일 때는 화면 높이도 고려
+            let cssScale = containerW / unscaledViewport.width;
             if (document.fullscreenElement) {
-                const ratioH = (window.innerHeight * 0.95) / unscaledViewport.height;
-                dynamicScale = Math.min(dynamicScale, ratioH);
+                const hScale = (window.innerHeight * 0.95) / unscaledViewport.height;
+                cssScale = Math.min(cssScale, hScale);
             }
+            const renderScale = cssScale * dpr;
 
-            const viewport = page.getViewport({scale: dynamicScale}); 
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            
+            const viewport = page.getViewport({scale: renderScale});
+
+            // canvas 실제 픽셀 크기 설정, CSS로 표시 크기 제어
+            canvas.width  = viewport.width;
             canvas.height = viewport.height;
-            canvas.width = viewport.width;
-            
-            // transform 초기화 (뒤집힘 방지)
-            ctx.setTransform(1, 0, 0, 1, 0, 0);
+            canvas.style.width  = Math.floor(viewport.width  / dpr) + 'px';
+            canvas.style.height = Math.floor(viewport.height / dpr) + 'px';
 
-            await page.render({canvasContext: ctx, viewport: viewport}).promise;
+            // transform 완전 초기화 (뒤집힘 원천 차단)
+            ctx.setTransform(1, 0, 0, 1, 0, 0);
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            const renderTask = page.render({canvasContext: ctx, viewport: viewport});
+            await renderTask.promise;
+
             guideMgr.isRendering = false;
-            
+            guideMgr.pageNum = num;
+
             // 페이지 번호 업데이트
             const indicator = document.getElementById('guidePageInfo');
-            if(indicator) {
-                indicator.innerText = `${num} / ${guideMgr.pdfDoc.numPages}`;
-            }
+            if(indicator) indicator.innerText = `${num} / ${guideMgr.pdfDoc.numPages}`;
+
         } catch (err) {
-            console.error("PDF 렌더링 오류:", err);
+            if (err && err.name !== 'RenderingCancelledException') {
+                console.error("PDF 렌더링 오류:", err);
+            }
             guideMgr.isRendering = false;
         }
     },
