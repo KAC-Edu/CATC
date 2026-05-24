@@ -1757,68 +1757,59 @@ updateQaCountBadge: function() {
     loadNoticeView: async function() {
         if(!state.room) return;
 
-        // [신규] 공지 탭 진입 시 coordNotice 읽음 처리
+        // coordNotice 읽음 처리
         const coordSnap = await firebase.database().ref(`courses/${state.room}/coordNotice`).once('value');
-        const coordMsg = coordSnap.val() || '';
-        if (coordMsg) {
-            localStorage.setItem(`kac_coord_notice_seen_${state.room}`, coordMsg);
-            ui.updateCoordNoticeBadge(coordMsg, coordMsg); // 읽었으므로 배지 제거
+        const coordRaw = coordSnap.val() || '';
+        const coordText = typeof coordRaw === 'object' ? (coordRaw.text || '') : coordRaw;
+        if (coordText) {
+            localStorage.setItem(`kac_coord_notice_seen_${state.room}`, coordText);
+            ui.updateCoordNoticeBadge(coordText, coordText);
         }
-        
-        // 1. 좌측 영역: 강사 본인 공지
-        const snap = await firebase.database().ref(`courses/${state.room}/notice`).once('value');
-        document.getElementById('instNoticeInputMain').value = snap.val() || "";
 
-        // 2. 우측 영역: 통합 공지 조회
-        const globalRef = firebase.database().ref('system/globalNotice');
-        const coordRef = firebase.database().ref(`courses/${state.room}/coordNotice`);
+        // ── 담임교수 공지 로드 + 실시간 감시
+        firebase.database().ref(`courses/${state.room}/notice`).on('value', snap => {
+            const d = snap.val();
+            let txt = '', meta = '게시된 공지 없음';
+            if (d) {
+                if (typeof d === 'object') { txt = d.text || ''; meta = d.updatedAt ? `게시: ${d.updatedAt}` : '게시됨'; }
+                else { txt = d; meta = '게시됨'; }
+            }
+            const inputEl = document.getElementById('instNoticeInputMain');
+            if (inputEl && document.activeElement !== inputEl) inputEl.value = txt;
+            const previewEl = document.getElementById('prof-notice-preview');
+            if (previewEl) previewEl.innerHTML = txt
+                ? txt.replace(/\n/g, '<br>')
+                : `<span style="opacity:0.45; font-style:italic;">— 게시된 공지 없음. 클릭하여 작성하세요.</span>`;
+            const metaEl = document.getElementById('prof-notice-meta');
+            if (metaEl) metaEl.innerText = meta;
+        });
 
-        const updateRightNotice = () => {
-            Promise.all([globalRef.once('value'), coordRef.once('value')]).then(([gSnap, cSnap]) => {
-                const globalMsg = gSnap.val();
-                const coordMsg = cSnap.val();
-                const display = document.getElementById('globalNoticeDisplay');
-                
-                let html = "";
-                
-                // (1) 과정 운영 공지
-                if (coordMsg) {
-                    html += `
-                        <div style="margin-bottom:15px; padding:15px 20px; background:#f0f7ff; border-radius:12px; border:1px solid #dbeafe; border-left:8px solid #3b82f6;">
-                            <div style="display:flex; align-items:center; gap:8px; margin-bottom:10px;">
-                                <span style="background:#3b82f6; color:white; font-size:10px; font-weight:900; padding:2px 6px; border-radius:4px; line-height:1.2;">ADMIN</span>
-                                <span style="color:#3b82f6; font-size:13px; font-weight:800;">과정 운영 공지</span>
-                            </div>
-                            <div style="font-size:14.5px; color:#1e3a8a; font-weight:600; line-height:1.5; white-space: pre-line;">${coordMsg}</div>
-                        </div>`;
-                }
-                
-                // (2) 항기원 전체 공지
-                if (globalMsg) {
-                    html += `
-                        <div style="margin-bottom:15px; padding:15px 20px; background:#f8fafc; border-radius:12px; border:1px solid #e2e8f0; border-left:8px solid #64748b;">
-                            <div style="display:flex; align-items:center; gap:8px; margin-bottom:10px;">
-                                <span style="background:#64748b; color:white; font-size:10px; font-weight:900; padding:2px 6px; border-radius:4px; line-height:1.2;">CENTER</span>
-                                <span style="color:#64748b; font-size:13px; font-weight:800;">항기원 전체 공지</span>
-                            </div>
-                            <div style="font-size:14.5px; color:#475569; font-weight:600; line-height:1.5; white-space: pre-line;">${globalMsg}</div>
-                        </div>`;
-                }
+        // ── 교육운영부 공지 실시간
+        firebase.database().ref(`courses/${state.room}/coordNotice`).on('value', snap => {
+            const d = snap.val();
+            let txt = '', meta = '';
+            if (d) {
+                if (typeof d === 'object') { txt = d.text || ''; meta = d.updatedAt || ''; }
+                else { txt = d; }
+            }
+            const el = document.getElementById('coordNoticeDisplay');
+            if (el) el.innerHTML = txt
+                ? txt.replace(/\n/g, '<br>')
+                : `<span style="opacity:0.45; font-style:italic;">— 등록된 공지 없음</span>`;
+            const me = document.getElementById('coord-notice-meta');
+            if (me) me.innerText = meta;
+        });
 
-                if (!coordMsg && !globalMsg) {
-                    display.innerHTML = `
-                        <div style="padding:50px 0; text-align:center; color:#cbd5e1;">
-                            <i class="fa-solid fa-envelope-open" style="font-size:35px; margin-bottom:12px; opacity:0.5;"></i>
-                            <p style="font-size:14px; font-weight:700;">현재 등록된 운영부 공지가 없습니다.</p>
-                        </div>`;
-                } else {
-                    display.innerHTML = html;
-                }
-            });
-        };
-
-        globalRef.on('value', updateRightNotice);
-        coordRef.on('value', updateRightNotice);
+        // ── 항기원 전체 공지 실시간
+        firebase.database().ref('system/globalNotice').on('value', snap => {
+            const d = snap.val();
+            let txt = '';
+            if (d) { txt = typeof d === 'object' ? (d.text || '') : d; }
+            const el = document.getElementById('globalNoticeDisplay');
+            if (el) el.innerHTML = txt
+                ? txt.replace(/\n/g, '<br>')
+                : `<span style="opacity:0.4; font-style:italic;">— 등록된 공지 없음</span>`;
+        });
     },
 
 

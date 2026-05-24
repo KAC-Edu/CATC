@@ -316,8 +316,8 @@
         <p>클릭하면 다음 페이지 / 우클릭하면 이전 페이지</p>
     </div>
 
-    <!-- 컨트롤 툴바 (PDF 위) -->
-    <div style="display:flex; align-items:center; gap:10px; margin-bottom:12px; background:white; padding:10px 20px; border-radius:14px; box-shadow:0 1px 6px rgba(0,0,0,0.07); border:1px solid #e2e8f0;">
+    <!-- 컨트롤 툴바 (PDF 위) — 전체화면에서 자동 숨김 -->
+    <div id="guideToolbar" style="display:flex; align-items:center; gap:10px; margin-bottom:12px; background:white; padding:10px 20px; border-radius:14px; box-shadow:0 1px 6px rgba(0,0,0,0.07); border:1px solid #e2e8f0;">
         <button onclick="guideMgr.changePage(-1)"
             style="padding:8px 16px; background:#f1f5f9; border:none; border-radius:8px; font-size:13px; font-weight:800; cursor:pointer; color:#334155;">
             <i class="fa-solid fa-chevron-left"></i> 이전
