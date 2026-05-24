@@ -293,10 +293,10 @@ loadInitialData: function() {
     
 // [수정 완료] 보안 검증 강화 및 데이터 유출 차단 로직
 switchRoomAttempt: async function(newRoom) {
-    // [중요] SELECT ROOM 변경 시 열려있는 모든 모달/설정창 즉시 닫기
+    // SELECT ROOM 변경 시 열려있는 모든 모달/설정창 즉시 닫기
     document.querySelectorAll('.modal-overlay').forEach(m => { m.style.display = 'none'; });
-    const courseSetup = document.getElementById('courseSetupModal');
-    if (courseSetup) courseSetup.style.display = 'none';
+    const courseSetupModal = document.getElementById('courseSetupModal');
+    if (courseSetupModal) courseSetupModal.style.display = 'none';
 
     // 1. 시각적 즉시 차단
     const overlay = document.getElementById('statusOverlay');
@@ -361,13 +361,7 @@ switchRoomAttempt: async function(newRoom) {
 
     // (B) 내가 주인이거나, 옵저버이거나, 혹은 방이 비어있는 경우 -> 입장 허용
     console.log(`[인증 성공] Room ${newRoom} 데이터 로드를 시작합니다.`);
-
-    // [핵심] 이미 isOwner로 확인됐다면 last_owned_room을 미리 갱신하여
-    // forceEnterRoom의 status.on()에서 wasMyRoom으로 확실히 통과되도록 보장
-    if (isOwner || isActive) {
-        localStorage.setItem('last_owned_room', newRoom.toUpperCase());
-    }
-    // overlay를 즉시 닫지 않고 forceEnterRoom 안에서 처리
+    if (isOwner) localStorage.setItem('last_owned_room', newRoom.toUpperCase());
     this.forceEnterRoom(newRoom);
     
     // [참고] forceEnterRoom 내부 리스너에서 소유권이 최종 확인되면 
@@ -617,17 +611,15 @@ forceEnterRoom: async function(room) {
                 state.pendingRoom = cleanRoom;
                 dataMgr.openTakeoverModal();
             } else if (!isActive && wasMyRoom) {
-                // 내가 쓰던 방인데 비어있음 → 자동으로 active 전환 + 입장
+                // 내가 쓰던 방인데 비어있음 → 자동 active + 즉시 입장
                 firebase.database().ref(`courses/${cleanRoom}/status`).update({
-                    ownerSessionId: state.sessionId,
-                    roomStatus: 'active'
+                    ownerSessionId: state.sessionId, roomStatus: 'active'
                 });
                 overlay.style.display = 'none';
                 const tm2 = document.getElementById('takeoverModal');
                 if (tm2) tm2.style.display = 'none';
                 return;
             } else if (!isActive) {
-                // 처음 들어온 비어있는 방 → 환경설정 안내
                 overlay.style.display = 'flex';
                 ui.showOverlayMessage('idle');
             } else {
@@ -2572,6 +2564,7 @@ setMode: function(mode) {
             if (mode === 'admin-action') ui.loadAdminActionData();
             if (mode === 'dinner-skip') ui.loadDinnerSkipData();
             if (mode === 'students') ui.loadStudentList();
+            if (mode === 'guide') { guideMgr.init(); }
             
             if (mode === 'dormitory') {
                 const tbody = document.getElementById('dormitoryTableBody');
@@ -4422,7 +4415,6 @@ const guideMgr = {
 
     // 1. 초기화 (기존 로직 + 리사이즈 감시 추가)
 init: function() {
-    if (!state.room) return;
     if (window['pdfjs-dist/build/pdf']) {
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
     }
