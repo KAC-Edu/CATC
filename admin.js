@@ -25,21 +25,6 @@ const DEFAULT_QUIZ_DATA = [
 ];
 
 // --- 날짜 유틸리티 함수 ---
-// 소유 방 목록에 추가 (최대 26개)
-function addOwnedRoom(room) {
-    if (!room) return;
-    const key = 'kac_owned_rooms';
-    let rooms = [];
-    try { rooms = JSON.parse(localStorage.getItem(key) || '[]'); } catch(e) { rooms = []; }
-    const upper = room.toUpperCase();
-    if (!rooms.map(r => r.toUpperCase()).includes(upper)) {
-        rooms.push(upper);
-        if (rooms.length > 26) rooms.shift(); // 최대 26개
-    }
-    localStorage.setItem(key, JSON.stringify(rooms));
-    localStorage.setItem('last_owned_room', upper); // 기존 호환 유지
-}
-
 // 전화번호 하이픈 자동 포맷 (010-1234-5678)
 function formatPhone(raw) {
     if (!raw) return '';
@@ -48,6 +33,26 @@ function formatPhone(raw) {
     if (digits.length === 10) return digits.replace(/(\d{3})(\d{3})(\d{4})/, '$1-$2-$3');
     if (digits.length === 9)  return digits.replace(/(\d{2})(\d{3})(\d{4})/, '$1-$2-$3');
     return raw;
+}
+
+// 내가 소유한 방 목록 관리 (복수 방 기억)
+function addOwnedRoom(room) {
+    if (!room) return;
+    const key = 'kac_owned_rooms';
+    let rooms = [];
+    try { rooms = JSON.parse(localStorage.getItem(key) || '[]'); } catch(e) { rooms = []; }
+    const upper = room.toUpperCase();
+    if (!rooms.includes(upper)) { rooms.push(upper); }
+    if (rooms.length > 26) rooms.shift();
+    localStorage.setItem(key, JSON.stringify(rooms));
+    localStorage.setItem('last_owned_room', upper);
+}
+function isMyRoom(room) {
+    if (!room) return false;
+    const upper = room.toUpperCase();
+    let rooms = [];
+    try { rooms = JSON.parse(localStorage.getItem('kac_owned_rooms') || '[]'); } catch(e) { rooms = []; }
+    return rooms.includes(upper) || (localStorage.getItem('last_owned_room')||'').toUpperCase() === upper;
 }
 
 function getTodayString() {
@@ -308,10 +313,17 @@ loadInitialData: function() {
     
 // [수정 완료] 보안 검증 강화 및 데이터 유출 차단 로직
 switchRoomAttempt: async function(newRoom) {
-    // SELECT ROOM 변경 시 열려있는 모든 모달/설정창 즉시 닫기
+    // 모든 열려있는 모달 닫기
     document.querySelectorAll('.modal-overlay').forEach(m => { m.style.display = 'none'; });
-    const courseSetupModal = document.getElementById('courseSetupModal');
-    if (courseSetupModal) courseSetupModal.style.display = 'none';
+    const csm = document.getElementById('courseSetupModal');
+    if (csm) csm.style.display = 'none';
+
+    // 이미 입장한 내 방을 다시 선택한 경우 → overlay만 닫고 끝
+    if (newRoom === state.room) {
+        const ov = document.getElementById('statusOverlay');
+        if (ov) ov.style.display = 'none';
+        return;
+    }
 
     // 1. 시각적 즉시 차단
     const overlay = document.getElementById('statusOverlay');
@@ -375,7 +387,6 @@ switchRoomAttempt: async function(newRoom) {
     }
 
     // (B) 내가 주인이거나, 옵저버이거나, 혹은 방이 비어있는 경우 -> 입장 허용
-    console.log(`[인증 성공] Room ${newRoom} 데이터 로드를 시작합니다.`);
     if (isOwner) addOwnedRoom(newRoom);
     this.forceEnterRoom(newRoom);
     
@@ -543,11 +554,11 @@ forceEnterRoom: async function(room) {
     firebase.database().ref(`courses/${cleanRoom}/status`).off();
     firebase.database().ref(`courses/${cleanRoom}/settings`).off();
 
-    state.room = cleanRoom; 
-    state.qaData = {};      
-    state.activeQaKey = null; 
+    state.room = cleanRoom;
+    state.qaData = {};
+    state.activeQaKey = null;
     localStorage.setItem('kac_last_room', cleanRoom);
-    addOwnedRoom(cleanRoom); // 방 소유 기록 추가 
+    addOwnedRoom(cleanRoom); 
     state.isObserver = (sessionStorage.getItem('kac_observer_room') === cleanRoom);
 
     const qaListEl = document.getElementById('qaList');
@@ -604,48 +615,42 @@ forceEnterRoom: async function(room) {
     dbRef.status.on('value', s => {
         if (state.room !== cleanRoom) return;
         const statusData = s.val() || {};
-        ui.renderRoomStatus(statusData.roomStatus || 'idle'); 
+        ui.renderRoomStatus(statusData.roomStatus || 'idle');
 
-        const isOwner = (statusData.ownerSessionId === state.sessionId);
-        const isActive = (statusData.roomStatus === 'active');
-
-        // [핵심] 이전에 이 방을 소유했던 기록이 있으면(last_owned_room)
-        // 새로고침으로 sessionId가 바뀌어도 자동으로 소유권 재획득
-        // 내가 소유했던 방 목록 (여러 방 기억)
-        let ownedRooms = [];
-        try { ownedRooms = JSON.parse(localStorage.getItem('kac_owned_rooms') || '[]'); } catch(e) { ownedRooms = []; }
-        const wasMyRoom = ownedRooms.map(r => r.toUpperCase()).includes(cleanRoom.toUpperCase())
-            || (localStorage.getItem('last_owned_room')||'').toUpperCase() === cleanRoom.toUpperCase();
+        const isOwner   = (statusData.ownerSessionId === state.sessionId);
+        const isActive  = (statusData.roomStatus === 'active');
+        const wasMyRoom = isMyRoom(cleanRoom); // 복수 방 기록으로 확인
 
         if (!state.isObserver) {
-            if (isActive && !isOwner && wasMyRoom) {
+            if (isOwner) {
+                // ① 내가 정당한 주인 → 즉시 입장
+                overlay.style.display = 'none';
+                const tm = document.getElementById('takeoverModal');
+                if (tm) tm.style.display = 'none';
+            } else if (isActive && wasMyRoom) {
+                // ② 내 방인데 세션 만료 → ownerSessionId 즉시 갱신 + 입장
                 firebase.database().ref(`courses/${cleanRoom}/status`).update({ ownerSessionId: state.sessionId });
                 overlay.style.display = 'none';
                 const tm = document.getElementById('takeoverModal');
                 if (tm) tm.style.display = 'none';
-                return;
-            } else if (isActive && !isOwner) {
-                // 다른 사람 방 → 비밀번호 입력 안내
-                overlay.style.display = 'flex';
-                ui.showOverlayMessage('locked');
-                state.pendingRoom = cleanRoom;
-                dataMgr.openTakeoverModal();
             } else if (!isActive && wasMyRoom) {
-                // 내가 쓰던 방인데 비어있음 → 자동 active + 즉시 입장
+                // ③ 내가 쓰던 빈 방 → active로 전환 + 즉시 입장
                 firebase.database().ref(`courses/${cleanRoom}/status`).update({
                     ownerSessionId: state.sessionId, roomStatus: 'active'
                 });
                 overlay.style.display = 'none';
-                const tm2 = document.getElementById('takeoverModal');
-                if (tm2) tm2.style.display = 'none';
-                return;
-            } else if (!isActive) {
+                const tm = document.getElementById('takeoverModal');
+                if (tm) tm.style.display = 'none';
+            } else if (isActive && !isOwner) {
+                // ④ 다른 사람 방 → 비밀번호 안내
+                overlay.style.display = 'flex';
+                ui.showOverlayMessage('locked');
+                state.pendingRoom = cleanRoom;
+                dataMgr.openTakeoverModal();
+            } else {
+                // ⑤ 빈 방 (처음 방문) → 환경설정 안내
                 overlay.style.display = 'flex';
                 ui.showOverlayMessage('idle');
-            } else {
-                // 정당한 주인 확인 → 잠금 해제
-                overlay.style.display = 'none';
-                document.getElementById('takeoverModal').style.display = 'none';
             }
         } else {
             overlay.style.display = 'none';
@@ -760,7 +765,7 @@ fetchCodeAndRenderQr: function(room) {
         updates[`courses/${state.room}/status/ownerSessionId`] = (statusVal === 'active' ? state.sessionId : null);
 
         firebase.database().ref().update(updates).then(() => {
-            addOwnedRoom(state.room);
+            localStorage.setItem('last_owned_room', state.room);
             ui.showAlert("✅ 설정이 저장되었습니다.");
         });
 
@@ -2584,7 +2589,6 @@ setMode: function(mode) {
             if (mode === 'admin-action') ui.loadAdminActionData();
             if (mode === 'dinner-skip') ui.loadDinnerSkipData();
             if (mode === 'students') ui.loadStudentList();
-            if (mode === 'guide') { guideMgr.init(); }
             
             if (mode === 'dormitory') {
                 const tbody = document.getElementById('dormitoryTableBody');
@@ -4435,6 +4439,7 @@ const guideMgr = {
 
     // 1. 초기화 (기존 로직 + 리사이즈 감시 추가)
 init: function() {
+    if (!state.room) return;
     if (window['pdfjs-dist/build/pdf']) {
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
     }
@@ -4790,17 +4795,16 @@ openSetupModal: async function() {
             this.loadCurrentSettings(); 
 
 // [최종 수정] 완벽한 대칭형 820px 달력 적용
-window._periodPicker = flatpickr("#setup-period-range", {
+flatpickr("#setup-period-range", {
     mode: "range",
     locale: "ko",
     dateFormat: "Y-m-d",
-    showMonths: 2,
-    closeOnSelect: false,
+    showMonths: 2,         
+    closeOnSelect: false,  
     disableMobile: "true",
     onReady: function(selectedDates, dateStr, instance) {
-        instance.calendarContainer.style.width = "820px";
-        if (selectedDates.length > 0) instance.jumpToDate(selectedDates[0]);
-        else instance.jumpToDate(new Date());
+        // 가로폭을 820px로 고정하여 양쪽 달력 균형 확보
+        instance.calendarContainer.style.width = "820px"; 
     },
     onChange: function(selectedDates, dateStr, instance) {
         instance.calendarContainer.style.width = "820px";
@@ -4877,18 +4881,11 @@ loadCurrentSettings: function() {
         const todayStr = typeof getTodayString === 'function' ? getTodayString() : new Date().toISOString().split('T')[0];
 
         if(s.period && s.period.includes(" ~ ")) {
+            // 기존에 "2026-03-03 ~ 2026-03-13" 형태의 데이터가 있다면 그대로 입력
             rangeInput.value = s.period;
-            if (window._periodPicker) {
-                const parts = s.period.split(' ~ ');
-                window._periodPicker.setDate([parts[0].trim(), parts[1].trim()], false);
-                window._periodPicker.jumpToDate(new Date(parts[0].trim()));
-            }
         } else {
+            // 데이터가 없으면 "오늘 ~ 오늘" 형태를 기본값으로 세팅
             rangeInput.value = `${todayStr} ~ ${todayStr}`;
-            if (window._periodPicker) {
-                window._periodPicker.setDate([todayStr, todayStr], false);
-                window._periodPicker.jumpToDate(new Date());
-            }
         }
         
         // 5. 모달 표시 및 과목 리스트 출력
@@ -4965,7 +4962,7 @@ saveAll: function() {
             document.getElementById('courseNameInput').value = name;
             document.getElementById('roomPw').value = rawPw;
             document.getElementById('displayCourseTitle').innerText = name;
-            addOwnedRoom(state.room);
+            localStorage.setItem('last_owned_room', state.room);
             
             ui.showAlert("✅ 설정이 저장되었습니다.");
             
