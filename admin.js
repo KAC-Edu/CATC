@@ -605,6 +605,21 @@ forceEnterRoom: async function(room) {
     subjectMgr.init();
     guideMgr.init();
 
+    // [코디 공지 변경 감지] 교육운영 담당자 공지 → 강사 실시간 알림
+    firebase.database().ref(`courses/${cleanRoom}/coordNotice`).off();
+    firebase.database().ref(`courses/${cleanRoom}/coordNotice`).on('value', snap => {
+        if (state.room !== cleanRoom) return;
+        const newMsg = snap.val() || '';
+        const lastSeen = localStorage.getItem(`kac_coord_notice_seen_${cleanRoom}`) || '';
+        ui.updateCoordNoticeBadge(newMsg, lastSeen);
+        if (newMsg && newMsg !== lastSeen && newMsg.trim() !== '') {
+            if (lastSeen !== '') ui.showCoordNoticeAlert(newMsg);
+        }
+    });
+
+    // [금요일 자동 리셋] 차량 신청 명단 자동 초기화 체크
+    this.autoResetShuttleIfNeeded(cleanRoom);
+
     if (window.adminQaRefreshInterval) clearInterval(window.adminQaRefreshInterval);
     window.adminQaRefreshInterval = setInterval(() => {
         if (state.room === cleanRoom) ui.renderQaList(); 
@@ -1491,24 +1506,91 @@ const ui = {
 
 
 // [신규] 단체 회식 적용 (전원 석식 제외)
+    // 단체회식 모달 열기
+    openGroupDinnerModal: function() {
+        if(state.isObserver) return ui.showAlert("👁️ 옵저버는 단체회식을 적용할 수 없습니다.");
+        if(!state.room) return;
+        // 기본값 세팅
+        document.getElementById('gd-destination').value = "";
+        document.getElementById('gd-phone').value = "";
+        document.getElementById('gd-reason').value = "단체 회식";
+        document.getElementById('gd-return-date').value = getTodayString();
+        this._gdType = 'outing';
+        this.selectGdType('outing');
+        document.getElementById('groupDinnerModal').style.display = 'flex';
+    },
+
+    selectGdType: function(type) {
+        this._gdType = type;
+        const outBtn = document.getElementById('gd-btn-outing');
+        const ovBtn = document.getElementById('gd-btn-overnight');
+        const outTime = document.getElementById('gd-outing-time');
+        const ovArea = document.getElementById('gd-overnight-area');
+        if(type === 'outing') {
+            outBtn.style.borderColor = '#3b82f6'; outBtn.style.background = '#eff6ff'; outBtn.style.color = '#1d4ed8';
+            ovBtn.style.borderColor = '#e2e8f0'; ovBtn.style.background = '#f8fafc'; ovBtn.style.color = '#64748b';
+            outTime.style.display = 'flex'; ovArea.style.display = 'none';
+        } else {
+            outBtn.style.borderColor = '#e2e8f0'; outBtn.style.background = '#f8fafc'; outBtn.style.color = '#64748b';
+            ovBtn.style.borderColor = '#ef4444'; ovBtn.style.background = '#fff1f2'; ovBtn.style.color = '#b91c1c';
+            outTime.style.display = 'none'; ovArea.style.display = 'block';
+        }
+    },
+
+    closeGroupDinnerModal: function() {
+        document.getElementById('groupDinnerModal').style.display = 'none';
+    },
+
     applyGroupDinner: function() {
-        if(!confirm("현재 명단의 모든 수강생을 '석식 제외'로 등록하시겠습니까?\n(단체 회식 시 사용)")) return;
-        
-        firebase.database().ref(`courses/${state.room}/students`).once('value', snap => {
+        if(state.isObserver) return ui.showAlert("👁️ 옵저버는 단체회식을 적용할 수 없습니다.");
+        if(!state.room) return;
+
+        const destination = document.getElementById('gd-destination')?.value.trim();
+        const phone = document.getElementById('gd-phone')?.value.trim();
+        const reason = document.getElementById('gd-reason')?.value.trim() || "단체 회식";
+        const gdType = this._gdType || 'outing';
+
+        if(!destination) return ui.showAlert("행선지를 입력해주세요.");
+        if(!phone) return ui.showAlert("대표 연락처를 입력해주세요.");
+
+        let startTime = '18:00', endTime = '21:00', returnDate = getTodayString();
+        if(gdType === 'outing') {
+            startTime = document.getElementById('gd-start')?.value || '18:00';
+            endTime = document.getElementById('gd-end')?.value || '21:00';
+        } else {
+            startTime = '18:00'; endTime = '08:00';
+            returnDate = document.getElementById('gd-return-date')?.value || getTodayString();
+        }
+
+        if(!confirm(`단체 회식을 적용하시겠습니까?\n행선지: ${destination}\n시간: ${startTime} ~ ${endTime}\n\n모든 수강생 석식 제외 + 단체외출 대장 등록`)) return;
+
+        firebase.database().ref(`courses/${state.room}/students`).once('value', async snap => {
             const students = snap.val() || {};
             const today = getTodayString();
+            const ts = firebase.database.ServerValue.TIMESTAMP;
             const updates = {};
-            
-            Object.keys(students).forEach(token => {
-                const s = students[token];
-                if(s.name) {
-                    updates[`courses/${state.room}/dinner_skips/${today}/${token}`] = `${s.name}(${s.phone ? s.phone.slice(-4) : '0000'})`;
-                }
+
+            const validStudents = Object.keys(students)
+                .filter(token => students[token]?.name)
+                .map(token => ({ token, ...students[token] }));
+
+            validStudents.forEach((s, idx) => {
+                const phone4 = s.phone ? s.phone.slice(-4) : '0000';
+                // 석식 제외 등록
+                updates[`courses/${state.room}/dinner_skips/${today}/${s.token}`] = `${s.name}(${phone4})`;
+                // 단체외출 행정 대장 등록
+                updates[`courses/${state.room}/admin_actions/${today}/${s.token}`] = {
+                    name: s.name, dept: '', phone: phone,
+                    destination: destination, startTime: startTime,
+                    endTime: endTime, returnDate: returnDate,
+                    reason: reason, type: 'group_outing',
+                    timestamp: Date.now() + idx, returned: false
+                };
             });
-            
-            firebase.database().ref().update(updates).then(() => {
-                ui.showAlert("✅ 전원 석식 제외 처리가 완료되었습니다.");
-            });
+
+            await firebase.database().ref().update(updates);
+            ui.showAlert(`✅ ${validStudents.length}명 석식 제외 및 단체외출 등록 완료\n행선지: ${destination} (${startTime}~${endTime})`);
+            this.closeGroupDinnerModal();
         });
     },
 
@@ -2526,9 +2608,25 @@ setMode: function(mode) {
             }
             
             if (mode === 'dashboard') ui.loadDashboardStats(); 
-            if (mode === 'notice') ui.loadNoticeView(); 
+            if (mode === 'notice') { ui.loadNoticeView(); ui.clearCoordNoticeBadge(); } 
             if (mode === 'attendance') ui.loadAttendanceView();
             if (mode === 'guide') setTimeout(() => guideMgr.refresh(), 100);
+            if (mode === 'shuttle') {
+                // 날짜 입력창 기본값: 오늘
+                const dateEl = document.getElementById('shuttle-depart-date');
+                if (dateEl && !dateEl.value) dateEl.value = getTodayString();
+                // 기존 설정된 출발시간 불러오기
+                if (state.room) {
+                    firebase.database().ref(`courses/${state.room}/shuttle/departure`).once('value', snap => {
+                        const dep = snap.val();
+                        if (dep) {
+                            if (dateEl) dateEl.value = dep.date || getTodayString();
+                            const timeEl = document.getElementById('shuttle-depart-time');
+                            if (timeEl && dep.time) timeEl.value = dep.time;
+                        }
+                    });
+                }
+            }
 
             if (mode === 'shuttle') {
                 this.loadShuttleData();
@@ -2991,7 +3089,9 @@ function renderAdminList(todayData, yesterdayData) {
             });
 
             function appendRow(item, isYesterday, token) {
-                const typeNm = item.type === 'outing' ? 
+                const typeNm = item.type === 'group_outing' ?
+                    '<span style="background:#7c3aed; color:white; padding:2px 7px; border-radius:6px; font-size:11px; font-weight:800;">단체외출</span>' :
+                    item.type === 'outing' ? 
                     '<span style="color:#f59e0b; font-weight:bold;">외출</span>' : 
                     '<span style="color:#ef4444; font-weight:bold;">외박</span>';
                 
@@ -3273,8 +3373,12 @@ loadShuttleData: function() {
                 </div>
             `;
             el.style.color = "white";
+            // 입력창에도 현재 설정값 반영
+            const dateEl = document.getElementById('shuttle-depart-date');
+            const timeEl = document.getElementById('shuttle-depart-time');
+            if (dateEl && dep.date) dateEl.value = dep.date;
+            if (timeEl && dep.time) timeEl.value = dep.time;
         } else {
-            // 기사님이 시간을 설정하지 않았을 때 표시될 문구 수정
             el.innerHTML = `<div style="font-size:18px; opacity:0.7;">퇴교 공지 대기 중</div>`;
             el.style.color = "white";
         }
@@ -3380,6 +3484,54 @@ toggleMenuDropdown: function() {
 
 
 
+
+// [자동 리셋] 금요일 18시 이후 차량 명단 리셋 체크
+autoResetShuttleIfNeeded: function(room) {
+    const now = new Date();
+    const day = now.getDay(); // 0=일, 5=금
+    const hour = now.getHours();
+    if(day !== 5 || hour < 18) return; // 금요일 18시 이후만 체크
+
+    const resetKey = `kac_shuttle_reset_${room}_${getTodayString()}`;
+    if(localStorage.getItem(resetKey)) return; // 오늘 이미 처리됨
+
+    firebase.database().ref(`courses/${room}/shuttle/requests`).once('value', snap => {
+        if(!snap.exists()) return;
+        // 금요일 18시 이후에 지난주 명단이 남아있는 경우 자동 초기화
+        const reqs = snap.val() || {};
+        const anyOld = Object.values(reqs).some(r => {
+            const d = new Date(r.timestamp);
+            return d.getDay() !== 5 || d < new Date(now.setHours(18,0,0,0));
+        });
+        if(anyOld && !state.isObserver) {
+            ui.showAlert("📢 금요일 18시가 지났습니다.
+차량 신청 명단이 자동으로 초기화되었습니다.");
+            firebase.database().ref(`courses/${room}/shuttle/requests`).set(null);
+            localStorage.setItem(resetKey, 'done');
+        }
+    });
+},
+
+// 강사가 직접 차량 출발시간 설정
+setShutttleDeparture: function() {
+    if (state.isObserver) return ui.showAlert("👁️ 옵저버는 출발시간을 설정할 수 없습니다.");
+    if (!state.room) return;
+    const date = document.getElementById('shuttle-depart-date')?.value;
+    const time = document.getElementById('shuttle-depart-time')?.value;
+    if (!date || !time) return ui.showAlert("날짜와 시간을 모두 입력해주세요.");
+    firebase.database().ref(`courses/${state.room}/shuttle/departure`).set({ date, time })
+        .then(() => ui.showAlert(`✅ 출발시간이 설정되었습니다.
+${date} [ ${time} ]`));
+},
+
+// 출발시간 초기화
+clearShuttleDeparture: function() {
+    if (state.isObserver) return ui.showAlert("👁️ 옵저버는 출발시간을 초기화할 수 없습니다.");
+    if (!state.room) return;
+    if (!confirm("출발시간을 초기화하시겠습니까?")) return;
+    firebase.database().ref(`courses/${state.room}/shuttle/departure`).set(null)
+        .then(() => ui.showAlert("✅ 출발시간이 초기화되었습니다."));
+},
 
 // [신규] 차량 신청 명단 전체 초기화 (옵저버 차단 포함)
 resetShuttleRequests: function() {
@@ -4227,6 +4379,38 @@ init: function() {
     });
 },
 
+    // 코디 공지 배지 업데이트
+    updateCoordNoticeBadge: function(newMsg, lastSeen) {
+        const badge = document.getElementById('coordNoticeBadge');
+        if(!badge) return;
+        if(newMsg && newMsg !== lastSeen) {
+            badge.style.display = 'inline-block';
+        } else {
+            badge.style.display = 'none';
+        }
+    },
+
+    // 공지 탭 진입 시 배지 숨기고 읽음 처리
+    clearCoordNoticeBadge: function() {
+        const badge = document.getElementById('coordNoticeBadge');
+        if(badge) badge.style.display = 'none';
+        if(state.room) {
+            firebase.database().ref(`courses/${state.room}/coordNotice`).once('value', snap => {
+                const msg = snap.val() || '';
+                localStorage.setItem(`kac_coord_notice_seen_${state.room}`, msg);
+            });
+        }
+    },
+
+    // 코디 공지 변경 알림 팝업
+    showCoordNoticeAlert: function(msg) {
+        const modal = document.getElementById('coordNoticeAlertModal');
+        const content = document.getElementById('coordNoticeAlertContent');
+        if(!modal || !content) return;
+        content.innerText = msg;
+        modal.style.display = 'flex';
+    },
+
     // 탭 전환 시 PDF 재렌더링 (setMode에서 호출)
     refresh: function() {
         if (guideMgr.pdfDoc) {
@@ -4690,7 +4874,15 @@ loadCurrentSettings: function() {
             rangeInput.value = `${todayStr} ~ ${todayStr}`;
         }
         
-        // 5. 모달 표시 및 과목 리스트 출력
+        // 5. menuFeatures 체크박스 상태 로드
+        const features = s.menuFeatures || {};
+        const featureKeys = ['facility','shuttle','adminAction','meal','attendanceQr','cns'];
+        featureKeys.forEach(key => {
+            const el = document.getElementById(`feat-${key}`);
+            if (el) el.checked = (features[key] !== false); // 기본값 true
+        });
+
+        // 6. 모달 표시 및 과목 리스트 출력
         subjectMgr.renderListInModal();
         document.getElementById('courseSetupModal').style.display = 'flex';
     });
@@ -4759,6 +4951,15 @@ saveAll: function() {
         updates[`courses/${state.room}/status/professorName`] = profName;
         updates[`courses/${state.room}/status/roomStatus`] = 'active';
         updates[`courses/${state.room}/status/ownerSessionId`] = state.sessionId;
+
+        // menuFeatures: 체크박스 상태 저장 (false일 때만 명시, true는 기본값)
+        const featureKeys = ['facility','shuttle','adminAction','meal','attendanceQr','cns'];
+        const menuFeatures = {};
+        featureKeys.forEach(key => {
+            const el = document.getElementById(`feat-${key}`);
+            menuFeatures[key] = el ? el.checked : true;
+        });
+        updates[`courses/${state.room}/settings/menuFeatures`] = menuFeatures;
 
         firebase.database().ref().update(updates).then(() => {
             document.getElementById('courseNameInput').value = name;
