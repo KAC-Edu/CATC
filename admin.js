@@ -78,20 +78,27 @@ const authMgr = {
         try {
             await firebase.auth().signInWithEmailAndPassword(this.ADMIN_EMAIL, inputPw);
             if(msgDiv) {
-                msgDiv.innerText = "로그인 되었습니다.";
+                msgDiv.innerText = "로그인 되었습니다. 잠시만 기다려주세요...";
                 msgDiv.style.color = "#10b981";
             }
-            setTimeout(() => {
-                document.getElementById('loginOverlay').style.display = 'none';
-                dataMgr.loadInitialData();
-                if(msgDiv) msgDiv.innerText = "";
-            }, 700);
+            // onAuthStateChanged가 자동으로 loginOverlay 숨기고 loadInitialData 호출
+            // 여기서 중복 호출 안 함
         } catch (error) {
-            if(msgDiv) {
-                msgDiv.innerText = "비밀번호가 틀렸습니다.";
-                msgDiv.style.color = "#ef4444";
+            console.error("로그인 오류:", error.code, error.message);
+            let msg = "비밀번호가 올바르지 않습니다.";
+            if(error.code === 'auth/unauthorized-domain') {
+                msg = "⛔ 도메인 인증 오류\n\nFirebase 콘솔 → Authentication → Settings → Authorized domains에\n현재 사이트 주소를 추가해주세요.\n\n현재 도메인: " + location.hostname;
+                alert(msg);
+            } else if(error.code === 'auth/network-request-failed') {
+                msg = "⛔ 네트워크 오류 - 인터넷 연결을 확인해주세요.";
+            } else if(error.code === 'auth/too-many-requests') {
+                msg = "⛔ 로그인 시도 초과 - 잠시 후 다시 시도해주세요.";
             } else {
-                alert("비밀번호가 올바르지 않습니다.");
+                msg = "⛔ 오류: " + (error.code || error.message);
+            }
+            if(msgDiv) {
+                msgDiv.innerText = msg;
+                msgDiv.style.color = "#ef4444";
             }
             document.getElementById('loginPwInput').value = "";
             document.getElementById('loginPwInput').focus();
