@@ -372,22 +372,27 @@ switchRoomAttempt: async function(newRoom) {
         return;
     }
     
-    // (A) 방이 사용 중인데 내가 주인이 아니고, 옵저버도 아님 -> 데이터 차단
+    // (A) 방이 사용 중인데 내가 주인이 아닌 경우
     if (isActive && !isOwner && !state.isObserver) {
-        console.log(`[권한 차단] Room ${newRoom}에 대한 소유권이 없습니다.`);
+        // 내가 이전에 소유했던 방이면 → ownerSessionId 갱신 후 바로 입장
+        if (isMyRoom(newRoom)) {
+            await firebase.database().ref(`courses/${newRoom}/status`).update({
+                ownerSessionId: state.sessionId
+            });
+            addOwnedRoom(newRoom);
+            this.forceEnterRoom(newRoom);
+            return;
+        }
+        // 진짜 남의 방 → 비번 모달
         state.pendingRoom = newRoom;
-        
-        // 중요: forceEnterRoom을 실행하지 않고 여기서 중단합니다. (데이터 리스너 실행 방지)
         document.getElementById('takeoverPwInput').value = "";
         dataMgr.openTakeoverModal();
         document.getElementById('takeoverPwInput').focus();
-        
-        // overlay는 flex 상태를 유지하여 뒷배경 데이터를 가립니다.
         return; 
     }
 
     // (B) 내가 주인이거나, 옵저버이거나, 혹은 방이 비어있는 경우 -> 입장 허용
-    if (isOwner) addOwnedRoom(newRoom);
+    addOwnedRoom(newRoom);
     this.forceEnterRoom(newRoom);
     
     // [참고] forceEnterRoom 내부 리스너에서 소유권이 최종 확인되면 
@@ -539,10 +544,9 @@ enterAsObserver: function() {
 forceEnterRoom: async function(room) {
     const cleanRoom = room.toUpperCase();
 
-    // [핵심 추가] 입장 시작과 동시에 화면을 잠금 상태로 강제 전환
-    // 데이터가 로드되어 내가 주인임이 확인되기 전까지는 아무것도 볼 수 없어야 함
+    // 내 방이면 overlay 켜지 않음, 처음 방문하는 방만 잠금 표시
     const overlay = document.getElementById('statusOverlay');
-    if (overlay) overlay.style.display = 'flex';
+    if (overlay && !isMyRoom(cleanRoom)) overlay.style.display = 'flex';
 
     if (window.dbRef) {
         Object.values(window.dbRef).forEach(ref => {
