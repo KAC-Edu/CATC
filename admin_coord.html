@@ -2282,11 +2282,11 @@ function updateIndividualView() {
 
     // 차량 신청 인원 실시간 업데이트
     const requests = room.shuttle?.requests || {};
-    const reqEntries = Object.values(requests).filter(r => r && r.location);
-    const osongCnt    = reqEntries.filter(r => r.location === 'osong').length;
-    const terminalCnt = reqEntries.filter(r => r.location === 'terminal').length;
-    const airportCnt  = reqEntries.filter(r => r.location === 'airport').length;
-    const carCnt      = reqEntries.filter(r => r.location === 'car').length;
+    const reqEntries = Object.values(requests).filter(r => r && r.type);
+    const osongCnt    = reqEntries.filter(r => r.type === 'osong').length;
+    const terminalCnt = reqEntries.filter(r => r.type === 'terminal').length;
+    const airportCnt  = reqEntries.filter(r => r.type === 'airport').length;
+    const carCnt      = reqEntries.filter(r => r.type === 'car').length;
     const totalCnt    = reqEntries.length;
 
     const setEl = (id, val) => { const el=document.getElementById(id); if(el) el.innerText=val; };

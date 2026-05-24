@@ -331,6 +331,12 @@ switchRoomAttempt: async function(newRoom) {
     }
 
     // 4. [분기 처리] 권한 여부에 따른 입장 통제
+
+    // [수정] 이미 내 방으로 현재 입장해 있으면 제어권 모달 없이 바로 재입장
+    if (newRoom === state.room && isOwner) {
+        dataMgr.forceEnterRoom(newRoom);
+        return;
+    }
     
     // (A) 방이 사용 중인데 내가 주인이 아니고, 옵저버도 아님 -> 데이터 차단
     if (isActive && !isOwner && !state.isObserver) {
@@ -465,7 +471,12 @@ enterAsObserver: function() {
         if (label) {
             const roomVal = state.pendingRoom || state.room || '';
             const roomStr = roomVal ? `Room ${roomVal.replace('room','').toUpperCase()}` : '강의실 미선택';
-            const courseName = document.getElementById('displayCourseTitle')?.innerText?.trim() || '';
+            // displayCourseTitle은 현재 입장한 방의 과정명 → pendingRoom이 다른 방이면 틀림
+            // latestCoursesData에서 해당 방의 과정명을 직접 읽음
+            let courseName = '';
+            if (roomVal && window.latestCoursesData?.[roomVal]?.settings?.courseName) {
+                courseName = window.latestCoursesData[roomVal].settings.courseName;
+            }
             label.innerText = courseName ? `${roomStr}  —  ${courseName}` : roomStr;
         }
         document.getElementById('takeoverPwInput').value = '';

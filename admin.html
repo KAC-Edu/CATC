@@ -18,6 +18,11 @@
 <style>
 @keyframes pulseDot { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.5;transform:scale(1.4)} }
 @keyframes slideUp { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
+@keyframes pulseBtn {
+    0%,100% { box-shadow: 0 0 0 0 rgba(59,130,246,0.6); transform: scale(1); }
+    50% { box-shadow: 0 0 0 12px rgba(59,130,246,0); transform: scale(1.03); }
+}
+.pulse-btn { animation: pulseBtn 1.8s ease-in-out infinite; }
 </style>
 </head>
 <body class="day-mode">
@@ -231,11 +236,22 @@
 <!-- 디자인은 유지하되, 비밀번호 창과 겹치지 않게 우선순위(z-index)를 낮춘 버전 -->
 <div id="statusOverlay" class="status-overlay" style="z-index: 5000 !important;">
     <div class="lock-message">
-        <i class="fa-solid fa-lock"></i>
-        <h3>강의실 입장 확인</h3>
-        <p>현재 이 강의실은 <b>'비어있음'</b> 상태이거나 <b>'제어권'</b>이 없는 상태입니다.<br><br>
-        이미 사용 중인 방이라면 잠시만 기다려 주세요.<br>
-        (잠시 후 <b>비밀번호 입력창</b>이 나타납니다.)</p>
+        <i class="fa-solid fa-lock" style="font-size:36px; color:#94a3b8; margin-bottom:12px;"></i>
+        <h3 style="font-size:18px; font-weight:900; color:#1e293b; margin-bottom:8px;">강의실 입장 확인</h3>
+        <p style="font-size:13px; color:#64748b; line-height:1.6; margin-bottom:20px;">
+            현재 이 강의실은 <b>'비어있음'</b> 상태이거나 <b>'제어권'</b>이 없는 상태입니다.<br>
+            이미 사용 중인 방이라면 아래 버튼을 눌러 입장하세요.
+        </p>
+        <!-- 깜빡이는 안내 버튼 -->
+        <button class="pulse-btn"
+            onclick="dataMgr.openTakeoverModal();"
+            style="background:#3b82f6; color:white; border:none; border-radius:14px;
+                   padding:14px 32px; font-size:16px; font-weight:900; cursor:pointer;
+                   display:flex; align-items:center; gap:10px; margin:0 auto 12px auto;">
+            <i class="fa-solid fa-lock-open"></i>
+            비밀번호 입력하기
+        </button>
+        <div style="font-size:11px; color:#94a3b8;">강의실을 처음 개설하는 경우 Select Room에서 방을 선택하세요.</div>
     </div>
 </div>
 <header class="header">
