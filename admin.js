@@ -420,7 +420,7 @@ verifyTakeover: async function() {
         const settings = settingSnap.val() || {};
         const dbPw = settings.password || btoa("7777"); 
 
-        if (btoa(input) === dbPw || btoa(input) === "MTMyODE=") {
+        if (btoa(input) === dbPw) {
             // [수정] 강사 입장 시 해당 방의 옵저버 기록만 정밀 삭제
             state.isObserver = false; 
             sessionStorage.removeItem('kac_observer_room');
@@ -544,9 +544,15 @@ enterAsObserver: function() {
 forceEnterRoom: async function(room) {
     const cleanRoom = room.toUpperCase();
 
-    // 내 방이면 overlay 켜지 않음, 처음 방문하는 방만 잠금 표시
+    // 내 방이면 overlay 즉시 숨김, 처음 방문하는 방만 잠금 표시
     const overlay = document.getElementById('statusOverlay');
-    if (overlay && !isMyRoom(cleanRoom)) overlay.style.display = 'flex';
+    if (overlay) {
+        if (isMyRoom(cleanRoom)) {
+            overlay.style.display = 'none'; // 내 방 → 즉시 열기
+        } else {
+            overlay.style.display = 'flex'; // 처음 방문 → 잠금
+        }
+    }
 
     if (window.dbRef) {
         Object.values(window.dbRef).forEach(ref => {
@@ -757,7 +763,7 @@ fetchCodeAndRenderQr: function(room) {
         const newName = document.getElementById('courseNameInput').value;
         const statusVal = document.getElementById('roomStatusSelect').value;
         const selectedProf = document.getElementById('profSelect').value;
-        const encryptedPw = rawPw ? btoa(rawPw) : "Nzc3Nw==";
+        const encryptedPw = rawPw ? btoa(rawPw) : btoa("7777");
 
         // 설정을 저장하면서 내 세션ID를 다시 한 번 서버에 등록
         const updates = {};
@@ -2373,8 +2379,11 @@ renderRoomStatus: function(st) {
         const sel = document.getElementById('roomStatusSelect');
         if(sel) {
             sel.value = st || 'idle'; 
-            // [수정] 사용자가 직접 클릭해서 상태를 변경하지 못하도록 비활성화 고정
-            sel.disabled = true; 
+            // 항상 비활성화 - 상태 변경은 setupMgr.saveAll()을 통해서만 가능
+            sel.disabled = true;
+            sel.style.pointerEvents = 'none';
+            sel.style.cursor = 'default';
+            sel.style.opacity = '0.85';
             
             // 시각적으로 가독성을 높이기 위해 색상 처리
             if(sel.value === 'active') {
@@ -2578,6 +2587,7 @@ setMode: function(mode) {
             if (mode === 'dashboard') ui.loadDashboardStats(); 
             if (mode === 'notice') ui.loadNoticeView(); 
             if (mode === 'attendance') ui.loadAttendanceView();
+            if (mode === 'guide') setTimeout(() => guideMgr.refresh(), 100); // PDF 재렌더링
 
             if (mode === 'shuttle') {
                 this.loadShuttleData();
@@ -4444,7 +4454,7 @@ const guideMgr = {
     // 1. 초기화 (기존 로직 + 리사이즈 감시 추가)
 init: function() {
     if (!state.room) return;
-    if (window['pdfjs-dist/build/pdf']) {
+    if (typeof pdfjsLib !== 'undefined') {
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
     }
     const guideRef = firebase.database().ref(`system/sharedGuide`);
@@ -4461,14 +4471,27 @@ init: function() {
         }
     });
     window.addEventListener('resize', () => {
-        if (document.getElementById('view-guide').style.display !== 'none') {
+        const vg = document.getElementById('view-guide');
+        if (vg && vg.style.display !== 'none') {
+            guideMgr.isRendering = false; // stuck 방지
             guideMgr.renderPage(guideMgr.pageNum);
         }
     });
     document.addEventListener('fullscreenchange', () => {
+        guideMgr.isRendering = false;
         setTimeout(() => guideMgr.renderPage(guideMgr.pageNum), 200);
     });
 },
+
+    // 탭 전환 시 PDF 재렌더링 (setMode에서 호출)
+    refresh: function() {
+        if (guideMgr.pdfDoc) {
+            guideMgr.isRendering = false;
+            guideMgr.renderPage(guideMgr.pageNum);
+        } else {
+            guideMgr.init();
+        }
+    },
 
     // 2. 가이드 업로드 (사용자님의 확인 팝업 버전 유지)
     uploadGuide: function(input) {
@@ -4476,6 +4499,14 @@ init: function() {
         if(!file || file.type !== 'application/pdf') {
             ui.showAlert("PDF 파일만 업로드 가능합니다.");
             input.value = ""; 
+            return;
+        }
+
+        // 파일 크기 제한 (10MB)
+        const MAX_SIZE = 10 * 1024 * 1024;
+        if (file.size > MAX_SIZE) {
+            ui.showAlert(`⚠️ 파일 크기가 너무 큽니다.\n현재: ${(file.size/1024/1024).toFixed(1)}MB\n최대: 10MB\n\nPDF를 압축한 후 다시 시도해 주세요.`);
+            input.value = "";
             return;
         }
 
@@ -4491,29 +4522,56 @@ init: function() {
             return;
         }
 
+        // 업로드 상태 표시
+        const badge = document.getElementById('guideStatusBadge');
+        if (badge) { badge.innerText = "⏳ 업로드 중..."; badge.style.color = "#f59e0b"; }
+
         const reader = new FileReader();
         reader.onload = (e) => {
             firebase.database().ref(`system/sharedGuide`).set(e.target.result)
                 .then(() => {
                     ui.showAlert("✅ 가이드가 성공적으로 교체되었습니다.");
                     input.value = "";
+                })
+                .catch(err => {
+                    ui.showAlert("❌ 업로드 실패: 파일이 너무 크거나 네트워크 오류입니다.\n\n파일을 더 압축하거나 인터넷 연결을 확인해 주세요.");
+                    if (badge) { badge.innerText = "❌ 업로드 실패"; badge.style.color = "#ef4444"; }
+                    input.value = "";
                 });
+        };
+        reader.onerror = () => {
+            ui.showAlert("❌ 파일을 읽는 중 오류가 발생했습니다.");
+            input.value = "";
         };
         reader.readAsDataURL(file);
     },
 
-    // 3. PDF 로드 (기존 로직 유지)
+    // 3. PDF 로드
     loadPDF: async function(base64) {
+        if (typeof pdfjsLib === 'undefined') {
+            console.error("PDF.js 라이브러리가 로드되지 않았습니다.");
+            const badge = document.getElementById('guideStatusBadge');
+            if (badge) { badge.innerText = "❌ PDF 라이브러리 오류"; badge.style.color = "#ef4444"; }
+            return;
+        }
+        // 렌더링 플래그 리셋 (이전 실패 상태 초기화)
+        guideMgr.isRendering = false;
         try {
-            const raw = atob(base64.split(',')[1]);
+            const parts = base64.split(',');
+            if (parts.length < 2) throw new Error("잘못된 PDF 데이터 형식");
+            const raw = atob(parts[1]);
             const array = new Uint8Array(new ArrayBuffer(raw.length));
             for (let i = 0; i < raw.length; i++) array[i] = raw.charCodeAt(i);
             
             const loadingTask = pdfjsLib.getDocument({data: array});
             guideMgr.pdfDoc = await loadingTask.promise;
-            guideMgr.renderPage(guideMgr.pageNum);
+            guideMgr.pageNum = 1;
+            guideMgr.renderPage(1);
         } catch (err) {
             console.error("PDF 로딩 실패:", err);
+            guideMgr.isRendering = false;
+            const badge = document.getElementById('guideStatusBadge');
+            if (badge) { badge.innerText = "❌ PDF 표시 오류 (파일 재업로드 필요)"; badge.style.color = "#ef4444"; }
         }
     },
 
@@ -4566,6 +4624,7 @@ init: function() {
                 indicator.innerText = `Page: ${num} / ${guideMgr.pdfDoc.numPages}`;
             }
         } catch (err) {
+            console.error("PDF 렌더링 오류:", err);
             guideMgr.isRendering = false;
         }
     },
@@ -4841,7 +4900,7 @@ loadCurrentSettings: function() {
         
         // 1. 기본 정보 세팅
         document.getElementById('setup-course-name').value = s.courseName || "";
-        document.getElementById('setup-room-pw').value = s.password ? atob(s.password) : "7777";
+        document.getElementById('setup-room-pw').value = s.password ? atob(s.password) : "";
         document.getElementById('setup-prof-select').value = st.professorName || "";
         document.getElementById('setup-coord-select').value = s.coordinatorName || "";
 
