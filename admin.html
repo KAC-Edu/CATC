@@ -2,6 +2,7 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Instructor Admin - KAC Platform</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
@@ -119,7 +120,7 @@
                 <div class="setting-group"><label class="setting-label">Select Room</label><select id="roomSelect" class="setting-select"></select></div>
                 <div class="setting-group">
                     <label class="setting-label">Room Status</label>
-                    <select id="roomStatusSelect" class="setting-select" style="font-weight:bold; color:#fbbf24; pointer-events:none; cursor:default;" disabled>
+                    <select id="roomStatusSelect" class="setting-select" style="font-weight:bold; color:#fbbf24;">
                         <option value="active">🟢 사용중</option>
                         <option value="idle">⚪ 비어있음</option>
                     </select>
@@ -237,12 +238,12 @@
 
 
 <!-- 디자인은 유지하되, 비밀번호 창과 겹치지 않게 우선순위(z-index)를 낮춘 버전 -->
-<div id="statusOverlay" class="status-overlay" style="z-index: 5000 !important; display:none;">
+<div id="statusOverlay" class="status-overlay" style="z-index: 5000 !important;">
     <div class="lock-message" id="overlayContent">
         <!-- 초기값 - showOverlayMessage()로 동적 교체됨 -->
-        <i class="fa-solid fa-door-closed" style="font-size:36px; color:#94a3b8; margin-bottom:12px; display:block; text-align:center;"></i>
-        <h3 style="font-size:18px; font-weight:900; color:#1e293b; margin-bottom:8px; text-align:center;">강의실 선택 대기 중</h3>
-        <p style="font-size:13px; color:#64748b; text-align:center;">좌측에서 강의실을 선택해 주세요.</p>
+        <i class="fa-solid fa-lock" style="font-size:36px; color:#94a3b8; margin-bottom:12px; display:block; text-align:center;"></i>
+        <h3 style="font-size:18px; font-weight:900; color:#1e293b; margin-bottom:8px; text-align:center;">강의실 확인 중...</h3>
+        <p style="font-size:13px; color:#64748b; text-align:center;">잠시만 기다려 주세요.</p>
     </div>
 </div>
 <header class="header">
@@ -1570,10 +1571,8 @@
 
 
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
 </body>
 
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
 </body>
 </html>
