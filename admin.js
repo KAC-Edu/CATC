@@ -2966,6 +2966,12 @@ renderQaList: function(f) {
         document.getElementById('changePwModal').style.display='none'; 
     },
     
+    // 전체 출석부 관리/인쇄 (attendance_sheet.html 연결)
+    openFullAttendanceSheet: function() {
+        if(!state.room) return ui.showAlert("강의실을 먼저 선택해주세요.");
+        window.open(`attendance_sheet.html?room=${state.room}`, '_blank');
+    },
+
     toggleNightMode: function() { 
         document.body.classList.toggle('night-mode'); 
         const n = document.body.classList.contains('night-mode');
@@ -4571,6 +4577,39 @@ init: function() {
             });
         } else {
             document.exitFullscreen();
+        }
+,
+
+    // 퀴즈 수동 문항 추가 (텍스트 입력)
+    addManualQuiz: function() {
+        const text = prompt("문항 텍스트를 입력하세요:");
+        if(!text) return;
+        const opts = [];
+        for(let i=1; i<=4; i++) {
+            const o = prompt(`보기 ${i} 입력 (빈칸이면 완료):`);
+            if(!o) break;
+            opts.push(o);
+        }
+        if(opts.length < 2) return ui.showAlert("보기는 최소 2개 이상 입력해야 합니다.");
+        const corr = parseInt(prompt("정답 번호 입력 (1~" + opts.length + "):"));
+        if(isNaN(corr) || corr < 1 || corr > opts.length) return ui.showAlert("올바른 정답 번호를 입력하세요.");
+        state.quizList.push({ text, options: opts, correct: corr, checked: true, isSurvey: false, isOX: false });
+        this.renderMiniList();
+        ui.showAlert("✅ 문항이 추가되었습니다.");
+    },
+
+    // 퀴즈 기록 리셋
+    executeReset: function(type) {
+        if(state.isObserver) return ui.showAlert("👁️ 옵저버는 리셋할 수 없습니다.");
+        if(!state.room) return;
+        if(!confirm(type === 'all' ? "전체 문항 기록을 초기화하시겠습니까?" : "현재 문항 기록만 초기화하시겠습니까?")) return;
+        if(type === 'all') {
+            firebase.database().ref(`courses/${state.room}/quizAnswers`).set(null)
+                .then(() => ui.showAlert("✅ 전체 기록이 초기화되었습니다."));
+        } else {
+            const id = `Q${state.currentQuizIdx}`;
+            firebase.database().ref(`courses/${state.room}/quizAnswers/${id}`).set(null)
+                .then(() => ui.showAlert("✅ 현재 문항 기록이 초기화되었습니다."));
         }
     }
 };
