@@ -25,6 +25,16 @@ const DEFAULT_QUIZ_DATA = [
 ];
 
 // --- 날짜 유틸리티 함수 ---
+// 전화번호 하이픈 자동 포맷 (010-1234-5678)
+function formatPhone(raw) {
+    if (!raw) return '';
+    const digits = String(raw).replace(/[^0-9]/g, '');
+    if (digits.length === 11) return digits.replace(/(\d{3})(\d{4})(\d{4})/, '$1-$2-$3');
+    if (digits.length === 10) return digits.replace(/(\d{3})(\d{3})(\d{4})/, '$1-$2-$3');
+    if (digits.length === 9)  return digits.replace(/(\d{2})(\d{3})(\d{4})/, '$1-$2-$3');
+    return raw;
+}
+
 function getTodayString() {
     const today = new Date();
     return `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
@@ -141,13 +151,19 @@ logout: async function() {
 // --- 2. Data & Room Logic ---
 const dataMgr = {
 saveInstructorNoticeMain: function() {
-        // [옵저버 제한]
         if(state.isObserver) return ui.showAlert("👁️ 옵저버 모드에서는 공지사항을 수정할 수 없습니다.");
-        
         if(!state.room) return;
-        const msg = document.getElementById('instNoticeInputMain').value;
-        firebase.database().ref(`courses/${state.room}/notice`).set(msg).then(() => {
-            ui.showAlert("✅ 강사 공지사항이 교육생에게 게시되었습니다.");
+        const msg = (document.getElementById('instNoticeInputMain')?.value || '').trim();
+        const now = new Date();
+        const ts = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+        const data = msg ? { text: msg, updatedAt: ts } : null;
+        firebase.database().ref(`courses/${state.room}/notice`).set(data).then(() => {
+            // 섹션 닫기 (작성 완료 후 접기)
+            const section = document.getElementById('notice-section-prof');
+            const chevron = document.getElementById('notice-chevron-prof');
+            if (section) section.style.display = 'none';
+            if (chevron) chevron.style.transform = '';
+            ui.showAlert(msg ? "✅ 공지사항이 교육생에게 게시되었습니다." : "🗑️ 공지가 삭제되었습니다.");
         });
     },
 
@@ -876,8 +892,7 @@ toggleLeader: function(token, currentName) {
                 
                 firebase.database().ref(`courses/${state.room}/students/${token}`).update({
                     isLeader: true,
-                    leaderPhone: phone  // 비상연락망 전체번호 (별도 필드)
-                    // phone은 기존 뒷4자리 유지 — 출결/명단 식별에 사용됨
+                    leaderPhone: formatPhone(phone)  // 하이픈 포맷으로 저장
                 });
                 ui.showAlert(`👑 [${currentName}] 교육생이 학생장으로 지정되었습니다.`);
             } else {
@@ -2722,25 +2737,60 @@ renderQaList: function(f) {
         items = items.filter(i => i.status === 'later');
     }
     
-    // 6. 정렬 로직 (고정 질문 > 나중에 답변 > 좋아요 순 > 최신 순)
-    items.sort((a, b) => {
-        const getWeight = (s) => {
-            if (s === 'pin') return 3;
-            if (s === 'later') return 2;
-            if (s === 'normal') return 1;
-            return 0; // done, pin-done
-        };
-        const weightDiff = getWeight(b.status) - getWeight(a.status);
-        if (weightDiff !== 0) return weightDiff;
-        if (b.likes !== a.likes) return b.likes - a.likes;
-        return b.timestamp - a.timestamp;
+    // 6. 날짜별 그룹핑 + 당일 우선 정렬
+    const todayStr = getTodayString();
+    const toDateStr = (ts) => {
+        const d = new Date(ts);
+        return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    };
+
+    // 날짜별 그룹 생성
+    const groups = {};
+    items.forEach(i => {
+        const dStr = toDateStr(i.timestamp);
+        if (!groups[dStr]) groups[dStr] = [];
+        groups[dStr].push(i);
     });
 
-    // 7. HTML 빌드 (메모리 내에서 한 번에 조립)
+    // 각 그룹 내 정렬: pin > later > (좋아요 > 최신)
+    Object.values(groups).forEach(g => {
+        g.sort((a, b) => {
+            const w = s => s==='pin'?3:s==='later'?2:s==='normal'?1:0;
+            const wd = w(b.status) - w(a.status);
+            if (wd !== 0) return wd;
+            if (b.likes !== a.likes) return b.likes - a.likes;
+            return b.timestamp - a.timestamp;
+        });
+    });
+
+    // 날짜 내림차순 (최신 날짜 먼저)
+    const sortedDates = Object.keys(groups).sort((a,b) => b.localeCompare(a));
+
+    // 7. HTML 빌드
     let htmlBuffer = "";
     const now = Date.now();
 
-    items.forEach(i => {
+    sortedDates.forEach(dateStr => {
+        const isToday = dateStr === todayStr;
+        const dateLabel = isToday ? '오늘' : dateStr;
+        const dayGroup = groups[dateStr];
+
+        // 날짜 구분선 헤더
+        htmlBuffer += `
+            <div style="display:flex; align-items:center; gap:10px; margin:${isToday?'0':'20px'} 0 10px 0;">
+                <span style="font-size:12px; font-weight:900; color:${isToday?'#003366':'#94a3b8'}; white-space:nowrap;">
+                    ${isToday ? '📋 오늘 질문' : `📁 ${dateLabel}`}
+                </span>
+                <span style="height:1px; flex:1; background:${isToday?'#dbeafe':'#e2e8f0'};"></span>
+                <span style="font-size:11px; color:#94a3b8; font-weight:700;">${dayGroup.length}건</span>
+            </div>`;
+
+        // 이전 날짜는 기본 접힘
+        if (!isToday) {
+            htmlBuffer += `<div id="qa-day-${dateStr}" style="display:none;">`;
+        }
+
+        dayGroup.forEach(i => {
         try {
             const s = i.status;
             const isDone = (s === 'done' || s === 'pin-done');
@@ -2791,7 +2841,17 @@ renderQaList: function(f) {
         } catch (err) {
             console.error("개별 카드 렌더링 에러:", err);
         }
-    });
+        }); // dayGroup.forEach 끝
+
+        if (!isToday) {
+            htmlBuffer += `</div>`; // qa-day 닫기
+            htmlBuffer += `
+                <button onclick="(function(el,btn,dl,cnt){const o=el.style.display!=='none';el.style.display=o?'none':'block';btn.innerText=o?'📁 '+dl+' ('+cnt+'건) 펼치기 ▼':'📁 '+dl+' ('+cnt+'건) 접기 ▲';})(document.getElementById('qa-day-${dateStr}'),this,'${dateLabel}',${dayGroup.length})"
+                    style="width:100%; padding:8px 12px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; font-size:12px; font-weight:800; color:#94a3b8; cursor:pointer; margin-bottom:8px; text-align:left;">
+                    📁 ${dateLabel} (${dayGroup.length}건) 펼치기 ▼
+                </button>`;
+        }
+    }); // sortedDates.forEach 끝
 
     // 8. 최종 반영
     list.innerHTML = htmlBuffer || `

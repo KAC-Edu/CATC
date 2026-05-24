@@ -521,17 +521,18 @@
             <div id="notice-section-prof" style="display:none; background:white; border-top:none;">
                 <div style="padding:14px 18px 16px;">
                     <textarea id="instNoticeInputMain"
+                        onclick="event.stopPropagation();"
                         oninput="const c=this.value.length; document.getElementById('noticeCharCount').innerText=c?c+'자':'';"
                         style="width:100%; height:80px; padding:10px 12px; font-size:13px; border:1.5px solid #e2e8f0; border-radius:8px; outline:none; background:#fafcff; resize:none; box-sizing:border-box; line-height:1.7; font-family:inherit; color:#1e293b; transition:border-color 0.2s;"
-                        onfocus="this.style.borderColor='#003366';" onblur="this.style.borderColor='#e2e8f0';"
-                        placeholder="교육생에게 전달할 공지를 입력하세요.&#10;줄바꿈은 * 또는 Enter로 구분됩니다."></textarea>
+                        onfocus="event.stopPropagation(); this.style.borderColor='#003366';" onblur="this.style.borderColor='#e2e8f0';"
+                        placeholder="교육생에게 전달할 공지를 입력하세요."></textarea>
                     <div style="display:flex; gap:8px; margin-top:8px; align-items:center;">
                         <span id="noticeCharCount" style="font-size:11px; color:#cbd5e1; min-width:36px;"></span>
-                        <button onclick="dataMgr.saveInstructorNoticeMain()"
+                        <button onclick="event.stopPropagation(); dataMgr.saveInstructorNoticeMain();"
                             style="flex:1; height:38px; background:#003366; color:white; border:none; border-radius:8px; font-size:13px; font-weight:800; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px;">
                             <i class="fa-solid fa-paper-plane" style="font-size:12px;"></i> 게시하기
                         </button>
-                        <button onclick="if(confirm('공지를 삭제하시겠습니까?')){document.getElementById('instNoticeInputMain').value=''; dataMgr.saveInstructorNoticeMain();}"
+                        <button onclick="event.stopPropagation(); if(confirm('공지를 삭제하시겠습니까?')){document.getElementById('instNoticeInputMain').value=''; dataMgr.saveInstructorNoticeMain();}"
                             style="height:38px; width:40px; background:white; color:#ef4444; border:1.5px solid #fca5a5; border-radius:8px; font-size:13px; cursor:pointer;">
                             <i class="fa-solid fa-trash"></i>
                         </button>
