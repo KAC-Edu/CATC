@@ -325,6 +325,11 @@ switchRoomAttempt: async function(newRoom) {
         return;
     }
 
+    // 방 전환 즉시 대시보드/사이드바 초기화 (이전 방 정보 잔류 방지)
+    ui.clearDashboard();
+    document.getElementById('displayCourseTitle').innerText = '';
+    document.getElementById('displayRoomName').innerText = `Room #${newRoom}`;
+
     // 1. 시각적 즉시 차단
     const overlay = document.getElementById('statusOverlay');
     if (overlay) overlay.style.display = 'flex';
@@ -560,6 +565,14 @@ forceEnterRoom: async function(room) {
         });
     }
 
+    // 대시보드 리스너도 함께 정리 (방 전환 시 이전 방 데이터 잔류 방지)
+    if (window.dashRefs) {
+        Object.values(window.dashRefs).forEach(ref => {
+            if (ref && typeof ref.off === 'function') ref.off();
+        });
+        window.dashRefs = null;
+    }
+
     firebase.database().ref(`courses/${cleanRoom}/questions`).off();
     firebase.database().ref(`courses/${cleanRoom}/status`).off();
     firebase.database().ref(`courses/${cleanRoom}/settings`).off();
@@ -568,7 +581,7 @@ forceEnterRoom: async function(room) {
     state.qaData = {};
     state.activeQaKey = null;
     localStorage.setItem('kac_last_room', cleanRoom);
-    addOwnedRoom(cleanRoom); 
+    // addOwnedRoom은 status 리스너에서 소유권 확인 후에만 호출 (아래 리스너에서 처리)
     state.isObserver = (sessionStorage.getItem('kac_observer_room') === cleanRoom);
 
     const qaListEl = document.getElementById('qaList');
@@ -633,18 +646,21 @@ forceEnterRoom: async function(room) {
 
         if (!state.isObserver) {
             if (isOwner) {
-                // ① 내가 정당한 주인 → 즉시 입장
+                // ① 내가 정당한 주인 → 소유 등록 후 즉시 입장
+                addOwnedRoom(cleanRoom);
                 overlay.style.display = 'none';
                 const tm = document.getElementById('takeoverModal');
                 if (tm) tm.style.display = 'none';
             } else if (isActive && wasMyRoom) {
                 // ② 내 방인데 세션 만료 → ownerSessionId 즉시 갱신 + 입장
+                addOwnedRoom(cleanRoom);
                 firebase.database().ref(`courses/${cleanRoom}/status`).update({ ownerSessionId: state.sessionId });
                 overlay.style.display = 'none';
                 const tm = document.getElementById('takeoverModal');
                 if (tm) tm.style.display = 'none';
             } else if (!isActive && wasMyRoom) {
                 // ③ 내가 쓰던 빈 방 → active로 전환 + 즉시 입장
+                addOwnedRoom(cleanRoom);
                 firebase.database().ref(`courses/${cleanRoom}/status`).update({
                     ownerSessionId: state.sessionId, roomStatus: 'active'
                 });
@@ -658,9 +674,10 @@ forceEnterRoom: async function(room) {
                 state.pendingRoom = cleanRoom;
                 dataMgr.openTakeoverModal();
             } else {
-                // ⑤ 빈 방 (처음 방문) → 환경설정 안내
+                // ⑤ 빈 방 (처음 방문) → 환경설정 안내 + 대시보드 초기화
                 overlay.style.display = 'flex';
                 ui.showOverlayMessage('idle');
+                ui.clearDashboard(); // 이전 방 데이터가 대시보드에 남아있지 않도록 초기화
             }
         } else {
             overlay.style.display = 'none';
@@ -1655,7 +1672,14 @@ loadDashboardStats: function() {
     const room = state.room;
     const today = getTodayString();
 
-    // 1. 데이터베이스 안테나(참조) 설정
+    // [핵심] 이전 방의 리스너 전부 끊기 (방 전환 시 데이터 혼재 방지)
+    if (window.dashRefs) {
+        Object.values(window.dashRefs).forEach(ref => {
+            if (ref && typeof ref.off === 'function') ref.off();
+        });
+    }
+
+    // 1. 데이터베이스 안테나(참조) 설정 - window에 보관해서 다음 호출 시 정리 가능
     const refs = {
         settings: firebase.database().ref(`courses/${room}/settings`),
         notice: firebase.database().ref(`courses/${room}/notice`),
@@ -1669,6 +1693,7 @@ loadDashboardStats: function() {
         departure: firebase.database().ref(`courses/${room}/shuttle/departure`),
         shuttleReq: firebase.database().ref(`courses/${room}/shuttle/requests`)
     };
+    window.dashRefs = refs; // 전역 보관 → 다음 방 전환 시 off() 가능
 
     // 2. 과정 정보 및 장소 실시간 업데이트
     refs.settings.on('value', snap => {
@@ -2371,8 +2396,28 @@ updateObserverButton: function() {
     
     renderSettings: function(d) {
         document.getElementById('courseNameInput').value = d.courseName || "";
-        document.getElementById('roomPw').value = d.password ? atob(d.password) : "7777";
+        document.getElementById('roomPw').value = d.password ? atob(d.password) : "";
         document.getElementById('displayCourseTitle').innerText = d.courseName || "";
+    },
+
+    // 방 전환/신규방 진입 시 대시보드 데이터 초기화 (이전 방 정보 잔류 방지)
+    clearDashboard: function() {
+        const clear = (id, val) => { const el = document.getElementById(id); if(el) el.innerText = val; };
+        clear('dashCourseTitle', '과정명을 설정해주세요.');
+        clear('dashPeriod', '-');
+        clear('dashRoomDetail', '-');
+        clear('dashCoordName', '-');
+        clear('dashProfNameOnly', '-');
+        clear('dashArrivedCount', '0');
+        clear('dashTotalCount', '0');
+        clear('dashOutingCount', '0');
+        clear('dashDinnerCount', '0');
+        clear('dashQaCount', '0');
+        clear('dashNoticeInst', '작성된 담임 교수 공지가 없습니다.');
+        clear('dashNoticeAdmin', '등록된 운영부 과정 공지가 없습니다.');
+        clear('dashNoticeGlobal', '현재 게시된 센터 전체 공지가 없습니다.');
+        // 셔틀 통계도 초기화
+        ['total-osong','total-term','total-air','total-car'].forEach(id => clear(id, '0'));
     },
     
 renderRoomStatus: function(st) { 
