@@ -2,7 +2,6 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Instructor Admin - KAC Platform</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
@@ -15,19 +14,6 @@
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/ko.js"></script>
     <link rel="stylesheet" href="admin.css">
-<style>
-@keyframes pulseDot { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.5;transform:scale(1.4)} }
-@keyframes slideUp { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
-@keyframes pulseBtn {
-    0%,100% { box-shadow: 0 0 0 0 rgba(59,130,246,0.6); transform: scale(1); }
-    50% { box-shadow: 0 0 0 12px rgba(59,130,246,0); transform: scale(1.03); }
-}
-.pulse-btn { animation: pulseBtn 1.8s ease-in-out infinite; }
-@keyframes bounceLeft {
-    0%,100% { transform: translateX(0); }
-    50% { transform: translateX(-6px); }
-}
-</style>
 </head>
 <body class="day-mode">
 
@@ -71,11 +57,6 @@
 <div id="takeoverModal" class="modal-overlay">
         <div class="modal-box" style="width: 400px;">
             <div class="modal-header"><h3><i class="fa-solid fa-lock"></i> 강의실 제어권 인증</h3></div>
-            <!-- 어느 강의실인지 표시 -->
-            <div id="takeoverRoomInfo" style="background:#f0f7ff; border:1.5px solid #bfdbfe; border-radius:10px; padding:10px 16px; margin-bottom:16px; text-align:center; font-size:14px; font-weight:800; color:#1d4ed8;">
-                <i class="fa-solid fa-door-open" style="margin-right:6px;"></i>
-                <span id="takeoverRoomLabel">강의실 확인 중...</span>
-            </div>
             <div class="setting-container">
                 <div class="setting-group">
                     <input type="password" id="takeoverPwInput" class="setting-input" style="text-align:center; font-size:18px;" placeholder="비밀번호 입력" onkeyup="if(event.key==='Enter') dataMgr.verifyTakeover()">
@@ -107,7 +88,7 @@
             </div>
             <div class="modal-actions" style="margin-top:25px; justify-content:center; gap:10px;">
                 <button class="m-btn m-btn-later" onclick="printMgr.closeInputModal()" style="background:#64748b; color:white;">취소</button>
-                <button class="m-btn m-btn-done" onclick="printMgr.confirmPrint()">미리보기 생성</button>
+                <button class="m-btn m-btn-done" onclick="printMgr.confirmPrint(false)">미리보기 생성</button>
             </div>
         </div>
     </div>
@@ -120,7 +101,7 @@
                 <div class="setting-group"><label class="setting-label">Select Room</label><select id="roomSelect" class="setting-select"></select></div>
                 <div class="setting-group">
                     <label class="setting-label">Room Status</label>
-                    <select id="roomStatusSelect" class="setting-select" style="font-weight:bold; color:#fbbf24;">
+                    <select id="roomStatusSelect" class="setting-select" style="font-weight:bold; color:#fbbf24; pointer-events:none; cursor:default;" disabled>
                         <option value="active">🟢 사용중</option>
                         <option value="idle">⚪ 비어있음</option>
                     </select>
@@ -177,13 +158,7 @@
                 </div>
 
 
-            <a href="mailto:jds0616@gmail.com" class="dev-info" style="display:block; text-align:center; color:#64748b; font-size:10px; margin-top:10px; text-decoration:none; cursor:pointer; transition:color 0.2s; line-height:1.6;"
-               onmouseover="this.style.color='#3b82f6'" onmouseout="this.style.color='#64748b'">
-                <span style="font-weight:800; color:#94a3b8;">KAC Training Platform</span><br>
-                개발 : 장두석 교수 (항공정보통신시설 담당)<br>
-                문의 : jds0616@gmail.com<br>
-                <span style="font-size:9px; color:#94a3b8;">Ver. 20260524-V1</span>
-            </a>
+            <div class="dev-info">(Developed by DooSeok, Jang)</div>
         </div>
     </div> <!-- 사이드바 끝 -->
 
@@ -238,12 +213,13 @@
 
 
 <!-- 디자인은 유지하되, 비밀번호 창과 겹치지 않게 우선순위(z-index)를 낮춘 버전 -->
-<div id="statusOverlay" class="status-overlay" style="z-index: 5000 !important;">
-    <div class="lock-message" id="overlayContent">
-        <!-- 초기값 - showOverlayMessage()로 동적 교체됨 -->
-        <i class="fa-solid fa-lock" style="font-size:36px; color:#94a3b8; margin-bottom:12px; display:block; text-align:center;"></i>
-        <h3 style="font-size:18px; font-weight:900; color:#1e293b; margin-bottom:8px; text-align:center;">강의실 확인 중...</h3>
-        <p style="font-size:13px; color:#64748b; text-align:center;">잠시만 기다려 주세요.</p>
+<div id="statusOverlay" class="status-overlay" style="z-index: 5000 !important; display:none;">
+    <div class="lock-message">
+        <i class="fa-solid fa-lock"></i>
+        <h3>강의실 입장 확인</h3>
+        <p>현재 이 강의실은 <b>'비어있음'</b> 상태이거나 <b>'제어권'</b>이 없는 상태입니다.<br><br>
+        이미 사용 중인 방이라면 잠시만 기다려 주세요.<br>
+        (잠시 후 <b>비밀번호 입력창</b>이 나타납니다.)</p>
     </div>
 </div>
 <header class="header">
@@ -322,36 +298,23 @@
 
 
 <!-- [개선] 입교안내 가이드 (위치 상향 및 전체화면 버그 수정) -->
-<div id="view-guide" style="display:flex; flex-direction:column; align-items:center; width:100%;">
-    <!-- 상단 헤더 -->
+<div id="view-guide">
+    <!-- 상단 표준 헤더 -->
     <div class="view-header">
-        <h1><i class="fa-solid fa-book-open"></i> 입교안내 <span class="header-room-badge room-badge-global"></span></h1>
-        <p>클릭하면 다음 페이지 / 우클릭하면 이전 페이지</p>
+        <h1><i class="fa-solid fa-book-open"></i> 항공기술훈련원 입교안내 <span class="header-room-badge room-badge-global"></span></h1>
+        <p>교육생들을 위한 입교 안내 및 시설 이용 가이드 슬라이드입니다.</p>
     </div>
 
-    <!-- 컨트롤 툴바 (PDF 위) — 전체화면에서 자동 숨김 -->
-    <div id="guideToolbar" style="display:flex; align-items:center; gap:10px; margin-bottom:12px; background:white; padding:10px 20px; border-radius:14px; box-shadow:0 1px 6px rgba(0,0,0,0.07); border:1px solid #e2e8f0;">
-        <button onclick="guideMgr.changePage(-1)"
-            style="padding:8px 16px; background:#f1f5f9; border:none; border-radius:8px; font-size:13px; font-weight:800; cursor:pointer; color:#334155;">
-            <i class="fa-solid fa-chevron-left"></i> 이전
-        </button>
-        <span id="guidePageInfo" style="font-size:13px; font-weight:700; color:#64748b; min-width:60px; text-align:center;">- / -</span>
-        <button onclick="guideMgr.changePage(1)"
-            style="padding:8px 16px; background:#f1f5f9; border:none; border-radius:8px; font-size:13px; font-weight:800; cursor:pointer; color:#334155;">
-            다음 <i class="fa-solid fa-chevron-right"></i>
-        </button>
-        <div style="width:1px; height:24px; background:#e2e8f0; margin:0 4px;"></div>
-        <button onclick="guideMgr.toggleFullScreen()"
-            style="padding:8px 16px; background:#003366; color:white; border:none; border-radius:8px; font-size:13px; font-weight:800; cursor:pointer; display:flex; align-items:center; gap:6px;">
-            <i class="fa-solid fa-expand"></i> 전체화면
-        </button>
-        <span id="guideStatusBadge" style="font-size:11px; font-weight:800; color:#94a3b8; margin-left:4px;"></span>
-    </div>
-
-    <!-- PDF 화면 (클릭 = 다음 페이지) -->
-    <div id="pdfWrapper" onclick="guideMgr.changePage(1)" oncontextmenu="event.preventDefault(); guideMgr.changePage(-1);"
-         style="cursor:pointer; max-width:900px; width:100%;">
-        <canvas id="guideCanvas" style="width:100%; height:auto; display:block; border-radius:12px; box-shadow:0 4px 20px rgba(0,0,0,0.1);"></canvas>
+    <div class="guide-main-container" style="padding: 0;"> <!-- 상하 여백 20px 제거 -->
+        <!-- PDF 화면 구역 -->
+        <div id="pdfWrapper" onclick="guideMgr.changePage(1)" oncontextmenu="event.preventDefault(); guideMgr.changePage(-1);">
+            <canvas id="guideCanvas"></canvas>
+            
+            <!-- 전체화면 버튼 (버블링 방지 적용) -->
+            <button class="btn-guide-fullscreen" onclick="event.stopPropagation(); guideMgr.toggleFullScreen()" title="전체화면 모드">
+                <i class="fa-solid fa-expand"></i>
+            </button>
+        </div>
     </div>
 </div>
 
@@ -447,11 +410,7 @@
                 </div>
                 <div class="notice-hub-content">
                     <div class="notice-item instructor"><span class="n-tag">담임</span><p id="dashNoticeInst">내용 로딩 중...</p></div>
-                    <div class="notice-item admin" style="position:relative;">
-                        <span class="n-tag">운영</span>
-                        <p id="dashNoticeAdmin">등록된 운영부 공지가 없습니다.</p>
-                        <span id="coordNoticeBadge" style="display:none; position:absolute; top:8px; right:8px; background:#ef4444; color:white; font-size:10px; font-weight:900; padding:2px 7px; border-radius:20px; align-items:center; gap:3px; animation:pulseDot 1.5s infinite;">NEW</span>
-                    </div>
+                    <div class="notice-item admin"><span class="n-tag">운영</span><p id="dashNoticeAdmin">등록된 운영부 공지가 없습니다.</p></div>
                     <div class="notice-item global"><span class="n-tag">센터</span><p id="dashNoticeGlobal">내용 로딩 중...</p></div>
                 </div>
             </div>
@@ -498,110 +457,61 @@
 
 <!-- [6.20차 최종] 공지사항 관리 섹션 - 박스 크기 및 헤더 높이 완벽 통일 -->
 <div id="view-notice" style="display:none; width:100%; flex-direction:column; align-items:center;">
-
-    <div class="view-header" style="margin-bottom:0; padding-bottom:16px;">
-        <h1><i class="fa-solid fa-bullhorn"></i> 공지사항 관리 <span class="header-room-badge room-badge-global"></span></h1>
-        <p>교육생 앱에 실시간으로 노출됩니다.</p>
+    <div class="view-header">
+        <h1><i class="fa-solid fa-bullhorn"></i> 통합 공지사항 관리 <span class="header-room-badge room-badge-global"></span></h1>
+        <p>교육생 앱에 실시간으로 노출될 공지사항을 관리합니다.</p>
     </div>
 
-    <div style="width:100%; max-width:1100px; margin:0 auto 60px auto; padding:0 16px; display:flex; flex-direction:column; gap:16px;">
-
-        <!-- ① 담임교수 공지 — 컬러 헤더에 미리보기, 클릭 시 입력폼 표시 -->
-        <div style="border-radius:16px; overflow:hidden; box-shadow:0 2px 10px rgba(0,0,0,0.08);">
-            <!-- 색상 헤더 (항상 표시) -->
-            <div style="background:linear-gradient(135deg,#003366,#1d4ed8); padding:16px 20px;">
-                <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:12px;">
-                    <div style="flex:1; min-width:0;">
-                        <div style="display:flex; align-items:center; gap:8px; margin-bottom:6px;">
-                            <i class="fa-solid fa-chalkboard-teacher" style="color:rgba(255,255,255,0.85); font-size:14px;"></i>
-                            <span style="font-size:14px; font-weight:900; color:white;">담임교수 공지</span>
-                            <span id="prof-notice-meta" style="font-size:10px; color:rgba(255,255,255,0.5); font-weight:600;"></span>
-                        </div>
-                        <!-- 공지 미리보기 (흰색, 최대 3줄) -->
-                        <div id="prof-notice-preview" style="font-size:13px; color:rgba(255,255,255,0.88); line-height:1.6; overflow:hidden; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; white-space:pre-wrap;">
-                            <span style="opacity:0.45; font-style:italic;">— 게시된 공지 없음</span>
-                        </div>
-                    </div>
-                    <i class="fa-solid fa-chevron-down" id="notice-chevron-prof" style="color:rgba(255,255,255,0.5); font-size:13px; flex-shrink:0; margin-top:2px; transition:0.2s;"></i>
+    <!-- 좌우 대칭 컨테이너 -->
+    <div class="notice-flex-container" style="display: flex; justify-content: center; gap: 30px; width: 100%; max-width: 1200px; margin: 0 auto 50px auto; align-items: stretch;">
+        
+        <!-- [왼쪽] 강사 전용 박스 -->
+        <div class="notice-card-half" style="flex: 1; display: flex; flex-direction: column;">
+            <div class="modern-white-card" style="margin:0; flex: 1; padding: 0; overflow: hidden; border: 2px solid #003366; box-shadow: 0 10px 30px rgba(0, 51, 102, 0.1); display: flex; flex-direction: column; height: 530px;">
+                <!-- 상단 딥블루 헤더 (높이 통일: padding 22px) -->
+                <div style="background: linear-gradient(135deg, #003366 0%, #0055aa 100%); padding: 22px; color: white; flex-shrink: 0;">
+                    <h3 style="margin:0; font-size: 19px; font-weight: 800;"><i class="fa-solid fa-pen-to-square"></i> 우리 과정 공지 작성</h3>
+                    <p style="font-size: 12px; opacity: 0.8; margin: 6px 0 0 0;">입력 후 하단 버튼을 눌러야 교육생 앱에 반영됩니다.</p>
                 </div>
-            </div>
-            <!-- 입력 폼 (토글) -->
-            <div id="notice-section-prof" style="display:block; background:white; border-top:none;">
-                <div style="padding:14px 18px 16px;">
-                    <textarea id="instNoticeInputMain"
-                        onclick="event.stopPropagation();"
-                        oninput="const c=this.value.length; document.getElementById('noticeCharCount').innerText=c?c+'자':'';"
-                        style="width:100%; height:80px; padding:10px 12px; font-size:13px; border:1.5px solid #e2e8f0; border-radius:8px; outline:none; background:#fafcff; resize:none; box-sizing:border-box; line-height:1.7; font-family:inherit; color:#1e293b; transition:border-color 0.2s;"
-                        onfocus="event.stopPropagation(); this.style.borderColor='#003366';" onblur="this.style.borderColor='#e2e8f0';"
-                        placeholder="교육생에게 전달할 공지를 입력하세요."></textarea>
-                    <div style="display:flex; gap:8px; margin-top:8px; align-items:center;">
-                        <span id="noticeCharCount" style="font-size:11px; color:#cbd5e1; min-width:36px;"></span>
-                        <button onclick="event.stopPropagation(); dataMgr.saveInstructorNoticeMain();"
-                            style="flex:1; height:38px; background:#003366; color:white; border:none; border-radius:8px; font-size:13px; font-weight:800; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px;">
-                            <i class="fa-solid fa-paper-plane" style="font-size:12px;"></i> 게시하기
-                        </button>
-                        <button onclick="event.stopPropagation(); if(confirm('공지를 삭제하시겠습니까?')){document.getElementById('instNoticeInputMain').value=''; dataMgr.saveInstructorNoticeMain();}"
-                            style="height:38px; width:40px; background:white; color:#ef4444; border:1.5px solid #fca5a5; border-radius:8px; font-size:13px; cursor:pointer;">
-                            <i class="fa-solid fa-trash"></i>
-                        </button>
-                    </div>
+                
+                <!-- 입력 영역 -->
+                <div style="padding: 25px; display: flex; flex-direction: column; flex: 1;">
+                    <textarea id="instNoticeInputMain" 
+                              style="width: 100%; flex: 1; padding: 20px; font-size: 16px; border: 2px solid #f1f5f9; border-radius: 15px; outline:none; background:#ffffff; resize: none; box-sizing: border-box; line-height: 1.6;" 
+                              placeholder="교육생에게 전달할 내용을 입력하세요."></textarea>
+                    
+                    <button class="btn-action" onclick="dataMgr.saveInstructorNoticeMain()" 
+                            style="height:55px; font-size:18px; width:100%; border-radius:12px; margin-top:20px; background: #f59e0b; color: #ffffff; border: none; font-weight: 900; cursor: pointer; box-shadow: 0 4px 15px rgba(245, 158, 11, 0.3); flex-shrink: 0;">
+                        <i class="fa-solid fa-paper-plane"></i> 교육생에게 공지사항 게시하기
+                    </button>
                 </div>
             </div>
         </div>
 
-        <!-- ② 교육운영부 공지 -->
-        <div style="border-radius:16px; overflow:hidden; box-shadow:0 2px 10px rgba(0,0,0,0.08);">
-            <div style="background:linear-gradient(135deg,#0369a1,#0ea5e9); padding:16px 20px; cursor:pointer;" onclick="ui.toggleNoticeSection('coord')">
-                <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:12px;">
-                    <div style="flex:1; min-width:0;">
-                        <div style="display:flex; align-items:center; gap:8px; margin-bottom:6px;">
-                            <i class="fa-solid fa-user-tie" style="color:rgba(255,255,255,0.85); font-size:14px;"></i>
-                            <span style="font-size:14px; font-weight:900; color:white;">교육운영부 공지</span>
-                            <span id="coord-notice-meta" style="font-size:10px; color:rgba(255,255,255,0.5); font-weight:600;"></span>
-                            <span id="coordNoticeBadge" style="display:none; background:#ef4444; color:white; font-size:10px; font-weight:900; padding:1px 7px; border-radius:10px; animation:pulseDot 1.5s infinite;">NEW</span>
-                        </div>
-                        <div id="coordNoticeDisplay" style="font-size:13px; color:rgba(255,255,255,0.88); line-height:1.6; overflow:hidden; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; white-space:pre-wrap;">
-                            <span style="opacity:0.45; font-style:italic;">— 등록된 공지 없음</span>
-                        </div>
-                    </div>
-                    <i class="fa-solid fa-chevron-down" id="notice-chevron-coord" style="color:rgba(255,255,255,0.5); font-size:13px; flex-shrink:0; margin-top:2px; transition:0.2s;"></i>
+        <!-- [오른쪽] 운영부 전용 박스 (왼쪽과 크기/디자인 100% 일치) -->
+        <div class="notice-card-half" style="flex: 1; display: flex; flex-direction: column;">
+            <div class="modern-white-card" style="margin:0; flex: 1; padding: 0; overflow: hidden; border: 1px solid #cbd5e1; background: #ffffff !important; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05); border-radius: 25px; display: flex; flex-direction: column; height: 530px;">
+                <!-- 상단 네이비 헤더 (왼쪽과 높이 통일: padding 22px) -->
+                <div style="background: #1e293b; padding: 22px; color: white; flex-shrink: 0; height: 95px; box-sizing: border-box; display: flex; flex-direction: column; justify-content: center;">
+                    <h3 style="margin:0; font-size: 19px; font-weight: 800; display: flex; align-items: center; gap: 10px;">
+                        <i class="fa-solid fa-circle-info" style="color: #3b82f6;"></i> 교육운영부 / 항기원 전체 공지
+                    </h3>
+                    <p style="font-size: 12px; opacity: 0.6; margin: 6px 0 0 0;">센터에서 발송한 실시간 공지사항입니다.</p>
                 </div>
-            </div>
-            <div id="notice-section-coord" style="display:none; background:white;">
-                <div style="padding:10px 18px 12px; display:flex; justify-content:flex-end;">
-                    <button onclick="ui.expandNotice('coord')" id="coord-expand-btn" style="display:none; font-size:12px; color:#0ea5e9; background:none; border:none; font-weight:800; cursor:pointer;">전체 보기 ▼</button>
+                
+                <!-- 내용 영역 -->
+                <div style="padding: 25px; flex: 1; display: flex; flex-direction: column; overflow: hidden;">
+                    <div id="globalNoticeDisplay" style="font-size: 15px; line-height: 1.7; color: #334155; flex: 1; overflow-y: auto; padding-right: 10px;">
+                        정보를 불러오는 중...
+                    </div>
+                    
+                    <!-- 하단 상태 바 (왼쪽 버튼 높이에 맞춰 여백 확보) -->
+                    <div style="margin-top: 15px; text-align: center; font-size: 11px; color: #94a3b8; border-top: 1px solid #f1f5f9; padding-top: 15px; flex-shrink: 0;">
+                        <i class="fa-solid fa-sync fa-spin" style="margin-right:5px; color:#3b82f6;"></i> 실시간 정보 업데이트 중
+                    </div>
                 </div>
             </div>
         </div>
-
-        <!-- ③ 항기원 전체 공지 -->
-        <div style="border-radius:16px; overflow:hidden; box-shadow:0 2px 10px rgba(0,0,0,0.08);">
-            <div style="background:linear-gradient(135deg,#334155,#475569); padding:16px 20px; cursor:pointer;" onclick="ui.toggleNoticeSection('global')">
-                <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:12px;">
-                    <div style="flex:1; min-width:0;">
-                        <div style="display:flex; align-items:center; gap:8px; margin-bottom:6px;">
-                            <i class="fa-solid fa-bullhorn" style="color:rgba(255,255,255,0.85); font-size:14px;"></i>
-                            <span style="font-size:14px; font-weight:900; color:white;">항기원 전체 공지</span>
-                            <span id="global-notice-meta" style="font-size:10px; color:rgba(255,255,255,0.45); font-weight:600;"></span>
-                            <span style="display:flex; align-items:center; gap:4px; margin-left:4px;">
-                                <span style="width:5px; height:5px; background:#22c55e; border-radius:50%; display:inline-block;"></span>
-                                <span style="font-size:10px; color:rgba(255,255,255,0.45); font-weight:700;">실시간</span>
-                            </span>
-                        </div>
-                        <div id="globalNoticeDisplay" style="font-size:13px; color:rgba(255,255,255,0.88); line-height:1.6; overflow:hidden; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; white-space:pre-wrap;">
-                            <span style="opacity:0.4; font-style:italic;">— 불러오는 중...</span>
-                        </div>
-                    </div>
-                    <i class="fa-solid fa-chevron-down" id="notice-chevron-global" style="color:rgba(255,255,255,0.5); font-size:13px; flex-shrink:0; margin-top:2px; transition:0.2s;"></i>
-                </div>
-            </div>
-            <div id="notice-section-global" style="display:none; background:white;">
-                <div style="padding:10px 18px 12px; display:flex; justify-content:flex-end;">
-                    <button onclick="ui.expandNotice('global')" id="global-expand-btn" style="display:none; font-size:12px; color:#64748b; background:none; border:none; font-weight:800; cursor:pointer;">전체 보기 ▼</button>
-                </div>
-            </div>
-        </div>
-
     </div>
 </div>
 
@@ -850,7 +760,7 @@
 
     <!-- 3. 버튼 영역 (표 바로 아래에 배치) -->
     <div style="margin-top: 25px; display: flex; gap: 15px; justify-content: center; padding-bottom: 50px;">
-        <button class="btn-action btn-primary" onclick="ui.openGroupDinnerModal()" style="width: auto; padding: 10px 20px;">
+        <button class="btn-action btn-primary" onclick="ui.applyGroupDinner()" style="width: auto; padding: 10px 20px;">
             <i class="fa-solid fa-users-rectangle"></i> 단체 회식 적용 (전원 석식 제외)
         </button>
         <button class="btn-action btn-secondary" onclick="ui.resetDinnerSkip()" style="width: auto; padding: 10px 20px; background: #64748b;">
@@ -1373,27 +1283,10 @@
                     </div>
                 </div>
 
-                <!-- 식단표 업로드 -->
-                <div style="margin-bottom:16px; padding:14px; background:#ecfdf5; border-radius:12px; border:1px solid #a7f3d0;">
-                    <span style="display:block; font-size:12px; font-weight:800; color:#059669; margin-bottom:6px;"><i class="fa-solid fa-utensils"></i> 금주 식단표 (이미지)</span>
-                    <div id="modalMealStatus" style="font-size:11px; color:#64748b; font-weight:700; margin-bottom:8px;">상태 확인 중...</div>
-                    <div style="display:flex; gap:6px;">
-                        <input type="file" id="modalMealInput" accept="image/*" style="display:none;" onchange="setupMgr.uploadMealImage(this)">
-                        <button class="btn-action" onclick="document.getElementById('modalMealInput').click()" style="flex:2; height:38px; font-size:12px; background:#10b981; color:white; border:none; border-radius:8px; font-weight:800; cursor:pointer;"><i class="fa-solid fa-image"></i> 식단 이미지 업로드</button>
-                        <button class="btn-action btn-dark" onclick="setupMgr.clearMealImage()" style="flex:1; height:38px; font-size:12px;">삭제</button>
-                    </div>
-                </div>
-                <!-- 교육생 앱 메뉴 ON/OFF -->
-                <div style="padding:14px; background:#f8fafc; border-radius:12px; border:1px solid #e2e8f0;">
-                    <span style="display:block; font-size:12px; font-weight:900; color:#003366; margin-bottom:10px;"><i class="fa-solid fa-toggle-on"></i> 교육생 앱 메뉴 활성화</span>
-                    <div style="display:flex; flex-direction:column; gap:8px;">
-                        <label style="display:flex; align-items:center; justify-content:space-between; font-size:13px; font-weight:700; cursor:pointer;"><span><i class="fa-solid fa-soap" style="color:#10b981; margin-right:6px;"></i>생활관 비품 요청</span><input type="checkbox" id="feat-facility" style="width:18px; height:18px;" checked></label>
-                        <label style="display:flex; align-items:center; justify-content:space-between; font-size:13px; font-weight:700; cursor:pointer;"><span><i class="fa-solid fa-bus" style="color:#3b82f6; margin-right:6px;"></i>차량 신청</span><input type="checkbox" id="feat-shuttle" style="width:18px; height:18px;" checked></label>
-                        <label style="display:flex; align-items:center; justify-content:space-between; font-size:13px; font-weight:700; cursor:pointer;"><span><i class="fa-solid fa-file-signature" style="color:#f59e0b; margin-right:6px;"></i>외출·외박 / 석식제외</span><input type="checkbox" id="feat-admin-action" style="width:18px; height:18px;" checked></label>
-                        <label style="display:flex; align-items:center; justify-content:space-between; font-size:13px; font-weight:700; cursor:pointer;"><span><i class="fa-solid fa-utensils" style="color:#059669; margin-right:6px;"></i>금주 식단보기</span><input type="checkbox" id="feat-meal" style="width:18px; height:18px;" checked></label>
-                        <label style="display:flex; align-items:center; justify-content:space-between; font-size:13px; font-weight:700; cursor:pointer;"><span><i class="fa-solid fa-qrcode" style="color:#3b82f6; margin-right:6px;"></i>출결 QR 확인</span><input type="checkbox" id="feat-attendance-qr" style="width:18px; height:18px;" checked></label>
-                        <label style="display:flex; align-items:center; justify-content:space-between; font-size:13px; font-weight:700; cursor:pointer;"><span><i class="fa-solid fa-tower-broadcast" style="color:#6366f1; margin-right:6px;"></i>CNS 플랫폼</span><input type="checkbox" id="feat-cns" style="width:18px; height:18px;" checked></label>
-                    </div>
+                <div style="margin-top:auto; padding:15px; background:#f1f5f9; border-radius:12px; font-size:11px; color:#64748b; line-height:1.6;">
+                    <i class="fa-solid fa-circle-info"></i> <b>관리 팁:</b><br>
+                    - 가이드 PDF는 교육생 앱 메인에 즉시 노출됩니다.<br>
+                    - 퀴즈 파일은 업로드 후 '퀴즈 모드'에서 선택하여 진행할 수 있습니다.
                 </div>
             </div>
         </div>
@@ -1453,84 +1346,6 @@
 
 
 
-
-<!-- 단체회식 외출 정보 입력 모달 -->
-<div id="groupDinnerModal" class="modal-overlay" style="z-index: 6000;">
-    <div class="modal-box" style="width: 480px;">
-        <div class="modal-header"><h3><i class="fa-solid fa-users-rectangle"></i> 단체 외출 정보 입력</h3></div>
-        <p style="font-size:13px; color:#64748b; margin-bottom:16px; line-height:1.6;">전원 석식 제외와 함께 외출 대장에 단체 기록이 남습니다.</p>
-
-        <!-- 외출/외박 선택 -->
-        <div style="display:flex; gap:8px; margin-bottom:16px;">
-            <button id="gd-btn-outing" onclick="ui.selectGroupDinnerType('outing')"
-                style="flex:1; padding:12px; border-radius:10px; border:2px solid #3b82f6; background:#3b82f6; color:white; font-weight:900; font-size:14px; cursor:pointer;">
-                🌆 외출 (당일)
-            </button>
-            <button id="gd-btn-overnight" onclick="ui.selectGroupDinnerType('overnight')"
-                style="flex:1; padding:12px; border-radius:10px; border:2px solid #e2e8f0; background:white; color:#64748b; font-weight:900; font-size:14px; cursor:pointer;">
-                🌙 외박 (익일)
-            </button>
-        </div>
-
-        <div class="setting-container">
-            <div class="setting-group">
-                <label class="setting-label">행선지 <span style="color:#ef4444;">*</span></label>
-                <input type="text" id="gd-destination" class="setting-input" placeholder="예: 청주 OO식당">
-            </div>
-
-            <!-- 외출 시간 영역 -->
-            <div id="gd-outing-time" style="display:grid; grid-template-columns:1fr 1fr; gap:15px;">
-                <div class="setting-group">
-                    <label class="setting-label">외출 시간</label>
-                    <div style="padding:10px 12px; background:#e0f2fe; border-radius:8px; font-weight:900; color:#0369a1; text-align:center; font-size:14px;">
-                        18:00 (수업 종료)
-                    </div>
-                    <input type="hidden" id="gd-start-time" value="18:00">
-                </div>
-                <div class="setting-group">
-                    <label class="setting-label">복귀 시간 <span style="color:#ef4444;">*</span></label>
-                    <select id="gd-end-time" class="setting-input" style="font-size:15px; font-weight:800;">
-                        <option value="18:30">18:30</option>
-                        <option value="19:00">19:00</option>
-                        <option value="19:30">19:30</option>
-                        <option value="20:00">20:00</option>
-                        <option value="20:30">20:30</option>
-                        <option value="21:00">21:00</option>
-                        <option value="21:30">21:30</option>
-                        <option value="22:00" selected>22:00</option>
-                    </select>
-                </div>
-            </div>
-
-            <!-- 외박 날짜 영역 (외박 선택 시 표시) -->
-            <div id="gd-overnight-area" style="display:none;">
-                <div class="setting-group">
-                    <label class="setting-label">외출 날짜 <span style="color:#ef4444;">*</span></label>
-                    <input type="date" id="gd-return-date" class="setting-input">
-                </div>
-                <div style="background:#fff1f2; border-radius:10px; padding:10px 14px; font-size:12px; font-weight:700; color:#dc2626; line-height:1.7;">
-                    출발: 18:00 (수업 종료) &nbsp;|&nbsp; 복귀: 익일 08:00 자동 설정
-                </div>
-            </div>
-
-            <div class="setting-group">
-                <label class="setting-label">대표 연락처 <span style="color:#ef4444;">*</span></label>
-                <input type="text" id="gd-phone" class="setting-input" placeholder="예: 010-0000-0000 (인솔자 또는 강사)">
-            </div>
-            <div class="setting-group">
-                <label class="setting-label">사유</label>
-                <input type="text" id="gd-reason" class="setting-input" value="과정 단체 회식">
-            </div>
-        </div>
-        <div class="modal-actions" style="margin-top:20px; justify-content:center; gap:10px;">
-            <button class="m-btn m-btn-later" onclick="document.getElementById('groupDinnerModal').style.display='none'" style="background:#64748b; color:white; min-width:90px; justify-content:center;">취소</button>
-            <button class="m-btn m-btn-done" onclick="ui.applyGroupDinner()" style="min-width:180px; justify-content:center;">
-                <i class="fa-solid fa-check"></i> 적용 (전원 석식제외 + 외출 등록)
-            </button>
-        </div>
-    </div>
-</div>
-
 <!-- [신규 추가] 교육과정 결과 보고서 미리보기 모달창 -->
 <div id="printPreviewModal" class="modal-overlay" style="z-index: 5000; display: none; align-items: center; justify-content: center; background: rgba(0,0,0,0.8);">
     <div class="print-preview-box" style="width: 90%; max-width: 1000px; background: #525659; height: 90vh; border-radius: 12px; display: flex; flex-direction: column; overflow: hidden; position: relative;">
@@ -1571,8 +1386,10 @@
 
 
 
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
 </body>
 
 
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
 </body>
 </html>
