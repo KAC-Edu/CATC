@@ -2225,8 +2225,9 @@ showAlert: function(msg) {
                     ? '<span class="badge-status badge-active">🟢 사용 중</span>' 
                     : '<span class="badge-status badge-idle">⚪ 비어 있음</span>';
 
+                const rowNum = count++;
                 row.innerHTML = `
-                    <td>${count++}</td>
+                    <td>${rowNum}</td>
                     <td style="font-weight:900; color:#3b82f6;">
                         Room ${c}
                         ${isRealMyRoom ? '<span class="my-room-badge">MY</span>' : ''}
