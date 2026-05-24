@@ -293,11 +293,8 @@ loadInitialData: function() {
     
 // [수정 완료] 보안 검증 강화 및 데이터 유출 차단 로직
 switchRoomAttempt: async function(newRoom) {
-    // [수정] SELECT ROOM 변경 시 모든 열려있는 모달/설정창 즉시 닫기
-    document.querySelectorAll('.modal-overlay, .setup-modal').forEach(m => {
-        m.style.display = 'none';
-    });
-    // 설정창도 닫기
+    // [중요] SELECT ROOM 변경 시 열려있는 모든 모달/설정창 즉시 닫기
+    document.querySelectorAll('.modal-overlay').forEach(m => { m.style.display = 'none'; });
     const courseSetup = document.getElementById('courseSetupModal');
     if (courseSetup) courseSetup.style.display = 'none';
 
@@ -364,6 +361,13 @@ switchRoomAttempt: async function(newRoom) {
 
     // (B) 내가 주인이거나, 옵저버이거나, 혹은 방이 비어있는 경우 -> 입장 허용
     console.log(`[인증 성공] Room ${newRoom} 데이터 로드를 시작합니다.`);
+
+    // [핵심] 이미 isOwner로 확인됐다면 last_owned_room을 미리 갱신하여
+    // forceEnterRoom의 status.on()에서 wasMyRoom으로 확실히 통과되도록 보장
+    if (isOwner || isActive) {
+        localStorage.setItem('last_owned_room', newRoom.toUpperCase());
+    }
+    // overlay를 즉시 닫지 않고 forceEnterRoom 안에서 처리
     this.forceEnterRoom(newRoom);
     
     // [참고] forceEnterRoom 내부 리스너에서 소유권이 최종 확인되면 
@@ -601,7 +605,6 @@ forceEnterRoom: async function(room) {
 
         if (!state.isObserver) {
             if (isActive && !isOwner && wasMyRoom) {
-                // 내 방인데 세션 갱신 → ownerSessionId 갱신 + 즉시 overlay 닫기
                 firebase.database().ref(`courses/${cleanRoom}/status`).update({ ownerSessionId: state.sessionId });
                 overlay.style.display = 'none';
                 const tm = document.getElementById('takeoverModal');
@@ -613,8 +616,18 @@ forceEnterRoom: async function(room) {
                 ui.showOverlayMessage('locked');
                 state.pendingRoom = cleanRoom;
                 dataMgr.openTakeoverModal();
+            } else if (!isActive && wasMyRoom) {
+                // 내가 쓰던 방인데 비어있음 → 자동으로 active 전환 + 입장
+                firebase.database().ref(`courses/${cleanRoom}/status`).update({
+                    ownerSessionId: state.sessionId,
+                    roomStatus: 'active'
+                });
+                overlay.style.display = 'none';
+                const tm2 = document.getElementById('takeoverModal');
+                if (tm2) tm2.style.display = 'none';
+                return;
             } else if (!isActive) {
-                // 비어있는 방 → 환경설정 안내
+                // 처음 들어온 비어있는 방 → 환경설정 안내
                 overlay.style.display = 'flex';
                 ui.showOverlayMessage('idle');
             } else {
@@ -4774,12 +4787,8 @@ window._periodPicker = flatpickr("#setup-period-range", {
     disableMobile: "true",
     onReady: function(selectedDates, dateStr, instance) {
         instance.calendarContainer.style.width = "820px";
-        // 기존 선택된 날짜가 있으면 해당 달로 이동, 없으면 오늘
-        if (selectedDates.length > 0) {
-            instance.jumpToDate(selectedDates[0]);
-        } else {
-            instance.jumpToDate(new Date());
-        }
+        if (selectedDates.length > 0) instance.jumpToDate(selectedDates[0]);
+        else instance.jumpToDate(new Date());
     },
     onChange: function(selectedDates, dateStr, instance) {
         instance.calendarContainer.style.width = "820px";
@@ -4857,12 +4866,10 @@ loadCurrentSettings: function() {
 
         if(s.period && s.period.includes(" ~ ")) {
             rangeInput.value = s.period;
-            // 달력을 기존 시작일 달로 이동
             if (window._periodPicker) {
                 const parts = s.period.split(' ~ ');
-                const startDate = parts[0].trim();
-                window._periodPicker.setDate([startDate, parts[1].trim()], false);
-                window._periodPicker.jumpToDate(new Date(startDate));
+                window._periodPicker.setDate([parts[0].trim(), parts[1].trim()], false);
+                window._periodPicker.jumpToDate(new Date(parts[0].trim()));
             }
         } else {
             rangeInput.value = `${todayStr} ~ ${todayStr}`;
