@@ -2864,55 +2864,69 @@ renderQaList: function(f) {
         items = items.filter(i => i.status === 'later');
     }
     
-    // 6. 정렬 로직 (고정 질문 > 나중에 답변 > 좋아요 순 > 최신 순)
-    items.sort((a, b) => {
-        const getWeight = (s) => {
-            if (s === 'pin') return 3;
-            if (s === 'later') return 2;
-            if (s === 'normal') return 1;
-            return 0; // done, pin-done
-        };
-        const weightDiff = getWeight(b.status) - getWeight(a.status);
-        if (weightDiff !== 0) return weightDiff;
-        if (b.likes !== a.likes) return b.likes - a.likes;
-        return b.timestamp - a.timestamp;
+    // 6. 날짜별 그룹핑 + 당일 우선 정렬
+    const todayStr = getTodayString();
+    const toDateStr = (ts) => {
+        const d = new Date(ts);
+        return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    };
+    const toDateLabel = (dStr) => {
+        if (dStr === todayStr) return '📅 오늘';
+        const d = new Date(dStr);
+        const days = ['일','월','화','수','목','금','토'];
+        return `${d.getMonth()+1}/${d.getDate()}(${days[d.getDay()]})`;
+    };
+
+    // 날짜별 그룹 생성
+    const groups = {};
+    items.forEach(i => {
+        const dStr = toDateStr(i.timestamp);
+        if (!groups[dStr]) groups[dStr] = [];
+        groups[dStr].push(i);
     });
 
-    // 7. HTML 빌드 (메모리 내에서 한 번에 조립)
+    // 각 그룹 내 정렬: pin > later > 좋아요 > 최신
+    const w = s => s==='pin'?3:s==='later'?2:s==='normal'?1:0;
+    Object.values(groups).forEach(g => {
+        g.sort((a, b) => {
+            const wd = w(b.status) - w(a.status);
+            if (wd !== 0) return wd;
+            if (b.likes !== a.likes) return b.likes - a.likes;
+            return b.timestamp - a.timestamp;
+        });
+    });
+
+    // 날짜 내림차순 (최신 날짜 먼저)
+    const sortedDates = Object.keys(groups).sort((a, b) => b.localeCompare(a));
+
+    // 7. HTML 빌드 — 날짜별 섹션으로 구성
     let htmlBuffer = "";
     const now = Date.now();
 
-    items.forEach(i => {
+    const buildCard = (i) => {
         try {
             const s = i.status;
             const isDone = (s === 'done' || s === 'pin-done');
-            
-            // 클래스 및 아이콘 설정
-            let cls = "";
-            let icon = "";
+            let cls = "", icon = "";
             if (s === 'pin' || s === 'pin-done') { cls = "status-pin"; icon = "📌 "; }
             else if (s === 'later') { cls = "status-later"; icon = "⚠️ "; }
             else if (isDone) { cls = "status-done"; icon = "✅ "; }
 
-            // 신규 질문 강조 (2분 이내)
             const isNew = (now - i.timestamp) < 120000;
-            const newClass = isNew ? 'is-new' : '';
             const newBadge = isNew ? '<span class="new-badge-icon">NEW</span>' : '';
 
-            // 강사 라벨 이름 처리
             let targetName = String(i.subject);
             let displayName = targetName;
-            const titles = ["본부장", "공항장", "센터장", "부장", "차장", "과장", "주임", "교수", "강사"];
+            const titles = ["본부장","공항장","센터장","부장","차장","과장","주임","교수","강사"];
             const hasTitle = titles.some(t => targetName.includes(t));
-            
             if (targetName !== '공통질문' && targetName !== '일반' && !hasTitle) {
                 displayName = targetName + " 강사님";
             } else if (hasTitle && !targetName.includes("님")) {
                 displayName = targetName + "님";
             }
 
-            htmlBuffer += `
-            <div class="q-card ${cls} ${newClass}" onclick="ui.openQaModal('${i.id}')">
+            return `
+            <div class="q-card ${cls} ${isNew ? 'is-new' : ''}" onclick="ui.openQaModal('${i.id}')">
                 <div class="q-content">
                     ${newBadge}
                     <span style="display:inline-block; background:#eff6ff; color:#3b82f6; font-size:10px; padding:2px 7px; border-radius:4px; margin-right:8px; vertical-align:middle; border:1px solid #dbeafe; font-weight:800;">
@@ -2930,8 +2944,42 @@ renderQaList: function(f) {
                     <div class="q-time">${new Date(i.timestamp).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</div>
                 </div>
             </div>`;
-        } catch (err) {
-            console.error("개별 카드 렌더링 에러:", err);
+        } catch(err) { return ''; }
+    };
+
+    sortedDates.forEach((dStr, idx) => {
+        const grp = groups[dStr];
+        const isToday = (dStr === todayStr);
+        const label = toDateLabel(dStr);
+        const cnt = grp.length;
+        const doneCnt = grp.filter(i => i.status === 'done' || i.status === 'pin-done').length;
+
+        if (isToday) {
+            // 오늘: 헤더 + 카드 바로 표시 (펼침 고정)
+            htmlBuffer += `
+            <div style="display:flex; align-items:center; gap:10px; margin:8px 0 6px; padding:8px 12px; background:#eff6ff; border-radius:10px; border-left:4px solid #3b82f6;">
+                <span style="font-weight:900; color:#1d4ed8; font-size:14px;">${label}</span>
+                <span style="font-size:12px; color:#64748b; font-weight:600;">${cnt}건</span>
+                ${doneCnt > 0 ? `<span style="font-size:11px; color:#10b981; font-weight:700;">✅ 답변완료 ${doneCnt}건</span>` : ''}
+            </div>`;
+            grp.forEach(i => { htmlBuffer += buildCard(i); });
+        } else {
+            // 과거 날짜: 접기/펼치기 아코디언
+            const uid = 'qa_grp_' + dStr.replace(/-/g,'');
+            htmlBuffer += `
+            <div style="margin:8px 0 2px;">
+                <button onclick="ui.toggleQaGroup('${uid}')"
+                    style="width:100%; display:flex; align-items:center; gap:10px; padding:8px 12px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; cursor:pointer; text-align:left;">
+                    <i id="${uid}_icon" class="fa-solid fa-chevron-right" style="color:#94a3b8; font-size:12px; transition:transform 0.2s;"></i>
+                    <span style="font-weight:800; color:#475569; font-size:14px;">${label}</span>
+                    <span style="font-size:12px; color:#94a3b8; font-weight:600;">${cnt}건</span>
+                    ${doneCnt > 0 ? `<span style="font-size:11px; color:#10b981; font-weight:700;">✅ ${doneCnt}건 답변</span>` : ''}
+                    <span style="margin-left:auto; font-size:11px; color:#cbd5e1;">클릭하여 펼치기</span>
+                </button>
+                <div id="${uid}" style="display:none; padding-top:4px;">
+                    ${grp.map(buildCard).join('')}
+                </div>
+            </div>`;
         }
     });
 
@@ -2941,6 +2989,16 @@ renderQaList: function(f) {
             <p>조건에 맞는 질문이 없습니다.</p>
         </div>`;
 },
+
+    // Q&A 날짜 그룹 펼치기/접기
+    toggleQaGroup: function(uid) {
+        const box = document.getElementById(uid);
+        const icon = document.getElementById(uid + '_icon');
+        if(!box) return;
+        const isOpen = box.style.display !== 'none';
+        box.style.display = isOpen ? 'none' : 'block';
+        if(icon) icon.style.transform = isOpen ? '' : 'rotate(90deg)';
+    },
 
 
 
