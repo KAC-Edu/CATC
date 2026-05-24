@@ -292,6 +292,9 @@ switchRoomAttempt: async function(newRoom) {
     if (dtEl) dtEl.innerText = '';
     const drEl = document.getElementById('displayRoomName');
     if (drEl) drEl.innerText = `Room #${newRoom}`;
+    // select room 드롭다운 즉시 동기화
+    const selEl = document.getElementById('roomSelect');
+    if(selEl) selEl.value = newRoom;
 
     localStorage.setItem('kac_last_mode', 'dashboard');
     
@@ -573,9 +576,11 @@ forceEnterRoom: async function(room) {
                 const tm = document.getElementById('takeoverModal');
                 if (tm) tm.style.display = 'none';
             } else if (isActive && !isOwner) {
-                // ④ 남의 방 → 비번 입력창
+                // ④ 남의 방 → 비번 입력창 (방 번호 표시)
                 overlay.style.display = 'flex';
                 state.pendingRoom = cleanRoom;
+                const lbl = document.getElementById('takeoverRoomLabel');
+                if(lbl) lbl.innerText = `Room #${cleanRoom}`;
                 document.getElementById('takeoverModal').style.display = 'flex';
             } else {
                 // ⑤ 빈 방 (처음 방문) → 환경설정 안내 + 대시보드 초기화
@@ -2196,7 +2201,8 @@ showAlert: function(msg) {
             const isRoomActive = (st.roomStatus === 'active');
             const courseName = settings.courseName ? settings.courseName : "-";
             const profName = st.professorName ? st.professorName : "-";
-            const isRealMyRoom = isRoomActive && (st.ownerSessionId === state.sessionId);
+            const myOwnedRoom = (localStorage.getItem('last_owned_room') || '').toUpperCase();
+            const isRealMyRoom = isRoomActive && (st.ownerSessionId === state.sessionId || (c === myOwnedRoom && c === state.room));
 
             // 사이드바 드롭다운 갱신
             if(sel) {
@@ -4549,6 +4555,9 @@ init: function() {
             
             canvas.height = viewport.height;
             canvas.width = viewport.width;
+            
+            // transform 초기화 (뒤집힘 방지)
+            ctx.setTransform(1, 0, 0, 1, 0, 0);
 
             await page.render({canvasContext: ctx, viewport: viewport}).promise;
             guideMgr.isRendering = false;
