@@ -1,0 +1,1578 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Instructor Admin - KAC Platform</title>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/ko.js"></script>
+    <link rel="stylesheet" href="admin.css">
+<style>
+@keyframes pulseDot { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.5;transform:scale(1.4)} }
+@keyframes slideUp { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
+@keyframes pulseBtn {
+    0%,100% { box-shadow: 0 0 0 0 rgba(59,130,246,0.6); transform: scale(1); }
+    50% { box-shadow: 0 0 0 12px rgba(59,130,246,0); transform: scale(1.03); }
+}
+.pulse-btn { animation: pulseBtn 1.8s ease-in-out infinite; }
+@keyframes bounceLeft {
+    0%,100% { transform: translateX(0); }
+    50% { transform: translateX(-6px); }
+}
+</style>
+</head>
+<body class="day-mode">
+
+    <!-- 1. 여기에 새로 추가 (모바일 차단 레이어) -->
+    <div id="mobileRestrictOverlay">
+        <div class="restrict-box">
+            <i class="fa-solid fa-desktop"></i>
+            <h2>PC 환경 접속 권장</h2>
+            <p>강사 관리 플랫폼은 모바일 환경을 지원하지 않습니다.<br>태블릿 또는 PC에서 접속해 주세요.</p>
+        </div>
+    </div>
+
+
+    <!-- Login & Global Modals (전체화면과 무관한 것들) -->
+    <div id="loginOverlay" class="login-overlay">
+        <div class="login-box">
+            <div class="login-logo"><i class="fa-solid fa-user-shield"></i></div>
+            <h2>KAC Training Platform</h2>
+            <p>강사 전용 접속 플랫폼입니다.</p>
+            <input type="password" id="loginPwInput" class="login-input" placeholder="Password" onkeyup="if(event.key==='Enter') authMgr.tryLogin()">
+            <button class="login-btn" onclick="authMgr.tryLogin()">Login <i class="fa-solid fa-arrow-right"></i></button>
+<div id="loginMsg" style="margin-top:10px; height:20px; font-weight:bold; color:#10b981; font-size:14px;"></div>
+            <div class="login-footer">KAC Training Platform</div>
+        </div>
+    </div>
+    
+    <div id="changePwModal" class="modal-overlay">
+        <div class="modal-box" style="width: 450px;">
+            <div class="modal-header"><h3><i class="fa-solid fa-key"></i> 비밀번호 변경</h3></div>
+            <div class="setting-container">
+                <div class="setting-group"><label class="setting-label">현재 비밀번호</label><input type="password" id="cp-current" class="setting-input"></div>
+                <div class="setting-group"><label class="setting-label">새 비밀번호</label><input type="password" id="cp-new" class="setting-input"></div>
+                <div class="setting-group"><label class="setting-label">새 비밀번호 확인</label><input type="password" id="cp-confirm" class="setting-input"></div>
+            </div>
+            <div class="modal-actions" style="margin-top:25px; justify-content:flex-end; gap:10px;">
+                <button class="m-btn m-btn-later" onclick="ui.closePwModal()" style="background:#64748b; color:white;">취소</button>
+                <button class="m-btn m-btn-done" onclick="authMgr.executeChangePw()">변경 저장</button>
+            </div>
+        </div>
+    </div>
+<div id="takeoverModal" class="modal-overlay">
+        <div class="modal-box" style="width: 400px;">
+            <div class="modal-header"><h3><i class="fa-solid fa-lock"></i> 강의실 제어권 인증</h3></div>
+            <!-- 어느 강의실인지 표시 -->
+            <div id="takeoverRoomInfo" style="background:#f0f7ff; border:1.5px solid #bfdbfe; border-radius:10px; padding:10px 16px; margin-bottom:16px; text-align:center; font-size:14px; font-weight:800; color:#1d4ed8;">
+                <i class="fa-solid fa-door-open" style="margin-right:6px;"></i>
+                <span id="takeoverRoomLabel">강의실 확인 중...</span>
+            </div>
+            <div class="setting-container">
+                <div class="setting-group">
+                    <input type="password" id="takeoverPwInput" class="setting-input" style="text-align:center; font-size:18px;" placeholder="비밀번호 입력" onkeyup="if(event.key==='Enter') dataMgr.verifyTakeover()">
+                </div>
+            </div>
+            <div class="modal-actions" style="margin-top:25px; display:flex; flex-direction:column; gap:10px;">
+                <div style="display:flex; gap:10px; width:100%;">
+                    <button class="m-btn m-btn-later" onclick="dataMgr.cancelTakeover()" style="background:#64748b; color:white; flex:1; justify-content:center;">취소</button>
+                    <button class="m-btn m-btn-done" onclick="dataMgr.verifyTakeover()" style="flex:2; justify-content:center;">제어권 획득 (강사)</button>
+                </div>
+                <!-- [추가] 옵저버 입장 버튼 -->
+                <button class="m-btn" onclick="dataMgr.enterAsObserver()" style="background:#e2e8f0; color:#475569; width:100%; justify-content:center; font-weight:800;">
+                    <i class="fa-solid fa-eye"></i> 단순 모니터링 (옵저버 입장)
+                </button>
+            </div>
+        </div>
+    </div>
+
+
+  
+
+<!-- 1. 리포트 정보 입력 팝업 (원래대로 복구) -->
+    <div id="printInputModal" class="modal-overlay">
+        <div class="modal-box" style="width: 400px;">
+            <div class="modal-q-text" style="font-size:22px; text-align:center; margin-bottom:20px;">📜 리포트 정보 입력</div>
+            <div class="setting-container">
+                <div class="setting-group"><label class="setting-label">교육 기간</label><input type="text" id="printDateInput" class="setting-input"></div>
+                <div class="setting-group"><label class="setting-label">담임 교수</label><input type="text" id="printProfInput" class="setting-input"></div>
+            </div>
+            <div class="modal-actions" style="margin-top:25px; justify-content:center; gap:10px;">
+                <button class="m-btn m-btn-later" onclick="printMgr.closeInputModal()" style="background:#64748b; color:white;">취소</button>
+                <button class="m-btn m-btn-done" onclick="printMgr.confirmPrint()">미리보기 생성</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. 사라졌던 사이드바 다시 생성 -->
+    <div class="sidebar">
+        <div class="sidebar-top">
+            <div class="sidebar-header" onclick="ui.goHome()" style="cursor:pointer;" title="초기 화면으로 이동">KAC Training Platform</div>
+            <div class="setting-container">
+                <div class="setting-group"><label class="setting-label">Select Room</label><select id="roomSelect" class="setting-select"></select></div>
+                <div class="setting-group">
+                    <label class="setting-label">Room Status</label>
+                    <select id="roomStatusSelect" class="setting-select" style="font-weight:bold; color:#fbbf24;">
+                        <option value="active">🟢 사용중</option>
+                        <option value="idle">⚪ 비어있음</option>
+                    </select>
+                </div>
+
+                <!-- 통합 설정 마스터 버튼 -->
+                <div class="setting-group" style="margin-top: 10px;">
+                    <label class="setting-label">Admin Control</label>
+<button id="btnSetupModal" class="btn-action btn-primary" onclick="setupMgr.openSetupModal()" style="height:50px; font-size:14px;">
+    <i class="fa-solid fa-gears"></i> 교육과정 환경 설정 (통합)
+</button>
+                    <!-- 데이터 연동용 숨김 입력창 -->
+                    <input type="text" id="courseNameInput" style="display:none;">
+                    <input type="password" id="roomPw" style="display:none;">
+                    <select id="profSelect" style="display:none;"></select>
+                </div>
+
+
+                <div class="divider"></div>
+                <div class="setting-group">
+                    <label class="setting-label">Student Link</label>
+                    <div class="qr-box"><div id="qrcode"></div><button class="btn-action btn-small btn-dark" id="btnCopyLink" onclick="ui.copyLink()"><i class="fa-solid fa-copy"></i> Copy</button><input type="text" id="studentLink" style="opacity:0;position:absolute;z-index:-1;"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="sidebar-bottom">
+            <div class="action-buttons">
+                <button class="btn-action btn-secondary" onclick="ui.requestAdminAuth('pw')"><i class="fa-solid fa-key"></i> Password</button>
+                <button class="btn-action btn-secondary" onclick="authMgr.logout()"><i class="fa-solid fa-right-from-bracket"></i> Logout</button>
+                <button class="btn-action btn-print" onclick="printMgr.openInputModal()"><i class="fa-solid fa-print"></i> Report</button>
+                <button id="observerToggleButton" class="btn-action btn-secondary" onclick="dataMgr.handleModeToggle()" style="background:#e2e8f0; color:#475569;"><i class="fa-solid fa-eye"></i> ObserverMode</button>
+                <button class="btn-action btn-danger" onclick="ui.requestAdminAuth('idle')" style="background:#b91c1c;"><i class="fa-solid fa-power-off"></i> All Idle</button>
+                <button id="btnReset" class="btn-action btn-danger" onclick="dataMgr.resetCourse()"><i class="fa-solid fa-triangle-exclamation"></i> Reset</button>
+            </div>
+            <div style="text-align: center; margin-top: 15px;">
+                <span onclick="ui.openSecretModal()" style="font-size:10px; color:#475569; cursor:pointer; text-decoration:underline;">시스템 보안 설정</span>
+            </div>
+<div class="divider"></div>
+                <div class="setting-group" style="position: relative;">
+                    <label class="setting-label">Related Platforms</label>
+                    <div id="familySiteMenu" class="family-site-menu">
+                        <a href="javascript:void(0)" onclick="ui.goFamilySite('coord', 'admin_coord.html')"><i class="fa-solid fa-user-tie"></i> 교육운영부 (행정)</a>
+                        <a href="javascript:void(0)" onclick="ui.goFamilySite('support', 'support_admin.html')"><i class="fa-solid fa-hotel"></i> 교육지원부 (생활관)</a>
+                        <a href="javascript:void(0)" onclick="ui.goFamilySite('driver', 'driver.html')"><i class="fa-solid fa-bus"></i> 기사 전용 (수송)</a>
+                        <a href="javascript:void(0)" onclick="ui.goFamilySite('meal', 'nutritionist.html')"><i class="fa-solid fa-utensils"></i> 영양사 전용 (식단)</a>
+                        <a href="javascript:void(0)" onclick="ui.goFamilySite('facility', 'facility_admin.html')"><i class="fa-solid fa-broom"></i> 미화/시설 관리</a>
+                        <a href="javascript:void(0)" onclick="ui.goFamilySite('none', 'student_leader.html')"><i class="fa-solid fa-crown"></i> 학생장 전용</a>
+                        <a href="javascript:void(0)" onclick="ui.goFamilySite('none', 'https://jds0616-boop.github.io/kac-cns-platform/index.html')"><i class="fa-solid fa-tower-broadcast"></i> CNS 통합 플랫폼</a>
+                    </div>
+                    <button class="btn-action btn-dark" onclick="ui.toggleFamilySites()" style="background: #334155; height: 42px;">
+                        <i class="fa-solid fa-layer-group"></i> 유관 시스템 바로가기 <i class="fa-solid fa-chevron-up" id="familyChevron" style="margin-left: auto; font-size: 10px;"></i>
+                    </button>
+                </div>
+
+
+            <a href="mailto:jds0616@gmail.com" class="dev-info" style="display:block; text-align:center; color:#64748b; font-size:10px; margin-top:10px; text-decoration:none; cursor:pointer; transition:color 0.2s; line-height:1.6;"
+               onmouseover="this.style.color='#3b82f6'" onmouseout="this.style.color='#64748b'">
+                <span style="font-weight:800; color:#94a3b8;">KAC Training Platform</span><br>
+                개발 : 장두석 교수 (항공정보통신시설 담당)<br>
+                문의 : jds0616@gmail.com<br>
+                <span style="font-size:9px; color:#94a3b8;">Ver. 20260524-V1</span>
+            </a>
+        </div>
+    </div> <!-- 사이드바 끝 -->
+
+
+
+    <!-- Main Content -->
+    <div class="main-stage">
+
+<!-- [추가] 출결 QR 보기 팝업 (강사 확인용) -->
+    <div id="attendanceQrModal" class="modal-overlay" onclick="if(event.target==this)this.style.display='none'">
+        <div class="modal-box" style="width: 400px; text-align: center;">
+            <h3 style="margin-top:0;">출결 QR (고용노동부)</h3>
+            <img id="attendanceQrImg" style="width:100%; border-radius:12px; display:none;">
+            <div id="noAttendanceQrMsg" style="padding:40px 0; color:#94a3b8; font-weight:bold;">등록된 QR이 없습니다.</div>
+            <button class="btn-action btn-secondary" style="margin-top:15px;" onclick="document.getElementById('attendanceQrModal').style.display='none'">닫기</button>
+        </div>
+    </div>
+
+    <!-- [추가] 공지사항 관리 팝업 -->
+    <div id="noticeManageModal" class="modal-overlay" onclick="if(event.target==this)this.style.display='none'">
+        <div class="modal-box" style="width: 500px;">
+            <div class="modal-header"><h3><i class="fa-solid fa-bullhorn"></i> 과정 공지사항 관리</h3></div>
+            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 15px; margin-bottom: 15px;">
+                <span style="font-size: 12px; font-weight: 800; color: #64748b; margin-bottom: 8px; display: block;">우리 과정 공지내용 (수정 시 교육생 앱 즉시 반영)</span>
+                <textarea id="instNoticeInput" style="width: 100%; min-height: 120px; border-radius: 8px; border: 1px solid #cbd5e1; padding: 10px; font-size: 14px; resize: vertical;"></textarea>
+            </div>
+            <div class="modal-actions" style="justify-content:center; gap:10px;">
+                <button class="m-btn m-btn-later" onclick="document.getElementById('noticeManageModal').style.display='none'" style="background:#64748b; color:white;">취소</button>
+                <button class="m-btn m-btn-done" onclick="dataMgr.saveInstructorNotice()">공지사항 저장</button>
+            </div>
+        </div>
+    </div>
+
+
+
+
+
+
+
+
+
+
+<!-- [수정] 디자인이 보강된 QR 확대 팝업창 -->
+<div id="qrModal" class="modal-overlay" onclick="ui.closeQrModal()" style="z-index: 9999;">
+    <div class="qr-big-box" style="background: white; padding: 30px; border-radius: 24px; text-align: center; box-shadow: 0 25px 60px rgba(0,0,0,0.5);">
+        <div id="qrBigTarget" style="display: flex; justify-content: center; margin-bottom: 20px;"></div>
+        <h3 style="margin: 0; color: #0f172a; font-size: 18px; font-weight: 900;">Student Join QR</h3>
+        <p style="margin: 8px 0 0 0; color: #64748b; font-size: 13px; font-weight: 500;">스마트폰으로 스캔하여 강의실에 입장하세요.</p>
+        <div style="margin-top: 20px; font-size: 11px; color: #cbd5e1; border-top: 1px solid #f1f5f9; padding-top: 15px;">바탕 화면을 클릭하면 창이 닫힙니다.</div>
+    </div>
+</div>
+
+
+<!-- 디자인은 유지하되, 비밀번호 창과 겹치지 않게 우선순위(z-index)를 낮춘 버전 -->
+<div id="statusOverlay" class="status-overlay" style="z-index: 5000 !important;">
+    <div class="lock-message" id="overlayContent">
+        <!-- 초기값 - showOverlayMessage()로 동적 교체됨 -->
+        <i class="fa-solid fa-lock" style="font-size:36px; color:#94a3b8; margin-bottom:12px; display:block; text-align:center;"></i>
+        <h3 style="font-size:18px; font-weight:900; color:#1e293b; margin-bottom:8px; text-align:center;">강의실 확인 중...</h3>
+        <p style="font-size:13px; color:#64748b; text-align:center;">잠시만 기다려 주세요.</p>
+    </div>
+</div>
+<header class="header">
+    <div class="header-title">
+        <span id="displayRoomName">Connecting...</span>
+        <span class="course-sub-name" id="displayCourseTitle"></span>
+    </div>
+    <div class="header-controls">
+        <div class="icon-btn-group">
+            <!-- 1. QR 토글 버튼 추가 -->
+            <div class="control-icon-btn" onclick="ui.toggleMiniQR()" title="Join QR">
+                <i class="fa-solid fa-qrcode"></i>
+            </div>
+            <!-- 2. 기존 테마 및 전체화면 버튼 (중복 제거됨) -->
+            <div class="theme-toggle" onclick="ui.toggleNightMode()">
+                <i class="fa-solid fa-sun active" id="iconSun"></i>
+                <i class="fa-solid fa-moon" id="iconMoon"></i>
+            </div>
+            <div class="control-icon-btn" onclick="ui.toggleFullScreen()" title="Full Screen">
+                <i class="fa-solid fa-expand"></i>
+            </div>
+        </div>
+        <img src="logo.png" alt="Logo" class="kac-logo" onerror="this.style.display='none'"> 
+    </div>
+</header>
+
+<!-- 3. 플로팅 QR 레이어 (Header 바로 아래, Main Stage 안쪽에 위치) -->
+<div id="floatingQR" class="floating-qr-box">
+    <div class="qr-label">Student Join</div>
+    <div id="miniQRElement" onclick="ui.openQrModal()" title="클릭하면 크게 확대됩니다"></div>
+    <div class="qr-close" onclick="ui.toggleMiniQR()"><i class="fa-solid fa-xmark"></i></div>
+</div>
+
+<div class="mode-tabs">
+    <button class="mode-btn active" id="tab-dashboard" onclick="ui.setMode('dashboard')"><i class="fa-solid fa-gauge-high"></i> 과정 현황</button>
+    <button class="mode-btn" id="tab-guide" onclick="ui.setMode('guide')"><i class="fa-solid fa-file-pdf"></i> 입교안내</button>
+    <button class="mode-btn" id="tab-notice" onclick="ui.setMode('notice')"><i class="fa-solid fa-bullhorn"></i> 공지 관리</button>
+    <button class="mode-btn" id="tab-students" onclick="ui.setMode('students')"><i class="fa-solid fa-users-viewfinder"></i> 수강생 현황</button>
+    <button class="mode-btn" id="tab-qa" onclick="ui.setMode('qa')"><i class="fa-regular fa-comments"></i> Q&A 현황</button>
+
+    <!-- 행정 메뉴 드롭다운 -->
+    <div class="mode-dropdown">
+        <button class="mode-btn dropdown-trigger" onclick="ui.toggleMenuDropdown()">
+            <i class="fa-solid fa-ellipsis-vertical"></i> 교육 관리 <i class="fa-solid fa-caret-down"></i>
+        </button>
+        <div class="dropdown-content" id="menuDropdown">
+            <a onclick="ui.setMode('waiting')"><i class="fa-solid fa-chart-line"></i> 과정 총 현황</a>
+            <a onclick="ui.setMode('quiz')"><i class="fa-solid fa-clipboard-question"></i> 퀴즈 모드</a>
+            <a onclick="ui.setMode('dormitory')"><i class="fa-solid fa-bed"></i> 생활관 배치현황</a>
+            <a onclick="ui.setMode('attendance')"><i class="fa-solid fa-qrcode"></i> 출결 QR</a>
+            <a onclick="ui.setMode('shuttle')" style="position: relative;">
+    <i class="fa-solid fa-bus"></i> 차량 수요조사
+    <span id="shuttleNewBadge" style="display:none; background:#ef4444; color:white; width:16px; height:16px; border-radius:50%; font-size:10px; font-weight:bold; align-items:center; justify-content:center; margin-left:5px;">N</span>
+</a>
+            <a onclick="ui.setMode('admin-action')"><i class="fa-solid fa-person-walking-arrow-right"></i> 외출/외박</a>
+            <a onclick="ui.setMode('dinner-skip')"><i class="fa-solid fa-utensils"></i> 석식 제외</a>
+        </div>
+    </div>
+</div>
+
+        
+        <!-- [핵심 수정] Modals inside Main Stage (전체화면 시 보이도록 이동) -->
+        <div id="qaModal" class="modal-overlay" onclick="ui.closeQaModal(event)">
+            <div class="modal-box">
+                <div class="modal-q-text-wrapper"><div class="modal-q-text" id="m-text"></div></div>
+                <div class="modal-actions">
+                    <div class="modal-left-btns"><button class="m-btn m-btn-icon m-btn-pin" onclick="dataMgr.updateQa('pin')"><i class="fa-solid fa-thumbtack"></i></button><button class="m-btn m-btn-icon m-btn-del" onclick="dataMgr.updateQa('delete')"><i class="fa-solid fa-trash"></i></button></div>
+                    <div class="modal-right-btns"><button class="m-btn m-btn-later" onclick="dataMgr.updateQa('later')"><i class="fa-solid fa-triangle-exclamation"></i> Answer Later</button><button class="m-btn m-btn-done" onclick="dataMgr.updateQa('done')"><i class="fa-solid fa-check"></i> Done (Close)</button></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="content-area">
+
+
+
+
+<!-- [개선] 입교안내 가이드 (위치 상향 및 전체화면 버그 수정) -->
+<div id="view-guide" style="display:flex; flex-direction:column; align-items:center; width:100%;">
+    <!-- 상단 헤더 -->
+    <div class="view-header">
+        <h1><i class="fa-solid fa-book-open"></i> 입교안내 <span class="header-room-badge room-badge-global"></span></h1>
+        <p>클릭하면 다음 페이지 / 우클릭하면 이전 페이지</p>
+    </div>
+
+    <!-- 컨트롤 툴바 (PDF 위) — 전체화면에서 자동 숨김 -->
+    <div id="guideToolbar" style="display:flex; align-items:center; gap:10px; margin-bottom:12px; background:white; padding:10px 20px; border-radius:14px; box-shadow:0 1px 6px rgba(0,0,0,0.07); border:1px solid #e2e8f0;">
+        <button onclick="guideMgr.changePage(-1)"
+            style="padding:8px 16px; background:#f1f5f9; border:none; border-radius:8px; font-size:13px; font-weight:800; cursor:pointer; color:#334155;">
+            <i class="fa-solid fa-chevron-left"></i> 이전
+        </button>
+        <span id="guidePageInfo" style="font-size:13px; font-weight:700; color:#64748b; min-width:60px; text-align:center;">- / -</span>
+        <button onclick="guideMgr.changePage(1)"
+            style="padding:8px 16px; background:#f1f5f9; border:none; border-radius:8px; font-size:13px; font-weight:800; cursor:pointer; color:#334155;">
+            다음 <i class="fa-solid fa-chevron-right"></i>
+        </button>
+        <div style="width:1px; height:24px; background:#e2e8f0; margin:0 4px;"></div>
+        <button onclick="guideMgr.toggleFullScreen()"
+            style="padding:8px 16px; background:#003366; color:white; border:none; border-radius:8px; font-size:13px; font-weight:800; cursor:pointer; display:flex; align-items:center; gap:6px;">
+            <i class="fa-solid fa-expand"></i> 전체화면
+        </button>
+        <span id="guideStatusBadge" style="font-size:11px; font-weight:800; color:#94a3b8; margin-left:4px;"></span>
+    </div>
+
+    <!-- PDF 화면 (클릭 = 다음 페이지) -->
+    <div id="pdfWrapper" onclick="guideMgr.changePage(1)" oncontextmenu="event.preventDefault(); guideMgr.changePage(-1);"
+         style="cursor:pointer; max-width:900px; width:100%;">
+        <canvas id="guideCanvas" style="width:100%; height:auto; display:block; border-radius:12px; box-shadow:0 4px 20px rgba(0,0,0,0.1);"></canvas>
+    </div>
+</div>
+
+
+
+
+<!-- [6.0차 최종 통합본] 대시보드 구역 -->
+<div id="view-dashboard" style="display:none; width:100%; flex-direction:column; align-items:center;">
+    
+    <!-- 1. 헤더 영역: 중앙 정렬 및 실시간 배지 연동 -->
+    <div class="view-header dash-hero-header">
+        <div class="dash-title-main">
+            <h1>
+                <i class="fa-solid fa-school-flag"></i> 
+                현재과정 운영 현황 
+                <span id="dashRoomBadge" class="header-room-badge room-badge-global"></span>
+            </h1>
+        </div>
+    </div>
+
+    <!-- 2. 메인 컨테이너 -->
+    <div class="modern-white-card dash-hero-container">
+        
+        <!-- 상단 히어로 배너 (과정명 + 교수님) -->
+        <div class="course-hero-banner">
+            <div class="hero-left">
+                <div class="hero-tag">NOW TRAINING</div>
+                <h2 id="dashCourseTitle">과정명을 설정해주세요.</h2>
+                <div class="hero-info-row">
+                    <span class="info-pill"><i class="fa-solid fa-calendar-check"></i> <b id="dashPeriod">-</b></span>
+                    <span class="info-pill"><i class="fa-solid fa-map-location-dot"></i> <b id="dashRoomDetail">-</b></span>
+                </div>
+            </div>
+            
+            <div class="hero-right">
+                <!-- 교수님 프로필 카드 -->
+                <div class="prof-glass-card" onclick="ui.showProfPresentation(document.getElementById('dashProfNameOnly').innerText)">
+                    <div class="prof-avatar"><i class="fa-solid fa-user-tie"></i></div>
+                    <div class="prof-details">
+                        <span class="prof-label">과정 담임</span>
+                        <div class="prof-name-row">
+                            <strong id="dashProfNameOnly">-</strong> <span>교수님</span>
+                        </div>
+                    </div>
+                    <i class="fa-solid fa-chevron-right prof-arrow"></i>
+                </div>
+                <!-- 하단 날짜 표시 -->
+                <div class="date-minimal-box" style="color: rgba(255,255,255,0.9) !important; font-weight: 800;">
+                    <i class="fa-solid fa-user-tie"></i> 과정담당: <span id="dashCoordName" style="margin-left:5px;">-</span>
+                </div>
+            </div>
+        </div> 
+
+        <!-- 하단 프리미엄 그리드 (통계 + 공지 + 셔틀) -->
+        <div class="dash-premium-grid">
+            
+<!-- (1) 수강생 현황 및 행정 신청 (클릭 시 각각의 탭으로 이동) -->
+            <div class="stat-premium-card card-blue">
+                <div class="card-content combined-stats">
+<!-- 수강생 현황 (입교 인원 강조형) -->
+                    <div class="stat-row" onclick="ui.setMode('students')" style="cursor:pointer;">
+                        <span class="card-label">수강생 입교 현황</span>
+                        <div class="card-value">
+                            <b id="dashArrivedCount">0</b>
+                            <span style="font-size: 14px; color: #94a3b8; font-weight: 600; margin-left: 2px;">
+                                / <span id="dashTotalCount">0</span>명
+                            </span>
+                        </div>
+                    </div>
+                    
+                    <div class="stat-divider"></div>
+                    
+                    <!-- 외출/외박 현황 -->
+                    <div class="stat-row" onclick="ui.setMode('admin-action')" style="cursor:pointer;">
+                        <span class="card-label">금일 외출/외박 신청</span>
+                        <div class="card-value color-coral"><b id="dashActionCount">0</b><small>명</small></div>
+                    </div>
+
+                    <div class="stat-divider" style="border-top: 1px dashed #e2e8f0; margin: 8px 0;"></div>
+
+                    <!-- 석식 제외 현황 [추가됨] -->
+                    <div class="stat-row" onclick="ui.setMode('dinner-skip')" style="cursor:pointer;">
+                        <span class="card-label">금일 석식 제외 신청</span>
+                        <div class="card-value" style="color: #10b981;"><b id="dashDinnerSkipCount">0</b><small>명</small></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- (3) 공지사항 허브 -->
+            <div class="stat-premium-card card-notice-hub" onclick="ui.setMode('notice')" style="cursor:pointer;">
+                <div class="notice-hub-header">
+                    <i class="fa-solid fa-bullhorn"></i> <span>주요 공지 피드 (상세보기)</span>
+                </div>
+                <div class="notice-hub-content">
+                    <div class="notice-item instructor"><span class="n-tag">담임</span><p id="dashNoticeInst">내용 로딩 중...</p></div>
+                    <div class="notice-item admin" style="position:relative;">
+                        <span class="n-tag">운영</span>
+                        <p id="dashNoticeAdmin">등록된 운영부 공지가 없습니다.</p>
+                        <span id="coordNoticeBadge" style="display:none; position:absolute; top:8px; right:8px; background:#ef4444; color:white; font-size:10px; font-weight:900; padding:2px 7px; border-radius:20px; align-items:center; gap:3px; animation:pulseDot 1.5s infinite;">NEW</span>
+                    </div>
+                    <div class="notice-item global"><span class="n-tag">센터</span><p id="dashNoticeGlobal">내용 로딩 중...</p></div>
+                </div>
+            </div>
+
+<!-- (3) 실시간 Q&A 및 셔틀 통합 수송 수요 (클릭 시 이동) -->
+            <div class="stat-premium-card card-mint" onclick="ui.setMode('shuttle')" style="cursor:pointer;">
+                <!-- Q&A 현황 -->
+                <div class="stat-row" onclick="event.stopPropagation(); ui.setMode('qa');" style="cursor:pointer; margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px dashed #e2e8f0;">
+                    <span class="card-label-shuttle" style="margin-bottom:0; color:#003366;">실시간 질문 현황</span>
+                    <div class="card-value" style="color: #3b82f6;"><b id="dashQaCount">0</b><small>건</small></div>
+                </div>
+
+                <div class="card-label-shuttle" style="color:#003366; margin-bottom:10px;">셔틀 탑승 수요 현황</div>
+
+                <!-- 기사님 실시간 공지 영역 -->
+                <div id="dashShuttleNotice" style="display:none; font-size:12px; background:#fffbeb; padding:8px 12px; border-radius:10px; color:#92400e; margin-bottom:12px; border-left:4px solid #facc15; border:1px solid #fef3c7;">
+                    <i class="fa-solid fa-bullhorn" style="color:#eab308; margin-right:5px;"></i> 
+                    <span id="dashShuttleNoticeTxt" style="font-weight:700;"></span>
+                </div>
+                
+                <!-- 통합 요약 박스 (1~2차 합산) -->
+                <div style="background:white; padding:15px; border-radius:12px; border:1px solid #e2e8f0;">
+                    <div style="font-size:12px; font-weight:800; color:#3b82f6; margin-bottom:12px; display:flex; align-items:center; gap:5px;">
+                        <i class="fa-solid fa-bus"></i> 전체 수송 예정 <span id="dashShuttleTotal" style="margin-left:auto; background:#eff6ff; padding:1px 8px; border-radius:4px;">0명</span>
+                    </div>
+                    <div class="shuttle-scoreboard" style="border:none; padding:0; background:transparent;">
+                        <div class="sb-item"><span class="sb-val" id="total-osong" style="font-size:22px;">0</span><span class="sb-txt">오송</span></div>
+                        <div class="sb-divider" style="height:20px;"></div>
+                        <div class="sb-item"><span class="sb-val" id="total-term" style="font-size:22px;">0</span><span class="sb-txt">터미널</span></div>
+                        <div class="sb-divider" style="height:20px;"></div>
+                        <div class="sb-item"><span class="sb-val" id="total-air" style="font-size:22px;">0</span><span class="sb-txt">공항</span></div>
+                        <div class="sb-divider" style="height:20px;"></div>
+                        <div class="sb-item"><span class="sb-val" id="total-car" style="font-size:22px;">0</span><span class="sb-txt">자차</span></div>
+                    </div>
+                </div>
+            </div> <!-- card-mint 끝 -->
+
+        </div> <!-- dash-premium-grid 끝 -->
+    </div> <!-- modern-white-card dash-hero-container 끝 -->
+</div> <!-- view-dashboard 끝 -->
+
+
+
+
+<!-- [6.20차 최종] 공지사항 관리 섹션 - 박스 크기 및 헤더 높이 완벽 통일 -->
+<div id="view-notice" style="display:none; width:100%; flex-direction:column; align-items:center;">
+
+    <div class="view-header" style="margin-bottom:0; padding-bottom:16px;">
+        <h1><i class="fa-solid fa-bullhorn"></i> 공지사항 관리 <span class="header-room-badge room-badge-global"></span></h1>
+        <p>교육생 앱에 실시간으로 노출됩니다.</p>
+    </div>
+
+    <div style="width:100%; max-width:1100px; margin:0 auto 60px auto; padding:0 16px; display:flex; flex-direction:column; gap:16px;">
+
+        <!-- ① 담임교수 공지 — 컬러 헤더에 미리보기, 클릭 시 입력폼 표시 -->
+        <div style="border-radius:16px; overflow:hidden; box-shadow:0 2px 10px rgba(0,0,0,0.08);">
+            <!-- 색상 헤더 (항상 표시) -->
+            <div style="background:linear-gradient(135deg,#003366,#1d4ed8); padding:16px 20px;">
+                <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:12px;">
+                    <div style="flex:1; min-width:0;">
+                        <div style="display:flex; align-items:center; gap:8px; margin-bottom:6px;">
+                            <i class="fa-solid fa-chalkboard-teacher" style="color:rgba(255,255,255,0.85); font-size:14px;"></i>
+                            <span style="font-size:14px; font-weight:900; color:white;">담임교수 공지</span>
+                            <span id="prof-notice-meta" style="font-size:10px; color:rgba(255,255,255,0.5); font-weight:600;"></span>
+                        </div>
+                        <!-- 공지 미리보기 (흰색, 최대 3줄) -->
+                        <div id="prof-notice-preview" style="font-size:13px; color:rgba(255,255,255,0.88); line-height:1.6; overflow:hidden; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; white-space:pre-wrap;">
+                            <span style="opacity:0.45; font-style:italic;">— 게시된 공지 없음</span>
+                        </div>
+                    </div>
+                    <i class="fa-solid fa-chevron-down" id="notice-chevron-prof" style="color:rgba(255,255,255,0.5); font-size:13px; flex-shrink:0; margin-top:2px; transition:0.2s;"></i>
+                </div>
+            </div>
+            <!-- 입력 폼 (토글) -->
+            <div id="notice-section-prof" style="display:block; background:white; border-top:none;">
+                <div style="padding:14px 18px 16px;">
+                    <textarea id="instNoticeInputMain"
+                        onclick="event.stopPropagation();"
+                        oninput="const c=this.value.length; document.getElementById('noticeCharCount').innerText=c?c+'자':'';"
+                        style="width:100%; height:80px; padding:10px 12px; font-size:13px; border:1.5px solid #e2e8f0; border-radius:8px; outline:none; background:#fafcff; resize:none; box-sizing:border-box; line-height:1.7; font-family:inherit; color:#1e293b; transition:border-color 0.2s;"
+                        onfocus="event.stopPropagation(); this.style.borderColor='#003366';" onblur="this.style.borderColor='#e2e8f0';"
+                        placeholder="교육생에게 전달할 공지를 입력하세요."></textarea>
+                    <div style="display:flex; gap:8px; margin-top:8px; align-items:center;">
+                        <span id="noticeCharCount" style="font-size:11px; color:#cbd5e1; min-width:36px;"></span>
+                        <button onclick="event.stopPropagation(); dataMgr.saveInstructorNoticeMain();"
+                            style="flex:1; height:38px; background:#003366; color:white; border:none; border-radius:8px; font-size:13px; font-weight:800; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px;">
+                            <i class="fa-solid fa-paper-plane" style="font-size:12px;"></i> 게시하기
+                        </button>
+                        <button onclick="event.stopPropagation(); if(confirm('공지를 삭제하시겠습니까?')){document.getElementById('instNoticeInputMain').value=''; dataMgr.saveInstructorNoticeMain();}"
+                            style="height:38px; width:40px; background:white; color:#ef4444; border:1.5px solid #fca5a5; border-radius:8px; font-size:13px; cursor:pointer;">
+                            <i class="fa-solid fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ② 교육운영부 공지 -->
+        <div style="border-radius:16px; overflow:hidden; box-shadow:0 2px 10px rgba(0,0,0,0.08);">
+            <div style="background:linear-gradient(135deg,#0369a1,#0ea5e9); padding:16px 20px; cursor:pointer;" onclick="ui.toggleNoticeSection('coord')">
+                <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:12px;">
+                    <div style="flex:1; min-width:0;">
+                        <div style="display:flex; align-items:center; gap:8px; margin-bottom:6px;">
+                            <i class="fa-solid fa-user-tie" style="color:rgba(255,255,255,0.85); font-size:14px;"></i>
+                            <span style="font-size:14px; font-weight:900; color:white;">교육운영부 공지</span>
+                            <span id="coord-notice-meta" style="font-size:10px; color:rgba(255,255,255,0.5); font-weight:600;"></span>
+                            <span id="coordNoticeBadge" style="display:none; background:#ef4444; color:white; font-size:10px; font-weight:900; padding:1px 7px; border-radius:10px; animation:pulseDot 1.5s infinite;">NEW</span>
+                        </div>
+                        <div id="coordNoticeDisplay" style="font-size:13px; color:rgba(255,255,255,0.88); line-height:1.6; overflow:hidden; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; white-space:pre-wrap;">
+                            <span style="opacity:0.45; font-style:italic;">— 등록된 공지 없음</span>
+                        </div>
+                    </div>
+                    <i class="fa-solid fa-chevron-down" id="notice-chevron-coord" style="color:rgba(255,255,255,0.5); font-size:13px; flex-shrink:0; margin-top:2px; transition:0.2s;"></i>
+                </div>
+            </div>
+            <div id="notice-section-coord" style="display:none; background:white;">
+                <div style="padding:10px 18px 12px; display:flex; justify-content:flex-end;">
+                    <button onclick="ui.expandNotice('coord')" id="coord-expand-btn" style="display:none; font-size:12px; color:#0ea5e9; background:none; border:none; font-weight:800; cursor:pointer;">전체 보기 ▼</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ③ 항기원 전체 공지 -->
+        <div style="border-radius:16px; overflow:hidden; box-shadow:0 2px 10px rgba(0,0,0,0.08);">
+            <div style="background:linear-gradient(135deg,#334155,#475569); padding:16px 20px; cursor:pointer;" onclick="ui.toggleNoticeSection('global')">
+                <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:12px;">
+                    <div style="flex:1; min-width:0;">
+                        <div style="display:flex; align-items:center; gap:8px; margin-bottom:6px;">
+                            <i class="fa-solid fa-bullhorn" style="color:rgba(255,255,255,0.85); font-size:14px;"></i>
+                            <span style="font-size:14px; font-weight:900; color:white;">항기원 전체 공지</span>
+                            <span id="global-notice-meta" style="font-size:10px; color:rgba(255,255,255,0.45); font-weight:600;"></span>
+                            <span style="display:flex; align-items:center; gap:4px; margin-left:4px;">
+                                <span style="width:5px; height:5px; background:#22c55e; border-radius:50%; display:inline-block;"></span>
+                                <span style="font-size:10px; color:rgba(255,255,255,0.45); font-weight:700;">실시간</span>
+                            </span>
+                        </div>
+                        <div id="globalNoticeDisplay" style="font-size:13px; color:rgba(255,255,255,0.88); line-height:1.6; overflow:hidden; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; white-space:pre-wrap;">
+                            <span style="opacity:0.4; font-style:italic;">— 불러오는 중...</span>
+                        </div>
+                    </div>
+                    <i class="fa-solid fa-chevron-down" id="notice-chevron-global" style="color:rgba(255,255,255,0.5); font-size:13px; flex-shrink:0; margin-top:2px; transition:0.2s;"></i>
+                </div>
+            </div>
+            <div id="notice-section-global" style="display:none; background:white;">
+                <div style="padding:10px 18px 12px; display:flex; justify-content:flex-end;">
+                    <button onclick="ui.expandNotice('global')" id="global-expand-btn" style="display:none; font-size:12px; color:#64748b; background:none; border:none; font-weight:800; cursor:pointer;">전체 보기 ▼</button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+<!-- 출결 QR 코드 게시판 (E-HRD 및 자체 출석 통합) -->
+<div id="view-attendance" style="display:none; width:100%; flex-direction:column; align-items:center;">
+    <div class="view-header">
+        <h1><i class="fa-solid fa-qrcode"></i> 출결 관리 시스템 <span class="header-room-badge room-badge-global"></span></h1>
+        <p id="attendanceSubTitle">E-HRD 출결 처리를 위한 QR 코드입니다.</p>
+    </div>
+
+    <!-- 모드 전환 버튼 -->
+    <div style="margin-bottom: 20px; display: flex; gap: 10px;">
+        <button id="btn-mode-official" class="btn-action" style="width:auto; padding:10px 20px; background:#003366; color:white; border-radius:50px; font-weight:800;" onclick="ui.toggleAttendanceMode('official')">공식 E-HRD QR</button>
+        <button id="btn-mode-internal" class="btn-action" style="width:auto; padding:10px 20px; background:#f1f5f9; color:#64748b; border-radius:50px; font-weight:800;" onclick="ui.toggleAttendanceMode('internal')">항기원 자체 출석체크</button>
+    </div>
+
+    <!-- [1] 공식 E-HRD QR 영역 -->
+    <div id="area-official-qr" class="modern-white-card" style="text-align: center; max-width: 600px;">
+        <div style="background: #f8fafc; padding: 20px; border-radius: 20px; border: 1px dashed #cbd5e1;">
+            <img id="attendanceQrImgMain" style="width: 100%; max-width: 400px; border-radius: 12px; display:none; margin: 0 auto;">
+            <div id="noAttendanceQrMsgMain" style="padding:100px 0; color:#cbd5e1; font-size:18px; font-weight:bold;">등록된 QR 이미지가 없습니다.</div>
+        </div>
+    </div>
+
+
+
+
+
+<!-- [2] 항기원 자체 출석체크 영역 (슬림 버전) -->
+    <div id="area-internal-qr" class="modern-white-card" style="display:none; text-align: center; max-width: 600px;">
+        <div style="display: flex; flex-direction: column; align-items: center; gap: 20px;">
+            <!-- QR 코드 -->
+            <div style="background:#fff; padding:15px; border-radius:15px; border:2px solid #003366;">
+                <div id="internalQrTarget"></div>
+                <div style="margin-top:10px; font-weight:900; color:#003366;">스마트폰 스캔 (자체 출석)</div>
+            </div>
+
+            <!-- 현황 요약 및 버튼 -->
+            <div style="width:100%; border-top:1px dashed #cbd5e1; padding-top:20px;">
+                <div style="font-size:20px; font-weight:900; color:#1e293b; margin-bottom:15px;">
+                    출석 완료: <span id="checkInCount" style="color:#10b981;">0</span> / <span id="totalMemberCount">0</span> 명
+                </div>
+                <button class="btn-action" style="background:#3b82f6; width:200px; height:50px; font-size:16px; margin:0 auto;" onclick="ui.openFullAttendanceSheet()">
+                    <i class="fa-solid fa-table-list"></i> 전체 출석부 관리/인쇄
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
+
+
+
+
+
+<!-- [수정] Q&A 3단 고정 구조 (qa-container 제거) -->
+<div id="view-qa">
+    
+    <!-- 1단: 제목 (고정) -->
+    <div class="view-header">
+        <h1><i class="fa-regular fa-comments"></i> 질문 및 답변 (Q&A) <span class="header-room-badge room-badge-global"></span></h1>
+        <p>교육생들의 질문을 실시간으로 확인하고 관리할 수 있습니다.</p>
+    </div>
+
+    <!-- 2단: 필터 박스 (고정) -->
+    <div class="qa-filters">
+        <div class="basic-filters">
+            <div class="filter-chip active" onclick="ui.filterQa('all', event)">All Questions</div>
+            <div class="filter-chip" onclick="ui.filterQa('pin', event)">Pinned</div>
+            <div class="filter-chip" onclick="ui.filterQa('later', event)">Answer Later</div>
+        </div>
+        <div id="subjectFilterBar"></div>
+    </div>
+
+    <!-- 3단: 질문 리스트 (스크롤) -->
+    <div class="qa-list" id="qaList">
+        <!-- 질문 카드들이 여기에 생성됨 -->
+    </div>
+    
+</div>
+
+
+
+ 
+<!-- 강사 대기실 (현황판) 섹션 -->
+<div id="view-waiting" class="full-dashboard" style="display:none; flex-direction:column; align-items:center;">
+    
+    <!-- (1) 표준 헤더: 아이콘과 제목 -->
+<div class="view-header">
+    <h1><i class="fa-solid fa-chart-simple"></i> 강의실 실시간 현황판</h1>
+    <p>KAC 교육단지의 모든 강의실 운영 상태를 실시간으로 모니터링합니다.</p>
+</div>
+
+    <!-- (2) 모던 화이트 카드: 이 안에 표가 들어갑니다 -->
+    <div class="modern-white-card">
+        <table class="modern-table">
+            <thead>
+                <tr>
+                    <th>연번</th><th>Room</th><th>과정명</th><th>교수명</th><th>상태</th><th>교육생</th><th>마지막 활동</th><th>관리</th>
+                </tr>
+            </thead>
+            <tbody id="statusTableBody">
+                <!-- JS가 내용을 채웁니다 -->
+            </tbody>
+        </table>
+    </div>
+
+    <!-- (3) 바닥 여백용 박스 -->
+    <div style="height: 150px; width: 100%; flex-shrink: 0;"></div>
+
+</div> <!-- view-waiting 끝 -->
+
+
+
+
+
+
+
+<!-- [개편] 항기원 퇴교 수송 현황 (명단 중심) -->
+<div id="view-shuttle" style="display:none; width:100%; flex-direction:column; align-items:center;">
+    <div class="view-header">
+        <h1><i class="fa-solid fa-bus-simple"></i> 항기원 퇴교 수송 현황 <span class="header-room-badge room-badge-global"></span></h1>
+    </div>
+
+    <!-- 상단 현황판 및 출발시간 -->
+    <div style="width:100%; max-width:1000px; display:grid; grid-template-columns: 1fr 2.5fr; gap:20px; margin-bottom:20px;">
+        <!-- 기사님 전달 시간 -->
+        <div style="background: linear-gradient(135deg, #003366 0%, #0055aa 100%); color:white; padding:25px; border-radius:24px; display:flex; flex-direction:column; justify-content:center; align-items:center; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 10px 30px rgba(0, 51, 102, 0.15); text-align:center;">
+            <!-- 상단 태그 스타일 (NOW TRAINING과 유사하게) -->
+            <div style="background: rgba(255,255,255,0.2); color: white; padding: 4px 12px; border-radius: 6px; font-size: 11px; font-weight: 800; margin-bottom: 15px; letter-spacing: 0.5px; border: 1px solid rgba(255,255,255,0.1);">
+                <i class="fa-solid fa-bullhorn" style="margin-right:5px;"></i> DRIVER NOTICE
+            </div>
+            <!-- 글자가 표시되는 구역 -->
+            <div id="shuttleDepartureTime" style="font-size:28px; font-weight:900; line-height:1.3; text-shadow: 0 2px 10px rgba(0,0,0,0.2);">
+                시간 정보 없음
+            </div>
+        </div>
+
+        <!-- 목적지별 요약 칩 + 초기화 버튼 추가 구역 -->
+        <div style="display:flex; justify-content:space-around; align-items:center; background:white; border:1px solid #e2e8f0; border-radius:20px; padding:15px; box-shadow: 0 4px 10px rgba(0,0,0,0.05);">
+            <div style="text-align:center;"><label style="font-size:20px; color:#64748b; font-weight:700; display:block; margin-bottom:5px;">자차</label><b id="cnt-car" style="font-size:42px; color:#64748b; font-weight:900;">0</b></div>
+            <div style="text-align:center;"><label style="font-size:20px; color:#ef4444; font-weight:700; display:block; margin-bottom:5px;">오송역</label><b id="cnt-osong" style="font-size:42px; color:#ef4444; font-weight:900;">0</b></div>
+            <div style="text-align:center;"><label style="font-size:20px; color:#3b82f6; font-weight:700; display:block; margin-bottom:5px;">터미널</label><b id="cnt-terminal" style="font-size:42px; color:#3b82f6; font-weight:900;">0</b></div>
+            <div style="text-align:center;"><label style="font-size:20px; color:#10b981; font-weight:700; display:block; margin-bottom:5px;">공항</label><b id="cnt-airport" style="font-size:42px; color:#10b981; font-weight:900;">0</b></div>
+            <div style="width:1px; height:40px; background:#e2e8f0; margin:0 10px;"></div>
+            <div style="text-align:center; margin-right: 15px;"><label style="font-size:20px; color:#0f172a; font-weight:800; display:block; margin-bottom:5px;">총 신청</label><b id="cnt-total" style="font-size:42px; color:#0f172a; font-weight:900;">0</b></div>
+            
+            <!-- [추가된 버튼] 명단 초기화 버튼 -->
+            <button class="btn-action" onclick="ui.resetShuttleRequests()" style="width: auto; padding: 10px 18px; background: #ef4444; border-radius: 12px; font-size: 14px; font-weight: 800; border: none; color: white; cursor: pointer;">
+                <i class="fa-solid fa-trash-can"></i> 전체 리셋
+            </button>
+        </div>
+    </div>
+
+    <!-- 실시간 신청 명단 테이블 -->
+    <div class="modern-white-card" style="max-width:1000px; padding-top:20px; position:relative;">
+        <div style="position: absolute; top: 15px; right: 25px; color:#94a3b8; font-size:11px; font-weight:800;">
+            <i class="fa-solid fa-sync fa-spin" style="color:#3b82f6;"></i> 실시간 업데이트 중
+        </div>
+        <table class="modern-table">
+            <thead>
+                <tr>
+                    <th style="width:80px;">연번</th>
+                    <th>성함</th>
+                    <th>연락처(뒤4자리)</th>
+                    <th>신청 현황</th>
+                    <th style="width:150px;">신청시간</th>
+                    <th style="width:100px;">관리</th>
+                </tr>
+            </thead>
+            <tbody id="shuttleListTableBody">
+                <!-- JS에서 채움 -->
+            </tbody>
+        </table>
+    </div>
+</div>
+
+
+
+
+
+
+
+<!-- [신규] 외출/외박 현황 섹션 -->
+<div id="view-admin-action" style="display:none; width:100%; flex-direction:column; align-items:center;">
+    <div class="view-header">
+        <h1><i class="fa-solid fa-person-walking-arrow-right"></i> 외출·외박 신청 현황 <span class="header-room-badge room-badge-global"></span></h1>
+        <p>익일 오전 09:00까지 명단이 유지됩니다.</p>
+    </div>
+    <div class="modern-white-card">
+        <table>
+            <thead>
+                <tr>
+                    <th style="width:80px;">연번</th>
+                    <th style="width:120px;">구분</th>
+                    <th>성명(뒷자리)</th>
+                    <th>비상 연락처</th>
+                    <th style="width:150px;">신청시간</th>
+                   <th style="width:100px;">관리</th> <!-- 이 줄 추가 -->
+                </tr>
+            </thead>
+            <tbody id="adminActionTableBody"></tbody>
+        </table>
+    </div>
+</div>
+
+
+
+<!-- [신규] 석식 제외 현황 섹션 -->
+<div id="view-dinner-skip" style="display:none; width:100%; flex-direction:column; align-items:center;">
+    
+    <!-- 1. 헤더 영역 (제목과 통계) -->
+    <div class="view-header">
+        <h1><i class="fa-solid fa-utensils"></i> 금일 석식 제외 명단 <span class="header-room-badge room-badge-global"></span></h1>
+        <p>매일 16:00에 신청이 마감됩니다. (총 제외: <span id="dinnerSkipTotal" style="font-weight:bold; color:#ef4444;">0</span>명)</p>
+    </div>
+
+    <!-- 2. 내용 영역 (표 한 개만 존재) -->
+    <div class="modern-white-card">
+        <table>
+            <thead>
+                <tr>
+                    <th style="width:100px;">연번</th>
+                    <th>성명(뒷자리)</th>
+                    <th style="width:200px;">상태</th>
+                    <th style="width:120px;">관리</th>
+                </tr>
+            </thead>
+            <tbody id="dinnerSkipTableBody"></tbody>
+        </table>
+    </div>
+
+    <!-- 3. 버튼 영역 (표 바로 아래에 배치) -->
+    <div style="margin-top: 25px; display: flex; gap: 15px; justify-content: center; padding-bottom: 50px;">
+        <button class="btn-action btn-primary" onclick="ui.openGroupDinnerModal()" style="width: auto; padding: 10px 20px;">
+            <i class="fa-solid fa-users-rectangle"></i> 단체 회식 적용 (전원 석식 제외)
+        </button>
+        <button class="btn-action btn-secondary" onclick="ui.resetDinnerSkip()" style="width: auto; padding: 10px 20px; background: #64748b;">
+            신청 초기화 (전원 취소)
+        </button>
+    </div>
+
+</div> <!-- view-dinner-skip 섹션의 진짜 끝 -->
+
+
+
+
+
+
+
+
+
+<!-- [7.3차 최종] 수강생 현황: 거대 박스 제거 및 리스트 상단 배지 적용 -->
+<div id="view-students" style="display:none; width:100%; flex-direction:column; align-items:center;">
+    <div class="view-header" style="margin-bottom: 20px;">
+        <h1><i class="fa-solid fa-users-viewfinder"></i> 수강생 현황 <span class="header-room-badge room-badge-global"></span></h1>
+    </div>
+
+    <!-- 리스트 카드 상단에 실시간 정보를 작게 배치 -->
+    <div class="modern-white-card" style="position: relative; padding-top: 50px;">
+        
+        <!-- [신규] 우측 상단 슬림 업데이트 배지 -->
+        <div style="position: absolute; top: 25px; right: 35px; display: flex; align-items: center; gap: 10px; color: #94a3b8; font-size: 12px; font-weight: 800;">
+            <div style="display: flex; align-items: center; gap: 5px; background: #f8fafc; padding: 4px 12px; border-radius: 50px; border: 1px solid #e2e8f0;">
+                <i class="fa-solid fa-sync fa-spin" style="color: #3b82f6; font-size: 11px;"></i>
+                <span id="arrivalStatusSmall">0 / 0 명 (0%)</span>
+                <span style="color: #cbd5e1; font-weight: 400;">|</span>
+                <span>실시간 업데이트 중</span>
+            </div>
+        </div>
+
+        <table>
+            <thead>
+                <tr>
+                    <th style="width:70px;">연번</th>
+                    <!-- 중앙 정렬을 위해 text-align: center로 수정 -->
+                    <th style="text-align: center;">수강생 성명</th>
+                    <th style="width:120px;">상태</th>
+                    <th style="width:150px;">최초 입장시간</th>
+                    <th style="width:180px;">관리</th>
+                </tr>
+            </thead>
+            <tbody id="studentListTableBody">
+                <!-- JS에서 동적 생성 -->
+            </tbody>
+        </table>
+        
+        <div class="list-upload-footer" style="display: flex; justify-content: center; gap: 12px; margin-top: 30px; padding-top: 20px; border-top: 1px dashed #e2e8f0;">
+            <input type="file" id="studentFile" accept=".txt" style="display:none;" onchange="dataMgr.uploadStudentNames(this)">
+<button class="btn-list-clear" onclick="dataMgr.downloadStudentSample()" style="background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; padding: 10px 20px; border-radius: 12px; font-weight: 700; cursor: pointer; font-size: 13px;">
+    <i class="fa-solid fa-download"></i> 양식 샘플 다운
+</button>
+            <label for="studentFile" class="btn-list-upload" style="background: #003366; color: white; padding: 10px 25px; border-radius: 12px; font-weight: 800; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; font-size: 14px;">
+                <i class="fa-solid fa-file-import"></i> 예정 명단(.txt) 업로드
+            </label>
+            <button class="btn-list-clear" onclick="dataMgr.clearExpectedList()" style="background: #ffffff; color: #ef4444; border: 1px solid #fee2e2; padding: 10px 20px; border-radius: 12px; font-weight: 700; cursor: pointer; font-size: 13px;">
+                <i class="fa-solid fa-trash-can"></i> 명단 초기화
+            </button>
+        </div>
+    </div>
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+<!-- [최종 디자인 수정] 생활관 배치 현황 섹션 -->
+<div id="view-dormitory" style="display:none; width:100%; flex-direction:column; align-items:center;">
+    <div class="view-header">
+        <h1><i class="fa-solid fa-bed"></i> 생활관 배치 현황 <span class="header-room-badge room-badge-global"></span></h1>
+    </div>
+
+    <!-- 하얀색 카드 박스 시작 -->
+    <div class="modern-white-card" style="position: relative; padding-top: 50px;">
+        
+        <!-- [위치/크기 수정] 수강생현황과 동일한 오른쪽 상단 배지 -->
+        <div style="position: absolute; top: 25px; right: 35px; display: flex; align-items: center; gap: 10px; color: #94a3b8; font-size: 12px; font-weight: 800;">
+            <div style="display: flex; align-items: center; gap: 5px; background: #f8fafc; padding: 4px 12px; border-radius: 50px; border: 1px solid #e2e8f0;">
+                <i class="fa-solid fa-sync fa-spin" style="color: #3b82f6; font-size: 11px;"></i>
+                <span id="dormArrivalStatus">0 / 0 명 (0%)</span>
+                <span style="color: #cbd5e1; font-weight: 400;">|</span>
+                <span>실시간 업데이트 중</span>
+            </div>
+        </div>
+
+        <table class="modern-table">
+            <thead>
+                <tr>
+                    <th style="width:70px;">연번</th>
+                    <th>성함</th>
+                    <th>전화번호(뒤4자리)</th>
+                    <th>배정 생활관</th>
+                    <th>호실</th>
+                </tr>
+            </thead>
+            <tbody id="dormitoryTableBody">
+                <!-- 자바스크립트에서 데이터 생성 -->
+            </tbody>
+        </table>
+    </div>
+</div>
+
+
+
+
+
+
+
+<!-- [5.9차 교체] 교수 프로필 시네마틱 뷰 (ID 복구 및 버튼 제거 버전) -->
+<div id="view-prof-presentation">
+    <div class="prof-premium-card magazine-style">
+        <!-- 닫기 버튼 -->
+        <div class="prof-close-btn" onclick="ui.setMode('dashboard')" title="닫기">
+            <i class="fa-solid fa-xmark"></i>
+        </div>
+
+        <!-- 좌측 사진 (1/3) -->
+        <div class="prof-photo-column">
+            <div class="prof-photo-frame">
+                <img id="pres-photo" src="logo.png" alt="Instructor">
+            </div>
+        </div>
+
+        <!-- 우측 정보 (2/3) -->
+        <div class="prof-info-column">
+            <div class="prof-header-row">
+                <span class="prof-title-label">과정 담임</span>
+                <h1 id="pres-display-full-name">
+                    <!-- JS에서 "교수 성함 (English)" 형식으로 채움 -->
+                </h1>
+                <p id="pres-msg" class="prof-slogan-text"></p>
+            </div>
+
+            <div class="prof-contact-grid">
+                <div class="contact-pill"><i class="fa-solid fa-phone"></i> <span id="pres-phone"></span></div>
+                <div class="contact-pill"><i class="fa-solid fa-envelope"></i> <span id="pres-email"></span></div>
+            </div>
+
+            <div class="prof-bio-section">
+                <div class="bio-header"><i class="fa-solid fa-award"></i> 주요 약력 및 경력사항</div>
+                <div id="pres-bio" class="bio-body-list"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
+
+
+
+        <!-- 여기서부터는 기존에 있던 퀴즈 섹션입니다 -->
+        <div id="view-quiz">                <div class="quiz-card">
+                    <div class="quiz-top-bar">
+                        <div class="quiz-top-info">
+                            <span id="quizNumberLabel" style="color:var(--accent-color); font-weight:800;">Q. --</span>
+                            <div class="quiz-info-item"><i class="fa-regular fa-clock"></i> <div class="quiz-timer-box" id="quizTimer">00:08</div></div>
+<div class="quiz-info-item">
+    <i class="fa-solid fa-users"></i> 
+    <span id="currentJoinCount" style="font-weight:800;">0</span>명
+    <span id="answerStatus" style="font-size:24px; font-weight:800; margin-left:10px; color:#64748b;">
+    (제출: <b id="answeredCount" style="color:#10b981;">0</b> / 대기: <b id="pendingCount" style="color:#ef4444;">0</b>)
+</span>
+</div>
+                        </div>
+                        <div class="quiz-exit-icon" onclick="quizMgr.closeQuizMode()" title="Exit"><i class="fa-solid fa-xmark"></i></div>
+                    </div>
+                    
+                    <div id="quizContent">
+                        <div class="quiz-question-area">
+                            <div id="quizGuideArea" style="margin-bottom:10px; font-size:12px; color:#94a3b8; font-weight:700;">Press Start</div>
+                            <div class="quiz-question" id="d-qtext">Ready?</div>
+                        </div>
+                        <div class="quiz-options" id="d-options"></div>
+                        <div class="chart-area" id="d-chart"></div>
+                    </div>
+                    
+<!-- [개편] 퀴즈 하단 컨트롤바: 더 크고 단순하게 -->
+<div class="quiz-status-bar" style="padding: 30px 20px; background: #f8fafc; border-top: 2px solid #e2e8f0;">
+    <div id="quizControls" style="display:none; gap:15px; width: 100%; max-width: 1000px; margin: 0 auto; justify-content: center; align-items: center;">
+        
+        <!-- 1. 이전 문제 (<<) -->
+        <button class="q-btn btn-nav btn-giant" onclick="quizMgr.prevNext(-1)" title="이전 문제" style="height: 75px; min-width: 90px; font-size: 25px; border-radius: 15px; background: #475569;">
+            <i class="fa-solid fa-angles-left"></i>
+        </button>
+
+        <!-- 2. 메인 시작 버튼 (현재 퀴즈 시작) -->
+        <button class="q-btn btn-start btn-giant-main" id="btnSmartNext" onclick="quizMgr.smartNext()" style="height: 75px; flex-grow: 1; font-size: 26px; font-weight: 900; border-radius: 15px; box-shadow: 0 8px 15px rgba(59, 130, 246, 0.3); display: flex; justify-content: center; align-items: center;">
+            현재 퀴즈 시작 <i class="fa-solid fa-play" style="margin-left:15px;"></i>
+        </button>
+
+        <!-- [전환용] 일시정지 버튼 (시작하면 위 버튼 대신 나타남) -->
+        <button class="q-btn btn-giant-main" id="btnPause" onclick="quizMgr.togglePause()" style="display:none; height: 75px; flex-grow: 1; font-size: 26px; font-weight: 900; border-radius: 15px; background: #f59e0b; color: white; justify-content: center; align-items: center; border: none; cursor: pointer; box-shadow: 0 8px 15px rgba(245, 158, 11, 0.3);">
+            일시정지 <i class="fa-solid fa-pause" style="margin-left:15px;"></i>
+        </button>
+
+        <!-- 3. 다음 문제 (>>) -->
+        <button class="q-btn btn-nav btn-giant" onclick="quizMgr.prevNext(1)" title="다음 문제" style="height: 75px; min-width: 90px; font-size: 25px; border-radius: 15px; background: #475569;">
+            <i class="fa-solid fa-angles-right"></i>
+        </button>
+
+        <!-- 4. 종료 버튼 -->
+        <button class="q-btn btn-giant" onclick="quizMgr.showFinalSummary()" style="height: 75px; min-width: 140px; font-size: 22px; font-weight: 800; border-radius: 15px; background: #0f172a; color: white; display: flex; justify-content: center; align-items: center;">
+            종료 <i class="fa-solid fa-flag-checkered" style="margin-left:12px;"></i>
+        </button>
+
+    </div>
+</div>
+</div>
+
+        <div class="overlay-panel" id="rightPanel">
+            <div class="overlay-toggle-tab" onclick="ui.toggleRightPanel()"><i class="fa-solid fa-chevron-left" id="panelIcon"></i></div>
+            <div class="panel-header"><h3>Quiz Editor</h3></div>
+            <div class="panel-body">
+                <textarea id="manualQ" class="editor-input" placeholder="퀴즈 질문 내용을 입력하세요..."></textarea>
+                <input type="text" id="manualO1" class="editor-input" placeholder="Option 1"><input type="text" id="manualO2" class="editor-input" placeholder="Option 2"><input type="text" id="manualO3" class="editor-input" placeholder="Option 3"><input type="text" id="manualO4" class="editor-input" placeholder="Option 4"><input type="number" id="manualAns" class="editor-input" placeholder="Correct Answer (1-4)">
+                <button class="btn-action btn-primary" onclick="quizMgr.addManualQuiz()">Add <i class="fa-solid fa-plus"></i></button>
+                <hr class="panel-divider" style="border:0; border-top:1px solid #e2e8f0; margin:10px 0;">
+                <div id="miniQuizList"></div>
+            </div>
+        </div>
+
+
+<!-- [수정] 퀴즈 관리 및 불러오기 통합 팝업 -->
+<div id="quizSelectModal" class="modal-overlay">
+    <div class="modal-box" style="width: 500px; max-height: 80vh; display: flex; flex-direction: column;">
+        <div class="modal-header">
+            <h3><i class="fa-solid fa-folder-tree"></i> 퀴즈 보관함 관리</h3>
+        </div>
+        
+        <div style="padding: 15px; background: #f8fafc; border-radius: 10px; margin-bottom: 15px;">
+           <p style="font-size: 16px; color: #ef4444; font-weight: 800; margin-bottom: 12px; background: #fff1f2; padding: 12px; border-radius: 8px; border: 1px dashed #ef4444; text-align: center;">
+    <i class="fa-solid fa-triangle-exclamation"></i> 새로운 퀴즈를 업로드하면 목록에 추가됩니다.
+            </p>
+            <!-- 샘플 문항 버튼 -->
+            <button class="btn-action btn-secondary" onclick="quizMgr.useDefaultQuiz()" style="width: 100%; height: 45px;">
+                <i class="fa-solid fa-file-lines"></i> 기본 샘플 문항 사용 (TEST.TXT)
+            </button>
+        </div>
+
+        <div style="flex-grow: 1; overflow-y: auto; margin-bottom: 20px;">
+            <label class="setting-label" style="display: block; margin-bottom: 10px;">저장된 퀴즈 목록</label>
+            <div id="savedQuizListContainer" style="display: flex; flex-direction: column; gap: 10px;">
+                <!-- 여기에 저장된 퀴즈 리스트가 자바스크립트로 생성됨 -->
+                <div style="text-align: center; padding: 20px; color: #94a3b8;">불러오는 중...</div>
+            </div>
+        </div>
+
+        <div class="modal-actions" style="gap: 10px;">
+            <button class="m-btn" onclick="document.getElementById('quizSelectModal').style.display='none'" style="flex: 1; justify-content: center; background: #e2e8f0; color: #475569;">닫기</button>
+        </div>
+    </div>
+</div>
+
+
+        <div id="resetChoiceModal" class="modal-overlay">
+            <div class="modal-box" style="width: 400px; text-align: center;">
+                <div class="modal-header"><h3><i class="fa-solid fa-rotate-left"></i> 퀴즈 리셋 설정</h3></div>
+                <p style="color:#64748b; margin-bottom:20px;">어떤 항목을 초기화하시겠습니까?</p>
+                <div style="display:flex; flex-direction:column; gap:10px;">
+                    <button class="btn-action btn-secondary" onclick="quizMgr.executeReset('current')">현재 문항 기록만 리셋</button>
+                    <button class="btn-action btn-danger" onclick="quizMgr.executeReset('all')">전체 문항 기록 리셋</button>
+                    <button class="btn-action btn-print" style="color:#333;" onclick="document.getElementById('resetChoiceModal').style.display='none'">취소</button>
+                </div>
+            </div>
+        </div>
+        <div id="quizExitModal" class="modal-overlay">
+            <div class="modal-box" style="width: 400px; text-align: center;">
+                <div class="modal-header"><h3><i class="fa-solid fa-door-open"></i> 퀴즈 모드 종료</h3></div>
+                <p style="color:#64748b; margin-bottom:20px;">퀴즈 모드를 닫습니다.<br>진행 상황을 유지할까요?</p>
+                <div style="display:flex; flex-direction:column; gap:10px;">
+                    <button class="btn-action btn-primary" onclick="quizMgr.confirmExitQuiz('resume')">일시 중단 (이어서 하기)</button>
+                    <button class="btn-action btn-danger" onclick="quizMgr.confirmExitQuiz('reset')">완전 초기화 (처음부터)</button>
+                    <button class="btn-action btn-print" style="color:#333;" onclick="document.getElementById('quizExitModal').style.display='none'">취소</button>
+                </div>
+            </div>
+        </div>
+        <div id="quizSummaryOverlay" class="status-overlay" style="background: rgba(255,255,255,0.98); color:#1e293b; backdrop-filter: none; z-index: 2000;">
+            <div style="width: 90%; max-width: 600px; text-align: center;">
+                <h2 style="font-size:32px; font-weight:800; color:var(--accent-color); margin-bottom:30px;">QUIZ REPORT</h2>
+                <div id="summaryStats" style="display:grid; grid-template-columns: 1fr 1fr; gap:15px; margin-bottom:30px;"></div>
+                <div id="mostMissedArea" style="background:#fff1f2; border:1px solid #fecaca; padding:15px; border-radius:12px; margin-bottom:30px; display:none;"><h4 style="margin:0 0 10px 0; color:#e11d48;">🔥 오답률이 가장 높았던 문제</h4><p id="mostMissedText" style="margin:0; font-weight:bold;"></p></div>
+                <button class="btn-action btn-primary" onclick="quizMgr.closeSummaryAndExit()">리포트 확인 및 퀴즈 종료</button>
+            </div>
+        </div>
+       
+    </div>
+    
+    <script src="config.js"></script>
+    <script src="admin.js"></script>
+<!-- 관리자 전용 인증 모달 -->
+<div id="adminAuthModal" class="modal-overlay">
+    <div class="modal-box" style="width: 380px;">
+        <div class="modal-header"><h3><i class="fa-solid fa-shield-halved"></i> 관리자 인증</h3></div>
+        <p style="text-align:center; font-size:13px; color:#64748b; margin-bottom:20px;">중요 메뉴 접근을 위해 관리자 암호를 입력하세요.</p>
+        <div class="setting-container">
+            <input type="password" id="adminAuthInput" class="setting-input" style="text-align:center; font-size:20px; letter-spacing:5px;" placeholder="••••••••" onkeyup="if(event.key==='Enter') ui.confirmAdminAuth()">
+        </div>
+        <div class="modal-actions" style="margin-top:25px; justify-content:center; gap:10px;">
+            <button class="m-btn m-btn-later" onclick="ui.closeAdminAuth()" style="background:#64748b; color:white; width: 100px; justify-content: center;">취소</button>
+            <button class="m-btn m-btn-done" onclick="ui.confirmAdminAuth()">인증 확인</button>
+        </div>
+    </div>
+</div>
+
+<!-- 관리자 암호 자체 변경 모달 -->
+<div id="changeAdminSecretModal" class="modal-overlay">
+    <div class="modal-box" style="width: 400px;">
+        <div class="modal-header"><h3><i class="fa-solid fa-gears"></i> 시스템 관리자 암호 변경</h3></div>
+        <div class="setting-container">
+            <div class="setting-group"><label class="setting-label">현재 관리자 암호</label><input type="password" id="secret-current" class="setting-input"></div>
+            <div class="setting-group"><label class="setting-label">새 관리자 암호</label><input type="password" id="secret-new" class="setting-input"></div>
+        </div>
+        <div class="modal-actions" style="margin-top:25px; justify-content:flex-end; gap:10px;">
+            <button class="m-btn m-btn-later" onclick="ui.closeSecretModal()" style="background:#64748b; color:white;">취소</button>
+            <button class="m-btn m-btn-done" onclick="dataMgr.updateAdminSecret()">변경 저장</button>
+        </div>
+    </div>
+</div>
+
+<!-- [우선순위 수정] 교수님 명단 관리 모달 (z-index를 21000으로 상향) -->
+<div id="profManageModal" class="modal-overlay" style="z-index: 21000 !important;">
+    <div class="modal-box" style="width: 400px;">
+        <div class="modal-header"><h3><i class="fa-solid fa-user-tie"></i> 교수님 명단 관리</h3></div>
+        
+        <div class="prof-list-container" id="profListContainer">
+            <!-- 리스트가 여기에 생성됨 -->
+        </div>
+
+        <div style="display:flex; gap:5px;">
+            <input type="text" id="newProfInput" class="setting-input" placeholder="성함 입력 (예: 홍길동)" onkeyup="if(event.key==='Enter') profMgr.addProf()">
+            <button class="btn-action btn-primary" onclick="profMgr.addProf()" style="width:80px;">추가</button>
+        </div>
+
+        <div class="modal-actions" style="margin-top:20px; justify-content:center;">
+            <button class="m-btn m-btn-done" onclick="document.getElementById('profManageModal').style.display='none'" style="width:100%; justify-content:center;">닫기</button>
+        </div>
+    </div>
+</div>
+
+
+
+
+<!-- [우선순위 수정] 교수님 상세 프로필 등록 모달 (z-index를 22000으로 상향) -->
+<div id="profProfileModal" class="modal-overlay" style="z-index: 22000 !important;">
+    <div class="modal-box" style="width: 500px;">
+        <div class="modal-header"><h3><i class="fa-solid fa-id-card"></i> 교수 프로필 상세 등록</h3></div>
+        <div class="setting-container">
+            <div class="setting-group">
+                <label class="setting-label">교수 사진 업로드</label>
+                <div style="display:flex; gap:10px; align-items:center;">
+                    <input type="file" id="pp-photo-file" class="setting-input" accept="image/*" style="padding: 5px;">
+                    <div id="pp-photo-preview" style="width:50px; height:60px; border:1px solid #ddd; border-radius:4px; overflow:hidden; background:#eee;">
+                        <img src="" style="width:100%; height:100%; object-fit:cover; display:none;">
+                    </div>
+                </div>
+            </div>
+            <div class="setting-group"><label class="setting-label">성함</label><input type="text" id="pp-name" class="setting-input" readonly></div>
+            <div class="setting-group"><label class="setting-label">영문 성함 (영문명 병기용)</label><input type="text" id="pp-eng-name" class="setting-input" placeholder="예: Dooseok Jang"></div>
+            <div class="setting-group"><label class="setting-label">연락처</label><input type="text" id="pp-phone" class="setting-input" placeholder="010-0000-0000"></div>
+            <div class="setting-group"><label class="setting-label">이메일</label><input type="text" id="pp-email" class="setting-input" placeholder="kac@airport.co.kr"></div>
+            <div class="setting-group"><label class="setting-label">한 줄 메시지</label><input type="text" id="pp-msg" class="setting-input" placeholder="교육생에게 전하는 한 마디"></div>
+            <div class="setting-group"><label class="setting-label">주요 약력</label><textarea id="pp-bio" class="setting-input" style="height:120px; resize:none;" placeholder="주요 경력 및 약력을 입력하세요."></textarea></div>
+        </div>
+        <div class="modal-actions" style="margin-top:20px; justify-content:flex-end; gap:10px;">
+            <button class="m-btn m-btn-later" onclick="ui.closeProfProfileModal()" style="background:#64748b; color:white;">취소</button>
+            <button class="m-btn m-btn-done" onclick="profMgr.saveFullProfile()">프로필 저장</button>
+        </div>
+    </div>
+</div>
+
+
+        <!-- [신규] Custom Alert Modal (전체화면 깨짐 방지용) -->
+        <div id="customAlertModal" class="modal-overlay" style="z-index: 99999;">
+            <div class="modal-box" style="width: 350px; text-align: center;">
+                <div style="font-size:40px; margin-bottom:15px; color:#3b82f6;"><i class="fa-solid fa-circle-info"></i></div>
+               <!-- 여기가 수정됨: color:#1e293b 를 color:var(--text-color) 로 변경 -->
+                <p id="customAlertText" style="font-size:16px; color:var(--text-color); font-weight:bold; margin-bottom:25px;"></p>
+                <button class="btn-action btn-primary" onclick="document.getElementById('customAlertModal').style.display='none'">확인</button>
+            </div>
+        </div>
+
+
+
+<!-- [최종 고도화] 통합 환경 설정 모달 (원본 속성 100% 유지 + 2단 와이드 레이아웃) -->
+<div id="courseSetupModal" class="modal-overlay" style="z-index: 4000;">
+    <div class="modal-box setup-modal-box" style="width: 950px !important; max-width: 95vw;">
+        <div class="modal-header" style="margin-bottom:25px;">
+            <h3><i class="fa-solid fa-sliders"></i> 교육과정 통합 환경 설정 및 자료 관리</h3>
+        </div>
+        
+        <!-- 2단 레이아웃 시작 -->
+        <div style="display: flex; gap: 30px; align-items: stretch;">
+            
+            <!-- [왼쪽] 기본 정보 설정 (제공해주신 코드 원본) -->
+            <div style="flex: 1.2;">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; padding-bottom: 20px;">
+                    <div class="setup-group">
+                        <label style="display:block; font-size:12px; font-weight:800; color:#64748b; margin-bottom:8px;">교육과정명</label>
+                        <input type="text" id="setup-course-name" class="setup-input" placeholder="정확한 과정명 입력">
+                    </div>
+                    <div class="setup-group">
+                        <label style="display:block; font-size:12px; font-weight:800; color:#64748b; margin-bottom:8px;">과정 비밀번호 설정</label>
+                        <input type="password" id="setup-room-pw" class="setup-input" maxlength="4" placeholder="숫자 4자리">
+                    </div>
+                </div>
+
+<div class="setup-group" style="margin-bottom:20px;">
+                        <label style="display:block; font-size:12px; font-weight:800; color:#64748b; margin-bottom:8px;">교육 기간 (시작일 ~ 종료일 선택)</label>
+                        <div style="position: relative;">
+                            <!-- 두 칸을 하나로 합쳐서 호텔 예약 방식으로 변경 -->
+                            <input type="text" id="setup-period-range" class="setup-input" placeholder="날짜 범위를 선택하세요" style="background:#fff; cursor:pointer; width:100%; text-align:center; font-size:16px; font-weight:bold; height:50px;"> 
+                            <i class="fa-solid fa-calendar-days" style="position:absolute; right:15px; top:17px; color:#3b82f6;"></i>
+                        </div>
+                    </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom:20px;">
+                    <div class="setup-group">
+                        <label style="display:block; font-size:12px; font-weight:800; color:#64748b; margin-bottom:8px;">강의실 상세 위치</label>
+                        <div style="display:flex; gap:5px; align-items: center;">
+                            <select id="setup-room-select" class="setup-input" style="flex:1;" onchange="setupMgr.checkDirectInput(this.value)">
+                                <option value="">--- 장소 선택 ---</option>
+                                <optgroup label="하늘관">
+                                    <option value="하늘관 1층 대강당">하늘관 1층 대강당</option>
+                                    <option value="하늘관 1층 소회의실">하늘관 1층 소회의실</option>
+                                    <option value="하늘관 2층 A강의실">하늘관 2층 A강의실</option>
+                                    <option value="하늘관 2층 B강의실">하늘관 2층 B강의실</option>
+                                    <option value="하늘관 2층 C강의실">하늘관 2층 C강의실</option>
+                                    <option value="하늘관 2층 D강의실">하늘관 2층 D강의실</option>
+                                    <option value="하늘관 2층 E강의실">하늘관 2층 E강의실</option>
+                                    <option value="하늘관 2층 F강의실">하늘관 2층 F강의실</option>
+                                    <option value="하늘관 2층 G강의실">하늘관 2층 G강의실</option>
+                                    <option value="하늘관 3층 회의실">하늘관 3층 회의실</option>
+                                </optgroup>
+                                <optgroup label="국제동">
+                                    <option value="국제동 1층 세미나홀">국제동 1층 세미나홀</option>
+                                    <option value="국제동 1층 A강의실">국제동 1층 A강의실</option>
+                                    <option value="국제동 1층 B강의실">국제동 1층 B강의실</option>
+                                    <option value="국제동 2층 실습실">국제동 2층 ILS 실습실</option>
+                                    <option value="국제동 2층 실습실">국제동 2층 VCCS/RADIO/ATIS 실습실</option>
+                                    <option value="국제동 2층 VOR/DME/TACAN">국제동 2층 VOR/DME/TACAN 실습실</option>
+                                </optgroup>
+                                <optgroup label="관제교육동">
+                                    <option value="관제동 1층"> 1층</option>
+                                    <option value="관제동 2층"> 2층</option>
+                                </optgroup>
+                                <option value="direct">--- 직접 입력 ---</option>
+                            </select>
+                            <input type="text" id="setup-room-direct" class="setup-input" style="display:none; flex:1;" placeholder="위치 직접 작성">
+                        </div>
+                    </div>           
+
+                    <div class="setup-group">
+                        <label style="display:block; font-size:12px; font-weight:800; color:#64748b; margin-bottom:8px;">담임 교수</label>
+                        <div style="display:flex; gap:5px; align-items: center;">
+                            <select id="setup-prof-select" class="setup-input" style="flex:1;"></select>
+                            <button class="btn-action btn-small btn-dark" onclick="profMgr.openManageModal()" style="width:40px;"><i class="fa-solid fa-gear"></i></button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="setup-group" style="margin-bottom:20px;">
+                    <label style="display:block; font-size:12px; font-weight:800; color:#64748b; margin-bottom:8px;">과정 운영 담당자 (행정)</label>
+                    <div style="display:flex; gap:5px; align-items: center;">
+                        <select id="setup-coord-select" class="setup-input" style="flex:1;">
+                            <option value="">--- 담당자 불러오는 중... ---</option>
+                        </select>
+                        <button class="btn-action btn-small btn-dark" onclick="coordMgr.openManage()" style="width:40px;"><i class="fa-solid fa-gear"></i></button>
+                    </div>
+                </div>
+
+                <div class="setup-group" style="padding:15px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px;">
+                    <label style="display:block; font-size:12px; font-weight:900; color:#003366; margin-bottom:10px;">출강 강사 리스트</label>
+                    <div id="setup-subject-list" style="max-height: 100px; overflow-y: auto; margin-bottom:10px;"></div>
+                    <div style="display: flex; gap: 5px;">
+                        <input type="text" id="setup-new-subject" class="setup-input" style="flex:1;" placeholder="강사명 또는 과목명 입력">
+                        <button class="btn-action btn-primary btn-small" onclick="subjectMgr.addSubjectInModal()" style="width: 60px;">추가</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- [오른쪽] 추가된 자료 관리 구역 -->
+            <div style="flex: 1; border-left: 1px dashed #e2e8f0; padding-left: 30px; display: flex; flex-direction: column;">
+                <label style="display:block; font-size:13px; font-weight:900; color:#003366; margin-bottom:15px;">
+                    <i class="fa-solid fa-folder-open"></i> 입교 가이드 및 자료 관리
+                </label>
+                
+                <!-- 가이드 PDF 업로드 -->
+                <div style="margin-bottom:20px; padding:15px; background:#f0f7ff; border-radius:12px; border:1px solid #dbeafe;">
+                    <span style="display:block; font-size:12px; font-weight:800; color:#3b82f6; margin-bottom:8px;">입교안내 가이드 (PDF)</span>
+                    <div id="modalGuideStatus" style="font-size: 11px; margin-bottom: 10px; color: #64748b; font-weight: 700;">상태 확인 중...</div>
+                    <input type="file" id="modalGuideInput" accept=".pdf" style="display:none;" onchange="guideMgr.uploadGuide(this)">
+                    <button class="btn-action btn-primary" onclick="document.getElementById('modalGuideInput').click()" style="height:40px; font-size:13px; width:100%;">
+                        <i class="fa-solid fa-file-pdf"></i> PDF 업로드/교체
+                    </button>
+                </div>
+
+                <!-- 퀴즈 문제 은행 업로드 -->
+                <div style="margin-bottom:20px; padding:15px; background:#fffbeb; border-radius:12px; border:1px solid #fef3c7;">
+                    <span style="display:block; font-size:12px; font-weight:800; color:#d97706; margin-bottom:8px;">퀴즈 문제 은행 (.TXT)</span>
+                    <p style="font-size: 11px; color: #92400e; line-height: 1.4; margin-bottom:10px;">새 파일을 업로드하면 퀴즈 보관함에 즉시 추가됩니다.</p>
+                    <div style="display:flex; gap:8px;">
+                        <input type="file" id="modalQuizInput" accept=".txt" style="display:none;" onchange="quizMgr.loadFile(event)">
+                        <button class="btn-action" onclick="document.getElementById('modalQuizInput').click()" style="flex:2; height:40px; font-size:13px; background:#f59e0b; color:white; border:none; border-radius:8px; font-weight:800; cursor:pointer;">
+                            <i class="fa-solid fa-file-import"></i> 문제 업로드
+                        </button>
+                        <button class="btn-action btn-dark" onclick="quizMgr.downloadSample()" style="flex:1; height:40px; font-size:13px;">샘플</button>
+                    </div>
+                </div>
+
+                <!-- 식단표 업로드 -->
+                <div style="margin-bottom:16px; padding:14px; background:#ecfdf5; border-radius:12px; border:1px solid #a7f3d0;">
+                    <span style="display:block; font-size:12px; font-weight:800; color:#059669; margin-bottom:6px;"><i class="fa-solid fa-utensils"></i> 금주 식단표 (이미지)</span>
+                    <div id="modalMealStatus" style="font-size:11px; color:#64748b; font-weight:700; margin-bottom:8px;">상태 확인 중...</div>
+                    <div style="display:flex; gap:6px;">
+                        <input type="file" id="modalMealInput" accept="image/*" style="display:none;" onchange="setupMgr.uploadMealImage(this)">
+                        <button class="btn-action" onclick="document.getElementById('modalMealInput').click()" style="flex:2; height:38px; font-size:12px; background:#10b981; color:white; border:none; border-radius:8px; font-weight:800; cursor:pointer;"><i class="fa-solid fa-image"></i> 식단 이미지 업로드</button>
+                        <button class="btn-action btn-dark" onclick="setupMgr.clearMealImage()" style="flex:1; height:38px; font-size:12px;">삭제</button>
+                    </div>
+                </div>
+                <!-- 교육생 앱 메뉴 ON/OFF -->
+                <div style="padding:14px; background:#f8fafc; border-radius:12px; border:1px solid #e2e8f0;">
+                    <span style="display:block; font-size:12px; font-weight:900; color:#003366; margin-bottom:10px;"><i class="fa-solid fa-toggle-on"></i> 교육생 앱 메뉴 활성화</span>
+                    <div style="display:flex; flex-direction:column; gap:8px;">
+                        <label style="display:flex; align-items:center; justify-content:space-between; font-size:13px; font-weight:700; cursor:pointer;"><span><i class="fa-solid fa-soap" style="color:#10b981; margin-right:6px;"></i>생활관 비품 요청</span><input type="checkbox" id="feat-facility" style="width:18px; height:18px;" checked></label>
+                        <label style="display:flex; align-items:center; justify-content:space-between; font-size:13px; font-weight:700; cursor:pointer;"><span><i class="fa-solid fa-bus" style="color:#3b82f6; margin-right:6px;"></i>차량 신청</span><input type="checkbox" id="feat-shuttle" style="width:18px; height:18px;" checked></label>
+                        <label style="display:flex; align-items:center; justify-content:space-between; font-size:13px; font-weight:700; cursor:pointer;"><span><i class="fa-solid fa-file-signature" style="color:#f59e0b; margin-right:6px;"></i>외출·외박 / 석식제외</span><input type="checkbox" id="feat-admin-action" style="width:18px; height:18px;" checked></label>
+                        <label style="display:flex; align-items:center; justify-content:space-between; font-size:13px; font-weight:700; cursor:pointer;"><span><i class="fa-solid fa-utensils" style="color:#059669; margin-right:6px;"></i>금주 식단보기</span><input type="checkbox" id="feat-meal" style="width:18px; height:18px;" checked></label>
+                        <label style="display:flex; align-items:center; justify-content:space-between; font-size:13px; font-weight:700; cursor:pointer;"><span><i class="fa-solid fa-qrcode" style="color:#3b82f6; margin-right:6px;"></i>출결 QR 확인</span><input type="checkbox" id="feat-attendance-qr" style="width:18px; height:18px;" checked></label>
+                        <label style="display:flex; align-items:center; justify-content:space-between; font-size:13px; font-weight:700; cursor:pointer;"><span><i class="fa-solid fa-tower-broadcast" style="color:#6366f1; margin-right:6px;"></i>CNS 플랫폼</span><input type="checkbox" id="feat-cns" style="width:18px; height:18px;" checked></label>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal-actions" style="margin-top:25px; justify-content:center; gap:10px;">
+            <button class="m-btn m-btn-later" onclick="setupMgr.closeSetupModal()" style="background:#64748b; color:white; min-width:100px; justify-content:center;">취소</button>
+            <button class="m-btn m-btn-done" onclick="setupMgr.saveAll()" style="min-width:200px; justify-content:center; background:#10b981; color:white;">모든 설정 저장 및 적용</button>
+        </div>
+    </div>
+</div>
+
+
+
+
+
+<!-- [추가] 우측 하단 플로팅 홈 버튼 -->
+    <div id="floatingHomeBtn" class="floating-home-btn" onclick="ui.setMode('dashboard')">
+        <i class="fa-solid fa-house"></i>
+        <span>홈으로</span>
+    </div>
+
+
+
+
+
+<!-- 과정 담당자 및 서명 관리 모달 (강사 플랫폼용) -->
+<div id="coordManageModal" class="modal-overlay" style="z-index: 8000;">
+    <div class="modal-box" style="width: 450px;">
+        <div class="modal-header">
+            <h3><i class="fa-solid fa-id-card-clip"></i> 담당자 및 서명 관리</h3>
+        </div>
+        <div id="coordListContainer" style="max-height: 250px; overflow-y: auto; margin-bottom: 15px; border:1px solid #e2e8f0; border-radius:12px; padding:10px; background:#f8fafc;">
+            <!-- 담당자 리스트가 여기에 나타남 -->
+        </div>
+        <div style="padding:15px; background:#fff; border:1px solid #e2e8f0; border-radius:12px;">
+            <label class="setting-label" style="color:#64748b; margin-bottom:8px; display:block;">새 담당자 등록 및 서명</label>
+            <input type="text" id="newCoordInput" class="setting-input" placeholder="성함 직책" style="margin-bottom:8px; border:1px solid #cbd5e1; background-color: white !important; color: #1e293b !important;">
+            <div style="display:flex; gap:5px;">
+                <input type="file" id="coordSignFile" accept="image/*" style="display:none;" onchange="coordMgr.handleFile(this)">
+                <button class="btn-action btn-secondary" style="flex:1; height:40px;" onclick="document.getElementById('coordSignFile').click()"><i class="fa-solid fa-stamp"></i> 서명 선택</button>
+                <button class="btn-action btn-primary" style="flex:1; height:40px;" onclick="coordMgr.add()">등록</button>
+            </div>
+            <div id="signPreviewArea" style="margin-top:10px; text-align:center; display:none; border:1px dashed #ddd; padding:5px;">
+                <span style="font-size:11px; color:#64748b;">선택된 서명 미리보기:</span><br>
+                <img id="tempSignPreview" style="height:50px; mix-blend-mode:multiply;">
+            </div>
+        </div>
+        <div class="modal-actions" style="margin-top:20px; justify-content:center;">
+            <button class="m-btn m-btn-later" style="width:100%; justify-content:center; background:#64748b;" onclick="document.getElementById('coordManageModal').style.display='none'">닫기</button>
+        </div>
+    </div>
+</div>
+
+
+
+
+
+
+
+
+<!-- 단체회식 외출 정보 입력 모달 -->
+<div id="groupDinnerModal" class="modal-overlay" style="z-index: 6000;">
+    <div class="modal-box" style="width: 480px;">
+        <div class="modal-header"><h3><i class="fa-solid fa-users-rectangle"></i> 단체 외출 정보 입력</h3></div>
+        <p style="font-size:13px; color:#64748b; margin-bottom:16px; line-height:1.6;">전원 석식 제외와 함께 외출 대장에 단체 기록이 남습니다.</p>
+
+        <!-- 외출/외박 선택 -->
+        <div style="display:flex; gap:8px; margin-bottom:16px;">
+            <button id="gd-btn-outing" onclick="ui.selectGroupDinnerType('outing')"
+                style="flex:1; padding:12px; border-radius:10px; border:2px solid #3b82f6; background:#3b82f6; color:white; font-weight:900; font-size:14px; cursor:pointer;">
+                🌆 외출 (당일)
+            </button>
+            <button id="gd-btn-overnight" onclick="ui.selectGroupDinnerType('overnight')"
+                style="flex:1; padding:12px; border-radius:10px; border:2px solid #e2e8f0; background:white; color:#64748b; font-weight:900; font-size:14px; cursor:pointer;">
+                🌙 외박 (익일)
+            </button>
+        </div>
+
+        <div class="setting-container">
+            <div class="setting-group">
+                <label class="setting-label">행선지 <span style="color:#ef4444;">*</span></label>
+                <input type="text" id="gd-destination" class="setting-input" placeholder="예: 청주 OO식당">
+            </div>
+
+            <!-- 외출 시간 영역 -->
+            <div id="gd-outing-time" style="display:grid; grid-template-columns:1fr 1fr; gap:15px;">
+                <div class="setting-group">
+                    <label class="setting-label">외출 시간</label>
+                    <div style="padding:10px 12px; background:#e0f2fe; border-radius:8px; font-weight:900; color:#0369a1; text-align:center; font-size:14px;">
+                        18:00 (수업 종료)
+                    </div>
+                    <input type="hidden" id="gd-start-time" value="18:00">
+                </div>
+                <div class="setting-group">
+                    <label class="setting-label">복귀 시간 <span style="color:#ef4444;">*</span></label>
+                    <select id="gd-end-time" class="setting-input" style="font-size:15px; font-weight:800;">
+                        <option value="18:30">18:30</option>
+                        <option value="19:00">19:00</option>
+                        <option value="19:30">19:30</option>
+                        <option value="20:00">20:00</option>
+                        <option value="20:30">20:30</option>
+                        <option value="21:00">21:00</option>
+                        <option value="21:30">21:30</option>
+                        <option value="22:00" selected>22:00</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- 외박 날짜 영역 (외박 선택 시 표시) -->
+            <div id="gd-overnight-area" style="display:none;">
+                <div class="setting-group">
+                    <label class="setting-label">외출 날짜 <span style="color:#ef4444;">*</span></label>
+                    <input type="date" id="gd-return-date" class="setting-input">
+                </div>
+                <div style="background:#fff1f2; border-radius:10px; padding:10px 14px; font-size:12px; font-weight:700; color:#dc2626; line-height:1.7;">
+                    출발: 18:00 (수업 종료) &nbsp;|&nbsp; 복귀: 익일 08:00 자동 설정
+                </div>
+            </div>
+
+            <div class="setting-group">
+                <label class="setting-label">대표 연락처 <span style="color:#ef4444;">*</span></label>
+                <input type="text" id="gd-phone" class="setting-input" placeholder="예: 010-0000-0000 (인솔자 또는 강사)">
+            </div>
+            <div class="setting-group">
+                <label class="setting-label">사유</label>
+                <input type="text" id="gd-reason" class="setting-input" value="과정 단체 회식">
+            </div>
+        </div>
+        <div class="modal-actions" style="margin-top:20px; justify-content:center; gap:10px;">
+            <button class="m-btn m-btn-later" onclick="document.getElementById('groupDinnerModal').style.display='none'" style="background:#64748b; color:white; min-width:90px; justify-content:center;">취소</button>
+            <button class="m-btn m-btn-done" onclick="ui.applyGroupDinner()" style="min-width:180px; justify-content:center;">
+                <i class="fa-solid fa-check"></i> 적용 (전원 석식제외 + 외출 등록)
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- [신규 추가] 교육과정 결과 보고서 미리보기 모달창 -->
+<div id="printPreviewModal" class="modal-overlay" style="z-index: 5000; display: none; align-items: center; justify-content: center; background: rgba(0,0,0,0.8);">
+    <div class="print-preview-box" style="width: 90%; max-width: 1000px; background: #525659; height: 90vh; border-radius: 12px; display: flex; flex-direction: column; overflow: hidden; position: relative;">
+        
+        <!-- 상단 헤더 바 -->
+        <div class="preview-header" style="background: #333; color: white; padding: 15px 25px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 10px rgba(0,0,0,0.3);">
+            <h3 style="margin: 0; font-size: 18px;"><i class="fa-solid fa-file-invoice"></i> 교육과정 결과 보고서 미리보기</h3>
+            <div style="display:flex; gap:10px;">
+                <button class="m-btn m-btn-done" onclick="printMgr.executePrint()" style="background: #10b981; color: white; border: none; padding: 8px 20px; border-radius: 6px; font-weight: 800; cursor: pointer;">
+                    <i class="fa-solid fa-print"></i> 지금 인쇄하기
+                </button>
+                <button class="m-btn m-btn-later" onclick="printMgr.closePreview()" style="background: #666; color: white; border: none; padding: 8px 20px; border-radius: 6px; font-weight: 800; cursor: pointer;">
+                    닫기
+                </button>
+            </div>
+        </div>
+
+        <!-- 보고서가 그려질 실제 종이 영역 (스크롤 가능) -->
+        <div class="preview-content" style="flex-grow: 1; overflow-y: auto; padding: 40px; display: flex; flex-direction: column; align-items: center; background: #525659;">
+            <div id="official-document" style="background: white; width: 210mm; min-height: 297mm; padding: 20mm 20mm; box-shadow: 0 0 30px rgba(0,0,0,0.5); color: black; box-sizing: border-box;">
+                <!-- 자바스크립트가 수집한 데이터가 이 안으로 쏙 들어갑니다 -->
+                <div style="text-align: center; padding-top: 100px; color: #ccc;">리포트 내용을 생성 중입니다...</div>
+            </div>
+            
+            <!-- 아래쪽 여백용 (인쇄 시 안 보임) -->
+            <div style="height: 50px; width: 100%;"></div>
+        </div>
+    </div>
+</div>
+
+
+
+
+
+
+
+
+
+
+
+</body>
+
+
+</body>
+</html>
