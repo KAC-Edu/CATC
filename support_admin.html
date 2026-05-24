@@ -420,10 +420,19 @@ function loadPeriod() {
                 const pdf = await pdfjsLib.getDocument(new Uint8Array(this.result)).promise;
                 extractedData = {};
                 const blacklist = [
-    "강의실", "개월", "계단", "과정", "관제사", "교육", "기도실", "배정표", "복도", "비상구", "생활관", 
-    "세탁", "신입사원", "휴게실", "하반기", "대강당", "세미나", "국제", "식당", "주방", "번호", "배정", 
-    "시설", "안내", "하늘관", "항공교통", "창고", "PC방", "세탁실", "전방향", "거리측정", "표지시설",
-    "초기", "공사", "전문", "이해", "차세대", "감시시설", "항공", "통신", "항행", "시설", "계약", "기기"
+    // 시설/장소명
+    "강의실", "계단", "복도", "비상구", "생활관", "휴게실", "대강당", "세미나", "식당", "주방",
+    "창고", "세탁실", "기도실", "PC방", "상담실", "회의실", "사무실", "화장실", "엘리베이터",
+    "하늘관", "청렴관", "상생관", "국제동", "훈련원", "본관", "별관",
+    // 기관/단체명
+    "항기원", "항공기술훈련원", "한국공항공사", "공항공사", "KAC",
+    "항공교통", "항공", "통신", "항행", "시설", "관제사", "감시시설", "표지시설",
+    // 과정/행정 용어
+    "과정", "교육", "배정표", "배정", "번호", "안내", "신입사원",
+    "개월", "하반기", "상반기", "기수", "기간", "일정",
+    // 기술 용어 (한글 2~4자 필터 통과 가능한 것들)
+    "초기", "공사", "전문", "이해", "차세대", "계약", "기기", "시스템", "거리",
+    "전방향", "거리측정", "국제", "세탁"
 ];
 
                 for(let i=1; i<=pdf.numPages; i++) {
@@ -438,18 +447,29 @@ function loadPeriod() {
 
                     let pageText = items.map(it => it.str).join('');
                     let currentBuilding = "기타";
-                    if(pageText.includes("청렴관")) currentBuilding = "청렴관";
-                    else if(pageText.includes("상생관")) currentBuilding = "상생관";
-                    else if(pageText.includes("국제동")) currentBuilding = "국제동";
+                    // 페이지 내 건물명 감지 (우선순위 순)
+                    if(pageText.includes("청렴관"))        currentBuilding = "청렴관";
+                    else if(pageText.includes("상생관"))   currentBuilding = "상생관";
+                    else if(pageText.includes("국제동"))   currentBuilding = "국제동";
+                    else if(pageText.includes("하늘관"))   currentBuilding = "하늘관";
+                    else if(pageText.includes("별관"))     currentBuilding = "별관";
 
                     let rooms = items.filter(it => /^\d{3}$/.test(it.str) || /^\d{3}\(/.test(it.str));
                     rooms = rooms.map(r => ({ num: r.str.substring(0,3), x: r.x, y: r.y }));
 
-                    let rawNames = items.filter(it => 
-    /[가-힣]{2,4}/.test(it.str) && // 2~4글자 한글만
-    !blacklist.some(b => it.str.includes(b)) && // 블랙리스트 제외
-    !["청렴관", "상생관", "국제동", "기타"].includes(it.str) // 건물 이름 자체를 이름으로 쓰지 않음
-);
+                    let rawNames = items.filter(it => {
+                        const s = it.str;
+                        // 1. 순수 한글 2~4자여야 함
+                        if (!/^[가-힣]{2,4}$/.test(s)) return false;
+                        // 2. 블랙리스트 단어 포함 시 제외
+                        if (blacklist.some(b => s.includes(b))) return false;
+                        // 3. 건물명 자체 제외
+                        if (["청렴관","상생관","국제동","하늘관","별관","기타"].includes(s)) return false;
+                        // 4. 흔한 비이름 단어 추가 제외 (2글자 조사/접속사 등)
+                        const nonNames = ["여자","남자","호실","합계","소계","합산","기준","단위","관리","운영","담당","직원","사원","과장","차장","부장","팀장","원장","소장","본부","교수","강사","학생","학장","처장"];
+                        if (nonNames.includes(s)) return false;
+                        return true;
+                    });
                     
                     rawNames.forEach(it => {
                         const namesInBlock = it.str.replace(/\(여\)/g, '').split('/');

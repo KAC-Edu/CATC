@@ -323,7 +323,7 @@ switchRoomAttempt: async function(newRoom) {
         
         // 중요: forceEnterRoom을 실행하지 않고 여기서 중단합니다. (데이터 리스너 실행 방지)
         document.getElementById('takeoverPwInput').value = "";
-        document.getElementById('takeoverModal').style.display = 'flex';
+        dataMgr.openTakeoverModal();
         document.getElementById('takeoverPwInput').focus();
         
         // overlay는 flex 상태를 유지하여 뒷배경 데이터를 가립니다.
@@ -390,7 +390,7 @@ verifyTakeover: async function() {
             // 1. 현재 옵저버인데 클릭했다면? -> 강사 모드로 전환 (비밀번호 창 띄우기)
             state.pendingRoom = state.room;
             document.getElementById('takeoverPwInput').value = "";
-            document.getElementById('takeoverModal').style.display = 'flex';
+            dataMgr.openTakeoverModal();
             document.getElementById('takeoverPwInput').focus();
         } else {
             // 2. 현재 강사인데 클릭했다면? -> 옵저버 모드로 전환
@@ -441,6 +441,20 @@ enterAsObserver: function() {
         document.getElementById('takeoverModal').style.display = 'none';
         document.getElementById('roomSelect').value = state.room || ""; 
         state.pendingRoom = null;
+    },
+
+    // 제어권 인증 모달 열기 (강의실 정보 표시 포함)
+    openTakeoverModal: function() {
+        const label = document.getElementById('takeoverRoomLabel');
+        if (label) {
+            const roomVal = state.pendingRoom || state.room || '';
+            const roomStr = roomVal ? `Room ${roomVal.replace('room','').toUpperCase()}` : '강의실 미선택';
+            const courseName = document.getElementById('displayCourseTitle')?.innerText?.trim() || '';
+            label.innerText = courseName ? `${roomStr}  —  ${courseName}` : roomStr;
+        }
+        document.getElementById('takeoverPwInput').value = '';
+        document.getElementById('takeoverModal').style.display = 'flex';
+        setTimeout(() => document.getElementById('takeoverPwInput')?.focus(), 100);
     },
 
 
@@ -552,7 +566,7 @@ forceEnterRoom: async function(room) {
                 // 방이 사용 중인데 내가 주인이 아님 -> 잠금 유지 및 비번 입력창 유도
                 overlay.style.display = 'flex';
                 state.pendingRoom = cleanRoom;
-                document.getElementById('takeoverModal').style.display = 'flex';
+                dataMgr.openTakeoverModal();
             } else if (!isActive) {
                 // 방이 비어있음 -> 잠금 유지
                 overlay.style.display = 'flex';
