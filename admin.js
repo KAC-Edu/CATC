@@ -460,14 +460,9 @@ enterAsObserver: function() {
     cancelTakeover: function() {
         document.getElementById('takeoverModal').style.display = 'none';
         state.pendingRoom = null;
-        // 이전 방(state.room)이 있으면 overlay 숨기고 그 방으로 완전 복귀
         if (state.room) {
-            const overlay = document.getElementById('statusOverlay');
-            if (overlay) overlay.style.display = 'none';
-            document.getElementById('roomSelect').value = state.room;
-            // 헤더도 이전 방으로 복원
-            const drEl = document.getElementById('displayRoomName');
-            if (drEl) drEl.innerText = `Room #${state.room}`;
+            // 이전 방으로 완전 복귀 - 데이터 재로드
+            this.forceEnterRoom(state.room);
         } else {
             document.getElementById('roomSelect').value = "";
         }

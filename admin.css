@@ -3055,8 +3055,8 @@ body.night-mode .status-badge.status-arrived {
 .family-site-menu {
     display: none;
     flex-direction: column;
-    background: #0f1d2e;
-    border: 1px solid #1e3a5f;
+    background: linear-gradient(160deg, #0c4a6e 0%, #075985 100%);
+    border: 1px solid #0ea5e9;
     border-radius: 12px;
     padding: 6px;
     position: absolute;
@@ -3064,12 +3064,12 @@ body.night-mode .status-badge.status-arrived {
     left: 0;
     width: 100%;
     z-index: 1000;
-    box-shadow: 0 -10px 25px rgba(0,0,0,0.5);
+    box-shadow: 0 -10px 30px rgba(14, 165, 233, 0.25);
 }
 
 .family-site-menu a {
     padding: 12px 15px;
-    color: #94a3b8;
+    color: #bae6fd;
     text-decoration: none;
     font-size: 13px;
     font-weight: 600;
@@ -3081,8 +3081,8 @@ body.night-mode .status-badge.status-arrived {
 }
 
 .family-site-menu a:hover {
-    background: #1e3a5f;
-    color: #60a5fa;
+    background: rgba(255,255,255,0.15);
+    color: #ffffff;
 }
 
 .family-site-menu a i {
