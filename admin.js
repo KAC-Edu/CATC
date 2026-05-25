@@ -120,6 +120,7 @@ logout: async function() {
                 await firebase.auth().signOut();
                 localStorage.removeItem('last_owned_room');
                 localStorage.removeItem('kac_last_room');
+                dataMgr.clearOwnedRooms();
                 location.reload(); 
             } catch (error) {
                 console.error("Logout Error:", error);
@@ -385,6 +386,7 @@ verifyTakeover: async function() {
                 roomStatus: 'active'
             });
             localStorage.setItem(`last_owned_room`, newRoom);
+            dataMgr.addOwnedRoom(newRoom);
             document.getElementById('takeoverModal').style.display = 'none';
             this.forceEnterRoom(newRoom);
             ui.showAlert("✅ 제어권을 획득했습니다.");
@@ -478,6 +480,23 @@ enterAsObserver: function() {
 
 
 
+// last_owned_rooms: 내가 비번치고 들어간 방 목록 관리
+getOwnedRooms: function() {
+    try { return JSON.parse(localStorage.getItem('kac_owned_rooms') || '[]'); } catch(e) { return []; }
+},
+addOwnedRoom: function(room) {
+    const rooms = this.getOwnedRooms();
+    if (!rooms.includes(room)) rooms.push(room);
+    localStorage.setItem('kac_owned_rooms', JSON.stringify(rooms));
+},
+isMyOwnedRoom: function(room) {
+    return this.getOwnedRooms().includes(room.toUpperCase());
+},
+clearOwnedRooms: function() {
+    localStorage.removeItem('kac_owned_rooms');
+    localStorage.removeItem('last_owned_room');
+},
+
 // [수정] 진입 시 잠금을 기본값으로 설정하고 권한에 따라 해제하는 버전
 forceEnterRoom: async function(room) {
     const cleanRoom = room.toUpperCase();
@@ -556,26 +575,43 @@ forceEnterRoom: async function(room) {
         const isActive = (statusData.roomStatus === 'active');
 
         // [중요] 권한 검증 로직 및 모달 트리거
-        const wasMyRoom = (localStorage.getItem('last_owned_room') || '').toUpperCase() === cleanRoom;
+        // 내가 직접 비번치고 들어갔던 방 목록에 있으면 wasMyRoom=true
+        const wasMyRoom = dataMgr.isMyOwnedRoom(cleanRoom);
 
         if (!state.isObserver) {
             if (isOwner) {
-                // ① 내가 정당한 주인 → 무조건 즉시 입장 (wasMyRoom 불필요)
+                // ① 내가 정당한 주인 → 무조건 즉시 입장
                 localStorage.setItem('last_owned_room', cleanRoom);
+                dataMgr.addOwnedRoom(cleanRoom);
                 overlay.style.display = 'none';
                 const tm = document.getElementById('takeoverModal');
                 if (tm) tm.style.display = 'none';
             } else if (!isActive) {
-                // ② 빈 방 → 내 방으로 활성화 후 입장
+                // ② 미개설 빈 방 → 활성화는 하되 overlay로 환경설정 유도
                 firebase.database().ref(`courses/${cleanRoom}/status`).update({
                     ownerSessionId: state.sessionId, roomStatus: 'active'
                 });
-                overlay.style.display = 'none';
+                localStorage.setItem('last_owned_room', cleanRoom);
+                // overlay 유지 + 환경설정 버튼 깜빡임 안내
+                const setupGuideEl = document.getElementById('setupGuideOverlay');
+                if (setupGuideEl) {
+                    overlay.style.display = 'none';
+                    setupGuideEl.style.display = 'flex';
+                } else {
+                    overlay.style.display = 'none';
+                }
                 const tm = document.getElementById('takeoverModal');
                 if (tm) tm.style.display = 'none';
+                // 환경설정 버튼 깜빡임 효과
+                const sb = document.getElementById('btnSetupModal');
+                if (sb) {
+                    sb.classList.add('btn-pulse');
+                    setTimeout(() => sb.classList.remove('btn-pulse'), 8000);
+                }
             } else if (isActive && wasMyRoom) {
-                // ③ 내 방인데 세션 갱신 필요(새로고침) → ownerSessionId 갱신 후 입장
+                // ③ 내가 비번치고 들어갔던 방 → ownerSessionId 갱신 후 입장
                 firebase.database().ref(`courses/${cleanRoom}/status`).update({ ownerSessionId: state.sessionId });
+                dataMgr.addOwnedRoom(cleanRoom);
                 overlay.style.display = 'none';
                 const tm = document.getElementById('takeoverModal');
                 if (tm) tm.style.display = 'none';

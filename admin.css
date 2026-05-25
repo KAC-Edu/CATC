@@ -3381,3 +3381,16 @@ body.night-mode .status-badge.status-arrived {
     0%, 100% { transform: scale(1); opacity: 1; }
     50% { transform: scale(1.15); opacity: 0.85; }
 }
+
+/* 미개설 방 진입 시 환경설정 버튼 깜빡임 */
+@keyframes btnPulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7); transform: scale(1); }
+    50% { box-shadow: 0 0 0 12px rgba(59, 130, 246, 0); transform: scale(1.04); }
+}
+.btn-pulse {
+    animation: btnPulse 1s ease-in-out infinite !important;
+    cursor: pointer !important;
+}
+.btn-pulse::after {
+    content: " 👆";
+}
