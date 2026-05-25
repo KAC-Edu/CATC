@@ -3144,11 +3144,13 @@ renderQaList: function(f) {
     },
     
     toggleFullScreen: function() {
-        const elem = document.querySelector('.main-stage');
-        if (!document.fullscreenElement) {
-            elem.requestFullscreen().catch(err => console.log(err));
-        } else if (document.exitFullscreen) {
-            document.exitFullscreen();
+        const body = document.body;
+        const btn = document.querySelector('.control-icon-btn i.fa-expand, .control-icon-btn i.fa-compress');
+        const isExpanded = body.classList.toggle('sidebar-hidden');
+        // 아이콘 전환
+        if (btn) {
+            btn.classList.toggle('fa-expand', !isExpanded);
+            btn.classList.toggle('fa-compress', isExpanded);
         }
     },
     

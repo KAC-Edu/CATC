@@ -3416,3 +3416,24 @@ body.night-mode .status-badge.status-arrived {
 .btn-pulse::after {
     content: " 👆";
 }
+
+/* ── 전체화면 모드 (사이드바 숨김) ── */
+body.sidebar-hidden .sidebar {
+    display: none !important;
+}
+body.sidebar-hidden .main-stage {
+    width: 100vw !important;
+    max-width: 100vw !important;
+    margin-left: 0 !important;
+}
+body.sidebar-hidden .header {
+    left: 0 !important;
+    width: 100vw !important;
+}
+body.sidebar-hidden .mode-tabs {
+    left: 0 !important;
+    width: 100vw !important;
+}
+body.sidebar-hidden .content-area {
+    width: 100% !important;
+}
