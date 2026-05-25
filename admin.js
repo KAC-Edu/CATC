@@ -1849,10 +1849,12 @@ refs.departure.on('value', snap => {
         const dateParts = dep.date.split('-');
         const formattedDate = `${dateParts[0]}년 ${parseInt(dateParts[1])}월 ${parseInt(dateParts[2])}일`;
         
-        // [시인성 개선] 제목은 작고 갈색톤으로, 실제 데이터(날짜/시간)는 딥블루 + 굵게 강조
         txt.innerHTML = `
-            <span style="color: #92400e; font-size: 12px; font-weight: 700; opacity: 0.8;">퇴교차량 출발 예정 시간</span><br>
-            <span style="color: #003366; font-size: 19px; font-weight: 900; letter-spacing: -0.5px;">${formattedDate} (${dep.time})</span>
+            <div style="text-align:center;">
+                <span style="color:#92400e; font-size:12px; font-weight:700; opacity:0.8;">퇴교차량 출발 예정 시간</span><br>
+                <span style="color:#003366; font-size:19px; font-weight:900; letter-spacing:-0.5px;">(${formattedDate})</span><br>
+                <span style="color:#003366; font-size:19px; font-weight:900; letter-spacing:-0.5px;">${dep.time}</span>
+            </div>
         `;
     } else {
         bar.style.display = "none";
