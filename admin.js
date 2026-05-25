@@ -57,6 +57,7 @@ const state = {
     timerInterval: null,
     pendingRoom: null,
     timerAudio: null,
+    noticeSeen: {}, // 공지 읽음 메모리 (탭 이동해도 유지, 새로고침은 리셋)
     newBadgeTimer: null,
     remainingTime: 8,
     ansListener: null,
@@ -664,34 +665,49 @@ forceEnterRoom: async function(room) {
     guideMgr.init();
 
     // ── 공지 실시간 리스너 ──
+    // state.noticeSeen으로 메모리 관리 (탭 이동해도 seen 값 유지, 새로고침만 리셋)
+    const coordSeenKey = `coord_${cleanRoom}`;
+    const globalSeenKey = 'global';
+
     firebase.database().ref(`courses/${cleanRoom}/coordNotice`).off();
     firebase.database().ref(`courses/${cleanRoom}/coordNotice`).on('value', snap => {
         if (state.room !== cleanRoom) return;
         const newMsg = snap.val() || '';
-        const seenKey = `kac_coord_notice_seen_${cleanRoom}`;
-        const lastSeen = localStorage.getItem(seenKey);
         const el = document.getElementById('dashNoticeAdmin');
         if (el) el.innerText = newMsg || '등록된 운영부 과정 공지가 없습니다.';
         if (!newMsg) return;
-        if (lastSeen === null) { localStorage.setItem(seenKey, newMsg); return; }
+        const lastSeen = state.noticeSeen[coordSeenKey];
+        if (lastSeen === undefined) {
+            // 첫 수신: 메모리에 저장만, 팝업 없음
+            state.noticeSeen[coordSeenKey] = newMsg;
+            return;
+        }
         if (newMsg !== lastSeen) {
-            localStorage.setItem(seenKey, newMsg);
-            if (state.currentMode !== 'notice') guideMgr.showCoordNoticeAlert(newMsg, '📋 운영부 과정 공지');
+            // 실제 변경: 팝업 + 메모리 갱신
+            state.noticeSeen[coordSeenKey] = newMsg;
+            if (state.currentMode !== 'notice') {
+                guideMgr.showCoordNoticeAlert(newMsg, '📋 운영부 과정 공지');
+            }
         }
     });
+
     firebase.database().ref('system/globalNotice').off();
     firebase.database().ref('system/globalNotice').on('value', snap => {
         if (state.room !== cleanRoom) return;
         const newMsg = snap.val() || '';
-        const seenKey = 'kac_global_notice_seen';
-        const lastSeen = localStorage.getItem(seenKey);
         const el = document.getElementById('dashNoticeGlobal');
         if (el) el.innerText = newMsg || '현재 게시된 센터 전체 공지가 없습니다.';
         if (!newMsg) return;
-        if (lastSeen === null) { localStorage.setItem(seenKey, newMsg); return; }
+        const lastSeen = state.noticeSeen[globalSeenKey];
+        if (lastSeen === undefined) {
+            state.noticeSeen[globalSeenKey] = newMsg;
+            return;
+        }
         if (newMsg !== lastSeen) {
-            localStorage.setItem(seenKey, newMsg);
-            if (state.currentMode !== 'notice') guideMgr.showCoordNoticeAlert(newMsg, '🏢 항기원 전체 공지');
+            state.noticeSeen[globalSeenKey] = newMsg;
+            if (state.currentMode !== 'notice') {
+                guideMgr.showCoordNoticeAlert(newMsg, '🏢 항기원 전체 공지');
+            }
         }
     });
 
@@ -4574,18 +4590,10 @@ init: function() {
 
     // 공지 탭 진입 시 배지 숨기고 읽음 처리 (coord + global 모두)
     clearCoordNoticeBadge: function() {
+        // 배지만 숨김 - state.noticeSeen은 건드리지 않음
+        // (seen 업데이트는 리스너에서만 처리)
         const badge = document.getElementById('coordNoticeBadge');
         if(badge) badge.style.display = 'none';
-        if(state.room) {
-            // 운영부 공지 읽음 처리
-            firebase.database().ref(`courses/${state.room}/coordNotice`).once('value', snap => {
-                localStorage.setItem(`kac_coord_notice_seen_${state.room}`, snap.val() || '');
-            });
-            // 센터 전체 공지 읽음 처리
-            firebase.database().ref('system/globalNotice').once('value', snap => {
-                localStorage.setItem('kac_global_notice_seen', snap.val() || '');
-            });
-        }
     },
 
     // 공지 알림 팝업
