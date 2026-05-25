@@ -628,19 +628,48 @@ forceEnterRoom: async function(room) {
     subjectMgr.init();
     guideMgr.init();
 
-    // [코디 공지 변경 감지] 교육운영 담당자 공지 → 강사 실시간 알림
-    // forceEnterRoom 리스너는 배지 표시만 담당 (팝업은 loadDashboardStats 리스너가 처리)
+    // ── 공지 실시간 리스너 (단일 통합 - 여기서만 처리) ──
+    // coordNotice (운영부 공지)
     firebase.database().ref(`courses/${cleanRoom}/coordNotice`).off();
     firebase.database().ref(`courses/${cleanRoom}/coordNotice`).on('value', snap => {
         if (state.room !== cleanRoom) return;
         const newMsg = snap.val() || '';
         const seenKey = `kac_coord_notice_seen_${cleanRoom}`;
         const lastSeen = localStorage.getItem(seenKey) || '';
-        // 배지만 업데이트 (팝업 중복 방지)
         if (newMsg && newMsg !== lastSeen) {
-            const badge = document.getElementById('coordNoticeBadge');
-            if(badge) badge.style.display = 'inline-block';
+            localStorage.setItem(seenKey, newMsg); // 읽음처리
+            if (state.currentMode !== 'notice') {
+                ui.showCoordNoticeAlert(newMsg, 'coord');
+            } else {
+                // 공지탭 열려있으면 배지만 숨김 (이미 보고있으므로)
+                const badge = document.getElementById('coordNoticeBadge');
+                if(badge) badge.style.display = 'none';
+            }
         }
+        // 대시보드 공지 텍스트 업데이트
+        const el = document.getElementById('dashNoticeAdmin');
+        if (el) el.innerText = newMsg || '등록된 운영부 과정 공지가 없습니다.';
+    });
+
+    // globalNotice (센터 전체 공지)
+    firebase.database().ref('system/globalNotice').off();
+    firebase.database().ref('system/globalNotice').on('value', snap => {
+        if (state.room !== cleanRoom) return;
+        const newMsg = snap.val() || '';
+        const seenKey = 'kac_global_notice_seen';
+        const lastSeen = localStorage.getItem(seenKey) || '';
+        if (newMsg && newMsg !== lastSeen) {
+            localStorage.setItem(seenKey, newMsg);
+            if (state.currentMode !== 'notice') {
+                ui.showCoordNoticeAlert(newMsg, 'global');
+            } else {
+                const badge = document.getElementById('coordNoticeBadge');
+                if(badge) badge.style.display = 'none';
+            }
+        }
+        // 대시보드 공지 텍스트 업데이트
+        const el = document.getElementById('dashNoticeGlobal');
+        if (el) el.innerText = newMsg || '현재 게시된 센터 전체 공지가 없습니다.';
     });
 
     // [금요일 자동 리셋] 차량 신청 명단 자동 초기화 체크
@@ -1719,38 +1748,16 @@ loadDashboardStats: function() {
         const el = document.getElementById('dashNoticeInst');
         if (el) el.innerText = s.val() || "작성된 담임 교수 공지가 없습니다.";
     });
-    refs.coordNotice.on('value', s => {
+    // coordNotice/globalNotice 실시간 감지는 forceEnterRoom에서 통합 처리
+    // 여기서는 대시보드 텍스트 초기값만 표시
+    refs.coordNotice.once('value', s => {
         if (state.room !== room) return;
-        const newMsg = s.val() || '';
         const el = document.getElementById('dashNoticeAdmin');
-        if (el) el.innerText = newMsg || "등록된 운영부 과정 공지가 없습니다.";
-        const seenKey = `kac_coord_notice_seen_${room}`;
-        const lastSeen = localStorage.getItem(seenKey) || '';
-        if (newMsg && newMsg.trim() !== '' && newMsg !== lastSeen) {
-            // 공지탭에 있으면 배지/팝업 없이 즉시 읽음처리만
-            if (state.currentMode === 'notice') {
-                localStorage.setItem(seenKey, newMsg);
-            } else {
-                // 팝업 표시 후 읽음처리 (표시 후에 setItem)
-                ui.showCoordNoticeAlert(newMsg, 'coord');
-                localStorage.setItem(seenKey, newMsg);
-            }
-        }
+        if (el) el.innerText = s.val() || '등록된 운영부 과정 공지가 없습니다.';
     });
-    refs.globalNotice.on('value', s => {
-        const newMsg = s.val() || '';
+    refs.globalNotice.once('value', s => {
         const el = document.getElementById('dashNoticeGlobal');
-        if (el) el.innerText = newMsg || "현재 게시된 센터 전체 공지가 없습니다.";
-        const seenKey = 'kac_global_notice_seen';
-        const lastSeen = localStorage.getItem(seenKey) || '';
-        if (newMsg && newMsg.trim() !== '' && newMsg !== lastSeen) {
-            if (state.currentMode === 'notice') {
-                localStorage.setItem(seenKey, newMsg);
-            } else {
-                ui.showCoordNoticeAlert(newMsg, 'global');
-                localStorage.setItem(seenKey, newMsg);
-            }
-        }
+        if (el) el.innerText = s.val() || '현재 게시된 센터 전체 공지가 없습니다.';
     });
 
     // 4. 교수 성함 실시간 업데이트
