@@ -1100,7 +1100,7 @@ body.modal-open .app-content {
     </div>
 
     <!-- ✅ [복구 완료] 현재 운영 중인 과정 리스트 섹션 -->
-    <div class="section-card" style="background:linear-gradient(135deg,#1e3a8a,#1d4ed8); color:white; padding:16px;">
+    <div class="section-card" style="background:linear-gradient(145deg,#1e40af,#2563eb); color:white; padding:16px;">
         <div class="section-title" style="color:white; margin-bottom:12px;"><i class="fa-solid fa-list-ul"></i> 현재 운영 중인 과정 </div>
         <div id="activeCourseList" style="display:flex; flex-direction:column; gap:8px;">
             <!-- 자바스크립트가 여기에 ROOM A, ROOM C 등의 카드를 채워넣습니다 -->
@@ -1115,7 +1115,7 @@ body.modal-open .app-content {
 
 <!-- [수정] 강사 픽업 통합 현황 테이블 -->
 <div id="pickupStatusView" class="view-card-full" style="display:none; flex-direction:column; gap:12px;">
-    <div class="section-card" style="background:linear-gradient(135deg,#1e3a8a,#1d4ed8); color:white; padding:16px;">
+    <div class="section-card" style="background:linear-gradient(145deg,#1e40af,#2563eb); color:white; padding:16px;">
         <div class="section-title" style="color:white; margin-bottom:12px; justify-content:space-between;">
             <span><i class="fa-solid fa-car-side"></i> 강사 수송 통합 예약 리스트</span>
             <button class="navy-btn" style="width:120px; height:32px; font-size:11px;" onclick="openTransportModal()">
@@ -1137,9 +1137,9 @@ body.modal-open .app-content {
 
       <!-- [신규 뷰 4] 교육생 퇴교차량 통합 현황 -->
       <div id="studentShuttleView" class="view-card-full" style="display:none; flex-direction:column; gap:12px;">
-          <div class="section-card" style="background:linear-gradient(135deg,#1e3a8a,#1d4ed8); color:white; padding:16px;">
+          <div class="section-card" style="background:linear-gradient(145deg,#1e40af,#2563eb); color:white; padding:16px;">
               <div class="section-title" style="color:white; margin-bottom:12px;"><i class="fa-solid fa-bus"></i> 과정별 퇴교차량 신청 총괄</div>
-              <div style="overflow-x: auto; background:rgba(255,255,255,0.95); border-radius:10px; overflow:hidden;">
+              <div style="overflow-x: auto; background:rgba(255,255,255,0.1); border-radius:10px; overflow:hidden; border:1px solid rgba(255,255,255,0.2);">
                   <table class="navy-table" style="background:transparent;">
                       <thead>
                           <tr><th>과정명</th><th>총원</th><th>오송역</th><th>터미널</th><th>공항</th><th>자차</th></tr>
@@ -1162,7 +1162,7 @@ body.modal-open .app-content {
 
 <!-- [신규 뷰 5] 항기원 전체 교육생 통합 관리 페이지 -->
 <div id="allStudentListView" class="view-card-full" style="display:none; flex-direction:column; gap:12px;">
-    <div class="section-card" style="background:linear-gradient(135deg,#1e3a8a,#1d4ed8); color:white; padding:16px; flex: 1; display: flex; flex-direction: column;">
+    <div class="section-card" style="background:linear-gradient(145deg,#1e40af,#2563eb); color:white; padding:16px; flex: 1; display: flex; flex-direction: column;">
         <div class="section-title" style="color:white; margin-bottom:12px; justify-content: space-between; align-items: center;">
             <span><i class="fa-solid fa-users-viewfinder"></i> 항기원 교육생 통합 명단</span>
             <div class="live-badge"><i class="fa-solid fa-sync fa-spin"></i> 실시간</div>
@@ -1179,7 +1179,7 @@ body.modal-open .app-content {
         <!-- 명단 테이블 구역 -->
         <div style="flex: 1; overflow-y: auto; border: 1px solid #f1f5f9; border-radius: 12px;">
             <table class="navy-table" style="min-width: 500px;">
-<thead style="position: sticky; top: 0; z-index: 10; background: #1e3a8a; color:white;">
+<thead style="position: sticky; top: 0; z-index: 10; background: rgba(0,0,0,0.25); color:rgba(255,255,255,0.9);">
     <tr>
         <th class="col-course">과정명</th>
         <th class="col-name">성함</th>
@@ -1298,7 +1298,7 @@ body.modal-open .app-content {
           </div>
 
 <!-- 퇴교 차량 출발 시간 공지 -->
-<div class="section-card" style="background:linear-gradient(135deg,#1e3a8a,#1d4ed8); color:white; padding:16px;">
+<div class="section-card" style="background:linear-gradient(145deg,#1e40af,#2563eb); color:white; padding:16px;">
     <div class="section-title" style="color:white; margin-bottom:12px;">
         <i class="fa-solid fa-bus"></i> 퇴교차량 출발 시간 공지
     </div>
@@ -1306,7 +1306,7 @@ body.modal-open .app-content {
         상태 확인 중...
     </div>
     <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
-        <select id="coord-departure-time" style="flex:1; padding:10px 12px; border-radius:10px; border:none; font-size:15px; font-weight:800; color:#1e3a8a; outline:none; min-width:110px;">
+        <select id="coord-departure-time" style="flex:1; padding:10px 12px; border-radius:10px; border:none; font-size:15px; font-weight:800; color:#1e3a8a; outline:none; min-width:110px; background:rgba(255,255,255,0.85);">
             <option value="">시간 선택</option>
             <option value="13:00">13:00</option><option value="13:30">13:30</option>
             <option value="14:00">14:00</option><option value="14:30">14:30</option>
@@ -1323,12 +1323,12 @@ body.modal-open .app-content {
     </div>
 </div>
 
-<div class="section-card" style="background:linear-gradient(135deg,#1e3a8a,#1d4ed8); color:white; padding:16px;">
+<div class="section-card" style="background:linear-gradient(145deg,#1e40af,#2563eb); color:white; padding:16px;">
     <div class="section-title" style="color:white; margin-bottom:12px;">
         <i class="fa-solid fa-comment-dots"></i> 담당 과정 공지 (해당 과정 교육생 공지)
     </div>
     <textarea id="courseNotice" class="notice-area" oninput="autoGrow(this)" placeholder="공지 내용을 입력하세요..."
-        style="background:rgba(255,255,255,0.95); color:#1e293b; border:none; border-radius:10px; font-size:14px; padding:12px;"></textarea>
+        style="background:rgba(255,255,255,0.88); color:#1e293b; border:none; border-radius:10px; font-size:14px; padding:12px;"></textarea>
     <button class="navy-btn" style="background:#0ea5e9; border:none; box-shadow:0 4px 10px rgba(14,165,233,0.4); margin-top:8px; width:100%;" onclick="saveCourseNotice()">
         <i class="fa-solid fa-paper-plane"></i> 과정 공지 업데이트
     </button>
@@ -1350,12 +1350,12 @@ body.modal-open .app-content {
 </div>
 
 
-          <div class="section-card" style="margin-bottom: 50px; background:linear-gradient(135deg,#1e3a8a,#1d4ed8); color:white; padding:16px;">
+          <div class="section-card" style="margin-bottom: 50px; background:linear-gradient(145deg,#1e40af,#2563eb); color:white; padding:16px;">
               <div class="section-title" style="color:white; margin-bottom:12px; justify-content:space-between;">
                   <span><i class="fa-solid fa-user-clock"></i> 외출/외박 신청자 명단</span>
                   <button class="navy-btn" style="width:140px; height:32px; font-size:12px; background:rgba(255,255,255,0.2); border:1px solid rgba(255,255,255,0.4);" onclick="openOutingLedger()">외출(외박)대장</button>
               </div>
-              <div style="overflow-x: auto; background:rgba(255,255,255,0.95); border-radius:10px; overflow:hidden;">
+              <div style="overflow-x: auto; background:rgba(255,255,255,0.1); border-radius:10px; overflow:hidden; border:1px solid rgba(255,255,255,0.2);">
                   <table class="navy-table" style="background:transparent;">
                       <thead>
                           <tr>
@@ -3433,12 +3433,12 @@ function renderNoticeHistory() {
             const items = Object.entries(data).sort((a,b) => b[0]-a[0]);
 
             const makeCard = ([key, item]) => `
-                <div style="background:rgba(255,255,255,0.95); border:none; border-radius:8px; padding:10px 12px; font-size:13px; color:#1e293b;">
+                <div style="background:rgba(255,255,255,0.15); border:1px solid rgba(255,255,255,0.25); border-radius:8px; padding:10px 12px; font-size:13px; color:white;">
                     <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px;">
-                        <span style="color:#334155; font-weight:600; line-height:1.5; flex:1; white-space:pre-wrap;">${item.text}</span>
+                        <span style="color:rgba(255,255,255,0.9); font-weight:600; line-height:1.5; flex:1; white-space:pre-wrap;">${item.text}</span>
                         <div style="display:flex; flex-direction:column; align-items:flex-end; gap:4px; flex-shrink:0;">
-                            <span style="color:#94a3b8; font-size:11px; white-space:nowrap;">${item.timeStr}</span>
-                            <button onclick="reapplyNotice('${key}')" style="font-size:10px; background:#eff6ff; color:#3b82f6; border:1px solid #bfdbfe; border-radius:4px; padding:2px 6px; cursor:pointer;">재발송</button>
+                            <span style="color:rgba(255,255,255,0.65); font-size:11px; white-space:nowrap;">${item.timeStr}</span>
+                            <button onclick="reapplyNotice('${key}')" style="font-size:10px; background:rgba(255,255,255,0.2); color:white; border:1px solid rgba(255,255,255,0.35); border-radius:4px; padding:2px 6px; cursor:pointer;">재발송</button>
                         </div>
                     </div>
                 </div>`;
@@ -3454,7 +3454,7 @@ function renderNoticeHistory() {
                     ${rest.map(makeCard).join('')}
                 </div>
                 <button onclick="toggleNoticeHistory()" id="noticeHistoryToggleBtn"
-                    style="width:100%; margin-top:6px; padding:7px; background:#f1f5f9; border:1px solid #e2e8f0; border-radius:8px; font-size:12px; color:#64748b; cursor:pointer; font-weight:600;">
+                    style="width:100%; margin-top:6px; padding:7px; background:rgba(255,255,255,0.15); border:1px solid rgba(255,255,255,0.25); border-radius:8px; font-size:12px; color:rgba(255,255,255,0.85); cursor:pointer; font-weight:600;">
                     이전 이력 ${rest.length}건 더 보기 ▼
                 </button>`;
             }
