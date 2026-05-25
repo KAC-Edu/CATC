@@ -5113,9 +5113,7 @@ flatpickr("#setup-period-range", {
     showMonths: 2,         
     closeOnSelect: false,  
     disableMobile: "true",
-    defaultDate: new Date(),
     onReady: function(selectedDates, dateStr, instance) {
-        // 가로폭을 820px로 고정하여 양쪽 달력 균형 확보
         instance.calendarContainer.style.width = "820px"; 
     },
     onChange: function(selectedDates, dateStr, instance) {
@@ -5192,19 +5190,23 @@ loadCurrentSettings: function() {
         const rangeInput = document.getElementById('setup-period-range');
         const todayStr = typeof getTodayString === 'function' ? getTodayString() : new Date().toISOString().split('T')[0];
 
-        if(s.period && s.period.includes(" ~ ")) {
-            // flatpickr setDate로 정확히 반영 (rangeInput.value만 설정하면 flatpickr가 무시함)
-            rangeInput.value = s.period;
-            const parts = s.period.split(" ~ ");
-            if(parts.length === 2 && rangeInput._flatpickr) {
-                rangeInput._flatpickr.setDate([parts[0].trim(), parts[1].trim()], false);
+        // flatpickr setDate - requestAnimationFrame으로 렌더링 후 정확히 반영
+        const applyDate = () => {
+            const fp = rangeInput._flatpickr;
+            if (!fp) return;
+            if (s.period && s.period.includes(" ~ ")) {
+                const parts = s.period.split(" ~ ");
+                if (parts.length === 2) {
+                    fp.setDate([parts[0].trim(), parts[1].trim()], false);
+                    rangeInput.value = s.period;
+                }
+            } else {
+                fp.setDate([todayStr, todayStr], false);
+                rangeInput.value = `${todayStr} ~ ${todayStr}`;
             }
-        } else {
-            rangeInput.value = `${todayStr} ~ ${todayStr}`;
-            if(rangeInput._flatpickr) {
-                rangeInput._flatpickr.setDate([todayStr, todayStr], false);
-            }
-        }
+        };
+        // 두 번 시도 (렌더링 타이밍 보장)
+        requestAnimationFrame(() => { applyDate(); setTimeout(applyDate, 50); });
         
         // 5. menuFeatures 체크박스 상태 로드
         // 기본값: 차량신청(shuttle) + 외출/외박(adminAction)만 ON, 나머지는 OFF
