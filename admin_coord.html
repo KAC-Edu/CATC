@@ -1100,8 +1100,8 @@ body.modal-open .app-content {
     </div>
 
     <!-- ✅ [복구 완료] 현재 운영 중인 과정 리스트 섹션 -->
-    <div class="section-card" style="background:linear-gradient(145deg,#1e40af,#2563eb); color:white; padding:16px;">
-        <div class="section-title" style="color:white; margin-bottom:12px;"><i class="fa-solid fa-list-ul"></i> 현재 운영 중인 과정 </div>
+    <div class="section-card" style="background:white; padding:16px; border:1px solid #e2e8f0;">
+        <div class="section-title" style="color:#1e293b; margin-bottom:12px;"><i class="fa-solid fa-list-ul"></i> 현재 운영 중인 과정 </div>
         <div id="activeCourseList" style="display:flex; flex-direction:column; gap:8px;">
             <!-- 자바스크립트가 여기에 ROOM A, ROOM C 등의 카드를 채워넣습니다 -->
         </div>
@@ -1115,8 +1115,8 @@ body.modal-open .app-content {
 
 <!-- [수정] 강사 픽업 통합 현황 테이블 -->
 <div id="pickupStatusView" class="view-card-full" style="display:none; flex-direction:column; gap:12px;">
-    <div class="section-card" style="background:linear-gradient(145deg,#1e40af,#2563eb); color:white; padding:16px;">
-        <div class="section-title" style="color:white; margin-bottom:12px; justify-content:space-between;">
+    <div class="section-card" style="background:white; padding:16px; border:1px solid #e2e8f0;">
+        <div class="section-title" style="color:#1e293b; margin-bottom:12px; justify-content:space-between;">
             <span><i class="fa-solid fa-car-side"></i> 강사 수송 통합 예약 리스트</span>
             <button class="navy-btn" style="width:120px; height:32px; font-size:11px;" onclick="openTransportModal()">
                 <i class="fa-solid fa-plus"></i> 수송 추가요청
@@ -1137,8 +1137,8 @@ body.modal-open .app-content {
 
       <!-- [신규 뷰 4] 교육생 퇴교차량 통합 현황 -->
       <div id="studentShuttleView" class="view-card-full" style="display:none; flex-direction:column; gap:12px;">
-          <div class="section-card" style="background:linear-gradient(145deg,#1e40af,#2563eb); color:white; padding:16px;">
-              <div class="section-title" style="color:white; margin-bottom:12px;"><i class="fa-solid fa-bus"></i> 과정별 퇴교차량 신청 총괄</div>
+          <div class="section-card" style="background:white; padding:16px; border:1px solid #e2e8f0;">
+              <div class="section-title" style="color:#1e293b; margin-bottom:12px;"><i class="fa-solid fa-bus"></i> 과정별 퇴교차량 신청 총괄</div>
               <div style="overflow-x: auto; background:rgba(255,255,255,0.1); border-radius:10px; overflow:hidden; border:1px solid rgba(255,255,255,0.2);">
                   <table class="navy-table" style="background:transparent;">
                       <thead>
@@ -1162,7 +1162,7 @@ body.modal-open .app-content {
 
 <!-- [신규 뷰 5] 항기원 전체 교육생 통합 관리 페이지 -->
 <div id="allStudentListView" class="view-card-full" style="display:none; flex-direction:column; gap:12px;">
-    <div class="section-card" style="background:linear-gradient(145deg,#1e40af,#2563eb); color:white; padding:16px; flex: 1; display: flex; flex-direction: column;">
+    <div class="section-card" style="background:white; padding:16px; border:1px solid #e2e8f0; flex: 1; display: flex; flex-direction: column;">
         <div class="section-title" style="color:white; margin-bottom:12px; justify-content: space-between; align-items: center;">
             <span><i class="fa-solid fa-users-viewfinder"></i> 항기원 교육생 통합 명단</span>
             <div class="live-badge"><i class="fa-solid fa-sync fa-spin"></i> 실시간</div>
@@ -1298,8 +1298,8 @@ body.modal-open .app-content {
           </div>
 
 <!-- 퇴교 차량 출발 시간 공지 -->
-<div class="section-card" style="background:linear-gradient(145deg,#1e40af,#2563eb); color:white; padding:16px;">
-    <div class="section-title" style="color:white; margin-bottom:12px;">
+<div class="section-card" style="background:white; padding:16px; border:1px solid #e2e8f0;">
+    <div class="section-title" style="color:#1e293b; margin-bottom:12px;">
         <i class="fa-solid fa-bus"></i> 퇴교차량 출발 시간 공지
     </div>
     <div id="coord-departure-status" style="font-size:12px; font-weight:700; color:rgba(255,255,255,0.7); margin-bottom:12px;">
@@ -1323,12 +1323,13 @@ body.modal-open .app-content {
     </div>
 </div>
 
-<div class="section-card" style="background:linear-gradient(145deg,#1e40af,#2563eb); color:white; padding:16px;">
-    <div class="section-title" style="color:white; margin-bottom:12px;">
+<div class="section-card" style="background:white; padding:0; border:1px solid #e2e8f0; overflow:hidden;">
+    <div style="background:#1e40af; color:white; padding:12px 16px; font-size:14px; font-weight:800; display:flex; align-items:center; gap:8px;">
         <i class="fa-solid fa-comment-dots"></i> 담당 과정 공지 (해당 과정 교육생 공지)
     </div>
+    <div style="padding:16px;">
     <textarea id="courseNotice" class="notice-area" oninput="autoGrow(this)" placeholder="공지 내용을 입력하세요..."
-        style="background:rgba(255,255,255,0.88); color:#1e293b; border:none; border-radius:10px; font-size:14px; padding:12px;"></textarea>
+        style="background:#f8fafc; color:#1e293b; border:1.5px solid #e2e8f0; border-radius:10px; font-size:14px; padding:12px;"></textarea>
     <button class="navy-btn" style="background:#10b981; border:none; box-shadow:0 4px 10px rgba(16,185,129,0.4); margin-top:8px; width:100%;" onclick="saveCourseNotice()">
         <i class="fa-solid fa-paper-plane"></i> 과정 공지 업데이트
     </button>
@@ -1336,22 +1337,23 @@ body.modal-open .app-content {
     <!-- 공지 발송 이력 -->
     <div style="margin-top:14px; border-top:1px solid rgba(255,255,255,0.2); padding-top:12px;">
         <div style="margin-bottom:6px;">
-            <span style="font-size:12px; font-weight:700; color:rgba(255,255,255,0.7);">
+            <span style="font-size:12px; font-weight:700; color:#64748b;">
                 <i class="fa-solid fa-clock-rotate-left"></i> 마지막 발송
             </span>
         </div>
         <div id="noticeHistoryList" style="max-height:200px; overflow-y:auto; display:flex; flex-direction:column; gap:6px;">
-            <div style="text-align:center; color:rgba(255,255,255,0.5); font-size:12px; padding:16px 0;">발송 이력이 없습니다.</div>
+            <div style="text-align:center; color:#94a3b8; font-size:12px; padding:16px 0;">발송 이력이 없습니다.</div>
         </div>
     </div>
 </div>
 
 
-          <div class="section-card" style="margin-bottom: 50px; background:linear-gradient(145deg,#1e40af,#2563eb); color:white; padding:16px;">
-              <div class="section-title" style="color:white; margin-bottom:12px; justify-content:space-between;">
-                  <span><i class="fa-solid fa-user-clock"></i> 외출/외박 신청자 명단</span>
-                  <button class="navy-btn" style="width:140px; height:32px; font-size:12px; background:rgba(255,255,255,0.2); border:1px solid rgba(255,255,255,0.4);" onclick="openOutingLedger()">외출(외박)대장</button>
+          <div class="section-card" style="margin-bottom: 50px; background:white; padding:0; border:1px solid #e2e8f0; overflow:hidden;">
+              <div style="background:#1e40af; color:white; padding:12px 16px; font-size:14px; font-weight:800; display:flex; align-items:center; justify-content:space-between;">
+                  <span style="display:flex; align-items:center; gap:8px;"><i class="fa-solid fa-user-clock"></i> 외출/외박 신청자 명단</span>
+                  <button class="navy-btn" style="width:110px; height:30px; font-size:11px; background:rgba(255,255,255,0.2); border:1px solid rgba(255,255,255,0.4);" onclick="openOutingLedger()">외출(외박)대장</button>
               </div>
+              <div style="padding:12px 16px;">
               <div style="overflow-x: auto; background:rgba(255,255,255,0.1); border-radius:10px; overflow:hidden; border:1px solid rgba(255,255,255,0.2);">
                   <table class="navy-table" style="background:transparent;">
                       <thead>
@@ -3424,7 +3426,7 @@ function renderNoticeHistory() {
         .once('value', snap => {
             const data = snap.val();
             if(!data) {
-                listEl.innerHTML = '<span style="color:rgba(255,255,255,0.4); font-size:12px;">발송 이력 없음</span>';
+                listEl.innerHTML = '<span style="color:#94a3b8; font-size:12px;">발송 이력 없음</span>';
                 return;
             }
             const items = Object.entries(data).sort((a,b) => b[0]-a[0]);
@@ -3432,8 +3434,8 @@ function renderNoticeHistory() {
             // 최신 1건만 흰색 글씨로 표시
             listEl.innerHTML = `
                 <div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
-                    <span style="color:rgba(255,255,255,0.88); font-size:13px; font-weight:600; flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${item.text}</span>
-                    <span style="color:rgba(255,255,255,0.5); font-size:11px; white-space:nowrap; flex-shrink:0;">${item.timeStr}</span>
+                    <span style="color:#334155; font-size:13px; font-weight:600; flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${item.text}</span>
+                    <span style="color:#94a3b8; font-size:11px; white-space:nowrap; flex-shrink:0;">${item.timeStr}</span>
                 </div>`;
         });
 }

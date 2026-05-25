@@ -224,17 +224,14 @@ loadInitialData: function() {
     // 2. [보안 핵심] 새로고침 시 자동 복구 로직 수정
     const lastRoom = localStorage.getItem('kac_last_room');
 
+    // 항상 현황판 먼저 표시 (새로고침 시 "확인 중..." 화면 방지)
+    ui.showWaitingRoom();
+
     if (lastRoom && lastRoom !== "null" && lastRoom !== "") {
-        // [중요 수정] forceEnterRoom을 바로 부르면 데이터 리스너가 즉시 꽂혀서 내용이 보입니다.
-        // 대신 switchRoomAttempt를 호출하여 '내 세션ID가 주인인지' 먼저 확인하고, 
-        // 주인이 아니면 비밀번호 입력창을 띄우도록 유도합니다.
-        console.log("기존 접속 강의실 보안 검증 및 복구 시도:", lastRoom);
-        
-        // ★ 핵심 변경: forceEnterRoom -> switchRoomAttempt
-        this.switchRoomAttempt(lastRoom.toUpperCase());
-    } else {
-        // 이전에 들어간 방 기록이 없으면 대기실(전체 현황판) 표시
-        ui.showWaitingRoom();
+        // 현황판 표시 후 백그라운드에서 방 복구 시도
+        setTimeout(() => {
+            this.switchRoomAttempt(lastRoom.toUpperCase());
+        }, 100);
     }
 
     // 3. 기본 퀴즈 데이터셋 설정
