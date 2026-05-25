@@ -356,6 +356,14 @@ switchRoomAttempt: async function(newRoom, silent = false) {
     }
 
     // (B) 내가 주인이거나, 옵저버이거나, 혹은 방이 비어있는 경우 -> 입장 허용
+    // silent(새로고침)일 때는 자동 입장 안 하고 현황판 유지
+    if (silent) {
+        ui.showWaitingRoom();
+        const sel = document.getElementById('roomSelect');
+        if(sel) sel.value = '';
+        localStorage.removeItem('kac_last_room');
+        return;
+    }
     console.log(`[인증 성공] Room ${newRoom} 데이터 로드를 시작합니다.`);
     this.forceEnterRoom(newRoom);
     
@@ -3930,16 +3938,11 @@ resetShuttleRequests: function() {
 
 // [강사 플랫폼: 로고 클릭 시 모든 정보를 초기화하고 현황판으로 이동]
     goHome: function() {
-        if(confirm("현재 강의실에서 나가 초기 현황판 화면으로 이동하시겠습니까?")) {
-            // 1. 로컬 저장소의 모든 방 접속 정보 삭제 (초기화 핵심)
-            localStorage.removeItem('kac_last_room');
-            localStorage.removeItem('kac_last_mode');
-            state.room = null;
-
-            // 2. 주소창의 파라미터를 제거하고 깨끗하게 새로고침
-            // 이렇게 하면 다시 접속했을 때 아무 방도 선택되지 않은 초기 상태가 됩니다.
-            location.href = 'admin.html';
-        }
+        // confirm 없이 바로 현황판으로 이동
+        localStorage.removeItem('kac_last_room');
+        localStorage.removeItem('kac_last_mode');
+        state.room = null;
+        location.href = 'admin.html';
     },
 
 
