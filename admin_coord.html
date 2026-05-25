@@ -1298,15 +1298,15 @@ body.modal-open .app-content {
           </div>
 
 <!-- 퇴교 차량 출발 시간 공지 -->
-<div class="section-card" style="background:white; padding:16px; border:1px solid #e2e8f0;">
-    <div class="section-title" style="color:#1e293b; margin-bottom:12px;">
+<div class="section-card" style="background:linear-gradient(135deg,#1e3a8a,#1d4ed8); color:white; padding:16px;">
+    <div class="section-title" style="color:white; margin-bottom:12px;">
         <i class="fa-solid fa-bus"></i> 퇴교차량 출발 시간 공지
     </div>
     <div id="coord-departure-status" style="font-size:12px; font-weight:700; color:rgba(255,255,255,0.7); margin-bottom:12px;">
         상태 확인 중...
     </div>
     <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
-        <select id="coord-departure-time" style="flex:1; padding:10px 12px; border-radius:10px; border:none; font-size:15px; font-weight:800; color:#1e3a8a; outline:none; min-width:110px; background:rgba(255,255,255,0.85);">
+        <select id="coord-departure-time" style="flex:1; padding:10px 12px; border-radius:10px; border:none; font-size:15px; font-weight:800; color:#1e3a8a; outline:none; min-width:110px; background:rgba(255,255,255,0.9);">
             <option value="">시간 선택</option>
             <option value="13:00">13:00</option><option value="13:30">13:30</option>
             <option value="14:00">14:00</option><option value="14:30">14:30</option>
@@ -1328,23 +1328,16 @@ body.modal-open .app-content {
         <i class="fa-solid fa-comment-dots"></i> 담당 과정 공지 (해당 과정 교육생 공지)
     </div>
     <div style="padding:16px;">
-    <textarea id="courseNotice" class="notice-area" oninput="autoGrow(this)" placeholder="공지 내용을 입력하세요..."
-        style="background:#f8fafc; color:#1e293b; border:1.5px solid #e2e8f0; border-radius:10px; font-size:14px; padding:12px;"></textarea>
+    <textarea id="courseNotice" class="notice-area" oninput="onNoticeInput(this)"
+        onclick="clearLastNoticePlaceholder(this)"
+        style="background:#eff6ff; color:#1e40af; border:1.5px solid #bfdbfe; border-radius:10px; font-size:14px; padding:12px; font-style:italic;"
+        data-placeholder="true"></textarea>
     <button class="navy-btn" style="background:#10b981; border:none; box-shadow:0 4px 10px rgba(16,185,129,0.4); margin-top:8px; width:100%;" onclick="saveCourseNotice()">
         <i class="fa-solid fa-paper-plane"></i> 과정 공지 업데이트
     </button>
 
-    <!-- 공지 발송 이력 -->
-    <div style="margin-top:14px; border-top:1px solid rgba(255,255,255,0.2); padding-top:12px;">
-        <div style="margin-bottom:6px;">
-            <span style="font-size:12px; font-weight:700; color:#64748b;">
-                <i class="fa-solid fa-clock-rotate-left"></i> 마지막 발송
-            </span>
-        </div>
-        <div id="noticeHistoryList" style="max-height:200px; overflow-y:auto; display:flex; flex-direction:column; gap:6px;">
-            <div style="text-align:center; color:#94a3b8; font-size:12px; padding:16px 0;">발송 이력이 없습니다.</div>
-        </div>
-    </div>
+    <!-- 마지막 발송 이력 (숨김 - textarea에 표시) -->
+    <div id="noticeHistoryList" style="display:none;"></div>
 </div>
 
 
@@ -3408,6 +3401,11 @@ function saveCourseNotice() {
             timestamp: ts,
             timeStr: now.toLocaleString('ko-KR', {month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'})
         });
+        // 발송 후 textarea placeholder 모드로 리셋
+        const ta = document.getElementById('courseNotice');
+        if(ta) {
+            ta.dataset.placeholder = 'true';
+        }
         renderNoticeHistory();
         alert("✅ 공지가 교육생 플랫폼에 즉시 반영되었습니다.");
     }).catch((err) => {
@@ -3418,26 +3416,58 @@ function saveCourseNotice() {
 // 공지 이력 렌더링
 function renderNoticeHistory() {
     if(!currentRID) return;
-    const listEl = document.getElementById('noticeHistoryList');
-    if(!listEl) return;
+    const textarea = document.getElementById('courseNotice');
+    if(!textarea) return;
 
     firebase.database().ref(`courses/${currentRID}/coordNoticeHistory`)
         .orderByKey().limitToLast(20)
         .once('value', snap => {
             const data = snap.val();
             if(!data) {
-                listEl.innerHTML = '<span style="color:#94a3b8; font-size:12px;">발송 이력 없음</span>';
+                if(textarea.dataset.placeholder !== 'false') {
+                    textarea.value = '';
+                    textarea.placeholder = '공지 내용을 입력하세요...';
+                }
                 return;
             }
             const items = Object.entries(data).sort((a,b) => b[0]-a[0]);
-            const [key, item] = items[0];
-            // 최신 1건만 흰색 글씨로 표시
-            listEl.innerHTML = `
-                <div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
-                    <span style="color:#334155; font-size:13px; font-weight:600; flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${item.text}</span>
-                    <span style="color:#94a3b8; font-size:11px; white-space:nowrap; flex-shrink:0;">${item.timeStr}</span>
-                </div>`;
+            const item = items[0][1];
+
+            // 현재 입력 중이 아닐 때만 마지막 공지를 파란색으로 표시
+            if(textarea.dataset.placeholder !== 'false') {
+                textarea.dataset.placeholder = 'true';
+                textarea.value = item.text;
+                textarea.style.color = '#1e40af';
+                textarea.style.fontStyle = 'italic';
+                textarea.style.background = '#eff6ff';
+                textarea.style.borderColor = '#bfdbfe';
+            }
         });
+}
+
+// textarea 클릭 시 placeholder 초기화 (입력 모드)
+function clearLastNoticePlaceholder(el) {
+    if(el.dataset.placeholder === 'true') {
+        el.dataset.placeholder = 'false';
+        el.value = '';
+        el.style.color = '#1e293b';
+        el.style.fontStyle = 'normal';
+        el.style.background = '#f8fafc';
+        el.style.borderColor = '#e2e8f0';
+        el.placeholder = '공지 내용을 입력하세요...';
+    }
+}
+
+// 입력 시 스타일 정상화
+function onNoticeInput(el) {
+    if(el.dataset.placeholder === 'true') {
+        el.dataset.placeholder = 'false';
+        el.style.color = '#1e293b';
+        el.style.fontStyle = 'normal';
+        el.style.background = '#f8fafc';
+        el.style.borderColor = '#e2e8f0';
+    }
+    autoGrow(el);
 }
 
 // 이력에서 재발송
