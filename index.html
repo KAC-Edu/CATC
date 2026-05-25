@@ -598,10 +598,18 @@
         <div id="shuttleSelectionArea">
             <p style="font-size:12px; color:#94a3b8; margin-bottom:15px; text-align: center;">이동 수단을 선택해 주세요.</p>
             <div style="display:flex; flex-direction:column; gap:10px;">
-                <button class="quiz-opt-btn shuttle-btn" onclick="selectShuttle('car', '자차(개별이동)')" style="justify-content: center; height:55px; font-size:17px; background:#f1f5f9; border-color:#e2e8f0; color:#64748b;">자차 (개별이동)</button>
-                <button class="quiz-opt-btn shuttle-btn" onclick="selectShuttle('osong', '오송역')" style="justify-content: center; height:55px; font-size:17px; border-color:#fca5a5; color:#b91c1c;">오송역</button>
-                <button class="quiz-opt-btn shuttle-btn" onclick="selectShuttle('terminal', '청주터미널')" style="justify-content: center; height:55px; font-size:17px; border-color:#93c5fd; color:#1e40af;">청주터미널</button>
-                <button class="quiz-opt-btn shuttle-btn" onclick="selectShuttle('airport', '청주공항')" style="justify-content: center; height:55px; font-size:17px; border-color:#86efac; color:#166534;">청주국제공항</button>
+                <button class="quiz-opt-btn shuttle-btn" onclick="selectShuttle('car', '자차(개별이동)')" style="justify-content:center; height:60px; font-size:16px; background:#f1f5f9; border-color:#e2e8f0; color:#64748b; gap:8px; flex-direction:column;">
+                    <span style="font-size:22px;">🚗</span><span>자차 (개별이동)</span>
+                </button>
+                <button class="quiz-opt-btn shuttle-btn" onclick="selectShuttle('osong', '오송역')" style="justify-content:center; height:60px; font-size:16px; border-color:#fca5a5; color:#b91c1c; gap:8px; flex-direction:column;">
+                    <span style="font-size:22px;">🚄</span><span>오송역</span>
+                </button>
+                <button class="quiz-opt-btn shuttle-btn" onclick="selectShuttle('terminal', '청주터미널')" style="justify-content:center; height:60px; font-size:16px; border-color:#93c5fd; color:#1e40af; gap:8px; flex-direction:column;">
+                    <span style="font-size:22px;">🚌</span><span>청주터미널</span>
+                </button>
+                <button class="quiz-opt-btn shuttle-btn" onclick="selectShuttle('airport', '청주공항')" style="justify-content:center; height:60px; font-size:16px; border-color:#86efac; color:#166534; gap:8px; flex-direction:column;">
+                    <span style="font-size:22px;">✈️</span><span>청주국제공항</span>
+                </button>
             </div>
         </div>
 
@@ -701,7 +709,7 @@
                     🌙 외박 — 수업 종료 후 출발, 익일 08:00 복귀 기준
                 </div>
                 <div style="display:flex; align-items:center; justify-content:space-between;">
-                    <label style="font-size:13px; font-weight:800; color:#64748b;">외출 날짜</label>
+                    <label style="font-size:13px; font-weight:800; color:#64748b;">외박 날짜</label>
                     <input type="date" id="returnDate" style="width:60%; padding:10px; border:1.5px solid #fca5a5; border-radius:8px; font-size:14px; font-weight:800; outline:none;">
                 </div>
                 <div style="display:flex; justify-content:space-between; font-size:12px; font-weight:700; color:#64748b;">
@@ -726,7 +734,7 @@
 
             <div>
                 <label style="font-size:11px; font-weight:800; color:#64748b;">비상 연락처</label>
-                <input type="tel" id="fullPhone" placeholder="010-0000-0000" style="width:100%; padding:12px; border:1.5px solid #e2e8f0; border-radius:10px; outline:none; font-size:15px;">
+                <input type="tel" id="fullPhone" placeholder="010-0000-0000" maxlength="13" oninput="formatPhoneInput(this)" style="width:100%; padding:12px; border:1.5px solid #e2e8f0; border-radius:10px; outline:none; font-size:15px;">
             </div>
 
 
@@ -745,11 +753,12 @@
 <!-- 석식 제외 체크박스 추가 -->
             <div style="background: #fdf2f2; padding: 12px; border-radius: 12px; border: 1px solid #fee2e2; margin-top: 5px;">
                 <label style="display:flex; align-items:center; gap:10px; cursor:pointer;">
-                    <input type="checkbox" id="skipDinner" style="width:20px; height:20px; accent-color: #ef4444;">
+                    <input type="checkbox" id="skipDinner" style="width:20px; height:20px; accent-color: #ef4444;" onchange="checkDinnerTime(this)">
                     <span style="font-size:15px; font-weight:800; color:#b91c1c;">오늘 저녁 식사를 하지 않습니다.</span>
                 </label>
                 <p style="font-size:11px; color:#ef4444; margin: 8px 0 0 30px; font-weight: 600;">
                     ※ 16:00 이후에는 변경이 불가합니다.
+                    <span id="dinnerClosedMsg" style="display:none; color:#ef4444; font-weight:800; font-size:12px; display:block; margin-top:4px;">🚫 16시 이후 신청 마감 — 식당(☎ 내선 123)에 직접 연락 바랍니다.</span>
                 </p>
             </div>
 
@@ -2243,6 +2252,12 @@ async function submitAdminAction() {
 
         alert("✅ 행정 신청서가 정상적으로 접수되었습니다.");
         document.getElementById('adminActionModal').style.display = 'none';
+        // 복귀 알림 시스템 시작
+        if (selectedAdminType === 'outing') {
+            startOutingReturnAlerts();
+        } else if (selectedAdminType === 'overnight') {
+            startOvernightReturnAlerts();
+        }
 
     } catch (e) {
         console.error(e);
@@ -2285,8 +2300,105 @@ async function cancelAdminAction() {
 
 
 
+// ── 연락처 하이픈 자동 포맷 ──
+function formatPhoneInput(el) {
+    let v = el.value.replace(/\D/g, '');
+    if (v.length <= 3) el.value = v;
+    else if (v.length <= 7) el.value = v.slice(0,3) + '-' + v.slice(3);
+    else el.value = v.slice(0,3) + '-' + v.slice(3,7) + '-' + v.slice(7,11);
+}
+
+// ── 석식 16시 이후 비활성화 ──
+function checkDinnerTime(cb) {
+    const now = new Date();
+    const closed = now.getHours() >= 16;
+    const msgEl = document.getElementById('dinnerClosedMsg');
+    if (closed) {
+        cb.checked = false;
+        cb.disabled = true;
+        if (msgEl) msgEl.style.display = 'block';
+    } else {
+        if (msgEl) msgEl.style.display = 'none';
+    }
+}
+// 페이지 로드 시 석식 시간 체크
+(function initDinnerCheck() {
+    const now = new Date();
+    if (now.getHours() >= 16) {
+        const cb = document.getElementById('skipDinner');
+        const msgEl = document.getElementById('dinnerClosedMsg');
+        if (cb) { cb.disabled = true; cb.checked = false; }
+        if (msgEl) msgEl.style.display = 'block';
+    }
+})();
+
+// ── 복귀 알림 시스템 ──
+let _returnAlertInterval = null;
+let _returnAlertCount = 0;
+
+function stopReturnAlerts() {
+    if (_returnAlertInterval) {
+        clearInterval(_returnAlertInterval);
+        _returnAlertInterval = null;
+        _returnAlertCount = 0;
+    }
+}
+
+function triggerReturnAlert(msg) {
+    // 진동
+    if (navigator.vibrate) navigator.vibrate([800, 200, 800, 200, 800]);
+    // 소리
+    try {
+        const audio = new Audio('timer.mp3');
+        audio.play().catch(() => {});
+    } catch(e) {}
+    // 팝업
+    const overlay = document.getElementById('returnAlertOverlay');
+    const msgEl = document.getElementById('returnAlertMsg');
+    if (overlay) overlay.style.display = 'flex';
+    if (msgEl) msgEl.innerText = msg;
+}
+
+function startOutingReturnAlerts(endTime) {
+    // 외출: 22시 이후 5분 간격 반복 알림
+    stopReturnAlerts();
+    _returnAlertInterval = setInterval(() => {
+        // 복귀 완료됐으면 중단
+        const doneEl = document.getElementById('returnCompletedIndicator');
+        if (doneEl && doneEl.style.display !== 'none') { stopReturnAlerts(); return; }
+
+        const now = new Date();
+        const h = now.getHours(), m = now.getMinutes();
+        if (h >= 22) {
+            triggerReturnAlert('🚨 외출 복귀 시간 초과!
+지금 바로 복귀 완료 버튼을 눌러주세요.');
+        }
+    }, 5 * 60 * 1000); // 5분마다
+}
+
+function startOvernightReturnAlerts() {
+    // 외박: 다음날 8시10분부터 5분 간격 3번
+    stopReturnAlerts();
+    _returnAlertCount = 0;
+    _returnAlertInterval = setInterval(() => {
+        const doneEl = document.getElementById('returnCompletedIndicator');
+        if (doneEl && doneEl.style.display !== 'none') { stopReturnAlerts(); return; }
+        if (_returnAlertCount >= 3) { stopReturnAlerts(); return; }
+
+        const now = new Date();
+        const h = now.getHours(), m = now.getMinutes();
+        // 다음날 8:10 이후
+        if (h > 8 || (h === 8 && m >= 10)) {
+            _returnAlertCount++;
+            triggerReturnAlert(`🚨 외박 복귀 확인 (${_returnAlertCount}/3)
+복귀 완료 보고 버튼을 눌러주세요!`);
+        }
+    }, 5 * 60 * 1000);
+}
+
 // 복귀 완료 보고 처리
 async function confirmReturnAction() {
+    stopReturnAlerts(); // 복귀 완료 시 알림 중단
     if(!confirm("현 시각부로 강의실(생활관)에 복귀하셨습니까?")) return;
     const uToken = localStorage.getItem('uToken');
     const today = getTodayString();
@@ -3027,6 +3139,22 @@ if (imageContainer && mealImg) {
     </div>
 </div>
 
+
+<!-- 복귀 완료 알림 팝업 -->
+<div id="returnAlertOverlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:99999; align-items:center; justify-content:center; flex-direction:column; gap:20px;">
+    <div style="background:#fff; border-radius:20px; padding:30px 24px; max-width:320px; width:90%; text-align:center; box-shadow:0 20px 60px rgba(0,0,0,0.5);">
+        <div style="font-size:48px; margin-bottom:12px;">🚨</div>
+        <div id="returnAlertMsg" style="font-size:16px; font-weight:800; color:#dc2626; line-height:1.6; white-space:pre-line; margin-bottom:20px;"></div>
+        <button onclick="document.getElementById('returnAlertOverlay').style.display='none'; openAdminAction();"
+            style="width:100%; padding:14px; background:#10b981; color:#fff; border:none; border-radius:12px; font-size:16px; font-weight:900; cursor:pointer;">
+            ✅ 지금 복귀 완료 보고하기
+        </button>
+        <button onclick="document.getElementById('returnAlertOverlay').style.display='none';"
+            style="width:100%; padding:10px; background:#f1f5f9; color:#64748b; border:none; border-radius:12px; font-size:13px; font-weight:700; cursor:pointer; margin-top:8px;">
+            닫기
+        </button>
+    </div>
+</div>
 
 </body>
 </html>
