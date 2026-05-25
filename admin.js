@@ -3283,8 +3283,8 @@ function renderAdminList(todayData, yesterdayData) {
                     <td>${count++}</td>
                     <td>${datePrefix}${typeNm}</td>
                     <td style="font-weight:bold;">${item.name}</td>
-                    <td>${item.phone}</td>
-                    <td style="color:#94a3b8; font-size:13px;">${timeStr}</td>
+                    <td style="white-space:nowrap;">${item.phone}</td>
+                    <td style="color:#94a3b8; font-size:13px; white-space:nowrap;">${timeStr}</td>
                     <td style="text-align:center;">${returnedBadge}</td>
                     <td style="text-align:center;">${callBtnHtml}</td>
                     <td>

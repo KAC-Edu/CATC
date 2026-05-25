@@ -727,28 +727,42 @@
 
 <!-- [신규] 외출/외박 현황 섹션 -->
 <div id="view-admin-action" style="display:none; width:100%; flex-direction:column; align-items:center;">
-    <div class="view-header">
-        <h1><i class="fa-solid fa-person-walking-arrow-right"></i> 외출·외박 신청 현황 <span class="header-room-badge room-badge-global"></span></h1>
-        <p>익일 오전 09:00까지 명단이 유지됩니다.</p>
-    </div>
-    <div style="display:flex; justify-content:flex-end; width:100%; max-width:1100px; margin-bottom:10px; gap:10px;">
+    <!-- 헤더 + 전체호출 버튼 한 줄 -->
+    <div style="display:flex; align-items:center; justify-content:space-between; width:100%; max-width:1100px; padding:20px 0 12px;">
+        <div>
+            <h1 style="margin:0; font-size:22px; font-weight:900; color:#1e293b;">
+                <i class="fa-solid fa-person-walking-arrow-right" style="color:#3b82f6;"></i> 외출·외박 신청 현황
+                <span class="header-room-badge room-badge-global"></span>
+            </h1>
+            <p style="margin:4px 0 0; font-size:13px; color:#94a3b8;">익일 오전 09:00까지 명단이 유지됩니다.</p>
+        </div>
         <button onclick="ui.callAllNotReturned()"
-            style="padding:10px 20px; background:#ef4444; color:white; border:none; border-radius:10px; font-weight:800; font-size:14px; cursor:pointer; display:flex; align-items:center; gap:8px;">
+            style="padding:10px 18px; background:#ef4444; color:white; border:none; border-radius:10px; font-weight:800; font-size:13px; cursor:pointer; display:flex; align-items:center; gap:7px; white-space:nowrap; flex-shrink:0;">
             <i class="fa-solid fa-bullhorn"></i> 미복귀자 전체 복귀 호출
         </button>
     </div>
-    <div class="modern-white-card">
-        <table>
+    <div class="modern-white-card" style="width:100%; max-width:1100px;">
+        <table style="width:100%; table-layout:fixed;">
+            <colgroup>
+                <col style="width:50px;">
+                <col style="width:90px;">
+                <col style="width:120px;">
+                <col style="width:130px;">
+                <col style="width:100px;">
+                <col style="width:90px;">
+                <col style="width:120px;">
+                <col style="width:70px;">
+            </colgroup>
             <thead>
                 <tr>
-                    <th style="width:50px;">연번</th>
-                    <th style="width:100px;">구분</th>
+                    <th>연번</th>
+                    <th>구분</th>
                     <th>성명(뒷자리)</th>
                     <th>비상 연락처</th>
-                    <th style="width:120px;">신청시간</th>
-                    <th style="width:80px;">복귀여부</th>
-                    <th style="width:160px;">복귀호출</th>
-                    <th style="width:70px;">관리</th>
+                    <th>신청시간</th>
+                    <th>복귀여부</th>
+                    <th>복귀호출</th>
+                    <th>관리</th>
                 </tr>
             </thead>
             <tbody id="adminActionTableBody"></tbody>
