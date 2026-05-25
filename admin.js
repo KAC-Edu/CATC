@@ -666,17 +666,20 @@ forceEnterRoom: async function(room) {
 
     // ── 공지 실시간 리스너 ──
     // 항상 재등록 (off → on), state.noticeSeen으로 중복 팝업만 방지
+    // ── 공지 실시간 리스너 (대시보드 피드 + 팝업 통합 처리) ──
     firebase.database().ref(`courses/${cleanRoom}/coordNotice`).off();
     firebase.database().ref(`courses/${cleanRoom}/coordNotice`).on('value', snap => {
         if (state.room !== cleanRoom) return;
         const newMsg = snap.val() || '';
+        // 대시보드 피드 즉시 업데이트 (항상)
         const el = document.getElementById('dashNoticeAdmin');
-        if (el) el.innerText = newMsg || '등록된 운영부 과정 공지가 없습니다.';
+        if (el) el.innerText = newMsg || '등록된 운영부 공지가 없습니다.';
+        // 팝업 처리
         if (!newMsg) return;
         const key = `coord_${cleanRoom}`;
         const prev = state.noticeSeen[key];
-        state.noticeSeen[key] = newMsg; // 항상 갱신
-        if (prev === undefined) return;  // 첫 수신: 팝업 없음
+        state.noticeSeen[key] = newMsg;
+        if (prev === undefined) return; // 첫 수신: 팝업 없음
         if (newMsg !== prev && state.currentMode !== 'notice') {
             guideMgr.showCoordNoticeAlert(newMsg, '📋 운영부 과정 공지');
         }
@@ -686,8 +689,10 @@ forceEnterRoom: async function(room) {
     firebase.database().ref('system/globalNotice').on('value', snap => {
         if (state.room !== cleanRoom) return;
         const newMsg = snap.val() || '';
+        // 대시보드 피드 즉시 업데이트 (항상)
         const el = document.getElementById('dashNoticeGlobal');
         if (el) el.innerText = newMsg || '현재 게시된 센터 전체 공지가 없습니다.';
+        // 팝업 처리
         if (!newMsg) return;
         const prev = state.noticeSeen['global'];
         state.noticeSeen['global'] = newMsg;
@@ -1744,8 +1749,6 @@ loadDashboardStats: function() {
     const refs = {
         settings: firebase.database().ref(`courses/${room}/settings`),
         notice: firebase.database().ref(`courses/${room}/notice`),
-        coordNotice: firebase.database().ref(`courses/${room}/coordNotice`),
-        globalNotice: firebase.database().ref(`system/globalNotice`),
         status: firebase.database().ref(`courses/${room}/status`),
         expected: firebase.database().ref(`courses/${room}/expectedStudents`),
         actual: firebase.database().ref(`courses/${room}/students`),
@@ -1774,15 +1777,7 @@ loadDashboardStats: function() {
     });
     // coordNotice/globalNotice 실시간 감지는 forceEnterRoom에서 통합 처리
     // 여기서는 대시보드 텍스트 초기값만 표시
-    refs.coordNotice.once('value', s => {
-        if (state.room !== room) return;
-        const el = document.getElementById('dashNoticeAdmin');
-        if (el) el.innerText = s.val() || '등록된 운영부 과정 공지가 없습니다.';
-    });
-    refs.globalNotice.once('value', s => {
-        const el = document.getElementById('dashNoticeGlobal');
-        if (el) el.innerText = s.val() || '현재 게시된 센터 전체 공지가 없습니다.';
-    });
+    // coordNotice/globalNotice 실시간 업데이트는 forceEnterRoom 리스너에서 처리
 
     // 4. 교수 성함 실시간 업데이트
     refs.status.on('value', snap => {
