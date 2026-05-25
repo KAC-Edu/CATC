@@ -664,52 +664,52 @@ forceEnterRoom: async function(room) {
     subjectMgr.init();
     guideMgr.init();
 
-    // ── 공지 실시간 리스너 ──
-    // state.noticeSeen으로 메모리 관리 (탭 이동해도 seen 값 유지, 새로고침만 리셋)
-    const coordSeenKey = `coord_${cleanRoom}`;
-    const globalSeenKey = 'global';
+    // ── 공지 실시간 리스너 (한 번만 등록, forceEnterRoom 재호출 시 재등록 방지) ──
+    if (!window._coordNoticeListenerRoom || window._coordNoticeListenerRoom !== cleanRoom) {
+        // 이전 방 리스너 제거
+        if (window._coordNoticeListenerRoom) {
+            firebase.database().ref(`courses/${window._coordNoticeListenerRoom}/coordNotice`).off();
+        }
+        firebase.database().ref('system/globalNotice').off();
+        window._coordNoticeListenerRoom = cleanRoom;
 
-    firebase.database().ref(`courses/${cleanRoom}/coordNotice`).off();
-    firebase.database().ref(`courses/${cleanRoom}/coordNotice`).on('value', snap => {
-        if (state.room !== cleanRoom) return;
-        const newMsg = snap.val() || '';
-        const el = document.getElementById('dashNoticeAdmin');
-        if (el) el.innerText = newMsg || '등록된 운영부 과정 공지가 없습니다.';
-        if (!newMsg) return;
-        const lastSeen = state.noticeSeen[coordSeenKey];
-        if (lastSeen === undefined) {
-            // 첫 수신: 메모리에 저장만, 팝업 없음
-            state.noticeSeen[coordSeenKey] = newMsg;
-            return;
-        }
-        if (newMsg !== lastSeen) {
-            // 실제 변경: 팝업 + 메모리 갱신
-            state.noticeSeen[coordSeenKey] = newMsg;
-            if (state.currentMode !== 'notice') {
-                guideMgr.showCoordNoticeAlert(newMsg, '📋 운영부 과정 공지');
+        firebase.database().ref(`courses/${cleanRoom}/coordNotice`).on('value', snap => {
+            if (state.room !== cleanRoom) return;
+            const newMsg = snap.val() || '';
+            const el = document.getElementById('dashNoticeAdmin');
+            if (el) el.innerText = newMsg || '등록된 운영부 과정 공지가 없습니다.';
+            if (!newMsg) return;
+            const key = `coord_${cleanRoom}`;
+            if (!(key in state.noticeSeen)) {
+                state.noticeSeen[key] = newMsg; // 첫 수신: 저장만
+                return;
             }
-        }
-    });
+            if (newMsg !== state.noticeSeen[key]) {
+                state.noticeSeen[key] = newMsg;
+                if (state.currentMode !== 'notice') {
+                    guideMgr.showCoordNoticeAlert(newMsg, '📋 운영부 과정 공지');
+                }
+            }
+        });
 
-    firebase.database().ref('system/globalNotice').off();
-    firebase.database().ref('system/globalNotice').on('value', snap => {
-        if (state.room !== cleanRoom) return;
-        const newMsg = snap.val() || '';
-        const el = document.getElementById('dashNoticeGlobal');
-        if (el) el.innerText = newMsg || '현재 게시된 센터 전체 공지가 없습니다.';
-        if (!newMsg) return;
-        const lastSeen = state.noticeSeen[globalSeenKey];
-        if (lastSeen === undefined) {
-            state.noticeSeen[globalSeenKey] = newMsg;
-            return;
-        }
-        if (newMsg !== lastSeen) {
-            state.noticeSeen[globalSeenKey] = newMsg;
-            if (state.currentMode !== 'notice') {
-                guideMgr.showCoordNoticeAlert(newMsg, '🏢 항기원 전체 공지');
+        firebase.database().ref('system/globalNotice').on('value', snap => {
+            if (state.room !== cleanRoom) return;
+            const newMsg = snap.val() || '';
+            const el = document.getElementById('dashNoticeGlobal');
+            if (el) el.innerText = newMsg || '현재 게시된 센터 전체 공지가 없습니다.';
+            if (!newMsg) return;
+            if (!('global' in state.noticeSeen)) {
+                state.noticeSeen['global'] = newMsg;
+                return;
             }
-        }
-    });
+            if (newMsg !== state.noticeSeen['global']) {
+                state.noticeSeen['global'] = newMsg;
+                if (state.currentMode !== 'notice') {
+                    guideMgr.showCoordNoticeAlert(newMsg, '🏢 항기원 전체 공지');
+                }
+            }
+        });
+    }
 
     ui.autoResetShuttleIfNeeded(cleanRoom);
 
