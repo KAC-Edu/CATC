@@ -3266,31 +3266,47 @@ function renderAdminList(todayData, yesterdayData) {
                     ? '<span style="color:#10b981; font-weight:800; font-size:12px;">✅ 복귀완료</span>'
                     : '<span style="color:#ef4444; font-weight:800; font-size:12px;">⏳ 미복귀</span>';
 
+                // tr 생성 (innerHTML 따옴표 충돌 방지 위해 DOM API 사용)
+                const returnedStr = isReturned ? 'true' : 'false';
+                const tr = document.createElement('tr');
+                tr.dataset.token = token;
+                tr.dataset.returned = returnedStr;
+
                 // 복귀 호출 버튼 (미복귀자만 활성)
-                const callBtn = isReturned
+                const callBtnHtml = isReturned
                     ? '<span style="color:#94a3b8; font-size:11px;">-</span>'
-                    : `<button class="btn-table-action" onclick="ui.callReturnToStudent('${token}', '${item.name}')"
-                            style="background:#f59e0b; color:white; font-size:11px; padding:5px 8px;">
-                            <i class="fa-solid fa-bell"></i> 복귀호출
+                    : `<button class="btn-table-action" style="background:#f59e0b; color:white; font-size:11px; padding:5px 8px;" data-call-token="${token}">
+                           <i class="fa-solid fa-bell"></i> 복귀호출
                        </button>`;
 
-                tbody.innerHTML += `
-                    <tr data-token="${token}" data-returned="${isReturned}">
-                        <td>${count++}</td>
-                        <td>${datePrefix}${typeNm}</td>
-                        <td style="font-weight:bold;">${item.name}</td>
-                        <td>${item.phone}</td>
-                        <td style="color:#94a3b8; font-size:13px;">${timeStr}</td>
-                        <td style="text-align:center;">${returnedBadge}</td>
-                        <td style="text-align:center;">${callBtn}</td>
-                        <td>
-                            <button class="btn-table-action" onclick="ui.cancelIndividualAdminAction('${targetDate}', '${token}')" 
-                                    style="background-color:#64748b; font-size:11px; padding:5px 8px;">
-                                취소
-                            </button>
-                        </td>
-                    </tr>
+                tr.innerHTML = `
+                    <td>${count++}</td>
+                    <td>${datePrefix}${typeNm}</td>
+                    <td style="font-weight:bold;">${item.name}</td>
+                    <td>${item.phone}</td>
+                    <td style="color:#94a3b8; font-size:13px;">${timeStr}</td>
+                    <td style="text-align:center;">${returnedBadge}</td>
+                    <td style="text-align:center;">${callBtnHtml}</td>
+                    <td>
+                        <button class="btn-table-action cancel-btn" style="background-color:#64748b; font-size:11px; padding:5px 8px;" data-cancel-token="${token}" data-cancel-date="${targetDate}">
+                            취소
+                        </button>
+                    </td>
                 `;
+
+                // 이벤트 바인딩 (onclick 문자열 대신 addEventListener)
+                const callBtn = tr.querySelector('[data-call-token]');
+                if (callBtn) {
+                    const capturedToken = token;
+                    const capturedName = item.name;
+                    callBtn.addEventListener('click', () => ui.callReturnToStudent(capturedToken, capturedName));
+                }
+                const cancelBtn = tr.querySelector('[data-cancel-token]');
+                if (cancelBtn) {
+                    cancelBtn.addEventListener('click', () => ui.cancelIndividualAdminAction(targetDate, token));
+                }
+
+                tbody.appendChild(tr);
             }
         } 
     },
@@ -3360,6 +3376,7 @@ cancelIndividualDinnerSkip: function(token) {
     callAllNotReturned: function() {
         if(!state.room) return;
         const rows = document.querySelectorAll('#adminActionTableBody tr[data-returned="false"]');
+        console.log('[복귀호출] 미복귀자 행 수:', rows.length);
         if(rows.length === 0) return ui.showAlert("✅ 미복귀자가 없습니다.");
         if(!confirm(`미복귀자 ${rows.length}명에게 일괄 복귀 호출 신호를 보내시겠습니까?`)) return;
         const today = getTodayString();
