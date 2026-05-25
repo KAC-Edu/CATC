@@ -798,6 +798,18 @@ fetchCodeAndRenderQr: function(room) {
 
 
 
+// All Idle - 마스터키 확인 후 실행
+allIdleWithMasterKey: function() {
+    const MASTER_KEY = "13281";
+    const input = prompt("🔐 All Idle 실행을 위해 마스터키를 입력하세요:");
+    if (!input) return;
+    if (input !== MASTER_KEY) {
+        ui.showAlert("❌ 마스터키가 올바르지 않습니다.");
+        return;
+    }
+    this.deactivateAllRooms();
+},
+
 deactivateAllRooms: async function() {
         if(state.isObserver) return ui.showAlert("👁️ 옵저버는 시스템 설정을 변경할 수 없습니다.");
         if(!confirm("⚠️ 경고: 모든 강의실을 비활성화하시겠습니까?")) return;
