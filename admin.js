@@ -649,15 +649,7 @@ forceEnterRoom: async function(room) {
 
     this.fetchCodeAndRenderQr(cleanRoom);
 
-    // 퀴즈 모드가 DB에 잘못 남아있으면 자동 복구 (교육생 화면 보호)
-    firebase.database().ref(`courses/${cleanRoom}/status`).once('value', snap => {
-        const st = snap.val() || {};
-        if (st.mode === 'quiz' && !state.isObserver) {
-            // 강사가 퀴즈 탭에 없는데 mode=quiz이면 qa로 복원
-            firebase.database().ref(`courses/${cleanRoom}/status/mode`).set('qa');
-            console.log('[자동복구] quiz mode → qa 복원');
-        }
-    });
+    // 퀴즈 mode 자동복구는 강사가 직접 퀴즈 탭에서 나갈 때만 처리 (forceEnterRoom에서 제거)
 
     const lastMode = localStorage.getItem('kac_last_mode') || 'dashboard';
     ui.setMode(lastMode); 
@@ -2638,6 +2630,11 @@ setMode: function(mode) {
             if(quizCtrl) quizCtrl.style.display = 'flex';
         }
         
+        // 퀴즈 탭에서 다른 탭으로 이동 시 교육생 화면 qa로 복원
+        if (state.currentMode === 'quiz' && mode !== 'quiz' && state.room && !state.isObserver) {
+            firebase.database().ref(`courses/${state.room}/status/mode`).set('qa');
+        }
+
         // 2. 현재 선택한 모드에 맞는 구역 ID 결정
         const targetView = (mode === 'admin-action') ? 'view-admin-action' : (mode === 'dinner-skip') ? 'view-dinner-skip' : `view-${mode}`;
         const targetEl = document.getElementById(targetView);
@@ -2692,14 +2689,22 @@ setMode: function(mode) {
                 }
             }
 
-            // quiz/prof-presentation 탭은 강사 전용 - 교육생에게 quiz 신호 보내면 안 됨
-            // 실제 퀴즈 모드는 quizMgr.showQuiz()에서만 status/mode='quiz'를 씀
+            // 교육생 화면 모드 설정
             const safeStudentModes = ['waiting', 'shuttle', 'admin-action', 'dinner-skip', 'students', 'dashboard', 'notice', 'attendance', 'guide', 'dormitory'];
-            const blockModes = ['quiz', 'prof-presentation', 'qa']; // 강사 전용 탭 - 교육생 화면 건드리지 않음
-            let studentMode = (safeStudentModes.includes(mode)) ? 'qa' : (blockModes.includes(mode) ? null : mode);
-            
-            // [옵저버 제한] 옵저버는 교육생 화면 모드를 원격으로 바꿀 수 없음
-            // studentMode가 null이면 교육생 화면을 건드리지 않음 (퀴즈탭 등 강사 전용)
+            const blockModes = ['prof-presentation']; // qa는 직접 qa로, quiz는 quiz로 전송
+            let studentMode;
+            if (safeStudentModes.includes(mode)) {
+                studentMode = 'qa';
+            } else if (mode === 'qa') {
+                studentMode = 'qa';
+            } else if (mode === 'quiz') {
+                studentMode = 'quiz'; // 퀴즈 탭 진입 시 교육생도 quiz 화면으로
+            } else if (blockModes.includes(mode)) {
+                studentMode = null;
+            } else {
+                studentMode = mode;
+            }
+
             if (!state.isObserver && studentMode !== null) {
                 firebase.database().ref(`courses/${state.room}/status/mode`).set(studentMode);
             }
