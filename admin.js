@@ -228,9 +228,9 @@ loadInitialData: function() {
     ui.showWaitingRoom();
 
     if (lastRoom && lastRoom !== "null" && lastRoom !== "") {
-        // 현황판 표시 후 백그라운드에서 방 복구 시도
+        // 현황판 표시 후 백그라운드에서 방 복구 시도 (새로고침 시 비밀번호창 안 띄움)
         setTimeout(() => {
-            this.switchRoomAttempt(lastRoom.toUpperCase());
+            this.switchRoomAttempt(lastRoom.toUpperCase(), true); // silent=true
         }, 100);
     }
 
@@ -282,7 +282,7 @@ loadInitialData: function() {
 
     
 // [수정 완료] 보안 검증 강화 및 데이터 유출 차단 로직
-switchRoomAttempt: async function(newRoom) {
+switchRoomAttempt: async function(newRoom, silent = false) {
     // 1. 시각적 즉시 차단 + 대시보드/헤더 초기화 (이전 방 정보 잔류 방지)
     const overlay = document.getElementById('statusOverlay');
     if (overlay) overlay.style.display = 'flex';
@@ -332,6 +332,16 @@ switchRoomAttempt: async function(newRoom) {
     // (A) 방이 사용 중인데 내가 주인이 아니고, 옵저버도 아님 -> 데이터 차단
     if (isActive && !isOwner && !state.isObserver) {
         console.log(`[권한 차단] Room ${newRoom}에 대한 소유권이 없습니다.`);
+
+        // 새로고침 복구 시(silent)에는 비밀번호창 없이 현황판으로 복귀
+        if (silent) {
+            localStorage.removeItem('kac_last_room');
+            ui.showWaitingRoom();
+            const sel = document.getElementById('roomSelect');
+            if(sel) sel.value = '';
+            return;
+        }
+
         state.pendingRoom = newRoom;
         
         // 중요: forceEnterRoom을 실행하지 않고 여기서 중단합니다. (데이터 리스너 실행 방지)
