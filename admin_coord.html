@@ -1329,6 +1329,21 @@ body.modal-open .app-content {
     </div>
     <textarea id="courseNotice" class="notice-area" oninput="autoGrow(this)" placeholder="공지 입력"></textarea>
     <button class="navy-btn" style="background:#0ea5e9; border:none; box-shadow: 0 4px 10px rgba(14,165,233,0.3);" onclick="saveCourseNotice()">과정 공지 업데이트</button>
+
+    <!-- 공지 발송 이력 -->
+    <div style="margin-top:18px; border-top:1px solid #e2e8f0; padding-top:14px;">
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;">
+            <span style="font-size:13px; font-weight:800; color:#475569;">
+                <i class="fa-solid fa-clock-rotate-left" style="color:#3b82f6;"></i> 공지 발송 이력
+            </span>
+            <button onclick="clearNoticeHistory()" style="font-size:11px; color:#94a3b8; background:none; border:none; cursor:pointer; padding:2px 6px; border-radius:4px; hover:background:#f1f5f9;">
+                전체 삭제
+            </button>
+        </div>
+        <div id="noticeHistoryList" style="max-height:200px; overflow-y:auto; display:flex; flex-direction:column; gap:6px;">
+            <div style="text-align:center; color:#cbd5e1; font-size:12px; padding:16px 0;">발송 이력이 없습니다.</div>
+        </div>
+    </div>
 </div>
 
 
@@ -2276,6 +2291,7 @@ function updateIndividualView() {
 
     // 5. 공지사항 업데이트
     const noticeEl = document.getElementById('courseNotice');
+    renderNoticeHistory(); // 과정 선택 시 이력 로드
     if (document.activeElement !== noticeEl) {
         noticeEl.value = room.coordNotice || "";
     }
@@ -3377,13 +3393,76 @@ function openCenterQrModal() {
 function saveCourseNotice() { 
     if(!currentRID) return alert("과정을 먼저 선택해주세요.");
     const noticeText = document.getElementById('courseNotice').value;
-    // 서버의 정확한 위치(coordNotice)에 저장
+    if(!noticeText.trim()) return alert("공지 내용을 입력해주세요.");
+
     firebase.database().ref('courses/' + currentRID + '/coordNotice').set(noticeText)
     .then(() => {
+        // 이력 저장 (Firebase)
+        const histKey = `courses/${currentRID}/coordNoticeHistory`;
+        const now = new Date();
+        const ts = now.getTime();
+        firebase.database().ref(`${histKey}/${ts}`).set({
+            text: noticeText,
+            timestamp: ts,
+            timeStr: now.toLocaleString('ko-KR', {month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'})
+        });
+        renderNoticeHistory();
         alert("✅ 공지가 교육생 플랫폼에 즉시 반영되었습니다.");
     }).catch((err) => {
         alert("오류 발생: " + err.message);
     });
+}
+
+// 공지 이력 렌더링
+function renderNoticeHistory() {
+    if(!currentRID) return;
+    const listEl = document.getElementById('noticeHistoryList');
+    if(!listEl) return;
+
+    firebase.database().ref(`courses/${currentRID}/coordNoticeHistory`)
+        .orderByKey().limitToLast(20)
+        .once('value', snap => {
+            const data = snap.val();
+            if(!data) {
+                listEl.innerHTML = '<div style="text-align:center; color:#cbd5e1; font-size:12px; padding:16px 0;">발송 이력이 없습니다.</div>';
+                return;
+            }
+            // 최신순 정렬
+            const items = Object.entries(data).sort((a,b) => b[0]-a[0]);
+            listEl.innerHTML = items.map(([key, item]) => `
+                <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:10px 12px; font-size:13px;">
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px;">
+                        <span style="color:#334155; font-weight:600; line-height:1.5; flex:1; white-space:pre-wrap;">${item.text}</span>
+                        <div style="display:flex; flex-direction:column; align-items:flex-end; gap:4px; flex-shrink:0;">
+                            <span style="color:#94a3b8; font-size:11px; white-space:nowrap;">${item.timeStr}</span>
+                            <button onclick="reapplyNotice('${key}')" style="font-size:10px; background:#eff6ff; color:#3b82f6; border:1px solid #bfdbfe; border-radius:4px; padding:2px 6px; cursor:pointer;">재발송</button>
+                        </div>
+                    </div>
+                </div>`).join('');
+        });
+}
+
+// 이력에서 재발송
+function reapplyNotice(key) {
+    if(!currentRID) return;
+    firebase.database().ref(`courses/${currentRID}/coordNoticeHistory/${key}`).once('value', snap => {
+        const item = snap.val();
+        if(!item) return;
+        document.getElementById('courseNotice').value = item.text;
+        if(confirm(`이 공지를 다시 발송하시겠습니까?
+
+"${item.text.substring(0,50)}${item.text.length>50?'...':''}"`)) {
+            saveCourseNotice();
+        }
+    });
+}
+
+// 이력 전체 삭제
+function clearNoticeHistory() {
+    if(!currentRID) return;
+    if(!confirm("공지 발송 이력을 모두 삭제하시겠습니까?")) return;
+    firebase.database().ref(`courses/${currentRID}/coordNoticeHistory`).set(null)
+        .then(() => renderNoticeHistory());
 }
     function saveGlobalNotice() { firebase.database().ref(`system/globalNotice`).set(document.getElementById('globalNotice').value).then(()=>alert("저장 완료")); }
     async function handleQRUpload(input) { const reader = new FileReader(); reader.onload = async (e) => { await firebase.database().ref(`courses/${currentRID}/attendanceQR`).set(e.target.result); alert("QR 저장 완료"); updateQRPreview(); }; reader.readAsDataURL(input.files[0]); }
