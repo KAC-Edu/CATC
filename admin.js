@@ -3233,14 +3233,7 @@ renderQaList: function(f) {
     },
     
     toggleFullScreen: function() {
-        const body = document.body;
-        const btn = document.querySelector('.control-icon-btn i.fa-expand, .control-icon-btn i.fa-compress');
-        const isExpanded = body.classList.toggle('sidebar-hidden');
-        // 아이콘 전환
-        if (btn) {
-            btn.classList.toggle('fa-expand', !isExpanded);
-            btn.classList.toggle('fa-compress', isExpanded);
-        }
+        this.toggleSidebar();
     },
     
     translateQa: function(id) {
@@ -3940,6 +3933,20 @@ resetShuttleRequests: function() {
     },
 
 // [강사 플랫폼: 로고 클릭 시 모든 정보를 초기화하고 현황판으로 이동]
+    // 사이드바 책갈피 토글
+    toggleSidebar: function() {
+        const body = document.body;
+        const icon = document.getElementById('sidebarToggleIcon');
+        body.classList.toggle('sidebar-hidden');
+        // 전체화면 버튼 아이콘도 동기화
+        const fsIcon = document.querySelector('.control-icon-btn i.fa-expand, .control-icon-btn i.fa-compress');
+        const isHidden = body.classList.contains('sidebar-hidden');
+        if (fsIcon) {
+            fsIcon.classList.toggle('fa-expand', !isHidden);
+            fsIcon.classList.toggle('fa-compress', isHidden);
+        }
+    },
+
     // 전역 로딩 스피너
     showLoading: function(msg = '로딩 중...') {
         const el = document.getElementById('globalLoadingOverlay');

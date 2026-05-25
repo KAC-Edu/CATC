@@ -3440,13 +3440,24 @@ body.night-mode .status-badge.status-arrived {
 }
 
 /* ── 전체화면 모드 (사이드바 숨김) ── */
+/* 사이드바 슬라이드 애니메이션 */
+.sidebar {
+    transition: transform 0.3s ease, width 0.3s ease !important;
+    position: relative;
+}
+
 body.sidebar-hidden .sidebar {
-    display: none !important;
+    transform: translateX(-100%) !important;
+    width: 0 !important;
+    min-width: 0 !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+    border: none !important;
 }
 body.sidebar-hidden .main-stage {
     width: 100vw !important;
     max-width: 100vw !important;
-    margin-left: 0 !important;
+    transition: width 0.3s ease !important;
 }
 body.sidebar-hidden .header {
     left: 0 !important;
@@ -3458,4 +3469,11 @@ body.sidebar-hidden .mode-tabs {
 }
 body.sidebar-hidden .content-area {
     width: 100% !important;
+}
+/* 숨김 상태에서 탭 위치 조정 */
+body.sidebar-hidden #sidebarToggleTab {
+    right: -28px;
+}
+body.sidebar-hidden #sidebarToggleIcon {
+    transform: rotate(180deg);
 }

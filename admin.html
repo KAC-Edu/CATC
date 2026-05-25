@@ -106,7 +106,21 @@
     </div>
 
     <!-- 2. 사라졌던 사이드바 다시 생성 -->
-    <div class="sidebar">
+    <div class="sidebar" id="mainSidebar">
+        <!-- 책갈피 탭 (사이드바 오른쪽 모서리) -->
+        <div id="sidebarToggleTab" onclick="ui.toggleSidebar()" title="사이드바 접기/펼치기" style="
+            position:absolute; right:-28px; top:50%; transform:translateY(-50%);
+            width:28px; height:64px;
+            background:#1e293b;
+            border-radius:0 10px 10px 0;
+            display:flex; align-items:center; justify-content:center;
+            cursor:pointer; z-index:51;
+            border:1px solid rgba(255,255,255,0.08);
+            border-left:none;
+            transition:background 0.2s;
+        ">
+            <i id="sidebarToggleIcon" class="fa-solid fa-chevron-left" style="color:#94a3b8; font-size:13px; transition:transform 0.3s;"></i>
+        </div>
         <div class="sidebar-top">
             <div class="sidebar-header" onclick="ui.goHome()" style="cursor:pointer;" title="초기 화면으로 이동">KAC Training Platform</div>
             <div class="setting-container">
