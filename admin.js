@@ -910,6 +910,7 @@ resetCourse: function() {
 
         // 과정 기본값 재설정
         updates[`${rPath}/settings/courseName`] = "";
+        updates[`${rPath}/settings/roomDetailName`] = ""; // 강의실 상세위치 초기화
         updates[`${rPath}/status/professorName`] = "";
         updates[`${rPath}/status/roomStatus`] = "idle"; // 비어있음으로 전환
         updates[`${rPath}/status/ownerSessionId`] = null; // 제어권 해제
