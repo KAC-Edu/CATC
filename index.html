@@ -2983,7 +2983,8 @@ function watchNotices() {
 function handleInternalAttendance(room) {
     const urlParams = new URLSearchParams(window.location.search);
     const isCheckIn = urlParams.get('checkin') === 'true';
-    const targetRoom = room || urlParams.get('room');
+    // URL room 파라미터 우선 사용 (A방 출결 후 B방 QR 찍을 때 currentRoom이 A로 남아있는 문제 방지)
+    const targetRoom = urlParams.get('room') || room;
 
     if (!isCheckIn || !targetRoom) return;
 
