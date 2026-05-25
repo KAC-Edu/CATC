@@ -3464,13 +3464,23 @@ loadStudentList: function() {
                     const studentData = isArrived ? sList[0] : null;
                     const isOnline = isArrived && studentData.isOnline === true;
                     const isLeader = isArrived && studentData.isLeader === true;
+                    const isExpected = expectedNames.includes(name); // 명단 업로드 여부
 
                     if(isArrived) arrivedCount++;
 
-                    // [수정] 학생장 여부에 따른 버튼 스타일 정의
+                    // 입교 방식 배지
+                    let arrivalBadge = '';
+                    if (isArrived) {
+                        if (isExpected) {
+                            arrivalBadge = '<span style="font-size:10px; background:#dbeafe; color:#1d4ed8; padding:1px 5px; border-radius:4px; font-weight:700; margin-left:4px;">명단</span>';
+                        } else {
+                            arrivalBadge = '<span style="font-size:10px; background:#dcfce7; color:#15803d; padding:1px 5px; border-radius:4px; font-weight:700; margin-left:4px;">QR신규</span>';
+                        }
+                    }
+
                     const leaderBtnStyle = isLeader 
-                        ? 'background: #3b82f6; color: white; border: none; font-weight: 800;' // 활성 (파랑)
-                        : 'background: #f1f5f9; color: #94a3b8; border: 1px solid #e2e8f0; font-weight: 500;'; // 비활성 (회색)
+                        ? 'background: #3b82f6; color: white; border: none; font-weight: 800;'
+                        : 'background: #f1f5f9; color: #94a3b8; border: 1px solid #e2e8f0; font-weight: 500;';
 
                     tbody.innerHTML += `
                         <tr class="${isLeader ? 'is-leader-row' : ''}">
@@ -3481,7 +3491,10 @@ loadStudentList: function() {
                                     <span style="font-weight:800;">${isLeader ? '👑 ' : ''}${name}</span>
                                 </div>
                             </td>
-                            <td><span class="status-badge ${isArrived ? 'status-arrived' : 'status-wait'}">${isArrived ? '입교 완료' : '미입교'}</span></td>
+                            <td>
+                                <span class="status-badge ${isArrived ? 'status-arrived' : 'status-wait'}">${isArrived ? '입교 완료' : '미입교'}</span>
+                                ${arrivalBadge}
+                            </td>
                             <td style="color:#94a3b8; font-size:13px;">${isArrived ? (isOnline ? '접속 중' : '오프라인') : '-'}</td>
                             <td>
                                 ${isArrived ? `
@@ -4801,9 +4814,8 @@ init: function() {
             const page = await guideMgr.pdfDoc.getPage(num);
             const canvas = document.getElementById('guideCanvas');
             if(!canvas) { guideMgr.isRendering = false; return; }
-            const ctx = canvas.getContext('2d');
 
-            // 스케일: pdfWrapper 너비 기준, devicePixelRatio 반영 (선명도)
+            // 스케일 계산
             const unscaledViewport = page.getViewport({scale: 1.0});
             const wrapper = document.getElementById('pdfWrapper');
             const containerW = (wrapper ? wrapper.clientWidth : window.innerWidth) - 2;
@@ -4815,26 +4827,30 @@ init: function() {
                 cssScale = Math.min(cssScale, hScale);
             }
             const renderScale = cssScale * dpr;
-
             const viewport = page.getViewport({scale: renderScale});
 
-            // canvas 실제 픽셀 크기 설정, CSS로 표시 크기 제어
+            // 오프스크린 캔버스에 먼저 렌더링 (번쩍임 방지)
+            const offscreen = document.createElement('canvas');
+            offscreen.width  = viewport.width;
+            offscreen.height = viewport.height;
+            const offCtx = offscreen.getContext('2d');
+            offCtx.setTransform(1, 0, 0, 1, 0, 0);
+
+            const renderTask = page.render({canvasContext: offCtx, viewport: viewport});
+            await renderTask.promise;
+
+            // 렌더링 완료 후 한 번에 교체 (깜빡임 없음)
             canvas.width  = viewport.width;
             canvas.height = viewport.height;
             canvas.style.width  = Math.floor(viewport.width  / dpr) + 'px';
             canvas.style.height = Math.floor(viewport.height / dpr) + 'px';
-
-            // transform 완전 초기화 (뒤집힘 원천 차단)
+            const ctx = canvas.getContext('2d');
             ctx.setTransform(1, 0, 0, 1, 0, 0);
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-            const renderTask = page.render({canvasContext: ctx, viewport: viewport});
-            await renderTask.promise;
+            ctx.drawImage(offscreen, 0, 0);
 
             guideMgr.isRendering = false;
             guideMgr.pageNum = num;
 
-            // 페이지 번호 업데이트
             const indicator = document.getElementById('guidePageInfo');
             if(indicator) indicator.innerText = `${num} / ${guideMgr.pdfDoc.numPages}`;
 
