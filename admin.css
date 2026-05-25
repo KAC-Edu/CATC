@@ -2408,7 +2408,24 @@ body.night-mode .header-room-badge { background-color: #003366 !important; borde
 /* 통계 카드 아이콘 제거 후 텍스트 정렬 보정 */
 .stat-premium-card {
     justify-content: flex-start !important;
-    padding-top: 25px !important;
+    padding: 25px !important;
+}
+
+/* 대시보드 그리드 - 카드 높이 동일하게 stretch */
+.dash-premium-grid {
+    align-items: stretch !important;
+}
+
+/* 왼쪽 입교/외출/석식 카드 - 내부 콘텐츠가 카드 높이를 꽉 채우도록 */
+.stat-premium-card.card-blue {
+    display: flex !important;
+    flex-direction: column !important;
+}
+.stat-premium-card.card-blue .card-content.combined-stats {
+    flex: 1 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: space-between !important;
 }
 
 
