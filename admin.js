@@ -2545,19 +2545,45 @@ updateObserverButton: function() {
     
 renderRoomStatus: function(st) { 
         const sel = document.getElementById('roomStatusSelect');
+        const isActive = (st === 'active');
+
         if(sel) {
             sel.value = st || 'idle'; 
-            // 항상 비활성화 - 상태 변경은 setupMgr.saveAll()을 통해서만 가능
             sel.disabled = true;
             sel.style.pointerEvents = 'none';
             sel.style.cursor = 'default';
             sel.style.opacity = '0.85';
-            
-            if(sel.value === 'active') {
-                sel.style.color = '#10b981';
+            sel.style.color = isActive ? '#10b981' : '#ef4444'; // 활성=초록, 비활성=빨강
+        }
+
+        // 강의실 미활성화 시 하단 버튼들 비활성화
+        const btnIds = ['btnReset'];
+        const btnsToDisable = [
+            document.querySelector('.btn-action.btn-print'),           // Report
+            document.getElementById('observerToggleButton'),            // 옵저버 모드
+            document.querySelector('[onclick*="allIdleWithMasterKey"]'), // All Idle
+            document.getElementById('btnReset'),                        // Reset
+        ];
+
+        btnsToDisable.forEach(btn => {
+            if (!btn) return;
+            if (isActive) {
+                btn.disabled = false;
+                btn.style.opacity = '1';
+                btn.style.pointerEvents = 'auto';
             } else {
-                sel.style.color = '#94a3b8';
+                btn.disabled = true;
+                btn.style.opacity = '0.35';
+                btn.style.pointerEvents = 'none';
             }
+        });
+
+        // All Idle은 항상 활성 (전체 강의실 관리용)
+        const allIdleBtn = document.querySelector('[onclick*="allIdleWithMasterKey"]');
+        if (allIdleBtn) {
+            allIdleBtn.disabled = false;
+            allIdleBtn.style.opacity = '1';
+            allIdleBtn.style.pointerEvents = 'auto';
         }
     },
     
@@ -3218,6 +3244,8 @@ renderQaList: function(f) {
     
 // [강사 플랫폼: 초기 대기 화면 설정 - 흐릿한 배경 완벽 제거 버전]
     showWaitingRoom: function() {
+        // 방 미선택 상태 - 하단 버튼 비활성화
+        this.renderRoomStatus('idle');
         state.room = null; // 메모리상 방 정보 완전 삭제
         
         // 1. 흐릿한 잠금 화면(overlay) 강제 숨김
