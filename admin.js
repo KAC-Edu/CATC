@@ -1849,22 +1849,13 @@ refs.departure.on('value', snap => {
     const txt = document.getElementById('dashShuttleNoticeTxt');
     if (!bar || !txt) return;
 
+    // 퇴교차량 노란 박스는 숨기고, 제목 옆에 시간만 표시
+    bar.style.display = "none";
+    const inlineEl = document.getElementById('dashShuttleTimeInline');
     if (dep && dep.time) {
-        bar.style.display = "block"; // 노란 박스 보이기
-
-        // 날짜 변환 (2026-03-06 -> 2026년 3월 6일)
-        const dateParts = dep.date.split('-');
-        const formattedDate = `${dateParts[0]}년 ${parseInt(dateParts[1])}월 ${parseInt(dateParts[2])}일`;
-        
-        txt.innerHTML = `
-            <div style="text-align:center;">
-                <span style="color:#92400e; font-size:12px; font-weight:700; opacity:0.8;">퇴교차량 출발 예정 시간</span><br>
-                <span style="color:#003366; font-size:19px; font-weight:900; letter-spacing:-0.5px;">(${formattedDate})</span><br>
-                <span style="color:#003366; font-size:19px; font-weight:900; letter-spacing:-0.5px;">${dep.time}</span>
-            </div>
-        `;
+        if (inlineEl) inlineEl.innerText = `(${dep.time} 출발)`;
     } else {
-        bar.style.display = "none";
+        if (inlineEl) inlineEl.innerText = '';
     }
 });
 

@@ -2428,6 +2428,11 @@ body.night-mode .header-room-badge { background-color: #003366 !important; borde
     justify-content: space-between !important;
 }
 
+/* 세 카드 모두 최소 높이 동일하게 */
+.dash-premium-grid .stat-premium-card {
+    min-height: 260px !important;
+}
+
 
 /* 1. 프로필 상세창의 텍스트 강제 노출 및 색상 고정 */
 .prof-info-column * {
