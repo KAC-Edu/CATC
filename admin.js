@@ -3260,13 +3260,29 @@ function renderAdminList(todayData, yesterdayData) {
                 const timeStr = new Date(item.timestamp).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
                 const targetDate = isYesterday ? getYesterdayString() : getTodayString();
 
+                // 복귀 여부 표시
+                const isReturned = item.returned === true || item.returnReportTime;
+                const returnedBadge = isReturned
+                    ? '<span style="color:#10b981; font-weight:800; font-size:12px;">✅ 복귀완료</span>'
+                    : '<span style="color:#ef4444; font-weight:800; font-size:12px;">⏳ 미복귀</span>';
+
+                // 복귀 호출 버튼 (미복귀자만 활성)
+                const callBtn = isReturned
+                    ? '<span style="color:#94a3b8; font-size:11px;">-</span>'
+                    : `<button class="btn-table-action" onclick="ui.callReturnToStudent('${token}', '${item.name}')"
+                            style="background:#f59e0b; color:white; font-size:11px; padding:5px 8px;">
+                            <i class="fa-solid fa-bell"></i> 복귀호출
+                       </button>`;
+
                 tbody.innerHTML += `
-                    <tr>
+                    <tr data-token="${token}" data-returned="${isReturned}">
                         <td>${count++}</td>
                         <td>${datePrefix}${typeNm}</td>
                         <td style="font-weight:bold;">${item.name}</td>
                         <td>${item.phone}</td>
                         <td style="color:#94a3b8; font-size:13px;">${timeStr}</td>
+                        <td style="text-align:center;">${returnedBadge}</td>
+                        <td style="text-align:center;">${callBtn}</td>
                         <td>
                             <button class="btn-table-action" onclick="ui.cancelIndividualAdminAction('${targetDate}', '${token}')" 
                                     style="background-color:#64748b; font-size:11px; padding:5px 8px;">
@@ -3325,7 +3341,33 @@ cancelIndividualDinnerSkip: function(token) {
             .then(() => { ui.showAlert("✅ 해당 학생이 제외 명단에서 삭제되었습니다."); });
     },
 
-// [신규] 특정 학생의 외출/외박 신청을 관리자가 강제 취소(삭제)
+// 개별 복귀 호출 (Firebase returnCall 신호)
+    callReturnToStudent: function(token, name) {
+        if(!state.room) return;
+        if(!confirm(`[${name}]님에게 복귀 완료 알림을 보내시겠습니까?`)) return;
+        const today = getTodayString();
+        firebase.database().ref(`courses/${state.room}/admin_actions/${today}/${token}/returnCall`).set(Date.now())
+            .then(() => ui.showAlert(`📳 [${name}]님에게 복귀 호출 신호를 보냈습니다.`));
+    },
+
+    // 전체 미복귀자 복귀 호출
+    callAllNotReturned: function() {
+        if(!state.room) return;
+        const rows = document.querySelectorAll('#adminActionTableBody tr[data-returned="false"]');
+        if(rows.length === 0) return ui.showAlert("✅ 미복귀자가 없습니다.");
+        if(!confirm(`미복귀자 ${rows.length}명에게 일괄 복귀 호출 신호를 보내시겠습니까?`)) return;
+        const today = getTodayString();
+        const now = Date.now();
+        const updates = {};
+        rows.forEach(row => {
+            const token = row.dataset.token;
+            if(token) updates[`courses/${state.room}/admin_actions/${today}/${token}/returnCall`] = now;
+        });
+        firebase.database().ref().update(updates)
+            .then(() => ui.showAlert(`📳 ${rows.length}명에게 복귀 호출 신호를 보냈습니다.`));
+    },
+
+    // [신규] 특정 학생의 외출/외박 신청을 관리자가 강제 취소(삭제)
 cancelIndividualAdminAction: function(date, token) {
         if(state.isObserver) return ui.showAlert("👁️ 옵저버는 신청 내역을 삭제할 수 없습니다.");
         if(!confirm("해당 외출/외박 신청을 취소하시겠습니까?")) return;

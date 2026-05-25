@@ -731,16 +731,24 @@
         <h1><i class="fa-solid fa-person-walking-arrow-right"></i> 외출·외박 신청 현황 <span class="header-room-badge room-badge-global"></span></h1>
         <p>익일 오전 09:00까지 명단이 유지됩니다.</p>
     </div>
+    <div style="display:flex; justify-content:flex-end; width:100%; max-width:1100px; margin-bottom:10px; gap:10px;">
+        <button onclick="ui.callAllNotReturned()"
+            style="padding:10px 20px; background:#ef4444; color:white; border:none; border-radius:10px; font-weight:800; font-size:14px; cursor:pointer; display:flex; align-items:center; gap:8px;">
+            <i class="fa-solid fa-bullhorn"></i> 미복귀자 전체 복귀 호출
+        </button>
+    </div>
     <div class="modern-white-card">
         <table>
             <thead>
                 <tr>
-                    <th style="width:80px;">연번</th>
-                    <th style="width:120px;">구분</th>
+                    <th style="width:50px;">연번</th>
+                    <th style="width:100px;">구분</th>
                     <th>성명(뒷자리)</th>
                     <th>비상 연락처</th>
-                    <th style="width:150px;">신청시간</th>
-                   <th style="width:100px;">관리</th> <!-- 이 줄 추가 -->
+                    <th style="width:120px;">신청시간</th>
+                    <th style="width:80px;">복귀여부</th>
+                    <th style="width:160px;">복귀호출</th>
+                    <th style="width:70px;">관리</th>
                 </tr>
             </thead>
             <tbody id="adminActionTableBody"></tbody>
