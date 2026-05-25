@@ -639,9 +639,7 @@ forceEnterRoom: async function(room) {
         // 배지만 업데이트 (팝업 중복 방지)
         if (newMsg && newMsg !== lastSeen) {
             const badge = document.getElementById('coordNoticeBadge');
-            const qaBadge = document.getElementById('qaNoticeBadge');
             if(badge) badge.style.display = 'inline-block';
-            if(qaBadge) qaBadge.style.display = 'inline-block';
         }
     });
 
@@ -1729,10 +1727,13 @@ loadDashboardStats: function() {
         const seenKey = `kac_coord_notice_seen_${room}`;
         const lastSeen = localStorage.getItem(seenKey) || '';
         if (newMsg && newMsg.trim() !== '' && newMsg !== lastSeen) {
-            localStorage.setItem(seenKey, newMsg); // 먼저 읽음처리 (중복 방지)
-            // 공지탭에 있으면 배지/팝업 없이 바로 읽음처리만
-            if (state.currentMode !== 'notice') {
+            // 공지탭에 있으면 배지/팝업 없이 즉시 읽음처리만
+            if (state.currentMode === 'notice') {
+                localStorage.setItem(seenKey, newMsg);
+            } else {
+                // 팝업 표시 후 읽음처리 (표시 후에 setItem)
                 ui.showCoordNoticeAlert(newMsg, 'coord');
+                localStorage.setItem(seenKey, newMsg);
             }
         }
     });
@@ -1743,9 +1744,11 @@ loadDashboardStats: function() {
         const seenKey = 'kac_global_notice_seen';
         const lastSeen = localStorage.getItem(seenKey) || '';
         if (newMsg && newMsg.trim() !== '' && newMsg !== lastSeen) {
-            localStorage.setItem(seenKey, newMsg);
-            if (state.currentMode !== 'notice') {
+            if (state.currentMode === 'notice') {
+                localStorage.setItem(seenKey, newMsg);
+            } else {
                 ui.showCoordNoticeAlert(newMsg, 'global');
+                localStorage.setItem(seenKey, newMsg);
             }
         }
     });
@@ -4525,29 +4528,17 @@ init: function() {
     }
 },
 
-    // 코디/센터 공지 배지 업데이트 (공지탭 NEW + Q&A탭 공지 배지)
+    // 코디/센터 공지 배지 업데이트
     updateCoordNoticeBadge: function(newMsg, lastSeen, type) {
         const hasNew = newMsg && newMsg !== lastSeen;
-        if (hasNew) {
-            const badge = document.getElementById('coordNoticeBadge');
-            const qaBadge = document.getElementById('qaNoticeBadge');
-            if(badge) badge.style.display = 'inline-block';
-            if(qaBadge) qaBadge.style.display = 'inline-block';
-        }
-        // 새 공지 없을 때는 양쪽 다 없는 경우만 숨김
-        if (!hasNew) {
-            const noCoord = !localStorage.getItem(`kac_coord_notice_seen_${state.room}`) || 
-                            (firebase.database && false); // 보수적으로 유지
-            // 배지 숨김은 clearCoordNoticeBadge에서만 처리
-        }
+        const badge = document.getElementById('coordNoticeBadge');
+        if(badge) badge.style.display = hasNew ? 'inline-block' : 'none';
     },
 
     // 공지 탭 진입 시 배지 숨기고 읽음 처리 (coord + global 모두)
     clearCoordNoticeBadge: function() {
         const badge = document.getElementById('coordNoticeBadge');
-        const qaBadge = document.getElementById('qaNoticeBadge');
         if(badge) badge.style.display = 'none';
-        if(qaBadge) qaBadge.style.display = 'none';
         if(state.room) {
             // 운영부 공지 읽음 처리
             firebase.database().ref(`courses/${state.room}/coordNotice`).once('value', snap => {
@@ -4560,24 +4551,25 @@ init: function() {
         }
     },
 
-    // 공지 알림 팝업 (Q&A 탭에서는 배지만, 나머지 탭에서는 팝업)
+    // 공지 알림 팝업
     showCoordNoticeAlert: function(msg, type) {
+        // 배지 표시 (공지탭 NEW 배지)
         const badge = document.getElementById('coordNoticeBadge');
-        const qaBadge = document.getElementById('qaNoticeBadge');
         if(badge) badge.style.display = 'inline-block';
-        if(qaBadge) qaBadge.style.display = 'inline-block';
 
-        // 퀴즈 탭에서는 팝업 차단 (퀴즈 진행 방해 금지)
-        if(state.currentMode === 'quiz') return;
+        // 퀴즈 탭 또는 Q&A 탭에서는 팝업 차단
+        const blockedModes = ['quiz', 'qa'];
+        if(blockedModes.includes(state.currentMode)) return;
 
         const modal = document.getElementById('coordNoticeAlertModal');
         const titleEl = document.getElementById('coordNoticeAlertTitle');
         const content = document.getElementById('coordNoticeAlertContent');
         if(!modal || !content) return;
 
-        // 공지 종류별 제목 표시
         if(titleEl) {
-            titleEl.innerText = type === 'global' ? '🏢 항기원 전체 공지가 업데이트되었습니다' : '📋 운영부 과정 공지가 업데이트되었습니다';
+            titleEl.innerText = type === 'global'
+                ? '🏢 항기원 전체 공지가 업데이트되었습니다'
+                : '📋 운영부 과정 공지가 업데이트되었습니다';
         }
         content.innerText = msg;
         modal.style.display = 'flex';
