@@ -560,36 +560,32 @@ forceEnterRoom: async function(room) {
 
         if (!state.isObserver) {
             if (isOwner) {
-                // ① 내가 정당한 주인 → 소유 기록 저장 후 즉시 입장
+                // ① 내가 정당한 주인 → 무조건 즉시 입장 (wasMyRoom 불필요)
                 localStorage.setItem('last_owned_room', cleanRoom);
                 overlay.style.display = 'none';
                 const tm = document.getElementById('takeoverModal');
                 if (tm) tm.style.display = 'none';
-            } else if (isActive && wasMyRoom) {
-                // ② 내 방인데 세션 만료(새로고침 등) → ownerSessionId 갱신 후 입장
-                firebase.database().ref(`courses/${cleanRoom}/status`).update({ ownerSessionId: state.sessionId });
-                overlay.style.display = 'none';
-                const tm = document.getElementById('takeoverModal');
-                if (tm) tm.style.display = 'none';
-            } else if (!isActive && wasMyRoom) {
-                // ③ 내가 쓰던 빈 방 → active 전환 후 입장
+            } else if (!isActive) {
+                // ② 빈 방 → 내 방으로 활성화 후 입장
                 firebase.database().ref(`courses/${cleanRoom}/status`).update({
                     ownerSessionId: state.sessionId, roomStatus: 'active'
                 });
                 overlay.style.display = 'none';
                 const tm = document.getElementById('takeoverModal');
                 if (tm) tm.style.display = 'none';
+            } else if (isActive && wasMyRoom) {
+                // ③ 내 방인데 세션 갱신 필요(새로고침) → ownerSessionId 갱신 후 입장
+                firebase.database().ref(`courses/${cleanRoom}/status`).update({ ownerSessionId: state.sessionId });
+                overlay.style.display = 'none';
+                const tm = document.getElementById('takeoverModal');
+                if (tm) tm.style.display = 'none';
             } else if (isActive && !isOwner) {
-                // ④ 남의 방 → 비번 입력창 (방 번호 표시)
+                // ④ 남의 방 → 비번 입력창
                 overlay.style.display = 'flex';
                 state.pendingRoom = cleanRoom;
                 const lbl = document.getElementById('takeoverRoomLabel');
                 if(lbl) lbl.innerText = `Room #${cleanRoom}`;
                 document.getElementById('takeoverModal').style.display = 'flex';
-            } else {
-                // ⑤ 빈 방 (처음 방문) → 환경설정 안내 + 대시보드 초기화
-                overlay.style.display = 'flex';
-                ui.clearDashboard();
             }
         } else {
             // 옵저버 모드는 잠금 없이 관람 허용
