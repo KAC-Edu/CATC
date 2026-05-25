@@ -1139,8 +1139,8 @@ body.modal-open .app-content {
       <div id="studentShuttleView" class="view-card-full" style="display:none; flex-direction:column; gap:12px;">
           <div class="section-card">
               <div class="section-title"><i class="fa-solid fa-bus"></i> 과정별 퇴교차량 신청 총괄</div>
-              <div style="overflow-x: auto;">
-                  <table class="navy-table">
+              <div style="overflow-x: auto; background:rgba(255,255,255,0.95); border-radius:10px; overflow:hidden;">
+                  <table class="navy-table" style="background:transparent;">
                       <thead>
                           <tr><th>과정명</th><th>총원</th><th>오송역</th><th>터미널</th><th>공항</th><th>자차</th></tr>
                       </thead>
@@ -1323,37 +1323,40 @@ body.modal-open .app-content {
     </div>
 </div>
 
-<div class="section-card notice-card-fill">
-    <div class="section-title" style="color: #1e40af;">
+<div class="section-card" style="background:linear-gradient(135deg,#1e3a8a,#1d4ed8); color:white; padding:16px;">
+    <div class="section-title" style="color:white; margin-bottom:12px;">
         <i class="fa-solid fa-comment-dots"></i> 담당 과정 공지 (해당 과정 교육생 공지)
     </div>
-    <textarea id="courseNotice" class="notice-area" oninput="autoGrow(this)" placeholder="공지 입력"></textarea>
-    <button class="navy-btn" style="background:#0ea5e9; border:none; box-shadow: 0 4px 10px rgba(14,165,233,0.3);" onclick="saveCourseNotice()">과정 공지 업데이트</button>
+    <textarea id="courseNotice" class="notice-area" oninput="autoGrow(this)" placeholder="공지 내용을 입력하세요..."
+        style="background:rgba(255,255,255,0.95); color:#1e293b; border:none; border-radius:10px; font-size:14px; padding:12px;"></textarea>
+    <button class="navy-btn" style="background:#0ea5e9; border:none; box-shadow:0 4px 10px rgba(14,165,233,0.4); margin-top:8px; width:100%;" onclick="saveCourseNotice()">
+        <i class="fa-solid fa-paper-plane"></i> 과정 공지 업데이트
+    </button>
 
     <!-- 공지 발송 이력 -->
-    <div style="margin-top:18px; border-top:1px solid #e2e8f0; padding-top:14px;">
-        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;">
-            <span style="font-size:13px; font-weight:800; color:#475569;">
-                <i class="fa-solid fa-clock-rotate-left" style="color:#3b82f6;"></i> 공지 발송 이력
+    <div style="margin-top:14px; border-top:1px solid rgba(255,255,255,0.2); padding-top:12px;">
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
+            <span style="font-size:13px; font-weight:800; color:rgba(255,255,255,0.9);">
+                <i class="fa-solid fa-clock-rotate-left"></i> 공지 발송 이력
             </span>
-            <button onclick="clearNoticeHistory()" style="font-size:11px; color:#94a3b8; background:none; border:none; cursor:pointer; padding:2px 6px; border-radius:4px; hover:background:#f1f5f9;">
+            <button onclick="clearNoticeHistory()" style="font-size:11px; color:rgba(255,255,255,0.6); background:none; border:none; cursor:pointer; padding:2px 6px;">
                 전체 삭제
             </button>
         </div>
         <div id="noticeHistoryList" style="max-height:200px; overflow-y:auto; display:flex; flex-direction:column; gap:6px;">
-            <div style="text-align:center; color:#cbd5e1; font-size:12px; padding:16px 0;">발송 이력이 없습니다.</div>
+            <div style="text-align:center; color:rgba(255,255,255,0.5); font-size:12px; padding:16px 0;">발송 이력이 없습니다.</div>
         </div>
     </div>
 </div>
 
 
-          <div class="section-card" style="margin-bottom: 50px;">
-              <div class="section-title" style="justify-content:space-between;">
+          <div class="section-card" style="margin-bottom: 50px; background:linear-gradient(135deg,#1e3a8a,#1d4ed8); color:white; padding:16px;">
+              <div class="section-title" style="color:white; margin-bottom:12px; justify-content:space-between;">
                   <span><i class="fa-solid fa-user-clock"></i> 외출/외박 신청자 명단</span>
-                  <button class="navy-btn" style="width:140px; height:32px; font-size:12px;" onclick="openOutingLedger()">외출(외박)대장</button>
+                  <button class="navy-btn" style="width:140px; height:32px; font-size:12px; background:rgba(255,255,255,0.2); border:1px solid rgba(255,255,255,0.4);" onclick="openOutingLedger()">외출(외박)대장</button>
               </div>
-              <div style="overflow-x: auto;">
-                  <table class="navy-table">
+              <div style="overflow-x: auto; background:rgba(255,255,255,0.95); border-radius:10px; overflow:hidden;">
+                  <table class="navy-table" style="background:transparent;">
                       <thead>
                           <tr>
                               <th>신청자</th>
@@ -3430,7 +3433,7 @@ function renderNoticeHistory() {
             const items = Object.entries(data).sort((a,b) => b[0]-a[0]);
 
             const makeCard = ([key, item]) => `
-                <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:10px 12px; font-size:13px;">
+                <div style="background:rgba(255,255,255,0.95); border:none; border-radius:8px; padding:10px 12px; font-size:13px; color:#1e293b;">
                     <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px;">
                         <span style="color:#334155; font-weight:600; line-height:1.5; flex:1; white-space:pre-wrap;">${item.text}</span>
                         <div style="display:flex; flex-direction:column; align-items:flex-end; gap:4px; flex-shrink:0;">
