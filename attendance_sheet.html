@@ -45,8 +45,16 @@
 
         @media print {
             .no-print { display: none; }
-            body { background: white; padding: 0; }
-            .sheet-container { box-shadow: none; margin: 0; border: none; }
+            body { background: white; padding: 0; margin: 0; }
+            .sheet-container { box-shadow: none; margin: 0; border: none; padding: 10mm 15mm; }
+            /* A4 페이지 설정 */
+            @page { size: A4 portrait; margin: 10mm 15mm; }
+            /* 테이블 헤더 반복 (여러 페이지) */
+            thead { display: table-header-group; }
+            tfoot { display: table-footer-group; }
+            tr { page-break-inside: avoid; }
+            /* 결재란이 페이지 넘어가지 않도록 */
+            .sign-area { page-break-inside: avoid; }
         }
     </style>
 </head>
@@ -174,9 +182,20 @@ function renderTable(studentsRaw, attendanceData) {
             return;
         }
 
+        // expectedStudents 데이터 로드 (명단 업로드 여부 확인용)
+        db.ref(`courses/${roomFromUrl}/expectedStudents`).once('value', expSnap => {
+            const expectedList = expSnap.val() || [];
+        
         sortedStudents.forEach((s, idx) => {
             const tr = document.createElement('tr');
-            tr.innerHTML = `<td>${idx + 1}</td><td class="name-col">${s.name}</td>`;
+            const isExpected = Array.isArray(expectedList) 
+                ? expectedList.includes(s.name)
+                : Object.values(expectedList).includes(s.name);
+            // 명단 업로드: 공책 아이콘, QR 신규: QR 아이콘
+            const icon = isExpected
+                ? '<span style="font-size:13px; margin-right:3px;" title="명단 등록">📋</span>'
+                : '<span style="font-size:13px; margin-right:3px;" title="QR 신규 입교">📱</span>';
+            tr.innerHTML = `<td>${idx + 1}</td><td class="name-col">${icon}${s.name}</td>`;
 
             dateArray.forEach(d => {
                 const td = document.createElement('td');
@@ -200,7 +219,8 @@ function renderTable(studentsRaw, attendanceData) {
                 tr.appendChild(td);
             });
             tbody.appendChild(tr);
-        });
+        }); // sortedStudents.forEach 끝
+        }); // expectedStudents once 끝
     }
 
 
