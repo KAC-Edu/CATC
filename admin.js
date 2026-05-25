@@ -3344,10 +3344,16 @@ cancelIndividualDinnerSkip: function(token) {
 // 개별 복귀 호출 (Firebase returnCall 신호)
     callReturnToStudent: function(token, name) {
         if(!state.room) return;
-        if(!confirm(`[${name}]님에게 복귀 완료 알림을 보내시겠습니까?`)) return;
         const today = getTodayString();
-        firebase.database().ref(`courses/${state.room}/admin_actions/${today}/${token}/returnCall`).set(Date.now())
-            .then(() => ui.showAlert(`📳 [${name}]님에게 복귀 호출 신호를 보냈습니다.`));
+        firebase.database().ref(`courses/${state.room}/admin_actions/${today}/${token}`).once('value', snap => {
+            const data = snap.val() || {};
+            if (data.returned === true || data.returnReportTime) {
+                return ui.showAlert(`✅ [${name}]님은 이미 복귀 완료했습니다.`);
+            }
+            if(!confirm(`[${name}]님에게 복귀 완료 알림을 보내시겠습니까?`)) return;
+            firebase.database().ref(`courses/${state.room}/admin_actions/${today}/${token}/returnCall`).set(Date.now())
+                .then(() => ui.showAlert(`📳 [${name}]님에게 복귀 호출 신호를 보냈습니다.`));
+        });
     },
 
     // 전체 미복귀자 복귀 호출
