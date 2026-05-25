@@ -3056,11 +3056,18 @@ function executeAttendanceRecord(room, name, phone, dateStr, storageKey) {
 
 // 주소창 정리 함수
 function cleanUrlAndGo(r) {
+    // 출결 완료 후 URL에서 checkin 파라미터 제거하고 해당 방으로 이동
+    // replaceState 대신 실제 이동으로 init()이 올바른 room으로 재실행되도록
     const newUrl = window.location.pathname + `?room=${r}`;
-    window.history.replaceState({}, '', newUrl);
-    if(document.getElementById('landingPage')) document.getElementById('landingPage').style.display = 'none';
-    if(document.getElementById('mainApp')) document.getElementById('mainApp').style.display = 'flex';
-    startPresence();
+    if (window.location.search.includes('checkin=true')) {
+        // checkin 완료 후 깨끗한 URL로 실제 이동 (페이지 재로드)
+        location.replace(newUrl);
+    } else {
+        window.history.replaceState({}, '', newUrl);
+        if(document.getElementById('landingPage')) document.getElementById('landingPage').style.display = 'none';
+        if(document.getElementById('mainApp')) document.getElementById('mainApp').style.display = 'flex';
+        startPresence();
+    }
 }
 
 
