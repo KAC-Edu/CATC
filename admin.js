@@ -2243,13 +2243,18 @@ showAlert: function(msg) {
             if(sel) {
                 const opt = document.createElement('option');
                 opt.value = c;
-                // 내가 선택한 방이면 무조건 파란색 (ownerSessionId 불일치 무관)
-                if(c === state.room) opt.innerText = `Room ${c} (🔵 내 강의실 - ${profName})`;
-                else if(isRoomActive) opt.innerText = `Room ${c} (🟠 사용중 - ${profName})`;
-                else opt.innerText = `Room ${c} (⚪ 대기)`;
-                
-                // [중요] 현재 방에 있을 때만 해당 항목을 선택 상태로 표시
-                if(c === state.room) opt.selected = true;
+                if(c === state.room) {
+                    // 내 강의실 - 파란색
+                    opt.innerText = `Room ${c} (🔵 내 강의실 - ${profName})`;
+                    opt.selected = true;
+                } else if(isRoomActive) {
+                    // 다른 강사 사용중 - 주황색
+                    opt.innerText = `Room ${c} (🟠 사용중 - ${profName})`;
+                } else {
+                    // 미개설 대기 방 - 흐리게 표시
+                    opt.innerText = `Room ${c}  (미개설)`;
+                    opt.style.color = '#94a3b8';
+                }
                 sel.appendChild(opt);
             }
 
