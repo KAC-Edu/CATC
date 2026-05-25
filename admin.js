@@ -337,6 +337,8 @@ switchRoomAttempt: async function(newRoom) {
         
         // 중요: forceEnterRoom을 실행하지 않고 여기서 중단합니다. (데이터 리스너 실행 방지)
         document.getElementById('takeoverPwInput').value = "";
+        const lbl1 = document.getElementById('takeoverRoomLabel');
+        if(lbl1) lbl1.innerText = `Room #${newRoom}`;
         document.getElementById('takeoverModal').style.display = 'flex';
         document.getElementById('takeoverPwInput').focus();
         
@@ -404,6 +406,8 @@ verifyTakeover: async function() {
             // 1. 현재 옵저버인데 클릭했다면? -> 강사 모드로 전환 (비밀번호 창 띄우기)
             state.pendingRoom = state.room;
             document.getElementById('takeoverPwInput').value = "";
+            const lbl3 = document.getElementById('takeoverRoomLabel');
+            if(lbl3) lbl3.innerText = `Room #${state.room}`;
             document.getElementById('takeoverModal').style.display = 'flex';
             document.getElementById('takeoverPwInput').focus();
         } else {
