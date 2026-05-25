@@ -284,6 +284,7 @@ loadInitialData: function() {
 // [수정 완료] 보안 검증 강화 및 데이터 유출 차단 로직
 switchRoomAttempt: async function(newRoom, silent = false) {
     // 1. 시각적 즉시 차단 + 대시보드/헤더 초기화 (이전 방 정보 잔류 방지)
+    if (!silent) ui.showLoading(`Room #${newRoom} 입장 중...`);
     const overlay = document.getElementById('statusOverlay');
     if (overlay && !silent) overlay.style.display = 'flex'; // silent(새로고침)일 때는 잠금화면 안 띄움
     ui.clearDashboard();
@@ -565,6 +566,7 @@ forceEnterRoom: async function(room) {
     };
     dbRef = window.dbRef; 
 
+    ui.hideLoading();
     ui.updateHeaderRoom(cleanRoom);
     ui.updateObserverButton();
 
@@ -3252,6 +3254,7 @@ renderQaList: function(f) {
     
 // [강사 플랫폼: 초기 대기 화면 설정 - 흐릿한 배경 완벽 제거 버전]
     showWaitingRoom: function() {
+        this.hideLoading();
         // 방 미선택 상태 - 하단 버튼 비활성화
         this.renderRoomStatus('idle');
         state.room = null; // 메모리상 방 정보 완전 삭제
@@ -3937,8 +3940,21 @@ resetShuttleRequests: function() {
     },
 
 // [강사 플랫폼: 로고 클릭 시 모든 정보를 초기화하고 현황판으로 이동]
+    // 전역 로딩 스피너
+    showLoading: function(msg = '로딩 중...') {
+        const el = document.getElementById('globalLoadingOverlay');
+        const msgEl = document.getElementById('globalLoadingMsg');
+        if (el) { el.style.display = 'flex'; }
+        if (msgEl) msgEl.innerText = msg;
+    },
+    hideLoading: function() {
+        const el = document.getElementById('globalLoadingOverlay');
+        if (el) el.style.display = 'none';
+    },
+
     goHome: function() {
         // confirm 없이 바로 현황판으로 이동
+        ui.showLoading('홈 화면으로 이동 중...');
         localStorage.removeItem('kac_last_room');
         localStorage.removeItem('kac_last_mode');
         state.room = null;
