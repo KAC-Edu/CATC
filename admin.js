@@ -2302,6 +2302,23 @@ showAlert: function(msg) {
                     : '<span class="badge-status badge-idle">⚪ 비어 있음</span>';
 
                 const rowNum = count++;
+                const roomDetail = settings.roomDetailName || '';
+                // 강의실명 2줄 표시 (공백 기준으로 분리, 마지막 단어를 2번째 줄로)
+                let roomLine1 = roomDetail, roomLine2 = '';
+                if (roomDetail) {
+                    const parts = roomDetail.trim().split(/\s+/);
+                    if (parts.length >= 2) {
+                        roomLine2 = parts.pop();
+                        roomLine1 = parts.join(' ');
+                    }
+                }
+                const roomCell = roomDetail
+                    ? `<div style="text-align:center; line-height:1.4;">
+                           <div style="font-size:11px; font-weight:700; color:#334155;">${roomLine1}</div>
+                           <div style="font-size:11px; font-weight:700; color:#334155;">${roomLine2}</div>
+                       </div>`
+                    : '<span style="color:#cbd5e1;">-</span>';
+
                 row.innerHTML = `
                     <td>${rowNum}</td>
                     <td style="font-weight:900; color:#3b82f6;">
@@ -2312,7 +2329,7 @@ showAlert: function(msg) {
                     <td style="font-weight:600;">${profName}</td>
                     <td>${statusBadge}</td>
                     <td style="font-weight:700;">${userCount}명</td>
-                    <td style="color:#94a3b8; font-size:14px;">-</td>
+                    <td>${roomCell}</td>
                     <td>
                         <button class="btn-table-action" onclick="dataMgr.switchRoomAttempt('${c}')">입장하기</button>
                     </td>
