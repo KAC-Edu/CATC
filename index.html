@@ -2370,8 +2370,7 @@ function startOutingReturnAlerts(endTime) {
         const now = new Date();
         const h = now.getHours(), m = now.getMinutes();
         if (h >= 22) {
-            triggerReturnAlert('🚨 외출 복귀 시간 초과!
-지금 바로 복귀 완료 버튼을 눌러주세요.');
+            triggerReturnAlert('🚨 외출 복귀 시간 초과!\n지금 바로 복귀 완료 버튼을 눌러주세요.');
         }
     }, 5 * 60 * 1000); // 5분마다
 }
@@ -2390,8 +2389,7 @@ function startOvernightReturnAlerts() {
         // 다음날 8:10 이후
         if (h > 8 || (h === 8 && m >= 10)) {
             _returnAlertCount++;
-            triggerReturnAlert(`🚨 외박 복귀 확인 (${_returnAlertCount}/3)
-복귀 완료 보고 버튼을 눌러주세요!`);
+            triggerReturnAlert(`🚨 외박 복귀 확인 (${_returnAlertCount}/3)\n복귀 완료 보고 버튼을 눌러주세요!`);
         }
     }, 5 * 60 * 1000);
 }
