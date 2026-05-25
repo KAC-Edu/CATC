@@ -3470,9 +3470,11 @@ loadStudentList: function() {
                     let arrivalBadge = '';
                     if (isArrived) {
                         if (isExpected) {
-                            arrivalBadge = '<span style="font-size:14px; margin-left:5px;" title="명단 등록 입교">📋</span>';
+                            // 명단 등록: 노트 아이콘 (fa-book-open)
+                            arrivalBadge = '<i class="fa-solid fa-book-open" title="명단 등록 입교" style="font-size:13px; color:#059669; margin-left:5px;"></i>';
                         } else {
-                            arrivalBadge = '<span style="font-size:14px; margin-left:5px;" title="QR 신규 입교">📱</span>';
+                            // QR 신규: QR 아이콘 (fa-qrcode)
+                            arrivalBadge = '<i class="fa-solid fa-qrcode" title="QR 신규 입교" style="font-size:13px; color:#059669; margin-left:5px;"></i>';
                         }
                     }
 

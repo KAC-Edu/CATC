@@ -193,8 +193,8 @@ function renderTable(studentsRaw, attendanceData) {
                 : Object.values(expectedList).includes(s.name);
             // 명단 업로드: 공책 아이콘, QR 신규: QR 아이콘
             const icon = isExpected
-                ? '<span style="font-size:13px; margin-right:3px;" title="명단 등록">📋</span>'
-                : '<span style="font-size:13px; margin-right:3px;" title="QR 신규 입교">📱</span>';
+                ? '<i class="fa-solid fa-book-open" title="명단 등록" style="font-size:12px; color:#059669; margin-right:4px;"></i>'
+                : '<i class="fa-solid fa-qrcode" title="QR 신규 입교" style="font-size:12px; color:#059669; margin-right:4px;"></i>';
             tr.innerHTML = `<td>${idx + 1}</td><td class="name-col">${icon}${s.name}</td>`;
 
             dateArray.forEach(d => {
