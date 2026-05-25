@@ -579,52 +579,46 @@ forceEnterRoom: async function(room) {
         const wasMyRoom = dataMgr.isMyOwnedRoom(cleanRoom);
 
         if (!state.isObserver) {
+            // 상황에 맞는 overlay 메시지 설정
+            const overlayMsg = document.getElementById('statusOverlayMsg');
+            
             if (isOwner) {
-                // ① 내가 정당한 주인 → 무조건 즉시 입장
-                localStorage.setItem('last_owned_room', cleanRoom);
+                // ① 내가 DB상 현재 주인 → 즉시 입장 + 소유 목록 추가
                 dataMgr.addOwnedRoom(cleanRoom);
                 overlay.style.display = 'none';
                 const tm = document.getElementById('takeoverModal');
                 if (tm) tm.style.display = 'none';
+
             } else if (!isActive) {
-                // ② 미개설 빈 방 → 활성화는 하되 overlay로 환경설정 유도
-                firebase.database().ref(`courses/${cleanRoom}/status`).update({
-                    ownerSessionId: state.sessionId, roomStatus: 'active'
-                });
-                localStorage.setItem('last_owned_room', cleanRoom);
-                // overlay 유지 + 환경설정 버튼 깜빡임 안내
-                const setupGuideEl = document.getElementById('setupGuideOverlay');
-                if (setupGuideEl) {
-                    overlay.style.display = 'none';
-                    setupGuideEl.style.display = 'flex';
-                } else {
-                    overlay.style.display = 'none';
-                }
-                const tm = document.getElementById('takeoverModal');
-                if (tm) tm.style.display = 'none';
-                // 환경설정 버튼 깜빡임 효과
+                // ② 미개설 빈 방 → overlay 유지, 과정현황 완전히 차단
+                overlay.style.display = 'flex';
+                if (overlayMsg) overlayMsg.innerHTML = '미개설 강의실입니다.<br><br>좌측 <b>👆 교육과정 환경 설정 (통합)</b> 버튼을<br>눌러 과정을 개설해주세요.';
                 const sb = document.getElementById('btnSetupModal');
                 if (sb) {
                     sb.classList.add('btn-pulse');
-                    setTimeout(() => sb.classList.remove('btn-pulse'), 8000);
+                    setTimeout(() => sb.classList.remove('btn-pulse'), 10000);
                 }
+
             } else if (isActive && wasMyRoom) {
-                // ③ 내가 비번치고 들어갔던 방 → ownerSessionId 갱신 후 입장
+                // ③ 내가 비번치고 들어갔던 방 (세션 만료 후 재진입)
+                // → ownerSessionId 갱신 후 입장
                 firebase.database().ref(`courses/${cleanRoom}/status`).update({ ownerSessionId: state.sessionId });
                 dataMgr.addOwnedRoom(cleanRoom);
                 overlay.style.display = 'none';
                 const tm = document.getElementById('takeoverModal');
                 if (tm) tm.style.display = 'none';
+
             } else if (isActive && !isOwner) {
-                // ④ 남의 방 → 비번 입력창
+                // ④ 다른 강사 사용중인 방 → 비번 입력창
                 overlay.style.display = 'flex';
+                if (overlayMsg) overlayMsg.innerHTML = '사용 중인 강의실입니다.<br><br>제어권을 얻으려면 비밀번호를 입력하세요.';
                 state.pendingRoom = cleanRoom;
                 const lbl = document.getElementById('takeoverRoomLabel');
                 if(lbl) lbl.innerText = `Room #${cleanRoom}`;
                 document.getElementById('takeoverModal').style.display = 'flex';
             }
         } else {
-            // 옵저버 모드는 잠금 없이 관람 허용
+            // 옵저버 모드
             overlay.style.display = 'none';
         }
 
@@ -2279,15 +2273,18 @@ showAlert: function(msg) {
             if(sel) {
                 const opt = document.createElement('option');
                 opt.value = c;
-                if(c === state.room) {
-                    // 내 강의실 - 파란색
+                // 파란 LED: 현재 선택한 방이면서 내가 비번 치고 들어간 방(verifyTakeover 성공)만
+                const isVerifiedMyRoom = (c === state.room) && dataMgr.isMyOwnedRoom(c);
+                if(isVerifiedMyRoom) {
                     opt.innerText = `Room ${c} (🔵 내 강의실 - ${profName})`;
                     opt.selected = true;
+                } else if(c === state.room) {
+                    // 선택한 방이지만 비번 미인증 (미개설 진입 등)
+                    opt.innerText = `Room ${c} (⚪ 설정 중)`;
+                    opt.selected = true;
                 } else if(isRoomActive) {
-                    // 다른 강사 사용중 - 주황색
                     opt.innerText = `Room ${c} (🟠 사용중 - ${profName})`;
                 } else {
-                    // 미개설 대기 방 - 흐리게 표시
                     opt.innerText = `Room ${c}  (미개설)`;
                     opt.style.color = '#94a3b8';
                 }
@@ -2307,7 +2304,7 @@ showAlert: function(msg) {
                     <td>${rowNum}</td>
                     <td style="font-weight:900; color:#3b82f6;">
                         Room ${c}
-                        ${c === state.room ? '<span class="my-room-badge">MY</span>' : ''}
+                        ${(c === state.room && dataMgr.isMyOwnedRoom(c)) ? '<span class="my-room-badge">MY</span>' : ''}
                     </td>
                     <td><div class="td-course-name" title="${courseName}">${courseName}</div></td>
                     <td style="font-weight:600;">${profName}</td>
@@ -2319,8 +2316,8 @@ showAlert: function(msg) {
                     </td>
                 `;
 
-                // innerHTML 설정 후에 class 추가 (innerHTML이 class를 덮어쓰는 문제 방지)
-                if (c === state.room) {
+                // 파란박스: 현재 방이면서 비번 인증된 방만
+                if (c === state.room && dataMgr.isMyOwnedRoom(c)) {
                     row.classList.add('is-my-room');
                 }
 
