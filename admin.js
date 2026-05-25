@@ -890,7 +890,30 @@ resetCourse: function() {
         return;
     }
 
-    if(confirm(`🚨 [위험] Room ${state.room}의 모든 데이터를 초기화하시겠습니까?\n이름, 질문, 신청 내역 등 모든 정보가 삭제되며 되돌릴 수 없습니다.`)) {
+    // 3. 소유권 또는 마스터키 확인
+    firebase.database().ref(`courses/${state.room}/status`).once('value', snap => {
+        const st = snap.val() || {};
+        const isOwner = st.ownerSessionId === state.sessionId;
+        const roomPw = st.password || null;
+
+        const MASTER_KEY = "13281";
+
+        // 내 방이 아닌 경우 비밀번호 확인
+        if (!isOwner) {
+            const inputPw = prompt(`🔐 Room ${state.room} 초기화 권한이 필요합니다.\n마스터키 또는 해당 강의실 비밀번호를 입력하세요:`);
+            if (!inputPw) return;
+            if (inputPw !== MASTER_KEY && inputPw !== roomPw) {
+                ui.showAlert("❌ 비밀번호가 올바르지 않습니다.");
+                return;
+            }
+        }
+
+        if(!confirm(`🚨 [위험] Room ${state.room}의 모든 데이터를 초기화하시겠습니까?\n이름, 질문, 신청 내역 등 모든 정보가 삭제되며 되돌릴 수 없습니다.`)) return;
+        doReset();
+    });
+
+    function doReset() {
+        if (!state.room) return;
         const rPath = `courses/${state.room}`;
         const updates = {};
 
@@ -928,7 +951,7 @@ resetCourse: function() {
         }).catch(err => {
             ui.showAlert("초기화 실패: " + err.message);
         });
-    }
+    } // doReset 끝
 },
 
 // [추가] 공지사항 관리창 열기
