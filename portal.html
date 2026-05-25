@@ -231,11 +231,15 @@
       if (!userInput) return;
 
       try {
+        // portalPins는 auth != null 규칙 → 익명 로그인으로 접근
+        if (!firebase.auth().currentUser) {
+          await firebase.auth().signInAnonymously();
+        }
         const snap = await firebase.database().ref(`system/portalPins/${role}`).once('value');
         const dbHashed = snap.val();
 
         if (!dbHashed) {
-          alert("PIN이 설정되지 않았습니다.");
+          alert("PIN이 설정되지 않았습니다. 관리자에게 문의하세요.");
           return;
         }
 
@@ -248,7 +252,8 @@
           alert("잘못된 PIN 번호입니다.");
         }
       } catch (e) {
-        alert("데이터 연결 오류가 발생했습니다.");
+        console.error(e);
+        alert("데이터 연결 오류: " + e.message);
       }
     }
 

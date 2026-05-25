@@ -1329,19 +1329,16 @@ body.modal-open .app-content {
     </div>
     <textarea id="courseNotice" class="notice-area" oninput="autoGrow(this)" placeholder="공지 내용을 입력하세요..."
         style="background:rgba(255,255,255,0.88); color:#1e293b; border:none; border-radius:10px; font-size:14px; padding:12px;"></textarea>
-    <button class="navy-btn" style="background:#0ea5e9; border:none; box-shadow:0 4px 10px rgba(14,165,233,0.4); margin-top:8px; width:100%;" onclick="saveCourseNotice()">
+    <button class="navy-btn" style="background:#10b981; border:none; box-shadow:0 4px 10px rgba(16,185,129,0.4); margin-top:8px; width:100%;" onclick="saveCourseNotice()">
         <i class="fa-solid fa-paper-plane"></i> 과정 공지 업데이트
     </button>
 
     <!-- 공지 발송 이력 -->
     <div style="margin-top:14px; border-top:1px solid rgba(255,255,255,0.2); padding-top:12px;">
-        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
-            <span style="font-size:13px; font-weight:800; color:rgba(255,255,255,0.9);">
-                <i class="fa-solid fa-clock-rotate-left"></i> 공지 발송 이력
+        <div style="margin-bottom:6px;">
+            <span style="font-size:12px; font-weight:700; color:rgba(255,255,255,0.7);">
+                <i class="fa-solid fa-clock-rotate-left"></i> 마지막 발송
             </span>
-            <button onclick="clearNoticeHistory()" style="font-size:11px; color:rgba(255,255,255,0.6); background:none; border:none; cursor:pointer; padding:2px 6px;">
-                전체 삭제
-            </button>
         </div>
         <div id="noticeHistoryList" style="max-height:200px; overflow-y:auto; display:flex; flex-direction:column; gap:6px;">
             <div style="text-align:center; color:rgba(255,255,255,0.5); font-size:12px; padding:16px 0;">발송 이력이 없습니다.</div>
@@ -3427,55 +3424,18 @@ function renderNoticeHistory() {
         .once('value', snap => {
             const data = snap.val();
             if(!data) {
-                listEl.innerHTML = '<div style="text-align:center; color:#cbd5e1; font-size:12px; padding:16px 0;">발송 이력이 없습니다.</div>';
+                listEl.innerHTML = '<span style="color:rgba(255,255,255,0.4); font-size:12px;">발송 이력 없음</span>';
                 return;
             }
             const items = Object.entries(data).sort((a,b) => b[0]-a[0]);
-
-            const makeCard = ([key, item]) => `
-                <div style="background:rgba(255,255,255,0.15); border:1px solid rgba(255,255,255,0.25); border-radius:8px; padding:10px 12px; font-size:13px; color:white;">
-                    <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px;">
-                        <span style="color:rgba(255,255,255,0.9); font-weight:600; line-height:1.5; flex:1; white-space:pre-wrap;">${item.text}</span>
-                        <div style="display:flex; flex-direction:column; align-items:flex-end; gap:4px; flex-shrink:0;">
-                            <span style="color:rgba(255,255,255,0.65); font-size:11px; white-space:nowrap;">${item.timeStr}</span>
-                            <button onclick="reapplyNotice('${key}')" style="font-size:10px; background:rgba(255,255,255,0.2); color:white; border:1px solid rgba(255,255,255,0.35); border-radius:4px; padding:2px 6px; cursor:pointer;">재발송</button>
-                        </div>
-                    </div>
+            const [key, item] = items[0];
+            // 최신 1건만 흰색 글씨로 표시
+            listEl.innerHTML = `
+                <div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
+                    <span style="color:rgba(255,255,255,0.88); font-size:13px; font-weight:600; flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${item.text}</span>
+                    <span style="color:rgba(255,255,255,0.5); font-size:11px; white-space:nowrap; flex-shrink:0;">${item.timeStr}</span>
                 </div>`;
-
-            // 최신 1개만 표시, 나머지는 접기
-            const latest = makeCard(items[0]);
-            const rest = items.slice(1);
-
-            let html = latest;
-            if(rest.length > 0) {
-                html += `
-                <div id="noticeHistoryMore" style="display:none; display:flex; flex-direction:column; gap:6px; margin-top:6px;">
-                    ${rest.map(makeCard).join('')}
-                </div>
-                <button onclick="toggleNoticeHistory()" id="noticeHistoryToggleBtn"
-                    style="width:100%; margin-top:6px; padding:7px; background:rgba(255,255,255,0.15); border:1px solid rgba(255,255,255,0.25); border-radius:8px; font-size:12px; color:rgba(255,255,255,0.85); cursor:pointer; font-weight:600;">
-                    이전 이력 ${rest.length}건 더 보기 ▼
-                </button>`;
-            }
-            listEl.innerHTML = html;
-            // 초기 상태: more 숨김
-            const moreEl = document.getElementById('noticeHistoryMore');
-            if(moreEl) moreEl.style.display = 'none';
         });
-}
-
-function toggleNoticeHistory() {
-    const moreEl = document.getElementById('noticeHistoryMore');
-    const btn = document.getElementById('noticeHistoryToggleBtn');
-    if(!moreEl || !btn) return;
-    const isOpen = moreEl.style.display !== 'none';
-    moreEl.style.display = isOpen ? 'none' : 'flex';
-    moreEl.style.flexDirection = 'column';
-    moreEl.style.gap = '6px';
-    btn.textContent = isOpen
-        ? `이전 이력 더 보기 ▼`
-        : `접기 ▲`;
 }
 
 // 이력에서 재발송
