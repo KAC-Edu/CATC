@@ -3427,9 +3427,9 @@ function renderNoticeHistory() {
                 listEl.innerHTML = '<div style="text-align:center; color:#cbd5e1; font-size:12px; padding:16px 0;">발송 이력이 없습니다.</div>';
                 return;
             }
-            // 최신순 정렬
             const items = Object.entries(data).sort((a,b) => b[0]-a[0]);
-            listEl.innerHTML = items.map(([key, item]) => `
+
+            const makeCard = ([key, item]) => `
                 <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:10px 12px; font-size:13px;">
                     <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px;">
                         <span style="color:#334155; font-weight:600; line-height:1.5; flex:1; white-space:pre-wrap;">${item.text}</span>
@@ -3438,8 +3438,41 @@ function renderNoticeHistory() {
                             <button onclick="reapplyNotice('${key}')" style="font-size:10px; background:#eff6ff; color:#3b82f6; border:1px solid #bfdbfe; border-radius:4px; padding:2px 6px; cursor:pointer;">재발송</button>
                         </div>
                     </div>
-                </div>`).join('');
+                </div>`;
+
+            // 최신 1개만 표시, 나머지는 접기
+            const latest = makeCard(items[0]);
+            const rest = items.slice(1);
+
+            let html = latest;
+            if(rest.length > 0) {
+                html += `
+                <div id="noticeHistoryMore" style="display:none; display:flex; flex-direction:column; gap:6px; margin-top:6px;">
+                    ${rest.map(makeCard).join('')}
+                </div>
+                <button onclick="toggleNoticeHistory()" id="noticeHistoryToggleBtn"
+                    style="width:100%; margin-top:6px; padding:7px; background:#f1f5f9; border:1px solid #e2e8f0; border-radius:8px; font-size:12px; color:#64748b; cursor:pointer; font-weight:600;">
+                    이전 이력 ${rest.length}건 더 보기 ▼
+                </button>`;
+            }
+            listEl.innerHTML = html;
+            // 초기 상태: more 숨김
+            const moreEl = document.getElementById('noticeHistoryMore');
+            if(moreEl) moreEl.style.display = 'none';
         });
+}
+
+function toggleNoticeHistory() {
+    const moreEl = document.getElementById('noticeHistoryMore');
+    const btn = document.getElementById('noticeHistoryToggleBtn');
+    if(!moreEl || !btn) return;
+    const isOpen = moreEl.style.display !== 'none';
+    moreEl.style.display = isOpen ? 'none' : 'flex';
+    moreEl.style.flexDirection = 'column';
+    moreEl.style.gap = '6px';
+    btn.textContent = isOpen
+        ? `이전 이력 더 보기 ▼`
+        : `접기 ▲`;
 }
 
 // 이력에서 재발송
