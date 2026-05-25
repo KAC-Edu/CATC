@@ -2407,8 +2407,8 @@ body.night-mode .header-room-badge { background-color: #003366 !important; borde
 
 /* 통계 카드 아이콘 제거 후 텍스트 정렬 보정 */
 .stat-premium-card {
-    justify-content: center !important;
-    padding-top: 40px !important;
+    justify-content: flex-start !important;
+    padding-top: 25px !important;
 }
 
 
