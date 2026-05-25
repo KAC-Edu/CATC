@@ -3184,13 +3184,35 @@ body.night-mode .status-badge.status-arrived {
 .flatpickr-day.startRange {
     border-top-left-radius: 30px !important;
     border-bottom-left-radius: 30px !important;
+    background: #1d4ed8 !important;
+    color: #ffffff !important;
+    border-color: #1d4ed8 !important;
 }
 .flatpickr-day.endRange {
     border-top-right-radius: 30px !important;
     border-bottom-right-radius: 30px !important;
+    background: #1d4ed8 !important;
+    color: #ffffff !important;
+    border-color: #1d4ed8 !important;
 }
 .flatpickr-day.startRange.endRange {
     border-radius: 30px !important;
+    background: #1d4ed8 !important;
+    color: #ffffff !important;
+}
+/* flatpickr 기본 selected 스타일 완전 override */
+.flatpickr-day.selected, 
+.flatpickr-day.selected:focus, 
+.flatpickr-day.selected:hover,
+.flatpickr-day.startRange,
+.flatpickr-day.startRange:focus,
+.flatpickr-day.startRange:hover,
+.flatpickr-day.endRange,
+.flatpickr-day.endRange:focus,
+.flatpickr-day.endRange:hover {
+    background: #1d4ed8 !important;
+    color: #ffffff !important;
+    border-color: #1d4ed8 !important;
 }
 
 /* 8. 마우스 호버 시 효과 보정 */

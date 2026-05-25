@@ -664,52 +664,38 @@ forceEnterRoom: async function(room) {
     subjectMgr.init();
     guideMgr.init();
 
-    // ── 공지 실시간 리스너 (한 번만 등록, forceEnterRoom 재호출 시 재등록 방지) ──
-    if (!window._coordNoticeListenerRoom || window._coordNoticeListenerRoom !== cleanRoom) {
-        // 이전 방 리스너 제거
-        if (window._coordNoticeListenerRoom) {
-            firebase.database().ref(`courses/${window._coordNoticeListenerRoom}/coordNotice`).off();
+    // ── 공지 실시간 리스너 ──
+    // 항상 재등록 (off → on), state.noticeSeen으로 중복 팝업만 방지
+    firebase.database().ref(`courses/${cleanRoom}/coordNotice`).off();
+    firebase.database().ref(`courses/${cleanRoom}/coordNotice`).on('value', snap => {
+        if (state.room !== cleanRoom) return;
+        const newMsg = snap.val() || '';
+        const el = document.getElementById('dashNoticeAdmin');
+        if (el) el.innerText = newMsg || '등록된 운영부 과정 공지가 없습니다.';
+        if (!newMsg) return;
+        const key = `coord_${cleanRoom}`;
+        const prev = state.noticeSeen[key];
+        state.noticeSeen[key] = newMsg; // 항상 갱신
+        if (prev === undefined) return;  // 첫 수신: 팝업 없음
+        if (newMsg !== prev && state.currentMode !== 'notice') {
+            guideMgr.showCoordNoticeAlert(newMsg, '📋 운영부 과정 공지');
         }
-        firebase.database().ref('system/globalNotice').off();
-        window._coordNoticeListenerRoom = cleanRoom;
+    });
 
-        firebase.database().ref(`courses/${cleanRoom}/coordNotice`).on('value', snap => {
-            if (state.room !== cleanRoom) return;
-            const newMsg = snap.val() || '';
-            const el = document.getElementById('dashNoticeAdmin');
-            if (el) el.innerText = newMsg || '등록된 운영부 과정 공지가 없습니다.';
-            if (!newMsg) return;
-            const key = `coord_${cleanRoom}`;
-            if (!(key in state.noticeSeen)) {
-                state.noticeSeen[key] = newMsg; // 첫 수신: 저장만
-                return;
-            }
-            if (newMsg !== state.noticeSeen[key]) {
-                state.noticeSeen[key] = newMsg;
-                if (state.currentMode !== 'notice') {
-                    guideMgr.showCoordNoticeAlert(newMsg, '📋 운영부 과정 공지');
-                }
-            }
-        });
-
-        firebase.database().ref('system/globalNotice').on('value', snap => {
-            if (state.room !== cleanRoom) return;
-            const newMsg = snap.val() || '';
-            const el = document.getElementById('dashNoticeGlobal');
-            if (el) el.innerText = newMsg || '현재 게시된 센터 전체 공지가 없습니다.';
-            if (!newMsg) return;
-            if (!('global' in state.noticeSeen)) {
-                state.noticeSeen['global'] = newMsg;
-                return;
-            }
-            if (newMsg !== state.noticeSeen['global']) {
-                state.noticeSeen['global'] = newMsg;
-                if (state.currentMode !== 'notice') {
-                    guideMgr.showCoordNoticeAlert(newMsg, '🏢 항기원 전체 공지');
-                }
-            }
-        });
-    }
+    firebase.database().ref('system/globalNotice').off();
+    firebase.database().ref('system/globalNotice').on('value', snap => {
+        if (state.room !== cleanRoom) return;
+        const newMsg = snap.val() || '';
+        const el = document.getElementById('dashNoticeGlobal');
+        if (el) el.innerText = newMsg || '현재 게시된 센터 전체 공지가 없습니다.';
+        if (!newMsg) return;
+        const prev = state.noticeSeen['global'];
+        state.noticeSeen['global'] = newMsg;
+        if (prev === undefined) return;
+        if (newMsg !== prev && state.currentMode !== 'notice') {
+            guideMgr.showCoordNoticeAlert(newMsg, '🏢 항기원 전체 공지');
+        }
+    });
 
     ui.autoResetShuttleIfNeeded(cleanRoom);
 
