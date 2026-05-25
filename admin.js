@@ -673,7 +673,39 @@ forceEnterRoom: async function(room) {
     });
 
     // [금요일 자동 리셋] 차량 신청 명단 자동 초기화 체크
-    this.autoResetShuttleIfNeeded(cleanRoom);
+    // ── 공지 실시간 리스너 (운영부 coordNotice + 센터 globalNotice) ──
+    firebase.database().ref(`courses/${cleanRoom}/coordNotice`).off();
+    firebase.database().ref(`courses/${cleanRoom}/coordNotice`).on('value', snap => {
+        if (state.room !== cleanRoom) return;
+        const newMsg = snap.val() || '';
+        const seenKey = `kac_coord_notice_seen_${cleanRoom}`;
+        const lastSeen = localStorage.getItem(seenKey);
+        const el = document.getElementById('dashNoticeAdmin');
+        if (el) el.innerText = newMsg || '등록된 운영부 과정 공지가 없습니다.';
+        if (!newMsg) return;
+        if (lastSeen === null) { localStorage.setItem(seenKey, newMsg); return; }
+        if (newMsg !== lastSeen) {
+            localStorage.setItem(seenKey, newMsg);
+            if (state.currentMode !== 'notice') guideMgr.showCoordNoticeAlert(newMsg, '📋 운영부 과정 공지');
+        }
+    });
+    firebase.database().ref('system/globalNotice').off();
+    firebase.database().ref('system/globalNotice').on('value', snap => {
+        if (state.room !== cleanRoom) return;
+        const newMsg = snap.val() || '';
+        const seenKey = 'kac_global_notice_seen';
+        const lastSeen = localStorage.getItem(seenKey);
+        const el = document.getElementById('dashNoticeGlobal');
+        if (el) el.innerText = newMsg || '현재 게시된 센터 전체 공지가 없습니다.';
+        if (!newMsg) return;
+        if (lastSeen === null) { localStorage.setItem(seenKey, newMsg); return; }
+        if (newMsg !== lastSeen) {
+            localStorage.setItem(seenKey, newMsg);
+            if (state.currentMode !== 'notice') guideMgr.showCoordNoticeAlert(newMsg, '🏢 항기원 전체 공지');
+        }
+    });
+
+    ui.autoResetShuttleIfNeeded(cleanRoom);
 
     if (window.adminQaRefreshInterval) clearInterval(window.adminQaRefreshInterval);
     window.adminQaRefreshInterval = setInterval(() => {
@@ -2678,7 +2710,7 @@ setMode: function(mode) {
             }
             
             if (mode === 'dashboard') ui.loadDashboardStats(); 
-            if (mode === 'notice') { ui.loadNoticeView(); ui.clearCoordNoticeBadge(); } 
+            if (mode === 'notice') { ui.loadNoticeView(); guideMgr.clearCoordNoticeBadge(); } 
             if (mode === 'attendance') ui.loadAttendanceView();
             if (mode === 'guide') setTimeout(() => guideMgr.refresh(), 100);
             if (mode === 'shuttle') {
@@ -4996,6 +5028,7 @@ flatpickr("#setup-period-range", {
     showMonths: 2,         
     closeOnSelect: false,  
     disableMobile: "true",
+    defaultDate: new Date(),
     onReady: function(selectedDates, dateStr, instance) {
         // 가로폭을 820px로 고정하여 양쪽 달력 균형 확보
         instance.calendarContainer.style.width = "820px"; 
