@@ -1935,6 +1935,14 @@ updateQaCountBadge: function() {
         const snap = await firebase.database().ref(`courses/${state.room}/notice`).once('value');
         document.getElementById('instNoticeInputMain').value = snap.val() || "";
 
+        // 새 공지가 있으면 카드 하이라이트 (연두색 flash)
+        const coordKey = `coord_${state.room}`;
+        const globalKey = 'global';
+        const hasNewCoord = state.noticeSeen[coordKey] !== undefined && 
+            state.noticeSeen[coordKey] !== (await firebase.database().ref(`courses/${state.room}/coordNotice`).once('value')).val();
+        // 공지 탭 진입 시 flash 예약 (렌더링 후)
+        setTimeout(() => ui._flashNewNotices(), 300);
+
         // 2. 우측 영역: 통합 공지 조회
         const globalRef = firebase.database().ref('system/globalNotice');
         const coordRef = firebase.database().ref(`courses/${state.room}/coordNotice`);
@@ -2658,26 +2666,38 @@ setMode: function(mode) {
         localStorage.setItem('kac_last_mode', mode);
         state.currentMode = mode; // 현재 탭 추적 (공지 팝업 차단용)
 
-        // 5. 각 모드별 데이터 로드 및 퀴즈 이어하기/새로고침 복구 판별
+        // 5. 각 모드별 데이터 로드
         if (state.room) {
+            // ── 교육생 화면 모드 설정 (퀴즈는 맨 먼저 처리) ──
+            if (!state.isObserver) {
+                const safeStudentModes = ['waiting', 'shuttle', 'admin-action', 'dinner-skip', 'students', 'dashboard', 'notice', 'attendance', 'guide', 'dormitory'];
+                let studentMode;
+                if (mode === 'quiz') {
+                    studentMode = 'quiz';
+                } else if (mode === 'qa' || safeStudentModes.includes(mode)) {
+                    studentMode = 'qa';
+                } else if (mode === 'prof-presentation') {
+                    studentMode = null;
+                } else {
+                    studentMode = mode;
+                }
+                if (studentMode !== null) {
+                    firebase.database().ref(`courses/${state.room}/status/mode`).set(studentMode);
+                }
+            }
+
             if (mode === 'quiz') {
                 // 퀴즈 탭 진입 시 리포트 오버레이(종료화면)가 떠있다면 강제로 닫기
                 const summaryOverlay = document.getElementById('quizSummaryOverlay');
                 if (summaryOverlay) summaryOverlay.style.display = 'none';
 
-                // 브라우저에 저장된 마지막 문제 번호 가져오기
                 const savedIdx = localStorage.getItem(`kac_quiz_idx_${state.room}`);
 
-                // (A) 이미 퀴즈 데이터가 메모리에 있는 경우 (탭 이동 후 복귀)
                 if (state.quizList && state.quizList.length > 0) {
-                    if (savedIdx !== null) {
-                        state.currentQuizIdx = parseInt(savedIdx);
-                    }
+                    if (savedIdx !== null) state.currentQuizIdx = parseInt(savedIdx);
                     document.getElementById('quizSelectModal').style.display = 'none'; 
                     quizMgr.showQuiz(); 
-                } 
-                // (B) 새로고침 등으로 메모리가 비었을 때 (서버 상태 확인 후 복구)
-                else {
+                } else {
                     firebase.database().ref(`courses/${state.room}/status/quizStep`).once('value', snap => {
                         const currentStep = snap.val();
                         if (currentStep === 'summary') {
@@ -2687,26 +2707,6 @@ setMode: function(mode) {
                         quizMgr.loadSavedQuizList(); 
                     });
                 }
-            }
-
-            // 교육생 화면 모드 설정
-            const safeStudentModes = ['waiting', 'shuttle', 'admin-action', 'dinner-skip', 'students', 'dashboard', 'notice', 'attendance', 'guide', 'dormitory'];
-            const blockModes = ['prof-presentation']; // qa는 직접 qa로, quiz는 quiz로 전송
-            let studentMode;
-            if (safeStudentModes.includes(mode)) {
-                studentMode = 'qa';
-            } else if (mode === 'qa') {
-                studentMode = 'qa';
-            } else if (mode === 'quiz') {
-                studentMode = 'quiz'; // 퀴즈 탭 진입 시 교육생도 quiz 화면으로
-            } else if (blockModes.includes(mode)) {
-                studentMode = null;
-            } else {
-                studentMode = mode;
-            }
-
-            if (!state.isObserver && studentMode !== null) {
-                firebase.database().ref(`courses/${state.room}/status/mode`).set(studentMode);
             }
             
             if (mode === 'dashboard') ui.loadDashboardStats(); 
@@ -4640,6 +4640,32 @@ init: function() {
     },
 
     // 공지 탭 진입 시 배지 숨기고 읽음 처리 (coord + global 모두)
+    // 공지 카드 하이라이트 (새 공지 flash 효과)
+    _flashNewNotices: function() {
+        // 배지가 켜져 있었으면 (새 공지가 있었으면) 카드 flash
+        const badge = document.getElementById('coordNoticeBadge');
+        const hasBadge = badge && badge.style.display !== 'none';
+        if (!hasBadge) return;
+        
+        const display = document.getElementById('globalNoticeDisplay');
+        if (!display) return;
+        
+        // 모든 공지 카드에 flash 효과
+        const cards = display.querySelectorAll('div[style*="border-radius:12px"]');
+        cards.forEach(card => {
+            const origBg = card.style.background;
+            card.style.transition = 'background 0.3s ease';
+            card.style.background = '#d1fae5'; // 연두색
+            setTimeout(() => {
+                card.style.background = origBg;
+                setTimeout(() => {
+                    card.style.background = '#d1fae5';
+                    setTimeout(() => { card.style.background = origBg; }, 400);
+                }, 400);
+            }, 400);
+        });
+    },
+
     clearCoordNoticeBadge: function() {
         // 배지만 숨김 - state.noticeSeen은 건드리지 않음
         // (seen 업데이트는 리스너에서만 처리)

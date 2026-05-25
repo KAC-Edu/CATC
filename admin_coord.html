@@ -1100,8 +1100,8 @@ body.modal-open .app-content {
     </div>
 
     <!-- ✅ [복구 완료] 현재 운영 중인 과정 리스트 섹션 -->
-    <div class="section-card">
-        <div class="section-title"><i class="fa-solid fa-list-ul"></i> 현재 운영 중인 과정 </div>
+    <div class="section-card" style="background:linear-gradient(135deg,#1e3a8a,#1d4ed8); color:white; padding:16px;">
+        <div class="section-title" style="color:white; margin-bottom:12px;"><i class="fa-solid fa-list-ul"></i> 현재 운영 중인 과정 </div>
         <div id="activeCourseList" style="display:flex; flex-direction:column; gap:8px;">
             <!-- 자바스크립트가 여기에 ROOM A, ROOM C 등의 카드를 채워넣습니다 -->
         </div>
@@ -1115,8 +1115,8 @@ body.modal-open .app-content {
 
 <!-- [수정] 강사 픽업 통합 현황 테이블 -->
 <div id="pickupStatusView" class="view-card-full" style="display:none; flex-direction:column; gap:12px;">
-    <div class="section-card">
-        <div class="section-title" style="justify-content:space-between;">
+    <div class="section-card" style="background:linear-gradient(135deg,#1e3a8a,#1d4ed8); color:white; padding:16px;">
+        <div class="section-title" style="color:white; margin-bottom:12px; justify-content:space-between;">
             <span><i class="fa-solid fa-car-side"></i> 강사 수송 통합 예약 리스트</span>
             <button class="navy-btn" style="width:120px; height:32px; font-size:11px;" onclick="openTransportModal()">
                 <i class="fa-solid fa-plus"></i> 수송 추가요청
@@ -1137,8 +1137,8 @@ body.modal-open .app-content {
 
       <!-- [신규 뷰 4] 교육생 퇴교차량 통합 현황 -->
       <div id="studentShuttleView" class="view-card-full" style="display:none; flex-direction:column; gap:12px;">
-          <div class="section-card">
-              <div class="section-title"><i class="fa-solid fa-bus"></i> 과정별 퇴교차량 신청 총괄</div>
+          <div class="section-card" style="background:linear-gradient(135deg,#1e3a8a,#1d4ed8); color:white; padding:16px;">
+              <div class="section-title" style="color:white; margin-bottom:12px;"><i class="fa-solid fa-bus"></i> 과정별 퇴교차량 신청 총괄</div>
               <div style="overflow-x: auto; background:rgba(255,255,255,0.95); border-radius:10px; overflow:hidden;">
                   <table class="navy-table" style="background:transparent;">
                       <thead>
@@ -1162,8 +1162,8 @@ body.modal-open .app-content {
 
 <!-- [신규 뷰 5] 항기원 전체 교육생 통합 관리 페이지 -->
 <div id="allStudentListView" class="view-card-full" style="display:none; flex-direction:column; gap:12px;">
-    <div class="section-card" style="flex: 1; display: flex; flex-direction: column;">
-        <div class="section-title" style="justify-content: space-between; align-items: center;">
+    <div class="section-card" style="background:linear-gradient(135deg,#1e3a8a,#1d4ed8); color:white; padding:16px; flex: 1; display: flex; flex-direction: column;">
+        <div class="section-title" style="color:white; margin-bottom:12px; justify-content: space-between; align-items: center;">
             <span><i class="fa-solid fa-users-viewfinder"></i> 항기원 교육생 통합 명단</span>
             <div class="live-badge"><i class="fa-solid fa-sync fa-spin"></i> 실시간</div>
         </div>
@@ -1172,14 +1172,14 @@ body.modal-open .app-content {
         <div style="margin-bottom: 15px; position: relative;">
             <i class="fa-solid fa-magnifying-glass" style="position: absolute; left: 15px; top: 13px; color: #94a3b8;"></i>
             <input type="text" id="studentSearchInput" class="navy-input" 
-                   style="padding-left: 40px; height: 45px; border-radius: 12px; font-size: 15px;" 
+                   style="padding-left: 40px; height: 45px; border-radius: 12px; font-size: 15px; background:rgba(255,255,255,0.95); border:none;" 
                    placeholder="교육생 성함 또는 과정명을 입력하세요..." oninput="filterAllStudents()">
         </div>
 
         <!-- 명단 테이블 구역 -->
         <div style="flex: 1; overflow-y: auto; border: 1px solid #f1f5f9; border-radius: 12px;">
             <table class="navy-table" style="min-width: 500px;">
-<thead style="position: sticky; top: 0; z-index: 10; background: #f8fafc;">
+<thead style="position: sticky; top: 0; z-index: 10; background: #1e3a8a; color:white;">
     <tr>
         <th class="col-course">과정명</th>
         <th class="col-name">성함</th>
