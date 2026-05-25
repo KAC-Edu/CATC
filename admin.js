@@ -285,7 +285,7 @@ loadInitialData: function() {
 switchRoomAttempt: async function(newRoom, silent = false) {
     // 1. 시각적 즉시 차단 + 대시보드/헤더 초기화 (이전 방 정보 잔류 방지)
     const overlay = document.getElementById('statusOverlay');
-    if (overlay) overlay.style.display = 'flex';
+    if (overlay && !silent) overlay.style.display = 'flex'; // silent(새로고침)일 때는 잠금화면 안 띄움
     ui.clearDashboard();
     const dtEl = document.getElementById('displayCourseTitle');
     if (dtEl) dtEl.innerText = '';
