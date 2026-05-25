@@ -674,22 +674,30 @@ forceEnterRoom: async function(room) {
     // ── 공지 실시간 리스너 ──
     // 항상 재등록 (off → on), state.noticeSeen으로 중복 팝업만 방지
     // ── 공지 실시간 리스너 (대시보드 피드 + 팝업 통합 처리) ──
-    firebase.database().ref(`courses/${cleanRoom}/coordNotice`).off();
-    firebase.database().ref(`courses/${cleanRoom}/coordNotice`).on('value', snap => {
-        if (state.room !== cleanRoom) return;
-        const newMsg = snap.val() || '';
-        // 대시보드 피드 즉시 업데이트 (항상)
-        const el = document.getElementById('dashNoticeAdmin');
-        if (el) el.innerText = newMsg || '등록된 운영부 공지가 없습니다.';
-        // 팝업 처리
-        if (!newMsg) return;
-        const key = `coord_${cleanRoom}`;
-        const prev = state.noticeSeen[key];
-        state.noticeSeen[key] = newMsg;
-        if (prev === undefined) return; // 첫 수신: 팝업 없음
-        if (newMsg !== prev && state.currentMode !== 'notice') {
-            guideMgr.showCoordNoticeAlert(newMsg, '📋 운영부 과정 공지');
+    // 방 이동 시 현재 공지값을 먼저 로드해 noticeSeen에 저장 (이후 변경분만 팝업)
+    const coordKey = `coord_${cleanRoom}`;
+    firebase.database().ref(`courses/${cleanRoom}/coordNotice`).once('value', initSnap => {
+        // 현재 시점의 공지값을 "기준값"으로 저장
+        if (!(coordKey in state.noticeSeen)) {
+            state.noticeSeen[coordKey] = initSnap.val() || '';
         }
+
+        firebase.database().ref(`courses/${cleanRoom}/coordNotice`).off();
+        firebase.database().ref(`courses/${cleanRoom}/coordNotice`).on('value', snap => {
+            if (state.room !== cleanRoom) return;
+            const newMsg = snap.val() || '';
+            // 대시보드 피드 즉시 업데이트 (항상)
+            const el = document.getElementById('dashNoticeAdmin');
+            if (el) el.innerText = newMsg || '등록된 운영부 공지가 없습니다.';
+            // 팝업 처리
+            if (!newMsg) return;
+            const prev = state.noticeSeen[coordKey];
+            state.noticeSeen[coordKey] = newMsg;
+            if (prev === undefined) return;
+            if (newMsg !== prev && state.currentMode !== 'notice') {
+                guideMgr.showCoordNoticeAlert(newMsg, '📋 운영부 과정 공지');
+            }
+        });
     });
 
     firebase.database().ref('system/globalNotice').off();
