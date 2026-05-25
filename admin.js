@@ -632,52 +632,7 @@ forceEnterRoom: async function(room) {
     subjectMgr.init();
     guideMgr.init();
 
-    // ── 공지 실시간 리스너 (단일 통합 - 여기서만 처리) ──
-    // coordNotice (운영부 공지)
-    firebase.database().ref(`courses/${cleanRoom}/coordNotice`).off();
-    firebase.database().ref(`courses/${cleanRoom}/coordNotice`).on('value', snap => {
-        if (state.room !== cleanRoom) return;
-        const newMsg = snap.val() || '';
-        const seenKey = `kac_coord_notice_seen_${cleanRoom}`;
-        const lastSeen = localStorage.getItem(seenKey) || '';
-        if (newMsg && newMsg !== lastSeen) {
-            localStorage.setItem(seenKey, newMsg); // 읽음처리
-            if (state.currentMode !== 'notice') {
-                ui.showCoordNoticeAlert(newMsg, 'coord');
-            } else {
-                // 공지탭 열려있으면 배지만 숨김 (이미 보고있으므로)
-                const badge = document.getElementById('coordNoticeBadge');
-                if(badge) badge.style.display = 'none';
-            }
-        }
-        // 대시보드 공지 텍스트 업데이트
-        const el = document.getElementById('dashNoticeAdmin');
-        if (el) el.innerText = newMsg || '등록된 운영부 과정 공지가 없습니다.';
-    });
-
-    // globalNotice (센터 전체 공지)
-    firebase.database().ref('system/globalNotice').off();
-    firebase.database().ref('system/globalNotice').on('value', snap => {
-        if (state.room !== cleanRoom) return;
-        const newMsg = snap.val() || '';
-        const seenKey = 'kac_global_notice_seen';
-        const lastSeen = localStorage.getItem(seenKey) || '';
-        if (newMsg && newMsg !== lastSeen) {
-            localStorage.setItem(seenKey, newMsg);
-            if (state.currentMode !== 'notice') {
-                ui.showCoordNoticeAlert(newMsg, 'global');
-            } else {
-                const badge = document.getElementById('coordNoticeBadge');
-                if(badge) badge.style.display = 'none';
-            }
-        }
-        // 대시보드 공지 텍스트 업데이트
-        const el = document.getElementById('dashNoticeGlobal');
-        if (el) el.innerText = newMsg || '현재 게시된 센터 전체 공지가 없습니다.';
-    });
-
-    // [금요일 자동 리셋] 차량 신청 명단 자동 초기화 체크
-    // ── 공지 실시간 리스너 (운영부 coordNotice + 센터 globalNotice) ──
+    // ── 공지 실시간 리스너 ──
     firebase.database().ref(`courses/${cleanRoom}/coordNotice`).off();
     firebase.database().ref(`courses/${cleanRoom}/coordNotice`).on('value', snap => {
         if (state.room !== cleanRoom) return;
