@@ -822,7 +822,7 @@ body.night-mode .quiz-card.result-mode {
     border-spacing: 0 8px !important;
     background: transparent !important;
     /* 첫 행 윗선 잘림 방지 */
-    padding-top: 6px !important;
+    padding-top: 8px !important;
 }
 
 

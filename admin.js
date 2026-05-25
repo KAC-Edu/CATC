@@ -5193,11 +5193,17 @@ loadCurrentSettings: function() {
         const todayStr = typeof getTodayString === 'function' ? getTodayString() : new Date().toISOString().split('T')[0];
 
         if(s.period && s.period.includes(" ~ ")) {
-            // 기존에 "2026-03-03 ~ 2026-03-13" 형태의 데이터가 있다면 그대로 입력
+            // flatpickr setDate로 정확히 반영 (rangeInput.value만 설정하면 flatpickr가 무시함)
             rangeInput.value = s.period;
+            const parts = s.period.split(" ~ ");
+            if(parts.length === 2 && rangeInput._flatpickr) {
+                rangeInput._flatpickr.setDate([parts[0].trim(), parts[1].trim()], false);
+            }
         } else {
-            // 데이터가 없으면 "오늘 ~ 오늘" 형태를 기본값으로 세팅
             rangeInput.value = `${todayStr} ~ ${todayStr}`;
+            if(rangeInput._flatpickr) {
+                rangeInput._flatpickr.setDate([todayStr, todayStr], false);
+            }
         }
         
         // 5. menuFeatures 체크박스 상태 로드
