@@ -231,10 +231,6 @@
       if (!userInput) return;
 
       try {
-        // portalPins는 auth != null 규칙 → 익명 로그인으로 접근
-        if (!firebase.auth().currentUser) {
-          await firebase.auth().signInAnonymously();
-        }
         const snap = await firebase.database().ref(`system/portalPins/${role}`).once('value');
         const dbHashed = snap.val();
 
@@ -253,7 +249,7 @@
         }
       } catch (e) {
         console.error(e);
-        alert("데이터 연결 오류: " + e.message);
+        alert("데이터 연결 오류가 발생했습니다.\n포탈 관리자에게 문의하세요.");
       }
     }
 
