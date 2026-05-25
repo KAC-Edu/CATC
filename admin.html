@@ -723,15 +723,9 @@
 
 <!-- [신규] 외출/외박 현황 섹션 -->
 <div id="view-admin-action" style="display:none; width:100%; flex-direction:column; align-items:center;">
-    <div class="view-header" style="flex-direction:row; justify-content:space-between; align-items:center; width:100%; max-width:1100px;">
-        <div>
-            <h1><i class="fa-solid fa-person-walking-arrow-right"></i> 외출·외박 신청 현황 <span class="header-room-badge room-badge-global"></span></h1>
-            <p>익일 오전 09:00까지 명단이 유지됩니다.</p>
-        </div>
-        <button onclick="ui.callAllNotReturned()"
-            style="padding:10px 18px; background:#ef4444; color:white; border:none; border-radius:10px; font-weight:800; font-size:13px; cursor:pointer; display:flex; align-items:center; gap:7px; white-space:nowrap; flex-shrink:0;">
-            <i class="fa-solid fa-bullhorn"></i> 미복귀자 전체 복귀 호출
-        </button>
+    <div class="view-header">
+        <h1><i class="fa-solid fa-person-walking-arrow-right"></i> 외출·외박 신청 현황 <span class="header-room-badge room-badge-global"></span></h1>
+        <p>익일 오전 09:00까지 명단이 유지됩니다.</p>
     </div>
     <div class="modern-white-card" style="width:100%; max-width:1100px;">
         <table style="width:100%; table-layout:fixed;">
@@ -759,6 +753,13 @@
             </thead>
             <tbody id="adminActionTableBody"></tbody>
         </table>
+    </div>
+    <!-- 미복귀자 전체 호출 버튼 - 하단 -->
+    <div style="display:flex; justify-content:flex-end; width:100%; max-width:1100px; margin-top:12px;">
+        <button onclick="ui.callAllNotReturned()"
+            style="padding:8px 16px; background:#ef4444; color:white; border:none; border-radius:8px; font-weight:700; font-size:13px; cursor:pointer; display:flex; align-items:center; gap:6px;">
+            <i class="fa-solid fa-bullhorn"></i> 미복귀자 전체 복귀 호출
+        </button>
     </div>
 </div>
 
