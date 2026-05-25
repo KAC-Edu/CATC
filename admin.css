@@ -3440,10 +3440,23 @@ body.night-mode .status-badge.status-arrived {
 }
 
 /* ── 전체화면 모드 (사이드바 숨김) ── */
-/* 사이드바 슬라이드 애니메이션 */
+/* ── 사이드바 슬라이드 애니메이션 ── */
+/* 모든 요소 동일한 transition (0.3s ease) */
 .sidebar {
-    transition: transform 0.3s ease, width 0.3s ease !important;
+    transition: transform 0.3s ease, width 0.3s ease, min-width 0.3s ease, padding 0.3s ease !important;
     position: relative;
+}
+.main-stage {
+    transition: width 0.3s ease !important;
+}
+.header {
+    transition: width 0.3s ease !important;
+}
+.mode-tabs {
+    transition: width 0.3s ease !important;
+}
+#sidebarToggleTab {
+    transition: left 0.3s ease !important;
 }
 
 body.sidebar-hidden .sidebar {
@@ -3457,7 +3470,6 @@ body.sidebar-hidden .sidebar {
 body.sidebar-hidden .main-stage {
     width: 100vw !important;
     max-width: 100vw !important;
-    transition: width 0.3s ease !important;
 }
 body.sidebar-hidden .header {
     left: 0 !important;
