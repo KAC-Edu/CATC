@@ -2528,6 +2528,22 @@ async function saveProfile() {
     
     const newUToken = `${name}_${phone}`;
 
+    // 이름 재입력 시 오늘 날짜 출결 기록 초기화 (테스트/재등록 대응)
+    const todayStr = new Date().toISOString().split('T')[0];
+    // 이전 토큰과 다른 경우에만 초기화 (완전히 다른 사람으로 재등록)
+    const oldToken = localStorage.getItem('uToken');
+    if (oldToken !== newUToken) {
+        // 오늘 날짜의 모든 출결 기록 제거
+        const keysToRemove = [];
+        for (let i = 0; i < localStorage.length; i++) {
+            const k = localStorage.key(i);
+            if (k && k.startsWith('kac_attended_') && k.includes(todayStr)) {
+                keysToRemove.push(k);
+            }
+        }
+        keysToRemove.forEach(k => localStorage.removeItem(k));
+    }
+
     try {
         localStorage.setItem('kac_user_name', name);
         localStorage.setItem('kac_user_phone', phone);
