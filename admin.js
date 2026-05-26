@@ -1910,8 +1910,11 @@ refs.departure.on('value', snap => {
     const inlineEl = document.getElementById('dashShuttleTimeInline');
     if (dep && dep.time) {
         if (inlineEl) inlineEl.innerText = `(${dep.time} 출발)`;
+        ui.updateShuttleETA(dep.time, room);
     } else {
         if (inlineEl) inlineEl.innerText = '';
+        const etaBox = document.getElementById('dashShuttleETA');
+        if (etaBox) etaBox.style.display = 'none';
     }
 });
 
@@ -1921,10 +1924,20 @@ refs.shuttleReq.on('value', s => {
     const items = Object.values(data);
     
     // 카운트 업데이트 (Deep Blue 숫자는 CSS에서 이미 적용됨)
-    if (document.getElementById('total-osong')) document.getElementById('total-osong').innerText = items.filter(i => i.type === 'osong').length;
-    if (document.getElementById('total-term')) document.getElementById('total-term').innerText = items.filter(i => i.type === 'terminal').length;
-    if (document.getElementById('total-air')) document.getElementById('total-air').innerText = items.filter(i => i.type === 'airport').length;
-    if (document.getElementById('total-car')) document.getElementById('total-car').innerText = items.filter(i => i.type === 'car').length;
+    const cntOsong = items.filter(i => i.type === 'osong').length;
+    const cntTerm = items.filter(i => i.type === 'terminal').length;
+    const cntAir = items.filter(i => i.type === 'airport').length;
+    const cntCar = items.filter(i => i.type === 'car').length;
+    if (document.getElementById('total-osong')) document.getElementById('total-osong').innerText = cntOsong;
+    if (document.getElementById('total-term')) document.getElementById('total-term').innerText = cntTerm;
+    if (document.getElementById('total-air')) document.getElementById('total-air').innerText = cntAir;
+    if (document.getElementById('total-car')) document.getElementById('total-car').innerText = cntCar;
+    // 신청자 변경 시 ETA 재계산
+    const inlineTime = document.getElementById('dashShuttleTimeInline');
+    if (inlineTime && inlineTime.innerText) {
+        const m = inlineTime.innerText.match(/(\d{1,2}:\d{2})/);
+        if (m) ui.updateShuttleETA(m[1], room);
+    }
     
     const totalEl = document.getElementById('dashShuttleTotal');
     if (totalEl) {
@@ -3943,6 +3956,45 @@ resetShuttleRequests: function() {
     },
 
 // [강사 플랫폼: 로고 클릭 시 모든 정보를 초기화하고 현황판으로 이동]
+    // 셔틀 예상 도착 시간 계산 및 표시
+    updateShuttleETA: function(departureTime, room) {
+        const etaBox = document.getElementById('dashShuttleETA');
+        const etaContent = document.getElementById('dashShuttleETAContent');
+        if (!etaBox || !etaContent || !departureTime) return;
+
+        // 출발 시간 파싱
+        const [h, m] = departureTime.split(':').map(Number);
+        if (isNaN(h) || isNaN(m)) return;
+
+        // 신청자 수 확인
+        const osong = parseInt(document.getElementById('total-osong')?.innerText || '0');
+        const term = parseInt(document.getElementById('total-term')?.innerText || '0');
+        const air = parseInt(document.getElementById('total-air')?.innerText || '0');
+
+        // 신청자 있는 목적지만 순서대로 (오송→터미널→공항)
+        const stops = [];
+        if (osong > 0) stops.push('오송역');
+        if (term > 0) stops.push('청주터미널');
+        if (air > 0) stops.push('청주공항');
+
+        if (stops.length === 0) {
+            etaBox.style.display = 'none';
+            return;
+        }
+
+        // 각 목적지별 도착 시간 계산 (30분씩)
+        const lines = stops.map((stop, idx) => {
+            const totalMins = h * 60 + m + (idx + 1) * 30;
+            const etaH = Math.floor(totalMins / 60) % 24;
+            const etaM = totalMins % 60;
+            const timeStr = `${String(etaH).padStart(2,'0')}:${String(etaM).padStart(2,'0')}`;
+            return `${stop} <span style="color:#2563eb;">(${timeStr})</span>`;
+        });
+
+        etaContent.innerHTML = lines.join(' → ');
+        etaBox.style.display = 'block';
+    },
+
     // 사이드바 책갈피 토글
     toggleSidebar: function() {
         const body = document.body;
