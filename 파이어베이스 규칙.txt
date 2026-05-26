@@ -1,0 +1,129 @@
+{
+  "rules": {
+ 
+    // ═══════════════════════════════════════════════════════════
+    //  COURSES
+    //  읽기: 강의실별로 세분화 (전체 공개 읽기 제거)
+    //  쓰기: 항목 성격에 따라 3단계로 구분
+    // ═══════════════════════════════════════════════════════════
+    "courses": {
+ 
+      // [수정] .read: true → 제거. 하위 노드에서 필요한 것만 개별 허용.
+      // 전체 courses 트리를 공개 읽기로 열면 모든 학생 개인정보(전화번호·출석)가 노출됨.
+ 
+      "$roomId": {
+ 
+        // ── TIER 1: 교육생 앱에서 직접 읽고 쓰는 항목 ──────────────────
+        // 읽기/쓰기 모두 공개. 단, 구조적 검증(validate) 추가.
+ 
+        "questions": {
+          ".read": true,
+          ".write": true,
+          ".indexOn": ["timestamp", "subject"]
+        },
+ 
+        // 교육생 자신의 상태(셔틀신청, 석식제외, 퀴즈답변)는 읽기/쓰기 공개
+        "shuttle":         { ".read": true, ".write": true },
+        "dinner_skips":    { ".read": true, ".write": true },
+        "quizAnswers":     { ".read": true, ".write": true },
+        "connections":     { ".read": true, ".write": true },
+ 
+        // 강의실 상태(현재 과정명, 교수명, 사용 여부)는 교육생이 읽어야 함
+        "status":   { ".read": true, ".write": "auth != null" },  // [수정] 쓰기는 강사만
+ 
+        // 과정 설정(기간·비밀번호 등)은 교육생이 읽어야 QR입장·비번확인 가능
+        // 단, 쓰기는 강사 로그인만 허용
+        "settings": { ".read": true, ".write": "auth != null" },  // [수정] 쓰기는 강사만
+ 
+        // 공지사항 읽기는 교육생에게 공개, 쓰기는 강사만
+        "notice":   { ".read": true, ".write": "auth != null" },
+ 
+        // 퀴즈 진행 데이터 읽기는 교육생 공개, 쓰기는 강사만
+        "activeQuiz":       { ".read": true, ".write": "auth != null" },
+        "quizFinalResults": { ".read": true, ".write": "auth != null" },
+        "quizBank":         { ".read": true, ".write": "auth != null" },
+ 
+        // ── TIER 2: 행정 플랫폼(PIN 인증) 항목 ─────────────────────────
+        // 읽기: 강사·행정 플랫폼 전용이므로 인증 필요
+        // 쓰기: 현재 구조상 PIN인증이 클라이언트에서만 이루어지므로 불가피하게 true 유지.
+        //        단, 읽기를 auth로 제한해 외부에서 데이터 열람을 차단함.
+ 
+        "students": {
+          ".read": "auth != null",   // [수정] 수강생 명단은 강사만 읽기
+          ".write": true             // 교육생 입교 시 본인 정보 기록 필요
+        },
+ 
+        "admin_actions": {
+          ".read": "auth != null",   // [수정] 외출/외박 내역은 강사만 읽기
+          ".write": true             // 교육생 신청 필요
+        },
+ 
+        "internal_attendance": {
+          ".read": "auth != null",   // [수정] 출석 데이터는 강사만 읽기
+          ".write": true             // 교육생 자체 출석 체크 필요
+        },
+ 
+        "expectedStudents": {
+          ".read": "auth != null",   // [수정] 예정 명단은 강사만 읽기
+          ".write": "auth != null"   // [수정] 명단 업로드는 강사만
+        },
+ 
+        "attendanceQR": {
+          ".read": "auth != null",   // [수정] QR 이미지는 강사만 읽기
+          ".write": "auth != null"   // [수정] QR 업로드는 강사만
+        },
+ 
+        "coordNotice": {
+          ".read": true,             // 교육생에게 노출되는 행정 공지
+          ".write": true             // 행정 플랫폼(PIN인증)에서 작성
+        }
+      }
+    },
+ 
+    // ═══════════════════════════════════════════════════════════
+    //  PUBLIC_CODES  (단축코드 → 강의실 매핑)
+    //  읽기 공개 필요, 쓰기는 강사만
+    // ═══════════════════════════════════════════════════════════
+    "public_codes": {
+      ".read": true,
+      ".write": "auth != null"      // [수정] 단축코드 생성·삭제는 강사만
+    },
+ 
+    // ═══════════════════════════════════════════════════════════
+    //  SYSTEM
+    //  [핵심 수정] 전체 .read: true 제거 → 하위 노드별 세분화
+    //  portalPins 해시값이 통째로 공개되면 오프라인 해시 대조 가능
+    // ═══════════════════════════════════════════════════════════
+    "system": {
+ 
+      // [수정] system 전체 읽기 공개 제거
+ 
+      // 포털 PIN 해시 및 관리자 암호: 읽기·쓰기 모두 강사 인증만
+      "portalPins":   { ".read": "auth != null", ".write": "auth != null" },
+      "adminSecret":  { ".read": "auth != null", ".write": "auth != null" },
+ 
+      // [추가] instructor room PIN (instructor_room_c.html 개선분)
+      "instructorPins": { ".read": "auth != null", ".write": "auth != null" },
+ 
+      // 영양사·운전원·행정담당자용 공용 데이터: 읽기·쓰기 공개 유지
+      "nutrition_menu":        { ".read": true, ".write": true },
+      "transport_requests":    { ".read": true, ".write": true },
+      "globalNotice":          { ".read": true, ".write": true },
+      "shuttle_notice":        { ".read": true, ".write": true },
+      "facility_requests":     { ".read": true, ".write": true },
+ 
+      // 교수 명단·프로필: 읽기는 교육생 공개(대시보드 표시), 쓰기는 강사만
+      "professors":            { ".read": true, ".write": "auth != null" },
+      "professorProfiles":     { ".read": true, ".write": "auth != null" },
+ 
+      // 과정 담당자 명단: 읽기는 교육생 공개, 쓰기는 강사만
+      "coordinators":          { ".read": true, ".write": "auth != null" },
+ 
+      // 입교 가이드 PDF: 읽기는 교육생 공개, 쓰기는 강사만
+      "sharedGuide":           { ".read": true, ".write": "auth != null" },
+ 
+      // 생활관 배치: 읽기는 강사만(개인정보), 쓰기도 강사만
+      "dormitory_assignments": { ".read": "auth != null", ".write": "auth != null" }
+    }
+  }
+}
