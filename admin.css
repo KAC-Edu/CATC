@@ -1157,8 +1157,8 @@ body.night-mode .badge-idle {
 /* 1. 모든 페이지 제목(헤더) 스타일 */
 .view-header {
     text-align: center;
-    margin-top: 20px;    /* 현황바로부터의 거리 (이 수치를 조절해서 높이를 맞추세요) */
-    margin-bottom: 30px; /* 제목과 본문 사이의 거리 */
+    margin-top: 20px;
+    margin-bottom: 24px; /* 과정현황과 동일한 제목-내용 간격 */
     position: relative;
     z-index: 10;
 }
@@ -3082,23 +3082,23 @@ body.night-mode .status-badge.status-arrived {
     border-radius: 12px;
     padding: 6px;
     position: absolute;
-    bottom: 50px;
+    top: 44px;
     left: 0;
     width: 100%;
     z-index: 1000;
-    box-shadow: 0 -10px 30px rgba(14, 165, 233, 0.25);
+    box-shadow: 0 10px 30px rgba(14, 165, 233, 0.25);
 }
 
 .family-site-menu a {
-    padding: 12px 15px;
+    padding: 7px 12px;
     color: #bae6fd;
     text-decoration: none;
-    font-size: 13px;
+    font-size: 12px;
     font-weight: 600;
     display: flex;
     align-items: center;
-    gap: 12px;
-    border-radius: 8px;
+    gap: 10px;
+    border-radius: 6px;
     transition: 0.2s;
 }
 
