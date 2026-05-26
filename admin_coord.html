@@ -124,11 +124,11 @@
         background: var(--navy-dark); 
         display: flex; 
         align-items: center; 
-        justify-content: space-between; 
-        padding: 0 20px; 
-        flex-shrink: 0; 
-        /* 🚩 기존 border-bottom 제거 및 그림자 추가 */
+        justify-content: center; 
+        padding: 0; 
+        position: relative;
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2); 
+        flex-shrink: 0;
         position: sticky; 
         top: 0; 
         z-index: 1000; 
@@ -1040,20 +1040,15 @@ body.modal-open .app-content {
 
 <!-- 상단 헤더 부분 (수정됨) -->
 <header class="app-header">
-  <!-- 아이콘 대신 << 텍스트 사용 (클릭 시 메인복귀 또는 포탈이동) -->
-  <button class="header-btn" onclick="handleBackNav()" style="font-family: 'Pretendard'; font-weight: 900; letter-spacing: -2px;">&lt;&lt;</button>
-  
-  <div class="header-title">항공기술훈련원 교육운영부</div>
-  
-  <div style="display:flex; gap:15px; align-items:center;">
-      <!-- 1. 접속 QR 아이콘 -->
-      <button class="header-btn" onclick="openCenterQrModal()"><i class="fa-solid fa-qrcode"></i></button>
-      
-      <!-- 2. 전체 공지 아이콘 (신규 추가) -->
-      <button class="header-btn" onclick="openGlobalNoticeModal()"><i class="fa-solid fa-bullhorn"></i></button>
-      
-      <!-- 3. 사이드 메뉴 아이콘 -->
-      <button class="header-btn" onclick="toggleMenu(true)"><i class="fa-solid fa-bars"></i></button>
+  <!-- << 왼쪽 고정 -->
+  <button class="header-btn" onclick="handleBackNav()" style="position:absolute; left:16px; font-family:'Pretendard'; font-weight:400; font-size:15px; letter-spacing:-1px; color:rgba(255,255,255,0.7); background:none; border:none; cursor:pointer;">&lt;&lt;</button>
+  <!-- 제목 진짜 정중앙 -->
+  <span style="font-size:17px; font-weight:500; color:#fff; letter-spacing:-0.3px;">항공기술훈련원 교육운영부</span>
+  <!-- 아이콘 오른쪽 고정 -->
+  <div style="position:absolute; right:16px; display:flex; gap:16px; align-items:center;">
+      <button class="header-btn" onclick="openCenterQrModal()" style="font-size:18px; color:rgba(255,255,255,0.75); background:none; border:none; cursor:pointer;"><i class="fa-solid fa-qrcode"></i></button>
+      <button class="header-btn" onclick="openGlobalNoticeModal()" style="font-size:18px; color:rgba(255,255,255,0.75); background:none; border:none; cursor:pointer;"><i class="fa-solid fa-bullhorn"></i></button>
+      <button class="header-btn" onclick="toggleMenu(true)" style="font-size:18px; color:rgba(255,255,255,0.75); background:none; border:none; cursor:pointer;"><i class="fa-solid fa-bars"></i></button>
   </div>
 </header>
 
