@@ -3170,33 +3170,11 @@ renderQaList: function(f) {
     },
     
     toggleFullScreen: function() {
-        if (!document.fullscreenElement &&
-            !document.webkitFullscreenElement &&
-            !document.mozFullScreenElement &&
-            !document.msFullscreenElement) {
-            // 전체화면 진입
-            const el = document.documentElement;
-            const req = el.requestFullscreen || el.webkitRequestFullscreen || el.mozRequestFullScreen || el.msRequestFullscreen;
-            if (req) {
-                req.call(el).then(() => {
-                    // 아이콘 변경: expand → compress
-                    document.querySelectorAll('.control-icon-btn i.fa-expand').forEach(i => {
-                        i.classList.remove('fa-expand');
-                        i.classList.add('fa-compress');
-                    });
-                }).catch(err => {
-                    alert('전체화면을 지원하지 않는 브라우저입니다. F11 키를 눌러주세요.');
-                });
-            }
+        const elem = document.documentElement;
+        if (!document.fullscreenElement) {
+            (elem.requestFullscreen || elem.webkitRequestFullscreen || elem.mozRequestFullScreen || elem.msRequestFullscreen).call(elem);
         } else {
-            // 전체화면 해제
-            const exit = document.exitFullscreen || document.webkitExitFullscreen || document.mozCancelFullScreen || document.msExitFullscreen;
-            if (exit) exit.call(document);
-            // 아이콘 복원: compress → expand
-            document.querySelectorAll('.control-icon-btn i.fa-compress').forEach(i => {
-                i.classList.remove('fa-compress');
-                i.classList.add('fa-expand');
-            });
+            (document.exitFullscreen || document.webkitExitFullscreen || document.mozCancelFullScreen || document.msExitFullscreen).call(document);
         }
     },
     
@@ -5312,23 +5290,14 @@ subjectMgr.addSubjectInModal = function() {
 
 // 파일 맨 아래 window.onload 부분도 이렇게 깔끔하게 바꿔야 실시간이 작동합니다!
 window.onload = function() { 
-    window.isRoomListenerSet = false;
     dataMgr.checkMobile(); 
     profMgr.init();   
     coordMgr.init(); 
     guideMgr.init();
-    dataMgr.initSystem(); 
 
-    // 전체화면 상태 변경 시 아이콘 자동 동기화 (ESC 포함)
-    const onFsChange = function() {
-        const isFs = !!(document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement);
-        document.querySelectorAll('.control-icon-btn i').forEach(i => {
-            if (isFs) { i.classList.remove('fa-expand'); i.classList.add('fa-compress'); }
-            else { i.classList.remove('fa-compress'); i.classList.add('fa-expand'); }
-        });
-    };
-    document.addEventListener('fullscreenchange', onFsChange);
-    document.addEventListener('webkitfullscreenchange', onFsChange);
+    // [중요] 여기서 forceEnterRoom을 또 부르면 안테나가 두 개 꽂혀서 실시간이 안 됩니다.
+    // dataMgr.initSystem()이 로그인 체크 후 위에서 고친 loadInitialData를 한 번만 실행합니다.
+    dataMgr.initSystem(); 
 };
 
 
