@@ -183,43 +183,51 @@
                 </button>
             </div>
 
-            <!-- 개발자 정보 -->
-            <div class="dev-info" onclick="ui.openDevInfo()" style="cursor:pointer; margin-top:8px;">
-                Developed by Dooseok Jang
-            </div>
+            <!-- 개발 이력 버튼 -->
+            <button onclick="ui.openDevInfo()" style="
+                width:100%; margin-top:8px; padding:8px 12px;
+                background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.15);
+                border-radius:8px; color:#94a3b8; font-size:12px; font-weight:700;
+                cursor:pointer; display:flex; align-items:center; gap:8px;
+                transition:background 0.2s;
+            " onmouseover="this.style.background='rgba(255,255,255,0.12)'"
+               onmouseout="this.style.background='rgba(255,255,255,0.07)'">
+                <i class="fa-solid fa-clock-rotate-left" style="color:#60a5fa;"></i>
+                플랫폼 개발 이력
+            </button>
         </div>
     </div> <!-- 사이드바 끝 -->
 
 <!-- 개발자 정보 팝업 -->
 <div id="devInfoModal" class="modal-overlay" onclick="if(event.target==this)this.style.display='none'" style="display:none;">
-    <div class="modal-box" style="width:480px; max-height:80vh; display:flex; flex-direction:column; padding:0; overflow:hidden;">
+    <div style="background:white; width:90%; max-width:860px; max-height:88vh; border-radius:20px; display:flex; flex-direction:column; overflow:hidden; box-shadow:0 24px 60px rgba(0,0,0,0.35);">
         <!-- 헤더 -->
-        <div style="background:#1e293b; color:white; padding:20px 24px; display:flex; align-items:center; justify-content:space-between; flex-shrink:0;">
+        <div style="background:#1e293b; color:white; padding:18px 28px; display:flex; align-items:center; justify-content:space-between; flex-shrink:0;">
             <div>
-                <div style="font-size:16px; font-weight:900;">Dooseok Jang</div>
-                <div style="font-size:12px; color:rgba(255,255,255,0.6); margin-top:3px;">
-                    <a href="mailto:jds0616@gmail.com" style="color:#60a5fa; text-decoration:none;">
-                        <i class="fa-solid fa-envelope" style="margin-right:5px;"></i>jds0616@gmail.com
+                <div style="font-size:13px; color:rgba(255,255,255,0.55); font-weight:600; margin-bottom:4px;">플랫폼 개발자</div>
+                <div style="font-size:17px; font-weight:900;">교수 장두석</div>
+                <div style="font-size:12px; color:rgba(255,255,255,0.6); margin-top:4px;">
+                    E-mail :
+                    <a href="mailto:jds0616@gmail.com" style="color:#60a5fa; text-decoration:none; margin-left:4px;">
+                        jds0616@gmail.com
                     </a>
                 </div>
             </div>
             <button onclick="document.getElementById('devInfoModal').style.display='none'"
-                style="background:rgba(255,255,255,0.1); border:none; color:white; width:32px; height:32px; border-radius:8px; cursor:pointer; font-size:14px;">
+                style="background:rgba(255,255,255,0.1); border:none; color:white; width:34px; height:34px; border-radius:8px; cursor:pointer; font-size:15px; flex-shrink:0;">
                 <i class="fa-solid fa-xmark"></i>
             </button>
         </div>
-        <!-- 개발 이력 제목 -->
-        <div style="background:#f8fafc; padding:12px 24px; border-bottom:1px solid #e2e8f0; flex-shrink:0;">
-            <div style="font-size:13px; font-weight:800; color:#334155;">
-                <i class="fa-brands fa-github" style="color:#1e293b; margin-right:6px;"></i>
-                KAC 플랫폼 개발 이력
-            </div>
-            <div style="font-size:11px; color:#94a3b8; margin-top:2px;">GitHub에서 실시간 로드</div>
+        <!-- 서브 헤더 -->
+        <div style="background:#f8fafc; padding:10px 28px; border-bottom:1px solid #e2e8f0; flex-shrink:0; display:flex; align-items:center; gap:8px;">
+            <i class="fa-brands fa-github" style="color:#1e293b; font-size:15px;"></i>
+            <span style="font-size:13px; font-weight:800; color:#334155;">KAC 플랫폼 개발 이력</span>
+            <span style="font-size:11px; color:#94a3b8; margin-left:4px;">GitHub 실시간 로드</span>
         </div>
-        <!-- 이력 내용 (스크롤 가능) -->
-        <div id="devInfoContent" style="flex:1; overflow-y:auto; padding:20px 24px; font-size:13px; line-height:1.7; color:#334155;">
-            <div style="text-align:center; color:#94a3b8; padding:30px 0;">
-                <i class="fa-solid fa-spinner fa-spin" style="font-size:24px; margin-bottom:10px; display:block;"></i>
+        <!-- 이력 내용 (스크롤) -->
+        <div id="devInfoContent" style="flex:1; overflow-y:auto; padding:24px 28px; font-size:13px; line-height:1.75; color:#334155;">
+            <div style="text-align:center; color:#94a3b8; padding:40px 0;">
+                <i class="fa-solid fa-spinner fa-spin" style="font-size:28px; margin-bottom:12px; display:block;"></i>
                 개발 이력 불러오는 중...
             </div>
         </div>
