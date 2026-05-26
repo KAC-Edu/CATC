@@ -126,9 +126,9 @@
         align-items: center; 
         justify-content: center; 
         padding: 0; 
-        position: relative;
+        flex-shrink: 0; 
+        /* 🚩 기존 border-bottom 제거 및 그림자 추가 */
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2); 
-        flex-shrink: 0;
         position: sticky; 
         top: 0; 
         z-index: 1000; 
@@ -1039,16 +1039,13 @@ body.modal-open .app-content {
 
 
 <!-- 상단 헤더 부분 (수정됨) -->
-<header class="app-header">
-  <!-- << 왼쪽 고정 -->
-  <button class="header-btn" onclick="handleBackNav()" style="position:absolute; left:16px; font-family:'Pretendard'; font-weight:400; font-size:15px; letter-spacing:-1px; color:rgba(255,255,255,0.7); background:none; border:none; cursor:pointer;">&lt;&lt;</button>
-  <!-- 제목 진짜 정중앙 -->
-  <span style="font-size:17px; font-weight:500; color:#fff; letter-spacing:-0.3px;">항공기술훈련원 교육운영부</span>
-  <!-- 아이콘 오른쪽 고정 -->
-  <div style="position:absolute; right:16px; display:flex; gap:16px; align-items:center;">
-      <button class="header-btn" onclick="openCenterQrModal()" style="font-size:18px; color:rgba(255,255,255,0.75); background:none; border:none; cursor:pointer;"><i class="fa-solid fa-qrcode"></i></button>
-      <button class="header-btn" onclick="openGlobalNoticeModal()" style="font-size:18px; color:rgba(255,255,255,0.75); background:none; border:none; cursor:pointer;"><i class="fa-solid fa-bullhorn"></i></button>
-      <button class="header-btn" onclick="toggleMenu(true)" style="font-size:18px; color:rgba(255,255,255,0.75); background:none; border:none; cursor:pointer;"><i class="fa-solid fa-bars"></i></button>
+<header class="app-header" style="position:relative;">
+  <button onclick="handleBackNav()" style="position:absolute; left:16px; font-family:'Pretendard'; font-weight:400; font-size:15px; color:rgba(255,255,255,0.7); background:none; border:none; cursor:pointer;">&lt;&lt;</button>
+  <span style="font-size:17px; font-weight:500; color:#fff;">항공기술훈련원 교육운영부</span>
+  <div style="position:absolute; right:16px; display:flex; gap:18px; align-items:center;">
+      <button onclick="openCenterQrModal()" style="font-size:18px; color:rgba(255,255,255,0.75); background:none; border:none; cursor:pointer;"><i class="fa-solid fa-qrcode"></i></button>
+      <button onclick="openGlobalNoticeModal()" style="font-size:18px; color:rgba(255,255,255,0.75); background:none; border:none; cursor:pointer;"><i class="fa-solid fa-bullhorn"></i></button>
+      <button onclick="toggleMenu(true)" style="font-size:18px; color:rgba(255,255,255,0.75); background:none; border:none; cursor:pointer;"><i class="fa-solid fa-bars"></i></button>
   </div>
 </header>
 
@@ -2207,6 +2204,22 @@ function updateIndividualView() {
     document.getElementById('ind-prof').innerText = (room.status?.professorName || "-") + " 교수";
     document.getElementById('ind-coord').innerText = room.settings?.coordinatorName || "-";
     document.getElementById('ind-room-loc').innerText = room.settings?.roomDetailName || "-";
+
+    // [입교현황 카운트] showEntryMemberList와 동일 로직
+    const elCnt = document.getElementById('ind-entry-cnt');
+    if (elCnt) {
+        const valid = Object.values(room.students || {}).filter(s => s && s.name && s.name !== "undefined");
+        const cnt = new Set(valid.map(s => s.name)).size;
+        elCnt.innerHTML = `${cnt}<span>명</span>`;
+    }
+    // Firebase 직접 조회로 최신값 보정
+    firebase.database().ref(`courses/${currentRID}/students`).once('value', snap => {
+        const elNow = document.getElementById('ind-entry-cnt');
+        if (elNow) {
+            const valid = Object.values(snap.val() || {}).filter(s => s && s.name && s.name !== "undefined");
+            elNow.innerHTML = `${new Set(valid.map(s => s.name)).size}<span>명</span>`;
+        }
+    });
 
     // 3. [핵심 추가] 학생장 정보 표시 (성함 + 강사가 입력한 전체 전화번호)
     let leaderTxt = "지정된 학생장 없음";
