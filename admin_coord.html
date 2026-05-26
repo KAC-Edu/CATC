@@ -124,8 +124,8 @@
         background: var(--navy-dark); 
         display: flex; 
         align-items: center; 
-        justify-content: space-between; 
-        padding: 0 20px; 
+        justify-content: center; 
+        padding: 0; 
         flex-shrink: 0; 
         /* 🚩 기존 border-bottom 제거 및 그림자 추가 */
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2); 
@@ -1039,16 +1039,13 @@ body.modal-open .app-content {
 
 
 <!-- 상단 헤더 부분 (수정됨) -->
-<header class="app-header">
-  <!-- 아이콘 대신 << 텍스트 사용 (클릭 시 메인복귀 또는 포탈이동) -->
-  <button class="header-btn" onclick="handleBackNav()" style="font-family: 'Pretendard'; font-weight: 900; letter-spacing: -2px;">&lt;&lt;</button>
-  
-  <div class="header-title" style="flex:1; text-align:center; font-weight:600;">항공기술훈련원 교육운영부</div>
-  
-  <div style="display:flex; gap:12px; align-items:center; flex-shrink:0;">
-      <button class="header-btn" onclick="openCenterQrModal()"><i class="fa-solid fa-qrcode"></i></button>
-      <button class="header-btn" onclick="openGlobalNoticeModal()"><i class="fa-solid fa-bullhorn"></i></button>
-      <button class="header-btn" onclick="toggleMenu(true)"><i class="fa-solid fa-bars"></i></button>
+<header class="app-header" style="position:relative;">
+  <button class="header-btn" onclick="handleBackNav()" style="position:absolute; left:16px; font-family:'Pretendard'; font-weight:400; font-size:15px; letter-spacing:-1px; color:rgba(255,255,255,0.7);">&lt;&lt;</button>
+  <span class="header-title" style="font-size:17px; font-weight:500; color:#fff;">항공기술훈련원 교육운영부</span>
+  <div style="position:absolute; right:16px; display:flex; gap:16px; align-items:center;">
+      <button class="header-btn" onclick="openCenterQrModal()" style="font-size:17px; color:rgba(255,255,255,0.75);"><i class="fa-solid fa-qrcode"></i></button>
+      <button class="header-btn" onclick="openGlobalNoticeModal()" style="font-size:17px; color:rgba(255,255,255,0.75);"><i class="fa-solid fa-bullhorn"></i></button>
+      <button class="header-btn" onclick="toggleMenu(true)" style="font-size:17px; color:rgba(255,255,255,0.75);"><i class="fa-solid fa-bars"></i></button>
   </div>
 </header>
 

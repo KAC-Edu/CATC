@@ -3170,11 +3170,13 @@ renderQaList: function(f) {
     },
     
     toggleFullScreen: function() {
-        const elem = document.querySelector('.main-stage');
+        const elem = document.documentElement;
         if (!document.fullscreenElement) {
-            elem.requestFullscreen().catch(err => console.log(err));
-        } else if (document.exitFullscreen) {
-            document.exitFullscreen();
+            const req = elem.requestFullscreen || elem.webkitRequestFullscreen || elem.mozRequestFullScreen || elem.msRequestFullscreen;
+            if (req) req.call(elem).catch(err => console.log(err));
+        } else {
+            const exit = document.exitFullscreen || document.webkitExitFullscreen || document.mozCancelFullScreen || document.msExitFullscreen;
+            if (exit) exit.call(document);
         }
     },
     
