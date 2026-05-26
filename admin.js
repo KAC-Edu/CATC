@@ -3170,11 +3170,11 @@ renderQaList: function(f) {
     },
     
     toggleFullScreen: function() {
-        const elem = document.documentElement;
+        const elem = document.querySelector('.main-stage');
         if (!document.fullscreenElement) {
-            (elem.requestFullscreen || elem.webkitRequestFullscreen || elem.mozRequestFullScreen || elem.msRequestFullscreen).call(elem);
-        } else {
-            (document.exitFullscreen || document.webkitExitFullscreen || document.mozCancelFullScreen || document.msExitFullscreen).call(document);
+            elem.requestFullscreen().catch(err => console.log(err));
+        } else if (document.exitFullscreen) {
+            document.exitFullscreen();
         }
     },
     
