@@ -950,6 +950,22 @@ function sendAns(idx) {
 
 
         
+// 단축 코드로 강의실 번호 조회
+async function resolveRoomFromCode(code) {
+    if (!code) return null;
+    try {
+        const snap = await firebase.database().ref(`public_codes/${code}`).once('value');
+        const data = snap.val();
+        if (data && data.room) return data.room;
+        // 코드 자체가 방 번호인 경우 (A~Z)
+        if (/^[A-Za-z]$/.test(code)) return code.toUpperCase();
+        return null;
+    } catch (e) {
+        console.error('코드 조회 오류:', e);
+        return null;
+    }
+}
+
 // [수정] index.html의 최하단 (async function init() { ... })
 (async function init() {
     const params = new URLSearchParams(window.location.search);
@@ -962,13 +978,24 @@ function sendAns(idx) {
         currentRoom = directRoom;
     } else if (code) {
         currentRoom = await resolveRoomFromCode(code);
-    } else if (!isCheckIn) {
-        // checkin이 아닌 일반 진입 시 localStorage 마지막 방 복구
+        // 코드 조회 실패 시 localStorage 복구 시도
+        if (!currentRoom) {
+            currentRoom = localStorage.getItem('kac_last_visited_room') || null;
+        }
+    } else {
+        // room/code 파라미터 없으면 localStorage에서 복구
         currentRoom = localStorage.getItem('kac_last_visited_room') || null;
     }
 
     if (!currentRoom) {
-        alert("강의실 정보가 없습니다. QR 코드를 다시 스캔해주세요.");
+        // checkin QR인 경우 오류 안내
+        if (isCheckIn) {
+            alert("강의실 정보가 없습니다. QR 코드를 다시 스캔해주세요.");
+        } else {
+            // 일반 접속인 경우 대기 화면 표시 (오류 팝업 없이)
+            document.getElementById('landingPage').style.display = 'flex';
+            document.getElementById('mainApp').style.display = 'none';
+        }
         return;
     }
 
