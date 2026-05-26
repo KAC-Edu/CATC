@@ -2266,6 +2266,13 @@ showAlert: function(msg) {
         
         // 1. Firebase 실시간 리스너 (한 번만 등록)
         if (!window.isRoomListenerSet) {
+            // 스피너 표시 유지 (리스너 대기 중)
+            if(tableBody && tableBody.innerHTML.trim() === '') {
+                tableBody.innerHTML = `<tr><td colspan="8" style="padding:40px; text-align:center; color:#94a3b8;">
+                    <i class="fa-solid fa-spinner fa-spin" style="font-size:22px; margin-bottom:10px; display:block; color:#3b82f6;"></i>
+                    강의실 정보 불러오는 중...
+                </td></tr>`;
+            }
             firebase.database().ref('courses').on('value', s => {
                 window.latestCoursesData = s.val() || {}; // 전역에 데이터 저장
                 window.isRoomListenerSet = true;
@@ -2275,9 +2282,7 @@ showAlert: function(msg) {
         }
 
         const d = window.latestCoursesData || {};
-        // state.room을 변수로 캡처하지 않음 - 루프 안에서 직접 참조 (캡처 시점 불일치 방지)
 
-        // [수정] placeholder에서 disabled를 제거하여 자바스크립트로 선택(리셋)이 가능하게 함
         if(sel) sel.innerHTML = '<option value="">Select Room ▾</option>';
         if(tableBody) tableBody.innerHTML = "";
 
