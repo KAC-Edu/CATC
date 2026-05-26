@@ -124,9 +124,10 @@
         background: var(--navy-dark); 
         display: flex; 
         align-items: center; 
-        justify-content: center; 
-        padding: 0; 
+        justify-content: space-between; 
+        padding: 0 20px; 
         flex-shrink: 0; 
+        /* 🚩 기존 border-bottom 제거 및 그림자 추가 */
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2); 
         position: sticky; 
         top: 0; 
@@ -134,24 +135,22 @@
     }
     
     .header-btn { 
-        font-size: 17px; 
-        color: rgba(255,255,255,0.72); 
+        font-size: 16px; 
+        color: rgba(255,255,255,0.8); 
         cursor: pointer; 
         border: none; 
         background: none; 
         transition: opacity 0.2s;
-        font-weight: 300;
-        line-height: 1;
-        padding: 0;
+        font-weight: 400;
     }
     .header-btn:active { opacity: 0.5; }
 
     .header-title { 
         color: #fff; 
-        font-size: 15px; 
+        font-size: 14px; 
         font-weight: 400; 
-        letter-spacing: 0;
-        opacity: 0.93;
+        letter-spacing: 0px;
+        opacity: 0.95;
     }
 
     .app-content { 
@@ -1051,9 +1050,9 @@ body.modal-open .app-content {
   </div>
   <!-- 아이콘 버튼: 절대위치 오른쪽 -->
   <div style="position:absolute; right:16px; display:flex; gap:14px; align-items:center;">
-      <button class="header-btn" onclick="openCenterQrModal()"><i class="fa-solid fa-qrcode"></i></button>
-      <button class="header-btn" onclick="openGlobalNoticeModal()"><i class="fa-solid fa-bullhorn"></i></button>
-      <button class="header-btn" onclick="toggleMenu(true)"><i class="fa-solid fa-bars"></i></button>
+      <button class="header-btn" onclick="openCenterQrModal()"><i class="fa-regular fa-qrcode"></i></button>
+      <button class="header-btn" onclick="openGlobalNoticeModal()"><i class="fa-regular fa-bullhorn"></i></button>
+      <button class="header-btn" onclick="toggleMenu(true)"><i class="fa-regular fa-bars"></i></button>
   </div>
 </header>
 
@@ -3494,32 +3493,29 @@ function clearNoticeHistory() {
     function showEntryMemberList() { const room = globalAllData[currentRID]; const valid = Object.values(room.students || {}).filter(s => s.name && s.name !== "undefined"); const list = Array.from(new Set(valid.map(s => s.name))).sort().join(", "); alert(`[입교 명단]\n\n${list || "입교자 없음"}`); }
 
     function updateEntryCnt(rid) {
-        // [수정] globalAllData 캐시 + Firebase 직접 조회 이중 처리
         const el = document.getElementById('ind-entry-cnt');
         if (!el) return;
 
-        // 1차: 캐시에 데이터 있으면 즉시 표시
-        const cached = globalAllData[rid];
-        if (cached && cached.students) {
-            const students = cached.students;
-            const uniqueNames = new Set(
-                Object.values(students)
-                    .filter(s => s && s.name && s.name.trim() !== "" && s.name !== "undefined")
-                    .map(s => s.name.trim())
-            );
-            el.innerHTML = `${uniqueNames.size}<span>명</span>`;
+        // showEntryMemberList와 완전히 동일한 로직으로 카운트
+        function countFromStudents(studentsObj) {
+            const valid = Object.values(studentsObj || {}).filter(s => s && s.name && s.name !== "undefined");
+            return new Set(valid.map(s => s.name)).size;
         }
 
-        // 2차: Firebase 직접 조회로 최신값 보정
+        // 1차: 캐시 즉시 표시
+        const cached = globalAllData[rid];
+        if (cached) {
+            const cnt = countFromStudents(cached.students);
+            el.innerHTML = `${cnt}<span>명</span>`;
+        }
+
+        // 2차: Firebase 직접 조회로 보정
         firebase.database().ref(`courses/${rid}/students`).once('value', snap => {
-            const students = snap.val() || {};
-            const uniqueNames = new Set(
-                Object.values(students)
-                    .filter(s => s && s.name && s.name.trim() !== "" && s.name !== "undefined")
-                    .map(s => s.name.trim())
-            );
             const elNow = document.getElementById('ind-entry-cnt');
-            if (elNow) elNow.innerHTML = `${uniqueNames.size}<span>명</span>`;
+            if (elNow) {
+                const cnt = countFromStudents(snap.val());
+                elNow.innerHTML = `${cnt}<span>명</span>`;
+            }
         });
     }
 // [개편] 목적지별 클릭 시 상세 명단 팝업
