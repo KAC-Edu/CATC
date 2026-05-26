@@ -480,7 +480,11 @@ enterAsObserver: function() {
             // 이전 방으로 완전 복귀 - 데이터 재로드
             this.forceEnterRoom(state.room);
         } else {
+            // 방이 없으면 현황판으로 복귀 (블러 화면 제거)
             document.getElementById('roomSelect').value = "";
+            const overlay = document.getElementById('statusOverlay');
+            if (overlay) overlay.style.display = 'none';
+            ui.showWaitingRoom();
         }
     },
 
