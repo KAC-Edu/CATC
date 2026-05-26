@@ -163,30 +163,68 @@
                 <button class="btn-action btn-danger" onclick="dataMgr.allIdleWithMasterKey()" style="background:#b91c1c;"><i class="fa-solid fa-power-off"></i> All Idle</button>
                 <button id="btnReset" class="btn-action btn-danger" onclick="dataMgr.resetCourse()"><i class="fa-solid fa-triangle-exclamation"></i> Reset</button>
             </div>
-            <div style="text-align: center; margin-top: 15px;">
-                <span onclick="ui.openSecretModal()" style="font-size:10px; color:#475569; cursor:pointer; text-decoration:underline;">시스템 보안 설정</span>
-            </div>
-<div class="divider"></div>
-                <div class="setting-group" style="position: relative;">
-                    <label class="setting-label">Related Platforms</label>
-                    <div id="familySiteMenu" class="family-site-menu">
-                        <a href="javascript:void(0)" onclick="ui.goFamilySite('coord', 'admin_coord.html')"><i class="fa-solid fa-user-tie"></i> 교육운영부 (행정)</a>
-                        <a href="javascript:void(0)" onclick="ui.goFamilySite('support', 'support_admin.html')"><i class="fa-solid fa-hotel"></i> 교육지원부 (생활관)</a>
-                        <a href="javascript:void(0)" onclick="ui.goFamilySite('driver', 'driver.html')"><i class="fa-solid fa-bus"></i> 기사 전용 (수송)</a>
-                        <a href="javascript:void(0)" onclick="ui.goFamilySite('meal', 'nutritionist.html')"><i class="fa-solid fa-utensils"></i> 영양사 전용 (식단)</a>
-                        <a href="javascript:void(0)" onclick="ui.goFamilySite('facility', 'facility_admin.html')"><i class="fa-solid fa-broom"></i> 미화/시설 관리</a>
-                        <a href="javascript:void(0)" onclick="ui.goFamilySite('none', 'student_leader.html')"><i class="fa-solid fa-crown"></i> 학생장 전용</a>
-                        <a href="javascript:void(0)" onclick="ui.goFamilySite('none', 'https://jds0616-boop.github.io/kac-cns-platform/index.html')"><i class="fa-solid fa-tower-broadcast"></i> CNS 통합 플랫폼</a>
-                    </div>
-                    <button class="btn-action btn-dark" onclick="ui.toggleFamilySites()" style="background: #334155; height: 42px;">
-                        <i class="fa-solid fa-layer-group"></i> 유관 시스템 바로가기 <i class="fa-solid fa-chevron-up" id="familyChevron" style="margin-left: auto; font-size: 10px;"></i>
-                    </button>
+            <div class="divider" style="margin-top:10px;"></div>
+
+            <!-- 유관 시스템 바로가기 -->
+            <div style="position:relative;">
+                <!-- 메뉴 (버튼 위로 펼쳐짐) -->
+                <div id="familySiteMenu" class="family-site-menu" style="top:44px; bottom:auto;">
+                    <a href="javascript:void(0)" onclick="ui.goFamilySite('coord', 'admin_coord.html')"><i class="fa-solid fa-user-tie"></i> 교육운영부 (행정)</a>
+                    <a href="javascript:void(0)" onclick="ui.goFamilySite('support', 'support_admin.html')"><i class="fa-solid fa-hotel"></i> 교육지원부 (생활관)</a>
+                    <a href="javascript:void(0)" onclick="ui.goFamilySite('driver', 'driver.html')"><i class="fa-solid fa-bus"></i> 기사 전용 (수송)</a>
+                    <a href="javascript:void(0)" onclick="ui.goFamilySite('meal', 'nutritionist.html')"><i class="fa-solid fa-utensils"></i> 영양사 전용 (식단)</a>
+                    <a href="javascript:void(0)" onclick="ui.goFamilySite('facility', 'facility_admin.html')"><i class="fa-solid fa-broom"></i> 미화/시설 관리</a>
+                    <a href="javascript:void(0)" onclick="ui.goFamilySite('none', 'student_leader.html')"><i class="fa-solid fa-crown"></i> 학생장 전용</a>
+                    <a href="javascript:void(0)" onclick="ui.goFamilySite('none', 'https://jds0616-boop.github.io/kac-cns-platform/index.html')"><i class="fa-solid fa-tower-broadcast"></i> CNS 통합 플랫폼</a>
                 </div>
+                <button class="btn-action btn-dark" onclick="ui.toggleFamilySites()" style="background:#334155; height:38px; width:100%; margin-top:6px;">
+                    <i class="fa-solid fa-layer-group"></i> 유관 시스템 바로가기
+                    <i class="fa-solid fa-chevron-up" id="familyChevron" style="margin-left:auto; font-size:10px;"></i>
+                </button>
+            </div>
 
-
-            <div class="dev-info">(Developed by DooSeok, Jang)</div>
+            <!-- 개발자 정보 -->
+            <div class="dev-info" onclick="ui.openDevInfo()" style="cursor:pointer; margin-top:8px;">
+                Developed by Dooseok Jang
+            </div>
         </div>
     </div> <!-- 사이드바 끝 -->
+
+<!-- 개발자 정보 팝업 -->
+<div id="devInfoModal" class="modal-overlay" onclick="if(event.target==this)this.style.display='none'" style="display:none;">
+    <div class="modal-box" style="width:480px; max-height:80vh; display:flex; flex-direction:column; padding:0; overflow:hidden;">
+        <!-- 헤더 -->
+        <div style="background:#1e293b; color:white; padding:20px 24px; display:flex; align-items:center; justify-content:space-between; flex-shrink:0;">
+            <div>
+                <div style="font-size:16px; font-weight:900;">Dooseok Jang</div>
+                <div style="font-size:12px; color:rgba(255,255,255,0.6); margin-top:3px;">
+                    <a href="mailto:jds0616@gmail.com" style="color:#60a5fa; text-decoration:none;">
+                        <i class="fa-solid fa-envelope" style="margin-right:5px;"></i>jds0616@gmail.com
+                    </a>
+                </div>
+            </div>
+            <button onclick="document.getElementById('devInfoModal').style.display='none'"
+                style="background:rgba(255,255,255,0.1); border:none; color:white; width:32px; height:32px; border-radius:8px; cursor:pointer; font-size:14px;">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+        <!-- 개발 이력 제목 -->
+        <div style="background:#f8fafc; padding:12px 24px; border-bottom:1px solid #e2e8f0; flex-shrink:0;">
+            <div style="font-size:13px; font-weight:800; color:#334155;">
+                <i class="fa-brands fa-github" style="color:#1e293b; margin-right:6px;"></i>
+                KAC 플랫폼 개발 이력
+            </div>
+            <div style="font-size:11px; color:#94a3b8; margin-top:2px;">GitHub에서 실시간 로드</div>
+        </div>
+        <!-- 이력 내용 (스크롤 가능) -->
+        <div id="devInfoContent" style="flex:1; overflow-y:auto; padding:20px 24px; font-size:13px; line-height:1.7; color:#334155;">
+            <div style="text-align:center; color:#94a3b8; padding:30px 0;">
+                <i class="fa-solid fa-spinner fa-spin" style="font-size:24px; margin-bottom:10px; display:block;"></i>
+                개발 이력 불러오는 중...
+            </div>
+        </div>
+    </div>
+</div>
 
 
 

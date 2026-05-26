@@ -4006,6 +4006,47 @@ resetShuttleRequests: function() {
         }
     },
 
+    // 개발자 정보 팝업 - GitHub에서 MD 파일 로드
+    openDevInfo: function() {
+        const modal = document.getElementById('devInfoModal');
+        const content = document.getElementById('devInfoContent');
+        if (!modal) return;
+        modal.style.display = 'flex';
+
+        // GitHub raw URL로 MD 파일 로드
+        const mdUrl = 'https://raw.githubusercontent.com/jds0616-boop/kac-cns-platform/main/KAC_%ED%94%8C%EB%9E%AB%ED%8F%BC_%EA%B0%9C%EB%B0%9C%EC%9D%B4%EB%A0%A5.md';
+        fetch(mdUrl)
+            .then(r => r.ok ? r.text() : Promise.reject(r.status))
+            .then(md => {
+                // MD → HTML 간단 변환
+                const html = md
+                    .replace(/^# (.+)$/gm, '<h2 style="font-size:16px;font-weight:900;color:#1e293b;margin:16px 0 8px;border-bottom:2px solid #e2e8f0;padding-bottom:6px;">$1</h2>')
+                    .replace(/^## (.+)$/gm, '<h3 style="font-size:14px;font-weight:800;color:#1e40af;margin:14px 0 6px;">$1</h3>')
+                    .replace(/^### (.+)$/gm, '<h4 style="font-size:13px;font-weight:700;color:#334155;margin:10px 0 4px;">$1</h4>')
+                    .split('\n').map(line => {
+                        if (line.startsWith('|') && line.endsWith('|')) {
+                            const cells = line.split('|').slice(1,-1).map(c => c.trim());
+                            if (cells.every(c => /^[-:]+$/.test(c))) return '';
+                            return '<tr>' + cells.map(c => `<td style="padding:5px 10px;border:1px solid #e2e8f0;font-size:12px;">${c}</td>`).join('') + '</tr>';
+                        }
+                        return line;
+                    }).join('\n')
+                    .replace(/((<tr>.*?<\/tr>\n?)+)/g, m => `<table style="width:100%;border-collapse:collapse;margin:6px 0;">${m}</table>`)
+                    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+                    .replace(/`(.+?)`/g, '<code style="background:#f1f5f9;padding:1px 4px;border-radius:3px;font-size:11px;">$1</code>')
+                    .replace(/^---$/gm, '<hr style="border:none;border-top:1px solid #e2e8f0;margin:12px 0;">')
+                    .replace(/\n\n/g, '<br>');
+                content.innerHTML = html;
+            })
+            .catch(err => {
+                content.innerHTML = `<div style="text-align:center;color:#ef4444;padding:20px;">
+                    <i class="fa-solid fa-triangle-exclamation" style="font-size:24px;margin-bottom:10px;display:block;"></i>
+                    개발 이력을 불러올 수 없습니다.<br>
+                    <small style="color:#94a3b8;">GitHub 저장소를 확인해 주세요.</small>
+                </div>`;
+            });
+    },
+
     // 사이드바 책갈피 토글
     toggleSidebar: function() {
         const body = document.body;
