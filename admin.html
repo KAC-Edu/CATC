@@ -706,20 +706,15 @@
         </div>
     </div>
 
-    <!-- 강사 출발시간 직접 설정 카드 -->
+    <!-- 퇴교차량 여정 예상 도착 시간 카드 -->
     <div style="width:100%; max-width:1000px; margin-bottom:15px;">
-        <div style="background:#fff; border:1px solid #e2e8f0; border-radius:16px; padding:16px 20px; display:flex; align-items:center; gap:15px; flex-wrap:wrap;">
-            <span style="font-size:13px; font-weight:800; color:#003366; white-space:nowrap;">
-                <i class="fa-solid fa-clock" style="color:#f59e0b;"></i> 출발시간 설정
-            </span>
-            <input type="date" id="shuttle-depart-date" class="setup-input" style="flex:1; min-width:130px; height:38px; padding:6px 10px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:14px; font-weight:700;">
-            <input type="time" id="shuttle-depart-time" class="setup-input" style="flex:1; min-width:110px; height:38px; padding:6px 10px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:14px; font-weight:700;">
-            <button onclick="ui.setShutttleDeparture()" style="height:38px; padding:0 18px; background:#003366; color:white; border:none; border-radius:8px; font-size:13px; font-weight:800; cursor:pointer; white-space:nowrap;">
-                <i class="fa-solid fa-bullhorn"></i> 기사님께 전달
-            </button>
-            <button onclick="ui.clearShuttleDeparture()" style="height:38px; padding:0 14px; background:#f1f5f9; color:#64748b; border:none; border-radius:8px; font-size:13px; font-weight:700; cursor:pointer; white-space:nowrap;">
-                초기화
-            </button>
+        <div id="shuttleETACard" style="background:#eff6ff; border:1px solid #bfdbfe; border-radius:16px; padding:16px 20px;">
+            <div style="font-size:13px; font-weight:800; color:#1e40af; margin-bottom:10px;">
+                <i class="fa-solid fa-route"></i> 퇴교차량 여정 예상 도착 시간
+            </div>
+            <div id="shuttleETADetail" style="font-size:14px; font-weight:700; color:#1e3a8a; line-height:2;">
+                <span style="color:#94a3b8; font-size:13px; font-weight:500;">운영부에서 출발 시간 공지 후 자동 표시됩니다.</span>
+            </div>
         </div>
     </div>
 

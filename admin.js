@@ -2850,6 +2850,12 @@ setMode: function(mode) {
                     const dep = snap.val();
                     if(dep && dep.time) {
                         localStorage.setItem(`last_seen_shuttle_${state.room}`, `${dep.date} ${dep.time}`);
+                        // 탭 진입 시 ETA 갱신
+                        ui.updateShuttleETA(dep.time, state.room);
+                    } else {
+                        // 출발 시간 없으면 안내 문구
+                        const etaDetail = document.getElementById('shuttleETADetail');
+                        if (etaDetail) etaDetail.innerHTML = '<span style="color:#94a3b8; font-size:13px; font-weight:500;">운영부에서 출발 시간 공지 후 자동 표시됩니다.</span>';
                     }
                 });
             }
@@ -3991,8 +3997,19 @@ resetShuttleRequests: function() {
             return `${stop} <span style="color:#2563eb;">(${timeStr})</span>`;
         });
 
-        etaContent.innerHTML = lines.join(' → ');
+        const etaText = lines.join(' → ');
+        etaContent.innerHTML = etaText;
         etaBox.style.display = 'block';
+
+        // 차량수요조사 탭의 여정 카드도 동시 업데이트
+        const etaDetail = document.getElementById('shuttleETADetail');
+        if (etaDetail) {
+            etaDetail.innerHTML = `
+                <div style="font-size:13px; color:#64748b; margin-bottom:4px;">
+                    항기원 출발 <strong style="color:#1e40af;">${departureTime}</strong> 기준
+                </div>
+                <div style="font-size:15px;">${etaText}</div>`;
+        }
     },
 
     // 사이드바 책갈피 토글
