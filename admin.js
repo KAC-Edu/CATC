@@ -1913,8 +1913,6 @@ refs.departure.on('value', snap => {
         ui.updateShuttleETA(dep.time, room);
     } else {
         if (inlineEl) inlineEl.innerText = '';
-        const etaBox = document.getElementById('dashShuttleETA');
-        if (etaBox) etaBox.style.display = 'none';
     }
 });
 
@@ -3964,9 +3962,7 @@ resetShuttleRequests: function() {
 // [강사 플랫폼: 로고 클릭 시 모든 정보를 초기화하고 현황판으로 이동]
     // 셔틀 예상 도착 시간 계산 및 표시
     updateShuttleETA: function(departureTime, room) {
-        const etaBox = document.getElementById('dashShuttleETA');
-        const etaContent = document.getElementById('dashShuttleETAContent');
-        if (!etaBox || !etaContent || !departureTime) return;
+        if (!departureTime) return;
 
         // 출발 시간 파싱
         const [h, m] = departureTime.split(':').map(Number);
@@ -3998,10 +3994,8 @@ resetShuttleRequests: function() {
         });
 
         const etaText = lines.join(' → ');
-        etaContent.innerHTML = etaText;
-        etaBox.style.display = 'block';
 
-        // 차량수요조사 탭의 여정 카드도 동시 업데이트
+        // 차량수요조사 탭의 여정 카드 업데이트
         const etaDetail = document.getElementById('shuttleETADetail');
         if (etaDetail) {
             etaDetail.innerHTML = `
