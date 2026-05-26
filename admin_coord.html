@@ -1039,13 +1039,13 @@ body.modal-open .app-content {
 
 
 <!-- 상단 헤더 부분 (수정됨) -->
-<header class="app-header">
-  <!-- 아이콘 대신 << 텍스트 사용 (클릭 시 메인복귀 또는 포탈이동) -->
-  <button class="header-btn" onclick="handleBackNav()" style="font-family: 'Pretendard'; font-weight: 900; letter-spacing: -2px;">&lt;&lt;</button>
-  
-  <div class="header-title" style="flex:1; text-align:center; font-weight:600;">항공기술훈련원 교육운영부</div>
-  
-  <div style="display:flex; gap:12px; align-items:center; flex-shrink:0;">
+<header class="app-header" style="position:relative;">
+  <!-- 뒤로가기 버튼 (왼쪽 고정) -->
+  <button class="header-btn" onclick="handleBackNav()" style="font-family: 'Pretendard'; font-weight: 900; letter-spacing: -2px; position:absolute; left:20px;">&lt;&lt;</button>
+  <!-- 제목 (완전 가운데 센터정렬) -->
+  <div class="header-title" style="flex:1; text-align:center; font-weight:400; font-size:15px;">항공기술훈련원 교육운영부</div>
+  <!-- 아이콘 버튼 (오른쪽 고정) -->
+  <div style="display:flex; gap:12px; align-items:center; flex-shrink:0; position:absolute; right:20px;">
       <button class="header-btn" onclick="openCenterQrModal()"><i class="fa-solid fa-qrcode"></i></button>
       <button class="header-btn" onclick="openGlobalNoticeModal()"><i class="fa-solid fa-bullhorn"></i></button>
       <button class="header-btn" onclick="toggleMenu(true)"><i class="fa-solid fa-bars"></i></button>
@@ -2212,6 +2212,9 @@ function updateIndividualView() {
     document.getElementById('ind-prof').innerText = (room.status?.professorName || "-") + " 교수";
     document.getElementById('ind-coord').innerText = room.settings?.coordinatorName || "-";
     document.getElementById('ind-room-loc').innerText = room.settings?.roomDetailName || "-";
+
+    // [버그수정] 입교현황 카운트 항상 갱신
+    updateEntryCnt(currentRID);
 
     // 3. [핵심 추가] 학생장 정보 표시 (성함 + 강사가 입력한 전체 전화번호)
     let leaderTxt = "지정된 학생장 없음";
@@ -3458,41 +3461,27 @@ function clearNoticeHistory() {
 }
     function saveGlobalNotice() {
         const ta = document.getElementById('globalNotice');
-        if (!ta || ta.dataset.placeholder === 'true') { alert("공지 내용을 입력해주세요."); return; }
+        const preview = document.getElementById('globalNoticePreview');
+        const inputText = ta ? ta.value.trim() : '';
+        if (!inputText) { alert("공지 내용을 입력해주세요."); return; }
         const now = new Date();
         const timeStr = `${now.getMonth()+1}/${now.getDate()} ${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}`;
-        const content = ta.value.trim();
-        const withTime = content + `
-[${timeStr}]`;
+        const withTime = inputText + ' [' + timeStr + ']';
         firebase.database().ref('system/globalNotice').set(withTime).then(() => {
-            alert("저장 완료");
-            ta.dataset.placeholder = 'true';
-            ta.style.color = '#1e40af';
-            ta.style.fontStyle = 'italic';
-            ta.style.background = '#eff6ff';
-            ta.style.borderColor = '#bfdbfe';
+            alert("✅ 전체 공지가 전송되었습니다.");
+            // 저장 후 미리보기 갱신, 입력창 초기화
+            if (preview) { preview.style.display = 'block'; preview.textContent = '✏️ 현재 공지: ' + withTime; }
+            ta.value = '';
         });
     }
 
-    function clearGlobalNoticePlaceholder(el) {
-        if (el.dataset.placeholder === 'true') {
-            el.dataset.placeholder = 'false';
-            el.value = '';
-            el.style.color = '#1e293b';
-            el.style.fontStyle = 'normal';
-            el.style.background = '#f8fafc';
-            el.style.borderColor = '#e2e8f0';
-        }
-    }
+    function clearGlobalNoticePlaceholder(el) { /* deprecated - no longer used */ }
 
     function onGlobalNoticeInput(el) {
-        if (el.dataset.placeholder === 'true') {
-            el.dataset.placeholder = 'false';
-            el.style.color = '#1e293b';
-            el.style.fontStyle = 'normal';
-            el.style.background = '#f8fafc';
-            el.style.borderColor = '#e2e8f0';
-        }
+        el.style.color = '#1e293b';
+        el.style.fontStyle = 'normal';
+        el.style.background = '#ffffff';
+        el.style.borderColor = '#3b82f6';
     }
     async function handleQRUpload(input) { const reader = new FileReader(); reader.onload = async (e) => { await firebase.database().ref(`courses/${currentRID}/attendanceQR`).set(e.target.result); alert("QR 저장 완료"); updateQRPreview(); }; reader.readAsDataURL(input.files[0]); }
     function updateQRPreview() { const room = globalAllData[currentRID]; const img = document.getElementById('qrPreview'); const empty = document.getElementById('qrEmpty'); if(room?.attendanceQR) { img.src = room.attendanceQR; img.style.display = "block"; empty.style.display = "none"; } else { img.style.display = "none"; empty.style.display = "block"; } }
@@ -4236,7 +4225,7 @@ handleBackNav = function() {
 
 
 
-// [추가] 센터 전체 공지 팝업 열기
+// [수정] 센터 전체 공지 팝업 열기 - 기존공지는 미리보기로, 입력창은 항상 비어있게
 function openGlobalNoticeModal() {
     toggleMenu(false); 
     const modal = document.getElementById('globalNoticeModal');
@@ -4245,22 +4234,23 @@ function openGlobalNoticeModal() {
     
     firebase.database().ref('system/globalNotice').once('value', s => {
         const textarea = document.getElementById('globalNotice');
+        const preview = document.getElementById('globalNoticePreview');
         const val = s.val() || '';
-        textarea.value = val;
-        if (val) {
-            textarea.dataset.placeholder = 'true';
-            textarea.style.color = '#1e40af';
-            textarea.style.fontStyle = 'italic';
-            textarea.style.background = '#eff6ff';
-            textarea.style.borderColor = '#bfdbfe';
-        } else {
-            textarea.dataset.placeholder = 'false';
-            textarea.style.color = '#1e293b';
-            textarea.style.fontStyle = 'normal';
-            textarea.style.background = '#f8fafc';
-            textarea.style.borderColor = '#e2e8f0';
+
+        // 기존 공지는 미리보기 영역에 회색 이탤릭으로 표시
+        if (val && preview) {
+            preview.style.display = 'block';
+            preview.textContent = '✏️ 현재 공지: ' + val;
+        } else if (preview) {
+            preview.style.display = 'none';
         }
-        if(typeof autoGrow === 'function') autoGrow(textarea); 
+
+        // 입력창은 항상 비어있게 (새 내용 입력 대기)
+        textarea.value = '';
+        textarea.style.color = '#1e293b';
+        textarea.style.fontStyle = 'normal';
+        textarea.style.background = '#ffffff';
+        textarea.style.borderColor = '#e2e8f0';
     });
 }
 
@@ -4286,23 +4276,27 @@ function openGlobalNoticeModal() {
 
 <!-- 센터 전체 공지 관리 팝업 -->
 <div id="globalNoticeModal" class="setup-modal" style="z-index: 9900;">
-    <div class="setup-box" style="max-width: 450px;">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; border-bottom:2px solid #eee; padding-bottom:10px;">
-            <h3 style="margin:0; font-size:17px; color:var(--navy-dark);"><i class="fa-solid fa-bullhorn"></i> 센터 전체 공지사항 송부</h3>
-            <i class="fa-solid fa-xmark" style="cursor:pointer; font-size:22px;" onclick="document.getElementById('globalNoticeModal').style.display='none'; document.body.classList.remove('modal-open');"></i>
-        </div>
-        
-        <div style="margin-bottom:15px;">
-            <p style="font-size: 11px; color: #ef4444; font-weight: 800; margin-bottom: 8px;">※ 여기에 입력하면 모든 과정(Room A~Z) 교육생 화면에 즉시 노출됩니다.</p>
-            <textarea id="globalNotice" class="notice-area"
-                style="min-height:250px; width:100%; color:#1e40af; font-style:italic; background:#eff6ff; border:1.5px solid #bfdbfe;"
-                onclick="clearGlobalNoticePlaceholder(this)"
-                oninput="onGlobalNoticeInput(this)"
-                data-placeholder="true"
-                placeholder="공지 내용을 입력하세요..."></textarea>
+    <div class="setup-box" style="max-width: 450px; padding:0; overflow:hidden;">
+        <!-- 타이틀 배너 -->
+        <div style="background:linear-gradient(135deg,#003366,#0055aa); padding:18px 20px; display:flex; justify-content:space-between; align-items:center;">
+            <div>
+                <div style="color:white; font-size:11px; font-weight:700; opacity:0.75; margin-bottom:4px;"><i class="fa-solid fa-tower-broadcast"></i> 항공기술훈련원 전체공지사항 송부</div>
+                <div style="color:white; font-size:16px; font-weight:900;"><i class="fa-solid fa-bullhorn"></i> 센터 전체 공지 관리</div>
+            </div>
+            <i class="fa-solid fa-xmark" style="cursor:pointer; font-size:22px; color:white;" onclick="document.getElementById('globalNoticeModal').style.display='none'; document.body.classList.remove('modal-open');"></i>
         </div>
 
-        <div style="display:flex; gap:10px;">
+        <div style="padding:20px;">
+            <p style="font-size: 11px; color: #ef4444; font-weight: 800; margin: 0 0 10px 0;">※ 여기에 입력하면 모든 과정(Room A~Z) 교육생 화면에 즉시 노출됩니다.</p>
+            <!-- 이전 공지 미리보기 -->
+            <div id="globalNoticePreview" style="display:none; background:#f8fafc; border:1px dashed #cbd5e1; border-radius:8px; padding:10px 14px; margin-bottom:10px; font-size:12px; color:#94a3b8; font-style:italic; line-height:1.5; white-space:pre-wrap; word-break:break-all;"></div>
+            <textarea id="globalNotice" class="notice-area"
+                style="min-height:200px; width:100%;"
+                oninput="onGlobalNoticeInput(this)"
+                placeholder="새 공지 내용을 입력하세요..."></textarea>
+        </div>
+
+        <div style="padding:0 20px 20px; display:flex; gap:10px;">
             <button class="navy-btn" style="background:#64748b; flex:1;" onclick="document.getElementById('globalNoticeModal').style.display='none'; document.body.classList.remove('modal-open');">닫기</button>
             <button class="navy-btn green" style="flex:2;" onclick="saveGlobalNotice()">공지 업데이트 (전송)</button>
         </div>

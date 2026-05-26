@@ -40,16 +40,16 @@ const state = {
     sessionId: (function() {
         const KEY = 'kac_admin_sid';
         const EXPIRE_KEY = 'kac_admin_sid_expire';
-        const EIGHT_HOURS = 8 * 60 * 60 * 1000;
+        const TWENTY_FOUR_HOURS = 24 * 60 * 60 * 1000; // 24시간으로 연장 (잦은 비밀번호 재입력 방지)
         let id = localStorage.getItem(KEY);
         const expire = parseInt(localStorage.getItem(EXPIRE_KEY) || '0');
-        // 8시간 이내면 기존 세션 유지, 초과 시 새 세션
+        // 24시간 이내면 기존 세션 유지, 초과 시 새 세션
         if (!id || Date.now() > expire) {
             id = Math.random().toString(36).substr(2, 9);
             localStorage.setItem(KEY, id);
         }
-        // 매번 만료 시간 갱신 (접속 시마다 8시간 연장)
-        localStorage.setItem(EXPIRE_KEY, String(Date.now() + EIGHT_HOURS));
+        // 매번 만료 시간 갱신 (접속 시마다 24시간 연장)
+        localStorage.setItem(EXPIRE_KEY, String(Date.now() + TWENTY_FOUR_HOURS));
         return id;
     })(),
     room: null,
@@ -2266,11 +2266,11 @@ showAlert: function(msg) {
         
         // 1. Firebase 실시간 리스너 (한 번만 등록)
         if (!window.isRoomListenerSet) {
-            // 스피너 표시 유지 (리스너 대기 중)
-            if(tableBody && tableBody.innerHTML.trim() === '') {
+            // 스피너 표시 (리스너 대기 중 - 항상 표시)
+            if(tableBody) {
                 tableBody.innerHTML = `<tr><td colspan="8" style="padding:40px; text-align:center; color:#94a3b8;">
-                    <i class="fa-solid fa-spinner fa-spin" style="font-size:22px; margin-bottom:10px; display:block; color:#3b82f6;"></i>
-                    강의실 정보 불러오는 중...
+                    <i class="fa-solid fa-spinner fa-spin" style="font-size:28px; margin-bottom:12px; display:block; color:#3b82f6;"></i>
+                    <span style="font-weight:700; font-size:14px;">강의실 현황 데이터를 불러오는 중...</span>
                 </td></tr>`;
             }
             firebase.database().ref('courses').on('value', s => {
@@ -3191,6 +3191,15 @@ renderQaList: function(f) {
     showWaitingRoom: function() {
         state.room = null; // 메모리상 방 정보 완전 삭제
         
+        // 0. 현황판 로딩 스피너 표시 (데이터 로딩 전)
+        const tableBody = document.getElementById('statusTableBody');
+        if (tableBody && !window.isRoomListenerSet) {
+            tableBody.innerHTML = `<tr><td colspan="8" style="padding:40px; text-align:center; color:#94a3b8;">
+                <i class="fa-solid fa-spinner fa-spin" style="font-size:28px; margin-bottom:12px; display:block; color:#3b82f6;"></i>
+                <span style="font-weight:700;">강의실 현황 데이터를 불러오는 중...</span>
+            </td></tr>`;
+        }
+
         // 1. 흐릿한 잠금 화면(overlay) 강제 숨김
         const overlay = document.getElementById('statusOverlay');
         if (overlay) overlay.style.setProperty('display', 'none', 'important');
