@@ -4245,8 +4245,9 @@ function openGlobalNoticeModal() {
     
     firebase.database().ref('system/globalNotice').once('value', s => {
         const textarea = document.getElementById('globalNotice');
-        if (s.val()) {
-            textarea.value = s.val();
+        const val = s.val() || '';
+        textarea.value = val;
+        if (val) {
             textarea.dataset.placeholder = 'true';
             textarea.style.color = '#1e40af';
             textarea.style.fontStyle = 'italic';
@@ -4254,24 +4255,16 @@ function openGlobalNoticeModal() {
             textarea.style.borderColor = '#bfdbfe';
         } else {
             textarea.dataset.placeholder = 'false';
+            textarea.style.color = '#1e293b';
+            textarea.style.fontStyle = 'normal';
+            textarea.style.background = '#f8fafc';
+            textarea.style.borderColor = '#e2e8f0';
         }
-        textarea.value = s.val() || "";
         if(typeof autoGrow === 'function') autoGrow(textarea); 
     });
 }
 
-// [추가] 전체 공지 저장 로직
-async function saveGlobalNotice() {
-    const content = document.getElementById('globalNotice').value;
-    try {
-        await firebase.database().ref(`system/globalNotice`).set(content);
-        alert("✅ 모든 과정의 교육생 화면에 공지가 반영되었습니다.");
-        document.getElementById('globalNoticeModal').style.display = 'none';
-        document.body.classList.remove('modal-open');
-    } catch(e) {
-        alert("오류 발생: " + e.message);
-    }
-}
+
 
 
 
