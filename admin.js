@@ -4014,7 +4014,7 @@ resetShuttleRequests: function() {
         modal.style.display = 'flex';
 
         // GitHub raw URL로 MD 파일 로드
-        const mdUrl = 'https://raw.githubusercontent.com/jds0616-boop/kac-cns-platform/main/KAC_%ED%94%8C%EB%9E%AB%ED%8F%BC_%EA%B0%9C%EB%B0%9C%EC%9D%B4%EB%A0%A5.md';
+        const mdUrl = 'https://raw.githubusercontent.com/jds0616-boop/CATC/main/KAC_%ED%94%8C%EB%9E%AB%ED%8F%BC_%EA%B0%9C%EB%B0%9C%EC%9D%B4%EB%A0%A5.md';
         fetch(mdUrl)
             .then(r => r.ok ? r.text() : Promise.reject(r.status))
             .then(md => {
