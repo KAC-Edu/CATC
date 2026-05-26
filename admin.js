@@ -2266,11 +2266,11 @@ showAlert: function(msg) {
         
         // 1. Firebase 실시간 리스너 (한 번만 등록)
         if (!window.isRoomListenerSet) {
-            // 스피너 항상 표시 (새로고침 직후)
-            if(tableBody) {
-                tableBody.innerHTML = `<tr><td colspan="8" style="padding:50px 20px; text-align:center;">
-                    <i class="fa-solid fa-spinner fa-spin" style="font-size:32px; display:block; margin-bottom:14px; color:#3b82f6;"></i>
-                    <div style="font-size:14px; font-weight:700; color:#64748b;">강의실 현황 불러오는 중...</div>
+            // 스피너 표시 유지 (리스너 대기 중)
+            if(tableBody && tableBody.innerHTML.trim() === '') {
+                tableBody.innerHTML = `<tr><td colspan="8" style="padding:40px; text-align:center; color:#94a3b8;">
+                    <i class="fa-solid fa-spinner fa-spin" style="font-size:22px; margin-bottom:10px; display:block; color:#3b82f6;"></i>
+                    강의실 정보 불러오는 중...
                 </td></tr>`;
             }
             firebase.database().ref('courses').on('value', s => {
@@ -3170,20 +3170,11 @@ renderQaList: function(f) {
     },
     
     toggleFullScreen: function() {
-        // 모니터 전체화면 (브라우저 전체, main-stage 아님)
         const elem = document.documentElement;
         if (!document.fullscreenElement) {
-            const req = elem.requestFullscreen
-                || elem.webkitRequestFullscreen
-                || elem.mozRequestFullScreen
-                || elem.msRequestFullscreen;
-            if (req) req.call(elem).catch(err => console.log(err));
+            (elem.requestFullscreen || elem.webkitRequestFullscreen || elem.mozRequestFullScreen || elem.msRequestFullscreen).call(elem);
         } else {
-            const exit = document.exitFullscreen
-                || document.webkitExitFullscreen
-                || document.mozCancelFullScreen
-                || document.msExitFullscreen;
-            if (exit) exit.call(document);
+            (document.exitFullscreen || document.webkitExitFullscreen || document.mozCancelFullScreen || document.msExitFullscreen).call(document);
         }
     },
     
@@ -5299,14 +5290,13 @@ subjectMgr.addSubjectInModal = function() {
 
 // 파일 맨 아래 window.onload 부분도 이렇게 깔끔하게 바꿔야 실시간이 작동합니다!
 window.onload = function() { 
-    // [수정] 새로고침마다 강의실 현황 리스너 초기화 → 스피너 반드시 표시
-    window.isRoomListenerSet = false;
-    window.latestCoursesData = null;
-
     dataMgr.checkMobile(); 
     profMgr.init();   
     coordMgr.init(); 
     guideMgr.init();
+
+    // [중요] 여기서 forceEnterRoom을 또 부르면 안테나가 두 개 꽂혀서 실시간이 안 됩니다.
+    // dataMgr.initSystem()이 로그인 체크 후 위에서 고친 loadInitialData를 한 번만 실행합니다.
     dataMgr.initSystem(); 
 };
 
