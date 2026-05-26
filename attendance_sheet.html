@@ -182,16 +182,16 @@ function renderTable(studentsRaw, attendanceData) {
             return;
         }
 
-        // expectedStudents 데이터 로드 (명단 업로드 여부 확인용)
+        // expectedStudents 데이터 로드 (없어도 렌더링 진행)
         db.ref(`courses/${roomFromUrl}/expectedStudents`).once('value', expSnap => {
             const expectedList = expSnap.val() || [];
         
         sortedStudents.forEach((s, idx) => {
             const tr = document.createElement('tr');
-            const isExpected = Array.isArray(expectedList) 
-                ? expectedList.includes(s.name)
-                : Object.values(expectedList).includes(s.name);
-            // 명단 업로드: 공책 아이콘, QR 신규: QR 아이콘
+            const rawList = expSnap.val();
+            const isExpected = rawList && (Array.isArray(rawList) 
+                ? rawList.includes(s.name)
+                : Object.values(rawList).includes(s.name));
             const icon = isExpected
                 ? '<i class="fa-solid fa-book-open" title="명단 등록" style="font-size:12px; color:#059669; margin-right:4px;"></i>'
                 : '<i class="fa-solid fa-qrcode" title="QR 신규 입교" style="font-size:12px; color:#059669; margin-right:4px;"></i>';
