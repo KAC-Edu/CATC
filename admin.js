@@ -3239,14 +3239,7 @@ renderQaList: function(f) {
     },
     
     toggleFullScreen: function() {
-        const elem = document.documentElement;
-        if (!document.fullscreenElement) {
-            const req = elem.requestFullscreen || elem.webkitRequestFullscreen || elem.mozRequestFullScreen || elem.msRequestFullscreen;
-            if (req) req.call(elem).catch(err => console.log(err));
-        } else {
-            const exit = document.exitFullscreen || document.webkitExitFullscreen || document.mozCancelFullScreen || document.msExitFullscreen;
-            if (exit) exit.call(document);
-        }
+        this.toggleSidebar();
     },
     
     translateQa: function(id) {
