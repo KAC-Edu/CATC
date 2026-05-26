@@ -40,16 +40,16 @@ const state = {
     sessionId: (function() {
         const KEY = 'kac_admin_sid';
         const EXPIRE_KEY = 'kac_admin_sid_expire';
-        const TWENTY_FOUR_HOURS = 24 * 60 * 60 * 1000; // 24시간으로 연장 (잦은 비밀번호 재입력 방지)
+        const EIGHT_HOURS = 8 * 60 * 60 * 1000;
         let id = localStorage.getItem(KEY);
         const expire = parseInt(localStorage.getItem(EXPIRE_KEY) || '0');
-        // 24시간 이내면 기존 세션 유지, 초과 시 새 세션
+        // 8시간 이내면 기존 세션 유지, 초과 시 새 세션
         if (!id || Date.now() > expire) {
             id = Math.random().toString(36).substr(2, 9);
             localStorage.setItem(KEY, id);
         }
-        // 매번 만료 시간 갱신 (접속 시마다 24시간 연장)
-        localStorage.setItem(EXPIRE_KEY, String(Date.now() + TWENTY_FOUR_HOURS));
+        // 매번 만료 시간 갱신 (접속 시마다 8시간 연장)
+        localStorage.setItem(EXPIRE_KEY, String(Date.now() + EIGHT_HOURS));
         return id;
     })(),
     room: null,
@@ -2266,11 +2266,11 @@ showAlert: function(msg) {
         
         // 1. Firebase 실시간 리스너 (한 번만 등록)
         if (!window.isRoomListenerSet) {
-            // 스피너 표시 (리스너 대기 중 - 항상 표시)
+            // 스피너 항상 표시 (새로고침 직후)
             if(tableBody) {
-                tableBody.innerHTML = `<tr><td colspan="8" style="padding:40px; text-align:center; color:#94a3b8;">
-                    <i class="fa-solid fa-spinner fa-spin" style="font-size:28px; margin-bottom:12px; display:block; color:#3b82f6;"></i>
-                    <span style="font-weight:700; font-size:14px;">강의실 현황 데이터를 불러오는 중...</span>
+                tableBody.innerHTML = `<tr><td colspan="8" style="padding:50px 20px; text-align:center;">
+                    <i class="fa-solid fa-spinner fa-spin" style="font-size:32px; display:block; margin-bottom:14px; color:#3b82f6;"></i>
+                    <div style="font-size:14px; font-weight:700; color:#64748b;">강의실 현황 불러오는 중...</div>
                 </td></tr>`;
             }
             firebase.database().ref('courses').on('value', s => {
@@ -3170,11 +3170,20 @@ renderQaList: function(f) {
     },
     
     toggleFullScreen: function() {
-        const elem = document.querySelector('.main-stage');
+        // 모니터 전체화면 (브라우저 전체, main-stage 아님)
+        const elem = document.documentElement;
         if (!document.fullscreenElement) {
-            elem.requestFullscreen().catch(err => console.log(err));
-        } else if (document.exitFullscreen) {
-            document.exitFullscreen();
+            const req = elem.requestFullscreen
+                || elem.webkitRequestFullscreen
+                || elem.mozRequestFullScreen
+                || elem.msRequestFullscreen;
+            if (req) req.call(elem).catch(err => console.log(err));
+        } else {
+            const exit = document.exitFullscreen
+                || document.webkitExitFullscreen
+                || document.mozCancelFullScreen
+                || document.msExitFullscreen;
+            if (exit) exit.call(document);
         }
     },
     
@@ -3191,15 +3200,6 @@ renderQaList: function(f) {
     showWaitingRoom: function() {
         state.room = null; // 메모리상 방 정보 완전 삭제
         
-        // 0. 현황판 로딩 스피너 표시 (데이터 로딩 전)
-        const tableBody = document.getElementById('statusTableBody');
-        if (tableBody && !window.isRoomListenerSet) {
-            tableBody.innerHTML = `<tr><td colspan="8" style="padding:40px; text-align:center; color:#94a3b8;">
-                <i class="fa-solid fa-spinner fa-spin" style="font-size:28px; margin-bottom:12px; display:block; color:#3b82f6;"></i>
-                <span style="font-weight:700;">강의실 현황 데이터를 불러오는 중...</span>
-            </td></tr>`;
-        }
-
         // 1. 흐릿한 잠금 화면(overlay) 강제 숨김
         const overlay = document.getElementById('statusOverlay');
         if (overlay) overlay.style.setProperty('display', 'none', 'important');
@@ -5299,13 +5299,14 @@ subjectMgr.addSubjectInModal = function() {
 
 // 파일 맨 아래 window.onload 부분도 이렇게 깔끔하게 바꿔야 실시간이 작동합니다!
 window.onload = function() { 
+    // [수정] 새로고침마다 강의실 현황 리스너 초기화 → 스피너 반드시 표시
+    window.isRoomListenerSet = false;
+    window.latestCoursesData = null;
+
     dataMgr.checkMobile(); 
     profMgr.init();   
     coordMgr.init(); 
     guideMgr.init();
-
-    // [중요] 여기서 forceEnterRoom을 또 부르면 안테나가 두 개 꽂혀서 실시간이 안 됩니다.
-    // dataMgr.initSystem()이 로그인 체크 후 위에서 고친 loadInitialData를 한 번만 실행합니다.
     dataMgr.initSystem(); 
 };
 
