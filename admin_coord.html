@@ -3,6 +3,9 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
   <title>항공기술훈련원 교육운영부 - 통합 행정 관리</title>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
@@ -135,22 +138,23 @@
     }
     
     .header-btn { 
-        font-size: 16px; 
-        color: rgba(255,255,255,0.8); 
+        font-size: 17px !important; 
+        color: rgba(255,255,255,0.75) !important; 
         cursor: pointer; 
         border: none; 
         background: none; 
         transition: opacity 0.2s;
-        font-weight: 400;
+        font-weight: 300 !important;
     }
+    .header-btn i { font-weight: 300 !important; }
     .header-btn:active { opacity: 0.5; }
 
     .header-title { 
-        color: #fff; 
-        font-size: 14px; 
-        font-weight: 400; 
-        letter-spacing: 0px;
-        opacity: 0.95;
+        color: #fff !important; 
+        font-size: 15px !important; 
+        font-weight: 400 !important; 
+        letter-spacing: 0px !important;
+        opacity: 0.95 !important;
     }
 
     .app-content { 
@@ -1039,20 +1043,20 @@ body.modal-open .app-content {
 
 
 
-<!-- 상단 헤더 부분 (수정됨) -->
-<header class="app-header" style="position:relative; justify-content:center;">
-  <!-- 뒤로가기 버튼: 절대위치 왼쪽 -->
+<!-- 상단 헤더 부분 (수정됨 v2) -->
+<header class="app-header" style="position:relative !important; justify-content:center !important;">
+  <!-- 뒤로가기 버튼: 왼쪽 -->
   <button class="header-btn" onclick="handleBackNav()" 
-    style="position:absolute; left:16px; font-family:'Pretendard'; font-weight:300; font-size:16px; letter-spacing:-1px; color:rgba(255,255,255,0.7);">&lt;&lt;</button>
-  <!-- 제목: 절대위치 정중앙 -->
-  <div style="position:absolute; left:50%; transform:translateX(-50%); white-space:nowrap;">
+    style="position:absolute !important; left:16px !important; font-family:'Pretendard' !important; font-weight:300 !important; font-size:16px !important; letter-spacing:-1px !important; color:rgba(255,255,255,0.7) !important;">&lt;&lt;</button>
+  <!-- 제목: 화면 정중앙 -->
+  <div style="position:absolute !important; left:50% !important; transform:translateX(-50%) !important; white-space:nowrap !important;">
     <span class="header-title">항공기술훈련원 교육운영부</span>
   </div>
-  <!-- 아이콘 버튼: 절대위치 오른쪽 -->
-  <div style="position:absolute; right:16px; display:flex; gap:14px; align-items:center;">
-      <button class="header-btn" onclick="openCenterQrModal()"><i class="fa-regular fa-qrcode"></i></button>
-      <button class="header-btn" onclick="openGlobalNoticeModal()"><i class="fa-regular fa-bullhorn"></i></button>
-      <button class="header-btn" onclick="toggleMenu(true)"><i class="fa-regular fa-bars"></i></button>
+  <!-- 아이콘 버튼: 오른쪽 -->
+  <div style="position:absolute !important; right:16px !important; display:flex !important; gap:18px !important; align-items:center !important;">
+      <button class="header-btn" onclick="openCenterQrModal()"><i class="fa-solid fa-qrcode" style="font-weight:300;"></i></button>
+      <button class="header-btn" onclick="openGlobalNoticeModal()"><i class="fa-solid fa-bullhorn" style="font-weight:300;"></i></button>
+      <button class="header-btn" onclick="toggleMenu(true)"><i class="fa-solid fa-bars" style="font-weight:300;"></i></button>
   </div>
 </header>
 
