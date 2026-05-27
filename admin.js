@@ -302,8 +302,10 @@ switchRoomAttempt: async function(newRoom, silent = false) {
     // 최근 인증 기록 있으면 silent 여부 관계없이 즉시 입장
     if (isRecentlyAuthed) {
         if (overlay) overlay.style.display = 'none';
-        await firebase.database().ref(`courses/${newRoom}/status/ownerSessionId`).set(state.sessionId);
-        this.forceEnterRoom(newRoom);
+        state.room = newRoom.toUpperCase(); // ★ 진입 전 state에 방 번호 고정
+        localStorage.setItem('kac_last_room', newRoom.toUpperCase());
+        await firebase.database().ref(`courses/${newRoom.toUpperCase()}/status/ownerSessionId`).set(state.sessionId);
+        this.forceEnterRoom(newRoom.toUpperCase());
         return;
     }
 
@@ -493,16 +495,20 @@ clearOwnedRooms: function() {
     localStorage.removeItem('last_owned_room');
 },
 
-// [수정] 진입 시 잠금을 기본값으로 설정하고 권한에 따라 해제하는 버전
 forceEnterRoom: async function(room) {
     const cleanRoom = room.toUpperCase();
 
+    // 현황판 즉시 숨기고 탭 표시 (루프 시각 효과 차단)
+    const viewWaiting = document.getElementById('view-waiting');
+    if (viewWaiting) viewWaiting.style.display = 'none';
+    const modeTabs = document.querySelector('.mode-tabs');
+    if (modeTabs) modeTabs.style.display = 'flex';
+
+    // overlay 즉시 해제
     const overlay = document.getElementById('statusOverlay');
-    // 최근 8시간 이내 인증 기록 있으면 overlay 띄우지 않음
-    const lastAuth = localStorage.getItem(`auth_room_${cleanRoom}`);
-    // overlay 항상 즉시 해제 (switchRoomAttempt에서 이미 권한 확인 완료)
     if (overlay) overlay.style.display = 'none';
-    // 방 전환 즉시 대시보드 초기화 (이전 방 데이터 잔류 방지)
+
+    // 방 전환 즉시 대시보드 초기화
     ui.clearDashboard();
 
     if (window.dbRef) {
@@ -2304,10 +2310,10 @@ showAlert: function(msg) {
         
         // 1. Firebase 실시간 리스너 (한 번만 등록)
         if (!window.isRoomListenerSet) {
+            window.isRoomListenerSet = true; // 먼저 플래그 설정 (중복 방지)
             firebase.database().ref('courses').on('value', s => {
-                window.latestCoursesData = s.val() || {}; // 전역에 데이터 저장
-                window.isRoomListenerSet = true;
-                this.initRoomSelect(); // 데이터가 오면 화면을 다시 그림
+                window.latestCoursesData = s.val() || {};
+                ui.initRoomSelect(); // 데이터 변경 시 테이블만 갱신
             });
             return;
         }
@@ -5467,4 +5473,4 @@ window.onclick = function(event) {
         ui.closeQaModal();
     }
 };
-// @build 20260527-071315
+// @build 20260527-071834
