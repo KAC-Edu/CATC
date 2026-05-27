@@ -3318,25 +3318,22 @@ body.night-mode .status-badge.status-arrived {
     50% { transform: scale(1.15); opacity: 0.85; }
 }
 
-/* ── 사이드바 슬라이드 (transform 방식 - 텍스트 안 깨짐) ── */
+/* ── 사이드바 fixed + transform 슬라이드 ── */
 .sidebar {
-    flex-shrink: 0;
-    position: relative;
-    z-index: 100;
+    position: fixed !important;
+    left: 0; top: 0;
+    height: 100vh;
     width: var(--sidebar-width);
-    min-width: var(--sidebar-width);
-    transition: transform 0.3s ease !important;
+    z-index: 1000;
+    transition: transform 0.3s ease-in-out !important;
     transform: translateX(0);
-}
-/* 사이드바 내부 컨테이너 너비 고정 (텍스트 줄바꿈 방지) */
-.sidebar-top, .sidebar-bottom, .sidebar-nav, .sidebar > * {
-    min-width: 260px;
+    overflow-y: auto;
+    overflow-x: hidden;
 }
 .main-stage {
-    flex: 1 1 0 !important;
-    min-width: 0 !important;
-    margin-left: 0 !important;
-    width: auto !important;
+    margin-left: var(--sidebar-width) !important;
+    width: calc(100vw - var(--sidebar-width)) !important;
+    transition: margin-left 0.3s ease-in-out, width 0.3s ease-in-out !important;
 }
 .header {
     position: relative !important;
@@ -3352,17 +3349,36 @@ body.night-mode .status-badge.status-arrived {
     padding-right: 0 !important;
 }
 
-/* 사이드바 숨김: transform으로 밀어내고 공간 회수 */
+/* 사이드바 숨김 */
 body.sidebar-hidden .sidebar {
     transform: translateX(-100%) !important;
-    margin-right: calc(var(--sidebar-width) * -1) !important;
+}
+body.sidebar-hidden .main-stage {
+    margin-left: 0 !important;
+    width: 100vw !important;
 }
 
-/* 클립 탭 */
+/* 클립 탭 - 항상 화면에 보임 */
 #sidebarClipTab {
     position: fixed !important;
-    z-index: 9999 !important;
+    top: 50%;
+    left: 300px;
+    transform: translateY(-50%) !important;
+    z-index: 1001 !important;
     display: flex !important;
+    transition: left 0.3s ease-in-out !important;
+    background: #1e293b;
+    color: white;
+    width: 18px;
+    height: 60px;
+    border-radius: 0 8px 8px 0;
+    cursor: pointer;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 4px 0 12px rgba(0,0,0,0.4);
+}
+body.sidebar-hidden #sidebarClipTab {
+    left: 0 !important;
 }
 
 /* 전체화면 시 배경 흰색 유지 */
@@ -3408,4 +3424,4 @@ body:fullscreen          { background: white !important; }
     width: auto !important;
     height: auto !important;
 }
-/* @build 20260527-065018 */
+/* @build 20260527-065511 */

@@ -3220,10 +3220,10 @@ renderQaList: function(f) {
             icon.classList.toggle('fa-bars', !isHidden);
             icon.classList.toggle('fa-bars-staggered', isHidden);
         }
-        // 클립 탭 위치 + 아이콘 방향
+        // 클립 탭 위치 강제 조정 (CSS + JS 이중 보장)
         const clipTab = document.getElementById('sidebarClipTab');
         const clipIcon = document.getElementById('clipTabIcon');
-        if (clipTab) clipTab.style.left = isHidden ? '0px' : '298px';
+        if (clipTab) clipTab.style.left = isHidden ? '0px' : '300px';
         if (clipIcon) {
             clipIcon.classList.toggle('fa-chevron-left', !isHidden);
             clipIcon.classList.toggle('fa-chevron-right', isHidden);
@@ -5466,4 +5466,4 @@ window.onclick = function(event) {
         ui.closeQaModal();
     }
 };
-// @build 20260527-065018
+// @build 20260527-065511
