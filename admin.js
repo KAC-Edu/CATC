@@ -4687,8 +4687,9 @@ init: function() {
             }, 300);
         });
         document.addEventListener('fullscreenchange', () => {
+            // 입교안내 탭에 있을 때만 PDF 재렌더링 (다른 탭 전체화면과 충돌 방지)
+            if (state.currentMode !== 'guide') return;
             guideMgr.isRendering = false;
-            // CSS 전환 후 pdfWrapper 크기가 확정된 다음 renderPage
             setTimeout(() => guideMgr.renderPage(guideMgr.pageNum), 350);
         });
     }
@@ -5456,4 +5457,4 @@ window.onclick = function(event) {
         ui.closeQaModal();
     }
 };
-// @build 20260527-013828
+// @build 20260527-014653
