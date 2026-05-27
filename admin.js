@@ -286,100 +286,53 @@ loadInitialData: function() {
     
 // [수정 완료] 보안 검증 강화 및 데이터 유출 차단 로직
 switchRoomAttempt: async function(newRoom, silent = false) {
-    // 1. 시각적 즉시 차단 (silent=새로고침 시 블러화면 안 띄움)
     const overlay = document.getElementById('statusOverlay');
-    if (overlay && !silent) overlay.style.display = 'flex';
-    ui.clearDashboard();
-    const dtEl = document.getElementById('displayCourseTitle');
-    if (dtEl) dtEl.innerText = '';
-    const drEl = document.getElementById('displayRoomName');
-    if (drEl) drEl.innerText = `Room #${newRoom}`;
-    // select room 드롭다운 즉시 동기화
+
+    // 8시간 이내 인증 기록 확인
+    const lastAuth = localStorage.getItem(`auth_room_${newRoom}`);
+    const isRecentlyAuthed = lastAuth && (Date.now() - parseInt(lastAuth) < 8 * 60 * 60 * 1000);
+
+    // 새로고침(silent) 시 현황판 표시
+    if (silent) {
+        ui.showWaitingRoom();
+        return;
+    }
+
+    // 드롭다운 동기화
     const selEl = document.getElementById('roomSelect');
     if(selEl) selEl.value = newRoom;
-
     localStorage.setItem('kac_last_mode', 'dashboard');
-    
-    // 해당 방에 대한 옵저버 모드 여부 확인
     state.isObserver = (sessionStorage.getItem('kac_observer_room') === newRoom);
 
-    // 2. 서버의 실시간 상태를 조회 (ownerSessionId 확인)
+    // 최근 인증 기록 있으면 즉시 입장
+    if (isRecentlyAuthed) {
+        if (overlay) overlay.style.display = 'none';
+        await firebase.database().ref(`courses/${newRoom}/status/ownerSessionId`).set(authMgr.sessionId);
+        this.forceEnterRoom(newRoom);
+        return;
+    }
+
+    // 서버 상태 조회
     const snapshot = await firebase.database().ref(`courses/${newRoom}/status`).get();
     const st = snapshot.val() || {};
-
     const isActive = (st.roomStatus === 'active');
     const isOwner = (st.ownerSessionId === state.sessionId);
 
-    // 3. [보안 핵심] 인증 전 버튼 및 기능 물리적 잠금
-    const setupBtn = document.getElementById('btnSetupModal');
-    if (setupBtn) {
-        if (isActive && !isOwner && !state.isObserver) {
-            // 권한이 없는 사용자가 접속했을 때 버튼 상태
-            setupBtn.style.setProperty('background', '#64748b', 'important');
-            setupBtn.style.setProperty('opacity', '0.6', 'important');
-            setupBtn.style.pointerEvents = 'none'; 
-            setupBtn.disabled = true;
-            setupBtn.innerHTML = '<i class="fa-solid fa-lock"></i> 과정 잠김 (인증 필요)';
-        } else {
-            // 본인 소유이거나 비어있는 방일 때 버튼 상태 복구
-            setupBtn.style.setProperty('background', '', '');
-            setupBtn.style.setProperty('opacity', '1', '');
-            setupBtn.style.pointerEvents = 'auto';
-            setupBtn.disabled = false;
-            setupBtn.innerHTML = '<i class="fa-solid fa-gears"></i> 교육과정 환경 설정 (통합)';
-        }
-    }
-
-    // 4. [분기 처리] 권한 여부에 따른 입장 통제
-    
-    // (A) 방이 사용 중인데 내가 주인이 아니고, 옵저버도 아님 -> 데이터 차단
+    // 타인이 사용 중인 방 → 비밀번호 입력
     if (isActive && !isOwner && !state.isObserver) {
-        // 8시간 이내 인증 기록 확인
-        const lastAuth = localStorage.getItem(`auth_room_${newRoom}`);
-        const isRecentlyAuthed = lastAuth && (Date.now() - parseInt(lastAuth) < 8 * 60 * 60 * 1000);
-        if (isRecentlyAuthed) {
-            // 즉시 overlay 해제 (서버 응답 기다리지 않음)
-            if (overlay) overlay.style.display = 'none';
-            // 세션 ID 서버에 즉시 동기화 → forceEnterRoom 리스너가 바로 isOwner 인식
-            await firebase.database().ref(`courses/${newRoom}/status/ownerSessionId`).set(authMgr.sessionId);
-            this.forceEnterRoom(newRoom);
-            return;
-        }
-        // silent(새로고침)일 때는 비번창 없이 현황판으로
-        if (silent) {
-            localStorage.removeItem('kac_last_room');
-            ui.showWaitingRoom();
-            const sel = document.getElementById('roomSelect');
-            if(sel) sel.value = '';
-            return;
-        }
+        if (overlay) overlay.style.display = 'flex';
         state.pendingRoom = newRoom;
-        
-        // 중요: forceEnterRoom을 실행하지 않고 여기서 중단합니다. (데이터 리스너 실행 방지)
-        document.getElementById('takeoverPwInput').value = "";
+        document.getElementById('takeoverPwInput').value = '';
         const lbl1 = document.getElementById('takeoverRoomLabel');
         if(lbl1) lbl1.innerText = `Room #${newRoom}`;
         document.getElementById('takeoverModal').style.display = 'flex';
         document.getElementById('takeoverPwInput').focus();
-        
-        // overlay는 flex 상태를 유지하여 뒷배경 데이터를 가립니다.
-        return; 
-    }
-
-    // (B) 내가 주인이거나, 옵저버이거나, 혹은 방이 비어있는 경우 -> 입장 허용
-    // silent(새로고침)일 때는 자동 입장 안 하고 현황판 유지
-    if (silent) {
-        ui.showWaitingRoom();
-        const sel = document.getElementById('roomSelect');
-        if(sel) sel.value = '';
-        localStorage.removeItem('kac_last_room');
         return;
     }
-    console.log(`[인증 성공] Room ${newRoom} 데이터 로드를 시작합니다.`);
+
+    // 내 방이거나 빈 방 → 즉시 입장
+    if (overlay) overlay.style.display = 'none';
     this.forceEnterRoom(newRoom);
-    
-    // [참고] forceEnterRoom 내부 리스너에서 소유권이 최종 확인되면 
-    // 그 때 overlay를 none으로 바꿔 화면을 보여주게 됩니다.
 },
 
 
@@ -540,12 +493,8 @@ forceEnterRoom: async function(room) {
     const overlay = document.getElementById('statusOverlay');
     // 최근 8시간 이내 인증 기록 있으면 overlay 띄우지 않음
     const lastAuth = localStorage.getItem(`auth_room_${cleanRoom}`);
-    const isRecentAuth = lastAuth && (Date.now() - parseInt(lastAuth) < 8 * 60 * 60 * 1000);
-    if (!isRecentAuth) {
-        if (overlay) overlay.style.display = 'flex';
-    } else {
-        if (overlay) overlay.style.display = 'none';
-    }
+    // overlay 항상 즉시 해제 (switchRoomAttempt에서 이미 권한 확인 완료)
+    if (overlay) overlay.style.display = 'none';
     // 방 전환 즉시 대시보드 초기화 (이전 방 데이터 잔류 방지)
     ui.clearDashboard();
 
@@ -5509,4 +5458,4 @@ window.onclick = function(event) {
         ui.closeQaModal();
     }
 };
-// @build 20260527-063647
+// @build 20260527-064325
