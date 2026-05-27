@@ -3255,28 +3255,28 @@ renderQaList: function(f) {
     
     toggleFullScreen: function() {
         const icon = document.getElementById('fullscreenIcon');
-        if (!document.fullscreenElement) {
-            // 1. 사이드바 숨기기
-            document.body.classList.add('sidebar-hidden');
+        const body = document.body;
+
+        if (!body.classList.contains('fs-mode')) {
+            // 전체화면 ON: 사이드바 숨기고 body를 fullscreen 요청
+            body.classList.add('sidebar-hidden');
+            body.classList.add('fs-mode');
             const clipTab = document.getElementById('sidebarClipTab');
             const clipIcon = document.getElementById('clipTabIcon');
             if (clipTab) clipTab.style.left = '0px';
             if (clipIcon) { clipIcon.classList.remove('fa-chevron-left'); clipIcon.classList.add('fa-chevron-right'); }
-            // 2. main-stage 전체화면
-            const stage = document.querySelector('.main-stage');
-            if (stage) {
-                stage.style.backgroundColor = '#f1f5f9';
-                (stage.requestFullscreen || stage.webkitRequestFullscreen || stage.mozRequestFullScreen).call(stage)
-                    .catch(err => console.log(err));
-            }
+            // document.documentElement 전체화면 (F11 효과 - 내용 크기 유지, 여백만 흰색)
+            document.documentElement.requestFullscreen && document.documentElement.requestFullscreen().catch(()=>{});
             if (icon) { icon.classList.remove('fa-expand'); icon.classList.add('fa-compress'); }
         } else {
-            (document.exitFullscreen || document.webkitExitFullscreen || document.mozCancelFullScreen).call(document);
-            document.body.classList.remove('sidebar-hidden');
+            // 전체화면 OFF
+            body.classList.remove('fs-mode');
+            body.classList.remove('sidebar-hidden');
             const clipTab = document.getElementById('sidebarClipTab');
             const clipIcon = document.getElementById('clipTabIcon');
             if (clipTab) clipTab.style.left = '298px';
             if (clipIcon) { clipIcon.classList.remove('fa-chevron-right'); clipIcon.classList.add('fa-chevron-left'); }
+            document.fullscreenElement && document.exitFullscreen();
             if (icon) { icon.classList.remove('fa-compress'); icon.classList.add('fa-expand'); }
         }
     },
@@ -5459,4 +5459,4 @@ window.onclick = function(event) {
         ui.closeQaModal();
     }
 };
-// @build 20260527-015422
+// @build 20260527-015635

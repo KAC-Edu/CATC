@@ -3427,4 +3427,12 @@ body.sidebar-hidden #sidebarClipTab {
 body:-webkit-full-screen { background: #f1f5f9 !important; width: 100vw !important; height: 100vh !important; }
 body:-moz-full-screen { background: #f1f5f9 !important; }
 body:fullscreen { background: #f1f5f9 !important; width: 100vw !important; height: 100vh !important; }
-/* @build 20260527-015422 */
+/* 전체화면 시 html 루트 배경 흰색 */
+html:-webkit-full-screen { background: white !important; }
+html:-moz-full-screen    { background: white !important; }
+html:fullscreen          { background: white !important; }
+
+/* body/main-stage도 흰색 유지 */
+body:-webkit-full-screen { background: white !important; }
+body:fullscreen          { background: white !important; }
+/* @build 20260527-015635 */
