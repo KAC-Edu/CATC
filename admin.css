@@ -68,7 +68,7 @@ body {
 .dev-info { text-align: center; font-size: 10px; color: #475569; margin-top: 10px; }
 
 /* Main Stage */
-.main-stage { flex-grow: 1; display: flex; flex-direction: column; position: relative; height: 100vh; background: var(--bg-color); overflow: hidden; }
+.main-stage { display: flex; flex-direction: column; position: relative; height: 100vh; background: var(--bg-color); overflow: hidden; }
 .header { height: 60px; background: var(--header-bg); display: flex; align-items: center; justify-content: space-between; padding: 0 30px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); z-index: 20; flex-shrink: 0; }
 .header-title { font-size: 18px; font-weight: 800; color: white; display: flex; align-items: center; gap: 10px; }
 .course-sub-name { font-weight: 400; opacity: 0.8; font-size: 15px; border-left: 1px solid rgba(255,255,255,0.2); padding-left: 15px; }
@@ -3330,8 +3330,14 @@ body.night-mode .status-badge.status-arrived {
     transform: translateX(0);
 }
 .main-stage {
-    margin-left: var(--sidebar-width);
+    margin-left: var(--sidebar-width) !important;
+    width: calc(100vw - var(--sidebar-width)) !important;
     transition: margin-left 0.3s ease, width 0.3s ease !important;
+}
+
+/* 클립 탭 z-index 사이드바보다 높게 */
+#sidebarClipTab {
+    z-index: 500 !important;
 }
 .header {
     left: var(--sidebar-width) !important;
@@ -3411,4 +3417,4 @@ body:fullscreen          { background: white !important; }
     width: auto !important;
     height: auto !important;
 }
-/* @build 20260527-054333 */
+/* @build 20260527-055610 */
