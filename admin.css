@@ -817,6 +817,7 @@ body.night-mode .quiz-card.result-mode {
 .dashboard-header-box, .status-table {
     width: 100% !important;
     max-width: 1200px !important;
+    min-width: 900px !important; /* 창이 작아져도 테이블 레이아웃 유지 */
     margin-left: auto !important;
     margin-right: auto !important;
 }
@@ -844,6 +845,7 @@ body.night-mode .quiz-card.result-mode {
     font-size: 14px !important;
     color: #94a3b8 !important;
     border: none !important; /* th에는 선을 아예 없앱니다 */
+    white-space: nowrap !important; /* 헤더 줄바꿈 방지 */
 }
 
 
@@ -855,6 +857,7 @@ body.night-mode .quiz-card.result-mode {
     vertical-align: middle !important;
     padding: 15px 10px !important;
     font-size: 16px !important;
+    white-space: nowrap !important; /* 텍스트 줄바꿈 방지 */
     
     /* 기본적으로 아주 연한 테두리를 둘러줍니다 */
     border-top: 1px solid #f1f5f9 !important;

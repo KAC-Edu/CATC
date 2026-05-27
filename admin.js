@@ -5634,29 +5634,6 @@ window.onclick = function(event) {
         ui.closeQaModal();
     }
 };
-/* ===== [사이드바 Hover 자동 개폐] ===== */
-window.addEventListener('DOMContentLoaded', () => {
-    const sidebar = document.getElementById('mainSidebar');
-    if (!sidebar) return;
-
-    // 화면 왼쪽 끝 15px 보이지 않는 트리거 영역 생성
-    const trigger = document.createElement('div');
-    trigger.id = 'sidebar-hover-trigger';
-    trigger.style.cssText = 'position:fixed; top:0; left:0; width:15px; height:100vh; z-index:9998;';
-    document.body.appendChild(trigger);
-
-    // 트리거에 마우스 대면 사이드바 열림
-    trigger.addEventListener('mouseenter', () => {
-        document.body.classList.remove('sidebar-hidden');
-    });
-
-    // 사이드바에 마우스 있는 동안 유지
-    sidebar.addEventListener('mouseenter', () => {
-        document.body.classList.remove('sidebar-hidden');
-    });
-
-    // 사이드바에서 마우스 나가면 닫힘
-    sidebar.addEventListener('mouseleave', () => {
-        document.body.classList.add('sidebar-hidden');
-    });
-});
+/* ===== [사이드바 수동 토글 고정 방식] ===== */
+// 호버(mouseenter/mouseleave) 자동 개폐 완전 제거.
+// 토글은 ui.toggleSidebar() 버튼 클릭으로만 동작하며, 열리면 고정 유지됨.
