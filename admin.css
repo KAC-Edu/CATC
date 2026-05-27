@@ -3381,4 +3381,38 @@ body.night-mode .status-badge.status-arrived {
     0%, 100% { transform: scale(1); opacity: 1; }
     50% { transform: scale(1.15); opacity: 0.85; }
 }
-/* @build 20260527-011905 */
+
+/* ── 사이드바 슬라이드 토글 ── */
+.sidebar {
+    transition: width 0.3s ease, min-width 0.3s ease, padding 0.3s ease, transform 0.3s ease !important;
+}
+.main-stage {
+    transition: width 0.3s ease !important;
+}
+.header, .mode-tabs {
+    transition: left 0.3s ease, width 0.3s ease !important;
+}
+
+body.sidebar-hidden .sidebar {
+    width: 0 !important;
+    min-width: 0 !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+    border: none !important;
+}
+body.sidebar-hidden .main-stage {
+    width: 100vw !important;
+    max-width: 100vw !important;
+}
+body.sidebar-hidden .header {
+    left: 0 !important;
+    width: 100vw !important;
+}
+body.sidebar-hidden .mode-tabs {
+    left: 0 !important;
+    width: 100vw !important;
+}
+body.sidebar-hidden .content-area {
+    width: 100% !important;
+}
+/* @build 20260527-012500 */

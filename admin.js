@@ -3206,6 +3206,16 @@ renderQaList: function(f) {
         window.open(`attendance_sheet.html?room=${state.room}`, '_blank');
     },
 
+    toggleSidebar: function() {
+        const body = document.body;
+        const isHidden = body.classList.toggle('sidebar-hidden');
+        const icon = document.getElementById('sidebarToggleIcon');
+        if (icon) {
+            icon.classList.toggle('fa-bars', !isHidden);
+            icon.classList.toggle('fa-bars-staggered', isHidden);
+        }
+    },
+
     toggleNightMode: function() { 
         document.body.classList.toggle('night-mode'); 
         const n = document.body.classList.contains('night-mode');
@@ -3221,8 +3231,12 @@ renderQaList: function(f) {
         const elem = document.querySelector('.main-stage');
         if (!document.fullscreenElement) {
             elem.requestFullscreen().catch(err => console.log(err));
-        } else if (document.exitFullscreen) {
+            const icon = document.getElementById('fullscreenIcon');
+            if (icon) { icon.classList.remove('fa-expand'); icon.classList.add('fa-compress'); }
+        } else {
             document.exitFullscreen();
+            const icon = document.getElementById('fullscreenIcon');
+            if (icon) { icon.classList.remove('fa-compress'); icon.classList.add('fa-expand'); }
         }
     },
     
@@ -5396,4 +5410,4 @@ window.onclick = function(event) {
         ui.closeQaModal();
     }
 };
-// @build 20260527-011905
+// @build 20260527-012500
