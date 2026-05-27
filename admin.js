@@ -4909,10 +4909,11 @@ init: function() {
 
     // 6. 진짜 전체화면 모드 (기존 로직 유지)
     toggleFullScreen: function() {
+        const wrapper = document.getElementById('pdfWrapper');
         if (!document.fullscreenElement) {
-            // 전체 페이지를 fullscreen으로 (캔버스가 화면 꽉 채우도록)
-            document.documentElement.requestFullscreen().catch(err => {
-                console.warn("전체화면 실패:", err);
+            // PDF 캔버스 영역만 전체화면
+            (wrapper || document.documentElement).requestFullscreen().catch(err => {
+                document.documentElement.requestFullscreen().catch(e => console.warn(e));
             });
         } else {
             document.exitFullscreen();
@@ -5475,4 +5476,4 @@ window.onclick = function(event) {
         ui.closeQaModal();
     }
 };
-// @build 20260527-020736
+// @build 20260527-020939
