@@ -1327,8 +1327,11 @@ body.modal-open .app-content {
     <div class="section-title" style="color:#1e293b; margin-bottom:12px; padding-bottom:10px; border-bottom:2px solid #e2e8f0;">
         <i class="fa-solid fa-comment-dots"></i> 담당 과정 공지 (해당 과정 교육생 공지)
     </div>
-    <textarea id="courseNotice" class="notice-area" oninput="autoGrow(this)" placeholder="공지 내용을 입력하세요..."
-        style="background:rgba(255,255,255,0.88); color:#1e293b; border:none; border-radius:10px; font-size:14px; padding:12px;"></textarea>
+    <textarea id="courseNotice" class="notice-area"
+        onclick="clearLastNoticePlaceholder(this)"
+        oninput="onNoticeInput(this)"
+        style="background:#eff6ff; color:#1e40af; font-style:italic; border:1.5px solid #bfdbfe; border-radius:10px; font-size:14px; padding:12px;"
+        data-placeholder="true"></textarea>
     <button class="navy-btn" style="background:#10b981; border:none; box-shadow:0 4px 10px rgba(16,185,129,0.4); margin-top:8px; width:100%;" onclick="saveCourseNotice()">
         <i class="fa-solid fa-paper-plane"></i> 과정 공지 업데이트
     </button>
@@ -3407,6 +3410,8 @@ function saveCourseNotice() {
             timestamp: ts,
             timeStr: now.toLocaleString('ko-KR', {month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'})
         });
+        const ta = document.getElementById('courseNotice');
+        if (ta) { ta.dataset.placeholder = 'true'; }
         renderNoticeHistory();
         alert("✅ 공지가 교육생 플랫폼에 즉시 반영되었습니다.");
     }).catch((err) => {
@@ -3415,6 +3420,28 @@ function saveCourseNotice() {
 }
 
 // 공지 이력 렌더링
+function clearLastNoticePlaceholder(el) {
+    if (el.dataset.placeholder === 'true') {
+        el.dataset.placeholder = 'false';
+        el.value = '';
+        el.style.color = '#1e293b';
+        el.style.fontStyle = 'normal';
+        el.style.background = '#f8fafc';
+        el.style.borderColor = '#e2e8f0';
+    }
+}
+
+function onNoticeInput(el) {
+    if (el.dataset.placeholder === 'true') {
+        el.dataset.placeholder = 'false';
+        el.style.color = '#1e293b';
+        el.style.fontStyle = 'normal';
+        el.style.background = '#f8fafc';
+        el.style.borderColor = '#e2e8f0';
+    }
+    if (typeof autoGrow === 'function') autoGrow(el);
+}
+
 function renderNoticeHistory() {
     if(!currentRID) return;
     const listEl = document.getElementById('noticeHistoryList');
@@ -3430,11 +3457,21 @@ function renderNoticeHistory() {
             }
             const items = Object.entries(data).sort((a,b) => b[0]-a[0]);
             const [key, item] = items[0];
-            // 최신 1건만 흰색 글씨로 표시
+            // textarea에 마지막 공지 파란 이탤릭으로 표시
+            const ta = document.getElementById('courseNotice');
+            if (ta && ta.dataset.placeholder !== 'false') {
+                ta.value = item.text;
+                ta.dataset.placeholder = 'true';
+                ta.style.color = '#1e40af';
+                ta.style.fontStyle = 'italic';
+                ta.style.background = '#eff6ff';
+                ta.style.borderColor = '#bfdbfe';
+            }
+            // 최신 1건 이력 표시
             listEl.innerHTML = `
                 <div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
                     <span style="color:#334155; font-size:13px; font-weight:600; flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${item.text}</span>
-                    <span style="color:#94a3b8; font-size:11px; white-space:nowrap; flex-shrink:0;">${item.timeStr}</span>
+                    <span style="color:#94a3b8; font-size:11px; white-space:nowrap; flex-shrink:0;">${item.timeStr || ''}</span>
                 </div>`;
         });
 }
@@ -4320,4 +4357,4 @@ async function saveGlobalNotice() {
 
 </body>
 </html>
-<!-- @build 20260527-022825 -->
+<!-- @build 20260527-033125 -->
