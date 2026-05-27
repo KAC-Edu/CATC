@@ -338,8 +338,10 @@ switchRoomAttempt: async function(newRoom, silent = false) {
         const lastAuth = localStorage.getItem(`auth_room_${newRoom}`);
         const isRecentlyAuthed = lastAuth && (Date.now() - parseInt(lastAuth) < 8 * 60 * 60 * 1000);
         if (isRecentlyAuthed) {
-            // 재인증 없이 바로 입장
-            await firebase.database().ref(`courses/${newRoom}/ownerSessionId`).set(authMgr.sessionId);
+            // 즉시 overlay 해제 (서버 응답 기다리지 않음)
+            if (overlay) overlay.style.display = 'none';
+            // 세션 ID 서버에 즉시 동기화 → forceEnterRoom 리스너가 바로 isOwner 인식
+            await firebase.database().ref(`courses/${newRoom}/status/ownerSessionId`).set(authMgr.sessionId);
             this.forceEnterRoom(newRoom);
             return;
         }
@@ -536,8 +538,14 @@ forceEnterRoom: async function(room) {
     const cleanRoom = room.toUpperCase();
 
     const overlay = document.getElementById('statusOverlay');
-    // 항상 잠금 상태로 시작 - status 리스너에서 소유권 확인 후 해제
-    if (overlay) overlay.style.display = 'flex';
+    // 최근 8시간 이내 인증 기록 있으면 overlay 띄우지 않음
+    const lastAuth = localStorage.getItem(`auth_room_${cleanRoom}`);
+    const isRecentAuth = lastAuth && (Date.now() - parseInt(lastAuth) < 8 * 60 * 60 * 1000);
+    if (!isRecentAuth) {
+        if (overlay) overlay.style.display = 'flex';
+    } else {
+        if (overlay) overlay.style.display = 'none';
+    }
     // 방 전환 즉시 대시보드 초기화 (이전 방 데이터 잔류 방지)
     ui.clearDashboard();
 
@@ -5499,4 +5507,4 @@ window.onclick = function(event) {
         ui.closeQaModal();
     }
 };
-// @build 20260527-061527
+// @build 20260527-062955
