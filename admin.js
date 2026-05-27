@@ -5131,13 +5131,11 @@ flatpickr("#setup-period-range", {
     mode: "range",
     locale: "ko",
     dateFormat: "Y-m-d",
-    showMonths: 2,         
-    closeOnSelect: false,  
+    showMonths: 2,
+    closeOnSelect: false,
     disableMobile: "true",
-    defaultDate: new Date(),
     onReady: function(selectedDates, dateStr, instance) {
-        // 가로폭을 820px로 고정하여 양쪽 달력 균형 확보
-        instance.calendarContainer.style.width = "820px"; 
+        instance.calendarContainer.style.width = "820px";
     },
     onChange: function(selectedDates, dateStr, instance) {
         instance.calendarContainer.style.width = "820px";
@@ -5213,13 +5211,22 @@ loadCurrentSettings: function() {
         const rangeInput = document.getElementById('setup-period-range');
         const todayStr = typeof getTodayString === 'function' ? getTodayString() : new Date().toISOString().split('T')[0];
 
-        if(s.period && s.period.includes(" ~ ")) {
-            // 기존에 "2026-03-03 ~ 2026-03-13" 형태의 데이터가 있다면 그대로 입력
-            rangeInput.value = s.period;
-        } else {
-            // 데이터가 없으면 "오늘 ~ 오늘" 형태를 기본값으로 세팅
-            rangeInput.value = `${todayStr} ~ ${todayStr}`;
-        }
+        // requestAnimationFrame으로 flatpickr 초기화 완료 후 setDate
+        const applyPeriod = () => {
+            const fp = rangeInput._flatpickr;
+            if (!fp) return;
+            if (s.period && s.period.includes(" ~ ")) {
+                const parts = s.period.split(" ~ ");
+                if (parts.length === 2) {
+                    fp.setDate([parts[0].trim(), parts[1].trim()], false);
+                    rangeInput.value = s.period;
+                }
+            } else {
+                fp.setDate([todayStr, todayStr], false);
+                rangeInput.value = `${todayStr} ~ ${todayStr}`;
+            }
+        };
+        requestAnimationFrame(() => { applyPeriod(); setTimeout(applyPeriod, 80); });
         
         // 5. menuFeatures 체크박스 상태 로드
         // 기본값: 차량신청(shuttle) + 외출/외박(adminAction)만 ON, 나머지는 OFF
@@ -5436,4 +5443,4 @@ window.onclick = function(event) {
         ui.closeQaModal();
     }
 };
-// @build 20260527-012928
+// @build 20260527-013237
