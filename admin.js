@@ -187,10 +187,13 @@ saveInstructorNoticeMain: function() {
     
 // dataMgr 객체 내부의 initSystem과 loadInitialData를 아래로 교체
 initSystem: function() {
+        // 세션 LOCAL로 유지 (브라우저 닫아도 로그인 상태 유지)
+        firebase.auth().setPersistence(firebase.auth.Auth.Persistence.LOCAL)
+            .catch(e => console.warn('setPersistence 오류:', e));
+
         firebase.auth().onAuthStateChanged(user => {
             if (user) { 
                 document.getElementById('loginOverlay').style.display = 'none'; 
-                // 로그인이 확인되면 즉시 데이터 로드 및 방 복구 프로세스 시작
                 this.loadInitialData(); 
             } else { 
                 document.getElementById('loginOverlay').style.display = 'flex'; 
@@ -4915,6 +4918,13 @@ init: function() {
     // 6. 진짜 전체화면 모드 (기존 로직 유지)
     toggleFullScreen: function() {
         const wrapper = document.getElementById('pdfWrapper');
+        // 이미 전체화면 중이면 (브라우저 전체화면 포함) → PDF 레이아웃 확대만
+        if (document.fullscreenElement && document.fullscreenElement !== wrapper) {
+            wrapper.classList.toggle('pdf-presentation-mode');
+            guideMgr.isRendering = false;
+            setTimeout(() => guideMgr.renderPage(guideMgr.pageNum), 100);
+            return;
+        }
         if (!document.fullscreenElement) {
             wrapper.requestFullscreen()
                 .then(() => {
@@ -5485,4 +5495,4 @@ window.onclick = function(event) {
         ui.closeQaModal();
     }
 };
-// @build 20260527-054333
+// @build 20260527-060424
