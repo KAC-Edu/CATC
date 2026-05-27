@@ -10,6 +10,14 @@
     --sidebar-bg: #1e293b;
 }
 
+/* 브라우저 전체화면 시 배경색 유실 방지 */
+html:fullscreen,
+html:-webkit-full-screen,
+body:fullscreen,
+body:-webkit-full-screen {
+    background-color: var(--bg-color) !important;
+}
+
 
 * { box-sizing: border-box; font-family: 'Pretendard', sans-serif; }
 body { 
@@ -319,7 +327,7 @@ body.night-mode .q-card.status-pin {
 }
 .quiz-opt.reveal-answer { border-color: #10b981; background: #ecfdf5; color: #065f46; transform: scale(1.02); box-shadow: 0 10px 25px rgba(16, 185, 129, 0.15); font-weight: 800; }
 .quiz-opt.reveal-answer .opt-num { background: #10b981; color: white; }
-.quiz-opt.ox-mode { flex: 1; min-height: 120px; font-size: 50px; justify-content: center; }
+.quiz-opt.ox-mode { flex: 1; min-height: 120px; font-size: 50px; justify-content: center; text-align: center; }
 .quiz-opt.ox-mode .opt-num { display: none; }
 .chart-area { display: none; width: 100%; height: 100%; flex-grow: 1; align-items: flex-end; justify-content: center; gap: 8%; padding-bottom: 20px; border-bottom: 2px solid #cbd5e1; margin-bottom: 20px; }
 .bar-wrapper { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; width: 100px; height: 100%; position: relative; }
@@ -1394,8 +1402,8 @@ body.night-mode .badge-idle {
     width: 100%;
     height: auto;
     background: #fff;
-    border: none; 
-    box-shadow: 0 10px 40px rgba(0,0,0,0.1); /* 부드러운 깊이감만 추가 */
+    border: none;
+    box-shadow: none;
     line-height: 0;
     cursor: pointer;
     position: relative;
@@ -1441,11 +1449,37 @@ body.night-mode .badge-idle {
 }
 
 /* ============================================================
-   [수정 2차 - 1단계] PDF 전체화면 몰입형 Presentation 모드 (통합본)
+   PDF 전체화면 몰입형 Presentation 모드
    ============================================================ */
 
-/* 1. 전체화면 시 컨테이너: 배경은 블랙, 모든 여백 제거, 중앙 정렬 */
-/* 전체화면: PDF가 모니터 전체를 덮도록 */
+/* pdfWrapper 자체를 fullscreen 타겟으로 */
+#pdfWrapper:fullscreen,
+#pdfWrapper:-webkit-full-screen {
+    background: #000 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    border: none !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    cursor: pointer !important;
+    overflow: hidden !important;
+}
+#pdfWrapper:fullscreen #guideCanvas,
+#pdfWrapper:-webkit-full-screen #guideCanvas {
+    max-width: 100vw !important;
+    max-height: 100vh !important;
+    width: auto !important;
+    height: auto !important;
+    border-radius: 0 !important;
+    display: block !important;
+}
+
+/* 기존 view-guide 전체화면 폴백 (하위호환) */
 :fullscreen #view-guide,
 :-webkit-full-screen #view-guide {
     position: fixed !important;
@@ -1462,8 +1496,6 @@ body.night-mode .badge-idle {
     margin: 0 !important;
     z-index: 99999 !important;
 }
-
-/* 전체화면 시 view-header, 툴바 숨김 → PDF만 표시 */
 :fullscreen #view-guide .view-header,
 :-webkit-full-screen #view-guide .view-header {
     display: none !important;
@@ -1472,8 +1504,6 @@ body.night-mode .badge-idle {
 :-webkit-full-screen #view-guide > div:not(#pdfWrapper) {
     display: none !important;
 }
-
-/* 전체화면 시 pdfWrapper: 화면 전체 */
 :fullscreen #pdfWrapper,
 :-webkit-full-screen #pdfWrapper {
     width: 100vw !important;
@@ -1489,9 +1519,6 @@ body.night-mode .badge-idle {
     cursor: pointer !important;
     overflow: hidden !important;
 }
-
-/* 전체화면 시 캔버스: JS가 pdfWrapper clientWidth 기준으로 크기 계산하므로
-   CSS는 최대 제약만 걸고 실제 크기는 JS에 맡김 */
 :fullscreen #guideCanvas,
 :-webkit-full-screen #guideCanvas {
     width: auto !important;
@@ -1501,8 +1528,6 @@ body.night-mode .badge-idle {
     border-radius: 0 !important;
     display: block !important;
 }
-
-/* 하위 호환 */
 #view-guide:fullscreen { background: #000 !important; }
 #view-guide:fullscreen #pdfWrapper { border: none !important; border-radius: 0 !important; }
 #view-guide:fullscreen #guideCanvas { max-width: 100vw !important; max-height: 100vh !important; }
@@ -2664,26 +2689,25 @@ body.night-mode .header-room-badge { background-color: #003366 !important; borde
     padding: 20px !important;
 }
 
-/* 2. 입교안내 PDF 슬라이드에 딥블루 라운딩 프레임 적용 */
+/* 2. 입교안내 PDF 슬라이드 - 평면 디자인 (그림자/테두리 제거) */
 #pdfWrapper {
-    border: 2px solid #003366 !important; /* 두툼한 딥블루 프레임 */
-    border-radius: 35px !important;       /* 모서리를 아주 부드럽게 */
-    background-color: #003366 !important; /* 캔버스 뒤 배경도 딥블루로 */
-    box-shadow: 0 30px 80px rgba(0, 51, 102, 0.3) !important; /* 깊이감 있는 그림자 */
+    border: none !important;
+    border-radius: 0 !important;
+    background-color: transparent !important;
+    box-shadow: none !important;
     overflow: hidden;
-    transition: all 0.3s ease;
-    line-height: 0; /* 하단 미세 틈새 제거 */
+    transition: none;
+    line-height: 0;
 }
 
-/* 마우스를 올렸을 때 살짝 반응하는 효과 */
 #pdfWrapper:hover {
-    transform: scale(1.01);
-    box-shadow: 0 40px 100px rgba(0, 51, 102, 0.4) !important;
+    transform: none;
+    box-shadow: none !important;
 }
 
 /* 내부 PDF 캔버스 보정 */
 #guideCanvas {
-    border-radius: 20px; /* 내부 화면도 살짝 라운딩 처리하여 일체감 부여 */
+    border-radius: 0;
     display: block;
 }
 
@@ -3366,12 +3390,12 @@ body.night-mode .status-badge.status-arrived {
     height: 50px;
 }
 
-/* O, X 전용 글자 크기 (더 크게) */
+/* O, X 전용 글자 크기 (컴팩트) */
 .quiz-opt.ox-mode .opt-text {
-    font-size: 60px !important; /* O, X는 대폭 확대 */
+    font-size: 50px !important;
     font-weight: 900;
-    text-align: left; /* 전체 정렬에 맞춰 왼쪽 정렬 */
-    padding-left: 10px;
+    text-align: center;
+    padding-left: 0;
 }
 
 .opt-result-bar {
