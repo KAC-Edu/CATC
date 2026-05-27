@@ -3435,4 +3435,4 @@ html:fullscreen          { background: white !important; }
 /* body/main-stage도 흰색 유지 */
 body:-webkit-full-screen { background: white !important; }
 body:fullscreen          { background: white !important; }
-/* @build 20260527-015635 */
+/* @build 20260527-021711 */
