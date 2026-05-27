@@ -790,6 +790,7 @@ body.night-mode .quiz-card.result-mode {
     display: none; /* 기본 숨김 */
     flex-direction: column;
     align-items: center;
+    overflow: visible !important; /* 자식 요소(강조 테두리)가 잘리지 않도록 */
     
     /* 3. 여백: 다른 페이지와 제목 높이를 맞춤 */
     padding: 0px 20px 100px 20px !important; 
@@ -830,8 +831,8 @@ body.night-mode .quiz-card.result-mode {
     border-collapse: separate !important;
     border-spacing: 0 8px !important;
     background: transparent !important;
-    /* 첫 행 윗선 잘림 방지: 컨테이너 천장에서 테이블을 살짝 띄움 */
-    margin-top: 5px !important;
+    /* 첫 행 윗선 잘림 방지: 컨테이너 천장에서 테이블을 충분히 띄움 */
+    margin-top: 10px !important;
     padding-top: 0 !important;
 }
 
@@ -1194,12 +1195,13 @@ body.night-mode .badge-idle {
     background: #ffffff !important;
     border-radius: 25px;
     padding: 40px;
+    padding-top: 55px; /* 첫 행 파란 테두리가 카드 천장에 잘리지 않도록 상단 여백 증가 */
     box-shadow: 0 10px 30px rgba(0,0,0,0.05);
     border: 1px solid #eef2f6;
     width: 100%;
     max-width: 1000px;
     margin: 0 auto 50px auto;
-    overflow: visible !important; /* 강조 테두리가 카드 경계에 잘리지 않도록 */
+    overflow: visible !important;
 }
 
 /* 3. 카드 내부 테이블 스타일 통일 */
