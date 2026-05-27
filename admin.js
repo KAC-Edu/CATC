@@ -520,6 +520,17 @@ clearOwnedRooms: function() {
 forceEnterRoom: async function(room) {
     const cleanRoom = room.toUpperCase();
 
+    // ── 방 전환 즉시 QR UI 강제 초기화 (이전 강의실 QR 잔류 방지) ──
+    const floatingQR = document.getElementById('floatingQR');
+    const qrModal    = document.getElementById('qrModal');
+    const miniQREl   = document.getElementById('miniQRElement');
+    const qrBigTarget = document.getElementById('qrBigTarget');
+    if (floatingQR)  floatingQR.style.display  = 'none'; // 플로팅 QR 닫기
+    if (qrModal)     qrModal.style.display     = 'none'; // 확대 QR 모달 닫기
+    if (miniQREl)    miniQREl.innerHTML         = '';     // 이전 QR 이미지 제거
+    if (qrBigTarget) qrBigTarget.innerHTML      = '';     // 확대 QR 이미지 제거
+    // ────────────────────────────────────────────────────────────────
+
     const overlay = document.getElementById('statusOverlay');
     // 항상 잠금 상태로 시작 - status 리스너에서 소유권 확인 후 해제
     if (overlay) overlay.style.display = 'flex';
