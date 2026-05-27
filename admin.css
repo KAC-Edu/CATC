@@ -830,8 +830,8 @@ body.night-mode .quiz-card.result-mode {
     border-collapse: separate !important;
     border-spacing: 0 8px !important;
     background: transparent !important;
-    /* 첫 행 윗선 잘림 방지 */
-    padding-top: 8px !important;
+    /* 첫 행 윗선 잘림 방지: 14px로 증가 (2.5px 테두리 + 여유 공간 확보) */
+    padding-top: 14px !important;
 }
 
 
@@ -1057,21 +1057,17 @@ body.night-mode .badge-idle {
     border-radius: 0 8px 8px 0 !important;
 }
 
-
-
-
-
-
-/* 마지막 칸(관리) 오른쪽 면과 모서리 */
-.status-table tr.is-my-room td:last-child {
-    border-right: 2px solid #3b82f6 !important; /* 파란색 오른쪽선 */
-}
-
-
-/* 줄 전체가 떠 보이는 효과를 위해 그림자 살짝 추가 */
+/* 테두리가 인접 행 위로 올라와 잘리지 않도록 z-index 부여 */
 .status-table tr.is-my-room {
-    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.1);
+    position: relative !important;
+    z-index: 5 !important;
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
 }
+
+
+
+
+
 
 /* --- 메뉴 드롭다운 스타일 --- */
 .mode-dropdown { position: relative; display: inline-block; }
