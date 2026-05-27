@@ -3262,14 +3262,16 @@ renderQaList: function(f) {
             const clipIcon = document.getElementById('clipTabIcon');
             if (clipTab) clipTab.style.left = '0px';
             if (clipIcon) { clipIcon.classList.remove('fa-chevron-left'); clipIcon.classList.add('fa-chevron-right'); }
-            // 2. body 전체화면 (배경색 유지됨)
-            document.body.requestFullscreen().catch(err => {
-                // body 안되면 documentElement로 시도
-                document.documentElement.requestFullscreen().catch(e => console.log(e));
-            });
+            // 2. main-stage 전체화면
+            const stage = document.querySelector('.main-stage');
+            if (stage) {
+                stage.style.backgroundColor = '#f1f5f9';
+                (stage.requestFullscreen || stage.webkitRequestFullscreen || stage.mozRequestFullScreen).call(stage)
+                    .catch(err => console.log(err));
+            }
             if (icon) { icon.classList.remove('fa-expand'); icon.classList.add('fa-compress'); }
         } else {
-            document.exitFullscreen();
+            (document.exitFullscreen || document.webkitExitFullscreen || document.mozCancelFullScreen).call(document);
             document.body.classList.remove('sidebar-hidden');
             const clipTab = document.getElementById('sidebarClipTab');
             const clipIcon = document.getElementById('clipTabIcon');
@@ -5457,4 +5459,4 @@ window.onclick = function(event) {
         ui.closeQaModal();
     }
 };
-// @build 20260527-014653
+// @build 20260527-015422

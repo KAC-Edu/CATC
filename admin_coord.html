@@ -2324,7 +2324,7 @@ function updateIndividualView() {
             depStatusEl.innerHTML = `<i class="fa-solid fa-clock" style="color:#fbbf24;margin-right:5px;"></i>시간 설정됨 &mdash; <b style="color:white;">${dep.time}</b> (공지 미완료)`;
             if (depTimeEl) depTimeEl.value = dep.time;
         } else {
-            depStatusEl.innerHTML = `<i class="fa-solid fa-circle-minus" style="color:rgba(255,255,255,0.4);margin-right:5px;"></i>퇴교 시간 미설정`;
+            depStatusEl.innerHTML = `<i class="fa-solid fa-circle-minus" style="color:#94a3b8;margin-right:5px;"></i>퇴교 시간 미설정`;
             if (depTimeEl) depTimeEl.value = '';
         }
     }
@@ -2792,6 +2792,7 @@ function renderCourseSelectors() {
             card.onclick = () => {
                 currentRID = rid;
                 handleRoomSelection();
+                updateEntryCnt(rid);
             };
 
             card.innerHTML = `
@@ -3424,7 +3425,7 @@ function renderNoticeHistory() {
         .once('value', snap => {
             const data = snap.val();
             if(!data) {
-                listEl.innerHTML = '<span style="color:rgba(255,255,255,0.4); font-size:12px;">발송 이력 없음</span>';
+                listEl.innerHTML = '<span style="color:#94a3b8; font-size:12px;">발송 이력 없음</span>';
                 return;
             }
             const items = Object.entries(data).sort((a,b) => b[0]-a[0]);
@@ -3465,6 +3466,23 @@ function clearNoticeHistory() {
     function updateQRPreview() { const room = globalAllData[currentRID]; const img = document.getElementById('qrPreview'); const empty = document.getElementById('qrEmpty'); if(room?.attendanceQR) { img.src = room.attendanceQR; img.style.display = "block"; empty.style.display = "none"; } else { img.style.display = "none"; empty.style.display = "block"; } }
     function loadActionHistory(date) { selectedDate = date; renderTotalHistory(); }
     function showEntryMemberList() { const room = globalAllData[currentRID]; const valid = Object.values(room.students || {}).filter(s => s.name && s.name !== "undefined"); const list = Array.from(new Set(valid.map(s => s.name))).sort().join(", "); alert(`[입교 명단]\n\n${list || "입교자 없음"}`); }
+
+    // 입교현황 실시간 카운트
+    let _entryCntListener = null;
+    function updateEntryCnt(rid) {
+        if (!rid) return;
+        // 기존 리스너 해제
+        if (_entryCntListener) {
+            firebase.database().ref(`courses/${_entryCntListener}/students`).off();
+        }
+        _entryCntListener = rid;
+        firebase.database().ref(`courses/${rid}/students`).on('value', snap => {
+            const students = snap.val() || {};
+            const cnt = Object.values(students).filter(s => s.name && s.name !== 'undefined').length;
+            const el = document.getElementById('ind-entry-cnt');
+            if (el) el.innerHTML = `${cnt}<span>명</span>`;
+        });
+    }
 // [개편] 목적지별 클릭 시 상세 명단 팝업
     function showShuttleMembers(locType) {
         const room = globalAllData[currentRID];
@@ -4302,4 +4320,4 @@ async function saveGlobalNotice() {
 
 </body>
 </html>
-<!-- @build 20260527-014832 -->
+<!-- @build 20260527-015422 -->
