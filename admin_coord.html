@@ -1043,11 +1043,16 @@ body.modal-open .app-content {
   <!-- 아이콘 대신 << 텍스트 사용 (클릭 시 메인복귀 또는 포탈이동) -->
   <button class="header-btn" onclick="handleBackNav()" style="font-family: 'Pretendard'; font-weight: 900; letter-spacing: -2px;">&lt;&lt;</button>
   
-  <div class="header-title" style="flex:1; text-align:center; font-weight:600;">항공기술훈련원 교육운영부</div>
+  <div class="header-title">항공기술훈련원 교육운영부</div>
   
-  <div style="display:flex; gap:12px; align-items:center; flex-shrink:0;">
+  <div style="display:flex; gap:15px; align-items:center;">
+      <!-- 1. 접속 QR 아이콘 -->
       <button class="header-btn" onclick="openCenterQrModal()"><i class="fa-solid fa-qrcode"></i></button>
+      
+      <!-- 2. 전체 공지 아이콘 (신규 추가) -->
       <button class="header-btn" onclick="openGlobalNoticeModal()"><i class="fa-solid fa-bullhorn"></i></button>
+      
+      <!-- 3. 사이드 메뉴 아이콘 -->
       <button class="header-btn" onclick="toggleMenu(true)"><i class="fa-solid fa-bars"></i></button>
   </div>
 </header>
@@ -1095,8 +1100,8 @@ body.modal-open .app-content {
     </div>
 
     <!-- ✅ [복구 완료] 현재 운영 중인 과정 리스트 섹션 -->
-    <div class="section-card" style="background:white; padding:0; border:1px solid #e2e8f0; overflow:hidden;">
-        <div style="background:#1e40af; color:white; padding:12px 16px; font-size:14px; font-weight:800; display:flex; align-items:center; gap:8px;"><i class="fa-solid fa-list-ul"></i> 현재 운영 중인 과정 </div><div style="padding:16px;">
+    <div class="section-card" style="background:white; padding:16px; border:1px solid #e2e8f0;">
+        <div class="section-title" style="color:#1e293b; margin-bottom:12px; padding-bottom:10px; border-bottom:2px solid #e2e8f0;"><i class="fa-solid fa-list-ul"></i> 현재 운영 중인 과정 </div>
         <div id="activeCourseList" style="display:flex; flex-direction:column; gap:8px;">
             <!-- 자바스크립트가 여기에 ROOM A, ROOM C 등의 카드를 채워넣습니다 -->
         </div>
@@ -1110,13 +1115,13 @@ body.modal-open .app-content {
 
 <!-- [수정] 강사 픽업 통합 현황 테이블 -->
 <div id="pickupStatusView" class="view-card-full" style="display:none; flex-direction:column; gap:12px;">
-    <div class="section-card" style="background:white; padding:0; border:1px solid #e2e8f0; overflow:hidden;">
-        <div style="background:#1e40af; color:white; padding:12px 16px; font-size:14px; font-weight:800; display:flex; align-items:center; gap:8px;">
+    <div class="section-card" style="background:white; padding:16px; border:1px solid #e2e8f0;">
+        <div class="section-title" style="color:#1e293b; margin-bottom:12px; padding-bottom:10px; border-bottom:2px solid #e2e8f0; justify-content:space-between;">
             <span><i class="fa-solid fa-car-side"></i> 강사 수송 통합 예약 리스트</span>
             <button class="navy-btn" style="width:120px; height:32px; font-size:11px;" onclick="openTransportModal()">
                 <i class="fa-solid fa-plus"></i> 수송 추가요청
             </button>
-        </div><div style="padding:16px;">
+        </div>
         <div style="overflow-x: auto;">
 <!-- 수송 리스트를 담을 모바일 대응 컨테이너 -->
 <div id="pickupCardContainer" style="display: flex; flex-direction: column; gap: 12px; margin-top: 10px;">
@@ -1132,8 +1137,8 @@ body.modal-open .app-content {
 
       <!-- [신규 뷰 4] 교육생 퇴교차량 통합 현황 -->
       <div id="studentShuttleView" class="view-card-full" style="display:none; flex-direction:column; gap:12px;">
-          <div class="section-card" style="background:white; padding:0; border:1px solid #e2e8f0; overflow:hidden;">
-              <div style="background:#1e40af; color:white; padding:12px 16px; font-size:14px; font-weight:800; display:flex; align-items:center; gap:8px;"><i class="fa-solid fa-bus"></i> 과정별 퇴교차량 신청 총괄</div><div style="padding:16px;">
+          <div class="section-card" style="background:white; padding:16px; border:1px solid #e2e8f0;">
+              <div class="section-title" style="color:#1e293b; margin-bottom:12px; padding-bottom:10px; border-bottom:2px solid #e2e8f0;"><i class="fa-solid fa-bus"></i> 과정별 퇴교차량 신청 총괄</div>
               <div style="overflow-x: auto; background:rgba(255,255,255,0.1); border-radius:10px; overflow:hidden; border:1px solid rgba(255,255,255,0.2);">
                   <table class="navy-table" style="background:transparent;">
                       <thead>
@@ -1157,10 +1162,10 @@ body.modal-open .app-content {
 
 <!-- [신규 뷰 5] 항기원 전체 교육생 통합 관리 페이지 -->
 <div id="allStudentListView" class="view-card-full" style="display:none; flex-direction:column; gap:12px;">
-    <div class="section-card" style="background:white; padding:0; border:1px solid #e2e8f0; overflow:hidden; flex: 1; display: flex; flex-direction: column;">
-        <div style="background:#1e40af; color:white; padding:12px 16px; font-size:14px; font-weight:800; display:flex; align-items:center; gap:8px;">
+    <div class="section-card" style="background:white; padding:16px; border:1px solid #e2e8f0; flex: 1; display: flex; flex-direction: column;">
+        <div class="section-title" style="color:white; margin-bottom:12px; justify-content: space-between; align-items: center;">
             <span><i class="fa-solid fa-users-viewfinder"></i> 항기원 교육생 통합 명단</span>
-            <div class="live-badge"><i class="fa-solid fa-sync fa-spin"></i> 실시간</div><div style="padding:16px;">
+            <div class="live-badge"><i class="fa-solid fa-sync fa-spin"></i> 실시간</div>
         </div>
 
         <!-- 상단 검색바 구역 -->
@@ -1248,9 +1253,9 @@ body.modal-open .app-content {
               <div class="col-1-3"><div class="entry-box" onclick="showEntryMemberList()"><span style="font-size:11px; font-weight:800; color:var(--blue-deep);">입교 현황</span><div class="entry-val" id="ind-entry-cnt">0<span>명</span></div></div></div>
               <div class="col-2-3">
               <div class="section-card" style="height:100%; padding:10px; display:flex; flex-direction:column; justify-content:center;">
-                  <div style="background:#1e40af; color:white; padding:12px 16px; font-size:14px; font-weight:800; display:flex; align-items:center; gap:8px;">
+                  <div class="section-title" style="margin-bottom:8px; font-size:11px;">
                       <i class="fa-solid fa-bus"></i> 퇴교 차량 수요조사 (실시간)
-                  </div><div style="padding:16px;">
+                  </div>
 
 
 <div class="shuttle-group-box" onclick="showShuttleApplicationDetails(currentRID)" style="background: #ffffff; border: 1.5px solid #e2e8f0; border-radius: 15px; padding: 15px; display: flex; align-items: center; cursor: pointer; transition: 0.2s; box-shadow: 0 4px 6px rgba(0,0,0,0.02); height: 75px;">
@@ -1293,10 +1298,10 @@ body.modal-open .app-content {
           </div>
 
 <!-- 퇴교 차량 출발 시간 공지 -->
-<div class="section-card" style="background:white; padding:0; border:1px solid #e2e8f0; overflow:hidden;">
-    <div style="background:#1e40af; color:white; padding:12px 16px; font-size:14px; font-weight:800; display:flex; align-items:center; gap:8px;">
+<div class="section-card" style="background:white; padding:16px; border:1px solid #e2e8f0;">
+    <div class="section-title" style="color:#1e293b; margin-bottom:12px; padding-bottom:10px; border-bottom:2px solid #e2e8f0;">
         <i class="fa-solid fa-bus"></i> 퇴교차량 출발 시간 공지
-    </div><div style="padding:16px;">
+    </div>
     <div id="coord-departure-status" style="font-size:12px; font-weight:700; color:#64748b; margin-bottom:12px;">
         상태 확인 중...
     </div>
@@ -1318,10 +1323,10 @@ body.modal-open .app-content {
     </div>
 </div>
 
-<div class="section-card" style="background:white; padding:0; border:1px solid #e2e8f0; overflow:hidden;">
-    <div style="background:#1e40af; color:white; padding:12px 16px; font-size:14px; font-weight:800; display:flex; align-items:center; gap:8px;">
+<div class="section-card" style="background:white; padding:16px; border:1px solid #e2e8f0;">
+    <div class="section-title" style="color:#1e293b; margin-bottom:12px; padding-bottom:10px; border-bottom:2px solid #e2e8f0;">
         <i class="fa-solid fa-comment-dots"></i> 담당 과정 공지 (해당 과정 교육생 공지)
-    </div><div style="padding:16px;">
+    </div>
     <textarea id="courseNotice" class="notice-area" oninput="autoGrow(this)" placeholder="공지 내용을 입력하세요..."
         style="background:rgba(255,255,255,0.88); color:#1e293b; border:none; border-radius:10px; font-size:14px; padding:12px;"></textarea>
     <button class="navy-btn" style="background:#10b981; border:none; box-shadow:0 4px 10px rgba(16,185,129,0.4); margin-top:8px; width:100%;" onclick="saveCourseNotice()">
@@ -1342,11 +1347,11 @@ body.modal-open .app-content {
 </div>
 
 
-          <div class="section-card" style="margin-bottom: 50px; background:white; padding:0; border:1px solid #e2e8f0; overflow:hidden;">
-              <div style="background:#1e40af; color:white; padding:12px 16px; font-size:14px; font-weight:800; display:flex; align-items:center; gap:8px;">
+          <div class="section-card" style="margin-bottom: 50px; background:white; padding:16px; border:1px solid #e2e8f0;">
+              <div class="section-title" style="color:#1e293b; margin-bottom:12px; padding-bottom:10px; border-bottom:2px solid #e2e8f0; justify-content:space-between;">
                   <span><i class="fa-solid fa-user-clock"></i> 외출/외박 신청자 명단</span>
-                  <button class="navy-btn" style="width:140px; height:32px; font-size:12px; background:#f8fafc; border:1px solid rgba(255,255,255,0.4);" onclick="openOutingLedger()">외출(외박)대장</button>
-              </div><div style="padding:16px;">
+                  <button class="navy-btn" style="width:140px; height:32px; font-size:12px; background:#f8fafc; border:1px solid #e2e8f0;" onclick="openOutingLedger()">외출(외박)대장</button>
+              </div>
               <div style="overflow-x: auto; background:rgba(255,255,255,0.1); border-radius:10px; overflow:hidden; border:1px solid rgba(255,255,255,0.2);">
                   <table class="navy-table" style="background:transparent;">
                       <thead>
@@ -1389,10 +1394,10 @@ body.modal-open .app-content {
     <div style="flex:1; overflow-y:auto; padding:15px;">
         <!-- 날짜 선택 섹션 추가 -->
         <div class="section-card" style="margin-bottom: 15px; padding: 15px;">
-            <div style="background:#1e40af; color:white; padding:12px 16px; font-size:14px; font-weight:800; display:flex; align-items:center; gap:8px;">
+            <div class="section-title" style="justify-content: space-between; margin-bottom: 0;">
                 <span><i class="fa-solid fa-calendar-day"></i> 조회 날짜 선택</span>
                 <input type="date" id="managerDatePicker" class="navy-select" style="width:140px; height:35px;" onchange="changeManagerDate(this.value)">
-            </div><div style="padding:16px;">
+            </div>
         </div>
 
         <div class="section-card">
@@ -2319,7 +2324,7 @@ function updateIndividualView() {
             depStatusEl.innerHTML = `<i class="fa-solid fa-clock" style="color:#fbbf24;margin-right:5px;"></i>시간 설정됨 &mdash; <b style="color:white;">${dep.time}</b> (공지 미완료)`;
             if (depTimeEl) depTimeEl.value = dep.time;
         } else {
-            depStatusEl.innerHTML = `<i class="fa-solid fa-circle-minus" style="color:#94a3b8;margin-right:5px;"></i>퇴교 시간 미설정`;
+            depStatusEl.innerHTML = `<i class="fa-solid fa-circle-minus" style="color:rgba(255,255,255,0.4);margin-right:5px;"></i>퇴교 시간 미설정`;
             if (depTimeEl) depTimeEl.value = '';
         }
     }
@@ -2787,7 +2792,6 @@ function renderCourseSelectors() {
             card.onclick = () => {
                 currentRID = rid;
                 handleRoomSelection();
-                updateEntryCnt(rid);
             };
 
             card.innerHTML = `
@@ -3420,7 +3424,7 @@ function renderNoticeHistory() {
         .once('value', snap => {
             const data = snap.val();
             if(!data) {
-                listEl.innerHTML = '<span style="color:#94a3b8; font-size:12px;">발송 이력 없음</span>';
+                listEl.innerHTML = '<span style="color:rgba(255,255,255,0.4); font-size:12px;">발송 이력 없음</span>';
                 return;
             }
             const items = Object.entries(data).sort((a,b) => b[0]-a[0]);
@@ -3456,59 +3460,11 @@ function clearNoticeHistory() {
     firebase.database().ref(`courses/${currentRID}/coordNoticeHistory`).set(null)
         .then(() => renderNoticeHistory());
 }
-    function saveGlobalNotice() {
-        const ta = document.getElementById('globalNotice');
-        if (!ta || ta.dataset.placeholder === 'true') { alert("공지 내용을 입력해주세요."); return; }
-        const now = new Date();
-        const timeStr = `${now.getMonth()+1}/${now.getDate()} ${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}`;
-        const content = ta.value.trim();
-        const withTime = content + `
-[${timeStr}]`;
-        firebase.database().ref('system/globalNotice').set(withTime).then(() => {
-            alert("저장 완료");
-            ta.dataset.placeholder = 'true';
-            ta.style.color = '#1e40af';
-            ta.style.fontStyle = 'italic';
-            ta.style.background = '#eff6ff';
-            ta.style.borderColor = '#bfdbfe';
-        });
-    }
-
-    function clearGlobalNoticePlaceholder(el) {
-        if (el.dataset.placeholder === 'true') {
-            el.dataset.placeholder = 'false';
-            el.value = '';
-            el.style.color = '#1e293b';
-            el.style.fontStyle = 'normal';
-            el.style.background = '#f8fafc';
-            el.style.borderColor = '#e2e8f0';
-        }
-    }
-
-    function onGlobalNoticeInput(el) {
-        if (el.dataset.placeholder === 'true') {
-            el.dataset.placeholder = 'false';
-            el.style.color = '#1e293b';
-            el.style.fontStyle = 'normal';
-            el.style.background = '#f8fafc';
-            el.style.borderColor = '#e2e8f0';
-        }
-    }
+    function saveGlobalNotice() { firebase.database().ref(`system/globalNotice`).set(document.getElementById('globalNotice').value).then(()=>alert("저장 완료")); }
     async function handleQRUpload(input) { const reader = new FileReader(); reader.onload = async (e) => { await firebase.database().ref(`courses/${currentRID}/attendanceQR`).set(e.target.result); alert("QR 저장 완료"); updateQRPreview(); }; reader.readAsDataURL(input.files[0]); }
     function updateQRPreview() { const room = globalAllData[currentRID]; const img = document.getElementById('qrPreview'); const empty = document.getElementById('qrEmpty'); if(room?.attendanceQR) { img.src = room.attendanceQR; img.style.display = "block"; empty.style.display = "none"; } else { img.style.display = "none"; empty.style.display = "block"; } }
     function loadActionHistory(date) { selectedDate = date; renderTotalHistory(); }
     function showEntryMemberList() { const room = globalAllData[currentRID]; const valid = Object.values(room.students || {}).filter(s => s.name && s.name !== "undefined"); const list = Array.from(new Set(valid.map(s => s.name))).sort().join(", "); alert(`[입교 명단]\n\n${list || "입교자 없음"}`); }
-
-    function updateEntryCnt(rid) {
-        if (!rid) return;
-        // Firebase 실시간 리스너로 즉시 반영
-        firebase.database().ref(`courses/${rid}/students`).on('value', snap => {
-            const students = snap.val() || {};
-            const cnt = Object.values(students).filter(s => s.name && s.name !== 'undefined').length;
-            const el = document.getElementById('ind-entry-cnt');
-            if (el) el.innerHTML = `${cnt}<span>명</span>`;
-        });
-    }
 // [개편] 목적지별 클릭 시 상세 명단 팝업
     function showShuttleMembers(locType) {
         const room = globalAllData[currentRID];
@@ -4247,26 +4203,23 @@ function openGlobalNoticeModal() {
     
     firebase.database().ref('system/globalNotice').once('value', s => {
         const textarea = document.getElementById('globalNotice');
-        const val = s.val() || '';
-        textarea.value = val;
-        if (val) {
-            textarea.dataset.placeholder = 'true';
-            textarea.style.color = '#1e40af';
-            textarea.style.fontStyle = 'italic';
-            textarea.style.background = '#eff6ff';
-            textarea.style.borderColor = '#bfdbfe';
-        } else {
-            textarea.dataset.placeholder = 'false';
-            textarea.style.color = '#1e293b';
-            textarea.style.fontStyle = 'normal';
-            textarea.style.background = '#f8fafc';
-            textarea.style.borderColor = '#e2e8f0';
-        }
+        textarea.value = s.val() || "";
         if(typeof autoGrow === 'function') autoGrow(textarea); 
     });
 }
 
-
+// [추가] 전체 공지 저장 로직
+async function saveGlobalNotice() {
+    const content = document.getElementById('globalNotice').value;
+    try {
+        await firebase.database().ref(`system/globalNotice`).set(content);
+        alert("✅ 모든 과정의 교육생 화면에 공지가 반영되었습니다.");
+        document.getElementById('globalNoticeModal').style.display = 'none';
+        document.body.classList.remove('modal-open');
+    } catch(e) {
+        alert("오류 발생: " + e.message);
+    }
+}
 
 
 
@@ -4296,12 +4249,7 @@ function openGlobalNoticeModal() {
         
         <div style="margin-bottom:15px;">
             <p style="font-size: 11px; color: #ef4444; font-weight: 800; margin-bottom: 8px;">※ 여기에 입력하면 모든 과정(Room A~Z) 교육생 화면에 즉시 노출됩니다.</p>
-            <textarea id="globalNotice" class="notice-area"
-                style="min-height:250px; width:100%; color:#1e40af; font-style:italic; background:#eff6ff; border:1.5px solid #bfdbfe;"
-                onclick="clearGlobalNoticePlaceholder(this)"
-                oninput="onGlobalNoticeInput(this)"
-                data-placeholder="true"
-                placeholder="공지 내용을 입력하세요..."></textarea>
+            <textarea id="globalNotice" class="notice-area" style="min-height: 250px; width: 100%;" placeholder="공지 내용을 입력하세요..."></textarea>
         </div>
 
         <div style="display:flex; gap:10px;">
@@ -4354,4 +4302,4 @@ function openGlobalNoticeModal() {
 
 </body>
 </html>
-<!-- @build 20260527-013828 -->
+<!-- @build 20260527-014832 -->
