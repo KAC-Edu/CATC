@@ -4916,9 +4916,8 @@ init: function() {
     toggleFullScreen: function() {
         const wrapper = document.getElementById('pdfWrapper');
         if (!document.fullscreenElement) {
-            (wrapper || document.documentElement).requestFullscreen()
+            wrapper.requestFullscreen()
                 .then(() => {
-                    // 전체화면 진입 후 뷰포트 확정되면 재렌더링
                     setTimeout(() => {
                         guideMgr.isRendering = false;
                         guideMgr.renderPage(guideMgr.pageNum);
@@ -5486,4 +5485,4 @@ window.onclick = function(event) {
         ui.closeQaModal();
     }
 };
-// @build 20260527-035521
+// @build 20260527-054333

@@ -3342,6 +3342,9 @@ body.night-mode .status-badge.status-arrived {
     left: var(--sidebar-width) !important;
     width: calc(100vw - var(--sidebar-width)) !important;
     transition: left 0.3s ease, width 0.3s ease !important;
+    justify-content: center !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
 }
 
 /* 사이드바 숨김: 너비 유지, 왼쪽으로 통째로 밀기 */
@@ -3408,4 +3411,4 @@ body:fullscreen          { background: white !important; }
     width: auto !important;
     height: auto !important;
 }
-/* @build 20260527-035521 */
+/* @build 20260527-054333 */
