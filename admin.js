@@ -4705,8 +4705,11 @@ init: function() {
             }, 300);
         });
         document.addEventListener('fullscreenchange', () => {
-            // 입교안내 탭에 있을 때만 PDF 재렌더링 (다른 탭 전체화면과 충돌 방지)
-            if (state.currentMode !== 'guide') return;
+            // PDF 전체화면이거나 guide 탭일 때만 재렌더링
+            const isGuideFullscreen = document.fullscreenElement &&
+                (document.fullscreenElement.id === 'pdfWrapper' ||
+                 document.fullscreenElement.id === 'guideCanvas');
+            if (state.currentMode !== 'guide' && !isGuideFullscreen) return;
             guideMgr.isRendering = false;
             setTimeout(() => guideMgr.renderPage(guideMgr.pageNum), 350);
         });
@@ -4862,8 +4865,10 @@ init: function() {
 
             let cssScale = containerW / unscaledViewport.width;
             if (document.fullscreenElement) {
-                const hScale = (window.innerHeight * 0.95) / unscaledViewport.height;
-                cssScale = Math.min(cssScale, hScale);
+                // 전체화면: 가로/세로 비율 모두 고려하여 꽉 차도록
+                const scaleX = window.innerWidth / unscaledViewport.width;
+                const scaleY = window.innerHeight / unscaledViewport.height;
+                cssScale = Math.min(scaleX, scaleY) * 0.97;
             }
             const renderScale = cssScale * dpr;
 
@@ -4911,10 +4916,15 @@ init: function() {
     toggleFullScreen: function() {
         const wrapper = document.getElementById('pdfWrapper');
         if (!document.fullscreenElement) {
-            // PDF 캔버스 영역만 전체화면
-            (wrapper || document.documentElement).requestFullscreen().catch(err => {
-                document.documentElement.requestFullscreen().catch(e => console.warn(e));
-            });
+            (wrapper || document.documentElement).requestFullscreen()
+                .then(() => {
+                    // 전체화면 진입 후 뷰포트 확정되면 재렌더링
+                    setTimeout(() => {
+                        guideMgr.isRendering = false;
+                        guideMgr.renderPage(guideMgr.pageNum);
+                    }, 300);
+                })
+                .catch(err => console.warn(err));
         } else {
             document.exitFullscreen();
         }
@@ -5476,4 +5486,4 @@ window.onclick = function(event) {
         ui.closeQaModal();
     }
 };
-// @build 20260527-020939
+// @build 20260527-035521
