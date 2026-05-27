@@ -3237,11 +3237,26 @@ renderQaList: function(f) {
     },
     
     toggleFullScreen: function() {
-        if (!document.fullscreenElement) {
-            document.documentElement.requestFullscreen();
+        const el = document.documentElement;
+        if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+            // 전체화면 진입 → 사이드바 자동 숨김
+            const req = el.requestFullscreen || el.webkitRequestFullscreen;
+            if (req) {
+                req.call(el).then(() => {
+                    document.body.classList.add('sidebar-hidden');
+                    const icon = document.querySelector('.control-icon-btn [class*="fa-expand"], .control-icon-btn [class*="fa-compress"]');
+                    if (icon) { icon.classList.remove('fa-expand'); icon.classList.add('fa-compress'); }
+                }).catch(err => console.warn('전체화면 진입 실패:', err));
+            }
         } else {
-            if (document.exitFullscreen) {
-                document.exitFullscreen();
+            // 전체화면 해제 → 사이드바 복원
+            const exit = document.exitFullscreen || document.webkitExitFullscreen;
+            if (exit) {
+                exit.call(document).then(() => {
+                    document.body.classList.remove('sidebar-hidden');
+                    const icon = document.querySelector('.control-icon-btn [class*="fa-compress"], .control-icon-btn [class*="fa-expand"]');
+                    if (icon) { icon.classList.remove('fa-compress'); icon.classList.add('fa-expand'); }
+                }).catch(err => console.warn('전체화면 해제 실패:', err));
             }
         }
     },
@@ -3979,7 +3994,7 @@ resetShuttleRequests: function() {
 
 // [플랫폼 개발 이력] GitHub README를 읽어와 팝업으로 표시
     openDevInfo: async function() {
-        const GITHUB_RAW_URL = 'https://raw.githubusercontent.com/jds0616-boop/kac-cns-platform/main/CHANGELOG.md';
+        const GITHUB_RAW_URL = 'https://raw.githubusercontent.com/jds0616-boop/CATC/main/KAC_%ED%94%8C%EB%9E%AB%ED%8F%BC_%EA%B0%9C%EB%B0%9C%EC%9D%B4%EB%A0%A5.md';
         // 기존 모달 재활용
         const modal = document.getElementById('qaModal');
         const mText = document.getElementById('m-text');
