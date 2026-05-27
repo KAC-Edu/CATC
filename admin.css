@@ -1395,7 +1395,7 @@ body.night-mode .badge-idle {
     height: auto;
     background: #fff;
     border: none; 
-    box-shadow: 0 10px 40px rgba(0,0,0,0.1); /* 부드러운 깊이감만 추가 */
+    box-shadow: none;
     line-height: 0;
     cursor: pointer;
     position: relative;
@@ -2585,19 +2585,18 @@ body.night-mode .header-room-badge { background-color: #003366 !important; borde
 
 /* 2. 입교안내 PDF 슬라이드에 딥블루 라운딩 프레임 적용 */
 #pdfWrapper {
-    border: 2px solid #003366 !important; /* 두툼한 딥블루 프레임 */
-    border-radius: 35px !important;       /* 모서리를 아주 부드럽게 */
-    background-color: #003366 !important; /* 캔버스 뒤 배경도 딥블루로 */
-    box-shadow: 0 30px 80px rgba(0, 51, 102, 0.3) !important; /* 깊이감 있는 그림자 */
+    border: none !important;
+    border-radius: 12px !important;
+    background-color: #fff !important;
+    box-shadow: none !important;
     overflow: hidden;
     transition: all 0.3s ease;
-    line-height: 0; /* 하단 미세 틈새 제거 */
+    line-height: 0;
 }
 
-/* 마우스를 올렸을 때 살짝 반응하는 효과 */
 #pdfWrapper:hover {
-    transform: scale(1.01);
-    box-shadow: 0 40px 100px rgba(0, 51, 102, 0.4) !important;
+    transform: none;
+    box-shadow: none !important;
 }
 
 /* 내부 PDF 캔버스 보정 */
@@ -3319,13 +3318,19 @@ body.night-mode .status-badge.status-arrived {
     50% { transform: scale(1.15); opacity: 0.85; }
 }
 
-/* ── 사이드바 슬라이드 (flex 방식 - 안정적) ── */
+/* ── 사이드바 슬라이드 (transform 방식 - 텍스트 안 깨짐) ── */
 .sidebar {
     flex-shrink: 0;
     position: relative;
     z-index: 100;
-    overflow: hidden;
-    transition: width 0.3s ease, min-width 0.3s ease, padding 0.3s ease !important;
+    width: var(--sidebar-width);
+    min-width: var(--sidebar-width);
+    transition: transform 0.3s ease !important;
+    transform: translateX(0);
+}
+/* 사이드바 내부 컨테이너 너비 고정 (텍스트 줄바꿈 방지) */
+.sidebar-top, .sidebar-bottom, .sidebar-nav, .sidebar > * {
+    min-width: 260px;
 }
 .main-stage {
     flex: 1 1 0 !important;
@@ -3347,12 +3352,10 @@ body.night-mode .status-badge.status-arrived {
     padding-right: 0 !important;
 }
 
-/* 사이드바 숨김: 너비 0으로 축소 */
+/* 사이드바 숨김: transform으로 밀어내고 공간 회수 */
 body.sidebar-hidden .sidebar {
-    width: 0 !important;
-    min-width: 0 !important;
-    padding: 0 !important;
-    border-right: none !important;
+    transform: translateX(-100%) !important;
+    margin-right: calc(var(--sidebar-width) * -1) !important;
 }
 
 /* 클립 탭 */
@@ -3405,4 +3408,4 @@ body:fullscreen          { background: white !important; }
     width: auto !important;
     height: auto !important;
 }
-/* @build 20260527-064325 */
+/* @build 20260527-065018 */

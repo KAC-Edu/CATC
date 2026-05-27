@@ -2401,6 +2401,14 @@ showAlert: function(msg) {
         if(!state.room && sel) {
             sel.value = "";
         }
+
+        // onchange 이벤트 재바인딩 (드롭다운 재생성 시 이벤트 유실 방지)
+        if(sel) {
+            sel.onchange = (e) => {
+                const val = e.target.value;
+                if(val) dataMgr.switchRoomAttempt(val.toUpperCase());
+            };
+        }
     },
 
 
@@ -5458,4 +5466,4 @@ window.onclick = function(event) {
         ui.closeQaModal();
     }
 };
-// @build 20260527-064325
+// @build 20260527-065018
