@@ -485,12 +485,12 @@
                     <div class="card-value" style="color: #3b82f6;"><b id="dashQaCount">0</b><small>건</small></div>
                 </div>
 
-                <div class="card-label-shuttle" style="color:#003366; margin-bottom:10px;">셔틀 탑승 수요 현황</div>
-
-                <!-- 기사님 실시간 공지 영역 -->
-                <div id="dashShuttleNotice" style="display:none; font-size:12px; background:#fffbeb; padding:8px 12px; border-radius:10px; color:#92400e; margin-bottom:12px; border-left:4px solid #facc15; border:1px solid #fef3c7;">
-                    <i class="fa-solid fa-bullhorn" style="color:#eab308; margin-right:5px;"></i> 
-                    <span id="dashShuttleNoticeTxt" style="font-weight:700;"></span>
+                <div class="card-label-shuttle" style="color:#003366; margin-bottom:10px;">
+                    셔틀 탑승 수요 현황<span id="dashShuttleTimeInline" style="font-size:12px; color:#92400e; font-weight:700; margin-left:6px;"></span>
+                </div>
+                <!-- 노란박스 숨김 유지 (JS에서 display:none) -->
+                <div id="dashShuttleNotice" style="display:none;">
+                    <span id="dashShuttleNoticeTxt"></span>
                 </div>
                 
                 <!-- 통합 요약 박스 (1~2차 합산) -->
@@ -726,20 +726,15 @@
         </div>
     </div>
 
-    <!-- 강사 출발시간 직접 설정 카드 -->
+    <!-- 퇴교차량 여정 예상 도착 시간 카드 -->
     <div style="width:100%; max-width:1000px; margin-bottom:15px;">
-        <div style="background:#fff; border:1px solid #e2e8f0; border-radius:16px; padding:16px 20px; display:flex; align-items:center; gap:15px; flex-wrap:wrap;">
-            <span style="font-size:13px; font-weight:800; color:#003366; white-space:nowrap;">
-                <i class="fa-solid fa-clock" style="color:#f59e0b;"></i> 출발시간 설정
-            </span>
-            <input type="date" id="shuttle-depart-date" class="setup-input" style="flex:1; min-width:130px; height:38px; padding:6px 10px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:14px; font-weight:700;">
-            <input type="time" id="shuttle-depart-time" class="setup-input" style="flex:1; min-width:110px; height:38px; padding:6px 10px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:14px; font-weight:700;">
-            <button onclick="ui.setShutttleDeparture()" style="height:38px; padding:0 18px; background:#003366; color:white; border:none; border-radius:8px; font-size:13px; font-weight:800; cursor:pointer; white-space:nowrap;">
-                <i class="fa-solid fa-bullhorn"></i> 기사님께 전달
-            </button>
-            <button onclick="ui.clearShuttleDeparture()" style="height:38px; padding:0 14px; background:#f1f5f9; color:#64748b; border:none; border-radius:8px; font-size:13px; font-weight:700; cursor:pointer; white-space:nowrap;">
-                초기화
-            </button>
+        <div id="shuttleETACard" style="background:#eff6ff; border:1px solid #bfdbfe; border-radius:16px; padding:16px 20px;">
+            <div style="font-size:13px; font-weight:800; color:#1e40af; margin-bottom:8px;">
+                <i class="fa-solid fa-route"></i> 퇴교차량 여정 예상 도착 시간
+            </div>
+            <div id="shuttleETADetail" style="font-size:14px; font-weight:700; color:#1e3a8a; line-height:2;">
+                <span style="color:#94a3b8; font-size:13px; font-weight:500;">운영부에서 출발 시간 공지 후 자동 표시됩니다.</span>
+            </div>
         </div>
     </div>
 
@@ -1587,4 +1582,4 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
 </body>
 </html>
-<!-- @build 20260527-012928 -->
+<!-- @build 20260527-020558 -->

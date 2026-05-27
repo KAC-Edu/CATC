@@ -1884,20 +1884,16 @@ refs.departure.on('value', snap => {
     const txt = document.getElementById('dashShuttleNoticeTxt');
     if (!bar || !txt) return;
 
-    if (dep && dep.time) {
-        bar.style.display = "block"; // 노란 박스 보이기
+    // 노란박스 항상 숨김
+    bar.style.display = "none";
 
-        // 날짜 변환 (2026-03-06 -> 2026년 3월 6일)
-        const dateParts = dep.date.split('-');
-        const formattedDate = `${dateParts[0]}년 ${parseInt(dateParts[1])}월 ${parseInt(dateParts[2])}일`;
-        
-        // [시인성 개선] 제목은 작고 갈색톤으로, 실제 데이터(날짜/시간)는 딥블루 + 굵게 강조
-        txt.innerHTML = `
-            <span style="color: #92400e; font-size: 12px; font-weight: 700; opacity: 0.8;">퇴교차량 출발 예정 시간</span><br>
-            <span style="color: #003366; font-size: 19px; font-weight: 900; letter-spacing: -0.5px;">${formattedDate} (${dep.time})</span>
-        `;
+    const inlineEl = document.getElementById('dashShuttleTimeInline');
+    if (dep && dep.time) {
+        if (inlineEl) inlineEl.innerText = `(${dep.time} 출발)`;
+        ui.updateShuttleETA(dep.time);
     } else {
-        bar.style.display = "none";
+        if (inlineEl) inlineEl.innerText = '';
+        ui.updateShuttleETA(null);
     }
 });
 
@@ -1911,6 +1907,12 @@ refs.shuttleReq.on('value', s => {
     if (document.getElementById('total-term')) document.getElementById('total-term').innerText = items.filter(i => i.type === 'terminal').length;
     if (document.getElementById('total-air')) document.getElementById('total-air').innerText = items.filter(i => i.type === 'airport').length;
     if (document.getElementById('total-car')) document.getElementById('total-car').innerText = items.filter(i => i.type === 'car').length;
+    // 신청자 변경 시 ETA 재계산
+    const inlineT = document.getElementById('dashShuttleTimeInline');
+    if (inlineT && inlineT.innerText) {
+        const mt = inlineT.innerText.match(/(\d{1,2}:\d{2})/);
+        if (mt) ui.updateShuttleETA(mt[1]);
+    }
     
     const totalEl = document.getElementById('dashShuttleTotal');
     if (totalEl) {
@@ -2823,6 +2825,12 @@ setMode: function(mode) {
 
             if (mode === 'shuttle') {
                 this.loadShuttleData();
+                // 탭 진입 시 ETA 갱신
+                const inlineT2 = document.getElementById('dashShuttleTimeInline');
+                if (inlineT2 && inlineT2.innerText) {
+                    const mt2 = inlineT2.innerText.match(/(\d{1,2}:\d{2})/);
+                    if (mt2) ui.updateShuttleETA(mt2[1]);
+                }
                 const badge = document.getElementById('shuttleNewBadge');
                 if(badge) badge.style.display = 'none';
                 firebase.database().ref(`courses/${state.room}/shuttle/departure`).once('value', snap => {
@@ -3240,6 +3248,36 @@ renderQaList: function(f) {
             clipIcon.classList.toggle('fa-chevron-left', !isHidden);
             clipIcon.classList.toggle('fa-chevron-right', isHidden);
         }
+    },
+
+    updateShuttleETA: function(departureTime) {
+        const etaDetail = document.getElementById('shuttleETADetail');
+        if (!etaDetail) return;
+        if (!departureTime) {
+            etaDetail.innerHTML = '<span style="color:#94a3b8;font-size:13px;font-weight:500;">운영부에서 출발 시간 공지 후 자동 표시됩니다.</span>';
+            return;
+        }
+        const parts = departureTime.split(':').map(Number);
+        const h = parts[0], m = parts[1];
+        if (isNaN(h) || isNaN(m)) return;
+        const osong = parseInt(document.getElementById('total-osong')?.innerText || '0');
+        const term  = parseInt(document.getElementById('total-term')?.innerText  || '0');
+        const air   = parseInt(document.getElementById('total-air')?.innerText   || '0');
+        const stops = [];
+        if (osong > 0) stops.push('오송역');
+        if (term  > 0) stops.push('청주터미널');
+        if (air   > 0) stops.push('청주공항');
+        if (stops.length === 0) {
+            etaDetail.innerHTML = `<div style="font-size:13px;color:#64748b;margin-bottom:4px;">항기원 출발 <strong style="color:#1e40af;">${departureTime}</strong> 기준</div><div style="color:#94a3b8;font-size:13px;">셔틀 신청자 없음</div>`;
+            return;
+        }
+        const lines = stops.map((stop, idx) => {
+            const total = h * 60 + m + (idx + 1) * 30;
+            const th = String(Math.floor(total / 60) % 24).padStart(2,'0');
+            const tm = String(total % 60).padStart(2,'0');
+            return stop + ' <span style="color:#2563eb;">(' + th + ':' + tm + ')</span>';
+        });
+        etaDetail.innerHTML = '<div style="font-size:13px;color:#64748b;margin-bottom:6px;">항기원 출발 <strong style="color:#1e40af;">' + departureTime + '</strong> 기준</div><div style="font-size:15px;">' + lines.join(' → ') + '</div>';
     },
 
     toggleNightMode: function() { 
@@ -5439,4 +5477,4 @@ window.onclick = function(event) {
         ui.closeQaModal();
     }
 };
-// @build 20260527-020217
+// @build 20260527-020558
