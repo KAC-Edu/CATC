@@ -830,8 +830,9 @@ body.night-mode .quiz-card.result-mode {
     border-collapse: separate !important;
     border-spacing: 0 8px !important;
     background: transparent !important;
-    /* 첫 행 윗선 잘림 방지: 14px로 증가 (2.5px 테두리 + 여유 공간 확보) */
-    padding-top: 14px !important;
+    /* 첫 행 윗선 잘림 방지: 컨테이너 천장에서 테이블을 살짝 띄움 */
+    margin-top: 5px !important;
+    padding-top: 0 !important;
 }
 
 
@@ -1047,6 +1048,8 @@ body.night-mode .badge-idle {
     background-color: #eff6ff !important;
     border-top: 2.5px solid #3b82f6 !important;
     border-bottom: 2.5px solid #3b82f6 !important;
+    position: relative !important; /* z-index 동작 보장 */
+    z-index: 5 !important;
 }
 .status-table tr.is-my-room td:first-child {
     border-left: 2.5px solid #3b82f6 !important;
@@ -1196,6 +1199,7 @@ body.night-mode .badge-idle {
     width: 100%;
     max-width: 1000px;
     margin: 0 auto 50px auto;
+    overflow: visible !important; /* 강조 테두리가 카드 경계에 잘리지 않도록 */
 }
 
 /* 3. 카드 내부 테이블 스타일 통일 */
