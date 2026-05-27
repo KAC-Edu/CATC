@@ -1,6 +1,6 @@
 /* --- admin.js (Final Integrated Version - Fixed Syntax & Logic) --- */
 
-// --- [기본 데이터] 20문항 ---
+// --- [기본 데이터] 20문항 ---//
 const DEFAULT_QUIZ_DATA = [
     { text: "[상식] 사람의 뼈는 성인이 되면서 뼈의 개수가 줄어든다.", options: ["O (줄어든다)", "X (늘어난다)"], correct: 1, isSurvey: false, isOX: true, checked: true },
     { text: "[건강] 식사 후 바로 눕는 습관은 소화에 도움이 된다.", options: ["O", "X"], correct: 2, isSurvey: false, isOX: true, checked: true },
