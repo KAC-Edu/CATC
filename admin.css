@@ -3513,3 +3513,23 @@ body.sidebar-hidden #sidebarToggleTab {
 body.sidebar-hidden #sidebarToggleIcon {
     transform: rotate(180deg);
 }
+
+/* ===== [추가 UI 보정] ===== */
+
+/* 전체화면 아이콘 부드러운 전환 */
+.control-icon-btn i {
+    transition: transform 0.3s ease;
+}
+
+/* 신규 과정 날짜 입력창 강조 */
+#setup-period-range {
+    background: #fff !important;
+    border: 2px solid #3b82f6 !important;
+    color: #1e3a8a !important;
+}
+
+/* 전체화면 상태에서 사이드바 숨김 시 main-stage 전체 너비 */
+body.sidebar-hidden .main-stage {
+    margin-left: 0 !important;
+    width: 100vw !important;
+}

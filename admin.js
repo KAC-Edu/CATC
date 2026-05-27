@@ -3237,27 +3237,27 @@ renderQaList: function(f) {
     },
     
     toggleFullScreen: function() {
-        const el = document.documentElement;
         if (!document.fullscreenElement && !document.webkitFullscreenElement) {
-            // 전체화면 진입 → 사이드바 자동 숨김
-            const req = el.requestFullscreen || el.webkitRequestFullscreen;
-            if (req) {
-                req.call(el).then(() => {
-                    document.body.classList.add('sidebar-hidden');
-                    const icon = document.querySelector('.control-icon-btn [class*="fa-expand"], .control-icon-btn [class*="fa-compress"]');
-                    if (icon) { icon.classList.remove('fa-expand'); icon.classList.add('fa-compress'); }
-                }).catch(err => console.warn('전체화면 진입 실패:', err));
+            // 전체화면 진입
+            const el = document.documentElement;
+            if (el.requestFullscreen) {
+                el.requestFullscreen();
+            } else if (el.webkitRequestFullscreen) {
+                el.webkitRequestFullscreen();
             }
+            document.body.classList.add('sidebar-hidden');
+            const icon = document.querySelector('.control-icon-btn i.fa-expand');
+            if (icon) { icon.classList.remove('fa-expand'); icon.classList.add('fa-compress'); }
         } else {
-            // 전체화면 해제 → 사이드바 복원
-            const exit = document.exitFullscreen || document.webkitExitFullscreen;
-            if (exit) {
-                exit.call(document).then(() => {
-                    document.body.classList.remove('sidebar-hidden');
-                    const icon = document.querySelector('.control-icon-btn [class*="fa-compress"], .control-icon-btn [class*="fa-expand"]');
-                    if (icon) { icon.classList.remove('fa-compress'); icon.classList.add('fa-expand'); }
-                }).catch(err => console.warn('전체화면 해제 실패:', err));
+            // 전체화면 해제
+            if (document.exitFullscreen) {
+                document.exitFullscreen();
+            } else if (document.webkitExitFullscreen) {
+                document.webkitExitFullscreen();
             }
+            document.body.classList.remove('sidebar-hidden');
+            const icon = document.querySelector('.control-icon-btn i.fa-compress');
+            if (icon) { icon.classList.remove('fa-compress'); icon.classList.add('fa-expand'); }
         }
     },
     
@@ -5649,3 +5649,25 @@ window.onclick = function(event) {
         ui.closeQaModal();
     }
 };
+/* ===== [사이드바 Hover 자동 개폐] ===== */
+window.addEventListener('DOMContentLoaded', () => {
+    const sidebar = document.getElementById('mainSidebar');
+    if (!sidebar) return;
+
+    let hideTimer = null;
+
+    sidebar.addEventListener('mouseenter', () => {
+        clearTimeout(hideTimer);
+        document.body.classList.remove('sidebar-hidden');
+    });
+
+    sidebar.addEventListener('mouseleave', () => {
+        // 0.5초 딜레이 후 숨김 (실수로 마우스 이탈 방지)
+        hideTimer = setTimeout(() => {
+            // 전체화면 상태일 때만 자동 숨김
+            if (document.fullscreenElement || document.webkitFullscreenElement) {
+                document.body.classList.add('sidebar-hidden');
+            }
+        }, 500);
+    });
+});
