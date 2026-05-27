@@ -3256,17 +3256,19 @@ renderQaList: function(f) {
     toggleFullScreen: function() {
         const icon = document.getElementById('fullscreenIcon');
         if (!document.fullscreenElement) {
-            // 1. 사이드바 먼저 숨기기
+            // 1. 사이드바 숨기기
             document.body.classList.add('sidebar-hidden');
             const clipTab = document.getElementById('sidebarClipTab');
             const clipIcon = document.getElementById('clipTabIcon');
             if (clipTab) clipTab.style.left = '0px';
             if (clipIcon) { clipIcon.classList.remove('fa-chevron-left'); clipIcon.classList.add('fa-chevron-right'); }
-            // 2. 브라우저 전체화면 (document 전체 = F11 효과)
-            document.documentElement.requestFullscreen().catch(err => console.log(err));
+            // 2. body 전체화면 (배경색 유지됨)
+            document.body.requestFullscreen().catch(err => {
+                // body 안되면 documentElement로 시도
+                document.documentElement.requestFullscreen().catch(e => console.log(e));
+            });
             if (icon) { icon.classList.remove('fa-expand'); icon.classList.add('fa-compress'); }
         } else {
-            // 전체화면 해제 + 사이드바 복원
             document.exitFullscreen();
             document.body.classList.remove('sidebar-hidden');
             const clipTab = document.getElementById('sidebarClipTab');
@@ -5454,4 +5456,4 @@ window.onclick = function(event) {
         ui.closeQaModal();
     }
 };
-// @build 20260527-013442
+// @build 20260527-013828

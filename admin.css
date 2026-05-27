@@ -3423,4 +3423,8 @@ body.sidebar-hidden .content-area {
 body.sidebar-hidden #sidebarClipTab {
     left: 0 !important;
 }
-/* @build 20260527-012928 */
+/* body 전체화면 시 배경 유지 */
+body:-webkit-full-screen { background: #f1f5f9 !important; width: 100vw !important; height: 100vh !important; }
+body:-moz-full-screen { background: #f1f5f9 !important; }
+body:fullscreen { background: #f1f5f9 !important; width: 100vw !important; height: 100vh !important; }
+/* @build 20260527-013828 */
