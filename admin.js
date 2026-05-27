@@ -224,17 +224,14 @@ loadInitialData: function() {
     // 2. [보안 핵심] 새로고침 시 자동 복구 로직 수정
     const lastRoom = localStorage.getItem('kac_last_room');
 
+    // 항상 현황판 먼저 표시 (새로고침 시 블러화면 방지)
+    ui.showWaitingRoom();
+
     if (lastRoom && lastRoom !== "null" && lastRoom !== "") {
-        // [중요 수정] forceEnterRoom을 바로 부르면 데이터 리스너가 즉시 꽂혀서 내용이 보입니다.
-        // 대신 switchRoomAttempt를 호출하여 '내 세션ID가 주인인지' 먼저 확인하고, 
-        // 주인이 아니면 비밀번호 입력창을 띄우도록 유도합니다.
-        console.log("기존 접속 강의실 보안 검증 및 복구 시도:", lastRoom);
-        
-        // ★ 핵심 변경: forceEnterRoom -> switchRoomAttempt
-        this.switchRoomAttempt(lastRoom.toUpperCase());
-    } else {
-        // 이전에 들어간 방 기록이 없으면 대기실(전체 현황판) 표시
-        ui.showWaitingRoom();
+        // 현황판 표시 후 백그라운드에서 silent 방 복구 시도
+        setTimeout(() => {
+            this.switchRoomAttempt(lastRoom.toUpperCase(), true); // silent=true
+        }, 100);
     }
 
     // 3. 기본 퀴즈 데이터셋 설정
@@ -285,10 +282,10 @@ loadInitialData: function() {
 
     
 // [수정 완료] 보안 검증 강화 및 데이터 유출 차단 로직
-switchRoomAttempt: async function(newRoom) {
-    // 1. 시각적 즉시 차단 + 대시보드/헤더 초기화 (이전 방 정보 잔류 방지)
+switchRoomAttempt: async function(newRoom, silent = false) {
+    // 1. 시각적 즉시 차단 (silent=새로고침 시 블러화면 안 띄움)
     const overlay = document.getElementById('statusOverlay');
-    if (overlay) overlay.style.display = 'flex';
+    if (overlay && !silent) overlay.style.display = 'flex';
     ui.clearDashboard();
     const dtEl = document.getElementById('displayCourseTitle');
     if (dtEl) dtEl.innerText = '';
@@ -334,7 +331,14 @@ switchRoomAttempt: async function(newRoom) {
     
     // (A) 방이 사용 중인데 내가 주인이 아니고, 옵저버도 아님 -> 데이터 차단
     if (isActive && !isOwner && !state.isObserver) {
-        console.log(`[권한 차단] Room ${newRoom}에 대한 소유권이 없습니다.`);
+        // silent(새로고침)일 때는 비번창 없이 현황판으로
+        if (silent) {
+            localStorage.removeItem('kac_last_room');
+            ui.showWaitingRoom();
+            const sel = document.getElementById('roomSelect');
+            if(sel) sel.value = '';
+            return;
+        }
         state.pendingRoom = newRoom;
         
         // 중요: forceEnterRoom을 실행하지 않고 여기서 중단합니다. (데이터 리스너 실행 방지)
@@ -349,6 +353,14 @@ switchRoomAttempt: async function(newRoom) {
     }
 
     // (B) 내가 주인이거나, 옵저버이거나, 혹은 방이 비어있는 경우 -> 입장 허용
+    // silent(새로고침)일 때는 자동 입장 안 하고 현황판 유지
+    if (silent) {
+        ui.showWaitingRoom();
+        const sel = document.getElementById('roomSelect');
+        if(sel) sel.value = '';
+        localStorage.removeItem('kac_last_room');
+        return;
+    }
     console.log(`[인증 성공] Room ${newRoom} 데이터 로드를 시작합니다.`);
     this.forceEnterRoom(newRoom);
     
@@ -462,10 +474,13 @@ enterAsObserver: function() {
         document.getElementById('takeoverModal').style.display = 'none';
         state.pendingRoom = null;
         if (state.room) {
-            // 이전 방으로 완전 복귀 - 데이터 재로드
             this.forceEnterRoom(state.room);
         } else {
-            document.getElementById('roomSelect').value = "";
+            // 방 없으면 블러 제거 + 현황판으로
+            const overlay = document.getElementById('statusOverlay');
+            if (overlay) overlay.style.display = 'none';
+            document.getElementById('roomSelect').value = '';
+            ui.showWaitingRoom();
         }
     },
 
