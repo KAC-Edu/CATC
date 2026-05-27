@@ -38,18 +38,11 @@ function getYesterdayString() {
 
 const state = {
     sessionId: (function() {
-        const KEY = 'kac_admin_sid';
-        const EXPIRE_KEY = 'kac_admin_sid_expire';
-        const EIGHT_HOURS = 8 * 60 * 60 * 1000;
-        let id = localStorage.getItem(KEY);
-        const expire = parseInt(localStorage.getItem(EXPIRE_KEY) || '0');
-        // 8시간 이내면 기존 세션 유지, 초과 시 새 세션
-        if (!id || Date.now() > expire) {
+        let id = sessionStorage.getItem('kac_admin_sid');
+        if (!id) {
             id = Math.random().toString(36).substr(2, 9);
-            localStorage.setItem(KEY, id);
+            sessionStorage.setItem('kac_admin_sid', id);
         }
-        // 매번 만료 시간 갱신 (접속 시마다 8시간 연장)
-        localStorage.setItem(EXPIRE_KEY, String(Date.now() + EIGHT_HOURS));
         return id;
     })(),
     room: null,
@@ -2240,6 +2233,51 @@ showAlert: function(msg) {
         state.adminCallback = null;
     },
     
+    openDevInfo: function() {
+        const modal = document.getElementById('devInfoModal');
+        const content = document.getElementById('devInfoContent');
+        if (!modal) return;
+        modal.style.display = 'flex';
+
+        const mdUrl = 'https://raw.githubusercontent.com/jds0616-boop/CATC/main/KAC_%ED%94%8C%EB%9E%AB%ED%8F%BC_%EA%B0%9C%EB%B0%9C%EC%9D%B4%EB%A0%A5.md';
+        fetch(mdUrl)
+            .then(r => r.ok ? r.text() : Promise.reject(r.status))
+            .then(md => {
+                const lines = md.split('\n');
+                let htmlOut = '';
+                let inTable = false;
+                for (const line of lines) {
+                    if (line.startsWith('# ')) {
+                        htmlOut += `<h2 style="font-size:17px;font-weight:900;color:#1e293b;margin:18px 0 8px;border-bottom:2px solid #e2e8f0;padding-bottom:6px;">${line.slice(2)}</h2>`;
+                    } else if (line.startsWith('## ')) {
+                        htmlOut += `<h3 style="font-size:15px;font-weight:800;color:#1e40af;margin:14px 0 6px;">${line.slice(3)}</h3>`;
+                    } else if (line.startsWith('### ')) {
+                        htmlOut += `<h4 style="font-size:13px;font-weight:700;color:#334155;margin:10px 0 4px;">${line.slice(4)}</h4>`;
+                    } else if (line.startsWith('#### ')) {
+                        htmlOut += `<h5 style="font-size:12px;font-weight:700;color:#64748b;margin:8px 0 4px;">${line.slice(5)}</h5>`;
+                    } else if (line.startsWith('---')) {
+                        htmlOut += '<hr style="border:none;border-top:1px solid #e2e8f0;margin:12px 0;">';
+                    } else if (line.startsWith('|')) {
+                        const cells = line.split('|').slice(1,-1).map(c => c.trim());
+                        if (cells.every(c => /^[-: ]+$/.test(c))) continue;
+                        if (!inTable) { htmlOut += '<table style="width:100%;border-collapse:collapse;margin:6px 0;font-size:12px;">'; inTable = true; }
+                        htmlOut += '<tr>' + cells.map(c => `<td style="padding:5px 10px;border:1px solid #e2e8f0;">${c.replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>').replace(/\`(.+?)\`/g,'<code style=\"background:#f1f5f9;padding:1px 4px;border-radius:3px;\">$1</code>')}</td>`).join('') + '</tr>';
+                    } else {
+                        if (inTable) { htmlOut += '</table>'; inTable = false; }
+                        if (line.trim()) {
+                            const l = line.replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>').replace(/\`(.+?)\`/g,'<code style="background:#f1f5f9;padding:1px 4px;border-radius:3px;">$1</code>');
+                            htmlOut += `<p style="margin:4px 0;">${l}</p>`;
+                        }
+                    }
+                }
+                if (inTable) htmlOut += '</table>';
+                content.innerHTML = htmlOut;
+            })
+            .catch(() => {
+                content.innerHTML = '<div style="text-align:center;color:#ef4444;padding:30px;"><i class="fa-solid fa-triangle-exclamation" style="font-size:24px;display:block;margin-bottom:10px;"></i>개발 이력을 불러올 수 없습니다.<br><small style="color:#94a3b8;">CATC 저장소의 KAC_플랫폼_개발이력.md 파일을 확인해주세요.</small></div>';
+            });
+    },
+
     openSecretModal: function() {
         document.getElementById('secret-current').value = "";
         document.getElementById('secret-new').value = "";
@@ -2266,13 +2304,6 @@ showAlert: function(msg) {
         
         // 1. Firebase 실시간 리스너 (한 번만 등록)
         if (!window.isRoomListenerSet) {
-            // 스피너 표시 유지 (리스너 대기 중)
-            if(tableBody && tableBody.innerHTML.trim() === '') {
-                tableBody.innerHTML = `<tr><td colspan="8" style="padding:40px; text-align:center; color:#94a3b8;">
-                    <i class="fa-solid fa-spinner fa-spin" style="font-size:22px; margin-bottom:10px; display:block; color:#3b82f6;"></i>
-                    강의실 정보 불러오는 중...
-                </td></tr>`;
-            }
             firebase.database().ref('courses').on('value', s => {
                 window.latestCoursesData = s.val() || {}; // 전역에 데이터 저장
                 window.isRoomListenerSet = true;
@@ -2282,7 +2313,9 @@ showAlert: function(msg) {
         }
 
         const d = window.latestCoursesData || {};
+        // state.room을 변수로 캡처하지 않음 - 루프 안에서 직접 참조 (캡처 시점 불일치 방지)
 
+        // [수정] placeholder에서 disabled를 제거하여 자바스크립트로 선택(리셋)이 가능하게 함
         if(sel) sel.innerHTML = '<option value="">Select Room ▾</option>';
         if(tableBody) tableBody.innerHTML = "";
 
@@ -5348,4 +5381,4 @@ window.onclick = function(event) {
         ui.closeQaModal();
     }
 };
-// @build 20260527-011034
+// @build 20260527-011905

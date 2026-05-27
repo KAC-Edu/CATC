@@ -822,7 +822,7 @@ body.night-mode .quiz-card.result-mode {
     border-spacing: 0 8px !important;
     background: transparent !important;
     /* 첫 행 윗선 잘림 방지 */
-    padding-top: 8px !important;
+    padding-top: 4px !important;
 }
 
 
@@ -1157,8 +1157,8 @@ body.night-mode .badge-idle {
 /* 1. 모든 페이지 제목(헤더) 스타일 */
 .view-header {
     text-align: center;
-    margin-top: 20px;
-    margin-bottom: 24px; /* 과정현황과 동일한 제목-내용 간격 */
+    margin-top: 20px;    /* 현황바로부터의 거리 (이 수치를 조절해서 높이를 맞추세요) */
+    margin-bottom: 30px; /* 제목과 본문 사이의 거리 */
     position: relative;
     z-index: 10;
 }
@@ -2407,30 +2407,8 @@ body.night-mode .header-room-badge { background-color: #003366 !important; borde
 
 /* 통계 카드 아이콘 제거 후 텍스트 정렬 보정 */
 .stat-premium-card {
-    justify-content: flex-start !important;
-    padding: 25px !important;
-}
-
-/* 대시보드 그리드 - 카드 높이 동일하게 stretch */
-.dash-premium-grid {
-    align-items: stretch !important;
-}
-
-/* 왼쪽 입교/외출/석식 카드 - 내부 콘텐츠가 카드 높이를 꽉 채우도록 */
-.stat-premium-card.card-blue {
-    display: flex !important;
-    flex-direction: column !important;
-}
-.stat-premium-card.card-blue .card-content.combined-stats {
-    flex: 1 !important;
-    display: flex !important;
-    flex-direction: column !important;
-    justify-content: space-between !important;
-}
-
-/* 세 카드 모두 최소 높이 동일하게 */
-.dash-premium-grid .stat-premium-card {
-    min-height: 260px !important;
+    justify-content: center !important;
+    padding-top: 40px !important;
 }
 
 
@@ -3077,34 +3055,34 @@ body.night-mode .status-badge.status-arrived {
 .family-site-menu {
     display: none;
     flex-direction: column;
-    background: linear-gradient(160deg, #0c4a6e 0%, #075985 100%);
-    border: 1px solid #0ea5e9;
+    background: #1e293b;
+    border: 1px solid #334155;
     border-radius: 12px;
     padding: 6px;
     position: absolute;
-    top: 44px;
+    bottom: 50px; /* 버튼 위에 위치 */
     left: 0;
     width: 100%;
     z-index: 1000;
-    box-shadow: 0 10px 30px rgba(14, 165, 233, 0.25);
+    box-shadow: 0 -10px 25px rgba(0,0,0,0.3);
 }
 
 .family-site-menu a {
-    padding: 7px 12px;
-    color: #bae6fd;
+    padding: 12px 15px;
+    color: #94a3b8;
     text-decoration: none;
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 600;
     display: flex;
     align-items: center;
-    gap: 10px;
-    border-radius: 6px;
+    gap: 12px;
+    border-radius: 8px;
     transition: 0.2s;
 }
 
 .family-site-menu a:hover {
-    background: rgba(255,255,255,0.15);
-    color: #ffffff;
+    background: #0f172a;
+    color: #3b82f6;
 }
 
 .family-site-menu a i {
@@ -3206,35 +3184,13 @@ body.night-mode .status-badge.status-arrived {
 .flatpickr-day.startRange {
     border-top-left-radius: 30px !important;
     border-bottom-left-radius: 30px !important;
-    background: #1d4ed8 !important;
-    color: #ffffff !important;
-    border-color: #1d4ed8 !important;
 }
 .flatpickr-day.endRange {
     border-top-right-radius: 30px !important;
     border-bottom-right-radius: 30px !important;
-    background: #1d4ed8 !important;
-    color: #ffffff !important;
-    border-color: #1d4ed8 !important;
 }
 .flatpickr-day.startRange.endRange {
     border-radius: 30px !important;
-    background: #1d4ed8 !important;
-    color: #ffffff !important;
-}
-/* flatpickr 기본 selected 스타일 완전 override */
-.flatpickr-day.selected, 
-.flatpickr-day.selected:focus, 
-.flatpickr-day.selected:hover,
-.flatpickr-day.startRange,
-.flatpickr-day.startRange:focus,
-.flatpickr-day.startRange:hover,
-.flatpickr-day.endRange,
-.flatpickr-day.endRange:focus,
-.flatpickr-day.endRange:hover {
-    background: #1d4ed8 !important;
-    color: #ffffff !important;
-    border-color: #1d4ed8 !important;
 }
 
 /* 8. 마우스 호버 시 효과 보정 */
@@ -3425,68 +3381,4 @@ body.night-mode .status-badge.status-arrived {
     0%, 100% { transform: scale(1); opacity: 1; }
     50% { transform: scale(1.15); opacity: 0.85; }
 }
-
-/* 미개설 방 진입 시 환경설정 버튼 깜빡임 */
-@keyframes btnPulse {
-    0%, 100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7); transform: scale(1); }
-    50% { box-shadow: 0 0 0 12px rgba(59, 130, 246, 0); transform: scale(1.04); }
-}
-.btn-pulse {
-    animation: btnPulse 1s ease-in-out infinite !important;
-    cursor: pointer !important;
-}
-.btn-pulse::after {
-    content: " 👆";
-}
-
-/* ── 전체화면 모드 (사이드바 숨김) ── */
-/* ── 사이드바 슬라이드 애니메이션 ── */
-/* 모든 요소 동일한 transition (0.3s ease) */
-.sidebar {
-    transition: transform 0.3s ease, width 0.3s ease, min-width 0.3s ease, padding 0.3s ease !important;
-    position: relative;
-}
-.main-stage {
-    transition: width 0.3s ease !important;
-}
-.header {
-    transition: width 0.3s ease !important;
-}
-.mode-tabs {
-    transition: width 0.3s ease !important;
-}
-#sidebarToggleTab {
-    transition: left 0.3s ease !important;
-}
-
-body.sidebar-hidden .sidebar {
-    transform: translateX(-100%) !important;
-    width: 0 !important;
-    min-width: 0 !important;
-    padding: 0 !important;
-    overflow: hidden !important;
-    border: none !important;
-}
-body.sidebar-hidden .main-stage {
-    width: 100vw !important;
-    max-width: 100vw !important;
-}
-body.sidebar-hidden .header {
-    left: 0 !important;
-    width: 100vw !important;
-}
-body.sidebar-hidden .mode-tabs {
-    left: 0 !important;
-    width: 100vw !important;
-}
-body.sidebar-hidden .content-area {
-    width: 100% !important;
-}
-/* 숨김 상태에서 탭 위치 조정 */
-body.sidebar-hidden #sidebarToggleTab {
-    left: 0 !important;
-}
-body.sidebar-hidden #sidebarToggleIcon {
-    transform: rotate(180deg);
-}
-/* @build 20260527-011034 */
+/* @build 20260527-011905 */
