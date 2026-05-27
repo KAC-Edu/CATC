@@ -3337,7 +3337,7 @@ body.night-mode .status-badge.status-arrived {
 
 /* 클립 탭 무조건 최상단 */
 #sidebarClipTab {
-    z-index: 5000 !important;
+    z-index: 9999 !important;
     position: fixed !important;
     display: flex !important;
 }
@@ -3419,4 +3419,4 @@ body:fullscreen          { background: white !important; }
     width: auto !important;
     height: auto !important;
 }
-/* @build 20260527-061527 */
+/* @build 20260527-063647 */

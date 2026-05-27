@@ -570,8 +570,10 @@ forceEnterRoom: async function(room) {
     state.room = cleanRoom; 
     state.qaData = {};      
     state.activeQaKey = null; 
-    localStorage.setItem('kac_last_room', cleanRoom); 
+    localStorage.setItem('kac_last_room', cleanRoom);
     state.isObserver = (sessionStorage.getItem('kac_observer_room') === cleanRoom);
+    // 방 번호 즉시 업데이트 (모든 배지 동시 갱신)
+    ui.updateHeaderRoom(cleanRoom);
 
     const qaListEl = document.getElementById('qaList');
     if (qaListEl) qaListEl.innerHTML = "<div style='text-align:center; padding:20px; color:#94a3b8;'>실시간 엔진 연결 중...</div>";
@@ -5507,4 +5509,4 @@ window.onclick = function(event) {
         ui.closeQaModal();
     }
 };
-// @build 20260527-062955
+// @build 20260527-063647

@@ -102,16 +102,16 @@
     <div class="sidebar" id="mainSidebar" style="position:relative;">
         <!-- 사이드바 모서리 클립 탭 -->
         <div id="sidebarClipTab" onclick="ui.toggleSidebar()" title="사이드바 접기/펼치기" style="
-            position:fixed; left:298px; top:50%; transform:translateY(-50%);
-            width:16px; height:56px; background:#1e293b;
+            position:fixed; left:300px; top:50%; transform:translateY(-50%);
+            width:18px; height:60px; background:#1e293b;
             border-radius:0 8px 8px 0;
-            display:flex; align-items:center; justify-content:center;
-            cursor:pointer; z-index:500;
-            border:1px solid rgba(255,255,255,0.1); border-left:none;
+            display:flex !important; align-items:center; justify-content:center;
+            cursor:pointer; z-index:9999 !important;
+            border:1px solid rgba(255,255,255,0.15); border-left:none;
             transition:left 0.3s ease;
-            box-shadow:3px 0 8px rgba(0,0,0,0.3);
+            box-shadow:4px 0 12px rgba(0,0,0,0.4);
         ">
-            <i id="clipTabIcon" class="fa-solid fa-chevron-left" style="color:#94a3b8; font-size:9px;"></i>
+            <i id="clipTabIcon" class="fa-solid fa-chevron-left" style="color:white; font-size:10px;"></i>
         </div>
         <div class="sidebar-top">
             <div class="sidebar-header" onclick="ui.goHome()" style="cursor:pointer;" title="초기 화면으로 이동">KAC Training Platform</div>
@@ -666,7 +666,7 @@
     <!-- (1) 표준 헤더: 아이콘과 제목 -->
 <div class="view-header">
     <h1><i class="fa-solid fa-chart-simple"></i> 강의실 실시간 현황판</h1>
-    <p>KAC 교육단지의 모든 강의실 운영 상태를 실시간으로 모니터링합니다.</p>
+    <p>항공기술훈련원 과정 운영 상태를 실시간으로 모니터링합니다.</p>
 </div>
 
     <!-- (2) 모던 화이트 카드: 이 안에 표가 들어갑니다 -->
@@ -1586,4 +1586,4 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
 </body>
 </html>
-<!-- @build 20260527-062721 -->
+<!-- @build 20260527-063647 -->
