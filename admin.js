@@ -227,14 +227,13 @@ loadInitialData: function() {
     // 2. [보안 핵심] 새로고침 시 자동 복구 로직 수정
     const lastRoom = localStorage.getItem('kac_last_room');
 
-    // 항상 현황판 먼저 표시 (새로고침 시 블러화면 방지)
     ui.showWaitingRoom();
 
     if (lastRoom && lastRoom !== "null" && lastRoom !== "") {
-        // 현황판 표시 후 백그라운드에서 silent 방 복구 시도
+        // 8시간 인증 기록 있으면 즉시 입장 시도
         setTimeout(() => {
-            this.switchRoomAttempt(lastRoom.toUpperCase(), true); // silent=true
-        }, 100);
+            this.switchRoomAttempt(lastRoom.toUpperCase(), false);
+        }, 300);
     }
 
     // 3. 기본 퀴즈 데이터셋 설정
@@ -3212,21 +3211,18 @@ renderQaList: function(f) {
     },
 
     toggleSidebar: function() {
-        const body = document.body;
-        const isHidden = body.classList.toggle('sidebar-hidden');
-        // 상단 토글 아이콘
-        const icon = document.getElementById('sidebarToggleIcon');
-        if (icon) {
-            icon.classList.toggle('fa-bars', !isHidden);
-            icon.classList.toggle('fa-bars-staggered', isHidden);
-        }
-        // 클립 탭 위치 강제 조정 (CSS + JS 이중 보장)
+        const isHidden = document.body.classList.toggle('sidebar-hidden');
         const clipTab = document.getElementById('sidebarClipTab');
         const clipIcon = document.getElementById('clipTabIcon');
+        const icon = document.getElementById('sidebarToggleIcon');
         if (clipTab) clipTab.style.left = isHidden ? '0px' : '300px';
         if (clipIcon) {
             clipIcon.classList.toggle('fa-chevron-left', !isHidden);
             clipIcon.classList.toggle('fa-chevron-right', isHidden);
+        }
+        if (icon) {
+            icon.classList.toggle('fa-bars', !isHidden);
+            icon.classList.toggle('fa-bars-staggered', isHidden);
         }
     },
 
@@ -5466,4 +5462,4 @@ window.onclick = function(event) {
         ui.closeQaModal();
     }
 };
-// @build 20260527-065511
+// @build 20260527-065923
