@@ -3292,11 +3292,9 @@ renderQaList: function(f) {
     },
     
     toggleFullScreen: function() {
-        if (!document.fullscreenElement) {
-            document.documentElement.requestFullscreen();
-        } else {
-            document.exitFullscreen();
-        }
+        document.documentElement.requestFullscreen
+            ? (document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen())
+            : null;
     },
     
     translateQa: function(id) {
@@ -5477,4 +5475,4 @@ window.onclick = function(event) {
         ui.closeQaModal();
     }
 };
-// @build 20260527-020558
+// @build 20260527-020736
