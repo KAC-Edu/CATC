@@ -475,13 +475,11 @@ enterAsObserver: function() {
 
     cancelTakeover: function() {
         document.getElementById('takeoverModal').style.display = 'none';
+        const overlay = document.getElementById('statusOverlay');
+        if (overlay) overlay.style.display = 'none'; // 블러 레이어 즉시 제거
         state.pendingRoom = null;
-        if (state.room) {
-            // 이전 방으로 완전 복귀 - 데이터 재로드
-            this.forceEnterRoom(state.room);
-        } else {
-            document.getElementById('roomSelect').value = "";
-        }
+        state.room = null;
+        ui.showWaitingRoom(); // 무조건 현황판 초기화면으로 복귀
     },
 
 
@@ -5066,11 +5064,12 @@ init: function() {
         }
     },
 
-    // 6. 진짜 전체화면 모드 (기존 로직 유지)
+    // 6. PDF 영역만 전체화면
     toggleFullScreen: function() {
-        if (!document.fullscreenElement) {
-            // 전체 페이지를 fullscreen으로 (캔버스가 화면 꽉 채우도록)
-            document.documentElement.requestFullscreen().catch(err => {
+        const wrapper = document.getElementById('pdfWrapper');
+        if (!wrapper) return;
+        if (document.fullscreenElement !== wrapper) {
+            wrapper.requestFullscreen().catch(err => {
                 console.warn("전체화면 실패:", err);
             });
         } else {
