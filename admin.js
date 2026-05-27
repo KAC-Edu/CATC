@@ -5320,24 +5320,27 @@ openSetupModal: async function() {
                 }
             }
 
-            // 기존에 저장된 데이터(과정명, 장소 등)를 입력창에 세팅
-            this.loadCurrentSettings(); 
+            // flatpickr를 먼저 초기화한 뒤, onReady 콜백에서 loadCurrentSettings 호출
+            // → _flatpickr 인스턴스가 확실히 존재하는 시점에 setDate가 실행됨
+            const existingFp = document.getElementById('setup-period-range')._flatpickr;
+            if (existingFp) existingFp.destroy(); // 모달 재오픈 시 중복 인스턴스 방지
 
-// [최종 수정] 완벽한 대칭형 820px 달력 적용
-flatpickr("#setup-period-range", {
-    mode: "range",
-    locale: "ko",
-    dateFormat: "Y-m-d",
-    showMonths: 2,         
-    closeOnSelect: false,  
-    disableMobile: "true",
-    onReady: function(selectedDates, dateStr, instance) {
-        instance.calendarContainer.style.width = "820px"; 
-    },
-    onChange: function(selectedDates, dateStr, instance) {
-        instance.calendarContainer.style.width = "820px";
-    }
-});
+            flatpickr("#setup-period-range", {
+                mode: "range",
+                locale: "ko",
+                dateFormat: "Y-m-d",
+                showMonths: 2,
+                closeOnSelect: false,
+                disableMobile: "true",
+                onReady: (selectedDates, dateStr, instance) => {
+                    instance.calendarContainer.style.width = "820px";
+                    // 인스턴스 준비 완료 후 기존 저장 데이터 주입
+                    this.loadCurrentSettings();
+                },
+                onChange: function(selectedDates, dateStr, instance) {
+                    instance.calendarContainer.style.width = "820px";
+                }
+            });
 
         });
     });
@@ -5405,19 +5408,27 @@ loadCurrentSettings: function() {
         }
 
         // 4. 날짜 범위 로직 (Range Picker 대응)
+        // flatpickr가 onReady 이후 호출되므로 _flatpickr 인스턴스는 반드시 존재함
+        // requestAnimationFrame으로 한 프레임 더 보장
         const rangeInput = document.getElementById('setup-period-range');
         const today = new Date();
         const todayStr = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0');
-        const fp = rangeInput._flatpickr;
-        if (fp) {
-            if (s.period && s.period.length > 5) {
-                fp.setDate(s.period.split(' ~ '));
+
+        const applyFpDate = () => {
+            const fp = rangeInput._flatpickr;
+            if (fp) {
+                if (s.period && s.period.length > 5) {
+                    fp.setDate(s.period.split(' ~ '), true);
+                } else {
+                    fp.setDate([today, today], true);
+                    rangeInput.value = `${todayStr} ~ ${todayStr}`;
+                }
             } else {
-                // 신규 과정이면 오늘 날짜로 즉시 세팅
-                fp.setDate([today, today]);
-                rangeInput.value = `${todayStr} ~ ${todayStr}`;
+                // 혹시 인스턴스가 아직 없으면 50ms 후 재시도 (이중 방어)
+                setTimeout(applyFpDate, 50);
             }
-        }
+        };
+        requestAnimationFrame(applyFpDate);
         
         // 5. menuFeatures 체크박스 상태 로드
         // 기본값: 차량신청(shuttle) + 외출/외박(adminAction)만 ON, 나머지는 OFF
