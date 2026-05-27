@@ -2381,6 +2381,23 @@ showAlert: function(msg) {
                     : '<span class="badge-status badge-idle">⚪ 비어 있음</span>';
 
                 const rowNum = count++;
+                const roomDetail = settings.roomDetailName || '';
+                // 강의실명 2줄 분리 (마지막 단어를 2번째 줄로)
+                let roomLine1 = roomDetail, roomLine2 = '';
+                if (roomDetail) {
+                    const parts = roomDetail.trim().split(' ');
+                    if (parts.length >= 2) {
+                        roomLine2 = parts.pop();
+                        roomLine1 = parts.join(' ');
+                    }
+                }
+                const roomCell = roomDetail
+                    ? `<div style="text-align:center;line-height:1.4;">
+                           <div style="font-size:11px;font-weight:700;color:#334155;">${roomLine1}</div>
+                           <div style="font-size:11px;font-weight:700;color:#334155;">${roomLine2}</div>
+                       </div>`
+                    : '<span style="color:#cbd5e1;">-</span>';
+
                 row.innerHTML = `
                     <td>${rowNum}</td>
                     <td style="font-weight:900; color:#3b82f6;">
@@ -2391,7 +2408,7 @@ showAlert: function(msg) {
                     <td style="font-weight:600;">${profName}</td>
                     <td>${statusBadge}</td>
                     <td style="font-weight:700;">${userCount}명</td>
-                    <td style="color:#94a3b8; font-size:14px;">-</td>
+                    <td>${roomCell}</td>
                     <td>
                         <button class="btn-table-action" onclick="dataMgr.switchRoomAttempt('${c}')">입장하기</button>
                     </td>
@@ -3209,10 +3226,19 @@ renderQaList: function(f) {
     toggleSidebar: function() {
         const body = document.body;
         const isHidden = body.classList.toggle('sidebar-hidden');
+        // 상단 토글 아이콘
         const icon = document.getElementById('sidebarToggleIcon');
         if (icon) {
             icon.classList.toggle('fa-bars', !isHidden);
             icon.classList.toggle('fa-bars-staggered', isHidden);
+        }
+        // 클립 탭 위치 + 아이콘 방향
+        const clipTab = document.getElementById('sidebarClipTab');
+        const clipIcon = document.getElementById('clipTabIcon');
+        if (clipTab) clipTab.style.left = isHidden ? '0px' : '298px';
+        if (clipIcon) {
+            clipIcon.classList.toggle('fa-chevron-left', !isHidden);
+            clipIcon.classList.toggle('fa-chevron-right', isHidden);
         }
     },
 
@@ -5410,4 +5436,4 @@ window.onclick = function(event) {
         ui.closeQaModal();
     }
 };
-// @build 20260527-012500
+// @build 20260527-012928

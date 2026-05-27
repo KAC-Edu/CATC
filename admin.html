@@ -99,7 +99,20 @@
     </div>
 
     <!-- 2. 사라졌던 사이드바 다시 생성 -->
-    <div class="sidebar">
+    <div class="sidebar" id="mainSidebar" style="position:relative;">
+        <!-- 사이드바 모서리 클립 탭 -->
+        <div id="sidebarClipTab" onclick="ui.toggleSidebar()" title="사이드바 접기/펼치기" style="
+            position:fixed; left:298px; top:50%; transform:translateY(-50%);
+            width:16px; height:56px; background:#1e293b;
+            border-radius:0 8px 8px 0;
+            display:flex; align-items:center; justify-content:center;
+            cursor:pointer; z-index:500;
+            border:1px solid rgba(255,255,255,0.1); border-left:none;
+            transition:left 0.3s ease;
+            box-shadow:3px 0 8px rgba(0,0,0,0.3);
+        ">
+            <i id="clipTabIcon" class="fa-solid fa-chevron-left" style="color:#94a3b8; font-size:9px;"></i>
+        </div>
         <div class="sidebar-top">
             <div class="sidebar-header" onclick="ui.goHome()" style="cursor:pointer;" title="초기 화면으로 이동">KAC Training Platform</div>
             <div class="setting-container">
@@ -657,7 +670,7 @@
         <table class="modern-table">
             <thead>
                 <tr>
-                    <th>연번</th><th>Room</th><th>과정명</th><th>교수명</th><th>상태</th><th>교육생</th><th>마지막 활동</th><th>관리</th>
+                    <th>연번</th><th>Room</th><th>과정명</th><th>교수명</th><th>상태</th><th>교육생</th><th>강의실</th><th>관리</th>
                 </tr>
             </thead>
             <tbody id="statusTableBody">
@@ -1574,4 +1587,4 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
 </body>
 </html>
-<!-- @build 20260527-012500 -->
+<!-- @build 20260527-012928 -->

@@ -3415,4 +3415,12 @@ body.sidebar-hidden .mode-tabs {
 body.sidebar-hidden .content-area {
     width: 100% !important;
 }
-/* @build 20260527-012500 */
+
+/* 전체화면 시 배경 흰색 유지 */
+.main-stage:-webkit-full-screen { background: var(--bg-color) !important; }
+.main-stage:-moz-full-screen { background: var(--bg-color) !important; }
+.main-stage:fullscreen { background: var(--bg-color) !important; }
+body.sidebar-hidden #sidebarClipTab {
+    left: 0 !important;
+}
+/* @build 20260527-012928 */
