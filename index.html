@@ -12,8 +12,9 @@
         :root { --header-bg: #0f172a; --bg-color: #0f172a; --accent-color: #3b82f6; --btn-yellow: #facc15; --btn-text: #1e293b; --card-bg: #ffffff; --text-color: #1e293b; --input-bg: #f8fafc; --safe-area-bottom: env(safe-area-inset-bottom); }
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; font-family: 'Pretendard', sans-serif; }
         body { margin: 0; background: var(--bg-color); color: var(--text-color); height: 100dvh; overflow: hidden; }
-        .landing-page { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--header-bg); z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; color: white; padding: 40px 20px; text-align: center; }
+        .landing-page { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--header-bg); z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; color: white; padding: 30px 20px; text-align: center; }
         .landing-course { font-size: 24px; font-weight: 800; margin-bottom: 10px; line-height: 1.3; }
+        .landing-banner { width: 90%; max-width: 400px; border-radius: 20px; margin-bottom: 25px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); border: 2px solid rgba(255,255,255,0.1); display: block; object-fit: cover; }
         .landing-room { font-size: 16px; opacity: 0.7; font-weight: 500; margin-bottom: 60px; padding: 5px 15px; border: 1px solid rgba(255,255,255,0.2); border-radius: 20px; }
         .btn-enter { background: var(--btn-yellow); color: var(--btn-text); width: 200px; height: 56px; border-radius: 30px; font-size: 18px; font-weight: 800; border: none; cursor: pointer; box-shadow: 0 4px 15px rgba(250, 204, 21, 0.3); display: flex; align-items: center; justify-content: center; gap: 8px; transition: transform 0.1s; }
         .btn-enter:active { transform: scale(0.96); }
@@ -371,11 +372,11 @@
 
 /* 차량 신청 버튼 선택 시 활성화 스타일 (연한 녹색) */
 .quiz-opt-btn.shuttle-active {
-    background-color: #f0fdf4 !important; /* 연한 녹색 바탕 */
-    border-color: #22c55e !important;    /* 선명한 녹색 테두리 */
-    color: #166534 !important;           /* 진한 녹색 글자 */
+    background-color: #f0fdf4 !important;
+    border-color: #22c55e !important;
+    color: #166534 !important;
     font-weight: 900 !important;
-    transform: scale(1.02);              /* 살짝 커지는 효과 */
+    transform: scale(1.02);
     box-shadow: 0 4px 10px rgba(34, 197, 94, 0.2);
 }
 
@@ -386,18 +387,26 @@
     z-index: 99999;
     display: flex; flex-direction: column;
     align-items: center; justify-content: center;
-    gap: 20px;
+    gap: 16px;
     transition: opacity 0.4s ease;
 }
+#global-loader .loader-banner {
+    width: 80%; max-width: 320px;
+    border-radius: 16px;
+    margin-bottom: 8px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.4);
+    border: 2px solid rgba(255,255,255,0.1);
+    display: block; object-fit: cover;
+}
 #global-loader .loader-spinner {
-    width: 52px; height: 52px;
+    width: 44px; height: 44px;
     border: 4px solid rgba(255,255,255,0.15);
     border-top: 4px solid #3b82f6;
     border-radius: 50%;
     animation: gl-spin 0.8s linear infinite;
 }
 #global-loader .loader-text {
-    color: #94a3b8; font-size: 14px; font-weight: 700; letter-spacing: 0.3px;
+    color: #94a3b8; font-size: 13px; font-weight: 700; letter-spacing: 0.3px;
 }
 @keyframes gl-spin { to { transform: rotate(360deg); } }
 
@@ -411,6 +420,7 @@
 
 <!-- 전역 로딩 스피너: 페이지 로드 즉시 표시, Firebase 데이터 준비 완료 시 fadeOut -->
 <div id="global-loader">
+    <img src="catc.png" alt="항공기술훈련원" class="loader-banner">
     <div class="loader-spinner"></div>
     <div class="loader-text">강의실 정보를 불러오는 중입니다...</div>
 </div>
@@ -440,6 +450,7 @@
 </div>
 
     <div id="landingPage" class="landing-page">
+        <img src="catc.png" alt="항공기술훈련원" class="landing-banner">
         <div class="landing-course" id="landingTitle">Loading...</div>
         <div class="landing-room" id="landingBadge">Room ...</div>
         <button class="btn-enter" onclick="enterApp()">입장하기 <i class="fa-solid fa-arrow-right-to-bracket"></i></button>
@@ -993,23 +1004,15 @@ function hideLoader() {
 }
 
 // ── public_codes 단축코드 → 실제 room 번호 변환 ──
-// QR에 ?code=XXXXX 형태로 담긴 단축코드를 Firebase에서 조회해 방 번호를 반환
 async function resolveRoomFromCode(code) {
     if (!code) return null;
     try {
         const snap = await firebase.database()
             .ref('public_codes')
-            .orderByValue()
-            .equalTo(code)           // code 값이 room 번호와 매핑된 경우
+            .orderByValue().equalTo(code)
             .once('value');
-        if (snap.exists()) {
-            // public_codes 구조: { roomNumber: shortCode } 이므로 key가 room
-            return Object.keys(snap.val())[0];
-        }
-        // 역방향 구조( shortCode → room )도 시도
-        const snap2 = await firebase.database()
-            .ref(`public_codes/${code}`)
-            .once('value');
+        if (snap.exists()) return Object.keys(snap.val())[0];
+        const snap2 = await firebase.database().ref(`public_codes/${code}`).once('value');
         if (snap2.exists()) return snap2.val();
         return null;
     } catch (e) {
@@ -1023,7 +1026,7 @@ async function resolveRoomFromCode(code) {
     showLoader('강의실 정보를 불러오는 중입니다...');
 
     const params = new URLSearchParams(window.location.search);
-    const directRoom = params.get('room'); 
+    const directRoom = params.get('room');
     const code = params.get('code');
     const isCheckIn = params.get('checkin') === 'true';
 
@@ -1033,11 +1036,9 @@ async function resolveRoomFromCode(code) {
         showLoader('QR 코드를 확인하는 중입니다...');
         currentRoom = await resolveRoomFromCode(code);
     } else if (!isCheckIn) {
-        // checkin이 아닌 일반 진입 시 localStorage 마지막 방 복구
         currentRoom = localStorage.getItem('kac_last_visited_room') || null;
     }
 
-    // ── room 확정 후에만 오류 판단 ──
     if (!currentRoom) {
         hideLoader();
         alert("강의실 정보가 없습니다. QR 코드를 다시 스캔해주세요.");
@@ -1051,13 +1052,13 @@ async function resolveRoomFromCode(code) {
 
     const db = firebase.database();
     const rPath = `courses/${currentRoom}`;
-    dbRef = { 
-        qa: db.ref(`${rPath}/questions`), 
-        quiz: db.ref(`${rPath}/activeQuiz`), 
-        ans: db.ref(`${rPath}/quizAnswers`), 
-        settings: db.ref(`${rPath}/settings`), 
-        status: db.ref(`${rPath}/status`), 
-        connections: db.ref(`${rPath}/connections`) 
+    dbRef = {
+        qa: db.ref(`${rPath}/questions`),
+        quiz: db.ref(`${rPath}/activeQuiz`),
+        ans: db.ref(`${rPath}/quizAnswers`),
+        settings: db.ref(`${rPath}/settings`),
+        status: db.ref(`${rPath}/status`),
+        connections: db.ref(`${rPath}/connections`)
     };
 
     // 강의실 기본 설정 로드 후 스피너 해제
@@ -1065,18 +1066,16 @@ async function resolveRoomFromCode(code) {
         const settingsSnap = await db.ref(`${rPath}/settings`).once('value');
         const s = settingsSnap.val() || {};
         if (s.courseName) {
-            document.getElementById('landingTitle') && 
-                (document.getElementById('landingTitle').textContent = s.courseName);
+            const lt = document.getElementById('landingTitle');
+            if (lt) lt.textContent = s.courseName;
         }
     } catch(e) { /* 무시 — setupListeners 에서도 처리됨 */ }
 
     hideLoader();
 
-    // [수정] 방 번호를 명확히 전달
-    handleInternalAttendance(currentRoom); 
-
-    setupListeners(); 
-    checkCooldown(); 
+    handleInternalAttendance(currentRoom);
+    setupListeners();
+    checkCooldown();
     initKeyboardFix();
 })();
 
@@ -3035,29 +3034,38 @@ async function updateMiniNotice() {
     // 텍스트 정제 함수 (태그 제거 및 줄바꿈 정리)
     const clean = (txt) => txt ? txt.replace(/<[^>]*>?/gm, '').replace(/\n/g, ' ').trim() : "";
 
-    const t_inst = clean(instSnap.val());   // 우리 과정
-    const t_coord = clean(coordSnap.val()); // 운영부
+    const t_inst   = clean(instSnap.val());   // 담임 강사 공지
+    const t_coord  = clean(coordSnap.val());  // 운영부
     const t_global = clean(globalSnap.val()); // 센터
 
     // 내용이 있는 공지만 모아서 합침
-    let combinedParts = [];
-    if (t_inst) combinedParts.push(`📢 [우리과정] ${t_inst}`);
-    if (t_coord) combinedParts.push(`🔔 [운영부] ${t_coord}`);
+    const combinedParts = [];
+    if (t_inst)   combinedParts.push(`📢 [우리과정] ${t_inst}`);
+    if (t_coord)  combinedParts.push(`🔔 [운영부] ${t_coord}`);
     if (t_global) combinedParts.push(`🏢 [센터공지] ${t_global}`);
 
-    // 공지들 사이에 구분선을 넣어 하나로 합침
-    const finalNoticeText = combinedParts.join(" 　 | 　 ");
+    const finalNoticeText = combinedParts.join("　|　");
 
-    if (finalNoticeText) {
-        // 이전에 'X' 눌러서 닫은 공지와 내용이 다를 때만 표시
-        if (localStorage.getItem('lastClosedNotice') !== finalNoticeText) {
-            textEl.innerText = finalNoticeText;
-            bar.style.display = 'flex';
-        } else {
-            bar.style.display = 'none';
-        }
+    if (!finalNoticeText) {
+        bar.style.display = 'none';
+        return;
+    }
+
+    // 강사 공지가 이전에 닫은 내용과 달라지면 lastClosedNotice 초기화 → 강제 재노출
+    const lastClosed     = localStorage.getItem('lastClosedNotice') || "";
+    const lastInstClosed = localStorage.getItem('lastClosedInst')   || "";
+
+    if (t_inst && t_inst !== lastInstClosed) {
+        // 강사가 공지를 새로 업데이트 → 무조건 표시, 이전 닫음 기록 무효화
+        localStorage.removeItem('lastClosedNotice');
+        localStorage.setItem('lastClosedInst', t_inst);
+    }
+
+    const updatedLastClosed = localStorage.getItem('lastClosedNotice') || "";
+    if (updatedLastClosed !== finalNoticeText) {
+        textEl.innerText = finalNoticeText;
+        bar.style.display = 'flex';
     } else {
-        // 공지가 아무것도 없으면 바를 숨김
         bar.style.display = 'none';
     }
 }
