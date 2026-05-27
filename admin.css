@@ -3409,12 +3409,11 @@ body.night-mode .status-badge.status-arrived {
     content: " 👆";
 }
 
-/* ── 전체화면 모드 (사이드바 숨김) ── */
-/* ── 사이드바 슬라이드 애니메이션 ── */
-/* 모든 요소 동일한 transition (0.3s ease) */
+/* ── 사이드바 슬라이드 전환 ── */
 .sidebar {
-    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), width 0.3s cubic-bezier(0.4, 0, 0.2, 1), min-width 0.3s cubic-bezier(0.4, 0, 0.2, 1), padding 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
-    position: fixed !important;
+    transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+                min-width 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+                padding 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
 }
 #sidebarClipTab {
     position: fixed !important;
@@ -3422,42 +3421,9 @@ body.night-mode .status-badge.status-arrived {
     z-index: 10000 !important;
 }
 body.sidebar-hidden #sidebarClipTab { left: 0 !important; }
-.main-stage {
-    transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
-}
-.header {
-    transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
-}
-.mode-tabs {
-    transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
-}
 #sidebarToggleTab {
     transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
     z-index: 10000 !important;
-}
-
-body.sidebar-hidden .sidebar { transform: translateX(-100%) !important; width: 0 !important; min-width: 0 !important; padding: 0 !important; overflow: hidden !important; border: none !important; }
-body.sidebar-hidden .main-stage {
-    width: 100vw !important;
-    max-width: 100vw !important;
-}
-body.sidebar-hidden .header {
-    left: 0 !important;
-    width: 100vw !important;
-}
-body.sidebar-hidden .mode-tabs {
-    left: 0 !important;
-    width: 100vw !important;
-}
-body.sidebar-hidden .content-area {
-    width: 100% !important;
-}
-/* 숨김 상태에서 탭 위치 조정 */
-body.sidebar-hidden #sidebarToggleTab {
-    left: 0 !important;
-}
-body.sidebar-hidden #sidebarToggleIcon {
-    transform: rotate(180deg);
 }
 
 /* ===== [추가 UI 보정] ===== */
@@ -3484,27 +3450,45 @@ body.sidebar-hidden #sidebarToggleIcon {
     color: #1e3a8a !important;
 }
 
-/* 사이드바: 메인을 밀어내지 않고 위에 덮는 방식 */
+/* ── 사이드바 완전 고정형(Pinned) 레이아웃 ── */
+/* 사이드바는 flex 흐름 안에 있고, 메인을 옆으로 밀어냄 */
 .sidebar {
-    position: fixed !important;
-    top: 0;
-    left: 0;
-    height: 100vh;
-    z-index: 9999 !important;
-    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
-    box-shadow: 5px 0 20px rgba(0,0,0,0.25);
+    position: relative !important; /* fixed 해제 → flex child로 복귀 */
+    top: auto !important;
+    left: auto !important;
+    box-shadow: 2px 0 12px rgba(0,0,0,0.18);
+    transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+                min-width 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+                padding 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+                transform 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    flex-shrink: 0;
+    overflow: hidden;
 }
 
-/* 사이드바 숨김 시 완전히 왼쪽으로 */
+/* 사이드바 숨김: 너비를 0으로 접어서 메인이 자동으로 전체 너비 차지 */
 body.sidebar-hidden .sidebar {
-    transform: translateX(-100%) !important;
+    width: 0 !important;
+    min-width: 0 !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+    border: none !important;
     box-shadow: none !important;
 }
 
-/* 사이드바가 닫혀도 메인 스테이지는 항상 전체 너비 */
+/* 메인 스테이지: 사이드바 유무에 따라 자동으로 너비 결정 */
 .main-stage {
-    width: 100vw !important;
+    flex: 1 1 0% !important;
+    width: auto !important;
     margin-left: 0 !important;
+    min-width: 0; /* flex 자식에서 overflow 방지 */
+}
+
+/* 숨김 상태에서 탭(책갈피) 위치 */
+body.sidebar-hidden #sidebarToggleTab {
+    left: 0 !important;
+}
+body.sidebar-hidden #sidebarToggleIcon {
+    transform: rotate(180deg);
 }
 
 /* 전체화면 시 레이아웃 유지 */
@@ -3514,7 +3498,7 @@ body:-webkit-full-screen .main-stage {
     flex-direction: column;
 }
 
-/* 마우스 트리거 영역 (투명) */
+/* hover 트리거 영역 잔재 숨김 */
 #sidebar-hover-trigger {
-    background: transparent;
+    display: none !important;
 }

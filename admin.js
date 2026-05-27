@@ -3251,6 +3251,7 @@ renderQaList: function(f) {
             else if (document.mozCancelFullScreen) document.mozCancelFullScreen();
             else if (document.msExitFullscreen) document.msExitFullscreen();
         }
+        // 아이콘 동기화는 fullscreenchange 이벤트에서 일괄 처리
     },
     
     translateQa: function(id) {
@@ -4028,15 +4029,8 @@ resetShuttleRequests: function() {
     // 사이드바 책갈피 토글
     toggleSidebar: function() {
         const body = document.body;
-        const icon = document.getElementById('sidebarToggleIcon');
         body.classList.toggle('sidebar-hidden');
-        // 전체화면 버튼 아이콘도 동기화
-        const fsIcon = document.querySelector('.control-icon-btn i.fa-expand, .control-icon-btn i.fa-compress');
-        const isHidden = body.classList.contains('sidebar-hidden');
-        if (fsIcon) {
-            fsIcon.classList.toggle('fa-expand', !isHidden);
-            fsIcon.classList.toggle('fa-compress', isHidden);
-        }
+        // 아이콘 방향은 CSS로 처리 (sidebar-hidden 클래스 기반 rotate)
     },
 
     // 전역 로딩 스피너
@@ -5405,19 +5399,26 @@ loadCurrentSettings: function() {
         }
 
         // 4. 날짜 범위 로직 (Range Picker 대응)
+        // requestAnimationFrame으로 DOM 렌더링 완료 후 flatpickr 인스턴스가 확실히 붙은 뒤 실행
         const rangeInput = document.getElementById('setup-period-range');
         const today = new Date();
         const todayStr = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0');
-        const fp = rangeInput._flatpickr;
-        if (fp) {
-            if (s.period && s.period.length > 5) {
-                fp.setDate(s.period.split(' ~ '));
+
+        const applyFpDate = () => {
+            const fp = rangeInput._flatpickr;
+            if (fp) {
+                if (s.period && s.period.length > 5) {
+                    fp.setDate(s.period.split(' ~ '), true);
+                } else {
+                    fp.setDate([today, today], true);
+                    rangeInput.value = `${todayStr} ~ ${todayStr}`;
+                }
             } else {
-                // 신규 과정이면 오늘 날짜로 즉시 세팅
-                fp.setDate([today, today]);
-                rangeInput.value = `${todayStr} ~ ${todayStr}`;
+                // 인스턴스가 아직 없으면 50ms 후 재시도 (flatpickr 초기화 경쟁 방지)
+                setTimeout(applyFpDate, 50);
             }
-        }
+        };
+        requestAnimationFrame(applyFpDate);
         
         // 5. menuFeatures 체크박스 상태 로드
         // 기본값: 차량신청(shuttle) + 외출/외박(adminAction)만 ON, 나머지는 OFF
@@ -5634,6 +5635,22 @@ window.onclick = function(event) {
         ui.closeQaModal();
     }
 };
+/* ===== [전체화면 아이콘 동기화] ===== */
+// 버튼 클릭 및 F11 키보드 조작 모두 대응
+(function() {
+    function syncFsIcon() {
+        const isFs = !!(document.fullscreenElement || document.webkitFullscreenElement);
+        const icon = document.querySelector('.control-icon-btn i.fa-expand, .control-icon-btn i.fa-compress');
+        if (!icon) return;
+        icon.classList.toggle('fa-expand', !isFs);
+        icon.classList.toggle('fa-compress', isFs);
+    }
+    document.addEventListener('fullscreenchange', syncFsIcon);
+    document.addEventListener('webkitfullscreenchange', syncFsIcon);
+    document.addEventListener('mozfullscreenchange', syncFsIcon);
+    document.addEventListener('MSFullscreenChange', syncFsIcon);
+})();
+
 /* ===== [사이드바 수동 토글 고정 방식] ===== */
 // 호버(mouseenter/mouseleave) 자동 개폐 완전 제거.
 // 토글은 ui.toggleSidebar() 버튼 클릭으로만 동작하며, 열리면 고정 유지됨.
