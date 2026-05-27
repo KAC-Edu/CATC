@@ -1298,15 +1298,15 @@ body.modal-open .app-content {
           </div>
 
 <!-- 퇴교 차량 출발 시간 공지 -->
-<div class="section-card" style="background:white; padding:16px; border:1px solid #e2e8f0;">
-    <div class="section-title" style="color:#1e293b; margin-bottom:12px; padding-bottom:10px; border-bottom:2px solid #e2e8f0;">
+<div class="section-card" style="background:linear-gradient(135deg,#1e3a8a,#1d4ed8); color:white; padding:16px;">
+    <div class="section-title" style="color:white; margin-bottom:12px;">
         <i class="fa-solid fa-bus"></i> 퇴교차량 출발 시간 공지
     </div>
-    <div id="coord-departure-status" style="font-size:12px; font-weight:700; color:#64748b; margin-bottom:12px;">
+    <div id="coord-departure-status" style="font-size:12px; font-weight:700; color:rgba(255,255,255,0.7); margin-bottom:12px;">
         상태 확인 중...
     </div>
     <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
-        <select id="coord-departure-time" style="flex:1; padding:10px 12px; border-radius:10px; border:none; font-size:15px; font-weight:800; color:#1e3a8a; outline:none; min-width:110px; background:rgba(255,255,255,0.85);">
+        <select id="coord-departure-time" style="flex:1; padding:10px 12px; border-radius:10px; border:none; font-size:15px; font-weight:800; color:#1e3a8a; outline:none; min-width:110px; background:rgba(255,255,255,0.9);">
             <option value="">시간 선택</option>
             <option value="13:00">13:00</option><option value="13:30">13:30</option>
             <option value="14:00">14:00</option><option value="14:30">14:30</option>
@@ -1317,7 +1317,7 @@ body.modal-open .app-content {
         <button onclick="coordSetDepartureTime()" style="flex:1; padding:10px 14px; background:#22c55e; color:white; border:none; border-radius:10px; font-size:14px; font-weight:900; cursor:pointer;">
             <i class="fa-solid fa-bullhorn"></i> 공지
         </button>
-        <button onclick="coordCancelDeparture()" style="padding:10px 12px; background:#f1f5f9; color:white; border:1px solid #e2e8f0; border-radius:10px; font-size:13px; font-weight:700; cursor:pointer;">
+        <button onclick="coordCancelDeparture()" style="padding:10px 12px; background:rgba(255,255,255,0.2); color:white; border:1px solid rgba(255,255,255,0.4); border-radius:10px; font-size:13px; font-weight:700; cursor:pointer;">
             취소
         </button>
     </div>
@@ -4320,4 +4320,4 @@ async function saveGlobalNotice() {
 
 </body>
 </html>
-<!-- @build 20260527-015422 -->
+<!-- @build 20260527-022825 -->
