@@ -224,6 +224,14 @@ loadInitialData: function() {
     // 1. 방 선택창(Dropdown) 및 실시간 강의실 현황판 초기화
     ui.initRoomSelect();
 
+    // 드롭다운 이벤트 한 번만 바인딩
+    const roomSelEl = document.getElementById('roomSelect');
+    if (roomSelEl) {
+        roomSelEl.onchange = (e) => {
+            if (e.target.value) dataMgr.switchRoomAttempt(e.target.value.toUpperCase());
+        };
+    }
+
     // 2. [보안 핵심] 새로고침 시 자동 복구 로직 수정
     const lastRoom = localStorage.getItem('kac_last_room');
 
@@ -294,7 +302,7 @@ switchRoomAttempt: async function(newRoom, silent = false) {
     // 최근 인증 기록 있으면 silent 여부 관계없이 즉시 입장
     if (isRecentlyAuthed) {
         if (overlay) overlay.style.display = 'none';
-        await firebase.database().ref(`courses/${newRoom}/status/ownerSessionId`).set(authMgr.sessionId);
+        await firebase.database().ref(`courses/${newRoom}/status/ownerSessionId`).set(state.sessionId);
         this.forceEnterRoom(newRoom);
         return;
     }
@@ -514,6 +522,10 @@ forceEnterRoom: async function(room) {
     firebase.database().ref(`courses/${cleanRoom}/questions`).off();
     firebase.database().ref(`courses/${cleanRoom}/status`).off();
     firebase.database().ref(`courses/${cleanRoom}/settings`).off();
+
+    // overlay 즉시 해제
+    const overlayEl = document.getElementById('statusOverlay');
+    if (overlayEl) overlayEl.style.display = 'none';
 
     state.room = cleanRoom; 
     state.qaData = {};      
@@ -2401,13 +2413,6 @@ showAlert: function(msg) {
             sel.value = "";
         }
 
-        // onchange 이벤트 재바인딩 (드롭다운 재생성 시 이벤트 유실 방지)
-        if(sel) {
-            sel.onchange = (e) => {
-                const val = e.target.value;
-                if(val) dataMgr.switchRoomAttempt(val.toUpperCase());
-            };
-        }
     },
 
 
@@ -5462,4 +5467,4 @@ window.onclick = function(event) {
         ui.closeQaModal();
     }
 };
-// @build 20260527-070709
+// @build 20260527-071315
