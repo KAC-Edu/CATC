@@ -68,7 +68,7 @@ body {
 .dev-info { text-align: center; font-size: 10px; color: #475569; margin-top: 10px; }
 
 /* Main Stage */
-.main-stage { display: flex; flex-direction: column; position: relative; height: 100vh; background: var(--bg-color); overflow: hidden; }
+.main-stage { flex-grow: 1; display: flex; flex-direction: column; position: relative; height: 100vh; background: var(--bg-color); overflow: hidden; }
 .header { height: 60px; background: var(--header-bg); display: flex; align-items: center; justify-content: space-between; padding: 0 30px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); z-index: 20; flex-shrink: 0; }
 .header-title { font-size: 18px; font-weight: 800; color: white; display: flex; align-items: center; gap: 10px; }
 .course-sub-name { font-weight: 400; opacity: 0.8; font-size: 15px; border-left: 1px solid rgba(255,255,255,0.2); padding-left: 15px; }
@@ -822,7 +822,7 @@ body.night-mode .quiz-card.result-mode {
     border-spacing: 0 8px !important;
     background: transparent !important;
     /* 첫 행 윗선 잘림 방지 */
-    padding-top: 4px !important;
+    padding-top: 8px !important;
 }
 
 
@@ -1395,7 +1395,7 @@ body.night-mode .badge-idle {
     height: auto;
     background: #fff;
     border: none; 
-    box-shadow: none;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.1); /* 부드러운 깊이감만 추가 */
     line-height: 0;
     cursor: pointer;
     position: relative;
@@ -1446,7 +1446,66 @@ body.night-mode .badge-idle {
 
 /* 1. 전체화면 시 컨테이너: 배경은 블랙, 모든 여백 제거, 중앙 정렬 */
 /* 전체화면: PDF가 모니터 전체를 덮도록 */
-/* PDF 전체화면 CSS 제거 - 상단 전체화면 버튼과 충돌 방지 */
+:fullscreen #view-guide,
+:-webkit-full-screen #view-guide {
+    position: fixed !important;
+    top: 0 !important; left: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    background: #000 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    overflow: hidden !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    z-index: 99999 !important;
+}
+
+/* 전체화면 시 view-header, 툴바 숨김 → PDF만 표시 */
+:fullscreen #view-guide .view-header,
+:-webkit-full-screen #view-guide .view-header {
+    display: none !important;
+}
+:fullscreen #view-guide > div:not(#pdfWrapper),
+:-webkit-full-screen #view-guide > div:not(#pdfWrapper) {
+    display: none !important;
+}
+
+/* 전체화면 시 pdfWrapper: 화면 전체 */
+:fullscreen #pdfWrapper,
+:-webkit-full-screen #pdfWrapper {
+    width: 100vw !important;
+    height: 100vh !important;
+    max-width: 100vw !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    background: #000 !important;
+    border: none !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    cursor: pointer !important;
+    overflow: hidden !important;
+}
+
+/* 전체화면 시 캔버스: JS가 pdfWrapper clientWidth 기준으로 크기 계산하므로
+   CSS는 최대 제약만 걸고 실제 크기는 JS에 맡김 */
+:fullscreen #guideCanvas,
+:-webkit-full-screen #guideCanvas {
+    width: auto !important;
+    height: auto !important;
+    max-width: 100vw !important;
+    max-height: 100vh !important;
+    border-radius: 0 !important;
+    display: block !important;
+}
+
+/* 하위 호환 */
+#view-guide:fullscreen { background: #000 !important; }
+#view-guide:fullscreen #pdfWrapper { border: none !important; border-radius: 0 !important; }
+#view-guide:fullscreen #guideCanvas { max-width: 100vw !important; max-height: 100vh !important; }
 
 
 
@@ -2348,8 +2407,30 @@ body.night-mode .header-room-badge { background-color: #003366 !important; borde
 
 /* 통계 카드 아이콘 제거 후 텍스트 정렬 보정 */
 .stat-premium-card {
-    justify-content: center !important;
-    padding-top: 40px !important;
+    justify-content: flex-start !important;
+    padding: 25px !important;
+}
+
+/* 대시보드 그리드 - 카드 높이 동일하게 stretch */
+.dash-premium-grid {
+    align-items: stretch !important;
+}
+
+/* 왼쪽 입교/외출/석식 카드 - 내부 콘텐츠가 카드 높이를 꽉 채우도록 */
+.stat-premium-card.card-blue {
+    display: flex !important;
+    flex-direction: column !important;
+}
+.stat-premium-card.card-blue .card-content.combined-stats {
+    flex: 1 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: space-between !important;
+}
+
+/* 세 카드 모두 최소 높이 동일하게 */
+.dash-premium-grid .stat-premium-card {
+    min-height: 260px !important;
 }
 
 
@@ -2585,18 +2666,19 @@ body.night-mode .header-room-badge { background-color: #003366 !important; borde
 
 /* 2. 입교안내 PDF 슬라이드에 딥블루 라운딩 프레임 적용 */
 #pdfWrapper {
-    border: none !important;
-    border-radius: 12px !important;
-    background-color: #fff !important;
-    box-shadow: none !important;
+    border: 2px solid #003366 !important; /* 두툼한 딥블루 프레임 */
+    border-radius: 35px !important;       /* 모서리를 아주 부드럽게 */
+    background-color: #003366 !important; /* 캔버스 뒤 배경도 딥블루로 */
+    box-shadow: 0 30px 80px rgba(0, 51, 102, 0.3) !important; /* 깊이감 있는 그림자 */
     overflow: hidden;
     transition: all 0.3s ease;
-    line-height: 0;
+    line-height: 0; /* 하단 미세 틈새 제거 */
 }
 
+/* 마우스를 올렸을 때 살짝 반응하는 효과 */
 #pdfWrapper:hover {
-    transform: none;
-    box-shadow: none !important;
+    transform: scale(1.01);
+    box-shadow: 0 40px 100px rgba(0, 51, 102, 0.4) !important;
 }
 
 /* 내부 PDF 캔버스 보정 */
@@ -2605,7 +2687,11 @@ body.night-mode .header-room-badge { background-color: #003366 !important; borde
     display: block;
 }
 
-
+/* 전체화면 모드일 때는 테두리 숨기기 (발표용) */
+#view-guide:fullscreen #pdfWrapper {
+    border: none !important;
+    border-radius: 0 !important;
+}
 
 
 /* --- [7.0차] 실시간 출석 상황판 스타일 --- */
@@ -2991,21 +3077,21 @@ body.night-mode .status-badge.status-arrived {
 .family-site-menu {
     display: none;
     flex-direction: column;
-    background: #1e293b;
-    border: 1px solid #334155;
+    background: linear-gradient(160deg, #0c4a6e 0%, #075985 100%);
+    border: 1px solid #0ea5e9;
     border-radius: 12px;
     padding: 6px;
     position: absolute;
-    bottom: 50px; /* 버튼 위에 위치 */
+    bottom: 50px;
     left: 0;
     width: 100%;
     z-index: 1000;
-    box-shadow: 0 -10px 25px rgba(0,0,0,0.3);
+    box-shadow: 0 -10px 30px rgba(14, 165, 233, 0.25);
 }
 
 .family-site-menu a {
     padding: 12px 15px;
-    color: #94a3b8;
+    color: #bae6fd;
     text-decoration: none;
     font-size: 13px;
     font-weight: 600;
@@ -3017,8 +3103,8 @@ body.night-mode .status-badge.status-arrived {
 }
 
 .family-site-menu a:hover {
-    background: #0f172a;
-    color: #3b82f6;
+    background: rgba(255,255,255,0.15);
+    color: #ffffff;
 }
 
 .family-site-menu a i {
@@ -3120,13 +3206,35 @@ body.night-mode .status-badge.status-arrived {
 .flatpickr-day.startRange {
     border-top-left-radius: 30px !important;
     border-bottom-left-radius: 30px !important;
+    background: #1d4ed8 !important;
+    color: #ffffff !important;
+    border-color: #1d4ed8 !important;
 }
 .flatpickr-day.endRange {
     border-top-right-radius: 30px !important;
     border-bottom-right-radius: 30px !important;
+    background: #1d4ed8 !important;
+    color: #ffffff !important;
+    border-color: #1d4ed8 !important;
 }
 .flatpickr-day.startRange.endRange {
     border-radius: 30px !important;
+    background: #1d4ed8 !important;
+    color: #ffffff !important;
+}
+/* flatpickr 기본 selected 스타일 완전 override */
+.flatpickr-day.selected, 
+.flatpickr-day.selected:focus, 
+.flatpickr-day.selected:hover,
+.flatpickr-day.startRange,
+.flatpickr-day.startRange:focus,
+.flatpickr-day.startRange:hover,
+.flatpickr-day.endRange,
+.flatpickr-day.endRange:focus,
+.flatpickr-day.endRange:hover {
+    background: #1d4ed8 !important;
+    color: #ffffff !important;
+    border-color: #1d4ed8 !important;
 }
 
 /* 8. 마우스 호버 시 효과 보정 */
@@ -3318,101 +3426,65 @@ body.night-mode .status-badge.status-arrived {
     50% { transform: scale(1.15); opacity: 0.85; }
 }
 
-/* ── 사이드바 fixed + transform 슬라이드 ── */
+/* 미개설 방 진입 시 환경설정 버튼 깜빡임 */
+@keyframes btnPulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7); transform: scale(1); }
+    50% { box-shadow: 0 0 0 12px rgba(59, 130, 246, 0); transform: scale(1.04); }
+}
+.btn-pulse {
+    animation: btnPulse 1s ease-in-out infinite !important;
+    cursor: pointer !important;
+}
+.btn-pulse::after {
+    content: " 👆";
+}
+
+/* ── 전체화면 모드 (사이드바 숨김) ── */
+/* ── 사이드바 슬라이드 애니메이션 ── */
+/* 모든 요소 동일한 transition (0.3s ease) */
 .sidebar {
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), width 0.3s cubic-bezier(0.4, 0, 0.2, 1), min-width 0.3s cubic-bezier(0.4, 0, 0.2, 1), padding 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
     position: fixed !important;
-    left: 0; top: 0;
-    width: var(--sidebar-width);
-    height: 100vh;
-    z-index: 1000;
-    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
-    transform: translateX(0);
-    overflow-y: auto;
-    overflow-x: hidden;
-}
-body.sidebar-hidden .sidebar {
-    transform: translateX(-100%) !important;
-}
-.main-stage {
-    margin-left: var(--sidebar-width) !important;
-    width: calc(100vw - var(--sidebar-width)) !important;
-    transition: margin-left 0.3s ease, width 0.3s ease !important;
-}
-body.sidebar-hidden .main-stage {
-    margin-left: 0 !important;
-    width: 100vw !important;
-}
-.header {
-    position: relative !important;
-    left: auto !important;
-    width: 100% !important;
-}
-.mode-tabs {
-    position: relative !important;
-    left: auto !important;
-    width: 100% !important;
-    justify-content: center !important;
-    padding-left: 0 !important;
-    padding-right: 0 !important;
 }
 #sidebarClipTab {
     position: fixed !important;
-    top: 50%;
-    left: 300px;
-    transform: translateY(-50%) !important;
-    z-index: 1001 !important;
-    display: flex !important;
     transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
-    background: #1e293b;
-    width: 20px; height: 60px;
-    border-radius: 0 8px 8px 0;
-    cursor: pointer;
-    align-items: center;
-    justify-content: center;
-    box-shadow: 4px 0 10px rgba(0,0,0,0.3);
+    z-index: 1001 !important;
 }
-body.sidebar-hidden #sidebarClipTab {
+body.sidebar-hidden #sidebarClipTab { left: 0 !important; }
+.main-stage {
+    transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+.header {
+    transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+.mode-tabs {
+    transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+#sidebarToggleTab {
+    transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+body.sidebar-hidden .sidebar { transform: translateX(-100%) !important; width: 0 !important; min-width: 0 !important; padding: 0 !important; overflow: hidden !important; border: none !important; }
+body.sidebar-hidden .main-stage {
+    width: 100vw !important;
+    max-width: 100vw !important;
+}
+body.sidebar-hidden .header {
+    left: 0 !important;
+    width: 100vw !important;
+}
+body.sidebar-hidden .mode-tabs {
+    left: 0 !important;
+    width: 100vw !important;
+}
+body.sidebar-hidden .content-area {
+    width: 100% !important;
+}
+/* 숨김 상태에서 탭 위치 조정 */
+body.sidebar-hidden #sidebarToggleTab {
     left: 0 !important;
 }
-
-/* 전체화면 시 배경 흰색 유지 */
-.main-stage:-webkit-full-screen { background: var(--bg-color) !important; }
-.main-stage:-moz-full-screen { background: var(--bg-color) !important; }
-.main-stage:fullscreen { background: var(--bg-color) !important; }
-/* body 전체화면 시 배경 유지 */
-body:-webkit-full-screen { background: #f1f5f9 !important; width: 100vw !important; height: 100vh !important; }
-body:-moz-full-screen { background: #f1f5f9 !important; }
-body:fullscreen { background: #f1f5f9 !important; width: 100vw !important; height: 100vh !important; }
-/* 전체화면 시 html 루트 배경 흰색 */
-html:-webkit-full-screen { background: white !important; }
-html:-moz-full-screen    { background: white !important; }
-html:fullscreen          { background: white !important; }
-
-/* body/main-stage도 흰색 유지 */
-body:-webkit-full-screen { background: white !important; }
-body:fullscreen          { background: white !important; }
-/* PDF 전체화면 - 검정 배경 + 중앙 정렬 */
-#pdfWrapper:-webkit-full-screen {
-    background: #000 !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    width: 100vw !important;
-    height: 100vh !important;
+body.sidebar-hidden #sidebarToggleIcon {
+    transform: rotate(180deg);
 }
-#pdfWrapper:fullscreen {
-    background: #000 !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    width: 100vw !important;
-    height: 100vh !important;
-}
-#pdfWrapper:fullscreen #guideCanvas,
-#pdfWrapper:-webkit-full-screen #guideCanvas {
-    max-width: 100vw !important;
-    max-height: 100vh !important;
-    width: auto !important;
-    height: auto !important;
-}
-/* @build 20260527-071315 */

@@ -18,6 +18,29 @@
 </head>
 <body class="day-mode">
 
+<!-- 전역 로딩 스피너 -->
+<div id="globalLoadingOverlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(15,23,42,0.65); z-index:99998; align-items:center; justify-content:center; flex-direction:column; gap:16px; backdrop-filter:blur(3px);">
+    <div style="width:52px; height:52px; border:4px solid rgba(255,255,255,0.15); border-top:4px solid #3b82f6; border-radius:50%; animation:kac-spin 0.8s linear infinite;"></div>
+    <span id="globalLoadingMsg" style="color:#e2e8f0; font-size:14px; font-weight:700; letter-spacing:0.3px;">로딩 중...</span>
+</div>
+<style>@keyframes kac-spin { to { transform: rotate(360deg); } }</style>
+
+<!-- 사이드바 책갈피 탭 (fixed - 항상 보임) -->
+<div id="sidebarToggleTab" onclick="ui.toggleSidebar()" title="사이드바 접기/펼치기" style="
+    position:fixed; left:300px; top:50%; transform:translateY(-50%);
+    width:22px; height:56px;
+    background:#1e293b;
+    border-radius:0 8px 8px 0;
+    display:flex; align-items:center; justify-content:center;
+    cursor:pointer; z-index:200;
+    border:1px solid rgba(255,255,255,0.12);
+    border-left:none;
+    transition:left 0.3s ease;
+    box-shadow:3px 0 8px rgba(0,0,0,0.3);
+">
+    <i id="sidebarToggleIcon" class="fa-solid fa-chevron-left" style="color:#94a3b8; font-size:11px; transition:transform 0.3s;"></i>
+</div>
+
     <!-- 1. 여기에 새로 추가 (모바일 차단 레이어) -->
     <div id="mobileRestrictOverlay">
         <div class="restrict-box">
@@ -100,26 +123,13 @@
 
     <!-- 2. 사라졌던 사이드바 다시 생성 -->
     <div class="sidebar" id="mainSidebar">
-        <!-- 사이드바 모서리 클립 탭 -->
-        <div id="sidebarClipTab" onclick="ui.toggleSidebar()" title="사이드바 접기/펼치기" style="
-            position:fixed; left:300px; top:50%; transform:translateY(-50%);
-            width:18px; height:60px; background:#1e293b;
-            border-radius:0 8px 8px 0;
-            display:flex !important; align-items:center; justify-content:center;
-            cursor:pointer; z-index:9999 !important;
-            border:1px solid rgba(255,255,255,0.15); border-left:none;
-            transition:left 0.3s ease;
-            box-shadow:4px 0 12px rgba(0,0,0,0.4);
-        ">
-            <i id="clipTabIcon" class="fa-solid fa-chevron-left" style="color:white; font-size:10px;"></i>
-        </div>
         <div class="sidebar-top">
             <div class="sidebar-header" onclick="ui.goHome()" style="cursor:pointer;" title="초기 화면으로 이동">KAC Training Platform</div>
             <div class="setting-container">
                 <div class="setting-group"><label class="setting-label">Select Room</label><select id="roomSelect" class="setting-select"></select></div>
                 <div class="setting-group">
                     <label class="setting-label">Room Status</label>
-                    <select id="roomStatusSelect" class="setting-select" style="font-weight:bold; color:#fbbf24; pointer-events:none; cursor:default;" disabled>
+                    <select id="roomStatusSelect" class="setting-select" style="font-weight:bold; color:#ef4444; pointer-events:none; cursor:default;" disabled>
                         <option value="active">🟢 사용중</option>
                         <option value="idle">⚪ 비어있음</option>
                     </select>
@@ -149,72 +159,37 @@
         <div class="sidebar-bottom">
             <div class="action-buttons">
                 <button class="btn-action btn-print" onclick="printMgr.openInputModal()"><i class="fa-solid fa-print"></i> Report</button>
-                <button id="observerToggleButton" class="btn-action btn-secondary" onclick="dataMgr.handleModeToggle()" style="background:#e2e8f0; color:#475569;"><i class="fa-solid fa-eye"></i> ObserverMode</button>
-                <button class="btn-action btn-danger" onclick="ui.requestAdminAuth('idle')" style="background:#b91c1c;"><i class="fa-solid fa-power-off"></i> All Idle</button>
+                <button id="observerToggleButton" class="btn-action btn-secondary" onclick="dataMgr.handleModeToggle()" style="background:#e2e8f0; color:#475569;"><i class="fa-solid fa-eye"></i> 옵저버 모드</button>
+                <button class="btn-action btn-danger" onclick="dataMgr.allIdleWithMasterKey()" style="background:#b91c1c;"><i class="fa-solid fa-power-off"></i> All Idle</button>
                 <button id="btnReset" class="btn-action btn-danger" onclick="dataMgr.resetCourse()"><i class="fa-solid fa-triangle-exclamation"></i> Reset</button>
             </div>
-            <div class="divider" style="margin-top:10px;"></div>
-
-            <!-- 유관 시스템 바로가기 -->
-            <div style="position:relative;">
-                <div id="familySiteMenu" class="family-site-menu" style="top:44px; bottom:auto;">
-                    <a href="javascript:void(0)" onclick="ui.goFamilySite('coord', 'admin_coord.html')"><i class="fa-solid fa-user-tie"></i> 교육운영부 (행정)</a>
-                    <a href="javascript:void(0)" onclick="ui.goFamilySite('support', 'support_admin.html')"><i class="fa-solid fa-hotel"></i> 교육지원부 (생활관)</a>
-                    <a href="javascript:void(0)" onclick="ui.goFamilySite('driver', 'driver.html')"><i class="fa-solid fa-bus"></i> 기사 전용 (수송)</a>
-                    <a href="javascript:void(0)" onclick="ui.goFamilySite('meal', 'nutritionist.html')"><i class="fa-solid fa-utensils"></i> 영양사 전용 (식단)</a>
-                    <a href="javascript:void(0)" onclick="ui.goFamilySite('facility', 'facility_admin.html')"><i class="fa-solid fa-broom"></i> 미화/시설 관리</a>
-                    <a href="javascript:void(0)" onclick="ui.goFamilySite('none', 'student_leader.html')"><i class="fa-solid fa-crown"></i> 학생장 전용</a>
-                    <a href="javascript:void(0)" onclick="ui.goFamilySite('none', 'https://jds0616-boop.github.io/kac-cns-platform/index.html')"><i class="fa-solid fa-tower-broadcast"></i> CNS 통합 플랫폼</a>
-                </div>
-                <button class="btn-action btn-dark" onclick="ui.toggleFamilySites()" style="background:#334155; height:38px; width:100%; margin-top:6px;">
-                    <i class="fa-solid fa-layer-group"></i> 유관 시스템 바로가기
-                    <i class="fa-solid fa-chevron-down" id="familyChevron" style="margin-left:auto; font-size:10px;"></i>
-                </button>
+            <div style="text-align: center; margin-top: 15px;">
+                <span onclick="ui.openSecretModal()" style="font-size:10px; color:#475569; cursor:pointer; text-decoration:underline;">시스템 보안 설정</span>
             </div>
+<div class="divider"></div>
+                <div class="setting-group" style="position: relative;">
+                    <label class="setting-label">Related Platforms</label>
+                    <div id="familySiteMenu" class="family-site-menu" style="bottom:45px; top:auto; position:absolute; left:0; right:0;">
+                        <a href="javascript:void(0)" onclick="ui.goFamilySite('coord', 'admin_coord.html')"><i class="fa-solid fa-user-tie"></i> 교육운영부 (행정)</a>
+                        <a href="javascript:void(0)" onclick="ui.goFamilySite('support', 'support_admin.html')"><i class="fa-solid fa-hotel"></i> 교육지원부 (생활관)</a>
+                        <a href="javascript:void(0)" onclick="ui.goFamilySite('driver', 'driver.html')"><i class="fa-solid fa-bus"></i> 기사 전용 (수송)</a>
+                        <a href="javascript:void(0)" onclick="ui.goFamilySite('meal', 'nutritionist.html')"><i class="fa-solid fa-utensils"></i> 영양사 전용 (식단)</a>
+                        <a href="javascript:void(0)" onclick="ui.goFamilySite('facility', 'facility_admin.html')"><i class="fa-solid fa-broom"></i> 미화/시설 관리</a>
+                        <a href="javascript:void(0)" onclick="ui.goFamilySite('none', 'student_leader.html')"><i class="fa-solid fa-crown"></i> 학생장 전용</a>
+                        <a href="javascript:void(0)" onclick="ui.goFamilySite('none', 'https://jds0616-boop.github.io/kac-cns-platform/index.html')"><i class="fa-solid fa-tower-broadcast"></i> CNS 통합 플랫폼</a>
+                    </div>
+                    <button class="btn-action btn-dark" onclick="ui.toggleFamilySites()" style="background: #334155; height: 42px;">
+                        <i class="fa-solid fa-layer-group"></i> 유관 시스템 바로가기 <i class="fa-solid fa-chevron-up" id="familyChevron" style="margin-left: auto; font-size: 10px;"></i>
+                    </button>
+                </div>
 
-            <!-- 플랫폼 개발 이력 버튼 -->
-            <button onclick="ui.openDevInfo()" style="
-                width:100%; margin-top:8px; padding:8px 12px;
-                background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.15);
-                border-radius:8px; color:#94a3b8; font-size:12px; font-weight:700;
-                cursor:pointer; display:flex; align-items:center; gap:8px;">
-                <i class="fa-solid fa-clock-rotate-left" style="color:#60a5fa;"></i>
-                플랫폼 개발 이력
+            <button onclick="ui.openDevInfo()" style="width:100%; margin-top:8px; padding:9px 0; background:transparent; border:1px solid rgba(255,255,255,0.12); border-radius:8px; color:#64748b; font-size:12px; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px; transition:background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.06)'" onmouseout="this.style.background='transparent'">
+                <i class="fa-solid fa-clock-rotate-left"></i> 플랫폼 개발 이력 (GitHub)
             </button>
 
+            <div class="dev-info">(Developed by DooSeok, Jang)</div>
         </div>
     </div> <!-- 사이드바 끝 -->
-
-<!-- 개발자 정보 팝업 -->
-<div id="devInfoModal" class="modal-overlay" onclick="if(event.target==this)this.style.display='none'" style="display:none;">
-    <div style="background:white; width:90%; max-width:860px; max-height:88vh; border-radius:20px; display:flex; flex-direction:column; overflow:hidden; box-shadow:0 24px 60px rgba(0,0,0,0.35);">
-        <div style="background:#1e293b; color:white; padding:18px 28px; display:flex; align-items:center; justify-content:space-between; flex-shrink:0;">
-            <div>
-                <div style="font-size:13px; color:rgba(255,255,255,0.55); font-weight:600; margin-bottom:4px;">플랫폼 개발자</div>
-                <div style="font-size:17px; font-weight:900;">교수 장두석</div>
-                <div style="font-size:12px; color:rgba(255,255,255,0.6); margin-top:4px;">
-                    E-mail :
-                    <a href="mailto:jds0616@gmail.com" style="color:#60a5fa; text-decoration:none; margin-left:4px;">jds0616@gmail.com</a>
-                </div>
-            </div>
-            <button onclick="document.getElementById('devInfoModal').style.display='none'"
-                style="background:rgba(255,255,255,0.1); border:none; color:white; width:34px; height:34px; border-radius:8px; cursor:pointer; font-size:15px; flex-shrink:0;">
-                <i class="fa-solid fa-xmark"></i>
-            </button>
-        </div>
-        <div style="background:#f8fafc; padding:10px 28px; border-bottom:1px solid #e2e8f0; flex-shrink:0; display:flex; align-items:center; gap:8px;">
-            <i class="fa-brands fa-github" style="color:#1e293b; font-size:15px;"></i>
-            <span style="font-size:13px; font-weight:800; color:#334155;">KAC 플랫폼 개발 이력</span>
-            <span style="font-size:11px; color:#94a3b8; margin-left:4px;">GitHub 실시간 로드</span>
-        </div>
-        <div id="devInfoContent" style="flex:1; overflow-y:auto; padding:24px 28px; font-size:13px; line-height:1.75; color:#334155;">
-            <div style="text-align:center; color:#94a3b8; padding:40px 0;">
-                <i class="fa-solid fa-spinner fa-spin" style="font-size:28px; margin-bottom:12px; display:block;"></i>
-                개발 이력 불러오는 중...
-            </div>
-        </div>
-    </div>
-</div>
 
 
 
@@ -285,11 +260,9 @@
             <div class="control-icon-btn" onclick="ui.toggleMiniQR()" title="Join QR">
                 <i class="fa-solid fa-qrcode"></i>
             </div>
-            <div class="control-icon-btn" onclick="ui.toggleSidebar()" title="사이드바 접기/펼치기" id="sidebarToggleBtn">
-                <i class="fa-solid fa-bars" id="sidebarToggleIcon"></i>
-            </div>
-            <div class="control-icon-btn" onclick="document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen()" title="전체화면">
-                <i class="fa-solid fa-expand" id="fullscreenIcon"></i>
+            <!-- 전체화면 버튼 (주야간 버튼 제거) -->
+            <div class="control-icon-btn" onclick="ui.toggleFullScreen()" title="Full Screen">
+                <i class="fa-solid fa-expand"></i>
             </div>
         </div>
         <img src="logo.png" alt="Logo" class="kac-logo" onerror="this.style.display='none'"> 
@@ -351,36 +324,20 @@
 <div id="view-guide" style="display:none; flex-direction:column; align-items:center; width:100%;">
     <div class="view-header">
         <h1><i class="fa-solid fa-book-open"></i> 입교안내 <span class="header-room-badge room-badge-global"></span></h1>
-        </div>
-
-    <!-- modern-white-card 래퍼 -->
+    </div>
     <div class="modern-white-card" style="width:100%; max-width:1150px; display:flex; flex-direction:column; align-items:center; padding:32px 40px; gap:20px;">
-
-        <!-- PDF 캔버스 -->
-        <div id="pdfWrapper" onclick="guideMgr.changePage(1)" oncontextmenu="event.preventDefault(); guideMgr.changePage(-1);"
-             style="cursor:pointer; width:100%; max-width:1050px;">
+        <div id="pdfWrapper" onclick="guideMgr.changePage(1)" oncontextmenu="event.preventDefault(); guideMgr.changePage(-1);" style="cursor:pointer; width:100%; max-width:1050px;">
             <canvas id="guideCanvas" style="width:100%; height:auto; display:block; border-radius:12px; box-shadow:0 4px 20px rgba(0,51,102,0.12);"></canvas>
         </div>
-
-        <!-- 컨트롤 툴바 -->
+        <!-- 툴바 영역 -->
         <div style="display:flex; align-items:center; gap:8px; padding:8px 16px; background:#f8fafc; border-radius:12px; border:1px solid #e2e8f0; width:100%; max-width:1050px; box-sizing:border-box;">
-            <button onclick="guideMgr.changePage(-1)"
-                style="padding:7px 14px; background:#fff; border:1px solid #e2e8f0; border-radius:8px; font-size:13px; font-weight:800; cursor:pointer; color:#334155; display:flex; align-items:center; gap:5px;">
-                <i class="fa-solid fa-chevron-left"></i> 이전
-            </button>
+            <button onclick="guideMgr.changePage(-1)" style="padding:7px 14px; background:#fff; border:1px solid #e2e8f0; border-radius:8px; font-size:13px; font-weight:800; cursor:pointer; color:#334155;"><i class="fa-solid fa-chevron-left"></i> 이전</button>
             <span id="guidePageInfo" style="font-size:13px; font-weight:700; color:#64748b; min-width:60px; text-align:center;">- / -</span>
-            <button onclick="guideMgr.changePage(1)"
-                style="padding:7px 14px; background:#fff; border:1px solid #e2e8f0; border-radius:8px; font-size:13px; font-weight:800; cursor:pointer; color:#334155; display:flex; align-items:center; gap:5px;">
-                다음 <i class="fa-solid fa-chevron-right"></i>
-            </button>
+            <button onclick="guideMgr.changePage(1)" style="padding:7px 14px; background:#fff; border:1px solid #e2e8f0; border-radius:8px; font-size:13px; font-weight:800; cursor:pointer; color:#334155;">다음 <i class="fa-solid fa-chevron-right"></i></button>
             <div style="flex:1;"></div>
-            <button onclick="guideMgr.toggleFullScreen()"
-                style="padding:7px 16px; background:#003366; color:#fff; border:none; border-radius:8px; font-size:13px; font-weight:800; cursor:pointer; display:flex; align-items:center; gap:6px;">
-                <i class="fa-solid fa-expand"></i> 전체화면
-            </button>
+            <button onclick="guideMgr.toggleFullScreen()" style="padding:7px 16px; background:#003366; color:#fff; border:none; border-radius:8px; font-size:13px; font-weight:800;"><i class="fa-solid fa-expand"></i> 전체화면</button>
             <span id="guideStatusBadge" style="font-size:11px; font-weight:800; color:#94a3b8; margin-left:4px;"></span>
         </div>
-
     </div>
 </div>
 
@@ -492,9 +449,11 @@
                 <div class="card-label-shuttle" style="color:#003366; margin-bottom:10px;">
                     셔틀 탑승 수요 현황<span id="dashShuttleTimeInline" style="font-size:12px; color:#92400e; font-weight:700; margin-left:6px;"></span>
                 </div>
-                <!-- 노란박스 숨김 유지 (JS에서 display:none) -->
-                <div id="dashShuttleNotice" style="display:none;">
-                    <span id="dashShuttleNoticeTxt"></span>
+
+                <!-- 기사님 실시간 공지 영역 -->
+                <div id="dashShuttleNotice" style="display:none; font-size:12px; background:#fffbeb; padding:8px 12px; border-radius:10px; color:#92400e; margin-bottom:12px; border-left:4px solid #facc15; border:1px solid #fef3c7;">
+                    <i class="fa-solid fa-bullhorn" style="color:#eab308; margin-right:5px;"></i> 
+                    <span id="dashShuttleNoticeTxt" style="font-weight:700;"></span>
                 </div>
                 
                 <!-- 통합 요약 박스 (1~2차 합산) -->
@@ -550,7 +509,7 @@
 
         <!-- 운영부/전체 공지 표시 (읽기 전용 리스트) -->
         <div style="background:#fff; border-radius:16px; border:1.5px solid #e2e8f0; overflow:hidden; box-shadow:0 2px 8px rgba(0,0,0,0.04);">
-            <div style="background:#1e293b; padding:14px 20px; display:flex; align-items:center; gap:10px;">
+            <div style="background:#10b981; padding:14px 20px; display:flex; align-items:center; gap:10px;">
                 <i class="fa-solid fa-circle-info" style="color:#3b82f6; font-size:16px;"></i>
                 <span style="color:#fff; font-weight:800; font-size:15px;">운영부 / 항기원 전체 공지</span>
                 <span style="color:rgba(255,255,255,0.5); font-size:11px; margin-left:auto;">
@@ -666,7 +625,7 @@
     <!-- (1) 표준 헤더: 아이콘과 제목 -->
 <div class="view-header">
     <h1><i class="fa-solid fa-chart-simple"></i> 강의실 실시간 현황판</h1>
-    <p>항공기술훈련원 과정 운영 상태를 실시간으로 모니터링합니다.</p>
+    <p>항공기술훈련원 강의실 및 교육과정 운영 상태를 실시간으로 모니터링합니다.</p>
 </div>
 
     <!-- (2) 모던 화이트 카드: 이 안에 표가 들어갑니다 -->
@@ -730,14 +689,31 @@
         </div>
     </div>
 
-    <!-- 퇴교차량 여정 예상 도착 시간 카드 -->
+    <!-- 강사 출발시간 직접 설정 카드 -->
     <div style="width:100%; max-width:1000px; margin-bottom:15px;">
-        <div id="shuttleETACard" style="background:#eff6ff; border:1px solid #bfdbfe; border-radius:16px; padding:16px 20px;">
-            <div style="font-size:13px; font-weight:800; color:#1e40af; margin-bottom:8px;">
-                <i class="fa-solid fa-route"></i> 퇴교차량 여정 예상 도착 시간
+        <div style="background:#fff; border:1px solid #e2e8f0; border-radius:16px; padding:16px 20px; display:flex; align-items:center; gap:15px; flex-wrap:wrap;">
+            <span style="font-size:13px; font-weight:800; color:#003366; white-space:nowrap;">
+                <i class="fa-solid fa-clock" style="color:#f59e0b;"></i> 출발시간 설정
+            </span>
+            <input type="date" id="shuttle-depart-date" class="setup-input" style="flex:1; min-width:130px; height:38px; padding:6px 10px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:14px; font-weight:700;">
+            <input type="time" id="shuttle-depart-time" class="setup-input" style="flex:1; min-width:110px; height:38px; padding:6px 10px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:14px; font-weight:700;">
+            <button onclick="ui.setShutttleDeparture()" style="height:38px; padding:0 18px; background:#003366; color:white; border:none; border-radius:8px; font-size:13px; font-weight:800; cursor:pointer; white-space:nowrap;">
+                <i class="fa-solid fa-bullhorn"></i> 기사님께 전달
+            </button>
+            <button onclick="ui.clearShuttleDeparture()" style="height:38px; padding:0 14px; background:#f1f5f9; color:#64748b; border:none; border-radius:8px; font-size:13px; font-weight:700; cursor:pointer; white-space:nowrap;">
+                초기화
+            </button>
+        </div>
+    </div>
+
+    <!-- ETA 예상 도착 시간 카드 -->
+    <div style="width:100%; max-width:1000px; margin-bottom:15px;">
+        <div style="background:#fff; border:1px solid #e2e8f0; border-radius:16px; padding:16px 20px;">
+            <div style="font-size:13px; font-weight:800; color:#003366; margin-bottom:10px;">
+                <i class="fa-solid fa-location-dot" style="color:#ef4444;"></i> 정류장별 예상 도착 시간 (ETA)
             </div>
-            <div id="shuttleETADetail" style="font-size:14px; font-weight:700; color:#1e3a8a; line-height:2;">
-                <span style="color:#94a3b8; font-size:13px; font-weight:500;">운영부에서 출발 시간 공지 후 자동 표시됩니다.</span>
+            <div id="shuttleETADetail">
+                <div style="color:#94a3b8; font-size:13px; text-align:center; padding:12px 0;">출발 시간이 공지되면 ETA가 표시됩니다.</div>
             </div>
         </div>
     </div>
@@ -777,20 +753,39 @@
         <h1><i class="fa-solid fa-person-walking-arrow-right"></i> 외출·외박 신청 현황 <span class="header-room-badge room-badge-global"></span></h1>
         <p>익일 오전 09:00까지 명단이 유지됩니다.</p>
     </div>
-    <div class="modern-white-card">
-        <table>
+    <div class="modern-white-card" style="width:100%; max-width:1100px;">
+        <table style="width:100%; table-layout:fixed;">
+            <colgroup>
+                <col style="width:50px;">
+                <col style="width:90px;">
+                <col style="width:120px;">
+                <col style="width:130px;">
+                <col style="width:100px;">
+                <col style="width:90px;">
+                <col style="width:120px;">
+                <col style="width:70px;">
+            </colgroup>
             <thead>
                 <tr>
-                    <th style="width:80px;">연번</th>
-                    <th style="width:120px;">구분</th>
+                    <th>연번</th>
+                    <th>구분</th>
                     <th>성명(뒷자리)</th>
                     <th>비상 연락처</th>
-                    <th style="width:150px;">신청시간</th>
-                   <th style="width:100px;">관리</th> <!-- 이 줄 추가 -->
+                    <th>신청시간</th>
+                    <th>복귀여부</th>
+                    <th>복귀호출</th>
+                    <th>관리</th>
                 </tr>
             </thead>
             <tbody id="adminActionTableBody"></tbody>
         </table>
+    </div>
+    <!-- 미복귀자 전체 호출 버튼 - 하단 -->
+    <div style="display:flex; justify-content:flex-end; width:100%; max-width:1100px; margin-top:12px;">
+        <button onclick="ui.callAllNotReturned()"
+            style="padding:8px 16px; background:#ef4444; color:white; border:none; border-radius:8px; font-weight:700; font-size:13px; cursor:pointer; display:flex; align-items:center; gap:6px;">
+            <i class="fa-solid fa-bullhorn"></i> 미복귀자 전체 복귀 호출
+        </button>
     </div>
 </div>
 
@@ -1586,4 +1581,3 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
 </body>
 </html>
-<!-- @build 20260527-065511 -->
