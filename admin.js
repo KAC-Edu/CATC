@@ -2310,10 +2310,13 @@ showAlert: function(msg) {
         
         // 1. Firebase 실시간 리스너 (한 번만 등록)
         if (!window.isRoomListenerSet) {
-            window.isRoomListenerSet = true; // 먼저 플래그 설정 (중복 방지)
+            window.isRoomListenerSet = true;
             firebase.database().ref('courses').on('value', s => {
                 window.latestCoursesData = s.val() || {};
-                ui.initRoomSelect(); // 데이터 변경 시 테이블만 갱신
+                // 강의실 입장 중이면 현황판 테이블 재생성 건너뜀 (루프 원인 차단)
+                if (!state.room) {
+                    ui.initRoomSelect();
+                }
             });
             return;
         }
@@ -5473,4 +5476,4 @@ window.onclick = function(event) {
         ui.closeQaModal();
     }
 };
-// @build 20260527-071834
+// @build 20260527-072421
