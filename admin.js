@@ -3237,27 +3237,19 @@ renderQaList: function(f) {
     },
     
     toggleFullScreen: function() {
+        const doc = document.documentElement;
         if (!document.fullscreenElement && !document.webkitFullscreenElement) {
             // 전체화면 진입
-            const el = document.documentElement;
-            if (el.requestFullscreen) {
-                el.requestFullscreen();
-            } else if (el.webkitRequestFullscreen) {
-                el.webkitRequestFullscreen();
-            }
-            document.body.classList.add('sidebar-hidden');
-            const icon = document.querySelector('.control-icon-btn i.fa-expand');
-            if (icon) { icon.classList.remove('fa-expand'); icon.classList.add('fa-compress'); }
+            if (doc.requestFullscreen) doc.requestFullscreen();
+            else if (doc.webkitRequestFullscreen) doc.webkitRequestFullscreen();
+            else if (doc.mozRequestFullScreen) doc.mozRequestFullScreen();
+            else if (doc.msRequestFullscreen) doc.msRequestFullscreen();
         } else {
             // 전체화면 해제
-            if (document.exitFullscreen) {
-                document.exitFullscreen();
-            } else if (document.webkitExitFullscreen) {
-                document.webkitExitFullscreen();
-            }
-            document.body.classList.remove('sidebar-hidden');
-            const icon = document.querySelector('.control-icon-btn i.fa-compress');
-            if (icon) { icon.classList.remove('fa-compress'); icon.classList.add('fa-expand'); }
+            if (document.exitFullscreen) document.exitFullscreen();
+            else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+            else if (document.mozCancelFullScreen) document.mozCancelFullScreen();
+            else if (document.msExitFullscreen) document.msExitFullscreen();
         }
     },
     
@@ -5412,27 +5404,20 @@ loadCurrentSettings: function() {
             roomDirect.style.display = "none";
         }
 
-        // 4. ★핵심 수정★ 날짜 범위 로직 (Range Picker 대응)
+        // 4. 날짜 범위 로직 (Range Picker 대응)
         const rangeInput = document.getElementById('setup-period-range');
-        const todayStr = typeof getTodayString === 'function' ? getTodayString() : new Date().toISOString().split('T')[0];
-
-        // flatpickr setDate - requestAnimationFrame으로 렌더링 후 정확히 반영
-        const applyDate = () => {
-            const fp = rangeInput._flatpickr;
-            if (!fp) return;
-            if (s.period && s.period.includes(" ~ ")) {
-                const parts = s.period.split(" ~ ");
-                if (parts.length === 2) {
-                    fp.setDate([parts[0].trim(), parts[1].trim()], false);
-                    rangeInput.value = s.period;
-                }
+        const today = new Date();
+        const todayStr = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0');
+        const fp = rangeInput._flatpickr;
+        if (fp) {
+            if (s.period && s.period.length > 5) {
+                fp.setDate(s.period.split(' ~ '));
             } else {
-                fp.setDate([todayStr, todayStr], false);
+                // 신규 과정이면 오늘 날짜로 즉시 세팅
+                fp.setDate([today, today]);
                 rangeInput.value = `${todayStr} ~ ${todayStr}`;
             }
-        };
-        // 두 번 시도 (렌더링 타이밍 보장)
-        requestAnimationFrame(() => { applyDate(); setTimeout(applyDate, 50); });
+        }
         
         // 5. menuFeatures 체크박스 상태 로드
         // 기본값: 차량신청(shuttle) + 외출/외박(adminAction)만 ON, 나머지는 OFF
@@ -5654,20 +5639,24 @@ window.addEventListener('DOMContentLoaded', () => {
     const sidebar = document.getElementById('mainSidebar');
     if (!sidebar) return;
 
-    let hideTimer = null;
+    // 화면 왼쪽 끝 15px 보이지 않는 트리거 영역 생성
+    const trigger = document.createElement('div');
+    trigger.id = 'sidebar-hover-trigger';
+    trigger.style.cssText = 'position:fixed; top:0; left:0; width:15px; height:100vh; z-index:9998;';
+    document.body.appendChild(trigger);
 
-    sidebar.addEventListener('mouseenter', () => {
-        clearTimeout(hideTimer);
+    // 트리거에 마우스 대면 사이드바 열림
+    trigger.addEventListener('mouseenter', () => {
         document.body.classList.remove('sidebar-hidden');
     });
 
+    // 사이드바에 마우스 있는 동안 유지
+    sidebar.addEventListener('mouseenter', () => {
+        document.body.classList.remove('sidebar-hidden');
+    });
+
+    // 사이드바에서 마우스 나가면 닫힘
     sidebar.addEventListener('mouseleave', () => {
-        // 0.5초 딜레이 후 숨김 (실수로 마우스 이탈 방지)
-        hideTimer = setTimeout(() => {
-            // 전체화면 상태일 때만 자동 숨김
-            if (document.fullscreenElement || document.webkitFullscreenElement) {
-                document.body.classList.add('sidebar-hidden');
-            }
-        }, 500);
+        document.body.classList.add('sidebar-hidden');
     });
 });

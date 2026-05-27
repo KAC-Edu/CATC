@@ -3516,6 +3516,16 @@ body.sidebar-hidden #sidebarToggleIcon {
 
 /* ===== [추가 UI 보정] ===== */
 
+/* 전체화면 검은 화면 방지 — 배경색 강제 지정 */
+:fullscreen,
+:-webkit-full-screen,
+:-moz-full-screen,
+:-ms-fullscreen {
+    background-color: #f1f5f9 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+}
+
 /* 전체화면 아이콘 부드러운 전환 */
 .control-icon-btn i {
     transition: transform 0.3s ease;
@@ -3528,8 +3538,37 @@ body.sidebar-hidden #sidebarToggleIcon {
     color: #1e3a8a !important;
 }
 
-/* 전체화면 상태에서 사이드바 숨김 시 main-stage 전체 너비 */
-body.sidebar-hidden .main-stage {
-    margin-left: 0 !important;
+/* 사이드바: 메인을 밀어내지 않고 위에 덮는 방식 */
+.sidebar {
+    position: fixed !important;
+    top: 0;
+    left: 0;
+    height: 100vh;
+    z-index: 9999 !important;
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    box-shadow: 5px 0 20px rgba(0,0,0,0.25);
+}
+
+/* 사이드바 숨김 시 완전히 왼쪽으로 */
+body.sidebar-hidden .sidebar {
+    transform: translateX(-100%) !important;
+    box-shadow: none !important;
+}
+
+/* 사이드바가 닫혀도 메인 스테이지는 항상 전체 너비 */
+.main-stage {
     width: 100vw !important;
+    margin-left: 0 !important;
+}
+
+/* 전체화면 시 레이아웃 유지 */
+body:fullscreen .main-stage,
+body:-webkit-full-screen .main-stage {
+    display: flex;
+    flex-direction: column;
+}
+
+/* 마우스 트리거 영역 (투명) */
+#sidebar-hover-trigger {
+    background: transparent;
 }
