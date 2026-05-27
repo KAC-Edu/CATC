@@ -288,7 +288,7 @@
             <div class="control-icon-btn" onclick="ui.toggleSidebar()" title="사이드바 접기/펼치기" id="sidebarToggleBtn">
                 <i class="fa-solid fa-bars" id="sidebarToggleIcon"></i>
             </div>
-            <div class="control-icon-btn" onclick="document.fullscreenElement ? document.exitFullscreen() : document.querySelector('.main-stage').requestFullscreen()" title="전체화면">
+            <div class="control-icon-btn" onclick="document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen()" title="전체화면">
                 <i class="fa-solid fa-expand" id="fullscreenIcon"></i>
             </div>
         </div>
@@ -1581,4 +1581,4 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
 </body>
 </html>
-<!-- @build 20260527-021711 -->
+<!-- @build 20260527-022158 -->
