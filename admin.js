@@ -334,6 +334,15 @@ switchRoomAttempt: async function(newRoom, silent = false) {
     
     // (A) 방이 사용 중인데 내가 주인이 아니고, 옵저버도 아님 -> 데이터 차단
     if (isActive && !isOwner && !state.isObserver) {
+        // 8시간 이내 인증 기록 확인
+        const lastAuth = localStorage.getItem(`auth_room_${newRoom}`);
+        const isRecentlyAuthed = lastAuth && (Date.now() - parseInt(lastAuth) < 8 * 60 * 60 * 1000);
+        if (isRecentlyAuthed) {
+            // 재인증 없이 바로 입장
+            await firebase.database().ref(`courses/${newRoom}/ownerSessionId`).set(authMgr.sessionId);
+            this.forceEnterRoom(newRoom);
+            return;
+        }
         // silent(새로고침)일 때는 비번창 없이 현황판으로
         if (silent) {
             localStorage.removeItem('kac_last_room');
@@ -402,6 +411,7 @@ verifyTakeover: async function() {
                 roomStatus: 'active'
             });
             localStorage.setItem(`last_owned_room`, newRoom);
+            localStorage.setItem(`auth_room_${newRoom}`, Date.now()); // 8시간 인증 유지
             dataMgr.addOwnedRoom(newRoom);
             document.getElementById('takeoverModal').style.display = 'none';
             this.forceEnterRoom(newRoom);
@@ -4918,14 +4928,8 @@ init: function() {
     // 6. 진짜 전체화면 모드 (기존 로직 유지)
     toggleFullScreen: function() {
         const wrapper = document.getElementById('pdfWrapper');
-        // 이미 전체화면 중이면 (브라우저 전체화면 포함) → PDF 레이아웃 확대만
-        if (document.fullscreenElement && document.fullscreenElement !== wrapper) {
-            wrapper.classList.toggle('pdf-presentation-mode');
-            guideMgr.isRendering = false;
-            setTimeout(() => guideMgr.renderPage(guideMgr.pageNum), 100);
-            return;
-        }
-        if (!document.fullscreenElement) {
+        if (document.fullscreenElement !== wrapper) {
+            // 이미 전체화면이어도 wrapper를 타겟으로 재호출 → PDF만 꽉 참
             wrapper.requestFullscreen()
                 .then(() => {
                     setTimeout(() => {
@@ -5495,4 +5499,4 @@ window.onclick = function(event) {
         ui.closeQaModal();
     }
 };
-// @build 20260527-060424
+// @build 20260527-061527
