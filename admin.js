@@ -287,11 +287,19 @@ loadInitialData: function() {
 switchRoomAttempt: async function(newRoom, silent = false) {
     const overlay = document.getElementById('statusOverlay');
 
-    // 8시간 이내 인증 기록 확인
+    // 8시간 이내 인증 기록 확인 (silent보다 먼저 체크)
     const lastAuth = localStorage.getItem(`auth_room_${newRoom}`);
     const isRecentlyAuthed = lastAuth && (Date.now() - parseInt(lastAuth) < 8 * 60 * 60 * 1000);
 
-    // 새로고침(silent) 시 현황판 표시
+    // 최근 인증 기록 있으면 silent 여부 관계없이 즉시 입장
+    if (isRecentlyAuthed) {
+        if (overlay) overlay.style.display = 'none';
+        await firebase.database().ref(`courses/${newRoom}/status/ownerSessionId`).set(authMgr.sessionId);
+        this.forceEnterRoom(newRoom);
+        return;
+    }
+
+    // 새로고침(silent) + 인증 기록 없으면 현황판 유지
     if (silent) {
         ui.showWaitingRoom();
         return;
@@ -303,35 +311,27 @@ switchRoomAttempt: async function(newRoom, silent = false) {
     localStorage.setItem('kac_last_mode', 'dashboard');
     state.isObserver = (sessionStorage.getItem('kac_observer_room') === newRoom);
 
-    // 최근 인증 기록 있으면 즉시 입장
-    if (isRecentlyAuthed) {
-        if (overlay) overlay.style.display = 'none';
-        await firebase.database().ref(`courses/${newRoom}/status/ownerSessionId`).set(authMgr.sessionId);
-        this.forceEnterRoom(newRoom);
-        return;
-    }
-
     // 서버 상태 조회
     const snapshot = await firebase.database().ref(`courses/${newRoom}/status`).get();
     const st = snapshot.val() || {};
     const isActive = (st.roomStatus === 'active');
     const isOwner = (st.ownerSessionId === state.sessionId);
 
-    // 타인이 사용 중인 방 → 비밀번호 입력
-    if (isActive && !isOwner && !state.isObserver) {
-        if (overlay) overlay.style.display = 'flex';
-        state.pendingRoom = newRoom;
-        document.getElementById('takeoverPwInput').value = '';
-        const lbl1 = document.getElementById('takeoverRoomLabel');
-        if(lbl1) lbl1.innerText = `Room #${newRoom}`;
-        document.getElementById('takeoverModal').style.display = 'flex';
-        document.getElementById('takeoverPwInput').focus();
+    // 내 방이거나 빈 방 → 즉시 입장
+    if (!isActive || isOwner || state.isObserver) {
+        if (overlay) overlay.style.display = 'none';
+        this.forceEnterRoom(newRoom);
         return;
     }
 
-    // 내 방이거나 빈 방 → 즉시 입장
-    if (overlay) overlay.style.display = 'none';
-    this.forceEnterRoom(newRoom);
+    // 타인이 사용 중인 방 → 비밀번호 입력
+    if (overlay) overlay.style.display = 'flex';
+    state.pendingRoom = newRoom;
+    document.getElementById('takeoverPwInput').value = '';
+    const lbl1 = document.getElementById('takeoverRoomLabel');
+    if(lbl1) lbl1.innerText = `Room #${newRoom}`;
+    document.getElementById('takeoverModal').style.display = 'flex';
+    document.getElementById('takeoverPwInput').focus();
 },
 
 
@@ -5462,4 +5462,4 @@ window.onclick = function(event) {
         ui.closeQaModal();
     }
 };
-// @build 20260527-065923
+// @build 20260527-070709

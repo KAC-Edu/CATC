@@ -3379,9 +3379,6 @@ body.sidebar-hidden #sidebarClipTab {
 .main-stage:-webkit-full-screen { background: var(--bg-color) !important; }
 .main-stage:-moz-full-screen { background: var(--bg-color) !important; }
 .main-stage:fullscreen { background: var(--bg-color) !important; }
-body.sidebar-hidden #sidebarClipTab {
-    left: 0 !important;
-}
 /* body 전체화면 시 배경 유지 */
 body:-webkit-full-screen { background: #f1f5f9 !important; width: 100vw !important; height: 100vh !important; }
 body:-moz-full-screen { background: #f1f5f9 !important; }
@@ -3418,4 +3415,4 @@ body:fullscreen          { background: white !important; }
     width: auto !important;
     height: auto !important;
 }
-/* @build 20260527-065923 */
+/* @build 20260527-070709 */
