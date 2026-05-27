@@ -3254,13 +3254,10 @@ renderQaList: function(f) {
     },
     
     toggleFullScreen: function() {
-        const icon = document.getElementById('fullscreenIcon');
         if (!document.fullscreenElement) {
             document.documentElement.requestFullscreen();
-            if (icon) { icon.classList.remove('fa-expand'); icon.classList.add('fa-compress'); }
         } else {
             document.exitFullscreen();
-            if (icon) { icon.classList.remove('fa-compress'); icon.classList.add('fa-expand'); }
         }
     },
     
@@ -5442,4 +5439,4 @@ window.onclick = function(event) {
         ui.closeQaModal();
     }
 };
-// @build 20260527-015908
+// @build 20260527-020217
