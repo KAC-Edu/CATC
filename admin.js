@@ -563,6 +563,11 @@ forceEnterRoom: async function(room) {
     // 방 전환 즉시 대시보드 초기화 (이전 방 데이터 잔류 방지)
     ui.clearDashboard();
 
+    // 방 전환 시 PDF 상태 초기화 (이전 방 페이지 번호 간섭 방지)
+    guideMgr.pdfDoc = null;
+    guideMgr.pageNum = 1;
+    guideMgr.isRendering = false;
+
     if (window.dbRef) {
         Object.values(window.dbRef).forEach(ref => {
             if (ref && typeof ref.off === 'function') ref.off();
@@ -2897,7 +2902,7 @@ setMode: function(mode) {
                 ui.initBoardPalette();
             }
             if (mode === 'attendance') ui.loadAttendanceView();
-            if (mode === 'guide') setTimeout(() => guideMgr.refresh(), 100);
+            if (mode === 'guide') { guideMgr.pageNum = 1; setTimeout(() => guideMgr.refresh(), 100); }
             if (mode === 'shuttle') {
                 // 날짜 입력창 기본값: 오늘
                 const dateEl = document.getElementById('shuttle-depart-date');
@@ -5169,9 +5174,10 @@ init: function() {
     // 탭 전환 시 PDF 재렌더링 (setMode에서 호출)
     // 이미 로드된 경우 재렌더, 처음 진입 시 GitHub URL에서 on-demand 로드
     refresh: function() {
+        guideMgr.pageNum = 1;
         if (guideMgr.pdfDoc) {
             guideMgr.isRendering = false;
-            guideMgr.renderPage(guideMgr.pageNum);
+            guideMgr.renderPage(1);
         } else {
             guideMgr.loadPDF(guideMgr.GUIDE_PDF_URL);
         }
