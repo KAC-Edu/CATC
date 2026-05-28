@@ -2731,6 +2731,9 @@ function handleRoomSelection() {
         updateIndividualView(); 
         updateQRPreview(); 
     } else {
+        // 홈으로 돌아갈 때 개별 뷰 리스너 즉시 해제
+        if (typeof clearEntryCntListeners === 'function') clearEntryCntListeners();
+
         globalMenu.style.setProperty('display', 'flex', 'important');
         individualMenu.style.setProperty('display', 'none', 'important');
         
@@ -3528,28 +3531,39 @@ ${names}`);
     let _entryCntRef = null;
     let _tabletCntRef = null;
 
+    // 리스너 완전 해제 함수 (뷰 전환 시 호출)
+    function clearEntryCntListeners() {
+        if (_entryCntRef) { _entryCntRef.off(); _entryCntRef = null; }
+        if (_tabletCntRef) { _tabletCntRef.off(); _tabletCntRef = null; }
+    }
+
     function updateEntryCnt(rid) {
         if (!rid) return;
 
         // 기존 리스너 완전 해제
-        if (_entryCntRef) _entryCntRef.off();
-        if (_tabletCntRef) _tabletCntRef.off();
+        clearEntryCntListeners();
 
-        // 1. 입교 현황 리스너 - rid 매개변수 사용 (currentRID 사용 안 함)
+        // 1. 입교 현황 리스너
         _entryCntRef = firebase.database().ref(`courses/${rid}/students`);
         _entryCntRef.on('value', snap => {
+            // 개별 뷰가 활성 상태인지 확인 후 업데이트
+            const el = document.getElementById('ind-entry-cnt');
+            if (!el || !document.getElementById('individualStatusView') || 
+                document.getElementById('individualStatusView').style.display === 'none') return;
             const students = snap.val() || {};
             const cnt = Object.values(students).filter(s => s.name && s.name !== 'undefined').length;
-            const el = document.getElementById('ind-entry-cnt');
-            if (el) el.innerHTML = `${cnt}<span>명</span>`;
+            el.innerHTML = `${cnt}<span>명</span>`;
         });
 
-        // 2. 태블릿 대여 리스너 - rid 매개변수 사용
+        // 2. 태블릿 대여 리스너
         _tabletCntRef = firebase.database().ref(`courses/${rid}/tablet_loans`);
         _tabletCntRef.on('value', snap => {
-            const cnt = Object.keys(snap.val() || {}).length;
+            // 개별 뷰가 활성 상태인지 확인 후 업데이트
             const elT = document.getElementById('ind-tablet-cnt');
-            if (elT) elT.innerHTML = `${cnt}<span>명</span>`;
+            if (!elT || !document.getElementById('individualStatusView') ||
+                document.getElementById('individualStatusView').style.display === 'none') return;
+            const cnt = Object.keys(snap.val() || {}).length;
+            elT.innerHTML = `${cnt}<span>명</span>`;
         });
     }
 // [개편] 목적지별 클릭 시 상세 명단 팝업
