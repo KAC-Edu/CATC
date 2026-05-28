@@ -493,24 +493,34 @@
 
     <div style="width:100%; max-width:900px; display:flex; flex-direction:column; gap:16px; padding:0 0 50px 0;">
 
+        <!-- 운영부/전체 공지 표시 (읽기 전용 리스트) -->
+        <div style="background:#fff; border-radius:16px; border:1.5px solid #e2e8f0; overflow:hidden; box-shadow:0 2px 8px rgba(0,0,0,0.04);">
+            <div style="background:#10b981; padding:14px 20px; display:flex; align-items:center; gap:10px;">
+                <i class="fa-solid fa-circle-info" style="color:#fff; font-size:16px;"></i>
+                <span style="color:#fff; font-weight:800; font-size:15px;">운영부 / 항기원 전체 공지</span>
+                <span style="color:rgba(255,255,255,0.5); font-size:11px; margin-left:auto;">
+                    <i class="fa-solid fa-sync fa-spin" style="margin-right:4px;"></i>실시간
+                </span>
+            </div>
+            <div id="globalNoticeDisplay" style="padding:16px; font-size:14px; line-height:1.7; color:#334155; min-height:80px;">
+                정보를 불러오는 중...
+            </div>
+        </div>
+
         <!-- ══════════════════════════════════════════════════════ -->
         <!-- 강의 안내 보드 (리치 텍스트 에디터) -->
         <!-- ══════════════════════════════════════════════════════ -->
-        <div style="background:#fff; border-radius:16px; border:2px solid #7c3aed; overflow:visible; box-shadow:0 4px 20px rgba(124,58,237,0.10);"
-             onmouseenter="this.querySelector('#boardToolbar').style.maxHeight='70px'; this.querySelector('#boardToolbar').style.padding='10px 14px';"
-             onmouseleave="if(document.activeElement.closest && !document.activeElement.closest('#boardEditor')) { this.querySelector('#boardToolbar').style.maxHeight='0'; this.querySelector('#boardToolbar').style.padding='0 14px'; }">
+        <div style="background:#fff; border-radius:16px; border:2px solid #7c3aed; overflow:hidden; box-shadow:0 4px 20px rgba(124,58,237,0.10);">
             <!-- 헤더 -->
-            <div style="background:linear-gradient(135deg,#7c3aed,#a855f7); padding:14px 20px; display:flex; align-items:center; gap:10px; border-radius:14px 14px 0 0;">
+            <div style="background:linear-gradient(135deg,#7c3aed,#a855f7); padding:14px 20px; display:flex; align-items:center; gap:10px;">
                 <i class="fa-solid fa-chalkboard" style="color:#fff; font-size:16px;"></i>
                 <span style="color:#fff; font-weight:800; font-size:15px;">강의 안내 보드</span>
-                <span style="color:rgba(255,255,255,0.75); font-size:12px; margin-left:auto;">마우스를 올리면 편집 도구가 나타납니다</span>
+                <span style="color:rgba(255,255,255,0.75); font-size:12px; margin-left:auto;">글자 크기·색상 자유 조합 | 저장 후 교육생 앱에 표시</span>
             </div>
 
-            <!-- 툴바: 기본 숨김, hover 시 슬라이드 다운 -->
-            <div id="boardToolbar" style="padding:0 14px; background:#f8f5ff; border-bottom:1px solid #ede9fe;
-                        display:flex; flex-wrap:wrap; gap:6px; align-items:center;
-                        max-height:0; overflow:hidden;
-                        transition: max-height 0.2s ease, padding 0.2s ease;">
+            <!-- 툴바: 항상 표시 고정 -->
+            <div id="boardToolbar" style="padding:10px 14px; background:#f8f5ff; border-bottom:1px solid #ede9fe;
+                        display:flex; flex-wrap:wrap; gap:6px; align-items:center;">
 
                 <select onchange="document.execCommand('fontSize', false, this.value); this.value=''; document.getElementById('boardEditor').focus();"
                     style="height:32px; border:1.5px solid #ddd; border-radius:7px; padding:0 8px; font-size:13px; cursor:pointer;">
@@ -568,21 +578,6 @@
         </div>
         <!-- ══════════════════════════════════════════════════════ -->
 
-        <!-- ② 운영부/전체 공지 -->
-        
-        <div style="background:#fff; border-radius:16px; border:1.5px solid #e2e8f0; overflow:hidden; box-shadow:0 2px 8px rgba(0,0,0,0.04);">
-            <div style="background:#10b981; padding:14px 20px; display:flex; align-items:center; gap:10px;">
-                <i class="fa-solid fa-circle-info" style="color:#fff; font-size:16px;"></i>
-                <span style="color:#fff; font-weight:800; font-size:15px;">운영부 / 항기원 전체 공지</span>
-                <span style="color:rgba(255,255,255,0.5); font-size:11px; margin-left:auto;">
-                    <i class="fa-solid fa-sync fa-spin" style="margin-right:4px;"></i>실시간
-                </span>
-            </div>
-            <div id="globalNoticeDisplay" style="padding:16px; font-size:14px; line-height:1.7; color:#334155; min-height:80px;">
-                정보를 불러오는 중...
-            </div>
-        </div>
-
         <!-- 담임교수 공지 작성 -->
         <div style="background:#fff; border-radius:16px; border:2px solid #003366; overflow:hidden; box-shadow:0 4px 16px rgba(0,51,102,0.08);">
             <div style="background:linear-gradient(135deg,#003366,#0055aa); padding:14px 20px; display:flex; align-items:center; gap:10px;">
@@ -602,9 +597,7 @@
         </div>
 
     </div>
-
-    </div>
-</div></div>
+</div>
 
 
 
