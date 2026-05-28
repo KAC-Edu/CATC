@@ -5071,7 +5071,7 @@ const guideMgr = {
     isRendering: false,
 
     // GitHub에 올린 입교안내 PDF의 raw URL (파일 교체 시 이 URL만 수정)
-    GUIDE_PDF_URL: 'https://raw.githubusercontent.com/YOUR_ORG/YOUR_REPO/main/입교안내.pdf',
+    GUIDE_PDF_URL: 'https://raw.githubusercontent.com/jds0616-boop/CATC/main/%EC%9E%85%EA%B5%90%EC%95%88%EB%82%B4.pdf',
 
     // 1. 초기화 — Firebase DB 리스너 없음, 리사이즈 감시만 설정
     //    실제 PDF 로드는 사용자가 '입교안내' 탭을 클릭할 때 refresh()에서 수행
@@ -5178,8 +5178,7 @@ init: function() {
     },
 
     // 2. 가이드 업로드 — 정식 버전 출시 전까지 업로드 제한
-    uploadGuide: function(input) {
-        input.value = "";
+    uploadGuide: function() {
         ui.showAlert(
             "🚫 정식 버전 출시 전까지 업로드가 제한됩니다.\n\n" +
             "입교안내 PDF를 교체하려면 운영부에 문의해 주세요."

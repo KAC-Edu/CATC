@@ -1471,8 +1471,8 @@
                 <div style="margin-bottom:20px; padding:15px; background:#f0f7ff; border-radius:12px; border:1px solid #dbeafe;">
                     <span style="display:block; font-size:12px; font-weight:800; color:#3b82f6; margin-bottom:8px;">입교안내 가이드 (PDF)</span>
                     <div id="modalGuideStatus" style="font-size: 11px; margin-bottom: 10px; color: #64748b; font-weight: 700;">상태 확인 중...</div>
-                    <input type="file" id="modalGuideInput" accept=".pdf" style="display:none;" onchange="guideMgr.uploadGuide(this)">
-                    <button class="btn-action btn-primary" onclick="document.getElementById('modalGuideInput').click()" style="height:40px; font-size:13px; width:100%;">
+                    <input type="file" id="modalGuideInput" accept=".pdf" style="display:none;">
+                    <button class="btn-action btn-primary" onclick="guideMgr.uploadGuide()" style="height:40px; font-size:13px; width:100%;">
                         <i class="fa-solid fa-file-pdf"></i> PDF 업로드/교체
                     </button>
                 </div>
