@@ -2252,9 +2252,9 @@ body.night-mode .header-room-badge { background-color: #003366 !important; borde
     font-size: 22px; margin-bottom: 15px;
 }
 
-.card-label { font-size: 14px; font-weight: 700; color: #64748b; margin-bottom: 10px; }
-.card-value { font-size: 32px; font-weight: 900; color: #1e293b; }
-.card-value small { font-size: 16px; margin-left: 4px; color: #94a3b8; }
+.card-label { font-size: 13px; font-weight: 700; color: #64748b; margin-bottom: 2px; }
+.card-value { font-size: 24px; font-weight: 900; color: #1e293b; }
+.card-value small { font-size: 13px; margin-left: 3px; color: #94a3b8; }
 
 .card-status-bar {
     margin-top: 20px; font-size: 10px; font-weight: 800; letter-spacing: 1px;
@@ -2300,8 +2300,8 @@ body.night-mode .header-room-badge { background-color: #003366 !important; borde
 .combined-stats {
     display: flex;
     flex-direction: column;
-    gap: 15px;
-    margin-top: 5px;
+    gap: 6px;
+    margin-top: 0;
 }
 .stat-row { display: flex; justify-content: space-between; align-items: center; }
 .stat-divider { height: 1px; background: #e2e8f0; width: 100%; }

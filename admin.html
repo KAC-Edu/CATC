@@ -411,14 +411,14 @@
         <div class="dash-premium-grid">
             
 <!-- (1) 수강생 현황 및 행정 신청 (클릭 시 각각의 탭으로 이동) -->
-            <div class="stat-premium-card card-blue">
+            <div class="stat-premium-card card-blue" style="padding:18px;">
                 <div class="card-content combined-stats">
 <!-- 수강생 현황 (입교 인원 강조형) -->
-                    <div class="stat-row" onclick="ui.setMode('students')" style="cursor:pointer;">
+                    <div class="stat-row" onclick="ui.setMode('students')" style="cursor:pointer; padding:6px 0;">
                         <span class="card-label">수강생 입교 현황</span>
                         <div class="card-value">
                             <b id="dashArrivedCount">0</b>
-                            <span style="font-size: 14px; color: #94a3b8; font-weight: 600; margin-left: 2px;">
+                            <span style="font-size: 13px; color: #94a3b8; font-weight: 600; margin-left: 2px;">
                                 / <span id="dashTotalCount">0</span>명
                             </span>
                         </div>
@@ -427,21 +427,21 @@
                     <div class="stat-divider"></div>
                     
                     <!-- 외출/외박 현황 -->
-                    <div class="stat-row" onclick="ui.setMode('admin-action')" style="cursor:pointer;">
+                    <div class="stat-row" onclick="ui.setMode('admin-action')" style="cursor:pointer; padding:6px 0;">
                         <span class="card-label">금일 외출/외박 신청</span>
                         <div class="card-value color-coral"><b id="dashActionCount">0</b><small>명</small></div>
                     </div>
 
-                    <div class="stat-divider" style="border-top: 1px dashed #e2e8f0; margin: 8px 0;"></div>
+                    <div class="stat-divider" style="border-top: 1px dashed #e2e8f0; margin: 2px 0;"></div>
 
-                    <!-- 석식 제외 현황 [추가됨] -->
-                    <div class="stat-row" onclick="ui.setMode('dinner-skip')" style="cursor:pointer;">
+                    <!-- 석식 제외 현황 -->
+                    <div class="stat-row" onclick="ui.setMode('dinner-skip')" style="cursor:pointer; padding:6px 0;">
                         <span class="card-label">금일 석식 제외 신청</span>
                         <div class="card-value" style="color: #10b981;"><b id="dashDinnerSkipCount">0</b><small>명</small></div>
                     </div>
-                    <div class="stat-divider" style="border-top: 1px dashed #e2e8f0; margin: 8px 0;"></div>
+                    <div class="stat-divider" style="border-top: 1px dashed #e2e8f0; margin: 2px 0;"></div>
                     <!-- 태블릿 대여 현황 -->
-                    <div class="stat-row" onclick="ui.setMode('tablet-loan')" style="cursor:pointer;">
+                    <div class="stat-row" onclick="ui.setMode('tablet-loan')" style="cursor:pointer; padding:6px 0;">
                         <span class="card-label">전자기기 대여 신청</span>
                         <div class="card-value" style="color: #6366f1;"><b id="dashTabletLoanCount">0</b><small>명</small></div>
                     </div>
