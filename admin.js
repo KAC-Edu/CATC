@@ -562,11 +562,7 @@ forceEnterRoom: async function(room) {
     if (overlay) overlay.style.display = 'flex';
     // 방 전환 즉시 대시보드 초기화 (이전 방 데이터 잔류 방지)
     ui.clearDashboard();
-
-    // 방 전환 시 PDF 상태 초기화 (이전 방 페이지 번호 간섭 방지)
-    guideMgr.pdfDoc = null;
-    guideMgr.pageNum = 1;
-    guideMgr.isRendering = false;
+    // PDF 상태는 _roomCache가 강의실별로 독립 관리하므로 별도 리셋 불필요
 
     if (window.dbRef) {
         Object.values(window.dbRef).forEach(ref => {
@@ -2902,7 +2898,7 @@ setMode: function(mode) {
                 ui.initBoardPalette();
             }
             if (mode === 'attendance') ui.loadAttendanceView();
-            if (mode === 'guide') { guideMgr.pageNum = 1; setTimeout(() => guideMgr.refresh(), 100); }
+            if (mode === 'guide') { setTimeout(() => guideMgr.refresh(), 100); }
             if (mode === 'shuttle') {
                 // 날짜 입력창 기본값: 오늘
                 const dateEl = document.getElementById('shuttle-depart-date');
@@ -5071,9 +5067,24 @@ closeSummaryAndExit: function() {
 
 /* --- [수정 2차 - 완결본] 입교안내 가이드 관리 로직 (동적 스케일 및 기존 기능 통합) --- */
 const guideMgr = {
-    pdfDoc: null,
-    pageNum: 1,
+    // 강의실별 PDF 상태 캐시: { [roomId]: { pdfDoc, pageNum } }
+    _roomCache: {},
     isRendering: false,
+
+    // 현재 방의 캐시를 가져오거나 초기화
+    _cache: function() {
+        const room = state.room || '__default__';
+        if (!this._roomCache[room]) {
+            this._roomCache[room] = { pdfDoc: null, pageNum: 1 };
+        }
+        return this._roomCache[room];
+    },
+
+    // pdfDoc / pageNum을 캐시 경유로 접근 (하위 코드 호환용 getter/setter 래퍼)
+    get pdfDoc() { return this._cache().pdfDoc; },
+    set pdfDoc(v) { this._cache().pdfDoc = v; },
+    get pageNum() { return this._cache().pageNum; },
+    set pageNum(v) { this._cache().pageNum = v; },
 
     // GitHub에 올린 입교안내 PDF의 raw URL (파일 교체 시 이 URL만 수정)
     GUIDE_PDF_URL: 'https://raw.githubusercontent.com/jds0616-boop/CATC/main/%EC%9E%85%EA%B5%90%EC%95%88%EB%82%B4.pdf',
@@ -5172,12 +5183,12 @@ init: function() {
     },
 
     // 탭 전환 시 PDF 재렌더링 (setMode에서 호출)
-    // 이미 로드된 경우 재렌더, 처음 진입 시 GitHub URL에서 on-demand 로드
+    // 해당 강의실의 캐시에 pdfDoc이 있으면 저장된 페이지 그대로 재개,
+    // 없으면 GitHub URL에서 on-demand 로드 (첫 진입 시)
     refresh: function() {
-        guideMgr.pageNum = 1;
         if (guideMgr.pdfDoc) {
             guideMgr.isRendering = false;
-            guideMgr.renderPage(1);
+            guideMgr.renderPage(guideMgr.pageNum);
         } else {
             guideMgr.loadPDF(guideMgr.GUIDE_PDF_URL);
         }
