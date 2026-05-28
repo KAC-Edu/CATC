@@ -2821,6 +2821,7 @@ setMode: function(mode) {
         if (mode === 'home') {
             const tabs = document.querySelector('.mode-tabs');
             if (tabs) tabs.style.display = 'none';
+            setTimeout(() => ui.loadHomeStats(), 200);
         } else if (mode === 'waiting') {
             ui.initRoomSelect();
         }
@@ -3372,6 +3373,9 @@ renderQaList: function(f) {
         });
         const viewHome = document.getElementById('view-home');
         if(viewHome) viewHome.style.display = 'flex';
+
+        // 홈 화면 통계 데이터 로드
+        setTimeout(() => ui.loadHomeStats(), 200);
 
         // 6. 왼쪽 룸 선택 메뉴 "Select Room"으로 강제 고정
         const sel = document.getElementById('roomSelect');
@@ -4157,6 +4161,117 @@ resetShuttleRequests: function() {
 
     goHome: function() {
         ui.setMode('home');
+        // 홈 화면 통계 로드
+        setTimeout(() => ui.loadHomeStats(), 100);
+    },
+
+    // ── 홈 화면 통계 3블록 데이터 로드 ──
+    loadHomeStats: function() {
+        const today = getTodayString();
+        firebase.database().ref('courses').once('value', snap => {
+            const d = snap.val() || {};
+            let activeCount = 0, studentTotal = 0, outingTotal = 0;
+
+            Object.entries(d).forEach(([room, roomData]) => {
+                const st = roomData.status || {};
+                const students = roomData.students || {};
+                const actions = (roomData.admin_actions || {})[today] || {};
+
+                const isActive = st.roomStatus === 'active';
+                if (isActive) activeCount++;
+
+                const validStudents = Object.values(students).filter(s => s.name && s.name !== 'undefined');
+                const uniqueCount = new Set(validStudents.map(s => s.name)).size;
+                if (isActive) studentTotal += uniqueCount;
+
+                Object.values(actions).forEach(a => {
+                    if (a.type === 'outing' || a.type === 'overnight' || a.type === 'group_outing') outingTotal++;
+                });
+            });
+
+            const elA = document.getElementById('stat-active-count');
+            const elS = document.getElementById('stat-student-count');
+            const elO = document.getElementById('stat-outing-count');
+            if (elA) elA.textContent = activeCount;
+            if (elS) elS.textContent = studentTotal;
+            if (elO) elO.textContent = outingTotal;
+
+            // 전역 캐시
+            window._homeStatsData = d;
+            window._homeStatsToday = today;
+        });
+    },
+
+    // ── 홈 통계 팝업 ──
+    openHomeStatModal: function(type) {
+        const modal = document.getElementById('homeStatModal');
+        const title = document.getElementById('homeStatModalTitle');
+        const body  = document.getElementById('homeStatModalBody');
+        const d     = window._homeStatsData || {};
+        const today = window._homeStatsToday || getTodayString();
+
+        modal.style.display = 'flex';
+
+        if (type === 'active') {
+            title.textContent = '🏫 현재 강의 중인 강의실';
+            const rows = Object.entries(d)
+                .filter(([, r]) => (r.status || {}).roomStatus === 'active')
+                .map(([room, r]) => {
+                    const prof = (r.status || {}).professorName || '-';
+                    const course = (r.settings || {}).courseName || '-';
+                    return `<div style="display:flex; justify-content:space-between; align-items:center; padding:12px 16px; background:#f8fafc; border-radius:10px; margin-bottom:8px;">
+                        <div>
+                            <span style="font-weight:900; color:#3b82f6; margin-right:10px;">Room ${room}</span>
+                            <span style="font-size:13px; color:#334155;">${course}</span>
+                        </div>
+                        <span style="font-size:12px; color:#64748b; font-weight:700;">${prof} 교수</span>
+                    </div>`;
+                }).join('');
+            body.innerHTML = rows || '<p style="color:#94a3b8; text-align:center; padding:20px;">현재 강의 중인 강의실이 없습니다.</p>';
+
+        } else if (type === 'students') {
+            title.textContent = '👩‍🎓 과정별 교육생 현황';
+            const rows = Object.entries(d)
+                .filter(([, r]) => (r.status || {}).roomStatus === 'active')
+                .map(([room, r]) => {
+                    const course = (r.settings || {}).courseName || '-';
+                    const students = r.students || {};
+                    const cnt = new Set(Object.values(students).filter(s => s.name && s.name !== 'undefined').map(s => s.name)).size;
+                    return `<div style="display:flex; justify-content:space-between; align-items:center; padding:12px 16px; background:#f0fdf4; border-radius:10px; margin-bottom:8px;">
+                        <div>
+                            <span style="font-weight:900; color:#10b981; margin-right:10px;">Room ${room}</span>
+                            <span style="font-size:13px; color:#334155;">${course}</span>
+                        </div>
+                        <span style="font-size:22px; font-weight:900; color:#1e293b;">${cnt}<span style="font-size:13px; font-weight:600; color:#64748b;"> 명</span></span>
+                    </div>`;
+                }).join('');
+            body.innerHTML = rows || '<p style="color:#94a3b8; text-align:center; padding:20px;">교육생 정보가 없습니다.</p>';
+
+        } else if (type === 'outing') {
+            title.textContent = '🚶 과정별 외출/외박 신청 현황 (금일)';
+            const rows = Object.entries(d)
+                .filter(([, r]) => (r.status || {}).roomStatus === 'active')
+                .map(([room, r]) => {
+                    const course = (r.settings || {}).courseName || '-';
+                    const actions = (r.admin_actions || {})[today] || {};
+                    const outings = Object.values(actions).filter(a =>
+                        a.type === 'outing' || a.type === 'overnight' || a.type === 'group_outing');
+                    if (outings.length === 0) return '';
+                    return `<div style="padding:12px 16px; background:#fffbeb; border-radius:10px; margin-bottom:8px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                            <div>
+                                <span style="font-weight:900; color:#f59e0b; margin-right:10px;">Room ${room}</span>
+                                <span style="font-size:13px; color:#334155;">${course}</span>
+                            </div>
+                            <span style="font-size:22px; font-weight:900; color:#1e293b;">${outings.length}<span style="font-size:13px; font-weight:600; color:#64748b;"> 명</span></span>
+                        </div>
+                        ${outings.map(a => `<div style="font-size:12px; color:#78716c; padding:4px 0; border-top:1px solid #fde68a;">
+                            <span style="font-weight:700;">${a.name || '-'}</span> · ${a.type === 'overnight' ? '외박' : '외출'} · ${a.destination || ''} (${a.startTime || ''}~${a.endTime || ''})
+                        </div>`).join('')}
+                    </div>`;
+                }).filter(Boolean).join('');
+            body.innerHTML = rows || '<p style="color:#94a3b8; text-align:center; padding:20px;">금일 외출/외박 신청자가 없습니다.</p>';
+        }
     },
 
 
