@@ -3582,17 +3582,7 @@ body:-webkit-full-screen .main-stage {
     display: none !important;
 }
 
-/* ── 헤더 날짜/시간 시계 ── */
-.header-clock-large {
-    color: #fff;
-    font-size: 28px !important;
-    font-weight: 800;
-    letter-spacing: 0.5px;
-    flex: 1;
-    text-align: center;
-    white-space: nowrap;
-    text-shadow: 0 2px 4px rgba(0,0,0,0.3);
-}
+
 
 /* ── 유관 시스템 아코디언 메뉴 ── */
 .family-site-menu-inline {
@@ -3705,5 +3695,39 @@ body:-webkit-full-screen .main-stage {
 /* main-stage가 position:relative여야 absolute 기준이 됨 */
 .main-stage {
     position: relative !important;
+}
+
+/* ══ 상단 시계 — 완벽한 정중앙 고정 ══ */
+.header-clock-large {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    color: #fff;
+    font-weight: 800;
+    white-space: nowrap;
+    display: flex;
+    align-items: baseline;
+    gap: 15px;
+    pointer-events: none; /* 클릭 이벤트 통과 */
+}
+.clock-date {
+    font-size: 26px;
+    letter-spacing: 0.5px;
+}
+.clock-time {
+    font-size: 28px;
+}
+.clock-ampm {
+    font-size: 18px;
+    margin-left: 6px;
+    font-weight: 600;
+    color: rgba(255,255,255,0.8);
+}
+@keyframes blink-animation {
+    to { visibility: hidden; }
+}
+.blink {
+    animation: blink-animation 1s steps(2, start) infinite;
 }
 

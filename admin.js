@@ -4161,17 +4161,21 @@ resetShuttleRequests: function() {
         location.reload();
     },
 
-    // ── 헤더 날짜/시간 실시간 시계 ──
+    // ── 헤더 날짜/시간 실시간 시계 (AM/PM, 깜빡이는 콜론) ──
     startHeaderClock: function() {
         const update = () => {
             const el = document.getElementById('headerDateTime');
             if (!el) return;
             const now = new Date();
-            const y = now.getFullYear(), m = now.getMonth()+1, d = now.getDate();
-            const hh = now.getHours(), mm = String(now.getMinutes()).padStart(2,'0');
-            const ampm = hh < 12 ? '오전' : '오후';
-            const h12 = hh % 12 || 12;
-            el.textContent = `${y}.${m}.${d}  ${h12}:${mm} (${ampm})`;
+            const dateStr = `${now.getFullYear()}.${now.getMonth()+1}.${now.getDate()}`;
+            let hh = now.getHours();
+            const mm = String(now.getMinutes()).padStart(2, '0');
+            const ampm = hh >= 12 ? 'PM' : 'AM';
+            hh = hh % 12 || 12;
+            el.innerHTML = `
+                <span class="clock-date">${dateStr}</span>
+                <span class="clock-time">${hh}<span class="blink">:</span>${mm}<span class="clock-ampm">${ampm}</span></span>
+            `;
         };
         update();
         setInterval(update, 1000);
