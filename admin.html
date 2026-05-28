@@ -947,23 +947,33 @@
 
 <!-- [신규] 태블릿 대여 관리 섹션 -->
 <div id="view-tablet-loan" style="display:none; width:100%; flex-direction:column; align-items:center;">
-    <div class="view-header" style="text-align:center; margin-bottom:24px;">
+    <div class="view-header" style="text-align:center; margin-bottom:20px;">
         <h1><i class="fa-solid fa-tablet-screen-button" style="color:#6366f1;"></i> 전자기기 대여 신청 현황 <span class="header-room-badge room-badge-global"></span></h1>
-        <p>교육생이 신청한 태블릿 대여 현황입니다. (총 신청: <span id="tabletLoanTotal" style="font-weight:bold; color:#6366f1;">0</span>명)</p>
     </div>
-    <div style="width:100%; max-width:900px;">
-        <table class="admin-table" style="width:100%;">
+
+    <div class="modern-white-card" style="position:relative; padding-top:50px;">
+        <!-- 우측 상단 실시간 배지 -->
+        <div style="position:absolute; top:25px; right:35px; display:flex; align-items:center; gap:10px; color:#94a3b8; font-size:12px; font-weight:800;">
+            <div style="display:flex; align-items:center; gap:5px; background:#f8fafc; padding:4px 12px; border-radius:50px; border:1px solid #e2e8f0;">
+                <i class="fa-solid fa-sync fa-spin" style="color:#6366f1; font-size:11px;"></i>
+                <span>총 신청: <b id="tabletLoanTotal" style="color:#6366f1;">0</b>명</span>
+                <span style="color:#cbd5e1; font-weight:400;">|</span>
+                <span>실시간 업데이트 중</span>
+            </div>
+        </div>
+
+        <table>
             <thead>
                 <tr>
-                    <th style="width:50px;">번호</th>
-                    <th>성명</th>
-                    <th>연락처(뒷4자리)</th>
-                    <th>신청 시각</th>
-                    <th>관리</th>
+                    <th style="width:70px;">번호</th>
+                    <th style="text-align:center;">성명</th>
+                    <th style="width:160px;">연락처(뒷4자리)</th>
+                    <th style="width:150px;">신청 시각</th>
+                    <th style="width:120px;">관리</th>
                 </tr>
             </thead>
             <tbody id="tabletLoanTableBody">
-                <tr><td colspan="5" style="padding:50px; color:#94a3b8;">신청자가 없습니다.</td></tr>
+                <tr><td colspan="5" style="padding:60px; color:#94a3b8; text-align:center;">태블릿 대여 신청자가 없습니다.</td></tr>
             </tbody>
         </table>
     </div>

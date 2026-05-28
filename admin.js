@@ -3575,14 +3575,19 @@ loadTabletLoanData: function() {
             const time = item.timestamp ? new Date(item.timestamp).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }) : '-';
             const name = item.name || '-';
             const phone = item.phone || '-';
-            return `<tr style="text-align:center;">
-                <td style="text-align:center;">${idx + 1}</td>
-                <td style="font-weight:bold; text-align:center;">${name}</td>
-                <td style="text-align:center;">${phone}</td>
-                <td style="text-align:center;">${time}</td>
+            return `<tr>
+                <td style="text-align:center; color:#94a3b8; font-size:14px;">${idx + 1}</td>
+                <td style="text-align:center; font-weight:800; font-size:16px; color:#1e293b;">
+                    <span style="display:inline-flex; align-items:center; gap:8px;">
+                        <i class="fa-solid fa-tablet-screen-button" style="color:#6366f1; font-size:13px;"></i>
+                        ${name}
+                    </span>
+                </td>
+                <td style="text-align:center; font-size:15px; font-weight:700; color:#475569;">${phone}</td>
+                <td style="text-align:center; font-size:14px; color:#64748b;">${time}</td>
                 <td style="text-align:center;">
-                    <button class="btn-table-action" onclick="ui.cancelTabletLoan('${item.token}')"
-                            style="background-color:#6366f1; font-size:11px; padding:5px 8px;">
+                    <button onclick="ui.cancelTabletLoan('${item.token}')"
+                        style="background:#ede9fe; color:#6366f1; border:none; border-radius:8px; padding:8px 16px; font-size:13px; font-weight:800; cursor:pointer;">
                         신청 취소
                     </button>
                 </td>
