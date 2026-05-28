@@ -313,6 +313,13 @@ loadInitialData: function() {
     
 // [수정 완료] 보안 검증 강화 및 데이터 유출 차단 로직
 switchRoomAttempt: async function(newRoom, silent = false) {
+    // [방 이동 시 QR UI 강제 초기화]
+    if (typeof ui !== 'undefined' && ui.closeQrModal) ui.closeQrModal();
+    const _fqr = document.getElementById('floatingQR');
+    if (_fqr) _fqr.style.display = 'none';
+    const _mqr = document.getElementById('miniQRElement');
+    if (_mqr) _mqr.innerHTML = '';
+
     // 1. 시각적 즉시 차단 + 대시보드/헤더 초기화 (이전 방 정보 잔류 방지)
     const overlay = document.getElementById('statusOverlay');
     if (overlay && !silent) overlay.style.display = 'flex'; // silent(새로고침)일 때는 잠금화면 안 띄움

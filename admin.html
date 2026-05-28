@@ -493,20 +493,6 @@
 
     <div style="width:100%; max-width:900px; display:flex; flex-direction:column; gap:16px; padding:0 0 50px 0;">
 
-        <!-- 운영부/전체 공지 표시 (읽기 전용 리스트) -->
-        <div style="background:#fff; border-radius:16px; border:1.5px solid #e2e8f0; overflow:hidden; box-shadow:0 2px 8px rgba(0,0,0,0.04);">
-            <div style="background:#10b981; padding:14px 20px; display:flex; align-items:center; gap:10px;">
-                <i class="fa-solid fa-circle-info" style="color:#fff; font-size:16px;"></i>
-                <span style="color:#fff; font-weight:800; font-size:15px;">운영부 / 항기원 전체 공지</span>
-                <span style="color:rgba(255,255,255,0.5); font-size:11px; margin-left:auto;">
-                    <i class="fa-solid fa-sync fa-spin" style="margin-right:4px;"></i>실시간
-                </span>
-            </div>
-            <div id="globalNoticeDisplay" style="padding:16px; font-size:14px; line-height:1.7; color:#334155; min-height:80px;">
-                정보를 불러오는 중...
-            </div>
-        </div>
-
         <!-- ══════════════════════════════════════════════════════ -->
         <!-- 강의 안내 보드 (리치 텍스트 에디터) -->
         <!-- ══════════════════════════════════════════════════════ -->
@@ -582,6 +568,21 @@
         </div>
         <!-- ══════════════════════════════════════════════════════ -->
 
+        <!-- ② 운영부/전체 공지 -->
+        
+        <div style="background:#fff; border-radius:16px; border:1.5px solid #e2e8f0; overflow:hidden; box-shadow:0 2px 8px rgba(0,0,0,0.04);">
+            <div style="background:#10b981; padding:14px 20px; display:flex; align-items:center; gap:10px;">
+                <i class="fa-solid fa-circle-info" style="color:#fff; font-size:16px;"></i>
+                <span style="color:#fff; font-weight:800; font-size:15px;">운영부 / 항기원 전체 공지</span>
+                <span style="color:rgba(255,255,255,0.5); font-size:11px; margin-left:auto;">
+                    <i class="fa-solid fa-sync fa-spin" style="margin-right:4px;"></i>실시간
+                </span>
+            </div>
+            <div id="globalNoticeDisplay" style="padding:16px; font-size:14px; line-height:1.7; color:#334155; min-height:80px;">
+                정보를 불러오는 중...
+            </div>
+        </div>
+
         <!-- 담임교수 공지 작성 -->
         <div style="background:#fff; border-radius:16px; border:2px solid #003366; overflow:hidden; box-shadow:0 4px 16px rgba(0,51,102,0.08);">
             <div style="background:linear-gradient(135deg,#003366,#0055aa); padding:14px 20px; display:flex; align-items:center; gap:10px;">
@@ -601,7 +602,9 @@
         </div>
 
     </div>
-</div>
+
+    </div>
+</div></div>
 
 
 
