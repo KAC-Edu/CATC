@@ -997,6 +997,10 @@ resetCourse: function() {
         // 과정 기본값 재설정
         updates[`${rPath}/settings/courseName`] = "";
         updates[`${rPath}/settings/roomDetailName`] = ""; // 강의실 상세위치 초기화
+        updates[`${rPath}/settings/period`] = null;           // [버그수정] 교육기간 초기화
+        updates[`${rPath}/settings/coordinatorName`] = null;  // [버그수정] 운영담당자 초기화
+        updates[`${rPath}/settings/subjects`] = null;         // [버그수정] 강사/과목 리스트 초기화
+        updates[`${rPath}/settings/password`] = null;         // 비밀번호 초기화
         updates[`${rPath}/status/professorName`] = "";
         updates[`${rPath}/status/roomStatus`] = "idle"; // 비어있음으로 전환
         updates[`${rPath}/status/ownerSessionId`] = null; // 제어권 해제
