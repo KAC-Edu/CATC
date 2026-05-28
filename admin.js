@@ -4077,16 +4077,16 @@ resetShuttleRequests: function() {
 
 // [가족 사이트 토글 함수]
     toggleFamilySites: function() {
-        const menu = document.getElementById('familySiteMenu');
+        const menu    = document.getElementById('familySiteMenu');
         const chevron = document.getElementById('familyChevron');
+        if (!menu) return;
         const isOpen = menu.style.display === 'flex';
-
         if (isOpen) {
             menu.style.display = 'none';
-            chevron.classList.replace('fa-chevron-down', 'fa-chevron-up');
+            if (chevron) chevron.style.transform = 'rotate(0deg)';
         } else {
             menu.style.display = 'flex';
-            chevron.classList.replace('fa-chevron-up', 'fa-chevron-down');
+            if (chevron) chevron.style.transform = 'rotate(180deg)';
         }
     },
 

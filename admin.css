@@ -3582,3 +3582,56 @@ body:-webkit-full-screen .main-stage {
     display: none !important;
 }
 
+/* ── 헤더 날짜/시간 시계 ── */
+.header-clock-large {
+    color: #fff;
+    font-size: 28px !important;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+    flex: 1;
+    text-align: center;
+    white-space: nowrap;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+}
+
+/* ── 유관 시스템 아코디언 메뉴 ── */
+.family-site-menu-inline {
+    flex-direction: column;
+    background: rgba(255,255,255,0.06);
+    border-radius: 10px;
+    margin-top: 6px;
+    padding: 5px;
+    border: 1px solid rgba(255,255,255,0.1);
+}
+.family-site-menu-inline a {
+    padding: 10px 14px;
+    color: #cbd5e1;
+    text-decoration: none;
+    font-size: 13px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border-radius: 7px;
+    transition: background 0.15s, color 0.15s;
+}
+.family-site-menu-inline a:hover {
+    background: rgba(255,255,255,0.12);
+    color: #fff;
+}
+.family-site-menu-inline a i {
+    width: 16px;
+    text-align: center;
+    font-size: 13px;
+}
+
+/* ── 홈 배너 (전체 이미지 노출) ── */
+.dashboard-campus-banner img {
+    width: 100%;
+    height: auto !important;
+    aspect-ratio: 1879 / 837 !important;
+    object-fit: contain !important;
+    display: block;
+    border-radius: 18px;
+}
+

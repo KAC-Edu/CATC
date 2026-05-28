@@ -124,7 +124,7 @@
     <!-- 2. 사라졌던 사이드바 다시 생성 -->
     <div class="sidebar" id="mainSidebar">
         <div class="sidebar-top">
-            <div class="sidebar-header" onclick="ui.goHome()" style="cursor:pointer;" title="초기 화면으로 이동">KAC Training Platform</div>
+            <div class="sidebar-header" onclick="location.reload()" style="cursor:pointer;" title="새로고침">KAC Training Platform</div>
             <div class="setting-container">
                 <div class="setting-group"><label class="setting-label">Select Room</label><select id="roomSelect" class="setting-select"></select></div>
                 <div class="setting-group">
@@ -163,13 +163,14 @@
                 <button class="btn-action btn-danger" onclick="dataMgr.allIdleWithMasterKey()" style="background:#b91c1c;"><i class="fa-solid fa-power-off"></i> All Idle</button>
                 <button id="btnReset" class="btn-action btn-danger" onclick="dataMgr.resetCourse()"><i class="fa-solid fa-triangle-exclamation"></i> Reset</button>
             </div>
-            <div style="text-align: center; margin-top: 15px;">
-                <span onclick="ui.openSecretModal()" style="font-size:10px; color:#475569; cursor:pointer; text-decoration:underline;">시스템 보안 설정</span>
-            </div>
-<div class="divider"></div>
-                <div class="setting-group" style="position: relative;">
-                    <label class="setting-label">Related Platforms</label>
-                    <div id="familySiteMenu" class="family-site-menu" style="bottom:auto; top:45px; position:absolute; left:0; right:0; z-index:100;">
+
+            <div class="divider" style="margin:18px 0 12px;"></div>
+                <div class="setting-group" id="familySiteContainer" style="position:relative;">
+                    <button class="btn-action btn-dark" onclick="ui.toggleFamilySites()" style="background:#334155; height:45px; justify-content:space-between;">
+                        <span><i class="fa-solid fa-layer-group"></i> 유관 시스템 바로가기</span>
+                        <i class="fa-solid fa-chevron-down" id="familyChevron" style="font-size:11px; transition:transform 0.2s;"></i>
+                    </button>
+                    <div id="familySiteMenu" class="family-site-menu-inline" style="display:none;">
                         <a href="javascript:void(0)" onclick="ui.goFamilySite('coord', 'admin_coord.html')"><i class="fa-solid fa-user-tie"></i> 교육운영부 (행정)</a>
                         <a href="javascript:void(0)" onclick="ui.goFamilySite('support', 'support_admin.html')"><i class="fa-solid fa-hotel"></i> 교육지원부 (생활관)</a>
                         <a href="javascript:void(0)" onclick="ui.goFamilySite('driver', 'driver.html')"><i class="fa-solid fa-bus"></i> 기사 전용 (수송)</a>
@@ -178,9 +179,6 @@
                         <a href="javascript:void(0)" onclick="ui.goFamilySite('none', 'student_leader.html')"><i class="fa-solid fa-crown"></i> 학생장 전용</a>
                         <a href="javascript:void(0)" onclick="ui.goFamilySite('none', 'https://jds0616-boop.github.io/kac-cns-platform/index.html')"><i class="fa-solid fa-tower-broadcast"></i> CNS 통합 플랫폼</a>
                     </div>
-                    <button class="btn-action btn-dark" onclick="ui.toggleFamilySites()" style="background: #334155; height: 42px;">
-                        <i class="fa-solid fa-layer-group"></i> 유관 시스템 바로가기 <i class="fa-solid fa-chevron-up" id="familyChevron" style="margin-left: auto; font-size: 10px;"></i>
-                    </button>
                 </div>
 
             <button onclick="ui.openDevInfo()" style="width:100%; margin-top:8px; padding:9px 0; background:transparent; border:1px solid rgba(255,255,255,0.12); border-radius:8px; color:#64748b; font-size:12px; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px; transition:background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.06)'" onmouseout="this.style.background='transparent'">
@@ -254,7 +252,7 @@
         <span id="displayRoomName">Connecting...</span>
         <span class="course-sub-name" id="displayCourseTitle"></span>
     </div>
-    <div id="headerDateTime" style="color:#fff; font-size:19px; font-weight:700; letter-spacing:0.3px; white-space:nowrap; flex:1; text-align:center;"></div>
+    <div id="headerDateTime" class="header-clock-large"></div>
     <div class="header-controls">
         <div class="icon-btn-group">
             <!-- 강의실 실시간 현황판 바로가기 버튼 -->
