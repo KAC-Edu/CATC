@@ -2438,11 +2438,16 @@ showAlert: function(msg) {
                        </div>`
                     : '<span style="color:#cbd5e1;">-</span>';
 
+                const isMyRoom = (c === state.room && dataMgr.isMyOwnedRoom(c));
+                const rowNumCell = isMyRoom
+                    ? `<span style="display:inline-flex; align-items:center; justify-content:center; width:28px; height:28px; background:#3b82f6; border-radius:50%;"><i class="fa-solid fa-check" style="color:#fff; font-size:13px;"></i></span>`
+                    : rowNum;
+
                 row.innerHTML = `
-                    <td>${rowNum}</td>
+                    <td>${rowNumCell}</td>
                     <td style="font-weight:900; color:#3b82f6;">
                         Room ${c}
-                        ${(c === state.room && dataMgr.isMyOwnedRoom(c)) ? '<span class="my-room-badge">MY</span>' : ''}
+                        ${isMyRoom ? '<span class="my-room-badge">MY</span>' : ''}
                     </td>
                     <td><div class="td-course-name" title="${courseName}">${courseName}</div></td>
                     <td style="font-weight:600;">${profName}</td>
@@ -2454,8 +2459,8 @@ showAlert: function(msg) {
                     </td>
                 `;
 
-                // 파란박스: 현재 방이면서 비번 인증된 방만
-                if (c === state.room && dataMgr.isMyOwnedRoom(c)) {
+                // 연한 파란 배경: 현재 방이면서 비번 인증된 방만
+                if (isMyRoom) {
                     row.classList.add('is-my-room');
                 }
 

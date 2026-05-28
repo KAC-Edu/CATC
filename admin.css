@@ -1068,17 +1068,17 @@ body.night-mode .badge-idle {
 /* [최종 해결] '내 강의실'일 때 파란색 테두리 강조 (전체 라운딩 노출) */
 .status-table tr.is-my-room td {
     background-color: #eff6ff !important;
-    border-top: 2.5px solid #3b82f6 !important;
-    border-bottom: 2.5px solid #3b82f6 !important;
+    border-top: none !important;
+    border-bottom: none !important;
     position: relative !important; /* z-index 동작 보장 */
     z-index: 5 !important;
 }
 .status-table tr.is-my-room td:first-child {
-    border-left: 2.5px solid #3b82f6 !important;
+    border-left: none !important;
     border-radius: 8px 0 0 8px !important;
 }
 .status-table tr.is-my-room td:last-child {
-    border-right: 2.5px solid #3b82f6 !important;
+    border-right: none !important;
     border-radius: 0 8px 8px 0 !important;
 }
 
@@ -1252,21 +1252,17 @@ body.night-mode .badge-idle {
 
 /* --- 내 강의실(강조) 스타일 --- */
 .modern-table tr.is-my-room td {
-    background-color: #eff6ff !important; /* 연한 파란색 배경 */
-    border-top: 2px solid #3b82f6 !important; /* 위쪽 파란 선 */
-    border-bottom: 2px solid #3b82f6 !important; /* 아래쪽 파란 선 */
+    background-color: #eff6ff !important; /* 연한 파란 배경만 유지, 테두리 없음 */
+    border-top: none !important;
+    border-bottom: none !important;
 }
-
-/* 첫 번째 칸과 마지막 칸의 옆면 테두리까지 둘러서 '파란 네모' 완성 */
 .modern-table tr.is-my-room td:first-child {
-    border-left: 2px solid #3b82f6 !important;
-    border-top-left-radius: 10px;
-    border-bottom-left-radius: 10px;
+    border-left: none !important;
+    border-radius: 0;
 }
 .modern-table tr.is-my-room td:last-child {
-    border-right: 2px solid #3b82f6 !important;
-    border-top-right-radius: 10px;
-    border-bottom-right-radius: 10px;
+    border-right: none !important;
+    border-radius: 0;
 }
 
 /* "관리 중" 뱃지 디자인 */
@@ -2080,7 +2076,7 @@ body.night-mode .header-room-badge { background-color: #003366 !important; borde
 }
 
 .status-table tr.is-my-room td:first-child {
-    border-left: 3px solid #3b82f6 !important;
+    border-left: none !important;
 }
 
 
