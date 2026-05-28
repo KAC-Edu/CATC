@@ -254,6 +254,8 @@
         <span id="displayRoomName">Connecting...</span>
         <span class="course-sub-name" id="displayCourseTitle"></span>
     </div>
+    <!-- 날짜/시간 실시간 표시 -->
+    <div id="headerDateTime" style="color:#fff; font-size:17px; font-weight:700; letter-spacing:0.3px; white-space:nowrap;"></div>
     <div class="header-controls">
         <div class="icon-btn-group">
             <!-- 강의실 실시간 현황판 바로가기 버튼 -->
@@ -697,7 +699,7 @@
 
 <!-- ══ 홈 화면 (#view-home) ══ -->
 <div id="view-home" class="full-dashboard" style="display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:70vh;">
-    <div class="view-header" style="margin-bottom:20px;">
+    <div class="view-header" style="margin-bottom:20px; text-align:center;">
         <h1 style="font-size:42px;"><i class="fa-solid fa-plane-departure"></i> 항공기술훈련원 교육운영플랫폼</h1>
         <p>CATC Education Operating Platform</p>
     </div>
@@ -706,57 +708,66 @@
     </div>
 
     <!-- 3개 통계 블록 -->
-    <div style="display:flex; gap:16px; width:100%; max-width:1100px; flex-wrap:wrap;">
+    <div style="display:flex; gap:16px; width:100%; max-width:1100px; flex-wrap:wrap; margin-bottom:40px;">
 
-        <!-- ① 현재 강의 중 -->
+        <!-- ① 현재 강의 중 (이번 주) -->
         <div onclick="ui.openHomeStatModal('active')"
-             style="flex:1; min-width:200px; background:#fff; border-radius:18px; padding:24px 28px;
+             style="flex:1; min-width:200px; background:#fff; border-radius:18px; padding:28px 24px;
                     box-shadow:0 4px 20px rgba(0,0,0,0.07); cursor:pointer; border:1.5px solid #e2e8f0;
-                    transition:transform 0.15s, box-shadow 0.15s;"
+                    transition:transform 0.15s, box-shadow 0.15s; text-align:center;"
              onmouseover="this.style.transform='translateY(-3px)'; this.style.boxShadow='0 8px 28px rgba(59,130,246,0.15)'"
              onmouseout="this.style.transform=''; this.style.boxShadow='0 4px 20px rgba(0,0,0,0.07)'">
-            <div style="display:flex; align-items:center; gap:12px; margin-bottom:14px;">
+            <div style="display:flex; align-items:center; justify-content:center; gap:10px; margin-bottom:16px;">
                 <div style="width:44px; height:44px; background:#eff6ff; border-radius:12px; display:flex; align-items:center; justify-content:center;">
                     <i class="fa-solid fa-chalkboard-user" style="color:#3b82f6; font-size:20px;"></i>
                 </div>
-                <span style="font-size:14px; font-weight:700; color:#64748b;">현재 강의 중</span>
+                <span style="font-size:15px; font-weight:700; color:#64748b;">현재 강의 중</span>
             </div>
-            <div style="font-size:42px; font-weight:900; color:#1e293b;" id="stat-active-count">-</div>
-            <div style="font-size:12px; color:#94a3b8; margin-top:4px; font-weight:600;">개 강의실 운영 중 · 클릭하여 상세 보기</div>
+            <div style="display:flex; align-items:baseline; justify-content:center; gap:8px;">
+                <span style="font-size:48px; font-weight:900; color:#1e293b; line-height:1;" id="stat-active-count">-</span>
+                <span style="font-size:16px; font-weight:700; color:#64748b;">개 과정 운영중</span>
+            </div>
+            <div style="font-size:12px; color:#94a3b8; margin-top:10px; font-weight:600;">이번 주 기준 · 클릭하여 상세 보기</div>
         </div>
 
-        <!-- ② 총 교육생 -->
+        <!-- ② 총 교육생 (이번 주) -->
         <div onclick="ui.openHomeStatModal('students')"
-             style="flex:1; min-width:200px; background:#fff; border-radius:18px; padding:24px 28px;
+             style="flex:1; min-width:200px; background:#fff; border-radius:18px; padding:28px 24px;
                     box-shadow:0 4px 20px rgba(0,0,0,0.07); cursor:pointer; border:1.5px solid #e2e8f0;
-                    transition:transform 0.15s, box-shadow 0.15s;"
+                    transition:transform 0.15s, box-shadow 0.15s; text-align:center;"
              onmouseover="this.style.transform='translateY(-3px)'; this.style.boxShadow='0 8px 28px rgba(16,185,129,0.15)'"
              onmouseout="this.style.transform=''; this.style.boxShadow='0 4px 20px rgba(0,0,0,0.07)'">
-            <div style="display:flex; align-items:center; gap:12px; margin-bottom:14px;">
+            <div style="display:flex; align-items:center; justify-content:center; gap:10px; margin-bottom:16px;">
                 <div style="width:44px; height:44px; background:#f0fdf4; border-radius:12px; display:flex; align-items:center; justify-content:center;">
                     <i class="fa-solid fa-users" style="color:#10b981; font-size:20px;"></i>
                 </div>
-                <span style="font-size:14px; font-weight:700; color:#64748b;">총 교육생</span>
+                <span style="font-size:15px; font-weight:700; color:#64748b;">총 교육생</span>
             </div>
-            <div style="font-size:42px; font-weight:900; color:#1e293b;" id="stat-student-count">-</div>
-            <div style="font-size:12px; color:#94a3b8; margin-top:4px; font-weight:600;">명 현재 교육 중 · 클릭하여 과정별 보기</div>
+            <div style="display:flex; align-items:baseline; justify-content:center; gap:8px;">
+                <span style="font-size:48px; font-weight:900; color:#1e293b; line-height:1;" id="stat-student-count">-</span>
+                <span style="font-size:16px; font-weight:700; color:#64748b;">명 교육 중</span>
+            </div>
+            <div style="font-size:12px; color:#94a3b8; margin-top:10px; font-weight:600;">이번 주 기준 · 클릭하여 과정별 보기</div>
         </div>
 
-        <!-- ③ 외출/외박 신청자(금일) -->
+        <!-- ③ 외출/외박 신청(금일) -->
         <div onclick="ui.openHomeStatModal('outing')"
-             style="flex:1; min-width:200px; background:#fff; border-radius:18px; padding:24px 28px;
+             style="flex:1; min-width:200px; background:#fff; border-radius:18px; padding:28px 24px;
                     box-shadow:0 4px 20px rgba(0,0,0,0.07); cursor:pointer; border:1.5px solid #e2e8f0;
-                    transition:transform 0.15s, box-shadow 0.15s;"
+                    transition:transform 0.15s, box-shadow 0.15s; text-align:center;"
              onmouseover="this.style.transform='translateY(-3px)'; this.style.boxShadow='0 8px 28px rgba(245,158,11,0.15)'"
              onmouseout="this.style.transform=''; this.style.boxShadow='0 4px 20px rgba(0,0,0,0.07)'">
-            <div style="display:flex; align-items:center; gap:12px; margin-bottom:14px;">
+            <div style="display:flex; align-items:center; justify-content:center; gap:10px; margin-bottom:16px;">
                 <div style="width:44px; height:44px; background:#fffbeb; border-radius:12px; display:flex; align-items:center; justify-content:center;">
                     <i class="fa-solid fa-person-walking-arrow-right" style="color:#f59e0b; font-size:20px;"></i>
                 </div>
-                <span style="font-size:14px; font-weight:700; color:#64748b;">외출/외박 신청(금일)</span>
+                <span style="font-size:15px; font-weight:700; color:#64748b;">외출/외박 신청(금일)</span>
             </div>
-            <div style="font-size:42px; font-weight:900; color:#1e293b;" id="stat-outing-count">-</div>
-            <div style="font-size:12px; color:#94a3b8; margin-top:4px; font-weight:600;">명 신청 · 클릭하여 과정별 보기</div>
+            <div style="display:flex; align-items:baseline; justify-content:center; gap:8px;">
+                <span style="font-size:48px; font-weight:900; color:#1e293b; line-height:1;" id="stat-outing-count">-</span>
+                <span style="font-size:16px; font-weight:700; color:#64748b;">명 신청</span>
+            </div>
+            <div style="font-size:12px; color:#94a3b8; margin-top:10px; font-weight:600;">금일 기준 · 클릭하여 과정별 보기</div>
         </div>
 
     </div>
