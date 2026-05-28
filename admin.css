@@ -3069,13 +3069,16 @@ body.night-mode .status-badge.status-arrived {
     background: linear-gradient(160deg, #0c4a6e 0%, #075985 100%);
     border: 1px solid #0ea5e9;
     border-radius: 12px;
-    padding: 6px;
+    padding: 8px;
     position: absolute;
+    top: 100% !important;        /* 버튼 바로 아래 */
     bottom: auto !important;
     left: 0;
+    right: 0;
     width: 100%;
     z-index: 1000;
-    box-shadow: 0 -10px 30px rgba(14, 165, 233, 0.25);
+    box-shadow: 0 8px 24px rgba(14, 165, 233, 0.25);
+    margin-top: 4px;
 }
 
 .family-site-menu a {

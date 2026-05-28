@@ -4158,16 +4158,7 @@ resetShuttleRequests: function() {
     },
 
     goHome: function() {
-        // KAC Training Platform 클릭 시:
-        // 1. 방 상태를 Select Room으로 리셋 (방은 유지하되 홈화면만 표시)
-        const sel = document.getElementById('roomSelect');
-        if (sel) sel.value = '';
-
-        // 2. 홈 모드 전환
-        ui.setMode('home');
-
-        // 3. 통계 데이터 갱신
-        if (typeof ui.loadHomeStats === 'function') setTimeout(() => ui.loadHomeStats(), 150);
+        location.reload();
     },
 
     // ── 헤더 날짜/시간 실시간 시계 ──
