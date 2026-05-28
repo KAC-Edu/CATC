@@ -167,13 +167,18 @@ saveInstructorNoticeMain: function() {
         const editor = document.getElementById('boardEditor');
         if(!editor) return;
         const html = editor.innerHTML;
-        firebase.database().ref(`courses/${state.room}/boardNotice`).set(html).then(() => {
-            const now = new Date();
-            const ts = `${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}`;
-            const el = document.getElementById('boardLastSaved');
-            if(el) el.textContent = `오늘 ${ts}`;
-            ui.showAlert("✅ 강의 안내 보드가 저장되었습니다.");
-        });
+        firebase.database().ref(`courses/${state.room}/boardNotice`).set(html)
+            .then(() => {
+                const now = new Date();
+                const ts = `${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}`;
+                const el = document.getElementById('boardLastSaved');
+                if(el) el.textContent = `오늘 ${ts}`;
+                ui.showAlert("✅ 강의 안내 보드가 저장되었습니다.");
+            })
+            .catch(err => {
+                console.error("boardNotice 저장 실패:", err);
+                ui.showAlert("❌ 저장 실패: Firebase Rules에 boardNotice 쓰기 권한을 추가해 주세요.\n\n경로: courses/$roomId/boardNotice\n규칙: \".write\": \"auth != null\"");
+            });
     },
 
     loadBoardNotice: function() {
