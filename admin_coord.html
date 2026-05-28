@@ -3267,10 +3267,7 @@ function openPrintModal() {
 // ==========================================
 
 // 날짜 변경 시 호출
-function changeManagerDate(val) {
-    selectedDate = val; // 전역 날짜 변수 업데이트
-    renderOutingManager(); // 리스트 새로고침
-}
+// [중복 제거] changeManagerDate - 위에 정의된 버전 사용
 
 // 인쇄 시작 로직
 function startPrint(mode) { 
@@ -3499,7 +3496,7 @@ function clearNoticeHistory() {
     firebase.database().ref(`courses/${currentRID}/coordNoticeHistory`).set(null)
         .then(() => renderNoticeHistory());
 }
-    function saveGlobalNotice() { firebase.database().ref(`system/globalNotice`).set(document.getElementById('globalNotice').value).then(()=>alert("저장 완료")); }
+    // [중복 제거] saveGlobalNotice - 아래 async 버전 사용
     async function handleQRUpload(input) { const reader = new FileReader(); reader.onload = async (e) => { await firebase.database().ref(`courses/${currentRID}/attendanceQR`).set(e.target.result); alert("QR 저장 완료"); updateQRPreview(); }; reader.readAsDataURL(input.files[0]); }
     function updateQRPreview() { const room = globalAllData[currentRID]; const img = document.getElementById('qrPreview'); const empty = document.getElementById('qrEmpty'); if(room?.attendanceQR) { img.src = room.attendanceQR; img.style.display = "block"; empty.style.display = "none"; } else { img.style.display = "none"; empty.style.display = "block"; } }
     function loadActionHistory(date) { selectedDate = date; renderTotalHistory(); }
