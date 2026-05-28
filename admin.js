@@ -160,6 +160,36 @@ saveInstructorNoticeMain: function() {
         });
     },
 
+    // ── 강의 안내 보드 저장/불러오기 ──
+    saveBoardNotice: function() {
+        if(state.isObserver) return ui.showAlert("👁️ 옵저버 모드에서는 수정할 수 없습니다.");
+        if(!state.room) return ui.showAlert("강의실을 먼저 선택해 주세요.");
+        const editor = document.getElementById('boardEditor');
+        if(!editor) return;
+        const html = editor.innerHTML;
+        firebase.database().ref(`courses/${state.room}/boardNotice`).set(html).then(() => {
+            const now = new Date();
+            const ts = `${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}`;
+            const el = document.getElementById('boardLastSaved');
+            if(el) el.textContent = `오늘 ${ts}`;
+            ui.showAlert("✅ 강의 안내 보드가 저장되었습니다.");
+        });
+    },
+
+    loadBoardNotice: function() {
+        if(!state.room) return;
+        firebase.database().ref(`courses/${state.room}/boardNotice`).once('value', snap => {
+            const editor = document.getElementById('boardEditor');
+            if(!editor) return;
+            const val = snap.val();
+            if(val) {
+                editor.innerHTML = val;
+                const el = document.getElementById('boardLastSaved');
+                if(el) el.textContent = '저장된 내용 불러옴';
+            }
+        });
+    },
+
     checkAdminSecret: async function(input) {
         const snap = await firebase.database().ref('system/adminSecret').get();
         const dbSecret = snap.val() || btoa("kac123!@#"); 
@@ -519,17 +549,6 @@ clearOwnedRooms: function() {
 // [수정] 진입 시 잠금을 기본값으로 설정하고 권한에 따라 해제하는 버전
 forceEnterRoom: async function(room) {
     const cleanRoom = room.toUpperCase();
-
-    // ── 방 전환 즉시 QR UI 강제 초기화 (이전 강의실 QR 잔류 방지) ──
-    const floatingQR = document.getElementById('floatingQR');
-    const qrModal    = document.getElementById('qrModal');
-    const miniQREl   = document.getElementById('miniQRElement');
-    const qrBigTarget = document.getElementById('qrBigTarget');
-    if (floatingQR)  floatingQR.style.display  = 'none'; // 플로팅 QR 닫기
-    if (qrModal)     qrModal.style.display     = 'none'; // 확대 QR 모달 닫기
-    if (miniQREl)    miniQREl.innerHTML         = '';     // 이전 QR 이미지 제거
-    if (qrBigTarget) qrBigTarget.innerHTML      = '';     // 확대 QR 이미지 제거
-    // ────────────────────────────────────────────────────────────────
 
     const overlay = document.getElementById('statusOverlay');
     // 항상 잠금 상태로 시작 - status 리스너에서 소유권 확인 후 해제
@@ -2003,6 +2022,38 @@ updateQaCountBadge: function() {
             state.noticeSeen[coordKey] !== (await firebase.database().ref(`courses/${state.room}/coordNotice`).once('value')).val();
         // 공지 탭 진입 시 flash 예약 (렌더링 후)
         setTimeout(() => ui._flashNewNotices(), 300);
+    },
+
+    // 강의 안내 보드 색상 팔레트 초기화 (중복 방지)
+    initBoardPalette: function() {
+        const palette = document.getElementById('colorPalette');
+        if(!palette || palette.dataset.init === '1') return;
+        palette.dataset.init = '1';
+        const colors = [
+            '#000000','#1e293b','#dc2626','#ea580c','#ca8a04',
+            '#16a34a','#0284c7','#7c3aed','#db2777','#ffffff'
+        ];
+        colors.forEach(c => {
+            const btn = document.createElement('button');
+            btn.title = c;
+            btn.style.cssText = `width:22px;height:22px;background:${c};border:2px solid ${c==='#ffffff'?'#ccc':'transparent'};border-radius:50%;cursor:pointer;flex-shrink:0;`;
+            btn.onclick = () => {
+                document.execCommand('foreColor', false, c);
+                document.getElementById('boardEditor').focus();
+            };
+            palette.appendChild(btn);
+        });
+    },
+
+    loadNoticeView: async function() {
+        if(!state.room) return;
+        
+        // 1. 강사 본인 공지 불러오기
+        const snap = await firebase.database().ref(`courses/${state.room}/notice`).once('value');
+        document.getElementById('instNoticeInputMain').value = snap.val() || "";
+
+        // 새 공지 flash 예약
+        setTimeout(() => ui._flashNewNotices(), 300);
 
         // 2. 우측 영역: 통합 공지 조회
         const globalRef = firebase.database().ref('system/globalNotice');
@@ -2814,7 +2865,13 @@ setMode: function(mode) {
             }
             
             if (mode === 'dashboard') ui.loadDashboardStats(); 
-            if (mode === 'notice') { ui.loadNoticeView(); guideMgr.clearCoordNoticeBadge(); } 
+            if (mode === 'notice') { 
+                ui.loadNoticeView(); 
+                guideMgr.clearCoordNoticeBadge();
+                // 안내 보드 기존 내용 불러오기 + 색상 팔레트 초기화
+                dataMgr.loadBoardNotice();
+                ui.initBoardPalette();
+            }
             if (mode === 'attendance') ui.loadAttendanceView();
             if (mode === 'guide') setTimeout(() => guideMgr.refresh(), 100);
             if (mode === 'shuttle') {
