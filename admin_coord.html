@@ -427,8 +427,8 @@
 
 
     /* 개별 과정 현황 박스 */
-    .dashboard-split { display: flex; gap: 8px; align-items: stretch; width: 100%; }
-    .col-1-3 { flex: 1; }
+    .dashboard-split { display: flex; gap: 8px; align-items: stretch; width: 100%; flex-wrap: wrap; }
+    .col-1-3 { flex: 1; min-width: 80px; }
     .col-2-3 { flex: 2.5; }
     /* [변경] 상세페이지 입교 현황 박스 - 남색 실선 적용 */
 .entry-box { 
@@ -1251,6 +1251,7 @@ body.modal-open .app-content {
 
           <div class="dashboard-split">
               <div class="col-1-3"><div class="entry-box" onclick="showEntryMemberList()"><span style="font-size:11px; font-weight:800; color:var(--blue-deep);">입교 현황</span><div class="entry-val" id="ind-entry-cnt">0<span>명</span></div></div></div>
+              <div class="col-1-3"><div class="entry-box" onclick="showTabletLoanList()" style="border-color:#6366f1; background:linear-gradient(135deg,#f5f3ff,#ede9fe);"><span style="font-size:11px; font-weight:800; color:#6366f1;"><i class="fa-solid fa-tablet-screen-button"></i> 전자기기 대여</span><div class="entry-val" id="ind-tablet-cnt" style="color:#6366f1;">0<span>명</span></div></div></div>
               <div class="col-2-3">
               <div class="section-card" style="height:100%; padding:10px; display:flex; flex-direction:column; justify-content:center;">
                   <div class="section-title" style="margin-bottom:8px; font-size:11px;">
@@ -3502,6 +3503,23 @@ function clearNoticeHistory() {
     async function handleQRUpload(input) { const reader = new FileReader(); reader.onload = async (e) => { await firebase.database().ref(`courses/${currentRID}/attendanceQR`).set(e.target.result); alert("QR 저장 완료"); updateQRPreview(); }; reader.readAsDataURL(input.files[0]); }
     function updateQRPreview() { const room = globalAllData[currentRID]; const img = document.getElementById('qrPreview'); const empty = document.getElementById('qrEmpty'); if(room?.attendanceQR) { img.src = room.attendanceQR; img.style.display = "block"; empty.style.display = "none"; } else { img.style.display = "none"; empty.style.display = "block"; } }
     function loadActionHistory(date) { selectedDate = date; renderTotalHistory(); }
+    function showTabletLoanList() {
+        if (!currentRID) return;
+        firebase.database().ref(`courses/${currentRID}/tablet_loans`).once('value', snap => {
+            const data = snap.val() || {};
+            const list = Object.values(data);
+            if (list.length === 0) { alert('[전자기기 대여 신청자]
+
+신청자가 없습니다.'); return; }
+            const names = list.sort((a,b)=>(a.name||'').localeCompare(b.name||''))
+                .map(d => `${d.name}(${d.phone||'-'})`).join('
+');
+            alert(`[전자기기 대여 신청자 - ${list.length}명]
+
+${names}`);
+        });
+    }
+
     function showEntryMemberList() { const room = globalAllData[currentRID]; const valid = Object.values(room.students || {}).filter(s => s.name && s.name !== "undefined"); const list = Array.from(new Set(valid.map(s => s.name))).sort().join(", "); alert(`[입교 명단]\n\n${list || "입교자 없음"}`); }
 
     // 입교현황 실시간 카운트
@@ -3518,6 +3536,12 @@ function clearNoticeHistory() {
             const cnt = Object.values(students).filter(s => s.name && s.name !== 'undefined').length;
             const el = document.getElementById('ind-entry-cnt');
             if (el) el.innerHTML = `${cnt}<span>명</span>`;
+        });
+
+        // 태블릿 대여 카운트 실시간
+        firebase.database().ref(`courses/${currentRID}/tablet_loans`).on('value', snap => {
+            const elT = document.getElementById('ind-tablet-cnt');
+            if (elT) elT.innerHTML = `${Object.keys(snap.val() || {}).length}<span>명</span>`;
         });
     }
 // [개편] 목적지별 클릭 시 상세 명단 팝업

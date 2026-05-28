@@ -989,6 +989,7 @@ resetCourse: function() {
         updates[`${rPath}/quizFinalResults`] = null;
         updates[`${rPath}/admin_actions`] = null;
         updates[`${rPath}/dinner_skips`] = null;
+        updates[`${rPath}/tablet_loans`] = null;         // 태블릿 대여 초기화
         updates[`${rPath}/shuttle`] = null;
         updates[`${rPath}/notice`] = null;
         updates[`${rPath}/coordNotice`] = null;
@@ -1844,6 +1845,7 @@ loadDashboardStats: function() {
         actual: firebase.database().ref(`courses/${room}/students`),
         action: firebase.database().ref(`courses/${room}/admin_actions/${today}`),
         dinner: firebase.database().ref(`courses/${room}/dinner_skips/${today}`),
+        tablet: firebase.database().ref(`courses/${room}/tablet_loans`),
         departure: firebase.database().ref(`courses/${room}/shuttle/departure`),
         shuttleReq: firebase.database().ref(`courses/${room}/shuttle/requests`)
     };
@@ -1925,6 +1927,11 @@ loadDashboardStats: function() {
         if (state.room !== room) return;
         const count = Object.keys(s.val() || {}).length;
         if (document.getElementById('dashDinnerSkipCount')) document.getElementById('dashDinnerSkipCount').innerText = count;
+    });
+    refs.tablet.on('value', s => {
+        if (state.room !== room) return;
+        const count = Object.keys(s.val() || {}).length;
+        if (document.getElementById('dashTabletLoanCount')) document.getElementById('dashTabletLoanCount').innerText = count;
     });
 
 
@@ -2815,7 +2822,7 @@ setMode: function(mode) {
         }
 
         // 2. 현재 선택한 모드에 맞는 구역 ID 결정
-        const targetView = (mode === 'admin-action') ? 'view-admin-action' : (mode === 'dinner-skip') ? 'view-dinner-skip' : `view-${mode}`;
+        const targetView = (mode === 'admin-action') ? 'view-admin-action' : (mode === 'dinner-skip') ? 'view-dinner-skip' : (mode === 'tablet-loan') ? 'view-tablet-loan' : `view-${mode}`;
         const targetEl = document.getElementById(targetView);
 
         // 3. 화면 표시 (전부 flex)
@@ -2842,7 +2849,7 @@ setMode: function(mode) {
         if (state.room) {
             // ── 교육생 화면 모드 설정 (퀴즈는 맨 먼저 처리) ──
             if (!state.isObserver) {
-                const safeStudentModes = ['waiting', 'shuttle', 'admin-action', 'dinner-skip', 'students', 'dashboard', 'notice', 'attendance', 'guide', 'dormitory'];
+                const safeStudentModes = ['waiting', 'shuttle', 'admin-action', 'dinner-skip', 'tablet-loan', 'students', 'dashboard', 'notice', 'attendance', 'guide', 'dormitory'];
                 let studentMode;
                 if (mode === 'quiz') {
                     studentMode = 'quiz';
@@ -2921,6 +2928,7 @@ setMode: function(mode) {
             }
             if (mode === 'admin-action') ui.loadAdminActionData();
             if (mode === 'dinner-skip') ui.loadDinnerSkipData();
+            if (mode === 'tablet-loan') ui.loadTabletLoanData();
             if (mode === 'students') ui.loadStudentList();
             
             if (mode === 'dormitory') {
@@ -3542,6 +3550,52 @@ loadDinnerSkipData: function() {
                 "<tr><td colspan='4' style='padding:50px; color:#94a3b8;'>제외 신청자가 없습니다.</td></tr>";
         });
     },
+
+// [신규] 태블릿 대여 신청 현황 로드
+loadTabletLoanData: function() {
+    if(!state.room) return;
+    firebase.database().ref(`courses/${state.room}/tablet_loans`).on('value', snap => {
+        const data = snap.val() || {};
+        const tbody = document.getElementById('tabletLoanTableBody');
+        if(!tbody) return;
+
+        const totalEl = document.getElementById('tabletLoanTotal');
+        const tokens = Object.keys(data);
+        if(totalEl) totalEl.innerText = tokens.length;
+
+        if(tokens.length === 0) {
+            tbody.innerHTML = "<tr><td colspan='5' style='padding:50px; color:#94a3b8;'>태블릿 대여 신청자가 없습니다.</td></tr>";
+            return;
+        }
+
+        const sorted = tokens.map(token => ({ token, ...data[token] }))
+            .sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+
+        tbody.innerHTML = sorted.map((item, idx) => {
+            const time = item.timestamp ? new Date(item.timestamp).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }) : '-';
+            return `<tr>
+                <td>${idx + 1}</td>
+                <td style="font-weight:bold;">${item.name || '-'}</td>
+                <td>${item.phone || '-'}</td>
+                <td>${time}</td>
+                <td>
+                    <button class="btn-table-action" onclick="ui.cancelTabletLoan('${item.token}')"
+                            style="background-color:#6366f1; font-size:11px; padding:5px 8px;">
+                        신청 취소
+                    </button>
+                </td>
+            </tr>`;
+        }).join('');
+    });
+},
+
+// [신규] 태블릿 대여 신청 개별 취소
+cancelTabletLoan: function(token) {
+    if(state.isObserver) return ui.showAlert("👁️ 옵저버는 취소할 수 없습니다.");
+    if(!confirm("이 학생의 태블릿 대여 신청을 취소하시겠습니까?")) return;
+    firebase.database().ref(`courses/${state.room}/tablet_loans/${token}`).remove()
+        .then(() => { ui.showAlert("✅ 태블릿 대여 신청이 취소되었습니다."); });
+},
 
 // [신규] 특정 학생 한 명만 석식 제외 명단에서 삭제 (식사 가능 상태로 복구)
 cancelIndividualDinnerSkip: function(token) {
@@ -5645,8 +5699,8 @@ loadCurrentSettings: function() {
         // 5. menuFeatures 체크박스 상태 로드
         // 기본값: 차량신청(shuttle) + 외출/외박(adminAction)만 ON, 나머지는 OFF
         const features = s.menuFeatures || {};
-        const defaultOn = ['shuttle', 'adminAction'];
-        const featureKeys = ['facility','shuttle','adminAction','meal','attendanceQr','cns'];
+        const defaultOn = ['shuttle', 'adminAction', 'tabletLoan'];
+        const featureKeys = ['facility','shuttle','adminAction','meal','attendanceQr','cns','tabletLoan'];
         featureKeys.forEach(key => {
             const el = document.getElementById(`feat-${key}`);
             if (!el) return;
@@ -5729,7 +5783,7 @@ saveAll: function() {
         updates[`courses/${state.room}/status/ownerSessionId`] = state.sessionId;
 
         // menuFeatures: 체크박스 상태 저장 (false일 때만 명시, true는 기본값)
-        const featureKeys = ['facility','shuttle','adminAction','meal','attendanceQr','cns'];
+        const featureKeys = ['facility','shuttle','adminAction','meal','attendanceQr','cns','tabletLoan'];
         const menuFeatures = {};
         featureKeys.forEach(key => {
             const el = document.getElementById(`feat-${key}`);

@@ -557,6 +557,7 @@
             <div class="menu-item" onclick="openFacilityRequest()"><i class="fa-solid fa-soap" style="color: #10b981;"></i> 생활관 비품 요청</div>
             <div class="menu-item" onclick="openShuttleApply()"><i class="fa-solid fa-bus"></i> 차량 신청</div>
             <div class="menu-item" onclick="openAdminAction()"><i class="fa-solid fa-file-signature"></i> 외출·외박 / 석식제외</div>
+            <div class="menu-item" id="menu-tabletLoan" onclick="openTabletLoan()"><i class="fa-solid fa-tablet-screen-button" style="color:#6366f1;"></i> 태블릿 대여 신청</div>
             <div class="menu-item" onclick="openAttendanceQR()"><i class="fa-solid fa-qrcode" style="color: #3b82f6;"></i> 출결 QR 확인</div>
             <div class="menu-item" onclick="openCnsPlatform()"><i class="fa-solid fa-tower-broadcast" style="color: #6366f1;"></i> CNS 표보재 플랫폼</div>
             <button onclick="document.getElementById('menuModal').style.display='none'" style="margin-top:15px; width:100%; padding:12px; border:none; border-radius:12px; background:#f1f5f9; font-weight:900; color:#475569;">닫기</button>
@@ -567,6 +568,32 @@
 
 
 
+
+<!-- 태블릿 대여 신청 모달 -->
+<div id="tabletLoanModal" class="menu-overlay" style="display:none; z-index:8500;" onclick="if(event.target==this)closeTabletLoan()">
+    <div class="menu-box" style="width:92%; max-width:380px; padding:28px; border-radius:24px;">
+        <h3 style="margin-bottom:16px; font-weight:900; color:#1e293b; text-align:center;">
+            <i class="fa-solid fa-tablet-screen-button" style="color:#6366f1;"></i> 태블릿 대여 신청
+        </h3>
+        <div id="tabletLoanContent" style="text-align:center; color:#64748b; font-size:14px; line-height:1.7; margin-bottom:20px;">
+            확인 중...
+        </div>
+        <div id="tabletLoanBtns" style="display:flex; flex-direction:column; gap:10px;">
+            <button id="btn-tablet-apply" onclick="applyTabletLoan()"
+                style="padding:14px; background:#6366f1; color:white; border:none; border-radius:12px; font-size:15px; font-weight:900; cursor:pointer;">
+                <i class="fa-solid fa-tablet-screen-button"></i> 태블릿 대여 신청하기
+            </button>
+            <button id="btn-tablet-cancel" onclick="cancelTabletLoan()" style="display:none;
+                padding:14px; background:#fee2e2; color:#ef4444; border:none; border-radius:12px; font-size:15px; font-weight:900; cursor:pointer;">
+                <i class="fa-solid fa-xmark"></i> 신청 취소
+            </button>
+            <button onclick="closeTabletLoan()"
+                style="padding:12px; background:#f1f5f9; color:#64748b; border:none; border-radius:12px; font-size:14px; font-weight:700; cursor:pointer;">
+                닫기
+            </button>
+        </div>
+    </div>
+</div>
 
 <!-- 생활관 비품 요청 모달 (실시간 현황 확인 기능 포함) -->
 <div id="facilityModal" class="menu-overlay" style="display:none; z-index: 8500;" onclick="if(event.target==this)closeFacilityModal()">
@@ -1361,6 +1388,7 @@ function applyMenuFeatures(features) {
         { key: 'meal',         selector: '[onclick="viewMealMenu()"]' },
         { key: 'attendanceQr', selector: '[onclick="openAttendanceQR()"]' },
         { key: 'cns',          selector: '[onclick="openCnsPlatform()"]' },
+        { key: 'tabletLoan',   selector: '[onclick="openTabletLoan()"]' },
     ];
     menuMap.forEach(({ key, selector }) => {
         const el = document.querySelector(selector);
@@ -3415,7 +3443,70 @@ if (imageContainer && mealImg) {
 
 
 
-    </script>
+    
+// ─── 태블릿 대여 신청 ───────────────────────────────────────────────
+function openTabletLoan() {
+    document.getElementById('menuModal').style.display = 'none';
+    document.getElementById('tabletLoanModal').style.display = 'flex';
+    const uToken = localStorage.getItem('uToken');
+    const name = localStorage.getItem('userName') || '';
+    const phone = localStorage.getItem('userPhone') || '';
+    const phone4 = phone.replace(/-/g, '').slice(-4);
+
+    if (!uToken || !currentRoom) {
+        document.getElementById('tabletLoanContent').innerText = '접속 정보를 확인할 수 없습니다.';
+        return;
+    }
+
+    firebase.database().ref(`courses/${currentRoom}/tablet_loans/${uToken}`).once('value', snap => {
+        const applyBtn = document.getElementById('btn-tablet-apply');
+        const cancelBtn = document.getElementById('btn-tablet-cancel');
+        if (snap.exists()) {
+            const d = snap.val();
+            const t = new Date(d.timestamp).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
+            document.getElementById('tabletLoanContent').innerHTML =
+                `<b style="color:#6366f1;">✅ 태블릿 대여 신청 완료</b><br>신청자: <b>${d.name}</b><br>신청 시각: ${t}`;
+            applyBtn.style.display = 'none';
+            cancelBtn.style.display = 'block';
+        } else {
+            document.getElementById('tabletLoanContent').innerHTML =
+                `태블릿 대여를 신청하시겠습니까?<br><small style="color:#94a3b8;">신청자: ${name}</small>`;
+            applyBtn.style.display = 'block';
+            cancelBtn.style.display = 'none';
+        }
+    });
+}
+
+function applyTabletLoan() {
+    const uToken = localStorage.getItem('uToken');
+    const name = localStorage.getItem('userName') || '';
+    const phone = localStorage.getItem('userPhone') || '';
+    const phone4 = phone.replace(/-/g, '').slice(-4);
+    if (!uToken || !currentRoom) return alert('접속 정보를 확인할 수 없습니다.');
+
+    firebase.database().ref(`courses/${currentRoom}/tablet_loans/${uToken}`).set({
+        name: name,
+        phone: phone4,
+        timestamp: firebase.database.ServerValue.TIMESTAMP
+    }).then(() => {
+        openTabletLoan(); // 상태 갱신
+    });
+}
+
+function cancelTabletLoan() {
+    const uToken = localStorage.getItem('uToken');
+    if (!uToken || !currentRoom) return;
+    if (!confirm('태블릿 대여 신청을 취소하시겠습니까?')) return;
+    firebase.database().ref(`courses/${currentRoom}/tablet_loans/${uToken}`).remove()
+        .then(() => { openTabletLoan(); });
+}
+
+function closeTabletLoan() {
+    document.getElementById('tabletLoanModal').style.display = 'none';
+}
+// ────────────────────────────────────────────────────────────────────
+
+</script>
 
 <!-- 커스텀 컨펌 창 (여기가 진짜 자리입니다) -->
 <div id="kacConfirm" class="kac-confirm-overlay">

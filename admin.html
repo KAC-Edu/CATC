@@ -314,6 +314,7 @@
 </a>
             <a onclick="ui.setMode('admin-action')"><i class="fa-solid fa-person-walking-arrow-right"></i> 외출/외박</a>
             <a onclick="ui.setMode('dinner-skip')"><i class="fa-solid fa-utensils"></i> 석식 제외</a>
+            <a onclick="ui.setMode('tablet-loan')"><i class="fa-solid fa-tablet-screen-button" style="color:#6366f1;"></i> 태블릿 대여 관리</a>
         </div>
     </div>
 </div>
@@ -437,6 +438,12 @@
                     <div class="stat-row" onclick="ui.setMode('dinner-skip')" style="cursor:pointer;">
                         <span class="card-label">금일 석식 제외 신청</span>
                         <div class="card-value" style="color: #10b981;"><b id="dashDinnerSkipCount">0</b><small>명</small></div>
+                    </div>
+                    <div class="stat-divider" style="border-top: 1px dashed #e2e8f0; margin: 8px 0;"></div>
+                    <!-- 태블릿 대여 현황 -->
+                    <div class="stat-row" onclick="ui.setMode('tablet-loan')" style="cursor:pointer;">
+                        <span class="card-label">전자기기 대여 신청</span>
+                        <div class="card-value" style="color: #6366f1;"><b id="dashTabletLoanCount">0</b><small>명</small></div>
                     </div>
                 </div>
             </div>
@@ -937,6 +944,30 @@
     </div>
 
 </div> <!-- view-dinner-skip 섹션의 진짜 끝 -->
+
+<!-- [신규] 태블릿 대여 관리 섹션 -->
+<div id="view-tablet-loan" style="display:none; width:100%; flex-direction:column; align-items:center;">
+    <div class="view-header" style="text-align:center; margin-bottom:24px;">
+        <h1><i class="fa-solid fa-tablet-screen-button" style="color:#6366f1;"></i> 전자기기 대여 신청 현황 <span class="header-room-badge room-badge-global"></span></h1>
+        <p>교육생이 신청한 태블릿 대여 현황입니다. (총 신청: <span id="tabletLoanTotal" style="font-weight:bold; color:#6366f1;">0</span>명)</p>
+    </div>
+    <div style="width:100%; max-width:900px;">
+        <table class="admin-table" style="width:100%;">
+            <thead>
+                <tr>
+                    <th style="width:50px;">번호</th>
+                    <th>성명</th>
+                    <th>연락처(뒷4자리)</th>
+                    <th>신청 시각</th>
+                    <th>관리</th>
+                </tr>
+            </thead>
+            <tbody id="tabletLoanTableBody">
+                <tr><td colspan="5" style="padding:50px; color:#94a3b8;">신청자가 없습니다.</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div> <!-- view-tablet-loan 끝 -->
 
 
 
@@ -1479,6 +1510,10 @@
                         <label style="display:flex; align-items:center; gap:6px; font-size:12px; font-weight:700; color:#334155; cursor:pointer;">
                             <input type="checkbox" id="feat-cns" checked style="width:15px; height:15px; accent-color:#0ea5e9;">
                             <i class="fa-solid fa-tower-broadcast" style="color:#0ea5e9;"></i> CNS 플랫폼
+                        </label>
+                        <label style="display:flex; align-items:center; gap:6px; font-size:12px; font-weight:700; color:#334155; cursor:pointer;">
+                            <input type="checkbox" id="feat-tabletLoan" checked style="width:15px; height:15px; accent-color:#6366f1;">
+                            <i class="fa-solid fa-tablet-screen-button" style="color:#6366f1;"></i> 태블릿 대여
                         </label>
                     </div>
                 </div>
