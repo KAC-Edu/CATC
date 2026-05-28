@@ -5112,6 +5112,20 @@ init: function() {
             guideMgr.isRendering = false;
             setTimeout(() => guideMgr.renderPage(guideMgr._slot().pageNum), 350);
         });
+
+        // 휴대용 프레젠터(포인터) 및 키보드 방향키 지원
+        // - 입교안내 탭이 활성화된 동안 항상 작동 (전체화면 불필요)
+        // - 프레젠터 기기: 다음→ PageDown/ArrowRight, 이전← PageUp/ArrowLeft
+        document.addEventListener('keydown', (e) => {
+            if (state.currentMode !== 'guide') return;
+            if (['ArrowRight', 'PageDown'].includes(e.key)) {
+                e.preventDefault();
+                guideMgr.changePage(1);
+            } else if (['ArrowLeft', 'PageUp'].includes(e.key)) {
+                e.preventDefault();
+                guideMgr.changePage(-1);
+            }
+        });
     }
 },
 
