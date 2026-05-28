@@ -3508,13 +3508,18 @@ function clearNoticeHistory() {
         firebase.database().ref(`courses/${currentRID}/tablet_loans`).once('value', snap => {
             const data = snap.val() || {};
             const list = Object.values(data);
-            if (list.length === 0) { alert('[전자기기 대여 신청자]
+            if (list.length === 0) { 
+                alert('[전자기기 대여 신청자]
 
-신청자가 없습니다.'); return; }
-            const names = list.sort((a,b)=>(a.name||'').localeCompare(b.name||''))
-                .map(d => `${d.name}(${d.phone||'-'})`).join('
+신청자가 없습니다.'); 
+                return; 
+            }
+            const names = list
+                .sort((a, b) => (a.name || '').localeCompare(b.name || ''))
+                .map((d, idx) => `${idx + 1}. ${d.name || '미등록'} (뒷자리: ${d.phone || '미등록'})`)
+                .join('
 ');
-            alert(`[전자기기 대여 신청자 - ${list.length}명]
+            alert(`[전자기기 대여 신청자 - 총 ${list.length}명]
 
 ${names}`);
         });
@@ -3522,33 +3527,33 @@ ${names}`);
 
     function showEntryMemberList() { const room = globalAllData[currentRID]; const valid = Object.values(room.students || {}).filter(s => s.name && s.name !== "undefined"); const list = Array.from(new Set(valid.map(s => s.name))).sort().join(", "); alert(`[입교 명단]\n\n${list || "입교자 없음"}`); }
 
-    // 입교현황 실시간 카운트
-    let _entryCntListener = null;
+    // 입교현황 + 태블릿 대여 실시간 카운트 (완벽 수정본)
+    let _entryCntRef = null;
+    let _tabletCntRef = null;
+
     function updateEntryCnt(rid) {
         if (!rid) return;
-        // 기존 리스너 해제
-        if (_entryCntListener) {
-            firebase.database().ref(`courses/${_entryCntListener}/students`).off();
-        }
-        _entryCntListener = rid;
-        firebase.database().ref(`courses/${rid}/students`).on('value', snap => {
+
+        // 기존 리스너 완전 해제
+        if (_entryCntRef) _entryCntRef.off();
+        if (_tabletCntRef) _tabletCntRef.off();
+
+        // 1. 입교 현황 리스너 - rid 매개변수 사용 (currentRID 사용 안 함)
+        _entryCntRef = firebase.database().ref(`courses/${rid}/students`);
+        _entryCntRef.on('value', snap => {
             const students = snap.val() || {};
             const cnt = Object.values(students).filter(s => s.name && s.name !== 'undefined').length;
             const el = document.getElementById('ind-entry-cnt');
             if (el) el.innerHTML = `${cnt}<span>명</span>`;
         });
 
-        // 태블릿 대여 카운트 실시간 (null 체크 + 중복 등록 방지)
-        if (window._tabletLoanListener) {
-            firebase.database().ref(`courses/${window._tabletLoanListener}/tablet_loans`).off();
-        }
-        window._tabletLoanListener = currentRID;
-        if (currentRID) {
-            firebase.database().ref(`courses/${currentRID}/tablet_loans`).on('value', snap => {
-                const elT = document.getElementById('ind-tablet-cnt');
-                if (elT) elT.innerHTML = `${Object.keys(snap.val() || {}).length}<span>명</span>`;
-            });
-        }
+        // 2. 태블릿 대여 리스너 - rid 매개변수 사용
+        _tabletCntRef = firebase.database().ref(`courses/${rid}/tablet_loans`);
+        _tabletCntRef.on('value', snap => {
+            const cnt = Object.keys(snap.val() || {}).length;
+            const elT = document.getElementById('ind-tablet-cnt');
+            if (elT) elT.innerHTML = `${cnt}<span>명</span>`;
+        });
     }
 // [개편] 목적지별 클릭 시 상세 명단 팝업
     function showShuttleMembers(locType) {
