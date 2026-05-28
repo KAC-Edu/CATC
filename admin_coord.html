@@ -430,6 +430,25 @@
     .dashboard-split { display: flex; gap: 8px; align-items: stretch; width: 100%; }
     .col-1-3 { flex: 1; }
     .col-2-3 { flex: 2.5; }
+    .col-1-4 { flex: 1; }
+    .col-2-4 { flex: 2.5; }
+    .entry-box-tablet {
+        background: #f5f3ff !important;
+        border: 1px solid #ddd6fe !important;
+        border-radius: 16px;
+        padding: 15px;
+        text-align: center;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+    .entry-box-tablet:hover {
+        transform: translateY(-2px);
+        border-color: #6366f1 !important;
+    }
     /* [변경] 상세페이지 입교 현황 박스 - 남색 실선 적용 */
 .entry-box { 
     background: #f0f7ff !important; /* 아주 연한 파란색 채우기 */
@@ -1250,8 +1269,9 @@ body.modal-open .app-content {
           </div>
 
           <div class="dashboard-split">
-              <div class="col-1-3"><div class="entry-box" onclick="showEntryMemberList()"><span style="font-size:11px; font-weight:800; color:var(--blue-deep);">입교 현황</span><div class="entry-val" id="ind-entry-cnt">0<span>명</span></div></div></div>
-              <div class="col-2-3">
+              <div class="col-1-4"><div class="entry-box" onclick="showEntryMemberList()"><span style="font-size:11px; font-weight:800; color:var(--blue-deep);">입교 현황</span><div class="entry-val" id="ind-entry-cnt">0<span>명</span></div></div></div>
+              <div class="col-1-4"><div class="entry-box-tablet" onclick="showTabletLoanList()"><span style="font-size:11px; font-weight:800; color:#6366f1;">태블릿 대여</span><div class="entry-val" id="ind-tablet-cnt" style="color:#6366f1;">0<span>명</span></div></div></div>
+              <div class="col-2-4">
               <div class="section-card" style="height:100%; padding:10px; display:flex; flex-direction:column; justify-content:center;">
                   <div class="section-title" style="margin-bottom:8px; font-size:11px;">
                       <i class="fa-solid fa-bus"></i> 퇴교 차량 수요조사 (실시간)
@@ -3504,19 +3524,51 @@ function clearNoticeHistory() {
     function loadActionHistory(date) { selectedDate = date; renderTotalHistory(); }
     function showEntryMemberList() { const room = globalAllData[currentRID]; const valid = Object.values(room.students || {}).filter(s => s.name && s.name !== "undefined"); const list = Array.from(new Set(valid.map(s => s.name))).sort().join(", "); alert(`[입교 명단]\n\n${list || "입교자 없음"}`); }
 
+    // 태블릿 대여 명단 팝업
+    function showTabletLoanList() {
+        const room = globalAllData[currentRID];
+        const loans = room?.tablet_loans || {};
+        const entries = Object.values(loans).filter(l => l.name && l.name !== 'undefined');
+        if (entries.length === 0) { alert("현재 태블릿 대여 신청자가 없습니다."); return; }
+        const modal = document.getElementById('tabletLoanListModal');
+        const tbody = document.getElementById('tabletLoanListBody');
+        if (!modal || !tbody) return;
+        tbody.innerHTML = entries.map((l, i) =>
+            `<tr style="border-bottom:1px solid #f1f5f9;">
+                <td style="padding:8px 12px; font-size:13px; color:#64748b; text-align:center;">${i + 1}</td>
+                <td style="padding:8px 12px; font-size:13px; font-weight:700; color:#1e293b;">${l.name || '-'}</td>
+                <td style="padding:8px 12px; font-size:13px; color:#64748b; text-align:center;">${l.serialNumber || '-'}</td>
+                <td style="padding:8px 12px; font-size:12px; color:#94a3b8; text-align:center;">${l.appliedAt ? new Date(l.appliedAt).toLocaleString('ko-KR', {month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}) : '-'}</td>
+            </tr>`
+        ).join('');
+        modal.style.display = 'flex';
+    }
+
     // 입교현황 실시간 카운트
     let _entryCntListener = null;
+    let _tabletCntListener = null;
     function updateEntryCnt(rid) {
         if (!rid) return;
         // 기존 리스너 해제
         if (_entryCntListener) {
             firebase.database().ref(`courses/${_entryCntListener}/students`).off();
         }
+        if (_tabletCntListener) {
+            firebase.database().ref(`courses/${_tabletCntListener}/tablet_loans`).off();
+        }
         _entryCntListener = rid;
+        _tabletCntListener = rid;
         firebase.database().ref(`courses/${rid}/students`).on('value', snap => {
             const students = snap.val() || {};
             const cnt = Object.values(students).filter(s => s.name && s.name !== 'undefined').length;
             const el = document.getElementById('ind-entry-cnt');
+            if (el) el.innerHTML = `${cnt}<span>명</span>`;
+        });
+        // 태블릿 대여 실시간 카운트
+        firebase.database().ref(`courses/${rid}/tablet_loans`).on('value', snap => {
+            const loans = snap.val() || {};
+            const cnt = Object.values(loans).filter(l => l.name && l.name !== 'undefined').length;
+            const el = document.getElementById('ind-tablet-cnt');
             if (el) el.innerHTML = `${cnt}<span>명</span>`;
         });
     }
@@ -4318,6 +4370,36 @@ async function saveGlobalNotice() {
 
 
 
+
+<!-- 태블릿 대여 신청자 명단 모달 -->
+<div id="tabletLoanListModal" class="setup-modal" style="display:none;" onclick="if(event.target===this)this.style.display='none'">
+    <div class="setup-box" style="max-width:520px; padding:28px;">
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:18px;">
+            <h3 style="margin:0; font-size:17px; color:#3730a3; font-weight:900;">
+                <i class="fa-solid fa-tablet-screen-button" style="margin-right:8px; color:#6366f1;"></i>태블릿 대여 신청자 명단
+            </h3>
+            <button onclick="document.getElementById('tabletLoanListModal').style.display='none'"
+                style="background:none; border:none; font-size:20px; color:#94a3b8; cursor:pointer; line-height:1;">✕</button>
+        </div>
+        <div style="overflow-x:auto;">
+            <table style="width:100%; border-collapse:collapse;">
+                <thead>
+                    <tr style="background:#f5f3ff; border-bottom:2px solid #ddd6fe;">
+                        <th style="padding:9px 12px; font-size:12px; color:#6366f1; font-weight:800; text-align:center; width:40px;">No.</th>
+                        <th style="padding:9px 12px; font-size:12px; color:#6366f1; font-weight:800; text-align:left;">이름</th>
+                        <th style="padding:9px 12px; font-size:12px; color:#6366f1; font-weight:800; text-align:center;">기기번호</th>
+                        <th style="padding:9px 12px; font-size:12px; color:#6366f1; font-weight:800; text-align:center;">신청시각</th>
+                    </tr>
+                </thead>
+                <tbody id="tabletLoanListBody"></tbody>
+            </table>
+        </div>
+        <div style="text-align:right; margin-top:16px;">
+            <button onclick="document.getElementById('tabletLoanListModal').style.display='none'"
+                style="padding:8px 22px; background:#6366f1; color:#fff; border:none; border-radius:8px; font-size:13px; font-weight:800; cursor:pointer;">닫기</button>
+        </div>
+    </div>
+</div>
 
 <!-- 퇴교 차량 상세 신청 현황 모달 -->
 <div id="shuttleDetailModal" class="setup-modal" style="display:none;">
