@@ -2770,10 +2770,10 @@ setMode: function(mode) {
             tabs.style.display = 'flex'; 
         }
 
-        // [유지] 플로팅 홈 버튼 제어: 대시보드(dashboard) 또는 퀴즈(quiz) 모드일 때 숨김
+        // 플로팅 홈 버튼 제어: 홈/대시보드/퀴즈 모드에서 숨김
         const homeBtn = document.getElementById('floatingHomeBtn');
         if (homeBtn) {
-            if (mode === 'dashboard' || mode === 'quiz') {
+            if (mode === 'home' || mode === 'dashboard' || mode === 'quiz') {
                 homeBtn.style.display = 'none';
             } else {
                 homeBtn.style.display = 'flex';
