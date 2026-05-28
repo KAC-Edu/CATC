@@ -3522,7 +3522,25 @@ function clearNoticeHistory() {
     async function handleQRUpload(input) { const reader = new FileReader(); reader.onload = async (e) => { await firebase.database().ref(`courses/${currentRID}/attendanceQR`).set(e.target.result); alert("QR 저장 완료"); updateQRPreview(); }; reader.readAsDataURL(input.files[0]); }
     function updateQRPreview() { const room = globalAllData[currentRID]; const img = document.getElementById('qrPreview'); const empty = document.getElementById('qrEmpty'); if(room?.attendanceQR) { img.src = room.attendanceQR; img.style.display = "block"; empty.style.display = "none"; } else { img.style.display = "none"; empty.style.display = "block"; } }
     function loadActionHistory(date) { selectedDate = date; renderTotalHistory(); }
-    function showEntryMemberList() { const room = globalAllData[currentRID]; const valid = Object.values(room.students || {}).filter(s => s.name && s.name !== "undefined"); const list = Array.from(new Set(valid.map(s => s.name))).sort().join(", "); alert(`[입교 명단]\n\n${list || "입교자 없음"}`); }
+    function showEntryMemberList() {
+        const room = globalAllData[currentRID];
+        const valid = Object.values(room.students || {}).filter(s => s.name && s.name !== 'undefined');
+        const names = Array.from(new Set(valid.map(s => s.name))).sort();
+        const modal = document.getElementById('entryMemberListModal');
+        const tbody = document.getElementById('entryMemberListBody');
+        if (!modal || !tbody) return;
+        if (names.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="2" style="padding:20px; text-align:center; color:#94a3b8; font-size:13px;">입교자가 없습니다.</td></tr>`;
+        } else {
+            tbody.innerHTML = names.map((name, i) =>
+                `<tr style="border-bottom:1px solid #f1f5f9;">
+                    <td style="padding:8px 12px; font-size:13px; color:#64748b; text-align:center;">${i + 1}</td>
+                    <td style="padding:8px 12px; font-size:13px; font-weight:700; color:#1e293b;">${name}</td>
+                </tr>`
+            ).join('');
+        }
+        modal.style.display = 'flex';
+    }
 
     // 태블릿 대여 명단 팝업
     function showTabletLoanList() {
@@ -3537,7 +3555,6 @@ function clearNoticeHistory() {
             `<tr style="border-bottom:1px solid #f1f5f9;">
                 <td style="padding:8px 12px; font-size:13px; color:#64748b; text-align:center;">${i + 1}</td>
                 <td style="padding:8px 12px; font-size:13px; font-weight:700; color:#1e293b;">${l.name || '-'}</td>
-                <td style="padding:8px 12px; font-size:13px; color:#64748b; text-align:center;">${l.serialNumber || '-'}</td>
                 <td style="padding:8px 12px; font-size:12px; color:#94a3b8; text-align:center;">${l.appliedAt ? new Date(l.appliedAt).toLocaleString('ko-KR', {month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}) : '-'}</td>
             </tr>`
         ).join('');
@@ -4371,6 +4388,34 @@ async function saveGlobalNotice() {
 
 
 
+<!-- 입교 현황 명단 모달 -->
+<div id="entryMemberListModal" class="setup-modal" style="display:none;" onclick="if(event.target===this)this.style.display='none'">
+    <div class="setup-box" style="max-width:520px; padding:28px;">
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:18px;">
+            <h3 style="margin:0; font-size:17px; color:#1e3a5f; font-weight:900;">
+                <i class="fa-solid fa-users" style="margin-right:8px; color:var(--blue-deep);"></i>입교 현황 명단
+            </h3>
+            <button onclick="document.getElementById('entryMemberListModal').style.display='none'"
+                style="background:none; border:none; font-size:20px; color:#94a3b8; cursor:pointer; line-height:1;">✕</button>
+        </div>
+        <div style="overflow-x:auto;">
+            <table style="width:100%; border-collapse:collapse;">
+                <thead>
+                    <tr style="background:#f0f7ff; border-bottom:2px solid #bfdbfe;">
+                        <th style="padding:9px 12px; font-size:12px; color:var(--blue-deep); font-weight:800; text-align:center; width:40px;">No.</th>
+                        <th style="padding:9px 12px; font-size:12px; color:var(--blue-deep); font-weight:800; text-align:left;">이름</th>
+                    </tr>
+                </thead>
+                <tbody id="entryMemberListBody"></tbody>
+            </table>
+        </div>
+        <div style="text-align:right; margin-top:16px;">
+            <button onclick="document.getElementById('entryMemberListModal').style.display='none'"
+                style="padding:8px 22px; background:var(--blue-deep); color:#fff; border:none; border-radius:8px; font-size:13px; font-weight:800; cursor:pointer;">닫기</button>
+        </div>
+    </div>
+</div>
+
 <!-- 태블릿 대여 신청자 명단 모달 -->
 <div id="tabletLoanListModal" class="setup-modal" style="display:none;" onclick="if(event.target===this)this.style.display='none'">
     <div class="setup-box" style="max-width:520px; padding:28px;">
@@ -4387,7 +4432,6 @@ async function saveGlobalNotice() {
                     <tr style="background:#f5f3ff; border-bottom:2px solid #ddd6fe;">
                         <th style="padding:9px 12px; font-size:12px; color:#6366f1; font-weight:800; text-align:center; width:40px;">No.</th>
                         <th style="padding:9px 12px; font-size:12px; color:#6366f1; font-weight:800; text-align:left;">이름</th>
-                        <th style="padding:9px 12px; font-size:12px; color:#6366f1; font-weight:800; text-align:center;">기기번호</th>
                         <th style="padding:9px 12px; font-size:12px; color:#6366f1; font-weight:800; text-align:center;">신청시각</th>
                     </tr>
                 </thead>
