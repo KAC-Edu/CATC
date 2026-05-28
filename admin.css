@@ -3635,3 +3635,57 @@ body:-webkit-full-screen .main-stage {
     border-radius: 18px;
 }
 
+/* ══ 홈 화면 통계 블록 슬림 스타일 ══ */
+.home-stat-card {
+    flex: 1;
+    min-width: 200px;
+    background: #fff;
+    border-radius: 18px;
+    padding: 16px 24px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.07);
+    cursor: pointer;
+    border: 1.5px solid #e2e8f0;
+    transition: transform 0.15s, box-shadow 0.15s;
+    text-align: center;
+}
+.home-stat-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 28px rgba(0,0,0,0.12);
+}
+.stat-card-inner {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 8px;
+}
+.stat-icon-box {
+    width: 36px; height: 36px;
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+}
+.stat-icon-box.blue   { background: #eff6ff; color: #3b82f6; }
+.stat-icon-box.green  { background: #f0fdf4; color: #10b981; }
+.stat-icon-box.orange { background: #fffbeb; color: #f59e0b; }
+.stat-label  { font-size: 14px; font-weight: 700; color: #64748b; }
+.stat-value-row { display: flex; align-items: baseline; justify-content: center; gap: 6px; }
+.stat-number { font-size: 36px; font-weight: 900; color: #1e293b; line-height: 1; }
+.stat-unit   { font-size: 14px; font-weight: 700; color: #64748b; }
+
+/* ══ catc.png 전체 노출 (비율 유지, 잘림 없음) ══ */
+.dashboard-campus-banner {
+    border-radius: 20px;
+    overflow: hidden;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.12);
+    line-height: 0;
+}
+.dashboard-campus-banner img {
+    width: 100%;
+    height: auto !important;
+    aspect-ratio: 1879 / 837;
+    object-fit: contain !important;
+    display: block;
+    border-radius: 18px;
+}
+
