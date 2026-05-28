@@ -167,18 +167,13 @@ saveInstructorNoticeMain: function() {
         const editor = document.getElementById('boardEditor');
         if(!editor) return;
         const html = editor.innerHTML;
-        firebase.database().ref(`courses/${state.room}/boardNotice`).set(html)
-            .then(() => {
-                const now = new Date();
-                const ts = `${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}`;
-                const el = document.getElementById('boardLastSaved');
-                if(el) el.textContent = `오늘 ${ts}`;
-                ui.showAlert("✅ 강의 안내 보드가 저장되었습니다.");
-            })
-            .catch(err => {
-                console.error("boardNotice 저장 실패:", err);
-                ui.showAlert("❌ 저장 실패: Firebase Rules에 boardNotice 쓰기 권한을 추가해 주세요.\n\n경로: courses/$roomId/boardNotice\n규칙: \".write\": \"auth != null\"");
-            });
+        firebase.database().ref(`courses/${state.room}/boardNotice`).set(html).then(() => {
+            const now = new Date();
+            const ts = `${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}`;
+            const el = document.getElementById('boardLastSaved');
+            if(el) el.textContent = `오늘 ${ts}`;
+            ui.showAlert("✅ 강의 안내 보드가 저장되었습니다.");
+        });
     },
 
     loadBoardNotice: function() {
@@ -2806,16 +2801,16 @@ setMode: function(mode) {
         // 2. 현재 선택한 모드에 맞는 구역 ID 결정
         const targetView = (mode === 'admin-action') ? 'view-admin-action' : (mode === 'dinner-skip') ? 'view-dinner-skip' : `view-${mode}`;
         const targetEl = document.getElementById(targetView);
-        
-        // 3. 화면 표시 방식 결정 (모달형은 flex, 일반은 block)
-        if(targetEl) {
-            if(mode === 'prof-presentation' || mode === 'quiz' || mode === 'qa') {
-                targetEl.style.display = 'flex';
-            } else if(mode === 'waiting' || mode === 'dashboard') {
-                targetEl.style.display = 'block';
-            } else {
-                targetEl.style.display = 'flex'; // 기본값
-            }
+
+        // 3. 화면 표시 (전부 flex)
+        if(targetEl) targetEl.style.display = 'flex';
+
+        // home 모드: 탭 숨김 / waiting 모드: 현황판 데이터 갱신
+        if (mode === 'home') {
+            const tabs = document.querySelector('.mode-tabs');
+            if (tabs) tabs.style.display = 'none';
+        } else if (mode === 'waiting') {
+            ui.initRoomSelect();
         }
 
         // 4. 상단 탭 활성화 표시
@@ -3359,12 +3354,12 @@ renderQaList: function(f) {
         const tabs = document.querySelector('.mode-tabs');
         if(tabs) tabs.style.display = 'none'; 
         
-        // 5. 모든 뷰 숨기고 현황판만 표시
-        document.querySelectorAll('[id^="view-"]').forEach(v => { 
-            v.style.display = 'none'; 
+        // 5. 모든 뷰 숨기고 홈 화면 표시
+        document.querySelectorAll('[id^="view-"]').forEach(v => {
+            v.style.display = 'none';
         });
-        const viewWait = document.getElementById('view-waiting');
-        if(viewWait) viewWait.style.display = 'block'; 
+        const viewHome = document.getElementById('view-home');
+        if(viewHome) viewHome.style.display = 'flex';
 
         // 6. 왼쪽 룸 선택 메뉴 "Select Room"으로 강제 고정
         const sel = document.getElementById('roomSelect');
@@ -4149,12 +4144,7 @@ resetShuttleRequests: function() {
     },
 
     goHome: function() {
-        // confirm 없이 바로 현황판으로 이동
-        ui.showLoading('홈 화면으로 이동 중...');
-        localStorage.removeItem('kac_last_room');
-        localStorage.removeItem('kac_last_mode');
-        state.room = null;
-        location.href = 'admin.html';
+        ui.setMode('home');
     },
 
 

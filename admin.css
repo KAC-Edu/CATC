@@ -3541,3 +3541,43 @@ body:-webkit-full-screen .main-stage {
 }
 #boardEditor:focus { outline: none; }
 
+/* ══ 홈 화면 전용 스타일 ══ */
+#view-home {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding-top: 60px !important;
+    text-align: center;
+}
+#view-home h1 {
+    font-size: 42px !important;
+    font-weight: 900;
+    color: #003366;
+    margin-bottom: 10px;
+    letter-spacing: -1px;
+}
+#view-home p {
+    font-size: 18px;
+    color: #64748b;
+    margin-bottom: 40px;
+}
+#view-home .dashboard-campus-banner {
+    display: block;
+}
+
+/* ══ 현황판 전용 스타일 (이미지 없음) ══ */
+#view-waiting {
+    padding-top: 30px !important;
+}
+#view-waiting .view-header {
+    margin-bottom: 20px;
+}
+#view-waiting .modern-white-card {
+    max-width: 1300px;
+    margin-top: 10px;
+}
+#view-waiting .dashboard-campus-banner {
+    display: none !important;
+}
+
