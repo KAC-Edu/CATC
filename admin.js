@@ -3796,11 +3796,13 @@ loadShuttleData: function() {
             const timeEl = document.getElementById('shuttle-depart-time');
             if (dateEl && dep.date) dateEl.value = dep.date;
             if (timeEl && dep.time) timeEl.value = dep.time;
-            // ETA 카드 업데이트
-            ui.updateShuttleETA(dep.time);
+            // ETA 카드 업데이트 (현재 신청 인원 수 함께 전달)
+            window._shuttleAdminDepTime = dep.time;
+            ui.updateShuttleETA(dep.time, window._shuttleAdminCounts || { osong:0, terminal:0, airport:0 });
         } else {
             el.innerHTML = `<div style="font-size:18px; opacity:0.7;">퇴교 공지 대기 중</div>`;
             el.style.color = "white";
+            window._shuttleAdminDepTime = null;
             ui.updateShuttleETA(null);
         }
     });
@@ -3869,6 +3871,12 @@ loadShuttleData: function() {
         if(document.getElementById('cnt-terminal')) document.getElementById('cnt-terminal').innerText = counts.terminal;
         if(document.getElementById('cnt-airport')) document.getElementById('cnt-airport').innerText = counts.airport;
         if(document.getElementById('cnt-total')) document.getElementById('cnt-total').innerText = items.length;
+
+        // 신청자 수 변경 시 ETA도 즉시 재계산 (경유지 skip 반영)
+        if (window._shuttleAdminDepTime) {
+            ui.updateShuttleETA(window._shuttleAdminDepTime, counts);
+        }
+        window._shuttleAdminCounts = counts; // 최신 counts 캐시
     });
 },
 
@@ -3897,35 +3905,51 @@ loadShuttleData: function() {
 
 
 
-// [ETA 시스템] 출발 시간 기준 정류장별 예상 도착 시간 계산
-updateShuttleETA: function(departureTime) {
+// [ETA 시스템] 신청자 유무 반영 동적 도착 시간 (교육생 앱과 동일 알고리즘)
+updateShuttleETA: function(departureTime, counts) {
     const etaDetail = document.getElementById('shuttleETADetail');
     if (!etaDetail) return;
     if (!departureTime) {
-        etaDetail.innerHTML = `<div style="color:#94a3b8; font-size:13px; text-align:center; padding:12px 0;">출발 시간이 공지되면 ETA가 표시됩니다.</div>`;
+        etaDetail.innerHTML = `<div style="color:#94a3b8; font-size:13px; padding:4px 0;">출발 시간이 공지되면 표시됩니다.</div>`;
         return;
     }
-    const parts = departureTime.split(':').map(Number);
-    const baseMin = parts[0] * 60 + (parts[1] || 0);
+
+    // counts: { osong, terminal, airport } — 각 목적지 신청 인원수
+    const c = counts || { osong: 0, terminal: 0, airport: 0 };
+    const [hh, mm] = departureTime.split(':').map(Number);
+    const base = hh * 60 + mm;
+
+    const fmt = (total) => {
+        const h = String(Math.floor(total / 60) % 24).padStart(2, '0');
+        const m = String(total % 60).padStart(2, '0');
+        return `${h}:${m}`;
+    };
+
+    // 동적 알고리즘 (index.html의 calcArrival과 동일)
+    const osongMin    = base + 30;
+    const termMin     = base + (c.osong > 0 ? 60 : 30);
+    const airMin      = (c.osong === 0 && c.terminal === 0)
+                        ? base + 60
+                        : termMin + (c.terminal > 0 ? 30 : 0) + 30;
+
     const stops = [
-        { name: '오송역', offset: 30, color: '#ef4444' },
-        { name: '터미널', offset: 60, color: '#3b82f6' },
-        { name: '공항',   offset: 90, color: '#10b981' }
+        { label: '오송역',      time: fmt(osongMin),   color: '#ef4444', cnt: c.osong },
+        { label: '청주터미널',  time: fmt(termMin),    color: '#3b82f6', cnt: c.terminal },
+        { label: '청주국제공항',time: fmt(airMin),     color: '#10b981', cnt: c.airport },
     ];
-    const rows = stops.map(s => {
-        const total = baseMin + s.offset;
-        const h = Math.floor(total / 60) % 24;
-        const m = total % 60;
-        const timeStr = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
-        return `<div style="display:flex; align-items:center; justify-content:space-between; padding:8px 14px; border-radius:8px; background:#f8fafc; border:1px solid #e2e8f0; margin-bottom:6px;">
-                    <span style="font-size:14px; font-weight:800; color:${s.color};">● ${s.name}</span>
-                    <span style="font-size:15px; font-weight:900; color:#1e293b;">약 ${timeStr} 도착 예정</span>
-                </div>`;
-    }).join('');
+
+    // 한 줄 인라인 표시
     etaDetail.innerHTML = `
-        <div style="font-size:12px; color:#64748b; font-weight:700; margin-bottom:8px;">항기원 출발 <strong style="color:#003366;">${departureTime}</strong> 기준 예상 도착 시간</div>
-        ${rows}
-        <div style="font-size:11px; color:#94a3b8; margin-top:6px; text-align:right;">※ 도로 상황에 따라 변동될 수 있습니다.</div>
+        <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+            ${stops.map(s => `
+                <div style="display:flex; align-items:center; gap:8px; background:#f8fafc; border:1.5px solid #e2e8f0; border-radius:10px; padding:8px 16px;">
+                    <span style="font-size:16px; font-weight:900; color:${s.color};">${s.label}</span>
+                    <span style="font-size:18px; font-weight:900; color:#1e293b;">${s.time}</span>
+                    <span style="font-size:12px; color:#94a3b8; font-weight:700;">도착</span>
+                </div>
+            `).join('')}
+        </div>
+        <div style="font-size:11px; color:#94a3b8; margin-top:8px;">※ 경유지 미신청 시 해당 정류장 skip — 도착 시간 자동 조정</div>
     `;
 },
 
