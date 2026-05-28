@@ -2821,7 +2821,7 @@ setMode: function(mode) {
         if (mode === 'home') {
             const tabs = document.querySelector('.mode-tabs');
             if (tabs) tabs.style.display = 'none';
-            setTimeout(() => ui.loadHomeStats(), 200);
+            setTimeout(() => { if(typeof ui.loadHomeStats==='function') ui.loadHomeStats(); }, 200);
         } else if (mode === 'waiting') {
             ui.initRoomSelect();
         }
@@ -3373,9 +3373,9 @@ renderQaList: function(f) {
         });
         const viewHome = document.getElementById('view-home');
         if(viewHome) viewHome.style.display = 'flex';
+        setTimeout(() => { if(typeof ui.loadHomeStats==='function') ui.loadHomeStats(); }, 200);
 
-        // 홈 통계 갱신
-        setTimeout(() => ui.loadHomeStats(), 200);
+        // 6. 왼쪽 룸 선택 메뉴 "Select Room"으로 강제 고정
         const sel = document.getElementById('roomSelect');
         if(sel) sel.value = "";
     },
@@ -4158,21 +4158,26 @@ resetShuttleRequests: function() {
     },
 
     goHome: function() {
+        // KAC Training Platform 클릭 시:
+        // 1. 방 상태를 Select Room으로 리셋 (방은 유지하되 홈화면만 표시)
+        const sel = document.getElementById('roomSelect');
+        if (sel) sel.value = '';
+
+        // 2. 홈 모드 전환
         ui.setMode('home');
-        setTimeout(() => ui.loadHomeStats(), 100);
+
+        // 3. 통계 데이터 갱신
+        if (typeof ui.loadHomeStats === 'function') setTimeout(() => ui.loadHomeStats(), 150);
     },
 
-    // ── 헤더 날짜/시간 시계 시작 ──
+    // ── 헤더 날짜/시간 실시간 시계 ──
     startHeaderClock: function() {
         const update = () => {
             const el = document.getElementById('headerDateTime');
             if (!el) return;
             const now = new Date();
-            const y = now.getFullYear();
-            const m = now.getMonth() + 1;
-            const d = now.getDate();
-            const hh = now.getHours();
-            const mm = String(now.getMinutes()).padStart(2, '0');
+            const y = now.getFullYear(), m = now.getMonth()+1, d = now.getDate();
+            const hh = now.getHours(), mm = String(now.getMinutes()).padStart(2,'0');
             const ampm = hh < 12 ? '오전' : '오후';
             const h12 = hh % 12 || 12;
             el.textContent = `${y}.${m}.${d}  ${h12}:${mm} (${ampm})`;
@@ -4181,128 +4186,90 @@ resetShuttleRequests: function() {
         setInterval(update, 1000);
     },
 
-    // ── 이번 주(월~금) 기간 필터 유틸 ──
+    // ── 이번 주(월~금) 기간 필터 ──
     _isThisWeek: function(periodStr) {
         if (!periodStr || periodStr.length < 5) return false;
-        // "2026-04-01 ~ 2026-04-30" 형식
         const parts = periodStr.split(' ~ ');
         if (parts.length < 2) return false;
-        const courseStart = new Date(parts[0].trim());
-        const courseEnd   = new Date(parts[1].trim());
-        courseEnd.setHours(23, 59, 59);
-
+        const cStart = new Date(parts[0].trim());
+        const cEnd   = new Date(parts[1].trim()); cEnd.setHours(23,59,59);
         const now = new Date();
-        const day = now.getDay(); // 0=일, 1=월...
-        const diffToMon = day === 0 ? -6 : 1 - day;
-        const weekMon = new Date(now); weekMon.setDate(now.getDate() + diffToMon); weekMon.setHours(0,0,0,0);
-        const weekFri = new Date(weekMon); weekFri.setDate(weekMon.getDate() + 4); weekFri.setHours(23,59,59,999);
-
-        // 과정 기간이 이번 주 월~금 범위와 겹치는지
-        return courseStart <= weekFri && courseEnd >= weekMon;
+        const diff = now.getDay() === 0 ? -6 : 1 - now.getDay();
+        const wMon = new Date(now); wMon.setDate(now.getDate()+diff); wMon.setHours(0,0,0,0);
+        const wFri = new Date(wMon); wFri.setDate(wMon.getDate()+4); wFri.setHours(23,59,59,999);
+        return cStart <= wFri && cEnd >= wMon;
     },
 
-    // ── 홈 통계 데이터 로드 (이번 주 필터 적용) ──
+    // ── 홈 통계 로드 (이번 주 필터) ──
     loadHomeStats: function() {
         const today = getTodayString();
         firebase.database().ref('courses').once('value', snap => {
             const d = snap.val() || {};
-            let activeCount = 0, studentTotal = 0, outingTotal = 0;
-
-            Object.entries(d).forEach(([room, roomData]) => {
-                const st       = roomData.status   || {};
-                const settings = roomData.settings  || {};
-                const students = roomData.students  || {};
-                const actions  = (roomData.admin_actions || {})[today] || {};
-                const period   = settings.period   || '';
-
-                // 이번 주에 해당하는 과정만 집계
-                if (!ui._isThisWeek(period)) return;
-
-                const isActive = st.roomStatus === 'active';
-                if (isActive) activeCount++;
-
-                const uniqueCnt = new Set(
-                    Object.values(students)
-                        .filter(s => s.name && s.name !== 'undefined')
-                        .map(s => s.name)
-                ).size;
-                studentTotal += uniqueCnt;
-
-                Object.values(actions).forEach(a => {
-                    if (a && (a.type === 'outing' || a.type === 'overnight' || a.type === 'group_outing')) outingTotal++;
+            let activeCount=0, studentTotal=0, outingTotal=0;
+            Object.entries(d).forEach(([room, r]) => {
+                const st=r.status||{}, settings=r.settings||{}, students=r.students||{};
+                const actions=(r.admin_actions||{})[today]||{};
+                if (!ui._isThisWeek(settings.period||'')) return;
+                if (st.roomStatus==='active') activeCount++;
+                const cnt = new Set(Object.values(students).filter(s=>s.name&&s.name!=='undefined').map(s=>s.name)).size;
+                studentTotal += cnt;
+                Object.values(actions).forEach(a=>{
+                    if(a&&(a.type==='outing'||a.type==='overnight'||a.type==='group_outing')) outingTotal++;
                 });
             });
-
-            const elA = document.getElementById('stat-active-count');
-            const elS = document.getElementById('stat-student-count');
-            const elO = document.getElementById('stat-outing-count');
-            if (elA) elA.textContent = activeCount;
-            if (elS) elS.textContent = studentTotal;
-            if (elO) elO.textContent = outingTotal;
-
-            window._homeStatsData  = d;
-            window._homeStatsToday = today;
+            const elA=document.getElementById('stat-active-count');
+            const elS=document.getElementById('stat-student-count');
+            const elO=document.getElementById('stat-outing-count');
+            if(elA) elA.textContent=activeCount;
+            if(elS) elS.textContent=studentTotal;
+            if(elO) elO.textContent=outingTotal;
+            window._homeStatsData=d; window._homeStatsToday=today;
         });
     },
 
     // ── 홈 통계 팝업 ──
     openHomeStatModal: function(type) {
-        const modal = document.getElementById('homeStatModal');
-        const title = document.getElementById('homeStatModalTitle');
-        const body  = document.getElementById('homeStatModalBody');
-        if (!modal) return;
-        const d     = window._homeStatsData  || {};
-        const today = window._homeStatsToday || getTodayString();
-        modal.style.display = 'flex';
-
-        // 이번 주 해당 방만 필터
-        const weekRooms = Object.entries(d).filter(([, r]) =>
-            ui._isThisWeek((r.settings || {}).period || ''));
-
-        if (type === 'active') {
-            title.textContent = '🏫 현재 강의 중인 과정 (이번 주)';
-            const rows = weekRooms
-                .filter(([, r]) => (r.status || {}).roomStatus === 'active')
-                .map(([room, r]) => {
-                    const prof   = (r.status   || {}).professorName || '-';
-                    const course = (r.settings || {}).courseName    || '-';
-                    return `<div style="display:flex; justify-content:space-between; align-items:center; padding:12px 16px; background:#f8fafc; border-radius:10px; margin-bottom:8px;">
-                        <div><span style="font-weight:900; color:#3b82f6; margin-right:10px;">Room ${room}</span><span style="font-size:13px; color:#334155;">${course}</span></div>
-                        <span style="font-size:12px; color:#64748b; font-weight:700;">${prof} 교수</span>
-                    </div>`;
-                }).join('');
-            body.innerHTML = rows || '<p style="color:#94a3b8; text-align:center; padding:20px;">이번 주 강의 중인 과정이 없습니다.</p>';
-
-        } else if (type === 'students') {
-            title.textContent = '👩‍🎓 과정별 교육생 현황 (이번 주)';
-            const rows = weekRooms.map(([room, r]) => {
-                const course = (r.settings || {}).courseName || '-';
-                const cnt = new Set(Object.values(r.students || {}).filter(s => s.name && s.name !== 'undefined').map(s => s.name)).size;
-                return `<div style="display:flex; justify-content:space-between; align-items:center; padding:12px 16px; background:#f0fdf4; border-radius:10px; margin-bottom:8px;">
-                    <div><span style="font-weight:900; color:#10b981; margin-right:10px;">Room ${room}</span><span style="font-size:13px; color:#334155;">${course}</span></div>
-                    <span style="font-size:22px; font-weight:900; color:#1e293b;">${cnt}<span style="font-size:13px; font-weight:600; color:#64748b;"> 명</span></span>
-                </div>`;
+        const modal=document.getElementById('homeStatModal');
+        const title=document.getElementById('homeStatModalTitle');
+        const body=document.getElementById('homeStatModalBody');
+        if(!modal) return;
+        const d=window._homeStatsData||{}, today=window._homeStatsToday||getTodayString();
+        modal.style.display='flex';
+        const weekRooms=Object.entries(d).filter(([,r])=>ui._isThisWeek((r.settings||{}).period||''));
+        if(type==='active'){
+            title.textContent='🏫 현재 강의 중인 과정 (이번 주)';
+            const rows=weekRooms.filter(([,r])=>(r.status||{}).roomStatus==='active').map(([room,r])=>{
+                const prof=(r.status||{}).professorName||'-', course=(r.settings||{}).courseName||'-';
+                return `<div style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;background:#f8fafc;border-radius:10px;margin-bottom:8px;">
+                    <div><span style="font-weight:900;color:#3b82f6;margin-right:10px;">Room ${room}</span><span style="font-size:13px;color:#334155;">${course}</span></div>
+                    <span style="font-size:12px;color:#64748b;font-weight:700;">${prof} 교수</span></div>`;
             }).join('');
-            body.innerHTML = rows || '<p style="color:#94a3b8; text-align:center; padding:20px;">이번 주 교육생 정보가 없습니다.</p>';
-
-        } else if (type === 'outing') {
-            title.textContent = '🚶 과정별 외출/외박 신청 현황 (금일)';
-            const rows = weekRooms.map(([room, r]) => {
-                const course   = (r.settings || {}).courseName || '-';
-                const actions  = (r.admin_actions || {})[today] || {};
-                const outings  = Object.values(actions).filter(a => a && (a.type === 'outing' || a.type === 'overnight' || a.type === 'group_outing'));
-                if (!outings.length) return '';
-                return `<div style="padding:12px 16px; background:#fffbeb; border-radius:10px; margin-bottom:8px;">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-                        <div><span style="font-weight:900; color:#f59e0b; margin-right:10px;">Room ${room}</span><span style="font-size:13px;">${course}</span></div>
-                        <span style="font-size:22px; font-weight:900;">${outings.length}<span style="font-size:13px; color:#64748b;"> 명</span></span>
-                    </div>
-                    ${outings.map(a => `<div style="font-size:12px; color:#78716c; padding:4px 0; border-top:1px solid #fde68a;">
-                        <b>${a.name || '-'}</b> · ${a.type === 'overnight' ? '외박' : '외출'} · ${a.destination || ''} (${a.startTime || ''}~${a.endTime || ''})
-                    </div>`).join('')}
+            body.innerHTML=rows||'<p style="color:#94a3b8;text-align:center;padding:20px;">이번 주 강의 중인 과정이 없습니다.</p>';
+        } else if(type==='students'){
+            title.textContent='👩‍🎓 과정별 교육생 현황 (이번 주)';
+            const rows=weekRooms.map(([room,r])=>{
+                const course=(r.settings||{}).courseName||'-';
+                const cnt=new Set(Object.values(r.students||{}).filter(s=>s.name&&s.name!=='undefined').map(s=>s.name)).size;
+                return `<div style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;background:#f0fdf4;border-radius:10px;margin-bottom:8px;">
+                    <div><span style="font-weight:900;color:#10b981;margin-right:10px;">Room ${room}</span><span style="font-size:13px;">${course}</span></div>
+                    <span style="font-size:22px;font-weight:900;">${cnt}<span style="font-size:13px;color:#64748b;"> 명</span></span></div>`;
+            }).join('');
+            body.innerHTML=rows||'<p style="color:#94a3b8;text-align:center;padding:20px;">이번 주 교육생 정보가 없습니다.</p>';
+        } else if(type==='outing'){
+            title.textContent='🚶 과정별 외출/외박 신청 현황 (금일)';
+            const rows=weekRooms.map(([room,r])=>{
+                const course=(r.settings||{}).courseName||'-';
+                const acts=(r.admin_actions||{})[today]||{};
+                const outs=Object.values(acts).filter(a=>a&&(a.type==='outing'||a.type==='overnight'||a.type==='group_outing'));
+                if(!outs.length) return '';
+                return `<div style="padding:12px 16px;background:#fffbeb;border-radius:10px;margin-bottom:8px;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                        <div><span style="font-weight:900;color:#f59e0b;margin-right:10px;">Room ${room}</span><span style="font-size:13px;">${course}</span></div>
+                        <span style="font-size:22px;font-weight:900;">${outs.length}<span style="font-size:13px;color:#64748b;"> 명</span></span></div>
+                    ${outs.map(a=>`<div style="font-size:12px;color:#78716c;padding:4px 0;border-top:1px solid #fde68a;"><b>${a.name||'-'}</b> · ${a.type==='overnight'?'외박':'외출'} · ${a.destination||''} (${a.startTime||''}~${a.endTime||''})</div>`).join('')}
                 </div>`;
             }).filter(Boolean).join('');
-            body.innerHTML = rows || '<p style="color:#94a3b8; text-align:center; padding:20px;">금일 외출/외박 신청자가 없습니다.</p>';
+            body.innerHTML=rows||'<p style="color:#94a3b8;text-align:center;padding:20px;">금일 외출/외박 신청자가 없습니다.</p>';
         }
     },
 
@@ -5837,8 +5804,7 @@ window.onload = function() {
     profMgr.init();   
     coordMgr.init(); 
     guideMgr.init();
-    ui.startHeaderClock(); // 상단 날짜/시간 시계 시작
-
+    ui.startHeaderClock(); // 헤더 날짜/시간 시계 시작
     dataMgr.initSystem(); 
 };
 

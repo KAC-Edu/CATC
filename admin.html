@@ -169,7 +169,7 @@
 <div class="divider"></div>
                 <div class="setting-group" style="position: relative;">
                     <label class="setting-label">Related Platforms</label>
-                    <div id="familySiteMenu" class="family-site-menu" style="bottom:45px; top:auto; position:absolute; left:0; right:0;">
+                    <div id="familySiteMenu" class="family-site-menu" style="bottom:auto; top:45px; position:absolute; left:0; right:0; z-index:100;">
                         <a href="javascript:void(0)" onclick="ui.goFamilySite('coord', 'admin_coord.html')"><i class="fa-solid fa-user-tie"></i> 교육운영부 (행정)</a>
                         <a href="javascript:void(0)" onclick="ui.goFamilySite('support', 'support_admin.html')"><i class="fa-solid fa-hotel"></i> 교육지원부 (생활관)</a>
                         <a href="javascript:void(0)" onclick="ui.goFamilySite('driver', 'driver.html')"><i class="fa-solid fa-bus"></i> 기사 전용 (수송)</a>
@@ -254,8 +254,7 @@
         <span id="displayRoomName">Connecting...</span>
         <span class="course-sub-name" id="displayCourseTitle"></span>
     </div>
-    <!-- 날짜/시간 실시간 표시 -->
-    <div id="headerDateTime" style="color:#fff; font-size:17px; font-weight:700; letter-spacing:0.3px; white-space:nowrap;"></div>
+    <div id="headerDateTime" style="color:#fff; font-size:19px; font-weight:700; letter-spacing:0.3px; white-space:nowrap; flex:1; text-align:center;"></div>
     <div class="header-controls">
         <div class="icon-btn-group">
             <!-- 강의실 실시간 현황판 바로가기 버튼 -->
@@ -699,92 +698,16 @@
 
 <!-- ══ 홈 화면 (#view-home) ══ -->
 <div id="view-home" class="full-dashboard" style="display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:70vh;">
-    <div class="view-header" style="margin-bottom:20px; text-align:center;">
-        <h1 style="font-size:42px;"><i class="fa-solid fa-plane-departure"></i> 항공기술훈련원 교육운영플랫폼</h1>
+    <!-- 타이틀 -->
+    <div class="view-header" style="margin-bottom:16px; text-align:center;">
+        <h1 style="font-size:42px;"><i class="fa-solid fa-plane-departure"></i> 항공기술훈련원 교육 플랫폼</h1>
         <p>CATC Education Operating Platform</p>
     </div>
+    <!-- catc.png: 원본 전체 비율 노출 -->
     <div class="dashboard-campus-banner" style="max-width:1100px; width:100%; margin-bottom:28px;">
-        <img src="catc.png" alt="항공기술훈련원 전경">
+        <img src="catc.png" alt="항공기술훈련원 전경"
+             style="width:100%; height:auto; aspect-ratio:1879/837; object-fit:contain; display:block; border-radius:18px;">
     </div>
-
-    <!-- 3개 통계 블록 -->
-    <div style="display:flex; gap:16px; width:100%; max-width:1100px; flex-wrap:wrap; margin-bottom:40px;">
-
-        <!-- ① 현재 강의 중 (이번 주) -->
-        <div onclick="ui.openHomeStatModal('active')"
-             style="flex:1; min-width:200px; background:#fff; border-radius:18px; padding:28px 24px;
-                    box-shadow:0 4px 20px rgba(0,0,0,0.07); cursor:pointer; border:1.5px solid #e2e8f0;
-                    transition:transform 0.15s, box-shadow 0.15s; text-align:center;"
-             onmouseover="this.style.transform='translateY(-3px)'; this.style.boxShadow='0 8px 28px rgba(59,130,246,0.15)'"
-             onmouseout="this.style.transform=''; this.style.boxShadow='0 4px 20px rgba(0,0,0,0.07)'">
-            <div style="display:flex; align-items:center; justify-content:center; gap:10px; margin-bottom:16px;">
-                <div style="width:44px; height:44px; background:#eff6ff; border-radius:12px; display:flex; align-items:center; justify-content:center;">
-                    <i class="fa-solid fa-chalkboard-user" style="color:#3b82f6; font-size:20px;"></i>
-                </div>
-                <span style="font-size:15px; font-weight:700; color:#64748b;">현재 강의 중</span>
-            </div>
-            <div style="display:flex; align-items:baseline; justify-content:center; gap:8px;">
-                <span style="font-size:48px; font-weight:900; color:#1e293b; line-height:1;" id="stat-active-count">-</span>
-                <span style="font-size:16px; font-weight:700; color:#64748b;">개 과정 운영중</span>
-            </div>
-            <div style="font-size:12px; color:#94a3b8; margin-top:10px; font-weight:600;">이번 주 기준 · 클릭하여 상세 보기</div>
-        </div>
-
-        <!-- ② 총 교육생 (이번 주) -->
-        <div onclick="ui.openHomeStatModal('students')"
-             style="flex:1; min-width:200px; background:#fff; border-radius:18px; padding:28px 24px;
-                    box-shadow:0 4px 20px rgba(0,0,0,0.07); cursor:pointer; border:1.5px solid #e2e8f0;
-                    transition:transform 0.15s, box-shadow 0.15s; text-align:center;"
-             onmouseover="this.style.transform='translateY(-3px)'; this.style.boxShadow='0 8px 28px rgba(16,185,129,0.15)'"
-             onmouseout="this.style.transform=''; this.style.boxShadow='0 4px 20px rgba(0,0,0,0.07)'">
-            <div style="display:flex; align-items:center; justify-content:center; gap:10px; margin-bottom:16px;">
-                <div style="width:44px; height:44px; background:#f0fdf4; border-radius:12px; display:flex; align-items:center; justify-content:center;">
-                    <i class="fa-solid fa-users" style="color:#10b981; font-size:20px;"></i>
-                </div>
-                <span style="font-size:15px; font-weight:700; color:#64748b;">총 교육생</span>
-            </div>
-            <div style="display:flex; align-items:baseline; justify-content:center; gap:8px;">
-                <span style="font-size:48px; font-weight:900; color:#1e293b; line-height:1;" id="stat-student-count">-</span>
-                <span style="font-size:16px; font-weight:700; color:#64748b;">명 교육 중</span>
-            </div>
-            <div style="font-size:12px; color:#94a3b8; margin-top:10px; font-weight:600;">이번 주 기준 · 클릭하여 과정별 보기</div>
-        </div>
-
-        <!-- ③ 외출/외박 신청(금일) -->
-        <div onclick="ui.openHomeStatModal('outing')"
-             style="flex:1; min-width:200px; background:#fff; border-radius:18px; padding:28px 24px;
-                    box-shadow:0 4px 20px rgba(0,0,0,0.07); cursor:pointer; border:1.5px solid #e2e8f0;
-                    transition:transform 0.15s, box-shadow 0.15s; text-align:center;"
-             onmouseover="this.style.transform='translateY(-3px)'; this.style.boxShadow='0 8px 28px rgba(245,158,11,0.15)'"
-             onmouseout="this.style.transform=''; this.style.boxShadow='0 4px 20px rgba(0,0,0,0.07)'">
-            <div style="display:flex; align-items:center; justify-content:center; gap:10px; margin-bottom:16px;">
-                <div style="width:44px; height:44px; background:#fffbeb; border-radius:12px; display:flex; align-items:center; justify-content:center;">
-                    <i class="fa-solid fa-person-walking-arrow-right" style="color:#f59e0b; font-size:20px;"></i>
-                </div>
-                <span style="font-size:15px; font-weight:700; color:#64748b;">외출/외박 신청(금일)</span>
-            </div>
-            <div style="display:flex; align-items:baseline; justify-content:center; gap:8px;">
-                <span style="font-size:48px; font-weight:900; color:#1e293b; line-height:1;" id="stat-outing-count">-</span>
-                <span style="font-size:16px; font-weight:700; color:#64748b;">명 신청</span>
-            </div>
-            <div style="font-size:12px; color:#94a3b8; margin-top:10px; font-weight:600;">금일 기준 · 클릭하여 과정별 보기</div>
-        </div>
-
-    </div>
-</div>
-
-<!-- 홈 통계 팝업 모달 -->
-<div id="homeStatModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%;
-     background:rgba(0,0,0,0.45); z-index:9000; align-items:center; justify-content:center;">
-    <div style="background:#fff; border-radius:20px; padding:32px; width:90%; max-width:560px;
-                max-height:75vh; overflow-y:auto; box-shadow:0 20px 60px rgba(0,0,0,0.2); position:relative;">
-        <button onclick="document.getElementById('homeStatModal').style.display='none'"
-                style="position:absolute; top:16px; right:16px; width:32px; height:32px; border:none;
-                       background:#f1f5f9; border-radius:50%; cursor:pointer; font-size:16px; color:#64748b;">✕</button>
-        <h3 id="homeStatModalTitle" style="font-size:18px; font-weight:900; color:#1e293b; margin-bottom:20px;"></h3>
-        <div id="homeStatModalBody"></div>
-    </div>
-</div>
 
 <!-- ══ 강의실 실시간 현황판 (#view-waiting) ══ -->
 <div id="view-waiting" class="full-dashboard" style="display:none; flex-direction:column; align-items:center; padding-top:30px;">
