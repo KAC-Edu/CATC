@@ -5065,26 +5065,24 @@ closeSummaryAndExit: function() {
 
 
 
-/* --- [수정 2차 - 완결본] 입교안내 가이드 관리 로직 (동적 스케일 및 기존 기능 통합) --- */
+/* --- [수정 3차 - 강의실별 완전 독립] 입교안내 가이드 관리 로직 --- */
 const guideMgr = {
     // 강의실별 PDF 상태 캐시: { [roomId]: { pdfDoc, pageNum } }
+    // getter/setter 없이 직접 참조 — 컨텍스트 문제 완전 차단
     _roomCache: {},
     isRendering: false,
 
-    // 현재 방의 캐시를 가져오거나 초기화
-    _cache: function() {
-        const room = state.room || '__default__';
-        if (!this._roomCache[room]) {
-            this._roomCache[room] = { pdfDoc: null, pageNum: 1 };
-        }
-        return this._roomCache[room];
-    },
+    // 현재 방 ID 반환
+    _room: function() { return state.room || '__default__'; },
 
-    // pdfDoc / pageNum을 캐시 경유로 접근 (하위 코드 호환용 getter/setter 래퍼)
-    get pdfDoc() { return this._cache().pdfDoc; },
-    set pdfDoc(v) { this._cache().pdfDoc = v; },
-    get pageNum() { return this._cache().pageNum; },
-    set pageNum(v) { this._cache().pageNum = v; },
+    // 현재 방 캐시 슬롯 반환 (없으면 초기화)
+    _slot: function() {
+        const r = guideMgr._room();
+        if (!guideMgr._roomCache[r]) {
+            guideMgr._roomCache[r] = { pdfDoc: null, pageNum: 1 };
+        }
+        return guideMgr._roomCache[r];
+    },
 
     // GitHub에 올린 입교안내 PDF의 raw URL (파일 교체 시 이 URL만 수정)
     GUIDE_PDF_URL: 'https://raw.githubusercontent.com/jds0616-boop/CATC/main/%EC%9E%85%EA%B5%90%EC%95%88%EB%82%B4.pdf',
@@ -5103,16 +5101,16 @@ init: function() {
         window.addEventListener('resize', () => {
             clearTimeout(resizeTimer);
             resizeTimer = setTimeout(() => {
-                if (guideMgr.pdfDoc) {
+                const slot = guideMgr._slot();
+                if (slot.pdfDoc) {
                     guideMgr.isRendering = false;
-                    guideMgr.renderPage(guideMgr.pageNum);
+                    guideMgr.renderPage(slot.pageNum);
                 }
             }, 300);
         });
         document.addEventListener('fullscreenchange', () => {
             guideMgr.isRendering = false;
-            // CSS 전환 후 pdfWrapper 크기가 확정된 다음 renderPage
-            setTimeout(() => guideMgr.renderPage(guideMgr.pageNum), 350);
+            setTimeout(() => guideMgr.renderPage(guideMgr._slot().pageNum), 350);
         });
     }
 },
@@ -5183,12 +5181,13 @@ init: function() {
     },
 
     // 탭 전환 시 PDF 재렌더링 (setMode에서 호출)
-    // 해당 강의실의 캐시에 pdfDoc이 있으면 저장된 페이지 그대로 재개,
+    // 현재 방 캐시에 pdfDoc이 있으면 저장된 페이지 그대로 재개,
     // 없으면 GitHub URL에서 on-demand 로드 (첫 진입 시)
     refresh: function() {
-        if (guideMgr.pdfDoc) {
+        const slot = guideMgr._slot();
+        if (slot.pdfDoc) {
             guideMgr.isRendering = false;
-            guideMgr.renderPage(guideMgr.pageNum);
+            guideMgr.renderPage(slot.pageNum);
         } else {
             guideMgr.loadPDF(guideMgr.GUIDE_PDF_URL);
         }
@@ -5202,7 +5201,7 @@ init: function() {
         );
     },
 
-    // 3. PDF 로드 — GitHub raw URL에서 직접 fetch (base64 DB 방식 제거)
+    // 3. PDF 로드 — GitHub raw URL에서 직접 fetch
     loadPDF: async function(url) {
         if (typeof pdfjsLib === 'undefined') {
             console.error("PDF.js 라이브러리가 로드되지 않았습니다.");
@@ -5210,15 +5209,25 @@ init: function() {
             if (badge) { badge.innerText = "❌ PDF 라이브러리 오류"; badge.style.color = "#ef4444"; }
             return;
         }
+        // 로드 시작 시점의 방을 고정 (비동기 완료 전 방이 바뀌어도 안전)
+        const targetRoom = guideMgr._room();
         const badge = document.getElementById('guideStatusBadge');
         if (badge) { badge.innerText = "⏳ 불러오는 중..."; badge.style.color = "#f59e0b"; }
         guideMgr.isRendering = false;
         try {
             const loadingTask = pdfjsLib.getDocument(url);
-            guideMgr.pdfDoc = await loadingTask.promise;
-            guideMgr.pageNum = 1;
+            const pdfDoc = await loadingTask.promise;
+            // 로드 완료 후 해당 방 슬롯에만 저장
+            if (!guideMgr._roomCache[targetRoom]) {
+                guideMgr._roomCache[targetRoom] = { pdfDoc: null, pageNum: 1 };
+            }
+            guideMgr._roomCache[targetRoom].pdfDoc = pdfDoc;
+            guideMgr._roomCache[targetRoom].pageNum = 1;
             if (badge) { badge.innerText = "✅ 가이드 로드 완료"; badge.style.color = "#10b981"; }
-            guideMgr.renderPage(1);
+            // 로드 완료 시점에도 같은 방이면 렌더링
+            if (guideMgr._room() === targetRoom) {
+                guideMgr.renderPage(1);
+            }
         } catch (err) {
             console.error("PDF 로딩 실패:", err);
             guideMgr.isRendering = false;
@@ -5228,13 +5237,14 @@ init: function() {
 
     // 4. 화면 렌더링
     renderPage: async function(num) {
-        if(!guideMgr.pdfDoc || guideMgr.isRendering) return;
+        const slot = guideMgr._slot();
+        if (!slot.pdfDoc || guideMgr.isRendering) return;
         guideMgr.isRendering = true;
 
         try {
-            const page = await guideMgr.pdfDoc.getPage(num);
+            const page = await slot.pdfDoc.getPage(num);
             const canvas = document.getElementById('guideCanvas');
-            if(!canvas) { guideMgr.isRendering = false; return; }
+            if (!canvas) { guideMgr.isRendering = false; return; }
 
             // 스케일 계산
             const unscaledViewport = page.getViewport({scale: 1.0});
@@ -5270,10 +5280,11 @@ init: function() {
             ctx.drawImage(offscreen, 0, 0);
 
             guideMgr.isRendering = false;
-            guideMgr.pageNum = num;
+            // 렌더링 완료 후 현재 방 슬롯에 페이지 번호 저장
+            guideMgr._slot().pageNum = num;
 
             const indicator = document.getElementById('guidePageInfo');
-            if(indicator) indicator.innerText = `${num} / ${guideMgr.pdfDoc.numPages}`;
+            if (indicator) indicator.innerText = `${num} / ${slot.pdfDoc.numPages}`;
 
         } catch (err) {
             if (err && err.name !== 'RenderingCancelledException') {
@@ -5283,13 +5294,13 @@ init: function() {
         }
     },
 
-    // 5. 페이지 이동 (기존 로직 유지)
+    // 5. 페이지 이동
     changePage: function(offset) {
-        if(!guideMgr.pdfDoc || guideMgr.isRendering) return;
-        let newPage = guideMgr.pageNum + offset;
-        if(newPage > 0 && newPage <= guideMgr.pdfDoc.numPages) {
-            guideMgr.pageNum = newPage;
-            guideMgr.renderPage(guideMgr.pageNum);
+        const slot = guideMgr._slot();
+        if (!slot.pdfDoc || guideMgr.isRendering) return;
+        const newPage = slot.pageNum + offset;
+        if (newPage > 0 && newPage <= slot.pdfDoc.numPages) {
+            guideMgr.renderPage(newPage);
         }
     },
 
