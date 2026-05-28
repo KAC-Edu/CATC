@@ -2150,12 +2150,18 @@ body.night-mode .header-room-badge { background-color: #003366 !important; borde
 /* --- [5.4차 최종] 프리미엄 에듀-대시보드 신규 스타일 --- */
 
 /* 1. 헤더 & 컨테이너 정리 */
-.dash-hero-header { margin-bottom: 25px !important; }
+.dash-hero-header { margin-bottom: 8px !important; }
+/* 과정 현황 탭 전용: 제목 여백 최소화 */
+#view-dashboard .view-header {
+    margin-top: 10px !important;
+    margin-bottom: 10px !important;
+}
+
 .dash-title-main { display: flex; align-items: center; justify-content: center; gap: 12px; }
 .dash-title-main i { font-size: 32px; color: #3b82f6; }
 
 .dash-hero-container {
-    padding: 30px !important;
+    padding: 16px 30px 30px !important;
     background: #ffffff !important;
     border: none !important;
     box-shadow: 0 20px 50px rgba(0,0,0,0.05) !important;
