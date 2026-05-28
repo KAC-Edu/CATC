@@ -3573,12 +3573,14 @@ loadTabletLoanData: function() {
 
         tbody.innerHTML = sorted.map((item, idx) => {
             const time = item.timestamp ? new Date(item.timestamp).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }) : '-';
-            return `<tr>
-                <td>${idx + 1}</td>
-                <td style="font-weight:bold;">${item.name || '-'}</td>
-                <td>${item.phone || '-'}</td>
-                <td>${time}</td>
-                <td>
+            const name = item.name || '-';
+            const phone = item.phone || '-';
+            return `<tr style="text-align:center;">
+                <td style="text-align:center;">${idx + 1}</td>
+                <td style="font-weight:bold; text-align:center;">${name}</td>
+                <td style="text-align:center;">${phone}</td>
+                <td style="text-align:center;">${time}</td>
+                <td style="text-align:center;">
                     <button class="btn-table-action" onclick="ui.cancelTabletLoan('${item.token}')"
                             style="background-color:#6366f1; font-size:11px; padding:5px 8px;">
                         신청 취소

@@ -3538,11 +3538,17 @@ ${names}`);
             if (el) el.innerHTML = `${cnt}<span>명</span>`;
         });
 
-        // 태블릿 대여 카운트 실시간
-        firebase.database().ref(`courses/${currentRID}/tablet_loans`).on('value', snap => {
-            const elT = document.getElementById('ind-tablet-cnt');
-            if (elT) elT.innerHTML = `${Object.keys(snap.val() || {}).length}<span>명</span>`;
-        });
+        // 태블릿 대여 카운트 실시간 (null 체크 + 중복 등록 방지)
+        if (window._tabletLoanListener) {
+            firebase.database().ref(`courses/${window._tabletLoanListener}/tablet_loans`).off();
+        }
+        window._tabletLoanListener = currentRID;
+        if (currentRID) {
+            firebase.database().ref(`courses/${currentRID}/tablet_loans`).on('value', snap => {
+                const elT = document.getElementById('ind-tablet-cnt');
+                if (elT) elT.innerHTML = `${Object.keys(snap.val() || {}).length}<span>명</span>`;
+            });
+        }
     }
 // [개편] 목적지별 클릭 시 상세 명단 팝업
     function showShuttleMembers(locType) {

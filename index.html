@@ -3449,9 +3449,6 @@ function openTabletLoan() {
     document.getElementById('menuModal').style.display = 'none';
     document.getElementById('tabletLoanModal').style.display = 'flex';
     const uToken = localStorage.getItem('uToken');
-    const name = localStorage.getItem('userName') || '';
-    const phone = localStorage.getItem('userPhone') || '';
-    const phone4 = phone.replace(/-/g, '').slice(-4);
 
     if (!uToken || !currentRoom) {
         document.getElementById('tabletLoanContent').innerText = '접속 정보를 확인할 수 없습니다.';
@@ -3465,12 +3462,12 @@ function openTabletLoan() {
             const d = snap.val();
             const t = new Date(d.timestamp).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
             document.getElementById('tabletLoanContent').innerHTML =
-                `<b style="color:#6366f1;">✅ 태블릿 대여 신청 완료</b><br>신청자: <b>${d.name}</b><br>신청 시각: ${t}`;
+                `<b style="color:#6366f1;">✅ 태블릿 대여 신청 완료</b><br>신청 시각: ${t}`;
             applyBtn.style.display = 'none';
             cancelBtn.style.display = 'block';
         } else {
             document.getElementById('tabletLoanContent').innerHTML =
-                `태블릿 대여를 신청하시겠습니까?<br><small style="color:#94a3b8;">신청자: ${name}</small>`;
+                `태블릿 대여를 신청하시겠습니까?`;
             applyBtn.style.display = 'block';
             cancelBtn.style.display = 'none';
         }
@@ -3479,8 +3476,8 @@ function openTabletLoan() {
 
 function applyTabletLoan() {
     const uToken = localStorage.getItem('uToken');
-    const name = localStorage.getItem('userName') || '';
-    const phone = localStorage.getItem('userPhone') || '';
+    const name = localStorage.getItem('kac_user_name') || '';
+    const phone = localStorage.getItem('kac_user_phone') || '';
     const phone4 = phone.replace(/-/g, '').slice(-4);
     if (!uToken || !currentRoom) return alert('접속 정보를 확인할 수 없습니다.');
 
