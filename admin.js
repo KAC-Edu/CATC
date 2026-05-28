@@ -5070,35 +5070,15 @@ const guideMgr = {
     pageNum: 1,
     isRendering: false,
 
-    // 1. 초기화 (기존 로직 + 리사이즈 감시 추가)
+    // GitHub에 올린 입교안내 PDF의 raw URL (파일 교체 시 이 URL만 수정)
+    GUIDE_PDF_URL: 'https://raw.githubusercontent.com/YOUR_ORG/YOUR_REPO/main/입교안내.pdf',
+
+    // 1. 초기화 — Firebase DB 리스너 없음, 리사이즈 감시만 설정
+    //    실제 PDF 로드는 사용자가 '입교안내' 탭을 클릭할 때 refresh()에서 수행
 init: function() {
-    if (!state.room) return;
     if (typeof pdfjsLib !== 'undefined') {
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
     }
-
-    // 리스너 중복 방지: 이미 등록됐으면 재등록 안 함
-    if (window._guideListenerSet) return;
-    window._guideListenerSet = true;
-
-    const guideRef = firebase.database().ref(`system/sharedGuide`);
-    guideRef.off();
-    guideRef.on('value', snap => {
-        const data = snap.val();
-        const badge = document.getElementById('guideStatusBadge');
-        if (data) {
-            if (badge) { badge.innerText = "✅ 가이드 등록 완료"; badge.style.color = "#10b981"; }
-            // 이미 같은 PDF가 로드된 경우 재로드 안 함 (버벅임 방지)
-            if (guideMgr._loadedData === data) return;
-            guideMgr._loadedData = data;
-            guideMgr.pageNum = 1;
-            guideMgr.loadPDF(data);
-        } else {
-            guideMgr._loadedData = null;
-            guideMgr.pdfDoc = null;
-            if (badge) { badge.innerText = "❌ 등록된 파일 없음"; badge.style.color = "#ef4444"; }
-        }
-    });
 
     // resize 디바운스 (300ms) - 연속 호출 방지
     if (!window._guideResizeSet) {
@@ -5187,93 +5167,46 @@ init: function() {
     },
 
     // 탭 전환 시 PDF 재렌더링 (setMode에서 호출)
+    // 이미 로드된 경우 재렌더, 처음 진입 시 GitHub URL에서 on-demand 로드
     refresh: function() {
         if (guideMgr.pdfDoc) {
             guideMgr.isRendering = false;
             guideMgr.renderPage(guideMgr.pageNum);
         } else {
-            // _guideListenerSet은 유지하고 로드만 재시도
-            window._guideListenerSet = false;
-            guideMgr.init();
+            guideMgr.loadPDF(guideMgr.GUIDE_PDF_URL);
         }
     },
 
-    // 2. 가이드 업로드 (사용자님의 확인 팝업 버전 유지)
+    // 2. 가이드 업로드 — 정식 버전 출시 전까지 업로드 제한
     uploadGuide: function(input) {
-        const file = input.files[0];
-        if(!file || file.type !== 'application/pdf') {
-            ui.showAlert("PDF 파일만 업로드 가능합니다.");
-            input.value = ""; 
-            return;
-        }
-
-        const MAX_SIZE = 10 * 1024 * 1024;
-        if (file.size > MAX_SIZE) {
-            ui.showAlert(`⚠️ 파일 크기가 너무 큽니다.\n현재: ${(file.size/1024/1024).toFixed(1)}MB / 최대: 10MB\n\nPDF를 압축한 후 다시 시도해 주세요.`);
-            input.value = "";
-            return;
-        }
-
-        const userConfirmed = confirm(
-            "⚠️ [주의] 새 가이드를 업로드하시겠습니까?\n\n" +
-            "업로드 시 기존에 등록되어 있던 가이드 자료는\n" +
-            "즉시 삭제되고 새로운 파일로 교체됩니다.\n\n" +
-            "진행하시겠습니까?"
+        input.value = "";
+        ui.showAlert(
+            "🚫 정식 버전 출시 전까지 업로드가 제한됩니다.\n\n" +
+            "입교안내 PDF를 교체하려면 운영부에 문의해 주세요."
         );
-
-        if (!userConfirmed) {
-            input.value = ""; 
-            return;
-        }
-
-        const badge = document.getElementById('guideStatusBadge');
-        if (badge) { badge.innerText = "⏳ 업로드 중..."; badge.style.color = "#f59e0b"; }
-
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            firebase.database().ref(`system/sharedGuide`).set(e.target.result)
-                .then(() => {
-                    ui.showAlert("✅ 가이드가 성공적으로 교체되었습니다.");
-                    input.value = "";
-                })
-                .catch(err => {
-                    ui.showAlert("❌ 업로드 실패: 파일이 너무 크거나 네트워크 오류입니다.\n파일을 더 압축하거나 인터넷 연결을 확인해 주세요.");
-                    if (badge) { badge.innerText = "❌ 업로드 실패"; badge.style.color = "#ef4444"; }
-                    input.value = "";
-                });
-        };
-        reader.onerror = () => {
-            ui.showAlert("❌ 파일을 읽는 중 오류가 발생했습니다.");
-            input.value = "";
-        };
-        reader.readAsDataURL(file);
     },
 
-    // 3. PDF 로드 (기존 로직 유지)
-    loadPDF: async function(base64) {
+    // 3. PDF 로드 — GitHub raw URL에서 직접 fetch (base64 DB 방식 제거)
+    loadPDF: async function(url) {
         if (typeof pdfjsLib === 'undefined') {
             console.error("PDF.js 라이브러리가 로드되지 않았습니다.");
             const badge = document.getElementById('guideStatusBadge');
             if (badge) { badge.innerText = "❌ PDF 라이브러리 오류"; badge.style.color = "#ef4444"; }
             return;
         }
-        guideMgr.isRendering = false; // 이전 실패 상태 초기화
+        const badge = document.getElementById('guideStatusBadge');
+        if (badge) { badge.innerText = "⏳ 불러오는 중..."; badge.style.color = "#f59e0b"; }
+        guideMgr.isRendering = false;
         try {
-            const parts = base64.split(',');
-            if (parts.length < 2) throw new Error("잘못된 PDF 데이터 형식");
-            const raw = atob(parts[1]);
-            const array = new Uint8Array(new ArrayBuffer(raw.length));
-            for (let i = 0; i < raw.length; i++) array[i] = raw.charCodeAt(i);
-            
-            const loadingTask = pdfjsLib.getDocument({data: array});
+            const loadingTask = pdfjsLib.getDocument(url);
             guideMgr.pdfDoc = await loadingTask.promise;
             guideMgr.pageNum = 1;
+            if (badge) { badge.innerText = "✅ 가이드 로드 완료"; badge.style.color = "#10b981"; }
             guideMgr.renderPage(1);
         } catch (err) {
             console.error("PDF 로딩 실패:", err);
             guideMgr.isRendering = false;
-            const badge = document.getElementById('guideStatusBadge');
-            if (badge) { badge.innerText = "❌ PDF 표시 오류 (파일 재업로드 필요)"; badge.style.color = "#ef4444"; }
+            if (badge) { badge.innerText = "❌ PDF 로드 실패 (운영부 문의)"; badge.style.color = "#ef4444"; }
         }
     },
 
@@ -5574,47 +5507,40 @@ openSetupModal: async function() {
     profMgr.list.forEach(p => { profOptions += `<option value="${p.name}">${p.name} 교수</option>`; });
     document.getElementById('setup-prof-select').innerHTML = profOptions;
 
-    // 담당자 및 가이드 상태 로드
+    // 담당자 상태 로드
     firebase.database().ref('system/coordinators').once('value', snap => {
         const coords = snap.val() || {};
         let coordOptions = '<option value="">--- 담당자 선택 ---</option>';
         Object.values(coords).forEach(c => { coordOptions += `<option value="${c.name}">${c.name}</option>`; });
         document.getElementById('setup-coord-select').innerHTML = coordOptions;
         
-        firebase.database().ref(`system/sharedGuide`).once('value', gSnap => {
-            const el = document.getElementById('modalGuideStatus');
-            if(el) {
-                if(gSnap.exists()) {
-                    el.innerHTML = '<i class="fa-solid fa-circle-check"></i> 가이드 PDF가 등록되어 있습니다.';
-                    el.style.color = "#10b981";
-                } else {
-                    el.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> 등록된 가이드 파일이 없습니다.';
-                    el.style.color = "#ef4444";
-                }
+        // 가이드 PDF는 GitHub 정적 파일로 운영 중 (DB 저장 방식 미사용)
+        const el = document.getElementById('modalGuideStatus');
+        if(el) {
+            el.innerHTML = '<i class="fa-solid fa-circle-check"></i> 가이드 PDF는 GitHub에서 운영 중입니다.';
+            el.style.color = "#10b981";
+        }
+
+        // flatpickr를 먼저 초기화한 뒤, onReady 콜백에서 loadCurrentSettings 호출
+        // → _flatpickr 인스턴스가 확실히 존재하는 시점에 setDate가 실행됨
+        const existingFp = document.getElementById('setup-period-range')._flatpickr;
+        if (existingFp) existingFp.destroy(); // 모달 재오픈 시 중복 인스턴스 방지
+
+        flatpickr("#setup-period-range", {
+            mode: "range",
+            locale: "ko",
+            dateFormat: "Y-m-d",
+            showMonths: 2,
+            closeOnSelect: false,
+            disableMobile: "true",
+            onReady: (selectedDates, dateStr, instance) => {
+                instance.calendarContainer.style.width = "820px";
+                // 인스턴스 준비 완료 후 기존 저장 데이터 주입
+                this.loadCurrentSettings();
+            },
+            onChange: function(selectedDates, dateStr, instance) {
+                instance.calendarContainer.style.width = "820px";
             }
-
-            // flatpickr를 먼저 초기화한 뒤, onReady 콜백에서 loadCurrentSettings 호출
-            // → _flatpickr 인스턴스가 확실히 존재하는 시점에 setDate가 실행됨
-            const existingFp = document.getElementById('setup-period-range')._flatpickr;
-            if (existingFp) existingFp.destroy(); // 모달 재오픈 시 중복 인스턴스 방지
-
-            flatpickr("#setup-period-range", {
-                mode: "range",
-                locale: "ko",
-                dateFormat: "Y-m-d",
-                showMonths: 2,
-                closeOnSelect: false,
-                disableMobile: "true",
-                onReady: (selectedDates, dateStr, instance) => {
-                    instance.calendarContainer.style.width = "820px";
-                    // 인스턴스 준비 완료 후 기존 저장 데이터 주입
-                    this.loadCurrentSettings();
-                },
-                onChange: function(selectedDates, dateStr, instance) {
-                    instance.calendarContainer.style.width = "820px";
-                }
-            });
-
         });
     });
 },
