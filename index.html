@@ -624,46 +624,63 @@
 
 <!-- [개편] 차량 신청 팝업 -->
 <div id="shuttleModal" class="menu-overlay" style="display:none; z-index: 7000;">
-    <div class="menu-box" style="width:90%; padding: 25px 20px; border-radius: 24px; max-width: 400px;">
-        <h3 style="margin-bottom: 5px; color:#1e293b; font-weight:900;">퇴교 차량 신청</h3>
-        
-        <!-- 기사님 전달 시간 표시 영역 -->
-        <div id="driverNoticeBar" style="background: #eff6ff; border: 1px solid #dbeafe; padding: 12px; border-radius: 12px; margin-bottom: 20px; text-align: center;">
-            <div style="font-size: 11px; font-weight: 800; color: #3b82f6; margin-bottom: 4px;">📢 항기원 출발 예정 시간</div>
-            <div id="departureTimeText" style="font-size: 18px; font-weight: 900; color: #1e40af;">시간 정보 없음</div>
+    <div class="menu-box" style="width:90%; padding:25px 20px; border-radius:24px; max-width:400px;">
+        <h3 style="margin-bottom:12px; color:#1e293b; font-weight:900;">퇴교 차량 신청</h3>
+
+        <!-- 출발 예정 시간 -->
+        <div id="driverNoticeBar" style="background:#eff6ff; border:1.5px solid #bfdbfe; padding:14px 18px; border-radius:14px; margin-bottom:18px; text-align:center;">
+            <div id="departureTimeText" style="font-size:22px; font-weight:900; color:#1d4ed8; letter-spacing:-0.3px;">시간 정보 없음</div>
         </div>
 
-        <!-- 신청 전: 버튼 선택 영역 -->
+        <!-- 신청 전: 버튼 선택 -->
         <div id="shuttleSelectionArea">
-            <p style="font-size:12px; color:#94a3b8; margin-bottom:15px; text-align: center;">이동 수단을 선택해 주세요.</p>
+            <p style="font-size:12px; color:#94a3b8; margin-bottom:12px; text-align:center;">이동 수단을 선택해 주세요.</p>
             <div style="display:flex; flex-direction:column; gap:10px;">
-                <button class="quiz-opt-btn shuttle-btn" onclick="selectShuttle('car', '자차(개별이동)')" style="justify-content:center; align-items:center; height:70px; background:#f1f5f9; border-color:#e2e8f0; color:#64748b; gap:6px; flex-direction:row; padding:0 12px;">
-                    <span style="font-size:26px; line-height:1; flex-shrink:0;">🚗</span>
-                    <span style="font-size:14px; font-weight:800; line-height:1.2;">자차<br><small style="font-size:11px; font-weight:600; opacity:0.7;">개별이동</small></span>
+
+                <button class="quiz-opt-btn shuttle-btn" onclick="selectShuttle('car','자차(개별이동)')"
+                    style="display:flex; align-items:center; justify-content:flex-start; gap:16px; height:68px; padding:0 20px; background:#f8fafc; border-color:#e2e8f0; color:#475569; border-radius:14px;">
+                    <span style="font-size:36px; line-height:1; flex-shrink:0;">🚗</span>
+                    <span style="font-size:18px; font-weight:800;">자차 &nbsp;<small style="font-size:13px; font-weight:600; opacity:0.55;">개별이동</small></span>
                 </button>
-                <button class="quiz-opt-btn shuttle-btn" onclick="selectShuttle('osong', '오송역')" style="justify-content:center; align-items:center; height:70px; border-color:#fca5a5; color:#b91c1c; gap:6px; flex-direction:row; padding:0 12px;">
-                    <span style="font-size:26px; line-height:1; flex-shrink:0;">🚄</span>
-                    <span style="font-size:14px; font-weight:800; line-height:1.2;">오송역</span>
+
+                <button class="quiz-opt-btn shuttle-btn" onclick="selectShuttle('osong','오송역')"
+                    style="display:flex; align-items:center; justify-content:flex-start; gap:16px; height:68px; padding:0 20px; border-color:#fca5a5; color:#b91c1c; border-radius:14px;">
+                    <span style="font-size:36px; line-height:1; flex-shrink:0;">🚄</span>
+                    <div style="display:flex; flex-direction:column; align-items:flex-start; line-height:1.3;">
+                        <span style="font-size:18px; font-weight:800;">오송역</span>
+                        <span id="arrival-osong" style="font-size:13px; font-weight:700; color:#ef4444; opacity:0.85;"></span>
+                    </div>
                 </button>
-                <button class="quiz-opt-btn shuttle-btn" onclick="selectShuttle('terminal', '청주터미널')" style="justify-content:center; align-items:center; height:70px; border-color:#93c5fd; color:#1e40af; gap:6px; flex-direction:row; padding:0 12px;">
-                    <span style="font-size:26px; line-height:1; flex-shrink:0;">🚌</span>
-                    <span style="font-size:14px; font-weight:800; line-height:1.2;">청주<br><small style="font-size:11px; font-weight:600; opacity:0.7;">터미널</small></span>
+
+                <button class="quiz-opt-btn shuttle-btn" onclick="selectShuttle('terminal','청주터미널')"
+                    style="display:flex; align-items:center; justify-content:flex-start; gap:16px; height:68px; padding:0 20px; border-color:#93c5fd; color:#1e40af; border-radius:14px;">
+                    <span style="font-size:36px; line-height:1; flex-shrink:0;">🚌</span>
+                    <div style="display:flex; flex-direction:column; align-items:flex-start; line-height:1.3;">
+                        <span style="font-size:18px; font-weight:800;">청주 터미널</span>
+                        <span id="arrival-terminal" style="font-size:13px; font-weight:700; color:#1d4ed8; opacity:0.85;"></span>
+                    </div>
                 </button>
-                <button class="quiz-opt-btn shuttle-btn" onclick="selectShuttle('airport', '청주공항')" style="justify-content:center; align-items:center; height:70px; border-color:#86efac; color:#166534; gap:6px; flex-direction:row; padding:0 12px;">
-                    <span style="font-size:26px; line-height:1; flex-shrink:0;">✈️</span>
-                    <span style="font-size:14px; font-weight:800; line-height:1.2;">청주<br><small style="font-size:11px; font-weight:600; opacity:0.7;">국제공항</small></span>
+
+                <button class="quiz-opt-btn shuttle-btn" onclick="selectShuttle('airport','청주공항')"
+                    style="display:flex; align-items:center; justify-content:flex-start; gap:16px; height:68px; padding:0 20px; border-color:#86efac; color:#166534; border-radius:14px;">
+                    <span style="font-size:36px; line-height:1; flex-shrink:0;">✈️</span>
+                    <div style="display:flex; flex-direction:column; align-items:flex-start; line-height:1.3;">
+                        <span style="font-size:18px; font-weight:800;">청주국제공항</span>
+                        <span id="arrival-airport" style="font-size:13px; font-weight:700; color:#16a34a; opacity:0.85;"></span>
+                    </div>
                 </button>
+
             </div>
         </div>
 
-        <!-- 신청 후: 내역 확인 및 취소 영역 -->
-        <div id="shuttleCancelArea" style="display:none; background: #f8fafc; padding: 20px; border-radius: 15px; border: 1px solid #e2e8f0; text-align:center;">
-            <p style="font-size: 12px; font-weight: 800; color: #64748b; margin-bottom:5px;">📍 나의 신청 현황</p>
-            <p id="myCurrentShuttleText" style="font-size: 20px; font-weight: 900; color: #1e293b; margin-bottom:20px;"></p>
-            <button onclick="cancelShuttleRequest()" style="width: 100%; padding: 15px; background: #ef4444; color: white; border: none; border-radius: 12px; font-size: 15px; font-weight: bold;">신청 취소하기</button>
+        <!-- 신청 후: 내역 확인 및 취소 -->
+        <div id="shuttleCancelArea" style="display:none; background:#f8fafc; padding:20px; border-radius:15px; border:1px solid #e2e8f0; text-align:center;">
+            <p style="font-size:12px; font-weight:800; color:#64748b; margin-bottom:5px;">📍 나의 신청 현황</p>
+            <p id="myCurrentShuttleText" style="font-size:20px; font-weight:900; color:#1e293b; margin-bottom:20px;"></p>
+            <button onclick="cancelShuttleRequest()" style="width:100%; padding:15px; background:#ef4444; color:white; border:none; border-radius:12px; font-size:15px; font-weight:bold;">신청 취소하기</button>
         </div>
 
-        <button onclick="closeShuttleModal()" style="margin-top:20px; width:100%; padding:15px; border:none; border-radius:15px; background:#f1f5f9; color: #475569; font-size: 18px; font-weight: 900;">닫기</button>
+        <button onclick="closeShuttleModal()" style="margin-top:20px; width:100%; padding:15px; border:none; border-radius:15px; background:#f1f5f9; color:#475569; font-size:18px; font-weight:900;">닫기</button>
     </div>
 </div>
 
@@ -1934,44 +1951,113 @@ let currentShuttleData = null; // 나의 신청 데이터 저장용
 async function openShuttleApply() {
     document.getElementById('menuModal').style.display = 'none';
     document.getElementById('shuttleModal').style.display = 'flex';
-    
+
     const uToken = localStorage.getItem('uToken');
 
-    // [핵심 연동] 기사님이 driver.html에서 설정한 시간을 실시간으로 감시하여 표시합니다.
+    // 출발 시간 실시간 감시
     if (window._shuttleDepartureRef) window._shuttleDepartureRef.off();
+    if (window._shuttleRequestsRef)  window._shuttleRequestsRef.off();
+
+    // 경유지 신청자 수에 따른 동적 도착 시간 계산 함수
+    // 경로: 항기원 → (오송역 +30분) → (청주터미널 +30분) → (청주공항 +30분)
+    // 각 경유지에 신청자가 없으면 해당 구간 +30분을 건너뜀
+    function calcArrival(depTime, counts) {
+        const [hh, mm] = depTime.split(':').map(Number);
+        let baseMin = hh * 60 + mm;
+        const result = {};
+
+        // 오송역: 항기원 출발 +30분 (고정, 첫 경유지)
+        result.osong = baseMin + 30;
+
+        // 청주터미널: 오송역 경유 여부와 무관하게 항기원 기준 +60분
+        // 단, 오송역에 아무도 없으면 오송 미경유 → +30분 절약
+        let termMin = baseMin + (counts.osong > 0 ? 60 : 30);
+        result.terminal = termMin;
+
+        // 청주공항: 터미널 경유 여부에 따라 달라짐
+        // 터미널 승객 있으면 터미널 도착 후 +30분, 없으면 터미널 skip → +30분 절약
+        let airMin = termMin + (counts.terminal > 0 ? 30 : 0) + 30;
+        // 터미널도 없고 오송도 없으면 항기원→공항 직행 +60분
+        if (counts.osong === 0 && counts.terminal === 0) airMin = baseMin + 60;
+        result.airport = airMin;
+
+        return result;
+    }
+
+    function fmtMin(totalMin) {
+        const h = String(Math.floor(totalMin / 60) % 24).padStart(2, '0');
+        const m = String(totalMin % 60).padStart(2, '0');
+        return `${h}:${m}`;
+    }
+
+    function updateArrivalUI(depTime, counts) {
+        const arrivals = calcArrival(depTime, counts);
+        const osongEl    = document.getElementById('arrival-osong');
+        const termEl     = document.getElementById('arrival-terminal');
+        const airportEl  = document.getElementById('arrival-airport');
+        if (osongEl)   osongEl.textContent   = `${fmtMin(arrivals.osong)} (도착 예정)`;
+        if (termEl)    termEl.textContent    = `${fmtMin(arrivals.terminal)} (도착 예정)`;
+        if (airportEl) airportEl.textContent = `${fmtMin(arrivals.airport)} (도착 예정)`;
+    }
+
+    function clearArrivalUI() {
+        ['arrival-osong','arrival-terminal','arrival-airport'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.textContent = '';
+        });
+    }
+
+    // 출발 시간 + 신청자 수를 동시에 감시해서 도착 시간 갱신
+    let currentDepTime = null;
+    let currentCounts  = { osong: 0, terminal: 0, airport: 0 };
+
+    function refresh() {
+        if (!currentDepTime) { clearArrivalUI(); return; }
+        updateArrivalUI(currentDepTime, currentCounts);
+    }
+
+    // 출발 시간 리스너
     window._shuttleDepartureRef = firebase.database().ref(`courses/${currentRoom}/shuttle/departure`);
     window._shuttleDepartureRef.on('value', snap => {
         const dep = snap.val();
         const timeEl = document.getElementById('departureTimeText');
         if (!timeEl) return;
         const today = getTodayString();
-        if (dep && dep.time && dep.date) {
-            if (dep.date >= today) {
-                timeEl.innerText = `${dep.date} [ ${dep.time} ] 출발 예정`;
-                timeEl.style.color = "#ef4444";
-            } else {
-                timeEl.innerText = "출발 일정이 없습니다.";
-                timeEl.style.color = "#94a3b8";
-            }
+        if (dep && dep.time && dep.date && dep.date >= today) {
+            const dateFmt = dep.date.replace(/-/g, '.');
+            const h = dep.time.split(':')[0].replace(/^0/, '');
+            timeEl.textContent = `${dateFmt}  ${h}시 출발 예정`;
+            timeEl.style.color = '#1d4ed8';
+            currentDepTime = dep.time;
         } else {
-            firebase.database().ref('system/shuttle_notice').once('value', s => {
-                timeEl.innerText = s.val() || "기사님이 출발 시간을 설정 중입니다.";
-                timeEl.style.color = "#64748b";
-            });
+            timeEl.textContent = dep ? '출발 일정이 없습니다.' : '기사님이 출발 시간을 설정 중입니다.';
+            timeEl.style.color = dep ? '#94a3b8' : '#64748b';
+            currentDepTime = null;
         }
+        refresh();
     });
 
-    // 기존 신청 내역 확인 (이미 신청했는지 체크)
+    // 신청자 수 실시간 감시 → 경유지 skip 여부 반영
+    window._shuttleRequestsRef = firebase.database().ref(`courses/${currentRoom}/shuttle/requests`);
+    window._shuttleRequestsRef.on('value', snap => {
+        const data = snap.val() || {};
+        currentCounts = { osong: 0, terminal: 0, airport: 0 };
+        Object.values(data).forEach(r => {
+            if (r.type === 'osong')    currentCounts.osong++;
+            if (r.type === 'terminal') currentCounts.terminal++;
+            if (r.type === 'airport')  currentCounts.airport++;
+        });
+        refresh();
+    });
+
+    // 기존 신청 내역 확인
     const snap = await firebase.database().ref(`courses/${currentRoom}/shuttle/requests/${uToken}`).once('value');
     currentShuttleData = snap.val();
-
     if (currentShuttleData) {
-        // 신청 기록이 있으면 취소 화면 표시
         document.getElementById('shuttleSelectionArea').style.display = 'none';
         document.getElementById('shuttleCancelArea').style.display = 'block';
         document.getElementById('myCurrentShuttleText').innerText = currentShuttleData.typeText;
     } else {
-        // 신청 기록이 없으면 선택 버튼들 표시
         document.getElementById('shuttleSelectionArea').style.display = 'block';
         document.getElementById('shuttleCancelArea').style.display = 'none';
     }
@@ -2023,7 +2109,9 @@ async function cancelShuttleRequest() {
 
 // 4. 팝업창 닫기
 function closeShuttleModal() { 
-    document.getElementById('shuttleModal').style.display = 'none'; 
+    document.getElementById('shuttleModal').style.display = 'none';
+    if (window._shuttleDepartureRef) { window._shuttleDepartureRef.off(); window._shuttleDepartureRef = null; }
+    if (window._shuttleRequestsRef)  { window._shuttleRequestsRef.off();  window._shuttleRequestsRef  = null; }
 }
 
 
