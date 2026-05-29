@@ -6194,17 +6194,22 @@ const bgmPlayer = {
 document.addEventListener('DOMContentLoaded', () => bgmPlayer.init());
 
 /* ══════════════════════════════════════════════════════════════
-   연간 교육운영계획 일괄 업로드 & Room 자동 배치 관리자 v2
-   - 헤더 셀의 줄바꿈(\n) 제거 후 매칭으로 파싱 오류 수정
+   연간 교육운영계획 일괄 업로드 & Room 자동 배치 v3 (최종)
+   - sheet_to_json 대신 셀 직접 접근 방식으로 파싱 안정화
+   - 날짜: 문자열/숫자/serial 모두 처리
    ══════════════════════════════════════════════════════════════ */
 const annualPlanMgr = {
 
     ROOMS: ['A', 'B', 'C'],
     PLAN_KEY: 'system/annualPlan',
 
-    _excelDate: function(n) {
-        if (typeof n === 'number' && n > 40000) {
-            const d = new Date((n - 25569) * 86400 * 1000);
+    /* 엑셀 Serial 또는 숫자문자열 → YYYY-MM-DD */
+    _excelDate: function(v) {
+        let n = typeof v === 'number' ? v : parseFloat(v);
+        if (!isNaN(n) && n > 40000) {
+            // UTC 기준으로 변환 (엑셀은 1900-01-01 기준, 단 1900-02-29 버그 포함)
+            const ms = (n - 25569) * 86400 * 1000;
+            const d = new Date(ms);
             const y = d.getUTCFullYear();
             const m = String(d.getUTCMonth() + 1).padStart(2, '0');
             const day = String(d.getUTCDate()).padStart(2, '0');
@@ -6216,13 +6221,20 @@ const annualPlanMgr = {
     _getMondayOf: function(dateStr) {
         const d = new Date(dateStr + 'T00:00:00Z');
         const day = d.getUTCDay();
-        const diff = (day === 0) ? -6 : 1 - day;
+        const diff = day === 0 ? -6 : 1 - day;
         d.setUTCDate(d.getUTCDate() + diff);
         return d.toISOString().split('T')[0];
     },
 
     _today: function() {
         return new Date().toISOString().split('T')[0];
+    },
+
+    /* ── 컬럼 문자 → 0-indexed 숫자 (A→0, B→1, ...) ── */
+    _colToIdx: function(col) {
+        let n = 0;
+        for (const ch of col) n = n * 26 + ch.charCodeAt(0) - 64;
+        return n - 1;
     },
 
     upload: async function(input) {
@@ -6235,71 +6247,94 @@ const annualPlanMgr = {
 
         try {
             const buf = await file.arrayBuffer();
-            const wb = XLSX.read(buf, { type: 'array' });
+            const wb = XLSX.read(buf, { type: 'array', cellText: false, cellDates: false });
 
-            // 총괄표 시트 찾기
+            // 총괄표 시트 찾기 (없으면 첫 번째)
             const sheetName = wb.SheetNames.find(n => n.includes('총괄')) || wb.SheetNames[0];
             const ws = wb.Sheets[sheetName];
-            const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: null });
 
-            // ★ 핵심 수정: 셀 값의 \n 제거 후 매칭
-            // '교육일정확인\n(운영부)' 같은 줄바꿈 포함 헤더도 정상 처리
-            let headerIdx = -1;
+            if (!ws || !ws['!ref']) {
+                throw new Error(`시트를 읽을 수 없습니다. (시트명: ${sheetName})\n파일을 Excel에서 다시 저장 후 업로드해 보세요.`);
+            }
+
+            const range = XLSX.utils.decode_range(ws['!ref']);
+
+            /* ── 헤더 행 탐색: '연번'과 '과정명'이 같은 행에 있는 행 ── */
+            let headerRow = -1;
             let colMap = {};
 
-            for (let i = 0; i < rows.length; i++) {
-                const row = rows[i];
-                // 각 셀값의 줄바꿈 제거한 배열
-                const flat = row.map(v => (v != null ? String(v).replace(/\n/g, '').trim() : ''));
-
-                if (flat.includes('연번') && flat.includes('과정명')) {
-                    headerIdx = i;
-                    flat.forEach((v, j) => {
-                        if (v === '연번')       colMap.no    = j;
-                        if (v === '과정명')     colMap.name  = j;
-                        // 담임교수: 컬럼이 두 개 있을 수 있으므로 첫 번째만
-                        if (v === '담임교수' && colMap.prof == null)  colMap.prof  = j;
-                        if (v.includes('교육일정확인')) colMap.coord = j;
-                        if (v === '교육시작일') colMap.start = j;
-                        if (v === '교육종료일') colMap.end   = j;
-                    });
-                    console.log('[annualPlanMgr] 헤더 행:', i + 1, '컬럼맵:', colMap);
+            for (let r = range.s.r; r <= Math.min(range.s.r + 20, range.e.r); r++) {
+                const rowVals = {};
+                for (let c = range.s.c; c <= range.e.c; c++) {
+                    const addr = XLSX.utils.encode_cell({ r, c });
+                    const cell = ws[addr];
+                    if (cell && cell.v != null) {
+                        // \n, \r 제거 후 trim
+                        rowVals[c] = String(cell.v).replace(/[\r\n]/g, '').trim();
+                    }
+                }
+                const vals = Object.values(rowVals);
+                if (vals.includes('연번') && vals.includes('과정명')) {
+                    headerRow = r;
+                    for (const [c, v] of Object.entries(rowVals)) {
+                        const ci = parseInt(c);
+                        if (v === '연번')       colMap.no    = ci;
+                        if (v === '과정명')     colMap.name  = ci;
+                        // 담임교수: 컬럼이 2개 있을 수 있으므로 첫 번째
+                        if (v === '담임교수' && colMap.prof == null) colMap.prof = ci;
+                        if (v.includes('교육일정확인')) colMap.coord = ci;
+                        if (v === '교육시작일') colMap.start = ci;
+                        if (v === '교육종료일') colMap.end   = ci;
+                    }
+                    console.log('[annualPlanMgr] 헤더 발견 행:', r + 1, colMap);
                     break;
                 }
             }
 
-            if (headerIdx < 0) {
-                throw new Error('총괄표 헤더를 찾을 수 없습니다.\n(연번·과정명 컬럼이 있는 행이 필요합니다)');
+            if (headerRow < 0) {
+                throw new Error(
+                    '헤더를 찾을 수 없습니다.\n' +
+                    '총괄표 시트에 "연번"과 "과정명" 컬럼이 있는 행이 필요합니다.'
+                );
             }
 
-            // 과정 데이터 파싱
+            /* ── 데이터 파싱 ── */
             const courses = [];
-            for (let i = headerIdx + 1; i < rows.length; i++) {
-                const row = rows[i];
-                if (!row || !row.length) continue;
+            for (let r = headerRow + 1; r <= range.e.r; r++) {
+                try {
+                    const noCell  = ws[XLSX.utils.encode_cell({ r, c: colMap.no })];
+                    if (!noCell) continue;
+                    const no = parseInt(noCell.v);
+                    if (isNaN(no)) continue;
 
-                const no = row[colMap.no];
-                if (typeof no !== 'number' || !Number.isInteger(no)) continue;
+                    const nameCell = ws[XLSX.utils.encode_cell({ r, c: colMap.name })];
+                    if (!nameCell || !nameCell.v) continue;
 
-                const name = row[colMap.name];
-                if (!name) continue;
+                    const startCell = ws[XLSX.utils.encode_cell({ r, c: colMap.start })];
+                    const endCell   = ws[XLSX.utils.encode_cell({ r, c: colMap.end })];
+                    const startDate = this._excelDate(startCell && startCell.v);
+                    const endDate   = this._excelDate(endCell   && endCell.v);
+                    if (!startDate || !endDate) continue;
 
-                const startDate = this._excelDate(row[colMap.start]);
-                const endDate   = this._excelDate(row[colMap.end]);
-                if (!startDate || !endDate) continue;
+                    const profCell  = ws[XLSX.utils.encode_cell({ r, c: colMap.prof })];
+                    const coordCell = ws[XLSX.utils.encode_cell({ r, c: colMap.coord })];
 
-                // 담임교수: 여러 명이면 첫 번째만
-                const profRaw = row[colMap.prof] ? String(row[colMap.prof]) : '';
-                const prof = profRaw.split(/[,，、\/]/)[0].trim();
+                    const profRaw = profCell ? String(profCell.v) : '';
+                    const prof    = profRaw.split(/[,，、\/]/)[0].trim();
+                    const coord   = coordCell ? String(coordCell.v).trim() : '';
 
-                const coord = row[colMap.coord] ? String(row[colMap.coord]).trim() : '';
-
-                courses.push({
-                    no, name: String(name).trim(),
-                    startDate, endDate, prof, coord,
-                    weekKey: this._getMondayOf(startDate),
-                    period: `${startDate} ~ ${endDate}`
-                });
+                    courses.push({
+                        no,
+                        name: String(nameCell.v).trim(),
+                        startDate, endDate,
+                        period: `${startDate} ~ ${endDate}`,
+                        prof, coord,
+                        weekKey: this._getMondayOf(startDate)
+                    });
+                } catch (rowErr) {
+                    // 개별 행 오류는 무시하고 계속
+                    console.warn(`[annualPlanMgr] 행 ${r + 1} 파싱 스킵:`, rowErr);
+                }
             }
 
             if (courses.length === 0) throw new Error('파싱된 과정이 없습니다.');
@@ -6313,25 +6348,30 @@ const annualPlanMgr = {
             ui.showAlert(`✅ 운영계획 업로드 완료!\n총 ${courses.length}개 과정을 Room A/B/C에 배치했습니다.`);
 
         } catch (err) {
-            console.error('annualPlanMgr.upload 오류:', err);
-            if (statusEl) { statusEl.innerText = '❌ ' + err.message.split('\n')[0]; statusEl.style.color = '#ef4444'; }
-            ui.showAlert('❌ 업로드 오류: ' + err.message);
+            console.error('[annualPlanMgr] upload 오류:', err);
+            if (statusEl) {
+                statusEl.innerText = '❌ ' + err.message.split('\n')[0];
+                statusEl.style.color = '#ef4444';
+            }
+            ui.showAlert('❌ 업로드 오류:\n' + err.message);
         }
     },
 
     _assignRooms: async function(courses) {
-        const resetUpdates = {};
+        // Room A/B/C 전체 초기화
+        const reset = {};
         for (const r of this.ROOMS) {
-            resetUpdates[`courses/${r}/settings/courseName`] = '';
-            resetUpdates[`courses/${r}/settings/period`] = '';
-            resetUpdates[`courses/${r}/settings/coordinatorName`] = null;
-            resetUpdates[`courses/${r}/status/professorName`] = '';
-            resetUpdates[`courses/${r}/status/roomStatus`] = 'idle';
+            reset[`courses/${r}/settings/courseName`] = '';
+            reset[`courses/${r}/settings/period`]     = '';
+            reset[`courses/${r}/settings/coordinatorName`] = null;
+            reset[`courses/${r}/status/professorName`] = '';
+            reset[`courses/${r}/status/roomStatus`]   = 'idle';
         }
-        await firebase.database().ref().update(resetUpdates);
+        await firebase.database().ref().update(reset);
 
+        // 전체 과정 저장 (만료 체크용)
         const planData = {};
-        courses.forEach((c, idx) => { planData[`c${idx}`] = c; });
+        courses.forEach((c, i) => { planData[`c${i}`] = c; });
         await firebase.database().ref(this.PLAN_KEY).set(planData);
 
         await this._applyCurrentWeek(courses);
@@ -6341,35 +6381,38 @@ const annualPlanMgr = {
         const today = this._today();
         const thisWeekMonday = this._getMondayOf(today);
 
+        // 아직 끝나지 않은 과정만, 시작일 순 정렬
         const upcoming = courses
             .filter(c => c.endDate >= today)
             .sort((a, b) => a.startDate.localeCompare(b.startDate));
 
+        // 우선순위: 진행 중 → 이번 주 시작 → 미래
         const ongoing  = upcoming.filter(c => c.startDate <= today);
         const thisWeek = upcoming.filter(c => c.startDate > today && this._getMondayOf(c.startDate) === thisWeekMonday);
         const future   = upcoming.filter(c => c.startDate > today && this._getMondayOf(c.startDate) !== thisWeekMonday);
 
         const pool = [...ongoing, ...thisWeek, ...future];
-        const toAssign = [];
-        for (let i = 0; i < Math.min(this.ROOMS.length, pool.length); i++) {
-            toAssign.push({ room: this.ROOMS[i], course: pool[i] });
-        }
-
-        if (toAssign.length === 0) return;
-
         const updates = {};
-        for (const { room, course } of toAssign) {
+        const assigned = [];
+
+        for (let i = 0; i < Math.min(this.ROOMS.length, pool.length); i++) {
+            const room = this.ROOMS[i];
+            const course = pool[i];
             updates[`courses/${room}/settings/courseName`] = course.name;
-            updates[`courses/${room}/settings/period`] = course.period;
+            updates[`courses/${room}/settings/period`]     = course.period;
             updates[`courses/${room}/settings/coordinatorName`] = course.coord;
             updates[`courses/${room}/status/professorName`] = course.prof;
-            updates[`courses/${room}/status/roomStatus`] = 'active';
+            updates[`courses/${room}/status/roomStatus`]   = 'active';
+            assigned.push(`${room}: ${course.name}`);
         }
-        await firebase.database().ref().update(updates);
 
-        console.log('[annualPlanMgr] Room 배치:', toAssign.map(x => `${x.room}=${x.course.name}`).join(', '));
+        if (Object.keys(updates).length) {
+            await firebase.database().ref().update(updates);
+            console.log('[annualPlanMgr] 배치 완료:', assigned.join(' | '));
+        }
     },
 
+    /* 페이지 로드 시 만료 Room 자동 체크 & 재배치 */
     checkAndReset: async function() {
         try {
             const snap = await firebase.database().ref(this.PLAN_KEY).once('value');
@@ -6382,13 +6425,11 @@ const annualPlanMgr = {
             let needsUpdate = false;
 
             for (const room of this.ROOMS) {
-                const snap2 = await firebase.database().ref(`courses/${room}/settings`).once('value');
-                const settings = snap2.val() || {};
-                const period = settings.period || '';
-                if (!period) continue;
+                const s = await firebase.database().ref(`courses/${room}/settings`).once('value');
+                const period = (s.val() || {}).period || '';
                 const endDate = period.split('~')[1]?.trim();
                 if (endDate && endDate < today) {
-                    console.log(`[annualPlanMgr] Room ${room} 만료 (${endDate}) → 재배치`);
+                    console.log(`[annualPlanMgr] Room ${room} 만료 (${endDate})`);
                     needsUpdate = true;
                     break;
                 }
@@ -6396,6 +6437,7 @@ const annualPlanMgr = {
 
             if (needsUpdate) {
                 await this._applyCurrentWeek(courses);
+                console.log('[annualPlanMgr] 자동 재배치 완료');
             }
         } catch (err) {
             console.warn('[annualPlanMgr] checkAndReset 오류:', err);
@@ -6403,6 +6445,7 @@ const annualPlanMgr = {
     }
 };
 
+/* 강사 플랫폼 로드 시 자동 만료 체크 */
 document.addEventListener('DOMContentLoaded', () => {
     if (typeof firebase !== 'undefined' && firebase.auth) {
         firebase.auth().onAuthStateChanged(user => {
