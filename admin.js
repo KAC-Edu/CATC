@@ -6249,42 +6249,74 @@ const annualPlanMgr = {
             const buf = await file.arrayBuffer();
             const wb = XLSX.read(buf, { type: 'array', cellText: false, cellDates: false });
 
-            // 총괄표 시트 찾기 (없으면 첫 번째)
-            const sheetName = wb.SheetNames.find(n => n.includes('총괄')) || wb.SheetNames[0];
+            // ── FIX 1: 시트 이름의 공백을 제거한 후 '총괄' 포함 여부로 검색.
+            //    실제 파일의 시트명은 '총괄표'이며, 보이지 않는 공백이나
+            //    전각 문자가 섞여도 매칭되도록 replace(/\s/g,'') 처리 후 비교.
+            //    일치하는 시트가 없으면 무조건 첫 번째 시트로 fallback.
+            const sheetName = wb.SheetNames.find(n => n.replace(/\s/g, '').includes('총괄'))
+                           || wb.SheetNames[0];
             const ws = wb.Sheets[sheetName];
+            console.log('[annualPlanMgr] 사용 시트:', sheetName);
 
-            if (!ws || !ws['!ref']) {
-                throw new Error(`시트를 읽을 수 없습니다. (시트명: ${sheetName})\n파일을 Excel에서 다시 저장 후 업로드해 보세요.`);
+            // ── FIX 2: !ref가 누락된 경우 강제로 넓은 범위를 주입.
+            //    일부 엑셀 라이브러리(LibreOffice 저장, 구버전 xlsx 등)는
+            //    ws['!ref']를 생략하는 경우가 있어 decode_range()가 undefined를
+            //    받아 TypeError를 냄. A1:Z500 범위를 강제 설정해 파싱을 계속함.
+            if (!ws) {
+                throw new Error(`시트 객체 자체가 없습니다. (시트명: ${sheetName})\n파일을 Excel에서 다시 저장 후 업로드해 보세요.`);
+            }
+            if (!ws['!ref']) {
+                console.warn('[annualPlanMgr] !ref 누락 → A1:Z500 강제 설정');
+                ws['!ref'] = XLSX.utils.encode_range({ s: { c: 0, r: 0 }, e: { c: 25, r: 499 } });
             }
 
             const range = XLSX.utils.decode_range(ws['!ref']);
 
-            /* ── 헤더 행 탐색: '연번'과 '과정명'이 같은 행에 있는 행 ── */
+            /* ── FIX 3: 헤더 탐색 범위를 상위 30행까지 확장.
+               실제 파일 구조: 1~12행은 제목·배정기준 등 메타 영역이고
+               13행(r=12)에 실제 컬럼 헤더가 위치함.
+               기존 +20 범위로는 항상 탐색 성공이지만, 다른 연도 파일에서
+               헤더가 더 아래에 있을 경우를 대비해 +30으로 여유를 확보함.
+               
+               헤더 셀 값 정규화: \r\n 및 공백·괄호를 모두 제거한 normalizedVal로
+               비교하여 '교육일정확인\n(운영부)' 같은 줄바꿈 포함 셀도 정확히 매칭. */
             let headerRow = -1;
             let colMap = {};
 
-            for (let r = range.s.r; r <= Math.min(range.s.r + 20, range.e.r); r++) {
-                const rowVals = {};
+            for (let r = range.s.r; r <= Math.min(range.s.r + 30, range.e.r); r++) {
+                const rowVals    = {};   // c → 원본값 (저장용)
+                const rowNormals = {};   // c → 정규화값 (비교용)
+
                 for (let c = range.s.c; c <= range.e.c; c++) {
                     const addr = XLSX.utils.encode_cell({ r, c });
                     const cell = ws[addr];
                     if (cell && cell.v != null) {
-                        // \n, \r 제거 후 trim
-                        rowVals[c] = String(cell.v).replace(/[\r\n]/g, '').trim();
+                        const raw        = String(cell.v);
+                        // 줄바꿈·공백·괄호를 제거한 정규화 문자열로 비교
+                        const normalized = raw.replace(/[\r\n\s()（）]/g, '');
+                        rowVals[c]    = raw.trim();
+                        rowNormals[c] = normalized;
                     }
                 }
-                const vals = Object.values(rowVals);
-                if (vals.includes('연번') && vals.includes('과정명')) {
+
+                const normals = Object.values(rowNormals);
+                // '연번' 과 '과정명' 이 같은 행에 존재하면 헤더 행으로 판정
+                if (normals.includes('연번') && normals.includes('과정명')) {
                     headerRow = r;
-                    for (const [c, v] of Object.entries(rowVals)) {
+                    for (const [c, nv] of Object.entries(rowNormals)) {
                         const ci = parseInt(c);
-                        if (v === '연번')       colMap.no    = ci;
-                        if (v === '과정명')     colMap.name  = ci;
-                        // 담임교수: 컬럼이 2개 있을 수 있으므로 첫 번째
-                        if (v === '담임교수' && colMap.prof == null) colMap.prof = ci;
-                        if (v.includes('교육일정확인')) colMap.coord = ci;
-                        if (v === '교육시작일') colMap.start = ci;
-                        if (v === '교육종료일') colMap.end   = ci;
+                        // FIX 3-a: 정규화된 값으로 컬럼 매핑
+                        if (nv === '연번')            colMap.no    = ci;
+                        if (nv === '과정명')          colMap.name  = ci;
+                        // 담임교수는 F열(idx 5)과 U열(idx 20) 두 곳에 존재.
+                        // 실제 담임교수는 F열(idx 5, 첫 번째 등장)을 사용.
+                        if (nv === '담임교수' && colMap.prof == null) colMap.prof = ci;
+                        // FIX 3-b: '교육일정확인(운영부)' → 정규화 후 '교육일정확인운영부'
+                        //   기존: v.includes('교육일정확인') → 줄바꿈 포함 셀에서 미매칭 발생
+                        //   수정: 정규화된 normals로 includes 검사
+                        if (nv.includes('교육일정확인')) colMap.coord = ci;
+                        if (nv === '교육시작일')      colMap.start = ci;
+                        if (nv === '교육종료일')      colMap.end   = ci;
                     }
                     console.log('[annualPlanMgr] 헤더 발견 행:', r + 1, colMap);
                     break;
@@ -6294,7 +6326,8 @@ const annualPlanMgr = {
             if (headerRow < 0) {
                 throw new Error(
                     '헤더를 찾을 수 없습니다.\n' +
-                    '총괄표 시트에 "연번"과 "과정명" 컬럼이 있는 행이 필요합니다.'
+                    `총괄표 시트(사용된 시트: "${sheetName}")의 상위 30행 내에\n` +
+                    '"연번"과 "과정명" 컬럼이 있는 행이 필요합니다.'
                 );
             }
 
@@ -6321,7 +6354,8 @@ const annualPlanMgr = {
 
                     const profRaw = profCell ? String(profCell.v) : '';
                     const prof    = profRaw.split(/[,，、\/]/)[0].trim();
-                    const coord   = coordCell ? String(coordCell.v).trim() : '';
+                    // FIX 3-c: coord 셀도 줄바꿈 제거 후 trim
+                    const coord   = coordCell ? String(coordCell.v).replace(/[\r\n]/g, '').trim() : '';
 
                     courses.push({
                         no,
