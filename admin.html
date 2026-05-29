@@ -415,18 +415,18 @@
 <!-- [6.0차 최종 통합본] 대시보드 구역 -->
 <!-- 설문조사 안내 뷰 (강당 스크린 전용) -->
 <div id="view-survey-guide" style="display:none; flex-direction:column; align-items:center; width:100%;">
-    <div class="view-header" style="margin-bottom:0;">
+    <div class="view-header" style="margin-bottom:20px;">
         <h1>
             <i class="fa-solid fa-square-poll-vertical"></i>
             교육 만족도 설문조사 안내
         </h1>
-        <button onclick="ui.setMode('notice')"
-            style="position:absolute; right:20px; top:50%; transform:translateY(-50%); height:32px; padding:0 14px; background:#fff; color:#475569; border:1.5px solid #cbd5e1; border-radius:8px; cursor:pointer; font-size:13px; font-weight:700; display:inline-flex; align-items:center; gap:6px; white-space:nowrap;">
-            <i class="fa-solid fa-xmark"></i> 닫기
-        </button>
     </div>
     <div class="survey-guide-container">
-        <div class="survey-card-main">
+        <div class="survey-card-main" style="position:relative;">
+            <!-- 카드 우측 상단 X 닫기 버튼 -->
+            <button class="card-close-btn" onclick="ui.setMode('notice')" title="닫기">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
             <div class="survey-header">★ 설 문 조 사 ★</div>
 
             <!-- Step 1 -->
@@ -482,19 +482,19 @@
 
 <!-- ══ 시험 타이머 뷰 (#view-exam-timer) ══ -->
 <div id="view-exam-timer" style="display:none; flex-direction:column; align-items:center; width:100%;">
-    <div class="view-header" style="margin-bottom:12px;">
+    <div class="view-header" style="margin-bottom:20px;">
         <h1>
             <i class="fa-regular fa-clock"></i>
             시험 타이머
         </h1>
-        <button onclick="examTimer.stop(); ui.setMode('notice')"
-            style="position:absolute; right:20px; top:50%; transform:translateY(-50%); height:32px; padding:0 14px; background:#fff; color:#475569; border:1.5px solid #cbd5e1; border-radius:8px; cursor:pointer; font-size:13px; font-weight:700; display:inline-flex; align-items:center; gap:6px; white-space:nowrap;">
-            <i class="fa-solid fa-xmark"></i> 닫기
-        </button>
     </div>
 
     <!-- 타이머 카드 -->
-    <div style="background:#fff; border-radius:28px; padding:36px 48px; box-shadow:0 12px 40px rgba(0,0,0,0.08); width:100%; max-width:600px; display:flex; flex-direction:column; align-items:center; gap:28px;">
+    <div style="position:relative; background:#fff; border-radius:28px; padding:36px 48px; box-shadow:0 12px 40px rgba(0,0,0,0.08); width:100%; max-width:600px; display:flex; flex-direction:column; align-items:center; gap:28px;">
+        <!-- 카드 우측 상단 X 닫기 버튼 -->
+        <button class="card-close-btn" onclick="examTimer.stop(); ui.setMode('notice')" title="닫기">
+            <i class="fa-solid fa-xmark"></i>
+        </button>
 
         <!-- SVG 원형 타임타이머 -->
         <div style="position:relative; width:320px; height:320px; flex-shrink:0;">
