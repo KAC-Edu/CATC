@@ -315,8 +315,24 @@
     </div>
 
     <!-- 트랙 목록 -->
-    <div style="padding:10px 10px 14px;">
+    <div style="padding:10px 10px 0;">
         <div id="bgmTrackList" style="display:flex; flex-direction:column; gap:4px;"></div>
+    </div>
+
+    <!-- 재생 컨트롤 바 -->
+    <div style="padding:12px 14px 14px; display:flex; align-items:center; gap:8px; border-top:1px solid rgba(255,255,255,0.06); margin-top:8px;">
+        <button onclick="bgmPlayer.play()"
+            style="flex:1; height:36px; background:#60a5fa; color:#fff; border:none; border-radius:10px; font-size:13px; font-weight:800; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px;">
+            <i class="fa-solid fa-play"></i> 재생
+        </button>
+        <button onclick="bgmPlayer.pause()"
+            style="flex:1; height:36px; background:rgba(255,255,255,0.08); color:#f1f5f9; border:1px solid rgba(255,255,255,0.12); border-radius:10px; font-size:13px; font-weight:800; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px;">
+            <i class="fa-solid fa-pause"></i> 일시정지
+        </button>
+        <button onclick="bgmPlayer.stop()"
+            style="height:36px; width:36px; background:rgba(239,68,68,0.15); color:#f87171; border:1px solid rgba(239,68,68,0.25); border-radius:10px; font-size:13px; cursor:pointer; display:flex; align-items:center; justify-content:center;">
+            <i class="fa-solid fa-stop"></i>
+        </button>
     </div>
 </div>
 

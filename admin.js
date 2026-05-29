@@ -6039,46 +6039,41 @@ const bgmPlayer = {
     _audio: null,
     _currentIdx: -1,
     _panelOpen: false,
+    _isPlaying: false,
 
-    // ── 큐레이션 트랙 목록 (Pixabay CDN 직접 링크, 무료/CC0) ──
+    // ── 큐레이션 트랙 목록 (SoundHelix - 직접 링크 허용, 무료) ──
     tracks: [
-        {
-            title: 'Lofi Study',
-            artist: 'Lesfm',
-            emoji: '📚',
-            url: 'https://cdn.pixabay.com/audio/2022/05/27/audio_1808fbf07a.mp3'
-        },
-        {
-            title: 'Relaxing Piano',
-            artist: 'Coma-Media',
-            emoji: '🎹',
-            url: 'https://cdn.pixabay.com/audio/2024/03/12/audio_1a5572f851.mp3'
-        },
-        {
-            title: 'Calm Ambient',
-            artist: 'Prazkhanal',
-            emoji: '🌿',
-            url: 'https://cdn.pixabay.com/audio/2022/03/10/audio_c0e1b3d9f7.mp3'
-        },
-        {
-            title: 'Focus Flow',
-            artist: 'AlexiAction',
-            emoji: '🎯',
-            url: 'https://cdn.pixabay.com/audio/2023/08/17/audio_e9d6f02d62.mp3'
-        },
-        {
-            title: 'Soft Jazz',
-            artist: 'Olexy',
-            emoji: '🎷',
-            url: 'https://cdn.pixabay.com/audio/2022/08/04/audio_2dde668d05.mp3'
-        }
+        { title: 'Lofi Study',      artist: 'SoundHelix', emoji: '📚', url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3' },
+        { title: 'Relaxing Piano',  artist: 'SoundHelix', emoji: '🎹', url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3' },
+        { title: 'Calm Ambient',    artist: 'SoundHelix', emoji: '🌿', url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-7.mp3' },
+        { title: 'Focus Flow',      artist: 'SoundHelix', emoji: '🎯', url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-9.mp3' },
+        { title: 'Soft Jazz',       artist: 'SoundHelix', emoji: '🎷', url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-17.mp3' }
     ],
+
+    // ── localStorage 키 ──
+    _LS_IDX: 'kac_bgm_idx',
+    _LS_VOL: 'kac_bgm_vol',
 
     init: function() {
         this._audio = new Audio();
         this._audio.loop = true;
-        this._audio.volume = 0.4;
+
+        // 저장된 볼륨 복원
+        const savedVol = parseFloat(localStorage.getItem(this._LS_VOL) ?? '0.4');
+        this._audio.volume = savedVol;
+        const volSlider = document.getElementById('bgmVolume');
+        if (volSlider) volSlider.value = Math.round(savedVol * 100);
+
+        // 저장된 트랙 복원 (자동재생 정책상 재생은 안 하고 트랙만 선택)
+        const savedIdx = parseInt(localStorage.getItem(this._LS_IDX) ?? '-1');
+        if (savedIdx >= 0 && savedIdx < this.tracks.length) {
+            this._currentIdx = savedIdx;
+            this._audio.src = this.tracks[savedIdx].url;
+            // 실제 재생은 사용자 인터랙션 후에만 가능 → 트랙 표시만
+        }
+
         this._renderTracks();
+        this._syncBadge();
 
         // 패널 외부 클릭 시 닫기
         document.addEventListener('click', (e) => {
@@ -6091,47 +6086,107 @@ const bgmPlayer = {
         });
     },
 
+    _save: function() {
+        localStorage.setItem(this._LS_IDX, this._currentIdx);
+        localStorage.setItem(this._LS_VOL, this._audio ? this._audio.volume : 0.4);
+    },
+
+    _syncBadge: function() {
+        const badge = document.getElementById('bgmNowBadge');
+        const iconBtn = document.getElementById('bgmIconBtn');
+        if (this._isPlaying) {
+            if (badge) { badge.innerText = '재생 중'; badge.style.display = 'inline-block'; }
+            if (iconBtn) iconBtn.style.color = '#60a5fa';
+        } else if (this._currentIdx >= 0) {
+            if (badge) { badge.innerText = '일시정지'; badge.style.background = '#94a3b8'; badge.style.display = 'inline-block'; }
+            if (iconBtn) iconBtn.style.color = '#94a3b8';
+        } else {
+            if (badge) { badge.style.display = 'none'; badge.style.background = '#60a5fa'; }
+            if (iconBtn) iconBtn.style.color = '';
+        }
+    },
+
     _renderTracks: function() {
         const list = document.getElementById('bgmTrackList');
         if (!list) return;
-        list.innerHTML = this.tracks.map((t, i) => `
-            <div id="bgmTrack_${i}" onclick="bgmPlayer.select(${i})"
-                style="display:flex; align-items:center; gap:12px; padding:10px 12px; border-radius:12px; cursor:pointer; transition:background 0.15s; ${this._currentIdx===i ? 'background:rgba(96,165,250,0.15);' : ''}">
+        const playing = this._isPlaying;
+        list.innerHTML = this.tracks.map((t, i) => {
+            const isActive = this._currentIdx === i;
+            const icon = isActive
+                ? (playing
+                    ? '<i class="fa-solid fa-volume-high" style="color:#60a5fa; font-size:12px; flex-shrink:0;"></i>'
+                    : '<i class="fa-solid fa-pause" style="color:#94a3b8; font-size:11px; flex-shrink:0;"></i>')
+                : '';
+            return `
+            <div onclick="bgmPlayer.select(${i})"
+                style="display:flex; align-items:center; gap:12px; padding:10px 12px; border-radius:12px; cursor:pointer; transition:background 0.15s; ${isActive ? 'background:rgba(96,165,250,0.12);' : ''}">
                 <div style="width:36px; height:36px; border-radius:10px; background:rgba(255,255,255,0.06); display:flex; align-items:center; justify-content:center; font-size:18px; flex-shrink:0;">${t.emoji}</div>
                 <div style="flex:1; overflow:hidden;">
-                    <div style="color:${this._currentIdx===i ? '#60a5fa' : '#f1f5f9'}; font-size:13px; font-weight:${this._currentIdx===i ? '800' : '600'}; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${t.title}</div>
+                    <div style="color:${isActive ? '#60a5fa' : '#f1f5f9'}; font-size:13px; font-weight:${isActive ? '800' : '600'}; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${t.title}</div>
                     <div style="color:#64748b; font-size:11px; margin-top:2px;">${t.artist}</div>
                 </div>
-                ${this._currentIdx===i ? '<i class="fa-solid fa-volume-high" style="color:#60a5fa; font-size:12px; flex-shrink:0;"></i>' : ''}
-            </div>
-        `).join('');
+                ${icon}
+            </div>`;
+        }).join('');
     },
 
     select: function(idx) {
         if (!this._audio) this.init();
         const t = this.tracks[idx];
         if (!t) return;
-
+        const isSame = this._currentIdx === idx;
         this._currentIdx = idx;
+
+        if (isSame && this._isPlaying) {
+            // 같은 트랙 클릭 = 일시정지
+            this.pause();
+            return;
+        }
+
         this._audio.src = t.url;
-        this._audio.play().catch(() => {
-            // 자동재생 정책으로 막힌 경우 무시
-        });
+        this._audio.load();
+        this._audio.play().then(() => {
+            this._isPlaying = true;
+            this._save();
+            this._renderTracks();
+            this._syncBadge();
+        }).catch(() => {});
+    },
 
-        // UI 업데이트
+    play: function() {
+        if (!this._audio) return;
+        if (this._currentIdx < 0) { this.select(0); return; }
+        this._audio.play().then(() => {
+            this._isPlaying = true;
+            this._save();
+            this._renderTracks();
+            this._syncBadge();
+        }).catch(() => {});
+    },
+
+    pause: function() {
+        if (!this._audio) return;
+        this._audio.pause();
+        this._isPlaying = false;
         this._renderTracks();
-        const badge = document.getElementById('bgmNowBadge');
-        if (badge) badge.style.display = 'inline-block';
+        this._syncBadge();
+    },
 
-        // 헤더 버튼 아이콘 강조
-        const btn = document.getElementById('bgmIconBtn');
-        if (btn) btn.style.color = '#60a5fa';
-
-        // 선택 후 패널 유지 (음악은 계속 흐름)
+    stop: function() {
+        if (!this._audio) return;
+        this._audio.pause();
+        this._audio.currentTime = 0;
+        this._isPlaying = false;
+        this._currentIdx = -1;
+        localStorage.removeItem(this._LS_IDX);
+        this._renderTracks();
+        this._syncBadge();
     },
 
     setVolume: function(val) {
-        if (this._audio) this._audio.volume = val / 100;
+        if (!this._audio) return;
+        this._audio.volume = val / 100;
+        localStorage.setItem(this._LS_VOL, val / 100);
     },
 
     togglePanel: function() {
@@ -6141,17 +6196,8 @@ const bgmPlayer = {
         this._panelOpen = !this._panelOpen;
         panel.style.display = this._panelOpen ? 'block' : 'none';
         if (this._panelOpen) this._renderTracks();
-    },
-
-    stop: function() {
-        if (this._audio) { this._audio.pause(); this._audio.src = ''; }
-        this._currentIdx = -1;
-        const badge = document.getElementById('bgmNowBadge');
-        if (badge) badge.style.display = 'none';
-        const btn = document.getElementById('bgmIconBtn');
-        if (btn) btn.style.color = '';
     }
 };
 
-// 페이지 로드 시 초기화
+// 페이지 로드 시 초기화 (트랙 복원)
 document.addEventListener('DOMContentLoaded', () => bgmPlayer.init());
