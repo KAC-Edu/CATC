@@ -3704,31 +3704,60 @@ body:-webkit-full-screen .main-stage {
 }
 
 /* ══ 상단 시계 — 완벽한 정중앙 고정 ══ */
+/* ── 헤더 시계 위젯 (Pill 디자인) ── */
 .header-clock-large {
     position: absolute;
     left: 50%;
     top: 50%;
     transform: translate(-50%, -50%);
     color: #fff;
-    font-weight: 800;
     white-space: nowrap;
     display: flex;
-    align-items: baseline;
-    gap: 15px;
-    pointer-events: none; /* 클릭 이벤트 통과 */
+    align-items: center;
+    gap: 12px;
+    background: rgba(255, 255, 255, 0.07);
+    padding: 5px 20px;
+    border-radius: 50px;
+    border: 1px solid rgba(255, 255, 255, 0.13);
+    pointer-events: none;
 }
+/* 날짜: 보조 정보 */
 .clock-date {
-    font-size: 26px;
+    font-size: 14px;
+    font-weight: 400;
     letter-spacing: 0.5px;
+    opacity: 0.75;
+    line-height: 1;
 }
+/* 요일 */
+.clock-day {
+    font-size: 13px;
+    font-weight: 600;
+    opacity: 0.6;
+    letter-spacing: 0.3px;
+}
+/* 구분선 */
+.clock-divider {
+    width: 1px;
+    height: 22px;
+    background: rgba(255,255,255,0.2);
+}
+/* 시간: 핵심 정보 (크고 굵고 고정폭) */
 .clock-time {
-    font-size: 28px;
+    font-size: 26px;
+    font-weight: 800;
+    font-family: 'Consolas', 'Roboto Mono', 'SF Mono', monospace;
+    letter-spacing: -0.5px;
+    line-height: 1;
+    color: #ffffff;
 }
 .clock-ampm {
-    font-size: 18px;
-    margin-left: 6px;
-    font-weight: 600;
-    color: rgba(255,255,255,0.8);
+    font-size: 13px;
+    font-weight: 700;
+    margin-left: 5px;
+    color: #60a5fa;
+    font-family: inherit;
+    letter-spacing: 0.5px;
 }
 @keyframes blink-animation {
     to { visibility: hidden; }

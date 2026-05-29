@@ -4257,20 +4257,24 @@ resetShuttleRequests: function() {
         location.reload();
     },
 
-    // ── 헤더 날짜/시간 실시간 시계 (AM/PM, 깜빡이는 콜론) ──
+    // ── 헤더 날짜/시간 실시간 시계 (Pill 위젯, 요일 포함) ──
     startHeaderClock: function() {
+        const DAYS = ['SUN','MON','TUE','WED','THU','FRI','SAT'];
         const update = () => {
             const el = document.getElementById('headerDateTime');
             if (!el) return;
             const now = new Date();
-            const dateStr = `${now.getFullYear()}.${now.getMonth()+1}.${now.getDate()}`;
+            const dateStr = `${now.getFullYear()}.${String(now.getMonth()+1).padStart(2,'0')}.${String(now.getDate()).padStart(2,'0')}`;
+            const dayStr = DAYS[now.getDay()];
             let hh = now.getHours();
             const mm = String(now.getMinutes()).padStart(2, '0');
             const ampm = hh >= 12 ? 'PM' : 'AM';
             hh = hh % 12 || 12;
             el.innerHTML = `
                 <span class="clock-date">${dateStr}</span>
-                <span class="clock-time">${hh}<span class="blink">:</span>${mm}<span class="clock-ampm">${ampm}</span></span>
+                <span class="clock-day">${dayStr}</span>
+                <span class="clock-divider"></span>
+                <span class="clock-time">${String(hh).padStart(2,'0')}<span class="blink">:</span>${mm}<span class="clock-ampm">${ampm}</span></span>
             `;
         };
         update();
