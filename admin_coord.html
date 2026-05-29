@@ -545,6 +545,13 @@
     .navy-btn.green { background: var(--green-save); }
     .navy-btn.red { background: var(--danger); }
 
+    /* ── 버튼 시인성 개선 ── */
+    /* 외출/외박 관리대장 버튼: 배경과 겹치지 않도록 진한 네이비 + 흰 글씨 강제 */
+    .navy-btn[onclick*="openOutingLedger"] { background:#1e293b !important; color:#ffffff !important; border:1px solid #334155 !important; }
+    /* 외출/외박 신청자 명단의 클릭 가능한 상세내역 셀: 링크처럼 보이게 */
+    #indActionTableBody td[onclick] { color:#0369a1 !important; text-decoration:underline; }
+    #indActionTableBody td[onclick]:hover { color:#075985 !important; background:#f0f9ff; }
+
     /* 사이드 메뉴 */
 .side-menu { 
     position: fixed; 
@@ -1024,6 +1031,10 @@ body.modal-open .app-content {
     <button class="navy-btn" style="background:#1e293b; height:45px;" onclick="openCenterQrModal()">
         <i class="fa-solid fa-qrcode"></i> 행정관리 접속용 QR
     </button>
+    <!-- 연간계획 관리/수정 버튼 -->
+    <button class="navy-btn" style="background:#003366; height:45px;" onclick="annualPlanMgrCoord.openEditorModal()">
+        <i class="fa-solid fa-calendar-days"></i> 연간계획 관리/수정
+    </button>
 </div>
 
 <div id="side-individual-menu" style="display:none; flex-direction:column; gap:12px;">
@@ -1370,7 +1381,7 @@ body.modal-open .app-content {
                   <span><i class="fa-solid fa-user-clock"></i> 외출/외박 신청자 명단</span>
                   <div style="display:flex; gap:6px;">
                       <button class="navy-btn" style="width:130px; height:32px; font-size:12px; background:#eff6ff; border:1px solid #bfdbfe; color:#1e40af;" onclick="openAttendanceSheet()"><i class="fa-solid fa-clipboard-user"></i> 출석부 관리/인쇄</button>
-                      <button class="navy-btn" style="width:130px; height:32px; font-size:12px; background:#f8fafc; border:1px solid #e2e8f0;" onclick="openOutingLedger()">외출(외박)대장</button>
+                      <button class="navy-btn" style="width:130px; height:32px; font-size:12px; background:#1e293b; color:#ffffff; border:1px solid #334155;" onclick="openOutingLedger()"><i class="fa-solid fa-book"></i> 외출(외박)대장</button>
                   </div>
               </div>
               <div style="overflow-x: auto; background:rgba(255,255,255,0.1); border-radius:10px; overflow:hidden; border:1px solid rgba(255,255,255,0.2);">
@@ -4629,10 +4640,216 @@ async function saveGlobalNotice() {
     </div>
 </div>
 
+<!-- ══ 연간계획 편집 모달 (교육운영부) ══ -->
+<div id="annualPlanModalCoord" class="setup-modal" style="z-index:14000;">
+    <div class="setup-box" style="max-width:1100px; width:96%; max-height:88vh; display:flex; flex-direction:column;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+            <h3 style="margin:0; color:var(--navy-dark);"><i class="fa-solid fa-calendar-check"></i> 연간 교육운영계획 편집기</h3>
+            <i class="fa-solid fa-xmark" style="cursor:pointer; font-size:22px;" onclick="document.getElementById('annualPlanModalCoord').style.display='none'"></i>
+        </div>
+        <p style="font-size:12px; color:#64748b; margin:0 0 12px;">수정 후 [저장 및 즉시적용]을 누르면 잠금되지 않은 강의실 정보가 현재 날짜 기준으로 자동 갱신됩니다.</p>
+        <div style="margin-bottom:10px;">
+            <button class="navy-btn" style="width:auto; padding:0 14px; height:36px; background:#0ea5e9;" onclick="annualPlanMgrCoord.addRow()"><i class="fa-solid fa-plus"></i> 과정 행 추가</button>
+        </div>
+        <div id="annualPlanEditorAreaCoord" style="flex:1; overflow:auto; border:1px solid var(--border-blue); border-radius:12px; min-height:200px;"></div>
+        <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:16px;">
+            <button class="navy-btn" style="width:auto; padding:0 18px; height:42px; background:#64748b;" onclick="document.getElementById('annualPlanModalCoord').style.display='none'">닫기</button>
+            <button class="navy-btn" style="width:auto; padding:0 18px; height:42px; background:var(--green-save);" onclick="annualPlanMgrCoord.saveAndSync()"><i class="fa-solid fa-sync"></i> 저장 및 모든 Room에 즉시 적용</button>
+        </div>
+    </div>
+</div>
+
 <!-- QR 생성 라이브러리 추가 (헤더에 없다면 여기에 추가) -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 
+<!-- ══ 연간계획 편집기 로직 (교육운영부, 자체 완결형) ══ -->
+<script>
+const annualPlanMgrCoord = {
+    ROOMS: ['A', 'B', 'C'],
+    PLAN_KEY: 'system/annualPlan',
+    currentEditingData: [],
 
+    _today: function() { return new Date().toISOString().split('T')[0]; },
+
+    _getMondayOf: function(dateStr) {
+        const d = new Date(dateStr + 'T00:00:00Z');
+        const day = d.getUTCDay();
+        const diff = day === 0 ? -6 : 1 - day;
+        d.setUTCDate(d.getUTCDate() + diff);
+        return d.toISOString().split('T')[0];
+    },
+
+    _escapeHtml: function(s) {
+        return String(s == null ? '' : s)
+            .replace(/&/g, '&amp;').replace(/"/g, '&quot;')
+            .replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    },
+
+    openEditorModal: async function() {
+        const modal = document.getElementById('annualPlanModalCoord');
+        const area  = document.getElementById('annualPlanEditorAreaCoord');
+        if (!modal || !area) return;
+        modal.style.display = 'flex';
+        area.innerHTML = "<p style='padding:20px; color:#64748b;'>데이터 로딩 중...</p>";
+        try {
+            const snap = await firebase.database().ref(this.PLAN_KEY).once('value');
+            const data = snap.val() || [];
+            const arr  = Array.isArray(data) ? data : Object.values(data);
+            this.currentEditingData = arr
+                .filter(c => c && (c.name || c.startDate))
+                .map(c => ({
+                    no:        c.no || 0,
+                    name:      c.name || '',
+                    startDate: c.startDate || '',
+                    endDate:   c.endDate || '',
+                    period:    c.period || ((c.startDate && c.endDate) ? `${c.startDate} ~ ${c.endDate}` : ''),
+                    prof:      c.prof || '',
+                    coord:     c.coord || '',
+                    weekKey:   c.weekKey || (c.startDate ? this._getMondayOf(c.startDate) : '')
+                }))
+                .sort((a, b) => (a.startDate || '').localeCompare(b.startDate || ''));
+            this.renderEditor();
+        } catch (e) {
+            area.innerHTML = `<p style='padding:20px; color:#ef4444;'>불러오기 오류: ${this._escapeHtml(e.message)}</p>`;
+            console.error('[annualPlanMgrCoord] openEditorModal 오류:', e);
+        }
+    },
+
+    renderEditor: function() {
+        const area = document.getElementById('annualPlanEditorAreaCoord');
+        if (!area) return;
+        const esc = this._escapeHtml;
+        if (!this.currentEditingData.length) {
+            area.innerHTML = "<p style='padding:24px; color:#64748b; text-align:center;'>등록된 과정이 없습니다. 상단 [과정 행 추가] 버튼으로 추가하세요.</p>";
+            return;
+        }
+        const th = "padding:10px; border:1px solid var(--border-blue); font-size:12px;";
+        const td = "padding:4px; border:1px solid var(--border-blue);";
+        const inp = "width:100%; border:1px solid transparent; background:transparent; padding:6px; font-size:13px; box-sizing:border-box; color:var(--navy-dark);";
+        let html = `<table style="width:100%; border-collapse:collapse;">
+            <thead style="position:sticky; top:0; background:#f8fafc; z-index:10;"><tr>
+                <th style="${th} width:46px;">No</th>
+                <th style="${th} min-width:200px;">과정명</th>
+                <th style="${th} width:140px;">시작일</th>
+                <th style="${th} width:140px;">종료일</th>
+                <th style="${th} width:100px;">담임교수</th>
+                <th style="${th} width:110px;">운영담당</th>
+                <th style="${th} width:46px;">삭제</th>
+            </tr></thead><tbody>`;
+        this.currentEditingData.forEach((c, idx) => {
+            html += `<tr>
+                <td style="${td} text-align:center; color:#64748b;">${idx + 1}</td>
+                <td style="${td}"><input type="text" value="${esc(c.name)}" onchange="annualPlanMgrCoord.updateLocalData(${idx},'name',this.value)" style="${inp} font-weight:700;"></td>
+                <td style="${td}"><input type="date" value="${esc(c.startDate)}" onchange="annualPlanMgrCoord.updateLocalData(${idx},'startDate',this.value)" style="${inp}"></td>
+                <td style="${td}"><input type="date" value="${esc(c.endDate)}" onchange="annualPlanMgrCoord.updateLocalData(${idx},'endDate',this.value)" style="${inp}"></td>
+                <td style="${td}"><input type="text" value="${esc(c.prof)}" onchange="annualPlanMgrCoord.updateLocalData(${idx},'prof',this.value)" style="${inp}"></td>
+                <td style="${td}"><input type="text" value="${esc(c.coord)}" onchange="annualPlanMgrCoord.updateLocalData(${idx},'coord',this.value)" style="${inp}"></td>
+                <td style="${td} text-align:center;"><button onclick="annualPlanMgrCoord.deleteRow(${idx})" title="삭제" style="color:#ef4444; border:none; background:none; cursor:pointer; font-size:16px; font-weight:800;">✕</button></td>
+            </tr>`;
+        });
+        html += `</tbody></table>`;
+        area.innerHTML = html;
+    },
+
+    updateLocalData: function(idx, field, value) {
+        const c = this.currentEditingData[idx];
+        if (!c) return;
+        c[field] = value;
+        if (field === 'startDate' || field === 'endDate') {
+            c.period  = (c.startDate && c.endDate) ? `${c.startDate} ~ ${c.endDate}` : '';
+            c.weekKey = c.startDate ? this._getMondayOf(c.startDate) : '';
+        }
+    },
+
+    addRow: function() {
+        this.currentEditingData.push({ no:0, name:'', startDate:'', endDate:'', period:'', prof:'', coord:'', weekKey:'' });
+        this.renderEditor();
+        const area = document.getElementById('annualPlanEditorAreaCoord');
+        if (area) area.scrollTop = area.scrollHeight;
+    },
+
+    deleteRow: function(idx) {
+        this.currentEditingData.splice(idx, 1);
+        this.renderEditor();
+    },
+
+    saveAndSync: async function() {
+        const invalid = this.currentEditingData.find(c =>
+            c.name && c.startDate && c.endDate && c.startDate > c.endDate);
+        if (invalid) { alert(`❌ "${invalid.name}" 과정의 시작일이 종료일보다 늦습니다.`); return; }
+        if (!confirm("수정된 계획을 저장하고, 잠금되지 않은 강의실 정보를 현재 날짜 기준으로 갱신하시겠습니까?")) return;
+
+        try {
+            const clean = this.currentEditingData
+                .filter(c => c.name && c.startDate && c.endDate)
+                .sort((a, b) => a.startDate.localeCompare(b.startDate))
+                .map((c, i) => ({
+                    no: i + 1,
+                    name: c.name.trim(),
+                    startDate: c.startDate,
+                    endDate: c.endDate,
+                    period: `${c.startDate} ~ ${c.endDate}`,
+                    prof: (c.prof || '').trim(),
+                    coord: (c.coord || '').trim(),
+                    weekKey: this._getMondayOf(c.startDate)
+                }));
+
+            const planData = {};
+            clean.forEach((c, i) => { planData[`c${i}`] = c; });
+            await firebase.database().ref(this.PLAN_KEY).set(planData);
+
+            await this._syncRoomsLockAware(clean);
+
+            alert(`✅ 저장 및 실시간 동기화가 완료되었습니다. (${clean.length}개 과정)`);
+            document.getElementById('annualPlanModalCoord').style.display = 'none';
+        } catch (e) {
+            alert("❌ 오류 발생: " + e.message);
+            console.error('[annualPlanMgrCoord] saveAndSync 오류:', e);
+        }
+    },
+
+    _syncRoomsLockAware: async function(courses) {
+        const today = this._today();
+        const thisWeekMonday = this._getMondayOf(today);
+        const d2 = new Date(today + 'T00:00:00Z');
+        d2.setUTCDate(d2.getUTCDate() + 2);
+        const openDate = d2.toISOString().split('T')[0];
+
+        const snap = await firebase.database().ref('courses').once('value');
+        const roomsData = snap.val() || {};
+        const openRooms = this.ROOMS.filter(r => !(roomsData[r] && roomsData[r].settings && roomsData[r].settings.autoAssignLocked));
+
+        const upcoming = courses.filter(c => c.endDate >= today).sort((a, b) => a.startDate.localeCompare(b.startDate));
+        const ongoing  = upcoming.filter(c => c.startDate <= today);
+        const d2ready  = upcoming.filter(c => c.startDate > today && c.startDate <= openDate);
+        const thisWeek = upcoming.filter(c => c.startDate > openDate && this._getMondayOf(c.startDate) === thisWeekMonday);
+        const future   = upcoming.filter(c => c.startDate > openDate && this._getMondayOf(c.startDate) !== thisWeekMonday);
+        const pool = [...ongoing, ...d2ready, ...thisWeek, ...future];
+
+        const updates = {};
+        for (const r of openRooms) {
+            updates[`courses/${r}/settings/courseName`] = '';
+            updates[`courses/${r}/settings/period`]     = '';
+            updates[`courses/${r}/settings/coordinatorName`] = null;
+            updates[`courses/${r}/status/professorName`] = '';
+            updates[`courses/${r}/status/roomStatus`]   = 'idle';
+        }
+        for (let i = 0; i < Math.min(openRooms.length, pool.length); i++) {
+            const room = openRooms[i];
+            const course = pool[i];
+            updates[`courses/${room}/settings/courseName`] = course.name;
+            updates[`courses/${room}/settings/period`]     = course.period;
+            updates[`courses/${room}/settings/coordinatorName`] = course.coord || null;
+            updates[`courses/${room}/status/professorName`] = course.prof;
+            updates[`courses/${room}/status/roomStatus`]   = 'active';
+        }
+        if (Object.keys(updates).length) {
+            await firebase.database().ref().update(updates);
+            console.log('[annualPlanMgrCoord] 동기화 완료. 대상 방:', openRooms.join(','));
+        }
+    }
+};
+</script>
 
 </body>
 </html>

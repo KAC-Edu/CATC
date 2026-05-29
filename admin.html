@@ -976,7 +976,13 @@
 <!-- ══ 강의실 실시간 현황판 (#view-waiting) ══ -->
 <div id="view-waiting" class="full-dashboard" style="display:none; flex-direction:column; align-items:center; padding-top:6px;">
     <div class="view-header">
-        <h1><i class="fa-solid fa-desktop"></i> 강의실 실시간 현황판</h1>
+        <h1>
+            <i class="fa-solid fa-desktop"></i> 강의실 실시간 현황판
+            <button onclick="annualPlanMgr.openEditorModal()"
+                    style="margin-left:18px; padding:8px 15px; font-size:13px; background:#003366; color:#ffffff; border-radius:8px; border:none; cursor:pointer; font-weight:800; vertical-align:middle;">
+                <i class="fa-solid fa-calendar-days"></i> 연간계획 관리/수정
+            </button>
+        </h1>
         <p>항공기술훈련원 강의실 및 교육과정 운영 상태를 실시간으로 모니터링합니다.</p>
     </div>
     <div class="modern-white-card" style="margin-top:10px;">
@@ -993,6 +999,30 @@
     </div>
     <div style="height:150px; width:100%; flex-shrink:0;"></div>
 </div> <!-- view-waiting 끝 -->
+
+<!-- ══ 연간계획 편집 모달 (신규) ══ -->
+<div id="annualPlanModal" class="modal-overlay" style="z-index:15000;">
+    <div class="modal-box" style="width:95%; max-width:1200px; height:85vh; display:flex; flex-direction:column; text-align:left;">
+        <div class="modal-header" style="text-align:left; margin-bottom:12px;">
+            <h3 style="display:flex; align-items:center; gap:8px; justify-content:flex-start;"><i class="fa-solid fa-calendar-check"></i> 연간 교육운영계획 마스터 편집기</h3>
+            <p style="font-size:12px; color:#64748b; margin:6px 0 0;">수정 후 [저장 및 즉시적용]을 누르면 현재 운영 중인 방(잠금되지 않은 방) 정보가 자동으로 갱신됩니다.</p>
+        </div>
+        <div style="margin-bottom:10px;">
+            <button onclick="annualPlanMgr.addRow()" class="m-btn" style="background:#0ea5e9; color:#fff; font-size:13px; padding:8px 14px;">
+                <i class="fa-solid fa-plus"></i> 과정 행 추가
+            </button>
+        </div>
+        <div id="annualPlanEditorArea" style="flex:1; overflow:auto; border:1px solid #e2e8f0; border-radius:12px;">
+            <!-- 편집 테이블이 생성됨 -->
+        </div>
+        <div class="modal-actions" style="margin-top:18px; justify-content:flex-end; gap:12px;">
+            <button class="m-btn m-btn-later" onclick="document.getElementById('annualPlanModal').style.display='none'">닫기</button>
+            <button class="m-btn m-btn-done" onclick="annualPlanMgr.saveAndSync()">
+                <i class="fa-solid fa-sync"></i> 저장 및 모든 Room에 즉시 적용
+            </button>
+        </div>
+    </div>
+</div>
 
 
 

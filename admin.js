@@ -6560,6 +6560,200 @@ const annualPlanMgr = {
     }
 };
 
+/* ════════════════════════════════════════════════════════════
+   연간계획 실시간 편집기 (모달) — 강사 플랫폼
+   DB(system/annualPlan)를 표로 불러와 수정/추가/삭제 후
+   저장 시 잠금되지 않은 Room을 현재 날짜 기준으로 즉시 갱신
+   ════════════════════════════════════════════════════════════ */
+annualPlanMgr.currentEditingData = [];
+
+annualPlanMgr._escapeHtml = function(s) {
+    return String(s == null ? '' : s)
+        .replace(/&/g, '&amp;').replace(/"/g, '&quot;')
+        .replace(/</g, '&lt;').replace(/>/g, '&gt;');
+};
+
+annualPlanMgr.openEditorModal = async function() {
+    const modal = document.getElementById('annualPlanModal');
+    const area  = document.getElementById('annualPlanEditorArea');
+    if (!modal || !area) return;
+    modal.style.display = 'flex';
+    area.innerHTML = "<p style='padding:20px; color:#64748b;'>데이터 로딩 중...</p>";
+    try {
+        const snap = await firebase.database().ref(this.PLAN_KEY).once('value');
+        const data = snap.val() || [];
+        const arr  = Array.isArray(data) ? data : Object.values(data);
+        this.currentEditingData = arr
+            .filter(c => c && (c.name || c.startDate))
+            .map(c => ({
+                no:        c.no || 0,
+                name:      c.name || '',
+                startDate: c.startDate || '',
+                endDate:   c.endDate || '',
+                period:    c.period || ((c.startDate && c.endDate) ? `${c.startDate} ~ ${c.endDate}` : ''),
+                prof:      c.prof || '',
+                coord:     c.coord || '',
+                weekKey:   c.weekKey || (c.startDate ? this._getMondayOf(c.startDate) : '')
+            }))
+            .sort((a, b) => (a.startDate || '').localeCompare(b.startDate || ''));
+        this.renderEditor();
+    } catch (e) {
+        area.innerHTML = `<p style='padding:20px; color:#ef4444;'>불러오기 오류: ${this._escapeHtml(e.message)}</p>`;
+        console.error('[annualPlanMgr] openEditorModal 오류:', e);
+    }
+};
+
+annualPlanMgr.renderEditor = function() {
+    const area = document.getElementById('annualPlanEditorArea');
+    if (!area) return;
+    const esc = this._escapeHtml;
+    if (!this.currentEditingData.length) {
+        area.innerHTML = "<p style='padding:24px; color:#64748b; text-align:center;'>등록된 과정이 없습니다. 상단 [과정 행 추가] 버튼으로 추가하세요.</p>";
+        return;
+    }
+    const cellStyle = "padding:4px; border:1px solid #e2e8f0;";
+    const inpStyle  = "width:100%; border:1px solid transparent; background:transparent; padding:6px; font-size:13px; box-sizing:border-box;";
+    let html = `
+        <table style="width:100%; border-collapse:collapse; font-size:13px;">
+            <thead style="position:sticky; top:0; background:#f8fafc; z-index:10;">
+                <tr>
+                    <th style="width:48px; padding:10px; border:1px solid #e2e8f0;">No</th>
+                    <th style="padding:10px; border:1px solid #e2e8f0; min-width:220px;">과정명</th>
+                    <th style="width:140px; padding:10px; border:1px solid #e2e8f0;">시작일</th>
+                    <th style="width:140px; padding:10px; border:1px solid #e2e8f0;">종료일</th>
+                    <th style="width:110px; padding:10px; border:1px solid #e2e8f0;">담임교수</th>
+                    <th style="width:120px; padding:10px; border:1px solid #e2e8f0;">운영담당</th>
+                    <th style="width:50px; padding:10px; border:1px solid #e2e8f0;">삭제</th>
+                </tr>
+            </thead>
+            <tbody>`;
+    this.currentEditingData.forEach((c, idx) => {
+        html += `
+            <tr>
+                <td style="${cellStyle} text-align:center; color:#64748b;">${idx + 1}</td>
+                <td style="${cellStyle}"><input type="text" value="${esc(c.name)}" onchange="annualPlanMgr.updateLocalData(${idx},'name',this.value)" style="${inpStyle} font-weight:700;"></td>
+                <td style="${cellStyle}"><input type="date" value="${esc(c.startDate)}" onchange="annualPlanMgr.updateLocalData(${idx},'startDate',this.value)" style="${inpStyle}"></td>
+                <td style="${cellStyle}"><input type="date" value="${esc(c.endDate)}" onchange="annualPlanMgr.updateLocalData(${idx},'endDate',this.value)" style="${inpStyle}"></td>
+                <td style="${cellStyle}"><input type="text" value="${esc(c.prof)}" onchange="annualPlanMgr.updateLocalData(${idx},'prof',this.value)" style="${inpStyle}"></td>
+                <td style="${cellStyle}"><input type="text" value="${esc(c.coord)}" onchange="annualPlanMgr.updateLocalData(${idx},'coord',this.value)" style="${inpStyle}"></td>
+                <td style="${cellStyle} text-align:center;"><button onclick="annualPlanMgr.deleteRow(${idx})" title="삭제" style="color:#ef4444; border:none; background:none; cursor:pointer; font-size:16px; font-weight:800;">✕</button></td>
+            </tr>`;
+    });
+    html += `</tbody></table>`;
+    area.innerHTML = html;
+};
+
+annualPlanMgr.updateLocalData = function(idx, field, value) {
+    const c = this.currentEditingData[idx];
+    if (!c) return;
+    c[field] = value;
+    if (field === 'startDate' || field === 'endDate') {
+        c.period  = (c.startDate && c.endDate) ? `${c.startDate} ~ ${c.endDate}` : '';
+        c.weekKey = c.startDate ? this._getMondayOf(c.startDate) : '';
+    }
+};
+
+annualPlanMgr.addRow = function() {
+    this.currentEditingData.push({ no:0, name:'', startDate:'', endDate:'', period:'', prof:'', coord:'', weekKey:'' });
+    this.renderEditor();
+    const area = document.getElementById('annualPlanEditorArea');
+    if (area) area.scrollTop = area.scrollHeight;
+};
+
+annualPlanMgr.deleteRow = function(idx) {
+    this.currentEditingData.splice(idx, 1);
+    this.renderEditor();
+};
+
+annualPlanMgr.saveAndSync = async function() {
+    const invalid = this.currentEditingData.find(c =>
+        c.name && c.startDate && c.endDate && c.startDate > c.endDate);
+    if (invalid) {
+        ui.showAlert(`❌ "${invalid.name}" 과정의 시작일이 종료일보다 늦습니다.`);
+        return;
+    }
+    if (!confirm("수정된 계획을 저장하고, 잠금되지 않은 강의실 정보를 현재 날짜 기준으로 갱신하시겠습니까?")) return;
+
+    ui.showLoading("데이터 동기화 및 룸 재배치 중...");
+    try {
+        // 빈 행 제거 + 시작일 정렬 + 연번 재부여
+        const clean = this.currentEditingData
+            .filter(c => c.name && c.startDate && c.endDate)
+            .sort((a, b) => a.startDate.localeCompare(b.startDate))
+            .map((c, i) => ({
+                no:        i + 1,
+                name:      c.name.trim(),
+                startDate: c.startDate,
+                endDate:   c.endDate,
+                period:    `${c.startDate} ~ ${c.endDate}`,
+                prof:      (c.prof || '').trim(),
+                coord:     (c.coord || '').trim(),
+                weekKey:   this._getMondayOf(c.startDate)
+            }));
+
+        // 1) 마스터 계획 저장 (keyed object 규약 c0,c1,... 유지)
+        const planData = {};
+        clean.forEach((c, i) => { planData[`c${i}`] = c; });
+        await firebase.database().ref(this.PLAN_KEY).set(planData);
+
+        // 2) 잠금 인식 룸 재배치
+        await this._syncRoomsLockAware(clean);
+
+        ui.hideLoading();
+        ui.showAlert(`✅ 저장 및 실시간 동기화가 완료되었습니다. (${clean.length}개 과정)`);
+        document.getElementById('annualPlanModal').style.display = 'none';
+    } catch (e) {
+        ui.hideLoading();
+        ui.showAlert("❌ 오류 발생: " + e.message);
+        console.error('[annualPlanMgr] saveAndSync 오류:', e);
+    }
+};
+
+/* _applyCurrentWeek 와 동일한 우선순위 로직이되, autoAssignLocked 방은 보존 */
+annualPlanMgr._syncRoomsLockAware = async function(courses) {
+    const today = this._today();
+    const thisWeekMonday = this._getMondayOf(today);
+    const d2 = new Date(today + 'T00:00:00Z');
+    d2.setUTCDate(d2.getUTCDate() + 2);
+    const openDate = d2.toISOString().split('T')[0];
+
+    const snap = await firebase.database().ref('courses').once('value');
+    const roomsData = snap.val() || {};
+    const openRooms = this.ROOMS.filter(r => !(roomsData[r] && roomsData[r].settings && roomsData[r].settings.autoAssignLocked));
+
+    const upcoming = courses
+        .filter(c => c.endDate >= today)
+        .sort((a, b) => a.startDate.localeCompare(b.startDate));
+    const ongoing  = upcoming.filter(c => c.startDate <= today);
+    const d2ready  = upcoming.filter(c => c.startDate > today && c.startDate <= openDate);
+    const thisWeek = upcoming.filter(c => c.startDate > openDate && this._getMondayOf(c.startDate) === thisWeekMonday);
+    const future   = upcoming.filter(c => c.startDate > openDate && this._getMondayOf(c.startDate) !== thisWeekMonday);
+    const pool = [...ongoing, ...d2ready, ...thisWeek, ...future];
+
+    const updates = {};
+    for (const r of openRooms) {
+        updates[`courses/${r}/settings/courseName`] = '';
+        updates[`courses/${r}/settings/period`]     = '';
+        updates[`courses/${r}/settings/coordinatorName`] = null;
+        updates[`courses/${r}/status/professorName`] = '';
+        updates[`courses/${r}/status/roomStatus`]   = 'idle';
+    }
+    for (let i = 0; i < Math.min(openRooms.length, pool.length); i++) {
+        const room = openRooms[i];
+        const course = pool[i];
+        const coordFull = (typeof coordMgr !== 'undefined' && coordMgr.matchName ? coordMgr.matchName(course.coord) : '') || (course.coord || '');
+        updates[`courses/${room}/settings/courseName`] = course.name;
+        updates[`courses/${room}/settings/period`]     = course.period;
+        updates[`courses/${room}/settings/coordinatorName`] = coordFull;
+        updates[`courses/${room}/status/professorName`] = course.prof;
+        updates[`courses/${room}/status/roomStatus`]   = 'active';
+    }
+    if (Object.keys(updates).length) {
+        await firebase.database().ref().update(updates);
+        console.log('[annualPlanMgr] 편집기 동기화 완료. 대상 방:', openRooms.join(','));
+    }
+};
+
 /* 강사 플랫폼 로드 시 자동 만료 체크 */
 document.addEventListener('DOMContentLoaded', () => {
     if (typeof firebase !== 'undefined' && firebase.auth) {
