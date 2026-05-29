@@ -817,7 +817,7 @@ fetchCodeAndRenderQr: function(room) {
 
 
 
- saveSettings: async function() {
+ saveSettings: function() {
         if (!state.room) {
             ui.showAlert("⚠️ 강의실을 먼저 선택해 주세요.");
             return;
@@ -828,23 +828,6 @@ fetchCodeAndRenderQr: function(room) {
         const statusVal = document.getElementById('roomStatusSelect').value;
         const selectedProf = document.getElementById('profSelect').value;
         const encryptedPw = rawPw ? btoa(rawPw) : btoa("7777");
-
-        // [수정] 잠금(idle) 설정 시 해당 강의실 비번 인증 필수
-        const prevSnap = await firebase.database().ref(`courses/${state.room}/status`).once('value');
-        const prevStatus = (prevSnap.val() || {}).roomStatus || 'idle';
-        if (statusVal === 'idle' && prevStatus === 'active') {
-            const savedPwRaw = rawPw || (prevSnap.val() || {}).password;
-            const savedPwDecoded = savedPwRaw ? (savedPwRaw.length > 6 ? atob(savedPwRaw) : savedPwRaw) : '7777';
-            const dbPwSnap = await firebase.database().ref(`courses/${state.room}/settings/password`).once('value');
-            const dbPwEncoded = dbPwSnap.val();
-            const dbPw = dbPwEncoded ? atob(dbPwEncoded) : '7777';
-            const inputPw = prompt(`🔒 Room ${state.room} 잠금을 해제하려면 강의실 비밀번호를 입력하세요:`);
-            if (!inputPw) return;
-            if (inputPw !== dbPw && inputPw !== '13281') {
-                ui.showAlert("❌ 비밀번호가 올바르지 않습니다. 잠금 상태가 유지됩니다.");
-                return;
-            }
-        }
 
         // 설정을 저장하면서 내 세션ID를 다시 한 번 서버에 등록
         const updates = {};
@@ -900,7 +883,30 @@ deactivateAllRooms: async function() {
 
 
 
-updateQa: function(action) {
+// 현황판 잠금 토글 - 자동배치 시 해당 방 제외 ([수정] 강의실 비밀번호 확인 후에만 동작)
+    toggleRoomLock: async function(room, currentLocked) {
+        if (state.isObserver) return ui.showAlert("👁️ 옵저버 모드에서는 설정을 변경할 수 없습니다.");
+
+        // [보안] 누구나 임의로 잠금 상태를 바꾸지 못하도록, 해당 강의실의 4자리 비밀번호를 확인한 뒤에만 허용
+        const settingSnap = await firebase.database().ref(`courses/${room}/settings`).get();
+        const settings = settingSnap.val() || {};
+        const dbPw = settings.password || btoa("7777"); // 기본값 7777 (기존 비밀번호 정책과 동일)
+
+        const input = prompt(`🔐 Room ${room}의 잠금 상태를 변경하려면\n강의실 비밀번호(4자리)를 입력하세요.`);
+        if (input === null) return;                       // 취소 시 아무 동작 안 함
+        if (btoa(input.trim()) !== dbPw) {
+            return ui.showAlert("❌ 비밀번호가 일치하지 않습니다.");
+        }
+
+        const nextLocked = !currentLocked;
+        await firebase.database().ref(`courses/${room}/settings/autoAssignLocked`).set(nextLocked || null);
+        ui.showAlert(nextLocked
+            ? `🔒 Room ${room} 잠금 설정\n연간계획 자동배치 시 이 방은 건드리지 않습니다.`
+            : `🔓 Room ${room} 잠금 해제\n연간계획 자동배치 시 이 방도 배치 대상이 됩니다.`
+        );
+    },
+
+    updateQa: function(action) {
     const activeRoom = state.room;
     if (state.isObserver) return ui.showAlert("👁️ 옵저버 모드에서는 질문을 관리할 수 없습니다.");
     if (!state.activeQaKey || !activeRoom) {
@@ -1411,6 +1417,44 @@ const coordMgr = {
         return 99; 
     },
 
+    // [신규] 입력 문자열(엑셀 연간계획값 / Firebase 저장값)을 등록된 담당자 명단의 '정식 이름'과 매칭.
+    //  - 공백 차이("장영근  과장"), 붙여쓰기("장영근과장"), 직급 표기 유무("장영근" vs "장영근 과장") 흡수
+    //  - 일치 항목이 없으면 null 반환 (동명이인 오매칭 방지를 위해 단일 후보일 때만 채택)
+    matchName: function(raw) {
+        const list = coordMgr.list || [];
+        if (!raw || !list.length) return null;
+
+        const squash = s => (s || '').replace(/\s+/g, '');          // 공백 완전 제거
+        const ranks  = Object.keys(coordMgr.rankPriority);          // 차장/과장/대리/주임/사원
+        const stripRank = s => {                                    // 직급 제거 후 공백 제거 → 순수 이름
+            let t = (s || '');
+            ranks.forEach(r => { t = t.split(r).join(''); });
+            return squash(t);
+        };
+
+        const rawSquash = squash(raw);
+        const rawName   = stripRank(raw);
+
+        // 1) 공백 무시 완전 일치 (가장 안전)
+        let m = list.find(c => squash(c.name) === rawSquash);
+        if (m) return m.name;
+
+        // 2) 한쪽이 다른 쪽을 포함 (직급 표기 유무 차이 등)
+        m = list.find(c => {
+            const cs = squash(c.name);
+            return cs.includes(rawSquash) || rawSquash.includes(cs);
+        });
+        if (m) return m.name;
+
+        // 3) 직급을 떼어낸 순수 이름이 '유일하게' 일치하는 경우만 채택 (예: 엑셀 "장영근 차장" vs 명단 "장영근 과장")
+        if (rawName) {
+            const cands = list.filter(c => stripRank(c.name) === rawName);
+            if (cands.length === 1) return cands[0].name;
+        }
+
+        return null;
+    },
+
     // 초기화 및 실시간 리스너 설정
     init: function() {
         console.log("운영담당자 리스너 가동...");
@@ -1888,7 +1932,12 @@ loadDashboardStats: function() {
         if (document.getElementById('dashCourseTitle')) document.getElementById('dashCourseTitle').innerText = s.courseName || "과정명을 설정해주세요.";
         if (document.getElementById('dashPeriod')) document.getElementById('dashPeriod').innerText = s.period || "기간 미설정";
         if (document.getElementById('dashRoomDetail')) document.getElementById('dashRoomDetail').innerText = s.roomDetailName || "장소 미설정";
-        if (document.getElementById('dashCoordName')) document.getElementById('dashCoordName').innerText = s.coordinatorName || "미지정";
+        if (document.getElementById('dashCoordName')) {
+            // Firebase 저장값(표기 차이 가능)을 명단의 정식 이름으로 매칭하여 전체 이름 표시
+            const savedCoord = s.coordinatorName || '';
+            const canonical = coordMgr.matchName(savedCoord);
+            document.getElementById('dashCoordName').innerText = canonical || (savedCoord || '미지정');
+        }
     });
 
     // 3. 공지사항 피드 실시간 업데이트
@@ -2498,12 +2547,33 @@ showAlert: function(msg) {
                     : '<span style="color:#cbd5e1;">-</span>';
 
                 const isMyRoom = (c === state.room && dataMgr.isMyOwnedRoom(c));
+                const isLocked = !!(settings.autoAssignLocked);
+
                 const rowNumCell = isMyRoom
                     ? `<span style="display:inline-flex; align-items:center; justify-content:center; width:28px; height:28px; background:#3b82f6; border-radius:50%;"><i class="fa-solid fa-check" style="color:#fff; font-size:13px;"></i></span>`
                     : rowNum;
 
+                const lockBtn = `
+                    <div style="margin-top:5px;" title="${isLocked ? '잠금 해제 (자동배치 허용)' : '잠금 (자동배치 제외)'}">
+                        <button onclick="event.stopPropagation(); dataMgr.toggleRoomLock('${c}', ${isLocked})"
+                            style="border:none; background:${isLocked ? '#fef3c7' : '#f1f5f9'};
+                                   border-radius:6px; padding:3px 7px; cursor:pointer;
+                                   font-size:12px; font-weight:800;
+                                   color:${isLocked ? '#d97706' : '#94a3b8'};
+                                   border:1px solid ${isLocked ? '#fde68a' : '#e2e8f0'};
+                                   transition:all .15s; display:flex; align-items:center; gap:4px;">
+                            <i class="fa-solid ${isLocked ? 'fa-lock' : 'fa-lock-open'}"></i>
+                            ${isLocked ? '잠금' : '열림'}
+                        </button>
+                    </div>`;
+
                 row.innerHTML = `
-                    <td>${rowNumCell}</td>
+                    <td>
+                        <div style="display:flex; flex-direction:column; align-items:center; gap:2px;">
+                            <div>${rowNumCell}</div>
+                            ${lockBtn}
+                        </div>
+                    </td>
                     <td style="font-weight:900; color:#3b82f6;">
                         Room ${c}
                         ${isMyRoom ? '<span class="my-room-badge">MY</span>' : ''}
@@ -3538,7 +3608,7 @@ function renderAdminList(todayData, yesterdayData) {
                     </td>
                 `;
 
-                // 취소 버튼 이벤트
+                // 이벤트 바인딩 (onclick 문자열 대신 addEventListener)
                 const cancelBtn = tr.querySelector('[data-cancel-token]');
                 if (cancelBtn) {
                     cancelBtn.addEventListener('click', () => ui.cancelIndividualAdminAction(targetDate, token));
@@ -3647,6 +3717,8 @@ cancelIndividualDinnerSkip: function(token) {
         firebase.database().ref(`courses/${state.room}/dinner_skips/${today}/${token}`).remove()
             .then(() => { ui.showAlert("✅ 해당 학생이 제외 명단에서 삭제되었습니다."); });
     },
+
+    // [삭제됨] 복귀호출 기능(callReturnToStudent / callAllNotReturned)은 요청에 따라 제거되었습니다.
 
     // [신규] 특정 학생의 외출/외박 신청을 관리자가 강제 취소(삭제)
 cancelIndividualAdminAction: function(date, token) {
@@ -5562,19 +5634,11 @@ openSetupModal: async function() {
     document.getElementById('setup-prof-select').innerHTML = profOptions;
 
     // 담당자 상태 로드
-    firebase.database().ref('system/coordinators').once('value', async snap => {
+    firebase.database().ref('system/coordinators').once('value', snap => {
         const coords = snap.val() || {};
         let coordOptions = '<option value="">--- 담당자 선택 ---</option>';
         Object.values(coords).forEach(c => { coordOptions += `<option value="${c.name}">${c.name}</option>`; });
         document.getElementById('setup-coord-select').innerHTML = coordOptions;
-
-        // [수정] 드롭다운이 채워진 직후, 현재 저장된 coordinatorName을 즉시 주입
-        // (loadCurrentSettings보다 먼저 실행되는 타이밍 보장)
-        const savedCoordSnap = await firebase.database().ref(`courses/${state.room}/settings/coordinatorName`).once('value');
-        const savedCoord = savedCoordSnap.val() || '';
-        if (savedCoord) {
-            document.getElementById('setup-coord-select').value = savedCoord;
-        }
         
         // 가이드 PDF는 GitHub 정적 파일로 운영 중 (DB 저장 방식 미사용)
         const el = document.getElementById('modalGuideStatus');
@@ -5631,14 +5695,17 @@ loadCurrentSettings: function() {
         document.getElementById('setup-course-name').value = s.courseName || "";
         document.getElementById('setup-room-pw').value = s.password ? atob(s.password) : "";
         document.getElementById('setup-prof-select').value = st.professorName || "";
-        // [수정] 담당자: setTimeout으로 드롭다운 렌더 완료 후 재주입 (타이밍 보장)
-        const coordVal = s.coordinatorName || "";
-        document.getElementById('setup-coord-select').value = coordVal;
-        if (coordVal) {
-            setTimeout(() => {
-                const sel = document.getElementById('setup-coord-select');
-                if (sel && sel.value !== coordVal) sel.value = coordVal;
-            }, 100);
+        // coordinatorName 매칭: 저장값("백유민"/"백유민 과장"/"백유민과장" 등)을 명단의 정식 이름으로 정규화해 드롭다운 자동 선택
+        const savedCoordName = s.coordinatorName || '';
+        const coordSel = document.getElementById('setup-coord-select');
+        if (coordSel) {
+            // 1순위: 완전 일치
+            coordSel.value = savedCoordName;
+            // 2순위: 표기 차이(공백/직급) 흡수 매칭
+            if (!coordSel.value && savedCoordName) {
+                const canonical = coordMgr.matchName(savedCoordName);
+                if (canonical) coordSel.value = canonical;
+            }
         }
 
         // 2. 강의실 선택 및 중복 체크 로직
@@ -6178,3 +6245,297 @@ const bgmPlayer = {
 
 // 페이지 로드 시 초기화
 document.addEventListener('DOMContentLoaded', () => bgmPlayer.init());
+
+/* ══════════════════════════════════════════════════════════════
+   연간 교육운영계획 일괄 업로드 & Room 자동 배치 v3 (최종)
+   - sheet_to_json 대신 셀 직접 접근 방식으로 파싱 안정화
+   - 날짜: 문자열/숫자/serial 모두 처리
+   ══════════════════════════════════════════════════════════════ */
+const annualPlanMgr = {
+
+    ROOMS: ['A', 'B', 'C'],
+    PLAN_KEY: 'system/annualPlan',
+
+    /* 엑셀 Serial 또는 숫자문자열 → YYYY-MM-DD */
+    _excelDate: function(v) {
+        let n = typeof v === 'number' ? v : parseFloat(v);
+        if (!isNaN(n) && n > 40000) {
+            // UTC 기준으로 변환 (엑셀은 1900-01-01 기준, 단 1900-02-29 버그 포함)
+            const ms = (n - 25569) * 86400 * 1000;
+            const d = new Date(ms);
+            const y = d.getUTCFullYear();
+            const m = String(d.getUTCMonth() + 1).padStart(2, '0');
+            const day = String(d.getUTCDate()).padStart(2, '0');
+            return `${y}-${m}-${day}`;
+        }
+        return null;
+    },
+
+    _getMondayOf: function(dateStr) {
+        const d = new Date(dateStr + 'T00:00:00Z');
+        const day = d.getUTCDay();
+        const diff = day === 0 ? -6 : 1 - day;
+        d.setUTCDate(d.getUTCDate() + diff);
+        return d.toISOString().split('T')[0];
+    },
+
+    _today: function() {
+        return new Date().toISOString().split('T')[0];
+    },
+
+    /* ── 컬럼 문자 → 0-indexed 숫자 (A→0, B→1, ...) ── */
+    _colToIdx: function(col) {
+        let n = 0;
+        for (const ch of col) n = n * 26 + ch.charCodeAt(0) - 64;
+        return n - 1;
+    },
+
+    upload: async function(input) {
+        const file = input.files[0];
+        if (!file) return;
+        input.value = '';
+
+        const statusEl = document.getElementById('annualPlanStatus');
+        if (statusEl) { statusEl.innerText = '⏳ 분석 중...'; statusEl.style.color = '#f59e0b'; }
+
+        try {
+            const buf = await file.arrayBuffer();
+            const wb  = XLSX.read(buf, { type: 'array', cellText: false, cellDates: false });
+
+            // ── 시트 접근: SheetNames 인덱스로 직접 접근하여 한글 키 불일치 완전 우회
+            // wb.Sheets[sheetName] 방식은 xlsx.js 내부 인코딩 불일치로 undefined 반환 가능.
+            // SheetNames 순서와 Sheets 객체 순서는 항상 일치하므로 인덱스로 꺼냄.
+            const sheetIdx  = wb.SheetNames.findIndex(n => n.replace(/\s/g,'').includes('총괄'));
+            const useIdx    = sheetIdx >= 0 ? sheetIdx : 0;
+            const sheetName = wb.SheetNames[useIdx];
+            // Sheets 객체를 배열로 변환해 인덱스로 접근 → 키 매칭 완전 우회
+            const ws        = Object.values(wb.Sheets)[useIdx];
+            console.log('[annualPlanMgr] 시트:', sheetName, '| index:', useIdx);
+
+            if (!ws) {
+                throw new Error(`시트를 열 수 없습니다.\n등록된 시트: ${wb.SheetNames.join(', ')}`);
+            }
+
+            // !ref 누락 방어: 데이터 범위 정보가 없으면 넓은 범위 강제 주입
+            if (!ws['!ref']) {
+                ws['!ref'] = XLSX.utils.encode_range({ s:{c:0,r:0}, e:{c:25,r:499} });
+            }
+
+            const range = XLSX.utils.decode_range(ws['!ref']);
+
+            // ── 헤더 행 탐색 (상위 30행): '연번'과 '과정명'이 같이 있는 행
+            // 실제 파일: 1~12행 메타데이터, 13행(r=12)에 컬럼 헤더 위치
+            // 셀 값 정규화: \r\n·공백·괄호 제거 후 비교 → '교육일정확인\n(운영부)' 도 매칭
+            let headerRow = -1;
+            const colMap  = {};
+
+            for (let r = range.s.r; r <= Math.min(range.s.r + 30, range.e.r); r++) {
+                const norm = {}; // col → 정규화된 문자열
+                for (let c = range.s.c; c <= range.e.c; c++) {
+                    const cell = ws[XLSX.utils.encode_cell({r, c})];
+                    if (cell && cell.v != null) {
+                        norm[c] = String(cell.v).replace(/[\r\n\s()（）]/g, '');
+                    }
+                }
+                const vals = Object.values(norm);
+                if (vals.includes('연번') && vals.includes('과정명')) {
+                    headerRow = r;
+                    for (const [c, v] of Object.entries(norm)) {
+                        const ci = parseInt(c);
+                        if (v === '연번')               colMap.no    = ci; // B열(1)
+                        if (v === '과정명')             colMap.name  = ci; // H열(7)
+                        if (v === '담임교수' && colMap.prof  == null) colMap.prof  = ci; // F열(5) 첫번째만
+                        if (v.includes('교육일정확인')) colMap.coord = ci; // E열(4)
+                        if (v === '교육시작일')         colMap.start = ci; // N열(13)
+                        if (v === '교육종료일')         colMap.end   = ci; // O열(14)
+                    }
+                    console.log('[annualPlanMgr] 헤더 행:', r + 1, colMap);
+                    break;
+                }
+            }
+
+            if (headerRow < 0) {
+                throw new Error('헤더 행을 찾을 수 없습니다.\n총괄표 시트에 "연번"과 "과정명" 컬럼이 필요합니다.');
+            }
+
+            // ── 데이터 파싱
+            const courses = [];
+            for (let r = headerRow + 1; r <= range.e.r; r++) {
+                try {
+                    const get = c => ws[XLSX.utils.encode_cell({r, c})];
+
+                    const noCell = get(colMap.no);
+                    if (!noCell) continue;
+                    const no = parseInt(noCell.v);
+                    if (isNaN(no)) continue;
+
+                    const nameCell = get(colMap.name);
+                    if (!nameCell || !nameCell.v) continue;
+
+                    const startDate = this._excelDate(get(colMap.start)?.v);
+                    const endDate   = this._excelDate(get(colMap.end)?.v);
+                    if (!startDate || !endDate) continue;
+
+                    const profRaw = get(colMap.prof)?.v  ? String(get(colMap.prof).v)  : '';
+                    const coordRaw= get(colMap.coord)?.v ? String(get(colMap.coord).v) : '';
+
+                    courses.push({
+                        no,
+                        name:      String(nameCell.v).trim(),
+                        startDate, endDate,
+                        period:    `${startDate} ~ ${endDate}`,
+                        prof:      profRaw.split(/[,，、\/]/)[0].trim(),
+                        coord:     coordRaw.replace(/[\r\n]/g,'').trim(),
+                        weekKey:   this._getMondayOf(startDate)
+                    });
+                } catch (rowErr) {
+                    console.warn(`[annualPlanMgr] 행 ${r+1} 스킵:`, rowErr);
+                }
+            }
+
+            if (courses.length === 0) throw new Error('파싱된 과정이 없습니다.');
+
+            await this._assignRooms(courses);
+
+            if (statusEl) { statusEl.innerText = `✅ ${courses.length}개 과정 적용됨`; statusEl.style.color = '#10b981'; }
+            ui.showAlert(`✅ 업로드 완료!\n총 ${courses.length}개 과정을 자동 배치했습니다.`);
+
+        } catch (err) {
+            console.error('[annualPlanMgr] 오류:', err);
+            if (statusEl) { statusEl.innerText = '❌ ' + err.message.split('\n')[0]; statusEl.style.color = '#ef4444'; }
+            ui.showAlert('❌ 업로드 오류:\n' + err.message);
+        }
+    },
+
+    _assignRooms: async function(courses) {
+        // Room A/B/C 전체 초기화
+        const reset = {};
+        for (const r of this.ROOMS) {
+            reset[`courses/${r}/settings/courseName`] = '';
+            reset[`courses/${r}/settings/period`]     = '';
+            reset[`courses/${r}/settings/coordinatorName`] = null;
+            reset[`courses/${r}/status/professorName`] = '';
+            reset[`courses/${r}/status/roomStatus`]   = 'idle';
+        }
+        await firebase.database().ref().update(reset);
+
+        // 전체 과정 저장 (만료 체크용)
+        const planData = {};
+        courses.forEach((c, i) => { planData[`c${i}`] = c; });
+        await firebase.database().ref(this.PLAN_KEY).set(planData);
+
+        await this._applyCurrentWeek(courses);
+    },
+
+    _applyCurrentWeek: async function(courses) {
+        const today = this._today();
+        const thisWeekMonday = this._getMondayOf(today);
+
+        // D-2 기준일: 오늘 + 2일 (교육 시작 2일 전부터 강의실 오픈)
+        const d2 = new Date(today + 'T00:00:00Z');
+        d2.setUTCDate(d2.getUTCDate() + 2);
+        const openDate = d2.toISOString().split('T')[0];
+
+        // 아직 끝나지 않은 과정만, 시작일 순 정렬
+        const upcoming = courses
+            .filter(c => c.endDate >= today)
+            .sort((a, b) => a.startDate.localeCompare(b.startDate));
+
+        // 우선순위:
+        // 1순위: 진행 중 (startDate <= today)
+        // 2순위: D-2 이내 예정 (today < startDate <= openDate) ← 2일 전 오픈
+        // 3순위: 이번 주 내 시작
+        // 4순위: 그 이후
+        const ongoing  = upcoming.filter(c => c.startDate <= today);
+        const d2ready  = upcoming.filter(c => c.startDate > today && c.startDate <= openDate);
+        const thisWeek = upcoming.filter(c => c.startDate > openDate && this._getMondayOf(c.startDate) === thisWeekMonday);
+        const future   = upcoming.filter(c => c.startDate > openDate && this._getMondayOf(c.startDate) !== thisWeekMonday);
+
+        const pool = [...ongoing, ...d2ready, ...thisWeek, ...future];
+        const updates = {};
+        const assigned = [];
+
+        for (let i = 0; i < Math.min(this.ROOMS.length, pool.length); i++) {
+            const room = this.ROOMS[i];
+            const course = pool[i];
+            updates[`courses/${room}/settings/courseName`] = course.name;
+            updates[`courses/${room}/settings/period`]     = course.period;
+            // [수정] coord 표기 차이(공백/직급)를 흡수해 명단의 정식 이름으로 정규화. 매칭 실패 시 원문 유지
+            const coordFull = coordMgr.matchName(course.coord) || (course.coord || '');
+            updates[`courses/${room}/settings/coordinatorName`] = coordFull;
+            updates[`courses/${room}/status/professorName`] = course.prof;
+            updates[`courses/${room}/status/roomStatus`]   = 'active';
+            assigned.push(`${room}: ${course.name}`);
+        }
+
+        if (Object.keys(updates).length) {
+            await firebase.database().ref().update(updates);
+            console.log('[annualPlanMgr] 배치 완료:', assigned.join(' | '));
+        }
+    },
+
+    /* 페이지 로드 시 만료 Room 자동 체크 & 재배치 */
+    checkAndReset: async function() {
+        try {
+            const snap = await firebase.database().ref(this.PLAN_KEY).once('value');
+            if (!snap.exists()) return;
+
+            const courses = Object.values(snap.val());
+            if (!courses.length) return;
+
+            const today = this._today();
+
+            // D-2 기준일 계산
+            const d2 = new Date(today + 'T00:00:00Z');
+            d2.setUTCDate(d2.getUTCDate() + 2);
+            const openDate = d2.toISOString().split('T')[0];
+
+            let needsUpdate = false;
+
+            for (const room of this.ROOMS) {
+                const s = await firebase.database().ref(`courses/${room}/settings`).once('value');
+                const settings = s.val() || {};
+                const period   = settings.period || '';
+                const endDate  = period.split('~')[1]?.trim();
+                const courseName = settings.courseName || '';
+
+                // 1. 과정 만료 → 재배치 필요
+                if (endDate && endDate < today) {
+                    console.log(`[annualPlanMgr] Room ${room} 만료 (${endDate})`);
+                    needsUpdate = true;
+                    break;
+                }
+
+                // 2. 방이 비어 있는데 D-2 이내 과정이 있으면 → 오픈 필요
+                if (!courseName) {
+                    const d2course = courses.find(c =>
+                        c.startDate > today &&
+                        c.startDate <= openDate &&
+                        c.endDate >= today
+                    );
+                    if (d2course) {
+                        console.log(`[annualPlanMgr] D-2 이내 과정 발견 → 오픈: ${d2course.name}`);
+                        needsUpdate = true;
+                        break;
+                    }
+                }
+            }
+
+            if (needsUpdate) {
+                await this._applyCurrentWeek(courses);
+                console.log('[annualPlanMgr] 자동 재배치 완료');
+            }
+        } catch (err) {
+            console.warn('[annualPlanMgr] checkAndReset 오류:', err);
+        }
+    }
+};
+
+/* 강사 플랫폼 로드 시 자동 만료 체크 */
+document.addEventListener('DOMContentLoaded', () => {
+    if (typeof firebase !== 'undefined' && firebase.auth) {
+        firebase.auth().onAuthStateChanged(user => {
+            if (user) annualPlanMgr.checkAndReset();
+        });
+    }
+});

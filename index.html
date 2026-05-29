@@ -1172,28 +1172,9 @@ async function enterApp() {
             return;
         }
     }
-    // [수정] OR 방식: 명단이 없으면 무조건 통과, 명단이 있으면 명단 대조
-    const expectedSnap = await firebase.database().ref(`courses/${currentRoom}/expectedStudents`).once('value');
-    const expectedList = expectedSnap.val();
-    if (expectedList && typeof expectedList === 'object') {
-        // 명단이 존재하는 경우에만 대조 — 단, 기존 uToken이 없으면(미등록) 통과 허용
-        const uToken = localStorage.getItem('uToken');
-        const savedName  = localStorage.getItem('kac_user_name') || '';
-        const savedPhone = localStorage.getItem('kac_user_phone') || '';
-        if (uToken && savedName) {
-            const found = Object.values(expectedList).some(e => {
-                const eName = (e.name || '').trim();
-                const ePhone = (e.phone || '').trim().slice(-4);
-                return eName === savedName.trim() && (ePhone === savedPhone.trim() || !ePhone);
-            });
-            // [OR 방식] 명단에 없어도 QR 입장 자체는 허용 (프로필 체크에서 추가 처리)
-            // 명단 미포함 시 안내만 표시하고 계속 진행
-            if (!found) {
-                console.log(`[QR입장] 명단 미포함 교육생 "${savedName}" — 입장은 허용됨`);
-            }
-        }
-    }
-    // 명단 유무와 무관하게 QR 입장 허용
+    // [수정] 명단(expectedStudents)이 있어도 QR 입장을 차단하지 않습니다.
+    //  - 명단은 참조용으로만 사용하고, 이미 등록한 재입장자는 항상 통과시킵니다.
+    //  - 명단 대조/안내는 신규 프로필 등록 시점(saveProfileWithCheck)에서 1회만 수행합니다.
     const doc = document.documentElement;
     if (doc.requestFullscreen) doc.requestFullscreen().catch(e=>{});
     await checkProfile();
@@ -2635,7 +2616,7 @@ function startOvernightReturnAlerts() {
     }, 5 * 60 * 1000);
 }
 
-
+// ── [삭제됨] 강사 복귀 호출 신호 감지 리스너(startReturnCallListener)는 요청에 따라 제거되었습니다. ──
 
 // 복귀 완료 보고 처리
 async function confirmReturnAction() {
@@ -2687,6 +2668,8 @@ async function saveProfileWithCheck() {
         return;
     }
 
+    // [수정] 명단에 없어도 입장을 전면 차단하지 않습니다.
+    //  - 명단이 있을 때만 대조하고, 미일치 시에는 '확인 후 입장' 안내(confirm)로 전환하여 QR 신규 입교를 허용합니다.
     const expectedSnap = await firebase.database().ref(`courses/${currentRoom}/expectedStudents`).once('value');
     const expectedList = expectedSnap.val();
     if (expectedList && typeof expectedList === 'object') {
@@ -2696,8 +2679,8 @@ async function saveProfileWithCheck() {
             return eName === name && (ePhone === phone || !ePhone);
         });
         if (!found) {
-            alert(`⚠️ 등록된 명단에 없는 교육생입니다.\n이름: ${name} / 번호: ${phone}\n\n입력 정보를 다시 확인하시거나 강사에게 문의해 주세요.`);
-            return;
+            const proceed = confirm(`ℹ️ 등록된 명단에서 일치하는 정보를 찾지 못했습니다.\n이름: ${name} / 번호: ${phone}\n\n현장에서 본인 확인 후 그대로 입장하시겠습니까?\n(취소를 누르면 입력 정보를 다시 확인할 수 있습니다.)`);
+            if (!proceed) return;
         }
     }
     const settingsSnap2 = await firebase.database().ref(`courses/${currentRoom}/settings`).once('value');
