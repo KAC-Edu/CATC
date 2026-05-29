@@ -6192,3 +6192,243 @@ const bgmPlayer = {
 
 // 페이지 로드 시 초기화
 document.addEventListener('DOMContentLoaded', () => bgmPlayer.init());
+
+/* ══════════════════════════════════════════════════════════════
+   연간 교육운영계획 일괄 업로드 & Room 자동 배치 관리자
+   - 엑셀 총괄표 파싱 → Room A/B/C 주별 자동 배치
+   - 강사 플랫폼 접속 시 만료된 Room 자동 리셋
+   ══════════════════════════════════════════════════════════════ */
+const annualPlanMgr = {
+
+    ROOMS: ['A', 'B', 'C'],   // 사용 중인 Room 목록
+    PLAN_KEY: 'system/annualPlan', // Firebase 저장 경로
+
+    /* ── 엑셀 시리얼 → YYYY-MM-DD ── */
+    _excelDate: function(n) {
+        if (typeof n === 'number' && n > 40000) {
+            const d = new Date((n - 25569) * 86400 * 1000);
+            // UTC 기준으로 변환
+            const y = d.getUTCFullYear();
+            const m = String(d.getUTCMonth() + 1).padStart(2, '0');
+            const day = String(d.getUTCDate()).padStart(2, '0');
+            return `${y}-${m}-${day}`;
+        }
+        return null;
+    },
+
+    /* ── 날짜 문자열에서 해당 주의 월요일 반환 (YYYY-MM-DD) ── */
+    _getMondayOf: function(dateStr) {
+        const d = new Date(dateStr + 'T00:00:00Z');
+        const day = d.getUTCDay(); // 0=일, 1=월 ...
+        const diff = (day === 0) ? -6 : 1 - day; // 월요일로
+        d.setUTCDate(d.getUTCDate() + diff);
+        return d.toISOString().split('T')[0];
+    },
+
+    /* ── 오늘 날짜 문자열 ── */
+    _today: function() {
+        return new Date().toISOString().split('T')[0];
+    },
+
+    /* ── 엑셀 파일 업로드 & 파싱 ── */
+    upload: async function(input) {
+        const file = input.files[0];
+        if (!file) return;
+        input.value = '';
+
+        const statusEl = document.getElementById('annualPlanStatus');
+        if (statusEl) { statusEl.innerText = '⏳ 분석 중...'; statusEl.style.color = '#f59e0b'; }
+
+        try {
+            const buf = await file.arrayBuffer();
+            const wb = XLSX.read(buf, { type: 'array' });
+
+            // 총괄표 시트 찾기
+            const sheetName = wb.SheetNames.find(n => n.includes('총괄')) || wb.SheetNames[0];
+            const ws = wb.Sheets[sheetName];
+            const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: null });
+
+            // 헤더 행 찾기 (과정명 + 담임교수 포함된 행)
+            let headerIdx = -1;
+            let colMap = {};
+            for (let i = 0; i < rows.length; i++) {
+                const row = rows[i];
+                if (row.includes('과정명') && row.includes('담임교수')) {
+                    headerIdx = i;
+                    row.forEach((v, j) => {
+                        if (v === '연번') colMap.no = j;
+                        if (v === '과정명') colMap.name = j;
+                        if (v === '담임교수') colMap.prof = j;
+                        if (v !== null && String(v).includes('교육일정확인')) colMap.coord = j;
+                        if (v === '교육시작일') colMap.start = j;
+                        if (v === '교육종료일') colMap.end = j;
+                    });
+                    break;
+                }
+            }
+
+            if (headerIdx < 0) throw new Error('총괄표 헤더를 찾을 수 없습니다.');
+
+            // 과정 데이터 파싱
+            const courses = [];
+            for (let i = headerIdx + 1; i < rows.length; i++) {
+                const row = rows[i];
+                if (!row || !row.length) continue;
+                const no = row[colMap.no];
+                if (typeof no !== 'number' || !Number.isInteger(no)) continue;
+                const name = row[colMap.name];
+                if (!name) continue;
+
+                const startDate = this._excelDate(row[colMap.start]);
+                const endDate   = this._excelDate(row[colMap.end]);
+                if (!startDate || !endDate) continue;
+
+                // 담임교수: 여러 명이면 첫 번째만
+                const profRaw = row[colMap.prof] ? String(row[colMap.prof]) : '';
+                const prof = profRaw.split(/[,，、/]/)[0].trim();
+
+                // 운영담당자
+                const coord = row[colMap.coord] ? String(row[colMap.coord]).trim() : '';
+
+                courses.push({
+                    no, name: String(name).trim(),
+                    startDate, endDate, prof, coord,
+                    weekKey: this._getMondayOf(startDate),
+                    period: `${startDate} ~ ${endDate}`
+                });
+            }
+
+            if (courses.length === 0) throw new Error('파싱된 과정이 없습니다.');
+
+            // 전체 초기화 후 재배치
+            await this._assignRooms(courses);
+
+            if (statusEl) {
+                statusEl.innerText = `✅ ${courses.length}개 과정 적용됨`;
+                statusEl.style.color = '#10b981';
+            }
+            ui.showAlert(`✅ 운영계획 업로드 완료!\n총 ${courses.length}개 과정을 Room A/B/C에 배치했습니다.`);
+
+        } catch (err) {
+            console.error('annualPlanMgr.upload 오류:', err);
+            if (statusEl) { statusEl.innerText = '❌ 오류: ' + err.message; statusEl.style.color = '#ef4444'; }
+            ui.showAlert('❌ 업로드 오류: ' + err.message);
+        }
+    },
+
+    /* ── Room A/B/C 자동 배치 ── */
+    _assignRooms: async function(courses) {
+        // 1. 현재 Room A/B/C 전체 초기화
+        const resetUpdates = {};
+        for (const r of this.ROOMS) {
+            const rPath = `courses/${r}/settings`;
+            resetUpdates[`${rPath}/courseName`] = '';
+            resetUpdates[`${rPath}/period`] = '';
+            resetUpdates[`${rPath}/coordinatorName`] = null;
+            resetUpdates[`courses/${r}/status/professorName`] = '';
+            resetUpdates[`courses/${r}/status/roomStatus`] = 'idle';
+        }
+        await firebase.database().ref().update(resetUpdates);
+
+        // 2. annualPlan에 전체 과정 저장 (만료 체크용)
+        const planData = {};
+        courses.forEach((c, idx) => { planData[`c${idx}`] = c; });
+        await firebase.database().ref(this.PLAN_KEY).set(planData);
+
+        // 3. 이번 주 + 다음 주 과정을 Room에 배치
+        await this._applyCurrentWeek(courses);
+    },
+
+    /* ── 이번 주 시작 과정을 Room에 배치 ── */
+    _applyCurrentWeek: async function(courses) {
+        const today = this._today();
+        const thisWeekMonday = this._getMondayOf(today);
+
+        // 오늘 이후 시작하는 과정만 weekKey 순 정렬
+        const upcoming = courses
+            .filter(c => c.endDate >= today)
+            .sort((a, b) => a.startDate.localeCompare(b.startDate));
+
+        // 이번 주 시작 과정 우선, 없으면 다음으로 진행 중인 과정
+        // Room 슬롯 3개 채우기
+        const toAssign = [];
+        // 이미 진행 중인 과정 (오늘 기준 start <= today <= end)
+        const ongoing = upcoming.filter(c => c.startDate <= today && c.endDate >= today);
+        // 이번 주 시작 과정
+        const thisWeek = upcoming.filter(c => this._getMondayOf(c.startDate) === thisWeekMonday && c.startDate > today);
+        // 그 외 미래 과정
+        const future = upcoming.filter(c => c.startDate > today && this._getMondayOf(c.startDate) !== thisWeekMonday);
+
+        const pool = [...ongoing, ...thisWeek, ...future];
+        for (let i = 0; i < Math.min(this.ROOMS.length, pool.length); i++) {
+            toAssign.push({ room: this.ROOMS[i], course: pool[i] });
+        }
+
+        if (toAssign.length === 0) return;
+
+        // Firebase에 각 Room 설정 저장
+        const updates = {};
+        for (const { room, course } of toAssign) {
+            updates[`courses/${room}/settings/courseName`] = course.name;
+            updates[`courses/${room}/settings/period`] = course.period;
+            updates[`courses/${room}/settings/coordinatorName`] = course.coord;
+            updates[`courses/${room}/status/professorName`] = course.prof;
+            updates[`courses/${room}/status/roomStatus`] = 'active';
+        }
+        await firebase.database().ref().update(updates);
+
+        console.log('[annualPlanMgr] Room 배치 완료:', toAssign.map(x => `${x.room}=${x.course.name}`));
+    },
+
+    /* ── 강사 플랫폼 로드 시 만료 체크 & 자동 리셋 ── */
+    checkAndReset: async function() {
+        try {
+            const snap = await firebase.database().ref(this.PLAN_KEY).once('value');
+            if (!snap.exists()) return;
+
+            const planData = snap.val();
+            const courses = Object.values(planData);
+            if (!courses.length) return;
+
+            const today = this._today();
+            let needsUpdate = false;
+
+            // 각 Room 확인: 과정 만료 여부
+            for (const room of this.ROOMS) {
+                const settingsSnap = await firebase.database().ref(`courses/${room}/settings`).once('value');
+                const settings = settingsSnap.val() || {};
+                const period = settings.period || '';
+
+                if (!period) continue;
+
+                // period 형식: "YYYY-MM-DD ~ YYYY-MM-DD"
+                const endDate = period.split('~')[1]?.trim();
+                if (!endDate) continue;
+
+                if (endDate < today) {
+                    // 과정 만료 → Room 리셋 후 다음 과정 배치
+                    console.log(`[annualPlanMgr] Room ${room} 과정 만료 (${endDate}) → 리셋`);
+                    needsUpdate = true;
+                    break;
+                }
+            }
+
+            if (needsUpdate) {
+                await this._applyCurrentWeek(courses);
+                console.log('[annualPlanMgr] 자동 리셋 & 재배치 완료');
+            }
+        } catch (err) {
+            console.warn('[annualPlanMgr] checkAndReset 오류:', err);
+        }
+    }
+};
+
+// 강사 플랫폼 로드 시 자동 만료 체크 실행
+document.addEventListener('DOMContentLoaded', () => {
+    // 로그인 확인 후 실행 (firebase auth 초기화 이후)
+    firebase.auth().onAuthStateChanged(user => {
+        if (user) {
+            annualPlanMgr.checkAndReset();
+        }
+    });
+});
