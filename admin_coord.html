@@ -1355,18 +1355,6 @@ body.modal-open .app-content {
     <button class="navy-btn" style="background:#10b981; border:none; box-shadow:0 4px 10px rgba(16,185,129,0.4); margin-top:8px; width:100%;" onclick="saveCourseNotice()">
         <i class="fa-solid fa-paper-plane"></i> 과정 공지 업데이트
     </button>
-
-    <!-- 공지 발송 이력 -->
-    <div style="margin-top:14px; border-top:1px solid rgba(255,255,255,0.2); padding-top:12px;">
-        <div style="margin-bottom:6px;">
-            <span style="font-size:12px; font-weight:700; color:#64748b;">
-                <i class="fa-solid fa-clock-rotate-left"></i> 마지막 발송
-            </span>
-        </div>
-        <div id="noticeHistoryList" style="max-height:200px; overflow-y:auto; display:flex; flex-direction:column; gap:6px;">
-            <div style="text-align:center; color:#94a3b8; font-size:12px; padding:16px 0;">발송 이력이 없습니다.</div>
-        </div>
-    </div>
 </div>
 
 
@@ -2043,6 +2031,9 @@ function init() {
         renderTotalHistory();
         if(currentRID) updateIndividualView();
         
+        // 신규 외출/외박 신청 자동 서명 처리
+        autoSignNewActions(globalAllData);
+        
         // 관리대장 뷰가 열려있을 때만 렌더링하도록 체크
         const outingView = document.getElementById('outingManagerView');
         if(outingView && outingView.style.display === 'flex') {
@@ -2257,9 +2248,14 @@ function updateIndividualView() {
     const leaderEl = document.getElementById('ind-leader');
     if (leaderEl) leaderEl.innerText = leaderTxt;
 
-    // 4. 외출/외박 신청 명단 렌더링
+    // 4. 외출/외박 신청 명단 렌더링 (당일 09:00 이후 신청 건만 표시)
     const actionTbody = document.getElementById('indActionTableBody');
     actionTbody.innerHTML = "";
+
+    // 09:00 기준 타임스탬프 계산
+    const now09 = new Date();
+    now09.setHours(9, 0, 0, 0);
+    const cutoff = now09.getTime(); // 오늘 09:00의 timestamp
 
     let actionItems = [];
     if (room.admin_actions) {
@@ -2267,7 +2263,11 @@ function updateIndividualView() {
             if (date >= startDate && date <= endDate) {
                 const dayActions = room.admin_actions[date];
                 Object.keys(dayActions).forEach(token => {
-                    actionItems.push({ ...dayActions[token], token: token, date: date });
+                    const item = dayActions[token];
+                    // 당일 09:00 이후 신청 건만 포함
+                    if (item.timestamp && item.timestamp >= cutoff) {
+                        actionItems.push({ ...item, token: token, date: date });
+                    }
                 });
             }
         });
@@ -2276,12 +2276,9 @@ function updateIndividualView() {
     actionItems.sort((a, b) => a.timestamp - b.timestamp);
     
     if (actionItems.length === 0) {
-        actionTbody.innerHTML = '<tr><td colspan="4" style="padding:20px; color:#94a3b8; text-align:center;">해당 교육 기간 내 신청 내역 없음</td></tr>';
+        actionTbody.innerHTML = '<tr><td colspan="4" style="padding:20px; color:#94a3b8; text-align:center;">오늘 09:00 이후 신청 내역 없음</td></tr>';
     } else {
         actionTbody.innerHTML = actionItems.map(a => {
-            const isSigned = a.confirmed === true;
-            const btnText = isSigned ? "취소" : "서명"; 
-            const btnStyle = isSigned ? "background:#94a3b8;" : "background:#3b82f6;";
             const dataStr = encodeURIComponent(JSON.stringify(a));
             
             return `<tr>
@@ -2289,24 +2286,17 @@ function updateIndividualView() {
                     ${a.date.substring(5)} ${a.name}
                 </td>
                 <td style="color:${a.type==='outing'?'#ea580c':'#dc2626'}; font-weight:800; text-align:center;">
-                    ${a.type==='outing'?'외출':'외박'}
+                    ${a.type==='group_outing'?'단체외출':a.type==='outing'?'외출':'외박'}
                 </td>
                 <td style="text-align:center;">
                     ${new Date(a.timestamp).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}
                 </td>
                 <td style="text-align:center;">
-                    <div style="display:flex; gap:6px; justify-content:center; align-items:center;">
-                        <!-- 서명 버튼: 55px * 34px 고정 -->
-                        <button onclick="toggleConfirm('${currentRID}', '${a.date}', '${a.token}', ${isSigned})" 
-                                style="${btnStyle} color:#fff; border:none; border-radius:6px; width:55px; height:34px; font-weight:800; cursor:pointer; font-size:12px;">
-                            ${btnText}
-                        </button>
-                        <!-- 삭제 버튼: 55px * 34px 고정 -->
-                        <button onclick="deleteActionRow('${currentRID}', '${a.date}', '${a.token}', '${a.name}')" 
-                                style="background:#ef4444; color:#fff; border:none; border-radius:6px; width:55px; height:34px; font-weight:800; cursor:pointer; font-size:12px;">
-                            삭제
-                        </button>
-                    </div>
+                    <!-- 삭제 버튼만 표시 (서명은 자동 처리) -->
+                    <button onclick="deleteActionRow('${currentRID}', '${a.date}', '${a.token}', '${a.name}')" 
+                            style="background:#ef4444; color:#fff; border:none; border-radius:6px; width:55px; height:34px; font-weight:800; cursor:pointer; font-size:12px;">
+                        삭제
+                    </button>
                 </td>
             </tr>`;
         }).join('');
@@ -2359,6 +2349,42 @@ function updateIndividualView() {
 
 
     // [5. 서명 연동 및 실시간 처리]
+// 신규 외출/외박 신청 자동 서명 처리
+// - confirmed 필드가 없는(미처리) 건을 감지해 담당자 서명 자동 입력
+async function autoSignNewActions(allData) {
+    const today = getTodayString();
+    for (const rid of Object.keys(allData)) {
+        const room = allData[rid];
+        const todayActions = room.admin_actions?.[today] || {};
+        const coordName = room.settings?.coordinatorName || '';
+        if (!coordName) continue;
+
+        // 담당자 서명 이미지 조회 (캐시 활용)
+        if (!autoSignNewActions._signCache) autoSignNewActions._signCache = {};
+        if (autoSignNewActions._signCache[coordName] === undefined) {
+            const cSnap = await firebase.database().ref('system/coordinators').orderByChild('name').equalTo(coordName).once('value');
+            autoSignNewActions._signCache[coordName] = '';
+            if (cSnap.exists()) {
+                const cData = Object.values(cSnap.val())[0];
+                autoSignNewActions._signCache[coordName] = cData.sign || '';
+            }
+        }
+        const signImg = autoSignNewActions._signCache[coordName];
+
+        for (const token of Object.keys(todayActions)) {
+            const action = todayActions[token];
+            // confirmed가 명시적으로 설정되지 않은 신규 신청 건만 처리
+            if (action && action.confirmed === undefined) {
+                firebase.database().ref(`courses/${rid}/admin_actions/${today}/${token}`).update({
+                    confirmed: true,
+                    confirmedBy: coordName,
+                    confirmedBySign: signImg
+                });
+            }
+        }
+    }
+}
+
 async function toggleConfirm(rid, date, token, currentStatus) {
     // 1. 현재 선택된 과정 담당자 정보를 가져옴 (예: 주영미 과장)
     const coordName = globalAllData[rid]?.settings?.coordinatorName || "담당자"; 

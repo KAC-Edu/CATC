@@ -1753,17 +1753,29 @@ const ui = {
                 .filter(token => students[token]?.name)
                 .map(token => ({ token, ...students[token] }));
 
+            // 자동 서명을 위해 담당자 정보를 루프 전에 미리 조회
+            const coordName = (await firebase.database().ref(`courses/${state.room}/settings/coordinatorName`).once('value')).val() || '담당자';
+            const coordSnap = await firebase.database().ref('system/coordinators').orderByChild('name').equalTo(coordName).once('value');
+            let autoSignImg = '';
+            if (coordSnap.exists()) {
+                const coordData = Object.values(coordSnap.val())[0];
+                autoSignImg = coordData.sign || '';
+            }
+
             validStudents.forEach((s, idx) => {
                 const phone4 = s.phone ? s.phone.slice(-4) : '0000';
                 // 석식 제외 등록
                 updates[`courses/${state.room}/dinner_skips/${today}/${s.token}`] = `${s.name}(${phone4})`;
-                // 단체외출 행정 대장 등록
+                // 단체외출 행정 대장 등록 (자동 서명 포함)
                 updates[`courses/${state.room}/admin_actions/${today}/${s.token}`] = {
                     name: s.name, dept: '', phone: phone,
                     destination: destination, startTime: startTime,
                     endTime: endTime, returnDate: returnDate,
                     reason: reason, type: 'group_outing',
-                    timestamp: Date.now() + idx, returned: false
+                    timestamp: Date.now() + idx, returned: false,
+                    confirmed: true,
+                    confirmedBy: coordName,
+                    confirmedBySign: autoSignImg
                 };
             });
 
