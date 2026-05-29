@@ -4,7 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>교육운영계획 변환기 | KAC</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" rel="stylesheet">
 <style>
@@ -14,63 +13,71 @@ body{background:var(--bg);color:var(--text);min-height:100vh;}
 .top-bar{background:linear-gradient(135deg,var(--navy),var(--navy2));padding:18px 40px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 4px 20px rgba(0,51,102,.3);}
 .top-bar .logo{color:#fff;font-size:18px;font-weight:800;display:flex;align-items:center;gap:10px;}
 .top-bar .logo i{color:var(--cyan);}
-.back-btn{color:rgba(255,255,255,.7);font-size:13px;font-weight:600;text-decoration:none;display:flex;align-items:center;gap:6px;transition:color .2s;}
+.back-btn{color:rgba(255,255,255,.7);font-size:13px;font-weight:600;text-decoration:none;display:flex;align-items:center;gap:6px;}
 .back-btn:hover{color:#fff;}
 .main{max-width:960px;margin:0 auto;padding:40px 20px 80px;}
 .page-title{margin-bottom:32px;}
 .page-title h1{font-size:28px;font-weight:900;color:var(--navy);margin-bottom:6px;}
 .page-title p{font-size:14px;color:var(--sub);}
-.progress-row{display:flex;gap:0;margin-bottom:32px;position:relative;}
-.progress-row::before{content:'';position:absolute;top:18px;left:18px;right:18px;height:2px;background:#e2e8f0;z-index:0;}
-.prog-step{flex:1;display:flex;flex-direction:column;align-items:center;gap:8px;position:relative;z-index:1;}
-.prog-dot{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;background:#e2e8f0;color:#94a3b8;border:3px solid var(--bg);transition:all .3s;}
-.prog-dot.active{background:var(--navy);color:#fff;box-shadow:0 0 0 4px rgba(0,51,102,.15);}
-.prog-dot.done{background:var(--green);color:#fff;}
-.prog-label{font-size:12px;font-weight:700;color:#94a3b8;text-align:center;}
-.prog-label.active{color:var(--navy);}
-.prog-label.done{color:var(--green);}
+
+/* 탭 */
+.tab-wrap{display:flex;gap:0;margin-bottom:28px;background:#e2e8f0;border-radius:14px;padding:4px;}
+.tab-btn{flex:1;padding:12px;border:none;background:transparent;border-radius:10px;font-size:14px;font-weight:700;color:var(--sub);cursor:pointer;transition:all .2s;}
+.tab-btn.active{background:#fff;color:var(--navy);box-shadow:0 2px 8px rgba(0,0,0,.08);}
+
 .step-card{background:var(--card);border-radius:20px;border:1.5px solid var(--border);padding:32px;margin-bottom:20px;box-shadow:0 4px 16px rgba(0,0,0,.04);}
 .step-header{display:flex;align-items:center;gap:14px;margin-bottom:22px;}
 .step-num{width:36px;height:36px;border-radius:50%;background:var(--navy);color:#fff;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:900;flex-shrink:0;}
-.step-num.done{background:var(--green);}
 .step-title{font-size:17px;font-weight:800;color:var(--navy);}
 .step-desc{font-size:13px;color:var(--sub);margin-top:2px;}
+
 .upload-zone{border:2.5px dashed #cbd5e1;border-radius:16px;padding:48px 24px;text-align:center;cursor:pointer;transition:all .2s;background:#f8fafc;position:relative;}
 .upload-zone:hover,.upload-zone.drag{border-color:var(--navy2);background:#eff6ff;}
-.upload-zone i{font-size:40px;color:#94a3b8;margin-bottom:14px;display:block;}
-.upload-zone .uz-title{font-size:16px;font-weight:700;color:#475569;margin-bottom:6px;}
-.upload-zone .uz-sub{font-size:13px;color:#94a3b8;}
+.upload-zone i{font-size:40px;margin-bottom:14px;display:block;}
+.uz-title{font-size:16px;font-weight:700;color:#475569;margin-bottom:6px;}
+.uz-sub{font-size:13px;color:#94a3b8;}
 .upload-zone input{position:absolute;inset:0;opacity:0;cursor:pointer;}
+
 .file-selected{display:flex;align-items:center;gap:14px;padding:16px 20px;background:#f0f7ff;border-radius:12px;border:1.5px solid #bfdbfe;}
-.file-selected i{font-size:28px;color:var(--navy2);}
 .fname{font-size:15px;font-weight:700;color:var(--navy);}
 .fsize{font-size:12px;color:var(--sub);margin-top:2px;}
-.clear-btn{margin-left:auto;width:32px;height:32px;border-radius:50%;border:none;background:#e2e8f0;color:#64748b;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;transition:.2s;}
+.clear-btn{margin-left:auto;width:32px;height:32px;border-radius:50%;border:none;background:#e2e8f0;color:#64748b;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;}
 .clear-btn:hover{background:#fee2e2;color:var(--red);}
+
 .btn{display:inline-flex;align-items:center;gap:8px;padding:13px 28px;border-radius:12px;border:none;font-size:15px;font-weight:800;cursor:pointer;transition:all .2s;}
 .btn:disabled{opacity:.4;cursor:not-allowed;}
 .btn-primary{background:linear-gradient(135deg,var(--navy),var(--navy2));color:#fff;box-shadow:0 4px 14px rgba(0,51,102,.25);}
 .btn-primary:not(:disabled):hover{transform:translateY(-2px);}
 .btn-green{background:linear-gradient(135deg,#059669,var(--green));color:#fff;box-shadow:0 4px 14px rgba(16,185,129,.25);}
 .btn-green:not(:disabled):hover{transform:translateY(-2px);}
-.btn-amber{background:linear-gradient(135deg,#d97706,#FFB703);color:#fff;box-shadow:0 4px 14px rgba(255,183,3,.25);}
+.btn-amber{background:linear-gradient(135deg,#d97706,#FFB703);color:#fff;}
 .btn-amber:not(:disabled):hover{transform:translateY(-2px);}
 .btn-row{display:flex;gap:12px;flex-wrap:wrap;margin-top:20px;}
-.preview-wrap{border-radius:14px;border:1.5px solid var(--border);overflow:hidden;margin-top:4px;}
+
+.preview-wrap{border-radius:14px;border:1.5px solid var(--border);overflow:hidden;margin-top:16px;}
 .preview-toolbar{background:#f8fafc;padding:12px 18px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);font-size:13px;font-weight:700;color:var(--sub);}
 .count-badge{background:var(--navy);color:#fff;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:800;}
 .preview-scroll{max-height:420px;overflow-y:auto;overflow-x:auto;}
 table{width:100%;border-collapse:collapse;font-size:13px;}
 thead th{background:var(--navy);color:#fff;padding:11px 14px;text-align:left;font-weight:700;position:sticky;top:0;white-space:nowrap;}
-tbody tr{border-bottom:1px solid #f1f5f9;transition:background .1s;}
+tbody tr{border-bottom:1px solid #f1f5f9;}
 tbody tr:hover{background:#f8fafc;}
-tbody td{padding:10px 14px;color:var(--text);}
+tbody td{padding:10px 14px;}
 td.no{color:var(--sub);font-weight:700;width:48px;}
-td.name{font-weight:700;min-width:220px;}
+td.name{font-weight:700;min-width:200px;}
 td.date{color:#3b82f6;font-size:12px;white-space:nowrap;}
-.status-box{padding:14px 18px;border-radius:12px;font-size:14px;font-weight:700;display:flex;align-items:center;gap:10px;margin-top:16px;}
+
+.status-box{padding:14px 18px;border-radius:12px;font-size:14px;font-weight:700;display:flex;align-items:center;gap:10px;margin-bottom:16px;}
 .status-box.ok{background:#ecfdf5;color:#065f46;border:1px solid #a7f3d0;}
 .status-box.info{background:#eff6ff;color:#1e40af;border:1px solid #bfdbfe;}
+.status-box.warn{background:#fffbeb;color:#92400e;border:1px solid #fde68a;}
+
+.info-notice{background:#f0f7ff;border:1.5px solid #bfdbfe;border-radius:14px;padding:20px 24px;margin-bottom:20px;}
+.info-notice h3{font-size:15px;font-weight:800;color:var(--navy);margin-bottom:10px;display:flex;align-items:center;gap:8px;}
+.info-notice ol{padding-left:20px;color:var(--sub);font-size:13px;line-height:2;}
+.info-notice ol li b{color:var(--navy);}
+.info-notice .cmd{background:#1e293b;color:#e2e8f0;padding:8px 14px;border-radius:8px;font-family:monospace;font-size:12px;margin:6px 0;display:block;}
+
 .spinner{display:inline-block;width:18px;height:18px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;}
 @keyframes spin{to{transform:rotate(360deg);}}
 </style>
@@ -80,63 +87,134 @@ td.date{color:#3b82f6;font-size:12px;white-space:nowrap;}
   <div class="logo"><i class="fa-solid fa-file-excel"></i> 교육운영계획 변환기</div>
   <a href="admin.html" class="back-btn"><i class="fa-solid fa-chevron-left"></i> 강사 플랫폼으로</a>
 </div>
+
 <div class="main">
   <div class="page-title">
     <h1>📋 연간 교육운영계획 → Firebase 업로드</h1>
-    <p>엑셀 파일을 업로드하면 내용을 확인한 뒤 Firebase에 적용합니다.</p>
+    <p>JSON 파일을 업로드하거나, 아래 안내에 따라 엑셀에서 JSON을 먼저 변환하세요.</p>
   </div>
 
-  <div class="progress-row">
-    <div class="prog-step"><div class="prog-dot active" id="pd1"><i class="fa-solid fa-upload"></i></div><div class="prog-label active" id="pl1">엑셀 업로드</div></div>
-    <div class="prog-step"><div class="prog-dot" id="pd2"><i class="fa-solid fa-magnifying-glass"></i></div><div class="prog-label" id="pl2">내용 확인</div></div>
-    <div class="prog-step"><div class="prog-dot" id="pd3"><i class="fa-solid fa-cloud-arrow-up"></i></div><div class="prog-label" id="pl3">Firebase 적용</div></div>
+  <!-- 탭 -->
+  <div class="tab-wrap">
+    <button class="tab-btn active" onclick="switchTab('json')" id="tab-json">
+      <i class="fa-solid fa-file-code"></i> JSON 업로드 (권장)
+    </button>
+    <button class="tab-btn" onclick="switchTab('guide')" id="tab-guide">
+      <i class="fa-solid fa-circle-info"></i> 변환 방법 안내
+    </button>
   </div>
 
-  <!-- STEP 1 -->
-  <div class="step-card">
-    <div class="step-header">
-      <div class="step-num" id="sn1">1</div>
-      <div><div class="step-title">엑셀 파일 선택</div><div class="step-desc">총괄표 시트가 포함된 xlsx 파일을 선택하세요</div></div>
-    </div>
-    <div id="upload-zone-wrap">
-      <div class="upload-zone" ondragover="event.preventDefault();this.classList.add('drag')" ondragleave="this.classList.remove('drag')" ondrop="handleDrop(event)">
-        <i class="fa-solid fa-file-excel" style="color:#16a34a;"></i>
-        <div class="uz-title">클릭하거나 파일을 여기에 드래그하세요</div>
-        <div class="uz-sub">.xlsx 파일만 지원 · 총괄표 시트 자동 인식</div>
-        <input type="file" accept=".xlsx" onchange="handleFile(this.files[0])">
+  <!-- JSON 업로드 탭 -->
+  <div id="panel-json">
+    <!-- STEP 1: 파일 -->
+    <div class="step-card">
+      <div class="step-header">
+        <div class="step-num">1</div>
+        <div>
+          <div class="step-title">JSON 파일 선택</div>
+          <div class="step-desc">변환된 kac_plan_YYYY.json 파일을 선택하세요</div>
+        </div>
+      </div>
+      <div id="json-upload-wrap">
+        <div class="upload-zone" ondragover="event.preventDefault();this.classList.add('drag')" ondragleave="this.classList.remove('drag')" ondrop="handleDrop(event)">
+          <i class="fa-solid fa-file-code" style="color:#3b82f6;"></i>
+          <div class="uz-title">클릭하거나 파일을 여기에 드래그하세요</div>
+          <div class="uz-sub">.json 파일만 지원</div>
+          <input type="file" accept=".json" onchange="handleJsonFile(this.files[0])">
+        </div>
+      </div>
+      <div id="json-file-info" style="display:none;"></div>
+      <div class="btn-row">
+        <button class="btn btn-primary" id="previewBtn" onclick="previewJson()" disabled>
+          <i class="fa-solid fa-magnifying-glass"></i> 내용 확인
+        </button>
       </div>
     </div>
-    <div id="file-info-wrap" style="display:none;"></div>
-    <div class="btn-row">
-      <button class="btn btn-primary" id="parseBtn" onclick="parseExcel()" disabled>
-        <i class="fa-solid fa-wand-magic-sparkles"></i> 변환 시작
-      </button>
+
+    <!-- STEP 2: 미리보기 -->
+    <div class="step-card" id="step2-card" style="display:none;">
+      <div class="step-header">
+        <div class="step-num">2</div>
+        <div>
+          <div class="step-title">내용 확인 후 Firebase 업로드</div>
+          <div class="step-desc">데이터를 확인하고 이상 없으면 업로드하세요.</div>
+        </div>
+      </div>
+      <div id="preview-area"></div>
+      <div class="btn-row">
+        <button class="btn btn-green" id="uploadBtn" onclick="uploadToFirebase()">
+          <i class="fa-solid fa-cloud-arrow-up"></i> Firebase에 업로드
+        </button>
+      </div>
+    </div>
+
+    <!-- STEP 3: 완료 -->
+    <div class="step-card" id="step3-card" style="display:none;">
+      <div class="step-header">
+        <div class="step-num" style="background:var(--green);"><i class="fa-solid fa-check"></i></div>
+        <div>
+          <div class="step-title" style="color:var(--green);">업로드 완료</div>
+          <div class="step-desc">강사 플랫폼에서 이번 주 과정이 자동 배치됩니다.</div>
+        </div>
+      </div>
+      <div id="result-area"></div>
+      <div class="btn-row">
+        <button class="btn btn-primary" onclick="resetAll()"><i class="fa-solid fa-rotate-left"></i> 처음으로</button>
+        <a href="admin.html" class="btn btn-green" style="text-decoration:none;"><i class="fa-solid fa-arrow-right"></i> 강사 플랫폼으로</a>
+      </div>
     </div>
   </div>
 
-  <!-- STEP 2 -->
-  <div class="step-card" id="step2-card" style="display:none;">
-    <div class="step-header">
-      <div class="step-num" id="sn2">2</div>
-      <div><div class="step-title">변환 결과 확인</div><div class="step-desc">아래 데이터가 Firebase에 저장될 내용입니다. 이상 없으면 업로드하세요.</div></div>
+  <!-- 변환 안내 탭 -->
+  <div id="panel-guide" style="display:none;">
+    <div class="info-notice">
+      <h3><i class="fa-solid fa-terminal"></i> 엑셀 → JSON 변환 방법</h3>
+      <ol>
+        <li>아래 <b>Python 스크립트 다운로드</b> 버튼을 누르세요.</li>
+        <li>엑셀 파일과 같은 폴더에 저장하세요.</li>
+        <li>터미널(명령 프롬프트)에서 실행하세요:
+          <span class="cmd">python kac_excel_to_json.py 2026년도_교육운영계획_260429.xlsx</span>
+        </li>
+        <li>같은 폴더에 <b>kac_plan_2026.json</b> 파일이 생성됩니다.</li>
+        <li><b>JSON 업로드</b> 탭으로 돌아가서 해당 파일을 업로드하세요.</li>
+      </ol>
     </div>
-    <div id="preview-area"></div>
-    <div class="btn-row">
-      <button class="btn btn-amber" onclick="downloadJson()"><i class="fa-solid fa-download"></i> JSON 백업 다운로드</button>
-      <button class="btn btn-green" id="uploadBtn" onclick="uploadToFirebase()"><i class="fa-solid fa-cloud-arrow-up"></i> Firebase에 업로드</button>
+    <div class="step-card">
+      <div class="step-header">
+        <div class="step-num">📥</div>
+        <div>
+          <div class="step-title">Python 변환 스크립트</div>
+          <div class="step-desc">Python 3.8 이상, openpyxl 설치 필요 (pip install openpyxl)</div>
+        </div>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-amber" onclick="downloadScript()">
+          <i class="fa-solid fa-download"></i> kac_excel_to_json.py 다운로드
+        </button>
+      </div>
     </div>
-  </div>
 
-  <!-- STEP 3 -->
-  <div class="step-card" id="step3-card" style="display:none;">
-    <div class="step-header">
-      <div class="step-num done"><i class="fa-solid fa-check"></i></div>
-      <div><div class="step-title" style="color:var(--green);">업로드 완료</div><div class="step-desc">강사 플랫폼에서 이번 주 과정이 자동 배치됩니다.</div></div>
-    </div>
-    <div id="result-area"></div>
-    <div class="btn-row">
-      <button class="btn btn-primary" onclick="reset()"><i class="fa-solid fa-rotate-left"></i> 처음으로</button>
-      <a href="admin.html" class="btn btn-green" style="text-decoration:none;"><i class="fa-solid fa-arrow-right"></i> 강사 플랫폼으로</a>
+    <!-- 또는: 직접 여기서 변환 -->
+    <div class="step-card" style="border-color:#bfdbfe;">
+      <div class="step-header">
+        <div class="step-num" style="background:#3b82f6;">💡</div>
+        <div>
+          <div class="step-title" style="color:#1e40af;">또는: 이미 변환된 2026년 데이터 사용</div>
+          <div class="step-desc">현재 업로드된 2026년도 파일 기준으로 미리 변환된 데이터입니다.</div>
+        </div>
+      </div>
+      <div class="status-box info">
+        <i class="fa-solid fa-circle-info"></i>
+        101개 과정 / 2025-11-10 ~ 2026-12-11 · 2026년도_교육운영계획_260429.xlsx 기준
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-primary" onclick="usePrebuilt()">
+          <i class="fa-solid fa-bolt"></i> 이 데이터로 바로 업로드
+        </button>
+        <button class="btn btn-amber" onclick="downloadPrebuilt()">
+          <i class="fa-solid fa-download"></i> JSON 다운로드
+        </button>
+      </div>
     </div>
   </div>
 </div>
@@ -145,193 +223,82 @@ td.date{color:#3b82f6;font-size:12px;white-space:nowrap;}
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 <script src="config.js"></script>
 <script>
-let selectedFile = null;
-let parsedCourses = [];
+/* ── 탭 전환 ── */
+function switchTab(tab) {
+    document.getElementById('panel-json').style.display  = tab==='json'  ? 'block' : 'none';
+    document.getElementById('panel-guide').style.display = tab==='guide' ? 'block' : 'none';
+    document.getElementById('tab-json').className  = 'tab-btn' + (tab==='json'?' active':'');
+    document.getElementById('tab-guide').className = 'tab-btn' + (tab==='guide'?' active':'');
+}
 
 /* ── 파일 처리 ── */
+let selectedData = null;
+
 function handleDrop(e) {
     e.preventDefault();
-    document.getElementById('upload-zone-wrap').querySelector('.upload-zone').classList.remove('drag');
+    e.currentTarget.classList.remove('drag');
     const f = e.dataTransfer.files[0];
-    if (f && f.name.endsWith('.xlsx')) handleFile(f);
-    else alert('xlsx 파일만 지원합니다.');
+    if (f && f.name.endsWith('.json')) handleJsonFile(f);
+    else alert('json 파일만 지원합니다.');
 }
-function handleFile(file) {
+
+function handleJsonFile(file) {
     if (!file) return;
-    selectedFile = file;
-    document.getElementById('upload-zone-wrap').style.display = 'none';
-    document.getElementById('file-info-wrap').style.display  = 'block';
-    document.getElementById('file-info-wrap').innerHTML = `
-        <div class="file-selected">
-            <i class="fa-solid fa-file-excel" style="color:#16a34a;"></i>
-            <div><div class="fname">${file.name}</div><div class="fsize">${(file.size/1024).toFixed(1)} KB</div></div>
-            <button class="clear-btn" onclick="clearFile()"><i class="fa-solid fa-xmark"></i></button>
-        </div>`;
-    document.getElementById('parseBtn').disabled = false;
+    const reader = new FileReader();
+    reader.onload = e => {
+        try {
+            const data = JSON.parse(e.target.result);
+            if (!Array.isArray(data) || !data[0]?.name) throw new Error('형식 오류');
+            selectedData = data;
+            document.getElementById('json-upload-wrap').style.display = 'none';
+            document.getElementById('json-file-info').style.display  = 'block';
+            document.getElementById('json-file-info').innerHTML = `
+                <div class="file-selected">
+                    <i class="fa-solid fa-file-code" style="font-size:28px;color:#3b82f6;"></i>
+                    <div><div class="fname">${file.name}</div><div class="fsize">${data.length}개 과정</div></div>
+                    <button class="clear-btn" onclick="clearJson()"><i class="fa-solid fa-xmark"></i></button>
+                </div>`;
+            document.getElementById('previewBtn').disabled = false;
+        } catch(err) {
+            alert('JSON 파일 형식이 올바르지 않습니다.');
+        }
+    };
+    reader.readAsText(file);
 }
-function clearFile() {
-    selectedFile = null;
-    document.getElementById('upload-zone-wrap').style.display = 'block';
-    document.getElementById('file-info-wrap').style.display  = 'none';
-    document.getElementById('parseBtn').disabled = true;
+
+function clearJson() {
+    selectedData = null;
+    document.getElementById('json-upload-wrap').style.display = 'block';
+    document.getElementById('json-file-info').style.display  = 'none';
+    document.getElementById('previewBtn').disabled = true;
     document.getElementById('step2-card').style.display = 'none';
-    setProgress(1);
 }
 
-/* ── 날짜 유틸 ── */
-function excelDate(v) {
-    const n = typeof v === 'number' ? v : parseFloat(v);
-    if (!isNaN(n) && n > 40000) {
-        const d = new Date((n - 25569) * 86400 * 1000);
-        return `${d.getUTCFullYear()}-${String(d.getUTCMonth()+1).padStart(2,'0')}-${String(d.getUTCDate()).padStart(2,'0')}`;
-    }
-    return null;
-}
-function getMondayOf(ds) {
-    const d = new Date(ds + 'T00:00:00Z');
-    const day = d.getUTCDay();
-    d.setUTCDate(d.getUTCDate() + (day===0?-6:1-day));
-    return d.toISOString().split('T')[0];
-}
-
-/* ══════════════════════════════════════════
-   핵심: 엑셀 파싱
-   이 파일에는 외부 xlsx 참조(externalLink)가 포함되어 있어
-   xlsx.js의 wb.Sheets 키가 실제 시트명과 불일치함.
-   해결: bookSheets 옵션으로 총괄표만 선택 파싱 →
-        실패 시 wb.Sheets를 값 배열로 직접 접근하는 3단계 fallback.
-══════════════════════════════════════════ */
-async function parseExcel() {
-    if (!selectedFile) return;
-    const btn = document.getElementById('parseBtn');
-    btn.innerHTML = '<span class="spinner"></span> 분석 중...';
-    btn.disabled  = true;
-
-    try {
-        const buf = await selectedFile.arrayBuffer();
-
-        // 1차 시도: 총괄표 시트만 선택해서 파싱 (externalLink 영향 최소화)
-        let wb = XLSX.read(buf, {
-            type: 'array', cellText: false, cellDates: false,
-            sheets: 0  // 첫 번째 시트(총괄표)만 파싱
-        });
-
-        // wb.Sheets 확인
-        let ws = null;
-        const sheetIdx  = wb.SheetNames.findIndex(n => n.replace(/\s/g,'').includes('총괄'));
-        const useIdx    = sheetIdx >= 0 ? sheetIdx : 0;
-        const sheetName = wb.SheetNames[useIdx] || '총괄표';
-
-        ws = wb.Sheets[sheetName];                    // 직접 접근
-        if (!ws) ws = Object.values(wb.Sheets)[0];   // 인덱스 접근
-        if (!ws) {
-            // 2차 시도: 전체 파싱 후 다시 접근
-            wb = XLSX.read(buf, { type:'array', cellText:false, cellDates:false });
-            ws = wb.Sheets[sheetName] || Object.values(wb.Sheets)[useIdx] || Object.values(wb.Sheets)[0];
-        }
-
-        console.log('[변환기] SheetNames:', wb.SheetNames, '| Sheets keys:', Object.keys(wb.Sheets), '| ws:', !!ws);
-
-        if (!ws) throw new Error(`시트를 찾을 수 없습니다.\n등록된 시트: ${wb.SheetNames.join(', ')}`);
-        if (!ws['!ref']) ws['!ref'] = XLSX.utils.encode_range({s:{c:0,r:0},e:{c:25,r:499}});
-
-        const range = XLSX.utils.decode_range(ws['!ref']);
-
-        // 헤더 탐색 (상위 30행)
-        let headerRow = -1;
-        const colMap  = {};
-        for (let r = range.s.r; r <= Math.min(range.s.r+30, range.e.r); r++) {
-            const norm = {};
-            for (let c = range.s.c; c <= range.e.c; c++) {
-                const cell = ws[XLSX.utils.encode_cell({r,c})];
-                if (cell && cell.v != null)
-                    norm[c] = String(cell.v).replace(/[\r\n\s()（）]/g,'');
-            }
-            const vals = Object.values(norm);
-            if (vals.includes('연번') && vals.includes('과정명')) {
-                headerRow = r;
-                for (const [c,v] of Object.entries(norm)) {
-                    const ci = parseInt(c);
-                    if (v==='연번')               colMap.no    = ci;
-                    if (v==='과정명')             colMap.name  = ci;
-                    if (v==='담임교수' && colMap.prof==null) colMap.prof = ci;
-                    if (v.includes('교육일정확인')) colMap.coord = ci;
-                    if (v==='교육시작일')         colMap.start = ci;
-                    if (v==='교육종료일')         colMap.end   = ci;
-                }
-                break;
-            }
-        }
-        if (headerRow < 0) throw new Error('헤더 행을 찾을 수 없습니다.\n총괄표 시트에 "연번"과 "과정명" 컬럼이 필요합니다.');
-
-        // 데이터 파싱
-        const courses = [];
-        for (let r = headerRow+1; r <= range.e.r; r++) {
-            try {
-                const get = c => ws[XLSX.utils.encode_cell({r,c})];
-                const noCell = get(colMap.no);
-                if (!noCell) continue;
-                const no = parseInt(noCell.v);
-                if (isNaN(no)) continue;
-                const nameCell = get(colMap.name);
-                if (!nameCell || !nameCell.v) continue;
-                const startDate = excelDate(get(colMap.start)?.v);
-                const endDate   = excelDate(get(colMap.end)?.v);
-                if (!startDate || !endDate) continue;
-                const profRaw  = get(colMap.prof)?.v  ? String(get(colMap.prof).v)  : '';
-                const coordRaw = get(colMap.coord)?.v ? String(get(colMap.coord).v) : '';
-                courses.push({
-                    no, name: String(nameCell.v).trim(),
-                    startDate, endDate,
-                    period:  `${startDate} ~ ${endDate}`,
-                    prof:    profRaw.split(/[,，、\/]/)[0].trim(),
-                    coord:   coordRaw.replace(/[\r\n]/g,'').trim(),
-                    weekKey: getMondayOf(startDate)
-                });
-            } catch(e) { /* 개별 행 오류 무시 */ }
-        }
-        if (courses.length === 0) throw new Error('파싱된 과정이 없습니다.');
-
-        parsedCourses = courses;
-        showPreview(courses, sheetName);
-        setProgress(2);
-
-    } catch(err) {
-        alert('❌ 변환 오류:\n' + err.message);
-    } finally {
-        btn.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i> 변환 시작';
-        btn.disabled  = false;
-    }
+function previewJson() {
+    if (!selectedData) return;
+    showPreview(selectedData);
 }
 
 /* ── 미리보기 ── */
-function showPreview(courses, sheetName) {
+function showPreview(courses) {
     const dates   = courses.map(c=>c.startDate).sort();
     const maxDate = courses.map(c=>c.endDate).sort().pop();
     document.getElementById('preview-area').innerHTML = `
-        <div class="status-box ok" style="margin-bottom:16px;">
+        <div class="status-box ok">
             <i class="fa-solid fa-circle-check"></i>
-            총 <b>${courses.length}개</b> 과정 파싱 완료 &nbsp;|&nbsp;
-            시트: <b>${sheetName}</b> &nbsp;|&nbsp;
-            기간: <b>${dates[0]} ~ ${maxDate}</b>
+            총 <b>${courses.length}개</b> 과정 &nbsp;|&nbsp; 기간: <b>${dates[0]} ~ ${maxDate}</b>
         </div>
         <div class="preview-wrap">
             <div class="preview-toolbar">
-                <span>과정 목록 미리보기</span>
-                <span class="count-badge">${courses.length}개</span>
+                <span>과정 목록</span><span class="count-badge">${courses.length}개</span>
             </div>
             <div class="preview-scroll">
                 <table>
                     <thead><tr><th>No.</th><th>과정명</th><th>시작일</th><th>종료일</th><th>담임교수</th><th>담당자</th></tr></thead>
                     <tbody>${courses.map(c=>`
-                        <tr>
-                            <td class="no">${c.no}</td>
-                            <td class="name">${c.name}</td>
-                            <td class="date">${c.startDate}</td>
-                            <td class="date">${c.endDate}</td>
-                            <td>${c.prof||'-'}</td>
-                            <td>${c.coord||'-'}</td>
-                        </tr>`).join('')}
+                        <tr><td class="no">${c.no}</td><td class="name">${c.name}</td>
+                        <td class="date">${c.startDate}</td><td class="date">${c.endDate}</td>
+                        <td>${c.prof||'-'}</td><td>${c.coord||'-'}</td></tr>`).join('')}
                     </tbody>
                 </table>
             </div>
@@ -340,36 +307,19 @@ function showPreview(courses, sheetName) {
     document.getElementById('step2-card').scrollIntoView({behavior:'smooth',block:'start'});
 }
 
-/* ── JSON 다운로드 ── */
-function downloadJson() {
-    if (!parsedCourses.length) return;
-    const a = Object.assign(document.createElement('a'), {
-        href: URL.createObjectURL(new Blob([JSON.stringify(parsedCourses,null,2)],{type:'application/json'})),
-        download: `kac_plan_${new Date().toISOString().split('T')[0]}.json`
-    });
-    a.click();
-}
-
 /* ── Firebase 업로드 ── */
 async function uploadToFirebase() {
-    if (!parsedCourses.length) return;
+    if (!selectedData) return;
     const btn = document.getElementById('uploadBtn');
     btn.innerHTML = '<span class="spinner"></span> 업로드 중...';
     btn.disabled  = true;
     try {
-        await firebase.database().ref('system/annualPlan').set(parsedCourses);
-        const assigned = await assignRooms(parsedCourses);
-        setProgress(3);
+        await firebase.database().ref('system/annualPlan').set(selectedData);
+        const assigned = await assignRooms(selectedData);
         document.getElementById('step3-card').style.display = 'block';
         document.getElementById('result-area').innerHTML = `
-            <div class="status-box ok" style="margin-bottom:12px;">
-                <i class="fa-solid fa-circle-check"></i>
-                <b>${parsedCourses.length}개</b> 과정 데이터 저장 완료
-            </div>
-            <div class="status-box info">
-                <i class="fa-solid fa-calendar-check"></i>
-                이번 주 배치: <b>${assigned.join(' | ')||'해당 주차 과정 없음'}</b>
-            </div>`;
+            <div class="status-box ok"><i class="fa-solid fa-circle-check"></i><b>${selectedData.length}개</b> 과정 저장 완료</div>
+            <div class="status-box info"><i class="fa-solid fa-calendar-check"></i>이번 주 배치: <b>${assigned.join(' | ')||'해당 주차 과정 없음'}</b></div>`;
         document.getElementById('step3-card').scrollIntoView({behavior:'smooth',block:'start'});
     } catch(err) {
         alert('❌ Firebase 업로드 오류:\n' + err.message);
@@ -380,48 +330,145 @@ async function uploadToFirebase() {
 
 /* ── 주차 자동 배치 ── */
 async function assignRooms(courses) {
-    const ROOMS   = ['A','B','C'];
-    const today   = new Date().toISOString().split('T')[0];
-    const active  = courses.filter(c => c.startDate <= today && c.endDate >= today);
-    const updates = {};
+    const ROOMS  = ['A','B','C'];
+    const today  = new Date().toISOString().split('T')[0];
+    const active = courses.filter(c => c.startDate <= today && c.endDate >= today);
+    const upd    = {};
     for (const r of ROOMS) {
-        updates[`courses/${r}/settings/courseName`]      = '';
-        updates[`courses/${r}/settings/period`]          = '';
-        updates[`courses/${r}/settings/coordinatorName`] = null;
-        updates[`courses/${r}/status/professorName`]     = '';
-        updates[`courses/${r}/status/roomStatus`]        = 'idle';
+        upd[`courses/${r}/settings/courseName`]      = '';
+        upd[`courses/${r}/settings/period`]          = '';
+        upd[`courses/${r}/settings/coordinatorName`] = null;
+        upd[`courses/${r}/status/professorName`]     = '';
+        upd[`courses/${r}/status/roomStatus`]        = 'idle';
     }
     const assigned = [];
-    active.slice(0, ROOMS.length).forEach((c,i) => {
+    active.slice(0,ROOMS.length).forEach((c,i) => {
         const r = ROOMS[i];
-        updates[`courses/${r}/settings/courseName`]      = c.name;
-        updates[`courses/${r}/settings/period`]          = c.period;
-        updates[`courses/${r}/settings/coordinatorName`] = c.coord;
-        updates[`courses/${r}/status/professorName`]     = c.prof;
-        updates[`courses/${r}/status/roomStatus`]        = 'active';
+        upd[`courses/${r}/settings/courseName`]      = c.name;
+        upd[`courses/${r}/settings/period`]          = c.period;
+        upd[`courses/${r}/settings/coordinatorName`] = c.coord;
+        upd[`courses/${r}/status/professorName`]     = c.prof;
+        upd[`courses/${r}/status/roomStatus`]        = 'active';
         assigned.push(`Room ${r}: ${c.name}`);
     });
-    await firebase.database().ref().update(updates);
+    await firebase.database().ref().update(upd);
     return assigned;
 }
 
-/* ── 진행 단계 ── */
-function setProgress(step) {
-    [1,2,3].forEach(i => {
-        const dot   = document.getElementById(`pd${i}`);
-        const label = document.getElementById(`pl${i}`);
-        dot.className   = 'prog-dot'   + (i<step?' done':i===step?' active':'');
-        label.className = 'prog-label' + (i<step?' done':i===step?' active':'');
-    });
+/* ── 미리 변환된 데이터 (서버에서 Python으로 직접 파싱한 결과) ── */
+const PREBUILT_JSON_URL = 'kac_plan_2026.json';
+
+async function usePrebuilt() {
+    try {
+        const res  = await fetch(PREBUILT_JSON_URL);
+        const data = await res.json();
+        selectedData = data;
+        switchTab('json');
+        document.getElementById('json-upload-wrap').style.display = 'none';
+        document.getElementById('json-file-info').style.display  = 'block';
+        document.getElementById('json-file-info').innerHTML = `
+            <div class="file-selected">
+                <i class="fa-solid fa-bolt" style="font-size:28px;color:#f59e0b;"></i>
+                <div><div class="fname">kac_plan_2026.json (사전 변환)</div><div class="fsize">${data.length}개 과정</div></div>
+            </div>`;
+        document.getElementById('previewBtn').disabled = false;
+        showPreview(data);
+    } catch(e) {
+        alert('사전 변환 파일을 불러올 수 없습니다.\nJSON 파일을 직접 업로드해 주세요.');
+    }
 }
-function reset() {
-    parsedCourses = []; selectedFile = null;
-    document.getElementById('upload-zone-wrap').style.display = 'block';
-    document.getElementById('file-info-wrap').style.display   = 'none';
-    document.getElementById('parseBtn').disabled = true;
+
+async function downloadPrebuilt() {
+    try {
+        const res  = await fetch(PREBUILT_JSON_URL);
+        const data = await res.json();
+        const a    = Object.assign(document.createElement('a'), {
+            href: URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json'})),
+            download: 'kac_plan_2026.json'
+        });
+        a.click();
+    } catch(e) {
+        alert('파일을 불러올 수 없습니다.');
+    }
+}
+
+/* ── Python 스크립트 다운로드 ── */
+function downloadScript() {
+    const script = `#!/usr/bin/env python3
+"""
+KAC 교육운영계획 엑셀 → JSON 변환기
+사용법: python kac_excel_to_json.py [엑셀파일명.xlsx]
+"""
+import sys, json
+from datetime import datetime, timedelta
+try:
+    import openpyxl
+except ImportError:
+    print("openpyxl 설치 필요: pip install openpyxl")
+    sys.exit(1)
+
+def excel_serial_to_date(v):
+    if isinstance(v, datetime):
+        return v.strftime('%Y-%m-%d')
+    try:
+        n = float(v)
+        if n > 40000:
+            return (datetime(1899,12,30) + timedelta(days=n)).strftime('%Y-%m-%d')
+    except:
+        pass
+    return None
+
+def get_monday(ds):
+    d = datetime.strptime(ds, '%Y-%m-%d')
+    return (d - timedelta(days=d.weekday())).strftime('%Y-%m-%d')
+
+fname = sys.argv[1] if len(sys.argv) > 1 else '2026년도_교육운영계획_260429.xlsx'
+print(f"파일 읽는 중: {fname}")
+
+wb = openpyxl.load_workbook(fname, read_only=True)
+ws = wb.worksheets[0]  # 첫 번째 시트 (총괄표)
+
+courses = []
+for i, row in enumerate(ws.iter_rows(min_row=14, max_row=300, values_only=True), 14):
+    no = row[1]
+    if no is None: continue
+    try: no = int(float(str(no)))
+    except: continue
+    name, coord, prof = row[7], row[4], row[5]
+    start, end = row[13], row[14]
+    if not name or not start or not end: continue
+    sd, ed = excel_serial_to_date(start), excel_serial_to_date(end)
+    if not sd or not ed: continue
+    courses.append({
+        'no': no,
+        'name': str(name).strip(),
+        'startDate': sd, 'endDate': ed,
+        'period': f'{sd} ~ {ed}',
+        'prof': str(prof).split(',')[0].strip() if prof else '',
+        'coord': str(coord).replace('\\n','').strip() if coord else '',
+        'weekKey': get_monday(sd)
+    })
+
+out = fname.replace('.xlsx', '').replace('.XLSX', '')
+out = f"kac_plan_{out.split('_')[0][-4:]}.json" if len(out) > 4 else 'kac_plan.json'
+with open(out, 'w', encoding='utf-8') as f:
+    json.dump(courses, f, ensure_ascii=False, indent=2)
+print(f"완료: {len(courses)}개 과정 → {out}")
+`;
+    const a = Object.assign(document.createElement('a'), {
+        href: URL.createObjectURL(new Blob([script], {type:'text/plain'})),
+        download: 'kac_excel_to_json.py'
+    });
+    a.click();
+}
+
+function resetAll() {
+    selectedData = null;
+    document.getElementById('json-upload-wrap').style.display = 'block';
+    document.getElementById('json-file-info').style.display  = 'none';
+    document.getElementById('previewBtn').disabled = true;
     document.getElementById('step2-card').style.display = 'none';
     document.getElementById('step3-card').style.display = 'none';
-    setProgress(1);
     window.scrollTo({top:0,behavior:'smooth'});
 }
 </script>
