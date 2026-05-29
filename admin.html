@@ -415,10 +415,10 @@
 <!-- [6.0차 최종 통합본] 대시보드 구역 -->
 <!-- 설문조사 안내 뷰 (강당 스크린 전용) -->
 <div id="view-survey-guide" style="display:none; flex-direction:column; align-items:center; width:100%;">
-    <!-- 제목 중앙 + 닫기 우측 독립 배치 -->
-    <div style="width:100%; max-width:1000px; position:relative; display:flex; align-items:center; justify-content:center; margin-top:20px; margin-bottom:8px; padding:0 20px; box-sizing:border-box;">
-        <h1 style="margin:0; font-size:28px; font-weight:800; color:#1e293b; display:flex; align-items:center; gap:10px;">
-            <i class="fa-solid fa-square-poll-vertical" style="color:#7c3aed;"></i> 교육 만족도 설문조사 안내
+    <div class="view-header" style="margin-bottom:0;">
+        <h1>
+            <i class="fa-solid fa-square-poll-vertical"></i>
+            교육 만족도 설문조사 안내
         </h1>
         <button onclick="ui.setMode('notice')"
             style="position:absolute; right:20px; top:50%; transform:translateY(-50%); height:32px; padding:0 14px; background:#fff; color:#475569; border:1.5px solid #cbd5e1; border-radius:8px; cursor:pointer; font-size:13px; font-weight:700; display:inline-flex; align-items:center; gap:6px; white-space:nowrap;">
@@ -482,10 +482,10 @@
 
 <!-- ══ 시험 타이머 뷰 (#view-exam-timer) ══ -->
 <div id="view-exam-timer" style="display:none; flex-direction:column; align-items:center; width:100%;">
-    <!-- 헤더 -->
-    <div style="width:100%; max-width:700px; position:relative; display:flex; align-items:center; justify-content:center; margin-top:20px; margin-bottom:12px; padding:0 20px; box-sizing:border-box;">
-        <h1 style="margin:0; font-size:28px; font-weight:800; color:#1e293b; display:flex; align-items:center; gap:10px;">
-            <i class="fa-regular fa-clock" style="color:#ef4444;"></i> 시험 타이머
+    <div class="view-header" style="margin-bottom:12px;">
+        <h1>
+            <i class="fa-regular fa-clock"></i>
+            시험 타이머
         </h1>
         <button onclick="examTimer.stop(); ui.setMode('notice')"
             style="position:absolute; right:20px; top:50%; transform:translateY(-50%); height:32px; padding:0 14px; background:#fff; color:#475569; border:1.5px solid #cbd5e1; border-radius:8px; cursor:pointer; font-size:13px; font-weight:700; display:inline-flex; align-items:center; gap:6px; white-space:nowrap;">
