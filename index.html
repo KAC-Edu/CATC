@@ -449,6 +449,21 @@
     </div>
 </div>
 
+    <!-- [수정] 출결 QR(checkin=true)로 들어온 경우, 비동기 init 이전에 '입장하기' 랜딩이 잠깐
+         노출되는 깜빡임을 막기 위해 파싱 시점에 즉시 랜딩/메인앱을 숨긴다. -->
+    <script>
+        (function () {
+            try {
+                if (new URLSearchParams(location.search).get('checkin') === 'true') {
+                    var st = document.createElement('style');
+                    st.id = 'checkinHideStyle';
+                    st.textContent = '#landingPage,#mainApp{display:none !important;}';
+                    document.head.appendChild(st);
+                }
+            } catch (e) {}
+        })();
+    </script>
+
     <div id="landingPage" class="landing-page">
         <img src="catc.webp" alt="항공기술훈련원" class="landing-banner">
         <div class="landing-course" id="landingTitle">Loading...</div>
@@ -1159,6 +1174,12 @@ async function resolveRoomFromCode(code) {
     //  - 출결 QR: 출석 처리만 하고 '완료 화면'을 띄운다. 랜딩/입장 흐름으로 진행하지 않음.
     //  - 강의실 QR: 기존처럼 랜딩 → 입장 흐름을 그대로 사용.
     if (isCheckIn) {
+        // [보강] 랜딩/메인앱을 확실히 숨긴다 (인라인 즉시-숨김 스타일과 더불어 이중 보장)
+        const _lp = document.getElementById('landingPage');
+        const _ma = document.getElementById('mainApp');
+        if (_lp) _lp.style.display = 'none';
+        if (_ma) _ma.style.display = 'none';
+
         // 프로필(uToken)이 없으면 최초 1회 등록을 받은 뒤 출석 처리 → 완료 화면
         const hasProfile = !!localStorage.getItem('uToken')
             && !!localStorage.getItem('kac_user_name')
@@ -3391,7 +3412,8 @@ function showCheckinDone(room, name, time) {
         const el = document.getElementById(id);
         if (el) el.style.display = 'none';
     });
-    page.style.display = 'flex';
+    // 인라인 즉시-숨김 스타일(!important)보다 우선하도록 important 로 표시
+    page.style.setProperty('display', 'flex', 'important');
 }
 
 // [신규] 완료 화면의 '확인' — 창을 닫거나(QR 스캐너 복귀) 깨끗한 안내로 정리

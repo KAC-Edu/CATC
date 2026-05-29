@@ -21,26 +21,25 @@
 
 /* 메인 테이블 스타일 수정 */
         .main-table { 
-            width: auto;                 /* 고정 열폭 합계만큼만 차지 */
+            width: 100%;                 /* [수정] A4 가로폭 전체 사용 (쏠림 방지) */
             border-collapse: collapse; 
             font-size: 11px; 
-            table-layout: fixed; /* 모든 열 너비를 고정합니다 */
+            table-layout: fixed; /* 열 너비를 고정 비율로 균등 배분 */
             word-break: break-all;
-            margin: 0 auto;
         }
         .main-table th, .main-table td { 
             border: 1px solid #000; 
             padding: 4px 2px; 
             text-align: center; 
             overflow: hidden; /* 내용이 넘쳐도 틀이 깨지지 않게 합니다 */
-            height: 44px;     /* [고정] 출석 여부와 무관하게 행 높이 고정 */
+            height: 50px;     /* [고정] 출석 여부/이름 길이와 무관하게 행 높이 고정 */
         }
-        .main-table th { background: #f8fafc; height: 38px; }
+        .main-table th { background: #f8fafc; height: 40px; }
         
-        /* 열별 너비 고정 (출석 여부와 무관하게 동일 폭 유지) */
-        .no-col { width: 34px; }
-        .name-col { width: 92px; font-weight: bold; }
-        .day-col { width: 94px; }
+        /* No·성명만 고정폭, 날짜 열은 남은 공간을 균등 분할(3일→3등분, 5일→5등분) */
+        .no-col { width: 38px; }
+        .name-col { width: 110px; font-weight: bold; }
+        /* .day-col 은 폭 미지정 → table-layout:fixed 가 남은 폭을 균등 분배 */
 
         /* 주차 페이지/라벨 */
         .sheet-container { margin-bottom: 28px; }
@@ -221,8 +220,7 @@ function renderTable(studentsRaw, attendanceData) {
 
         const table = document.createElement('table');
         table.className = 'main-table';
-        // [고정] 열 폭 합계만큼 표 너비 고정 → 모든 페이지의 칸 크기 동일
-        table.style.width = (34 + 92 + 94 * weekDates.length) + 'px';
+        // [수정] 표 너비는 CSS의 width:100% 를 사용 → A4 가로폭을 꽉 채우고 날짜 열이 균등 배분됨
 
         let cols = '<col class="no-col"><col class="name-col">';
         weekDates.forEach(() => { cols += '<col class="day-col">'; });
@@ -247,7 +245,7 @@ function renderTable(studentsRaw, attendanceData) {
                 if (info) {
                     // [간소화] 빨간 도장(출석) + 인증번호(Auth ID)만 표시 — 시간 등 부가 텍스트 제거
                     const authId = (info && info.authId) ? info.authId : '';
-                    row += `<td><div style="display:flex; flex-direction:column; align-items:center; gap:2px;"><div class="stamp">출석</div><div style="font-size:7px; color:#999; font-weight:normal; line-height:1;">${authId}</div></div></td>`;
+                    row += `<td><div style="display:flex; flex-direction:column; align-items:center; gap:3px;"><div class="stamp">출석</div><div style="font-size:8px; color:#888; font-weight:normal; line-height:1;">${authId}</div></div></td>`;
                 } else {
                     row += `<td></td>`;
                 }

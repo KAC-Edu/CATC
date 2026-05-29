@@ -1024,8 +1024,17 @@ resetCourse: function() {
                 resetKey: newResetKey,   // 교육생 강제 퇴출/유령 재등록 차단 신호
                 mode: 'qa',
                 quizStep: 'none'
-            }
+            },
+            // [버그수정] 초기화 시 강의 안내 보드(스케치보드)와 공지가 잔존하던 문제 해결
+            boardNotice: "",   // 강의 안내 보드(보라색 상단바) 내용 초기화
+            notice: "",        // 강사 공지 초기화
+            coordNotice: ""    // 운영부 공지 초기화
         };
+
+        // [UI 즉시 반영] DB 초기화와 동시에 화면의 보드 에디터 내용도 즉시 비운다
+        //  (리스너 반영 지연/시점 어긋남으로 이전 글자가 잠시 남아 보이는 것 방지)
+        const _boardEditor = document.getElementById('boardEditor');
+        if (_boardEditor) _boardEditor.innerHTML = "";
 
         // set() 으로 방 노드 전체를 freshRoom 으로 교체 → students/expectedStudents/internal_attendance 등
         // 명시되지 않은 모든 하위 데이터까지 일괄 삭제된다.
