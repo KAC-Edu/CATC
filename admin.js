@@ -6032,47 +6032,41 @@ const examTimer = {
 };
 
 /* ══ 배경음악 플레이어 (BGM Player) ══
-   음원: Pixabay Free Music (CC0 / 저작권 없음)
-   https://pixabay.com/music/
+   음원: GitHub 저장소 자체 파일 (배경음1.mp3 ~ 배경음11.mp3)
+   https://raw.githubusercontent.com/jds0616-boop/CATC/main/
 */
 const bgmPlayer = {
     _audio: null,
-    _currentIdx: -1,
+    _currentNum: -1,   // 현재 재생 중인 트랙 번호 (1~11)
+    _prevNum: -1,       // 중복 방지용 이전 번호
     _panelOpen: false,
     _isPlaying: false,
 
-    // ── 큐레이션 트랙 목록 (SoundHelix - 직접 링크 허용, 무료) ──
-    tracks: [
-        { title: 'Lofi Study',      artist: 'SoundHelix', emoji: '📚', url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3' },
-        { title: 'Relaxing Piano',  artist: 'SoundHelix', emoji: '🎹', url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3' },
-        { title: 'Calm Ambient',    artist: 'SoundHelix', emoji: '🌿', url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-7.mp3' },
-        { title: 'Focus Flow',      artist: 'SoundHelix', emoji: '🎯', url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-9.mp3' },
-        { title: 'Soft Jazz',       artist: 'SoundHelix', emoji: '🎷', url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-17.mp3' }
-    ],
-
-    // ── localStorage 키 ──
-    _LS_IDX: 'kac_bgm_idx',
+    _TOTAL: 11,
+    _BASE_URL: 'https://raw.githubusercontent.com/jds0616-boop/CATC/main/',
     _LS_VOL: 'kac_bgm_vol',
+
+    // 트랙 번호로 URL 생성
+    _url: function(num) {
+        return this._BASE_URL + encodeURIComponent(`배경음${num}.mp3`);
+    },
 
     init: function() {
         this._audio = new Audio();
-        this._audio.loop = true;
+        this._audio.loop = false;  // 곡이 끝나면 onended로 다음 랜덤 곡 재생
 
-        // 저장된 볼륨 복원
+        // 볼륨 복원
         const savedVol = parseFloat(localStorage.getItem(this._LS_VOL) ?? '0.4');
         this._audio.volume = savedVol;
         const volSlider = document.getElementById('bgmVolume');
         if (volSlider) volSlider.value = Math.round(savedVol * 100);
 
-        // 저장된 트랙 복원 (자동재생 정책상 재생은 안 하고 트랙만 선택)
-        const savedIdx = parseInt(localStorage.getItem(this._LS_IDX) ?? '-1');
-        if (savedIdx >= 0 && savedIdx < this.tracks.length) {
-            this._currentIdx = savedIdx;
-            this._audio.src = this.tracks[savedIdx].url;
-            // 실제 재생은 사용자 인터랙션 후에만 가능 → 트랙 표시만
-        }
+        // 곡 종료 시 자동으로 다음 랜덤 곡 재생
+        this._audio.onended = () => {
+            if (this._isPlaying) this.playRandom();
+        };
 
-        this._renderTracks();
+        this._renderPanel();
         this._syncBadge();
 
         // 패널 외부 클릭 시 닫기
@@ -6086,80 +6080,79 @@ const bgmPlayer = {
         });
     },
 
-    _save: function() {
-        localStorage.setItem(this._LS_IDX, this._currentIdx);
-        localStorage.setItem(this._LS_VOL, this._audio ? this._audio.volume : 0.4);
+    // 중복 방지 랜덤 번호 추출 (방금 재생한 곡 제외)
+    _randomNum: function() {
+        if (this._TOTAL === 1) return 1;
+        let num;
+        do {
+            num = Math.floor(Math.random() * this._TOTAL) + 1;
+        } while (num === this._prevNum);
+        return num;
+    },
+
+    // 랜덤 트랙 재생
+    playRandom: function() {
+        if (!this._audio) this.init();
+        const num = this._randomNum();
+        this._prevNum = this._currentNum;
+        this._currentNum = num;
+        this._audio.src = this._url(num);
+        this._audio.load();
+        this._audio.play().then(() => {
+            this._isPlaying = true;
+            this._renderPanel();
+            this._syncBadge();
+        }).catch(() => {});
     },
 
     _syncBadge: function() {
         const badge = document.getElementById('bgmNowBadge');
         const iconBtn = document.getElementById('bgmIconBtn');
-        if (this._isPlaying) {
-            if (badge) { badge.innerText = '재생 중'; badge.style.display = 'inline-block'; }
+        if (this._isPlaying && this._currentNum > 0) {
+            if (badge) {
+                badge.innerText = `배경음 ${this._currentNum}번`;
+                badge.style.background = '#60a5fa';
+                badge.style.display = 'inline-block';
+            }
             if (iconBtn) iconBtn.style.color = '#60a5fa';
-        } else if (this._currentIdx >= 0) {
-            if (badge) { badge.innerText = '일시정지'; badge.style.background = '#94a3b8'; badge.style.display = 'inline-block'; }
+        } else if (this._currentNum > 0) {
+            if (badge) {
+                badge.innerText = `배경음 ${this._currentNum}번 (정지)`;
+                badge.style.background = '#94a3b8';
+                badge.style.display = 'inline-block';
+            }
             if (iconBtn) iconBtn.style.color = '#94a3b8';
         } else {
-            if (badge) { badge.style.display = 'none'; badge.style.background = '#60a5fa'; }
+            if (badge) { badge.style.display = 'none'; }
             if (iconBtn) iconBtn.style.color = '';
         }
-    },
-
-    _renderTracks: function() {
-        const list = document.getElementById('bgmTrackList');
-        if (!list) return;
-        const playing = this._isPlaying;
-        list.innerHTML = this.tracks.map((t, i) => {
-            const isActive = this._currentIdx === i;
-            const icon = isActive
-                ? (playing
-                    ? '<i class="fa-solid fa-volume-high" style="color:#60a5fa; font-size:12px; flex-shrink:0;"></i>'
-                    : '<i class="fa-solid fa-pause" style="color:#94a3b8; font-size:11px; flex-shrink:0;"></i>')
-                : '';
-            return `
-            <div onclick="bgmPlayer.select(${i})"
-                style="display:flex; align-items:center; gap:12px; padding:10px 12px; border-radius:12px; cursor:pointer; transition:background 0.15s; ${isActive ? 'background:rgba(96,165,250,0.12);' : ''}">
-                <div style="width:36px; height:36px; border-radius:10px; background:rgba(255,255,255,0.06); display:flex; align-items:center; justify-content:center; font-size:18px; flex-shrink:0;">${t.emoji}</div>
-                <div style="flex:1; overflow:hidden;">
-                    <div style="color:${isActive ? '#60a5fa' : '#f1f5f9'}; font-size:13px; font-weight:${isActive ? '800' : '600'}; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${t.title}</div>
-                    <div style="color:#64748b; font-size:11px; margin-top:2px;">${t.artist}</div>
-                </div>
-                ${icon}
-            </div>`;
-        }).join('');
-    },
-
-    select: function(idx) {
-        if (!this._audio) this.init();
-        const t = this.tracks[idx];
-        if (!t) return;
-        const isSame = this._currentIdx === idx;
-        this._currentIdx = idx;
-
-        if (isSame && this._isPlaying) {
-            // 같은 트랙 클릭 = 일시정지
-            this.pause();
-            return;
+        // 패널 내 현재 곡 표시 업데이트
+        const nowEl = document.getElementById('bgmNowTrack');
+        if (nowEl) {
+            if (this._currentNum > 0) {
+                nowEl.innerText = this._isPlaying
+                    ? `♪ 배경음 ${this._currentNum}번 재생 중`
+                    : `배경음 ${this._currentNum}번 (일시정지)`;
+                nowEl.style.color = this._isPlaying ? '#60a5fa' : '#94a3b8';
+            } else {
+                nowEl.innerText = '재생 중인 곡 없음';
+                nowEl.style.color = '#475569';
+            }
         }
+    },
 
-        this._audio.src = t.url;
-        this._audio.load();
-        this._audio.play().then(() => {
-            this._isPlaying = true;
-            this._save();
-            this._renderTracks();
-            this._syncBadge();
-        }).catch(() => {});
+    _renderPanel: function() {
+        this._syncBadge();
     },
 
     play: function() {
-        if (!this._audio) return;
-        if (this._currentIdx < 0) { this.select(0); return; }
+        if (!this._audio) this.init();
+        if (this._currentNum < 0) {
+            this.playRandom();
+            return;
+        }
         this._audio.play().then(() => {
             this._isPlaying = true;
-            this._save();
-            this._renderTracks();
             this._syncBadge();
         }).catch(() => {});
     },
@@ -6168,7 +6161,6 @@ const bgmPlayer = {
         if (!this._audio) return;
         this._audio.pause();
         this._isPlaying = false;
-        this._renderTracks();
         this._syncBadge();
     },
 
@@ -6177,9 +6169,8 @@ const bgmPlayer = {
         this._audio.pause();
         this._audio.currentTime = 0;
         this._isPlaying = false;
-        this._currentIdx = -1;
-        localStorage.removeItem(this._LS_IDX);
-        this._renderTracks();
+        this._currentNum = -1;
+        this._prevNum = -1;
         this._syncBadge();
     },
 
@@ -6195,9 +6186,9 @@ const bgmPlayer = {
         if (!panel) return;
         this._panelOpen = !this._panelOpen;
         panel.style.display = this._panelOpen ? 'block' : 'none';
-        if (this._panelOpen) this._renderTracks();
+        if (this._panelOpen) this._syncBadge();
     }
 };
 
-// 페이지 로드 시 초기화 (트랙 복원)
+// 페이지 로드 시 초기화
 document.addEventListener('DOMContentLoaded', () => bgmPlayer.init());
