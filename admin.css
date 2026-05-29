@@ -3770,6 +3770,11 @@ body:-webkit-full-screen .main-stage {
 /* 색상 드롭다운 패널 open 상태 */
 #colorDropdownPanel.open { display:block !important; }
 
+/* 설문 안내 - 보라색 */
+#view-survey-guide .view-header i { color: #7c3aed; }
+/* 시험 타이머 - 빨간색 */
+#view-exam-timer .view-header i { color: #ef4444; }
+
 /* 설문 안내 탭 - 제목 영역을 다른 탭과 동일하게 정렬 */
 #view-survey-guide .view-header {
     text-align: center;
