@@ -158,22 +158,11 @@ tbody td.prof, tbody td.coord { white-space: nowrap; }
 .status-box.ok   { background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; }
 .status-box.err  { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
 .status-box.info { background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; }
+.status-box.warn { background: #fffbeb; color: #92400e; border: 1px solid #fde68a; }
 
 /* 스피너 */
 .spinner { display: inline-block; width: 18px; height: 18px; border: 2px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: spin 0.7s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
-
-/* 로그인 오버레이 */
-.login-overlay { position: fixed; inset: 0; background: #0f172a; z-index: 9999; display: flex; align-items: center; justify-content: center; }
-.login-box { background: #fff; padding: 40px; border-radius: 20px; width: 340px; text-align: center; box-shadow: 0 20px 60px rgba(0,0,0,0.4); }
-.login-icon { width: 70px; height: 70px; background: #eff6ff; border-radius: 50%; margin: 0 auto 20px; display: flex; align-items: center; justify-content: center; font-size: 28px; color: var(--navy); }
-.login-box h2 { font-size: 20px; font-weight: 800; color: var(--navy); margin-bottom: 6px; }
-.login-box p  { font-size: 13px; color: var(--sub); margin-bottom: 24px; }
-.login-input  { width: 100%; padding: 14px; border: 2px solid #e2e8f0; border-radius: 12px; font-size: 15px; outline: none; transition: .2s; margin-bottom: 14px; font-family: inherit; box-sizing: border-box; }
-.login-input:focus { border-color: var(--navy); }
-.login-btn { width: 100%; padding: 14px; background: linear-gradient(135deg, var(--navy), var(--navy2)); color: #fff; border: none; border-radius: 12px; font-size: 15px; font-weight: 800; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; }
-.login-btn:hover { opacity: .9; }
-.login-msg { margin-top: 12px; font-size: 13px; font-weight: 700; height: 18px; color: #ef4444; }
 
 /* 안내 박스 */
 .info-box {
@@ -218,21 +207,6 @@ tbody td.prof, tbody td.coord { white-space: nowrap; }
 </style>
 </head>
 <body>
-
-<!-- 로그인 오버레이 -->
-<div class="login-overlay" id="loginOverlay">
-    <div class="login-box">
-        <div class="login-icon"><i class="fa-solid fa-file-excel"></i></div>
-        <h2>KAC 운영계획 변환기</h2>
-        <p>강사 플랫폼과 동일한 비밀번호로 로그인하세요.</p>
-        <input type="password" class="login-input" id="loginPw" placeholder="Password"
-               onkeyup="if(event.key==='Enter') doLogin()">
-        <button class="login-btn" onclick="doLogin()">
-            <i class="fa-solid fa-arrow-right-to-bracket"></i> 로그인
-        </button>
-        <div class="login-msg" id="loginMsg"></div>
-    </div>
-</div>
 
 <div class="top-bar">
     <div class="logo"><i class="fa-solid fa-file-excel"></i> 교육운영계획 변환기</div>
@@ -338,32 +312,10 @@ tbody td.prof, tbody td.coord { white-space: nowrap; }
 
 <!-- Firebase SDK -->
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 <script src="config.js"></script>
 
 <script>
-const ADMIN_EMAIL = 'admin@kac.com';
-
-/* ── Firebase Auth 상태 감지 ── */
-firebase.auth().onAuthStateChanged(user => {
-    document.getElementById('loginOverlay').style.display = user ? 'none' : 'flex';
-});
-
-/* ── 로그인 ── */
-async function doLogin() {
-    const pw  = document.getElementById('loginPw').value;
-    const msg = document.getElementById('loginMsg');
-    if (!pw) return;
-    try {
-        await firebase.auth().signInWithEmailAndPassword(ADMIN_EMAIL, pw);
-    } catch(e) {
-        msg.innerText = '비밀번호가 올바르지 않습니다.';
-        document.getElementById('loginPw').value = '';
-        document.getElementById('loginPw').focus();
-    }
-}
-
 /* ══════════════════════════════════════════
    상태
 ══════════════════════════════════════════ */
@@ -534,9 +486,28 @@ function showPreview(courses, sheetName) {
             총 <b>${courses.length}개</b> 과정 파싱 완료 &nbsp;|&nbsp; 시트: <b>${sheetName}</b>
             &nbsp;|&nbsp; 기간: <b>${minDate} ~ ${maxDate}</b>
         </div>
-        <div class="info-box" style="margin-bottom:16px;">
-            <i class="fa-solid fa-circle-info"></i>
-            <span>내용을 확인하세요. 이상 없으면 <b>Firebase에 업로드</b> 버튼을 누르면 해당 주차 강의실에 자동 배치됩니다.</span>
+        <!-- Room 유보 선택 -->
+        <div style="background:#fffbeb; border:1.5px solid #fde68a; border-radius:14px; padding:18px 22px; margin-bottom:16px;">
+            <div style="font-size:13px; font-weight:800; color:#92400e; margin-bottom:12px;">
+                <i class="fa-solid fa-shield-halved"></i> &nbsp;배치 제외할 강의실 (체크된 방은 현재 과정 그대로 유지)
+            </div>
+            <div style="display:flex; gap:12px; flex-wrap:wrap;" id="skip-room-wrap">
+                <label id="room-label-A" style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:10px 18px;background:#fff;border-radius:10px;border:1.5px solid #e2e8f0;font-size:14px;font-weight:700;color:#1e293b;transition:.15s;">
+                    <input type="checkbox" id="skip-room-A" onchange="toggleRoomLabel('A')" style="width:17px;height:17px;accent-color:#f59e0b;cursor:pointer;">
+                    Room A &nbsp;<span style="font-size:11px;color:#94a3b8;font-weight:500;">현재 과정 유지</span>
+                </label>
+                <label id="room-label-B" style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:10px 18px;background:#fff;border-radius:10px;border:1.5px solid #e2e8f0;font-size:14px;font-weight:700;color:#1e293b;transition:.15s;">
+                    <input type="checkbox" id="skip-room-B" onchange="toggleRoomLabel('B')" style="width:17px;height:17px;accent-color:#f59e0b;cursor:pointer;">
+                    Room B &nbsp;<span style="font-size:11px;color:#94a3b8;font-weight:500;">현재 과정 유지</span>
+                </label>
+                <label id="room-label-C" style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:10px 18px;background:#fff;border-radius:10px;border:1.5px solid #e2e8f0;font-size:14px;font-weight:700;color:#1e293b;transition:.15s;">
+                    <input type="checkbox" id="skip-room-C" onchange="toggleRoomLabel('C')" style="width:17px;height:17px;accent-color:#f59e0b;cursor:pointer;">
+                    Room C &nbsp;<span style="font-size:11px;color:#94a3b8;font-weight:500;">현재 과정 유지</span>
+                </label>
+            </div>
+            <div style="font-size:11px;color:#b45309;margin-top:10px;">
+                ※ 체크하지 않은 방만 이번 주 과정으로 자동 배치됩니다. 체크한 방은 Firebase에 저장된 과정을 그대로 유지합니다.
+            </div>
         </div>
         <div class="preview-wrap">
             <div class="preview-toolbar">
@@ -601,7 +572,7 @@ async function uploadToFirebase() {
         await firebase.database().ref('system/annualPlan').set(parsedCourses);
 
         // 2. 현재 주차에 맞는 과정 자동 배치
-        const assigned = await assignRooms(parsedCourses);
+        const { assigned, skipped } = await assignRooms(parsedCourses);
 
         // 완료
         setProgress(3);
@@ -611,10 +582,15 @@ async function uploadToFirebase() {
                 <i class="fa-solid fa-circle-check"></i>
                 <b>${parsedCourses.length}개</b> 과정 데이터 저장 완료
             </div>
-            <div class="status-box info">
+            <div class="status-box info" style="margin-bottom:8px;">
                 <i class="fa-solid fa-calendar-check"></i>
-                이번 주 배치 완료: <b>${assigned.join(' | ') || '해당 주차 과정 없음'}</b>
-            </div>`;
+                이번 주 배치: <b>${assigned.join(' | ') || '해당 주차 과정 없음'}</b>
+            </div>
+            ${skipped.length ? `
+            <div class="status-box warn">
+                <i class="fa-solid fa-shield-halved"></i>
+                유보(현재 과정 유지): <b>${skipped.join(' | ')}</b>
+            </div>` : ''}`;
         document.getElementById('step3-card').scrollIntoView({behavior:'smooth', block:'start'});
 
     } catch(err) {
@@ -628,21 +604,24 @@ async function uploadToFirebase() {
    주차 자동 배치 (admin.js _assignRooms 동일 로직)
 ══════════════════════════════════════════ */
 async function assignRooms(courses) {
-    const ROOMS = ['A','B','C'];
-    const today = new Date().toISOString().split('T')[0];
+    const ALL_ROOMS = ['A','B','C'];
+    const today     = new Date().toISOString().split('T')[0];
 
-    // 이번 주 월요일
-    const d   = new Date(today + 'T00:00:00Z');
-    const day = d.getUTCDay();
-    d.setUTCDate(d.getUTCDate() + (day === 0 ? -6 : 1 - day));
-    const thisWeek = d.toISOString().split('T')[0];
+    // 체크박스로 선택된 유보(제외) 방 목록
+    const skipRooms = ALL_ROOMS.filter(r => {
+        const el = document.getElementById(`skip-room-${r}`);
+        return el && el.checked;
+    });
 
-    // 이번 주 진행 과정 필터
+    // 실제 배치 대상 방 (유보 제외)
+    const ROOMS = ALL_ROOMS.filter(r => !skipRooms.includes(r));
+
+    // 이번 주 진행 중인 과정 필터
     const thisWeekCourses = courses.filter(c => c.startDate <= today && c.endDate >= today);
 
     const updates = {};
 
-    // Room A/B/C 초기화
+    // 배치 대상 방만 초기화 (유보된 방은 건드리지 않음)
     for (const r of ROOMS) {
         updates[`courses/${r}/settings/courseName`]      = '';
         updates[`courses/${r}/settings/period`]          = '';
@@ -651,8 +630,10 @@ async function assignRooms(courses) {
         updates[`courses/${r}/status/roomStatus`]        = 'idle';
     }
 
-    // 이번 주 과정 배치
+    // 이번 주 과정을 배치 대상 방에 순서대로 배정
     const assigned = [];
+    const skipped  = skipRooms.map(r => `Room ${r} (유보)`);
+
     thisWeekCourses.slice(0, ROOMS.length).forEach((c, i) => {
         const r = ROOMS[i];
         updates[`courses/${r}/settings/courseName`]      = c.name;
@@ -664,12 +645,27 @@ async function assignRooms(courses) {
     });
 
     await firebase.database().ref().update(updates);
-    return assigned;
+    return { assigned, skipped };
 }
 
 /* ══════════════════════════════════════════
    진행 단계 UI
 ══════════════════════════════════════════ */
+/* ── Room 유보 체크박스 시각 피드백 ── */
+function toggleRoomLabel(r) {
+    const checked = document.getElementById(`skip-room-${r}`).checked;
+    const label   = document.getElementById(`room-label-${r}`);
+    if (checked) {
+        label.style.background    = '#fffbeb';
+        label.style.borderColor   = '#fde68a';
+        label.style.color         = '#92400e';
+    } else {
+        label.style.background    = '#fff';
+        label.style.borderColor   = '#e2e8f0';
+        label.style.color         = '#1e293b';
+    }
+}
+
 function setProgress(step) {
     [1,2,3].forEach(i => {
         const dot   = document.getElementById(`pd${i}`);
