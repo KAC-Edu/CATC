@@ -245,6 +245,14 @@
             flex: 1; padding: 18px; background: #3b82f6; border: none;
             font-size: 16px; font-weight: 700; color: white; cursor: pointer;
         }
+        .kac-confirm-box { position: relative; }
+        .kac-modal-x {
+            position: absolute; top: 6px; right: 8px; width: 32px; height: 32px;
+            border: none; background: transparent; color: #94a3b8;
+            font-size: 26px; line-height: 1; cursor: pointer; border-radius: 8px; z-index: 2;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .kac-modal-x:hover, .kac-modal-x:active { background: #f1f5f9; color: #475569; }
 
 
 
@@ -988,16 +996,46 @@
     <script>
         let serverTimeOffset = 0; // 추가
 let confirmCallback = null;
-        function showKacConfirm(msg, callback) {
+        let confirmCancelCallback = null;
+        let confirmResolver = null;
+        function showKacConfirm(msg, onConfirm, onCancel) {
             document.getElementById('kacConfirmMsg').innerText = msg;
             document.getElementById('kacConfirm').style.display = 'flex';
-            confirmCallback = callback;
+            confirmCallback = onConfirm || null;
+            confirmCancelCallback = onCancel || null;
+            return new Promise(function(resolve){ confirmResolver = resolve; });
         }
         function closeKacConfirm(result) {
             document.getElementById('kacConfirm').style.display = 'none';
-            if(result && confirmCallback) confirmCallback();
-            confirmCallback = null;
+            var cb = confirmCallback, ccb = confirmCancelCallback, res = confirmResolver;
+            confirmCallback = null; confirmCancelCallback = null; confirmResolver = null;
+            if (result && cb)  { try { cb();  } catch(e){ console.error(e); } }
+            if (!result && ccb){ try { ccb(); } catch(e){ console.error(e); } }
+            if (res) res(!!result);
         }
+
+        // [커스텀 알림] 네이티브 showKacAlert() 대체. 단일 [확인] 버튼 + X/배경클릭 닫기.
+        //  - 비차단(non-blocking)이므로, 알림 후 화면 이동/새로고침이 필요하면 콜백으로 전달한다.
+        let alertCallback = null;
+        let alertResolver = null;
+        function showKacAlert(msg, callback) {
+            var box = document.getElementById('kacAlertMsg');
+            if (box) box.innerText = (msg == null ? '' : String(msg));
+            var modal = document.getElementById('customAlertModal');
+            if (modal) modal.style.display = 'flex';
+            alertCallback = callback || null;
+            return new Promise(function(resolve){ alertResolver = resolve; });
+        }
+        function closeKacAlert() {
+            var modal = document.getElementById('customAlertModal');
+            if (modal) modal.style.display = 'none';
+            var cb = alertCallback, res = alertResolver;
+            alertCallback = null; alertResolver = null;
+            if (cb) { try { cb(); } catch(e){ console.error(e); } }
+            if (res) res(true);
+        }
+        // [안전망] 혹시 남아있는 네이티브 alert 호출도 커스텀 모달로 우회 (화면 멈춤/대화상자 숨기기 방지)
+        window.alert = function(m){ showKacAlert(m); };
 
 
 
@@ -1138,7 +1176,7 @@ async function resolveRoomFromCode(code) {
 
     if (!currentRoom) {
         hideLoader();
-        alert("강의실 정보가 없습니다. QR 코드를 다시 스캔해주세요.");
+        showKacAlert("강의실 정보가 없습니다. QR 코드를 다시 스캔해주세요.");
         return;
     }
 
@@ -1208,7 +1246,7 @@ async function resolveRoomFromCode(code) {
 async function enterApp() {
     const statusSnap = await firebase.database().ref(`courses/${currentRoom}/status/roomStatus`).once('value');
     if (statusSnap.val() !== 'active') {
-        alert("⚠️ 강사님이 아직 강의를 시작하지 않았거나 준비 중입니다.\n잠시 후 다시 시도해 주세요.");
+        showKacAlert("⚠️ 강사님이 아직 강의를 시작하지 않았거나 준비 중입니다.\n잠시 후 다시 시도해 주세요.");
         return;
     }
     const settingsSnap = await firebase.database().ref(`courses/${currentRoom}/settings`).once('value');
@@ -1218,7 +1256,7 @@ async function enterApp() {
         const [startStr, endStr] = period.split(' ~ ').map(s => s.trim());
         const today = getTodayString();
         if (today < startStr || today > endStr) {
-            alert(`⚠️ 현재 교육 기간이 아닙니다.\n교육 기간: ${startStr} ~ ${endStr}\n\n해당 과정의 교육생이 아니시거나 교육 기간이 종료된 과정입니다.`);
+            showKacAlert(`⚠️ 현재 교육 기간이 아닙니다.\n교육 기간: ${startStr} ~ ${endStr}\n\n해당 과정의 교육생이 아니시거나 교육 기간이 종료된 과정입니다.`);
             return;
         }
     }
@@ -1301,9 +1339,10 @@ function editProfile() {
 
 
         // [수정] 완전히 나가기 (주소 초기화)
-function exitApp() {
+async function exitApp() {
 
-    if (confirm("정말 종료하시겠습니까?")) {
+    { // 종료 확인
+        if (!(await showKacConfirm("정말 종료하시겠습니까?"))) return;
 
     const uToken = localStorage.getItem('uToken');
     if (uToken && currentRoom) {
@@ -1397,8 +1436,7 @@ function startPresence() {
             const lastRoom = localStorage.getItem('kac_last_visited_room');
             if (lastRoom === currentRoom) {
                 localStorage.removeItem('uToken');
-                alert("사용자 정보가 변경되어 초기화합니다.");
-                location.reload();
+                showKacAlert("사용자 정보가 변경되어 초기화합니다.", function(){ location.reload(); });
             }
         }
     });
@@ -1535,8 +1573,7 @@ function setupListeners() {
             localStorage.setItem(`kac_resetKey_${currentRoom}`, serverResetKey);
         } else if (myLocalKey !== serverResetKey) {
             localStorage.clear();
-            alert("강의실 정보가 초기화되었습니다.");
-            location.reload();
+            showKacAlert("강의실 정보가 초기화되었습니다.", function(){ location.reload(); });
             return;
         }
 
@@ -1546,8 +1583,7 @@ function setupListeners() {
             firebase.database().ref(`courses/${currentRoom}/students/${uToken}`).once('value', sSnap => {
                 if (document.getElementById('mainApp').style.display === 'flex' && !sSnap.exists()) {
                     localStorage.removeItem('uToken');
-                    alert("정보가 갱신되었거나 삭제되었습니다.");
-                    location.reload();
+                    showKacAlert("정보가 갱신되었거나 삭제되었습니다.", function(){ location.reload(); });
                 }
             });
         }
@@ -1862,7 +1898,7 @@ function submitQ() {
     // 수정 모드일 때 로직
     if(editingKey) {
         dbRef.qa.child(editingKey).update({ text: txt, subject: subject }).then(() => { 
-            alert("질문이 수정되었습니다."); 
+            showKacAlert("질문이 수정되었습니다."); 
             resetInput(); 
         });
         return;
@@ -1870,7 +1906,7 @@ function submitQ() {
 
     // 도배 방지 체크 (2분)
     if(now - lastTimeForSubject < 120000) { 
-        alert(`'${subject}'님께는 잠시 후 다시 질문해주세요.`); 
+        showKacAlert(`'${subject}'님께는 잠시 후 다시 질문해주세요.`); 
         // 전송 실패 시 키보드가 다시 올라오지 않게 그대로 둡니다.
         return; 
     }
@@ -1916,7 +1952,7 @@ function submitQ() {
         function editQ(key) {
             // 클릭 시점에 다시 한번 시간 체크
             if (Date.now() - myQs[key] > 300000) {
-                alert("⌛ 작성 후 5분이 경과하여 내용을 수정할 수 없습니다.");
+                showKacAlert("⌛ 작성 후 5분이 경과하여 내용을 수정할 수 없습니다.");
                 // 버튼을 없애기 위해 목록 새로고침
                 dbRef.qa.once('value', s => renderList(s.val() || {}));
                 return;
@@ -1935,7 +1971,7 @@ function submitQ() {
                 checkCooldown(); 
             });
         }
-        function deleteQ(key) { if(confirm("삭제하시겠습니까?")) dbRef.qa.child(key).remove(); }
+        function deleteQ(key) { showKacConfirm("삭제하시겠습니까?", function(){ dbRef.qa.child(key).remove(); }); }
 function resetInput() {
     const el = document.getElementById('qInput');
     el.value = "";
@@ -2038,8 +2074,8 @@ function forceCloseQuiz() {
             const pw = prompt(`Room ${r} 입장 비밀번호를 입력하세요:`); if (!pw) return;
             firebase.database().ref(`courses/${r}/settings/password`).once('value', snap => {
                 const dbPw = snap.val();
-                if (!dbPw) { alert("⚠️ 해당 강의실은 아직 개설되지 않았거나,\n비밀번호가 설정되지 않았습니다."); return; }
-                if (String(pw) === String(dbPw) || btoa(pw) === String(dbPw)) { window.location.href = `?room=${r}`; } else { alert("⛔ 비밀번호가 올바르지 않습니다."); }
+                if (!dbPw) { showKacAlert("⚠️ 해당 강의실은 아직 개설되지 않았거나,\n비밀번호가 설정되지 않았습니다."); return; }
+                if (String(pw) === String(dbPw) || btoa(pw) === String(dbPw)) { window.location.href = `?room=${r}`; } else { showKacAlert("⛔ 비밀번호가 올바르지 않습니다."); }
             });
         }
 
@@ -2186,28 +2222,28 @@ function selectShuttle(typeId, typeName) {
         try {
             // 신규 통합 경로: shuttle/requests 밑에 내 토큰으로 저장
             await firebase.database().ref(`courses/${currentRoom}/shuttle/requests/${uToken}`).set(requestData);
-            alert("✅ 신청이 완료되었습니다.");
+            showKacAlert("✅ 신청이 완료되었습니다.");
             closeShuttleModal();
         } catch (e) { 
-            alert("저장 실패. 인터넷 연결을 확인하세요."); 
+            showKacAlert("저장 실패. 인터넷 연결을 확인하세요."); 
         }
     });
 }
 
 // 3. 신청 취소 실행
 async function cancelShuttleRequest() {
-    if (!confirm("정말 신청을 취소하시겠습니까?")) return;
+    if (!(await showKacConfirm("정말 신청을 취소하시겠습니까?"))) return;
     
     const uToken = localStorage.getItem('uToken');
     try {
         // 서버에서 내 데이터 삭제
         await firebase.database().ref(`courses/${currentRoom}/shuttle/requests/${uToken}`).remove();
-        alert("정상적으로 취소되었습니다.");
+        showKacAlert("정상적으로 취소되었습니다.");
         
         // 다시 신청할 수 있도록 팝업 화면 갱신
         openShuttleApply(); 
     } catch (e) { 
-        alert("취소 처리 중 오류가 발생했습니다."); 
+        showKacAlert("취소 처리 중 오류가 발생했습니다."); 
     }
 }
 
@@ -2335,20 +2371,20 @@ async function openAdminAction() {
 async function cancelDinnerOnly() {
     const now = new Date();
     if (now.getHours() >= 16) {
-        alert("⚠️ 석식 취소는 16시에 마감되었습니다. 행정팀에 별도 문의바랍니다.");
+        showKacAlert("⚠️ 석식 취소는 16시에 마감되었습니다. 행정팀에 별도 문의바랍니다.");
         return;
     }
     
-    if(!confirm("오늘 저녁 식사 제외 신청을 취소하시겠습니까?")) return;
+    if(!(await showKacConfirm("오늘 저녁 식사 제외 신청을 취소하시겠습니까?"))) return;
     
     const uToken = localStorage.getItem('uToken');
     const today = getTodayString();
     
     try {
         await firebase.database().ref(`courses/${currentRoom}/dinner_skips/${today}/${uToken}`).remove();
-        alert("석식 제외 신청이 취소되었습니다.");
+        showKacAlert("석식 제외 신청이 취소되었습니다.");
         openAdminAction(); // 화면 갱신
-    } catch (e) { alert("취소 중 오류 발생"); }
+    } catch (e) { showKacAlert("취소 중 오류 발생"); }
 }
 
 
@@ -2358,7 +2394,7 @@ async function cancelDinnerOnly() {
 
 // 복귀 보고 취소 (재수정)
 async function undoReturnAction() {
-    if(!confirm("복귀 보고를 취소하고 다시 외출 중 상태로 돌릴까요?")) return;
+    if(!(await showKacConfirm("복귀 보고를 취소하고 다시 외출 중 상태로 돌릴까요?"))) return;
     const uToken = localStorage.getItem('uToken');
     const today = getTodayString();
     
@@ -2368,7 +2404,7 @@ async function undoReturnAction() {
             returnReportTime: null
         });
         openAdminAction(); // 화면 갱신
-    } catch (e) { alert("처리 오류"); }
+    } catch (e) { showKacAlert("처리 오류"); }
 }
 
 
@@ -2438,7 +2474,7 @@ async function submitAdminAction() {
     
     // 1. 본인 인증 정보 확인 (치명적 오류 방지)
     if (!uToken || !name) {
-        alert("본인 인증 정보가 없습니다. 앱을 새로고침하거나 성함을 다시 입력해주세요.");
+        showKacAlert("본인 인증 정보가 없습니다. 앱을 새로고침하거나 성함을 다시 입력해주세요.");
         return;
     }
 
@@ -2461,25 +2497,25 @@ async function submitAdminAction() {
 
     // 3. 아무것도 선택/체크 안 한 경우 차단
     if (selectedAdminType === 'none' && !skipDinner) {
-        alert("외출 유형을 선택하거나 '석식 제외'에 체크해주세요.");
+        showKacAlert("외출 유형을 선택하거나 '석식 제외'에 체크해주세요.");
         return;
     }
 
     // 4. 외출/외박 선택 시 필수 입력 검사
     if (selectedAdminType !== 'none') {
         if (!dept || !dest || !reason || !fullPhone) {
-            alert("외출·외박 대장 기록을 위해 모든 항목을 입력해주세요.");
+            showKacAlert("외출·외박 대장 기록을 위해 모든 항목을 입력해주세요.");
             return;
         }
 
         if (selectedAdminType === 'overnight') {
             // 외박: 날짜 선택 여부만 확인 (시간은 자동 고정)
             if (!returnDate) {
-                alert("외출 날짜를 선택해주세요.");
+                showKacAlert("외출 날짜를 선택해주세요.");
                 return;
             }
             if (returnDate < today) {
-                alert("외출 날짜는 오늘 이후여야 합니다.");
+                showKacAlert("외출 날짜는 오늘 이후여야 합니다.");
                 return;
             }
         } else {
@@ -2487,7 +2523,7 @@ async function submitAdminAction() {
             const outFullTime    = new Date(`${today}T${startTime}:00`);
             const returnFullTime = new Date(`${today}T${endTime}:00`);
             if (returnFullTime <= outFullTime) {
-                alert("⚠️ 복귀 시간이 외출 시간보다 빠릅니다.");
+                showKacAlert("⚠️ 복귀 시간이 외출 시간보다 빠릅니다.");
                 return;
             }
         }
@@ -2529,14 +2565,14 @@ async function submitAdminAction() {
         if (skipDinner) {
             const now = new Date();
             if (now.getHours() >= 16) {
-                alert("⚠️ 석식 신청/취소는 16시에 마감되었습니다.\n(외출 신청은 정상 접수되었습니다)");
+                showKacAlert("⚠️ 석식 신청/취소는 16시에 마감되었습니다.\n(외출 신청은 정상 접수되었습니다)");
             } else {
                 // 관리자/식당 앱에서 보기 편하게 "이름(뒷자리)" 형식으로 저장
                 await firebase.database().ref(`courses/${currentRoom}/dinner_skips/${today}/${uToken}`).set(`${name}(${phoneShort})`);
             }
         }
 
-        alert("✅ 행정 신청서가 정상적으로 접수되었습니다.");
+        showKacAlert("✅ 행정 신청서가 정상적으로 접수되었습니다.");
         document.getElementById('adminActionModal').style.display = 'none';
         // 복귀 알림 시스템 시작
         if (selectedAdminType === 'outing') {
@@ -2547,7 +2583,7 @@ async function submitAdminAction() {
 
     } catch (e) {
         console.error(e);
-        alert("데이터 저장 중 오류가 발생했습니다. 인터넷 연결을 확인해주세요.");
+        showKacAlert("데이터 저장 중 오류가 발생했습니다. 인터넷 연결을 확인해주세요.");
     }
 }
 
@@ -2561,7 +2597,7 @@ async function submitAdminAction() {
 
 // [수정] 신청 취소 처리
 async function cancelAdminAction() {
-    if(!confirm("기존 외출/외박 신청을 취소하시겠습니까?")) return;
+    if(!(await showKacConfirm("기존 외출/외박 신청을 취소하시겠습니까?"))) return;
     
     const today = getTodayString();
     const uToken = localStorage.getItem('uToken');
@@ -2573,13 +2609,13 @@ async function cancelAdminAction() {
         // 2. 석식 제외도 같이 신청했다면 삭제
         await firebase.database().ref(`courses/${currentRoom}/dinner_skips/${today}/${uToken}`).remove();
 
-        alert("신청이 취소되었습니다. 다시 작성하실 수 있습니다.");
+        showKacAlert("신청이 취소되었습니다. 다시 작성하실 수 있습니다.");
         
         // 3. UI를 다시 신청 양식으로 전환
         document.getElementById('adminStatusArea').style.display = 'none';
         document.getElementById('adminActionForm').style.display = 'flex';
     } catch (e) {
-        alert("취소 처리 중 오류가 발생했습니다.");
+        showKacAlert("취소 처리 중 오류가 발생했습니다.");
     }
 }
 
@@ -2685,7 +2721,7 @@ function startOvernightReturnAlerts() {
 // 복귀 완료 보고 처리
 async function confirmReturnAction() {
     stopReturnAlerts(); // 복귀 완료 시 알림 중단
-    if(!confirm("현 시각부로 강의실(생활관)에 복귀하셨습니까?")) return;
+    if(!(await showKacConfirm("현 시각부로 강의실(생활관)에 복귀하셨습니까?"))) return;
     const uToken = localStorage.getItem('uToken');
     const today = getTodayString();
     
@@ -2695,9 +2731,9 @@ async function confirmReturnAction() {
             returned: true,
             returnReportTime: nowTime
         });
-        alert("✅ 복귀 보고 완료!");
+        showKacAlert("✅ 복귀 보고 완료!");
         openAdminAction(); // 화면 갱신
-    } catch (e) { alert("처리 오류"); }
+    } catch (e) { showKacAlert("처리 오류"); }
 }
 
 
@@ -2723,12 +2759,12 @@ async function saveProfileWithCheck() {
     const phone = document.getElementById('userPhone').value.trim();
 
     if (!agree) {
-        alert("서비스 이용을 위해 개인정보 수집 동의가 필요합니다.");
+        showKacAlert("서비스 이용을 위해 개인정보 수집 동의가 필요합니다.");
         return;
     }
     
     if (!name || phone.length !== 4) {
-        alert("성함과 전화번호 뒷 4자리를 정확히 입력해주세요.");
+        showKacAlert("성함과 전화번호 뒷 4자리를 정확히 입력해주세요.");
         return;
     }
 
@@ -2743,7 +2779,7 @@ async function saveProfileWithCheck() {
             return eName === name && (ePhone === phone || !ePhone);
         });
         if (!found) {
-            const proceed = confirm(`ℹ️ 등록된 명단에서 일치하는 정보를 찾지 못했습니다.\n이름: ${name} / 번호: ${phone}\n\n현장에서 본인 확인 후 그대로 입장하시겠습니까?\n(취소를 누르면 입력 정보를 다시 확인할 수 있습니다.)`);
+            const proceed = await showKacConfirm(`ℹ️ 등록된 명단에서 일치하는 정보를 찾지 못했습니다.\n이름: ${name} / 번호: ${phone}\n\n현장에서 본인 확인 후 그대로 입장하시겠습니까?\n(취소를 누르면 입력 정보를 다시 확인할 수 있습니다.)`);
             if (!proceed) return;
         }
     }
@@ -2753,7 +2789,7 @@ async function saveProfileWithCheck() {
         const [startStr, endStr] = period2.split(' ~ ').map(s => s.trim());
         const today = getTodayString();
         if (today < startStr || today > endStr) {
-            alert(`⚠️ 교육 기간이 아닙니다. (${startStr} ~ ${endStr})`);
+            showKacAlert(`⚠️ 교육 기간이 아닙니다. (${startStr} ~ ${endStr})`);
             return;
         }
     }
@@ -2774,7 +2810,7 @@ async function saveProfile() {
     const phone = document.getElementById('userPhone').value.trim();
     
     if (!name || phone.length !== 4) {
-        alert("성함과 전화번호 뒷 4자리를 정확히 입력해주세요.");
+        showKacAlert("성함과 전화번호 뒷 4자리를 정확히 입력해주세요.");
         return;
     }
     
@@ -2818,14 +2854,14 @@ async function saveProfile() {
         
         if (!isCheckIn) {
             showMainDashboard();
-            alert(`${name}님, 환영합니다!`);
+            showKacAlert(`${name}님, 환영합니다!`);
         }
         // [수정] 출결 QR 등록 흐름에서는 메인 대시보드(입장)로 보내지 않는다.
         //        handleInternalAttendance가 출결 처리 후 '완료 화면'을 표시한다.
         
     } catch (e) {
         console.error("SaveProfile Error:", e);
-        alert("등록 중 오류가 발생했습니다.");
+        showKacAlert("등록 중 오류가 발생했습니다.");
     }
 }
 
@@ -2895,7 +2931,7 @@ async function viewMealMenu() {
             loader.style.display = 'none';
             const msg = document.getElementById('mealEmptyMsg');
             if (msg) { msg.style.display = 'block'; msg.innerText = '아직 식단표가 업로드되지 않았습니다.'; }
-            else { alert('아직 식단표가 업로드되지 않았습니다.'); modal.style.display = 'none'; }
+            else { showKacAlert('아직 식단표가 업로드되지 않았습니다.'); modal.style.display = 'none'; }
             return;
         }
         let imageUrl = '';
@@ -2906,7 +2942,7 @@ async function viewMealMenu() {
                 loader.style.display = 'none';
                 const msg = document.getElementById('mealEmptyMsg');
                 if (msg) { msg.style.display = 'block'; msg.innerText = `식단표 기간이 만료되었습니다.`; }
-                else { alert('식단표 기간이 만료되었습니다.'); modal.style.display = 'none'; }
+                else { showKacAlert('식단표 기간이 만료되었습니다.'); modal.style.display = 'none'; }
                 return;
             }
             imageUrl = data.image;
@@ -3046,12 +3082,12 @@ async function submitFacilityRequest() {
     const userPhone = localStorage.getItem('kac_user_phone');
 
     if (!reqText) {
-        alert("요청 사항을 입력해 주세요.");
+        showKacAlert("요청 사항을 입력해 주세요.");
         return;
     }
 
     if (dormInfo.includes("확인 중")) {
-        alert("생활관 정보가 확인되지 않습니다. 관리실에 문의하세요.");
+        showKacAlert("생활관 정보가 확인되지 않습니다. 관리실에 문의하세요.");
         return;
     }
 
@@ -3068,10 +3104,10 @@ async function submitFacilityRequest() {
     try {
         // system/facility_requests 경로에 저장 (미화 담당자가 한꺼번에 보기 위함)
         await firebase.database().ref('system/facility_requests').push(requestData);
-        alert("✅ 요청이 전달되었습니다. 담당자 확인 후 처리됩니다.");
+        showKacAlert("✅ 요청이 전달되었습니다. 담당자 확인 후 처리됩니다.");
         closeFacilityModal();
     } catch (e) {
-        alert("전송 실패: " + e.message);
+        showKacAlert("전송 실패: " + e.message);
     }
 }
 
@@ -3283,6 +3319,13 @@ function handleInternalAttendance(room) {
 
     if (!uToken || !myName || myPhone.length !== 4) return;
 
+    // [출결 가능일 검사 ①] 주말(토/일)에는 출석체크 차단 — 2주 과정 등 중간에 낀 주말 포함
+    const _dow = new Date().getDay(); // 0=일요일, 6=토요일
+    if (_dow === 0 || _dow === 6) {
+        showKacAlert("금일은 주말 등 교육 일정이 없는 날이므로 출석체크를 진행하지 않습니다.");
+        return;
+    }
+
     const d = new Date();
     const today = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
     const storageKey = `kac_attended_${targetRoom}_${today}_${uToken}`;
@@ -3299,6 +3342,18 @@ function handleInternalAttendance(room) {
     const attendKey = `${myName}_${myPhone}`;
     firebase.database().ref('courses').once('value', snap => {
         const courses = snap.val() || {};
+
+        // [출결 가능일 검사 ②] 오늘이 해당 강의실의 교육기간(period) 내인지 확인
+        const _settings = (courses[targetRoom] && courses[targetRoom].settings) || {};
+        const _period = _settings.period || '';
+        if (_period.includes(' ~ ')) {
+            const _pp = _period.split(' ~ ').map(x => x.trim());
+            const _start = _pp[0], _end = _pp[1];
+            if (today < _start || today > _end) {
+                showKacAlert(`⚠️ 현재 교육 기간이 아닙니다.\n교육 기간: ${_start} ~ ${_end}`);
+                return;
+            }
+        }
         const enrolledRooms = [];
         Object.keys(courses).forEach(r => {
             const students = courses[r].students || {};
@@ -3390,17 +3445,16 @@ function executeAttendanceRecord(room, name, phone, dateStr, storageKey) {
         if (new URLSearchParams(window.location.search).get('checkin') === 'true') {
             showCheckinDone(room, name, currentTime);
         } else {
-            alert(`✅ [Room ${room}] 출석 완료!\n${name}님, 정상 처리되었습니다.`);
-            cleanUrlAndGo(room);
+            showKacAlert(`✅ [Room ${room}] 출석 완료!\n${name}님, 정상 처리되었습니다.`, function(){ cleanUrlAndGo(room); });
         }
-    }).catch(e => { alert("출석 처리 중 오류가 발생했습니다."); });
+    }).catch(e => { showKacAlert("출석 처리 중 오류가 발생했습니다."); });
 }
 
 // [신규] 출결 처리 완료 화면 표시 (출결 QR 전용)
 function showCheckinDone(room, name, time) {
     const page = document.getElementById('checkinDonePage');
     if (!page) { // 안전장치: 화면 요소가 없으면 기존 방식으로 안내
-        alert(`✅ [Room ${room}] 출석 완료!\n${name}님, 정상 처리되었습니다.`);
+        showKacAlert(`✅ [Room ${room}] 출석 완료!\n${name}님, 정상 처리되었습니다.`);
         return;
     }
     const sub = document.getElementById('checkinDoneSub');
@@ -3573,7 +3627,7 @@ function applyTabletLoan() {
     const name = localStorage.getItem('kac_user_name') || '';
     const phone = localStorage.getItem('kac_user_phone') || '';
     const phone4 = phone.replace(/-/g, '').slice(-4);
-    if (!uToken || !currentRoom) return alert('접속 정보를 확인할 수 없습니다.');
+    if (!uToken || !currentRoom) return showKacAlert('접속 정보를 확인할 수 없습니다.');
 
     firebase.database().ref(`courses/${currentRoom}/tablet_loans/${uToken}`).set({
         name: name,
@@ -3584,10 +3638,10 @@ function applyTabletLoan() {
     });
 }
 
-function cancelTabletLoan() {
+async function cancelTabletLoan() {
     const uToken = localStorage.getItem('uToken');
     if (!uToken || !currentRoom) return;
-    if (!confirm('태블릿 대여 신청을 취소하시겠습니까?')) return;
+    if (!(await showKacConfirm('태블릿 대여 신청을 취소하시겠습니까?'))) return;
     firebase.database().ref(`courses/${currentRoom}/tablet_loans/${uToken}`).remove()
         .then(() => { openTabletLoan(); });
 }
@@ -3600,12 +3654,24 @@ function closeTabletLoan() {
 </script>
 
 <!-- 커스텀 컨펌 창 (여기가 진짜 자리입니다) -->
-<div id="kacConfirm" class="kac-confirm-overlay">
-    <div class="kac-confirm-box">
+<div id="kacConfirm" class="kac-confirm-overlay" onclick="if(event.target===this) closeKacConfirm(false)">
+    <div class="kac-confirm-box" onclick="event.stopPropagation()">
+        <button class="kac-modal-x" onclick="closeKacConfirm(false)" aria-label="닫기">&times;</button>
         <div id="kacConfirmMsg" class="kac-confirm-msg">메시지 내용</div>
         <div class="kac-confirm-btns">
             <button id="kacBtnNo" class="kac-btn-no" onclick="closeKacConfirm(false)">취소</button>
             <button id="kacBtnYes" class="kac-btn-yes" onclick="closeKacConfirm(true)">확인</button>
+        </div>
+    </div>
+</div>
+
+<!-- 커스텀 알림(Alert) 모달 (네이티브 alert 대체) -->
+<div id="customAlertModal" class="kac-confirm-overlay" style="z-index:20001;" onclick="if(event.target===this) closeKacAlert()">
+    <div class="kac-confirm-box" onclick="event.stopPropagation()">
+        <button class="kac-modal-x" onclick="closeKacAlert()" aria-label="닫기">&times;</button>
+        <div id="kacAlertMsg" class="kac-confirm-msg">알림 내용</div>
+        <div class="kac-confirm-btns">
+            <button class="kac-btn-yes" style="flex:1;" onclick="closeKacAlert()">확인</button>
         </div>
     </div>
 </div>
