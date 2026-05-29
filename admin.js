@@ -541,12 +541,14 @@ getOwnedRooms: function() {
     try { return JSON.parse(localStorage.getItem('kac_owned_rooms') || '[]'); } catch(e) { return []; }
 },
 addOwnedRoom: function(room) {
+    const r = (room || '').toString().toUpperCase();   // [수정] isMyOwnedRoom 과 동일하게 대문자 정규화
+    if (!r) return;
     const rooms = this.getOwnedRooms();
-    if (!rooms.includes(room)) rooms.push(room);
+    if (!rooms.includes(r)) rooms.push(r);
     localStorage.setItem('kac_owned_rooms', JSON.stringify(rooms));
 },
 isMyOwnedRoom: function(room) {
-    return this.getOwnedRooms().includes(room.toUpperCase());
+    return this.getOwnedRooms().includes((room || '').toString().toUpperCase());
 },
 clearOwnedRooms: function() {
     localStorage.removeItem('kac_owned_rooms');
@@ -971,38 +973,63 @@ resetCourse: function() {
         return;
     }
 
-    // 2. 옵저버(단순 관람) 모드일 때는 초기화 금지
-    if (state.isObserver) {
-        ui.showAlert("👁️ 옵저버 모드에서는 과정을 초기화할 수 없습니다.");
+    const MASTER_KEY = "13281";
+    const room = state.room;
+
+    // [수정] 권한 인증을 'DB 조회보다 먼저' 처리한다.
+    //  - 옵저버 모드라도 마스터키를 입력하면 초기화를 허용한다(무조건 차단 X).
+    //  - 정상 소유자(ownerSessionId 일치) 또는 직접 비번치고 들어간 방이면 추가 입력 없이 통과.
+    //  - 그 외에는 마스터키 또는 강의실 비밀번호를 확인한다.
+    //  - 마스터키가 맞으면 DB 권한 체크를 우회(bypass)하여 즉시 초기화한다(느린 응답으로 인한 퍼미션 에러 방지).
+
+    const proceedConfirmAndReset = () => {
+        if (!confirm(`🚨 [위험] Room ${room}의 모든 데이터를 초기화하시겠습니까?\n이름, 질문, 신청 내역 등 모든 정보가 삭제되며 되돌릴 수 없습니다.`)) return;
+        doReset();
+    };
+
+    // (A) 마스터키/비번을 먼저 묻는다. (옵저버 포함 — 마스터키면 강제 초기화 가능)
+    //     단, 내가 명백히 정상 소유 중인 방이면 불필요한 입력을 생략한다.
+    const ownsThisRoomLocally = !state.isObserver && dataMgr.isMyOwnedRoom(room);
+
+    if (ownsThisRoomLocally) {
+        // 정상 소유자: 곧바로 확인 후 초기화 (세션ID는 doReset 직전 자동 복구)
+        proceedConfirmAndReset();
         return;
     }
 
-    // 3. 소유권 또는 마스터키 확인
-    firebase.database().ref(`courses/${state.room}/status`).once('value', snap => {
+    const inputPw = prompt(`🔐 Room ${room} 초기화 권한 확인\n마스터키 또는 해당 강의실 비밀번호를 입력하세요:`);
+    if (inputPw === null) return; // 취소
+
+    // (B) 마스터키 일치 → DB 권한 체크 우회, 즉시 초기화
+    if (inputPw === MASTER_KEY) {
+        proceedConfirmAndReset();
+        return;
+    }
+
+    // (C) 마스터키가 아니면 강의실 비밀번호와 대조 (DB status 조회)
+    firebase.database().ref(`courses/${room}/status`).once('value', snap => {
         const st = snap.val() || {};
         const isOwner = st.ownerSessionId === state.sessionId;
         const roomPw = st.password || null;
 
-        const MASTER_KEY = "13281";
-
-        // 내 방이 아닌 경우 비밀번호 확인
-        if (!isOwner) {
-            const inputPw = prompt(`🔐 Room ${state.room} 초기화 권한이 필요합니다.\n마스터키 또는 해당 강의실 비밀번호를 입력하세요:`);
-            if (!inputPw) return;
-            if (inputPw !== MASTER_KEY && inputPw !== roomPw) {
-                ui.showAlert("❌ 비밀번호가 올바르지 않습니다.");
-                return;
-            }
+        if (isOwner || (roomPw && inputPw === roomPw)) {
+            proceedConfirmAndReset();
+        } else {
+            ui.showAlert("❌ 비밀번호가 올바르지 않습니다.");
         }
-
-        if(!confirm(`🚨 [위험] Room ${state.room}의 모든 데이터를 초기화하시겠습니까?\n이름, 질문, 신청 내역 등 모든 정보가 삭제되며 되돌릴 수 없습니다.`)) return;
-        doReset();
+    }, err => {
+        ui.showAlert("권한 확인 중 오류가 발생했습니다. 마스터키로 다시 시도해 주세요.");
     });
 
     function doReset() {
         if (!state.room) return;
         const rPath = `courses/${state.room}`;
         const newResetKey = "reset_" + Date.now();
+
+        // [소유권 자동 복구] 마스터키/옵저버 강제 초기화 등으로 현재 세션이 소유자가 아닐 수 있으므로,
+        //  초기화 직전에 이 방의 소유 세션을 현재 세션으로 맞춰 두어 쓰기 권한 충돌을 예방한다.
+        dataMgr.addOwnedRoom(state.room);
+        localStorage.setItem('last_owned_room', state.room);
 
         // [완전 초기화 보강]
         //  기존에는 알려진 하위 노드만 개별 null 처리했기 때문에, 누락된(또는 이후 추가된) 하위 경로가
