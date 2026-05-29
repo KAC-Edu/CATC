@@ -1116,6 +1116,13 @@ body.modal-open .app-content {
             <div class="val"><span id="g-shuttle-count">0</span><small>명</small></div>
             <i class="fa-solid fa-bus icon-shuttle"></i>
         </div>
+
+        <!-- 5번 카드: 과정별 출석부 관리/인쇄 -->
+        <div class="dashboard-card-btn action-white" onclick="openAttendanceManager()">
+            <div class="label">과정별 출석부 관리 / 인쇄</div>
+            <div class="val"><span id="g-attend-active">0</span><small>과정</small></div>
+            <i class="fa-solid fa-clipboard-user"></i>
+        </div>
     </div>
 
     <!-- ✅ [복구 완료] 현재 운영 중인 과정 리스트 섹션 -->
@@ -1361,7 +1368,10 @@ body.modal-open .app-content {
           <div class="section-card" style="margin-bottom: 50px; background:white; padding:16px; border:1px solid #e2e8f0;">
               <div class="section-title" style="color:#1e293b; margin-bottom:12px; padding-bottom:10px; border-bottom:2px solid #e2e8f0; justify-content:space-between;">
                   <span><i class="fa-solid fa-user-clock"></i> 외출/외박 신청자 명단</span>
-                  <button class="navy-btn" style="width:140px; height:32px; font-size:12px; background:#f8fafc; border:1px solid #e2e8f0;" onclick="openOutingLedger()">외출(외박)대장</button>
+                  <div style="display:flex; gap:6px;">
+                      <button class="navy-btn" style="width:130px; height:32px; font-size:12px; background:#eff6ff; border:1px solid #bfdbfe; color:#1e40af;" onclick="openAttendanceSheet()"><i class="fa-solid fa-clipboard-user"></i> 출석부 관리/인쇄</button>
+                      <button class="navy-btn" style="width:130px; height:32px; font-size:12px; background:#f8fafc; border:1px solid #e2e8f0;" onclick="openOutingLedger()">외출(외박)대장</button>
+                  </div>
               </div>
               <div style="overflow-x: auto; background:rgba(255,255,255,0.1); border-radius:10px; overflow:hidden; border:1px solid rgba(255,255,255,0.2);">
                   <table class="navy-table" style="background:transparent;">
@@ -1624,6 +1634,21 @@ body.modal-open .app-content {
       </div>
   </div>
 <!-- --- 여기까지 추가 --- -->
+
+<!-- --- [신규] 출석부 통합 관리 모달 --- -->
+  <div id="attendSelectModal" class="setup-modal" style="z-index: 9500;">
+      <div class="setup-box" style="max-width: 440px;">
+          <div style="text-align:center; margin-bottom:20px;">
+              <h3 style="margin:0; font-size:18px; color:var(--navy-dark);"><i class="fa-solid fa-clipboard-user" style="margin-right:6px;"></i>과정별 출석부 관리</h3>
+              <p style="font-size:12px; color:#64748b; margin-top:5px;">운영 중인 과정의 금일 출석 현황입니다. 선택 시 출석부(A4 인쇄)로 연결됩니다.</p>
+          </div>
+          <div id="attendCourseList" style="display:flex; flex-direction:column; gap:8px; max-height:340px; overflow-y:auto;">
+              <!-- 운영중인 과정별 출석 요약 버튼이 여기에 생성됨 -->
+          </div>
+          <button class="navy-btn" style="margin-top:20px; background:#64748b;" onclick="document.getElementById('attendSelectModal').style.display='none'">닫기</button>
+      </div>
+  </div>
+<!-- --- 여기까지 --- -->
 
 
 
@@ -2023,6 +2048,9 @@ function init() {
         coordMgr.init();
     }
 
+    // [신규] 데이터 보존정책: 60일(약 2개월) 경과한 외출·외박 기록 자동 정리 (페이지 진입 시 1회)
+    purgeOldOutingRecords();
+
     // 3. 기존 데이터 로드 로직 (안정성 강화)
     firebase.database().ref('courses').on('value', snap => {
         globalAllData = snap.val() || {};
@@ -2030,6 +2058,13 @@ function init() {
         renderCourseSelectors(); 
         renderTotalHistory();
         if(currentRID) updateIndividualView();
+
+        // [신규] 출석부 관리 카드: 운영 중 과정 수 표시
+        const _activeEl = document.getElementById('g-attend-active');
+        if (_activeEl) {
+            _activeEl.innerText = Object.values(globalAllData)
+                .filter(r => r?.status?.roomStatus === 'active').length;
+        }
         
         // 신규 외출/외박 신청 자동 서명 처리
         autoSignNewActions(globalAllData);
@@ -3301,6 +3336,98 @@ function openPrintModal() {
     }
 
     modal.style.display = 'flex';
+}
+
+
+// [신규] 상세 페이지에서 현재 과정의 출석부(인쇄용) 열기
+function openAttendanceSheet() {
+    if(!currentRID) {
+        alert("먼저 왼쪽 리스트에서 교육 과정을 선택해주세요.");
+        return;
+    }
+    window.open(`attendance_sheet.html?room=${currentRID}`, '_blank', 'width=1100,height=900,scrollbars=yes');
+}
+
+// [신규] 과정별 출석부 통합 관리 모달 — 운영 중 과정의 금일 출석 요약 + 출석부 인쇄 연결
+function openAttendanceManager() {
+    const modal = document.getElementById('attendSelectModal');
+    const listDiv = document.getElementById('attendCourseList');
+    if (!modal || !listDiv) return;
+
+    listDiv.innerHTML = "";
+    const today = getTodayString();
+    let hasActive = false;
+
+    for (let i = 65; i <= 90; i++) {
+        const rid = String.fromCharCode(i);
+        const room = globalAllData[rid];
+        if (room?.status?.roomStatus === 'active') {
+            hasActive = true;
+            const cName = room.settings?.courseName || `Room ${rid}`;
+
+            // 등록 인원 / 금일 출석 인원 집계
+            const enrolled = Object.values(room.students || {})
+                .filter(s => s && s.name && s.name !== 'undefined').length;
+            const todayAtt = room.internal_attendance?.[today]
+                ? Object.keys(room.internal_attendance[today]).length : 0;
+
+            const btn = document.createElement('button');
+            btn.className = "navy-btn";
+            btn.style = "background:#fff; color:var(--navy-dark); border:1.5px solid #e2e8f0; justify-content:space-between; padding:12px 15px; margin-bottom:2px; display:flex; align-items:center; height:auto;";
+            btn.innerHTML = `
+                <span style="display:flex; flex-direction:column; align-items:flex-start; gap:3px; text-align:left;">
+                    <span style="font-weight:800;"><i class="fa-solid fa-clipboard-user" style="color:var(--blue-main); margin-right:8px;"></i>${cName}</span>
+                    <span style="font-size:11px; color:#64748b; font-weight:600;">금일 출석 ${todayAtt}명 / 등록 ${enrolled}명</span>
+                </span>
+                <span style="font-size:12px; color:var(--blue-main); font-weight:800; white-space:nowrap;">출석부 <i class="fa-solid fa-arrow-right"></i></span>
+            `;
+            btn.onclick = () => {
+                window.open(`attendance_sheet.html?room=${rid}`, '_blank');
+                modal.style.display = 'none';
+            };
+            listDiv.appendChild(btn);
+        }
+    }
+
+    if (!hasActive) {
+        listDiv.innerHTML = "<p style='text-align:center; padding:20px; color:#94a3b8; font-size:13px;'>현재 운영 중인 과정이 없습니다.</p>";
+    }
+
+    modal.style.display = 'flex';
+}
+
+// [신규] 데이터 보존 정책 — 외출·외박 기록을 60일(약 2개월)간 보관하고 이후 자동 삭제
+//   admin_actions는 날짜(YYYY-MM-DD)별로 저장되므로, 기준일 이전 날짜 노드를 일괄 정리한다.
+//   (과정 종료 후에도 해당 기록은 발생일로부터 60일간 유지된 뒤 제거됨)
+async function purgeOldOutingRecords() {
+    try {
+        const d = new Date();
+        d.setDate(d.getDate() - 60);
+        const limit = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+
+        const snap = await firebase.database().ref('courses').once('value');
+        const courses = snap.val() || {};
+        const updates = {};
+        let cnt = 0;
+
+        Object.keys(courses).forEach(rid => {
+            const actions = courses[rid]?.admin_actions || {};
+            Object.keys(actions).forEach(date => {
+                // 날짜 형식(YYYY-MM-DD)인 노드만, 기준일보다 이전이면 삭제 예약
+                if (/^\d{4}-\d{2}-\d{2}$/.test(date) && date < limit) {
+                    updates[`courses/${rid}/admin_actions/${date}`] = null;
+                    cnt++;
+                }
+            });
+        });
+
+        if (cnt > 0) {
+            await firebase.database().ref().update(updates);
+            console.log(`[보존정책] 60일 경과 외출·외박 기록 ${cnt}건 자동 삭제 (${limit} 이전)`);
+        }
+    } catch (e) {
+        console.warn('[보존정책] 정리 중 오류:', e);
+    }
 }
 
 

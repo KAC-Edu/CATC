@@ -101,6 +101,7 @@
     const params = new URLSearchParams(window.location.search);
     let courseInfo = {};
     let dateArray = [];
+    let SHEET_ROOM = '';   // [수정] init 외의 함수(renderTable)에서도 방 번호를 참조할 수 있도록 전역 보관
 
     // 파이어베이스 데이터베이스 참조 (config.js 로드 후 사용 가능)
     const db = firebase.database();
@@ -112,6 +113,7 @@ async function init() {
     // 1. 주소창에서 방 번호(room)를 정확히 가져옵니다.
     const params = new URLSearchParams(window.location.search);
     const roomFromUrl = params.get('room');
+    SHEET_ROOM = roomFromUrl;   // [수정] 전역 보관 (renderTable에서 사용)
 
     if (!roomFromUrl) {
         document.getElementById('print-area').innerHTML = '<div style="text-align:center; padding:80px 20px; color:#64748b;"><h2>⚠️ 강의실 정보가 없습니다</h2><p>올바른 경로로 접속해 주세요.<br>강사 플랫폼의 [출석부 관리/인쇄] 버튼을 통해 접속해 주세요.</p></div>';
@@ -183,7 +185,7 @@ function renderTable(studentsRaw, attendanceData) {
         }
 
         // expectedStudents 데이터 로드 (없어도 렌더링 진행)
-        db.ref(`courses/${roomFromUrl}/expectedStudents`).once('value', expSnap => {
+        db.ref(`courses/${SHEET_ROOM}/expectedStudents`).once('value', expSnap => {
             const expectedList = expSnap.val() || [];
         
         sortedStudents.forEach((s, idx) => {
@@ -199,14 +201,12 @@ function renderTable(studentsRaw, attendanceData) {
 
             dateArray.forEach(d => {
                 const td = document.createElement('td');
-                const attendKey = `${s.name}_${s.phone}`;
+                // [수정] 저장 키 표기 차이(전화번호 형식/공백)에 강인하게 출석 기록을 조회
+                const info = findAttendanceRecord(attendanceData[d], s.name, s.phone);
 
-                if (attendanceData[d] && attendanceData[d][attendKey]) {
-                    const info = attendanceData[d][attendKey];
-                    const displayTime = (typeof info === 'object') ? info.time : "";
-                    
-                    // [인증 ID 생성] 데이터베이스에 authId가 있으면 쓰고, 없으면 토큰 앞자리를 가져옵니다.
-                    const authId = info.authId || "CERT-" + Math.random().toString(36).substr(2, 4).toUpperCase();
+                if (info) {
+                    const displayTime = (typeof info === 'object') ? (info.time || '') : '';
+                    const authId = (info && info.authId) ? info.authId : '';
 
                     td.innerHTML = `
                         <div style="display:flex; flex-direction:column; align-items:center; gap:1px;">
@@ -221,6 +221,27 @@ function renderTable(studentsRaw, attendanceData) {
             tbody.appendChild(tr);
         }); // sortedStudents.forEach 끝
         }); // expectedStudents once 끝
+    }
+
+    // [신규] 해당 일자의 출석 데이터에서 학생 기록을 찾는다 (이름_전화번호뒷4자리 기준, 키 표기 차이 흡수)
+    function findAttendanceRecord(dayData, name, phone) {
+        if (!dayData) return null;
+        const nm = (name || '').trim();
+        const last4 = (phone || '').toString().replace(/\D/g, '').slice(-4);
+
+        // 1) 정확 키 우선
+        const exactKey = `${nm}_${phone}`;
+        if (dayData[exactKey]) return dayData[exactKey];
+
+        // 2) 값/키를 이름 + 전화 뒷4자리로 정규화하여 매칭
+        for (const k in dayData) {
+            const v = dayData[k] || {};
+            const vName = (v.name || (k.split('_')[0] || '')).trim();
+            const vPhoneRaw = (v.phone != null ? v.phone : (k.split('_').slice(1).join('_') || '')).toString();
+            const vLast4 = vPhoneRaw.replace(/\D/g, '').slice(-4);
+            if (vName === nm && (!last4 || !vLast4 || vLast4 === last4)) return v;
+        }
+        return null;
     }
 
 
@@ -243,13 +264,15 @@ function renderTable(studentsRaw, attendanceData) {
         let current = new Date(parts[0].trim());
         const end = new Date(parts[1].trim());
         const result = [];
-        
+        // [수정] 출결 저장 측과 동일한 '로컬 기준 YYYY-MM-DD'로 생성 (UTC 변환으로 인한 날짜 어긋남 방지)
+        const fmt = dt => `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`;
+
         // 안전장치: 최대 30일까지만 생성 (무한루프 방지)
         let safety = 0;
         while (current <= end && safety < 30) {
             const day = current.getDay();
             if (day !== 0 && day !== 6) { // 토, 일 제외
-                result.push(current.toISOString().split('T')[0]);
+                result.push(fmt(current));
             }
             current.setDate(current.getDate() + 1);
             safety++;

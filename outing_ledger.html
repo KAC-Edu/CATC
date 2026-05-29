@@ -56,8 +56,10 @@
         .print-btn { position:fixed; top:20px; right:20px; padding:12px 28px; background:#003366; color:white; border:none; border-radius:8px; cursor:pointer; font-weight:900; z-index:1000; font-size:15px; }
 
         @media print {
-            body { background:white; }
-            .print-btn { display:none; }
+            html, body { background:white !important; margin:0 !important; padding:0 !important; }
+            .print-btn, .no-print { display:none !important; }
+            /* 브라우저가 자동 삽입하는 머리글/꼬리글 영역(주소·제목·날짜)을 최소화 */
+            header, footer, nav { display:none !important; }
             /* A4 가로, 여백 10mm로 잘림 방지 */
             @page { size: A4 landscape; margin: 10mm; }
             .page {
@@ -66,7 +68,11 @@
                 padding: 0;
                 box-shadow: none;
             }
-            /* 행이 페이지 경계에서 잘리지 않게 */
+            /* 배경색(단체외출 강조 등)이 인쇄에도 반영되도록 */
+            * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+            /* 표가 페이지 경계에서 잘리지 않게 */
+            table { page-break-inside: auto; }
+            thead { display: table-header-group; }
             tbody tr { page-break-inside: avoid; }
         }
     </style>
