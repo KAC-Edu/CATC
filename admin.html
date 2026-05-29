@@ -363,14 +363,12 @@
 <!-- [6.0차 최종 통합본] 대시보드 구역 -->
 <!-- 설문조사 안내 뷰 (강당 스크린 전용) -->
 <div id="view-survey-guide" style="display:none; flex-direction:column; align-items:center; width:100%;">
-    <!-- 돌아가기 버튼 -->
-    <div style="width:100%; max-width:1000px; padding:10px 20px 0;">
+    <div class="view-header" style="margin-bottom:0; width:100%; max-width:1000px; position:relative;">
+        <!-- 돌아가기 버튼: 우측 상단 절대 위치 -->
         <button onclick="ui.setMode('notice')"
-            style="height:34px; padding:0 16px; background:#fff; color:#475569; border:1.5px solid #cbd5e1; border-radius:8px; cursor:pointer; font-size:13px; font-weight:700; display:inline-flex; align-items:center; gap:6px;">
-            <i class="fa-solid fa-arrow-left"></i> 공지 관리로 돌아가기
+            style="position:absolute; right:0; top:50%; transform:translateY(-50%); height:34px; padding:0 14px; background:#fff; color:#475569; border:1.5px solid #cbd5e1; border-radius:8px; cursor:pointer; font-size:13px; font-weight:700; display:inline-flex; align-items:center; gap:6px; white-space:nowrap;">
+            <i class="fa-solid fa-xmark"></i> 닫기
         </button>
-    </div>
-    <div class="view-header" style="margin-top:6px; margin-bottom:0;">
         <h1><i class="fa-solid fa-square-poll-vertical"></i> 교육 만족도 설문조사 안내</h1>
     </div>
     <div class="survey-guide-container">

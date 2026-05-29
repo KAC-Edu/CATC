@@ -3741,6 +3741,15 @@ body:-webkit-full-screen .main-stage {
 /* 색상 드롭다운 패널 open 상태 */
 #colorDropdownPanel.open { display:block !important; }
 
+/* 설문 안내 탭 - 제목 영역을 다른 탭과 동일하게 정렬 */
+#view-survey-guide .view-header {
+    text-align: center;
+    margin-top: 20px;
+    margin-bottom: 8px;
+    padding: 0 20px;
+    box-sizing: border-box;
+}
+
 /* ── 설문 안내 모드 전용 스타일 (강당 스크린 고시인성) ── */
 .survey-guide-container {
     width: 100%;
