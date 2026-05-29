@@ -603,7 +603,7 @@
                     
                     <!-- 외출/외박 현황 -->
                     <div class="stat-row" onclick="ui.setMode('admin-action')" style="cursor:pointer; padding:6px 0;">
-                        <span class="card-label">금일 외출/외박 신청</span>
+                        <span class="card-label">외출/외박 현황 (금일)</span>
                         <div class="card-value color-coral"><b id="dashActionCount">0</b><small>명</small></div>
                     </div>
 
@@ -914,8 +914,8 @@
 <div id="view-home" class="full-dashboard" style="display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:70vh;">
     <!-- 타이틀 -->
     <div class="view-header" style="margin-bottom:10px; text-align:center;">
-        <h1 style="font-size:42px;"><i class="fa-solid fa-plane-departure"></i> 항공기술훈련원 교육 플랫폼</h1>
-        <p>CATC Education Operating Platform</p>
+        <h1 style="font-size:42px;"><i class="fa-solid fa-plane-departure"></i> 항공기술훈련원 통합 교육 현황판</h1>
+        <p>CATC Integrated Education Management System</p>
     </div>
     <!-- catc.png: 원본 전체 비율 노출 -->
     <div class="dashboard-campus-banner" style="max-width:1100px; width:100%; margin-bottom:20px;">
@@ -929,33 +929,33 @@
         <div onclick="ui.openHomeStatModal('active')" class="home-stat-card">
             <div class="stat-card-inner">
                 <div class="stat-icon-box blue"><i class="fa-solid fa-chalkboard-user"></i></div>
-                <span class="stat-label">현재 강의 중</span>
+                <span class="stat-label">운영 과정</span>
             </div>
             <div class="stat-value-row">
                 <span class="stat-number" id="stat-active-count">-</span>
-                <span class="stat-unit">개 과정 운영중</span>
+                <span class="stat-unit">개 과정 진행 중</span>
             </div>
         </div>
 
         <div onclick="ui.openHomeStatModal('students')" class="home-stat-card">
             <div class="stat-card-inner">
                 <div class="stat-icon-box green"><i class="fa-solid fa-users"></i></div>
-                <span class="stat-label">총 교육생</span>
+                <span class="stat-label">교육 인원</span>
             </div>
             <div class="stat-value-row">
                 <span class="stat-number" id="stat-student-count">-</span>
-                <span class="stat-unit">명 교육 중</span>
+                <span class="stat-unit">명 수강 중</span>
             </div>
         </div>
 
         <div onclick="ui.openHomeStatModal('outing')" class="home-stat-card">
             <div class="stat-card-inner">
                 <div class="stat-icon-box orange"><i class="fa-solid fa-person-walking-arrow-right"></i></div>
-                <span class="stat-label">외출/외박 신청(금일)</span>
+                <span class="stat-label">외출/외박</span>
             </div>
             <div class="stat-value-row">
                 <span class="stat-number" id="stat-outing-count">-</span>
-                <span class="stat-unit">명 신청</span>
+                <span class="stat-unit">건 접수 (금일)</span>
             </div>
         </div>
 
