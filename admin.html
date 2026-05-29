@@ -107,6 +107,35 @@
 
   
 
+<!-- ══ 강의실 초기화 인증 모달 ══ -->
+<div id="resetAuthModal" class="modal-overlay" onclick="if(event.target===this) ui.closeResetAuthModal()">
+    <div class="modal-box" style="width:420px; border:3px solid #ef4444;" onclick="event.stopPropagation()">
+        <div class="modal-header">
+            <div style="font-size:40px; margin-bottom:8px;">🚨</div>
+            <h3 style="color:#ef4444; margin:0 0 6px;">강의실 초기화</h3>
+            <p style="font-size:13px; color:#64748b; margin:0; line-height:1.5;">이 작업은 되돌릴 수 없습니다.<br>교육생 데이터가 모두 삭제됩니다.</p>
+        </div>
+        <div style="background:#fff1f2; border:1.5px solid #fecaca; border-radius:12px; padding:14px 16px; margin-bottom:18px; text-align:center;">
+            <span id="resetAuthRoomLabel" style="font-size:20px; font-weight:900; color:#dc2626;">Room ?</span><br>
+            <span style="font-size:13px; color:#7f1d1d; font-weight:600;">마스터키 또는 강의실 비밀번호를 입력하세요.</span>
+        </div>
+        <div class="setting-container">
+            <div class="setting-group">
+                <input type="password" id="resetAuthInput" class="setting-input"
+                       style="text-align:center; font-size:20px; letter-spacing:4px;"
+                       placeholder="비밀번호 입력"
+                       onkeyup="if(event.key==='Enter') ui.confirmResetAuth()">
+            </div>
+        </div>
+        <div class="modal-actions" style="margin-top:22px;">
+            <button class="m-btn m-btn-later" onclick="ui.closeResetAuthModal()">취소</button>
+            <button class="m-btn" style="background:#ef4444; color:#fff; gap:8px;" onclick="ui.confirmResetAuth()">
+                <i class="fa-solid fa-trash-can"></i> 초기화 실행
+            </button>
+        </div>
+    </div>
+</div>
+
 <!-- 1. 리포트 정보 입력 팝업 (원래대로 복구) -->
     <div id="printInputModal" class="modal-overlay">
         <div class="modal-box" style="width: 400px;">

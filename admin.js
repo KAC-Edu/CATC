@@ -965,143 +965,71 @@ deactivateAllRooms: async function() {
 
 
 
-// [최종 수정] 리셋 시 교육생 퇴출용 resetKey를 포함한 초기화 로직
+// [수정] 리셋 실행 전 항상 비밀번호 확인 (소유자도 예외 없이)
 resetCourse: function() {
-    // 1. 현재 강의실이 선택되어 있는지 확인
     if (!state.room) {
         ui.showAlert("⚠️ 초기화할 강의실을 먼저 선택해야 합니다.");
         return;
     }
+    ui.openResetAuthModal();
+},
 
-    const MASTER_KEY = "13281";
-    const room = state.room;
+// [분리] 인증 완료 후 실제 초기화 실행 (ui.confirmResetAuth 에서 호출)
+_executeReset: function() {
+    if (!state.room) return;
+    const rPath = `courses/${state.room}`;
+    const newResetKey = "reset_" + Date.now();
 
-    // [수정] 권한 인증을 'DB 조회보다 먼저' 처리한다.
-    //  - 옵저버 모드라도 마스터키를 입력하면 초기화를 허용한다(무조건 차단 X).
-    //  - 정상 소유자(ownerSessionId 일치) 또는 직접 비번치고 들어간 방이면 추가 입력 없이 통과.
-    //  - 그 외에는 마스터키 또는 강의실 비밀번호를 확인한다.
-    //  - 마스터키가 맞으면 DB 권한 체크를 우회(bypass)하여 즉시 초기화한다(느린 응답으로 인한 퍼미션 에러 방지).
+    // 소유권 자동 복구: 초기화 직전 이 세션을 소유자로 등록해 쓰기 권한 충돌 예방
+    dataMgr.addOwnedRoom(state.room);
+    localStorage.setItem('last_owned_room', state.room);
 
-    const proceedConfirmAndReset = () => {
-        if (!confirm(`🚨 [위험] Room ${room}의 모든 데이터를 초기화하시겠습니까?\n이름, 질문, 신청 내역 등 모든 정보가 삭제되며 되돌릴 수 없습니다.`)) return;
-        doReset();
+    const freshRoom = {
+        settings: {
+            courseName: "", roomDetailName: "", period: null,
+            coordinatorName: null, subjects: null, password: null
+        },
+        status: {
+            professorName: "", roomStatus: "idle",
+            ownerSessionId: null, resetKey: newResetKey,
+            mode: 'qa', quizStep: 'none'
+        },
+        boardNotice: "", notice: "", coordNotice: ""
     };
 
-    // (A) 마스터키/비번을 먼저 묻는다. (옵저버 포함 — 마스터키면 강제 초기화 가능)
-    //     단, 내가 명백히 정상 소유 중인 방이면 불필요한 입력을 생략한다.
-    const ownsThisRoomLocally = !state.isObserver && dataMgr.isMyOwnedRoom(room);
+    const _boardEditor = document.getElementById('boardEditor');
+    if (_boardEditor) _boardEditor.innerHTML = "";
 
-    if (ownsThisRoomLocally) {
-        // 정상 소유자: 곧바로 확인 후 초기화 (세션ID는 doReset 직전 자동 복구)
-        proceedConfirmAndReset();
-        return;
-    }
+    // 보안 규칙 호환: 루트 set() 대신 하위 노드별 multi-path update
+    const resetUpdates = {
+        [`${rPath}/settings`]: freshRoom.settings,
+        [`${rPath}/status`]:   freshRoom.status,
+        [`${rPath}/boardNotice`]:        "",
+        [`${rPath}/notice`]:             "",
+        [`${rPath}/coordNotice`]:        "",
+        [`${rPath}/coordNoticeHistory`]: null,
+        [`${rPath}/students`]:            null,
+        [`${rPath}/internal_attendance`]: null,
+        [`${rPath}/questions`]:           null,
+        [`${rPath}/admin_actions`]:       null,
+        [`${rPath}/shuttle`]:             null,
+        [`${rPath}/dinner_skips`]:        null,
+        [`${rPath}/tablet_loans`]:        null,
+        [`${rPath}/connections`]:         null,
+        [`${rPath}/quizAnswers`]:         null,
+        [`${rPath}/expectedStudents`]:    null,
+        [`${rPath}/activeQuiz`]:          null,
+        [`${rPath}/quizFinalResults`]:    null,
+        [`${rPath}/quizBank`]:            null,
+        [`${rPath}/attendanceQR`]:        null
+    };
 
-    const inputPw = prompt(`🔐 Room ${room} 초기화 권한 확인\n마스터키 또는 해당 강의실 비밀번호를 입력하세요:`);
-    if (inputPw === null) return; // 취소
-
-    // (B) 마스터키 일치 → DB 권한 체크 우회, 즉시 초기화
-    if (inputPw === MASTER_KEY) {
-        proceedConfirmAndReset();
-        return;
-    }
-
-    // (C) 마스터키가 아니면 강의실 비밀번호와 대조 (DB status 조회)
-    firebase.database().ref(`courses/${room}/status`).once('value', snap => {
-        const st = snap.val() || {};
-        const isOwner = st.ownerSessionId === state.sessionId;
-        const roomPw = st.password || null;
-
-        if (isOwner || (roomPw && inputPw === roomPw)) {
-            proceedConfirmAndReset();
-        } else {
-            ui.showAlert("❌ 비밀번호가 올바르지 않습니다.");
-        }
-    }, err => {
-        ui.showAlert("권한 확인 중 오류가 발생했습니다. 마스터키로 다시 시도해 주세요.");
+    firebase.database().ref().update(resetUpdates).then(() => {
+        ui.showAlert(`✅ Room ${state.room}이 성공적으로 초기화되었습니다.`);
+        setTimeout(() => location.reload(), 800);
+    }).catch(err => {
+        ui.showAlert("초기화 실패: " + err.message);
     });
-
-    function doReset() {
-        if (!state.room) return;
-        const rPath = `courses/${state.room}`;
-        const newResetKey = "reset_" + Date.now();
-
-        // [소유권 자동 복구] 마스터키/옵저버 강제 초기화 등으로 현재 세션이 소유자가 아닐 수 있으므로,
-        //  초기화 직전에 이 방의 소유 세션을 현재 세션으로 맞춰 두어 쓰기 권한 충돌을 예방한다.
-        dataMgr.addOwnedRoom(state.room);
-        localStorage.setItem('last_owned_room', state.room);
-
-        // [완전 초기화 보강]
-        //  기존에는 알려진 하위 노드만 개별 null 처리했기 때문에, 누락된(또는 이후 추가된) 하위 경로가
-        //  남아 이전 차수 데이터가 잔존할 수 있었다. 이를 막기 위해 방 노드 전체를 한 번에 비운 뒤,
-        //  새 resetKey 와 함께 기본 상태/설정만 재구성한다. (모든 하위 경로가 확실히 소거됨)
-        const freshRoom = {
-            settings: {
-                courseName: "",
-                roomDetailName: "",
-                period: null,
-                coordinatorName: null,
-                subjects: null,
-                password: null
-            },
-            status: {
-                professorName: "",
-                roomStatus: "idle",      // 비어있음(미개설)으로 전환
-                ownerSessionId: null,    // 제어권 해제
-                resetKey: newResetKey,   // 교육생 강제 퇴출/유령 재등록 차단 신호
-                mode: 'qa',
-                quizStep: 'none'
-            },
-            // [버그수정] 초기화 시 강의 안내 보드(스케치보드)와 공지가 잔존하던 문제 해결
-            boardNotice: "",   // 강의 안내 보드(보라색 상단바) 내용 초기화
-            notice: "",        // 강사 공지 초기화
-            coordNotice: ""    // 운영부 공지 초기화
-        };
-
-        // [UI 즉시 반영] DB 초기화와 동시에 화면의 보드 에디터 내용도 즉시 비운다
-        //  (리스너 반영 지연/시점 어긋남으로 이전 글자가 잠시 남아 보이는 것 방지)
-        const _boardEditor = document.getElementById('boardEditor');
-        if (_boardEditor) _boardEditor.innerHTML = "";
-
-        // [권한 호환 초기화] 보안 규칙상 courses/$roomId 루트에는 .write 규칙이 없으므로
-        //  ref(rPath).set() 은 PERMISSION_DENIED 를 유발한다(하위 노드에만 쓰기 권한 존재).
-        //  → 루트 통 set() 대신, 규칙에 정의된 하위 노드별 multi-path update 로 초기화한다.
-        //    (update 의 각 경로는 개별 .write 규칙으로 평가되어 권한 충돌이 없다)
-        const resetUpdates = {
-            // 설정/상태 재구성 (.write: auth != null)
-            [`${rPath}/settings`]: freshRoom.settings,
-            [`${rPath}/status`]:   freshRoom.status,
-            // 공지류 초기화
-            [`${rPath}/boardNotice`]:        "",   // auth != null
-            [`${rPath}/notice`]:             "",   // auth != null
-            [`${rPath}/coordNotice`]:        "",   // .write: true
-            [`${rPath}/coordNoticeHistory`]: null, // .write: true
-            // 교육생/출결/신청 데이터 일괄 소거 (.write: true)
-            [`${rPath}/students`]:            null,
-            [`${rPath}/internal_attendance`]: null,
-            [`${rPath}/questions`]:           null,
-            [`${rPath}/admin_actions`]:       null,
-            [`${rPath}/shuttle`]:             null,
-            [`${rPath}/dinner_skips`]:        null,
-            [`${rPath}/tablet_loans`]:        null,
-            [`${rPath}/connections`]:         null,
-            [`${rPath}/quizAnswers`]:         null,
-            // auth != null 노드 소거
-            [`${rPath}/expectedStudents`]:    null,
-            [`${rPath}/activeQuiz`]:          null,
-            [`${rPath}/quizFinalResults`]:    null,
-            [`${rPath}/quizBank`]:            null,
-            [`${rPath}/attendanceQR`]:        null
-        };
-
-        firebase.database().ref().update(resetUpdates).then(() => {
-            ui.showAlert(`✅ Room ${state.room}이 성공적으로 초기화되었습니다.`);
-            // 화면 새로고침하여 대기 상태로 복귀
-            setTimeout(() => location.reload(), 800);
-        }).catch(err => {
-            ui.showAlert("초기화 실패: " + err.message);
-        });
-    } // doReset 끝
 },
 
 // [추가] 공지사항 관리창 열기
@@ -4488,6 +4416,61 @@ resetShuttleRequests: function() {
 
 
 // [강사 플랫폼 전용: 유관 시스템 보안 하이패스 함수]
+    // ── 강의실 초기화 인증 모달 ──
+    openResetAuthModal: function() {
+        const label = document.getElementById('resetAuthRoomLabel');
+        const input = document.getElementById('resetAuthInput');
+        if (label) label.innerText = `Room ${state.room}`;
+        if (input) input.value = '';
+        const modal = document.getElementById('resetAuthModal');
+        if (modal) modal.style.display = 'flex';
+        setTimeout(() => { if (input) input.focus(); }, 150);
+    },
+
+    closeResetAuthModal: function() {
+        const modal = document.getElementById('resetAuthModal');
+        if (modal) modal.style.display = 'none';
+        const input = document.getElementById('resetAuthInput');
+        if (input) input.value = '';
+    },
+
+    confirmResetAuth: async function() {
+        const MASTER_KEY = "13281";
+        const room = state.room;
+        if (!room) return;
+
+        const input = document.getElementById('resetAuthInput');
+        const inputPw = (input ? input.value : '').trim();
+        if (!inputPw) {
+            ui.showAlert("비밀번호를 입력해주세요.");
+            if (input) input.focus();
+            return;
+        }
+
+        // (A) 마스터키 일치 → 즉시 초기화
+        if (inputPw === MASTER_KEY) {
+            ui.closeResetAuthModal();
+            dataMgr._executeReset();
+            return;
+        }
+
+        // (B) DB의 강의실 비밀번호(btoa 인코딩)와 대조
+        try {
+            const snap = await firebase.database().ref(`courses/${room}/settings`).once('value');
+            const settings = snap.val() || {};
+            const storedPw = settings.password || btoa("7777"); // 미설정 시 기본값 7777
+            if (btoa(inputPw) === storedPw) {
+                ui.closeResetAuthModal();
+                dataMgr._executeReset();
+            } else {
+                ui.showAlert("❌ 비밀번호가 올바르지 않습니다.\n마스터키 또는 강의실 비밀번호를 확인해주세요.");
+                if (input) { input.value = ''; input.focus(); }
+            }
+        } catch(e) {
+            ui.showAlert("권한 확인 중 오류: " + e.message);
+        }
+    },
+
     goFamilySite: function(role, url) {
         // 1. 해당 역할의 보안 키를 생성 (포털에서 PIN 친 것과 동일한 효과)
         if(role !== 'none') {
