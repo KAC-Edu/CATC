@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>교육운영계획 변환기 | KAC</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" rel="stylesheet">
+<style>
+:root {
+    --navy: #003366;
+    --navy2: #0055aa;
+    --cyan: #00b4d8;
+    --amber: #FFB703;
+    --bg: #f0f4f8;
+    --card: #ffffff;
+    --text: #1e293b;
+    --sub: #64748b;
+    --border: #e2e8f0;
+    --green: #10b981;
+    --red: #ef4444;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Pretendard', sans-serif; }
+body { background: var(--bg); color: var(--text); min-height: 100vh; }
+
+/* 헤더 */
+.top-bar {
+    background: linear-gradient(135deg, var(--navy) 0%, var(--navy2) 100%);
+    padding: 18px 40px;
+    display: flex; align-items: center; justify-content: space-between;
+    box-shadow: 0 4px 20px rgba(0,51,102,0.3);
+}
+.top-bar .logo { color: white; font-size: 18px; font-weight: 800; display: flex; align-items: center; gap: 10px; }
+.top-bar .logo i { color: var(--cyan); }
+.top-bar .back-btn {
+    color: rgba(255,255,255,0.7); font-size: 13px; font-weight: 600;
+    text-decoration: none; display: flex; align-items: center; gap: 6px;
+    transition: color 0.2s;
+}
+.top-bar .back-btn:hover { color: white; }
+
+/* 메인 */
+.main { max-width: 960px; margin: 0 auto; padding: 40px 20px 80px; }
+
+.page-title { margin-bottom: 32px; }
+.page-title h1 { font-size: 28px; font-weight: 900; color: var(--navy); margin-bottom: 6px; }
+.page-title p  { font-size: 14px; color: var(--sub); }
+
+/* 스텝 카드 */
+.step-card {
+    background: var(--card);
+    border-radius: 20px;
+    border: 1.5px solid var(--border);
+    padding: 32px;
+    margin-bottom: 20px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.04);
+}
+.step-header {
+    display: flex; align-items: center; gap: 14px;
+    margin-bottom: 22px;
+}
+.step-num {
+    width: 36px; height: 36px; border-radius: 50%;
+    background: var(--navy); color: white;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px; font-weight: 900; flex-shrink: 0;
+}
+.step-num.done { background: var(--green); }
+.step-title { font-size: 17px; font-weight: 800; color: var(--navy); }
+.step-desc  { font-size: 13px; color: var(--sub); margin-top: 2px; }
+
+/* 업로드 존 */
+.upload-zone {
+    border: 2.5px dashed #cbd5e1;
+    border-radius: 16px;
+    padding: 48px 24px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: #f8fafc;
+    position: relative;
+}
+.upload-zone:hover, .upload-zone.drag { border-color: var(--navy2); background: #eff6ff; }
+.upload-zone i { font-size: 40px; color: #94a3b8; margin-bottom: 14px; display: block; }
+.upload-zone .uz-title { font-size: 16px; font-weight: 700; color: #475569; margin-bottom: 6px; }
+.upload-zone .uz-sub   { font-size: 13px; color: #94a3b8; }
+.upload-zone input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+
+/* 파일 선택됨 */
+.file-selected {
+    display: flex; align-items: center; gap: 14px;
+    padding: 16px 20px; background: #f0f7ff;
+    border-radius: 12px; border: 1.5px solid #bfdbfe;
+}
+.file-selected i { font-size: 28px; color: var(--navy2); }
+.file-selected .fname { font-size: 15px; font-weight: 700; color: var(--navy); }
+.file-selected .fsize { font-size: 12px; color: var(--sub); margin-top: 2px; }
+.file-selected .clear-btn {
+    margin-left: auto; width: 32px; height: 32px; border-radius: 50%;
+    border: none; background: #e2e8f0; color: #64748b;
+    cursor: pointer; font-size: 14px; display: flex; align-items: center; justify-content: center;
+    transition: 0.2s;
+}
+.file-selected .clear-btn:hover { background: #fee2e2; color: var(--red); }
+
+/* 버튼 */
+.btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 13px 28px; border-radius: 12px; border: none;
+    font-size: 15px; font-weight: 800; cursor: pointer; transition: all 0.2s;
+}
+.btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.btn-primary  { background: linear-gradient(135deg,var(--navy),var(--navy2)); color: white; box-shadow: 0 4px 14px rgba(0,51,102,0.25); }
+.btn-primary:not(:disabled):hover  { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0,51,102,0.3); }
+.btn-green    { background: linear-gradient(135deg,#059669,var(--green)); color: white; box-shadow: 0 4px 14px rgba(16,185,129,0.25); }
+.btn-green:not(:disabled):hover    { transform: translateY(-2px); }
+.btn-amber    { background: linear-gradient(135deg,#d97706,var(--amber)); color: white; box-shadow: 0 4px 14px rgba(255,183,3,0.25); }
+.btn-amber:not(:disabled):hover    { transform: translateY(-2px); }
+.btn-row { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 20px; }
+
+/* 미리보기 테이블 */
+.preview-wrap {
+    border-radius: 14px; border: 1.5px solid var(--border);
+    overflow: hidden; margin-top: 4px;
+}
+.preview-toolbar {
+    background: #f8fafc; padding: 12px 18px;
+    display: flex; align-items: center; justify-content: space-between;
+    border-bottom: 1px solid var(--border);
+    font-size: 13px; font-weight: 700; color: var(--sub);
+}
+.count-badge {
+    background: var(--navy); color: white;
+    padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 800;
+}
+.preview-scroll { max-height: 420px; overflow-y: auto; overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+thead th {
+    background: var(--navy); color: white;
+    padding: 11px 14px; text-align: left; font-weight: 700;
+    position: sticky; top: 0; white-space: nowrap;
+}
+tbody tr { border-bottom: 1px solid #f1f5f9; transition: background 0.1s; }
+tbody tr:hover { background: #f8fafc; }
+tbody td { padding: 10px 14px; color: var(--text); }
+tbody td.no   { color: var(--sub); font-weight: 700; width: 48px; }
+tbody td.name { font-weight: 700; min-width: 220px; }
+tbody td.date { color: #3b82f6; font-size: 12px; white-space: nowrap; }
+tbody td.prof, tbody td.coord { white-space: nowrap; }
+
+/* 상태 */
+.status-box {
+    padding: 14px 18px; border-radius: 12px;
+    font-size: 14px; font-weight: 700; display: flex; align-items: center; gap: 10px;
+    margin-top: 16px;
+}
+.status-box.ok   { background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; }
+.status-box.err  { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
+.status-box.info { background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; }
+
+/* 스피너 */
+.spinner { display: inline-block; width: 18px; height: 18px; border: 2px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: spin 0.7s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* 안내 박스 */
+.info-box {
+    background: #fffbeb; border: 1px solid #fde68a;
+    border-radius: 12px; padding: 14px 18px;
+    font-size: 13px; color: #92400e; line-height: 1.6;
+    display: flex; gap: 10px; align-items: flex-start;
+}
+.info-box i { flex-shrink: 0; margin-top: 1px; color: #d97706; }
+
+/* Firebase 섹션 */
+.firebase-card {
+    background: linear-gradient(135deg, #f0f7ff, #eff6ff);
+    border: 2px solid #bfdbfe; border-radius: 20px;
+    padding: 32px; margin-bottom: 20px;
+    box-shadow: 0 4px 16px rgba(59,130,246,0.08);
+}
+.firebase-card .step-title { color: #1e40af; }
+
+/* 진행 표시 */
+.progress-row {
+    display: flex; gap: 0; margin-bottom: 32px;
+    position: relative;
+}
+.progress-row::before {
+    content: ''; position: absolute; top: 18px; left: 18px; right: 18px;
+    height: 2px; background: #e2e8f0; z-index: 0;
+}
+.prog-step { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 8px; position: relative; z-index: 1; }
+.prog-dot {
+    width: 36px; height: 36px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; font-weight: 800;
+    background: #e2e8f0; color: #94a3b8;
+    border: 3px solid #f0f4f8; transition: all 0.3s;
+}
+.prog-dot.active { background: var(--navy); color: white; box-shadow: 0 0 0 4px rgba(0,51,102,0.15); }
+.prog-dot.done   { background: var(--green); color: white; }
+.prog-label { font-size: 12px; font-weight: 700; color: #94a3b8; text-align: center; }
+.prog-label.active { color: var(--navy); }
+.prog-label.done   { color: var(--green); }
+</style>
+</head>
+<body>
+
+<div class="top-bar">
+    <div class="logo"><i class="fa-solid fa-file-excel"></i> 교육운영계획 변환기</div>
+    <a href="admin.html" class="back-btn"><i class="fa-solid fa-chevron-left"></i> 강사 플랫폼으로</a>
+</div>
+
+<div class="main">
+    <div class="page-title">
+        <h1>📋 연간 교육운영계획 → Firebase 업로드</h1>
+        <p>엑셀 파일을 변환하여 내용을 확인한 뒤, Firebase에 직접 업로드합니다.</p>
+    </div>
+
+    <!-- 진행 단계 표시 -->
+    <div class="progress-row">
+        <div class="prog-step">
+            <div class="prog-dot active" id="pd1"><i class="fa-solid fa-upload"></i></div>
+            <div class="prog-label active" id="pl1">엑셀 업로드</div>
+        </div>
+        <div class="prog-step">
+            <div class="prog-dot" id="pd2"><i class="fa-solid fa-magnifying-glass"></i></div>
+            <div class="prog-label" id="pl2">내용 확인</div>
+        </div>
+        <div class="prog-step">
+            <div class="prog-dot" id="pd3"><i class="fa-solid fa-cloud-arrow-up"></i></div>
+            <div class="prog-label" id="pl3">Firebase 적용</div>
+        </div>
+    </div>
+
+    <!-- STEP 1: 파일 업로드 -->
+    <div class="step-card" id="step1-card">
+        <div class="step-header">
+            <div class="step-num" id="sn1">1</div>
+            <div>
+                <div class="step-title">엑셀 파일 선택</div>
+                <div class="step-desc">2026년도_교육운영계획.xlsx 파일을 선택하세요</div>
+            </div>
+        </div>
+
+        <div id="upload-zone-wrap">
+            <div class="upload-zone" id="uploadZone"
+                ondragover="event.preventDefault(); this.classList.add('drag')"
+                ondragleave="this.classList.remove('drag')"
+                ondrop="handleDrop(event)">
+                <i class="fa-solid fa-file-excel" style="color:#16a34a;"></i>
+                <div class="uz-title">클릭하거나 파일을 여기에 드래그하세요</div>
+                <div class="uz-sub">.xlsx 파일만 지원 | 총괄표 시트 자동 인식</div>
+                <input type="file" accept=".xlsx" onchange="handleFile(this.files[0])">
+            </div>
+        </div>
+
+        <div id="file-info-wrap" style="display:none;"></div>
+
+        <div class="btn-row">
+            <button class="btn btn-primary" id="parseBtn" onclick="parseExcel()" disabled>
+                <i class="fa-solid fa-wand-magic-sparkles"></i> 변환 시작
+            </button>
+        </div>
+    </div>
+
+    <!-- STEP 2: 미리보기 -->
+    <div class="step-card" id="step2-card" style="display:none;">
+        <div class="step-header">
+            <div class="step-num" id="sn2">2</div>
+            <div>
+                <div class="step-title">변환 결과 확인</div>
+                <div class="step-desc">아래 데이터가 Firebase에 저장될 내용입니다. 이상 없으면 업로드하세요.</div>
+            </div>
+        </div>
+
+        <div id="preview-area"></div>
+
+        <div class="btn-row">
+            <button class="btn btn-amber" onclick="downloadJson()">
+                <i class="fa-solid fa-download"></i> JSON 백업 다운로드
+            </button>
+            <button class="btn btn-green" id="uploadBtn" onclick="uploadToFirebase()">
+                <i class="fa-solid fa-cloud-arrow-up"></i> Firebase에 업로드
+            </button>
+        </div>
+    </div>
+
+    <!-- STEP 3: 완료 -->
+    <div class="step-card" id="step3-card" style="display:none;">
+        <div class="step-header">
+            <div class="step-num done" id="sn3"><i class="fa-solid fa-check"></i></div>
+            <div>
+                <div class="step-title" style="color:var(--green);">업로드 완료</div>
+                <div class="step-desc">강사 플랫폼에서 해당 주차 과정이 자동으로 배치됩니다.</div>
+            </div>
+        </div>
+        <div id="result-area"></div>
+        <div class="btn-row">
+            <button class="btn btn-primary" onclick="reset()">
+                <i class="fa-solid fa-rotate-left"></i> 처음으로
+            </button>
+            <a href="admin.html" class="btn btn-green" style="text-decoration:none;">
+                <i class="fa-solid fa-arrow-right"></i> 강사 플랫폼으로 이동
+            </a>
+        </div>
+    </div>
+
+</div>
+
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+<script src="config.js"></script>
+
+<script>
+/* ══════════════════════════════════════════
+   상태
+══════════════════════════════════════════ */
+let selectedFile = null;
+let parsedCourses = [];
+
+/* ══════════════════════════════════════════
+   파일 처리
+══════════════════════════════════════════ */
+function handleDrop(e) {
+    e.preventDefault();
+    document.getElementById('uploadZone').classList.remove('drag');
+    const f = e.dataTransfer.files[0];
+    if (f && f.name.endsWith('.xlsx')) handleFile(f);
+    else alert('xlsx 파일만 지원합니다.');
+}
+
+function handleFile(file) {
+    if (!file) return;
+    selectedFile = file;
+
+    const sizeKB = (file.size / 1024).toFixed(1);
+    document.getElementById('upload-zone-wrap').style.display = 'none';
+    document.getElementById('file-info-wrap').style.display  = 'block';
+    document.getElementById('file-info-wrap').innerHTML = `
+        <div class="file-selected">
+            <i class="fa-solid fa-file-excel" style="color:#16a34a;"></i>
+            <div>
+                <div class="fname">${file.name}</div>
+                <div class="fsize">${sizeKB} KB</div>
+            </div>
+            <button class="clear-btn" onclick="clearFile()"><i class="fa-solid fa-xmark"></i></button>
+        </div>`;
+    document.getElementById('parseBtn').disabled = false;
+}
+
+function clearFile() {
+    selectedFile = null;
+    document.getElementById('upload-zone-wrap').style.display = 'block';
+    document.getElementById('file-info-wrap').style.display  = 'none';
+    document.getElementById('parseBtn').disabled = true;
+    document.getElementById('step2-card').style.display = 'none';
+    setProgress(1);
+}
+
+/* ══════════════════════════════════════════
+   엑셀 파싱
+══════════════════════════════════════════ */
+function excelDate(v) {
+    let n = typeof v === 'number' ? v : parseFloat(v);
+    if (!isNaN(n) && n > 40000) {
+        const ms = (n - 25569) * 86400 * 1000;
+        const d  = new Date(ms);
+        return `${d.getUTCFullYear()}-${String(d.getUTCMonth()+1).padStart(2,'0')}-${String(d.getUTCDate()).padStart(2,'0')}`;
+    }
+    return null;
+}
+
+function getMondayOf(dateStr) {
+    const d   = new Date(dateStr + 'T00:00:00Z');
+    const day = d.getUTCDay();
+    d.setUTCDate(d.getUTCDate() + (day === 0 ? -6 : 1 - day));
+    return d.toISOString().split('T')[0];
+}
+
+async function parseExcel() {
+    if (!selectedFile) return;
+    const btn = document.getElementById('parseBtn');
+    btn.innerHTML = '<span class="spinner"></span> 분석 중...';
+    btn.disabled = true;
+
+    try {
+        const buf = await selectedFile.arrayBuffer();
+        const wb  = XLSX.read(buf, { type:'array', cellText:false, cellDates:false });
+
+        // ── 시트 접근: 인덱스 기반으로 한글 키 불일치 완전 우회
+        const sheetIdx  = wb.SheetNames.findIndex(n => n.replace(/\s/g,'').includes('총괄'));
+        const useIdx    = sheetIdx >= 0 ? sheetIdx : 0;
+        const sheetName = wb.SheetNames[useIdx];
+        const ws        = Object.values(wb.Sheets)[useIdx];
+
+        if (!ws) throw new Error(`시트를 찾을 수 없습니다.\n등록된 시트: ${wb.SheetNames.join(', ')}`);
+        if (!ws['!ref']) ws['!ref'] = XLSX.utils.encode_range({s:{c:0,r:0},e:{c:25,r:499}});
+
+        const range = XLSX.utils.decode_range(ws['!ref']);
+
+        // ── 헤더 탐색 (상위 30행)
+        let headerRow = -1;
+        const colMap  = {};
+        for (let r = range.s.r; r <= Math.min(range.s.r + 30, range.e.r); r++) {
+            const norm = {};
+            for (let c = range.s.c; c <= range.e.c; c++) {
+                const cell = ws[XLSX.utils.encode_cell({r,c})];
+                if (cell && cell.v != null)
+                    norm[c] = String(cell.v).replace(/[\r\n\s()（）]/g,'');
+            }
+            const vals = Object.values(norm);
+            if (vals.includes('연번') && vals.includes('과정명')) {
+                headerRow = r;
+                for (const [c,v] of Object.entries(norm)) {
+                    const ci = parseInt(c);
+                    if (v === '연번')               colMap.no    = ci;
+                    if (v === '과정명')             colMap.name  = ci;
+                    if (v === '담임교수' && colMap.prof  == null) colMap.prof  = ci;
+                    if (v.includes('교육일정확인')) colMap.coord = ci;
+                    if (v === '교육시작일')         colMap.start = ci;
+                    if (v === '교육종료일')         colMap.end   = ci;
+                }
+                break;
+            }
+        }
+        if (headerRow < 0) throw new Error('헤더 행을 찾을 수 없습니다.\n총괄표 시트에 "연번"과 "과정명" 컬럼이 필요합니다.');
+
+        // ── 데이터 파싱
+        const courses = [];
+        for (let r = headerRow + 1; r <= range.e.r; r++) {
+            try {
+                const get = c => ws[XLSX.utils.encode_cell({r,c})];
+                const noCell = get(colMap.no);
+                if (!noCell) continue;
+                const no = parseInt(noCell.v);
+                if (isNaN(no)) continue;
+                const nameCell = get(colMap.name);
+                if (!nameCell || !nameCell.v) continue;
+                const startDate = excelDate(get(colMap.start)?.v);
+                const endDate   = excelDate(get(colMap.end)?.v);
+                if (!startDate || !endDate) continue;
+                const profRaw  = get(colMap.prof)?.v  ? String(get(colMap.prof).v)  : '';
+                const coordRaw = get(colMap.coord)?.v ? String(get(colMap.coord).v) : '';
+                courses.push({
+                    no, name: String(nameCell.v).trim(),
+                    startDate, endDate,
+                    period:  `${startDate} ~ ${endDate}`,
+                    prof:    profRaw.split(/[,，、\/]/)[0].trim(),
+                    coord:   coordRaw.replace(/[\r\n]/g,'').trim(),
+                    weekKey: getMondayOf(startDate)
+                });
+            } catch(e) { /* 개별 행 오류 무시 */ }
+        }
+        if (courses.length === 0) throw new Error('파싱된 과정이 없습니다.');
+
+        parsedCourses = courses;
+        showPreview(courses, sheetName);
+        setProgress(2);
+
+    } catch(err) {
+        alert('❌ 변환 오류:\n' + err.message);
+    } finally {
+        btn.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i> 변환 시작';
+        btn.disabled  = false;
+    }
+}
+
+/* ══════════════════════════════════════════
+   미리보기 렌더링
+══════════════════════════════════════════ */
+function showPreview(courses, sheetName) {
+    const area = document.getElementById('preview-area');
+
+    // 날짜 범위 통계
+    const dates   = courses.map(c => c.startDate).sort();
+    const minDate = dates[0];
+    const maxDate = courses.map(c => c.endDate).sort().pop();
+
+    area.innerHTML = `
+        <div class="status-box ok" style="margin-bottom:16px;">
+            <i class="fa-solid fa-circle-check"></i>
+            총 <b>${courses.length}개</b> 과정 파싱 완료 &nbsp;|&nbsp; 시트: <b>${sheetName}</b>
+            &nbsp;|&nbsp; 기간: <b>${minDate} ~ ${maxDate}</b>
+        </div>
+        <div class="info-box" style="margin-bottom:16px;">
+            <i class="fa-solid fa-circle-info"></i>
+            <span>내용을 확인하세요. 이상 없으면 <b>Firebase에 업로드</b> 버튼을 누르면 해당 주차 강의실에 자동 배치됩니다.</span>
+        </div>
+        <div class="preview-wrap">
+            <div class="preview-toolbar">
+                <span>과정 목록 미리보기</span>
+                <span class="count-badge">${courses.length}개</span>
+            </div>
+            <div class="preview-scroll">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>No.</th>
+                            <th>과정명</th>
+                            <th>시작일</th>
+                            <th>종료일</th>
+                            <th>담임교수</th>
+                            <th>담당자</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${courses.map(c => `
+                        <tr>
+                            <td class="no">${c.no}</td>
+                            <td class="name">${c.name}</td>
+                            <td class="date">${c.startDate}</td>
+                            <td class="date">${c.endDate}</td>
+                            <td class="prof">${c.prof || '-'}</td>
+                            <td class="coord">${c.coord || '-'}</td>
+                        </tr>`).join('')}
+                    </tbody>
+                </table>
+            </div>
+        </div>`;
+
+    document.getElementById('step2-card').style.display = 'block';
+    document.getElementById('step2-card').scrollIntoView({behavior:'smooth', block:'start'});
+}
+
+/* ══════════════════════════════════════════
+   JSON 백업 다운로드
+══════════════════════════════════════════ */
+function downloadJson() {
+    if (!parsedCourses.length) return;
+    const blob = new Blob([JSON.stringify(parsedCourses, null, 2)], {type:'application/json'});
+    const a    = document.createElement('a');
+    a.href     = URL.createObjectURL(blob);
+    a.download = `kac_plan_${new Date().toISOString().split('T')[0]}.json`;
+    a.click();
+}
+
+/* ══════════════════════════════════════════
+   Firebase 업로드
+══════════════════════════════════════════ */
+async function uploadToFirebase() {
+    if (!parsedCourses.length) return;
+
+    const btn = document.getElementById('uploadBtn');
+    btn.innerHTML = '<span class="spinner"></span> 업로드 중...';
+    btn.disabled  = true;
+
+    try {
+        // 1. 전체 과정 데이터 저장
+        await firebase.database().ref('system/annualPlan').set(parsedCourses);
+
+        // 2. 현재 주차에 맞는 과정 자동 배치
+        const assigned = await assignRooms(parsedCourses);
+
+        // 완료
+        setProgress(3);
+        document.getElementById('step3-card').style.display = 'block';
+        document.getElementById('result-area').innerHTML = `
+            <div class="status-box ok" style="margin-bottom:12px;">
+                <i class="fa-solid fa-circle-check"></i>
+                <b>${parsedCourses.length}개</b> 과정 데이터 저장 완료
+            </div>
+            <div class="status-box info">
+                <i class="fa-solid fa-calendar-check"></i>
+                이번 주 배치 완료: <b>${assigned.join(' | ') || '해당 주차 과정 없음'}</b>
+            </div>`;
+        document.getElementById('step3-card').scrollIntoView({behavior:'smooth', block:'start'});
+
+    } catch(err) {
+        alert('❌ Firebase 업로드 오류:\n' + err.message);
+        btn.innerHTML = '<i class="fa-solid fa-cloud-arrow-up"></i> Firebase에 업로드';
+        btn.disabled  = false;
+    }
+}
+
+/* ══════════════════════════════════════════
+   주차 자동 배치 (admin.js _assignRooms 동일 로직)
+══════════════════════════════════════════ */
+async function assignRooms(courses) {
+    const ROOMS = ['A','B','C'];
+    const today = new Date().toISOString().split('T')[0];
+
+    // 이번 주 월요일
+    const d   = new Date(today + 'T00:00:00Z');
+    const day = d.getUTCDay();
+    d.setUTCDate(d.getUTCDate() + (day === 0 ? -6 : 1 - day));
+    const thisWeek = d.toISOString().split('T')[0];
+
+    // 이번 주 진행 과정 필터
+    const thisWeekCourses = courses.filter(c => c.startDate <= today && c.endDate >= today);
+
+    const updates = {};
+
+    // Room A/B/C 초기화
+    for (const r of ROOMS) {
+        updates[`courses/${r}/settings/courseName`]      = '';
+        updates[`courses/${r}/settings/period`]          = '';
+        updates[`courses/${r}/settings/coordinatorName`] = null;
+        updates[`courses/${r}/status/professorName`]     = '';
+        updates[`courses/${r}/status/roomStatus`]        = 'idle';
+    }
+
+    // 이번 주 과정 배치
+    const assigned = [];
+    thisWeekCourses.slice(0, ROOMS.length).forEach((c, i) => {
+        const r = ROOMS[i];
+        updates[`courses/${r}/settings/courseName`]      = c.name;
+        updates[`courses/${r}/settings/period`]          = c.period;
+        updates[`courses/${r}/settings/coordinatorName`] = c.coord;
+        updates[`courses/${r}/status/professorName`]     = c.prof;
+        updates[`courses/${r}/status/roomStatus`]        = 'active';
+        assigned.push(`Room ${r}: ${c.name}`);
+    });
+
+    await firebase.database().ref().update(updates);
+    return assigned;
+}
+
+/* ══════════════════════════════════════════
+   진행 단계 UI
+══════════════════════════════════════════ */
+function setProgress(step) {
+    [1,2,3].forEach(i => {
+        const dot   = document.getElementById(`pd${i}`);
+        const label = document.getElementById(`pl${i}`);
+        dot.className   = 'prog-dot'   + (i < step ? ' done' : i === step ? ' active' : '');
+        label.className = 'prog-label' + (i < step ? ' done' : i === step ? ' active' : '');
+    });
+    if (step >= 2) document.getElementById('sn2').className = 'step-num' + (step > 2 ? ' done' : '');
+    if (step >= 3) document.getElementById('sn3').className = 'step-num done';
+}
+
+function reset() {
+    parsedCourses = [];
+    selectedFile  = null;
+    document.getElementById('upload-zone-wrap').style.display = 'block';
+    document.getElementById('file-info-wrap').style.display   = 'none';
+    document.getElementById('parseBtn').disabled = true;
+    document.getElementById('step2-card').style.display = 'none';
+    document.getElementById('step3-card').style.display = 'none';
+    document.getElementById('preview-area').innerHTML = '';
+    document.getElementById('result-area').innerHTML  = '';
+    setProgress(1);
+    window.scrollTo({top:0, behavior:'smooth'});
+}
+</script>
+</body>
+</html>
