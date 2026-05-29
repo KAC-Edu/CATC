@@ -21,24 +21,30 @@
 
 /* 메인 테이블 스타일 수정 */
         .main-table { 
-            width: 100%; 
+            width: auto;                 /* 고정 열폭 합계만큼만 차지 */
             border-collapse: collapse; 
             font-size: 11px; 
             table-layout: fixed; /* 모든 열 너비를 고정합니다 */
             word-break: break-all;
+            margin: 0 auto;
         }
         .main-table th, .main-table td { 
             border: 1px solid #000; 
-            padding: 8px 2px; 
+            padding: 4px 2px; 
             text-align: center; 
             overflow: hidden; /* 내용이 넘쳐도 틀이 깨지지 않게 합니다 */
+            height: 44px;     /* [고정] 출석 여부와 무관하게 행 높이 고정 */
         }
-        .main-table th { background: #f8fafc; height: 35px; }
+        .main-table th { background: #f8fafc; height: 38px; }
         
-        /* 열별 너비 지정 */
-        .no-col { width: 35px; }   /* 번호 칸 */
-        .name-col { width: 75px; font-weight: bold; } /* 성명 칸 */
-        /* 나머지 날짜 칸들은 남은 공간을 똑같이 나눠 갖습니다 */
+        /* 열별 너비 고정 (출석 여부와 무관하게 동일 폭 유지) */
+        .no-col { width: 34px; }
+        .name-col { width: 92px; font-weight: bold; }
+        .day-col { width: 94px; }
+
+        /* 주차 페이지/라벨 */
+        .sheet-container { margin-bottom: 28px; }
+        .week-label { display:inline-block; font-size:13px; font-weight:800; color:#1e3a8a; margin:4px 0 12px; padding:3px 12px; border:1px solid #1e3a8a; border-radius:14px; }
         
         /* 도장 스타일 */
         .stamp { color: #dc2626; font-weight: 900; border: 2px solid #dc2626; border-radius: 50%; width: 22px; height: 22px; display: inline-flex; align-items: center; justify-content: center; font-size: 10px; transform: rotate(-10deg); }
@@ -49,12 +55,16 @@
             .sheet-container { box-shadow: none; margin: 0; border: none; padding: 10mm 15mm; }
             /* A4 페이지 설정 */
             @page { size: A4 portrait; margin: 10mm 15mm; }
+            /* [신규] 주차별 페이지 자동 분할 — 다음 주는 새 장에서 이어 출력 */
+            .sheet-container { page-break-after: always; }
+            .sheet-container:last-child { page-break-after: auto; }
             /* 테이블 헤더 반복 (여러 페이지) */
             thead { display: table-header-group; }
             tfoot { display: table-footer-group; }
             tr { page-break-inside: avoid; }
             /* 결재란이 페이지 넘어가지 않도록 */
             .sign-area { page-break-inside: avoid; }
+            * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
         }
     </style>
 </head>
@@ -64,36 +74,9 @@
         <button onclick="window.print()" style="padding:10px 30px; background:#003366; color:white; border:none; border-radius:5px; cursor:pointer; font-weight:bold;">출석부 인쇄하기 (A4)</button>
     </div>
 
-    <div class="sheet-container" id="print-area">
-        <div class="title">교 육 생 출 석 부</div>
-        
-        <div style="margin-bottom:10px; font-weight:bold;">
-            과정명: <span id="courseName">-</span><br>
-            기간: <span id="coursePeriod">-</span>
-        </div>
-
-        <div class="sign-area">
-            <table class="sign-table">
-                <tr><td rowspan="2" style="width:20px; background:#eee;">결<br>재</td><td>과정담당</td><td>담임교수</td></tr>
-                <tr>
-                    <td class="sign-box" onclick="applySign('coord')"><div id="sign-coord">-</div></td>
-                    <td class="sign-box" onclick="applySign('prof')"><div id="sign-prof">-</div></td>
-                </tr>
-            </table>
-        </div>
-
-        <table class="main-table">
-            <thead>
-                <tr id="date-header">
-                    <th>No</th>
-                    <th>성명</th>
-                    <!-- 날짜 칸이 자동으로 생성됩니다 -->
-                </tr>
-            </thead>
-            <tbody id="attendance-body">
-                <!-- 수강생 목록이 자동으로 생성됩니다 -->
-            </tbody>
-        </table>
+    <!-- 주차별 출석부 페이지가 자동 생성됩니다 -->
+    <div id="print-area">
+        <div id="sheets-root"></div>
     </div>
 
 
@@ -102,6 +85,7 @@
     let courseInfo = {};
     let dateArray = [];
     let SHEET_ROOM = '';   // [수정] init 외의 함수(renderTable)에서도 방 번호를 참조할 수 있도록 전역 보관
+    let HEADER = { courseName:'', period:'', coordName:'', profName:'' }; // [신규] 주차 페이지 공통 헤더 정보
 
     // 파이어베이스 데이터베이스 참조 (config.js 로드 후 사용 가능)
     const db = firebase.database();
@@ -127,24 +111,14 @@ async function init() {
     const courseInfo = setSnap.val() || {};
     const roomStatus = statSnap.val() || {};
 
-    // [화면 연동] 상단 정보 표시
-    document.getElementById('courseName').innerText = courseInfo.courseName || roomFromUrl;
-    document.getElementById('coursePeriod').innerText = courseInfo.period || "-";
+    // [수정] 주차별 페이지에서 반복 사용하기 위해 헤더 정보를 전역에 보관
+    HEADER.courseName = courseInfo.courseName || roomFromUrl;
+    HEADER.period     = courseInfo.period || "-";
+    HEADER.coordName  = courseInfo.coordinatorName || "-";
+    HEADER.profName   = roomStatus.professorName ? roomStatus.professorName + " 교수" : "-";
 
-    // [화면 연동] 결재란 담당자/교수 자동 입력
-    document.getElementById('sign-coord').innerText = courseInfo.coordinatorName || "-";
-    document.getElementById('sign-prof').innerText = roomStatus.professorName ? roomStatus.professorName + " 교수" : "-";
-
-    // 3. 날짜 헤더 생성 (월~금)
+    // 3. 전체 평일 날짜 배열 생성 (월~금) — 이후 주 단위로 분할
     dateArray = generateDates(courseInfo.period);
-    const header = document.getElementById('date-header');
-    header.innerHTML = '<th class="no-col">No</th><th class="name-col">성명</th>';
-    
-    dateArray.forEach(d => {
-        const th = document.createElement('th');
-        th.innerHTML = d.split('-')[1] + '/' + d.split('-')[2] + '<br>' + getDayName(d);
-        header.appendChild(th);
-    });
 
     // 4. [중요] 해당 방의 수강생 명단 및 출석 데이터만 실시간 감시
     db.ref(`courses/${roomFromUrl}/students`).on('value', studentSnap => {
@@ -165,8 +139,9 @@ async function init() {
 
 
 function renderTable(studentsRaw, attendanceData) {
-        const tbody = document.getElementById('attendance-body');
-        tbody.innerHTML = ""; 
+        const root = document.getElementById('sheets-root');
+        if (!root) return;
+        root.innerHTML = "";
 
         const uniqueStudentsMap = new Map();
         Object.values(studentsRaw).forEach(s => {
@@ -180,47 +155,109 @@ function renderTable(studentsRaw, attendanceData) {
         const sortedStudents = Array.from(uniqueStudentsMap.values()).sort((a, b) => a.name.localeCompare(b.name));
 
         if (sortedStudents.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="${dateArray.length + 2}" style="padding:50px; color:#999;">현재 입교 완료된 교육생이 없습니다.</td></tr>`;
+            root.innerHTML = `<div class="sheet-container"><div class="title">교 육 생 출 석 부</div><div style="padding:50px; color:#999; text-align:center;">현재 입교 완료된 교육생이 없습니다.</div></div>`;
             return;
         }
 
         // expectedStudents 데이터 로드 (없어도 렌더링 진행)
         db.ref(`courses/${SHEET_ROOM}/expectedStudents`).once('value', expSnap => {
-            const expectedList = expSnap.val() || [];
-        
-        sortedStudents.forEach((s, idx) => {
-            const tr = document.createElement('tr');
             const rawList = expSnap.val();
-            const isExpected = rawList && (Array.isArray(rawList) 
+
+            // [신규] 전체 기간을 1주일(월~금) 단위로 분할하여 각각 별도 페이지로 출력
+            const weeks = chunkDatesByWeek(dateArray);
+            const pages = weeks.length ? weeks : [[]];
+            const totalPages = pages.length;
+
+            pages.forEach((weekDates, wIdx) => {
+                root.appendChild(buildWeekPage(weekDates, wIdx, totalPages, sortedStudents, attendanceData, rawList));
+            });
+        });
+    }
+
+    // [신규] 평일 날짜 배열을 '주(월요일 기준)' 단위로 묶는다
+    function chunkDatesByWeek(dates) {
+        const groups = [];
+        let curKey = null, cur = null;
+        dates.forEach(d => {
+            const dt = new Date(d + 'T00:00:00');
+            const monday = new Date(dt);
+            const dow = (dt.getDay() + 6) % 7; // 월=0 ... 일=6
+            monday.setDate(dt.getDate() - dow);
+            const key = `${monday.getFullYear()}-${monday.getMonth()}-${monday.getDate()}`;
+            if (key !== curKey) { cur = []; groups.push(cur); curKey = key; }
+            cur.push(d);
+        });
+        return groups;
+    }
+
+    // [신규] 한 주(週) 분량의 출석부 페이지(헤더+결재란+표)를 생성. 헤더/결재란은 매 페이지 반복.
+    function buildWeekPage(weekDates, wIdx, totalPages, students, attendanceData, rawList) {
+        const page = document.createElement('div');
+        page.className = 'sheet-container';
+
+        const pageInfo = totalPages > 1 ? ` (${wIdx + 1}/${totalPages} 주차)` : '';
+        const weekRange = weekDates.length
+            ? `${weekDates[0].slice(5).replace('-', '/')} ~ ${weekDates[weekDates.length - 1].slice(5).replace('-', '/')}`
+            : '';
+
+        const head = document.createElement('div');
+        head.innerHTML = `
+            <div class="title">교 육 생 출 석 부${pageInfo}</div>
+            <div style="margin-bottom:10px; font-weight:bold;">
+                과정명: ${HEADER.courseName}<br>
+                기간: ${HEADER.period}
+            </div>
+            ${weekRange ? `<div class="week-label">${weekRange}</div>` : ''}
+            <div class="sign-area">
+                <table class="sign-table">
+                    <tr><td rowspan="2" style="width:20px; background:#eee;">결<br>재</td><td>과정담당</td><td>담임교수</td></tr>
+                    <tr>
+                        <td class="sign-box" onclick="applySign('coord')"><div class="sign-coord">${HEADER.coordName}</div></td>
+                        <td class="sign-box" onclick="applySign('prof')"><div class="sign-prof">${HEADER.profName}</div></td>
+                    </tr>
+                </table>
+            </div>`;
+        page.appendChild(head);
+
+        const table = document.createElement('table');
+        table.className = 'main-table';
+        // [고정] 열 폭 합계만큼 표 너비 고정 → 모든 페이지의 칸 크기 동일
+        table.style.width = (34 + 92 + 94 * weekDates.length) + 'px';
+
+        let cols = '<col class="no-col"><col class="name-col">';
+        weekDates.forEach(() => { cols += '<col class="day-col">'; });
+
+        let thead = '<tr><th class="no-col">No</th><th class="name-col">성명</th>';
+        weekDates.forEach(d => {
+            thead += `<th class="day-col">${d.split('-')[1]}/${d.split('-')[2]}<br>${getDayName(d)}</th>`;
+        });
+        thead += '</tr>';
+
+        let tbody = '';
+        students.forEach((s, idx) => {
+            const isExpected = rawList && (Array.isArray(rawList)
                 ? rawList.includes(s.name)
                 : Object.values(rawList).includes(s.name));
             const icon = isExpected
                 ? '<i class="fa-solid fa-book-open" title="명단 등록" style="font-size:12px; color:#059669; margin-right:4px;"></i>'
                 : '<i class="fa-solid fa-qrcode" title="QR 신규 입교" style="font-size:12px; color:#059669; margin-right:4px;"></i>';
-            tr.innerHTML = `<td>${idx + 1}</td><td class="name-col">${icon}${s.name}</td>`;
-
-            dateArray.forEach(d => {
-                const td = document.createElement('td');
-                // [수정] 저장 키 표기 차이(전화번호 형식/공백)에 강인하게 출석 기록을 조회
+            let row = `<td>${idx + 1}</td><td class="name-col">${icon}${s.name}</td>`;
+            weekDates.forEach(d => {
                 const info = findAttendanceRecord(attendanceData[d], s.name, s.phone);
-
                 if (info) {
-                    const displayTime = (typeof info === 'object') ? (info.time || '') : '';
+                    // [간소화] 빨간 도장(출석) + 인증번호(Auth ID)만 표시 — 시간 등 부가 텍스트 제거
                     const authId = (info && info.authId) ? info.authId : '';
-
-                    td.innerHTML = `
-                        <div style="display:flex; flex-direction:column; align-items:center; gap:1px;">
-                            <div class="stamp">출석</div>
-                            <div style="font-size:8px; color:#999; font-weight:normal; line-height:1;">${displayTime}</div>
-                            <div style="font-size:7px; color:#ccc; font-weight:normal; line-height:1;">${authId}</div>
-                        </div>
-                    `;
+                    row += `<td><div style="display:flex; flex-direction:column; align-items:center; gap:2px;"><div class="stamp">출석</div><div style="font-size:7px; color:#999; font-weight:normal; line-height:1;">${authId}</div></div></td>`;
+                } else {
+                    row += `<td></td>`;
                 }
-                tr.appendChild(td);
             });
-            tbody.appendChild(tr);
-        }); // sortedStudents.forEach 끝
-        }); // expectedStudents once 끝
+            tbody += `<tr>${row}</tr>`;
+        });
+
+        table.innerHTML = `<colgroup>${cols}</colgroup><thead>${thead}</thead><tbody>${tbody}</tbody>`;
+        page.appendChild(table);
+        return page;
     }
 
     // [신규] 해당 일자의 출석 데이터에서 학생 기록을 찾는다 (이름_전화번호뒷4자리 기준, 키 표기 차이 흡수)
@@ -267,9 +304,9 @@ function renderTable(studentsRaw, attendanceData) {
         // [수정] 출결 저장 측과 동일한 '로컬 기준 YYYY-MM-DD'로 생성 (UTC 변환으로 인한 날짜 어긋남 방지)
         const fmt = dt => `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`;
 
-        // 안전장치: 최대 30일까지만 생성 (무한루프 방지)
+        // 안전장치: 최대 200일까지 생성 (장기 과정 대응, 무한루프 방지)
         let safety = 0;
-        while (current <= end && safety < 30) {
+        while (current <= end && safety < 200) {
             const day = current.getDay();
             if (day !== 0 && day !== 6) { // 토, 일 제외
                 result.push(fmt(current));
@@ -289,7 +326,8 @@ function renderTable(studentsRaw, attendanceData) {
     function applySign(type) {
         const name = prompt("확인자 성함을 입력하세요:");
         if (!name) return;
-        document.getElementById(`sign-${type}`).innerText = name;
+        // 모든 주차 페이지의 동일 결재칸을 함께 갱신
+        document.querySelectorAll(`.sign-${type}`).forEach(el => el.innerText = name);
     }
 
     // 실행

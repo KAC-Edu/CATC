@@ -1002,41 +1002,34 @@ resetCourse: function() {
     function doReset() {
         if (!state.room) return;
         const rPath = `courses/${state.room}`;
-        const updates = {};
+        const newResetKey = "reset_" + Date.now();
 
-        // [격리 초기화] 해당 방 번호 밑에 있는 데이터들만 콕 집어서 삭제(null) 처리
-        updates[`${rPath}/questions`] = null;
-        updates[`${rPath}/students`] = null;
-        updates[`${rPath}/expectedStudents`] = null; 
-        updates[`${rPath}/activeQuiz`] = null;
-        updates[`${rPath}/quizAnswers`] = null;
-        updates[`${rPath}/quizFinalResults`] = null;
-        updates[`${rPath}/admin_actions`] = null;
-        updates[`${rPath}/dinner_skips`] = null;
-        updates[`${rPath}/tablet_loans`] = null;         // 태블릿 대여 초기화
-        updates[`${rPath}/shuttle`] = null;
-        updates[`${rPath}/notice`] = null;
-        updates[`${rPath}/coordNotice`] = null;
-        updates[`${rPath}/internal_attendance`] = null;
+        // [완전 초기화 보강]
+        //  기존에는 알려진 하위 노드만 개별 null 처리했기 때문에, 누락된(또는 이후 추가된) 하위 경로가
+        //  남아 이전 차수 데이터가 잔존할 수 있었다. 이를 막기 위해 방 노드 전체를 한 번에 비운 뒤,
+        //  새 resetKey 와 함께 기본 상태/설정만 재구성한다. (모든 하위 경로가 확실히 소거됨)
+        const freshRoom = {
+            settings: {
+                courseName: "",
+                roomDetailName: "",
+                period: null,
+                coordinatorName: null,
+                subjects: null,
+                password: null
+            },
+            status: {
+                professorName: "",
+                roomStatus: "idle",      // 비어있음(미개설)으로 전환
+                ownerSessionId: null,    // 제어권 해제
+                resetKey: newResetKey,   // 교육생 강제 퇴출/유령 재등록 차단 신호
+                mode: 'qa',
+                quizStep: 'none'
+            }
+        };
 
-        // 과정 기본값 재설정
-        updates[`${rPath}/settings/courseName`] = "";
-        updates[`${rPath}/settings/roomDetailName`] = ""; // 강의실 상세위치 초기화
-        updates[`${rPath}/settings/period`] = null;           // [버그수정] 교육기간 초기화
-        updates[`${rPath}/settings/coordinatorName`] = null;  // [버그수정] 운영담당자 초기화
-        updates[`${rPath}/settings/subjects`] = null;         // [버그수정] 강사/과목 리스트 초기화
-        updates[`${rPath}/settings/password`] = null;         // 비밀번호 초기화
-        updates[`${rPath}/status/professorName`] = "";
-        updates[`${rPath}/status/roomStatus`] = "idle"; // 비어있음으로 전환
-        updates[`${rPath}/status/ownerSessionId`] = null; // 제어권 해제
-        
-        // 학생들에게 초기화 신호를 보내 강제 퇴출시킴
-        updates[`${rPath}/status/resetKey`] = "reset_" + Date.now();
-        // 퀴즈 모드 강제 초기화 (교육생 화면에 퀴즈 화면이 남아있지 않도록)
-        updates[`${rPath}/status/mode`] = 'qa';
-        updates[`${rPath}/status/quizStep`] = 'none';
-
-        firebase.database().ref().update(updates).then(() => {
+        // set() 으로 방 노드 전체를 freshRoom 으로 교체 → students/expectedStudents/internal_attendance 등
+        // 명시되지 않은 모든 하위 데이터까지 일괄 삭제된다.
+        firebase.database().ref(rPath).set(freshRoom).then(() => {
             ui.showAlert(`✅ Room ${state.room}이 성공적으로 초기화되었습니다.`);
             // 화면 새로고침하여 대기 상태로 복귀
             setTimeout(() => location.reload(), 800);

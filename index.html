@@ -456,6 +456,17 @@
         <button class="btn-enter" onclick="enterApp()">입장하기 <i class="fa-solid fa-arrow-right-to-bracket"></i></button>
         <img src="logo.webp" alt="KAC" class="landing-logo">
     </div>
+
+    <!-- [신규] 출결 QR 전용 — 출결 처리 완료 화면 (입장 랜딩으로 진행하지 않음) -->
+    <div id="checkinDonePage" class="landing-page" style="display:none;">
+        <div style="font-size:72px; margin-bottom:18px;">✅</div>
+        <div class="landing-course" id="checkinDoneTitle">출결 처리가 완료되었습니다</div>
+        <div id="checkinDoneSub" style="font-size:15px; opacity:0.85; margin:6px 0 14px; line-height:1.5;"></div>
+        <div class="landing-room" id="checkinDoneRoom">Room ...</div>
+        <button class="btn-enter" onclick="closeCheckinDone()">확인</button>
+        <img src="logo.webp" alt="KAC" class="landing-logo">
+    </div>
+
     <div class="app-container" id="mainApp">
 <div class="header">
     <div class="header-center">
@@ -1144,7 +1155,25 @@ async function resolveRoomFromCode(code) {
 
     hideLoader();
 
-    handleInternalAttendance(currentRoom);
+    // [수정] 출결 QR(checkin=true)과 강의실 입장 QR을 분리
+    //  - 출결 QR: 출석 처리만 하고 '완료 화면'을 띄운다. 랜딩/입장 흐름으로 진행하지 않음.
+    //  - 강의실 QR: 기존처럼 랜딩 → 입장 흐름을 그대로 사용.
+    if (isCheckIn) {
+        // 프로필(uToken)이 없으면 최초 1회 등록을 받은 뒤 출석 처리 → 완료 화면
+        const hasProfile = !!localStorage.getItem('uToken')
+            && !!localStorage.getItem('kac_user_name')
+            && (localStorage.getItem('kac_user_phone') || '').trim().length === 4;
+        if (hasProfile) {
+            handleInternalAttendance(currentRoom);
+        } else {
+            // 출결용 최초 등록: 이름/연락처 입력창만 표시 (랜딩/입장 흐름은 띄우지 않음)
+            document.getElementById('userName').value = "";
+            document.getElementById('userPhone').value = "";
+            document.getElementById('profileOverlay').style.display = 'flex';
+        }
+        return; // 출결 모드에서는 강의실 입장용 리스너/랜딩을 띄우지 않는다.
+    }
+
     setupListeners();
     checkCooldown();
     initKeyboardFix();
@@ -1355,13 +1384,27 @@ function startPresence() {
 
     connectedRef.on("value", (snap) => {
         if (snap.val() === true) {
-            myRef.update({
-                name: name,
-                phone: phone,
-                isOnline: true,
-                lastSeen: firebase.database.ServerValue.TIMESTAMP
+            // [버그수정] 초기화/재개설 후 유령 재등록 방지
+            //  방이 초기화되면 서버 status/resetKey 가 갱신된다. 이 값이 내가 마지막으로 본 값과
+            //  다르면, 이전 차수의 잔존 세션이 students 를 다시 써넣는 것이므로 등록을 막고 스스로 정리한다.
+            firebase.database().ref(`courses/${currentRoom}/status/resetKey`).once('value').then(rkSnap => {
+                const serverResetKey = rkSnap.val() || 'init';
+                const myLocalKey = localStorage.getItem(`kac_resetKey_${currentRoom}`);
+                if (myLocalKey && myLocalKey !== serverResetKey) {
+                    // 초기화 이후의 재접속 → 재등록 금지 + 로컬 세션 소거
+                    myRef.off();
+                    localStorage.removeItem('uToken');
+                    localStorage.removeItem(`kac_resetKey_${currentRoom}`);
+                    return;
+                }
+                myRef.update({
+                    name: name,
+                    phone: phone,
+                    isOnline: true,
+                    lastSeen: firebase.database.ServerValue.TIMESTAMP
+                });
+                myRef.child('isOnline').onDisconnect().set(false);
             });
-            myRef.child('isOnline').onDisconnect().set(false);
         }
     });
 
@@ -2746,19 +2789,18 @@ async function saveProfile() {
 
         startPresence(); 
         document.getElementById('profileOverlay').style.display = 'none';
-        
+
+        const isCheckIn = window.location.search.includes('checkin=true');
+
         // [핵심 연결] 이름을 저장하자마자 즉시 출결 함수를 호출합니다.
         handleInternalAttendance(currentRoom); 
         
-        if (!window.location.search.includes('checkin=true')) {
+        if (!isCheckIn) {
             showMainDashboard();
             alert(`${name}님, 환영합니다!`);
-        } else {
-            setTimeout(() => {
-                const app = document.getElementById('mainApp');
-                if (!app || app.style.display === 'none' || app.style.display === '') showMainDashboard();
-            }, 1500);
         }
+        // [수정] 출결 QR 등록 흐름에서는 메인 대시보드(입장)로 보내지 않는다.
+        //        handleInternalAttendance가 출결 처리 후 '완료 화면'을 표시한다.
         
     } catch (e) {
         console.error("SaveProfile Error:", e);
@@ -3225,8 +3267,10 @@ function handleInternalAttendance(room) {
     const storageKey = `kac_attended_${targetRoom}_${today}_${uToken}`;
 
     if (localStorage.getItem(storageKey)) {
-        alert(`알림: 오늘 [Room ${targetRoom}]의 ${myName}님 출석 처리는 이미 완료되었습니다.`);
-        cleanUrlAndGo(targetRoom);
+        // [수정] 이미 출결한 경우에도 입장 랜딩으로 보내지 않고 완료 화면으로 안내
+        showCheckinDone(targetRoom, myName, '');
+        const sub = document.getElementById('checkinDoneSub');
+        if (sub) sub.innerHTML = `${myName}님, 오늘 출석은 이미 완료되었습니다.`;
         return;
     }
 
@@ -3321,9 +3365,42 @@ function executeAttendanceRecord(room, name, phone, dateStr, storageKey) {
         return firebase.database().ref().update(updates);
     }).then(() => {
         localStorage.setItem(storageKey, "true");
-        alert(`✅ [Room ${room}] 출석 완료!\n${name}님, 정상 처리되었습니다.`);
-        cleanUrlAndGo(room);
+        // [수정] 출결 QR로 들어온 경우: 입장 랜딩으로 보내지 않고 '완료 화면'만 표시
+        if (new URLSearchParams(window.location.search).get('checkin') === 'true') {
+            showCheckinDone(room, name, currentTime);
+        } else {
+            alert(`✅ [Room ${room}] 출석 완료!\n${name}님, 정상 처리되었습니다.`);
+            cleanUrlAndGo(room);
+        }
     }).catch(e => { alert("출석 처리 중 오류가 발생했습니다."); });
+}
+
+// [신규] 출결 처리 완료 화면 표시 (출결 QR 전용)
+function showCheckinDone(room, name, time) {
+    const page = document.getElementById('checkinDonePage');
+    if (!page) { // 안전장치: 화면 요소가 없으면 기존 방식으로 안내
+        alert(`✅ [Room ${room}] 출석 완료!\n${name}님, 정상 처리되었습니다.`);
+        return;
+    }
+    const sub = document.getElementById('checkinDoneSub');
+    const roomEl = document.getElementById('checkinDoneRoom');
+    if (sub) sub.innerHTML = `${name}님, 출석이 정상 처리되었습니다.${time ? `<br>처리 시각 ${time}` : ''}`;
+    if (roomEl) roomEl.innerText = `ROOM ${room}`;
+    // 다른 화면은 모두 숨기고 완료 화면만 노출
+    ['landingPage','mainApp','profileOverlay'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = 'none';
+    });
+    page.style.display = 'flex';
+}
+
+// [신규] 완료 화면의 '확인' — 창을 닫거나(QR 스캐너 복귀) 깨끗한 안내로 정리
+function closeCheckinDone() {
+    // QR 리더 인앱 브라우저에서 열린 경우 창 닫기 시도
+    window.close();
+    // 창이 닫히지 않는 일반 브라우저 환경: 완료 화면 유지하고 안내만 갱신
+    const sub = document.getElementById('checkinDoneSub');
+    if (sub) sub.innerHTML += '<br><span style="opacity:0.7;font-size:13px;">이 창을 닫아 주세요.</span>';
 }
 
 

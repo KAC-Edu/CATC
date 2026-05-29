@@ -52,6 +52,9 @@
         .badge-group { display:inline-block; background:#7c3aed; color:white; padding:1px 6px; border-radius:5px; font-size:10px; font-weight:800; margin-bottom:2px; }
         .badge-return { display:block; font-size:9px; color:#10b981; font-weight:bold; margin-top:2px; }
 
+        /* [신규] 주차 구분 행 */
+        tr.week-sep td { background:#e0e7ff; color:#1e3a8a; font-weight:900; font-size:12px; text-align:left; padding:5px 10px; letter-spacing:1px; }
+
         /* ── 인쇄 전용 ── */
         .print-btn { position:fixed; top:20px; right:20px; padding:12px 28px; background:#003366; color:white; border:none; border-radius:8px; cursor:pointer; font-weight:900; z-index:1000; font-size:15px; }
 
@@ -74,6 +77,8 @@
             table { page-break-inside: auto; }
             thead { display: table-header-group; }
             tbody tr { page-break-inside: avoid; }
+            /* [신규] 주차 구분 행 바로 뒤에서 페이지가 끊겨 헤더만 남는 것 방지 */
+            tr.week-sep { page-break-after: avoid; }
         }
     </style>
 </head>
@@ -155,7 +160,30 @@
                     return (a.timestamp || 0) - (b.timestamp || 0);
                 });
 
+                // [신규] 주(월요일 기준) 키 계산 헬퍼
+                const weekKeyOf = (dateStr) => {
+                    const dt = new Date(dateStr + 'T00:00:00');
+                    if (isNaN(dt)) return '';
+                    const monday = new Date(dt);
+                    const dow = (dt.getDay() + 6) % 7;
+                    monday.setDate(dt.getDate() - dow);
+                    const sun = new Date(monday); sun.setDate(monday.getDate() + 6);
+                    const fmt = d => `${d.getMonth()+1}/${d.getDate()}`;
+                    return `${fmt(monday)} ~ ${fmt(sun)}`;
+                };
+
+                let curWeek = null;
                 list.forEach(a => {
+                    // [신규] 주차가 바뀌면 구분 행 삽입 (주 단위 그룹화)
+                    const wk = weekKeyOf(a.date);
+                    if (wk && wk !== curWeek) {
+                        curWeek = wk;
+                        const sep = document.createElement('tr');
+                        sep.className = 'week-sep';
+                        sep.innerHTML = `<td colspan="8"><i class="fa-regular fa-calendar-week"></i> 주간 (${wk})</td>`;
+                        body.appendChild(sep);
+                    }
+
                     const tr = document.createElement('tr');
                     const isGroup = (a.type === 'group_outing');
                     if (isGroup) tr.classList.add('group-row');
