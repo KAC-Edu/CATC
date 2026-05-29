@@ -2070,10 +2070,28 @@ updateQaCountBadge: function() {
             btn.style.cssText = `width:22px;height:22px;background:${c};border:2px solid ${c==='#ffffff'?'#ccc':'transparent'};border-radius:50%;cursor:pointer;flex-shrink:0;`;
             btn.onclick = () => {
                 document.execCommand('foreColor', false, c);
+                // 미리보기 점 색상 업데이트
+                const dot = document.getElementById('colorPreviewDot');
+                if(dot) dot.style.background = c;
+                // 드롭다운 닫기
+                const panel = document.getElementById('colorDropdownPanel');
+                if(panel) panel.classList.remove('open');
                 document.getElementById('boardEditor').focus();
             };
             palette.appendChild(btn);
         });
+
+        // 드롭다운 외부 클릭 시 닫기 (한 번만 등록)
+        if(!window._colorDropdownOutsideSet) {
+            window._colorDropdownOutsideSet = true;
+            document.addEventListener('click', (e) => {
+                const wrap = document.getElementById('colorDropdownWrap');
+                const panel = document.getElementById('colorDropdownPanel');
+                if(wrap && panel && !wrap.contains(e.target)) {
+                    panel.classList.remove('open');
+                }
+            });
+        }
     },
 
     loadNoticeView: async function() {

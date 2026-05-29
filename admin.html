@@ -363,7 +363,14 @@
 <!-- [6.0차 최종 통합본] 대시보드 구역 -->
 <!-- 설문조사 안내 뷰 (강당 스크린 전용) -->
 <div id="view-survey-guide" style="display:none; flex-direction:column; align-items:center; width:100%;">
-    <div class="view-header" style="margin-bottom:0;">
+    <!-- 돌아가기 버튼 -->
+    <div style="width:100%; max-width:1000px; padding:10px 20px 0;">
+        <button onclick="ui.setMode('notice')"
+            style="height:34px; padding:0 16px; background:#fff; color:#475569; border:1.5px solid #cbd5e1; border-radius:8px; cursor:pointer; font-size:13px; font-weight:700; display:inline-flex; align-items:center; gap:6px;">
+            <i class="fa-solid fa-arrow-left"></i> 공지 관리로 돌아가기
+        </button>
+    </div>
+    <div class="view-header" style="margin-top:6px; margin-bottom:0;">
         <h1><i class="fa-solid fa-square-poll-vertical"></i> 교육 만족도 설문조사 안내</h1>
     </div>
     <div class="survey-guide-container">
@@ -581,11 +588,11 @@
             </div>
 
             <!-- 툴바: 항상 표시 고정 -->
-            <div id="boardToolbar" style="padding:10px 14px; background:#f8f5ff; border-bottom:1px solid #ede9fe;
-                        display:flex; flex-wrap:wrap; gap:6px; align-items:center;">
+            <div id="boardToolbar" style="padding:8px 14px; background:#f8f5ff; border-bottom:1px solid #ede9fe; display:flex; flex-wrap:nowrap; gap:6px; align-items:center;">
 
+                <!-- 크기 선택 -->
                 <select onchange="document.execCommand('fontSize', false, this.value); this.value=''; document.getElementById('boardEditor').focus();"
-                    style="height:32px; border:1.5px solid #ddd; border-radius:7px; padding:0 8px; font-size:13px; cursor:pointer;">
+                    style="height:32px; border:1.5px solid #ddd; border-radius:7px; padding:0 8px; font-size:13px; cursor:pointer; flex-shrink:0;">
                     <option value="">크기</option>
                     <option value="1">아주 작게</option>
                     <option value="2">작게</option>
@@ -596,41 +603,55 @@
                     <option value="7">최대</option>
                 </select>
 
-                <div style="display:flex; gap:4px; align-items:center;">
-                    <span style="font-size:11px; color:#64748b; font-weight:700;">색상:</span>
-                    <div id="colorPalette" style="display:flex; gap:3px; flex-wrap:wrap; max-width:200px;"></div>
-                    <input type="color" id="customColorPicker" value="#000000" title="직접 선택"
-                        style="width:26px; height:26px; border:none; border-radius:5px; cursor:pointer; padding:1px;"
-                        onchange="document.execCommand('foreColor', false, this.value); document.getElementById('boardEditor').focus();">
+                <!-- 색상 드롭다운 -->
+                <div style="position:relative; flex-shrink:0;" id="colorDropdownWrap">
+                    <button onclick="document.getElementById('colorDropdownPanel').classList.toggle('open')"
+                        style="height:32px; padding:0 10px; border:1.5px solid #ddd; border-radius:7px; background:#fff; cursor:pointer; font-size:12px; font-weight:700; color:#334155; display:flex; align-items:center; gap:6px;">
+                        <span id="colorPreviewDot" style="width:16px; height:16px; border-radius:50%; background:#000000; border:1.5px solid #ccc; display:inline-block; flex-shrink:0;"></span>
+                        색상 <i class="fa-solid fa-chevron-down" style="font-size:10px;"></i>
+                    </button>
+                    <div id="colorDropdownPanel" style="display:none; position:absolute; top:36px; left:0; background:#fff; border:1.5px solid #e2e8f0; border-radius:10px; padding:10px; box-shadow:0 8px 24px rgba(0,0,0,0.12); z-index:999; width:160px;">
+                        <div id="colorPalette" style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:8px;"></div>
+                        <div style="display:flex; align-items:center; gap:6px; border-top:1px solid #f1f5f9; padding-top:8px;">
+                            <span style="font-size:11px; color:#94a3b8; font-weight:700;">직접입력</span>
+                            <input type="color" id="customColorPicker" value="#000000" title="직접 선택"
+                                style="width:28px; height:28px; border:none; border-radius:5px; cursor:pointer; padding:1px;"
+                                onchange="document.execCommand('foreColor', false, this.value); document.getElementById('colorPreviewDot').style.background=this.value; document.getElementById('colorDropdownPanel').classList.remove('open'); document.getElementById('boardEditor').focus();">
+                        </div>
+                    </div>
                 </div>
 
-                <div style="width:1px; height:24px; background:#ddd; margin:0 2px;"></div>
+                <div style="width:1px; height:24px; background:#ddd; margin:0 2px; flex-shrink:0;"></div>
                 <button onclick="document.execCommand('bold'); document.getElementById('boardEditor').focus();"
-                    style="width:30px; height:30px; border:1.5px solid #ddd; border-radius:7px; background:#fff; cursor:pointer; font-weight:900; font-size:13px;">B</button>
+                    style="width:30px; height:30px; border:1.5px solid #ddd; border-radius:7px; background:#fff; cursor:pointer; font-weight:900; font-size:13px; flex-shrink:0;">B</button>
                 <button onclick="document.execCommand('italic'); document.getElementById('boardEditor').focus();"
-                    style="width:30px; height:30px; border:1.5px solid #ddd; border-radius:7px; background:#fff; cursor:pointer; font-style:italic; font-size:13px;">I</button>
+                    style="width:30px; height:30px; border:1.5px solid #ddd; border-radius:7px; background:#fff; cursor:pointer; font-style:italic; font-size:13px; flex-shrink:0;">I</button>
                 <button onclick="document.execCommand('underline'); document.getElementById('boardEditor').focus();"
-                    style="width:30px; height:30px; border:1.5px solid #ddd; border-radius:7px; background:#fff; cursor:pointer; text-decoration:underline; font-size:13px;">U</button>
-                <div style="width:1px; height:24px; background:#ddd; margin:0 2px;"></div>
+                    style="width:30px; height:30px; border:1.5px solid #ddd; border-radius:7px; background:#fff; cursor:pointer; text-decoration:underline; font-size:13px; flex-shrink:0;">U</button>
+                <div style="width:1px; height:24px; background:#ddd; margin:0 2px; flex-shrink:0;"></div>
                 <button onclick="document.execCommand('justifyLeft'); document.getElementById('boardEditor').focus();"
-                    style="width:30px; height:30px; border:1.5px solid #ddd; border-radius:7px; background:#fff; cursor:pointer; font-size:13px;">◀</button>
+                    style="width:30px; height:30px; border:1.5px solid #ddd; border-radius:7px; background:#fff; cursor:pointer; font-size:13px; flex-shrink:0;">◀</button>
                 <button onclick="document.execCommand('justifyCenter'); document.getElementById('boardEditor').focus();"
-                    style="width:30px; height:30px; border:1.5px solid #ddd; border-radius:7px; background:#fff; cursor:pointer; font-size:13px;">▣</button>
+                    style="width:30px; height:30px; border:1.5px solid #ddd; border-radius:7px; background:#fff; cursor:pointer; font-size:13px; flex-shrink:0;">▣</button>
                 <button onclick="document.execCommand('justifyRight'); document.getElementById('boardEditor').focus();"
-                    style="width:30px; height:30px; border:1.5px solid #ddd; border-radius:7px; background:#fff; cursor:pointer; font-size:13px;">▶</button>
-                <div style="width:1px; height:24px; background:#ddd; margin:0 2px;"></div>
+                    style="width:30px; height:30px; border:1.5px solid #ddd; border-radius:7px; background:#fff; cursor:pointer; font-size:13px; flex-shrink:0;">▶</button>
+                <div style="width:1px; height:24px; background:#ddd; margin:0 2px; flex-shrink:0;"></div>
                 <button onclick="if(confirm('보드 내용을 모두 지울까요?')) { document.getElementById('boardEditor').innerHTML=''; }"
-                    style="height:30px; padding:0 12px; border:1.5px solid #ddd; border-radius:7px; background:#fff; cursor:pointer; font-size:12px; color:#ef4444; font-weight:700;">
-                    <i class="fa-solid fa-trash"></i> 초기화
+                    style="height:30px; padding:0 10px; border:1.5px solid #ddd; border-radius:7px; background:#fff; cursor:pointer; font-size:12px; color:#ef4444; font-weight:700; flex-shrink:0;">
+                    <i class="fa-solid fa-trash"></i>
                 </button>
-                <button onclick="ui.setMode('survey-guide')"
-                    style="height:30px; padding:0 16px; background:#fff; color:#7c3aed; border:1.5px solid #7c3aed; border-radius:7px; cursor:pointer; font-size:13px; font-weight:800; margin-left:auto; margin-right:8px;">
-                    <i class="fa-solid fa-square-poll-vertical"></i> 설문 안내 모드
-                </button>
-                <button onclick="dataMgr.saveBoardNotice()"
-                    style="height:30px; padding:0 16px; background:#7c3aed; color:#fff; border:none; border-radius:7px; cursor:pointer; font-size:13px; font-weight:800;">
-                    <i class="fa-solid fa-floppy-disk"></i> 저장 & 게시
-                </button>
+
+                <!-- 우측 고정: 설문 안내 + 저장&게시 -->
+                <div style="display:flex; gap:6px; align-items:center; margin-left:auto; flex-shrink:0;">
+                    <button onclick="ui.setMode('survey-guide')"
+                        style="height:30px; padding:0 14px; background:#fff; color:#7c3aed; border:1.5px solid #7c3aed; border-radius:7px; cursor:pointer; font-size:13px; font-weight:800; white-space:nowrap;">
+                        <i class="fa-solid fa-square-poll-vertical"></i> 설문 안내
+                    </button>
+                    <button onclick="dataMgr.saveBoardNotice()"
+                        style="height:30px; padding:0 14px; background:#7c3aed; color:#fff; border:none; border-radius:7px; cursor:pointer; font-size:13px; font-weight:800; white-space:nowrap;">
+                        <i class="fa-solid fa-floppy-disk"></i> 저장 & 게시
+                    </button>
+                </div>
             </div>
 
             <!-- 에디터 본문 -->
