@@ -151,11 +151,6 @@ body {
 }
 
 
-#view-qa .view-header {
-    margin-top: 30px;
-    margin-bottom: 25px;
-}
-
 /* Q&A 필터 전체 컨테이너 */
 .qa-filters { 
     position: -webkit-sticky;
@@ -799,12 +794,6 @@ body.night-mode .quiz-card.result-mode {
 
 
 /* 현황판 내부의 제목 마진 보정 (다른 페이지와 일치) */
-.full-dashboard .view-header {
-    margin-top: 20px;
-    margin-bottom: 30px;
-}
-
-
 /* ── 현황판 전경 배너 ── */
 .dashboard-campus-banner {
     width: 100%;
@@ -1189,8 +1178,8 @@ body.night-mode .badge-idle {
 /* 1. 모든 페이지 제목(헤더) 스타일 */
 .view-header {
     text-align: center;
-    margin-top: 20px;    /* 현황바로부터의 거리 (이 수치를 조절해서 높이를 맞추세요) */
-    margin-bottom: 30px; /* 제목과 본문 사이의 거리 */
+    margin-top: 30px;    /* ★ 전 탭 공통 기준: 탭 메뉴로부터의 간격 */
+    margin-bottom: 25px; /* ★ 전 탭 공통 기준: 본문 카드와의 간격 */
     position: relative;
     z-index: 10;
 }
@@ -1403,8 +1392,7 @@ body.night-mode .badge-idle {
 
 /* 2. 제목 영역: 수강생 명부 등과 통일된 여백 설정 */
 #view-guide .view-header {
-    margin-top: 20px;   /* 계단 현상 방지를 위한 상단 고정 여백 */
-    margin-bottom: 10px; /* 제목과 슬라이드 사이의 간격 */
+    margin-bottom: 10px; /* PDF 슬라이드와의 간격은 살짝 줄임 */
     text-align: center;
 }
 
@@ -2151,11 +2139,6 @@ body.night-mode .header-room-badge { background-color: #003366 !important; borde
 
 /* 1. 헤더 & 컨테이너 정리 */
 .dash-hero-header { margin-bottom: 8px !important; }
-/* 과정 현황 탭 전용: 제목 여백 최소화 */
-#view-dashboard .view-header {
-    margin-top: 10px !important;
-    margin-bottom: 10px !important;
-}
 
 .dash-title-main { display: flex; align-items: center; justify-content: center; gap: 12px; }
 .dash-title-main i { font-size: 32px; color: #3b82f6; }
@@ -2567,8 +2550,8 @@ body.night-mode .header-room-badge { background-color: #003366 !important; borde
 
 .view-header {
     text-align: center;
-    margin-top: 25px;
-    margin-bottom: 35px;
+    margin-top: 30px;    /* ★ 전 탭 공통 기준 */
+    margin-bottom: 25px; /* ★ 전 탭 공통 기준 */
 }
 
 .view-header h1 {
@@ -3575,15 +3558,11 @@ body:-webkit-full-screen .main-stage {
 
 /* ══ 현황판 전용 스타일 (이미지 없음) ══ */
 #view-waiting {
-    padding-top: 6px !important;
-}
-#view-waiting .view-header {
-    margin-top: 8px;
-    margin-bottom: 8px;
+    padding-top: 0 !important;
 }
 #view-waiting .modern-white-card {
     max-width: 1300px;
-    margin-top: 4px;
+    margin-top: 0;
 }
 #view-waiting .dashboard-campus-banner {
     display: none !important;
@@ -3801,11 +3780,8 @@ body:-webkit-full-screen .main-stage {
     transform: rotate(90deg) scale(1.15);
 }
 
-/* 설문 안내 탭 - 제목 영역을 다른 탭과 동일하게 정렬 */
+/* 설문 안내 탭 - 좌우 패딩만 유지 (margin은 공통 기준 적용) */
 #view-survey-guide .view-header {
-    text-align: center;
-    margin-top: 20px;
-    margin-bottom: 8px;
     padding: 0 20px;
     box-sizing: border-box;
 }
