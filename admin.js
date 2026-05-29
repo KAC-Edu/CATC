@@ -6432,17 +6432,27 @@ const annualPlanMgr = {
         const today = this._today();
         const thisWeekMonday = this._getMondayOf(today);
 
+        // D-2 기준일: 오늘 + 2일 (교육 시작 2일 전부터 강의실 오픈)
+        const d2 = new Date(today + 'T00:00:00Z');
+        d2.setUTCDate(d2.getUTCDate() + 2);
+        const openDate = d2.toISOString().split('T')[0];
+
         // 아직 끝나지 않은 과정만, 시작일 순 정렬
         const upcoming = courses
             .filter(c => c.endDate >= today)
             .sort((a, b) => a.startDate.localeCompare(b.startDate));
 
-        // 우선순위: 진행 중 → 이번 주 시작 → 미래
+        // 우선순위:
+        // 1순위: 진행 중 (startDate <= today)
+        // 2순위: D-2 이내 예정 (today < startDate <= openDate) ← 2일 전 오픈
+        // 3순위: 이번 주 내 시작
+        // 4순위: 그 이후
         const ongoing  = upcoming.filter(c => c.startDate <= today);
-        const thisWeek = upcoming.filter(c => c.startDate > today && this._getMondayOf(c.startDate) === thisWeekMonday);
-        const future   = upcoming.filter(c => c.startDate > today && this._getMondayOf(c.startDate) !== thisWeekMonday);
+        const d2ready  = upcoming.filter(c => c.startDate > today && c.startDate <= openDate);
+        const thisWeek = upcoming.filter(c => c.startDate > openDate && this._getMondayOf(c.startDate) === thisWeekMonday);
+        const future   = upcoming.filter(c => c.startDate > openDate && this._getMondayOf(c.startDate) !== thisWeekMonday);
 
-        const pool = [...ongoing, ...thisWeek, ...future];
+        const pool = [...ongoing, ...d2ready, ...thisWeek, ...future];
         const updates = {};
         const assigned = [];
 
@@ -6484,16 +6494,40 @@ const annualPlanMgr = {
             if (!courses.length) return;
 
             const today = this._today();
+
+            // D-2 기준일 계산
+            const d2 = new Date(today + 'T00:00:00Z');
+            d2.setUTCDate(d2.getUTCDate() + 2);
+            const openDate = d2.toISOString().split('T')[0];
+
             let needsUpdate = false;
 
             for (const room of this.ROOMS) {
                 const s = await firebase.database().ref(`courses/${room}/settings`).once('value');
-                const period = (s.val() || {}).period || '';
-                const endDate = period.split('~')[1]?.trim();
+                const settings = s.val() || {};
+                const period   = settings.period || '';
+                const endDate  = period.split('~')[1]?.trim();
+                const courseName = settings.courseName || '';
+
+                // 1. 과정 만료 → 재배치 필요
                 if (endDate && endDate < today) {
                     console.log(`[annualPlanMgr] Room ${room} 만료 (${endDate})`);
                     needsUpdate = true;
                     break;
+                }
+
+                // 2. 방이 비어 있는데 D-2 이내 과정이 있으면 → 오픈 필요
+                if (!courseName) {
+                    const d2course = courses.find(c =>
+                        c.startDate > today &&
+                        c.startDate <= openDate &&
+                        c.endDate >= today
+                    );
+                    if (d2course) {
+                        console.log(`[annualPlanMgr] D-2 이내 과정 발견 → 오픈: ${d2course.name}`);
+                        needsUpdate = true;
+                        break;
+                    }
                 }
             }
 
