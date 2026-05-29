@@ -6247,141 +6247,96 @@ const annualPlanMgr = {
 
         try {
             const buf = await file.arrayBuffer();
-            const wb = XLSX.read(buf, { type: 'array', cellText: false, cellDates: false });
+            const wb  = XLSX.read(buf, { type: 'array', cellText: false, cellDates: false });
 
-            // ── 시트 접근: SheetNames 문자열 키 매칭 대신 인덱스 기반으로 접근.
-            //
-            //    [근본 원인] xlsx.js 0.18.x 에서 한글 등 멀티바이트 시트명을 가진
-            //    파일을 파싱할 때, wb.SheetNames 배열에 저장된 문자열과
-            //    wb.Sheets 객체의 실제 키(key)가 내부 인코딩 차이로 불일치하는
-            //    버그가 있음. 즉 SheetNames[0] === '총괄표' 이지만
-            //    wb.Sheets['총괄표']는 undefined를 반환 → "시트 객체가 없다" 에러.
-            //
-            //    [해결] wb.Sheets를 Object.values()로 접근하면 키 매칭 없이
-            //    시트 객체 자체를 직접 꺼낼 수 있으므로 인코딩 불일치 문제 우회.
-            //    '총괄' 이름을 가진 시트를 우선 찾되, 없으면 무조건 첫 번째 시트 사용.
-
-            const allSheetEntries = Object.entries(wb.Sheets);  // [[name, sheetObj], ...]
-            const targetEntry = allSheetEntries.find(([n]) => n.replace(/\s/g, '').includes('총괄'))
-                             || allSheetEntries[0];
-
-            const sheetName = targetEntry ? targetEntry[0] : '(알 수 없음)';
-            const ws        = targetEntry ? targetEntry[1] : null;
-            console.log('[annualPlanMgr] 사용 시트:', sheetName,
-                        '| SheetNames[0]:', wb.SheetNames[0]);
+            // ── 시트 접근: SheetNames 인덱스로 직접 접근하여 한글 키 불일치 완전 우회
+            // wb.Sheets[sheetName] 방식은 xlsx.js 내부 인코딩 불일치로 undefined 반환 가능.
+            // SheetNames 순서와 Sheets 객체 순서는 항상 일치하므로 인덱스로 꺼냄.
+            const sheetIdx  = wb.SheetNames.findIndex(n => n.replace(/\s/g,'').includes('총괄'));
+            const useIdx    = sheetIdx >= 0 ? sheetIdx : 0;
+            const sheetName = wb.SheetNames[useIdx];
+            // Sheets 객체를 배열로 변환해 인덱스로 접근 → 키 매칭 완전 우회
+            const ws        = Object.values(wb.Sheets)[useIdx];
+            console.log('[annualPlanMgr] 시트:', sheetName, '| index:', useIdx);
 
             if (!ws) {
-                throw new Error(
-                    `시트를 찾을 수 없습니다.\n` +
-                    `등록된 시트: ${wb.SheetNames.join(', ')}`
-                );
+                throw new Error(`시트를 열 수 없습니다.\n등록된 시트: ${wb.SheetNames.join(', ')}`);
             }
 
-            // !ref 누락 방어: 일부 저장 환경에서 데이터 범위 정보가 빠지는 경우
-            // A1:Z500 범위를 강제 주입해 파싱을 계속 진행
+            // !ref 누락 방어: 데이터 범위 정보가 없으면 넓은 범위 강제 주입
             if (!ws['!ref']) {
-                console.warn('[annualPlanMgr] !ref 누락 → A1:Z500 강제 설정');
-                ws['!ref'] = XLSX.utils.encode_range({ s: { c: 0, r: 0 }, e: { c: 25, r: 499 } });
+                ws['!ref'] = XLSX.utils.encode_range({ s:{c:0,r:0}, e:{c:25,r:499} });
             }
 
             const range = XLSX.utils.decode_range(ws['!ref']);
 
-            /* ── FIX 3: 헤더 탐색 범위를 상위 30행까지 확장.
-               실제 파일 구조: 1~12행은 제목·배정기준 등 메타 영역이고
-               13행(r=12)에 실제 컬럼 헤더가 위치함.
-               기존 +20 범위로는 항상 탐색 성공이지만, 다른 연도 파일에서
-               헤더가 더 아래에 있을 경우를 대비해 +30으로 여유를 확보함.
-               
-               헤더 셀 값 정규화: \r\n 및 공백·괄호를 모두 제거한 normalizedVal로
-               비교하여 '교육일정확인\n(운영부)' 같은 줄바꿈 포함 셀도 정확히 매칭. */
+            // ── 헤더 행 탐색 (상위 30행): '연번'과 '과정명'이 같이 있는 행
+            // 실제 파일: 1~12행 메타데이터, 13행(r=12)에 컬럼 헤더 위치
+            // 셀 값 정규화: \r\n·공백·괄호 제거 후 비교 → '교육일정확인\n(운영부)' 도 매칭
             let headerRow = -1;
-            let colMap = {};
+            const colMap  = {};
 
             for (let r = range.s.r; r <= Math.min(range.s.r + 30, range.e.r); r++) {
-                const rowVals    = {};   // c → 원본값 (저장용)
-                const rowNormals = {};   // c → 정규화값 (비교용)
-
+                const norm = {}; // col → 정규화된 문자열
                 for (let c = range.s.c; c <= range.e.c; c++) {
-                    const addr = XLSX.utils.encode_cell({ r, c });
-                    const cell = ws[addr];
+                    const cell = ws[XLSX.utils.encode_cell({r, c})];
                     if (cell && cell.v != null) {
-                        const raw        = String(cell.v);
-                        // 줄바꿈·공백·괄호를 제거한 정규화 문자열로 비교
-                        const normalized = raw.replace(/[\r\n\s()（）]/g, '');
-                        rowVals[c]    = raw.trim();
-                        rowNormals[c] = normalized;
+                        norm[c] = String(cell.v).replace(/[\r\n\s()（）]/g, '');
                     }
                 }
-
-                const normals = Object.values(rowNormals);
-                // '연번' 과 '과정명' 이 같은 행에 존재하면 헤더 행으로 판정
-                if (normals.includes('연번') && normals.includes('과정명')) {
+                const vals = Object.values(norm);
+                if (vals.includes('연번') && vals.includes('과정명')) {
                     headerRow = r;
-                    for (const [c, nv] of Object.entries(rowNormals)) {
+                    for (const [c, v] of Object.entries(norm)) {
                         const ci = parseInt(c);
-                        // FIX 3-a: 정규화된 값으로 컬럼 매핑
-                        if (nv === '연번')            colMap.no    = ci;
-                        if (nv === '과정명')          colMap.name  = ci;
-                        // 담임교수는 F열(idx 5)과 U열(idx 20) 두 곳에 존재.
-                        // 실제 담임교수는 F열(idx 5, 첫 번째 등장)을 사용.
-                        if (nv === '담임교수' && colMap.prof == null) colMap.prof = ci;
-                        // FIX 3-b: '교육일정확인(운영부)' → 정규화 후 '교육일정확인운영부'
-                        //   기존: v.includes('교육일정확인') → 줄바꿈 포함 셀에서 미매칭 발생
-                        //   수정: 정규화된 normals로 includes 검사
-                        if (nv.includes('교육일정확인')) colMap.coord = ci;
-                        if (nv === '교육시작일')      colMap.start = ci;
-                        if (nv === '교육종료일')      colMap.end   = ci;
+                        if (v === '연번')               colMap.no    = ci; // B열(1)
+                        if (v === '과정명')             colMap.name  = ci; // H열(7)
+                        if (v === '담임교수' && colMap.prof  == null) colMap.prof  = ci; // F열(5) 첫번째만
+                        if (v.includes('교육일정확인')) colMap.coord = ci; // E열(4)
+                        if (v === '교육시작일')         colMap.start = ci; // N열(13)
+                        if (v === '교육종료일')         colMap.end   = ci; // O열(14)
                     }
-                    console.log('[annualPlanMgr] 헤더 발견 행:', r + 1, colMap);
+                    console.log('[annualPlanMgr] 헤더 행:', r + 1, colMap);
                     break;
                 }
             }
 
             if (headerRow < 0) {
-                throw new Error(
-                    '헤더를 찾을 수 없습니다.\n' +
-                    `총괄표 시트(사용된 시트: "${sheetName}")의 상위 30행 내에\n` +
-                    '"연번"과 "과정명" 컬럼이 있는 행이 필요합니다.'
-                );
+                throw new Error('헤더 행을 찾을 수 없습니다.\n총괄표 시트에 "연번"과 "과정명" 컬럼이 필요합니다.');
             }
 
-            /* ── 데이터 파싱 ── */
+            // ── 데이터 파싱
             const courses = [];
             for (let r = headerRow + 1; r <= range.e.r; r++) {
                 try {
-                    const noCell  = ws[XLSX.utils.encode_cell({ r, c: colMap.no })];
+                    const get = c => ws[XLSX.utils.encode_cell({r, c})];
+
+                    const noCell = get(colMap.no);
                     if (!noCell) continue;
                     const no = parseInt(noCell.v);
                     if (isNaN(no)) continue;
 
-                    const nameCell = ws[XLSX.utils.encode_cell({ r, c: colMap.name })];
+                    const nameCell = get(colMap.name);
                     if (!nameCell || !nameCell.v) continue;
 
-                    const startCell = ws[XLSX.utils.encode_cell({ r, c: colMap.start })];
-                    const endCell   = ws[XLSX.utils.encode_cell({ r, c: colMap.end })];
-                    const startDate = this._excelDate(startCell && startCell.v);
-                    const endDate   = this._excelDate(endCell   && endCell.v);
+                    const startDate = this._excelDate(get(colMap.start)?.v);
+                    const endDate   = this._excelDate(get(colMap.end)?.v);
                     if (!startDate || !endDate) continue;
 
-                    const profCell  = ws[XLSX.utils.encode_cell({ r, c: colMap.prof })];
-                    const coordCell = ws[XLSX.utils.encode_cell({ r, c: colMap.coord })];
-
-                    const profRaw = profCell ? String(profCell.v) : '';
-                    const prof    = profRaw.split(/[,，、\/]/)[0].trim();
-                    // FIX 3-c: coord 셀도 줄바꿈 제거 후 trim
-                    const coord   = coordCell ? String(coordCell.v).replace(/[\r\n]/g, '').trim() : '';
+                    const profRaw = get(colMap.prof)?.v  ? String(get(colMap.prof).v)  : '';
+                    const coordRaw= get(colMap.coord)?.v ? String(get(colMap.coord).v) : '';
 
                     courses.push({
                         no,
-                        name: String(nameCell.v).trim(),
+                        name:      String(nameCell.v).trim(),
                         startDate, endDate,
-                        period: `${startDate} ~ ${endDate}`,
-                        prof, coord,
-                        weekKey: this._getMondayOf(startDate)
+                        period:    `${startDate} ~ ${endDate}`,
+                        prof:      profRaw.split(/[,，、\/]/)[0].trim(),
+                        coord:     coordRaw.replace(/[\r\n]/g,'').trim(),
+                        weekKey:   this._getMondayOf(startDate)
                     });
                 } catch (rowErr) {
-                    // 개별 행 오류는 무시하고 계속
-                    console.warn(`[annualPlanMgr] 행 ${r + 1} 파싱 스킵:`, rowErr);
+                    console.warn(`[annualPlanMgr] 행 ${r+1} 스킵:`, rowErr);
                 }
             }
 
@@ -6389,18 +6344,12 @@ const annualPlanMgr = {
 
             await this._assignRooms(courses);
 
-            if (statusEl) {
-                statusEl.innerText = `✅ ${courses.length}개 과정 적용됨`;
-                statusEl.style.color = '#10b981';
-            }
-            ui.showAlert(`✅ 운영계획 업로드 완료!\n총 ${courses.length}개 과정을 Room A/B/C에 배치했습니다.`);
+            if (statusEl) { statusEl.innerText = `✅ ${courses.length}개 과정 적용됨`; statusEl.style.color = '#10b981'; }
+            ui.showAlert(`✅ 업로드 완료!\n총 ${courses.length}개 과정을 자동 배치했습니다.`);
 
         } catch (err) {
-            console.error('[annualPlanMgr] upload 오류:', err);
-            if (statusEl) {
-                statusEl.innerText = '❌ ' + err.message.split('\n')[0];
-                statusEl.style.color = '#ef4444';
-            }
+            console.error('[annualPlanMgr] 오류:', err);
+            if (statusEl) { statusEl.innerText = '❌ ' + err.message.split('\n')[0]; statusEl.style.color = '#ef4444'; }
             ui.showAlert('❌ 업로드 오류:\n' + err.message);
         }
     },
