@@ -4036,12 +4036,20 @@ updateShuttleETA: function(departureTime, counts) {
         return `${h}:${m}`;
     };
 
-    // 동적 알고리즘 (index.html의 calcArrival과 동일)
-    const osongMin    = base + 30;
-    const termMin     = base + (c.osong > 0 ? 60 : 30);
-    const airMin      = (c.osong === 0 && c.terminal === 0)
-                        ? base + 60
-                        : termMin + (c.terminal > 0 ? 30 : 0) + 30;
+    // 동적 알고리즘 — 누적 소요 시간 방식
+    // 물리적 경로: 출발 → 오송역(30분) → 청주터미널(+20분) → 청주공항(+30분)
+    // 경유지 skip = '정차 대기 시간' 절약, 이동 구간 시간은 항상 누적
+
+    // 오송역: 출발 + 30분 고정 (이동 시간)
+    const osongMin = base + 30;
+
+    // 청주터미널: 오송역 통과 이후 + 구간 이동 시간
+    // 오송 정차 시 5분 대기 포함, 미신청 시 pass-through(이동 시간만)
+    const termMin = osongMin + (c.osong > 0 ? 25 : 15);
+
+    // 청주공항: 터미널 통과 이후 + 구간 이동 시간
+    // 터미널 정차 시 5분 대기 포함, 미신청 시 pass-through
+    const airMin = termMin + (c.terminal > 0 ? 35 : 25);
 
     const stops = [
         { label: '오송역',      time: fmt(osongMin),   color: '#ef4444', cnt: c.osong },
