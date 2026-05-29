@@ -883,18 +883,7 @@ deactivateAllRooms: async function() {
 
 
 
-// 현황판 잠금 토글 - 자동배치 시 해당 방 제외
-    toggleRoomLock: async function(room, currentLocked) {
-        if (state.isObserver) return ui.showAlert("👁️ 옵저버 모드에서는 설정을 변경할 수 없습니다.");
-        const nextLocked = !currentLocked;
-        await firebase.database().ref(`courses/${room}/settings/autoAssignLocked`).set(nextLocked || null);
-        ui.showAlert(nextLocked
-            ? `🔒 Room ${room} 잠금 설정\n연간계획 자동배치 시 이 방은 건드리지 않습니다.`
-            : `🔓 Room ${room} 잠금 해제\n연간계획 자동배치 시 이 방도 배치 대상이 됩니다.`
-        );
-    },
-
-    updateQa: function(action) {
+updateQa: function(action) {
     const activeRoom = state.room;
     if (state.isObserver) return ui.showAlert("👁️ 옵저버 모드에서는 질문을 관리할 수 없습니다.");
     if (!state.activeQaKey || !activeRoom) {
@@ -1882,7 +1871,16 @@ loadDashboardStats: function() {
         if (document.getElementById('dashCourseTitle')) document.getElementById('dashCourseTitle').innerText = s.courseName || "과정명을 설정해주세요.";
         if (document.getElementById('dashPeriod')) document.getElementById('dashPeriod').innerText = s.period || "기간 미설정";
         if (document.getElementById('dashRoomDetail')) document.getElementById('dashRoomDetail').innerText = s.roomDetailName || "장소 미설정";
-        if (document.getElementById('dashCoordName')) document.getElementById('dashCoordName').innerText = s.coordinatorName || "미지정";
+        if (document.getElementById('dashCoordName')) {
+            // Firebase에 저장된 이름(성만 있을 수 있음)과 coordMgr.list를 매칭하여 전체 이름 표시
+            const savedCoord = s.coordinatorName || '';
+            const matched = (coordMgr.list || []).find(c =>
+                c.name === savedCoord ||                          // 완전 일치
+                c.name.startsWith(savedCoord) ||                 // "백유민" → "백유민 과장" 매칭
+                savedCoord.startsWith(c.name.split(' ')[0])      // "백유민 과장" → "백유민" 매칭
+            );
+            document.getElementById('dashCoordName').innerText = matched ? matched.name : (savedCoord || '미지정');
+        }
     });
 
     // 3. 공지사항 피드 실시간 업데이트
@@ -2492,34 +2490,12 @@ showAlert: function(msg) {
                     : '<span style="color:#cbd5e1;">-</span>';
 
                 const isMyRoom = (c === state.room && dataMgr.isMyOwnedRoom(c));
-                const isLocked = !!(settings.autoAssignLocked);
-
                 const rowNumCell = isMyRoom
                     ? `<span style="display:inline-flex; align-items:center; justify-content:center; width:28px; height:28px; background:#3b82f6; border-radius:50%;"><i class="fa-solid fa-check" style="color:#fff; font-size:13px;"></i></span>`
                     : rowNum;
 
-                // 잠금 토글 버튼 (연번 셀에 함께 표시)
-                const lockBtn = `
-                    <div style="margin-top:5px;" title="${isLocked ? '잠금 해제' : '자동배치 잠금'}">
-                        <button onclick="event.stopPropagation(); dataMgr.toggleRoomLock('${c}', ${isLocked})"
-                            style="border:none; background:${isLocked ? '#fef3c7' : '#f1f5f9'};
-                                   border-radius:6px; padding:3px 7px; cursor:pointer;
-                                   font-size:12px; font-weight:800;
-                                   color:${isLocked ? '#d97706' : '#94a3b8'};
-                                   border:1px solid ${isLocked ? '#fde68a' : '#e2e8f0'};
-                                   transition:all .15s; display:flex; align-items:center; gap:4px;">
-                            <i class="fa-solid ${isLocked ? 'fa-lock' : 'fa-lock-open'}"></i>
-                            ${isLocked ? '잠금' : '열림'}
-                        </button>
-                    </div>`;
-
                 row.innerHTML = `
-                    <td>
-                        <div style="display:flex; flex-direction:column; align-items:center; gap:2px;">
-                            <div>${rowNumCell}</div>
-                            ${lockBtn}
-                        </div>
-                    </td>
+                    <td>${rowNumCell}</td>
                     <td style="font-weight:900; color:#3b82f6;">
                         Room ${c}
                         ${isMyRoom ? '<span class="my-room-badge">MY</span>' : ''}
@@ -5686,7 +5662,20 @@ loadCurrentSettings: function() {
         document.getElementById('setup-course-name').value = s.courseName || "";
         document.getElementById('setup-room-pw').value = s.password ? atob(s.password) : "";
         document.getElementById('setup-prof-select').value = st.professorName || "";
-        document.getElementById('setup-coord-select').value = s.coordinatorName || "";
+        // coordinatorName 매칭: 저장값이 "백유민"이면 "백유민 과장" option도 선택
+        const savedCoordName = s.coordinatorName || '';
+        const coordSel = document.getElementById('setup-coord-select');
+        if (coordSel) {
+            // 1순위: 완전 일치
+            coordSel.value = savedCoordName;
+            // 2순위: 저장값으로 시작하는 option 찾기 (이름만 저장된 경우)
+            if (!coordSel.value && savedCoordName) {
+                const matchOpt = Array.from(coordSel.options).find(o =>
+                    o.value.startsWith(savedCoordName) || savedCoordName.startsWith(o.value.split(' ')[0])
+                );
+                if (matchOpt) coordSel.value = matchOpt.value;
+            }
+        }
 
         // 2. 강의실 선택 및 중복 체크 로직
         const roomSelect = document.getElementById('setup-room-select');
@@ -6430,7 +6419,18 @@ const annualPlanMgr = {
             const course = pool[i];
             updates[`courses/${room}/settings/courseName`] = course.name;
             updates[`courses/${room}/settings/period`]     = course.period;
-            updates[`courses/${room}/settings/coordinatorName`] = course.coord;
+            // coord가 이름만인 경우(예: "백유민") coordMgr.list에서 전체 이름("백유민 과장") 매칭
+            const coordFull = (() => {
+                const raw = course.coord || '';
+                if (!raw) return '';
+                const matched = (coordMgr.list || []).find(c =>
+                    c.name === raw ||
+                    c.name.startsWith(raw) ||
+                    raw.startsWith(c.name.split(' ')[0])
+                );
+                return matched ? matched.name : raw;
+            })();
+            updates[`courses/${room}/settings/coordinatorName`] = coordFull;
             updates[`courses/${room}/status/professorName`] = course.prof;
             updates[`courses/${room}/status/roomStatus`]   = 'active';
             assigned.push(`${room}: ${course.name}`);
