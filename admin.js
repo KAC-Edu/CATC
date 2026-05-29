@@ -6249,22 +6249,36 @@ const annualPlanMgr = {
             const buf = await file.arrayBuffer();
             const wb = XLSX.read(buf, { type: 'array', cellText: false, cellDates: false });
 
-            // ── FIX 1: 시트 이름의 공백을 제거한 후 '총괄' 포함 여부로 검색.
-            //    실제 파일의 시트명은 '총괄표'이며, 보이지 않는 공백이나
-            //    전각 문자가 섞여도 매칭되도록 replace(/\s/g,'') 처리 후 비교.
-            //    일치하는 시트가 없으면 무조건 첫 번째 시트로 fallback.
-            const sheetName = wb.SheetNames.find(n => n.replace(/\s/g, '').includes('총괄'))
-                           || wb.SheetNames[0];
-            const ws = wb.Sheets[sheetName];
-            console.log('[annualPlanMgr] 사용 시트:', sheetName);
+            // ── 시트 접근: SheetNames 문자열 키 매칭 대신 인덱스 기반으로 접근.
+            //
+            //    [근본 원인] xlsx.js 0.18.x 에서 한글 등 멀티바이트 시트명을 가진
+            //    파일을 파싱할 때, wb.SheetNames 배열에 저장된 문자열과
+            //    wb.Sheets 객체의 실제 키(key)가 내부 인코딩 차이로 불일치하는
+            //    버그가 있음. 즉 SheetNames[0] === '총괄표' 이지만
+            //    wb.Sheets['총괄표']는 undefined를 반환 → "시트 객체가 없다" 에러.
+            //
+            //    [해결] wb.Sheets를 Object.values()로 접근하면 키 매칭 없이
+            //    시트 객체 자체를 직접 꺼낼 수 있으므로 인코딩 불일치 문제 우회.
+            //    '총괄' 이름을 가진 시트를 우선 찾되, 없으면 무조건 첫 번째 시트 사용.
 
-            // ── FIX 2: !ref가 누락된 경우 강제로 넓은 범위를 주입.
-            //    일부 엑셀 라이브러리(LibreOffice 저장, 구버전 xlsx 등)는
-            //    ws['!ref']를 생략하는 경우가 있어 decode_range()가 undefined를
-            //    받아 TypeError를 냄. A1:Z500 범위를 강제 설정해 파싱을 계속함.
+            const allSheetEntries = Object.entries(wb.Sheets);  // [[name, sheetObj], ...]
+            const targetEntry = allSheetEntries.find(([n]) => n.replace(/\s/g, '').includes('총괄'))
+                             || allSheetEntries[0];
+
+            const sheetName = targetEntry ? targetEntry[0] : '(알 수 없음)';
+            const ws        = targetEntry ? targetEntry[1] : null;
+            console.log('[annualPlanMgr] 사용 시트:', sheetName,
+                        '| SheetNames[0]:', wb.SheetNames[0]);
+
             if (!ws) {
-                throw new Error(`시트 객체 자체가 없습니다. (시트명: ${sheetName})\n파일을 Excel에서 다시 저장 후 업로드해 보세요.`);
+                throw new Error(
+                    `시트를 찾을 수 없습니다.\n` +
+                    `등록된 시트: ${wb.SheetNames.join(', ')}`
+                );
             }
+
+            // !ref 누락 방어: 일부 저장 환경에서 데이터 범위 정보가 빠지는 경우
+            // A1:Z500 범위를 강제 주입해 파싱을 계속 진행
             if (!ws['!ref']) {
                 console.warn('[annualPlanMgr] !ref 누락 → A1:Z500 강제 설정');
                 ws['!ref'] = XLSX.utils.encode_range({ s: { c: 0, r: 0 }, e: { c: 25, r: 499 } });
