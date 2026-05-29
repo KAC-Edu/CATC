@@ -4648,13 +4648,20 @@ async function saveGlobalNotice() {
             <i class="fa-solid fa-xmark" style="cursor:pointer; font-size:22px;" onclick="document.getElementById('annualPlanModalCoord').style.display='none'"></i>
         </div>
         <p style="font-size:12px; color:#64748b; margin:0 0 12px;">수정 후 [저장 및 즉시적용]을 누르면 잠금되지 않은 강의실 정보가 현재 날짜 기준으로 자동 갱신됩니다.</p>
+        <div style="display:flex; align-items:center; gap:10px; background:#eff6ff; border:1px solid #bfdbfe; border-radius:10px; padding:10px 14px; margin-bottom:12px;">
+            <i class="fa-solid fa-circle-info" style="color:#2563eb; font-size:15px; flex-shrink:0;"></i>
+            <span style="font-size:12px; color:#1e40af; line-height:1.5;">본 페이지의 데이터는 업로드된 자료를 바탕으로 구성됩니다. 대량 수정이나 신규 등록 시 <b>[교육운영계획 변환기]</b>를 통해 엑셀 파일을 JSON으로 변환 후 반영해 주시기 바랍니다.</span>
+        </div>
         <div style="margin-bottom:10px;">
             <button class="navy-btn" style="width:auto; padding:0 14px; height:36px; background:#0ea5e9;" onclick="annualPlanMgrCoord.addRow()"><i class="fa-solid fa-plus"></i> 과정 행 추가</button>
         </div>
         <div id="annualPlanEditorAreaCoord" style="flex:1; overflow:auto; border:1px solid var(--border-blue); border-radius:12px; min-height:200px;"></div>
-        <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:16px;">
-            <button class="navy-btn" style="width:auto; padding:0 18px; height:42px; background:#64748b;" onclick="document.getElementById('annualPlanModalCoord').style.display='none'">닫기</button>
-            <button class="navy-btn" style="width:auto; padding:0 18px; height:42px; background:var(--green-save);" onclick="annualPlanMgrCoord.saveAndSync()"><i class="fa-solid fa-sync"></i> 저장 및 모든 Room에 즉시 적용</button>
+        <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; margin-top:16px;">
+            <button class="navy-btn" style="width:auto; padding:0 16px; height:42px; background:#16a34a;" onclick="window.open('plan_converter.html','_blank')"><i class="fa-solid fa-file-excel"></i> 교육운영계획 변환기 바로가기</button>
+            <div style="display:flex; gap:10px;">
+                <button class="navy-btn" style="width:auto; padding:0 18px; height:42px; background:#64748b;" onclick="document.getElementById('annualPlanModalCoord').style.display='none'">닫기</button>
+                <button class="navy-btn" style="width:auto; padding:0 18px; height:42px; background:var(--green-save);" onclick="annualPlanMgrCoord.saveAndSync()"><i class="fa-solid fa-sync"></i> 저장 및 모든 Room에 즉시 적용</button>
+            </div>
         </div>
     </div>
 </div>

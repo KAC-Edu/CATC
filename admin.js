@@ -1063,9 +1063,38 @@ resetCourse: function() {
         const _boardEditor = document.getElementById('boardEditor');
         if (_boardEditor) _boardEditor.innerHTML = "";
 
-        // set() 으로 방 노드 전체를 freshRoom 으로 교체 → students/expectedStudents/internal_attendance 등
-        // 명시되지 않은 모든 하위 데이터까지 일괄 삭제된다.
-        firebase.database().ref(rPath).set(freshRoom).then(() => {
+        // [권한 호환 초기화] 보안 규칙상 courses/$roomId 루트에는 .write 규칙이 없으므로
+        //  ref(rPath).set() 은 PERMISSION_DENIED 를 유발한다(하위 노드에만 쓰기 권한 존재).
+        //  → 루트 통 set() 대신, 규칙에 정의된 하위 노드별 multi-path update 로 초기화한다.
+        //    (update 의 각 경로는 개별 .write 규칙으로 평가되어 권한 충돌이 없다)
+        const resetUpdates = {
+            // 설정/상태 재구성 (.write: auth != null)
+            [`${rPath}/settings`]: freshRoom.settings,
+            [`${rPath}/status`]:   freshRoom.status,
+            // 공지류 초기화
+            [`${rPath}/boardNotice`]:        "",   // auth != null
+            [`${rPath}/notice`]:             "",   // auth != null
+            [`${rPath}/coordNotice`]:        "",   // .write: true
+            [`${rPath}/coordNoticeHistory`]: null, // .write: true
+            // 교육생/출결/신청 데이터 일괄 소거 (.write: true)
+            [`${rPath}/students`]:            null,
+            [`${rPath}/internal_attendance`]: null,
+            [`${rPath}/questions`]:           null,
+            [`${rPath}/admin_actions`]:       null,
+            [`${rPath}/shuttle`]:             null,
+            [`${rPath}/dinner_skips`]:        null,
+            [`${rPath}/tablet_loans`]:        null,
+            [`${rPath}/connections`]:         null,
+            [`${rPath}/quizAnswers`]:         null,
+            // auth != null 노드 소거
+            [`${rPath}/expectedStudents`]:    null,
+            [`${rPath}/activeQuiz`]:          null,
+            [`${rPath}/quizFinalResults`]:    null,
+            [`${rPath}/quizBank`]:            null,
+            [`${rPath}/attendanceQR`]:        null
+        };
+
+        firebase.database().ref().update(resetUpdates).then(() => {
             ui.showAlert(`✅ Room ${state.room}이 성공적으로 초기화되었습니다.`);
             // 화면 새로고침하여 대기 상태로 복귀
             setTimeout(() => location.reload(), 800);
@@ -2551,6 +2580,9 @@ showAlert: function(msg) {
 
             // 우측 현황판 테이블 갱신
             if(tableBody) {
+                const hasCourse = !!(settings.courseName && String(settings.courseName).trim());
+                // [필터] 운용 중(roomStatus=active + 과정명 존재)인 강의실만 현황판에 표출
+                if (isRoomActive && hasCourse) {
                 const row = document.createElement('tr');
 
                 const statusBadge = isRoomActive 
@@ -2623,7 +2655,13 @@ showAlert: function(msg) {
                 }
 
                 tableBody.appendChild(row);
+                } // [필터] 운용 중 방만 표출 끝
             }
+        }
+
+        // [현황판] 운용 중인 강의실이 하나도 없으면 안내 행 표시 (count는 표출된 방에서만 증가)
+        if (tableBody && count === 1) {
+            tableBody.innerHTML = '<tr><td colspan="8" style="padding:28px; text-align:center; color:#94a3b8; font-weight:700;">현재 운용 중인 강의실이 없습니다.</td></tr>';
         }
 
         // [핵심 추가] 현재 선택된 방 정보가 없다면(홈 화면) 메뉴를 "Select Room"으로 강제 리셋

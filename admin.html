@@ -976,10 +976,12 @@
 <!-- ══ 강의실 실시간 현황판 (#view-waiting) ══ -->
 <div id="view-waiting" class="full-dashboard" style="display:none; flex-direction:column; align-items:center; padding-top:6px;">
     <div class="view-header">
-        <h1>
-            <i class="fa-solid fa-desktop"></i> 강의실 실시간 현황판
+        <h1 style="display:inline-flex; align-items:center; justify-content:center; gap:16px; flex-wrap:wrap;">
+            <span style="display:inline-flex; align-items:center; gap:10px;"><i class="fa-solid fa-desktop"></i> 강의실 실시간 현황판</span>
             <button onclick="annualPlanMgr.openEditorModal()"
-                    style="margin-left:18px; padding:8px 15px; font-size:13px; background:#003366; color:#ffffff; border-radius:8px; border:none; cursor:pointer; font-weight:800; vertical-align:middle;">
+                    style="display:inline-flex; align-items:center; gap:7px; padding:9px 16px; font-size:14px; line-height:1; background:#0ea5e9; color:#ffffff; border:none; border-radius:10px; cursor:pointer; font-weight:800; box-shadow:0 3px 8px rgba(14,165,233,0.30); transition:transform .15s, box-shadow .15s;"
+                    onmouseover="this.style.transform='translateY(-1px)'; this.style.boxShadow='0 5px 13px rgba(14,165,233,0.42)';"
+                    onmouseout="this.style.transform=''; this.style.boxShadow='0 3px 8px rgba(14,165,233,0.30)';">
                 <i class="fa-solid fa-calendar-days"></i> 연간계획 관리/수정
             </button>
         </h1>
@@ -1007,6 +1009,10 @@
             <h3 style="display:flex; align-items:center; gap:8px; justify-content:flex-start;"><i class="fa-solid fa-calendar-check"></i> 연간 교육운영계획 마스터 편집기</h3>
             <p style="font-size:12px; color:#64748b; margin:6px 0 0;">수정 후 [저장 및 즉시적용]을 누르면 현재 운영 중인 방(잠금되지 않은 방) 정보가 자동으로 갱신됩니다.</p>
         </div>
+        <div style="display:flex; align-items:center; gap:10px; background:#eff6ff; border:1px solid #bfdbfe; border-radius:10px; padding:10px 14px; margin-bottom:12px;">
+            <i class="fa-solid fa-circle-info" style="color:#2563eb; font-size:15px; flex-shrink:0;"></i>
+            <span style="font-size:12px; color:#1e40af; line-height:1.5;">본 페이지의 데이터는 업로드된 자료를 바탕으로 구성됩니다. 대량 수정이나 신규 등록 시 <b>[교육운영계획 변환기]</b>를 통해 엑셀 파일을 JSON으로 변환 후 반영해 주시기 바랍니다.</span>
+        </div>
         <div style="margin-bottom:10px;">
             <button onclick="annualPlanMgr.addRow()" class="m-btn" style="background:#0ea5e9; color:#fff; font-size:13px; padding:8px 14px;">
                 <i class="fa-solid fa-plus"></i> 과정 행 추가
@@ -1015,11 +1021,16 @@
         <div id="annualPlanEditorArea" style="flex:1; overflow:auto; border:1px solid #e2e8f0; border-radius:12px;">
             <!-- 편집 테이블이 생성됨 -->
         </div>
-        <div class="modal-actions" style="margin-top:18px; justify-content:flex-end; gap:12px;">
-            <button class="m-btn m-btn-later" onclick="document.getElementById('annualPlanModal').style.display='none'">닫기</button>
-            <button class="m-btn m-btn-done" onclick="annualPlanMgr.saveAndSync()">
-                <i class="fa-solid fa-sync"></i> 저장 및 모든 Room에 즉시 적용
+        <div class="modal-actions" style="margin-top:18px; justify-content:space-between; gap:12px; align-items:center;">
+            <button class="m-btn" onclick="window.open('plan_converter.html','_blank')" style="background:#16a34a; color:#fff; font-size:13px;">
+                <i class="fa-solid fa-file-excel"></i> 교육운영계획 변환기 바로가기
             </button>
+            <div style="display:flex; gap:12px;">
+                <button class="m-btn m-btn-later" onclick="document.getElementById('annualPlanModal').style.display='none'">닫기</button>
+                <button class="m-btn m-btn-done" onclick="annualPlanMgr.saveAndSync()">
+                    <i class="fa-solid fa-sync"></i> 저장 및 모든 Room에 즉시 적용
+                </button>
+            </div>
         </div>
     </div>
 </div>
