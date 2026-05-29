@@ -6022,3 +6022,128 @@ const examTimer = {
         this._render();
     }
 };
+
+/* ══ 배경음악 플레이어 (BGM Player) ══
+   음원: Pixabay Free Music (CC0 / 저작권 없음)
+   https://pixabay.com/music/
+*/
+const bgmPlayer = {
+    _audio: null,
+    _currentIdx: -1,
+    _panelOpen: false,
+
+    // ── 큐레이션 트랙 목록 (Pixabay CDN 직접 링크, 무료/CC0) ──
+    tracks: [
+        {
+            title: 'Lofi Study',
+            artist: 'Lesfm',
+            emoji: '📚',
+            url: 'https://cdn.pixabay.com/audio/2022/05/27/audio_1808fbf07a.mp3'
+        },
+        {
+            title: 'Relaxing Piano',
+            artist: 'Coma-Media',
+            emoji: '🎹',
+            url: 'https://cdn.pixabay.com/audio/2024/03/12/audio_1a5572f851.mp3'
+        },
+        {
+            title: 'Calm Ambient',
+            artist: 'Prazkhanal',
+            emoji: '🌿',
+            url: 'https://cdn.pixabay.com/audio/2022/03/10/audio_c0e1b3d9f7.mp3'
+        },
+        {
+            title: 'Focus Flow',
+            artist: 'AlexiAction',
+            emoji: '🎯',
+            url: 'https://cdn.pixabay.com/audio/2023/08/17/audio_e9d6f02d62.mp3'
+        },
+        {
+            title: 'Soft Jazz',
+            artist: 'Olexy',
+            emoji: '🎷',
+            url: 'https://cdn.pixabay.com/audio/2022/08/04/audio_2dde668d05.mp3'
+        }
+    ],
+
+    init: function() {
+        this._audio = new Audio();
+        this._audio.loop = true;
+        this._audio.volume = 0.4;
+        this._renderTracks();
+
+        // 패널 외부 클릭 시 닫기
+        document.addEventListener('click', (e) => {
+            const panel = document.getElementById('bgmPanel');
+            const btn = document.getElementById('bgmIconBtn');
+            if (panel && btn && !panel.contains(e.target) && !btn.contains(e.target)) {
+                panel.style.display = 'none';
+                this._panelOpen = false;
+            }
+        });
+    },
+
+    _renderTracks: function() {
+        const list = document.getElementById('bgmTrackList');
+        if (!list) return;
+        list.innerHTML = this.tracks.map((t, i) => `
+            <div id="bgmTrack_${i}" onclick="bgmPlayer.select(${i})"
+                style="display:flex; align-items:center; gap:12px; padding:10px 12px; border-radius:12px; cursor:pointer; transition:background 0.15s; ${this._currentIdx===i ? 'background:rgba(96,165,250,0.15);' : ''}">
+                <div style="width:36px; height:36px; border-radius:10px; background:rgba(255,255,255,0.06); display:flex; align-items:center; justify-content:center; font-size:18px; flex-shrink:0;">${t.emoji}</div>
+                <div style="flex:1; overflow:hidden;">
+                    <div style="color:${this._currentIdx===i ? '#60a5fa' : '#f1f5f9'}; font-size:13px; font-weight:${this._currentIdx===i ? '800' : '600'}; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${t.title}</div>
+                    <div style="color:#64748b; font-size:11px; margin-top:2px;">${t.artist}</div>
+                </div>
+                ${this._currentIdx===i ? '<i class="fa-solid fa-volume-high" style="color:#60a5fa; font-size:12px; flex-shrink:0;"></i>' : ''}
+            </div>
+        `).join('');
+    },
+
+    select: function(idx) {
+        if (!this._audio) this.init();
+        const t = this.tracks[idx];
+        if (!t) return;
+
+        this._currentIdx = idx;
+        this._audio.src = t.url;
+        this._audio.play().catch(() => {
+            // 자동재생 정책으로 막힌 경우 무시
+        });
+
+        // UI 업데이트
+        this._renderTracks();
+        const badge = document.getElementById('bgmNowBadge');
+        if (badge) badge.style.display = 'inline-block';
+
+        // 헤더 버튼 아이콘 강조
+        const btn = document.getElementById('bgmIconBtn');
+        if (btn) btn.style.color = '#60a5fa';
+
+        // 선택 후 패널 유지 (음악은 계속 흐름)
+    },
+
+    setVolume: function(val) {
+        if (this._audio) this._audio.volume = val / 100;
+    },
+
+    togglePanel: function() {
+        if (!this._audio) this.init();
+        const panel = document.getElementById('bgmPanel');
+        if (!panel) return;
+        this._panelOpen = !this._panelOpen;
+        panel.style.display = this._panelOpen ? 'block' : 'none';
+        if (this._panelOpen) this._renderTracks();
+    },
+
+    stop: function() {
+        if (this._audio) { this._audio.pause(); this._audio.src = ''; }
+        this._currentIdx = -1;
+        const badge = document.getElementById('bgmNowBadge');
+        if (badge) badge.style.display = 'none';
+        const btn = document.getElementById('bgmIconBtn');
+        if (btn) btn.style.color = '';
+    }
+};
+
+// 페이지 로드 시 초기화
+document.addEventListener('DOMContentLoaded', () => bgmPlayer.init());
