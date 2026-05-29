@@ -486,28 +486,9 @@ function showPreview(courses, sheetName) {
             총 <b>${courses.length}개</b> 과정 파싱 완료 &nbsp;|&nbsp; 시트: <b>${sheetName}</b>
             &nbsp;|&nbsp; 기간: <b>${minDate} ~ ${maxDate}</b>
         </div>
-        <!-- Room 유보 선택 -->
-        <div style="background:#fffbeb; border:1.5px solid #fde68a; border-radius:14px; padding:18px 22px; margin-bottom:16px;">
-            <div style="font-size:13px; font-weight:800; color:#92400e; margin-bottom:12px;">
-                <i class="fa-solid fa-shield-halved"></i> &nbsp;배치 제외할 강의실 (체크된 방은 현재 과정 그대로 유지)
-            </div>
-            <div style="display:flex; gap:12px; flex-wrap:wrap;" id="skip-room-wrap">
-                <label id="room-label-A" style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:10px 18px;background:#fff;border-radius:10px;border:1.5px solid #e2e8f0;font-size:14px;font-weight:700;color:#1e293b;transition:.15s;">
-                    <input type="checkbox" id="skip-room-A" onchange="toggleRoomLabel('A')" style="width:17px;height:17px;accent-color:#f59e0b;cursor:pointer;">
-                    Room A &nbsp;<span style="font-size:11px;color:#94a3b8;font-weight:500;">현재 과정 유지</span>
-                </label>
-                <label id="room-label-B" style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:10px 18px;background:#fff;border-radius:10px;border:1.5px solid #e2e8f0;font-size:14px;font-weight:700;color:#1e293b;transition:.15s;">
-                    <input type="checkbox" id="skip-room-B" onchange="toggleRoomLabel('B')" style="width:17px;height:17px;accent-color:#f59e0b;cursor:pointer;">
-                    Room B &nbsp;<span style="font-size:11px;color:#94a3b8;font-weight:500;">현재 과정 유지</span>
-                </label>
-                <label id="room-label-C" style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:10px 18px;background:#fff;border-radius:10px;border:1.5px solid #e2e8f0;font-size:14px;font-weight:700;color:#1e293b;transition:.15s;">
-                    <input type="checkbox" id="skip-room-C" onchange="toggleRoomLabel('C')" style="width:17px;height:17px;accent-color:#f59e0b;cursor:pointer;">
-                    Room C &nbsp;<span style="font-size:11px;color:#94a3b8;font-weight:500;">현재 과정 유지</span>
-                </label>
-            </div>
-            <div style="font-size:11px;color:#b45309;margin-top:10px;">
-                ※ 체크하지 않은 방만 이번 주 과정으로 자동 배치됩니다. 체크한 방은 Firebase에 저장된 과정을 그대로 유지합니다.
-            </div>
+        <div class="info-box" style="margin-bottom:16px;">
+            <i class="fa-solid fa-circle-info"></i>
+            <span>내용을 확인하세요. 이상 없으면 <b>Firebase에 업로드</b> 버튼을 누르면 해당 주차 강의실에 자동 배치됩니다.</span>
         </div>
         <div class="preview-wrap">
             <div class="preview-toolbar">
@@ -588,8 +569,8 @@ async function uploadToFirebase() {
             </div>
             ${skipped.length ? `
             <div class="status-box warn">
-                <i class="fa-solid fa-shield-halved"></i>
-                유보(현재 과정 유지): <b>${skipped.join(' | ')}</b>
+                <i class="fa-solid fa-lock"></i>
+                잠금 유지: <b>${skipped.join(' | ')}</b>
             </div>` : ''}`;
         document.getElementById('step3-card').scrollIntoView({behavior:'smooth', block:'start'});
 
@@ -607,21 +588,25 @@ async function assignRooms(courses) {
     const ALL_ROOMS = ['A','B','C'];
     const today     = new Date().toISOString().split('T')[0];
 
-    // 체크박스로 선택된 유보(제외) 방 목록
-    const skipRooms = ALL_ROOMS.filter(r => {
-        const el = document.getElementById(`skip-room-${r}`);
-        return el && el.checked;
-    });
+    // Firebase에서 잠금 상태 읽기
+    const coursesSnap = await firebase.database().ref('courses').get();
+    const coursesData = coursesSnap.val() || {};
 
-    // 실제 배치 대상 방 (유보 제외)
-    const ROOMS = ALL_ROOMS.filter(r => !skipRooms.includes(r));
+    // 잠긴 방 목록: Firebase의 autoAssignLocked 또는 체크박스 중 하나라도 체크된 방 제외
+    const lockedByFirebase = ALL_ROOMS.filter(r =>
+        !!(coursesData[r]?.settings?.autoAssignLocked)
+    );
 
-    // 이번 주 진행 중인 과정 필터
+    // 이번 주 진행 과정 필터
     const thisWeekCourses = courses.filter(c => c.startDate <= today && c.endDate >= today);
+
+    // 실제 배치 대상 (잠기지 않은 방만)
+    const ROOMS   = ALL_ROOMS.filter(r => !lockedByFirebase.includes(r));
+    const skipped = lockedByFirebase.map(r => `Room ${r} 🔒`);
 
     const updates = {};
 
-    // 배치 대상 방만 초기화 (유보된 방은 건드리지 않음)
+    // 배치 대상 방만 초기화 (잠긴 방은 건드리지 않음)
     for (const r of ROOMS) {
         updates[`courses/${r}/settings/courseName`]      = '';
         updates[`courses/${r}/settings/period`]          = '';
@@ -630,10 +615,8 @@ async function assignRooms(courses) {
         updates[`courses/${r}/status/roomStatus`]        = 'idle';
     }
 
-    // 이번 주 과정을 배치 대상 방에 순서대로 배정
+    // 이번 주 과정 배치
     const assigned = [];
-    const skipped  = skipRooms.map(r => `Room ${r} (유보)`);
-
     thisWeekCourses.slice(0, ROOMS.length).forEach((c, i) => {
         const r = ROOMS[i];
         updates[`courses/${r}/settings/courseName`]      = c.name;
@@ -651,21 +634,6 @@ async function assignRooms(courses) {
 /* ══════════════════════════════════════════
    진행 단계 UI
 ══════════════════════════════════════════ */
-/* ── Room 유보 체크박스 시각 피드백 ── */
-function toggleRoomLabel(r) {
-    const checked = document.getElementById(`skip-room-${r}`).checked;
-    const label   = document.getElementById(`room-label-${r}`);
-    if (checked) {
-        label.style.background    = '#fffbeb';
-        label.style.borderColor   = '#fde68a';
-        label.style.color         = '#92400e';
-    } else {
-        label.style.background    = '#fff';
-        label.style.borderColor   = '#e2e8f0';
-        label.style.color         = '#1e293b';
-    }
-}
-
 function setProgress(step) {
     [1,2,3].forEach(i => {
         const dot   = document.getElementById(`pd${i}`);
