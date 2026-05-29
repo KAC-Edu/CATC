@@ -1172,9 +1172,11 @@ async function enterApp() {
             return;
         }
     }
+    // [수정] OR 방식: 명단이 없으면 무조건 통과, 명단이 있으면 명단 대조
     const expectedSnap = await firebase.database().ref(`courses/${currentRoom}/expectedStudents`).once('value');
     const expectedList = expectedSnap.val();
     if (expectedList && typeof expectedList === 'object') {
+        // 명단이 존재하는 경우에만 대조 — 단, 기존 uToken이 없으면(미등록) 통과 허용
         const uToken = localStorage.getItem('uToken');
         const savedName  = localStorage.getItem('kac_user_name') || '';
         const savedPhone = localStorage.getItem('kac_user_phone') || '';
@@ -1184,12 +1186,14 @@ async function enterApp() {
                 const ePhone = (e.phone || '').trim().slice(-4);
                 return eName === savedName.trim() && (ePhone === savedPhone.trim() || !ePhone);
             });
+            // [OR 방식] 명단에 없어도 QR 입장 자체는 허용 (프로필 체크에서 추가 처리)
+            // 명단 미포함 시 안내만 표시하고 계속 진행
             if (!found) {
-                alert(`⚠️ 등록된 명단에 없는 교육생입니다.\n이름: ${savedName}\n\n본인이 맞다면 강사에게 문의해 주세요.`);
-                return;
+                console.log(`[QR입장] 명단 미포함 교육생 "${savedName}" — 입장은 허용됨`);
             }
         }
     }
+    // 명단 유무와 무관하게 QR 입장 허용
     const doc = document.documentElement;
     if (doc.requestFullscreen) doc.requestFullscreen().catch(e=>{});
     await checkProfile();
@@ -2495,8 +2499,6 @@ async function submitAdminAction() {
         } else if (selectedAdminType === 'overnight') {
             startOvernightReturnAlerts();
         }
-        // 강사 복귀 호출 신호 감지 시작
-        if (uToken && currentRoom) startReturnCallListener(currentRoom, uToken);
 
     } catch (e) {
         console.error(e);
@@ -2633,29 +2635,7 @@ function startOvernightReturnAlerts() {
     }, 5 * 60 * 1000);
 }
 
-// ── 강사 복귀 호출 신호 감지 리스너 ──
-let _returnCallRef = null;
-function startReturnCallListener(room, token) {
-    const today = new Date().toISOString().split('T')[0];
-    if (_returnCallRef) _returnCallRef.off();
-    _returnCallRef = firebase.database().ref(`courses/${room}/admin_actions/${today}/${token}/returnCall`);
-    _returnCallRef.on('value', snap => {
-        const callTs = snap.val();
-        if (!callTs) return;
-        // 복귀 완료 상태면 무시
-        const returnedSnap = firebase.database().ref(`courses/${room}/admin_actions/${today}/${token}/returned`);
-        returnedSnap.once('value', rs => {
-            if (rs.val() === true) return;
-            // 알림 발생
-            if (navigator.vibrate) navigator.vibrate([500, 200, 500, 200, 500]);
-            try { new Audio('timer.mp3').play().catch(()=>{}); } catch(e) {}
-            const overlay = document.getElementById('returnAlertOverlay');
-            const msgEl = document.getElementById('returnAlertMsg');
-            if (overlay) overlay.style.display = 'flex';
-            if (msgEl) msgEl.innerText = '📣 강사님이 복귀 확인을 요청했습니다!\n지금 바로 복귀 완료 보고를 눌러주세요.';
-        });
-    });
-}
+
 
 // 복귀 완료 보고 처리
 async function confirmReturnAction() {
