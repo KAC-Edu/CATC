@@ -883,7 +883,18 @@ deactivateAllRooms: async function() {
 
 
 
-updateQa: function(action) {
+// 현황판 잠금 토글 - 자동배치 시 해당 방 제외
+    toggleRoomLock: async function(room, currentLocked) {
+        if (state.isObserver) return ui.showAlert("👁️ 옵저버 모드에서는 설정을 변경할 수 없습니다.");
+        const nextLocked = !currentLocked;
+        await firebase.database().ref(`courses/${room}/settings/autoAssignLocked`).set(nextLocked || null);
+        ui.showAlert(nextLocked
+            ? `🔒 Room ${room} 잠금 설정\n연간계획 자동배치 시 이 방은 건드리지 않습니다.`
+            : `🔓 Room ${room} 잠금 해제\n연간계획 자동배치 시 이 방도 배치 대상이 됩니다.`
+        );
+    },
+
+    updateQa: function(action) {
     const activeRoom = state.room;
     if (state.isObserver) return ui.showAlert("👁️ 옵저버 모드에서는 질문을 관리할 수 없습니다.");
     if (!state.activeQaKey || !activeRoom) {
@@ -2490,12 +2501,33 @@ showAlert: function(msg) {
                     : '<span style="color:#cbd5e1;">-</span>';
 
                 const isMyRoom = (c === state.room && dataMgr.isMyOwnedRoom(c));
+                const isLocked = !!(settings.autoAssignLocked);
+
                 const rowNumCell = isMyRoom
                     ? `<span style="display:inline-flex; align-items:center; justify-content:center; width:28px; height:28px; background:#3b82f6; border-radius:50%;"><i class="fa-solid fa-check" style="color:#fff; font-size:13px;"></i></span>`
                     : rowNum;
 
+                const lockBtn = `
+                    <div style="margin-top:5px;" title="${isLocked ? '잠금 해제 (자동배치 허용)' : '잠금 (자동배치 제외)'}">
+                        <button onclick="event.stopPropagation(); dataMgr.toggleRoomLock('${c}', ${isLocked})"
+                            style="border:none; background:${isLocked ? '#fef3c7' : '#f1f5f9'};
+                                   border-radius:6px; padding:3px 7px; cursor:pointer;
+                                   font-size:12px; font-weight:800;
+                                   color:${isLocked ? '#d97706' : '#94a3b8'};
+                                   border:1px solid ${isLocked ? '#fde68a' : '#e2e8f0'};
+                                   transition:all .15s; display:flex; align-items:center; gap:4px;">
+                            <i class="fa-solid ${isLocked ? 'fa-lock' : 'fa-lock-open'}"></i>
+                            ${isLocked ? '잠금' : '열림'}
+                        </button>
+                    </div>`;
+
                 row.innerHTML = `
-                    <td>${rowNumCell}</td>
+                    <td>
+                        <div style="display:flex; flex-direction:column; align-items:center; gap:2px;">
+                            <div>${rowNumCell}</div>
+                            ${lockBtn}
+                        </div>
+                    </td>
                     <td style="font-weight:900; color:#3b82f6;">
                         Room ${c}
                         ${isMyRoom ? '<span class="my-room-badge">MY</span>' : ''}
