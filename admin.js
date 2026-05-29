@@ -2862,7 +2862,7 @@ setMode: function(mode) {
         if (state.room) {
             // ── 교육생 화면 모드 설정 (퀴즈는 맨 먼저 처리) ──
             if (!state.isObserver) {
-                const safeStudentModes = ['waiting', 'shuttle', 'admin-action', 'dinner-skip', 'tablet-loan', 'students', 'dashboard', 'notice', 'attendance', 'guide', 'dormitory'];
+                const safeStudentModes = ['waiting', 'shuttle', 'admin-action', 'dinner-skip', 'tablet-loan', 'students', 'dashboard', 'notice', 'attendance', 'guide', 'dormitory', 'survey-guide'];
                 let studentMode;
                 if (mode === 'quiz') {
                     studentMode = 'quiz';

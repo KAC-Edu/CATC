@@ -361,6 +361,66 @@
 
 
 <!-- [6.0차 최종 통합본] 대시보드 구역 -->
+<!-- 설문조사 안내 뷰 (강당 스크린 전용) -->
+<div id="view-survey-guide" style="display:none; flex-direction:column; align-items:center; width:100%;">
+    <div class="view-header" style="margin-bottom:0;">
+        <h1><i class="fa-solid fa-square-poll-vertical"></i> 교육 만족도 설문조사 안내</h1>
+    </div>
+    <div class="survey-guide-container">
+        <div class="survey-card-main">
+            <div class="survey-header">★ 설 문 조 사 ★</div>
+
+            <!-- Step 1 -->
+            <div class="survey-step">
+                <div class="step-num">1</div>
+                <div class="step-content">
+                    <p class="step-title">스카이캠퍼스 <span style="color:#ef4444; font-size:0.85em;">(외부망)</span> 접속 <span class="sub-txt">— 모바일 & PC 모두 가능</span></p>
+                    <div style="display:flex; flex-direction:column; gap:12px; margin-top:10px;">
+                        <div class="link-box" style="display:flex; align-items:center; gap:16px;">
+                            <i class="fa-solid fa-globe" style="font-size:28px; color:#3b82f6;"></i>
+                            <span>한국공항공사 스카이캠퍼스 &nbsp;<span style="color:#94a3b8; font-size:0.75em;">▶ 네이버 검색 또는 주소입력</span></span>
+                        </div>
+                        <div class="link-box" onclick="window.open('https://skycampus.airport.co.kr/', '_blank')" style="display:flex; align-items:center; gap:16px;">
+                            <i class="fa-solid fa-link" style="font-size:24px;"></i>
+                            <span>https://skycampus.airport.co.kr</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 2 -->
+            <div class="survey-step">
+                <div class="step-num">2</div>
+                <div class="step-content">
+                    <p class="step-title">우 상단, 공사직원 로그인 &nbsp;<i class="fa-solid fa-user-lock" style="font-size:0.8em; color:#64748b;"></i></p>
+                </div>
+            </div>
+
+            <!-- Step 3 -->
+            <div class="survey-step">
+                <div class="step-num">3</div>
+                <div class="step-content">
+                    <p class="step-title">설문조사 실시</p>
+                    <div class="step-detail">
+                        <span class="badge-blue">마이페이지</span>
+                        &nbsp;<i class="fa-solid fa-hand-point-right" style="color:#f59e0b;"></i>&nbsp;
+                        <b>〈현재 수강 중인 과정명〉</b> 입장
+                    </div>
+                    <div class="step-detail">
+                        <i class="fa-solid fa-folder-open" style="color:#3b82f6;"></i>&nbsp;
+                        좌측 카테고리 하단 &nbsp;<b>〈항기원 교육과정운영 설문평가〉</b> 실시
+                    </div>
+                    <div class="final-action-box">
+                        <div class="num-badge" style="display:flex; align-items:center; justify-content:center; flex-shrink:0;">15</div>
+                        <span>항기원 교육과정운영 설문평가</span>
+                        <div class="go-btn">설문 이동 &nbsp;<i class="fa-solid fa-chevron-right"></i></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <div id="view-dashboard" style="display:none; width:100%; flex-direction:column; align-items:center;">
     
     <!-- 1. 헤더 영역: 중앙 정렬 및 실시간 배지 연동 -->
@@ -563,8 +623,12 @@
                     style="height:30px; padding:0 12px; border:1.5px solid #ddd; border-radius:7px; background:#fff; cursor:pointer; font-size:12px; color:#ef4444; font-weight:700;">
                     <i class="fa-solid fa-trash"></i> 초기화
                 </button>
+                <button onclick="ui.setMode('survey-guide')"
+                    style="height:30px; padding:0 16px; background:#fff; color:#7c3aed; border:1.5px solid #7c3aed; border-radius:7px; cursor:pointer; font-size:13px; font-weight:800; margin-left:auto; margin-right:8px;">
+                    <i class="fa-solid fa-square-poll-vertical"></i> 설문 안내 모드
+                </button>
                 <button onclick="dataMgr.saveBoardNotice()"
-                    style="height:30px; padding:0 16px; background:#7c3aed; color:#fff; border:none; border-radius:7px; cursor:pointer; font-size:13px; font-weight:800; margin-left:auto;">
+                    style="height:30px; padding:0 16px; background:#7c3aed; color:#fff; border:none; border-radius:7px; cursor:pointer; font-size:13px; font-weight:800;">
                     <i class="fa-solid fa-floppy-disk"></i> 저장 & 게시
                 </button>
             </div>

@@ -560,6 +560,7 @@
             <div class="menu-item" id="menu-tabletLoan" onclick="openTabletLoan()"><i class="fa-solid fa-tablet-screen-button" style="color:#6366f1;"></i> 태블릿 대여 신청</div>
             <div class="menu-item" onclick="openAttendanceQR()"><i class="fa-solid fa-qrcode" style="color: #3b82f6;"></i> 출결 QR 확인</div>
             <div class="menu-item" onclick="openCnsPlatform()"><i class="fa-solid fa-tower-broadcast" style="color: #6366f1;"></i> CNS 표보재 플랫폼</div>
+            <div class="menu-item" onclick="openSurveyModal()"><i class="fa-solid fa-square-poll-vertical" style="color: #3b82f6;"></i> 설문조사 (스카이캠퍼스)</div>
             <button onclick="document.getElementById('menuModal').style.display='none'" style="margin-top:15px; width:100%; padding:12px; border:none; border-radius:12px; background:#f1f5f9; font-weight:900; color:#475569;">닫기</button>
         </div>
     </div>
@@ -570,6 +571,32 @@
 
 
 <!-- 태블릿 대여 신청 모달 -->
+<!-- 설문조사 안내 모달 -->
+<div id="surveyModal" class="menu-overlay" style="display:none; z-index:9500;" onclick="if(event.target==this)this.style.display='none'">
+    <div class="menu-box" style="width:90%; max-width:400px; padding:25px; border-radius:24px;">
+        <h3 style="margin:0 0 20px 0; font-weight:900; color:#003366;">
+            <i class="fa-solid fa-square-poll-vertical" style="color:#3b82f6; margin-right:8px;"></i>설문조사 참여 방법
+        </h3>
+        <div style="text-align:left; font-size:14px; line-height:1.8; color:#475569;">
+            <div style="margin-bottom:18px; padding:14px; background:#f8fafc; border-radius:12px; border-left:4px solid #3b82f6;">
+                <b style="color:#003366; font-size:15px;">1단계.</b>&nbsp; 스카이캠퍼스 접속 및 공사직원 로그인<br>
+                <button onclick="window.open('https://skycampus.airport.co.kr/', '_blank')"
+                    style="width:100%; margin-top:10px; padding:13px; background:#3b82f6; color:white; border:none; border-radius:10px; font-weight:800; font-size:14px; cursor:pointer;">
+                    <i class="fa-solid fa-globe"></i>&nbsp; 스카이캠퍼스 바로가기
+                </button>
+            </div>
+            <div style="margin-bottom:18px; padding:14px; background:#f8fafc; border-radius:12px; border-left:4px solid #3b82f6;">
+                <b style="color:#003366; font-size:15px;">2단계.</b>&nbsp; <b>마이페이지</b> → 현재 수강 중인 과정 입장
+            </div>
+            <div style="padding:14px; background:#f8fafc; border-radius:12px; border-left:4px solid #3b82f6;">
+                <b style="color:#003366; font-size:15px;">3단계.</b>&nbsp; 좌측 하단 <b>[항기원 교육과정운영 설문평가]</b> 선택 후 참여
+            </div>
+        </div>
+        <button onclick="document.getElementById('surveyModal').style.display='none'"
+            style="margin-top:16px; width:100%; padding:13px; border:none; border-radius:12px; background:#f1f5f9; color:#475569; font-weight:800; font-size:14px; cursor:pointer;">닫기</button>
+    </div>
+</div>
+
 <div id="tabletLoanModal" class="menu-overlay" style="display:none; z-index:8500;" onclick="if(event.target==this)closeTabletLoan()">
     <div class="menu-box" style="width:92%; max-width:380px; padding:28px; border-radius:24px;">
         <h3 style="margin-bottom:16px; font-weight:900; color:#1e293b; text-align:center;">
@@ -3076,6 +3103,11 @@ function openCnsPlatform() {
     document.getElementById('menuModal').style.display = 'none';
     // CNS 플랫폼 주소로 새 창 열기
     window.open("https://jds0616-boop.github.io/kac-cns-platform/index.html", "_blank");
+}
+
+function openSurveyModal() {
+    document.getElementById('menuModal').style.display = 'none';
+    document.getElementById('surveyModal').style.display = 'flex';
 }
 
 
