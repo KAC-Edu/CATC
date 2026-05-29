@@ -3575,14 +3575,15 @@ body:-webkit-full-screen .main-stage {
 
 /* ══ 현황판 전용 스타일 (이미지 없음) ══ */
 #view-waiting {
-    padding-top: 30px !important;
+    padding-top: 6px !important;
 }
 #view-waiting .view-header {
-    margin-bottom: 20px;
+    margin-top: 8px;
+    margin-bottom: 8px;
 }
 #view-waiting .modern-white-card {
     max-width: 1300px;
-    margin-top: 10px;
+    margin-top: 4px;
 }
 #view-waiting .dashboard-campus-banner {
     display: none !important;
