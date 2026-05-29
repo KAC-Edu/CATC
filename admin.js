@@ -2880,7 +2880,7 @@ setMode: function(mode) {
         if (state.room) {
             // ── 교육생 화면 모드 설정 (퀴즈는 맨 먼저 처리) ──
             if (!state.isObserver) {
-                const safeStudentModes = ['waiting', 'shuttle', 'admin-action', 'dinner-skip', 'tablet-loan', 'students', 'dashboard', 'notice', 'attendance', 'guide', 'dormitory', 'survey-guide'];
+                const safeStudentModes = ['waiting', 'shuttle', 'admin-action', 'dinner-skip', 'tablet-loan', 'students', 'dashboard', 'notice', 'attendance', 'guide', 'dormitory', 'survey-guide', 'exam-timer'];
                 let studentMode;
                 if (mode === 'quiz') {
                     studentMode = 'quiz';
@@ -2929,6 +2929,7 @@ setMode: function(mode) {
             }
             if (mode === 'attendance') ui.loadAttendanceView();
             if (mode === 'guide') { setTimeout(() => guideMgr.refresh(), 100); }
+            if (mode === 'exam-timer') { setTimeout(() => examTimer.init(), 50); }
             if (mode === 'shuttle') {
                 // 날짜 입력창 기본값: 오늘
                 const dateEl = document.getElementById('shuttle-depart-date');
@@ -5920,3 +5921,104 @@ window.onclick = function(event) {
 /* ===== [사이드바 수동 토글 고정 방식] ===== */
 // 호버(mouseenter/mouseleave) 자동 개폐 완전 제거.
 // 토글은 ui.toggleSidebar() 버튼 클릭으로만 동작하며, 열리면 고정 유지됨.
+
+/* ══ 시험 타이머 (Time Timer 방식) ══ */
+const examTimer = {
+    maxSec: 60 * 60,   // 기본 60분 (초 단위)
+    remainSec: 60 * 60,
+    _interval: null,
+    _running: false,
+
+    // 원 둘레: 2π × 140 ≈ 879.65
+    _circumference: 2 * Math.PI * 140,
+
+    _arc: function() { return document.getElementById('timerArc'); },
+    _display: function() { return document.getElementById('timerDisplay'); },
+    _status: function() { return document.getElementById('timerStatus'); },
+    _maxDisp: function() { return document.getElementById('timerMaxDisplay'); },
+
+    _fmt: function(sec) {
+        const m = Math.floor(sec / 60);
+        const s = sec % 60;
+        return `${String(m).padStart(2,'0')}<span id="timerColon" style="animation:blink-animation 1s steps(2,start) infinite;">:</span>${String(s).padStart(2,'0')}`;
+    },
+
+    _render: function() {
+        const arc = this._arc();
+        const disp = this._display();
+        if (!arc || !disp) return;
+        // 남은 비율만큼 원호 표시 (1 = 꽉 참, 0 = 비어있음)
+        const ratio = this.remainSec / this.maxSec;
+        const offset = this._circumference * (1 - ratio);
+        arc.style.strokeDashoffset = offset;
+        // 30% 이하 주황, 10% 이하 회색 (종료 임박 표시)
+        arc.style.stroke = ratio > 0.3 ? '#ef4444' : ratio > 0.1 ? '#f97316' : '#94a3b8';
+        disp.innerHTML = this._fmt(this.remainSec);
+    },
+
+    start: function() {
+        if (this._running) return;
+        if (this.remainSec <= 0) this.reset();
+        this._running = true;
+        const s = this._status();
+        const btn = document.getElementById('timerStartBtn');
+        if (s) s.innerText = '시험 진행 중';
+        if (btn) btn.style.background = '#94a3b8';
+        this._interval = setInterval(() => {
+            if (this.remainSec <= 0) {
+                this.stop();
+                const s2 = this._status();
+                if (s2) s2.innerText = '⏰ 시험 종료!';
+                const arc = this._arc();
+                if (arc) arc.style.stroke = '#94a3b8';
+                return;
+            }
+            this.remainSec--;
+            this._render();
+        }, 1000);
+    },
+
+    pause: function() {
+        if (!this._running) return;
+        this._running = false;
+        clearInterval(this._interval);
+        const s = this._status();
+        if (s) s.innerText = '일시정지';
+        const btn = document.getElementById('timerStartBtn');
+        if (btn) btn.style.background = '#ef4444';
+    },
+
+    stop: function() {
+        this._running = false;
+        clearInterval(this._interval);
+    },
+
+    reset: function() {
+        this.stop();
+        this.remainSec = this.maxSec;
+        this._render();
+        const s = this._status();
+        const btn = document.getElementById('timerStartBtn');
+        if (s) s.innerText = '대기 중';
+        if (btn) btn.style.background = '#ef4444';
+    },
+
+    adjustMax: function(deltaMin) {
+        this.stop();
+        const newMin = Math.max(5, Math.round(this.maxSec / 60) + deltaMin);
+        this.maxSec = newMin * 60;
+        this.remainSec = this.maxSec;
+        const d = this._maxDisp();
+        if (d) d.innerText = `${newMin}분`;
+        this._render();
+        const s = this._status();
+        if (s) s.innerText = '대기 중';
+        const btn = document.getElementById('timerStartBtn');
+        if (btn) btn.style.background = '#ef4444';
+    },
+
+    // 탭 진입 시 호출 (렌더 초기화)
+    init: function() {
+        this._render();
+    }
+};
