@@ -1171,6 +1171,37 @@ async function resolveRoomFromCode(code) {
 
 // [수정] index.html의 최하단 (async function init() { ... })
 (async function init() {
+    // [인앱 브라우저 감지] 카카오톡/네이버/인스타 등 인앱 브라우저는 '홈 화면 추가'가 불가하므로
+    //  아이폰 사용자에게 Safari로 다시 열도록 안내한다.
+    (function nudgeSafari(){
+        try {
+            var ua = navigator.userAgent || '';
+            var isIOS = /iphone|ipad|ipod/i.test(ua);
+            if (!isIOS) return;
+            var inApp = /KAKAOTALK|NAVER|Instagram|FBAN|FBAV|Line\/|DaumApps|whale|everytimeApp|band/i.test(ua);
+            var isRealSafari = /Safari/i.test(ua) && !/CriOS|FxiOS|EdgiOS/i.test(ua);
+            if (!(inApp || !isRealSafari)) return;
+            if (sessionStorage.getItem('safariNudgeShown') === '1') return;
+            sessionStorage.setItem('safariNudgeShown','1');
+            var url = window.location.href;
+            var ov = document.createElement('div');
+            ov.style.cssText = 'position:fixed;inset:0;z-index:30000;background:rgba(15,23,42,0.92);color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px 24px;text-align:center;';
+            ov.innerHTML = '<div style="font-size:46px;margin-bottom:16px;">🧭</div>'
+              + '<div style="font-size:18px;font-weight:900;margin-bottom:10px;">Safari로 열어주세요</div>'
+              + '<div style="font-size:14px;line-height:1.6;color:#cbd5e1;max-width:300px;">지금은 카카오톡/네이버 등 <b style="color:#fff;">인앱 브라우저</b>라 홈 화면에 앱을 추가할 수 없어요.<br>우측 상단(또는 하단) <b style="color:#fff;">··· 메뉴 → "Safari로 열기"</b> 를 눌러주세요.</div>'
+              + '<button id="safariCopyBtn" style="margin-top:22px;height:46px;padding:0 22px;border:none;border-radius:12px;background:#3b82f6;color:#fff;font-size:14px;font-weight:800;cursor:pointer;">주소 복사하기</button>'
+              + '<button id="safariSkipBtn" style="margin-top:10px;height:40px;padding:0 18px;border:none;border-radius:10px;background:transparent;color:#94a3b8;font-size:13px;font-weight:700;cursor:pointer;">이대로 계속 보기</button>';
+            document.body.appendChild(ov);
+            var copyBtn = document.getElementById('safariCopyBtn');
+            if (copyBtn) copyBtn.onclick = function(){
+                try { navigator.clipboard.writeText(url); copyBtn.textContent = '✓ 복사됨 — Safari 주소창에 붙여넣기'; }
+                catch(e){ copyBtn.textContent = url; }
+            };
+            var skipBtn = document.getElementById('safariSkipBtn');
+            if (skipBtn) skipBtn.onclick = function(){ ov.remove(); };
+        } catch(e){ console.warn('[safari nudge]', e); }
+    })();
+
     showLoader('강의실 정보를 불러오는 중입니다...');
 
     const params = new URLSearchParams(window.location.search);
@@ -1185,6 +1216,16 @@ async function resolveRoomFromCode(code) {
         currentRoom = await resolveRoomFromCode(code);
     } else if (!isCheckIn) {
         currentRoom = localStorage.getItem('kac_last_visited_room') || null;
+    }
+
+    // [홈화면(PWA) 실행 대응] standalone(설치앱)으로 실행하면 start_url(index.html)만 열려
+    //  room/code 파라미터가 없어 강의실이 로딩되지 않는다 → 마지막으로 들어갔던 강의실로 복귀.
+    if (!currentRoom) {
+        const remembered = localStorage.getItem('kac_last_visited_room');
+        if (remembered) {
+            currentRoom = remembered;
+            console.log('[PWA] 파라미터 없음 → 마지막 강의실로 복귀:', remembered);
+        }
     }
 
     if (!currentRoom) {
@@ -3790,6 +3831,23 @@ function closeTabletLoan() {
     // 전역 노출: 입장/홈아이콘/나가기에서 호출
     window.pwaShowPrompt = function(context){
         if (isStandalone() || (installedOrDeclined() && context!=='manual')) return;
+
+        // [홈버튼 동작] 좌측 상단 홈버튼(manual)은 '1회만' 설치 안내 팝업을 띄우고,
+        //  그 이후로는 창을 닫는 기능으로 동작한다.
+        if (context === 'manual') {
+            var shown = false;
+            try { shown = localStorage.getItem('pwaHomeHintShown') === '1'; } catch(e){}
+            if (shown) {
+                // 두 번째부터: 창 닫기 시도 (모바일 브라우저는 직접 닫기가 막힐 수 있어 안내로 폴백)
+                try { window.close(); } catch(e){}
+                setTimeout(function(){
+                    // 여전히 떠 있으면(close 실패) 안내
+                    showKacAlert('이 탭을 닫으려면 브라우저의 닫기 버튼을 사용해주세요.\n(이미 홈 화면 추가 안내는 확인하셨습니다.)');
+                }, 150);
+                return;
+            }
+            try { localStorage.setItem('pwaHomeHintShown','1'); } catch(e){}
+        }
         showPrompt(context || 'manual');
     };
 

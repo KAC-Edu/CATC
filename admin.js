@@ -492,11 +492,31 @@ verifyTakeover: async function() {
 
 
 
-enterAsObserver: function() {
+enterAsObserver: async function() {
         const newRoom = state.pendingRoom;
         if (!newRoom) return;
 
-        // [수정] 방 번호를 구체적으로 지정해서 옵저버 메모 저장
+        // [추가] 옵저버 모드도 비밀번호 인증 요구 (단순 모니터링이라도 해당 강의실 비번 필요)
+        let input = document.getElementById('takeoverPwInput').value;
+        if (input) input = input.trim();
+        if (!input) {
+            ui.showAlert("👁️ 옵저버 모드 입장에도 해당 강의실 비밀번호가 필요합니다.\n비밀번호를 입력해주세요.");
+            document.getElementById('takeoverPwInput').focus();
+            return;
+        }
+
+        const settingSnap = await firebase.database().ref(`courses/${newRoom}/settings`).get();
+        const settings = settingSnap.val() || {};
+        const dbPw = settings.password || btoa("7777");
+
+        if (btoa(input) !== dbPw) {
+            ui.showAlert("⛔ 비밀번호가 올바르지 않습니다.");
+            document.getElementById('takeoverPwInput').value = "";
+            document.getElementById('takeoverPwInput').focus();
+            return;
+        }
+
+        // 인증 성공 → 옵저버로 입장 (제어권은 가져오지 않음)
         state.isObserver = true; 
         sessionStorage.setItem('kac_observer_room', newRoom);
         
