@@ -2256,7 +2256,7 @@ function init() {
 
     if (isAccessDenied) {
         showKacAlert("보안 세션이 만료되었거나 권한이 없습니다.\n포털 페이지에서 다시 접속해주세요.");
-        location.href = 'potal.html';
+        location.href = 'portal.html';
         return;
     }
     // --- 보안 체크 끝 ---
@@ -2992,7 +2992,7 @@ const allModals = [
     } else {
         // 🚩 [핵심] 이미 메인 페이지(Total View)라면 포탈로 이동!
         showKacConfirm("행정 관리 시스템을 종료하고 포탈로 이동하시겠습니까?", function(){
-            location.href = 'potal.html';
+            location.href = 'portal.html';
         });
     }
 }

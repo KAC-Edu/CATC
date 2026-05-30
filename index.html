@@ -500,6 +500,9 @@
 
     <div class="app-container" id="mainApp">
 <div class="header">
+    <div class="header-btn" id="pwaHomeBtn" onclick="pwaShowPrompt('manual')" style="display:none;" title="홈 화면에 추가">
+        <i class="fa-solid fa-house-circle-plus"></i>
+    </div>
     <div class="header-center">
         <div class="header-title" id="roomTitle">Course Name</div>
         <div class="header-sub">
@@ -2907,6 +2910,9 @@ function showMainDashboard() {
     document.getElementById('landingPage').style.display = 'none';
     document.getElementById('mainApp').style.display = 'flex';
     startPresence();
+    // [PWA] 좌측 상단 홈 아이콘 갱신 + 입장 시 1회 설치 권유 (이미 설치/standalone 이면 무시됨)
+    if (window.pwaUpdateHomeBtn) window.pwaUpdateHomeBtn();
+    setTimeout(function(){ if (window.pwaShowPrompt) window.pwaShowPrompt('entry'); }, 1200);
 }
 
 
@@ -3504,6 +3510,7 @@ function cleanUrlAndGo(r) {
         if(document.getElementById('landingPage')) document.getElementById('landingPage').style.display = 'none';
         if(document.getElementById('mainApp')) document.getElementById('mainApp').style.display = 'flex';
         startPresence();
+        if (window.pwaUpdateHomeBtn) window.pwaUpdateHomeBtn(); // [PWA] 홈 아이콘 노출 갱신(재진입 시엔 자동 권유 생략)
     }
 }
 
@@ -3729,56 +3736,93 @@ function closeTabletLoan() {
         });
     }
 
-    var banner   = document.getElementById('pwaInstallBanner');
-    var installBtn = document.getElementById('pwaInstallBtn');
-    var closeBtn = document.getElementById('pwaBannerClose');
-    var desc     = document.getElementById('pwaBannerDesc');
-    var actions  = document.getElementById('pwaBannerActions');
+    var banner     = document.getElementById('pwaInstallBanner');
+    var installBtn  = document.getElementById('pwaInstallBtn');
+    var closeBtn   = document.getElementById('pwaBannerClose');
+    var desc       = document.getElementById('pwaBannerDesc');
+    var actions    = document.getElementById('pwaBannerActions');
     var deferredPrompt = null;
 
-    // 이미 설치된(standalone) 상태면 배너를 띄우지 않음
     function isStandalone(){
         return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
     }
-    // 이번 세션에서 닫았으면 다시 안 띄움
-    function dismissedThisSession(){ try { return sessionStorage.getItem('pwaBannerDismissed')==='1'; } catch(e){ return false; } }
-    function markDismissed(){ try { sessionStorage.setItem('pwaBannerDismissed','1'); } catch(e){} }
+    var ua = window.navigator.userAgent || '';
+    var isIOS = /iphone|ipad|ipod/i.test(ua);
+    var isiOSSafari = isIOS && /safari/i.test(ua) && !/crios|fxios|edgios/i.test(ua);
 
-    function showBanner(){ if(banner && !dismissedThisSession() && !isStandalone()) banner.style.display='block'; }
+    // 이미 설치(또는 영구 거부) 여부 — localStorage 로 기기에 기억
+    function installedOrDeclined(){
+        try { return localStorage.getItem('pwaInstalled')==='1'; } catch(e){ return false; }
+    }
+    function markInstalled(){ try { localStorage.setItem('pwaInstalled','1'); } catch(e){} updateHomeBtn(); }
+
+    // 좌측 상단 홈 아이콘: 설치 안 됐고 standalone 아닐 때만 노출
+    function updateHomeBtn(){
+        var btn = document.getElementById('pwaHomeBtn');
+        if (!btn) return;
+        var show = !isStandalone() && !installedOrDeclined();
+        btn.style.display = show ? 'flex' : 'none';
+    }
+
     function hideBanner(){ if(banner) banner.style.display='none'; }
 
-    if (closeBtn) closeBtn.onclick = function(){ hideBanner(); markDismissed(); };
+    // 배너 노출 — context: 'entry'(입장 시) / 'exit'(나가기 전) / 'manual'(홈아이콘)
+    function showPrompt(context){
+        if (!banner || isStandalone()) return;
+        // iOS: 자동설치 불가 → 공유 버튼 안내 문구
+        if (isiOSSafari) {
+            if (desc) desc.innerHTML = '아이폰에서는 하단 <b>공유</b> 버튼 <i class="fa-solid fa-arrow-up-from-bracket"></i> → <b>"홈 화면에 추가"</b>를 눌러 설치할 수 있어요.';
+            if (actions) actions.style.display = 'none';
+        } else {
+            if (actions) actions.style.display = 'flex';
+            if (desc) desc.innerText = (context==='exit')
+                ? '나가기 전에, 이 페이지를 홈 화면에 추가해 두면 다음에 바로 들어올 수 있어요.'
+                : '홈 화면에 바로가기를 설치하면 다음에 더 빠르게 접속할 수 있어요.';
+        }
+        banner.style.display='block';
+    }
+    // 전역 노출: 입장/홈아이콘/나가기에서 호출
+    window.pwaShowPrompt = function(context){
+        // 이미 설치/standalone 이면 조용히 무시 (그냥 나가면 됨)
+        if (isStandalone() || (installedOrDeclined() && context!=='manual')) return;
+        showPrompt(context || 'manual');
+    };
 
-    // 2) 안드로이드/크롬: beforeinstallprompt 캡처 후 3초 뒤 배너 노출
+    if (closeBtn) closeBtn.onclick = function(){ hideBanner(); };
+
+    // 안드로이드/크롬: 설치 가능 신호 캡처
     window.addEventListener('beforeinstallprompt', function(e){
         e.preventDefault();
         deferredPrompt = e;
-        setTimeout(showBanner, 3000);
+        updateHomeBtn();
     });
 
     if (installBtn) installBtn.onclick = function(){
         if (deferredPrompt) {
             deferredPrompt.prompt();
-            deferredPrompt.userChoice.finally(function(){ deferredPrompt=null; hideBanner(); markDismissed(); });
+            deferredPrompt.userChoice.then(function(choice){
+                if (choice && choice.outcome === 'accepted') markInstalled();
+            }).finally(function(){ deferredPrompt=null; hideBanner(); });
         } else {
-            hideBanner(); markDismissed();
+            // 설치 신호가 없으면(이미 설치 등) 배너만 닫음
+            hideBanner();
         }
     };
 
-    // 3) iOS(Safari): beforeinstallprompt 미지원 → 공유 버튼 안내 문구로 대체
-    var ua = window.navigator.userAgent || '';
-    var isIOS = /iphone|ipad|ipod/i.test(ua);
-    var isiOSSafari = isIOS && /safari/i.test(ua) && !/crios|fxios|edgios/i.test(ua);
-    if (isiOSSafari && !isStandalone()) {
-        setTimeout(function(){
-            if (desc) desc.innerHTML = '아이폰에서는 하단 <b>공유</b> 버튼 <i class="fa-solid fa-arrow-up-from-bracket"></i> → <b>“홈 화면에 추가”</b>를 눌러 설치할 수 있어요.';
-            if (actions) actions.style.display = 'none'; // iOS는 자동 설치 버튼 불가
-            showBanner();
-        }, 3000);
-    }
+    // 설치 완료 시: 기억 + 배너/홈아이콘 정리
+    window.addEventListener('appinstalled', function(){
+        markInstalled(); hideBanner(); deferredPrompt=null;
+    });
 
-    // 설치 완료 시 배너 정리
-    window.addEventListener('appinstalled', function(){ hideBanner(); markDismissed(); deferredPrompt=null; });
+    // 나가기 직전: 설치 안 했으면 한 번 더 권유 (best-effort)
+    //  - 모바일에서 페이지가 숨겨질 때(pagehide) 배너 노출
+    window.addEventListener('pagehide', function(){
+        if (!isStandalone() && !installedOrDeclined()) showPrompt('exit');
+    });
+
+    // 초기 상태 반영 (메인앱 진입 시 enterApp 쪽에서 pwaShowPrompt('entry') 호출)
+    updateHomeBtn();
+    window.pwaUpdateHomeBtn = updateHomeBtn;
 })();
 </script>
 
