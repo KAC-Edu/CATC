@@ -77,30 +77,32 @@
 /* [변경] 리스트 카드 - 부드러운 화이트 카드 스타일 */
 .course-item-card {
     background: #ffffff; 
-    border-radius: 16px; 
+    border-radius: 14px; 
     display: flex; 
-    align-items: center; 
+    align-items: stretch; 
     cursor: pointer; 
-    margin-bottom: 12px; 
-    border: 1px solid #e2e8f0; /* 얇은 회색 테두리 */
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.02);
+    margin-bottom: 10px; 
+    border: 1px solid #eef2f7;
+    box-shadow: 0 3px 10px rgba(15, 23, 42, 0.05);
     overflow: hidden;
-    transition: all 0.2s ease;
+    transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
 }
-
-
-/* 마우스를 올렸을 때 테두리가 더 강조되는 효과 */
 .course-item-card:hover {
-    border-color: var(--blue-main);
-    background: #f8fafc;
-    transform: translateX(5px); /* 옆으로 살짝 밀리는 효과 */
+    border-color: #dbeafe;
+    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.10);
+    transform: translateX(3px);
 }
-
-
-
-    .course-item-card:active { transform: scale(0.98); }
-    .course-color-bar { width: 6px; height: 60px; flex-shrink: 0; }
-    .course-info-content { flex: 1; padding: 12px 15px; display: flex; justify-content: space-between; align-items: center; }
+.course-item-card:active { transform: scale(0.99); }
+.course-color-bar { width: 8px; flex-shrink: 0; border-radius: 4px; margin: 8px 0 8px 8px; }
+.course-info-content { flex: 1; padding: 12px 14px; display: flex; justify-content: space-between; align-items: center; }
+.course-chevron {
+    width: 26px; height: 26px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    background: #f1f5f9; color: #94a3b8;
+    border-radius: 8px; font-size: 11px;
+    transition: background 0.18s, color 0.18s;
+}
+.course-item-card:hover .course-chevron { background: #e0f2fe; color: #0284c7; }
 /* --- 여기까지 추가 --- */
 
 
@@ -335,92 +337,91 @@
     grid-template-columns: 1fr 1fr; 
     gap: 12px; 
     width: 100%; 
-    margin-bottom: 20px;
+    margin-bottom: 24px;
 }
+/* 5번째 카드(출석부)는 한 줄을 꽉 채워 짝 안 맞는 불균형 해소 */
+.global-status-grid .span-2 { grid-column: 1 / -1; }
 
-/* [핵심] 모든 버튼형 카드의 공통 기반 스타일 (레이아웃 통일) */
+/* [핵심] 카드형 디자인: 흰 배경 + 포인트 컬러 (네이비 무게감 제거) */
 .dashboard-card-btn {
-    height: 130px; /* 높이 고정 */
-    border-radius: 20px;
+    min-height: 116px;
+    border-radius: 18px;
     display: flex;
     flex-direction: column;
-    justify-content: space-between; /* 요소들을 상-중-하로 균등 배정 */
-    align-items: center;
+    justify-content: flex-start;
+    align-items: flex-start;       /* 좌측 정렬 (라벨/숫자 왼쪽 시작) */
     cursor: pointer;
-    transition: all 0.25s ease;
-    box-shadow: 0 8px 16px rgba(0,0,0,0.2);
-    border: 1px solid rgba(255, 255, 255, 0.1); /* 어두운 버튼용 */
+    transition: transform 0.18s ease, box-shadow 0.18s ease;
+    background: #ffffff;
+    border: 1px solid #e8edf3;
+    box-shadow: 0 4px 14px rgba(15, 23, 42, 0.06);
     position: relative;
     overflow: hidden;
-    text-align: center;
+    text-align: left;
     box-sizing: border-box;
-    padding: 15px 10px; /* 내부 여백 통일 */
+    padding: 16px 16px 14px;
+    gap: 6px;
 }
-
-/* 마우스 올렸을 때 효과 */
 .dashboard-card-btn:hover {
-    transform: translateY(-5px); 
-    box-shadow: 0 12px 24px rgba(0,0,0,0.4);
+    transform: translateY(-3px); 
+    box-shadow: 0 10px 22px rgba(15, 23, 42, 0.12);
 }
+.dashboard-card-btn:active { transform: scale(0.99); }
 
-/* 내부 텍스트 및 아이콘 정밀 위치 고정 */
+/* 라벨: 우측 아이콘 배지와 겹치지 않도록 여백 확보 */
 .dashboard-card-btn .label { 
-    font-size: 11px; 
+    font-size: 12px; 
     font-weight: 700; 
-    opacity: 0.8; 
-    margin-bottom: 0; 
+    color: #64748b;
+    opacity: 1;
+    line-height: 1.35;
+    padding-right: 46px;   /* 아이콘 배지 공간 */
+    margin: 0;
 }
 
 .dashboard-card-btn .val { 
-    font-size: 26px; 
+    font-size: 30px; 
     font-weight: 900; 
     line-height: 1;
-    margin: 5px 0;
+    margin: auto 0 0;       /* 숫자를 카드 하단으로 */
+    color: #1e293b;
+    transition: color 0.2s ease, transform 0.2s ease;
 }
+/* 값이 0이면 흐리게(회색), 데이터가 있으면 포인트 컬러 — JS에서 has-value 토글 */
+.dashboard-card-btn .val.is-zero { color: #cbd5e1; }
 
 .dashboard-card-btn .val small { 
-    font-size: 14px; 
-    margin-left: 2px; 
+    font-size: 13px; 
+    margin-left: 3px; 
     font-weight: 700;
+    color: #94a3b8;
 }
+.dashboard-card-btn .val.counting { transform: scale(1.05); }
 
+/* 아이콘 배지: 우상단 동그란 배경으로 시인성 강화 */
 .dashboard-card-btn i { 
-    font-size: 22px; /* 아이콘 크기 통일 */
-    margin-top: 5px;
+    position: absolute;
+    top: 14px; right: 14px;
+    width: 40px; height: 40px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 17px;
+    border-radius: 12px;
+    margin: 0;
 }
 
-/* [통일] 모든 상황판 버튼을 헤더와 동일한 딥블루 그라데이션으로 변경 */
-
-/* 1번 카드: 전체 교육생 */
-.stat-dark { 
-    background: linear-gradient(135deg, #003366 0%, #0055aa 100%) !important; 
-    color: white !important; 
-    border: 1px solid rgba(255, 255, 255, 0.2) !important; /* 은은한 흰색 테두리 */
-}
-.stat-dark .val { color: #60a5fa !important; } /* 밝은 하늘색 숫자 */
-.stat-dark i { color: #60a5fa !important; }
-
-/* 2번 카드: 외출/외박 */
-.stat-blue { 
-    background: linear-gradient(135deg, #003366 0%, #0055aa 100%) !important; 
-    color: white !important; 
-    border: 1px solid rgba(255, 255, 255, 0.2) !important;
-}
-.stat-blue .val { color: #fbbf24 !important; } /* 노란색 숫자 */
-.stat-blue i { color: #fbbf24 !important; }
-
-/* 3, 4번 카드: 하단 액션 버튼 (화이트에서 딥블루로 변경) */
-.action-white { 
-    background: linear-gradient(135deg, #003366 0%, #0055aa 100%) !important; 
-    color: white !important;
-    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3) !important;
-    border: 1px solid rgba(255, 255, 255, 0.2) !important;
-}
-/* 3, 4번 카드의 내부 글자와 아이콘 색상 보정 */
-.action-white .label { color: rgba(255, 255, 255, 0.7) !important; }
-.action-white .val { color: white !important; }
-.action-white .icon-pickup { color: #a5b4fc !important; } /* 연보라색 아이콘 */
-.action-white .icon-shuttle { color: #fcd34d !important; } /* 황금색 아이콘 */
+/* 카드별 포인트 컬러 (아이콘 배지 + 값 색상) */
+.stat-dark    i { background: #e0f2fe; color: #0284c7; }
+.stat-dark    .val:not(.is-zero) { color: #0284c7; }   /* 전체 교육생 → 블루 */
+.stat-blue    i { background: #fef3c7; color: #d97706; }
+.stat-blue    .val:not(.is-zero) { color: #d97706; }   /* 외출/외박 → 앰버 */
+.action-white.card-pickup  i { background: #ede9fe; color: #7c3aed; }
+.action-white.card-pickup  .val:not(.is-zero) { color: #7c3aed; } /* 픽업 → 퍼플 */
+.action-white.card-shuttle i { background: #fff7ed; color: #ea580c; }
+.action-white.card-shuttle .val:not(.is-zero) { color: #ea580c; } /* 퇴교 → 오렌지 */
+.action-white.card-attend  i { background: #dcfce7; color: #059669; }
+.action-white.card-attend  .val:not(.is-zero) { color: #059669; } /* 출석부 → 그린 */
+/* 구버전 아이콘 클래스 잔재 무력화 (배지 색이 우선되도록) */
+.action-white .icon-pickup, .action-white .icon-shuttle { color: inherit !important; }
 
 /* ════ 히어로 섹션 (훈련원 전경 배너) ════ */
 .coord-hero {
@@ -483,27 +484,7 @@
     .hero-badge .hb-value { font-size: 14px; }
 }
 
-/* ════ 모던 카드 보강 (기존 구조 유지, 비주얼만 고도화) ════ */
-.dashboard-card-btn {
-    /* 더 부드러운 라운드 + 깊이감 있는 소프트 쉐도우 */
-    border-radius: 22px;
-    box-shadow: 0 10px 22px rgba(2, 12, 32, 0.22), inset 0 1px 0 rgba(255,255,255,0.12);
-}
-.dashboard-card-btn::before {
-    /* 카드 상단 광택 하이라이트 */
-    content: "";
-    position: absolute; top: 0; left: 0; right: 0; height: 45%;
-    background: linear-gradient(180deg, rgba(255,255,255,0.10), rgba(255,255,255,0));
-    pointer-events: none;
-}
-.dashboard-card-btn i {
-    /* 아이콘을 우상단 워터마크처럼 은은하게 */
-    position: absolute; top: 13px; right: 14px; margin-top: 0;
-    opacity: 0.9;
-}
-.dashboard-card-btn .val { transition: color 0.2s ease; }
-/* 카운트업 중 살짝 강조 */
-.dashboard-card-btn .val.counting { transform: scale(1.04); }
+/* (이전 라운드의 네이비 카드 보강 CSS는 화이트 카드형 디자인으로 대체되어 제거됨) */
 
 
 
@@ -1236,21 +1217,21 @@ body.modal-open .app-content {
         </div>
 
         <!-- 3번 카드: 강사 픽업 현황 -->
-        <div class="dashboard-card-btn action-white" onclick="showPickupView()">
+        <div class="dashboard-card-btn action-white card-pickup" onclick="showPickupView()">
             <div class="label">강사 픽업요청 신청 및 조회</div>
             <div class="val"><span id="g-pickup-count">0</span><small>건</small></div>
             <i class="fa-solid fa-car-side icon-pickup"></i>
         </div>
 
         <!-- 4번 카드: 교육생 퇴교 현황 -->
-        <div class="dashboard-card-btn action-white" onclick="showStudentShuttleView()">
+        <div class="dashboard-card-btn action-white card-shuttle" onclick="showStudentShuttleView()">
             <div class="label">교육생 퇴교 차량 신청 현황</div>
             <div class="val"><span id="g-shuttle-count">0</span><small>명</small></div>
             <i class="fa-solid fa-bus icon-shuttle"></i>
         </div>
 
-        <!-- 5번 카드: 과정별 출석부 관리/인쇄 -->
-        <div class="dashboard-card-btn action-white" onclick="openAttendanceManager()">
+        <!-- 5번 카드: 과정별 출석부 관리/인쇄 (한 줄 전체 차지하여 균형 맞춤) -->
+        <div class="dashboard-card-btn action-white card-attend span-2" onclick="openAttendanceManager()">
             <div class="label">과정별 출석부 관리 / 인쇄</div>
             <div class="val"><span id="g-attend-active">0</span><small>과정</small></div>
             <i class="fa-solid fa-clipboard-user"></i>
@@ -1258,9 +1239,9 @@ body.modal-open .app-content {
     </div>
 
     <!-- ✅ [복구 완료] 현재 운영 중인 과정 리스트 섹션 -->
-    <div class="section-card" style="background:white; padding:16px; border:1px solid #e2e8f0;">
-        <div class="section-title" style="color:#1e293b; margin-bottom:12px; padding-bottom:10px; border-bottom:2px solid #e2e8f0;"><i class="fa-solid fa-list-ul"></i> 현재 운영 중인 과정 </div>
-        <div id="activeCourseList" style="display:flex; flex-direction:column; gap:8px;">
+    <div class="section-card" style="background:white; padding:18px 16px; border:1px solid #eef2f7; box-shadow:0 4px 14px rgba(15,23,42,0.05);">
+        <div class="section-title" style="color:#0f172a; font-size:16px; font-weight:900; margin-bottom:16px; padding-bottom:12px; border-bottom:1px solid #f1f5f9; display:flex; align-items:center; gap:8px;"><i class="fa-solid fa-list-ul" style="color:var(--blue-main);"></i> 현재 운영 중인 과정</div>
+        <div id="activeCourseList" style="display:flex; flex-direction:column; gap:0;">
             <!-- 자바스크립트가 여기에 ROOM A, ROOM C 등의 카드를 채워넣습니다 -->
         </div>
     </div>
@@ -1909,6 +1890,9 @@ body.modal-open .app-content {
         const el = document.getElementById(id);
         if (!el) return;
         const target = Number(value);
+        const valBox0 = el.closest('.val');
+        // 0이면 회색(is-zero), 1 이상이면 포인트 컬러로 상태 표시
+        if (valBox0) valBox0.classList.toggle('is-zero', !(Number(target) > 0));
         // 숫자가 아니면 그대로 출력 (애니메이션 없음)
         if (!isFinite(target)) { el.innerText = value; return; }
         const start = Number(String(el.innerText).replace(/[^0-9.-]/g, '')) || 0;
@@ -3117,14 +3101,12 @@ function renderCourseSelectors() {
             card.innerHTML = `
                 <div class="course-color-bar" style="background: ${color};"></div>
                 <div class="course-info-content">
-                    <div style="display:flex; flex-direction:column; gap:2px;">
-                        <span style="font-size:11px; color:${color}; font-weight:800;">ROOM ${rid}</span>
-                        <span style="font-weight:800; font-size:15px; color:var(--navy-dark);">${cName}</span>
+                    <div style="display:flex; flex-direction:column; gap:3px; min-width:0; flex:1;">
+                        <span style="font-size:11px; color:${color}; font-weight:800; letter-spacing:0.3px;">ROOM ${rid}</span>
+                        <span style="font-weight:800; font-size:14.5px; color:var(--navy-dark); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${cName}</span>
+                        <span style="font-size:11.5px; color:#94a3b8; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${coordName}</span>
                     </div>
-                    <div style="display:flex; align-items:center; gap:10px;">
-                        <span style="font-size:12px; color:#64748b; font-weight:700;">${coordName}</span>
-                        <i class="fa-solid fa-chevron-right" style="color:#cbd5e1; font-size:12px;"></i>
-                    </div>
+                    <span class="course-chevron" style="margin-left:10px;"><i class="fa-solid fa-chevron-right"></i></span>
                 </div>
             `;
             list.appendChild(card);
