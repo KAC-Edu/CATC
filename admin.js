@@ -4330,10 +4330,24 @@ resetShuttleRequests: function() {
     // ── 이번 주(월~금) 기간 필터 ──
     _isThisWeek: function(periodStr) {
         if (!periodStr || periodStr.length < 5) return false;
-        const parts = periodStr.split(' ~ ');
-        if (parts.length < 2) return false;
-        const cStart = new Date(parts[0].trim());
-        const cEnd   = new Date(parts[1].trim()); cEnd.setHours(23,59,59);
+        // 구분자 유연 처리: " ~ ", "~", "-" 등 어떤 형태든 시작/종료일 추출
+        const m = periodStr.match(/(\d{4}-\d{2}-\d{2})\s*[~\-]\s*(\d{4}-\d{2}-\d{2})/);
+        let s0, s1;
+        if (m) { s0 = m[1]; s1 = m[2]; }
+        else {
+            const parts = periodStr.split('~');
+            if (parts.length < 2) return false;
+            s0 = parts[0].trim(); s1 = parts[1].trim();
+        }
+        // [TZ 안전] YYYY-MM-DD 를 로컬 자정 기준으로 파싱 (new Date("YYYY-MM-DD")는 UTC로 해석되어 KST에서 하루 밀림)
+        const toLocal = (str, endOfDay) => {
+            const p = String(str).split('-');
+            if (p.length !== 3) { const d = new Date(str); if (endOfDay) d.setHours(23,59,59,999); return d; }
+            return new Date(+p[0], +p[1]-1, +p[2], endOfDay?23:0, endOfDay?59:0, endOfDay?59:0, endOfDay?999:0);
+        };
+        const cStart = toLocal(s0, false);
+        const cEnd   = toLocal(s1, true);
+        if (isNaN(cStart) || isNaN(cEnd)) return false;
         const now = new Date();
         const diff = now.getDay() === 0 ? -6 : 1 - now.getDay();
         const wMon = new Date(now); wMon.setDate(now.getDate()+diff); wMon.setHours(0,0,0,0);
@@ -4341,31 +4355,63 @@ resetShuttleRequests: function() {
         return cStart <= wFri && cEnd >= wMon;
     },
 
-    // ── 홈 통계 로드 (이번 주 필터) ──
+    // ── 홈 통계 로드 (이번 주 필터) ── [수정] 실시간 on() 리스너로 전환하여 과정 갱신 시 즉시 반영
     loadHomeStats: function() {
-        const today = getTodayString();
-        firebase.database().ref('courses').once('value', snap => {
-            const d = snap.val() || {};
+        const computeAndRender = (d) => {
+            const today = getTodayString();
             let activeCount=0, studentTotal=0, outingTotal=0;
             Object.entries(d).forEach(([room, r]) => {
+                if (!r) return;
                 const st=r.status||{}, settings=r.settings||{}, students=r.students||{};
                 const actions=(r.admin_actions||{})[today]||{};
                 if (!ui._isThisWeek(settings.period||'')) return;
                 if (st.roomStatus==='active') activeCount++;
-                const cnt = new Set(Object.values(students).filter(s=>s.name&&s.name!=='undefined').map(s=>s.name)).size;
+                const cnt = new Set(Object.values(students).filter(s=>s&&s.name&&s.name!=='undefined').map(s=>s.name)).size;
                 studentTotal += cnt;
                 Object.values(actions).forEach(a=>{
                     if(a&&(a.type==='outing'||a.type==='overnight'||a.type==='group_outing')) outingTotal++;
                 });
             });
-            const elA=document.getElementById('stat-active-count');
-            const elS=document.getElementById('stat-student-count');
-            const elO=document.getElementById('stat-outing-count');
-            if(elA) elA.textContent=activeCount;
-            if(elS) elS.textContent=studentTotal;
-            if(elO) elO.textContent=outingTotal;
+            ui._setStat('stat-active-count', activeCount);
+            ui._setStat('stat-student-count', studentTotal);
+            ui._setStat('stat-outing-count', outingTotal);
             window._homeStatsData=d; window._homeStatsToday=today;
-        });
+        };
+
+        // 실시간 리스너는 1회만 등록 (중복 등록 방지). 등록 시 즉시 최초값으로 렌더된다.
+        if (!ui._homeStatsBound) {
+            ui._homeStatsBound = true;
+            firebase.database().ref('courses').on('value', snap => {
+                computeAndRender(snap.val() || {});
+            }, err => {
+                console.warn('[loadHomeStats] 실시간 구독 실패, 1회 조회로 대체:', err && err.message);
+                firebase.database().ref('courses').once('value', s => computeAndRender(s.val() || {}));
+            });
+        } else if (window._homeStatsData) {
+            // 이미 구독 중이면 보유 데이터로 즉시 재렌더 (화면 재진입 시 빈 값 깜빡임 방지)
+            computeAndRender(window._homeStatsData);
+        }
+    },
+
+    // 통계 숫자 카운트업 (부드러운 증감). 숫자가 아니면 즉시 출력.
+    _statTimers: {},
+    _setStat: function(id, value) {
+        const el = document.getElementById(id);
+        if (!el) return;
+        const target = Number(value);
+        if (!isFinite(target)) { el.textContent = value; return; }
+        const start = Number(String(el.textContent).replace(/[^0-9.-]/g,'')) || 0;
+        if (start === target) { el.textContent = target; return; }
+        if (ui._statTimers[id]) cancelAnimationFrame(ui._statTimers[id]);
+        const dur=600, t0=performance.now();
+        const step=(now)=>{
+            const p=Math.min((now-t0)/dur,1);
+            const eased=1-Math.pow(1-p,3);
+            el.textContent=Math.round(start+(target-start)*eased);
+            if(p<1) ui._statTimers[id]=requestAnimationFrame(step);
+            else { el.textContent=target; delete ui._statTimers[id]; }
+        };
+        ui._statTimers[id]=requestAnimationFrame(step);
     },
 
     // ── 홈 통계 팝업 ──
@@ -6502,26 +6548,70 @@ const annualPlanMgr = {
         const future   = upcoming.filter(c => c.startDate > openDate && this._getMondayOf(c.startDate) !== thisWeekMonday);
 
         const pool = [...ongoing, ...d2ready, ...thisWeek, ...future];
+
+        // [Clean Start 준비] 각 방의 현재 과정명을 먼저 읽어둔다 (과정 교체 감지용)
+        const curSnap = await firebase.database().ref('courses').once('value');
+        const curRooms = curSnap.val() || {};
+
         const updates = {};
         const assigned = [];
+        const wiped = [];
 
-        for (let i = 0; i < Math.min(this.ROOMS.length, pool.length); i++) {
+        for (let i = 0; i < this.ROOMS.length; i++) {
             const room = this.ROOMS[i];
             const course = pool[i];
-            updates[`courses/${room}/settings/courseName`] = course.name;
-            updates[`courses/${room}/settings/period`]     = course.period;
-            // [수정] coord 표기 차이(공백/직급)를 흡수해 명단의 정식 이름으로 정규화. 매칭 실패 시 원문 유지
-            const coordFull = coordMgr.matchName(course.coord) || (course.coord || '');
-            updates[`courses/${room}/settings/coordinatorName`] = coordFull;
-            updates[`courses/${room}/status/professorName`] = course.prof;
-            updates[`courses/${room}/status/roomStatus`]   = 'active';
-            assigned.push(`${room}: ${course.name}`);
+            const prevName = ((curRooms[room] || {}).settings || {}).courseName || '';
+
+            if (course) {
+                // [Clean Start] 이 방에 배정될 과정이 직전 과정과 다르면, 이전 기수 데이터 일괄 소거
+                if (prevName && prevName !== course.name) {
+                    Object.assign(updates, this._cleanStartUpdates(room));
+                    wiped.push(`${room}(${prevName}→${course.name})`);
+                }
+                updates[`courses/${room}/settings/courseName`] = course.name;
+                updates[`courses/${room}/settings/period`]     = course.period;
+                // [수정] coord 표기 차이(공백/직급)를 흡수해 명단의 정식 이름으로 정규화. 매칭 실패 시 원문 유지
+                const coordFull = coordMgr.matchName(course.coord) || (course.coord || '');
+                updates[`courses/${room}/settings/coordinatorName`] = coordFull;
+                updates[`courses/${room}/status/professorName`] = course.prof;
+                updates[`courses/${room}/status/roomStatus`]   = 'active';
+                assigned.push(`${room}: ${course.name}`);
+            }
+            // course 가 없으면(배정 대상 없음) 기존 동작 유지: 방을 건드리지 않는다.
         }
 
         if (Object.keys(updates).length) {
             await firebase.database().ref().update(updates);
             console.log('[annualPlanMgr] 배치 완료:', assigned.join(' | '));
+            if (wiped.length) console.log('[annualPlanMgr] 과정 교체 자동 리셋:', wiped.join(' | '));
         }
+    },
+
+    /* [Clean Start] 과정 교체 시 이전 기수 데이터를 비우는 multi-path 업데이트 묶음 반환.
+       (보안 규칙에 정의된 하위 노드만 대상으로 하여 권한 충돌 방지) */
+    _cleanStartUpdates: function(room) {
+        const rPath = `courses/${room}`;
+        const newResetKey = "reset_" + Date.now();
+        return {
+            [`${rPath}/students`]:            null,
+            [`${rPath}/internal_attendance`]: null,
+            [`${rPath}/questions`]:           null,
+            [`${rPath}/admin_actions`]:       null,
+            [`${rPath}/shuttle`]:             null,
+            [`${rPath}/dinner_skips`]:        null,
+            [`${rPath}/tablet_loans`]:        null,
+            [`${rPath}/connections`]:         null,
+            [`${rPath}/quizAnswers`]:         null,
+            [`${rPath}/expectedStudents`]:    null,
+            [`${rPath}/activeQuiz`]:          null,
+            [`${rPath}/quizFinalResults`]:    null,
+            [`${rPath}/attendanceQR`]:        null,
+            [`${rPath}/boardNotice`]:         "",
+            [`${rPath}/notice`]:              "",
+            [`${rPath}/coordNotice`]:         "",
+            [`${rPath}/coordNoticeHistory`]:  null,
+            [`${rPath}/status/resetKey`]:     newResetKey  // 교육생 강제 퇴출 신호
+        };
     },
 
     /* 페이지 로드 시 만료 Room 자동 체크 & 재배치 */
@@ -6632,9 +6722,27 @@ annualPlanMgr.renderEditor = function() {
         area.innerHTML = "<p style='padding:24px; color:#64748b; text-align:center;'>등록된 과정이 없습니다. 상단 [과정 행 추가] 버튼으로 추가하세요.</p>";
         return;
     }
+    // 행 배경색 분류: 진행중(연블루) / 차주 예정(연핑크) / 그 외 예정(연그린) / 종료(회색)
+    const today = this._today();
+    const thisMon = this._getMondayOf(today);
+    const nextMon = (() => { const d = new Date(thisMon + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate()+7); return d.toISOString().split('T')[0]; })();
+    const rowBg = (c) => {
+        if (!c.startDate || !c.endDate) return '';                         // 미입력
+        if (c.endDate < today) return 'background:#f1f5f9;';                // 종료(회색)
+        if (c.startDate <= today && c.endDate >= today) return 'background:#dbeafe;'; // 진행중(연블루)
+        if (this._getMondayOf(c.startDate) === nextMon) return 'background:#fce7f3;';  // 차주 예정(연핑크)
+        return 'background:#dcfce7;';                                       // 그 외 예정(연그린)
+    };
     const cellStyle = "padding:4px; border:1px solid #e2e8f0;";
     const inpStyle  = "width:100%; border:1px solid transparent; background:transparent; padding:6px; font-size:13px; box-sizing:border-box;";
     let html = `
+        <div style="display:flex; gap:14px; flex-wrap:wrap; padding:10px 12px; font-size:12px; color:#475569; align-items:center;">
+            <span style="font-weight:800;">상태 색상:</span>
+            <span><span style="display:inline-block; width:12px; height:12px; border-radius:3px; background:#dbeafe; vertical-align:middle; margin-right:4px;"></span>진행 중</span>
+            <span><span style="display:inline-block; width:12px; height:12px; border-radius:3px; background:#fce7f3; vertical-align:middle; margin-right:4px;"></span>차주 진행 예정</span>
+            <span><span style="display:inline-block; width:12px; height:12px; border-radius:3px; background:#dcfce7; vertical-align:middle; margin-right:4px;"></span>예정</span>
+            <span><span style="display:inline-block; width:12px; height:12px; border-radius:3px; background:#f1f5f9; vertical-align:middle; margin-right:4px;"></span>종료</span>
+        </div>
         <table style="width:100%; border-collapse:collapse; font-size:13px;">
             <thead style="position:sticky; top:0; background:#f8fafc; z-index:10;">
                 <tr>
@@ -6650,7 +6758,7 @@ annualPlanMgr.renderEditor = function() {
             <tbody>`;
     this.currentEditingData.forEach((c, idx) => {
         html += `
-            <tr>
+            <tr style="${rowBg(c)}">
                 <td style="${cellStyle} text-align:center; color:#64748b;">${idx + 1}</td>
                 <td style="${cellStyle}"><input type="text" value="${esc(c.name)}" onchange="annualPlanMgr.updateLocalData(${idx},'name',this.value)" style="${inpStyle} font-weight:700;"></td>
                 <td style="${cellStyle}"><input type="date" value="${esc(c.startDate)}" onchange="annualPlanMgr.updateLocalData(${idx},'startDate',this.value)" style="${inpStyle}"></td>
@@ -6671,6 +6779,8 @@ annualPlanMgr.updateLocalData = function(idx, field, value) {
     if (field === 'startDate' || field === 'endDate') {
         c.period  = (c.startDate && c.endDate) ? `${c.startDate} ~ ${c.endDate}` : '';
         c.weekKey = c.startDate ? this._getMondayOf(c.startDate) : '';
+        // 날짜가 바뀌면 상태 색상도 갱신되도록 다시 그린다 (입력 포커스 유지를 위해 약간 지연)
+        setTimeout(() => this.renderEditor(), 0);
     }
 };
 
