@@ -500,8 +500,10 @@
 
     <div class="app-container" id="mainApp">
 <div class="header">
-    <div class="header-btn" id="pwaHomeBtn" onclick="pwaShowPrompt('manual')" style="display:none;" title="홈 화면에 추가">
-        <i class="fa-solid fa-house-circle-plus"></i>
+    <div class="header-btn" id="pwaHomeBtn" onclick="pwaShowPrompt('manual')" style="display:none; color:#ffffff;" title="홈 화면에 추가">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M3 9.5 12 3l9 6.5"/><path d="M5 10v9a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1v-9"/>
+        </svg>
     </div>
     <div class="header-center">
         <div class="header-title" id="roomTitle">Course Name</div>
@@ -3708,20 +3710,22 @@ function closeTabletLoan() {
     </div>
 </div>
 
-<!-- ══ PWA 설치 안내 배너 ══ -->
-<div id="pwaInstallBanner" style="display:none; position:fixed; left:50%; transform:translateX(-50%); bottom:calc(16px + env(safe-area-inset-bottom)); width:calc(100% - 32px); max-width:440px; background:#ffffff; border-radius:16px; box-shadow:0 12px 30px rgba(0,0,0,0.3); z-index:21000; padding:16px 16px 14px; box-sizing:border-box;">
-    <button id="pwaBannerClose" style="position:absolute; top:8px; right:10px; width:30px; height:30px; border:none; background:#f1f5f9; color:#64748b; font-size:20px; border-radius:8px; cursor:pointer;">&times;</button>
-    <div style="display:flex; align-items:center; gap:12px;">
-        <img src="icon-192.png" alt="앱 아이콘" style="width:48px; height:48px; border-radius:12px; flex-shrink:0;" onerror="this.style.display='none'">
-        <div style="flex:1; min-width:0;">
-            <div style="font-size:14px; font-weight:800; color:#0f172a;">바탕화면에 앱 추가</div>
-            <div id="pwaBannerDesc" style="font-size:12px; color:#64748b; line-height:1.45; margin-top:2px;">홈 화면에 바로가기를 설치하면 다음에 더 빠르게 접속할 수 있어요.</div>
+<!-- ══ PWA 설치 안내 (중앙 팝업) ══ -->
+<div id="pwaInstallBanner" style="display:none; position:fixed; inset:0; z-index:21000; background:rgba(15,23,42,0.55); align-items:center; justify-content:center; padding:24px; box-sizing:border-box;">
+    <div style="position:relative; width:100%; max-width:340px; background:#ffffff; border-radius:20px; box-shadow:0 20px 50px rgba(0,0,0,0.35); padding:24px 22px 20px; box-sizing:border-box; text-align:center;">
+        <button id="pwaBannerClose" style="position:absolute; top:10px; right:12px; width:32px; height:32px; border:none; background:#f1f5f9; color:#64748b; font-size:22px; border-radius:9px; cursor:pointer;">&times;</button>
+        <!-- CATC 로고 타일 (한국공항공사 로고 대신 텍스트) -->
+        <div style="width:64px; height:64px; margin:4px auto 14px; border-radius:16px; background:linear-gradient(135deg,#0f172a 0%,#1e3a8a 100%); display:flex; align-items:center; justify-content:center; box-shadow:0 6px 16px rgba(15,23,42,0.25);">
+            <span style="color:#38bdf8; font-size:22px; font-weight:900; letter-spacing:1px;">CATC</span>
         </div>
-    </div>
-    <div id="pwaBannerActions" style="margin-top:12px; display:flex; gap:8px;">
-        <button id="pwaInstallBtn" style="flex:1; height:44px; border:none; border-radius:10px; background:#3b82f6; color:#fff; font-size:14px; font-weight:800; cursor:pointer;">
-            <i class="fa-solid fa-download"></i> 설치하기
-        </button>
+        <div style="font-size:17px; font-weight:900; color:#0f172a;">홈 화면에 바로가기 추가</div>
+        <div id="pwaBannerDesc" style="font-size:13px; color:#64748b; line-height:1.55; margin-top:8px;">홈 화면에 추가하면 다음에 앱처럼 더 빠르게 접속할 수 있어요.</div>
+        <div id="pwaBannerActions" style="margin-top:18px; display:flex; gap:8px;">
+            <button id="pwaLaterBtn" style="flex:1; height:46px; border:none; border-radius:12px; background:#f1f5f9; color:#475569; font-size:14px; font-weight:800; cursor:pointer;">나중에</button>
+            <button id="pwaInstallBtn" style="flex:1.4; height:46px; border:none; border-radius:12px; background:#3b82f6; color:#fff; font-size:14px; font-weight:800; cursor:pointer;">
+                <i class="fa-solid fa-download"></i> 추가하기
+            </button>
+        </div>
     </div>
 </div>
 
@@ -3738,6 +3742,7 @@ function closeTabletLoan() {
 
     var banner     = document.getElementById('pwaInstallBanner');
     var installBtn  = document.getElementById('pwaInstallBtn');
+    var laterBtn   = document.getElementById('pwaLaterBtn');
     var closeBtn   = document.getElementById('pwaBannerClose');
     var desc       = document.getElementById('pwaBannerDesc');
     var actions    = document.getElementById('pwaBannerActions');
@@ -3747,8 +3752,7 @@ function closeTabletLoan() {
         return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
     }
     var ua = window.navigator.userAgent || '';
-    var isIOS = /iphone|ipad|ipod/i.test(ua);
-    var isiOSSafari = isIOS && /safari/i.test(ua) && !/crios|fxios|edgios/i.test(ua);
+    var isIOS = /iphone|ipad|ipod/i.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
 
     // 이미 설치(또는 영구 거부) 여부 — localStorage 로 기기에 기억
     function installedOrDeclined(){
@@ -3766,29 +3770,33 @@ function closeTabletLoan() {
 
     function hideBanner(){ if(banner) banner.style.display='none'; }
 
-    // 배너 노출 — context: 'entry'(입장 시) / 'exit'(나가기 전) / 'manual'(홈아이콘)
+    // 배너(중앙 팝업) 노출 — context: 'entry'(입장 시) / 'exit'(나가기 전) / 'manual'(홈아이콘)
     function showPrompt(context){
         if (!banner || isStandalone()) return;
-        // iOS: 자동설치 불가 → 공유 버튼 안내 문구
-        if (isiOSSafari) {
-            if (desc) desc.innerHTML = '아이폰에서는 하단 <b>공유</b> 버튼 <i class="fa-solid fa-arrow-up-from-bracket"></i> → <b>"홈 화면에 추가"</b>를 눌러 설치할 수 있어요.';
-            if (actions) actions.style.display = 'none';
+        if (isIOS) {
+            // iOS: 자동설치 불가 → 공유 버튼으로 직접 추가하는 단계 안내 (죽은 '추가하기' 버튼 노출 금지)
+            if (desc) desc.innerHTML = 'Safari 하단의 <b>공유</b> 버튼 <i class="fa-solid fa-arrow-up-from-bracket" style="color:#3b82f6;"></i> 을 누른 뒤<br><b>"홈 화면에 추가"</b> 를 선택하세요.';
+            if (installBtn) installBtn.style.display = 'none';
+            if (laterBtn) { laterBtn.style.flex = '1'; laterBtn.textContent = '확인'; }
         } else {
-            if (actions) actions.style.display = 'flex';
+            if (installBtn) installBtn.style.display = '';
+            if (laterBtn) { laterBtn.style.flex = '1'; laterBtn.textContent = '나중에'; }
             if (desc) desc.innerText = (context==='exit')
                 ? '나가기 전에, 이 페이지를 홈 화면에 추가해 두면 다음에 바로 들어올 수 있어요.'
-                : '홈 화면에 바로가기를 설치하면 다음에 더 빠르게 접속할 수 있어요.';
+                : '홈 화면에 추가하면 다음에 앱처럼 더 빠르게 접속할 수 있어요.';
         }
-        banner.style.display='block';
+        banner.style.display='flex';   // 중앙 정렬 오버레이
     }
     // 전역 노출: 입장/홈아이콘/나가기에서 호출
     window.pwaShowPrompt = function(context){
-        // 이미 설치/standalone 이면 조용히 무시 (그냥 나가면 됨)
         if (isStandalone() || (installedOrDeclined() && context!=='manual')) return;
         showPrompt(context || 'manual');
     };
 
     if (closeBtn) closeBtn.onclick = function(){ hideBanner(); };
+    if (laterBtn) laterBtn.onclick = function(){ hideBanner(); };
+    // 배경(어두운 영역) 클릭 시 닫기
+    if (banner) banner.addEventListener('click', function(e){ if (e.target === banner) hideBanner(); });
 
     // 안드로이드/크롬: 설치 가능 신호 캡처
     window.addEventListener('beforeinstallprompt', function(e){
@@ -3804,8 +3812,10 @@ function closeTabletLoan() {
                 if (choice && choice.outcome === 'accepted') markInstalled();
             }).finally(function(){ deferredPrompt=null; hideBanner(); });
         } else {
-            // 설치 신호가 없으면(이미 설치 등) 배너만 닫음
-            hideBanner();
+            // 설치 신호가 아직 없으면: 브라우저 메뉴 안내로 폴백
+            if (desc) desc.innerHTML = '브라우저 메뉴(⋮)에서 <b>"앱 설치"</b> 또는 <b>"홈 화면에 추가"</b> 를 선택하세요.';
+            if (installBtn) installBtn.style.display = 'none';
+            if (laterBtn) { laterBtn.style.flex = '1'; laterBtn.textContent = '확인'; }
         }
     };
 
@@ -3815,7 +3825,6 @@ function closeTabletLoan() {
     });
 
     // 나가기 직전: 설치 안 했으면 한 번 더 권유 (best-effort)
-    //  - 모바일에서 페이지가 숨겨질 때(pagehide) 배너 노출
     window.addEventListener('pagehide', function(){
         if (!isStandalone() && !installedOrDeclined()) showPrompt('exit');
     });
