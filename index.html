@@ -4,6 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>KAC Student Platform</title>
+    <!-- PWA -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#0f172a">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="KAC 교육생">
+    <link rel="apple-touch-icon" href="icon-192.png">
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -3692,6 +3700,87 @@ function closeTabletLoan() {
         </button>
     </div>
 </div>
+
+<!-- ══ PWA 설치 안내 배너 ══ -->
+<div id="pwaInstallBanner" style="display:none; position:fixed; left:50%; transform:translateX(-50%); bottom:calc(16px + env(safe-area-inset-bottom)); width:calc(100% - 32px); max-width:440px; background:#ffffff; border-radius:16px; box-shadow:0 12px 30px rgba(0,0,0,0.3); z-index:21000; padding:16px 16px 14px; box-sizing:border-box;">
+    <button id="pwaBannerClose" style="position:absolute; top:8px; right:10px; width:30px; height:30px; border:none; background:#f1f5f9; color:#64748b; font-size:20px; border-radius:8px; cursor:pointer;">&times;</button>
+    <div style="display:flex; align-items:center; gap:12px;">
+        <img src="icon-192.png" alt="앱 아이콘" style="width:48px; height:48px; border-radius:12px; flex-shrink:0;" onerror="this.style.display='none'">
+        <div style="flex:1; min-width:0;">
+            <div style="font-size:14px; font-weight:800; color:#0f172a;">바탕화면에 앱 추가</div>
+            <div id="pwaBannerDesc" style="font-size:12px; color:#64748b; line-height:1.45; margin-top:2px;">홈 화면에 바로가기를 설치하면 다음에 더 빠르게 접속할 수 있어요.</div>
+        </div>
+    </div>
+    <div id="pwaBannerActions" style="margin-top:12px; display:flex; gap:8px;">
+        <button id="pwaInstallBtn" style="flex:1; height:44px; border:none; border-radius:10px; background:#3b82f6; color:#fff; font-size:14px; font-weight:800; cursor:pointer;">
+            <i class="fa-solid fa-download"></i> 설치하기
+        </button>
+    </div>
+</div>
+
+<script>
+(function(){
+    // 1) 서비스 워커 등록
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', function(){
+            navigator.serviceWorker.register('sw.js').catch(function(err){
+                console.warn('[PWA] SW 등록 실패:', err && err.message);
+            });
+        });
+    }
+
+    var banner   = document.getElementById('pwaInstallBanner');
+    var installBtn = document.getElementById('pwaInstallBtn');
+    var closeBtn = document.getElementById('pwaBannerClose');
+    var desc     = document.getElementById('pwaBannerDesc');
+    var actions  = document.getElementById('pwaBannerActions');
+    var deferredPrompt = null;
+
+    // 이미 설치된(standalone) 상태면 배너를 띄우지 않음
+    function isStandalone(){
+        return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+    }
+    // 이번 세션에서 닫았으면 다시 안 띄움
+    function dismissedThisSession(){ try { return sessionStorage.getItem('pwaBannerDismissed')==='1'; } catch(e){ return false; } }
+    function markDismissed(){ try { sessionStorage.setItem('pwaBannerDismissed','1'); } catch(e){} }
+
+    function showBanner(){ if(banner && !dismissedThisSession() && !isStandalone()) banner.style.display='block'; }
+    function hideBanner(){ if(banner) banner.style.display='none'; }
+
+    if (closeBtn) closeBtn.onclick = function(){ hideBanner(); markDismissed(); };
+
+    // 2) 안드로이드/크롬: beforeinstallprompt 캡처 후 3초 뒤 배너 노출
+    window.addEventListener('beforeinstallprompt', function(e){
+        e.preventDefault();
+        deferredPrompt = e;
+        setTimeout(showBanner, 3000);
+    });
+
+    if (installBtn) installBtn.onclick = function(){
+        if (deferredPrompt) {
+            deferredPrompt.prompt();
+            deferredPrompt.userChoice.finally(function(){ deferredPrompt=null; hideBanner(); markDismissed(); });
+        } else {
+            hideBanner(); markDismissed();
+        }
+    };
+
+    // 3) iOS(Safari): beforeinstallprompt 미지원 → 공유 버튼 안내 문구로 대체
+    var ua = window.navigator.userAgent || '';
+    var isIOS = /iphone|ipad|ipod/i.test(ua);
+    var isiOSSafari = isIOS && /safari/i.test(ua) && !/crios|fxios|edgios/i.test(ua);
+    if (isiOSSafari && !isStandalone()) {
+        setTimeout(function(){
+            if (desc) desc.innerHTML = '아이폰에서는 하단 <b>공유</b> 버튼 <i class="fa-solid fa-arrow-up-from-bracket"></i> → <b>“홈 화면에 추가”</b>를 눌러 설치할 수 있어요.';
+            if (actions) actions.style.display = 'none'; // iOS는 자동 설치 버튼 불가
+            showBanner();
+        }, 3000);
+    }
+
+    // 설치 완료 시 배너 정리
+    window.addEventListener('appinstalled', function(){ hideBanner(); markDismissed(); deferredPrompt=null; });
+})();
+</script>
 
 </body>
 </html>
