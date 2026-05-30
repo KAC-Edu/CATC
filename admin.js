@@ -178,15 +178,19 @@ saveInstructorNoticeMain: function() {
 
     loadBoardNotice: function() {
         if(!state.room) return;
-        firebase.database().ref(`courses/${state.room}/boardNotice`).once('value', snap => {
+        const roomAtBind = state.room;
+        // 이전 방의 boardNotice 리스너 제거 후, 현재 방에 새로 연결
+        try { firebase.database().ref(`courses/${roomAtBind}/boardNotice`).off(); } catch(e){}
+        firebase.database().ref(`courses/${roomAtBind}/boardNotice`).on('value', snap => {
+            // 콜백이 늦게 도착해 방이 이미 바뀐 경우엔 무시 (이전 방 데이터 잔류 방지)
+            if (state.room !== roomAtBind) return;
             const editor = document.getElementById('boardEditor');
             if(!editor) return;
             const val = snap.val();
-            if(val) {
-                editor.innerHTML = val;
-                const el = document.getElementById('boardLastSaved');
-                if(el) el.textContent = '저장된 내용 불러옴';
-            }
+            // [버그수정] 값이 없으면 반드시 비운다 — 이전 방 공지가 새 방에 남아 보이던 문제 해결
+            editor.innerHTML = val || "";
+            const el = document.getElementById('boardLastSaved');
+            if(el) el.textContent = val ? '저장된 내용 불러옴' : '';
         });
     },
 
@@ -583,6 +587,7 @@ forceEnterRoom: async function(room) {
     firebase.database().ref(`courses/${cleanRoom}/questions`).off();
     firebase.database().ref(`courses/${cleanRoom}/status`).off();
     firebase.database().ref(`courses/${cleanRoom}/settings`).off();
+    firebase.database().ref(`courses/${cleanRoom}/boardNotice`).off(); // 안내 보드 리스너도 분리 (방 전환 시 잔류 방지)
 
     state.room = cleanRoom; 
     state.qaData = {};      
@@ -4355,7 +4360,10 @@ resetShuttleRequests: function() {
         return cStart <= wFri && cEnd >= wMon;
     },
 
-    // ── 홈 통계 로드 (이번 주 필터) ── [수정] 실시간 on() 리스너로 전환하여 과정 갱신 시 즉시 반영
+    // ── 홈 통계 로드 ── [수정] 실시간 on() 리스너 + '현재 방에 배정된 과정' 기준 집계
+    //   기존엔 _isThisWeek(이번 주 월~금)로만 필터해서, 토요일에 SELECT ROOM이 차주 과정을
+    //   미리 배정(D-2 오픈)해 둔 경우 그 과정이 "이번 주"가 아니라 0으로 누락됐다.
+    //   → 방이 실제로 active(과정 배정됨)이거나, 기간이 이번 주와 겹치면 집계에 포함한다.
     loadHomeStats: function() {
         const computeAndRender = (d) => {
             const today = getTodayString();
@@ -4364,8 +4372,13 @@ resetShuttleRequests: function() {
                 if (!r) return;
                 const st=r.status||{}, settings=r.settings||{}, students=r.students||{};
                 const actions=(r.admin_actions||{})[today]||{};
-                if (!ui._isThisWeek(settings.period||'')) return;
-                if (st.roomStatus==='active') activeCount++;
+                const period = settings.period || '';
+                const hasCourse = !!(settings.courseName && String(settings.courseName).trim());
+                const isActive  = st.roomStatus === 'active';
+                // 집계 대상: (1) 현재 방에 과정이 배정/운영 중이거나 (2) 기간이 이번 주와 겹치는 과정
+                const include = (isActive && hasCourse) || ui._isThisWeek(period);
+                if (!include) return;
+                if (isActive) activeCount++;
                 const cnt = new Set(Object.values(students).filter(s=>s&&s.name&&s.name!=='undefined').map(s=>s.name)).size;
                 studentTotal += cnt;
                 Object.values(actions).forEach(a=>{
@@ -4422,7 +4435,12 @@ resetShuttleRequests: function() {
         if(!modal) return;
         const d=window._homeStatsData||{}, today=window._homeStatsToday||getTodayString();
         modal.style.display='flex';
-        const weekRooms=Object.entries(d).filter(([,r])=>ui._isThisWeek((r.settings||{}).period||''));
+        // 카드 집계와 동일 기준: 현재 과정이 배정된 active 방 OR 이번 주와 겹치는 과정
+        const weekRooms=Object.entries(d).filter(([,r])=>{
+            const s=(r&&r.settings)||{}, st=(r&&r.status)||{};
+            const hasCourse=!!(s.courseName && String(s.courseName).trim());
+            return (st.roomStatus==='active' && hasCourse) || ui._isThisWeek(s.period||'');
+        });
         if(type==='active'){
             title.textContent='🏫 현재 강의 중인 과정 (이번 주)';
             const rows=weekRooms.filter(([,r])=>(r.status||{}).roomStatus==='active').map(([room,r])=>{
