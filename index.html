@@ -1294,6 +1294,43 @@ async function enterApp() {
 }
 
 
+// ─────────────────────────────────────────────────────────────
+// [공통] 내 프로필 유효성 검사 — 신청/제출 전에 반드시 호출
+//  이름이 비었거나 'undefined'/공백이거나 전화 뒷자리가 4자리가 아니면
+//  무효로 보고, 재등록 창을 띄운 뒤 제출을 막는다. (unknown 제출 방지)
+function isValidProfile() {
+    const name  = (localStorage.getItem('kac_user_name')  || '').trim();
+    const phone = (localStorage.getItem('kac_user_phone') || '').trim();
+    const token = (localStorage.getItem('uToken')         || '').trim();
+    if (!token) return false;
+    if (!name || name.toLowerCase() === 'undefined' || name === '미등록') return false;
+    if (phone.length !== 4 || !/^\d{4}$/.test(phone)) return false;
+    return true;
+}
+
+// 신청 직전 호출: 유효하면 {name, phone, token} 반환, 아니면 안내 후 재등록 창 띄우고 null
+function requireProfile() {
+    if (isValidProfile()) {
+        return {
+            name:  localStorage.getItem('kac_user_name').trim(),
+            phone: localStorage.getItem('kac_user_phone').trim(),
+            token: localStorage.getItem('uToken').trim()
+        };
+    }
+    // 무효 → 손상된 값 정리 후 재등록 유도
+    showKacAlert("본인 정보가 확인되지 않습니다.\n정확한 신청을 위해 성함과 연락처 뒷 4자리를 다시 등록해 주세요.");
+    try {
+        const uName = document.getElementById('userName');
+        const uPhone = document.getElementById('userPhone');
+        if (uName)  uName.value = (localStorage.getItem('kac_user_name') || '').replace(/undefined/i,'').trim();
+        if (uPhone) uPhone.value = "";
+    } catch(e){}
+    const ov = document.getElementById('profileOverlay');
+    if (ov) ov.style.display = 'flex';
+    return null;
+}
+
+
 function openMainMenu() {
     // 1. 내 정보 가져오기 (공백 제거)
     const myName = (localStorage.getItem('kac_user_name') || "미등록").trim();
@@ -2230,6 +2267,8 @@ async function openShuttleApply() {
 
 // 2. 차량 선택 시 호출 (오송, 터미널, 공항, 자차 공통)
 function selectShuttle(typeId, typeName) {
+    // [본인확인] 프로필이 유효하지 않으면 재등록 유도 후 중단 (unknown 제출 방지)
+    if (!isValidProfile()) { requireProfile(); return; }
     showKacConfirm(`[${typeName}]\n차량을 신청하시겠습니까?`, async function() {
         const uToken = localStorage.getItem('uToken');
         const name = localStorage.getItem('kac_user_name');
@@ -2497,11 +2536,8 @@ async function submitAdminAction() {
     const name = localStorage.getItem('kac_user_name');
     const phoneShort = localStorage.getItem('kac_user_phone');
     
-    // 1. 본인 인증 정보 확인 (치명적 오류 방지)
-    if (!uToken || !name) {
-        showKacAlert("본인 인증 정보가 없습니다. 앱을 새로고침하거나 성함을 다시 입력해주세요.");
-        return;
-    }
+    // 1. 본인 인증 정보 확인 (치명적 오류 방지 + unknown 제출 차단)
+    if (!isValidProfile()) { requireProfile(); return; }
 
     // 2. 입력된 값들 가져오기
     const dept = document.getElementById('userDept').value.trim();
@@ -2788,8 +2824,17 @@ async function saveProfileWithCheck() {
         return;
     }
     
-    if (!name || phone.length !== 4) {
-        showKacAlert("성함과 전화번호 뒷 4자리를 정확히 입력해주세요.");
+    const nameOk2 = name.length >= 2
+        && name.toLowerCase() !== 'undefined'
+        && /[가-힣A-Za-z]/.test(name);
+    if (!nameOk2) {
+        showKacAlert("성함을 정확히 입력해 주세요. (2자 이상)");
+        document.getElementById('userName').focus();
+        return;
+    }
+    if (!/^\d{4}$/.test(phone)) {
+        showKacAlert("전화번호 뒷 4자리를 숫자로 정확히 입력해 주세요.");
+        document.getElementById('userPhone').focus();
         return;
     }
 
@@ -2833,9 +2878,21 @@ async function saveProfileWithCheck() {
 async function saveProfile() {
     const name = document.getElementById('userName').value.trim();
     const phone = document.getElementById('userPhone').value.trim();
-    
-    if (!name || phone.length !== 4) {
-        showKacAlert("성함과 전화번호 뒷 4자리를 정확히 입력해주세요.");
+
+    // [강화] 이름은 2자 이상 한글/영문, 'undefined'·숫자만 등 무효값 차단
+    const nameOk = name.length >= 2
+        && name.toLowerCase() !== 'undefined'
+        && /[가-힣A-Za-z]/.test(name);
+    const phoneOk = /^\d{4}$/.test(phone);
+
+    if (!nameOk) {
+        showKacAlert("성함을 정확히 입력해 주세요. (2자 이상)");
+        document.getElementById('userName').focus();
+        return;
+    }
+    if (!phoneOk) {
+        showKacAlert("전화번호 뒷 4자리를 숫자로 정확히 입력해 주세요.");
+        document.getElementById('userPhone').focus();
         return;
     }
     
@@ -3102,6 +3159,7 @@ function closeFacilityModal() {
 
 // 비품 요청 서버 업로드
 async function submitFacilityRequest() {
+    if (!isValidProfile()) { requireProfile(); return; }
     const reqText = document.getElementById('facilityReqText').value.trim();
     const dormInfo = document.getElementById('displayMyDorm').innerText;
     const userName = localStorage.getItem('kac_user_name');
@@ -3649,6 +3707,7 @@ function openTabletLoan() {
 }
 
 function applyTabletLoan() {
+    if (!isValidProfile()) { requireProfile(); return; }
     const uToken = localStorage.getItem('uToken');
     const name = localStorage.getItem('kac_user_name') || '';
     const phone = localStorage.getItem('kac_user_phone') || '';
