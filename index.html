@@ -500,7 +500,7 @@
 
     <div class="app-container" id="mainApp">
 <div class="header">
-    <div class="header-btn" id="pwaHomeBtn" onclick="pwaShowPrompt('manual')" style="display:none; color:#ffffff;" title="홈 화면에 추가">
+    <div class="header-btn" id="pwaHomeBtn" onclick="closeStudentWindow()" style="color:#ffffff;" title="닫기">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <path d="M3 9.5 12 3l9 6.5"/><path d="M5 10v9a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1v-9"/>
         </svg>
@@ -1171,36 +1171,7 @@ async function resolveRoomFromCode(code) {
 
 // [수정] index.html의 최하단 (async function init() { ... })
 (async function init() {
-    // [인앱 브라우저 감지] 카카오톡/네이버/인스타 등 인앱 브라우저는 '홈 화면 추가'가 불가하므로
-    //  아이폰 사용자에게 Safari로 다시 열도록 안내한다.
-    (function nudgeSafari(){
-        try {
-            var ua = navigator.userAgent || '';
-            var isIOS = /iphone|ipad|ipod/i.test(ua);
-            if (!isIOS) return;
-            var inApp = /KAKAOTALK|NAVER|Instagram|FBAN|FBAV|Line\/|DaumApps|whale|everytimeApp|band/i.test(ua);
-            var isRealSafari = /Safari/i.test(ua) && !/CriOS|FxiOS|EdgiOS/i.test(ua);
-            if (!(inApp || !isRealSafari)) return;
-            if (sessionStorage.getItem('safariNudgeShown') === '1') return;
-            sessionStorage.setItem('safariNudgeShown','1');
-            var url = window.location.href;
-            var ov = document.createElement('div');
-            ov.style.cssText = 'position:fixed;inset:0;z-index:30000;background:rgba(15,23,42,0.92);color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px 24px;text-align:center;';
-            ov.innerHTML = '<div style="font-size:46px;margin-bottom:16px;">🧭</div>'
-              + '<div style="font-size:18px;font-weight:900;margin-bottom:10px;">Safari로 열어주세요</div>'
-              + '<div style="font-size:14px;line-height:1.6;color:#cbd5e1;max-width:300px;">지금은 카카오톡/네이버 등 <b style="color:#fff;">인앱 브라우저</b>라 홈 화면에 앱을 추가할 수 없어요.<br>우측 상단(또는 하단) <b style="color:#fff;">··· 메뉴 → "Safari로 열기"</b> 를 눌러주세요.</div>'
-              + '<button id="safariCopyBtn" style="margin-top:22px;height:46px;padding:0 22px;border:none;border-radius:12px;background:#3b82f6;color:#fff;font-size:14px;font-weight:800;cursor:pointer;">주소 복사하기</button>'
-              + '<button id="safariSkipBtn" style="margin-top:10px;height:40px;padding:0 18px;border:none;border-radius:10px;background:transparent;color:#94a3b8;font-size:13px;font-weight:700;cursor:pointer;">이대로 계속 보기</button>';
-            document.body.appendChild(ov);
-            var copyBtn = document.getElementById('safariCopyBtn');
-            if (copyBtn) copyBtn.onclick = function(){
-                try { navigator.clipboard.writeText(url); copyBtn.textContent = '✓ 복사됨 — Safari 주소창에 붙여넣기'; }
-                catch(e){ copyBtn.textContent = url; }
-            };
-            var skipBtn = document.getElementById('safariSkipBtn');
-            if (skipBtn) skipBtn.onclick = function(){ ov.remove(); };
-        } catch(e){ console.warn('[safari nudge]', e); }
-    })();
+    // [PWA 제거] Safari 권장/인앱 브라우저 안내 레이어는 요청에 따라 비활성화됨.
 
     showLoader('강의실 정보를 불러오는 중입니다...');
 
@@ -2953,9 +2924,7 @@ function showMainDashboard() {
     document.getElementById('landingPage').style.display = 'none';
     document.getElementById('mainApp').style.display = 'flex';
     startPresence();
-    // [PWA] 좌측 상단 홈 아이콘 갱신 + 입장 시 1회 설치 권유 (이미 설치/standalone 이면 무시됨)
-    if (window.pwaUpdateHomeBtn) window.pwaUpdateHomeBtn();
-    setTimeout(function(){ if (window.pwaShowPrompt) window.pwaShowPrompt('entry'); }, 1200);
+    // [PWA 제거] 입장 시 설치 권유 팝업 비활성화 (홈 버튼은 창 닫기 기능)
 }
 
 
@@ -3221,7 +3190,7 @@ function openCnsPlatform() {
     // 메뉴창 닫기
     document.getElementById('menuModal').style.display = 'none';
     // CNS 플랫폼 주소로 새 창 열기
-    window.open("https://jds0616-boop.github.io/kac-cns-platform/index.html", "_blank");
+    window.open("https://kac-edu.github.io/kac-cns-platform/index.html", "_blank");
 }
 
 function openSurveyModal() {
@@ -3553,7 +3522,6 @@ function cleanUrlAndGo(r) {
         if(document.getElementById('landingPage')) document.getElementById('landingPage').style.display = 'none';
         if(document.getElementById('mainApp')) document.getElementById('mainApp').style.display = 'flex';
         startPresence();
-        if (window.pwaUpdateHomeBtn) window.pwaUpdateHomeBtn(); // [PWA] 홈 아이콘 노출 갱신(재진입 시엔 자동 권유 생략)
     }
 }
 
@@ -3751,145 +3719,37 @@ function closeTabletLoan() {
     </div>
 </div>
 
-<!-- ══ PWA 설치 안내 (중앙 팝업) ══ -->
-<div id="pwaInstallBanner" style="display:none; position:fixed; inset:0; z-index:21000; background:rgba(15,23,42,0.55); align-items:center; justify-content:center; padding:24px; box-sizing:border-box;">
-    <div style="position:relative; width:100%; max-width:340px; background:#ffffff; border-radius:20px; box-shadow:0 20px 50px rgba(0,0,0,0.35); padding:24px 22px 20px; box-sizing:border-box; text-align:center;">
-        <button id="pwaBannerClose" style="position:absolute; top:10px; right:12px; width:32px; height:32px; border:none; background:#f1f5f9; color:#64748b; font-size:22px; border-radius:9px; cursor:pointer;">&times;</button>
-        <!-- CATC 로고 타일 (한국공항공사 로고 대신 텍스트) -->
-        <div style="width:64px; height:64px; margin:4px auto 14px; border-radius:16px; background:linear-gradient(135deg,#0f172a 0%,#1e3a8a 100%); display:flex; align-items:center; justify-content:center; box-shadow:0 6px 16px rgba(15,23,42,0.25);">
-            <span style="color:#38bdf8; font-size:22px; font-weight:900; letter-spacing:1px;">CATC</span>
-        </div>
-        <div style="font-size:17px; font-weight:900; color:#0f172a;">홈 화면에 바로가기 추가</div>
-        <div id="pwaBannerDesc" style="font-size:13px; color:#64748b; line-height:1.55; margin-top:8px;">홈 화면에 추가하면 다음에 앱처럼 더 빠르게 접속할 수 있어요.</div>
-        <div id="pwaBannerActions" style="margin-top:18px; display:flex; gap:8px;">
-            <button id="pwaLaterBtn" style="flex:1; height:46px; border:none; border-radius:12px; background:#f1f5f9; color:#475569; font-size:14px; font-weight:800; cursor:pointer;">나중에</button>
-            <button id="pwaInstallBtn" style="flex:1.4; height:46px; border:none; border-radius:12px; background:#3b82f6; color:#fff; font-size:14px; font-weight:800; cursor:pointer;">
-                <i class="fa-solid fa-download"></i> 추가하기
-            </button>
-        </div>
-    </div>
-</div>
+<!-- [PWA 제거] 홈 화면 추가 안내 배너는 요청에 따라 삭제됨 -->
 
 <script>
 (function(){
-    // 1) 서비스 워커 등록
+    // 서비스 워커 등록만 유지 (팝업/안내 레이어 없음 — 오프라인 캐시 용도)
     if ('serviceWorker' in navigator) {
         window.addEventListener('load', function(){
             navigator.serviceWorker.register('sw.js').catch(function(err){
-                console.warn('[PWA] SW 등록 실패:', err && err.message);
+                console.warn('[SW] 등록 실패:', err && err.message);
             });
         });
     }
 
-    var banner     = document.getElementById('pwaInstallBanner');
-    var installBtn  = document.getElementById('pwaInstallBtn');
-    var laterBtn   = document.getElementById('pwaLaterBtn');
-    var closeBtn   = document.getElementById('pwaBannerClose');
-    var desc       = document.getElementById('pwaBannerDesc');
-    var actions    = document.getElementById('pwaBannerActions');
-    var deferredPrompt = null;
-
-    function isStandalone(){
-        return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
-    }
-    var ua = window.navigator.userAgent || '';
-    var isIOS = /iphone|ipad|ipod/i.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
-
-    // 이미 설치(또는 영구 거부) 여부 — localStorage 로 기기에 기억
-    function installedOrDeclined(){
-        try { return localStorage.getItem('pwaInstalled')==='1'; } catch(e){ return false; }
-    }
-    function markInstalled(){ try { localStorage.setItem('pwaInstalled','1'); } catch(e){} updateHomeBtn(); }
-
-    // 좌측 상단 홈 아이콘: 설치 안 됐고 standalone 아닐 때만 노출
-    function updateHomeBtn(){
-        var btn = document.getElementById('pwaHomeBtn');
-        if (!btn) return;
-        var show = !isStandalone() && !installedOrDeclined();
-        btn.style.display = show ? 'flex' : 'none';
-    }
-
-    function hideBanner(){ if(banner) banner.style.display='none'; }
-
-    // 배너(중앙 팝업) 노출 — context: 'entry'(입장 시) / 'exit'(나가기 전) / 'manual'(홈아이콘)
-    function showPrompt(context){
-        if (!banner || isStandalone()) return;
-        if (isIOS) {
-            // iOS: 자동설치 불가 → 공유 버튼으로 직접 추가하는 단계 안내 (죽은 '추가하기' 버튼 노출 금지)
-            if (desc) desc.innerHTML = 'Safari 하단의 <b>공유</b> 버튼 <i class="fa-solid fa-arrow-up-from-bracket" style="color:#3b82f6;"></i> 을 누른 뒤<br><b>"홈 화면에 추가"</b> 를 선택하세요.';
-            if (installBtn) installBtn.style.display = 'none';
-            if (laterBtn) { laterBtn.style.flex = '1'; laterBtn.textContent = '확인'; }
-        } else {
-            if (installBtn) installBtn.style.display = '';
-            if (laterBtn) { laterBtn.style.flex = '1'; laterBtn.textContent = '나중에'; }
-            if (desc) desc.innerText = (context==='exit')
-                ? '나가기 전에, 이 페이지를 홈 화면에 추가해 두면 다음에 바로 들어올 수 있어요.'
-                : '홈 화면에 추가하면 다음에 앱처럼 더 빠르게 접속할 수 있어요.';
-        }
-        banner.style.display='flex';   // 중앙 정렬 오버레이
-    }
-    // 전역 노출: 입장/홈아이콘/나가기에서 호출
-    window.pwaShowPrompt = function(context){
-        if (isStandalone() || (installedOrDeclined() && context!=='manual')) return;
-
-        // [홈버튼 동작] 좌측 상단 홈버튼(manual)은 '1회만' 설치 안내 팝업을 띄우고,
-        //  그 이후로는 창을 닫는 기능으로 동작한다.
-        if (context === 'manual') {
-            var shown = false;
-            try { shown = localStorage.getItem('pwaHomeHintShown') === '1'; } catch(e){}
-            if (shown) {
-                // 두 번째부터: 창 닫기 시도 (모바일 브라우저는 직접 닫기가 막힐 수 있어 안내로 폴백)
-                try { window.close(); } catch(e){}
-                setTimeout(function(){
-                    // 여전히 떠 있으면(close 실패) 안내
-                    showKacAlert('이 탭을 닫으려면 브라우저의 닫기 버튼을 사용해주세요.\n(이미 홈 화면 추가 안내는 확인하셨습니다.)');
-                }, 150);
-                return;
-            }
-            try { localStorage.setItem('pwaHomeHintShown','1'); } catch(e){}
-        }
-        showPrompt(context || 'manual');
+    // 좌측 상단 홈 버튼: 현재 창(탭) 닫기. 모바일에서 close()가 막히면 안내 표시.
+    window.closeStudentWindow = function(){
+        try { window.open('', '_self'); window.close(); } catch(e){}
+        // close()가 무시되는 환경(직접 연 탭이 아닐 때) 대비 폴백 안내
+        setTimeout(function(){
+            try {
+                if (typeof showKacAlert === 'function') {
+                    showKacAlert('창을 닫아주세요.\n(브라우저의 닫기 버튼을 이용해 종료할 수 있습니다.)');
+                } else {
+                    alert('창을 닫아주세요.');
+                }
+            } catch(e){}
+        }, 200);
     };
 
-    if (closeBtn) closeBtn.onclick = function(){ hideBanner(); };
-    if (laterBtn) laterBtn.onclick = function(){ hideBanner(); };
-    // 배경(어두운 영역) 클릭 시 닫기
-    if (banner) banner.addEventListener('click', function(e){ if (e.target === banner) hideBanner(); });
-
-    // 안드로이드/크롬: 설치 가능 신호 캡처
-    window.addEventListener('beforeinstallprompt', function(e){
-        e.preventDefault();
-        deferredPrompt = e;
-        updateHomeBtn();
-    });
-
-    if (installBtn) installBtn.onclick = function(){
-        if (deferredPrompt) {
-            deferredPrompt.prompt();
-            deferredPrompt.userChoice.then(function(choice){
-                if (choice && choice.outcome === 'accepted') markInstalled();
-            }).finally(function(){ deferredPrompt=null; hideBanner(); });
-        } else {
-            // 설치 신호가 아직 없으면: 브라우저 메뉴 안내로 폴백
-            if (desc) desc.innerHTML = '브라우저 메뉴(⋮)에서 <b>"앱 설치"</b> 또는 <b>"홈 화면에 추가"</b> 를 선택하세요.';
-            if (installBtn) installBtn.style.display = 'none';
-            if (laterBtn) { laterBtn.style.flex = '1'; laterBtn.textContent = '확인'; }
-        }
-    };
-
-    // 설치 완료 시: 기억 + 배너/홈아이콘 정리
-    window.addEventListener('appinstalled', function(){
-        markInstalled(); hideBanner(); deferredPrompt=null;
-    });
-
-    // 나가기 직전: 설치 안 했으면 한 번 더 권유 (best-effort)
-    window.addEventListener('pagehide', function(){
-        if (!isStandalone() && !installedOrDeclined()) showPrompt('exit');
-    });
-
-    // 초기 상태 반영 (메인앱 진입 시 enterApp 쪽에서 pwaShowPrompt('entry') 호출)
-    updateHomeBtn();
-    window.pwaUpdateHomeBtn = updateHomeBtn;
+    // [PWA 제거] 설치 권유/홈아이콘 노출 제어 함수는 더 이상 동작하지 않도록 비활성화(no-op)
+    window.pwaShowPrompt = function(){};
+    window.pwaUpdateHomeBtn = function(){};
 })();
 </script>
 

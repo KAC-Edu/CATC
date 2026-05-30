@@ -612,6 +612,7 @@ forceEnterRoom: async function(room) {
     state.room = cleanRoom; 
     state.qaData = {};      
     state.activeQaKey = null; 
+    state._ownedSessionRoom = null; // [핸드오버] 방 전환 시 소유 추적 초기화
     localStorage.setItem('kac_last_room', cleanRoom); 
     state.isObserver = (sessionStorage.getItem('kac_observer_room') === cleanRoom);
 
@@ -658,6 +659,35 @@ forceEnterRoom: async function(room) {
         const isOwner = (statusData.ownerSessionId === state.sessionId);
         const isActive = (statusData.roomStatus === 'active');
 
+        // [세션 핸드오버] 내가 직전까지 이 방의 강사(소유자)였는데, 다른 기기가 제어권을 가져가
+        //  ownerSessionId 가 '다른 값'으로 바뀐 순간을 감지 → 자동으로 옵저버 모드로 전환 + 알림.
+        if (!state.isObserver
+            && state._ownedSessionRoom === cleanRoom        // 직전 스냅샷에서 내가 소유자였음
+            && isActive
+            && statusData.ownerSessionId                    // 누군가가 소유 중(빈값/리셋 아님)
+            && statusData.ownerSessionId !== state.sessionId) {
+            state._ownedSessionRoom = null;
+            state.isObserver = true;
+            sessionStorage.setItem('kac_observer_room', cleanRoom);
+            if (overlay) overlay.style.display = 'none';
+            const tm0 = document.getElementById('takeoverModal');
+            if (tm0) tm0.style.display = 'none';
+            ui.updateObserverButton();
+            ui.showAlert("다른 기기에서 강사 권한을 획득하였습니다.\n현재 기기는 옵저버 모드로 전환됩니다.");
+            // 옵저버 상태로 화면 권한만 갱신 (데이터 리스너는 유지)
+            const sb0 = document.getElementById('btnSetupModal');
+            if (sb0) {
+                sb0.style.setProperty('background', '#64748b', 'important');
+                sb0.style.setProperty('opacity', '0.6', 'important');
+                sb0.innerHTML = '<i class="fa-solid fa-eye"></i> 옵저버 모드 (보기 전용)';
+                sb0.style.pointerEvents = 'none';
+                sb0.disabled = true;
+            }
+            return;
+        }
+        // 내가 현재 소유자이면 '소유 중이던 방'으로 기록 (핸드오버 감지 기준점)
+        if (isOwner) state._ownedSessionRoom = cleanRoom;
+
         // [중요] 권한 검증 로직 및 모달 트리거
         // 내가 직접 비번치고 들어갔던 방 목록에 있으면 wasMyRoom=true
         const wasMyRoom = dataMgr.isMyOwnedRoom(cleanRoom);
@@ -693,9 +723,9 @@ forceEnterRoom: async function(room) {
                 if (tm) tm.style.display = 'none';
 
             } else if (isActive && !isOwner) {
-                // ④ 다른 강사 사용중인 방 → 비번 입력창
+                // ④ 다른 강사 사용중인 방 → 비번 입력창 (옵저버 입장도 가능)
                 overlay.style.display = 'flex';
-                if (overlayMsg) overlayMsg.innerHTML = '사용 중인 강의실입니다.<br><br>제어권을 얻으려면 비밀번호를 입력하세요.';
+                if (overlayMsg) overlayMsg.innerHTML = '현재 다른 기기에서 강의가 진행 중입니다.<br><br>옵저버 모드로 입장하거나,<br>강사 권한을 가져오려면 강의실 비밀번호를 입력하세요.';
                 state.pendingRoom = cleanRoom;
                 const lbl = document.getElementById('takeoverRoomLabel');
                 if(lbl) lbl.innerText = `Room #${cleanRoom}`;
@@ -4259,7 +4289,7 @@ resetShuttleRequests: function() {
 
 // [플랫폼 개발 이력] GitHub README를 읽어와 팝업으로 표시
     openDevInfo: async function() {
-        const GITHUB_RAW_URL = 'https://raw.githubusercontent.com/jds0616-boop/CATC/main/KAC_%ED%94%8C%EB%9E%AB%ED%8F%BC_%EA%B0%9C%EB%B0%9C%EC%9D%B4%EB%A0%A5.md';
+        const GITHUB_RAW_URL = 'https://raw.githubusercontent.com/kac-edu/CATC/main/KAC_%ED%94%8C%EB%9E%AB%ED%8F%BC_%EA%B0%9C%EB%B0%9C%EC%9D%B4%EB%A0%A5.md';
         // 기존 모달 재활용
         const modal = document.getElementById('qaModal');
         const mText = document.getElementById('m-text');
@@ -5304,7 +5334,7 @@ const guideMgr = {
     },
 
     // GitHub에 올린 입교안내 PDF의 raw URL (파일 교체 시 이 URL만 수정)
-    GUIDE_PDF_URL: 'https://raw.githubusercontent.com/jds0616-boop/CATC/main/%EC%9E%85%EA%B5%90%EC%95%88%EB%82%B4.pdf',
+    GUIDE_PDF_URL: 'https://raw.githubusercontent.com/kac-edu/CATC/main/%EC%9E%85%EA%B5%90%EC%95%88%EB%82%B4.pdf',
 
     // 1. 초기화 — Firebase DB 리스너 없음, 리사이즈 감시만 설정
     //    실제 PDF 로드는 사용자가 '입교안내' 탭을 클릭할 때 refresh()에서 수행
@@ -6220,7 +6250,7 @@ const examTimer = {
 
 /* ══ 배경음악 플레이어 (BGM Player) ══
    음원: GitHub 저장소 자체 파일 (배경음1.mp3 ~ 배경음11.mp3)
-   https://raw.githubusercontent.com/jds0616-boop/CATC/main/
+   https://raw.githubusercontent.com/kac-edu/CATC/main/
 */
 const bgmPlayer = {
     _audio: null,
@@ -6230,7 +6260,7 @@ const bgmPlayer = {
     _isPlaying: false,
 
     _TOTAL: 11,
-    _BASE_URL: 'https://raw.githubusercontent.com/jds0616-boop/CATC/main/',
+    _BASE_URL: 'https://raw.githubusercontent.com/kac-edu/CATC/main/',
     _LS_VOL: 'kac_bgm_vol',
 
     // 트랙 번호로 URL 생성
