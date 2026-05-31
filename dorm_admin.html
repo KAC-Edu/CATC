@@ -75,6 +75,19 @@
 
         .empty-floor { text-align: center; color: var(--muted); font-size: 13px; padding: 24px 0; }
 
+        /* 방 표 방식 */
+        .room-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        .room-table th { background: #f8fafc; padding: 9px 8px; border: 1px solid var(--border); font-weight: 800; font-size: 12px; color: var(--muted); white-space: nowrap; }
+        .room-table td { padding: 5px 8px; border: 1px solid var(--border); text-align: center; }
+        .room-table tr.royal-row td { background: var(--royal-bg); }
+        .room-table .rno-cell { font-weight: 900; font-size: 15px; }
+        .room-table select { border: 1px solid var(--border); border-radius: 7px; padding: 6px 8px; font-size: 13px; font-weight: 700; outline: none; background: #fff; cursor: pointer; }
+        .room-table select:focus { border-color: var(--blue); }
+        .royal-check { width: 20px; height: 20px; cursor: pointer; accent-color: var(--royal); }
+        .room-table .del-x { color: var(--danger); cursor: pointer; font-size: 15px; opacity: 0.65; }
+        .room-table .del-x:hover { opacity: 1; }
+        .crit-disabled { opacity: 0.35; pointer-events: none; }
+
         .save-bar { position: sticky; bottom: 0; background: rgba(255,255,255,0.95); border-top: 1px solid var(--border); padding: 14px 20px; display: flex; justify-content: space-between; align-items: center; margin: 0 -20px -20px; border-radius: 0 0 16px 16px; }
         .save-bar .summary { font-size: 13px; color: var(--muted); font-weight: 700; }
         .save-btn { padding: 13px 28px; border: none; border-radius: 11px; background: var(--success); color: #fff; font-weight: 900; font-size: 15px; cursor: pointer; }
@@ -237,45 +250,6 @@
         </div>
     </div>
 
-    <!-- 우선순위 설정 팝업 -->
-    <div class="pop-overlay" id="priorityPop">
-        <div class="pop-box">
-            <h3 id="popRoomTitle">방 우선순위 설정</h3>
-            <div class="opt-group">
-                <label>정원</label>
-                <div class="seg" id="segCapacity">
-                    <button data-v="1" onclick="popSet('capacity','1',this)">1인 1실</button>
-                    <button data-v="2" onclick="popSet('capacity','2',this)">2인 1실</button>
-                </div>
-            </div>
-            <div class="opt-group">
-                <label>방 성별 지정 (선택)</label>
-                <div class="seg" id="segGender">
-                    <button data-v="" onclick="popSet('gender','',this)">지정 안함</button>
-                    <button data-v="M" onclick="popSet('gender','M',this)">남</button>
-                    <button data-v="F" onclick="popSet('gender','F',this)">여</button>
-                </div>
-            </div>
-            <div class="opt-group">
-                <label>로얄층 우선순위</label>
-                <div class="seg" id="segRoyal">
-                    <button data-v="off" onclick="popSet('royal','off',this)">사용 안함</button>
-                    <button data-v="on" onclick="popSet('royal','on',this)">우선 배치</button>
-                </div>
-            </div>
-            <div class="opt-group" id="royalCriteriaGroup" style="display:none;">
-                <label>우선 배치 기준</label>
-                <div class="seg" id="segCriteria">
-                    <button data-v="empno" onclick="popSet('criteria','empno',this)">사번 낮은순(연장자)</button>
-                    <button data-v="female" onclick="popSet('criteria','female',this)">여성 우선</button>
-                </div>
-            </div>
-            <div class="pop-actions">
-                <button class="pop-cancel" onclick="closePriorityPop()">취소</button>
-                <button class="pop-save" onclick="savePriorityPop()">적용</button>
-            </div>
-        </div>
-    </div>
 
     <!-- 학생 이동 팝업 -->
     <div class="pop-overlay" id="movePop">
@@ -315,8 +289,6 @@
         // rooms 데이터 구조: { roomId: { building, floor, no, capacity, gender, royal, criteria } }
         // roomId = `${building}_${floor}_${no}`
         let rooms = {};
-        let popTargetRoomId = null;
-        let popDraft = {};
 
         // ── 초기 로드 ──
         function init() {
@@ -353,46 +325,81 @@
                     .filter(([id, r]) => r.building === currentBldg && r.floor === f)
                     .sort((a, b) => String(a[1].no).localeCompare(String(b[1].no), undefined, { numeric: true }));
 
-                const roomCards = floorRooms.length ? floorRooms.map(([id, r]) => roomCardHtml(id, r)).join('')
-                    : `<div class="empty-floor">아직 등록된 방이 없습니다. 위에 방 번호를 입력해 추가하세요.</div>`;
+                const tableBody = floorRooms.length
+                    ? floorRooms.map(([id, r]) => roomRowHtml(id, r)).join('')
+                    : `<tr><td colspan="6" class="empty-floor">아직 등록된 방이 없습니다. 위에 방 번호를 입력해 추가하세요.</td></tr>`;
 
                 return `
                     <div class="floor-card">
-                        <h3><i class="fa-solid fa-layer-group"></i> ${currentBldg} ${f}층</h3>
-                        <div class="hint">방 번호를 쉼표(,)로 여러 개 한 번에 입력할 수 있어요. 예: 201, 202, 203 또는 201~210</div>
+                        <h3><i class="fa-solid fa-layer-group"></i> ${currentBldg} ${f}층 <span style="font-size:12px; color:var(--muted); font-weight:600;">(${floorRooms.length}개 방)</span></h3>
+                        <div class="hint">방 번호를 쉼표(,)로 여러 개, 또는 범위(201~210)로 한 번에 추가할 수 있어요.</div>
                         <div class="floor-input-row">
                             <input type="text" id="in-${currentBldg}-${f}" placeholder="방 번호 입력 (예: 201, 202 또는 201~210)"
                                    onkeyup="if(event.key==='Enter') addRooms('${currentBldg}', ${f})">
                             <button onclick="addRooms('${currentBldg}', ${f})"><i class="fa-solid fa-plus"></i> 추가</button>
                         </div>
-                        <div class="room-grid">${roomCards}</div>
+                        <div style="overflow-x:auto;">
+                            <table class="room-table">
+                                <thead>
+                                    <tr>
+                                        <th style="width:70px;">방번호</th>
+                                        <th style="width:110px;">정원</th>
+                                        <th style="width:130px;">성별 지정</th>
+                                        <th style="width:90px;">로얄층</th>
+                                        <th>우선 배치 기준</th>
+                                        <th style="width:50px;">삭제</th>
+                                    </tr>
+                                </thead>
+                                <tbody>${tableBody}</tbody>
+                            </table>
+                        </div>
                     </div>
                 `;
             }).join('');
         }
 
-        function roomCardHtml(id, r) {
-            const capLabel = (r.capacity === 2) ? '2인실' : '1인실';
-            const genderLabel = r.gender === 'M' ? '남' : (r.gender === 'F' ? '여' : null);
+        function roomRowHtml(id, r) {
             const royal = !!r.royal;
-            let metaHtml = `<span class="room-opt ${r.capacity === 2 ? 'on' : ''}">${capLabel}</span>`;
-            if (genderLabel) metaHtml += `<span class="room-opt ${r.gender === 'M' ? 'g-m' : 'g-f'}">${genderLabel}전용</span>`;
-            if (royal) {
-                const crit = r.criteria === 'female' ? '여성우선' : '사번우선';
-                metaHtml += `<span class="room-opt royal-on">로얄·${crit}</span>`;
-            }
+            const critDisabled = royal ? '' : 'crit-disabled';
             return `
-                <div class="room-card ${royal ? 'royal' : ''}">
-                    <div class="rno">
-                        <span>${r.no}</span>
-                        <span class="del" onclick="removeRoom('${id}')" title="삭제"><i class="fa-solid fa-xmark"></i></span>
-                    </div>
-                    <div class="room-meta">${metaHtml}</div>
-                    <div style="margin-top:8px;">
-                        <span class="room-opt" style="background:#eef2ff;color:#4338ca;" onclick="openPriorityPop('${id}')"><i class="fa-solid fa-sliders"></i> 설정</span>
-                    </div>
-                </div>
+                <tr class="${royal ? 'royal-row' : ''}">
+                    <td class="rno-cell">${r.no}${royal ? ' 🏅' : ''}</td>
+                    <td>
+                        <select onchange="setRoomField('${id}','capacity',this.value)">
+                            <option value="1" ${r.capacity !== 2 ? 'selected' : ''}>1인 1실</option>
+                            <option value="2" ${r.capacity === 2 ? 'selected' : ''}>2인 1실</option>
+                        </select>
+                    </td>
+                    <td>
+                        <select onchange="setRoomField('${id}','gender',this.value)">
+                            <option value="" ${!r.gender ? 'selected' : ''}>지정 안함</option>
+                            <option value="M" ${r.gender === 'M' ? 'selected' : ''}>남 전용</option>
+                            <option value="F" ${r.gender === 'F' ? 'selected' : ''}>여 전용</option>
+                        </select>
+                    </td>
+                    <td><input type="checkbox" class="royal-check" ${royal ? 'checked' : ''} onchange="setRoomField('${id}','royal',this.checked)"></td>
+                    <td>
+                        <select class="${critDisabled}" onchange="setRoomField('${id}','criteria',this.value)">
+                            <option value="empno" ${r.criteria !== 'female' ? 'selected' : ''}>사번 낮은순(연장자) 우선</option>
+                            <option value="female" ${r.criteria === 'female' ? 'selected' : ''}>여성 우선</option>
+                        </select>
+                    </td>
+                    <td><span class="del-x" onclick="removeRoom('${id}')" title="삭제"><i class="fa-solid fa-xmark"></i></span></td>
+                </tr>
             `;
+        }
+
+        // 인라인 셀 편집
+        function setRoomField(id, key, val) {
+            const r = rooms[id];
+            if (!r) return;
+            if (key === 'capacity') r.capacity = parseInt(val, 10) || 1;
+            else if (key === 'royal') r.royal = !!val;
+            else if (key === 'gender') r.gender = val || '';
+            else if (key === 'criteria') r.criteria = val || 'empno';
+            // 로얄 체크 변경 시 기준 칸 활성/비활성 갱신을 위해 해당 행만 다시 그림
+            if (key === 'royal') renderFloors();
+            updateSummary();
         }
 
         // 방 번호 파싱: "201, 202, 203" 또는 "201~210" 지원
@@ -448,57 +455,6 @@
             const cap2 = Object.values(rooms).filter(r => r.capacity === 2).length;
             document.getElementById('roomSummary').innerText =
                 `총 ${total}개 방 · 로얄층 ${royal}개 · 2인실 ${cap2}개`;
-        }
-
-        // ── 우선순위/속성 팝업 ──
-        function openPriorityPop(id) {
-            popTargetRoomId = id;
-            const r = rooms[id];
-            popDraft = {
-                capacity: String(r.capacity || 1),
-                gender: r.gender || '',
-                royal: r.royal ? 'on' : 'off',
-                criteria: r.criteria || 'empno'
-            };
-            document.getElementById('popRoomTitle').innerText = `${r.building} ${r.floor}층 ${r.no}호 설정`;
-            syncPopUI();
-            document.getElementById('priorityPop').style.display = 'flex';
-        }
-
-        function syncPopUI() {
-            const setSeg = (segId, val) => {
-                document.querySelectorAll(`#${segId} button`).forEach(b => {
-                    b.classList.toggle('on', b.dataset.v === val);
-                });
-            };
-            setSeg('segCapacity', popDraft.capacity);
-            setSeg('segGender', popDraft.gender);
-            setSeg('segRoyal', popDraft.royal);
-            setSeg('segCriteria', popDraft.criteria);
-            document.getElementById('royalCriteriaGroup').style.display = (popDraft.royal === 'on') ? 'block' : 'none';
-        }
-
-        function popSet(key, val, btn) {
-            popDraft[key] = val;
-            syncPopUI();
-        }
-
-        function savePriorityPop() {
-            const r = rooms[popTargetRoomId];
-            if (!r) return closePriorityPop();
-            r.capacity = parseInt(popDraft.capacity, 10) || 1;
-            r.gender = popDraft.gender || '';
-            r.royal = (popDraft.royal === 'on');
-            r.criteria = popDraft.criteria || 'empno';
-            closePriorityPop();
-            renderFloors();
-            updateSummary();
-            showToast('방 설정 변경됨 (저장 버튼을 눌러야 반영됩니다)');
-        }
-
-        function closePriorityPop() {
-            document.getElementById('priorityPop').style.display = 'none';
-            popTargetRoomId = null;
         }
 
         // ── 저장 ──
