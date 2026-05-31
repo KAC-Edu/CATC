@@ -7200,9 +7200,107 @@ const surveyMgr = {
 
     end: function() {
         if (!state.room) return;
-        if (!confirm('설문을 종료하시겠습니까?\n교육생 팝업이 닫히고, 결과는 그대로 보존됩니다.')) return;
-        firebase.database().ref(`courses/${state.room}/activeSurvey/status`).set('ended')
-            .then(() => ui.showAlert('설문이 종료되었습니다.'));
+        if (!confirm('설문을 종료하시겠습니까?\n교육생 팝업이 닫히고, 결과 요약이 한 번 더 표시됩니다.')) return;
+        const room = state.room;
+        // 종료 직전의 결과를 스냅샷으로 보존 (이력 1개)
+        const snapshot = this.computeSnapshot();
+        const updates = {};
+        updates[`courses/${room}/activeSurvey/status`] = 'ended';
+        if (snapshot) updates[`courses/${room}/lastSurveyResult`] = snapshot;
+        firebase.database().ref().update(updates)
+            .then(() => {
+                ui.showAlert('설문이 종료되었습니다.');
+                // 종료 결과를 팝업으로 한 번 더 강조
+                if (snapshot) surveyMgr.showResultPopup(snapshot);
+            });
+    },
+
+    // 현재 설문+응답으로 결과 스냅샷 객체 생성
+    computeSnapshot: function() {
+        const survey = this._survey;
+        if (!survey) return null;
+        const answers = this._answers || {};
+        const opts = survey.options || [];
+        const counts = opts.map(() => 0);
+        const named = opts.map(() => []);
+        Object.entries(answers).forEach(([token, a]) => {
+            const idx = (typeof a === 'object') ? a.choice : a;
+            if (idx != null && counts[idx] != null) {
+                counts[idx]++;
+                const nm = (typeof a === 'object' && a.name) ? a.name : token.split('_')[0];
+                named[idx].push(nm);
+            }
+        });
+        return {
+            question: survey.question,
+            options: opts,
+            anonymous: !!survey.anonymous,
+            counts: counts,
+            named: named,
+            total: counts.reduce((s, c) => s + c, 0),
+            endedAt: Date.now()
+        };
+    },
+
+    // 결과 막대 HTML 생성 (인라인/팝업 공용)
+    buildResultBars: function(opts, counts, total) {
+        const palette = ['#0ea5e9','#10b981','#f59e0b','#8b5cf6','#ec4899','#ef4444'];
+        return opts.map((o, i) => {
+            const pct = total > 0 ? Math.round((counts[i] / total) * 100) : 0;
+            const col = palette[i % palette.length];
+            return `
+                <div>
+                    <div style="display:flex; justify-content:space-between; font-size:13px; font-weight:700; margin-bottom:4px;">
+                        <span>${this._esc(o)}</span>
+                        <span style="color:${col};">${counts[i]}명 (${pct}%)</span>
+                    </div>
+                    <div style="background:#f1f5f9; border-radius:8px; height:14px; overflow:hidden;">
+                        <div style="width:${pct}%; height:100%; background:${col}; transition:width 0.4s;"></div>
+                    </div>
+                </div>`;
+        }).join('');
+    },
+
+    // 종료 결과 강조 팝업
+    showResultPopup: function(snap) {
+        if (!snap) return;
+        const modal = document.getElementById('surveyResultPopup');
+        if (!modal) return;
+        document.getElementById('srpQ').innerText = snap.question || '';
+        document.getElementById('srpTotal').innerText = `응답 ${snap.total}명`;
+        document.getElementById('srpAnon').innerText = snap.anonymous ? '· 익명 설문' : '· 기명 설문';
+        document.getElementById('srpBars').innerHTML = this.buildResultBars(snap.options || [], snap.counts || [], snap.total || 0);
+        // 최다 득표(승자) 강조
+        let winIdx = -1, winMax = -1;
+        (snap.counts || []).forEach((c, i) => { if (c > winMax) { winMax = c; winIdx = i; } });
+        const winEl = document.getElementById('srpWinner');
+        if (snap.total > 0 && winIdx >= 0) {
+            winEl.style.display = 'block';
+            winEl.innerHTML = `🏆 최다 선택: <b>${this._esc(snap.options[winIdx])}</b> (${winMax}명)`;
+        } else {
+            winEl.style.display = 'none';
+        }
+        // 기명이면 명단
+        const detail = document.getElementById('srpNamed');
+        if (!snap.anonymous && snap.total > 0) {
+            detail.style.display = 'block';
+            detail.innerHTML = (snap.options || []).map((o, i) =>
+                (snap.named[i] && snap.named[i].length) ? `<div><b>${this._esc(o)}</b>: ${snap.named[i].map(n => this._esc(n)).join(', ')}</div>` : ''
+            ).filter(Boolean).join('');
+        } else {
+            detail.style.display = 'none';
+        }
+        modal.style.display = 'flex';
+    },
+
+    // 저장된 직전 설문 결과 다시 보기
+    viewLastResult: function() {
+        if (!state.room) return;
+        firebase.database().ref(`courses/${state.room}/lastSurveyResult`).once('value', s => {
+            const snap = s.val();
+            if (!snap) { ui.showAlert('저장된 직전 설문 결과가 없습니다.'); return; }
+            this.showResultPopup(snap);
+        });
     },
 
     bindListeners: function() {
@@ -7255,21 +7353,7 @@ const surveyMgr = {
         document.getElementById('surveyResultTotal').innerText = `응답 ${total}명`;
         document.getElementById('surveyResultAnon').innerText = survey.anonymous ? '· 익명 설문' : '· 기명 설문';
 
-        const palette = ['#0ea5e9','#10b981','#f59e0b','#8b5cf6','#ec4899','#ef4444'];
-        document.getElementById('surveyResultBars').innerHTML = opts.map((o, i) => {
-            const pct = total > 0 ? Math.round((counts[i] / total) * 100) : 0;
-            const col = palette[i % palette.length];
-            return `
-                <div>
-                    <div style="display:flex; justify-content:space-between; font-size:13px; font-weight:700; margin-bottom:4px;">
-                        <span>${this._esc(o)}</span>
-                        <span style="color:${col};">${counts[i]}명 (${pct}%)</span>
-                    </div>
-                    <div style="background:#f1f5f9; border-radius:8px; height:14px; overflow:hidden;">
-                        <div style="width:${pct}%; height:100%; background:${col}; transition:width 0.4s;"></div>
-                    </div>
-                </div>`;
-        }).join('');
+        document.getElementById('surveyResultBars').innerHTML = this.buildResultBars(opts, counts, total);
 
         // 기명이면 보기별 응답자 명단
         const detail = document.getElementById('surveyNamedDetail');
