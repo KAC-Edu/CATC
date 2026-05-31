@@ -625,6 +625,7 @@
 
             <h3 style="margin-bottom:15px; font-size:16px; color:#64748b;">메뉴 서비스</h3>
             <div class="menu-item" id="menu-kakao" style="display:none; background:#FAE100; color:#3A1D1D; font-weight:900; text-align:center;" onclick="openKakaoChat()"><i class="fa-solid fa-comment"></i> 카카오톡 오픈톡방 입장</div>
+            <div class="menu-item" id="menu-survey-instant" style="display:none; background:#e0f2fe; color:#0369a1; font-weight:900; text-align:center;" onclick="document.getElementById('menuModal').style.display='none'; openInstantSurvey();"><i class="fa-solid fa-square-poll-vertical"></i> 설문 응답 / 수정</div>
             <div class="menu-item" onclick="openNotice()"><i class="fa-solid fa-bullhorn" style="color: #facc15;"></i> 공지사항 </div>
             <div class="menu-item" onclick="viewMealMenu()"><i class="fa-solid fa-utensils"></i> 금주 식단보기</div>
             <div class="menu-item" onclick="openFacilityRequest()"><i class="fa-solid fa-soap" style="color: #10b981;"></i> 생활관 비품 요청</div>
@@ -667,6 +668,24 @@
         </div>
         <button onclick="document.getElementById('surveyModal').style.display='none'"
             style="margin-top:16px; width:100%; padding:13px; border:none; border-radius:12px; background:#f1f5f9; color:#475569; font-weight:800; font-size:14px; cursor:pointer;">닫기</button>
+    </div>
+</div>
+
+<!-- [즉석 설문] 교육생 응답 팝업 -->
+<div id="instantSurveyOverlay" class="menu-overlay" style="display:none; z-index:9600; align-items:center; justify-content:center; padding:20px;">
+    <div class="menu-box" style="width:100%; max-width:380px; padding:0; border-radius:20px; overflow:hidden;">
+        <div style="background:linear-gradient(135deg,#0ea5e9,#38bdf8); padding:16px 20px; display:flex; align-items:center; gap:9px;">
+            <i class="fa-solid fa-square-poll-vertical" style="color:#fff; font-size:17px;"></i>
+            <span style="color:#fff; font-weight:900; font-size:15px;">설문조사</span>
+            <span id="isvDoneTag" style="display:none; margin-left:auto; background:rgba(255,255,255,0.25); color:#fff; font-size:11px; font-weight:800; padding:3px 9px; border-radius:10px;">응답 완료</span>
+        </div>
+        <div style="padding:22px 20px;">
+            <div id="isvQ" style="font-size:18px; font-weight:900; color:#0f172a; margin-bottom:18px; line-height:1.4; word-break:keep-all;"></div>
+            <div id="isvOptions" style="display:flex; flex-direction:column; gap:10px; margin-bottom:18px;"></div>
+            <button id="isvSubmit" onclick="submitInstantSurvey()" disabled
+                style="width:100%; padding:15px; background:#0ea5e9; color:#fff; border:none; border-radius:13px; font-size:16px; font-weight:900; cursor:pointer; opacity:0.5;">제출하기</button>
+            <button onclick="document.getElementById('instantSurveyOverlay').style.display='none'" style="width:100%; margin-top:8px; padding:12px; background:#f1f5f9; color:#64748b; border:none; border-radius:13px; font-size:14px; font-weight:800; cursor:pointer;">나중에</button>
+        </div>
     </div>
 </div>
 
@@ -756,7 +775,7 @@
 
         <!-- 출발 예정 시간 -->
         <div id="driverNoticeBar" style="background:#eff6ff; border:1.5px solid #bfdbfe; padding:14px 18px; border-radius:14px; margin-bottom:18px; text-align:center;">
-            <div id="departureTimeText" style="font-size:22px; font-weight:900; color:#1d4ed8; letter-spacing:-0.3px;">시간 정보 없음</div>
+            <div id="departureTimeText" style="font-size:22px; font-weight:900; color:#1d4ed8; letter-spacing:-0.3px; word-break:keep-all; line-height:1.4;">시간 정보 없음</div>
         </div>
 
         <!-- 신청 전: 버튼 선택 -->
@@ -1251,7 +1270,9 @@ async function resolveRoomFromCode(code) {
         ans: db.ref(`${rPath}/quizAnswers`),
         settings: db.ref(`${rPath}/settings`),
         status: db.ref(`${rPath}/status`),
-        connections: db.ref(`${rPath}/connections`)
+        connections: db.ref(`${rPath}/connections`),
+        survey: db.ref(`${rPath}/activeSurvey`),
+        surveyAns: db.ref(`${rPath}/surveyAnswers`)
     };
 
     // 강의실 기본 설정 로드 후 스피너 해제
@@ -1871,6 +1892,109 @@ function setupListeners() {
             this.style.height = (this.scrollHeight) + 'px';
         });
     }
+
+    // ── 즉석 설문 실시간 감시 ──
+    if (dbRef.survey) {
+        dbRef.survey.off();
+        dbRef.survey.on('value', s => {
+            activeSurveyData = s.val();
+            handleSurveyUpdate();
+        });
+    }
+}
+
+// ════════ 즉석 설문 (교육생) ════════
+let activeSurveyData = null;
+let mySurveyChoice = null;
+
+function surveyDoneKey() {
+    const sv = activeSurveyData;
+    if (!sv || !sv.createdAt) return null;
+    return 'kac_survey_done_' + currentRoom + '_' + sv.createdAt;
+}
+
+function hasAnsweredSurvey() {
+    const k = surveyDoneKey();
+    if (!k) return false;
+    try { return localStorage.getItem(k) != null; } catch(e) { return false; }
+}
+
+// 설문 상태 변화 처리: active면서 미응답이면 팝업, 종료/없음이면 닫기
+function handleSurveyUpdate() {
+    const sv = activeSurveyData;
+    const overlay = document.getElementById('instantSurveyOverlay');
+    // 메뉴의 설문 버튼 노출 토글
+    const menuBtn = document.getElementById('menu-survey-instant');
+    if (menuBtn) menuBtn.style.display = (sv && sv.status === 'active') ? 'block' : 'none';
+
+    if (!sv || sv.status !== 'active') {
+        if (overlay) overlay.style.display = 'none';
+        return;
+    }
+    // 활성 설문 — 이미 응답했으면 자동으로 띄우지 않음 (메뉴로만 재수정)
+    if (hasAnsweredSurvey()) return;
+    openInstantSurvey();
+}
+
+// 설문 팝업 열기 (재수정 포함)
+function openInstantSurvey() {
+    const sv = activeSurveyData;
+    if (!sv || sv.status !== 'active') { showKacAlert('현재 진행 중인 설문이 없습니다.'); return; }
+    const overlay = document.getElementById('instantSurveyOverlay');
+    document.getElementById('isvQ').innerText = sv.question || '';
+    const answered = hasAnsweredSurvey();
+    document.getElementById('isvDoneTag').style.display = answered ? 'inline-block' : 'none';
+
+    // 이전 선택 복원
+    let prevChoice = null;
+    try { const v = localStorage.getItem(surveyDoneKey()); prevChoice = v != null ? parseInt(v, 10) : null; } catch(e) {}
+    mySurveyChoice = prevChoice;
+
+    const optsWrap = document.getElementById('isvOptions');
+    optsWrap.innerHTML = (sv.options || []).map((o, i) => `
+        <div class="isv-opt" data-idx="${i}" onclick="pickSurveyOption(${i})"
+            style="padding:14px 16px; border:2px solid ${mySurveyChoice===i?'#0ea5e9':'#e2e8f0'}; background:${mySurveyChoice===i?'#f0f9ff':'#fff'}; border-radius:13px; font-size:15px; font-weight:700; color:#1e293b; cursor:pointer; display:flex; align-items:center; gap:10px;">
+            <span style="width:22px; height:22px; border-radius:50%; border:2px solid ${mySurveyChoice===i?'#0ea5e9':'#cbd5e1'}; background:${mySurveyChoice===i?'#0ea5e9':'#fff'}; flex-shrink:0; display:flex; align-items:center; justify-content:center;">${mySurveyChoice===i?'<i class="fa-solid fa-check" style="color:#fff; font-size:11px;"></i>':''}</span>
+            ${o}
+        </div>`).join('');
+
+    const submitBtn = document.getElementById('isvSubmit');
+    submitBtn.disabled = (mySurveyChoice == null);
+    submitBtn.style.opacity = (mySurveyChoice == null) ? '0.5' : '1';
+    submitBtn.innerText = answered ? '응답 수정하기' : '제출하기';
+
+    overlay.style.display = 'flex';
+}
+
+function pickSurveyOption(i) {
+    mySurveyChoice = i;
+    document.querySelectorAll('#isvOptions .isv-opt').forEach(el => {
+        const on = parseInt(el.dataset.idx, 10) === i;
+        el.style.borderColor = on ? '#0ea5e9' : '#e2e8f0';
+        el.style.background = on ? '#f0f9ff' : '#fff';
+        const dot = el.querySelector('span');
+        dot.style.borderColor = on ? '#0ea5e9' : '#cbd5e1';
+        dot.style.background = on ? '#0ea5e9' : '#fff';
+        dot.innerHTML = on ? '<i class="fa-solid fa-check" style="color:#fff; font-size:11px;"></i>' : '';
+    });
+    const submitBtn = document.getElementById('isvSubmit');
+    submitBtn.disabled = false;
+    submitBtn.style.opacity = '1';
+}
+
+function submitInstantSurvey() {
+    const sv = activeSurveyData;
+    if (!sv || mySurveyChoice == null) return;
+    const uToken = localStorage.getItem('uToken') || ('anon_' + Date.now());
+    const name = localStorage.getItem('kac_user_name') || '익명';
+    const record = sv.anonymous ? { choice: mySurveyChoice } : { choice: mySurveyChoice, name: name };
+    dbRef.surveyAns.child(uToken).set(record)
+        .then(() => {
+            try { localStorage.setItem(surveyDoneKey(), String(mySurveyChoice)); } catch(e) {}
+            document.getElementById('instantSurveyOverlay').style.display = 'none';
+            showKacAlert('✅ 설문에 응답해 주셔서 감사합니다.');
+        })
+        .catch(e => { console.error(e); showKacAlert('⚠️ 제출 실패. 다시 시도해 주세요.'); });
 }
 
 
@@ -2322,10 +2446,12 @@ async function openShuttleApply() {
             const h = dep.time.split(':')[0].replace(/^0/, '');
             timeEl.textContent = `${dateFmt}  ${h}시 출발 예정`;
             timeEl.style.color = '#1d4ed8';
+            timeEl.style.fontSize = '22px';   // 시간: 크게
             currentDepTime = dep.time;
         } else {
             timeEl.textContent = dep ? '출발 일정이 없습니다.' : '기사님이 출발 시간을 설정 중입니다.';
             timeEl.style.color = dep ? '#94a3b8' : '#64748b';
+            timeEl.style.fontSize = '15px';   // 안내문: 작게 (한 줄 유지)
             currentDepTime = null;
         }
         refresh();

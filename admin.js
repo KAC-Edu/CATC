@@ -3097,6 +3097,7 @@ setMode: function(mode) {
                 // 안내 보드 기존 내용 불러오기 + 색상 팔레트 초기화
                 dataMgr.loadBoardNotice();
                 ui.initBoardPalette();
+                if (typeof surveyMgr !== 'undefined') surveyMgr.init();
             }
             if (mode === 'attendance') ui.loadAttendanceView();
             if (mode === 'guide') { setTimeout(() => guideMgr.refresh(), 100); }
@@ -7114,3 +7115,172 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 });
+
+/* ════════════════════════════════════════════════════════
+   즉석 설문조사 관리 (강사 플랫폼)
+   데이터: courses/{room}/activeSurvey, courses/{room}/surveyAnswers
+════════════════════════════════════════════════════════ */
+const surveyMgr = {
+    _bound: false,
+    _optCount: 0,
+
+    // 공지 화면 진입 시 초기화 + 리스너 바인딩
+    init: function() {
+        this.renderComposeOptions(true);
+        if (!this._bound && state.room) {
+            this.bindListeners();
+        }
+    },
+
+    // 작성 영역의 보기 입력칸 렌더 (reset=true면 기본 2칸)
+    renderComposeOptions: function(reset) {
+        const wrap = document.getElementById('surveyOptions');
+        if (!wrap) return;
+        if (reset || !wrap.children.length) {
+            wrap.innerHTML = '';
+            this._optCount = 0;
+            this.addOption(); this.addOption();
+        }
+    },
+
+    addOption: function() {
+        const wrap = document.getElementById('surveyOptions');
+        if (!wrap) return;
+        if (wrap.children.length >= 6) { ui.showAlert('보기는 최대 6개까지 가능합니다.'); return; }
+        this._optCount++;
+        const idx = this._optCount;
+        const row = document.createElement('div');
+        row.style.cssText = 'display:flex; gap:8px; align-items:center;';
+        row.innerHTML = `
+            <span style="width:24px; height:24px; border-radius:50%; background:#e0f2fe; color:#0369a1; font-weight:900; font-size:12px; display:flex; align-items:center; justify-content:center; flex-shrink:0;">${wrap.children.length + 1}</span>
+            <input type="text" class="survey-opt-input" maxlength="60" placeholder="보기 내용"
+                style="flex:1; padding:10px 12px; border:1.5px solid #e2e8f0; border-radius:9px; font-size:14px; outline:none;">
+            <button onclick="this.parentElement.remove(); surveyMgr.renumberOptions();" style="background:#fef2f2; color:#ef4444; border:none; border-radius:8px; width:34px; height:34px; cursor:pointer; flex-shrink:0;"><i class="fa-solid fa-xmark"></i></button>
+        `;
+        wrap.appendChild(row);
+    },
+
+    renumberOptions: function() {
+        const wrap = document.getElementById('surveyOptions');
+        if (!wrap) return;
+        Array.from(wrap.children).forEach((row, i) => {
+            const badge = row.querySelector('span');
+            if (badge) badge.innerText = i + 1;
+        });
+    },
+
+    publish: function() {
+        if (state.isObserver) return ui.showAlert('👁️ 옵저버 모드에서는 설문을 게시할 수 없습니다.');
+        if (!state.room) return ui.showAlert('강의실을 먼저 선택하세요.');
+        const q = (document.getElementById('surveyQuestion').value || '').trim();
+        if (!q) return ui.showAlert('설문 질문을 입력하세요.');
+        const opts = Array.from(document.querySelectorAll('#surveyOptions .survey-opt-input'))
+            .map(i => i.value.trim()).filter(v => v);
+        if (opts.length < 2) return ui.showAlert('보기를 2개 이상 입력하세요.');
+        const anonymous = document.getElementById('surveyAnonymous').checked;
+
+        const payload = {
+            question: q,
+            options: opts,
+            anonymous: anonymous,
+            status: 'active',
+            createdAt: firebase.database.ServerValue.TIMESTAMP
+        };
+        // 새 설문 게시 → 기존 응답 초기화
+        const updates = {};
+        updates[`courses/${state.room}/activeSurvey`] = payload;
+        updates[`courses/${state.room}/surveyAnswers`] = null;
+        firebase.database().ref().update(updates)
+            .then(() => ui.showAlert('✅ 설문이 게시되었습니다. 교육생 화면에 팝업으로 표시됩니다.'))
+            .catch(e => { console.error(e); ui.showAlert('⚠️ 게시 실패'); });
+    },
+
+    end: function() {
+        if (!state.room) return;
+        if (!confirm('설문을 종료하시겠습니까?\n교육생 팝업이 닫히고, 결과는 그대로 보존됩니다.')) return;
+        firebase.database().ref(`courses/${state.room}/activeSurvey/status`).set('ended')
+            .then(() => ui.showAlert('설문이 종료되었습니다.'));
+    },
+
+    bindListeners: function() {
+        this._bound = true;
+        const room = state.room;
+        firebase.database().ref(`courses/${room}/activeSurvey`).on('value', snap => {
+            if (state.room !== room) return;
+            this.renderState(snap.val());
+        });
+        firebase.database().ref(`courses/${room}/surveyAnswers`).on('value', snap => {
+            if (state.room !== room) return;
+            this._answers = snap.val() || {};
+            this.renderResult();
+        });
+    },
+
+    renderState: function(survey) {
+        this._survey = survey;
+        const composeArea = document.getElementById('surveyComposeArea');
+        const resultArea = document.getElementById('surveyResultArea');
+        if (!composeArea || !resultArea) return;
+        if (survey && survey.status === 'active') {
+            composeArea.style.display = 'none';
+            resultArea.style.display = 'block';
+            this.renderResult();
+        } else {
+            composeArea.style.display = 'block';
+            resultArea.style.display = 'none';
+        }
+    },
+
+    renderResult: function() {
+        const survey = this._survey;
+        if (!survey || survey.status !== 'active') return;
+        const answers = this._answers || {};
+        const opts = survey.options || [];
+        const counts = opts.map(() => 0);
+        const named = opts.map(() => []);
+        Object.entries(answers).forEach(([token, a]) => {
+            const idx = (typeof a === 'object') ? a.choice : a;
+            if (idx != null && counts[idx] != null) {
+                counts[idx]++;
+                const nm = (typeof a === 'object' && a.name) ? a.name : token.split('_')[0];
+                named[idx].push(nm);
+            }
+        });
+        const total = counts.reduce((s, c) => s + c, 0);
+
+        document.getElementById('surveyResultQ').innerText = survey.question;
+        document.getElementById('surveyResultTotal').innerText = `응답 ${total}명`;
+        document.getElementById('surveyResultAnon').innerText = survey.anonymous ? '· 익명 설문' : '· 기명 설문';
+
+        const palette = ['#0ea5e9','#10b981','#f59e0b','#8b5cf6','#ec4899','#ef4444'];
+        document.getElementById('surveyResultBars').innerHTML = opts.map((o, i) => {
+            const pct = total > 0 ? Math.round((counts[i] / total) * 100) : 0;
+            const col = palette[i % palette.length];
+            return `
+                <div>
+                    <div style="display:flex; justify-content:space-between; font-size:13px; font-weight:700; margin-bottom:4px;">
+                        <span>${this._esc(o)}</span>
+                        <span style="color:${col};">${counts[i]}명 (${pct}%)</span>
+                    </div>
+                    <div style="background:#f1f5f9; border-radius:8px; height:14px; overflow:hidden;">
+                        <div style="width:${pct}%; height:100%; background:${col}; transition:width 0.4s;"></div>
+                    </div>
+                </div>`;
+        }).join('');
+
+        // 기명이면 보기별 응답자 명단
+        const detail = document.getElementById('surveyNamedDetail');
+        if (!survey.anonymous && total > 0) {
+            detail.style.display = 'block';
+            detail.innerHTML = opts.map((o, i) =>
+                named[i].length ? `<div><b>${this._esc(o)}</b>: ${named[i].map(n => this._esc(n)).join(', ')}</div>` : ''
+            ).filter(Boolean).join('');
+        } else {
+            detail.style.display = 'none';
+        }
+    },
+
+    _esc: function(s) {
+        return String(s == null ? '' : s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+    }
+};
