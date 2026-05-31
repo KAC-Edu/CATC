@@ -127,7 +127,7 @@
         
         <div class="auth-input-group">
             <input type="text" id="leaderName" class="auth-input" placeholder="성함 입력">
-            <input type="number" id="leaderPhone" class="auth-input" placeholder="전화번호 뒤 4자리">
+            <input type="text" inputmode="numeric" id="leaderPhone" class="auth-input" maxlength="5" placeholder="본인 사번 (없으면 전화 뒤 4자리)">
         </div>
         
         <button class="auth-btn" onclick="verifyLeaderAccess()">권한 확인 및 입장</button>
@@ -205,10 +205,10 @@
 // --- [수정] 학생장 권한 검증 로직 (전화번호 뒷자리 비교 방식) ---
     async function verifyLeaderAccess() {
         const name = document.getElementById('leaderName').value.trim();
-        const inputPhone = document.getElementById('leaderPhone').value.trim(); // 사용자가 입력한 4자리
+        const inputPhone = document.getElementById('leaderPhone').value.trim(); // 사번 또는 전화 뒤 4자리
         const errorEl = document.getElementById('authError');
 
-        if(!name || inputPhone.length !== 4) return alert("성함과 전화번호 뒷자리 4자리를 정확히 입력해주세요.");
+        if(!name || !/^\d{4,5}$/.test(inputPhone)) return alert("성함과 사번(또는 전화 뒤 4자리)을 정확히 입력해주세요.");
 
         errorEl.style.display = "none";
         const btn = document.querySelector('.auth-btn');
@@ -228,13 +228,15 @@
                     for (const sKey of studentKeys) {
                         const student = room.students[sKey];
                         
-                        // DB에 저장된 전화번호에서 숫자만 추출 후 마지막 4자리 가져오기
-                        // 예: "010-1234-5678" -> "01012345678" -> "5678"
-                        const dbFullPhone = String(student.phone || "").replace(/[^0-9]/g, ""); 
-                        const dbLast4 = dbFullPhone.slice(-4);
+                        // 저장된 식별번호(사번 또는 전화)와 입력값을 대조
+                        //  - 사번: 전체 일치 / 전화: 저장된 번호의 뒤 4자리 일치
+                        const dbRaw = String(student.phone || "").replace(/[^0-9]/g, "");
+                        const idMatch = (dbRaw === inputPhone)
+                            || (dbRaw.slice(-4) === inputPhone)
+                            || (dbRaw.slice(-5) === inputPhone);
 
-                        // 이름이 일치하고, 추출한 뒷 4자리가 입력값과 일치하는지 체크
-                        if (student.name === name && dbLast4 === inputPhone) {
+                        // 이름이 일치하고, 식별번호가 일치하는지 체크
+                        if (student.name === name && idMatch) {
                             if (student.isLeader === true) {
                                 myRoomID = rid;
                                 isLeaderFound = true;

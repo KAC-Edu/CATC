@@ -1865,7 +1865,7 @@ const ui = {
             }
 
             validStudents.forEach((s, idx) => {
-                const phone4 = s.phone ? s.phone.slice(-4) : '0000';
+                const phone4 = s.phone ? s.phone : '0000';
                 // 석식 제외 등록
                 updates[`courses/${state.room}/dinner_skips/${today}/${s.token}`] = `${s.name}(${phone4})`;
                 // 단체외출 행정 대장 등록 (자동 서명 포함)
@@ -3138,7 +3138,7 @@ setMode: function(mode) {
 
                     studentList.forEach((s, idx) => {
                         const sName = s.name;
-                        const sPhone = s.phone ? s.phone.slice(-4) : ""; 
+                        const sPhone = s.phone ? s.phone : ""; 
                         let assignedInfo = null;
                         if (dormData[`${sName}_${sPhone}`]) assignedInfo = dormData[`${sName}_${sPhone}`];
                         else if (dormData[sName]) assignedInfo = dormData[sName];
@@ -3947,7 +3947,7 @@ loadDormitoryData: function() {
             combinedNames.forEach((name, idx) => {
                 const isArrived = actualNames.includes(name);
                 const sData = actualStudents.find(s => s.name === name) || {};
-                const phoneSuffix = sData.phone ? sData.phone.slice(-4) : "-";
+                const phoneSuffix = sData.phone ? sData.phone : "-";
 
                 const cleanName = name.trim();
                 const assigned = dormData[cleanName] || { building: "-", room: "미배정" };

@@ -1755,7 +1755,7 @@ body.modal-open .app-content {
           <div style="max-height: 400px; overflow-y: auto;">
               <table class="navy-table">
                   <thead>
-                      <tr><th>성함</th><th>뒷자리</th><th>생활관</th><th>호실</th></tr>
+                      <tr><th>성함</th><th>사번/뒤4</th><th>생활관</th><th>호실</th></tr>
                   </thead>
                   <tbody id="dormTableBody"></tbody>
               </table>
@@ -1777,7 +1777,7 @@ body.modal-open .app-content {
           <div class="modal-scroll-area">
               <table class="navy-table">
                   <thead style="position:sticky; top:0; z-index:10;">
-                      <tr><th>과정</th><th>성함</th><th>연락처(뒷자리)</th></tr>
+                      <tr><th>과정</th><th>성함</th><th>연락처(사번/뒤4)</th></tr>
                   </thead>
                   <tbody id="totalStudentListBody"></tbody>
               </table>
@@ -2412,7 +2412,7 @@ function updateGlobalStatus() {
             Object.values(room.students).forEach(s => {
                 if (s && s.name && s.name !== "undefined" && s.name.trim() !== "") {
                     const cleanPhone = (s.phone || "0000").replace(/[^0-9]/g, "");
-                    const last4 = cleanPhone.length >= 4 ? cleanPhone.slice(-4) : cleanPhone;
+                    const last4 = cleanPhone; // 식별번호 전체(사번/전화) 그대로 사용
                     // 중복 제거를 위해 리스트에 수집
                     globalList.push({ name: s.name.trim(), phone: last4 });
                 }
@@ -4068,7 +4068,7 @@ function clearNoticeHistory() {
             }
 
             studentList.forEach(s => {
-                const sPhone = s.phone ? s.phone.slice(-4) : "";
+                const sPhone = s.phone ? s.phone : "";
                 let assigned = dormData[`${s.name.trim()}_${sPhone}`] || dormData[s.name.trim()] || { building: "-", room: "미배정" };
                 
                 tbody.innerHTML += `
@@ -4421,7 +4421,7 @@ async function showShuttleApplicationDetails(rid) {
 
     appliedData.forEach(req => {
         if (categories[req.type] && req.name && req.name !== "undefined") {
-            const phoneSuffix = req.phone ? `(${req.phone.slice(-4)})` : "";
+            const phoneSuffix = req.phone ? `(${req.phone})` : "";
             categories[req.type].members.push(`${req.name}${phoneSuffix}`);
         }
     });
@@ -4628,7 +4628,7 @@ async function loadAllStudentData() {
             const s = room.students[stoken];
             if (!s.name || s.name === "undefined" || s.name.trim() === "") return;
 
-            const phoneSuffix = s.phone ? s.phone.slice(-4) : "0000";
+            const phoneSuffix = s.phone ? s.phone : "0000";
             const sKey = `${s.name.trim()}_${phoneSuffix}`;
 
             // 생활관 매칭 (정밀 키 또는 이름 기준)

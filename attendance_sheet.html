@@ -258,23 +258,28 @@ function renderTable(studentsRaw, attendanceData) {
         return page;
     }
 
-    // [신규] 해당 일자의 출석 데이터에서 학생 기록을 찾는다 (이름_전화번호뒷4자리 기준, 키 표기 차이 흡수)
+    // [수정] 출석 데이터에서 학생 기록을 찾는다 (이름 + 식별번호(사번/전화) 기준, 키 표기 차이 흡수)
     function findAttendanceRecord(dayData, name, phone) {
         if (!dayData) return null;
         const nm = (name || '').trim();
-        const last4 = (phone || '').toString().replace(/\D/g, '').slice(-4);
+        const idRaw = (phone || '').toString().replace(/\D/g, '');
+        const last4 = idRaw.slice(-4);
+        const last5 = idRaw.slice(-5);
 
-        // 1) 정확 키 우선
+        // 1) 정확 키 우선 (이름_식별번호 전체)
         const exactKey = `${nm}_${phone}`;
         if (dayData[exactKey]) return dayData[exactKey];
 
-        // 2) 값/키를 이름 + 전화 뒷4자리로 정규화하여 매칭
+        // 2) 이름 + 식별번호(전체/뒤5/뒤4) 유연 매칭
         for (const k in dayData) {
             const v = dayData[k] || {};
             const vName = (v.name || (k.split('_')[0] || '')).trim();
-            const vPhoneRaw = (v.phone != null ? v.phone : (k.split('_').slice(1).join('_') || '')).toString();
-            const vLast4 = vPhoneRaw.replace(/\D/g, '').slice(-4);
-            if (vName === nm && (!last4 || !vLast4 || vLast4 === last4)) return v;
+            const vRaw = (v.phone != null ? v.phone : (k.split('_').slice(1).join('_') || '')).toString().replace(/\D/g, '');
+            const idMatch = !idRaw || !vRaw
+                || vRaw === idRaw
+                || vRaw.slice(-5) === last5
+                || vRaw.slice(-4) === last4;
+            if (vName === nm && idMatch) return v;
         }
         return null;
     }
