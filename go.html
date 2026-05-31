@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>교육생 플랫폼 연결 중…</title>
+    <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" rel="stylesheet">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Pretendard', sans-serif; -webkit-tap-highlight-color: transparent; }
+        body { min-height: 100dvh; background: #0f172a; display: flex; align-items: center; justify-content: center; padding: 24px; color: #fff; }
+        .card { width: 100%; max-width: 360px; text-align: center; }
+        .logo { font-size: 46px; margin-bottom: 14px; }
+        .spinner { width: 42px; height: 42px; border: 4px solid rgba(255,255,255,0.15); border-top-color: #facc15; border-radius: 50%; margin: 18px auto; animation: spin 0.8s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .title { font-size: 18px; font-weight: 900; margin-bottom: 6px; }
+        .sub { font-size: 14px; color: #94a3b8; line-height: 1.6; }
+        .room-badge { display: inline-block; margin-top: 14px; background: rgba(250,204,21,0.15); border: 1px solid rgba(250,204,21,0.5); color: #facc15; font-weight: 800; font-size: 15px; padding: 8px 18px; border-radius: 12px; }
+        /* 미등록 안내 */
+        .notice { display: none; }
+        .notice .icon { font-size: 52px; margin-bottom: 14px; }
+        .notice .steps { text-align: left; background: rgba(255,255,255,0.06); border-radius: 14px; padding: 18px 20px; margin: 18px 0; font-size: 14px; line-height: 1.9; color: #cbd5e1; }
+        .notice .steps b { color: #fff; }
+        .btn { display: inline-block; width: 100%; padding: 15px; background: #facc15; color: #1e293b; border: none; border-radius: 13px; font-size: 15px; font-weight: 900; cursor: pointer; text-decoration: none; }
+        .kac-logo { margin-top: 28px; opacity: 0.5; font-size: 12px; letter-spacing: 1px; color: #64748b; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <!-- 연결 중 (룸 기록 있음) -->
+        <div id="connecting">
+            <div class="logo">🎓</div>
+            <div class="spinner"></div>
+            <div class="title">교육생 플랫폼으로 연결 중…</div>
+            <div class="sub">최근 입장하신 강의실로 이동합니다.</div>
+            <div class="room-badge" id="roomBadge" style="display:none;"></div>
+        </div>
+
+        <!-- 미등록 안내 (룸 기록 없음) -->
+        <div id="notice" class="notice">
+            <div class="icon">📋</div>
+            <div class="title">아직 입장 기록이 없습니다</div>
+            <div class="sub">이 기기에서 교육생 플랫폼에 입장한 기록을 찾지 못했어요.</div>
+            <div class="steps">
+                <b>처음이신가요?</b><br>
+                1. 강의실에 게시된 <b>QR 코드</b>를 먼저 스캔하세요.<br>
+                2. 성함과 사번(또는 전화 뒤 4자리)을 등록하세요.<br>
+                3. 그 다음부터는 이 링크로 바로 입장됩니다.
+            </div>
+            <div class="sub" style="margin-bottom:14px;">등록을 마치셨다면 같은 휴대폰·같은 브라우저로 이 링크를 다시 눌러주세요.</div>
+        </div>
+    </div>
+
+    <script>
+        (function () {
+            // 교육생 앱이 마지막 입장 강의실을 저장하는 키
+            var room = null;
+            try { room = localStorage.getItem('kac_last_visited_room'); } catch (e) {}
+
+            if (room && String(room).trim()) {
+                // 룸 기록 있음 → 해당 강의실로 자동 이동
+                var badge = document.getElementById('roomBadge');
+                if (badge) { badge.textContent = 'ROOM ' + room; badge.style.display = 'inline-block'; }
+                // 약간의 지연 후 이동 (스피너를 잠깐 보여줘 자연스럽게)
+                setTimeout(function () {
+                    location.replace('index.html?room=' + encodeURIComponent(room));
+                }, 700);
+            } else {
+                // 룸 기록 없음 → 안내 표시
+                document.getElementById('connecting').style.display = 'none';
+                document.getElementById('notice').style.display = 'block';
+            }
+        })();
+    </script>
+</body>
+</html>
