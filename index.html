@@ -19,6 +19,23 @@
     <style>
         :root { --header-bg: #0f172a; --bg-color: #0f172a; --accent-color: #3b82f6; --btn-yellow: #facc15; --btn-text: #1e293b; --card-bg: #ffffff; --text-color: #1e293b; --input-bg: #f8fafc; --safe-area-bottom: env(safe-area-inset-bottom); }
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; font-family: 'Pretendard', sans-serif; }
+
+        /* ── 전역 버튼 눌림 피드백 ── */
+        button, .menu-item, .sort-chip, .send-btn, .header-btn, .btn-edit-profile,
+        [onclick], [role="button"], a.btn, label[for] {
+            -webkit-user-select: none; user-select: none;
+            transition: transform 0.08s ease, filter 0.08s ease, background-color 0.12s ease;
+            touch-action: manipulation;
+        }
+        button:active, .menu-item:active, .sort-chip:active, .send-btn:active,
+        .header-btn:active, .btn-edit-profile:active, [onclick]:active, [role="button"]:active {
+            transform: scale(0.95);
+            filter: brightness(0.92);
+        }
+        /* JS가 추가하는 순간 강조 (햅틱과 동시) */
+        .kac-pressed { transform: scale(0.93) !important; filter: brightness(0.88) !important; }
+        /* 메뉴 항목은 눌릴 때 배경 살짝 */
+        .menu-item:active { background: #eef2ff; }
         body { margin: 0; background: var(--bg-color); color: var(--text-color); height: 100dvh; overflow: hidden; }
         .landing-page { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--header-bg); z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; color: white; padding: 30px 20px; text-align: center; }
         .landing-course { font-size: 24px; font-weight: 800; margin-bottom: 10px; line-height: 1.3; }
@@ -3959,6 +3976,35 @@ function closeTabletLoan() {
     // [PWA 제거] 설치 권유/홈아이콘 노출 제어 함수는 더 이상 동작하지 않도록 비활성화(no-op)
     window.pwaShowPrompt = function(){};
     window.pwaUpdateHomeBtn = function(){};
+
+    // ── 전역 햅틱 + 눌림 피드백 ──
+    // 클릭 가능한 요소를 누르면 (1)짧은 진동 (2)순간 눌림 강조로 "눌렸다"는 느낌을 준다.
+    (function setupTapFeedback() {
+        function isInteractive(el) {
+            return el.closest('button, a, .menu-item, .sort-chip, .send-btn, .header-btn, .btn-edit-profile, [onclick], [role="button"], label');
+        }
+        function vibrate(ms) {
+            try { if (navigator.vibrate) navigator.vibrate(ms); } catch (e) {}
+        }
+        // pointerdown: 누르는 즉시 반응 (click보다 빠르고 확실)
+        document.addEventListener('pointerdown', function (e) {
+            const target = isInteractive(e.target);
+            if (!target) return;
+            vibrate(12); // 살짝 톡 — 12ms
+            target.classList.add('kac-pressed');
+            const clear = function () {
+                target.classList.remove('kac-pressed');
+                target.removeEventListener('pointerup', clear);
+                target.removeEventListener('pointerleave', clear);
+                target.removeEventListener('pointercancel', clear);
+            };
+            target.addEventListener('pointerup', clear);
+            target.addEventListener('pointerleave', clear);
+            target.addEventListener('pointercancel', clear);
+            // 안전장치: 250ms 후 자동 해제
+            setTimeout(function () { target.classList.remove('kac-pressed'); }, 250);
+        }, { passive: true });
+    })();
 })();
 </script>
 
