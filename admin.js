@@ -2005,6 +2005,16 @@ loadDashboardStats: function() {
     });
 
     // 5. ★핵심 수정★ 실시간 입교 완료 현황 집계 (온라인 여부 상관없이 전체 카운트)
+    //  최신 expected 명단을 캐시해 두고, 학생 입장(actual)·명단(expected) 어느 쪽이 바뀌어도 분모를 다시 계산한다.
+    let _expectedNamesCache = [];
+    const recalcTotal = (actualData) => {
+        const actualNames = Object.values(actualData || {})
+            .map(s => s && s.name).filter(n => n && n !== "undefined");
+        const combined = Array.from(new Set([..._expectedNamesCache, ...actualNames]));
+        const totalEl = document.getElementById('dashTotalCount');
+        if (totalEl) totalEl.innerText = combined.length;
+    };
+
     refs.actual.on('value', snap => {
         if (state.room !== room) return;
         const data = snap.val() || {};
@@ -2016,6 +2026,9 @@ loadDashboardStats: function() {
         // (A) 대시보드 "수강생 입교 현황" 좌측 숫자 업데이트
         const dashArrivedEl = document.getElementById('dashArrivedCount');
         if (dashArrivedEl) dashArrivedEl.innerText = arrivedCount;
+
+        // (A-2) 분모(총원)도 함께 재계산 — 학생이 새로 들어와도 즉시 반영
+        recalcTotal(data);
         
         // (B) 퀴즈 화면 상단 인원 숫자도 함께 업데이트
         const quizJoinCountEl = document.getElementById('currentJoinCount');
@@ -2031,14 +2044,12 @@ loadDashboardStats: function() {
         }
     });
 
-    // 6. 전체 명단(분모) 계산
+    // 6. 전체 명단(분모) 계산 — expected 명단 변경 시 캐시 갱신 후 재계산
     refs.expected.on('value', expSnap => {
-        const expectedNames = expSnap.val() || [];
+        if (state.room !== room) return;
+        _expectedNamesCache = expSnap.val() || [];
         firebase.database().ref(`courses/${room}/students`).once('value', snap => {
-            const data = snap.val() || {};
-            const actualNames = Object.values(data).map(s => s.name);
-            const combinedNames = Array.from(new Set([...expectedNames, ...actualNames]));
-            if (document.getElementById('dashTotalCount')) document.getElementById('dashTotalCount').innerText = combinedNames.length;
+            recalcTotal(snap.val() || {});
         });
     });
 
