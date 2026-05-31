@@ -88,6 +88,27 @@
         .room-table .del-x:hover { opacity: 1; }
         .crit-disabled { opacity: 0.35; pointer-events: none; }
 
+        /* 과정 선택 — 주차 섹션 + 가로 리스트 카드 */
+        .week-section { margin-bottom: 18px; }
+        .week-head { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 900; color: #fff; background: linear-gradient(90deg, #1e3a8a, #2563eb); padding: 8px 14px; border-radius: 9px; margin-bottom: 10px; box-shadow: 0 2px 6px rgba(37,99,235,0.25); }
+        .week-head .cnt { margin-left: auto; font-size: 11px; font-weight: 700; background: rgba(255,255,255,0.2); padding: 2px 9px; border-radius: 12px; }
+
+        .course-row { display: flex; align-items: center; gap: 14px; background: #fff; border: 1.5px solid var(--border); border-left: 6px solid var(--blue); border-radius: 12px; padding: 13px 18px; margin-bottom: 8px; cursor: pointer; transition: all 0.15s; }
+        .course-row:hover { box-shadow: 0 4px 14px rgba(15,23,42,0.1); transform: translateX(2px); border-color: var(--blue); border-left-color: var(--blue); }
+        .course-row.sel { background: var(--blue-soft); border-color: var(--blue); border-left-color: var(--blue); box-shadow: 0 4px 14px rgba(37,99,235,0.18); }
+        .course-room-badge { flex-shrink: 0; display: inline-flex; align-items: center; gap: 5px; background: var(--navy); color: #fff; font-weight: 900; font-size: 13px; padding: 7px 13px; border-radius: 9px; min-width: 78px; justify-content: center; }
+        .course-row.sel .course-room-badge { background: var(--blue); }
+        .course-main { flex: 1; min-width: 0; }
+        .course-main .cname { font-size: 15px; font-weight: 800; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .course-main .cmeta { font-size: 12px; color: var(--muted); margin-top: 2px; }
+        .course-prof { flex-shrink: 0; font-size: 12px; font-weight: 700; color: var(--muted); background: #f1f5f9; padding: 5px 11px; border-radius: 8px; }
+        .course-period { flex-shrink: 0; font-size: 12px; font-weight: 700; color: var(--blue); }
+        .course-go { flex-shrink: 0; color: #cbd5e1; font-size: 16px; }
+        .course-row:hover .course-go, .course-row.sel .course-go { color: var(--blue); }
+        @media (max-width: 640px) {
+            .course-period, .course-prof { display: none; }
+        }
+
         .save-bar { position: sticky; bottom: 0; background: rgba(255,255,255,0.95); border-top: 1px solid var(--border); padding: 14px 20px; display: flex; justify-content: space-between; align-items: center; margin: 0 -20px -20px; border-radius: 0 0 16px 16px; }
         .save-bar .summary { font-size: 13px; color: var(--muted); font-weight: 700; }
         .save-btn { padding: 13px 28px; border: none; border-radius: 11px; background: var(--success); color: #fff; font-weight: 900; font-size: 15px; cursor: pointer; }
@@ -168,7 +189,7 @@
                     </div>
                     <button class="h-btn" style="background:var(--blue);" onclick="loadCourses()"><i class="fa-solid fa-rotate"></i> 새로고침</button>
                 </div>
-                <div id="courseList" style="display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:12px;">
+                <div id="courseList" style="display:block;">
                     <div class="empty-floor">과정을 불러오는 중...</div>
                 </div>
             </div>
@@ -540,25 +561,35 @@
                     return;
                 }
 
-                // 주차별 그룹 헤더 + 카드
+                // 주차별 섹션 + 가로 리스트
                 let html = '';
                 let curWeek = null;
+                let openSection = false;
                 items.forEach(it => {
                     if (it.weekKey !== curWeek) {
+                        if (openSection) html += `</div>`; // 이전 섹션 닫기
                         curWeek = it.weekKey;
                         const wd = new Date(curWeek + 'T00:00:00');
                         const wEnd = new Date(wd); wEnd.setDate(wd.getDate() + 6);
                         const fmt = d => `${d.getMonth()+1}/${d.getDate()}`;
-                        html += `<div style="grid-column:1/-1; font-size:12px; font-weight:900; color:var(--blue); margin-top:6px;"><i class="fa-regular fa-calendar-week"></i> ${fmt(wd)} ~ ${fmt(wEnd)} 주간</div>`;
+                        const wkCount = items.filter(x => x.weekKey === curWeek).length;
+                        html += `<div class="week-section">
+                            <div class="week-head"><i class="fa-regular fa-calendar-week"></i> ${fmt(wd)} ~ ${fmt(wEnd)} 주간 <span class="cnt">과정 ${wkCount}개</span></div>`;
+                        openSection = true;
                     }
                     const sel = selectedCourse && selectedCourse.room === it.room;
                     html += `
-                        <div class="step-tab ${sel ? 'active' : ''}" style="min-width:0;" onclick='selectCourse(${JSON.stringify(it).replace(/'/g, "&#39;")})'>
-                            <div class="n">ROOM ${it.room}${it.profName ? ' · ' + it.profName : ''}</div>
-                            <div class="t" style="font-size:15px;">${it.courseName}</div>
-                            <div style="font-size:11px; color:var(--muted); margin-top:4px;">${it.period || '-'}</div>
+                        <div class="course-row ${sel ? 'sel' : ''}" onclick='selectCourse(${JSON.stringify(it).replace(/'/g, "&#39;")})'>
+                            <span class="course-room-badge"><i class="fa-solid fa-door-open"></i> ${it.room}</span>
+                            <div class="course-main">
+                                <div class="cname">${it.courseName}</div>
+                                <div class="cmeta">${it.period || '-'}</div>
+                            </div>
+                            ${it.profName ? `<span class="course-prof"><i class="fa-solid fa-user-tie"></i> ${it.profName}</span>` : ''}
+                            <span class="course-go"><i class="fa-solid fa-chevron-right"></i></span>
                         </div>`;
                 });
+                if (openSection) html += `</div>`;
                 listEl.innerHTML = html;
             } catch (e) {
                 console.error(e);
