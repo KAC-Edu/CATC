@@ -1,0 +1,1172 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>생활관 배정 관리 — 항공기술훈련원</title>
+
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+    <script src="config.js"></script>
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" rel="stylesheet">
+
+    <style>
+        :root {
+            --navy: #0f172a; --blue: #2563eb; --blue-soft: #eff6ff;
+            --bg: #f1f5f9; --card: #ffffff; --text: #1e293b; --muted: #64748b;
+            --border: #e2e8f0; --danger: #ef4444; --success: #10b981; --warning: #f59e0b;
+            --royal: #f59e0b; --royal-bg: #fffbeb;
+        }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body { margin: 0; background: var(--bg); font-family: 'Pretendard', sans-serif; color: var(--text); }
+
+        .header { background: var(--navy); color: #fff; padding: 16px 20px; position: sticky; top: 0; z-index: 100; display: flex; align-items: center; justify-content: space-between; }
+        .header h1 { margin: 0; font-size: 18px; font-weight: 900; }
+        .header .sub { font-size: 12px; color: #94a3b8; margin-top: 2px; }
+        .header-actions { display: flex; gap: 8px; }
+        .h-btn { background: rgba(255,255,255,0.1); border: none; color: #fff; padding: 9px 14px; border-radius: 9px; font-weight: 700; font-size: 13px; cursor: pointer; }
+        .h-btn:hover { background: rgba(255,255,255,0.2); }
+
+        .container { max-width: 1100px; margin: 0 auto; padding: 20px; }
+
+        /* 상단 단계 탭 */
+        .step-tabs { display: flex; gap: 8px; margin-bottom: 18px; flex-wrap: wrap; }
+        .step-tab { flex: 1; min-width: 140px; background: var(--card); border: 1.5px solid var(--border); border-radius: 12px; padding: 12px 14px; cursor: pointer; transition: all 0.15s; }
+        .step-tab.active { border-color: var(--blue); background: var(--blue-soft); }
+        .step-tab .n { font-size: 11px; font-weight: 800; color: var(--muted); }
+        .step-tab.active .n { color: var(--blue); }
+        .step-tab .t { font-size: 14px; font-weight: 800; margin-top: 2px; }
+        .step-tab.disabled { opacity: 0.45; cursor: not-allowed; }
+
+        .panel { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 22px; margin-bottom: 16px; }
+        .panel h2 { margin: 0 0 4px 0; font-size: 17px; font-weight: 900; }
+        .panel .desc { font-size: 13px; color: var(--muted); margin-bottom: 18px; line-height: 1.5; }
+
+        /* 건물 탭 */
+        .bldg-tabs { display: flex; gap: 8px; margin-bottom: 18px; }
+        .bldg-tab { padding: 10px 18px; border-radius: 10px; border: 1.5px solid var(--border); background: #fff; font-weight: 800; font-size: 14px; cursor: pointer; color: var(--muted); }
+        .bldg-tab.active { background: var(--navy); color: #fff; border-color: var(--navy); }
+
+        /* 층 카드 */
+        .floor-card { border: 1px solid var(--border); border-radius: 12px; padding: 16px; margin-bottom: 14px; }
+        .floor-card h3 { margin: 0 0 10px 0; font-size: 15px; font-weight: 900; color: var(--blue); display: flex; align-items: center; gap: 8px; }
+        .floor-input-row { display: flex; gap: 8px; margin-bottom: 12px; }
+        .floor-input-row input { flex: 1; padding: 11px 13px; border: 1.5px solid var(--border); border-radius: 9px; font-size: 14px; outline: none; }
+        .floor-input-row input:focus { border-color: var(--blue); }
+        .floor-input-row button { padding: 11px 16px; border: none; border-radius: 9px; background: var(--blue); color: #fff; font-weight: 800; font-size: 13px; cursor: pointer; white-space: nowrap; }
+        .hint { font-size: 11px; color: var(--muted); margin-bottom: 12px; }
+
+        /* 방 그리드 */
+        .room-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+        .room-card { border: 1.5px solid var(--border); border-radius: 10px; padding: 10px 12px; position: relative; transition: all 0.15s; }
+        .room-card.royal { border-color: var(--royal); background: var(--royal-bg); }
+        .room-card .rno { font-size: 16px; font-weight: 900; display: flex; align-items: center; justify-content: space-between; }
+        .room-card .rno .del { color: var(--danger); cursor: pointer; font-size: 13px; opacity: 0.6; }
+        .room-card .rno .del:hover { opacity: 1; }
+        .room-meta { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 8px; }
+        .room-opt { font-size: 11px; padding: 3px 8px; border-radius: 6px; background: #f1f5f9; color: var(--muted); cursor: pointer; font-weight: 700; border: 1px solid transparent; user-select: none; }
+        .room-opt.on { background: var(--blue); color: #fff; }
+        .room-opt.royal-on { background: var(--royal); color: #fff; }
+        .room-opt.g-m { background: #dbeafe; color: #1e40af; }
+        .room-opt.g-f { background: #fce7f3; color: #9d174d; }
+
+        .empty-floor { text-align: center; color: var(--muted); font-size: 13px; padding: 24px 0; }
+
+        .save-bar { position: sticky; bottom: 0; background: rgba(255,255,255,0.95); border-top: 1px solid var(--border); padding: 14px 20px; display: flex; justify-content: space-between; align-items: center; margin: 0 -20px -20px; border-radius: 0 0 16px 16px; }
+        .save-bar .summary { font-size: 13px; color: var(--muted); font-weight: 700; }
+        .save-btn { padding: 13px 28px; border: none; border-radius: 11px; background: var(--success); color: #fff; font-weight: 900; font-size: 15px; cursor: pointer; }
+        .save-btn:hover { filter: brightness(1.05); }
+
+        /* 우선순위 설정 팝업 */
+        .pop-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000; display: none; align-items: center; justify-content: center; padding: 20px; }
+        .pop-box { background: #fff; border-radius: 18px; padding: 24px; width: 100%; max-width: 360px; }
+        .pop-box h3 { margin: 0 0 16px 0; font-size: 16px; font-weight: 900; }
+        .opt-group { margin-bottom: 16px; }
+        .opt-group label { display: block; font-size: 12px; font-weight: 800; color: var(--muted); margin-bottom: 7px; }
+        .seg { display: flex; gap: 6px; }
+        .seg button { flex: 1; padding: 10px; border: 1.5px solid var(--border); border-radius: 9px; background: #fff; font-weight: 800; font-size: 13px; cursor: pointer; color: var(--muted); }
+        .seg button.on { background: var(--blue); color: #fff; border-color: var(--blue); }
+        .pop-actions { display: flex; gap: 8px; margin-top: 20px; }
+        .pop-actions button { flex: 1; padding: 13px; border: none; border-radius: 11px; font-weight: 800; font-size: 14px; cursor: pointer; }
+        .pop-save { background: var(--blue); color: #fff; }
+        .pop-cancel { background: #f1f5f9; color: var(--muted); }
+
+        .toast { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); background: var(--navy); color: #fff; padding: 13px 24px; border-radius: 12px; font-weight: 700; font-size: 14px; z-index: 2000; opacity: 0; transition: opacity 0.3s; pointer-events: none; }
+        .toast.show { opacity: 1; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div>
+            <h1><i class="fa-solid fa-bed"></i> 생활관 배정 관리</h1>
+            <div class="sub">항공기술훈련원 교육지원부</div>
+        </div>
+        <div class="header-actions">
+            <button class="h-btn" onclick="location.href='portal.html'"><i class="fa-solid fa-grip"></i> 포털</button>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- 단계 탭 -->
+        <div class="step-tabs">
+            <div class="step-tab active" id="stab-1" onclick="goStep(1)">
+                <div class="n">STEP 1</div><div class="t"><i class="fa-solid fa-building"></i> 방 마스터 설정</div>
+            </div>
+            <div class="step-tab" id="stab-2" onclick="goStep(2)">
+                <div class="n">STEP 2</div><div class="t"><i class="fa-solid fa-users"></i> 과정·명단</div>
+            </div>
+            <div class="step-tab" id="stab-3" onclick="goStep(3)">
+                <div class="n">STEP 3</div><div class="t"><i class="fa-solid fa-wand-magic-sparkles"></i> 자동 배정</div>
+            </div>
+            <div class="step-tab" id="stab-4" onclick="goStep(4)">
+                <div class="n">STEP 4</div><div class="t"><i class="fa-solid fa-table-list"></i> 현황·출력</div>
+            </div>
+        </div>
+
+        <!-- STEP 1: 방 마스터 -->
+        <div id="step-1">
+            <div class="panel">
+                <h2>방 마스터 설정</h2>
+                <p class="desc">건물·층별로 방 번호를 입력하고 저장하세요. 각 방은 <b>정원(1·2인)</b>, <b>성별 지정</b>, <b>로얄층 우선순위</b>를 설정할 수 있습니다. 로얄층은 배정 시 우선 채워집니다.</p>
+
+                <div class="bldg-tabs" id="bldgTabs"></div>
+                <div id="floorArea"></div>
+
+                <div class="save-bar">
+                    <div class="summary" id="roomSummary">방 0개</div>
+                    <button class="save-btn" onclick="saveRooms()"><i class="fa-solid fa-floppy-disk"></i> 방 마스터 저장</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- STEP 2: 과정 선택 + 명단 업로드 -->
+        <div id="step-2" style="display:none;">
+            <div class="panel">
+                <h2>과정 선택</h2>
+                <p class="desc">연간계획 기준 <b>향후 3주 이내</b> 진행되는 과정이 표시됩니다. 과정을 선택하면 교육생 명단을 업로드할 수 있습니다. 한 주에 여러 과정이 있으면 과정마다 각각 명단을 올리세요.</p>
+                <div style="display:flex; gap:8px; align-items:center; margin-bottom:14px; flex-wrap:wrap;">
+                    <label style="font-size:13px; font-weight:800; color:var(--muted);">조회 범위</label>
+                    <div class="seg" style="max-width:320px;">
+                        <button class="on" id="rng-3w" onclick="setRange('3w')">3주 이내</button>
+                        <button id="rng-all" onclick="setRange('all')">전체 과정</button>
+                    </div>
+                    <button class="h-btn" style="background:var(--blue);" onclick="loadCourses()"><i class="fa-solid fa-rotate"></i> 새로고침</button>
+                </div>
+                <div id="courseList" style="display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:12px;">
+                    <div class="empty-floor">과정을 불러오는 중...</div>
+                </div>
+            </div>
+
+            <div class="panel" id="rosterPanel" style="display:none;">
+                <h2 id="rosterTitle">교육생 명단</h2>
+                <p class="desc">명단 PDF(연번/성함/사번/소속/성별)를 업로드하면 자동 판독합니다. 판독이 부정확하면 표에서 직접 수정하거나 행을 추가/삭제하세요.</p>
+
+                <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px;">
+                    <input type="file" id="pdfInput" accept="application/pdf" style="display:none;" onchange="handlePdf(event)">
+                    <button class="save-btn" style="background:var(--blue);" onclick="document.getElementById('pdfInput').click()"><i class="fa-solid fa-file-pdf"></i> PDF 업로드</button>
+                    <button class="h-btn" style="background:#475569;" onclick="addRosterRow()"><i class="fa-solid fa-plus"></i> 행 추가</button>
+                    <button class="h-btn" style="background:#475569;" onclick="clearRoster()"><i class="fa-solid fa-eraser"></i> 비우기</button>
+                    <div style="flex:1;"></div>
+                    <span class="summary" id="rosterCount" style="align-self:center;">0명</span>
+                </div>
+
+                <div id="rosterPreview" style="font-size:12px; color:var(--muted); margin-bottom:10px;"></div>
+
+                <div style="overflow-x:auto;">
+                    <table id="rosterTable" style="width:100%; border-collapse:collapse; font-size:13px;">
+                        <thead>
+                            <tr style="background:#f8fafc;">
+                                <th style="padding:9px; border:1px solid var(--border); width:50px;">연번</th>
+                                <th style="padding:9px; border:1px solid var(--border);">성함</th>
+                                <th style="padding:9px; border:1px solid var(--border);">사번</th>
+                                <th style="padding:9px; border:1px solid var(--border);">소속</th>
+                                <th style="padding:9px; border:1px solid var(--border); width:90px;">성별</th>
+                                <th style="padding:9px; border:1px solid var(--border); width:50px;"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="rosterBody"></tbody>
+                    </table>
+                </div>
+
+                <div class="save-bar">
+                    <div class="summary" id="rosterSaveSummary">선택된 과정 없음</div>
+                    <button class="save-btn" onclick="saveRoster()"><i class="fa-solid fa-floppy-disk"></i> 이 과정 명단 저장</button>
+                </div>
+            </div>
+        </div>
+        <div id="step-3" style="display:none;">
+            <div class="panel">
+                <h2>자동 배정</h2>
+                <p class="desc">선택한 <b>주차</b>의 모든 과정 명단을 모아 자동으로 생활관을 배정합니다. 로얄층(우선순위) 방을 먼저 채우고, 나머지는 방 연번 순서대로 과정별로 묶어 배치합니다. 남녀 공용 1실은 만들지 않습니다.</p>
+
+                <div style="display:flex; gap:8px; align-items:center; margin-bottom:14px; flex-wrap:wrap;">
+                    <label style="font-size:13px; font-weight:800; color:var(--muted);">배정할 주차</label>
+                    <select id="weekSelect" style="padding:10px 13px; border:1.5px solid var(--border); border-radius:9px; font-size:14px; min-width:200px;" onchange="onWeekChange()"></select>
+                    <button class="h-btn" style="background:var(--blue);" onclick="loadWeeks()"><i class="fa-solid fa-rotate"></i> 주차 새로고침</button>
+                </div>
+
+                <div id="weekCourseInfo" style="font-size:13px; color:var(--muted); margin-bottom:14px;"></div>
+
+                <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                    <button class="save-btn" onclick="runAssign()"><i class="fa-solid fa-wand-magic-sparkles"></i> 자동 배정 실행</button>
+                    <button class="h-btn" style="background:#475569;" onclick="goStep(4)"><i class="fa-solid fa-table-list"></i> 현황 보기</button>
+                </div>
+
+                <div id="assignLog" style="margin-top:16px; font-size:13px; line-height:1.7;"></div>
+            </div>
+        </div>
+        <div id="step-4" style="display:none;">
+            <div class="panel">
+                <h2>배치 현황 · 출력</h2>
+                <p class="desc">주차를 선택하면 배정 결과를 건물·층·방 순으로 보여줍니다. 학생을 다른 방으로 <b>이동</b>하거나 <b>삭제</b>할 수 있고, 충돌(정원 초과·성별 불일치) 시 이동이 차단됩니다. PDF로 출력해 공유하세요.</p>
+
+                <div style="display:flex; gap:8px; align-items:center; margin-bottom:14px; flex-wrap:wrap;">
+                    <label style="font-size:13px; font-weight:800; color:var(--muted);">주차</label>
+                    <select id="viewWeekSelect" style="padding:10px 13px; border:1.5px solid var(--border); border-radius:9px; font-size:14px; min-width:200px;" onchange="renderBoard()"></select>
+                    <button class="h-btn" style="background:var(--blue);" onclick="loadViewWeeks()"><i class="fa-solid fa-rotate"></i> 새로고침</button>
+                    <div style="flex:1;"></div>
+                    <button class="save-btn" style="background:var(--danger);" onclick="printBoard()"><i class="fa-solid fa-print"></i> PDF 출력</button>
+                </div>
+
+                <div id="boardStats" style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:14px;"></div>
+                <div id="boardArea"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 우선순위 설정 팝업 -->
+    <div class="pop-overlay" id="priorityPop">
+        <div class="pop-box">
+            <h3 id="popRoomTitle">방 우선순위 설정</h3>
+            <div class="opt-group">
+                <label>정원</label>
+                <div class="seg" id="segCapacity">
+                    <button data-v="1" onclick="popSet('capacity','1',this)">1인 1실</button>
+                    <button data-v="2" onclick="popSet('capacity','2',this)">2인 1실</button>
+                </div>
+            </div>
+            <div class="opt-group">
+                <label>방 성별 지정 (선택)</label>
+                <div class="seg" id="segGender">
+                    <button data-v="" onclick="popSet('gender','',this)">지정 안함</button>
+                    <button data-v="M" onclick="popSet('gender','M',this)">남</button>
+                    <button data-v="F" onclick="popSet('gender','F',this)">여</button>
+                </div>
+            </div>
+            <div class="opt-group">
+                <label>로얄층 우선순위</label>
+                <div class="seg" id="segRoyal">
+                    <button data-v="off" onclick="popSet('royal','off',this)">사용 안함</button>
+                    <button data-v="on" onclick="popSet('royal','on',this)">우선 배치</button>
+                </div>
+            </div>
+            <div class="opt-group" id="royalCriteriaGroup" style="display:none;">
+                <label>우선 배치 기준</label>
+                <div class="seg" id="segCriteria">
+                    <button data-v="empno" onclick="popSet('criteria','empno',this)">사번 낮은순(연장자)</button>
+                    <button data-v="female" onclick="popSet('criteria','female',this)">여성 우선</button>
+                </div>
+            </div>
+            <div class="pop-actions">
+                <button class="pop-cancel" onclick="closePriorityPop()">취소</button>
+                <button class="pop-save" onclick="savePriorityPop()">적용</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 학생 이동 팝업 -->
+    <div class="pop-overlay" id="movePop">
+        <div class="pop-box">
+            <h3 id="moveTitle">학생 이동</h3>
+            <div class="opt-group">
+                <label>이동할 방 선택</label>
+                <select id="moveRoomSelect" style="width:100%; padding:11px; border:1.5px solid var(--border); border-radius:9px; font-size:14px;"></select>
+            </div>
+            <div id="moveMsg" style="font-size:12px; min-height:16px; margin-bottom:8px;"></div>
+            <div class="pop-actions">
+                <button class="pop-cancel" onclick="closeMovePop()">취소</button>
+                <button class="pop-save" onclick="confirmMove()">이동</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script>
+        const db = firebase.database();
+        if (window.pdfjsLib) pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+
+        // ── STEP 2 상태 ──
+        let courseRange = '3w';          // '3w' | 'all'
+        let selectedCourse = null;        // { room, courseName, period, weekKey, profName }
+        let roster = [];                  // [{ seq, name, empNo, dept, gender }]
+
+        // 건물·층 구조 정의 (확정된 구조)
+        const BUILDINGS = {
+            '청렴관':   { floors: [1, 2] },
+            '상생관':   { floors: [2, 3] },
+            '국제교육동': { floors: [3] }
+        };
+
+        let currentBldg = '청렴관';
+        // rooms 데이터 구조: { roomId: { building, floor, no, capacity, gender, royal, criteria } }
+        // roomId = `${building}_${floor}_${no}`
+        let rooms = {};
+        let popTargetRoomId = null;
+        let popDraft = {};
+
+        // ── 초기 로드 ──
+        function init() {
+            renderBldgTabs();
+            loadRooms();
+        }
+
+        function renderBldgTabs() {
+            const wrap = document.getElementById('bldgTabs');
+            wrap.innerHTML = Object.keys(BUILDINGS).map(b =>
+                `<div class="bldg-tab ${b === currentBldg ? 'active' : ''}" onclick="selectBldg('${b}')">${b}</div>`
+            ).join('');
+        }
+
+        function selectBldg(b) {
+            currentBldg = b;
+            renderBldgTabs();
+            renderFloors();
+        }
+
+        function loadRooms() {
+            db.ref('system/dorm/rooms').once('value', snap => {
+                rooms = snap.val() || {};
+                renderFloors();
+                updateSummary();
+            });
+        }
+
+        function renderFloors() {
+            const area = document.getElementById('floorArea');
+            const floors = BUILDINGS[currentBldg].floors;
+            area.innerHTML = floors.map(f => {
+                const floorRooms = Object.entries(rooms)
+                    .filter(([id, r]) => r.building === currentBldg && r.floor === f)
+                    .sort((a, b) => String(a[1].no).localeCompare(String(b[1].no), undefined, { numeric: true }));
+
+                const roomCards = floorRooms.length ? floorRooms.map(([id, r]) => roomCardHtml(id, r)).join('')
+                    : `<div class="empty-floor">아직 등록된 방이 없습니다. 위에 방 번호를 입력해 추가하세요.</div>`;
+
+                return `
+                    <div class="floor-card">
+                        <h3><i class="fa-solid fa-layer-group"></i> ${currentBldg} ${f}층</h3>
+                        <div class="hint">방 번호를 쉼표(,)로 여러 개 한 번에 입력할 수 있어요. 예: 201, 202, 203 또는 201~210</div>
+                        <div class="floor-input-row">
+                            <input type="text" id="in-${currentBldg}-${f}" placeholder="방 번호 입력 (예: 201, 202 또는 201~210)"
+                                   onkeyup="if(event.key==='Enter') addRooms('${currentBldg}', ${f})">
+                            <button onclick="addRooms('${currentBldg}', ${f})"><i class="fa-solid fa-plus"></i> 추가</button>
+                        </div>
+                        <div class="room-grid">${roomCards}</div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function roomCardHtml(id, r) {
+            const capLabel = (r.capacity === 2) ? '2인실' : '1인실';
+            const genderLabel = r.gender === 'M' ? '남' : (r.gender === 'F' ? '여' : null);
+            const royal = !!r.royal;
+            let metaHtml = `<span class="room-opt ${r.capacity === 2 ? 'on' : ''}">${capLabel}</span>`;
+            if (genderLabel) metaHtml += `<span class="room-opt ${r.gender === 'M' ? 'g-m' : 'g-f'}">${genderLabel}전용</span>`;
+            if (royal) {
+                const crit = r.criteria === 'female' ? '여성우선' : '사번우선';
+                metaHtml += `<span class="room-opt royal-on">로얄·${crit}</span>`;
+            }
+            return `
+                <div class="room-card ${royal ? 'royal' : ''}">
+                    <div class="rno">
+                        <span>${r.no}</span>
+                        <span class="del" onclick="removeRoom('${id}')" title="삭제"><i class="fa-solid fa-xmark"></i></span>
+                    </div>
+                    <div class="room-meta">${metaHtml}</div>
+                    <div style="margin-top:8px;">
+                        <span class="room-opt" style="background:#eef2ff;color:#4338ca;" onclick="openPriorityPop('${id}')"><i class="fa-solid fa-sliders"></i> 설정</span>
+                    </div>
+                </div>
+            `;
+        }
+
+        // 방 번호 파싱: "201, 202, 203" 또는 "201~210" 지원
+        function parseRoomNumbers(raw) {
+            const result = [];
+            raw.split(',').forEach(part => {
+                part = part.trim();
+                if (!part) return;
+                const rangeMatch = part.match(/^(\d+)\s*~\s*(\d+)$/);
+                if (rangeMatch) {
+                    let start = parseInt(rangeMatch[1], 10);
+                    let end = parseInt(rangeMatch[2], 10);
+                    if (start <= end && (end - start) <= 200) {
+                        for (let i = start; i <= end; i++) result.push(String(i));
+                    }
+                } else {
+                    result.push(part);
+                }
+            });
+            return result;
+        }
+
+        function addRooms(building, floor) {
+            const input = document.getElementById(`in-${building}-${floor}`);
+            const raw = input.value.trim();
+            if (!raw) return;
+            const nums = parseRoomNumbers(raw);
+            let added = 0;
+            nums.forEach(no => {
+                const id = `${building}_${floor}_${no}`;
+                if (!rooms[id]) {
+                    rooms[id] = { building, floor, no: String(no), capacity: 1, gender: '', royal: false, criteria: 'empno' };
+                    added++;
+                }
+            });
+            input.value = '';
+            renderFloors();
+            updateSummary();
+            if (added) showToast(`${added}개 방 추가됨 (저장 버튼을 눌러야 반영됩니다)`);
+            else showToast('이미 등록된 방입니다');
+        }
+
+        function removeRoom(id) {
+            if (!confirm(`${rooms[id]?.no || ''}호를 삭제하시겠습니까?`)) return;
+            delete rooms[id];
+            renderFloors();
+            updateSummary();
+        }
+
+        function updateSummary() {
+            const total = Object.keys(rooms).length;
+            const royal = Object.values(rooms).filter(r => r.royal).length;
+            const cap2 = Object.values(rooms).filter(r => r.capacity === 2).length;
+            document.getElementById('roomSummary').innerText =
+                `총 ${total}개 방 · 로얄층 ${royal}개 · 2인실 ${cap2}개`;
+        }
+
+        // ── 우선순위/속성 팝업 ──
+        function openPriorityPop(id) {
+            popTargetRoomId = id;
+            const r = rooms[id];
+            popDraft = {
+                capacity: String(r.capacity || 1),
+                gender: r.gender || '',
+                royal: r.royal ? 'on' : 'off',
+                criteria: r.criteria || 'empno'
+            };
+            document.getElementById('popRoomTitle').innerText = `${r.building} ${r.floor}층 ${r.no}호 설정`;
+            syncPopUI();
+            document.getElementById('priorityPop').style.display = 'flex';
+        }
+
+        function syncPopUI() {
+            const setSeg = (segId, val) => {
+                document.querySelectorAll(`#${segId} button`).forEach(b => {
+                    b.classList.toggle('on', b.dataset.v === val);
+                });
+            };
+            setSeg('segCapacity', popDraft.capacity);
+            setSeg('segGender', popDraft.gender);
+            setSeg('segRoyal', popDraft.royal);
+            setSeg('segCriteria', popDraft.criteria);
+            document.getElementById('royalCriteriaGroup').style.display = (popDraft.royal === 'on') ? 'block' : 'none';
+        }
+
+        function popSet(key, val, btn) {
+            popDraft[key] = val;
+            syncPopUI();
+        }
+
+        function savePriorityPop() {
+            const r = rooms[popTargetRoomId];
+            if (!r) return closePriorityPop();
+            r.capacity = parseInt(popDraft.capacity, 10) || 1;
+            r.gender = popDraft.gender || '';
+            r.royal = (popDraft.royal === 'on');
+            r.criteria = popDraft.criteria || 'empno';
+            closePriorityPop();
+            renderFloors();
+            updateSummary();
+            showToast('방 설정 변경됨 (저장 버튼을 눌러야 반영됩니다)');
+        }
+
+        function closePriorityPop() {
+            document.getElementById('priorityPop').style.display = 'none';
+            popTargetRoomId = null;
+        }
+
+        // ── 저장 ──
+        function saveRooms() {
+            db.ref('system/dorm/rooms').set(rooms)
+                .then(() => showToast('✅ 방 마스터가 저장되었습니다'))
+                .catch(e => { console.error(e); showToast('⚠️ 저장 실패 — 네트워크를 확인하세요'); });
+        }
+
+        // ── 단계 이동 ──
+        function goStep(n) {
+            const tab = document.getElementById(`stab-${n}`);
+            if (tab.classList.contains('disabled')) {
+                showToast('이 단계는 다음 업데이트에서 열립니다');
+                return;
+            }
+            [1,2,3,4].forEach(i => {
+                document.getElementById(`step-${i}`).style.display = (i === n) ? 'block' : 'none';
+                document.getElementById(`stab-${i}`).classList.toggle('active', i === n);
+            });
+            if (n === 2) loadCourses();
+            if (n === 3) loadWeeks();
+            if (n === 4) loadViewWeeks();
+        }
+
+        // ════════════ STEP 2: 과정 선택 + 명단 ════════════
+        function setRange(r) {
+            courseRange = r;
+            document.getElementById('rng-3w').classList.toggle('on', r === '3w');
+            document.getElementById('rng-all').classList.toggle('on', r === 'all');
+            loadCourses();
+        }
+
+        // 주(월요일 기준) 키 — 같은 주 과정 묶음용
+        function weekKeyOf(dateStr) {
+            const dt = new Date(dateStr + 'T00:00:00');
+            if (isNaN(dt)) return '';
+            const monday = new Date(dt);
+            const dow = (dt.getDay() + 6) % 7;
+            monday.setDate(dt.getDate() - dow);
+            return monday.toISOString().slice(0, 10);
+        }
+
+        function parsePeriod(periodStr) {
+            const sep = (periodStr || '').includes(' ~ ') ? ' ~ ' : '~';
+            const parts = (periodStr || '').split(sep).map(s => s.trim());
+            return { start: parts[0] || '', end: parts[1] || parts[0] || '' };
+        }
+
+        async function loadCourses() {
+            const listEl = document.getElementById('courseList');
+            listEl.innerHTML = `<div class="empty-floor">과정을 불러오는 중...</div>`;
+            try {
+                const snap = await db.ref('courses').once('value');
+                const courses = snap.val() || {};
+
+                const today = new Date(); today.setHours(0,0,0,0);
+                const limit = new Date(today); limit.setDate(today.getDate() + 21); // 3주
+
+                let items = [];
+                Object.entries(courses).forEach(([room, c]) => {
+                    const s = (c && c.settings) || {};
+                    if (!s.courseName && !s.period) return;
+                    const { start, end } = parsePeriod(s.period);
+                    if (!start) return;
+                    const startDt = new Date(start + 'T00:00:00');
+                    const endDt = new Date((end || start) + 'T23:59:59');
+                    if (isNaN(startDt)) return;
+
+                    if (courseRange === '3w') {
+                        // 아직 끝나지 않았고(종료일>=오늘), 3주 이내 시작
+                        if (endDt < today) return;
+                        if (startDt > limit) return;
+                    }
+                    const profName = (c.status && c.status.professorName) || '';
+                    items.push({ room, courseName: s.courseName || room, period: s.period || '', start, end: end || start, weekKey: weekKeyOf(start), profName });
+                });
+
+                items.sort((a, b) => (a.start || '').localeCompare(b.start || '') || a.room.localeCompare(b.room));
+
+                if (!items.length) {
+                    listEl.innerHTML = `<div class="empty-floor">표시할 과정이 없습니다. ${courseRange==='3w' ? '범위를 "전체 과정"으로 바꿔보세요.' : ''}</div>`;
+                    return;
+                }
+
+                // 주차별 그룹 헤더 + 카드
+                let html = '';
+                let curWeek = null;
+                items.forEach(it => {
+                    if (it.weekKey !== curWeek) {
+                        curWeek = it.weekKey;
+                        const wd = new Date(curWeek + 'T00:00:00');
+                        const wEnd = new Date(wd); wEnd.setDate(wd.getDate() + 6);
+                        const fmt = d => `${d.getMonth()+1}/${d.getDate()}`;
+                        html += `<div style="grid-column:1/-1; font-size:12px; font-weight:900; color:var(--blue); margin-top:6px;"><i class="fa-regular fa-calendar-week"></i> ${fmt(wd)} ~ ${fmt(wEnd)} 주간</div>`;
+                    }
+                    const sel = selectedCourse && selectedCourse.room === it.room;
+                    html += `
+                        <div class="step-tab ${sel ? 'active' : ''}" style="min-width:0;" onclick='selectCourse(${JSON.stringify(it).replace(/'/g, "&#39;")})'>
+                            <div class="n">ROOM ${it.room}${it.profName ? ' · ' + it.profName : ''}</div>
+                            <div class="t" style="font-size:15px;">${it.courseName}</div>
+                            <div style="font-size:11px; color:var(--muted); margin-top:4px;">${it.period || '-'}</div>
+                        </div>`;
+                });
+                listEl.innerHTML = html;
+            } catch (e) {
+                console.error(e);
+                listEl.innerHTML = `<div class="empty-floor">과정을 불러오지 못했습니다. 새로고침해 주세요.</div>`;
+            }
+        }
+
+        function selectCourse(it) {
+            selectedCourse = it;
+            document.getElementById('rosterPanel').style.display = 'block';
+            document.getElementById('rosterTitle').innerText = `${it.courseName} — 교육생 명단 (ROOM ${it.room})`;
+            document.getElementById('rosterSaveSummary').innerText = `${it.courseName} · ${it.period}`;
+            loadCourses(); // 선택 표시 갱신
+            loadRoster(it); // 기존 저장된 명단 있으면 로드
+            document.getElementById('rosterPanel').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // 명단 저장 키: 주차_룸  (월화수/수목금 분리 위해 주차+룸 조합)
+        function rosterKey(it) {
+            return `${it.weekKey}__${it.room}`;
+        }
+
+        function loadRoster(it) {
+            db.ref(`system/dorm/rosters/${rosterKey(it)}`).once('value', snap => {
+                const v = snap.val();
+                roster = (v && Array.isArray(v.list)) ? v.list : [];
+                renderRoster();
+            });
+        }
+
+        // ── PDF 판독: 행(Y) 기반 표 파싱 ──
+        async function handlePdf(ev) {
+            const file = ev.target.files[0];
+            if (!file) return;
+            document.getElementById('rosterPreview').innerText = '📄 PDF 판독 중...';
+            try {
+                const buf = await file.arrayBuffer();
+                const pdf = await pdfjsLib.getDocument(new Uint8Array(buf)).promise;
+                let parsed = [];
+
+                for (let p = 1; p <= pdf.numPages; p++) {
+                    const page = await pdf.getPage(p);
+                    const content = await page.getTextContent();
+                    // 같은 줄(Y 근접)끼리 묶기
+                    const rowsMap = {};
+                    content.items.forEach(it => {
+                        const str = (it.str || '').trim();
+                        if (!str) return;
+                        const y = Math.round(it.transform[5]);
+                        // 2px 오차 허용하여 같은 줄로 묶음
+                        const key = Object.keys(rowsMap).find(k => Math.abs(k - y) <= 3);
+                        const useKey = key != null ? key : y;
+                        (rowsMap[useKey] = rowsMap[useKey] || []).push({ str, x: it.transform[4] });
+                    });
+                    // Y 내림차순(위→아래), 각 줄은 X 오름차순
+                    Object.keys(rowsMap).sort((a, b) => b - a).forEach(y => {
+                        const cells = rowsMap[y].sort((a, b) => a.x - b.x).map(c => c.str);
+                        const row = parseRosterRow(cells);
+                        if (row) parsed.push(row);
+                    });
+                }
+
+                if (!parsed.length) {
+                    document.getElementById('rosterPreview').innerText = '⚠️ 자동 판독 결과가 없습니다. 양식이 다를 수 있어요. 표에서 직접 입력하거나 다른 PDF를 시도하세요.';
+                } else {
+                    // 연번 재부여
+                    parsed.forEach((r, i) => r.seq = i + 1);
+                    roster = parsed;
+                    renderRoster();
+                    document.getElementById('rosterPreview').innerHTML = `✅ ${parsed.length}명 판독됨. <b style="color:var(--warning);">반드시 내용을 확인/수정</b>한 뒤 저장하세요.`;
+                }
+            } catch (e) {
+                console.error(e);
+                document.getElementById('rosterPreview').innerText = '⚠️ PDF 판독 실패. 표에서 직접 입력해 주세요.';
+            }
+            ev.target.value = '';
+        }
+
+        // 한 줄(cells 배열)을 명단 행으로 해석
+        function parseRosterRow(cells) {
+            const joined = cells.join(' ');
+            // 헤더/제목/합계 줄 제외
+            if (/연\s*번|성\s*명|성\s*함|사\s*번|소\s*속|성\s*별|합계|소계|명단|과정|배정/.test(joined)) return null;
+
+            // 이름: 한글 2~4자
+            const name = cells.find(c => /^[가-힣]{2,4}$/.test(c));
+            if (!name) return null;
+            // 사번: 4~6자리 숫자
+            const empNo = (cells.find(c => /^\d{4,6}$/.test(c)) || '').trim();
+            // 성별: 남/여 또는 M/F
+            let gender = '';
+            const gCell = cells.find(c => /^(남|여|남자|여자|M|F|m|f)$/.test(c));
+            if (gCell) gender = /남|M|m/.test(gCell) ? 'M' : 'F';
+            // 소속: 이름·사번·성별·연번 아닌 나머지 한글 토큰 중 가장 긴 것
+            const used = new Set([name, empNo, gCell]);
+            const deptCand = cells.filter(c => !used.has(c) && /[가-힣]/.test(c) && !/^\d+$/.test(c) && c !== name);
+            const dept = deptCand.sort((a, b) => b.length - a.length)[0] || '';
+
+            return { seq: 0, name, empNo, dept, gender };
+        }
+
+        function renderRoster() {
+            const body = document.getElementById('rosterBody');
+            if (!roster.length) {
+                body.innerHTML = `<tr><td colspan="6" style="padding:20px; text-align:center; color:var(--muted);">명단이 비어 있습니다. PDF를 업로드하거나 "행 추가"로 입력하세요.</td></tr>`;
+            } else {
+                body.innerHTML = roster.map((r, i) => `
+                    <tr>
+                        <td style="padding:4px; border:1px solid var(--border); text-align:center;">${i + 1}</td>
+                        <td style="padding:4px; border:1px solid var(--border);"><input value="${(r.name||'').replace(/"/g,'&quot;')}" oninput="editRoster(${i},'name',this.value)" style="width:100%; border:none; outline:none; font-size:13px; background:transparent;"></td>
+                        <td style="padding:4px; border:1px solid var(--border);"><input value="${(r.empNo||'').replace(/"/g,'&quot;')}" oninput="editRoster(${i},'empNo',this.value)" style="width:100%; border:none; outline:none; font-size:13px; background:transparent;"></td>
+                        <td style="padding:4px; border:1px solid var(--border);"><input value="${(r.dept||'').replace(/"/g,'&quot;')}" oninput="editRoster(${i},'dept',this.value)" style="width:100%; border:none; outline:none; font-size:13px; background:transparent;"></td>
+                        <td style="padding:4px; border:1px solid var(--border); text-align:center;">
+                            <select onchange="editRoster(${i},'gender',this.value)" style="border:none; outline:none; font-size:13px; background:transparent;">
+                                <option value="" ${!r.gender?'selected':''}>-</option>
+                                <option value="M" ${r.gender==='M'?'selected':''}>남</option>
+                                <option value="F" ${r.gender==='F'?'selected':''}>여</option>
+                            </select>
+                        </td>
+                        <td style="padding:4px; border:1px solid var(--border); text-align:center;"><span class="del" style="color:var(--danger); cursor:pointer;" onclick="delRosterRow(${i})"><i class="fa-solid fa-xmark"></i></span></td>
+                    </tr>`).join('');
+            }
+            document.getElementById('rosterCount').innerText = `${roster.length}명`;
+        }
+
+        function editRoster(i, key, val) { if (roster[i]) roster[i][key] = val.trim(); }
+        function addRosterRow() { roster.push({ seq: roster.length + 1, name: '', empNo: '', dept: '', gender: '' }); renderRoster(); }
+        function delRosterRow(i) { roster.splice(i, 1); renderRoster(); }
+        function clearRoster() { if (confirm('명단을 모두 비우시겠습니까?')) { roster = []; renderRoster(); } }
+
+        function saveRoster() {
+            if (!selectedCourse) { showToast('먼저 과정을 선택하세요'); return; }
+            const clean = roster.filter(r => (r.name || '').trim());
+            // 식별번호(사번 또는 전화 뒤4) 없는 행 경고
+            const noId = clean.filter(r => !/^\d{4,6}$/.test((r.empNo || '').trim()));
+            if (noId.length) {
+                if (!confirm(`사번이 비어있거나 형식이 이상한 인원이 ${noId.length}명 있습니다.\n그래도 저장할까요? (배정 시 식별이 어려울 수 있음)`)) return;
+            }
+            const payload = {
+                room: selectedCourse.room,
+                courseName: selectedCourse.courseName,
+                period: selectedCourse.period,
+                weekKey: selectedCourse.weekKey,
+                list: clean.map((r, i) => ({ seq: i + 1, name: r.name.trim(), empNo: (r.empNo||'').trim(), dept: (r.dept||'').trim(), gender: r.gender || '' })),
+                updatedAt: firebase.database.ServerValue.TIMESTAMP
+            };
+            db.ref(`system/dorm/rosters/${rosterKey(selectedCourse)}`).set(payload)
+                .then(() => showToast(`✅ ${clean.length}명 명단 저장됨`))
+                .catch(e => { console.error(e); showToast('⚠️ 저장 실패'); });
+        }
+
+        // ════════════ STEP 3: 자동 배정 ════════════
+        let weekRosters = {};   // 선택 주차의 과정별 명단 { rosterKey: payload }
+
+        async function loadWeeks() {
+            const sel = document.getElementById('weekSelect');
+            try {
+                const snap = await db.ref('system/dorm/rosters').once('value');
+                const all = snap.val() || {};
+                // weekKey별로 그룹
+                const weeks = {};
+                Object.entries(all).forEach(([k, v]) => {
+                    const wk = v.weekKey || (k.split('__')[0]);
+                    (weeks[wk] = weeks[wk] || []).push(v);
+                });
+                const wkList = Object.keys(weeks).sort();
+                if (!wkList.length) {
+                    sel.innerHTML = `<option value="">저장된 명단이 없습니다</option>`;
+                    document.getElementById('weekCourseInfo').innerText = 'STEP 2에서 과정 명단을 먼저 저장하세요.';
+                    return;
+                }
+                sel.innerHTML = wkList.map(wk => {
+                    const wd = new Date(wk + 'T00:00:00');
+                    const wEnd = new Date(wd); wEnd.setDate(wd.getDate() + 6);
+                    const fmt = d => `${d.getMonth()+1}/${d.getDate()}`;
+                    const cnt = weeks[wk].length;
+                    return `<option value="${wk}">${fmt(wd)} ~ ${fmt(wEnd)} 주간 (과정 ${cnt}개)</option>`;
+                }).join('');
+                onWeekChange();
+            } catch (e) { console.error(e); }
+        }
+
+        async function onWeekChange() {
+            const wk = document.getElementById('weekSelect').value;
+            if (!wk) return;
+            const snap = await db.ref('system/dorm/rosters').once('value');
+            const all = snap.val() || {};
+            weekRosters = {};
+            Object.entries(all).forEach(([k, v]) => {
+                if ((v.weekKey || k.split('__')[0]) === wk) weekRosters[k] = v;
+            });
+            const info = Object.values(weekRosters).map(v =>
+                `· <b>${v.courseName}</b> (ROOM ${v.room}) — ${(v.list||[]).length}명`).join('<br>');
+            const total = Object.values(weekRosters).reduce((s, v) => s + (v.list||[]).length, 0);
+            document.getElementById('weekCourseInfo').innerHTML = `${info}<br><br>총 <b>${total}명</b> · 과정 ${Object.keys(weekRosters).length}개`;
+        }
+
+        // 방 목록을 연번 순으로 정렬 (건물 순서 → 층 → 방번호)
+        function sortedRooms() {
+            const bldgOrder = { '청렴관': 0, '상생관': 1, '국제교육동': 2 };
+            return Object.entries(rooms).map(([id, r]) => ({ id, ...r }))
+                .sort((a, b) =>
+                    (bldgOrder[a.building] ?? 9) - (bldgOrder[b.building] ?? 9)
+                    || a.floor - b.floor
+                    || String(a.no).localeCompare(String(b.no), undefined, { numeric: true })
+                );
+        }
+
+        async function runAssign() {
+            const wk = document.getElementById('weekSelect').value;
+            if (!wk) { showToast('배정할 주차를 선택하세요'); return; }
+            if (!Object.keys(rooms).length) {
+                // rooms가 비어있으면 로드
+                const rs = await db.ref('system/dorm/rooms').once('value');
+                rooms = rs.val() || {};
+            }
+            if (!Object.keys(rooms).length) { showToast('STEP 1에서 방을 먼저 설정하세요'); return; }
+            if (!Object.keys(weekRosters).length) { showToast('이 주차에 저장된 명단이 없습니다'); return; }
+
+            const log = [];
+            // 방 상태 초기화: { id, capacity, gender(고정/지정), occupants:[] }
+            const roomState = {};
+            sortedRooms().forEach(r => {
+                roomState[r.id] = {
+                    id: r.id, building: r.building, floor: r.floor, no: r.no,
+                    capacity: r.capacity || 1, fixedGender: r.gender || '', royal: !!r.royal, criteria: r.criteria || 'empno',
+                    occupants: []
+                };
+            });
+
+            // 과정 목록 (방 연번 순 연속배치를 위해 명단 순서 유지)
+            const courseKeys = Object.keys(weekRosters);
+
+            // 전체 인원 모으기 (과정 태그 포함)
+            let people = [];
+            courseKeys.forEach(ck => {
+                const v = weekRosters[ck];
+                (v.list || []).forEach(p => {
+                    people.push({
+                        name: p.name, empNo: String(p.empNo || ''), dept: p.dept || '', gender: p.gender || '',
+                        course: v.courseName, room: v.room, rosterKey: ck,
+                        token: `${p.name}_${p.empNo || ''}`
+                    });
+                });
+            });
+
+            const assigned = {};   // token -> { roomId, ... }
+            const placeInRoom = (person, rs) => {
+                // 성별 충돌 검사
+                const roomGender = rs.fixedGender || (rs.occupants[0] ? rs.occupants[0].gender : '');
+                if (roomGender && person.gender && roomGender !== person.gender) return false;
+                if (rs.occupants.length >= rs.capacity) return false;
+                rs.occupants.push(person);
+                assigned[person.token] = {
+                    name: person.name, empNo: person.empNo, dept: person.dept, gender: person.gender,
+                    course: person.course, room: person.room, roomId: rs.id,
+                    building: rs.building, floor: rs.floor, no: rs.no
+                };
+                return true;
+            };
+
+            // ── 1) 로얄층 우선 배정 ──
+            const royalRooms = sortedRooms().filter(r => roomState[r.id].royal);
+            let remaining = people.slice();
+
+            royalRooms.forEach(r => {
+                const rs = roomState[r.id];
+                while (rs.occupants.length < rs.capacity && remaining.length) {
+                    // 기준에 맞는 후보 정렬
+                    let pool = remaining.filter(p => !assigned[p.token]);
+                    // 성별 지정방이면 해당 성별만
+                    if (rs.fixedGender) pool = pool.filter(p => p.gender === rs.fixedGender);
+                    // 이미 입실자 있으면 같은 성별만
+                    if (rs.occupants[0]) pool = pool.filter(p => p.gender === rs.occupants[0].gender);
+                    if (!pool.length) break;
+
+                    if (rs.criteria === 'female') {
+                        // 여성 우선 → 여성 중 사번 낮은순, 없으면 종료
+                        pool = pool.filter(p => p.gender === 'F');
+                        if (!pool.length) break;
+                    }
+                    // 공통: 사번 낮은순(연장자) 정렬
+                    pool.sort((a, b) => (parseInt(a.empNo||'999999',10)) - (parseInt(b.empNo||'999999',10)));
+                    const pick = pool[0];
+                    if (!placeInRoom(pick, rs)) break;
+                    remaining = remaining.filter(p => p.token !== pick.token);
+                }
+            });
+            const royalCount = Object.keys(assigned).length;
+            log.push(`🏅 로얄층 우선 배정: ${royalCount}명 (${royalRooms.length}개 방)`);
+
+            // ── 2) 나머지: 과정별 연속 배치 (방 연번 순) ──
+            const normalRooms = sortedRooms().filter(r => !roomState[r.id].royal);
+            let roomPtr = 0;
+            courseKeys.forEach(ck => {
+                const v = weekRosters[ck];
+                const coursePeople = remaining.filter(p => p.rosterKey === ck && !assigned[p.token]);
+                let placedThisCourse = 0;
+                coursePeople.forEach(person => {
+                    if (assigned[person.token]) return;
+                    let placed = false;
+                    // 현재 포인터부터 빈 방 탐색
+                    for (let scan = roomPtr; scan < normalRooms.length; scan++) {
+                        const rs = roomState[normalRooms[scan].id];
+                        if (placeInRoom(person, rs)) {
+                            // 방이 꽉 찼으면 포인터 전진 (연속 배치 유지)
+                            if (rs.occupants.length >= rs.capacity) {
+                                if (scan === roomPtr) roomPtr++;
+                            }
+                            placed = true; placedThisCourse++;
+                            break;
+                        }
+                    }
+                    if (!placed) {
+                        log.push(`⚠️ <span style="color:var(--danger)">배정 실패</span>: ${person.name}(${person.empNo}) — 적합한 빈 방 부족`);
+                    }
+                });
+                // 다음 과정은 다음 빈 방부터 시작하도록 포인터를 현재 채워진 위치로 이동
+                while (roomPtr < normalRooms.length && roomState[normalRooms[roomPtr].id].occupants.length >= roomState[normalRooms[roomPtr].id].capacity) {
+                    roomPtr++;
+                }
+                log.push(`📚 ${v.courseName}: ${placedThisCourse}명 배정`);
+            });
+
+            const totalAssigned = Object.keys(assigned).length;
+            const totalPeople = people.length;
+            log.push(`<br><b>총 ${totalAssigned} / ${totalPeople}명 배정 완료</b>`);
+            if (totalAssigned < totalPeople) {
+                log.push(`<span style="color:var(--danger)">⚠️ ${totalPeople - totalAssigned}명 미배정 — 방이 부족하거나 성별 제약 때문일 수 있습니다. STEP 1에서 방을 추가하거나 수동 배정하세요.</span>`);
+            }
+
+            // 저장
+            const payload = {
+                weekKey: wk,
+                assignedAt: firebase.database.ServerValue.TIMESTAMP,
+                students: assigned,
+                courses: courseKeys.map(ck => ({ rosterKey: ck, courseName: weekRosters[ck].courseName, room: weekRosters[ck].room }))
+            };
+            db.ref(`system/dorm/assignments/${wk}`).set(payload)
+                .then(() => {
+                    document.getElementById('assignLog').innerHTML = log.join('<br>');
+                    showToast(`✅ 배정 완료 (${totalAssigned}/${totalPeople}명)`);
+                })
+                .catch(e => { console.error(e); showToast('⚠️ 배정 결과 저장 실패'); });
+        }
+
+        // ════════════ STEP 4: 현황 · 이동 · 출력 ════════════
+        let viewAssign = null;   // 현재 보고있는 배정 { weekKey, students:{token:rec} }
+        let moveTargetToken = null;
+
+        async function loadViewWeeks() {
+            const sel = document.getElementById('viewWeekSelect');
+            const snap = await db.ref('system/dorm/assignments').once('value');
+            const all = snap.val() || {};
+            const wks = Object.keys(all).sort().reverse();
+            if (!wks.length) {
+                sel.innerHTML = `<option value="">배정 결과가 없습니다</option>`;
+                document.getElementById('boardArea').innerHTML = `<div class="empty-floor">STEP 3에서 자동 배정을 먼저 실행하세요.</div>`;
+                document.getElementById('boardStats').innerHTML = '';
+                return;
+            }
+            sel.innerHTML = wks.map(wk => {
+                const wd = new Date(wk + 'T00:00:00');
+                const wEnd = new Date(wd); wEnd.setDate(wd.getDate() + 6);
+                const fmt = d => `${d.getMonth()+1}/${d.getDate()}`;
+                return `<option value="${wk}">${fmt(wd)} ~ ${fmt(wEnd)} 주간</option>`;
+            }).join('');
+            renderBoard();
+        }
+
+        async function renderBoard() {
+            const wk = document.getElementById('viewWeekSelect').value;
+            if (!wk) return;
+            // 방 마스터도 최신 로드
+            if (!Object.keys(rooms).length) {
+                const rs = await db.ref('system/dorm/rooms').once('value'); rooms = rs.val() || {};
+            }
+            const snap = await db.ref(`system/dorm/assignments/${wk}`).once('value');
+            viewAssign = snap.val();
+            if (!viewAssign || !viewAssign.students) {
+                document.getElementById('boardArea').innerHTML = `<div class="empty-floor">이 주차의 배정 결과가 없습니다.</div>`;
+                document.getElementById('boardStats').innerHTML = '';
+                return;
+            }
+
+            const students = viewAssign.students;
+            const courseColors = {};
+            const palette = ['#2563eb','#10b981','#f59e0b','#8b5cf6','#ec4899','#06b6d4','#ef4444'];
+            (viewAssign.courses || []).forEach((c, i) => { courseColors[c.courseName] = palette[i % palette.length]; });
+
+            // 방별 그룹
+            const byRoom = {};
+            Object.entries(students).forEach(([token, s]) => {
+                (byRoom[s.roomId] = byRoom[s.roomId] || []).push({ token, ...s });
+            });
+
+            // 통계
+            const totalP = Object.keys(students).length;
+            const usedRooms = Object.keys(byRoom).length;
+            const courseCount = (viewAssign.courses || []).length;
+            document.getElementById('boardStats').innerHTML = `
+                <div class="step-tab" style="flex:0; min-width:120px;"><div class="n">총원</div><div class="t">${totalP}명</div></div>
+                <div class="step-tab" style="flex:0; min-width:120px;"><div class="n">사용 방</div><div class="t">${usedRooms}개</div></div>
+                <div class="step-tab" style="flex:0; min-width:120px;"><div class="n">과정</div><div class="t">${courseCount}개</div></div>
+                ${Object.entries(courseColors).map(([cn,col]) => `<div class="step-tab" style="flex:0; min-width:120px; border-left:5px solid ${col};"><div class="n">과정</div><div class="t" style="font-size:13px;">${cn}</div></div>`).join('')}
+            `;
+
+            // 건물·층 순으로 렌더
+            const bldgOrder = { '청렴관': 0, '상생관': 1, '국제교육동': 2 };
+            const allRoomsSorted = Object.entries(rooms).map(([id, r]) => ({ id, ...r }))
+                .sort((a,b) => (bldgOrder[a.building]??9)-(bldgOrder[b.building]??9) || a.floor-b.floor || String(a.no).localeCompare(String(b.no),undefined,{numeric:true}));
+
+            let html = '';
+            let curGroup = null;
+            allRoomsSorted.forEach(r => {
+                const grp = `${r.building} ${r.floor}층`;
+                if (grp !== curGroup) {
+                    if (curGroup !== null) html += `</div>`;
+                    curGroup = grp;
+                    html += `<div class="floor-card"><h3><i class="fa-solid fa-layer-group"></i> ${grp}</h3><div class="room-grid">`;
+                }
+                const occ = byRoom[r.id] || [];
+                const isRoyal = r.royal;
+                let occHtml = occ.map(p => {
+                    const col = courseColors[p.course] || '#64748b';
+                    const gLabel = p.gender === 'M' ? '남' : (p.gender === 'F' ? '여' : '');
+                    return `<div style="display:flex; align-items:center; justify-content:space-between; gap:6px; padding:5px 7px; background:#f8fafc; border-radius:7px; margin-top:5px; border-left:4px solid ${col};">
+                        <div style="overflow:hidden;">
+                            <div style="font-weight:800; font-size:13px;">${p.name} <span style="font-size:11px; color:var(--muted);">${gLabel}</span></div>
+                            <div style="font-size:10px; color:var(--muted);">${p.empNo} · ${p.dept || '-'}</div>
+                        </div>
+                        <div style="display:flex; gap:4px; flex-shrink:0;">
+                            <span class="room-opt" style="background:#eef2ff;color:#4338ca;" onclick="openMovePop('${p.token}')"><i class="fa-solid fa-right-left"></i></span>
+                            <span class="room-opt" style="background:#fee2e2;color:#dc2626;" onclick="deleteStudent('${p.token}')"><i class="fa-solid fa-xmark"></i></span>
+                        </div>
+                    </div>`;
+                }).join('');
+                if (!occ.length) occHtml = `<div style="font-size:11px; color:#cbd5e1; margin-top:6px;">(빈 방)</div>`;
+                html += `
+                    <div class="room-card ${isRoyal ? 'royal' : ''}" style="min-height:auto;">
+                        <div class="rno"><span>${r.no}</span><span style="font-size:10px; color:var(--muted); font-weight:700;">${occ.length}/${r.capacity||1}${isRoyal?' 🏅':''}</span></div>
+                        ${occHtml}
+                    </div>`;
+            });
+            if (curGroup !== null) html += `</div></div>`;
+            document.getElementById('boardArea').innerHTML = html || `<div class="empty-floor">방 마스터가 비어 있습니다.</div>`;
+        }
+
+        // ── 이동 ──
+        function openMovePop(token) {
+            moveTargetToken = token;
+            const s = viewAssign.students[token];
+            document.getElementById('moveTitle').innerText = `${s.name} 이동 (현재: ${s.building} ${s.no}호)`;
+            // 이동 가능 방 = 모든 방 (충돌은 선택 시 검사)
+            const bldgOrder = { '청렴관': 0, '상생관': 1, '국제교육동': 2 };
+            const opts = Object.entries(rooms).map(([id, r]) => ({ id, ...r }))
+                .sort((a,b) => (bldgOrder[a.building]??9)-(bldgOrder[b.building]??9) || a.floor-b.floor || String(a.no).localeCompare(String(b.no),undefined,{numeric:true}))
+                .map(r => `<option value="${r.id}">${r.building} ${r.floor}층 ${r.no}호</option>`).join('');
+            document.getElementById('moveRoomSelect').innerHTML = opts;
+            document.getElementById('moveMsg').innerText = '';
+            document.getElementById('movePop').style.display = 'flex';
+        }
+
+        function checkMoveConflict(token, destRoomId) {
+            const s = viewAssign.students[token];
+            const dest = rooms[destRoomId];
+            if (!dest) return '존재하지 않는 방입니다.';
+            // 현재 점유자 (본인 제외)
+            const occ = Object.entries(viewAssign.students).filter(([tk, x]) => x.roomId === destRoomId && tk !== token);
+            const cap = dest.capacity || 1;
+            if (occ.length >= cap) return `정원 초과 — 이미 ${occ.length}/${cap}명이 배정되어 이동 불가합니다.`;
+            // 성별 충돌
+            const destGender = dest.gender || (occ[0] ? occ[0][1].gender : '');
+            if (destGender && s.gender && destGender !== s.gender) return `성별 불일치 — 이 방은 ${destGender==='M'?'남':'여'}성 방이라 이동 불가합니다.`;
+            return null;
+        }
+
+        function confirmMove() {
+            const destRoomId = document.getElementById('moveRoomSelect').value;
+            const conflict = checkMoveConflict(moveTargetToken, destRoomId);
+            if (conflict) {
+                document.getElementById('moveMsg').innerHTML = `<span style="color:var(--danger); font-weight:700;">⛔ ${conflict}</span>`;
+                return;
+            }
+            const dest = rooms[destRoomId];
+            const wk = viewAssign.weekKey;
+            const upd = {
+                roomId: destRoomId, building: dest.building, floor: dest.floor, no: dest.no
+            };
+            db.ref(`system/dorm/assignments/${wk}/students/${moveTargetToken}`).update(upd)
+                .then(() => { closeMovePop(); showToast('✅ 이동 완료'); renderBoard(); })
+                .catch(e => { console.error(e); document.getElementById('moveMsg').innerText = '저장 실패'; });
+        }
+        function closeMovePop() { document.getElementById('movePop').style.display = 'none'; moveTargetToken = null; }
+
+        function deleteStudent(token) {
+            const s = viewAssign.students[token];
+            if (!confirm(`${s.name}(${s.empNo})을(를) 배정에서 삭제하시겠습니까?\n(명단에서 지우는 게 아니라 이 주차 배정에서만 제외됩니다)`)) return;
+            const wk = viewAssign.weekKey;
+            db.ref(`system/dorm/assignments/${wk}/students/${token}`).remove()
+                .then(() => { showToast('삭제됨'); renderBoard(); })
+                .catch(e => { console.error(e); showToast('삭제 실패'); });
+        }
+
+        // ── PDF 출력 (인쇄) ──
+        function printBoard() {
+            if (!viewAssign) { showToast('먼저 주차를 선택하세요'); return; }
+            const wk = viewAssign.weekKey;
+            const wd = new Date(wk + 'T00:00:00');
+            const wEnd = new Date(wd); wEnd.setDate(wd.getDate() + 6);
+            const fmt = d => `${d.getMonth()+1}/${d.getDate()}`;
+            const students = viewAssign.students;
+
+            const bldgOrder = { '청렴관': 0, '상생관': 1, '국제교육동': 2 };
+            const byRoom = {};
+            Object.entries(students).forEach(([t, s]) => { (byRoom[s.roomId] = byRoom[s.roomId] || []).push(s); });
+            const allRoomsSorted = Object.entries(rooms).map(([id, r]) => ({ id, ...r }))
+                .sort((a,b) => (bldgOrder[a.building]??9)-(bldgOrder[b.building]??9) || a.floor-b.floor || String(a.no).localeCompare(String(b.no),undefined,{numeric:true}));
+
+            let rowsHtml = '';
+            allRoomsSorted.forEach(r => {
+                const occ = byRoom[r.id] || [];
+                if (!occ.length) return;
+                occ.forEach((p, idx) => {
+                    rowsHtml += `<tr>
+                        ${idx===0 ? `<td rowspan="${occ.length}" style="font-weight:800;">${r.building} ${r.floor}층 ${r.no}호${r.royal?' 🏅':''}</td>` : ''}
+                        <td>${p.name}</td><td>${p.empNo}</td><td>${p.dept||'-'}</td>
+                        <td>${p.gender==='M'?'남':(p.gender==='F'?'여':'-')}</td><td>${p.course}</td>
+                    </tr>`;
+                });
+            });
+
+            const win = window.open('', '_blank');
+            win.document.write(`<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8"><title>생활관 배치표</title>
+                <style>
+                    @import url("https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css");
+                    body { font-family:'Pretendard',sans-serif; padding:20px; }
+                    h1 { text-align:center; font-size:22px; }
+                    .sub { text-align:center; color:#64748b; margin-bottom:16px; }
+                    table { width:100%; border-collapse:collapse; font-size:13px; }
+                    th,td { border:1px solid #333; padding:6px 8px; text-align:center; }
+                    th { background:#f1f5f9; }
+                    @media print { @page { size: A4 portrait; margin:12mm; } }
+                </style></head><body>
+                <h1>생활관 배치표</h1>
+                <div class="sub">${fmt(wd)} ~ ${fmt(wEnd)} 주간 · 총 ${Object.keys(students).length}명 · 출력 ${new Date().toLocaleDateString('ko-KR')}</div>
+                <table><thead><tr><th style="width:140px;">생활관/호실</th><th>성명</th><th>사번</th><th>소속</th><th>성별</th><th>과정</th></tr></thead>
+                <tbody>${rowsHtml}</tbody></table>
+                <script>window.onload=function(){setTimeout(function(){window.print();},400);};<\/script>
+                </body></html>`);
+            win.document.close();
+        }
+
+        // ── 토스트 ──
+        let toastTimer = null;
+        function showToast(msg) {
+            const t = document.getElementById('toast');
+            t.innerText = msg;
+            t.classList.add('show');
+            clearTimeout(toastTimer);
+            toastTimer = setTimeout(() => t.classList.remove('show'), 2600);
+        }
+
+        init();
+    </script>
+</body>
+</html>
