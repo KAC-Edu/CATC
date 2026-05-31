@@ -4348,6 +4348,95 @@ resetShuttleRequests: function() {
         modal.addEventListener('click', closeHandler);
     },
 
+// [개발자 문의 / 저작권 안내] 사이드바 버튼에서 호출
+    openContactDev: function() {
+        const DEV_NAME = '장두석 교수';
+        const DEV_EMAIL = 'jds0616@gmail.com';
+        const mailSubject = encodeURIComponent('[KAC 항공기술훈련원 플랫폼 문의]');
+        const mailUrl = `mailto:${DEV_EMAIL}?subject=${mailSubject}`;
+
+        const modal = document.getElementById('qaModal');
+        const mText = document.getElementById('m-text');
+        const mActions = document.querySelector('#qaModal .modal-actions');
+        if (!modal || !mText) return;
+        if (mActions) mActions.style.display = 'none';
+
+        mText.innerHTML = `
+            <div style="max-height:65vh; overflow-y:auto; text-align:left; padding:4px 6px;">
+                <div style="text-align:center; margin-bottom:18px;">
+                    <div style="display:inline-flex; align-items:center; justify-content:center; width:60px; height:60px; border-radius:50%; background:#eff6ff; margin-bottom:10px;">
+                        <i class="fa-solid fa-code" style="font-size:26px; color:#1d4ed8;"></i>
+                    </div>
+                    <div style="font-size:18px; font-weight:900; color:#0f172a;">개발자 문의</div>
+                    <div style="font-size:12px; color:#94a3b8; font-weight:600; margin-top:2px;">항공기술훈련원 교육 플랫폼</div>
+                </div>
+
+                <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:16px; margin-bottom:14px;">
+                    <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
+                        <i class="fa-solid fa-user-tie" style="color:#64748b; width:18px; text-align:center;"></i>
+                        <span style="font-size:14px; font-weight:700; color:#334155;">개발자</span>
+                        <span style="margin-left:auto; font-size:15px; font-weight:900; color:#0f172a;">${DEV_NAME}</span>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:10px;">
+                        <i class="fa-solid fa-envelope" style="color:#64748b; width:18px; text-align:center;"></i>
+                        <span style="font-size:14px; font-weight:700; color:#334155;">이메일</span>
+                        <a href="${mailUrl}" style="margin-left:auto; font-size:14px; font-weight:800; color:#1d4ed8; text-decoration:underline;">${DEV_EMAIL}</a>
+                    </div>
+                </div>
+
+                <div style="display:flex; gap:8px; margin-bottom:16px;">
+                    <a href="${mailUrl}" style="flex:1; text-align:center; padding:12px 0; background:#1d4ed8; color:#fff; border-radius:10px; font-size:14px; font-weight:800; text-decoration:none;">
+                        <i class="fa-solid fa-paper-plane"></i> 메일 보내기
+                    </a>
+                    <button onclick="ui.copyDevEmail('${DEV_EMAIL}')" style="flex:1; padding:12px 0; background:#e2e8f0; color:#475569; border:none; border-radius:10px; font-size:14px; font-weight:800; cursor:pointer;">
+                        <i class="fa-solid fa-copy"></i> 주소 복사
+                    </button>
+                </div>
+
+                <div style="border-top:1px dashed #cbd5e1; padding-top:14px;">
+                    <div style="font-size:13px; font-weight:900; color:#b91c1c; margin-bottom:8px;">
+                        <i class="fa-solid fa-shield-halved"></i> 저작권 및 이용 안내
+                    </div>
+                    <ul style="margin:0; padding-left:18px; font-size:12px; line-height:1.75; color:#475569;">
+                        <li>본 플랫폼의 저작권 및 모든 권리는 개발자 <b>${DEV_NAME}</b>에게 있습니다.</li>
+                        <li>본 플랫폼은 한국공항공사 항공기술훈련원 교육 운영 목적으로만 사용이 허가됩니다.</li>
+                        <li>개발자의 사전 서면 동의 없이 복제·배포·수정·2차적 저작물 작성 및 외부 반출을 금합니다.</li>
+                        <li>허가된 목적 외 타 용도로 무단 사용할 경우, 관련 법령에 따라 <b style="color:#b91c1c;">민·형사상 책임 및 제재</b>가 따를 수 있습니다.</li>
+                    </ul>
+                    <div style="font-size:11px; color:#94a3b8; margin-top:10px; text-align:center;">
+                        &copy; ${new Date().getFullYear()} ${DEV_NAME}. All rights reserved.
+                    </div>
+                </div>
+            </div>
+        `;
+        modal.style.display = 'flex';
+
+        const closeHandler = (e) => {
+            if (e.target.id === 'qaModal') {
+                if (mActions) mActions.style.display = 'flex';
+                modal.removeEventListener('click', closeHandler);
+            }
+        };
+        modal.addEventListener('click', closeHandler);
+    },
+
+    copyDevEmail: function(email) {
+        const done = () => ui.showAlert('📋 이메일 주소가 복사되었습니다.\n' + email);
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(email).then(done).catch(() => {
+                const t = document.createElement('textarea');
+                t.value = email; document.body.appendChild(t); t.select();
+                try { document.execCommand('copy'); } catch(e) {}
+                document.body.removeChild(t); done();
+            });
+        } else {
+            const t = document.createElement('textarea');
+            t.value = email; document.body.appendChild(t); t.select();
+            try { document.execCommand('copy'); } catch(e) {}
+            document.body.removeChild(t); done();
+        }
+    },
+
 // [강사 플랫폼: 로고 클릭 시 모든 정보를 초기화하고 현황판으로 이동]
     // 사이드바 책갈피 토글
     toggleSidebar: function() {
