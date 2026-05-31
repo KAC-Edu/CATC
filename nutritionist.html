@@ -1,669 +1,733 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-  <title>항공기술훈련원 식당 - 관리시스템</title>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"/>
+    <title>항공기술훈련원 영양사 관리 플랫폼</title>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="config.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" rel="stylesheet">
+    <style>
+        :root {
+            --navy:   #0f172a;
+            --blue:   #0ea5e9;
+            --deep:   #0369a1;
+            --green:  #10b981;
+            --amber:  #f59e0b;
+            --red:    #ef4444;
+            --bg:     #f1f5f9;
+            --white:  #ffffff;
+            --text:   #1e293b;
+            --muted:  #64748b;
+            --border: #e2e8f0;
+        }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; margin: 0; padding: 0; }
+        body {
+            font-family: 'Pretendard', sans-serif;
+            background: #cfd8e3;
+            display: flex;
+            justify-content: center;
+            color: var(--text);
+            overflow-x: hidden;
+        }
+        .app-container {
+            width: 100%;
+            max-width: 600px;
+            min-height: 100dvh;
+            background: var(--bg);
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 0 30px rgba(0,0,0,0.1);
+        }
 
-  <!-- Firebase SDK -->
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+        /* ── 헤더 ── */
+        .app-header {
+            height: 55px;
+            background: var(--navy);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 18px;
+            position: sticky;
+            top: 0;
+            z-index: 200;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            flex-shrink: 0;
+        }
+        .header-btn { font-size: 19px; color: #fff; border: none; background: none; cursor: pointer; transition: opacity .2s; padding: 4px; }
+        .header-btn:active { opacity: .6; }
+        .header-title { color: #fff; font-size: 16px; font-weight: 900; letter-spacing: -0.3px; }
 
-  <!-- QR Code 생성 라이브러리 -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-  <!-- Font Awesome & Pretendard Font -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" rel="stylesheet">
+        /* ── 메인 콘텐츠 ── */
+        .app-content { flex: 1; padding: 12px; display: flex; flex-direction: column; gap: 12px; overflow-y: auto; }
 
-  <style>
-    :root {
-      --navy-dark: #0f172a;
-      --green-main: #10b981;
-      --green-dark: #065f46;
-      --green-bg: #f8fafc;
-      --card-white: #ffffff;
-      --text-dark: #1e293b;
-      --danger: #ef4444;
-      --accent-blue: #3b82f6;
-    }
+        /* ── 카드 ── */
+        .section-card {
+            background: var(--white);
+            border-radius: 20px;
+            padding: 18px;
+            border: 1px solid var(--border);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.03);
+        }
+        .section-title {
+            font-size: 13px;
+            font-weight: 800;
+            color: var(--deep);
+            margin-bottom: 14px;
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid var(--border);
+        }
+        .section-title i { color: var(--blue); }
 
-    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-    
-    body {
-      margin: 0; padding: 0;
-      font-family: 'Pretendard', sans-serif;
-      background: #f1f5f9; 
-      display: flex; justify-content: center;
-      color: var(--text-dark);
-    }
+        /* ── 상단 3칸 요약 카드 ── */
+        .stat-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 8px;
+        }
+        .stat-card {
+            border-radius: 16px;
+            padding: 14px 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
+            cursor: pointer;
+            transition: transform .15s;
+            position: relative;
+            overflow: hidden;
+        }
+        .stat-card:active { transform: scale(.96); }
+        .stat-card .sc-label { font-size: 11px; font-weight: 700; text-align: center; line-height: 1.3; }
+        .stat-card .sc-val { font-size: 28px; font-weight: 900; }
+        .stat-card .sc-unit { font-size: 12px; font-weight: 700; }
+        .stat-card i { font-size: 22px; opacity: .25; position: absolute; right: 10px; bottom: 8px; }
 
-    .app-container {
-      width: 100%;
-      max-width: 600px; 
-      min-height: 100dvh;
-      background: var(--green-bg);
-      position: relative;
-      display: flex;
-      flex-direction: column;
-      box-shadow: 0 0 30px rgba(0,0,0,0.1);
-    }
+        .sc-total { background: var(--navy); color: #fff; }
+        .sc-skip  { background: var(--red);  color: #fff; }
+        .sc-eat   { background: var(--green);color: #fff; }
 
-    /* --- 상단바 --- */
-    .app-header {
-      position: fixed; top: 0; width: 100%; max-width: 600px; height: 60px;
-      background: var(--navy-dark);
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 0 20px; z-index: 1000;
-    }
-    .header-btn { font-size: 20px; color: #fff; cursor: pointer; border:none; background:none; }
-    .header-title { color: #fff; font-size: 18px; font-weight: 800; letter-spacing: -0.5px; }
+        /* ── 과정별 제외 신청자 모달 ── */
+        .modal-bg {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,.55);
+            z-index: 1000;
+            align-items: flex-end;
+            justify-content: center;
+        }
+        .modal-bg.open { display: flex; }
+        .modal-sheet {
+            background: var(--white);
+            border-radius: 24px 24px 0 0;
+            width: 100%;
+            max-width: 600px;
+            max-height: 80dvh;
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+            overflow: hidden;
+        }
+        .modal-handle { width: 40px; height: 4px; background: var(--border); border-radius: 99px; margin: 0 auto 16px; }
+        .modal-title { font-size: 16px; font-weight: 900; color: var(--navy); margin-bottom: 14px; }
+        .modal-body  { flex: 1; overflow-y: auto; }
+        .modal-close-btn {
+            width: 100%;
+            margin-top: 14px;
+            padding: 13px;
+            background: var(--navy);
+            color: #fff;
+            border: none;
+            border-radius: 12px;
+            font-size: 15px;
+            font-weight: 800;
+            cursor: pointer;
+        }
 
-    /* --- 콘텐츠 영역 --- */
-    .app-content {
-      flex: 1;
-      margin-top: 60px; margin-bottom: 54px;
-      padding: 20px;
-    }
+        /* ── 과정별 제외 블록 ── */
+        .course-skip-block {
+            border: 1.5px solid var(--border);
+            border-radius: 14px;
+            margin-bottom: 10px;
+            overflow: hidden;
+        }
+        .csb-header {
+            background: #f8fafc;
+            padding: 10px 14px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .csb-name { font-size: 13px; font-weight: 800; color: var(--navy); }
+        .csb-badge { font-size: 11px; font-weight: 700; color: var(--red); background: #fee2e2; padding: 2px 8px; border-radius: 99px; }
+        .csb-list { padding: 8px 14px 10px; display: flex; flex-direction: column; gap: 6px; }
+        .csb-person {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            font-weight: 700;
+        }
+        .csb-person i { color: var(--red); font-size: 12px; }
 
-    /* 카운트다운 바 */
-    .countdown-bar {
-        background: #fffbeb;
-        border: 1px solid #fef3c7;
-        padding: 10px;
-        border-radius: 12px;
-        text-align: center;
-        margin-bottom: 15px;
-        font-size: 13px;
-        font-weight: 700;
-        color: #b45309;
-    }
-    #timerText { color: var(--danger); font-weight: 900; }
+        /* ── 식단표 업로드 ── */
+        .menu-status-banner {
+            border-radius: 14px;
+            padding: 14px 16px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 13px;
+            font-weight: 700;
+            margin-bottom: 12px;
+        }
+        .msb-ok  { background: #ecfdf5; border: 1.5px solid #a7f3d0; color: #065f46; }
+        .msb-no  { background: #fff7ed; border: 1.5px solid #fed7aa; color: #92400e; }
+        .msb-icon { font-size: 22px; }
+        .msb-text { flex: 1; line-height: 1.4; }
+        .msb-date { font-size: 11px; font-weight: 600; opacity: .7; }
 
-    /* 메인 지표 카드 */
-    .main-stat-card {
-        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-        border-radius: 24px;
-        padding: 35px 20px;
-        text-align: center;
-        color: white;
-        box-shadow: 0 10px 20px rgba(16, 185, 129, 0.2);
-        margin-bottom: 15px;
-    }
-    .main-stat-label { font-size: 15px; opacity: 0.9; margin-bottom: 10px; display: block; font-weight: 600;}
-    .main-stat-val { font-size: 60px; font-weight: 900; line-height: 1; }
-    .main-stat-val span { font-size: 24px; margin-left: 5px; }
+        .upload-btn {
+            width: 100%;
+            padding: 14px;
+            border-radius: 14px;
+            font-size: 15px;
+            font-weight: 800;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: opacity .2s;
+        }
+        .upload-btn:active { opacity: .8; }
+        .btn-green { background: var(--green); color: #fff; }
+        .btn-red   { background: var(--red);   color: #fff; }
+        .btn-gray  { background: #94a3b8;       color: #fff; }
 
-    .sub-stat-row {
-        display: grid; grid-template-columns: 1fr; gap: 10px; margin-bottom: 25px;
-    }
-    .sub-stat-card {
-        background: white; border: 1.5px solid #e2e8f0; border-radius: 15px;
-        padding: 18px 20px; display: flex; justify-content: space-between; align-items: center;
-        cursor: pointer; transition: 0.2s;
-    }
-    .sub-stat-card:active { background: #fef2f2; transform: scale(0.98); border-color: var(--danger); }
-    .sub-stat-label { font-size: 14px; font-weight: 700; color: #64748b; }
-    .sub-stat-val { font-size: 20px; font-weight: 800; color: var(--danger); }
+        .menu-preview-img {
+            width: 100%;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            object-fit: cover;
+            max-height: 260px;
+            cursor: pointer;
+        }
+        #menuFileInput { display: none; }
 
-    /* 테이블 스타일 */
-    .list-card {
-      background: var(--card-white); border-radius: 20px;
-      border: 1px solid #e2e8f0; overflow: hidden; margin-bottom: 20px;
-    }
-    .card-header {
-      padding: 15px 20px; background: #f8fafc;
-      border-bottom: 1px solid #e2e8f0; font-weight: 800; font-size: 14px;
-      color: var(--navy-dark);
-    }
-    .status-table { width: 100%; border-collapse: collapse; }
-    .status-table th { padding: 12px; font-size: 12px; color: #64748b; background: #f8fafc; text-align: center; }
-    .status-table td { padding: 16px 10px; font-size: 14px; text-align: center; border-bottom: 1px solid #f1f5f9; cursor: pointer; }
-    .status-table tr:active { background: #f0fdf4; }
-    .status-table td.course-name { text-align: left; font-weight: 800; color: var(--text-dark); padding-left: 20px; }
-    .status-table td.skip-val { color: var(--danger); font-weight: 800; }
-    .status-table td.net-val { color: var(--green-main); font-weight: 800; }
+        /* ── 로딩 스피너 ── */
+        .spinner-wrap { text-align: center; padding: 30px; color: var(--muted); font-size: 13px; }
+        .spinner { border: 3px solid #e2e8f0; border-top-color: var(--blue); border-radius: 50%; width: 28px; height: 28px; animation: spin .8s linear infinite; display: inline-block; margin-bottom: 8px; }
+        @keyframes spin { to { transform: rotate(360deg); } }
 
-    /* 팝업 모달 */
-    .modal-overlay {
-        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-        background: rgba(0,0,0,0.7); z-index: 5000;
-        display: none; align-items: center; justify-content: center; padding: 20px;
-    }
-    .modal-box {
-        background: white; width: 100%; max-width: 400px;
-        border-radius: 24px; overflow: hidden; display: flex; flex-direction: column;
-        max-height: 80vh;
-    }
-    .modal-header { padding: 20px; background: var(--navy-dark); color: white; display: flex; justify-content: space-between; align-items: center; }
-    .modal-body { padding: 20px; overflow-y: auto; }
-    .modal-close { font-size: 20px; cursor: pointer; }
-    .skip-user-item { padding: 12px 0; border-bottom: 1px solid #f1f5f9; display: flex; flex-direction: column; gap: 4px; }
-    .skip-user-main { display: flex; justify-content: space-between; align-items: center; }
-    .skip-user-name { font-weight: 800; color: var(--text-dark); font-size: 16px; }
-    .skip-user-phone { color: var(--accent-blue); font-weight: 700; font-size: 14px; }
-    .skip-user-course { font-size: 11px; color: #94a3b8; font-weight: 600; }
+        /* ── 날짜 배지 ── */
+        .date-badge {
+            display: inline-block;
+            background: var(--navy);
+            color: #fff;
+            font-size: 11px;
+            font-weight: 800;
+            padding: 3px 10px;
+            border-radius: 99px;
+            margin-bottom: 12px;
+        }
 
-    /* 사이드 메뉴 */
-    .side-menu {
-        position: fixed; top: 0; right: -100%; width: 80%; max-width: 300px; height: 100%;
-        background: white; z-index: 6000; transition: 0.3s; padding: 30px 20px;
-        box-shadow: -5px 0 20px rgba(0,0,0,0.1);
-    }
-    .side-menu.open { right: 0; }
-    .menu-title { font-size: 18px; font-weight: 900; margin-bottom: 30px; border-bottom: 2px solid var(--navy-dark); padding-bottom: 10px;}
-    .upload-btn { background: var(--green-main); color: white; border: none; padding: 15px; width: 100%; border-radius: 12px; font-weight: 800; cursor: pointer; margin-bottom: 20px;}
-    #menuPreview { width: 100%; border-radius: 10px; border: 1px solid #ddd; margin-top: 10px; }
+        /* ── 빈 상태 ── */
+        .empty-msg { text-align: center; padding: 30px 10px; color: var(--muted); font-size: 13px; }
 
-    /* 하단바 디자인 */
-    .app-footer {
-      position: fixed; bottom: 0; width: 100%; max-width: 600px; height: 54px;
-      background: var(--navy-dark); color: #fff;
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 0 20px; z-index: 1000;
-    }
-    #footer-date { font-size: 15px; font-weight: 800; opacity: 0.9; letter-spacing: -0.5px; }
-    .footer-logo img { height: 18px; filter: brightness(0) invert(1); opacity: 0.9; }
-  </style>
+        /* ── toast ── */
+        #toast {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%) translateY(20px);
+            background: var(--navy);
+            color: #fff;
+            padding: 11px 20px;
+            border-radius: 99px;
+            font-size: 13px;
+            font-weight: 700;
+            opacity: 0;
+            transition: all .3s;
+            z-index: 9999;
+            white-space: nowrap;
+            pointer-events: none;
+        }
+        #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+        /* ── 이미지 전체보기 오버레이 ── */
+        #imgOverlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,.88);
+            z-index: 2000;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+        }
+        #imgOverlay.open { display: flex; }
+        #imgOverlay img { max-width: 100%; max-height: 90dvh; border-radius: 12px; }
+        #imgOverlay button { position: absolute; top: 18px; right: 18px; background: rgba(255,255,255,.15); border: none; color: #fff; font-size: 22px; border-radius: 50%; width: 40px; height: 40px; cursor: pointer; }
+    </style>
 </head>
-
 <body>
+<div class="app-container">
 
-  <div class="app-container">
+    <!-- 헤더 -->
     <header class="app-header">
-      <button class="header-btn" onclick="history.back()"><i class="fa-solid fa-chevron-left"></i></button>
-      <div class="header-title">항공기술훈련원 식당</div>
-      <button class="header-btn" onclick="toggleSideMenu(true)"><i class="fa-solid fa-bars"></i></button>
+        <button class="header-btn" onclick="history.back()"><i class="fa-solid fa-chevron-left"></i></button>
+        <div class="header-title"><i class="fa-solid fa-utensils" style="margin-right:7px; color:#0ea5e9;"></i>항기원 영양사 플랫폼</div>
+        <button class="header-btn" onclick="loadAll()"><i class="fa-solid fa-rotate-right"></i></button>
     </header>
 
-    <div id="sideMenu" class="side-menu">
-        <div style="text-align: right; margin-bottom: 20px;"><i class="fa-solid fa-xmark modal-close" onclick="toggleSideMenu(false)"></i></div>
-        <div class="menu-title">주간 식단표 관리</div>
-        <div style="margin-bottom:20px; padding-bottom:15px; border-bottom:1px solid #e2e8f0;">
-            <div style="font-size:12px; color:#64748b; font-weight:800; margin-bottom:8px;">메뉴</div>
-            <div onclick="switchTab('meal')" style="padding:10px 14px; border-radius:8px; cursor:pointer; font-weight:700; font-size:14px; background:#f0f7ff; color:#003366; margin-bottom:6px;">🍽️ 석식 관리</div>
-            <div onclick="switchTab('staff')" style="padding:10px 14px; border-radius:8px; cursor:pointer; font-weight:700; font-size:14px; background:#f8fafc; color:#64748b;">👤 직원 식사 관리</div>
-        </div>
-        <div class="upload-section">
-            <p style="font-size: 13px; color: #64748b; margin-bottom: 15px;">교육생 앱에 노출될<br>식단표 사진을 업로드하세요.</p>
-            <input type="file" id="menuFile" accept="image/*" style="display:none;" onchange="handleFileUpload(this)">
-            <button class="upload-btn" onclick="document.getElementById('menuFile').click()">
-                <i class="fa-solid fa-camera"></i> 식단표 사진 변경
-            </button>
-            <div style="font-size: 12px; font-weight: bold; color: var(--navy-dark); margin-bottom: 5px; text-align: left;">현재 등록된 사진:</div>
-            <img id="menuPreview" src="" alt="식단표 로딩 중...">
-        </div>
-    </div>
-
     <main class="app-content">
-    <div id="tabMeal">
-      <div class="countdown-bar">
-          <i class="fa-regular fa-clock"></i> 금일 석식 조사 마감까지 <span id="timerText">00:00:00</span> 남음
-      </div>
 
-      <div class="main-stat-card">
-          <span class="main-stat-label">오늘의 석식 식사 예정 총원</span>
-          <div class="main-stat-val" id="grandTotalNet">0<span>명</span></div>
-      </div>
+        <!-- 날짜 표시 -->
+        <div><span class="date-badge" id="todayBadge">-</span></div>
 
-      <div class="sub-stat-row">
-          <div class="sub-stat-card" onclick="showAllExclusions()">
-              <span class="sub-stat-label">오늘의 석식 제외 신청 (명단보기)</span>
-              <span class="sub-stat-val" id="grandTotalSkips">0명</span>
-          </div>
-      </div>
-
-      <div class="list-card">
-          <div class="card-header"><i class="fa-solid fa-clipboard-list"></i> 과정별 식수 상세 (클릭 시 명단확인)</div>
-          <table class="status-table">
-              <thead>
-                  <tr>
-                      <th style="width: 50%;">과정명</th>
-                      <th style="width: 15%;">입교</th>
-                      <th style="width: 15%;">제외</th>
-                      <th style="width: 20%;">예정</th>
-                  </tr>
-              </thead>
-              <tbody id="roomTableBody"></tbody>
-          </table>
-      </div>
-    </div><!-- /tabMeal -->
-
-  <!-- 직원 식사 관리 탭 -->
-  <div id="tabStaff" style="display:none; padding:15px;">
-
-    <!-- 식당 QR 카드 -->
-    <div style="background:white; border-radius:16px; padding:20px; margin-bottom:15px; box-shadow:0 1px 4px rgba(0,0,0,0.06); text-align:center;">
-        <div style="font-size:15px; font-weight:900; color:#0f172a; margin-bottom:4px;">
-            <i class="fa-solid fa-qrcode" style="color:#10b981; margin-right:6px;"></i>식당 공용 QR코드
+        <!-- ① 석식 요약 3칸 카드 -->
+        <div class="stat-grid">
+            <div class="stat-card sc-total" onclick="void 0">
+                <div class="sc-label">전체<br>식수 인원</div>
+                <div><span class="sc-val" id="totalMeals">-</span><span class="sc-unit">명</span></div>
+                <i class="fa-solid fa-users"></i>
+            </div>
+            <div class="stat-card sc-skip" onclick="openSkipModal()">
+                <div class="sc-label">석식 제외<br>신청자</div>
+                <div><span class="sc-val" id="skipCount">-</span><span class="sc-unit">명</span></div>
+                <i class="fa-solid fa-ban"></i>
+            </div>
+            <div class="stat-card sc-eat">
+                <div class="sc-label">실제<br>식사 예정</div>
+                <div><span class="sc-val" id="eatCount">-</span><span class="sc-unit">명</span></div>
+                <i class="fa-solid fa-bowl-rice"></i>
+            </div>
         </div>
-        <div style="font-size:12px; color:#64748b; margin-bottom:16px; line-height:1.5;">
-            이 QR을 식당 입구에 부착하세요.<br>
-            직원이 각자 폰으로 스캔 → 첫 스캔 시 이름 등록 → 이후 자동 기록
+        <div style="font-size:11px; color:var(--muted); text-align:right; margin-top:-6px;">
+            <i class="fa-solid fa-circle-info"></i> 제외 신청자 카드를 누르면 과정별 명단을 확인할 수 있습니다
         </div>
-        <div id="canteenQRBox" style="display:flex; justify-content:center; margin-bottom:14px;"></div>
-        <div id="canteenQRUrl" style="font-size:10px; color:#cbd5e1; word-break:break-all; margin-bottom:14px; line-height:1.4;"></div>
-        <button onclick="printQR()" style="width:100%; padding:12px; background:#003366; color:white; border:none; border-radius:11px; font-size:14px; font-weight:800; cursor:pointer;">
-            <i class="fa-solid fa-print"></i> QR 인쇄 / 저장
-        </button>
-    </div>
 
-    <!-- 오늘 식사 현황 + 전체 이력 -->
-    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;">
-        <div style="font-size:13px; font-weight:800; color:#64748b;">
-            <i class="fa-solid fa-clock-rotate-left"></i> 식사 이력
-        </div>
-        <div style="display:flex; gap:6px; align-items:center;">
-            <input type="date" id="mealLogDatePicker"
-                style="padding:5px 8px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:12px; font-weight:700; outline:none;">
-            <button onclick="loadMealLog()" style="padding:5px 10px; background:#f1f5f9; border:none; border-radius:6px; font-size:12px; font-weight:800; cursor:pointer; color:#475569;">
-                <i class="fa-solid fa-rotate"></i>
+        <!-- ② 금주 식단표 섹션 -->
+        <div class="section-card">
+            <div class="section-title"><i class="fa-solid fa-calendar-week"></i> 금주 식단표 관리</div>
+
+            <!-- 업로드 상태 배너 -->
+            <div id="menuBanner" class="menu-status-banner msb-no">
+                <span class="msb-icon">⚠️</span>
+                <div class="msb-text">
+                    <div>아직 금주 식단표가 갱신되지 않았습니다.</div>
+                    <div class="msb-date">교육생에게 미표시 상태입니다.</div>
+                </div>
+            </div>
+
+            <!-- 미리보기 이미지 (업로드 후 노출) -->
+            <div id="menuPreviewWrap" style="display:none; margin-bottom:12px;">
+                <img id="menuPreviewImg" class="menu-preview-img" src="" alt="이번 주 식단표" onclick="openImgOverlay(this.src)">
+            </div>
+
+            <!-- 업로드 버튼 -->
+            <input type="file" id="menuFileInput" accept="image/*,application/pdf">
+            <button class="upload-btn btn-green" onclick="document.getElementById('menuFileInput').click()" style="margin-bottom:8px;">
+                <i class="fa-solid fa-cloud-arrow-up"></i> 금주 식단표 업로드 (이미지)
+            </button>
+            <!-- 삭제 버튼 (업로드 후 노출) -->
+            <button id="menuDeleteBtn" class="upload-btn btn-red" onclick="deleteMenu()" style="display:none;">
+                <i class="fa-solid fa-trash-can"></i> 이번 주 식단표 삭제
             </button>
         </div>
-    </div>
-    <div id="mealLogSummary" style="background:#f0fdf4; border-radius:10px; padding:10px 14px; font-size:13px; font-weight:800; color:#166534; margin-bottom:10px; display:none;"></div>
-    <div id="staffList">
-        <div style="text-align:center; padding:40px 0; color:#94a3b8; font-size:14px;">불러오는 중...</div>
-    </div>
-  </div><!-- /tabStaff -->
 
-  </main>
-
-    <div id="detailModal" class="modal-overlay" onclick="if(event.target==this) closeDetailModal()">
-        <div class="modal-box">
-            <div class="modal-header">
-                <div id="modalTitle" style="font-weight: 800;">제외 교육생 명단</div>
-                <i class="fa-solid fa-xmark modal-close" onclick="closeDetailModal()"></i>
+        <!-- ③ 과정별 운영 현황 -->
+        <div class="section-card">
+            <div class="section-title"><i class="fa-solid fa-list-check"></i> 현재 운영 중인 과정 현황</div>
+            <div id="courseStatusList">
+                <div class="spinner-wrap"><div class="spinner"></div><br>불러오는 중...</div>
             </div>
-            <div class="modal-body" id="modalList"></div>
-            <button onclick="closeDetailModal()" style="width: 100%; padding: 15px; border: none; background: #f1f5f9; font-weight: 800; color: #64748b; cursor: pointer;">닫기</button>
         </div>
+
+    </main>
+</div>
+
+<!-- ── 과정별 제외 신청자 모달 ── -->
+<div class="modal-bg" id="skipModal">
+    <div class="modal-sheet">
+        <div class="modal-handle"></div>
+        <div class="modal-title"><i class="fa-solid fa-ban" style="color:var(--red); margin-right:6px;"></i>석식 제외 신청자 — 과정별 명단</div>
+        <div class="modal-body" id="skipModalBody">
+            <div class="empty-msg">데이터 없음</div>
+        </div>
+        <button class="modal-close-btn" onclick="closeSkipModal()">닫기</button>
     </div>
+</div>
 
-    <footer class="app-footer">
-      <div id="footer-date">로딩 중...</div>
-      <div class="footer-logo"><img src="logo.png" alt="KAC"></div>
-    </footer>
-  </div>
+<!-- ── 이미지 전체보기 ── -->
+<div id="imgOverlay">
+    <button onclick="document.getElementById('imgOverlay').classList.remove('open')"><i class="fa-solid fa-xmark"></i></button>
+    <img id="overlayImg" src="" alt="식단표 전체보기">
+</div>
 
-  <script src="config.js"></script>
-  <script>
-    let allCourseData = {};
+<!-- ── Toast ── -->
+<div id="toast"></div>
 
-    function toggleSideMenu(open) {
-        document.getElementById('sideMenu').classList.toggle('open', open);
-        if(open) fetchCurrentMenu();
-    }
+<script>
+/* ═══════════════════════════════════════════════════════════
+   항기원 영양사 플랫폼 — nutritionist.html
+   Firebase 경로:
+     courses/{room}/students          → 교육생 목록
+     courses/{room}/dinner_skips/{date}/{token} → 석식 제외 신청 ("이름(뒷4자리)" 문자열)
+     system/weeklyMenu                → {weekKey, uploadedAt, url, fileName}
+     system/weeklyMenu 는 차주가 되면 autoCleanMenu()가 삭제
+═══════════════════════════════════════════════════════════ */
 
-    function updateClock() {
-        const now = new Date();
-        const year = now.getFullYear();
-        const month = now.getMonth() + 1;
-        const day = now.getDate();
-        const hh = String(now.getHours()).padStart(2, '0');
-        const mm = String(now.getMinutes()).padStart(2, '0');
-        document.getElementById('footer-date').innerText = `${year}.${month}.${day} ${hh}시 ${mm}분`;
-    }
-    setInterval(updateClock, 1000);
-    updateClock();
+const db = firebase.database();
+const ROOMS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J'];
+const MENU_KEY = 'system/weeklyMenu';
 
-    function updateCountdown() {
-        const now = new Date();
-        const deadline = new Date();
-        deadline.setHours(16, 0, 0, 0);
-        let diff = deadline - now;
-        const timerEl = document.getElementById('timerText');
-        if (diff <= 0) { timerEl.innerText = "조사 마감됨"; return; }
-        const h = String(Math.floor(diff / (1000 * 60 * 60))).padStart(2, '0');
-        const m = String(Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))).padStart(2, '0');
-        const s = String(Math.floor((diff % (1000 * 60)) / 1000)).padStart(2, '0');
-        timerEl.innerText = `${h}:${m}:${s}`;
-    }
-    setInterval(updateCountdown, 1000);
+/* ── 날짜 헬퍼 ── */
+function toLocalStr(d) {
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+function getToday() { return toLocalStr(new Date()); }
+function getMondayOf(dateStr) {
+    const d = new Date(dateStr + 'T00:00:00');
+    const dow = (d.getDay() + 6) % 7;
+    d.setDate(d.getDate() - dow);
+    return toLocalStr(d);
+}
+function getThisWeekKey() { return getMondayOf(getToday()); }
 
+/* ── 전역 상태 ── */
+let allRoomData = {};          // { room: { settings, status, students, dinner_skips } }
+let uploadedMenuData = null;   // system/weeklyMenu 값
 
+/* ── 초기화 ── */
+window.addEventListener('DOMContentLoaded', () => {
+    // 헤더 날짜 배지
+    const today = getToday();
+    const dNames = ['일','월','화','수','목','금','토'];
+    const d = new Date();
+    document.getElementById('todayBadge').textContent = `${today} (${dNames[d.getDay()]})`;
 
+    // 파일 선택 이벤트
+    document.getElementById('menuFileInput').addEventListener('change', handleFileSelect);
 
+    loadAll();
+    autoCleanMenu(); // 차주가 되면 지난 주 식단 자동 삭제
+});
 
-// --- [수정] 데이터 로드 (종료된 과정 필터링 추가) ---
-    function fetchMealData() {
-        const today = getTodayString();
-        // 비교를 위한 오늘 날짜 (YYYY-MM-DD)
-        const now = new Date();
-        const todayStr = now.getFullYear() + '-' + 
-                       String(now.getMonth() + 1).padStart(2, '0') + '-' + 
-                       String(now.getDate()).padStart(2, '0');
+function loadAll() {
+    loadMenuStatus();
+    loadRoomData();
+}
 
-        firebase.database().ref('courses').on('value', snap => {
-            const data = snap.val() || {};
-            allCourseData = data;
-            const tbody = document.getElementById('roomTableBody');
-            tbody.innerHTML = "";
-            
-            let grandTotalArrived = 0; 
-            let grandTotalSkips = 0;
+/* ══════════════════════════
+   ① 식수 현황 집계
+══════════════════════════ */
+function loadRoomData() {
+    const today = getToday();
+    document.getElementById('courseStatusList').innerHTML =
+        '<div class="spinner-wrap"><div class="spinner"></div><br>불러오는 중...</div>';
 
-            Object.keys(data).forEach(rid => {
-                const room = data[rid];
-                const settings = room.settings || {};
+    db.ref('courses').on('value', snap => {
+        allRoomData = snap.val() || {};
+        renderMealStats(today);
+        renderCourseStatus(today);
+    });
+}
 
-                // [필터링 로직 추가] 
-                // 1. 방 상태가 'active'(사용중)여야 함
-                if (room.status && room.status.roomStatus === 'active') {
-                    
-                    // 2. 날짜 체크: 종료일이 오늘보다 이전인 과거 과정은 무시
-                    if (settings.period && settings.period.includes(" ~ ")) {
-                        const endDate = settings.period.split(" ~ ")[1];
-                        if (endDate < todayStr) {
-                            return; // 과거 과정이면 이 루프를 건너뜁니다.
-                        }
-                    }
+function renderMealStats(today) {
+    let totalStudents = 0;
+    let skipStudents  = 0;
 
-                    // 실제 접속한 교육생 인원 추출
-                    const actualStudents = Object.values(room.students || {}).filter(s => s.name && s.name !== "undefined");
-                    const actualNames = Array.from(new Set(actualStudents.map(s => s.name))); 
-                    
-                    const roomArrived = actualNames.length; 
-                    const roomSkips = room.dinner_skips && room.dinner_skips[today] ? Object.keys(room.dinner_skips[today]).length : 0;
-                    
-                    if (roomArrived > 0) {
-                        grandTotalArrived += roomArrived;
-                        grandTotalSkips += roomSkips;
+    Object.keys(allRoomData).forEach(rid => {
+        const room = allRoomData[rid];
+        if (!room?.status?.roomStatus || room.status.roomStatus !== 'active') return;
 
-                        const cName = settings.courseName || `강의실 ${rid}`;
-                        tbody.innerHTML += `
-                            <tr onclick="showRoomDetails('${rid}', '${cName}')">
-                                <td class="course-name">${cName}</td>
-                                <td>${roomArrived}</td>
-                                <td class="skip-val">${roomSkips}</td>
-                                <td class="net-val">${roomArrived - roomSkips}</td>
-                            </tr>`;
-                    }
-                }
-            });
-            
-            document.getElementById('grandTotalNet').innerHTML = (grandTotalArrived - grandTotalSkips) + "<span>명</span>";
-            document.getElementById('grandTotalSkips').innerText = grandTotalSkips + "명";
-
-            // 만약 표시할 과정이 하나도 없다면 안내 문구 출력
-            if (tbody.innerHTML === "") {
-                tbody.innerHTML = "<tr><td colspan='4' style='padding:50px; color:#94a3b8; text-align:center;'>현재 진행 중인 교육 과정이 없습니다.</td></tr>";
-            }
+        // 교육생 수 (온라인 포함 전체 등록자, 중복 제거)
+        const students = room.students || {};
+        const names = new Set();
+        Object.values(students).forEach(s => {
+            if (s?.name && s.name !== 'undefined') names.add(s.name.trim());
         });
+        totalStudents += names.size;
+
+        // 석식 제외 신청자
+        const skips = room.dinner_skips?.[today] || {};
+        skipStudents += Object.keys(skips).length;
+    });
+
+    const eat = Math.max(0, totalStudents - skipStudents);
+    document.getElementById('totalMeals').textContent = totalStudents;
+    document.getElementById('skipCount').textContent  = skipStudents;
+    document.getElementById('eatCount').textContent   = eat;
+}
+
+function renderCourseStatus(today) {
+    const list = document.getElementById('courseStatusList');
+    const activeRooms = Object.keys(allRoomData).filter(rid => {
+        const r = allRoomData[rid];
+        return r?.status?.roomStatus === 'active';
+    });
+
+    if (!activeRooms.length) {
+        list.innerHTML = '<div class="empty-msg">현재 운영 중인 과정이 없습니다.</div>';
+        return;
     }
 
-
-
-
-
-
-
-    function showRoomDetails(rid, cName) {
-        const today = getTodayString();
-        const skips = allCourseData[rid].dinner_skips ? allCourseData[rid].dinner_skips[today] : null;
-        const modal = document.getElementById('detailModal');
-        const listArea = document.getElementById('modalList');
-        document.getElementById('modalTitle').innerText = cName;
-        listArea.innerHTML = "";
-
-        if (!skips || Object.keys(skips).length === 0) {
-            listArea.innerHTML = "<div style='text-align:center; padding:30px; color:#94a3b8;'>석식 제외 신청자가 없습니다.</div>";
-        } else {
-            Object.values(skips).sort().forEach(val => {
-                const name = val.split('(')[0];
-                const phone = val.includes('(') ? val.split('(')[1].replace(')', '') : '';
-                listArea.innerHTML += `
-                    <div class="skip-user-item">
-                        <div class="skip-user-main"><span class="skip-user-name">${name}</span><span class="skip-user-phone">${phone}</span></div>
-                    </div>`;
-            });
-        }
-        modal.style.display = 'flex';
-    }
-
-    function showAllExclusions() {
-        const today = getTodayString();
-        const modal = document.getElementById('detailModal');
-        const listArea = document.getElementById('modalList');
-        document.getElementById('modalTitle').innerText = "전체 석식 제외자 현황";
-        listArea.innerHTML = "";
-
-        let allSkips = [];
-        Object.keys(allCourseData).forEach(rid => {
-            const room = allCourseData[rid];
-            const skips = room.dinner_skips ? room.dinner_skips[today] : null;
-            if(skips) {
-                Object.values(skips).forEach(val => {
-                    allSkips.push({
-                        nameInfo: val,
-                        course: room.settings?.courseName || rid
-                    });
-                });
-            }
+    list.innerHTML = activeRooms.map(rid => {
+        const room    = allRoomData[rid];
+        const cName   = room.settings?.courseName || `Room ${rid}`;
+        const students = room.students || {};
+        const names   = new Set();
+        Object.values(students).forEach(s => {
+            if (s?.name && s.name !== 'undefined') names.add(s.name.trim());
         });
+        const total = names.size;
+        const skips = Object.keys(room.dinner_skips?.[today] || {}).length;
+        const eat   = Math.max(0, total - skips);
 
-        if (allSkips.length === 0) {
-            listArea.innerHTML = "<div style='text-align:center; padding:30px; color:#94a3b8;'>오늘 석식 제외자가 없습니다.</div>";
-        } else {
-            allSkips.sort((a,b) => a.nameInfo.localeCompare(b.nameInfo));
-            allSkips.forEach(item => {
-                const name = item.nameInfo.split('(')[0];
-                const phone = item.nameInfo.includes('(') ? item.nameInfo.split('(')[1].replace(')', '') : '';
-                listArea.innerHTML += `
-                    <div class="skip-user-item">
-                        <div class="skip-user-main"><span class="skip-user-name">${name}</span><span class="skip-user-phone">${phone}</span></div>
-                        <div class="skip-user-course">${item.course}</div>
-                    </div>`;
-            });
-        }
-        modal.style.display = 'flex';
-    }
+        const skipPct = total > 0 ? Math.round(skips / total * 100) : 0;
+        const barColor = skipPct > 30 ? '#ef4444' : skipPct > 10 ? '#f59e0b' : '#10b981';
 
-    function closeDetailModal() { document.getElementById('detailModal').style.display = 'none'; }
-
-    function fetchCurrentMenu() {
-        firebase.database().ref('system/nutrition_menu').once('value', snap => {
-            const imgEl = document.getElementById('menuPreview');
-            imgEl.src = snap.exists() ? snap.val() : "https://via.placeholder.com/300x400?text=No+Image";
-        });
-    }
-
-// 사진을 압축하고 용량을 줄이는 함수 (추가)
-    function compressImage(file, callback) {
-        const reader = new FileReader();
-        reader.onload = function (e) {
-            const img = new Image();
-            img.onload = function () {
-                const canvas = document.createElement('canvas');
-                let width = img.width;
-                let height = img.height;
-
-                // 최대 가로 크기를 1000px로 제한 (용량 최적화 핵심)
-                const MAX_WIDTH = 1000;
-                if (width > MAX_WIDTH) {
-                    height *= MAX_WIDTH / width;
-                    width = MAX_WIDTH;
-                }
-
-                canvas.width = width;
-                canvas.height = height;
-                const ctx = canvas.getContext('2d');
-                ctx.drawImage(img, 0, 0, width, height);
-
-                // 이미지 품질을 70%로 낮춰서 용량을 대폭 줄임
-                const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
-                callback(dataUrl);
-            };
-            img.src = e.target.result;
-        };
-        reader.readAsDataURL(file);
-    }
-
-    // 기존의 업로드 함수를 압축 기능이 포함된 버전으로 교체
-    async function handleFileUpload(input) {
-        const file = input.files[0];
-        if (!file) return;
-
-        // 로딩 시작 알림 (선택사항)
-        const btn = document.querySelector('.upload-btn');
-        const originalText = btn.innerHTML;
-        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 압축 중...';
-        btn.disabled = true;
-
-        compressImage(file, async function(compressedData) {
-            try {
-                await firebase.database().ref('system/nutrition_menu').set(compressedData);
-                document.getElementById('menuPreview').src = compressedData;
-                alert("식단표가 압축되어 업로드되었습니다. 이제 학생들이 아주 빠르게 볼 수 있습니다.");
-            } catch (error) {
-                alert("업로드 실패: " + error.message);
-            } finally {
-                btn.innerHTML = originalText;
-                btn.disabled = false;
-            }
-        });
-    }
-
-    fetchMealData();
-    fetchCurrentMenu();
-
-    // ─────────────────────────────────────────────
-    // 직원 식사 관리 모듈
-    // ─────────────────────────────────────────────
-    let currentTab = 'meal';
-
-    function switchTab(tab) {
-        currentTab = tab;
-        document.getElementById('tabMeal').style.display  = tab === 'meal'  ? 'block' : 'none';
-        document.getElementById('tabStaff').style.display = tab === 'staff' ? 'block' : 'none';
-        const btns = document.querySelectorAll('#sideMenu [onclick^="switchTab"]');
-        btns.forEach(b => {
-            const isActive = b.getAttribute('onclick').includes(tab);
-            b.style.background = isActive ? '#f0f7ff' : '#f8fafc';
-            b.style.color      = isActive ? '#003366' : '#64748b';
-        });
-        toggleSideMenu(false);
-        if (tab === 'staff') initStaffTab();
-    }
-
-    // ── 직원 식사 탭 초기화
-    function initStaffTab() {
-        // 1. 날짜 피커 기본값: 오늘
-        const picker = document.getElementById('mealLogDatePicker');
-        if (picker && !picker.value) {
-            const d = new Date();
-            picker.value = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-        }
-
-        // 2. 식당 공용 QR 생성
-        const base = window.location.href.replace(/[^/]*$/, '');
-        const url  = `${base}staff_meal.html`;
-        const box  = document.getElementById('canteenQRBox');
-        const urlEl = document.getElementById('canteenQRUrl');
-
-        if (box && !box.querySelector('canvas')) {
-            new QRCode(box, { text: url, width: 200, height: 200, correctLevel: QRCode.CorrectLevel.H });
-        }
-        if (urlEl) urlEl.innerText = url;
-
-        // 3. 이력 로드
-        loadMealLog();
-    }
-
-    // ── QR 인쇄
-    function printQR() {
-        const base = window.location.href.replace(/[^/]*$/, '');
-        const url  = `${base}staff_meal.html`;
-        const win  = window.open('', '', 'width=500,height=600');
-        win.document.write(`
-            <!DOCTYPE html><html><head><meta charset="UTF-8">
-            <style>
-                body { font-family: sans-serif; text-align:center; padding:40px 20px; }
-                h2 { font-size:22px; margin-bottom:6px; }
-                p  { font-size:13px; color:#64748b; margin-bottom:20px; line-height:1.5; }
-                .url { font-size:11px; color:#94a3b8; word-break:break-all; margin-top:15px; }
-                @media print { button { display:none; } }
-            </style>
-            <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script>
-            </head><body>
-            <h2>🍽️ KAC 식당 식사 체크인</h2>
-            <p>QR코드를 스캔하여 식사를 기록해 주세요.<br>처음 스캔 시 이름을 한 번만 등록하면<br>이후 자동으로 기록됩니다.</p>
-            <div id="qr" style="display:flex;justify-content:center;margin:20px 0;"></div>
-            <div class="url">${url}</div>
-            <br><button onclick="window.print()">인쇄하기</button>
-            <script>
-                new QRCode(document.getElementById('qr'), {text:'${url}', width:250, height:250, correctLevel:QRCode.CorrectLevel.H});
-                setTimeout(() => window.print(), 800);
-            <\/script>
-            </body></html>`);
-        win.document.close();
-    }
-
-    // ── 선택 날짜의 식사 이력 조회
-    async function loadMealLog() {
-        const picker = document.getElementById('mealLogDatePicker');
-        const date   = picker ? picker.value : '';
-        if (!date) return;
-
-        const list    = document.getElementById('staffList');
-        const summary = document.getElementById('mealLogSummary');
-        list.innerHTML = '<div style="text-align:center; padding:30px 0; color:#94a3b8; font-size:14px;">불러오는 중...</div>';
-
-        // system/staff_meal_log 구조: {deviceId: {date: {name, dept, time, ...}}}
-        const logSnap = await firebase.database().ref('system/staff_meal_log').once('value');
-        const allLog  = logSnap.val() || {};
-
-        // 해당 날짜에 식사한 기록 수집
-        const dayRecords = [];
-        Object.entries(allLog).forEach(([deviceId, dates]) => {
-            if (dates[date]) {
-                dayRecords.push({ deviceId, ...dates[date] });
-            }
-        });
-
-        dayRecords.sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
-
-        // 요약 배지
-        if (summary) {
-            summary.style.display = dayRecords.length > 0 ? 'block' : 'none';
-            summary.innerHTML = `<i class="fa-solid fa-utensils"></i> ${date} 식사 인원: <b style="font-size:17px;">${dayRecords.length}명</b>`;
-        }
-
-        if (dayRecords.length === 0) {
-            list.innerHTML = `<div style="text-align:center; padding:40px 0; color:#94a3b8; font-size:14px; font-weight:700;">
-                ${date} 식사 기록이 없습니다.</div>`;
-            return;
-        }
-
-        list.innerHTML = dayRecords.map((r, i) => `
-            <div style="background:white; border-radius:12px; padding:14px 16px; margin-bottom:8px;
-                        border:1px solid #e2e8f0; display:flex; align-items:center; justify-content:space-between;
-                        box-shadow:0 1px 3px rgba(0,0,0,0.04);">
-                <div style="display:flex; align-items:center; gap:12px;">
-                    <div style="width:32px; height:32px; background:#f0fdf4; border-radius:50%;
-                                display:flex; align-items:center; justify-content:center;
-                                font-size:14px; font-weight:900; color:#10b981;">${i+1}</div>
-                    <div>
-                        <div style="font-size:15px; font-weight:900; color:#0f172a;">${r.name || '(익명)'}</div>
-                        <div style="font-size:12px; color:#64748b;">${r.dept || ''}</div>
-                    </div>
+        return `
+        <div style="border:1.5px solid var(--border); border-radius:14px; padding:14px; margin-bottom:8px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                <div>
+                    <div style="font-size:12px; color:var(--muted); font-weight:700;">Room ${rid}</div>
+                    <div style="font-size:14px; font-weight:900; color:var(--navy);">${cName}</div>
                 </div>
                 <div style="text-align:right;">
-                    <div style="font-size:14px; font-weight:800; color:#059669;">${r.time || '-'}</div>
-                    <div style="font-size:10px; color:#cbd5e1; margin-top:2px;">기기ID: ${r.deviceId.slice(-4)}</div>
+                    <div style="font-size:11px; color:var(--muted);">등록 인원</div>
+                    <div style="font-size:18px; font-weight:900;">${total}<small style="font-size:12px;">명</small></div>
                 </div>
-            </div>`).join('');
+            </div>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:10px;">
+                <div style="background:#fee2e2; border-radius:10px; padding:8px 12px; text-align:center;">
+                    <div style="font-size:10px; color:#b91c1c; font-weight:700;">석식 제외</div>
+                    <div style="font-size:20px; font-weight:900; color:#ef4444;">${skips}명</div>
+                </div>
+                <div style="background:#ecfdf5; border-radius:10px; padding:8px 12px; text-align:center;">
+                    <div style="font-size:10px; color:#065f46; font-weight:700;">식사 예정</div>
+                    <div style="font-size:20px; font-weight:900; color:#10b981;">${eat}명</div>
+                </div>
+            </div>
+            <!-- 제외율 바 -->
+            <div style="background:#f1f5f9; border-radius:99px; height:6px; overflow:hidden;">
+                <div style="background:${barColor}; height:100%; width:${skipPct}%; border-radius:99px; transition:width .4s;"></div>
+            </div>
+            <div style="font-size:10px; color:var(--muted); margin-top:4px; text-align:right;">제외율 ${skipPct}%</div>
+        </div>`;
+    }).join('');
+}
+
+/* ══════════════════════════
+   ② 과정별 제외 신청자 모달
+══════════════════════════ */
+function openSkipModal() {
+    const today  = getToday();
+    const modal  = document.getElementById('skipModal');
+    const body   = document.getElementById('skipModalBody');
+
+    const activeRooms = Object.keys(allRoomData).filter(rid => {
+        return allRoomData[rid]?.status?.roomStatus === 'active';
+    });
+
+    if (!activeRooms.length) {
+        body.innerHTML = '<div class="empty-msg">현재 운영 중인 과정이 없습니다.</div>';
+        modal.classList.add('open');
+        return;
     }
 
-    // ── 이력 삭제 (특정 날짜)
-    async function deleteMealLog(deviceId, date) {
-        if (!confirm('이 기록을 삭제하시겠습니까?')) return;
-        await firebase.database().ref(`system/staff_meal_log/${deviceId}/${date}`).remove();
-        loadMealLog();
+    let html = '';
+    let anySkip = false;
+
+    activeRooms.forEach(rid => {
+        const room  = allRoomData[rid];
+        const cName = room.settings?.courseName || `Room ${rid}`;
+        const skips = room.dinner_skips?.[today] || {};
+        const list  = Object.values(skips);
+
+        if (!list.length) {
+            html += `
+            <div class="course-skip-block">
+                <div class="csb-header">
+                    <div class="csb-name"><i class="fa-solid fa-door-open" style="color:var(--blue); margin-right:5px;"></i>Room ${rid} · ${cName}</div>
+                    <span class="csb-badge" style="background:#f0fdf4; color:#16a34a;">제외 0명</span>
+                </div>
+                <div class="csb-list"><div style="font-size:12px; color:var(--muted); padding:4px 0;">전원 석식 예정</div></div>
+            </div>`;
+        } else {
+            anySkip = true;
+            const names = list.map((v, i) =>
+                `<div class="csb-person"><i class="fa-solid fa-circle-minus"></i>${v}</div>`
+            ).join('');
+            html += `
+            <div class="course-skip-block">
+                <div class="csb-header">
+                    <div class="csb-name"><i class="fa-solid fa-door-open" style="color:var(--blue); margin-right:5px;"></i>Room ${rid} · ${cName}</div>
+                    <span class="csb-badge">${list.length}명 제외</span>
+                </div>
+                <div class="csb-list">${names}</div>
+            </div>`;
+        }
+    });
+
+    body.innerHTML = html || '<div class="empty-msg">데이터 없음</div>';
+    modal.classList.add('open');
+}
+
+function closeSkipModal() {
+    document.getElementById('skipModal').classList.remove('open');
+}
+
+// 배경 클릭 시 모달 닫기
+document.getElementById('skipModal').addEventListener('click', function(e) {
+    if (e.target === this) closeSkipModal();
+});
+
+/* ══════════════════════════
+   ③ 금주 식단표 관리
+══════════════════════════ */
+function loadMenuStatus() {
+    db.ref(MENU_KEY).on('value', snap => {
+        uploadedMenuData = snap.val();
+        renderMenuUI(uploadedMenuData);
+    });
+}
+
+function renderMenuUI(data) {
+    const banner   = document.getElementById('menuBanner');
+    const preview  = document.getElementById('menuPreviewWrap');
+    const img      = document.getElementById('menuPreviewImg');
+    const delBtn   = document.getElementById('menuDeleteBtn');
+
+    const thisWeek = getThisWeekKey();
+
+    if (data && data.weekKey === thisWeek && data.url) {
+        // ✅ 이번 주 식단 있음
+        const uploadDate = data.uploadedAt
+            ? new Date(data.uploadedAt).toLocaleString('ko-KR', { month:'numeric', day:'numeric', hour:'2-digit', minute:'2-digit' })
+            : '날짜 미상';
+        banner.className = 'menu-status-banner msb-ok';
+        banner.innerHTML = `
+            <span class="msb-icon">✅</span>
+            <div class="msb-text">
+                <div>금주 식단표가 등록되어 있습니다.</div>
+                <div class="msb-date">업로드: ${uploadDate} · ${data.fileName || ''}</div>
+            </div>`;
+        if (data.url.startsWith('data:image')) {
+            img.src = data.url;
+            preview.style.display = 'block';
+        } else {
+            preview.style.display = 'none';
+        }
+        delBtn.style.display = 'flex';
+    } else {
+        // ❌ 미등록 또는 지난 주 데이터
+        banner.className = 'menu-status-banner msb-no';
+        banner.innerHTML = `
+            <span class="msb-icon">⚠️</span>
+            <div class="msb-text">
+                <div>아직 금주 식단표가 갱신되지 않았습니다.</div>
+                <div class="msb-date">교육생에게 미표시 상태입니다.</div>
+            </div>`;
+        preview.style.display = 'none';
+        img.src = '';
+        delBtn.style.display = 'none';
+    }
+}
+
+function handleFileSelect(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    e.target.value = '';
+
+    // 이미지 파일만 Base64로 저장 (5MB 제한)
+    if (!file.type.startsWith('image/')) {
+        showToast('⚠️ 이미지 파일(JPG·PNG 등)만 업로드할 수 있습니다.');
+        return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+        showToast('⚠️ 파일 크기가 5MB를 초과합니다. 이미지를 압축해 주세요.');
+        return;
     }
 
-  </script>
+    showToast('⏳ 업로드 중...');
 
+    const reader = new FileReader();
+    reader.onload = async function(ev) {
+        const base64 = ev.target.result; // data:image/...;base64,...
+        const payload = {
+            weekKey:    getThisWeekKey(),
+            uploadedAt: Date.now(),
+            fileName:   file.name,
+            url:        base64
+        };
+        try {
+            await db.ref(MENU_KEY).set(payload);
+            showToast('✅ 금주 식단표가 등록되었습니다!');
+        } catch (err) {
+            showToast('❌ 저장 실패: ' + err.message);
+        }
+    };
+    reader.readAsDataURL(file);
+}
 
+async function deleteMenu() {
+    if (!confirm('이번 주 식단표를 삭제하시겠습니까?\n교육생 화면에서도 즉시 사라집니다.')) return;
+    try {
+        await db.ref(MENU_KEY).remove();
+        showToast('🗑️ 식단표가 삭제되었습니다.');
+    } catch (err) {
+        showToast('❌ 삭제 실패: ' + err.message);
+    }
+}
 
+/* 자동 만료 정리 — 저장된 weekKey가 이번 주(thisWeek)가 아니면 삭제
+   교육생 화면이 아닌 영양사 플랫폼 진입 시 1회 실행 */
+async function autoCleanMenu() {
+    try {
+        const snap = await db.ref(MENU_KEY).once('value');
+        if (!snap.exists()) return;
+        const data = snap.val();
+        if (!data || !data.weekKey) return;
+        const thisWeek = getThisWeekKey();
+        if (data.weekKey < thisWeek) {
+            // 지난 주 데이터 → 자동 삭제
+            await db.ref(MENU_KEY).remove();
+            console.log('[영양사] 지난 주 식단표 자동 삭제 완료:', data.weekKey);
+        }
+    } catch (e) {
+        console.warn('[영양사] 식단표 자동 정리 오류:', e);
+    }
+}
+
+/* ── 이미지 전체보기 ── */
+function openImgOverlay(src) {
+    document.getElementById('overlayImg').src = src;
+    document.getElementById('imgOverlay').classList.add('open');
+}
+document.getElementById('imgOverlay').addEventListener('click', function(e) {
+    if (e.target === this) this.classList.remove('open');
+});
+
+/* ── Toast ── */
+let _toastTimer = null;
+function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    clearTimeout(_toastTimer);
+    _toastTimer = setTimeout(() => t.classList.remove('show'), 3000);
+}
+</script>
 </body>
 </html>
