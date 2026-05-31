@@ -468,7 +468,8 @@
             </label>
         </div>
         
-        <button onclick="saveProfileWithCheck()" style="width:100%; padding:16px; background:#3b82f6; color:white; border:none; border-radius:12px; font-size:18px; font-weight:900; cursor:pointer; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);">동의하고 입장하기</button>
+        <button id="profileSaveBtn" onclick="saveProfileWithCheck()" style="width:100%; padding:16px; background:#3b82f6; color:white; border:none; border-radius:12px; font-size:18px; font-weight:900; cursor:pointer; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);">동의하고 입장하기</button>
+        <button id="profileCloseBtn" onclick="closeProfileOverlay()" style="display:none; width:100%; margin-top:10px; padding:14px; background:#f1f5f9; color:#475569; border:none; border-radius:12px; font-size:16px; font-weight:800; cursor:pointer;">닫기</button>
     </div>
 </div>
 
@@ -1274,6 +1275,7 @@ async function resolveRoomFromCode(code) {
             // 출결용 최초 등록: 이름/연락처 입력창만 표시 (랜딩/입장 흐름은 띄우지 않음)
             document.getElementById('userName').value = "";
             document.getElementById('userPhone').value = "";
+            resetProfileOverlayButtons();
             document.getElementById('profileOverlay').style.display = 'flex';
         }
         return; // 출결 모드에서는 강의실 입장용 리스너/랜딩을 띄우지 않는다.
@@ -1439,9 +1441,31 @@ function editProfile() {
 
     document.getElementById('userName').value = oldName || "";
     document.getElementById('userPhone').value = oldPhone || "";
-    
+
+    // [정보 수정 모드] 버튼 문구 변경 + 닫기 버튼 표시 + 동의 자동 체크(이미 동의한 사용자)
+    const saveBtn = document.getElementById('profileSaveBtn');
+    if (saveBtn) saveBtn.innerText = '정보수정하기';
+    const closeBtn = document.getElementById('profileCloseBtn');
+    if (closeBtn) closeBtn.style.display = 'block';
+    const agree = document.getElementById('privacyAgree');
+    if (agree) agree.checked = true;
+
     document.getElementById('menuModal').style.display = 'none';
     document.getElementById('profileOverlay').style.display = 'flex';
+}
+
+// [정보 수정] 닫기 — 수정 없이 오버레이만 닫고 메뉴로 복귀
+function closeProfileOverlay() {
+    document.getElementById('profileOverlay').style.display = 'none';
+    resetProfileOverlayButtons();
+}
+
+// 신규 등록 흐름용: 버튼 문구/닫기 버튼을 기본(첫 입장) 상태로 원복
+function resetProfileOverlayButtons() {
+    const saveBtn = document.getElementById('profileSaveBtn');
+    if (saveBtn) saveBtn.innerText = '동의하고 입장하기';
+    const closeBtn = document.getElementById('profileCloseBtn');
+    if (closeBtn) closeBtn.style.display = 'none';
 }
 
 
@@ -3003,6 +3027,7 @@ async function saveProfile() {
 
         startPresence(); 
         document.getElementById('profileOverlay').style.display = 'none';
+        if (typeof resetProfileOverlayButtons === 'function') resetProfileOverlayButtons();
 
         const isCheckIn = window.location.search.includes('checkin=true');
 
@@ -3045,6 +3070,7 @@ async function checkProfile() {
     }
     document.getElementById('userName').value = "";
     document.getElementById('userPhone').value = "";
+    resetProfileOverlayButtons();
     document.getElementById('profileOverlay').style.display = 'flex';
 }
 
