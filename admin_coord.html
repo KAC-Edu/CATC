@@ -2336,7 +2336,7 @@ function init() {
         const _activeEl = document.getElementById('g-attend-active');
         if (_activeEl) {
             const _activeCount = Object.values(globalAllData)
-                .filter(r => r?.status?.roomStatus === 'active').length;
+                .filter(r => r?.status?.roomStatus === 'active' && !(r?.settings?.hideFromBoard)).length;
             setMetric('g-attend-active', _activeCount);
             setMetric('hero-active-courses', _activeCount);
         }
@@ -2398,6 +2398,8 @@ function updateGlobalStatus() {
         
         // [필터 1] 방 상태가 'active'(사용중)가 아니면 무조건 제외
         if (status.roomStatus !== 'active') return;
+        // [필터 1-2] 테스트·내부 운용(총괄표 비노출) 과정 제외
+        if (settings.hideFromBoard) return;
 
         // [필터 2] 교육 기간이 설정된 경우, 종료일이 오늘보다 이전이면 제외
         if (settings.period && settings.period.includes(" ~ ")) {
@@ -2447,7 +2449,7 @@ function updateGlobalStatus() {
             const room = globalAllData[rid];
             
             // 요청된 픽업의 해당 강의실이 현재 'active' 상태인지 확인
-            if (room && room.status?.roomStatus === 'active') {
+            if (room && room.status?.roomStatus === 'active' && !(room.settings?.hideFromBoard)) {
                 const settings = room.settings || {};
                 
                 // 해당 과정의 기간이 지나지 않았는지 확인

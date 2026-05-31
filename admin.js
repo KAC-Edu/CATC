@@ -4553,6 +4553,8 @@ resetShuttleRequests: function() {
                 const period = settings.period || '';
                 const hasCourse = !!(settings.courseName && String(settings.courseName).trim());
                 const isActive  = st.roomStatus === 'active';
+                // 테스트·내부 운용(총괄표 비노출) 과정은 통합 현황판 집계에서 제외
+                if (settings.hideFromBoard) return;
                 // 집계 대상: (1) 현재 방에 과정이 배정/운영 중이거나 (2) 기간이 이번 주와 겹치는 과정
                 const include = (isActive && hasCourse) || ui._isThisWeek(period);
                 if (!include) return;
@@ -4616,6 +4618,7 @@ resetShuttleRequests: function() {
         // 카드 집계와 동일 기준: 현재 과정이 배정된 active 방 OR 이번 주와 겹치는 과정
         const weekRooms=Object.entries(d).filter(([,r])=>{
             const s=(r&&r.settings)||{}, st=(r&&r.status)||{};
+            if (s.hideFromBoard) return false;
             const hasCourse=!!(s.courseName && String(s.courseName).trim());
             return (st.roomStatus==='active' && hasCourse) || ui._isThisWeek(s.period||'');
         });

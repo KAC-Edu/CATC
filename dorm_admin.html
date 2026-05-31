@@ -602,6 +602,8 @@
             Object.entries(courses).forEach(([room, c]) => {
                 const s = (c && c.settings) || {};
                 if (!s.courseName && !s.period) return;
+                // 테스트·내부 운용(총괄표 비노출) 과정은 생활관 배정에서도 제외
+                if (s.hideFromBoard) return;
                 const { start, end } = parsePeriod(s.period);
                 if (!start) return;
                 const startDt = new Date(start + 'T00:00:00');
