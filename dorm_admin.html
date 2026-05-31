@@ -118,7 +118,7 @@
         .filter-row { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
         .filter-label { font-size: 13px; font-weight: 800; color: var(--muted); }
         .pill-toggle { display: inline-flex; background: #f1f5f9; border-radius: 11px; padding: 4px; gap: 2px; }
-        .pill-toggle button { white-space: nowrap; border: none; background: transparent; color: var(--muted); font-weight: 800; font-size: 13px; padding: 9px 18px; border-radius: 8px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: all 0.15s; }
+        .pill-toggle button { white-space: nowrap; border: none; background: transparent; color: var(--muted); font-weight: 800; font-size: 13px; padding: 7px 16px; border-radius: 8px; cursor: pointer; display: inline-flex; flex-direction: column; align-items: center; gap: 1px; line-height: 1.25; transition: all 0.15s; text-align: center; }
         .pill-toggle button.on { background: #fff; color: var(--blue); box-shadow: 0 1px 4px rgba(15,23,42,0.12); }
         .refresh-btn { margin-left: auto; border: 1.5px solid var(--border); background: #fff; color: var(--muted); font-weight: 800; font-size: 13px; padding: 9px 16px; border-radius: 10px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: all 0.15s; white-space: nowrap; }
         .refresh-btn:hover { border-color: var(--blue); color: var(--blue); }
@@ -197,14 +197,11 @@
         <div id="step-2" style="display:none;">
             <div class="panel">
                 <h2>과정 선택</h2>
-                <p class="desc">연간계획 기준 <b>향후 3주 이내</b> 진행되는 과정이 표시됩니다. 과정을 선택하면 교육생 명단을 업로드할 수 있습니다. 한 주에 여러 과정이 있으면 과정마다 각각 명단을 올리세요.</p>
+                <p class="desc">조회 주차를 선택하면 그 주에 진행되는 과정만 표시됩니다 (지난 과정 제외). 과정을 선택해 교육생 명단을 업로드하세요. 한 주에 여러 과정이 있으면 과정마다 각각 올리면 됩니다.</p>
                 <div class="filter-row">
-                    <span class="filter-label">조회 범위</span>
-                    <div class="pill-toggle">
-                        <button class="on" id="rng-3w" onclick="setRange('3w')"><i class="fa-regular fa-calendar"></i> 3주 이내</button>
-                        <button id="rng-all" onclick="setRange('all')"><i class="fa-solid fa-list"></i> 전체 과정</button>
-                    </div>
-                    <button class="refresh-btn" onclick="loadCourses()"><i class="fa-solid fa-rotate"></i> 새로고침</button>
+                    <span class="filter-label">조회 주차</span>
+                    <div class="pill-toggle" id="weekPills"></div>
+                    <button class="refresh-btn" onclick="loadCourses(true)"><i class="fa-solid fa-rotate"></i> 새로고침</button>
                 </div>
                 <div id="courseList" style="display:block;">
                     <div class="empty-floor">과정을 불러오는 중...</div>
@@ -312,7 +309,6 @@
         if (window.pdfjsLib) pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
 
         // ── STEP 2 상태 ──
-        let courseRange = '3w';          // '3w' | 'all'
         let selectedCourse = null;        // { room, courseName, period, weekKey, profName }
         let roster = [];                  // [{ seq, name, empNo, dept, gender }]
 
@@ -519,11 +515,38 @@
         }
 
         // ════════════ STEP 2: 과정 선택 + 명단 ════════════
-        function setRange(r) {
-            courseRange = r;
-            document.getElementById('rng-3w').classList.toggle('on', r === '3w');
-            document.getElementById('rng-all').classList.toggle('on', r === 'all');
-            loadCourses();
+        // 선택된 주(월요일 키). 기본 = 이번주
+        let selectedWeekKey = null;
+        let coursesCache = null;   // courses 데이터 캐시 (렌더 속도 개선)
+
+        function mondayOf(d) {
+            const dt = new Date(d); dt.setHours(0,0,0,0);
+            const dow = (dt.getDay() + 6) % 7;
+            dt.setDate(dt.getDate() - dow);
+            return dt;
+        }
+
+        // 이번주~3주 뒤까지 주차 버튼 렌더
+        function renderWeekPills() {
+            const base = mondayOf(new Date());
+            const labels = ['이번주', '다음주', '2주 뒤', '3주 뒤'];
+            const wrap = document.getElementById('weekPills');
+            let html = '';
+            for (let i = 0; i < 4; i++) {
+                const wk = new Date(base); wk.setDate(base.getDate() + i * 7);
+                const key = wk.toISOString().slice(0, 10);
+                if (i === 0 && selectedWeekKey === null) selectedWeekKey = key;
+                const wEnd = new Date(wk); wEnd.setDate(wk.getDate() + 6);
+                const fmt = d => `${d.getMonth()+1}/${d.getDate()}`;
+                html += `<button class="${selectedWeekKey === key ? 'on' : ''}" data-wk="${key}" onclick="selectWeek('${key}')">${labels[i]}<br><span style="font-size:10px; opacity:0.8;">${fmt(wk)}~${fmt(wEnd)}</span></button>`;
+            }
+            wrap.innerHTML = html;
+        }
+
+        function selectWeek(key) {
+            selectedWeekKey = key;
+            document.querySelectorAll('#weekPills button').forEach(b => b.classList.toggle('on', b.dataset.wk === key));
+            renderCourseList();
         }
 
         // 주(월요일 기준) 키 — 같은 주 과정 묶음용
@@ -544,89 +567,93 @@
 
         let rosterCounts = {};   // rosterKey -> 등재 인원수
 
-        async function loadCourses() {
+        // 데이터 로드 (force=true면 캐시 무시하고 새로 가져옴). 렌더는 renderCourseList가 담당.
+        async function loadCourses(force) {
             const listEl = document.getElementById('courseList');
+            renderWeekPills();
+            if (coursesCache && !force) { renderCourseList(); return; }
             listEl.innerHTML = `<div class="empty-floor">과정을 불러오는 중...</div>`;
             try {
-                const snap = await db.ref('courses').once('value');
-                const courses = snap.val() || {};
-
-                // 저장된 명단 인원수 미리 로드 (과정별 등재 표시용)
-                const rsSnap = await db.ref('system/dorm/rosters').once('value');
+                // courses + rosters를 병렬로 한 번에 (속도 개선)
+                const [snap, rsSnap] = await Promise.all([
+                    db.ref('courses').once('value'),
+                    db.ref('system/dorm/rosters').once('value')
+                ]);
+                coursesCache = snap.val() || {};
                 const rsAll = rsSnap.val() || {};
                 rosterCounts = {};
                 Object.entries(rsAll).forEach(([k, v]) => {
                     rosterCounts[k] = Array.isArray(v.list) ? v.list.length : 0;
                 });
-
-                const today = new Date(); today.setHours(0,0,0,0);
-                const limit = new Date(today); limit.setDate(today.getDate() + 21); // 3주
-
-                let items = [];
-                Object.entries(courses).forEach(([room, c]) => {
-                    const s = (c && c.settings) || {};
-                    if (!s.courseName && !s.period) return;
-                    const { start, end } = parsePeriod(s.period);
-                    if (!start) return;
-                    const startDt = new Date(start + 'T00:00:00');
-                    const endDt = new Date((end || start) + 'T23:59:59');
-                    if (isNaN(startDt)) return;
-
-                    if (courseRange === '3w') {
-                        // 아직 끝나지 않았고(종료일>=오늘), 3주 이내 시작
-                        if (endDt < today) return;
-                        if (startDt > limit) return;
-                    }
-                    const profName = (c.status && c.status.professorName) || '';
-                    items.push({ room, courseName: s.courseName || room, period: s.period || '', start, end: end || start, weekKey: weekKeyOf(start), profName });
-                });
-
-                items.sort((a, b) => (a.start || '').localeCompare(b.start || '') || a.room.localeCompare(b.room));
-
-                if (!items.length) {
-                    listEl.innerHTML = `<div class="empty-floor">표시할 과정이 없습니다. ${courseRange==='3w' ? '범위를 "전체 과정"으로 바꿔보세요.' : ''}</div>`;
-                    return;
-                }
-
-                // 주차별 섹션 + 가로 리스트
-                let html = '';
-                let curWeek = null;
-                let openSection = false;
-                items.forEach(it => {
-                    if (it.weekKey !== curWeek) {
-                        if (openSection) html += `</div>`; // 이전 섹션 닫기
-                        curWeek = it.weekKey;
-                        const wd = new Date(curWeek + 'T00:00:00');
-                        const wEnd = new Date(wd); wEnd.setDate(wd.getDate() + 6);
-                        const fmt = d => `${d.getMonth()+1}/${d.getDate()}`;
-                        const wkCount = items.filter(x => x.weekKey === curWeek).length;
-                        html += `<div class="week-section">
-                            <div class="week-head"><i class="fa-regular fa-calendar-week"></i> ${fmt(wd)} ~ ${fmt(wEnd)} 주간 <span class="cnt">과정 ${wkCount}개</span></div>`;
-                        openSection = true;
-                    }
-                    const sel = selectedCourse && selectedCourse.room === it.room && selectedCourse.weekKey === it.weekKey;
-                    const rk = `${it.weekKey}__${it.room}`;
-                    const cnt = rosterCounts[rk] || 0;
-                    const enrolled = cnt > 0;
-                    html += `
-                        <div class="course-row ${sel ? 'sel' : ''} ${enrolled ? 'enrolled' : ''}" data-room="${it.room}" data-week="${it.weekKey}" onclick='selectCourse(${JSON.stringify(it).replace(/'/g, "&#39;")})'>
-                            <span class="course-room-badge"><i class="fa-solid fa-door-open"></i> ${it.room}</span>
-                            <div class="course-main">
-                                <div class="cname">${it.courseName}</div>
-                                <div class="cmeta">${it.period || '-'}</div>
-                            </div>
-                            ${enrolled ? `<span class="course-count"><i class="fa-solid fa-circle-check"></i> ${cnt}명</span>` : ''}
-                            ${it.profName ? `<span class="course-prof"><i class="fa-solid fa-user-tie"></i> ${it.profName}</span>` : ''}
-                            <span class="course-go"><i class="fa-solid fa-chevron-right"></i></span>
-                        </div>`;
-                });
-                if (openSection) html += `</div>`;
-                listEl.innerHTML = html;
+                renderCourseList();
             } catch (e) {
                 console.error(e);
                 listEl.innerHTML = `<div class="empty-floor">과정을 불러오지 못했습니다. 새로고침해 주세요.</div>`;
             }
         }
+
+        // 선택된 주차의 과정만 렌더 (네트워크 호출 없음 → 빠름)
+        function renderCourseList() {
+            const listEl = document.getElementById('courseList');
+            const courses = coursesCache || {};
+            const today = new Date(); today.setHours(0,0,0,0);
+
+            let items = [];
+            Object.entries(courses).forEach(([room, c]) => {
+                const s = (c && c.settings) || {};
+                if (!s.courseName && !s.period) return;
+                const { start, end } = parsePeriod(s.period);
+                if (!start) return;
+                const startDt = new Date(start + 'T00:00:00');
+                const endDt = new Date((end || start) + 'T23:59:59');
+                if (isNaN(startDt)) return;
+
+                // 지난 과정 제외 (종료일이 오늘보다 이전)
+                if (endDt < today) return;
+                // 선택한 주에 "걸치는" 과정만: 과정 기간이 선택 주(월~일)와 겹치면 표시
+                if (selectedWeekKey) {
+                    const wkStart = new Date(selectedWeekKey + 'T00:00:00');
+                    const wkEnd = new Date(wkStart); wkEnd.setDate(wkStart.getDate() + 6); wkEnd.setHours(23,59,59);
+                    // 겹침 판정: startDt <= wkEnd && endDt >= wkStart
+                    if (!(startDt <= wkEnd && endDt >= wkStart)) return;
+                }
+                const profName = (c.status && c.status.professorName) || '';
+                items.push({ room, courseName: s.courseName || room, period: s.period || '', start, end: end || start, weekKey: weekKeyOf(start), profName });
+            });
+
+            items.sort((a, b) => (a.start || '').localeCompare(b.start || '') || a.room.localeCompare(b.room));
+
+            if (!items.length) {
+                listEl.innerHTML = `<div class="empty-floor">이 주차에 진행되는 과정이 없습니다.</div>`;
+                return;
+            }
+
+            // 선택 주차 헤더 1개 + 과정 행들
+            const wkStart = new Date(selectedWeekKey + 'T00:00:00');
+            const wkEnd = new Date(wkStart); wkEnd.setDate(wkStart.getDate() + 6);
+            const fmt = d => `${d.getMonth()+1}/${d.getDate()}`;
+            let html = `<div class="week-section"><div class="week-head"><i class="fa-regular fa-calendar-week"></i> ${fmt(wkStart)} ~ ${fmt(wkEnd)} 주간 <span class="cnt">과정 ${items.length}개</span></div>`;
+            items.forEach(it => {
+                const sel = selectedCourse && selectedCourse.room === it.room && selectedCourse.weekKey === it.weekKey;
+                const rk = `${it.weekKey}__${it.room}`;
+                const cnt = rosterCounts[rk] || 0;
+                const enrolled = cnt > 0;
+                html += `
+                    <div class="course-row ${sel ? 'sel' : ''} ${enrolled ? 'enrolled' : ''}" data-room="${it.room}" data-week="${it.weekKey}" onclick='selectCourse(${JSON.stringify(it).replace(/'/g, "&#39;")})'>
+                        <span class="course-room-badge"><i class="fa-solid fa-door-open"></i> ${it.room}</span>
+                        <div class="course-main">
+                            <div class="cname">${it.courseName}</div>
+                            <div class="cmeta">${it.period || '-'}</div>
+                        </div>
+                        ${enrolled ? `<span class="course-count"><i class="fa-solid fa-circle-check"></i> ${cnt}명</span>` : ''}
+                        ${it.profName ? `<span class="course-prof"><i class="fa-solid fa-user-tie"></i> ${it.profName}</span>` : ''}
+                        <span class="course-go"><i class="fa-solid fa-chevron-right"></i></span>
+                    </div>`;
+            });
+            html += `</div>`;
+            listEl.innerHTML = html;
+        }
+
 
         function selectCourse(it) {
             selectedCourse = it;
@@ -875,18 +902,32 @@
             // 과정 목록 (방 연번 순 연속배치를 위해 명단 순서 유지)
             const courseKeys = Object.keys(weekRosters);
 
-            // 전체 인원 모으기 (과정 태그 포함)
+            // 전체 인원 모으기 (과정 태그 + 기간 포함)
             let people = [];
             courseKeys.forEach(ck => {
                 const v = weekRosters[ck];
+                const pr = parsePeriod(v.period || '');
                 (v.list || []).forEach(p => {
                     people.push({
                         name: p.name, empNo: String(p.empNo || ''), dept: p.dept || '', gender: p.gender || '',
                         course: v.courseName, room: v.room, rosterKey: ck,
+                        start: pr.start, end: pr.end || pr.start,
                         token: `${p.name}_${p.empNo || ''}`
                     });
                 });
             });
+
+            // 두 기간이 며칠 겹치는지 (숙박 기준). 마지막날=다음 첫날(경계 1일)은 허용,
+            //  2일 이상 겹치면 같은 방 동시 사용 불가.
+            function overlapDays(aStart, aEnd, bStart, bEnd) {
+                const d = s => { const x = new Date(s + 'T00:00:00'); return isNaN(x) ? null : x; };
+                const as = d(aStart), ae = d(aEnd), bs = d(bStart), be = d(bEnd);
+                if (!as || !ae || !bs || !be) return 0;
+                const start = as > bs ? as : bs;
+                const end = ae < be ? ae : be;
+                if (end < start) return 0;
+                return Math.round((end - start) / 86400000) + 1; // 겹치는 날 수
+            }
 
             const assigned = {};   // token -> { roomId, ... }
             const placeInRoom = (person, rs) => {
@@ -894,6 +935,13 @@
                 const roomGender = rs.fixedGender || (rs.occupants[0] ? rs.occupants[0].gender : '');
                 if (roomGender && person.gender && roomGender !== person.gender) return false;
                 if (rs.occupants.length >= rs.capacity) return false;
+                // 기간 중복 검사: 같은 방의 기존 입실자 중, '다른 과정'이면서 2일 이상 겹치면 불가
+                //  (빈방이면 occupants가 없으므로 자유롭게 배정 — 평시엔 제약 없음)
+                for (const occ of rs.occupants) {
+                    if (occ.rosterKey === person.rosterKey) continue; // 같은 과정은 어차피 같은 기간
+                    const ov = overlapDays(person.start, person.end, occ.start, occ.end);
+                    if (ov >= 2) return false; // 2일 이상 겹침 → 같은 방 불가
+                }
                 rs.occupants.push(person);
                 assigned[person.token] = {
                     name: person.name, empNo: person.empNo, dept: person.dept, gender: person.gender,
