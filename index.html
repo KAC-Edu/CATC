@@ -492,7 +492,7 @@
         <div class="landing-course" id="landingTitle">Loading...</div>
         <div class="landing-room" id="landingBadge">Room ...</div>
         <button class="btn-enter" onclick="enterApp()">입장하기 <i class="fa-solid fa-arrow-right-to-bracket"></i></button>
-        <a id="landingKakaoBtn" href="#" target="_blank" rel="noopener" style="display:none; align-items:center; justify-content:center; gap:8px; width:auto; margin-top:14px; padding:13px 22px; background:#FAE100; color:#3A1D1D; border-radius:14px; font-size:15px; font-weight:800; text-decoration:none; box-shadow:0 2px 10px rgba(250,225,0,0.35);">
+        <a id="landingKakaoBtn" href="#" target="_blank" rel="noopener" style="display:none; align-self:center; align-items:center; justify-content:center; gap:8px; width:auto; margin-top:14px; padding:13px 22px; background:#FAE100; color:#3A1D1D; border-radius:14px; font-size:15px; font-weight:800; text-decoration:none; box-shadow:0 2px 10px rgba(250,225,0,0.35);">
             <i class="fa-solid fa-comment"></i> 카카오톡 오픈톡방 입장
         </a>
         <img src="logo.webp" alt="KAC" class="landing-logo">
@@ -609,7 +609,7 @@
             </div>
 
             <h3 style="margin-bottom:15px; font-size:16px; color:#64748b;">메뉴 서비스</h3>
-            <div class="menu-item" id="menu-kakao" style="display:none; background:#FAE100; color:#3A1D1D; font-weight:900;" onclick="openKakaoChat()"><i class="fa-solid fa-comment"></i> 카카오톡 오픈톡방 입장</div>
+            <div class="menu-item" id="menu-kakao" style="display:none; background:#FAE100; color:#3A1D1D; font-weight:900; text-align:center;" onclick="openKakaoChat()"><i class="fa-solid fa-comment"></i> 카카오톡 오픈톡방 입장</div>
             <div class="menu-item" onclick="openNotice()"><i class="fa-solid fa-bullhorn" style="color: #facc15;"></i> 공지사항 </div>
             <div class="menu-item" onclick="viewMealMenu()"><i class="fa-solid fa-utensils"></i> 금주 식단보기</div>
             <div class="menu-item" onclick="openFacilityRequest()"><i class="fa-solid fa-soap" style="color: #10b981;"></i> 생활관 비품 요청</div>
@@ -1301,7 +1301,7 @@ function applyKakaoLink(link) {
     const menuBtn = document.getElementById('menu-kakao');
     if (url) {
         if (landingBtn) { landingBtn.href = url; landingBtn.style.display = 'inline-flex'; }
-        if (menuBtn) menuBtn.style.display = 'flex';
+        if (menuBtn) menuBtn.style.display = 'block';
     } else {
         if (landingBtn) landingBtn.style.display = 'none';
         if (menuBtn) menuBtn.style.display = 'none';
