@@ -1346,16 +1346,20 @@ const profMgr = {
 
         firebase.database().ref(`system/professorProfiles/${name}`).once('value', snap => {
             const p = snap.val();
+            const kakaoEl = document.getElementById('pp-kakao');
             if(p) {
                 document.getElementById('pp-eng-name').value = p.engName || ""; // 영문 성함 로드
                 document.getElementById('pp-phone').value = p.phone || "";
                 document.getElementById('pp-email').value = p.email || "";
+                if (kakaoEl) kakaoEl.value = p.kakaoLink || "";
                 document.getElementById('pp-msg').value = p.msg || "";
                 document.getElementById('pp-bio').value = p.bio || "";
                 if(p.photo && previewImg) {
                     previewImg.src = p.photo;
                     previewImg.style.display = 'block';
                 }
+            } else if (kakaoEl) {
+                kakaoEl.value = "";
             }
         });
         document.getElementById('profProfileModal').style.display = 'flex';
@@ -1398,6 +1402,7 @@ const profMgr = {
                 engName: document.getElementById('pp-eng-name').value, // 영문 성함 추가
                 phone: document.getElementById('pp-phone').value,
                 email: document.getElementById('pp-email').value,
+                kakaoLink: (document.getElementById('pp-kakao')?.value || '').trim(),
                 msg: document.getElementById('pp-msg').value,
                 bio: document.getElementById('pp-bio').value
             };
@@ -6140,7 +6145,9 @@ saveAll: function() {
         });
         updates[`courses/${state.room}/settings/menuFeatures`] = menuFeatures;
 
-        firebase.database().ref().update(updates).then(() => {
+        const self = this;
+        const commitUpdates = () => {
+            firebase.database().ref().update(updates).then(() => {
             document.getElementById('courseNameInput').value = name;
             document.getElementById('roomPw').value = rawPw;
             document.getElementById('displayCourseTitle').innerText = name;
@@ -6149,11 +6156,24 @@ saveAll: function() {
             ui.showAlert("✅ 설정이 저장되었습니다.");
             
             // 1. 팝업창 닫기
-            this.closeSetupModal();
+            self.closeSetupModal();
 
             // 2. [핵심 추가] 즉시 방에 다시 입장하여 잠금 화면을 치우고 대시보드를 보여줌
             dataMgr.forceEnterRoom(state.room);
-        });
+            });
+        };
+
+        // [자동 적용] 톡방 칸이 비어있고 담임 교수가 지정돼 있으면,
+        //  그 교수 프로필의 오픈톡방 링크를 자동으로 채워서 저장한다.
+        if (!kakaoLinkVal && profName) {
+            firebase.database().ref(`system/professorProfiles/${profName}/kakaoLink`).once('value', s => {
+                const profLink = (s.val() || '').trim();
+                if (profLink) updates[`courses/${state.room}/settings/kakaoLink`] = profLink;
+                commitUpdates();
+            }, () => commitUpdates());
+        } else {
+            commitUpdates();
+        }
     }
 }; // <--- setupMgr 객체를 닫아주는 아주 중요한 마침표입니다.
 
