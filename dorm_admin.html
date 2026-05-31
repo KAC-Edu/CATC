@@ -33,13 +33,16 @@
         .container { max-width: 1100px; margin: 0 auto; padding: 20px; }
 
         /* 상단 단계 탭 */
-        .step-tabs { display: flex; gap: 8px; margin-bottom: 18px; flex-wrap: wrap; }
-        .step-tab { flex: 1; min-width: 140px; background: var(--card); border: 1.5px solid var(--border); border-radius: 12px; padding: 12px 14px; cursor: pointer; transition: all 0.15s; }
-        .step-tab.active { border-color: var(--blue); background: var(--blue-soft); }
-        .step-tab .n { font-size: 11px; font-weight: 800; color: var(--muted); }
+        .step-tabs { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
+        .step-tabs > .step-tab { flex: 1; min-width: 150px; background: var(--card); border: 1.5px solid var(--border); border-radius: 14px; padding: 14px 16px; cursor: pointer; transition: all 0.18s; position: relative; overflow: hidden; }
+        .step-tabs > .step-tab:hover { border-color: #bfdbfe; box-shadow: 0 4px 12px rgba(15,23,42,0.07); transform: translateY(-1px); }
+        .step-tabs > .step-tab.active { border-color: var(--blue); background: linear-gradient(135deg, #eff6ff, #fff); box-shadow: 0 4px 14px rgba(37,99,235,0.15); }
+        .step-tabs > .step-tab.active::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--blue); }
+        .step-tab .n { font-size: 11px; font-weight: 800; color: var(--muted); letter-spacing: 0.5px; }
         .step-tab.active .n { color: var(--blue); }
-        .step-tab .t { font-size: 14px; font-weight: 800; margin-top: 2px; }
-        .step-tab.disabled { opacity: 0.45; cursor: not-allowed; }
+        .step-tab .t { font-size: 14px; font-weight: 800; margin-top: 3px; }
+        .step-tabs > .step-tab.disabled { opacity: 0.45; cursor: not-allowed; }
+        .step-tabs > .step-tab.disabled:hover { transform: none; box-shadow: none; border-color: var(--border); }
 
         .panel { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 22px; margin-bottom: 16px; }
         .panel h2 { margin: 0 0 4px 0; font-size: 17px; font-weight: 900; }
@@ -105,6 +108,20 @@
         .course-period { flex-shrink: 0; font-size: 12px; font-weight: 700; color: var(--blue); }
         .course-go { flex-shrink: 0; color: #cbd5e1; font-size: 16px; }
         .course-row:hover .course-go, .course-row.sel .course-go { color: var(--blue); }
+        /* 명단 등재 완료(녹색) */
+        .course-row.enrolled { border-left-color: var(--success); }
+        .course-row.enrolled .course-room-badge { background: var(--success); }
+        .course-row.enrolled.sel { background: #ecfdf5; border-color: var(--success); }
+        .course-count { flex-shrink: 0; display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 800; color: #047857; background: #d1fae5; padding: 5px 11px; border-radius: 8px; }
+
+        /* 조회 범위 필터 줄 */
+        .filter-row { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
+        .filter-label { font-size: 13px; font-weight: 800; color: var(--muted); }
+        .pill-toggle { display: inline-flex; background: #f1f5f9; border-radius: 11px; padding: 4px; gap: 2px; }
+        .pill-toggle button { white-space: nowrap; border: none; background: transparent; color: var(--muted); font-weight: 800; font-size: 13px; padding: 9px 18px; border-radius: 8px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: all 0.15s; }
+        .pill-toggle button.on { background: #fff; color: var(--blue); box-shadow: 0 1px 4px rgba(15,23,42,0.12); }
+        .refresh-btn { margin-left: auto; border: 1.5px solid var(--border); background: #fff; color: var(--muted); font-weight: 800; font-size: 13px; padding: 9px 16px; border-radius: 10px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: all 0.15s; white-space: nowrap; }
+        .refresh-btn:hover { border-color: var(--blue); color: var(--blue); }
         @media (max-width: 640px) {
             .course-period, .course-prof { display: none; }
         }
@@ -181,13 +198,13 @@
             <div class="panel">
                 <h2>과정 선택</h2>
                 <p class="desc">연간계획 기준 <b>향후 3주 이내</b> 진행되는 과정이 표시됩니다. 과정을 선택하면 교육생 명단을 업로드할 수 있습니다. 한 주에 여러 과정이 있으면 과정마다 각각 명단을 올리세요.</p>
-                <div style="display:flex; gap:8px; align-items:center; margin-bottom:14px; flex-wrap:wrap;">
-                    <label style="font-size:13px; font-weight:800; color:var(--muted);">조회 범위</label>
-                    <div class="seg" style="max-width:320px;">
-                        <button class="on" id="rng-3w" onclick="setRange('3w')">3주 이내</button>
-                        <button id="rng-all" onclick="setRange('all')">전체 과정</button>
+                <div class="filter-row">
+                    <span class="filter-label">조회 범위</span>
+                    <div class="pill-toggle">
+                        <button class="on" id="rng-3w" onclick="setRange('3w')"><i class="fa-regular fa-calendar"></i> 3주 이내</button>
+                        <button id="rng-all" onclick="setRange('all')"><i class="fa-solid fa-list"></i> 전체 과정</button>
                     </div>
-                    <button class="h-btn" style="background:var(--blue);" onclick="loadCourses()"><i class="fa-solid fa-rotate"></i> 새로고침</button>
+                    <button class="refresh-btn" onclick="loadCourses()"><i class="fa-solid fa-rotate"></i> 새로고침</button>
                 </div>
                 <div id="courseList" style="display:block;">
                     <div class="empty-floor">과정을 불러오는 중...</div>
@@ -525,12 +542,22 @@
             return { start: parts[0] || '', end: parts[1] || parts[0] || '' };
         }
 
+        let rosterCounts = {};   // rosterKey -> 등재 인원수
+
         async function loadCourses() {
             const listEl = document.getElementById('courseList');
             listEl.innerHTML = `<div class="empty-floor">과정을 불러오는 중...</div>`;
             try {
                 const snap = await db.ref('courses').once('value');
                 const courses = snap.val() || {};
+
+                // 저장된 명단 인원수 미리 로드 (과정별 등재 표시용)
+                const rsSnap = await db.ref('system/dorm/rosters').once('value');
+                const rsAll = rsSnap.val() || {};
+                rosterCounts = {};
+                Object.entries(rsAll).forEach(([k, v]) => {
+                    rosterCounts[k] = Array.isArray(v.list) ? v.list.length : 0;
+                });
 
                 const today = new Date(); today.setHours(0,0,0,0);
                 const limit = new Date(today); limit.setDate(today.getDate() + 21); // 3주
@@ -577,14 +604,18 @@
                             <div class="week-head"><i class="fa-regular fa-calendar-week"></i> ${fmt(wd)} ~ ${fmt(wEnd)} 주간 <span class="cnt">과정 ${wkCount}개</span></div>`;
                         openSection = true;
                     }
-                    const sel = selectedCourse && selectedCourse.room === it.room;
+                    const sel = selectedCourse && selectedCourse.room === it.room && selectedCourse.weekKey === it.weekKey;
+                    const rk = `${it.weekKey}__${it.room}`;
+                    const cnt = rosterCounts[rk] || 0;
+                    const enrolled = cnt > 0;
                     html += `
-                        <div class="course-row ${sel ? 'sel' : ''}" onclick='selectCourse(${JSON.stringify(it).replace(/'/g, "&#39;")})'>
+                        <div class="course-row ${sel ? 'sel' : ''} ${enrolled ? 'enrolled' : ''}" data-room="${it.room}" data-week="${it.weekKey}" onclick='selectCourse(${JSON.stringify(it).replace(/'/g, "&#39;")})'>
                             <span class="course-room-badge"><i class="fa-solid fa-door-open"></i> ${it.room}</span>
                             <div class="course-main">
                                 <div class="cname">${it.courseName}</div>
                                 <div class="cmeta">${it.period || '-'}</div>
                             </div>
+                            ${enrolled ? `<span class="course-count"><i class="fa-solid fa-circle-check"></i> ${cnt}명</span>` : ''}
                             ${it.profName ? `<span class="course-prof"><i class="fa-solid fa-user-tie"></i> ${it.profName}</span>` : ''}
                             <span class="course-go"><i class="fa-solid fa-chevron-right"></i></span>
                         </div>`;
@@ -599,12 +630,16 @@
 
         function selectCourse(it) {
             selectedCourse = it;
+            // 목록 전체 재렌더 대신, 선택 표시만 인라인으로 갱신 (깜빡임 방지)
+            document.querySelectorAll('#courseList .course-row').forEach(row => {
+                const on = row.dataset.room === String(it.room) && row.dataset.week === it.weekKey;
+                row.classList.toggle('sel', on);
+            });
             document.getElementById('rosterPanel').style.display = 'block';
             document.getElementById('rosterTitle').innerText = `${it.courseName} — 교육생 명단 (ROOM ${it.room})`;
             document.getElementById('rosterSaveSummary').innerText = `${it.courseName} · ${it.period}`;
-            loadCourses(); // 선택 표시 갱신
             loadRoster(it); // 기존 저장된 명단 있으면 로드
-            document.getElementById('rosterPanel').scrollIntoView({ behavior: 'smooth' });
+            document.getElementById('rosterPanel').scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
 
         // 명단 저장 키: 주차_룸  (월화수/수목금 분리 위해 주차+룸 조합)
@@ -737,7 +772,24 @@
                 updatedAt: firebase.database.ServerValue.TIMESTAMP
             };
             db.ref(`system/dorm/rosters/${rosterKey(selectedCourse)}`).set(payload)
-                .then(() => showToast(`✅ ${clean.length}명 명단 저장됨`))
+                .then(() => {
+                    showToast(`✅ ${clean.length}명 명단 저장됨`);
+                    // 해당 과정 행을 녹색+인원수로 즉시 갱신 (전체 재렌더 없이)
+                    const rk = rosterKey(selectedCourse);
+                    rosterCounts[rk] = clean.length;
+                    const row = document.querySelector(`#courseList .course-row[data-room="${selectedCourse.room}"][data-week="${selectedCourse.weekKey}"]`);
+                    if (row) {
+                        row.classList.add('enrolled');
+                        let badge = row.querySelector('.course-count');
+                        if (!badge) {
+                            badge = document.createElement('span');
+                            badge.className = 'course-count';
+                            const prof = row.querySelector('.course-prof');
+                            row.insertBefore(badge, prof || row.querySelector('.course-go'));
+                        }
+                        badge.innerHTML = `<i class="fa-solid fa-circle-check"></i> ${clean.length}명`;
+                    }
+                })
                 .catch(e => { console.error(e); showToast('⚠️ 저장 실패'); });
         }
 
