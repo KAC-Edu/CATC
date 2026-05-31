@@ -3558,7 +3558,7 @@ renderQaList: function(f) {
 
         // 3. 상단 바 텍스트 및 배지 초기화
         const roomNameEl = document.getElementById('displayRoomName');
-        if(roomNameEl) roomNameEl.innerText = "Instructor Waiting Room";
+        if(roomNameEl) roomNameEl.innerText = "";
         document.querySelectorAll('.room-badge-global').forEach(b => b.innerText = "");
         
         // 4. 탭 메뉴 숨기기
