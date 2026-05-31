@@ -5968,6 +5968,8 @@ loadCurrentSettings: function() {
         // 1. 기본 정보 세팅
         document.getElementById('setup-course-name').value = s.courseName || "";
         document.getElementById('setup-room-pw').value = s.password ? atob(s.password) : "";
+        const kakaoInput = document.getElementById('setup-kakao-link');
+        if (kakaoInput) kakaoInput.value = s.kakaoLink || "";
         document.getElementById('setup-prof-select').value = st.professorName || "";
         // coordinatorName 매칭: 저장값("백유민"/"백유민 과장"/"백유민과장" 등)을 명단의 정식 이름으로 정규화해 드롭다운 자동 선택
         const savedCoordName = s.coordinatorName || '';
@@ -6116,6 +6118,9 @@ saveAll: function() {
         const updates = {};
         updates[`courses/${state.room}/settings/courseName`] = name;
         updates[`courses/${state.room}/settings/password`] = btoa(rawPw);
+        // 카카오톡 오픈톡방 링크 (선택) — 입력값 정리 후 저장
+        const kakaoLinkVal = (document.getElementById('setup-kakao-link')?.value || '').trim();
+        updates[`courses/${state.room}/settings/kakaoLink`] = kakaoLinkVal;
         
         // ★ 수정: 호텔 예약 방식으로 선택된 날짜 범위 ("시작일 ~ 종료일")를 그대로 저장합니다.
         updates[`courses/${state.room}/settings/period`] = periodRange;
