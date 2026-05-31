@@ -23,7 +23,9 @@
         .landing-page { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--header-bg); z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; color: white; padding: 30px 20px; text-align: center; }
         .landing-course { font-size: 24px; font-weight: 800; margin-bottom: 10px; line-height: 1.3; }
         .landing-banner { width: 90%; max-width: 400px; border-radius: 20px; margin-bottom: 25px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); border: 2px solid rgba(255,255,255,0.1); display: block; object-fit: cover; }
-        .landing-room { font-size: 16px; opacity: 0.7; font-weight: 500; margin-bottom: 60px; padding: 5px 15px; border: 1px solid rgba(255,255,255,0.2); border-radius: 20px; }
+        .landing-room { display: inline-flex; align-items: center; gap: 8px; font-size: 16px; font-weight: 700; color: #fff; margin-bottom: 60px; padding: 9px 18px; background: rgba(59,130,246,0.18); border: 1.5px solid rgba(96,165,250,0.6); border-radius: 22px; box-shadow: 0 2px 12px rgba(59,130,246,0.25); max-width: 90%; }
+        .landing-room .room-pill { display: inline-flex; align-items: center; gap: 5px; background: var(--btn-yellow); color: var(--btn-text); font-weight: 900; font-size: 14px; padding: 3px 11px; border-radius: 14px; flex-shrink: 0; letter-spacing: 0.5px; }
+        .landing-room .room-course { opacity: 0.92; font-weight: 600; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .btn-enter { background: var(--btn-yellow); color: var(--btn-text); width: 200px; height: 56px; border-radius: 30px; font-size: 18px; font-weight: 800; border: none; cursor: pointer; box-shadow: 0 4px 15px rgba(250, 204, 21, 0.3); display: flex; align-items: center; justify-content: center; gap: 8px; transition: transform 0.1s; }
         .btn-enter:active { transform: scale(0.96); }
         .landing-logo { position: absolute; bottom: 40px; width: 120px; z-index: 9999; }
@@ -241,9 +243,14 @@
             box-shadow: 0 10px 30px rgba(0,0,0,0.5);
         }
         .kac-confirm-msg {
-            padding: 30px 20px; text-align: center; font-size: 18px;
-            font-weight: 800; color: #1e293b; line-height: 1.5; white-space: pre-wrap;
+            padding: 28px 22px 24px; text-align: center; font-size: 17px;
+            font-weight: 700; color: #1e293b; line-height: 1.55; white-space: pre-wrap; word-break: keep-all;
         }
+        .kac-alert-title { font-size: 19px; font-weight: 900; color: #1e293b; line-height: 1.4; margin-bottom: 14px; }
+        .kac-alert-period { display: inline-block; background: #f1f5f9; border-radius: 10px; padding: 8px 14px; font-size: 15px; font-weight: 800; color: #2563eb; line-height: 1.5; margin-bottom: 14px; }
+        .kac-alert-period .label { display: block; font-size: 12px; font-weight: 700; color: #94a3b8; margin-bottom: 3px; }
+        .kac-alert-room { display: inline-flex; align-items: center; gap: 6px; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 999px; padding: 5px 13px; font-size: 13px; font-weight: 800; color: #1d4ed8; margin-bottom: 14px; }
+        .kac-alert-desc { font-size: 14px; font-weight: 600; color: #64748b; line-height: 1.6; word-break: keep-all; }
         .kac-confirm-btns { display: flex; border-top: 1px solid #e2e8f0; }
         .kac-btn-no {
             flex: 1; padding: 18px; background: #f1f5f9; border: none;
@@ -1031,9 +1038,13 @@ let confirmCallback = null;
         //  - 비차단(non-blocking)이므로, 알림 후 화면 이동/새로고침이 필요하면 콜백으로 전달한다.
         let alertCallback = null;
         let alertResolver = null;
-        function showKacAlert(msg, callback) {
+        function showKacAlert(msg, callback, opts) {
+            opts = opts || {};
             var box = document.getElementById('kacAlertMsg');
-            if (box) box.innerText = (msg == null ? '' : String(msg));
+            if (box) {
+                if (opts.html) { box.innerHTML = (msg == null ? '' : String(msg)); }
+                else { box.innerText = (msg == null ? '' : String(msg)); }
+            }
             var modal = document.getElementById('customAlertModal');
             if (modal) modal.style.display = 'flex';
             alertCallback = callback || null;
@@ -1208,7 +1219,10 @@ async function resolveRoomFromCode(code) {
     localStorage.setItem('kac_last_visited_room', currentRoom);
 
     document.getElementById('roomBadge').innerText = `Room ${currentRoom}`;
-    document.getElementById('landingBadge').innerText = `ROOM ${currentRoom}`;
+    // 랜딩 배지: ROOM 알약 + 과정명. 과정명은 settings 로드 후 채워진다.
+    document.getElementById('landingBadge').innerHTML =
+        `<span class="room-pill"><i class="fa-solid fa-door-open"></i> ROOM ${currentRoom}</span>` +
+        `<span class="room-course" id="landingCourseName">강의실 확인 중...</span>`;
 
     const db = firebase.database();
     const rPath = `courses/${currentRoom}`;
@@ -1228,6 +1242,11 @@ async function resolveRoomFromCode(code) {
         if (s.courseName) {
             const lt = document.getElementById('landingTitle');
             if (lt) lt.textContent = s.courseName;
+            const lcn = document.getElementById('landingCourseName');
+            if (lcn) lcn.textContent = s.courseName;
+        } else {
+            const lcn = document.getElementById('landingCourseName');
+            if (lcn) lcn.textContent = '교육 과정';
         }
     } catch(e) { /* 무시 — setupListeners 에서도 처리됨 */ }
 
@@ -1281,7 +1300,14 @@ async function enterApp() {
         const [startStr, endStr] = period.split(' ~ ').map(s => s.trim());
         const today = getTodayString();
         if (today < startStr || today > endStr) {
-            showKacAlert(`⚠️ 현재 교육 기간이 아닙니다.\n교육 기간: ${startStr} ~ ${endStr}\n\n해당 과정의 교육생이 아니시거나 교육 기간이 종료된 과정입니다.`);
+            const courseNm = settings.courseName ? escapeHtml(settings.courseName) : '교육 과정';
+            showKacAlert(
+                `<div class="kac-alert-title">⚠️ 현재 교육 기간이 아닙니다</div>` +
+                `<div class="kac-alert-room"><i class="fa-solid fa-door-open"></i> ROOM ${escapeHtml(String(currentRoom))} · ${courseNm}</div>` +
+                `<div class="kac-alert-period"><span class="label">교육 기간</span>${escapeHtml(startStr)} ~ ${escapeHtml(endStr)}</div>` +
+                `<div class="kac-alert-desc">해당 과정의 교육생이 아니시거나<br>교육 기간이 종료된 과정입니다.</div>`,
+                null, { html: true }
+            );
             return;
         }
     }
@@ -3434,7 +3460,14 @@ function handleInternalAttendance(room) {
             const _pp = _period.split(' ~ ').map(x => x.trim());
             const _start = _pp[0], _end = _pp[1];
             if (today < _start || today > _end) {
-                showKacAlert(`⚠️ 현재 교육 기간이 아닙니다.\n교육 기간: ${_start} ~ ${_end}`);
+                const _cn = _settings.courseName ? escapeHtml(_settings.courseName) : '교육 과정';
+                showKacAlert(
+                    `<div class="kac-alert-title">⚠️ 현재 교육 기간이 아닙니다</div>` +
+                    `<div class="kac-alert-room"><i class="fa-solid fa-door-open"></i> ROOM ${escapeHtml(String(targetRoom))} · ${_cn}</div>` +
+                    `<div class="kac-alert-period"><span class="label">교육 기간</span>${escapeHtml(_start)} ~ ${escapeHtml(_end)}</div>` +
+                    `<div class="kac-alert-desc">해당 과정의 교육생이 아니시거나<br>교육 기간이 종료된 과정입니다.</div>`,
+                    null, { html: true }
+                );
                 return;
             }
         }
