@@ -4145,39 +4145,43 @@ updateShuttleETA: function(departureTime, counts) {
         return `${h}:${m}`;
     };
 
-    // 동적 알고리즘 — 누적 소요 시간 방식
-    // 물리적 경로: 출발 → 오송역(30분) → 청주터미널(+20분) → 청주공항(+30분)
-    // 경유지 skip = '정차 대기 시간' 절약, 이동 구간 시간은 항상 누적
+    // [스킵 방식] 신청자 있는 정류장만 순서대로 정차, 각 구간 30분
+    //  - 신청자 없는 정류장은 건너뜀(정차 안 함) → 다음 정류장이 그만큼 앞당겨짐
+    //  - 예) 출발 00:00, 셋 다 신청: 오송 00:30 / 터미널 01:00 / 공항 01:30
+    //        오송 미신청: 터미널 00:30 / 공항 01:00
+    let acc = base;
+    const osongStop = c.osong > 0;
+    const termStop  = c.terminal > 0;
+    const airStop   = c.airport > 0;
 
-    // 오송역: 출발 + 30분 고정 (이동 시간)
-    const osongMin = base + 30;
-
-    // 청주터미널: 오송역 통과 이후 + 구간 이동 시간
-    // 오송 정차 시 5분 대기 포함, 미신청 시 pass-through(이동 시간만)
-    const termMin = osongMin + (c.osong > 0 ? 25 : 15);
-
-    // 청주공항: 터미널 통과 이후 + 구간 이동 시간
-    // 터미널 정차 시 5분 대기 포함, 미신청 시 pass-through
-    const airMin = termMin + (c.terminal > 0 ? 35 : 25);
+    let osongMin = null, termMin = null, airMin = null;
+    if (osongStop) { acc += 30; osongMin = acc; }
+    if (termStop)  { acc += 30; termMin  = acc; }
+    if (airStop)   { acc += 30; airMin   = acc; }
 
     const stops = [
-        { label: '오송역',      time: fmt(osongMin),   color: '#ef4444', cnt: c.osong },
-        { label: '청주터미널',  time: fmt(termMin),    color: '#3b82f6', cnt: c.terminal },
-        { label: '청주국제공항',time: fmt(airMin),     color: '#10b981', cnt: c.airport },
+        { label: '오송역',      time: osongMin !== null ? fmt(osongMin) : null, color: '#ef4444', cnt: c.osong },
+        { label: '청주터미널',  time: termMin  !== null ? fmt(termMin)  : null, color: '#3b82f6', cnt: c.terminal },
+        { label: '청주국제공항',time: airMin   !== null ? fmt(airMin)   : null, color: '#10b981', cnt: c.airport },
     ];
 
-    // 한 줄 인라인 표시
+    // 한 줄 인라인 표시 (정차하지 않는 정류장은 흐리게 skip 표기)
     etaDetail.innerHTML = `
         <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
-            ${stops.map(s => `
+            ${stops.map(s => s.time !== null ? `
                 <div style="display:flex; align-items:center; gap:8px; background:#f8fafc; border:1.5px solid #e2e8f0; border-radius:10px; padding:8px 16px;">
                     <span style="font-size:16px; font-weight:900; color:${s.color};">${s.label}</span>
                     <span style="font-size:18px; font-weight:900; color:#1e293b;">${s.time}</span>
                     <span style="font-size:12px; color:#94a3b8; font-weight:700;">도착</span>
                 </div>
+            ` : `
+                <div style="display:flex; align-items:center; gap:6px; background:#f1f5f9; border:1.5px dashed #cbd5e1; border-radius:10px; padding:8px 14px; opacity:0.6;">
+                    <span style="font-size:14px; font-weight:800; color:#94a3b8; text-decoration:line-through;">${s.label}</span>
+                    <span style="font-size:11px; color:#94a3b8; font-weight:700;">신청자 없음 · skip</span>
+                </div>
             `).join('')}
         </div>
-        <div style="font-size:11px; color:#94a3b8; margin-top:8px;">※ 경유지 미신청 시 해당 정류장 skip — 도착 시간 자동 조정</div>
+        <div style="font-size:11px; color:#94a3b8; margin-top:8px;">※ 신청자 있는 정류장만 정차 · 각 구간 30분 (미신청 정류장은 건너뜀)</div>
     `;
 },
 
@@ -5948,9 +5952,9 @@ loadCurrentSettings: function() {
         requestAnimationFrame(applyFpDate);
         
         // 5. menuFeatures 체크박스 상태 로드
-        // 기본값: 차량신청(shuttle) + 외출/외박(adminAction)만 ON, 나머지는 OFF
+        // 기본값: 차량신청(shuttle) + 외출/외박(adminAction)만 ON, 나머지는 강사가 수동 체크
         const features = s.menuFeatures || {};
-        const defaultOn = ['shuttle', 'adminAction', 'tabletLoan'];
+        const defaultOn = ['shuttle', 'adminAction'];
         const featureKeys = ['facility','shuttle','adminAction','meal','attendanceQr','cns','tabletLoan'];
         featureKeys.forEach(key => {
             const el = document.getElementById(`feat-${key}`);

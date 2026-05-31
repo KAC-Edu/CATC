@@ -926,7 +926,7 @@
                 </label>
                 <p style="font-size:11px; color:#ef4444; margin: 8px 0 0 30px; font-weight: 600;">
                     ※ 16:00 이후에는 변경이 불가합니다.
-                    <span id="dinnerClosedMsg" style="display:none; color:#ef4444; font-weight:800; font-size:12px; display:block; margin-top:4px;">🚫 16시 이후 신청 마감 — 식당(☎ 내선 123)에 직접 연락 바랍니다.</span>
+                    <span id="dinnerClosedMsg" style="display:none; color:#ef4444; font-weight:800; font-size:12px; display:block; margin-top:4px;">🚫 16시 이후 신청 마감 — 식당(<a href="tel:043-290-2325" style="color:#dc2626; text-decoration:underline; font-weight:900;">☎ 043-290-2325</a>)에 직접 연락 바랍니다.</span>
                 </p>
             </div>
 
@@ -2186,28 +2186,19 @@ async function openShuttleApply() {
     if (window._shuttleDepartureRef) window._shuttleDepartureRef.off();
     if (window._shuttleRequestsRef)  window._shuttleRequestsRef.off();
 
-    // 경유지 신청자 수에 따른 동적 도착 시간 계산 함수
-    // 경로: 항기원 → (오송역 +30분) → (청주터미널 +30분) → (청주공항 +30분)
-    // 각 경유지에 신청자가 없으면 해당 구간 +30분을 건너뜀
+    // [스킵 방식] 신청자 있는 정류장만 순서대로 정차, 각 구간 30분
+    // 경로: 항기원 → 오송역 → 청주터미널 → 청주공항 (정차 정류장끼리 30분씩)
+    // 신청자 없는 정류장은 건너뜀(미정차) → null 반환하여 UI에서 'skip' 표기
+    // 예) 출발 00:00, 셋 다 신청: 오송 00:30 / 터미널 01:00 / 공항 01:30
+    //     오송 미신청: 오송 skip / 터미널 00:30 / 공항 01:00
     function calcArrival(depTime, counts) {
         const [hh, mm] = depTime.split(':').map(Number);
-        let baseMin = hh * 60 + mm;
-        const result = {};
+        let acc = hh * 60 + mm;
+        const result = { osong: null, terminal: null, airport: null };
 
-        // 오송역: 항기원 출발 +30분 (고정, 첫 경유지)
-        result.osong = baseMin + 30;
-
-        // 청주터미널: 오송역 경유 여부와 무관하게 항기원 기준 +60분
-        // 단, 오송역에 아무도 없으면 오송 미경유 → +30분 절약
-        let termMin = baseMin + (counts.osong > 0 ? 60 : 30);
-        result.terminal = termMin;
-
-        // 청주공항: 터미널 경유 여부에 따라 달라짐
-        // 터미널 승객 있으면 터미널 도착 후 +30분, 없으면 터미널 skip → +30분 절약
-        let airMin = termMin + (counts.terminal > 0 ? 30 : 0) + 30;
-        // 터미널도 없고 오송도 없으면 항기원→공항 직행 +60분
-        if (counts.osong === 0 && counts.terminal === 0) airMin = baseMin + 60;
-        result.airport = airMin;
+        if (counts.osong > 0)    { acc += 30; result.osong = acc; }
+        if (counts.terminal > 0) { acc += 30; result.terminal = acc; }
+        if (counts.airport > 0)  { acc += 30; result.airport = acc; }
 
         return result;
     }
@@ -2223,9 +2214,13 @@ async function openShuttleApply() {
         const osongEl    = document.getElementById('arrival-osong');
         const termEl     = document.getElementById('arrival-terminal');
         const airportEl  = document.getElementById('arrival-airport');
-        if (osongEl)   osongEl.textContent   = `${fmtMin(arrivals.osong)} (도착 예정)`;
-        if (termEl)    termEl.textContent    = `${fmtMin(arrivals.terminal)} (도착 예정)`;
-        if (airportEl) airportEl.textContent = `${fmtMin(arrivals.airport)} (도착 예정)`;
+        const setTxt = (el, min) => {
+            if (!el) return;
+            el.textContent = (min !== null) ? `${fmtMin(min)} (도착 예정)` : '미정차 (신청자 없음)';
+        };
+        setTxt(osongEl, arrivals.osong);
+        setTxt(termEl, arrivals.terminal);
+        setTxt(airportEl, arrivals.airport);
     }
 
     function clearArrivalUI() {
@@ -2407,6 +2402,25 @@ async function openAdminAction() {
         const on = document.getElementById('overnightArea');
         if (oa) oa.style.display = 'flex';
         if (on) on.style.display = 'none';
+
+        // [기능 추가] 이전 신청 정보가 있으면 그대로 불러올지 물어본다
+        let lastOuting = null;
+        try { lastOuting = JSON.parse(localStorage.getItem('kac_last_outing') || 'null'); } catch(e) {}
+        if (lastOuting && (lastOuting.dept || lastOuting.destination || lastOuting.reason || lastOuting.phone)) {
+            const preview =
+                `소속: ${lastOuting.dept || '-'}\n` +
+                `행선지: ${lastOuting.destination || '-'}\n` +
+                `사유: ${lastOuting.reason || '-'}\n` +
+                `비상연락처: ${lastOuting.phone || '-'}`;
+            showKacConfirm(`📋 이전에 신청한 정보를 그대로 불러올까요?\n\n${preview}`).then(ok => {
+                if (!ok) return;
+                const setVal = (id, v) => { const el = document.getElementById(id); if (el && v) el.value = v; };
+                setVal('userDept', lastOuting.dept);
+                setVal('destination', lastOuting.destination);
+                setVal('outingReason', lastOuting.reason);
+                setVal('fullPhone', lastOuting.phone);
+            });
+        }
     } 
     // 2. 신청 내역이 있을 때
     else {
@@ -2646,6 +2660,13 @@ async function submitAdminAction() {
             saveAutoHistory('dept', dept);
             saveAutoHistory('dest', dest);
             saveAutoHistory('reason', reason);
+
+            // [기능 추가] 다음 신청 시 그대로 불러오기 위해 마지막 입력값 묶음 저장
+            try {
+                localStorage.setItem('kac_last_outing', JSON.stringify({
+                    dept: dept, destination: dest, reason: reason, phone: fullPhone
+                }));
+            } catch(e) {}
         }
 
         // 6. 석식 제외 데이터 저장 (체크했을 때만)
