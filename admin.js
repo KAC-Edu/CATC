@@ -2686,7 +2686,9 @@ toggleMiniQR: function() {
         const baseUrl = window.location.origin + directory + "/";
         const forcedUrl = `${baseUrl}index.html?room=${state.room}`;
         
-        label.innerText = `Room ${state.room} Join`;
+        const ctEl = document.getElementById('displayCourseTitle');
+        const courseNm = (ctEl && ctEl.innerText.trim()) ? ctEl.innerText.trim() : '';
+        label.innerText = `ROOM ${state.room} Join` + (courseNm ? ` · ${courseNm}` : '');
         
         // QR 생성
         new QRCode(target, {
@@ -2889,6 +2891,15 @@ openQrModal: function() {
     if(modal && target) {
         modal.style.display = 'flex'; // 팝업창 열기
         target.innerHTML = "";        // 이전 QR 흔적 삭제
+
+        // [추가] 어느 강의실인지 라벨 표시
+        const roomLabel = document.getElementById('qrBigRoomLabel');
+        if (roomLabel) {
+            const ctEl = document.getElementById('displayCourseTitle');
+            const courseNm = (ctEl && ctEl.innerText.trim()) ? ctEl.innerText.trim() : '';
+            roomLabel.innerHTML = `<i class="fa-solid fa-door-open"></i> ROOM ${state.room}` +
+                (courseNm ? ` · ${courseNm}` : '');
+        }
         
         // [2. 인식률 최적화] 팝업이 뜨는 애니메이션 시간을 고려해 0.1초 뒤 생성
         setTimeout(() => {
@@ -2926,18 +2937,24 @@ openQrModal: function() {
             ui.showAlert("강의실을 먼저 선택하세요!"); 
             return; 
         }
+        const ctEl = document.getElementById('displayCourseTitle');
+        const courseNm = (ctEl && ctEl.innerText.trim()) ? ctEl.innerText.trim() : '';
+        const roomTag = state.room
+            ? `ROOM ${state.room}${courseNm ? ' · ' + courseNm : ''}`
+            : '강의실';
+        const okMsg = `📋 [${roomTag}] 입장 링크가 복사되었습니다!`;
         if (navigator.clipboard && navigator.clipboard.writeText) {
             navigator.clipboard.writeText(url).then(() => {
-                ui.showAlert("클립보드에 링크가 복사되었습니다!");
+                ui.showAlert(okMsg);
             }).catch(() => {
                 linkInput.select(); 
                 document.execCommand('copy'); 
-                ui.showAlert("링크가 복사되었습니다!");
+                ui.showAlert(okMsg);
             });
         } else {
             linkInput.select(); 
             document.execCommand('copy'); 
-            ui.showAlert("링크가 복사되었습니다!");
+            ui.showAlert(okMsg);
         }
     },
 
