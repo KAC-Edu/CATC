@@ -2581,7 +2581,8 @@ showAlert: function(msg) {
             if(tableBody) {
                 const hasCourse = !!(settings.courseName && String(settings.courseName).trim());
                 // [필터] 운용 중(roomStatus=active + 과정명 존재)인 강의실만 현황판에 표출
-                if (isRoomActive && hasCourse) {
+                //  단, 환경설정에서 '총괄표 비노출'(hideFromBoard)로 지정한 과정은 제외 (테스트/내부 운용)
+                if (isRoomActive && hasCourse && !settings.hideFromBoard) {
                 const row = document.createElement('tr');
 
                 const statusBadge = isRoomActive 
@@ -5986,6 +5987,9 @@ loadCurrentSettings: function() {
         document.getElementById('setup-room-pw').value = s.password ? atob(s.password) : "";
         const kakaoInput = document.getElementById('setup-kakao-link');
         if (kakaoInput) kakaoInput.value = s.kakaoLink || "";
+        const showBoardInput = document.getElementById('setup-show-on-board');
+        // hideFromBoard가 true면 체크 해제, 아니면(기본) 체크
+        if (showBoardInput) showBoardInput.checked = !s.hideFromBoard;
         document.getElementById('setup-prof-select').value = st.professorName || "";
         // coordinatorName 매칭: 저장값("백유민"/"백유민 과장"/"백유민과장" 등)을 명단의 정식 이름으로 정규화해 드롭다운 자동 선택
         const savedCoordName = s.coordinatorName || '';
@@ -6137,6 +6141,9 @@ saveAll: function() {
         // 카카오톡 오픈톡방 링크 (선택) — 입력값 정리 후 저장
         const kakaoLinkVal = (document.getElementById('setup-kakao-link')?.value || '').trim();
         updates[`courses/${state.room}/settings/kakaoLink`] = kakaoLinkVal;
+        // 전면 현황판 총괄표 노출 여부 — 체크 해제 시 hideFromBoard=true (총괄표에서 숨김)
+        const showOnBoard = document.getElementById('setup-show-on-board');
+        updates[`courses/${state.room}/settings/hideFromBoard`] = showOnBoard ? !showOnBoard.checked : false;
         
         // ★ 수정: 호텔 예약 방식으로 선택된 날짜 범위 ("시작일 ~ 종료일")를 그대로 저장합니다.
         updates[`courses/${state.room}/settings/period`] = periodRange;
