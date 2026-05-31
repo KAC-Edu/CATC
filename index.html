@@ -510,10 +510,8 @@
 
     <div class="app-container" id="mainApp">
 <div class="header">
-    <div class="header-btn" id="pwaHomeBtn" onclick="closeStudentWindow()" style="color:#ffffff;" title="닫기">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <path d="M3 9.5 12 3l9 6.5"/><path d="M5 10v9a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1v-9"/>
-        </svg>
+    <div class="header-btn" id="headerKakaoBtn" onclick="openKakaoChat()" style="color:#FAE100; visibility:hidden;" title="카카오톡 오픈톡방">
+        <i class="fa-solid fa-comment" style="font-size:22px;"></i>
     </div>
     <div class="header-center">
         <div class="header-title" id="roomTitle">Course Name</div>
@@ -1299,12 +1297,16 @@ function applyKakaoLink(link) {
     const url = (link || '').trim();
     const landingBtn = document.getElementById('landingKakaoBtn');
     const menuBtn = document.getElementById('menu-kakao');
+    const headerBtn = document.getElementById('headerKakaoBtn');
     if (url) {
         if (landingBtn) { landingBtn.href = url; landingBtn.style.display = 'inline-flex'; }
         if (menuBtn) menuBtn.style.display = 'block';
+        if (headerBtn) { headerBtn.style.display = 'flex'; headerBtn.style.visibility = 'visible'; }
     } else {
         if (landingBtn) landingBtn.style.display = 'none';
         if (menuBtn) menuBtn.style.display = 'none';
+        // 헤더 버튼은 자리를 유지(visibility)하여 제목 가운데 정렬이 틀어지지 않게 함
+        if (headerBtn) { headerBtn.style.display = 'flex'; headerBtn.style.visibility = 'hidden'; }
     }
 }
 
