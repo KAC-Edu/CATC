@@ -3,31 +3,42 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>교육생 플랫폼 연결 중…</title>
+    <title>교육생 플랫폼 연결</title>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <script src="config.js"></script>
     <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" rel="stylesheet">
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Pretendard', sans-serif; -webkit-tap-highlight-color: transparent; }
         body { min-height: 100dvh; background: #0f172a; display: flex; align-items: center; justify-content: center; padding: 24px; color: #fff; }
-        .card { width: 100%; max-width: 360px; text-align: center; }
+        .card { width: 100%; max-width: 380px; text-align: center; }
         .logo { font-size: 46px; margin-bottom: 14px; }
         .spinner { width: 42px; height: 42px; border: 4px solid rgba(255,255,255,0.15); border-top-color: #facc15; border-radius: 50%; margin: 18px auto; animation: spin 0.8s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
         .title { font-size: 18px; font-weight: 900; margin-bottom: 6px; }
         .sub { font-size: 14px; color: #94a3b8; line-height: 1.6; }
         .room-badge { display: inline-block; margin-top: 14px; background: rgba(250,204,21,0.15); border: 1px solid rgba(250,204,21,0.5); color: #facc15; font-weight: 800; font-size: 15px; padding: 8px 18px; border-radius: 12px; }
-        /* 미등록 안내 */
-        .notice { display: none; }
-        .notice .icon { font-size: 52px; margin-bottom: 14px; }
-        .notice .steps { text-align: left; background: rgba(255,255,255,0.06); border-radius: 14px; padding: 18px 20px; margin: 18px 0; font-size: 14px; line-height: 1.9; color: #cbd5e1; }
-        .notice .steps b { color: #fff; }
-        .btn { display: inline-block; width: 100%; padding: 15px; background: #facc15; color: #1e293b; border: none; border-radius: 13px; font-size: 15px; font-weight: 900; cursor: pointer; text-decoration: none; }
-        .kac-logo { margin-top: 28px; opacity: 0.5; font-size: 12px; letter-spacing: 1px; color: #64748b; }
+        .section { display: none; }
+        .steps { text-align: left; background: rgba(255,255,255,0.06); border-radius: 14px; padding: 18px 20px; margin: 18px 0; font-size: 14px; line-height: 1.9; color: #cbd5e1; }
+        .steps b { color: #fff; }
+        .input { width: 100%; padding: 15px 16px; border-radius: 13px; border: 1.5px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.08); color: #fff; font-size: 16px; font-weight: 700; outline: none; text-align: center; margin-bottom: 12px; }
+        .input::placeholder { color: #64748b; }
+        .input:focus { border-color: #facc15; }
+        .btn { display: block; width: 100%; padding: 15px; background: #facc15; color: #1e293b; border: none; border-radius: 13px; font-size: 15px; font-weight: 900; cursor: pointer; }
+        .btn:disabled { opacity: 0.5; }
+        .btn-sub { background: transparent; color: #94a3b8; border: 1.5px solid rgba(255,255,255,0.2); margin-top: 10px; }
+        .match-card { background: rgba(255,255,255,0.08); border: 1.5px solid rgba(250,204,21,0.4); border-radius: 14px; padding: 18px; margin: 16px 0; }
+        .match-room { font-size: 26px; font-weight: 900; color: #facc15; }
+        .match-course { font-size: 15px; color: #e2e8f0; margin-top: 4px; font-weight: 700; }
+        .match-prof { font-size: 13px; color: #94a3b8; margin-top: 6px; }
+        .err { color: #fca5a5; font-size: 13px; margin: 8px 0; min-height: 16px; }
+        .link-find { margin-top: 16px; font-size: 13px; color: #facc15; text-decoration: underline; cursor: pointer; background: none; border: none; }
     </style>
 </head>
 <body>
     <div class="card">
         <!-- 연결 중 (룸 기록 있음) -->
-        <div id="connecting">
+        <div id="sec-connecting" class="section" style="display:block;">
             <div class="logo">🎓</div>
             <div class="spinner"></div>
             <div class="title">교육생 플랫폼으로 연결 중…</div>
@@ -35,41 +46,175 @@
             <div class="room-badge" id="roomBadge" style="display:none;"></div>
         </div>
 
-        <!-- 미등록 안내 (룸 기록 없음) -->
-        <div id="notice" class="notice">
-            <div class="icon">📋</div>
-            <div class="title">아직 입장 기록이 없습니다</div>
-            <div class="sub">이 기기에서 교육생 플랫폼에 입장한 기록을 찾지 못했어요.</div>
+        <!-- 입장 기록 없음 → 안내 + 이름으로 찾기 진입 -->
+        <div id="sec-notice" class="section">
+            <div class="logo">📋</div>
+            <div class="title">입장 기록을 찾지 못했어요</div>
+            <div class="sub">처음이거나, 기기 정보가 초기화된 경우입니다.</div>
             <div class="steps">
                 <b>처음이신가요?</b><br>
-                1. 강의실에 게시된 <b>QR 코드</b>를 먼저 스캔하세요.<br>
-                2. 성함과 사번(또는 전화 뒤 4자리)을 등록하세요.<br>
-                3. 그 다음부터는 이 링크로 바로 입장됩니다.
+                강의실에 게시된 <b>QR 코드</b>를 스캔해 등록해 주세요.<br><br>
+                <b>이미 등록하셨나요?</b><br>
+                아래 버튼을 눌러 성함으로 강의실을 찾을 수 있어요.
             </div>
-            <div class="sub" style="margin-bottom:14px;">등록을 마치셨다면 같은 휴대폰·같은 브라우저로 이 링크를 다시 눌러주세요.</div>
+            <button class="btn" onclick="showFind()"><i class="fa-solid fa-user-magnifying-glass"></i> 성함으로 내 강의실 찾기</button>
+        </div>
+
+        <!-- 이름으로 찾기 -->
+        <div id="sec-find" class="section">
+            <div class="logo">🔎</div>
+            <div class="title">성함으로 강의실 찾기</div>
+            <div class="sub">등록하셨던 성함을 입력해 주세요.</div>
+            <div style="margin-top:18px;">
+                <input type="text" id="findName" class="input" placeholder="성함 (예: 홍길동)" autocomplete="off">
+                <div class="err" id="findErr"></div>
+                <button class="btn" id="findBtn" onclick="findRoom()">강의실 찾기</button>
+                <button class="btn btn-sub" onclick="showNotice()">뒤로</button>
+            </div>
+        </div>
+
+        <!-- 매칭 결과 확인 -->
+        <div id="sec-confirm" class="section">
+            <div class="logo">✅</div>
+            <div class="title">이 강의실이 맞으신가요?</div>
+            <div class="match-card">
+                <div class="match-room" id="mRoom"></div>
+                <div class="match-course" id="mCourse"></div>
+                <div class="match-prof" id="mProf"></div>
+            </div>
+            <button class="btn" onclick="confirmEnter()"><i class="fa-solid fa-right-to-bracket"></i> 네, 입장합니다</button>
+            <button class="btn btn-sub" onclick="showFind()">아니요, 다시 찾기</button>
+            <div id="multiHint" style="display:none; margin-top:14px;"></div>
         </div>
     </div>
 
     <script>
+        var db = null;
+        try { db = firebase.database(); } catch (e) { console.error('firebase init 실패', e); }
+
+        function show(sec) {
+            ['connecting','notice','find','confirm'].forEach(function (s) {
+                document.getElementById('sec-' + s).style.display = (s === sec) ? 'block' : 'none';
+            });
+        }
+        function showNotice() { show('notice'); }
+        function showFind() {
+            show('find');
+            document.getElementById('findErr').textContent = '';
+            setTimeout(function () { document.getElementById('findName').focus(); }, 100);
+        }
+
+        // ── 1) 최근 강의실 자동 복귀 ──
         (function () {
-            // 교육생 앱이 마지막 입장 강의실을 저장하는 키
             var room = null;
             try { room = localStorage.getItem('kac_last_visited_room'); } catch (e) {}
-
             if (room && String(room).trim()) {
-                // 룸 기록 있음 → 해당 강의실로 자동 이동
                 var badge = document.getElementById('roomBadge');
                 if (badge) { badge.textContent = 'ROOM ' + room; badge.style.display = 'inline-block'; }
-                // 약간의 지연 후 이동 (스피너를 잠깐 보여줘 자연스럽게)
                 setTimeout(function () {
                     location.replace('index.html?room=' + encodeURIComponent(room));
                 }, 700);
             } else {
-                // 룸 기록 없음 → 안내 표시
-                document.getElementById('connecting').style.display = 'none';
-                document.getElementById('notice').style.display = 'block';
+                show('notice');
             }
         })();
+
+        // ── 2) 이름으로 강의실 찾기 ──
+        var _matches = [];
+        var _pickedRoom = null;
+
+        function findRoom() {
+            var name = (document.getElementById('findName').value || '').trim();
+            var errEl = document.getElementById('findErr');
+            errEl.textContent = '';
+            if (!name) { errEl.textContent = '성함을 입력해 주세요.'; return; }
+            if (!db) { errEl.textContent = '연결 오류입니다. QR로 입장해 주세요.'; return; }
+
+            var btn = document.getElementById('findBtn');
+            btn.disabled = true; btn.textContent = '찾는 중…';
+
+            db.ref('courses').once('value').then(function (snap) {
+                var courses = snap.val() || {};
+                var today = new Date(); today.setHours(0,0,0,0);
+                _matches = [];
+
+                Object.keys(courses).forEach(function (room) {
+                    var c = courses[room] || {};
+                    var st = c.status || {};
+                    var settings = c.settings || {};
+                    // 운영 중(active)인 강의실만 대상
+                    if (st.roomStatus !== 'active') return;
+                    // 기간이 지난 과정 제외
+                    var period = settings.period || '';
+                    if (period.indexOf(' ~ ') > -1) {
+                        var endStr = period.split(' ~ ')[1].trim();
+                        var endDt = new Date(endStr + 'T23:59:59');
+                        if (!isNaN(endDt) && endDt < today) return;
+                    }
+                    // 학생 명단에서 이름 일치 검색
+                    var students = c.students || {};
+                    var found = Object.keys(students).some(function (tk) {
+                        var s = students[tk] || {};
+                        var nm = (s.name || tk.split('_')[0] || '').trim();
+                        return nm === name;
+                    });
+                    if (found) {
+                        _matches.push({
+                            room: room,
+                            course: settings.courseName || ('ROOM ' + room),
+                            prof: (st.professorName || '')
+                        });
+                    }
+                });
+
+                btn.disabled = false; btn.textContent = '강의실 찾기';
+
+                if (_matches.length === 0) {
+                    errEl.textContent = '"' + name + '" 님으로 등록된 강의실을 찾지 못했어요. 성함을 다시 확인해 주세요.';
+                    return;
+                }
+                // 첫 매칭을 기본 후보로
+                showConfirm(0);
+            }).catch(function (e) {
+                console.error(e);
+                btn.disabled = false; btn.textContent = '강의실 찾기';
+                errEl.textContent = '조회 중 오류가 발생했습니다. 잠시 후 다시 시도하거나 QR로 입장해 주세요.';
+            });
+        }
+
+        function showConfirm(idx) {
+            var m = _matches[idx];
+            if (!m) return;
+            _pickedRoom = m.room;
+            document.getElementById('mRoom').textContent = 'ROOM ' + m.room;
+            document.getElementById('mCourse').textContent = m.course;
+            document.getElementById('mProf').textContent = m.prof ? (m.prof + ' 교수') : '';
+
+            // 동명이인으로 여러 강의실이 잡힌 경우 선택 힌트
+            var hint = document.getElementById('multiHint');
+            if (_matches.length > 1) {
+                hint.style.display = 'block';
+                hint.innerHTML = '<div class="sub" style="margin-bottom:8px;">같은 성함이 여러 강의실에 있어요. 본인 강의실을 선택하세요.</div>' +
+                    _matches.map(function (mm, i) {
+                        return '<button class="link-find" onclick="showConfirm(' + i + ')">ROOM ' + mm.room + ' · ' + mm.course + '</button>';
+                    }).join('<br>');
+            } else {
+                hint.style.display = 'none';
+            }
+            show('confirm');
+        }
+
+        function confirmEnter() {
+            if (!_pickedRoom) return;
+            location.replace('index.html?room=' + encodeURIComponent(_pickedRoom));
+        }
+
+        // 엔터로 검색
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter' && document.getElementById('sec-find').style.display === 'block') {
+                findRoom();
+            }
+        });
     </script>
 </body>
 </html>

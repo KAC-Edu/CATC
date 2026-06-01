@@ -1324,6 +1324,14 @@ async function resolveRoomFromCode(code) {
     setupListeners();
     checkCooldown();
     initKeyboardFix();
+
+    // [자동 입장] 이미 등록을 마친 교육생(유효 프로필 보유)은 '입장하기' 버튼을 누르지 않고
+    //  바로 채팅방(메인앱)으로 진입시킨다. 신규/미등록자만 랜딩의 입장하기 버튼을 보게 된다.
+    try {
+        if (isValidProfile()) {
+            enterApp();
+        }
+    } catch(e) { /* 실패 시 일반 랜딩 유지 */ }
 })();
 
 
