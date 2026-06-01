@@ -7117,6 +7117,20 @@ document.addEventListener('DOMContentLoaded', () => {
             if (user) annualPlanMgr.checkAndReset();
         });
     }
+    // 생활관 플랫폼 등에서 ?openAnnual=1 로 진입하면 연간계획 편집기를 자동으로 연다.
+    try {
+        const params = new URLSearchParams(location.search);
+        if (params.get('openAnnual') === '1') {
+            const tryOpen = (n) => {
+                if (typeof annualPlanMgr !== 'undefined' && annualPlanMgr.openEditorModal) {
+                    annualPlanMgr.openEditorModal();
+                } else if (n < 20) {
+                    setTimeout(() => tryOpen(n + 1), 300);
+                }
+            };
+            setTimeout(() => tryOpen(0), 600);
+        }
+    } catch (e) {}
 });
 
 /* ════════════════════════════════════════════════════════

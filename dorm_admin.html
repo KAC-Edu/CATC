@@ -202,6 +202,7 @@
                     <span class="filter-label">조회 주차</span>
                     <div class="pill-toggle" id="weekPills"></div>
                     <button class="refresh-btn" onclick="loadCourses(true)"><i class="fa-solid fa-rotate"></i> 새로고침</button>
+                    <button class="refresh-btn" onclick="openAnnualPlan()" style="border-color:#bae6fd; color:#0369a1;"><i class="fa-solid fa-calendar-days"></i> 연간계획표</button>
                 </div>
                 <div id="courseList" style="display:block;">
                     <div class="empty-floor">과정을 불러오는 중...</div>
@@ -298,6 +299,47 @@
             <div class="pop-actions">
                 <button class="pop-cancel" onclick="closeMovePop()">취소</button>
                 <button class="pop-save" onclick="confirmMove()">이동</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 연간계획 조회/추가 모달 -->
+    <div class="pop-overlay" id="annualPop" style="align-items:flex-start;">
+        <div class="pop-box" style="max-width:860px; width:100%; margin-top:40px; max-height:88vh; display:flex; flex-direction:column;">
+            <div style="display:flex; align-items:center; gap:10px; margin-bottom:8px;">
+                <h3 style="margin:0; font-size:18px;"><i class="fa-solid fa-calendar-days" style="color:#0ea5e9;"></i> 연간 교육계획</h3>
+                <span style="font-size:12px; color:var(--muted); font-weight:600;">과정·일정 확인 및 사전 등록</span>
+                <button onclick="annualPlan.close()" style="margin-left:auto; background:#f1f5f9; border:none; width:34px; height:34px; border-radius:9px; cursor:pointer; font-size:16px; color:var(--muted);"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <p style="font-size:12px; color:var(--muted); margin:0 0 14px;">여기서 추가/수정한 과정은 STEP 2 과정 선택에도 나타나 생활관 배치를 미리 준비할 수 있습니다. (강사 플랫폼의 실제 강의실 배정은 변경되지 않습니다.)</p>
+
+            <div style="display:flex; gap:8px; margin-bottom:12px; flex-wrap:wrap;">
+                <button class="refresh-btn" style="border-color:#bae6fd; color:#0369a1;" onclick="annualPlan.addRow()"><i class="fa-solid fa-plus"></i> 과정 추가</button>
+                <button class="refresh-btn" onclick="annualPlan.load()"><i class="fa-solid fa-rotate"></i> 새로고침</button>
+                <div style="flex:1;"></div>
+                <span id="annualCount" class="summary" style="align-self:center;">0개 과정</span>
+            </div>
+
+            <div style="overflow:auto; flex:1; border:1px solid var(--border); border-radius:12px;">
+                <table style="width:100%; border-collapse:collapse; font-size:13px;">
+                    <thead>
+                        <tr style="background:#f8fafc; position:sticky; top:0;">
+                            <th style="padding:9px; border:1px solid var(--border); width:42px;">연번</th>
+                            <th style="padding:9px; border:1px solid var(--border); min-width:160px;">과정명</th>
+                            <th style="padding:9px; border:1px solid var(--border); width:140px;">시작일</th>
+                            <th style="padding:9px; border:1px solid var(--border); width:140px;">종료일</th>
+                            <th style="padding:9px; border:1px solid var(--border); width:100px;">교수</th>
+                            <th style="padding:9px; border:1px solid var(--border); width:100px;">담당</th>
+                            <th style="padding:9px; border:1px solid var(--border); width:46px;"></th>
+                        </tr>
+                    </thead>
+                    <tbody id="annualBody"></tbody>
+                </table>
+            </div>
+
+            <div style="display:flex; gap:8px; margin-top:14px;">
+                <button class="pop-cancel" style="flex:1;" onclick="annualPlan.close()">닫기</button>
+                <button class="pop-save" style="flex:2;" onclick="annualPlan.save()"><i class="fa-solid fa-floppy-disk"></i> 저장</button>
             </div>
         </div>
     </div>
@@ -518,6 +560,7 @@
         // 선택된 주(월요일 키). 기본 = 이번주
         let selectedWeekKey = null;
         let coursesCache = null;   // courses 데이터 캐시 (렌더 속도 개선)
+        let annualCache = [];      // 연간계획 캐시 (룸 미배정 과정 표시용)
 
         function mondayOf(d) {
             const dt = new Date(d); dt.setHours(0,0,0,0);
@@ -549,6 +592,11 @@
             renderCourseList();
         }
 
+        // 연간계획표 열기 — 생활관 플랫폼 자체 모달 (조회 + 추가/수정)
+        function openAnnualPlan() {
+            annualPlan.open();
+        }
+
         // 주(월요일 기준) 키 — 같은 주 과정 묶음용
         function weekKeyOf(dateStr) {
             const dt = new Date(dateStr + 'T00:00:00');
@@ -574,12 +622,14 @@
             if (coursesCache && !force) { renderCourseList(); return; }
             listEl.innerHTML = `<div class="empty-floor">과정을 불러오는 중...</div>`;
             try {
-                // courses + rosters를 병렬로 한 번에 (속도 개선)
-                const [snap, rsSnap] = await Promise.all([
+                // courses + rosters + 연간계획을 병렬로 한 번에 (속도 개선)
+                const [snap, rsSnap, apSnap] = await Promise.all([
                     db.ref('courses').once('value'),
-                    db.ref('system/dorm/rosters').once('value')
+                    db.ref('system/dorm/rosters').once('value'),
+                    db.ref('system/annualPlan').once('value')
                 ]);
                 coursesCache = snap.val() || {};
+                annualCache = apSnap.val() || [];
                 const rsAll = rsSnap.val() || {};
                 rosterCounts = {};
                 Object.entries(rsAll).forEach(([k, v]) => {
@@ -623,6 +673,33 @@
                 items.push({ room, courseName: s.courseName || room, period: s.period || '', start, end: end || start, weekKey: weekKeyOf(start), profName });
             });
 
+            // 연간계획에만 있고 실제 룸에 아직 배정 안 된 과정도 표시 (생활관 사전 준비용)
+            const existingKeys = new Set(items.map(it => `${it.courseName}|${it.start}`));
+            (Array.isArray(annualCache) ? annualCache : Object.values(annualCache || {})).forEach(c => {
+                if (!c || !c.name) return;
+                const start = c.startDate || (c.period && c.period.includes(' ~ ') ? c.period.split(' ~ ')[0].trim() : '');
+                const end = c.endDate || (c.period && c.period.includes(' ~ ') ? c.period.split(' ~ ')[1].trim() : start);
+                if (!start) return;
+                if (existingKeys.has(`${c.name}|${start}`)) return; // 이미 룸 과정으로 표시됨
+                const startDt = new Date(start + 'T00:00:00');
+                const endDt = new Date((end || start) + 'T23:59:59');
+                if (isNaN(startDt)) return;
+                if (endDt < today) return;
+                if (selectedWeekKey) {
+                    const wkStart = new Date(selectedWeekKey + 'T00:00:00');
+                    const wkEnd = new Date(wkStart); wkEnd.setDate(wkStart.getDate() + 6); wkEnd.setHours(23,59,59);
+                    if (!(startDt <= wkEnd && endDt >= wkStart)) return;
+                }
+                items.push({
+                    room: 'AP_' + (c.name || '').replace(/[^가-힣A-Za-z0-9]/g, '').slice(0, 20) + '_' + start,
+                    courseName: c.name,
+                    period: c.period || `${start} ~ ${end}`,
+                    start, end: end || start, weekKey: weekKeyOf(start),
+                    profName: c.prof || '',
+                    fromPlan: true
+                });
+            });
+
             items.sort((a, b) => (a.start || '').localeCompare(b.start || '') || a.room.localeCompare(b.room));
 
             if (!items.length) {
@@ -642,7 +719,7 @@
                 const enrolled = cnt > 0;
                 html += `
                     <div class="course-row ${sel ? 'sel' : ''} ${enrolled ? 'enrolled' : ''}" data-room="${it.room}" data-week="${it.weekKey}" onclick='selectCourse(${JSON.stringify(it).replace(/'/g, "&#39;")})'>
-                        <span class="course-room-badge"><i class="fa-solid fa-door-open"></i> ${it.room}</span>
+                        <span class="course-room-badge" ${it.fromPlan ? 'style="background:#94a3b8;"' : ''}>${it.fromPlan ? '<i class="fa-solid fa-clock"></i> 예정' : '<i class="fa-solid fa-door-open"></i> ' + it.room}</span>
                         <div class="course-main">
                             <div class="cname">${it.courseName}</div>
                             <div class="cmeta">${it.period || '-'}</div>
@@ -665,7 +742,9 @@
                 row.classList.toggle('sel', on);
             });
             document.getElementById('rosterPanel').style.display = 'block';
-            document.getElementById('rosterTitle').innerText = `${it.courseName} — 교육생 명단 (ROOM ${it.room})`;
+            document.getElementById('rosterTitle').innerText = it.fromPlan
+                ? `${it.courseName} — 교육생 명단 (예정 과정)`
+                : `${it.courseName} — 교육생 명단 (ROOM ${it.room})`;
             document.getElementById('rosterSaveSummary').innerText = `${it.courseName} · ${it.period}`;
             loadRoster(it); // 기존 저장된 명단 있으면 로드
             document.getElementById('rosterPanel').scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -1244,6 +1323,99 @@
                 </body></html>`);
             win.document.close();
         }
+
+        // ════════════ 연간계획 조회/추가 (생활관 자체) ════════════
+        const annualPlan = {
+            KEY: 'system/annualPlan',
+            data: [],
+
+            open() {
+                document.getElementById('annualPop').style.display = 'flex';
+                this.load();
+            },
+            close() {
+                document.getElementById('annualPop').style.display = 'none';
+            },
+
+            mondayOf(dateStr) {
+                const dt = new Date(dateStr + 'T00:00:00');
+                if (isNaN(dt)) return '';
+                const dow = (dt.getDay() + 6) % 7;
+                dt.setDate(dt.getDate() - dow);
+                return dt.toISOString().slice(0, 10);
+            },
+
+            load() {
+                document.getElementById('annualBody').innerHTML = `<tr><td colspan="7" style="padding:18px; text-align:center; color:var(--muted);">불러오는 중...</td></tr>`;
+                db.ref(this.KEY).once('value', snap => {
+                    const v = snap.val() || [];
+                    const arr = Array.isArray(v) ? v : Object.values(v);
+                    this.data = arr.filter(c => c && (c.name || c.startDate)).map(c => ({
+                        name: c.name || '',
+                        startDate: c.startDate || '',
+                        endDate: c.endDate || '',
+                        prof: c.prof || '',
+                        coord: c.coord || ''
+                    })).sort((a, b) => (a.startDate || '').localeCompare(b.startDate || ''));
+                    this.render();
+                });
+            },
+
+            render() {
+                const body = document.getElementById('annualBody');
+                document.getElementById('annualCount').innerText = `${this.data.length}개 과정`;
+                if (!this.data.length) {
+                    body.innerHTML = `<tr><td colspan="7" style="padding:20px; text-align:center; color:var(--muted);">등록된 과정이 없습니다. "과정 추가"로 입력하세요.</td></tr>`;
+                    return;
+                }
+                const today = new Date().toISOString().slice(0, 10);
+                body.innerHTML = this.data.map((c, i) => {
+                    let bg = '';
+                    if (c.startDate && c.endDate) {
+                        if (c.endDate < today) bg = 'background:#f1f5f9;';
+                        else if (c.startDate <= today && c.endDate >= today) bg = 'background:#dbeafe;';
+                        else bg = 'background:#dcfce7;';
+                    }
+                    const inp = 'width:100%; border:none; outline:none; background:transparent; font-size:13px;';
+                    return `<tr style="${bg}">
+                        <td style="padding:4px; border:1px solid var(--border); text-align:center;">${i + 1}</td>
+                        <td style="padding:4px; border:1px solid var(--border);"><input value="${(c.name||'').replace(/"/g,'&quot;')}" oninput="annualPlan.edit(${i},'name',this.value)" style="${inp} font-weight:700;"></td>
+                        <td style="padding:4px; border:1px solid var(--border);"><input type="date" value="${c.startDate||''}" oninput="annualPlan.edit(${i},'startDate',this.value)" style="${inp}"></td>
+                        <td style="padding:4px; border:1px solid var(--border);"><input type="date" value="${c.endDate||''}" oninput="annualPlan.edit(${i},'endDate',this.value)" style="${inp}"></td>
+                        <td style="padding:4px; border:1px solid var(--border);"><input value="${(c.prof||'').replace(/"/g,'&quot;')}" oninput="annualPlan.edit(${i},'prof',this.value)" style="${inp}"></td>
+                        <td style="padding:4px; border:1px solid var(--border);"><input value="${(c.coord||'').replace(/"/g,'&quot;')}" oninput="annualPlan.edit(${i},'coord',this.value)" style="${inp}"></td>
+                        <td style="padding:4px; border:1px solid var(--border); text-align:center;"><span class="del-x" style="color:var(--danger); cursor:pointer;" onclick="annualPlan.del(${i})"><i class="fa-solid fa-xmark"></i></span></td>
+                    </tr>`;
+                }).join('');
+            },
+
+            edit(i, key, val) { if (this.data[i]) this.data[i][key] = val.trim(); },
+            addRow() { this.data.push({ name: '', startDate: '', endDate: '', prof: '', coord: '' }); this.render(); },
+            del(i) { this.data.splice(i, 1); this.render(); },
+
+            save() {
+                // 유효한 행만 저장 (과정명 필수)
+                const clean = this.data.filter(c => (c.name || '').trim());
+                const payload = clean.map((c, i) => ({
+                    no: i + 1,
+                    name: c.name.trim(),
+                    startDate: c.startDate || '',
+                    endDate: c.endDate || '',
+                    period: (c.startDate && c.endDate) ? `${c.startDate} ~ ${c.endDate}` : '',
+                    prof: (c.prof || '').trim(),
+                    coord: (c.coord || '').trim(),
+                    weekKey: c.startDate ? this.mondayOf(c.startDate) : ''
+                }));
+                db.ref(this.KEY).set(payload)
+                    .then(() => {
+                        showToast(`✅ 연간계획 저장됨 (${payload.length}개 과정)`);
+                        // STEP 2 캐시 갱신 위해 과정 다시 로드
+                        coursesCache = null;
+                        if (document.getElementById('step-2').style.display !== 'none') loadCourses(true);
+                    })
+                    .catch(e => { console.error(e); showToast('⚠️ 저장 실패'); });
+            }
+        };
 
         // ── 토스트 ──
         let toastTimer = null;
