@@ -5898,6 +5898,21 @@ occupiedLocations: [], // 이 줄을 추가하세요
 
 
 
+// 담임 교수 선택 즉시 → 그 교수의 오픈톡방 링크를 입력칸에 자동 채움
+onProfChange: function() {
+    const profName = (document.getElementById('setup-prof-select')?.value || '').trim();
+    const kakaoInput = document.getElementById('setup-kakao-link');
+    if (!kakaoInput) return;
+    if (!profName) { return; }
+    firebase.database().ref(`system/professorProfiles/${profName}/kakaoLink`).once('value', s => {
+        const link = (s.val() || '').trim();
+        // 교수 프로필에 링크가 있으면 항상 그 링크로 갱신 (교수 바뀌면 링크도 따라 바뀜)
+        if (link) {
+            kakaoInput.value = link;
+        }
+    });
+},
+
 // [최종 수정] 권한 체크 + 호텔 예약 방식(Range) 달력이 적용된 설정 모달 오픈 함수
 openSetupModal: async function() {
     if(!state.room) return ui.showAlert("강의실을 먼저 선택하세요.");
@@ -6419,10 +6434,26 @@ const bgmPlayer = {
     _TOTAL: 11,
     _BASE_URL: 'https://raw.githubusercontent.com/kac-edu/CATC/main/',
     _LS_VOL: 'kac_bgm_vol',
+    _SS_STATE: 'kac_bgm_state',   // sessionStorage: 새로고침 시 이어듣기용
 
     // 트랙 번호로 URL 생성
     _url: function(num) {
         return this._BASE_URL + encodeURIComponent(`배경음${num}.mp3`);
+    },
+
+    // 현재 재생 상태를 sessionStorage에 저장 (새로고침 후 이어듣기)
+    _saveState: function() {
+        try {
+            if (this._currentNum > 0 && this._isPlaying && this._audio) {
+                sessionStorage.setItem(this._SS_STATE, JSON.stringify({
+                    num: this._currentNum,
+                    time: this._audio.currentTime || 0,
+                    playing: true
+                }));
+            } else {
+                sessionStorage.removeItem(this._SS_STATE);
+            }
+        } catch (e) {}
     },
 
     init: function() {
@@ -6439,6 +6470,54 @@ const bgmPlayer = {
         this._audio.onended = () => {
             if (this._isPlaying) this.playRandom();
         };
+
+        // 재생 위치를 주기적으로 저장 (새로고침 이어듣기)
+        this._audio.addEventListener('timeupdate', () => {
+            if (this._isPlaying) this._saveState();
+        });
+        // 페이지 떠나기 직전에도 저장
+        window.addEventListener('beforeunload', () => this._saveState());
+
+        // ── Ctrl+Shift+R(하드 리로드) 감지 → 음악 상태 완전 리셋 ──
+        //   (일반 새로고침/플랫폼 제목 클릭 시에는 아래 복원 로직으로 이어듣기)
+        window.addEventListener('keydown', (e) => {
+            if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'R' || e.key === 'r')) {
+                try { sessionStorage.removeItem(this._SS_STATE); } catch (err) {}
+                // 기본 동작(하드 리로드)은 그대로 진행됨 → 음악 리셋
+            }
+        });
+
+        // ── 저장된 상태가 있으면 이어듣기 복원 ──
+        let restored = false;
+        try {
+            const raw = sessionStorage.getItem(this._SS_STATE);
+            if (raw) {
+                const st = JSON.parse(raw);
+                if (st && st.num > 0 && st.playing) {
+                    this._currentNum = st.num;
+                    this._audio.src = this._url(st.num);
+                    this._audio.load();
+                    const resumeAt = st.time || 0;
+                    const tryResume = () => {
+                        try { this._audio.currentTime = resumeAt; } catch (e) {}
+                        this._audio.play().then(() => {
+                            this._isPlaying = true;
+                            this._syncBadge();
+                        }).catch(() => {
+                            // 브라우저 자동재생 차단 시: 사용자가 한 번 클릭하면 이어재생
+                            const resumeOnce = () => {
+                                this._audio.play().then(() => { this._isPlaying = true; this._syncBadge(); }).catch(()=>{});
+                                document.removeEventListener('click', resumeOnce);
+                            };
+                            document.addEventListener('click', resumeOnce);
+                        });
+                    };
+                    if (this._audio.readyState >= 1) tryResume();
+                    else this._audio.addEventListener('loadedmetadata', tryResume, { once: true });
+                    restored = true;
+                }
+            }
+        } catch (e) {}
 
         this._renderPanel();
         this._syncBadge();
@@ -6476,6 +6555,7 @@ const bgmPlayer = {
             this._isPlaying = true;
             this._renderPanel();
             this._syncBadge();
+            this._saveState();
         }).catch(() => {});
     },
 
@@ -6513,6 +6593,17 @@ const bgmPlayer = {
                 nowEl.style.color = '#475569';
             }
         }
+        // 음악 아이콘 아래 '재생 중' 말풍선
+        const bubble = document.getElementById('bgmNowBubble');
+        const bubbleText = document.getElementById('bgmNowBubbleText');
+        if (bubble) {
+            if (this._isPlaying && this._currentNum > 0) {
+                if (bubbleText) bubbleText.innerText = `배경음 ${this._currentNum}번 재생 중`;
+                bubble.style.display = 'flex';
+            } else {
+                bubble.style.display = 'none';
+            }
+        }
     },
 
     _renderPanel: function() {
@@ -6528,6 +6619,7 @@ const bgmPlayer = {
         this._audio.play().then(() => {
             this._isPlaying = true;
             this._syncBadge();
+            this._saveState();
         }).catch(() => {});
     },
 
@@ -6536,6 +6628,7 @@ const bgmPlayer = {
         this._audio.pause();
         this._isPlaying = false;
         this._syncBadge();
+        this._saveState();
     },
 
     stop: function() {
@@ -6546,6 +6639,7 @@ const bgmPlayer = {
         this._currentNum = -1;
         this._prevNum = -1;
         this._syncBadge();
+        try { sessionStorage.removeItem(this._SS_STATE); } catch (e) {}
     },
 
     setVolume: function(val) {
@@ -7010,9 +7104,11 @@ annualPlanMgr.renderEditor = function() {
                 </tr>
             </thead>
             <tbody>`;
+    const _today = this._today();
     this.currentEditingData.forEach((c, idx) => {
+        const isCur = c.startDate && c.endDate && c.startDate <= _today && c.endDate >= _today;
         html += `
-            <tr style="${rowBg(c)}">
+            <tr data-cur="${isCur ? '1' : '0'}" style="${rowBg(c)}">
                 <td style="${cellStyle} text-align:center; color:#64748b;">${idx + 1}</td>
                 <td style="${cellStyle}"><input type="text" value="${esc(c.name)}" onchange="annualPlanMgr.updateLocalData(${idx},'name',this.value)" style="${inpStyle} font-weight:700;"></td>
                 <td style="${cellStyle}"><input type="date" value="${esc(c.startDate)}" onchange="annualPlanMgr.updateLocalData(${idx},'startDate',this.value)" style="${inpStyle}"></td>
@@ -7024,6 +7120,12 @@ annualPlanMgr.renderEditor = function() {
     });
     html += `</tbody></table>`;
     area.innerHTML = html;
+
+    // 현재 진행 중(오늘 포함) 과정 행을 화면 중앙으로 스크롤
+    setTimeout(() => {
+        const curRow = area.querySelector('tr[data-cur="1"]');
+        if (curRow && curRow.scrollIntoView) curRow.scrollIntoView({ block: 'center' });
+    }, 50);
 };
 
 annualPlanMgr.updateLocalData = function(idx, field, value) {
@@ -7127,7 +7229,10 @@ annualPlanMgr._syncRoomsLockAware = async function(courses) {
 
     const snap = await firebase.database().ref('courses').once('value');
     const roomsData = snap.val() || {};
-    const courseKey = (nm, pd) => `${(nm||'').trim()}|${(pd||'').trim()}`;
+    const norm = s => (s || '').trim();
+    // 과정명 기준으로 연간계획에서 최신 정보 찾기 (교수/담당/기간 갱신용)
+    const planByName = {};
+    courses.forEach(c => { if (c.name) planByName[norm(c.name)] = c; });
 
     // 대상 주에 걸치는 과정 풀 (시작일 순)
     let pool = courses
@@ -7135,31 +7240,42 @@ annualPlanMgr._syncRoomsLockAware = async function(courses) {
         .filter(c => c.startDate <= targetSun && c.endDate >= targetMon)
         .sort((a, b) => a.startDate.localeCompare(b.startDate));
 
-    // 이미 어떤 방(잠금 포함)에 들어있는 과정키 → 그 방 유지, 풀에서 제외
-    const keptKeys = new Set();
-    this.ROOMS.forEach(r => {
-        const s = (roomsData[r] || {}).settings || {};
-        const nm = (s.courseName || '').trim();
-        if (!nm) return;
-        const key = courseKey(nm, s.period);
-        // 잠긴 방은 무조건 유지. 열린 방이라도 그 과정이 대상 주 풀에 있으면 유지.
-        const inPool = pool.some(c => courseKey(c.name, c.period) === key);
-        if (s.autoAssignLocked || inPool) keptKeys.add(key);
-    });
-
-    // 풀에서 '이미 유지되는 과정' 제외 → 새로 배치할 과정만 남김
-    const toPlace = pool.filter(c => !keptKeys.has(courseKey(c.name, c.period)));
-
-    // 비울 수 있는 방 = 열린 방 중, 현재 과정이 '유지 대상'이 아닌 방
     const updates = {};
+    const keptNames = new Set();   // 보존된 방의 과정명 (중복 배치 방지)
     const freeRooms = [];
+
+    // 1) 각 방 판정: 잠금 OR 현재 진행 중이면 보존, 그 외 열린 방은 비움
     this.ROOMS.forEach(r => {
-        const s = (roomsData[r] || {}).settings || {};
-        if (s.autoAssignLocked) return; // 잠금 방 제외
-        const nm = (s.courseName || '').trim();
-        const key = courseKey(nm, s.period);
-        if (nm && keptKeys.has(key)) return; // 유지 대상 → 그대로 둠
-        // 그 외 열린 방은 비우고 배치 대상 풀로
+        const rd = roomsData[r] || {};
+        const s = rd.settings || {};
+        const st = rd.status || {};
+        const nm = norm(s.courseName);
+        const locked = !!s.autoAssignLocked;
+
+        // 현재 진행 중 여부: 기간이 오늘을 포함
+        let inProgress = false;
+        if (nm && s.period && s.period.includes('~')) {
+            const parts = s.period.split('~');
+            const sd = norm(parts[0]), ed = norm(parts[1]);
+            if (sd && ed && sd <= today && ed >= today) inProgress = true;
+        }
+
+        if (locked || (nm && inProgress)) {
+            // ── 보존 방 ──
+            keptNames.add(nm);
+            // 잠금 방이 아니면서, 연간계획에 같은 과정명이 있으면 교수/담당/기간을 최신으로 갱신
+            //  (사용자가 연간계획에서 수정한 교수/담당이 진행 중인 방에도 반영되도록)
+            if (!locked && planByName[nm]) {
+                const pc = planByName[nm];
+                const coordFull = (typeof coordMgr !== 'undefined' && coordMgr.matchName ? coordMgr.matchName(pc.coord) : '') || (pc.coord || '');
+                updates[`courses/${r}/settings/period`] = pc.period;
+                updates[`courses/${r}/settings/coordinatorName`] = coordFull;
+                updates[`courses/${r}/status/professorName`] = pc.prof;
+            }
+            return; // 방 자체는 유지
+        }
+
+        // ── 열린 방 & 진행 중 아님 → 비우고 재배치 대상 ──
         updates[`courses/${r}/settings/courseName`] = '';
         updates[`courses/${r}/settings/period`]     = '';
         updates[`courses/${r}/settings/coordinatorName`] = null;
@@ -7167,6 +7283,9 @@ annualPlanMgr._syncRoomsLockAware = async function(courses) {
         updates[`courses/${r}/status/roomStatus`]   = 'idle';
         freeRooms.push(r);
     });
+
+    // 2) 풀에서 '보존된 방에 이미 있는 과정명' 제외 → 나머지만 빈 방에 배치
+    const toPlace = pool.filter(c => !keptNames.has(norm(c.name)));
 
     for (let i = 0; i < Math.min(freeRooms.length, toPlace.length); i++) {
         const room = freeRooms[i];
@@ -7180,7 +7299,7 @@ annualPlanMgr._syncRoomsLockAware = async function(courses) {
     }
     if (Object.keys(updates).length) {
         await firebase.database().ref().update(updates);
-        console.log('[annualPlanMgr] 편집기 동기화 완료. 대상 주:', targetMon, '~', targetSun, '/ 유지:', [...keptKeys].length, '/ 신규배치:', Math.min(freeRooms.length, toPlace.length));
+        console.log('[annualPlanMgr] 동기화 완료. 대상주:', targetMon, '~', targetSun, '/ 보존:', [...keptNames].filter(Boolean).length, '/ 신규:', Math.min(freeRooms.length, toPlace.length));
     }
 };
 

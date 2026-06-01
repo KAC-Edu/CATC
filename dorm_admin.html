@@ -1461,6 +1461,19 @@
                         <td style="padding:4px; border:1px solid var(--border); text-align:center;"><span class="del-x" style="color:var(--danger); cursor:pointer;" onclick="annualPlan.del(${i})"><i class="fa-solid fa-xmark"></i></span></td>
                     </tr>`;
                 }).join('');
+
+                // 현재 진행 중(오늘 포함) 과정 행을 중앙으로 스크롤
+                setTimeout(() => {
+                    const rows = body.querySelectorAll('tr');
+                    const td = new Date().toISOString().slice(0, 10);
+                    for (let k = 0; k < this.data.length; k++) {
+                        const c = this.data[k];
+                        if (c.startDate && c.endDate && c.startDate <= td && c.endDate >= td) {
+                            if (rows[k] && rows[k].scrollIntoView) rows[k].scrollIntoView({ block: 'center' });
+                            break;
+                        }
+                    }
+                }, 50);
             },
 
             edit(i, key, val) { if (this.data[i]) this.data[i][key] = val.trim(); },

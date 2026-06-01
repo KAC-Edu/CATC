@@ -5076,8 +5076,10 @@ const annualPlanMgrCoord = {
                 <th style="${th} width:110px;">운영담당</th>
                 <th style="${th} width:46px;">삭제</th>
             </tr></thead><tbody>`;
+        const _td2 = new Date().toISOString().slice(0,10);
         this.currentEditingData.forEach((c, idx) => {
-            html += `<tr>
+            const isCur = c.startDate && c.endDate && c.startDate <= _td2 && c.endDate >= _td2;
+            html += `<tr data-cur="${isCur ? '1' : '0'}">
                 <td style="${td} text-align:center; color:#64748b;">${idx + 1}</td>
                 <td style="${td}"><input type="text" value="${esc(c.name)}" onchange="annualPlanMgrCoord.updateLocalData(${idx},'name',this.value)" style="${inp} font-weight:700;"></td>
                 <td style="${td}"><input type="date" value="${esc(c.startDate)}" onchange="annualPlanMgrCoord.updateLocalData(${idx},'startDate',this.value)" style="${inp}"></td>
@@ -5089,6 +5091,10 @@ const annualPlanMgrCoord = {
         });
         html += `</tbody></table>`;
         area.innerHTML = html;
+        setTimeout(() => {
+            const curRow = area.querySelector('tr[data-cur="1"]');
+            if (curRow && curRow.scrollIntoView) curRow.scrollIntoView({ block: 'center' });
+        }, 50);
     },
 
     updateLocalData: function(idx, field, value) {
