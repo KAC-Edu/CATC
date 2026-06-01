@@ -1039,6 +1039,26 @@ _executeReset: function() {
     dataMgr.addOwnedRoom(state.room);
     localStorage.setItem('last_owned_room', state.room);
 
+    // [중요] 수동 리셋한 과정은 이번 '대상 주' 자동배치에서 제외(되살아나지 않도록).
+    //  현재 방에 들어있던 과정명+기간을 system/dismissedCourses/{weekKey} 에 기록한다.
+    const _curName   = (document.getElementById('setup-course-name')?.value || '').trim();
+    let _dismissPromise = Promise.resolve();
+    try {
+        _dismissPromise = firebase.database().ref(`${rPath}/settings`).once('value').then(s => {
+            const st = s.val() || {};
+            const nm = (st.courseName || '').trim();
+            const pd = (st.period || '').trim();
+            if (!nm) return;
+            // 대상 주 키 계산 (annualPlanMgr와 동일 기준)
+            let weekKey = '';
+            try { weekKey = annualPlanMgr._getTargetMonday(annualPlanMgr._today()); } catch(e) {}
+            const key = `${nm}|${pd}`.replace(/[.#$/\[\]]/g, '_');
+            const upd = {};
+            upd[`system/dismissedCourses/${weekKey}/${key}`] = { name: nm, period: pd, at: Date.now() };
+            return firebase.database().ref().update(upd);
+        });
+    } catch(e) {}
+
     const freshRoom = {
         settings: {
             courseName: "", roomDetailName: "", period: null,
@@ -1080,6 +1100,8 @@ _executeReset: function() {
     };
 
     firebase.database().ref().update(resetUpdates).then(() => {
+        return _dismissPromise;
+    }).then(() => {
         ui.showAlert(`✅ Room ${state.room}이 성공적으로 초기화되었습니다.`);
         setTimeout(() => location.reload(), 800);
     }).catch(err => {
@@ -5903,13 +5925,20 @@ onProfChange: function() {
     const profName = (document.getElementById('setup-prof-select')?.value || '').trim();
     const kakaoInput = document.getElementById('setup-kakao-link');
     if (!kakaoInput) return;
-    if (!profName) { return; }
+    if (!profName) return;
+
+    // 1) 캐시에 있으면 즉시 반영 (지연 없음)
+    if (this._profKakaoCache && Object.prototype.hasOwnProperty.call(this._profKakaoCache, profName)) {
+        const cached = (this._profKakaoCache[profName] || '').trim();
+        if (cached) kakaoInput.value = cached;
+        return;
+    }
+    // 2) 캐시에 없으면 즉시 조회 후 반영 + 캐시에 저장
     firebase.database().ref(`system/professorProfiles/${profName}/kakaoLink`).once('value', s => {
         const link = (s.val() || '').trim();
-        // 교수 프로필에 링크가 있으면 항상 그 링크로 갱신 (교수 바뀌면 링크도 따라 바뀜)
-        if (link) {
-            kakaoInput.value = link;
-        }
+        if (!this._profKakaoCache) this._profKakaoCache = {};
+        this._profKakaoCache[profName] = link;
+        if (link) kakaoInput.value = link;
     });
 },
 
@@ -5942,6 +5971,15 @@ openSetupModal: async function() {
     let profOptions = '<option value="">(선택 안함)</option>';
     profMgr.list.forEach(p => { profOptions += `<option value="${p.name}">${p.name} 교수</option>`; });
     document.getElementById('setup-prof-select').innerHTML = profOptions;
+
+    // 교수별 오픈톡방 링크 미리 캐시 (선택 즉시 채우기 위해)
+    this._profKakaoCache = {};
+    firebase.database().ref('system/professorProfiles').once('value', snap => {
+        const all = snap.val() || {};
+        Object.keys(all).forEach(name => {
+            this._profKakaoCache[name] = (all[name] && all[name].kakaoLink) ? all[name].kakaoLink : '';
+        });
+    });
 
     // 담당자 상태 로드
     firebase.database().ref('system/coordinators').once('value', snap => {
@@ -6860,6 +6898,19 @@ const annualPlanMgr = {
         return mon;
     },
 
+    // 수동 리셋되어 이번 대상 주 자동배치에서 제외할 과정(과정명|기간) Set 반환
+    _getDismissedSet: async function(weekKey) {
+        const set = new Set();
+        try {
+            const snap = await firebase.database().ref(`system/dismissedCourses/${weekKey}`).once('value');
+            const obj = snap.val() || {};
+            Object.values(obj).forEach(d => {
+                if (d && d.name) set.add(`${(d.name||'').trim()}|${(d.period||'').trim()}`);
+            });
+        } catch (e) {}
+        return set;
+    },
+
     _applyCurrentWeek: async function(courses) {
         const today = this._today();
         // 대상 주(이번주 또는 토요일부터는 차주) 월~일 범위
@@ -6973,12 +7024,17 @@ const annualPlanMgr = {
             const targetSunObj = new Date(targetMon + 'T00:00:00Z');
             targetSunObj.setUTCDate(targetSunObj.getUTCDate() + 6);
             const targetSun = targetSunObj.toISOString().split('T')[0];
+            const norm = s => (s || '').trim();
 
-            // 대상 주에 걸치는 과정명 집합 (기대 배정)
+            // 수동 리셋되어 이번 주 배치 제외할 과정
+            const dismissed = await this._getDismissedSet(targetMon);
+
+            // 대상 주에 걸치는 과정명 집합 (dismissed 제외)
             const expected = new Set(
                 courses
                     .filter(c => c.startDate && c.endDate && c.startDate <= targetSun && c.endDate >= targetMon)
-                    .map(c => (c.name || '').trim())
+                    .filter(c => !dismissed.has(`${norm(c.name)}|${norm(c.period)}`))
+                    .map(c => norm(c.name))
             );
 
             const snapAll = await firebase.database().ref('courses').once('value');
@@ -6989,20 +7045,19 @@ const annualPlanMgr = {
                 const rd = roomsData[room] || {};
                 const settings = rd.settings || {};
                 if (settings.autoAssignLocked) continue; // 잠긴 방은 무시
-                const courseName = (settings.courseName || '').trim();
+                const courseName = norm(settings.courseName);
                 const period = settings.period || '';
                 const endDate = period.split('~')[1]?.trim();
 
-                // (1) 배정돼 있는데 대상 주 과정이 아니면 → 주가 바뀜 → 재배치
-                if (courseName && !expected.has(courseName)) { needsUpdate = true; break; }
-                // (2) 과정 만료
+                // (2) 과정 만료 → 재배치
                 if (endDate && endDate < today) { needsUpdate = true; break; }
             }
 
             // (3) 대상 주 과정 중 아직 어느 방에도 안 들어간 게 있으면 → 재배치
+            //     (단, 진행 중이 아닌 빈 방이 있을 때만 의미가 있으므로 sync가 알아서 처리)
             if (!needsUpdate) {
                 const assignedNames = new Set(
-                    this.ROOMS.map(r => ((roomsData[r] || {}).settings || {}).courseName || '').filter(Boolean).map(n => n.trim())
+                    this.ROOMS.map(r => norm(((roomsData[r] || {}).settings || {}).courseName)).filter(Boolean)
                 );
                 for (const nm of expected) {
                     if (!assignedNames.has(nm)) { needsUpdate = true; break; }
@@ -7010,7 +7065,8 @@ const annualPlanMgr = {
             }
 
             if (needsUpdate) {
-                await this._applyCurrentWeek(courses);
+                // 진행 중 방·잠금 방은 보존하고, dismissed는 제외하는 keep-in-place 동기화 사용
+                await this._syncRoomsLockAware(courses);
                 console.log('[annualPlanMgr] 자동 재배치 완료 (대상 주:', targetMon, '~', targetSun, ')');
             }
         } catch (err) {
@@ -7239,6 +7295,12 @@ annualPlanMgr._syncRoomsLockAware = async function(courses) {
         .filter(c => c.startDate && c.endDate)
         .filter(c => c.startDate <= targetSun && c.endDate >= targetMon)
         .sort((a, b) => a.startDate.localeCompare(b.startDate));
+
+    // 수동 리셋된 과정은 이번 대상 주 배치에서 제외 (되살아나지 않도록)
+    const dismissed = await this._getDismissedSet(targetMon);
+    if (dismissed.size) {
+        pool = pool.filter(c => !dismissed.has(`${norm(c.name)}|${norm(c.period)}`));
+    }
 
     const updates = {};
     const keptNames = new Set();   // 보존된 방의 과정명 (중복 배치 방지)
