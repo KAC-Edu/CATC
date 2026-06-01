@@ -6560,7 +6560,8 @@ const bgmPlayer = {
         this._renderPanel();
         this._syncBadge();
 
-        // 패널 외부 클릭 시 닫기
+        // 창 크기 변경 시 플레이어 위치 재계산
+        window.addEventListener('resize', () => this._syncBadge());
         document.addEventListener('click', (e) => {
             const panel = document.getElementById('bgmPanel');
             const btn = document.getElementById('bgmIconBtn');
@@ -6631,13 +6632,23 @@ const bgmPlayer = {
                 nowEl.style.color = '#475569';
             }
         }
-        // 음악 아이콘 아래 '재생 중' 말풍선
+        // 음악 아이콘 바로 아래에 미니 플레이어 표시 (모든 페이지 위 레이어)
         const bubble = document.getElementById('bgmNowBubble');
         const bubbleText = document.getElementById('bgmNowBubbleText');
         if (bubble) {
             if (this._isPlaying && this._currentNum > 0) {
                 if (bubbleText) bubbleText.innerText = `배경음 ${this._currentNum}번 재생 중`;
                 bubble.style.display = 'flex';
+                // 음악 아이콘 위치 기준으로 바로 아래·우측 정렬
+                const icon = document.getElementById('bgmIconBtn');
+                if (icon && icon.getBoundingClientRect) {
+                    const r = icon.getBoundingClientRect();
+                    bubble.style.top = (r.bottom + 10) + 'px';
+                    // 플레이어 오른쪽 끝을 아이콘 오른쪽에 맞춤
+                    bubble.style.right = (window.innerWidth - r.right) + 'px';
+                    bubble.style.left = 'auto';
+                    bubble.style.transform = 'none';
+                }
             } else {
                 bubble.style.display = 'none';
             }
