@@ -1077,19 +1077,17 @@
 
 <!-- ══ 강의실 실시간 현황판 (#view-waiting) ══ -->
 <div id="view-waiting" class="full-dashboard" style="display:none; flex-direction:column; align-items:center; padding-top:6px;">
-    <div class="view-header" style="position:relative; width:100%;">
-        <h1 style="display:inline-flex; align-items:center; justify-content:center; gap:10px; flex-wrap:wrap;">
-            <i class="fa-solid fa-desktop"></i> 강의실 실시간 현황판
-        </h1>
-        <p>항공기술훈련원 강의실 및 교육과정 운영 상태를 실시간으로 모니터링합니다.</p>
-        <div style="display:flex; justify-content:center; margin-top:10px;">
+    <div class="view-header">
+        <h1 style="display:inline-flex; align-items:center; justify-content:center; gap:16px; flex-wrap:wrap;">
+            <span style="display:inline-flex; align-items:center; gap:10px;"><i class="fa-solid fa-desktop"></i> 강의실 실시간 현황판</span>
             <button onclick="annualPlanMgr.openEditorModal()"
-                    style="display:inline-flex; align-items:center; gap:7px; padding:9px 16px; font-size:14px; line-height:1; background:#0ea5e9; color:#ffffff; border:none; border-radius:10px; cursor:pointer; font-weight:800; box-shadow:0 3px 8px rgba(14,165,233,0.30); transition:transform .15s, box-shadow .15s;"
+                    style="margin-left:36px; display:inline-flex; align-items:center; gap:7px; padding:9px 16px; font-size:14px; line-height:1; background:#0ea5e9; color:#ffffff; border:none; border-radius:10px; cursor:pointer; font-weight:800; box-shadow:0 3px 8px rgba(14,165,233,0.30); transition:transform .15s, box-shadow .15s;"
                     onmouseover="this.style.transform='translateY(-1px)'; this.style.boxShadow='0 5px 13px rgba(14,165,233,0.42)';"
                     onmouseout="this.style.transform=''; this.style.boxShadow='0 3px 8px rgba(14,165,233,0.30)';">
                 <i class="fa-solid fa-calendar-days"></i> 연간계획 관리/수정
             </button>
-        </div>
+        </h1>
+        <p>항공기술훈련원 강의실 및 교육과정 운영 상태를 실시간으로 모니터링합니다.</p>
     </div>
     <div class="modern-white-card" style="margin-top:10px;">
         <table class="modern-table">
