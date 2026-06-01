@@ -6603,20 +6603,20 @@ const bgmPlayer = {
         if (this._isPlaying && this._currentNum > 0) {
             if (badge) {
                 badge.innerText = `배경음 ${this._currentNum}번`;
-                badge.style.background = '#60a5fa';
+                badge.style.background = '#ef4444';
                 badge.style.display = 'inline-block';
             }
-            if (iconBtn) iconBtn.style.color = '#60a5fa';
+            if (iconBtn) { iconBtn.style.color = '#ef4444'; iconBtn.classList.add('bgm-playing'); }
         } else if (this._currentNum > 0) {
             if (badge) {
                 badge.innerText = `배경음 ${this._currentNum}번 (정지)`;
                 badge.style.background = '#94a3b8';
                 badge.style.display = 'inline-block';
             }
-            if (iconBtn) iconBtn.style.color = '#94a3b8';
+            if (iconBtn) { iconBtn.style.color = '#94a3b8'; iconBtn.classList.remove('bgm-playing'); }
         } else {
             if (badge) { badge.style.display = 'none'; }
-            if (iconBtn) iconBtn.style.color = '';
+            if (iconBtn) { iconBtn.style.color = ''; iconBtn.classList.remove('bgm-playing'); }
         }
         // 패널 내 현재 곡 표시 업데이트
         const nowEl = document.getElementById('bgmNowTrack');
