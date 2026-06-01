@@ -6574,7 +6574,7 @@ document.addEventListener('DOMContentLoaded', () => bgmPlayer.init());
    ══════════════════════════════════════════════════════════════ */
 const annualPlanMgr = {
 
-    ROOMS: ['A', 'B', 'C'],
+    ROOMS: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split(''),
     PLAN_KEY: 'system/annualPlan',
 
     /* 엑셀 Serial 또는 숫자문자열 → YYYY-MM-DD */
@@ -6729,9 +6729,12 @@ const annualPlanMgr = {
     },
 
     _assignRooms: async function(courses) {
-        // Room A/B/C 전체 초기화
+        // 전체 방 초기화 (단, 잠금(autoAssignLocked) 방은 건드리지 않음)
+        const lockSnap = await firebase.database().ref('courses').once('value');
+        const lockData = lockSnap.val() || {};
         const reset = {};
         for (const r of this.ROOMS) {
+            if (lockData[r] && lockData[r].settings && lockData[r].settings.autoAssignLocked) continue;
             reset[`courses/${r}/settings/courseName`] = '';
             reset[`courses/${r}/settings/period`]     = '';
             reset[`courses/${r}/settings/coordinatorName`] = null;
@@ -6778,12 +6781,15 @@ const annualPlanMgr = {
         const curSnap = await firebase.database().ref('courses').once('value');
         const curRooms = curSnap.val() || {};
 
+        // 잠금(autoAssignLocked) 방은 자동배치에서 제외
+        const openRooms = this.ROOMS.filter(r => !(curRooms[r] && curRooms[r].settings && curRooms[r].settings.autoAssignLocked));
+
         const updates = {};
         const assigned = [];
         const wiped = [];
 
-        for (let i = 0; i < this.ROOMS.length; i++) {
-            const room = this.ROOMS[i];
+        for (let i = 0; i < openRooms.length; i++) {
+            const room = openRooms[i];
             const course = pool[i];
             const prevName = ((curRooms[room] || {}).settings || {}).courseName || '';
 
