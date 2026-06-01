@@ -122,6 +122,38 @@
         .pill-toggle button.on { background: #fff; color: var(--blue); box-shadow: 0 1px 4px rgba(15,23,42,0.12); }
         .refresh-btn { margin-left: auto; border: 1.5px solid var(--border); background: #fff; color: var(--muted); font-weight: 800; font-size: 13px; padding: 9px 16px; border-radius: 10px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: all 0.15s; white-space: nowrap; }
         .refresh-btn:hover { border-color: var(--blue); color: var(--blue); }
+
+        /* ── PC 모드: 글자·아이콘·여백 확대 (담당자 가독성) ── */
+        body.pc-mode { font-size: 17px; }
+        body.pc-mode .container { max-width: 1400px; }
+        body.pc-mode .header h1 { font-size: 24px; }
+        body.pc-mode .header .sub { font-size: 14px; }
+        body.pc-mode .h-btn { font-size: 15px; padding: 12px 18px; }
+        body.pc-mode .step-tabs > .step-tab { padding: 18px 22px; min-width: 180px; }
+        body.pc-mode .step-tab .n { font-size: 13px; }
+        body.pc-mode .step-tab .t { font-size: 17px; }
+        body.pc-mode .panel { padding: 28px; }
+        body.pc-mode .panel h2 { font-size: 21px; }
+        body.pc-mode .panel .desc { font-size: 15px; }
+        body.pc-mode .filter-label { font-size: 15px; }
+        body.pc-mode .pill-toggle button { font-size: 15px; padding: 11px 22px; }
+        body.pc-mode .refresh-btn { font-size: 15px; padding: 12px 20px; }
+        body.pc-mode .week-head { font-size: 15px; padding: 11px 18px; }
+        body.pc-mode .course-row { padding: 18px 24px; gap: 18px; }
+        body.pc-mode .course-room-badge { font-size: 15px; padding: 9px 16px; min-width: 92px; }
+        body.pc-mode .course-main .cname { font-size: 18px; }
+        body.pc-mode .course-main .cmeta { font-size: 14px; }
+        body.pc-mode .course-prof, body.pc-mode .course-count { font-size: 14px; padding: 7px 14px; }
+        body.pc-mode .course-go { font-size: 20px; }
+        body.pc-mode .room-table { font-size: 15px; }
+        body.pc-mode .room-table th { font-size: 14px; padding: 12px 10px; }
+        body.pc-mode .room-table td { padding: 8px 10px; }
+        body.pc-mode .room-table select { font-size: 15px; padding: 9px 11px; }
+        body.pc-mode .save-btn { font-size: 17px; padding: 15px 32px; }
+        body.pc-mode .floor-card h3 { font-size: 18px; }
+        body.pc-mode #rosterTable { font-size: 15px; }
+        body.pc-mode #rosterTable th { padding: 12px; }
+        body.pc-mode .pop-box { max-width: 980px; }
         @media (max-width: 640px) {
             .course-period, .course-prof { display: none; }
         }
@@ -156,6 +188,7 @@
             <div class="sub">항공기술훈련원 교육지원부</div>
         </div>
         <div class="header-actions">
+            <button class="h-btn" id="viewModeBtn" onclick="toggleViewMode()"><i class="fa-solid fa-desktop"></i> PC 모드</button>
             <button class="h-btn" onclick="location.href='portal.html'"><i class="fa-solid fa-grip"></i> 포털</button>
         </div>
     </div>
@@ -595,6 +628,23 @@
         // 연간계획표 열기 — 생활관 플랫폼 자체 모달 (조회 + 추가/수정)
         function openAnnualPlan() {
             annualPlan.open();
+        }
+
+        // ── PC / 모바일 보기 모드 전환 ──
+        function applyViewMode(mode) {
+            const btn = document.getElementById('viewModeBtn');
+            if (mode === 'pc') {
+                document.body.classList.add('pc-mode');
+                if (btn) btn.innerHTML = '<i class="fa-solid fa-mobile-screen-button"></i> 모바일 모드';
+            } else {
+                document.body.classList.remove('pc-mode');
+                if (btn) btn.innerHTML = '<i class="fa-solid fa-desktop"></i> PC 모드';
+            }
+            try { localStorage.setItem('kac_dorm_viewmode', mode); } catch(e) {}
+        }
+        function toggleViewMode() {
+            const now = document.body.classList.contains('pc-mode') ? 'pc' : 'mobile';
+            applyViewMode(now === 'pc' ? 'mobile' : 'pc');
         }
 
         // 주(월요일 기준) 키 — 같은 주 과정 묶음용
@@ -1426,6 +1476,13 @@
             clearTimeout(toastTimer);
             toastTimer = setTimeout(() => t.classList.remove('show'), 2600);
         }
+
+        // 저장된 보기 모드 복원 (기본: 모바일). PC 화면이 넓으면 PC 모드 자동 제안.
+        try {
+            let savedMode = localStorage.getItem('kac_dorm_viewmode');
+            if (!savedMode) savedMode = (window.innerWidth >= 1024) ? 'pc' : 'mobile';
+            applyViewMode(savedMode);
+        } catch(e) {}
 
         init();
     </script>
