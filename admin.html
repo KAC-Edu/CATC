@@ -1137,6 +1137,35 @@
     </div>
 </div>
 
+<!-- 과정 추가 팝업 (과정명 + 시작일 + 종료일) -->
+<div id="courseAddPop" class="modal-overlay" style="z-index:16000; display:none;">
+    <div class="modal-box" style="width:90%; max-width:400px; text-align:left;">
+        <div class="modal-header" style="text-align:left; margin-bottom:14px;">
+            <h3 style="display:flex; align-items:center; gap:8px;"><i class="fa-solid fa-circle-plus" style="color:#0ea5e9;"></i> 과정 추가</h3>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:12px;">
+            <div>
+                <label style="display:block; font-size:12px; font-weight:800; color:#64748b; margin-bottom:5px;">과정명</label>
+                <input type="text" id="ca-name" placeholder="예: KAC중급(2차)" style="width:100%; padding:12px 14px; border:1.5px solid #e2e8f0; border-radius:10px; font-size:15px; outline:none;">
+            </div>
+            <div>
+                <label style="display:block; font-size:12px; font-weight:800; color:#64748b; margin-bottom:5px;">시작일</label>
+                <input type="date" id="ca-start" style="width:100%; padding:12px 14px; border:1.5px solid #e2e8f0; border-radius:10px; font-size:15px; outline:none;">
+            </div>
+            <div>
+                <label style="display:block; font-size:12px; font-weight:800; color:#64748b; margin-bottom:5px;">종료일</label>
+                <input type="date" id="ca-end" style="width:100%; padding:12px 14px; border:1.5px solid #e2e8f0; border-radius:10px; font-size:15px; outline:none;">
+            </div>
+            <div id="ca-err" style="color:#ef4444; font-size:12px; min-height:16px;"></div>
+        </div>
+        <div class="modal-actions" style="margin-top:18px; justify-content:flex-end; gap:10px;">
+            <button class="m-btn m-btn-later" onclick="document.getElementById('courseAddPop').style.display='none'">취소</button>
+            <button class="m-btn m-btn-done" onclick="annualPlanMgr.confirmAdd()"><i class="fa-solid fa-plus"></i> 추가</button>
+        </div>
+    </div>
+</div>
+
+
 
 
 

@@ -7039,10 +7039,32 @@ annualPlanMgr.updateLocalData = function(idx, field, value) {
 };
 
 annualPlanMgr.addRow = function() {
-    this.currentEditingData.push({ no:0, name:'', startDate:'', endDate:'', period:'', prof:'', coord:'', weekKey:'' });
+    document.getElementById('ca-name').value = '';
+    document.getElementById('ca-start').value = '';
+    document.getElementById('ca-end').value = '';
+    document.getElementById('ca-err').innerText = '';
+    document.getElementById('courseAddPop').style.display = 'flex';
+    setTimeout(() => document.getElementById('ca-name').focus(), 100);
+};
+
+annualPlanMgr.confirmAdd = function() {
+    const name = (document.getElementById('ca-name').value || '').trim();
+    const start = document.getElementById('ca-start').value;
+    const end = document.getElementById('ca-end').value;
+    const err = document.getElementById('ca-err');
+    if (!name) { err.innerText = '과정명을 입력하세요.'; return; }
+    if (!start || !end) { err.innerText = '시작일과 종료일을 입력하세요.'; return; }
+    if (end < start) { err.innerText = '종료일이 시작일보다 빠를 수 없습니다.'; return; }
+    // 맨 위에 추가
+    this.currentEditingData.unshift({
+        no: 0, name, startDate: start, endDate: end,
+        period: `${start} ~ ${end}`, prof: '', coord: '',
+        weekKey: this._getMondayOf(start)
+    });
+    document.getElementById('courseAddPop').style.display = 'none';
     this.renderEditor();
     const area = document.getElementById('annualPlanEditorArea');
-    if (area) area.scrollTop = area.scrollHeight;
+    if (area) area.scrollTop = 0;
 };
 
 annualPlanMgr.deleteRow = function(idx) {
@@ -7094,7 +7116,8 @@ annualPlanMgr.saveAndSync = async function() {
     }
 };
 
-/* 편집기 "저장 및 즉시 적용" — 대상 주(이번주, 토요일부터는 차주)만 배정. 잠금 방 보존 + 동일 과정 중복 방지 */
+/* 편집기 "저장 및 즉시 적용" — 대상 주만 배정.
+   잠금 방 보존 + 이미 배정된 과정(과정명|기간 동일)은 잠금 없어도 그 방 그대로 유지 + 동일 과정 중복 방지 */
 annualPlanMgr._syncRoomsLockAware = async function(courses) {
     const today = this._today();
     const targetMon = this._getTargetMonday(today);
@@ -7104,37 +7127,50 @@ annualPlanMgr._syncRoomsLockAware = async function(courses) {
 
     const snap = await firebase.database().ref('courses').once('value');
     const roomsData = snap.val() || {};
-    const openRooms = this.ROOMS.filter(r => !(roomsData[r] && roomsData[r].settings && roomsData[r].settings.autoAssignLocked));
+    const courseKey = (nm, pd) => `${(nm||'').trim()}|${(pd||'').trim()}`;
 
-    // 잠긴 방의 (과정명|기간) — 동일 과정은 중복 배치 안 함
-    const lockedKeys = new Set();
-    this.ROOMS.forEach(r => {
-        const rd = roomsData[r];
-        if (rd && rd.settings && rd.settings.autoAssignLocked) {
-            const nm = (rd.settings.courseName || '').trim();
-            const pd = (rd.settings.period || '').trim();
-            if (nm) lockedKeys.add(`${nm}|${pd}`);
-        }
-    });
-
-    // 대상 주에 걸치는 과정만, 시작일 순. 잠긴 방 과정 제외.
-    const pool = courses
+    // 대상 주에 걸치는 과정 풀 (시작일 순)
+    let pool = courses
         .filter(c => c.startDate && c.endDate)
         .filter(c => c.startDate <= targetSun && c.endDate >= targetMon)
-        .filter(c => !lockedKeys.has(`${(c.name||'').trim()}|${(c.period||'').trim()}`))
         .sort((a, b) => a.startDate.localeCompare(b.startDate));
 
+    // 이미 어떤 방(잠금 포함)에 들어있는 과정키 → 그 방 유지, 풀에서 제외
+    const keptKeys = new Set();
+    this.ROOMS.forEach(r => {
+        const s = (roomsData[r] || {}).settings || {};
+        const nm = (s.courseName || '').trim();
+        if (!nm) return;
+        const key = courseKey(nm, s.period);
+        // 잠긴 방은 무조건 유지. 열린 방이라도 그 과정이 대상 주 풀에 있으면 유지.
+        const inPool = pool.some(c => courseKey(c.name, c.period) === key);
+        if (s.autoAssignLocked || inPool) keptKeys.add(key);
+    });
+
+    // 풀에서 '이미 유지되는 과정' 제외 → 새로 배치할 과정만 남김
+    const toPlace = pool.filter(c => !keptKeys.has(courseKey(c.name, c.period)));
+
+    // 비울 수 있는 방 = 열린 방 중, 현재 과정이 '유지 대상'이 아닌 방
     const updates = {};
-    for (const r of openRooms) {
+    const freeRooms = [];
+    this.ROOMS.forEach(r => {
+        const s = (roomsData[r] || {}).settings || {};
+        if (s.autoAssignLocked) return; // 잠금 방 제외
+        const nm = (s.courseName || '').trim();
+        const key = courseKey(nm, s.period);
+        if (nm && keptKeys.has(key)) return; // 유지 대상 → 그대로 둠
+        // 그 외 열린 방은 비우고 배치 대상 풀로
         updates[`courses/${r}/settings/courseName`] = '';
         updates[`courses/${r}/settings/period`]     = '';
         updates[`courses/${r}/settings/coordinatorName`] = null;
         updates[`courses/${r}/status/professorName`] = '';
         updates[`courses/${r}/status/roomStatus`]   = 'idle';
-    }
-    for (let i = 0; i < Math.min(openRooms.length, pool.length); i++) {
-        const room = openRooms[i];
-        const course = pool[i];
+        freeRooms.push(r);
+    });
+
+    for (let i = 0; i < Math.min(freeRooms.length, toPlace.length); i++) {
+        const room = freeRooms[i];
+        const course = toPlace[i];
         const coordFull = (typeof coordMgr !== 'undefined' && coordMgr.matchName ? coordMgr.matchName(course.coord) : '') || (course.coord || '');
         updates[`courses/${room}/settings/courseName`] = course.name;
         updates[`courses/${room}/settings/period`]     = course.period;
@@ -7144,7 +7180,7 @@ annualPlanMgr._syncRoomsLockAware = async function(courses) {
     }
     if (Object.keys(updates).length) {
         await firebase.database().ref().update(updates);
-        console.log('[annualPlanMgr] 편집기 동기화 완료. 대상 주:', targetMon, '~', targetSun, '/ 방:', openRooms.join(','));
+        console.log('[annualPlanMgr] 편집기 동기화 완료. 대상 주:', targetMon, '~', targetSun, '/ 유지:', [...keptKeys].length, '/ 신규배치:', Math.min(freeRooms.length, toPlace.length));
     }
 };
 

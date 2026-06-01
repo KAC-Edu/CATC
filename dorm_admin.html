@@ -377,6 +377,30 @@
         </div>
     </div>
 
+    <!-- 과정 추가 팝업 (과정명 + 시작일 + 종료일) -->
+    <div class="pop-overlay" id="courseAddPop" style="z-index:1100;">
+        <div class="pop-box" style="max-width:400px;">
+            <h3 style="margin:0 0 16px;"><i class="fa-solid fa-circle-plus" style="color:#0ea5e9;"></i> 과정 추가</h3>
+            <div class="opt-group">
+                <label>과정명</label>
+                <input type="text" id="caName" placeholder="예: KAC중급(2차)" style="width:100%; padding:12px 14px; border:1.5px solid var(--border); border-radius:10px; font-size:15px; outline:none;">
+            </div>
+            <div class="opt-group">
+                <label>시작일</label>
+                <input type="date" id="caStart" style="width:100%; padding:12px 14px; border:1.5px solid var(--border); border-radius:10px; font-size:15px; outline:none;">
+            </div>
+            <div class="opt-group">
+                <label>종료일</label>
+                <input type="date" id="caEnd" style="width:100%; padding:12px 14px; border:1.5px solid var(--border); border-radius:10px; font-size:15px; outline:none;">
+            </div>
+            <div id="caErr" style="color:var(--danger); font-size:12px; min-height:16px; margin-bottom:6px;"></div>
+            <div class="pop-actions">
+                <button class="pop-cancel" onclick="document.getElementById('courseAddPop').style.display='none'">취소</button>
+                <button class="pop-save" onclick="annualPlan.confirmAdd()">추가</button>
+            </div>
+        </div>
+    </div>
+
     <div class="toast" id="toast"></div>
 
     <script>
@@ -1440,7 +1464,29 @@
             },
 
             edit(i, key, val) { if (this.data[i]) this.data[i][key] = val.trim(); },
-            addRow() { this.data.push({ name: '', startDate: '', endDate: '', prof: '', coord: '' }); this.render(); },
+            addRow() {
+                // 과정 추가 팝업 열기
+                document.getElementById('caName').value = '';
+                document.getElementById('caStart').value = '';
+                document.getElementById('caEnd').value = '';
+                document.getElementById('caErr').innerText = '';
+                document.getElementById('courseAddPop').style.display = 'flex';
+                setTimeout(() => document.getElementById('caName').focus(), 100);
+            },
+            confirmAdd() {
+                const name = (document.getElementById('caName').value || '').trim();
+                const start = document.getElementById('caStart').value;
+                const end = document.getElementById('caEnd').value;
+                const err = document.getElementById('caErr');
+                if (!name) { err.innerText = '과정명을 입력하세요.'; return; }
+                if (!start || !end) { err.innerText = '시작일과 종료일을 입력하세요.'; return; }
+                if (end < start) { err.innerText = '종료일이 시작일보다 빠를 수 없습니다.'; return; }
+                // 맨 위에 추가
+                this.data.unshift({ name, startDate: start, endDate: end, prof: '', coord: '' });
+                document.getElementById('courseAddPop').style.display = 'none';
+                this.render();
+                showToast('과정이 추가되었습니다. "저장"을 눌러 반영하세요.');
+            },
             del(i) { this.data.splice(i, 1); this.render(); },
 
             save() {

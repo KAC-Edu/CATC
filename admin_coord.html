@@ -1209,6 +1209,30 @@ body.modal-open .app-content {
   </div>
 </header>
 
+<!-- 과정 추가 팝업 (운영부) -->
+<div id="coordCourseAddPop" style="display:none; position:fixed; inset:0; background:rgba(15,23,42,0.55); z-index:21000; align-items:center; justify-content:center; padding:20px;">
+    <div style="background:#fff; width:100%; max-width:400px; border-radius:18px; padding:24px; font-family:'Pretendard',sans-serif;">
+        <h3 style="margin:0 0 16px; font-size:17px; font-weight:900;"><i class="fa-solid fa-circle-plus" style="color:#0ea5e9;"></i> 과정 추가</h3>
+        <div style="margin-bottom:12px;">
+            <label style="display:block; font-size:12px; font-weight:800; color:#64748b; margin-bottom:5px;">과정명</label>
+            <input type="text" id="cca-name" placeholder="예: KAC중급(2차)" style="width:100%; padding:12px 14px; border:1.5px solid #e2e8f0; border-radius:10px; font-size:15px; outline:none;">
+        </div>
+        <div style="margin-bottom:12px;">
+            <label style="display:block; font-size:12px; font-weight:800; color:#64748b; margin-bottom:5px;">시작일</label>
+            <input type="date" id="cca-start" style="width:100%; padding:12px 14px; border:1.5px solid #e2e8f0; border-radius:10px; font-size:15px; outline:none;">
+        </div>
+        <div style="margin-bottom:12px;">
+            <label style="display:block; font-size:12px; font-weight:800; color:#64748b; margin-bottom:5px;">종료일</label>
+            <input type="date" id="cca-end" style="width:100%; padding:12px 14px; border:1.5px solid #e2e8f0; border-radius:10px; font-size:15px; outline:none;">
+        </div>
+        <div id="cca-err" style="color:#ef4444; font-size:12px; min-height:16px; margin-bottom:6px;"></div>
+        <div style="display:flex; gap:8px;">
+            <button onclick="document.getElementById('coordCourseAddPop').style.display='none'" style="flex:1; padding:13px; border:none; border-radius:11px; background:#f1f5f9; color:#64748b; font-weight:800; cursor:pointer;">취소</button>
+            <button onclick="coordAnnual.confirmAdd()" style="flex:1; padding:13px; border:none; border-radius:11px; background:#2563eb; color:#fff; font-weight:800; cursor:pointer;">추가</button>
+        </div>
+    </div>
+</div>
+
 
 
 
@@ -5078,10 +5102,28 @@ const annualPlanMgrCoord = {
     },
 
     addRow: function() {
-        this.currentEditingData.push({ no:0, name:'', startDate:'', endDate:'', period:'', prof:'', coord:'', weekKey:'' });
+        document.getElementById('cca-name').value = '';
+        document.getElementById('cca-start').value = '';
+        document.getElementById('cca-end').value = '';
+        document.getElementById('cca-err').innerText = '';
+        document.getElementById('coordCourseAddPop').style.display = 'flex';
+        setTimeout(function(){ document.getElementById('cca-name').focus(); }, 100);
+    },
+
+    confirmAdd: function() {
+        var name = (document.getElementById('cca-name').value || '').trim();
+        var start = document.getElementById('cca-start').value;
+        var end = document.getElementById('cca-end').value;
+        var err = document.getElementById('cca-err');
+        if (!name) { err.innerText = '과정명을 입력하세요.'; return; }
+        if (!start || !end) { err.innerText = '시작일과 종료일을 입력하세요.'; return; }
+        if (end < start) { err.innerText = '종료일이 시작일보다 빠를 수 없습니다.'; return; }
+        var mon = (this._getMondayOf ? this._getMondayOf(start) : '');
+        this.currentEditingData.unshift({ no:0, name:name, startDate:start, endDate:end, period:(start+' ~ '+end), prof:'', coord:'', weekKey:mon });
+        document.getElementById('coordCourseAddPop').style.display = 'none';
         this.renderEditor();
-        const area = document.getElementById('annualPlanEditorAreaCoord');
-        if (area) area.scrollTop = area.scrollHeight;
+        var area = document.getElementById('annualPlanEditorAreaCoord');
+        if (area) area.scrollTop = 0;
     },
 
     deleteRow: function(idx) {
