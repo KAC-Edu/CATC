@@ -6632,23 +6632,13 @@ const bgmPlayer = {
                 nowEl.style.color = '#475569';
             }
         }
-        // 음악 아이콘 바로 아래에 미니 플레이어 표시 (모든 페이지 위 레이어)
+        // 미니 플레이어 표시 (화면 우측 상단 고정, 모든 페이지 위 레이어)
         const bubble = document.getElementById('bgmNowBubble');
         const bubbleText = document.getElementById('bgmNowBubbleText');
         if (bubble) {
             if (this._isPlaying && this._currentNum > 0) {
                 if (bubbleText) bubbleText.innerText = `배경음 ${this._currentNum}번 재생 중`;
                 bubble.style.display = 'flex';
-                // 음악 아이콘 위치 기준으로 바로 아래·우측 정렬
-                const icon = document.getElementById('bgmIconBtn');
-                if (icon && icon.getBoundingClientRect) {
-                    const r = icon.getBoundingClientRect();
-                    bubble.style.top = (r.bottom + 10) + 'px';
-                    // 플레이어 오른쪽 끝을 아이콘 오른쪽에 맞춤
-                    bubble.style.right = (window.innerWidth - r.right) + 'px';
-                    bubble.style.left = 'auto';
-                    bubble.style.transform = 'none';
-                }
             } else {
                 bubble.style.display = 'none';
             }
