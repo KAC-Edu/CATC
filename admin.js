@@ -6751,31 +6751,34 @@ const annualPlanMgr = {
         await this._applyCurrentWeek(courses);
     },
 
+    // 대상 주(월~일)의 월요일 키 계산.
+    //  토요일(6)·일요일(0)에는 '다음 주'를 대상으로 한다 → 토요일부터 차주 과정으로 전환.
+    _getTargetMonday: function(todayStr) {
+        const d = new Date(todayStr + 'T00:00:00Z');
+        const dow = d.getUTCDay(); // 0=일 ... 6=토
+        const mon = this._getMondayOf(todayStr);
+        if (dow === 6 || dow === 0) {
+            // 주말이면 다음 주 월요일
+            const m = new Date(mon + 'T00:00:00Z');
+            m.setUTCDate(m.getUTCDate() + 7);
+            return m.toISOString().split('T')[0];
+        }
+        return mon;
+    },
+
     _applyCurrentWeek: async function(courses) {
         const today = this._today();
-        const thisWeekMonday = this._getMondayOf(today);
+        // 대상 주(이번주 또는 토요일부터는 차주) 월~일 범위
+        const targetMon = this._getTargetMonday(today);
+        const targetSunObj = new Date(targetMon + 'T00:00:00Z');
+        targetSunObj.setUTCDate(targetSunObj.getUTCDate() + 6);
+        const targetSun = targetSunObj.toISOString().split('T')[0];
 
-        // D-2 기준일: 오늘 + 2일 (교육 시작 2일 전부터 강의실 오픈)
-        const d2 = new Date(today + 'T00:00:00Z');
-        d2.setUTCDate(d2.getUTCDate() + 2);
-        const openDate = d2.toISOString().split('T')[0];
-
-        // 아직 끝나지 않은 과정만, 시작일 순 정렬
-        const upcoming = courses
-            .filter(c => c.endDate >= today)
+        // 대상 주에 '걸치는' 과정만 (과정 기간이 그 주와 겹치면 포함). 미래/지난 주 과정은 제외.
+        const weekCourses = courses
+            .filter(c => c.startDate && c.endDate)
+            .filter(c => c.startDate <= targetSun && c.endDate >= targetMon)
             .sort((a, b) => a.startDate.localeCompare(b.startDate));
-
-        // 우선순위:
-        // 1순위: 진행 중 (startDate <= today)
-        // 2순위: D-2 이내 예정 (today < startDate <= openDate) ← 2일 전 오픈
-        // 3순위: 이번 주 내 시작
-        // 4순위: 그 이후
-        const ongoing  = upcoming.filter(c => c.startDate <= today);
-        const d2ready  = upcoming.filter(c => c.startDate > today && c.startDate <= openDate);
-        const thisWeek = upcoming.filter(c => c.startDate > openDate && this._getMondayOf(c.startDate) === thisWeekMonday);
-        const future   = upcoming.filter(c => c.startDate > openDate && this._getMondayOf(c.startDate) !== thisWeekMonday);
-
-        const pool = [...ongoing, ...d2ready, ...thisWeek, ...future];
 
         // [Clean Start 준비] 각 방의 현재 과정명을 먼저 읽어둔다 (과정 교체 감지용)
         const curSnap = await firebase.database().ref('courses').once('value');
@@ -6783,6 +6786,23 @@ const annualPlanMgr = {
 
         // 잠금(autoAssignLocked) 방은 자동배치에서 제외
         const openRooms = this.ROOMS.filter(r => !(curRooms[r] && curRooms[r].settings && curRooms[r].settings.autoAssignLocked));
+
+        // 잠긴 방에 이미 들어있는 (과정명|기간) 집합 — 동일 과정은 다른 방에 중복 배치하지 않음
+        const lockedKeys = new Set();
+        this.ROOMS.forEach(r => {
+            const rd = curRooms[r];
+            if (rd && rd.settings && rd.settings.autoAssignLocked) {
+                const nm = (rd.settings.courseName || '').trim();
+                const pd = (rd.settings.period || '').trim();
+                if (nm) lockedKeys.add(`${nm}|${pd}`);
+            }
+        });
+
+        // 풀에서 잠긴 방과 동일한 과정 제외
+        const pool = weekCourses.filter(c => {
+            const key = `${(c.name||'').trim()}|${(c.period||'').trim()}`;
+            return !lockedKeys.has(key);
+        });
 
         const updates = {};
         const assigned = [];
@@ -6845,7 +6865,7 @@ const annualPlanMgr = {
         };
     },
 
-    /* 페이지 로드 시 만료 Room 자동 체크 & 재배치 */
+    /* 페이지 로드 시 자동 체크 & 재배치 — 대상 주(토요일부터 차주)와 현재 배정이 다르면 갱신 */
     checkAndReset: async function() {
         try {
             const snap = await firebase.database().ref(this.PLAN_KEY).once('value');
@@ -6855,46 +6875,49 @@ const annualPlanMgr = {
             if (!courses.length) return;
 
             const today = this._today();
+            const targetMon = this._getTargetMonday(today);
+            const targetSunObj = new Date(targetMon + 'T00:00:00Z');
+            targetSunObj.setUTCDate(targetSunObj.getUTCDate() + 6);
+            const targetSun = targetSunObj.toISOString().split('T')[0];
 
-            // D-2 기준일 계산
-            const d2 = new Date(today + 'T00:00:00Z');
-            d2.setUTCDate(d2.getUTCDate() + 2);
-            const openDate = d2.toISOString().split('T')[0];
+            // 대상 주에 걸치는 과정명 집합 (기대 배정)
+            const expected = new Set(
+                courses
+                    .filter(c => c.startDate && c.endDate && c.startDate <= targetSun && c.endDate >= targetMon)
+                    .map(c => (c.name || '').trim())
+            );
+
+            const snapAll = await firebase.database().ref('courses').once('value');
+            const roomsData = snapAll.val() || {};
 
             let needsUpdate = false;
-
             for (const room of this.ROOMS) {
-                const s = await firebase.database().ref(`courses/${room}/settings`).once('value');
-                const settings = s.val() || {};
-                const period   = settings.period || '';
-                const endDate  = period.split('~')[1]?.trim();
-                const courseName = settings.courseName || '';
+                const rd = roomsData[room] || {};
+                const settings = rd.settings || {};
+                if (settings.autoAssignLocked) continue; // 잠긴 방은 무시
+                const courseName = (settings.courseName || '').trim();
+                const period = settings.period || '';
+                const endDate = period.split('~')[1]?.trim();
 
-                // 1. 과정 만료 → 재배치 필요
-                if (endDate && endDate < today) {
-                    console.log(`[annualPlanMgr] Room ${room} 만료 (${endDate})`);
-                    needsUpdate = true;
-                    break;
-                }
+                // (1) 배정돼 있는데 대상 주 과정이 아니면 → 주가 바뀜 → 재배치
+                if (courseName && !expected.has(courseName)) { needsUpdate = true; break; }
+                // (2) 과정 만료
+                if (endDate && endDate < today) { needsUpdate = true; break; }
+            }
 
-                // 2. 방이 비어 있는데 D-2 이내 과정이 있으면 → 오픈 필요
-                if (!courseName) {
-                    const d2course = courses.find(c =>
-                        c.startDate > today &&
-                        c.startDate <= openDate &&
-                        c.endDate >= today
-                    );
-                    if (d2course) {
-                        console.log(`[annualPlanMgr] D-2 이내 과정 발견 → 오픈: ${d2course.name}`);
-                        needsUpdate = true;
-                        break;
-                    }
+            // (3) 대상 주 과정 중 아직 어느 방에도 안 들어간 게 있으면 → 재배치
+            if (!needsUpdate) {
+                const assignedNames = new Set(
+                    this.ROOMS.map(r => ((roomsData[r] || {}).settings || {}).courseName || '').filter(Boolean).map(n => n.trim())
+                );
+                for (const nm of expected) {
+                    if (!assignedNames.has(nm)) { needsUpdate = true; break; }
                 }
             }
 
             if (needsUpdate) {
                 await this._applyCurrentWeek(courses);
-                console.log('[annualPlanMgr] 자동 재배치 완료');
+                console.log('[annualPlanMgr] 자동 재배치 완료 (대상 주:', targetMon, '~', targetSun, ')');
             }
         } catch (err) {
             console.warn('[annualPlanMgr] checkAndReset 오류:', err);
@@ -7071,26 +7094,35 @@ annualPlanMgr.saveAndSync = async function() {
     }
 };
 
-/* _applyCurrentWeek 와 동일한 우선순위 로직이되, autoAssignLocked 방은 보존 */
+/* 편집기 "저장 및 즉시 적용" — 대상 주(이번주, 토요일부터는 차주)만 배정. 잠금 방 보존 + 동일 과정 중복 방지 */
 annualPlanMgr._syncRoomsLockAware = async function(courses) {
     const today = this._today();
-    const thisWeekMonday = this._getMondayOf(today);
-    const d2 = new Date(today + 'T00:00:00Z');
-    d2.setUTCDate(d2.getUTCDate() + 2);
-    const openDate = d2.toISOString().split('T')[0];
+    const targetMon = this._getTargetMonday(today);
+    const targetSunObj = new Date(targetMon + 'T00:00:00Z');
+    targetSunObj.setUTCDate(targetSunObj.getUTCDate() + 6);
+    const targetSun = targetSunObj.toISOString().split('T')[0];
 
     const snap = await firebase.database().ref('courses').once('value');
     const roomsData = snap.val() || {};
     const openRooms = this.ROOMS.filter(r => !(roomsData[r] && roomsData[r].settings && roomsData[r].settings.autoAssignLocked));
 
-    const upcoming = courses
-        .filter(c => c.endDate >= today)
+    // 잠긴 방의 (과정명|기간) — 동일 과정은 중복 배치 안 함
+    const lockedKeys = new Set();
+    this.ROOMS.forEach(r => {
+        const rd = roomsData[r];
+        if (rd && rd.settings && rd.settings.autoAssignLocked) {
+            const nm = (rd.settings.courseName || '').trim();
+            const pd = (rd.settings.period || '').trim();
+            if (nm) lockedKeys.add(`${nm}|${pd}`);
+        }
+    });
+
+    // 대상 주에 걸치는 과정만, 시작일 순. 잠긴 방 과정 제외.
+    const pool = courses
+        .filter(c => c.startDate && c.endDate)
+        .filter(c => c.startDate <= targetSun && c.endDate >= targetMon)
+        .filter(c => !lockedKeys.has(`${(c.name||'').trim()}|${(c.period||'').trim()}`))
         .sort((a, b) => a.startDate.localeCompare(b.startDate));
-    const ongoing  = upcoming.filter(c => c.startDate <= today);
-    const d2ready  = upcoming.filter(c => c.startDate > today && c.startDate <= openDate);
-    const thisWeek = upcoming.filter(c => c.startDate > openDate && this._getMondayOf(c.startDate) === thisWeekMonday);
-    const future   = upcoming.filter(c => c.startDate > openDate && this._getMondayOf(c.startDate) !== thisWeekMonday);
-    const pool = [...ongoing, ...d2ready, ...thisWeek, ...future];
 
     const updates = {};
     for (const r of openRooms) {
@@ -7112,7 +7144,7 @@ annualPlanMgr._syncRoomsLockAware = async function(courses) {
     }
     if (Object.keys(updates).length) {
         await firebase.database().ref().update(updates);
-        console.log('[annualPlanMgr] 편집기 동기화 완료. 대상 방:', openRooms.join(','));
+        console.log('[annualPlanMgr] 편집기 동기화 완료. 대상 주:', targetMon, '~', targetSun, '/ 방:', openRooms.join(','));
     }
 };
 
