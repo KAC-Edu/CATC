@@ -844,9 +844,6 @@
                     <button onclick="surveyMgr.publish()" style="width:100%; padding:14px; background:#0ea5e9; color:#fff; border:none; border-radius:11px; font-size:15px; font-weight:900; cursor:pointer;">
                         <i class="fa-solid fa-paper-plane"></i> 설문 게시 (교육생에게 팝업)
                     </button>
-                    <button onclick="surveyMgr.viewLastResult()" style="width:100%; margin-top:8px; padding:11px; background:#fff; color:#0369a1; border:1.5px solid #bae6fd; border-radius:11px; font-size:13px; font-weight:800; cursor:pointer;">
-                        <i class="fa-solid fa-clock-rotate-left"></i> 직전 설문 결과 다시 보기
-                    </button>
                 </div>
 
                 <!-- 진행중/결과 영역 -->
@@ -863,6 +860,11 @@
                         <i class="fa-solid fa-stop"></i> 설문 종료 (교육생 팝업 닫힘)
                     </button>
                 </div>
+
+                <!-- 직전 설문 결과 다시 보기 (진행 중/대기 상관없이 항상 표시) -->
+                <button onclick="surveyMgr.viewLastResult()" style="width:100%; margin-top:14px; padding:11px; background:#fff; color:#0369a1; border:1.5px solid #bae6fd; border-radius:11px; font-size:13px; font-weight:800; cursor:pointer;">
+                    <i class="fa-solid fa-clock-rotate-left"></i> 직전 설문 결과 다시 보기
+                </button>
             </div>
         </div>
         <!-- ══════════════════════════════════════════════════════ -->
