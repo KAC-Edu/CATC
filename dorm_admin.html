@@ -722,6 +722,12 @@
             const courses = coursesCache || {};
             const today = new Date(); today.setHours(0,0,0,0);
 
+            // 연간계획에 존재하는 과정명 집합 (실제 운영 중이지만 계획에 없는 과정 구분용)
+            const planNames = new Set(
+                (Array.isArray(annualCache) ? annualCache : Object.values(annualCache || {}))
+                    .filter(c => c && c.name).map(c => (c.name || '').trim())
+            );
+
             let items = [];
             Object.entries(courses).forEach(([room, c]) => {
                 const s = (c && c.settings) || {};
@@ -744,7 +750,8 @@
                     if (!(startDt <= wkEnd && endDt >= wkStart)) return;
                 }
                 const profName = (c.status && c.status.professorName) || '';
-                items.push({ room, courseName: s.courseName || room, period: s.period || '', start, end: end || start, weekKey: weekKeyOf(start), profName });
+                const notInPlan = !planNames.has((s.courseName || '').trim());
+                items.push({ room, courseName: s.courseName || room, period: s.period || '', start, end: end || start, weekKey: weekKeyOf(start), profName, notInPlan });
             });
 
             // 연간계획에만 있고 실제 룸에 아직 배정 안 된 과정도 표시 (생활관 사전 준비용)
@@ -795,7 +802,7 @@
                     <div class="course-row ${sel ? 'sel' : ''} ${enrolled ? 'enrolled' : ''}" data-room="${it.room}" data-week="${it.weekKey}" onclick='selectCourse(${JSON.stringify(it).replace(/'/g, "&#39;")})'>
                         <span class="course-room-badge" ${it.fromPlan ? 'style="background:#94a3b8;"' : ''}>${it.fromPlan ? '<i class="fa-solid fa-clock"></i> 예정' : '<i class="fa-solid fa-door-open"></i> ' + it.room}</span>
                         <div class="course-main">
-                            <div class="cname">${it.courseName}</div>
+                            <div class="cname">${it.courseName} ${it.notInPlan && !it.fromPlan ? '<span style="display:inline-block; background:#fef3c7; color:#92400e; font-size:11px; font-weight:800; padding:2px 8px; border-radius:10px; margin-left:6px; vertical-align:middle;">계획 외 운영</span>' : ''}</div>
                             <div class="cmeta">${it.period || '-'}</div>
                         </div>
                         ${enrolled ? `<span class="course-count"><i class="fa-solid fa-circle-check"></i> ${cnt}명</span>` : ''}
