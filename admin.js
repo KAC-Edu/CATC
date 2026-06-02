@@ -729,6 +729,7 @@ forceEnterRoom: async function(room) {
             const tm0 = document.getElementById('takeoverModal');
             if (tm0) tm0.style.display = 'none';
             ui.updateObserverButton();
+            ui.updateHeaderRoom(cleanRoom);   // 상단바 '보기 전용' 배지 즉시 반영
             ui.showAlert("다른 기기에서 강사 권한을 획득하였습니다.\n현재 기기는 옵저버 모드로 전환됩니다.");
             // 옵저버 상태로 화면 권한만 갱신 (데이터 리스너는 유지)
             const sb0 = document.getElementById('btnSetupModal');
@@ -2832,11 +2833,11 @@ updateHeaderRoom: function(r) {
     const elTop = document.getElementById('displayRoomName'); 
     if(elTop) {
         let titleText = `Room #${r}`;
-        // 무서운 눈(👁️) 대신 폰트어썸 아이콘 사용
         if (state.isObserver) {
-            titleText += ` <span style="font-size:14px; margin-left:8px; color:#94a3b8; font-weight:normal;">(<i class="fa-solid fa-eye" style="font-size:12px;"></i> 옵저버)</span>`;
+            // 옵저버: 눈에 띄는 앰버 배지 + 쌍안경 아이콘 (보기 전용 강조)
+            titleText += ` <span style="display:inline-flex; align-items:center; gap:5px; font-size:12px; margin-left:10px; padding:3px 11px; background:linear-gradient(135deg,#f59e0b,#f97316); color:#fff; font-weight:800; border-radius:20px; vertical-align:middle; box-shadow:0 2px 8px rgba(245,158,11,0.4);"><i class="fa-solid fa-binoculars" style="font-size:11px;"></i> 보기 전용</span>`;
         }
-        elTop.innerHTML = titleText; // innerText 대신 innerHTML 사용
+        elTop.innerHTML = titleText;
     }
 
     // 2. 모든 섹션 제목 옆의 룸 배지 업데이트
@@ -2866,7 +2867,7 @@ updateObserverButton: function() {
         btn.style.color = "#ffffff";
     } else {
         // 강사 상태일 때 -> 옵저버로 가기
-        btn.innerHTML = '<i class="fa-solid fa- binoculars"></i> 옵저버 모드'; // 쌍안경 아이콘으로 변경 (선택사항)
+        btn.innerHTML = '<i class="fa-solid fa-binoculars"></i> 옵저버 모드';
         btn.style.background = "#e2e8f0"; 
         btn.style.color = "#475569";
     }
