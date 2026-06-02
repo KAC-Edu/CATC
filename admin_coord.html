@@ -5066,8 +5066,28 @@ const annualPlanMgrCoord = {
         const th = "padding:10px; border:1px solid var(--border-blue); font-size:12px;";
         const td = "padding:4px; border:1px solid var(--border-blue);";
         const inp = "width:100%; border:1px solid transparent; background:transparent; padding:6px; font-size:13px; box-sizing:border-box; color:var(--navy-dark);";
-        let html = `<table style="width:100%; border-collapse:collapse;">
-            <thead style="position:sticky; top:0; background:#f8fafc; z-index:10;"><tr>
+        // 행 배경색 분류
+        const _t = new Date().toISOString().slice(0,10);
+        const _mondayOf = (ds) => { const d=new Date(ds+'T00:00:00Z'); const dow=(d.getUTCDay()+6)%7; d.setUTCDate(d.getUTCDate()-dow); return d.toISOString().slice(0,10); };
+        const _thisMon = _mondayOf(_t);
+        const _nextMon = (()=>{ const d=new Date(_thisMon+'T00:00:00Z'); d.setUTCDate(d.getUTCDate()+7); return d.toISOString().slice(0,10); })();
+        const rowBg = (c) => {
+            if (!c.startDate || !c.endDate) return '';
+            if (c.endDate < _t) return 'background:#f1f5f9;';
+            if (c.startDate <= _t && c.endDate >= _t) return 'background:#dbeafe;';
+            if (_mondayOf(c.startDate) === _nextMon) return 'background:#fce7f3;';
+            return 'background:#dcfce7;';
+        };
+        let html = `
+        <div style="position:sticky; top:0; z-index:11; display:flex; gap:14px; flex-wrap:wrap; padding:10px 12px; font-size:12px; color:#475569; align-items:center; background:#fff; border-bottom:1px solid var(--border-blue);">
+            <span style="font-weight:800;">상태 색상:</span>
+            <span><span style="display:inline-block; width:12px; height:12px; border-radius:3px; background:#dbeafe; vertical-align:middle; margin-right:4px;"></span>진행 중</span>
+            <span><span style="display:inline-block; width:12px; height:12px; border-radius:3px; background:#fce7f3; vertical-align:middle; margin-right:4px;"></span>차주 진행 예정</span>
+            <span><span style="display:inline-block; width:12px; height:12px; border-radius:3px; background:#dcfce7; vertical-align:middle; margin-right:4px;"></span>예정</span>
+            <span><span style="display:inline-block; width:12px; height:12px; border-radius:3px; background:#f1f5f9; vertical-align:middle; margin-right:4px;"></span>종료</span>
+        </div>
+        <table style="width:100%; border-collapse:collapse;">
+            <thead style="position:sticky; top:38px; background:#f8fafc; z-index:10;"><tr>
                 <th style="${th} width:46px;">No</th>
                 <th style="${th} min-width:200px;">과정명</th>
                 <th style="${th} width:140px;">시작일</th>
@@ -5079,7 +5099,7 @@ const annualPlanMgrCoord = {
         const _td2 = new Date().toISOString().slice(0,10);
         this.currentEditingData.forEach((c, idx) => {
             const isCur = c.startDate && c.endDate && c.startDate <= _td2 && c.endDate >= _td2;
-            html += `<tr data-cur="${isCur ? '1' : '0'}">
+            html += `<tr data-cur="${isCur ? '1' : '0'}" style="${rowBg(c)}">
                 <td style="${td} text-align:center; color:#64748b;">${idx + 1}</td>
                 <td style="${td}"><input type="text" value="${esc(c.name)}" onchange="annualPlanMgrCoord.updateLocalData(${idx},'name',this.value)" style="${inp} font-weight:700;"></td>
                 <td style="${td}"><input type="date" value="${esc(c.startDate)}" onchange="annualPlanMgrCoord.updateLocalData(${idx},'startDate',this.value)" style="${inp}"></td>

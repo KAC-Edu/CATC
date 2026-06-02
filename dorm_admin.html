@@ -354,16 +354,22 @@
             </div>
 
             <div style="overflow:auto; flex:1; border:1px solid var(--border); border-radius:12px;">
+                <div style="position:sticky; top:0; z-index:11; display:flex; gap:12px; flex-wrap:wrap; padding:9px 12px; font-size:11px; color:#475569; align-items:center; background:#fff; border-bottom:1px solid var(--border);">
+                    <span style="font-weight:800;">상태 색상:</span>
+                    <span><span style="display:inline-block; width:11px; height:11px; border-radius:3px; background:#dbeafe; vertical-align:middle; margin-right:4px;"></span>진행 중</span>
+                    <span><span style="display:inline-block; width:11px; height:11px; border-radius:3px; background:#dcfce7; vertical-align:middle; margin-right:4px;"></span>예정</span>
+                    <span><span style="display:inline-block; width:11px; height:11px; border-radius:3px; background:#f1f5f9; vertical-align:middle; margin-right:4px;"></span>종료</span>
+                </div>
                 <table style="width:100%; border-collapse:collapse; font-size:13px;">
                     <thead>
-                        <tr style="background:#f8fafc; position:sticky; top:0;">
-                            <th style="padding:9px; border:1px solid var(--border); width:42px;">연번</th>
-                            <th style="padding:9px; border:1px solid var(--border); min-width:160px;">과정명</th>
-                            <th style="padding:9px; border:1px solid var(--border); width:140px;">시작일</th>
-                            <th style="padding:9px; border:1px solid var(--border); width:140px;">종료일</th>
-                            <th style="padding:9px; border:1px solid var(--border); width:100px;">교수</th>
-                            <th style="padding:9px; border:1px solid var(--border); width:100px;">담당</th>
-                            <th style="padding:9px; border:1px solid var(--border); width:46px;"></th>
+                        <tr style="background:#f8fafc;">
+                            <th style="padding:9px; border:1px solid var(--border); width:42px; position:sticky; top:34px; background:#f8fafc; z-index:10;">연번</th>
+                            <th style="padding:9px; border:1px solid var(--border); min-width:160px; position:sticky; top:34px; background:#f8fafc; z-index:10;">과정명</th>
+                            <th style="padding:9px; border:1px solid var(--border); width:140px; position:sticky; top:34px; background:#f8fafc; z-index:10;">시작일</th>
+                            <th style="padding:9px; border:1px solid var(--border); width:140px; position:sticky; top:34px; background:#f8fafc; z-index:10;">종료일</th>
+                            <th style="padding:9px; border:1px solid var(--border); width:100px; position:sticky; top:34px; background:#f8fafc; z-index:10;">교수</th>
+                            <th style="padding:9px; border:1px solid var(--border); width:100px; position:sticky; top:34px; background:#f8fafc; z-index:10;">담당</th>
+                            <th style="padding:9px; border:1px solid var(--border); width:46px; position:sticky; top:34px; background:#f8fafc; z-index:10;"></th>
                         </tr>
                     </thead>
                     <tbody id="annualBody"></tbody>

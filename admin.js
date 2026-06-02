@@ -7121,7 +7121,7 @@ annualPlanMgr.renderEditor = function() {
     const cellStyle = "padding:4px; border:1px solid #e2e8f0;";
     const inpStyle  = "width:100%; border:1px solid transparent; background:transparent; padding:6px; font-size:13px; box-sizing:border-box;";
     let html = `
-        <div style="display:flex; gap:14px; flex-wrap:wrap; padding:10px 12px; font-size:12px; color:#475569; align-items:center;">
+        <div style="position:sticky; top:0; z-index:11; display:flex; gap:14px; flex-wrap:wrap; padding:10px 12px; font-size:12px; color:#475569; align-items:center; background:#fff; border-bottom:1px solid #e2e8f0;">
             <span style="font-weight:800;">상태 색상:</span>
             <span><span style="display:inline-block; width:12px; height:12px; border-radius:3px; background:#dbeafe; vertical-align:middle; margin-right:4px;"></span>진행 중</span>
             <span><span style="display:inline-block; width:12px; height:12px; border-radius:3px; background:#fce7f3; vertical-align:middle; margin-right:4px;"></span>차주 진행 예정</span>
@@ -7129,7 +7129,7 @@ annualPlanMgr.renderEditor = function() {
             <span><span style="display:inline-block; width:12px; height:12px; border-radius:3px; background:#f1f5f9; vertical-align:middle; margin-right:4px;"></span>종료</span>
         </div>
         <table style="width:100%; border-collapse:collapse; font-size:13px;">
-            <thead style="position:sticky; top:0; background:#f8fafc; z-index:10;">
+            <thead style="position:sticky; top:38px; background:#f8fafc; z-index:10;">
                 <tr>
                     <th style="width:48px; padding:10px; border:1px solid #e2e8f0;">No</th>
                     <th style="padding:10px; border:1px solid #e2e8f0; min-width:220px;">과정명</th>
