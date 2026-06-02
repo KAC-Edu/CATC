@@ -5097,9 +5097,23 @@ const annualPlanMgrCoord = {
                 <th style="${th} width:46px;">삭제</th>
             </tr></thead><tbody>`;
         const _td2 = new Date().toISOString().slice(0,10);
+        // 스크롤 대상: 진행 중 → 없으면 다가오는(미래 시작) 과정 중 가장 빠른 것
+        let _tIdx = -1;
+        this.currentEditingData.forEach((c, idx) => {
+            if (c.startDate && c.endDate && c.startDate <= _td2 && c.endDate >= _td2 && _tIdx === -1) _tIdx = idx;
+        });
+        if (_tIdx === -1) {
+            let best = null;
+            this.currentEditingData.forEach((c, idx) => {
+                if (c.startDate && c.startDate > _td2) {
+                    if (best === null || c.startDate < this.currentEditingData[best].startDate) best = idx;
+                }
+            });
+            if (best !== null) _tIdx = best;
+        }
         this.currentEditingData.forEach((c, idx) => {
             const isCur = c.startDate && c.endDate && c.startDate <= _td2 && c.endDate >= _td2;
-            html += `<tr data-cur="${isCur ? '1' : '0'}" style="${rowBg(c)}">
+            html += `<tr data-cur="${isCur ? '1' : '0'}" data-target="${idx === _tIdx ? '1' : '0'}" style="${rowBg(c)}">
                 <td style="${td} text-align:center; color:#64748b;">${idx + 1}</td>
                 <td style="${td}"><input type="text" value="${esc(c.name)}" onchange="annualPlanMgrCoord.updateLocalData(${idx},'name',this.value)" style="${inp} font-weight:700;"></td>
                 <td style="${td}"><input type="date" value="${esc(c.startDate)}" onchange="annualPlanMgrCoord.updateLocalData(${idx},'startDate',this.value)" style="${inp}"></td>
@@ -5112,8 +5126,8 @@ const annualPlanMgrCoord = {
         html += `</tbody></table>`;
         area.innerHTML = html;
         setTimeout(() => {
-            const curRow = area.querySelector('tr[data-cur="1"]');
-            if (curRow && curRow.scrollIntoView) curRow.scrollIntoView({ block: 'center' });
+            const targetRow = area.querySelector('tr[data-target="1"]') || area.querySelector('tr[data-cur="1"]');
+            if (targetRow && targetRow.scrollIntoView) targetRow.scrollIntoView({ block: 'center' });
         }, 50);
     },
 

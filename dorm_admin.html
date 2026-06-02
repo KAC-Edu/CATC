@@ -1475,16 +1475,25 @@
                     </tr>`;
                 }).join('');
 
-                // 현재 진행 중(오늘 포함) 과정 행을 중앙으로 스크롤
+                // 진행 중(없으면 다가오는) 과정 행을 중앙으로 스크롤
                 setTimeout(() => {
                     const rows = body.querySelectorAll('tr');
                     const td = new Date().toISOString().slice(0, 10);
+                    let targetIdx = -1;
+                    // ① 진행 중
                     for (let k = 0; k < this.data.length; k++) {
                         const c = this.data[k];
-                        if (c.startDate && c.endDate && c.startDate <= td && c.endDate >= td) {
-                            if (rows[k] && rows[k].scrollIntoView) rows[k].scrollIntoView({ block: 'center' });
-                            break;
+                        if (c.startDate && c.endDate && c.startDate <= td && c.endDate >= td) { targetIdx = k; break; }
+                    }
+                    // ② 없으면 시작일이 오늘 이후인 가장 가까운 과정 (this.data는 시작일 오름차순 정렬됨)
+                    if (targetIdx === -1) {
+                        for (let k = 0; k < this.data.length; k++) {
+                            const c = this.data[k];
+                            if (c.startDate && c.startDate > td) { targetIdx = k; break; }
                         }
+                    }
+                    if (targetIdx >= 0 && rows[targetIdx] && rows[targetIdx].scrollIntoView) {
+                        rows[targetIdx].scrollIntoView({ block: 'center' });
                     }
                 }, 50);
             },

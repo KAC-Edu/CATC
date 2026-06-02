@@ -7142,10 +7142,28 @@ annualPlanMgr.renderEditor = function() {
             </thead>
             <tbody>`;
     const _today = this._today();
+    // 스크롤 대상 결정: ① 진행 중 과정 → 없으면 ② 시작일이 오늘 이후인 가장 가까운 과정
+    let _targetIdx = -1;
+    this.currentEditingData.forEach((c, idx) => {
+        if (c.startDate && c.endDate && c.startDate <= _today && c.endDate >= _today) {
+            if (_targetIdx === -1) _targetIdx = idx;  // 진행 중 (최우선)
+        }
+    });
+    if (_targetIdx === -1) {
+        // 진행 중 없음 → 다가오는(미래) 과정 중 시작일이 가장 빠른 것
+        let best = null;
+        this.currentEditingData.forEach((c, idx) => {
+            if (c.startDate && c.startDate > _today) {
+                if (best === null || c.startDate < this.currentEditingData[best].startDate) best = idx;
+            }
+        });
+        if (best !== null) _targetIdx = best;
+    }
+
     this.currentEditingData.forEach((c, idx) => {
         const isCur = c.startDate && c.endDate && c.startDate <= _today && c.endDate >= _today;
         html += `
-            <tr data-cur="${isCur ? '1' : '0'}" style="${rowBg(c)}">
+            <tr data-cur="${isCur ? '1' : '0'}" data-target="${idx === _targetIdx ? '1' : '0'}" style="${rowBg(c)}">
                 <td style="${cellStyle} text-align:center; color:#64748b;">${idx + 1}</td>
                 <td style="${cellStyle}"><input type="text" value="${esc(c.name)}" onchange="annualPlanMgr.updateLocalData(${idx},'name',this.value)" style="${inpStyle} font-weight:700;"></td>
                 <td style="${cellStyle}"><input type="date" value="${esc(c.startDate)}" onchange="annualPlanMgr.updateLocalData(${idx},'startDate',this.value)" style="${inpStyle}"></td>
@@ -7158,10 +7176,10 @@ annualPlanMgr.renderEditor = function() {
     html += `</tbody></table>`;
     area.innerHTML = html;
 
-    // 현재 진행 중(오늘 포함) 과정 행을 화면 중앙으로 스크롤
+    // 진행 중(없으면 차주/다가오는) 과정 행을 화면 중앙으로 스크롤
     setTimeout(() => {
-        const curRow = area.querySelector('tr[data-cur="1"]');
-        if (curRow && curRow.scrollIntoView) curRow.scrollIntoView({ block: 'center' });
+        const targetRow = area.querySelector('tr[data-target="1"]') || area.querySelector('tr[data-cur="1"]');
+        if (targetRow && targetRow.scrollIntoView) targetRow.scrollIntoView({ block: 'center' });
     }, 50);
 };
 
