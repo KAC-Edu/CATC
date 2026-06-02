@@ -347,11 +347,14 @@ switchRoomAttempt: async function(newRoom, silent = false) {
 
     const isActive = (st.roomStatus === 'active');
     const isOwner = (st.ownerSessionId === state.sessionId);
+    // 자동배치 등으로 ownerSessionId가 아직 없는 방은 '주인 없는 방'으로 보고 자유 입장 허용
+    const hasOwner = !!st.ownerSessionId;
+    const blocked = isActive && hasOwner && !isOwner && !state.isObserver;
 
     // 3. [보안 핵심] 인증 전 버튼 및 기능 물리적 잠금
     const setupBtn = document.getElementById('btnSetupModal');
     if (setupBtn) {
-        if (isActive && !isOwner && !state.isObserver) {
+        if (blocked) {
             // 권한이 없는 사용자가 접속했을 때 버튼 상태
             setupBtn.style.setProperty('background', '#64748b', 'important');
             setupBtn.style.setProperty('opacity', '0.6', 'important');
@@ -370,8 +373,8 @@ switchRoomAttempt: async function(newRoom, silent = false) {
 
     // 4. [분기 처리] 권한 여부에 따른 입장 통제
     
-    // (A) 방이 사용 중인데 내가 주인이 아니고, 옵저버도 아님 -> 데이터 차단
-    if (isActive && !isOwner && !state.isObserver) {
+    // (A) 방이 사용 중이고 '실제 소유자'가 있는데 내가 주인이 아니고 옵저버도 아님 -> 차단
+    if (blocked) {
         console.log(`[권한 차단] Room ${newRoom}에 대한 소유권이 없습니다.`);
 
         // 새로고침 복구 시(silent)에는 비밀번호창 없이 현황판으로 복귀
@@ -492,28 +495,48 @@ verifyTakeover: async function() {
     // [입장 방식 선택] 강사 권한 가져오기 → 비밀번호 입력창으로
     chooseTakeover: function() {
         document.getElementById('roleChoiceModal').style.display = 'none';
+        state.entryIntent = 'teacher';
         const newRoom = state.pendingRoom;
         document.getElementById('takeoverPwInput').value = "";
         const lbl = document.getElementById('takeoverRoomLabel');
         if (lbl) lbl.innerText = `Room #${newRoom}`;
-        // 비밀번호 모달을 '강사 권한' 모드로 표시
         const hdr = document.querySelector('#takeoverModal .modal-header h3');
         if (hdr) hdr.innerHTML = '<i class="fa-solid fa-chalkboard-user"></i> 강사 권한 인증';
+        // 버튼: 강사 획득만 노출
+        const btT = document.getElementById('btnTakeoverTeacher');
+        const btO = document.getElementById('btnTakeoverObserver');
+        if (btT) { btT.style.display = 'flex'; btT.innerHTML = '<i class="fa-solid fa-chalkboard-user"></i> 강사 권한 가져오기'; }
+        if (btO) btO.style.display = 'none';
         document.getElementById('takeoverModal').style.display = 'flex';
         setTimeout(() => document.getElementById('takeoverPwInput').focus(), 50);
     },
 
-    // [입장 방식 선택] 옵저버 → 비밀번호 입력창으로(옵저버 모드 표시)
+    // [입장 방식 선택] 옵저버 → 비밀번호 입력창으로(옵저버 의도 유지)
     chooseObserver: function() {
         document.getElementById('roleChoiceModal').style.display = 'none';
+        state.entryIntent = 'observer';
         const newRoom = state.pendingRoom;
         document.getElementById('takeoverPwInput').value = "";
         const lbl = document.getElementById('takeoverRoomLabel');
         if (lbl) lbl.innerText = `Room #${newRoom}`;
         const hdr = document.querySelector('#takeoverModal .modal-header h3');
         if (hdr) hdr.innerHTML = '<i class="fa-solid fa-eye"></i> 옵저버 입장 인증';
+        // 버튼: 옵저버 입장만 노출
+        const btT = document.getElementById('btnTakeoverTeacher');
+        const btO = document.getElementById('btnTakeoverObserver');
+        if (btT) btT.style.display = 'none';
+        if (btO) { btO.style.display = 'flex'; }
         document.getElementById('takeoverModal').style.display = 'flex';
         setTimeout(() => document.getElementById('takeoverPwInput').focus(), 50);
+    },
+
+    // 비밀번호 모달 엔터/제출 → 의도에 따라 분기
+    submitTakeover: function() {
+        if (state.entryIntent === 'observer') {
+            this.enterAsObserver();
+        } else {
+            this.verifyTakeover();
+        }
     },
 
     cancelRoleChoice: function() {
@@ -755,14 +778,22 @@ forceEnterRoom: async function(room) {
                 const tm = document.getElementById('takeoverModal');
                 if (tm) tm.style.display = 'none';
 
+            } else if (isActive && !isOwner && !statusData.ownerSessionId) {
+                // ④-a 자동배치 등으로 주인이 아직 없는 방 → 입장하는 강사가 소유권 획득
+                firebase.database().ref(`courses/${cleanRoom}/status`).update({ ownerSessionId: state.sessionId });
+                dataMgr.addOwnedRoom(cleanRoom);
+                overlay.style.display = 'none';
+                const tm = document.getElementById('takeoverModal');
+                if (tm) tm.style.display = 'none';
+
             } else if (isActive && !isOwner) {
-                // ④ 다른 강사 사용중인 방 → 비번 입력창 (옵저버 입장도 가능)
+                // ④-b 실제 다른 강사가 소유 중인 방 → 입장 방식 선택(강사/옵저버) 먼저
                 overlay.style.display = 'flex';
-                if (overlayMsg) overlayMsg.innerHTML = '현재 다른 기기에서 강의가 진행 중입니다.<br><br>옵저버 모드로 입장하거나,<br>강사 권한을 가져오려면 강의실 비밀번호를 입력하세요.';
+                if (overlayMsg) overlayMsg.innerHTML = '현재 다른 기기에서 강의가 진행 중입니다.<br><br>입장 방식을 선택하세요.';
                 state.pendingRoom = cleanRoom;
-                const lbl = document.getElementById('takeoverRoomLabel');
-                if(lbl) lbl.innerText = `Room #${cleanRoom}`;
-                document.getElementById('takeoverModal').style.display = 'flex';
+                const rcl = document.getElementById('roleChoiceRoomLabel');
+                if (rcl) rcl.innerText = `Room #${cleanRoom}`;
+                document.getElementById('roleChoiceModal').style.display = 'flex';
             }
         } else {
             // 옵저버 모드
@@ -772,7 +803,7 @@ forceEnterRoom: async function(room) {
         // 설정 버튼 상태 제어
         const setupBtn = document.getElementById('btnSetupModal');
         if (setupBtn) {
-            if (isActive && !isOwner && !state.isObserver) {
+            if (isActive && !isOwner && !state.isObserver && statusData.ownerSessionId) {
                 setupBtn.style.setProperty('background', '#64748b', 'important');
                 setupBtn.style.setProperty('opacity', '0.6', 'important');
                 setupBtn.innerHTML = '<i class="fa-solid fa-lock"></i> 과정 잠김 (인증 필요)';
@@ -6886,6 +6917,7 @@ const annualPlanMgr = {
             reset[`courses/${r}/settings/coordinatorName`] = null;
             reset[`courses/${r}/status/professorName`] = '';
             reset[`courses/${r}/status/roomStatus`]   = 'idle';
+            reset[`courses/${r}/status/ownerSessionId`] = null;
         }
         await firebase.database().ref().update(reset);
 
@@ -6985,6 +7017,7 @@ const annualPlanMgr = {
                 updates[`courses/${room}/settings/coordinatorName`] = coordFull;
                 updates[`courses/${room}/status/professorName`] = course.prof;
                 updates[`courses/${room}/status/roomStatus`]   = 'active';
+                updates[`courses/${room}/status/ownerSessionId`] = null;
                 assigned.push(`${room}: ${course.name}`);
             }
             // course 가 없으면(배정 대상 없음) 기존 동작 유지: 방을 건드리지 않는다.
@@ -7020,6 +7053,7 @@ const annualPlanMgr = {
             [`${rPath}/notice`]:              "",
             [`${rPath}/coordNotice`]:         "",
             [`${rPath}/coordNoticeHistory`]:  null,
+            [`${rPath}/status/ownerSessionId`]: null,
             [`${rPath}/status/resetKey`]:     newResetKey  // 교육생 강제 퇴출 신호
         };
     },
@@ -7388,6 +7422,7 @@ annualPlanMgr._syncRoomsLockAware = async function(courses) {
         updates[`courses/${r}/settings/coordinatorName`] = null;
         updates[`courses/${r}/status/professorName`] = '';
         updates[`courses/${r}/status/roomStatus`]   = 'idle';
+        updates[`courses/${r}/status/ownerSessionId`] = null;  // 주인 없는 방으로
         freeRooms.push(r);
     });
 
@@ -7403,6 +7438,7 @@ annualPlanMgr._syncRoomsLockAware = async function(courses) {
         updates[`courses/${room}/settings/coordinatorName`] = coordFull;
         updates[`courses/${room}/status/professorName`] = course.prof;
         updates[`courses/${room}/status/roomStatus`]   = 'active';
+        updates[`courses/${room}/status/ownerSessionId`] = null;  // 자동배치 방은 주인 미지정(첫 강사가 자유 입장)
     }
     if (Object.keys(updates).length) {
         await firebase.database().ref().update(updates);
