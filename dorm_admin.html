@@ -1516,8 +1516,9 @@
                 if (!name) { err.innerText = '과정명을 입력하세요.'; return; }
                 if (!start || !end) { err.innerText = '시작일과 종료일을 입력하세요.'; return; }
                 if (end < start) { err.innerText = '종료일이 시작일보다 빠를 수 없습니다.'; return; }
-                // 맨 위에 추가
-                this.data.unshift({ name, startDate: start, endDate: end, prof: '', coord: '' });
+                // 날짜 순으로 정렬되어 알맞은 위치에 들어감
+                this.data.push({ name, startDate: start, endDate: end, prof: '', coord: '' });
+                this.data.sort((a, b) => (a.startDate || '').localeCompare(b.startDate || ''));
                 document.getElementById('courseAddPop').style.display = 'none';
                 this.render();
                 showToast('과정이 추가되었습니다. "저장"을 눌러 반영하세요.');

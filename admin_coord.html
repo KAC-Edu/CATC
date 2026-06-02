@@ -5159,11 +5159,24 @@ const annualPlanMgrCoord = {
         if (!start || !end) { err.innerText = '시작일과 종료일을 입력하세요.'; return; }
         if (end < start) { err.innerText = '종료일이 시작일보다 빠를 수 없습니다.'; return; }
         var mon = (this._getMondayOf ? this._getMondayOf(start) : '');
-        this.currentEditingData.unshift({ no:0, name:name, startDate:start, endDate:end, period:(start+' ~ '+end), prof:'', coord:'', weekKey:mon });
+        this.currentEditingData.push({ no:0, name:name, startDate:start, endDate:end, period:(start+' ~ '+end), prof:'', coord:'', weekKey:mon });
+        this.currentEditingData.sort(function(a,b){ return (a.startDate||'').localeCompare(b.startDate||''); });
         document.getElementById('coordCourseAddPop').style.display = 'none';
         this.renderEditor();
-        var area = document.getElementById('annualPlanEditorAreaCoord');
-        if (area) area.scrollTop = 0;
+        var self = this;
+        setTimeout(function(){
+            var area = document.getElementById('annualPlanEditorAreaCoord');
+            if (!area) return;
+            var idx = self.currentEditingData.findIndex(function(c){ return c.name===name && c.startDate===start && c.endDate===end; });
+            var row = area.querySelectorAll('tbody tr')[idx];
+            if (row && row.scrollIntoView) {
+                row.scrollIntoView({ block: 'center' });
+                var orig = row.style.background;
+                row.style.transition = 'background 0.3s';
+                row.style.background = '#fde68a';
+                setTimeout(function(){ row.style.background = orig; }, 900);
+            }
+        }, 60);
     },
 
     deleteRow: function(idx) {

@@ -7212,16 +7212,29 @@ annualPlanMgr.confirmAdd = function() {
     if (!name) { err.innerText = '과정명을 입력하세요.'; return; }
     if (!start || !end) { err.innerText = '시작일과 종료일을 입력하세요.'; return; }
     if (end < start) { err.innerText = '종료일이 시작일보다 빠를 수 없습니다.'; return; }
-    // 맨 위에 추가
-    this.currentEditingData.unshift({
+    // 새 과정 추가 후 시작일 순으로 정렬 (날짜에 맞는 위치에 들어가도록)
+    this.currentEditingData.push({
         no: 0, name, startDate: start, endDate: end,
         period: `${start} ~ ${end}`, prof: '', coord: '',
         weekKey: this._getMondayOf(start)
     });
+    this.currentEditingData.sort((a, b) => (a.startDate || '').localeCompare(b.startDate || ''));
     document.getElementById('courseAddPop').style.display = 'none';
     this.renderEditor();
-    const area = document.getElementById('annualPlanEditorArea');
-    if (area) area.scrollTop = 0;
+    // 방금 추가한 과정 행으로 스크롤 + 잠깐 강조
+    setTimeout(() => {
+        const area = document.getElementById('annualPlanEditorArea');
+        if (!area) return;
+        const idx = this.currentEditingData.findIndex(c => c.name === name && c.startDate === start && c.endDate === end);
+        const row = area.querySelectorAll('tbody tr')[idx];
+        if (row && row.scrollIntoView) {
+            row.scrollIntoView({ block: 'center' });
+            row.style.transition = 'background 0.3s';
+            const orig = row.style.background;
+            row.style.background = '#fde68a';
+            setTimeout(() => { row.style.background = orig; }, 900);
+        }
+    }, 60);
 };
 
 annualPlanMgr.deleteRow = function(idx) {
