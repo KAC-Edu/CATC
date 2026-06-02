@@ -384,16 +384,13 @@ switchRoomAttempt: async function(newRoom, silent = false) {
         }
 
         state.pendingRoom = newRoom;
-        
-        // 중요: forceEnterRoom을 실행하지 않고 여기서 중단합니다. (데이터 리스너 실행 방지)
-        document.getElementById('takeoverPwInput').value = "";
-        const lbl1 = document.getElementById('takeoverRoomLabel');
-        if(lbl1) lbl1.innerText = `Room #${newRoom}`;
-        document.getElementById('takeoverModal').style.display = 'flex';
-        document.getElementById('takeoverPwInput').focus();
-        
-        // overlay는 flex 상태를 유지하여 뒷배경 데이터를 가립니다.
-        return; 
+
+        // [변경] 비밀번호창을 바로 띄우지 않고, 먼저 '입장 방식'을 선택하게 한다.
+        //  강사 권한 가져오기 → 비밀번호창 / 옵저버 → 모니터링 입장 / 취소
+        const lbl1 = document.getElementById('roleChoiceRoomLabel');
+        if (lbl1) lbl1.innerText = `Room #${newRoom}`;
+        document.getElementById('roleChoiceModal').style.display = 'flex';
+        return;
     }
 
     // (B) 내가 주인이거나, 옵저버이거나, 혹은 방이 비어있는 경우 -> 입장 허용
@@ -491,6 +488,42 @@ verifyTakeover: async function() {
 
 
 
+
+    // [입장 방식 선택] 강사 권한 가져오기 → 비밀번호 입력창으로
+    chooseTakeover: function() {
+        document.getElementById('roleChoiceModal').style.display = 'none';
+        const newRoom = state.pendingRoom;
+        document.getElementById('takeoverPwInput').value = "";
+        const lbl = document.getElementById('takeoverRoomLabel');
+        if (lbl) lbl.innerText = `Room #${newRoom}`;
+        // 비밀번호 모달을 '강사 권한' 모드로 표시
+        const hdr = document.querySelector('#takeoverModal .modal-header h3');
+        if (hdr) hdr.innerHTML = '<i class="fa-solid fa-chalkboard-user"></i> 강사 권한 인증';
+        document.getElementById('takeoverModal').style.display = 'flex';
+        setTimeout(() => document.getElementById('takeoverPwInput').focus(), 50);
+    },
+
+    // [입장 방식 선택] 옵저버 → 비밀번호 입력창으로(옵저버 모드 표시)
+    chooseObserver: function() {
+        document.getElementById('roleChoiceModal').style.display = 'none';
+        const newRoom = state.pendingRoom;
+        document.getElementById('takeoverPwInput').value = "";
+        const lbl = document.getElementById('takeoverRoomLabel');
+        if (lbl) lbl.innerText = `Room #${newRoom}`;
+        const hdr = document.querySelector('#takeoverModal .modal-header h3');
+        if (hdr) hdr.innerHTML = '<i class="fa-solid fa-eye"></i> 옵저버 입장 인증';
+        document.getElementById('takeoverModal').style.display = 'flex';
+        setTimeout(() => document.getElementById('takeoverPwInput').focus(), 50);
+    },
+
+    cancelRoleChoice: function() {
+        document.getElementById('roleChoiceModal').style.display = 'none';
+        const overlay = document.getElementById('statusOverlay');
+        if (overlay) overlay.style.display = 'none';
+        state.pendingRoom = null;
+        state.room = null;
+        ui.showWaitingRoom();
+    },
 
 enterAsObserver: async function() {
         const newRoom = state.pendingRoom;

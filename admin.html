@@ -113,6 +113,30 @@
             </div>
         </div>
     </div>
+<!-- 입장 방식 선택 모달 (강사 권한 가져오기 / 옵저버) -->
+<div id="roleChoiceModal" class="modal-overlay">
+    <div class="modal-box" style="width: 420px;">
+        <div class="modal-header"><h3><i class="fa-solid fa-user-shield"></i> 입장 방식 선택</h3></div>
+        <div style="text-align:center; margin-bottom:8px; padding:12px 16px; background:#fff7ed; border-radius:10px; border:1.5px solid #fed7aa;">
+            <span id="roleChoiceRoomLabel" style="font-size:20px; font-weight:900; color:#ea580c;">Room #-</span><br>
+            <span style="font-size:13px; color:#9a3412; font-weight:700;">이 강의실은 현재 다른 기기에서 강사가 운영 중입니다.</span>
+        </div>
+        <p style="font-size:13px; color:#64748b; text-align:center; line-height:1.6; margin:14px 0 18px;">
+            <b>강사 권한을 가져오면</b> 기존에 운영 중이던 강사는 옵저버로 전환됩니다.<br>
+            단순히 화면만 보려면 <b>옵저버</b>로 입장하세요.
+        </p>
+        <div style="display:flex; flex-direction:column; gap:10px;">
+            <button class="m-btn m-btn-done" onclick="dataMgr.chooseTakeover()" style="width:100%; justify-content:center; font-weight:900; padding:14px;">
+                <i class="fa-solid fa-chalkboard-user"></i> 강사 권한 가져오기 (비밀번호 필요)
+            </button>
+            <button class="m-btn" onclick="dataMgr.chooseObserver()" style="background:#e0f2fe; color:#0369a1; width:100%; justify-content:center; font-weight:900; padding:14px;">
+                <i class="fa-solid fa-eye"></i> 옵저버로 입장 (모니터링만)
+            </button>
+            <button class="m-btn m-btn-later" onclick="dataMgr.cancelRoleChoice()" style="background:#64748b; color:white; width:100%; justify-content:center;">취소</button>
+        </div>
+    </div>
+</div>
+
 <div id="takeoverModal" class="modal-overlay">
         <div class="modal-box" style="width: 400px;">
             <div class="modal-header"><h3><i class="fa-solid fa-lock"></i> 강의실 제어권 인증</h3></div>
