@@ -6560,16 +6560,8 @@ const bgmPlayer = {
         this._renderPanel();
         this._syncBadge();
 
-        // 창 크기 변경 시 플레이어 위치 재계산
+        // 창 크기 변경 시 위치 재계산
         window.addEventListener('resize', () => this._syncBadge());
-        document.addEventListener('click', (e) => {
-            const panel = document.getElementById('bgmPanel');
-            const btn = document.getElementById('bgmIconBtn');
-            if (panel && btn && !panel.contains(e.target) && !btn.contains(e.target)) {
-                panel.style.display = 'none';
-                this._panelOpen = false;
-            }
-        });
     },
 
     // 중복 방지 랜덤 번호 추출 (방금 재생한 곡 제외)
@@ -6599,48 +6591,28 @@ const bgmPlayer = {
     },
 
     _syncBadge: function() {
-        const badge = document.getElementById('bgmNowBadge');
         const iconBtn = document.getElementById('bgmIconBtn');
-        if (this._isPlaying && this._currentNum > 0) {
-            if (badge) {
-                badge.innerText = `배경음 ${this._currentNum}번`;
-                badge.style.background = '#ef4444';
-                badge.style.display = 'inline-block';
-            }
-            if (iconBtn) { iconBtn.style.color = '#ef4444'; iconBtn.classList.add('bgm-playing'); }
-        } else if (this._currentNum > 0) {
-            if (badge) {
-                badge.innerText = `배경음 ${this._currentNum}번 (정지)`;
-                badge.style.background = '#94a3b8';
-                badge.style.display = 'inline-block';
-            }
-            if (iconBtn) { iconBtn.style.color = '#94a3b8'; iconBtn.classList.remove('bgm-playing'); }
-        } else {
-            if (badge) { badge.style.display = 'none'; }
-            if (iconBtn) { iconBtn.style.color = ''; iconBtn.classList.remove('bgm-playing'); }
-        }
-        // 패널 내 현재 곡 표시 업데이트
-        const nowEl = document.getElementById('bgmNowTrack');
-        if (nowEl) {
-            if (this._currentNum > 0) {
-                nowEl.innerText = this._isPlaying
-                    ? `♪ 배경음 ${this._currentNum}번 재생 중`
-                    : `배경음 ${this._currentNum}번 (일시정지)`;
-                nowEl.style.color = this._isPlaying ? '#60a5fa' : '#94a3b8';
-            } else {
-                nowEl.innerText = '재생 중인 곡 없음';
-                nowEl.style.color = '#475569';
-            }
-        }
-        // 미니 플레이어 표시 (화면 우측 상단 고정, 모든 페이지 위 레이어)
-        const bubble = document.getElementById('bgmNowBubble');
-        const bubbleText = document.getElementById('bgmNowBubbleText');
-        if (bubble) {
+        // 음악 아이콘: 재생 중이면 주황으로 빛남
+        if (iconBtn) {
             if (this._isPlaying && this._currentNum > 0) {
-                if (bubbleText) bubbleText.innerText = `배경음 ${this._currentNum}번 재생 중`;
-                bubble.style.display = 'flex';
+                iconBtn.style.color = '#f97316';
+                iconBtn.classList.add('bgm-playing');
             } else {
-                bubble.style.display = 'none';
+                iconBtn.style.color = '';
+                iconBtn.classList.remove('bgm-playing');
+            }
+        }
+        // 통합 주황 바: 재생 시작되면 자동으로 띄움, 상태 텍스트 갱신
+        const bar = document.getElementById('bgmNowBubble');
+        const barText = document.getElementById('bgmNowBubbleText');
+        if (bar) {
+            if (this._isPlaying && this._currentNum > 0) {
+                if (barText) barText.innerText = `배경음 ${this._currentNum}번 재생 중`;
+                bar.style.display = 'flex';
+                this._panelOpen = true;
+            } else if (this._currentNum > 0) {
+                // 일시정지/정지 상태 — 바는 사용자가 닫기 전까지 유지
+                if (barText) barText.innerText = this._isPlaying ? '' : `배경음 ${this._currentNum}번 (정지)`;
             }
         }
     },
@@ -6679,6 +6651,10 @@ const bgmPlayer = {
         this._prevNum = -1;
         this._syncBadge();
         try { sessionStorage.removeItem(this._SS_STATE); } catch (e) {}
+        // 정지 시 주황 바 닫기
+        const bar = document.getElementById('bgmNowBubble');
+        if (bar) bar.style.display = 'none';
+        this._panelOpen = false;
     },
 
     setVolume: function(val) {
@@ -6689,11 +6665,15 @@ const bgmPlayer = {
 
     togglePanel: function() {
         if (!this._audio) this.init();
-        const panel = document.getElementById('bgmPanel');
-        if (!panel) return;
+        const bar = document.getElementById('bgmNowBubble');
+        if (!bar) return;
         this._panelOpen = !this._panelOpen;
-        panel.style.display = this._panelOpen ? 'block' : 'none';
-        if (this._panelOpen) this._syncBadge();
+        bar.style.display = this._panelOpen ? 'flex' : 'none';
+        if (this._panelOpen) {
+            const txt = document.getElementById('bgmNowBubbleText');
+            if (txt) txt.innerText = (this._isPlaying && this._currentNum > 0)
+                ? `배경음 ${this._currentNum}번 재생 중` : '배경음악';
+        }
     }
 };
 

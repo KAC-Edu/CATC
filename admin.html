@@ -18,21 +18,39 @@
     <link rel="stylesheet" href="admin.css">
 </head>
 <body class="day-mode">
-<!-- 배경음 재생 미니 플레이어 (body 직속 — 어떤 페이지에서도 최상위 노출) -->
-<div id="bgmNowBubble" style="display:none; position:fixed; top:58px; right:24px; background:linear-gradient(135deg,#ef4444,#f97316); color:#fff; padding:8px 16px 8px 12px; border-radius:30px; font-size:13px; font-weight:800; white-space:nowrap; box-shadow:0 6px 24px rgba(239,68,68,0.55); z-index:2147483647; align-items:center; gap:9px; border:2px solid rgba(255,255,255,0.9);">
-    <span style="display:inline-flex; align-items:center; justify-content:center; width:22px; height:22px; background:rgba(255,255,255,0.25); border-radius:50%;">
-        <i class="fa-solid fa-play" style="font-size:10px; margin-left:1px;"></i>
-    </span>
-    <span style="display:inline-flex; gap:2px; align-items:flex-end; height:14px;">
-        <span class="bgm-eq" style="width:3px; background:#fff; border-radius:2px;"></span>
-        <span class="bgm-eq" style="width:3px; background:#fff; border-radius:2px;"></span>
-        <span class="bgm-eq" style="width:3px; background:#fff; border-radius:2px;"></span>
-        <span class="bgm-eq" style="width:3px; background:#fff; border-radius:2px;"></span>
-    </span>
-    <span id="bgmNowBubbleText">배경음 재생 중</span>
-    <span onclick="bgmPlayer.pause(); event.stopPropagation();" style="cursor:pointer; display:inline-flex; align-items:center; justify-content:center; width:22px; height:22px; background:rgba(255,255,255,0.25); border-radius:50%; margin-left:2px;" title="일시정지">
-        <i class="fa-solid fa-pause" style="font-size:10px;"></i>
-    </span>
+<!-- 통합 배경음 플레이어 (주황 바 하나 — body 직속, 최상위 노출) -->
+<div id="bgmNowBubble" style="display:none; position:fixed; top:96px; right:24px; background:linear-gradient(135deg,#f97316,#fb923c); color:#fff; padding:12px 16px; border-radius:18px; font-size:13px; font-weight:800; box-shadow:0 10px 32px rgba(249,115,22,0.5); z-index:2147483647; flex-direction:column; gap:10px; border:2px solid rgba(255,255,255,0.85); min-width:280px;">
+    <!-- 상단: 상태 + 닫기 -->
+    <div style="display:flex; align-items:center; gap:10px; width:100%;">
+        <span style="display:inline-flex; gap:2px; align-items:flex-end; height:15px;">
+            <span class="bgm-eq" style="width:3px; background:#fff; border-radius:2px;"></span>
+            <span class="bgm-eq" style="width:3px; background:#fff; border-radius:2px;"></span>
+            <span class="bgm-eq" style="width:3px; background:#fff; border-radius:2px;"></span>
+            <span class="bgm-eq" style="width:3px; background:#fff; border-radius:2px;"></span>
+        </span>
+        <span id="bgmNowBubbleText" style="font-size:14px; font-weight:900;">배경음 재생 중</span>
+        <button onclick="bgmPlayer.togglePanel()" style="margin-left:auto; background:rgba(255,255,255,0.25); border:none; color:#fff; cursor:pointer; width:24px; height:24px; border-radius:50%; font-size:13px; line-height:1;">✕</button>
+    </div>
+    <!-- 컨트롤 버튼들 -->
+    <div style="display:flex; align-items:center; gap:7px; width:100%;">
+        <button onclick="bgmPlayer.playRandom()" style="flex:1; height:36px; background:#fff; color:#ea580c; border:none; border-radius:10px; font-size:13px; font-weight:900; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px;">
+            <i class="fa-solid fa-shuffle"></i> 랜덤
+        </button>
+        <button onclick="bgmPlayer.pause()" title="일시정지" style="height:36px; width:40px; background:rgba(255,255,255,0.22); color:#fff; border:1.5px solid rgba(255,255,255,0.5); border-radius:10px; cursor:pointer; display:flex; align-items:center; justify-content:center;">
+            <i class="fa-solid fa-pause"></i>
+        </button>
+        <button onclick="bgmPlayer.play()" title="재생" style="height:36px; width:40px; background:rgba(255,255,255,0.22); color:#fff; border:1.5px solid rgba(255,255,255,0.5); border-radius:10px; cursor:pointer; display:flex; align-items:center; justify-content:center;">
+            <i class="fa-solid fa-play"></i>
+        </button>
+        <button onclick="bgmPlayer.stop()" title="정지" style="height:36px; width:40px; background:rgba(255,255,255,0.22); color:#fff; border:1.5px solid rgba(255,255,255,0.5); border-radius:10px; cursor:pointer; display:flex; align-items:center; justify-content:center;">
+            <i class="fa-solid fa-stop"></i>
+        </button>
+    </div>
+    <!-- 볼륨 -->
+    <div style="display:flex; align-items:center; gap:8px; width:100%;">
+        <i class="fa-solid fa-volume-low" style="font-size:12px;"></i>
+        <input type="range" id="bgmVolume" min="0" max="100" value="40" oninput="bgmPlayer.setVolume(this.value)" style="flex:1; height:4px; accent-color:#fff; cursor:pointer;">
+    </div>
 </div>
 
 <!-- 전역 로딩 스피너 -->
@@ -352,54 +370,7 @@
     <div class="qr-close" onclick="ui.toggleMiniQR()"><i class="fa-solid fa-xmark"></i></div>
 </div>
 
-<!-- ── 배경음악 플로팅 패널 ── -->
-<div id="bgmPanel" style="display:none; position:fixed; top:64px; right:16px; width:300px; background:#1e2a3a; border-radius:18px; box-shadow:0 16px 48px rgba(0,0,0,0.4); z-index:9800; overflow:hidden; border:1px solid rgba(255,255,255,0.08);">
-    <!-- 패널 헤더 -->
-    <div style="padding:14px 18px; background:#162030; display:flex; align-items:center; justify-content:space-between;">
-        <div style="display:flex; align-items:center; gap:10px;">
-            <i class="fa-solid fa-music" style="color:#60a5fa; font-size:14px;"></i>
-            <span style="color:#f1f5f9; font-size:14px; font-weight:800;">배경음악</span>
-            <span id="bgmNowBadge" style="display:none; background:#60a5fa; color:#fff; font-size:10px; font-weight:800; padding:2px 8px; border-radius:20px;">재생 중</span>
-        </div>
-        <div style="display:flex; align-items:center; gap:10px;">
-            <!-- 볼륨 -->
-            <i class="fa-solid fa-volume-low" style="color:#94a3b8; font-size:12px;"></i>
-            <input type="range" id="bgmVolume" min="0" max="100" value="40"
-                oninput="bgmPlayer.setVolume(this.value)"
-                style="width:64px; height:4px; accent-color:#60a5fa; cursor:pointer;">
-            <button onclick="bgmPlayer.togglePanel()" style="background:none; border:none; color:#64748b; cursor:pointer; font-size:16px; padding:0; line-height:1;">✕</button>
-        </div>
-    </div>
-
-    <!-- 현재 재생 곡 표시 -->
-    <div style="padding:14px 14px 0;">
-        <div style="background:rgba(96,165,250,0.08); border:1px solid rgba(96,165,250,0.15); border-radius:12px; padding:12px 16px; display:flex; align-items:center; gap:10px;">
-            <i class="fa-solid fa-music" style="color:#60a5fa; font-size:13px; flex-shrink:0;"></i>
-            <span id="bgmNowTrack" style="color:#475569; font-size:13px; font-weight:600;">재생 중인 곡 없음</span>
-        </div>
-    </div>
-
-    <!-- 재생 컨트롤 바 -->
-    <div style="padding:12px 14px 14px; display:flex; align-items:center; gap:8px; border-top:1px solid rgba(255,255,255,0.06); margin-top:10px;">
-        <button onclick="bgmPlayer.playRandom()"
-            style="flex:1; height:36px; background:#60a5fa; color:#fff; border:none; border-radius:10px; font-size:13px; font-weight:800; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px;">
-            <i class="fa-solid fa-shuffle"></i> 랜덤 재생
-        </button>
-        <button onclick="bgmPlayer.pause()"
-            style="height:36px; width:36px; background:rgba(255,255,255,0.08); color:#f1f5f9; border:1px solid rgba(255,255,255,0.12); border-radius:10px; font-size:13px; cursor:pointer; display:flex; align-items:center; justify-content:center;">
-            <i class="fa-solid fa-pause"></i>
-        </button>
-        <button onclick="bgmPlayer.play()"
-            style="height:36px; width:36px; background:rgba(255,255,255,0.08); color:#f1f5f9; border:1px solid rgba(255,255,255,0.12); border-radius:10px; font-size:13px; cursor:pointer; display:flex; align-items:center; justify-content:center;">
-            <i class="fa-solid fa-play"></i>
-        </button>
-        <button onclick="bgmPlayer.stop()"
-            style="height:36px; width:36px; background:rgba(239,68,68,0.15); color:#f87171; border:1px solid rgba(239,68,68,0.25); border-radius:10px; font-size:13px; cursor:pointer; display:flex; align-items:center; justify-content:center;">
-            <i class="fa-solid fa-stop"></i>
-        </button>
-    </div>
-</div>
-
+<!-- ── 배경음악: 통합 주황 플레이어 바(상단 #bgmNowBubble)로 일원화됨 ── -->
 <div class="mode-tabs">
     <button class="mode-btn active" id="tab-dashboard" onclick="ui.setMode('dashboard')"><i class="fa-solid fa-gauge-high"></i> 과정 현황</button>
     <button class="mode-btn" id="tab-guide" onclick="ui.setMode('guide')"><i class="fa-solid fa-file-pdf"></i> 입교안내</button>
