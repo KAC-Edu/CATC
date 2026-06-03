@@ -6260,9 +6260,36 @@ saveAll: function() {
         const roomSelectVal = document.getElementById('setup-room-select').value;
         const roomName = (roomSelectVal === "direct") ? document.getElementById('setup-room-direct').value.trim() : roomSelectVal;
 
-        // ★ 유효성 검사 수정 (periodRange가 비어있는지 확인)
-        if(!name || !periodRange || !rawPw || !roomName) {
-            alert("모든 필수 항목(과정명, 암호, 교육기간, 장소)을 입력해주세요.");
+        // ★ 유효성 검사: 빈 필수 항목을 빨간 테두리로 표시
+        const reqChecks = [
+            { val: name,        id: 'setup-course-name',  label: '과정명' },
+            { val: periodRange, id: 'setup-period-range',  label: '교육기간' },
+            { val: rawPw,       id: 'setup-room-pw',       label: '암호' },
+            { val: roomName,    id: (roomSelectVal === 'direct' ? 'setup-room-direct' : 'setup-room-select'), label: '장소' }
+        ];
+        // 먼저 모든 표시 초기화
+        reqChecks.forEach(c => {
+            const el = document.getElementById(c.id);
+            if (el) { el.style.border = ''; el.style.background = ''; el.style.boxShadow = ''; }
+        });
+        const missing = reqChecks.filter(c => !c.val);
+        if (missing.length) {
+            missing.forEach(c => {
+                const el = document.getElementById(c.id);
+                if (el) {
+                    el.style.border = '2px solid #ef4444';
+                    el.style.background = '#fef2f2';
+                    el.style.boxShadow = '0 0 0 3px rgba(239,68,68,0.15)';
+                    // 입력 시작하면 빨간 표시 자동 해제
+                    const clear = () => { el.style.border=''; el.style.background=''; el.style.boxShadow=''; el.removeEventListener('input', clear); el.removeEventListener('change', clear); };
+                    el.addEventListener('input', clear);
+                    el.addEventListener('change', clear);
+                }
+            });
+            // 첫 미입력 항목으로 스크롤·포커스
+            const firstEl = document.getElementById(missing[0].id);
+            if (firstEl) { firstEl.scrollIntoView({ block:'center', behavior:'smooth' }); setTimeout(()=>firstEl.focus(), 200); }
+            ui.showAlert(`❌ 다음 항목을 입력해주세요:\n\n· ${missing.map(m=>m.label).join('\n· ')}\n\n(빨간색으로 표시된 칸을 확인하세요)`);
             return;
         }
 
