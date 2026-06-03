@@ -86,6 +86,15 @@
             <button class="btn btn-sub" onclick="showFind()">아니요, 다시 찾기</button>
             <div id="multiHint" style="display:none; margin-top:14px;"></div>
         </div>
+
+        <!-- 동명이인: 과정 선택 -->
+        <div id="sec-picker" class="section">
+            <div class="logo">👥</div>
+            <div class="title">본인 과정을 선택하세요</div>
+            <div class="sub">같은 성함이 여러 강의실에 있어요.<br>듣고 계신 과정을 눌러 주세요.</div>
+            <div id="pickerList" style="margin-top:18px; display:flex; flex-direction:column; gap:12px;"></div>
+            <button class="btn btn-sub" style="margin-top:14px;" onclick="showFind()">다시 찾기</button>
+        </div>
     </div>
 
     <script>
@@ -93,7 +102,7 @@
         try { db = firebase.database(); } catch (e) { console.error('firebase init 실패', e); }
 
         function show(sec) {
-            ['connecting','notice','find','confirm'].forEach(function (s) {
+            ['connecting','notice','find','confirm','picker'].forEach(function (s) {
                 document.getElementById('sec-' + s).style.display = (s === sec) ? 'block' : 'none';
             });
         }
@@ -104,7 +113,7 @@
             setTimeout(function () { document.getElementById('findName').focus(); }, 100);
         }
 
-        // ── 1) 최근 강의실 자동 복귀 ──
+        // ── 1) 최근 확정한 강의실 자동 복귀 (본인이 한 번 선택한 방만 저장됨) ──
         (function () {
             var room = null;
             try { room = localStorage.getItem('kac_last_visited_room'); } catch (e) {}
@@ -115,7 +124,9 @@
                     location.replace('index.html?room=' + encodeURIComponent(room));
                 }, 700);
             } else {
-                show('notice');
+                // 저장된 방이 없으면 바로 '성함으로 찾기' 화면
+                show('find');
+                setTimeout(function () { var el = document.getElementById('findName'); if (el) el.focus(); }, 150);
             }
         })();
 
@@ -173,13 +184,31 @@
                     errEl.textContent = '"' + name + '" 님으로 등록된 강의실을 찾지 못했어요. 성함을 다시 확인해 주세요.';
                     return;
                 }
-                // 첫 매칭을 기본 후보로
-                showConfirm(0);
+                if (_matches.length === 1) {
+                    // 단일 매치 → 바로 확인 화면
+                    showConfirm(0);
+                } else {
+                    // 동명이인 → 과정명으로 본인 강의실 선택하게 안내
+                    showPicker();
+                }
             }).catch(function (e) {
                 console.error(e);
                 btn.disabled = false; btn.textContent = '강의실 찾기';
                 errEl.textContent = '조회 중 오류가 발생했습니다. 잠시 후 다시 시도하거나 QR로 입장해 주세요.';
             });
+        }
+
+        // 동명이인 → 과정명으로 선택
+        function showPicker() {
+            var list = document.getElementById('pickerList');
+            list.innerHTML = _matches.map(function (m, i) {
+                return '<button class="btn" style="text-align:left; line-height:1.4;" onclick="showConfirm(' + i + ')">' +
+                    '<span style="font-weight:900;">ROOM ' + m.room + '</span><br>' +
+                    '<span style="font-size:14px; opacity:0.95;">' + m.course + '</span>' +
+                    (m.prof ? ' <span style="font-size:12px; opacity:0.8;">· ' + m.prof + ' 교수</span>' : '') +
+                    '</button>';
+            }).join('');
+            show('picker');
         }
 
         function showConfirm(idx) {
@@ -189,23 +218,14 @@
             document.getElementById('mRoom').textContent = 'ROOM ' + m.room;
             document.getElementById('mCourse').textContent = m.course;
             document.getElementById('mProf').textContent = m.prof ? (m.prof + ' 교수') : '';
-
-            // 동명이인으로 여러 강의실이 잡힌 경우 선택 힌트
-            var hint = document.getElementById('multiHint');
-            if (_matches.length > 1) {
-                hint.style.display = 'block';
-                hint.innerHTML = '<div class="sub" style="margin-bottom:8px;">같은 성함이 여러 강의실에 있어요. 본인 강의실을 선택하세요.</div>' +
-                    _matches.map(function (mm, i) {
-                        return '<button class="link-find" onclick="showConfirm(' + i + ')">ROOM ' + mm.room + ' · ' + mm.course + '</button>';
-                    }).join('<br>');
-            } else {
-                hint.style.display = 'none';
-            }
+            document.getElementById('multiHint').style.display = 'none';
             show('confirm');
         }
 
         function confirmEnter() {
             if (!_pickedRoom) return;
+            // 본인이 확정한 방을 저장 → 다음부터 자동 복귀 (같은 기간 동안)
+            try { localStorage.setItem('kac_last_visited_room', _pickedRoom); } catch (e) {}
             location.replace('index.html?room=' + encodeURIComponent(_pickedRoom));
         }
 
