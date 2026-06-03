@@ -520,7 +520,7 @@ verifyTakeover: async function() {
         const lbl = document.getElementById('takeoverRoomLabel');
         if (lbl) lbl.innerText = `Room #${newRoom}`;
         const hdr = document.querySelector('#takeoverModal .modal-header h3');
-        if (hdr) hdr.innerHTML = '<i class="fa-solid fa-eye"></i> 옵저버 입장 인증';
+        if (hdr) hdr.innerHTML = '<i class="fa-solid fa-binoculars"></i> 옵저버 입장 인증';
         // 버튼: 옵저버 입장만 노출
         const btT = document.getElementById('btnTakeoverTeacher');
         const btO = document.getElementById('btnTakeoverObserver');
