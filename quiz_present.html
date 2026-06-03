@@ -85,7 +85,7 @@
     .btn-close { background:#334155; }
     .btn:disabled { opacity:0.4; cursor:default; }
 
-    .timer { font-size:15px; font-weight:900; color:var(--amber); text-align:center; margin-top:14px; display:none; }
+    .timer { font-size:28px; font-weight:900; color:var(--amber); text-align:center; margin-top:16px; display:none; letter-spacing:1px; }
     .timer.on { display:block; }
 
     #loadingMsg, #errMsg { text-align:center; padding:60px 20px; }
@@ -127,10 +127,10 @@
     </div>
 
     <div id="quizArea" style="display:none;">
-        <!-- 교육생 입장 QR (우측 하단 고정) -->
-        <div id="joinQR" style="position:fixed; bottom:22px; right:22px; background:#fff; border-radius:16px; padding:14px 14px 10px; box-shadow:0 12px 32px rgba(0,0,0,0.4); text-align:center; z-index:50;">
+        <!-- 교육생 입장 QR (우측 하단 고정, 클릭 시 확대) -->
+        <div id="joinQR" onclick="presenter.enlargeQR()" title="클릭하면 크게 보기" style="position:fixed; bottom:22px; right:22px; background:#fff; border-radius:16px; padding:14px 14px 10px; box-shadow:0 12px 32px rgba(0,0,0,0.4); text-align:center; z-index:50; cursor:pointer;">
             <div id="qrCanvas" style="width:120px; height:120px; margin:0 auto;"></div>
-            <div style="font-size:12px; font-weight:800; color:#0f172a; margin-top:8px;">📲 스캔하여 참여</div>
+            <div style="font-size:12px; font-weight:800; color:#0f172a; margin-top:8px;">📲 스캔하여 참여 <i class="fa-solid fa-expand" style="color:#94a3b8; margin-left:2px;"></i></div>
             <div id="qrRoomTxt" style="font-size:11px; color:#64748b; font-weight:700;"></div>
         </div>
         <div class="qcard">
@@ -155,6 +155,15 @@
     </div>
 </div>
 
+<!-- QR 확대 오버레이 -->
+<div id="qrBigOverlay" onclick="this.style.display='none'" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.85); z-index:9999; align-items:center; justify-content:center; flex-direction:column; cursor:pointer;">
+    <div style="background:#fff; padding:32px; border-radius:24px; text-align:center;">
+        <div id="qrBigCanvas" style="width:360px; height:360px; margin:0 auto;"></div>
+        <div id="qrBigRoom" style="font-size:22px; font-weight:900; color:#0f172a; margin-top:18px;"></div>
+        <div style="font-size:14px; color:#64748b; margin-top:4px;">📲 스마트폰으로 스캔하여 입장</div>
+    </div>
+    <div style="color:#fff; margin-top:18px; font-size:14px; opacity:0.7;">화면을 누르면 닫힙니다</div>
+</div>
 <script src="config.js"></script>
 <script>
 const ADMIN_EMAIL = "admin@kac.com";
@@ -255,6 +264,21 @@ const presenter = {
         } catch(e) {}
     },
 
+    // QR 확대 보기
+    enlargeQR() {
+        try {
+            const base = location.href.replace(/quiz_present\.html.*$/, '').replace(/\/$/, '');
+            const joinUrl = `${base}/index.html?room=${encodeURIComponent(this.room)}`;
+            const box = document.getElementById('qrBigCanvas');
+            if (box && window.QRCode) {
+                box.innerHTML = '';
+                new QRCode(box, { text: joinUrl, width:360, height:360, correctLevel: QRCode.CorrectLevel.M });
+            }
+            document.getElementById('qrBigRoom').innerText = `Room ${this.room}`;
+            document.getElementById('qrBigOverlay').style.display = 'flex';
+        } catch(e) {}
+    },
+
     error(msg) {
         document.getElementById('loadingMsg').style.display = 'none';
         document.getElementById('errMsg').style.display = 'block';
@@ -309,17 +333,37 @@ const presenter = {
         }
     },
 
-    // '응답 시작' → 학생폰 답변 가능
+    // '응답 시작' → 학생폰 답변 가능 + 카운트다운 타이머 (강사 플랫폼과 동일 방식)
     async openAnswers() {
-        await this.db.ref(`courses/${this.room}/activeQuiz`).update({ status:'open' });
+        const SEC = 8; // 기본 응답 시간 (강사 플랫폼 기본값과 동일)
+        const endTime = Date.now() + SEC * 1000;
+        await this.db.ref(`courses/${this.room}/activeQuiz`).update({ status:'open', endTime: endTime });
         document.getElementById('btnStart').disabled = true;
         document.getElementById('btnReveal').disabled = false;
         document.getElementById('liveBadge').classList.add('on');
+        // 타이머 표시
+        const tl = document.getElementById('timerLine');
+        tl.classList.add('on');
+        const tick = () => {
+            const remain = Math.max(0, Math.ceil((endTime - Date.now()) / 1000));
+            tl.innerHTML = `<i class="fa-regular fa-clock"></i> ${remain}초`;
+            tl.style.color = remain <= 3 ? '#ef4444' : '#f59e0b';
+            if (remain <= 0) {
+                clearInterval(this._timerInt);
+                tl.innerHTML = '<i class="fa-solid fa-hourglass-end"></i> 시간 종료';
+                document.getElementById('statusLine').innerHTML = '<span class="answered">응답 마감 — 정답을 공개하세요</span>';
+            }
+        };
+        tick();
+        this._timerInt = setInterval(tick, 250);
         document.getElementById('statusLine').innerHTML = '<span class="answered">교육생이 응답하고 있습니다…</span>';
     },
 
     // 정답 공개
     async reveal() {
+        if (this._timerInt) clearInterval(this._timerInt);
+        const tl = document.getElementById('timerLine');
+        if (tl) tl.classList.remove('on');
         await this.db.ref(`courses/${this.room}/activeQuiz`).update({ status:'result' });
         document.getElementById('liveBadge').classList.remove('on');
         const q = this.quiz;
@@ -337,6 +381,7 @@ const presenter = {
 
     // 종료 → 방을 일반 모드로 (학생폰 퀴즈 닫힘)
     async finish() {
+        if (this._timerInt) clearInterval(this._timerInt);
         if (!confirm('퀴즈를 종료하고 일반 모드로 돌아갈까요?')) return;
         await this.db.ref(`courses/${this.room}/status`).update({ mode:'qa', quizStep:'none' });
         await this.db.ref(`courses/${this.room}/activeQuiz`).remove();

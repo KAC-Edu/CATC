@@ -4984,10 +4984,10 @@ loadFile: function(e) {
         const url = `${base}/quiz_present.html?room=${encodeURIComponent(state.room)}&set=${encodeURIComponent(state.loadedQuizSetKey)}&q=${state.currentQuizIdx}`;
         const qNo = state.currentQuizIdx + 1;
         const label = `▶ 퀴즈 시작 (Q${qNo})`;
-        // PPT에 붙이면 '클릭 가능한 버튼형 링크'가 되도록 HTML 서식으로 복사
-        const html = `<a href="${url}" style="display:inline-block;padding:10px 22px;background:#2563eb;color:#ffffff;font-weight:bold;font-size:16px;text-decoration:none;border-radius:8px;font-family:'Malgun Gothic',sans-serif;">${label}</a>`;
-        const done = () => ui.showAlert(`✅ PPT용 퀴즈 버튼이 복사되었습니다.\n\nQ${qNo} · Room ${state.room}\n\n파워포인트 슬라이드에 그대로 붙여넣으세요.\n파란 '▶ 퀴즈 시작' 버튼이 생기고,\n발표 중 클릭하면 교육생 화면이 이 퀴즈로 전환됩니다.`);
-        // 1) HTML+텍스트 동시 복사 시도 (PPT는 HTML을 클릭형 링크로 인식)
+        // PPT 호환: 단순 텍스트 + 하이퍼링크 (인라인 스타일 최소화 → 막대로 늘어나지 않음)
+        const html = `<a href="${url}">${label}</a>`;
+        const done = () => ui.showAlert(`✅ 복사되었습니다.\n\nQ${qNo} · Room ${state.room}\n\n[파워포인트 붙여넣기 방법]\n1) 슬라이드에서 Ctrl+V → 파란 밑줄 링크 텍스트가 생깁니다.\n2) 또는 도형/그림을 만든 뒤 우클릭 → '링크(하이퍼링크)' → 붙여넣기 하면\n   원하는 버튼 모양에 링크를 걸 수 있습니다.\n\n발표 중 클릭하면 교육생 화면이 이 퀴즈로 전환됩니다.`);
+        // 1) HTML+텍스트 동시 복사 (PPT는 링크 텍스트로 인식)
         if (navigator.clipboard && window.ClipboardItem) {
             try {
                 const item = new ClipboardItem({
