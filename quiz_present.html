@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>퀴즈 진행 — KAC</title>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+    :root {
+        --navy:#0f172a; --navy2:#1e293b; --blue:#2563eb; --cyan:#38bdf8;
+        --amber:#f59e0b; --green:#22c55e; --red:#ef4444; --line:#334155;
+    }
+    body {
+        font-family:'Malgun Gothic','맑은 고딕',sans-serif;
+        background:radial-gradient(1200px 600px at 50% -10%, #1e293b 0%, #0f172a 60%);
+        color:#f1f5f9; min-height:100vh; display:flex; flex-direction:column;
+        align-items:center; padding:28px 20px;
+    }
+    .wrap { width:100%; max-width:980px; }
+    .topbar { display:flex; align-items:center; gap:12px; margin-bottom:22px; }
+    .topbar .room { font-size:15px; font-weight:900; color:var(--cyan); background:rgba(56,189,248,0.12);
+        padding:6px 14px; border-radius:20px; border:1px solid rgba(56,189,248,0.3); }
+    .topbar .live { display:none; align-items:center; gap:7px; font-size:13px; font-weight:800; color:#fff;
+        background:var(--red); padding:6px 13px; border-radius:20px; }
+    .topbar .live.on { display:inline-flex; }
+    .topbar .live .dot { width:8px; height:8px; border-radius:50%; background:#fff; animation:blink 1s infinite; }
+    @keyframes blink { 50%{opacity:0.3;} }
+    .topbar .spacer { flex:1; }
+    .topbar .brand { font-size:13px; color:#64748b; font-weight:800; letter-spacing:1px; }
+
+    .qcard {
+        background:linear-gradient(160deg,#1e293b,#172033);
+        border:1px solid var(--line); border-radius:24px; padding:38px 40px;
+        box-shadow:0 24px 60px rgba(0,0,0,0.45);
+    }
+    .qnum { display:inline-block; font-size:14px; font-weight:900; color:var(--navy);
+        background:var(--cyan); padding:5px 16px; border-radius:20px; margin-bottom:20px; }
+    .qtype { font-size:13px; font-weight:800; color:var(--amber); margin-left:8px; }
+    .qtext { font-size:30px; font-weight:900; line-height:1.45; color:#fff; margin-bottom:30px; word-break:keep-all; }
+
+    .opts { display:flex; flex-direction:column; gap:13px; }
+    .opt {
+        display:flex; align-items:center; gap:16px; padding:16px 20px;
+        background:rgba(255,255,255,0.04); border:1.5px solid var(--line); border-radius:14px;
+        font-size:19px; font-weight:700; transition:all .25s; position:relative; overflow:hidden;
+    }
+    .opt .badge { width:34px; height:34px; flex-shrink:0; border-radius:9px; background:var(--blue);
+        color:#fff; font-weight:900; display:flex; align-items:center; justify-content:center; font-size:16px; }
+    .opt .txt { flex:1; }
+    .opt .cnt { font-size:15px; font-weight:900; color:var(--cyan); min-width:54px; text-align:right; }
+    /* 실시간 막대 (답변 비율) */
+    .opt .fill { position:absolute; left:0; top:0; bottom:0; width:0%;
+        background:linear-gradient(90deg, rgba(37,99,235,0.30), rgba(56,189,248,0.18)); transition:width .5s; z-index:0; }
+    .opt > * { position:relative; z-index:1; }
+    .opt.correct { border-color:var(--green); background:rgba(34,197,94,0.12); }
+    .opt.correct .badge { background:var(--green); }
+    .opt.correct::after { content:'\f00c'; font-family:'Font Awesome 6 Free'; font-weight:900;
+        color:var(--green); margin-left:6px; font-size:18px; }
+
+    .ox-wrap { display:flex; gap:18px; }
+    .ox { flex:1; height:150px; border-radius:18px; display:flex; flex-direction:column;
+        align-items:center; justify-content:center; gap:8px; font-size:60px; font-weight:900;
+        border:2px solid var(--line); background:rgba(255,255,255,0.03); position:relative; overflow:hidden; }
+    .ox .fill { position:absolute; left:0; bottom:0; width:100%; height:0%;
+        background:rgba(56,189,248,0.18); transition:height .5s; z-index:0; }
+    .ox > * { position:relative; z-index:1; }
+    .ox .cnt { font-size:17px; font-weight:900; color:var(--cyan); }
+    .ox.o { color:#38bdf8; } .ox.x { color:#fb7185; }
+    .ox.correct { border-color:var(--green); }
+
+    .statusline { text-align:center; margin:24px 0 6px; font-size:15px; font-weight:800; color:#94a3b8; }
+    .answered { color:var(--cyan); }
+
+    .controls { display:flex; gap:12px; margin-top:26px; }
+    .btn { flex:1; height:58px; border:none; border-radius:14px; font-size:17px; font-weight:900;
+        cursor:pointer; display:flex; align-items:center; justify-content:center; gap:9px; transition:all .2s; color:#fff; }
+    .btn:active { transform:scale(0.97); }
+    .btn-start { background:linear-gradient(135deg,#2563eb,#38bdf8); }
+    .btn-reveal { background:linear-gradient(135deg,#f59e0b,#f97316); }
+    .btn-close { background:#334155; }
+    .btn:disabled { opacity:0.4; cursor:default; }
+
+    .timer { font-size:15px; font-weight:900; color:var(--amber); text-align:center; margin-top:14px; display:none; }
+    .timer.on { display:block; }
+
+    #loadingMsg, #errMsg { text-align:center; padding:60px 20px; }
+    #errMsg { display:none; color:#fca5a5; }
+    #errMsg h2 { font-size:22px; margin-bottom:10px; }
+    .spin { font-size:34px; color:var(--cyan); animation:rot 1s linear infinite; }
+    @keyframes rot { to{transform:rotate(360deg);} }
+</style>
+</head>
+<body>
+<div class="wrap">
+    <div class="topbar">
+        <span class="room" id="roomLabel">Room #-</span>
+        <span class="live" id="liveBadge"><span class="dot"></span> 응답 받는 중</span>
+        <span class="spacer"></span>
+        <span class="brand">KAC · 퀴즈 진행</span>
+    </div>
+
+    <div id="loadingMsg">
+        <i class="fa-solid fa-spinner spin"></i>
+        <p style="margin-top:16px; color:#94a3b8; font-weight:700;">퀴즈를 불러오는 중...</p>
+    </div>
+
+    <div id="errMsg">
+        <h2><i class="fa-solid fa-triangle-exclamation"></i> 퀴즈를 찾을 수 없습니다</h2>
+        <p id="errDetail" style="color:#94a3b8; font-weight:600;"></p>
+    </div>
+
+    <div id="quizArea" style="display:none;">
+        <div class="qcard">
+            <div>
+                <span class="qnum" id="qNum">Q1</span>
+                <span class="qtype" id="qType"></span>
+            </div>
+            <div class="qtext" id="qText"></div>
+            <div class="opts" id="optsArea"></div>
+            <div class="ox-wrap" id="oxArea" style="display:none;">
+                <div class="ox o" data-ox="1"><div class="fill" id="oxFill1"></div><span>O</span><span class="cnt" id="oxCnt1">0명</span></div>
+                <div class="ox x" data-ox="2"><div class="fill" id="oxFill2"></div><span>X</span><span class="cnt" id="oxCnt2">0명</span></div>
+            </div>
+            <div class="statusline" id="statusLine">곧 시작합니다…</div>
+            <div class="timer" id="timerLine"></div>
+            <div class="controls">
+                <button class="btn btn-start" id="btnStart" onclick="presenter.openAnswers()"><i class="fa-solid fa-play"></i> 응답 시작</button>
+                <button class="btn btn-reveal" id="btnReveal" onclick="presenter.reveal()" disabled><i class="fa-solid fa-eye"></i> 정답 공개</button>
+                <button class="btn btn-close" onclick="presenter.finish()"><i class="fa-solid fa-flag-checkered"></i> 종료</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="config.js"></script>
+<script>
+const ADMIN_EMAIL = "admin@kac.com";
+
+const presenter = {
+    room:null, setKey:null, qIdx:0, quiz:null, db:null, total:0, answered:0,
+    _answerRef:null, _timerInt:null, _qid:null,
+
+    // 인증 보장: 이미 로그인돼 있으면 그대로, 아니면 관리자 비번 1회 요청
+    async ensureAuth() {
+        return new Promise((resolve) => {
+            firebase.auth().onAuthStateChanged(async (user) => {
+                if (user) { resolve(true); return; }
+                // 같은 브라우저에 admin 로그인 세션이 없으면 비번 요청
+                const pw = prompt("강사 인증이 필요합니다.\n관리자 비밀번호를 입력하세요:");
+                if (!pw) { resolve(false); return; }
+                try {
+                    await firebase.auth().signInWithEmailAndPassword(ADMIN_EMAIL, pw);
+                    resolve(true);
+                } catch (e) {
+                    alert("인증 실패: 비밀번호가 올바르지 않습니다.");
+                    resolve(false);
+                }
+            });
+        });
+    },
+
+    async init() {
+        const p = new URLSearchParams(location.search);
+        this.room = (p.get('room')||'').trim().toUpperCase();
+        this.setKey = (p.get('set')||'').trim();
+        this.qIdx = parseInt(p.get('q')||'0', 10) || 0;
+
+        if (!this.room || !this.setKey) {
+            return this.error('링크에 강의실(room) 또는 퀴즈세트(set) 정보가 없습니다.');
+        }
+        try { this.db = firebase.database(); }
+        catch(e) { return this.error('Firebase 초기화 실패. config.js를 확인하세요.'); }
+
+        // 인증 (status/activeQuiz 쓰기 권한 확보)
+        const ok = await this.ensureAuth();
+        if (!ok) { return this.error('강사 인증이 필요합니다. 페이지를 새로고침 후 다시 시도하세요.'); }
+
+        document.getElementById('roomLabel').innerText = `Room #${this.room}`;
+
+        // 1) 해당 문항 로드
+        let snap;
+        try {
+            snap = await this.db.ref(`courses/${this.room}/quizBank/${this.setKey}`).once('value');
+        } catch(e) { return this.error('데이터를 불러오지 못했습니다. (권한/네트워크)'); }
+
+        const set = snap.val();
+        if (!set || !set.data || !set.data[this.qIdx]) {
+            return this.error(`해당 문항을 찾을 수 없습니다. (set=${this.setKey}, q=${this.qIdx+1})`);
+        }
+        this.quiz = set.data[this.qIdx];
+
+        // 2) 방을 퀴즈모드로 + 문제 발행 (학생폰 자동 전환)
+        await this.publish();
+
+        // 3) 화면 렌더 + 실시간 응답 집계
+        this.render();
+        this.watchAnswers();
+        this.watchTotal();
+
+        document.getElementById('loadingMsg').style.display = 'none';
+        document.getElementById('quizArea').style.display = 'block';
+    },
+
+    error(msg) {
+        document.getElementById('loadingMsg').style.display = 'none';
+        document.getElementById('errMsg').style.display = 'block';
+        document.getElementById('errDetail').innerText = msg;
+    },
+
+    // 문제를 activeQuiz에 발행 → 학생폰 전환
+    async publish() {
+        const q = this.quiz;
+        const qid = `PPTQ_${this.setKey}_${this.qIdx}`;
+        this._qid = qid;
+        // 방 상태: 퀴즈모드 진입 (기존 학생앱 규약과 동일)
+        await this.db.ref(`courses/${this.room}/status`).update({ mode:'quiz', quizStep:'none' });
+        // 이 문제ID의 이전 답변만 초기화
+        await this.db.ref(`courses/${this.room}/quizAnswers/${qid}`).remove();
+        await this.db.ref(`courses/${this.room}/activeQuiz`).set({
+            id: qid,
+            status: 'ready',            // 아직 응답 불가(대기) — '응답 시작' 누르면 open
+            type: q.isOX ? 'OX' : 'MULTIPLE',
+            text: q.text || '',
+            options: q.options || [],
+            correct: q.correct ?? null,
+            isOX: !!q.isOX,
+            isSurvey: !!q.isSurvey
+        });
+    },
+
+    render() {
+        const q = this.quiz;
+        document.getElementById('qNum').innerText = `Q${this.qIdx + 1}`;
+        document.getElementById('qType').innerText = q.isSurvey ? '설문' : (q.isOX ? 'O/X' : '4지선다');
+        document.getElementById('qText').innerText = q.text || '';
+
+        const opts = document.getElementById('optsArea');
+        const ox = document.getElementById('oxArea');
+        if (q.isOX) {
+            opts.style.display = 'none';
+            ox.style.display = 'flex';
+        } else {
+            ox.style.display = 'none';
+            opts.style.display = 'flex';
+            opts.innerHTML = '';
+            (q.options || []).forEach((o, i) => {
+                const div = document.createElement('div');
+                div.className = 'opt'; div.dataset.opt = (i+1);
+                div.innerHTML = `<div class="fill" data-fill="${i+1}"></div>
+                    <div class="badge">${i+1}</div>
+                    <div class="txt">${this._esc(o)}</div>
+                    <div class="cnt" data-cnt="${i+1}">0명</div>`;
+                opts.appendChild(div);
+            });
+        }
+    },
+
+    // '응답 시작' → 학생폰 답변 가능
+    async openAnswers() {
+        await this.db.ref(`courses/${this.room}/activeQuiz`).update({ status:'open' });
+        document.getElementById('btnStart').disabled = true;
+        document.getElementById('btnReveal').disabled = false;
+        document.getElementById('liveBadge').classList.add('on');
+        document.getElementById('statusLine').innerHTML = '<span class="answered">교육생이 응답하고 있습니다…</span>';
+    },
+
+    // 정답 공개
+    async reveal() {
+        await this.db.ref(`courses/${this.room}/activeQuiz`).update({ status:'result' });
+        document.getElementById('liveBadge').classList.remove('on');
+        const q = this.quiz;
+        if (q.isSurvey) { document.getElementById('statusLine').innerText = '설문 결과'; return; }
+        if (q.isOX) {
+            const el = document.querySelector(`.ox[data-ox="${q.correct}"]`);
+            if (el) el.classList.add('correct');
+        } else {
+            const el = document.querySelector(`.opt[data-opt="${q.correct}"]`);
+            if (el) el.classList.add('correct');
+        }
+        document.getElementById('statusLine').innerHTML = `<span style="color:#22c55e;">정답은 ${q.correct}번 입니다.</span>`;
+        document.getElementById('btnReveal').disabled = true;
+    },
+
+    // 종료 → 방을 일반 모드로 (학생폰 퀴즈 닫힘)
+    async finish() {
+        if (!confirm('퀴즈를 종료하고 일반 모드로 돌아갈까요?')) return;
+        await this.db.ref(`courses/${this.room}/status`).update({ mode:'qa', quizStep:'none' });
+        await this.db.ref(`courses/${this.room}/activeQuiz`).remove();
+        window.close();
+        // 창이 안 닫히면 안내
+        setTimeout(() => { document.getElementById('statusLine').innerText = '종료되었습니다. 이 창을 닫아주세요.'; }, 300);
+    },
+
+    // 실시간 응답 집계
+    watchAnswers() {
+        this._answerRef = this.db.ref(`courses/${this.room}/quizAnswers/${this._qid}`);
+        this._answerRef.on('value', s => {
+            const ans = s.val() || {};
+            const counts = {};
+            let answered = 0;
+            Object.values(ans).forEach(a => {
+                const c = (a && a.choice);
+                if (c == null) return;
+                counts[c] = (counts[c] || 0) + 1;
+                answered++;
+            });
+            this.answered = answered;
+            this._renderCounts(counts, answered);
+        });
+    },
+
+    watchTotal() {
+        this.db.ref(`courses/${this.room}/students`).on('value', s => {
+            const st = s.val() || {};
+            this.total = Object.keys(st).length;
+            this._updateStatusCount();
+        });
+    },
+
+    _renderCounts(counts, answered) {
+        const q = this.quiz;
+        const max = Math.max(1, answered);
+        if (q.isOX) {
+            [1,2].forEach(n => {
+                const c = counts[n] || 0;
+                const cnt = document.getElementById('oxCnt'+n);
+                const fill = document.getElementById('oxFill'+n);
+                if (cnt) cnt.innerText = c + '명';
+                if (fill) fill.style.height = ((c/max)*100) + '%';
+            });
+        } else {
+            (q.options||[]).forEach((o,i) => {
+                const n = i+1; const c = counts[n] || 0;
+                const cnt = document.querySelector(`[data-cnt="${n}"]`);
+                const fill = document.querySelector(`[data-fill="${n}"]`);
+                if (cnt) cnt.innerText = c + '명';
+                if (fill) fill.style.width = ((c/max)*100) + '%';
+            });
+        }
+        this._updateStatusCount();
+    },
+
+    _updateStatusCount() {
+        const line = document.getElementById('statusLine');
+        if (!line || !document.getElementById('liveBadge').classList.contains('on')) return;
+        line.innerHTML = `<span class="answered">${this.answered}명 응답${this.total?` / 전체 ${this.total}명`:''}</span>`;
+    },
+
+    _esc(s){ return (s==null?'':String(s)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+};
+
+window.addEventListener('DOMContentLoaded', () => presenter.init());
+</script>
+</body>
+</html>

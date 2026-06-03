@@ -4965,11 +4965,27 @@ loadFile: function(e) {
             const val = snap.val();
             if (val) { 
                 state.quizList = val.data; 
+                state.loadedQuizSetKey = key;   // PPT 링크 생성용
                 state.isExternalFileLoaded = true; 
                 this.renderMiniList(); 
                 this.completeQuizLoading(); 
             }
         });
+    },
+
+    // 현재 문항의 'PPT용 진행 링크'를 클립보드에 복사
+    copyPresentLink: function() {
+        if (!state.loadedQuizSetKey) {
+            return ui.showAlert("이 기능은 '저장된 퀴즈'를 불러왔을 때만 사용할 수 있습니다.\n(좌측에서 저장된 퀴즈 세트를 선택해 주세요.)");
+        }
+        const base = location.href.replace(/admin\.html.*$/, '').replace(/\/$/, '');
+        const url = `${base}/quiz_present.html?room=${encodeURIComponent(state.room)}&set=${encodeURIComponent(state.loadedQuizSetKey)}&q=${state.currentQuizIdx}`;
+        const done = () => ui.showAlert(`✅ PPT용 퀴즈 링크가 복사되었습니다.\n\nQ${state.currentQuizIdx+1} · Room ${state.room}\n\n파워포인트 도형/텍스트에 '하이퍼링크'로 붙여넣으세요.\n발표 중 클릭하면 교육생 화면이 자동으로 이 퀴즈로 전환됩니다.`);
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(url).then(done).catch(() => { prompt("아래 링크를 복사하세요:", url); });
+        } else {
+            prompt("아래 링크를 복사하세요:", url);
+        }
     },
     
     deleteQuizSet: function(key, title) {
