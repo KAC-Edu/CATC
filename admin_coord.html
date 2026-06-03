@@ -2348,6 +2348,11 @@ function init() {
     // [신규] 데이터 보존정책: 60일(약 2개월) 경과한 외출·외박 기록 자동 정리 (페이지 진입 시 1회)
     purgeOldOutingRecords();
 
+    // [신규] 연간계획 자동 동기화: 추가/저장된 과정이 해당 주에 즉시 반영되도록 진입 시 1회 실행
+    if (annualPlanMgrCoord && typeof annualPlanMgrCoord.autoSync === 'function') {
+        annualPlanMgrCoord.autoSync();
+    }
+
     // 3. 기존 데이터 로드 로직 (안정성 강화)
     firebase.database().ref('courses').on('value', snap => {
         globalAllData = snap.val() || {};
@@ -5011,6 +5016,24 @@ const annualPlanMgrCoord = {
 
     _today: function() { return new Date().toISOString().split('T')[0]; },
 
+    // 페이지 로드 시: 저장된 연간계획을 현재 날짜 기준으로 자동 동기화
+    //  (운영부에서 과정 추가/저장 후 별도 조작 없이도 해당 주 과정이 즉시 반영됨)
+    autoSync: async function() {
+        try {
+            const snap = await firebase.database().ref(this.PLAN_KEY).once('value');
+            const val = snap.val();
+            if (!val) return;
+            const courses = Object.values(val)
+                .filter(c => c && c.name && c.startDate && c.endDate)
+                .sort((a, b) => a.startDate.localeCompare(b.startDate));
+            if (!courses.length) return;
+            await this._syncRoomsLockAware(courses);
+            console.log('[annualPlanMgrCoord] 자동 동기화 완료');
+        } catch (e) {
+            console.warn('[annualPlanMgrCoord] autoSync 오류:', e);
+        }
+    },
+
     _getMondayOf: function(dateStr) {
         const d = new Date(dateStr + 'T00:00:00Z');
         const day = d.getUTCDay();
@@ -5163,7 +5186,12 @@ const annualPlanMgrCoord = {
         this.currentEditingData.sort(function(a,b){ return (a.startDate||'').localeCompare(b.startDate||''); });
         document.getElementById('coordCourseAddPop').style.display = 'none';
         this.renderEditor();
+        // [추가] 과정 추가 즉시 저장 + 동기화 → 해당 주 과정이면 바로 강의실에 반영
         var self = this;
+        this._persistAndSync().then(function(){
+            if (typeof showKacToast === 'function') showKacToast('✅ 추가되어 즉시 적용되었습니다.');
+            else console.log('[annualPlanMgrCoord] 과정 추가 즉시 적용 완료');
+        }).catch(function(e){ console.warn('즉시 적용 실패:', e); });
         setTimeout(function(){
             var area = document.getElementById('annualPlanEditorAreaCoord');
             if (!area) return;
@@ -5189,34 +5217,36 @@ const annualPlanMgrCoord = {
             c.name && c.startDate && c.endDate && c.startDate > c.endDate);
         if (invalid) { showKacAlert(`❌ "${invalid.name}" 과정의 시작일이 종료일보다 늦습니다.`); return; }
         if (!(await showKacConfirm("수정된 계획을 저장하고, 잠금되지 않은 강의실 정보를 현재 날짜 기준으로 갱신하시겠습니까?"))) return;
-
         try {
-            const clean = this.currentEditingData
-                .filter(c => c.name && c.startDate && c.endDate)
-                .sort((a, b) => a.startDate.localeCompare(b.startDate))
-                .map((c, i) => ({
-                    no: i + 1,
-                    name: c.name.trim(),
-                    startDate: c.startDate,
-                    endDate: c.endDate,
-                    period: `${c.startDate} ~ ${c.endDate}`,
-                    prof: (c.prof || '').trim(),
-                    coord: (c.coord || '').trim(),
-                    weekKey: this._getMondayOf(c.startDate)
-                }));
-
-            const planData = {};
-            clean.forEach((c, i) => { planData[`c${i}`] = c; });
-            await firebase.database().ref(this.PLAN_KEY).set(planData);
-
-            await this._syncRoomsLockAware(clean);
-
+            const clean = await this._persistAndSync();
             showKacAlert(`✅ 저장 및 실시간 동기화가 완료되었습니다. (${clean.length}개 과정)`);
             document.getElementById('annualPlanModalCoord').style.display = 'none';
         } catch (e) {
             showKacAlert("❌ 오류 발생: " + e.message);
             console.error('[annualPlanMgrCoord] saveAndSync 오류:', e);
         }
+    },
+
+    // 저장 + 동기화 공통 로직 (확인창 없이 조용히 실행)
+    _persistAndSync: async function() {
+        const clean = this.currentEditingData
+            .filter(c => c.name && c.startDate && c.endDate)
+            .sort((a, b) => a.startDate.localeCompare(b.startDate))
+            .map((c, i) => ({
+                no: i + 1,
+                name: c.name.trim(),
+                startDate: c.startDate,
+                endDate: c.endDate,
+                period: `${c.startDate} ~ ${c.endDate}`,
+                prof: (c.prof || '').trim(),
+                coord: (c.coord || '').trim(),
+                weekKey: this._getMondayOf(c.startDate)
+            }));
+        const planData = {};
+        clean.forEach((c, i) => { planData[`c${i}`] = c; });
+        await firebase.database().ref(this.PLAN_KEY).set(planData);
+        await this._syncRoomsLockAware(clean);
+        return clean;
     },
 
     _syncRoomsLockAware: async function(courses) {
