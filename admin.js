@@ -4460,8 +4460,8 @@ resetShuttleRequests: function() {
         mText.innerHTML = `
             <div style="max-height:65vh; overflow-y:auto; text-align:left; padding:4px 6px;">
                 <div style="text-align:center; margin-bottom:18px;">
-                    <div style="display:inline-flex; align-items:center; justify-content:center; width:72px; height:72px; border-radius:18px; background:#eff6ff; margin-bottom:10px; overflow:hidden;">
-                        <img src="catc.png" alt="CATC" style="width:84%; height:84%; object-fit:contain;" onerror="this.style.display='none'; this.parentElement.innerHTML='<i class=&quot;fa-solid fa-graduation-cap&quot; style=&quot;font-size:30px; color:#1d4ed8;&quot;></i>';">
+                    <div style="display:inline-flex; align-items:center; justify-content:center; width:80px; height:80px; border-radius:20px; background:linear-gradient(135deg,#2563eb,#60a5fa); margin-bottom:12px; box-shadow:0 8px 20px rgba(37,99,235,0.3);">
+                        <i class="fa-solid fa-graduation-cap" style="font-size:38px; color:#fff;"></i>
                     </div>
                     <div style="font-size:18px; font-weight:900; color:#0f172a;">개발자 문의</div>
                     <div style="font-size:12px; color:#94a3b8; font-weight:600; margin-top:2px;">항공기술훈련원 교육 플랫폼</div>

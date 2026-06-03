@@ -489,48 +489,49 @@
     object-fit: cover;
     display: block;
 }
-/* 가독성을 위한 하단 그라데이션 오버레이 */
+/* 가독성을 위한 하단 그라데이션 오버레이 (더 진하게) */
 .coord-hero__overlay {
     position: absolute; inset: 0;
-    background: linear-gradient(180deg, rgba(2,12,32,0.05) 0%, rgba(2,12,32,0.15) 45%, rgba(2,12,32,0.82) 100%);
+    background: linear-gradient(180deg, rgba(2,12,32,0.10) 0%, rgba(2,12,32,0.45) 55%, rgba(2,12,32,0.92) 100%);
 }
 .coord-hero__content {
     position: absolute; left: 0; right: 0; bottom: 0;
-    padding: 16px 18px;
-    display: flex; flex-direction: column; gap: 10px;
+    padding: 18px 20px;
+    display: flex; flex-direction: column; gap: 12px;
 }
 .coord-hero__title {
     color: #fff;
-    font-size: 17px; font-weight: 900; letter-spacing: -0.5px;
-    text-shadow: 0 2px 8px rgba(0,0,0,0.5);
-    display: flex; align-items: center; gap: 8px;
+    font-size: 18px; font-weight: 900; letter-spacing: -0.5px;
+    text-shadow: 0 2px 10px rgba(0,0,0,0.7);
+    display: flex; align-items: center; gap: 9px;
 }
+.coord-hero__title i { color: #93c5fd; }
 .coord-hero__title small {
-    font-size: 11px; font-weight: 700; opacity: 0.85;
-    background: rgba(255,255,255,0.15);
-    padding: 3px 9px; border-radius: 999px;
+    font-size: 11px; font-weight: 800; opacity: 0.95;
+    background: rgba(37,99,235,0.85);
+    padding: 3px 10px; border-radius: 999px;
     backdrop-filter: blur(4px);
 }
 /* 실시간 요약 배지 */
-.coord-hero__badges { display: flex; gap: 8px; flex-wrap: wrap; }
+.coord-hero__badges { display: flex; gap: 10px; flex-wrap: wrap; }
 .hero-badge {
-    display: inline-flex; align-items: center; gap: 7px;
-    background: rgba(255,255,255,0.16);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-    border: 1px solid rgba(255,255,255,0.25);
-    border-radius: 12px;
-    padding: 7px 12px;
+    display: inline-flex; align-items: center; gap: 9px;
+    background: rgba(15,23,42,0.55);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255,255,255,0.22);
+    border-radius: 14px;
+    padding: 9px 15px;
     color: #fff;
 }
-.hero-badge i { font-size: 14px; color: #93c5fd; }
-.hero-badge .hb-label { font-size: 10.5px; font-weight: 700; opacity: 0.82; }
-.hero-badge .hb-value { font-size: 16px; font-weight: 900; letter-spacing: -0.5px; }
-.hero-badge .hb-value small { font-size: 11px; font-weight: 700; margin-left: 1px; opacity: 0.85; }
+.hero-badge i { font-size: 15px; color: #93c5fd; }
+.hero-badge .hb-label { font-size: 10.5px; font-weight: 700; opacity: 0.85; }
+.hero-badge .hb-value { font-size: 18px; font-weight: 900; letter-spacing: -0.5px; }
+.hero-badge .hb-value small { font-size: 11px; font-weight: 700; margin-left: 2px; opacity: 0.85; }
 @media (max-width: 380px) {
     .coord-hero__title { font-size: 15px; }
-    .hero-badge { padding: 6px 10px; }
-    .hero-badge .hb-value { font-size: 14px; }
+    .hero-badge { padding: 7px 12px; }
+    .hero-badge .hb-value { font-size: 15px; }
 }
 
 /* (이전 라운드의 네이비 카드 보강 CSS는 화이트 카드형 디자인으로 대체되어 제거됨) */
@@ -1251,7 +1252,7 @@ body.modal-open .app-content {
         <div class="coord-hero__overlay"></div>
         <div class="coord-hero__content">
             <div class="coord-hero__title">
-                <i class="fa-solid fa-tower-broadcast"></i> 항공기술훈련원 통합 관제
+                <i class="fa-solid fa-building-columns"></i> 항공기술훈련원 교육 운영 현황
                 <small>교육운영부</small>
             </div>
             <div class="coord-hero__badges">
