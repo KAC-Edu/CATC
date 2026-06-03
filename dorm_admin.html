@@ -66,6 +66,13 @@
         /* 방 그리드 */
         .room-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
         .room-card { border: 1.5px solid var(--border); border-radius: 10px; padding: 10px 12px; position: relative; transition: all 0.15s; }
+        .room-card.rc-empty { background:#f8fafc; border-style:dashed; border-color:#e2e8f0; }
+        .room-card.rc-filled { background:#fff; border-color:#cbd5e1; box-shadow:0 2px 6px rgba(0,0,0,0.05); }
+        .bstat { background:#fff; border:1.5px solid var(--border); border-radius:14px; padding:14px 20px; min-width:140px; }
+        .bstat-n { font-size:28px; font-weight:900; color:#1e293b; }
+        .bstat-n span { font-size:15px; color:#94a3b8; font-weight:700; }
+        .bstat-l { font-size:13px; color:var(--muted); font-weight:700; margin-top:4px; }
+        #boardArea .room-grid { grid-template-columns:repeat(auto-fill, minmax(190px, 1fr)); gap:12px; }
         .room-card.royal { border-color: var(--royal); background: var(--royal-bg); }
         .room-card .rno { font-size: 16px; font-weight: 900; display: flex; align-items: center; justify-content: space-between; }
         .room-card .rno .del { color: var(--danger); cursor: pointer; font-size: 13px; opacity: 0.6; }
@@ -1280,6 +1287,8 @@
             if (!Object.keys(weekRosters).length) { showToast('이 주차에 저장된 명단이 없습니다'); return; }
 
             const log = [];
+            const unassignedList = [];
+            const courseStats = [];
             // 방 상태 초기화: { id, capacity, gender(고정/지정), occupants:[] }
             // 층별 성별 전용 맵 (floorPriority의 gender)
             const floorGenderMap = {};
@@ -1399,6 +1408,7 @@
                         }
                     }
                     if (!placed) {
+                        unassignedList.push({ name: person.name, empNo: person.empNo, gender: person.gender, course: v.courseName });
                         log.push(`⚠️ <span style="color:var(--danger)">배정 실패</span>: ${person.name}(${person.empNo}) — 적합한 빈 방 부족`);
                     }
                 });
@@ -1406,6 +1416,7 @@
                 while (roomPtr < normalRooms.length && roomState[normalRooms[roomPtr].id].occupants.length >= roomState[normalRooms[roomPtr].id].capacity) {
                     roomPtr++;
                 }
+                courseStats.push({ name: v.courseName, placed: placedThisCourse, total: coursePeople.length });
                 log.push(`📚 ${v.courseName}: ${placedThisCourse}명 배정`);
             });
 
@@ -1425,7 +1436,57 @@
             };
             db.ref(`system/dorm/assignments/${wk}`).set(payload)
                 .then(() => {
-                    document.getElementById('assignLog').innerHTML = log.join('<br>');
+                    const pct = totalPeople ? Math.round(totalAssigned / totalPeople * 100) : 0;
+                    const allOk = totalAssigned === totalPeople;
+                    let html = `
+                    <div style="margin-top:18px;">
+                        <!-- 요약 배너 -->
+                        <div style="display:flex; align-items:center; gap:16px; padding:18px 22px; border-radius:16px; background:${allOk?'#f0fdf4':'#fffbeb'}; border:2px solid ${allOk?'#86efac':'#fcd34d'};">
+                            <div style="font-size:38px;">${allOk?'✅':'⚠️'}</div>
+                            <div style="flex:1;">
+                                <div style="font-size:20px; font-weight:900; color:${allOk?'#15803d':'#b45309'};">${allOk?'배정 완료':'일부 미배정'}</div>
+                                <div style="font-size:14px; color:#475569; font-weight:600; margin-top:2px;">총 ${totalPeople}명 중 <b>${totalAssigned}명</b> 배정 (${pct}%)${royalCount?` · 우선실 ${royalCount}명`:''}</div>
+                            </div>
+                            <div style="text-align:right;">
+                                <div style="font-size:34px; font-weight:900; color:${allOk?'#16a34a':'#d97706'};">${totalAssigned}<span style="font-size:18px; color:#94a3b8;">/${totalPeople}</span></div>
+                            </div>
+                        </div>`;
+
+                    // 과정별 배정 표
+                    if (courseStats.length) {
+                        html += `<div style="margin-top:16px; border:1.5px solid var(--border); border-radius:14px; overflow:hidden;">
+                            <table style="width:100%; border-collapse:collapse; font-size:14px;">
+                                <thead><tr style="background:#f8fafc;">
+                                    <th style="text-align:left; padding:12px 16px; font-weight:800; color:#475569;">과정</th>
+                                    <th style="text-align:center; padding:12px 16px; font-weight:800; color:#475569; width:120px;">배정</th>
+                                    <th style="text-align:center; padding:12px 16px; font-weight:800; color:#475569; width:100px;">상태</th>
+                                </tr></thead><tbody>`;
+                        courseStats.forEach(c => {
+                            const ok = c.placed === c.total;
+                            html += `<tr style="border-top:1px solid #f1f5f9;">
+                                <td style="padding:12px 16px; font-weight:700; color:#1e293b;">${c.name}</td>
+                                <td style="padding:12px 16px; text-align:center; font-weight:800;">${c.placed} / ${c.total}명</td>
+                                <td style="padding:12px 16px; text-align:center;"><span style="font-size:12px; font-weight:800; padding:4px 11px; border-radius:20px; background:${ok?'#dcfce7':'#fef9c3'}; color:${ok?'#15803d':'#a16207'};">${ok?'완료':'일부'}</span></td>
+                            </tr>`;
+                        });
+                        html += `</tbody></table></div>`;
+                    }
+
+                    // 미배정자 강조
+                    if (unassignedList.length) {
+                        html += `<div style="margin-top:16px; padding:16px 20px; border-radius:14px; background:#fef2f2; border:1.5px solid #fecaca;">
+                            <div style="font-weight:900; color:#dc2626; font-size:15px; margin-bottom:10px;">⚠️ 미배정 ${unassignedList.length}명 — 방 추가 또는 수동 배정 필요</div>
+                            <div style="display:flex; flex-wrap:wrap; gap:8px;">
+                                ${unassignedList.map(u => `<span style="background:#fff; border:1.5px solid #fca5a5; border-radius:10px; padding:7px 13px; font-size:13px; font-weight:700; color:#991b1b;">${u.name} <span style="color:#cbd5e1;">·</span> ${u.empNo} <span style="color:${u.gender==='F'?'#ec4899':'#3b82f6'};">${u.gender==='F'?'여':'남'}</span> <span style="color:#94a3b8;">(${u.course})</span></span>`).join('')}
+                            </div>
+                        </div>`;
+                    }
+
+                    // 현황 보기 이동 버튼
+                    html += `<button class="save-btn" style="margin-top:18px; width:100%;" onclick="goStep(4)"><i class="fa-solid fa-table-list"></i> 배치 현황 자세히 보기</button>`;
+                    html += `</div>`;
+
+                    document.getElementById('assignLog').innerHTML = html;
                     showToast(`✅ 배정 완료 (${totalAssigned}/${totalPeople}명)`);
                 })
                 .catch(e => { console.error(e); showToast('⚠️ 배정 결과 저장 실패'); });
@@ -1481,15 +1542,17 @@
                 (byRoom[s.roomId] = byRoom[s.roomId] || []).push({ token, ...s });
             });
 
-            // 통계
+            // 통계 (충원율 포함, 크게)
             const totalP = Object.keys(students).length;
             const usedRooms = Object.keys(byRoom).length;
+            const totalRooms = Object.keys(rooms).length;
             const courseCount = (viewAssign.courses || []).length;
+            const fillPct = totalRooms ? Math.round(usedRooms / totalRooms * 100) : 0;
             document.getElementById('boardStats').innerHTML = `
-                <div class="step-tab" style="flex:0; min-width:120px;"><div class="n">총원</div><div class="t">${totalP}명</div></div>
-                <div class="step-tab" style="flex:0; min-width:120px;"><div class="n">사용 방</div><div class="t">${usedRooms}개</div></div>
-                <div class="step-tab" style="flex:0; min-width:120px;"><div class="n">과정</div><div class="t">${courseCount}개</div></div>
-                ${Object.entries(courseColors).map(([cn,col]) => `<div class="step-tab" style="flex:0; min-width:120px; border-left:5px solid ${col};"><div class="n">과정</div><div class="t" style="font-size:13px;">${cn}</div></div>`).join('')}
+                <div class="bstat"><div class="bstat-n">${totalP}<span>명</span></div><div class="bstat-l">배정 인원</div></div>
+                <div class="bstat"><div class="bstat-n">${usedRooms}<span>/${totalRooms}</span></div><div class="bstat-l">사용 방 (충원 ${fillPct}%)</div></div>
+                <div class="bstat"><div class="bstat-n">${courseCount}<span>개</span></div><div class="bstat-l">과정</div></div>
+                ${Object.entries(courseColors).map(([cn,col]) => `<div class="bstat" style="border-left:5px solid ${col};"><div class="bstat-l" style="margin-top:0;">과정명</div><div style="font-size:15px; font-weight:800; color:#1e293b; margin-top:3px;">${cn}</div></div>`).join('')}
             `;
 
             // 건물·층 순으로 렌더
@@ -1508,24 +1571,26 @@
                 }
                 const occ = byRoom[r.id] || [];
                 const isRoyal = r.royal;
+                const isEmpty = !occ.length;
                 let occHtml = occ.map(p => {
                     const col = courseColors[p.course] || '#64748b';
                     const gLabel = p.gender === 'M' ? '남' : (p.gender === 'F' ? '여' : '');
-                    return `<div style="display:flex; align-items:center; justify-content:space-between; gap:6px; padding:5px 7px; background:#f8fafc; border-radius:7px; margin-top:5px; border-left:4px solid ${col};">
+                    const gCol = p.gender === 'F' ? '#ec4899' : '#3b82f6';
+                    return `<div style="display:flex; align-items:center; justify-content:space-between; gap:6px; padding:7px 9px; background:#fff; border-radius:8px; margin-top:6px; border-left:4px solid ${col}; box-shadow:0 1px 2px rgba(0,0,0,0.04);">
                         <div style="overflow:hidden;">
-                            <div style="font-weight:800; font-size:13px;">${p.name} <span style="font-size:11px; color:var(--muted);">${gLabel}</span></div>
-                            <div style="font-size:10px; color:var(--muted);">${p.empNo} · ${p.dept || '-'}</div>
+                            <div style="font-weight:800; font-size:14px; color:#1e293b;">${p.name} <span style="font-size:11px; font-weight:700; color:${gCol};">${gLabel}</span></div>
+                            <div style="font-size:11px; color:var(--muted);">${p.empNo}${p.dept?' · '+p.dept:''}</div>
                         </div>
                         <div style="display:flex; gap:4px; flex-shrink:0;">
-                            <span class="room-opt" style="background:#eef2ff;color:#4338ca;" onclick="openMovePop('${p.token}')"><i class="fa-solid fa-right-left"></i></span>
-                            <span class="room-opt" style="background:#fee2e2;color:#dc2626;" onclick="deleteStudent('${p.token}')"><i class="fa-solid fa-xmark"></i></span>
+                            <span class="room-opt" style="background:#eef2ff;color:#4338ca;" onclick="openMovePop('${p.token}')" title="이동"><i class="fa-solid fa-right-left"></i></span>
+                            <span class="room-opt" style="background:#fee2e2;color:#dc2626;" onclick="deleteStudent('${p.token}')" title="삭제"><i class="fa-solid fa-xmark"></i></span>
                         </div>
                     </div>`;
                 }).join('');
-                if (!occ.length) occHtml = `<div style="font-size:11px; color:#cbd5e1; margin-top:6px;">(빈 방)</div>`;
+                if (isEmpty) occHtml = `<div style="font-size:12px; color:#cbd5e1; margin-top:8px; text-align:center; padding:6px 0;">빈 방</div>`;
                 html += `
-                    <div class="room-card ${isRoyal ? 'royal' : ''}" style="min-height:auto;">
-                        <div class="rno"><span>${r.no}</span><span style="font-size:10px; color:var(--muted); font-weight:700;">${occ.length}/${r.capacity||1}${isRoyal?' ⭐':''}</span></div>
+                    <div class="room-card ${isRoyal ? 'royal' : ''} ${isEmpty ? 'rc-empty' : 'rc-filled'}" style="min-height:auto;">
+                        <div class="rno"><span>${r.no}</span><span style="font-size:11px; font-weight:800; color:${isEmpty?'#cbd5e1':(occ.length>=(r.capacity||1)?'#16a34a':'#f59e0b')};">${occ.length}/${r.capacity||1}${isRoyal?' ⭐':''}</span></div>
                         ${occHtml}
                     </div>`;
             });
