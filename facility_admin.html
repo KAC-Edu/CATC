@@ -10,40 +10,66 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         * { margin:0; padding:0; box-sizing:border-box; }
-        :root { --navy:#0f172a; --blue:#2563eb; --green:#10b981; --red:#ef4444; --amber:#f59e0b; }
+        :root { --green:#10b981; --red:#ef4444; --blue:#2563eb; }
         body { background:#0f172a; font-family:'Malgun Gothic','맑은 고딕',sans-serif; color:#f1f5f9; min-height:100vh; }
-        .top { background:#1e293b; padding:20px 30px; display:flex; align-items:center; gap:20px; flex-wrap:wrap; border-bottom:2px solid #334155; }
-        .top h1 { font-size:30px; font-weight:900; display:flex; align-items:center; gap:12px; }
-        .top h1 .dot { width:14px; height:14px; border-radius:50%; background:var(--green); animation:blink 1.4s infinite; }
+        .top { background:#1e293b; padding:16px 26px; display:flex; align-items:center; gap:18px; flex-wrap:wrap; border-bottom:2px solid #334155; position:sticky; top:0; z-index:50; }
+        .top h1 { font-size:26px; font-weight:900; display:flex; align-items:center; gap:10px; }
+        .top h1 .dot { width:12px; height:12px; border-radius:50%; background:var(--green); animation:blink 1.4s infinite; }
         @keyframes blink { 50%{opacity:0.3;} }
-        .clock { margin-left:auto; font-size:24px; font-weight:800; color:#94a3b8; }
-        .stats { display:flex; gap:14px; }
-        .stat { background:#0f172a; border:1px solid #334155; border-radius:14px; padding:10px 20px; text-align:center; min-width:90px; }
-        .stat .n { font-size:30px; font-weight:900; }
-        .stat .l { font-size:13px; color:#94a3b8; font-weight:700; margin-top:2px; }
+        .clock { margin-left:auto; font-size:22px; font-weight:800; color:#94a3b8; }
+        .stats { display:flex; gap:12px; }
+        .stat { background:#0f172a; border:1px solid #334155; border-radius:12px; padding:8px 18px; text-align:center; min-width:80px; }
+        .stat .n { font-size:26px; font-weight:900; }
+        .stat .l { font-size:12px; color:#94a3b8; font-weight:700; }
         .stat.wait .n { color:var(--red); } .stat.done .n { color:#64748b; }
-        .filters { display:flex; gap:12px; padding:18px 30px; flex-wrap:wrap; }
-        .chip { padding:12px 26px; border-radius:30px; background:#1e293b; border:2px solid #334155; font-size:18px; font-weight:800; color:#cbd5e1; cursor:pointer; }
-        .chip.active { background:var(--blue); border-color:var(--blue); color:#fff; }
-        .grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(420px, 1fr)); gap:18px; padding:10px 30px 40px; }
-        .card { background:#1e293b; border:2px solid #334155; border-radius:20px; padding:22px 24px; display:flex; flex-direction:column; gap:14px; }
-        .card.wait { border-color:var(--green); box-shadow:0 0 0 2px rgba(16,185,129,0.25); }
-        .card .head { display:flex; align-items:center; justify-content:space-between; gap:12px; }
-        .card .dorm { font-size:28px; font-weight:900; color:#fff; }
-        .card .meta { font-size:15px; color:#94a3b8; font-weight:700; }
-        .card .when { font-size:15px; color:#64748b; font-weight:700; white-space:nowrap; }
-        .items { display:flex; flex-wrap:wrap; gap:10px; }
-        .item-chip { background:#0f172a; border:1.5px solid #475569; border-radius:12px; padding:10px 18px; font-size:20px; font-weight:800; color:#e2e8f0; display:inline-flex; align-items:center; gap:8px; }
-        .extra { font-size:18px; color:#cbd5e1; font-weight:600; line-height:1.5; background:#0f172a; border-radius:12px; padding:12px 16px; }
-        .actions { display:flex; gap:10px; margin-top:4px; }
-        .btn { flex:1; padding:16px; border:none; border-radius:14px; font-size:20px; font-weight:900; cursor:pointer; }
+        .mode-toggle { background:#0f172a; border:1px solid #475569; color:#cbd5e1; border-radius:10px; padding:8px 16px; font-size:14px; font-weight:800; cursor:pointer; }
+
+        /* === 큰 화면: 3컬럼 === */
+        .columns { display:grid; grid-template-columns:repeat(3, 1fr); gap:0; min-height:calc(100vh - 80px); }
+        .col { border-right:2px solid #1e293b; padding:18px; overflow-y:auto; }
+        .col:last-child { border-right:none; }
+        .col-head { position:sticky; top:0; background:#0f172a; padding-bottom:12px; margin-bottom:6px; z-index:2; }
+        .col-title { font-size:24px; font-weight:900; display:flex; align-items:center; gap:10px; }
+        .col-title .badge { font-size:15px; font-weight:900; background:var(--red); color:#fff; border-radius:20px; padding:2px 13px; }
+        .col-title .badge.zero { background:#334155; color:#94a3b8; }
+        .col-sub { font-size:13px; color:#64748b; font-weight:700; margin-top:3px; }
+
+        .req { background:#1e293b; border:2px solid #334155; border-radius:16px; padding:16px 18px; margin-top:12px; }
+        .req.wait { border-color:var(--green); box-shadow:0 0 0 1px rgba(16,185,129,0.2); }
+        .req.done { opacity:0.55; }
+        .req-head { display:flex; align-items:baseline; justify-content:space-between; gap:8px; }
+        .req-loc { font-size:22px; font-weight:900; color:#fff; }
+        .req-floor { font-size:14px; font-weight:800; color:#38bdf8; }
+        .req-when { font-size:13px; color:#64748b; font-weight:700; white-space:nowrap; }
+        .req-meta { font-size:13px; color:#94a3b8; font-weight:600; margin-top:2px; }
+        .req-items { display:flex; flex-wrap:wrap; gap:8px; margin:12px 0; }
+        .ichip { background:#0f172a; border:1.5px solid #475569; border-radius:10px; padding:8px 14px; font-size:17px; font-weight:800; color:#e2e8f0; display:inline-flex; align-items:center; gap:8px; }
+        .ichip i { font-size:18px; }
+        .extra { font-size:15px; color:#cbd5e1; font-weight:600; background:#0f172a; border-radius:10px; padding:10px 13px; margin-bottom:10px; line-height:1.5; }
+        .acts { display:flex; gap:8px; }
+        .btn { flex:1; padding:13px; border:none; border-radius:11px; font-size:16px; font-weight:900; cursor:pointer; }
         .btn-done { background:var(--green); color:#fff; }
         .btn-reject { background:#3f1d2e; color:#fca5a5; }
-        .card.done { opacity:0.5; }
-        .card.done .badge-done { font-size:20px; font-weight:900; color:#64748b; text-align:center; padding:14px; }
-        .empty { text-align:center; padding:80px 20px; color:#64748b; font-size:24px; font-weight:700; grid-column:1/-1; }
-        .status-tag { font-size:15px; font-weight:900; padding:6px 14px; border-radius:20px; }
-        .tag-done { background:#334155; color:#94a3b8; } .tag-reject { background:#3f1d2e; color:#fca5a5; }
+        .btn-undo { background:#334155; color:#e2e8f0; flex:1; }
+        .donetag { font-size:14px; font-weight:900; padding:5px 13px; border-radius:20px; }
+        .tag-done { background:#14532d; color:#86efac; } .tag-reject { background:#3f1d2e; color:#fca5a5; }
+        .col-empty { text-align:center; color:#475569; font-size:16px; font-weight:700; padding:50px 10px; }
+
+        /* === 모바일: 탭 + 리스트 === */
+        .m-tabs { display:none; }
+        @media (max-width:820px) {
+            .columns { display:none; }
+            .m-tabs { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; padding:16px; }
+            .m-tab { background:#1e293b; border:2px solid #334155; border-radius:16px; padding:20px 10px; text-align:center; cursor:pointer; }
+            .m-tab.active { border-color:var(--blue); background:#1e3a8a; }
+            .m-tab .mt-n { font-size:30px; font-weight:900; color:#fff; }
+            .m-tab .mt-l { font-size:15px; font-weight:800; color:#cbd5e1; margin-top:4px; }
+            .m-tab .mt-w { font-size:13px; font-weight:800; color:#fca5a5; margin-top:2px; }
+            .m-list { display:block; padding:0 16px 30px; }
+            .top h1 { font-size:20px; } .clock { font-size:18px; }
+            .stat { padding:6px 12px; min-width:64px; } .stat .n { font-size:20px; }
+        }
+        @media (min-width:821px) { .m-list { display:none; } }
     </style>
 </head>
 <body>
@@ -55,96 +81,157 @@
         </div>
         <div class="clock" id="clock">--:--</div>
     </div>
-    <div class="filters">
-        <div class="chip active" onclick="setFilter('대기', this)">⏳ 처리 대기</div>
-        <div class="chip" onclick="setFilter('전체', this)">전체 보기</div>
-        <div class="chip" onclick="setFilter('청렴관', this)">청렴관</div>
-        <div class="chip" onclick="setFilter('상생관', this)">상생관</div>
-        <div class="chip" onclick="setFilter('국제', this)">국제동</div>
-    </div>
-    <div class="grid" id="grid">
-        <div class="empty">데이터를 불러오는 중입니다...</div>
-    </div>
+
+    <!-- 큰 화면: 3컬럼 -->
+    <div class="columns" id="columns"></div>
+
+    <!-- 모바일: 동 탭 + 리스트 -->
+    <div class="m-tabs" id="mTabs"></div>
+    <div class="m-list" id="mList"></div>
+
     <script>
-        let filter = '대기';
+        const BUILDINGS = ['청렴관','상생관','국제동'];
         let cache = null;
+        let mSel = '청렴관';
         const ref = firebase.database().ref('system/facility_requests');
+
+        // 비품 → Font Awesome 아이콘 (이모지 폰트 차이 문제 제거)
+        const ICONS = {
+            '수건':  { i:'fa-bath',       c:'#38bdf8' },
+            '샴푸':  { i:'fa-pump-soap',  c:'#a78bfa' },
+            '바디샤워':{ i:'fa-soap',      c:'#34d399' },
+            '치약':  { i:'fa-tooth',      c:'#fbbf24' }
+        };
+        function iconChip(name) {
+            const m = ICONS[name];
+            if (m) return `<span class="ichip"><i class="fa-solid ${m.i}" style="color:${m.c}"></i> ${name}</span>`;
+            return `<span class="ichip"><i class="fa-solid fa-box" style="color:#94a3b8"></i> ${name}</span>`;
+        }
+
         function clock() {
             const d = new Date();
             document.getElementById('clock').innerText = `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
         }
         clock(); setInterval(clock, 10000);
-        function setFilter(f, el) {
-            filter = f;
-            document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
-            el.classList.add('active');
-            if (cache !== null) render(cache);
+
+        ref.on('value', snap => { cache = snap.val(); render(); });
+
+        // 건물명 판별 (국제교육동/국제동 모두 국제동으로)
+        function bldgOf(dorm) {
+            const d = dorm || '';
+            if (d.includes('청렴')) return '청렴관';
+            if (d.includes('상생')) return '상생관';
+            if (d.includes('국제')) return '국제동';
+            return '기타';
         }
-        ref.on('value', snap => { cache = snap.val(); render(cache); });
-        function render(data) {
-            const grid = document.getElementById('grid');
-            if (!data) {
-                grid.innerHTML = '<div class="empty">📭 현재 요청이 없습니다.</div>';
-                document.getElementById('s-wait').innerText = 0;
-                document.getElementById('s-done').innerText = 0;
-                return;
+        function floorOf(dorm) {
+            const m = (dorm||'').match(/(\d+)\s*층/);
+            return m ? `${m[1]}층` : '';
+        }
+
+        function parseItems(req) {
+            let chips = Array.isArray(req.items) ? req.items.slice() : [];
+            let extra = req.text || '';
+            if (chips.length) extra = extra.replace(chips.join(', '), '').replace(/^\s*\/\s*/, '').trim();
+            return { chips, extra };
+        }
+
+        function reqCard(req) {
+            const d = new Date(req.timestamp);
+            const when = `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+            const isWait = (req.status === '대기' || req.status === '확인');
+            const isDone = (req.status === '처리완료' || req.status === '처리불가');
+            const { chips, extra } = parseItems(req);
+            const floor = floorOf(req.dorm);
+            const itemsHtml = (chips.length ? chips.map(iconChip).join('') : iconChip('비품 요청'));
+            const extraHtml = extra ? `<div class="extra"><i class="fa-solid fa-pen" style="color:#94a3b8"></i> ${escapeHtml(extra)}</div>` : '';
+            let acts;
+            if (isDone) {
+                const tag = req.status === '처리완료'
+                    ? '<span class="donetag tag-done">✓ 처리 완료</span>'
+                    : '<span class="donetag tag-reject">처리 불가</span>';
+                acts = `<div class="acts" style="align-items:center;">
+                    ${tag}
+                    ${req.reason ? `<span style="font-size:13px; color:#fca5a5; margin-left:4px;">사유: ${escapeHtml(req.reason)}</span>` : ''}
+                    <button class="btn btn-undo" style="flex:0; padding:9px 16px; font-size:14px;" onclick="undoStatus('${req.id}')"><i class="fa-solid fa-rotate-left"></i> 되돌리기</button>
+                </div>`;
+            } else {
+                acts = `<div class="acts">
+                    <button class="btn btn-done" onclick="markDone('${req.id}')"><i class="fa-solid fa-check"></i> 해결 완료</button>
+                    <button class="btn btn-reject" onclick="markReject('${req.id}')">처리 불가</button>
+                </div>`;
             }
+            return `<div class="req ${isWait?'wait':''} ${isDone?'done':''}">
+                <div class="req-head">
+                    <div><span class="req-loc">${escapeHtml(req.dorm||'-')}</span></div>
+                    <span class="req-when">${when}</span>
+                </div>
+                <div class="req-meta">${escapeHtml(req.name||'')} · ${escapeHtml(req.courseName||'')}</div>
+                <div class="req-items">${itemsHtml}</div>
+                ${extraHtml}
+                ${acts}
+            </div>`;
+        }
+
+        function render() {
+            const data = cache || {};
             let items = Object.keys(data).map(k => ({ id:k, ...data[k] }));
             const waitCount = items.filter(i => i.status === '대기' || i.status === '확인').length;
             const doneCount = items.filter(i => i.status === '처리완료' || i.status === '처리불가').length;
             document.getElementById('s-wait').innerText = waitCount;
             document.getElementById('s-done').innerText = doneCount;
-            if (filter === '대기') items = items.filter(i => i.status === '대기' || i.status === '확인');
-            else if (filter !== '전체') items = items.filter(i => (i.dorm||'').includes(filter));
+
+            // 정렬: 대기 우선 → 최신
             const pri = { '대기':0, '확인':1, '처리완료':2, '처리불가':2 };
             items.sort((a,b) => (pri[a.status]-pri[b.status]) || (b.timestamp-a.timestamp));
-            if (!items.length) {
-                grid.innerHTML = '<div class="empty">✅ 처리할 요청이 없습니다.</div>';
-                return;
-            }
-            const emoji = { '수건':'🧺','샴푸':'🧴','바디샤워':'🛁','치약':'🪥' };
-            grid.innerHTML = items.map(req => {
-                const d = new Date(req.timestamp);
-                const when = `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
-                const isWait = (req.status === '대기' || req.status === '확인');
-                const isDone = (req.status === '처리완료' || req.status === '처리불가');
-                let chips = Array.isArray(req.items) ? req.items.slice() : [];
-                let extra = req.text || '';
-                if (chips.length) { extra = extra.replace(chips.join(', '), '').replace(/^\s*\/\s*/, '').trim(); }
-                const chipsHtml = chips.map(c => `<span class="item-chip">${emoji[c]||'📦'} ${c}</span>`).join('');
-                const extraHtml = extra ? `<div class="extra">✏️ ${escapeHtml(extra)}</div>` : '';
-                let body;
-                if (isDone) {
-                    const tag = req.status === '처리완료'
-                        ? '<span class="status-tag tag-done">처리 완료</span>'
-                        : '<span class="status-tag tag-reject">처리 불가</span>';
-                    body = `<div class="badge-done">${tag}${req.reason ? '<div style="margin-top:8px; font-size:15px; color:#fca5a5;">사유: '+escapeHtml(req.reason)+'</div>' : ''}</div>`;
-                } else {
-                    body = `<div class="actions">
-                        <button class="btn btn-done" onclick="markDone('${req.id}')"><i class="fa-solid fa-check"></i> 해결 완료</button>
-                        <button class="btn btn-reject" onclick="markReject('${req.id}')">처리 불가</button>
-                    </div>`;
-                }
-                return `<div class="card ${isWait?'wait':''} ${isDone?'done':''}">
-                    <div class="head">
-                        <div>
-                            <div class="dorm">${escapeHtml(req.dorm||'-')}</div>
-                            <div class="meta">${escapeHtml(req.name||'')} · ${escapeHtml(req.courseName||'')}</div>
-                        </div>
-                        <div class="when">${when}</div>
+
+            // 동별 분류
+            const byB = { '청렴관':[], '상생관':[], '국제동':[] };
+            items.forEach(it => { const b = bldgOf(it.dorm); if (byB[b]) byB[b].push(it); });
+
+            // 큰 화면: 3컬럼
+            document.getElementById('columns').innerHTML = BUILDINGS.map(b => {
+                const list = byB[b];
+                const waitN = list.filter(i => i.status==='대기'||i.status==='확인').length;
+                const cards = list.length ? list.map(reqCard).join('') : `<div class="col-empty">요청 없음</div>`;
+                return `<div class="col">
+                    <div class="col-head">
+                        <div class="col-title">${b} <span class="badge ${waitN?'':'zero'}">${waitN}</span></div>
+                        <div class="col-sub">대기 ${waitN}건 · 전체 ${list.length}건</div>
                     </div>
-                    <div class="items">${chipsHtml || '<span class="item-chip">📦 비품 요청</span>'}</div>
-                    ${extraHtml}
-                    ${body}
+                    ${cards}
                 </div>`;
             }).join('');
+
+            // 모바일: 탭
+            document.getElementById('mTabs').innerHTML = BUILDINGS.map(b => {
+                const list = byB[b];
+                const waitN = list.filter(i => i.status==='대기'||i.status==='확인').length;
+                return `<div class="m-tab ${mSel===b?'active':''}" onclick="mSelect('${b}')">
+                    <div class="mt-n">${list.length}</div>
+                    <div class="mt-l">${b}</div>
+                    <div class="mt-w">대기 ${waitN}</div>
+                </div>`;
+            }).join('');
+            // 모바일: 선택 동 리스트
+            const mlist = byB[mSel] || [];
+            document.getElementById('mList').innerHTML = mlist.length
+                ? mlist.map(reqCard).join('')
+                : `<div class="col-empty">${mSel} 요청이 없습니다.</div>`;
         }
-        function markDone(id) { firebase.database().ref('system/facility_requests/' + id).update({ status:'처리완료' }); }
+
+        function mSelect(b) { mSel = b; render(); }
+
+        function markDone(id) { firebase.database().ref('system/facility_requests/'+id).update({ status:'처리완료' }); }
         function markReject(id) {
             const reason = prompt("처리 불가 사유를 입력하세요 (생략 가능)");
             const upd = { status:'처리불가' };
             if (reason) upd.reason = reason;
-            firebase.database().ref('system/facility_requests/' + id).update(upd);
+            firebase.database().ref('system/facility_requests/'+id).update(upd);
+        }
+        function undoStatus(id) {
+            // 처리완료/불가 → 다시 대기로 되돌림 (사유도 제거)
+            firebase.database().ref('system/facility_requests/'+id).update({ status:'대기', reason:null });
         }
         function escapeHtml(s){ return (s==null?'':String(s)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
     </script>
