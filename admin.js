@@ -3281,10 +3281,8 @@ setMode: function(mode) {
             const quizCtrl = document.getElementById('quizControls');
             if(quizCtrl) quizCtrl.style.display = 'none';
 
-            const roomNameEl = document.getElementById('displayRoomName');
-            if(roomNameEl && !roomNameEl.innerHTML.includes('fa-eye')) {
-                roomNameEl.innerHTML = "Room #" + state.room + ` <span style="font-size:14px; margin-left:8px; color:#94a3b8; font-weight:normal;">(<i class="fa-solid fa-eye" style="font-size:12px;"></i> 옵저버)</span>`;
-            }
+            // 옵저버 헤더 배지를 공통 함수로 통일 (주황 '보기 전용' 배지)
+            if (state.room) ui.updateHeaderRoom(state.room);
         }
     },
 
@@ -6999,6 +6997,10 @@ const annualPlanMgr = {
         const updates = {};
         const assigned = [];
         const wiped = [];
+        // 교수 오픈톡 프로필 미리 로드
+        const _profSnap = await firebase.database().ref('system/professorProfiles').once('value');
+        const _profAll = _profSnap.val() || {};
+        const _kakaoOf = (pn) => { const p = _profAll[(pn||'').trim()]; return (p && p.kakaoLink) ? p.kakaoLink : ''; };
 
         for (let i = 0; i < openRooms.length; i++) {
             const room = openRooms[i];
@@ -7018,6 +7020,7 @@ const annualPlanMgr = {
                 updates[`courses/${room}/settings/coordinatorName`] = coordFull;
                 updates[`courses/${room}/status/professorName`] = course.prof;
                 updates[`courses/${room}/status/roomStatus`]   = 'active';
+                updates[`courses/${room}/settings/kakaoLink`]  = _kakaoOf(course.prof);
                 updates[`courses/${room}/status/ownerSessionId`] = null;
                 assigned.push(`${room}: ${course.name}`);
             }
@@ -7366,6 +7369,13 @@ annualPlanMgr._syncRoomsLockAware = async function(courses) {
     const snap = await firebase.database().ref('courses').once('value');
     const roomsData = snap.val() || {};
     const norm = s => (s || '').trim();
+    // 교수 프로필(오픈톡 링크) 미리 로드 → 배치 시 방에 자동 세팅
+    const profSnap = await firebase.database().ref('system/professorProfiles').once('value');
+    const profAll = profSnap.val() || {};
+    const kakaoOf = (profName) => {
+        const p = profAll[norm(profName)];
+        return (p && p.kakaoLink) ? p.kakaoLink : '';
+    };
     // 과정명 기준으로 연간계획에서 최신 정보 찾기 (교수/담당/기간 갱신용)
     const planByName = {};
     courses.forEach(c => { if (c.name) planByName[norm(c.name)] = c; });
@@ -7413,6 +7423,7 @@ annualPlanMgr._syncRoomsLockAware = async function(courses) {
                 updates[`courses/${r}/settings/period`] = pc.period;
                 updates[`courses/${r}/settings/coordinatorName`] = coordFull;
                 updates[`courses/${r}/status/professorName`] = pc.prof;
+                updates[`courses/${r}/settings/kakaoLink`] = kakaoOf(pc.prof);  // 교수 오픈톡 자동 세팅
             }
             return; // 방 자체는 유지
         }
@@ -7439,6 +7450,7 @@ annualPlanMgr._syncRoomsLockAware = async function(courses) {
         updates[`courses/${room}/settings/coordinatorName`] = coordFull;
         updates[`courses/${room}/status/professorName`] = course.prof;
         updates[`courses/${room}/status/roomStatus`]   = 'active';
+        updates[`courses/${room}/settings/kakaoLink`]  = kakaoOf(course.prof);  // 교수 오픈톡 자동 세팅
         updates[`courses/${room}/status/ownerSessionId`] = null;  // 자동배치 방은 주인 미지정(첫 강사가 자유 입장)
     }
     if (Object.keys(updates).length) {
