@@ -2348,10 +2348,15 @@ function init() {
     // [신규] 데이터 보존정책: 60일(약 2개월) 경과한 외출·외박 기록 자동 정리 (페이지 진입 시 1회)
     purgeOldOutingRecords();
 
-    // [신규] 연간계획 자동 동기화: 추가/저장된 과정이 해당 주에 즉시 반영되도록 진입 시 1회 실행
-    if (annualPlanMgrCoord && typeof annualPlanMgrCoord.autoSync === 'function') {
-        annualPlanMgrCoord.autoSync();
-    }
+    // [신규] 연간계획 자동 동기화: annualPlanMgrCoord는 다음 스크립트 블록에서 정의되므로
+    //  defer 호출로 안전하게 실행 (ReferenceError로 init이 중단되지 않도록)
+    setTimeout(function () {
+        try {
+            if (typeof annualPlanMgrCoord !== 'undefined' && annualPlanMgrCoord.autoSync) {
+                annualPlanMgrCoord.autoSync();
+            }
+        } catch (e) { console.warn('autoSync 보류:', e); }
+    }, 800);
 
     // 3. 기존 데이터 로드 로직 (안정성 강화)
     firebase.database().ref('courses').on('value', snap => {
@@ -5316,6 +5321,22 @@ const annualPlanMgrCoord = {
                 if (sd && ed && sd <= today && ed >= today) inProgress = true;
             }
             if (locked || (nm && inProgress)) {
+                // 단, 진행 중이라도 (잠금 아님 + 연간계획에서 삭제된 과정 + 한 번도 안 쓴 방)이면 리셋
+                const removedFromPlan = nm && !planByName[nm];
+                const hasStudents = rd.students && Object.keys(rd.students).length > 0;
+                const hasOwner = !!(rd.status && rd.status.ownerSessionId);
+                const untouched = !hasStudents && !hasOwner;
+                if (!locked && removedFromPlan && untouched) {
+                    // 미사용 + 계획에서 삭제됨 → 방 리셋 (보존하지 않음)
+                    updates[`courses/${r}/settings/courseName`] = '';
+                    updates[`courses/${r}/settings/period`]     = '';
+                    updates[`courses/${r}/settings/coordinatorName`] = null;
+                    updates[`courses/${r}/status/professorName`] = '';
+                    updates[`courses/${r}/status/roomStatus`]   = 'idle';
+                    updates[`courses/${r}/status/ownerSessionId`] = null;
+                    freeRooms.push(r);
+                    return;
+                }
                 keptNames.add(nm);
                 if (!locked && planByName[nm]) {
                     const pc = planByName[nm];

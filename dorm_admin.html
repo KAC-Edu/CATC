@@ -1500,6 +1500,19 @@
                         if (sd && ed && sd <= today && ed >= today) inProgress = true;
                     }
                     if (locked || (nm && inProgress)) {
+                        const removedFromPlan = nm && !planByName[nm];
+                        const hasStudents = rd.students && Object.keys(rd.students).length > 0;
+                        const hasOwner = !!(rd.status && rd.status.ownerSessionId);
+                        if (!locked && removedFromPlan && !hasStudents && !hasOwner) {
+                            updates[`courses/${r}/settings/courseName`] = '';
+                            updates[`courses/${r}/settings/period`]     = '';
+                            updates[`courses/${r}/settings/coordinatorName`] = null;
+                            updates[`courses/${r}/status/professorName`] = '';
+                            updates[`courses/${r}/status/roomStatus`]   = 'idle';
+                            updates[`courses/${r}/status/ownerSessionId`] = null;
+                            freeRooms.push(r);
+                            return;
+                        }
                         keptNames.add(nm);
                         if (!locked && planByName[nm]) {
                             const pc = planByName[nm];
