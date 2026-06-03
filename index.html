@@ -1454,30 +1454,35 @@ function openMainMenu() {
     // 우선순위 1: '이름_번호'로 된 정밀 데이터가 있는지 확인 (동명이인 수동 구분용)
     // 우선순위 2: 일반 '이름' 데이터가 있는지 확인 (기본 매칭)
     
-    const dormAssignmentsRef = firebase.database().ref(`system/dormitory_assignments`);
+    // 지원부 배정 결과는 system/dorm/assignments/{주차}/students/{token} 에 저장됨
+    //  students[token] = {name, empNo, dept, gender, course, room, roomId, building, floor, no}
+    //  교육생은 본인 이름(+가능하면 사번)으로 매칭한다.
+    const dormAssignmentsRef = firebase.database().ref(`system/dorm/assignments`);
 
-    // .on을 사용하여 지원부에서 어떤 방식으로 수정하든 실시간으로 반응합니다.
     dormAssignmentsRef.on('value', snap => {
-        const allDormData = snap.val() || {};
-        
-        // [A] 이름_번호 조합 (예: 홍길동_3126) 확인
-        const precisionKey = `${myName}_${myPhone}`;
-        
-        if (allDormData[precisionKey]) {
-            const data = allDormData[precisionKey];
-            dormTextEl.innerText = `${data.building} ${data.room}호`;
+        const allWeeks = snap.val() || {};
+        let found = null;
+        let foundAt = 0;
+
+        // 모든 주차를 훑어 이름이 일치하는 최신 배정을 찾는다
+        Object.values(allWeeks).forEach(wk => {
+            const students = (wk && wk.students) ? wk.students : {};
+            const when = wk && wk.assignedAt ? wk.assignedAt : 0;
+            Object.values(students).forEach(s => {
+                if (!s || !s.name) return;
+                if (s.name.trim() === myName) {
+                    // 더 최근 배정을 우선
+                    if (when >= foundAt) { found = s; foundAt = when; }
+                }
+            });
+        });
+
+        if (found && found.building) {
+            const floorTxt = found.floor ? ` ${found.floor}층` : '';
+            dormTextEl.innerText = `${found.building}${floorTxt} ${found.no || found.room}호`;
             dormTextEl.style.color = "#3b82f6";
             dormTextEl.style.fontWeight = "900";
-        } 
-        // [B] 일반 이름 (예: 홍길동) 확인
-        else if (allDormData[myName]) {
-            const data = allDormData[myName];
-            dormTextEl.innerText = `${data.building} ${data.room}호`;
-            dormTextEl.style.color = "#3b82f6";
-            dormTextEl.style.fontWeight = "900";
-        } 
-        // [C] 데이터 없음
-        else {
+        } else {
             dormTextEl.innerText = "생활관 배정 정보 확인 중...";
             dormTextEl.style.color = "#94a3b8";
         }
@@ -3416,7 +3421,9 @@ function openFacilityRequest() {
     
     const dormInfo = document.getElementById('displayMyDorm').innerText;
     document.getElementById('reqDormInfo').innerText = dormInfo;
-    document.getElementById('facilityReqText').value = ""; 
+    document.getElementById('facilityReqText').value = "";
+    // 체크박스 초기화
+    document.querySelectorAll('#amenityChecks input:checked').forEach(c => c.checked = false);
 
     // 내 상태 불러오기
     const userPhone = localStorage.getItem('kac_user_phone');
