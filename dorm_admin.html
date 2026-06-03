@@ -212,9 +212,42 @@
 
         <!-- STEP 1: 방 마스터 -->
         <div id="step-1">
+            <!-- 동·층 배정 우선순위 -->
+            <div class="panel" style="margin-bottom:16px;">
+                <h2>동·층 배정 우선순위</h2>
+                <p class="desc">교육생을 채울 <b>동·층 순서</b>를 정합니다. 위에 있을수록 먼저 채웁니다. 항목을 끌어서(드래그) 순서를 바꾸고, 층별로 <b>성별 전용</b>을 지정할 수 있어요. (예: 청렴관 1·2층 여성 전용 → 여성을 다 채우면 남은 인원은 다음 순위로, 그 층엔 남성이 들어가지 않음)</p>
+                <div id="floorPriorityList" style="display:flex; flex-direction:column; gap:8px; margin:14px 0;"></div>
+                <div class="save-bar">
+                    <div class="summary" id="floorPrioSummary"></div>
+                    <button class="save-btn" onclick="saveFloorPriority()"><i class="fa-solid fa-floppy-disk"></i> 우선순위 저장</button>
+                </div>
+            </div>
+
+            <!-- 배치 기준 관리 -->
+            <div class="panel" style="margin-bottom:16px;">
+                <h2>배치 기준 관리</h2>
+                <p class="desc">방에 적용할 <b>우선 배치 기준</b>을 직접 추가/삭제합니다. 기준 이름을 정하고 동작 방식을 고르세요. (방마다 적용 기준을 선택할 수 있습니다.)</p>
+                <div id="criteriaList" style="display:flex; flex-direction:column; gap:8px; margin:14px 0;"></div>
+                <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:12px;">
+                    <input type="text" id="newCritName" placeholder="기준 이름 (예: 여성 연장자 우선)" style="flex:1; min-width:180px; padding:10px 13px; border:1.5px solid #e2e8f0; border-radius:9px; font-size:14px; outline:none;">
+                    <select id="newCritType" style="padding:10px 13px; border:1.5px solid #e2e8f0; border-radius:9px; font-size:14px;">
+                        <option value="empno_asc">사번 낮은순(연장자) 우선</option>
+                        <option value="empno_desc">사번 높은순(연소자) 우선</option>
+                        <option value="female">여성 우선</option>
+                        <option value="male">남성 우선</option>
+                        <option value="name_asc">가나다순</option>
+                    </select>
+                    <button onclick="addCriteria()" style="padding:10px 18px; border:none; border-radius:9px; background:#2563eb; color:#fff; font-weight:800; cursor:pointer;"><i class="fa-solid fa-plus"></i> 기준 추가</button>
+                </div>
+                <div class="save-bar" style="margin-top:12px;">
+                    <div class="summary" id="critSummary"></div>
+                    <button class="save-btn" onclick="saveCriteria()"><i class="fa-solid fa-floppy-disk"></i> 기준 저장</button>
+                </div>
+            </div>
+
             <div class="panel">
                 <h2>방 마스터 설정</h2>
-                <p class="desc">건물·층별로 방 번호를 입력하고 저장하세요. 각 방은 <b>정원(1·2인)</b>, <b>성별 지정</b>, <b>로얄층 우선순위</b>를 설정할 수 있습니다. 로얄층은 배정 시 우선 채워집니다.</p>
+                <p class="desc">건물·층별로 방 번호를 입력하고 저장하세요. 각 방은 <b>정원(1·2인)</b>, <b>성별 지정</b>, <b>우선 배정 지정</b>를 설정할 수 있습니다. 우선 배정 지정된 방은 가장 먼저 채워집니다.</p>
 
                 <div class="bldg-tabs" id="bldgTabs"></div>
                 <div id="floorArea"></div>
@@ -282,7 +315,7 @@
         <div id="step-3" style="display:none;">
             <div class="panel">
                 <h2>자동 배정</h2>
-                <p class="desc">선택한 <b>주차</b>의 모든 과정 명단을 모아 자동으로 생활관을 배정합니다. 로얄층(우선순위) 방을 먼저 채우고, 나머지는 방 연번 순서대로 과정별로 묶어 배치합니다. 남녀 공용 1실은 만들지 않습니다.</p>
+                <p class="desc">선택한 <b>주차</b>의 모든 과정 명단을 모아 자동으로 생활관을 배정합니다. 우선 배정 방을 먼저 채우고, 나머지는 방 연번 순서대로 과정별로 묶어 배치합니다. 남녀 공용 1실은 만들지 않습니다.</p>
 
                 <div style="display:flex; gap:8px; align-items:center; margin-bottom:14px; flex-wrap:wrap;">
                     <label style="font-size:13px; font-weight:800; color:var(--muted);">배정할 주차</label>
@@ -429,10 +462,179 @@
         // roomId = `${building}_${floor}_${no}`
         let rooms = {};
 
+        // ── 동·층 배정 우선순위 ──
+        // floorKey = `${building}_${floor}`  /  순서가 빠를수록 먼저 채움
+        let floorPriority = [];   // [{key, building, floor}] 정렬된 순서
+
+        // ── 배치 기준 레지스트리 ──
+        // criteria: { id, name, type }  type ∈ empno_asc | empno_desc | female | male | name_asc
+        const CRITERIA_TYPES = {
+            empno_asc:  '사번 낮은순(연장자) 우선',
+            empno_desc: '사번 높은순(연소자) 우선',
+            female:     '여성 우선',
+            male:       '남성 우선',
+            name_asc:   '가나다순'
+        };
+        let criteriaList = [];  // [{id, name, type}]
+
+        function defaultCriteria() {
+            return [
+                { id: 'empno', name: '사번 낮은순(연장자) 우선', type: 'empno_asc' },
+                { id: 'female', name: '여성 우선', type: 'female' }
+            ];
+        }
+
+        function loadCriteria() {
+            db.ref('system/dorm/criteria').once('value', snap => {
+                const v = snap.val();
+                criteriaList = (Array.isArray(v) && v.length) ? v : defaultCriteria();
+                renderCriteriaManager();
+                renderFloors(); // 드롭다운 갱신
+            });
+        }
+
+        function criteriaOptionsHtml(selectedId) {
+            return criteriaList.map(c =>
+                `<option value="${c.id}" ${c.id === selectedId ? 'selected' : ''}>${c.name}</option>`
+            ).join('');
+        }
+
+        function renderCriteriaManager() {
+            const wrap = document.getElementById('criteriaList');
+            if (!wrap) return;
+            wrap.innerHTML = criteriaList.map((c, i) => `
+                <div style="display:flex; align-items:center; gap:10px; padding:11px 14px; background:#fff; border:1.5px solid #e2e8f0; border-radius:11px;">
+                    <i class="fa-solid fa-sliders" style="color:#2563eb;"></i>
+                    <div style="flex:1;">
+                        <div style="font-weight:800; color:#0f172a; font-size:14px;">${c.name}</div>
+                        <div style="font-size:11.5px; color:#94a3b8;">동작: ${CRITERIA_TYPES[c.type] || c.type}</div>
+                    </div>
+                    ${criteriaList.length > 1 ? `<span class="del-x" onclick="removeCriteria('${c.id}')" title="삭제" style="color:#ef4444; cursor:pointer;"><i class="fa-solid fa-xmark"></i></span>` : ''}
+                </div>
+            `).join('');
+            const cs = document.getElementById('critSummary');
+            if (cs) cs.innerText = `총 ${criteriaList.length}개 기준`;
+        }
+
+        function addCriteria() {
+            const name = (document.getElementById('newCritName').value || '').trim();
+            const type = document.getElementById('newCritType').value;
+            if (!name) { showToast('기준 이름을 입력하세요.'); return; }
+            const id = 'c_' + Date.now().toString(36);
+            criteriaList.push({ id, name, type });
+            document.getElementById('newCritName').value = '';
+            renderCriteriaManager();
+            renderFloors();
+            showToast('기준이 추가되었습니다. "기준 저장"을 눌러 반영하세요.');
+        }
+
+        function removeCriteria(id) {
+            criteriaList = criteriaList.filter(c => c.id !== id);
+            renderCriteriaManager();
+            renderFloors();
+        }
+
+        function saveCriteria() {
+            db.ref('system/dorm/criteria').set(criteriaList)
+                .then(() => showToast('✅ 배치 기준이 저장되었습니다.'))
+                .catch(() => showToast('⚠️ 저장 실패'));
+        }
+
+        function defaultFloorOrder() {
+            const list = [];
+            Object.keys(BUILDINGS).forEach(b => {
+                BUILDINGS[b].floors.forEach(f => list.push({ key: `${b}_${f}`, building: b, floor: f }));
+            });
+            return list;
+        }
+
+        function loadFloorPriority() {
+            db.ref('system/dorm/floorPriority').once('value', snap => {
+                const saved = snap.val();
+                const def = defaultFloorOrder();
+                if (Array.isArray(saved) && saved.length) {
+                    const seen = new Set();
+                    floorPriority = [];
+                    saved.forEach(entry => {
+                        // 구버전(문자열 key) / 신버전({key,gender}) 모두 지원
+                        const k = (typeof entry === 'string') ? entry : entry.key;
+                        const g = (typeof entry === 'object' && entry) ? (entry.gender || '') : '';
+                        const found = def.find(d => d.key === k);
+                        if (found && !seen.has(k)) { floorPriority.push({ ...found, gender: g }); seen.add(k); }
+                    });
+                    def.forEach(d => { if (!seen.has(d.key)) floorPriority.push({ ...d, gender: '' }); });
+                } else {
+                    floorPriority = def.map(d => ({ ...d, gender: '' }));
+                }
+                renderFloorPriority();
+            });
+        }
+
+        function renderFloorPriority() {
+            const wrap = document.getElementById('floorPriorityList');
+            if (!wrap) return;
+            wrap.innerHTML = floorPriority.map((item, i) => `
+                <div class="fp-item" draggable="true" data-idx="${i}"
+                     style="display:flex; align-items:center; gap:12px; padding:13px 16px; background:#fff; border:1.5px solid #e2e8f0; border-radius:12px; cursor:grab;">
+                    <span style="font-weight:900; color:#fff; background:#2563eb; min-width:30px; height:30px; border-radius:8px; display:inline-flex; align-items:center; justify-content:center; font-size:14px;">${i + 1}</span>
+                    <i class="fa-solid fa-grip-vertical" style="color:#cbd5e1;"></i>
+                    <span style="font-weight:800; color:#0f172a; font-size:15px; min-width:130px;">${item.building} ${item.floor}층</span>
+                    <select onchange="setFloorGender('${item.key}', this.value)" onmousedown="event.stopPropagation()" draggable="false"
+                        style="padding:7px 11px; border:1.5px solid ${item.gender==='F'?'#ec4899':item.gender==='M'?'#3b82f6':'#e2e8f0'}; border-radius:9px; font-size:13px; font-weight:700; color:${item.gender==='F'?'#be185d':item.gender==='M'?'#1d4ed8':'#475569'};">
+                        <option value="" ${!item.gender?'selected':''}>혼합 (제한 없음)</option>
+                        <option value="F" ${item.gender==='F'?'selected':''}>여성 전용</option>
+                        <option value="M" ${item.gender==='M'?'selected':''}>남성 전용</option>
+                    </select>
+                    <span style="margin-left:auto; font-size:12px; color:#94a3b8;">${i === 0 ? '가장 먼저 채움' : ''}</span>
+                </div>
+            `).join('');
+            document.getElementById('floorPrioSummary').innerText = `총 ${floorPriority.length}개 층 · 위에서부터 순서대로 채움`;
+            _bindFloorPriorityDnD();
+        }
+
+        function setFloorGender(key, val) {
+            const f = floorPriority.find(x => x.key === key);
+            if (f) { f.gender = val; renderFloorPriority(); }
+        }
+
+        let _fpDragIdx = null;
+        function _bindFloorPriorityDnD() {
+            const items = document.querySelectorAll('#floorPriorityList .fp-item');
+            items.forEach(el => {
+                el.addEventListener('dragstart', e => {
+                    _fpDragIdx = parseInt(el.dataset.idx, 10);
+                    el.style.opacity = '0.4';
+                });
+                el.addEventListener('dragend', e => { el.style.opacity = '1'; });
+                el.addEventListener('dragover', e => { e.preventDefault(); el.style.borderColor = '#2563eb'; });
+                el.addEventListener('dragleave', e => { el.style.borderColor = '#e2e8f0'; });
+                el.addEventListener('drop', e => {
+                    e.preventDefault();
+                    el.style.borderColor = '#e2e8f0';
+                    const to = parseInt(el.dataset.idx, 10);
+                    if (_fpDragIdx === null || _fpDragIdx === to) return;
+                    const moved = floorPriority.splice(_fpDragIdx, 1)[0];
+                    floorPriority.splice(to, 0, moved);
+                    _fpDragIdx = null;
+                    renderFloorPriority();
+                });
+            });
+        }
+
+        function saveFloorPriority() {
+            // {key, gender} 배열로 저장 (순서 + 층별 성별전용)
+            const order = floorPriority.map(f => ({ key: f.key, gender: f.gender || '' }));
+            db.ref('system/dorm/floorPriority').set(order)
+                .then(() => showToast('✅ 동·층 우선순위가 저장되었습니다.'))
+                .catch(() => showToast('⚠️ 저장 실패'));
+        }
+
         // ── 초기 로드 ──
         function init() {
             renderBldgTabs();
             loadRooms();
+            loadFloorPriority();
+            loadCriteria();
             // 연간계획 자동 동기화 (운영부와 동일: 추가/저장된 과정이 해당 주에 즉시 반영)
             if (typeof annualPlan !== 'undefined' && annualPlan.autoSync) annualPlan.autoSync();
         }
@@ -486,7 +688,7 @@
                                         <th style="width:70px;">방번호</th>
                                         <th style="width:110px;">정원</th>
                                         <th style="width:130px;">성별 지정</th>
-                                        <th style="width:90px;">로얄층</th>
+                                        <th style="width:90px;">우선 배정</th>
                                         <th>우선 배치 기준</th>
                                         <th style="width:50px;">삭제</th>
                                     </tr>
@@ -504,7 +706,7 @@
             const critDisabled = royal ? '' : 'crit-disabled';
             return `
                 <tr class="${royal ? 'royal-row' : ''}">
-                    <td class="rno-cell">${r.no}${royal ? ' 🏅' : ''}</td>
+                    <td class="rno-cell">${r.no}${royal ? ' ⭐' : ''}</td>
                     <td>
                         <select onchange="setRoomField('${id}','capacity',this.value)">
                             <option value="1" ${r.capacity !== 2 ? 'selected' : ''}>1인 1실</option>
@@ -521,8 +723,7 @@
                     <td><input type="checkbox" class="royal-check" ${royal ? 'checked' : ''} onchange="setRoomField('${id}','royal',this.checked)"></td>
                     <td>
                         <select class="${critDisabled}" onchange="setRoomField('${id}','criteria',this.value)">
-                            <option value="empno" ${r.criteria !== 'female' ? 'selected' : ''}>사번 낮은순(연장자) 우선</option>
-                            <option value="female" ${r.criteria === 'female' ? 'selected' : ''}>여성 우선</option>
+                            ${criteriaOptionsHtml(r.criteria || (criteriaList[0] && criteriaList[0].id) || 'empno')}
                         </select>
                     </td>
                     <td><span class="del-x" onclick="removeRoom('${id}')" title="삭제"><i class="fa-solid fa-xmark"></i></span></td>
@@ -595,7 +796,7 @@
             const royal = Object.values(rooms).filter(r => r.royal).length;
             const cap2 = Object.values(rooms).filter(r => r.capacity === 2).length;
             document.getElementById('roomSummary').innerText =
-                `총 ${total}개 방 · 로얄층 ${royal}개 · 2인실 ${cap2}개`;
+                `총 ${total}개 방 · 우선실 ${royal}개 · 2인실 ${cap2}개`;
         }
 
         // ── 저장 ──
@@ -1037,14 +1238,33 @@
         }
 
         // 방 목록을 연번 순으로 정렬 (건물 순서 → 층 → 방번호)
+        // 배치 기준 id → type 조회 + 후보 풀에 적용(필터/정렬). 적용 후 비면 null 반환
+        function applyCriteria(critId, pool) {
+            const c = criteriaList.find(x => x.id === critId);
+            const type = c ? c.type : (critId === 'female' ? 'female' : 'empno_asc');
+            let p = pool.slice();
+            if (type === 'female') { p = p.filter(x => x.gender === 'F'); }
+            else if (type === 'male') { p = p.filter(x => x.gender === 'M'); }
+            if (!p.length) return null;
+            const empAsc = (a, b) => (parseInt(a.empNo||'999999',10)) - (parseInt(b.empNo||'999999',10));
+            if (type === 'empno_desc') p.sort((a, b) => empAsc(b, a));
+            else if (type === 'name_asc') p.sort((a, b) => (a.name||'').localeCompare(b.name||''));
+            else p.sort(empAsc); // empno_asc / female / male 공통: 사번 낮은순
+            return p;
+        }
+
         function sortedRooms() {
-            const bldgOrder = { '청렴관': 0, '상생관': 1, '국제교육동': 2 };
+            // 동·층 우선순위(floorPriority) 기준으로 정렬, 같은 층이면 방번호 순
+            const floorRank = {};
+            (floorPriority && floorPriority.length ? floorPriority : defaultFloorOrder())
+                .forEach((f, i) => { floorRank[f.key] = i; });
             return Object.entries(rooms).map(([id, r]) => ({ id, ...r }))
-                .sort((a, b) =>
-                    (bldgOrder[a.building] ?? 9) - (bldgOrder[b.building] ?? 9)
-                    || a.floor - b.floor
-                    || String(a.no).localeCompare(String(b.no), undefined, { numeric: true })
-                );
+                .sort((a, b) => {
+                    const ra = floorRank[`${a.building}_${a.floor}`] ?? 999;
+                    const rb = floorRank[`${b.building}_${b.floor}`] ?? 999;
+                    return ra - rb
+                        || String(a.no).localeCompare(String(b.no), undefined, { numeric: true });
+                });
         }
 
         async function runAssign() {
@@ -1060,11 +1280,19 @@
 
             const log = [];
             // 방 상태 초기화: { id, capacity, gender(고정/지정), occupants:[] }
+            // 층별 성별 전용 맵 (floorPriority의 gender)
+            const floorGenderMap = {};
+            (floorPriority || []).forEach(f => { if (f.gender) floorGenderMap[f.key] = f.gender; });
+
             const roomState = {};
             sortedRooms().forEach(r => {
+                // 층 전용 성별이 있으면 우선 적용, 없으면 방 개별 지정 사용
+                const floorG = floorGenderMap[`${r.building}_${r.floor}`] || '';
                 roomState[r.id] = {
                     id: r.id, building: r.building, floor: r.floor, no: r.no,
-                    capacity: r.capacity || 1, fixedGender: r.gender || '', royal: !!r.royal, criteria: r.criteria || 'empno',
+                    capacity: r.capacity || 1,
+                    fixedGender: floorG || r.gender || '',
+                    royal: !!r.royal, criteria: r.criteria || 'empno',
                     occupants: []
                 };
             });
@@ -1121,7 +1349,7 @@
                 return true;
             };
 
-            // ── 1) 로얄층 우선 배정 ──
+            // ── 1) 우선 배정 ──
             const royalRooms = sortedRooms().filter(r => roomState[r.id].royal);
             let remaining = people.slice();
 
@@ -1136,20 +1364,16 @@
                     if (rs.occupants[0]) pool = pool.filter(p => p.gender === rs.occupants[0].gender);
                     if (!pool.length) break;
 
-                    if (rs.criteria === 'female') {
-                        // 여성 우선 → 여성 중 사번 낮은순, 없으면 종료
-                        pool = pool.filter(p => p.gender === 'F');
-                        if (!pool.length) break;
-                    }
-                    // 공통: 사번 낮은순(연장자) 정렬
-                    pool.sort((a, b) => (parseInt(a.empNo||'999999',10)) - (parseInt(b.empNo||'999999',10)));
-                    const pick = pool[0];
+                    // 방에 지정된 배치 기준 적용 (필터 + 정렬)
+                    const ranked = applyCriteria(rs.criteria, pool);
+                    if (!ranked) break;
+                    const pick = ranked[0];
                     if (!placeInRoom(pick, rs)) break;
                     remaining = remaining.filter(p => p.token !== pick.token);
                 }
             });
             const royalCount = Object.keys(assigned).length;
-            log.push(`🏅 로얄층 우선 배정: ${royalCount}명 (${royalRooms.length}개 방)`);
+            log.push(`⭐ 우선 배정: ${royalCount}명 (${royalRooms.length}개 방)`);
 
             // ── 2) 나머지: 과정별 연속 배치 (방 연번 순) ──
             const normalRooms = sortedRooms().filter(r => !roomState[r.id].royal);
@@ -1300,7 +1524,7 @@
                 if (!occ.length) occHtml = `<div style="font-size:11px; color:#cbd5e1; margin-top:6px;">(빈 방)</div>`;
                 html += `
                     <div class="room-card ${isRoyal ? 'royal' : ''}" style="min-height:auto;">
-                        <div class="rno"><span>${r.no}</span><span style="font-size:10px; color:var(--muted); font-weight:700;">${occ.length}/${r.capacity||1}${isRoyal?' 🏅':''}</span></div>
+                        <div class="rno"><span>${r.no}</span><span style="font-size:10px; color:var(--muted); font-weight:700;">${occ.length}/${r.capacity||1}${isRoyal?' ⭐':''}</span></div>
                         ${occHtml}
                     </div>`;
             });
@@ -1385,7 +1609,7 @@
                 if (!occ.length) return;
                 occ.forEach((p, idx) => {
                     rowsHtml += `<tr>
-                        ${idx===0 ? `<td rowspan="${occ.length}" style="font-weight:800;">${r.building} ${r.floor}층 ${r.no}호${r.royal?' 🏅':''}</td>` : ''}
+                        ${idx===0 ? `<td rowspan="${occ.length}" style="font-weight:800;">${r.building} ${r.floor}층 ${r.no}호${r.royal?' ⭐':''}</td>` : ''}
                         <td>${p.name}</td><td>${p.empNo}</td><td>${p.dept||'-'}</td>
                         <td>${p.gender==='M'?'남':(p.gender==='F'?'여':'-')}</td><td>${p.course}</td>
                     </tr>`;
