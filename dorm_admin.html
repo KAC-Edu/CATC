@@ -1493,28 +1493,37 @@
                     const s = rd.settings || {};
                     const nm = norm(s.courseName);
                     const locked = !!s.autoAssignLocked;
+                    const hasStudents = rd.students && Object.keys(rd.students).length > 0;
+                    const hasOwner = !!(rd.status && rd.status.ownerSessionId);
+                    const touched = hasStudents || hasOwner;  // 강사/학생이 실제 사용한 흔적
+                    const inPlan = nm && !!planByName[nm];     // 현재 연간계획에 남아있는 과정
+
                     let inProgress = false;
                     if (nm && s.period && s.period.includes('~')) {
                         const parts = s.period.split('~');
                         const sd = norm(parts[0]), ed = norm(parts[1]);
                         if (sd && ed && sd <= today && ed >= today) inProgress = true;
                     }
-                    if (locked || (nm && inProgress)) {
-                        const removedFromPlan = nm && !planByName[nm];
-                        const hasStudents = rd.students && Object.keys(rd.students).length > 0;
-                        const hasOwner = !!(rd.status && rd.status.ownerSessionId);
-                        if (!locked && removedFromPlan && !hasStudents && !hasOwner) {
-                            updates[`courses/${r}/settings/courseName`] = '';
-                            updates[`courses/${r}/settings/period`]     = '';
-                            updates[`courses/${r}/settings/coordinatorName`] = null;
-                            updates[`courses/${r}/status/professorName`] = '';
-                            updates[`courses/${r}/status/roomStatus`]   = 'idle';
-                            updates[`courses/${r}/status/ownerSessionId`] = null;
-                            freeRooms.push(r);
-                            return;
-                        }
+
+                    // 1) 잠금 방: 무조건 보존
+                    if (locked) { keptNames.add(nm); return; }
+
+                    // 2) 계획에서 삭제된 과정 + 미사용 방 → 완전 리셋 (재배치 대상에서도 제외)
+                    if (nm && !inPlan && !touched) {
+                        updates[`courses/${r}/settings/courseName`] = '';
+                        updates[`courses/${r}/settings/period`]     = '';
+                        updates[`courses/${r}/settings/coordinatorName`] = null;
+                        updates[`courses/${r}/settings/kakaoLink`] = null;
+                        updates[`courses/${r}/status/professorName`] = '';
+                        updates[`courses/${r}/status/roomStatus`]   = 'idle';
+                        updates[`courses/${r}/status/ownerSessionId`] = null;
+                        return; // freeRooms에 넣지 않음 → 다른 과정으로 다시 채우지 않음
+                    }
+
+                    // 3) 강사/학생이 사용 중인 방 → 보존 (실수로 지우지 않도록)
+                    if (touched) {
                         keptNames.add(nm);
-                        if (!locked && planByName[nm]) {
+                        if (inPlan) {
                             const pc = planByName[nm];
                             updates[`courses/${r}/settings/period`] = pc.period;
                             updates[`courses/${r}/settings/coordinatorName`] = pc.coord || null;
@@ -1523,6 +1532,19 @@
                         }
                         return;
                     }
+
+                    // 4) 진행 중(계획에 있음) + 미사용 → 보존 + 최신 정보 갱신
+                    if (nm && inProgress && inPlan) {
+                        keptNames.add(nm);
+                        const pc = planByName[nm];
+                        updates[`courses/${r}/settings/period`] = pc.period;
+                        updates[`courses/${r}/settings/coordinatorName`] = pc.coord || null;
+                        updates[`courses/${r}/status/professorName`] = pc.prof;
+                        updates[`courses/${r}/settings/kakaoLink`] = kakaoOf(pc.prof);
+                        return;
+                    }
+
+                    // 5) 그 외 열린 방 → 비우고 재배치 대상
                     updates[`courses/${r}/settings/courseName`] = '';
                     updates[`courses/${r}/settings/period`]     = '';
                     updates[`courses/${r}/settings/coordinatorName`] = null;
@@ -1677,7 +1699,16 @@
                     if (document.getElementById('step-2').style.display !== 'none') loadCourses(true);
                 }).catch(e => { console.warn(e); showToast('⚠️ 적용 실패'); });
             },
-            del(i) { this.data.splice(i, 1); this.render(); },
+            del(i) {
+                this.data.splice(i, 1);
+                this.render();
+                // 삭제 즉시 저장 + 동기화 (미사용 방이면 바로 리셋)
+                this._persistAndSync().then(() => {
+                    showToast('🗑️ 삭제되어 즉시 적용되었습니다.');
+                    coursesCache = null;
+                    if (document.getElementById('step-2').style.display !== 'none') loadCourses(true);
+                }).catch(e => { console.warn(e); });
+            },
 
             save() {
                 this._persistAndSync()

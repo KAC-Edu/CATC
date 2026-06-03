@@ -5239,6 +5239,10 @@ const annualPlanMgrCoord = {
     deleteRow: function(idx) {
         this.currentEditingData.splice(idx, 1);
         this.renderEditor();
+        // 삭제 즉시 저장 + 동기화 (미사용 방이면 바로 리셋됨)
+        this._persistAndSync().then(function(){
+            if (typeof showKacToast === 'function') showKacToast('🗑️ 삭제되어 즉시 적용되었습니다.');
+        }).catch(function(e){ console.warn('삭제 적용 실패:', e); });
     },
 
     saveAndSync: async function() {
@@ -5308,37 +5312,43 @@ const annualPlanMgrCoord = {
         const keptNames = new Set();
         const freeRooms = [];
 
-        // 1) 잠금 OR 진행 중이면 보존, 그 외 열린 방은 비움
+        // 1) 방별 판정
         this.ROOMS.forEach(r => {
             const rd = roomsData[r] || {};
             const s = rd.settings || {};
             const nm = norm(s.courseName);
             const locked = !!s.autoAssignLocked;
+            const hasStudents = rd.students && Object.keys(rd.students).length > 0;
+            const hasOwner = !!(rd.status && rd.status.ownerSessionId);
+            const touched = hasStudents || hasOwner;
+            const inPlan = nm && !!planByName[nm];
+
             let inProgress = false;
             if (nm && s.period && s.period.includes('~')) {
                 const parts = s.period.split('~');
                 const sd = norm(parts[0]), ed = norm(parts[1]);
                 if (sd && ed && sd <= today && ed >= today) inProgress = true;
             }
-            if (locked || (nm && inProgress)) {
-                // 단, 진행 중이라도 (잠금 아님 + 연간계획에서 삭제된 과정 + 한 번도 안 쓴 방)이면 리셋
-                const removedFromPlan = nm && !planByName[nm];
-                const hasStudents = rd.students && Object.keys(rd.students).length > 0;
-                const hasOwner = !!(rd.status && rd.status.ownerSessionId);
-                const untouched = !hasStudents && !hasOwner;
-                if (!locked && removedFromPlan && untouched) {
-                    // 미사용 + 계획에서 삭제됨 → 방 리셋 (보존하지 않음)
-                    updates[`courses/${r}/settings/courseName`] = '';
-                    updates[`courses/${r}/settings/period`]     = '';
-                    updates[`courses/${r}/settings/coordinatorName`] = null;
-                    updates[`courses/${r}/status/professorName`] = '';
-                    updates[`courses/${r}/status/roomStatus`]   = 'idle';
-                    updates[`courses/${r}/status/ownerSessionId`] = null;
-                    freeRooms.push(r);
-                    return;
-                }
+
+            // 1) 잠금 방: 무조건 보존
+            if (locked) { keptNames.add(nm); return; }
+
+            // 2) 계획에서 삭제된 과정 + 미사용 방 → 완전 리셋 (재배치도 안 함)
+            if (nm && !inPlan && !touched) {
+                updates[`courses/${r}/settings/courseName`] = '';
+                updates[`courses/${r}/settings/period`]     = '';
+                updates[`courses/${r}/settings/coordinatorName`] = null;
+                updates[`courses/${r}/settings/kakaoLink`] = null;
+                updates[`courses/${r}/status/professorName`] = '';
+                updates[`courses/${r}/status/roomStatus`]   = 'idle';
+                updates[`courses/${r}/status/ownerSessionId`] = null;
+                return;
+            }
+
+            // 3) 사용 중인 방 → 보존
+            if (touched) {
                 keptNames.add(nm);
-                if (!locked && planByName[nm]) {
+                if (inPlan) {
                     const pc = planByName[nm];
                     const coordFull = (typeof coordMgr !== 'undefined' && coordMgr.matchName ? coordMgr.matchName(pc.coord) : '') || (pc.coord || '');
                     updates[`courses/${r}/settings/period`] = pc.period;
@@ -5348,6 +5358,20 @@ const annualPlanMgrCoord = {
                 }
                 return;
             }
+
+            // 4) 진행 중(계획에 있음) + 미사용 → 보존 + 최신화
+            if (nm && inProgress && inPlan) {
+                keptNames.add(nm);
+                const pc = planByName[nm];
+                const coordFull = (typeof coordMgr !== 'undefined' && coordMgr.matchName ? coordMgr.matchName(pc.coord) : '') || (pc.coord || '');
+                updates[`courses/${r}/settings/period`] = pc.period;
+                updates[`courses/${r}/settings/coordinatorName`] = coordFull;
+                updates[`courses/${r}/status/professorName`] = pc.prof;
+                updates[`courses/${r}/settings/kakaoLink`] = kakaoOf(pc.prof);
+                return;
+            }
+
+            // 5) 그 외 열린 방 → 비우고 재배치 대상
             updates[`courses/${r}/settings/courseName`] = '';
             updates[`courses/${r}/settings/period`]     = '';
             updates[`courses/${r}/settings/coordinatorName`] = null;
