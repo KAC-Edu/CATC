@@ -4975,19 +4975,35 @@ loadFile: function(e) {
         });
     },
 
-    // 현재 문항의 'PPT용 진행 링크'를 클립보드에 복사
+    // 현재 문항의 'PPT용 진행 링크'를 클립보드에 복사 (클릭 가능한 서식 포함)
     copyPresentLink: function() {
         if (!state.loadedQuizSetKey) {
             return ui.showAlert("이 기능은 '저장된 퀴즈'를 불러왔을 때만 사용할 수 있습니다.\n(좌측에서 저장된 퀴즈 세트를 선택해 주세요.)");
         }
         const base = location.href.replace(/admin\.html.*$/, '').replace(/\/$/, '');
         const url = `${base}/quiz_present.html?room=${encodeURIComponent(state.room)}&set=${encodeURIComponent(state.loadedQuizSetKey)}&q=${state.currentQuizIdx}`;
-        const done = () => ui.showAlert(`✅ PPT용 퀴즈 링크가 복사되었습니다.\n\nQ${state.currentQuizIdx+1} · Room ${state.room}\n\n파워포인트 도형/텍스트에 '하이퍼링크'로 붙여넣으세요.\n발표 중 클릭하면 교육생 화면이 자동으로 이 퀴즈로 전환됩니다.`);
-        if (navigator.clipboard && navigator.clipboard.writeText) {
-            navigator.clipboard.writeText(url).then(done).catch(() => { prompt("아래 링크를 복사하세요:", url); });
-        } else {
-            prompt("아래 링크를 복사하세요:", url);
+        const qNo = state.currentQuizIdx + 1;
+        const label = `▶ 퀴즈 시작 (Q${qNo})`;
+        // PPT에 붙이면 '클릭 가능한 버튼형 링크'가 되도록 HTML 서식으로 복사
+        const html = `<a href="${url}" style="display:inline-block;padding:10px 22px;background:#2563eb;color:#ffffff;font-weight:bold;font-size:16px;text-decoration:none;border-radius:8px;font-family:'Malgun Gothic',sans-serif;">${label}</a>`;
+        const done = () => ui.showAlert(`✅ PPT용 퀴즈 버튼이 복사되었습니다.\n\nQ${qNo} · Room ${state.room}\n\n파워포인트 슬라이드에 그대로 붙여넣으세요.\n파란 '▶ 퀴즈 시작' 버튼이 생기고,\n발표 중 클릭하면 교육생 화면이 이 퀴즈로 전환됩니다.`);
+        // 1) HTML+텍스트 동시 복사 시도 (PPT는 HTML을 클릭형 링크로 인식)
+        if (navigator.clipboard && window.ClipboardItem) {
+            try {
+                const item = new ClipboardItem({
+                    'text/html': new Blob([html], { type:'text/html' }),
+                    'text/plain': new Blob([url], { type:'text/plain' })
+                });
+                navigator.clipboard.write([item]).then(done).catch(() => fallback());
+                return;
+            } catch(e) { /* fallthrough */ }
         }
+        function fallback() {
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(url).then(done).catch(() => prompt("아래 링크를 복사하세요:", url));
+            } else { prompt("아래 링크를 복사하세요:", url); }
+        }
+        fallback();
     },
     
     deleteQuizSet: function(key, title) {

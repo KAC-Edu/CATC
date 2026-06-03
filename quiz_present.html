@@ -7,6 +7,7 @@
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 <style>
     * { margin:0; padding:0; box-sizing:border-box; }
@@ -108,12 +109,30 @@
         <p style="margin-top:16px; color:#94a3b8; font-weight:700;">퀴즈를 불러오는 중...</p>
     </div>
 
+    <!-- 강사 인증 (비밀번호 ****로 가림) -->
+    <div id="authBox" style="display:none; max-width:420px; margin:40px auto; background:linear-gradient(160deg,#1e293b,#172033); border:1px solid var(--line); border-radius:20px; padding:34px 32px; text-align:center; box-shadow:0 24px 60px rgba(0,0,0,0.45);">
+        <div style="font-size:30px; color:var(--cyan); margin-bottom:14px;"><i class="fa-solid fa-user-shield"></i></div>
+        <h2 style="font-size:20px; font-weight:900; margin-bottom:8px;">강사 인증</h2>
+        <p style="font-size:13px; color:#94a3b8; margin-bottom:20px;">퀴즈를 진행하려면 관리자 비밀번호가 필요합니다.</p>
+        <input type="password" id="authPw" placeholder="비밀번호" autocomplete="current-password"
+            style="width:100%; height:48px; border-radius:12px; border:1.5px solid var(--line); background:#0f172a; color:#fff; font-size:18px; text-align:center; outline:none; margin-bottom:6px;"
+            onkeyup="if(event.key==='Enter') presenter.submitAuth()">
+        <p id="authErr" style="display:none; color:#fca5a5; font-size:13px; font-weight:700; margin:6px 0 0;"></p>
+        <button onclick="presenter.submitAuth()" style="width:100%; height:48px; margin-top:16px; border:none; border-radius:12px; background:linear-gradient(135deg,#2563eb,#38bdf8); color:#fff; font-size:16px; font-weight:900; cursor:pointer;">인증하고 시작</button>
+    </div>
+
     <div id="errMsg">
         <h2><i class="fa-solid fa-triangle-exclamation"></i> 퀴즈를 찾을 수 없습니다</h2>
         <p id="errDetail" style="color:#94a3b8; font-weight:600;"></p>
     </div>
 
     <div id="quizArea" style="display:none;">
+        <!-- 교육생 입장 QR (우측 하단 고정) -->
+        <div id="joinQR" style="position:fixed; bottom:22px; right:22px; background:#fff; border-radius:16px; padding:14px 14px 10px; box-shadow:0 12px 32px rgba(0,0,0,0.4); text-align:center; z-index:50;">
+            <div id="qrCanvas" style="width:120px; height:120px; margin:0 auto;"></div>
+            <div style="font-size:12px; font-weight:800; color:#0f172a; margin-top:8px;">📲 스캔하여 참여</div>
+            <div id="qrRoomTxt" style="font-size:11px; color:#64748b; font-weight:700;"></div>
+        </div>
         <div class="qcard">
             <div>
                 <span class="qnum" id="qNum">Q1</span>
@@ -144,23 +163,38 @@ const presenter = {
     room:null, setKey:null, qIdx:0, quiz:null, db:null, total:0, answered:0,
     _answerRef:null, _timerInt:null, _qid:null,
 
-    // 인증 보장: 이미 로그인돼 있으면 그대로, 아니면 관리자 비번 1회 요청
-    async ensureAuth() {
+    // 인증 보장: 이미 로그인돼 있으면 진행, 아니면 비번 입력 화면 표시
+    ensureAuth() {
         return new Promise((resolve) => {
-            firebase.auth().onAuthStateChanged(async (user) => {
+            // onAuthStateChanged는 최초 1회만 사용해 현재 상태 확인
+            const unsub = firebase.auth().onAuthStateChanged((user) => {
+                unsub();  // 즉시 해제 → 중복 콜백 방지
                 if (user) { resolve(true); return; }
-                // 같은 브라우저에 admin 로그인 세션이 없으면 비번 요청
-                const pw = prompt("강사 인증이 필요합니다.\n관리자 비밀번호를 입력하세요:");
-                if (!pw) { resolve(false); return; }
-                try {
-                    await firebase.auth().signInWithEmailAndPassword(ADMIN_EMAIL, pw);
-                    resolve(true);
-                } catch (e) {
-                    alert("인증 실패: 비밀번호가 올바르지 않습니다.");
-                    resolve(false);
-                }
+                // 로그인 안 됨 → 비번 입력 화면 표시하고 대기
+                document.getElementById('loadingMsg').style.display = 'none';
+                document.getElementById('authBox').style.display = 'block';
+                setTimeout(() => document.getElementById('authPw').focus(), 100);
+                this._authResolve = resolve;  // submitAuth에서 호출
             });
         });
+    },
+
+    async submitAuth() {
+        const pwEl = document.getElementById('authPw');
+        const errEl = document.getElementById('authErr');
+        const pw = (pwEl.value || '').trim();
+        if (!pw) { errEl.style.display='block'; errEl.innerText='비밀번호를 입력하세요.'; return; }
+        errEl.style.display = 'none';
+        try {
+            await firebase.auth().signInWithEmailAndPassword(ADMIN_EMAIL, pw);
+            document.getElementById('authBox').style.display = 'none';
+            document.getElementById('loadingMsg').style.display = 'block';
+            if (this._authResolve) { this._authResolve(true); this._authResolve = null; }
+        } catch (e) {
+            errEl.style.display = 'block';
+            errEl.innerText = '비밀번호가 올바르지 않습니다.';
+            pwEl.value = ''; pwEl.focus();
+        }
     },
 
     async init() {
@@ -175,11 +209,11 @@ const presenter = {
         try { this.db = firebase.database(); }
         catch(e) { return this.error('Firebase 초기화 실패. config.js를 확인하세요.'); }
 
+        document.getElementById('roomLabel').innerText = `Room #${this.room}`;
+
         // 인증 (status/activeQuiz 쓰기 권한 확보)
         const ok = await this.ensureAuth();
-        if (!ok) { return this.error('강사 인증이 필요합니다. 페이지를 새로고침 후 다시 시도하세요.'); }
-
-        document.getElementById('roomLabel').innerText = `Room #${this.room}`;
+        if (!ok) return;
 
         // 1) 해당 문항 로드
         let snap;
@@ -203,6 +237,22 @@ const presenter = {
 
         document.getElementById('loadingMsg').style.display = 'none';
         document.getElementById('quizArea').style.display = 'block';
+        this.makeQR();
+    },
+
+    // 교육생 입장 QR 생성 (index.html?room=XX)
+    makeQR() {
+        try {
+            const base = location.href.replace(/quiz_present\.html.*$/, '').replace(/\/$/, '');
+            const joinUrl = `${base}/index.html?room=${encodeURIComponent(this.room)}`;
+            const box = document.getElementById('qrCanvas');
+            if (box && window.QRCode) {
+                box.innerHTML = '';
+                new QRCode(box, { text: joinUrl, width:120, height:120, correctLevel: QRCode.CorrectLevel.M });
+            }
+            const txt = document.getElementById('qrRoomTxt');
+            if (txt) txt.innerText = `Room ${this.room}`;
+        } catch(e) {}
     },
 
     error(msg) {
