@@ -3164,7 +3164,8 @@ function renderCourseSelectors() {
         setupRoom.add(new Option(label, rid));
 
         // 2. 메인 리스트 아이템 생성 (사용중인 방만 + 기간이 안 지난 것만)
-        if (status.roomStatus === 'active') {
+        //    단, 총괄표 비노출(hideFromBoard) 과정은 운영부 현황 리스트에서도 제외
+        if (status.roomStatus === 'active' && !settings.hideFromBoard) {
             
             // [날짜 필터링 강화] 종료일이 오늘보다 이전이면 리스트에서 제외
             if (settings.period && settings.period.includes(" ~ ")) {
