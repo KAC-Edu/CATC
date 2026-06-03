@@ -1434,44 +1434,102 @@
                 return dt.toISOString().slice(0, 10);
             },
 
-            // ── 강의실 자동배치 (운영부와 동일 로직: A·B·C, 잠금 인식) ──
+            // ── 강의실 자동배치 (강사 플랫폼과 동일: 토요일 규칙 + 진행중/잠금 보존) ──
             ROOMS: ['A', 'B', 'C'],
             _todayStr() { return new Date().toISOString().split('T')[0]; },
 
+            _targetMonday(todayStr) {
+                const d = new Date(todayStr + 'T00:00:00Z');
+                const dow = d.getUTCDay();
+                const mon = this.mondayOf(todayStr);
+                if (dow === 6 || dow === 0) {
+                    const m = new Date(mon + 'T00:00:00Z');
+                    m.setUTCDate(m.getUTCDate() + 7);
+                    return m.toISOString().split('T')[0];
+                }
+                return mon;
+            },
+
+            async _dismissedSet(weekKey) {
+                const set = new Set();
+                try {
+                    const snap = await db.ref(`system/dismissedCourses/${weekKey}`).once('value');
+                    const v = snap.val() || {};
+                    Object.values(v).forEach(d => { if (d && d.name) set.add(`${(d.name||'').trim()}|${(d.period||'').trim()}`); });
+                } catch (e) {}
+                return set;
+            },
+
             async _syncRoomsLockAware(courses) {
                 const today = this._todayStr();
-                const thisWeekMonday = this.mondayOf(today);
-                const d2 = new Date(today + 'T00:00:00Z');
-                d2.setUTCDate(d2.getUTCDate() + 2);
-                const openDate = d2.toISOString().split('T')[0];
+                const targetMon = this._targetMonday(today);
+                const tSun = new Date(targetMon + 'T00:00:00Z');
+                tSun.setUTCDate(tSun.getUTCDate() + 6);
+                const targetSun = tSun.toISOString().split('T')[0];
 
                 const snap = await db.ref('courses').once('value');
                 const roomsData = snap.val() || {};
-                const openRooms = this.ROOMS.filter(r => !(roomsData[r] && roomsData[r].settings && roomsData[r].settings.autoAssignLocked));
+                const norm = s => (s || '').trim();
+                const profSnap = await db.ref('system/professorProfiles').once('value');
+                const profAll = profSnap.val() || {};
+                const kakaoOf = (p) => { const x = profAll[norm(p)]; return (x && x.kakaoLink) ? x.kakaoLink : ''; };
 
-                const upcoming = courses.filter(c => c.endDate >= today).sort((a, b) => a.startDate.localeCompare(b.startDate));
-                const ongoing  = upcoming.filter(c => c.startDate <= today);
-                const d2ready  = upcoming.filter(c => c.startDate > today && c.startDate <= openDate);
-                const thisWeek = upcoming.filter(c => c.startDate > openDate && this.mondayOf(c.startDate) === thisWeekMonday);
-                const future   = upcoming.filter(c => c.startDate > openDate && this.mondayOf(c.startDate) !== thisWeekMonday);
-                const pool = [...ongoing, ...d2ready, ...thisWeek, ...future];
+                const planByName = {};
+                courses.forEach(c => { if (c.name) planByName[norm(c.name)] = c; });
+
+                let pool = courses
+                    .filter(c => c.startDate && c.endDate)
+                    .filter(c => c.startDate <= targetSun && c.endDate >= targetMon)
+                    .sort((a, b) => a.startDate.localeCompare(b.startDate));
+                const dismissed = await this._dismissedSet(targetMon);
+                if (dismissed.size) pool = pool.filter(c => !dismissed.has(`${norm(c.name)}|${norm(c.period)}`));
 
                 const updates = {};
-                for (const r of openRooms) {
+                const keptNames = new Set();
+                const freeRooms = [];
+
+                this.ROOMS.forEach(r => {
+                    const rd = roomsData[r] || {};
+                    const s = rd.settings || {};
+                    const nm = norm(s.courseName);
+                    const locked = !!s.autoAssignLocked;
+                    let inProgress = false;
+                    if (nm && s.period && s.period.includes('~')) {
+                        const parts = s.period.split('~');
+                        const sd = norm(parts[0]), ed = norm(parts[1]);
+                        if (sd && ed && sd <= today && ed >= today) inProgress = true;
+                    }
+                    if (locked || (nm && inProgress)) {
+                        keptNames.add(nm);
+                        if (!locked && planByName[nm]) {
+                            const pc = planByName[nm];
+                            updates[`courses/${r}/settings/period`] = pc.period;
+                            updates[`courses/${r}/settings/coordinatorName`] = pc.coord || null;
+                            updates[`courses/${r}/status/professorName`] = pc.prof;
+                            updates[`courses/${r}/settings/kakaoLink`] = kakaoOf(pc.prof);
+                        }
+                        return;
+                    }
                     updates[`courses/${r}/settings/courseName`] = '';
                     updates[`courses/${r}/settings/period`]     = '';
                     updates[`courses/${r}/settings/coordinatorName`] = null;
                     updates[`courses/${r}/status/professorName`] = '';
                     updates[`courses/${r}/status/roomStatus`]   = 'idle';
-                }
-                for (let i = 0; i < Math.min(openRooms.length, pool.length); i++) {
-                    const room = openRooms[i];
-                    const course = pool[i];
+                    updates[`courses/${r}/status/ownerSessionId`] = null;
+                    freeRooms.push(r);
+                });
+
+                const toPlace = pool.filter(c => !keptNames.has(norm(c.name)));
+                for (let i = 0; i < Math.min(freeRooms.length, toPlace.length); i++) {
+                    const room = freeRooms[i];
+                    const course = toPlace[i];
                     updates[`courses/${room}/settings/courseName`] = course.name;
                     updates[`courses/${room}/settings/period`]     = course.period;
                     updates[`courses/${room}/settings/coordinatorName`] = course.coord || null;
                     updates[`courses/${room}/status/professorName`] = course.prof;
+                    updates[`courses/${room}/settings/kakaoLink`]  = kakaoOf(course.prof);
                     updates[`courses/${room}/status/roomStatus`]   = 'active';
+                    updates[`courses/${room}/status/ownerSessionId`] = null;
                 }
                 if (Object.keys(updates).length) await db.ref().update(updates);
             },

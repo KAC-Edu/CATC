@@ -5016,6 +5016,30 @@ const annualPlanMgrCoord = {
 
     _today: function() { return new Date().toISOString().split('T')[0]; },
 
+    // 대상 주(월~일)의 월요일 키. 토(6)·일(0)이면 다음 주 → 토요일부터 차주 과정 전환
+    _getTargetMonday: function(todayStr) {
+        const d = new Date(todayStr + 'T00:00:00Z');
+        const dow = d.getUTCDay();
+        const mon = this._getMondayOf(todayStr);
+        if (dow === 6 || dow === 0) {
+            const m = new Date(mon + 'T00:00:00Z');
+            m.setUTCDate(m.getUTCDate() + 7);
+            return m.toISOString().split('T')[0];
+        }
+        return mon;
+    },
+
+    // 수동 리셋되어 대상 주 배치에서 제외할 과정 Set
+    _getDismissedSet: async function(weekKey) {
+        const set = new Set();
+        try {
+            const snap = await firebase.database().ref(`system/dismissedCourses/${weekKey}`).once('value');
+            const v = snap.val() || {};
+            Object.values(v).forEach(d => { if (d && d.name) set.add(`${(d.name||'').trim()}|${(d.period||'').trim()}`); });
+        } catch (e) {}
+        return set;
+    },
+
     // 페이지 로드 시: 저장된 연간계획을 현재 날짜 기준으로 자동 동기화
     //  (운영부에서 과정 추가/저장 후 별도 조작 없이도 해당 주 과정이 즉시 반영됨)
     autoSync: async function() {
@@ -5251,42 +5275,84 @@ const annualPlanMgrCoord = {
 
     _syncRoomsLockAware: async function(courses) {
         const today = this._today();
-        const thisWeekMonday = this._getMondayOf(today);
-        const d2 = new Date(today + 'T00:00:00Z');
-        d2.setUTCDate(d2.getUTCDate() + 2);
-        const openDate = d2.toISOString().split('T')[0];
+        const targetMon = this._getTargetMonday(today);
+        const targetSunObj = new Date(targetMon + 'T00:00:00Z');
+        targetSunObj.setUTCDate(targetSunObj.getUTCDate() + 6);
+        const targetSun = targetSunObj.toISOString().split('T')[0];
 
         const snap = await firebase.database().ref('courses').once('value');
         const roomsData = snap.val() || {};
-        const openRooms = this.ROOMS.filter(r => !(roomsData[r] && roomsData[r].settings && roomsData[r].settings.autoAssignLocked));
+        const norm = s => (s || '').trim();
+        const profSnap = await firebase.database().ref('system/professorProfiles').once('value');
+        const profAll = profSnap.val() || {};
+        const kakaoOf = (p) => { const x = profAll[norm(p)]; return (x && x.kakaoLink) ? x.kakaoLink : ''; };
 
-        const upcoming = courses.filter(c => c.endDate >= today).sort((a, b) => a.startDate.localeCompare(b.startDate));
-        const ongoing  = upcoming.filter(c => c.startDate <= today);
-        const d2ready  = upcoming.filter(c => c.startDate > today && c.startDate <= openDate);
-        const thisWeek = upcoming.filter(c => c.startDate > openDate && this._getMondayOf(c.startDate) === thisWeekMonday);
-        const future   = upcoming.filter(c => c.startDate > openDate && this._getMondayOf(c.startDate) !== thisWeekMonday);
-        const pool = [...ongoing, ...d2ready, ...thisWeek, ...future];
+        const planByName = {};
+        courses.forEach(c => { if (c.name) planByName[norm(c.name)] = c; });
+
+        // 대상 주에 걸치는 과정만 (토요일 규칙 적용)
+        let pool = courses
+            .filter(c => c.startDate && c.endDate)
+            .filter(c => c.startDate <= targetSun && c.endDate >= targetMon)
+            .sort((a, b) => a.startDate.localeCompare(b.startDate));
+
+        const dismissed = await this._getDismissedSet(targetMon);
+        if (dismissed.size) pool = pool.filter(c => !dismissed.has(`${norm(c.name)}|${norm(c.period)}`));
 
         const updates = {};
-        for (const r of openRooms) {
+        const keptNames = new Set();
+        const freeRooms = [];
+
+        // 1) 잠금 OR 진행 중이면 보존, 그 외 열린 방은 비움
+        this.ROOMS.forEach(r => {
+            const rd = roomsData[r] || {};
+            const s = rd.settings || {};
+            const nm = norm(s.courseName);
+            const locked = !!s.autoAssignLocked;
+            let inProgress = false;
+            if (nm && s.period && s.period.includes('~')) {
+                const parts = s.period.split('~');
+                const sd = norm(parts[0]), ed = norm(parts[1]);
+                if (sd && ed && sd <= today && ed >= today) inProgress = true;
+            }
+            if (locked || (nm && inProgress)) {
+                keptNames.add(nm);
+                if (!locked && planByName[nm]) {
+                    const pc = planByName[nm];
+                    const coordFull = (typeof coordMgr !== 'undefined' && coordMgr.matchName ? coordMgr.matchName(pc.coord) : '') || (pc.coord || '');
+                    updates[`courses/${r}/settings/period`] = pc.period;
+                    updates[`courses/${r}/settings/coordinatorName`] = coordFull;
+                    updates[`courses/${r}/status/professorName`] = pc.prof;
+                    updates[`courses/${r}/settings/kakaoLink`] = kakaoOf(pc.prof);
+                }
+                return;
+            }
             updates[`courses/${r}/settings/courseName`] = '';
             updates[`courses/${r}/settings/period`]     = '';
             updates[`courses/${r}/settings/coordinatorName`] = null;
             updates[`courses/${r}/status/professorName`] = '';
             updates[`courses/${r}/status/roomStatus`]   = 'idle';
-        }
-        for (let i = 0; i < Math.min(openRooms.length, pool.length); i++) {
-            const room = openRooms[i];
-            const course = pool[i];
+            updates[`courses/${r}/status/ownerSessionId`] = null;
+            freeRooms.push(r);
+        });
+
+        // 2) 보존된 과정 제외하고 빈 방에 배치
+        const toPlace = pool.filter(c => !keptNames.has(norm(c.name)));
+        for (let i = 0; i < Math.min(freeRooms.length, toPlace.length); i++) {
+            const room = freeRooms[i];
+            const course = toPlace[i];
+            const coordFull = (typeof coordMgr !== 'undefined' && coordMgr.matchName ? coordMgr.matchName(course.coord) : '') || (course.coord || '');
             updates[`courses/${room}/settings/courseName`] = course.name;
             updates[`courses/${room}/settings/period`]     = course.period;
-            updates[`courses/${room}/settings/coordinatorName`] = course.coord || null;
+            updates[`courses/${room}/settings/coordinatorName`] = coordFull;
             updates[`courses/${room}/status/professorName`] = course.prof;
+            updates[`courses/${room}/settings/kakaoLink`]  = kakaoOf(course.prof);
             updates[`courses/${room}/status/roomStatus`]   = 'active';
+            updates[`courses/${room}/status/ownerSessionId`] = null;
         }
         if (Object.keys(updates).length) {
             await firebase.database().ref().update(updates);
-            console.log('[annualPlanMgrCoord] 동기화 완료. 대상 방:', openRooms.join(','));
+            console.log('[annualPlanMgrCoord] 동기화 완료. 대상주:', targetMon, '~', targetSun);
         }
     }
 };
