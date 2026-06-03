@@ -433,6 +433,8 @@
         function init() {
             renderBldgTabs();
             loadRooms();
+            // 연간계획 자동 동기화 (운영부와 동일: 추가/저장된 과정이 해당 주에 즉시 반영)
+            if (typeof annualPlan !== 'undefined' && annualPlan.autoSync) annualPlan.autoSync();
         }
 
         function renderBldgTabs() {
@@ -1432,6 +1434,82 @@
                 return dt.toISOString().slice(0, 10);
             },
 
+            // ── 강의실 자동배치 (운영부와 동일 로직: A·B·C, 잠금 인식) ──
+            ROOMS: ['A', 'B', 'C'],
+            _todayStr() { return new Date().toISOString().split('T')[0]; },
+
+            async _syncRoomsLockAware(courses) {
+                const today = this._todayStr();
+                const thisWeekMonday = this.mondayOf(today);
+                const d2 = new Date(today + 'T00:00:00Z');
+                d2.setUTCDate(d2.getUTCDate() + 2);
+                const openDate = d2.toISOString().split('T')[0];
+
+                const snap = await db.ref('courses').once('value');
+                const roomsData = snap.val() || {};
+                const openRooms = this.ROOMS.filter(r => !(roomsData[r] && roomsData[r].settings && roomsData[r].settings.autoAssignLocked));
+
+                const upcoming = courses.filter(c => c.endDate >= today).sort((a, b) => a.startDate.localeCompare(b.startDate));
+                const ongoing  = upcoming.filter(c => c.startDate <= today);
+                const d2ready  = upcoming.filter(c => c.startDate > today && c.startDate <= openDate);
+                const thisWeek = upcoming.filter(c => c.startDate > openDate && this.mondayOf(c.startDate) === thisWeekMonday);
+                const future   = upcoming.filter(c => c.startDate > openDate && this.mondayOf(c.startDate) !== thisWeekMonday);
+                const pool = [...ongoing, ...d2ready, ...thisWeek, ...future];
+
+                const updates = {};
+                for (const r of openRooms) {
+                    updates[`courses/${r}/settings/courseName`] = '';
+                    updates[`courses/${r}/settings/period`]     = '';
+                    updates[`courses/${r}/settings/coordinatorName`] = null;
+                    updates[`courses/${r}/status/professorName`] = '';
+                    updates[`courses/${r}/status/roomStatus`]   = 'idle';
+                }
+                for (let i = 0; i < Math.min(openRooms.length, pool.length); i++) {
+                    const room = openRooms[i];
+                    const course = pool[i];
+                    updates[`courses/${room}/settings/courseName`] = course.name;
+                    updates[`courses/${room}/settings/period`]     = course.period;
+                    updates[`courses/${room}/settings/coordinatorName`] = course.coord || null;
+                    updates[`courses/${room}/status/professorName`] = course.prof;
+                    updates[`courses/${room}/status/roomStatus`]   = 'active';
+                }
+                if (Object.keys(updates).length) await db.ref().update(updates);
+            },
+
+            // 저장 + 동기화 공통 (조용히 실행)
+            async _persistAndSync() {
+                const clean = this.data
+                    .filter(c => (c.name || '').trim())
+                    .sort((a, b) => (a.startDate || '').localeCompare(b.startDate || ''))
+                    .map((c, i) => ({
+                        no: i + 1,
+                        name: c.name.trim(),
+                        startDate: c.startDate || '',
+                        endDate: c.endDate || '',
+                        period: (c.startDate && c.endDate) ? `${c.startDate} ~ ${c.endDate}` : '',
+                        prof: (c.prof || '').trim(),
+                        coord: (c.coord || '').trim(),
+                        weekKey: c.startDate ? this.mondayOf(c.startDate) : ''
+                    }));
+                await db.ref(this.KEY).set(clean);
+                const valid = clean.filter(c => c.startDate && c.endDate);
+                if (valid.length) await this._syncRoomsLockAware(valid);
+                return clean;
+            },
+
+            // 페이지 진입 시 자동 동기화
+            async autoSync() {
+                try {
+                    const snap = await db.ref(this.KEY).once('value');
+                    const v = snap.val();
+                    if (!v) return;
+                    const arr = (Array.isArray(v) ? v : Object.values(v))
+                        .filter(c => c && c.name && c.startDate && c.endDate)
+                        .sort((a, b) => a.startDate.localeCompare(b.startDate));
+                    if (arr.length) await this._syncRoomsLockAware(arr);
+                } catch (e) { console.warn('[dorm annualPlan] autoSync 오류:', e); }
+            },
+
             load() {
                 document.getElementById('annualBody').innerHTML = `<tr><td colspan="7" style="padding:18px; text-align:center; color:var(--muted);">불러오는 중...</td></tr>`;
                 db.ref(this.KEY).once('value', snap => {
@@ -1521,27 +1599,19 @@
                 this.data.sort((a, b) => (a.startDate || '').localeCompare(b.startDate || ''));
                 document.getElementById('courseAddPop').style.display = 'none';
                 this.render();
-                showToast('과정이 추가되었습니다. "저장"을 눌러 반영하세요.');
+                // 추가 즉시 저장 + 강의실 배치 (운영부와 동일)
+                this._persistAndSync().then(() => {
+                    showToast('✅ 추가되어 즉시 적용되었습니다.');
+                    coursesCache = null;
+                    if (document.getElementById('step-2').style.display !== 'none') loadCourses(true);
+                }).catch(e => { console.warn(e); showToast('⚠️ 적용 실패'); });
             },
             del(i) { this.data.splice(i, 1); this.render(); },
 
             save() {
-                // 유효한 행만 저장 (과정명 필수)
-                const clean = this.data.filter(c => (c.name || '').trim());
-                const payload = clean.map((c, i) => ({
-                    no: i + 1,
-                    name: c.name.trim(),
-                    startDate: c.startDate || '',
-                    endDate: c.endDate || '',
-                    period: (c.startDate && c.endDate) ? `${c.startDate} ~ ${c.endDate}` : '',
-                    prof: (c.prof || '').trim(),
-                    coord: (c.coord || '').trim(),
-                    weekKey: c.startDate ? this.mondayOf(c.startDate) : ''
-                }));
-                db.ref(this.KEY).set(payload)
-                    .then(() => {
-                        showToast(`✅ 연간계획 저장됨 (${payload.length}개 과정)`);
-                        // STEP 2 캐시 갱신 위해 과정 다시 로드
+                this._persistAndSync()
+                    .then((clean) => {
+                        showToast(`✅ 저장 및 강의실 적용 완료 (${clean.length}개 과정)`);
                         coursesCache = null;
                         if (document.getElementById('step-2').style.display !== 'none') loadCourses(true);
                     })
