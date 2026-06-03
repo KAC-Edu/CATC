@@ -4711,21 +4711,27 @@ resetShuttleRequests: function() {
             title.textContent='🏫 현재 강의 중인 과정 (이번 주)';
             const rows=weekRooms.filter(([,r])=>(r.status||{}).roomStatus==='active').map(([room,r])=>{
                 const prof=(r.status||{}).professorName||'-', course=(r.settings||{}).courseName||'-';
-                return `<div style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;background:#f8fafc;border-radius:10px;margin-bottom:8px;">
-                    <div><span style="font-weight:900;color:#3b82f6;margin-right:10px;">Room ${room}</span><span style="font-size:13px;color:#334155;">${course}</span></div>
-                    <span style="font-size:12px;color:#64748b;font-weight:700;">${prof} 교수</span></div>`;
+                return `<div style="display:flex;justify-content:space-between;align-items:center;padding:20px 24px;background:#eff6ff;border:1px solid #dbeafe;border-radius:14px;margin-bottom:12px;">
+                    <div style="display:flex;align-items:center;gap:16px;">
+                        <span style="font-weight:900;color:#fff;background:#3b82f6;padding:6px 14px;border-radius:10px;font-size:16px;">Room ${room}</span>
+                        <span style="font-size:18px;color:#0f172a;font-weight:700;">${course}</span>
+                    </div>
+                    <span style="font-size:15px;color:#475569;font-weight:800;">${prof} 교수</span></div>`;
             }).join('');
-            body.innerHTML=rows||'<p style="color:#94a3b8;text-align:center;padding:20px;">이번 주 강의 중인 과정이 없습니다.</p>';
+            body.innerHTML=rows||'<p style="color:#94a3b8;text-align:center;padding:30px;font-size:16px;">이번 주 강의 중인 과정이 없습니다.</p>';
         } else if(type==='students'){
             title.textContent='👩‍🎓 과정별 교육생 현황 (이번 주)';
             const rows=weekRooms.map(([room,r])=>{
                 const course=(r.settings||{}).courseName||'-';
                 const cnt=new Set(Object.values(r.students||{}).filter(s=>s.name&&s.name!=='undefined').map(s=>s.name)).size;
-                return `<div style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;background:#f0fdf4;border-radius:10px;margin-bottom:8px;">
-                    <div><span style="font-weight:900;color:#10b981;margin-right:10px;">Room ${room}</span><span style="font-size:13px;">${course}</span></div>
-                    <span style="font-size:22px;font-weight:900;">${cnt}<span style="font-size:13px;color:#64748b;"> 명</span></span></div>`;
+                return `<div style="display:flex;justify-content:space-between;align-items:center;padding:20px 24px;background:#f0fdf4;border:1px solid #dcfce7;border-radius:14px;margin-bottom:12px;">
+                    <div style="display:flex;align-items:center;gap:16px;">
+                        <span style="font-weight:900;color:#fff;background:#10b981;padding:6px 14px;border-radius:10px;font-size:16px;">Room ${room}</span>
+                        <span style="font-size:18px;color:#0f172a;font-weight:700;">${course}</span>
+                    </div>
+                    <span style="font-size:30px;font-weight:900;color:#0f172a;">${cnt}<span style="font-size:15px;color:#64748b;font-weight:800;"> 명</span></span></div>`;
             }).join('');
-            body.innerHTML=rows||'<p style="color:#94a3b8;text-align:center;padding:20px;">이번 주 교육생 정보가 없습니다.</p>';
+            body.innerHTML=rows||'<p style="color:#94a3b8;text-align:center;padding:30px;font-size:16px;">이번 주 교육생 정보가 없습니다.</p>';
         } else if(type==='outing'){
             title.textContent='🚶 과정별 외출/외박 신청 현황 (금일)';
             const rows=weekRooms.map(([room,r])=>{
@@ -4733,14 +4739,17 @@ resetShuttleRequests: function() {
                 const acts=(r.admin_actions||{})[today]||{};
                 const outs=Object.values(acts).filter(a=>a&&(a.type==='outing'||a.type==='overnight'||a.type==='group_outing'));
                 if(!outs.length) return '';
-                return `<div style="padding:12px 16px;background:#fffbeb;border-radius:10px;margin-bottom:8px;">
-                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-                        <div><span style="font-weight:900;color:#f59e0b;margin-right:10px;">Room ${room}</span><span style="font-size:13px;">${course}</span></div>
-                        <span style="font-size:22px;font-weight:900;">${outs.length}<span style="font-size:13px;color:#64748b;"> 명</span></span></div>
-                    ${outs.map(a=>`<div style="font-size:12px;color:#78716c;padding:4px 0;border-top:1px solid #fde68a;"><b>${a.name||'-'}</b> · ${a.type==='overnight'?'외박':'외출'} · ${a.destination||''} (${a.startTime||''}~${a.endTime||''})</div>`).join('')}
+                return `<div style="padding:20px 24px;background:#fffbeb;border:1px solid #fef3c7;border-radius:14px;margin-bottom:12px;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+                        <div style="display:flex;align-items:center;gap:16px;">
+                            <span style="font-weight:900;color:#fff;background:#f59e0b;padding:6px 14px;border-radius:10px;font-size:16px;">Room ${room}</span>
+                            <span style="font-size:18px;color:#0f172a;font-weight:700;">${course}</span>
+                        </div>
+                        <span style="font-size:30px;font-weight:900;color:#0f172a;">${outs.length}<span style="font-size:15px;color:#64748b;font-weight:800;"> 명</span></span></div>
+                    ${outs.map(a=>`<div style="font-size:14px;color:#78716c;padding:8px 0;border-top:1px solid #fde68a;"><b>${a.name||'-'}</b> · ${a.type==='overnight'?'외박':'외출'} · ${a.destination||''} (${a.startTime||''}~${a.endTime||''})</div>`).join('')}
                 </div>`;
             }).filter(Boolean).join('');
-            body.innerHTML=rows||'<p style="color:#94a3b8;text-align:center;padding:20px;">금일 외출/외박 신청자가 없습니다.</p>';
+            body.innerHTML=rows||'<p style="color:#94a3b8;text-align:center;padding:30px;font-size:16px;">금일 외출/외박 신청자가 없습니다.</p>';
         }
     },
 
