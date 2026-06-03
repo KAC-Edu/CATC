@@ -5387,7 +5387,7 @@ closeSummaryAndExit: function() {
         if (state.room) {
             firebase.database().ref(`courses/${state.room}/status/mode`).set('qa');
         }
-        ui.setMode('home');
+        ui.setMode('dashboard');
         alert("퀴즈가 종료되었습니다. 데이터가 초기화되고 과정 현황 화면으로 이동합니다.");
     },
 
@@ -5510,7 +5510,7 @@ closeSummaryAndExit: function() {
     closeQuizMode: function() { 
         // 옵저버는 데이터에 영향이 없으므로 그냥 나갑니다.
         if(state.isObserver) {
-            ui.setMode('home');
+            ui.setMode('dashboard');
             return;
         }
         // 강사는 팝업창을 띄워 선택하게 합니다.
@@ -5556,7 +5556,7 @@ closeSummaryAndExit: function() {
         // 'resume' (이어서 하기)의 경우 데이터를 지우지 않고 메모리와 로컬스토리지에 둔 채 화면만 이동합니다.
 
         // 5. 공통: 과정 현황(메인)으로 화면 전환
-        ui.setMode('home'); 
+        ui.setMode('dashboard'); 
     }
 }; // <--- quizMgr 객체를 닫는 마침표입니다. 절대 지우지 마세요.
 
