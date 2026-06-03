@@ -456,6 +456,9 @@
 
 
 
+    .amenity-chip { display:flex; align-items:center; gap:8px; padding:12px 14px; border:2px solid #e2e8f0; border-radius:12px; font-size:15px; font-weight:700; color:#334155; cursor:pointer; background:#fff; transition:all .15s; }
+    .amenity-chip input { width:18px; height:18px; accent-color:#10b981; cursor:pointer; }
+    .amenity-chip:has(input:checked) { border-color:#10b981; background:#f0fdf4; color:#047857; }
     </style>
 </head>
 <body>
@@ -740,8 +743,15 @@
 
         <!-- 3. 요청 입력창 -->
         <div style="text-align:left;">
-            <label style="font-size:12px; font-weight:800; color:#64748b; margin-left:5px;">새로운 요청 사항</label>
-            <textarea id="facilityReqText" placeholder="수건, 샴푸, 휴지 등 필요한 물품이나 요청사항을 기재해주세요." style="width:100%; height:100px; border:2px solid #e2e8f0; border-radius:15px; padding:15px; font-size:15px; outline:none; resize:none; margin-top:5px; margin-bottom:15px; background:#fff; line-height:1.5;"></textarea>
+            <label style="font-size:12px; font-weight:800; color:#64748b; margin-left:5px;">필요한 비품 선택</label>
+            <div id="amenityChecks" style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin:8px 0 14px;">
+                <label class="amenity-chip"><input type="checkbox" value="수건"> 🧺 수건</label>
+                <label class="amenity-chip"><input type="checkbox" value="샴푸"> 🧴 샴푸</label>
+                <label class="amenity-chip"><input type="checkbox" value="바디샤워"> 🛁 바디샤워</label>
+                <label class="amenity-chip"><input type="checkbox" value="치약"> 🪥 치약</label>
+            </div>
+            <label style="font-size:12px; font-weight:800; color:#64748b; margin-left:5px;">추가 요청 (직접 입력)</label>
+            <textarea id="facilityReqText" placeholder="그 외 필요한 물품이나 요청사항을 적어주세요. (선택)" style="width:100%; height:72px; border:2px solid #e2e8f0; border-radius:15px; padding:15px; font-size:15px; outline:none; resize:none; margin-top:5px; margin-bottom:15px; background:#fff; line-height:1.5;"></textarea>
         </div>
 
         <!-- 4. 하단 버튼 -->
@@ -3456,13 +3466,20 @@ function closeFacilityModal() {
 // 비품 요청 서버 업로드
 async function submitFacilityRequest() {
     if (!isValidProfile()) { requireProfile(); return; }
-    const reqText = document.getElementById('facilityReqText').value.trim();
+    const extraText = document.getElementById('facilityReqText').value.trim();
+    // 체크된 비품 항목 수집
+    const checked = Array.from(document.querySelectorAll('#amenityChecks input:checked')).map(c => c.value);
+    // 최종 요청 텍스트 = 체크항목 + 추가입력
+    let parts = [];
+    if (checked.length) parts.push(checked.join(', '));
+    if (extraText) parts.push(extraText);
+    const reqText = parts.join(' / ');
     const dormInfo = document.getElementById('displayMyDorm').innerText;
     const userName = localStorage.getItem('kac_user_name');
     const userPhone = localStorage.getItem('kac_user_phone');
 
     if (!reqText) {
-        showKacAlert("요청 사항을 입력해 주세요.");
+        showKacAlert("필요한 비품을 선택하거나 요청 사항을 입력해 주세요.");
         return;
     }
 
@@ -3475,14 +3492,14 @@ async function submitFacilityRequest() {
         name: userName,
         phone: userPhone,
         dorm: dormInfo,
+        items: checked,            // 체크된 비품 배열 (미화원 화면에서 칩으로 표시)
         text: reqText,
-        status: "대기", // 대기, 확인, 처리완료, 처리불가
+        status: "대기",
         timestamp: firebase.database.ServerValue.TIMESTAMP,
-        courseName: document.getElementById('roomTitle').innerText // 어느 과정 학생인지 확인용
+        courseName: document.getElementById('roomTitle').innerText
     };
 
     try {
-        // system/facility_requests 경로에 저장 (미화 담당자가 한꺼번에 보기 위함)
         await firebase.database().ref('system/facility_requests').push(requestData);
         showKacAlert("✅ 요청이 전달되었습니다. 담당자 확인 후 처리됩니다.");
         closeFacilityModal();
