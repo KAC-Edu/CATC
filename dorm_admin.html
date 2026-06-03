@@ -73,6 +73,10 @@
         .bstat-n span { font-size:15px; color:#94a3b8; font-weight:700; }
         .bstat-l { font-size:13px; color:var(--muted); font-weight:700; margin-top:4px; }
         #boardArea .room-grid { grid-template-columns:repeat(auto-fill, minmax(160px, 1fr)); gap:10px; }
+        .board-table { width:100%; border-collapse:collapse; font-size:14px; }
+        .board-table th { background:#f1f5f9; color:#475569; font-weight:800; text-align:left; padding:11px 14px; font-size:13px; white-space:nowrap; }
+        .board-table td { padding:11px 14px; border-top:1px solid #f1f5f9; white-space:nowrap; }
+        .board-table tbody tr:hover { background:#f8fafc; }
         .room-card.royal { border-color: var(--royal); background: var(--royal-bg); }
         .room-card .rno { font-size: 16px; font-weight: 900; display: flex; align-items: center; justify-content: space-between; }
         .room-card .rno .del { color: var(--danger); cursor: pointer; font-size: 13px; opacity: 0.6; }
@@ -1531,7 +1535,25 @@
                 return;
             }
 
-            const students = viewAssign.students;
+            const allStudents = viewAssign.students;
+            // 총괄표 비노출(hideFromBoard) 과정의 학생은 현황에서도 제외
+            const coursesSnap = await db.ref('courses').once('value');
+            const coursesData = coursesSnap.val() || {};
+            const hiddenCourseNames = new Set();
+            Object.values(coursesData).forEach(c => {
+                const s = (c && c.settings) || {};
+                if (s.hideFromBoard && s.courseName) hiddenCourseNames.add((s.courseName||'').trim());
+            });
+            const students = {};
+            Object.entries(allStudents).forEach(([token, s]) => {
+                if (hiddenCourseNames.has((s.course||'').trim())) return;
+                students[token] = s;
+            });
+            if (!Object.keys(students).length) {
+                document.getElementById('boardArea').innerHTML = `<div class="empty-floor">이 주차의 표시할 배정 결과가 없습니다.</div>`;
+                document.getElementById('boardStats').innerHTML = '';
+                return;
+            }
             const courseColors = {};
             const palette = ['#2563eb','#10b981','#f59e0b','#8b5cf6','#ec4899','#06b6d4','#ef4444'];
             (viewAssign.courses || []).forEach((c, i) => { courseColors[c.courseName] = palette[i % palette.length]; });
@@ -1555,47 +1577,65 @@
                 ${Object.entries(courseColors).map(([cn,col]) => `<div class="bstat" style="border-left:5px solid ${col};"><div class="bstat-l" style="margin-top:0;">과정명</div><div style="font-size:15px; font-weight:800; color:#1e293b; margin-top:3px;">${cn}</div></div>`).join('')}
             `;
 
-            // 건물·층 순으로 렌더
+            // 건물·층 순 정렬 (배정된 학생만 표로)
             const bldgOrder = { '청렴관': 0, '상생관': 1, '국제교육동': 2 };
-            const allRoomsSorted = Object.entries(rooms).map(([id, r]) => ({ id, ...r }))
-                .sort((a,b) => (bldgOrder[a.building]??9)-(bldgOrder[b.building]??9) || a.floor-b.floor || String(a.no).localeCompare(String(b.no),undefined,{numeric:true}));
+            // 학생 행 목록 만들기 (방 정보 + 학생)
+            const rows = [];
+            Object.entries(students).forEach(([token, s]) => {
+                rows.push({ token, ...s });
+            });
+            // 건물 → 층 → 방번호 → (성별) 순 정렬
+            rows.sort((a, b) =>
+                (bldgOrder[a.building]??9) - (bldgOrder[b.building]??9)
+                || (a.floor||0) - (b.floor||0)
+                || String(a.no).localeCompare(String(b.no), undefined, { numeric:true })
+            );
+
+            // 건물별 그룹핑하여 리스트(표) 렌더
+            const byBldg = {};
+            rows.forEach(r => { (byBldg[r.building] = byBldg[r.building] || []).push(r); });
+            const bldgSorted = Object.keys(byBldg).sort((a,b)=>(bldgOrder[a]??9)-(bldgOrder[b]??9));
 
             let html = '';
-            let curGroup = null;
-            allRoomsSorted.forEach(r => {
-                const grp = `${r.building} ${r.floor}층`;
-                if (grp !== curGroup) {
-                    if (curGroup !== null) html += `</div>`;
-                    curGroup = grp;
-                    html += `<div class="floor-card"><h3><i class="fa-solid fa-layer-group"></i> ${grp}</h3><div class="room-grid">`;
-                }
-                const occ = byRoom[r.id] || [];
-                const isRoyal = r.royal;
-                const isEmpty = !occ.length;
-                let occHtml = occ.map(p => {
-                    const col = courseColors[p.course] || '#64748b';
-                    const gLabel = p.gender === 'M' ? '남' : (p.gender === 'F' ? '여' : '');
-                    const gCol = p.gender === 'F' ? '#ec4899' : '#3b82f6';
-                    return `<div style="display:flex; align-items:center; justify-content:space-between; gap:6px; padding:7px 9px; background:#fff; border-radius:8px; margin-top:6px; border-left:4px solid ${col}; box-shadow:0 1px 2px rgba(0,0,0,0.04);">
-                        <div style="overflow:hidden;">
-                            <div style="font-weight:800; font-size:14px; color:#1e293b;">${p.name} <span style="font-size:11px; font-weight:700; color:${gCol};">${gLabel}</span></div>
-                            <div style="font-size:11px; color:var(--muted);">${p.empNo}${p.dept?' · '+p.dept:''}</div>
-                        </div>
-                        <div style="display:flex; gap:4px; flex-shrink:0;">
-                            <span class="room-opt" style="background:#eef2ff;color:#4338ca;" onclick="openMovePop('${p.token}')" title="이동"><i class="fa-solid fa-right-left"></i></span>
-                            <span class="room-opt" style="background:#fee2e2;color:#dc2626;" onclick="deleteStudent('${p.token}')" title="삭제"><i class="fa-solid fa-xmark"></i></span>
-                        </div>
-                    </div>`;
-                }).join('');
-                if (isEmpty) occHtml = `<div style="font-size:12px; color:#cbd5e1; margin-top:8px; text-align:center; padding:6px 0;">빈 방</div>`;
-                html += `
-                    <div class="room-card ${isRoyal ? 'royal' : ''} ${isEmpty ? 'rc-empty' : 'rc-filled'}" style="min-height:auto;">
-                        <div class="rno"><span>${r.no}</span><span style="font-size:11px; font-weight:800; color:${isEmpty?'#cbd5e1':(occ.length>=(r.capacity||1)?'#16a34a':'#f59e0b')};">${occ.length}/${r.capacity||1}${isRoyal?' ⭐':''}</span></div>
-                        ${occHtml}
-                    </div>`;
-            });
-            if (curGroup !== null) html += `</div></div>`;
-            document.getElementById('boardArea').innerHTML = html || `<div class="empty-floor">방 마스터가 비어 있습니다.</div>`;
+            if (!rows.length) {
+                html = `<div class="empty-floor">배정된 인원이 없습니다.</div>`;
+            } else {
+                bldgSorted.forEach(bldg => {
+                    const list = byBldg[bldg];
+                    html += `<div class="floor-card" style="padding:0; overflow:hidden;">
+                        <h3 style="padding:14px 18px; margin:0; background:#f8fafc; border-bottom:1.5px solid var(--border);"><i class="fa-solid fa-building"></i> ${bldg} <span style="font-size:13px; color:var(--muted); font-weight:700;">(${list.length}명)</span></h3>
+                        <div style="overflow-x:auto;">
+                        <table class="board-table">
+                            <thead><tr>
+                                <th style="width:70px;">생활관</th>
+                                <th style="width:80px;">호실</th>
+                                <th>성명</th>
+                                <th style="width:110px;">사번</th>
+                                <th>과정명</th>
+                                <th style="width:70px;">성별</th>
+                                <th style="width:110px;">관리</th>
+                            </tr></thead><tbody>`;
+                    list.forEach(p => {
+                        const col = courseColors[p.course] || '#64748b';
+                        const gLabel = p.gender === 'M' ? '남' : (p.gender === 'F' ? '여' : '-');
+                        const gCol = p.gender === 'F' ? '#ec4899' : (p.gender === 'M' ? '#3b82f6' : '#94a3b8');
+                        html += `<tr>
+                            <td style="font-weight:700; color:#475569;">${p.floor}층</td>
+                            <td style="font-weight:900; color:#0f172a;">${p.no}호</td>
+                            <td style="font-weight:800; color:#1e293b;">${p.name}</td>
+                            <td style="color:#64748b;">${p.empNo || '-'}</td>
+                            <td><span style="display:inline-block; width:9px; height:9px; border-radius:50%; background:${col}; margin-right:7px;"></span>${p.course || '-'}</td>
+                            <td><span style="font-weight:800; color:${gCol};">${gLabel}</span></td>
+                            <td>
+                                <span class="room-opt" style="background:#eef2ff;color:#4338ca;" onclick="openMovePop('${p.token}')" title="방 이동"><i class="fa-solid fa-right-left"></i></span>
+                                <span class="room-opt" style="background:#fee2e2;color:#dc2626;" onclick="deleteStudent('${p.token}')" title="삭제"><i class="fa-solid fa-xmark"></i></span>
+                            </td>
+                        </tr>`;
+                    });
+                    html += `</tbody></table></div></div>`;
+                });
+            }
+            document.getElementById('boardArea').innerHTML = html;
         }
 
         // ── 이동 ──
