@@ -6665,17 +6665,23 @@ const bgmPlayer = {
                 iconBtn.classList.remove('bgm-playing');
             }
         }
-        // 통합 주황 바: 재생 시작되면 자동으로 띄움, 상태 텍스트 갱신
+        // 통합 주황 바: 재생 시작되면 자동으로 띄움, 상태 텍스트/애니메이션 갱신
         const bar = document.getElementById('bgmNowBubble');
         const barText = document.getElementById('bgmNowBubbleText');
         if (bar) {
             if (this._isPlaying && this._currentNum > 0) {
                 if (barText) barText.innerText = `배경음 ${this._currentNum}번 재생 중`;
                 bar.style.display = 'flex';
+                bar.classList.add('playing');   // 재생 중 → 이퀄라이저 움직임
                 this._panelOpen = true;
-            } else if (this._currentNum > 0) {
-                // 일시정지/정지 상태 — 바는 사용자가 닫기 전까지 유지
-                if (barText) barText.innerText = this._isPlaying ? '' : `배경음 ${this._currentNum}번 (정지)`;
+            } else {
+                // 일시정지/정지/대기 → 막대 정지
+                bar.classList.remove('playing');
+                if (this._currentNum > 0) {
+                    if (barText) barText.innerText = `배경음 ${this._currentNum}번 (일시정지)`;
+                } else {
+                    if (barText) barText.innerText = '배경음악';
+                }
             }
         }
     },
