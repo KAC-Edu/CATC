@@ -1760,11 +1760,10 @@
 
         <!-- [신규] Custom Alert Modal (전체화면 깨짐 방지용) -->
         <div id="customAlertModal" class="modal-overlay" style="z-index: 99999;">
-            <div class="modal-box" style="width: 350px; text-align: center;">
+            <div class="modal-box" style="width: 420px; max-width:90vw; text-align: center; padding:28px 30px;">
                 <div style="font-size:40px; margin-bottom:15px; color:#3b82f6;"><i class="fa-solid fa-circle-info"></i></div>
-               <!-- 여기가 수정됨: color:#1e293b 를 color:var(--text-color) 로 변경 -->
-                <p id="customAlertText" style="font-size:16px; color:var(--text-color); font-weight:bold; margin-bottom:25px;"></p>
-                <button class="btn-action btn-primary" onclick="document.getElementById('customAlertModal').style.display='none'">확인</button>
+                <p id="customAlertText" style="font-size:16px; line-height:1.65; color:var(--text-color); font-weight:700; margin-bottom:25px; word-break:keep-all; white-space:pre-line; text-align:center;"></p>
+                <button class="btn-action btn-primary" style="width:100%;" onclick="document.getElementById('customAlertModal').style.display='none'">확인</button>
             </div>
         </div>
 
