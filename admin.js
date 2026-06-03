@@ -4949,14 +4949,31 @@ loadFile: function(e) {
             container.innerHTML = "";
             const data = snap.val();
             if (!data) {
-                container.innerHTML = `<div style="text-align:center; padding:30px; color:#ef4444; font-weight:bold;">⚠️ 저장된 퀴즈가 없습니다.</div>`;
+                container.innerHTML = `<div style="text-align:center; padding:36px 20px; color:#94a3b8;">
+                    <div style="font-size:34px; margin-bottom:10px;">📂</div>
+                    <div style="font-weight:700;">저장된 퀴즈가 없습니다.</div>
+                    <div style="font-size:12px; margin-top:4px;">아래 '기본 샘플 문항으로 시작'을 누르거나<br>우측 Quiz Editor에서 파일을 업로드하세요.</div>
+                </div>`;
                 return;
             }
             Object.keys(data).reverse().forEach(key => {
                 const quizSet = data[key];
                 const item = document.createElement('div');
                 item.className = 'saved-quiz-item';
-                item.innerHTML = `<div style="flex-grow:1; cursor:pointer;" onclick="quizMgr.useSavedQuizSet('${key}')"><div class="q-title">${quizSet.title}</div><div class="q-info">${quizSet.data.length}문항 | ${new Date(quizSet.timestamp).toLocaleString()}</div></div><button class="btn-del-mini" onclick="quizMgr.deleteQuizSet('${key}', '${quizSet.title}')"><i class="fa-solid fa-trash-can"></i></button>`;
+                item.style.cssText = 'display:flex; align-items:center; gap:14px; padding:14px 16px; background:#fff; border:1.5px solid #e2e8f0; border-radius:14px; transition:all .15s;';
+                item.onmouseover = () => { item.style.borderColor = '#3b82f6'; item.style.boxShadow = '0 4px 14px rgba(59,130,246,0.15)'; };
+                item.onmouseout = () => { item.style.borderColor = '#e2e8f0'; item.style.boxShadow = 'none'; };
+                const dateStr = new Date(quizSet.timestamp).toLocaleDateString('ko-KR', {month:'long', day:'numeric'});
+                item.innerHTML = `
+                    <div onclick="quizMgr.useSavedQuizSet('${key}')" style="flex:1; cursor:pointer; display:flex; align-items:center; gap:14px;">
+                        <div style="width:46px; height:46px; flex-shrink:0; border-radius:12px; background:linear-gradient(135deg,#3b82f6,#60a5fa); display:flex; align-items:center; justify-content:center; color:#fff; font-size:20px;"><i class="fa-solid fa-clipboard-question"></i></div>
+                        <div style="flex:1; min-width:0;">
+                            <div style="font-weight:800; font-size:16px; color:#0f172a; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${quizSet.title}</div>
+                            <div style="font-size:12px; color:#64748b; margin-top:3px;"><span style="background:#eff6ff; color:#2563eb; font-weight:800; padding:1px 8px; border-radius:10px; margin-right:6px;">${quizSet.data.length}문항</span>${dateStr}</div>
+                        </div>
+                        <i class="fa-solid fa-play" style="color:#3b82f6; font-size:14px; margin-right:6px;"></i>
+                    </div>
+                    <button class="btn-del-mini" onclick="quizMgr.deleteQuizSet('${key}', '${quizSet.title}')" style="background:none; border:none; color:#cbd5e1; cursor:pointer; font-size:16px; padding:6px;"><i class="fa-solid fa-trash-can"></i></button>`;
                 container.appendChild(item);
             });
         });
@@ -4978,32 +4995,18 @@ loadFile: function(e) {
     // 현재 문항의 'PPT용 진행 링크'를 클립보드에 복사 (클릭 가능한 서식 포함)
     copyPresentLink: function() {
         if (!state.loadedQuizSetKey) {
-            return ui.showAlert("이 기능은 '저장된 퀴즈'를 불러왔을 때만 사용할 수 있습니다.\n(좌측에서 저장된 퀴즈 세트를 선택해 주세요.)");
+            return ui.showAlert("저장된 퀴즈를 불러온 뒤 사용할 수 있어요.\n좌측 '저장된 퀴즈 목록'에서 선택해 주세요.");
         }
         const base = location.href.replace(/admin\.html.*$/, '').replace(/\/$/, '');
         const url = `${base}/quiz_present.html?room=${encodeURIComponent(state.room)}&set=${encodeURIComponent(state.loadedQuizSetKey)}&q=${state.currentQuizIdx}`;
         const qNo = state.currentQuizIdx + 1;
-        const label = `▶ 퀴즈 시작 (Q${qNo})`;
-        // PPT 호환: 단순 텍스트 + 하이퍼링크 (인라인 스타일 최소화 → 막대로 늘어나지 않음)
-        const html = `<a href="${url}">${label}</a>`;
-        const done = () => ui.showAlert(`✅ 복사되었습니다.\n\nQ${qNo} · Room ${state.room}\n\n[파워포인트 붙여넣기 방법]\n1) 슬라이드에서 Ctrl+V → 파란 밑줄 링크 텍스트가 생깁니다.\n2) 또는 도형/그림을 만든 뒤 우클릭 → '링크(하이퍼링크)' → 붙여넣기 하면\n   원하는 버튼 모양에 링크를 걸 수 있습니다.\n\n발표 중 클릭하면 교육생 화면이 이 퀴즈로 전환됩니다.`);
-        // 1) HTML+텍스트 동시 복사 (PPT는 링크 텍스트로 인식)
-        if (navigator.clipboard && window.ClipboardItem) {
-            try {
-                const item = new ClipboardItem({
-                    'text/html': new Blob([html], { type:'text/html' }),
-                    'text/plain': new Blob([url], { type:'text/plain' })
-                });
-                navigator.clipboard.write([item]).then(done).catch(() => fallback());
-                return;
-            } catch(e) { /* fallthrough */ }
+        const done = () => ui.showAlert(`✅ Q${qNo} 링크가 복사되었습니다.\n\nPPT 슬라이드에서 도형이나 텍스트를 선택하고\n[우클릭 → 링크] 에 붙여넣으세요.\n\n발표 중 그 링크를 누르면 교육생 화면이\n이 퀴즈로 바로 전환됩니다.`);
+        // 순수 URL(text)만 복사 → PPT에서 막대로 늘어나지 않음
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(url).then(done).catch(() => prompt("아래 링크를 복사하세요:", url));
+        } else {
+            prompt("아래 링크를 복사하세요:", url);
         }
-        function fallback() {
-            if (navigator.clipboard && navigator.clipboard.writeText) {
-                navigator.clipboard.writeText(url).then(done).catch(() => prompt("아래 링크를 복사하세요:", url));
-            } else { prompt("아래 링크를 복사하세요:", url); }
-        }
-        fallback();
     },
     
     deleteQuizSet: function(key, title) {
