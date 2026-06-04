@@ -361,7 +361,12 @@
                 </div>
 
                 <div id="boardStats" style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:14px;"></div>
+                <div style="display:flex; gap:6px; margin-bottom:12px; border-bottom:2px solid var(--border); padding-bottom:0;">
+                    <button id="tabList" onclick="switchBoardTab('list')" style="padding:8px 18px; border:none; background:none; font-size:13px; font-weight:800; color:var(--blue); border-bottom:3px solid var(--blue); margin-bottom:-2px; cursor:pointer;"><i class="fa-solid fa-table-list"></i> 명단 표</button>
+                    <button id="tabMap" onclick="switchBoardTab('map')" style="padding:8px 18px; border:none; background:none; font-size:13px; font-weight:800; color:var(--muted); border-bottom:3px solid transparent; margin-bottom:-2px; cursor:pointer;"><i class="fa-solid fa-building"></i> 배치도</button>
+                </div>
                 <div id="boardArea"></div>
+                <div id="boardMapArea" style="display:none;"></div>
             </div>
         </div>
     </div>
@@ -1770,7 +1775,175 @@
             document.getElementById('boardArea').innerHTML = html;
         }
 
+        // ════════════ STEP 4: 탭 전환 + SVG 배치도 ════════════
+        let currentBoardTab = 'list';
+
+        function switchBoardTab(tab) {
+            currentBoardTab = tab;
+            document.getElementById('boardArea').style.display    = tab === 'list' ? '' : 'none';
+            document.getElementById('boardMapArea').style.display = tab === 'map'  ? '' : 'none';
+            const tl = document.getElementById('tabList');
+            const tm = document.getElementById('tabMap');
+            if (tab === 'list') {
+                tl.style.color = 'var(--blue)'; tl.style.borderBottom = '3px solid var(--blue)';
+                tm.style.color = 'var(--muted)'; tm.style.borderBottom = '3px solid transparent';
+            } else {
+                tm.style.color = 'var(--blue)'; tm.style.borderBottom = '3px solid var(--blue)';
+                tl.style.color = 'var(--muted)'; tl.style.borderBottom = '3px solid transparent';
+                renderBoardMap();
+            }
+        }
+
+        function renderBoardMap() {
+            if (!viewAssign || !viewAssign.students) return;
+            const allStudents = viewAssign.students;
+            const courseColors = {};
+            const palette = ['#2563eb','#10b981','#f59e0b','#8b5cf6','#ec4899','#06b6d4','#ef4444'];
+            (viewAssign.courses || []).forEach((c, i) => { courseColors[c.courseName] = palette[i % palette.length]; });
+
+            // 방번호 → 학생 배열 맵
+            const byNo = {};  // key: "building|no"
+            Object.values(allStudents).forEach(s => {
+                const k = `${s.building}|${s.no}`;
+                (byNo[k] = byNo[k] || []).push(s);
+            });
+
+            function nameHtml(building, no, x, y, w, h) {
+                const people = byNo[`${building}|${no}`] || [];
+                if (!people.length) return '';
+                const col = courseColors[people[0].course] || '#334155';
+                const gc = p => p.gender === 'F' ? '#db2777' : (p.gender === 'M' ? '#2563eb' : '#475569');
+                const nameLines = people.map((p, i) =>
+                    `<text x="${x + w/2}" y="${y + h - 8 - (people.length - 1 - i) * 13}" text-anchor="middle" font-size="9.5" font-weight="700" fill="${gc(p)}">${p.name}</text>`
+                ).join('');
+                // 방번호 배경바 채우기 (과정 컬러)
+                return `<rect x="${x+0.75}" y="${y+0.75}" width="${w-1.5}" height="15" fill="${col}" opacity="0.85"/>
+                        <text x="${x+w/2}" y="${y+11}" text-anchor="middle" font-size="9.5" font-weight="700" fill="white">${no}</text>
+                        ${nameLines}`;
+            }
+
+            // 공용 defs
+            const defs = `<defs><pattern id="BH" patternUnits="userSpaceOnUse" width="8" height="8" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="8" stroke="#94a3b8" stroke-width="1.2" opacity=".4"/></pattern></defs>`;
+
+            function roomRect(building, no, x, y, w, h) {
+                const people = byNo[`${building}|${no}`] || [];
+                const col = people.length ? (courseColors[people[0].course] || '#334155') : null;
+                const bg  = people.length ? `${col}18` : 'white';
+                const bdr = people.length ? col : '#7ba4cc';
+                const gc = p => p.gender === 'F' ? '#db2777' : (p.gender === 'M' ? '#2563eb' : '#475569');
+                const nameLines = people.map((p, i) =>
+                    `<text x="${x+w/2}" y="${y+h-8-(people.length-1-i)*13}" text-anchor="middle" font-size="9.5" font-weight="700" fill="${gc(p)}">${p.name}</text>`
+                ).join('');
+                const hdrFill = col || '#e6f1fb';
+                const hdrText = col ? 'white' : '#185fa5';
+                return `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${bg}" stroke="${bdr}" stroke-width="${people.length?2:1.5}"/>
+                        <rect x="${x}" y="${y}" width="${w}" height="15" fill="${hdrFill}"/>
+                        <text x="${x+w/2}" y="${y+11}" text-anchor="middle" font-size="9.5" font-weight="700" fill="${hdrText}">${no}</text>
+                        ${nameLines}`;
+            }
+            function fac(label, x, y, w, h) {
+                return `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="url(#BH)" stroke="#94a3b8" stroke-width="1.5"/>
+                        <text x="${x+w/2}" y="${y+h/2+4}" text-anchor="middle" font-size="9.5" fill="#475569" font-weight="600">${label}</text>`;
+            }
+            function corridor(x, y, w, h, label) {
+                return `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="#dce7f3"/>
+                        <text x="${x+w/2}" y="${y+h/2+4}" text-anchor="middle" font-size="8" fill="#5b8db8" font-weight="600" letter-spacing="3">${label||'복  도'}</text>`;
+            }
+            function wall(x, y, w, h) {
+                return `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="3" fill="#f0f4f8" stroke="#1e3a8a" stroke-width="3"/>`;
+            }
+            function floorLabel(txt) {
+                return `<div style="font-size:11px;font-weight:600;color:#185fa5;background:#e6f1fb;display:inline-block;padding:2px 10px 2px 8px;border-radius:0 4px 4px 0;border-left:3px solid #185fa5;margin:10px 0 4px;">${txt}</div>`;
+            }
+            function bldgLabel(txt) {
+                return `<div style="font-size:14px;font-weight:500;color:var(--color-text-primary);margin:18px 0 6px 2px;">🏢 ${txt}</div>`;
+            }
+
+            // ─ 범례 ─
+            const legend = `<div style="display:flex;flex-wrap:wrap;gap:14px;margin-top:14px;padding:8px 12px;background:var(--bg-card, #f8fafc);border-radius:8px;font-size:11px;color:#64748b;">
+                ${Object.entries(courseColors).map(([cn,col])=>`<span style="display:flex;align-items:center;gap:5px;"><span style="width:12px;height:12px;border-radius:3px;background:${col};display:inline-block;"></span>${cn}</span>`).join('')}
+                <span style="display:flex;align-items:center;gap:5px;"><span style="width:12px;height:12px;border:1.5px solid #7ba4cc;background:white;display:inline-block;border-radius:2px;"></span>빈 방</span>
+            </div>`;
+
+            // ════ SVG 생성 ════
+            let html = `<div style="font-family:'Pretendard',system-ui,sans-serif;overflow-x:auto;">`;
+
+            // ─ 청렴관 1층 ─
+            html += bldgLabel('청렴관') + floorLabel('1층');
+            html += `<svg style="display:block;width:100%;max-width:760px;" viewBox="0 0 760 165">
+            ${defs}
+            ${wall(2,2,500,161)} ${wall(504,2,254,161)}
+            ${corridor(6,78,494,18)}
+            ${roomRect('청렴관','106',6,5,80,72)} ${roomRect('청렴관','105',88,5,80,72)} ${roomRect('청렴관','104',170,5,80,72)}
+            ${roomRect('청렴관','103',252,5,80,72)} ${roomRect('청렴관','102',334,5,80,72)} ${roomRect('청렴관','101',416,5,82,72)}
+            ${roomRect('청렴관','107',6,98,80,62)} ${roomRect('청렴관','108',88,98,80,62)} ${roomRect('청렴관','109',170,98,80,62)} ${roomRect('청렴관','110',252,98,80,62)}
+            ${fac('휴게실',334,98,164,62)}
+            ${fac('주방·식당',508,6,246,151)}
+            </svg>`;
+
+            // ─ 청렴관 2층 ─
+            html += floorLabel('2층');
+            html += `<svg style="display:block;width:100%;max-width:760px;" viewBox="0 0 760 200">
+            ${wall(2,2,110,196)} ${wall(114,38,644,160)}
+            ${fac('218',6,5,100,46)} ${fac('219',6,5,100,46)}
+            ${roomRect('청렴관','217',6,53,48,42)} ${fac('창고',56,53,50,42)}
+            ${roomRect('청렴관','216',6,97,48,42)} ${roomRect('청렴관','214',56,97,50,42)}
+            ${roomRect('청렴관','215',6,141,48,53)} ${fac('휴게실',56,141,50,53)}
+            ${corridor(118,114,636,18)}
+            ${roomRect('청렴관','201',118,41,76,72)} ${roomRect('청렴관','202',196,41,76,72)} ${roomRect('청렴관','203',274,41,76,72)} ${roomRect('청렴관','204',352,41,76,72)}
+            ${roomRect('청렴관','205',430,41,76,72)} ${roomRect('청렴관','206',508,41,76,72)} ${roomRect('청렴관','207',586,41,76,72)} ${roomRect('청렴관','208',664,41,90,72)}
+            ${roomRect('청렴관','213',118,134,76,62)} ${roomRect('청렴관','212',196,134,76,62)} ${roomRect('청렴관','211',274,134,76,62)} ${roomRect('청렴관','210',352,134,76,62)} ${roomRect('청렴관','209',430,134,76,62)}
+            ${fac('계단·비상구',508,134,246,62)}
+            </svg>`;
+
+            // ─ 상생관 2층 ─
+            html += bldgLabel('상생관') + floorLabel('2층');
+            html += `<svg style="display:block;width:100%;max-width:760px;" viewBox="0 0 760 175">
+            ${wall(2,2,756,171)}
+            ${fac('세탁실',6,5,62,80)} ${fac('PC방',6,87,62,80)}
+            ${corridor(70,78,682,19)}
+            ${roomRect('상생관','201',70,5,78,72)} ${roomRect('상생관','202',150,5,78,72)} ${roomRect('상생관','203',230,5,78,72)} ${roomRect('상생관','204',310,5,78,72)}
+            ${roomRect('상생관','205',390,5,78,72)} ${roomRect('상생관','206',470,5,78,72)} ${roomRect('상생관','207',550,5,78,72)} ${roomRect('상생관','208',630,5,122,72)}
+            ${roomRect('상생관','215',70,99,78,68)} ${roomRect('상생관','214',150,99,78,68)} ${roomRect('상생관','213',230,99,78,68)} ${roomRect('상생관','212',310,99,78,68)}
+            ${roomRect('상생관','211',390,99,78,68)} ${roomRect('상생관','210',470,99,78,68)} ${roomRect('상생관','209',550,99,78,68)}
+            ${fac('휴게실',630,99,122,68)}
+            </svg>`;
+
+            // ─ 상생관 3층 ─
+            html += floorLabel('3층');
+            html += `<svg style="display:block;width:100%;max-width:760px;" viewBox="0 0 760 175">
+            ${wall(2,2,756,171)}
+            ${fac('휴게실',6,5,62,80)} ${fac('세탁실',6,87,62,83)}
+            ${corridor(70,78,614,19)}
+            ${roomRect('상생관','301',70,5,78,72)} ${roomRect('상생관','302',150,5,78,72)} ${roomRect('상생관','303',230,5,78,72)} ${roomRect('상생관','304',310,5,78,72)}
+            ${roomRect('상생관','305',390,5,78,72)} ${roomRect('상생관','306',470,5,78,72)} ${roomRect('상생관','307',550,5,78,72)}
+            ${fac('접견실',630,5,122,72)}
+            ${roomRect('상생관','316',70,99,78,68)} ${roomRect('상생관','315',150,99,78,68)} ${roomRect('상생관','314',230,99,78,68)} ${roomRect('상생관','313',310,99,78,68)}
+            ${roomRect('상생관','312',390,99,78,68)} ${roomRect('상생관','310',470,99,78,68)} ${roomRect('상생관','309',550,99,78,68)} ${roomRect('상생관','308',630,99,122,68)}
+            </svg>`;
+
+            // ─ 국제교육동 3층 ─
+            html += bldgLabel('국제교육동') + floorLabel('3층');
+            html += `<svg style="display:block;width:100%;max-width:760px;" viewBox="0 0 760 230">
+            ${wall(2,2,352,195)} ${wall(408,2,350,195)} ${wall(2,199,352,29)}
+            <rect x="356" y="60" width="50" height="137" rx="3" fill="#e2e8f0" stroke="#1e3a8a" stroke-width="3"/>
+            <ellipse cx="381" cy="60" rx="25" ry="28" fill="#e2e8f0" stroke="#1e3a8a" stroke-width="3"/>
+            <text x="381" y="105" text-anchor="middle" font-size="8" fill="#64748b" font-weight="600">계단홀</text>
+            ${corridor(6,90,342,17)} ${corridor(412,90,342,17)}
+            ${roomRect('국제교육동','301',6,5,56,84)} ${roomRect('국제교육동','302',64,5,56,84)} ${roomRect('국제교육동','303',122,5,56,84)}
+            ${roomRect('국제교육동','304',180,5,56,84)} ${roomRect('국제교육동','305',238,5,56,84)} ${roomRect('국제교육동','306',296,5,54,84)}
+            ${roomRect('국제교육동','307',6,109,56,84)} ${roomRect('국제교육동','308',64,109,56,84)} ${roomRect('국제교육동','309',122,109,56,84)} ${roomRect('국제교육동','310',180,109,170,84)}
+            ${roomRect('국제교육동','311',412,5,66,84)} ${roomRect('국제교육동','312',480,5,66,84)} ${roomRect('국제교육동','313',548,5,66,84)} ${roomRect('국제교육동','314',616,5,66,84)} ${roomRect('국제교육동','315',684,5,70,84)}
+            ${roomRect('국제교육동','320',412,109,66,84)} ${roomRect('국제교육동','319',480,109,66,84)} ${roomRect('국제교육동','318',548,109,66,84)} ${roomRect('국제교육동','317',616,109,66,84)} ${roomRect('국제교육동','316',684,109,70,84)}
+            ${fac('기도실',6,202,113,24)} ${fac('세탁실',121,202,113,24)} ${fac('주방',236,202,116,24)}
+            </svg>`;
+
+            html += legend + '</div>';
+            document.getElementById('boardMapArea').innerHTML = html;
+        }
+
         // ── 이동 ──
+
         function openMovePop(token) {
             moveTargetToken = token;
             const s = viewAssign.students[token];
