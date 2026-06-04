@@ -362,16 +362,12 @@
                     <label style="font-size:13px; font-weight:800; color:var(--muted);">주차</label>
                     <select id="viewWeekSelect" style="padding:10px 13px; border:1.5px solid var(--border); border-radius:9px; font-size:14px; min-width:200px;" onchange="renderBoard()"></select>
                     <button class="h-btn" style="background:var(--blue);" onclick="loadViewWeeks()"><i class="fa-solid fa-rotate"></i> 새로고침</button>
-                    <div style="flex:1;"></div>
-                    <button class="h-btn" style="background:#dc2626;" onclick="purgeHiddenStudents()" title="폐강 과정 인원을 이 주차 배정에서 삭제"><i class="fa-solid fa-trash-can"></i> 폐강 과정 정리</button>
-                    <button class="save-btn" style="background:#2563eb;" onclick="printList()"><i class="fa-solid fa-list"></i> 명단 PDF</button>
-                    <button class="save-btn" style="background:var(--danger);" onclick="printLayout()"><i class="fa-solid fa-building"></i> 건물 배치도 PDF</button>
                 </div>
 
                 <div id="boardStats" style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:14px;"></div>
-                <div style="display:flex; gap:6px; margin-bottom:12px; border-bottom:2px solid var(--border); padding-bottom:0;">
-                    <button id="tabList" onclick="switchBoardTab('list')" style="padding:8px 18px; border:none; background:none; font-size:13px; font-weight:800; color:var(--blue); border-bottom:3px solid var(--blue); margin-bottom:-2px; cursor:pointer;"><i class="fa-solid fa-table-list"></i> 명단 표</button>
-                    <button id="tabMap" onclick="switchBoardTab('map')" style="padding:8px 18px; border:none; background:none; font-size:13px; font-weight:800; color:var(--muted); border-bottom:3px solid transparent; margin-bottom:-2px; cursor:pointer;"><i class="fa-solid fa-building"></i> 배치도</button>
+                <div style="display:flex; gap:10px; margin-bottom:16px;">
+                    <button id="tabList" onclick="switchBoardTab('list')" style="padding:12px 26px; border:2px solid var(--blue); background:var(--blue); color:#fff; font-size:15.5px; font-weight:900; border-radius:12px; cursor:pointer; display:inline-flex; align-items:center; gap:9px; box-shadow:0 4px 12px rgba(37,99,235,0.35); transition:all .15s;"><i class="fa-solid fa-table-list"></i> 명단 표</button>
+                    <button id="tabMap" onclick="switchBoardTab('map')" style="padding:12px 26px; border:2px solid var(--blue); background:#fff; color:var(--blue); font-size:15.5px; font-weight:900; border-radius:12px; cursor:pointer; display:inline-flex; align-items:center; gap:9px; transition:all .15s;"><i class="fa-solid fa-building"></i> 배치도</button>
                 </div>
                 <div id="boardArea"></div>
                 <div id="boardMapArea" style="display:none;"></div>
@@ -1845,14 +1841,14 @@
             document.getElementById('boardMapArea').style.display = tab === 'map'  ? '' : 'none';
             const tl = document.getElementById('tabList');
             const tm = document.getElementById('tabMap');
-            if (tab === 'list') {
-                tl.style.color = 'var(--blue)'; tl.style.borderBottom = '3px solid var(--blue)';
-                tm.style.color = 'var(--muted)'; tm.style.borderBottom = '3px solid transparent';
-            } else {
-                tm.style.color = 'var(--blue)'; tm.style.borderBottom = '3px solid var(--blue)';
-                tl.style.color = 'var(--muted)'; tl.style.borderBottom = '3px solid transparent';
-                renderBoardMap();
-            }
+            const setTab = (el, on) => {
+                el.style.background = on ? 'var(--blue)' : '#fff';
+                el.style.color = on ? '#fff' : 'var(--blue)';
+                el.style.boxShadow = on ? '0 4px 12px rgba(37,99,235,0.35)' : 'none';
+            };
+            setTab(tl, tab === 'list');
+            setTab(tm, tab === 'map');
+            if (tab === 'map') renderBoardMap();
         }
 
         // ── STEP 4 화면 배치도: 드래그앤드롭 편집기 (PDF 양식과 동일) ──
@@ -1877,16 +1873,15 @@
             function roomCell(building, cell) {
                 const people = byNo[`${building}|${cell.no}`] || [];
                 const occ = people.length > 0;
-                const col = occ ? colorOf(people[0].course) : '#94a3b8';
                 const ext = cell.ext ? ` <span class="fm-ext">\u260e${cell.ext}</span>` : '';
-                const head = `<div class="fm-head" style="${occ ? `background:${col};color:#fff;border-color:${col};` : ''}">${cell.no}${ext}</div>`;
+                const head = `<div class="fm-head">${cell.no}${ext}</div>`;   // 헤더는 항상 회색(기본)
                 const body = people.map(chip).join('');
-                return `<div class="fm-room dm-room${occ ? ' occ' : ''}" data-building="${building}" data-no="${cell.no}" style="grid-column:${cell.c};grid-row:${cell.r};${occ ? `border-color:${col};` : ''}">${head}<div class="fm-body">${body}</div></div>`;
+                return `<div class="fm-room dm-room${occ ? ' occ' : ''}" data-building="${building}" data-no="${cell.no}" style="grid-column:${cell.c};grid-row:${cell.r};">${head}<div class="fm-body">${body}</div></div>`;
             }
             function facCell(cell) { return `<div class="fm-fac" style="grid-column:${cell.c};grid-row:${cell.r};">${cell.fac}</div>`; }
             function floor(building, fl) {
                 const inner = fl.cells.map(c => (c.fac !== undefined) ? facCell(c) : roomCell(building, c)).join('');
-                return `<div class="fm-floor-label">${fl.floor}</div><div class="fm-grid" style="grid-template-columns:repeat(${fl.cols},1fr);">${inner}</div>`;
+                return `<div class="fm-floor-label">${fl.floor}</div><div class="fm-grid" style="grid-template-columns:repeat(${fl.cols},minmax(74px,1fr));">${inner}</div>`;
             }
             function bldg(building) {
                 const bar = DORM_BLDG_BAR[building] || '#0f2057';
@@ -1898,9 +1893,10 @@
                 .map(c => `<span class="leg-item"><span class="leg-swatch" style="background:${courseColors[c]}"></span><span style="color:${courseColors[c]}">${c}</span></span>`).join('');
             const toolbar = `<div class="dm-toolbar">
                 <div class="dm-hint"><i class="fa-solid fa-arrows-up-down-left-right"></i> 이름을 드래그해 다른 방에 놓으면 즉시 이동, 이름 옆 <b>✕</b>로 삭제됩니다 (정원·성별 충돌 시 이동 차단).</div>
-                <div style="display:flex;gap:8px;">
+                <div style="display:flex;gap:8px;flex-wrap:wrap;">
                     <button class="dm-btn" style="background:#475569;" onclick="openInstructorAdd()"><i class="fa-solid fa-chalkboard-user"></i> 강사·외부 숙박 추가</button>
-                    <button class="dm-btn" style="background:var(--danger);" onclick="printLayout()"><i class="fa-solid fa-file-pdf"></i> 이대로 PDF 출력</button>
+                    <button class="dm-btn" style="background:#2563eb;" onclick="printList()"><i class="fa-solid fa-list"></i> 명단 PDF</button>
+                    <button class="dm-btn" style="background:var(--danger);" onclick="printLayout()"><i class="fa-solid fa-file-pdf"></i> 배치도 PDF</button>
                 </div>
             </div>`;
             const buildings = ['청렴관', '상생관', '국제교육동'].map(bldg).join('');
@@ -2415,7 +2411,7 @@
  #boardMapArea .leg-swatch{width:13px;height:13px;border-radius:4px;display:inline-block;}
  #boardMapArea .pf-block{margin-bottom:26px;}
  #boardMapArea .pf-bldg-header{display:flex;align-items:center;gap:10px;color:#fff;padding:9px 18px;border-radius:10px 10px 0 0;font-size:15px;font-weight:900;}
- #boardMapArea .pf-floor-wrap{background:#fff;border:3px solid #1e3a8a;border-top:none;border-radius:0 0 10px 10px;padding:14px;}
+ #boardMapArea .pf-floor-wrap{background:#fff;border:3px solid #1e3a8a;border-top:none;border-radius:0 0 10px 10px;padding:14px;overflow-x:auto;}
  #boardMapArea .fm-floor-label{font-size:12px;font-weight:900;color:#1e3a8a;margin:10px 0 6px;padding:3px 10px;background:#eff6ff;border-left:4px solid #2563eb;border-radius:0 6px 6px 0;display:inline-block;}
  #boardMapArea .fm-floor-label:first-child{margin-top:2px;}
  #boardMapArea .fm-grid{display:grid;gap:5px;grid-auto-rows:minmax(64px,auto);}
@@ -2424,7 +2420,7 @@
  #boardMapArea .fm-ext{font-size:9px;font-weight:700;opacity:.85;}
  #boardMapArea .fm-body{flex:1;display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:3px;padding:4px 3px;}
  #boardMapArea .fm-fac{border:1.5px dashed #b6c0cf;border-radius:6px;background:repeating-linear-gradient(45deg,#e9edf3,#e9edf3 4px,#f4f7fb 4px,#f4f7fb 11px);color:#64748b;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;text-align:center;}
- #boardMapArea .dm-chip{display:inline-flex;align-items:center;gap:1px;background:#fff;border:1.5px solid #94a3b8;border-radius:7px;padding:2px 7px;font-size:12.5px;font-weight:800;cursor:grab;line-height:1.3;user-select:none;}
+ #boardMapArea .dm-chip{display:inline-flex;align-items:center;gap:1px;background:#fff;border:1.5px solid #94a3b8;border-radius:9px;padding:2px 8px;font-size:12px;font-weight:800;cursor:grab;line-height:1.3;user-select:none;white-space:nowrap;}
  #boardMapArea .dm-chip:active{cursor:grabbing;}
  #boardMapArea .dm-chip .dm-del{margin-left:5px;color:#cbd5e1;font-weight:900;font-size:11px;cursor:pointer;padding:0 2px;border-radius:3px;line-height:1;}
  #boardMapArea .dm-chip .dm-del:hover{color:#fff;background:#ef4444;}
@@ -2492,19 +2488,18 @@
                         function roomCellHtml(building, cell) {
                 const people = P.byRoomNo[`${building}|${cell.no}`] || [];
                 const occ = people.length > 0;
-                const col = occ ? (P.courseColors[people[0].course] || '#334155') : '#94a3b8';
                 const ext = cell.ext ? ` <span class="fm-ext">\u260e${cell.ext}</span>` : '';
-                const head = `<div class="fm-head" style="${occ ? `background:${col};color:#fff;border-color:${col};` : ''}">${cell.no}${ext}</div>`;
+                const head = `<div class="fm-head">${cell.no}${ext}</div>`;   // 헤더 항상 회색(기본)
                 let body = '';
                 if (occ) {
                     body = people.map(p => {
-                        const nameCol = P.courseColors[p.course] || '#0f172a';
+                        const col = P.courseColors[p.course] || '#334155';
                         const gs = p.gender === 'F' ? '(여)' : (p.gender === 'M' ? '(남)' : '');
-                        return `<span class="fm-name" style="color:${nameCol}">${p.name}<span class="fm-g" style="color:${nameCol}">${gs}</span></span>`;
+                        return `<span class="fm-pill" style="color:${col};border-color:${col};">${p.name}<span class="fm-pg">${gs}</span></span>`;
                     }).join('');
                 }
                 const flat = cell.flat ? ' fm-flat' : '';
-                return `<div class="fm-room${occ ? ' occ' : ''}${flat}" style="grid-column:${cell.c};grid-row:${cell.r};${occ ? `border-color:${col};` : ''}">${head}<div class="fm-body">${body}</div></div>`;
+                return `<div class="fm-room${occ ? ' occ' : ''}${flat}" style="grid-column:${cell.c};grid-row:${cell.r};">${head}<div class="fm-body">${body}</div></div>`;
             }
             function facCellHtml(cell) {
                 return `<div class="fm-fac" style="grid-column:${cell.c};grid-row:${cell.r};">${cell.fac}</div>`;
@@ -2530,9 +2525,11 @@
                 .fm-room { border:1.5px solid #94a3b8; border-radius:6px; background:#fff; display:flex; flex-direction:column; overflow:hidden; min-height:60px; }
                 .fm-head { font-size:11px; font-weight:900; color:#475569; background:#f1f5f9; border-bottom:1.5px solid #cbd5e1; text-align:center; padding:2px 2px; line-height:1.5; white-space:nowrap; }
                 .fm-ext { font-size:9px; font-weight:700; opacity:.85; }
-                .fm-body { flex:1; display:flex; flex-wrap:wrap; align-items:center; justify-content:center; gap:1px 7px; padding:3px 2px; }
+                .fm-body { flex:1; display:flex; flex-wrap:wrap; align-items:center; justify-content:center; gap:4px 5px; padding:4px 3px; }
                 .fm-name { font-size:13px; font-weight:800; line-height:1.3; }
                 .fm-g { font-size:9px; font-weight:700; margin-left:1px; }
+                .fm-pill { display:inline-flex; align-items:center; border:1.5px solid; border-radius:11px; padding:2px 9px; font-size:12px; font-weight:800; line-height:1.35; white-space:nowrap; background:#fff; }
+                .fm-pg { font-size:9px; font-weight:700; margin-left:1px; }
                 .fm-flat { flex-direction:row; min-height:42px; }
                 .fm-flat .fm-head { display:flex; flex-direction:column; align-items:center; justify-content:center; border-bottom:none; border-right:1.5px solid #cbd5e1; min-width:70px; }
                 .fm-flat .fm-body { flex:1; }
