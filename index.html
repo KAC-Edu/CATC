@@ -742,7 +742,7 @@
         </div>
 
         <!-- 3. 요청 입력창 -->
-        <div style="text-align:left;">
+        <div id="facilityInputArea" style="text-align:left;">
             <label style="font-size:12px; font-weight:800; color:#64748b; margin-left:5px;">필요한 비품 선택</label>
             <div id="amenityChecks" style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin:8px 0 14px;">
                 <label class="amenity-chip"><input type="checkbox" value="수건"> <i class="fa-solid fa-bath" style="color:#0ea5e9;"></i> 수건</label>
@@ -755,7 +755,8 @@
         </div>
 
         <!-- 4. 하단 버튼 -->
-        <button onclick="submitFacilityRequest()" style="width:100%; padding:16px; background:#10b981; color:white; border:none; border-radius:15px; font-size:17px; font-weight:900; cursor:pointer; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);">요청 제출하기</button>
+        <button id="facilitySubmitBtn" onclick="submitFacilityRequest()" style="width:100%; padding:16px; background:#10b981; color:white; border:none; border-radius:15px; font-size:17px; font-weight:900; cursor:pointer; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);">요청 제출하기</button>
+        <button id="facilityCancelBtn" onclick="cancelMyFacilityRequest()" style="display:none; width:100%; padding:16px; background:#ef4444; color:white; border:none; border-radius:15px; font-size:16px; font-weight:900; cursor:pointer;"><i class="fa-solid fa-xmark"></i> 신청 취소 후 다시 신청</button>
         <button onclick="closeFacilityModal()" style="margin-top:10px; width:100%; padding:12px; border:none; border-radius:15px; background:#f1f5f9; color:#475569; font-weight:800; cursor:pointer;">닫기</button>
     </div>
 </div>
@@ -3435,23 +3436,24 @@ function openFacilityRequest() {
         .limitToLast(1)
         .on('value', (snap) => {
             const statusArea = document.getElementById('myFacilityStatus');
+            const inputArea = document.getElementById('facilityInputArea');
+            const submitBtn = document.getElementById('facilitySubmitBtn');
+            const cancelBtn = document.getElementById('facilityCancelBtn');
             const data = snap.val();
-            
+            window._myFacilityKey = null;
+
+            let activePending = false;
             if (data) {
                 const key = Object.keys(data)[0];
                 const req = data[key];
-
-                // 내 이름과도 일치하는지 확인 (다른 과정 동명이인 방지)
                 if (req.name === userName) {
+                    // 대기/확인 = 처리 진행 중 → 신청 완료 상태로 보여주고 취소만 허용
+                    const isPending = (req.status === '대기' || req.status === '확인');
                     statusArea.style.display = 'block';
                     document.getElementById('statusText').innerText = req.text;
-                    document.getElementById('statusBadge').innerText = req.status;
-                    
-                    // 상태별 색상 변경
-                    const badge = document.getElementById('statusBadge');
-                    badge.className = 'status-badge badge-' + req.status;
+                    document.getElementById('statusBadge').innerText = (req.status === '대기' ? '신청 완료' : req.status);
+                    document.getElementById('statusBadge').className = 'status-badge badge-' + req.status;
 
-                    // 반려 사유 표시
                     const reasonEl = document.getElementById('rejectReason');
                     if (req.status === "처리불가" && req.reason) {
                         reasonEl.innerText = "🚩 사유: " + req.reason;
@@ -3459,11 +3461,44 @@ function openFacilityRequest() {
                     } else {
                         reasonEl.style.display = 'none';
                     }
+
+                    if (isPending) {
+                        // 진행 중: 입력 폼 숨기고 "취소 후 재신청" 버튼
+                        window._myFacilityKey = key;
+                        activePending = true;
+                    }
                 }
             } else {
-                statusArea.style.display = 'none'; // 요청 기록 없으면 안 보임
+                statusArea.style.display = 'none';
+            }
+
+            // 진행 중이면 폼 숨김 + 취소 버튼, 아니면(없음/완료/불가) 폼 표시
+            if (activePending) {
+                inputArea.style.display = 'none';
+                submitBtn.style.display = 'none';
+                cancelBtn.style.display = 'block';
+            } else {
+                inputArea.style.display = 'block';
+                submitBtn.style.display = 'block';
+                cancelBtn.style.display = 'none';
             }
         });
+}
+
+// 내 비품 신청 취소 → 다시 신청 가능
+async function cancelMyFacilityRequest() {
+    if (!window._myFacilityKey) return;
+    if (!(await showKacConfirm("기존 신청을 취소하고 다시 신청하시겠습니까?"))) return;
+    try {
+        await firebase.database().ref('system/facility_requests/' + window._myFacilityKey).remove();
+        window._myFacilityKey = null;
+        // 체크박스/텍스트 초기화
+        document.querySelectorAll('#amenityChecks input:checked').forEach(c => c.checked = false);
+        document.getElementById('facilityReqText').value = "";
+        showKacAlert("신청이 취소되었습니다. 다시 신청해 주세요.");
+    } catch (e) {
+        showKacAlert("취소 처리 중 오류: " + e.message);
+    }
 }
 
 function closeFacilityModal() {

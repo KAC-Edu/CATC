@@ -13,30 +13,41 @@
         body { background:#f0f4f8; font-family:'Malgun Gothic','맑은 고딕',sans-serif; color:#1e293b; min-height:100vh; }
 
         .top {
-            background:#fff; border-bottom:3px solid #e2e8f0;
+            background:#0f1e3d; border-bottom:3px solid #1e3a8a;
             padding:0 32px; height:72px;
             display:flex; align-items:center; gap:24px;
             position:sticky; top:0; z-index:100;
-            box-shadow:0 2px 12px rgba(0,0,0,0.06);
+            box-shadow:0 2px 12px rgba(0,0,0,0.2);
         }
         .top-logo { display:flex; align-items:center; gap:10px; }
-        .top-logo .dot { width:11px; height:11px; border-radius:50%; background:#10b981; animation:blink 1.4s infinite; flex-shrink:0; }
+        .top-logo .dot { width:11px; height:11px; border-radius:50%; background:#34d399; animation:blink 1.4s infinite; flex-shrink:0; }
         @keyframes blink { 50%{opacity:0.25;} }
-        .top-logo h1 { font-size:22px; font-weight:900; color:#0f172a; white-space:nowrap; }
+        .top-logo h1 { font-size:22px; font-weight:900; color:#fff; white-space:nowrap; }
         .top-stats { display:flex; gap:10px; margin-left:16px; }
         .scard { border-radius:12px; padding:8px 20px; text-align:center; min-width:90px; border:2px solid; }
-        .scard.wait { background:#fef2f2; border-color:#fecaca; }
-        .scard.done { background:#f0fdf4; border-color:#bbf7d0; }
+        .scard.wait { background:rgba(239,68,68,0.15); border-color:#7f1d1d; }
+        .scard.done { background:rgba(16,185,129,0.15); border-color:#14532d; }
         .scard .sn { font-size:24px; font-weight:900; }
-        .scard.wait .sn { color:#dc2626; }
-        .scard.done .sn { color:#16a34a; }
-        .scard .sl { font-size:12px; font-weight:800; color:#64748b; }
-        .clock { margin-left:auto; font-size:26px; font-weight:900; color:#334155; letter-spacing:2px; }
+        .scard.wait .sn { color:#f87171; }
+        .scard.done .sn { color:#34d399; }
+        .scard .sl { font-size:12px; font-weight:800; color:#cbd5e1; }
+        /* 강사 플랫폼 형식 시계 */
+        .clock { margin-left:auto; display:flex; align-items:center; gap:12px; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.15); border-radius:12px; padding:8px 18px; }
+        .clock .c-date { font-size:18px; font-weight:800; color:#e2e8f0; letter-spacing:1px; }
+        .clock .c-day { font-size:14px; font-weight:800; color:#93c5fd; }
+        .clock .c-div { width:1px; height:22px; background:rgba(255,255,255,0.2); }
+        .clock .c-time { font-size:22px; font-weight:900; color:#fff; letter-spacing:1px; }
+        .clock .c-ampm { font-size:13px; font-weight:800; color:#93c5fd; margin-left:4px; }
+        .clock .blink { animation:cblink 1s step-end infinite; }
+        @keyframes cblink { 50%{opacity:0.3;} }
 
-        .body { display:grid; grid-template-columns:repeat(3,1fr); gap:0; min-height:calc(100vh - 72px); }
-        .col { padding:20px 18px; border-right:2px solid #e2e8f0; }
+        .body { display:grid; grid-template-columns:repeat(3,1fr); gap:0; height:calc(100vh - 72px); }
+        .col { padding:0 18px 20px; border-right:2px solid #e2e8f0; overflow-y:auto; height:100%; }
         .col:last-child { border-right:none; }
-        .col-hd { position:sticky; top:72px; background:#f0f4f8; padding:10px 0 14px; z-index:5; }
+        .col::-webkit-scrollbar { width:8px; }
+        .col::-webkit-scrollbar-thumb { background:#cbd5e1; border-radius:4px; }
+        .col::-webkit-scrollbar-track { background:transparent; }
+        .col-hd { position:sticky; top:0; background:#f0f4f8; padding:18px 0 14px; z-index:5; }
         .col-name { font-size:24px; font-weight:900; color:#0f172a; display:flex; align-items:center; gap:10px; }
         .cnt-badge { font-size:14px; font-weight:900; border-radius:20px; padding:3px 14px; }
         .cnt-wait { background:#fef2f2; color:#dc2626; border:1.5px solid #fecaca; }
@@ -98,7 +109,7 @@
         <div class="scard wait"><div class="sn" id="s-wait">0</div><div class="sl">처리 대기</div></div>
         <div class="scard done"><div class="sn" id="s-done">0</div><div class="sl">처리 완료</div></div>
     </div>
-    <div class="clock" id="clock">--:--</div>
+    <div class="clock" id="clock"></div>
 </div>
 
 <div class="body" id="body3col"></div>
@@ -115,12 +126,22 @@
     let activeCourseNames = null; // 현재 진행 중인 과정명 집합 (null=아직 로드전, 모두표시)
     const db = firebase.database().ref('system/facility_requests');
 
+    const DAYS = ['SUN','MON','TUE','WED','THU','FRI','SAT'];
     function tick() {
-        const d = new Date();
-        document.getElementById('clock').textContent =
-            `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+        const now = new Date();
+        const dateStr = `${now.getFullYear()}.${String(now.getMonth()+1).padStart(2,'0')}.${String(now.getDate()).padStart(2,'0')}`;
+        const dayStr = DAYS[now.getDay()];
+        let hh = now.getHours();
+        const mm = String(now.getMinutes()).padStart(2,'0');
+        const ampm = hh >= 12 ? 'PM' : 'AM';
+        hh = hh % 12 || 12;
+        document.getElementById('clock').innerHTML =
+            `<span class="c-date">${dateStr}</span>`
+            + `<span class="c-day">${dayStr}</span>`
+            + `<span class="c-div"></span>`
+            + `<span class="c-time">${String(hh).padStart(2,'0')}<span class="blink">:</span>${mm}<span class="c-ampm">${ampm}</span></span>`;
     }
-    tick(); setInterval(tick, 15000);
+    tick(); setInterval(tick, 1000);
 
     // 진행 중 과정명 집합 로드 (courses/{room}/settings 기간 기준)
     function loadActiveCourses() {
