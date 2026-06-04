@@ -355,6 +355,7 @@
                     <select id="viewWeekSelect" style="padding:10px 13px; border:1.5px solid var(--border); border-radius:9px; font-size:14px; min-width:200px;" onchange="renderBoard()"></select>
                     <button class="h-btn" style="background:var(--blue);" onclick="loadViewWeeks()"><i class="fa-solid fa-rotate"></i> 새로고침</button>
                     <div style="flex:1;"></div>
+                    <button class="h-btn" style="background:#dc2626;" onclick="purgeHiddenStudents()" title="hideFromBoard 과정 인원을 Firebase에서 실제 삭제"><i class="fa-solid fa-trash-can"></i> 폐강 과정 인원 정리</button>
                     <button class="save-btn" style="background:#2563eb;" onclick="printList()"><i class="fa-solid fa-list"></i> 명단 PDF</button>
                     <button class="save-btn" style="background:var(--danger);" onclick="printLayout()"><i class="fa-solid fa-building"></i> 건물 배치도 PDF</button>
                 </div>
@@ -1771,6 +1772,44 @@
                 .catch(e => { console.error(e); showToast('삭제 실패'); });
         }
 
+        // ── 폐강(hideFromBoard) 과정 인원 Firebase에서 실제 삭제 ──
+        async function purgeHiddenStudents() {
+            if (!viewAssign || !viewAssign.students) { showToast('먼저 주차를 선택하세요'); return; }
+            const wk = viewAssign.weekKey;
+
+            // hideFromBoard 과정명 수집
+            const coursesSnap = await db.ref('courses').once('value');
+            const coursesData = coursesSnap.val() || {};
+            const hiddenCourseNames = new Set();
+            Object.values(coursesData).forEach(c => {
+                const s = (c && c.settings) || {};
+                if (s.hideFromBoard && s.courseName) hiddenCourseNames.add((s.courseName||'').trim());
+            });
+
+            if (!hiddenCourseNames.size) { showToast('폐강 처리된 과정이 없습니다'); return; }
+
+            // 삭제 대상 토큰 수집
+            const toDelete = Object.entries(viewAssign.students)
+                .filter(([, s]) => hiddenCourseNames.has((s.course||'').trim()))
+                .map(([token]) => token);
+
+            if (!toDelete.length) { showToast('이 주차에 정리할 인원이 없습니다'); return; }
+
+            const courseList = [...hiddenCourseNames].join(', ');
+            if (!confirm(`폐강 과정 [${courseList}]의 배정 인원 ${toDelete.length}명을 이 주차 배정에서 삭제합니다.\n계속하시겠습니까?`)) return;
+
+            const updates = {};
+            toDelete.forEach(token => { updates[`system/dorm/assignments/${wk}/students/${token}`] = null; });
+
+            // courses 배열에서도 해당 과정 제거
+            const remainingCourses = (viewAssign.courses || []).filter(c => !hiddenCourseNames.has((c.courseName||'').trim()));
+            updates[`system/dorm/assignments/${wk}/courses`] = remainingCourses;
+
+            db.ref().update(updates)
+                .then(() => { showToast(`✅ ${toDelete.length}명 정리 완료`); renderBoard(); })
+                .catch(e => { console.error(e); showToast('⚠️ 정리 실패'); });
+        }
+
         // ── PDF 출력: 1부 명단 + 2부 건물 평면 배치도 (원본 양식 좌표 재현) ──
         const FLOORPLANS = {
             '청렴관': {
@@ -1852,19 +1891,65 @@
                     {t:'fac',label:'휴게실',x:718,y:77,w:91,h:76},
                 ]},
             },
+            '국제교육동': {
+                '3층': { w:841, h:200, items:[
+                    {t:'room',no:'301',x:4,  y:4,  w:76,h:40},
+                    {t:'room',no:'302',x:80, y:4,  w:76,h:40},
+                    {t:'room',no:'303',x:156,y:4,  w:76,h:40},
+                    {t:'room',no:'304',x:232,y:4,  w:76,h:40},
+                    {t:'room',no:'305',x:308,y:4,  w:76,h:40},
+                    {t:'room',no:'306',x:384,y:4,  w:76,h:40},
+                    {t:'fac',label:'복도',x:460,y:4,w:381,h:18},
+                    {t:'room',no:'311',x:460,y:22,w:76,h:40},
+                    {t:'room',no:'312',x:536,y:22,w:76,h:40},
+                    {t:'room',no:'313',x:612,y:22,w:76,h:40},
+                    {t:'room',no:'314',x:688,y:22,w:76,h:40},
+                    {t:'room',no:'315',x:764,y:22,w:73,h:40},
+                    {t:'room',no:'307',x:460,y:62,w:76,h:40},
+                    {t:'room',no:'308',x:536,y:62,w:76,h:40},
+                    {t:'room',no:'309',x:612,y:62,w:76,h:40},
+                    {t:'room',no:'310',x:688,y:62,w:153,h:40},
+                    {t:'room',no:'316',x:764,y:102,w:73,h:40},
+                    {t:'room',no:'317',x:688,y:102,w:76,h:40},
+                    {t:'room',no:'318',x:612,y:102,w:76,h:40},
+                    {t:'room',no:'319',x:536,y:102,w:76,h:40},
+                    {t:'room',no:'320',x:460,y:102,w:76,h:40},
+                    {t:'fac',label:'기도실',x:4,  y:142,w:152,h:54},
+                    {t:'fac',label:'세탁실',x:156,y:142,w:152,h:54},
+                    {t:'fac',label:'주방',  x:308,y:142,w:152,h:54},
+                ]},
+            },
         };
 
-        // 공통: 색상·집계 준비
-        function _prepPrint() {
+        // 공통: 색상·집계 준비 (async — hideFromBoard 과정 필터링 포함)
+        async function _prepPrint() {
             const wk = viewAssign.weekKey;
             const wd = new Date(wk + 'T00:00:00');
             const wEnd = new Date(wd); wEnd.setDate(wd.getDate() + 6);
             const fmt = d => `${d.getMonth()+1}.${d.getDate()}.`;
-            const students = viewAssign.students;
+
+            // renderBoard()와 동일하게: hideFromBoard 과정 학생 제외
+            const allStudents = viewAssign.students || {};
+            const coursesSnap = await db.ref('courses').once('value');
+            const coursesData = coursesSnap.val() || {};
+            const hiddenCourseNames = new Set();
+            Object.values(coursesData).forEach(c => {
+                const s = (c && c.settings) || {};
+                if (s.hideFromBoard && s.courseName) hiddenCourseNames.add((s.courseName||'').trim());
+            });
+            const students = {};
+            Object.entries(allStudents).forEach(([t, s]) => {
+                if (hiddenCourseNames.has((s.course||'').trim())) return;
+                students[t] = s;
+            });
+
             const bldgOrder = { '청렴관': 0, '상생관': 1, '국제교육동': 2 };
             const courseColors = {};
             const palette = ['#2563eb','#dc2626','#059669','#d97706','#7c3aed','#db2777','#0891b2'];
-            (viewAssign.courses || []).forEach((c, i) => { courseColors[c.courseName] = palette[i % palette.length]; });
+            // viewAssign.courses 중 실제 students에 남아있는 과정만 색상 배정
+            const activeCourseNames = new Set(Object.values(students).map(s => s.course));
+            (viewAssign.courses || []).filter(c => activeCourseNames.has(c.courseName))
+                .forEach((c, i) => { courseColors[c.courseName] = palette[i % palette.length]; });
             const coursePeriod = {};
             (viewAssign.courses || []).forEach(c => { coursePeriod[c.courseName] = c.period || ''; });
             const byRoomNo = {}, byRoom = {};
@@ -1918,9 +2003,9 @@
         }
 
         // ── 1부: 명단 리스트 PDF ──
-        function printList() {
+        async function printList() {
             if (!viewAssign) { showToast('먼저 주차를 선택하세요'); return; }
-            const P = _prepPrint();
+            const P = await _prepPrint();
             const allRoomsSorted = Object.entries(rooms).map(([id, r]) => ({ id, ...r }))
                 .sort((a,b) => (P.bldgOrder[a.building]??9)-(P.bldgOrder[b.building]??9) || a.floor-b.floor || String(a.no).localeCompare(String(b.no),undefined,{numeric:true}));
             let rowsHtml = '';
@@ -1949,9 +2034,9 @@
         }
 
         // ── 2부: 건물 배치도 PDF ──
-        function printLayout() {
+        async function printLayout() {
             if (!viewAssign) { showToast('먼저 주차를 선택하세요'); return; }
-            const P = _prepPrint();
+            const P = await _prepPrint();
             function planFloorHtml(building, floorName, plan) {
                 let inner = '';
                 plan.items.forEach(it => {
@@ -1980,7 +2065,7 @@
                 Object.entries(fp).forEach(([fname, plan]) => { h += planFloorHtml(building, fname, plan); });
                 return h + `</div>`;
             }
-            const layoutSection = ['청렴관','상생관'].map(planBuildingHtml).join('<div class="page-break"></div>');
+            const layoutSection = ['청렴관','상생관','국제교육동'].map(planBuildingHtml).join('<div class="page-break"></div>');
             const win = window.open('', '_blank');
             win.document.write(_docHead('생활관 건물 배치도') + `
                 <h1>생활관 건물 배치도</h1>
