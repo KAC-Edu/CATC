@@ -2250,13 +2250,18 @@
             const allRoomsSorted = Object.entries(rooms).map(([id, r]) => ({ id, ...r }))
                 .sort((a,b) => (P.bldgOrder[a.building]??9)-(P.bldgOrder[b.building]??9) || a.floor-b.floor || String(a.no).localeCompare(String(b.no),undefined,{numeric:true}));
             let rowsHtml = '';
+            let _lastFloorKey = null, _shade = false;
             allRoomsSorted.forEach(r => {
                 const occ = P.byRoom[r.id] || [];
                 if (!occ.length) return;
+                // 건물+층이 바뀔 때마다 음영 토글 → 1층/2층 구분
+                const fk = `${r.building}|${r.floor}`;
+                if (fk !== _lastFloorKey) { _shade = !_shade; _lastFloorKey = fk; }
+                const rowBg = _shade ? 'background:#f1f5f9;' : 'background:#ffffff;';
                 occ.forEach((p, idx) => {
                     const cc = P.courseColors[p.course] || '#64748b';
-                    rowsHtml += `<tr>
-                        ${idx===0 ? `<td rowspan="${occ.length}" style="font-weight:800;">${r.building} ${r.floor}층 ${r.no}호</td>` : ''}
+                    rowsHtml += `<tr style="${rowBg}">
+                        ${idx===0 ? `<td rowspan="${occ.length}" style="font-weight:800;${rowBg}">${r.building} ${r.floor}층 ${r.no}호</td>` : ''}
                         <td style="font-weight:700;">${p.name}</td><td>${p.empNo||'-'}</td><td>${p.dept||'-'}</td>
                         <td>${p.gender==='M'?'남':(p.gender==='F'?'여':'-')}</td>
                         <td style="color:${cc};font-weight:700;">${p.course}</td>
@@ -2279,65 +2284,113 @@
             if (!viewAssign) { showToast('먼저 주차를 선택하세요'); return; }
             const P = await _prepPrint();
 
-            // 과정별 배경색 밝게 (방 배경용 tint)
-            function hexToRgb(hex) {
-                const r = parseInt(hex.slice(1,3),16), g = parseInt(hex.slice(3,5),16), b = parseInt(hex.slice(5,7),16);
-                return {r,g,b};
-            }
-            function tint(hex, alpha) {
-                const {r,g,b} = hexToRgb(hex);
-                return `rgba(${r},${g},${b},${alpha})`;
-            }
+            // ── 한글 배정표 양식: 방번호+내선(☎)과 이름·성별을 표로 배치 ──
+            // (PC방·휴게실·식당 등 부대공간은 회색 처리, 과정별 색상 적용)
+            const FORM = {
+                '청렴관': [
+                    { floor:'2층', cols:10, cells:[
+                        {no:'208',ext:'438',c:'1',r:'1/4'},{no:'209',ext:'439',c:'2',r:'1/4'},{no:'210',ext:'440',c:'3',r:'1/4'},
+                        {no:'211',ext:'441',c:'4',r:'1/4'},{no:'212',ext:'442',c:'5',r:'1/4'},{no:'213',ext:'443',c:'6',r:'1/4'},
+                        {fac:'계단',c:'7',r:'1/4'},{fac:'휴게실',c:'8',r:'1/4'},
+                        {no:'215',ext:'445',c:'9/11',r:'1',flat:true},{no:'216',ext:'446',c:'9/11',r:'2',flat:true},{no:'217',ext:'447',c:'9/11',r:'3',flat:true},
+                        {no:'207',ext:'437',c:'1',r:'4'},{no:'206',ext:'436',c:'2',r:'4'},{no:'205',ext:'435',c:'3',r:'4'},
+                        {no:'204',ext:'434',c:'4',r:'4'},{no:'203',ext:'433',c:'5',r:'4'},{no:'202',ext:'432',c:'6',r:'4'},
+                        {no:'201',ext:'431',c:'7',r:'4'},{no:'214',ext:'444',c:'8',r:'4'},{no:'219',ext:'449',c:'9',r:'4'},{no:'218',ext:'448',c:'10',r:'4'},
+                    ]},
+                    { floor:'1층', cols:10, cells:[
+                        {no:'106',ext:'426',c:'1',r:'1'},{no:'105',ext:'425',c:'2',r:'1'},{no:'104',ext:'424',c:'3',r:'1'},
+                        {no:'103',ext:'423',c:'4',r:'1'},{no:'102',ext:'422',c:'5',r:'1'},{no:'101',ext:'421',c:'6',r:'1'},
+                        {fac:'식 당',c:'8/11',r:'1/3'},
+                        {no:'107',ext:'427',c:'1',r:'2'},{no:'108',ext:'428',c:'2',r:'2'},{no:'109',ext:'429',c:'3',r:'2'},{no:'110',ext:'430',c:'4',r:'2'},
+                        {fac:'휴게실',c:'5/7',r:'2'},
+                    ]},
+                ],
+                '상생관': [
+                    { floor:'3층', cols:9, cells:[
+                        {no:'308',ext:'452',c:'1',r:'1'},{no:'309',ext:'396',c:'2',r:'1'},{no:'310',ext:'410',c:'3',r:'1'},
+                        {no:'311',ext:'459',c:'4',r:'1'},{no:'312',ext:'460',c:'5',r:'1'},{no:'313',ext:'477',c:'6',r:'1'},
+                        {no:'314',ext:'478',c:'7',r:'1'},{no:'315',ext:'479',c:'8',r:'1'},{no:'316',ext:'468',c:'9',r:'1'},
+                        {no:'307',ext:'451',c:'1',r:'2'},{no:'306',ext:'458',c:'2',r:'2'},{no:'305',ext:'356',c:'3',r:'2'},
+                        {no:'304',ext:'398',c:'4',r:'2'},{no:'303',ext:'397',c:'5',r:'2'},{no:'302',ext:'394',c:'6',r:'2'},
+                        {no:'301',ext:'393',c:'7',r:'2'},{fac:'휴게실',c:'8/10',r:'2'},
+                    ]},
+                    { floor:'2층', cols:10, cells:[
+                        {no:'208',ext:'',c:'1',r:'1'},{no:'209',ext:'469',c:'2',r:'1'},{no:'210',ext:'470',c:'3',r:'1'},
+                        {no:'211',ext:'471',c:'4',r:'1'},{no:'212',ext:'472',c:'5',r:'1'},{no:'213',ext:'473',c:'6',r:'1'},
+                        {no:'214',ext:'474',c:'7',r:'1'},{no:'215',ext:'475',c:'8',r:'1'},{fac:'PC방',c:'9',r:'1'},{fac:'세탁실',c:'10',r:'1'},
+                        {fac:'창고',c:'1',r:'2'},{no:'207',ext:'467',c:'2',r:'2'},{no:'206',ext:'466',c:'3',r:'2'},
+                        {no:'205',ext:'465',c:'4',r:'2'},{no:'204',ext:'464',c:'5',r:'2'},{no:'203',ext:'463',c:'6',r:'2'},
+                        {no:'202',ext:'462',c:'7',r:'2'},{no:'201',ext:'461',c:'8',r:'2'},{fac:'휴게실',c:'9/11',r:'2'},
+                    ]},
+                ],
+                '국제교육동': [
+                    { floor:'3층', cols:6, cells:[
+                        {no:'301',ext:'480',c:'1',r:'1'},{no:'302',ext:'481',c:'2',r:'1'},{no:'303',ext:'482',c:'3',r:'1'},
+                        {no:'304',ext:'483',c:'4',r:'1'},{no:'305',ext:'484',c:'5',r:'1'},{no:'306',ext:'485',c:'6',r:'1'},
+                        {no:'307',ext:'',c:'1',r:'2'},{no:'308',ext:'',c:'2',r:'2'},{no:'309',ext:'',c:'3',r:'2'},
+                        {no:'310',ext:'',c:'4',r:'2'},{no:'311',ext:'',c:'5',r:'2'},{no:'312',ext:'',c:'6',r:'2'},
+                        {no:'313',ext:'',c:'1',r:'3'},{no:'314',ext:'',c:'2',r:'3'},{no:'315',ext:'',c:'3',r:'3'},
+                        {no:'316',ext:'',c:'4',r:'3'},{no:'317',ext:'',c:'5',r:'3'},{no:'318',ext:'',c:'6',r:'3'},
+                        {no:'319',ext:'',c:'1',r:'4'},{no:'320',ext:'',c:'2',r:'4'},
+                        {fac:'기도실',c:'3',r:'4'},{fac:'세탁실',c:'4',r:'4'},{fac:'주방',c:'5',r:'4'},{fac:'복도',c:'6',r:'4'},
+                    ]},
+                ],
+            };
 
-            function planFloorHtml(building, floorName, plan) {
-                let inner = '';
-                plan.items.forEach(it => {
-                    const leftPct  = (it.x / plan.w) * 100;
-                    const wPct     = ((it.w || 78) / plan.w) * 100;
-                    const hPx      = it.h || 42;
-                    const style    = `left:${leftPct.toFixed(3)}%; top:${it.y}px; width:${wPct.toFixed(3)}%; height:${hPx}px;`;
-
-                    if (it.t === 'fac') {
-                        const isCorridor = it.label === '복도';
-                        inner += `<div class="${isCorridor?'pf-corridor':'pf-fac'}" style="${style}">${it.label}</div>`;
-                    } else {
-                        const people = P.byRoomNo[`${building}|${it.no}`] || [];
-                        if (people.length) {
-                            const col    = P.courseColors[people[0].course] || '#334155';
-                            const bgTint = tint(col, 0.10);
-                            const names  = people.map(p => {
-                                const gc = p.gender === 'F' ? '#db2777' : '#2563eb';
-                                const gs = p.gender === 'F' ? '여' : (p.gender === 'M' ? '남' : '');
-                                return `<span class="pf-name" style="color:${P.courseColors[p.course]||'#0f172a'}">${p.name}<span class="gsuf" style="color:${gc}">${gs}</span></span>`;
-                            }).join('');
-                            inner += `<div class="pf-room-occ" style="${style} min-height:${hPx}px; height:auto; background:${bgTint}; border-color:${tint(col,0.4)};">
-                                <span class="rno" style="background:${col};">${it.no}</span>${names}</div>`;
-                        } else {
-                            inner += `<div class="pf-room-empty" style="${style}">
-                                <span class="rno">${it.no}</span></div>`;
-                        }
-                    }
-                });
-                return `
-                    <div class="pf-floor-label">${floorName}</div>
-                    <div class="pf-canvas" style="height:${plan.h}px;">${inner}</div>`;
+            function roomCellHtml(building, cell) {
+                const people = P.byRoomNo[`${building}|${cell.no}`] || [];
+                const occ = people.length > 0;
+                const col = occ ? (P.courseColors[people[0].course] || '#334155') : '#94a3b8';
+                const ext = cell.ext ? ` <span class="fm-ext">\u260e${cell.ext}</span>` : '';
+                const head = `<div class="fm-head" style="${occ ? `background:${col};color:#fff;border-color:${col};` : ''}">${cell.no}${ext}</div>`;
+                let body = '';
+                if (occ) {
+                    body = people.map(p => {
+                        const gc = p.gender === 'F' ? '#db2777' : '#2563eb';
+                        const gs = p.gender === 'F' ? '여' : (p.gender === 'M' ? '남' : '');
+                        return `<span class="fm-name" style="color:${P.courseColors[p.course] || '#0f172a'}">${p.name}<span class="fm-g" style="color:${gc}">${gs}</span></span>`;
+                    }).join('');
+                }
+                const flat = cell.flat ? ' fm-flat' : '';
+                return `<div class="fm-room${occ ? ' occ' : ''}${flat}" style="grid-column:${cell.c};grid-row:${cell.r};${occ ? `border-color:${col};` : ''}">${head}<div class="fm-body">${body}</div></div>`;
             }
-
-            function planBuildingHtml(building) {
-                const fp = FLOORPLANS[building];
-                if (!fp) return '';
-                const floors = Object.entries(fp).map(([fname, plan]) => planFloorHtml(building, fname, plan)).join('');
+            function facCellHtml(cell) {
+                return `<div class="fm-fac" style="grid-column:${cell.c};grid-row:${cell.r};">${cell.fac}</div>`;
+            }
+            function floorHtml(building, fl) {
+                const inner = fl.cells.map(c => (c.fac !== undefined) ? facCellHtml(c) : roomCellHtml(building, c)).join('');
+                return `<div class="fm-floor-label">${fl.floor}</div>
+                    <div class="fm-grid" style="grid-template-columns:repeat(${fl.cols},1fr);">${inner}</div>`;
+            }
+            function buildingHtml(building) {
+                const fls = (FORM[building] || []).map(fl => floorHtml(building, fl)).join('');
                 return `<div class="pf-block">
-                    <div class="pf-bldg-header"><span class="bicon">🏢</span>${building}</div>
-                    <div class="pf-floor-wrap">${floors}</div>
+                    <div class="pf-bldg-header"><span class="bicon">\ud83c\udfe2</span>${building}</div>
+                    <div class="pf-floor-wrap">${fls}</div>
                 </div>`;
             }
 
-            const layoutSection = ['청렴관','상생관','국제교육동'].map(planBuildingHtml).join('<div class="page-break"></div>');
+            const FORM_CSS = `<style>
+                .fm-floor-label { font-size:12px; font-weight:900; color:#1e3a8a; margin:12px 0 6px; padding:3px 10px; background:#eff6ff; border-left:4px solid #2563eb; border-radius:0 6px 6px 0; display:inline-block; }
+                .fm-floor-label:first-child { margin-top:2px; }
+                .fm-grid { display:grid; gap:5px; grid-auto-rows:minmax(60px,auto); }
+                .fm-room { border:1.5px solid #94a3b8; border-radius:6px; background:#fff; display:flex; flex-direction:column; overflow:hidden; min-height:60px; }
+                .fm-head { font-size:11px; font-weight:900; color:#475569; background:#f1f5f9; border-bottom:1.5px solid #cbd5e1; text-align:center; padding:2px 2px; line-height:1.5; white-space:nowrap; }
+                .fm-ext { font-size:9px; font-weight:700; opacity:.85; }
+                .fm-body { flex:1; display:flex; flex-wrap:wrap; align-items:center; justify-content:center; gap:1px 7px; padding:3px 2px; }
+                .fm-name { font-size:13px; font-weight:800; line-height:1.3; }
+                .fm-g { font-size:9px; font-weight:700; margin-left:1px; }
+                .fm-flat { flex-direction:row; min-height:42px; }
+                .fm-flat .fm-head { display:flex; flex-direction:column; align-items:center; justify-content:center; border-bottom:none; border-right:1.5px solid #cbd5e1; min-width:70px; }
+                .fm-flat .fm-body { flex:1; }
+                .fm-fac { border:1.5px dashed #b6c0cf; border-radius:6px; background:repeating-linear-gradient(45deg,#e9edf3,#e9edf3 4px,#f4f7fb 4px,#f4f7fb 11px); color:#64748b; font-size:11px; font-weight:800; display:flex; align-items:center; justify-content:center; text-align:center; letter-spacing:-0.3px; }
+            </style>`;
+
+            const layoutSection = ['청렴관','상생관','국제교육동'].map(buildingHtml).join('<div class="page-break"></div>');
             const totalCount = Object.keys(P.students).length;
             const win = window.open('', '_blank');
-            win.document.write(_docHead('생활관 건물 배치도') + `
-                <h1>생활관 건물 배치도</h1>
+            win.document.write(_docHead('생활관 배정 배치도') + FORM_CSS + `
+                <h1>생활관 배정 배치도</h1>
                 <div class="sub">${P.fmt(P.wd)} ~ ${P.fmt(P.wEnd)} 주간 · 총 ${totalCount}명 · 출력일 ${new Date().toLocaleDateString('ko-KR')}</div>
                 <div class="legend">${_legendHtml(P)}</div>
                 ${layoutSection}
