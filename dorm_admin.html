@@ -1872,7 +1872,7 @@
             function chip(p) {
                 const col = colorOf(p.course);
                 const gs = p.gender === 'F' ? '(여)' : (p.gender === 'M' ? '(남)' : '');
-                return `<span class="dm-chip" draggable="true" data-token="${p.tk}" style="color:${col};border-color:${col};" title="드래그하여 이동">${p.name}<span style="color:${col};font-size:10.5px;">${gs}</span></span>`;
+                return `<span class="dm-chip" draggable="true" data-token="${p.tk}" style="color:${col};border-color:${col};" title="드래그하여 이동">${p.name}<span style="color:${col};font-size:10.5px;">${gs}</span><span class="dm-del" draggable="false" onmousedown="event.stopPropagation();" onclick="event.stopPropagation(); _dormDelete('${p.tk}')" title="이 인원 삭제">✕</span></span>`;
             }
             function roomCell(building, cell) {
                 const people = byNo[`${building}|${cell.no}`] || [];
@@ -1897,7 +1897,7 @@
             const legend = Object.keys(courseColors).filter(c => c !== '강사' || hasInst)
                 .map(c => `<span class="leg-item"><span class="leg-swatch" style="background:${courseColors[c]}"></span><span style="color:${courseColors[c]}">${c}</span></span>`).join('');
             const toolbar = `<div class="dm-toolbar">
-                <div class="dm-hint"><i class="fa-solid fa-arrows-up-down-left-right"></i> 이름을 드래그해 다른 방에 놓으면 즉시 이동·저장됩니다 (정원·성별 충돌 시 차단).</div>
+                <div class="dm-hint"><i class="fa-solid fa-arrows-up-down-left-right"></i> 이름을 드래그해 다른 방에 놓으면 즉시 이동, 이름 옆 <b>✕</b>로 삭제됩니다 (정원·성별 충돌 시 이동 차단).</div>
                 <div style="display:flex;gap:8px;">
                     <button class="dm-btn" style="background:#475569;" onclick="openInstructorAdd()"><i class="fa-solid fa-chalkboard-user"></i> 강사·외부 숙박 추가</button>
                     <button class="dm-btn" style="background:var(--danger);" onclick="printLayout()"><i class="fa-solid fa-file-pdf"></i> 이대로 PDF 출력</button>
@@ -1941,6 +1941,26 @@
                     renderBoardMap();
                 })
                 .catch(e => { console.error(e); showToast('저장 실패'); });
+        }
+
+        // 배치도 편집기: 인원 삭제 (교육생·강사 공통). 강사는 예약 목록에서도 제거.
+        function _dormDelete(token) {
+            const s = (viewAssign && viewAssign.students) ? viewAssign.students[token] : null;
+            if (!s) return;
+            const isInst = (token && token.indexOf('inst_') === 0) || (s.course === '강사');
+            const idTxt = (s.empNo && s.empNo !== '-') ? `(${s.empNo})` : '';
+            if (!confirm(`${s.name}${idTxt}님을 이 주차 배정에서 삭제할까요?${isInst ? '\n(강사 사전배치 목록에서도 함께 제거됩니다)' : ''}`)) return;
+            const wk = viewAssign.weekKey;
+            const ops = [ db.ref(`system/dorm/assignments/${wk}/students/${token}`).remove() ];
+            if (isInst) ops.push(db.ref(`system/dorm/instructors/${wk}/${token}`).remove().catch(() => {}));
+            Promise.all(ops)
+                .then(() => {
+                    delete viewAssign.students[token];
+                    showToast(`🗑️ ${s.name} 삭제됨`);
+                    renderBoardMap();
+                    if (typeof renderInstReserve === 'function' && document.getElementById('instReserveList')) renderInstReserve(wk);
+                })
+                .catch(e => { console.error(e); showToast('삭제 실패'); });
         }
 
         // 강사·외부 숙박 추가
@@ -2296,7 +2316,7 @@
             return `<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8"><title>${title}</title>
                 <style>
                     @import url("https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css");
-                    * { box-sizing:border-box; }
+                    * { box-sizing:border-box; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
                     body { font-family:'Pretendard',sans-serif; padding:16px 20px; color:#1e293b; background:#f8fafc; }
                     h1 { text-align:center; font-size:22px; font-weight:900; margin:0 0 3px; letter-spacing:-0.5px; }
                     .sub { text-align:center; color:#64748b; margin-bottom:10px; font-size:12.5px; }
@@ -2321,7 +2341,7 @@
                     .pf-name .gsuf { font-size:8px; font-weight:700; opacity:0.65; margin-left:1px; }
                     .pf-fac { position:absolute; background:repeating-linear-gradient(45deg,#e2e8f0,#e2e8f0 3px,#f1f5f9 3px,#f1f5f9 9px); border:1.5px solid #94a3b8; color:#475569; font-size:10.5px; font-weight:800; display:flex; align-items:center; justify-content:center; text-align:center; letter-spacing:-0.3px; }
                     .pf-corridor { position:absolute; background:#e2e8f0; border:1px solid #cbd5e1; color:#94a3b8; font-size:9.5px; font-weight:700; display:flex; align-items:center; justify-content:center; letter-spacing:3px; }
-                    @media print { @page { size:A4 landscape; margin:8mm; } body { background:#fff; padding:10px 14px; } .page-break { page-break-before:always; } .pf-canvas { box-shadow:none; } }
+                    @media print { * { -webkit-print-color-adjust:exact !important; print-color-adjust:exact !important; } @page { size:A4 landscape; margin:8mm; } body { background:#fff; padding:10px 14px; } .page-break { page-break-before:always; } .pf-canvas { box-shadow:none; } }
                 </style></head><body>`;
         }
 
@@ -2406,6 +2426,8 @@
  #boardMapArea .fm-fac{border:1.5px dashed #b6c0cf;border-radius:6px;background:repeating-linear-gradient(45deg,#e9edf3,#e9edf3 4px,#f4f7fb 4px,#f4f7fb 11px);color:#64748b;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;text-align:center;}
  #boardMapArea .dm-chip{display:inline-flex;align-items:center;gap:1px;background:#fff;border:1.5px solid #94a3b8;border-radius:7px;padding:2px 7px;font-size:12.5px;font-weight:800;cursor:grab;line-height:1.3;user-select:none;}
  #boardMapArea .dm-chip:active{cursor:grabbing;}
+ #boardMapArea .dm-chip .dm-del{margin-left:5px;color:#cbd5e1;font-weight:900;font-size:11px;cursor:pointer;padding:0 2px;border-radius:3px;line-height:1;}
+ #boardMapArea .dm-chip .dm-del:hover{color:#fff;background:#ef4444;}
  #boardMapArea .dm-room.dm-over{outline:3px dashed #2563eb;outline-offset:1px;background:#eff6ff;}
  #boardMapArea .dm-toolbar{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px;}
  #boardMapArea .dm-hint{font-size:12px;color:#9a3412;font-weight:700;background:#fff7ed;border:1px solid #fed7aa;padding:7px 12px;border-radius:8px;}
