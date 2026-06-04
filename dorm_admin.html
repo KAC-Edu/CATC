@@ -1089,9 +1089,30 @@
                         const useKey = key != null ? key : y;
                         (rowsMap[useKey] = rowsMap[useKey] || []).push({ str, x: it.transform[4] });
                     });
-                    // Y 내림차순(위→아래), 각 줄은 X 오름차순
-                    Object.keys(rowsMap).sort((a, b) => b - a).forEach(y => {
-                        const cells = rowsMap[y].sort((a, b) => a.x - b.x).map(c => c.str);
+                    // Y 내림차순(위→아래) 정렬된 줄 배열
+                    const lines = Object.keys(rowsMap).sort((a, b) => b - a)
+                        .map(y => rowsMap[y].sort((a, b) => a.x - b.x).map(c => c.str));
+
+                    // 사번(4~6자리)이 있는 줄을 "사람 시작 줄"로 보고,
+                    //  그 다음 사번 없는 줄들(부서 줄바꿈/성별)을 같은 사람으로 병합
+                    const merged = [];
+                    let cur = null;
+                    const hasEmp = arr => arr.some(c => /^\d{4,6}$/.test(c));
+                    const isHeader = arr => /연\s*번|성\s*명|성\s*함|사\s*번|소\s*속|성\s*별|합계|소계|명단|과정|배정/.test(arr.join(' '));
+                    lines.forEach(arr => {
+                        if (isHeader(arr)) return;
+                        if (hasEmp(arr)) {
+                            if (cur) merged.push(cur);
+                            cur = arr.slice();
+                        } else if (cur) {
+                            // 사번 없는 줄: 직전 사람에 이어붙임 (부서 둘째 줄, 성별 등)
+                            cur = cur.concat(arr);
+                        }
+                        // cur이 없고 사번도 없는 줄(앞부분 잡소리)은 무시
+                    });
+                    if (cur) merged.push(cur);
+
+                    merged.forEach(cells => {
                         const row = parseRosterRow(cells);
                         if (row) parsed.push(row);
                     });
@@ -1119,18 +1140,37 @@
             // 헤더/제목/합계 줄 제외
             if (/연\s*번|성\s*명|성\s*함|사\s*번|소\s*속|성\s*별|합계|소계|명단|과정|배정/.test(joined)) return null;
 
-            // 이름: 한글 2~4자
-            const name = cells.find(c => /^[가-힣]{2,4}$/.test(c));
-            if (!name) return null;
-            // 사번: 4~6자리 숫자
+            // 사번: 4~6자리 숫자 — 명단의 각 사람은 반드시 사번이 있다.
+            //  (부서명이 두 줄로 줄바꿈되어 생기는 "본사/차장/대우" 같은 가짜 줄에는 사번이 없으므로 제외)
             const empNo = (cells.find(c => /^\d{4,6}$/.test(c)) || '').trim();
-            // 성별: 남/여 또는 M/F
+            if (!empNo) return null;
+
+            // 이름: 한글 2~4자 (사번 다음에 오는 첫 한글 토큰 우선)
+            //  직위·부서 단어(과장/차장/대리/주임/본사/대우 등)는 이름에서 배제
+            const TITLE_WORDS = /^(과장|차장|대리|주임|부장|팀장|실장|센터장|교수|본사|대우|사원|선임|책임|수석)$/;
+            let name = '';
+            const empIdx = cells.findIndex(c => c === empNo);
+            for (let i = 0; i < cells.length; i++) {
+                const c = cells[i];
+                if (!/^[가-힣]{2,4}$/.test(c)) continue;
+                if (TITLE_WORDS.test(c)) continue;
+                // 사번 바로 뒤 토큰을 가장 우선
+                if (empIdx >= 0 && i > empIdx) { name = c; break; }
+                if (!name) name = c; // 폴백
+            }
+            if (!name) return null;
+
+            // 성별: 남/여 (OCR 오류 '넘' → 남 보정)
             let gender = '';
-            const gCell = cells.find(c => /^(남|여|남자|여자|M|F|m|f)$/.test(c));
-            if (gCell) gender = /남|M|m/.test(gCell) ? 'M' : 'F';
-            // 소속: 이름·사번·성별·연번 아닌 나머지 한글 토큰 중 가장 긴 것
+            const gCell = cells.find(c => /^(남|여|남자|여자|넘|M|F|m|f)$/.test(c));
+            if (gCell) gender = /남|넘|M|m/.test(gCell) ? 'M' : 'F';
+
+            // 소속: 이름·사번·성별 제외한 한글 토큰 중 가장 긴 것 (직위 단어 제외)
             const used = new Set([name, empNo, gCell]);
-            const deptCand = cells.filter(c => !used.has(c) && /[가-힣]/.test(c) && !/^\d+$/.test(c) && c !== name);
+            const deptCand = cells.filter(c =>
+                !used.has(c) && /[가-힣]/.test(c) && !/^\d+$/.test(c)
+                && c !== name && !TITLE_WORDS.test(c)
+            );
             const dept = deptCand.sort((a, b) => b.length - a.length)[0] || '';
 
             return { seq: 0, name, empNo, dept, gender };
