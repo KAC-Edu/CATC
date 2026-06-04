@@ -355,7 +355,7 @@
                     <select id="viewWeekSelect" style="padding:10px 13px; border:1.5px solid var(--border); border-radius:9px; font-size:14px; min-width:200px;" onchange="renderBoard()"></select>
                     <button class="h-btn" style="background:var(--blue);" onclick="loadViewWeeks()"><i class="fa-solid fa-rotate"></i> 새로고침</button>
                     <div style="flex:1;"></div>
-                    <button class="h-btn" style="background:#dc2626;" onclick="purgeHiddenStudents()" title="hideFromBoard 과정 인원을 Firebase에서 실제 삭제"><i class="fa-solid fa-trash-can"></i> 폐강 과정 인원 정리</button>
+                    <button class="h-btn" style="background:#dc2626;" onclick="purgeHiddenStudents()" title="폐강 과정 인원을 이 주차 배정에서 삭제"><i class="fa-solid fa-trash-can"></i> 폐강 과정 정리</button>
                     <button class="save-btn" style="background:#2563eb;" onclick="printList()"><i class="fa-solid fa-list"></i> 명단 PDF</button>
                     <button class="save-btn" style="background:var(--danger);" onclick="printLayout()"><i class="fa-solid fa-building"></i> 건물 배치도 PDF</button>
                 </div>
@@ -1031,6 +1031,7 @@
                         ${enrolled ? `<span class="course-count"><i class="fa-solid fa-circle-check"></i> ${cnt}명</span>` : ''}
                         ${it.profName ? `<span class="course-prof"><i class="fa-solid fa-user-tie"></i> ${it.profName}</span>` : ''}
                         <span class="course-go"><i class="fa-solid fa-chevron-right"></i></span>
+                        <span class="course-del-btn" onclick="event.stopPropagation(); deleteRoster(${JSON.stringify(it).replace(/'/g, "&#39;")})" title="이 과정 명단 삭제" style="flex-shrink:0; width:32px; height:32px; display:inline-flex; align-items:center; justify-content:center; border-radius:8px; background:#fee2e2; color:#dc2626; cursor:pointer; font-size:14px; margin-left:4px;"><i class="fa-solid fa-trash-can"></i></span>
                     </div>`;
             });
             html += `</div>`;
@@ -1312,19 +1313,66 @@
             } catch (e) { console.error(e); }
         }
 
+        let excludedRosterKeys = new Set();  // 자동배정에서 제외할 과정 키 집합
+
         async function onWeekChange() {
             const wk = document.getElementById('weekSelect').value;
             if (!wk) return;
+            excludedRosterKeys = new Set();
             const snap = await db.ref('system/dorm/rosters').once('value');
             const all = snap.val() || {};
             weekRosters = {};
             Object.entries(all).forEach(([k, v]) => {
                 if ((v.weekKey || k.split('__')[0]) === wk) weekRosters[k] = v;
             });
-            const info = Object.values(weekRosters).map(v =>
-                `· <b>${v.courseName}</b> (ROOM ${v.room}) — ${(v.list||[]).length}명`).join('<br>');
-            const total = Object.values(weekRosters).reduce((s, v) => s + (v.list||[]).length, 0);
-            document.getElementById('weekCourseInfo').innerHTML = `${info}<br><br>총 <b>${total}명</b> · 과정 ${Object.keys(weekRosters).length}개`;
+            renderWeekRosterList();
+        }
+
+        function renderWeekRosterList() {
+            const total = Object.entries(weekRosters)
+                .filter(([k]) => !excludedRosterKeys.has(k))
+                .reduce((s, [, v]) => s + (v.list||[]).length, 0);
+            const courseCount = Object.keys(weekRosters).length - excludedRosterKeys.size;
+            let rows = Object.entries(weekRosters).map(([k, v]) => {
+                const excluded = excludedRosterKeys.has(k);
+                const cnt = (v.list||[]).length;
+                return `<div style="display:flex; align-items:center; gap:10px; padding:10px 14px; background:${excluded?'#f8fafc':'#fff'}; border:1.5px solid ${excluded?'#e2e8f0':'var(--border)'}; border-radius:11px; margin-bottom:7px; opacity:${excluded?'0.5':'1'};">
+                    <input type="checkbox" ${excluded?'':'checked'} onchange="toggleExclude('${k}', !this.checked)"
+                        style="width:18px; height:18px; cursor:pointer; accent-color:var(--blue);">
+                    <div style="flex:1; min-width:0;">
+                        <div style="font-weight:800; font-size:14px; color:#0f172a; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${v.courseName}</div>
+                        <div style="font-size:12px; color:#94a3b8; margin-top:1px;">${v.period||''} · ${cnt}명</div>
+                    </div>
+                    <span style="font-size:12px; font-weight:800; color:${excluded?'#94a3b8':'var(--success)'}; background:${excluded?'#f1f5f9':'#dcfce7'}; padding:4px 10px; border-radius:20px;">${excluded?'제외':'포함'}</span>
+                    <span onclick="deleteRosterByKey('${k}', '${(v.courseName||'').replace(/'/g,"\\'")}', ${cnt})"
+                        title="명단 삭제" style="width:30px; height:30px; display:inline-flex; align-items:center; justify-content:center; border-radius:8px; background:#fee2e2; color:#dc2626; cursor:pointer; font-size:13px; flex-shrink:0;"><i class="fa-solid fa-trash-can"></i></span>
+                </div>`;
+            }).join('');
+            if (!rows) rows = `<div style="color:var(--muted); font-size:13px; padding:8px 0;">이 주차에 저장된 명단이 없습니다.</div>`;
+            document.getElementById('weekCourseInfo').innerHTML = rows +
+                `<div style="margin-top:10px; font-size:13px; font-weight:700; color:#475569;">배정 대상: <b style="color:#0f172a;">${total}명 · ${courseCount}개 과정</b></div>`;
+        }
+
+        function toggleExclude(key, shouldExclude) {
+            if (shouldExclude) excludedRosterKeys.add(key);
+            else excludedRosterKeys.delete(key);
+            renderWeekRosterList();
+        }
+
+        async function deleteRosterByKey(key, courseName, cnt) {
+            const msg = cnt > 0
+                ? `[${courseName}] 명단(${cnt}명)을 삭제합니다.\n이 작업은 되돌릴 수 없습니다. 계속할까요?`
+                : `[${courseName}] 명단을 삭제합니다. 계속할까요?`;
+            if (!confirm(msg)) return;
+            try {
+                await db.ref(`system/dorm/rosters/${key}`).remove();
+                delete weekRosters[key];
+                excludedRosterKeys.delete(key);
+                // STEP 2 캐시 무효화
+                rosterCounts[key] = 0;
+                showToast(`✅ [${courseName}] 명단이 삭제되었습니다`);
+                renderWeekRosterList();
+            } catch(e) { console.error(e); showToast('⚠️ 삭제 실패'); }
         }
 
         // 방 목록을 연번 순으로 정렬 (건물 순서 → 층 → 방번호)
@@ -1368,6 +1416,12 @@
             if (!Object.keys(rooms).length) { showToast('STEP 1에서 방을 먼저 설정하세요'); return; }
             if (!Object.keys(weekRosters).length) { showToast('이 주차에 저장된 명단이 없습니다'); return; }
 
+            // 체크박스에서 제외된 과정 빼기
+            const activeRosters = Object.fromEntries(
+                Object.entries(weekRosters).filter(([k]) => !excludedRosterKeys.has(k))
+            );
+            if (!Object.keys(activeRosters).length) { showToast('배정할 과정이 없습니다. 하나 이상 선택하세요'); return; }
+
             const log = [];
             const unassignedList = [];
             const courseStats = [];
@@ -1390,12 +1444,12 @@
             });
 
             // 과정 목록 (방 연번 순 연속배치를 위해 명단 순서 유지)
-            const courseKeys = Object.keys(weekRosters);
+            const courseKeys = Object.keys(activeRosters);
 
             // 전체 인원 모으기 (과정 태그 + 기간 포함)
             let people = [];
             courseKeys.forEach(ck => {
-                const v = weekRosters[ck];
+                const v = activeRosters[ck];
                 const pr = parsePeriod(v.period || '');
                 (v.list || []).forEach(p => {
                     people.push({
@@ -1514,7 +1568,7 @@
                 weekKey: wk,
                 assignedAt: firebase.database.ServerValue.TIMESTAMP,
                 students: assigned,
-                courses: courseKeys.map(ck => ({ rosterKey: ck, courseName: weekRosters[ck].courseName, room: weekRosters[ck].room, period: weekRosters[ck].period || '' }))
+                courses: courseKeys.map(ck => ({ rosterKey: ck, courseName: activeRosters[ck].courseName, room: activeRosters[ck].room, period: activeRosters[ck].period || '' }))
             };
             db.ref(`system/dorm/assignments/${wk}`).set(payload)
                 .then(() => {
@@ -1772,12 +1826,32 @@
                 .catch(e => { console.error(e); showToast('삭제 실패'); });
         }
 
-        // ── 폐강(hideFromBoard) 과정 인원 Firebase에서 실제 삭제 ──
+        // ── STEP 2: 과정 카드에서 명단 삭제 ──
+        async function deleteRoster(it) {
+            const key = rosterKey(it);
+            const cnt = rosterCounts[key] || 0;
+            const msg = cnt > 0
+                ? `[${it.courseName}] 명단(${cnt}명)을 삭제합니다.\n⚠️ 이미 자동배정을 실행했다면 STEP 4에서 "폐강 과정 정리"도 눌러주세요.\n계속할까요?`
+                : `[${it.courseName}] 명단을 삭제합니다. 계속할까요?`;
+            if (!confirm(msg)) return;
+            try {
+                await db.ref(`system/dorm/rosters/${key}`).remove();
+                rosterCounts[key] = 0;
+                // 선택 중인 과정이면 패널 닫기
+                if (selectedCourse && rosterKey(selectedCourse) === key) {
+                    selectedCourse = null;
+                    document.getElementById('rosterPanel').style.display = 'none';
+                    roster = [];
+                }
+                showToast(`✅ [${it.courseName}] 명단이 삭제되었습니다`);
+                renderCourseList();
+            } catch(e) { console.error(e); showToast('⚠️ 삭제 실패'); }
+        }
+
+        // ── STEP 4: 폐강(hideFromBoard) 과정 인원 Firebase에서 실제 삭제 ──
         async function purgeHiddenStudents() {
             if (!viewAssign || !viewAssign.students) { showToast('먼저 주차를 선택하세요'); return; }
             const wk = viewAssign.weekKey;
-
-            // hideFromBoard 과정명 수집
             const coursesSnap = await db.ref('courses').once('value');
             const coursesData = coursesSnap.val() || {};
             const hiddenCourseNames = new Set();
@@ -1785,26 +1859,17 @@
                 const s = (c && c.settings) || {};
                 if (s.hideFromBoard && s.courseName) hiddenCourseNames.add((s.courseName||'').trim());
             });
-
             if (!hiddenCourseNames.size) { showToast('폐강 처리된 과정이 없습니다'); return; }
-
-            // 삭제 대상 토큰 수집
             const toDelete = Object.entries(viewAssign.students)
                 .filter(([, s]) => hiddenCourseNames.has((s.course||'').trim()))
                 .map(([token]) => token);
-
             if (!toDelete.length) { showToast('이 주차에 정리할 인원이 없습니다'); return; }
-
             const courseList = [...hiddenCourseNames].join(', ');
             if (!confirm(`폐강 과정 [${courseList}]의 배정 인원 ${toDelete.length}명을 이 주차 배정에서 삭제합니다.\n계속하시겠습니까?`)) return;
-
             const updates = {};
             toDelete.forEach(token => { updates[`system/dorm/assignments/${wk}/students/${token}`] = null; });
-
-            // courses 배열에서도 해당 과정 제거
             const remainingCourses = (viewAssign.courses || []).filter(c => !hiddenCourseNames.has((c.courseName||'').trim()));
             updates[`system/dorm/assignments/${wk}/courses`] = remainingCourses;
-
             db.ref().update(updates)
                 .then(() => { showToast(`✅ ${toDelete.length}명 정리 완료`); renderBoard(); })
                 .catch(e => { console.error(e); showToast('⚠️ 정리 실패'); });
@@ -1927,8 +1992,6 @@
             const wd = new Date(wk + 'T00:00:00');
             const wEnd = new Date(wd); wEnd.setDate(wd.getDate() + 6);
             const fmt = d => `${d.getMonth()+1}.${d.getDate()}.`;
-
-            // renderBoard()와 동일하게: hideFromBoard 과정 학생 제외
             const allStudents = viewAssign.students || {};
             const coursesSnap = await db.ref('courses').once('value');
             const coursesData = coursesSnap.val() || {};
@@ -1942,11 +2005,9 @@
                 if (hiddenCourseNames.has((s.course||'').trim())) return;
                 students[t] = s;
             });
-
             const bldgOrder = { '청렴관': 0, '상생관': 1, '국제교육동': 2 };
             const courseColors = {};
             const palette = ['#2563eb','#dc2626','#059669','#d97706','#7c3aed','#db2777','#0891b2'];
-            // viewAssign.courses 중 실제 students에 남아있는 과정만 색상 배정
             const activeCourseNames = new Set(Object.values(students).map(s => s.course));
             (viewAssign.courses || []).filter(c => activeCourseNames.has(c.courseName))
                 .forEach((c, i) => { courseColors[c.courseName] = palette[i % palette.length]; });
@@ -1958,7 +2019,6 @@
                 const k = `${s.building}|${String(s.no)}`;
                 (byRoomNo[k] = byRoomNo[k] || []).push(s);
             });
-            // 과정별 인원수
             const courseCount = {};
             Object.values(students).forEach(s => { courseCount[s.course] = (courseCount[s.course]||0)+1; });
             return { wk, wd, wEnd, fmt, students, bldgOrder, courseColors, coursePeriod, byRoomNo, byRoom, courseCount };
@@ -1969,27 +2029,31 @@
                 <style>
                     @import url("https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css");
                     * { box-sizing:border-box; }
-                    body { font-family:'Pretendard',sans-serif; padding:18px; color:#1e293b; }
-                    h1 { text-align:center; font-size:22px; margin:0 0 4px; }
-                    .sub { text-align:center; color:#64748b; margin-bottom:14px; font-size:13px; }
-                    .legend { text-align:center; margin-bottom:16px; display:flex; justify-content:center; flex-wrap:wrap; gap:18px; }
-                    .leg-item { display:inline-flex; align-items:center; gap:7px; font-size:13px; font-weight:800; }
-                    .leg-dot { width:13px; height:13px; border-radius:4px; display:inline-block; }
-                    .leg-period { font-size:11px; font-weight:600; color:#64748b; }
-                    .part-title { font-size:16px; font-weight:900; margin:8px 0 12px; padding-left:10px; border-left:5px solid #2563eb; }
+                    body { font-family:'Pretendard',sans-serif; padding:16px 20px; color:#1e293b; background:#f8fafc; }
+                    h1 { text-align:center; font-size:22px; font-weight:900; margin:0 0 3px; letter-spacing:-0.5px; }
+                    .sub { text-align:center; color:#64748b; margin-bottom:10px; font-size:12.5px; }
+                    .legend { display:flex; justify-content:center; flex-wrap:wrap; gap:6px 20px; margin-bottom:14px; padding:10px 16px; background:#fff; border:1.5px solid #e2e8f0; border-radius:10px; }
+                    .leg-item { display:inline-flex; align-items:center; gap:7px; font-size:12.5px; font-weight:800; }
+                    .leg-swatch { width:14px; height:14px; border-radius:4px; display:inline-block; flex-shrink:0; }
+                    .leg-period { font-size:10.5px; font-weight:600; color:#94a3b8; }
                     table.list { width:100%; border-collapse:collapse; font-size:12.5px; }
                     table.list th, table.list td { border:1px solid #cbd5e1; padding:6px 8px; text-align:center; }
                     table.list th { background:#f1f5f9; }
-                    .pf-block { margin-top:18px; page-break-inside:avoid; }
-                    .pf-block h2 { font-size:16px; font-weight:900; margin:0 0 8px; background:#0f1e3d; color:#fff; padding:6px 16px; border-radius:8px; display:inline-block; }
-                    .pf-floor-label { font-size:13px; font-weight:800; color:#334155; margin:12px 0 5px; }
-                    .pf-canvas { position:relative; width:100%; border:1.5px solid #94a3b8; border-radius:6px; background:#fff; }
-                    .pf-room { position:absolute; border:1px solid #94a3b8; background:#fff; padding:2px 3px; font-size:10px; text-align:center; overflow:hidden; }
-                    .pf-room b { display:block; font-size:11px; font-weight:900; color:#0f172a; border-bottom:1px solid #e2e8f0; margin-bottom:1px; }
-                    .pf-name { display:block; font-size:10.5px; font-weight:800; line-height:1.3; }
-                    .pf-name i { font-style:normal; font-size:8px; opacity:0.7; margin-left:2px; }
-                    .pf-fac { position:absolute; background:#f1f5f9; color:#64748b; border:1px solid #cbd5e1; font-size:11px; font-weight:700; display:flex; align-items:center; justify-content:center; text-align:center; }
-                    @media print { @page { size:A4 landscape; margin:9mm; } .page-break { page-break-before:always; } }
+                    .pf-block { margin-top:14px; break-inside:avoid; page-break-inside:avoid; }
+                    .pf-bldg-header { display:flex; align-items:center; gap:10px; background:linear-gradient(135deg,#0f2057 0%,#1e3a8a 100%); color:#fff; padding:8px 18px; border-radius:10px 10px 0 0; font-size:15px; font-weight:900; letter-spacing:-0.3px; }
+                    .pf-floor-wrap { background:#fff; border:3px solid #1e3a8a; border-top:none; border-radius:0 0 10px 10px; padding:14px 14px 16px; margin-bottom:2px; }
+                    .pf-floor-label { font-size:12px; font-weight:900; color:#1e3a8a; margin:10px 0 6px; padding:3px 10px; background:#eff6ff; border-left:4px solid #2563eb; border-radius:0 6px 6px 0; display:inline-block; }
+                    .pf-floor-label:first-child { margin-top:0; }
+                    .pf-canvas { position:relative; width:100%; border:3px solid #334155; border-radius:4px; background:#f0f4f8; box-shadow:inset 0 0 0 1px rgba(0,0,0,.06); }
+                    .pf-room-empty { position:absolute; border:1.5px solid #94a3b8; background:#fff; display:flex; flex-direction:column; align-items:center; justify-content:flex-start; overflow:hidden; }
+                    .pf-room-empty .rno { display:block; width:100%; text-align:center; font-size:10px; font-weight:900; color:#64748b; background:#f1f5f9; border-bottom:1.5px solid #cbd5e1; padding:1px 0; line-height:1.6; }
+                    .pf-room-occ { position:absolute; border:1.5px solid #94a3b8; background:#fff; display:flex; flex-direction:column; align-items:center; justify-content:flex-start; overflow:hidden; }
+                    .pf-room-occ .rno { display:block; width:100%; text-align:center; font-size:10px; font-weight:900; color:#fff; padding:1px 0; line-height:1.6; border-bottom:1.5px solid rgba(0,0,0,.15); }
+                    .pf-name { display:block; font-size:10px; font-weight:800; line-height:1.35; color:#0f172a; text-align:center; padding:0 2px; }
+                    .pf-name .gsuf { font-size:8px; font-weight:700; opacity:0.65; margin-left:1px; }
+                    .pf-fac { position:absolute; background:repeating-linear-gradient(45deg,#e2e8f0,#e2e8f0 3px,#f1f5f9 3px,#f1f5f9 9px); border:1.5px solid #94a3b8; color:#475569; font-size:10.5px; font-weight:800; display:flex; align-items:center; justify-content:center; text-align:center; letter-spacing:-0.3px; }
+                    .pf-corridor { position:absolute; background:#e2e8f0; border:1px solid #cbd5e1; color:#94a3b8; font-size:9.5px; font-weight:700; display:flex; align-items:center; justify-content:center; letter-spacing:3px; }
+                    @media print { @page { size:A4 landscape; margin:8mm; } body { background:#fff; padding:10px 14px; } .page-break { page-break-before:always; } .pf-canvas { box-shadow:none; } }
                 </style></head><body>`;
         }
 
@@ -1998,7 +2062,7 @@
                 const col = P.courseColors[cn];
                 const per = P.coursePeriod[cn] ? ` <span class="leg-period">(${P.coursePeriod[cn]})</span>` : '';
                 const cnt = P.courseCount[cn] || 0;
-                return `<span class="leg-item"><span class="leg-dot" style="background:${col}"></span><span style="color:${col}">${cn} · ${cnt}명</span>${per}</span>`;
+                return `<span class="leg-item"><span class="leg-swatch" style="background:${col}"></span><span style="color:${col}">${cn} · ${cnt}명</span>${per}</span>`;
             }).join('');
         }
 
@@ -2037,39 +2101,67 @@
         async function printLayout() {
             if (!viewAssign) { showToast('먼저 주차를 선택하세요'); return; }
             const P = await _prepPrint();
+
+            // 과정별 배경색 밝게 (방 배경용 tint)
+            function hexToRgb(hex) {
+                const r = parseInt(hex.slice(1,3),16), g = parseInt(hex.slice(3,5),16), b = parseInt(hex.slice(5,7),16);
+                return {r,g,b};
+            }
+            function tint(hex, alpha) {
+                const {r,g,b} = hexToRgb(hex);
+                return `rgba(${r},${g},${b},${alpha})`;
+            }
+
             function planFloorHtml(building, floorName, plan) {
                 let inner = '';
                 plan.items.forEach(it => {
-                    const leftPct = (it.x / plan.w) * 100;
-                    const wPct = ((it.w||78) / plan.w) * 100;
-                    const hPx = it.h || 42;
+                    const leftPct  = (it.x / plan.w) * 100;
+                    const wPct     = ((it.w || 78) / plan.w) * 100;
+                    const hPx      = it.h || 42;
+                    const style    = `left:${leftPct.toFixed(3)}%; top:${it.y}px; width:${wPct.toFixed(3)}%; height:${hPx}px;`;
+
                     if (it.t === 'fac') {
-                        inner += `<div class="pf-fac" style="left:${leftPct}%; top:${it.y}px; width:${wPct}%; height:${hPx}px;">${it.label}</div>`;
+                        const isCorridor = it.label === '복도';
+                        inner += `<div class="${isCorridor?'pf-corridor':'pf-fac'}" style="${style}">${it.label}</div>`;
                     } else {
                         const people = P.byRoomNo[`${building}|${it.no}`] || [];
                         if (people.length) {
-                            const col = P.courseColors[people[0].course] || '#0f172a';
-                            const names = people.map(p => `<span class="pf-name" style="color:${P.courseColors[p.course]||'#0f172a'}">${p.name}<i>${p.gender==='M'?'남':(p.gender==='F'?'여':'')}</i></span>`).join('');
-                            inner += `<div class="pf-room" style="left:${leftPct}%; top:${it.y}px; width:${wPct}%; min-height:${hPx}px;"><b>${it.no}</b>${names}</div>`;
+                            const col    = P.courseColors[people[0].course] || '#334155';
+                            const bgTint = tint(col, 0.10);
+                            const names  = people.map(p => {
+                                const gc = p.gender === 'F' ? '#db2777' : '#2563eb';
+                                const gs = p.gender === 'F' ? '여' : (p.gender === 'M' ? '남' : '');
+                                return `<span class="pf-name" style="color:${P.courseColors[p.course]||'#0f172a'}">${p.name}<span class="gsuf" style="color:${gc}">${gs}</span></span>`;
+                            }).join('');
+                            inner += `<div class="pf-room-occ" style="${style} min-height:${hPx}px; height:auto; background:${bgTint}; border-color:${tint(col,0.4)};">
+                                <span class="rno" style="background:${col};">${it.no}</span>${names}</div>`;
                         } else {
-                            inner += `<div class="pf-room" style="left:${leftPct}%; top:${it.y}px; width:${wPct}%; height:${hPx}px;"><b>${it.no}</b></div>`;
+                            inner += `<div class="pf-room-empty" style="${style}">
+                                <span class="rno">${it.no}</span></div>`;
                         }
                     }
                 });
-                return `<div class="pf-floor-label">${floorName}</div><div class="pf-canvas" style="height:${plan.h}px;">${inner}</div>`;
+                return `
+                    <div class="pf-floor-label">${floorName}</div>
+                    <div class="pf-canvas" style="height:${plan.h}px;">${inner}</div>`;
             }
+
             function planBuildingHtml(building) {
                 const fp = FLOORPLANS[building];
                 if (!fp) return '';
-                let h = `<div class="pf-block"><h2>${building}</h2>`;
-                Object.entries(fp).forEach(([fname, plan]) => { h += planFloorHtml(building, fname, plan); });
-                return h + `</div>`;
+                const floors = Object.entries(fp).map(([fname, plan]) => planFloorHtml(building, fname, plan)).join('');
+                return `<div class="pf-block">
+                    <div class="pf-bldg-header"><span class="bicon">🏢</span>${building}</div>
+                    <div class="pf-floor-wrap">${floors}</div>
+                </div>`;
             }
+
             const layoutSection = ['청렴관','상생관','국제교육동'].map(planBuildingHtml).join('<div class="page-break"></div>');
+            const totalCount = Object.keys(P.students).length;
             const win = window.open('', '_blank');
             win.document.write(_docHead('생활관 건물 배치도') + `
                 <h1>생활관 건물 배치도</h1>
-                <div class="sub">${P.fmt(P.wd)} ~ ${P.fmt(P.wEnd)} 주간 · 총 ${Object.keys(P.students).length}명 · 출력일 ${new Date().toLocaleDateString('ko-KR')}</div>
+                <div class="sub">${P.fmt(P.wd)} ~ ${P.fmt(P.wEnd)} 주간 · 총 ${totalCount}명 · 출력일 ${new Date().toLocaleDateString('ko-KR')}</div>
                 <div class="legend">${_legendHtml(P)}</div>
                 ${layoutSection}
                 <script>window.onload=function(){setTimeout(function(){window.print();},500);};<\/script></body></html>`);
