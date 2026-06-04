@@ -718,7 +718,7 @@
             const critDisabled = royal ? '' : 'crit-disabled';
             return `
                 <tr class="${royal ? 'royal-row' : ''}">
-                    <td class="rno-cell">${r.no}${royal ? ' ⭐' : ''}</td>
+                    <td class="rno-cell">${r.no}</td>
                     <td>
                         <select onchange="setRoomField('${id}','capacity',this.value)">
                             <option value="1" ${r.capacity !== 2 ? 'selected' : ''}>1인 1실</option>
@@ -1145,18 +1145,47 @@
             const empNo = (cells.find(c => /^\d{4,6}$/.test(c)) || '').trim();
             if (!empNo) return null;
 
-            // 이름: 한글 2~4자 (사번 다음에 오는 첫 한글 토큰 우선)
-            //  직위·부서 단어(과장/차장/대리/주임/본사/대우 등)는 이름에서 배제
-            const TITLE_WORDS = /^(과장|차장|대리|주임|부장|팀장|실장|센터장|교수|본사|대우|사원|선임|책임|수석)$/;
+            // 이름: 사번 바로 뒤에 오는 한글 토큰들을 모은다.
+            //  PDF가 "손 평", "정 양 욱"처럼 글자 사이를 띄우면 1글자씩 쪼개지므로,
+            //  사번 다음의 연속된 한글 조각(1~2자)을 이어붙여 이름을 복원한다.
+            //  직위·부서 단어가 나오면 거기서 멈춘다.
+            const TITLE_WORDS = /^(과장|차장|대리|주임|부장|팀장|실장|센터장|교수|본사|대우|사원|선임|책임|수석|대표|이사|부사장|사장)$/;
+            // 소속 키워드(공항/본부/부/실/단/센터/팀 등)가 포함되면 이름이 아니라 소속
+            const isDeptToken = c => /(공항|본부|부서|훈련원|센터|운영단|시설단|기술단|관제|운영|시설|항행|전력|토목|건축|안전|기획|경영|법무|전략|보안|항공|항로|무선|표지소)/.test(c) || c.length >= 4;
+
             let name = '';
             const empIdx = cells.findIndex(c => c === empNo);
-            for (let i = 0; i < cells.length; i++) {
-                const c = cells[i];
-                if (!/^[가-힣]{2,4}$/.test(c)) continue;
-                if (TITLE_WORDS.test(c)) continue;
-                // 사번 바로 뒤 토큰을 가장 우선
-                if (empIdx >= 0 && i > empIdx) { name = c; break; }
-                if (!name) name = c; // 폴백
+            if (empIdx >= 0) {
+                const nameParts = [];
+                for (let i = empIdx + 1; i < cells.length; i++) {
+                    const c = cells[i];
+                    if (!/^[가-힣]+$/.test(c)) {
+                        if (nameParts.length) break;   // 이름 수집 시작 후 비한글 → 종료
+                        continue;                       // 아직 시작 전이면 건너뜀
+                    }
+                    if (TITLE_WORDS.test(c) || isDeptToken(c)) break; // 직위·소속 만나면 종료
+                    nameParts.push(c);
+                    // 이미 2자 이상 모였고 다음이 긴 토큰이면 충분
+                    if (nameParts.join('').length >= 3) break;
+                }
+                name = nameParts.join('');
+            }
+            // 폴백 1: 사번 앞쪽의 연속 한글 조각 (이름이 사번 앞에 오는 양식)
+            if (!name && empIdx > 0) {
+                const parts = [];
+                for (let i = empIdx - 1; i >= 0; i--) {
+                    const c = cells[i];
+                    if (!/^[가-힣]+$/.test(c)) break;
+                    if (TITLE_WORDS.test(c) || isDeptToken(c)) break;
+                    parts.unshift(c);
+                    if (parts.join('').length >= 3) break;
+                }
+                name = parts.join('');
+            }
+            // 폴백 2: 전체에서 직위·소속 아닌 2~4자 한글
+            if (!name) {
+                const cand = cells.find(c => /^[가-힣]{2,4}$/.test(c) && !TITLE_WORDS.test(c) && !isDeptToken(c));
+                name = cand || '';
             }
             if (!name) return null;
 
@@ -1165,13 +1194,20 @@
             const gCell = cells.find(c => /^(남|여|남자|여자|넘|M|F|m|f)$/.test(c));
             if (gCell) gender = /남|넘|M|m/.test(gCell) ? 'M' : 'F';
 
-            // 소속: 이름·사번·성별 제외한 한글 토큰 중 가장 긴 것 (직위 단어 제외)
+            // 소속: 이름 조각·사번·성별·직위 제외, 소속 키워드 포함 토큰 우선
+            const nameChars = new Set(name.split(''));
             const used = new Set([name, empNo, gCell]);
-            const deptCand = cells.filter(c =>
-                !used.has(c) && /[가-힣]/.test(c) && !/^\d+$/.test(c)
-                && c !== name && !TITLE_WORDS.test(c)
-            );
-            const dept = deptCand.sort((a, b) => b.length - a.length)[0] || '';
+            const deptCand = cells.filter(c => {
+                if (used.has(c)) return false;
+                if (!/[가-힣]/.test(c) || /^\d+$/.test(c)) return false;
+                if (TITLE_WORDS.test(c)) return false;
+                // 이름 조각(1글자이고 이름에 포함)이면 제외
+                if (c.length === 1 && nameChars.has(c)) return false;
+                return true;
+            });
+            // 소속 키워드 포함된 것 우선, 없으면 가장 긴 것
+            const deptKeyword = deptCand.find(c => isDeptToken(c));
+            const dept = deptKeyword || deptCand.sort((a, b) => b.length - a.length)[0] || '';
 
             return { seq: 0, name, empNo, dept, gender };
         }
@@ -1734,51 +1770,160 @@
                 .catch(e => { console.error(e); showToast('삭제 실패'); });
         }
 
-        // ── PDF 출력 (인쇄) ──
+        // ── PDF 출력: 1부 리스트 + 2부 방 배치도 ──
+        // 청렴관·상생관 방 배열 양식 (첨부 PDF 기준). null=빈칸, 'F:라벨'=시설칸, 숫자=방번호
+        const LAYOUTS = {
+            '청렴관': [
+                { floor: 2, rows: [
+                    ['208','209','210','211','212','213', 'F:계단', 'F:휴게실'],
+                    [null, null, null, null, null, null, 'F: ', '215'],
+                    [null, null, null, null, null, null, 'F: ', '216'],
+                    ['207','206','205','204','203','202','201', '217'],
+                    [null, null, null, null, null, '214','219','218']
+                ]},
+                { floor: 1, rows: [
+                    ['106','105','104','103','102','101'],
+                    ['F:식당','107','108','109','110','F:휴게실']
+                ]}
+            ],
+            '상생관': [
+                { floor: 3, rows: [
+                    ['308','309','310','311','312','313','314','315','316'],
+                    ['307','306','305','304','303','302','301', 'F:휴게실', 'F: ']
+                ]},
+                { floor: 2, rows: [
+                    ['209','210','211','212','213','214','215', 'F:PC방'],
+                    [null, null, null, null, null, null, null, 'F:세탁/창고'],
+                    ['207','206','205','204','203','202','201', 'F:휴게실']
+                ]}
+            ]
+        };
+
         function printBoard() {
             if (!viewAssign) { showToast('먼저 주차를 선택하세요'); return; }
             const wk = viewAssign.weekKey;
             const wd = new Date(wk + 'T00:00:00');
             const wEnd = new Date(wd); wEnd.setDate(wd.getDate() + 6);
-            const fmt = d => `${d.getMonth()+1}/${d.getDate()}`;
+            const fmt = d => `${d.getMonth()+1}.${d.getDate()}.`;
             const students = viewAssign.students;
-
             const bldgOrder = { '청렴관': 0, '상생관': 1, '국제교육동': 2 };
+
+            // 색상 팔레트 (과정별)
+            const courseColors = {};
+            const palette = ['#2563eb','#10b981','#f59e0b','#8b5cf6','#ec4899','#06b6d4','#ef4444'];
+            (viewAssign.courses || []).forEach((c, i) => { courseColors[c.courseName] = palette[i % palette.length]; });
+
+            // 방번호 → 점유자 매핑 (호수 문자열 기준)
+            const byRoomNo = {};   // `${building}|${no}` → [people]
             const byRoom = {};
-            Object.entries(students).forEach(([t, s]) => { (byRoom[s.roomId] = byRoom[s.roomId] || []).push(s); });
+            Object.entries(students).forEach(([t, s]) => {
+                (byRoom[s.roomId] = byRoom[s.roomId] || []).push(s);
+                const k = `${s.building}|${String(s.no)}`;
+                (byRoomNo[k] = byRoomNo[k] || []).push(s);
+            });
+
+            // ===== 1부: 리스트 표 =====
             const allRoomsSorted = Object.entries(rooms).map(([id, r]) => ({ id, ...r }))
                 .sort((a,b) => (bldgOrder[a.building]??9)-(bldgOrder[b.building]??9) || a.floor-b.floor || String(a.no).localeCompare(String(b.no),undefined,{numeric:true}));
-
             let rowsHtml = '';
             allRoomsSorted.forEach(r => {
                 const occ = byRoom[r.id] || [];
                 if (!occ.length) return;
                 occ.forEach((p, idx) => {
+                    const cc = courseColors[p.course] || '#64748b';
                     rowsHtml += `<tr>
-                        ${idx===0 ? `<td rowspan="${occ.length}" style="font-weight:800;">${r.building} ${r.floor}층 ${r.no}호${r.royal?' ⭐':''}</td>` : ''}
-                        <td>${p.name}</td><td>${p.empNo}</td><td>${p.dept||'-'}</td>
-                        <td>${p.gender==='M'?'남':(p.gender==='F'?'여':'-')}</td><td>${p.course}</td>
+                        ${idx===0 ? `<td rowspan="${occ.length}" style="font-weight:800;">${r.building} ${r.floor}층 ${r.no}호</td>` : ''}
+                        <td style="font-weight:700;">${p.name}</td><td>${p.empNo||'-'}</td><td>${p.dept||'-'}</td>
+                        <td>${p.gender==='M'?'남':(p.gender==='F'?'여':'-')}</td>
+                        <td><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${cc};margin-right:5px;"></span>${p.course}</td>
                     </tr>`;
                 });
             });
+
+            // 과정 범례
+            const legend = Object.entries(courseColors).map(([cn,col]) =>
+                `<span style="display:inline-flex;align-items:center;gap:5px;margin-right:14px;font-size:12px;"><span style="width:11px;height:11px;border-radius:3px;background:${col};display:inline-block;"></span>${cn}</span>`
+            ).join('');
+
+            // ===== 2부: 방 배치도 =====
+            function cellHtml(token, building) {
+                if (token === null) return `<td class="blank"></td>`;
+                if (typeof token === 'string' && token.startsWith('F:')) {
+                    const label = token.slice(2).trim();
+                    return `<td class="fac">${label}</td>`;
+                }
+                // 방 번호
+                const no = String(token);
+                const people = byRoomNo[`${building}|${no}`] || [];
+                if (!people.length) {
+                    return `<td class="room empty"><div class="rno">${no}</div></td>`;
+                }
+                const col = courseColors[people[0].course] || '#64748b';
+                const names = people.map(p => `<div class="pname">${p.name} <span class="pg">${p.gender==='M'?'남':(p.gender==='F'?'여':'')}</span></div>`).join('');
+                return `<td class="room filled" style="border-top:4px solid ${col};"><div class="rno">${no}</div>${names}</td>`;
+            }
+            function layoutHtml(building) {
+                const floors = LAYOUTS[building];
+                if (!floors) return '';
+                let h = `<div class="bldg-block"><h2>${building}</h2>`;
+                floors.forEach(fl => {
+                    const maxCols = Math.max(...fl.rows.map(r => r.length));
+                    h += `<div class="floor-title">${fl.floor}층</div><table class="layout"><tbody>`;
+                    fl.rows.forEach(row => {
+                        h += '<tr>';
+                        row.forEach(tok => h += cellHtml(tok, building));
+                        // 칸 수 보정
+                        for (let i = row.length; i < maxCols; i++) h += `<td class="blank"></td>`;
+                        h += '</tr>';
+                    });
+                    h += `</tbody></table>`;
+                });
+                h += `</div>`;
+                return h;
+            }
+            const layoutSection = ['청렴관','상생관'].map(layoutHtml).join('');
 
             const win = window.open('', '_blank');
             win.document.write(`<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8"><title>생활관 배치표</title>
                 <style>
                     @import url("https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css");
-                    body { font-family:'Pretendard',sans-serif; padding:20px; }
-                    h1 { text-align:center; font-size:22px; }
-                    .sub { text-align:center; color:#64748b; margin-bottom:16px; }
-                    table { width:100%; border-collapse:collapse; font-size:13px; }
-                    th,td { border:1px solid #333; padding:6px 8px; text-align:center; }
-                    th { background:#f1f5f9; }
-                    @media print { @page { size: A4 portrait; margin:12mm; } }
+                    * { box-sizing:border-box; }
+                    body { font-family:'Pretendard',sans-serif; padding:18px; color:#1e293b; }
+                    h1 { text-align:center; font-size:22px; margin:0 0 4px; }
+                    .sub { text-align:center; color:#64748b; margin-bottom:14px; font-size:13px; }
+                    .legend { text-align:center; margin-bottom:14px; }
+                    .part-title { font-size:16px; font-weight:900; margin:8px 0 10px; padding-left:10px; border-left:5px solid #2563eb; }
+                    table.list { width:100%; border-collapse:collapse; font-size:12.5px; }
+                    table.list th, table.list td { border:1px solid #cbd5e1; padding:6px 8px; text-align:center; }
+                    table.list th { background:#f1f5f9; }
+                    /* 배치도 */
+                    .bldg-block { margin-top:18px; page-break-inside:avoid; }
+                    .bldg-block h2 { font-size:17px; font-weight:900; margin:0 0 8px; background:#0f1e3d; color:#fff; padding:7px 14px; border-radius:8px; display:inline-block; }
+                    .floor-title { font-size:13px; font-weight:800; color:#2563eb; margin:10px 0 4px; }
+                    table.layout { width:100%; border-collapse:separate; border-spacing:4px; table-layout:fixed; }
+                    table.layout td { border-radius:7px; height:54px; vertical-align:top; padding:4px 5px; font-size:11px; }
+                    td.blank { background:transparent; }
+                    td.fac { background:#e2e8f0; color:#64748b; font-weight:700; text-align:center; vertical-align:middle; font-size:11px; }
+                    td.room { background:#f8fafc; border:1px solid #cbd5e1; }
+                    td.room.empty { background:#fff; border:1px dashed #cbd5e1; }
+                    td.room .rno { font-weight:900; font-size:12px; color:#0f172a; }
+                    td.room .pname { font-weight:700; font-size:11px; color:#1e293b; line-height:1.3; }
+                    td.room .pg { font-size:9px; color:#64748b; }
+                    @media print { @page { size: A4 portrait; margin:10mm; } .page-break { page-break-before:always; } }
                 </style></head><body>
                 <h1>생활관 배치표</h1>
-                <div class="sub">${fmt(wd)} ~ ${fmt(wEnd)} 주간 · 총 ${Object.keys(students).length}명 · 출력 ${new Date().toLocaleDateString('ko-KR')}</div>
-                <table><thead><tr><th style="width:140px;">생활관/호실</th><th>성명</th><th>사번</th><th>소속</th><th>성별</th><th>과정</th></tr></thead>
-                <tbody>${rowsHtml}</tbody></table>
-                <script>window.onload=function(){setTimeout(function(){window.print();},400);};<\/script>
+                <div class="sub">${fmt(wd)} ~ ${fmt(wEnd)} 주간 · 총 ${Object.keys(students).length}명 · 출력일 ${new Date().toLocaleDateString('ko-KR')}</div>
+                <div class="legend">${legend}</div>
+
+                <div class="part-title">1부. 배정 명단</div>
+                <table class="list"><thead><tr><th style="width:130px;">생활관/호실</th><th>성명</th><th>사번</th><th>소속</th><th>성별</th><th>과정</th></tr></thead>
+                <tbody>${rowsHtml || '<tr><td colspan="6" style="padding:20px;color:#94a3b8;">배정된 인원이 없습니다.</td></tr>'}</tbody></table>
+
+                <div class="page-break"></div>
+                <div class="part-title">2부. 생활관 배치도</div>
+                ${layoutSection}
+
+                <script>window.onload=function(){setTimeout(function(){window.print();},500);};<\/script>
                 </body></html>`);
             win.document.close();
         }
