@@ -342,6 +342,14 @@
                     <button class="h-btn" style="background:#475569;" onclick="goStep(4)"><i class="fa-solid fa-table-list"></i> 현황 보기</button>
                 </div>
 
+                <div style="margin-top:16px; padding:14px 16px; border:1.5px dashed #cbd5e1; border-radius:12px; background:#f8fafc;">
+                    <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap;">
+                        <div style="font-weight:800; color:#334155; font-size:14px;"><i class="fa-solid fa-chalkboard-user" style="color:#475569;"></i> 강사 숙박 사전배치 <span style="font-size:12px; font-weight:600; color:#64748b;">— 자동배정 전에 강사 방을 잡아두면, 교육생은 나머지 방에만 배정됩니다.</span></div>
+                        <button class="h-btn" style="background:#475569;" onclick="openInstructorAdd('reserve')"><i class="fa-solid fa-plus"></i> 강사 추가</button>
+                    </div>
+                    <div id="instReserveList" style="margin-top:10px;"></div>
+                </div>
+
                 <div id="assignLog" style="margin-top:16px; font-size:13px; line-height:1.7;"></div>
             </div>
         </div>
@@ -391,7 +399,7 @@
     <!-- 강사·외부 숙박 추가 팝업 -->
     <div class="pop-overlay" id="instPop">
         <div class="pop-box">
-            <h3>강사·외부 숙박 추가</h3>
+            <h3 id="instPopTitle">강사·외부 숙박 추가</h3>
             <div class="opt-group">
                 <label>성명</label>
                 <input id="instName" type="text" placeholder="예: 홍길동" style="width:100%; padding:11px; border:1.5px solid var(--border); border-radius:9px; font-size:14px;">
@@ -902,6 +910,11 @@
         function selectWeek(key) {
             selectedWeekKey = key;
             document.querySelectorAll('#weekPills button').forEach(b => b.classList.toggle('on', b.dataset.wk === key));
+            // 주차를 바꾸면 이전 주차에서 열어둔 교육생 명단 패널을 닫고 선택 초기화
+            selectedCourse = null;
+            roster = [];
+            const _rp = document.getElementById('rosterPanel');
+            if (_rp) _rp.style.display = 'none';
             renderCourseList();
         }
 
@@ -1359,6 +1372,7 @@
                 if ((v.weekKey || k.split('__')[0]) === wk) weekRosters[k] = v;
             });
             renderWeekRosterList();
+            renderInstReserve(wk);
         }
 
         function renderWeekRosterList() {
@@ -1528,8 +1542,24 @@
                 return true;
             };
 
+            // ── 0) 강사 숙박 사전배치: 예약된 방을 먼저 점유하고 자동배정에서 제외 ──
+            let instCount = 0;
+            try {
+                const instSnap = await db.ref(`system/dorm/instructors/${wk}`).once('value');
+                const insts = instSnap.val() || {};
+                Object.entries(insts).forEach(([tk, it]) => {
+                    const rs = roomState[it.roomId];
+                    if (!rs) return;
+                    rs.reserved = true;
+                    rs.occupants.push({ name: it.name, empNo: it.empNo || '-', dept: it.dept || '강사', gender: it.gender || '', course: '강사', rosterKey: '__INST__', start: '', end: '' });
+                    assigned[tk] = { name: it.name, empNo: it.empNo || '-', dept: it.dept || '강사', gender: it.gender || '', course: '강사', room: `${rs.building} ${rs.no}`, roomId: rs.id, building: rs.building, floor: rs.floor, no: rs.no };
+                    instCount++;
+                });
+            } catch (e) { console.error('강사 예약 로드 실패', e); }
+            if (instCount) log.push(`👨‍🏫 강사 사전배치: ${instCount}명 (해당 방은 교육생 자동배정에서 제외)`);
+
             // ── 1) 우선 배정 ──
-            const royalRooms = sortedRooms().filter(r => roomState[r.id].royal);
+            const royalRooms = sortedRooms().filter(r => roomState[r.id].royal && !roomState[r.id].reserved);
             let remaining = people.slice();
 
             royalRooms.forEach(r => {
@@ -1555,7 +1585,7 @@
             log.push(`⭐ 우선 배정: ${royalCount}명 (${royalRooms.length}개 방)`);
 
             // ── 2) 나머지: 과정별 연속 배치 (방 연번 순) ──
-            const normalRooms = sortedRooms().filter(r => !roomState[r.id].royal);
+            const normalRooms = sortedRooms().filter(r => !roomState[r.id].royal && !roomState[r.id].reserved);
             let roomPtr = 0;
             courseKeys.forEach(ck => {
                 const v = weekRosters[ck];
@@ -1780,11 +1810,14 @@
                                 <th style="width:70px;">성별</th>
                                 <th style="width:110px;">관리</th>
                             </tr></thead><tbody>`;
+                    let _lf = null, _sh = false;
                     list.forEach(p => {
                         const col = courseColors[p.course] || '#64748b';
                         const gLabel = p.gender === 'M' ? '남' : (p.gender === 'F' ? '여' : '-');
                         const gCol = p.gender === 'F' ? '#ec4899' : (p.gender === 'M' ? '#3b82f6' : '#94a3b8');
-                        html += `<tr>
+                        if (p.floor !== _lf) { _sh = !_sh; _lf = p.floor; }
+                        const _rb = _sh ? 'background:#eef2f7;' : 'background:#ffffff;';
+                        html += `<tr style="${_rb}">
                             <td style="font-weight:700; color:#475569;">${p.floor}층</td>
                             <td style="font-weight:900; color:#0f172a;">${p.no}호</td>
                             <td style="font-weight:800; color:#1e293b;">${p.name}</td>
@@ -1911,8 +1944,17 @@
         }
 
         // 강사·외부 숙박 추가
-        function openInstructorAdd() {
-            if (!viewAssign) { showToast('먼저 주차를 선택하세요'); return; }
+        // ── 강사 숙박: 예약 저장소(system/dorm/instructors/{wk}) 기반, 2가지 상황 지원 ──
+        //  reserve = STEP3 자동배정 전 사전배치 / now = STEP4 즉시 추가
+        let _instCtx = 'now', _instWk = null;
+        function openInstructorAdd(ctx) {
+            _instCtx = (ctx === 'reserve') ? 'reserve' : 'now';
+            const wk = _instCtx === 'reserve'
+                ? (document.getElementById('weekSelect') ? document.getElementById('weekSelect').value : null)
+                : (viewAssign ? viewAssign.weekKey : null);
+            if (!wk) { showToast(_instCtx === 'reserve' ? '먼저 배정할 주차를 선택하세요' : '먼저 주차를 선택하세요'); return; }
+            _instWk = wk;
+            if (!Object.keys(rooms).length) { showToast('STEP 1에서 방을 먼저 설정하세요'); return; }
             const bldgOrder = { '청렴관': 0, '상생관': 1, '국제교육동': 2 };
             const opts = Object.entries(rooms).map(([id, r]) => Object.assign({ id }, r))
                 .sort((a, b) => (bldgOrder[a.building] ?? 9) - (bldgOrder[b.building] ?? 9) || a.floor - b.floor || String(a.no).localeCompare(String(b.no), undefined, { numeric: true }))
@@ -1922,29 +1964,75 @@
             document.getElementById('instDept').value = '강사';
             document.getElementById('instGender').value = 'M';
             document.getElementById('instMsg').innerText = '';
+            const ttl = document.getElementById('instPopTitle');
+            if (ttl) ttl.innerText = _instCtx === 'reserve' ? '강사 숙박 사전배치' : '강사·외부 숙박 추가';
             document.getElementById('instPop').style.display = 'flex';
         }
         function closeInstPop() { document.getElementById('instPop').style.display = 'none'; }
-        function confirmInstructorAdd() {
+        // 해당 주차/방의 현재 점유자(예약 + 확정배정 합산)
+        async function _instRoomOcc(wk, roomId) {
+            const occ = [];
+            const ir = await db.ref(`system/dorm/instructors/${wk}`).once('value');
+            Object.values(ir.val() || {}).forEach(x => { if (x.roomId === roomId) occ.push(x); });
+            if (viewAssign && viewAssign.weekKey === wk && viewAssign.students) {
+                Object.values(viewAssign.students).forEach(x => { if (x.roomId === roomId) occ.push(x); });
+            } else {
+                const as = await db.ref(`system/dorm/assignments/${wk}/students`).once('value');
+                Object.values(as.val() || {}).forEach(x => { if (x.roomId === roomId) occ.push(x); });
+            }
+            return occ;
+        }
+        async function confirmInstructorAdd() {
             const name = (document.getElementById('instName').value || '').trim();
             const gender = document.getElementById('instGender').value;
             const dept = (document.getElementById('instDept').value || '강사').trim();
             const destRoomId = document.getElementById('instRoom').value;
             const msg = document.getElementById('instMsg');
+            const wk = _instWk;
             if (!name) { msg.innerHTML = '<span style="color:var(--danger);font-weight:700;">성명을 입력하세요.</span>'; return; }
             const dest = rooms[destRoomId];
-            if (!dest) { msg.innerHTML = '<span style="color:var(--danger);font-weight:700;">방을 선택하세요.</span>'; return; }
-            const occ = Object.entries(viewAssign.students).filter(([tk, x]) => x.roomId === destRoomId);
+            if (!dest || !wk) { msg.innerHTML = '<span style="color:var(--danger);font-weight:700;">방/주차를 확인하세요.</span>'; return; }
+            const occ = await _instRoomOcc(wk, destRoomId);
             const cap = dest.capacity || 1;
-            if (occ.length >= cap) { msg.innerHTML = `<span style="color:var(--danger);font-weight:700;">⛔ 정원 초과 — 이미 ${occ.length}/${cap}명 배정됨</span>`; return; }
-            const destGender = dest.gender || (occ[0] ? occ[0][1].gender : '');
-            if (destGender && destGender !== gender) { msg.innerHTML = `<span style="color:var(--danger);font-weight:700;">⛔ 성별 불일치 — ${destGender === 'M' ? '남' : '여'}성 방입니다.</span>`; return; }
-            const wk = viewAssign.weekKey;
+            if (occ.length >= cap) { msg.innerHTML = `<span style="color:var(--danger);font-weight:700;">⛔ 정원 초과 — 이미 ${occ.length}/${cap}명</span>`; return; }
+            const destGender = dest.gender || (occ[0] ? occ[0].gender : '');
+            if (destGender && destGender !== gender) { msg.innerHTML = `<span style="color:var(--danger);font-weight:700;">⛔ 성별 불일치 — ${destGender === 'M' ? '남' : '여'}성 방</span>`; return; }
             const token = 'inst_' + Date.now();
             const rec = { name, empNo: '-', dept, gender, course: '강사', room: `${dest.building} ${dest.no}`, roomId: destRoomId, building: dest.building, floor: dest.floor, no: dest.no };
-            db.ref(`system/dorm/assignments/${wk}/students/${token}`).update(rec)
-                .then(() => { if (!viewAssign.students) viewAssign.students = {}; viewAssign.students[token] = rec; closeInstPop(); showToast(`✅ ${name} 추가 (${dest.building} ${dest.no}호)`); renderBoardMap(); })
-                .catch(e => { console.error(e); msg.innerText = '저장 실패'; });
+            try {
+                await db.ref(`system/dorm/instructors/${wk}/${token}`).update(rec);   // 예약 저장(재배정에도 유지)
+                const asnap = await db.ref(`system/dorm/assignments/${wk}`).once('value');
+                if (asnap.exists()) {                                                  // 이미 배정 있으면 즉시 반영
+                    await db.ref(`system/dorm/assignments/${wk}/students/${token}`).update(rec);
+                    if (viewAssign && viewAssign.weekKey === wk) { if (!viewAssign.students) viewAssign.students = {}; viewAssign.students[token] = rec; }
+                }
+                closeInstPop();
+                showToast(`✅ ${name} 강사 ${_instCtx === 'reserve' ? '사전배치' : '추가'} (${dest.building} ${dest.no}호)`);
+                if (_instCtx === 'reserve') renderInstReserve(wk);
+                else if (typeof renderBoardMap === 'function') renderBoardMap();
+            } catch (e) { console.error(e); msg.innerText = '저장 실패'; }
+        }
+        // STEP3 강사 예약 목록
+        async function renderInstReserve(wk) {
+            const box = document.getElementById('instReserveList');
+            if (!box) return;
+            wk = wk || (document.getElementById('weekSelect') ? document.getElementById('weekSelect').value : null);
+            if (!wk) { box.innerHTML = ''; return; }
+            const snap = await db.ref(`system/dorm/instructors/${wk}`).once('value');
+            const arr = Object.entries(snap.val() || {});
+            if (!arr.length) { box.innerHTML = '<div style="font-size:12.5px; color:#94a3b8;">사전배치된 강사가 없습니다.</div>'; return; }
+            box.innerHTML = arr.map(([tk, it]) => `<span style="display:inline-flex; align-items:center; gap:8px; background:#fff; border:1.5px solid #cbd5e1; border-radius:10px; padding:6px 10px; margin:0 6px 6px 0; font-size:13px; font-weight:700; color:#334155;"><i class="fa-solid fa-chalkboard-user" style="color:#475569;"></i> ${it.name}<span style="color:${it.gender==='F'?'#db2777':'#2563eb'};">(${it.gender==='F'?'여':'남'})</span><span style="color:#64748b; font-weight:600;">${it.building} ${it.no}호</span><span onclick="removeInstReserve('${tk}')" title="삭제" style="cursor:pointer; color:#dc2626; font-weight:900;">✕</span></span>`).join('');
+        }
+        async function removeInstReserve(token) {
+            const wk = document.getElementById('weekSelect') ? document.getElementById('weekSelect').value : (viewAssign && viewAssign.weekKey);
+            if (!wk) return;
+            await db.ref(`system/dorm/instructors/${wk}/${token}`).remove();
+            await db.ref(`system/dorm/assignments/${wk}/students/${token}`).remove().catch(() => {});
+            if (viewAssign && viewAssign.weekKey === wk && viewAssign.students) delete viewAssign.students[token];
+            showToast('강사 예약 삭제됨');
+            renderInstReserve(wk);
+            const bm = document.getElementById('boardMapArea');
+            if (typeof renderBoardMap === 'function' && bm && bm.offsetParent !== null) renderBoardMap();
         }
 
 
@@ -2330,32 +2418,42 @@
             const P = await _prepPrint();
             const allRoomsSorted = Object.entries(rooms).map(([id, r]) => ({ id, ...r }))
                 .sort((a,b) => (P.bldgOrder[a.building]??9)-(P.bldgOrder[b.building]??9) || a.floor-b.floor || String(a.no).localeCompare(String(b.no),undefined,{numeric:true}));
-            let rowsHtml = '';
-            let _lastFloorKey = null, _shade = false;
-            allRoomsSorted.forEach(r => {
-                const occ = P.byRoom[r.id] || [];
-                if (!occ.length) return;
-                // 건물+층이 바뀔 때마다 음영 토글 → 1층/2층 구분
-                const fk = `${r.building}|${r.floor}`;
-                if (fk !== _lastFloorKey) { _shade = !_shade; _lastFloorKey = fk; }
-                const rowBg = _shade ? 'background:#f1f5f9;' : 'background:#ffffff;';
-                occ.forEach((p, idx) => {
-                    const cc = P.courseColors[p.course] || '#64748b';
-                    rowsHtml += `<tr style="${rowBg}">
-                        ${idx===0 ? `<td rowspan="${occ.length}" style="font-weight:800;${rowBg}">${r.building} ${r.floor}층 ${r.no}호</td>` : ''}
-                        <td style="font-weight:700;">${p.name}</td><td>${p.empNo||'-'}</td><td>${p.dept||'-'}</td>
-                        <td>${p.gender==='M'?'남':(p.gender==='F'?'여':'-')}</td>
-                        <td style="color:${cc};font-weight:700;">${p.course}</td>
-                    </tr>`;
+            // 건물별로 분리 → 각 건물이 한 페이지씩
+            const order = ['청렴관','상생관','국제교육동'];
+            const byB = {};
+            allRoomsSorted.forEach(r => { (byB[r.building] = byB[r.building] || []).push(r); });
+            const bldgs = order.filter(b => byB[b] && byB[b].some(r => (P.byRoom[r.id]||[]).length));
+            const sections = bldgs.map((b, bi) => {
+                let rowsHtml = '', _lf = null, _sh = false, cnt = 0;
+                byB[b].forEach(r => {
+                    const occ = P.byRoom[r.id] || [];
+                    if (!occ.length) return;
+                    if (r.floor !== _lf) { _sh = !_sh; _lf = r.floor; }     // 층 바뀔 때 음영 토글
+                    const rowBg = _sh ? 'background:#eef2f7;' : 'background:#ffffff;';
+                    occ.forEach((p, idx) => {
+                        cnt++;
+                        const cc = P.courseColors[p.course] || '#64748b';
+                        rowsHtml += `<tr style="${rowBg}">
+                            ${idx===0 ? `<td rowspan="${occ.length}" style="font-weight:800;${rowBg}">${r.floor}층 ${r.no}호</td>` : ''}
+                            <td style="font-weight:700;">${p.name}</td><td>${p.empNo||'-'}</td><td>${p.dept||'-'}</td>
+                            <td>${p.gender==='M'?'(남)':(p.gender==='F'?'(여)':'-')}</td>
+                            <td style="color:${cc};font-weight:700;">${p.course}</td>
+                        </tr>`;
+                    });
                 });
-            });
+                const bar = (typeof DORM_BLDG_BAR !== 'undefined' && DORM_BLDG_BAR[b]) || '#0f2057';
+                return `<div${bi>0 ? ' style="page-break-before:always;"' : ''}>
+                    <h2 style="background:${bar};color:#fff;padding:9px 16px;border-radius:9px 9px 0 0;margin:14px 0 0;font-size:16px;font-weight:900;">\ud83c\udfe2 ${b} <span style="font-weight:700;font-size:13px;opacity:.85;">· ${cnt}명</span></h2>
+                    <table class="list" style="margin-top:0;"><thead><tr><th style="width:120px;">호실</th><th>성명</th><th>사번</th><th>소속</th><th>성별</th><th>과정</th></tr></thead>
+                    <tbody>${rowsHtml}</tbody></table>
+                </div>`;
+            }).join('');
             const win = window.open('', '_blank');
             win.document.write(_docHead('생활관 배정 명단') + `
                 <h1>생활관 배정 명단</h1>
                 <div class="sub">${P.fmt(P.wd)} ~ ${P.fmt(P.wEnd)} 주간 · 총 ${Object.keys(P.students).length}명 · 출력일 ${new Date().toLocaleDateString('ko-KR')}</div>
                 <div class="legend">${_legendHtml(P)}</div>
-                <table class="list"><thead><tr><th style="width:130px;">생활관/호실</th><th>성명</th><th>사번</th><th>소속</th><th>성별</th><th>과정</th></tr></thead>
-                <tbody>${rowsHtml || '<tr><td colspan="6" style="padding:20px;color:#94a3b8;">배정된 인원이 없습니다.</td></tr>'}</tbody></table>
+                ${sections || '<div style="padding:20px;color:#94a3b8;">배정된 인원이 없습니다.</div>'}
                 <script>window.onload=function(){setTimeout(function(){window.print();},500);};<\/script></body></html>`);
             win.document.close();
         }
