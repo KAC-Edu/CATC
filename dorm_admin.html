@@ -355,7 +355,8 @@
                     <select id="viewWeekSelect" style="padding:10px 13px; border:1.5px solid var(--border); border-radius:9px; font-size:14px; min-width:200px;" onchange="renderBoard()"></select>
                     <button class="h-btn" style="background:var(--blue);" onclick="loadViewWeeks()"><i class="fa-solid fa-rotate"></i> 새로고침</button>
                     <div style="flex:1;"></div>
-                    <button class="save-btn" style="background:var(--danger);" onclick="printBoard()"><i class="fa-solid fa-print"></i> PDF 출력</button>
+                    <button class="save-btn" style="background:#2563eb;" onclick="printList()"><i class="fa-solid fa-list"></i> 명단 PDF</button>
+                    <button class="save-btn" style="background:var(--danger);" onclick="printLayout()"><i class="fa-solid fa-building"></i> 건물 배치도 PDF</button>
                 </div>
 
                 <div id="boardStats" style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:14px;"></div>
@@ -1512,7 +1513,7 @@
                 weekKey: wk,
                 assignedAt: firebase.database.ServerValue.TIMESTAMP,
                 students: assigned,
-                courses: courseKeys.map(ck => ({ rosterKey: ck, courseName: weekRosters[ck].courseName, room: weekRosters[ck].room }))
+                courses: courseKeys.map(ck => ({ rosterKey: ck, courseName: weekRosters[ck].courseName, room: weekRosters[ck].room, period: weekRosters[ck].period || '' }))
             };
             db.ref(`system/dorm/assignments/${wk}`).set(payload)
                 .then(() => {
@@ -1773,103 +1774,200 @@
         // ── PDF 출력: 1부 명단 + 2부 건물 평면 배치도 (원본 양식 좌표 재현) ──
         const FLOORPLANS = {
             '청렴관': {
-                '2층': { w:820, h:230, items:[
-                    {t:'room',no:'208',x:30,y:18},{t:'room',no:'209',x:113,y:18},{t:'room',no:'210',x:196,y:18},
-                    {t:'room',no:'211',x:279,y:18},{t:'room',no:'212',x:362,y:18},{t:'room',no:'213',x:445,y:18},
-                    {t:'fac',label:'계단',x:535,y:62},{t:'fac',label:'휴게실',x:618,y:62},
-                    {t:'room',no:'215',x:710,y:18},{t:'room',no:'216',x:710,y:66},{t:'room',no:'217',x:710,y:114},
-                    {t:'room',no:'207',x:30,y:150},{t:'room',no:'206',x:113,y:150},{t:'room',no:'205',x:196,y:150},
-                    {t:'room',no:'204',x:279,y:150},{t:'room',no:'203',x:362,y:150},{t:'room',no:'202',x:445,y:150},
-                    {t:'room',no:'201',x:528,y:150},{t:'room',no:'214',x:600,y:150},{t:'room',no:'219',x:672,y:150},
-                    {t:'room',no:'218',x:744,y:150}
+                '2층': { w:841, h:148, items:[
+                    {t:'room',no:'208',x:35,y:4,w:76,h:23},
+                    {t:'room',no:'209',x:111,y:4,w:74,h:23},
+                    {t:'room',no:'210',x:185,y:4,w:75,h:23},
+                    {t:'room',no:'211',x:260,y:4,w:76,h:23},
+                    {t:'room',no:'212',x:336,y:4,w:77,h:23},
+                    {t:'room',no:'213',x:413,y:4,w:75,h:23},
+                    {t:'fac',label:'휴게실',x:555,y:4,w:96,h:118},
+                    {t:'room',no:'215',x:651,y:4,w:78,h:39},
+                    {t:'room',no:'216',x:651,y:43,w:78,h:40},
+                    {t:'room',no:'217',x:651,y:83,w:78,h:39},
+                    {t:'room',no:'207',x:35,y:122,w:76,h:22},
+                    {t:'room',no:'206',x:111,y:122,w:74,h:22},
+                    {t:'room',no:'205',x:185,y:122,w:75,h:22},
+                    {t:'room',no:'204',x:260,y:122,w:76,h:22},
+                    {t:'room',no:'203',x:336,y:122,w:77,h:22},
+                    {t:'room',no:'202',x:413,y:122,w:75,h:22},
+                    {t:'room',no:'201',x:488,y:122,w:67,h:22},
+                    {t:'room',no:'214',x:555,y:122,w:69,h:22},
+                    {t:'room',no:'219',x:624,y:122,w:91,h:22},
+                    {t:'room',no:'218',x:715,y:122,w:93,h:22},
                 ]},
-                '1층': { w:820, h:130, items:[
-                    {t:'room',no:'106',x:30,y:18},{t:'room',no:'105',x:113,y:18},{t:'room',no:'104',x:196,y:18},
-                    {t:'room',no:'103',x:279,y:18},{t:'room',no:'102',x:362,y:18},{t:'room',no:'101',x:445,y:18},
-                    {t:'fac',label:'식당',x:690,y:18},
-                    {t:'room',no:'107',x:30,y:66},{t:'room',no:'108',x:113,y:66},{t:'room',no:'109',x:196,y:66},
-                    {t:'room',no:'110',x:279,y:66},{t:'fac',label:'휴게실',x:400,y:66}
-                ]}
+                '1층': { w:841, h:122, items:[
+                    {t:'room',no:'106',x:35,y:4,w:76,h:17},
+                    {t:'room',no:'105',x:111,y:4,w:74,h:17},
+                    {t:'room',no:'104',x:185,y:4,w:75,h:17},
+                    {t:'room',no:'103',x:260,y:4,w:76,h:17},
+                    {t:'room',no:'102',x:336,y:4,w:77,h:17},
+                    {t:'room',no:'101',x:413,y:4,w:75,h:17},
+                    {t:'fac',label:'식당',x:555,y:4,w:253,h:114},
+                    {t:'room',no:'107',x:35,y:61,w:76,h:17},
+                    {t:'room',no:'108',x:111,y:61,w:74,h:17},
+                    {t:'room',no:'109',x:185,y:61,w:75,h:17},
+                    {t:'room',no:'110',x:260,y:61,w:76,h:17},
+                    {t:'fac',label:'휴게실',x:336,y:61,w:152,h:57},
+                ]},
             },
             '상생관': {
-                '3층': { w:830, h:130, items:[
-                    {t:'room',no:'308',x:20,y:18},{t:'room',no:'309',x:110,y:18},{t:'room',no:'310',x:200,y:18},
-                    {t:'room',no:'311',x:290,y:18},{t:'room',no:'312',x:380,y:18},{t:'room',no:'313',x:470,y:18},
-                    {t:'room',no:'314',x:560,y:18},{t:'room',no:'315',x:650,y:18},{t:'room',no:'316',x:745,y:18},
-                    {t:'room',no:'307',x:20,y:66},{t:'room',no:'306',x:110,y:66},{t:'room',no:'305',x:200,y:66},
-                    {t:'room',no:'304',x:290,y:66},{t:'room',no:'303',x:380,y:66},{t:'room',no:'302',x:470,y:66},
-                    {t:'room',no:'301',x:560,y:66},{t:'fac',label:'휴게실',x:730,y:66}
+                '3층': { w:841, h:158, items:[
+                    {t:'room',no:'308',x:34,y:4,w:86,h:27},
+                    {t:'room',no:'309',x:120,y:4,w:85,h:27},
+                    {t:'room',no:'310',x:205,y:4,w:85,h:27},
+                    {t:'room',no:'311',x:290,y:4,w:86,h:27},
+                    {t:'room',no:'312',x:376,y:4,w:85,h:27},
+                    {t:'room',no:'313',x:461,y:4,w:85,h:27},
+                    {t:'room',no:'314',x:546,y:4,w:86,h:27},
+                    {t:'room',no:'315',x:632,y:4,w:86,h:27},
+                    {t:'room',no:'316',x:718,y:4,w:91,h:27},
+                    {t:'room',no:'307',x:34,y:76,w:86,h:27},
+                    {t:'room',no:'306',x:120,y:76,w:85,h:27},
+                    {t:'room',no:'305',x:205,y:76,w:85,h:27},
+                    {t:'room',no:'304',x:290,y:76,w:86,h:27},
+                    {t:'room',no:'303',x:376,y:76,w:85,h:27},
+                    {t:'room',no:'302',x:461,y:76,w:85,h:27},
+                    {t:'room',no:'301',x:546,y:76,w:86,h:27},
+                    {t:'fac',label:'휴게실',x:632,y:76,w:177,h:78},
                 ]},
-                '2층': { w:870, h:130, items:[
-                    {t:'room',no:'209',x:20,y:18},{t:'room',no:'210',x:108,y:18},{t:'room',no:'211',x:196,y:18},
-                    {t:'room',no:'212',x:284,y:18},{t:'room',no:'213',x:372,y:18},{t:'room',no:'214',x:462,y:18},
-                    {t:'room',no:'215',x:550,y:18},{t:'fac',label:'PC방',x:670,y:18},{t:'fac',label:'세탁실',x:760,y:18},
-                    {t:'fac',label:'창고',x:20,y:66},
-                    {t:'room',no:'207',x:108,y:66},{t:'room',no:'206',x:196,y:66},{t:'room',no:'205',x:284,y:66},
-                    {t:'room',no:'204',x:372,y:66},{t:'room',no:'203',x:462,y:66},{t:'room',no:'202',x:550,y:66},
-                    {t:'room',no:'201',x:638,y:66},{t:'fac',label:'세탁실',x:760,y:66}
-                ]}
-            }
+                '2층': { w:841, h:157, items:[
+                    {t:'room',no:'209',x:34,y:4,w:83,h:29},
+                    {t:'room',no:'210',x:117,y:4,w:86,h:29},
+                    {t:'room',no:'211',x:203,y:4,w:84,h:29},
+                    {t:'room',no:'212',x:287,y:4,w:83,h:29},
+                    {t:'room',no:'213',x:370,y:4,w:92,h:29},
+                    {t:'room',no:'214',x:462,y:4,w:86,h:29},
+                    {t:'room',no:'215',x:548,y:4,w:84,h:29},
+                    {t:'fac',label:'PC방',x:632,y:4,w:86,h:73},
+                    {t:'fac',label:'세탁실',x:718,y:4,w:91,h:73},
+                    {t:'fac',label:'창고',x:34,y:77,w:83,h:76},
+                    {t:'room',no:'207',x:117,y:77,w:86,h:32},
+                    {t:'room',no:'206',x:203,y:77,w:84,h:32},
+                    {t:'room',no:'205',x:287,y:77,w:83,h:32},
+                    {t:'room',no:'204',x:370,y:77,w:92,h:32},
+                    {t:'room',no:'203',x:462,y:77,w:86,h:32},
+                    {t:'room',no:'202',x:548,y:77,w:84,h:32},
+                    {t:'room',no:'201',x:632,y:77,w:86,h:32},
+                    {t:'fac',label:'휴게실',x:718,y:77,w:91,h:76},
+                ]},
+            },
         };
 
-        function printBoard() {
-            if (!viewAssign) { showToast('먼저 주차를 선택하세요'); return; }
+        // 공통: 색상·집계 준비
+        function _prepPrint() {
             const wk = viewAssign.weekKey;
             const wd = new Date(wk + 'T00:00:00');
             const wEnd = new Date(wd); wEnd.setDate(wd.getDate() + 6);
             const fmt = d => `${d.getMonth()+1}.${d.getDate()}.`;
             const students = viewAssign.students;
             const bldgOrder = { '청렴관': 0, '상생관': 1, '국제교육동': 2 };
-
             const courseColors = {};
-            const palette = ['#2563eb','#10b981','#f59e0b','#8b5cf6','#ec4899','#06b6d4','#ef4444'];
+            const palette = ['#2563eb','#dc2626','#059669','#d97706','#7c3aed','#db2777','#0891b2'];
             (viewAssign.courses || []).forEach((c, i) => { courseColors[c.courseName] = palette[i % palette.length]; });
-
+            const coursePeriod = {};
+            (viewAssign.courses || []).forEach(c => { coursePeriod[c.courseName] = c.period || ''; });
             const byRoomNo = {}, byRoom = {};
             Object.entries(students).forEach(([t, s]) => {
                 (byRoom[s.roomId] = byRoom[s.roomId] || []).push(s);
                 const k = `${s.building}|${String(s.no)}`;
                 (byRoomNo[k] = byRoomNo[k] || []).push(s);
             });
+            // 과정별 인원수
+            const courseCount = {};
+            Object.values(students).forEach(s => { courseCount[s.course] = (courseCount[s.course]||0)+1; });
+            return { wk, wd, wEnd, fmt, students, bldgOrder, courseColors, coursePeriod, byRoomNo, byRoom, courseCount };
+        }
 
-            // 1부: 명단
+        function _docHead(title) {
+            return `<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8"><title>${title}</title>
+                <style>
+                    @import url("https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css");
+                    * { box-sizing:border-box; }
+                    body { font-family:'Pretendard',sans-serif; padding:18px; color:#1e293b; }
+                    h1 { text-align:center; font-size:22px; margin:0 0 4px; }
+                    .sub { text-align:center; color:#64748b; margin-bottom:14px; font-size:13px; }
+                    .legend { text-align:center; margin-bottom:16px; display:flex; justify-content:center; flex-wrap:wrap; gap:18px; }
+                    .leg-item { display:inline-flex; align-items:center; gap:7px; font-size:13px; font-weight:800; }
+                    .leg-dot { width:13px; height:13px; border-radius:4px; display:inline-block; }
+                    .leg-period { font-size:11px; font-weight:600; color:#64748b; }
+                    .part-title { font-size:16px; font-weight:900; margin:8px 0 12px; padding-left:10px; border-left:5px solid #2563eb; }
+                    table.list { width:100%; border-collapse:collapse; font-size:12.5px; }
+                    table.list th, table.list td { border:1px solid #cbd5e1; padding:6px 8px; text-align:center; }
+                    table.list th { background:#f1f5f9; }
+                    .pf-block { margin-top:18px; page-break-inside:avoid; }
+                    .pf-block h2 { font-size:16px; font-weight:900; margin:0 0 8px; background:#0f1e3d; color:#fff; padding:6px 16px; border-radius:8px; display:inline-block; }
+                    .pf-floor-label { font-size:13px; font-weight:800; color:#334155; margin:12px 0 5px; }
+                    .pf-canvas { position:relative; width:100%; border:1.5px solid #94a3b8; border-radius:6px; background:#fff; }
+                    .pf-room { position:absolute; border:1px solid #94a3b8; background:#fff; padding:2px 3px; font-size:10px; text-align:center; overflow:hidden; }
+                    .pf-room b { display:block; font-size:11px; font-weight:900; color:#0f172a; border-bottom:1px solid #e2e8f0; margin-bottom:1px; }
+                    .pf-name { display:block; font-size:10.5px; font-weight:800; line-height:1.3; }
+                    .pf-name i { font-style:normal; font-size:8px; opacity:0.7; margin-left:2px; }
+                    .pf-fac { position:absolute; background:#f1f5f9; color:#64748b; border:1px solid #cbd5e1; font-size:11px; font-weight:700; display:flex; align-items:center; justify-content:center; text-align:center; }
+                    @media print { @page { size:A4 landscape; margin:9mm; } .page-break { page-break-before:always; } }
+                </style></head><body>`;
+        }
+
+        function _legendHtml(P) {
+            return Object.keys(P.courseColors).map(cn => {
+                const col = P.courseColors[cn];
+                const per = P.coursePeriod[cn] ? ` <span class="leg-period">(${P.coursePeriod[cn]})</span>` : '';
+                const cnt = P.courseCount[cn] || 0;
+                return `<span class="leg-item"><span class="leg-dot" style="background:${col}"></span><span style="color:${col}">${cn} · ${cnt}명</span>${per}</span>`;
+            }).join('');
+        }
+
+        // ── 1부: 명단 리스트 PDF ──
+        function printList() {
+            if (!viewAssign) { showToast('먼저 주차를 선택하세요'); return; }
+            const P = _prepPrint();
             const allRoomsSorted = Object.entries(rooms).map(([id, r]) => ({ id, ...r }))
-                .sort((a,b) => (bldgOrder[a.building]??9)-(bldgOrder[b.building]??9) || a.floor-b.floor || String(a.no).localeCompare(String(b.no),undefined,{numeric:true}));
+                .sort((a,b) => (P.bldgOrder[a.building]??9)-(P.bldgOrder[b.building]??9) || a.floor-b.floor || String(a.no).localeCompare(String(b.no),undefined,{numeric:true}));
             let rowsHtml = '';
             allRoomsSorted.forEach(r => {
-                const occ = byRoom[r.id] || [];
+                const occ = P.byRoom[r.id] || [];
                 if (!occ.length) return;
                 occ.forEach((p, idx) => {
-                    const cc = courseColors[p.course] || '#64748b';
+                    const cc = P.courseColors[p.course] || '#64748b';
                     rowsHtml += `<tr>
                         ${idx===0 ? `<td rowspan="${occ.length}" style="font-weight:800;">${r.building} ${r.floor}층 ${r.no}호</td>` : ''}
                         <td style="font-weight:700;">${p.name}</td><td>${p.empNo||'-'}</td><td>${p.dept||'-'}</td>
                         <td>${p.gender==='M'?'남':(p.gender==='F'?'여':'-')}</td>
-                        <td><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${cc};margin-right:5px;"></span>${p.course}</td>
+                        <td style="color:${cc};font-weight:700;">${p.course}</td>
                     </tr>`;
                 });
             });
-            const legend = Object.entries(courseColors).map(([cn,col]) =>
-                `<span style="display:inline-flex;align-items:center;gap:5px;margin-right:14px;font-size:12px;"><span style="width:11px;height:11px;border-radius:3px;background:${col};display:inline-block;"></span>${cn}</span>`
-            ).join('');
+            const win = window.open('', '_blank');
+            win.document.write(_docHead('생활관 배정 명단') + `
+                <h1>생활관 배정 명단</h1>
+                <div class="sub">${P.fmt(P.wd)} ~ ${P.fmt(P.wEnd)} 주간 · 총 ${Object.keys(P.students).length}명 · 출력일 ${new Date().toLocaleDateString('ko-KR')}</div>
+                <div class="legend">${_legendHtml(P)}</div>
+                <table class="list"><thead><tr><th style="width:130px;">생활관/호실</th><th>성명</th><th>사번</th><th>소속</th><th>성별</th><th>과정</th></tr></thead>
+                <tbody>${rowsHtml || '<tr><td colspan="6" style="padding:20px;color:#94a3b8;">배정된 인원이 없습니다.</td></tr>'}</tbody></table>
+                <script>window.onload=function(){setTimeout(function(){window.print();},500);};<\/script></body></html>`);
+            win.document.close();
+        }
 
-            // 2부: 평면 배치도
+        // ── 2부: 건물 배치도 PDF ──
+        function printLayout() {
+            if (!viewAssign) { showToast('먼저 주차를 선택하세요'); return; }
+            const P = _prepPrint();
             function planFloorHtml(building, floorName, plan) {
-                const CW = 78;
                 let inner = '';
                 plan.items.forEach(it => {
                     const leftPct = (it.x / plan.w) * 100;
-                    const wPct = (CW / plan.w) * 100;
+                    const wPct = ((it.w||78) / plan.w) * 100;
+                    const hPx = it.h || 42;
                     if (it.t === 'fac') {
-                        inner += `<div class="pf-fac" style="left:${leftPct}%; top:${it.y}px; width:${wPct}%; height:42px;">${it.label}</div>`;
+                        inner += `<div class="pf-fac" style="left:${leftPct}%; top:${it.y}px; width:${wPct}%; height:${hPx}px;">${it.label}</div>`;
                     } else {
-                        const people = byRoomNo[`${building}|${it.no}`] || [];
+                        const people = P.byRoomNo[`${building}|${it.no}`] || [];
                         if (people.length) {
-                            const col = courseColors[people[0].course] || '#64748b';
-                            const names = people.map(p => `<span class="pf-name">${p.name}<i>${p.gender==='M'?'남':(p.gender==='F'?'여':'')}</i></span>`).join('');
-                            inner += `<div class="pf-room filled" style="left:${leftPct}%; top:${it.y}px; width:${wPct}%; min-height:42px; border-top:3px solid ${col};"><b>${it.no}</b>${names}</div>`;
+                            const col = P.courseColors[people[0].course] || '#0f172a';
+                            const names = people.map(p => `<span class="pf-name" style="color:${P.courseColors[p.course]||'#0f172a'}">${p.name}<i>${p.gender==='M'?'남':(p.gender==='F'?'여':'')}</i></span>`).join('');
+                            inner += `<div class="pf-room" style="left:${leftPct}%; top:${it.y}px; width:${wPct}%; min-height:${hPx}px;"><b>${it.no}</b>${names}</div>`;
                         } else {
-                            inner += `<div class="pf-room" style="left:${leftPct}%; top:${it.y}px; width:${wPct}%; height:42px;"><b>${it.no}</b></div>`;
+                            inner += `<div class="pf-room" style="left:${leftPct}%; top:${it.y}px; width:${wPct}%; height:${hPx}px;"><b>${it.no}</b></div>`;
                         }
                     }
                 });
@@ -1882,46 +1980,19 @@
                 Object.entries(fp).forEach(([fname, plan]) => { h += planFloorHtml(building, fname, plan); });
                 return h + `</div>`;
             }
-            const layoutSection = ['청렴관','상생관'].map(planBuildingHtml).join('');
-
+            const layoutSection = ['청렴관','상생관'].map(planBuildingHtml).join('<div class="page-break"></div>');
             const win = window.open('', '_blank');
-            win.document.write(`<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8"><title>생활관 배치표</title>
-                <style>
-                    @import url("https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css");
-                    * { box-sizing:border-box; }
-                    body { font-family:'Pretendard',sans-serif; padding:18px; color:#1e293b; }
-                    h1 { text-align:center; font-size:22px; margin:0 0 4px; }
-                    .sub { text-align:center; color:#64748b; margin-bottom:14px; font-size:13px; }
-                    .legend { text-align:center; margin-bottom:14px; }
-                    .part-title { font-size:16px; font-weight:900; margin:8px 0 12px; padding-left:10px; border-left:5px solid #2563eb; }
-                    table.list { width:100%; border-collapse:collapse; font-size:12.5px; }
-                    table.list th, table.list td { border:1px solid #cbd5e1; padding:6px 8px; text-align:center; }
-                    table.list th { background:#f1f5f9; }
-                    .pf-block { margin-top:20px; page-break-inside:avoid; }
-                    .pf-block h2 { font-size:16px; font-weight:900; margin:0 0 10px; background:#0f1e3d; color:#fff; padding:7px 16px; border-radius:8px; display:inline-block; }
-                    .pf-floor-label { font-size:13px; font-weight:800; color:#2563eb; margin:14px 0 6px; }
-                    .pf-canvas { position:relative; width:100%; border:1.5px solid #cbd5e1; border-radius:8px; background:#fafbfc; }
-                    .pf-room { position:absolute; border:1px solid #cbd5e1; border-radius:6px; background:#fff; padding:3px 4px; font-size:10px; text-align:center; overflow:hidden; }
-                    .pf-room b { display:block; font-size:11px; font-weight:900; color:#0f172a; }
-                    .pf-room.filled { background:#f0f7ff; }
-                    .pf-name { display:block; font-size:10px; font-weight:700; color:#1e293b; line-height:1.35; }
-                    .pf-name i { font-style:normal; font-size:8px; color:#64748b; margin-left:2px; }
-                    .pf-fac { position:absolute; background:#e2e8f0; color:#64748b; border-radius:6px; font-size:10px; font-weight:700; display:flex; align-items:center; justify-content:center; }
-                    @media print { @page { size:A4 landscape; margin:9mm; } .page-break { page-break-before:always; } }
-                </style></head><body>
-                <h1>생활관 배치표</h1>
-                <div class="sub">${fmt(wd)} ~ ${fmt(wEnd)} 주간 · 총 ${Object.keys(students).length}명 · 출력일 ${new Date().toLocaleDateString('ko-KR')}</div>
-                <div class="legend">${legend}</div>
-                <div class="part-title">1부. 배정 명단</div>
-                <table class="list"><thead><tr><th style="width:130px;">생활관/호실</th><th>성명</th><th>사번</th><th>소속</th><th>성별</th><th>과정</th></tr></thead>
-                <tbody>${rowsHtml || '<tr><td colspan="6" style="padding:20px;color:#94a3b8;">배정된 인원이 없습니다.</td></tr>'}</tbody></table>
-                <div class="page-break"></div>
-                <div class="part-title">2부. 생활관 건물 배치도</div>
+            win.document.write(_docHead('생활관 건물 배치도') + `
+                <h1>생활관 건물 배치도</h1>
+                <div class="sub">${P.fmt(P.wd)} ~ ${P.fmt(P.wEnd)} 주간 · 총 ${Object.keys(P.students).length}명 · 출력일 ${new Date().toLocaleDateString('ko-KR')}</div>
+                <div class="legend">${_legendHtml(P)}</div>
                 ${layoutSection}
-                <script>window.onload=function(){setTimeout(function(){window.print();},500);};<\/script>
-                </body></html>`);
+                <script>window.onload=function(){setTimeout(function(){window.print();},500);};<\/script></body></html>`);
             win.document.close();
         }
+
+        // 구버전 호환
+        function printBoard() { printList(); }
 
         // ════════════ 연간계획 조회/추가 (생활관 자체) ════════════
         const annualPlan = {
