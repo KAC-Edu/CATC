@@ -6586,24 +6586,111 @@ const examTimer = {
 };
 
 /* ══ 배경음악 플레이어 (BGM Player) ══
-   음원: GitHub 저장소 자체 파일 (배경음1.mp3 ~ 배경음11.mp3)
+   음원: GitHub 저장소(kac-edu/CATC)에 올라온 "배경음N" 음원을 모두 자동 인식.
+   → 깃허브에 배경음16, 17 … 을 추가만 하면 코드 수정 없이 곧바로 재생됩니다.
    https://raw.githubusercontent.com/kac-edu/CATC/main/
 */
 const bgmPlayer = {
     _audio: null,
-    _currentNum: -1,   // 현재 재생 중인 트랙 번호 (1~11)
+    _currentNum: -1,   // 현재 재생 중인 트랙 번호
     _prevNum: -1,       // 중복 방지용 이전 번호
     _panelOpen: false,
     _isPlaying: false,
 
-    _TOTAL: 11,
+    // GitHub 저장소 정보 (음원 목록 자동 조회용)
+    _OWNER: 'kac-edu',
+    _REPO: 'CATC',
+    _BRANCH: 'main',
     _BASE_URL: 'https://raw.githubusercontent.com/kac-edu/CATC/main/',
     _LS_VOL: 'kac_bgm_vol',
-    _SS_STATE: 'kac_bgm_state',   // sessionStorage: 새로고침 시 이어듣기용
+    _SS_STATE: 'kac_bgm_state',     // sessionStorage: 새로고침 시 이어듣기용
+    _LS_TRACKS: 'kac_bgm_tracks',   // localStorage: 음원 목록 캐시
+    _TRACKS_TTL: 6 * 60 * 60 * 1000,// 캐시 유효시간 6시간
+    _AUDIO_EXT: ['mp3','m4a','aac','ogg','oga','wav','opus','flac'],
 
-    // 트랙 번호로 URL 생성
+    _nums: [],          // 재생 가능한 트랙 번호 목록 (예: [1,2,...,15,16,17])
+    _fileByNum: {},     // 번호 → 실제 파일명 (확장자 보존: 배경음7.m4a 등)
+
+    // (1) 캐시(localStorage)에서 목록 즉시 로드. 없으면 기본 1~15로 시작.
+    _loadTracks: function() {
+        try {
+            const raw = localStorage.getItem(this._LS_TRACKS);
+            if (raw) {
+                const c = JSON.parse(raw);
+                if (c && Array.isArray(c.nums) && c.nums.length) {
+                    this._nums = c.nums.slice();
+                    this._fileByNum = c.files || {};
+                    return;
+                }
+            }
+        } catch (e) {}
+        this._nums = Array.from({ length: 15 }, (_, i) => i + 1);  // 폴백(조회 성공 시 즉시 갱신)
+        this._fileByNum = {};
+    },
+
+    // (2) 음원 목록 자동 조회: ① GitHub API → 실패 시 ② raw 직접 탐색(probe). 결과 캐시.
+    _discover: async function() {
+        try {  // 캐시가 충분히 최신이면 재조회 생략
+            const raw = localStorage.getItem(this._LS_TRACKS);
+            if (raw) {
+                const c = JSON.parse(raw);
+                if (c && c.ts && (Date.now() - c.ts) < this._TRACKS_TTL && Array.isArray(c.nums) && c.nums.length) {
+                    this._nums = c.nums.slice();
+                    this._fileByNum = c.files || {};
+                    return;
+                }
+            }
+        } catch (e) {}
+
+        let result = null;
+        // ① GitHub Contents API (확장자·중간 누락까지 정확히 인식)
+        try {
+            const api = `https://api.github.com/repos/${this._OWNER}/${this._REPO}/contents?ref=${this._BRANCH}`;
+            const res = await fetch(api, { headers: { 'Accept': 'application/vnd.github.v3+json' } });
+            if (res.ok) {
+                const list = await res.json();
+                if (Array.isArray(list)) {
+                    const re = new RegExp(`^배경음(\\d+)\\.(${this._AUDIO_EXT.join('|')})$`, 'i');
+                    const nums = [], files = {};
+                    list.forEach(it => {
+                        if (!it || it.type !== 'file' || !it.name) return;
+                        const m = it.name.match(re);
+                        if (m) { const n = parseInt(m[1], 10); nums.push(n); files[n] = it.name; }
+                    });
+                    if (nums.length) { nums.sort((a, b) => a - b); result = { nums, files }; }
+                }
+            }
+        } catch (e) {}
+
+        // ② API 실패(레이트리밋 등) → raw 경로 직접 탐색으로 대체 (GitHub API 한도와 무관)
+        if (!result) result = await this._probe();
+
+        if (result && result.nums.length) {
+            this._nums = result.nums;
+            this._fileByNum = result.files;
+            try { localStorage.setItem(this._LS_TRACKS, JSON.stringify({ ts: Date.now(), nums: result.nums, files: result.files })); } catch (e) {}
+            this._syncBadge();
+        }
+    },
+
+    // raw.githubusercontent 에서 배경음N.mp3 를 1번부터 순차 확인 (API 한도 영향 없음)
+    _probe: async function() {
+        const nums = [], files = {};
+        let miss = 0;
+        for (let n = 1; n <= 80 && miss < 3; n++) {     // 연속 3개 비면 종료(중간 누락 일부 허용)
+            const url = this._BASE_URL + encodeURIComponent(`배경음${n}.mp3`);
+            let ok = false;
+            try { const r = await fetch(url, { method: 'HEAD', cache: 'no-store' }); ok = r.ok; } catch (e) { ok = false; }
+            if (ok) { nums.push(n); files[n] = `배경음${n}.mp3`; miss = 0; }
+            else { miss++; }
+        }
+        return nums.length ? { nums, files } : null;
+    },
+
+    // 트랙 번호 → URL (실제 파일명 우선, 없으면 배경음N.mp3)
     _url: function(num) {
-        return this._BASE_URL + encodeURIComponent(`배경음${num}.mp3`);
+        const fname = this._fileByNum[num] || `배경음${num}.mp3`;
+        return this._BASE_URL + encodeURIComponent(fname);
     },
 
     // 현재 재생 상태를 sessionStorage에 저장 (새로고침 후 이어듣기)
@@ -6622,6 +6709,8 @@ const bgmPlayer = {
     },
 
     init: function() {
+        this._loadTracks();   // 캐시/기본 음원 목록 즉시 로드
+        this._discover();     // GitHub에서 최신 음원 목록 자동 갱신(비동기, 실패해도 무방)
         this._audio = new Audio();
         this._audio.loop = false;  // 곡이 끝나면 onended로 다음 랜덤 곡 재생
 
@@ -6691,12 +6780,13 @@ const bgmPlayer = {
         window.addEventListener('resize', () => this._syncBadge());
     },
 
-    // 중복 방지 랜덤 번호 추출 (방금 재생한 곡 제외)
+    // 중복 방지 랜덤 트랙 번호 (방금 재생한 곡 제외) — 실제 보유 목록(_nums)에서 추출
     _randomNum: function() {
-        if (this._TOTAL === 1) return 1;
+        const pool = (this._nums && this._nums.length) ? this._nums : [1];
+        if (pool.length === 1) return pool[0];
         let num;
         do {
-            num = Math.floor(Math.random() * this._TOTAL) + 1;
+            num = pool[Math.floor(Math.random() * pool.length)];
         } while (num === this._prevNum);
         return num;
     },
