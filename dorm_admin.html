@@ -2485,6 +2485,9 @@
                     table.list { width:100%; border-collapse:collapse; font-size:12.5px; }
                     table.list th, table.list td { border:1px solid #cbd5e1; padding:6px 8px; text-align:center; }
                     table.list th { background:#f1f5f9; }
+                    table.list thead { display:table-header-group; }
+                    table.list th.bldg-bar { text-align:left; color:#fff; font-size:15px; font-weight:900; letter-spacing:-0.3px; padding:9px 16px; border-color:rgba(0,0,0,.15); }
+                    table.list th.bldg-bar .bbar-cnt { font-weight:700; font-size:12.5px; opacity:.9; margin-left:4px; }
                     .pf-block { margin-top:14px; break-inside:avoid; page-break-inside:avoid; }
                     .pf-bldg-header { display:flex; align-items:center; gap:10px; background:linear-gradient(135deg,#0f2057 0%,#1e3a8a 100%); color:#fff; padding:8px 18px; border-radius:10px 10px 0 0; font-size:15px; font-weight:900; letter-spacing:-0.3px; }
                     .pf-floor-wrap { background:#fff; border:3px solid #1e3a8a; border-top:none; border-radius:0 0 10px 10px; padding:14px 14px 16px; margin-bottom:2px; }
@@ -2651,8 +2654,11 @@
                 });
                 const bar = (typeof DORM_BLDG_BAR !== 'undefined' && DORM_BLDG_BAR[b]) || '#0f2057';
                 return `<div${bi>0 ? ' style="page-break-before:always;"' : ''}>
-                    <h2 style="background:${bar};color:#fff;padding:9px 16px;border-radius:9px 9px 0 0;margin:14px 0 0;font-size:16px;font-weight:900;">\ud83c\udfe2 ${b} <span style="font-weight:700;font-size:13px;opacity:.85;">· ${cnt}명</span></h2>
-                    <table class="list" style="margin-top:0;"><thead><tr><th style="width:120px;">호실</th><th>성명</th><th>사번</th><th>소속</th><th>성별</th><th>과정</th></tr></thead>
+                    <table class="list" style="margin-top:14px;">
+                    <thead>
+                        <tr><th class="bldg-bar" colspan="6" style="background:${bar};">\ud83c\udfe2 ${b}<span class="bbar-cnt">\u00b7 ${cnt}\uba85</span></th></tr>
+                        <tr><th style="width:120px;">호실</th><th>성명</th><th>사번</th><th>소속</th><th>성별</th><th>과정</th></tr>
+                    </thead>
                     <tbody>${rowsHtml}</tbody></table>
                 </div>`;
             }).join('');
