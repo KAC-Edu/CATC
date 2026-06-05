@@ -341,15 +341,22 @@ switchRoomAttempt: async function(newRoom, silent = false) {
     // 해당 방에 대한 옵저버 모드 여부 확인
     state.isObserver = (sessionStorage.getItem('kac_observer_room') === newRoom);
 
-    // 2. 서버의 실시간 상태를 조회 (ownerSessionId 확인)
-    const snapshot = await firebase.database().ref(`courses/${newRoom}/status`).get();
+    // 2. 서버의 실시간 상태 + 비밀번호 설정 여부 동시 조회
+    //  [수정] 기존엔 ownerSessionId 유무만으로 차단 여부를 판단해
+    //  자동배치 후 ownerSessionId=null 인 방은 비밀번호가 있어도 누구나 자유입장됐음.
+    //  이제 비밀번호가 설정된 방은 주인 없어도 반드시 인증 요구.
+    const [snapshot, pwSnap] = await Promise.all([
+        firebase.database().ref(`courses/${newRoom}/status`).get(),
+        firebase.database().ref(`courses/${newRoom}/settings/password`).get()
+    ]);
     const st = snapshot.val() || {};
+    const roomHasPassword = !!(pwSnap.val()); // 비밀번호가 설정돼 있으면 true
 
     const isActive = (st.roomStatus === 'active');
     const isOwner = (st.ownerSessionId === state.sessionId);
-    // 자동배치 등으로 ownerSessionId가 아직 없는 방은 '주인 없는 방'으로 보고 자유 입장 허용
     const hasOwner = !!st.ownerSessionId;
-    const blocked = isActive && hasOwner && !isOwner && !state.isObserver;
+    // 차단 조건: 방이 활성 상태이고, (실제 주인이 있거나 OR 비밀번호가 설정됨) AND 내가 주인/옵저버 아님
+    const blocked = isActive && (hasOwner || roomHasPassword) && !isOwner && !state.isObserver;
 
     // 3. [보안 핵심] 인증 전 버튼 및 기능 물리적 잠금
     const setupBtn = document.getElementById('btnSetupModal');
@@ -7173,10 +7180,11 @@ const annualPlanMgr = {
             const prevName = ((curRooms[room] || {}).settings || {}).courseName || '';
 
             if (course) {
-                // [Clean Start] 이 방에 배정될 과정이 직전 과정과 다르면, 이전 기수 데이터 일괄 소거
-                if (prevName && prevName !== course.name) {
+                // [Clean Start] 과정명이 바뀌었거나 현재 비어 있는 방에 새 과정 배치 시 데이터 소거.
+                //  "과정명이 같으면 리셋하지 말고, 없는 과정이면 리셋 후 배치" 규칙 적용.
+                if (course.name !== prevName) {
                     Object.assign(updates, this._cleanStartUpdates(room));
-                    wiped.push(`${room}(${prevName}→${course.name})`);
+                    wiped.push(`${room}(${prevName || '비어있음'}→${course.name})`);
                 }
                 updates[`courses/${room}/settings/courseName`] = course.name;
                 updates[`courses/${room}/settings/period`]     = course.period;
@@ -7557,11 +7565,15 @@ annualPlanMgr._syncRoomsLockAware = async function(courses) {
         pool = pool.filter(c => !dismissed.has(`${norm(c.name)}|${norm(c.period)}`));
     }
 
+    // 대상 주 과정명 집합 — 방에 이미 세팅된 과정이 풀에 있으면 보존 대상으로 분류
+    const poolNames = new Set(pool.map(c => norm(c.name)));
+
     const updates = {};
     const keptNames = new Set();   // 보존된 방의 과정명 (중복 배치 방지)
     const freeRooms = [];
 
-    // 1) 각 방 판정: 잠금 OR 현재 진행 중이면 보존, 그 외 열린 방은 비움
+    // 1) 각 방 판정: 잠금 / 현재 진행 중 / 이미 대상 주 과정명 세팅된 경우 → 보존
+    //    그 외(만료됐거나 관계없는 과정, 빈 방)는 재배치 대상
     this.ROOMS.forEach(r => {
         const rd = roomsData[r] || {};
         const s = rd.settings || {};
@@ -7577,29 +7589,32 @@ annualPlanMgr._syncRoomsLockAware = async function(courses) {
             if (sd && ed && sd <= today && ed >= today) inProgress = true;
         }
 
-        if (locked || (nm && inProgress)) {
+        // 과정명이 같은 경우(대상 주 풀에 포함된 과정명이면) → 리셋 없이 보존.
+        // 잠금, 진행 중, 또는 이미 대상 주 과정으로 세팅된 방 모두 보존.
+        const alreadySet = nm && poolNames.has(nm);
+
+        if (locked || (nm && inProgress) || alreadySet) {
             // ── 보존 방 ──
             keptNames.add(nm);
-            // 잠금 방이 아니면서, 연간계획에 같은 과정명이 있으면 교수/담당/기간을 최신으로 갱신
-            //  (사용자가 연간계획에서 수정한 교수/담당이 진행 중인 방에도 반영되도록)
+            // 잠금 방 제외: 연간계획의 최신 교수·담당·기간으로 갱신 (데이터는 건드리지 않음)
             if (!locked && planByName[nm]) {
                 const pc = planByName[nm];
                 const coordFull = (typeof coordMgr !== 'undefined' && coordMgr.matchName ? coordMgr.matchName(pc.coord) : '') || (pc.coord || '');
                 updates[`courses/${r}/settings/period`] = pc.period;
                 updates[`courses/${r}/settings/coordinatorName`] = coordFull;
                 updates[`courses/${r}/status/professorName`] = pc.prof;
-                updates[`courses/${r}/settings/kakaoLink`] = kakaoOf(pc.prof);  // 교수 오픈톡 자동 세팅
+                updates[`courses/${r}/settings/kakaoLink`] = kakaoOf(pc.prof);
             }
             return; // 방 자체는 유지
         }
 
-        // ── 열린 방 & 진행 중 아님 → 비우고 재배치 대상 ──
+        // ── 열린 방 & 대상 주 과정 아님 → 비우고 재배치 대상 ──
         updates[`courses/${r}/settings/courseName`] = '';
         updates[`courses/${r}/settings/period`]     = '';
         updates[`courses/${r}/settings/coordinatorName`] = null;
         updates[`courses/${r}/status/professorName`] = '';
         updates[`courses/${r}/status/roomStatus`]   = 'idle';
-        updates[`courses/${r}/status/ownerSessionId`] = null;  // 주인 없는 방으로
+        updates[`courses/${r}/status/ownerSessionId`] = null;
         freeRooms.push(r);
     });
 
@@ -7609,14 +7624,19 @@ annualPlanMgr._syncRoomsLockAware = async function(courses) {
     for (let i = 0; i < Math.min(freeRooms.length, toPlace.length); i++) {
         const room = freeRooms[i];
         const course = toPlace[i];
+
+        // [Clean Start] 새 과정 배치 시 이전 기수 데이터 일괄 소거
+        //  (학생 명단·출결·질문·설문·셔틀·석식 등 전부 초기화 → 이전 기수 잔류 방지)
+        Object.assign(updates, annualPlanMgr._cleanStartUpdates(room));
+
         const coordFull = (typeof coordMgr !== 'undefined' && coordMgr.matchName ? coordMgr.matchName(course.coord) : '') || (course.coord || '');
         updates[`courses/${room}/settings/courseName`] = course.name;
         updates[`courses/${room}/settings/period`]     = course.period;
         updates[`courses/${room}/settings/coordinatorName`] = coordFull;
         updates[`courses/${room}/status/professorName`] = course.prof;
         updates[`courses/${room}/status/roomStatus`]   = 'active';
-        updates[`courses/${room}/settings/kakaoLink`]  = kakaoOf(course.prof);  // 교수 오픈톡 자동 세팅
-        updates[`courses/${room}/status/ownerSessionId`] = null;  // 자동배치 방은 주인 미지정(첫 강사가 자유 입장)
+        updates[`courses/${room}/settings/kakaoLink`]  = kakaoOf(course.prof);
+        updates[`courses/${room}/status/ownerSessionId`] = null;
     }
     if (Object.keys(updates).length) {
         await firebase.database().ref().update(updates);
