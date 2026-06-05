@@ -1183,9 +1183,31 @@
         }
 
         function loadRoster(it) {
-            db.ref(`system/dorm/rosters/${rosterKey(it)}`).once('value', snap => {
+            const key = rosterKey(it);
+            console.log('[명단 로드] Firebase 경로:', `system/dorm/rosters/${key}`, '| 과정:', it.courseName);
+            db.ref(`system/dorm/rosters/${key}`).once('value', snap => {
                 const v = snap.val();
                 roster = (v && Array.isArray(v.list)) ? v.list : [];
+                console.log('[명단 로드] 결과:', v ? `${roster.length}명 (list 존재: ${!!v.list})` : '⚠️ Firebase에 데이터 없음 (null)');
+                if (!v) {
+                    // 데이터가 없을 경우 — 인접 키도 시도 (UTC/KST 하루 차이 대비)
+                    const [wkPart, roomPart] = key.split('__');
+                    const wkDate = new Date(wkPart + 'T00:00:00');
+                    wkDate.setDate(wkDate.getDate() + 1); // 하루 뒤 키로 재시도
+                    const altKey = `${wkDate.toISOString().slice(0,10)}__${roomPart}`;
+                    if (altKey !== key) {
+                        console.log('[명단 로드] 대체 키 시도:', `system/dorm/rosters/${altKey}`);
+                        db.ref(`system/dorm/rosters/${altKey}`).once('value', snap2 => {
+                            const v2 = snap2.val();
+                            if (v2 && Array.isArray(v2.list) && v2.list.length > 0) {
+                                console.log('[명단 로드] 대체 키에서 발견:', v2.list.length + '명 → 이 키로 로드');
+                                roster = v2.list;
+                            }
+                            renderRoster();
+                        });
+                        return;
+                    }
+                }
                 renderRoster();
             });
         }
@@ -1407,6 +1429,14 @@
         // ════════════ STEP 3: 자동 배정 ════════════
         let weekRosters = {};   // 선택 주차의 과정별 명단 { rosterKey: payload }
 
+        // STEP 2·3 공통 — 현재 기준 대상 주(월요일 키) 계산: 토·일엔 차주가 기준
+        function getTargetMondayKey() {
+            const today = new Date();
+            const base = mondayOf(today);
+            if (today.getDay() === 6 || today.getDay() === 0) base.setDate(base.getDate() + 7);
+            return base.toISOString().slice(0, 10);
+        }
+
         async function loadWeeks() {
             const sel = document.getElementById('weekSelect');
             try {
@@ -1414,11 +1444,30 @@
                 const all = snap.val() || {};
                 // 비노출(hideFromBoard) 과정은 주차 드롭다운 카운트에서도 제외
                 await loadHiddenCourses();
-                // weekKey별로 그룹 (비노출 과정 제외)
+
+                // 현재 기준 대상 주 키 (토·일엔 차주)
+                const targetMon = getTargetMondayKey();
+
+                // ── 지난 주차 명단 자동 삭제 ──
+                //  과정 기간이 대상 주 이전인 저장 내역을 DB에서 정리
+                const pastKeys = Object.keys(all).filter(k => {
+                    const wk = (all[k].weekKey || k.split('__')[0]);
+                    return wk < targetMon;
+                });
+                if (pastKeys.length) {
+                    const delUpdates = {};
+                    pastKeys.forEach(k => { delUpdates[`system/dorm/rosters/${k}`] = null; });
+                    await db.ref().update(delUpdates);
+                    console.log('[생활관] 지난 주차 명단 자동 삭제:', pastKeys.join(', '));
+                }
+
+                // 남은 데이터에서 비노출 과정 제외 후 weekKey별 그룹
                 const weeks = {};
                 Object.entries(all).forEach(([k, v]) => {
                     if (isRosterHidden(v)) return;
                     const wk = v.weekKey || (k.split('__')[0]);
+                    // 대상 주 이전 내역은 표시하지 않음
+                    if (wk < targetMon) return;
                     (weeks[wk] = weeks[wk] || []).push(v);
                 });
                 const wkList = Object.keys(weeks).sort();
@@ -1436,15 +1485,7 @@
                 }).join('');
                 // 기본 선택: 강사 플랫폼과 동일하게 토·일엔 차주, 평일엔 이번주 명단을 기본 표시
                 {
-                    const _td = new Date();
-                    const _tdow = _td.getDay();
-                    const _baseMonday = (function() {
-                        const m = new Date(_td); m.setHours(0,0,0,0);
-                        const dow = (m.getDay() + 6) % 7; m.setDate(m.getDate() - dow);
-                        if (_tdow === 6 || _tdow === 0) m.setDate(m.getDate() + 7);
-                        return m.toISOString().slice(0, 10);
-                    })();
-                    const preferred = wkList.find(wk => wk >= _baseMonday) || wkList[wkList.length - 1];
+                    const preferred = wkList.find(wk => wk >= targetMon) || wkList[wkList.length - 1];
                     if (preferred) sel.value = preferred;
                 }
                 onWeekChange();
