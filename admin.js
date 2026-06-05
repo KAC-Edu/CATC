@@ -6937,7 +6937,12 @@ const annualPlanMgr = {
     },
 
     _today: function() {
-        return new Date().toISOString().split('T')[0];
+        // KST(UTC+9) 기준 날짜 반환.
+        // toISOString()은 UTC 기준이라 토요일 00:00~08:59 KST 구간에도
+        // UTC상 금요일로 인식되어 차주 전환이 09:00까지 지연됐던 문제 수정.
+        const d = new Date();
+        d.setTime(d.getTime() + 9 * 60 * 60 * 1000); // UTC → KST
+        return d.toISOString().split('T')[0];
     },
 
     /* ── 컬럼 문자 → 0-indexed 숫자 (A→0, B→1, ...) ── */
@@ -7623,7 +7628,21 @@ annualPlanMgr._syncRoomsLockAware = async function(courses) {
 document.addEventListener('DOMContentLoaded', () => {
     if (typeof firebase !== 'undefined' && firebase.auth) {
         firebase.auth().onAuthStateChanged(user => {
-            if (user) annualPlanMgr.checkAndReset();
+            if (user) {
+                annualPlanMgr.checkAndReset();
+
+                // 탭을 열어 두어도 KST 날짜가 바뀌면 자동으로 재체크 (10분 간격).
+                // 특히 금→토 자정 또는 일→월 자정에도 차주 전환이 자동 적용됨.
+                let _lastCheckedDate = annualPlanMgr._today();
+                setInterval(function() {
+                    const nowDate = annualPlanMgr._today();
+                    if (nowDate !== _lastCheckedDate) {
+                        _lastCheckedDate = nowDate;
+                        console.log('[annualPlanMgr] KST 날짜 변경 감지 → 자동 재배치 체크');
+                        annualPlanMgr.checkAndReset();
+                    }
+                }, 10 * 60 * 1000); // 10분마다 KST 날짜 변경 감지
+            }
         });
     }
     // 생활관 플랫폼 등에서 ?openAnnual=1 로 진입하면 연간계획 편집기를 자동으로 연다.
