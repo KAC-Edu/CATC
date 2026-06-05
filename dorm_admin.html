@@ -950,8 +950,15 @@
         }
 
         // 이번주~3주 뒤까지 주차 버튼 렌더
+        //  토요일(6)·일요일(0): 강사 플랫폼과 동일하게 차주를 '이번주' 기준으로 표시
+        //  (한국 시간 기준 로컬 getDay() 사용 — KST 환경에서 정확)
         function renderWeekPills() {
-            const base = mondayOf(new Date());
+            const today = new Date();
+            const base = mondayOf(today);
+            // 토·일엔 차주가 준비 대상 → 기준 주를 한 주 앞당김
+            if (today.getDay() === 6 || today.getDay() === 0) {
+                base.setDate(base.getDate() + 7);
+            }
             const labels = ['이번주', '다음주', '2주 뒤', '3주 뒤'];
             const wrap = document.getElementById('weekPills');
             let html = '';
@@ -1417,6 +1424,19 @@
                     const cnt = weeks[wk].length;
                     return `<option value="${wk}">${fmt(wd)} ~ ${fmt(wEnd)} 주간 (과정 ${cnt}개)</option>`;
                 }).join('');
+                // 기본 선택: 강사 플랫폼과 동일하게 토·일엔 차주, 평일엔 이번주 명단을 기본 표시
+                {
+                    const _td = new Date();
+                    const _tdow = _td.getDay();
+                    const _baseMonday = (function() {
+                        const m = new Date(_td); m.setHours(0,0,0,0);
+                        const dow = (m.getDay() + 6) % 7; m.setDate(m.getDate() - dow);
+                        if (_tdow === 6 || _tdow === 0) m.setDate(m.getDate() + 7);
+                        return m.toISOString().slice(0, 10);
+                    })();
+                    const preferred = wkList.find(wk => wk >= _baseMonday) || wkList[wkList.length - 1];
+                    if (preferred) sel.value = preferred;
+                }
                 onWeekChange();
             } catch (e) { console.error(e); }
         }
