@@ -365,9 +365,17 @@
                 </div>
 
                 <div id="boardStats" style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:14px;"></div>
-                <div style="display:flex; gap:10px; margin-bottom:16px;">
+
+                <div style="border-top:2px solid var(--border); margin:26px 0 18px;"></div>
+
+                <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-bottom:16px;">
                     <button id="tabList" onclick="switchBoardTab('list')" style="padding:12px 26px; border:2px solid var(--blue); background:var(--blue); color:#fff; font-size:15.5px; font-weight:900; border-radius:12px; cursor:pointer; display:inline-flex; align-items:center; gap:9px; box-shadow:0 4px 12px rgba(37,99,235,0.35); transition:all .15s;"><i class="fa-solid fa-table-list"></i> 명단 표</button>
                     <button id="tabMap" onclick="switchBoardTab('map')" style="padding:12px 26px; border:2px solid var(--blue); background:#fff; color:var(--blue); font-size:15.5px; font-weight:900; border-radius:12px; cursor:pointer; display:inline-flex; align-items:center; gap:9px; transition:all .15s;"><i class="fa-solid fa-building"></i> 배치도</button>
+                    <div style="flex:1; min-width:8px;"></div>
+                    <button onclick="openStudentAdd()" style="background:var(--blue); color:#fff; border:none; font-weight:800; font-size:13px; padding:10px 15px; border-radius:9px; cursor:pointer; display:inline-flex; align-items:center; gap:7px;"><i class="fa-solid fa-user-plus"></i> 교육생 추가</button>
+                    <button onclick="openInstructorAdd()" style="background:#475569; color:#fff; border:none; font-weight:800; font-size:13px; padding:10px 15px; border-radius:9px; cursor:pointer; display:inline-flex; align-items:center; gap:7px;"><i class="fa-solid fa-chalkboard-user"></i> 강사·외부 숙박 추가</button>
+                    <button onclick="printList()" style="background:#2563eb; color:#fff; border:none; font-weight:800; font-size:13px; padding:10px 15px; border-radius:9px; cursor:pointer; display:inline-flex; align-items:center; gap:7px;"><i class="fa-solid fa-list"></i> 명단 PDF</button>
+                    <button onclick="printLayout()" style="background:var(--danger); color:#fff; border:none; font-weight:800; font-size:13px; padding:10px 15px; border-radius:9px; cursor:pointer; display:inline-flex; align-items:center; gap:7px;"><i class="fa-solid fa-file-pdf"></i> 배치도 PDF</button>
                 </div>
                 <div id="boardArea"></div>
                 <div id="boardMapArea" style="display:none;"></div>
@@ -393,6 +401,36 @@
     </div>
 
     <!-- 강사·외부 숙박 추가 팝업 -->
+    <div class="pop-overlay" id="stuPop">
+        <div class="pop-box">
+            <h3>교육생 추가</h3>
+            <div class="opt-group">
+                <label>과정 (현재 배정 중인 과정)</label>
+                <select id="stuCourse" style="width:100%; padding:11px; border:1.5px solid var(--border); border-radius:9px; font-size:14px;"></select>
+            </div>
+            <div class="opt-group">
+                <label>성명</label>
+                <input id="stuName" type="text" placeholder="예: 홍길동" style="width:100%; padding:11px; border:1.5px solid var(--border); border-radius:9px; font-size:14px;">
+            </div>
+            <div class="opt-group">
+                <label>사번</label>
+                <input id="stuEmpNo" type="text" placeholder="예: 51234" style="width:100%; padding:11px; border:1.5px solid var(--border); border-radius:9px; font-size:14px;">
+            </div>
+            <div class="opt-group">
+                <label>성별</label>
+                <select id="stuGender" style="width:100%; padding:11px; border:1.5px solid var(--border); border-radius:9px; font-size:14px;"><option value="M">남</option><option value="F">여</option></select>
+            </div>
+            <div class="opt-group">
+                <label>방 선택 (빈 방만 표시)</label>
+                <select id="stuRoom" style="width:100%; padding:11px; border:1.5px solid var(--border); border-radius:9px; font-size:14px;"></select>
+            </div>
+            <div id="stuMsg" style="font-size:12px; min-height:16px; margin-bottom:8px;"></div>
+            <div class="pop-actions">
+                <button class="pop-cancel" onclick="closeStuPop()">취소</button>
+                <button class="pop-save" onclick="confirmStudentAdd()">추가</button>
+            </div>
+        </div>
+    </div>
     <div class="pop-overlay" id="instPop">
         <div class="pop-box">
             <h3 id="instPopTitle">강사·외부 숙박 추가</h3>
@@ -1357,6 +1395,7 @@
 
         let excludedRosterKeys = new Set();  // 자동배정에서 제외할 과정 키 집합
 
+        let _step3Hidden = new Set();
         async function onWeekChange() {
             const wk = document.getElementById('weekSelect').value;
             if (!wk) return;
@@ -1367,16 +1406,27 @@
             Object.entries(all).forEach(([k, v]) => {
                 if ((v.weekKey || k.split('__')[0]) === wk) weekRosters[k] = v;
             });
+            // 강사 플랫폼에서 비노출(hideFromBoard) 처리된 과정은 자동배정 목록에서 제외
+            try {
+                const cs = await db.ref('courses').once('value');
+                _step3Hidden = new Set();
+                Object.values(cs.val() || {}).forEach(c => {
+                    const st = (c && c.settings) || {};
+                    if (st.hideFromBoard && st.courseName) _step3Hidden.add((st.courseName || '').trim());
+                });
+            } catch (e) { _step3Hidden = new Set(); }
             renderWeekRosterList();
             renderInstReserve(wk);
         }
 
         function renderWeekRosterList() {
-            const total = Object.entries(weekRosters)
+            // 비노출(hideFromBoard) 과정은 목록에서 제외
+            const visible = Object.entries(weekRosters).filter(([, v]) => !_step3Hidden.has((v.courseName || '').trim()));
+            const total = visible
                 .filter(([k]) => !excludedRosterKeys.has(k))
                 .reduce((s, [, v]) => s + (v.list||[]).length, 0);
-            const courseCount = Object.keys(weekRosters).length - excludedRosterKeys.size;
-            let rows = Object.entries(weekRosters).map(([k, v]) => {
+            const courseCount = visible.filter(([k]) => !excludedRosterKeys.has(k)).length;
+            let rows = visible.map(([k, v]) => {
                 const excluded = excludedRosterKeys.has(k);
                 const cnt = (v.list||[]).length;
                 return `<div style="display:flex; align-items:center; gap:10px; padding:10px 14px; background:${excluded?'#f8fafc':'#fff'}; border:1.5px solid ${excluded?'#e2e8f0':'var(--border)'}; border-radius:11px; margin-bottom:7px; opacity:${excluded?'0.5':'1'};">
@@ -1858,7 +1908,7 @@
             if (!viewAssign || !viewAssign.students) { area.innerHTML = '<div style="padding:24px;color:#94a3b8;">먼저 주차를 선택하세요.</div>'; return; }
             const students = viewAssign.students;
             const courseColors = {};
-            const palette = ['#2563eb','#dc2626','#059669','#d97706','#7c3aed','#db2777','#0891b2'];
+            const palette = ['#2563eb','#10b981','#f59e0b','#8b5cf6','#ec4899','#06b6d4','#ef4444'];
             (viewAssign.courses || []).forEach((c, idx) => { courseColors[c.courseName] = palette[idx % palette.length]; });
             courseColors['강사'] = '#475569';
             const colorOf = c => courseColors[c] || '#475569';
@@ -1892,12 +1942,7 @@
             const legend = Object.keys(courseColors).filter(c => c !== '강사' || hasInst)
                 .map(c => `<span class="leg-item"><span class="leg-swatch" style="background:${courseColors[c]}"></span><span style="color:${courseColors[c]}">${c}</span></span>`).join('');
             const toolbar = `<div class="dm-toolbar">
-                <div class="dm-hint"><i class="fa-solid fa-arrows-up-down-left-right"></i> 이름을 드래그해 다른 방에 놓으면 즉시 이동, 이름 옆 <b>✕</b>로 삭제됩니다 (정원·성별 충돌 시 이동 차단).</div>
-                <div style="display:flex;gap:8px;flex-wrap:wrap;">
-                    <button class="dm-btn" style="background:#475569;" onclick="openInstructorAdd()"><i class="fa-solid fa-chalkboard-user"></i> 강사·외부 숙박 추가</button>
-                    <button class="dm-btn" style="background:#2563eb;" onclick="printList()"><i class="fa-solid fa-list"></i> 명단 PDF</button>
-                    <button class="dm-btn" style="background:var(--danger);" onclick="printLayout()"><i class="fa-solid fa-file-pdf"></i> 배치도 PDF</button>
-                </div>
+                <div class="dm-hint"><i class="fa-solid fa-arrows-up-down-left-right"></i> 이름을 드래그해 다른 방에 놓으면 즉시 이동(찬 방이면 서로 자리 교환), 이름 옆 <b>✕</b>로 삭제됩니다.</div>
             </div>`;
             const buildings = ['청렴관', '상생관', '국제교육동'].map(bldg).join('');
             area.innerHTML = DORM_FORM_CSS + toolbar + `<div class="legend" style="margin:6px 0 16px;">${legend}</div>` + buildings;
@@ -1926,17 +1971,43 @@
             if (!entry) { showToast('해당 방 정보를 찾을 수 없습니다'); return; }
             const destRoomId = entry[0];
             if (s.roomId === destRoomId) return;
-            const conflict = checkMoveConflict(token, destRoomId);
-            if (conflict) { showToast('⛔ ' + conflict); return; }
             const dest = rooms[destRoomId];
+            const srcRoomId = s.roomId;
+            const src = srcRoomId ? rooms[srcRoomId] : null;
             const wk = viewAssign.weekKey;
-            db.ref(`system/dorm/assignments/${wk}/students/${token}`).update({ roomId: destRoomId, building: dest.building, floor: dest.floor, no: dest.no })
-                .then(() => {
-                    Object.assign(viewAssign.students[token], { roomId: destRoomId, building: dest.building, floor: dest.floor, no: dest.no });
-                    showToast(`✅ ${s.name} → ${dest.building} ${dest.no}호`);
-                    renderBoardMap();
-                })
-                .catch(e => { console.error(e); showToast('저장 실패'); });
+            const cap = dest.capacity || 1;
+            const occ = Object.entries(viewAssign.students).filter(([tk, x]) => x.roomId === destRoomId && tk !== token);
+
+            // 1) 빈자리가 있으면 단순 이동
+            if (occ.length < cap) {
+                const conflict = checkMoveConflict(token, destRoomId);
+                if (conflict) { showToast('⛔ ' + conflict); return; }
+                db.ref(`system/dorm/assignments/${wk}/students/${token}`).update({ roomId: destRoomId, building: dest.building, floor: dest.floor, no: dest.no })
+                    .then(() => {
+                        Object.assign(viewAssign.students[token], { roomId: destRoomId, building: dest.building, floor: dest.floor, no: dest.no });
+                        showToast(`✅ ${s.name} → ${dest.building} ${dest.no}호`);
+                        renderBoardMap();
+                    })
+                    .catch(e => { console.error(e); showToast('저장 실패'); });
+                return;
+            }
+
+            // 2) 정원이 찼으면 → 상대 1명과 자리 교환(swap)
+            if (!srcRoomId || !src) { showToast('⛔ 교환할 원래 방 정보가 없어 이동 불가합니다'); return; }
+            const [swapTk, swapS] = occ[0];
+            if (dest.gender && s.gender && dest.gender !== s.gender) { showToast(`⛔ 교환 불가 — 대상 방은 ${dest.gender==='M'?'남':'여'}성 전용`); return; }
+            if (src.gender && swapS.gender && src.gender !== swapS.gender) { showToast(`⛔ 교환 불가 — 원래 방은 ${src.gender==='M'?'남':'여'}성 전용`); return; }
+            const upA = { roomId: destRoomId, building: dest.building, floor: dest.floor, no: dest.no };
+            const upB = { roomId: srcRoomId, building: src.building, floor: src.floor, no: src.no };
+            Promise.all([
+                db.ref(`system/dorm/assignments/${wk}/students/${token}`).update(upA),
+                db.ref(`system/dorm/assignments/${wk}/students/${swapTk}`).update(upB)
+            ]).then(() => {
+                Object.assign(viewAssign.students[token], upA);
+                Object.assign(viewAssign.students[swapTk], upB);
+                showToast(`🔄 ${s.name} ↔ ${swapS.name} 자리 교환`);
+                renderBoardMap();
+            }).catch(e => { console.error(e); showToast('교환 저장 실패'); });
         }
 
         // 배치도 편집기: 인원 삭제 (교육생·강사 공통). 강사는 예약 목록에서도 제거.
@@ -1963,7 +2034,7 @@
         // ── 강사 숙박: 예약 저장소(system/dorm/instructors/{wk}) 기반, 2가지 상황 지원 ──
         //  reserve = STEP3 자동배정 전 사전배치 / now = STEP4 즉시 추가
         let _instCtx = 'now', _instWk = null;
-        function openInstructorAdd(ctx) {
+        async function openInstructorAdd(ctx) {
             _instCtx = (ctx === 'reserve') ? 'reserve' : 'now';
             const wk = _instCtx === 'reserve'
                 ? (document.getElementById('weekSelect') ? document.getElementById('weekSelect').value : null)
@@ -1971,11 +2042,8 @@
             if (!wk) { showToast(_instCtx === 'reserve' ? '먼저 배정할 주차를 선택하세요' : '먼저 주차를 선택하세요'); return; }
             _instWk = wk;
             if (!Object.keys(rooms).length) { showToast('STEP 1에서 방을 먼저 설정하세요'); return; }
-            const bldgOrder = { '청렴관': 0, '상생관': 1, '국제교육동': 2 };
-            const opts = Object.entries(rooms).map(([id, r]) => Object.assign({ id }, r))
-                .sort((a, b) => (bldgOrder[a.building] ?? 9) - (bldgOrder[b.building] ?? 9) || a.floor - b.floor || String(a.no).localeCompare(String(b.no), undefined, { numeric: true }))
-                .map(r => `<option value="${r.id}">${r.building} ${r.floor}층 ${r.no}호</option>`).join('');
-            document.getElementById('instRoom').innerHTML = opts;
+            const _occ = await _roomOccByWeek(wk);
+            document.getElementById('instRoom').innerHTML = _availRoomOptions(_occ) || '<option value="">(빈 방 없음)</option>';
             document.getElementById('instName').value = '';
             document.getElementById('instDept').value = '강사';
             document.getElementById('instGender').value = 'M';
@@ -1985,6 +2053,76 @@
             document.getElementById('instPop').style.display = 'flex';
         }
         function closeInstPop() { document.getElementById('instPop').style.display = 'none'; }
+
+        // 해당 주차의 방별 점유 인원/성별 집계 (배정 + 강사 예약)
+        async function _roomOccByWeek(wk) {
+            const cnt = {}, gset = {};
+            const acc = x => { if (!x || !x.roomId) return; cnt[x.roomId] = (cnt[x.roomId] || 0) + 1; (gset[x.roomId] = gset[x.roomId] || new Set()).add(x.gender); };
+            if (viewAssign && viewAssign.weekKey === wk && viewAssign.students) {
+                Object.values(viewAssign.students).forEach(acc);
+            } else {
+                const a = await db.ref(`system/dorm/assignments/${wk}/students`).once('value');
+                Object.values(a.val() || {}).forEach(acc);
+            }
+            const ir = await db.ref(`system/dorm/instructors/${wk}`).once('value');
+            Object.values(ir.val() || {}).forEach(acc);
+            return { cnt, gset };
+        }
+        // 빈자리가 있는 방만 option 생성 (이미 찬 방 제외)
+        function _availRoomOptions(occ) {
+            const bldgOrder = { '청렴관': 0, '상생관': 1, '국제교육동': 2 };
+            return Object.entries(rooms).map(([id, r]) => Object.assign({ id }, r))
+                .filter(r => (occ.cnt[r.id] || 0) < (r.capacity || 1))
+                .sort((a, b) => (bldgOrder[a.building] ?? 9) - (bldgOrder[b.building] ?? 9) || a.floor - b.floor || String(a.no).localeCompare(String(b.no), undefined, { numeric: true }))
+                .map(r => `<option value="${r.id}">${r.building} ${r.floor}층 ${r.no}호</option>`).join('');
+        }
+
+        // 교육생 추가 (현재 배정 중인 과정 선택 → 성명/사번/성별 → 빈 방 배정)
+        async function openStudentAdd() {
+            if (!viewAssign || !viewAssign.weekKey) { showToast('먼저 주차를 선택하세요'); return; }
+            if (!Object.keys(rooms).length) { showToast('STEP 1에서 방을 먼저 설정하세요'); return; }
+            const wk = viewAssign.weekKey;
+            const courses = (viewAssign.courses || []).map(c => c.courseName).filter(Boolean);
+            if (!courses.length) { showToast('이 주차에 배정 중인 과정이 없습니다'); return; }
+            document.getElementById('stuCourse').innerHTML = courses.map(c => `<option value="${c}">${c}</option>`).join('');
+            document.getElementById('stuName').value = '';
+            document.getElementById('stuEmpNo').value = '';
+            document.getElementById('stuGender').value = 'M';
+            document.getElementById('stuMsg').innerText = '';
+            const occ = await _roomOccByWeek(wk);
+            document.getElementById('stuRoom').innerHTML = _availRoomOptions(occ) || '<option value="">(빈 방 없음)</option>';
+            document.getElementById('stuPop').style.display = 'flex';
+        }
+        function closeStuPop() { document.getElementById('stuPop').style.display = 'none'; }
+        async function confirmStudentAdd() {
+            const name = (document.getElementById('stuName').value || '').trim();
+            const empNo = (document.getElementById('stuEmpNo').value || '').trim();
+            const gender = document.getElementById('stuGender').value;
+            const course = document.getElementById('stuCourse').value;
+            const destRoomId = document.getElementById('stuRoom').value;
+            const msg = document.getElementById('stuMsg');
+            const wk = viewAssign.weekKey;
+            if (!name) { msg.innerHTML = '<span style="color:var(--danger);font-weight:700;">성명을 입력하세요.</span>'; return; }
+            if (!course) { msg.innerHTML = '<span style="color:var(--danger);font-weight:700;">과정을 선택하세요.</span>'; return; }
+            const dest = rooms[destRoomId];
+            if (!dest) { msg.innerHTML = '<span style="color:var(--danger);font-weight:700;">배정 가능한 빈 방을 선택하세요.</span>'; return; }
+            const occ = await _roomOccByWeek(wk);
+            const cap = dest.capacity || 1;
+            if ((occ.cnt[destRoomId] || 0) >= cap) { msg.innerHTML = '<span style="color:var(--danger);font-weight:700;">⛔ 정원 초과</span>'; return; }
+            const gs = occ.gset[destRoomId];
+            const destGender = dest.gender || (gs && gs.size === 1 ? [...gs][0] : '');
+            if (destGender && destGender !== gender) { msg.innerHTML = `<span style="color:var(--danger);font-weight:700;">⛔ 성별 불일치 — ${destGender === 'M' ? '남' : '여'}성 방</span>`; return; }
+            const token = 'manual_' + Date.now();
+            const rec = { name, empNo: empNo || '-', dept: '', gender, course, room: `${dest.building} ${dest.no}`, roomId: destRoomId, building: dest.building, floor: dest.floor, no: dest.no };
+            try {
+                await db.ref(`system/dorm/assignments/${wk}/students/${token}`).update(rec);
+                if (viewAssign && viewAssign.weekKey === wk) { if (!viewAssign.students) viewAssign.students = {}; viewAssign.students[token] = rec; }
+                closeStuPop();
+                showToast(`✅ ${name} 교육생 추가 (${dest.building} ${dest.no}호)`);
+                if (typeof renderBoard === 'function') renderBoard();
+                if (currentBoardTab === 'map' && typeof renderBoardMap === 'function') renderBoardMap();
+            } catch (e) { console.error(e); msg.innerText = '저장 실패'; }
+        }
         // 해당 주차/방의 현재 점유자(예약 + 확정배정 합산)
         async function _instRoomOcc(wk, roomId) {
             const occ = [];
@@ -2290,10 +2428,8 @@
             });
             const bldgOrder = { '청렴관': 0, '상생관': 1, '국제교육동': 2 };
             const courseColors = {};
-            const palette = ['#2563eb','#dc2626','#059669','#d97706','#7c3aed','#db2777','#0891b2'];
-            const activeCourseNames = new Set(Object.values(students).map(s => s.course));
-            (viewAssign.courses || []).filter(c => activeCourseNames.has(c.courseName))
-                .forEach((c, i) => { courseColors[c.courseName] = palette[i % palette.length]; });
+            const palette = ['#2563eb','#10b981','#f59e0b','#8b5cf6','#ec4899','#06b6d4','#ef4444'];
+            (viewAssign.courses || []).forEach((c, i) => { courseColors[c.courseName] = palette[i % palette.length]; });
             if (Object.values(students).some(s => (s.course||'').trim() === '강사')) courseColors['강사'] = '#475569';
             const coursePeriod = {};
             (viewAssign.courses || []).forEach(c => { coursePeriod[c.courseName] = c.period || ''; });
@@ -2337,8 +2473,36 @@
                     .pf-name .gsuf { font-size:8px; font-weight:700; opacity:0.65; margin-left:1px; }
                     .pf-fac { position:absolute; background:repeating-linear-gradient(45deg,#e2e8f0,#e2e8f0 3px,#f1f5f9 3px,#f1f5f9 9px); border:1.5px solid #94a3b8; color:#475569; font-size:10.5px; font-weight:800; display:flex; align-items:center; justify-content:center; text-align:center; letter-spacing:-0.3px; }
                     .pf-corridor { position:absolute; background:#e2e8f0; border:1px solid #cbd5e1; color:#94a3b8; font-size:9.5px; font-weight:700; display:flex; align-items:center; justify-content:center; letter-spacing:3px; }
-                    @media print { * { -webkit-print-color-adjust:exact !important; print-color-adjust:exact !important; } @page { size:A4 landscape; margin:8mm; } body { background:#fff; padding:10px 14px; } .page-break { page-break-before:always; } .pf-canvas { box-shadow:none; } }
+                    table.pwrap { width:100%; border-collapse:collapse; }
+                    table.pwrap > thead { display:table-header-group; }
+                    table.pwrap > tbody > tr > td, table.pwrap > thead > tr > td { padding:0; border:none; vertical-align:top; }
+                    @media print { * { -webkit-print-color-adjust:exact !important; print-color-adjust:exact !important; } @page { size:A4 landscape; margin:8mm; } body { background:#fff; padding:10px 14px; } .page-break { page-break-before:always; } .pf-canvas { box-shadow:none; } thead { display:table-header-group; } }
                 </style></head><body>`;
+        }
+
+        // 새 창 없이 숨김 iframe으로 바로 인쇄(파일명 = 문서 제목 → PDF 저장 시 그대로 사용)
+        function _printDoc(fileName, bodyHtml, extraCss) {
+            const old = document.getElementById('_kacPrintFrame'); if (old) old.remove();
+            const f = document.createElement('iframe');
+            f.id = '_kacPrintFrame';
+            f.style.cssText = 'position:fixed; right:0; bottom:0; width:0; height:0; border:0; opacity:0;';
+            document.body.appendChild(f);
+            const doc = f.contentWindow.document;
+            doc.open();
+            doc.write(_docHead(fileName) + (extraCss || '') + bodyHtml + '</body></html>');
+            doc.close();
+            const prevTitle = document.title;
+            setTimeout(function () {
+                try { document.title = fileName; f.contentWindow.focus(); f.contentWindow.print(); }
+                catch (e) { console.error(e); }
+                setTimeout(function () { document.title = prevTitle; try { f.remove(); } catch (_) {} }, 2000);
+            }, 450);
+        }
+        function _kacWeekTag(d) {
+            const yy = String(d.getFullYear()).slice(2);
+            const mm = d.getMonth() + 1;
+            const wom = Math.ceil(d.getDate() / 7);
+            return `${yy}.${mm}월 ${wom}주차`;
         }
 
         function _legendHtml(P) {
@@ -2380,13 +2544,13 @@
                         {no:'304',ext:'398',c:'4',r:'2'},{no:'303',ext:'397',c:'5',r:'2'},{no:'302',ext:'394',c:'6',r:'2'},
                         {no:'301',ext:'393',c:'7',r:'2'},{fac:'휴게실',c:'8/10',r:'2'},
                     ]},
-                    { floor:'2층', cols:10, cells:[
-                        {no:'208',ext:'',c:'1',r:'1'},{no:'209',ext:'469',c:'2',r:'1'},{no:'210',ext:'470',c:'3',r:'1'},
-                        {no:'211',ext:'471',c:'4',r:'1'},{no:'212',ext:'472',c:'5',r:'1'},{no:'213',ext:'473',c:'6',r:'1'},
-                        {no:'214',ext:'474',c:'7',r:'1'},{no:'215',ext:'475',c:'8',r:'1'},{fac:'PC방',c:'9',r:'1'},{fac:'세탁실',c:'10',r:'1'},
-                        {fac:'창고',c:'1',r:'2'},{no:'207',ext:'467',c:'2',r:'2'},{no:'206',ext:'466',c:'3',r:'2'},
-                        {no:'205',ext:'465',c:'4',r:'2'},{no:'204',ext:'464',c:'5',r:'2'},{no:'203',ext:'463',c:'6',r:'2'},
-                        {no:'202',ext:'462',c:'7',r:'2'},{no:'201',ext:'461',c:'8',r:'2'},{fac:'휴게실',c:'9/11',r:'2'},
+                    { floor:'2층', cols:9, cells:[
+                        {no:'209',ext:'469',c:'1',r:'1'},{no:'210',ext:'470',c:'2',r:'1'},{no:'211',ext:'471',c:'3',r:'1'},
+                        {no:'212',ext:'472',c:'4',r:'1'},{no:'213',ext:'473',c:'5',r:'1'},{no:'214',ext:'474',c:'6',r:'1'},
+                        {no:'215',ext:'475',c:'7',r:'1'},{fac:'PC방',c:'8',r:'1'},{fac:'세탁실',c:'9',r:'1'},
+                        {fac:'휴게실',c:'1',r:'2'},{no:'201',ext:'461',c:'2',r:'2'},{no:'202',ext:'462',c:'3',r:'2'},
+                        {no:'203',ext:'463',c:'4',r:'2'},{no:'204',ext:'464',c:'5',r:'2'},{no:'205',ext:'465',c:'6',r:'2'},
+                        {no:'206',ext:'466',c:'7',r:'2'},{no:'207',ext:'467',c:'8',r:'2'},{fac:'창고',c:'9',r:'2'},
                     ]},
                 ],
                 '국제교육동': [
@@ -2466,14 +2630,11 @@
                     <tbody>${rowsHtml}</tbody></table>
                 </div>`;
             }).join('');
-            const win = window.open('', '_blank');
-            win.document.write(_docHead('생활관 배정 명단') + `
-                <h1>생활관 배정 명단</h1>
+            const header = `<h1>생활관 배정 명단</h1>
                 <div class="sub">${P.fmt(P.wd)} ~ ${P.fmt(P.wEnd)} 주간 · 총 ${Object.keys(P.students).length}명 · 출력일 ${new Date().toLocaleDateString('ko-KR')}</div>
-                <div class="legend">${_legendHtml(P)}</div>
-                ${sections || '<div style="padding:20px;color:#94a3b8;">배정된 인원이 없습니다.</div>'}
-                <script>window.onload=function(){setTimeout(function(){window.print();},500);};<\/script></body></html>`);
-            win.document.close();
+                <div class="legend">${_legendHtml(P)}</div>`;
+            const bodyHtml = `<table class="pwrap"><thead><tr><td>${header}</td></tr></thead><tbody><tr><td>${sections || '<div style="padding:20px;color:#94a3b8;">배정된 인원이 없습니다.</div>'}</td></tr></tbody></table>`;
+            _printDoc(`(${_kacWeekTag(P.wd)}_리스트) 항공기술훈련원 방 배정 현황표`, bodyHtml);
         }
 
         // ── 2부: 건물 배치도 PDF ──
@@ -2538,14 +2699,11 @@
 
             const layoutSection = ['청렴관','상생관','국제교육동'].map(buildingHtml).join('<div class="page-break"></div>');
             const totalCount = Object.keys(P.students).length;
-            const win = window.open('', '_blank');
-            win.document.write(_docHead('생활관 배정 배치도') + FORM_CSS + `
-                <h1>생활관 배정 배치도</h1>
+            const header = `<h1>생활관 배정 배치도</h1>
                 <div class="sub">${P.fmt(P.wd)} ~ ${P.fmt(P.wEnd)} 주간 · 총 ${totalCount}명 · 출력일 ${new Date().toLocaleDateString('ko-KR')}</div>
-                <div class="legend">${_legendHtml(P)}</div>
-                ${layoutSection}
-                <script>window.onload=function(){setTimeout(function(){window.print();},500);};<\/script></body></html>`);
-            win.document.close();
+                <div class="legend">${_legendHtml(P)}</div>`;
+            const bodyHtml = `<table class="pwrap"><thead><tr><td>${header}</td></tr></thead><tbody><tr><td>${layoutSection}</td></tr></tbody></table>`;
+            _printDoc(`(${_kacWeekTag(P.wd)}_배치도) 항공기술훈련원 방 배정 현황표`, bodyHtml, FORM_CSS);
         }
 
         // 구버전 호환

@@ -3279,6 +3279,19 @@ async function checkProfile() {
                 showMainDashboard();
                 return;
             }
+            // [추가] 이 브라우저에 유효한 프로필(localStorage)이 있는데 이 방의 등록 기록만 없는 경우
+            //  (예: 카카오 오픈톡방을 다녀와 재진입했을 때) → 재입력 팝업 없이 자동 재등록 후 바로 입장.
+            if (isValidProfile()) {
+                const _name  = (localStorage.getItem('kac_user_name')  || '').trim();
+                const _phone = (localStorage.getItem('kac_user_phone') || '').trim();
+                await firebase.database().ref(`courses/${currentRoom}/students/${uToken}`).update({
+                    name: _name, phone: _phone,
+                    joinedAt: firebase.database.ServerValue.TIMESTAMP, isOnline: true
+                });
+                if (typeof startPresence === 'function') { try { startPresence(); } catch (e) {} }
+                showMainDashboard();
+                return;
+            }
         } catch (e) {}
     }
     document.getElementById('userName').value = "";
