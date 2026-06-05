@@ -7648,12 +7648,14 @@ document.addEventListener('DOMContentLoaded', () => {
 ════════════════════════════════════════════════════════ */
 const surveyMgr = {
     _bound: false,
+    _boundRoom: null,
     _optCount: 0,
 
     // 공지 화면 진입 시 초기화 + 리스너 바인딩
     init: function() {
         this.renderComposeOptions(true);
-        if (!this._bound && state.room) {
+        // 방이 바뀌었으면 새 방으로 다시 바인딩 (기존엔 _bound 가드 때문에 옛 방에 묶여 화면이 안 바뀌었음)
+        if (state.room && this._boundRoom !== state.room) {
             this.bindListeners();
         }
     },
@@ -7705,6 +7707,9 @@ const surveyMgr = {
         if (opts.length < 2) return ui.showAlert('보기를 2개 이상 입력하세요.');
         const anonymous = document.getElementById('surveyAnonymous').checked;
 
+        // 현재 방 기준으로 리스너가 살아있는지 보장 (방 전환 후 stale 리스너로 화면이 안 바뀌는 문제 방지)
+        if (this._boundRoom !== state.room) this.bindListeners();
+
         const payload = {
             question: q,
             options: opts,
@@ -7717,7 +7722,13 @@ const surveyMgr = {
         updates[`courses/${state.room}/activeSurvey`] = payload;
         updates[`courses/${state.room}/surveyAnswers`] = null;
         firebase.database().ref().update(updates)
-            .then(() => ui.showAlert('✅ 설문이 게시되었습니다. 교육생 화면에 팝업으로 표시됩니다.'))
+            .then(() => {
+                // [수정] 실시간 리스너 타이밍과 무관하게 즉시 '취합 화면'으로 전환.
+                //  (리스너가 늦게 도착하거나 방 전환으로 누락돼 설정 화면에 멈추던 문제 해결)
+                surveyMgr._answers = {};
+                surveyMgr.renderState(payload);
+                ui.showAlert('✅ 설문이 게시되었습니다. 교육생 화면에 팝업으로 표시됩니다.');
+            })
             .catch(e => { console.error(e); ui.showAlert('⚠️ 게시 실패'); });
     },
 
@@ -7827,8 +7838,17 @@ const surveyMgr = {
     },
 
     bindListeners: function() {
-        this._bound = true;
         const room = state.room;
+        if (!room) return;
+        // 이전 방 리스너 해제 (방 전환 시 stale 리스너가 현재 방 이벤트를 무시하던 문제 방지)
+        if (this._boundRoom && this._boundRoom !== room) {
+            try {
+                firebase.database().ref(`courses/${this._boundRoom}/activeSurvey`).off();
+                firebase.database().ref(`courses/${this._boundRoom}/surveyAnswers`).off();
+            } catch (e) {}
+        }
+        this._bound = true;
+        this._boundRoom = room;
         firebase.database().ref(`courses/${room}/activeSurvey`).on('value', snap => {
             if (state.room !== room) return;
             this.renderState(snap.val());

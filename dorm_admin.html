@@ -99,6 +99,11 @@
         .room-table select { border: 1px solid var(--border); border-radius: 7px; padding: 6px 8px; font-size: 13px; font-weight: 700; outline: none; background: #fff; cursor: pointer; }
         .room-table select:focus { border-color: var(--blue); }
         .royal-check { width: 20px; height: 20px; cursor: pointer; accent-color: var(--royal); }
+        .noassign-check { width: 20px; height: 20px; cursor: pointer; accent-color: #64748b; }
+        .room-table tr.noassign-row td { background: #f1f5f9; color: #94a3b8; }
+        .room-table tr.noassign-row .rno-cell { color: #64748b; }
+        .room-table tr.noassign-row select { color: #94a3b8; background: #f8fafc; }
+        .room-table .rno-use { display:inline-block; margin-left:4px; padding:1px 7px; border-radius:6px; font-size:10.5px; font-weight:800; background:#e2e8f0; color:#475569; vertical-align:middle; }
         .room-table .del-x { color: var(--danger); cursor: pointer; font-size: 15px; opacity: 0.65; }
         .room-table .del-x:hover { opacity: 1; }
         .crit-disabled { opacity: 0.35; pointer-events: none; }
@@ -547,9 +552,18 @@
         };
 
         let currentBldg = '청렴관';
-        // rooms 데이터 구조: { roomId: { building, floor, no, capacity, gender, royal, criteria } }
+        // rooms 데이터 구조: { roomId: { building, floor, no, capacity, gender, royal, criteria, noAssign } }
         // roomId = `${building}_${floor}_${no}`
         let rooms = {};
+
+        // 특수 용도 방: 추가 시 기본으로 '배정 제외' + 용도 라벨 표시
+        //  · 상생관 208 = 창고
+        //  · 청렴관 218·219 = 살림형(취사 가능) 특수실 → 일반 교육생 자동배정 제외, 필요 시 체크 해제로 배정 가능
+        const SPECIAL_ROOMS = {
+            '상생관_2_208': { label: '창고',  defaultNoAssign: true },
+            '청렴관_2_218': { label: '살림형', defaultNoAssign: true },
+            '청렴관_2_219': { label: '살림형', defaultNoAssign: true }
+        };
 
         // ── 동·층 배정 우선순위 ──
         // floorKey = `${building}_${floor}`  /  순서가 빠를수록 먼저 채움
@@ -759,7 +773,7 @@
 
                 const tableBody = floorRooms.length
                     ? floorRooms.map(([id, r]) => roomRowHtml(id, r)).join('')
-                    : `<tr><td colspan="6" class="empty-floor">아직 등록된 방이 없습니다. 위에 방 번호를 입력해 추가하세요.</td></tr>`;
+                    : `<tr><td colspan="7" class="empty-floor">아직 등록된 방이 없습니다. 위에 방 번호를 입력해 추가하세요.</td></tr>`;
 
                 return `
                     <div class="floor-card">
@@ -778,6 +792,7 @@
                                         <th style="width:110px;">정원</th>
                                         <th style="width:130px;">성별 지정</th>
                                         <th style="width:90px;">우선 배정</th>
+                                        <th style="width:90px;">배정 제외</th>
                                         <th>우선 배치 기준</th>
                                         <th style="width:50px;">삭제</th>
                                     </tr>
@@ -793,9 +808,12 @@
         function roomRowHtml(id, r) {
             const royal = !!r.royal;
             const critDisabled = royal ? '' : 'crit-disabled';
+            const sp = SPECIAL_ROOMS[id];
+            const noAssign = !!r.noAssign;
+            const badge = sp ? ` <span class="rno-use">${sp.label}</span>` : '';
             return `
-                <tr class="${royal ? 'royal-row' : ''}">
-                    <td class="rno-cell">${r.no}</td>
+                <tr class="${royal ? 'royal-row' : ''}${noAssign ? ' noassign-row' : ''}">
+                    <td class="rno-cell">${r.no}${badge}</td>
                     <td>
                         <select onchange="setRoomField('${id}','capacity',this.value)">
                             <option value="1" ${r.capacity !== 2 ? 'selected' : ''}>1인 1실</option>
@@ -809,7 +827,8 @@
                             <option value="F" ${r.gender === 'F' ? 'selected' : ''}>여 전용</option>
                         </select>
                     </td>
-                    <td><input type="checkbox" class="royal-check" ${royal ? 'checked' : ''} onchange="setRoomField('${id}','royal',this.checked)"></td>
+                    <td><input type="checkbox" class="royal-check" ${royal ? 'checked' : ''} ${noAssign ? 'disabled' : ''} onchange="setRoomField('${id}','royal',this.checked)"></td>
+                    <td><input type="checkbox" class="noassign-check" ${noAssign ? 'checked' : ''} title="체크 시 자동 배정에서 제외됩니다" onchange="setRoomField('${id}','noAssign',this.checked)"></td>
                     <td>
                         <select class="${critDisabled}" onchange="setRoomField('${id}','criteria',this.value)">
                             ${criteriaOptionsHtml(r.criteria || (criteriaList[0] && criteriaList[0].id) || 'empno')}
@@ -828,8 +847,12 @@
             else if (key === 'royal') r.royal = !!val;
             else if (key === 'gender') r.gender = val || '';
             else if (key === 'criteria') r.criteria = val || 'empno';
-            // 로얄 체크 변경 시 기준 칸 활성/비활성 갱신을 위해 해당 행만 다시 그림
-            if (key === 'royal') renderFloors();
+            else if (key === 'noAssign') {
+                r.noAssign = !!val;
+                if (r.noAssign) r.royal = false; // 배정 제외 방은 우선배정 대상이 될 수 없음
+            }
+            // 로얄/배정제외 변경 시 행 상태(활성/비활성) 갱신을 위해 다시 그림
+            if (key === 'royal' || key === 'noAssign') renderFloors();
             updateSummary();
         }
 
@@ -862,7 +885,8 @@
             nums.forEach(no => {
                 const id = `${building}_${floor}_${no}`;
                 if (!rooms[id]) {
-                    rooms[id] = { building, floor, no: String(no), capacity: 1, gender: '', royal: false, criteria: 'empno' };
+                    const sp = SPECIAL_ROOMS[id];
+                    rooms[id] = { building, floor, no: String(no), capacity: 1, gender: '', royal: false, criteria: 'empno', noAssign: !!(sp && sp.defaultNoAssign) };
                     added++;
                 }
             });
@@ -884,8 +908,9 @@
             const total = Object.keys(rooms).length;
             const royal = Object.values(rooms).filter(r => r.royal).length;
             const cap2 = Object.values(rooms).filter(r => r.capacity === 2).length;
+            const noAssign = Object.values(rooms).filter(r => r.noAssign).length;
             document.getElementById('roomSummary').innerText =
-                `총 ${total}개 방 · 우선실 ${royal}개 · 2인실 ${cap2}개`;
+                `총 ${total}개 방 · 우선실 ${royal}개 · 2인실 ${cap2}개` + (noAssign ? ` · 배정제외 ${noAssign}개` : '');
         }
 
         // ── 저장 ──
@@ -1532,6 +1557,7 @@
                     capacity: r.capacity || 1,
                     fixedGender: floorG || r.gender || '',
                     royal: !!r.royal, criteria: r.criteria || 'empno',
+                    noAssign: !!r.noAssign,
                     occupants: []
                 };
             });
@@ -1605,7 +1631,7 @@
             if (instCount) log.push(`👨‍🏫 강사 사전배치: ${instCount}명 (해당 방은 교육생 자동배정에서 제외)`);
 
             // ── 1) 우선 배정 ──
-            const royalRooms = sortedRooms().filter(r => roomState[r.id].royal && !roomState[r.id].reserved);
+            const royalRooms = sortedRooms().filter(r => roomState[r.id].royal && !roomState[r.id].reserved && !roomState[r.id].noAssign);
             let remaining = people.slice();
 
             royalRooms.forEach(r => {
@@ -1631,7 +1657,7 @@
             log.push(`⭐ 우선 배정: ${royalCount}명 (${royalRooms.length}개 방)`);
 
             // ── 2) 나머지: 과정별 연속 배치 (방 연번 순) ──
-            const normalRooms = sortedRooms().filter(r => !roomState[r.id].royal && !roomState[r.id].reserved);
+            const normalRooms = sortedRooms().filter(r => !roomState[r.id].royal && !roomState[r.id].reserved && !roomState[r.id].noAssign);
             let roomPtr = 0;
             courseKeys.forEach(ck => {
                 const v = weekRosters[ck];
@@ -2452,8 +2478,8 @@
                     body { font-family:'Pretendard',sans-serif; padding:16px 20px; color:#1e293b; background:#f8fafc; }
                     h1 { text-align:center; font-size:22px; font-weight:900; margin:0 0 3px; letter-spacing:-0.5px; }
                     .sub { text-align:center; color:#64748b; margin-bottom:10px; font-size:12.5px; }
-                    .legend { display:flex; justify-content:center; flex-wrap:wrap; gap:6px 20px; margin-bottom:14px; padding:10px 16px; background:#fff; border:1.5px solid #e2e8f0; border-radius:10px; }
-                    .leg-item { display:inline-flex; align-items:center; gap:7px; font-size:12.5px; font-weight:800; }
+                    .legend { display:flex; flex-direction:column; align-items:flex-start; gap:6px; width:fit-content; max-width:100%; margin:0 auto 14px; padding:11px 18px; background:#fff; border:1.5px solid #e2e8f0; border-radius:10px; }
+                    .leg-item { display:flex; align-items:center; gap:8px; font-size:12.5px; font-weight:800; text-align:left; white-space:nowrap; }
                     .leg-swatch { width:14px; height:14px; border-radius:4px; display:inline-block; flex-shrink:0; }
                     .leg-period { font-size:10.5px; font-weight:600; color:#94a3b8; }
                     table.list { width:100%; border-collapse:collapse; font-size:12.5px; }
@@ -2476,7 +2502,7 @@
                     table.pwrap { width:100%; border-collapse:collapse; }
                     table.pwrap > thead { display:table-header-group; }
                     table.pwrap > tbody > tr > td, table.pwrap > thead > tr > td { padding:0; border:none; vertical-align:top; }
-                    @media print { * { -webkit-print-color-adjust:exact !important; print-color-adjust:exact !important; } @page { size:A4 landscape; margin:8mm; } body { background:#fff; padding:10px 14px; } .page-break { page-break-before:always; } .pf-canvas { box-shadow:none; } thead { display:table-header-group; } }
+                    @media print { * { -webkit-print-color-adjust:exact !important; print-color-adjust:exact !important; } @page { size:A4 landscape; margin:8mm; } body { background:#fff; padding:0 14px 10px; } table.pwrap > thead > tr > td { padding-top:10px; } .page-break { page-break-before:always; } .pf-canvas { box-shadow:none; } thead { display:table-header-group; } }
                 </style></head><body>`;
         }
 
@@ -2548,9 +2574,9 @@
                         {no:'209',ext:'469',c:'1',r:'1'},{no:'210',ext:'470',c:'2',r:'1'},{no:'211',ext:'471',c:'3',r:'1'},
                         {no:'212',ext:'472',c:'4',r:'1'},{no:'213',ext:'473',c:'5',r:'1'},{no:'214',ext:'474',c:'6',r:'1'},
                         {no:'215',ext:'475',c:'7',r:'1'},{fac:'PC방',c:'8',r:'1'},{fac:'세탁실',c:'9',r:'1'},
-                        {fac:'휴게실',c:'1',r:'2'},{no:'201',ext:'461',c:'2',r:'2'},{no:'202',ext:'462',c:'3',r:'2'},
+                        {fac:'창고',c:'1',r:'2'},{no:'201',ext:'461',c:'2',r:'2'},{no:'202',ext:'462',c:'3',r:'2'},
                         {no:'203',ext:'463',c:'4',r:'2'},{no:'204',ext:'464',c:'5',r:'2'},{no:'205',ext:'465',c:'6',r:'2'},
-                        {no:'206',ext:'466',c:'7',r:'2'},{no:'207',ext:'467',c:'8',r:'2'},{fac:'창고',c:'9',r:'2'},
+                        {no:'206',ext:'466',c:'7',r:'2'},{no:'207',ext:'467',c:'8',r:'2'},{fac:'휴게실',c:'9',r:'2'},
                     ]},
                 ],
                 '국제교육동': [

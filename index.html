@@ -3790,7 +3790,21 @@ function handleInternalAttendance(room) {
     const myPhone = (localStorage.getItem('kac_user_phone') || '').trim();
     const uToken = localStorage.getItem('uToken');
 
-    if (!uToken || !myName || myPhone.length !== 4) return;
+    // [버그 수정] 사번은 4~5자리 모두 허용 (앱 전체가 /^\d{4,5}$/ 기준).
+    //  기존엔 myPhone.length !== 4 로 5자리 사번 사용자를 무음 반환시켜
+    //  랜딩·메인·로더가 모두 숨겨진 채 아무 화면도 안 떠 '검은 화면'이 됐음.
+    if (!uToken || !myName || !/^\d{4,5}$/.test(myPhone)) {
+        // 출결 모드에서 프로필이 불완전하면 그냥 끝내지 말고 등록창을 띄운다(검은 화면 방지)
+        if (isCheckIn) {
+            try {
+                const _un = document.getElementById('userName'); if (_un) _un.value = myName || '';
+                const _up = document.getElementById('userPhone'); if (_up) _up.value = '';
+                if (typeof resetProfileOverlayButtons === 'function') resetProfileOverlayButtons();
+                const _ov = document.getElementById('profileOverlay'); if (_ov) _ov.style.display = 'flex';
+            } catch (e) {}
+        }
+        return;
+    }
 
     // [출결 가능일 검사 ①] 주말(토/일)에는 출석체크 차단 — 2주 과정 등 중간에 낀 주말 포함
     const _dow = new Date().getDay(); // 0=일요일, 6=토요일
