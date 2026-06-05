@@ -931,7 +931,7 @@
                 document.getElementById(`step-${i}`).style.display = (i === n) ? 'block' : 'none';
                 document.getElementById(`stab-${i}`).classList.toggle('active', i === n);
             });
-            if (n === 2) loadCourses();
+            if (n === 2) loadCourses(true);  // 주차 전환 후 캐시 불일치 방지 — 항상 새로 조회
             if (n === 3) loadWeeks();
             if (n === 4) loadViewWeeks();
         }
@@ -962,10 +962,20 @@
             const labels = ['이번주', '다음주', '2주 뒤', '3주 뒤'];
             const wrap = document.getElementById('weekPills');
             let html = '';
+            // 이번주 키 미리 계산
+            const baseKey = new Date(base).toISOString().slice(0, 10);
+            // 유효한 주차 키 집합 계산
+            const validKeys = Array.from({length: 4}, (_, i) => {
+                const wk = new Date(base); wk.setDate(base.getDate() + i * 7);
+                return wk.toISOString().slice(0, 10);
+            });
+            // selectedWeekKey가 없거나 현재 유효 범위 밖(이전 세션 잔류)이면 이번주로 초기화
+            if (!selectedWeekKey || !validKeys.includes(selectedWeekKey)) {
+                selectedWeekKey = baseKey;
+            }
             for (let i = 0; i < 4; i++) {
                 const wk = new Date(base); wk.setDate(base.getDate() + i * 7);
                 const key = wk.toISOString().slice(0, 10);
-                if (i === 0 && selectedWeekKey === null) selectedWeekKey = key;
                 const wEnd = new Date(wk); wEnd.setDate(wk.getDate() + 6);
                 const fmt = d => `${d.getMonth()+1}/${d.getDate()}`;
                 html += `<button class="${selectedWeekKey === key ? 'on' : ''}" data-wk="${key}" onclick="selectWeek('${key}')">${labels[i]}<br><span style="font-size:10px; opacity:0.8;">${fmt(wk)}~${fmt(wEnd)}</span></button>`;
