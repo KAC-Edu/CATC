@@ -1395,9 +1395,12 @@
             try {
                 const snap = await db.ref('system/dorm/rosters').once('value');
                 const all = snap.val() || {};
-                // weekKey별로 그룹
+                // 비노출(hideFromBoard) 과정은 주차 드롭다운 카운트에서도 제외
+                await loadHiddenCourses();
+                // weekKey별로 그룹 (비노출 과정 제외)
                 const weeks = {};
                 Object.entries(all).forEach(([k, v]) => {
+                    if (isRosterHidden(v)) return;
                     const wk = v.weekKey || (k.split('__')[0]);
                     (weeks[wk] = weeks[wk] || []).push(v);
                 });
@@ -1421,6 +1424,32 @@
         let excludedRosterKeys = new Set();  // 자동배정에서 제외할 과정 키 집합
 
         let _step3Hidden = new Set();
+        let _step3HiddenRooms = new Set();
+
+        // 강사 플랫폼에서 '전면 현황판 비노출(hideFromBoard)' 처리된 과정 집합 로드
+        //  (과정명 + 방번호 두 가지로 매칭 → 이름 변경/공백/방 리셋에도 견고)
+        async function loadHiddenCourses() {
+            _step3Hidden = new Set();
+            _step3HiddenRooms = new Set();
+            try {
+                const cs = await db.ref('courses').once('value');
+                Object.entries(cs.val() || {}).forEach(([room, c]) => {
+                    const st = (c && c.settings) || {};
+                    if (st.hideFromBoard) {
+                        if (st.courseName) _step3Hidden.add((st.courseName || '').trim());
+                        _step3HiddenRooms.add(String(room));
+                    }
+                });
+            } catch (e) { /* 무시 */ }
+        }
+        function isRosterHidden(v) {
+            if (!v) return false;
+            const nm = (v.courseName || '').trim();
+            if (nm && _step3Hidden.has(nm)) return true;
+            if (v.room != null && _step3HiddenRooms.has(String(v.room))) return true;
+            return false;
+        }
+
         async function onWeekChange() {
             const wk = document.getElementById('weekSelect').value;
             if (!wk) return;
@@ -1431,22 +1460,15 @@
             Object.entries(all).forEach(([k, v]) => {
                 if ((v.weekKey || k.split('__')[0]) === wk) weekRosters[k] = v;
             });
-            // 강사 플랫폼에서 비노출(hideFromBoard) 처리된 과정은 자동배정 목록에서 제외
-            try {
-                const cs = await db.ref('courses').once('value');
-                _step3Hidden = new Set();
-                Object.values(cs.val() || {}).forEach(c => {
-                    const st = (c && c.settings) || {};
-                    if (st.hideFromBoard && st.courseName) _step3Hidden.add((st.courseName || '').trim());
-                });
-            } catch (e) { _step3Hidden = new Set(); }
+            // 비노출(hideFromBoard) 과정 집합 갱신 후 목록 렌더
+            await loadHiddenCourses();
             renderWeekRosterList();
             renderInstReserve(wk);
         }
 
         function renderWeekRosterList() {
             // 비노출(hideFromBoard) 과정은 목록에서 제외
-            const visible = Object.entries(weekRosters).filter(([, v]) => !_step3Hidden.has((v.courseName || '').trim()));
+            const visible = Object.entries(weekRosters).filter(([, v]) => !isRosterHidden(v));
             const total = visible
                 .filter(([k]) => !excludedRosterKeys.has(k))
                 .reduce((s, [, v]) => s + (v.list||[]).length, 0);
