@@ -1545,6 +1545,15 @@
                 });
         }
 
+        // 배정 결과 비교용 서명: 토큰→방 매핑을 정렬해 직렬화 (변경 여부 판단)
+        function _assignSignature(students) {
+            if (!students) return '';
+            return Object.keys(students).sort().map(tk => {
+                const s = students[tk] || {};
+                return `${tk}=${s.roomId || ''}`;
+            }).join('|');
+        }
+
         async function runAssign() {
             const wk = document.getElementById('weekSelect').value;
             if (!wk) { showToast('배정할 주차를 선택하세요'); return; }
@@ -1718,6 +1727,27 @@
             log.push(`<br><b>총 ${totalAssigned} / ${totalPeople}명 배정 완료</b>`);
             if (totalAssigned < totalPeople) {
                 log.push(`<span style="color:var(--danger)">⚠️ ${totalPeople - totalAssigned}명 미배정 — 방이 부족하거나 성별 제약 때문일 수 있습니다. STEP 1에서 방을 추가하거나 수동 배정하세요.</span>`);
+            }
+
+            // ── 저장 전: 기존 배정과 비교 ──
+            //  · 변경 없음 → 덮어쓰지 않고 안내
+            //  · 변경 있음(수동 이동·추가 포함) → 덮어쓰기 확인 후 진행
+            const newSig = _assignSignature(assigned);
+            let existing = null;
+            try {
+                const existSnap = await db.ref(`system/dorm/assignments/${wk}`).once('value');
+                existing = existSnap.val();
+            } catch (e) { existing = null; }
+            const hadExisting = existing && existing.students && Object.keys(existing.students).length;
+            if (hadExisting) {
+                const oldSig = _assignSignature(existing.students);
+                if (oldSig === newSig) {
+                    showToast('변경된 내용이 없어 기존 배정을 유지합니다');
+                    alert('✅ 변경된 내용이 없습니다.\n\n새로 계산한 결과가 기존 배정과 동일하여 덮어쓰지 않았습니다.');
+                    return;
+                }
+                const ok = confirm('⚠️ 이 주차에는 이미 배정 결과가 있습니다.\n\n자동 배정을 다시 실행하면 기존 배정이 새로 계산한 결과로 모두 덮어쓰여집니다.\n수동으로 이동·추가·삭제한 내용이 사라질 수 있습니다.\n\n계속할까요?');
+                if (!ok) { showToast('자동 배정을 취소했습니다 — 기존 배정 유지'); return; }
             }
 
             // 저장
@@ -2120,6 +2150,7 @@
         function _availRoomOptions(occ) {
             const bldgOrder = { '청렴관': 0, '상생관': 1, '국제교육동': 2 };
             return Object.entries(rooms).map(([id, r]) => Object.assign({ id }, r))
+                .filter(r => !r.noAssign)
                 .filter(r => (occ.cnt[r.id] || 0) < (r.capacity || 1))
                 .sort((a, b) => (bldgOrder[a.building] ?? 9) - (bldgOrder[b.building] ?? 9) || a.floor - b.floor || String(a.no).localeCompare(String(b.no), undefined, { numeric: true }))
                 .map(r => `<option value="${r.id}">${r.building} ${r.floor}층 ${r.no}호</option>`).join('');
@@ -2247,6 +2278,7 @@
             // 이동 가능 방 = 모든 방 (충돌은 선택 시 검사)
             const bldgOrder = { '청렴관': 0, '상생관': 1, '국제교육동': 2 };
             const opts = Object.entries(rooms).map(([id, r]) => ({ id, ...r }))
+                .filter(r => !r.noAssign)
                 .sort((a,b) => (bldgOrder[a.building]??9)-(bldgOrder[b.building]??9) || a.floor-b.floor || String(a.no).localeCompare(String(b.no),undefined,{numeric:true}))
                 .map(r => `<option value="${r.id}">${r.building} ${r.floor}층 ${r.no}호</option>`).join('');
             document.getElementById('moveRoomSelect').innerHTML = opts;
