@@ -544,6 +544,7 @@
         // ── STEP 2 상태 ──
         let selectedCourse = null;        // { room, courseName, period, weekKey, profName }
         let roster = [];                  // [{ seq, name, empNo, dept, gender }]
+        let rosterDirty = false;          // PDF 업로드·행 추가·삭제 후 미저장 상태 여부
 
         // 건물·층 구조 정의 (확정된 구조)
         const BUILDINGS = {
@@ -1051,44 +1052,82 @@
 
                 for (const wk of weeks) {
                     const a = allAssign[wk] || {};
-                    const courses = a.courses || [];
+                    // courses 가 배열 또는 Firebase 객체 둘 다 처리
+                    const rawCourses = a.courses || {};
+                    const courseArr = Array.isArray(rawCourses) ? rawCourses : Object.values(rawCourses);
                     const students = a.students || {};
+                    const studentArr = Object.values(students);
 
-                    // rosterKey별로 학생 묶기
+                    // ── 방법 1: rosterKey로 매칭 ──
                     const rosterMap = {};
-                    courses.forEach(c => {
-                        if (c.rosterKey) rosterMap[c.rosterKey] = {
+                    // courses 배열로 초기 rosterMap 생성
+                    courseArr.forEach(c => {
+                        if (c && c.rosterKey) rosterMap[c.rosterKey] = {
                             courseName: c.courseName, room: c.room,
-                            period: c.period, weekKey: c.rosterKey.split('__')[0],
+                            period: c.period, weekKey: (c.rosterKey.split('__')[0] || wk),
                             list: []
                         };
                     });
-                    Object.values(students).forEach(s => {
-                        const ck = s.rosterKey;
-                        if (!ck || ck === '__INST__') return; // 강사 제외
-                        if (!rosterMap[ck]) rosterMap[ck] = {
-                            courseName: s.course || '', room: (ck.split('__')[1] || ''),
-                            period: '', weekKey: ck.split('__')[0], list: []
-                        };
+
+                    // ── 방법 2: rosterKey 없으면 과정명으로 매칭 ──
+                    // 과정명 → rosterKey 매핑 테이블
+                    const courseNameToRk = {};
+                    courseArr.forEach(c => {
+                        if (c && c.courseName && c.rosterKey) courseNameToRk[c.courseName] = c.rosterKey;
+                    });
+
+                    let noKeyCount = 0;
+                    studentArr.forEach(s => {
+                        if (!s || !s.name) return;
+                        let ck = s.rosterKey;
+
+                        // rosterKey 없거나 강사면 과정명으로 대체 매핑
+                        if (!ck || ck === '__INST__') {
+                            if (s.course && courseNameToRk[s.course]) {
+                                ck = courseNameToRk[s.course];
+                            } else {
+                                noKeyCount++;
+                                return;
+                            }
+                        }
+
+                        if (!rosterMap[ck]) {
+                            // courses 배열에도 없는 rosterKey → 과정명/방 기반으로 생성
+                            rosterMap[ck] = {
+                                courseName: s.course || '', room: (ck.split('__')[1] || ''),
+                                period: '', weekKey: (ck.split('__')[0] || wk), list: []
+                            };
+                        }
                         rosterMap[ck].list.push({
-                            name: s.name || '', empNo: s.empNo || '',
+                            name: s.name || '', empNo: s.empNo || s.empno || '',
                             dept: s.dept || '', gender: s.gender || ''
                         });
                     });
 
-                    // Firebase 업데이트 준비
+                    if (noKeyCount > 0) console.warn(`[명단 복구] rosterKey·과정명 모두 없는 학생 ${noKeyCount}명 제외`);
+
+                    // Firebase 업데이트 준비 (학생 있는 것만)
                     Object.entries(rosterMap).forEach(([rk, v]) => {
                         if (!v.list.length) return;
                         updates[`system/dorm/rosters/${rk}`] = v;
                         totalRecovered++;
+                        console.log(`[명단 복구] ${rk}: ${v.list.length}명 (${v.courseName})`);
                     });
                 }
 
-                if (!totalRecovered) { showToast('⚠️ 복구할 명단이 없습니다 (배정된 교육생이 없거나 강사만 있음)'); return; }
+                if (!totalRecovered) {
+                    // 진단 정보 출력
+                    const diagKeys = Object.keys(allAssign);
+                    const firstWk = diagKeys[0];
+                    const firstA = allAssign[firstWk] || {};
+                    const sArr = Object.values(firstA.students || {});
+                    console.warn('[명단 복구 실패] 주차:', diagKeys, '| 학생수:', sArr.length, '| 첫 학생 샘플:', sArr[0]);
+                    showToast(`⚠️ 복구할 명단이 없습니다\n주차: ${diagKeys.join(', ')}, 학생수: ${sArr.length}`);
+                    return;
+                }
 
                 await db.ref().update(updates);
                 showToast(`✅ ${totalRecovered}개 과정 명단 복구 완료`);
-                // coursesCache 초기화 후 새로고침
                 coursesCache = null;
                 await loadCourses(true);
             } catch (e) {
@@ -1224,9 +1263,26 @@
         }
 
 
-        function selectCourse(it) {
+        async function selectCourse(it) {
+            // ── 미저장 명단 확인 ──
+            if (rosterDirty && selectedCourse) {
+                const answer = confirm(
+                    `"${selectedCourse.courseName}" 명단에 저장되지 않은 내용이 있습니다.\n\n저장하고 이동할까요?\n\n[확인] 저장 후 이동  /  [취소] 저장 없이 이동`
+                );
+                if (answer) {
+                    await new Promise(resolve => {
+                        // saveRoster는 동기처럼 작동하므로 짧게 대기
+                        saveRoster();
+                        setTimeout(resolve, 500);
+                    });
+                }
+                rosterDirty = false;
+            }
+
             selectedCourse = it;
-            // 목록 전체 재렌더 대신, 선택 표시만 인라인으로 갱신 (깜빡임 방지)
+            // 이전 과정의 판독 결과 메시지 초기화
+            document.getElementById('rosterPreview').innerText = '';
+
             document.querySelectorAll('#courseList .course-row').forEach(row => {
                 const on = row.dataset.room === String(it.room) && row.dataset.week === it.weekKey;
                 row.classList.toggle('sel', on);
@@ -1251,6 +1307,7 @@
             db.ref(`system/dorm/rosters/${key}`).once('value', snap => {
                 const v = snap.val();
                 roster = (v && Array.isArray(v.list)) ? v.list : [];
+                rosterDirty = false;  // DB에서 로드한 시점엔 항상 클린 상태
                 console.log('[명단 로드] 결과:', v ? `${roster.length}명 (list 존재: ${!!v.list})` : '⚠️ Firebase에 데이터 없음 (null)');
                 if (!v) {
                     // 데이터가 없을 경우 — 인접 키도 시도 (UTC/KST 하루 차이 대비)
@@ -1336,6 +1393,7 @@
                     roster = parsed;
                     renderRoster();
                     document.getElementById('rosterPreview').innerHTML = `✅ ${parsed.length}명 판독됨. <b style="color:var(--warning);">반드시 내용을 확인/수정</b>한 뒤 저장하세요.`;
+                    rosterDirty = true;
                 }
             } catch (e) {
                 console.error(e);
@@ -1447,9 +1505,9 @@
         }
 
         function editRoster(i, key, val) { if (roster[i]) roster[i][key] = val.trim(); }
-        function addRosterRow() { roster.push({ seq: roster.length + 1, name: '', empNo: '', dept: '', gender: '' }); renderRoster(); }
-        function delRosterRow(i) { roster.splice(i, 1); renderRoster(); }
-        function clearRoster() { if (confirm('명단을 모두 비우시겠습니까?')) { roster = []; renderRoster(); } }
+        function addRosterRow() { roster.push({ seq: roster.length + 1, name: '', empNo: '', dept: '', gender: '' }); rosterDirty = true; renderRoster(); }
+        function delRosterRow(i) { roster.splice(i, 1); rosterDirty = true; renderRoster(); }
+        function clearRoster() { if (confirm('명단을 모두 비우시겠습니까?')) { roster = []; rosterDirty = true; renderRoster(); } }
 
         function saveRoster() {
             if (!selectedCourse) { showToast('먼저 과정을 선택하세요'); return; }
@@ -1470,6 +1528,8 @@
             db.ref(`system/dorm/rosters/${rosterKey(selectedCourse)}`).set(payload)
                 .then(() => {
                     showToast(`✅ ${clean.length}명 명단 저장됨`);
+                    rosterDirty = false;
+                    document.getElementById('rosterPreview').innerText = '';
                     // 해당 과정 행을 녹색+인원수로 즉시 갱신 (전체 재렌더 없이)
                     const rk = rosterKey(selectedCourse);
                     rosterCounts[rk] = clean.length;
