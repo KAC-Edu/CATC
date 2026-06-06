@@ -1754,34 +1754,72 @@
             }).join('|');
         }
 
+        // ═══════════ 가배정(Draft) 확정 저장용 임시 보관 ═══════════
+        let _draftPayload = null;   // runAssign 계산 결과 임시 저장 → 확정 버튼 클릭 시 저장
+
+        async function commitDraftAssign() {
+            if (!_draftPayload) { showToast('가배정 데이터가 없습니다. 다시 계산해 주세요.'); return; }
+            const { wk, payload, totalAssigned, totalPeople, royalCount } = _draftPayload;
+
+            // 기존 배정과 비교
+            let existing = null;
+            try { const s = await db.ref(`system/dorm/assignments/${wk}`).once('value'); existing = s.val(); } catch(e) {}
+            const hadExisting = existing && existing.students && Object.keys(existing.students).length;
+            if (hadExisting) {
+                const oldSig = _assignSignature(existing.students);
+                const newSig = _assignSignature(payload.students);
+                if (oldSig === newSig) {
+                    showToast('변경된 내용이 없어 기존 배정을 유지합니다');
+                    alert('✅ 변경된 내용이 없습니다.\n기존 배정과 동일하여 덮어쓰지 않았습니다.');
+                    return;
+                }
+                if (!confirm('⚠️ 이 주차에는 이미 배정 결과가 있습니다.\n덮어쓰면 수동으로 이동·추가·삭제한 내용이 사라질 수 있습니다.\n\n계속할까요?')) {
+                    showToast('자동 배정을 취소했습니다 — 기존 배정 유지');
+                    return;
+                }
+            }
+
+            const btn = document.getElementById('draftConfirmBtn');
+            if (btn) { btn.disabled = true; btn.innerText = '저장 중…'; }
+
+            db.ref(`system/dorm/assignments/${wk}`).set(payload)
+                .then(() => {
+                    _draftPayload = null;
+                    showToast(`✅ 배정 확정 완료 (${totalAssigned}/${totalPeople}명)`);
+                    const logEl = document.getElementById('assignLog');
+                    if (logEl) {
+                        const banner = logEl.querySelector('.draft-banner');
+                        if (banner) banner.innerHTML = `<div style="padding:16px 20px; border-radius:14px; background:#f0fdf4; border:2px solid #86efac; font-weight:800; color:#15803d; font-size:16px; text-align:center;">✅ 배정이 확정 저장되었습니다.</div>`;
+                    }
+                    setTimeout(() => goStep(4), 800);
+                })
+                .catch(e => { console.error(e); showToast('⚠️ 배정 결과 저장 실패'); if (btn) { btn.disabled = false; btn.innerText = '✅ 확정 저장'; } });
+        }
+
         async function runAssign() {
             const wk = document.getElementById('weekSelect').value;
             if (!wk) { showToast('배정할 주차를 선택하세요'); return; }
             if (!Object.keys(rooms).length) {
-                // rooms가 비어있으면 로드
                 const rs = await db.ref('system/dorm/rooms').once('value');
                 rooms = rs.val() || {};
             }
             if (!Object.keys(rooms).length) { showToast('STEP 1에서 방을 먼저 설정하세요'); return; }
             if (!Object.keys(weekRosters).length) { showToast('이 주차에 저장된 명단이 없습니다'); return; }
 
-            // 체크박스에서 제외된 과정 빼기
             const activeRosters = Object.fromEntries(
                 Object.entries(weekRosters).filter(([k]) => !excludedRosterKeys.has(k))
             );
             if (!Object.keys(activeRosters).length) { showToast('배정할 과정이 없습니다. 하나 이상 선택하세요'); return; }
 
+            // ══ 공통 준비 ══
             const log = [];
             const unassignedList = [];
             const courseStats = [];
-            // 방 상태 초기화: { id, capacity, gender(고정/지정), occupants:[] }
-            // 층별 성별 전용 맵 (floorPriority의 gender)
             const floorGenderMap = {};
             (floorPriority || []).forEach(f => { if (f.gender) floorGenderMap[f.key] = f.gender; });
 
             const roomState = {};
             sortedRooms().forEach(r => {
-                // 층 전용 성별이 있으면 우선 적용, 없으면 방 개별 지정 사용
                 const floorG = floorGenderMap[`${r.building}_${r.floor}`] || '';
                 roomState[r.id] = {
                     id: r.id, building: r.building, floor: r.floor, no: r.no,
@@ -1793,10 +1831,35 @@
                 };
             });
 
-            // 과정 목록 (방 연번 순 연속배치를 위해 명단 순서 유지)
             const courseKeys = Object.keys(activeRosters);
 
-            // 전체 인원 모으기 (과정 태그 + 기간 포함)
+            function overlapDays(aS, aE, bS, bE) {
+                const d = s => { const x = new Date(s + 'T00:00:00'); return isNaN(x) ? null : x; };
+                const as=d(aS),ae=d(aE),bs=d(bS),be=d(bE);
+                if (!as||!ae||!bs||!be) return 0;
+                const start=as>bs?as:bs, end=ae<be?ae:be;
+                if (end<start) return 0;
+                return Math.round((end-start)/86400000)+1;
+            }
+
+            const assigned = {};
+            const placeInRoom = (person, rs) => {
+                const roomGender = rs.fixedGender || (rs.occupants[0] ? rs.occupants[0].gender : '');
+                if (roomGender && person.gender && roomGender !== person.gender) return false;
+                if (rs.occupants.length >= rs.capacity) return false;
+                for (const occ of rs.occupants) {
+                    if (occ.rosterKey === person.rosterKey) continue;
+                    if (overlapDays(person.start, person.end, occ.start, occ.end) >= 2) return false;
+                }
+                rs.occupants.push(person);
+                assigned[person.token] = {
+                    name: person.name, empNo: person.empNo, dept: person.dept, gender: person.gender,
+                    course: person.course, room: person.room, roomId: rs.id,
+                    building: rs.building, floor: rs.floor, no: rs.no, rosterKey: person.rosterKey
+                };
+                return true;
+            };
+
             let people = [];
             courseKeys.forEach(ck => {
                 const v = activeRosters[ck];
@@ -1811,72 +1874,31 @@
                 });
             });
 
-            // 두 기간이 며칠 겹치는지 (숙박 기준). 마지막날=다음 첫날(경계 1일)은 허용,
-            //  2일 이상 겹치면 같은 방 동시 사용 불가.
-            function overlapDays(aStart, aEnd, bStart, bEnd) {
-                const d = s => { const x = new Date(s + 'T00:00:00'); return isNaN(x) ? null : x; };
-                const as = d(aStart), ae = d(aEnd), bs = d(bStart), be = d(bEnd);
-                if (!as || !ae || !bs || !be) return 0;
-                const start = as > bs ? as : bs;
-                const end = ae < be ? ae : be;
-                if (end < start) return 0;
-                return Math.round((end - start) / 86400000) + 1; // 겹치는 날 수
-            }
-
-            const assigned = {};   // token -> { roomId, ... }
-            const placeInRoom = (person, rs) => {
-                // 성별 충돌 검사
-                const roomGender = rs.fixedGender || (rs.occupants[0] ? rs.occupants[0].gender : '');
-                if (roomGender && person.gender && roomGender !== person.gender) return false;
-                if (rs.occupants.length >= rs.capacity) return false;
-                // 기간 중복 검사: 같은 방의 기존 입실자 중, '다른 과정'이면서 2일 이상 겹치면 불가
-                //  (빈방이면 occupants가 없으므로 자유롭게 배정 — 평시엔 제약 없음)
-                for (const occ of rs.occupants) {
-                    if (occ.rosterKey === person.rosterKey) continue; // 같은 과정은 어차피 같은 기간
-                    const ov = overlapDays(person.start, person.end, occ.start, occ.end);
-                    if (ov >= 2) return false; // 2일 이상 겹침 → 같은 방 불가
-                }
-                rs.occupants.push(person);
-                assigned[person.token] = {
-                    name: person.name, empNo: person.empNo, dept: person.dept, gender: person.gender,
-                    course: person.course, room: person.room, roomId: rs.id,
-                    building: rs.building, floor: rs.floor, no: rs.no
-                };
-                return true;
-            };
-
-            // ── 0) 강사 숙박 사전배치: 예약된 방을 먼저 점유하고 자동배정에서 제외 ──
+            // ── 0) 강사 사전배치 ──
             let instCount = 0;
             try {
                 const instSnap = await db.ref(`system/dorm/instructors/${wk}`).once('value');
                 const insts = instSnap.val() || {};
                 Object.entries(insts).forEach(([tk, it]) => {
-                    const rs = roomState[it.roomId];
-                    if (!rs) return;
+                    const rs = roomState[it.roomId]; if (!rs) return;
                     rs.reserved = true;
-                    rs.occupants.push({ name: it.name, empNo: it.empNo || '-', dept: it.dept || '강사', gender: it.gender || '', course: '강사', rosterKey: '__INST__', start: '', end: '' });
-                    assigned[tk] = { name: it.name, empNo: it.empNo || '-', dept: it.dept || '강사', gender: it.gender || '', course: '강사', room: `${rs.building} ${rs.no}`, roomId: rs.id, building: rs.building, floor: rs.floor, no: rs.no };
+                    rs.occupants.push({ name: it.name, empNo: it.empNo||'-', dept: it.dept||'강사', gender: it.gender||'', course:'강사', rosterKey:'__INST__', start:'', end:'' });
+                    assigned[tk] = { name: it.name, empNo: it.empNo||'-', dept: it.dept||'강사', gender: it.gender||'', course:'강사', room:`${rs.building} ${rs.no}`, roomId: rs.id, building: rs.building, floor: rs.floor, no: rs.no };
                     instCount++;
                 });
-            } catch (e) { console.error('강사 예약 로드 실패', e); }
-            if (instCount) log.push(`👨‍🏫 강사 사전배치: ${instCount}명 (해당 방은 교육생 자동배정에서 제외)`);
+            } catch(e) { console.error('강사 예약 로드 실패', e); }
+            if (instCount) log.push(`👨‍🏫 강사 사전배치: ${instCount}명`);
 
-            // ── 1) 우선 배정 ──
+            // ── 1) 우선 배정(royal) ──
             const royalRooms = sortedRooms().filter(r => roomState[r.id].royal && !roomState[r.id].reserved && !roomState[r.id].noAssign);
             let remaining = people.slice();
-
             royalRooms.forEach(r => {
                 const rs = roomState[r.id];
                 while (rs.occupants.length < rs.capacity && remaining.length) {
-                    // 기준에 맞는 후보 정렬
                     let pool = remaining.filter(p => !assigned[p.token]);
-                    // 성별 지정방이면 해당 성별만
                     if (rs.fixedGender) pool = pool.filter(p => p.gender === rs.fixedGender);
-                    // 이미 입실자 있으면 같은 성별만
                     if (rs.occupants[0]) pool = pool.filter(p => p.gender === rs.occupants[0].gender);
                     if (!pool.length) break;
-
-                    // 방에 지정된 배치 기준 적용 (필터 + 정렬)
                     const ranked = applyCriteria(rs.criteria, pool);
                     if (!ranked) break;
                     const pick = ranked[0];
@@ -1884,135 +1906,250 @@
                     remaining = remaining.filter(p => p.token !== pick.token);
                 }
             });
-            const royalCount = Object.keys(assigned).length;
+            const royalCount = Object.keys(assigned).filter(k => k !== '__INST__').length;
             log.push(`⭐ 우선 배정: ${royalCount}명 (${royalRooms.length}개 방)`);
 
-            // ── 2) 나머지: 과정별 연속 배치 (방 연번 순) ──
+            // ── 2) 블록 배정: 과정별로 최적 층·건물 사전 배분 ──
             const normalRooms = sortedRooms().filter(r => !roomState[r.id].royal && !roomState[r.id].reserved && !roomState[r.id].noAssign);
-            let roomPtr = 0;
-            courseKeys.forEach(ck => {
-                const v = weekRosters[ck];
-                const coursePeople = remaining.filter(p => p.rosterKey === ck && !assigned[p.token]);
-                let placedThisCourse = 0;
-                coursePeople.forEach(person => {
-                    if (assigned[person.token]) return;
-                    let placed = false;
-                    // 현재 포인터부터 빈 방 탐색
-                    for (let scan = roomPtr; scan < normalRooms.length; scan++) {
-                        const rs = roomState[normalRooms[scan].id];
-                        if (placeInRoom(person, rs)) {
-                            // 방이 꽉 찼으면 포인터 전진 (연속 배치 유지)
-                            if (rs.occupants.length >= rs.capacity) {
-                                if (scan === roomPtr) roomPtr++;
-                            }
-                            placed = true; placedThisCourse++;
-                            break;
-                        }
-                    }
-                    if (!placed) {
-                        unassignedList.push({ name: person.name, empNo: person.empNo, gender: person.gender, course: v.courseName });
-                        log.push(`⚠️ <span style="color:var(--danger)">배정 실패</span>: ${person.name}(${person.empNo}) — 적합한 빈 방 부족`);
-                    }
-                });
-                // 다음 과정은 다음 빈 방부터 시작하도록 포인터를 현재 채워진 위치로 이동
-                while (roomPtr < normalRooms.length && roomState[normalRooms[roomPtr].id].occupants.length >= roomState[normalRooms[roomPtr].id].capacity) {
-                    roomPtr++;
-                }
-                courseStats.push({ name: v.courseName, placed: placedThisCourse, total: coursePeople.length });
-                log.push(`📚 ${v.courseName}: ${placedThisCourse}명 배정`);
+
+            // 층별 블록 생성 (building_floor → 방 목록)
+            const floorBlockMap = {};
+            normalRooms.forEach(r => {
+                const key = `${r.building}_${r.floor}`;
+                if (!floorBlockMap[key]) floorBlockMap[key] = { building: r.building, floor: r.floor, rooms: [] };
+                floorBlockMap[key].rooms.push(r);
             });
 
-            const totalAssigned = Object.keys(assigned).length;
-            const totalPeople = people.length;
-            log.push(`<br><b>총 ${totalAssigned} / ${totalPeople}명 배정 완료</b>`);
-            if (totalAssigned < totalPeople) {
-                log.push(`<span style="color:var(--danger)">⚠️ ${totalPeople - totalAssigned}명 미배정 — 방이 부족하거나 성별 제약 때문일 수 있습니다. STEP 1에서 방을 추가하거나 수동 배정하세요.</span>`);
-            }
+            // 과정 규모 내림차순 정렬 (큰 과정이 먼저 블록을 선점)
+            const coursesBySize = [...courseKeys].sort((a, b) => {
+                const sa = (activeRosters[a].list || []).length;
+                const sb = (activeRosters[b].list || []).length;
+                return sb - sa;
+            });
 
-            // ── 저장 전: 기존 배정과 비교 ──
-            //  · 변경 없음 → 덮어쓰지 않고 안내
-            //  · 변경 있음(수동 이동·추가 포함) → 덮어쓰기 확인 후 진행
-            const newSig = _assignSignature(assigned);
-            let existing = null;
-            try {
-                const existSnap = await db.ref(`system/dorm/assignments/${wk}`).once('value');
-                existing = existSnap.val();
-            } catch (e) { existing = null; }
-            const hadExisting = existing && existing.students && Object.keys(existing.students).length;
-            if (hadExisting) {
-                const oldSig = _assignSignature(existing.students);
-                if (oldSig === newSig) {
-                    showToast('변경된 내용이 없어 기존 배정을 유지합니다');
-                    alert('✅ 변경된 내용이 없습니다.\n\n새로 계산한 결과가 기존 배정과 동일하여 덮어쓰지 않았습니다.');
-                    return;
+            // 각 과정에 예정된 방 목록 (블록 사전 배분)
+            const coursePlan = {}; // ck → Set of roomId
+            const claimedRooms = new Set();
+
+            coursesBySize.forEach(ck => {
+                const need = (activeRosters[ck].list || []).filter(p => !assigned[`${p.name}_${p.empNo||''}`]).length;
+                if (!need) { coursePlan[ck] = new Set(); return; }
+
+                // 각 층 블록에 대한 점수 계산
+                const blockScores = Object.values(floorBlockMap).map(block => {
+                    const avail = block.rooms.filter(r => !claimedRooms.has(r.id));
+                    const cap = avail.reduce((s, r) => s + (roomState[r.id].capacity - roomState[r.id].occupants.length), 0);
+                    if (cap <= 0) return null;
+                    // 점수: 딱 맞게 들어가면 +100, 여유가 너무 많으면 -20(낭비), 못 맞으면 partial점수
+                    const fit = Math.min(cap, need) / need;
+                    const waste = cap > need ? (cap - need) / cap * 20 : 0;
+                    return { block, avail, cap, score: fit * 100 - waste };
+                }).filter(Boolean).sort((a, b) => b.score - a.score);
+
+                coursePlan[ck] = new Set();
+                let still = need;
+                for (const candidate of blockScores) {
+                    if (still <= 0) break;
+                    // 이 블록의 방을 과정에 배분 (용량만큼 채울 수 있는 방만 클레임)
+                    candidate.avail.forEach(r => {
+                        if (still <= 0 || claimedRooms.has(r.id)) return;
+                        const avCap = roomState[r.id].capacity - roomState[r.id].occupants.length;
+                        if (avCap <= 0) return;
+                        claimedRooms.add(r.id);
+                        coursePlan[ck].add(r.id);
+                        still -= avCap;
+                    });
                 }
-                const ok = confirm('⚠️ 이 주차에는 이미 배정 결과가 있습니다.\n\n자동 배정을 다시 실행하면 기존 배정이 새로 계산한 결과로 모두 덮어쓰여집니다.\n수동으로 이동·추가·삭제한 내용이 사라질 수 있습니다.\n\n계속할까요?');
-                if (!ok) { showToast('자동 배정을 취소했습니다 — 기존 배정 유지'); return; }
+            });
+
+            // ── 3) 스마트 성별 페어링 배정 ──
+            // 2인실: 동성 2명씩 묶어서 배치 → 잔여 1명은 1인실
+            const smartPlace = (people, plannedIds) => {
+                const unplaced = [];
+                const dbl = [...plannedIds].map(id => roomState[id]).filter(rs => rs && !rs.reserved && rs.capacity >= 2 && rs.occupants.length < rs.capacity);
+                const sgl = [...plannedIds].map(id => roomState[id]).filter(rs => rs && !rs.reserved && rs.capacity === 1 && rs.occupants.length < rs.capacity);
+
+                // 성별 그룹으로 묶기
+                const byGender = {};
+                people.forEach(p => {
+                    if (assigned[p.token]) return;
+                    const g = p.gender || '기타';
+                    (byGender[g] = byGender[g] || []).push(p);
+                });
+
+                // 2인실: 동성 2명씩 배치
+                dbl.forEach(rs => {
+                    if (rs.occupants.length >= rs.capacity) return;
+                    const space = rs.capacity - rs.occupants.length;
+                    const gFilter = rs.fixedGender || (rs.occupants[0] ? rs.occupants[0].gender : null);
+
+                    // 배치할 성별 결정: 지정 성별 우선, 없으면 가장 많은 성별 선택
+                    let targetG = gFilter;
+                    if (!targetG) {
+                        const sorted = Object.entries(byGender).sort((a,b)=>b[1].length-a[1].length);
+                        // 2인실은 2명 이상인 성별 우선, 없으면 아무 성별
+                        const pairG = sorted.find(([,arr]) => arr.filter(p => !assigned[p.token]).length >= 2);
+                        targetG = (pairG || sorted[0])?.[0];
+                    }
+                    if (!targetG || !byGender[targetG]) return;
+
+                    let filled = 0;
+                    const queue = byGender[targetG].filter(p => !assigned[p.token]);
+                    while (filled < space && queue.length) {
+                        const person = queue.shift();
+                        if (assigned[person.token]) continue;
+                        if (placeInRoom(person, rs)) {
+                            filled++;
+                            byGender[targetG] = byGender[targetG].filter(p => p.token !== person.token);
+                        }
+                    }
+                });
+
+                // 1인실: 남은 인원 배치
+                sgl.forEach(rs => {
+                    if (rs.occupants.length >= rs.capacity) return;
+                    const gFilter = rs.fixedGender;
+                    const allLeft = Object.values(byGender).flat().filter(p => !assigned[p.token]);
+                    const candidates = gFilter ? allLeft.filter(p => p.gender === gFilter) : allLeft;
+                    if (!candidates.length) return;
+                    const person = candidates[0];
+                    if (placeInRoom(person, rs)) {
+                        const g = person.gender || '기타';
+                        if (byGender[g]) byGender[g] = byGender[g].filter(p => p.token !== person.token);
+                    }
+                });
+
+                // 아직 미배정인 사람 수집
+                Object.values(byGender).flat().forEach(p => {
+                    if (!assigned[p.token]) unplaced.push(p);
+                });
+                return unplaced;
+            };
+
+            // 과정별 스마트 배정 실행
+            coursesBySize.forEach(ck => {
+                const v = activeRosters[ck];
+                const coursePeople = people.filter(p => p.rosterKey === ck && !assigned[p.token]);
+                const plannedIds = coursePlan[ck] || new Set();
+                const leftover = smartPlace(coursePeople, plannedIds);
+
+                const placed = coursePeople.length - leftover.length;
+                courseStats.push({ name: v.courseName, placed, total: coursePeople.length });
+                log.push(`📚 ${v.courseName}: ${placed}명 배정 (${coursePeople.length}명 중)`);
+            });
+
+            // ── 4) 잔여 인원 구제: 미배정자 → 남은 빈 방 어디든 탐색 ──
+            const rescue = people.filter(p => !assigned[p.token]);
+            if (rescue.length) {
+                log.push(`🔄 잔여 인원 2차 탐색: ${rescue.length}명`);
+                const anyAvail = normalRooms.filter(r => {
+                    const rs = roomState[r.id];
+                    return rs && !rs.reserved && rs.occupants.length < rs.capacity;
+                });
+                rescue.forEach(person => {
+                    for (const r of anyAvail) {
+                        const rs = roomState[r.id];
+                        if (rs.occupants.length >= rs.capacity) continue;
+                        if (placeInRoom(person, rs)) {
+                            log.push(`  ↳ ${person.name} → ${rs.building} ${rs.floor}층 ${rs.no}호 (2차)`);
+                            return;
+                        }
+                    }
+                    unassignedList.push({ name: person.name, empNo: person.empNo, gender: person.gender, course: person.course });
+                });
             }
 
-            // 저장
+            const totalAssigned = Object.keys(assigned).filter(k => !k.startsWith('__INST__')).length + instCount;
+            const totalPeople = people.length + instCount;
+
+            // ── 5) 가배정(Draft) 미리보기 표시 — DB에 바로 저장하지 않음 ──
             const payload = {
                 weekKey: wk,
                 assignedAt: firebase.database.ServerValue.TIMESTAMP,
                 students: assigned,
                 courses: courseKeys.map(ck => ({ rosterKey: ck, courseName: activeRosters[ck].courseName, room: activeRosters[ck].room, period: activeRosters[ck].period || '' }))
             };
-            db.ref(`system/dorm/assignments/${wk}`).set(payload)
-                .then(() => {
-                    const pct = totalPeople ? Math.round(totalAssigned / totalPeople * 100) : 0;
-                    const allOk = totalAssigned === totalPeople;
-                    let html = `
-                    <div style="margin-top:18px;">
-                        <!-- 요약 배너 -->
-                        <div style="display:flex; align-items:center; gap:16px; padding:18px 22px; border-radius:16px; background:${allOk?'#f0fdf4':'#fffbeb'}; border:2px solid ${allOk?'#86efac':'#fcd34d'};">
-                            <div style="font-size:38px;">${allOk?'✅':'⚠️'}</div>
-                            <div style="flex:1;">
-                                <div style="font-size:20px; font-weight:900; color:${allOk?'#15803d':'#b45309'};">${allOk?'배정 완료':'일부 미배정'}</div>
-                                <div style="font-size:14px; color:#475569; font-weight:600; margin-top:2px;">총 ${totalPeople}명 중 <b>${totalAssigned}명</b> 배정 (${pct}%)${royalCount?` · 우선실 ${royalCount}명`:''}</div>
-                            </div>
-                            <div style="text-align:right;">
-                                <div style="font-size:34px; font-weight:900; color:${allOk?'#16a34a':'#d97706'};">${totalAssigned}<span style="font-size:18px; color:#94a3b8;">/${totalPeople}</span></div>
-                            </div>
-                        </div>`;
+            _draftPayload = { wk, payload, totalAssigned, totalPeople, royalCount };
 
-                    // 과정별 배정 표
-                    if (courseStats.length) {
-                        html += `<div style="margin-top:16px; border:1.5px solid var(--border); border-radius:14px; overflow:hidden;">
-                            <table style="width:100%; border-collapse:collapse; font-size:14px;">
-                                <thead><tr style="background:#f8fafc;">
-                                    <th style="text-align:left; padding:12px 16px; font-weight:800; color:#475569;">과정</th>
-                                    <th style="text-align:center; padding:12px 16px; font-weight:800; color:#475569; width:120px;">배정</th>
-                                    <th style="text-align:center; padding:12px 16px; font-weight:800; color:#475569; width:100px;">상태</th>
-                                </tr></thead><tbody>`;
-                        courseStats.forEach(c => {
+            const pct = totalPeople ? Math.round(totalAssigned / totalPeople * 100) : 0;
+            const allOk = unassignedList.length === 0;
+
+            // 블록 배분 요약 (과정별 배정 층 정보)
+            const blockSummary = coursesBySize.map(ck => {
+                const ids = [...(coursePlan[ck] || [])];
+                if (!ids.length) return '';
+                const bldgs = [...new Set(ids.map(id => roomState[id]?.building).filter(Boolean))].join(', ');
+                const floors = [...new Set(ids.map(id => roomState[id]?.floor).filter(Boolean))].sort().join('·');
+                return `<span style="display:inline-block;padding:3px 10px;border-radius:8px;background:#eff6ff;color:#1d4ed8;font-size:12px;font-weight:700;margin:2px;">${activeRosters[ck].courseName} → ${bldgs} ${floors}층</span>`;
+            }).join('');
+
+            let html = `
+            <div class="draft-banner" style="margin-top:18px;">
+                <!-- 가배정 안내 배너 -->
+                <div style="padding:14px 18px; border-radius:12px; background:#fef9c3; border:2px solid #fde047; margin-bottom:16px; display:flex; align-items:center; gap:12px;">
+                    <div style="font-size:24px;">📋</div>
+                    <div style="flex:1;">
+                        <div style="font-size:15px; font-weight:900; color:#713f12;">가배정 미리보기</div>
+                        <div style="font-size:13px; color:#92400e; margin-top:2px;">배정 결과를 확인 후 <b>확정 저장</b>을 눌러야 실제 저장됩니다.</div>
+                    </div>
+                    <div style="display:flex; gap:8px;">
+                        <button id="draftConfirmBtn" onclick="commitDraftAssign()" style="padding:11px 22px; background:#15803d; color:#fff; border:none; border-radius:10px; font-weight:900; font-size:14px; cursor:pointer;">✅ 확정 저장</button>
+                        <button onclick="document.getElementById('assignLog').innerHTML=''" style="padding:11px 16px; background:#f1f5f9; color:#475569; border:none; border-radius:10px; font-weight:800; font-size:13px; cursor:pointer;">취소</button>
+                    </div>
+                </div>
+
+                <!-- 요약 -->
+                <div style="display:flex; align-items:center; gap:16px; padding:18px 22px; border-radius:16px; background:${allOk?'#f0fdf4':'#fffbeb'}; border:2px solid ${allOk?'#86efac':'#fcd34d'};">
+                    <div style="font-size:38px;">${allOk?'✅':'⚠️'}</div>
+                    <div style="flex:1;">
+                        <div style="font-size:20px; font-weight:900; color:${allOk?'#15803d':'#b45309'};">${allOk?'전원 배정 가능':'일부 미배정'}</div>
+                        <div style="font-size:13px; color:#475569; font-weight:600; margin-top:4px;">총 ${totalPeople}명 중 <b>${totalAssigned}명</b> 배정 (${pct}%)${royalCount?` · 우선실 ${royalCount}명`:''}</div>
+                        <div style="margin-top:8px; display:flex; flex-wrap:wrap; gap:4px;">${blockSummary}</div>
+                    </div>
+                    <div style="text-align:right;">
+                        <div style="font-size:34px; font-weight:900; color:${allOk?'#16a34a':'#d97706'};">${totalAssigned}<span style="font-size:18px; color:#94a3b8;">/${totalPeople}</span></div>
+                    </div>
+                </div>
+
+                <!-- 과정별 표 -->
+                ${courseStats.length ? `
+                <div style="margin-top:16px; border:1.5px solid var(--border); border-radius:14px; overflow:hidden;">
+                    <table style="width:100%; border-collapse:collapse; font-size:14px;">
+                        <thead><tr style="background:#f8fafc;">
+                            <th style="text-align:left; padding:12px 16px; font-weight:800; color:#475569;">과정</th>
+                            <th style="text-align:center; padding:12px 16px; font-weight:800; color:#475569; width:120px;">배정</th>
+                            <th style="text-align:center; padding:12px 16px; font-weight:800; color:#475569; width:80px;">상태</th>
+                        </tr></thead><tbody>
+                        ${courseStats.map(c => {
                             const ok = c.placed === c.total;
-                            html += `<tr style="border-top:1px solid #f1f5f9;">
-                                <td style="padding:12px 16px; font-weight:700; color:#1e293b;">${c.name}</td>
+                            return `<tr style="border-top:1px solid #f1f5f9;">
+                                <td style="padding:12px 16px; font-weight:700;">${c.name}</td>
                                 <td style="padding:12px 16px; text-align:center; font-weight:800;">${c.placed} / ${c.total}명</td>
-                                <td style="padding:12px 16px; text-align:center;"><span style="font-size:12px; font-weight:800; padding:4px 11px; border-radius:20px; background:${ok?'#dcfce7':'#fef9c3'}; color:${ok?'#15803d':'#a16207'};">${ok?'완료':'일부'}</span></td>
+                                <td style="padding:12px 16px; text-align:center;"><span style="font-size:12px;font-weight:800;padding:4px 11px;border-radius:20px;background:${ok?'#dcfce7':'#fef9c3'};color:${ok?'#15803d':'#a16207'};">${ok?'완료':'일부'}</span></td>
                             </tr>`;
-                        });
-                        html += `</tbody></table></div>`;
-                    }
+                        }).join('')}
+                        </tbody>
+                    </table>
+                </div>` : ''}
 
-                    // 미배정자 강조
-                    if (unassignedList.length) {
-                        html += `<div style="margin-top:16px; padding:16px 20px; border-radius:14px; background:#fef2f2; border:1.5px solid #fecaca;">
-                            <div style="font-weight:900; color:#dc2626; font-size:15px; margin-bottom:10px;">⚠️ 미배정 ${unassignedList.length}명 — 방 추가 또는 수동 배정 필요</div>
-                            <div style="display:flex; flex-wrap:wrap; gap:8px;">
-                                ${unassignedList.map(u => `<span style="background:#fff; border:1.5px solid #fca5a5; border-radius:10px; padding:7px 13px; font-size:13px; font-weight:700; color:#991b1b;">${u.name} <span style="color:#cbd5e1;">·</span> ${u.empNo} <span style="color:${u.gender==='F'?'#ec4899':'#3b82f6'};">${u.gender==='F'?'여':'남'}</span> <span style="color:#94a3b8;">(${u.course})</span></span>`).join('')}
-                            </div>
-                        </div>`;
-                    }
+                <!-- 미배정자 -->
+                ${unassignedList.length ? `
+                <div style="margin-top:16px; padding:16px 20px; border-radius:14px; background:#fef2f2; border:1.5px solid #fecaca;">
+                    <div style="font-weight:900; color:#dc2626; font-size:15px; margin-bottom:10px;">⚠️ 미배정 ${unassignedList.length}명 — 방 추가 또는 수동 배정 필요</div>
+                    <div style="display:flex; flex-wrap:wrap; gap:8px;">
+                        ${unassignedList.map(u => `<span style="background:#fff;border:1.5px solid #fca5a5;border-radius:10px;padding:7px 13px;font-size:13px;font-weight:700;color:#991b1b;">${u.name} · ${u.empNo} <span style="color:${u.gender==='F'||u.gender==='여'?'#ec4899':'#3b82f6'};">${u.gender==='F'||u.gender==='여'?'여':'남'}</span> <span style="color:#94a3b8;">(${u.course})</span></span>`).join('')}
+                    </div>
+                </div>` : ''}
 
-                    // 현황 보기 이동 버튼
-                    html += `<button class="save-btn" style="margin-top:18px; width:100%;" onclick="goStep(4)"><i class="fa-solid fa-table-list"></i> 배치 현황 자세히 보기</button>`;
-                    html += `</div>`;
+                <!-- 배정 로그 (접을 수 있게) -->
+                <details style="margin-top:14px;">
+                    <summary style="cursor:pointer; font-size:13px; color:#64748b; font-weight:700; padding:8px 0;">📋 배정 상세 로그 보기</summary>
+                    <div style="margin-top:8px; padding:14px; background:#f8fafc; border-radius:10px; font-size:13px; line-height:2; color:#475569;">${log.join('<br>')}</div>
+                </details>
+            </div>`;
 
-                    document.getElementById('assignLog').innerHTML = html;
-                    showToast(`✅ 배정 완료 (${totalAssigned}/${totalPeople}명)`);
-                })
-                .catch(e => { console.error(e); showToast('⚠️ 배정 결과 저장 실패'); });
+            document.getElementById('assignLog').innerHTML = html;
+            showToast(`📋 가배정 완료 — ${totalAssigned}/${totalPeople}명. 확정 저장을 눌러 적용하세요.`);
         }
 
         // ════════════ STEP 4: 현황 · 이동 · 출력 ════════════
