@@ -335,9 +335,11 @@
                 <div class="filter-row">
                     <span class="filter-label">조회 주차</span>
                     <div class="pill-toggle" id="weekPills"></div>
-                    <button class="refresh-btn" onclick="loadCourses(true)"><i class="fa-solid fa-rotate"></i> 새로고침</button>
-                    <button class="refresh-btn" onclick="recoverRostersFromAssignment()" style="border-color:#fca5a5; color:#dc2626;" title="배치 현황 데이터로 명단을 복구합니다"><i class="fa-solid fa-arrow-rotate-left"></i> 명단 복구</button>
-                    <button class="refresh-btn" onclick="openAnnualPlan()" style="border-color:#bae6fd; color:#0369a1;"><i class="fa-solid fa-calendar-days"></i> 연간계획표</button>
+                    <div style="margin-left:auto; display:flex; gap:8px; align-items:center; flex-shrink:0;">
+                        <button class="refresh-btn" onclick="loadCourses(true)" style="margin-left:0;"><i class="fa-solid fa-rotate"></i> 새로고침</button>
+                        <button class="refresh-btn" onclick="recoverRostersFromAssignment()" style="margin-left:0; border-color:#fca5a5; color:#dc2626;" title="배치 현황 데이터로 명단을 복구합니다"><i class="fa-solid fa-arrow-rotate-left"></i> 명단 복구</button>
+                        <button class="refresh-btn" onclick="openAnnualPlan()" style="margin-left:0; border-color:#bae6fd; color:#0369a1;"><i class="fa-solid fa-calendar-days"></i> 연간계획표</button>
+                    </div>
                 </div>
                 <div id="courseList" style="display:block;">
                     <div class="empty-floor">과정을 불러오는 중...</div>
