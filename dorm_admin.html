@@ -3283,10 +3283,24 @@
                 return `<div class="fm-floor-label">${fl.floor}</div>
                     <div class="fm-grid" style="grid-template-columns:repeat(${fl.cols},1fr);">${inner}</div>`;
             }
+            // 건물별 사진 파일명 매핑
+            const BLDG_PHOTO = { '청렴관': 'dorm_chung.png', '상생관': 'dorm_sang.png', '국제교육동': 'dorm_inter.png' };
+
             function buildingHtml(building) {
                 const fls = (FORM[building] || []).map(fl => floorHtml(building, fl)).join('');
                 const bar = (typeof DORM_BLDG_BAR !== 'undefined' && DORM_BLDG_BAR[building]) || '#0f2057';
+                const photoFile = BLDG_PHOTO[building] || '';
+                // 각 건물 페이지 상단: 과정범례(좌) + 해당 건물 사진(우)
+                const pageHeader = `
+                    <div class="bldg-page-header">
+                        <div class="legend">${_legendHtml(P)}</div>
+                        <div class="bldg-photo-box">
+                            <img src="${photoFile}" alt="${building}" onerror="this.parentNode.style.display='none'">
+                            <span>${building}</span>
+                        </div>
+                    </div>`;
                 return `<div class="pf-block">
+                    ${pageHeader}
                     <div class="pf-bldg-header" style="background:${bar};"><span class="bicon">\ud83c\udfe2</span>${building}</div>
                     <div class="pf-floor-wrap" style="border-color:${bar};">${fls}</div>
                 </div>`;
@@ -3308,13 +3322,21 @@
                 .fm-flat .fm-head { display:flex; flex-direction:column; align-items:center; justify-content:center; border-bottom:none; border-right:1.5px solid #cbd5e1; min-width:70px; }
                 .fm-flat .fm-body { flex:1; }
                 .fm-fac { border:1.5px dashed #b6c0cf; border-radius:6px; background:repeating-linear-gradient(45deg,#e9edf3,#e9edf3 4px,#f4f7fb 4px,#f4f7fb 11px); color:#64748b; font-size:11px; font-weight:800; display:flex; align-items:center; justify-content:center; text-align:center; letter-spacing:-0.3px; }
+                /* 건물 페이지 상단: 과정범례(좌) + 건물사진(우) */
+                .bldg-page-header { display:flex; align-items:flex-start; justify-content:space-between; gap:16px; margin-bottom:10px; }
+                .legend { display:flex; flex-direction:column; align-items:flex-start; gap:5px; padding:10px 16px; background:#fff; border:1.5px solid #e2e8f0; border-radius:10px; flex:1; max-width:55%; }
+                .leg-item { display:flex; align-items:center; gap:8px; font-size:12.5px; font-weight:800; white-space:nowrap; }
+                .leg-swatch { width:13px; height:13px; border-radius:4px; display:inline-block; flex-shrink:0; }
+                .leg-period { font-size:10.5px; font-weight:600; color:#94a3b8; }
+                .bldg-photo-box { display:flex; flex-direction:column; align-items:center; gap:4px; flex-shrink:0; }
+                .bldg-photo-box img { width:200px; height:130px; object-fit:cover; border-radius:10px; border:1.5px solid #e2e8f0; display:block; }
+                .bldg-photo-box span { font-size:10px; font-weight:800; color:#475569; }
             </style>`;
 
             const layoutSection = ['청렴관','상생관','국제교육동'].map(buildingHtml).join('<div class="page-break"></div>');
             const totalCount = Object.keys(P.students).length;
             const header = `<h1>생활관 배정 배치도</h1>
-                <div class="sub">${P.fmt(P.wd)} ~ ${P.fmt(P.wEnd)} 주간 · 총 ${totalCount}명 · 출력일 ${new Date().toLocaleDateString('ko-KR')}</div>
-                <div class="legend">${_legendHtml(P)}</div>`;
+                <div class="sub">${P.fmt(P.wd)} ~ ${P.fmt(P.wEnd)} 주간 · 총 ${totalCount}명 · 출력일 ${new Date().toLocaleDateString('ko-KR')}</div>`;
             const bodyHtml = `<table class="pwrap"><thead><tr><td>${header}</td></tr></thead><tbody><tr><td>${layoutSection}</td></tr></tbody></table>`;
             _printDoc(`(${_kacWeekTag(P.wd)}_배치도) 항공기술훈련원 방 배정 현황표`, bodyHtml, FORM_CSS);
         }
