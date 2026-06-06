@@ -285,6 +285,7 @@
                     <span class="filter-label">조회 주차</span>
                     <div class="pill-toggle" id="weekPills"></div>
                     <button class="refresh-btn" onclick="loadCourses(true)"><i class="fa-solid fa-rotate"></i> 새로고침</button>
+                    <button class="refresh-btn" onclick="recoverRostersFromAssignment()" style="border-color:#fca5a5; color:#dc2626;" title="배치 현황 데이터로 명단을 복구합니다"><i class="fa-solid fa-arrow-rotate-left"></i> 명단 복구</button>
                     <button class="refresh-btn" onclick="openAnnualPlan()" style="border-color:#bae6fd; color:#0369a1;"><i class="fa-solid fa-calendar-days"></i> 연간계획표</button>
                 </div>
                 <div id="courseList" style="display:block;">
@@ -1034,6 +1035,68 @@
 
         let rosterCounts = {};   // rosterKey -> 등재 인원수
 
+        // ── 명단 복구: 배치 현황(system/dorm/assignments)에서 rosters를 역으로 재생성 ──
+        //  배치 실행 이후 rosters 데이터가 지워진 경우 STEP4 데이터로 복원
+        async function recoverRostersFromAssignment() {
+            if (!confirm('배치 현황 데이터로 명단을 복구합니다.\n(STEP 4의 현재 배정 결과를 STEP 2 명단으로 되살립니다)\n\n계속할까요?')) return;
+            try {
+                showToast('🔄 복구 중...');
+                const asnap = await db.ref('system/dorm/assignments').once('value');
+                const allAssign = asnap.val() || {};
+                const weeks = Object.keys(allAssign);
+                if (!weeks.length) { showToast('⚠️ 복구할 배치 데이터가 없습니다'); return; }
+
+                let totalRecovered = 0;
+                const updates = {};
+
+                for (const wk of weeks) {
+                    const a = allAssign[wk] || {};
+                    const courses = a.courses || [];
+                    const students = a.students || {};
+
+                    // rosterKey별로 학생 묶기
+                    const rosterMap = {};
+                    courses.forEach(c => {
+                        if (c.rosterKey) rosterMap[c.rosterKey] = {
+                            courseName: c.courseName, room: c.room,
+                            period: c.period, weekKey: c.rosterKey.split('__')[0],
+                            list: []
+                        };
+                    });
+                    Object.values(students).forEach(s => {
+                        const ck = s.rosterKey;
+                        if (!ck || ck === '__INST__') return; // 강사 제외
+                        if (!rosterMap[ck]) rosterMap[ck] = {
+                            courseName: s.course || '', room: (ck.split('__')[1] || ''),
+                            period: '', weekKey: ck.split('__')[0], list: []
+                        };
+                        rosterMap[ck].list.push({
+                            name: s.name || '', empNo: s.empNo || '',
+                            dept: s.dept || '', gender: s.gender || ''
+                        });
+                    });
+
+                    // Firebase 업데이트 준비
+                    Object.entries(rosterMap).forEach(([rk, v]) => {
+                        if (!v.list.length) return;
+                        updates[`system/dorm/rosters/${rk}`] = v;
+                        totalRecovered++;
+                    });
+                }
+
+                if (!totalRecovered) { showToast('⚠️ 복구할 명단이 없습니다 (배정된 교육생이 없거나 강사만 있음)'); return; }
+
+                await db.ref().update(updates);
+                showToast(`✅ ${totalRecovered}개 과정 명단 복구 완료`);
+                // coursesCache 초기화 후 새로고침
+                coursesCache = null;
+                await loadCourses(true);
+            } catch (e) {
+                console.error('[명단 복구]', e);
+                showToast('❌ 복구 실패: ' + e.message);
+            }
+        }
+
         // 데이터 로드 (force=true면 캐시 무시하고 새로 가져옴). 렌더는 renderCourseList가 담당.
         async function loadCourses(force) {
             const listEl = document.getElementById('courseList');
@@ -1449,10 +1512,16 @@
                 const targetMon = getTargetMondayKey();
 
                 // ── 지난 주차 명단 자동 삭제 ──
-                //  과정 기간이 대상 주 이전인 저장 내역을 DB에서 정리
+                //  현재 기준 대상 주(targetMon) 이전 주까지만 삭제 — 오차 방지를 위해
+                //  대상 주 당일 키(targetMon)와 같은 것은 절대 삭제하지 않음
+                const prevCutoff = (function() {
+                    const d = new Date(targetMon + 'T00:00:00');
+                    d.setDate(d.getDate() - 1); // targetMon 하루 전까지만 삭제
+                    return d.toISOString().slice(0, 10);
+                })();
                 const pastKeys = Object.keys(all).filter(k => {
-                    const wk = (all[k].weekKey || k.split('__')[0]);
-                    return wk < targetMon;
+                    const wk = (all[k] && all[k].weekKey) || k.split('__')[0];
+                    return wk <= prevCutoff; // targetMon과 같은 주는 절대 포함 안 됨
                 });
                 if (pastKeys.length) {
                     const delUpdates = {};
