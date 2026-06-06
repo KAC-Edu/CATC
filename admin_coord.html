@@ -1164,6 +1164,184 @@ body.pc-mode #pickupStatusView, body.pc-mode #studentShuttleView, body.pc-mode #
 body.pc-mode #floatingHomeBtn { bottom:24px !important; right:24px !important; }
 body.pc-mode main { padding-bottom:24px !important; }
 
+/* ══ PC 대시보드 리뉴얼 ════════════════════════════════════════ */
+
+/* 1. 슬림 히어로 배너 */
+body.pc-mode .coord-hero {
+    height: 130px !important;
+    border-radius: 18px !important;
+    display: flex !important;
+    flex-direction: row !important;
+    overflow: hidden !important;
+    position: relative !important;
+    background: linear-gradient(125deg, #0c1f40 0%, #0f3460 60%, #1a4f8a 100%) !important;
+    margin-bottom: 4px !important;
+}
+body.pc-mode .coord-hero__img {
+    position: relative !important;
+    width: 320px !important;
+    min-width: 320px !important;
+    height: 100% !important;
+    object-fit: cover !important;
+    object-position: center 30% !important;
+    order: 2 !important;
+    opacity: 0.75 !important;
+    mask-image: linear-gradient(to left, rgba(0,0,0,0.9) 50%, transparent 100%) !important;
+    -webkit-mask-image: linear-gradient(to left, rgba(0,0,0,0.9) 50%, transparent 100%) !important;
+}
+body.pc-mode .coord-hero__overlay { display: none !important; }
+body.pc-mode .coord-hero__content {
+    position: relative !important;
+    order: 1 !important;
+    flex: 1 !important;
+    padding: 20px 32px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: center !important;
+    gap: 12px !important;
+    z-index: 1 !important;
+}
+body.pc-mode .coord-hero__title {
+    font-size: 19px !important;
+    line-height: 1.3 !important;
+}
+body.pc-mode .coord-hero__badges { gap: 16px !important; }
+body.pc-mode .hero-badge {
+    padding: 8px 16px !important;
+    border-radius: 10px !important;
+    background: rgba(255,255,255,0.12) !important;
+    backdrop-filter: blur(8px) !important;
+    border: 1px solid rgba(255,255,255,0.15) !important;
+}
+
+/* PC 퀵 액션 툴바 */
+#pcQuickBar {
+    display: none;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 16px;
+    background: #fff;
+    border-radius: 14px;
+    border: 1.5px solid #e8eef4;
+    box-shadow: 0 2px 12px rgba(15,23,42,0.06);
+    flex-wrap: wrap;
+}
+body.pc-mode #pcQuickBar { display: flex; }
+.pc-qb-label { font-size: 11px; font-weight: 800; color: #94a3b8; letter-spacing: 0.8px; text-transform: uppercase; margin-right: 4px; flex-shrink: 0; }
+.pc-qb-btn {
+    display: flex; align-items: center; gap: 6px;
+    padding: 7px 14px; border-radius: 9px;
+    border: 1.5px solid #e2e8f0; background: #f8fafc;
+    color: #475569; font-size: 12.5px; font-weight: 800;
+    cursor: pointer; transition: all 0.15s; white-space: nowrap;
+}
+.pc-qb-btn:hover { background: #eff6ff; border-color: #93c5fd; color: #1d4ed8; transform: translateY(-1px); box-shadow: 0 3px 10px rgba(37,99,235,0.12); }
+.pc-qb-btn i { font-size: 12px; }
+
+/* 2. 상황판 칩 → 대형 그리드 카드 */
+body.pc-mode .stat-strip {
+    display: grid !important;
+    grid-template-columns: repeat(5, 1fr) !important;
+    gap: 14px !important;
+    overflow: visible !important;
+    padding: 0 !important;
+    margin: 0 !important;
+}
+body.pc-mode .stat-chip {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    padding: 20px 20px 16px !important;
+    border-radius: 16px !important;
+    height: auto !important;
+    gap: 14px !important;
+    background: #fff !important;
+    border: 1.5px solid #e8eef4 !important;
+    box-shadow: 0 2px 10px rgba(15,23,42,0.05) !important;
+    transition: transform 0.18s, box-shadow 0.18s !important;
+    cursor: pointer !important;
+}
+body.pc-mode .stat-chip:hover {
+    transform: translateY(-4px) !important;
+    box-shadow: 0 10px 28px rgba(15,23,42,0.11) !important;
+    border-color: currentColor !important;
+}
+body.pc-mode .chip-ic {
+    width: 46px !important;
+    height: 46px !important;
+    border-radius: 12px !important;
+    font-size: 19px !important;
+    flex-shrink: 0 !important;
+}
+body.pc-mode .chip-body { gap: 3px !important; }
+body.pc-mode .chip-val { font-size: 30px !important; line-height: 1 !important; }
+body.pc-mode .chip-val small { font-size: 14px !important; }
+body.pc-mode .chip-label { font-size: 12.5px !important; margin-top: 4px !important; }
+/* 칩별 hover 색상 */
+body.pc-mode .chip-students:hover { border-color: #0284c7 !important; background: #f0f9ff !important; }
+body.pc-mode .chip-outing:hover   { border-color: #d97706 !important; background: #fffbeb !important; }
+body.pc-mode .chip-pickup:hover   { border-color: #7c3aed !important; background: #faf5ff !important; }
+body.pc-mode .chip-shuttle:hover  { border-color: #ea580c !important; background: #fff7ed !important; }
+body.pc-mode .chip-attend:hover   { border-color: #059669 !important; background: #f0fdf4 !important; }
+
+/* 3. 과정 섹션 카드 고도화 */
+body.pc-mode #totalStatusView > .section-card {
+    border-radius: 18px !important;
+    box-shadow: 0 4px 20px rgba(15,23,42,0.06) !important;
+    border: 1.5px solid #e8eef4 !important;
+    padding: 24px !important;
+}
+body.pc-mode #totalStatusView > .section-card .section-title {
+    font-size: 17px !important;
+    margin-bottom: 20px !important;
+    padding-bottom: 14px !important;
+}
+body.pc-mode #activeCourseList {
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)) !important;
+    gap: 16px !important;
+}
+body.pc-mode .course-item-card {
+    border-radius: 16px !important;
+    box-shadow: 0 3px 14px rgba(15,23,42,0.07) !important;
+    border: 1.5px solid #e8eef4 !important;
+    transition: all 0.2s !important;
+    overflow: hidden !important;
+}
+body.pc-mode .course-item-card:hover {
+    box-shadow: 0 10px 30px rgba(15,23,42,0.13) !important;
+    transform: translateY(-3px) !important;
+    border-color: #93c5fd !important;
+}
+
+/* 4. 타 뷰들 PC 패딩 */
+body.pc-mode #pickupStatusView .section-card,
+body.pc-mode #studentShuttleView .section-card,
+body.pc-mode #allStudentListView .section-card {
+    border-radius: 16px !important;
+    box-shadow: 0 4px 20px rgba(15,23,42,0.06) !important;
+}
+
+/* 5. PC 개별 과정 카드들 */
+body.pc-mode #ind-departure-card,
+body.pc-mode #ind-notice-card,
+body.pc-mode #ind-outing-card,
+body.pc-mode .dashboard-split .section-card {
+    border-radius: 16px !important;
+    box-shadow: 0 3px 14px rgba(15,23,42,0.06) !important;
+    transition: box-shadow 0.15s !important;
+}
+body.pc-mode #ind-departure-card:hover,
+body.pc-mode #ind-notice-card:hover { box-shadow: 0 8px 24px rgba(15,23,42,0.1) !important; }
+body.pc-mode .entry-box, body.pc-mode .entry-box-tablet {
+    border-radius: 14px !important;
+    box-shadow: 0 2px 10px rgba(15,23,42,0.06) !important;
+    transition: transform 0.15s, box-shadow 0.15s !important;
+}
+body.pc-mode .entry-box:hover, body.pc-mode .entry-box-tablet:hover {
+    transform: translateY(-2px) !important;
+    box-shadow: 0 6px 20px rgba(15,23,42,0.1) !important;
+}
+
+
 /* 명단 업로드 모달 */
 #rosterUploadModal { display:none; position:fixed; inset:0; background:rgba(15,23,42,0.55); z-index:30000; align-items:center; justify-content:center; padding:20px; }
 
@@ -1321,6 +1499,18 @@ body.pc-mode main { padding-bottom:24px !important; }
     </div>
 
     <!-- 상단 상황판: 컴팩트 한 줄 스트립 (가로 스크롤) -->
+    <!-- PC 전용 퀵 액션 툴바 -->
+    <div id="pcQuickBar">
+        <span class="pc-qb-label"><i class="fa-solid fa-bolt"></i> 바로가기</span>
+        <button class="pc-qb-btn" onclick="openRosterUpload()"><i class="fa-solid fa-file-arrow-up"></i> 명단 업로드</button>
+        <button class="pc-qb-btn" onclick="openGlobalNoticeModal()"><i class="fa-solid fa-bullhorn"></i> 전체 공지</button>
+        <button class="pc-qb-btn" onclick="openAttendanceManager()"><i class="fa-solid fa-clipboard-user"></i> 출석부 관리</button>
+        <button class="pc-qb-btn" onclick="showPickupView()"><i class="fa-solid fa-car-side"></i> 강사 픽업</button>
+        <button class="pc-qb-btn" onclick="showStudentShuttleView()"><i class="fa-solid fa-bus"></i> 셔틀 현황</button>
+        <button class="pc-qb-btn" onclick="showTotalStudentList()"><i class="fa-solid fa-users"></i> 전체 교육생</button>
+        <button class="pc-qb-btn" onclick="annualPlanMgrCoord.openEditorModal()"><i class="fa-solid fa-calendar-days"></i> 연간계획</button>
+    </div>
+
     <div class="stat-strip">
         <div class="stat-chip chip-students" onclick="showTotalStudentList()">
             <div class="chip-ic"><i class="fa-solid fa-users"></i></div>
