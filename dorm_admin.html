@@ -1798,6 +1798,42 @@
             await loadHiddenCourses();
             renderWeekRosterList();
             renderInstReserve(wk);
+            // 이미 배정 확정된 주차인지 확인 → 상태 배너 표시
+            checkAssignmentStatus(wk);
+        }
+
+        async function checkAssignmentStatus(wk) {
+            const logEl = document.getElementById('assignLog');
+            if (!logEl) return;
+            try {
+                const snap = await db.ref(`system/dorm/assignments/${wk}`).once('value');
+                const data = snap.val();
+                if (data && data.students && Object.keys(data.students).length) {
+                    const studentArr = Object.values(data.students);
+                    const total = studentArr.filter(s => s.rosterKey !== '__INST__').length;
+                    const courses = [...new Set(studentArr.map(s => s.course).filter(Boolean))];
+                    const savedAt = data.assignedAt ? new Date(data.assignedAt) : null;
+                    const timeStr = savedAt ? `${savedAt.getMonth()+1}/${savedAt.getDate()} ${String(savedAt.getHours()).padStart(2,'0')}:${String(savedAt.getMinutes()).padStart(2,'0')} 배정됨` : '';
+                    logEl.innerHTML = `
+                        <div style="display:flex; align-items:center; gap:14px; padding:16px 20px; border-radius:14px; background:#f0fdf4; border:2px solid #86efac;">
+                            <div style="font-size:28px;">✅</div>
+                            <div style="flex:1;">
+                                <div style="font-size:15px; font-weight:900; color:#15803d;">자동배정 확정 완료</div>
+                                <div style="font-size:13px; color:#166534; margin-top:3px; font-weight:600;">
+                                    ${total}명 배정 · ${courses.length}개 과정${timeStr ? ' · ' + timeStr : ''}
+                                </div>
+                            </div>
+                            <button onclick="goStep(4)" style="padding:9px 18px; background:#16a34a; color:#fff; border:none; border-radius:9px; font-weight:800; font-size:13px; cursor:pointer; flex-shrink:0;">
+                                <i class="fa-solid fa-table-list"></i> 배치 현황 보기
+                            </button>
+                        </div>
+                        <div style="margin-top:10px; font-size:12px; color:#94a3b8; text-align:center;">
+                            다시 배정을 실행하면 기존 확정 내용이 덮어쓰여집니다.
+                        </div>`;
+                } else {
+                    logEl.innerHTML = '';
+                }
+            } catch(e) { logEl.innerHTML = ''; }
         }
 
         function renderWeekRosterList() {
@@ -2259,6 +2295,8 @@
                     html += `<button class="save-btn" style="margin-top:16px;width:100%;" onclick="goStep(4)"><i class="fa-solid fa-table-list"></i> 배치 현황 보기</button></div>`;
                     document.getElementById('assignLog').innerHTML = html;
                     showToast(`✅ 배정 완료 (${totalAssigned}/${totalPeople}명)`);
+                    // 배정 확정 상태 배너 갱신
+                    setTimeout(() => checkAssignmentStatus(wk), 800);
                 })
                 .catch(e => { console.error(e); showToast('⚠️ 배정 결과 저장 실패'); });
         }
