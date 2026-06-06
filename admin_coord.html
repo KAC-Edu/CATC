@@ -115,63 +115,46 @@
     * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
     body {
       margin: 0; padding: 0; font-family: 'Pretendard', sans-serif;
-      background: #e8eef8;
-      background-image:
-        linear-gradient(rgba(37,99,235,0.05) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(37,99,235,0.05) 1px, transparent 1px);
-      background-size: 28px 28px;
-      display: flex; justify-content: center; align-items: flex-start;
-      color: var(--text-dark);
+      background: #cfd8e3; display: flex; justify-content: center; color: var(--text-dark);
       overflow-x: hidden;
-      min-height: 100dvh;
-      padding: 20px 12px;
     }
-    @media (max-width: 540px) {
-      body { padding: 0; align-items: stretch; background: #cfd8e3; background-image: none; }
-    }
-    .app-container {
-      width: 100%; max-width: 500px; min-height: calc(100dvh - 40px);
-      background: var(--bg-cool); position: relative; display: flex; flex-direction: column;
-      box-shadow: 0 20px 60px rgba(15,23,42,0.14), 0 4px 16px rgba(15,23,42,0.08);
-      border-radius: 24px; overflow: hidden;
-    }
-    @media (max-width: 540px) {
-      .app-container { max-width: 100%; min-height: 100dvh; border-radius: 0; box-shadow: 0 0 30px rgba(0,0,0,0.1); }
-    }
+    .app-container { width: 100%; max-width: 600px; min-height: 100dvh; background: var(--bg-cool); position: relative; display: flex; flex-direction: column; box-shadow: 0 0 30px rgba(0,0,0,0.1); }
     
 /* 상단바 (1안: 실선 제거 및 모던한 그림자 적용) */
-    .app-header { 
-        height: 55px; 
-        background: var(--navy-dark); 
-        display: flex; 
-        align-items: center; 
-        justify-content: space-between; 
-        padding: 0 20px; 
-        flex-shrink: 0; 
-        /* 🚩 기존 border-bottom 제거 및 그림자 추가 */
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2); 
-        position: sticky; 
-        top: 0; 
-        z-index: 1000; 
+    .app-header {
+        background: linear-gradient(135deg, #0f2057 0%, #1a3a8a 50%, #2563eb 100%);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 14px 18px 12px;
+        flex-shrink: 0;
+        position: sticky;
+        top: 0;
+        z-index: 1000;
+        border-bottom: none;
+        box-shadow: none;
     }
-    
-    .header-btn { 
-        font-size: 20px; 
-        color: #fff; 
-        cursor: pointer; 
-        border: none; 
-        background: none; 
-        /* 버튼 클릭 시 약간 투명해지는 효과 추가 (선택사항) */
+
+    .header-btn {
+        font-size: 19px;
+        color: rgba(255,255,255,0.85);
+        cursor: pointer;
+        border: none;
+        background: none;
         transition: opacity 0.2s;
+        padding: 4px;
+        display: flex; align-items: center; justify-content: center;
     }
     .header-btn:active { opacity: 0.6; }
 
-    .header-title { 
-        color: #fff; 
-        font-size: 18px; 
-        font-weight: 900; 
-        letter-spacing: -0.5px; 
+    .header-title {
+        color: #fff;
+        font-size: 15px;
+        font-weight: 900;
+        letter-spacing: -0.3px;
+        opacity: 0.92;
     }
+
 
     .app-content { 
         flex: 1; 
@@ -495,49 +478,60 @@
 .coord-hero {
     position: relative;
     width: 100%;
-    border-radius: 22px;
     overflow: hidden;
-    margin-bottom: 16px;
-    box-shadow: 0 12px 28px rgba(15, 23, 42, 0.28);
-    aspect-ratio: 800 / 300;
-    background: #0f172a;
+    background: linear-gradient(160deg, #0f2057 0%, #1a3a8a 55%, #2563eb 100%);
+    padding: 14px 18px 18px;
+    /* 헤더와 연결: 상단 border-radius 없음, 하단만 */
+    border-radius: 0 0 20px 20px;
+    margin-bottom: 12px;
+    box-shadow: 0 8px 24px rgba(15,23,42,0.22);
 }
-.coord-hero__img {
-    position: absolute; inset: 0;
-    width: 100%; height: 100%;
-    object-fit: cover;
-    display: block;
+/* 배경 장식 원 */
+.coord-hero::before {
+    content: '';
+    position: absolute;
+    top: -30px; right: -30px;
+    width: 140px; height: 140px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.07);
+    pointer-events: none;
 }
-/* 가독성을 위한 하단 그라데이션 오버레이 (더 진하게) */
-.coord-hero__overlay {
-    position: absolute; inset: 0;
-    background: linear-gradient(180deg, rgba(2,12,32,0.10) 0%, rgba(2,12,32,0.45) 55%, rgba(2,12,32,0.92) 100%);
+.coord-hero::after {
+    content: '';
+    position: absolute;
+    bottom: -20px; left: 30px;
+    width: 90px; height: 90px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.05);
+    pointer-events: none;
 }
+.coord-hero__img { display: none; }
+/* 가독성을 위한 하단 그라데이션 오버레이 */
+.coord-hero__overlay { display: none; }
 .coord-hero__content {
-    position: absolute; left: 0; right: 0; bottom: 0;
-    padding: 18px 20px;
-    display: flex; flex-direction: column; gap: 12px;
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
 }
 .coord-hero__title {
     color: #fff;
-    font-size: 18px; font-weight: 900; letter-spacing: -0.5px;
-    text-shadow: 0 2px 10px rgba(0,0,0,0.7);
+    font-size: 16px; font-weight: 900; letter-spacing: -0.3px;
     display: flex; align-items: center; gap: 9px;
 }
-.coord-hero__title i { color: #93c5fd; }
+.coord-hero__title i { color: #93c5fd; font-size: 15px; }
 .coord-hero__title small {
-    font-size: 11px; font-weight: 800; opacity: 0.95;
-    background: rgba(37,99,235,0.85);
+    font-size: 11px; font-weight: 800; opacity: 0.9;
+    background: rgba(255,255,255,0.18);
     padding: 3px 10px; border-radius: 999px;
-    backdrop-filter: blur(4px);
+    border: 1px solid rgba(255,255,255,0.25);
 }
 /* 실시간 요약 배지 */
 .coord-hero__badges { display: flex; gap: 10px; flex-wrap: wrap; }
 .hero-badge {
     display: inline-flex; align-items: center; gap: 9px;
-    background: rgba(15,23,42,0.55);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
+    background: rgba(255,255,255,0.12);
     border: 1px solid rgba(255,255,255,0.22);
     border-radius: 14px;
     padding: 9px 15px;
@@ -548,7 +542,7 @@
 .hero-badge .hb-value { font-size: 18px; font-weight: 900; letter-spacing: -0.5px; }
 .hero-badge .hb-value small { font-size: 11px; font-weight: 700; margin-left: 2px; opacity: 0.85; }
 @media (max-width: 380px) {
-    .coord-hero__title { font-size: 15px; }
+    .coord-hero__title { font-size: 14px; }
     .hero-badge { padding: 7px 12px; }
     .hero-badge .hb-value { font-size: 15px; }
 }
@@ -1134,90 +1128,6 @@ body.modal-open .app-content {
     padding-bottom: 120px !important;
 }
 
-/* ═══ 포털 클론 메인화면 CSS ═══════════════════════════════ */
-
-/* 히어로 헤더 */
-.coord-hero-new {
-    background: linear-gradient(135deg, #0f2057 0%, #1a3a8a 50%, #2563eb 100%);
-    padding: 20px 18px 18px;
-    position: relative; overflow: hidden;
-}
-.chn-circle1 { position:absolute; top:-30px; right:-30px; width:120px; height:120px; border-radius:50%; background:rgba(255,255,255,0.07); }
-.chn-circle2 { position:absolute; bottom:-20px; left:30px; width:80px; height:80px; border-radius:50%; background:rgba(255,255,255,0.05); }
-.chn-top { display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:14px; position:relative; z-index:1; }
-.chn-brand { display:flex; align-items:center; gap:10px; }
-.chn-badge { width:34px; height:34px; background:rgba(255,255,255,0.2); border:1.5px solid rgba(255,255,255,0.3); border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:15px; color:#fff; }
-.chn-org { font-size:9px; color:rgba(255,255,255,0.6); font-weight:700; letter-spacing:1.2px; text-transform:uppercase; }
-.chn-title { font-size:14px; font-weight:900; color:#fff; margin-top:1px; }
-.chn-time { text-align:right; }
-#coord-hero-clock { font-size:22px; font-weight:800; color:#fff; letter-spacing:-0.5px; line-height:1; font-family:'Pretendard',monospace; }
-#coord-hero-date { font-size:11px; color:rgba(255,255,255,0.65); margin-top:3px; font-weight:600; }
-.chn-stats { display:flex; align-items:center; gap:0; background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.18); border-radius:14px; padding:10px 16px; position:relative; z-index:1; }
-.chn-stat { flex:1; text-align:center; font-size:20px; font-weight:900; color:#fff; line-height:1; }
-.chn-stat small { display:block; font-size:10px; font-weight:700; color:rgba(255,255,255,0.65); margin-top:3px; }
-.chn-divider { width:1px; height:28px; background:rgba(255,255,255,0.2); margin:0 8px; flex-shrink:0; }
-
-/* 통계 카드 그리드 */
-.coord-stat-grid {
-    display: grid; grid-template-columns: 1fr 1fr;
-    gap: 9px; padding: 14px 14px 4px;
-    background: #f8fafc;
-}
-.csg-card {
-    background: #fff; border: 1.5px solid #e8eef4;
-    border-radius: 16px; padding: 13px 12px 11px;
-    display: flex; align-items: center; gap: 10px;
-    cursor: pointer; position: relative; overflow: hidden;
-    box-shadow: 0 2px 8px rgba(15,23,42,0.05);
-    transition: transform 0.13s, box-shadow 0.13s;
-}
-.csg-card::before { content:''; position:absolute; top:0; left:0; right:0; height:3px; border-radius:16px 16px 0 0; }
-.csg-card:active { transform: scale(0.95); }
-.csg-full { grid-column: span 1; }
-.csg-blue::before   { background: linear-gradient(90deg,#1d4ed8,#60a5fa); }
-.csg-amber::before  { background: linear-gradient(90deg,#d97706,#fbbf24); }
-.csg-purple::before { background: linear-gradient(90deg,#7c3aed,#a78bfa); }
-.csg-orange::before { background: linear-gradient(90deg,#ea580c,#fb923c); }
-.csg-green::before  { background: linear-gradient(90deg,#059669,#34d399); }
-.csg-rose::before   { background: linear-gradient(90deg,#e11d48,#fb7185); }
-.csg-icon { width:37px; height:37px; border-radius:11px; display:flex; align-items:center; justify-content:center; font-size:16px; flex-shrink:0; margin-top:2px; }
-.csg-blue   .csg-icon { background:#eff6ff; color:#2563eb; }
-.csg-amber  .csg-icon { background:#fffbeb; color:#d97706; }
-.csg-purple .csg-icon { background:#f5f3ff; color:#7c3aed; }
-.csg-orange .csg-icon { background:#fff7ed; color:#ea580c; }
-.csg-green  .csg-icon { background:#ecfdf5; color:#059669; }
-.csg-rose   .csg-icon { background:#fff1f2; color:#e11d48; }
-.csg-body { flex:1; min-width:0; }
-.csg-val { font-size:21px; font-weight:900; color:#0f172a; line-height:1; }
-.csg-val small { font-size:12px; font-weight:700; color:#64748b; margin-left:2px; }
-.csg-sm { font-size:16px; font-weight:900; color:#0f172a; }
-.csg-label { font-size:10.5px; font-weight:700; color:#64748b; margin-top:3px; }
-.csg-arrow { color:#cbd5e1; font-size:11px; flex-shrink:0; }
-
-/* 과정 섹션 */
-.coord-courses-section {
-    background: #fff; margin: 8px 14px 14px;
-    border-radius: 16px; border: 1.5px solid #e8eef4;
-    box-shadow: 0 2px 8px rgba(15,23,42,0.05); overflow: hidden;
-}
-.ccs-header {
-    padding: 13px 16px 11px;
-    font-size: 14px; font-weight: 900; color: #0f172a;
-    border-bottom: 1px solid #f1f5f9;
-}
-.ccs-header i { color: var(--blue-main); margin-right: 7px; }
-
-/* 카드 입장 애니메이션 */
-.csg-card { animation: csgIn 0.35s cubic-bezier(.25,.8,.25,1) both; }
-.csg-card:nth-child(1) { animation-delay:0.05s; }
-.csg-card:nth-child(2) { animation-delay:0.09s; }
-.csg-card:nth-child(3) { animation-delay:0.13s; }
-.csg-card:nth-child(4) { animation-delay:0.17s; }
-.csg-card:nth-child(5) { animation-delay:0.21s; }
-.csg-card:nth-child(6) { animation-delay:0.25s; }
-@keyframes csgIn { from{opacity:0;transform:translateY(10px);} to{opacity:1;transform:translateY(0);} }
-
-
 /* ══ PC 사이드바 ══ */
 #pcSidebar { display:none; width:220px; min-width:220px; min-height:100vh; position:sticky; top:0; height:100vh; background:#0b1628; flex-direction:column; overflow-y:auto; z-index:200; flex-shrink:0; }
 .pcs-brand { display:flex; align-items:center; gap:11px; padding:20px 16px 16px; border-bottom:1px solid rgba(255,255,255,0.07); }
@@ -1484,6 +1394,10 @@ body.pc-mode .entry-box:hover, body.pc-mode .entry-box-tablet:hover {
     <button class="navy-btn" style="background:#3b82f6; height:45px;" onclick="openSetupModal()">
         <i class="fa-solid fa-plus-circle"></i> 교육과정 추가/설정
     </button>
+    <!-- 전체 공지 (헤더에서 이동) -->
+    <button class="navy-btn" style="background:#f97316; height:45px;" onclick="openGlobalNoticeModal(); toggleMenu(false);">
+        <i class="fa-solid fa-bullhorn"></i> 전체 공지 작성
+    </button>
     <!-- 여기에 QR 보기 버튼을 추가로 배치하면 편리합니다 -->
     <button class="navy-btn" style="background:#1e293b; height:45px;" onclick="openCenterQrModal()">
         <i class="fa-solid fa-qrcode"></i> 행정관리 접속용 QR
@@ -1527,14 +1441,9 @@ body.pc-mode .entry-box:hover, body.pc-mode .entry-box-tablet:hover {
 
 <!-- 상단 헤더 부분 (수정됨) -->
 <header class="app-header">
-  <button class="header-btn" onclick="handleBackNav()" style="font-family: 'Pretendard'; font-weight: 900; letter-spacing: -2px;">&lt;&lt;</button>
+  <button class="header-btn" onclick="handleBackNav()" style="font-family:'Pretendard';font-weight:900;letter-spacing:-2px;font-size:18px;">&lt;&lt;</button>
   <div class="header-title">항공기술훈련원 교육운영부</div>
-  <div style="display:flex; gap:15px; align-items:center;">
-      <button class="header-btn" onclick="openCenterQrModal()"><i class="fa-solid fa-qrcode"></i></button>
-      <button class="header-btn" onclick="openGlobalNoticeModal()"><i class="fa-solid fa-bullhorn"></i></button>
-      <button class="header-btn" id="pcModeBtn" onclick="togglePcMode()" title="PC 모드" style="display:none;"><i class="fa-solid fa-display"></i></button>
-      <button class="header-btn" onclick="toggleMenu(true)"><i class="fa-solid fa-bars"></i></button>
-  </div>
+  <button class="header-btn" onclick="toggleMenu(true)"><i class="fa-solid fa-bars"></i></button>
 </header>
 
 <!-- 과정 추가 팝업 (운영부) -->
@@ -1570,103 +1479,100 @@ body.pc-mode .entry-box:hover, body.pc-mode .entry-box-tablet:hover {
 
     <main class="app-content">
 <!-- [뷰 1] 전체 과정 현황 (메인) -->
-<div id="totalStatusView" style="display:flex; flex-direction:column;">
+<div id="totalStatusView" style="display:flex; flex-direction:column; gap:12px;">
 
-    <!-- ── 포털형 상단 히어로 ── -->
-    <div class="coord-hero-new">
-        <div class="chn-circle1"></div>
-        <div class="chn-circle2"></div>
-        <div class="chn-top">
-            <div class="chn-brand">
-                <div class="chn-badge"><i class="fa-solid fa-building-columns"></i></div>
-                <div>
-                    <div class="chn-org">Korea Airports Corp. · CATC</div>
-                    <div class="chn-title">교육 운영 현황</div>
+    <!-- 히어로 배너 (훈련원 전경 + 실시간 요약 배지) -->
+    <div class="coord-hero">
+        <img class="coord-hero__img" id="coordHeroImg" src="catc.webp" alt="항공기술훈련원 전경"
+             onerror="if(!this.dataset.fb){this.dataset.fb=1; this.src=window.__CATC_HERO__||'';}">
+        <div class="coord-hero__overlay"></div>
+        <div class="coord-hero__content">
+            <div class="coord-hero__title">
+                <i class="fa-solid fa-building-columns"></i> 항공기술훈련원 교육 운영 현황
+                <small>교육운영부</small>
+            </div>
+            <div class="coord-hero__badges">
+                <div class="hero-badge">
+                    <i class="fa-solid fa-graduation-cap"></i>
+                    <div>
+                        <div class="hb-label">운영 과정</div>
+                        <div class="hb-value"><span id="hero-active-courses">0</span><small>개</small></div>
+                    </div>
+                </div>
+                <div class="hero-badge">
+                    <i class="fa-solid fa-users"></i>
+                    <div>
+                        <div class="hb-label">전체 입교생</div>
+                        <div class="hb-value"><span id="hero-total-students">0</span><small>명</small></div>
+                    </div>
                 </div>
             </div>
-            <div class="chn-time">
-                <div id="coord-hero-clock">--:--</div>
-                <div id="coord-hero-date">--.--.--</div>
+        </div>
+    </div>
+
+    <!-- 상단 상황판: 컴팩트 한 줄 스트립 (가로 스크롤) -->
+    <!-- PC 전용 퀵 액션 툴바 -->
+    <div id="pcQuickBar">
+        <span class="pc-qb-label"><i class="fa-solid fa-bolt"></i> 바로가기</span>
+        <button class="pc-qb-btn" onclick="openRosterUpload()"><i class="fa-solid fa-file-arrow-up"></i> 명단 업로드</button>
+        <button class="pc-qb-btn" onclick="openGlobalNoticeModal()"><i class="fa-solid fa-bullhorn"></i> 전체 공지</button>
+        <button class="pc-qb-btn" onclick="openAttendanceManager()"><i class="fa-solid fa-clipboard-user"></i> 출석부 관리</button>
+        <button class="pc-qb-btn" onclick="showPickupView()"><i class="fa-solid fa-car-side"></i> 강사 픽업</button>
+        <button class="pc-qb-btn" onclick="showStudentShuttleView()"><i class="fa-solid fa-bus"></i> 셔틀 현황</button>
+        <button class="pc-qb-btn" onclick="showTotalStudentList()"><i class="fa-solid fa-users"></i> 전체 교육생</button>
+        <button class="pc-qb-btn" onclick="annualPlanMgrCoord.openEditorModal()"><i class="fa-solid fa-calendar-days"></i> 연간계획</button>
+    </div>
+
+    <div class="stat-strip">
+        <div class="stat-chip chip-students" onclick="showTotalStudentList()">
+            <div class="chip-ic"><i class="fa-solid fa-users"></i></div>
+            <div class="chip-body">
+                <div class="chip-val"><span id="g-total-students">0</span><small>명</small></div>
+                <div class="chip-label">전체 교육생</div>
             </div>
         </div>
-        <div class="chn-stats">
-            <div class="chn-stat">
-                <span id="hero-active-courses">0</span>
-                <small>개 과정</small>
+
+        <div class="stat-chip chip-outing" onclick="openOutingManager()">
+            <div class="chip-ic"><i class="fa-solid fa-file-signature"></i></div>
+            <div class="chip-body">
+                <div class="chip-val"><span id="g-today-actions">0</span><small>건</small></div>
+                <div class="chip-label">금일 외출·외박</div>
             </div>
-            <div class="chn-divider"></div>
-            <div class="chn-stat">
-                <span id="hero-total-students">0</span>
-                <small>명 교육생</small>
+        </div>
+
+        <div class="stat-chip chip-pickup" onclick="showPickupView()">
+            <div class="chip-ic"><i class="fa-solid fa-car-side"></i></div>
+            <div class="chip-body">
+                <div class="chip-val"><span id="g-pickup-count">0</span><small>건</small></div>
+                <div class="chip-label">강사 픽업요청</div>
             </div>
-            <div class="chn-divider"></div>
-            <div class="chn-stat">
-                <span id="g-attend-active2">0</span>
-                <small>과정 출석부</small>
+        </div>
+
+        <div class="stat-chip chip-shuttle" onclick="showStudentShuttleView()">
+            <div class="chip-ic"><i class="fa-solid fa-bus"></i></div>
+            <div class="chip-body">
+                <div class="chip-val"><span id="g-shuttle-count">0</span><small>명</small></div>
+                <div class="chip-label">교육생 퇴교</div>
+            </div>
+        </div>
+
+        <div class="stat-chip chip-attend" onclick="openAttendanceManager()">
+            <div class="chip-ic"><i class="fa-solid fa-clipboard-user"></i></div>
+            <div class="chip-body">
+                <div class="chip-val"><span id="g-attend-active">0</span><small>과정</small></div>
+                <div class="chip-label">출석부 관리</div>
             </div>
         </div>
     </div>
 
-    <!-- ── 포털형 2열 통계 카드 그리드 ── -->
-    <div class="coord-stat-grid">
-        <div class="csg-card csg-blue" onclick="showTotalStudentList()">
-            <div class="csg-icon"><i class="fa-solid fa-users"></i></div>
-            <div class="csg-body">
-                <div class="csg-val"><span id="g-total-students">0</span><small>명</small></div>
-                <div class="csg-label">전체 교육생</div>
-            </div>
-            <i class="fa-solid fa-chevron-right csg-arrow"></i>
-        </div>
-        <div class="csg-card csg-amber" onclick="openOutingManager()">
-            <div class="csg-icon"><i class="fa-solid fa-file-signature"></i></div>
-            <div class="csg-body">
-                <div class="csg-val"><span id="g-today-actions">0</span><small>건</small></div>
-                <div class="csg-label">금일 외출·외박</div>
-            </div>
-            <i class="fa-solid fa-chevron-right csg-arrow"></i>
-        </div>
-        <div class="csg-card csg-purple" onclick="showPickupView()">
-            <div class="csg-icon"><i class="fa-solid fa-car-side"></i></div>
-            <div class="csg-body">
-                <div class="csg-val"><span id="g-pickup-count">0</span><small>건</small></div>
-                <div class="csg-label">강사 픽업요청</div>
-            </div>
-            <i class="fa-solid fa-chevron-right csg-arrow"></i>
-        </div>
-        <div class="csg-card csg-orange" onclick="showStudentShuttleView()">
-            <div class="csg-icon"><i class="fa-solid fa-bus"></i></div>
-            <div class="csg-body">
-                <div class="csg-val"><span id="g-shuttle-count">0</span><small>명</small></div>
-                <div class="csg-label">교육생 퇴교</div>
-            </div>
-            <i class="fa-solid fa-chevron-right csg-arrow"></i>
-        </div>
-        <div class="csg-card csg-green csg-full" onclick="openAttendanceManager()">
-            <div class="csg-icon"><i class="fa-solid fa-clipboard-user"></i></div>
-            <div class="csg-body">
-                <div class="csg-val"><span id="g-attend-active">0</span><small>과정</small></div>
-                <div class="csg-label">출석부 관리</div>
-            </div>
-            <i class="fa-solid fa-chevron-right csg-arrow"></i>
-        </div>
-        <div class="csg-card csg-rose" onclick="openCenterQrModal()">
-            <div class="csg-icon"><i class="fa-solid fa-qrcode"></i></div>
-            <div class="csg-body">
-                <div class="csg-val csg-sm">QR</div>
-                <div class="csg-label">접속 QR</div>
-            </div>
-            <i class="fa-solid fa-chevron-right csg-arrow"></i>
-        </div>
-    </div>
-
-    <!-- ── 현재 운영 중인 과정 ── -->
-    <div class="coord-courses-section">
-        <div class="ccs-header">
-            <span><i class="fa-solid fa-list-ul"></i> 현재 운영 중인 과정</span>
-        </div>
+    <!-- ✅ [복구 완료] 현재 운영 중인 과정 리스트 섹션 -->
+    <div class="section-card" style="background:white; padding:18px 16px; border:1px solid #eef2f7; box-shadow:0 4px 14px rgba(15,23,42,0.05);">
+        <div class="section-title" style="color:#0f172a; font-size:16px; font-weight:900; margin-bottom:16px; padding-bottom:12px; border-bottom:1px solid #f1f5f9; display:flex; align-items:center; gap:8px;"><i class="fa-solid fa-list-ul" style="color:var(--blue-main);"></i> 현재 운영 중인 과정</div>
         <div id="activeCourseList" style="display:flex; flex-direction:column; gap:0;">
+            <!-- 자바스크립트가 여기에 ROOM A, ROOM C 등의 카드를 채워넣습니다 -->
         </div>
     </div>
+
 
 </div> <!-- totalStatusView 닫기 -->
 
@@ -6099,24 +6005,6 @@ function _coordParseRoster(text) {
     }
     return students;
 }
-
-// ── 포털형 히어로 시계 ──────────────────────────────────────
-(function startCoordHeroClock() {
-    const DAYS = ['일','월','화','수','목','금','토'];
-    function tick() {
-        const now = new Date();
-        const h = now.getHours(), m = now.getMinutes();
-        const ampm = h >= 12 ? 'PM' : 'AM';
-        const h12 = (h % 12 || 12).toString().padStart(2,'0');
-        const mm = m.toString().padStart(2,'0');
-        const clkEl = document.getElementById('coord-hero-clock');
-        const datEl = document.getElementById('coord-hero-date');
-        if (clkEl) clkEl.textContent = `${h12}:${mm} ${ampm}`;
-        if (datEl) datEl.textContent = `${now.getFullYear()}.${String(now.getMonth()+1).padStart(2,'0')}.${String(now.getDate()).padStart(2,'0')} (${DAYS[now.getDay()]})`;
-    }
-    tick();
-    setInterval(tick, 1000);
-})();
 </script>
 
 </body>
