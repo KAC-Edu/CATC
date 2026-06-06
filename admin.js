@@ -1021,7 +1021,8 @@ deactivateAllRooms: async function() {
         const settings = settingSnap.val() || {};
         const dbPw = settings.password || btoa("7777"); // 기본값 7777 (기존 비밀번호 정책과 동일)
 
-        const input = prompt(`🔐 Room ${room}의 잠금 상태를 변경하려면\n강의실 비밀번호(4자리)를 입력하세요.`);
+        const input = await showPasswordPrompt(`🔐 Room ${room}의 잠금 상태를 변경하려면
+강의실 비밀번호(4자리)를 입력하세요.`);
         if (input === null) return;                       // 취소 시 아무 동작 안 함
         if (btoa(input.trim()) !== dbPw) {
             return ui.showAlert("❌ 비밀번호가 일치하지 않습니다.");
@@ -1882,6 +1883,66 @@ init: function() {
 
 
 // --- 3. UI ---
+// ── 비밀번호 커스텀 프롬프트: 입력값을 **** 로 마스킹 ──────────────
+// prompt() 대신 type="password" 입력 모달을 반환
+// resolve: 입력된 문자열, 취소 시 null
+function showPasswordPrompt(message) {
+    return new Promise(resolve => {
+        // 기존 모달 있으면 제거
+        const old = document.getElementById('_pwPromptOverlay');
+        if (old) old.remove();
+
+        const overlay = document.createElement('div');
+        overlay.id = '_pwPromptOverlay';
+        overlay.style.cssText = `
+            position:fixed; inset:0; z-index:99999;
+            background:rgba(0,0,0,0.6);
+            display:flex; align-items:center; justify-content:center;`;
+
+        overlay.innerHTML = `
+        <div style="background:#1e293b; border-radius:14px; padding:28px 28px 22px;
+                    min-width:320px; max-width:440px; width:90%; box-shadow:0 20px 60px rgba(0,0,0,0.5);">
+            <div style="font-size:14px; color:#e2e8f0; font-weight:600; margin-bottom:16px; line-height:1.5;">
+                ${message.replace(/\n/g,'<br>')}
+            </div>
+            <input id="_pwPromptInput" type="password" maxlength="10" autocomplete="off"
+                style="width:100%; box-sizing:border-box; padding:12px 14px; font-size:16px;
+                       border:2px solid #3b82f6; border-radius:9px; background:#0f172a;
+                       color:#f8fafc; outline:none; letter-spacing:4px;"
+                placeholder="••••">
+            <div style="display:flex; gap:10px; margin-top:18px; justify-content:flex-end;">
+                <button id="_pwPromptCancel"
+                    style="padding:10px 20px; border:none; border-radius:9px;
+                           background:#334155; color:#94a3b8; font-weight:700; cursor:pointer; font-size:14px;">
+                    취소
+                </button>
+                <button id="_pwPromptOk"
+                    style="padding:10px 24px; border:none; border-radius:9px;
+                           background:#3b82f6; color:#fff; font-weight:800; cursor:pointer; font-size:14px;">
+                    확인
+                </button>
+            </div>
+        </div>`;
+
+        document.body.appendChild(overlay);
+
+        const input = document.getElementById('_pwPromptInput');
+        const ok    = document.getElementById('_pwPromptOk');
+        const cancel = document.getElementById('_pwPromptCancel');
+
+        const done = (val) => { overlay.remove(); resolve(val); };
+
+        ok.onclick = () => done(input.value);
+        cancel.onclick = () => done(null);
+        overlay.onclick = (e) => { if (e.target === overlay) done(null); };
+        input.onkeydown = (e) => {
+            if (e.key === 'Enter') done(input.value);
+            if (e.key === 'Escape') done(null);
+        };
+        setTimeout(() => input.focus(), 50);
+    });
+}
+
 const ui = {
 
 
