@@ -7,8 +7,6 @@
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js"></script>
   <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" rel="stylesheet">
   <style>
 
@@ -970,37 +968,6 @@
     min-height: 100dvh;
 }
 
-/* ── PC 모드 ── */
-body.pc-mode { background: #f1f5f9; display: flex; justify-content: center; }
-body.pc-mode .app-container {
-    max-width: 1280px; width: 100%;
-    box-shadow: 0 0 40px rgba(0,0,0,0.08);
-}
-body.pc-mode .app-header { padding: 0 32px; }
-body.pc-mode #courseGrid {
-    display: grid !important;
-    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
-    gap: 16px; padding: 20px 24px;
-}
-body.pc-mode .course-card { margin: 0; }
-
-/* 명단 업로드 모달 */
-#rosterUploadModal {
-    display: none; position: fixed; inset: 0;
-    background: rgba(15,23,42,0.55); z-index: 30000;
-    align-items: center; justify-content: center; padding: 20px;
-}
-#rosterUploadModal.open { display: flex; }
-.roster-upload-box {
-    background: #fff; width: 100%; max-width: 680px;
-    border-radius: 20px; overflow: hidden;
-    display: flex; flex-direction: column; max-height: 90vh;
-}
-.roster-upload-box table { width: 100%; border-collapse: collapse; font-size: 13px; }
-.roster-upload-box table th { background: #f8fafc; padding: 8px 10px; font-weight: 800; color: #475569; border-bottom: 1.5px solid #e2e8f0; }
-.roster-upload-box table td { padding: 7px 10px; border-bottom: 1px solid #f1f5f9; }
-.roster-upload-box table tr:hover td { background: #f8fafc; }
-
 
 /* 팝업 또는 메뉴 열렸을 때 뒷배경 스크롤 방지 */
 body.modal-open {
@@ -1148,6 +1115,144 @@ body.modal-open .app-content {
     padding-bottom: 120px !important;
 }
 
+/* ══ PC 사이드바 ══════════════════════════════════════════════ */
+#pcSidebar {
+    display: none;
+    width: 230px;
+    min-width: 230px;
+    min-height: 100vh;
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    background: #0b1628;
+    flex-direction: column;
+    overflow-y: auto;
+    z-index: 200;
+    flex-shrink: 0;
+}
+.pcs-brand {
+    display: flex; align-items: center; gap: 11px;
+    padding: 22px 18px 18px;
+    border-bottom: 1px solid rgba(255,255,255,0.07);
+}
+.pcs-logo { width: 36px; height: 36px; border-radius: 8px; object-fit: cover; }
+.pcs-title { font-size: 13px; font-weight: 900; color: #f1f5f9; letter-spacing: -0.3px; }
+.pcs-sub { font-size: 10px; color: #475569; font-weight: 600; margin-top: 1px; }
+.pcs-nav { display: flex; flex-direction: column; gap: 2px; padding: 14px 10px 8px; }
+.pcs-nav-btn {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 12px; border: none; border-radius: 9px;
+    background: transparent; color: #64748b;
+    font-size: 13px; font-weight: 700; cursor: pointer; text-align: left;
+    transition: all 0.15s; width: 100%;
+}
+.pcs-nav-btn i { width: 16px; text-align: center; font-size: 14px; }
+.pcs-nav-btn:hover { background: rgba(255,255,255,0.06); color: #cbd5e1; }
+.pcs-nav-btn.active { background: rgba(59,130,246,0.18); color: #93c5fd; }
+.pcs-section-label {
+    font-size: 10px; font-weight: 800; letter-spacing: 1px;
+    color: #334155; text-transform: uppercase;
+    padding: 14px 18px 6px;
+}
+.pcs-course-list { display: flex; flex-direction: column; gap: 2px; padding: 0 10px; }
+.pcs-course-item {
+    display: flex; align-items: center; gap: 9px;
+    padding: 9px 12px; border-radius: 9px;
+    cursor: pointer; transition: all 0.15s; border: none;
+    background: transparent; text-align: left; width: 100%;
+}
+.pcs-course-item:hover { background: rgba(255,255,255,0.05); }
+.pcs-course-item.active { background: rgba(59,130,246,0.15); }
+.pcs-course-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.pcs-course-info { min-width: 0; }
+.pcs-course-room { font-size: 9px; font-weight: 900; color: #475569; letter-spacing: 0.5px; }
+.pcs-course-name { font-size: 12px; font-weight: 700; color: #94a3b8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 158px; }
+.pcs-course-item.active .pcs-course-name { color: #93c5fd; }
+.pcs-spacer { flex: 1; }
+.pcs-footer {
+    display: flex; align-items: center; justify-content: space-around;
+    padding: 12px 10px; border-top: 1px solid rgba(255,255,255,0.06);
+}
+.pcs-foot-btn {
+    background: none; border: none; color: #475569; font-size: 15px;
+    cursor: pointer; padding: 8px; border-radius: 8px; transition: all 0.15s;
+}
+.pcs-foot-btn:hover { background: rgba(255,255,255,0.07); color: #94a3b8; }
+
+/* ══ PC 모드 전체 레이아웃 ══════════════════════════════════ */
+body.pc-mode {
+    display: flex; flex-direction: row;
+    min-height: 100vh; background: #eef2f7;
+}
+body.pc-mode #pcSidebar { display: flex; }
+body.pc-mode .app-container {
+    flex: 1; max-width: none; min-width: 0;
+    box-shadow: none; background: #f1f5f9;
+}
+body.pc-mode .app-header { display: none; } /* 사이드바가 대체 */
+
+/* PC 모드: 전체 현황 대시보드 그리드 */
+body.pc-mode #totalStatusView {
+    padding: 28px 32px !important;
+    background: #f1f5f9;
+}
+body.pc-mode #totalStatusView .main-summary-card,
+body.pc-mode #totalStatusView > div:first-child {
+    display: none !important; /* 모바일 이미지 배너 숨김 */
+}
+body.pc-mode #activeCourseList {
+    display: grid !important;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)) !important;
+    gap: 14px !important;
+    margin-top: 0 !important;
+}
+body.pc-mode .course-item-card {
+    margin: 0 !important;
+    border-radius: 14px !important;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.07) !important;
+    border: 1.5px solid #e2e8f0 !important;
+    transition: box-shadow 0.15s, transform 0.15s !important;
+}
+body.pc-mode .course-item-card:hover {
+    box-shadow: 0 6px 24px rgba(0,0,0,0.11) !important;
+    transform: translateY(-2px) !important;
+}
+/* PC 개별 과정 뷰 */
+body.pc-mode #individualStatusView {
+    padding: 28px 32px !important;
+    background: #f1f5f9;
+}
+body.pc-mode .dashboard-split {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 16px !important;
+}
+/* PC 모드 스크롤 패딩 제거 */
+body.pc-mode .app-scroll-area,
+body.pc-mode #totalStatusView,
+body.pc-mode #individualStatusView {
+    padding-bottom: 32px !important;
+}
+
+/* PC 모드 헤더 대신 인라인 타이틀 영역 */
+#pcPageHeader {
+    display: none;
+    align-items: center; justify-content: space-between;
+    padding: 20px 32px 0; margin-bottom: 6px;
+}
+body.pc-mode #pcPageHeader { display: flex; }
+.pc-page-title { font-size: 22px; font-weight: 900; color: #0f172a; }
+.pc-page-actions { display: flex; gap: 10px; align-items: center; }
+.pc-action-btn {
+    padding: 9px 18px; border-radius: 10px; border: 1.5px solid #e2e8f0;
+    background: #fff; color: #475569; font-size: 13px; font-weight: 800;
+    cursor: pointer; display: flex; align-items: center; gap: 7px; transition: all 0.15s;
+}
+.pc-action-btn:hover { border-color: #3b82f6; color: #3b82f6; }
+.pc-action-btn.primary { background: #2563eb; color: #fff; border-color: #2563eb; }
+.pc-action-btn.primary:hover { background: #1d4ed8; }
+
+
 
 
 
@@ -1169,6 +1274,86 @@ body.modal-open .app-content {
       <div style="font-weight:900; color:var(--navy-dark);">실시간 데이터를 동기화 중입니다...</div>
       <div class="progress-bar"><div id="progressFill" class="progress-fill"></div></div>
   </div>
+
+<!-- ── PC 사이드바 ─────────────────────────────────────── -->
+<div id="pcSidebar">
+  <div class="pcs-brand">
+    <img src="catc.webp" class="pcs-logo" onerror="this.style.display='none'">
+    <div>
+      <div class="pcs-title">교육운영부</div>
+      <div class="pcs-sub">CATC Coord Platform</div>
+    </div>
+  </div>
+
+  <div class="pcs-nav">
+    <button class="pcs-nav-btn" id="pcsNav_total" onclick="pcNav('total')">
+      <i class="fa-solid fa-house-chimney"></i><span>전체 현황</span>
+    </button>
+    <button class="pcs-nav-btn" id="pcsNav_pickup" onclick="pcNav('pickup')">
+      <i class="fa-solid fa-person-walking-luggage"></i><span>외출·외박</span>
+    </button>
+    <button class="pcs-nav-btn" id="pcsNav_shuttle" onclick="pcNav('shuttle')">
+      <i class="fa-solid fa-bus-simple"></i><span>셔틀 현황</span>
+    </button>
+    <button class="pcs-nav-btn" id="pcsNav_students" onclick="pcNav('students')">
+      <i class="fa-solid fa-users"></i><span>전체 교육생</span>
+    </button>
+  </div>
+
+  <div class="pcs-section-label">진행 중인 과정</div>
+  <div id="pcsCourseList" class="pcs-course-list"></div>
+
+  <div class="pcs-spacer"></div>
+
+  <div class="pcs-footer">
+    <button onclick="openCenterQrModal()" class="pcs-foot-btn" title="접속 QR"><i class="fa-solid fa-qrcode"></i></button>
+    <button onclick="openGlobalNoticeModal()" class="pcs-foot-btn" title="전체 공지"><i class="fa-solid fa-bullhorn"></i></button>
+    <button onclick="annualPlanMgrCoord.openEditorModal()" class="pcs-foot-btn" title="연간계획"><i class="fa-solid fa-calendar-days"></i></button>
+    <button onclick="togglePcMode()" class="pcs-foot-btn" title="모바일 전환"><i class="fa-solid fa-mobile-screen"></i></button>
+    <button onclick="toggleMenu(true)" class="pcs-foot-btn" title="설정"><i class="fa-solid fa-gear"></i></button>
+  </div>
+</div>
+
+<!-- 명단 업로드 모달 (PC + 모바일 공용) -->
+<div id="rosterUploadModal" style="display:none; position:fixed; inset:0; background:rgba(15,23,42,0.55); z-index:30000; align-items:center; justify-content:center; padding:20px;">
+  <div style="background:#fff; width:100%; max-width:680px; border-radius:20px; overflow:hidden; display:flex; flex-direction:column; max-height:90vh;">
+    <div style="padding:20px 22px 14px; border-bottom:1.5px solid #e2e8f0; display:flex; align-items:center; gap:12px;">
+      <div style="font-size:20px;">📋</div>
+      <div style="flex:1;">
+        <div style="font-size:16px; font-weight:900; color:#0f172a;">교육생 명단 업로드</div>
+        <div style="font-size:12px; color:#64748b; margin-top:2px;">한글(HWP) 또는 PDF 파일을 업로드하면 자동 판독합니다</div>
+      </div>
+      <button onclick="closeRosterUpload()" style="background:none; border:none; font-size:20px; color:#94a3b8; cursor:pointer;">✕</button>
+    </div>
+    <div style="padding:16px 22px; border-bottom:1px solid #f1f5f9;">
+      <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+        <input type="file" id="coordRosterInput" accept="application/pdf,.hwp" style="display:none;" onchange="coordHandleRosterFile(event)">
+        <button onclick="document.getElementById('coordRosterInput').click()" style="padding:10px 18px; background:#2563eb; color:#fff; border:none; border-radius:10px; font-weight:800; font-size:13px; cursor:pointer; display:flex; align-items:center; gap:7px;"><i class="fa-solid fa-file-arrow-up"></i> PDF / HWP 선택</button>
+        <div id="coordRosterStatus" style="font-size:13px; color:#64748b;"></div>
+      </div>
+    </div>
+    <div style="overflow-y:auto; flex:1; min-height:200px;">
+      <table style="width:100%; border-collapse:collapse; font-size:13px;">
+        <thead><tr style="background:#f8fafc;">
+          <th style="padding:8px 10px; font-weight:800; color:#475569; border-bottom:1.5px solid #e2e8f0; width:40px;">연번</th>
+          <th style="padding:8px 10px; font-weight:800; color:#475569; border-bottom:1.5px solid #e2e8f0;">성명</th>
+          <th style="padding:8px 10px; font-weight:800; color:#475569; border-bottom:1.5px solid #e2e8f0; width:80px;">사번</th>
+          <th style="padding:8px 10px; font-weight:800; color:#475569; border-bottom:1.5px solid #e2e8f0;">소속</th>
+          <th style="padding:8px 10px; font-weight:800; color:#475569; border-bottom:1.5px solid #e2e8f0; width:55px;">성별</th>
+        </tr></thead>
+        <tbody id="coordRosterBody">
+          <tr><td colspan="5" style="padding:24px; text-align:center; color:#94a3b8;">파일을 업로드하면 명단이 표시됩니다</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div style="padding:14px 22px; border-top:1.5px solid #e2e8f0; display:flex; gap:10px; justify-content:flex-end;">
+      <div style="flex:1; font-size:12px; color:#64748b; align-self:center;" id="coordRosterCount"></div>
+      <button onclick="coordSaveRoster()" style="padding:11px 22px; background:#16a34a; color:#fff; border:none; border-radius:10px; font-weight:900; font-size:13px; cursor:pointer;"><i class="fa-solid fa-floppy-disk"></i> Firebase 저장</button>
+      <button onclick="coordExportRoster()" style="padding:11px 16px; background:#f8fafc; color:#0f172a; border:1.5px solid #e2e8f0; border-radius:10px; font-weight:800; font-size:13px; cursor:pointer;"><i class="fa-solid fa-table"></i> 표 복사</button>
+      <button onclick="closeRosterUpload()" style="padding:11px 16px; background:#f1f5f9; color:#64748b; border:none; border-radius:10px; font-weight:800; font-size:13px; cursor:pointer;">닫기</button>
+    </div>
+  </div>
+</div>
 
   <div class="app-container no-print">
     <div id="menuOverlay" class="menu-overlay" onclick="toggleMenu(false)"></div>
@@ -1226,71 +1411,17 @@ body.modal-open .app-content {
 
 <!-- 상단 헤더 부분 (수정됨) -->
 <header class="app-header">
-  <!-- 아이콘 대신 << 텍스트 사용 (클릭 시 메인복귀 또는 포탈이동) -->
   <button class="header-btn" onclick="handleBackNav()" style="font-family: 'Pretendard'; font-weight: 900; letter-spacing: -2px;">&lt;&lt;</button>
   
   <div class="header-title">항공기술훈련원 교육운영부</div>
   
   <div style="display:flex; gap:15px; align-items:center;">
-      <!-- 1. 접속 QR 아이콘 -->
       <button class="header-btn" onclick="openCenterQrModal()"><i class="fa-solid fa-qrcode"></i></button>
-      
-      <!-- 2. 전체 공지 아이콘 (신규 추가) -->
       <button class="header-btn" onclick="openGlobalNoticeModal()"><i class="fa-solid fa-bullhorn"></i></button>
-
-      <!-- 3. 명단 업로드 -->
-      <button class="header-btn" onclick="openRosterUpload()" title="교육생 명단 업로드"><i class="fa-solid fa-file-arrow-up"></i></button>
-
-      <!-- 4. PC 모드 토글 -->
-      <button class="header-btn" id="pcModeBtn" onclick="togglePcMode()" title="PC 모드 전환"><i class="fa-solid fa-display"></i></button>
-      
-      <!-- 5. 사이드 메뉴 아이콘 -->
+      <button class="header-btn" id="pcModeBtn" onclick="togglePcMode()" title="PC 모드 전환" style="display:none;"><i class="fa-solid fa-display"></i></button>
       <button class="header-btn" onclick="toggleMenu(true)"><i class="fa-solid fa-bars"></i></button>
   </div>
 </header>
-
-<!-- 교육생 명단 업로드 모달 -->
-<div id="rosterUploadModal">
-  <div class="roster-upload-box">
-    <div style="padding:20px 22px 14px; border-bottom:1.5px solid #e2e8f0; display:flex; align-items:center; gap:12px;">
-      <div style="font-size:20px;">📋</div>
-      <div style="flex:1;">
-        <div style="font-size:16px; font-weight:900; color:#0f172a;">교육생 명단 업로드</div>
-        <div style="font-size:12px; color:#64748b; margin-top:2px;">한글(HWP) 또는 PDF 파일을 업로드하면 자동 판독합니다</div>
-      </div>
-      <button onclick="closeRosterUpload()" style="background:none; border:none; font-size:20px; color:#94a3b8; cursor:pointer;">✕</button>
-    </div>
-    <div style="padding:16px 22px; border-bottom:1px solid #f1f5f9;">
-      <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
-        <input type="file" id="coordRosterInput" accept="application/pdf,.hwp" style="display:none;" onchange="coordHandleRosterFile(event)">
-        <button onclick="document.getElementById('coordRosterInput').click()" style="padding:10px 18px; background:#2563eb; color:#fff; border:none; border-radius:10px; font-weight:800; font-size:13px; cursor:pointer; display:flex; align-items:center; gap:7px;"><i class="fa-solid fa-file-arrow-up"></i> PDF / HWP 선택</button>
-        <div id="coordRosterStatus" style="font-size:13px; color:#64748b;"></div>
-      </div>
-    </div>
-    <div style="overflow-y:auto; flex:1; min-height:200px;">
-      <table>
-        <thead>
-          <tr>
-            <th style="width:40px;">연번</th>
-            <th>성명</th>
-            <th style="width:80px;">사번</th>
-            <th>소속</th>
-            <th style="width:55px;">성별</th>
-          </tr>
-        </thead>
-        <tbody id="coordRosterBody">
-          <tr><td colspan="5" style="padding:24px; text-align:center; color:#94a3b8;">파일을 업로드하면 명단이 표시됩니다</td></tr>
-        </tbody>
-      </table>
-    </div>
-    <div style="padding:14px 22px; border-top:1.5px solid #e2e8f0; display:flex; gap:10px; justify-content:flex-end;">
-      <div style="flex:1; font-size:12px; color:#64748b; align-self:center;" id="coordRosterCount"></div>
-      <button onclick="coordSaveRoster()" style="padding:11px 22px; background:#16a34a; color:#fff; border:none; border-radius:10px; font-weight:900; font-size:13px; cursor:pointer;"><i class="fa-solid fa-floppy-disk"></i> Firebase 저장</button>
-      <button onclick="coordExportRoster()" style="padding:11px 16px; background:#f8fafc; color:#0f172a; border:1.5px solid #e2e8f0; border-radius:10px; font-weight:800; font-size:13px; cursor:pointer;"><i class="fa-solid fa-table"></i> 표 복사</button>
-      <button onclick="closeRosterUpload()" style="padding:11px 16px; background:#f1f5f9; color:#64748b; border:none; border-radius:10px; font-weight:800; font-size:13px; cursor:pointer;">닫기</button>
-    </div>
-  </div>
-</div>
 
 <!-- 과정 추가 팝업 (운영부) -->
 <div id="coordCourseAddPop" style="display:none; position:fixed; inset:0; background:rgba(15,23,42,0.55); z-index:21000; align-items:center; justify-content:center; padding:20px;">
@@ -1537,6 +1668,9 @@ body.modal-open .app-content {
               <div style="display: flex; align-items: baseline; gap: 10px; border-bottom: 1px solid rgba(255,255,255,0.15); padding-bottom: 12px;">
                   <span style="font-weight: 900; font-size: 14px; color: #60a5fa;">ROOM <span id="ind-room-id">-</span></span>
                   <span id="ind-course-name" style="font-weight: 800; font-size: 19px;">과정명 로딩 중...</span>
+                  <button onclick="openRosterUpload()" title="교육생 명단 업로드" style="margin-left:auto; padding:7px 14px; background:rgba(255,255,255,0.15); border:1.5px solid rgba(255,255,255,0.35); border-radius:9px; color:#fff; font-size:12px; font-weight:800; cursor:pointer; display:inline-flex; align-items:center; gap:6px; white-space:nowrap; flex-shrink:0;">
+                      <i class="fa-solid fa-file-arrow-up"></i> 명단 업로드
+                  </button>
               </div>
               <div style="display: flex; flex-wrap: wrap; gap: 10px 20px; font-size: 12.5px;">
                   <div><span style="opacity: 0.6;">교육기간:</span> <span id="ind-period">-</span></div>
@@ -5520,29 +5654,127 @@ const annualPlanMgrCoord = {
 </div>
 
 <script>
-// ═══ PC 모드 토글 ════════════════════════════════════════════════
+// ══ PDF.js + pako CDN 초기화 ══════════════════════════════════
+if (window.pdfjsLib) pdfjsLib.GlobalWorkerOptions.workerSrc =
+    'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+
+// ══ PC 모드 토글 ══════════════════════════════════════════════
 function togglePcMode() {
     const isPc = document.body.classList.toggle('pc-mode');
     localStorage.setItem('coord_pc_mode', isPc ? '1' : '');
-    const btn = document.getElementById('pcModeBtn');
-    if (btn) btn.innerHTML = isPc
-        ? '<i class="fa-solid fa-mobile-screen"></i>'
-        : '<i class="fa-solid fa-display"></i>';
-}
-(function() {
-    if (localStorage.getItem('coord_pc_mode')) {
-        document.body.classList.add('pc-mode');
-        const btn = document.getElementById('pcModeBtn');
-        if (btn) btn.innerHTML = '<i class="fa-solid fa-mobile-screen"></i>';
+    if (isPc) {
+        pcsSyncCourseList();
+        pcUpdateNav();
     }
-    if (window.pdfjsLib) pdfjsLib.GlobalWorkerOptions.workerSrc =
-        'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+}
+(function initPcMode() {
+    // PC 모드 토글 버튼: 화면 폭 768px 이상이면 표시
+    const btn = document.getElementById('pcModeBtn');
+    if (btn) {
+        const showBtn = () => { btn.style.display = window.innerWidth >= 768 ? '' : 'none'; };
+        showBtn();
+        window.addEventListener('resize', showBtn);
+    }
+    if (localStorage.getItem('coord_pc_mode') && window.innerWidth >= 768) {
+        document.body.classList.add('pc-mode');
+        pcsSyncCourseList();
+    }
 })();
 
-// ═══ 교육생 명단 업로드 모달 ══════════════════════════════════════
+// ── PC 사이드바 과정 목록 동기화 ──────────────────────────────
+const PCS_COLORS = ['#3b82f6','#22c55e','#f59e0b','#ec4899','#8b5cf6','#14b8a6'];
+function pcsSyncCourseList() {
+    const list = document.getElementById('pcsCourseList');
+    if (!list) return;
+    const src = document.getElementById('activeCourseList');
+    if (!src) return;
+    const cards = src.querySelectorAll('.course-item-card');
+    if (!cards.length) {
+        list.innerHTML = '<div style="padding:10px 12px; font-size:12px; color:#334155;">진행 중인 과정 없음</div>';
+        return;
+    }
+    list.innerHTML = '';
+    cards.forEach((card, i) => {
+        const roomEl = card.querySelector('[style*="font-size:11px"]') || card.querySelector('span');
+        const nameEl = card.querySelector('[style*="font-size:14"]') || card.querySelectorAll('span')[1];
+        const room = roomEl ? roomEl.textContent.replace('ROOM ','').trim() : String.fromCharCode(65+i);
+        const name = nameEl ? nameEl.textContent.trim() : '과정명';
+        const color = PCS_COLORS[i % PCS_COLORS.length];
+
+        const btn = document.createElement('button');
+        btn.className = 'pcs-course-item' + (currentRID === room ? ' active' : '');
+        btn.dataset.rid = room;
+        btn.innerHTML = `<span class="pcs-course-dot" style="background:${color};"></span>
+            <span class="pcs-course-info">
+                <div class="pcs-course-room">ROOM ${room}</div>
+                <div class="pcs-course-name">${name}</div>
+            </span>`;
+        btn.onclick = () => {
+            currentRID = room;
+            handleRoomSelection();
+            pcUpdateNav();
+        };
+        list.appendChild(btn);
+    });
+}
+
+function pcUpdateNav() {
+    // 과정 아이템 active 갱신
+    document.querySelectorAll('.pcs-course-item').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.rid === currentRID);
+    });
+    // 페이지 타이틀 갱신
+    const titleEl = document.getElementById('pcPageTitle');
+    if (titleEl) {
+        if (currentRID) {
+            const nameEl = document.getElementById('ind-course-name');
+            titleEl.textContent = nameEl ? nameEl.textContent : `ROOM ${currentRID}`;
+        } else {
+            titleEl.textContent = '교육 운영 현황';
+        }
+    }
+}
+
+// PC 사이드 내비 클릭
+function pcNav(view) {
+    currentRID = '';
+    document.querySelectorAll('.pcs-nav-btn').forEach(b => b.classList.remove('active'));
+    const btn = document.getElementById(`pcsNav_${view}`);
+    if (btn) btn.classList.add('active');
+
+    if (view === 'total') {
+        handleRoomSelection();
+    } else if (view === 'pickup') {
+        document.querySelector('[onclick*="showPickupStatus"]')?.click();
+    } else if (view === 'shuttle') {
+        document.querySelector('[onclick*="showStudentShuttle"]')?.click();
+    } else if (view === 'students') {
+        document.querySelector('[onclick*="showAllStudentList"]')?.click();
+    }
+}
+
+// handleRoomSelection 후처리 패치 (PC 사이드바 동기화)
+const _origHandleRoomSelection = typeof handleRoomSelection === 'function' ? handleRoomSelection : null;
+if (_origHandleRoomSelection) {
+    window.handleRoomSelection = function() {
+        _origHandleRoomSelection();
+        if (document.body.classList.contains('pc-mode')) {
+            pcsSyncCourseList();
+            pcUpdateNav();
+        }
+    };
+}
+
+// ══ 명단 업로드 모달 ══════════════════════════════════════════
 let _coordRosterData = [];
-function openRosterUpload() { document.getElementById('rosterUploadModal').classList.add('open'); }
-function closeRosterUpload() { document.getElementById('rosterUploadModal').classList.remove('open'); }
+function openRosterUpload() {
+    const m = document.getElementById('rosterUploadModal');
+    if (m) { m.style.display = 'flex'; }
+}
+function closeRosterUpload() {
+    const m = document.getElementById('rosterUploadModal');
+    if (m) m.style.display = 'none';
+}
 
 async function coordHandleRosterFile(ev) {
     const file = ev.target.files[0]; if (!file) return;
@@ -5574,28 +5806,25 @@ async function coordHandleRosterFile(ev) {
             students = _coordParseRoster(rawLines.join('\n'));
         }
         _coordRosterData = students;
-        _coordRenderRoster(students);
-        statusEl.textContent = students.length ? `✅ ${students.length}명 판독됨` : '⚠️ 명단을 찾지 못했습니다';
-        document.getElementById('coordRosterCount').textContent = `총 ${students.length}명`;
+        const tbody = document.getElementById('coordRosterBody');
+        if (!students.length) {
+            tbody.innerHTML = '<tr><td colspan="5" style="padding:20px;text-align:center;color:#94a3b8;">명단을 찾지 못했습니다</td></tr>';
+            statusEl.textContent = '⚠️ 판독 결과 없음';
+        } else {
+            tbody.innerHTML = students.map((s,i)=>`<tr>
+                <td style="text-align:center;color:#94a3b8;padding:7px 10px;">${i+1}</td>
+                <td style="font-weight:700;padding:7px 10px;">${s.name}</td>
+                <td style="color:#64748b;padding:7px 10px;">${s.empNo}</td>
+                <td style="color:#475569;font-size:12px;padding:7px 10px;">${s.dept}</td>
+                <td style="text-align:center;padding:7px 10px;font-size:12px;font-weight:700;color:${s.gender==='F'?'#ec4899':'#3b82f6'};">${s.gender==='F'?'여':'남'}</td>
+            </tr>`).join('');
+            statusEl.textContent = `✅ ${students.length}명 판독됨`;
+            document.getElementById('coordRosterCount').textContent = `총 ${students.length}명`;
+        }
     } catch(e) {
         console.error('[명단업로드]', e);
-        statusEl.textContent = '❌ 오류: ' + e.message;
+        document.getElementById('coordRosterStatus').textContent = '❌ 오류: ' + e.message;
     }
-}
-
-function _coordRenderRoster(students) {
-    const tbody = document.getElementById('coordRosterBody');
-    if (!students.length) {
-        tbody.innerHTML = '<tr><td colspan="5" style="padding:20px;text-align:center;color:#94a3b8;">명단이 없습니다</td></tr>';
-        return;
-    }
-    tbody.innerHTML = students.map((s,i) => `<tr>
-        <td style="text-align:center;color:#94a3b8;">${i+1}</td>
-        <td style="font-weight:700;">${s.name}</td>
-        <td style="color:#64748b;">${s.empNo}</td>
-        <td style="color:#475569;font-size:12px;">${s.dept}</td>
-        <td style="text-align:center;font-size:12px;font-weight:700;color:${s.gender==='F'?'#ec4899':'#3b82f6'};">${s.gender==='F'?'여':'남'}</td>
-    </tr>`).join('');
 }
 
 async function coordSaveRoster() {
@@ -5606,7 +5835,7 @@ async function coordSaveRoster() {
         savedAt: firebase.database.ServerValue.TIMESTAMP,
         list: _coordRosterData
     });
-    alert(`✅ ${_coordRosterData.length}명 명단 저장 완료\n경로: system/coord/rosters/${key}`);
+    alert(`✅ ${_coordRosterData.length}명 명단 저장 완료`);
 }
 
 function coordExportRoster() {
@@ -5614,20 +5843,20 @@ function coordExportRoster() {
     const header = '연번\t성명\t사번\t소속\t성별';
     const rows = _coordRosterData.map((s,i)=>`${i+1}\t${s.name}\t${s.empNo}\t${s.dept}\t${s.gender==='F'?'여':'남'}`).join('\n');
     navigator.clipboard.writeText(header+'\n'+rows)
-        .then(()=>alert('✅ 클립보드에 복사됐습니다. 엑셀에 붙여넣기 하세요.'))
+        .then(()=>alert('✅ 클립보드에 복사됐습니다'))
         .catch(()=>alert('복사 실패'));
 }
 
 // HWP CFB + pako 텍스트 추출
 async function _coordHwpExtract(buffer) {
-    const buf8=new Uint8Array(buffer), view=new DataView(buffer);
-    if (buf8[0]!==0xD0||buf8[1]!==0xCF) throw new Error('HWP CFB 형식 아님');
-    const ss=1<<view.getUint16(30,true), fatCount=view.getUint32(44,true), dirStart=view.getUint32(48,true);
+    const buf8=new Uint8Array(buffer),view=new DataView(buffer);
+    if(buf8[0]!==0xD0||buf8[1]!==0xCF) throw new Error('HWP CFB 형식 아님');
+    const ss=1<<view.getUint16(30,true),fatCount=view.getUint32(44,true),dirStart=view.getUint32(48,true);
     const fat=new Int32Array(Math.ceil(buffer.byteLength/ss)+256).fill(-1);
     let fi=0;
     for(let i=0;i<109&&fi<fatCount;i++){
-        const fs=view.getUint32(76+i*4,true); if(fs>=0xFFFFFFFE) break;
-        for(let j=0;j<ss/4;j++){const off=(fs+1)*ss+j*4; if(off+4>buffer.byteLength)break; fat[fi*(ss/4)+j]=view.getInt32(off,true);} fi++;
+        const fs=view.getUint32(76+i*4,true);if(fs>=0xFFFFFFFE)break;
+        for(let j=0;j<ss/4;j++){const off=(fs+1)*ss+j*4;if(off+4>buffer.byteLength)break;fat[fi*(ss/4)+j]=view.getInt32(off,true);}fi++;
     }
     const chain=s=>{const c=[];let cur=s;while(cur>=0&&cur<0xFFFFFFFE&&c.length<100000){c.push(cur);cur=fat[cur];}return c;};
     const readStream=(sid,size)=>{
@@ -5639,9 +5868,9 @@ async function _coordHwpExtract(buffer) {
     for(const ds of chain(dirStart)){
         const base=(ds+1)*ss;
         for(let e=0;e+128<=ss;e+=128){
-            const o=base+e; if(o+128>buffer.byteLength)break;
-            const nameLen=view.getUint16(o+64,true); if(nameLen<=0||nameLen>64)continue;
-            let name=''; for(let n=0;n<nameLen-2;n+=2)name+=String.fromCharCode(view.getUint16(o+n,true));
+            const o=base+e;if(o+128>buffer.byteLength)break;
+            const nameLen=view.getUint16(o+64,true);if(nameLen<=0||nameLen>64)continue;
+            let name='';for(let n=0;n<nameLen-2;n+=2)name+=String.fromCharCode(view.getUint16(o+n,true));
             if(buf8[o+66]!==2||!name.startsWith('Section'))continue;
             const startId=view.getInt32(o+116,true),sz=view.getInt32(o+120,true);
             if(startId>=0&&startId<0xFFFFFFFE&&sz>0)sections.push(readStream(startId,sz));
@@ -5649,7 +5878,7 @@ async function _coordHwpExtract(buffer) {
     }
     if(!sections.length) throw new Error('BodyText Section 없음');
     return sections.map(data=>{
-        let raw=data; try{raw=pako.inflateRaw(data);}catch(e){}
+        let raw=data;try{raw=pako.inflateRaw(data);}catch(e){}
         const sv=new DataView(raw.buffer,raw.byteOffset,raw.byteLength);
         let pos=0,text='';
         while(pos+4<=raw.length){
@@ -5662,43 +5891,25 @@ async function _coordHwpExtract(buffer) {
     }).join('\n');
 }
 
-// 추출 텍스트 → 교육생 배열 파싱
 function _coordParseRoster(text) {
     const lines=text.split(/[\n\r]+/).map(l=>l.trim()).filter(l=>l);
-    const students=[];
-    let startIdx=-1;
+    const students=[];let startIdx=-1;
     for(let i=0;i<lines.length;i++){
-        if(/^연\s*번$/.test(lines[i])){
-            for(let j=i+1;j<Math.min(i+12,lines.length);j++){if(lines[j]==='1'){startIdx=j;break;}}
-            if(startIdx>=0)break;
-        }
+        if(/^연\s*번$/.test(lines[i])){for(let j=i+1;j<Math.min(i+12,lines.length);j++){if(lines[j]==='1'){startIdx=j;break;}}if(startIdx>=0)break;}
     }
-    if(startIdx<0){
-        for(let i=0;i<lines.length;i++){
-            if(/교육생\s*명단/.test(lines[i])){
-                for(let j=i+1;j<Math.min(i+20,lines.length);j++){if(lines[j]==='1'){startIdx=j;break;}}
-                if(startIdx>=0)break;
-            }
-        }
-    }
+    if(startIdx<0){for(let i=0;i<lines.length;i++){if(/교육생\s*명단/.test(lines[i])){for(let j=i+1;j<Math.min(i+20,lines.length);j++){if(lines[j]==='1'){startIdx=j;break;}}if(startIdx>=0)break;}}}
     if(startIdx<0)return[];
     const POS=/^(부장|차장|과장|대리|주임|사원|팀장|교수|수석|본부장|처장|이사|소장|원장|선임|직원|대우)$/;
     let pos=startIdx,expectedSeq=1;
     while(pos<lines.length){
-        const seqStr=lines[pos];
-        if(!/^\d{1,3}$/.test(seqStr)){pos++;continue;}
-        const seq=parseInt(seqStr); if(seq>expectedSeq+3)break; pos++;
-        let empNo=''; if(pos<lines.length&&/^\d{4,6}$/.test(lines[pos]))empNo=lines[pos++]; else{pos++;continue;}
-        let name=''; if(pos<lines.length&&/^[가-힣\s]{1,8}$/.test(lines[pos]))name=lines[pos++].replace(/\s+/g,'').trim(); else{pos++;continue;}
+        const seqStr=lines[pos];if(!/^\d{1,3}$/.test(seqStr)){pos++;continue;}
+        const seq=parseInt(seqStr);if(seq>expectedSeq+3)break;pos++;
+        let empNo='';if(pos<lines.length&&/^\d{4,6}$/.test(lines[pos]))empNo=lines[pos++];else{pos++;continue;}
+        let name='';if(pos<lines.length&&/^[가-힣\s]{1,8}$/.test(lines[pos]))name=lines[pos++].replace(/\s+/g,'').trim();else{pos++;continue;}
         let dept='';
-        while(pos<lines.length){
-            const l=lines[pos];
-            if(/^\d{1,3}$/.test(l)||/^(남|여|넘|M|F)$/.test(l)||POS.test(l)||/^\d{4,6}$/.test(l))break;
-            dept+=(dept?' ':'')+l;pos++;if(dept.length>100)break;
-        }
-        let position=''; if(pos<lines.length&&POS.test(lines[pos]))position=lines[pos++];
-        else if(pos<lines.length&&/^[가-힣\s]{2,6}$/.test(lines[pos])&&!/^(남|여)$/.test(lines[pos]))position=lines[pos++];
-        let gender=''; if(pos<lines.length&&/^(남|여|넘|M|F)$/.test(lines[pos])){gender=/^(여|F)$/.test(lines[pos])?'F':'M';pos++;}
+        while(pos<lines.length){const l=lines[pos];if(/^\d{1,3}$/.test(l)||/^(남|여|넘|M|F)$/.test(l)||POS.test(l)||/^\d{4,6}$/.test(l))break;dept+=(dept?' ':'')+l;pos++;if(dept.length>100)break;}
+        let position='';if(pos<lines.length&&POS.test(lines[pos]))position=lines[pos++];else if(pos<lines.length&&/^[가-힣\s]{2,6}$/.test(lines[pos])&&!/^(남|여)$/.test(lines[pos]))position=lines[pos++];
+        let gender='';if(pos<lines.length&&/^(남|여|넘|M|F)$/.test(lines[pos])){gender=/^(여|F)$/.test(lines[pos])?'F':'M';pos++;}
         if(name&&empNo){students.push({seq,empNo,name,dept:dept.trim(),position,gender:gender||'M'});expectedSeq=seq+1;}
     }
     return students;
