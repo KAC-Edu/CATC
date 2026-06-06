@@ -7,6 +7,8 @@
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js"></script>
   <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" rel="stylesheet">
   <style>
 
@@ -968,6 +970,37 @@
     min-height: 100dvh;
 }
 
+/* ── PC 모드 ── */
+body.pc-mode { background: #f1f5f9; display: flex; justify-content: center; }
+body.pc-mode .app-container {
+    max-width: 1280px; width: 100%;
+    box-shadow: 0 0 40px rgba(0,0,0,0.08);
+}
+body.pc-mode .app-header { padding: 0 32px; }
+body.pc-mode #courseGrid {
+    display: grid !important;
+    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+    gap: 16px; padding: 20px 24px;
+}
+body.pc-mode .course-card { margin: 0; }
+
+/* 명단 업로드 모달 */
+#rosterUploadModal {
+    display: none; position: fixed; inset: 0;
+    background: rgba(15,23,42,0.55); z-index: 30000;
+    align-items: center; justify-content: center; padding: 20px;
+}
+#rosterUploadModal.open { display: flex; }
+.roster-upload-box {
+    background: #fff; width: 100%; max-width: 680px;
+    border-radius: 20px; overflow: hidden;
+    display: flex; flex-direction: column; max-height: 90vh;
+}
+.roster-upload-box table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.roster-upload-box table th { background: #f8fafc; padding: 8px 10px; font-weight: 800; color: #475569; border-bottom: 1.5px solid #e2e8f0; }
+.roster-upload-box table td { padding: 7px 10px; border-bottom: 1px solid #f1f5f9; }
+.roster-upload-box table tr:hover td { background: #f8fafc; }
+
 
 /* 팝업 또는 메뉴 열렸을 때 뒷배경 스크롤 방지 */
 body.modal-open {
@@ -1204,11 +1237,60 @@ body.modal-open .app-content {
       
       <!-- 2. 전체 공지 아이콘 (신규 추가) -->
       <button class="header-btn" onclick="openGlobalNoticeModal()"><i class="fa-solid fa-bullhorn"></i></button>
+
+      <!-- 3. 명단 업로드 -->
+      <button class="header-btn" onclick="openRosterUpload()" title="교육생 명단 업로드"><i class="fa-solid fa-file-arrow-up"></i></button>
+
+      <!-- 4. PC 모드 토글 -->
+      <button class="header-btn" id="pcModeBtn" onclick="togglePcMode()" title="PC 모드 전환"><i class="fa-solid fa-display"></i></button>
       
-      <!-- 3. 사이드 메뉴 아이콘 -->
+      <!-- 5. 사이드 메뉴 아이콘 -->
       <button class="header-btn" onclick="toggleMenu(true)"><i class="fa-solid fa-bars"></i></button>
   </div>
 </header>
+
+<!-- 교육생 명단 업로드 모달 -->
+<div id="rosterUploadModal">
+  <div class="roster-upload-box">
+    <div style="padding:20px 22px 14px; border-bottom:1.5px solid #e2e8f0; display:flex; align-items:center; gap:12px;">
+      <div style="font-size:20px;">📋</div>
+      <div style="flex:1;">
+        <div style="font-size:16px; font-weight:900; color:#0f172a;">교육생 명단 업로드</div>
+        <div style="font-size:12px; color:#64748b; margin-top:2px;">한글(HWP) 또는 PDF 파일을 업로드하면 자동 판독합니다</div>
+      </div>
+      <button onclick="closeRosterUpload()" style="background:none; border:none; font-size:20px; color:#94a3b8; cursor:pointer;">✕</button>
+    </div>
+    <div style="padding:16px 22px; border-bottom:1px solid #f1f5f9;">
+      <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+        <input type="file" id="coordRosterInput" accept="application/pdf,.hwp" style="display:none;" onchange="coordHandleRosterFile(event)">
+        <button onclick="document.getElementById('coordRosterInput').click()" style="padding:10px 18px; background:#2563eb; color:#fff; border:none; border-radius:10px; font-weight:800; font-size:13px; cursor:pointer; display:flex; align-items:center; gap:7px;"><i class="fa-solid fa-file-arrow-up"></i> PDF / HWP 선택</button>
+        <div id="coordRosterStatus" style="font-size:13px; color:#64748b;"></div>
+      </div>
+    </div>
+    <div style="overflow-y:auto; flex:1; min-height:200px;">
+      <table>
+        <thead>
+          <tr>
+            <th style="width:40px;">연번</th>
+            <th>성명</th>
+            <th style="width:80px;">사번</th>
+            <th>소속</th>
+            <th style="width:55px;">성별</th>
+          </tr>
+        </thead>
+        <tbody id="coordRosterBody">
+          <tr><td colspan="5" style="padding:24px; text-align:center; color:#94a3b8;">파일을 업로드하면 명단이 표시됩니다</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div style="padding:14px 22px; border-top:1.5px solid #e2e8f0; display:flex; gap:10px; justify-content:flex-end;">
+      <div style="flex:1; font-size:12px; color:#64748b; align-self:center;" id="coordRosterCount"></div>
+      <button onclick="coordSaveRoster()" style="padding:11px 22px; background:#16a34a; color:#fff; border:none; border-radius:10px; font-weight:900; font-size:13px; cursor:pointer;"><i class="fa-solid fa-floppy-disk"></i> Firebase 저장</button>
+      <button onclick="coordExportRoster()" style="padding:11px 16px; background:#f8fafc; color:#0f172a; border:1.5px solid #e2e8f0; border-radius:10px; font-weight:800; font-size:13px; cursor:pointer;"><i class="fa-solid fa-table"></i> 표 복사</button>
+      <button onclick="closeRosterUpload()" style="padding:11px 16px; background:#f1f5f9; color:#64748b; border:none; border-radius:10px; font-weight:800; font-size:13px; cursor:pointer;">닫기</button>
+    </div>
+  </div>
+</div>
 
 <!-- 과정 추가 팝업 (운영부) -->
 <div id="coordCourseAddPop" style="display:none; position:fixed; inset:0; background:rgba(15,23,42,0.55); z-index:21000; align-items:center; justify-content:center; padding:20px;">
@@ -5436,6 +5518,192 @@ const annualPlanMgrCoord = {
         </div>
     </div>
 </div>
+
+<script>
+// ═══ PC 모드 토글 ════════════════════════════════════════════════
+function togglePcMode() {
+    const isPc = document.body.classList.toggle('pc-mode');
+    localStorage.setItem('coord_pc_mode', isPc ? '1' : '');
+    const btn = document.getElementById('pcModeBtn');
+    if (btn) btn.innerHTML = isPc
+        ? '<i class="fa-solid fa-mobile-screen"></i>'
+        : '<i class="fa-solid fa-display"></i>';
+}
+(function() {
+    if (localStorage.getItem('coord_pc_mode')) {
+        document.body.classList.add('pc-mode');
+        const btn = document.getElementById('pcModeBtn');
+        if (btn) btn.innerHTML = '<i class="fa-solid fa-mobile-screen"></i>';
+    }
+    if (window.pdfjsLib) pdfjsLib.GlobalWorkerOptions.workerSrc =
+        'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+})();
+
+// ═══ 교육생 명단 업로드 모달 ══════════════════════════════════════
+let _coordRosterData = [];
+function openRosterUpload() { document.getElementById('rosterUploadModal').classList.add('open'); }
+function closeRosterUpload() { document.getElementById('rosterUploadModal').classList.remove('open'); }
+
+async function coordHandleRosterFile(ev) {
+    const file = ev.target.files[0]; if (!file) return;
+    ev.target.value = '';
+    const statusEl = document.getElementById('coordRosterStatus');
+    statusEl.textContent = '판독 중...';
+    try {
+        let students = [];
+        if (file.name.toLowerCase().endsWith('.hwp')) {
+            const buf = await file.arrayBuffer();
+            const text = await _coordHwpExtract(buf);
+            students = _coordParseRoster(text);
+        } else {
+            const buf = await file.arrayBuffer();
+            const pdf = await pdfjsLib.getDocument(new Uint8Array(buf)).promise;
+            let rawLines = [];
+            for (let p = 1; p <= pdf.numPages; p++) {
+                const page = await pdf.getPage(p);
+                const content = await page.getTextContent();
+                const rowsMap = {};
+                content.items.forEach(it => {
+                    const str = (it.str||'').trim(); if (!str) return;
+                    const y = Math.round(it.transform[5]);
+                    const key = Object.keys(rowsMap).find(k => Math.abs(k-y)<=3) ?? y;
+                    (rowsMap[key] = rowsMap[key]||[]).push(str);
+                });
+                Object.keys(rowsMap).sort((a,b)=>b-a).forEach(k => rawLines.push(rowsMap[k].join(' ')));
+            }
+            students = _coordParseRoster(rawLines.join('\n'));
+        }
+        _coordRosterData = students;
+        _coordRenderRoster(students);
+        statusEl.textContent = students.length ? `✅ ${students.length}명 판독됨` : '⚠️ 명단을 찾지 못했습니다';
+        document.getElementById('coordRosterCount').textContent = `총 ${students.length}명`;
+    } catch(e) {
+        console.error('[명단업로드]', e);
+        statusEl.textContent = '❌ 오류: ' + e.message;
+    }
+}
+
+function _coordRenderRoster(students) {
+    const tbody = document.getElementById('coordRosterBody');
+    if (!students.length) {
+        tbody.innerHTML = '<tr><td colspan="5" style="padding:20px;text-align:center;color:#94a3b8;">명단이 없습니다</td></tr>';
+        return;
+    }
+    tbody.innerHTML = students.map((s,i) => `<tr>
+        <td style="text-align:center;color:#94a3b8;">${i+1}</td>
+        <td style="font-weight:700;">${s.name}</td>
+        <td style="color:#64748b;">${s.empNo}</td>
+        <td style="color:#475569;font-size:12px;">${s.dept}</td>
+        <td style="text-align:center;font-size:12px;font-weight:700;color:${s.gender==='F'?'#ec4899':'#3b82f6'};">${s.gender==='F'?'여':'남'}</td>
+    </tr>`).join('');
+}
+
+async function coordSaveRoster() {
+    if (!_coordRosterData.length) { alert('저장할 명단이 없습니다'); return; }
+    const today = new Date().toISOString().slice(0,10);
+    const key = `coord_roster_${today}`;
+    await firebase.database().ref(`system/coord/rosters/${key}`).set({
+        savedAt: firebase.database.ServerValue.TIMESTAMP,
+        list: _coordRosterData
+    });
+    alert(`✅ ${_coordRosterData.length}명 명단 저장 완료\n경로: system/coord/rosters/${key}`);
+}
+
+function coordExportRoster() {
+    if (!_coordRosterData.length) { alert('내보낼 명단이 없습니다'); return; }
+    const header = '연번\t성명\t사번\t소속\t성별';
+    const rows = _coordRosterData.map((s,i)=>`${i+1}\t${s.name}\t${s.empNo}\t${s.dept}\t${s.gender==='F'?'여':'남'}`).join('\n');
+    navigator.clipboard.writeText(header+'\n'+rows)
+        .then(()=>alert('✅ 클립보드에 복사됐습니다. 엑셀에 붙여넣기 하세요.'))
+        .catch(()=>alert('복사 실패'));
+}
+
+// HWP CFB + pako 텍스트 추출
+async function _coordHwpExtract(buffer) {
+    const buf8=new Uint8Array(buffer), view=new DataView(buffer);
+    if (buf8[0]!==0xD0||buf8[1]!==0xCF) throw new Error('HWP CFB 형식 아님');
+    const ss=1<<view.getUint16(30,true), fatCount=view.getUint32(44,true), dirStart=view.getUint32(48,true);
+    const fat=new Int32Array(Math.ceil(buffer.byteLength/ss)+256).fill(-1);
+    let fi=0;
+    for(let i=0;i<109&&fi<fatCount;i++){
+        const fs=view.getUint32(76+i*4,true); if(fs>=0xFFFFFFFE) break;
+        for(let j=0;j<ss/4;j++){const off=(fs+1)*ss+j*4; if(off+4>buffer.byteLength)break; fat[fi*(ss/4)+j]=view.getInt32(off,true);} fi++;
+    }
+    const chain=s=>{const c=[];let cur=s;while(cur>=0&&cur<0xFFFFFFFE&&c.length<100000){c.push(cur);cur=fat[cur];}return c;};
+    const readStream=(sid,size)=>{
+        const secs=chain(sid),out=new Uint8Array(Math.min(size,secs.length*ss));let p=0;
+        for(const s of secs){const off=(s+1)*ss,sl=buf8.slice(off,off+ss),cp=Math.min(sl.length,out.length-p);out.set(sl.slice(0,cp),p);p+=cp;}
+        return out.slice(0,Math.min(size,out.length));
+    };
+    const sections=[];
+    for(const ds of chain(dirStart)){
+        const base=(ds+1)*ss;
+        for(let e=0;e+128<=ss;e+=128){
+            const o=base+e; if(o+128>buffer.byteLength)break;
+            const nameLen=view.getUint16(o+64,true); if(nameLen<=0||nameLen>64)continue;
+            let name=''; for(let n=0;n<nameLen-2;n+=2)name+=String.fromCharCode(view.getUint16(o+n,true));
+            if(buf8[o+66]!==2||!name.startsWith('Section'))continue;
+            const startId=view.getInt32(o+116,true),sz=view.getInt32(o+120,true);
+            if(startId>=0&&startId<0xFFFFFFFE&&sz>0)sections.push(readStream(startId,sz));
+        }
+    }
+    if(!sections.length) throw new Error('BodyText Section 없음');
+    return sections.map(data=>{
+        let raw=data; try{raw=pako.inflateRaw(data);}catch(e){}
+        const sv=new DataView(raw.buffer,raw.byteOffset,raw.byteLength);
+        let pos=0,text='';
+        while(pos+4<=raw.length){
+            const hdr=sv.getUint32(pos,true),tag=hdr&0x3FF;let sz=(hdr>>20)&0xFFF;pos+=4;
+            if(sz===0xFFF){if(pos+4>raw.length)break;sz=sv.getUint32(pos,true);pos+=4;}
+            if(tag===67){for(let j=0;j+1<sz;j+=2){if(pos+j+2>raw.length)break;const ch=raw[pos+j]|(raw[pos+j+1]<<8);if(ch>31&&ch!==0xFFFF)text+=String.fromCharCode(ch);}text+='\n';}
+            pos+=sz;
+        }
+        return text;
+    }).join('\n');
+}
+
+// 추출 텍스트 → 교육생 배열 파싱
+function _coordParseRoster(text) {
+    const lines=text.split(/[\n\r]+/).map(l=>l.trim()).filter(l=>l);
+    const students=[];
+    let startIdx=-1;
+    for(let i=0;i<lines.length;i++){
+        if(/^연\s*번$/.test(lines[i])){
+            for(let j=i+1;j<Math.min(i+12,lines.length);j++){if(lines[j]==='1'){startIdx=j;break;}}
+            if(startIdx>=0)break;
+        }
+    }
+    if(startIdx<0){
+        for(let i=0;i<lines.length;i++){
+            if(/교육생\s*명단/.test(lines[i])){
+                for(let j=i+1;j<Math.min(i+20,lines.length);j++){if(lines[j]==='1'){startIdx=j;break;}}
+                if(startIdx>=0)break;
+            }
+        }
+    }
+    if(startIdx<0)return[];
+    const POS=/^(부장|차장|과장|대리|주임|사원|팀장|교수|수석|본부장|처장|이사|소장|원장|선임|직원|대우)$/;
+    let pos=startIdx,expectedSeq=1;
+    while(pos<lines.length){
+        const seqStr=lines[pos];
+        if(!/^\d{1,3}$/.test(seqStr)){pos++;continue;}
+        const seq=parseInt(seqStr); if(seq>expectedSeq+3)break; pos++;
+        let empNo=''; if(pos<lines.length&&/^\d{4,6}$/.test(lines[pos]))empNo=lines[pos++]; else{pos++;continue;}
+        let name=''; if(pos<lines.length&&/^[가-힣\s]{1,8}$/.test(lines[pos]))name=lines[pos++].replace(/\s+/g,'').trim(); else{pos++;continue;}
+        let dept='';
+        while(pos<lines.length){
+            const l=lines[pos];
+            if(/^\d{1,3}$/.test(l)||/^(남|여|넘|M|F)$/.test(l)||POS.test(l)||/^\d{4,6}$/.test(l))break;
+            dept+=(dept?' ':'')+l;pos++;if(dept.length>100)break;
+        }
+        let position=''; if(pos<lines.length&&POS.test(lines[pos]))position=lines[pos++];
+        else if(pos<lines.length&&/^[가-힣\s]{2,6}$/.test(lines[pos])&&!/^(남|여)$/.test(lines[pos]))position=lines[pos++];
+        let gender=''; if(pos<lines.length&&/^(남|여|넘|M|F)$/.test(lines[pos])){gender=/^(여|F)$/.test(lines[pos])?'F':'M';pos++;}
+        if(name&&empNo){students.push({seq,empNo,name,dept:dept.trim(),position,gender:gender||'M'});expectedSeq=seq+1;}
+    }
+    return students;
+}
+</script>
 
 </body>
 </html>

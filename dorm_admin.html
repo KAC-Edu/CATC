@@ -8,6 +8,7 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js"></script>
     <script src="config.js"></script>
 
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -298,8 +299,8 @@
                 <p class="desc">명단 PDF(연번/성함/사번/소속/성별)를 업로드하면 자동 판독합니다. 판독이 부정확하면 표에서 직접 수정하거나 행을 추가/삭제하세요.</p>
 
                 <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px;">
-                    <input type="file" id="pdfInput" accept="application/pdf" style="display:none;" onchange="handlePdf(event)">
-                    <button class="save-btn" style="background:var(--blue);" onclick="document.getElementById('pdfInput').click()"><i class="fa-solid fa-file-pdf"></i> PDF 업로드</button>
+                    <input type="file" id="pdfInput" accept="application/pdf,.hwp" style="display:none;" onchange="handleRosterFile(event)">
+                    <button class="save-btn" style="background:var(--blue);" onclick="document.getElementById('pdfInput').click()"><i class="fa-solid fa-file-arrow-up"></i> PDF / HWP 업로드</button>
                     <button class="h-btn" style="background:#475569;" onclick="addRosterRow()"><i class="fa-solid fa-plus"></i> 행 추가</button>
                     <button class="h-btn" style="background:#475569;" onclick="clearRoster()"><i class="fa-solid fa-eraser"></i> 비우기</button>
                     <div style="flex:1;"></div>
@@ -1330,6 +1331,215 @@
                 }
                 renderRoster();
             });
+        }
+
+        // ══ HWP / PDF 통합 라우터 ══════════════════════════════════════
+        async function handleRosterFile(ev) {
+            const file = ev.target.files[0];
+            if (!file) return;
+            ev.target.value = '';
+            if (file.name.toLowerCase().endsWith('.hwp')) {
+                await handleHwp(file);
+            } else {
+                await handlePdf({ target: { files: [file], value: '' } });
+            }
+        }
+
+        // ── HWP 판독: CFB+zlib → 텍스트 → 명단 파싱 ──────────────────
+        async function handleHwp(file) {
+            document.getElementById('rosterPreview').innerText = '📄 HWP 판독 중...';
+            try {
+                const buf = await file.arrayBuffer();
+                const text = await _hwpExtractText(buf);
+                const parsed = _parseHwpRoster(text);
+                if (!parsed.length) {
+                    document.getElementById('rosterPreview').innerText = '⚠️ HWP 판독 결과가 없습니다. 표 형식을 확인하거나 PDF로 변환 후 시도하세요.';
+                    return;
+                }
+                parsed.forEach((r, i) => r.seq = i + 1);
+                roster = parsed;
+                renderRoster();
+                document.getElementById('rosterPreview').innerHTML =
+                    `✅ ${parsed.length}명 판독됨 (HWP). <b style="color:var(--warning);">반드시 내용을 확인/수정</b>한 뒤 저장하세요.`;
+                rosterDirty = true;
+            } catch (e) {
+                console.error('[HWP]', e);
+                document.getElementById('rosterPreview').innerText = '⚠️ HWP 판독 실패: ' + e.message;
+            }
+        }
+
+        // OLE CFB → BodyText 섹션 스트림 추출 → HWPTAG_CHAR 텍스트 파싱
+        async function _hwpExtractText(buffer) {
+            const buf8 = new Uint8Array(buffer);
+            const view = new DataView(buffer);
+
+            // CFB 시그니처 확인
+            if (buf8[0] !== 0xD0 || buf8[1] !== 0xCF) throw new Error('HWP 형식이 아닙니다 (CFB 시그니처 없음)');
+
+            const ss = 1 << view.getUint16(30, true); // 섹터 크기 (보통 512)
+            const fatCount = view.getUint32(44, true);
+            const dirStart = view.getUint32(48, true);
+
+            // FAT 구축 (헤더의 DIFAT 109개)
+            const fat = new Int32Array(Math.ceil(buffer.byteLength / ss) + 256).fill(-1);
+            let fi = 0;
+            for (let i = 0; i < 109 && fi < fatCount; i++) {
+                const fs = view.getUint32(76 + i * 4, true);
+                if (fs >= 0xFFFFFFFE) break;
+                for (let j = 0; j < ss / 4; j++) {
+                    const off = (fs + 1) * ss + j * 4;
+                    if (off + 4 > buffer.byteLength) break;
+                    fat[fi * (ss / 4) + j] = view.getInt32(off, true);
+                }
+                fi++;
+            }
+
+            const chain = (start) => {
+                const c = []; let cur = start;
+                while (cur >= 0 && cur < 0xFFFFFFFE && c.length < 100000) { c.push(cur); cur = fat[cur]; }
+                return c;
+            };
+            const readStream = (startId, size) => {
+                const sectors = chain(startId);
+                const out = new Uint8Array(Math.min(size, sectors.length * ss));
+                let p = 0;
+                for (const s of sectors) {
+                    const off = (s + 1) * ss;
+                    const slice = buf8.slice(off, off + ss);
+                    const copy = Math.min(slice.length, out.length - p);
+                    out.set(slice.slice(0, copy), p); p += copy;
+                }
+                return out.slice(0, Math.min(size, out.length));
+            };
+
+            // 디렉터리 읽기 → Section* 스트림 찾기
+            const sections = [];
+            for (const ds of chain(dirStart)) {
+                const base = (ds + 1) * ss;
+                for (let e = 0; e + 128 <= ss; e += 128) {
+                    const o = base + e;
+                    if (o + 128 > buffer.byteLength) break;
+                    const nameLen = view.getUint16(o + 64, true);
+                    if (nameLen <= 0 || nameLen > 64) continue;
+                    let name = '';
+                    for (let n = 0; n < nameLen - 2; n += 2)
+                        name += String.fromCharCode(view.getUint16(o + n, true));
+                    if (buf8[o + 66] !== 2) continue; // stream only
+                    if (!name.startsWith('Section')) continue;
+                    const startId = view.getInt32(o + 116, true);
+                    const sz = view.getInt32(o + 120, true);
+                    if (startId >= 0 && startId < 0xFFFFFFFE && sz > 0)
+                        sections.push(readStream(startId, sz));
+                }
+            }
+            if (!sections.length) throw new Error('BodyText/Section 스트림을 찾을 수 없습니다');
+
+            // 각 섹션: raw deflate 압축해제 → HWPTAG_CHAR(67) 레코드에서 텍스트 추출
+            return sections.map(data => {
+                let raw = data;
+                try { raw = pako.inflateRaw(data); } catch(e) {}
+                const sv = new DataView(raw.buffer, raw.byteOffset, raw.byteLength);
+                let pos = 0, text = '';
+                while (pos + 4 <= raw.length) {
+                    const hdr = sv.getUint32(pos, true);
+                    const tag = hdr & 0x3FF;
+                    let sz = (hdr >> 20) & 0xFFF;
+                    pos += 4;
+                    if (sz === 0xFFF) { if (pos + 4 > raw.length) break; sz = sv.getUint32(pos, true); pos += 4; }
+                    if (tag === 67) { // HWPTAG_CHAR
+                        for (let j = 0; j + 1 < sz; j += 2) {
+                            if (pos + j + 2 > raw.length) break;
+                            const ch = raw[pos + j] | (raw[pos + j + 1] << 8);
+                            if (ch > 31 && ch !== 0xFFFF) text += String.fromCharCode(ch);
+                        }
+                        text += '\n';
+                    }
+                    pos += sz;
+                }
+                return text;
+            }).join('\n');
+        }
+
+        // HWP 추출 텍스트에서 교육생 명단 파싱
+        function _parseHwpRoster(text) {
+            const lines = text.split(/[\n\r]+/).map(l => l.trim()).filter(l => l);
+            const students = [];
+
+            // "연번" 헤더 → 첫 번째 "1" 위치 탐색
+            let startIdx = -1;
+            for (let i = 0; i < lines.length; i++) {
+                if (/^연\s*번$/.test(lines[i])) {
+                    for (let j = i + 1; j < Math.min(i + 12, lines.length); j++) {
+                        if (lines[j] === '1') { startIdx = j; break; }
+                    }
+                    if (startIdx >= 0) break;
+                }
+            }
+            // 대체 탐색: "교육생 명단" 이후 첫 "1"
+            if (startIdx < 0) {
+                for (let i = 0; i < lines.length; i++) {
+                    if (/교육생\s*명단/.test(lines[i])) {
+                        for (let j = i + 1; j < Math.min(i + 20, lines.length); j++) {
+                            if (lines[j] === '1') { startIdx = j; break; }
+                        }
+                        if (startIdx >= 0) break;
+                    }
+                }
+            }
+            if (startIdx < 0) return [];
+
+            const POSITION = /^(부장|차장|과장|대리|주임|사원|팀장|교수|수석|본부장|처장|이사|소장|원장|선임|직원|대우|차장 대우|팀장 대우)$/;
+            let pos = startIdx, expectedSeq = 1;
+
+            while (pos < lines.length) {
+                const seqStr = lines[pos];
+                if (!/^\d{1,3}$/.test(seqStr)) { pos++; continue; }
+                const seq = parseInt(seqStr);
+                if (seq > expectedSeq + 3) break;
+                pos++;
+
+                // 사번 (4~6자리)
+                let empNo = '';
+                if (pos < lines.length && /^\d{4,6}$/.test(lines[pos])) empNo = lines[pos++];
+                else { pos++; continue; }
+
+                // 성명 (한글 1~8자, 공백 포함)
+                let name = '';
+                if (pos < lines.length && /^[가-힣\s]{1,8}$/.test(lines[pos]))
+                    name = lines[pos++].replace(/\s+/g, '').trim();
+                else { pos++; continue; }
+
+                // 소속 (직위·성별·다음연번 전까지)
+                let dept = '';
+                while (pos < lines.length) {
+                    const l = lines[pos];
+                    if (/^\d{1,3}$/.test(l)) break;
+                    if (/^(남|여|넘|M|F)$/.test(l)) break;
+                    if (POSITION.test(l)) break;
+                    if (/^\d{4,6}$/.test(l)) break;
+                    dept += (dept ? ' ' : '') + l; pos++;
+                    if (dept.length > 100) break;
+                }
+
+                // 직위
+                let position = '';
+                if (pos < lines.length && POSITION.test(lines[pos])) position = lines[pos++];
+                else if (pos < lines.length && /^[가-힣\s]{2,6}$/.test(lines[pos]) && !/^(남|여)$/.test(lines[pos]))
+                    position = lines[pos++];
+
+                // 성별
+                let gender = '';
+                if (pos < lines.length && /^(남|여|넘|M|F)$/.test(lines[pos])) {
+                    gender = /^(여|F)$/.test(lines[pos]) ? 'F' : 'M';
+                    pos++;
+                }
+
+                if (name && empNo) {
+                    students.push({ seq, empNo, name, dept: dept.trim(), gender: gender || 'M' });
+                    expectedSeq = seq + 1;
+                }
+            }
+            return students;
         }
 
         // ── PDF 판독: 행(Y) 기반 표 파싱 ──
