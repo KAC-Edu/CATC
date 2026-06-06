@@ -121,28 +121,23 @@
     .app-container { width: 100%; max-width: 600px; min-height: 100dvh; background: var(--bg-cool); position: relative; display: flex; flex-direction: column; box-shadow: 0 0 30px rgba(0,0,0,0.1); }
     
 /* 상단바 (1안: 실선 제거 및 모던한 그림자 적용) */
-    .app-header {
-        background: linear-gradient(135deg, #0f2057 0%, #1a3a8a 50%, #2563eb 100%);
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        padding: 14px 18px;
-        flex-shrink: 0;
-        position: sticky;
-        top: 0;
-        z-index: 1000;
-        /* 헤더 아래가 coord-hero와 이어지므로 border·shadow 없음 */
-        border-bottom: none;
-        box-shadow: none;
+    .app-header { 
+        height: 55px; 
+        background: var(--navy-dark); 
+        display: flex; 
+        align-items: center; 
+        justify-content: space-between; 
+        padding: 0 20px; 
+        flex-shrink: 0; 
+        /* 🚩 기존 border-bottom 제거 및 그림자 추가 */
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2); 
+        position: sticky; 
+        top: 0; 
+        z-index: 1000; 
     }
-
-    .header-btn {
-        font-size: 19px;
-        color: rgba(255,255,255,0.85);
-        cursor: pointer; border: none; background: none;
-        transition: opacity 0.2s; padding: 4px;
-    }
-    .header-btn:active { opacity: 0.6; }
+    
+    .header-btn { 
+        font-size: 20px; 
         color: #fff; 
         cursor: pointer; 
         border: none; 
@@ -478,52 +473,52 @@
 .action-white .icon-pickup, .action-white .icon-shuttle { color: inherit !important; }
 
 /* ════ 히어로 섹션 (훈련원 전경 배너) ════ */
-/* ── 헤더와 이어지는 파란 히어로 (이미지 없음) ── */
 .coord-hero {
-    background: linear-gradient(160deg, #0f2057 0%, #1a3a8a 55%, #2563eb 100%);
-    padding: 14px 18px 22px;
-    border-radius: 0 0 24px 24px;   /* 상단 없음 → 헤더에서 이어짐, 하단만 곡선 */
-    margin-bottom: 14px;
     position: relative;
+    width: 100%;
+    border-radius: 22px;
     overflow: hidden;
+    margin-bottom: 16px;
+    box-shadow: 0 12px 28px rgba(15, 23, 42, 0.28);
+    aspect-ratio: 800 / 300;
+    background: #0f172a;
 }
-/* 배경 장식 원 */
-.coord-hero::before {
-    content: ''; position: absolute;
-    top: -40px; right: -40px;
-    width: 160px; height: 160px; border-radius: 50%;
-    background: rgba(255,255,255,0.07); pointer-events: none;
+.coord-hero__img {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%;
+    object-fit: cover;
+    display: block;
 }
-.coord-hero::after {
-    content: ''; position: absolute;
-    bottom: -20px; left: 20px;
-    width: 100px; height: 100px; border-radius: 50%;
-    background: rgba(255,255,255,0.05); pointer-events: none;
+/* 가독성을 위한 하단 그라데이션 오버레이 (더 진하게) */
+.coord-hero__overlay {
+    position: absolute; inset: 0;
+    background: linear-gradient(180deg, rgba(2,12,32,0.10) 0%, rgba(2,12,32,0.45) 55%, rgba(2,12,32,0.92) 100%);
 }
-/* 이미지·오버레이 완전 숨김 */
-.coord-hero__img     { display: none !important; }
-.coord-hero__overlay { display: none !important; }
 .coord-hero__content {
-    position: relative; z-index: 1;
-    display: flex; flex-direction: column; gap: 14px;
+    position: absolute; left: 0; right: 0; bottom: 0;
+    padding: 18px 20px;
+    display: flex; flex-direction: column; gap: 12px;
 }
 .coord-hero__title {
     color: #fff;
-    font-size: 16px; font-weight: 900; letter-spacing: -0.3px;
+    font-size: 18px; font-weight: 900; letter-spacing: -0.5px;
+    text-shadow: 0 2px 10px rgba(0,0,0,0.7);
     display: flex; align-items: center; gap: 9px;
 }
-.coord-hero__title i { color: #93c5fd; font-size: 14px; }
+.coord-hero__title i { color: #93c5fd; }
 .coord-hero__title small {
-    font-size: 11px; font-weight: 800;
-    background: rgba(255,255,255,0.18);
-    border: 1px solid rgba(255,255,255,0.25);
+    font-size: 11px; font-weight: 800; opacity: 0.95;
+    background: rgba(37,99,235,0.85);
     padding: 3px 10px; border-radius: 999px;
+    backdrop-filter: blur(4px);
 }
 /* 실시간 요약 배지 */
 .coord-hero__badges { display: flex; gap: 10px; flex-wrap: wrap; }
 .hero-badge {
     display: inline-flex; align-items: center; gap: 9px;
-    background: rgba(255,255,255,0.12);
+    background: rgba(15,23,42,0.55);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
     border: 1px solid rgba(255,255,255,0.22);
     border-radius: 14px;
     padding: 9px 15px;
@@ -1382,15 +1377,15 @@ body.pc-mode .entry-box:hover, body.pc-mode .entry-box-tablet:hover {
       </div>
 
 <div id="side-global-menu" style="display:none; flex-direction:column; gap:12px;">
+    <!-- [복구] 과정 추가 및 개설 버튼 -->
     <button class="navy-btn" style="background:#3b82f6; height:45px;" onclick="openSetupModal()">
         <i class="fa-solid fa-plus-circle"></i> 교육과정 추가/설정
     </button>
-    <button class="navy-btn" style="background:#f97316; height:45px;" onclick="openGlobalNoticeModal(); toggleMenu(false);">
-        <i class="fa-solid fa-bullhorn"></i> 전체 공지 작성
-    </button>
-    <button class="navy-btn" style="background:#1e293b; height:45px;" onclick="openCenterQrModal(); toggleMenu(false);">
+    <!-- 여기에 QR 보기 버튼을 추가로 배치하면 편리합니다 -->
+    <button class="navy-btn" style="background:#1e293b; height:45px;" onclick="openCenterQrModal()">
         <i class="fa-solid fa-qrcode"></i> 행정관리 접속용 QR
     </button>
+    <!-- 연간계획 관리/수정 버튼 -->
     <button class="navy-btn" style="background:#003366; height:45px;" onclick="annualPlanMgrCoord.openEditorModal()">
         <i class="fa-solid fa-calendar-days"></i> 연간계획 관리/수정
     </button>
@@ -1429,23 +1424,13 @@ body.pc-mode .entry-box:hover, body.pc-mode .entry-box-tablet:hover {
 
 <!-- 상단 헤더 부분 (수정됨) -->
 <header class="app-header">
-  <!-- 좌: 뒤로가기 -->
-  <button class="header-btn" onclick="handleBackNav()" style="font-family:'Pretendard';font-weight:900;letter-spacing:-2px;font-size:18px;">&lt;&lt;</button>
-  <!-- 중: 브랜드 뱃지 -->
-  <div style="display:flex;align-items:center;gap:10px;flex:1;margin:0 12px;">
-    <div style="width:33px;height:33px;background:rgba(255,255,255,0.2);border:1.5px solid rgba(255,255,255,0.35);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:14px;color:#fff;flex-shrink:0;"><i class="fa-solid fa-building-columns"></i></div>
-    <div>
-      <div style="font-size:9px;color:rgba(255,255,255,0.6);font-weight:700;letter-spacing:1.2px;text-transform:uppercase;line-height:1;">Korea Airports Corp. · CATC</div>
-      <div style="font-size:14px;font-weight:900;color:#fff;margin-top:2px;line-height:1;">교육운영부</div>
-    </div>
-  </div>
-  <!-- 우: 시계 + 메뉴 버튼 -->
-  <div style="display:flex;align-items:center;gap:10px;flex-shrink:0;">
-    <div style="text-align:right;">
-      <div id="coordHeaderTime" style="font-size:17px;font-weight:800;color:#fff;letter-spacing:-0.5px;line-height:1;">--:--</div>
-      <div id="coordHeaderDate" style="font-size:10px;color:rgba(255,255,255,0.65);margin-top:2px;font-weight:600;">----.--.--(---)</div>
-    </div>
-    <button class="header-btn" onclick="toggleMenu(true)" style="width:33px;height:33px;background:rgba(255,255,255,0.18);border:1px solid rgba(255,255,255,0.28);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:14px;padding:0;"><i class="fa-solid fa-bars"></i></button>
+  <button class="header-btn" onclick="handleBackNav()" style="font-family: 'Pretendard'; font-weight: 900; letter-spacing: -2px;">&lt;&lt;</button>
+  <div class="header-title">항공기술훈련원 교육운영부</div>
+  <div style="display:flex; gap:15px; align-items:center;">
+      <button class="header-btn" onclick="openCenterQrModal()"><i class="fa-solid fa-qrcode"></i></button>
+      <button class="header-btn" onclick="openGlobalNoticeModal()"><i class="fa-solid fa-bullhorn"></i></button>
+      <button class="header-btn" id="pcModeBtn" onclick="togglePcMode()" title="PC 모드" style="display:none;"><i class="fa-solid fa-display"></i></button>
+      <button class="header-btn" onclick="toggleMenu(true)"><i class="fa-solid fa-bars"></i></button>
   </div>
 </header>
 
@@ -4064,25 +4049,6 @@ function executePrintProcess(mode) {
 // [2] 화면 UI 제어 및 유틸리티 함수 (중복 제거용)
 // ==========================================
 
-// ── 헤더 시계 ───────────────────────────────────────────────
-(function() {
-    const DAYS = ['일','월','화','수','목','금','토'];
-    function tick() {
-        const now = new Date();
-        const h = now.getHours(), m = now.getMinutes();
-        const ampm = h >= 12 ? 'PM' : 'AM';
-        const h12 = (h % 12 || 12).toString().padStart(2,'0');
-        const el1 = document.getElementById('coordHeaderTime');
-        const el2 = document.getElementById('coordHeaderDate');
-        if (el1) el1.textContent = `${h12}:${m.toString().padStart(2,'0')} ${ampm}`;
-        if (el2) {
-            const y=now.getFullYear(), mo=now.getMonth()+1, d=now.getDate();
-            el2.textContent = `${y}.${String(mo).padStart(2,'0')}.${String(d).padStart(2,'0')} (${DAYS[now.getDay()]})`;
-        }
-    }
-    tick(); setInterval(tick, 1000);
-})();
-
 function toggleMenu(open) { 
     const sideMenu = document.getElementById('sideMenu');
     const menuOverlay = document.getElementById('menuOverlay');
@@ -5742,8 +5708,17 @@ const annualPlanMgrCoord = {
       <div style="flex:1;"><div style="font-size:16px; font-weight:900; color:#0f172a;">교육생 명단 업로드</div><div style="font-size:12px; color:#64748b; margin-top:2px;">한글(HWP) 또는 PDF 파일을 업로드하면 자동 판독합니다</div></div>
       <button onclick="closeRosterUpload()" style="background:none; border:none; font-size:20px; color:#94a3b8; cursor:pointer;">✕</button>
     </div>
-    <div style="padding:14px 22px; border-bottom:1px solid #f1f5f9; display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
-      <input type="file" id="coordRosterInput" accept="application/pdf,.hwp" style="display:none;" onchange="coordHandleRosterFile(event)">
+    <!-- 지원부 공유 명단 배너 (자동 표시/숨김) -->
+    <div id="dormSharedBanner" style="display:none; margin:12px 22px 0; padding:12px 16px; background:#f0fdf4; border:1.5px solid #86efac; border-radius:12px; align-items:center; gap:12px;">
+      <div style="font-size:20px; flex-shrink:0;">🏨</div>
+      <div style="flex:1;">
+        <div style="font-size:13px; font-weight:900; color:#15803d;">교육지원부에서 이미 명단이 업로드되어 있습니다</div>
+        <div style="font-size:11.5px; color:#166534; margin-top:2px;" id="dormSharedInfo">명단을 불러오는 중...</div>
+      </div>
+      <button onclick="loadDormSharedRoster()" style="padding:7px 14px; background:#16a34a; color:#fff; border:none; border-radius:9px; font-weight:800; font-size:12px; cursor:pointer; flex-shrink:0;">명단 불러오기</button>
+    </div>
+    <div style="padding:14px 22px; border-bottom:1px solid #f1f5f9; display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-top:8px;">
+      <input type="file" id="coordRosterInput" accept="application/pdf,.hwp,.hwpx" style="display:none;" onchange="coordHandleRosterFile(event)">
       <button onclick="document.getElementById('coordRosterInput').click()" style="padding:10px 18px; background:#2563eb; color:#fff; border:none; border-radius:10px; font-weight:800; font-size:13px; cursor:pointer; display:flex; align-items:center; gap:7px;"><i class="fa-solid fa-file-arrow-up"></i> PDF / HWP 선택</button>
       <div id="coordRosterStatus" style="font-size:13px; color:#64748b;"></div>
     </div>
@@ -5882,9 +5857,75 @@ if (_origHRS) {
 }
 
 // ══ 명단 업로드 모달 ══════════════════════════════════════
-function openRosterUpload() {
+// ── 지원부(dorm) 공유 명단 캐시 ──────────────────────────────
+let _dormSharedRoster = null;  // { list, courseName, updatedAt }
+
+function _getDormRosterKey() {
+    // dorm_admin과 동일한 키 형식: {weekKey}__{room}
+    const d = new Date();
+    const dow = d.getDay();
+    const mon = new Date(d);
+    mon.setDate(d.getDate() - (dow === 0 ? 6 : dow - 1));
+    // 토요일이면 다음주 월요일
+    if (dow === 6) mon.setDate(mon.getDate() + 7);
+    const wk = mon.toISOString().slice(0, 10);
+    return `${wk}__${currentRID}`;
+}
+
+async function openRosterUpload() {
     const m = document.getElementById('rosterUploadModal');
-    if (m) m.style.display = 'flex';
+    if (!m) return;
+    // 배너 초기화
+    const banner = document.getElementById('dormSharedBanner');
+    const infoEl = document.getElementById('dormSharedInfo');
+    if (banner) banner.style.display = 'none';
+    _dormSharedRoster = null;
+    m.style.display = 'flex';
+
+    // 현재 과정(currentRID)이 있으면 지원부 명단 조회
+    if (currentRID) {
+        const key = _getDormRosterKey();
+        try {
+            const snap = await firebase.database().ref(`system/dorm/rosters/${key}`).once('value');
+            const data = snap.val();
+            if (data && data.list && data.list.length) {
+                _dormSharedRoster = data;
+                if (banner && infoEl) {
+                    const upd = data.updatedAt ? new Date(data.updatedAt) : null;
+                    const timeStr = upd
+                        ? `${upd.getMonth()+1}/${upd.getDate()} ${String(upd.getHours()).padStart(2,'0')}:${String(upd.getMinutes()).padStart(2,'0')} 업로드`
+                        : '';
+                    infoEl.textContent = `${data.courseName || ''} · ${data.list.length}명${timeStr ? ' · ' + timeStr : ''}`;
+                    banner.style.display = 'flex';
+                }
+            }
+        } catch(e) { console.warn('[지원부 명단 조회]', e); }
+    }
+}
+
+function loadDormSharedRoster() {
+    if (!_dormSharedRoster || !_dormSharedRoster.list) return;
+    const students = _dormSharedRoster.list.map((s, i) => ({
+        seq: i + 1,
+        empNo: s.empNo || '',
+        name: s.name || '',
+        dept: s.dept || '',
+        gender: s.gender || 'M'
+    }));
+    _coordRosterData = students;
+    const tbody = document.getElementById('coordRosterBody');
+    tbody.innerHTML = students.map((s,i) => `<tr>
+        <td style="text-align:center;color:#94a3b8;padding:7px 10px;border-bottom:1px solid #f1f5f9;">${i+1}</td>
+        <td style="font-weight:700;padding:7px 10px;border-bottom:1px solid #f1f5f9;">${s.name}</td>
+        <td style="color:#64748b;padding:7px 10px;border-bottom:1px solid #f1f5f9;">${s.empNo}</td>
+        <td style="color:#475569;font-size:12px;padding:7px 10px;border-bottom:1px solid #f1f5f9;">${s.dept}</td>
+        <td style="text-align:center;padding:7px 10px;border-bottom:1px solid #f1f5f9;font-size:12px;font-weight:700;color:${s.gender==='F'?'#ec4899':'#3b82f6'};">${s.gender==='F'?'여':'남'}</td>
+    </tr>`).join('');
+    document.getElementById('coordRosterStatus').textContent = `✅ 지원부 명단 ${students.length}명 불러옴`;
+    document.getElementById('coordRosterCount').textContent = `총 ${students.length}명`;
+    // 배너 색상 변경 (불러옴 완료)
+    const banner = document.getElementById('dormSharedBanner');
+    if (banner) banner.style.background = '#eff6ff', banner.style.borderColor = '#93c5fd';
 }
 function closeRosterUpload() {
     const m = document.getElementById('rosterUploadModal');
