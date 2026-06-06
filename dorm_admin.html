@@ -2372,6 +2372,26 @@
             const sel = document.getElementById('viewWeekSelect');
             const snap = await db.ref('system/dorm/assignments').once('value');
             const all = snap.val() || {};
+
+            // ── 지난 주차 배정 결과 자동 정리 ──
+            //  현재 기준 대상 주(targetMon) 이전 주까지만 삭제 (현재 주 보호)
+            try {
+                const targetMon = getTargetMondayKey();
+                const prevCutoff = (function() {
+                    const d = new Date(targetMon + 'T00:00:00');
+                    d.setDate(d.getDate() - 1);
+                    return d.toISOString().slice(0, 10);
+                })();
+                const oldKeys = Object.keys(all).filter(k => k <= prevCutoff);
+                if (oldKeys.length) {
+                    const del = {};
+                    oldKeys.forEach(k => { del[`system/dorm/assignments/${k}`] = null; });
+                    await db.ref().update(del);
+                    oldKeys.forEach(k => delete all[k]);
+                    console.log('[배정 자동정리] 삭제된 주차:', oldKeys);
+                }
+            } catch(e) { console.warn('[배정 자동정리 실패]', e); }
+
             const wks = Object.keys(all).sort().reverse();
             if (!wks.length) {
                 sel.innerHTML = `<option value="">배정 결과가 없습니다</option>`;
