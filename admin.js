@@ -4614,6 +4614,16 @@ resetShuttleRequests: function() {
             fsIcon.classList.toggle('fa-expand', !isHidden);
             fsIcon.classList.toggle('fa-compress', isHidden);
         }
+        // 사이드바 너비에 따라 CSS 변수 업데이트 → 모달 센터 정렬에 반영
+        const sidebar = document.querySelector('.sidebar');
+        const updateSidebarVar = () => {
+            const w = sidebar ? sidebar.getBoundingClientRect().width : 0;
+            document.documentElement.style.setProperty('--sidebar-width', w + 'px');
+        };
+        updateSidebarVar();
+        // 트랜지션 중에도 계속 업데이트
+        const ticker = setInterval(updateSidebarVar, 16);
+        setTimeout(() => { clearInterval(ticker); updateSidebarVar(); }, 350);
     },
 
     // 전역 로딩 스피너
@@ -6497,7 +6507,15 @@ window.onload = function() {
     coordMgr.init(); 
     guideMgr.init();
     ui.startHeaderClock(); // 헤더 날짜/시간 시계 시작
-    dataMgr.initSystem(); 
+    dataMgr.initSystem();
+    // 사이드바 너비를 CSS 변수에 초기화 → 모달 센터 정렬용
+    requestAnimationFrame(() => {
+        const sidebar = document.querySelector('.sidebar');
+        if (sidebar) {
+            const w = sidebar.getBoundingClientRect().width;
+            document.documentElement.style.setProperty('--sidebar-width', w + 'px');
+        }
+    });
 };
 
 

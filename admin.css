@@ -342,8 +342,8 @@ body.night-mode .q-card.status-pin {
 .modal-overlay { 
     position: fixed; 
     top: 0; 
-    left: 0 !important;
-    width: 100% !important;
+    left: var(--sidebar-width, 300px) !important;
+    width: calc(100% - var(--sidebar-width, 300px)) !important;
     height: 100%; 
     background: rgba(0,0,0,0.6); 
     z-index: 10000 !important; 
@@ -351,6 +351,11 @@ body.night-mode .q-card.status-pin {
     align-items: center; 
     justify-content: center; 
     backdrop-filter: blur(10px) !important; 
+}
+/* 사이드바 숨김 시 전체 너비로 복원 */
+body.sidebar-hidden .modal-overlay {
+    left: 0 !important;
+    width: 100% !important;
 }
 .modal-box { background: var(--card-bg); width: 600px; padding: 30px; border-radius: 20px; box-shadow: 0 25px 50px rgba(0,0,0,0.2); animation: popIn 0.3s; }
 .modal-header { margin-bottom: 20px; text-align: center; color: var(--text-color); }
