@@ -3092,73 +3092,73 @@
         }
 
         // 새 창 없이 숨김 iframe으로 바로 인쇄(파일명 = 문서 제목 → PDF 저장 시 그대로 사용)
-        // ── PDF 직접 다운로드 (브라우저 머릿말/꼬릿말 없음) ──────────
         function _printDoc(fileName, bodyHtml, extraCss) {
-            const old = document.getElementById('_kacPdfEl'); if (old) old.remove();
+            // 이전 잔여 요소 정리
+            ['_kacPdfEl','_kacPdfOverlay'].forEach(id => { const e = document.getElementById(id); if (e) e.remove(); });
 
-            // CSS 추출 (extraCss는 <style>...</style> 형태)
-            const extraCssText = (extraCss || '').replace(/<\/?style[^>]*>/g, '');
+            // ── 로딩 오버레이 (흰 화면으로 내용 가리기) ──
+            const overlay = document.createElement('div');
+            overlay.id = '_kacPdfOverlay';
+            overlay.style.cssText = 'position:fixed;inset:0;background:rgba(255,255,255,0.96);z-index:999999;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:14px;';
+            overlay.innerHTML = `
+                <div style="font-size:40px;">📄</div>
+                <div style="font-size:16px;font-weight:800;color:#1e293b;">PDF 생성 중...</div>
+                <div style="font-size:13px;color:#64748b;">잠시 기다려 주세요</div>`;
+            document.body.appendChild(overlay);
 
-            // 렌더링용 임시 컨테이너
+            // ── PDF 콘텐츠 요소: 뷰포트 안에 배치 (html2canvas 캡처 가능) ──
             const el = document.createElement('div');
             el.id = '_kacPdfEl';
-            el.style.cssText = 'position:absolute;left:-9999px;top:0;width:277mm;background:#fff;padding:10mm 10mm 8mm;font-family:"Malgun Gothic","Apple SD Gothic Neo",sans-serif;color:#1e293b;';
+            // 오버레이 뒤, 뷰포트 안에 위치 → html2canvas가 정상 캡처
+            el.style.cssText = 'position:fixed;left:0;top:0;width:1120px;min-height:100vh;background:#fff;z-index:999998;padding:22px 24px 16px;overflow:visible;';
 
-            const baseStyle = `
-                *{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
-                h1{text-align:center;font-size:20px;font-weight:900;margin:0 0 5px;letter-spacing:-0.5px;}
-                .sub{text-align:center;color:#64748b;margin-bottom:14px;font-size:11.5px;}
-                .legend{display:flex;flex-direction:column;align-items:flex-start;gap:5px;padding:10px 16px;background:#fff;border:1.5px solid #e2e8f0;border-radius:10px;margin:0;max-width:57%;}
-                .leg-item{display:flex;align-items:center;gap:7px;font-size:12px;font-weight:800;}
-                .leg-swatch{width:12px;height:12px;border-radius:3px;display:inline-block;flex-shrink:0;}
-                .leg-period{font-size:10px;font-weight:600;color:#94a3b8;}
-                .pf-block{margin-bottom:16px;}
-                .pf-bldg-header{display:flex;align-items:center;gap:8px;color:#fff;padding:7px 16px;border-radius:10px 10px 0 0;font-size:14px;font-weight:900;}
-                .pf-floor-wrap{background:#fff;border:3px solid;border-top:none;border-radius:0 0 10px 10px;padding:12px;}
-                .pf-floor-label{font-size:11px;font-weight:900;color:#1e3a8a;margin:10px 0 5px;padding:2px 8px;background:#eff6ff;border-left:4px solid #2563eb;border-radius:0 5px 5px 0;display:inline-block;}
-                .pf-floor-label:first-child{margin-top:0;}
-                .pf-canvas{position:relative;width:100%;border:2px solid #334155;border-radius:4px;background:#f0f4f8;}
-                .pf-room-empty{position:absolute;border:1.5px solid #94a3b8;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;overflow:hidden;}
-                .pf-room-occ{position:absolute;border:1.5px solid #94a3b8;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;overflow:hidden;}
-                .pf-room-empty .rno,.pf-room-occ .rno{display:block;width:100%;text-align:center;font-size:9px;font-weight:900;background:#f1f5f9;border-bottom:1.5px solid #cbd5e1;padding:1px 0;line-height:1.5;}
-                .pf-room-occ .rno{color:#fff;border-bottom-color:rgba(0,0,0,.15);}
-                .pf-name{display:block;font-size:9.5px;font-weight:800;line-height:1.3;color:#0f172a;text-align:center;padding:0 1px;}
-                .pf-fac{position:absolute;background:repeating-linear-gradient(45deg,#e2e8f0,#e2e8f0 3px,#f1f5f9 3px,#f1f5f9 9px);border:1.5px solid #94a3b8;color:#475569;font-size:9.5px;font-weight:800;display:flex;align-items:center;justify-content:center;text-align:center;}
-                .pf-corridor{position:absolute;background:#e2e8f0;border:1px solid #cbd5e1;color:#94a3b8;font-size:8.5px;font-weight:700;display:flex;align-items:center;justify-content:center;letter-spacing:2px;}
-                .page-break{break-before:page;page-break-before:always;margin-top:16px;}
-                /* 건물 상단 행: 범례(좌) + 사진(우) */
-                .bldg-top-row{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:12px;}
-                .bldg-photo-box{display:flex;flex-direction:column;align-items:flex-end;gap:0;flex-shrink:0;}
-                .bldg-photo-box img{width:200px;height:130px;object-fit:cover;border-radius:10px;border:1.5px solid #e2e8f0;display:block;}
-                /* AED 안내 */
-                .aed-notice{display:flex;align-items:center;gap:9px;margin-top:10px;padding:8px 14px;background:#fffbeb;border:1.5px solid #fcd34d;border-radius:9px;font-size:12px;font-weight:700;color:#78350f;}
-                .aed-icon{font-size:17px;flex-shrink:0;}
-            `;
+            // _docHead()에서 CSS 추출
+            const headStr = _docHead(fileName);
+            const cssMatch = headStr.match(/<style>([\s\S]*?)<\/style>/);
+            const docCss = cssMatch ? cssMatch[1] : '';
+            const extraCssText = (extraCss || '').replace(/<\/?style[^>]*>/g, '');
 
-            el.innerHTML = `<style>${baseStyle}${extraCssText}</style>${bodyHtml}`;
+            el.innerHTML = `<style>
+                ${docCss}
+                ${extraCssText}
+                /* html2pdf 렌더용 보정 */
+                body { background:#fff !important; }
+                .page-break { display:block; height:0; page-break-before:always; break-before:page; }
+                table.pwrap { width:100%; }
+                table.pwrap thead { display:table-header-group; }
+            </style>${bodyHtml}`;
             document.body.appendChild(el);
 
-            showToast('📄 PDF 생성 중... 잠시 기다려 주세요');
-
+            // DOM 렌더링 대기 후 캡처
             setTimeout(() => {
                 html2pdf().set({
-                    margin: 0,
+                    margin: [8, 6, 8, 6],
                     filename: fileName + '.pdf',
                     image: { type: 'jpeg', quality: 0.97 },
-                    html2canvas: { scale: 2, useCORS: true, logging: false, backgroundColor: '#ffffff' },
+                    html2canvas: {
+                        scale: 1.5,
+                        useCORS: true,
+                        logging: false,
+                        backgroundColor: '#ffffff',
+                        scrollX: 0,
+                        scrollY: 0,
+                        windowWidth: 1120
+                    },
                     jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' },
                     pagebreak: { mode: ['css', 'legacy'], before: '.page-break' }
-                }).from(el).save().then(() => {
-                    const e = document.getElementById('_kacPdfEl');
-                    if (e) e.remove();
-                    showToast('✅ PDF 다운로드 완료');
-                }).catch(err => {
-                    console.error('[PDF]', err);
-                    showToast('⚠️ PDF 생성 실패 — 다시 시도해 주세요');
-                    const e = document.getElementById('_kacPdfEl');
-                    if (e) e.remove();
-                });
-            }, 200);
+                }).from(el).save()
+                    .then(() => {
+                        document.getElementById('_kacPdfEl')?.remove();
+                        document.getElementById('_kacPdfOverlay')?.remove();
+                        showToast('✅ PDF 다운로드 완료');
+                    })
+                    .catch(err => {
+                        console.error('[PDF]', err);
+                        document.getElementById('_kacPdfEl')?.remove();
+                        document.getElementById('_kacPdfOverlay')?.remove();
+                        showToast('⚠️ PDF 생성 실패 — 다시 시도해 주세요');
+                    });
+            }, 500);
         }
         function _kacWeekTag(d) {
             const yy = String(d.getFullYear()).slice(2);
@@ -3346,17 +3346,17 @@
                 const fls = (FORM[building] || []).map(fl => floorHtml(building, fl)).join('');
                 const bar = (typeof DORM_BLDG_BAR !== 'undefined' && DORM_BLDG_BAR[building]) || '#0f2057';
                 const photo = BLDG_PHOTO[building] || '';
-                const aed = AED_MSG[building] || '';
+                const aed   = AED_MSG[building] || '';
                 return `<div class="pf-block">
-                    <div class="bldg-top-row">
+                    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:12px;">
                         <div class="legend">${_legendHtml(P)}</div>
-                        <div class="bldg-photo-box">
-                            <img src="${photo}" alt="${building}" onerror="this.parentNode.style.display='none'">
+                        <div style="flex-shrink:0;display:flex;flex-direction:column;align-items:flex-end;">
+                            <img src="${photo}" alt="${building}" style="width:200px;height:130px;object-fit:cover;border-radius:10px;border:1.5px solid #e2e8f0;display:block;" onerror="this.parentNode.style.display='none'">
                         </div>
                     </div>
                     <div class="pf-bldg-header" style="background:${bar};"><span class="bicon">\ud83c\udfe2</span>${building}</div>
                     <div class="pf-floor-wrap" style="border-color:${bar};">${fls}</div>
-                    ${aed ? `<div class="aed-notice"><span class="aed-icon">⑧</span><span>${aed}</span></div>` : ''}
+                    ${aed ? `<div style="display:flex;align-items:center;gap:9px;margin-top:10px;padding:8px 14px;background:#fffbeb;border:1.5px solid #fcd34d;border-radius:9px;font-size:12px;font-weight:700;color:#78350f;"><span style="font-size:17px;flex-shrink:0;">⑧</span><span>${aed}</span></div>` : ''}
                 </div>`;
             }
 
@@ -3380,10 +3380,9 @@
 
             const layoutSection = ['청렴관','상생관','국제교육동'].map(buildingHtml).join('<div class="page-break"></div>');
             const totalCount = Object.keys(P.students).length;
-            const header = `<div style="text-align:center;padding:0 0 12px;">
-                <h1 style="margin:0 0 5px;font-size:22px;font-weight:900;letter-spacing:-0.5px;">생활관 배정 배치도</h1>
-                <div style="color:#64748b;font-size:12px;">${P.fmt(P.wd)} ~ ${P.fmt(P.wEnd)} 주간 · 총 ${totalCount}명 · 출력일 ${new Date().toLocaleDateString('ko-KR')}</div>
-            </div>`;
+            const header = `<h1>생활관 배정 배치도</h1>
+                <div class="sub">${P.fmt(P.wd)} ~ ${P.fmt(P.wEnd)} 주간 · 총 ${totalCount}명 · 출력일 ${new Date().toLocaleDateString('ko-KR')}</div>
+                <div class="legend">${_legendHtml(P)}</div>`;
             const bodyHtml = `<table class="pwrap"><thead><tr><td>${header}</td></tr></thead><tbody><tr><td>${layoutSection}</td></tr></tbody></table>`;
             _printDoc(`(${_kacWeekTag(P.wd)}_배치도) 항공기술훈련원 방 배정 현황표`, bodyHtml, FORM_CSS);
         }
