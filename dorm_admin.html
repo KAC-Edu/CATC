@@ -165,29 +165,24 @@
         @keyframes blink-kst { to { visibility: hidden; } }
         .hc-blink { animation: blink-kst 1s steps(2, start) infinite; }
 
-        /* ── 생활관 현황 칩 ── */
-        .dorm-status-bar {
-            display: flex; align-items: center; gap: 8px;
-            padding: 8px 20px; background: rgba(255,255,255,0.06);
-            border-top: 1px solid rgba(255,255,255,0.08);
-            flex-wrap: wrap;
+        /* ── 생활관 현황 칩 (헤더 인라인) ── */
+        .dorm-header-chips { display:flex; align-items:center; gap:6px; }
+        .dorm-chip-inline {
+            display:flex; align-items:center; gap:5px;
+            padding:4px 10px; border-radius:16px;
+            background:rgba(255,255,255,0.1);
+            border:1px solid rgba(255,255,255,0.15);
+            font-size:12px; color:#e2e8f0; white-space:nowrap;
         }
-        .dorm-chip {
-            display: flex; align-items: center; gap: 7px;
-            padding: 4px 12px; border-radius: 20px;
-            background: rgba(255,255,255,0.08);
-            border: 1px solid rgba(255,255,255,0.12);
-            font-size: 12px; font-weight: 700; color: #e2e8f0;
-            white-space: nowrap;
-        }
-        .dorm-chip .dc-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
-        .dorm-chip .dc-name { opacity: 0.75; font-size: 11px; }
-        .dorm-chip .dc-val { font-size: 13px; font-weight: 900; color: #fff; }
-        .dorm-chip .dc-sep { opacity: 0.4; margin: 0 1px; }
-        .dorm-chip .dc-total { opacity: 0.55; }
-        .dorm-chip.full .dc-val { color: #fca5a5; }
-        .dorm-chip.avail .dc-val { color: #86efac; }
-        .dorm-status-label { font-size: 10px; font-weight: 800; color: rgba(255,255,255,0.35); letter-spacing: 0.8px; text-transform: uppercase; margin-right: 4px; }
+        .dc-dot   { width:7px; height:7px; border-radius:50%; flex-shrink:0; }
+        .dc-name  { opacity:0.75; font-size:11px; }
+        .dc-val   { font-size:12.5px; font-weight:900; color:#fff; margin:0 1px; }
+        .dc-sep   { opacity:0.35; font-size:10px; }
+        .dc-total { opacity:0.5; font-size:11px; }
+        .dc-loader{ font-size:11px; opacity:0.5; }
+        .dorm-chip-inline.full  .dc-val { color:#fca5a5; }
+        .dorm-chip-inline.avail .dc-val { color:#86efac; }
+        .dorm-chip-sep { width:1px; height:14px; background:rgba(255,255,255,0.15); margin:0 2px; }
 
         body.pc-mode .h-btn { font-size: 15px; padding: 12px 18px; }
         body.pc-mode .step-tabs > .step-tab { padding: 18px 22px; min-width: 180px; }
@@ -243,23 +238,23 @@
     </style>
 </head>
 <body>
-    <div class="header" style="position:relative; flex-wrap:wrap;">
+    <div class="header" style="position:relative;">
+        <!-- 좌측: 타이틀 -->
         <div>
             <h1><i class="fa-solid fa-bed"></i> 생활관 배정 관리</h1>
             <div class="sub">항공기술훈련원 교육지원부</div>
         </div>
-        <!-- 중앙 시계 -->
+        <!-- 중앙 시계 (절대 고정) -->
         <div id="dormHeaderClock" class="header-clock"></div>
-        <div class="header-actions">
-            <button class="h-btn" id="viewModeBtn" onclick="toggleViewMode()"><i class="fa-solid fa-desktop"></i> PC 모드</button>
-            <button class="h-btn" onclick="location.href='portal.html'"><i class="fa-solid fa-grip"></i> 포털</button>
-        </div>
-    </div>
-    <!-- 생활관 현황 바 -->
-    <div class="dorm-status-bar" id="dormStatusBar">
-        <span class="dorm-status-label"><i class="fa-solid fa-building"></i> 생활관 현황</span>
-        <div id="dormStatusChips" style="display:flex; gap:8px; flex-wrap:wrap;">
-            <div class="dorm-chip"><span class="dc-name">로딩 중...</span></div>
+        <!-- 우측: 생활관 현황 칩 + 버튼 -->
+        <div style="display:flex; align-items:center; gap:12px; margin-left:auto;">
+            <div id="dormStatusChips" class="dorm-header-chips">
+                <div class="dorm-chip-inline"><span class="dc-loader">⏳</span></div>
+            </div>
+            <div class="header-actions">
+                <button class="h-btn" id="viewModeBtn" onclick="toggleViewMode()"><i class="fa-solid fa-desktop"></i> PC 모드</button>
+                <button class="h-btn" onclick="location.href='portal.html'"><i class="fa-solid fa-grip"></i> 포털</button>
+            </div>
         </div>
     </div>
 
@@ -848,16 +843,10 @@
         // ── 생활관 현황 바: 건물별 빈방/전체방 실시간 표시 ─────────
         const DORM_BAR_COLORS = { '청렴관': '#3b82f6', '상생관': '#10b981', '국제교육동': '#8b5cf6' };
         function startDormStatusBar() {
-            // STEP 4 배정 결과 + 방 마스터를 결합해 빈방 계산
-            const wk = getTargetMondayKey();
-            // 방 마스터 구독
-            db.ref('system/dorm/rooms').on('value', async () => {
-                await renderDormStatusBar();
-            });
-            // 배정 결과도 구독
-            db.ref(`system/dorm/assignments/${wk}/students`).on('value', async () => {
-                await renderDormStatusBar();
-            });
+            // 방 마스터 변경 시 재계산
+            db.ref('system/dorm/rooms').on('value', () => renderDormStatusBar());
+            // 전체 배정 경로 구독 (주차 상관없이 최신 반영)
+            db.ref('system/dorm/assignments').on('value', () => renderDormStatusBar());
         }
 
         async function renderDormStatusBar() {
@@ -891,17 +880,18 @@
                     return;
                 }
 
-                chipsEl.innerHTML = Object.entries(bldgMap).map(([bldg, stat]) => {
+                chipsEl.innerHTML = Object.entries(bldgMap).map(([bldg, stat], i) => {
                     const color = DORM_BAR_COLORS[bldg] || '#94a3b8';
                     const cls = stat.empty === 0 ? 'full' : 'avail';
-                    return `<div class="dorm-chip ${cls}">
+                    const sep = i > 0 ? '<span class="dorm-chip-sep"></span>' : '';
+                    return `${sep}<div class="dorm-chip-inline ${cls}">
                         <span class="dc-dot" style="background:${color};"></span>
                         <span class="dc-name">${bldg}</span>
-                        <span class="dc-val">${stat.empty}개</span>
+                        <span class="dc-val">${stat.empty}</span>
                         <span class="dc-sep">/</span>
-                        <span class="dc-total">${stat.total}개</span>
+                        <span class="dc-total">${stat.total}</span>
                     </div>`;
-                }).join('') + `<span style="font-size:10px;color:rgba(255,255,255,0.3);margin-left:6px;">빈방/전체</span>`;
+                }).join('');
             } catch(e) {
                 console.warn('[dormStatusBar]', e);
             }
