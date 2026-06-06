@@ -253,6 +253,7 @@
                 <div class="dorm-chip-inline"><span class="dc-loader">⏳</span></div>
             </div>
             <div class="header-actions">
+                <button class="h-btn" id="viewModeBtn" onclick="toggleViewMode()"><i class="fa-solid fa-desktop"></i> PC 모드</button>
                 <button class="h-btn" onclick="location.href='portal.html'"><i class="fa-solid fa-grip"></i> 포털</button>
             </div>
         </div>
@@ -1889,66 +1890,6 @@
         // ═══════════ 가배정(Draft) 확정 저장용 임시 보관 ═══════════
         let _draftPayload = null;   // runAssign 계산 결과 임시 저장 → 확정 버튼 클릭 시 저장
 
-        // ══ 가배정 배치도 미리보기 ═══════════════════════════════
-        // Firebase에 저장하지 않고 _draftPayload 데이터로 STEP 4 배치도를 임시 렌더링
-        async function previewDraftBoard() {
-            if (!_draftPayload) { showToast('먼저 자동 배정을 실행하세요'); return; }
-            // STEP 4로 이동
-            goStep(4);
-            // viewAssign에 draft 데이터 임시 주입
-            viewAssign = _draftPayload.payload;
-            const wk = _draftPayload.wk;
-            // 주차 선택기 설정
-            const sel = document.getElementById('viewWeekSelect');
-            if (sel) {
-                // 옵션이 없으면 추가
-                let hasOption = Array.from(sel.options).some(o => o.value === wk);
-                if (!hasOption) {
-                    const wd = new Date(wk + 'T00:00:00');
-                    const wEnd = new Date(wd); wEnd.setDate(wd.getDate() + 6);
-                    const fmt = d => `${d.getMonth()+1}/${d.getDate()}`;
-                    const opt = document.createElement('option');
-                    opt.value = wk; opt.text = `${fmt(wd)} ~ ${fmt(wEnd)} 주간 (가배정)`;
-                    sel.insertBefore(opt, sel.firstChild);
-                }
-                sel.value = wk;
-            }
-            // 배치도 렌더링 (Firebase 읽지 않고 viewAssign 직접 사용)
-            await renderBoardContent();
-            // 상단에 가배정 경고 배너 표시
-            const boardArea = document.getElementById('boardArea');
-            if (boardArea) {
-                const warn = document.createElement('div');
-                warn.id = 'draftPreviewBanner';
-                warn.style.cssText = 'margin-bottom:16px; padding:14px 18px; border-radius:12px; background:#fef9c3; border:2px solid #fde047; display:flex; align-items:center; gap:12px;';
-                warn.innerHTML = `
-                    <span style="font-size:22px;">⚠️</span>
-                    <div style="flex:1;">
-                        <div style="font-size:14px; font-weight:900; color:#713f12;">가배정 미리보기 — 아직 저장되지 않은 상태입니다</div>
-                        <div style="font-size:12px; color:#92400e; margin-top:2px;">STEP 3으로 돌아가 <b>확정 저장</b>을 눌러야 실제 적용됩니다.</div>
-                    </div>
-                    <button onclick="goStep(3)" style="padding:9px 18px; background:#d97706; color:#fff; border:none; border-radius:9px; font-weight:800; font-size:13px; cursor:pointer;">← STEP 3 돌아가기</button>`;
-                boardArea.insertBefore(warn, boardArea.firstChild);
-            }
-        }
-
-        // renderBoardContent: Firebase에서 읽지 않고 viewAssign 상태로 배치도 렌더링
-        async function renderBoardContent() {
-            if (!viewAssign || !viewAssign.students) {
-                document.getElementById('boardArea').innerHTML = `<div class="empty-floor">배정 결과가 없습니다.</div>`;
-                document.getElementById('boardStats').innerHTML = '';
-                return;
-            }
-            // 방 마스터 로드
-            if (!Object.keys(rooms).length) {
-                const rs = await db.ref('system/dorm/rooms').once('value'); rooms = rs.val() || {};
-            }
-            // _skipFirebaseFetch 플래그 → renderBoard가 Firebase 읽기 건너뜀
-            window._skipFirebaseFetch = true;
-            await renderBoard();
-            window._skipFirebaseFetch = false;
-        }
-
         async function commitDraftAssign() {
             if (!_draftPayload) { showToast('가배정 데이터가 없습니다. 다시 계산해 주세요.'); return; }
             const { wk, payload, totalAssigned, totalPeople, royalCount } = _draftPayload;
@@ -2261,88 +2202,95 @@
                 students: assigned,
                 courses: courseKeys.map(ck => ({ rosterKey: ck, courseName: activeRosters[ck].courseName, room: activeRosters[ck].room, period: activeRosters[ck].period || '' }))
             };
-            _draftPayload = { wk, payload, totalAssigned, totalPeople, royalCount };
+            // ── 즉시 저장 ───────────────────────────────────────────
+            const existSnap = await db.ref(`system/dorm/assignments/${wk}`).once('value');
+            const existing = existSnap.val();
+            if (existing && existing.students && Object.keys(existing.students).length) {
+                const oldSig = _assignSignature(existing.students);
+                const newSig = _assignSignature(assigned);
+                if (oldSig === newSig) {
+                    showToast('변경된 내용이 없어 기존 배정을 유지합니다');
+                    return;
+                }
+                if (!confirm('이미 배정 결과가 있습니다. 덮어쓸까요?\n(수동으로 이동·추가·삭제한 내용이 사라집니다)')) return;
+            }
 
-            const pct = totalPeople ? Math.round(totalAssigned / totalPeople * 100) : 0;
-            const allOk = unassignedList.length === 0;
-
-            // 블록 배분 요약 (과정별 배정 층 정보)
-            const blockSummary = coursesBySize.map(ck => {
-                const ids = [...(coursePlan[ck] || [])];
-                if (!ids.length) return '';
-                const bldgs = [...new Set(ids.map(id => roomState[id]?.building).filter(Boolean))].join(', ');
-                const floors = [...new Set(ids.map(id => roomState[id]?.floor).filter(Boolean))].sort().join('·');
-                return `<span style="display:inline-block;padding:3px 10px;border-radius:8px;background:#eff6ff;color:#1d4ed8;font-size:12px;font-weight:700;margin:2px;">${activeRosters[ck].courseName} → ${bldgs} ${floors}층</span>`;
-            }).join('');
-
-            let html = `
-            <div class="draft-banner" style="margin-top:18px;">
-                <!-- 가배정 안내 배너 -->
-                <div style="padding:14px 18px; border-radius:12px; background:#fef9c3; border:2px solid #fde047; margin-bottom:16px; display:flex; align-items:center; gap:12px;">
-                    <div style="font-size:24px;">📋</div>
-                    <div style="flex:1;">
-                        <div style="font-size:15px; font-weight:900; color:#713f12;">가배정 미리보기</div>
-                        <div style="font-size:13px; color:#92400e; margin-top:2px;">배정 결과를 확인 후 <b>확정 저장</b>을 눌러야 실제 저장됩니다.</div>
-                    </div>
-                    <div style="display:flex; gap:8px;">
-                        <button onclick="previewDraftBoard()" style="padding:11px 18px; background:#2563eb; color:#fff; border:none; border-radius:10px; font-weight:900; font-size:14px; cursor:pointer;">🗺️ 배치도 미리보기</button>
-                        <button id="draftConfirmBtn" onclick="commitDraftAssign()" style="padding:11px 22px; background:#15803d; color:#fff; border:none; border-radius:10px; font-weight:900; font-size:14px; cursor:pointer;">✅ 확정 저장</button>
-                        <button onclick="document.getElementById('assignLog').innerHTML=''" style="padding:11px 16px; background:#f1f5f9; color:#475569; border:none; border-radius:10px; font-weight:800; font-size:13px; cursor:pointer;">취소</button>
-                    </div>
-                </div>
-
-                <!-- 요약 -->
-                <div style="display:flex; align-items:center; gap:16px; padding:18px 22px; border-radius:16px; background:${allOk?'#f0fdf4':'#fffbeb'}; border:2px solid ${allOk?'#86efac':'#fcd34d'};">
-                    <div style="font-size:38px;">${allOk?'✅':'⚠️'}</div>
-                    <div style="flex:1;">
-                        <div style="font-size:20px; font-weight:900; color:${allOk?'#15803d':'#b45309'};">${allOk?'전원 배정 가능':'일부 미배정'}</div>
-                        <div style="font-size:13px; color:#475569; font-weight:600; margin-top:4px;">총 ${totalPeople}명 중 <b>${totalAssigned}명</b> 배정 (${pct}%)${royalCount?` · 우선실 ${royalCount}명`:''}</div>
-                        <div style="margin-top:8px; display:flex; flex-wrap:wrap; gap:4px;">${blockSummary}</div>
-                    </div>
-                    <div style="text-align:right;">
-                        <div style="font-size:34px; font-weight:900; color:${allOk?'#16a34a':'#d97706'};">${totalAssigned}<span style="font-size:18px; color:#94a3b8;">/${totalPeople}</span></div>
-                    </div>
-                </div>
-
-                <!-- 과정별 표 -->
-                ${courseStats.length ? `
-                <div style="margin-top:16px; border:1.5px solid var(--border); border-radius:14px; overflow:hidden;">
-                    <table style="width:100%; border-collapse:collapse; font-size:14px;">
-                        <thead><tr style="background:#f8fafc;">
-                            <th style="text-align:left; padding:12px 16px; font-weight:800; color:#475569;">과정</th>
-                            <th style="text-align:center; padding:12px 16px; font-weight:800; color:#475569; width:120px;">배정</th>
-                            <th style="text-align:center; padding:12px 16px; font-weight:800; color:#475569; width:80px;">상태</th>
-                        </tr></thead><tbody>
-                        ${courseStats.map(c => {
+            db.ref(`system/dorm/assignments/${wk}`).set(payload)
+                .then(() => {
+                    const pct = totalPeople ? Math.round(totalAssigned / totalPeople * 100) : 0;
+                    const allOk = unassignedList.length === 0;
+                    let html = `<div style="margin-top:18px;">
+                        <div style="display:flex; align-items:center; gap:16px; padding:18px 22px; border-radius:16px; background:${allOk?'#f0fdf4':'#fffbeb'}; border:2px solid ${allOk?'#86efac':'#fcd34d'};">
+                            <div style="font-size:38px;">${allOk?'✅':'⚠️'}</div>
+                            <div style="flex:1;">
+                                <div style="font-size:20px; font-weight:900; color:${allOk?'#15803d':'#b45309'};">${allOk?'배정 완료':'일부 미배정'}</div>
+                                <div style="font-size:13px; color:#475569; font-weight:600; margin-top:2px;">총 ${totalPeople}명 중 <b>${totalAssigned}명</b> 배정 (${pct}%)</div>
+                                <div style="margin-top:8px; display:flex; flex-wrap:wrap; gap:4px;">${blockSummary}</div>
+                            </div>
+                            <div style="text-align:right;">
+                                <div style="font-size:34px; font-weight:900; color:${allOk?'#16a34a':'#d97706'};">${totalAssigned}<span style="font-size:18px; color:#94a3b8;">/${totalPeople}</span></div>
+                            </div>
+                        </div>`;
+                    if (courseStats.length) {
+                        html += `<div style="margin-top:14px; border:1.5px solid var(--border); border-radius:14px; overflow:hidden;">
+                            <table style="width:100%; border-collapse:collapse; font-size:14px;">
+                                <thead><tr style="background:#f8fafc;">
+                                    <th style="text-align:left;padding:11px 16px;font-weight:800;color:#475569;">과정</th>
+                                    <th style="text-align:center;padding:11px 16px;font-weight:800;color:#475569;width:120px;">배정</th>
+                                    <th style="text-align:center;padding:11px 16px;font-weight:800;color:#475569;width:80px;">상태</th>
+                                </tr></thead><tbody>`;
+                        courseStats.forEach(c => {
                             const ok = c.placed === c.total;
-                            return `<tr style="border-top:1px solid #f1f5f9;">
-                                <td style="padding:12px 16px; font-weight:700;">${c.name}</td>
-                                <td style="padding:12px 16px; text-align:center; font-weight:800;">${c.placed} / ${c.total}명</td>
-                                <td style="padding:12px 16px; text-align:center;"><span style="font-size:12px;font-weight:800;padding:4px 11px;border-radius:20px;background:${ok?'#dcfce7':'#fef9c3'};color:${ok?'#15803d':'#a16207'};">${ok?'완료':'일부'}</span></td>
+                            html += `<tr style="border-top:1px solid #f1f5f9;">
+                                <td style="padding:11px 16px;font-weight:700;">${c.name}</td>
+                                <td style="padding:11px 16px;text-align:center;font-weight:800;">${c.placed} / ${c.total}명</td>
+                                <td style="padding:11px 16px;text-align:center;"><span style="font-size:12px;font-weight:800;padding:3px 10px;border-radius:20px;background:${ok?'#dcfce7':'#fef9c3'};color:${ok?'#15803d':'#a16207'};">${ok?'완료':'일부'}</span></td>
                             </tr>`;
-                        }).join('')}
-                        </tbody>
-                    </table>
-                </div>` : ''}
+                        });
+                        html += `</tbody></table></div>`;
+                    }
+                    if (unassignedList.length) {
+                        html += `<div style="margin-top:14px;padding:16px 20px;border-radius:14px;background:#fef2f2;border:1.5px solid #fecaca;">
+                            <div style="font-weight:900;color:#dc2626;font-size:15px;margin-bottom:10px;">⚠️ 미배정 ${unassignedList.length}명</div>
+                            <div style="display:flex;flex-wrap:wrap;gap:8px;">${unassignedList.map(u=>`<span style="background:#fff;border:1.5px solid #fca5a5;border-radius:10px;padding:6px 12px;font-size:13px;font-weight:700;color:#991b1b;">${u.name} ${u.gender==='F'?'여':'남'}</span>`).join('')}</div>
+                        </div>`;
+                    }
+                    html += `<button class="save-btn" style="margin-top:16px;width:100%;" onclick="goStep(4)"><i class="fa-solid fa-table-list"></i> 배치 현황 보기</button></div>`;
+                    document.getElementById('assignLog').innerHTML = html;
+                    showToast(`✅ 배정 완료 (${totalAssigned}/${totalPeople}명)`);
+                })
+                .catch(e => { console.error(e); showToast('⚠️ 배정 결과 저장 실패'); });
+        }
 
-                <!-- 미배정자 -->
-                ${unassignedList.length ? `
-                <div style="margin-top:16px; padding:16px 20px; border-radius:14px; background:#fef2f2; border:1.5px solid #fecaca;">
-                    <div style="font-weight:900; color:#dc2626; font-size:15px; margin-bottom:10px;">⚠️ 미배정 ${unassignedList.length}명 — 방 추가 또는 수동 배정 필요</div>
-                    <div style="display:flex; flex-wrap:wrap; gap:8px;">
-                        ${unassignedList.map(u => `<span style="background:#fff;border:1.5px solid #fca5a5;border-radius:10px;padding:7px 13px;font-size:13px;font-weight:700;color:#991b1b;">${u.name} · ${u.empNo} <span style="color:${u.gender==='F'||u.gender==='여'?'#ec4899':'#3b82f6'};">${u.gender==='F'||u.gender==='여'?'여':'남'}</span> <span style="color:#94a3b8;">(${u.course})</span></span>`).join('')}
+        // ── 과정 팝업 ──────────────────────────────────────────────
+        function showCoursePopup() {
+            const colors = window._boardCourseColors || {};
+            const entries = Object.entries(colors).filter(([cn]) => cn !== '강사');
+            if (!entries.length) { showToast('과정 정보가 없습니다'); return; }
+            let modal = document.getElementById('coursePopupModal');
+            if (!modal) {
+                modal = document.createElement('div');
+                modal.id = 'coursePopupModal';
+                modal.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(15,23,42,0.45);display:flex;align-items:center;justify-content:center;padding:20px;';
+                modal.onclick = e => { if (e.target === modal) modal.style.display='none'; };
+                document.body.appendChild(modal);
+            }
+            modal.innerHTML = `
+                <div style="background:#fff;border-radius:18px;padding:28px;min-width:320px;max-width:480px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.18);">
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+                        <div style="font-size:17px;font-weight:900;color:#0f172a;">진행 과정 목록</div>
+                        <button onclick="document.getElementById('coursePopupModal').style.display='none'" style="background:none;border:none;font-size:20px;color:#94a3b8;cursor:pointer;">✕</button>
                     </div>
-                </div>` : ''}
-
-                <!-- 배정 로그 (접을 수 있게) -->
-                <details style="margin-top:14px;">
-                    <summary style="cursor:pointer; font-size:13px; color:#64748b; font-weight:700; padding:8px 0;">📋 배정 상세 로그 보기</summary>
-                    <div style="margin-top:8px; padding:14px; background:#f8fafc; border-radius:10px; font-size:13px; line-height:2; color:#475569;">${log.join('<br>')}</div>
-                </details>
-            </div>`;
-
-            document.getElementById('assignLog').innerHTML = html;
-            showToast(`📋 가배정 완료 — ${totalAssigned}/${totalPeople}명. 확정 저장을 눌러 적용하세요.`);
+                    <div style="display:flex;flex-direction:column;gap:10px;">
+                        ${entries.map(([cn, col]) => `
+                            <div style="display:flex;align-items:center;gap:12px;padding:13px 16px;border-radius:12px;background:#f8fafc;border-left:5px solid ${col};">
+                                <div style="min-width:0;">
+                                    <div style="font-size:15px;font-weight:800;color:#1e293b;">${cn}</div>
+                                </div>
+                            </div>`).join('')}
+                    </div>
+                </div>`;
+            modal.style.display = 'flex';
         }
 
         // ════════════ STEP 4: 현황 · 이동 · 출력 ════════════
@@ -2376,11 +2324,8 @@
             if (!Object.keys(rooms).length) {
                 const rs = await db.ref('system/dorm/rooms').once('value'); rooms = rs.val() || {};
             }
-            // 가배정 미리보기 모드: Firebase 읽기 건너뜀 (viewAssign 이미 세팅됨)
-            if (!window._skipFirebaseFetch) {
-                const snap = await db.ref(`system/dorm/assignments/${wk}`).once('value');
-                viewAssign = snap.val();
-            }
+            const snap = await db.ref(`system/dorm/assignments/${wk}`).once('value');
+            viewAssign = snap.val();
             if (!viewAssign || !viewAssign.students) {
                 document.getElementById('boardArea').innerHTML = `<div class="empty-floor">이 주차의 배정 결과가 없습니다.</div>`;
                 document.getElementById('boardStats').innerHTML = '';
@@ -2422,11 +2367,16 @@
             const totalRooms = Object.keys(rooms).length;
             const courseCount = (viewAssign.courses || []).length;
             const fillPct = totalRooms ? Math.round(usedRooms / totalRooms * 100) : 0;
+            // 과정 목록을 전역 저장 (팝업용)
+            window._boardCourseColors = courseColors;
+
             document.getElementById('boardStats').innerHTML = `
                 <div class="bstat"><div class="bstat-n">${totalP}<span>명</span></div><div class="bstat-l">배정 인원</div></div>
                 <div class="bstat"><div class="bstat-n">${usedRooms}<span>/${totalRooms}</span></div><div class="bstat-l">사용 방 (충원 ${fillPct}%)</div></div>
-                <div class="bstat"><div class="bstat-n">${courseCount}<span>개</span></div><div class="bstat-l">과정</div></div>
-                ${Object.entries(courseColors).map(([cn,col]) => `<div class="bstat" style="border-left:5px solid ${col};"><div class="bstat-l" style="margin-top:0;">과정명</div><div style="font-size:15px; font-weight:800; color:#1e293b; margin-top:3px;">${cn}</div></div>`).join('')}
+                <div class="bstat" onclick="showCoursePopup()" style="cursor:pointer; border:1.5px solid #e2e8f0; transition:box-shadow 0.15s;" onmouseenter="this.style.boxShadow='0 4px 14px rgba(37,99,235,0.13)'" onmouseleave="this.style.boxShadow=''">
+                    <div class="bstat-n">${courseCount}<span>개</span></div>
+                    <div class="bstat-l">과정 <i class="fa-solid fa-chevron-down" style="font-size:10px;color:#94a3b8;margin-left:4px;"></i></div>
+                </div>
             `;
 
             // 건물·층 순 정렬 (배정된 학생만 표로)
@@ -3651,8 +3601,12 @@
             toastTimer = setTimeout(() => t.classList.remove('show'), 2600);
         }
 
-        // PC 모드 항상 적용 (모바일 전환 없음)
-        document.body.classList.add('pc-mode');
+        // 저장된 보기 모드 복원 (기본: 모바일). PC 화면이 넓으면 PC 모드 자동 제안.
+        try {
+            let savedMode = localStorage.getItem('kac_dorm_viewmode');
+            if (!savedMode) savedMode = (window.innerWidth >= 1024) ? 'pc' : 'mobile';
+            applyViewMode(savedMode);
+        } catch(e) {}
 
         init();
     </script>
