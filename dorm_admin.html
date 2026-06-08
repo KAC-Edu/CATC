@@ -597,6 +597,7 @@
         let selectedCourse = null;        // { room, courseName, period, weekKey, profName }
         let roster = [];                  // [{ seq, name, empNo, dept, gender }]
         let rosterDirty = false;          // PDF 업로드·행 추가·삭제 후 미저장 상태 여부
+        let currentScheduleData = null;   // 업로드 파일에서 함께 판독한 교육시간표
 
         // 건물·층 구조 정의 (확정된 구조)
         const BUILDINGS = {
@@ -1391,7 +1392,7 @@
                         ${enrolled ? `<span class="course-count"><i class="fa-solid fa-circle-check"></i> ${cnt}명</span>` : ''}
                         ${it.profName ? `<span class="course-prof"><i class="fa-solid fa-user-tie"></i> ${it.profName}</span>` : ''}
                         <span class="course-go"><i class="fa-solid fa-chevron-right"></i></span>
-                        <span class="course-del-btn" onclick="event.stopPropagation(); deleteRoster(${JSON.stringify(it).replace(/'/g, "&#39;")})" title="이 과정에 업로드/저장된 교육생 명단 전체 삭제" style="flex-shrink:0; width:32px; height:32px; display:inline-flex; align-items:center; justify-content:center; border-radius:8px; background:#fee2e2; color:#dc2626; cursor:pointer; font-size:14px; margin-left:4px;"><i class="fa-solid fa-trash-can"></i></span>
+                        <span class="course-del-btn" onclick='event.stopPropagation(); deleteRoster(${JSON.stringify(it).replace(/'/g, "&#39;")})' title="이 과정에 업로드/저장된 교육생 명단 전체 삭제" style="flex-shrink:0; width:32px; height:32px; display:inline-flex; align-items:center; justify-content:center; border-radius:8px; background:#fee2e2; color:#dc2626; cursor:pointer; font-size:14px; margin-left:4px;"><i class="fa-solid fa-trash-can"></i></span>
                     </div>`;
             });
             html += `</div>`;
@@ -1443,6 +1444,7 @@
             db.ref(`system/dorm/rosters/${key}`).once('value', snap => {
                 const v = snap.val();
                 roster = (v && Array.isArray(v.list)) ? v.list : [];
+                currentScheduleData = v && v.schedule ? v.schedule : null;
                 rosterDirty = false;  // DB에서 로드한 시점엔 항상 클린 상태
                 console.log('[명단 로드] 결과:', v ? `${roster.length}명 (list 존재: ${!!v.list})` : '⚠️ Firebase에 데이터 없음 (null)');
                 if (!v) {
@@ -1458,6 +1460,7 @@
                             if (v2 && Array.isArray(v2.list) && v2.list.length > 0) {
                                 console.log('[명단 로드] 대체 키에서 발견:', v2.list.length + '명 → 이 키로 로드');
                                 roster = v2.list;
+                                currentScheduleData = v2.schedule || null;
                             }
                             renderRoster();
                         });
@@ -1530,6 +1533,28 @@
                 .trim();
         }
 
+        function buildScheduleData(lines, fileName) {
+            const arr = (lines || [])
+                .map(normalizeRosterCell)
+                .filter(v => v && /[가-힣0-9]/.test(v))
+                .filter(v => !/^[捤獥汤捯氠瑢]+$/.test(v));
+            if (!arr.length) return null;
+            let start = arr.findIndex(v => /교육\s*시간표|시간표/.test(v));
+            if (start < 0) start = 0;
+            let end = arr.findIndex((v, i) => i > start + 3 && /교육생\s*명단|연\s*번/.test(v));
+            if (end < 0) end = Math.min(arr.length, start + 90);
+            const picked = arr.slice(start, end)
+                .filter(v => !/^비고$|^연번$|^성명$|^사번$|^소\s*속$|^직위$/.test(v))
+                .slice(0, 120);
+            if (!picked.length) return null;
+            return {
+                lines: picked,
+                text: picked.join('\n'),
+                fileName: fileName || '',
+                savedAt: Date.now()
+            };
+        }
+
         function parseRowsFromPlainText(text) {
             const parsed = [];
             const lines = String(text || '')
@@ -1585,6 +1610,7 @@
             const xmlNames = Object.keys(zip.files).filter(n => /\.xml$/i.test(n) && !zip.files[n].dir);
             const parsed = [];
             let allText = '';
+            const scheduleLines = [];
 
             for (const n of xmlNames) {
                 const xml = await zip.files[n].async('string');
@@ -1598,11 +1624,13 @@
                         .filter(el => el.localName === 'tc')
                         .map(tc => normalizeRosterCell(tc.textContent))
                         .filter(Boolean);
+                    if (cells.length) scheduleLines.push(cells.join(' '));
                     const row = parseRosterRow(cells);
                     if (row) parsed.push(row);
                 });
             }
 
+            currentScheduleData = buildScheduleData(scheduleLines.length ? scheduleLines : allText.split(/[\n\r]+/), file.name);
             return parsed.length ? parsed : parseRowsFromPlainText(allText);
         }
 
@@ -1768,6 +1796,7 @@
                 readLegacyHwpSectionsFromCfb(buf).forEach(addSection);
             }
 
+            currentScheduleData = buildScheduleData(records.length ? records : text.split(/[\n\r]+/), file.name);
             const byRecords = parseRosterRecords(records);
             return byRecords.length ? byRecords : parseRowsFromPlainText(text);
         }
@@ -1781,6 +1810,7 @@
                 const buf = await file.arrayBuffer();
                 const pdf = await pdfjsLib.getDocument(new Uint8Array(buf)).promise;
                 let parsed = [];
+                const scheduleLines = [];
 
                 for (let p = 1; p <= pdf.numPages; p++) {
                     const page = await pdf.getPage(p);
@@ -1799,6 +1829,7 @@
                     // Y 내림차순(위→아래) 정렬된 줄 배열
                     const lines = Object.keys(rowsMap).sort((a, b) => b - a)
                         .map(y => rowsMap[y].sort((a, b) => a.x - b.x).map(c => c.str));
+                    lines.forEach(arr => scheduleLines.push(arr.join(' ')));
 
                     // 사번(4~6자리)이 있는 줄을 "사람 시작 줄"로 보고,
                     //  그 다음 사번 없는 줄들(부서 줄바꿈/성별)을 같은 사람으로 병합
@@ -1825,6 +1856,7 @@
                     });
                 }
 
+                currentScheduleData = buildScheduleData(scheduleLines, file.name);
                 if (!parsed.length) {
                     document.getElementById('rosterPreview').innerText = '⚠️ 자동 판독 결과가 없습니다. 양식이 다를 수 있어요. 표에서 직접 입력하거나 다른 PDF를 시도하세요.';
                 } else {
@@ -1963,11 +1995,25 @@
                 period: selectedCourse.period,
                 weekKey: selectedCourse.weekKey,
                 list: clean.map((r, i) => ({ seq: i + 1, name: r.name.trim(), empNo: (r.empNo||'').trim(), dept: (r.dept||'').trim(), gender: r.gender || '' })),
+                schedule: currentScheduleData || null,
                 updatedAt: firebase.database.ServerValue.TIMESTAMP
             };
-            db.ref(`system/dorm/rosters/${rosterKey(selectedCourse)}`).set(payload)
+            const updates = {};
+            updates[`system/dorm/rosters/${rosterKey(selectedCourse)}`] = payload;
+            if (currentScheduleData) {
+                updates[`courses/${selectedCourse.room}/schedule`] = {
+                    courseName: selectedCourse.courseName,
+                    period: selectedCourse.period,
+                    weekKey: selectedCourse.weekKey,
+                    source: currentScheduleData.fileName || '',
+                    lines: currentScheduleData.lines || [],
+                    text: currentScheduleData.text || '',
+                    updatedAt: firebase.database.ServerValue.TIMESTAMP
+                };
+            }
+            db.ref().update(updates)
                 .then(() => {
-                    showToast(`✅ ${clean.length}명 명단 저장됨`);
+                    showToast(`✅ ${clean.length}명 명단 저장됨${currentScheduleData ? ' · 교육시간표도 강사플랫폼에 반영' : ''}`);
                     rosterDirty = false;
                     document.getElementById('rosterPreview').innerText = '';
                     // 해당 과정 행을 녹색+인원수로 즉시 갱신 (전체 재렌더 없이)
@@ -2183,11 +2229,14 @@
             try {
                 await db.ref(`system/dorm/rosters/${key}`).remove();
                 const removed = await removeRosterFromAssignment(key, courseName);
+                const roomForSchedule = (weekRosters[key] && weekRosters[key].room) || (key.split('__')[1] || '');
+                if (roomForSchedule) await db.ref(`courses/${roomForSchedule}/schedule`).remove().catch(() => {});
                 delete weekRosters[key];
                 excludedRosterKeys.delete(key);
                 rosterCounts[key] = 0;
                 if (selectedCourse && rosterKey(selectedCourse) === key) {
                     roster = [];
+                    currentScheduleData = null;
                     rosterDirty = false;
                     document.getElementById('rosterPreview').innerText = '🗑️ 이 과정의 업로드 명단이 삭제되었습니다.';
                     renderRoster();
@@ -3265,9 +3314,11 @@
             try {
                 await db.ref(`system/dorm/rosters/${key}`).remove();
                 const removed = await removeRosterFromAssignment(key, it.courseName);
+                if (it.room) await db.ref(`courses/${it.room}/schedule`).remove().catch(() => {});
                 rosterCounts[key] = 0;
                 if (selectedCourse && rosterKey(selectedCourse) === key) {
                     roster = [];
+                    currentScheduleData = null;
                     rosterDirty = false;
                     document.getElementById('rosterPreview').innerText = '🗑️ 이 과정의 업로드 명단이 삭제되었습니다.';
                     renderRoster();
