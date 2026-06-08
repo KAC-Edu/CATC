@@ -3229,7 +3229,7 @@ setMode: function(mode) {
         if (state.room) {
             // ── 교육생 화면 모드 설정 (퀴즈는 맨 먼저 처리) ──
             if (!state.isObserver) {
-                const safeStudentModes = ['waiting', 'shuttle', 'admin-action', 'dinner-skip', 'tablet-loan', 'students', 'dashboard', 'notice', 'attendance', 'guide', 'dormitory', 'survey-guide', 'exam-timer'];
+                const safeStudentModes = ['waiting', 'schedule', 'shuttle', 'admin-action', 'dinner-skip', 'tablet-loan', 'students', 'dashboard', 'notice', 'attendance', 'guide', 'dormitory', 'survey-guide', 'exam-timer'];
                 let studentMode;
                 if (mode === 'quiz') {
                     studentMode = 'quiz';
@@ -3272,6 +3272,7 @@ setMode: function(mode) {
             }
             if (mode === 'attendance') ui.loadAttendanceView();
             if (mode === 'guide') { setTimeout(() => guideMgr.refresh(), 100); }
+            if (mode === 'schedule' && typeof scheduleMgr !== 'undefined') scheduleMgr.load();
             if (mode === 'exam-timer') { setTimeout(() => examTimer.init(), 50); }
             if (mode === 'shuttle') {
                 // 날짜 입력창 기본값: 오늘
@@ -5708,6 +5709,60 @@ closeSummaryAndExit: function() {
 
 
 /* --- [수정 3차 - 강의실별 완전 독립] 입교안내 가이드 관리 로직 --- */
+const scheduleMgr = {
+    escapeHtml: function(v) {
+        return String(v || '').replace(/[&<>"']/g, ch => ({
+            '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+        }[ch]));
+    },
+    load: async function() {
+        const body = document.getElementById('scheduleBody');
+        const title = document.getElementById('scheduleCourseName');
+        const meta = document.getElementById('scheduleMeta');
+        if (!body) return;
+        if (!state.room) {
+            body.innerHTML = '<div style="height:260px; display:flex; align-items:center; justify-content:center; color:#94a3b8; font-weight:800;">먼저 강의실을 선택하세요.</div>';
+            return;
+        }
+        body.innerHTML = '<div style="height:260px; display:flex; align-items:center; justify-content:center; color:#94a3b8; font-weight:800;">교육시간표를 불러오는 중입니다.</div>';
+        try {
+            const snap = await firebase.database().ref(`courses/${state.room}/schedule`).once('value');
+            const data = snap.val() || {};
+            const settingsSnap = await firebase.database().ref(`courses/${state.room}/settings`).once('value');
+            const settings = settingsSnap.val() || {};
+            const courseName = data.courseName || settings.courseName || '교육시간표';
+            const period = data.period || settings.period || '';
+            if (title) title.innerText = courseName;
+            if (meta) {
+                const source = data.source ? ` · 원본: ${data.source}` : '';
+                meta.innerText = `${period || '기간 미설정'}${source}`;
+            }
+            const lines = Array.isArray(data.lines) ? data.lines : String(data.text || '').split(/[\n\r]+/).filter(Boolean);
+            if (!lines.length) {
+                body.innerHTML = `
+                    <div style="height:260px; display:flex; flex-direction:column; align-items:center; justify-content:center; color:#94a3b8; font-weight:800; gap:10px; text-align:center;">
+                        <i class="fa-regular fa-calendar-xmark" style="font-size:42px; color:#cbd5e1;"></i>
+                        <div>업로드된 교육시간표가 없습니다.</div>
+                        <div style="font-size:13px; font-weight:700;">교육지원부/생활관 플랫폼에서 명단 파일을 업로드하고 저장하면 이곳에 표시됩니다.</div>
+                    </div>`;
+                return;
+            }
+            body.innerHTML = `
+                <div style="display:flex; flex-direction:column; gap:8px;">
+                    ${lines.map(line => `
+                        <div style="display:flex; align-items:flex-start; gap:10px; background:#fff; border:1px solid #e2e8f0; border-radius:10px; padding:10px 12px; color:#1e293b; font-size:14px; font-weight:700; line-height:1.45;">
+                            <span style="width:7px; height:7px; border-radius:50%; background:#2563eb; margin-top:8px; flex-shrink:0;"></span>
+                            <span style="white-space:pre-wrap; word-break:keep-all;">${this.escapeHtml(line)}</span>
+                        </div>
+                    `).join('')}
+                </div>`;
+        } catch (e) {
+            console.error('[교육시간표 로드]', e);
+            body.innerHTML = '<div style="height:260px; display:flex; align-items:center; justify-content:center; color:#ef4444; font-weight:900;">교육시간표를 불러오지 못했습니다.</div>';
+        }
+    }
+};
+
 const guideMgr = {
     // 강의실별 PDF 상태 캐시: { [roomId]: { pdfDoc, pageNum } }
     // getter/setter 없이 직접 참조 — 컨텍스트 문제 완전 차단

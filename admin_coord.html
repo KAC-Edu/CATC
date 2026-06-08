@@ -6090,6 +6090,7 @@ function closeRosterUpload() {
 
 let _coordRosterData = [];
 let _coordSharedDormRoster = null;
+let _coordScheduleData = null;
 
 function coordRosterNormName(v) {
     return (v || '').toString().replace(/\s+/g, '').trim();
@@ -6259,6 +6260,7 @@ async function coordHandleRosterFile(ev) {
                 });
                 Object.keys(rowsMap).sort((a,b)=>b-a).forEach(k => rawLines.push(rowsMap[k].join(' ')));
             }
+            _coordScheduleData = _coordBuildScheduleData(rawLines, file.name);
             students = _coordParseRoster(rawLines.join('\n'));
         } else {
             throw new Error('PDF/HWP/HWPX 파일만 업로드할 수 있습니다');
@@ -6293,6 +6295,23 @@ function _coordNormalizeRosterCell(v) {
         .replace(/[|]/g, ' ')
         .replace(/\s+/g, ' ')
         .trim();
+}
+
+function _coordBuildScheduleData(lines, fileName) {
+    const arr = (lines || [])
+        .map(_coordNormalizeRosterCell)
+        .filter(v => v && /[가-힣0-9]/.test(v))
+        .filter(v => !/^[捤獥汤捯氠瑢]+$/.test(v));
+    if (!arr.length) return null;
+    let start = arr.findIndex(v => /교육\s*시간표|시간표/.test(v));
+    if (start < 0) start = 0;
+    let end = arr.findIndex((v, i) => i > start + 3 && /교육생\s*명단|연\s*번/.test(v));
+    if (end < 0) end = Math.min(arr.length, start + 90);
+    const picked = arr.slice(start, end)
+        .filter(v => !/^비고$|^연번$|^성명$|^사번$|^소\s*속$|^직위$/.test(v))
+        .slice(0, 120);
+    if (!picked.length) return null;
+    return { lines: picked, text: picked.join('\n'), fileName: fileName || '', savedAt: Date.now() };
 }
 
 function _coordDedupeRoster(rows) {
@@ -6373,6 +6392,7 @@ async function _coordParseHwpxRosterFile(file) {
     const xmlNames = Object.keys(zip.files).filter(n => /\.xml$/i.test(n) && !zip.files[n].dir);
     const parsed = [];
     let allText = '';
+    const scheduleLines = [];
 
     for (const n of xmlNames) {
         const xml = await zip.files[n].async('string');
@@ -6385,10 +6405,12 @@ async function _coordParseHwpxRosterFile(file) {
                 .filter(el => el.localName === 'tc')
                 .map(tc => _coordNormalizeRosterCell(tc.textContent))
                 .filter(Boolean);
+            if (cells.length) scheduleLines.push(cells.join(' '));
             const row = _coordParseRosterCells(cells);
             if (row) parsed.push(row);
         });
     }
+    _coordScheduleData = _coordBuildScheduleData(scheduleLines.length ? scheduleLines : allText.split(/[\n\r]+/), file.name);
     return parsed.length ? _coordDedupeRoster(parsed) : _coordParseRoster(allText);
 }
 
@@ -6536,6 +6558,7 @@ async function _coordParseHwpRosterFile(file) {
         _coordReadLegacyHwpSections(buf).forEach(addSection);
     }
 
+    _coordScheduleData = _coordBuildScheduleData(records.length ? records : text.split(/[\n\r]+/), file.name);
     const byRecords = _coordParseRosterRecords(records);
     return byRecords.length ? byRecords : _coordParseRoster(text);
 }
@@ -6545,15 +6568,29 @@ async function coordSaveRoster() {
     const today = new Date().toISOString().slice(0,10);
     const room = globalAllData && currentRID ? globalAllData[currentRID] : null;
     const settings = (room && room.settings) || {};
-    await firebase.database().ref(`system/coord/rosters/coord_roster_${today}`).set({
+    const rosterPayload = {
         savedAt: firebase.database.ServerValue.TIMESTAMP,
         room: currentRID || '',
         courseName: settings.courseName || '',
         period: settings.period || '',
         sharedDormRosterKey: _coordSharedDormRoster ? _coordSharedDormRoster.key : '',
-        list: _coordRosterData
-    });
-    alert(`✅ ${_coordRosterData.length}명 명단 저장 완료`);
+        list: _coordRosterData,
+        schedule: _coordScheduleData || null
+    };
+    const updates = {};
+    updates[`system/coord/rosters/coord_roster_${today}`] = rosterPayload;
+    if (_coordScheduleData && currentRID) {
+        updates[`courses/${currentRID}/schedule`] = {
+            courseName: settings.courseName || '',
+            period: settings.period || '',
+            source: _coordScheduleData.fileName || '',
+            lines: _coordScheduleData.lines || [],
+            text: _coordScheduleData.text || '',
+            updatedAt: firebase.database.ServerValue.TIMESTAMP
+        };
+    }
+    await firebase.database().ref().update(updates);
+    alert(`✅ ${_coordRosterData.length}명 명단 저장 완료${_coordScheduleData ? '\n교육시간표도 강사플랫폼에 반영되었습니다.' : ''}`);
 }
 
 function coordExportRoster() {
