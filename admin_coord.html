@@ -6311,7 +6311,7 @@ function _coordBuildScheduleData(lines, fileName) {
         .filter(v => !/^비고$|^연번$|^성명$|^사번$|^소\s*속$|^직위$/.test(v))
         .slice(0, 120);
     if (!picked.length) return null;
-    return { lines: picked, text: picked.join('\n'), fileName: fileName || '', savedAt: Date.now() };
+    return { lines: picked, fileName: fileName || '', savedAt: Date.now() };
 }
 
 function _coordDedupeRoster(rows) {
@@ -6586,7 +6586,6 @@ async function coordSaveRoster() {
                 period: settings.period || '',
                 source: _coordScheduleData.fileName || '',
                 lines: _coordScheduleData.lines || [],
-                text: _coordScheduleData.text || '',
                 updatedAt: firebase.database.ServerValue.TIMESTAMP
             };
             const mirrors = await Promise.allSettled([

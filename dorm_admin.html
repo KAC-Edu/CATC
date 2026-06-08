@@ -1549,7 +1549,6 @@
             if (!picked.length) return null;
             return {
                 lines: picked,
-                text: picked.join('\n'),
                 fileName: fileName || '',
                 savedAt: Date.now()
             };
@@ -2009,7 +2008,6 @@
                             weekKey: selectedCourse.weekKey || '',
                             source: currentScheduleData.fileName || '',
                             lines: currentScheduleData.lines || [],
-                            text: currentScheduleData.text || '',
                             rosterKey: rk,
                             updatedAt: firebase.database.ServerValue.TIMESTAMP
                         };
