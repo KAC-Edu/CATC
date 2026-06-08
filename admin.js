@@ -2535,9 +2535,12 @@ loadInternalAttendance: function() {
         Object.keys(students).forEach(key => {
             const s = students[key];
             if (s.name && s.name !== "undefined") {
-                const cleanPhone = (s.phone || "0000").trim();
+                const tokenId = String(key || '').includes('_') ? String(key).split('_').slice(1).join('_') : '';
+                const phoneDigits = String(s.phone || '').replace(/\D/g, '');
+                const phoneLooksMobile = /^010\d{7,8}$/.test(phoneDigits);
+                const cleanPhone = String(s.empNo || s.employeeNo || s.id || s.studentId || (phoneLooksMobile ? tokenId : s.phone) || tokenId || "0000").trim();
                 const identifier = `${s.name.trim()}_${cleanPhone}`;
-                uniqueStudentsMap.set(identifier, { name: s.name.trim(), phone: cleanPhone });
+                uniqueStudentsMap.set(key || identifier, { name: s.name.trim(), phone: cleanPhone, token: key || identifier });
             }
         });
         const sortedList = Array.from(uniqueStudentsMap.values()).sort((a,b) => a.name.localeCompare(b.name));
@@ -2551,7 +2554,7 @@ loadInternalAttendance: function() {
             sortedList.forEach(s => {
                 // [수정 포인트] 학생이 저장한 '이름_번호' 형식과 정확히 일치시켜서 숫자를 올립니다.
                 const attendKey = `${s.name}_${s.phone}`;
-                const isAttended = attendees[attendKey] ? true : false;
+                const isAttended = !!(attendees[attendKey] || attendees[s.token]);
                 if(isAttended) attendCount++;
 
                 const bgColor = isAttended ? "#ecfdf5" : "#ffffff";
@@ -3598,6 +3601,73 @@ renderQaList: function(f) {
     openFullAttendanceSheet: function() {
         if(!state.room) return ui.showAlert("강의실을 먼저 선택해주세요.");
         window.open(`attendance_sheet.html?room=${state.room}`, '_blank');
+    },
+
+    openMissingAttendanceModal: async function() {
+        if(!state.room) return ui.showAlert("강의실을 먼저 선택해주세요.");
+        const modal = document.getElementById('missingAttendanceModal');
+        const listEl = document.getElementById('missingAttendanceList');
+        const summaryEl = document.getElementById('missingAttendanceSummary');
+        if (!modal || !listEl || !summaryEl) return;
+
+        modal.style.display = 'flex';
+        summaryEl.innerText = '확인 중...';
+        listEl.innerHTML = '<div style="padding:28px; text-align:center; color:#94a3b8; font-weight:800;">데이터를 불러오는 중...</div>';
+
+        const today = getTodayString();
+        try {
+            const [studentSnap, attendSnap] = await Promise.all([
+                firebase.database().ref(`courses/${state.room}/students`).once('value'),
+                firebase.database().ref(`courses/${state.room}/internal_attendance/${today}`).once('value')
+            ]);
+            const students = studentSnap.val() || {};
+            const attendees = attendSnap.val() || {};
+            const attendedKeys = new Set(Object.keys(attendees));
+            const seen = new Set();
+            const expected = [];
+
+            Object.entries(students).forEach(([token, s]) => {
+                if (!s || !s.name || s.name === 'undefined') return;
+                const name = String(s.name || '').trim();
+                const tokenId = String(token || '').includes('_') ? String(token).split('_').slice(1).join('_') : '';
+                const phoneDigits = String(s.phone || '').replace(/\D/g, '');
+                const phoneLooksMobile = /^010\d{7,8}$/.test(phoneDigits);
+                const id = String(s.empNo || s.employeeNo || s.id || s.studentId || (phoneLooksMobile ? tokenId : s.phone) || tokenId || '').trim();
+                const key = `${name}_${id}`;
+                const fallbackKey = token || key;
+                if (seen.has(fallbackKey)) return;
+                seen.add(fallbackKey);
+                expected.push({ name, id: id || '-', key, token: fallbackKey });
+            });
+
+            const missing = expected
+                .filter(s => !attendedKeys.has(s.key) && !attendedKeys.has(s.token))
+                .sort((a,b) => a.name.localeCompare(b.name));
+
+            summaryEl.innerText = `오늘 자체 출결 기준 · 완료 ${expected.length - missing.length}명 / 전체 ${expected.length}명 · 미완료 ${missing.length}명`;
+            if (!expected.length) {
+                listEl.innerHTML = '<div style="padding:28px; text-align:center; color:#94a3b8; font-weight:800;">수강생 명단이 없습니다.</div>';
+                return;
+            }
+            if (!missing.length) {
+                listEl.innerHTML = '<div style="padding:32px; text-align:center; color:#10b981; font-size:18px; font-weight:900;"><i class="fa-solid fa-circle-check"></i><br>모두 출석 완료했습니다.</div>';
+                return;
+            }
+            listEl.innerHTML = missing.map((s, i) => `
+                <div style="display:flex; align-items:center; gap:12px; padding:12px 14px; background:#fff; border:1px solid #e2e8f0; border-radius:11px; margin-bottom:8px;">
+                    <div style="width:28px; height:28px; border-radius:50%; background:#fffbeb; color:#d97706; display:flex; align-items:center; justify-content:center; font-weight:900; flex-shrink:0;">${i + 1}</div>
+                    <div style="flex:1; min-width:0;">
+                        <div style="font-size:15px; color:#0f172a; font-weight:900;">${s.name}</div>
+                        <div style="font-size:12px; color:#64748b; font-weight:700; margin-top:2px;">식별ID: ${s.id || '-'}</div>
+                    </div>
+                    <span style="font-size:12px; color:#b45309; background:#fffbeb; border:1px solid #fde68a; padding:5px 9px; border-radius:999px; font-weight:900;">미완료</span>
+                </div>
+            `).join('');
+        } catch(e) {
+            console.error('[자체출결 미완료자]', e);
+            summaryEl.innerText = '미완료자 확인 실패';
+            listEl.innerHTML = `<div style="padding:28px; text-align:center; color:#ef4444; font-weight:800;">데이터를 불러오지 못했습니다.<br>${e.message || e}</div>`;
+        }
     },
 
     toggleNightMode: function() { 

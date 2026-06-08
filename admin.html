@@ -962,10 +962,33 @@
                 <div style="font-size:20px; font-weight:900; color:#1e293b; margin-bottom:15px;">
                     출석 완료: <span id="checkInCount" style="color:#10b981;">0</span> / <span id="totalMemberCount">0</span> 명
                 </div>
-                <button class="btn-action" style="background:#3b82f6; width:200px; height:50px; font-size:16px; margin:0 auto;" onclick="ui.openFullAttendanceSheet()">
-                    <i class="fa-solid fa-table-list"></i> 전체 출석부 관리/인쇄
-                </button>
+                <div style="display:flex; gap:10px; justify-content:center; flex-wrap:wrap;">
+                    <button class="btn-action" style="background:#f59e0b; width:180px; height:50px; font-size:15px; margin:0;" onclick="ui.openMissingAttendanceModal()">
+                        <i class="fa-solid fa-user-clock"></i> 미완료자 확인
+                    </button>
+                    <button class="btn-action" style="background:#3b82f6; width:200px; height:50px; font-size:16px; margin:0;" onclick="ui.openFullAttendanceSheet()">
+                        <i class="fa-solid fa-table-list"></i> 전체 출석부 관리/인쇄
+                    </button>
+                </div>
             </div>
+        </div>
+    </div>
+</div>
+
+<!-- 자체 출결 미완료자 팝업 -->
+<div id="missingAttendanceModal" class="modal-overlay" onclick="if(event.target===this)this.style.display='none'">
+    <div class="modal-box" style="width:92%; max-width:520px; text-align:left;">
+        <div class="modal-header" style="text-align:left; margin-bottom:12px;">
+            <h3 style="display:flex; align-items:center; gap:8px; justify-content:flex-start;">
+                <i class="fa-solid fa-user-clock" style="color:#f59e0b;"></i> 자체 출결 미완료자
+            </h3>
+            <p id="missingAttendanceSummary" style="font-size:13px; color:#64748b; margin:8px 0 0;">확인 중...</p>
+        </div>
+        <div id="missingAttendanceList" style="max-height:420px; overflow:auto; border:1.5px solid #e2e8f0; border-radius:14px; background:#f8fafc; padding:10px;">
+            <div style="padding:28px; text-align:center; color:#94a3b8; font-weight:800;">데이터를 불러오는 중...</div>
+        </div>
+        <div class="modal-actions" style="margin-top:16px; justify-content:flex-end;">
+            <button class="m-btn m-btn-later" onclick="document.getElementById('missingAttendanceModal').style.display='none'">닫기</button>
         </div>
     </div>
 </div>
