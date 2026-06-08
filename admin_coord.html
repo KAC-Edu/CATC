@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ko">
 <head>
   <meta charset="UTF-8" />
@@ -9,7 +9,6 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
-  <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" rel="stylesheet">
   <style>
@@ -111,46 +110,7 @@
 
 
 
-
-/* 모바일 축소 화면에서 글자가 한 글자씩 세로로 쌓이지 않도록 보정 */
-@media (max-width: 430px) {
-    .navy-table th,
-    .navy-table td,
-    #allStudentListView .navy-table th,
-    #allStudentListView .navy-table td,
-    .pickup-grid-table th,
-    .pickup-grid-table td {
-        word-break: keep-all !important;
-        overflow-wrap: normal !important;
-        white-space: nowrap !important;
-        font-size: clamp(9px, 2.55vw, 12px) !important;
-        line-height: 1.25 !important;
-        padding-left: 3px !important;
-        padding-right: 3px !important;
-    }
-    #allStudentListView .course-cell,
-    #allStudentListView .bold-text,
-    #allStudentListView .blue-text,
-    .course-name-cell {
-        display: inline-block;
-        max-width: 100%;
-        white-space: nowrap !important;
-        overflow: hidden !important;
-        text-overflow: ellipsis !important;
-        vertical-align: middle;
-    }
-    .badge-shuttle {
-        white-space: nowrap !important;
-        font-size: clamp(8px, 2.3vw, 10px) !important;
-        padding: 2px 4px !important;
-    }
-    .course-item-card span,
-    .entry-box span,
-    .entry-box-tablet span {
-        word-break: keep-all !important;
-        white-space: nowrap;
-    }
-}    :root {
+    :root {
       --navy-dark: #0f172a; --blue-main: #0ea5e9; --blue-deep: #0369a1;
       --green-save: #10b981; --bg-cool: #f1f5f9; --card-white: #ffffff;
       --text-dark: #1e293b; --border-blue: #e2e8f0; --danger: #ef4444;
@@ -182,143 +142,18 @@
     .header-btn {
         font-size: 19px;
         color: rgba(255,255,255,0.85);
-        cursor: pointer;
-        border: none;
-        background: none;
-        transition: opacity 0.2s, background 0.2s;
-        padding: 4px;
+        cursor: pointer; border: none; background: none;
+        transition: opacity 0.2s; padding: 4px;
     }
     .header-btn:active { opacity: 0.6; }
-
-    .coord-back-btn {
-        width: 36px;
-        height: 36px;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        border-radius: 12px;
-        background: rgba(255,255,255,0.12);
-        border: 1px solid rgba(255,255,255,0.18);
-        font-size: 16px;
-        flex-shrink: 0;
+        color: #fff; 
+        cursor: pointer; 
+        border: none; 
+        background: none; 
+        /* 버튼 클릭 시 약간 투명해지는 효과 추가 (선택사항) */
+        transition: opacity 0.2s;
     }
-
-    .coord-brand {
-        display: flex;
-        align-items: center;
-        flex: 1;
-        min-width: 0;
-        margin: 0 12px;
-    }
-
-    .coord-brand-text {
-        min-width: 0;
-    }
-
-    .coord-brand-kicker {
-        font-size: 9px;
-        color: rgba(255,255,255,0.6);
-        font-weight: 700;
-        letter-spacing: 1.2px;
-        text-transform: uppercase;
-        line-height: 1;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
-
-    .coord-brand-title {
-        font-size: 14px;
-        font-weight: 900;
-        color: #fff;
-        margin-top: 3px;
-        line-height: 1;
-    }
-
-    .ind-title-row {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        border-bottom: 1px solid rgba(255,255,255,0.15);
-        padding-bottom: 12px;
-    }
-
-    .ind-room-label {
-        font-weight: 900;
-        font-size: 14px;
-        color: #60a5fa;
-        white-space: nowrap;
-        flex-shrink: 0;
-    }
-
-    #ind-course-name {
-        font-weight: 800;
-        font-size: clamp(16px, 4.6vw, 19px);
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        min-width: 0;
-        flex: 1;
-    }
-
-    .coord-roster-upload-btn {
-        margin-left: auto;
-        padding: 7px 14px;
-        background: rgba(255,255,255,0.15);
-        border: 1.5px solid rgba(255,255,255,0.35);
-        border-radius: 9px;
-        color: #fff;
-        font-size: 12px;
-        font-weight: 800;
-        cursor: pointer;
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        white-space: nowrap;
-        flex-shrink: 0;
-    }
-
-    @media (max-width: 430px) {
-        .app-header {
-            padding: 11px 14px;
-        }
-
-        .coord-back-btn {
-            width: 34px;
-            height: 34px;
-            border-radius: 11px;
-            font-size: 15px;
-        }
-
-        .coord-brand {
-            margin: 0 9px;
-        }
-
-        .coord-brand-kicker {
-            font-size: 8px;
-            letter-spacing: 0.8px;
-        }
-
-        .coord-brand-title {
-            font-size: 13px;
-        }
-
-        .ind-title-row {
-            display: grid;
-            grid-template-columns: auto minmax(0, 1fr);
-            gap: 6px 9px;
-            align-items: center;
-        }
-
-        .coord-roster-upload-btn {
-            grid-column: 2;
-            justify-self: end;
-            margin-left: 0;
-            padding: 6px 10px;
-            font-size: 11px;
-            border-radius: 8px;
-        }
-    }
+    .header-btn:active { opacity: 0.6; }
 
     .header-title { 
         color: #fff; 
@@ -1568,9 +1403,6 @@ body.pc-mode .entry-box:hover, body.pc-mode .entry-box-tablet:hover {
           <button class="navy-btn" style="background:var(--blue-deep); height:45px;" onclick="openSetupModalFromIndividual()">
               <i class="fa-solid fa-sliders"></i> 해당 과정 설정 수정
           </button>
-          <button class="navy-btn" style="background:#2563eb; height:45px;" onclick="openRosterUpload(); toggleMenu(false);">
-              <i class="fa-solid fa-file-arrow-up"></i> 교육생 명단 업로드
-          </button>
           <div class="section-card" style="padding:10px;">
               <div class="section-title"><i class="fa-solid fa-qrcode"></i> 출결 QR 관리</div>
               <div id="qrPreviewArea" style="background:#f8fafc; border:1px solid #eee; border-radius:8px; padding:10px; text-align:center;">
@@ -1601,14 +1433,13 @@ body.pc-mode .entry-box:hover, body.pc-mode .entry-box-tablet:hover {
 <!-- 상단 헤더 부분 (수정됨) -->
 <header class="app-header">
   <!-- 좌: 뒤로가기 -->
-  <button class="header-btn coord-back-btn" onclick="handleBackNav()" title="이전 화면으로">
-    <i class="fa-solid fa-chevron-left"></i>
-  </button>
+  <button class="header-btn" onclick="handleBackNav()" style="font-family:'Pretendard';font-weight:900;letter-spacing:-2px;font-size:18px;">&lt;&lt;</button>
   <!-- 중: 브랜드 뱃지 -->
-  <div class="coord-brand">
-    <div class="coord-brand-text">
-      <div class="coord-brand-kicker">Korea Airports Corp. · CATC</div>
-      <div class="coord-brand-title">교육운영부</div>
+  <div style="display:flex;align-items:center;gap:10px;flex:1;margin:0 12px;">
+    <div style="width:33px;height:33px;background:rgba(255,255,255,0.2);border:1.5px solid rgba(255,255,255,0.35);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:14px;color:#fff;flex-shrink:0;"><i class="fa-solid fa-building-columns"></i></div>
+    <div>
+      <div style="font-size:9px;color:rgba(255,255,255,0.6);font-weight:700;letter-spacing:1.2px;text-transform:uppercase;line-height:1;">Korea Airports Corp. · CATC</div>
+      <div style="font-size:14px;font-weight:900;color:#fff;margin-top:2px;line-height:1;">교육운영부</div>
     </div>
   </div>
   <!-- 우: 시계 + 메뉴 버튼 -->
@@ -1875,9 +1706,12 @@ body.pc-mode .entry-box:hover, body.pc-mode .entry-box-tablet:hover {
       <!-- [뷰 2] 개별 과정 상세 -->
       <div id="individualStatusView" style="display:none; flex-direction:column; gap:12px;">
           <div id="indCourseHeader" style="background: linear-gradient(135deg, #003366 0%, #0055aa 100%); border-radius: 12px; padding: 22px 25px; margin-bottom: 10px; color: #ffffff; box-shadow: 0 4px 12px rgba(0, 51, 102, 0.2); display: flex; flex-direction: column; gap: 12px;">
-              <div class="ind-title-row">
-                  <span class="ind-room-label">ROOM <span id="ind-room-id">-</span></span>
-                  <span id="ind-course-name">과정명 로딩 중...</span>
+              <div style="display: flex; align-items: baseline; gap: 10px; border-bottom: 1px solid rgba(255,255,255,0.15); padding-bottom: 12px;">
+                  <span style="font-weight: 900; font-size: 14px; color: #60a5fa;">ROOM <span id="ind-room-id">-</span></span>
+                  <span id="ind-course-name" style="font-weight: 800; font-size: 19px;">과정명 로딩 중...</span>
+                  <button onclick="openRosterUpload()" title="교육생 명단 업로드" style="margin-left:auto; padding:7px 14px; background:rgba(255,255,255,0.15); border:1.5px solid rgba(255,255,255,0.35); border-radius:9px; color:#fff; font-size:12px; font-weight:800; cursor:pointer; display:inline-flex; align-items:center; gap:6px; white-space:nowrap; flex-shrink:0;">
+                      <i class="fa-solid fa-file-arrow-up"></i> 명단 업로드
+                  </button>
               </div>
               <div style="display: flex; flex-wrap: wrap; gap: 10px 20px; font-size: 12.5px;">
                   <div><span style="opacity: 0.6;">교육기간:</span> <span id="ind-period">-</span></div>
@@ -4522,30 +4356,6 @@ function clearNoticeHistory() {
 
 
 // 생활관 배정 현황 로직 추가
-    function coordNormDormName(v) { return String(v || '').replace(/\s+/g, '').trim(); }
-    function coordNormDormId(v) { return String(v || '').replace(/\D/g, '').trim(); }
-    function coordFindDormAssignment(allWeeks, person, rid, courseName) {
-        const n = coordNormDormName(person && person.name);
-        const id = coordNormDormId((person && (person.phone || person.empNo)) || '');
-        let best = null;
-        let bestScore = -1;
-        Object.values(allWeeks || {}).forEach(wk => {
-            const when = Number((wk && wk.assignedAt) || 0);
-            Object.values((wk && wk.students) || {}).forEach(a => {
-                if (!a || coordNormDormName(a.name) !== n) return;
-                const aid = coordNormDormId(a.empNo || a.phone || '');
-                const idMatch = id && aid && (id === aid || id.slice(-4) === aid || aid.slice(-4) === id);
-                if (id && aid && !idMatch) return;
-                let score = when;
-                if (idMatch) score += 10000000000000;
-                if (rid && String(a.room || '') === String(rid)) score += 1000000000000;
-                if (courseName && String(a.course || '').trim() === String(courseName).trim()) score += 100000000000;
-                if (score > bestScore) { bestScore = score; best = a; }
-            });
-        });
-        return best || null;
-    }
-
     async function openDormManager() {
         toggleMenu(false);
         const tbody = document.getElementById('dormTableBody');
@@ -4555,12 +4365,11 @@ function clearNoticeHistory() {
         try {
             const [studentSnap, dormSnap] = await Promise.all([
                 firebase.database().ref(`courses/${currentRID}/students`).once('value'),
-                firebase.database().ref(`system/dorm/assignments`).once('value')
+                firebase.database().ref(`system/dormitory_assignments`).once('value')
             ]);
 
             const students = studentSnap.val() || {};
             const dormData = dormSnap.val() || {};
-            const courseName = globalAllData?.[currentRID]?.settings?.courseName || '';
             tbody.innerHTML = "";
 
             const studentList = Object.values(students)
@@ -4574,15 +4383,14 @@ function clearNoticeHistory() {
 
             studentList.forEach(s => {
                 const sPhone = s.phone ? s.phone : "";
-                let assigned = coordFindDormAssignment(dormData, s, currentRID, courseName) || { building: "-", no: "미배정" };
-                const roomNo = assigned.no || assigned.room || "미배정";
+                let assigned = dormData[`${s.name.trim()}_${sPhone}`] || dormData[s.name.trim()] || { building: "-", room: "미배정" };
                 
                 tbody.innerHTML += `
                     <tr>
                         <td style="font-weight:800;">${s.name}</td>
                         <td style="color:#64748b;">${sPhone}</td>
                         <td style="color:var(--blue-deep);">${assigned.building}</td>
-                        <td style="font-weight:800;">${roomNo}${roomNo !== '미배정' ? '호' : ''}</td>
+                        <td style="font-weight:800;">${assigned.room}${assigned.room !== '미배정' ? '호' : ''}</td>
                     </tr>`;
             });
         } catch (e) {
@@ -5108,7 +4916,7 @@ async function loadAllStudentData() {
     masterStudentList = [];
 
     // 생활관 배정 정보 가져오기
-    const dormSnap = await firebase.database().ref('system/dorm/assignments').once('value');
+    const dormSnap = await firebase.database().ref('system/dormitory_assignments').once('value');
     const dormData = dormSnap.val() || {};
 
     Object.keys(globalAllData).forEach(rid => {
@@ -5135,10 +4943,11 @@ async function loadAllStudentData() {
             if (!s.name || s.name === "undefined" || s.name.trim() === "") return;
 
             const phoneSuffix = s.phone ? s.phone : "0000";
-            // 생활관 매칭: 교육지원부 생활관 배정(system/dorm/assignments) 기준
-            let assigned = coordFindDormAssignment(dormData, s, rid, courseName);
+            const sKey = `${s.name.trim()}_${phoneSuffix}`;
+
+            // 생활관 매칭 (정밀 키 또는 이름 기준)
+            let assigned = dormData[sKey] || dormData[s.name.trim()];
             const dorm = assigned || { building: "-", room: "미배정" };
-            const dormNo = dorm.no || dorm.room || "미배정";
             
             // 퇴교 차량 정보 추출
             const shuttleReq = room.shuttle?.requests?.[stoken];
@@ -5160,7 +4969,7 @@ async function loadAllStudentData() {
                 name: s.name,
                 phone: phoneSuffix,
                 dormBuilding: dorm.building,
-                dormRoom: dormNo !== '미배정' ? (String(dormNo).includes('호') ? String(dormNo) : `${dormNo}호`) : "미배정",
+                dormRoom: dorm.room !== '미배정' ? (dorm.room.includes('호') ? dorm.room : `${dorm.room}호`) : "미배정",
                 shuttleText,
                 shuttleClass,
                 shuttleType,
@@ -5937,12 +5746,10 @@ const annualPlanMgrCoord = {
       <button onclick="closeRosterUpload()" style="background:none; border:none; font-size:20px; color:#94a3b8; cursor:pointer;">✕</button>
     </div>
     <div style="padding:14px 22px; border-bottom:1px solid #f1f5f9; display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
-      <input type="file" id="coordRosterInput" accept=".pdf,.hwp,.hwpx,application/pdf,application/x-hwp,application/haansofthwp,application/vnd.hancom.hwpx" style="display:none;" onchange="coordHandleRosterFile(event)">
+      <input type="file" id="coordRosterInput" accept="application/pdf,.hwp,.hwpx" style="display:none;" onchange="coordHandleRosterFile(event)">
       <button onclick="document.getElementById('coordRosterInput').click()" style="padding:10px 18px; background:#2563eb; color:#fff; border:none; border-radius:10px; font-weight:800; font-size:13px; cursor:pointer; display:flex; align-items:center; gap:7px;"><i class="fa-solid fa-file-arrow-up"></i> PDF / HWP / HWPX 선택</button>
       <div id="coordRosterStatus" style="font-size:13px; color:#64748b;"></div>
     </div>
-    <div id="coordSharedRosterBox" style="display:none; margin:12px 22px 0; padding:12px 14px; border:1.5px solid #bfdbfe; background:#eff6ff; border-radius:12px; font-size:12.5px; color:#1e3a8a; line-height:1.55;"></div>
-    <div id="coordRosterDiffBox" style="display:none; margin:10px 22px 0; padding:12px 14px; border:1.5px solid #fed7aa; background:#fff7ed; border-radius:12px; font-size:12.5px; color:#9a3412; line-height:1.55;"></div>
     <div style="overflow-y:auto; flex:1; min-height:180px;">
       <table style="width:100%; border-collapse:collapse; font-size:13px;">
         <thead><tr style="background:#f8fafc;">
@@ -6081,7 +5888,6 @@ if (_origHRS) {
 function openRosterUpload() {
     const m = document.getElementById('rosterUploadModal');
     if (m) m.style.display = 'flex';
-    coordLoadSharedDormRoster();
 }
 function closeRosterUpload() {
     const m = document.getElementById('rosterUploadModal');
@@ -6089,149 +5895,6 @@ function closeRosterUpload() {
 }
 
 let _coordRosterData = [];
-let _coordSharedDormRoster = null;
-let _coordScheduleData = null;
-
-function coordRosterNormName(v) {
-    return (v || '').toString().replace(/\s+/g, '').trim();
-}
-function coordRosterNormEmp(v) {
-    return (v || '').toString().replace(/\D/g, '').trim();
-}
-function coordRosterPersonKey(s) {
-    const emp = coordRosterNormEmp(s && s.empNo);
-    const name = coordRosterNormName(s && s.name);
-    return emp ? `${name}|${emp}` : name;
-}
-function coordRosterWeekKeyFromPeriod(period) {
-    const start = (period || '').split('~')[0].trim();
-    if (!start) return '';
-    const d = new Date(start + 'T00:00:00');
-    if (isNaN(d)) return '';
-    const day = (d.getDay() + 6) % 7;
-    d.setDate(d.getDate() - day);
-    return d.toISOString().slice(0, 10);
-}
-
-async function coordLoadSharedDormRoster() {
-    const box = document.getElementById('coordSharedRosterBox');
-    const diff = document.getElementById('coordRosterDiffBox');
-    if (box) {
-        box.style.display = 'block';
-        box.innerHTML = '<b>교육지원부 생활관 명단 확인 중...</b>';
-    }
-    if (diff) { diff.style.display = 'none'; diff.innerHTML = ''; }
-    _coordSharedDormRoster = null;
-
-    try {
-        const room = globalAllData && currentRID ? globalAllData[currentRID] : null;
-        const settings = (room && room.settings) || {};
-        const courseName = (settings.courseName || '').trim();
-        const period = (settings.period || '').trim();
-        const weekKey = coordRosterWeekKeyFromPeriod(period);
-        const snap = await firebase.database().ref('system/dorm/rosters').once('value');
-        const all = snap.val() || {};
-        let foundKey = '';
-        let found = null;
-
-        Object.entries(all).forEach(([key, roster]) => {
-            if (found || !roster || !Array.isArray(roster.list)) return;
-            const sameRoom = currentRID && String(roster.room || key.split('__')[1] || '') === String(currentRID);
-            const sameCourse = courseName && (roster.courseName || '').trim() === courseName;
-            const sameWeek = !weekKey || (roster.weekKey || key.split('__')[0] || '') === weekKey;
-            if (sameWeek && (sameRoom || sameCourse)) {
-                foundKey = key;
-                found = roster;
-            }
-        });
-
-        if (!found) {
-            if (box) {
-                box.style.display = 'block';
-                box.innerHTML = '<b>공유 명단 없음</b><br>교육지원부 생활관 플랫폼에 저장된 현재 과정 명단을 찾지 못했습니다.';
-            }
-            return;
-        }
-
-        _coordSharedDormRoster = {
-            key: foundKey,
-            courseName: found.courseName || courseName || '-',
-            weekKey: found.weekKey || foundKey.split('__')[0] || '',
-            list: found.list || []
-        };
-        if (box) {
-            const rows = (_coordSharedDormRoster.list || []).map((s, i) => `
-                <tr>
-                    <td style="padding:6px 8px; border-top:1px solid #bfdbfe; text-align:center;">${i + 1}</td>
-                    <td style="padding:6px 8px; border-top:1px solid #bfdbfe; font-weight:900;">${(s.name || '-').toString().replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'})[m])}</td>
-                    <td style="padding:6px 8px; border-top:1px solid #bfdbfe;">${(s.empNo || '-').toString().replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'})[m])}</td>
-                    <td style="padding:6px 8px; border-top:1px solid #bfdbfe;">${(s.dept || '-').toString().replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'})[m])}</td>
-                    <td style="padding:6px 8px; border-top:1px solid #bfdbfe; text-align:center;">${(s.gender || '-').toString().replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'})[m])}</td>
-                </tr>`).join('');
-            box.style.display = 'block';
-            box.innerHTML =
-                `<b>교육지원부 공유 명단 있음</b><br>` +
-                `${_coordSharedDormRoster.courseName} · ${_coordSharedDormRoster.list.length}명` +
-                `<span style="display:inline-block;margin-left:8px;padding:2px 7px;border-radius:999px;background:#dbeafe;color:#1d4ed8;font-weight:900;">공유 중</span>` +
-                `<div style="margin-top:10px; max-height:190px; overflow:auto; border:1px solid #bfdbfe; border-radius:10px; background:#fff;">
-                    <table style="width:100%; border-collapse:collapse; font-size:12px; color:#1e3a8a;">
-                        <thead style="position:sticky; top:0; background:#eff6ff;">
-                            <tr>
-                                <th style="padding:7px 8px; text-align:center;">#</th>
-                                <th style="padding:7px 8px;">성명</th>
-                                <th style="padding:7px 8px;">사번</th>
-                                <th style="padding:7px 8px;">소속</th>
-                                <th style="padding:7px 8px;">성별</th>
-                            </tr>
-                        </thead>
-                        <tbody>${rows || '<tr><td colspan="5" style="padding:14px; text-align:center; color:#64748b;">공유 명단이 비어 있습니다.</td></tr>'}</tbody>
-                    </table>
-                </div>`;
-        }
-        if (_coordRosterData.length) coordRenderRosterDiff(_coordRosterData);
-    } catch (e) {
-        console.error('[생활관 공유 명단 확인]', e);
-        if (box) {
-            box.style.display = 'block';
-            box.innerHTML = '<b>공유 명단 확인 실패</b><br>네트워크 또는 권한 상태를 확인해 주세요.';
-        }
-    }
-}
-
-function coordRenderRosterDiff(uploadList) {
-    const box = document.getElementById('coordRosterDiffBox');
-    if (!box) return;
-    if (!_coordSharedDormRoster || !Array.isArray(_coordSharedDormRoster.list)) {
-        box.style.display = 'none';
-        box.innerHTML = '';
-        return;
-    }
-    const shared = _coordSharedDormRoster.list || [];
-    const sharedMap = new Map(shared.map(s => [coordRosterPersonKey(s), s]));
-    const uploadMap = new Map((uploadList || []).map(s => [coordRosterPersonKey(s), s]));
-    const added = [];
-    const missing = [];
-    uploadMap.forEach((s, key) => { if (key && !sharedMap.has(key)) added.push(s); });
-    sharedMap.forEach((s, key) => { if (key && !uploadMap.has(key)) missing.push(s); });
-    const fmt = arr => arr.slice(0, 12).map(s => `${s.name || '-'}${s.empNo ? '(' + s.empNo + ')' : ''}`).join(', ') + (arr.length > 12 ? ` 외 ${arr.length - 12}명` : '');
-    if (!added.length && !missing.length) {
-        box.style.display = 'block';
-        box.style.borderColor = '#86efac';
-        box.style.background = '#f0fdf4';
-        box.style.color = '#166534';
-        box.innerHTML = `<b>명단 일치</b><br>교육지원부 공유 명단 ${shared.length}명과 업로드 명단 ${uploadList.length}명이 같습니다.`;
-        return;
-    }
-    box.style.display = 'block';
-    box.style.borderColor = '#fed7aa';
-    box.style.background = '#fff7ed';
-    box.style.color = '#9a3412';
-    box.innerHTML =
-        `<b>교육지원부 공유 명단과 차이가 있습니다.</b><br>` +
-        `업로드 명단에만 있는 인원: <b>${added.length}명</b>${added.length ? '<br>' + fmt(added) : ''}<br>` +
-        `교육지원부 명단에는 있으나 업로드 명단에 없는 인원: <b>${missing.length}명</b>${missing.length ? '<br>' + fmt(missing) : ''}`;
-}
-
 async function coordHandleRosterFile(ev) {
     const file = ev.target.files[0]; if (!file) return;
     ev.target.value = '';
@@ -6241,10 +5904,13 @@ async function coordHandleRosterFile(ev) {
         let students = [];
         const lowerName = file.name.toLowerCase();
         if (lowerName.endsWith('.hwpx')) {
-            students = await _coordParseHwpxRosterFile(file);
+            const text = await _coordHwpxExtract(file);
+            students = _coordParseRoster(text);
         } else if (lowerName.endsWith('.hwp')) {
-            students = await _coordParseHwpRosterFile(file);
-        } else if (lowerName.endsWith('.pdf') || file.type === 'application/pdf') {
+            const buf = await file.arrayBuffer();
+            const text = await _coordHwpExtract(buf);
+            students = _coordParseRoster(text);
+        } else {
             const buf = await file.arrayBuffer();
             const pdf = await pdfjsLib.getDocument(new Uint8Array(buf)).promise;
             let rawLines = [];
@@ -6260,10 +5926,7 @@ async function coordHandleRosterFile(ev) {
                 });
                 Object.keys(rowsMap).sort((a,b)=>b-a).forEach(k => rawLines.push(rowsMap[k].join(' ')));
             }
-            _coordScheduleData = _coordBuildScheduleData(rawLines, file.name);
             students = _coordParseRoster(rawLines.join('\n'));
-        } else {
-            throw new Error('PDF/HWP/HWPX 파일만 업로드할 수 있습니다');
         }
         _coordRosterData = students;
         const tbody = document.getElementById('coordRosterBody');
@@ -6280,7 +5943,6 @@ async function coordHandleRosterFile(ev) {
             </tr>`).join('');
             statusEl.textContent = `✅ ${students.length}명 판독됨`;
             document.getElementById('coordRosterCount').textContent = `총 ${students.length}명`;
-            coordRenderRosterDiff(students);
         }
     } catch(e) {
         statusEl.textContent = '❌ 오류: ' + e.message;
@@ -6288,316 +5950,79 @@ async function coordHandleRosterFile(ev) {
     }
 }
 
-function _coordNormalizeRosterCell(v) {
-    return String(v || '')
-        .replace(/\u0000/g, '')
-        .replace(/\u00a0/g, ' ')
-        .replace(/[|]/g, ' ')
-        .replace(/\s+/g, ' ')
-        .trim();
-}
-
-function _coordBuildScheduleData(lines, fileName) {
-    const arr = (lines || [])
-        .map(_coordNormalizeRosterCell)
-        .filter(v => v && /[가-힣0-9]/.test(v))
-        .filter(v => !/^[捤獥汤捯氠瑢]+$/.test(v));
-    if (!arr.length) return null;
-    let start = arr.findIndex(v => /교육\s*시간표|시간표/.test(v));
-    if (start < 0) start = 0;
-    let end = arr.findIndex((v, i) => i > start + 3 && /교육생\s*명단|연\s*번/.test(v));
-    if (end < 0) end = Math.min(arr.length, start + 90);
-    const picked = arr.slice(start, end)
-        .filter(v => !/^비고$|^연번$|^성명$|^사번$|^소\s*속$|^직위$/.test(v))
-        .slice(0, 120);
-    if (!picked.length) return null;
-    return { lines: picked, fileName: fileName || '', savedAt: Date.now() };
-}
-
-function _coordDedupeRoster(rows) {
-    const seen = new Set();
-    return (rows || []).filter(r => {
-        if (!r || !r.name || !r.empNo) return false;
-        const key = `${r.name}_${r.empNo}`;
-        if (seen.has(key)) return false;
-        seen.add(key);
-        return true;
-    });
-}
-
-function _coordParseRosterCells(cells) {
-    const arr = (cells || []).map(_coordNormalizeRosterCell).filter(Boolean);
-    if (!arr.length || /연\s*번|성\s*명|성\s*함|사\s*번|소\s*속|성\s*별|합계|소계|명단|과정/.test(arr.join(' '))) return null;
-    const POS = /^(부장|차장|과장|대리|주임|사원|팀장|교수|수석|본부장|처장|이사|소장|원장|선임|직원|대우|센터장|실장|담당|청원경찰|운전원)$/;
-    const isSeq = v => /^\d{1,3}$/.test(v);
-    const isEmp = v => /^\d{4,6}$/.test(v);
-    const isGender = v => /^(남|여|남자|여자|넘|M|F|m|f)$/.test(v);
-    const isDeptToken = v => /(본부|실|팀|부|처|센터|지사|공항|사업|운영|관제|항행|시설|보안|재무|인사|교육|훈련|지원|관리|청|소방|대대|항공대)/.test(v);
-    const empIdx = arr.findIndex(isEmp);
-    if (empIdx < 0) return null;
-    const empNo = arr[empIdx];
-
-    const nameCandidates = arr
-        .map((v, i) => ({ v: v.replace(/\s+/g, ''), i }))
-        .filter(x => x.i !== empIdx && !isSeq(x.v) && !isGender(x.v) && !POS.test(x.v) && /^[가-힣]{2,5}$/.test(x.v) && !isDeptToken(x.v));
-    const nearName = nameCandidates
-        .sort((a, b) => Math.abs(a.i - empIdx) - Math.abs(b.i - empIdx))[0];
-    const name = nearName ? nearName.v : '';
-    if (!name) return null;
-
-    const genderCell = arr.find(isGender);
-    const gender = /^(여|여자|F|f)$/.test(genderCell || '') ? 'F' : 'M';
-    const nameChars = new Set(name.split(''));
-    const deptCand = arr.filter(v => {
-        const c = v.replace(/\s+/g, '');
-        if (!c || c === name || c === empNo || isSeq(c) || isGender(c) || POS.test(c)) return false;
-        if (/^\d+$/.test(c)) return false;
-        if (c.length === 1 && nameChars.has(c)) return false;
-        return /[가-힣]/.test(c);
-    });
-    const deptKeyword = deptCand.find(isDeptToken);
-    const dept = deptKeyword || deptCand.sort((a, b) => b.length - a.length)[0] || '';
-    return { seq: 0, name, empNo, dept, position: '', gender };
-}
-
-function _coordParseRosterRecords(records) {
-    const arr = (records || []).map(_coordNormalizeRosterCell).filter(Boolean);
-    const parsed = [];
-    const isSeq = v => /^\d{1,3}$/.test(v);
-    const isEmp = v => /^\d{4,6}$/.test(v);
-    const isGender = v => /^(남|여|남자|여자|넘|M|F|m|f)$/.test(v);
-
-    arr.forEach((cell, idx) => {
-        if (!isEmp(cell)) return;
-        let start = idx;
-        if (idx >= 2 && isSeq(arr[idx - 2])) start = idx - 2;
-        else if (idx >= 1 && isSeq(arr[idx - 1])) start = idx - 1;
-        else if (idx >= 1) start = idx - 1;
-
-        let end = Math.min(arr.length, idx + 8);
-        for (let j = idx + 1; j < Math.min(arr.length, idx + 9); j++) {
-            if (isGender(arr[j])) { end = j + 1; break; }
-            if (j > idx + 1 && isSeq(arr[j]) && isEmp(arr[j + 1])) { end = j; break; }
-            if (j > idx + 2 && isEmp(arr[j])) { end = j; break; }
-        }
-        const row = _coordParseRosterCells(arr.slice(start, end));
-        if (row) parsed.push(row);
-    });
-    return _coordDedupeRoster(parsed);
-}
-
-async function _coordParseHwpxRosterFile(file) {
-    if (!window.JSZip) throw new Error('HWPX 파서 라이브러리 로드 실패');
-    const zip = await JSZip.loadAsync(file);
-    const xmlNames = Object.keys(zip.files).filter(n => /\.xml$/i.test(n) && !zip.files[n].dir);
-    const parsed = [];
-    let allText = '';
-    const scheduleLines = [];
-
-    for (const n of xmlNames) {
-        const xml = await zip.files[n].async('string');
-        if (!/(성명|성함|사번|소속|성별|\d{4,6})/.test(xml)) continue;
-        allText += '\n' + xml.replace(/<[^>]+>/g, '\n');
-        const doc = new DOMParser().parseFromString(xml, 'application/xml');
-        const rows = Array.from(doc.getElementsByTagName('*')).filter(el => el.localName === 'tr');
-        rows.forEach(tr => {
-            const rawCells = Array.from(tr.getElementsByTagName('*'))
-                .filter(el => el.localName === 'tc')
-                .map(tc => _coordNormalizeRosterCell(tc.textContent));
-            const cells = rawCells.filter(Boolean);
-            if (rawCells.some(Boolean)) scheduleLines.push(rawCells.join('\u241F'));
-            const row = _coordParseRosterCells(cells);
-            if (row) parsed.push(row);
-        });
-    }
-    _coordScheduleData = _coordBuildScheduleData(scheduleLines.length ? scheduleLines : allText.split(/[\n\r]+/), file.name);
-    return parsed.length ? _coordDedupeRoster(parsed) : _coordParseRoster(allText);
-}
-
-function _coordHwpU32(bytes, off) {
-    return (bytes[off] | (bytes[off + 1] << 8) | (bytes[off + 2] << 16) | (bytes[off + 3] << 24)) >>> 0;
-}
-
-function _coordDecodeUtf16Le(bytes) {
-    let out = '';
-    const chunk = 0x8000;
-    for (let i = 0; i < bytes.length; i += chunk) {
-        const part = bytes.subarray(i, Math.min(i + chunk, bytes.length));
-        const codes = [];
-        for (let j = 0; j + 1 < part.length; j += 2) {
-            const c = part[j] | (part[j + 1] << 8);
-            if (c === 0) continue;
-            codes.push(c);
-        }
-        out += String.fromCharCode.apply(null, codes);
-    }
-    return out;
-}
-
-function _coordExtractHwpSection(bytes) {
-    const records = [];
-    let text = '';
-    let off = 0;
-    while (off + 4 <= bytes.length) {
-        const header = _coordHwpU32(bytes, off);
-        off += 4;
-        const tag = header & 0x3ff;
-        let size = (header >>> 20) & 0xfff;
-        if (size === 0xfff) {
-            if (off + 4 > bytes.length) break;
-            size = _coordHwpU32(bytes, off);
-            off += 4;
-        }
-        if (off + size > bytes.length) break;
-        if (tag === 67) {
-            const txt = _coordNormalizeRosterCell(_coordDecodeUtf16Le(bytes.subarray(off, off + size)));
-            if (txt) records.push(txt);
-            text += txt + '\n';
-        }
-        off += size;
-    }
-    return { text, records };
-}
-
-function _coordReadLegacyHwpSections(buffer) {
-    const buf8 = new Uint8Array(buffer);
-    const view = new DataView(buffer);
-    if (buf8[0] !== 0xD0 || buf8[1] !== 0xCF) throw new Error('HWP CFB 형식 아님');
-    const sectorSize = 1 << view.getUint16(30, true);
-    const fatCount = view.getUint32(44, true);
-    const dirStart = view.getUint32(48, true);
-    const fat = new Int32Array(Math.ceil(buffer.byteLength / sectorSize) + 4096).fill(-1);
-    let fatIndex = 0;
-
-    for (let i = 0; i < 109 && fatIndex < fatCount; i++) {
-        const fatSector = view.getUint32(76 + i * 4, true);
-        if (fatSector >= 0xFFFFFFFE) break;
-        for (let j = 0; j < sectorSize / 4; j++) {
-            const off = (fatSector + 1) * sectorSize + j * 4;
-            if (off + 4 > buffer.byteLength) break;
-            fat[fatIndex * (sectorSize / 4) + j] = view.getInt32(off, true);
-        }
-        fatIndex++;
-    }
-
-    const chain = start => {
-        const out = [];
-        let cur = start;
-        while (cur >= 0 && cur < 0xFFFFFFFE && out.length < 100000) {
-            out.push(cur);
-            cur = fat[cur];
-        }
-        return out;
-    };
-    const readStream = (startId, size) => {
-        const sectors = chain(startId);
-        const out = new Uint8Array(Math.min(size, sectors.length * sectorSize));
-        let pos = 0;
-        sectors.forEach(sec => {
-            const off = (sec + 1) * sectorSize;
-            const slice = buf8.slice(off, off + sectorSize);
-            const copy = Math.min(slice.length, out.length - pos);
-            out.set(slice.slice(0, copy), pos);
-            pos += copy;
-        });
-        return out.slice(0, Math.min(size, out.length));
-    };
-
-    const sections = [];
-    chain(dirStart).forEach(dirSector => {
-        const base = (dirSector + 1) * sectorSize;
-        for (let e = 0; e + 128 <= sectorSize; e += 128) {
-            const off = base + e;
-            if (off + 128 > buffer.byteLength) break;
-            const nameLen = view.getUint16(off + 64, true);
-            if (nameLen <= 0 || nameLen > 64) continue;
-            let name = '';
-            for (let n = 0; n < nameLen - 2; n += 2) name += String.fromCharCode(view.getUint16(off + n, true));
-            if (buf8[off + 66] !== 2 || !name.startsWith('Section')) continue;
-            const startId = view.getInt32(off + 116, true);
-            const size = view.getInt32(off + 120, true);
-            if (startId >= 0 && startId < 0xFFFFFFFE && size > 0) sections.push(readStream(startId, size));
-        }
-    });
-    return sections;
-}
-
-async function _coordParseHwpRosterFile(file) {
-    if (!window.pako) throw new Error('HWP 압축 해제 라이브러리 로드 실패');
-    const buf = await file.arrayBuffer();
-    let text = '';
-    let records = [];
-    const addSection = data => {
-        let bytes = new Uint8Array(data);
-        try { bytes = pako.inflateRaw(bytes); }
-        catch (_) {
-            try { bytes = pako.inflate(bytes); } catch (err) {}
-        }
-        const section = _coordExtractHwpSection(bytes);
-        text += section.text || _coordDecodeUtf16Le(bytes);
-        text += '\n';
-        records = records.concat(section.records);
-    };
-
-    if (window.XLSX && XLSX.CFB) {
-        try {
-            const cfb = XLSX.CFB.read(new Uint8Array(buf), { type: 'array' });
-            const entries = cfb.FileIndex || [];
-            entries
-                .filter(e => /BodyText[\\/]+Section\d+$/i.test(e.name) && e.content)
-                .sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }))
-                .forEach(e => addSection(e.content));
-        } catch (e) {
-            console.warn('[교육운영부 HWP] SheetJS CFB 파싱 실패, 직접 파서로 재시도:', e);
-        }
-    }
-
-    if (!_coordParseRosterRecords(records).length) {
-        text = '';
-        records = [];
-        _coordReadLegacyHwpSections(buf).forEach(addSection);
-    }
-
-    _coordScheduleData = _coordBuildScheduleData(records.length ? records : text.split(/[\n\r]+/), file.name);
-    const byRecords = _coordParseRosterRecords(records);
-    return byRecords.length ? byRecords : _coordParseRoster(text);
-}
-
 async function coordSaveRoster() {
     if (!_coordRosterData.length) { alert('저장할 명단이 없습니다'); return; }
-    const today = new Date().toISOString().slice(0,10);
-    const room = globalAllData && currentRID ? globalAllData[currentRID] : null;
-    const settings = (room && room.settings) || {};
-    const rosterPayload = {
-        savedAt: firebase.database.ServerValue.TIMESTAMP,
-        room: currentRID || '',
-        courseName: settings.courseName || '',
-        period: settings.period || '',
-        sharedDormRosterKey: _coordSharedDormRoster ? _coordSharedDormRoster.key : '',
-        list: _coordRosterData,
-        schedule: _coordScheduleData || null
-    };
-    await firebase.database().ref(`system/coord/rosters/coord_roster_${today}`).set(rosterPayload);
-    let scheduleSynced = false;
-    if (_coordScheduleData && currentRID) {
-        try {
-            const schedulePayload = {
-                courseName: settings.courseName || '',
-                period: settings.period || '',
-                source: _coordScheduleData.fileName || '',
-                lines: _coordScheduleData.lines || [],
-                updatedAt: firebase.database.ServerValue.TIMESTAMP
-            };
-            const mirrors = await Promise.allSettled([
-                firebase.database().ref(`courses/${currentRID}/settings/schedule`).set(schedulePayload),
-                firebase.database().ref(`courses/${currentRID}/schedule`).set(schedulePayload)
-            ]);
-            scheduleSynced = mirrors.some(r => r.status === 'fulfilled');
-        } catch (e) {
-            console.warn('[교육운영부 시간표] 강사플랫폼 미러 저장 실패:', e);
-        }
+    if (!currentRID || !globalAllData[currentRID]) {
+        alert('저장할 과정을 먼저 선택해주세요.');
+        return;
     }
-    alert(`✅ ${_coordRosterData.length}명 명단 저장 완료${_coordScheduleData ? (scheduleSynced ? '\n교육시간표도 강사플랫폼에 반영되었습니다.' : '\n교육시간표는 업로드 명단에 함께 보관되었습니다.') : ''}`);
+
+    const room = globalAllData[currentRID] || {};
+    const settings = room.settings || {};
+    const courseName = settings.courseName || `Room ${currentRID}`;
+    const period = settings.period || '';
+    const startDate = period.includes(' ~ ') ? period.split(' ~ ')[0].trim() : '';
+    const weekKey = startDate ? _coordRosterWeekKey(startDate) : _coordRosterToday();
+    const rosterKey = `${weekKey}__${currentRID}`;
+    const cleanList = _coordRosterData
+        .filter(s => s && (s.name || '').trim())
+        .map((s, i) => ({
+            seq: i + 1,
+            name: (s.name || '').trim(),
+            empNo: (s.empNo || '').trim(),
+            dept: (s.dept || '').trim(),
+            gender: s.gender || ''
+        }));
+
+    const payload = _coordCleanFirebaseValue({
+        room: currentRID,
+        courseName,
+        period,
+        weekKey,
+        list: cleanList,
+        source: 'coord',
+        updatedAt: firebase.database.ServerValue.TIMESTAMP
+    });
+
+    try {
+        const updates = {};
+        // 교육지원부와 같은 공유 포맷: 생활관/지원부/강사 시간표 연동에서 기준으로 쓰는 경로
+        updates[`system/dorm/rosters/${rosterKey}`] = payload;
+        // 교육운영부 자체 조회용 백업 경로도 같은 포맷으로 유지
+        updates[`system/coord/rosters/${rosterKey}`] = payload;
+        await firebase.database().ref().update(updates);
+        alert(`✅ ${cleanList.length}명 명단 저장 완료\n지원부 공유 포맷: system/dorm/rosters/${rosterKey}`);
+    } catch (e) {
+        console.error('[교육운영부 명단 저장]', e);
+        alert('명단 저장 실패: ' + (e && e.message ? e.message : e));
+    }
+}
+
+function _coordRosterToday() {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+function _coordRosterWeekKey(dateStr) {
+    const d = new Date(`${dateStr}T00:00:00`);
+    if (Number.isNaN(d.getTime())) return _coordRosterToday();
+    const day = d.getDay();
+    const diff = (day === 0 ? -6 : 1 - day);
+    d.setDate(d.getDate() + diff);
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+function _coordCleanFirebaseValue(v) {
+    if (Array.isArray(v)) return v.map(_coordCleanFirebaseValue);
+    if (v && typeof v === 'object') {
+        const out = {};
+        Object.keys(v).forEach(k => {
+            if (v[k] === undefined) return;
+            out[k] = _coordCleanFirebaseValue(v[k]);
+        });
+        return out;
+    }
+    return v === undefined ? null : v;
 }
 
 function coordExportRoster() {
@@ -6606,6 +6031,36 @@ function coordExportRoster() {
         ..._coordRosterData.map((s,i) => `${i+1}\t${s.name}\t${s.empNo}\t${s.dept}\t${s.gender==='F'?'여':'남'}`)
     ].join('\n');
     navigator.clipboard.writeText(rows).then(()=>alert('✅ 클립보드에 복사됐습니다')).catch(()=>alert('복사 실패'));
+}
+
+async function _coordHwpxExtract(file) {
+    if (!window.JSZip) throw new Error('HWPX 판독 라이브러리(JSZip)를 불러오지 못했습니다');
+    const zip = await JSZip.loadAsync(file);
+    const names = Object.keys(zip.files)
+        .filter(n => /section\d+\.xml$/i.test(n) || /contents\/section\d+\.xml$/i.test(n))
+        .sort();
+    if (!names.length) throw new Error('HWPX 본문 XML을 찾지 못했습니다');
+
+    const parser = new DOMParser();
+    const lines = [];
+    for (const name of names) {
+        const xml = await zip.files[name].async('text');
+        const doc = parser.parseFromString(xml, 'application/xml');
+        const trs = Array.from(doc.getElementsByTagName('*')).filter(el => el.localName === 'tr');
+        if (trs.length) {
+            trs.forEach(tr => {
+                const cells = Array.from(tr.getElementsByTagName('*'))
+                    .filter(el => el.localName === 'tc')
+                    .map(tc => (tc.textContent || '').replace(/\s+/g, ' ').trim())
+                    .filter(Boolean);
+                if (cells.length) lines.push(cells.join('\n'));
+            });
+        } else {
+            const text = (doc.documentElement && doc.documentElement.textContent || '').replace(/\s+/g, '\n').trim();
+            if (text) lines.push(text);
+        }
+    }
+    return lines.join('\n');
 }
 
 // HWP CFB + pako 텍스트 추출
