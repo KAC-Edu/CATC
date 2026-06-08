@@ -5811,7 +5811,46 @@ const scheduleMgr = {
                 const snap = await firebase.database().ref(`courses/${state.room}/schedule`).once('value');
                 data = snap.val() || {};
             }
-            const lines = Array.isArray(data.lines) ? data.lines : String(data.text || '').split(/[\n\r]+/).filter(Boolean);
+            let lines = Array.isArray(data.lines) ? data.lines : String(data.text || '').split(/[\n\r]+/).filter(Boolean);
+
+            // 교육지원부 생활관 명단 업로드는 시간표를 system/dorm/rosters에
+            // 함께 저장한다. 강사플랫폼 미러 경로 저장이 막혀도 여기서 다시 찾는다.
+            if (!lines.length) {
+                const norm = v => String(v || '').replace(/\s+/g, '').trim();
+                const candidates = [];
+                const addRosterSchedules = async (path, baseScore) => {
+                    try {
+                        const snap = await firebase.database().ref(path).once('value');
+                        const rows = snap.val() || {};
+                        Object.values(rows).forEach(row => {
+                            if (!row || String(row.room || '') !== String(state.room || '') || !row.schedule) return;
+                            const sched = row.schedule || {};
+                            const schedLines = Array.isArray(sched.lines) ? sched.lines : String(sched.text || '').split(/[\n\r]+/).filter(Boolean);
+                            if (!schedLines.length) return;
+                            let score = baseScore;
+                            if (norm(row.courseName) && norm(row.courseName) === norm(settings.courseName || sched.courseName)) score += 100;
+                            if (norm(row.period) && norm(row.period) === norm(settings.period || sched.period)) score += 50;
+                            score += Number(row.updatedAt || sched.updatedAt || 0) / 100000000000000;
+                            candidates.push({
+                                ...sched,
+                                lines: schedLines,
+                                courseName: sched.courseName || row.courseName || settings.courseName || '',
+                                period: sched.period || row.period || settings.period || '',
+                                _score: score
+                            });
+                        });
+                    } catch (err) {
+                        console.warn(`[교육일정 요약] ${path} 조회 실패`, err);
+                    }
+                };
+                await addRosterSchedules('system/dorm/rosters', 1000);
+                await addRosterSchedules('system/coord/rosters', 500);
+                candidates.sort((a, b) => b._score - a._score);
+                if (candidates.length) {
+                    data = candidates[0];
+                    lines = candidates[0].lines;
+                }
+            }
             if (title) title.innerText = data.courseName || settings.courseName || '교육일정 요약';
             if (meta) meta.innerText = data.period || settings.period || '기간 미설정';
             if (!lines.length) {
