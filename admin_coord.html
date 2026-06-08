@@ -6401,11 +6401,11 @@ async function _coordParseHwpxRosterFile(file) {
         const doc = new DOMParser().parseFromString(xml, 'application/xml');
         const rows = Array.from(doc.getElementsByTagName('*')).filter(el => el.localName === 'tr');
         rows.forEach(tr => {
-            const cells = Array.from(tr.getElementsByTagName('*'))
+            const rawCells = Array.from(tr.getElementsByTagName('*'))
                 .filter(el => el.localName === 'tc')
-                .map(tc => _coordNormalizeRosterCell(tc.textContent))
-                .filter(Boolean);
-            if (cells.length) scheduleLines.push(cells.join(' '));
+                .map(tc => _coordNormalizeRosterCell(tc.textContent));
+            const cells = rawCells.filter(Boolean);
+            if (rawCells.some(Boolean)) scheduleLines.push(rawCells.join('\u241F'));
             const row = _coordParseRosterCells(cells);
             if (row) parsed.push(row);
         });

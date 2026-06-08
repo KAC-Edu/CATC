@@ -5718,18 +5718,65 @@ const scheduleMgr = {
     cleanLine: function(v) {
         return String(v || '')
             .replace(/汤捯/g, '')
-            .replace(/^[ㄱ-ㅎㅏ-ㅣ]+(?=[가-힣A-Za-z0-9])/g, '')
+            .replace(/[�]/g, '')
+            .replace(/^[ㄱ-ㅎㅏ-ㅣ]{1,6}(?=[가-힣A-Za-z0-9(])/g, '')
+            .replace(/\s+[ㄱ-ㅎㅏ-ㅣ]{1,6}(?=[가-힣A-Za-z0-9(])/g, ' ')
             .replace(/[|]/g, ' ')
             .replace(/\s+/g, ' ')
             .trim();
     },
     parseTable: function(lines) {
-        const arr = (lines || []).map(v => this.cleanLine(v)).filter(Boolean);
+        const cellSep = '\u241F';
+        const cleanCell = v => this.cleanLine(v).replace(/^[ㄱ-ㅎㅏ-ㅣ]{1,6}$/g, '').trim();
         const isDate = v => /\d+\s*월\s*\d+\s*일/.test(v);
         const isWeekday = v => /^(월|화|수|목|금|토|일)$/.test(v);
         const isPeriod = v => /^\d{1,2}$/.test(v);
         const isTime = v => /^\d{1,2}:\d{2}\s*~?$/.test(v) || /^\d{1,2}:\d{2}\s*~\s*\d{1,2}:\d{2}$/.test(v);
         const isHeader = v => /교육\s*시간표|과정명|담임|교육담당|교수|강의실|교육장소|일\s*자|시\s*간/.test(v);
+        const stripNoise = v => cleanCell(v)
+            .replace(/\b\d+\s*교시\b/g, '')
+            .replace(/^[ㄱ-ㅎㅏ-ㅣ]{1,6}\s*/g, '')
+            .replace(/\s+/g, ' ')
+            .trim();
+
+        const tableLines = (lines || []).filter(v => String(v || '').includes(cellSep));
+        if (tableLines.length) {
+            const table = tableLines.map(line => String(line).split(cellSep).map(cleanCell));
+            const dateRow = table.find(row => row.some(isDate)) || [];
+            const weekdayRow = table.find(row => row.some(isWeekday)) || [];
+            const dateCells = dateRow.map((v, i) => ({ v, i })).filter(x => isDate(x.v));
+            const days = dateCells.map((x, idx) => ({
+                date: x.v,
+                weekday: (weekdayRow[x.i] && isWeekday(weekdayRow[x.i])) ? weekdayRow[x.i] : (weekdayRow.filter(isWeekday)[idx] || '')
+            }));
+            const dayCount = days.length || Math.max(weekdayRow.filter(isWeekday).length, 5);
+            while (days.length < dayCount) days.push({ date: '', weekday: weekdayRow.filter(isWeekday)[days.length] || '' });
+
+            const rows = [];
+            table.forEach(cells => {
+                const pIdx = cells.findIndex(isPeriod);
+                const timeIdx = cells.findIndex(isTime);
+                if (pIdx < 0 || timeIdx < 0) return;
+                let endTimeIdx = timeIdx + 1;
+                if (!isTime(cells[endTimeIdx] || '')) endTimeIdx = timeIdx;
+                const rawSubjects = cells.slice(endTimeIdx + 1);
+                const subjects = Array.from({ length: dayCount }, (_, i) => {
+                    const v = stripNoise(rawSubjects[i] || '');
+                    if (!v || isHeader(v) || isDate(v) || isWeekday(v) || isPeriod(v) || isTime(v) || /점심|식사/.test(v)) return '';
+                    return v;
+                });
+                if (subjects.some(Boolean)) {
+                    rows.push({
+                        period: cells[pIdx],
+                        time: [cells[timeIdx], isTime(cells[endTimeIdx]) && endTimeIdx !== timeIdx ? cells[endTimeIdx] : ''].filter(Boolean).join(' '),
+                        cells: subjects
+                    });
+                }
+            });
+            return { days, rows };
+        }
+
+        const arr = (lines || []).map(v => this.cleanLine(v)).filter(Boolean);
 
         const dates = arr.filter(isDate).slice(0, 7);
         const firstDateIdx = arr.findIndex(isDate);
@@ -5745,8 +5792,8 @@ const scheduleMgr = {
         const combineSessions = items => {
             const sessions = [];
             items.forEach(raw => {
-                const v = this.cleanLine(raw);
-                if (!v || isHeader(v) || isDate(v) || isWeekday(v) || isPeriod(v) || isTime(v)) return;
+                const v = stripNoise(raw);
+                if (!v || /^[ㄱ-ㅎㅏ-ㅣ]{1,6}$/.test(v) || isHeader(v) || isDate(v) || isWeekday(v) || isPeriod(v) || isTime(v)) return;
                 if (/^[(（].+[)）]$/.test(v) && sessions.length) {
                     sessions[sessions.length - 1] += `\n${v}`;
                 } else if (!sessions.includes(v)) {
@@ -5803,9 +5850,13 @@ const scheduleMgr = {
     renderSchedule: function(lines) {
         const parsed = this.parseTable(lines);
         if (!parsed.rows.length || !parsed.days.length) {
+            const fallbackLines = (lines || [])
+                .map(line => this.cleanLine(line))
+                .map(line => line.replace(/^[ㄱ-ㅎㅏ-ㅣ]{1,6}\s*/g, '').trim())
+                .filter(line => line && !/^[ㄱ-ㅎㅏ-ㅣ]{1,6}$/.test(line) && !/점심|식사/.test(line));
             return `
                 <div style="display:flex; flex-direction:column; gap:8px;">
-                    ${(lines || []).map(line => `
+                    ${fallbackLines.map(line => `
                         <div style="display:flex; align-items:flex-start; gap:10px; background:#fff; border:1px solid #e2e8f0; border-radius:10px; padding:10px 12px; color:#1e293b; font-size:14px; font-weight:700; line-height:1.45;">
                             <span style="width:7px; height:7px; border-radius:50%; background:#2563eb; margin-top:8px; flex-shrink:0;"></span>
                             <span style="white-space:pre-wrap; word-break:keep-all;">${this.escapeHtml(line)}</span>
@@ -5820,11 +5871,12 @@ const scheduleMgr = {
         const isSpecial = text => /노조|청렴|체육|입교|수료|설문|평가|안내/.test(text || '');
         const cleanSubject = text => this.cleanLine(text)
             .replace(/\n+/g, ' ')
+            .replace(/^[ㄱ-ㅎㅏ-ㅣ]{1,6}\s*/g, '')
             .replace(/\s*\(([^)]{1,18})\)\s*/g, ' ($1)')
             .trim();
         const addUnique = (arr, value) => {
             const v = cleanSubject(value);
-            if (!v || /점심\s*식사/.test(v)) return;
+            if (!v || /^[ㄱ-ㅎㅏ-ㅣ]{1,6}$/.test(v) || /점심|식사/.test(v)) return;
             if (!arr.some(x => x === v)) arr.push(v);
         };
         const summaries = parsed.days.map((day, dayIdx) => {
@@ -5840,26 +5892,26 @@ const scheduleMgr = {
         const chip = text => {
             const special = isSpecial(text);
             return `
-                <div style="padding:7px 9px; border-radius:9px; border:1px solid ${special ? '#fed7aa' : '#dbeafe'}; background:${special ? '#fff7ed' : '#eff6ff'}; color:${special ? '#9a3412' : '#0f3f73'}; font-size:12px; font-weight:900; line-height:1.35; word-break:keep-all;">
+                <div style="padding:9px 10px; border-radius:8px; border:1px solid ${special ? '#fed7aa' : '#dbeafe'}; background:${special ? '#fff7ed' : '#eff6ff'}; color:${special ? '#9a3412' : '#0f3f73'}; font-size:13px; font-weight:700; line-height:1.38; word-break:keep-all;">
                     ${this.escapeHtml(text)}
                 </div>`;
         };
         const sessionBlock = (label, items) => `
-            <div style="display:flex; flex-direction:column; gap:7px;">
-                <div style="display:flex; align-items:center; gap:6px; color:#475569; font-size:11px; font-weight:900;">
+            <div style="display:flex; flex-direction:column; gap:8px; flex:1; min-height:0;">
+                <div style="display:flex; align-items:center; gap:6px; color:#475569; font-size:12px; font-weight:800;">
                     <span style="width:6px; height:6px; border-radius:50%; background:${label === '오전' ? '#2563eb' : '#16a34a'};"></span>${label} 세션
                 </div>
-                ${items.length ? items.map(chip).join('') : '<div style="color:#cbd5e1; font-size:12px; font-weight:800;">-</div>'}
+                ${items.length ? items.map(chip).join('') : '<div style="min-height:42px; border:1px dashed #e2e8f0; border-radius:8px; background:#f8fafc;"></div>'}
             </div>`;
         return `
-            <div style="display:grid; grid-template-columns:repeat(${Math.min(summaries.length, 5)}, minmax(0, 1fr)); gap:12px;">
+            <div style="display:grid; grid-template-columns:repeat(${Math.min(summaries.length, 5)}, minmax(0, 1fr)); gap:12px; font-family:inherit;">
                 ${summaries.map(day => `
-                    <div style="background:#fff; border:1px solid #dbe4f0; border-radius:14px; overflow:hidden; min-height:220px;">
+                    <div style="background:#fff; border:1px solid #dbe4f0; border-radius:14px; overflow:hidden; min-height:280px; display:flex; flex-direction:column;">
                         <div style="background:#0f3f73; color:#fff; padding:10px 12px; text-align:center;">
-                            <div style="font-size:13px; font-weight:900;">${this.escapeHtml(day.date || '-')}</div>
-                            <div style="font-size:12px; font-weight:800; opacity:0.82; margin-top:2px;">${this.escapeHtml(day.weekday || '')}</div>
+                            <div style="font-size:14px; font-weight:800;">${this.escapeHtml(day.date || '-')}</div>
+                            <div style="font-size:12px; font-weight:700; opacity:0.82; margin-top:2px;">${this.escapeHtml(day.weekday || '')}</div>
                         </div>
-                        <div style="padding:12px; display:flex; flex-direction:column; gap:12px;">
+                        <div style="padding:12px; display:flex; flex-direction:column; gap:12px; flex:1;">
                             ${sessionBlock('오전', day.morning)}
                             <div style="height:1px; background:#e2e8f0;"></div>
                             ${sessionBlock('오후', day.afternoon)}

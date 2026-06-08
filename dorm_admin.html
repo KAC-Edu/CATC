@@ -1619,11 +1619,11 @@
                 const doc = new DOMParser().parseFromString(xml, 'application/xml');
                 const rows = Array.from(doc.getElementsByTagName('*')).filter(el => el.localName === 'tr');
                 rows.forEach(tr => {
-                    const cells = Array.from(tr.getElementsByTagName('*'))
+                    const rawCells = Array.from(tr.getElementsByTagName('*'))
                         .filter(el => el.localName === 'tc')
-                        .map(tc => normalizeRosterCell(tc.textContent))
-                        .filter(Boolean);
-                    if (cells.length) scheduleLines.push(cells.join(' '));
+                        .map(tc => normalizeRosterCell(tc.textContent));
+                    const cells = rawCells.filter(Boolean);
+                    if (rawCells.some(Boolean)) scheduleLines.push(rawCells.join('\u241F'));
                     const row = parseRosterRow(cells);
                     if (row) parsed.push(row);
                 });
@@ -1828,7 +1828,7 @@
                     // Y 내림차순(위→아래) 정렬된 줄 배열
                     const lines = Object.keys(rowsMap).sort((a, b) => b - a)
                         .map(y => rowsMap[y].sort((a, b) => a.x - b.x).map(c => c.str));
-                    lines.forEach(arr => scheduleLines.push(arr.join(' ')));
+                    lines.forEach(arr => scheduleLines.push(arr.map(normalizeRosterCell).join('\u241F')));
 
                     // 사번(4~6자리)이 있는 줄을 "사람 시작 줄"로 보고,
                     //  그 다음 사번 없는 줄들(부서 줄바꿈/성별)을 같은 사람으로 병합
