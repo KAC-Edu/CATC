@@ -5989,15 +5989,13 @@ async function coordSaveRoster() {
     });
 
     try {
-        const writes = await Promise.allSettled([
-            firebase.database().ref(`courses/${currentRID}/coordRoster`).set(payload),
-            firebase.database().ref(`courses/${currentRID}/settings/coordRosterUpdatedAt`).set(firebase.database.ServerValue.TIMESTAMP),
-            firebase.database().ref(`system/coord/rosters/${rosterKey}`).set(payload)
-        ]);
-        const primaryOk = writes[0].status === 'fulfilled';
-        if (!primaryOk) throw writes[0].reason || new Error('과정 명단 저장 권한 없음');
-        const backupOk = writes[2].status === 'fulfilled';
-        alert(`✅ ${cleanList.length}명 명단 저장 완료${backupOk ? '' : '\n※ 공용 백업 경로는 권한 제한으로 생략되었습니다.'}`);
+        await firebase.database().ref(`courses/${currentRID}/coordRoster`).set(payload);
+        try {
+            await firebase.database().ref(`system/coord/rosters/${rosterKey}`).set(payload);
+        } catch (backupErr) {
+            console.warn('[교육운영부 명단 백업 저장 생략]', backupErr);
+        }
+        alert(`✅ ${cleanList.length}명 명단 저장 완료`);
     } catch (e) {
         console.error('[교육운영부 명단 저장]', e);
         alert('명단 저장 실패: ' + (e && e.message ? e.message : e));
