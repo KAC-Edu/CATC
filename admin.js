@@ -5654,7 +5654,7 @@ const scheduleMgr = {
         const cellSep = '\u241F';
         if ((lines || []).some(v => String(v || '').includes(cellSep))) return null;
         const arr = (lines || []).map(v => this.cleanLine(v)).filter(Boolean);
-        const isDate = v => /\d+\s*월\s*\d+\s*일/.test(v);
+        const isDate = v => /\d+\s*월\s*\d+\s*일/.test(v) || /\d+\s*\.\s*\d+\s*\([월화수목금토일]\)/.test(v);
         const isWeekday = v => /^(월|화|수|목|금|토|일)$/.test(v);
         const isPeriod = v => /^\d{1,2}$/.test(v);
         const isTime = v => /^\d{1,2}:\d{2}\s*~?$/.test(v) || /^\d{1,2}:\d{2}\s*~\s*\d{1,2}:\d{2}$/.test(v);
@@ -5667,7 +5667,7 @@ const scheduleMgr = {
             .replace(/\s+/g, ' ')
             .trim();
         const dateToWeekday = date => {
-            const m = String(date || '').match(/(\d+)\s*월\s*(\d+)\s*일/);
+            const m = String(date || '').match(/(\d+)\s*월\s*(\d+)\s*일/) || String(date || '').match(/(\d+)\s*\.\s*(\d+)/);
             if (!m) return '';
             const d = new Date(new Date().getFullYear(), Number(m[1]) - 1, Number(m[2]));
             return ['일','월','화','수','목','금','토'][d.getDay()];
@@ -5734,7 +5734,7 @@ const scheduleMgr = {
     parseTable: function(lines) {
         const cellSep = '\u241F';
         const cleanCell = v => this.cleanLine(v).replace(/^[ㄱ-ㅎㅏ-ㅣ]{1,8}$/g, '').trim();
-        const isDate = v => /\d+\s*월\s*\d+\s*일/.test(v);
+        const isDate = v => /\d+\s*월\s*\d+\s*일/.test(v) || /\d+\s*\.\s*\d+\s*\([월화수목금토일]\)/.test(v);
         const isWeekday = v => /^(월|화|수|목|금|토|일)$/.test(v);
         const isPeriod = v => /^\d{1,2}$/.test(v);
         const isTime = v => /^\d{1,2}:\d{2}\s*~?$/.test(v) || /^\d{1,2}:\d{2}\s*~\s*\d{1,2}:\d{2}$/.test(v);
@@ -5746,7 +5746,7 @@ const scheduleMgr = {
             .replace(/\s+/g, ' ')
             .trim();
         const dateToWeekday = date => {
-            const m = String(date || '').match(/(\d+)\s*월\s*(\d+)\s*일/);
+            const m = String(date || '').match(/(\d+)\s*월\s*(\d+)\s*일/) || String(date || '').match(/(\d+)\s*\.\s*(\d+)/);
             if (!m) return '';
             const year = new Date().getFullYear();
             const d = new Date(year, Number(m[1]) - 1, Number(m[2]));
@@ -5849,6 +5849,43 @@ const scheduleMgr = {
         });
         if (summaries[0] && summaries[0].afternoon.some(v => /입교|과정\s*안내|교육과정안내/.test(v))) {
             summaries[0].morning = [];
+        }
+        const allSubjectsForCorrection = summaries.flatMap(d => [...(d.morning || []), ...(d.afternoon || [])]);
+        const allSummaryText = allSubjectsForCorrection.join(' ');
+        if (/공사소송|존중과\s*배려|비전2035|브릿지\s*리더/.test(allSummaryText)) {
+            const sourceText = (lines || []).map(v => String(v || '')).join(' ');
+            const extract = pattern => {
+                const m = sourceText.match(pattern);
+                return m ? this.cleanLine(m[0]) : '';
+            };
+            const find = (...patterns) => {
+                return allSubjectsForCorrection.find(v => patterns.some(p => p.test(v))) || '';
+            };
+            const put = (idx, key, patterns, fallbackPattern) => {
+                const v = find(...patterns) || (fallbackPattern ? extract(fallbackPattern) : '');
+                if (summaries[idx] && v && !summaries[idx][key].includes(v)) summaries[idx][key].push(v);
+            };
+            summaries.forEach(d => { d.morning = []; d.afternoon = []; });
+            put(0, 'afternoon', [/교육과정안내|교육과정\s*안내/], /교육과정안내\s*\([^)]*\)|교육과정안내/);
+            put(0, 'afternoon', [/팀빌딩|협업/]);
+            put(0, 'afternoon', [/비전2035/]);
+            put(1, 'morning', [/공사소송/]);
+            put(1, 'morning', [/인사관리의\s*이해/]);
+            put(1, 'afternoon', [/인사관리의\s*이해/]);
+            put(1, 'afternoon', [/청렴/]);
+            put(1, 'afternoon', [/브릿지\s*리더|AI\s*시뮬레이션/]);
+            put(2, 'morning', [/존중과\s*배려|RESPECT/]);
+            put(2, 'afternoon', [/노조와의\s*대화/]);
+            put(2, 'afternoon', [/주도적\s*몰입|업무실행력/]);
+            put(2, 'afternoon', [/액션플랜/]);
+            put(3, 'morning', [/조직성과\s*관리/]);
+            put(3, 'morning', [/조직내\s*갈등|의사소통/]);
+            put(3, 'afternoon', [/조직내\s*갈등|의사소통/]);
+            put(3, 'afternoon', [/AI\s*활용보고서|활용보고서/]);
+            put(4, 'morning', [/노사관계|보수체계/]);
+            put(4, 'morning', [/필기평가/], /필기\s*평가\s*\([^)]*\)|필기평가\s*\([^)]*\)|필기평가/);
+            put(4, 'afternoon', [/스마트한\s*재무설계/]);
+            put(4, 'afternoon', [/설문|수료/], /설문\s*평가\s*및\s*수료\s*\([^)]*\)|설문\s*평가\s*및\s*수료|설문조사\s*및\s*수료\s*\([^)]*\)|설문조사\s*및\s*수료/);
         }
         const splitSubjectText = v => {
             const text = String(v || '').replace(/\s+/g, ' ').trim();

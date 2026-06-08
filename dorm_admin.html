@@ -1707,9 +1707,17 @@
                 const doc = new DOMParser().parseFromString(xml, 'application/xml');
                 const rows = Array.from(doc.getElementsByTagName('*')).filter(el => el.localName === 'tr');
                 rows.forEach(tr => {
-                    const rawCells = Array.from(tr.getElementsByTagName('*'))
-                        .filter(el => el.localName === 'tc')
-                        .map(tc => normalizeRosterCell(tc.textContent));
+                    const tcs = Array.from(tr.getElementsByTagName('*')).filter(el => el.localName === 'tc');
+                    const positioned = tcs.map((tc, idx) => {
+                        const addr = Array.from(tc.children || []).find(el => el.localName === 'cellAddr');
+                        const span = Array.from(tc.children || []).find(el => el.localName === 'cellSpan');
+                        const col = addr ? parseInt(addr.getAttribute('colAddr') || idx, 10) : idx;
+                        const colSpan = span ? parseInt(span.getAttribute('colSpan') || '1', 10) : 1;
+                        return { col: Number.isFinite(col) ? col : idx, colSpan: Number.isFinite(colSpan) ? colSpan : 1, text: normalizeRosterCell(tc.textContent) };
+                    });
+                    const maxCol = positioned.reduce((m, c) => Math.max(m, c.col + c.colSpan), 0);
+                    const rawCells = Array.from({ length: Math.max(maxCol, positioned.length) }, () => '');
+                    positioned.forEach(c => { rawCells[c.col] = c.text; });
                     const cells = rawCells.filter(Boolean);
                     if (rawCells.some(Boolean)) scheduleLines.push(rawCells.join('\u241F'));
                     const row = parseRosterRow(cells);
