@@ -178,18 +178,143 @@
     .header-btn {
         font-size: 19px;
         color: rgba(255,255,255,0.85);
-        cursor: pointer; border: none; background: none;
-        transition: opacity 0.2s; padding: 4px;
+        cursor: pointer;
+        border: none;
+        background: none;
+        transition: opacity 0.2s, background 0.2s;
+        padding: 4px;
     }
     .header-btn:active { opacity: 0.6; }
-        color: #fff; 
-        cursor: pointer; 
-        border: none; 
-        background: none; 
-        /* 버튼 클릭 시 약간 투명해지는 효과 추가 (선택사항) */
-        transition: opacity 0.2s;
+
+    .coord-back-btn {
+        width: 36px;
+        height: 36px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 12px;
+        background: rgba(255,255,255,0.12);
+        border: 1px solid rgba(255,255,255,0.18);
+        font-size: 16px;
+        flex-shrink: 0;
     }
-    .header-btn:active { opacity: 0.6; }
+
+    .coord-brand {
+        display: flex;
+        align-items: center;
+        flex: 1;
+        min-width: 0;
+        margin: 0 12px;
+    }
+
+    .coord-brand-text {
+        min-width: 0;
+    }
+
+    .coord-brand-kicker {
+        font-size: 9px;
+        color: rgba(255,255,255,0.6);
+        font-weight: 700;
+        letter-spacing: 1.2px;
+        text-transform: uppercase;
+        line-height: 1;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .coord-brand-title {
+        font-size: 14px;
+        font-weight: 900;
+        color: #fff;
+        margin-top: 3px;
+        line-height: 1;
+    }
+
+    .ind-title-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        border-bottom: 1px solid rgba(255,255,255,0.15);
+        padding-bottom: 12px;
+    }
+
+    .ind-room-label {
+        font-weight: 900;
+        font-size: 14px;
+        color: #60a5fa;
+        white-space: nowrap;
+        flex-shrink: 0;
+    }
+
+    #ind-course-name {
+        font-weight: 800;
+        font-size: clamp(16px, 4.6vw, 19px);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        min-width: 0;
+        flex: 1;
+    }
+
+    .coord-roster-upload-btn {
+        margin-left: auto;
+        padding: 7px 14px;
+        background: rgba(255,255,255,0.15);
+        border: 1.5px solid rgba(255,255,255,0.35);
+        border-radius: 9px;
+        color: #fff;
+        font-size: 12px;
+        font-weight: 800;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        white-space: nowrap;
+        flex-shrink: 0;
+    }
+
+    @media (max-width: 430px) {
+        .app-header {
+            padding: 11px 14px;
+        }
+
+        .coord-back-btn {
+            width: 34px;
+            height: 34px;
+            border-radius: 11px;
+            font-size: 15px;
+        }
+
+        .coord-brand {
+            margin: 0 9px;
+        }
+
+        .coord-brand-kicker {
+            font-size: 8px;
+            letter-spacing: 0.8px;
+        }
+
+        .coord-brand-title {
+            font-size: 13px;
+        }
+
+        .ind-title-row {
+            display: grid;
+            grid-template-columns: auto minmax(0, 1fr);
+            gap: 6px 9px;
+            align-items: center;
+        }
+
+        .coord-roster-upload-btn {
+            grid-column: 2;
+            justify-self: end;
+            margin-left: 0;
+            padding: 6px 10px;
+            font-size: 11px;
+            border-radius: 8px;
+        }
+    }
 
     .header-title { 
         color: #fff; 
@@ -1469,13 +1594,14 @@ body.pc-mode .entry-box:hover, body.pc-mode .entry-box-tablet:hover {
 <!-- 상단 헤더 부분 (수정됨) -->
 <header class="app-header">
   <!-- 좌: 뒤로가기 -->
-  <button class="header-btn" onclick="handleBackNav()" style="font-family:'Pretendard';font-weight:900;letter-spacing:-2px;font-size:18px;">&lt;&lt;</button>
+  <button class="header-btn coord-back-btn" onclick="handleBackNav()" title="이전 화면으로">
+    <i class="fa-solid fa-chevron-left"></i>
+  </button>
   <!-- 중: 브랜드 뱃지 -->
-  <div style="display:flex;align-items:center;gap:10px;flex:1;margin:0 12px;">
-    <div style="width:33px;height:33px;background:rgba(255,255,255,0.2);border:1.5px solid rgba(255,255,255,0.35);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:14px;color:#fff;flex-shrink:0;"><i class="fa-solid fa-building-columns"></i></div>
-    <div>
-      <div style="font-size:9px;color:rgba(255,255,255,0.6);font-weight:700;letter-spacing:1.2px;text-transform:uppercase;line-height:1;">Korea Airports Corp. · CATC</div>
-      <div style="font-size:14px;font-weight:900;color:#fff;margin-top:2px;line-height:1;">교육운영부</div>
+  <div class="coord-brand">
+    <div class="coord-brand-text">
+      <div class="coord-brand-kicker">Korea Airports Corp. · CATC</div>
+      <div class="coord-brand-title">교육운영부</div>
     </div>
   </div>
   <!-- 우: 시계 + 메뉴 버튼 -->
@@ -1742,10 +1868,10 @@ body.pc-mode .entry-box:hover, body.pc-mode .entry-box-tablet:hover {
       <!-- [뷰 2] 개별 과정 상세 -->
       <div id="individualStatusView" style="display:none; flex-direction:column; gap:12px;">
           <div id="indCourseHeader" style="background: linear-gradient(135deg, #003366 0%, #0055aa 100%); border-radius: 12px; padding: 22px 25px; margin-bottom: 10px; color: #ffffff; box-shadow: 0 4px 12px rgba(0, 51, 102, 0.2); display: flex; flex-direction: column; gap: 12px;">
-              <div style="display: flex; align-items: baseline; gap: 10px; border-bottom: 1px solid rgba(255,255,255,0.15); padding-bottom: 12px;">
-                  <span style="font-weight: 900; font-size: 14px; color: #60a5fa;">ROOM <span id="ind-room-id">-</span></span>
-                  <span id="ind-course-name" style="font-weight: 800; font-size: 19px;">과정명 로딩 중...</span>
-                  <button onclick="openRosterUpload()" title="교육생 명단 업로드" style="margin-left:auto; padding:7px 14px; background:rgba(255,255,255,0.15); border:1.5px solid rgba(255,255,255,0.35); border-radius:9px; color:#fff; font-size:12px; font-weight:800; cursor:pointer; display:inline-flex; align-items:center; gap:6px; white-space:nowrap; flex-shrink:0;">
+              <div class="ind-title-row">
+                  <span class="ind-room-label">ROOM <span id="ind-room-id">-</span></span>
+                  <span id="ind-course-name">과정명 로딩 중...</span>
+                  <button class="coord-roster-upload-btn" onclick="openRosterUpload()" title="교육생 명단 업로드">
                       <i class="fa-solid fa-file-arrow-up"></i> 명단 업로드
                   </button>
               </div>
