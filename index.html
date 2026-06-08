@@ -422,6 +422,8 @@
         .tag-course { background: #3b82f6; } /* 강사공지 파란색 */
         .tag-coord { background: #6366f1; }  /* 코디공지 보라색 (추가됨) */
         .notice-body { font-size: 14px; line-height: 1.6; color: #334155; white-space: pre-wrap; font-weight: 500; }
+        .lecture-board-notice-body { white-space: normal; word-break: keep-all; overflow-wrap: anywhere; }
+        .lecture-board-notice-body, .lecture-board-notice-body * { font-size: 14px !important; line-height: 1.65 !important; max-width: 100% !important; }
         .qr-img-full { width: 100%; border-radius: 12px; display: block; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
 
 
@@ -3487,7 +3489,18 @@ async function openNotice() {
         const coordSnap = await firebase.database().ref(`courses/${currentRoom}/coordNotice`).once('value');
         const coordVal = coordSnap.val();
 
+        const boardSnap = await firebase.database().ref(`courses/${currentRoom}/boardNotice`).once('value');
+        const boardRaw = boardSnap.val();
+        const boardHtml = boardRaw && typeof boardRaw === 'object' ? (boardRaw.html || '') : (boardRaw || '');
+
         let html = "";
+
+        if (boardHtml && String(boardHtml).trim()) {
+            const cleanedBoard = (typeof normalizeLectureBoardHtml === 'function')
+                ? normalizeLectureBoardHtml(boardHtml)
+                : boardHtml;
+            html += `<div class="notice-card"><span class="notice-tag tag-course">담임 공지사항</span><div class="notice-body lecture-board-notice-body">${cleanedBoard}</div></div>`;
+        }
         
         // (1) 센터 전체 공지 표시
         if (globalVal) {
