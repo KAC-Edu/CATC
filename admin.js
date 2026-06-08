@@ -1229,7 +1229,7 @@ toggleLeader: function(token, currentName) {
                 
                 firebase.database().ref(`courses/${state.room}/students/${token}`).update({
                     isLeader: true,
-                    phone: phone // 전체 번호 서버 저장
+                    leaderPhone: phone // 학생 식별ID(phone)는 건드리지 않고 비상연락망만 별도 저장
                 });
                 ui.showAlert(`👑 [${currentName}] 교육생이 학생장으로 지정되었습니다.`);
             } else {
@@ -4055,7 +4055,10 @@ loadDormitoryData: function() {
         const dormRef = firebase.database().ref(`system/dorm/assignments`);
 
         const norm = v => String(v || '').replace(/\s+/g, '').trim();
-        const studentId = s => norm(s.empNo || s.employeeNo || s.id || s.studentId || s.phone || '');
+        const studentId = s => {
+            const tokenId = s && s.token && String(s.token).includes('_') ? String(s.token).split('_').slice(1).join('_') : '';
+            return norm(s.empNo || s.employeeNo || s.id || s.studentId || tokenId || s.phone || '');
+        };
         const makeDormIndex = (assignData, settings) => {
             const out = {};
             const targetCourse = norm(settings && settings.courseName);
@@ -4084,7 +4087,9 @@ loadDormitoryData: function() {
 
         const renderAll = (expData, actData, assignData, settings) => {
             const expectedNames = expData || [];
-            const actualStudents = Object.values(actData || {}).filter(s => s.name && s.name !== "undefined");
+            const actualStudents = Object.entries(actData || {})
+                .map(([token, s]) => ({ token, ...s }))
+                .filter(s => s.name && s.name !== "undefined");
             const actualNames = actualStudents.map(s => s.name);
             const combinedNames = Array.from(new Set([...expectedNames, ...actualNames])).sort((a,b) => a.localeCompare(b));
             const dormData = makeDormIndex(assignData, settings || {});
@@ -4104,7 +4109,10 @@ loadDormitoryData: function() {
             combinedNames.forEach((name, idx) => {
                 const isArrived = actualNames.includes(name);
                 const sData = actualStudents.find(s => s.name === name) || {};
-                const phoneSuffix = sData.phone ? sData.phone : "-";
+                const tokenId = sData.token && String(sData.token).includes('_') ? String(sData.token).split('_').slice(1).join('_') : '';
+                const phoneLooksLikeMobile = /^010\d{7,8}$/.test(String(sData.phone || '').replace(/\D/g, ''));
+                const displayId = sData.empNo || sData.employeeNo || sData.id || sData.studentId || tokenId || sData.phone || "-";
+                const phoneSuffix = phoneLooksLikeMobile && tokenId ? tokenId : displayId;
 
                 const cleanName = name.trim();
                 const id = studentId(sData);
