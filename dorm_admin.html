@@ -314,7 +314,7 @@
 
             <div class="panel">
                 <h2>방 마스터 설정</h2>
-                <p class="desc">건물·층별로 방 번호를 입력하고 저장하세요. 각 방은 <b>정원(1·2인)</b>, <b>성별 지정</b>, <b>우선 배정 지정</b>를 설정할 수 있습니다. 우선 배정 지정된 방은 가장 먼저 채워집니다.</p>
+                <p class="desc">건물·층별로 방 번호를 입력하고 저장하세요. 각 방은 <b>정원(1·2인)</b>, <b>우선 배정 지정</b>, <b>배정 제외</b>를 설정할 수 있습니다. 성별 우선/전용 조건은 우선 배치 기준에서 관리합니다.</p>
 
                 <div class="bldg-tabs" id="bldgTabs"></div>
                 <div id="floorArea"></div>
@@ -815,6 +815,7 @@
         function loadRooms() {
             db.ref('system/dorm/rooms').once('value', snap => {
                 rooms = snap.val() || {};
+                Object.values(rooms).forEach(r => { if (r) r.gender = ''; });
                 renderFloors();
                 updateSummary();
             });
@@ -914,7 +915,7 @@
 
                 const tableBody = floorRooms.length
                     ? floorRooms.map(([id, r]) => roomRowHtml(id, r)).join('')
-                    : `<tr><td colspan="7" class="empty-floor">아직 등록된 방이 없습니다. 위에 방 번호를 입력해 추가하세요.</td></tr>`;
+                    : `<tr><td colspan="6" class="empty-floor">아직 등록된 방이 없습니다. 위에 방 번호를 입력해 추가하세요.</td></tr>`;
 
                 return `
                     <div class="floor-card">
@@ -931,7 +932,6 @@
                                     <tr>
                                         <th style="width:70px;">방번호</th>
                                         <th style="width:110px;">정원</th>
-                                        <th style="width:130px;">성별 지정</th>
                                         <th style="width:90px;">우선 배정</th>
                                         <th style="width:90px;">배정 제외</th>
                                         <th>우선 배치 기준</th>
@@ -959,13 +959,6 @@
                         <select onchange="setRoomField('${id}','capacity',this.value)">
                             <option value="1" ${r.capacity !== 2 ? 'selected' : ''}>1인 1실</option>
                             <option value="2" ${r.capacity === 2 ? 'selected' : ''}>2인 1실</option>
-                        </select>
-                    </td>
-                    <td>
-                        <select onchange="setRoomField('${id}','gender',this.value)">
-                            <option value="" ${!r.gender ? 'selected' : ''}>지정 안함</option>
-                            <option value="M" ${r.gender === 'M' ? 'selected' : ''}>남 전용</option>
-                            <option value="F" ${r.gender === 'F' ? 'selected' : ''}>여 전용</option>
                         </select>
                     </td>
                     <td><input type="checkbox" class="royal-check" ${royal ? 'checked' : ''} ${noAssign ? 'disabled' : ''} onchange="setRoomField('${id}','royal',this.checked)"></td>
@@ -2439,7 +2432,7 @@
                 roomState[r.id] = {
                     id: r.id, building: r.building, floor: r.floor, no: r.no,
                     capacity: r.capacity || 1,
-                    fixedGender: floorG || r.gender || '',
+                    fixedGender: floorG || '',
                     royal: !!r.royal, criteria: r.criteria || 'empno',
                     noAssign: !!r.noAssign,
                     occupants: []
@@ -3057,8 +3050,6 @@
             // 2) 정원이 찼으면 → 상대 1명과 자리 교환(swap)
             if (!srcRoomId || !src) { showToast('⛔ 교환할 원래 방 정보가 없어 이동 불가합니다'); return; }
             const [swapTk, swapS] = occ[0];
-            if (dest.gender && s.gender && dest.gender !== s.gender) { showToast(`⛔ 교환 불가 — 대상 방은 ${dest.gender==='M'?'남':'여'}성 전용`); return; }
-            if (src.gender && swapS.gender && src.gender !== swapS.gender) { showToast(`⛔ 교환 불가 — 원래 방은 ${src.gender==='M'?'남':'여'}성 전용`); return; }
             const upA = { roomId: destRoomId, building: dest.building, floor: dest.floor, no: dest.no };
             const upB = { roomId: srcRoomId, building: src.building, floor: src.floor, no: src.no };
             Promise.all([
@@ -3173,7 +3164,7 @@
             const cap = dest.capacity || 1;
             if ((occ.cnt[destRoomId] || 0) >= cap) { msg.innerHTML = '<span style="color:var(--danger);font-weight:700;">⛔ 정원 초과</span>'; return; }
             const gs = occ.gset[destRoomId];
-            const destGender = dest.gender || (gs && gs.size === 1 ? [...gs][0] : '');
+            const destGender = gs && gs.size === 1 ? [...gs][0] : '';
             if (destGender && destGender !== gender) { msg.innerHTML = `<span style="color:var(--danger);font-weight:700;">⛔ 성별 불일치 — ${destGender === 'M' ? '남' : '여'}성 방</span>`; return; }
             const token = 'manual_' + Date.now();
             const rec = { name, empNo: empNo || '-', dept: '', gender, course, room: `${dest.building} ${dest.no}`, roomId: destRoomId, building: dest.building, floor: dest.floor, no: dest.no };
@@ -3212,7 +3203,7 @@
             const occ = await _instRoomOcc(wk, destRoomId);
             const cap = dest.capacity || 1;
             if (occ.length >= cap) { msg.innerHTML = `<span style="color:var(--danger);font-weight:700;">⛔ 정원 초과 — 이미 ${occ.length}/${cap}명</span>`; return; }
-            const destGender = dest.gender || (occ[0] ? occ[0].gender : '');
+            const destGender = occ[0] ? occ[0].gender : '';
             if (destGender && destGender !== gender) { msg.innerHTML = `<span style="color:var(--danger);font-weight:700;">⛔ 성별 불일치 — ${destGender === 'M' ? '남' : '여'}성 방</span>`; return; }
             const token = 'inst_' + Date.now();
             const rec = { name, empNo: '-', dept, gender, course: '강사', room: `${dest.building} ${dest.no}`, roomId: destRoomId, building: dest.building, floor: dest.floor, no: dest.no };
@@ -3279,7 +3270,7 @@
             const cap = dest.capacity || 1;
             if (occ.length >= cap) return `정원 초과 — 이미 ${occ.length}/${cap}명이 배정되어 이동 불가합니다.`;
             // 성별 충돌
-            const destGender = dest.gender || (occ[0] ? occ[0][1].gender : '');
+            const destGender = occ[0] ? occ[0][1].gender : '';
             if (destGender && s.gender && destGender !== s.gender) return `성별 불일치 — 이 방은 ${destGender==='M'?'남':'여'}성 방이라 이동 불가합니다.`;
             return null;
         }
