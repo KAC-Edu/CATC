@@ -5715,6 +5715,112 @@ const scheduleMgr = {
             '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
         }[ch]));
     },
+    cleanLine: function(v) {
+        return String(v || '')
+            .replace(/汤捯/g, '')
+            .replace(/[|]/g, ' ')
+            .replace(/\s+/g, ' ')
+            .trim();
+    },
+    parseTable: function(lines) {
+        const arr = (lines || []).map(v => this.cleanLine(v)).filter(Boolean);
+        const isDate = v => /\d+\s*월\s*\d+\s*일/.test(v);
+        const isWeekday = v => /^(월|화|수|목|금|토|일)$/.test(v);
+        const isPeriod = v => /^\d{1,2}$/.test(v);
+        const isTime = v => /^\d{1,2}:\d{2}\s*~?$/.test(v) || /^\d{1,2}:\d{2}\s*~\s*\d{1,2}:\d{2}$/.test(v);
+        const isHeader = v => /교육\s*시간표|과정명|담임|교육담당|교수|강의실|교육장소|일\s*자|시\s*간/.test(v);
+
+        const dates = arr.filter(isDate).slice(0, 7);
+        const firstDateIdx = arr.findIndex(isDate);
+        const weekdays = firstDateIdx >= 0
+            ? arr.slice(firstDateIdx).filter(isWeekday).slice(0, dates.length || 7)
+            : arr.filter(isWeekday).slice(0, 7);
+        const dayCount = Math.max(dates.length, weekdays.length, 1);
+        const days = Array.from({ length: dayCount }, (_, i) => ({
+            date: dates[i] || '',
+            weekday: weekdays[i] || ''
+        }));
+
+        const combineSessions = items => {
+            const sessions = [];
+            items.forEach(raw => {
+                const v = this.cleanLine(raw);
+                if (!v || isHeader(v) || isDate(v) || isWeekday(v) || isPeriod(v) || isTime(v)) return;
+                if (/^[(（].+[)）]$/.test(v) && sessions.length) {
+                    sessions[sessions.length - 1] += `\n${v}`;
+                } else {
+                    sessions.push(v);
+                }
+            });
+            return sessions;
+        };
+
+        let startIdx = arr.findIndex(v => isWeekday(v));
+        if (startIdx < 0) startIdx = arr.findIndex(v => /^1$/.test(v));
+        let i = Math.max(0, startIdx + 1);
+        const rows = [];
+        while (i < arr.length) {
+            if (!(isPeriod(arr[i]) && isTime(arr[i + 1] || ''))) { i++; continue; }
+            const period = arr[i++];
+            const t1 = arr[i++] || '';
+            let t2 = '';
+            if (isTime(arr[i] || '')) t2 = arr[i++];
+            const cells = [];
+            while (i < arr.length) {
+                if (isPeriod(arr[i]) && isTime(arr[i + 1] || '')) break;
+                cells.push(arr[i++]);
+            }
+            const sessions = combineSessions(cells);
+            const common = sessions.length === 1 && /점심|식사|체육|설문|수료|청렴/.test(sessions[0]);
+            rows.push({
+                period,
+                time: [t1, t2].filter(Boolean).join(' '),
+                cells: days.map((_, idx) => common ? sessions[0] : (sessions[idx] || ''))
+            });
+        }
+
+        return { days, rows: rows.filter(r => r.time || r.cells.some(Boolean)) };
+    },
+    renderSchedule: function(lines) {
+        const parsed = this.parseTable(lines);
+        if (!parsed.rows.length || !parsed.days.length) {
+            return `
+                <div style="display:flex; flex-direction:column; gap:8px;">
+                    ${(lines || []).map(line => `
+                        <div style="display:flex; align-items:flex-start; gap:10px; background:#fff; border:1px solid #e2e8f0; border-radius:10px; padding:10px 12px; color:#1e293b; font-size:14px; font-weight:700; line-height:1.45;">
+                            <span style="width:7px; height:7px; border-radius:50%; background:#2563eb; margin-top:8px; flex-shrink:0;"></span>
+                            <span style="white-space:pre-wrap; word-break:keep-all;">${this.escapeHtml(line)}</span>
+                        </div>
+                    `).join('')}
+                </div>`;
+        }
+        return `
+            <div style="overflow:auto; border:1px solid #dbe4f0; border-radius:14px; background:#fff;">
+                <table style="width:100%; border-collapse:collapse; min-width:${560 + parsed.days.length * 120}px; table-layout:fixed;">
+                    <thead>
+                        <tr style="background:#eff6ff; color:#0f3f73;">
+                            <th style="width:70px; padding:12px 10px; border-bottom:1px solid #dbe4f0; font-size:13px;">교시</th>
+                            <th style="width:120px; padding:12px 10px; border-bottom:1px solid #dbe4f0; font-size:13px;">시간</th>
+                            ${parsed.days.map(d => `
+                                <th style="padding:12px 10px; border-bottom:1px solid #dbe4f0; font-size:13px;">
+                                    <div style="font-weight:900;">${this.escapeHtml(d.date || '-')}</div>
+                                    <div style="font-size:12px; color:#64748b; margin-top:2px;">${this.escapeHtml(d.weekday || '')}</div>
+                                </th>`).join('')}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${parsed.rows.map((r, idx) => `
+                            <tr style="background:${idx % 2 ? '#fbfdff' : '#fff'};">
+                                <td style="padding:11px 10px; border-bottom:1px solid #edf2f7; text-align:center; font-weight:900; color:#2563eb;">${this.escapeHtml(r.period)}</td>
+                                <td style="padding:11px 10px; border-bottom:1px solid #edf2f7; text-align:center; font-weight:800; color:#334155; white-space:pre-line;">${this.escapeHtml(r.time)}</td>
+                                ${r.cells.map(c => `
+                                    <td style="padding:11px 10px; border-bottom:1px solid #edf2f7; vertical-align:top; color:#0f172a; font-size:13px; font-weight:700; line-height:1.45; white-space:pre-line; word-break:keep-all;">${c ? this.escapeHtml(c) : '<span style="color:#cbd5e1;">-</span>'}</td>
+                                `).join('')}
+                            </tr>`).join('')}
+                    </tbody>
+                </table>
+            </div>`;
+    },
     load: async function() {
         const body = document.getElementById('scheduleBody');
         const title = document.getElementById('scheduleCourseName');
@@ -5801,15 +5907,7 @@ const scheduleMgr = {
                     </div>`;
                 return;
             }
-            body.innerHTML = `
-                <div style="display:flex; flex-direction:column; gap:8px;">
-                    ${lines.map(line => `
-                        <div style="display:flex; align-items:flex-start; gap:10px; background:#fff; border:1px solid #e2e8f0; border-radius:10px; padding:10px 12px; color:#1e293b; font-size:14px; font-weight:700; line-height:1.45;">
-                            <span style="width:7px; height:7px; border-radius:50%; background:#2563eb; margin-top:8px; flex-shrink:0;"></span>
-                            <span style="white-space:pre-wrap; word-break:keep-all;">${this.escapeHtml(line)}</span>
-                        </div>
-                    `).join('')}
-                </div>`;
+            body.innerHTML = this.renderSchedule(lines);
         } catch (e) {
             console.error('[교육시간표 로드]', e);
             body.innerHTML = '<div style="height:260px; display:flex; align-items:center; justify-content:center; color:#ef4444; font-weight:900;">교육시간표를 불러오지 못했습니다.</div>';
