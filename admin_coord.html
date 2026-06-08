@@ -6437,33 +6437,104 @@ function _coordExtractHwpSection(bytes) {
     return { text, records };
 }
 
+function _coordReadLegacyHwpSections(buffer) {
+    const buf8 = new Uint8Array(buffer);
+    const view = new DataView(buffer);
+    if (buf8[0] !== 0xD0 || buf8[1] !== 0xCF) throw new Error('HWP CFB 형식 아님');
+    const sectorSize = 1 << view.getUint16(30, true);
+    const fatCount = view.getUint32(44, true);
+    const dirStart = view.getUint32(48, true);
+    const fat = new Int32Array(Math.ceil(buffer.byteLength / sectorSize) + 4096).fill(-1);
+    let fatIndex = 0;
+
+    for (let i = 0; i < 109 && fatIndex < fatCount; i++) {
+        const fatSector = view.getUint32(76 + i * 4, true);
+        if (fatSector >= 0xFFFFFFFE) break;
+        for (let j = 0; j < sectorSize / 4; j++) {
+            const off = (fatSector + 1) * sectorSize + j * 4;
+            if (off + 4 > buffer.byteLength) break;
+            fat[fatIndex * (sectorSize / 4) + j] = view.getInt32(off, true);
+        }
+        fatIndex++;
+    }
+
+    const chain = start => {
+        const out = [];
+        let cur = start;
+        while (cur >= 0 && cur < 0xFFFFFFFE && out.length < 100000) {
+            out.push(cur);
+            cur = fat[cur];
+        }
+        return out;
+    };
+    const readStream = (startId, size) => {
+        const sectors = chain(startId);
+        const out = new Uint8Array(Math.min(size, sectors.length * sectorSize));
+        let pos = 0;
+        sectors.forEach(sec => {
+            const off = (sec + 1) * sectorSize;
+            const slice = buf8.slice(off, off + sectorSize);
+            const copy = Math.min(slice.length, out.length - pos);
+            out.set(slice.slice(0, copy), pos);
+            pos += copy;
+        });
+        return out.slice(0, Math.min(size, out.length));
+    };
+
+    const sections = [];
+    chain(dirStart).forEach(dirSector => {
+        const base = (dirSector + 1) * sectorSize;
+        for (let e = 0; e + 128 <= sectorSize; e += 128) {
+            const off = base + e;
+            if (off + 128 > buffer.byteLength) break;
+            const nameLen = view.getUint16(off + 64, true);
+            if (nameLen <= 0 || nameLen > 64) continue;
+            let name = '';
+            for (let n = 0; n < nameLen - 2; n += 2) name += String.fromCharCode(view.getUint16(off + n, true));
+            if (buf8[off + 66] !== 2 || !name.startsWith('Section')) continue;
+            const startId = view.getInt32(off + 116, true);
+            const size = view.getInt32(off + 120, true);
+            if (startId >= 0 && startId < 0xFFFFFFFE && size > 0) sections.push(readStream(startId, size));
+        }
+    });
+    return sections;
+}
+
 async function _coordParseHwpRosterFile(file) {
-    if (!window.XLSX || !XLSX.CFB || !window.pako) throw new Error('HWP 파서 라이브러리 로드 실패');
+    if (!window.pako) throw new Error('HWP 압축 해제 라이브러리 로드 실패');
     const buf = await file.arrayBuffer();
-    const cfb = XLSX.CFB.read(new Uint8Array(buf), { type: 'array' });
-    const entries = cfb.FileIndex || [];
-    const header = entries.find(e => /FileHeader$/i.test(e.name));
-    const headerBytes = header && header.content ? new Uint8Array(header.content) : null;
-    const compressed = headerBytes && headerBytes.length > 39 ? !!(_coordHwpU32(headerBytes, 36) & 1) : true;
     let text = '';
     let records = [];
+    const addSection = data => {
+        let bytes = new Uint8Array(data);
+        try { bytes = pako.inflateRaw(bytes); }
+        catch (_) {
+            try { bytes = pako.inflate(bytes); } catch (err) {}
+        }
+        const section = _coordExtractHwpSection(bytes);
+        text += section.text || _coordDecodeUtf16Le(bytes);
+        text += '\n';
+        records = records.concat(section.records);
+    };
 
-    entries
-        .filter(e => /BodyText\/Section\d+$/i.test(e.name) && e.content)
-        .sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }))
-        .forEach(e => {
-            let bytes = new Uint8Array(e.content);
-            if (compressed) {
-                try { bytes = pako.inflateRaw(bytes); }
-                catch (_) {
-                    try { bytes = pako.inflate(bytes); } catch (err) {}
-                }
-            }
-            const section = _coordExtractHwpSection(bytes);
-            text += section.text || _coordDecodeUtf16Le(bytes);
-            text += '\n';
-            records = records.concat(section.records);
-        });
+    if (window.XLSX && XLSX.CFB) {
+        try {
+            const cfb = XLSX.CFB.read(new Uint8Array(buf), { type: 'array' });
+            const entries = cfb.FileIndex || [];
+            entries
+                .filter(e => /BodyText[\\/]+Section\d+$/i.test(e.name) && e.content)
+                .sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }))
+                .forEach(e => addSection(e.content));
+        } catch (e) {
+            console.warn('[교육운영부 HWP] SheetJS CFB 파싱 실패, 직접 파서로 재시도:', e);
+        }
+    }
+
+    if (!_coordParseRosterRecords(records).length) {
+        text = '';
+        records = [];
+        _coordReadLegacyHwpSections(buf).forEach(addSection);
+    }
 
     const byRecords = _coordParseRosterRecords(records);
     return byRecords.length ? byRecords : _coordParseRoster(text);
