@@ -1564,6 +1564,9 @@ body.pc-mode .entry-box:hover, body.pc-mode .entry-box-tablet:hover {
           <button class="navy-btn" style="background:var(--blue-deep); height:45px;" onclick="openSetupModalFromIndividual()">
               <i class="fa-solid fa-sliders"></i> 해당 과정 설정 수정
           </button>
+          <button class="navy-btn" style="background:#2563eb; height:45px;" onclick="openRosterUpload(); toggleMenu(false);">
+              <i class="fa-solid fa-file-arrow-up"></i> 교육생 명단 업로드
+          </button>
           <div class="section-card" style="padding:10px;">
               <div class="section-title"><i class="fa-solid fa-qrcode"></i> 출결 QR 관리</div>
               <div id="qrPreviewArea" style="background:#f8fafc; border:1px solid #eee; border-radius:8px; padding:10px; text-align:center;">
@@ -1871,9 +1874,6 @@ body.pc-mode .entry-box:hover, body.pc-mode .entry-box-tablet:hover {
               <div class="ind-title-row">
                   <span class="ind-room-label">ROOM <span id="ind-room-id">-</span></span>
                   <span id="ind-course-name">과정명 로딩 중...</span>
-                  <button class="coord-roster-upload-btn" onclick="openRosterUpload()" title="교육생 명단 업로드">
-                      <i class="fa-solid fa-file-arrow-up"></i> 명단 업로드
-                  </button>
               </div>
               <div style="display: flex; flex-wrap: wrap; gap: 10px 20px; font-size: 12.5px;">
                   <div><span style="opacity: 0.6;">교육기간:</span> <span id="ind-period">-</span></div>
