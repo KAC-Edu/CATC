@@ -5718,6 +5718,7 @@ const scheduleMgr = {
     cleanLine: function(v) {
         return String(v || '')
             .replace(/汤捯/g, '')
+            .replace(/^[ㄱ-ㅎㅏ-ㅣ]+(?=[가-힣A-Za-z0-9])/g, '')
             .replace(/[|]/g, ' ')
             .replace(/\s+/g, ' ')
             .trim();
@@ -5748,12 +5749,19 @@ const scheduleMgr = {
                 if (!v || isHeader(v) || isDate(v) || isWeekday(v) || isPeriod(v) || isTime(v)) return;
                 if (/^[(（].+[)）]$/.test(v) && sessions.length) {
                     sessions[sessions.length - 1] += `\n${v}`;
-                } else {
+                } else if (!sessions.includes(v)) {
                     sessions.push(v);
                 }
             });
             return sessions;
         };
+
+        const mergeTime = (a, b) => {
+            const times = `${a || ''} ${b || ''}`.match(/\d{1,2}:\d{2}/g) || [];
+            if (times.length >= 2) return `${times[0]}~${times[times.length - 1]}`;
+            return [a, b].filter(Boolean).join(' ');
+        };
+        const sameCells = (a, b) => JSON.stringify(a || []) === JSON.stringify(b || []);
 
         let startIdx = arr.findIndex(v => isWeekday(v));
         if (startIdx < 0) startIdx = arr.findIndex(v => /^1$/.test(v));
@@ -5779,7 +5787,18 @@ const scheduleMgr = {
             });
         }
 
-        return { days, rows: rows.filter(r => r.time || r.cells.some(Boolean)) };
+        const compactRows = [];
+        rows.forEach(row => {
+            const hasContent = row.cells.some(Boolean);
+            const prev = compactRows[compactRows.length - 1];
+            if (prev && (!hasContent || sameCells(prev.cells, row.cells))) {
+                prev.time = mergeTime(prev.time, row.time);
+                return;
+            }
+            compactRows.push(row);
+        });
+
+        return { days, rows: compactRows.filter(r => r.time || r.cells.some(Boolean)) };
     },
     renderSchedule: function(lines) {
         const parsed = this.parseTable(lines);
@@ -5795,26 +5814,27 @@ const scheduleMgr = {
                 </div>`;
         }
         return `
-            <div style="overflow:auto; border:1px solid #dbe4f0; border-radius:14px; background:#fff;">
-                <table style="width:100%; border-collapse:collapse; min-width:${560 + parsed.days.length * 120}px; table-layout:fixed;">
+            <div style="overflow:hidden; border:1px solid #dbe4f0; border-radius:14px; background:#fff;">
+                <table style="width:100%; border-collapse:collapse; table-layout:fixed;">
                     <thead>
                         <tr style="background:#eff6ff; color:#0f3f73;">
-                            <th style="width:70px; padding:12px 10px; border-bottom:1px solid #dbe4f0; font-size:13px;">교시</th>
-                            <th style="width:120px; padding:12px 10px; border-bottom:1px solid #dbe4f0; font-size:13px;">시간</th>
+                            <th style="width:92px; padding:8px 6px; border-bottom:1px solid #dbe4f0; font-size:12px;">시간</th>
                             ${parsed.days.map(d => `
-                                <th style="padding:12px 10px; border-bottom:1px solid #dbe4f0; font-size:13px;">
+                                <th style="padding:8px 6px; border-bottom:1px solid #dbe4f0; font-size:12px;">
                                     <div style="font-weight:900;">${this.escapeHtml(d.date || '-')}</div>
-                                    <div style="font-size:12px; color:#64748b; margin-top:2px;">${this.escapeHtml(d.weekday || '')}</div>
+                                    <div style="font-size:11px; color:#64748b; margin-top:1px;">${this.escapeHtml(d.weekday || '')}</div>
                                 </th>`).join('')}
                         </tr>
                     </thead>
                     <tbody>
                         ${parsed.rows.map((r, idx) => `
                             <tr style="background:${idx % 2 ? '#fbfdff' : '#fff'};">
-                                <td style="padding:11px 10px; border-bottom:1px solid #edf2f7; text-align:center; font-weight:900; color:#2563eb;">${this.escapeHtml(r.period)}</td>
-                                <td style="padding:11px 10px; border-bottom:1px solid #edf2f7; text-align:center; font-weight:800; color:#334155; white-space:pre-line;">${this.escapeHtml(r.time)}</td>
+                                <td style="padding:7px 6px; border-bottom:1px solid #edf2f7; text-align:center; color:#334155; white-space:pre-line;">
+                                    <div style="font-size:10px; font-weight:900; color:#2563eb; margin-bottom:2px;">${this.escapeHtml(r.period)}교시</div>
+                                    <div style="font-size:12px; font-weight:900; line-height:1.2;">${this.escapeHtml(r.time)}</div>
+                                </td>
                                 ${r.cells.map(c => `
-                                    <td style="padding:11px 10px; border-bottom:1px solid #edf2f7; vertical-align:top; color:#0f172a; font-size:13px; font-weight:700; line-height:1.45; white-space:pre-line; word-break:keep-all;">${c ? this.escapeHtml(c) : '<span style="color:#cbd5e1;">-</span>'}</td>
+                                    <td style="padding:7px 6px; border-bottom:1px solid #edf2f7; vertical-align:middle; text-align:center; color:#0f172a; font-size:11px; font-weight:800; line-height:1.35; white-space:pre-line; word-break:keep-all;">${c ? this.escapeHtml(c) : '<span style="color:#cbd5e1;">-</span>'}</td>
                                 `).join('')}
                             </tr>`).join('')}
                     </tbody>
