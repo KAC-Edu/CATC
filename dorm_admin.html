@@ -9,6 +9,8 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
     <script src="config.js"></script>
 
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -345,11 +347,11 @@
 
             <div class="panel" id="rosterPanel" style="display:none;">
                 <h2 id="rosterTitle">교육생 명단</h2>
-                <p class="desc">명단 PDF(연번/성함/사번/소속/성별)를 업로드하면 자동 판독합니다. 판독이 부정확하면 표에서 직접 수정하거나 행을 추가/삭제하세요.</p>
+                <p class="desc">명단 PDF 또는 한글(HWP/HWPX)을 업로드하면 자동 판독합니다. 판독이 부정확하면 표에서 직접 수정하거나 행을 추가/삭제하세요.</p>
 
                 <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px;">
-                    <input type="file" id="pdfInput" accept="application/pdf" style="display:none;" onchange="handlePdf(event)">
-                    <button class="save-btn" style="background:var(--blue);" onclick="document.getElementById('pdfInput').click()"><i class="fa-solid fa-file-pdf"></i> PDF 업로드</button>
+                    <input type="file" id="pdfInput" accept=".pdf,.hwp,.hwpx,application/pdf,application/x-hwp,application/haansofthwp,application/vnd.hancom.hwpx" style="display:none;" onchange="handleRosterFile(event)">
+                    <button class="save-btn" style="background:var(--blue);" onclick="document.getElementById('pdfInput').click()"><i class="fa-solid fa-file-arrow-up"></i> PDF/HWP 업로드</button>
                     <button class="h-btn" style="background:#475569;" onclick="addRosterRow()"><i class="fa-solid fa-plus"></i> 행 추가</button>
                     <button class="h-btn" style="background:#475569;" onclick="clearRoster()"><i class="fa-solid fa-eraser"></i> 비우기</button>
                     <div style="flex:1;"></div>
@@ -1466,6 +1468,186 @@
             });
         }
 
+        async function handleRosterFile(ev) {
+            const file = ev.target.files[0];
+            if (!file) return;
+            const name = (file.name || '').toLowerCase();
+            const preview = document.getElementById('rosterPreview');
+
+            try {
+                let parsed = [];
+                if (name.endsWith('.pdf')) {
+                    await handlePdf(ev);
+                    return;
+                } else if (name.endsWith('.hwpx')) {
+                    preview.innerText = '📄 HWPX 판독 중...';
+                    parsed = await parseHwpxRosterFile(file);
+                } else if (name.endsWith('.hwp')) {
+                    preview.innerText = '📄 HWP 판독 중...';
+                    parsed = await parseHwpRosterFile(file);
+                } else {
+                    preview.innerText = '⚠️ PDF/HWP/HWPX 파일만 업로드할 수 있습니다.';
+                    return;
+                }
+
+                parsed = dedupeRoster(parsed);
+                if (!parsed.length) {
+                    preview.innerText = '⚠️ 자동 판독 결과가 없습니다. 표에서 직접 입력하거나 다른 파일을 시도하세요.';
+                } else {
+                    parsed.forEach((r, i) => r.seq = i + 1);
+                    roster = parsed;
+                    renderRoster();
+                    preview.innerHTML = `✅ ${parsed.length}명 판독됨. <b style="color:var(--warning);">반드시 내용을 확인/수정</b>한 뒤 저장하세요.`;
+                    rosterDirty = true;
+                }
+            } catch (e) {
+                console.error(e);
+                preview.innerText = '⚠️ 한글/PDF 판독 실패. 표에서 직접 입력해 주세요.';
+            } finally {
+                ev.target.value = '';
+            }
+        }
+
+        function dedupeRoster(rows) {
+            const seen = new Set();
+            const out = [];
+            (rows || []).forEach(r => {
+                if (!r || !r.name || !r.empNo) return;
+                const key = `${r.name}_${r.empNo}`;
+                if (seen.has(key)) return;
+                seen.add(key);
+                out.push(r);
+            });
+            return out;
+        }
+
+        function normalizeRosterCell(v) {
+            return String(v || '')
+                .replace(/\u0000/g, '')
+                .replace(/\u00a0/g, ' ')
+                .replace(/[|]/g, ' ')
+                .replace(/\s+/g, ' ')
+                .trim();
+        }
+
+        function parseRowsFromPlainText(text) {
+            const parsed = [];
+            const lines = String(text || '')
+                .replace(/\r/g, '\n')
+                .split('\n')
+                .map(normalizeRosterCell)
+                .filter(Boolean);
+
+            lines.forEach(line => {
+                if (!/\d{4,6}/.test(line)) return;
+                if (/연\s*번|성\s*명|성\s*함|사\s*번|소\s*속|성\s*별|합계|소계|명단|과정/.test(line)) return;
+                const cells = line
+                    .replace(/([가-힣])\s+([가-힣])\s+([가-힣])(?=\s|$)/g, '$1$2$3')
+                    .split(/\t+|\s{2,}|(?<=\d)\s+(?=[가-힣])|(?<=[가-힣])\s+(?=\d{4,6})/)
+                    .flatMap(c => normalizeRosterCell(c).split(/\s+/))
+                    .filter(Boolean);
+                const row = parseRosterRow(cells);
+                if (row) parsed.push(row);
+            });
+            return parsed;
+        }
+
+        async function parseHwpxRosterFile(file) {
+            if (!window.JSZip) throw new Error('JSZip 로드 실패');
+            const zip = await JSZip.loadAsync(file);
+            const xmlNames = Object.keys(zip.files).filter(n => /\.xml$/i.test(n) && !zip.files[n].dir);
+            const parsed = [];
+            let allText = '';
+
+            for (const n of xmlNames) {
+                const xml = await zip.files[n].async('string');
+                if (!/(성명|성함|사번|소속|성별|\d{4,6})/.test(xml)) continue;
+                allText += '\n' + xml.replace(/<[^>]+>/g, '\n');
+
+                const doc = new DOMParser().parseFromString(xml, 'application/xml');
+                const rows = Array.from(doc.getElementsByTagName('*')).filter(el => el.localName === 'tr');
+                rows.forEach(tr => {
+                    const cells = Array.from(tr.getElementsByTagName('*'))
+                        .filter(el => el.localName === 'tc')
+                        .map(tc => normalizeRosterCell(tc.textContent))
+                        .filter(Boolean);
+                    const row = parseRosterRow(cells);
+                    if (row) parsed.push(row);
+                });
+            }
+
+            return parsed.length ? parsed : parseRowsFromPlainText(allText);
+        }
+
+        function hwpReadU32LE(bytes, off) {
+            return (bytes[off] | (bytes[off + 1] << 8) | (bytes[off + 2] << 16) | (bytes[off + 3] << 24)) >>> 0;
+        }
+
+        function decodeUtf16Le(bytes) {
+            let out = '';
+            const chunk = 0x8000;
+            for (let i = 0; i < bytes.length; i += chunk) {
+                const part = bytes.subarray(i, Math.min(i + chunk, bytes.length));
+                const codes = [];
+                for (let j = 0; j + 1 < part.length; j += 2) {
+                    const c = part[j] | (part[j + 1] << 8);
+                    if (c === 0) continue;
+                    codes.push(c);
+                }
+                out += String.fromCharCode.apply(null, codes);
+            }
+            return out;
+        }
+
+        function extractHwpSectionText(bytes) {
+            let text = '';
+            let off = 0;
+            while (off + 4 <= bytes.length) {
+                const header = hwpReadU32LE(bytes, off);
+                off += 4;
+                const tag = header & 0x3ff;
+                let size = (header >>> 20) & 0xfff;
+                if (size === 0xfff) {
+                    if (off + 4 > bytes.length) break;
+                    size = hwpReadU32LE(bytes, off);
+                    off += 4;
+                }
+                if (off + size > bytes.length) break;
+                if (tag === 67) text += decodeUtf16Le(bytes.subarray(off, off + size)) + '\n';
+                off += size;
+            }
+            return text;
+        }
+
+        async function parseHwpRosterFile(file) {
+            if (!window.XLSX || !XLSX.CFB || !window.pako) throw new Error('HWP 파서 라이브러리 로드 실패');
+            const buf = await file.arrayBuffer();
+            const cfb = XLSX.CFB.read(new Uint8Array(buf), { type: 'array' });
+            const entries = cfb.FileIndex || [];
+            const header = entries.find(e => /FileHeader$/i.test(e.name));
+            const headerBytes = header && header.content ? new Uint8Array(header.content) : null;
+            const compressed = headerBytes && headerBytes.length > 39 ? !!(hwpReadU32LE(headerBytes, 36) & 1) : true;
+            let text = '';
+
+            entries
+                .filter(e => /BodyText\/Section\d+$/i.test(e.name) && e.content)
+                .sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }))
+                .forEach(e => {
+                    let bytes = new Uint8Array(e.content);
+                    if (compressed) {
+                        try { bytes = pako.inflateRaw(bytes); }
+                        catch (_) {
+                            try { bytes = pako.inflate(bytes); } catch (err) {}
+                        }
+                    }
+                    const sectionText = extractHwpSectionText(bytes);
+                    text += sectionText || decodeUtf16Le(bytes);
+                    text += '\n';
+                });
+
+            return parseRowsFromPlainText(text);
+        }
+
         // ── PDF 판독: 행(Y) 기반 표 파싱 ──
         async function handlePdf(ev) {
             const file = ev.target.files[0];
@@ -1617,7 +1799,7 @@
         function renderRoster() {
             const body = document.getElementById('rosterBody');
             if (!roster.length) {
-                body.innerHTML = `<tr><td colspan="6" style="padding:20px; text-align:center; color:var(--muted);">명단이 비어 있습니다. PDF를 업로드하거나 "행 추가"로 입력하세요.</td></tr>`;
+                body.innerHTML = `<tr><td colspan="6" style="padding:20px; text-align:center; color:var(--muted);">명단이 비어 있습니다. PDF/HWP 파일을 업로드하거나 "행 추가"로 입력하세요.</td></tr>`;
             } else {
                 body.innerHTML = roster.map((r, i) => `
                     <tr>
