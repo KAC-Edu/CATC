@@ -9,8 +9,6 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
-    <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
     <script src="config.js"></script>
 
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -347,11 +345,11 @@
 
             <div class="panel" id="rosterPanel" style="display:none;">
                 <h2 id="rosterTitle">교육생 명단</h2>
-                <p class="desc">명단 PDF 또는 한글(HWP/HWPX)을 업로드하면 자동 판독합니다. 판독이 부정확하면 표에서 직접 수정하거나 행을 추가/삭제하세요.</p>
+                <p class="desc">명단 PDF(연번/성함/사번/소속/성별)를 업로드하면 자동 판독합니다. 판독이 부정확하면 표에서 직접 수정하거나 행을 추가/삭제하세요.</p>
 
                 <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px;">
-                    <input type="file" id="pdfInput" accept=".pdf,.hwp,.hwpx,application/pdf,application/x-hwp,application/haansofthwp,application/vnd.hancom.hwpx" style="display:none;" onchange="handleRosterFile(event)">
-                    <button class="save-btn" style="background:var(--blue);" onclick="document.getElementById('pdfInput').click()"><i class="fa-solid fa-file-arrow-up"></i> PDF/HWP 업로드</button>
+                    <input type="file" id="pdfInput" accept="application/pdf" style="display:none;" onchange="handlePdf(event)">
+                    <button class="save-btn" style="background:var(--blue);" onclick="document.getElementById('pdfInput').click()"><i class="fa-solid fa-file-pdf"></i> PDF 업로드</button>
                     <button class="h-btn" style="background:#475569;" onclick="addRosterRow()"><i class="fa-solid fa-plus"></i> 행 추가</button>
                     <button class="h-btn" style="background:#475569;" onclick="clearRoster()"><i class="fa-solid fa-eraser"></i> 비우기</button>
                     <div style="flex:1;"></div>
@@ -597,7 +595,6 @@
         let selectedCourse = null;        // { room, courseName, period, weekKey, profName }
         let roster = [];                  // [{ seq, name, empNo, dept, gender }]
         let rosterDirty = false;          // PDF 업로드·행 추가·삭제 후 미저장 상태 여부
-        let currentScheduleData = null;   // 업로드 파일에서 함께 판독한 교육시간표
 
         // 건물·층 구조 정의 (확정된 구조)
         const BUILDINGS = {
@@ -1392,7 +1389,7 @@
                         ${enrolled ? `<span class="course-count"><i class="fa-solid fa-circle-check"></i> ${cnt}명</span>` : ''}
                         ${it.profName ? `<span class="course-prof"><i class="fa-solid fa-user-tie"></i> ${it.profName}</span>` : ''}
                         <span class="course-go"><i class="fa-solid fa-chevron-right"></i></span>
-                        <span class="course-del-btn" onclick='event.stopPropagation(); deleteRoster(${JSON.stringify(it).replace(/'/g, "&#39;")})' title="이 과정에 업로드/저장된 교육생 명단 전체 삭제" style="flex-shrink:0; width:32px; height:32px; display:inline-flex; align-items:center; justify-content:center; border-radius:8px; background:#fee2e2; color:#dc2626; cursor:pointer; font-size:14px; margin-left:4px;"><i class="fa-solid fa-trash-can"></i></span>
+                        <span class="course-del-btn" onclick="event.stopPropagation(); deleteRoster(${JSON.stringify(it).replace(/'/g, "&#39;")})" title="이 과정 명단 삭제" style="flex-shrink:0; width:32px; height:32px; display:inline-flex; align-items:center; justify-content:center; border-radius:8px; background:#fee2e2; color:#dc2626; cursor:pointer; font-size:14px; margin-left:4px;"><i class="fa-solid fa-trash-can"></i></span>
                     </div>`;
             });
             html += `</div>`;
@@ -1444,7 +1441,6 @@
             db.ref(`system/dorm/rosters/${key}`).once('value', snap => {
                 const v = snap.val();
                 roster = (v && Array.isArray(v.list)) ? v.list : [];
-                currentScheduleData = v && v.schedule ? v.schedule : null;
                 rosterDirty = false;  // DB에서 로드한 시점엔 항상 클린 상태
                 console.log('[명단 로드] 결과:', v ? `${roster.length}명 (list 존재: ${!!v.list})` : '⚠️ Firebase에 데이터 없음 (null)');
                 if (!v) {
@@ -1460,7 +1456,6 @@
                             if (v2 && Array.isArray(v2.list) && v2.list.length > 0) {
                                 console.log('[명단 로드] 대체 키에서 발견:', v2.list.length + '명 → 이 키로 로드');
                                 roster = v2.list;
-                                currentScheduleData = v2.schedule || null;
                             }
                             renderRoster();
                         });
@@ -1469,335 +1464,6 @@
                 }
                 renderRoster();
             });
-        }
-
-        async function handleRosterFile(ev) {
-            const file = ev.target.files[0];
-            if (!file) return;
-            const name = (file.name || '').toLowerCase();
-            const preview = document.getElementById('rosterPreview');
-
-            try {
-                let parsed = [];
-                if (name.endsWith('.pdf')) {
-                    await handlePdf(ev);
-                    return;
-                } else if (name.endsWith('.hwpx')) {
-                    preview.innerText = '📄 HWPX 판독 중...';
-                    parsed = await parseHwpxRosterFile(file);
-                } else if (name.endsWith('.hwp')) {
-                    preview.innerText = '📄 HWP 판독 중...';
-                    parsed = await parseHwpRosterFile(file);
-                } else {
-                    preview.innerText = '⚠️ PDF/HWP/HWPX 파일만 업로드할 수 있습니다.';
-                    return;
-                }
-
-                parsed = dedupeRoster(parsed);
-                if (!parsed.length) {
-                    preview.innerText = '⚠️ 자동 판독 결과가 없습니다. 표에서 직접 입력하거나 다른 파일을 시도하세요.';
-                } else {
-                    parsed.forEach((r, i) => r.seq = i + 1);
-                    roster = parsed;
-                    renderRoster();
-                    preview.innerHTML = `✅ ${parsed.length}명 판독됨. <b style="color:var(--warning);">반드시 내용을 확인/수정</b>한 뒤 저장하세요.`;
-                    rosterDirty = true;
-                }
-            } catch (e) {
-                console.error(e);
-                preview.innerText = '⚠️ 한글/PDF 판독 실패. 표에서 직접 입력해 주세요.';
-            } finally {
-                ev.target.value = '';
-            }
-        }
-
-        function dedupeRoster(rows) {
-            const seen = new Set();
-            const out = [];
-            (rows || []).forEach(r => {
-                if (!r || !r.name || !r.empNo) return;
-                const key = `${r.name}_${r.empNo}`;
-                if (seen.has(key)) return;
-                seen.add(key);
-                out.push(r);
-            });
-            return out;
-        }
-
-        function normalizeRosterCell(v) {
-            return String(v || '')
-                .replace(/\u0000/g, '')
-                .replace(/\u00a0/g, ' ')
-                .replace(/[|]/g, ' ')
-                .replace(/\s+/g, ' ')
-                .trim();
-        }
-
-        function buildScheduleData(lines, fileName) {
-            const arr = (lines || [])
-                .map(normalizeRosterCell)
-                .filter(v => v && /[가-힣0-9]/.test(v))
-                .filter(v => !/^[捤獥汤捯氠瑢]+$/.test(v));
-            if (!arr.length) return null;
-            let start = arr.findIndex(v => /교육\s*시간표|시간표/.test(v));
-            if (start < 0) start = 0;
-            let end = arr.findIndex((v, i) => i > start + 3 && /교육생\s*명단|연\s*번/.test(v));
-            if (end < 0) end = Math.min(arr.length, start + 90);
-            const picked = arr.slice(start, end)
-                .filter(v => !/^비고$|^연번$|^성명$|^사번$|^소\s*속$|^직위$/.test(v))
-                .slice(0, 120);
-            if (!picked.length) return null;
-            return {
-                lines: picked,
-                fileName: fileName || '',
-                savedAt: Date.now()
-            };
-        }
-
-        function parseRowsFromPlainText(text) {
-            const parsed = [];
-            const lines = String(text || '')
-                .replace(/\r/g, '\n')
-                .split('\n')
-                .map(normalizeRosterCell)
-                .filter(Boolean);
-
-            lines.forEach(line => {
-                if (!/\d{4,6}/.test(line)) return;
-                if (/연\s*번|성\s*명|성\s*함|사\s*번|소\s*속|성\s*별|합계|소계|명단|과정/.test(line)) return;
-                const cells = line
-                    .replace(/([가-힣])\s+([가-힣])\s+([가-힣])(?=\s|$)/g, '$1$2$3')
-                    .split(/\t+|\s{2,}|(?<=\d)\s+(?=[가-힣])|(?<=[가-힣])\s+(?=\d{4,6})/)
-                    .flatMap(c => normalizeRosterCell(c).split(/\s+/))
-                    .filter(Boolean);
-                const row = parseRosterRow(cells);
-                if (row) parsed.push(row);
-            });
-            return parsed;
-        }
-
-        function parseRosterRecords(records) {
-            const arr = (records || []).map(normalizeRosterCell).filter(Boolean);
-            const parsed = [];
-            const isSeq = v => /^\d{1,3}$/.test(v);
-            const isEmp = v => /^\d{4,6}$/.test(v);
-            const isGender = v => /^(남|여|남자|여자|넘|M|F|m|f)$/.test(v);
-
-            arr.forEach((cell, idx) => {
-                if (!isEmp(cell)) return;
-                let start = idx;
-                if (idx >= 2 && isSeq(arr[idx - 2])) start = idx - 2;      // 연번, 성명, 사번
-                else if (idx >= 1 && isSeq(arr[idx - 1])) start = idx - 1; // 연번, 사번, 성명
-                else if (idx >= 1) start = idx - 1;
-
-                let end = Math.min(arr.length, idx + 7);
-                for (let j = idx + 1; j < Math.min(arr.length, idx + 8); j++) {
-                    if (isGender(arr[j])) { end = j + 1; break; }
-                    if (j > idx + 1 && isSeq(arr[j]) && isEmp(arr[j + 1])) { end = j; break; }
-                    if (j > idx + 2 && isEmp(arr[j])) { end = j; break; }
-                }
-
-                const row = parseRosterRow(arr.slice(start, end));
-                if (row) parsed.push(row);
-            });
-            return dedupeRoster(parsed);
-        }
-
-        async function parseHwpxRosterFile(file) {
-            if (!window.JSZip) throw new Error('JSZip 로드 실패');
-            const zip = await JSZip.loadAsync(file);
-            const xmlNames = Object.keys(zip.files).filter(n => /\.xml$/i.test(n) && !zip.files[n].dir);
-            const parsed = [];
-            let allText = '';
-            const scheduleLines = [];
-
-            for (const n of xmlNames) {
-                const xml = await zip.files[n].async('string');
-                if (!/(성명|성함|사번|소속|성별|\d{4,6})/.test(xml)) continue;
-                allText += '\n' + xml.replace(/<[^>]+>/g, '\n');
-
-                const doc = new DOMParser().parseFromString(xml, 'application/xml');
-                const rows = Array.from(doc.getElementsByTagName('*')).filter(el => el.localName === 'tr');
-                rows.forEach(tr => {
-                    const rawCells = Array.from(tr.getElementsByTagName('*'))
-                        .filter(el => el.localName === 'tc')
-                        .map(tc => normalizeRosterCell(tc.textContent));
-                    const cells = rawCells.filter(Boolean);
-                    if (rawCells.some(Boolean)) scheduleLines.push(rawCells.join('\u241F'));
-                    const row = parseRosterRow(cells);
-                    if (row) parsed.push(row);
-                });
-            }
-
-            currentScheduleData = buildScheduleData(scheduleLines.length ? scheduleLines : allText.split(/[\n\r]+/), file.name);
-            return parsed.length ? parsed : parseRowsFromPlainText(allText);
-        }
-
-        function hwpReadU32LE(bytes, off) {
-            return (bytes[off] | (bytes[off + 1] << 8) | (bytes[off + 2] << 16) | (bytes[off + 3] << 24)) >>> 0;
-        }
-
-        function decodeUtf16Le(bytes) {
-            let out = '';
-            const chunk = 0x8000;
-            for (let i = 0; i < bytes.length; i += chunk) {
-                const part = bytes.subarray(i, Math.min(i + chunk, bytes.length));
-                const codes = [];
-                for (let j = 0; j + 1 < part.length; j += 2) {
-                    const c = part[j] | (part[j + 1] << 8);
-                    if (c === 0) continue;
-                    codes.push(c);
-                }
-                out += String.fromCharCode.apply(null, codes);
-            }
-            return out;
-        }
-
-        function extractHwpSectionText(bytes) {
-            let text = '';
-            let off = 0;
-            while (off + 4 <= bytes.length) {
-                const header = hwpReadU32LE(bytes, off);
-                off += 4;
-                const tag = header & 0x3ff;
-                let size = (header >>> 20) & 0xfff;
-                if (size === 0xfff) {
-                    if (off + 4 > bytes.length) break;
-                    size = hwpReadU32LE(bytes, off);
-                    off += 4;
-                }
-                if (off + size > bytes.length) break;
-                if (tag === 67) text += decodeUtf16Le(bytes.subarray(off, off + size)) + '\n';
-                off += size;
-            }
-            return text;
-        }
-
-        function extractHwpSectionRecords(bytes) {
-            const records = [];
-            let off = 0;
-            while (off + 4 <= bytes.length) {
-                const header = hwpReadU32LE(bytes, off);
-                off += 4;
-                const tag = header & 0x3ff;
-                let size = (header >>> 20) & 0xfff;
-                if (size === 0xfff) {
-                    if (off + 4 > bytes.length) break;
-                    size = hwpReadU32LE(bytes, off);
-                    off += 4;
-                }
-                if (off + size > bytes.length) break;
-                if (tag === 67) {
-                    const txt = normalizeRosterCell(decodeUtf16Le(bytes.subarray(off, off + size)));
-                    if (txt) records.push(txt);
-                }
-                off += size;
-            }
-            return records;
-        }
-
-        function readLegacyHwpSectionsFromCfb(buffer) {
-            const buf8 = new Uint8Array(buffer);
-            const view = new DataView(buffer);
-            if (buf8[0] !== 0xD0 || buf8[1] !== 0xCF) throw new Error('HWP CFB 형식 아님');
-            const sectorSize = 1 << view.getUint16(30, true);
-            const fatCount = view.getUint32(44, true);
-            const dirStart = view.getUint32(48, true);
-            const fat = new Int32Array(Math.ceil(buffer.byteLength / sectorSize) + 4096).fill(-1);
-            let fatIndex = 0;
-
-            for (let i = 0; i < 109 && fatIndex < fatCount; i++) {
-                const fatSector = view.getUint32(76 + i * 4, true);
-                if (fatSector >= 0xFFFFFFFE) break;
-                for (let j = 0; j < sectorSize / 4; j++) {
-                    const off = (fatSector + 1) * sectorSize + j * 4;
-                    if (off + 4 > buffer.byteLength) break;
-                    fat[fatIndex * (sectorSize / 4) + j] = view.getInt32(off, true);
-                }
-                fatIndex++;
-            }
-
-            const chain = start => {
-                const out = [];
-                let cur = start;
-                while (cur >= 0 && cur < 0xFFFFFFFE && out.length < 100000) {
-                    out.push(cur);
-                    cur = fat[cur];
-                }
-                return out;
-            };
-            const readStream = (startId, size) => {
-                const sectors = chain(startId);
-                const out = new Uint8Array(Math.min(size, sectors.length * sectorSize));
-                let pos = 0;
-                sectors.forEach(sec => {
-                    const off = (sec + 1) * sectorSize;
-                    const slice = buf8.slice(off, off + sectorSize);
-                    const copy = Math.min(slice.length, out.length - pos);
-                    out.set(slice.slice(0, copy), pos);
-                    pos += copy;
-                });
-                return out.slice(0, Math.min(size, out.length));
-            };
-
-            const sections = [];
-            chain(dirStart).forEach(dirSector => {
-                const base = (dirSector + 1) * sectorSize;
-                for (let e = 0; e + 128 <= sectorSize; e += 128) {
-                    const off = base + e;
-                    if (off + 128 > buffer.byteLength) break;
-                    const nameLen = view.getUint16(off + 64, true);
-                    if (nameLen <= 0 || nameLen > 64) continue;
-                    let name = '';
-                    for (let n = 0; n < nameLen - 2; n += 2) name += String.fromCharCode(view.getUint16(off + n, true));
-                    if (buf8[off + 66] !== 2 || !name.startsWith('Section')) continue;
-                    const startId = view.getInt32(off + 116, true);
-                    const size = view.getInt32(off + 120, true);
-                    if (startId >= 0 && startId < 0xFFFFFFFE && size > 0) sections.push(readStream(startId, size));
-                }
-            });
-            return sections;
-        }
-
-        async function parseHwpRosterFile(file) {
-            if (!window.pako) throw new Error('HWP 압축 해제 라이브러리 로드 실패');
-            const buf = await file.arrayBuffer();
-            let text = '';
-            let records = [];
-            const addSection = data => {
-                let bytes = new Uint8Array(data);
-                try { bytes = pako.inflateRaw(bytes); }
-                catch (_) {
-                    try { bytes = pako.inflate(bytes); } catch (err) {}
-                }
-                const sectionText = extractHwpSectionText(bytes);
-                records = records.concat(extractHwpSectionRecords(bytes));
-                text += sectionText || decodeUtf16Le(bytes);
-                text += '\n';
-            };
-
-            if (window.XLSX && XLSX.CFB) {
-                try {
-                    const cfb = XLSX.CFB.read(new Uint8Array(buf), { type: 'array' });
-                    const entries = cfb.FileIndex || [];
-                    entries
-                        .filter(e => /BodyText[\\/]+Section\d+$/i.test(e.name) && e.content)
-                        .sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }))
-                        .forEach(e => addSection(e.content));
-                } catch (e) {
-                    console.warn('[HWP] SheetJS CFB 파싱 실패, 직접 파서로 재시도:', e);
-                }
-            }
-
-            if (!parseRosterRecords(records).length) {
-                text = '';
-                records = [];
-                readLegacyHwpSectionsFromCfb(buf).forEach(addSection);
-            }
-
-            currentScheduleData = buildScheduleData(records.length ? records : text.split(/[\n\r]+/), file.name);
-            const byRecords = parseRosterRecords(records);
-            return byRecords.length ? byRecords : parseRowsFromPlainText(text);
         }
 
         // ── PDF 판독: 행(Y) 기반 표 파싱 ──
@@ -1809,7 +1475,6 @@
                 const buf = await file.arrayBuffer();
                 const pdf = await pdfjsLib.getDocument(new Uint8Array(buf)).promise;
                 let parsed = [];
-                const scheduleLines = [];
 
                 for (let p = 1; p <= pdf.numPages; p++) {
                     const page = await pdf.getPage(p);
@@ -1828,7 +1493,6 @@
                     // Y 내림차순(위→아래) 정렬된 줄 배열
                     const lines = Object.keys(rowsMap).sort((a, b) => b - a)
                         .map(y => rowsMap[y].sort((a, b) => a.x - b.x).map(c => c.str));
-                    lines.forEach(arr => scheduleLines.push(arr.map(normalizeRosterCell).join('\u241F')));
 
                     // 사번(4~6자리)이 있는 줄을 "사람 시작 줄"로 보고,
                     //  그 다음 사번 없는 줄들(부서 줄바꿈/성별)을 같은 사람으로 병합
@@ -1855,7 +1519,6 @@
                     });
                 }
 
-                currentScheduleData = buildScheduleData(scheduleLines, file.name);
                 if (!parsed.length) {
                     document.getElementById('rosterPreview').innerText = '⚠️ 자동 판독 결과가 없습니다. 양식이 다를 수 있어요. 표에서 직접 입력하거나 다른 PDF를 시도하세요.';
                 } else {
@@ -1888,7 +1551,7 @@
             //  PDF가 "손 평", "정 양 욱"처럼 글자 사이를 띄우면 1글자씩 쪼개지므로,
             //  사번 다음의 연속된 한글 조각(1~2자)을 이어붙여 이름을 복원한다.
             //  직위·부서 단어가 나오면 거기서 멈춘다.
-            const TITLE_WORDS = /^(과장|차장|대리|주임|부장|팀장|실장|센터장|교수|본사|대우|사원|선임|책임|수석|대표|이사|부사장|사장|조장|종합상황실장|선임행정|행정)$/;
+            const TITLE_WORDS = /^(과장|차장|대리|주임|부장|팀장|실장|센터장|교수|본사|대우|사원|선임|책임|수석|대표|이사|부사장|사장)$/;
             // 소속 키워드(공항/본부/부/실/단/센터/팀 등)가 포함되면 이름이 아니라 소속
             const isDeptToken = c => /(공항|본부|부서|훈련원|센터|운영단|시설단|기술단|관제|운영|시설|항행|전력|토목|건축|안전|기획|경영|법무|전략|보안|항공|항로|무선|표지소)/.test(c) || c.length >= 4;
 
@@ -1954,7 +1617,7 @@
         function renderRoster() {
             const body = document.getElementById('rosterBody');
             if (!roster.length) {
-                body.innerHTML = `<tr><td colspan="6" style="padding:20px; text-align:center; color:var(--muted);">명단이 비어 있습니다. PDF/HWP 파일을 업로드하거나 "행 추가"로 입력하세요.</td></tr>`;
+                body.innerHTML = `<tr><td colspan="6" style="padding:20px; text-align:center; color:var(--muted);">명단이 비어 있습니다. PDF를 업로드하거나 "행 추가"로 입력하세요.</td></tr>`;
             } else {
                 body.innerHTML = roster.map((r, i) => `
                     <tr>
@@ -1989,42 +1652,20 @@
                 if (!confirm(`사번이 비어있거나 형식이 이상한 인원이 ${noId.length}명 있습니다.\n그래도 저장할까요? (배정 시 식별이 어려울 수 있음)`)) return;
             }
             const payload = {
-                room: selectedCourse.room,
-                courseName: selectedCourse.courseName,
-                period: selectedCourse.period,
-                weekKey: selectedCourse.weekKey,
-                list: clean.map((r, i) => ({ seq: i + 1, name: r.name.trim(), empNo: (r.empNo||'').trim(), dept: (r.dept||'').trim(), gender: r.gender || '' })),
-                schedule: currentScheduleData || null,
+                room: selectedCourse.room || '',
+                courseName: selectedCourse.courseName || '과정명 미지정',
+                period: selectedCourse.period || '',
+                weekKey: selectedCourse.weekKey || '',
+                list: clean.map((r, i) => ({ seq: i + 1, name: (r.name||'').trim(), empNo: (r.empNo||'').trim(), dept: (r.dept||'').trim(), gender: r.gender || '' })),
                 updatedAt: firebase.database.ServerValue.TIMESTAMP
             };
-            const rk = rosterKey(selectedCourse);
-            db.ref(`system/dorm/rosters/${rk}`).set(payload)
-                .then(async () => {
-                    let scheduleSynced = false;
-                    if (currentScheduleData) {
-                        const schedulePayload = {
-                            courseName: selectedCourse.courseName || '',
-                            period: selectedCourse.period || '',
-                            weekKey: selectedCourse.weekKey || '',
-                            source: currentScheduleData.fileName || '',
-                            lines: currentScheduleData.lines || [],
-                            rosterKey: rk,
-                            updatedAt: firebase.database.ServerValue.TIMESTAMP
-                        };
-                        try {
-                            const mirrors = await Promise.allSettled([
-                                db.ref(`courses/${selectedCourse.room}/settings/schedule`).set(schedulePayload),
-                                db.ref(`courses/${selectedCourse.room}/schedule`).set(schedulePayload)
-                            ]);
-                            scheduleSynced = mirrors.some(r => r.status === 'fulfilled');
-                        } catch (scheduleErr) {
-                            console.warn('[교육시간표] 강사플랫폼 미러 저장 실패, rosters 저장값으로 대체 표시 예정:', scheduleErr);
-                        }
-                    }
-                    showToast(`✅ ${clean.length}명 명단 저장됨${currentScheduleData ? (scheduleSynced ? ' · 교육시간표도 강사플랫폼에 반영' : ' · 시간표는 명단 저장값으로 보관됨') : ''}`);
+            db.ref(`system/dorm/rosters/${rosterKey(selectedCourse)}`).set(cleanFirebaseValue(payload))
+                .then(() => {
+                    showToast(`✅ ${clean.length}명 명단 저장됨`);
                     rosterDirty = false;
                     document.getElementById('rosterPreview').innerText = '';
                     // 해당 과정 행을 녹색+인원수로 즉시 갱신 (전체 재렌더 없이)
+                    const rk = rosterKey(selectedCourse);
                     rosterCounts[rk] = clean.length;
                     const row = document.querySelector(`#courseList .course-row[data-room="${selectedCourse.room}"][data-week="${selectedCourse.weekKey}"]`);
                     if (row) {
@@ -2039,11 +1680,44 @@
                         badge.innerHTML = `<i class="fa-solid fa-circle-check"></i> ${clean.length}명`;
                     }
                 })
-                .catch(e => { console.error(e); showToast('⚠️ 저장 실패: ' + (e.message || e.code || '권한/네트워크 확인 필요')); });
+                .catch(e => { console.error(e); showToast('⚠️ 저장 실패'); });
         }
 
         // ════════════ STEP 3: 자동 배정 ════════════
         let weekRosters = {};   // 선택 주차의 과정별 명단 { rosterKey: payload }
+
+        function cleanFirebaseValue(value) {
+            if (value === undefined) return null;
+            if (value === null) return null;
+            if (Array.isArray(value)) return value.map(cleanFirebaseValue);
+            if (typeof value === 'object') {
+                const out = {};
+                Object.entries(value).forEach(([k, v]) => {
+                    if (v !== undefined) out[k] = cleanFirebaseValue(v);
+                });
+                return out;
+            }
+            return value;
+        }
+
+        function safeFirebaseKey(v) {
+            return String(v || '')
+                .replace(/[.#$/\[\]]/g, '_')
+                .replace(/\s+/g, ' ')
+                .trim() || `token_${Date.now()}`;
+        }
+
+        async function refreshWeekRostersFromDb(wk) {
+            const snap = await db.ref('system/dorm/rosters').once('value');
+            const all = snap.val() || {};
+            weekRosters = {};
+            Object.entries(all).forEach(([k, v]) => {
+                if (!v) return;
+                const keyWeek = v.weekKey || k.split('__')[0];
+                if (keyWeek === wk) weekRosters[k] = v;
+            });
+            return weekRosters;
+        }
 
         // STEP 2·3 공통 — 현재 기준 대상 주(월요일 키) 계산: 토·일엔 차주가 기준
         function getTargetMondayKey() {
@@ -2147,12 +1821,7 @@
             const wk = document.getElementById('weekSelect').value;
             if (!wk) return;
             excludedRosterKeys = new Set();
-            const snap = await db.ref('system/dorm/rosters').once('value');
-            const all = snap.val() || {};
-            weekRosters = {};
-            Object.entries(all).forEach(([k, v]) => {
-                if ((v.weekKey || k.split('__')[0]) === wk) weekRosters[k] = v;
-            });
+            await refreshWeekRostersFromDb(wk);
             // 비노출(hideFromBoard) 과정 집합 갱신 후 목록 렌더
             await loadHiddenCourses();
             renderWeekRosterList();
@@ -2230,26 +1899,16 @@
 
         async function deleteRosterByKey(key, courseName, cnt) {
             const msg = cnt > 0
-                ? `[${courseName}]에 업로드/저장된 교육생 명단 ${cnt}명을 전부 삭제합니다.\n\n자동배정이 이미 되어 있으면 현황/출력/PDF에서도 이 과정 인원이 함께 제거됩니다.\n이 작업은 되돌릴 수 없습니다. 계속할까요?`
-                : `[${courseName}]에 저장된 교육생 명단을 삭제합니다.\n\n자동배정이 이미 되어 있으면 현황/출력/PDF에서도 이 과정 인원이 함께 제거됩니다.\n계속할까요?`;
+                ? `[${courseName}] 명단(${cnt}명)을 삭제합니다.\n이미 자동배정된 현황/출력에서도 이 과정 인원이 함께 제거됩니다.\n이 작업은 되돌릴 수 없습니다. 계속할까요?`
+                : `[${courseName}] 명단을 삭제합니다.\n이미 자동배정된 현황/출력에서도 이 과정 인원이 함께 제거됩니다. 계속할까요?`;
             if (!confirm(msg)) return;
             try {
                 await db.ref(`system/dorm/rosters/${key}`).remove();
-                const removed = await removeRosterFromAssignment(key, courseName);
-                const roomForSchedule = (weekRosters[key] && weekRosters[key].room) || (key.split('__')[1] || '');
-                if (roomForSchedule) await db.ref(`courses/${roomForSchedule}/schedule`).remove().catch(() => {});
+                await removeRosterFromAssignment(key, courseName);
                 delete weekRosters[key];
                 excludedRosterKeys.delete(key);
                 rosterCounts[key] = 0;
-                if (selectedCourse && rosterKey(selectedCourse) === key) {
-                    roster = [];
-                    currentScheduleData = null;
-                    rosterDirty = false;
-                    document.getElementById('rosterPreview').innerText = '🗑️ 이 과정의 업로드 명단이 삭제되었습니다.';
-                    renderRoster();
-                }
-                alert(`✅ [${courseName}] 명단이 삭제되었습니다.\n현황/출력에서 제거된 인원: ${removed || 0}명\n인쇄 및 PDF 출력에도 바로 반영됩니다.`);
-                showToast(`✅ [${courseName}] 명단 삭제 완료 - 현황/출력 반영`);
+                showToast(`✅ [${courseName}] 명단이 삭제되었습니다`);
                 renderWeekRosterList();
             } catch(e) { console.error(e); showToast('❌ 삭제 실패'); }
         }
@@ -2320,7 +1979,7 @@
             const btn = document.getElementById('draftConfirmBtn');
             if (btn) { btn.disabled = true; btn.innerText = '저장 중…'; }
 
-            db.ref(`system/dorm/assignments/${wk}`).set(payload)
+            db.ref(`system/dorm/assignments/${wk}`).set(cleanFirebaseValue(payload))
                 .then(() => {
                     _draftPayload = null;
                     showToast(`✅ 배정 확정 완료 (${totalAssigned}/${totalPeople}명)`);
@@ -2331,12 +1990,15 @@
                     }
                     setTimeout(() => goStep(4), 800);
                 })
-                .catch(e => { console.error(e); showToast('⚠️ 배정 결과 저장 실패'); if (btn) { btn.disabled = false; btn.innerText = '✅ 확정 저장'; } });
+                .catch(e => { console.error('[배정 결과 저장 실패]', e); showToast(`⚠️ 배정 결과 저장 실패${e && e.message ? ': ' + e.message : ''}`); if (btn) { btn.disabled = false; btn.innerText = '✅ 확정 저장'; } });
         }
 
         async function runAssign() {
             const wk = document.getElementById('weekSelect').value;
             if (!wk) { showToast('배정할 주차를 선택하세요'); return; }
+            await refreshWeekRostersFromDb(wk);
+            await loadHiddenCourses();
+            renderWeekRosterList();
             if (!Object.keys(rooms).length) {
                 const rs = await db.ref('system/dorm/rooms').once('value');
                 rooms = rs.val() || {};
@@ -2349,7 +2011,8 @@
             }
 
             const activeRosters = Object.fromEntries(
-                Object.entries(weekRosters).filter(([k]) => !excludedRosterKeys.has(k))
+                Object.entries(weekRosters)
+                    .filter(([k, v]) => !excludedRosterKeys.has(k) && !isRosterHidden(v) && Array.isArray(v.list) && v.list.length)
             );
             if (!Object.keys(activeRosters).length) { showToast('배정할 과정이 없습니다. 하나 이상 선택하세요'); return; }
 
@@ -2407,11 +2070,14 @@
                 const v = activeRosters[ck];
                 const pr = parsePeriod(v.period || '');
                 (v.list || []).forEach(p => {
+                    const name = String(p.name || '').trim();
+                    if (!name) return;
+                    const empNo = String(p.empNo || '').trim();
                     people.push({
-                        name: p.name, empNo: String(p.empNo || ''), dept: p.dept || '', gender: p.gender || '',
-                        course: v.courseName, room: v.room, rosterKey: ck,
+                        name, empNo, dept: p.dept || '', gender: p.gender || '',
+                        course: v.courseName || '과정명 미지정', room: v.room || '', rosterKey: ck,
                         start: pr.start, end: pr.end || pr.start,
-                        token: `${p.name}_${p.empNo || ''}`
+                        token: safeFirebaseKey(`${name}_${empNo || ck}`)
                     });
                 });
             });
@@ -2624,7 +2290,7 @@
                 if (!confirm('이미 배정 결과가 있습니다. 덮어쓸까요?\n(수동으로 이동·추가·삭제한 내용이 사라집니다)')) return;
             }
 
-            db.ref(`system/dorm/assignments/${wk}`).set(payload)
+            db.ref(`system/dorm/assignments/${wk}`).set(cleanFirebaseValue(payload))
                 .then(() => {
                     const pct = totalPeople ? Math.round(totalAssigned / totalPeople * 100) : 0;
                     const allOk = unassignedList.length === 0;
@@ -2670,7 +2336,7 @@
                     // 배정 확정 상태 배너 갱신
                     setTimeout(() => checkAssignmentStatus(wk), 800);
                 })
-                .catch(e => { console.error(e); showToast('⚠️ 배정 결과 저장 실패'); });
+                .catch(e => { console.error('[배정 결과 저장 실패]', e); showToast(`⚠️ 배정 결과 저장 실패${e && e.message ? ': ' + e.message : ''}`); });
         }
 
         // ── 과정 팝업 ──────────────────────────────────────────────
@@ -3000,7 +2666,7 @@
             Promise.all(ops)
                 .then(() => {
                     delete viewAssign.students[token];
-                    showToast(`🗑️ ${s.name} 삭제 완료 - 현황/출력 및 PDF에 반영됩니다`);
+                    showToast(`🗑️ ${s.name} 삭제됨`);
                     renderBoardMap();
                     if (typeof renderInstReserve === 'function' && document.getElementById('instReserveList')) renderInstReserve(wk);
                 })
@@ -3096,7 +2762,7 @@
                 await db.ref(`system/dorm/assignments/${wk}/students/${token}`).update(rec);
                 if (viewAssign && viewAssign.weekKey === wk) { if (!viewAssign.students) viewAssign.students = {}; viewAssign.students[token] = rec; }
                 closeStuPop();
-                showToast(`✅ ${name} 교육생 추가 (${dest.building} ${dest.no}호) - 현황/출력 및 PDF에 반영됩니다`);
+                showToast(`✅ ${name} 교육생 추가 (${dest.building} ${dest.no}호)`);
                 if (typeof renderBoard === 'function') renderBoard();
                 if (currentBoardTab === 'map' && typeof renderBoardMap === 'function') renderBoardMap();
             } catch (e) { console.error(e); msg.innerText = '저장 실패'; }
@@ -3212,14 +2878,7 @@
                 roomId: destRoomId, building: dest.building, floor: dest.floor, no: dest.no
             };
             db.ref(`system/dorm/assignments/${wk}/students/${moveTargetToken}`).update(upd)
-                .then(() => {
-                    if (viewAssign && viewAssign.students && viewAssign.students[moveTargetToken]) {
-                        Object.assign(viewAssign.students[moveTargetToken], upd);
-                    }
-                    closeMovePop();
-                    showToast('✅ 이동 완료 - 현황/출력 및 PDF에 반영됩니다');
-                    renderBoard();
-                })
+                .then(() => { closeMovePop(); showToast('✅ 이동 완료'); renderBoard(); })
                 .catch(e => { console.error(e); document.getElementById('moveMsg').innerText = '저장 실패'; });
         }
         function closeMovePop() { document.getElementById('movePop').style.display = 'none'; moveTargetToken = null; }
@@ -3229,21 +2888,17 @@
             if (!confirm(`${s.name}(${s.empNo})을(를) 배정에서 삭제하시겠습니까?\n(명단에서 지우는 게 아니라 이 주차 배정에서만 제외됩니다)`)) return;
             const wk = viewAssign.weekKey;
             db.ref(`system/dorm/assignments/${wk}/students/${token}`).remove()
-                .then(() => {
-                    if (viewAssign && viewAssign.students) delete viewAssign.students[token];
-                    showToast('🗑️ 삭제 완료 - 현황/출력 및 PDF에 반영됩니다');
-                    renderBoard();
-                })
+                .then(() => { showToast('삭제됨'); renderBoard(); })
                 .catch(e => { console.error(e); showToast('삭제 실패'); });
         }
 
         // ── STEP 2: 과정 카드에서 명단 삭제 ──
         async function removeRosterFromAssignment(key, courseName) {
             const wk = (key || '').split('__')[0] || selectedWeekKey || (viewAssign && viewAssign.weekKey);
-            if (!wk) return 0;
+            if (!wk) return;
             const snap = await db.ref(`system/dorm/assignments/${wk}`).once('value');
             const assign = snap.val();
-            if (!assign) return 0;
+            if (!assign) return;
             const norm = v => (v || '').trim();
             const targetCourse = norm(courseName);
             const updates = {};
@@ -3272,8 +2927,7 @@
                 if (typeof renderBoard === 'function') renderBoard();
                 if (currentBoardTab === 'map' && typeof renderBoardMap === 'function') renderBoardMap();
             }
-            if (removed) showToast(`🧹 현황/출력에서도 ${removed}명 제거됨 - PDF 출력에 반영됩니다`);
-            return removed;
+            if (removed) showToast(`🧹 자동배정 현황에서도 ${removed}명 제거됨`);
         }
 
         async function clearCourseAssignmentsForWeek(wk) {
@@ -3292,22 +2946,7 @@
             });
             updates[`system/dorm/assignments/${wk}/courses`] = [];
             await db.ref().update(updates);
-            if (viewAssign && viewAssign.weekKey === wk) {
-                Object.entries(viewAssign.students || {}).forEach(([token, s]) => {
-                    const isInstructor = token.indexOf('inst_') === 0 || (s.course || '').trim() === '강사';
-                    if (!isInstructor) delete viewAssign.students[token];
-                });
-                viewAssign.courses = [];
-                if (typeof renderBoard === 'function') renderBoard();
-                if (currentBoardTab === 'map' && typeof renderBoardMap === 'function') renderBoardMap();
-            }
-            if (removed) {
-                showToast(`🧹 자동배정 현황/출력 목록 초기화 완료 (${removed}명 삭제)`);
-                alert(`✅ 자동배정 현황/출력 목록이 초기화되었습니다.\n삭제 인원: ${removed}명\n인쇄 및 PDF 출력에도 바로 반영됩니다.`);
-            } else {
-                showToast('저장된 과정 명단이 없어 초기화할 배정 인원이 없습니다');
-                alert('저장된 과정 명단이 없어 초기화할 배정 인원이 없습니다.');
-            }
+            showToast(removed ? `🧹 저장된 명단이 없어 기존 자동배정 인원 ${removed}명을 제거했습니다` : '저장된 과정 명단이 없습니다');
             return removed > 0;
         }
 
@@ -3315,27 +2954,19 @@
             const key = rosterKey(it);
             const cnt = rosterCounts[key] || (selectedCourse && selectedCourse.room === it.room ? roster.length : 0);
             const msg = cnt > 0
-                ? `[${it.courseName}]에 업로드/저장된 교육생 명단 ${cnt}명을 전부 삭제합니다.\n\n자동배정이 이미 되어 있으면 현황/출력/PDF에서도 이 과정 인원이 함께 제거됩니다.\n이 작업은 되돌릴 수 없습니다. 계속할까요?`
-                : `[${it.courseName}]에 저장된 교육생 명단을 삭제합니다.\n\n자동배정이 이미 되어 있으면 현황/출력/PDF에서도 이 과정 인원이 함께 제거됩니다.\n계속할까요?`;
+                ? `[${it.courseName}] 명단(${cnt}명)을 삭제합니다.\n이미 자동배정된 현황/출력에서도 이 과정 인원이 함께 제거됩니다.\n계속할까요?`
+                : `[${it.courseName}] 명단을 삭제합니다.\n이미 자동배정된 현황/출력에서도 이 과정 인원이 함께 제거됩니다. 계속할까요?`;
             if (!confirm(msg)) return;
             try {
                 await db.ref(`system/dorm/rosters/${key}`).remove();
-                const removed = await removeRosterFromAssignment(key, it.courseName);
-                if (it.room) await db.ref(`courses/${it.room}/schedule`).remove().catch(() => {});
+                await removeRosterFromAssignment(key, it.courseName);
                 rosterCounts[key] = 0;
                 if (selectedCourse && rosterKey(selectedCourse) === key) {
+                    selectedCourse = null;
+                    document.getElementById('rosterPanel').style.display = 'none';
                     roster = [];
-                    currentScheduleData = null;
-                    rosterDirty = false;
-                    document.getElementById('rosterPreview').innerText = '🗑️ 이 과정의 업로드 명단이 삭제되었습니다.';
-                    renderRoster();
-                    const countEl = document.getElementById('rosterCount');
-                    if (countEl) countEl.innerText = '0명';
-                    const summaryEl = document.getElementById('rosterSaveSummary');
-                    if (summaryEl) summaryEl.innerText = `${it.courseName} · ${it.period || '-'}`;
                 }
-                alert(`✅ [${it.courseName}] 명단이 삭제되었습니다.\n현황/출력에서 제거된 인원: ${removed || 0}명\n인쇄 및 PDF 출력에도 바로 반영됩니다.`);
-                showToast(`✅ [${it.courseName}] 명단 삭제 완료 - 현황/출력 반영`);
+                showToast(`✅ [${it.courseName}] 명단이 삭제되었습니다`);
                 renderCourseList();
             } catch(e) { console.error(e); showToast('❌ 삭제 실패'); }
         }
