@@ -413,7 +413,7 @@
         </button>
         <div class="dropdown-content" id="menuDropdown">
             <a onclick="ui.setMode('waiting')"><i class="fa-solid fa-chart-line"></i> 과정 총 현황</a>
-            <a onclick="ui.setMode('schedule')"><i class="fa-solid fa-calendar-days"></i> 교육시간표</a>
+            <a onclick="ui.setMode('schedule')"><i class="fa-solid fa-calendar-days"></i> 교육일정 요약</a>
             <a onclick="ui.setMode('quiz')"><i class="fa-solid fa-clipboard-question"></i> 퀴즈 모드</a>
             <a onclick="ui.setMode('dormitory')"><i class="fa-solid fa-bed"></i> 생활관 배치현황</a>
             <a onclick="ui.setMode('attendance')"><i class="fa-solid fa-qrcode"></i> 출결 QR</a>
@@ -474,20 +474,20 @@
 <!-- 교육시간표 보기 -->
 <div id="view-schedule" style="display:none; width:100%; flex-direction:column; align-items:center;">
     <div class="view-header">
-        <h1><i class="fa-solid fa-calendar-days"></i> 교육시간표 <span class="header-room-badge room-badge-global"></span></h1>
+        <h1><i class="fa-solid fa-calendar-days"></i> 교육일정 요약 <span class="header-room-badge room-badge-global"></span></h1>
     </div>
     <div class="modern-white-card" style="width:100%; max-width:1150px; padding:28px 34px; box-sizing:border-box;">
         <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:18px; border-bottom:1px solid #e2e8f0; padding-bottom:18px; margin-bottom:18px;">
             <div>
-                <div id="scheduleCourseName" style="font-size:24px; font-weight:900; color:#0f172a; line-height:1.3;">교육시간표</div>
-                <div id="scheduleMeta" style="font-size:13px; font-weight:700; color:#64748b; margin-top:6px;">업로드된 시간표를 불러오는 중입니다.</div>
+                <div id="scheduleCourseName" style="font-size:24px; font-weight:900; color:#0f172a; line-height:1.3;">교육일정 요약</div>
+                <div id="scheduleMeta" style="font-size:13px; font-weight:700; color:#64748b; margin-top:6px;">요일별 오전/오후 일정을 불러오는 중입니다.</div>
             </div>
             <button onclick="scheduleMgr.load()" style="height:40px; padding:0 16px; border:1.5px solid #cbd5e1; background:#fff; color:#334155; border-radius:10px; font-size:13px; font-weight:900; cursor:pointer;">
                 <i class="fa-solid fa-rotate"></i> 새로고침
             </button>
         </div>
         <div id="scheduleBody" style="min-height:340px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:14px; padding:22px; box-sizing:border-box; overflow:auto;">
-            <div style="height:260px; display:flex; align-items:center; justify-content:center; color:#94a3b8; font-weight:800;">교육시간표를 불러오는 중입니다.</div>
+            <div style="height:260px; display:flex; align-items:center; justify-content:center; color:#94a3b8; font-weight:800;">교육일정을 불러오는 중입니다.</div>
         </div>
     </div>
 </div>
