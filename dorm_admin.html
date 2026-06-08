@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
@@ -1871,20 +1871,19 @@
 
         async function deleteRosterByKey(key, courseName, cnt) {
             const msg = cnt > 0
-                ? `[${courseName}] 명단(${cnt}명)을 삭제합니다.\n이 작업은 되돌릴 수 없습니다. 계속할까요?`
-                : `[${courseName}] 명단을 삭제합니다. 계속할까요?`;
+                ? `[${courseName}] 명단(${cnt}명)을 삭제합니다.\n이미 자동배정된 현황/출력에서도 이 과정 인원이 함께 제거됩니다.\n이 작업은 되돌릴 수 없습니다. 계속할까요?`
+                : `[${courseName}] 명단을 삭제합니다.\n이미 자동배정된 현황/출력에서도 이 과정 인원이 함께 제거됩니다. 계속할까요?`;
             if (!confirm(msg)) return;
             try {
                 await db.ref(`system/dorm/rosters/${key}`).remove();
+                await removeRosterFromAssignment(key, courseName);
                 delete weekRosters[key];
                 excludedRosterKeys.delete(key);
-                // STEP 2 캐시 무효화
                 rosterCounts[key] = 0;
                 showToast(`✅ [${courseName}] 명단이 삭제되었습니다`);
                 renderWeekRosterList();
-            } catch(e) { console.error(e); showToast('⚠️ 삭제 실패'); }
+            } catch(e) { console.error(e); showToast('❌ 삭제 실패'); }
         }
-
         // 방 목록을 연번 순으로 정렬 (건물 순서 → 층 → 방번호)
         // 배치 기준 id → type 조회 + 후보 풀에 적용(필터/정렬). 적용 후 비면 null 반환
         function applyCriteria(critId, pool) {
@@ -1974,7 +1973,11 @@
                 rooms = rs.val() || {};
             }
             if (!Object.keys(rooms).length) { showToast('STEP 1에서 방을 먼저 설정하세요'); return; }
-            if (!Object.keys(weekRosters).length) { showToast('이 주차에 저장된 명단이 없습니다'); return; }
+            if (!Object.keys(weekRosters).length) {
+                await clearCourseAssignmentsForWeek(wk);
+                setTimeout(() => checkAssignmentStatus(wk), 500);
+                return;
+            }
 
             const activeRosters = Object.fromEntries(
                 Object.entries(weekRosters).filter(([k]) => !excludedRosterKeys.has(k))
@@ -2855,17 +2858,74 @@
         }
 
         // ── STEP 2: 과정 카드에서 명단 삭제 ──
+        async function removeRosterFromAssignment(key, courseName) {
+            const wk = (key || '').split('__')[0] || selectedWeekKey || (viewAssign && viewAssign.weekKey);
+            if (!wk) return;
+            const snap = await db.ref(`system/dorm/assignments/${wk}`).once('value');
+            const assign = snap.val();
+            if (!assign) return;
+            const norm = v => (v || '').trim();
+            const targetCourse = norm(courseName);
+            const updates = {};
+            let removed = 0;
+
+            Object.entries(assign.students || {}).forEach(([token, s]) => {
+                const isInstructor = token.indexOf('inst_') === 0 || norm(s.course) === '강사';
+                if (isInstructor) return;
+                if (s.rosterKey === key || (targetCourse && norm(s.course) === targetCourse)) {
+                    updates[`system/dorm/assignments/${wk}/students/${token}`] = null;
+                    removed++;
+                }
+            });
+
+            const rawCourses = assign.courses || [];
+            const courseArr = Array.isArray(rawCourses) ? rawCourses : Object.values(rawCourses);
+            const remainingCourses = courseArr.filter(c => !(c && (c.rosterKey === key || (targetCourse && norm(c.courseName) === targetCourse))));
+            updates[`system/dorm/assignments/${wk}/courses`] = remainingCourses;
+
+            if (Object.keys(updates).length) await db.ref().update(updates);
+            if (viewAssign && viewAssign.weekKey === wk) {
+                Object.entries(viewAssign.students || {}).forEach(([token, s]) => {
+                    if (s.rosterKey === key || (targetCourse && norm(s.course) === targetCourse)) delete viewAssign.students[token];
+                });
+                viewAssign.courses = remainingCourses;
+                if (typeof renderBoard === 'function') renderBoard();
+                if (currentBoardTab === 'map' && typeof renderBoardMap === 'function') renderBoardMap();
+            }
+            if (removed) showToast(`🧹 자동배정 현황에서도 ${removed}명 제거됨`);
+        }
+
+        async function clearCourseAssignmentsForWeek(wk) {
+            if (!wk) return false;
+            const snap = await db.ref(`system/dorm/assignments/${wk}`).once('value');
+            const assign = snap.val();
+            if (!assign) return false;
+            const updates = {};
+            let removed = 0;
+            Object.entries(assign.students || {}).forEach(([token, s]) => {
+                const isInstructor = token.indexOf('inst_') === 0 || (s.course || '').trim() === '강사';
+                if (!isInstructor) {
+                    updates[`system/dorm/assignments/${wk}/students/${token}`] = null;
+                    removed++;
+                }
+            });
+            updates[`system/dorm/assignments/${wk}/courses`] = [];
+            await db.ref().update(updates);
+            showToast(removed ? `🧹 저장된 명단이 없어 기존 자동배정 인원 ${removed}명을 제거했습니다` : '저장된 과정 명단이 없습니다');
+            return removed > 0;
+        }
+
         async function deleteRoster(it) {
             const key = rosterKey(it);
-            const cnt = rosterCounts[key] || 0;
+            const cnt = rosterCounts[key] || (selectedCourse && selectedCourse.room === it.room ? roster.length : 0);
             const msg = cnt > 0
-                ? `[${it.courseName}] 명단(${cnt}명)을 삭제합니다.\n⚠️ 이미 자동배정을 실행했다면 STEP 4에서 "폐강 과정 정리"도 눌러주세요.\n계속할까요?`
-                : `[${it.courseName}] 명단을 삭제합니다. 계속할까요?`;
+                ? `[${it.courseName}] 명단(${cnt}명)을 삭제합니다.\n이미 자동배정된 현황/출력에서도 이 과정 인원이 함께 제거됩니다.\n계속할까요?`
+                : `[${it.courseName}] 명단을 삭제합니다.\n이미 자동배정된 현황/출력에서도 이 과정 인원이 함께 제거됩니다. 계속할까요?`;
             if (!confirm(msg)) return;
             try {
                 await db.ref(`system/dorm/rosters/${key}`).remove();
+                await removeRosterFromAssignment(key, it.courseName);
                 rosterCounts[key] = 0;
-                // 선택 중인 과정이면 패널 닫기
                 if (selectedCourse && rosterKey(selectedCourse) === key) {
                     selectedCourse = null;
                     document.getElementById('rosterPanel').style.display = 'none';
@@ -2873,9 +2933,8 @@
                 }
                 showToast(`✅ [${it.courseName}] 명단이 삭제되었습니다`);
                 renderCourseList();
-            } catch(e) { console.error(e); showToast('⚠️ 삭제 실패'); }
+            } catch(e) { console.error(e); showToast('❌ 삭제 실패'); }
         }
-
         // ── STEP 4: 폐강(hideFromBoard) 과정 인원 Firebase에서 실제 삭제 ──
         async function purgeHiddenStudents() {
             if (!viewAssign || !viewAssign.students) { showToast('먼저 주차를 선택하세요'); return; }
@@ -3236,13 +3295,14 @@
                 });
                 const bar   = (typeof DORM_BLDG_BAR !== 'undefined' && DORM_BLDG_BAR[b]) || '#0f2057';
                 const photo = BLDG_PHOTO_LIST[b] || '';
-                // 사진을 건물 헤더 우측에 배치
-                const photoHtml = photo
-                    ? `<div style="float:right;margin:-2px 0 8px 16px;"><img src="${photo}" alt="${b}" style="width:180px;height:116px;object-fit:cover;border-radius:8px;border:1.5px solid #e2e8f0;" onerror="this.parentNode.style.display='none'"></div>`
-                    : '';
+                // 배치도 PDF와 동일하게 과정 범례와 생활관 사진을 같은 줄에 배치
+                const topHtml = `<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:14px;margin-bottom:10px;">
+                        <div class="legend" style="flex:1;margin:0;">${_legendHtml(P)}</div>
+                        ${photo ? `<div style="flex-shrink:0;"><img src="${photo}" alt="${b}" style="width:190px;height:124px;object-fit:cover;border-radius:9px;border:1.5px solid #e2e8f0;" onerror="this.parentNode.style.display='none'"></div>` : ''}
+                    </div>`;
                 return `<div${bi>0 ? ' style="page-break-before:always;"' : ''}>
-                    ${photoHtml}
-                    <table class="list" style="margin-top:14px;">
+                    ${topHtml}
+                    <table class="list" style="margin-top:0;">
                     <thead>
                         <tr><th class="bldg-bar" colspan="6" style="background:${bar};">\ud83c\udfe2 ${b}<span class="bbar-cnt">\u00b7 ${cnt}\uba85</span></th></tr>
                         <tr><th style="width:120px;">호실</th><th>성명</th><th>사번</th><th>소속</th><th>성별</th><th>과정</th></tr>
@@ -3252,8 +3312,7 @@
                 </div>`;
             }).join('');
             const header = `<h1>생활관 배정 명단</h1>
-                <div class="sub">${P.fmt(P.wd)} ~ ${P.fmt(P.wEnd)} 주간 · 총 ${Object.keys(P.students).length}명 · 출력일 ${new Date().toLocaleDateString('ko-KR')}</div>
-                <div class="legend">${_legendHtml(P)}</div>`;
+                <div class="sub">${P.fmt(P.wd)} ~ ${P.fmt(P.wEnd)} 주간 · 총 ${Object.keys(P.students).length}명 · 출력일 ${new Date().toLocaleDateString('ko-KR')}</div>`;
             const bodyHtml = `<table class="pwrap"><thead><tr><td>${header}</td></tr></thead><tbody><tr><td>${sections || '<div style="padding:20px;color:#94a3b8;">배정된 인원이 없습니다.</div>'}</td></tr></tbody></table>`;
             _printDoc(`(${_kacWeekTag(P.wd)}_리스트) 항공기술훈련원 방 배정 현황표`, bodyHtml);
         }
