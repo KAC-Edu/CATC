@@ -1998,26 +1998,32 @@
                 schedule: currentScheduleData || null,
                 updatedAt: firebase.database.ServerValue.TIMESTAMP
             };
-            const updates = {};
-            updates[`system/dorm/rosters/${rosterKey(selectedCourse)}`] = payload;
-            if (currentScheduleData) {
-                updates[`courses/${selectedCourse.room}/schedule`] = {
-                    courseName: selectedCourse.courseName,
-                    period: selectedCourse.period,
-                    weekKey: selectedCourse.weekKey,
-                    source: currentScheduleData.fileName || '',
-                    lines: currentScheduleData.lines || [],
-                    text: currentScheduleData.text || '',
-                    updatedAt: firebase.database.ServerValue.TIMESTAMP
-                };
-            }
-            db.ref().update(updates)
-                .then(() => {
-                    showToast(`✅ ${clean.length}명 명단 저장됨${currentScheduleData ? ' · 교육시간표도 강사플랫폼에 반영' : ''}`);
+            const rk = rosterKey(selectedCourse);
+            db.ref(`system/dorm/rosters/${rk}`).set(payload)
+                .then(async () => {
+                    let scheduleSynced = false;
+                    if (currentScheduleData) {
+                        const schedulePayload = {
+                            courseName: selectedCourse.courseName || '',
+                            period: selectedCourse.period || '',
+                            weekKey: selectedCourse.weekKey || '',
+                            source: currentScheduleData.fileName || '',
+                            lines: currentScheduleData.lines || [],
+                            text: currentScheduleData.text || '',
+                            rosterKey: rk,
+                            updatedAt: firebase.database.ServerValue.TIMESTAMP
+                        };
+                        try {
+                            await db.ref(`courses/${selectedCourse.room}/schedule`).set(schedulePayload);
+                            scheduleSynced = true;
+                        } catch (scheduleErr) {
+                            console.warn('[교육시간표] 강사플랫폼 미러 저장 실패, rosters 저장값으로 대체 표시 예정:', scheduleErr);
+                        }
+                    }
+                    showToast(`✅ ${clean.length}명 명단 저장됨${currentScheduleData ? (scheduleSynced ? ' · 교육시간표도 강사플랫폼에 반영' : ' · 시간표는 명단 저장값으로 보관됨') : ''}`);
                     rosterDirty = false;
                     document.getElementById('rosterPreview').innerText = '';
                     // 해당 과정 행을 녹색+인원수로 즉시 갱신 (전체 재렌더 없이)
-                    const rk = rosterKey(selectedCourse);
                     rosterCounts[rk] = clean.length;
                     const row = document.querySelector(`#courseList .course-row[data-room="${selectedCourse.room}"][data-week="${selectedCourse.weekKey}"]`);
                     if (row) {
@@ -2032,7 +2038,7 @@
                         badge.innerHTML = `<i class="fa-solid fa-circle-check"></i> ${clean.length}명`;
                     }
                 })
-                .catch(e => { console.error(e); showToast('⚠️ 저장 실패'); });
+                .catch(e => { console.error(e); showToast('⚠️ 저장 실패: ' + (e.message || e.code || '권한/네트워크 확인 필요')); });
         }
 
         // ════════════ STEP 3: 자동 배정 ════════════

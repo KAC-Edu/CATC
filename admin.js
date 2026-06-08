@@ -5726,10 +5726,48 @@ const scheduleMgr = {
         }
         body.innerHTML = '<div style="height:260px; display:flex; align-items:center; justify-content:center; color:#94a3b8; font-weight:800;">교육시간표를 불러오는 중입니다.</div>';
         try {
-            const snap = await firebase.database().ref(`courses/${state.room}/schedule`).once('value');
-            const data = snap.val() || {};
             const settingsSnap = await firebase.database().ref(`courses/${state.room}/settings`).once('value');
             const settings = settingsSnap.val() || {};
+            const snap = await firebase.database().ref(`courses/${state.room}/schedule`).once('value');
+            let data = snap.val() || {};
+            let lines = Array.isArray(data.lines) ? data.lines : String(data.text || '').split(/[\n\r]+/).filter(Boolean);
+
+            if (!lines.length) {
+                const rosterSnap = await firebase.database().ref('system/dorm/rosters').once('value');
+                const coordRosterSnap = await firebase.database().ref('system/coord/rosters').once('value');
+                const rosters = rosterSnap.val() || {};
+                const coordRosters = coordRosterSnap.val() || {};
+                const norm = v => String(v || '').replace(/\s+/g, '').trim();
+                const dormCandidates = Object.values(rosters)
+                    .filter(r => r && r.room === state.room && r.schedule)
+                    .map(r => ({
+                        ...r.schedule,
+                        courseName: r.courseName || '',
+                        period: r.period || '',
+                        weekKey: r.weekKey || '',
+                        _score:
+                            (norm(r.courseName) && norm(r.courseName) === norm(settings.courseName) ? 100 : 0) +
+                            (norm(r.period) && norm(r.period) === norm(settings.period) ? 20 : 0) +
+                            Number(r.updatedAt || r.schedule.savedAt || 0) / 10000000000000
+                    }));
+                const coordCandidates = Object.values(coordRosters)
+                    .filter(r => r && r.room === state.room && r.schedule)
+                    .map(r => ({
+                        ...r.schedule,
+                        courseName: r.courseName || '',
+                        period: r.period || '',
+                        _score:
+                            (norm(r.courseName) && norm(r.courseName) === norm(settings.courseName) ? 100 : 0) +
+                            (norm(r.period) && norm(r.period) === norm(settings.period) ? 20 : 0) +
+                            Number(r.savedAt || r.schedule.savedAt || 0) / 10000000000000
+                    }));
+                const candidates = dormCandidates.concat(coordCandidates)
+                    .sort((a, b) => b._score - a._score);
+                if (candidates.length) {
+                    data = candidates[0];
+                    lines = Array.isArray(data.lines) ? data.lines : String(data.text || '').split(/[\n\r]+/).filter(Boolean);
+                }
+            }
             const courseName = data.courseName || settings.courseName || '교육시간표';
             const period = data.period || settings.period || '';
             if (title) title.innerText = courseName;
@@ -5737,7 +5775,6 @@ const scheduleMgr = {
                 const source = data.source ? ` · 원본: ${data.source}` : '';
                 meta.innerText = `${period || '기간 미설정'}${source}`;
             }
-            const lines = Array.isArray(data.lines) ? data.lines : String(data.text || '').split(/[\n\r]+/).filter(Boolean);
             if (!lines.length) {
                 body.innerHTML = `
                     <div style="height:260px; display:flex; flex-direction:column; align-items:center; justify-content:center; color:#94a3b8; font-weight:800; gap:10px; text-align:center;">

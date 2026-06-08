@@ -6577,20 +6577,24 @@ async function coordSaveRoster() {
         list: _coordRosterData,
         schedule: _coordScheduleData || null
     };
-    const updates = {};
-    updates[`system/coord/rosters/coord_roster_${today}`] = rosterPayload;
+    await firebase.database().ref(`system/coord/rosters/coord_roster_${today}`).set(rosterPayload);
+    let scheduleSynced = false;
     if (_coordScheduleData && currentRID) {
-        updates[`courses/${currentRID}/schedule`] = {
-            courseName: settings.courseName || '',
-            period: settings.period || '',
-            source: _coordScheduleData.fileName || '',
-            lines: _coordScheduleData.lines || [],
-            text: _coordScheduleData.text || '',
-            updatedAt: firebase.database.ServerValue.TIMESTAMP
-        };
+        try {
+            await firebase.database().ref(`courses/${currentRID}/schedule`).set({
+                courseName: settings.courseName || '',
+                period: settings.period || '',
+                source: _coordScheduleData.fileName || '',
+                lines: _coordScheduleData.lines || [],
+                text: _coordScheduleData.text || '',
+                updatedAt: firebase.database.ServerValue.TIMESTAMP
+            });
+            scheduleSynced = true;
+        } catch (e) {
+            console.warn('[교육운영부 시간표] 강사플랫폼 미러 저장 실패:', e);
+        }
     }
-    await firebase.database().ref().update(updates);
-    alert(`✅ ${_coordRosterData.length}명 명단 저장 완료${_coordScheduleData ? '\n교육시간표도 강사플랫폼에 반영되었습니다.' : ''}`);
+    alert(`✅ ${_coordRosterData.length}명 명단 저장 완료${_coordScheduleData ? (scheduleSynced ? '\n교육시간표도 강사플랫폼에 반영되었습니다.' : '\n교육시간표는 업로드 명단에 함께 보관되었습니다.') : ''}`);
 }
 
 function coordExportRoster() {
