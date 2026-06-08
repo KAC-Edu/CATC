@@ -351,7 +351,7 @@
 
                 <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px;">
                     <input type="file" id="pdfInput" accept=".pdf,.hwp,.hwpx,application/pdf,application/x-hwp,application/haansofthwp,application/vnd.hancom.hwpx" style="display:none;" onchange="handleRosterFile(event)">
-                    <button class="save-btn" style="background:var(--blue);" onclick="document.getElementById('pdfInput').click()"><i class="fa-solid fa-file-arrow-up"></i> PDF/HWP 업로드</button>
+                    <button class="save-btn" style="background:var(--blue);" onclick="beginRosterUpload()"><i class="fa-solid fa-file-arrow-up"></i> PDF/HWP 업로드</button>
                     <button class="h-btn" style="background:#475569;" onclick="addRosterRow()"><i class="fa-solid fa-plus"></i> 행 추가</button>
                     <button class="h-btn" style="background:#475569;" onclick="clearRoster()"><i class="fa-solid fa-eraser"></i> 비우기</button>
                     <div style="flex:1;"></div>
@@ -598,6 +598,8 @@
         let roster = [];                  // [{ seq, name, empNo, dept, gender }]
         let rosterDirty = false;          // PDF 업로드·행 추가·삭제 후 미저장 상태 여부
         let currentScheduleData = null;   // 업로드 파일에서 함께 판독한 교육시간표
+        let rosterUploadCourse = null;    // 파일 선택창을 연 순간의 과정
+        let rosterEditCourse = null;      // 현재 표에 표시된 명단이 속한 과정
 
         // 건물·층 구조 정의 (확정된 구조)
         const BUILDINGS = {
@@ -1438,6 +1440,27 @@
             return `${it.weekKey}__${it.room}`;
         }
 
+        function syncRosterPanelCourse(it) {
+            if (!it) return;
+            selectedCourse = it;
+            document.querySelectorAll('#courseList .course-row').forEach(row => {
+                const on = row.dataset.room === String(it.room) && row.dataset.week === it.weekKey;
+                row.classList.toggle('sel', on);
+            });
+            document.getElementById('rosterPanel').style.display = 'block';
+            document.getElementById('rosterTitle').innerText = it.fromPlan
+                ? `${it.courseName} — 교육생 명단 (예정 과정)`
+                : `${it.courseName} — 교육생 명단 (ROOM ${it.room})`;
+            document.getElementById('rosterSaveSummary').innerText = `${it.courseName} · ${it.period}`;
+        }
+
+        function beginRosterUpload() {
+            if (!selectedCourse) { showToast('먼저 과정을 선택하세요'); return; }
+            rosterUploadCourse = Object.assign({}, selectedCourse);
+            document.getElementById('rosterPreview').innerText = '';
+            document.getElementById('pdfInput').click();
+        }
+
         function loadRoster(it) {
             const key = rosterKey(it);
             console.log('[명단 로드] Firebase 경로:', `system/dorm/rosters/${key}`, '| 과정:', it.courseName);
@@ -1445,6 +1468,7 @@
                 const v = snap.val();
                 roster = (v && Array.isArray(v.list)) ? v.list : [];
                 currentScheduleData = v && v.schedule ? v.schedule : null;
+                rosterEditCourse = it;
                 rosterDirty = false;  // DB에서 로드한 시점엔 항상 클린 상태
                 console.log('[명단 로드] 결과:', v ? `${roster.length}명 (list 존재: ${!!v.list})` : '⚠️ Firebase에 데이터 없음 (null)');
                 if (!v) {
@@ -1461,6 +1485,7 @@
                                 console.log('[명단 로드] 대체 키에서 발견:', v2.list.length + '명 → 이 키로 로드');
                                 roster = v2.list;
                                 currentScheduleData = v2.schedule || null;
+                                rosterEditCourse = it;
                             }
                             renderRoster();
                         });
@@ -1474,6 +1499,16 @@
         async function handleRosterFile(ev) {
             const file = ev.target.files[0];
             if (!file) return;
+            const targetCourse = rosterUploadCourse ? Object.assign({}, rosterUploadCourse) : (selectedCourse ? Object.assign({}, selectedCourse) : null);
+            rosterUploadCourse = null;
+            if (!targetCourse) {
+                showToast('먼저 과정을 선택하세요');
+                ev.target.value = '';
+                return;
+            }
+            if (!selectedCourse || rosterKey(selectedCourse) !== rosterKey(targetCourse)) {
+                syncRosterPanelCourse(targetCourse);
+            }
             const name = (file.name || '').toLowerCase();
             const preview = document.getElementById('rosterPreview');
 
@@ -1495,10 +1530,12 @@
 
                 parsed = dedupeRoster(parsed);
                 if (!parsed.length) {
-                    preview.innerText = '⚠️ 자동 판독 결과가 없습니다. 표에서 직접 입력하거나 다른 파일을 시도하세요.';
+                    preview.innerText = '';
+                    showToast('자동 판독 결과가 없습니다. 다른 파일을 시도하거나 직접 입력하세요.');
                 } else {
                     parsed.forEach((r, i) => r.seq = i + 1);
                     roster = parsed;
+                    rosterEditCourse = targetCourse;
                     renderRoster();
                     preview.innerHTML = `✅ ${parsed.length}명 판독됨. <b style="color:var(--warning);">반드시 내용을 확인/수정</b>한 뒤 저장하세요.`;
                     rosterDirty = true;
@@ -1981,7 +2018,11 @@
         function clearRoster() { if (confirm('명단을 모두 비우시겠습니까?')) { roster = []; rosterDirty = true; renderRoster(); } }
 
         function saveRoster() {
-            if (!selectedCourse) { showToast('먼저 과정을 선택하세요'); return; }
+            const saveCourse = rosterEditCourse || selectedCourse;
+            if (!saveCourse) { showToast('먼저 과정을 선택하세요'); return; }
+            if (!selectedCourse || rosterKey(selectedCourse) !== rosterKey(saveCourse)) {
+                syncRosterPanelCourse(saveCourse);
+            }
             const clean = roster.filter(r => (r.name || '').trim());
             // 식별번호(사번 또는 전화 뒤4) 없는 행 경고
             const noId = clean.filter(r => !/^\d{4,6}$/.test((r.empNo || '').trim()));
@@ -1989,23 +2030,23 @@
                 if (!confirm(`사번이 비어있거나 형식이 이상한 인원이 ${noId.length}명 있습니다.\n그래도 저장할까요? (배정 시 식별이 어려울 수 있음)`)) return;
             }
             const payload = {
-                room: selectedCourse.room,
-                courseName: selectedCourse.courseName,
-                period: selectedCourse.period,
-                weekKey: selectedCourse.weekKey,
+                room: saveCourse.room,
+                courseName: saveCourse.courseName,
+                period: saveCourse.period,
+                weekKey: saveCourse.weekKey,
                 list: clean.map((r, i) => ({ seq: i + 1, name: r.name.trim(), empNo: (r.empNo||'').trim(), dept: (r.dept||'').trim(), gender: r.gender || '' })),
                 schedule: currentScheduleData || null,
                 updatedAt: firebase.database.ServerValue.TIMESTAMP
             };
-            const rk = rosterKey(selectedCourse);
+            const rk = rosterKey(saveCourse);
             db.ref(`system/dorm/rosters/${rk}`).set(payload)
                 .then(async () => {
                     let scheduleSynced = false;
                     if (currentScheduleData) {
                         const schedulePayload = {
-                            courseName: selectedCourse.courseName || '',
-                            period: selectedCourse.period || '',
-                            weekKey: selectedCourse.weekKey || '',
+                            courseName: saveCourse.courseName || '',
+                            period: saveCourse.period || '',
+                            weekKey: saveCourse.weekKey || '',
                             source: currentScheduleData.fileName || '',
                             lines: currentScheduleData.lines || [],
                             rosterKey: rk,
@@ -2013,8 +2054,8 @@
                         };
                         try {
                             const mirrors = await Promise.allSettled([
-                                db.ref(`courses/${selectedCourse.room}/settings/schedule`).set(schedulePayload),
-                                db.ref(`courses/${selectedCourse.room}/schedule`).set(schedulePayload)
+                                db.ref(`courses/${saveCourse.room}/settings/schedule`).set(schedulePayload),
+                                db.ref(`courses/${saveCourse.room}/schedule`).set(schedulePayload)
                             ]);
                             scheduleSynced = mirrors.some(r => r.status === 'fulfilled');
                         } catch (scheduleErr) {
@@ -2026,7 +2067,7 @@
                     document.getElementById('rosterPreview').innerText = '';
                     // 해당 과정 행을 녹색+인원수로 즉시 갱신 (전체 재렌더 없이)
                     rosterCounts[rk] = clean.length;
-                    const row = document.querySelector(`#courseList .course-row[data-room="${selectedCourse.room}"][data-week="${selectedCourse.weekKey}"]`);
+                    const row = document.querySelector(`#courseList .course-row[data-room="${saveCourse.room}"][data-week="${saveCourse.weekKey}"]`);
                     if (row) {
                         row.classList.add('enrolled');
                         let badge = row.querySelector('.course-count');
@@ -2638,6 +2679,15 @@
 
             const totalAssigned = Object.keys(assigned).filter(k => !k.startsWith('__INST__')).length + instCount;
             const totalPeople = people.length + instCount;
+            const buildingSummary = {};
+            Object.values(assigned).forEach(s => {
+                if (!s || s.rosterKey === '__INST__') return;
+                const b = s.building || '미지정';
+                buildingSummary[b] = (buildingSummary[b] || 0) + 1;
+            });
+            const blockSummary = Object.entries(buildingSummary).map(([b, c]) =>
+                `<span style="font-size:12px;font-weight:800;padding:4px 9px;border-radius:999px;background:#e0f2fe;color:#0369a1;">${b} ${c}명</span>`
+            ).join('');
 
             // ── 5) 가배정(Draft) 미리보기 표시 — DB에 바로 저장하지 않음 ──
             const payload = {
