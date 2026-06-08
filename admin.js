@@ -3285,45 +3285,7 @@ setMode: function(mode) {
             if (mode === 'students') ui.loadStudentList();
             
             if (mode === 'dormitory') {
-                const tbody = document.getElementById('dormitoryTableBody');
-                if(!tbody) return;
-                tbody.innerHTML = "<tr><td colspan='5' style='padding:50px; color:#94a3b8;'>데이터를 매칭 중입니다...</td></tr>";
-
-                Promise.all([
-                    firebase.database().ref(`courses/${state.room}/students`).once('value'),
-                    firebase.database().ref(`system/dormitory_assignments`).once('value')
-                ]).then(([studentSnap, dormSnap]) => {
-                    const students = studentSnap.val() || {};
-                    const dormData = dormSnap.val() || {}; 
-                    tbody.innerHTML = "";
-                    const studentList = Object.values(students).filter(s => s.name && s.name !== "undefined").sort((a, b) => a.name.localeCompare(b.name));
-
-                    if (studentList.length === 0) {
-                        tbody.innerHTML = "<tr><td colspan='5' style='padding:50px; color:#94a3b8;'>현재 입실한 수강생이 없습니다.</td></tr>";
-                        return;
-                    }
-
-                    studentList.forEach((s, idx) => {
-                        const sName = s.name;
-                        const sPhone = s.phone ? s.phone : ""; 
-                        let assignedInfo = null;
-                        if (dormData[`${sName}_${sPhone}`]) assignedInfo = dormData[`${sName}_${sPhone}`];
-                        else if (dormData[sName]) assignedInfo = dormData[sName];
-
-                        const bName = assignedInfo ? assignedInfo.building : "-";
-                        const rNo = assignedInfo ? assignedInfo.room + "호" : "미배정";
-                        const statusColor = assignedInfo ? "#3b82f6" : "#94a3b8";
-
-                        tbody.innerHTML += `
-                            <tr>
-                                <td>${idx + 1}</td>
-                                <td style="font-weight:bold;">${sName}</td>
-                                <td>${sPhone || "-"}</td>
-                                <td style="color:${statusColor}; font-weight:800;">${bName}</td>
-                                <td style="color:${statusColor}; font-weight:800;">${rNo}</td>
-                            </tr>`;
-                    });
-                });
+                if (typeof ui.loadDormitoryData === 'function') ui.loadDormitoryData();
             }
         }
 
@@ -4089,13 +4051,43 @@ loadDormitoryData: function() {
 
         const expectedRef = firebase.database().ref(`courses/${state.room}/expectedStudents`);
         const actualRef = firebase.database().ref(`courses/${state.room}/students`);
-        const dormRef = firebase.database().ref(`system/dormitory_assignments`);
+        const settingsRef = firebase.database().ref(`courses/${state.room}/settings`);
+        const dormRef = firebase.database().ref(`system/dorm/assignments`);
 
-        const renderAll = (expData, actData, dormData) => {
+        const norm = v => String(v || '').replace(/\s+/g, '').trim();
+        const studentId = s => norm(s.empNo || s.employeeNo || s.id || s.studentId || s.phone || '');
+        const makeDormIndex = (assignData, settings) => {
+            const out = {};
+            const targetCourse = norm(settings && settings.courseName);
+            const put = (key, rec, exactCourse) => {
+                if (!key) return;
+                if (!out[key] || exactCourse || !out[key]._exactCourse) out[key] = Object.assign({ _exactCourse: exactCourse }, rec);
+            };
+            Object.values(assignData || {}).forEach(week => {
+                Object.values((week && week.students) || {}).forEach(s => {
+                    if (!s || !s.name || s.course === '강사') return;
+                    const exactCourse = !!(targetCourse && norm(s.course) === targetCourse);
+                    const roomNo = s.no || s.roomNo || String(s.room || '').replace(/^.*\s/, '').replace(/호$/, '');
+                    const rec = {
+                        building: s.building || '-',
+                        room: roomNo || '미배정',
+                        course: s.course || ''
+                    };
+                    const nameKey = norm(s.name);
+                    const idKey = norm(s.empNo || s.id || s.studentId || '');
+                    put(nameKey, rec, exactCourse);
+                    if (idKey) put(`${nameKey}_${idKey}`, rec, exactCourse);
+                });
+            });
+            return out;
+        };
+
+        const renderAll = (expData, actData, assignData, settings) => {
             const expectedNames = expData || [];
             const actualStudents = Object.values(actData || {}).filter(s => s.name && s.name !== "undefined");
             const actualNames = actualStudents.map(s => s.name);
             const combinedNames = Array.from(new Set([...expectedNames, ...actualNames])).sort((a,b) => a.localeCompare(b));
+            const dormData = makeDormIndex(assignData, settings || {});
 
             let arrivedCount = 0;
             combinedNames.forEach(name => { if(actualNames.includes(name)) arrivedCount++; });
@@ -4115,7 +4107,8 @@ loadDormitoryData: function() {
                 const phoneSuffix = sData.phone ? sData.phone : "-";
 
                 const cleanName = name.trim();
-                const assigned = dormData[cleanName] || { building: "-", room: "미배정" };
+                const id = studentId(sData);
+                const assigned = dormData[`${norm(cleanName)}_${id}`] || dormData[norm(cleanName)] || { building: "-", room: "미배정" };
                 
                 // [확실한 색상 구분 로직]
                 let buildingColor = "#94a3b8"; // 기본 회색 (미배정)
@@ -4146,10 +4139,11 @@ loadDormitoryData: function() {
             });
         };
 
-        let cacheExp = [], cacheAct = {}, cacheDorm = {};
-        expectedRef.on('value', s => { cacheExp = s.val(); renderAll(cacheExp, cacheAct, cacheDorm); });
-        actualRef.on('value', s => { cacheAct = s.val(); renderAll(cacheExp, cacheAct, cacheDorm); });
-        dormRef.on('value', s => { cacheDorm = s.val() || {}; renderAll(cacheExp, cacheAct, cacheDorm); });
+        let cacheExp = [], cacheAct = {}, cacheDorm = {}, cacheSettings = {};
+        expectedRef.on('value', s => { cacheExp = s.val(); renderAll(cacheExp, cacheAct, cacheDorm, cacheSettings); });
+        actualRef.on('value', s => { cacheAct = s.val(); renderAll(cacheExp, cacheAct, cacheDorm, cacheSettings); });
+        settingsRef.on('value', s => { cacheSettings = s.val() || {}; renderAll(cacheExp, cacheAct, cacheDorm, cacheSettings); });
+        dormRef.on('value', s => { cacheDorm = s.val() || {}; renderAll(cacheExp, cacheAct, cacheDorm, cacheSettings); });
     },
 
 
@@ -5645,15 +5639,97 @@ const scheduleMgr = {
     },
     cleanLine: function(v) {
         return String(v || '')
-            .replace(/\u0000/g, '')
+            .replace(/[\u0000-\u001f]/g, '')
             .replace(/\u00a0/g, ' ')
             .replace(/[�]/g, '')
             .replace(/汤捯/g, '')
+            .replace(/氠瑢/g, '')
             .replace(/^[ㄱ-ㅎㅏ-ㅣ]{1,8}(?=[가-힣A-Za-z0-9(])/g, '')
             .replace(/\s+[ㄱ-ㅎㅏ-ㅣ]{1,8}(?=[가-힣A-Za-z0-9(])/g, ' ')
             .replace(/[|]/g, ' ')
             .replace(/\s+/g, ' ')
             .trim();
+    },
+    parseLinearSummary: function(lines) {
+        const cellSep = '\u241F';
+        if ((lines || []).some(v => String(v || '').includes(cellSep))) return null;
+        const arr = (lines || []).map(v => this.cleanLine(v)).filter(Boolean);
+        const isDate = v => /\d+\s*월\s*\d+\s*일/.test(v);
+        const isWeekday = v => /^(월|화|수|목|금|토|일)$/.test(v);
+        const isPeriod = v => /^\d{1,2}$/.test(v);
+        const isTime = v => /^\d{1,2}:\d{2}\s*~?$/.test(v) || /^\d{1,2}:\d{2}\s*~\s*\d{1,2}:\d{2}$/.test(v);
+        const isHeader = v => /교육\s*시간표|과정명|담임|교육담당|교수|강의실|교육장소|일\s*자|시\s*간/.test(v);
+        const isTeacher = v => /^\((강사|담당|교수|임채택|장두석|노조간부|.*계영수).*\)$/.test(v);
+        const isLunch = v => /점\s*심|식\s*사/.test(v);
+        const cleanSubject = v => this.cleanLine(v)
+            .replace(/^[ㄱ-ㅎㅏ-ㅣ]{1,8}\s*/g, '')
+            .replace(/\s*\((강사\s*[^)]*|담당\s*[^)]*|교수\s*[^)]*|장두석|임채택|노조간부)\)\s*/g, '')
+            .replace(/\s+/g, ' ')
+            .trim();
+        const dateToWeekday = date => {
+            const m = String(date || '').match(/(\d+)\s*월\s*(\d+)\s*일/);
+            if (!m) return '';
+            const d = new Date(new Date().getFullYear(), Number(m[1]) - 1, Number(m[2]));
+            return ['일','월','화','수','목','금','토'][d.getDay()];
+        };
+
+        const dates = arr.filter(isDate).slice(0, 5);
+        if (dates.length < 2) return null;
+        const firstDate = arr.findIndex(isDate);
+        const weekdays = arr.slice(firstDate).filter(isWeekday).slice(0, dates.length);
+        const summaries = dates.map((date, i) => ({
+            date,
+            weekday: weekdays[i] || dateToWeekday(date) || ['월','화','수','목','금'][i] || '',
+            morning: [],
+            afternoon: []
+        }));
+
+        const beforeLunch = [];
+        const afterLunch = [];
+        let lunchSeen = false;
+        let chunk = [];
+        const flush = () => {
+            const text = cleanSubject(chunk.join(' '));
+            chunk = [];
+            if (!text || /^[ㄱ-ㅎㅏ-ㅣ]{1,8}$/.test(text) || isLunch(text)) return;
+            (lunchSeen ? afterLunch : beforeLunch).push(text);
+        };
+
+        for (let i = firstDate + 1; i < arr.length; i++) {
+            const v = arr[i];
+            if (isLunch(v)) { flush(); lunchSeen = true; continue; }
+            if (isHeader(v) || isDate(v) || isWeekday(v) || isPeriod(v) || isTime(v)) { flush(); continue; }
+            if (isTeacher(v)) { flush(); continue; }
+            chunk.push(v);
+        }
+        flush();
+
+        const add = (bucket, idx, val) => {
+            if (!summaries[idx]) return;
+            const v = cleanSubject(val);
+            if (v && !bucket.call(summaries[idx]).includes(v)) bucket.call(summaries[idx]).push(v);
+        };
+        const addMorning = (idx, val) => add(function(){ return this.morning; }, idx, val);
+        const addAfternoon = (idx, val) => add(function(){ return this.afternoon; }, idx, val);
+
+        const morningSpecial = beforeLunch.filter(v => /청렴|입교|수료|설문|노조|체육/.test(v));
+        const morningMain = beforeLunch.filter(v => !morningSpecial.includes(v));
+        if (morningMain.length === summaries.length - 1) morningMain.forEach((v, i) => addMorning(i + 1, v));
+        else morningMain.slice(0, summaries.length).forEach((v, i) => addMorning(i, v));
+        morningSpecial.forEach(v => {
+            if (/청렴/.test(v)) addMorning(3, v);
+            else addMorning(0, v);
+        });
+
+        afterLunch.slice(0, summaries.length).forEach((v, i) => addAfternoon(i, v));
+        afterLunch.slice(summaries.length).forEach(v => {
+            if (/네트워크\s*개요|Cisco|패킷트레이서/.test(v)) addAfternoon(0, v);
+            else if (/패킷/.test(v)) addAfternoon(2, v);
+            else if (/체육/.test(v)) addAfternoon(3, v);
+            else if (/설문|수료/.test(v)) addAfternoon(4, v);
+            else addAfternoon(Math.max(0, summaries.length - 1), v);
+        });
+        return summaries;
     },
     parseTable: function(lines) {
         const cellSep = '\u241F';
@@ -5663,7 +5739,7 @@ const scheduleMgr = {
         const isPeriod = v => /^\d{1,2}$/.test(v);
         const isTime = v => /^\d{1,2}:\d{2}\s*~?$/.test(v) || /^\d{1,2}:\d{2}\s*~\s*\d{1,2}:\d{2}$/.test(v);
         const isHeader = v => /교육\s*시간표|과정명|담임|교육담당|교수|강의실|교육장소|일\s*자|시\s*간/.test(v);
-        const isExclude = v => /점심|식사|청렴|체육\s*활동/.test(v || '');
+        const isExclude = v => /점\s*심|식\s*사/.test(v || '');
         const stripNoise = v => cleanCell(v)
             .replace(/\b\d+\s*교시\b/g, '')
             .replace(/^[ㄱ-ㅎㅏ-ㅣ]{1,8}\s*/g, '')
@@ -5744,23 +5820,24 @@ const scheduleMgr = {
         return { days, rows };
     },
     renderSchedule: function(lines) {
-        const parsed = this.parseTable(lines);
-        if (!parsed.days.length) return '<div style="height:180px; display:flex; align-items:center; justify-content:center; color:#94a3b8; font-weight:800;">표시할 교육일정이 없습니다.</div>';
+        const linearSummaries = this.parseLinearSummary(lines);
+        const parsed = linearSummaries ? null : this.parseTable(lines);
+        if (!linearSummaries && !parsed.days.length) return '<div style="height:180px; display:flex; align-items:center; justify-content:center; color:#94a3b8; font-weight:800;">표시할 교육일정이 없습니다.</div>';
         const startHour = time => {
             const m = String(time || '').match(/(\d{1,2}):(\d{2})/);
             return m ? Number(m[1]) + Number(m[2]) / 60 : 13;
         };
         const cleanSubject = v => this.cleanLine(v)
             .replace(/^[ㄱ-ㅎㅏ-ㅣ]{1,8}\s*/g, '')
-            .replace(/\s*\((강사|담당|교수)?\s*[^)]{0,10}\)\s*/g, '')
+            .replace(/\s*\((강사\s*[^)]*|담당\s*[^)]*|교수\s*[^)]*|장두석|임채택|노조간부)\)\s*/g, '')
             .replace(/\s+/g, ' ')
             .trim();
         const add = (arr, val) => {
             const v = cleanSubject(val);
-            if (!v || /^[ㄱ-ㅎㅏ-ㅣ]{1,8}$/.test(v) || /점심|식사|청렴|체육\s*활동/.test(v)) return;
+            if (!v || /^[ㄱ-ㅎㅏ-ㅣ]{1,8}$/.test(v) || /점\s*심|식\s*사/.test(v)) return;
             if (!arr.includes(v)) arr.push(v);
         };
-        const summaries = parsed.days.slice(0, 5).map((day, idx) => {
+        const summaries = linearSummaries || parsed.days.slice(0, 5).map((day, idx) => {
             const item = { ...day, morning: [], afternoon: [] };
             parsed.rows.forEach(row => {
                 const v = row.cells[idx];
@@ -5773,7 +5850,14 @@ const scheduleMgr = {
         if (summaries[0] && summaries[0].afternoon.some(v => /입교|과정\s*안내|교육과정안내/.test(v))) {
             summaries[0].morning = [];
         }
-        const text = arr => arr.length ? arr.join(', ') : '해당없음';
+        const formatSubjects = arr => {
+            if (!arr.length) return '<span style="color:#64748b; font-weight:800;">해당없음</span>';
+            return arr.map(v => {
+                const special = /청렴|체육|노조|입교|수료|설문/.test(v);
+                const color = special ? '#b45309' : '#0f172a';
+                return `<span style="color:${color}; font-weight:900;">${this.escapeHtml(v)}</span>`;
+            }).join(', ');
+        };
         const dayTitle = d => {
             const wd = d.weekday ? `${d.weekday}요일` : '';
             return [d.date, wd].filter(Boolean).join(' ');
@@ -5784,8 +5868,8 @@ const scheduleMgr = {
                     <div style="border:1px solid #dbe4f0; border-radius:14px; background:#fff; padding:18px 20px;">
                         <div style="font-size:18px; font-weight:900; color:#0f3f73; margin-bottom:10px;">${this.escapeHtml(dayTitle(day) || '-')}</div>
                         <div style="display:flex; flex-direction:column; gap:7px; color:#0f172a; font-size:15px; line-height:1.55; font-weight:700;">
-                            <div><span style="color:#2563eb; font-weight:900;">* 오전 과정 :</span> ${this.escapeHtml(text(day.morning))}</div>
-                            <div><span style="color:#16a34a; font-weight:900;">* 오후 과정 :</span> ${this.escapeHtml(text(day.afternoon))}</div>
+                            <div><span style="color:#2563eb; font-weight:900;">* 오전 과정 :</span> ${formatSubjects(day.morning)}</div>
+                            <div><span style="color:#16a34a; font-weight:900;">* 오후 과정 :</span> ${formatSubjects(day.afternoon)}</div>
                         </div>
                     </div>
                 `).join('')}
