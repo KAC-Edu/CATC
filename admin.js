@@ -5850,9 +5850,38 @@ const scheduleMgr = {
         if (summaries[0] && summaries[0].afternoon.some(v => /입교|과정\s*안내|교육과정안내/.test(v))) {
             summaries[0].morning = [];
         }
+        const splitSubjectText = v => {
+            const text = String(v || '').replace(/\s+/g, ' ').trim();
+            if (!text) return [];
+            const out = [];
+            const re = /(.+?\([^)]{1,30}\))(?=\s*[가-힣A-Za-z0-9])/g;
+            let last = 0;
+            let m;
+            while ((m = re.exec(text)) !== null) {
+                const part = m[1].trim();
+                if (part) out.push(part);
+                last = re.lastIndex;
+            }
+            const tail = text.slice(last).trim();
+            if (tail) out.push(tail);
+            return out.length ? out : [text];
+        };
+        const normalizeSubjects = arr => {
+            const flat = [];
+            (arr || []).forEach(v => splitSubjectText(v).forEach(part => {
+                const item = part.replace(/\s+,/g, ',').replace(/,\s*/g, ', ').trim();
+                if (item && !flat.includes(item)) flat.push(item);
+            }));
+            return flat.sort((a, b) => {
+                const as = /설문|수료/.test(a) ? 1 : 0;
+                const bs = /설문|수료/.test(b) ? 1 : 0;
+                return as - bs;
+            });
+        };
         const formatSubjects = arr => {
-            if (!arr.length) return '<span style="color:#64748b; font-weight:800;">해당없음</span>';
-            return arr.map(v => {
+            const subjects = normalizeSubjects(arr);
+            if (!subjects.length) return '<span style="color:#64748b; font-weight:800;">해당없음</span>';
+            return subjects.map(v => {
                 const special = /청렴|체육|노조|입교|수료|설문/.test(v);
                 const color = special ? '#b45309' : '#0f172a';
                 return `<span style="color:${color}; font-weight:900;">${this.escapeHtml(v)}</span>`;
