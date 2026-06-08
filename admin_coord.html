@@ -4518,6 +4518,30 @@ function clearNoticeHistory() {
 
 
 // 생활관 배정 현황 로직 추가
+    function coordNormDormName(v) { return String(v || '').replace(/\s+/g, '').trim(); }
+    function coordNormDormId(v) { return String(v || '').replace(/\D/g, '').trim(); }
+    function coordFindDormAssignment(allWeeks, person, rid, courseName) {
+        const n = coordNormDormName(person && person.name);
+        const id = coordNormDormId((person && (person.phone || person.empNo)) || '');
+        let best = null;
+        let bestScore = -1;
+        Object.values(allWeeks || {}).forEach(wk => {
+            const when = Number((wk && wk.assignedAt) || 0);
+            Object.values((wk && wk.students) || {}).forEach(a => {
+                if (!a || coordNormDormName(a.name) !== n) return;
+                const aid = coordNormDormId(a.empNo || a.phone || '');
+                const idMatch = id && aid && (id === aid || id.slice(-4) === aid || aid.slice(-4) === id);
+                if (id && aid && !idMatch) return;
+                let score = when;
+                if (idMatch) score += 10000000000000;
+                if (rid && String(a.room || '') === String(rid)) score += 1000000000000;
+                if (courseName && String(a.course || '').trim() === String(courseName).trim()) score += 100000000000;
+                if (score > bestScore) { bestScore = score; best = a; }
+            });
+        });
+        return best || null;
+    }
+
     async function openDormManager() {
         toggleMenu(false);
         const tbody = document.getElementById('dormTableBody');
@@ -4527,11 +4551,12 @@ function clearNoticeHistory() {
         try {
             const [studentSnap, dormSnap] = await Promise.all([
                 firebase.database().ref(`courses/${currentRID}/students`).once('value'),
-                firebase.database().ref(`system/dormitory_assignments`).once('value')
+                firebase.database().ref(`system/dorm/assignments`).once('value')
             ]);
 
             const students = studentSnap.val() || {};
             const dormData = dormSnap.val() || {};
+            const courseName = globalAllData?.[currentRID]?.settings?.courseName || '';
             tbody.innerHTML = "";
 
             const studentList = Object.values(students)
@@ -4545,14 +4570,15 @@ function clearNoticeHistory() {
 
             studentList.forEach(s => {
                 const sPhone = s.phone ? s.phone : "";
-                let assigned = dormData[`${s.name.trim()}_${sPhone}`] || dormData[s.name.trim()] || { building: "-", room: "미배정" };
+                let assigned = coordFindDormAssignment(dormData, s, currentRID, courseName) || { building: "-", no: "미배정" };
+                const roomNo = assigned.no || assigned.room || "미배정";
                 
                 tbody.innerHTML += `
                     <tr>
                         <td style="font-weight:800;">${s.name}</td>
                         <td style="color:#64748b;">${sPhone}</td>
                         <td style="color:var(--blue-deep);">${assigned.building}</td>
-                        <td style="font-weight:800;">${assigned.room}${assigned.room !== '미배정' ? '호' : ''}</td>
+                        <td style="font-weight:800;">${roomNo}${roomNo !== '미배정' ? '호' : ''}</td>
                     </tr>`;
             });
         } catch (e) {
@@ -5078,7 +5104,7 @@ async function loadAllStudentData() {
     masterStudentList = [];
 
     // 생활관 배정 정보 가져오기
-    const dormSnap = await firebase.database().ref('system/dormitory_assignments').once('value');
+    const dormSnap = await firebase.database().ref('system/dorm/assignments').once('value');
     const dormData = dormSnap.val() || {};
 
     Object.keys(globalAllData).forEach(rid => {
@@ -5105,11 +5131,10 @@ async function loadAllStudentData() {
             if (!s.name || s.name === "undefined" || s.name.trim() === "") return;
 
             const phoneSuffix = s.phone ? s.phone : "0000";
-            const sKey = `${s.name.trim()}_${phoneSuffix}`;
-
-            // 생활관 매칭 (정밀 키 또는 이름 기준)
-            let assigned = dormData[sKey] || dormData[s.name.trim()];
+            // 생활관 매칭: 교육지원부 생활관 배정(system/dorm/assignments) 기준
+            let assigned = coordFindDormAssignment(dormData, s, rid, courseName);
             const dorm = assigned || { building: "-", room: "미배정" };
+            const dormNo = dorm.no || dorm.room || "미배정";
             
             // 퇴교 차량 정보 추출
             const shuttleReq = room.shuttle?.requests?.[stoken];
@@ -5131,7 +5156,7 @@ async function loadAllStudentData() {
                 name: s.name,
                 phone: phoneSuffix,
                 dormBuilding: dorm.building,
-                dormRoom: dorm.room !== '미배정' ? (dorm.room.includes('호') ? dorm.room : `${dorm.room}호`) : "미배정",
+                dormRoom: dormNo !== '미배정' ? (String(dormNo).includes('호') ? String(dormNo) : `${dormNo}호`) : "미배정",
                 shuttleText,
                 shuttleClass,
                 shuttleType,
@@ -6130,11 +6155,33 @@ async function coordLoadSharedDormRoster() {
             list: found.list || []
         };
         if (box) {
+            const rows = (_coordSharedDormRoster.list || []).map((s, i) => `
+                <tr>
+                    <td style="padding:6px 8px; border-top:1px solid #bfdbfe; text-align:center;">${i + 1}</td>
+                    <td style="padding:6px 8px; border-top:1px solid #bfdbfe; font-weight:900;">${(s.name || '-').toString().replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'})[m])}</td>
+                    <td style="padding:6px 8px; border-top:1px solid #bfdbfe;">${(s.empNo || '-').toString().replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'})[m])}</td>
+                    <td style="padding:6px 8px; border-top:1px solid #bfdbfe;">${(s.dept || '-').toString().replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'})[m])}</td>
+                    <td style="padding:6px 8px; border-top:1px solid #bfdbfe; text-align:center;">${(s.gender || '-').toString().replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'})[m])}</td>
+                </tr>`).join('');
             box.style.display = 'block';
             box.innerHTML =
                 `<b>교육지원부 공유 명단 있음</b><br>` +
                 `${_coordSharedDormRoster.courseName} · ${_coordSharedDormRoster.list.length}명` +
-                `<span style="display:inline-block;margin-left:8px;padding:2px 7px;border-radius:999px;background:#dbeafe;color:#1d4ed8;font-weight:900;">공유 중</span>`;
+                `<span style="display:inline-block;margin-left:8px;padding:2px 7px;border-radius:999px;background:#dbeafe;color:#1d4ed8;font-weight:900;">공유 중</span>` +
+                `<div style="margin-top:10px; max-height:190px; overflow:auto; border:1px solid #bfdbfe; border-radius:10px; background:#fff;">
+                    <table style="width:100%; border-collapse:collapse; font-size:12px; color:#1e3a8a;">
+                        <thead style="position:sticky; top:0; background:#eff6ff;">
+                            <tr>
+                                <th style="padding:7px 8px; text-align:center;">#</th>
+                                <th style="padding:7px 8px;">성명</th>
+                                <th style="padding:7px 8px;">사번</th>
+                                <th style="padding:7px 8px;">소속</th>
+                                <th style="padding:7px 8px;">성별</th>
+                            </tr>
+                        </thead>
+                        <tbody>${rows || '<tr><td colspan="5" style="padding:14px; text-align:center; color:#64748b;">공유 명단이 비어 있습니다.</td></tr>'}</tbody>
+                    </table>
+                </div>`;
         }
         if (_coordRosterData.length) coordRenderRosterDiff(_coordRosterData);
     } catch (e) {

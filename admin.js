@@ -3313,10 +3313,34 @@ setMode: function(mode) {
 
                 Promise.all([
                     firebase.database().ref(`courses/${state.room}/students`).once('value'),
-                    firebase.database().ref(`system/dormitory_assignments`).once('value')
+                    firebase.database().ref(`system/dorm/assignments`).once('value')
                 ]).then(([studentSnap, dormSnap]) => {
                     const students = studentSnap.val() || {};
                     const dormData = dormSnap.val() || {}; 
+                    const norm = v => String(v || '').replace(/\s+/g, '').trim();
+                    const normId = v => String(v || '').replace(/\D/g, '').trim();
+                    const currentCourse = (document.getElementById('dashCourseName')?.innerText || '').trim();
+                    const findDorm = (student) => {
+                        const n = norm(student?.name);
+                        const id = normId(student?.phone || student?.empNo || '');
+                        let best = null;
+                        let bestScore = -1;
+                        Object.values(dormData || {}).forEach(wk => {
+                            const when = Number(wk?.assignedAt || 0);
+                            Object.values(wk?.students || {}).forEach(a => {
+                                if (!a || norm(a.name) !== n) return;
+                                const aid = normId(a.empNo || a.phone || '');
+                                const idMatch = id && aid && (id === aid || id.slice(-4) === aid || aid.slice(-4) === id);
+                                if (id && aid && !idMatch) return;
+                                let score = when;
+                                if (idMatch) score += 10000000000000;
+                                if (String(a.room || '') === String(state.room || '')) score += 1000000000000;
+                                if (currentCourse && String(a.course || '').trim() === currentCourse) score += 100000000000;
+                                if (score > bestScore) { bestScore = score; best = a; }
+                            });
+                        });
+                        return best;
+                    };
                     tbody.innerHTML = "";
                     const studentList = Object.values(students).filter(s => s.name && s.name !== "undefined").sort((a, b) => a.name.localeCompare(b.name));
 
@@ -3328,12 +3352,10 @@ setMode: function(mode) {
                     studentList.forEach((s, idx) => {
                         const sName = s.name;
                         const sPhone = s.phone ? s.phone : ""; 
-                        let assignedInfo = null;
-                        if (dormData[`${sName}_${sPhone}`]) assignedInfo = dormData[`${sName}_${sPhone}`];
-                        else if (dormData[sName]) assignedInfo = dormData[sName];
+                        let assignedInfo = findDorm(s);
 
                         const bName = assignedInfo ? assignedInfo.building : "-";
-                        const rNo = assignedInfo ? assignedInfo.room + "호" : "미배정";
+                        const rNo = assignedInfo ? (assignedInfo.no || assignedInfo.room) + "호" : "미배정";
                         const statusColor = assignedInfo ? "#3b82f6" : "#94a3b8";
 
                         tbody.innerHTML += `
@@ -4111,9 +4133,37 @@ loadDormitoryData: function() {
 
         const expectedRef = firebase.database().ref(`courses/${state.room}/expectedStudents`);
         const actualRef = firebase.database().ref(`courses/${state.room}/students`);
-        const dormRef = firebase.database().ref(`system/dormitory_assignments`);
+        const dormRef = firebase.database().ref(`system/dorm/assignments`);
 
         const renderAll = (expData, actData, dormData) => {
+            const norm = v => String(v || '').replace(/\s+/g, '').trim();
+            const normId = v => String(v || '').replace(/\D/g, '').trim();
+            const currentCourse = (document.getElementById('dashCourseName')?.innerText || '').trim();
+            const findDorm = (name, sData) => {
+                const n = norm(name);
+                const id = normId(sData?.phone || sData?.empNo || '');
+                let best = null;
+                let bestScore = -1;
+                Object.values(dormData || {}).forEach(wk => {
+                    const when = Number(wk?.assignedAt || 0);
+                    Object.values(wk?.students || {}).forEach(a => {
+                        if (!a || norm(a.name) !== n) return;
+                        const aid = normId(a.empNo || a.phone || '');
+                        const idMatch = id && aid && (id === aid || id.slice(-4) === aid || aid.slice(-4) === id);
+                        if (id && aid && !idMatch) return;
+                        let score = when;
+                        if (idMatch) score += 10000000000000;
+                        if (String(a.room || '') === String(state.room || '')) score += 1000000000000;
+                        if (currentCourse && String(a.course || '').trim() === currentCourse) score += 100000000000;
+                        if (score > bestScore) {
+                            bestScore = score;
+                            best = a;
+                        }
+                    });
+                });
+                if (!best) return { building: "-", room: "미배정" };
+                return { building: best.building || "-", room: best.no || best.room || "미배정" };
+            };
             const expectedNames = expData || [];
             const actualStudents = Object.values(actData || {}).filter(s => s.name && s.name !== "undefined");
             const actualNames = actualStudents.map(s => s.name);
@@ -4136,8 +4186,7 @@ loadDormitoryData: function() {
                 const sData = actualStudents.find(s => s.name === name) || {};
                 const phoneSuffix = sData.phone ? sData.phone : "-";
 
-                const cleanName = name.trim();
-                const assigned = dormData[cleanName] || { building: "-", room: "미배정" };
+                const assigned = findDorm(name, sData);
                 
                 // [확실한 색상 구분 로직]
                 let buildingColor = "#94a3b8"; // 기본 회색 (미배정)

@@ -1589,11 +1589,15 @@ function openMainMenu() {
     //  students[token] = {name, empNo, dept, gender, course, room, roomId, building, floor, no}
     //  교육생은 본인 이름(+가능하면 사번)으로 매칭한다.
     const dormAssignmentsRef = firebase.database().ref(`system/dorm/assignments`);
+    const normDormName = v => String(v || '').replace(/\s+/g, '').trim();
+    const normDormId = v => String(v || '').replace(/\D/g, '').trim();
+    const myId = normDormId(myPhone);
+    const currentCourseName = (document.getElementById('roomTitle')?.innerText || '').trim();
 
     dormAssignmentsRef.on('value', snap => {
         const allWeeks = snap.val() || {};
         let found = null;
-        let foundAt = 0;
+        let foundScore = -1;
 
         // 모든 주차를 훑어 이름이 일치하는 최신 배정을 찾는다
         Object.values(allWeeks).forEach(wk => {
@@ -1601,9 +1605,16 @@ function openMainMenu() {
             const when = wk && wk.assignedAt ? wk.assignedAt : 0;
             Object.values(students).forEach(s => {
                 if (!s || !s.name) return;
-                if (s.name.trim() === myName) {
+                if (normDormName(s.name) === normDormName(myName)) {
+                    const sid = normDormId(s.empNo || s.phone || '');
+                    const idMatch = myId && sid && (myId === sid || myId.slice(-4) === sid || sid.slice(-4) === myId);
+                    if (myId && sid && !idMatch) return;
+                    let score = Number(when || 0);
+                    if (idMatch) score += 10000000000000;
+                    if (String(s.room || '') === String(currentRoom || '')) score += 1000000000000;
+                    if (currentCourseName && String(s.course || '').trim() === currentCourseName) score += 100000000000;
                     // 더 최근 배정을 우선
-                    if (when >= foundAt) { found = s; foundAt = when; }
+                    if (score >= foundScore) { found = s; foundScore = score; }
                 }
             });
         });
@@ -1614,7 +1625,7 @@ function openMainMenu() {
             dormTextEl.style.color = "#3b82f6";
             dormTextEl.style.fontWeight = "900";
         } else {
-            dormTextEl.innerText = "생활관 배정 정보 확인 중...";
+            dormTextEl.innerText = "생활관 미배정";
             dormTextEl.style.color = "#94a3b8";
         }
     });
