@@ -1391,7 +1391,7 @@
                         ${enrolled ? `<span class="course-count"><i class="fa-solid fa-circle-check"></i> ${cnt}명</span>` : ''}
                         ${it.profName ? `<span class="course-prof"><i class="fa-solid fa-user-tie"></i> ${it.profName}</span>` : ''}
                         <span class="course-go"><i class="fa-solid fa-chevron-right"></i></span>
-                        <span class="course-del-btn" onclick="event.stopPropagation(); deleteRoster(${JSON.stringify(it).replace(/'/g, "&#39;")})" title="이 과정 명단 삭제" style="flex-shrink:0; width:32px; height:32px; display:inline-flex; align-items:center; justify-content:center; border-radius:8px; background:#fee2e2; color:#dc2626; cursor:pointer; font-size:14px; margin-left:4px;"><i class="fa-solid fa-trash-can"></i></span>
+                        <span class="course-del-btn" onclick="event.stopPropagation(); deleteRoster(${JSON.stringify(it).replace(/'/g, "&#39;")})" title="이 과정에 업로드/저장된 교육생 명단 전체 삭제" style="flex-shrink:0; width:32px; height:32px; display:inline-flex; align-items:center; justify-content:center; border-radius:8px; background:#fee2e2; color:#dc2626; cursor:pointer; font-size:14px; margin-left:4px;"><i class="fa-solid fa-trash-can"></i></span>
                     </div>`;
             });
             html += `</div>`;
@@ -2177,8 +2177,8 @@
 
         async function deleteRosterByKey(key, courseName, cnt) {
             const msg = cnt > 0
-                ? `[${courseName}] 명단(${cnt}명)을 삭제합니다.\n이미 자동배정된 현황/출력에서도 이 과정 인원이 함께 제거됩니다.\n이 작업은 되돌릴 수 없습니다. 계속할까요?`
-                : `[${courseName}] 명단을 삭제합니다.\n이미 자동배정된 현황/출력에서도 이 과정 인원이 함께 제거됩니다. 계속할까요?`;
+                ? `[${courseName}]에 업로드/저장된 교육생 명단 ${cnt}명을 전부 삭제합니다.\n\n자동배정이 이미 되어 있으면 현황/출력/PDF에서도 이 과정 인원이 함께 제거됩니다.\n이 작업은 되돌릴 수 없습니다. 계속할까요?`
+                : `[${courseName}]에 저장된 교육생 명단을 삭제합니다.\n\n자동배정이 이미 되어 있으면 현황/출력/PDF에서도 이 과정 인원이 함께 제거됩니다.\n계속할까요?`;
             if (!confirm(msg)) return;
             try {
                 await db.ref(`system/dorm/rosters/${key}`).remove();
@@ -2186,6 +2186,12 @@
                 delete weekRosters[key];
                 excludedRosterKeys.delete(key);
                 rosterCounts[key] = 0;
+                if (selectedCourse && rosterKey(selectedCourse) === key) {
+                    roster = [];
+                    rosterDirty = false;
+                    document.getElementById('rosterPreview').innerText = '🗑️ 이 과정의 업로드 명단이 삭제되었습니다.';
+                    renderRoster();
+                }
                 alert(`✅ [${courseName}] 명단이 삭제되었습니다.\n현황/출력에서 제거된 인원: ${removed || 0}명\n인쇄 및 PDF 출력에도 바로 반영됩니다.`);
                 showToast(`✅ [${courseName}] 명단 삭제 완료 - 현황/출력 반영`);
                 renderWeekRosterList();
@@ -3253,17 +3259,22 @@
             const key = rosterKey(it);
             const cnt = rosterCounts[key] || (selectedCourse && selectedCourse.room === it.room ? roster.length : 0);
             const msg = cnt > 0
-                ? `[${it.courseName}] 명단(${cnt}명)을 삭제합니다.\n이미 자동배정된 현황/출력에서도 이 과정 인원이 함께 제거됩니다.\n계속할까요?`
-                : `[${it.courseName}] 명단을 삭제합니다.\n이미 자동배정된 현황/출력에서도 이 과정 인원이 함께 제거됩니다. 계속할까요?`;
+                ? `[${it.courseName}]에 업로드/저장된 교육생 명단 ${cnt}명을 전부 삭제합니다.\n\n자동배정이 이미 되어 있으면 현황/출력/PDF에서도 이 과정 인원이 함께 제거됩니다.\n이 작업은 되돌릴 수 없습니다. 계속할까요?`
+                : `[${it.courseName}]에 저장된 교육생 명단을 삭제합니다.\n\n자동배정이 이미 되어 있으면 현황/출력/PDF에서도 이 과정 인원이 함께 제거됩니다.\n계속할까요?`;
             if (!confirm(msg)) return;
             try {
                 await db.ref(`system/dorm/rosters/${key}`).remove();
                 const removed = await removeRosterFromAssignment(key, it.courseName);
                 rosterCounts[key] = 0;
                 if (selectedCourse && rosterKey(selectedCourse) === key) {
-                    selectedCourse = null;
-                    document.getElementById('rosterPanel').style.display = 'none';
                     roster = [];
+                    rosterDirty = false;
+                    document.getElementById('rosterPreview').innerText = '🗑️ 이 과정의 업로드 명단이 삭제되었습니다.';
+                    renderRoster();
+                    const countEl = document.getElementById('rosterCount');
+                    if (countEl) countEl.innerText = '0명';
+                    const summaryEl = document.getElementById('rosterSaveSummary');
+                    if (summaryEl) summaryEl.innerText = `${it.courseName} · ${it.period || '-'}`;
                 }
                 alert(`✅ [${it.courseName}] 명단이 삭제되었습니다.\n현황/출력에서 제거된 인원: ${removed || 0}명\n인쇄 및 PDF 출력에도 바로 반영됩니다.`);
                 showToast(`✅ [${it.courseName}] 명단 삭제 완료 - 현황/출력 반영`);
