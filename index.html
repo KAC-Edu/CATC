@@ -3244,6 +3244,9 @@ async function saveProfile() {
         localStorage.setItem('kac_user_name', name);
         localStorage.setItem('kac_user_phone', phone);
         localStorage.setItem('uToken', newUToken);
+        localStorage.setItem('kac_last_visited_room', currentRoom);
+        localStorage.setItem('kac_last_visited_name', name);
+        localStorage.setItem('kac_last_visited_phone', phone);
 
         await firebase.database().ref(`courses/${currentRoom}/students/${newUToken}`).update({
             name: name,

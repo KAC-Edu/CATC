@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="ko">
 <head>
   <meta charset="UTF-8" />
@@ -107,7 +107,46 @@
 
 
 
-    :root {
+
+/* 모바일 축소 화면에서 글자가 한 글자씩 세로로 쌓이지 않도록 보정 */
+@media (max-width: 430px) {
+    .navy-table th,
+    .navy-table td,
+    #allStudentListView .navy-table th,
+    #allStudentListView .navy-table td,
+    .pickup-grid-table th,
+    .pickup-grid-table td {
+        word-break: keep-all !important;
+        overflow-wrap: normal !important;
+        white-space: nowrap !important;
+        font-size: clamp(9px, 2.55vw, 12px) !important;
+        line-height: 1.25 !important;
+        padding-left: 3px !important;
+        padding-right: 3px !important;
+    }
+    #allStudentListView .course-cell,
+    #allStudentListView .bold-text,
+    #allStudentListView .blue-text,
+    .course-name-cell {
+        display: inline-block;
+        max-width: 100%;
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+        vertical-align: middle;
+    }
+    .badge-shuttle {
+        white-space: nowrap !important;
+        font-size: clamp(8px, 2.3vw, 10px) !important;
+        padding: 2px 4px !important;
+    }
+    .course-item-card span,
+    .entry-box span,
+    .entry-box-tablet span {
+        word-break: keep-all !important;
+        white-space: nowrap;
+    }
+}    :root {
       --navy-dark: #0f172a; --blue-main: #0ea5e9; --blue-deep: #0369a1;
       --green-save: #10b981; --bg-cool: #f1f5f9; --card-white: #ffffff;
       --text-dark: #1e293b; --border-blue: #e2e8f0; --danger: #ef4444;
@@ -5747,6 +5786,8 @@ const annualPlanMgrCoord = {
       <button onclick="document.getElementById('coordRosterInput').click()" style="padding:10px 18px; background:#2563eb; color:#fff; border:none; border-radius:10px; font-weight:800; font-size:13px; cursor:pointer; display:flex; align-items:center; gap:7px;"><i class="fa-solid fa-file-arrow-up"></i> PDF / HWP 선택</button>
       <div id="coordRosterStatus" style="font-size:13px; color:#64748b;"></div>
     </div>
+    <div id="coordSharedRosterBox" style="display:none; margin:12px 22px 0; padding:12px 14px; border:1.5px solid #bfdbfe; background:#eff6ff; border-radius:12px; font-size:12.5px; color:#1e3a8a; line-height:1.55;"></div>
+    <div id="coordRosterDiffBox" style="display:none; margin:10px 22px 0; padding:12px 14px; border:1.5px solid #fed7aa; background:#fff7ed; border-radius:12px; font-size:12.5px; color:#9a3412; line-height:1.55;"></div>
     <div style="overflow-y:auto; flex:1; min-height:180px;">
       <table style="width:100%; border-collapse:collapse; font-size:13px;">
         <thead><tr style="background:#f8fafc;">
@@ -5885,6 +5926,7 @@ if (_origHRS) {
 function openRosterUpload() {
     const m = document.getElementById('rosterUploadModal');
     if (m) m.style.display = 'flex';
+    coordLoadSharedDormRoster();
 }
 function closeRosterUpload() {
     const m = document.getElementById('rosterUploadModal');
@@ -5892,6 +5934,126 @@ function closeRosterUpload() {
 }
 
 let _coordRosterData = [];
+let _coordSharedDormRoster = null;
+
+function coordRosterNormName(v) {
+    return (v || '').toString().replace(/\s+/g, '').trim();
+}
+function coordRosterNormEmp(v) {
+    return (v || '').toString().replace(/\D/g, '').trim();
+}
+function coordRosterPersonKey(s) {
+    const emp = coordRosterNormEmp(s && s.empNo);
+    const name = coordRosterNormName(s && s.name);
+    return emp ? `${name}|${emp}` : name;
+}
+function coordRosterWeekKeyFromPeriod(period) {
+    const start = (period || '').split('~')[0].trim();
+    if (!start) return '';
+    const d = new Date(start + 'T00:00:00');
+    if (isNaN(d)) return '';
+    const day = (d.getDay() + 6) % 7;
+    d.setDate(d.getDate() - day);
+    return d.toISOString().slice(0, 10);
+}
+
+async function coordLoadSharedDormRoster() {
+    const box = document.getElementById('coordSharedRosterBox');
+    const diff = document.getElementById('coordRosterDiffBox');
+    if (box) {
+        box.style.display = 'block';
+        box.innerHTML = '<b>교육지원부 생활관 명단 확인 중...</b>';
+    }
+    if (diff) { diff.style.display = 'none'; diff.innerHTML = ''; }
+    _coordSharedDormRoster = null;
+
+    try {
+        const room = globalAllData && currentRID ? globalAllData[currentRID] : null;
+        const settings = (room && room.settings) || {};
+        const courseName = (settings.courseName || '').trim();
+        const period = (settings.period || '').trim();
+        const weekKey = coordRosterWeekKeyFromPeriod(period);
+        const snap = await firebase.database().ref('system/dorm/rosters').once('value');
+        const all = snap.val() || {};
+        let foundKey = '';
+        let found = null;
+
+        Object.entries(all).forEach(([key, roster]) => {
+            if (found || !roster || !Array.isArray(roster.list)) return;
+            const sameRoom = currentRID && String(roster.room || key.split('__')[1] || '') === String(currentRID);
+            const sameCourse = courseName && (roster.courseName || '').trim() === courseName;
+            const sameWeek = !weekKey || (roster.weekKey || key.split('__')[0] || '') === weekKey;
+            if (sameWeek && (sameRoom || sameCourse)) {
+                foundKey = key;
+                found = roster;
+            }
+        });
+
+        if (!found) {
+            if (box) {
+                box.style.display = 'block';
+                box.innerHTML = '<b>공유 명단 없음</b><br>교육지원부 생활관 플랫폼에 저장된 현재 과정 명단을 찾지 못했습니다.';
+            }
+            return;
+        }
+
+        _coordSharedDormRoster = {
+            key: foundKey,
+            courseName: found.courseName || courseName || '-',
+            weekKey: found.weekKey || foundKey.split('__')[0] || '',
+            list: found.list || []
+        };
+        if (box) {
+            box.style.display = 'block';
+            box.innerHTML =
+                `<b>교육지원부 공유 명단 있음</b><br>` +
+                `${_coordSharedDormRoster.courseName} · ${_coordSharedDormRoster.list.length}명` +
+                `<span style="display:inline-block;margin-left:8px;padding:2px 7px;border-radius:999px;background:#dbeafe;color:#1d4ed8;font-weight:900;">공유 중</span>`;
+        }
+        if (_coordRosterData.length) coordRenderRosterDiff(_coordRosterData);
+    } catch (e) {
+        console.error('[생활관 공유 명단 확인]', e);
+        if (box) {
+            box.style.display = 'block';
+            box.innerHTML = '<b>공유 명단 확인 실패</b><br>네트워크 또는 권한 상태를 확인해 주세요.';
+        }
+    }
+}
+
+function coordRenderRosterDiff(uploadList) {
+    const box = document.getElementById('coordRosterDiffBox');
+    if (!box) return;
+    if (!_coordSharedDormRoster || !Array.isArray(_coordSharedDormRoster.list)) {
+        box.style.display = 'none';
+        box.innerHTML = '';
+        return;
+    }
+    const shared = _coordSharedDormRoster.list || [];
+    const sharedMap = new Map(shared.map(s => [coordRosterPersonKey(s), s]));
+    const uploadMap = new Map((uploadList || []).map(s => [coordRosterPersonKey(s), s]));
+    const added = [];
+    const missing = [];
+    uploadMap.forEach((s, key) => { if (key && !sharedMap.has(key)) added.push(s); });
+    sharedMap.forEach((s, key) => { if (key && !uploadMap.has(key)) missing.push(s); });
+    const fmt = arr => arr.slice(0, 12).map(s => `${s.name || '-'}${s.empNo ? '(' + s.empNo + ')' : ''}`).join(', ') + (arr.length > 12 ? ` 외 ${arr.length - 12}명` : '');
+    if (!added.length && !missing.length) {
+        box.style.display = 'block';
+        box.style.borderColor = '#86efac';
+        box.style.background = '#f0fdf4';
+        box.style.color = '#166534';
+        box.innerHTML = `<b>명단 일치</b><br>교육지원부 공유 명단 ${shared.length}명과 업로드 명단 ${uploadList.length}명이 같습니다.`;
+        return;
+    }
+    box.style.display = 'block';
+    box.style.borderColor = '#fed7aa';
+    box.style.background = '#fff7ed';
+    box.style.color = '#9a3412';
+    box.innerHTML =
+        `<b>교육지원부 공유 명단과 차이가 있습니다.</b><br>` +
+        `업로드 명단에만 있는 인원: <b>${added.length}명</b>${added.length ? '<br>' + fmt(added) : ''}<br>` +
+        `교육지원부 명단에는 있으나 업로드 명단에 없는 인원: <b>${missing.length}명</b>${missing.length ? '<br>' + fmt(missing) : ''}`;
+}
+
 async function coordHandleRosterFile(ev) {
     const file = ev.target.files[0]; if (!file) return;
     ev.target.value = '';
@@ -5936,6 +6098,7 @@ async function coordHandleRosterFile(ev) {
             </tr>`).join('');
             statusEl.textContent = `✅ ${students.length}명 판독됨`;
             document.getElementById('coordRosterCount').textContent = `총 ${students.length}명`;
+            coordRenderRosterDiff(students);
         }
     } catch(e) {
         statusEl.textContent = '❌ 오류: ' + e.message;
@@ -5946,8 +6109,15 @@ async function coordHandleRosterFile(ev) {
 async function coordSaveRoster() {
     if (!_coordRosterData.length) { alert('저장할 명단이 없습니다'); return; }
     const today = new Date().toISOString().slice(0,10);
+    const room = globalAllData && currentRID ? globalAllData[currentRID] : null;
+    const settings = (room && room.settings) || {};
     await firebase.database().ref(`system/coord/rosters/coord_roster_${today}`).set({
-        savedAt: firebase.database.ServerValue.TIMESTAMP, list: _coordRosterData
+        savedAt: firebase.database.ServerValue.TIMESTAMP,
+        room: currentRID || '',
+        courseName: settings.courseName || '',
+        period: settings.period || '',
+        sharedDormRosterKey: _coordSharedDormRoster ? _coordSharedDormRoster.key : '',
+        list: _coordRosterData
     });
     alert(`✅ ${_coordRosterData.length}명 명단 저장 완료`);
 }
