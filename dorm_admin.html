@@ -1552,6 +1552,33 @@
             return parsed;
         }
 
+        function parseRosterRecords(records) {
+            const arr = (records || []).map(normalizeRosterCell).filter(Boolean);
+            const parsed = [];
+            const isSeq = v => /^\d{1,3}$/.test(v);
+            const isEmp = v => /^\d{4,6}$/.test(v);
+            const isGender = v => /^(남|여|남자|여자|넘|M|F|m|f)$/.test(v);
+
+            arr.forEach((cell, idx) => {
+                if (!isEmp(cell)) return;
+                let start = idx;
+                if (idx >= 2 && isSeq(arr[idx - 2])) start = idx - 2;      // 연번, 성명, 사번
+                else if (idx >= 1 && isSeq(arr[idx - 1])) start = idx - 1; // 연번, 사번, 성명
+                else if (idx >= 1) start = idx - 1;
+
+                let end = Math.min(arr.length, idx + 7);
+                for (let j = idx + 1; j < Math.min(arr.length, idx + 8); j++) {
+                    if (isGender(arr[j])) { end = j + 1; break; }
+                    if (j > idx + 1 && isSeq(arr[j]) && isEmp(arr[j + 1])) { end = j; break; }
+                    if (j > idx + 2 && isEmp(arr[j])) { end = j; break; }
+                }
+
+                const row = parseRosterRow(arr.slice(start, end));
+                if (row) parsed.push(row);
+            });
+            return dedupeRoster(parsed);
+        }
+
         async function parseHwpxRosterFile(file) {
             if (!window.JSZip) throw new Error('JSZip 로드 실패');
             const zip = await JSZip.loadAsync(file);
@@ -1619,6 +1646,29 @@
             return text;
         }
 
+        function extractHwpSectionRecords(bytes) {
+            const records = [];
+            let off = 0;
+            while (off + 4 <= bytes.length) {
+                const header = hwpReadU32LE(bytes, off);
+                off += 4;
+                const tag = header & 0x3ff;
+                let size = (header >>> 20) & 0xfff;
+                if (size === 0xfff) {
+                    if (off + 4 > bytes.length) break;
+                    size = hwpReadU32LE(bytes, off);
+                    off += 4;
+                }
+                if (off + size > bytes.length) break;
+                if (tag === 67) {
+                    const txt = normalizeRosterCell(decodeUtf16Le(bytes.subarray(off, off + size)));
+                    if (txt) records.push(txt);
+                }
+                off += size;
+            }
+            return records;
+        }
+
         async function parseHwpRosterFile(file) {
             if (!window.XLSX || !XLSX.CFB || !window.pako) throw new Error('HWP 파서 라이브러리 로드 실패');
             const buf = await file.arrayBuffer();
@@ -1628,6 +1678,7 @@
             const headerBytes = header && header.content ? new Uint8Array(header.content) : null;
             const compressed = headerBytes && headerBytes.length > 39 ? !!(hwpReadU32LE(headerBytes, 36) & 1) : true;
             let text = '';
+            let records = [];
 
             entries
                 .filter(e => /BodyText\/Section\d+$/i.test(e.name) && e.content)
@@ -1641,11 +1692,13 @@
                         }
                     }
                     const sectionText = extractHwpSectionText(bytes);
+                    records = records.concat(extractHwpSectionRecords(bytes));
                     text += sectionText || decodeUtf16Le(bytes);
                     text += '\n';
                 });
 
-            return parseRowsFromPlainText(text);
+            const byRecords = parseRosterRecords(records);
+            return byRecords.length ? byRecords : parseRowsFromPlainText(text);
         }
 
         // ── PDF 판독: 행(Y) 기반 표 파싱 ──
@@ -2058,11 +2111,12 @@
             if (!confirm(msg)) return;
             try {
                 await db.ref(`system/dorm/rosters/${key}`).remove();
-                await removeRosterFromAssignment(key, courseName);
+                const removed = await removeRosterFromAssignment(key, courseName);
                 delete weekRosters[key];
                 excludedRosterKeys.delete(key);
                 rosterCounts[key] = 0;
-                showToast(`✅ [${courseName}] 명단이 삭제되었습니다`);
+                alert(`✅ [${courseName}] 명단이 삭제되었습니다.\n현황/출력에서 제거된 인원: ${removed || 0}명\n인쇄 및 PDF 출력에도 바로 반영됩니다.`);
+                showToast(`✅ [${courseName}] 명단 삭제 완료 - 현황/출력 반영`);
                 renderWeekRosterList();
             } catch(e) { console.error(e); showToast('❌ 삭제 실패'); }
         }
@@ -2813,7 +2867,7 @@
             Promise.all(ops)
                 .then(() => {
                     delete viewAssign.students[token];
-                    showToast(`🗑️ ${s.name} 삭제됨`);
+                    showToast(`🗑️ ${s.name} 삭제 완료 - 현황/출력 및 PDF에 반영됩니다`);
                     renderBoardMap();
                     if (typeof renderInstReserve === 'function' && document.getElementById('instReserveList')) renderInstReserve(wk);
                 })
@@ -2909,7 +2963,7 @@
                 await db.ref(`system/dorm/assignments/${wk}/students/${token}`).update(rec);
                 if (viewAssign && viewAssign.weekKey === wk) { if (!viewAssign.students) viewAssign.students = {}; viewAssign.students[token] = rec; }
                 closeStuPop();
-                showToast(`✅ ${name} 교육생 추가 (${dest.building} ${dest.no}호)`);
+                showToast(`✅ ${name} 교육생 추가 (${dest.building} ${dest.no}호) - 현황/출력 및 PDF에 반영됩니다`);
                 if (typeof renderBoard === 'function') renderBoard();
                 if (currentBoardTab === 'map' && typeof renderBoardMap === 'function') renderBoardMap();
             } catch (e) { console.error(e); msg.innerText = '저장 실패'; }
@@ -3025,7 +3079,14 @@
                 roomId: destRoomId, building: dest.building, floor: dest.floor, no: dest.no
             };
             db.ref(`system/dorm/assignments/${wk}/students/${moveTargetToken}`).update(upd)
-                .then(() => { closeMovePop(); showToast('✅ 이동 완료'); renderBoard(); })
+                .then(() => {
+                    if (viewAssign && viewAssign.students && viewAssign.students[moveTargetToken]) {
+                        Object.assign(viewAssign.students[moveTargetToken], upd);
+                    }
+                    closeMovePop();
+                    showToast('✅ 이동 완료 - 현황/출력 및 PDF에 반영됩니다');
+                    renderBoard();
+                })
                 .catch(e => { console.error(e); document.getElementById('moveMsg').innerText = '저장 실패'; });
         }
         function closeMovePop() { document.getElementById('movePop').style.display = 'none'; moveTargetToken = null; }
@@ -3035,17 +3096,21 @@
             if (!confirm(`${s.name}(${s.empNo})을(를) 배정에서 삭제하시겠습니까?\n(명단에서 지우는 게 아니라 이 주차 배정에서만 제외됩니다)`)) return;
             const wk = viewAssign.weekKey;
             db.ref(`system/dorm/assignments/${wk}/students/${token}`).remove()
-                .then(() => { showToast('삭제됨'); renderBoard(); })
+                .then(() => {
+                    if (viewAssign && viewAssign.students) delete viewAssign.students[token];
+                    showToast('🗑️ 삭제 완료 - 현황/출력 및 PDF에 반영됩니다');
+                    renderBoard();
+                })
                 .catch(e => { console.error(e); showToast('삭제 실패'); });
         }
 
         // ── STEP 2: 과정 카드에서 명단 삭제 ──
         async function removeRosterFromAssignment(key, courseName) {
             const wk = (key || '').split('__')[0] || selectedWeekKey || (viewAssign && viewAssign.weekKey);
-            if (!wk) return;
+            if (!wk) return 0;
             const snap = await db.ref(`system/dorm/assignments/${wk}`).once('value');
             const assign = snap.val();
-            if (!assign) return;
+            if (!assign) return 0;
             const norm = v => (v || '').trim();
             const targetCourse = norm(courseName);
             const updates = {};
@@ -3074,7 +3139,8 @@
                 if (typeof renderBoard === 'function') renderBoard();
                 if (currentBoardTab === 'map' && typeof renderBoardMap === 'function') renderBoardMap();
             }
-            if (removed) showToast(`🧹 자동배정 현황에서도 ${removed}명 제거됨`);
+            if (removed) showToast(`🧹 현황/출력에서도 ${removed}명 제거됨 - PDF 출력에 반영됩니다`);
+            return removed;
         }
 
         async function clearCourseAssignmentsForWeek(wk) {
@@ -3093,7 +3159,22 @@
             });
             updates[`system/dorm/assignments/${wk}/courses`] = [];
             await db.ref().update(updates);
-            showToast(removed ? `🧹 저장된 명단이 없어 기존 자동배정 인원 ${removed}명을 제거했습니다` : '저장된 과정 명단이 없습니다');
+            if (viewAssign && viewAssign.weekKey === wk) {
+                Object.entries(viewAssign.students || {}).forEach(([token, s]) => {
+                    const isInstructor = token.indexOf('inst_') === 0 || (s.course || '').trim() === '강사';
+                    if (!isInstructor) delete viewAssign.students[token];
+                });
+                viewAssign.courses = [];
+                if (typeof renderBoard === 'function') renderBoard();
+                if (currentBoardTab === 'map' && typeof renderBoardMap === 'function') renderBoardMap();
+            }
+            if (removed) {
+                showToast(`🧹 자동배정 현황/출력 목록 초기화 완료 (${removed}명 삭제)`);
+                alert(`✅ 자동배정 현황/출력 목록이 초기화되었습니다.\n삭제 인원: ${removed}명\n인쇄 및 PDF 출력에도 바로 반영됩니다.`);
+            } else {
+                showToast('저장된 과정 명단이 없어 초기화할 배정 인원이 없습니다');
+                alert('저장된 과정 명단이 없어 초기화할 배정 인원이 없습니다.');
+            }
             return removed > 0;
         }
 
@@ -3106,14 +3187,15 @@
             if (!confirm(msg)) return;
             try {
                 await db.ref(`system/dorm/rosters/${key}`).remove();
-                await removeRosterFromAssignment(key, it.courseName);
+                const removed = await removeRosterFromAssignment(key, it.courseName);
                 rosterCounts[key] = 0;
                 if (selectedCourse && rosterKey(selectedCourse) === key) {
                     selectedCourse = null;
                     document.getElementById('rosterPanel').style.display = 'none';
                     roster = [];
                 }
-                showToast(`✅ [${it.courseName}] 명단이 삭제되었습니다`);
+                alert(`✅ [${it.courseName}] 명단이 삭제되었습니다.\n현황/출력에서 제거된 인원: ${removed || 0}명\n인쇄 및 PDF 출력에도 바로 반영됩니다.`);
+                showToast(`✅ [${it.courseName}] 명단 삭제 완료 - 현황/출력 반영`);
                 renderCourseList();
             } catch(e) { console.error(e); showToast('❌ 삭제 실패'); }
         }
