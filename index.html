@@ -1244,6 +1244,111 @@ async function resolveRoomFromCode(code) {
 }
 
 // [수정] index.html의 최하단 (async function init() { ... })
+function kacStudentNormPhone(v) {
+    return String(v || '').replace(/\D/g, '');
+}
+
+function kacStudentSamePhone(a, b) {
+    const aa = kacStudentNormPhone(a);
+    const bb = kacStudentNormPhone(b);
+    if (!aa || !bb) return false;
+    return aa === bb || aa.slice(-4) === bb || aa.slice(-5) === bb || bb.slice(-4) === aa || bb.slice(-5) === aa;
+}
+
+function kacStudentEsc(v) {
+    return String(v == null ? '' : v).replace(/[&<>"']/g, function(m) {
+        return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'})[m];
+    });
+}
+
+async function findMyRegisteredRooms() {
+    const token = (localStorage.getItem('uToken') || '').trim();
+    const name = (localStorage.getItem('kac_user_name') || localStorage.getItem('kac_last_visited_name') || '').trim();
+    const phone = (localStorage.getItem('kac_user_phone') || localStorage.getItem('kac_last_visited_phone') || '').trim();
+    if (!token && (!name || !phone)) return [];
+
+    try {
+        const snap = await firebase.database().ref('courses').once('value');
+        const courses = snap.val() || {};
+        const found = [];
+        Object.keys(courses).forEach(room => {
+            const c = courses[room] || {};
+            const students = c.students || {};
+            let matched = token && students[token];
+            if (!matched && name && phone) {
+                matched = Object.values(students).find(s => {
+                    if (!s || !s.name) return false;
+                    return String(s.name).trim() === name && kacStudentSamePhone(s.phone, phone);
+                });
+            }
+            if (!matched) return;
+            found.push({
+                room,
+                courseName: c.settings?.courseName || `Room ${room}`,
+                period: c.settings?.period || '',
+                active: c.status?.roomStatus === 'active'
+            });
+        });
+        found.sort((a, b) => {
+            if (a.active !== b.active) return a.active ? -1 : 1;
+            return String(a.room).localeCompare(String(b.room));
+        });
+        return found;
+    } catch (e) {
+        console.error('findMyRegisteredRooms error:', e);
+        return [];
+    }
+}
+
+function showRegisteredRoomPicker(rooms) {
+    return new Promise(resolve => {
+        const old = document.getElementById('registeredRoomPicker');
+        if (old) old.remove();
+
+        const overlay = document.createElement('div');
+        overlay.id = 'registeredRoomPicker';
+        overlay.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,0.62);z-index:12000;display:flex;align-items:center;justify-content:center;padding:20px;font-family:Pretendard,sans-serif;';
+        const lastRoom = localStorage.getItem('kac_last_visited_room') || '';
+        const titleText = '\uC785\uC7A5\uD560 \uACFC\uC815\uC744 \uC120\uD0DD\uD558\uC138\uC694';
+        const descText = '\uB3D9\uC77C\uD55C \uC815\uBCF4\uB85C \uC5EC\uB7EC \uACFC\uC815\uC5D0 \uB4F1\uB85D\uB418\uC5B4 \uC788\uC2B5\uB2C8\uB2E4.';
+        const periodEmptyText = '\uAD50\uC721\uAE30\uAC04 \uBBF8\uC124\uC815';
+        const recentText = '\uCD5C\uADFC';
+        overlay.innerHTML = `
+            <div style="width:100%;max-width:430px;background:#fff;border-radius:22px;padding:24px;box-shadow:0 20px 45px rgba(15,23,42,0.25);">
+                <div style="font-size:19px;font-weight:900;color:#0f172a;margin-bottom:8px;">${titleText}</div>
+                <div style="font-size:13px;line-height:1.55;color:#64748b;margin-bottom:18px;">${descText}</div>
+                <div id="registeredRoomPickerList" style="display:flex;flex-direction:column;gap:10px;"></div>
+            </div>`;
+        document.body.appendChild(overlay);
+
+        const list = overlay.querySelector('#registeredRoomPickerList');
+        rooms.forEach(item => {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.style.cssText = 'width:100%;border:1.5px solid #dbeafe;background:#f8fbff;border-radius:14px;padding:13px 14px;text-align:left;cursor:pointer;display:flex;gap:12px;align-items:center;color:#0f172a;';
+            const badge = item.room === lastRoom ? `<span style="margin-left:6px;font-size:10px;font-weight:900;color:#2563eb;background:#dbeafe;border-radius:999px;padding:2px 7px;">${recentText}</span>` : '';
+            btn.innerHTML = `
+                <span style="flex-shrink:0;width:54px;text-align:center;border-radius:12px;background:#1d4ed8;color:#fff;font-size:12px;font-weight:900;padding:8px 0;">ROOM ${kacStudentEsc(item.room)}</span>
+                <span style="min-width:0;flex:1;">
+                    <span style="display:block;font-size:14px;font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${kacStudentEsc(item.courseName)}${badge}</span>
+                    <span style="display:block;margin-top:3px;font-size:11px;color:#64748b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${kacStudentEsc(item.period || periodEmptyText)}</span>
+                </span>`;
+            btn.onclick = () => {
+                localStorage.setItem('kac_last_visited_room', item.room);
+                overlay.remove();
+                resolve(item.room);
+            };
+            list.appendChild(btn);
+        });
+    });
+}
+
+function markCurrentRoomRemoved() {
+    if (!currentRoom) return;
+    const token = localStorage.getItem('uToken') || 'removed';
+    localStorage.setItem(`kac_removed_room_${currentRoom}`, token);
+}
+
 (async function init() {
     // [PWA 제거] Safari 권장/인앱 브라우저 안내 레이어는 요청에 따라 비활성화됨.
 
@@ -1260,7 +1365,16 @@ async function resolveRoomFromCode(code) {
         showLoader('QR 코드를 확인하는 중입니다...');
         currentRoom = await resolveRoomFromCode(code);
     } else if (!isCheckIn) {
-        currentRoom = localStorage.getItem('kac_last_visited_room') || null;
+        const myRooms = await findMyRegisteredRooms();
+        if (myRooms.length > 1) {
+            hideLoader();
+            currentRoom = await showRegisteredRoomPicker(myRooms);
+            showLoader('媛뺤쓽???뺣낫瑜?遺덈윭?ㅻ뒗 以묒엯?덈떎...');
+        } else if (myRooms.length === 1) {
+            currentRoom = myRooms[0].room;
+        } else {
+            currentRoom = localStorage.getItem('kac_last_visited_room') || null;
+        }
     }
 
     // [홈화면(PWA) 실행 대응] standalone(설치앱)으로 실행하면 start_url(index.html)만 열려
@@ -1650,7 +1764,8 @@ function startPresence() {
             // 방 이동 중에는 작동하지 않도록 체크함
             const lastRoom = localStorage.getItem('kac_last_visited_room');
             if (lastRoom === currentRoom) {
-                localStorage.removeItem('uToken');
+                localStorage.removeItem('kac_last_visited_room');
+                markCurrentRoomRemoved();
                 showKacAlert("사용자 정보가 변경되어 초기화합니다.", function(){ location.reload(); });
             }
         }
@@ -1667,7 +1782,10 @@ function startPresence() {
                 if (myLocalKey && myLocalKey !== serverResetKey) {
                     // 초기화 이후의 재접속 → 재등록 금지 + 로컬 세션 소거
                     myRef.off();
-                    localStorage.removeItem('uToken');
+                    if (localStorage.getItem('kac_last_visited_room') === currentRoom) {
+                        localStorage.removeItem('kac_last_visited_room');
+                        markCurrentRoomRemoved();
+                    }
                     localStorage.removeItem(`kac_resetKey_${currentRoom}`);
                     return;
                 }
@@ -1792,7 +1910,11 @@ function setupListeners() {
         if (!myLocalKey) {
             localStorage.setItem(`kac_resetKey_${currentRoom}`, serverResetKey);
         } else if (myLocalKey !== serverResetKey) {
-            localStorage.clear();
+            localStorage.removeItem(`kac_resetKey_${currentRoom}`);
+            if (localStorage.getItem('kac_last_visited_room') === currentRoom) {
+                localStorage.removeItem('kac_last_visited_room');
+                markCurrentRoomRemoved();
+            }
             showKacAlert("강의실 정보가 초기화되었습니다.", function(){ location.reload(); });
             return;
         }
@@ -1802,7 +1924,10 @@ function setupListeners() {
         if (uToken && st.roomStatus === 'active') {
             firebase.database().ref(`courses/${currentRoom}/students/${uToken}`).once('value', sSnap => {
                 if (document.getElementById('mainApp').style.display === 'flex' && !sSnap.exists()) {
-                    localStorage.removeItem('uToken');
+                    if (localStorage.getItem('kac_last_visited_room') === currentRoom) {
+                        localStorage.removeItem('kac_last_visited_room');
+                        markCurrentRoomRemoved();
+                    }
                     showKacAlert("정보가 갱신되었거나 삭제되었습니다.", function(){ location.reload(); });
                 }
             });
@@ -3247,6 +3372,7 @@ async function saveProfile() {
         localStorage.setItem('kac_last_visited_room', currentRoom);
         localStorage.setItem('kac_last_visited_name', name);
         localStorage.setItem('kac_last_visited_phone', phone);
+        localStorage.removeItem(`kac_removed_room_${currentRoom}`);
 
         await firebase.database().ref(`courses/${currentRoom}/students/${newUToken}`).update({
             name: name,
@@ -3299,6 +3425,13 @@ async function checkProfile() {
             // [추가] 이 브라우저에 유효한 프로필(localStorage)이 있는데 이 방의 등록 기록만 없는 경우
             //  (예: 카카오 오픈톡방을 다녀와 재진입했을 때) → 재입력 팝업 없이 자동 재등록 후 바로 입장.
             if (isValidProfile()) {
+                if (localStorage.getItem(`kac_removed_room_${currentRoom}`) === uToken) {
+                    showKacAlert("현재 과정에서는 등록 정보가 삭제되었습니다. 다시 입장하려면 이름과 사번을 새로 입력해 주세요.");
+                    document.getElementById('userName').value = "";
+                    document.getElementById('userPhone').value = "";
+                    document.getElementById('profileOverlay').style.display = 'flex';
+                    return;
+                }
                 const _name  = (localStorage.getItem('kac_user_name')  || '').trim();
                 const _phone = (localStorage.getItem('kac_user_phone') || '').trim();
                 await firebase.database().ref(`courses/${currentRoom}/students/${uToken}`).update({

@@ -1280,11 +1280,34 @@ toggleLeader: function(token, currentName) {
                         }
                     });
 
-                    // [C] 서버에 최종 명령 전송
-                    firebase.database().ref().update(updates).then(() => {
-                        ui.showAlert(`✅ [${targetName}]님의 모든 데이터가 정상적으로 삭제되었습니다.`);
-                    }).catch(e => {
-                        ui.showAlert("삭제 실패: " + e.message);
+                    firebase.database().ref(`${rPath}/expectedStudents`).once('value', expSnap => {
+                        const expected = expSnap.val();
+                        const normName = v => String(v || '').trim();
+                        const normPhone = v => String(v || '').replace(/\D/g, '');
+                        const samePhone = (a, b) => {
+                            const aa = normPhone(a), bb = normPhone(b);
+                            if (!aa || !bb) return true;
+                            return aa === bb || aa.slice(-4) === bb || aa.slice(-5) === bb || bb.slice(-4) === aa || bb.slice(-5) === aa;
+                        };
+                        const removeIfMatch = (key, item) => {
+                            const itemName = typeof item === 'string' ? item : (item?.name || '');
+                            const itemPhone = typeof item === 'string' ? '' : (item?.phone || item?.empNo || '');
+                            if (normName(itemName) === normName(targetName) && samePhone(itemPhone, targetPhone)) {
+                                updates[`${rPath}/expectedStudents/${key}`] = null;
+                            }
+                        };
+                        if (Array.isArray(expected)) {
+                            expected.forEach((item, idx) => removeIfMatch(idx, item));
+                        } else if (expected && typeof expected === 'object') {
+                            Object.keys(expected).forEach(key => removeIfMatch(key, expected[key]));
+                        }
+
+                        // [C] 서버에 최종 명령 전송
+                        firebase.database().ref().update(updates).then(() => {
+                            ui.showAlert(`✅ [${targetName}]님의 모든 데이터가 정상적으로 삭제되었습니다.`);
+                        }).catch(e => {
+                            ui.showAlert("삭제 실패: " + e.message);
+                        });
                     });
                 });
             }
