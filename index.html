@@ -706,6 +706,20 @@
     </div>
 </div>
 
+<!-- [강의 안내 보드] 교육생 1회 확인 팝업 -->
+<div id="lectureBoardOverlay" class="menu-overlay" style="display:none; z-index:9550; align-items:center; justify-content:center; padding:20px;" onclick="if(event.target==this)confirmLectureBoardNotice()">
+    <div class="menu-box" style="width:100%; max-width:420px; padding:0; border-radius:20px; overflow:hidden;">
+        <div style="background:linear-gradient(135deg,#7c3aed,#a855f7); padding:16px 20px; display:flex; align-items:center; gap:9px;">
+            <i class="fa-solid fa-chalkboard" style="color:#fff; font-size:17px;"></i>
+            <span style="color:#fff; font-weight:900; font-size:15px;">강의 안내 보드</span>
+        </div>
+        <div style="padding:20px;">
+            <div id="lectureBoardBody" style="max-height:46vh; overflow:auto; padding:16px; background:#f8fafc; border:1.5px solid #e2e8f0; border-radius:14px; color:#0f172a; font-size:15px; line-height:1.65; word-break:keep-all;"></div>
+            <button onclick="confirmLectureBoardNotice()" style="width:100%; margin-top:16px; padding:15px; background:#7c3aed; color:#fff; border:none; border-radius:13px; font-size:16px; font-weight:900; cursor:pointer;">확인</button>
+        </div>
+    </div>
+</div>
+
 <div id="tabletLoanModal" class="menu-overlay" style="display:none; z-index:8500;" onclick="if(event.target==this)closeTabletLoan()">
     <div class="menu-box" style="width:92%; max-width:380px; padding:28px; border-radius:24px;">
         <h3 style="margin-bottom:16px; font-weight:900; color:#1e293b; text-align:center;">
@@ -1244,111 +1258,6 @@ async function resolveRoomFromCode(code) {
 }
 
 // [수정] index.html의 최하단 (async function init() { ... })
-function kacStudentNormPhone(v) {
-    return String(v || '').replace(/\D/g, '');
-}
-
-function kacStudentSamePhone(a, b) {
-    const aa = kacStudentNormPhone(a);
-    const bb = kacStudentNormPhone(b);
-    if (!aa || !bb) return false;
-    return aa === bb || aa.slice(-4) === bb || aa.slice(-5) === bb || bb.slice(-4) === aa || bb.slice(-5) === aa;
-}
-
-function kacStudentEsc(v) {
-    return String(v == null ? '' : v).replace(/[&<>"']/g, function(m) {
-        return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'})[m];
-    });
-}
-
-async function findMyRegisteredRooms() {
-    const token = (localStorage.getItem('uToken') || '').trim();
-    const name = (localStorage.getItem('kac_user_name') || localStorage.getItem('kac_last_visited_name') || '').trim();
-    const phone = (localStorage.getItem('kac_user_phone') || localStorage.getItem('kac_last_visited_phone') || '').trim();
-    if (!token && (!name || !phone)) return [];
-
-    try {
-        const snap = await firebase.database().ref('courses').once('value');
-        const courses = snap.val() || {};
-        const found = [];
-        Object.keys(courses).forEach(room => {
-            const c = courses[room] || {};
-            const students = c.students || {};
-            let matched = token && students[token];
-            if (!matched && name && phone) {
-                matched = Object.values(students).find(s => {
-                    if (!s || !s.name) return false;
-                    return String(s.name).trim() === name && kacStudentSamePhone(s.phone, phone);
-                });
-            }
-            if (!matched) return;
-            found.push({
-                room,
-                courseName: c.settings?.courseName || `Room ${room}`,
-                period: c.settings?.period || '',
-                active: c.status?.roomStatus === 'active'
-            });
-        });
-        found.sort((a, b) => {
-            if (a.active !== b.active) return a.active ? -1 : 1;
-            return String(a.room).localeCompare(String(b.room));
-        });
-        return found;
-    } catch (e) {
-        console.error('findMyRegisteredRooms error:', e);
-        return [];
-    }
-}
-
-function showRegisteredRoomPicker(rooms) {
-    return new Promise(resolve => {
-        const old = document.getElementById('registeredRoomPicker');
-        if (old) old.remove();
-
-        const overlay = document.createElement('div');
-        overlay.id = 'registeredRoomPicker';
-        overlay.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,0.62);z-index:12000;display:flex;align-items:center;justify-content:center;padding:20px;font-family:Pretendard,sans-serif;';
-        const lastRoom = localStorage.getItem('kac_last_visited_room') || '';
-        const titleText = '\uC785\uC7A5\uD560 \uACFC\uC815\uC744 \uC120\uD0DD\uD558\uC138\uC694';
-        const descText = '\uB3D9\uC77C\uD55C \uC815\uBCF4\uB85C \uC5EC\uB7EC \uACFC\uC815\uC5D0 \uB4F1\uB85D\uB418\uC5B4 \uC788\uC2B5\uB2C8\uB2E4.';
-        const periodEmptyText = '\uAD50\uC721\uAE30\uAC04 \uBBF8\uC124\uC815';
-        const recentText = '\uCD5C\uADFC';
-        overlay.innerHTML = `
-            <div style="width:100%;max-width:430px;background:#fff;border-radius:22px;padding:24px;box-shadow:0 20px 45px rgba(15,23,42,0.25);">
-                <div style="font-size:19px;font-weight:900;color:#0f172a;margin-bottom:8px;">${titleText}</div>
-                <div style="font-size:13px;line-height:1.55;color:#64748b;margin-bottom:18px;">${descText}</div>
-                <div id="registeredRoomPickerList" style="display:flex;flex-direction:column;gap:10px;"></div>
-            </div>`;
-        document.body.appendChild(overlay);
-
-        const list = overlay.querySelector('#registeredRoomPickerList');
-        rooms.forEach(item => {
-            const btn = document.createElement('button');
-            btn.type = 'button';
-            btn.style.cssText = 'width:100%;border:1.5px solid #dbeafe;background:#f8fbff;border-radius:14px;padding:13px 14px;text-align:left;cursor:pointer;display:flex;gap:12px;align-items:center;color:#0f172a;';
-            const badge = item.room === lastRoom ? `<span style="margin-left:6px;font-size:10px;font-weight:900;color:#2563eb;background:#dbeafe;border-radius:999px;padding:2px 7px;">${recentText}</span>` : '';
-            btn.innerHTML = `
-                <span style="flex-shrink:0;width:54px;text-align:center;border-radius:12px;background:#1d4ed8;color:#fff;font-size:12px;font-weight:900;padding:8px 0;">ROOM ${kacStudentEsc(item.room)}</span>
-                <span style="min-width:0;flex:1;">
-                    <span style="display:block;font-size:14px;font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${kacStudentEsc(item.courseName)}${badge}</span>
-                    <span style="display:block;margin-top:3px;font-size:11px;color:#64748b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${kacStudentEsc(item.period || periodEmptyText)}</span>
-                </span>`;
-            btn.onclick = () => {
-                localStorage.setItem('kac_last_visited_room', item.room);
-                overlay.remove();
-                resolve(item.room);
-            };
-            list.appendChild(btn);
-        });
-    });
-}
-
-function markCurrentRoomRemoved() {
-    if (!currentRoom) return;
-    const token = localStorage.getItem('uToken') || 'removed';
-    localStorage.setItem(`kac_removed_room_${currentRoom}`, token);
-}
-
 (async function init() {
     // [PWA 제거] Safari 권장/인앱 브라우저 안내 레이어는 요청에 따라 비활성화됨.
 
@@ -1365,16 +1274,7 @@ function markCurrentRoomRemoved() {
         showLoader('QR 코드를 확인하는 중입니다...');
         currentRoom = await resolveRoomFromCode(code);
     } else if (!isCheckIn) {
-        const myRooms = await findMyRegisteredRooms();
-        if (myRooms.length > 1) {
-            hideLoader();
-            currentRoom = await showRegisteredRoomPicker(myRooms);
-            showLoader('媛뺤쓽???뺣낫瑜?遺덈윭?ㅻ뒗 以묒엯?덈떎...');
-        } else if (myRooms.length === 1) {
-            currentRoom = myRooms[0].room;
-        } else {
-            currentRoom = localStorage.getItem('kac_last_visited_room') || null;
-        }
+        currentRoom = localStorage.getItem('kac_last_visited_room') || null;
     }
 
     // [홈화면(PWA) 실행 대응] standalone(설치앱)으로 실행하면 start_url(index.html)만 열려
@@ -1411,7 +1311,8 @@ function markCurrentRoomRemoved() {
         status: db.ref(`${rPath}/status`),
         connections: db.ref(`${rPath}/connections`),
         survey: db.ref(`${rPath}/activeSurvey`),
-        surveyAns: db.ref(`${rPath}/surveyAnswers`)
+        surveyAns: db.ref(`${rPath}/surveyAnswers`),
+        boardNotice: db.ref(`${rPath}/boardNotice`)
     };
 
     // 강의실 기본 설정 로드 후 스피너 해제
@@ -1589,15 +1490,11 @@ function openMainMenu() {
     //  students[token] = {name, empNo, dept, gender, course, room, roomId, building, floor, no}
     //  교육생은 본인 이름(+가능하면 사번)으로 매칭한다.
     const dormAssignmentsRef = firebase.database().ref(`system/dorm/assignments`);
-    const normDormName = v => String(v || '').replace(/\s+/g, '').trim();
-    const normDormId = v => String(v || '').replace(/\D/g, '').trim();
-    const myId = normDormId(myPhone);
-    const currentCourseName = (document.getElementById('roomTitle')?.innerText || '').trim();
 
     dormAssignmentsRef.on('value', snap => {
         const allWeeks = snap.val() || {};
         let found = null;
-        let foundScore = -1;
+        let foundAt = 0;
 
         // 모든 주차를 훑어 이름이 일치하는 최신 배정을 찾는다
         Object.values(allWeeks).forEach(wk => {
@@ -1605,16 +1502,9 @@ function openMainMenu() {
             const when = wk && wk.assignedAt ? wk.assignedAt : 0;
             Object.values(students).forEach(s => {
                 if (!s || !s.name) return;
-                if (normDormName(s.name) === normDormName(myName)) {
-                    const sid = normDormId(s.empNo || s.phone || '');
-                    const idMatch = myId && sid && (myId === sid || myId.slice(-4) === sid || sid.slice(-4) === myId);
-                    if (myId && sid && !idMatch) return;
-                    let score = Number(when || 0);
-                    if (idMatch) score += 10000000000000;
-                    if (String(s.room || '') === String(currentRoom || '')) score += 1000000000000;
-                    if (currentCourseName && String(s.course || '').trim() === currentCourseName) score += 100000000000;
+                if (s.name.trim() === myName) {
                     // 더 최근 배정을 우선
-                    if (score >= foundScore) { found = s; foundScore = score; }
+                    if (when >= foundAt) { found = s; foundAt = when; }
                 }
             });
         });
@@ -1625,7 +1515,7 @@ function openMainMenu() {
             dormTextEl.style.color = "#3b82f6";
             dormTextEl.style.fontWeight = "900";
         } else {
-            dormTextEl.innerText = "생활관 미배정";
+            dormTextEl.innerText = "생활관 배정 정보 확인 중...";
             dormTextEl.style.color = "#94a3b8";
         }
     });
@@ -1775,8 +1665,7 @@ function startPresence() {
             // 방 이동 중에는 작동하지 않도록 체크함
             const lastRoom = localStorage.getItem('kac_last_visited_room');
             if (lastRoom === currentRoom) {
-                localStorage.removeItem('kac_last_visited_room');
-                markCurrentRoomRemoved();
+                localStorage.removeItem('uToken');
                 showKacAlert("사용자 정보가 변경되어 초기화합니다.", function(){ location.reload(); });
             }
         }
@@ -1793,10 +1682,7 @@ function startPresence() {
                 if (myLocalKey && myLocalKey !== serverResetKey) {
                     // 초기화 이후의 재접속 → 재등록 금지 + 로컬 세션 소거
                     myRef.off();
-                    if (localStorage.getItem('kac_last_visited_room') === currentRoom) {
-                        localStorage.removeItem('kac_last_visited_room');
-                        markCurrentRoomRemoved();
-                    }
+                    localStorage.removeItem('uToken');
                     localStorage.removeItem(`kac_resetKey_${currentRoom}`);
                     return;
                 }
@@ -1921,11 +1807,7 @@ function setupListeners() {
         if (!myLocalKey) {
             localStorage.setItem(`kac_resetKey_${currentRoom}`, serverResetKey);
         } else if (myLocalKey !== serverResetKey) {
-            localStorage.removeItem(`kac_resetKey_${currentRoom}`);
-            if (localStorage.getItem('kac_last_visited_room') === currentRoom) {
-                localStorage.removeItem('kac_last_visited_room');
-                markCurrentRoomRemoved();
-            }
+            localStorage.clear();
             showKacAlert("강의실 정보가 초기화되었습니다.", function(){ location.reload(); });
             return;
         }
@@ -1935,10 +1817,7 @@ function setupListeners() {
         if (uToken && st.roomStatus === 'active') {
             firebase.database().ref(`courses/${currentRoom}/students/${uToken}`).once('value', sSnap => {
                 if (document.getElementById('mainApp').style.display === 'flex' && !sSnap.exists()) {
-                    if (localStorage.getItem('kac_last_visited_room') === currentRoom) {
-                        localStorage.removeItem('kac_last_visited_room');
-                        markCurrentRoomRemoved();
-                    }
+                    localStorage.removeItem('uToken');
                     showKacAlert("정보가 갱신되었거나 삭제되었습니다.", function(){ location.reload(); });
                 }
             });
@@ -2077,11 +1956,75 @@ function setupListeners() {
             handleSurveyUpdate();
         });
     }
+    if (dbRef.boardNotice) {
+        dbRef.boardNotice.off();
+        dbRef.boardNotice.on('value', s => {
+            handleLectureBoardUpdate(s.val());
+        });
+    }
 }
 
 // ════════ 즉석 설문 (교육생) ════════
 let activeSurveyData = null;
 let mySurveyChoice = null;
+let activeLectureBoardNotice = null;
+
+function lectureBoardNoticeKey(notice) {
+    if (!notice) return null;
+    const html = typeof notice === 'object' ? (notice.html || '') : String(notice || '');
+    if (!html.trim()) return null;
+    const version = (typeof notice === 'object' && notice.updatedAt) ? notice.updatedAt : _simpleLectureHash(html);
+    return 'kac_board_notice_done_' + currentRoom + '_' + version;
+}
+
+function _simpleLectureHash(text) {
+    let h = 0;
+    for (let i = 0; i < text.length; i++) h = ((h << 5) - h + text.charCodeAt(i)) | 0;
+    return String(Math.abs(h));
+}
+
+function normalizeLectureBoardHtml(html) {
+    const wrap = document.createElement('div');
+    wrap.innerHTML = html || '';
+    wrap.querySelectorAll('script,style,iframe,object,embed').forEach(el => el.remove());
+    wrap.querySelectorAll('*').forEach(el => {
+        el.removeAttribute('size');
+        if (el.style) {
+            el.style.fontSize = '';
+            el.style.lineHeight = '';
+            el.style.width = '';
+            el.style.height = '';
+            el.style.maxWidth = '100%';
+        }
+    });
+    return wrap.innerHTML;
+}
+
+function handleLectureBoardUpdate(notice) {
+    const html = typeof notice === 'object' ? (notice.html || '') : String(notice || '');
+    if (!html.trim()) {
+        activeLectureBoardNotice = null;
+        const overlay = document.getElementById('lectureBoardOverlay');
+        if (overlay) overlay.style.display = 'none';
+        return;
+    }
+    activeLectureBoardNotice = notice;
+    const key = lectureBoardNoticeKey(notice);
+    if (key && localStorage.getItem(key)) return;
+    const body = document.getElementById('lectureBoardBody');
+    if (body) body.innerHTML = normalizeLectureBoardHtml(html);
+    const overlay = document.getElementById('lectureBoardOverlay');
+    if (overlay) overlay.style.display = 'flex';
+}
+
+function confirmLectureBoardNotice() {
+    const key = lectureBoardNoticeKey(activeLectureBoardNotice);
+    if (key) {
+        try { localStorage.setItem(key, '1'); } catch(e) {}
+    }
+    const overlay = document.getElementById('lectureBoardOverlay');
+    if (overlay) overlay.style.display = 'none';
+}
 
 function surveyDoneKey() {
     const sv = activeSurveyData;
@@ -3380,10 +3323,6 @@ async function saveProfile() {
         localStorage.setItem('kac_user_name', name);
         localStorage.setItem('kac_user_phone', phone);
         localStorage.setItem('uToken', newUToken);
-        localStorage.setItem('kac_last_visited_room', currentRoom);
-        localStorage.setItem('kac_last_visited_name', name);
-        localStorage.setItem('kac_last_visited_phone', phone);
-        localStorage.removeItem(`kac_removed_room_${currentRoom}`);
 
         await firebase.database().ref(`courses/${currentRoom}/students/${newUToken}`).update({
             name: name,
@@ -3436,13 +3375,6 @@ async function checkProfile() {
             // [추가] 이 브라우저에 유효한 프로필(localStorage)이 있는데 이 방의 등록 기록만 없는 경우
             //  (예: 카카오 오픈톡방을 다녀와 재진입했을 때) → 재입력 팝업 없이 자동 재등록 후 바로 입장.
             if (isValidProfile()) {
-                if (localStorage.getItem(`kac_removed_room_${currentRoom}`) === uToken) {
-                    showKacAlert("현재 과정에서는 등록 정보가 삭제되었습니다. 다시 입장하려면 이름과 사번을 새로 입력해 주세요.");
-                    document.getElementById('userName').value = "";
-                    document.getElementById('userPhone').value = "";
-                    document.getElementById('profileOverlay').style.display = 'flex';
-                    return;
-                }
                 const _name  = (localStorage.getItem('kac_user_name')  || '').trim();
                 const _phone = (localStorage.getItem('kac_user_phone') || '').trim();
                 await firebase.database().ref(`courses/${currentRoom}/students/${uToken}`).update({
@@ -3538,7 +3470,7 @@ async function viewMealMenu() {
 
 
 
-// [수정] 공지사항 불러오기: 센터 공지 + 코디네이터 공지 + 강사 공지 3종 통합
+// 공지사항 불러오기: 센터 공지 + 운영부 공지
 async function openNotice() {
     document.getElementById('menuModal').style.display = 'none';
     const container = document.getElementById('noticeContainer');
@@ -3555,10 +3487,6 @@ async function openNotice() {
         const coordSnap = await firebase.database().ref(`courses/${currentRoom}/coordNotice`).once('value');
         const coordVal = coordSnap.val();
 
-        // 3. 강사 과정 공지 (courses/방ID/notice)
-        const instSnap = await firebase.database().ref(`courses/${currentRoom}/notice`).once('value');
-        const instVal = instSnap.val();
-
         let html = "";
         
         // (1) 센터 전체 공지 표시
@@ -3569,11 +3497,6 @@ async function openNotice() {
         // (2) 코디네이터 과정 공지 표시
         if (coordVal) {
             html += `<div class="notice-card"><span class="notice-tag tag-coord">교육 운영부 공지</span><div class="notice-body">${coordVal}</div></div>`;
-        }
-
-        // (3) 강사 과정 공지 표시
-        if (instVal) {
-            html += `<div class="notice-card"><span class="notice-tag tag-course">우리 과정 공지 (강사)</span><div class="notice-body">${instVal}</div></div>`;
         }
 
         container.innerHTML = html || "<div style='text-align:center; padding:30px; color:#94a3b8;'>현재 등록된 공지사항이 없습니다.</div>";
@@ -3868,9 +3791,8 @@ async function updateMiniNotice() {
     const textEl = document.getElementById('miniNoticeText');
     if(!bar || !textEl) return;
 
-    // 세 군데 공지 데이터를 한 번에 가져옴
-    const [instSnap, coordSnap, globalSnap] = await Promise.all([
-        firebase.database().ref(`courses/${currentRoom}/notice`).once('value'),
+    // 운영부/센터 공지 데이터를 한 번에 가져옴
+    const [coordSnap, globalSnap] = await Promise.all([
         firebase.database().ref(`courses/${currentRoom}/coordNotice`).once('value'),
         firebase.database().ref('system/globalNotice').once('value')
     ]);
@@ -3878,13 +3800,11 @@ async function updateMiniNotice() {
     // 텍스트 정제 함수 (태그 제거 및 줄바꿈 정리)
     const clean = (txt) => txt ? txt.replace(/<[^>]*>?/gm, '').replace(/\n/g, ' ').trim() : "";
 
-    const t_inst   = clean(instSnap.val());   // 담임 강사 공지
     const t_coord  = clean(coordSnap.val());  // 운영부
     const t_global = clean(globalSnap.val()); // 센터
 
     // 내용이 있는 공지만 모아서 합침
     const combinedParts = [];
-    if (t_inst)   combinedParts.push(`📢 [우리과정] ${t_inst}`);
     if (t_coord)  combinedParts.push(`🔔 [운영부] ${t_coord}`);
     if (t_global) combinedParts.push(`🏢 [센터공지] ${t_global}`);
 
@@ -3895,15 +3815,7 @@ async function updateMiniNotice() {
         return;
     }
 
-    // 강사 공지가 이전에 닫은 내용과 달라지면 lastClosedNotice 초기화 → 강제 재노출
     const lastClosed     = localStorage.getItem('lastClosedNotice') || "";
-    const lastInstClosed = localStorage.getItem('lastClosedInst')   || "";
-
-    if (t_inst && t_inst !== lastInstClosed) {
-        // 강사가 공지를 새로 업데이트 → 무조건 표시, 이전 닫음 기록 무효화
-        localStorage.removeItem('lastClosedNotice');
-        localStorage.setItem('lastClosedInst', t_inst);
-    }
 
     const updatedLastClosed = localStorage.getItem('lastClosedNotice') || "";
     if (updatedLastClosed !== finalNoticeText) {
@@ -3922,7 +3834,6 @@ function closeMiniNotice() {
 
 function watchNotices() {
     if(!currentRoom) return;
-    firebase.database().ref(`courses/${currentRoom}/notice`).on('value', updateMiniNotice);
     firebase.database().ref(`courses/${currentRoom}/coordNotice`).on('value', updateMiniNotice);
     firebase.database().ref('system/globalNotice').on('value', updateMiniNotice);
 }

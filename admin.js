@@ -149,17 +149,6 @@ logout: async function() {
 
 // --- 2. Data & Room Logic ---
 const dataMgr = {
-saveInstructorNoticeMain: function() {
-        // [옵저버 제한]
-        if(state.isObserver) return ui.showAlert("👁️ 옵저버 모드에서는 공지사항을 수정할 수 없습니다.");
-        
-        if(!state.room) return;
-        const msg = document.getElementById('instNoticeInputMain').value;
-        firebase.database().ref(`courses/${state.room}/notice`).set(msg).then(() => {
-            ui.showAlert("✅ 강사 공지사항이 교육생에게 게시되었습니다.");
-        });
-    },
-
     // ── 강의 안내 보드 저장/불러오기 ──
     saveBoardNotice: function() {
         if(state.isObserver) return ui.showAlert("👁️ 옵저버 모드에서는 수정할 수 없습니다.");
@@ -167,12 +156,16 @@ saveInstructorNoticeMain: function() {
         const editor = document.getElementById('boardEditor');
         if(!editor) return;
         const html = editor.innerHTML;
-        firebase.database().ref(`courses/${state.room}/boardNotice`).set(html).then(() => {
+        const payload = {
+            html,
+            updatedAt: firebase.database.ServerValue.TIMESTAMP
+        };
+        firebase.database().ref(`courses/${state.room}/boardNotice`).set(payload).then(() => {
             const now = new Date();
             const ts = `${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}`;
             const el = document.getElementById('boardLastSaved');
             if(el) el.textContent = `오늘 ${ts}`;
-            ui.showAlert("✅ 강의 안내 보드가 저장되었습니다.");
+            ui.showAlert("✅ 강의 안내 보드가 저장되어 교육생 앱에 게시되었습니다.");
         });
     },
 
@@ -187,10 +180,11 @@ saveInstructorNoticeMain: function() {
             const editor = document.getElementById('boardEditor');
             if(!editor) return;
             const val = snap.val();
+            const html = (val && typeof val === 'object') ? (val.html || '') : (val || '');
             // [버그수정] 값이 없으면 반드시 비운다 — 이전 방 공지가 새 방에 남아 보이던 문제 해결
-            editor.innerHTML = val || "";
+            editor.innerHTML = html || "";
             const el = document.getElementById('boardLastSaved');
-            if(el) el.textContent = val ? '저장된 내용 불러옴' : '';
+            if(el) el.textContent = html ? '저장된 내용 불러옴' : '';
         });
     },
 
@@ -1181,23 +1175,6 @@ _executeReset: function() {
         ui.showAlert("초기화 실패: " + err.message);
     });
 },
-
-// [추가] 공지사항 관리창 열기
-    openNoticeManage: async function() {
-        if(!state.room) return ui.showAlert("강의실을 선택하세요.");
-        const snap = await firebase.database().ref(`courses/${state.room}/notice`).once('value');
-        document.getElementById('instNoticeInput').value = snap.val() || ""; 
-        document.getElementById('noticeManageModal').style.display = 'flex';
-    },
-
-    // [추가] 강사 공지사항 저장
-    saveInstructorNotice: function() {
-        const msg = document.getElementById('instNoticeInput').value;
-        firebase.database().ref(`courses/${state.room}/notice`).set(msg).then(() => {
-            ui.showAlert("✅ 공지사항이 게시되었습니다.");
-            document.getElementById('noticeManageModal').style.display = 'none';
-        });
-    },
 
     // [추가] 출결 QR 보기
     openAttendanceQr: async function() {
@@ -2320,10 +2297,6 @@ updateQaCountBadge: function() {
     loadNoticeView: async function() {
         if(!state.room) return;
         
-        // 1. 좌측 영역: 강사 본인 공지
-        const snap = await firebase.database().ref(`courses/${state.room}/notice`).once('value');
-        document.getElementById('instNoticeInputMain').value = snap.val() || "";
-
         // 새 공지가 있으면 카드 하이라이트 (연두색 flash)
         const coordKey = `coord_${state.room}`;
         const globalKey = 'global';
@@ -2375,10 +2348,6 @@ updateQaCountBadge: function() {
     loadNoticeView: async function() {
         if(!state.room) return;
         
-        // 1. 강사 본인 공지 불러오기
-        const snap = await firebase.database().ref(`courses/${state.room}/notice`).once('value');
-        document.getElementById('instNoticeInputMain').value = snap.val() || "";
-
         // 새 공지 flash 예약
         setTimeout(() => ui._flashNewNotices(), 300);
 
