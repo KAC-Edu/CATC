@@ -2014,8 +2014,11 @@
                             updatedAt: firebase.database.ServerValue.TIMESTAMP
                         };
                         try {
-                            await db.ref(`courses/${selectedCourse.room}/schedule`).set(schedulePayload);
-                            scheduleSynced = true;
+                            const mirrors = await Promise.allSettled([
+                                db.ref(`courses/${selectedCourse.room}/settings/schedule`).set(schedulePayload),
+                                db.ref(`courses/${selectedCourse.room}/schedule`).set(schedulePayload)
+                            ]);
+                            scheduleSynced = mirrors.some(r => r.status === 'fulfilled');
                         } catch (scheduleErr) {
                             console.warn('[교육시간표] 강사플랫폼 미러 저장 실패, rosters 저장값으로 대체 표시 예정:', scheduleErr);
                         }

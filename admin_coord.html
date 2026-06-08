@@ -6581,15 +6581,19 @@ async function coordSaveRoster() {
     let scheduleSynced = false;
     if (_coordScheduleData && currentRID) {
         try {
-            await firebase.database().ref(`courses/${currentRID}/schedule`).set({
+            const schedulePayload = {
                 courseName: settings.courseName || '',
                 period: settings.period || '',
                 source: _coordScheduleData.fileName || '',
                 lines: _coordScheduleData.lines || [],
                 text: _coordScheduleData.text || '',
                 updatedAt: firebase.database.ServerValue.TIMESTAMP
-            });
-            scheduleSynced = true;
+            };
+            const mirrors = await Promise.allSettled([
+                firebase.database().ref(`courses/${currentRID}/settings/schedule`).set(schedulePayload),
+                firebase.database().ref(`courses/${currentRID}/schedule`).set(schedulePayload)
+            ]);
+            scheduleSynced = mirrors.some(r => r.status === 'fulfilled');
         } catch (e) {
             console.warn('[교육운영부 시간표] 강사플랫폼 미러 저장 실패:', e);
         }

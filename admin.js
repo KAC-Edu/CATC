@@ -5728,15 +5728,32 @@ const scheduleMgr = {
         try {
             const settingsSnap = await firebase.database().ref(`courses/${state.room}/settings`).once('value');
             const settings = settingsSnap.val() || {};
-            const snap = await firebase.database().ref(`courses/${state.room}/schedule`).once('value');
-            let data = snap.val() || {};
+            let data = settings.schedule || {};
+            if (!(Array.isArray(data.lines) && data.lines.length) && !data.text) {
+                try {
+                    const snap = await firebase.database().ref(`courses/${state.room}/schedule`).once('value');
+                    data = snap.val() || {};
+                } catch (courseScheduleErr) {
+                    console.warn('[교육시간표] courses schedule 읽기 실패:', courseScheduleErr);
+                }
+            }
             let lines = Array.isArray(data.lines) ? data.lines : String(data.text || '').split(/[\n\r]+/).filter(Boolean);
 
             if (!lines.length) {
-                const rosterSnap = await firebase.database().ref('system/dorm/rosters').once('value');
-                const coordRosterSnap = await firebase.database().ref('system/coord/rosters').once('value');
-                const rosters = rosterSnap.val() || {};
-                const coordRosters = coordRosterSnap.val() || {};
+                let rosters = {};
+                let coordRosters = {};
+                try {
+                    const rosterSnap = await firebase.database().ref('system/dorm/rosters').once('value');
+                    rosters = rosterSnap.val() || {};
+                } catch (dormRosterErr) {
+                    console.warn('[교육시간표] 생활관 명단 저장소 읽기 실패:', dormRosterErr);
+                }
+                try {
+                    const coordRosterSnap = await firebase.database().ref('system/coord/rosters').once('value');
+                    coordRosters = coordRosterSnap.val() || {};
+                } catch (coordRosterErr) {
+                    console.warn('[교육시간표] 운영부 명단 저장소 읽기 실패:', coordRosterErr);
+                }
                 const norm = v => String(v || '').replace(/\s+/g, '').trim();
                 const dormCandidates = Object.values(rosters)
                     .filter(r => r && r.room === state.room && r.schedule)
