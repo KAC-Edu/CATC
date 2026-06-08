@@ -3073,6 +3073,16 @@ openQrModal: function() {
     closeQrModal: function() { 
         document.getElementById('qrModal').style.display = 'none'; 
     },
+
+    openStudentManual: function() {
+        const modal = document.getElementById('studentManualModal');
+        if (modal) modal.style.display = 'flex';
+    },
+
+    closeStudentManual: function() {
+        const modal = document.getElementById('studentManualModal');
+        if (modal) modal.style.display = 'none';
+    },
     
     copyLink: function() {
         const linkInput = document.getElementById('studentLink');

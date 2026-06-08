@@ -239,7 +239,7 @@
                 <div class="divider"></div>
                 <div class="setting-group">
                     <label class="setting-label">Student Link</label>
-                    <div class="qr-box"><div id="qrcode"></div><button class="btn-action btn-small btn-dark" id="btnCopyLink" onclick="ui.copyLink()"><i class="fa-solid fa-copy"></i> Copy</button><input type="text" id="studentLink" style="opacity:0;position:absolute;z-index:-1;"></div>
+                    <div class="qr-box"><div id="qrcode"></div><div class="qr-actions"><button class="btn-action btn-small btn-dark" id="btnCopyLink" onclick="ui.copyLink()"><i class="fa-solid fa-copy"></i> Copy</button><button class="btn-action btn-small btn-dark" id="btnStudentManual" onclick="ui.openStudentManual()"><i class="fa-solid fa-book-open"></i> Manual</button></div><input type="text" id="studentLink" style="opacity:0;position:absolute;z-index:-1;"></div>
                 </div>
             </div>
         </div>
@@ -318,6 +318,49 @@
 
 
 <!-- 디자인은 유지하되, 비밀번호 창과 겹치지 않게 우선순위(z-index)를 낮춘 버전 -->
+<div id="studentManualModal" class="modal-overlay student-manual-overlay" onclick="if(event.target===this) ui.closeStudentManual()">
+    <div class="student-manual-panel">
+        <div class="student-manual-top">
+            <div>
+                <div class="student-manual-eyebrow">STUDENT PLATFORM GUIDE</div>
+                <h2><i class="fa-solid fa-mobile-screen-button"></i> 교육생 플랫폼 사용법</h2>
+                <p>입교 안내 시 교육생에게 핵심 기능만 빠르게 설명하는 화면입니다.</p>
+            </div>
+            <button class="student-manual-close" onclick="ui.closeStudentManual()"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="student-manual-grid">
+            <section class="student-manual-card">
+                <div class="student-manual-icon kakao"><i class="fa-solid fa-comment"></i></div>
+                <h3>오픈톡방 이동</h3>
+                <p>교육생 메인 화면의 말풍선 아이콘을 누르면 과정 오픈톡방으로 이동합니다.</p>
+                <div class="student-manual-note">공지, 준비물, 질문 안내를 카카오 오픈톡방에서 확인합니다.</div>
+            </section>
+            <section class="student-manual-card">
+                <div class="student-manual-icon leave"><i class="fa-solid fa-person-walking-arrow-right"></i></div>
+                <h3>외출·외박 신청</h3>
+                <p>외출 또는 외박이 필요할 때 신청 메뉴에서 날짜, 시간, 사유를 입력합니다.</p>
+                <div class="student-manual-note">담당자가 확인할 수 있도록 정확한 복귀 시간을 입력합니다.</div>
+            </section>
+            <section class="student-manual-card">
+                <div class="student-manual-icon bus"><i class="fa-solid fa-bus"></i></div>
+                <h3>퇴교차량 신청</h3>
+                <p>퇴교 차량 수요조사 영역에서 이용할 차량 또는 터미널 이동 여부를 선택합니다.</p>
+                <div class="student-manual-note">실시간 집계되므로 변경이 있으면 다시 선택하면 됩니다.</div>
+            </section>
+            <section class="student-manual-card">
+                <div class="student-manual-icon qa"><i class="fa-solid fa-comments"></i></div>
+                <h3>Q&amp;A 사용</h3>
+                <p>수업 중 질문은 Q&amp;A 메뉴에 입력합니다. 강사가 확인 후 답변하거나 수업 중 다룹니다.</p>
+                <div class="student-manual-note">질문은 짧고 구체적으로 작성하면 확인이 쉽습니다.</div>
+            </section>
+        </div>
+        <div class="student-manual-footer">
+            <div><i class="fa-solid fa-circle-info"></i> 교육생은 QR 접속 후 이름과 사번을 입력하면 해당 과정 플랫폼으로 들어갑니다.</div>
+            <button onclick="ui.closeStudentManual()"><i class="fa-solid fa-check"></i> 안내 완료</button>
+        </div>
+    </div>
+</div>
+
 <div id="statusOverlay" class="status-overlay" style="z-index: 5000 !important; display:none;">
     <div class="lock-message">
         <i class="fa-solid fa-lock"></i>
