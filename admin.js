@@ -452,6 +452,7 @@ verifyTakeover: async function() {
                 roomStatus: 'active'
             });
             if (micConsent) {
+                lectureMonitor._consentRoomAsked = newRoom;
                 await lectureMonitor.requestMic();
             } else {
                 lectureMonitor._consentRoomAsked = newRoom;
