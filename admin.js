@@ -453,6 +453,7 @@ verifyTakeover: async function() {
             });
             if (micConsent) {
                 lectureMonitor._consentRoomAsked = newRoom;
+                lectureMonitor._rememberSessionConsent();
                 await lectureMonitor.requestMic();
             } else {
                 lectureMonitor._consentRoomAsked = newRoom;
@@ -713,6 +714,10 @@ forceEnterRoom: async function(room) {
     firebase.database().ref(`courses/${cleanRoom}/status`).off();
     firebase.database().ref(`courses/${cleanRoom}/settings`).off();
     firebase.database().ref(`courses/${cleanRoom}/boardNotice`).off(); // 안내 보드 리스너도 분리 (방 전환 시 잔류 방지)
+
+    if (lectureMonitor && lectureMonitor.currentRoom && lectureMonitor.currentRoom !== cleanRoom) {
+        lectureMonitor.stopMic(false);
+    }
 
     state.room = cleanRoom; 
     state.qaData = {};      
@@ -7094,6 +7099,12 @@ const lectureMonitor = {
         if (!el) return;
         el.style.display = 'none';
     },
+    _rememberSessionConsent: function() {
+        try { sessionStorage.setItem('kac_mic_monitor_consent', '1'); } catch (e) {}
+    },
+    _hasSessionConsent: function() {
+        try { return sessionStorage.getItem('kac_mic_monitor_consent') === '1'; } catch (e) { return false; }
+    },
 
     // status 구독 콜백에서 호출 — 방송 여부 결정
     syncStatus: function(room, statusData, isOwner, isActive) {
@@ -7110,10 +7121,17 @@ const lectureMonitor = {
             if (!this.hbTimer) this.hbTimer = setInterval(() => this._publishStatus(), 20000);
             this._updateToggleButton();
             // 마이크가 아직 없으면 '이 강의실' 모니터링 동의를 받음 (방마다 1회)
-            if (!this.micReady) this._askConsent(room);
+            if (!this.micReady) {
+                if (this._hasSessionConsent()) {
+                    this._consentRoomAsked = room;
+                    this.requestMic();
+                } else {
+                    this._askConsent(room);
+                }
+            }
         } else {
-            this._updateToggleButton();
-            if (this.currentRoom) this._teardownRoom();
+            if (this.currentRoom || this.stream || this.micReady) this.stopMic(false);
+            else this._updateToggleButton();
         }
     },
 
@@ -7134,6 +7152,7 @@ const lectureMonitor = {
     acceptConsent: async function() {
         const modal = document.getElementById('micConsentModal');
         if (modal) modal.style.display = 'none';
+        this._rememberSessionConsent();
         await this.requestMic();   // 동의 클릭(사용자 제스처) 직후 브라우저 권한 요청
     },
     dismissConsent: function() {
