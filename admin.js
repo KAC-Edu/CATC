@@ -1545,8 +1545,7 @@ const profMgr = {
                 bio: document.getElementById('pp-bio').value
             };
             firebase.database().ref(`system/professorProfiles/${name}`).set(profileData).then(() => {
-                ui.closeProfProfileModal();
-                setTimeout(() => ui.showAlert("✅ 담임 교수 프로필이 성공적으로 저장되었습니다."), 150);
+                ui.showAlert("✅ 담임 교수 프로필이 성공적으로 저장되었습니다.", () => ui.closeProfProfileModal());
             });
         };
 
@@ -2652,13 +2651,17 @@ loadInternalAttendance: function() {
 
 
 
-showAlert: function(msg) {
+showAlert: function(msg, onConfirm) {
         document.getElementById('customAlertText').innerText = msg;
         document.getElementById('customAlertModal').style.display = 'flex';
+        this._alertCallback = (typeof onConfirm === 'function') ? onConfirm : null;
     },
 
     closeAlert: function() {
         document.getElementById('customAlertModal').style.display = 'none';
+        const cb = this._alertCallback;
+        this._alertCallback = null;
+        if (cb) cb();
     },
 
 
