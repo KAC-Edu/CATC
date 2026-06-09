@@ -3472,10 +3472,11 @@
                 const intl = building === '국제교육동' ? ' fm-intl' : '';
                 return `<div class="fm-room dm-room${occ ? ' occ' : ''}${intl}" data-building="${building}" data-no="${cell.no}" style="grid-column:${cell.c};grid-row:${cell.r};">${head}<div class="fm-body">${body}</div></div>`;
             }
-            function facCell(cell) { return `<div class="fm-fac" style="grid-column:${cell.c};grid-row:${cell.r};">${cell.fac}</div>`; }
+            function facCell(cell) { const cls = cell.corridor ? 'fm-corridor' : 'fm-fac'; return `<div class="${cls}" style="grid-column:${cell.c};grid-row:${cell.r};">${cell.fac}</div>`; }
             function floor(building, fl) {
                 const inner = fl.cells.map(c => (c.fac !== undefined) ? facCell(c) : roomCell(building, c)).join('');
-                return `<div class="fm-floor-label">${fl.floor}</div><div class="fm-grid" style="grid-template-columns:repeat(${fl.cols},minmax(74px,1fr));">${inner}</div>`;
+                const rowsStyle = fl.rows ? `grid-template-rows:${fl.rows};` : '';
+                return `<div class="fm-floor-label">${fl.floor}</div><div class="fm-grid" style="grid-template-columns:repeat(${fl.cols},minmax(74px,1fr));${rowsStyle}">${inner}</div>`;
             }
             function bldg(building) {
                 const bar = DORM_BLDG_BAR[building] || '#0f2057';
@@ -4168,20 +4169,7 @@
             document.body.appendChild(f);
             const doc = f.contentWindow.document;
             doc.open();
-            doc.write(_docHead(fileName) + (extraCss || '') + bodyHtml + '
-        <!-- 자동배정 로딩 오버레이 -->
-        <div id="assignLoadingOverlay" style="display:none;position:fixed;inset:0;z-index:99999;background:rgba(15,23,42,0.72);align-items:center;justify-content:center;flex-direction:column;">
-            <div style="background:#fff;border-radius:20px;padding:36px 44px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,0.35);min-width:280px;">
-                <div style="font-size:48px;margin-bottom:14px;">🏨</div>
-                <div style="font-size:18px;font-weight:900;color:#0f172a;margin-bottom:8px;">자동 배정 중…</div>
-                <div style="font-size:14px;color:#64748b;margin-bottom:20px;" id="assignLoadingMsg">생활관 방을 배정하고 있습니다.</div>
-                <div style="width:200px;height:6px;background:#e2e8f0;border-radius:99px;margin:0 auto;overflow:hidden;">
-                    <div id="assignLoadingBar" style="height:100%;width:0%;background:linear-gradient(90deg,#2563eb,#7c3aed);border-radius:99px;transition:width .4s;"></div>
-                </div>
-            </div>
-        </div>
-
-</body></html>');
+            doc.write(_docHead(fileName) + (extraCss || '') + bodyHtml + '</body></html>');
             doc.close();
             const prevTitle = document.title;
             setTimeout(function () {
@@ -4211,53 +4199,58 @@
         // ── 한글 배정표 양식 (화면 편집기·PDF 공용) ──
         const DORM_FORM = {
                 '청렴관': [
-                    { floor:'2층', cols:10, cells:[
+                    { floor:'2층', cols:10, rows:'minmax(64px,auto) 26px minmax(64px,auto)', cells:[
                         {no:'208',ext:'438',c:'1',r:'1'},{no:'209',ext:'439',c:'2',r:'1'},{no:'210',ext:'440',c:'3',r:'1'},
                         {no:'211',ext:'441',c:'4',r:'1'},{no:'212',ext:'442',c:'5',r:'1'},{no:'213',ext:'443',c:'6',r:'1'},
-                        {fac:'계단·휴게실',c:'7',r:'1'},
+                        {fac:'계단·휴게실',c:'7',r:'1/3'},
                         {no:'215',ext:'445',c:'8',r:'1'},{no:'216',ext:'446',c:'9',r:'1'},{no:'217',ext:'447',c:'10',r:'1'},
-                        {no:'207',ext:'437',c:'1',r:'2'},{no:'206',ext:'436',c:'2',r:'2'},{no:'205',ext:'435',c:'3',r:'2'},
-                        {no:'204',ext:'434',c:'4',r:'2'},{no:'203',ext:'433',c:'5',r:'2'},{no:'202',ext:'432',c:'6',r:'2'},
-                        {no:'201',ext:'431',c:'7',r:'2'},{no:'214',ext:'444',c:'8',r:'2'},{no:'219',ext:'449',c:'9',r:'2'},{no:'218',ext:'448',c:'10',r:'2'},
+                        {fac:'━━━ 복 도 ━━━',c:'1/7',r:'2',corridor:true},
+                        {fac:'━━━ 복 도 ━━━',c:'8/11',r:'2',corridor:true},
+                        {no:'207',ext:'437',c:'1',r:'3'},{no:'206',ext:'436',c:'2',r:'3'},{no:'205',ext:'435',c:'3',r:'3'},
+                        {no:'204',ext:'434',c:'4',r:'3'},{no:'203',ext:'433',c:'5',r:'3'},{no:'202',ext:'432',c:'6',r:'3'},
+                        {no:'201',ext:'431',c:'7',r:'3'},{no:'214',ext:'444',c:'8',r:'3'},{no:'219',ext:'449',c:'9',r:'3'},{no:'218',ext:'448',c:'10',r:'3'},
                     ]},
-                    { floor:'1층', cols:10, cells:[
+                    { floor:'1층', cols:10, rows:'minmax(64px,auto) 26px minmax(64px,auto)', cells:[
                         {no:'106',ext:'426',c:'1',r:'1'},{no:'105',ext:'425',c:'2',r:'1'},{no:'104',ext:'424',c:'3',r:'1'},
                         {no:'103',ext:'423',c:'4',r:'1'},{no:'102',ext:'422',c:'5',r:'1'},{no:'101',ext:'421',c:'6',r:'1'},
-                        {fac:'식 당',c:'8/11',r:'1/3'},
-                        {no:'107',ext:'427',c:'1',r:'2'},{no:'108',ext:'428',c:'2',r:'2'},{no:'109',ext:'429',c:'3',r:'2'},{no:'110',ext:'430',c:'4',r:'2'},
-                        {fac:'휴게실',c:'5/7',r:'2'},
+                        {fac:'식 당',c:'8/11',r:'1/4'},
+                        {fac:'━━━ 복 도 ━━━',c:'1/8',r:'2',corridor:true},
+                        {no:'107',ext:'427',c:'1',r:'3'},{no:'108',ext:'428',c:'2',r:'3'},{no:'109',ext:'429',c:'3',r:'3'},{no:'110',ext:'430',c:'4',r:'3'},
+                        {fac:'휴게실',c:'5/8',r:'3'},
                     ]},
                 ],
                 '상생관': [
-                    { floor:'3층', cols:9, cells:[
+                    { floor:'3층', cols:9, rows:'minmax(64px,auto) 26px minmax(64px,auto)', cells:[
                         {no:'308',ext:'452',c:'1',r:'1'},{no:'309',ext:'396',c:'2',r:'1'},{no:'310',ext:'410',c:'3',r:'1'},
                         {no:'311',ext:'459',c:'4',r:'1'},{no:'312',ext:'460',c:'5',r:'1'},{no:'313',ext:'477',c:'6',r:'1'},
                         {no:'314',ext:'478',c:'7',r:'1'},{no:'315',ext:'479',c:'8',r:'1'},{no:'316',ext:'468',c:'9',r:'1'},
-                        {no:'307',ext:'451',c:'1',r:'2'},{no:'306',ext:'458',c:'2',r:'2'},{no:'305',ext:'356',c:'3',r:'2'},
-                        {no:'304',ext:'398',c:'4',r:'2'},{no:'303',ext:'397',c:'5',r:'2'},{no:'302',ext:'394',c:'6',r:'2'},
-                        {no:'301',ext:'393',c:'7',r:'2'},{fac:'휴게실',c:'8/10',r:'2'},
+                        {fac:'━━━━━━━━━━ 복 도 ━━━━━━━━━━',c:'1/10',r:'2',corridor:true},
+                        {no:'307',ext:'451',c:'1',r:'3'},{no:'306',ext:'458',c:'2',r:'3'},{no:'305',ext:'356',c:'3',r:'3'},
+                        {no:'304',ext:'398',c:'4',r:'3'},{no:'303',ext:'397',c:'5',r:'3'},{no:'302',ext:'394',c:'6',r:'3'},
+                        {no:'301',ext:'393',c:'7',r:'3'},{fac:'휴게실',c:'8/10',r:'3'},
                     ]},
-                    { floor:'2층', cols:9, cells:[
+                    { floor:'2층', cols:9, rows:'minmax(64px,auto) 26px minmax(64px,auto)', cells:[
                         {no:'209',ext:'469',c:'1',r:'1'},{no:'210',ext:'470',c:'2',r:'1'},{no:'211',ext:'471',c:'3',r:'1'},
                         {no:'212',ext:'472',c:'4',r:'1'},{no:'213',ext:'473',c:'5',r:'1'},{no:'214',ext:'474',c:'6',r:'1'},
                         {no:'215',ext:'475',c:'7',r:'1'},{fac:'PC방',c:'8',r:'1'},{fac:'세탁실',c:'9',r:'1'},
-                        {fac:'창고',c:'1',r:'2'},{no:'207',ext:'467',c:'2',r:'2'},{no:'206',ext:'466',c:'3',r:'2'},
-                        {no:'205',ext:'465',c:'4',r:'2'},{no:'204',ext:'464',c:'5',r:'2'},{no:'203',ext:'463',c:'6',r:'2'},
-                        {no:'202',ext:'462',c:'7',r:'2'},{no:'201',ext:'461',c:'8',r:'2'},{fac:'휴게실',c:'9',r:'2'},
+                        {fac:'━━━━━━━━━━ 복 도 ━━━━━━━━━━',c:'1/10',r:'2',corridor:true},
+                        {fac:'창고',c:'1',r:'3'},{no:'207',ext:'467',c:'2',r:'3'},{no:'206',ext:'466',c:'3',r:'3'},
+                        {no:'205',ext:'465',c:'4',r:'3'},{no:'204',ext:'464',c:'5',r:'3'},{no:'203',ext:'463',c:'6',r:'3'},
+                        {no:'202',ext:'462',c:'7',r:'3'},{no:'201',ext:'461',c:'8',r:'3'},{fac:'휴게실',c:'9',r:'3'},
                     ]},
                 ],
                 '국제교육동': [
                     { floor:'3층', cols:12, cells:[
                         {no:'306',ext:'485',c:'1',r:'1'},{no:'305',ext:'484',c:'2',r:'1'},{no:'304',ext:'483',c:'3',r:'1'},
                         {no:'303',ext:'482',c:'4',r:'1'},{no:'302',ext:'481',c:'5',r:'1'},{no:'301',ext:'480',c:'6',r:'1'},
-                        {fac:'복도',c:'7',r:'1/3'},
+                        {fac:'복도',c:'7',r:'1/4',corridor:true},
                         {no:'311',ext:'490',c:'8',r:'1'},{no:'312',ext:'491',c:'9',r:'1'},{no:'313',ext:'492',c:'10',r:'1'},
                         {no:'314',ext:'493',c:'11',r:'1'},{no:'315',ext:'494',c:'12',r:'1'},
                         {fac:'비상구',c:'2',r:'2'},
                         {no:'307',ext:'486',c:'3',r:'2'},{no:'308',ext:'487',c:'4',r:'2'},{no:'309',ext:'488',c:'5',r:'2'},{no:'310',ext:'489',c:'6',r:'2'},
                         {no:'320',ext:'499',c:'8',r:'2'},{no:'319',ext:'498',c:'9',r:'2'},{no:'318',ext:'497',c:'10',r:'2'},
                         {no:'317',ext:'496',c:'11',r:'2'},{no:'316',ext:'495',c:'12',r:'2'},
-                        {fac:'기도실',c:'6',r:'3'},{fac:'세탁실',c:'7',r:'3'},{fac:'주방',c:'8',r:'3'},
+                        {fac:'기도실',c:'5',r:'3'},{fac:'세탁실',c:'8',r:'3'},{fac:'주방',c:'9',r:'3'},
                     ]},
                 ],
             };
@@ -4278,6 +4271,7 @@
  #boardMapArea .fm-ext{font-size:9px;font-weight:700;opacity:.85;}
  #boardMapArea .fm-body{flex:1;display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:3px;padding:4px 3px;}
  #boardMapArea .fm-fac{border:1.5px dashed #b6c0cf;border-radius:6px;background:repeating-linear-gradient(45deg,#e9edf3,#e9edf3 4px,#f4f7fb 4px,#f4f7fb 11px);color:#64748b;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;text-align:center;}
+ #boardMapArea .fm-corridor{background:#d1d5db;border:1px solid #9ca3af;border-radius:4px;color:#4b5563;font-size:11px;font-weight:900;display:flex;align-items:center;justify-content:center;letter-spacing:3px;min-height:22px;max-height:28px;}
  #boardMapArea .dm-chip{display:inline-flex;align-items:center;gap:1px;background:#fff;border:1.5px solid #94a3b8;border-radius:9px;padding:2px 8px;font-size:12px;font-weight:800;cursor:grab;line-height:1.3;user-select:none;white-space:nowrap;}
  #boardMapArea .fm-intl .dm-chip{white-space:normal;overflow-wrap:anywhere;word-break:break-word;font-size:10.5px;text-align:center;}
  #boardMapArea .dm-chip.dm-foreign{flex-direction:column;align-items:center;justify-content:center;gap:1px;padding:3px 6px;max-width:100%;}
@@ -4390,18 +4384,20 @@
                 return `<div class="fm-room${occ ? ' occ' : ''}${flat}${intl}" style="grid-column:${cell.c};grid-row:${cell.r};">${head}<div class="fm-body">${body}</div></div>`;
             }
             function facCellHtml(cell) {
-                return `<div class="fm-fac" style="grid-column:${cell.c};grid-row:${cell.r};">${cell.fac}</div>`;
+                const cls = cell.corridor ? 'fm-corridor' : 'fm-fac';
+                return `<div class="${cls}" style="grid-column:${cell.c};grid-row:${cell.r};">${cell.fac}</div>`;
             }
             function floorHtml(building, fl) {
                 const inner = fl.cells.map(c => (c.fac !== undefined) ? facCellHtml(c) : roomCellHtml(building, c)).join('');
+                const rowsStyle = fl.rows ? `grid-template-rows:${fl.rows};` : '';
                 return `<div class="fm-floor-label">${fl.floor}</div>
-                    <div class="fm-grid" style="grid-template-columns:repeat(${fl.cols},1fr);">${inner}</div>`;
+                    <div class="fm-grid" style="grid-template-columns:repeat(${fl.cols},1fr);${rowsStyle}">${inner}</div>`;
             }
             const BLDG_PHOTO_LAYOUT = { '청렴관':'dorm_chung.png', '상생관':'dorm_sang.png', '국제교육동':'dorm_inter.png' };
             const AED_MSG = {
-                '청렴관':     '자동심장충격기(AED)는 2층 휴게실에 비치되어 있습니다.',
-                '상생관':     '자동심장충격기(AED)는 2층 휴게실에 비치되어 있습니다.',
-                '국제교육동': '자동심장충격기(AED)는 1층 정수기 앞에 비치되어 있습니다.',
+                '청렴관':     '제세동기(AED/CPR)는 2층 휴게실에 비치되어 있습니다.',
+                '상생관':     '제세동기(AED/CPR)는 2층 휴게실에 비치되어 있습니다.',
+                '국제교육동': '제세동기(AED/CPR)는 1층 정수기 앞에 설치되어 있습니다.',
             };
             function buildingHtml(building) {
                 const fls   = (FORM[building] || []).map(fl => floorHtml(building, fl)).join('');
@@ -4444,6 +4440,7 @@
                 .fm-flat .fm-head { display:flex; flex-direction:column; align-items:center; justify-content:center; border-bottom:none; border-right:1.5px solid #cbd5e1; min-width:70px; }
                 .fm-flat .fm-body { flex:1; }
                 .fm-fac { border:1.5px dashed #b6c0cf; border-radius:6px; background:repeating-linear-gradient(45deg,#e9edf3,#e9edf3 4px,#f4f7fb 4px,#f4f7fb 11px); color:#64748b; font-size:11px; font-weight:800; display:flex; align-items:center; justify-content:center; text-align:center; letter-spacing:-0.3px; }
+                .fm-corridor { background:#d1d5db; border:1px solid #9ca3af; border-radius:4px; color:#374151; font-size:11px; font-weight:900; display:flex; align-items:center; justify-content:center; letter-spacing:3px; min-height:20px; max-height:26px; }
             </style>`;
 
             // 건물 사이 page-break-before 방식으로 변경 (thead 반복 없앰)
@@ -4813,5 +4810,16 @@
 
         init();
     </script>
+
+    <div id="assignLoadingOverlay" style="display:none;position:fixed;inset:0;z-index:99999;background:rgba(15,23,42,0.72);align-items:center;justify-content:center;flex-direction:column;">
+        <div style="background:#fff;border-radius:20px;padding:36px 44px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,0.35);min-width:280px;">
+            <div style="font-size:48px;margin-bottom:14px;">🏨</div>
+            <div style="font-size:18px;font-weight:900;color:#0f172a;margin-bottom:8px;">자동 배정 중…</div>
+            <div style="font-size:14px;color:#64748b;margin-bottom:20px;" id="assignLoadingMsg">생활관 방을 배정하고 있습니다.</div>
+            <div style="width:200px;height:6px;background:#e2e8f0;border-radius:99px;margin:0 auto;overflow:hidden;">
+                <div id="assignLoadingBar" style="height:100%;width:0%;background:linear-gradient(90deg,#2563eb,#7c3aed);border-radius:99px;transition:width .4s;"></div>
+            </div>
+        </div>
+    </div>
 </body>
 </html>
