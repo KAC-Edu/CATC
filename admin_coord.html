@@ -1383,20 +1383,28 @@ body.pc-mode .entry-box:hover, body.pc-mode .entry-box-tablet:hover {
 
 
   
-/* ── 연간계획표 모달 모바일 반응형 ── */
-@media (max-width: 768px) {
-    #annualPlanModalCoord .setup-box {
-        width: 100% !important;
-        max-width: 100% !important;
-        height: 100dvh !important;
-        max-height: 100dvh !important;
-        border-radius: 0 !important;
-    }
-    #annualPlanModalCoord { padding: 0 !important; align-items: flex-start !important; }
-    #annualPlanEditorAreaCoord { font-size: 11px; }
-    #annualPlanEditorAreaCoord table { min-width: 660px; }
-    #annualPlanEditorAreaCoord input,
-    #annualPlanEditorAreaCoord select { font-size: 12px !important; padding: 4px !important; }
+/* ── 연간계획표 모달: 전체화면 앱 스타일 ── */
+#annualPlanModalCoord {
+    padding: 0 !important;
+    align-items: stretch !important;
+    justify-content: stretch !important;
+}
+#annualPlanModalCoord .setup-box {
+    max-width: 1100px !important;
+    width: 100% !important;
+    height: 100dvh !important;
+    max-height: 100dvh !important;
+    border-radius: 0 !important;
+    margin: 0 auto !important;
+}
+/* 편집기 행 입력창 */
+#annualPlanEditorAreaCoord input,
+#annualPlanEditorAreaCoord select {
+    font-size: 12px !important;
+    padding: 4px 5px !important;
+}
+#annualPlanEditorAreaCoord table {
+    min-width: 600px;
 }
 </style>
 </head>
@@ -1591,7 +1599,7 @@ body.pc-mode .entry-box:hover, body.pc-mode .entry-box-tablet:hover {
             <div class="chip-ic"><i class="fa-solid fa-bus"></i></div>
             <div class="chip-body">
                 <div class="chip-val"><span id="g-shuttle-count">0</span><small>명</small></div>
-                <div class="chip-label">퇴교차량신청</div>
+                <div class="chip-label">교육생 퇴교</div>
             </div>
         </div>
 
@@ -1739,9 +1747,9 @@ body.pc-mode .entry-box:hover, body.pc-mode .entry-box-tablet:hover {
       <!-- [뷰 2] 개별 과정 상세 -->
       <div id="individualStatusView" style="display:none; flex-direction:column; gap:12px;">
           <div id="indCourseHeader" style="background: linear-gradient(135deg, #003366 0%, #0055aa 100%); border-radius: 12px; padding: 22px 25px; margin-bottom: 10px; color: #ffffff; box-shadow: 0 4px 12px rgba(0, 51, 102, 0.2); display: flex; flex-direction: column; gap: 12px;">
-              <div style="display: flex; align-items: baseline; gap: 10px; border-bottom: 1px solid rgba(255,255,255,0.15); padding-bottom: 12px;">
-                  <span style="font-weight: 900; font-size: 14px; color: #60a5fa;">ROOM <span id="ind-room-id">-</span></span>
-                  <span id="ind-course-name" style="font-weight: 800; font-size: 19px;">과정명 로딩 중...</span>
+              <div style="display: flex; align-items: baseline; gap: 8px; border-bottom: 1px solid rgba(255,255,255,0.15); padding-bottom: 12px; flex-wrap: wrap;">
+                  <span style="font-weight: 900; font-size: 13px; color: #60a5fa; white-space: nowrap; flex-shrink: 0;">ROOM <span id="ind-room-id">-</span></span>
+                  <span id="ind-course-name" style="font-weight: 800; font-size: 17px; line-height: 1.3; word-break: keep-all; overflow-wrap: break-word;">과정명 로딩 중...</span>
               </div>
               <div style="display: flex; flex-wrap: wrap; gap: 10px 20px; font-size: 12.5px;">
                   <div><span style="opacity: 0.6;">교육기간:</span> <span id="ind-period">-</span></div>
@@ -1756,7 +1764,7 @@ body.pc-mode .entry-box:hover, body.pc-mode .entry-box-tablet:hover {
 
           <div class="dashboard-split">
               <div class="col-1-4"><div class="entry-box" onclick="showEntryMemberList()"><span style="font-size:11px; font-weight:800; color:var(--blue-deep);">입교 현황</span><div class="entry-val" id="ind-entry-cnt">0<span>명</span></div></div></div>
-              <div class="col-1-4"><div class="entry-box-tablet" onclick="showTabletLoanList()"><span style="font-size:11px; font-weight:800; color:#6366f1;">태블릿 대여</span><div class="entry-val" id="ind-tablet-cnt" style="color:#6366f1;">0<span>명</span></div></div></div>
+              <div class="col-1-4"><div class="entry-box-tablet" onclick="showTabletLoanList()"><span style="font-size:11px; font-weight:800; color:#6366f1; white-space:nowrap;">태블릿</span><div class="entry-val" id="ind-tablet-cnt" style="color:#6366f1;">0<span>명</span></div></div></div>
               <div class="col-2-4">
               <div class="section-card" style="height:100%; padding:10px; display:flex; flex-direction:column; justify-content:center;">
                   <div class="section-title" style="margin-bottom:8px; font-size:11px;">
@@ -1770,7 +1778,6 @@ body.pc-mode .entry-box:hover, body.pc-mode .entry-box-tablet:hover {
         <span style="font-size: 11px; font-weight: 800; color: #64748b; margin-bottom: 2px;">총 신청</span>
         <div>
             <b id="ind-shuttle-total" style="font-size: 26px; font-weight: 900; color: #3b82f6;">0</b>
-            <span style="font-size: 13px; font-weight: 800; color: #3b82f6; margin-left: 2px;">명</span>
         </div>
     </div>
     
@@ -1845,11 +1852,11 @@ body.pc-mode .entry-box:hover, body.pc-mode .entry-box-tablet:hover {
 
 
           <div id="ind-outing-card" class="section-card" style="margin-bottom: 50px; background:white; padding:16px; border:1px solid #e2e8f0;">
-              <div class="section-title" style="color:#1e293b; margin-bottom:12px; padding-bottom:10px; border-bottom:2px solid #e2e8f0; justify-content:space-between;">
-                  <span><i class="fa-solid fa-user-clock"></i> 외출/외박 신청자 명단</span>
-                  <div style="display:flex; gap:6px;">
-                      <button class="navy-btn" style="width:130px; height:32px; font-size:12px; background:#eff6ff; border:1px solid #bfdbfe; color:#1e40af;" onclick="openAttendanceSheet()"><i class="fa-solid fa-clipboard-user"></i> 출석부 관리/인쇄</button>
-                      <button class="navy-btn" style="width:130px; height:32px; font-size:12px; background:#1e293b; color:#ffffff; border:1px solid #334155;" onclick="openOutingLedger()"><i class="fa-solid fa-book"></i> 외출(외박)대장</button>
+              <div class="section-title" style="color:#1e293b; margin-bottom:12px; padding-bottom:10px; border-bottom:2px solid #e2e8f0; justify-content:space-between; flex-wrap:nowrap; align-items:center; gap:8px;">
+                  <span style="white-space:nowrap; font-size:13px; font-weight:800; flex-shrink:0;"><i class="fa-solid fa-user-clock"></i> 외출/외박 신청자 명단</span>
+                  <div style="display:flex; gap:5px; flex-shrink:0;">
+                      <button class="navy-btn" style="width:auto; padding:0 8px; height:30px; font-size:11px; background:#eff6ff; border:1px solid #bfdbfe; color:#1e40af; white-space:nowrap;" onclick="openAttendanceSheet()"><i class="fa-solid fa-clipboard-user"></i> 출석부</button>
+                      <button class="navy-btn" style="width:auto; padding:0 8px; height:30px; font-size:11px; background:#1e293b; color:#ffffff; border:1px solid #334155; white-space:nowrap;" onclick="openOutingLedger()"><i class="fa-solid fa-book"></i> 외출대장</button>
                   </div>
               </div>
               <div style="overflow-x: auto; background:rgba(255,255,255,0.1); border-radius:10px; overflow:hidden; border:1px solid rgba(255,255,255,0.2);">
@@ -2871,7 +2878,7 @@ function updateIndividualView() {
         const leaders = Object.values(room.students).filter(s => s.isLeader === true);
         if (leaders.length > 0) {
             leaderTxt = leaders.map(l => {
-                const raw = l.leaderPhone || '';
+                const raw = l.leaderPhone || l.phone || '';
                 const displayPhone = raw ? formatPhone(raw) : '연락처 미등록';
                 return `${l.name}  ${displayPhone}`;
             }).join('  /  ');
@@ -2880,33 +2887,25 @@ function updateIndividualView() {
     const leaderEl = document.getElementById('ind-leader');
     if (leaderEl) leaderEl.innerText = leaderTxt;
 
-    // 4. 외출/외박 신청 명단 렌더링 (당일 09:00 ~ 익일 09:00 범위만 표시)
+    // 4. 외출/외박 신청 명단 렌더링 (당일 09:00 이후 신청 건만 표시)
     const actionTbody = document.getElementById('indActionTableBody');
     actionTbody.innerHTML = "";
 
-    // 당일 09:00 ~ 익일 09:00 타임스탬프 계산
-    const _now = new Date();
-    const _today0900 = new Date(_now.getFullYear(), _now.getMonth(), _now.getDate(), 9, 0, 0, 0).getTime();
-    const _tmrw0900  = _today0900 + 24 * 60 * 60 * 1000;
-    const _todayStr  = _now.toISOString().slice(0, 10);
-    const _ydayDate  = new Date(_now.getFullYear(), _now.getMonth(), _now.getDate() - 1);
-    const _ydayStr   = _ydayDate.toISOString().slice(0, 10);
+    // 09:00 기준 타임스탬프 계산
 
     let actionItems = [];
     if (room.admin_actions) {
-        [_ydayStr, _todayStr].forEach(date => {
-            if (date < startDate || date > endDate) return;
-            const dayActions = room.admin_actions[date];
-            if (!dayActions) return;
-            Object.keys(dayActions).forEach(token => {
-                const item = dayActions[token];
-                if (!item) return;
-                if (item.type !== 'outing' && item.type !== 'overnight' && item.type !== 'group_outing') return;
-                const ts = Number(item.timestamp || 0);
-                if (ts >= _today0900 && ts < _tmrw0900) {
-                    actionItems.push({ ...item, token: token, date: date });
-                }
-            });
+        Object.keys(room.admin_actions).forEach(date => {
+            if (date >= startDate && date <= endDate) {
+                const dayActions = room.admin_actions[date];
+                Object.keys(dayActions).forEach(token => {
+                    const item = dayActions[token];
+                    // 당일 09:00 이후 신청 건만 포함
+                    if (item && (item.type === 'outing' || item.type === 'overnight' || item.type === 'group_outing')) {
+                        actionItems.push({ ...item, token: token, date: date });
+                    }
+                });
+            }
         });
     }
 
@@ -5297,27 +5296,43 @@ async function saveGlobalNotice() {
 </div>
 
 <!-- ══ 연간계획 편집 모달 (교육운영부) ══ -->
-<div id="annualPlanModalCoord" class="setup-modal" style="z-index:14000;">
-    <div class="setup-box" style="max-width:1100px; width:96%; max-height:88vh; display:flex; flex-direction:column;">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-            <h3 style="margin:0; color:var(--navy-dark);"><i class="fa-solid fa-calendar-check"></i> 연간 교육운영계획 편집기</h3>
-            <i class="fa-solid fa-xmark" style="cursor:pointer; font-size:22px;" onclick="document.getElementById('annualPlanModalCoord').style.display='none'"></i>
+<div id="annualPlanModalCoord" class="setup-modal" style="z-index:14000; padding:0; align-items:stretch;">
+    <div class="setup-box" id="annualPlanBoxCoord" style="max-width:1100px; width:100%; max-height:100dvh; height:100dvh; display:flex; flex-direction:column; border-radius:0; margin:0 auto;">
+
+        <!-- 상단바 (앱 스타일) -->
+        <div style="display:flex; align-items:center; gap:10px; padding:0 14px; height:52px; background:linear-gradient(135deg,#003366,#0055aa); flex-shrink:0;">
+            <button onclick="document.getElementById('annualPlanModalCoord').style.display='none'"
+                style="width:36px;height:36px;border:none;background:rgba(255,255,255,0.15);border-radius:10px;color:#fff;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                <i class="fa-solid fa-chevron-left"></i>
+            </button>
+            <span style="color:#fff;font-weight:900;font-size:16px;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+                <i class="fa-solid fa-calendar-check" style="margin-right:6px;"></i>연간 교육운영계획 편집기
+            </span>
+            <button class="navy-btn" style="width:auto;padding:0 10px;height:34px;background:#0ea5e9;font-size:12px;flex-shrink:0;" onclick="annualPlanMgrCoord.addRow()">
+                <i class="fa-solid fa-plus"></i> 추가
+            </button>
         </div>
-        <p style="font-size:12px; color:#64748b; margin:0 0 12px;">수정 후 [저장 및 즉시적용]을 누르면 잠금되지 않은 강의실 정보가 현재 날짜 기준으로 자동 갱신됩니다.</p>
-        <div style="display:flex; align-items:center; gap:10px; background:#eff6ff; border:1px solid #bfdbfe; border-radius:10px; padding:10px 14px; margin-bottom:12px;">
-            <i class="fa-solid fa-circle-info" style="color:#2563eb; font-size:15px; flex-shrink:0;"></i>
-            <span style="font-size:12px; color:#1e40af; line-height:1.5;">본 페이지의 데이터는 업로드된 자료를 바탕으로 구성됩니다. 대량 수정이나 신규 등록 시 <b>[교육운영계획 변환기]</b>를 통해 엑셀 파일을 JSON으로 변환 후 반영해 주시기 바랍니다.</span>
+
+        <!-- 안내 배너 (접을 수 있게 축소) -->
+        <div style="display:flex;align-items:center;gap:8px;background:#eff6ff;border-bottom:1px solid #bfdbfe;padding:7px 14px;flex-shrink:0;">
+            <i class="fa-solid fa-circle-info" style="color:#2563eb;font-size:13px;flex-shrink:0;"></i>
+            <span style="font-size:11px;color:#1e40af;line-height:1.4;">수정 후 [즉시 적용]을 누르면 잠금되지 않은 강의실 정보가 자동 갱신됩니다. 대량 수정 시 <b>변환기</b>를 이용하세요.</span>
         </div>
-        <div style="margin-bottom:10px;">
-            <button class="navy-btn" style="width:auto; padding:0 14px; height:36px; background:#0ea5e9;" onclick="annualPlanMgrCoord.addRow()"><i class="fa-solid fa-plus"></i> 과정 행 추가</button>
-        </div>
-        <div id="annualPlanEditorAreaCoord" style="flex:1; overflow:auto; border:1px solid var(--border-blue); border-radius:12px; min-height:200px; -webkit-overflow-scrolling:touch;"></div>
-        <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; margin-top:16px;">
-            <button class="navy-btn" style="width:auto; padding:0 16px; height:42px; background:#16a34a;" onclick="window.open('plan_converter.html','_blank')"><i class="fa-solid fa-file-excel"></i> 교육운영계획 변환기 바로가기</button>
-            <div style="display:flex; gap:10px;">
-                <button class="navy-btn" style="width:auto; padding:0 18px; height:42px; background:#64748b;" onclick="document.getElementById('annualPlanModalCoord').style.display='none'">닫기</button>
-                <button class="navy-btn" style="width:auto; padding:0 18px; height:42px; background:var(--green-save);" onclick="annualPlanMgrCoord.saveAndSync()"><i class="fa-solid fa-sync"></i> 저장 및 모든 Room에 즉시 적용</button>
-            </div>
+
+        <!-- 편집기 본체 (flex:1 = 남은 공간 전부) -->
+        <div id="annualPlanEditorAreaCoord" style="flex:1; overflow:auto; -webkit-overflow-scrolling:touch;"></div>
+
+        <!-- 하단 버튼바 -->
+        <div style="display:flex;gap:8px;padding:10px 14px;border-top:1.5px solid #e2e8f0;background:#f8fafc;flex-shrink:0;flex-wrap:wrap;">
+            <button class="navy-btn" style="flex:1;min-width:120px;padding:0 10px;height:42px;background:#16a34a;font-size:12px;" onclick="window.open('plan_converter.html','_blank')">
+                <i class="fa-solid fa-file-excel"></i> 변환기 바로가기
+            </button>
+            <button class="navy-btn" style="flex:1;min-width:120px;padding:0 10px;height:42px;background:#64748b;font-size:12px;" onclick="document.getElementById('annualPlanModalCoord').style.display='none'">
+                닫기
+            </button>
+            <button class="navy-btn" style="flex:2;min-width:160px;padding:0 10px;height:42px;background:var(--green-save);font-size:12px;" onclick="annualPlanMgrCoord.saveAndSync()">
+                <i class="fa-solid fa-sync"></i> 저장 및 즉시 적용
+            </button>
         </div>
     </div>
 </div>
@@ -5329,9 +5344,9 @@ async function saveGlobalNotice() {
 <script>
 
 const CLASSROOM_DETAIL_GROUPS_SHARED = window.CLASSROOM_DETAIL_GROUPS_SHARED || [
-    { label: '하늘관', items: ['하늘관 1층 대강당','하늘관 1층 소회의실','하늘관 2층 A강의실','하늘관 2층 B강의실 (전산실)','하늘관 2층 C강의실','하늘관 2층 D강의실','하늘관 2층 E강의실','하늘관 2층 F강의실','하늘관 2층 G강의실','하늘관 3층 회의실'] },
-    { label: '국제동', items: ['국제동 1층 세미나홀','국제동 1층 A강의실','국제동 1층 B강의실','국제동 2층 ILS 실습실','국제동 2층 VCCS/RADIO/ATIS 실습실','국제동 2층 VOR/DME/TACAN 실습실','국제동 2층 종합실습실'] },
-    { label: '관제교육동', items: ['관제교육동 1층','관제교육동 2층'] }
+    { label: '???', items: ['??? 1? ???','??? 1? ????','??? 2? A???','??? 2? B???','??? 2? C???','??? 2? D???','??? 2? E???','??? 2? F???','??? 2? G???','??? 3? ???'] },
+    { label: '???', items: ['??? 1? ????','??? 1? A???','??? 1? B???','??? 2? ILS ???','??? 2? VCCS/RADIO/ATIS ???','??? 2? VOR/DME/TACAN ???','??? 2? ???????? ???'] },
+    { label: '?????', items: ['????? 1?'] }
 ];
 window.CLASSROOM_DETAIL_GROUPS_SHARED = CLASSROOM_DETAIL_GROUPS_SHARED;
 function classroomDetailSelectHtmlCoord(value, changeExpr, styleText) {
@@ -5340,7 +5355,7 @@ function classroomDetailSelectHtmlCoord(value, changeExpr, styleText) {
     const flat = CLASSROOM_DETAIL_GROUPS_SHARED.flatMap(g => g.items);
     const custom = current && !flat.includes(current) ? '<option value="' + esc(current) + '" selected>' + esc(current) + '</option>' : '';
     return '<select onchange="' + esc(changeExpr) + '" style="' + esc(styleText) + '">' +
-        '<option value="">-- 장소 선택 --</option>' + custom +
+        '<option value="">-- ?? ?? --</option>' + custom +
         CLASSROOM_DETAIL_GROUPS_SHARED.map(g => '<optgroup label="' + esc(g.label) + '">' + g.items.map(item => '<option value="' + esc(item) + '" ' + (item === current ? 'selected' : '') + '>' + esc(item) + '</option>').join('') + '</optgroup>').join('') +
         '</select>';
 }
@@ -5447,7 +5462,7 @@ const annualPlanMgrCoord = {
             area.innerHTML = "<p style='padding:24px; color:#64748b; text-align:center;'>등록된 과정이 없습니다. 상단 [과정 행 추가] 버튼으로 추가하세요.</p>";
             return;
         }
-        const th = "padding:8px 6px; border:1px solid var(--border-blue); font-size:12px; white-space:nowrap;";
+        const th = "padding:10px; border:1px solid var(--border-blue); font-size:12px;";
         const td = "padding:4px; border:1px solid var(--border-blue);";
         const inp = "width:100%; border:1px solid transparent; background:transparent; padding:6px; font-size:13px; box-sizing:border-box; color:var(--navy-dark);";
         // 행 배경색 분류
@@ -5463,23 +5478,23 @@ const annualPlanMgrCoord = {
             return 'background:#dcfce7;';
         };
         let html = `
-        <div style="position:sticky; top:0; z-index:11; display:flex; gap:14px; flex-wrap:wrap; padding:0 12px; height:37px; box-sizing:border-box; font-size:12px; color:#475569; align-items:center; background:#fff; border-bottom:1px solid var(--border-blue);">
-            <span style="font-weight:800;">상태 색상:</span>
-            <span><span style="display:inline-block; width:12px; height:12px; border-radius:3px; background:#dbeafe; vertical-align:middle; margin-right:4px;"></span>진행 중</span>
-            <span><span style="display:inline-block; width:12px; height:12px; border-radius:3px; background:#fce7f3; vertical-align:middle; margin-right:4px;"></span>차주 진행 예정</span>
-            <span><span style="display:inline-block; width:12px; height:12px; border-radius:3px; background:#dcfce7; vertical-align:middle; margin-right:4px;"></span>예정</span>
-            <span><span style="display:inline-block; width:12px; height:12px; border-radius:3px; background:#f1f5f9; vertical-align:middle; margin-right:4px;"></span>종료</span>
+        <div style="position:sticky; top:0; z-index:11; display:flex; gap:10px; flex-wrap:wrap; padding:5px 10px; box-sizing:border-box; font-size:11px; color:#475569; align-items:center; background:#f8fafc; border-bottom:1px solid var(--border-blue);">
+            <span style="font-weight:800;">색상:</span>
+            <span><span style="display:inline-block; width:10px; height:10px; border-radius:2px; background:#dbeafe; vertical-align:middle; margin-right:3px;"></span>진행중</span>
+            <span><span style="display:inline-block; width:10px; height:10px; border-radius:2px; background:#fce7f3; vertical-align:middle; margin-right:3px;"></span>차주</span>
+            <span><span style="display:inline-block; width:10px; height:10px; border-radius:2px; background:#dcfce7; vertical-align:middle; margin-right:3px;"></span>예정</span>
+            <span><span style="display:inline-block; width:10px; height:10px; border-radius:2px; background:#f1f5f9; vertical-align:middle; margin-right:3px;"></span>종료</span>
         </div>
-        <table style="width:100%; border-collapse:collapse;">
-            <thead style="position:sticky; top:37px; background:#f8fafc; z-index:10;"><tr>
-                <th style="${th} width:46px;">No</th>
-                <th style="${th} min-width:200px;">과정명</th>
-                <th style="${th} width:140px;">시작일</th>
-                <th style="${th} width:140px;">종료일</th>
-                <th style="${th} width:100px;">담임교수</th>
-                <th style="${th} width:110px;">운영담당</th>
-                <th style="${th} min-width:150px;">강의실 위치</th>
-                <th style="${th} width:46px;">삭제</th>
+        <table style="width:100%; border-collapse:collapse; min-width:600px;">
+            <thead style="position:sticky; top:30px; background:#f8fafc; z-index:10;"><tr>
+                <th style="${th} width:36px;">No</th>
+                <th style="${th} min-width:150px;">과정명</th>
+                <th style="${th} width:100px;">시작일</th>
+                <th style="${th} width:100px;">종료일</th>
+                <th style="${th} width:80px;">담임교수</th>
+                <th style="${th} width:80px;">운영담당</th>
+                <th style="${th} min-width:130px;">강의실 위치</th>
+                <th style="${th} width:36px;">삭제</th>
             </tr></thead><tbody>`;
         const _td2 = new Date().toISOString().slice(0,10);
         // 스크롤 대상: 진행 중 → 없으면 다가오는(미래 시작) 과정 중 가장 빠른 것
@@ -5815,14 +5830,14 @@ const annualPlanMgrCoord = {
     <div id="coordRosterSharedBox" style="margin:12px 22px 0; padding:12px 14px; background:#eff6ff; border:1.5px solid #bfdbfe; border-radius:12px; color:#1e3a8a; font-size:12px; font-weight:800; line-height:1.5;">
       지원부 공유 명단 확인 중...
     </div>
-    <div style="overflow-y:auto; flex:1; min-height:180px;">
-      <table style="width:100%; border-collapse:collapse; font-size:13px;">
+    <div style="overflow:auto; flex:1; min-height:180px; -webkit-overflow-scrolling:touch;">
+      <table style="width:100%; border-collapse:collapse; font-size:13px; table-layout:fixed;">
         <thead><tr style="background:#f8fafc;">
-          <th style="padding:8px 10px; font-weight:800; color:#475569; border-bottom:1.5px solid #e2e8f0; width:64px; min-width:64px; white-space:nowrap;">연번</th>
-          <th style="padding:8px 10px; font-weight:800; color:#475569; border-bottom:1.5px solid #e2e8f0;">성명</th>
-          <th style="padding:8px 10px; font-weight:800; color:#475569; border-bottom:1.5px solid #e2e8f0; width:80px;">사번</th>
-          <th style="padding:8px 10px; font-weight:800; color:#475569; border-bottom:1.5px solid #e2e8f0;">소속</th>
-          <th style="padding:8px 10px; font-weight:800; color:#475569; border-bottom:1.5px solid #e2e8f0; width:55px;">성별</th>
+          <th style="padding:7px 8px; font-weight:800; color:#475569; border-bottom:1.5px solid #e2e8f0; width:40px; white-space:nowrap;">No</th>
+          <th style="padding:7px 8px; font-weight:800; color:#475569; border-bottom:1.5px solid #e2e8f0; width:60px; white-space:nowrap;">성명</th>
+          <th style="padding:7px 8px; font-weight:800; color:#475569; border-bottom:1.5px solid #e2e8f0; width:70px; white-space:nowrap;">사번</th>
+          <th style="padding:7px 8px; font-weight:800; color:#475569; border-bottom:1.5px solid #e2e8f0;">소속</th>
+          <th style="padding:7px 8px; font-weight:800; color:#475569; border-bottom:1.5px solid #e2e8f0; width:36px; white-space:nowrap;">성별</th>
         </tr></thead>
         <tbody id="coordRosterBody"><tr><td colspan="5" style="padding:24px; text-align:center; color:#94a3b8;">파일을 업로드하면 명단이 표시됩니다</td></tr></tbody>
       </table>
@@ -5831,7 +5846,6 @@ const annualPlanMgrCoord = {
       <div style="flex:1; font-size:12px; color:#64748b; align-self:center;" id="coordRosterCount"></div>
       <button onclick="coordSaveRoster()" style="padding:10px 20px; background:#16a34a; color:#fff; border:none; border-radius:10px; font-weight:900; font-size:13px; cursor:pointer;"><i class="fa-solid fa-floppy-disk"></i> 저장</button>
       <button onclick="coordExportRoster()" style="padding:10px 14px; background:#f8fafc; color:#0f172a; border:1.5px solid #e2e8f0; border-radius:10px; font-weight:800; font-size:13px; cursor:pointer;"><i class="fa-solid fa-table"></i> 표 복사</button>
-      <button onclick="coordDeleteSavedRoster()" style="padding:10px 14px; background:#fee2e2; color:#dc2626; border:1.5px solid #fca5a5; border-radius:10px; font-weight:800; font-size:13px; cursor:pointer;"><i class="fa-solid fa-trash-can"></i> 저장된 명단 삭제</button>
       <button onclick="closeRosterUpload()" style="padding:10px 14px; background:#f1f5f9; color:#64748b; border:none; border-radius:10px; font-weight:800; font-size:13px; cursor:pointer;">닫기</button>
     </div>
   </div>
@@ -5974,11 +5988,11 @@ async function coordReloadSavedRoster() {
         _coordScheduleData = v.schedule || null;
         if (tbody) {
             tbody.innerHTML = _coordRosterData.map((s, i) => `<tr>
-                <td style="text-align:center;color:#94a3b8;padding:7px 10px;border-bottom:1px solid #f1f5f9;width:64px;min-width:64px;white-space:nowrap;">${i+1}</td>
-                <td style="font-weight:700;padding:7px 10px;border-bottom:1px solid #f1f5f9;">${s.name}</td>
-                <td style="color:#64748b;padding:7px 10px;border-bottom:1px solid #f1f5f9;">${s.empNo}</td>
-                <td style="color:#475569;font-size:12px;padding:7px 10px;border-bottom:1px solid #f1f5f9;">${s.dept}</td>
-                <td style="text-align:center;padding:7px 10px;border-bottom:1px solid #f1f5f9;font-size:12px;font-weight:700;color:${s.gender==='F'?'#ec4899':'#3b82f6'};">${s.gender==='F'?'여':'남'}</td>
+                <td style="text-align:center;color:#94a3b8;padding:6px 8px;border-bottom:1px solid #f1f5f9;width:40px;white-space:nowrap;">${i+1}</td>
+                <td style="font-weight:700;padding:6px 8px;border-bottom:1px solid #f1f5f9;white-space:nowrap;">${s.name}</td>
+                <td style="color:#64748b;padding:6px 8px;border-bottom:1px solid #f1f5f9;white-space:nowrap;">${s.empNo}</td>
+                <td style="color:#475569;font-size:11px;padding:6px 8px;border-bottom:1px solid #f1f5f9;word-break:keep-all;">${s.dept}</td>
+                <td style="text-align:center;padding:6px 8px;border-bottom:1px solid #f1f5f9;font-size:12px;font-weight:700;white-space:nowrap;color:${s.gender==='F'?'#ec4899':'#3b82f6'};">${s.gender==='F'?'여':'남'}</td>
             </tr>`).join('');
         }
         const when = v.updatedAt ? new Date(v.updatedAt) : null;
@@ -6073,11 +6087,11 @@ async function coordHandleRosterFile(ev) {
             statusEl.textContent = '⚠️ 판독 결과 없음';
         } else {
             tbody.innerHTML = students.map((s,i) => `<tr>
-                <td style="text-align:center;color:#94a3b8;padding:7px 10px;border-bottom:1px solid #f1f5f9;width:64px;min-width:64px;white-space:nowrap;">${i+1}</td>
-                <td style="font-weight:700;padding:7px 10px;border-bottom:1px solid #f1f5f9;">${s.name}</td>
-                <td style="color:#64748b;padding:7px 10px;border-bottom:1px solid #f1f5f9;">${s.empNo}</td>
-                <td style="color:#475569;font-size:12px;padding:7px 10px;border-bottom:1px solid #f1f5f9;">${s.dept}</td>
-                <td style="text-align:center;padding:7px 10px;border-bottom:1px solid #f1f5f9;font-size:12px;font-weight:700;color:${s.gender==='F'?'#ec4899':'#3b82f6'};">${s.gender==='F'?'여':'남'}</td>
+                <td style="text-align:center;color:#94a3b8;padding:6px 8px;border-bottom:1px solid #f1f5f9;width:40px;white-space:nowrap;">${i+1}</td>
+                <td style="font-weight:700;padding:6px 8px;border-bottom:1px solid #f1f5f9;white-space:nowrap;">${s.name}</td>
+                <td style="color:#64748b;padding:6px 8px;border-bottom:1px solid #f1f5f9;white-space:nowrap;">${s.empNo}</td>
+                <td style="color:#475569;font-size:11px;padding:6px 8px;border-bottom:1px solid #f1f5f9;word-break:keep-all;">${s.dept}</td>
+                <td style="text-align:center;padding:6px 8px;border-bottom:1px solid #f1f5f9;font-size:12px;font-weight:700;white-space:nowrap;color:${s.gender==='F'?'#ec4899':'#3b82f6'};">${s.gender==='F'?'여':'남'}</td>
             </tr>`).join('');
             statusEl.textContent = `✅ ${students.length}명 판독됨`;
             document.getElementById('coordRosterCount').textContent = `총 ${students.length}명`;
@@ -6090,32 +6104,6 @@ async function coordHandleRosterFile(ev) {
 }
 
 async function coordSaveRoster() {
-    // ── 저장된 명단 삭제 함수 ──
-    window.coordDeleteSavedRoster = async function() {
-        if (!currentRID) { alert('과정을 먼저 선택해주세요.'); return; }
-        const ctx = _coordRosterContext();
-        if (!ctx) { alert('과정 정보를 찾을 수 없습니다.'); return; }
-        const { courseName, rosterKey } = ctx;
-        const snap = await firebase.database().ref(`courses/${currentRID}/coordRoster`).once('value');
-        const existing = snap.val();
-        if (!existing || !existing.list || !existing.list.length) {
-            alert(`[${courseName}]에 저장된 명단이 없습니다.`); return;
-        }
-        if (!confirm(`[${courseName}] 저장된 명단 ${existing.list.length}명을 삭제하시겠습니까?\n교육지원부 공유 명단도 함께 삭제됩니다.`)) return;
-        try {
-            await firebase.database().ref(`courses/${currentRID}/coordRoster`).remove();
-            await firebase.database().ref(`system/coord/rosters/${rosterKey}`).remove().catch(()=>{});
-            _coordRosterData = [];
-            const tbody = document.getElementById('coordRosterBody');
-            if (tbody) tbody.innerHTML = '<tr><td colspan="5" style="padding:24px;text-align:center;color:#94a3b8;">명단이 삭제되었습니다.</td></tr>';
-            const cntEl = document.getElementById('coordRosterCount');
-            if (cntEl) cntEl.textContent = '총 0명';
-            const statusEl = document.getElementById('coordRosterStatus');
-            if (statusEl) statusEl.textContent = '✅ 명단 삭제 완료';
-            alert(`✅ [${courseName}] 명단이 삭제되었습니다.`);
-        } catch(e) { alert('삭제 실패: ' + e.message); }
-    };
-
     if (!_coordRosterData.length) { alert('저장할 명단이 없습니다'); return; }
     if (!currentRID || !globalAllData[currentRID]) {
         alert('저장할 과정을 먼저 선택해주세요.');
