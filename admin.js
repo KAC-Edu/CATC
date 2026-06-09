@@ -528,7 +528,7 @@ verifyTakeover: async function() {
         const micWrap = document.getElementById('entryMicConsentWrap');
         const micChk = document.getElementById('entryMicConsent');
         if (micWrap) micWrap.style.display = 'flex';
-        if (micChk) micChk.checked = true;
+        if (micChk) micChk.checked = false;
         const modal = document.getElementById('takeoverModal');
         if (modal) modal.style.display = 'flex';
         setTimeout(() => input && input.focus(), 50);
@@ -552,7 +552,7 @@ verifyTakeover: async function() {
         const micWrap = document.getElementById('entryMicConsentWrap');
         const micChk = document.getElementById('entryMicConsent');
         if (micWrap) micWrap.style.display = 'flex';
-        if (micChk) micChk.checked = true;
+        if (micChk) micChk.checked = false;
         document.getElementById('takeoverModal').style.display = 'flex';
         setTimeout(() => document.getElementById('takeoverPwInput').focus(), 50);
     },
@@ -7105,15 +7105,12 @@ const lectureMonitor = {
     },
     toggleMic: async function() {
         if (this.micReady || this.stream) {
+            // 마이크 끄기
             this.stopMic(true);
             ui.showAlert('강의 음성 모니터링 마이크를 껐습니다.');
         } else {
-            // 버튼 클릭 시: 동의를 이미 받았으면 바로 켜고, 아니면 동의 모달 표시
-            if (this._hasSessionConsent()) {
-                await this.requestMic();
-            } else {
-                this._askConsent(this.currentRoom);
-            }
+            // 버튼 클릭 시: 항상 동의 모달 표시 (자동 켜짐 방지)
+            this._askConsent(this.currentRoom);
         }
     },
     stopMic: function(keepRoom) {
