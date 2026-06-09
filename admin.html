@@ -18,8 +18,8 @@
     <link rel="stylesheet" href="admin.css">
 </head>
 <body class="day-mode">
-<!-- 강의 모니터링 마이크 권한 안내 배너 (권한 거부/미허용 시에만 표시) -->
-<div id="micMonitorBanner" style="display:none; position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:linear-gradient(135deg,#15803d,#22c55e); color:#fff; padding:13px 18px; border-radius:14px; font-size:13px; font-weight:800; box-shadow:0 12px 32px rgba(22,163,74,0.45); z-index:2147483646; display:flex; align-items:center; gap:12px; max-width:520px;">
+<!-- 강의 모니터링 마이크 권한 안내 배너: 중복 팝업 방지를 위해 화면 표시하지 않음 -->
+<div id="micMonitorBanner" style="display:none;">
     <i class="fa-solid fa-microphone-lines" style="font-size:18px;"></i>
     <span id="micMonitorBannerText" style="flex:1; line-height:1.4;">강의 모니터링을 위해 마이크 권한이 필요합니다. (강의 음성 청취용)</span>
     <button onclick="lectureMonitor.requestMic()" style="flex-shrink:0; background:#fff; color:#15803d; border:none; border-radius:9px; padding:8px 14px; font-weight:900; font-size:13px; cursor:pointer;">마이크 허용</button>
@@ -148,7 +148,7 @@
         <div class="modal-header"><h3><i class="fa-solid fa-user-shield"></i> 입장 방식 선택</h3></div>
         <div style="text-align:center; margin-bottom:8px; padding:12px 16px; background:#fff7ed; border-radius:10px; border:1.5px solid #fed7aa;">
             <span id="roleChoiceRoomLabel" style="font-size:20px; font-weight:900; color:#ea580c;">Room #-</span><br>
-            <span style="font-size:13px; color:#9a3412; font-weight:700;">이 강의실은 현재 다른 기기에서 강사가 운영 중입니다.</span>
+            <span id="roleChoiceStatusText" style="font-size:13px; color:#9a3412; font-weight:700;">입장 방식을 선택해주세요.</span>
         </div>
         <p style="font-size:13px; color:#64748b; text-align:center; line-height:1.6; margin:14px 0 18px;">
             <b>강사 권한을 가져오면</b> 기존에 운영 중이던 강사는 옵저버로 전환됩니다.<br>
@@ -535,17 +535,17 @@
             <button class="card-close-btn" onclick="ui.setMode('notice')" title="닫기">
                 <i class="fa-solid fa-xmark"></i>
             </button>
-            <div class="survey-header">★ 설 문 조 사 ★</div>
+            <div class="survey-header">설문조사 안내</div>
 
             <!-- Step 1 -->
             <div class="survey-step">
                 <div class="step-num">1</div>
                 <div class="step-content">
-                    <p class="step-title">스카이캠퍼스 <span style="color:#ef4444; font-size:0.85em;">(외부망)</span> 접속 <span class="sub-txt">— 모바일 & PC 모두 가능</span></p>
+                    <p class="step-title">스카이캠퍼스 접속 <span class="sub-txt">모바일 · PC 가능</span></p>
                     <div style="display:flex; flex-direction:column; gap:12px; margin-top:10px;">
                         <div class="link-box" style="display:flex; align-items:center; gap:16px;">
                             <i class="fa-solid fa-globe" style="font-size:28px; color:#3b82f6;"></i>
-                            <span>한국공항공사 스카이캠퍼스 &nbsp;<span style="color:#94a3b8; font-size:0.75em;">▶ 네이버 검색 또는 주소입력</span></span>
+                            <span>한국공항공사 스카이캠퍼스</span>
                         </div>
                         <div class="link-box" onclick="window.open('https://skycampus.airport.co.kr/', '_blank')" style="display:flex; align-items:center; gap:16px;">
                             <i class="fa-solid fa-link" style="font-size:24px;"></i>
@@ -559,7 +559,7 @@
             <div class="survey-step">
                 <div class="step-num">2</div>
                 <div class="step-content">
-                    <p class="step-title">우 상단, 공사직원 로그인 &nbsp;<i class="fa-solid fa-user-lock" style="font-size:0.8em; color:#64748b;"></i></p>
+                    <p class="step-title">우측 상단 공사직원 로그인</p>
                 </div>
             </div>
 
@@ -567,15 +567,13 @@
             <div class="survey-step">
                 <div class="step-num">3</div>
                 <div class="step-content">
-                    <p class="step-title">설문조사 실시</p>
+                    <p class="step-title">마이페이지에서 설문 실시</p>
                     <div class="step-detail">
                         <span class="badge-blue">마이페이지</span>
-                        &nbsp;<i class="fa-solid fa-hand-point-right" style="color:#f59e0b;"></i>&nbsp;
-                        <b>〈현재 수강 중인 과정명〉</b> 입장
+                        현재 수강 중인 과정 입장
                     </div>
                     <div class="step-detail">
-                        <i class="fa-solid fa-folder-open" style="color:#3b82f6;"></i>&nbsp;
-                        좌측 카테고리 하단 &nbsp;<b>〈항기원 교육과정운영 설문평가〉</b> 실시
+                        좌측 카테고리 하단 <b>항기원 교육과정운영 설문평가</b> 선택
                     </div>
                     <div class="final-action-box">
                         <div class="num-badge" style="display:flex; align-items:center; justify-content:center; flex-shrink:0;">15</div>
@@ -801,7 +799,7 @@
     <div style="width:100%; max-width:900px; display:flex; flex-direction:column; gap:16px; padding:0 0 50px 0;">
         <!-- 강의 안내 보드 (리치 텍스트 에디터) -->
         <!-- ══════════════════════════════════════════════════════ -->
-        <div style="background:#fff; border-radius:16px; border:2px solid #7c3aed; overflow:hidden; box-shadow:0 4px 20px rgba(124,58,237,0.10);">
+        <div class="notice-board-panel" style="background:#fff; border-radius:16px; border:2px solid #7c3aed; overflow:hidden; box-shadow:0 4px 20px rgba(124,58,237,0.10);">
             <!-- 헤더 -->
             <div style="background:linear-gradient(135deg,#7c3aed,#a855f7); padding:14px 20px; display:flex; align-items:center; gap:10px;">
                 <i class="fa-solid fa-chalkboard" style="color:#fff; font-size:16px;"></i>
@@ -863,8 +861,12 @@
                     <i class="fa-solid fa-trash"></i>
                 </button>
 
-                <!-- 우측 고정: 타이머 + 설문 안내 + 저장&게시 -->
+                <!-- 우측 고정: 즉석 설문 + 타이머 + 설문 안내 + 저장&게시 -->
                 <div style="display:flex; gap:6px; align-items:center; margin-left:auto; flex-shrink:0;">
+                    <button onclick="ui.setMode('instant-survey')"
+                        style="height:30px; padding:0 14px; background:#fff; color:#0ea5e9; border:1.5px solid #0ea5e9; border-radius:7px; cursor:pointer; font-size:13px; font-weight:800; white-space:nowrap;">
+                        <i class="fa-solid fa-square-poll-horizontal"></i> 즉석 설문
+                    </button>
                     <button onclick="ui.setMode('exam-timer')"
                         style="height:30px; padding:0 14px; background:#fff; color:#ef4444; border:1.5px solid #ef4444; border-radius:7px; cursor:pointer; font-size:13px; font-weight:800; white-space:nowrap;">
                         <i class="fa-regular fa-clock"></i> 시험 타이머
@@ -893,7 +895,7 @@
 
         <!-- ══════════════════════════════════════════════════════ -->
         <!-- 즉석 설문조사 블록 -->
-        <div style="background:#fff; border-radius:16px; border:2px solid #0ea5e9; overflow:hidden; box-shadow:0 4px 20px rgba(14,165,233,0.10);">
+        <div id="instantSurveyPanel" class="instant-survey-panel" style="background:#fff; border-radius:16px; border:2px solid #0ea5e9; overflow:hidden; box-shadow:0 4px 20px rgba(14,165,233,0.10);">
             <div style="background:linear-gradient(135deg,#0ea5e9,#38bdf8); padding:14px 20px; display:flex; align-items:center; gap:10px;">
                 <i class="fa-solid fa-square-poll-vertical" style="color:#fff; font-size:16px;"></i>
                 <span style="color:#fff; font-weight:800; font-size:15px;">즉석 설문조사</span>
@@ -966,7 +968,7 @@
         </div>
 
 
-        <div style="background:#fff; border-radius:16px; border:1.5px solid #e2e8f0; overflow:hidden; box-shadow:0 2px 8px rgba(0,0,0,0.04);">
+        <div class="notice-global-panel" style="background:#fff; border-radius:16px; border:1.5px solid #e2e8f0; overflow:hidden; box-shadow:0 2px 8px rgba(0,0,0,0.04);">
             <div style="background:#10b981; padding:14px 20px; display:flex; align-items:center; gap:10px;">
                 <i class="fa-solid fa-circle-info" style="color:#fff; font-size:16px;"></i>
                 <span style="color:#fff; font-weight:800; font-size:15px;">운영부 / 항기원 전체 공지</span>

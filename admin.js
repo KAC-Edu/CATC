@@ -348,9 +348,12 @@ switchRoomAttempt: async function(newRoom, silent = false) {
 
     const isActive = (st.roomStatus === 'active');
     const isOwner = (st.ownerSessionId === state.sessionId);
-    const hasOwner = !!st.ownerSessionId;
-    // 차단 조건: 방이 활성 상태이고, (실제 주인이 있거나 OR 비밀번호가 설정됨) AND 내가 주인/옵저버 아님
-    const blocked = isActive && (hasOwner || roomHasPassword) && !isOwner && !state.isObserver;
+    const ownerLastSeen = Number(st.ownerLastSeen || 0);
+    const ownerIsLive = !!st.ownerSessionId && ownerLastSeen && (Date.now() - ownerLastSeen < 60000);
+    const hasOwner = !!st.ownerSessionId && ownerIsLive;
+    // 실제 강사 소유 세션이 있을 때만 "다른 기기 사용 중"으로 차단한다.
+    const blocked = isActive && hasOwner && !isOwner && !state.isObserver;
+    const needsEntryChoice = isActive && roomHasPassword && !hasOwner && !isOwner && !state.isObserver;
 
     // 3. [보안 핵심] 인증 전 버튼 및 기능 물리적 잠금
     const setupBtn = document.getElementById('btnSetupModal');
@@ -375,7 +378,7 @@ switchRoomAttempt: async function(newRoom, silent = false) {
     // 4. [분기 처리] 권한 여부에 따른 입장 통제
     
     // (A) 방이 사용 중이고 '실제 소유자'가 있는데 내가 주인이 아니고 옵저버도 아님 -> 차단
-    if (blocked) {
+    if (blocked || needsEntryChoice) {
         console.log(`[권한 차단] Room ${newRoom}에 대한 소유권이 없습니다.`);
 
         // 새로고침 복구 시(silent)에는 비밀번호창 없이 현황판으로 복귀
@@ -393,6 +396,10 @@ switchRoomAttempt: async function(newRoom, silent = false) {
         //  강사 권한 가져오기 → 비밀번호창 / 옵저버 → 모니터링 입장 / 취소
         const lbl1 = document.getElementById('roleChoiceRoomLabel');
         if (lbl1) lbl1.innerText = `Room #${newRoom}`;
+        const roleMsg = document.getElementById('roleChoiceStatusText');
+        if (roleMsg) roleMsg.innerText = blocked
+            ? '이 강의실은 현재 다른 기기에서 강사가 운영 중입니다.'
+            : '강사 또는 옵저버 입장 방식을 선택해주세요.';
         document.getElementById('roleChoiceModal').style.display = 'flex';
         return;
     }
@@ -441,6 +448,7 @@ verifyTakeover: async function() {
 
             await firebase.database().ref(`courses/${newRoom}/status`).update({ 
                 ownerSessionId: state.sessionId,
+                ownerLastSeen: firebase.database.ServerValue.TIMESTAMP,
                 roomStatus: 'active'
             });
             localStorage.setItem(`last_owned_room`, newRoom);
@@ -715,6 +723,8 @@ forceEnterRoom: async function(room) {
 
         const isOwner = (statusData.ownerSessionId === state.sessionId);
         const isActive = (statusData.roomStatus === 'active');
+        const ownerLastSeen = Number(statusData.ownerLastSeen || 0);
+        const ownerIsLive = isOwner || (!!statusData.ownerSessionId && ownerLastSeen && (Date.now() - ownerLastSeen < 60000));
 
         // [강의 모니터링] 이 기기가 소유자 + 강의중일 때만 마이크 송출(live)
         try { lectureMonitor.syncStatus(cleanRoom, statusData, isOwner, isActive); } catch (e) { /* 무시 */ }
@@ -724,7 +734,7 @@ forceEnterRoom: async function(room) {
         if (!state.isObserver
             && state._ownedSessionRoom === cleanRoom        // 직전 스냅샷에서 내가 소유자였음
             && isActive
-            && statusData.ownerSessionId                    // 누군가가 소유 중(빈값/리셋 아님)
+            && ownerIsLive                                  // 실제 최근 소유 신호가 있음
             && statusData.ownerSessionId !== state.sessionId) {
             state._ownedSessionRoom = null;
             state.isObserver = true;
@@ -747,7 +757,12 @@ forceEnterRoom: async function(room) {
             return;
         }
         // 내가 현재 소유자이면 '소유 중이던 방'으로 기록 (핸드오버 감지 기준점)
-        if (isOwner) state._ownedSessionRoom = cleanRoom;
+        if (isOwner) {
+            state._ownedSessionRoom = cleanRoom;
+            if (!ownerLastSeen || (Date.now() - ownerLastSeen > 20000)) {
+                firebase.database().ref(`courses/${cleanRoom}/status/ownerLastSeen`).set(firebase.database.ServerValue.TIMESTAMP);
+            }
+        }
 
         // [중요] 권한 검증 로직 및 모달 트리거
         // 내가 직접 비번치고 들어갔던 방 목록에 있으면 wasMyRoom=true
@@ -777,7 +792,7 @@ forceEnterRoom: async function(room) {
             } else if (isActive && wasMyRoom) {
                 // ③ 내가 비번치고 들어갔던 방 (세션 만료 후 재진입)
                 // → ownerSessionId 갱신 후 입장
-                firebase.database().ref(`courses/${cleanRoom}/status`).update({ ownerSessionId: state.sessionId });
+                firebase.database().ref(`courses/${cleanRoom}/status`).update({ ownerSessionId: state.sessionId, ownerLastSeen: firebase.database.ServerValue.TIMESTAMP });
                 dataMgr.addOwnedRoom(cleanRoom);
                 overlay.style.display = 'none';
                 const tm = document.getElementById('takeoverModal');
@@ -785,19 +800,21 @@ forceEnterRoom: async function(room) {
 
             } else if (isActive && !isOwner && !statusData.ownerSessionId) {
                 // ④-a 자동배치 등으로 주인이 아직 없는 방 → 입장하는 강사가 소유권 획득
-                firebase.database().ref(`courses/${cleanRoom}/status`).update({ ownerSessionId: state.sessionId });
+                firebase.database().ref(`courses/${cleanRoom}/status`).update({ ownerSessionId: state.sessionId, ownerLastSeen: firebase.database.ServerValue.TIMESTAMP });
                 dataMgr.addOwnedRoom(cleanRoom);
                 overlay.style.display = 'none';
                 const tm = document.getElementById('takeoverModal');
                 if (tm) tm.style.display = 'none';
 
-            } else if (isActive && !isOwner) {
+            } else if (isActive && !isOwner && ownerIsLive) {
                 // ④-b 실제 다른 강사가 소유 중인 방 → 입장 방식 선택(강사/옵저버) 먼저
                 overlay.style.display = 'flex';
                 if (overlayMsg) overlayMsg.innerHTML = '현재 다른 기기에서 강의가 진행 중입니다.<br><br>입장 방식을 선택하세요.';
                 state.pendingRoom = cleanRoom;
                 const rcl = document.getElementById('roleChoiceRoomLabel');
                 if (rcl) rcl.innerText = `Room #${cleanRoom}`;
+                const roleMsg = document.getElementById('roleChoiceStatusText');
+                if (roleMsg) roleMsg.innerText = '이 강의실은 현재 다른 기기에서 강사가 운영 중입니다.';
                 document.getElementById('roleChoiceModal').style.display = 'flex';
             }
         } else {
@@ -808,7 +825,7 @@ forceEnterRoom: async function(room) {
         // 설정 버튼 상태 제어
         const setupBtn = document.getElementById('btnSetupModal');
         if (setupBtn) {
-            if (isActive && !isOwner && !state.isObserver && statusData.ownerSessionId) {
+            if (isActive && !isOwner && !state.isObserver && ownerIsLive) {
                 setupBtn.style.setProperty('background', '#64748b', 'important');
                 setupBtn.style.setProperty('opacity', '0.6', 'important');
                 setupBtn.innerHTML = '<i class="fa-solid fa-lock"></i> 과정 잠김 (인증 필요)';
@@ -3164,7 +3181,7 @@ setMode: function(mode) {
         }
 
         // 2. 현재 선택한 모드에 맞는 구역 ID 결정
-        const targetView = (mode === 'admin-action') ? 'view-admin-action' : (mode === 'dinner-skip') ? 'view-dinner-skip' : (mode === 'tablet-loan') ? 'view-tablet-loan' : `view-${mode}`;
+        const targetView = (mode === 'admin-action') ? 'view-admin-action' : (mode === 'dinner-skip') ? 'view-dinner-skip' : (mode === 'tablet-loan') ? 'view-tablet-loan' : (mode === 'instant-survey') ? 'view-notice' : `view-${mode}`;
         const targetEl = document.getElementById(targetView);
 
         // 3. 화면 표시 (전부 flex)
@@ -3191,7 +3208,7 @@ setMode: function(mode) {
         if (state.room) {
             // ── 교육생 화면 모드 설정 (퀴즈는 맨 먼저 처리) ──
             if (!state.isObserver) {
-                const safeStudentModes = ['waiting', 'schedule', 'shuttle', 'admin-action', 'dinner-skip', 'tablet-loan', 'students', 'dashboard', 'notice', 'attendance', 'guide', 'dormitory', 'survey-guide', 'exam-timer'];
+                const safeStudentModes = ['waiting', 'schedule', 'shuttle', 'admin-action', 'dinner-skip', 'tablet-loan', 'students', 'dashboard', 'notice', 'attendance', 'guide', 'dormitory', 'survey-guide', 'exam-timer', 'instant-survey'];
                 let studentMode;
                 if (mode === 'quiz') {
                     studentMode = 'quiz';
@@ -3224,13 +3241,19 @@ setMode: function(mode) {
             }
             
             if (mode === 'dashboard') ui.loadDashboardStats(); 
-            if (mode === 'notice') { 
+            const noticeView = document.getElementById('view-notice');
+            if (noticeView) noticeView.classList.toggle('survey-focus-mode', mode === 'instant-survey');
+
+            if (mode === 'notice' || mode === 'instant-survey') { 
                 ui.loadNoticeView(); 
                 guideMgr.clearCoordNoticeBadge();
                 // 안내 보드 기존 내용 불러오기 + 색상 팔레트 초기화
                 dataMgr.loadBoardNotice();
                 ui.initBoardPalette();
                 if (typeof surveyMgr !== 'undefined') surveyMgr.init();
+                if (mode === 'instant-survey') {
+                    setTimeout(() => document.getElementById('instantSurveyPanel')?.scrollIntoView({ block: 'start', behavior: 'smooth' }), 80);
+                }
             }
             if (mode === 'attendance') ui.loadAttendanceView();
             if (mode === 'schedule' && typeof scheduleMgr !== 'undefined') scheduleMgr.load();
@@ -6980,13 +7003,7 @@ const lectureMonitor = {
     _setBanner: function(kind) {
         const el = document.getElementById('micMonitorBanner');
         if (!el) return;
-        if (!kind) { el.style.display = 'none'; return; }
-        const msg = (kind === 'unsupported')
-            ? '강의 모니터링 마이크는 HTTPS 환경에서만 동작합니다.'
-            : '강의 모니터링을 위해 마이크 권한이 필요합니다. (강의 음성 청취용)';
-        const txtEl = document.getElementById('micMonitorBannerText');
-        if (txtEl) txtEl.textContent = msg;
-        el.style.display = 'flex';
+        el.style.display = 'none';
     },
 
     // status 구독 콜백에서 호출 — 방송 여부 결정
@@ -7031,8 +7048,8 @@ const lectureMonitor = {
     dismissConsent: function() {
         const modal = document.getElementById('micConsentModal');
         if (modal) modal.style.display = 'none';
-        // 나중에 다시 켤 수 있도록 안내 배너 노출
-        this._setBanner('blocked');
+        // 하단 배너는 중복 안내가 되므로 표시하지 않는다.
+        this._setBanner(null);
     },
 
     _publishStatus: function() {
