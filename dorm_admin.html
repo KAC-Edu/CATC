@@ -150,6 +150,24 @@
         .room-table .del-x { color: var(--danger); cursor: pointer; font-size: 15px; opacity: 0.65; }
         .room-table .del-x:hover { opacity: 1; }
         .crit-disabled { opacity: 0.35; pointer-events: none; }
+        .floor-bulk-tools { display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin:10px 0 12px; padding:10px 12px; border:1.5px solid #dbe4f0; border-radius:12px; background:#f8fafc; }
+        .bulk-box { display:inline-flex; align-items:center; gap:8px; padding:7px 10px; border:1px solid #dbe4f0; border-radius:10px; background:#fff; font-size:12px; font-weight:900; color:#334155; }
+        .bulk-box input[type="checkbox"] { width:18px; height:18px; accent-color:#2563eb; cursor:pointer; }
+        .bulk-box select { border:1px solid #cbd5e1; border-radius:8px; padding:5px 8px; font-size:12px; font-weight:800; }
+        .bulk-btn { border:1px solid #cbd5e1; background:#fff; color:#334155; border-radius:9px; padding:8px 11px; font-size:12px; font-weight:900; cursor:pointer; }
+        .bulk-btn.primary { border-color:#2563eb; color:#2563eb; }
+        .bulk-btn:hover { filter:brightness(0.98); box-shadow:0 1px 5px rgba(15,23,42,0.08); }
+        .room-map-editor { margin:10px 0 14px; padding:12px; border:1.5px solid #bfdbfe; background:#eff6ff; border-radius:14px; }
+        .room-map-editor-head { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:10px; font-size:13px; font-weight:900; color:#1e3a8a; }
+        .room-map-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(112px,1fr)); gap:8px; }
+        .room-map-tile { background:#fff; border:1.5px solid #dbe4f0; border-radius:12px; padding:9px; min-height:82px; display:flex; flex-direction:column; gap:7px; }
+        .room-map-tile.royal { border-color:#f59e0b; background:#fffbeb; }
+        .room-map-tile.noassign { opacity:.62; background:#f1f5f9; }
+        .room-map-no { font-size:16px; font-weight:1000; color:#0f172a; }
+        .room-map-ops { display:grid; grid-template-columns:1fr 1fr; gap:5px; font-size:11px; font-weight:800; color:#475569; }
+        .room-map-ops label { display:flex; align-items:center; gap:4px; white-space:nowrap; }
+        .room-map-ops input { width:15px; height:15px; accent-color:#2563eb; }
+        .room-map-tile select { width:100%; border:1px solid #cbd5e1; border-radius:8px; padding:5px 6px; font-size:12px; font-weight:800; background:#fff; }
 
         /* 과정 선택 — 주차 섹션 + 가로 리스트 카드 */
         .week-section { margin-bottom: 18px; }
@@ -366,6 +384,7 @@
                         <option value="empno_desc">사번 높은순(연소자) 우선</option>
                         <option value="female">여성 우선</option>
                         <option value="male">남성 우선</option>
+                        <option value="foreign">외국인 교육생 우선</option>
                         <option value="name_asc">가나다순</option>
                     </select>
                     <button onclick="addCriteria()" style="padding:10px 18px; border:none; border-radius:9px; background:#2563eb; color:#fff; font-weight:800; cursor:pointer;"><i class="fa-solid fa-plus"></i> 기준 추가</button>
@@ -702,12 +721,13 @@
         let floorPriority = [];   // [{key, building, floor}] 정렬된 순서
 
         // ── 배치 기준 레지스트리 ──
-        // criteria: { id, name, type }  type ∈ empno_asc | empno_desc | female | male | name_asc
+        // criteria: { id, name, type }  type ∈ empno_asc | empno_desc | female | male | foreign | name_asc
         const CRITERIA_TYPES = {
             empno_asc:  '사번 낮은순(연장자) 우선',
             empno_desc: '사번 높은순(연소자) 우선',
             female:     '여성 우선',
             male:       '남성 우선',
+            foreign:    '외국인 교육생 우선',
             name_asc:   '가나다순'
         };
         let criteriaList = [];  // [{id, name, type}]
@@ -715,14 +735,22 @@
         function defaultCriteria() {
             return [
                 { id: 'empno', name: '사번 낮은순(연장자) 우선', type: 'empno_asc' },
-                { id: 'female', name: '여성 우선', type: 'female' }
+                { id: 'female', name: '여성 우선', type: 'female' },
+                { id: 'foreign', name: '외국인 교육생 우선', type: 'foreign' }
             ];
+        }
+
+        function ensureBuiltinCriteria() {
+            if (!criteriaList.some(c => c && c.type === 'foreign')) {
+                criteriaList.push({ id: 'foreign', name: '외국인 교육생 우선', type: 'foreign' });
+            }
         }
 
         function loadCriteria() {
             db.ref('system/dorm/criteria').once('value', snap => {
                 const v = snap.val();
                 criteriaList = (Array.isArray(v) && v.length) ? v : defaultCriteria();
+                ensureBuiltinCriteria();
                 renderCriteriaManager();
                 renderFloors(); // 드롭다운 갱신
             });
@@ -815,12 +843,13 @@
                     <i class="fa-solid fa-grip-vertical" style="color:#cbd5e1;"></i>
                     <span style="font-weight:800; color:#0f172a; font-size:15px; min-width:130px;">${item.building} ${item.floor}층</span>
                     <select onchange="setFloorGender('${item.key}', this.value)" onmousedown="event.stopPropagation()" draggable="false"
-                        style="padding:7px 11px; border:1.5px solid ${item.gender==='F'?'#ec4899':item.gender==='M'?'#3b82f6':'#e2e8f0'}; border-radius:9px; font-size:13px; font-weight:700; color:${item.gender==='F'?'#be185d':item.gender==='M'?'#1d4ed8':'#475569'};">
+                        style="padding:7px 11px; border:1.5px solid ${item.gender==='F'?'#ec4899':item.gender==='M'?'#3b82f6':item.gender==='X'?'#ef4444':'#e2e8f0'}; border-radius:9px; font-size:13px; font-weight:700; color:${item.gender==='F'?'#be185d':item.gender==='M'?'#1d4ed8':item.gender==='X'?'#b91c1c':'#475569'};">
                         <option value="" ${!item.gender?'selected':''}>혼합 (제한 없음)</option>
                         <option value="F" ${item.gender==='F'?'selected':''}>여성 전용</option>
                         <option value="M" ${item.gender==='M'?'selected':''}>남성 전용</option>
+                        <option value="X" ${item.gender==='X'?'selected':''}>사용안함</option>
                     </select>
-                    <span style="margin-left:auto; font-size:12px; color:#94a3b8;">${i === 0 ? '가장 먼저 채움' : ''}</span>
+                    <span style="margin-left:auto; font-size:12px; color:${item.gender==='X'?'#ef4444':'#94a3b8'};">${item.gender==='X' ? '자동배정 제외' : (i === 0 ? '가장 먼저 채움' : '')}</span>
                 </div>
             `).join('');
             document.getElementById('floorPrioSummary').innerText = `총 ${floorPriority.length}개 층 · 위에서부터 순서대로 채움`;
@@ -886,6 +915,8 @@
             renderBldgTabs();
             renderFloors();
         }
+
+        let roomMapEditorOpen = {};
 
         function loadRooms() {
             db.ref('system/dorm/rooms').once('value', snap => {
@@ -1001,6 +1032,8 @@
                                    onkeyup="if(event.key==='Enter') addRooms('${currentBldg}', ${f})">
                             <button onclick="addRooms('${currentBldg}', ${f})"><i class="fa-solid fa-plus"></i> 추가</button>
                         </div>
+                        ${floorBulkToolsHtml(currentBldg, f)}
+                        ${roomMapEditorHtml(currentBldg, f, floorRooms)}
                         <div style="overflow-x:auto;">
                             <table class="room-table">
                                 <thead>
@@ -1019,6 +1052,79 @@
                     </div>
                 `;
             }).join('');
+        }
+
+        function floorBulkToolsHtml(building, floor) {
+            const key = `${building}_${floor}`;
+            return `<div class="floor-bulk-tools">
+                <span style="font-size:12px;font-weight:900;color:#64748b;margin-right:4px;">이 층 전체 설정</span>
+                <label class="bulk-box">우선배정<br><input type="checkbox" onchange="bulkSetFloor('${building}', ${floor}, 'royal', this.checked)" title="이 층 우선배정 전체 설정/해제"></label>
+                <label class="bulk-box">배정제외<br><input type="checkbox" onchange="bulkSetFloor('${building}', ${floor}, 'noAssign', this.checked)" title="이 층 배정제외 전체 설정/해제"></label>
+                <label class="bulk-box">정원
+                    <select onchange="if(this.value) bulkSetFloor('${building}', ${floor}, 'capacity', this.value); this.value='';">
+                        <option value="">선택</option>
+                        <option value="1">전체 1인 1실</option>
+                        <option value="2">전체 2인 1실</option>
+                    </select>
+                </label>
+                <button class="bulk-btn primary" onclick="toggleRoomMapEditor('${key}')"><i class="fa-solid fa-map"></i> 배치도 설정</button>
+            </div>`;
+        }
+
+        function bulkSetFloor(building, floor, key, val) {
+            Object.entries(rooms).forEach(([id, r]) => {
+                if (!r || r.building !== building || r.floor !== floor) return;
+                if (key === 'capacity') r.capacity = parseInt(val, 10) || 1;
+                if (key === 'royal') {
+                    r.royal = !!val;
+                    if (r.royal) r.noAssign = false;
+                }
+                if (key === 'noAssign') {
+                    r.noAssign = !!val;
+                    if (r.noAssign) r.royal = false;
+                }
+            });
+            renderFloors();
+            updateSummary();
+            showToast('이 층 전체 설정이 반영되었습니다. 저장 버튼을 눌러 확정하세요.');
+        }
+
+        function toggleRoomMapEditor(key) {
+            roomMapEditorOpen[key] = !roomMapEditorOpen[key];
+            renderFloors();
+        }
+
+        function roomMapEditorHtml(building, floor, floorRooms) {
+            const key = `${building}_${floor}`;
+            if (!roomMapEditorOpen[key]) return '';
+            if (!floorRooms.length) return `<div class="room-map-editor"><div class="empty-floor">배치도에서 설정할 방이 없습니다.</div></div>`;
+            const tiles = floorRooms.map(([id, r]) => {
+                const royal = !!r.royal;
+                const noAssign = !!r.noAssign;
+                return `<div class="room-map-tile ${royal ? 'royal' : ''} ${noAssign ? 'noassign' : ''}">
+                    <div class="room-map-no">${r.no}호</div>
+                    <select onchange="setRoomField('${id}','capacity',this.value)">
+                        <option value="1" ${r.capacity !== 2 ? 'selected' : ''}>1인 1실</option>
+                        <option value="2" ${r.capacity === 2 ? 'selected' : ''}>2인 1실</option>
+                    </select>
+                    <div class="room-map-ops">
+                        <label><input type="checkbox" ${royal ? 'checked' : ''} ${noAssign ? 'disabled' : ''} onchange="setRoomField('${id}','royal',this.checked)">우선</label>
+                        <label><input type="checkbox" ${noAssign ? 'checked' : ''} onchange="setRoomField('${id}','noAssign',this.checked)">제외</label>
+                    </div>
+                </div>`;
+            }).join('');
+            return `<div class="room-map-editor">
+                <div class="room-map-editor-head">
+                    <span><i class="fa-solid fa-map-location-dot"></i> ${building} ${floor}층 배치도식 설정</span>
+                    <span style="display:flex;gap:6px;flex-wrap:wrap;">
+                        <button class="bulk-btn" onclick="bulkSetFloor('${building}', ${floor}, 'royal', true)">우선 전체</button>
+                        <button class="bulk-btn" onclick="bulkSetFloor('${building}', ${floor}, 'royal', false)">우선 해제</button>
+                        <button class="bulk-btn" onclick="bulkSetFloor('${building}', ${floor}, 'noAssign', true)">제외 전체</button>
+                        <button class="bulk-btn" onclick="bulkSetFloor('${building}', ${floor}, 'noAssign', false)">제외 해제</button>
+                    </span>
+                </div>
+                <div class="room-map-grid">${tiles}</div>
+            </div>`;
         }
 
         function roomRowHtml(id, r) {
@@ -1688,8 +1794,8 @@
             const seen = new Set();
             const out = [];
             (rows || []).forEach(r => {
-                if (!r || !r.name || !r.empNo) return;
-                const key = `${r.name}_${r.empNo}`;
+                if (!r || !r.name) return;
+                const key = `${String(r.name).replace(/\s+/g,'').toLowerCase()}_${r.empNo || r.gender || r.seq || ''}`;
                 if (seen.has(key)) return;
                 seen.add(key);
                 out.push(r);
@@ -1709,7 +1815,7 @@
         function buildScheduleData(lines, fileName) {
             const arr = (lines || [])
                 .map(normalizeRosterCell)
-                .filter(v => v && /[가-힣0-9]/.test(v))
+                .filter(v => v && /[가-힣0-9A-Za-z]/.test(v))
                 .filter(v => !/^[捤獥汤捯氠瑢]+$/.test(v));
             if (!arr.length) return null;
             let start = arr.findIndex(v => /교육\s*시간표|시간표/.test(v));
@@ -1736,7 +1842,7 @@
                 .filter(Boolean);
 
             lines.forEach(line => {
-                if (!/\d{4,6}/.test(line)) return;
+                if (!/\d{4,6}/.test(line) && !/[A-Za-z]{2,}.*\b[MF]\b/i.test(line)) return;
                 if (/연\s*번|성\s*명|성\s*함|사\s*번|소\s*속|성\s*별|합계|소계|명단|과정/.test(line)) return;
                 const cells = line
                     .replace(/([가-힣])\s+([가-힣])\s+([가-힣])(?=\s|$)/g, '$1$2$3')
@@ -1772,6 +1878,13 @@
 
                 const row = parseRosterRow(arr.slice(start, end));
                 if (row) parsed.push(row);
+            });
+            // 외국인 과정 양식은 사번이 없고 성별(M/F)만 있는 경우가 많다.
+            arr.forEach((cell, idx) => {
+                if (!isSeq(cell)) return;
+                const slice = arr.slice(idx, Math.min(arr.length, idx + 10));
+                const row = parseRosterRow(slice);
+                if (row && !row.empNo) parsed.push(row);
             });
             return dedupeRoster(parsed);
         }
@@ -2019,6 +2132,11 @@
                     const isHeader = arr => /연\s*번|성\s*명|성\s*함|사\s*번|소\s*속|성\s*별|합계|소계|명단|과정|배정/.test(arr.join(' '));
                     lines.forEach(arr => {
                         if (isHeader(arr)) return;
+                        const foreignRow = parseRosterRow(arr);
+                        if (foreignRow && !foreignRow.empNo) {
+                            parsed.push(foreignRow);
+                            return;
+                        }
                         if (hasEmp(arr)) {
                             if (cur) merged.push(cur);
                             cur = arr.slice();
@@ -2054,11 +2172,53 @@
             ev.target.value = '';
         }
 
+        function isForeignNameValue(v) {
+            const s = normalizeRosterCell(v);
+            return /^[A-Za-z][A-Za-z .'\-]{1,80}$/.test(s) && /[A-Za-z]{2,}/.test(s);
+        }
+
+        function parseForeignRosterRow(cells) {
+            const arr = (cells || []).map(normalizeRosterCell).filter(Boolean);
+            if (!arr.length) return null;
+            const joined = arr.join(' ');
+            if (/교육\s*시간표|교육생\s*명단|성\s*명|국\s*가|출생|합계|과정명|담임/.test(joined)) return null;
+            const gIdx = arr.findIndex(c => /^(M|F|m|f)$/.test(c));
+            if (gIdx < 0) return null;
+            const seqIdx = arr.findIndex(c => /^\d{1,3}$/.test(c));
+            if (seqIdx < 0 && !/\d{4}[./-]\d{1,2}[./-]\d{1,2}/.test(joined)) return null;
+            const JOB_WORDS = /engineer|inspector|officer|manager|specialist|supervisor|technician|department|services|communication|electrical|aeronautical|aerodrome|navigation|surveillance|certification|licensing|senior|head|airport|system/i;
+            const start = seqIdx >= 0 ? seqIdx + 1 : 0;
+            const nameParts = [];
+            for (let i = start; i < gIdx; i++) {
+                const c = arr[i];
+                if (!isForeignNameValue(c)) {
+                    if (nameParts.length) break;
+                    continue;
+                }
+                if (JOB_WORDS.test(c)) break;
+                nameParts.push(c);
+                const words = nameParts.join(' ').split(/\s+/).filter(Boolean);
+                if (words.length >= 4) break;
+            }
+            let name = nameParts.join(' ').replace(/\s+/g, ' ').trim();
+            if (!name) {
+                const cand = arr.slice(start, gIdx).find(c => isForeignNameValue(c) && !JOB_WORDS.test(c));
+                name = cand || '';
+            }
+            if (!name || name.split(/\s+/).filter(Boolean).length < 2) return null;
+            const gender = /^F$/i.test(arr[gIdx]) ? 'F' : 'M';
+            const country = arr.slice(gIdx + 1).find(c => /^[A-Za-z][A-Za-z .'\-]{2,30}$/.test(c) && !JOB_WORDS.test(c)) || '';
+            return { seq: 0, name, empNo: '', dept: country ? `외국인 교육생 · ${country}` : '외국인 교육생', gender, foreign: true };
+        }
+
         // 한 줄(cells 배열)을 명단 행으로 해석
         function parseRosterRow(cells) {
             const joined = cells.join(' ');
             // 헤더/제목/합계 줄 제외
             if (/연\s*번|성\s*명|성\s*함|사\s*번|소\s*속|성\s*별|합계|소계|명단|과정|배정/.test(joined)) return null;
+
+            const foreignRow = parseForeignRosterRow(cells);
+            if (foreignRow) return foreignRow;
 
             // 사번: 4~6자리 숫자 — 명단의 각 사람은 반드시 사번이 있다.
             //  (부서명이 두 줄로 줄바꿈되어 생기는 "본사/차장/대우" 같은 가짜 줄에는 사번이 없으므로 제외)
@@ -2161,6 +2321,12 @@
         function delRosterRow(i) { roster.splice(i, 1); rosterDirty = true; renderRoster(); }
         function clearRoster() { if (confirm('명단을 모두 비우시겠습니까?')) { roster = []; rosterDirty = true; renderRoster(); } }
 
+        function courseRoomDetail(course, settings) {
+            const c = course || {};
+            const s = settings || {};
+            return (c.roomDetail || c.classroomDetail || c.classroom || c.roomName || s.roomDetail || s.classroomDetail || s.classroom || s.roomName || s.location || '').trim();
+        }
+
         function saveRoster() {
             const saveCourse = rosterEditCourse || selectedCourse;
             if (!saveCourse) { showToast('먼저 과정을 선택하세요'); return; }
@@ -2169,7 +2335,7 @@
             }
             const clean = roster.filter(r => (r.name || '').trim());
             // 식별번호(사번 또는 전화 뒤4) 없는 행 경고
-            const noId = clean.filter(r => !/^\d{4,6}$/.test((r.empNo || '').trim()));
+            const noId = clean.filter(r => !/^\d{4,6}$/.test((r.empNo || '').trim()) && !isForeignNameValue(r.name || ''));
             if (noId.length) {
                 if (!confirm(`사번이 비어있거나 형식이 이상한 인원이 ${noId.length}명 있습니다.\n그래도 저장할까요? (배정 시 식별이 어려울 수 있음)`)) return;
             }
@@ -2177,8 +2343,9 @@
                 room: saveCourse.room,
                 courseName: saveCourse.courseName,
                 period: saveCourse.period,
+                roomDetail: courseRoomDetail(saveCourse),
                 weekKey: saveCourse.weekKey,
-                list: clean.map((r, i) => ({ seq: i + 1, name: r.name.trim(), empNo: (r.empNo||'').trim(), dept: (r.dept||'').trim(), gender: r.gender || '' })),
+                list: clean.map((r, i) => ({ seq: i + 1, name: r.name.trim(), empNo: (r.empNo||'').trim(), dept: (r.dept||'').trim(), gender: r.gender || '', foreign: !!(r.foreign || isForeignNameValue(r.name || '')) })),
                 schedule: currentScheduleData || null,
                 coordUpdatedAt: _appliedCoordUpdatedAt || (dormRosterMeta[rosterKey(saveCourse)] && dormRosterMeta[rosterKey(saveCourse)].coordUpdatedAt) || 0,
                 updatedAt: firebase.database.ServerValue.TIMESTAMP
@@ -2191,6 +2358,7 @@
                         const schedulePayload = {
                             courseName: saveCourse.courseName || '',
                             period: saveCourse.period || '',
+                            roomDetail: courseRoomDetail(saveCourse),
                             weekKey: saveCourse.weekKey || '',
                             source: currentScheduleData.fileName || '',
                             lines: currentScheduleData.lines || [],
@@ -2556,6 +2724,7 @@
             let p = pool.slice();
             if (type === 'female') { p = p.filter(x => x.gender === 'F'); }
             else if (type === 'male') { p = p.filter(x => x.gender === 'M'); }
+            else if (type === 'foreign') { p = p.filter(x => x.foreign || isForeignNameValue(x.name || '')); }
             if (!p.length) return null;
             const empAsc = (a, b) => (parseInt(a.empNo||'999999',10)) - (parseInt(b.empNo||'999999',10));
             if (type === 'empno_desc') p.sort((a, b) => empAsc(b, a));
@@ -2665,9 +2834,9 @@
                 roomState[r.id] = {
                     id: r.id, building: r.building, floor: r.floor, no: r.no,
                     capacity: r.capacity || 1,
-                    fixedGender: floorG || '',
+                    fixedGender: floorG === 'X' ? '' : (floorG || ''),
                     royal: !!r.royal, criteria: r.criteria || 'empno',
-                    noAssign: !!r.noAssign,
+                    noAssign: !!r.noAssign || floorG === 'X',
                     occupants: []
                 };
             });
@@ -2710,7 +2879,7 @@
                     if (!name) return;
                     const empNo = String(p.empNo || '').trim();
                     people.push({
-                        name, empNo, dept: p.dept || '', gender: p.gender || '',
+                        name, empNo, dept: p.dept || '', gender: p.gender || '', foreign: !!(p.foreign || isForeignNameValue(name)),
                         course: v.courseName || '과정명 미지정', room: v.room || '', rosterKey: ck,
                         start: pr.start, end: pr.end || pr.start,
                         token: safeFirebaseKey(`${name}_${empNo || ck}`)
@@ -2920,7 +3089,7 @@
                 weekKey: wk,
                 assignedAt: firebase.database.ServerValue.TIMESTAMP,
                 students: assigned,
-                courses: courseKeys.map(ck => ({ rosterKey: ck, courseName: activeRosters[ck].courseName, room: activeRosters[ck].room, period: activeRosters[ck].period || '' }))
+                courses: courseKeys.map(ck => ({ rosterKey: ck, courseName: activeRosters[ck].courseName, room: activeRosters[ck].room, period: activeRosters[ck].period || '', roomDetail: activeRosters[ck].roomDetail || activeRosters[ck].classroomDetail || '' }))
             };
             // ── 즉시 저장 ───────────────────────────────────────────
             const existSnap = await db.ref(`system/dorm/assignments/${wk}`).once('value');
@@ -3214,7 +3383,8 @@
                 const ext = cell.ext ? ` <span class="fm-ext">\u260e${cell.ext}</span>` : '';
                 const head = `<div class="fm-head">${cell.no}${ext}</div>`;   // 헤더는 항상 회색(기본)
                 const body = people.map(chip).join('');
-                return `<div class="fm-room dm-room${occ ? ' occ' : ''}" data-building="${building}" data-no="${cell.no}" style="grid-column:${cell.c};grid-row:${cell.r};">${head}<div class="fm-body">${body}</div></div>`;
+                const intl = building === '국제교육동' ? ' fm-intl' : '';
+                return `<div class="fm-room dm-room${occ ? ' occ' : ''}${intl}" data-building="${building}" data-no="${cell.no}" style="grid-column:${cell.c};grid-row:${cell.r};">${head}<div class="fm-body">${body}</div></div>`;
             }
             function facCell(cell) { return `<div class="fm-fac" style="grid-column:${cell.c};grid-row:${cell.r};">${cell.fac}</div>`; }
             function floor(building, fl) {
@@ -3812,6 +3982,11 @@
             if (Object.values(students).some(s => (s.course||'').trim() === '강사')) courseColors['강사'] = '#475569';
             const coursePeriod = {};
             (viewAssign.courses || []).forEach(c => { coursePeriod[c.courseName] = c.period || ''; });
+            const courseRoomDetailMap = {};
+            (viewAssign.courses || []).forEach(c => {
+                const settings = (c.room && coursesData[c.room] && coursesData[c.room].settings) || {};
+                courseRoomDetailMap[c.courseName] = c.roomDetail || courseRoomDetail(c, settings) || '';
+            });
             const byRoomNo = {}, byRoom = {};
             Object.entries(students).forEach(([t, s]) => {
                 (byRoom[s.roomId] = byRoom[s.roomId] || []).push(s);
@@ -3820,7 +3995,7 @@
             });
             const courseCount = {};
             Object.values(students).forEach(s => { courseCount[s.course] = (courseCount[s.course]||0)+1; });
-            return { wk, wd, wEnd, fmt, students, bldgOrder, courseColors, coursePeriod, byRoomNo, byRoom, courseCount };
+            return { wk, wd, wEnd, fmt, students, bldgOrder, courseColors, coursePeriod, courseRoomDetail: courseRoomDetailMap, byRoomNo, byRoom, courseCount };
         }
 
         function _docHead(title) {
@@ -3891,7 +4066,8 @@
         function _legendHtml(P) {
             return Object.keys(P.courseColors).map(cn => {
                 const col = P.courseColors[cn];
-                const per = P.coursePeriod[cn] ? ` <span class="leg-period">(${P.coursePeriod[cn]})</span>` : '';
+                const meta = [P.coursePeriod[cn], P.courseRoomDetail && P.courseRoomDetail[cn]].filter(Boolean).join(' / ');
+                const per = meta ? ` <span class="leg-period">(${meta})</span>` : '';
                 const cnt = P.courseCount[cn] || 0;
                 return `<span class="leg-item"><span class="leg-swatch" style="background:${col}"></span><span style="color:${col}">${cn} · ${cnt}명</span>${per}</span>`;
             }).join('');
@@ -3963,11 +4139,13 @@
  #boardMapArea .fm-floor-label:first-child{margin-top:2px;}
  #boardMapArea .fm-grid{display:grid;gap:5px;grid-auto-rows:minmax(64px,auto);}
  #boardMapArea .fm-room{border:1.5px solid #94a3b8;border-radius:6px;background:#fff;display:flex;flex-direction:column;overflow:hidden;min-height:64px;}
+ #boardMapArea .fm-room.fm-intl{min-height:78px;}
  #boardMapArea .fm-head{font-size:11px;font-weight:900;color:#475569;background:#f1f5f9;border-bottom:1.5px solid #cbd5e1;text-align:center;padding:2px;line-height:1.5;white-space:nowrap;}
  #boardMapArea .fm-ext{font-size:9px;font-weight:700;opacity:.85;}
  #boardMapArea .fm-body{flex:1;display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:3px;padding:4px 3px;}
  #boardMapArea .fm-fac{border:1.5px dashed #b6c0cf;border-radius:6px;background:repeating-linear-gradient(45deg,#e9edf3,#e9edf3 4px,#f4f7fb 4px,#f4f7fb 11px);color:#64748b;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;text-align:center;}
  #boardMapArea .dm-chip{display:inline-flex;align-items:center;gap:1px;background:#fff;border:1.5px solid #94a3b8;border-radius:9px;padding:2px 8px;font-size:12px;font-weight:800;cursor:grab;line-height:1.3;user-select:none;white-space:nowrap;}
+ #boardMapArea .fm-intl .dm-chip{white-space:normal;overflow-wrap:anywhere;word-break:break-word;font-size:10.5px;text-align:center;}
  #boardMapArea .dm-chip:active{cursor:grabbing;}
  #boardMapArea .dm-chip .dm-del{margin-left:5px;color:#cbd5e1;font-weight:900;font-size:11px;cursor:pointer;padding:0 2px;border-radius:3px;line-height:1;}
  #boardMapArea .dm-chip .dm-del:hover{color:#fff;background:#ef4444;}
@@ -4054,7 +4232,8 @@
                     }).join('');
                 }
                 const flat = cell.flat ? ' fm-flat' : '';
-                return `<div class="fm-room${occ ? ' occ' : ''}${flat}" style="grid-column:${cell.c};grid-row:${cell.r};">${head}<div class="fm-body">${body}</div></div>`;
+                const intl = building === '국제교육동' ? ' fm-intl' : '';
+                return `<div class="fm-room${occ ? ' occ' : ''}${flat}${intl}" style="grid-column:${cell.c};grid-row:${cell.r};">${head}<div class="fm-body">${body}</div></div>`;
             }
             function facCellHtml(cell) {
                 return `<div class="fm-fac" style="grid-column:${cell.c};grid-row:${cell.r};">${cell.fac}</div>`;
@@ -4094,12 +4273,15 @@
                 .fm-floor-label:first-child { margin-top:2px; }
                 .fm-grid { display:grid; gap:5px; grid-auto-rows:minmax(60px,auto); }
                 .fm-room { border:1.5px solid #94a3b8; border-radius:6px; background:#fff; display:flex; flex-direction:column; overflow:hidden; min-height:60px; }
+                .fm-room.fm-intl { min-height:74px; }
                 .fm-head { font-size:11px; font-weight:900; color:#475569; background:#f1f5f9; border-bottom:1.5px solid #cbd5e1; text-align:center; padding:2px 2px; line-height:1.5; white-space:nowrap; }
                 .fm-ext { font-size:9px; font-weight:700; opacity:.85; }
                 .fm-body { flex:1; display:flex; flex-wrap:wrap; align-items:center; justify-content:center; gap:4px 5px; padding:4px 3px; }
                 .fm-name { font-size:13px; font-weight:800; line-height:1.3; }
                 .fm-g { font-size:9px; font-weight:700; margin-left:1px; }
                 .fm-pill { display:inline-flex; align-items:center; border:1.5px solid; border-radius:11px; padding:2px 9px; font-size:12px; font-weight:800; line-height:1.35; white-space:nowrap; background:#fff; }
+                .fm-intl .fm-body { padding:5px 3px; align-items:stretch; }
+                .fm-intl .fm-pill { white-space:normal; word-break:break-word; overflow-wrap:anywhere; text-align:center; justify-content:center; max-width:100%; font-size:10.5px; line-height:1.25; padding:2px 5px; }
                 .fm-pg { font-size:9px; font-weight:700; margin-left:1px; }
                 .fm-flat { flex-direction:row; min-height:42px; }
                 .fm-flat .fm-head { display:flex; flex-direction:column; align-items:center; justify-content:center; border-bottom:none; border-right:1.5px solid #cbd5e1; min-width:70px; }

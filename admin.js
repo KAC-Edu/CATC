@@ -5859,6 +5859,45 @@ const scheduleMgr = {
         });
         return summaries;
     },
+    parseFlexibleTable: function(lines) {
+        const cellSep = '\u241F';
+        const clean = v => this.cleanLine(v).replace(/\s+/g, ' ').trim();
+        const tableLines = (lines || []).filter(v => String(v || '').includes(cellSep));
+        if (!tableLines.length) return null;
+        const table = tableLines.map(line => String(line).split(cellSep).map(clean));
+        const isDate = v => /(\d{1,2})\s*(?:월|[./-])\s*(\d{1,2})/.test(v || '');
+        const isWeekday = v => /^(월|화|수|목|금|토|일|Mon|Tue|Wed|Thu|Fri|Sat|Sun)$/i.test(v || '');
+        const isTime = v => /^\d{1,2}:\d{2}\s*~?(\s*\d{1,2}:\d{2})?$/.test(v || '');
+        const isPeriod = v => /^\d{1,2}$/.test(v || '');
+        const isNoise = v => !v || /교육\s*시간표|교육생\s*명단|과정명|담임|강의실|시간|일\s*자|점\s*심|점심|Lunch|비고/i.test(v);
+        const dateRow = table.find(row => row.some(isDate)) || [];
+        const dateCells = dateRow.map((v, i) => ({ v, i })).filter(x => isDate(x.v));
+        if (!dateCells.length) return null;
+        const weekdayRow = table.find(row => row.some(isWeekday)) || [];
+        const weekdayOf = (date, fallback) => {
+            const m = String(date || '').match(/(\d{1,2})\s*(?:월|[./-])\s*(\d{1,2})/);
+            if (!m) return fallback || '';
+            const d = new Date(new Date().getFullYear(), Number(m[1]) - 1, Number(m[2]));
+            return ['일','월','화','수','목','금','토'][d.getDay()];
+        };
+        const days = dateCells.slice(0, 7).map((x, idx) => ({ date: x.v, weekday: isWeekday(weekdayRow[x.i] || '') ? weekdayRow[x.i] : weekdayOf(x.v, ['월','화','수','목','금'][idx]) }));
+        const rows = [];
+        table.forEach(cells => {
+            const timeIdx = cells.findIndex(isTime);
+            if (timeIdx < 0) return;
+            const time = cells[timeIdx];
+            let startIdx = timeIdx + 1;
+            if (isTime(cells[startIdx] || '')) startIdx++;
+            const subjects = days.map((d, i) => {
+                const col = dateCells[i] ? dateCells[i].i : startIdx + i;
+                const candidates = [cells[col], cells[startIdx + i]].map(clean).filter(Boolean);
+                const val = candidates.find(v => !isNoise(v) && !isDate(v) && !isWeekday(v) && !isTime(v) && !isPeriod(v)) || '';
+                return val;
+            });
+            if (subjects.some(Boolean)) rows.push({ time, cells: subjects });
+        });
+        return rows.length ? { days, rows } : null;
+    },
     parseTable: function(lines) {
         const cellSep = '\u241F';
         const cleanCell = v => this.cleanLine(v).replace(/^[ㄱ-ㅎㅏ-ㅣ]{1,8}$/g, '').trim();
@@ -5949,7 +5988,8 @@ const scheduleMgr = {
     },
     renderSchedule: function(lines) {
         const linearSummaries = this.parseLinearSummary(lines);
-        const parsed = linearSummaries ? null : this.parseTable(lines);
+        const flexibleParsed = linearSummaries ? null : this.parseFlexibleTable(lines);
+        const parsed = linearSummaries ? null : (flexibleParsed || this.parseTable(lines));
         if (!linearSummaries && !parsed.days.length) return '<div style="height:180px; display:flex; align-items:center; justify-content:center; color:#94a3b8; font-weight:800;">표시할 교육일정이 없습니다.</div>';
         const startHour = time => {
             const m = String(time || '').match(/(\d{1,2}):(\d{2})/);

@@ -5964,7 +5964,7 @@ function _coordNormCell(v) {
 function _coordBuildScheduleData(lines, fileName) {
     const arr = (lines || [])
         .map(_coordNormCell)
-        .filter(v => v && /[가-힣0-9]/.test(v))
+        .filter(v => v && /[가-힣0-9A-Za-z]/.test(v))
         .filter(v => !/^[捤獥汤捯氠瑢]+$/.test(v));
     if (!arr.length) return null;
     let start = arr.findIndex(v => /교육\s*시간표|시간표/.test(v));
@@ -6052,7 +6052,8 @@ async function coordSaveRoster() {
         alert('저장할 과정 정보를 찾지 못했습니다.');
         return;
     }
-    const { courseName, period, weekKey, rosterKey } = ctx;
+    const { courseName, period, weekKey, rosterKey, settings } = ctx;
+    const roomDetail = (settings.roomDetail || settings.classroomDetail || settings.classroom || settings.roomName || settings.location || '').trim();
     const cleanList = _coordRosterData
         .filter(s => s && (s.name || '').trim())
         .map((s, i) => ({
@@ -6060,7 +6061,8 @@ async function coordSaveRoster() {
             name: (s.name || '').trim(),
             empNo: (s.empNo || '').trim(),
             dept: (s.dept || '').trim(),
-            gender: s.gender || ''
+            gender: s.gender || '',
+            foreign: !!(s.foreign || _coordRosterIsForeignName(s.name || ''))
         }));
 
     // ── 교육지원부 공유 여부 확인 ──
@@ -6074,6 +6076,7 @@ async function coordSaveRoster() {
         room: currentRID,
         courseName,
         period,
+        roomDetail,
         weekKey,
         list: cleanList,
         schedule: _coordScheduleData || null,
@@ -6100,6 +6103,7 @@ async function coordSaveRoster() {
             const schedulePayload = _coordCleanFirebaseValue({
                 courseName: courseName || '',
                 period: period || '',
+                roomDetail,
                 weekKey: weekKey || '',
                 source: _coordScheduleData.fileName || '',
                 lines: _coordScheduleData.lines || [],
@@ -6115,6 +6119,10 @@ async function coordSaveRoster() {
             } catch (scheduleErr) {
                 console.warn('[교육시간표] 강사플랫폼 미러 저장 실패, system/coord/rosters 저장값으로 대체:', scheduleErr);
             }
+        }
+
+        if (applyToDorm) {
+            await firebase.database().ref(`system/dorm/rosters/${rosterKey}`).set(payload);
         }
 
         const schedNote = _coordScheduleData
@@ -6302,14 +6310,84 @@ async function _coordHwpExtract(buffer) {
     }).join('\n');
 }
 
+function _coordRosterIsForeignName(v) {
+    const s = String(v || '').replace(/\s+/g, ' ').trim();
+    return /^[A-Za-z][A-Za-z .'\-]{1,80}$/.test(s) && /[A-Za-z]{2,}/.test(s);
+}
+
+function _coordParseForeignRosterCells(cells) {
+    const arr = (cells || []).map(v => String(v || '').replace(/\s+/g, ' ').trim()).filter(Boolean);
+    if (!arr.length) return null;
+    const joined = arr.join(' ');
+    if (/교육\s*시간표|교육생\s*명단|성\s*명|국\s*가|출생|합계|과정명|담임/.test(joined)) return null;
+    const gIdx = arr.findIndex(c => /^(M|F|m|f)$/.test(c));
+    if (gIdx < 0) return null;
+    const seqIdx = arr.findIndex(c => /^\d{1,3}$/.test(c));
+    if (seqIdx < 0 && !/\d{4}[./-]\d{1,2}[./-]\d{1,2}/.test(joined)) return null;
+    const jobWords = /engineer|inspector|officer|manager|specialist|supervisor|technician|department|services|communication|electrical|aeronautical|aerodrome|navigation|surveillance|certification|licensing|senior|head|airport|system/i;
+    const start = seqIdx >= 0 ? seqIdx + 1 : 0;
+    const nameParts = [];
+    for (let i = start; i < gIdx; i++) {
+        const c = arr[i];
+        if (!_coordRosterIsForeignName(c)) {
+            if (nameParts.length) break;
+            continue;
+        }
+        if (jobWords.test(c)) break;
+        nameParts.push(c);
+        if (nameParts.join(' ').split(/\s+/).filter(Boolean).length >= 4) break;
+    }
+    const name = nameParts.join(' ').replace(/\s+/g, ' ').trim();
+    if (!name || name.split(/\s+/).filter(Boolean).length < 2) return null;
+    return { seq: 0, name, empNo: '', dept: '외국인 교육생', gender: /^F$/i.test(arr[gIdx]) ? 'F' : 'M', foreign: true };
+}
+
+function _coordParseForeignRoster(text) {
+    const out = [];
+    if (Array.isArray(_coordScheduleRawLines) && _coordScheduleRawLines.length) {
+        _coordScheduleRawLines.forEach(line => {
+            const row = _coordParseForeignRosterCells(String(line || '').split('\u241F'));
+            if (row) out.push(row);
+        });
+    }
+    String(text || '').split(/[\n\r]+/).forEach(line => {
+        if (!/[A-Za-z]{2,}.*\b[MF]\b/i.test(line)) return;
+        const cells = line.split(/\t+|\s{2,}/).flatMap(v => String(v || '').trim().split(/\s+/)).filter(Boolean);
+        const row = _coordParseForeignRosterCells(cells);
+        if (row) out.push(row);
+    });
+    const seen = new Set();
+    return out.filter((r, i) => {
+        const key = `${String(r.name || '').replace(/\s+/g,'').toLowerCase()}_${r.gender || ''}`;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        r.seq = i + 1;
+        return true;
+    });
+}
+
+function _coordMergeForeignRoster(students, foreignStudents) {
+    const rows = [...(students || []), ...(foreignStudents || [])];
+    const seen = new Set();
+    return rows.filter((r, i) => {
+        if (!r || !r.name) return false;
+        const key = `${String(r.name || '').replace(/\s+/g,'').toLowerCase()}_${r.empNo || r.gender || ''}`;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        r.seq = i + 1;
+        return true;
+    });
+}
+
 function _coordParseRoster(text) {
+    const foreignStudents = _coordParseForeignRoster(text);
     const lines=text.split(/[\n\r]+/).map(l=>l.trim()).filter(l=>l);
     const students=[];let startIdx=-1;
     for(let i=0;i<lines.length;i++){
         if(/^연\s*번$/.test(lines[i])){for(let j=i+1;j<Math.min(i+12,lines.length);j++){if(lines[j]==='1'){startIdx=j;break;}}if(startIdx>=0)break;}
     }
     if(startIdx<0)for(let i=0;i<lines.length;i++){if(/교육생\s*명단/.test(lines[i])){for(let j=i+1;j<Math.min(i+20,lines.length);j++){if(lines[j]==='1'){startIdx=j;break;}}if(startIdx>=0)break;}}
-    if(startIdx<0)return[];
+    if(startIdx<0)return foreignStudents;
     const POS=/^(부장|차장|과장|대리|주임|사원|팀장|교수|수석|본부장|처장|이사|소장|원장|선임|직원|대우)$/;
     let pos=startIdx,expectedSeq=1;
     while(pos<lines.length){
@@ -6323,7 +6401,7 @@ function _coordParseRoster(text) {
         let gender='';if(pos<lines.length&&/^(남|여|넘|M|F)$/.test(lines[pos])){gender=/^(여|F)$/.test(lines[pos])?'F':'M';pos++;}
         if(name&&empNo){students.push({seq,empNo,name,dept:dept.trim(),position,gender:gender||'M'});expectedSeq=seq+1;}
     }
-    return students;
+    return _coordMergeForeignRoster(students, foreignStudents);
 }
 </script>
 
