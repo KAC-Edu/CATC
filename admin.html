@@ -177,6 +177,10 @@
                 <div class="setting-group">
                     <input type="password" id="takeoverPwInput" class="setting-input" style="text-align:center; font-size:18px;" placeholder="비밀번호 입력" onkeyup="if(event.key==='Enter') dataMgr.submitTakeover()">
                 </div>
+                <label id="entryMicConsentWrap" style="display:flex; align-items:center; gap:8px; margin-top:10px; padding:10px 12px; background:#f0fdf4; border:1px solid #bbf7d0; border-radius:10px; color:#166534; font-size:12px; font-weight:800; cursor:pointer;">
+                    <input type="checkbox" id="entryMicConsent" style="width:16px; height:16px; accent-color:#16a34a;">
+                    강사 입장 후 이 PC 마이크로 강의 음성 모니터링 시작
+                </label>
             </div>
             <div class="modal-actions" style="margin-top:25px; display:flex; flex-direction:column; gap:10px;">
                 <!-- 강사 권한 가져오기 (강사 의도일 때 노출) -->
@@ -1840,9 +1844,12 @@
             <div class="setting-group"><label class="setting-label">한 줄 메시지</label><input type="text" id="pp-msg" class="setting-input" placeholder="교육생에게 전하는 한 마디"></div>
             <div class="setting-group"><label class="setting-label">주요 약력</label><textarea id="pp-bio" class="setting-input" style="height:120px; resize:none;" placeholder="주요 경력 및 약력을 입력하세요."></textarea></div>
         </div>
-        <div class="modal-actions" style="margin-top:20px; justify-content:flex-end; gap:10px;">
+        <div style="margin-top:16px; padding:10px 14px; background:#eff6ff; border:1px solid #bfdbfe; border-radius:10px; font-size:12px; color:#1e40af; line-height:1.5;">
+            <i class="fa-solid fa-circle-info"></i> 이 프로필은 <b>교수님 단위로 즉시 저장</b>됩니다. 과정 개설 시 자동으로 불러와지므로, 아래 "모든 설정 저장"과는 <b>별개</b>입니다.
+        </div>
+        <div class="modal-actions" style="margin-top:14px; justify-content:flex-end; gap:10px;">
             <button class="m-btn m-btn-later" onclick="ui.closeProfProfileModal()" style="background:#64748b; color:white;">취소</button>
-            <button class="m-btn m-btn-done" onclick="profMgr.saveFullProfile()">프로필 저장</button>
+            <button class="m-btn m-btn-done" onclick="profMgr.saveFullProfile()"><i class="fa-solid fa-floppy-disk"></i> 프로필 저장 (즉시 적용)</button>
         </div>
     </div>
 </div>

@@ -444,14 +444,21 @@ verifyTakeover: async function() {
             // [수정] 강사 입장 시 해당 방의 옵저버 기록만 정밀 삭제
             state.isObserver = false; 
             sessionStorage.removeItem('kac_observer_room');
+            const micConsent = !!document.getElementById('entryMicConsent')?.checked;
+
             await firebase.database().ref(`courses/${newRoom}/status`).update({ 
                 ownerSessionId: state.sessionId,
                 ownerLastSeen: firebase.database.ServerValue.TIMESTAMP,
                 roomStatus: 'active'
             });
-            // 입장 시 마이크는 항상 OFF — 강사가 수동으로 켬
-            lectureMonitor._consentRoomAsked = newRoom;
-            lectureMonitor.stopMic(true);
+            if (micConsent) {
+                lectureMonitor._consentRoomAsked = newRoom;
+                lectureMonitor._rememberSessionConsent();
+                await lectureMonitor.requestMic();
+            } else {
+                lectureMonitor._consentRoomAsked = newRoom;
+                lectureMonitor.stopMic(true);
+            }
             localStorage.setItem(`last_owned_room`, newRoom);
             dataMgr.addOwnedRoom(newRoom);
             document.getElementById('takeoverModal').style.display = 'none';
@@ -518,6 +525,10 @@ verifyTakeover: async function() {
         const btO = document.getElementById('btnTakeoverObserver');
         if (btT) { btT.style.display = 'flex'; btT.innerHTML = '<i class="fa-solid fa-right-to-bracket"></i> 강사모드로 입장'; }
         if (btO) btO.style.display = 'none';
+        const micWrap = document.getElementById('entryMicConsentWrap');
+        const micChk = document.getElementById('entryMicConsent');
+        if (micWrap) micWrap.style.display = 'flex';
+        if (micChk) micChk.checked = false;
         const modal = document.getElementById('takeoverModal');
         if (modal) modal.style.display = 'flex';
         setTimeout(() => input && input.focus(), 50);
@@ -538,6 +549,10 @@ verifyTakeover: async function() {
         const btO = document.getElementById('btnTakeoverObserver');
         if (btT) { btT.style.display = 'flex'; btT.innerHTML = '<i class="fa-solid fa-chalkboard-user"></i> 강사 권한 가져오기'; }
         if (btO) btO.style.display = 'none';
+        const micWrap = document.getElementById('entryMicConsentWrap');
+        const micChk = document.getElementById('entryMicConsent');
+        if (micWrap) micWrap.style.display = 'flex';
+        if (micChk) micChk.checked = false;
         document.getElementById('takeoverModal').style.display = 'flex';
         setTimeout(() => document.getElementById('takeoverPwInput').focus(), 50);
     },
@@ -557,6 +572,10 @@ verifyTakeover: async function() {
         const btO = document.getElementById('btnTakeoverObserver');
         if (btT) btT.style.display = 'none';
         if (btO) { btO.style.display = 'flex'; }
+        const micWrap = document.getElementById('entryMicConsentWrap');
+        const micChk = document.getElementById('entryMicConsent');
+        if (micWrap) micWrap.style.display = 'none';
+        if (micChk) micChk.checked = false;
         document.getElementById('takeoverModal').style.display = 'flex';
         setTimeout(() => document.getElementById('takeoverPwInput').focus(), 50);
     },
@@ -1526,8 +1545,8 @@ const profMgr = {
                 bio: document.getElementById('pp-bio').value
             };
             firebase.database().ref(`system/professorProfiles/${name}`).set(profileData).then(() => {
-                ui.showAlert("✅ 담임 교수 프로필이 성공적으로 저장되었습니다.");
                 ui.closeProfProfileModal();
+                setTimeout(() => ui.showAlert("✅ 담임 교수 프로필이 성공적으로 저장되었습니다."), 150);
             });
         };
 
@@ -6714,6 +6733,15 @@ openSetupModal: async function() {
             disableMobile: "true",
             onReady: (selectedDates, dateStr, instance) => {
                 instance.calendarContainer.style.width = "820px";
+                // 달력 하단에 [적용] 버튼 추가 (중복 추가 방지)
+                if (!instance.calendarContainer.querySelector('.fp-apply-bar')) {
+                    const bar = document.createElement('div');
+                    bar.className = 'fp-apply-bar';
+                    bar.style.cssText = 'display:flex; gap:8px; justify-content:flex-end; padding:10px 14px; border-top:1px solid #e2e8f0; background:#f8fafc;';
+                    bar.innerHTML = '<button type="button" class="fp-apply-btn" style="padding:8px 22px; background:#2563eb; color:#fff; border:none; border-radius:9px; font-size:14px; font-weight:800; cursor:pointer;"><i class="fa-solid fa-check"></i> 적용</button>';
+                    bar.querySelector('.fp-apply-btn').addEventListener('click', () => instance.close());
+                    instance.calendarContainer.appendChild(bar);
+                }
                 // 인스턴스 준비 완료 후 기존 저장 데이터 주입
                 this.loadCurrentSettings();
             },
