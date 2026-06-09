@@ -7784,9 +7784,9 @@ document.addEventListener('DOMContentLoaded', () => bgmPlayer.init());
    ══════════════════════════════════════════════════════════════ */
 
 const CLASSROOM_DETAIL_GROUPS_SHARED = window.CLASSROOM_DETAIL_GROUPS_SHARED || [
-    { label: '???', items: ['??? 1? ???','??? 1? ????','??? 2? A???','??? 2? B???','??? 2? C???','??? 2? D???','??? 2? E???','??? 2? F???','??? 2? G???','??? 3? ???'] },
-    { label: '???', items: ['??? 1? ????','??? 1? A???','??? 1? B???','??? 2? ILS ???','??? 2? VCCS/RADIO/ATIS ???','??? 2? VOR/DME/TACAN ???','??? 2? ???????? ???'] },
-    { label: '?????', items: ['????? 1?'] }
+    { label: '하늘관', items: ['하늘관 1층 대강당','하늘관 1층 소회의실','하늘관 2층 A강의실','하늘관 2층 B강의실 (전산실)','하늘관 2층 C강의실','하늘관 2층 D강의실','하늘관 2층 E강의실','하늘관 2층 F강의실','하늘관 2층 G강의실','하늘관 3층 회의실'] },
+    { label: '국제동', items: ['국제동 1층 세미나홀','국제동 1층 A강의실','국제동 1층 B강의실','국제동 2층 ILS 실습실','국제동 2층 VCCS/RADIO/ATIS 실습실','국제동 2층 VOR/DME/TACAN 실습실','국제동 2층 종합실습실'] },
+    { label: '관제교육동', items: ['관제교육동 1층','관제교육동 2층'] }
 ];
 window.CLASSROOM_DETAIL_GROUPS_SHARED = CLASSROOM_DETAIL_GROUPS_SHARED;
 function classroomDetailSelectHtmlInstructor(value, changeExpr, styleText) {
@@ -7795,7 +7795,7 @@ function classroomDetailSelectHtmlInstructor(value, changeExpr, styleText) {
     const flat = CLASSROOM_DETAIL_GROUPS_SHARED.flatMap(g => g.items);
     const custom = current && !flat.includes(current) ? '<option value="' + esc(current) + '" selected>' + esc(current) + '</option>' : '';
     return '<select onchange="' + esc(changeExpr) + '" style="' + esc(styleText) + '">' +
-        '<option value="">-- ?? ?? --</option>' + custom +
+        '<option value="">-- 장소 선택 --</option>' + custom +
         CLASSROOM_DETAIL_GROUPS_SHARED.map(g => '<optgroup label="' + esc(g.label) + '">' + g.items.map(item => '<option value="' + esc(item) + '" ' + (item === current ? 'selected' : '') + '>' + esc(item) + '</option>').join('') + '</optgroup>').join('') +
         '</select>';
 }
