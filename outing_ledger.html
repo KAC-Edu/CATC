@@ -129,6 +129,15 @@
             const setSnap = await db.ref(`courses/${room}/settings`).once('value');
             const settings = setSnap.val() || {};
             document.getElementById('displayCourseName').innerText = settings.courseName || room;
+
+            // 기간 파싱 (먼저 실행)
+            const periodStr = settings.period || '';
+            let startDate = '', endDate = '';
+            const sep = periodStr.includes(' ~ ') ? ' ~ ' : '~';
+            if (periodStr.includes(sep)) {
+                [startDate, endDate] = periodStr.split(sep).map(s => s.trim());
+            }
+
             // 기간 표시
             const periodEl = document.getElementById('displayPeriod');
             if (periodEl) {
@@ -141,14 +150,6 @@
                 } else {
                     periodEl.innerText = periodStr || '-';
                 }
-            }
-
-            // 기간 파싱
-            const periodStr = settings.period || '';
-            let startDate = '', endDate = '';
-            const sep = periodStr.includes(' ~ ') ? ' ~ ' : '~';
-            if (periodStr.includes(sep)) {
-                [startDate, endDate] = periodStr.split(sep).map(s => s.trim());
             }
 
             db.ref(`courses/${room}/admin_actions`).on('value', snap => {
