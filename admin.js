@@ -2784,7 +2784,6 @@ showAlert: function(msg) {
                     </td>
                     <td style="font-weight:900; color:#3b82f6;">
                         Room ${c}
-                        ${isMyRoom ? '<span class="my-room-badge">MY</span>' : ''}
                     </td>
                     <td><div class="td-course-name" title="${courseName}">${courseName}</div></td>
                     <td style="font-weight:600;">${profName}</td>
@@ -6969,7 +6968,9 @@ const lectureMonitor = {
     _info: {},
     ICE: { iceServers: [
         { urls: 'stun:stun.l.google.com:19302' },
-        { urls: 'stun:stun1.l.google.com:19302' }
+        { urls: 'stun:stun1.l.google.com:19302' },
+        { urls: 'stun:stun.cloudflare.com:3478' },
+        { urls: 'stun:stun.nextcloud.com:443' }
     ] },
 
     // 마이크 자동 요청 (최초 1회 브라우저 권한 팝업 → HTTPS에선 이후 기억됨)
@@ -6988,16 +6989,48 @@ const lectureMonitor = {
             });
             this.micReady = true;
             this._setBanner(null);
+            this._updateToggleButton();
             console.log('[강의모니터링] 🎙️ 마이크 활성화 — 모니터링 송출 준비됨');
             if (this.currentRoom) this._publishStatus();
             return true;
         } catch (e) {
             this.micReady = false;
+            this._updateToggleButton();
             console.warn('[강의모니터링] 마이크 권한 거부/실패:', e && e.name);
             this._setBanner('blocked');
             if (this.currentRoom) this._publishStatus(); // micOn:false 라도 live 표시
             return false;
         }
+    },
+    toggleMic: async function() {
+        if (this.micReady || this.stream) {
+            this.stopMic(true);
+            ui.showAlert('강의 음성 모니터링 마이크를 껐습니다.');
+        } else {
+            await this.requestMic();
+        }
+    },
+    stopMic: function(keepRoom) {
+        Object.keys(this.peers || {}).forEach(id => this._closePeer(id));
+        if (this.stream) {
+            try { this.stream.getTracks().forEach(t => t.stop()); } catch (e) {}
+        }
+        this.stream = null;
+        this.micReady = false;
+        this._updateToggleButton();
+        if (this.currentRoom) this._publishStatus();
+        if (!keepRoom) this._teardownRoom();
+    },
+    _updateToggleButton: function() {
+        const btn = document.getElementById('micMonitorToggleBtn');
+        if (!btn) return;
+        const shouldShow = !!(this.currentRoom && !state.isObserver);
+        btn.style.display = shouldShow ? 'flex' : 'none';
+        btn.classList.toggle('is-off', !this.micReady);
+        btn.title = this.micReady ? '강의 음성 모니터링 끄기' : '강의 음성 모니터링 켜기';
+        btn.innerHTML = this.micReady
+            ? '<i class="fa-solid fa-microphone"></i>'
+            : '<i class="fa-solid fa-microphone-slash"></i>';
     },
 
     _setBanner: function(kind) {
@@ -7019,9 +7052,11 @@ const lectureMonitor = {
             this._publishStatus();
             this._listenForCalls(room);
             if (!this.hbTimer) this.hbTimer = setInterval(() => this._publishStatus(), 20000);
+            this._updateToggleButton();
             // 마이크가 아직 없으면 '이 강의실' 모니터링 동의를 받음 (방마다 1회)
             if (!this.micReady) this._askConsent(room);
         } else {
+            this._updateToggleButton();
             if (this.currentRoom) this._teardownRoom();
         }
     },
@@ -7098,7 +7133,10 @@ const lectureMonitor = {
         pc.onicecandidate = ev => {
             if (ev.candidate) callBase.child('broadcasterCandidates').push(ev.candidate.toJSON());
         };
-        pc.oniceconnectionstatechange = () => console.log('[강의모니터링] ICE 상태:', pc.iceConnectionState);
+        pc.oniceconnectionstatechange = () => {
+            console.log('[강의모니터링] ICE 상태:', pc.iceConnectionState);
+            if (['failed', 'disconnected'].includes(pc.iceConnectionState)) this._closePeer(listenerId);
+        };
         pc.onconnectionstatechange = () => {
             console.log('[강의모니터링] 연결 상태:', pc.connectionState);
             if (['failed', 'closed'].includes(pc.connectionState)) this._closePeer(listenerId);
@@ -7138,6 +7176,7 @@ const lectureMonitor = {
         if (this.statusRef) { try { this.statusRef.onDisconnect().cancel(); this.statusRef.remove(); } catch (e) {} this.statusRef = null; }
         if (this.hbTimer) { clearInterval(this.hbTimer); this.hbTimer = null; }
         this.currentRoom = null;
+        this._updateToggleButton();
     }
 };
 

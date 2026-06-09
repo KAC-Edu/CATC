@@ -414,6 +414,9 @@
             <div class="control-icon-btn" onclick="ui.toggleMiniQR()" title="Join QR">
                 <i class="fa-solid fa-qrcode"></i>
             </div>
+            <div class="control-icon-btn mic-monitor-toggle" id="micMonitorToggleBtn" onclick="lectureMonitor.toggleMic()" title="강의 음성 모니터링 끄기" style="display:none;">
+                <i class="fa-solid fa-microphone"></i>
+            </div>
             <!-- 배경음악 버튼 -->
             <div class="control-icon-btn" id="bgmIconBtn" onclick="bgmPlayer.togglePanel()" title="배경음악" style="position:relative;">
                 <i class="fa-solid fa-music"></i>
@@ -895,7 +898,10 @@
 
         <!-- ══════════════════════════════════════════════════════ -->
         <!-- 즉석 설문조사 블록 -->
-        <div id="instantSurveyPanel" class="instant-survey-panel" style="background:#fff; border-radius:16px; border:2px solid #0ea5e9; overflow:hidden; box-shadow:0 4px 20px rgba(14,165,233,0.10);">
+        <div id="instantSurveyPanel" class="instant-survey-panel" style="background:#fff; border-radius:16px; border:2px solid #0ea5e9; overflow:hidden; box-shadow:0 4px 20px rgba(14,165,233,0.10); position:relative;">
+            <button class="card-close-btn" onclick="ui.setMode('notice')" title="닫기">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
             <div style="background:linear-gradient(135deg,#0ea5e9,#38bdf8); padding:14px 20px; display:flex; align-items:center; gap:10px;">
                 <i class="fa-solid fa-square-poll-vertical" style="color:#fff; font-size:16px;"></i>
                 <span style="color:#fff; font-weight:800; font-size:15px;">즉석 설문조사</span>

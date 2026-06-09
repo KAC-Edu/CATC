@@ -3940,6 +3940,10 @@ body:-webkit-full-screen .main-stage {
     white-space: nowrap;
 }
 
+#view-notice:not(.survey-focus-mode) .instant-survey-panel {
+    display: none !important;
+}
+
 .survey-focus-mode .notice-board-panel,
 .survey-focus-mode .notice-global-panel {
     display: none !important;
@@ -3949,4 +3953,12 @@ body:-webkit-full-screen .main-stage {
     max-width: 760px;
     width: 100%;
     margin: 0 auto;
+}
+
+.mic-monitor-toggle {
+    color: #22c55e !important;
+}
+
+.mic-monitor-toggle.is-off {
+    color: #94a3b8 !important;
 }
