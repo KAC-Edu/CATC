@@ -348,12 +348,11 @@ switchRoomAttempt: async function(newRoom, silent = false) {
 
     const isActive = (st.roomStatus === 'active');
     const isOwner = (st.ownerSessionId === state.sessionId);
-    const ownerLastSeen = Number(st.ownerLastSeen || 0);
-    const ownerIsLive = !!st.ownerSessionId && ownerLastSeen && (Date.now() - ownerLastSeen < 60000);
-    const hasOwner = !!st.ownerSessionId && ownerIsLive;
-    // 실제 강사 소유 세션이 있을 때만 "다른 기기 사용 중"으로 차단한다.
-    const blocked = isActive && hasOwner && !isOwner && !state.isObserver;
-    const needsEntryChoice = isActive && roomHasPassword && !hasOwner && !isOwner && !state.isObserver;
+    const hasOwnerRecord = !!st.ownerSessionId;
+    // ownerSessionId가 있으면 실제 강사권이 남아있는 것으로 보고 권한 선택을 먼저 띄운다.
+    // 오래된 기록이어도 자동으로 뺏지 않고, 사용자가 "강사 권한 가져오기"로 명시 처리한다.
+    const blocked = isActive && hasOwnerRecord && !isOwner && !state.isObserver;
+    const needsEntryChoice = isActive && roomHasPassword && !hasOwnerRecord && !isOwner && !state.isObserver;
 
     // 3. [보안 핵심] 인증 전 버튼 및 기능 물리적 잠금
     const setupBtn = document.getElementById('btnSetupModal');
@@ -724,7 +723,7 @@ forceEnterRoom: async function(room) {
         const isOwner = (statusData.ownerSessionId === state.sessionId);
         const isActive = (statusData.roomStatus === 'active');
         const ownerLastSeen = Number(statusData.ownerLastSeen || 0);
-        const ownerIsLive = isOwner || (!!statusData.ownerSessionId && ownerLastSeen && (Date.now() - ownerLastSeen < 60000));
+        const hasOtherOwnerRecord = !!statusData.ownerSessionId && statusData.ownerSessionId !== state.sessionId;
 
         // [강의 모니터링] 이 기기가 소유자 + 강의중일 때만 마이크 송출(live)
         try { lectureMonitor.syncStatus(cleanRoom, statusData, isOwner, isActive); } catch (e) { /* 무시 */ }
@@ -734,7 +733,7 @@ forceEnterRoom: async function(room) {
         if (!state.isObserver
             && state._ownedSessionRoom === cleanRoom        // 직전 스냅샷에서 내가 소유자였음
             && isActive
-            && ownerIsLive                                  // 실제 최근 소유 신호가 있음
+            && hasOtherOwnerRecord                          // 다른 강사 소유 기록이 있음
             && statusData.ownerSessionId !== state.sessionId) {
             state._ownedSessionRoom = null;
             state.isObserver = true;
@@ -806,7 +805,7 @@ forceEnterRoom: async function(room) {
                 const tm = document.getElementById('takeoverModal');
                 if (tm) tm.style.display = 'none';
 
-            } else if (isActive && !isOwner && ownerIsLive) {
+            } else if (isActive && !isOwner && hasOtherOwnerRecord) {
                 // ④-b 실제 다른 강사가 소유 중인 방 → 입장 방식 선택(강사/옵저버) 먼저
                 overlay.style.display = 'flex';
                 if (overlayMsg) overlayMsg.innerHTML = '현재 다른 기기에서 강의가 진행 중입니다.<br><br>입장 방식을 선택하세요.';
@@ -825,7 +824,7 @@ forceEnterRoom: async function(room) {
         // 설정 버튼 상태 제어
         const setupBtn = document.getElementById('btnSetupModal');
         if (setupBtn) {
-            if (isActive && !isOwner && !state.isObserver && ownerIsLive) {
+            if (isActive && !isOwner && !state.isObserver && hasOtherOwnerRecord) {
                 setupBtn.style.setProperty('background', '#64748b', 'important');
                 setupBtn.style.setProperty('opacity', '0.6', 'important');
                 setupBtn.innerHTML = '<i class="fa-solid fa-lock"></i> 과정 잠김 (인증 필요)';
@@ -980,6 +979,7 @@ fetchCodeAndRenderQr: function(room) {
         updates[`courses/${state.room}/status/professorName`] = (statusVal === 'active' ? selectedProf : "");
         // 사용중으로 저장할 때만 세션ID 등록
         updates[`courses/${state.room}/status/ownerSessionId`] = (statusVal === 'active' ? state.sessionId : null);
+        updates[`courses/${state.room}/status/ownerLastSeen`] = (statusVal === 'active' ? firebase.database.ServerValue.TIMESTAMP : null);
 
         firebase.database().ref().update(updates).then(() => {
             localStorage.setItem('last_owned_room', state.room);
