@@ -58,22 +58,9 @@
         /* ── 인쇄 전용 ── */
         .print-btn { position:fixed; top:20px; right:20px; padding:12px 28px; background:#003366; color:white; border:none; border-radius:8px; cursor:pointer; font-weight:900; z-index:1000; font-size:15px; }
 
-        /* 복귀완료 처리 버튼 */
-        .btn-return-done {
-            display: inline-block; padding: 3px 8px; background: #10b981; color: white;
-            border: none; border-radius: 5px; font-size: 10px; font-weight: 800;
-            cursor: pointer; white-space: nowrap; font-family: "Pretendard", sans-serif;
-        }
-        .btn-return-done.is-done {
-            background: #d1fae5; color: #059669; cursor: default; border: 1px solid #a7f3d0;
-        }
-        @media print { .btn-return-done { display: none !important; } }
-
         @media print {
             html, body { background:white !important; margin:0 !important; padding:0 !important; }
             .print-btn, .no-print { display:none !important; }
-            table { width:100%; }
-            th:last-child, td:last-child { display:none !important; }
             /* 브라우저가 자동 삽입하는 머리글/꼬리글 영역(주소·제목·날짜)을 최소화 */
             header, footer, nav { display:none !important; }
             /* A4 가로, 여백 10mm로 잘림 방지 */
@@ -104,6 +91,7 @@
 
         <h1 class="title">외출 (외박) 신청서</h1>
         <div class="course-title">◎ 과정명 : <span id="displayCourseName">-</span></div>
+        <div style="text-align:right; font-size:13px; font-weight:600; color:#334155; margin-bottom:8px;">교육기간 : <span id="displayPeriod">-</span></div>
 
         <table>
             <thead>
@@ -115,8 +103,7 @@
                     <th style="width:12%;">행선지</th>
                     <th style="width:16%;">전화번호</th>
                     <th style="width:21%;">사유</th>
-                    <th style="width:8%;">확인<br>(담임/담당)</th>
-                    <th style="width:9%;" class="no-print">복귀<br>확인(운영)</th>
+                    <th style="width:10%;">확인<br>(담임/담당)</th>
                 </tr>
             </thead>
             <tbody id="ledgerBody"></tbody>
@@ -142,6 +129,19 @@
             const setSnap = await db.ref(`courses/${room}/settings`).once('value');
             const settings = setSnap.val() || {};
             document.getElementById('displayCourseName').innerText = settings.courseName || room;
+            // 기간 표시
+            const periodEl = document.getElementById('displayPeriod');
+            if (periodEl) {
+                if (startDate && endDate) {
+                    const fmt = (s) => {
+                        const d = new Date(s + 'T00:00:00');
+                        return `${d.getFullYear()}. ${d.getMonth()+1}. ${d.getDate()}.`;
+                    };
+                    periodEl.innerText = `${fmt(startDate)} ~ ${fmt(endDate)}`;
+                } else {
+                    periodEl.innerText = periodStr || '-';
+                }
+            }
 
             // 기간 파싱
             const periodStr = settings.period || '';
@@ -227,14 +227,6 @@
                         confirmDisplay = `<span class="confirm-text">${a.confirmedBy}</span>`;
                     }
 
-                    const returnBtnHtml = a.type !== 'overnight'
-                        ? (a.returned
-                            ? `<button class="btn-return-done is-done" disabled>✅ ${a.returnReportTime||'복귀'}</button>`
-                            : `<button class="btn-return-done" onclick="markReturn('${a.date}','${a.token}',this)">복귀 처리</button>`)
-                        : (a.returned
-                            ? `<button class="btn-return-done is-done" disabled>✅ ${a.returnReportTime||'복귀'}</button>`
-                            : `<button class="btn-return-done" onclick="markReturn('${a.date}','${a.token}',this)" style="background:#6366f1;">외박 복귀</button>`);
-
                     tr.innerHTML = `
                         <td>${a.date ? a.date.substring(5) : ''}</td>
                         <td style="padding:4px 2px;">${timeHtml}</td>
@@ -244,7 +236,6 @@
                         <td style="font-size:11px;">${a.phone || ''}</td>
                         <td><span class="shrink-text">${a.reason || ''}</span></td>
                         <td>${confirmDisplay}</td>
-                        <td class="no-print" style="text-align:center;">${returnBtnHtml}</td>
                     `;
                     body.appendChild(tr);
                 });
@@ -253,30 +244,10 @@
                 const minRows = 10;
                 for (let i = list.length; i < minRows; i++) {
                     const tr = document.createElement('tr');
-                    tr.innerHTML = '<td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td class="no-print"></td>';
+                    tr.innerHTML = '<td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>';
                     body.appendChild(tr);
                 }
             });
-        }
-
-        async function markReturn(date, token, btn) {
-            if (!room) return;
-            const now = new Date();
-            const hh = String(now.getHours()).padStart(2,'0');
-            const mm = String(now.getMinutes()).padStart(2,'0');
-            const timeStr = hh + ':' + mm;
-            if (!confirm(`복귀 완료 처리하시겠습니까?\n복귀 시각: ${timeStr}`)) return;
-            try {
-                await db.ref(`courses/${room}/admin_actions/${date}/${token}`).update({
-                    returned: true,
-                    returnReportTime: timeStr
-                });
-                btn.className = 'btn-return-done is-done';
-                btn.disabled = true;
-                btn.textContent = '✅ ' + timeStr;
-            } catch(e) {
-                alert('처리 실패: ' + e.message);
-            }
         }
 
         init();
