@@ -994,7 +994,7 @@ body.night-mode .quiz-card.result-mode {
 
 /* 알림창(customAlertModal) 전용 설정 */
 #customAlertModal {
-    z-index: 11000 !important; /* 일반 팝업보다 더 위로 */
+    z-index: 2147483647 !important; /* 모든 팝업(명단 21000/프로필 22000)보다 무조건 위로 */
 }
 
 /* 현황판 입장하기 버튼 세련된 디자인 */
