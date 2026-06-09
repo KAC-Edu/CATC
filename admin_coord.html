@@ -2887,32 +2887,46 @@ function updateIndividualView() {
     const leaderEl = document.getElementById('ind-leader');
     if (leaderEl) leaderEl.innerText = leaderTxt;
 
-    // 4. 외출/외박 신청 명단 렌더링 (당일 09:00 이후 신청 건만 표시)
+    // 4. 외출/외박 신청 명단 렌더링 (한국시간 당일 09:00 ~ 익일 09:00 신청 건만 표시)
     const actionTbody = document.getElementById('indActionTableBody');
     actionTbody.innerHTML = "";
 
-    // 09:00 기준 타임스탬프 계산
+    // ── 한국시간(KST, UTC+9) 기준 당일 09:00 ~ 익일 09:00 윈도우 계산 ──
+    const KST_OFFSET = 9 * 60 * 60 * 1000;
+    const nowKstMs = Date.now() + KST_OFFSET;          // KST 환산된 현재 ms
+    const nowKst = new Date(nowKstMs);
+    // KST 기준 오늘 0시(UTC ms로 환산값) 구하기
+    const kstY = nowKst.getUTCFullYear();
+    const kstM = nowKst.getUTCMonth();
+    const kstD = nowKst.getUTCDate();
+    const kstHour = nowKst.getUTCHours();
+    // 오늘 09:00 (KST) 의 실제 UTC 타임스탬프 = Date.UTC(y,m,d,9) - KST_OFFSET
+    let windowStart = Date.UTC(kstY, kstM, kstD, 9, 0, 0) - KST_OFFSET;
+    // 현재가 09:00 이전이면 어제 09:00 ~ 오늘 09:00 윈도우로
+    if (kstHour < 9) windowStart -= 24 * 60 * 60 * 1000;
+    const windowEnd = windowStart + 24 * 60 * 60 * 1000;  // +24h = 익일 09:00
 
     let actionItems = [];
     if (room.admin_actions) {
         Object.keys(room.admin_actions).forEach(date => {
-            if (date >= startDate && date <= endDate) {
-                const dayActions = room.admin_actions[date];
-                Object.keys(dayActions).forEach(token => {
-                    const item = dayActions[token];
-                    // 당일 09:00 이후 신청 건만 포함
-                    if (item && (item.type === 'outing' || item.type === 'overnight' || item.type === 'group_outing')) {
+            const dayActions = room.admin_actions[date];
+            Object.keys(dayActions).forEach(token => {
+                const item = dayActions[token];
+                if (item && (item.type === 'outing' || item.type === 'overnight' || item.type === 'group_outing')) {
+                    // timestamp가 당일 09:00 ~ 익일 09:00 윈도우 내에 있는 건만 표시
+                    const ts = item.timestamp || 0;
+                    if (ts >= windowStart && ts < windowEnd) {
                         actionItems.push({ ...item, token: token, date: date });
                     }
-                });
-            }
+                }
+            });
         });
     }
 
     actionItems.sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
     
     if (actionItems.length === 0) {
-        actionTbody.innerHTML = '<tr><td colspan="4" style="padding:20px; color:#94a3b8; text-align:center;">오늘 09:00 이후 신청 내역 없음</td></tr>';
+        actionTbody.innerHTML = '<tr><td colspan="4" style="padding:20px; color:#94a3b8; text-align:center;">금일 09:00 이후 신청 내역 없음</td></tr>';
     } else {
         actionTbody.innerHTML = actionItems.map(a => {
             const dataStr = encodeURIComponent(JSON.stringify(a));
@@ -5344,9 +5358,9 @@ async function saveGlobalNotice() {
 <script>
 
 const CLASSROOM_DETAIL_GROUPS_SHARED = window.CLASSROOM_DETAIL_GROUPS_SHARED || [
-    { label: '???', items: ['??? 1? ???','??? 1? ????','??? 2? A???','??? 2? B???','??? 2? C???','??? 2? D???','??? 2? E???','??? 2? F???','??? 2? G???','??? 3? ???'] },
-    { label: '???', items: ['??? 1? ????','??? 1? A???','??? 1? B???','??? 2? ILS ???','??? 2? VCCS/RADIO/ATIS ???','??? 2? VOR/DME/TACAN ???','??? 2? ???????? ???'] },
-    { label: '?????', items: ['????? 1?'] }
+    { label: '하늘관', items: ['하늘관 1층 대강당','하늘관 1층 소회의실','하늘관 2층 A강의실','하늘관 2층 B강의실','하늘관 2층 C강의실','하늘관 2층 D강의실','하늘관 2층 E강의실','하늘관 2층 F강의실','하늘관 2층 G강의실','하늘관 3층 회의실'] },
+    { label: '국제동', items: ['국제동 1층 세미나홀','국제동 1층 A강의실','국제동 1층 B강의실','국제동 2층 ILS 실습실','국제동 2층 VCCS/RADIO/ATIS 실습실','국제동 2층 VOR/DME/TACAN 실습실','국제동 2층 항공정보통신시설 실습실'] },
+    { label: '관제교육동', items: ['관제교육동 1층'] }
 ];
 window.CLASSROOM_DETAIL_GROUPS_SHARED = CLASSROOM_DETAIL_GROUPS_SHARED;
 function classroomDetailSelectHtmlCoord(value, changeExpr, styleText) {

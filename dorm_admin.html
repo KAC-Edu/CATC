@@ -161,15 +161,15 @@
         .room-map-editor-head { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:10px; font-size:13px; font-weight:900; color:#1e3a8a; }
         .room-map-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(112px,1fr)); gap:8px; }
         .room-map-layout { display:grid; gap:7px; align-items:stretch; overflow-x:auto; padding-bottom:2px; }
-        .room-map-tile { background:#fff; border:1.5px solid #dbe4f0; border-radius:12px; padding:9px; min-height:100px; display:flex; flex-direction:column; gap:0; }
+        .room-map-tile { background:#fff; border:1.5px solid #dbe4f0; border-radius:12px; padding:8px; min-height:100px; display:flex; flex-direction:column; gap:0; box-sizing:border-box; overflow:hidden; }
         .room-map-tile.royal { border-color:#f59e0b; background:#fffbeb; }
         .room-map-tile.noassign { opacity:.62; background:#f1f5f9; }
         .room-map-tile.facility { justify-content:center; align-items:center; color:#64748b; font-weight:900; background:repeating-linear-gradient(45deg,#e2e8f0,#e2e8f0 4px,#f8fafc 4px,#f8fafc 10px); border-style:dashed; }
         .room-map-no { font-size:15px; font-weight:900; color:#0f172a; margin-bottom:5px; flex-shrink:0; }
-        .room-map-ops { display:flex; flex-direction:row; gap:4px 6px; font-size:10.5px; font-weight:800; color:#475569; margin-top:auto; padding-top:5px; flex-wrap:nowrap; }
-        .room-map-ops label { display:flex; align-items:center; gap:2px; white-space:nowrap; }
-        .room-map-ops input { width:13px; height:13px; accent-color:#2563eb; flex-shrink:0; }
-        .room-map-tile select { width:100%; border:1px solid #cbd5e1; border-radius:8px; padding:4px 6px; font-size:12px; font-weight:800; background:#fff; flex-shrink:0; margin-bottom:0; }
+        .room-map-ops { display:flex; flex-direction:row; justify-content:space-between; gap:2px; font-size:10px; font-weight:800; color:#475569; margin-top:auto; padding-top:5px; flex-wrap:nowrap; width:100%; box-sizing:border-box; }
+        .room-map-ops label { display:flex; align-items:center; gap:1px; white-space:nowrap; flex-shrink:0; }
+        .room-map-ops input { width:12px; height:12px; accent-color:#2563eb; flex-shrink:0; margin:0; }
+        .room-map-tile select { width:100%; border:1px solid #cbd5e1; border-radius:8px; padding:4px 4px; font-size:11px; font-weight:800; background:#fff; flex-shrink:0; margin-bottom:0; box-sizing:border-box; }
 
         /* 과정 선택 — 주차 섹션 + 가로 리스트 카드 */
         .week-section { margin-bottom: 18px; }
@@ -2873,6 +2873,7 @@
         }
 
         async function runAssign() {
+            try {
             const wk = document.getElementById('weekSelect').value;
             if (!wk) { showToast('배정할 주차를 선택하세요'); return; }
             _showAssignLoading('명단 및 방 정보를 불러오는 중…', 10);
@@ -2887,6 +2888,7 @@
             if (!Object.keys(rooms).length) { _hideAssignLoading(); showToast('STEP 1에서 방을 먼저 설정하세요'); return; }
             if (!Object.keys(weekRosters).length) {
                 await clearCourseAssignmentsForWeek(wk);
+                _hideAssignLoading();
                 setTimeout(() => checkAssignmentStatus(wk), 500);
                 return;
             }
@@ -2895,7 +2897,7 @@
                 Object.entries(weekRosters)
                     .filter(([k, v]) => !excludedRosterKeys.has(k) && !isRosterHidden(v) && Array.isArray(v.list) && v.list.length)
             );
-            if (!Object.keys(activeRosters).length) { showToast('배정할 과정이 없습니다. 하나 이상 선택하세요'); return; }
+            if (!Object.keys(activeRosters).length) { _hideAssignLoading(); showToast('배정할 과정이 없습니다. 하나 이상 선택하세요'); return; }
 
             // ══ 공통 준비 ══
             _showAssignLoading('배정 알고리즘 실행 중…', 50);
@@ -3231,6 +3233,11 @@
                     setTimeout(() => checkAssignmentStatus(wk), 800);
                 })
                 .catch(e => { _hideAssignLoading(); console.error('[배정 결과 저장 실패]', e); showToast(`⚠️ 배정 결과 저장 실패${e && e.message ? ': ' + e.message : ''}`); });
+            } catch (err) {
+                _hideAssignLoading();
+                console.error("[자동배정 오류]", err);
+                showToast("⚠️ 자동배정 중 오류: " + (err && err.message ? err.message : err));
+            }
         }
 
         // ── 과정 팝업 ──────────────────────────────────────────────
@@ -4386,9 +4393,9 @@
             }
             const BLDG_PHOTO_LAYOUT = { '청렴관':'dorm_chung.png', '상생관':'dorm_sang.png', '국제교육동':'dorm_inter.png' };
             const AED_MSG = {
-                '청렴관':     '제세동기(AED/CPR)는 2층 휴게실에 비치되어 있습니다.',
-                '상생관':     '제세동기(AED/CPR)는 2층 휴게실에 비치되어 있습니다.',
-                '국제교육동': '제세동기(AED/CPR)는 1층 정수기 앞에 설치되어 있습니다.',
+                '청렴관':     '자동심장충격기(AED)는 2층 휴게실에 비치되어 있습니다.',
+                '상생관':     '자동심장충격기(AED)는 2층 휴게실에 비치되어 있습니다.',
+                '국제교육동': '자동심장충격기(AED)는 1층 정수기 앞에 비치되어 있습니다.',
             };
             function buildingHtml(building) {
                 const fls   = (FORM[building] || []).map(fl => floorHtml(building, fl)).join('');
@@ -4648,7 +4655,10 @@
                     }));
                 await db.ref(this.KEY).set(clean);
                 const valid = clean.filter(c => c.startDate && c.endDate);
-                if (valid.length) await this._syncRoomsLockAware(valid);
+                if (valid.length) {
+                    try { await this._syncRoomsLockAware(valid); }
+                    catch (syncErr) { console.warn('[강의실 동기화 일부 실패]', syncErr); }
+                }
                 return clean;
             },
 
@@ -4779,9 +4789,12 @@
                     .then((clean) => {
                         showToast(`✅ 저장 및 강의실 적용 완료 (${clean.length}개 과정)`);
                         coursesCache = null;
-                        if (document.getElementById('step-2').style.display !== 'none') loadCourses(true);
+                        if (typeof loadCourses === 'function') {
+                            const s2 = document.getElementById('step-2');
+                            if (s2 && s2.style.display !== 'none') loadCourses(true);
+                        }
                     })
-                    .catch(e => { console.error(e); showToast('⚠️ 저장 실패'); });
+                    .catch(e => { console.error('[연간계획 저장 실패]', e); showToast('⚠️ 저장 실패: ' + (e && e.message ? e.message : e)); });
             }
         };
 

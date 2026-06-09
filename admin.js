@@ -444,21 +444,14 @@ verifyTakeover: async function() {
             // [수정] 강사 입장 시 해당 방의 옵저버 기록만 정밀 삭제
             state.isObserver = false; 
             sessionStorage.removeItem('kac_observer_room');
-            const micConsent = !!document.getElementById('entryMicConsent')?.checked;
-
             await firebase.database().ref(`courses/${newRoom}/status`).update({ 
                 ownerSessionId: state.sessionId,
                 ownerLastSeen: firebase.database.ServerValue.TIMESTAMP,
                 roomStatus: 'active'
             });
-            if (micConsent) {
-                lectureMonitor._consentRoomAsked = newRoom;
-                lectureMonitor._rememberSessionConsent();
-                await lectureMonitor.requestMic();
-            } else {
-                lectureMonitor._consentRoomAsked = newRoom;
-                lectureMonitor.stopMic(true);
-            }
+            // 입장 시 마이크는 항상 OFF — 강사가 수동으로 켬
+            lectureMonitor._consentRoomAsked = newRoom;
+            lectureMonitor.stopMic(true);
             localStorage.setItem(`last_owned_room`, newRoom);
             dataMgr.addOwnedRoom(newRoom);
             document.getElementById('takeoverModal').style.display = 'none';
@@ -525,10 +518,6 @@ verifyTakeover: async function() {
         const btO = document.getElementById('btnTakeoverObserver');
         if (btT) { btT.style.display = 'flex'; btT.innerHTML = '<i class="fa-solid fa-right-to-bracket"></i> 강사모드로 입장'; }
         if (btO) btO.style.display = 'none';
-        const micWrap = document.getElementById('entryMicConsentWrap');
-        const micChk = document.getElementById('entryMicConsent');
-        if (micWrap) micWrap.style.display = 'flex';
-        if (micChk) micChk.checked = false;
         const modal = document.getElementById('takeoverModal');
         if (modal) modal.style.display = 'flex';
         setTimeout(() => input && input.focus(), 50);
@@ -549,10 +538,6 @@ verifyTakeover: async function() {
         const btO = document.getElementById('btnTakeoverObserver');
         if (btT) { btT.style.display = 'flex'; btT.innerHTML = '<i class="fa-solid fa-chalkboard-user"></i> 강사 권한 가져오기'; }
         if (btO) btO.style.display = 'none';
-        const micWrap = document.getElementById('entryMicConsentWrap');
-        const micChk = document.getElementById('entryMicConsent');
-        if (micWrap) micWrap.style.display = 'flex';
-        if (micChk) micChk.checked = false;
         document.getElementById('takeoverModal').style.display = 'flex';
         setTimeout(() => document.getElementById('takeoverPwInput').focus(), 50);
     },
@@ -572,10 +557,6 @@ verifyTakeover: async function() {
         const btO = document.getElementById('btnTakeoverObserver');
         if (btT) btT.style.display = 'none';
         if (btO) { btO.style.display = 'flex'; }
-        const micWrap = document.getElementById('entryMicConsentWrap');
-        const micChk = document.getElementById('entryMicConsent');
-        if (micWrap) micWrap.style.display = 'none';
-        if (micChk) micChk.checked = false;
         document.getElementById('takeoverModal').style.display = 'flex';
         setTimeout(() => document.getElementById('takeoverPwInput').focus(), 50);
     },
