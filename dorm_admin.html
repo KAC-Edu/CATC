@@ -4168,20 +4168,7 @@
             document.body.appendChild(f);
             const doc = f.contentWindow.document;
             doc.open();
-            doc.write(_docHead(fileName) + (extraCss || '') + bodyHtml + '
-        <!-- 자동배정 로딩 오버레이 -->
-        <div id="assignLoadingOverlay" style="display:none;position:fixed;inset:0;z-index:99999;background:rgba(15,23,42,0.72);align-items:center;justify-content:center;flex-direction:column;">
-            <div style="background:#fff;border-radius:20px;padding:36px 44px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,0.35);min-width:280px;">
-                <div style="font-size:48px;margin-bottom:14px;">🏨</div>
-                <div style="font-size:18px;font-weight:900;color:#0f172a;margin-bottom:8px;">자동 배정 중…</div>
-                <div style="font-size:14px;color:#64748b;margin-bottom:20px;" id="assignLoadingMsg">생활관 방을 배정하고 있습니다.</div>
-                <div style="width:200px;height:6px;background:#e2e8f0;border-radius:99px;margin:0 auto;overflow:hidden;">
-                    <div id="assignLoadingBar" style="height:100%;width:0%;background:linear-gradient(90deg,#2563eb,#7c3aed);border-radius:99px;transition:width .4s;"></div>
-                </div>
-            </div>
-        </div>
-
-</body></html>');
+            doc.write(_docHead(fileName) + (extraCss || '') + bodyHtml + '</body></html>');
             doc.close();
             const prevTitle = document.title;
             setTimeout(function () {
