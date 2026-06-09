@@ -196,6 +196,8 @@
         var btn;
         if (!live) {
           btn = '<button class="listen-btn off" disabled><i class="fa-solid fa-volume-xmark"></i> 청취 불가</button>';
+        } else if (!micOn) {
+          btn = '<button class="listen-btn off" disabled><i class="fa-solid fa-microphone-slash"></i> 마이크 대기 중</button>';
         } else if (isActiveListen) {
           var label = current.connecting ? '<i class="fa-solid fa-spinner fa-spin"></i> 연결 중…' : '<i class="fa-solid fa-stop"></i> 청취 중지';
           btn = '<button class="listen-btn ' + (current.connecting?'connecting':'stop') + '" onclick="stopListen()">' + label + '</button>';
@@ -244,7 +246,7 @@
       var listenerId = 'L' + Math.random().toString(36).substr(2,9);
       var callBase = db.ref('system/monitoring/calls/' + room + '/' + listenerId);
       var pc = new RTCPeerConnection(ICE);
-      current = { room: room, listenerId: listenerId, pc: pc, callBase: callBase, connecting: true, candAdded: {} };
+      current = { room: room, listenerId: listenerId, pc: pc, callBase: callBase, connecting: true, remoteSet: false, pendCand: [] };
       render();
 
       // 수신 전용 오디오
@@ -253,29 +255,40 @@
       pc.ontrack = function(ev){
         var audio = document.getElementById('monitorAudio');
         audio.srcObject = ev.streams[0];
-        audio.play().catch(function(){ /* 사용자 제스처로 호출되므로 보통 통과 */ });
+        audio.muted = false;
+        audio.play().catch(function(err){ console.warn('자동재생 차단? ', err); });
       };
       pc.onicecandidate = function(ev){
         if (ev.candidate) callBase.child('listenerCandidates').push(ev.candidate.toJSON());
       };
+      pc.oniceconnectionstatechange = function(){ console.log('[모니터] ICE 상태:', pc.iceConnectionState); };
       pc.onconnectionstatechange = function(){
         if (!current || current.pc !== pc) return;
+        console.log('[모니터] 연결 상태:', pc.connectionState);
         if (pc.connectionState === 'connected') { current.connecting = false; render(); }
-        if (pc.connectionState === 'failed' || pc.connectionState === 'disconnected' || pc.connectionState === 'closed') {
+        if (pc.connectionState === 'failed' || pc.connectionState === 'closed') {
           if (current && current.pc === pc) { stopListen(); }
         }
       };
 
-      // 방송측이 쓰는 answer 수신
+      // 방송측 answer 수신 → 원격설명 설정 후 큐에 쌓인 ICE 후보 일괄 적용
       callBase.child('answer').on('value', async function(s){
         var ans = s.val();
-        if (ans && pc.signalingState !== 'stable' && !pc.currentRemoteDescription) {
-          try { await pc.setRemoteDescription(new RTCSessionDescription(ans)); } catch(e){ console.warn('answer 적용 실패', e); }
+        if (ans && current && current.pc === pc && !current.remoteSet) {
+          try {
+            await pc.setRemoteDescription(new RTCSessionDescription(ans));
+            current.remoteSet = true;
+            for (var i = 0; i < current.pendCand.length; i++) {
+              try { await pc.addIceCandidate(new RTCIceCandidate(current.pendCand[i])); } catch(e){ console.warn('큐 ICE 적용 실패', e); }
+            }
+            current.pendCand = [];
+          } catch(e){ console.warn('answer 적용 실패', e); }
         }
       });
-      // 방송측 ICE 수신
+      // 방송측 ICE 수신 — 원격설명 전이면 큐에 보관
       callBase.child('broadcasterCandidates').on('child_added', async function(s){
-        var c = s.val(); if (!c) return;
+        var c = s.val(); if (!c || !current || current.pc !== pc) return;
+        if (!current.remoteSet) { current.pendCand.push(c); return; }
         try { await pc.addIceCandidate(new RTCIceCandidate(c)); } catch(e){ console.warn('ICE 추가 실패', e); }
       });
       // 방송측 오류(마이크 미허용 등)
@@ -283,9 +296,9 @@
         if (s.val()) { alert('강의실 PC에서 마이크가 허용되지 않아 청취할 수 없습니다.'); stopListen(); }
       });
 
-      // offer 생성 → 업로드
+      // offer 생성 → 업로드 (recvonly transceiver 사용하므로 offerToReceiveAudio 옵션 불필요)
       try {
-        var offer = await pc.createOffer({ offerToReceiveAudio: true });
+        var offer = await pc.createOffer();
         await pc.setLocalDescription(offer);
         await callBase.update({ offer: { type: offer.type, sdp: offer.sdp }, ts: firebase.database.ServerValue.TIMESTAMP });
         callBase.onDisconnect().remove();   // 모니터 창 닫히면 정리

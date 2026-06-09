@@ -26,6 +26,27 @@
     <button onclick="document.getElementById('micMonitorBanner').style.display='none'" style="flex-shrink:0; background:rgba(255,255,255,0.22); border:none; color:#fff; width:28px; height:28px; border-radius:50%; cursor:pointer; font-size:13px;">✕</button>
 </div>
 
+<!-- 강의 모니터링 마이크 동의 모달 (강의실 입장 시 1회) -->
+<div id="micConsentModal" style="display:none; position:fixed; inset:0; background:rgba(15,23,42,0.55); z-index:2147483647; align-items:center; justify-content:center; padding:24px; backdrop-filter:blur(4px);">
+    <div style="background:#fff; width:100%; max-width:440px; border-radius:22px; padding:30px 28px 24px; box-shadow:0 24px 70px rgba(0,0,0,0.3); text-align:center;">
+        <div style="width:64px; height:64px; margin:0 auto 16px; border-radius:50%; background:linear-gradient(135deg,#15803d,#22c55e); display:flex; align-items:center; justify-content:center;">
+            <i class="fa-solid fa-microphone-lines" style="font-size:28px; color:#fff;"></i>
+        </div>
+        <h3 style="margin:0 0 6px; font-size:19px; font-weight:900; color:#0f172a;">강의 음성 모니터링 동의</h3>
+        <div id="micConsentRoomInfo" style="font-size:13px; font-weight:800; color:#16a34a; margin-bottom:12px;">ROOM</div>
+        <p style="font-size:13.5px; color:#475569; line-height:1.65; margin:0 0 20px;">
+            이 강의실의 진행 상황 확인을 위해 <b>이 PC의 마이크로 강의 음성을 실시간 청취</b>할 수 있도록 합니다.
+            동의하시면 이어지는 브라우저 권한 창에서 <b>'허용'</b>을 눌러주세요.<br>
+            <span style="font-size:12px; color:#94a3b8;">(강의가 종료되면 자동으로 송출이 중단됩니다.)</span>
+        </p>
+        <button onclick="lectureMonitor.acceptConsent()" style="width:100%; padding:14px; background:linear-gradient(135deg,#15803d,#22c55e); color:#fff; border:none; border-radius:13px; font-size:15px; font-weight:900; cursor:pointer;">
+            <i class="fa-solid fa-check"></i> 동의하고 마이크 켜기
+        </button>
+        <button onclick="lectureMonitor.dismissConsent()" style="width:100%; margin-top:9px; padding:12px; background:#f1f5f9; color:#64748b; border:none; border-radius:13px; font-size:14px; font-weight:800; cursor:pointer;">나중에</button>
+    </div>
+</div>
+
+
 <!-- 통합 배경음 플레이어 (주황 바 하나 — body 직속, 최상위 노출) -->
 <div id="bgmNowBubble" style="display:none; position:fixed; top:96px; right:24px; background:linear-gradient(135deg,#f97316,#fb923c); color:#fff; padding:12px 16px; border-radius:18px; font-size:13px; font-weight:800; box-shadow:0 10px 32px rgba(249,115,22,0.5); z-index:2147483647; flex-direction:column; gap:10px; border:2px solid rgba(255,255,255,0.85); min-width:280px;">
     <!-- 상단: 상태 + 닫기 -->

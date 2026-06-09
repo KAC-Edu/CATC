@@ -6999,13 +6999,40 @@ const lectureMonitor = {
             };
             if (this.currentRoom && this.currentRoom !== room) this._teardownRoom();
             this.currentRoom = room;
-            if (!this.micAsked) this.requestMic();   // 강의 시작 시 마이크 자동 확보
             this._publishStatus();
             this._listenForCalls(room);
             if (!this.hbTimer) this.hbTimer = setInterval(() => this._publishStatus(), 20000);
+            // 마이크가 아직 없으면 '이 강의실' 모니터링 동의를 받음 (방마다 1회)
+            if (!this.micReady) this._askConsent(room);
         } else {
             if (this.currentRoom) this._teardownRoom();
         }
+    },
+
+    // 강의실 입장(강의 시작) 시 마이크 모니터링 동의 모달 — 방이 바뀔 때마다 1회
+    _askConsent: function(room) {
+        if (this.micReady) return;
+        if (this._consentRoomAsked === room) return;   // 이 방은 이미 물어봄
+        this._consentRoomAsked = room;
+        const modal = document.getElementById('micConsentModal');
+        if (!modal) { this.requestMic(); return; }   // 모달 없으면 바로 요청(하위호환)
+        const info = document.getElementById('micConsentRoomInfo');
+        if (info) {
+            const cn = (this._info && this._info.courseName) ? this._info.courseName : '';
+            info.textContent = `ROOM ${room}` + (cn ? ` · ${cn}` : '');
+        }
+        modal.style.display = 'flex';
+    },
+    acceptConsent: async function() {
+        const modal = document.getElementById('micConsentModal');
+        if (modal) modal.style.display = 'none';
+        await this.requestMic();   // 동의 클릭(사용자 제스처) 직후 브라우저 권한 요청
+    },
+    dismissConsent: function() {
+        const modal = document.getElementById('micConsentModal');
+        if (modal) modal.style.display = 'none';
+        // 나중에 다시 켤 수 있도록 안내 배너 노출
+        this._setBanner('blocked');
     },
 
     _publishStatus: function() {
@@ -7045,7 +7072,8 @@ const lectureMonitor = {
         }
 
         const pc = new RTCPeerConnection(this.ICE);
-        this.peers[listenerId] = { pc, callBase };
+        const peer = { pc, callBase, remoteSet: false, pendCand: [] };
+        this.peers[listenerId] = peer;
 
         // 이 PC 마이크 트랙 추가
         this.stream.getTracks().forEach(t => pc.addTrack(t, this.stream));
@@ -7053,17 +7081,23 @@ const lectureMonitor = {
         pc.onicecandidate = ev => {
             if (ev.candidate) callBase.child('broadcasterCandidates').push(ev.candidate.toJSON());
         };
+        pc.oniceconnectionstatechange = () => console.log('[강의모니터링] ICE 상태:', pc.iceConnectionState);
         pc.onconnectionstatechange = () => {
-            if (['failed', 'closed', 'disconnected'].includes(pc.connectionState)) this._closePeer(listenerId);
+            console.log('[강의모니터링] 연결 상태:', pc.connectionState);
+            if (['failed', 'closed'].includes(pc.connectionState)) this._closePeer(listenerId);
         };
-        // 리스너 ICE 수신
+        // 리스너 ICE 수신 — 원격설명(offer) 적용 전이면 큐에 보관
         callBase.child('listenerCandidates').on('child_added', async s => {
             const c = s.val(); if (!c) return;
+            if (!peer.remoteSet) { peer.pendCand.push(c); return; }
             try { await pc.addIceCandidate(new RTCIceCandidate(c)); } catch (e) { console.warn('[강의모니터링] ICE 추가 실패', e); }
         });
 
         try {
             await pc.setRemoteDescription(new RTCSessionDescription(data.offer));
+            peer.remoteSet = true;
+            for (const c of peer.pendCand) { try { await pc.addIceCandidate(new RTCIceCandidate(c)); } catch (e) {} }
+            peer.pendCand = [];
             const answer = await pc.createAnswer();
             await pc.setLocalDescription(answer);
             await callBase.child('answer').set({ type: answer.type, sdp: answer.sdp });
@@ -7098,8 +7132,7 @@ window.onload = function() {
     guideMgr.init();
     ui.startHeaderClock(); // 헤더 날짜/시간 시계 시작
     dataMgr.initSystem(); 
-    // [강의 모니터링] 플랫폼이 켜지면 마이크를 자동 확보 (최초 1회만 권한 팝업, HTTPS에선 이후 기억됨)
-    setTimeout(function(){ try { lectureMonitor.requestMic(); } catch (e) {} }, 1500);
+    // [강의 모니터링] 마이크는 강의실에 입장(강의 시작)할 때 동의받아 켭니다. (lectureMonitor.syncStatus)
 };
 
 
