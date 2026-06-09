@@ -7782,6 +7782,24 @@ document.addEventListener('DOMContentLoaded', () => bgmPlayer.init());
    - sheet_to_json 대신 셀 직접 접근 방식으로 파싱 안정화
    - 날짜: 문자열/숫자/serial 모두 처리
    ══════════════════════════════════════════════════════════════ */
+
+const CLASSROOM_DETAIL_GROUPS_SHARED = window.CLASSROOM_DETAIL_GROUPS_SHARED || [
+    { label: '???', items: ['??? 1? ???','??? 1? ????','??? 2? A???','??? 2? B???','??? 2? C???','??? 2? D???','??? 2? E???','??? 2? F???','??? 2? G???','??? 3? ???'] },
+    { label: '???', items: ['??? 1? ????','??? 1? A???','??? 1? B???','??? 2? ILS ???','??? 2? VCCS/RADIO/ATIS ???','??? 2? VOR/DME/TACAN ???','??? 2? ???????? ???'] },
+    { label: '?????', items: ['????? 1?'] }
+];
+window.CLASSROOM_DETAIL_GROUPS_SHARED = CLASSROOM_DETAIL_GROUPS_SHARED;
+function classroomDetailSelectHtmlInstructor(value, changeExpr, styleText) {
+    const current = String(value || '').trim();
+    const esc = v => String(v || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const flat = CLASSROOM_DETAIL_GROUPS_SHARED.flatMap(g => g.items);
+    const custom = current && !flat.includes(current) ? '<option value="' + esc(current) + '" selected>' + esc(current) + '</option>' : '';
+    return '<select onchange="' + esc(changeExpr) + '" style="' + esc(styleText) + '">' +
+        '<option value="">-- ?? ?? --</option>' + custom +
+        CLASSROOM_DETAIL_GROUPS_SHARED.map(g => '<optgroup label="' + esc(g.label) + '">' + g.items.map(item => '<option value="' + esc(item) + '" ' + (item === current ? 'selected' : '') + '>' + esc(item) + '</option>').join('') + '</optgroup>').join('') +
+        '</select>';
+}
+
 const annualPlanMgr = {
 
     ROOMS: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split(''),
@@ -8283,7 +8301,7 @@ annualPlanMgr.renderEditor = function() {
                 <td style="${cellStyle}"><input type="date" value="${esc(c.endDate)}" onchange="annualPlanMgr.updateLocalData(${idx},'endDate',this.value)" style="${inpStyle}"></td>
                 <td style="${cellStyle}"><input type="text" value="${esc(c.prof)}" onchange="annualPlanMgr.updateLocalData(${idx},'prof',this.value)" style="${inpStyle}"></td>
                 <td style="${cellStyle}"><input type="text" value="${esc(c.coord)}" onchange="annualPlanMgr.updateLocalData(${idx},'coord',this.value)" style="${inpStyle}"></td>
-                <td style="${cellStyle}"><input type="text" value="${esc(c.roomDetail || '')}" onchange="annualPlanMgr.updateLocalData(${idx},'roomDetail',this.value)" placeholder="예: 하늘관 2층 B강의실" style="${inpStyle}"></td>
+                <td style="${cellStyle}">${classroomDetailSelectHtmlInstructor(c.roomDetail || '', "annualPlanMgr.updateLocalData(" + idx + ",'roomDetail',this.value)", inpStyle)}</td>
                 <td style="${cellStyle} text-align:center;"><button onclick="annualPlanMgr.deleteRow(${idx})" title="삭제" style="color:#ef4444; border:none; background:none; cursor:pointer; font-size:16px; font-weight:800;">✕</button></td>
             </tr>`;
     });

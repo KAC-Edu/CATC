@@ -5303,6 +5303,24 @@ async function saveGlobalNotice() {
 
 <!-- ══ 연간계획 편집기 로직 (교육운영부, 자체 완결형) ══ -->
 <script>
+
+const CLASSROOM_DETAIL_GROUPS_SHARED = window.CLASSROOM_DETAIL_GROUPS_SHARED || [
+    { label: '???', items: ['??? 1? ???','??? 1? ????','??? 2? A???','??? 2? B???','??? 2? C???','??? 2? D???','??? 2? E???','??? 2? F???','??? 2? G???','??? 3? ???'] },
+    { label: '???', items: ['??? 1? ????','??? 1? A???','??? 1? B???','??? 2? ILS ???','??? 2? VCCS/RADIO/ATIS ???','??? 2? VOR/DME/TACAN ???','??? 2? ???????? ???'] },
+    { label: '?????', items: ['????? 1?'] }
+];
+window.CLASSROOM_DETAIL_GROUPS_SHARED = CLASSROOM_DETAIL_GROUPS_SHARED;
+function classroomDetailSelectHtmlCoord(value, changeExpr, styleText) {
+    const current = String(value || '').trim();
+    const esc = v => String(v || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const flat = CLASSROOM_DETAIL_GROUPS_SHARED.flatMap(g => g.items);
+    const custom = current && !flat.includes(current) ? '<option value="' + esc(current) + '" selected>' + esc(current) + '</option>' : '';
+    return '<select onchange="' + esc(changeExpr) + '" style="' + esc(styleText) + '">' +
+        '<option value="">-- ?? ?? --</option>' + custom +
+        CLASSROOM_DETAIL_GROUPS_SHARED.map(g => '<optgroup label="' + esc(g.label) + '">' + g.items.map(item => '<option value="' + esc(item) + '" ' + (item === current ? 'selected' : '') + '>' + esc(item) + '</option>').join('') + '</optgroup>').join('') +
+        '</select>';
+}
+
 const annualPlanMgrCoord = {
     ROOMS: ['A', 'B', 'C'],
     PLAN_KEY: 'system/annualPlan',
@@ -5463,7 +5481,7 @@ const annualPlanMgrCoord = {
                 <td style="${td}"><input type="date" value="${esc(c.endDate)}" onchange="annualPlanMgrCoord.updateLocalData(${idx},'endDate',this.value)" style="${inp}"></td>
                 <td style="${td}"><input type="text" value="${esc(c.prof)}" onchange="annualPlanMgrCoord.updateLocalData(${idx},'prof',this.value)" style="${inp}"></td>
                 <td style="${td}"><input type="text" value="${esc(c.coord)}" onchange="annualPlanMgrCoord.updateLocalData(${idx},'coord',this.value)" style="${inp}"></td>
-                <td style="${td}"><input type="text" value="${esc(c.roomDetail || '')}" onchange="annualPlanMgrCoord.updateLocalData(${idx},'roomDetail',this.value)" placeholder="예: 하늘관 2층 B강의실" style="${inp}"></td>
+                <td style="${td}">${classroomDetailSelectHtmlCoord(c.roomDetail || '', "annualPlanMgrCoord.updateLocalData(" + idx + ",'roomDetail',this.value)", inp)}</td>
                 <td style="${td} text-align:center;"><button onclick="annualPlanMgrCoord.deleteRow(${idx})" title="삭제" style="color:#ef4444; border:none; background:none; cursor:pointer; font-size:16px; font-weight:800;">✕</button></td>
             </tr>`;
         });

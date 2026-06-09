@@ -1056,10 +1056,13 @@
 
         function floorBulkToolsHtml(building, floor) {
             const key = `${building}_${floor}`;
+            const floorRooms = Object.values(rooms).filter(r => r && r.building === building && r.floor === floor);
+            const allRoyal = floorRooms.length && floorRooms.every(r => !!r.royal && !r.noAssign);
+            const allNoAssign = floorRooms.length && floorRooms.every(r => !!r.noAssign);
             return `<div class="floor-bulk-tools">
                 <span style="font-size:12px;font-weight:900;color:#64748b;margin-right:4px;">이 층 전체 설정</span>
-                <label class="bulk-box">우선배정<br><input type="checkbox" onchange="bulkSetFloor('${building}', ${floor}, 'royal', this.checked)" title="이 층 우선배정 전체 설정/해제"></label>
-                <label class="bulk-box">배정제외<br><input type="checkbox" onchange="bulkSetFloor('${building}', ${floor}, 'noAssign', this.checked)" title="이 층 배정제외 전체 설정/해제"></label>
+                <label class="bulk-box">우선배정<br><input type="checkbox" ${allRoyal ? 'checked' : ''} onchange="bulkSetFloor('${building}', ${floor}, 'royal', this.checked)" title="이 층 우선배정 전체 설정/해제"></label>
+                <label class="bulk-box">배정제외<br><input type="checkbox" ${allNoAssign ? 'checked' : ''} onchange="bulkSetFloor('${building}', ${floor}, 'noAssign', this.checked)" title="이 층 배정제외 전체 설정/해제"></label>
                 <label class="bulk-box">정원
                     <select onchange="if(this.value) bulkSetFloor('${building}', ${floor}, 'capacity', this.value); this.value='';">
                         <option value="">선택</option>
@@ -1185,6 +1188,11 @@
             return result;
         }
 
+        function isDefaultRoyalRoom(building, floor, no) {
+            const n = parseInt(no, 10);
+            return building === '청렴관' && Number(floor) === 1 && n >= 101 && n <= 110;
+        }
+
         function addRooms(building, floor) {
             const input = document.getElementById(`in-${building}-${floor}`);
             const raw = input.value.trim();
@@ -1195,7 +1203,7 @@
                 const id = `${building}_${floor}_${no}`;
                 if (!rooms[id]) {
                     const sp = SPECIAL_ROOMS[id];
-                    rooms[id] = { building, floor, no: String(no), capacity: 1, gender: '', royal: false, criteria: 'empno', noAssign: !!(sp && sp.defaultNoAssign) };
+                    rooms[id] = { building, floor, no: String(no), capacity: 1, gender: '', royal: isDefaultRoyalRoom(building, floor, no), criteria: 'empno', noAssign: !!(sp && sp.defaultNoAssign) };
                     added++;
                 }
             });
@@ -2727,6 +2735,13 @@
             return p;
         }
 
+        function roomNaturalSorter(a, b) {
+            const bldgRank = { '청렴관': 0, '상생관': 1, '국제교육동': 2 };
+            return (bldgRank[a.building] ?? 99) - (bldgRank[b.building] ?? 99)
+                || (Number(a.floor) || 99) - (Number(b.floor) || 99)
+                || String(a.no).localeCompare(String(b.no), undefined, { numeric: true });
+        }
+
         function sortedRooms() {
             // 동·층 우선순위(floorPriority) 기준으로 정렬, 같은 층이면 방번호 순
             const floorRank = {};
@@ -2897,7 +2912,9 @@
             if (instCount) log.push(`👨‍🏫 강사 사전배치: ${instCount}명`);
 
             // ── 1) 우선 배정(royal) ──
-            const royalRooms = sortedRooms().filter(r => roomState[r.id].royal && !roomState[r.id].reserved && !roomState[r.id].noAssign);
+            const royalRooms = sortedRooms()
+                .filter(r => roomState[r.id].royal && !roomState[r.id].reserved && !roomState[r.id].noAssign)
+                .sort(roomNaturalSorter);
             let remaining = people.slice();
             royalRooms.forEach(r => {
                 const rs = roomState[r.id];
@@ -4318,6 +4335,27 @@
         // 구버전 호환
         function printBoard() { printList(); }
 
+        const CLASSROOM_DETAIL_GROUPS = [
+            { label: '하늘관', items: ['하늘관 1층 대강당','하늘관 1층 소회의실','하늘관 2층 A강의실','하늘관 2층 B강의실','하늘관 2층 C강의실','하늘관 2층 D강의실','하늘관 2층 E강의실','하늘관 2층 F강의실','하늘관 2층 G강의실','하늘관 3층 회의실'] },
+            { label: '국제동', items: ['국제동 1층 세미나홀','국제동 1층 A강의실','국제동 1층 B강의실','국제동 2층 ILS 실습실','국제동 2층 VCCS/RADIO/ATIS 실습실','국제동 2층 VOR/DME/TACAN 실습실','국제동 2층 항공정보통신시설 실습실'] },
+            { label: '관제교육동', items: ['관제교육동 1층'] }
+        ];
+        function escapeAttr(v) {
+            return String(v || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        }
+        function classroomSelectHtml(value, changeExpr, styleText) {
+            const current = String(value || '').trim();
+            const flat = CLASSROOM_DETAIL_GROUPS.flatMap(g => g.items);
+            const custom = current && !flat.includes(current)
+                ? `<option value="${escapeAttr(current)}" selected>${escapeAttr(current)}</option>`
+                : '';
+            return `<select onchange="${changeExpr}" style="${styleText}">
+                <option value="">-- 장소 선택 --</option>
+                ${custom}
+                ${CLASSROOM_DETAIL_GROUPS.map(g => `<optgroup label="${escapeAttr(g.label)}">${g.items.map(item => `<option value="${escapeAttr(item)}" ${item === current ? 'selected' : ''}>${escapeAttr(item)}</option>`).join('')}</optgroup>`).join('')}
+            </select>`;
+        }
+
         // ════════════ 연간계획 조회/추가 (생활관 자체) ════════════
         const annualPlan = {
             KEY: 'system/annualPlan',
@@ -4554,7 +4592,7 @@
                         <td style="padding:4px; border:1px solid var(--border);"><input type="date" value="${c.endDate||''}" oninput="annualPlan.edit(${i},'endDate',this.value)" style="${inp}"></td>
                         <td style="padding:4px; border:1px solid var(--border);"><input value="${(c.prof||'').replace(/"/g,'&quot;')}" oninput="annualPlan.edit(${i},'prof',this.value)" style="${inp}"></td>
                         <td style="padding:4px; border:1px solid var(--border);"><input value="${(c.coord||'').replace(/"/g,'&quot;')}" oninput="annualPlan.edit(${i},'coord',this.value)" style="${inp}"></td>
-                        <td style="padding:4px; border:1px solid var(--border);"><input value="${(c.roomDetail||'').replace(/"/g,'&quot;')}" oninput="annualPlan.edit(${i},'roomDetail',this.value)" placeholder="예: 하늘관 2층 B강의실" style="${inp}"></td>
+                        <td style="padding:4px; border:1px solid var(--border);">${classroomSelectHtml(c.roomDetail || '', "annualPlan.edit(" + i + ",'roomDetail',this.value)", inp)}</td>
                         <td style="padding:4px; border:1px solid var(--border); text-align:center;"><span class="del-x" style="color:var(--danger); cursor:pointer;" onclick="annualPlan.del(${i})"><i class="fa-solid fa-xmark"></i></span></td>
                     </tr>`;
                 }).join('');
