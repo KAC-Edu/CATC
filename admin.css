@@ -3955,6 +3955,19 @@ body:-webkit-full-screen .main-stage {
     margin: 0 auto;
 }
 
+.instant-survey-panel .card-close-btn {
+    top: 8px;
+    right: 10px;
+    background: rgba(255,255,255,0.92);
+    color: #0f172a;
+    z-index: 20;
+}
+
+.instant-survey-panel .card-close-btn:hover {
+    background: #fff;
+    color: #ef4444;
+}
+
 .mic-monitor-toggle {
     color: #22c55e !important;
 }

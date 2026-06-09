@@ -7033,7 +7033,13 @@ const lectureMonitor = {
         }
         try {
             this.stream = await navigator.mediaDevices.getUserMedia({
-                audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: true },
+                audio: {
+                    echoCancellation: true,
+                    noiseSuppression: true,
+                    autoGainControl: true,
+                    channelCount: 1,
+                    sampleRate: 48000
+                },
                 video: false
             });
             this.micReady = true;

@@ -136,13 +136,18 @@
 
     var ICE = { iceServers: [
       { urls: 'stun:stun.l.google.com:19302' },
-      { urls: 'stun:stun1.l.google.com:19302' }
+      { urls: 'stun:stun1.l.google.com:19302' },
+      { urls: 'stun:stun.cloudflare.com:3478' },
+      { urls: 'stun:stun.nextcloud.com:443' }
     ] };
 
     var LIVE_FRESH_MS = 45000;       // 이 시간 내 heartbeat면 'live'
     var statusMap = {};              // room -> { live, micOn, ts }
     var coursesMap = {};             // room -> course 데이터 (이름/교수)
     var current = null;              // { room, listenerId, pc, statusRef, ... } 현재 청취 중
+    var audioCtx = null;
+    var filteredSource = null;
+    var filteredDest = null;
 
     // ── 시계 ──
     function tick(){ var d=new Date(); document.getElementById('clock').textContent =
@@ -237,6 +242,41 @@
 
     function esc(s){ return String(s||'').replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
     function setVol(v){ document.getElementById('monitorAudio').volume = Math.max(0, Math.min(1, v/100)); }
+    function applyVoiceFilter(stream){
+      try {
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        if (filteredSource) { try { filteredSource.disconnect(); } catch(e){} }
+        var source = audioCtx.createMediaStreamSource(stream);
+        var high = audioCtx.createBiquadFilter();
+        high.type = 'highpass';
+        high.frequency.value = 120;
+        high.Q.value = 0.7;
+        var low = audioCtx.createBiquadFilter();
+        low.type = 'lowpass';
+        low.frequency.value = 3600;
+        low.Q.value = 0.7;
+        var compressor = audioCtx.createDynamicsCompressor();
+        compressor.threshold.value = -42;
+        compressor.knee.value = 24;
+        compressor.ratio.value = 8;
+        compressor.attack.value = 0.003;
+        compressor.release.value = 0.18;
+        var gain = audioCtx.createGain();
+        gain.gain.value = 1.15;
+        filteredDest = audioCtx.createMediaStreamDestination();
+        source.connect(high);
+        high.connect(low);
+        low.connect(compressor);
+        compressor.connect(gain);
+        gain.connect(filteredDest);
+        filteredSource = source;
+        return filteredDest.stream;
+      } catch(e) {
+        console.warn('음성 필터 적용 실패, 원본 음성 사용', e);
+        return stream;
+      }
+    }
 
     // ── 청취 시작 (리스너 = offerer) ──
     async function startListen(room){
@@ -246,7 +286,7 @@
       var listenerId = 'L' + Math.random().toString(36).substr(2,9);
       var callBase = db.ref('system/monitoring/calls/' + room + '/' + listenerId);
       var pc = new RTCPeerConnection(ICE);
-      current = { room: room, listenerId: listenerId, pc: pc, callBase: callBase, connecting: true, remoteSet: false, pendCand: [] };
+      current = { room: room, listenerId: listenerId, pc: pc, callBase: callBase, connecting: true, remoteSet: false, pendCand: [], startedAt: Date.now(), connectTimer: null };
       render();
 
       // 수신 전용 오디오
@@ -254,18 +294,34 @@
 
       pc.ontrack = function(ev){
         var audio = document.getElementById('monitorAudio');
-        audio.srcObject = ev.streams[0];
+        audio.srcObject = applyVoiceFilter(ev.streams[0]);
         audio.muted = false;
         audio.play().catch(function(err){ console.warn('자동재생 차단? ', err); });
       };
       pc.onicecandidate = function(ev){
         if (ev.candidate) callBase.child('listenerCandidates').push(ev.candidate.toJSON());
       };
-      pc.oniceconnectionstatechange = function(){ console.log('[모니터] ICE 상태:', pc.iceConnectionState); };
+      pc.oniceconnectionstatechange = function(){
+        console.log('[모니터] ICE 상태:', pc.iceConnectionState);
+        if (!current || current.pc !== pc) return;
+        if (pc.iceConnectionState === 'connected' || pc.iceConnectionState === 'completed') {
+          current.connecting = false;
+          if (current.connectTimer) { clearTimeout(current.connectTimer); current.connectTimer = null; }
+          render();
+        }
+        if (pc.iceConnectionState === 'failed' || pc.iceConnectionState === 'disconnected') {
+          alert('청취 연결이 지연되거나 끊겼습니다. 강사 PC와 모니터 PC의 네트워크 상태를 확인한 뒤 다시 시도해주세요.');
+          stopListen();
+        }
+      };
       pc.onconnectionstatechange = function(){
         if (!current || current.pc !== pc) return;
         console.log('[모니터] 연결 상태:', pc.connectionState);
-        if (pc.connectionState === 'connected') { current.connecting = false; render(); }
+        if (pc.connectionState === 'connected') {
+          current.connecting = false;
+          if (current.connectTimer) { clearTimeout(current.connectTimer); current.connectTimer = null; }
+          render();
+        }
         if (pc.connectionState === 'failed' || pc.connectionState === 'closed') {
           if (current && current.pc === pc) { stopListen(); }
         }
@@ -302,16 +358,28 @@
         await pc.setLocalDescription(offer);
         await callBase.update({ offer: { type: offer.type, sdp: offer.sdp }, ts: firebase.database.ServerValue.TIMESTAMP });
         callBase.onDisconnect().remove();   // 모니터 창 닫히면 정리
+        if (current && current.pc === pc) {
+          current.connectTimer = setTimeout(function(){
+            if (current && current.pc === pc && current.connecting) {
+              alert('청취 연결이 완료되지 않았습니다. 일부 네트워크에서는 P2P 음성 연결이 제한될 수 있습니다. 다른 네트워크 또는 같은 Wi-Fi에서 다시 시도해주세요.');
+              stopListen();
+            }
+          }, 20000);
+        }
       } catch(e){ console.error('offer 실패', e); alert('연결을 시작하지 못했습니다.'); stopListen(); }
     }
 
     async function stopListen(){
       if (!current) return;
       var c = current; current = null;
+      try { if (c.connectTimer) clearTimeout(c.connectTimer); } catch(e){}
       try { if (c.callBase) { c.callBase.off(); c.callBase.remove(); c.callBase.onDisconnect().cancel(); } } catch(e){}
       try { if (c.pc) c.pc.close(); } catch(e){}
       var audio = document.getElementById('monitorAudio');
       try { audio.srcObject = null; } catch(e){}
+      try { if (filteredSource) filteredSource.disconnect(); } catch(e){}
+      filteredSource = null;
+      filteredDest = null;
       render();
     }
 
