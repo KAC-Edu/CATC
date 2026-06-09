@@ -2815,11 +2815,13 @@
                 const oldSig = _assignSignature(existing.students);
                 const newSig = _assignSignature(payload.students);
                 if (oldSig === newSig) {
+                    _hideAssignLoading();
                     showToast('변경된 내용이 없어 기존 배정을 유지합니다');
                     alert('✅ 변경된 내용이 없습니다.\n기존 배정과 동일하여 덮어쓰지 않았습니다.');
                     return;
                 }
                 if (!confirm('⚠️ 이 주차에는 이미 배정 결과가 있습니다.\n덮어쓰면 수동으로 이동·추가·삭제한 내용이 사라질 수 있습니다.\n\n계속할까요?')) {
+                    _hideAssignLoading();
                     showToast('자동 배정을 취소했습니다 — 기존 배정 유지');
                     return;
                 }
@@ -2840,7 +2842,17 @@
                     }
                     setTimeout(() => goStep(4), 800);
                 })
-                .catch(e => { console.error('[배정 결과 저장 실패]', e); showToast(`⚠️ 배정 결과 저장 실패${e && e.message ? ': ' + e.message : ''}`); if (btn) { btn.disabled = false; btn.innerText = '✅ 확정 저장'; } });
+                .catch(e => {
+                    _hideAssignLoading();
+                    console.error('[배정 결과 저장 실패]', e);
+                    const msg = (e && e.message) ? e.message : String(e);
+                    if (msg.indexOf('PERMISSION_DENIED') >= 0 || msg.indexOf('permission') >= 0) {
+                        alert('⚠️ 저장 권한 오류 (PERMISSION_DENIED)\n\nFirebase 보안 규칙에서 system/dorm/assignments 쓰기가 거부되었습니다.\n규칙을 최신본으로 게시했는지 확인해 주세요.');
+                    } else {
+                        alert('⚠️ 배정 결과 저장 실패\n\n' + msg);
+                    }
+                    if (btn) { btn.disabled = false; btn.innerText = '✅ 확정 저장'; }
+                });
         }
 
         function _showAssignLoading(msg, pct) {
@@ -2901,6 +2913,7 @@
 
             // ══ 공통 준비 ══
             _showAssignLoading('배정 알고리즘 실행 중…', 50);
+            console.log('[자동배정] 1단계: 알고리즘 시작, 활성 과정 수=', Object.keys(activeRosters).length);
             const log = [];
             const unassignedList = [];
             const courseStats = [];
@@ -3179,14 +3192,17 @@
                 const oldSig = _assignSignature(existing.students);
                 const newSig = _assignSignature(assigned);
                 if (oldSig === newSig) {
+                    _hideAssignLoading();
                     showToast('변경된 내용이 없어 기존 배정을 유지합니다');
                     return;
                 }
-                if (!confirm('이미 배정 결과가 있습니다. 덮어쓸까요?\n(수동으로 이동·추가·삭제한 내용이 사라집니다)')) return;
+                if (!confirm('이미 배정 결과가 있습니다. 덮어쓸까요?\n(수동으로 이동·추가·삭제한 내용이 사라집니다)')) { _hideAssignLoading(); return; }
             }
 
+            console.log('[자동배정] 2단계: 저장 시작, payload 방 수=', payload && payload.rooms ? Object.keys(payload.rooms).length : '?');
             db.ref(`system/dorm/assignments/${wk}`).set(cleanFirebaseValue(payload))
                 .then(() => {
+                    console.log('[자동배정] 3단계: 저장 성공');
                     const pct = totalPeople ? Math.round(totalAssigned / totalPeople * 100) : 0;
                     const allOk = unassignedList.length === 0;
                     let html = `<div style="margin-top:18px;">
@@ -3232,11 +3248,20 @@
                     // 배정 확정 상태 배너 갱신
                     setTimeout(() => checkAssignmentStatus(wk), 800);
                 })
-                .catch(e => { _hideAssignLoading(); console.error('[배정 결과 저장 실패]', e); showToast(`⚠️ 배정 결과 저장 실패${e && e.message ? ': ' + e.message : ''}`); });
+                .catch(e => {
+                    _hideAssignLoading();
+                    console.error('[배정 결과 저장 실패]', e);
+                    const msg = (e && e.message) ? e.message : String(e);
+                    if (msg.indexOf('PERMISSION_DENIED') >= 0 || msg.indexOf('permission') >= 0) {
+                        alert('⚠️ 저장 권한 오류 (PERMISSION_DENIED)\n\nFirebase 보안 규칙에서 system/dorm/assignments 쓰기가 거부되었습니다.\n규칙을 최신본으로 게시했는지 확인해 주세요.');
+                    } else {
+                        alert('⚠️ 배정 결과 저장 실패\n\n' + msg);
+                    }
+                });
             } catch (err) {
                 _hideAssignLoading();
                 console.error("[자동배정 오류]", err);
-                showToast("⚠️ 자동배정 중 오류: " + (err && err.message ? err.message : err));
+                alert("⚠️ 자동배정 중 오류 발생\n\n" + (err && err.message ? err.message : String(err)) + "\n\n(개발자 도구 콘솔에서 상세 내용 확인 가능)");
             }
         }
 
