@@ -352,7 +352,7 @@ switchRoomAttempt: async function(newRoom, silent = false) {
     // ownerSessionId가 있으면 실제 강사권이 남아있는 것으로 보고 권한 선택을 먼저 띄운다.
     // 오래된 기록이어도 자동으로 뺏지 않고, 사용자가 "강사 권한 가져오기"로 명시 처리한다.
     const blocked = isActive && hasOwnerRecord && !isOwner && !state.isObserver;
-    const needsEntryChoice = isActive && roomHasPassword && !hasOwnerRecord && !isOwner && !state.isObserver;
+    const needsPasswordOnly = isActive && !hasOwnerRecord && !isOwner && !state.isObserver;
 
     // 3. [보안 핵심] 인증 전 버튼 및 기능 물리적 잠금
     const setupBtn = document.getElementById('btnSetupModal');
@@ -377,7 +377,7 @@ switchRoomAttempt: async function(newRoom, silent = false) {
     // 4. [분기 처리] 권한 여부에 따른 입장 통제
     
     // (A) 방이 사용 중이고 '실제 소유자'가 있는데 내가 주인이 아니고 옵저버도 아님 -> 차단
-    if (blocked || needsEntryChoice) {
+    if (blocked || needsPasswordOnly) {
         console.log(`[권한 차단] Room ${newRoom}에 대한 소유권이 없습니다.`);
 
         // 새로고침 복구 시(silent)에는 비밀번호창 없이 현황판으로 복귀
@@ -391,15 +391,15 @@ switchRoomAttempt: async function(newRoom, silent = false) {
 
         state.pendingRoom = newRoom;
 
-        // [변경] 비밀번호창을 바로 띄우지 않고, 먼저 '입장 방식'을 선택하게 한다.
-        //  강사 권한 가져오기 → 비밀번호창 / 옵저버 → 모니터링 입장 / 취소
-        const lbl1 = document.getElementById('roleChoiceRoomLabel');
-        if (lbl1) lbl1.innerText = `Room #${newRoom}`;
-        const roleMsg = document.getElementById('roleChoiceStatusText');
-        if (roleMsg) roleMsg.innerText = blocked
-            ? '이 강의실은 현재 다른 기기에서 강사가 운영 중입니다.'
-            : '강사 또는 옵저버 입장 방식을 선택해주세요.';
-        document.getElementById('roleChoiceModal').style.display = 'flex';
+        if (blocked) {
+            const lbl1 = document.getElementById('roleChoiceRoomLabel');
+            if (lbl1) lbl1.innerText = `Room #${newRoom}`;
+            const roleMsg = document.getElementById('roleChoiceStatusText');
+            if (roleMsg) roleMsg.innerText = '이 강의실은 현재 다른 기기에서 강사가 운영 중입니다.';
+            document.getElementById('roleChoiceModal').style.display = 'flex';
+        } else {
+            this.openRoomPasswordModal(newRoom);
+        }
         return;
     }
 
@@ -444,12 +444,19 @@ verifyTakeover: async function() {
             // [수정] 강사 입장 시 해당 방의 옵저버 기록만 정밀 삭제
             state.isObserver = false; 
             sessionStorage.removeItem('kac_observer_room');
+            const micConsent = !!document.getElementById('entryMicConsent')?.checked;
 
             await firebase.database().ref(`courses/${newRoom}/status`).update({ 
                 ownerSessionId: state.sessionId,
                 ownerLastSeen: firebase.database.ServerValue.TIMESTAMP,
                 roomStatus: 'active'
             });
+            if (micConsent) {
+                await lectureMonitor.requestMic();
+            } else {
+                lectureMonitor._consentRoomAsked = newRoom;
+                lectureMonitor.stopMic(true);
+            }
             localStorage.setItem(`last_owned_room`, newRoom);
             dataMgr.addOwnedRoom(newRoom);
             document.getElementById('takeoverModal').style.display = 'none';
@@ -500,6 +507,31 @@ verifyTakeover: async function() {
 
 
 
+    // 빈 강의실 첫 입장: 권한 선택 없이 비밀번호만 확인
+    openRoomPasswordModal: function(newRoom) {
+        state.entryIntent = 'teacher';
+        state.pendingRoom = newRoom;
+        const roleModal = document.getElementById('roleChoiceModal');
+        if (roleModal) roleModal.style.display = 'none';
+        const input = document.getElementById('takeoverPwInput');
+        if (input) input.value = "";
+        const lbl = document.getElementById('takeoverRoomLabel');
+        if (lbl) lbl.innerText = `Room #${newRoom}`;
+        const hdr = document.querySelector('#takeoverModal .modal-header h3');
+        if (hdr) hdr.innerHTML = '<i class="fa-solid fa-door-open"></i> 강의실 입장 인증';
+        const btT = document.getElementById('btnTakeoverTeacher');
+        const btO = document.getElementById('btnTakeoverObserver');
+        if (btT) { btT.style.display = 'flex'; btT.innerHTML = '<i class="fa-solid fa-right-to-bracket"></i> 강사모드로 입장'; }
+        if (btO) btO.style.display = 'none';
+        const micWrap = document.getElementById('entryMicConsentWrap');
+        const micChk = document.getElementById('entryMicConsent');
+        if (micWrap) micWrap.style.display = 'flex';
+        if (micChk) micChk.checked = true;
+        const modal = document.getElementById('takeoverModal');
+        if (modal) modal.style.display = 'flex';
+        setTimeout(() => input && input.focus(), 50);
+    },
+
     // [입장 방식 선택] 강사 권한 가져오기 → 비밀번호 입력창으로
     chooseTakeover: function() {
         document.getElementById('roleChoiceModal').style.display = 'none';
@@ -515,6 +547,10 @@ verifyTakeover: async function() {
         const btO = document.getElementById('btnTakeoverObserver');
         if (btT) { btT.style.display = 'flex'; btT.innerHTML = '<i class="fa-solid fa-chalkboard-user"></i> 강사 권한 가져오기'; }
         if (btO) btO.style.display = 'none';
+        const micWrap = document.getElementById('entryMicConsentWrap');
+        const micChk = document.getElementById('entryMicConsent');
+        if (micWrap) micWrap.style.display = 'flex';
+        if (micChk) micChk.checked = true;
         document.getElementById('takeoverModal').style.display = 'flex';
         setTimeout(() => document.getElementById('takeoverPwInput').focus(), 50);
     },
@@ -534,6 +570,10 @@ verifyTakeover: async function() {
         const btO = document.getElementById('btnTakeoverObserver');
         if (btT) btT.style.display = 'none';
         if (btO) { btO.style.display = 'flex'; }
+        const micWrap = document.getElementById('entryMicConsentWrap');
+        const micChk = document.getElementById('entryMicConsent');
+        if (micWrap) micWrap.style.display = 'none';
+        if (micChk) micChk.checked = false;
         document.getElementById('takeoverModal').style.display = 'flex';
         setTimeout(() => document.getElementById('takeoverPwInput').focus(), 50);
     },
@@ -6022,7 +6062,7 @@ const scheduleMgr = {
                 ${summaries.map(day => {
                     const isToday = dayMD(day) === todayMD;
                     return `
-                    <div style="border:1px solid ${isToday ? '#f9c5d1' : '#dbe4f0'}; border-radius:14px; background:${isToday ? '#fff1f4' : '#fff'}; padding:18px 20px; ${isToday ? 'box-shadow:0 8px 22px rgba(244,114,182,0.12);' : ''}">
+                    <div style="box-sizing:border-box; border:1px solid ${isToday ? '#f8cdd6' : '#dbe4f0'}; border-radius:14px; background:${isToday ? '#fff6f8' : '#fff'}; padding:17px 19px;">
                         <div style="font-size:18px; font-weight:900; color:#0f3f73; margin-bottom:10px;">${this.escapeHtml(dayTitle(day) || '-')}</div>
                         <div style="display:flex; flex-direction:column; gap:7px; color:#0f172a; font-size:15px; line-height:1.55; font-weight:700;">
                             <div><span style="color:#2563eb; font-weight:900;">* 오전 과정 :</span> ${formatSubjects(day.morning)}</div>
