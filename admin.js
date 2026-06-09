@@ -6010,17 +6010,26 @@ const scheduleMgr = {
             const wd = d.weekday ? `${d.weekday}요일` : '';
             return [d.date, wd].filter(Boolean).join(' ');
         };
+        const today = new Date();
+        const todayMD = `${today.getMonth() + 1}-${today.getDate()}`;
+        const dayMD = d => {
+            const text = `${d.date || ''} ${d.weekday || ''}`;
+            const m = text.match(/(\d{1,2})\s*(?:월|[./-])\s*(\d{1,2})/);
+            return m ? `${Number(m[1])}-${Number(m[2])}` : '';
+        };
         return `
             <div style="display:flex; flex-direction:column; gap:12px; font-family:inherit;">
-                ${summaries.map(day => `
-                    <div style="border:1px solid #dbe4f0; border-radius:14px; background:#fff; padding:18px 20px;">
+                ${summaries.map(day => {
+                    const isToday = dayMD(day) === todayMD;
+                    return `
+                    <div style="border:1px solid ${isToday ? '#f9c5d1' : '#dbe4f0'}; border-radius:14px; background:${isToday ? '#fff1f4' : '#fff'}; padding:18px 20px; ${isToday ? 'box-shadow:0 8px 22px rgba(244,114,182,0.12);' : ''}">
                         <div style="font-size:18px; font-weight:900; color:#0f3f73; margin-bottom:10px;">${this.escapeHtml(dayTitle(day) || '-')}</div>
                         <div style="display:flex; flex-direction:column; gap:7px; color:#0f172a; font-size:15px; line-height:1.55; font-weight:700;">
                             <div><span style="color:#2563eb; font-weight:900;">* 오전 과정 :</span> ${formatSubjects(day.morning)}</div>
                             <div><span style="color:#16a34a; font-weight:900;">* 오후 과정 :</span> ${formatSubjects(day.afternoon)}</div>
                         </div>
                     </div>
-                `).join('')}
+                `}).join('')}
             </div>`;
     },
     load: async function() {
