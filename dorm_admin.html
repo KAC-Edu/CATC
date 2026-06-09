@@ -161,7 +161,7 @@
         .room-map-editor-head { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:10px; font-size:13px; font-weight:900; color:#1e3a8a; }
         .room-map-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(112px,1fr)); gap:8px; }
         .room-map-layout { display:grid; gap:7px; align-items:stretch; overflow-x:auto; padding-bottom:2px; }
-        .room-map-tile { background:#fff; border:1.5px solid #dbe4f0; border-radius:12px; padding:9px; display:flex; flex-direction:column; gap:0; min-height:92px; }
+        .room-map-tile { background:#fff; border:1.5px solid #dbe4f0; border-radius:12px; padding:9px; display:flex; flex-direction:column; gap:0; min-height:96px; }
         .room-map-tile.royal { border-color:#f59e0b; background:#fffbeb; }
         .room-map-tile.noassign { opacity:.62; background:#f1f5f9; }
         .room-map-tile.facility { justify-content:center; align-items:center; color:#64748b; font-weight:900; background:repeating-linear-gradient(45deg,#e2e8f0,#e2e8f0 4px,#f8fafc 4px,#f8fafc 10px); border-style:dashed; }
@@ -1132,7 +1132,7 @@
             } else {
                 tiles = floorRooms.map(([id, r]) => tileHtml(id, r, '')).join('');
             }
-            const rowsAttr = (layout && layout.rows) ? `grid-template-rows:${layout.rows};` : `grid-auto-rows:minmax(92px,auto);`;
+            const rowsAttr = (layout && layout.rows) ? `grid-template-rows:${layout.rows};` : `grid-auto-rows:minmax(96px,auto);`;
             return `<div class="room-map-editor">
                 <div class="room-map-editor-head">
                     <span><i class="fa-solid fa-map-location-dot"></i> ${building} ${floor}층 배치도식 설정</span>
@@ -4200,7 +4200,7 @@
         // ── 한글 배정표 양식 (화면 편집기·PDF 공용) ──
         const DORM_FORM = {
                 '청렴관': [
-                    { floor:'2층', cols:10, rows:'minmax(64px,auto) 26px minmax(64px,auto)', cells:[
+                    { floor:'2층', cols:10, rows:'minmax(96px,auto) 24px minmax(96px,auto)', cells:[
                         {no:'208',ext:'438',c:'1',r:'1'},{no:'209',ext:'439',c:'2',r:'1'},{no:'210',ext:'440',c:'3',r:'1'},
                         {no:'211',ext:'441',c:'4',r:'1'},{no:'212',ext:'442',c:'5',r:'1'},{no:'213',ext:'443',c:'6',r:'1'},
                         {fac:'계단·휴게실',c:'7',r:'1/3'},
@@ -4211,7 +4211,7 @@
                         {no:'204',ext:'434',c:'4',r:'3'},{no:'203',ext:'433',c:'5',r:'3'},{no:'202',ext:'432',c:'6',r:'3'},
                         {no:'201',ext:'431',c:'7',r:'3'},{no:'214',ext:'444',c:'8',r:'3'},{no:'219',ext:'449',c:'9',r:'3'},{no:'218',ext:'448',c:'10',r:'3'},
                     ]},
-                    { floor:'1층', cols:10, rows:'minmax(64px,auto) 26px minmax(64px,auto)', cells:[
+                    { floor:'1층', cols:10, rows:'minmax(96px,auto) 24px minmax(96px,auto)', cells:[
                         {no:'106',ext:'426',c:'1',r:'1'},{no:'105',ext:'425',c:'2',r:'1'},{no:'104',ext:'424',c:'3',r:'1'},
                         {no:'103',ext:'423',c:'4',r:'1'},{no:'102',ext:'422',c:'5',r:'1'},{no:'101',ext:'421',c:'6',r:'1'},
                         {fac:'식 당',c:'8/11',r:'1/4'},
@@ -4221,7 +4221,7 @@
                     ]},
                 ],
                 '상생관': [
-                    { floor:'3층', cols:9, rows:'minmax(64px,auto) 26px minmax(64px,auto)', cells:[
+                    { floor:'3층', cols:9, rows:'minmax(96px,auto) 24px minmax(96px,auto)', cells:[
                         {no:'308',ext:'452',c:'1',r:'1'},{no:'309',ext:'396',c:'2',r:'1'},{no:'310',ext:'410',c:'3',r:'1'},
                         {no:'311',ext:'459',c:'4',r:'1'},{no:'312',ext:'460',c:'5',r:'1'},{no:'313',ext:'477',c:'6',r:'1'},
                         {no:'314',ext:'478',c:'7',r:'1'},{no:'315',ext:'479',c:'8',r:'1'},{no:'316',ext:'468',c:'9',r:'1'},
@@ -4230,7 +4230,7 @@
                         {no:'304',ext:'398',c:'4',r:'3'},{no:'303',ext:'397',c:'5',r:'3'},{no:'302',ext:'394',c:'6',r:'3'},
                         {no:'301',ext:'393',c:'7',r:'3'},{fac:'휴게실',c:'8/10',r:'3'},
                     ]},
-                    { floor:'2층', cols:9, rows:'minmax(64px,auto) 26px minmax(64px,auto)', cells:[
+                    { floor:'2층', cols:9, rows:'minmax(96px,auto) 24px minmax(96px,auto)', cells:[
                         {no:'209',ext:'469',c:'1',r:'1'},{no:'210',ext:'470',c:'2',r:'1'},{no:'211',ext:'471',c:'3',r:'1'},
                         {no:'212',ext:'472',c:'4',r:'1'},{no:'213',ext:'473',c:'5',r:'1'},{no:'214',ext:'474',c:'6',r:'1'},
                         {no:'215',ext:'475',c:'7',r:'1'},{fac:'PC방',c:'8',r:'1'},{fac:'세탁실',c:'9',r:'1'},
@@ -4241,7 +4241,7 @@
                     ]},
                 ],
                 '국제교육동': [
-                    { floor:'3층', cols:12, rows:'minmax(70px,auto) 24px minmax(70px,auto) minmax(56px,auto)', cells:[
+                    { floor:'3층', cols:12, rows:'minmax(96px,auto) 24px minmax(96px,auto) minmax(60px,auto)', cells:[
                         {no:'306',ext:'485',c:'1',r:'1'},{no:'305',ext:'484',c:'2',r:'1'},{no:'304',ext:'483',c:'3',r:'1'},
                         {no:'303',ext:'482',c:'4',r:'1'},{no:'302',ext:'481',c:'5',r:'1'},{no:'301',ext:'480',c:'6',r:'1'},
                         {no:'311',ext:'490',c:'8',r:'1'},{no:'312',ext:'491',c:'9',r:'1'},{no:'313',ext:'492',c:'10',r:'1'},
