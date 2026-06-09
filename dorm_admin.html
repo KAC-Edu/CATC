@@ -160,9 +160,11 @@
         .room-map-editor { margin:10px 0 14px; padding:12px; border:1.5px solid #bfdbfe; background:#eff6ff; border-radius:14px; }
         .room-map-editor-head { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:10px; font-size:13px; font-weight:900; color:#1e3a8a; }
         .room-map-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(112px,1fr)); gap:8px; }
+        .room-map-layout { display:grid; gap:7px; align-items:stretch; overflow-x:auto; padding-bottom:2px; }
         .room-map-tile { background:#fff; border:1.5px solid #dbe4f0; border-radius:12px; padding:9px; min-height:82px; display:flex; flex-direction:column; gap:7px; }
         .room-map-tile.royal { border-color:#f59e0b; background:#fffbeb; }
         .room-map-tile.noassign { opacity:.62; background:#f1f5f9; }
+        .room-map-tile.facility { justify-content:center; align-items:center; color:#64748b; font-weight:900; background:repeating-linear-gradient(45deg,#e2e8f0,#e2e8f0 4px,#f8fafc 4px,#f8fafc 10px); border-style:dashed; }
         .room-map-no { font-size:16px; font-weight:1000; color:#0f172a; }
         .room-map-ops { display:grid; grid-template-columns:1fr 1fr; gap:5px; font-size:11px; font-weight:800; color:#475569; }
         .room-map-ops label { display:flex; align-items:center; gap:4px; white-space:nowrap; }
@@ -1101,10 +1103,13 @@
             const key = `${building}_${floor}`;
             if (!roomMapEditorOpen[key]) return '';
             if (!floorRooms.length) return `<div class="room-map-editor"><div class="empty-floor">배치도에서 설정할 방이 없습니다.</div></div>`;
-            const tiles = floorRooms.map(([id, r]) => {
+            const roomByNo = {};
+            floorRooms.forEach(([id, r]) => { roomByNo[String(r.no)] = { id, r }; });
+            const layout = (typeof DORM_FORM !== 'undefined' && DORM_FORM[building] || []).find(fl => fl.floor === `${floor}층`);
+            const tileHtml = (id, r, extraStyle) => {
                 const royal = !!r.royal;
                 const noAssign = !!r.noAssign;
-                return `<div class="room-map-tile ${royal ? 'royal' : ''} ${noAssign ? 'noassign' : ''}">
+                return `<div class="room-map-tile ${royal ? 'royal' : ''} ${noAssign ? 'noassign' : ''}" ${extraStyle ? `style="${extraStyle}"` : ''}>
                     <div class="room-map-no">${r.no}호</div>
                     <select onchange="setRoomField('${id}','capacity',this.value)">
                         <option value="1" ${r.capacity !== 2 ? 'selected' : ''}>1인 1실</option>
@@ -1115,12 +1120,23 @@
                         <label><input type="checkbox" ${noAssign ? 'checked' : ''} onchange="setRoomField('${id}','noAssign',this.checked)">제외</label>
                     </div>
                 </div>`;
-            }).join('');
+            };
+            let tiles = '';
+            if (layout && Array.isArray(layout.cells)) {
+                tiles = layout.cells.map(cell => {
+                    const style = `grid-column:${cell.c};grid-row:${cell.r};min-width:96px;`;
+                    if (cell.fac) return `<div class="room-map-tile facility" style="${style}">${cell.fac}</div>`;
+                    const found = roomByNo[String(cell.no)];
+                    return found ? tileHtml(found.id, found.r, style) : `<div class="room-map-tile noassign" style="${style}"><div class="room-map-no">${cell.no}호</div><div style="font-size:12px;color:#94a3b8;font-weight:800;">미등록</div></div>`;
+                }).join('');
+            } else {
+                tiles = floorRooms.map(([id, r]) => tileHtml(id, r, '')).join('');
+            }
             return `<div class="room-map-editor">
                 <div class="room-map-editor-head">
                     <span><i class="fa-solid fa-map-location-dot"></i> ${building} ${floor}층 배치도식 설정</span>
                 </div>
-                <div class="room-map-grid">${tiles}</div>
+                <div class="${layout ? 'room-map-layout' : 'room-map-grid'}" ${layout ? `style="grid-template-columns:repeat(${layout.cols}, minmax(96px, 1fr)); grid-auto-rows:minmax(88px, auto);"` : ''}>${tiles}</div>
             </div>`;
         }
 
@@ -1533,7 +1549,17 @@
                 }
                 const profName = (c.status && c.status.professorName) || '';
                 const notInPlan = !planNames.has((s.courseName || '').trim());
-                items.push({ room, courseName: s.courseName || room, period: s.period || '', start, end: end || start, weekKey: weekKeyOf(start), profName, notInPlan });
+                items.push({
+                    room,
+                    courseName: s.courseName || room,
+                    period: s.period || '',
+                    roomDetail: courseRoomDetail({ room, courseName: s.courseName || room, period: s.period || '' }, s),
+                    start,
+                    end: end || start,
+                    weekKey: weekKeyOf(start),
+                    profName,
+                    notInPlan
+                });
             });
 
             // 연간계획에만 있고 실제 룸에 아직 배정 안 된 과정도 표시 (생활관 사전 준비용)
@@ -1557,6 +1583,7 @@
                     room: 'AP_' + (c.name || '').replace(/[^가-힣A-Za-z0-9]/g, '').slice(0, 20) + '_' + start,
                     courseName: c.name,
                     period: c.period || `${start} ~ ${end}`,
+                    roomDetail: courseRoomDetail(c),
                     start, end: end || start, weekKey: weekKeyOf(start),
                     profName: c.prof || '',
                     fromPlan: true
@@ -2188,19 +2215,23 @@
             if (gIdx < 0) return null;
             const seqIdx = arr.findIndex(c => /^\d{1,3}$/.test(c));
             if (seqIdx < 0 && !/\d{4}[./-]\d{1,2}[./-]\d{1,2}/.test(joined)) return null;
-            const JOB_WORDS = /engineer|inspector|officer|manager|specialist|supervisor|technician|department|services|communication|electrical|aeronautical|aerodrome|navigation|surveillance|certification|licensing|senior|head|airport|system/i;
+            const JOB_WORDS = /engineer|inspector|officer|manager|specialist|supervisor|technician|department|services|communication|electrical|electromechanical|aeronautical|aerodrome|navigation|surveillance|certification|licensing|senior|head|airport|system/i;
+            const COUNTRY_WORDS = /^(Algeria|Burundi|Ethiopia|Togo|Uganda|Azerbaijan|Jamaica|Peru|Jordan|Mongolia|Tonga|Uzbekistan|Indonesia|Laos|Philippines|Sri\s*Lanka)$/i;
             const start = seqIdx >= 0 ? seqIdx + 1 : 0;
             const nameParts = [];
             for (let i = start; i < gIdx; i++) {
                 const c = arr[i];
+                if (COUNTRY_WORDS.test(c)) break;
+                if (/[가-힣]/.test(c)) {
+                    if (nameParts.length) break;
+                    continue;
+                }
                 if (!isForeignNameValue(c)) {
                     if (nameParts.length) break;
                     continue;
                 }
                 if (JOB_WORDS.test(c)) break;
                 nameParts.push(c);
-                const words = nameParts.join(' ').split(/\s+/).filter(Boolean);
-                if (words.length >= 4) break;
             }
             let name = nameParts.join(' ').replace(/\s+/g, ' ').trim();
             if (!name) {
@@ -2209,7 +2240,8 @@
             }
             if (!name || name.split(/\s+/).filter(Boolean).length < 2) return null;
             const gender = /^F$/i.test(arr[gIdx]) ? 'F' : 'M';
-            const country = arr.slice(gIdx + 1).find(c => /^[A-Za-z][A-Za-z .'\-]{2,30}$/.test(c) && !JOB_WORDS.test(c)) || '';
+            const beforeGenderCountry = arr.slice(start, gIdx).find(c => COUNTRY_WORDS.test(c)) || '';
+            const country = beforeGenderCountry || arr.slice(gIdx + 1).find(c => /^[A-Za-z][A-Za-z .'\-]{2,30}$/.test(c) && !JOB_WORDS.test(c)) || '';
             return { seq: 0, name, empNo: '', dept: country ? `외국인 교육생 · ${country}` : '외국인 교육생', gender, foreign: true };
         }
 
@@ -3100,7 +3132,7 @@
                 weekKey: wk,
                 assignedAt: firebase.database.ServerValue.TIMESTAMP,
                 students: assigned,
-                courses: courseKeys.map(ck => ({ rosterKey: ck, courseName: activeRosters[ck].courseName, room: activeRosters[ck].room, period: activeRosters[ck].period || '', roomDetail: activeRosters[ck].roomDetail || activeRosters[ck].classroomDetail || '' }))
+                courses: courseKeys.map(ck => ({ rosterKey: ck, courseName: activeRosters[ck].courseName, room: activeRosters[ck].room, period: activeRosters[ck].period || '', roomDetail: courseRoomDetail(activeRosters[ck]) }))
             };
             // ── 즉시 저장 ───────────────────────────────────────────
             const existSnap = await db.ref(`system/dorm/assignments/${wk}`).once('value');
@@ -3980,8 +4012,27 @@
             const wEnd = new Date(wd); wEnd.setDate(wd.getDate() + 6);
             const fmt = d => `${d.getMonth()+1}.${d.getDate()}.`;
             const allStudents = viewAssign.students || {};
-            const coursesSnap = await db.ref('courses').once('value');
+            const [coursesSnap, annualSnap, rosterSnap] = await Promise.all([
+                db.ref('courses').once('value'),
+                db.ref('system/annualPlan').once('value').catch(() => ({ val: () => ({}) })),
+                db.ref('system/dorm/rosters').once('value').catch(() => ({ val: () => ({}) }))
+            ]);
             const coursesData = coursesSnap.val() || {};
+            const annualList = Array.isArray(annualSnap.val()) ? annualSnap.val() : Object.values(annualSnap.val() || {});
+            const rosterData = rosterSnap.val() || {};
+            const normName = v => String(v || '').replace(/\s+/g, '').trim();
+            const annualRoomDetailByName = {};
+            annualList.forEach(c => {
+                if (!c || !c.name) return;
+                const rd = courseRoomDetail(c);
+                if (rd) annualRoomDetailByName[normName(c.name)] = rd;
+            });
+            const rosterRoomDetailByName = {};
+            Object.values(rosterData).forEach(r => {
+                if (!r || !r.courseName) return;
+                const rd = courseRoomDetail(r);
+                if (rd) rosterRoomDetailByName[normName(r.courseName)] = rd;
+            });
             const hiddenCourseNames = new Set();
             Object.values(coursesData).forEach(c => {
                 const s = (c && c.settings) || {};
@@ -4002,7 +4053,8 @@
             const courseRoomDetailMap = {};
             (viewAssign.courses || []).forEach(c => {
                 const settings = (c.room && coursesData[c.room] && coursesData[c.room].settings) || {};
-                courseRoomDetailMap[c.courseName] = c.roomDetail || courseRoomDetail(c, settings) || '';
+                const nm = normName(c.courseName);
+                courseRoomDetailMap[c.courseName] = c.roomDetail || courseRoomDetail(c, settings) || rosterRoomDetailByName[nm] || annualRoomDetailByName[nm] || '';
             });
             const byRoomNo = {}, byRoom = {};
             Object.entries(students).forEach(([t, s]) => {
@@ -4190,7 +4242,8 @@
             const bldgs = order.filter(b => byB[b] && byB[b].some(r => (P.byRoom[r.id]||[]).length));
             const BLDG_PHOTO_LIST = { '청렴관':'dorm_chung.png', '상생관':'dorm_sang.png', '국제교육동':'dorm_inter.png' };
             const sections = bldgs.map((b, bi) => {
-                let rowsHtml = '', _lf = null, _sh = false, cnt = 0;
+                const rows = [];
+                let _lf = null, _sh = false, cnt = 0;
                 byB[b].forEach(r => {
                     const occ = P.byRoom[r.id] || [];
                     if (!occ.length) return;
@@ -4199,12 +4252,12 @@
                     occ.forEach((p, idx) => {
                         cnt++;
                         const cc = P.courseColors[p.course] || '#64748b';
-                        rowsHtml += `<tr style="${rowBg}">
-                            ${idx===0 ? `<td rowspan="${occ.length}" style="font-weight:800;${rowBg}">${r.floor}층 ${r.no}호</td>` : ''}
+                        rows.push(`<tr style="${rowBg}">
+                            <td style="font-weight:800;${rowBg}">${r.floor}층 ${r.no}호</td>
                             <td style="font-weight:700;">${p.name}</td><td>${p.empNo||'-'}</td><td>${p.dept||'-'}</td>
                             <td>${p.gender==='M'?'(남)':(p.gender==='F'?'(여)':'-')}</td>
                             <td style="color:${cc};font-weight:700;">${p.course}</td>
-                        </tr>`;
+                        </tr>`);
                     });
                 });
                 const bar   = (typeof DORM_BLDG_BAR !== 'undefined' && DORM_BLDG_BAR[b]) || '#0f2057';
@@ -4214,16 +4267,19 @@
                         <div class="legend" style="flex:1;margin:0;">${_legendHtml(P)}</div>
                         ${photo ? `<div style="flex-shrink:0;"><img src="${photo}" alt="${b}" style="width:190px;height:124px;object-fit:cover;border-radius:9px;border:1.5px solid #e2e8f0;" onerror="this.parentNode.style.display='none'"></div>` : ''}
                     </div>`;
-                return `<div${bi>0 ? ' style="page-break-before:always;"' : ''}>
+                const pageSize = 18;
+                const chunks = [];
+                for (let i = 0; i < rows.length; i += pageSize) chunks.push(rows.slice(i, i + pageSize));
+                return chunks.map((chunk, pi) => `<div${(bi>0 || pi>0) ? ' style="page-break-before:always;"' : ''}>
                     <table class="list" style="margin-top:0;">
                     <thead>
                         <tr><td colspan="6" class="pf-listtop">${topHtml}</td></tr>
-                        <tr><th class="bldg-bar" colspan="6" style="background:${bar};">\ud83c\udfe2 ${b}<span class="bbar-cnt">\u00b7 ${cnt}\uba85</span></th></tr>
+                        <tr><th class="bldg-bar" colspan="6" style="background:${bar};">\ud83c\udfe2 ${b}<span class="bbar-cnt">\u00b7 ${cnt}\uba85${chunks.length > 1 ? ` · ${pi + 1}/${chunks.length}페이지` : ''}</span></th></tr>
                         <tr><th style="width:120px;">호실</th><th>성명</th><th>사번</th><th>소속</th><th>성별</th><th>과정</th></tr>
                     </thead>
-                    <tbody>${rowsHtml}</tbody></table>
+                    <tbody>${chunk.join('')}</tbody></table>
                     <div style="clear:both;"></div>
-                </div>`;
+                </div>`).join('');
             }).join('');
             const header = `<h1>생활관 배정 명단</h1>
                 <div class="sub">${P.fmt(P.wd)} ~ ${P.fmt(P.wEnd)} 주간 · 총 ${Object.keys(P.students).length}명 · 출력일 ${new Date().toLocaleDateString('ko-KR')}</div>`;
