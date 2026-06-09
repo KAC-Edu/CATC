@@ -5906,6 +5906,41 @@ function openRosterUpload() {
     const m = document.getElementById('rosterUploadModal');
     if (m) m.style.display = 'flex';
     coordLoadSharedRoster();
+    coordReloadSavedRoster();   // 이전에 저장한 교육운영부 명단이 있으면 표에 복원
+}
+
+// 새로고침 후 모달 재진입 시: 저장돼 있던 교육운영부 명단을 다시 표에 채워 표시
+async function coordReloadSavedRoster() {
+    if (!currentRID) return;
+    const statusEl = document.getElementById('coordRosterStatus');
+    const tbody = document.getElementById('coordRosterBody');
+    try {
+        const snap = await firebase.database().ref(`courses/${currentRID}/coordRoster`).once('value');
+        const v = snap.val();
+        if (!v || !Array.isArray(v.list) || !v.list.length) return;  // 저장된 것 없음 → 그대로 둠
+        _coordRosterData = v.list.map(s => ({
+            seq: s.seq, name: s.name || '', empNo: s.empNo || '',
+            dept: s.dept || '', gender: s.gender || ''
+        }));
+        _coordScheduleData = v.schedule || null;
+        if (tbody) {
+            tbody.innerHTML = _coordRosterData.map((s, i) => `<tr>
+                <td style="text-align:center;color:#94a3b8;padding:7px 10px;border-bottom:1px solid #f1f5f9;width:64px;min-width:64px;white-space:nowrap;">${i+1}</td>
+                <td style="font-weight:700;padding:7px 10px;border-bottom:1px solid #f1f5f9;">${s.name}</td>
+                <td style="color:#64748b;padding:7px 10px;border-bottom:1px solid #f1f5f9;">${s.empNo}</td>
+                <td style="color:#475569;font-size:12px;padding:7px 10px;border-bottom:1px solid #f1f5f9;">${s.dept}</td>
+                <td style="text-align:center;padding:7px 10px;border-bottom:1px solid #f1f5f9;font-size:12px;font-weight:700;color:${s.gender==='F'?'#ec4899':'#3b82f6'};">${s.gender==='F'?'여':'남'}</td>
+            </tr>`).join('');
+        }
+        const when = v.updatedAt ? new Date(v.updatedAt) : null;
+        const tstr = when ? ` (${when.getMonth()+1}/${when.getDate()} ${String(when.getHours()).padStart(2,'0')}:${String(when.getMinutes()).padStart(2,'0')} 저장)` : '';
+        if (statusEl) statusEl.textContent = `📋 저장된 명단 ${_coordRosterData.length}명 불러옴${tstr}`;
+        const cntEl = document.getElementById('coordRosterCount');
+        if (cntEl) cntEl.textContent = `총 ${_coordRosterData.length}명`;
+        coordRenderRosterCompare();
+    } catch (e) {
+        console.warn('[교육운영부 저장 명단 복원]', e);
+    }
 }
 function closeRosterUpload() {
     const m = document.getElementById('rosterUploadModal');
@@ -5914,21 +5949,55 @@ function closeRosterUpload() {
 
 let _coordRosterData = [];
 let _coordSharedRosterData = null;
+let _coordScheduleData = null;        // 업로드 파일에서 함께 판독한 교육시간표 (강사플랫폼 교육요약 반영용)
+let _coordScheduleRawLines = [];      // HWPX 표 행을 \u241F로 이어붙인 원시 시간표 라인
+
+// 교육지원부(dorm)와 동일한 시간표 판독 로직 — 강사플랫폼이 같은 포맷을 기대하므로 그대로 이식
+function _coordNormCell(v) {
+    return String(v || '')
+        .replace(/\u0000/g, '')
+        .replace(/\u00a0/g, ' ')
+        .replace(/[|]/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+}
+function _coordBuildScheduleData(lines, fileName) {
+    const arr = (lines || [])
+        .map(_coordNormCell)
+        .filter(v => v && /[가-힣0-9]/.test(v))
+        .filter(v => !/^[捤獥汤捯氠瑢]+$/.test(v));
+    if (!arr.length) return null;
+    let start = arr.findIndex(v => /교육\s*시간표|시간표/.test(v));
+    if (start < 0) start = 0;
+    let end = arr.findIndex((v, i) => i > start + 3 && /교육생\s*명단|연\s*번/.test(v));
+    if (end < 0) end = Math.min(arr.length, start + 90);
+    const picked = arr.slice(start, end)
+        .filter(v => !/^비고$|^연번$|^성명$|^사번$|^소\s*속$|^직위$/.test(v))
+        .slice(0, 120);
+    if (!picked.length) return null;
+    return { lines: picked, fileName: fileName || '', savedAt: Date.now() };
+}
+
 async function coordHandleRosterFile(ev) {
     const file = ev.target.files[0]; if (!file) return;
     ev.target.value = '';
     const statusEl = document.getElementById('coordRosterStatus');
     statusEl.textContent = '판독 중...';
+    _coordScheduleData = null;
+    _coordScheduleRawLines = [];
     try {
         let students = [];
         const lowerName = file.name.toLowerCase();
         if (lowerName.endsWith('.hwpx')) {
             const text = await _coordHwpxExtract(file);
             students = _coordParseRoster(text);
+            _coordScheduleData = _coordBuildScheduleData(
+                _coordScheduleRawLines.length ? _coordScheduleRawLines : text.split(/[\n\r]+/), file.name);
         } else if (lowerName.endsWith('.hwp')) {
             const buf = await file.arrayBuffer();
             const text = await _coordHwpExtract(buf);
             students = _coordParseRoster(text);
+            _coordScheduleData = _coordBuildScheduleData(text.split(/[\n\r]+/), file.name);
         } else {
             const buf = await file.arrayBuffer();
             const pdf = await pdfjsLib.getDocument(new Uint8Array(buf)).promise;
@@ -5946,6 +6015,7 @@ async function coordHandleRosterFile(ev) {
                 Object.keys(rowsMap).sort((a,b)=>b-a).forEach(k => rawLines.push(rowsMap[k].join(' ')));
             }
             students = _coordParseRoster(rawLines.join('\n'));
+            _coordScheduleData = _coordBuildScheduleData(rawLines, file.name);
         }
         _coordRosterData = students;
         const tbody = document.getElementById('coordRosterBody');
@@ -5993,24 +6063,65 @@ async function coordSaveRoster() {
             gender: s.gender || ''
         }));
 
+    // ── 교육지원부 공유 여부 확인 ──
+    const applyToDorm = confirm(
+        `이 명단(${cleanList.length}명)을 교육지원부 생활관 배정에도 공유(적용)할까요?\n\n` +
+        `[확인] 교육지원부에 공유 — 생활관 배정 화면에 보라색으로 표시되고, 자동배정에 반영할 수 있습니다.\n` +
+        `[취소] 교육운영부에만 저장 — 강사 교육요약에는 반영되지만 생활관 배정에는 공유하지 않습니다.`
+    );
+
     const payload = _coordCleanFirebaseValue({
         room: currentRID,
         courseName,
         period,
         weekKey,
         list: cleanList,
+        schedule: _coordScheduleData || null,
         source: 'coord',
+        applyToDorm: applyToDorm,
+        sharedAt: applyToDorm ? firebase.database.ServerValue.TIMESTAMP : null,
         updatedAt: firebase.database.ServerValue.TIMESTAMP
     });
 
     try {
+        // 1) 정식 보관 위치 (교육지원부가 courses 스냅샷에서 바로 읽음)
         await firebase.database().ref(`courses/${currentRID}/coordRoster`).set(payload);
+
+        // 2) 강사플랫폼 교육요약이 읽는 경로 (system/coord/rosters) — 시간표 동기화
         try {
             await firebase.database().ref(`system/coord/rosters/${rosterKey}`).set(payload);
         } catch (backupErr) {
             console.warn('[교육운영부 명단 백업 저장 생략]', backupErr);
         }
-        alert(`✅ ${cleanList.length}명 명단 저장 완료`);
+
+        // 3) 강사플랫폼 교육요약 즉시 반영 — 시간표 미러링 (best-effort)
+        let scheduleSynced = false;
+        if (_coordScheduleData && Array.isArray(_coordScheduleData.lines) && _coordScheduleData.lines.length) {
+            const schedulePayload = _coordCleanFirebaseValue({
+                courseName: courseName || '',
+                period: period || '',
+                weekKey: weekKey || '',
+                source: _coordScheduleData.fileName || '',
+                lines: _coordScheduleData.lines || [],
+                rosterKey: rosterKey,
+                updatedAt: firebase.database.ServerValue.TIMESTAMP
+            });
+            try {
+                const mirrors = await Promise.allSettled([
+                    firebase.database().ref(`courses/${currentRID}/settings/schedule`).set(schedulePayload),
+                    firebase.database().ref(`courses/${currentRID}/schedule`).set(schedulePayload)
+                ]);
+                scheduleSynced = mirrors.some(r => r.status === 'fulfilled');
+            } catch (scheduleErr) {
+                console.warn('[교육시간표] 강사플랫폼 미러 저장 실패, system/coord/rosters 저장값으로 대체:', scheduleErr);
+            }
+        }
+
+        const schedNote = _coordScheduleData
+            ? (scheduleSynced ? ' · 교육시간표 강사플랫폼 반영' : ' · 시간표 저장됨(강사플랫폼 자동 표시)')
+            : '';
+        const dormNote = applyToDorm ? ' · 교육지원부에 공유됨' : ' · 교육운영부만 저장';
+        alert(`✅ ${cleanList.length}명 명단 저장 완료${schedNote}${dormNote}`);
     } catch (e) {
         console.error('[교육운영부 명단 저장]', e);
         alert('명단 저장 실패: ' + (e && e.message ? e.message : e));
@@ -6133,9 +6244,11 @@ async function _coordHwpxExtract(file) {
             trs.forEach(tr => {
                 const cells = Array.from(tr.getElementsByTagName('*'))
                     .filter(el => el.localName === 'tc')
-                    .map(tc => (tc.textContent || '').replace(/\s+/g, ' ').trim())
-                    .filter(Boolean);
-                if (cells.length) lines.push(cells.join('\n'));
+                    .map(tc => (tc.textContent || '').replace(/\s+/g, ' ').trim());
+                const nonEmpty = cells.filter(Boolean);
+                if (nonEmpty.length) lines.push(nonEmpty.join('\n'));
+                // 강사플랫폼 교육요약은 표 행을 \u241F로 구분한 라인을 기대 → 시간표 판독용으로 함께 수집
+                if (cells.some(Boolean)) _coordScheduleRawLines.push(cells.join('\u241F'));
             });
         } else {
             const text = (doc.documentElement && doc.documentElement.textContent || '').replace(/\s+/g, '\n').trim();

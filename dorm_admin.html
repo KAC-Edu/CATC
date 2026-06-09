@@ -173,6 +173,12 @@
         .course-row.enrolled .course-room-badge { background: var(--success); }
         .course-row.enrolled.sel { background: #ecfdf5; border-color: var(--success); }
         .course-count { flex-shrink: 0; display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 800; color: #047857; background: #d1fae5; padding: 5px 11px; border-radius: 8px; }
+        /* 교육운영부 공유 명단 표시 */
+        .course-coord { flex-shrink: 0; display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 800; color: #6d28d9; background: #ede9fe; border: 1px solid #c4b5fd; padding: 4px 10px; border-radius: 8px; white-space: nowrap; }
+        .course-coord.pending { color: #fff; background: #7c3aed; border-color: #7c3aed; box-shadow: 0 2px 8px rgba(124,58,237,0.35); }
+        .course-row.coord-pending { border-left-color: #7c3aed; background: #faf5ff; }
+        .course-row.coord-pending.sel { border-color: #7c3aed; }
+        .course-row.coord-pending .course-room-badge { background: #7c3aed; }
 
         /* 조회 범위 필터 줄 */
         .filter-row { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
@@ -406,6 +412,17 @@
             <div class="panel" id="rosterPanel" style="display:none;">
                 <h2 id="rosterTitle">교육생 명단</h2>
                 <p class="desc">명단 PDF 또는 한글(HWP/HWPX)을 업로드하면 자동 판독합니다. 판독이 부정확하면 표에서 직접 수정하거나 행을 추가/삭제하세요.</p>
+
+                <div id="coordRosterBanner" style="display:none; margin-bottom:14px; padding:14px 16px; border-radius:12px; background:#faf5ff; border:1.5px solid #c4b5fd; align-items:center; gap:12px; flex-wrap:wrap;">
+                    <i class="fa-solid fa-user-tie" style="font-size:20px; color:#7c3aed;"></i>
+                    <div style="flex:1; min-width:180px;">
+                        <div style="font-weight:900; color:#6d28d9; font-size:14px;" id="coordBannerTitle">교육운영부에서 등록한 명단이 있습니다</div>
+                        <div style="font-size:12px; color:#7c3aed; margin-top:2px;" id="coordBannerMeta"></div>
+                    </div>
+                    <button onclick="applyCoordRosterToPanel()" style="flex-shrink:0; padding:9px 16px; background:#7c3aed; color:#fff; border:none; border-radius:9px; font-weight:800; font-size:13px; cursor:pointer;">
+                        <i class="fa-solid fa-download"></i> 이 명단 불러오기
+                    </button>
+                </div>
 
                 <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px;">
                     <input type="file" id="pdfInput" accept=".pdf,.hwp,.hwpx,application/pdf,application/x-hwp,application/haansofthwp,application/vnd.hancom.hwpx" style="display:none;" onchange="handleRosterFile(event)">
@@ -1225,6 +1242,8 @@
         }
 
         let rosterCounts = {};   // rosterKey -> 등재 인원수
+        let coordRosters = {};   // rosterKey -> 교육운영부 공유 명단 payload (applyToDorm=true 인 것만)
+        let dormRosterMeta = {}; // rosterKey -> { count, updatedAt, coordUpdatedAt } (최신 여부 비교용)
 
         // ── 명단 복구: 배치 현황(system/dorm/assignments)에서 rosters를 역으로 재생성 ──
         //  배치 실행 이후 rosters 데이터가 지워진 경우 STEP4 데이터로 복원
@@ -1343,8 +1362,26 @@
                 annualCache = apSnap.val() || [];
                 const rsAll = rsSnap.val() || {};
                 rosterCounts = {};
+                dormRosterMeta = {};
                 Object.entries(rsAll).forEach(([k, v]) => {
                     rosterCounts[k] = Array.isArray(v.list) ? v.list.length : 0;
+                    dormRosterMeta[k] = {
+                        count: Array.isArray(v.list) ? v.list.length : 0,
+                        updatedAt: v.updatedAt || 0,
+                        coordUpdatedAt: v.coordUpdatedAt || 0
+                    };
+                });
+                // 교육운영부가 공유(applyToDorm)한 명단 수집 — courses 스냅샷에 이미 포함됨 (별도 조회 불필요)
+                //  ⚠️ coord와 dorm의 weekKey 계산 방식이 달라(로컬 vs UTC), coord의 weekKey 필드 대신
+                //     dorm의 weekKeyOf(period 시작일)로 키를 재계산해 rk를 정확히 맞춘다.
+                coordRosters = {};
+                Object.entries(coursesCache).forEach(([room, c]) => {
+                    const cr = c && c.coordRoster;
+                    if (!cr || !cr.applyToDorm || !Array.isArray(cr.list) || !cr.list.length) return;
+                    const start = parsePeriod(cr.period || '').start;
+                    const wk = start ? weekKeyOf(start) : (cr.weekKey || '');
+                    if (!wk) return;
+                    coordRosters[`${wk}__${room}`] = cr;
                 });
                 renderCourseList();
             } catch (e) {
@@ -1435,13 +1472,24 @@
                 const rk = `${it.weekKey}__${it.room}`;
                 const cnt = rosterCounts[rk] || 0;
                 const enrolled = cnt > 0;
+                // ── 교육운영부 공유 명단 표시 ──
+                const coord = coordRosters[rk];
+                const meta = dormRosterMeta[rk] || {};
+                // 아직 지원부가 반영하지 않은(또는 더 최신인) 교육운영부 명단 → '신규/변경'
+                const coordPending = coord && (Number(coord.updatedAt || 0) > Number(meta.coordUpdatedAt || 0));
+                const coordBadge = coord
+                    ? `<span class="course-coord ${coordPending ? 'pending' : 'applied'}" title="교육운영부에서 공유한 명단입니다${coordPending ? ' (아직 생활관 명단에 반영되지 않음)' : ' (반영됨)'}">
+                            <i class="fa-solid fa-user-tie"></i> 교육운영부 ${(coord.list || []).length}명${coordPending ? ' · 신규' : ''}
+                       </span>`
+                    : '';
                 html += `
-                    <div class="course-row ${sel ? 'sel' : ''} ${enrolled ? 'enrolled' : ''}" data-room="${it.room}" data-week="${it.weekKey}" onclick='selectCourse(${JSON.stringify(it).replace(/'/g, "&#39;")})'>
+                    <div class="course-row ${sel ? 'sel' : ''} ${enrolled ? 'enrolled' : ''} ${coordPending ? 'coord-pending' : ''}" data-room="${it.room}" data-week="${it.weekKey}" onclick='selectCourse(${JSON.stringify(it).replace(/'/g, "&#39;")})'>
                         <span class="course-room-badge" ${it.fromPlan ? 'style="background:#94a3b8;"' : ''}>${it.fromPlan ? '<i class="fa-solid fa-clock"></i> 예정' : '<i class="fa-solid fa-door-open"></i> ' + it.room}</span>
                         <div class="course-main">
                             <div class="cname">${it.courseName} ${it.notInPlan && !it.fromPlan ? '<span style="display:inline-block; background:#fef3c7; color:#92400e; font-size:11px; font-weight:800; padding:2px 8px; border-radius:10px; margin-left:6px; vertical-align:middle;">계획 외 운영</span>' : ''}</div>
                             <div class="cmeta">${it.period || '-'}</div>
                         </div>
+                        ${coordBadge}
                         ${enrolled ? `<span class="course-count"><i class="fa-solid fa-circle-check"></i> ${cnt}명</span>` : ''}
                         ${it.profName ? `<span class="course-prof"><i class="fa-solid fa-user-tie"></i> ${it.profName}</span>` : ''}
                         <span class="course-go"><i class="fa-solid fa-chevron-right"></i></span>
@@ -1512,8 +1560,45 @@
             document.getElementById('pdfInput').click();
         }
 
+        let _panelCoordRoster = null;  // 현재 패널에 해당하는 교육운영부 공유 명단
+        let _appliedCoordUpdatedAt = 0; // 방금 '불러오기'로 반영한 교육운영부 명단 버전 (저장 시 기록 → 최신여부 비교)
+
+        function _renderCoordBanner(it) {
+            const banner = document.getElementById('coordRosterBanner');
+            if (!banner) return;
+            const rk = rosterKey(it);
+            const coord = coordRosters[rk];
+            _panelCoordRoster = coord || null;
+            if (!coord) { banner.style.display = 'none'; return; }
+            const meta = dormRosterMeta[rk] || {};
+            const pending = Number(coord.updatedAt || 0) > Number(meta.coordUpdatedAt || 0);
+            const when = coord.updatedAt ? new Date(coord.updatedAt) : null;
+            const tstr = when ? `${when.getMonth()+1}/${when.getDate()} ${String(when.getHours()).padStart(2,'0')}:${String(when.getMinutes()).padStart(2,'0')}` : '';
+            document.getElementById('coordBannerTitle').innerText = pending
+                ? '🔄 교육운영부에서 등록/변경한 명단이 있습니다 (최신)'
+                : '교육운영부에서 공유한 명단이 있습니다 (이미 반영됨)';
+            document.getElementById('coordBannerMeta').innerText =
+                `${(coord.list || []).length}명${tstr ? ' · 업데이트 ' + tstr : ''}${pending ? ' — 불러오기를 누르면 생활관 명단에 반영됩니다' : ''}`;
+            banner.style.display = 'flex';
+        }
+
+        function applyCoordRosterToPanel() {
+            if (!_panelCoordRoster || !Array.isArray(_panelCoordRoster.list)) { showToast('불러올 교육운영부 명단이 없습니다'); return; }
+            roster = _panelCoordRoster.list.map((s, i) => ({
+                seq: i + 1, name: (s.name || '').trim(), empNo: (s.empNo || '').trim(),
+                dept: (s.dept || '').trim(), gender: s.gender || ''
+            }));
+            if (_panelCoordRoster.schedule) currentScheduleData = _panelCoordRoster.schedule;
+            _appliedCoordUpdatedAt = Number(_panelCoordRoster.updatedAt || 0);
+            rosterDirty = true;  // 저장하면 system/dorm/rosters에 기록됨
+            document.getElementById('rosterPreview').innerText = `📋 교육운영부 명단 ${roster.length}명을 불러왔습니다. [이 과정 명단 저장]을 눌러 생활관 명단으로 확정하세요.`;
+            renderRoster();
+            showToast(`교육운영부 명단 ${roster.length}명 불러옴 — 저장하면 반영됩니다`);
+        }
+
         function loadRoster(it) {
             const key = rosterKey(it);
+            _renderCoordBanner(it);
             console.log('[명단 로드] Firebase 경로:', `system/dorm/rosters/${key}`, '| 과정:', it.courseName);
             db.ref(`system/dorm/rosters/${key}`).once('value', snap => {
                 const v = snap.val();
@@ -2095,6 +2180,7 @@
                 weekKey: saveCourse.weekKey,
                 list: clean.map((r, i) => ({ seq: i + 1, name: r.name.trim(), empNo: (r.empNo||'').trim(), dept: (r.dept||'').trim(), gender: r.gender || '' })),
                 schedule: currentScheduleData || null,
+                coordUpdatedAt: _appliedCoordUpdatedAt || (dormRosterMeta[rosterKey(saveCourse)] && dormRosterMeta[rosterKey(saveCourse)].coordUpdatedAt) || 0,
                 updatedAt: firebase.database.ServerValue.TIMESTAMP
             };
             const rk = rosterKey(saveCourse);
@@ -2126,6 +2212,14 @@
                     document.getElementById('rosterPreview').innerText = '';
                     // 해당 과정 행을 녹색+인원수로 즉시 갱신 (전체 재렌더 없이)
                     rosterCounts[rk] = clean.length;
+                    // 교육운영부 명단 반영 상태 기록 → 다음 렌더에서 '신규' 배지/배너 해제
+                    dormRosterMeta[rk] = {
+                        count: clean.length,
+                        updatedAt: Date.now(),
+                        coordUpdatedAt: payload.coordUpdatedAt || 0
+                    };
+                    _appliedCoordUpdatedAt = 0;
+                    if (selectedCourse && rosterKey(selectedCourse) === rk) _renderCoordBanner(selectedCourse);
                     const row = document.querySelector(`#courseList .course-row[data-room="${saveCourse.room}"][data-week="${saveCourse.weekKey}"]`);
                     if (row) {
                         row.classList.add('enrolled');
@@ -2225,6 +2319,23 @@
                     if (wk < targetMon) return;
                     (weeks[wk] = weeks[wk] || []).push(v);
                 });
+
+                // ── 교육운영부가 공유했지만 아직 지원부 명단이 없는 주차도 드롭다운에 포함 ──
+                try {
+                    const cSnap = await db.ref('courses').once('value');
+                    const courses = cSnap.val() || {};
+                    Object.entries(courses).forEach(([room, c]) => {
+                        const cr = c && c.coordRoster;
+                        if (!cr || !cr.applyToDorm || !Array.isArray(cr.list) || !cr.list.length) return;
+                        const start = parsePeriod(cr.period || '').start;
+                        const wk = start ? weekKeyOf(start) : (cr.weekKey || '');
+                        if (!wk || wk < targetMon) return;
+                        const rk = `${wk}__${room}`;
+                        if (all[rk]) return;  // 이미 지원부 명단 있음 → 위에서 집계됨
+                        (weeks[wk] = weeks[wk] || []).push(cr);  // 주차 목록에만 노출 (실제 반영은 onWeekChange에서)
+                    });
+                } catch (coordErr) { console.warn('[주차 목록 - 교육운영부 명단 병합]', coordErr); }
+
                 const wkList = Object.keys(weeks).sort();
                 if (!wkList.length) {
                     sel.innerHTML = `<option value="">저장된 명단이 없습니다</option>`;
@@ -2281,12 +2392,68 @@
             if (!wk) return;
             excludedRosterKeys = new Set();
             await refreshWeekRostersFromDb(wk);
+            await maybeApplyCoordRostersForWeek(wk);   // 교육운영부 공유 명단 반영 여부 확인
             // 비노출(hideFromBoard) 과정 집합 갱신 후 목록 렌더
             await loadHiddenCourses();
             renderWeekRosterList();
             renderInstReserve(wk);
             // 이미 배정 확정된 주차인지 확인 → 상태 배너 표시
             checkAssignmentStatus(wk);
+        }
+
+        // STEP3 진입 시: 이 주차에 교육운영부가 공유한(applyToDorm) 명단 중
+        // 아직 생활관 명단에 반영 안 됐거나 더 최신인 것이 있으면 반영 여부를 묻고, 동의 시 system/dorm/rosters에 기록
+        async function maybeApplyCoordRostersForWeek(wk) {
+            try {
+                const snap = await db.ref('courses').once('value');
+                const courses = snap.val() || {};
+                const pending = [];  // { rk, room, coord }
+                Object.entries(courses).forEach(([room, c]) => {
+                    const cr = c && c.coordRoster;
+                    if (!cr || !cr.applyToDorm || !Array.isArray(cr.list) || !cr.list.length) return;
+                    const start = parsePeriod(cr.period || '').start;
+                    const crWk = start ? weekKeyOf(start) : (cr.weekKey || '');
+                    if (crWk !== wk) return;
+                    const rk = `${crWk}__${room}`;
+                    const dorm = weekRosters[rk];
+                    const dormCoordVer = dorm ? Number(dorm.coordUpdatedAt || 0) : 0;
+                    // 지원부에 없거나, 교육운영부 명단이 더 최신이면 반영 대상
+                    if (!dorm || Number(cr.updatedAt || 0) > dormCoordVer) {
+                        pending.push({ rk, room, coord: cr });
+                    }
+                });
+                if (!pending.length) return;
+
+                const listText = pending.map(p => `• ${p.coord.courseName || ('ROOM ' + p.room)} (${(p.coord.list || []).length}명)`).join('\n');
+                const ok = confirm(
+                    `📋 교육운영부에서 등록/변경한 명단이 ${pending.length}개 있습니다.\n\n${listText}\n\n` +
+                    `이 명단을 자동배정에 반영할까요?\n\n[확인] 반영 — 생활관 배정에 즉시 사용\n[취소] 무시 — 기존 지원부 명단으로 진행`
+                );
+                if (!ok) return;
+
+                const updates = {};
+                pending.forEach(({ rk, room, coord }) => {
+                    const merged = {
+                        room: room,
+                        courseName: coord.courseName || '',
+                        period: coord.period || '',
+                        weekKey: wk,
+                        list: (coord.list || []).map((s, i) => ({
+                            seq: i + 1, name: (s.name || '').trim(), empNo: (s.empNo || '').trim(),
+                            dept: (s.dept || '').trim(), gender: s.gender || ''
+                        })),
+                        schedule: coord.schedule || (weekRosters[rk] && weekRosters[rk].schedule) || null,
+                        coordUpdatedAt: Number(coord.updatedAt || 0),
+                        updatedAt: firebase.database.ServerValue.TIMESTAMP
+                    };
+                    updates[`system/dorm/rosters/${rk}`] = cleanFirebaseValue(merged);
+                });
+                await db.ref().update(updates);
+                await refreshWeekRostersFromDb(wk);  // 반영분 다시 로드
+                showToast(`✅ 교육운영부 명단 ${pending.length}개 과정 반영 완료`);
+            } catch (e) {
+                console.warn('[교육운영부 명단 반영]', e);
+            }
         }
 
         async function checkAssignmentStatus(wk) {
