@@ -81,6 +81,12 @@
     .listen-btn.connecting { background:#f59e0b; color:#fff; }
     .vol-wrap { display:none; align-items:center; gap:8px; }
     .room-card.active-listen .vol-wrap { display:flex; }
+    .voice-filter-btn {
+      height:28px; padding:0 9px; border:1px solid #bbf7d0; border-radius:9px;
+      background:#ecfdf5; color:#15803d; font-size:11px; font-weight:900; cursor:pointer;
+      display:inline-flex; align-items:center; gap:5px; white-space:nowrap;
+    }
+    .voice-filter-btn.off { border-color:#cbd5e1; background:#f8fafc; color:#64748b; }
 
     .empty { text-align:center; color:var(--muted); padding:60px 20px; font-size:14px; }
     .empty i { font-size:40px; color:#cbd5e1; display:block; margin-bottom:14px; }
@@ -146,8 +152,10 @@
     var coursesMap = {};             // room -> course 데이터 (이름/교수)
     var current = null;              // { room, listenerId, pc, statusRef, ... } 현재 청취 중
     var audioCtx = null;
+    var audioCtx = null;
     var filteredSource = null;
     var filteredDest = null;
+    var voiceFilterEnabled = true;
 
     // ── 시계 ──
     function tick(){ var d=new Date(); document.getElementById('clock').textContent =
@@ -219,7 +227,8 @@
           + badge
           + '<div class="rc-listen">' + btn
           +   '<div class="vol-wrap"><i class="fa-solid fa-volume-low" style="color:#64748b;"></i>'
-          +     '<input type="range" min="0" max="100" value="100" style="width:90px; accent-color:#16a34a;" oninput="setVol(this.value)"></div>'
+          +     '<input type="range" min="0" max="100" value="100" style="width:74px; accent-color:#16a34a;" oninput="setVol(this.value)">'
+          +     '<button class="voice-filter-btn ' + (voiceFilterEnabled ? '' : 'off') + '" onclick="toggleVoiceFilter(event)" title="음성 보정 켜기/끄기"><i class="fa-solid fa-wand-magic-sparkles"></i> 보정 ' + (voiceFilterEnabled ? 'ON' : 'OFF') + '</button></div>'
           + '</div>'
           + '<div class="mic-note"><i class="fa-solid fa-triangle-exclamation"></i> 강의실 PC에서 마이크가 아직 허용되지 않았습니다.</div>'
           + '</div>';
@@ -242,11 +251,28 @@
 
     function esc(s){ return String(s||'').replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
     function setVol(v){ document.getElementById('monitorAudio').volume = Math.max(0, Math.min(1, v/100)); }
+    function disconnectVoiceFilter(){
+      disconnectVoiceFilter();
+    }
+    function toggleVoiceFilter(ev){
+      if (ev) {
+        ev.preventDefault();
+        ev.stopPropagation();
+      }
+      voiceFilterEnabled = !voiceFilterEnabled;
+      var audio = document.getElementById('monitorAudio');
+      if (current && current.rawStream) {
+        audio.srcObject = applyVoiceFilter(current.rawStream);
+        audio.play().catch(function(err){ console.warn('audio replay blocked', err); });
+      }
+      render();
+    }
     function applyVoiceFilter(stream){
       try {
+        disconnectVoiceFilter();
+        if (!voiceFilterEnabled) return stream;
         if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         if (audioCtx.state === 'suspended') audioCtx.resume();
-        if (filteredSource) { try { filteredSource.disconnect(); } catch(e){} }
         var source = audioCtx.createMediaStreamSource(stream);
         var high = audioCtx.createBiquadFilter();
         high.type = 'highpass';
@@ -294,7 +320,8 @@
 
       pc.ontrack = function(ev){
         var audio = document.getElementById('monitorAudio');
-        audio.srcObject = applyVoiceFilter(ev.streams[0]);
+        current.rawStream = ev.streams[0];
+        audio.srcObject = applyVoiceFilter(current.rawStream);
         audio.muted = false;
         audio.play().catch(function(err){ console.warn('자동재생 차단? ', err); });
       };
