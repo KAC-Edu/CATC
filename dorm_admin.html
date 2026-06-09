@@ -159,16 +159,18 @@
         .bulk-btn.primary { border-color:#2563eb; color:#2563eb; background:#eff6ff; }
         .bulk-btn.on { border-color:#1e3a8a; color:#fff; background:#1e3a8a; }
         .bulk-btn:hover { filter:brightness(0.98); box-shadow:0 1px 5px rgba(15,23,42,0.08); }
-        .room-map-editor { margin:6px 0 16px; padding:14px; border:2px solid #93c5fd; background:#eff6ff; border-radius:14px; }
+        .room-map-editor { margin:6px 0 16px; padding:14px; border:2px solid #93c5fd; background:#eff6ff; border-radius:14px; overflow:hidden; }
         .room-map-editor-head { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:12px; font-size:13.5px; font-weight:900; color:#1e3a8a; flex-wrap:wrap; }
+        .room-map-editor-head .rme-title { flex:1 1 auto; min-width:0; }
+        .room-map-editor-head .rme-btns { display:flex; gap:6px; flex-wrap:wrap; justify-content:flex-end; max-width:100%; }
         .room-map-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(124px,1fr)); gap:9px; }
-        .room-map-tile { background:#fff; border:1.5px solid #cbd5e1; border-radius:12px; padding:10px; min-height:90px; display:flex; flex-direction:column; gap:8px; transition:all .12s; }
+        .room-map-tile { background:#fff; border:1.5px solid #cbd5e1; border-radius:12px; padding:10px; min-height:90px; display:flex; flex-direction:column; gap:8px; overflow:hidden; }
         .room-map-tile.royal { border-color:#f59e0b; background:#fffbeb; box-shadow:0 0 0 1px #fde68a inset; }
         .room-map-tile.noassign { opacity:.6; background:#f1f5f9; }
         .room-map-no { font-size:16px; font-weight:1000; color:#0f172a; display:flex; align-items:center; gap:5px; }
-        .room-map-ops { display:grid; grid-template-columns:1fr 1fr; gap:6px; font-size:11.5px; font-weight:800; color:#475569; }
-        .room-map-ops label { display:flex; align-items:center; gap:5px; white-space:nowrap; cursor:pointer; padding:3px 4px; border-radius:7px; background:#f8fafc; }
-        .room-map-ops input { width:16px; height:16px; accent-color:#2563eb; cursor:pointer; }
+        .room-map-ops { display:flex; flex-wrap:wrap; gap:6px; font-size:11.5px; font-weight:800; color:#475569; }
+        .room-map-ops label { flex:1 1 0; min-width:0; display:flex; align-items:center; justify-content:center; gap:4px; white-space:nowrap; cursor:pointer; padding:4px 2px; border-radius:7px; background:#f1f5f9; }
+        .room-map-ops input { width:16px; height:16px; flex-shrink:0; accent-color:#2563eb; cursor:pointer; }
         .room-map-tile select { width:100%; border:1px solid #cbd5e1; border-radius:8px; padding:6px; font-size:12.5px; font-weight:800; background:#fff; cursor:pointer; }
 
         /* 과정 선택 — 주차 섹션 + 가로 리스트 카드 */
@@ -1054,22 +1056,35 @@
                     </div>
                 `;
             }).join('');
+            // 일부만 설정된 일괄 체크박스는 중간상태(―)로 표시
+            area.querySelectorAll('.fbt-chk').forEach(cb => {
+                cb.indeterminate = cb.getAttribute('data-state') === 'some';
+            });
         }
 
         function floorBulkToolsHtml(building, floor) {
             const key = `${building}_${floor}`;
             const open = !!roomMapEditorOpen[key];
+            // 이 층 방들의 현재 상태 집계 → 일괄 체크박스가 현재 상태를 반영(전체 설정 시 켜짐)
+            const fr = Object.values(rooms).filter(r => r && r.building === building && r.floor === floor);
+            const royalEli = fr.filter(r => !r.noAssign);
+            const royalAll = royalEli.length > 0 && royalEli.every(r => r.royal);
+            const royalSome = royalEli.some(r => r.royal);
+            const naAll = fr.length > 0 && fr.every(r => r.noAssign);
+            const naSome = fr.some(r => r.noAssign);
+            const capAll = fr.length > 0 && fr.every(r => (r.capacity || 1) === 2) ? '2'
+                         : (fr.length > 0 && fr.every(r => (r.capacity || 1) !== 2) ? '1' : '');
             return `<div class="floor-bulk-tools">
                 <span class="fbt-title"><i class="fa-solid fa-sliders"></i> 이 층 전체 일괄</span>
                 <label class="bulk-box"><span>정원</span>
-                    <select onchange="if(this.value) bulkSetFloor('${building}', ${floor}, 'capacity', this.value); this.value='';">
-                        <option value="">선택…</option>
-                        <option value="1">전체 1인 1실</option>
-                        <option value="2">전체 2인 1실</option>
+                    <select onchange="if(this.value) bulkSetFloor('${building}', ${floor}, 'capacity', this.value);">
+                        <option value="" ${capAll===''?'selected':''}>혼합/선택…</option>
+                        <option value="1" ${capAll==='1'?'selected':''}>전체 1인 1실</option>
+                        <option value="2" ${capAll==='2'?'selected':''}>전체 2인 1실</option>
                     </select>
                 </label>
-                <label class="bulk-box"><span>우선배정</span><input type="checkbox" onchange="bulkSetFloor('${building}', ${floor}, 'royal', this.checked)" title="이 층 우선배정 전체 설정/해제"></label>
-                <label class="bulk-box"><span>배정제외</span><input type="checkbox" onchange="bulkSetFloor('${building}', ${floor}, 'noAssign', this.checked)" title="이 층 배정제외 전체 설정/해제"></label>
+                <label class="bulk-box"><span>우선배정</span><input type="checkbox" class="fbt-chk" data-state="${royalAll?'all':(royalSome?'some':'none')}" ${royalAll?'checked':''} onchange="bulkSetFloor('${building}', ${floor}, 'royal', this.checked)" title="체크하면 이 층 전체 우선배정, 해제하면 전체 해제"></label>
+                <label class="bulk-box"><span>배정제외</span><input type="checkbox" class="fbt-chk" data-state="${naAll?'all':(naSome?'some':'none')}" ${naAll?'checked':''} onchange="bulkSetFloor('${building}', ${floor}, 'noAssign', this.checked)" title="체크하면 이 층 전체 배정제외, 해제하면 전체 해제"></label>
                 <button class="bulk-btn ${open ? 'on' : 'primary'}" onclick="toggleRoomMapEditor('${key}')">
                     <i class="fa-solid fa-map"></i> ${open ? '배치도 닫기 ▲' : '배치도로 설정 ▾'}
                 </button>
@@ -1120,8 +1135,8 @@
             }).join('');
             return `<div class="room-map-editor">
                 <div class="room-map-editor-head">
-                    <span><i class="fa-solid fa-map-location-dot"></i> ${building} ${floor}층 배치도식 설정</span>
-                    <span style="display:flex;gap:6px;flex-wrap:wrap;">
+                    <span class="rme-title"><i class="fa-solid fa-map-location-dot"></i> ${building} ${floor}층 배치도식 설정</span>
+                    <span class="rme-btns">
                         <button class="bulk-btn" onclick="bulkSetFloor('${building}', ${floor}, 'royal', true)">우선 전체</button>
                         <button class="bulk-btn" onclick="bulkSetFloor('${building}', ${floor}, 'royal', false)">우선 해제</button>
                         <button class="bulk-btn" onclick="bulkSetFloor('${building}', ${floor}, 'noAssign', true)">제외 전체</button>
@@ -1887,7 +1902,17 @@
             // 외국인 과정 양식은 사번이 없고 성별(M/F)만 있는 경우가 많다.
             arr.forEach((cell, idx) => {
                 if (!isSeq(cell)) return;
-                const slice = arr.slice(idx, Math.min(arr.length, idx + 10));
+                // 이 연번부터 한 사람의 필드까지만 슬라이스 — 다음 연번 또는 합계/푸터('총계','당직자 방배정' 등)에서 멈춘다.
+                //  (마지막 사람이 '당직자 방배정' 푸터 줄을 삼켜 '배정' 키워드로 헤더 오인·탈락하던 문제 해결)
+                let end = idx + 1;
+                const lim = Math.min(arr.length, idx + 9);
+                while (end < lim) {
+                    const c = arr[end];
+                    if (isSeq(c)) break;
+                    if (/^총|^합\s*계|^소\s*계|^계$|^당직|개국|방\s*배정|명\s*단/.test(c)) break;
+                    end++;
+                }
+                const slice = arr.slice(idx, end);
                 const row = parseRosterRow(slice);
                 if (row && !row.empNo) parsed.push(row);
             });
@@ -2212,7 +2237,18 @@
             }
             if (!name || name.split(/\s+/).filter(Boolean).length < 2) return null;
             const gender = /^F$/i.test(arr[gIdx]) ? 'F' : 'M';
-            const country = arr.slice(gIdx + 1).find(c => /^[A-Za-z][A-Za-z .'\-]{2,30}$/.test(c) && !JOB_WORDS.test(c)) || '';
+            // 국가: 이 양식은 [이름·직책(국문/영문)·국가·성별·출생] 순서라 국가가 성별 '앞'에 온다.
+            //  성별 직전(gIdx-1)부터 거꾸로 올라가며, 이름·직책(JOB_WORDS)이 아닌 첫 영문 토큰을 국가로 본다.
+            let country = '';
+            for (let i = gIdx - 1; i > (seqIdx >= 0 ? seqIdx : -1); i--) {
+                const c = arr[i];
+                if (c === name || nameParts.includes(c)) continue;
+                if (/^[A-Za-z][A-Za-z .'\-]{1,30}$/.test(c) && !JOB_WORDS.test(c)) { country = c; break; }
+            }
+            // 폴백: 옛 양식(성별 뒤 국가)도 지원
+            if (!country) {
+                country = arr.slice(gIdx + 1).find(c => /^[A-Za-z][A-Za-z .'\-]{2,30}$/.test(c) && !JOB_WORDS.test(c)) || '';
+            }
             return { seq: 0, name, empNo: '', dept: country ? `외국인 교육생 · ${country}` : '외국인 교육생', gender, foreign: true };
         }
 
@@ -2599,11 +2635,22 @@
                 });
                 if (!pending.length) return;
 
+                // ── 같은 내용으로는 한 번만 묻기 ──
+                //  pending 내용(과정·버전)으로 서명을 만들어, 이미 한 번 응답(확인/취소)했으면 다시 띄우지 않는다.
+                //  (교육운영부에서 명단을 새로 바꾸면 서명이 달라져 다시 물어봄)
+                const promptSig = pending.map(p => `${p.rk}:${Number(p.coord.updatedAt || 0)}`).sort().join('|');
+                const promptedKey = `kac_coordPrompted_${wk}`;
+                let alreadyPrompted = '';
+                try { alreadyPrompted = localStorage.getItem(promptedKey) || ''; } catch (_) {}
+                if (alreadyPrompted === promptSig) return;
+
                 const listText = pending.map(p => `• ${p.coord.courseName || ('ROOM ' + p.room)} (${(p.coord.list || []).length}명)`).join('\n');
                 const ok = confirm(
                     `📋 교육운영부에서 등록/변경한 명단이 ${pending.length}개 있습니다.\n\n${listText}\n\n` +
                     `이 명단을 자동배정에 반영할까요?\n\n[확인] 반영 — 생활관 배정에 즉시 사용\n[취소] 무시 — 기존 지원부 명단으로 진행`
                 );
+                // 응답 여부와 무관하게 '이 내용은 물어봤음'으로 기록 → 다시 뜨지 않음
+                try { localStorage.setItem(promptedKey, promptSig); } catch (_) {}
                 if (!ok) return;
 
                 const updates = {};
@@ -4175,13 +4222,14 @@
  #boardMapArea .fm-floor-label:first-child{margin-top:2px;}
  #boardMapArea .fm-grid{display:grid;gap:5px;grid-auto-rows:minmax(64px,auto);}
  #boardMapArea .fm-room{border:1.5px solid #94a3b8;border-radius:6px;background:#fff;display:flex;flex-direction:column;overflow:hidden;min-height:64px;}
- #boardMapArea .fm-room.fm-intl{min-height:78px;}
+ #boardMapArea .fm-room.fm-intl{min-height:92px;}
  #boardMapArea .fm-head{font-size:11px;font-weight:900;color:#475569;background:#f1f5f9;border-bottom:1.5px solid #cbd5e1;text-align:center;padding:2px;line-height:1.5;white-space:nowrap;}
  #boardMapArea .fm-ext{font-size:9px;font-weight:700;opacity:.85;}
  #boardMapArea .fm-body{flex:1;display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:3px;padding:4px 3px;}
  #boardMapArea .fm-fac{border:1.5px dashed #b6c0cf;border-radius:6px;background:repeating-linear-gradient(45deg,#e9edf3,#e9edf3 4px,#f4f7fb 4px,#f4f7fb 11px);color:#64748b;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;text-align:center;}
  #boardMapArea .dm-chip{display:inline-flex;align-items:center;gap:1px;background:#fff;border:1.5px solid #94a3b8;border-radius:9px;padding:2px 8px;font-size:12px;font-weight:800;cursor:grab;line-height:1.3;user-select:none;white-space:nowrap;}
- #boardMapArea .fm-intl .dm-chip{white-space:normal;overflow-wrap:anywhere;word-break:break-word;font-size:10.5px;text-align:center;}
+ #boardMapArea .fm-intl .fm-body{padding:3px;align-items:stretch;}
+ #boardMapArea .fm-intl .dm-chip{white-space:normal;overflow-wrap:anywhere;word-break:keep-all;font-size:10px;line-height:1.25;text-align:center;width:100%;justify-content:center;padding:4px 3px;border-radius:8px;box-sizing:border-box;}
  #boardMapArea .dm-chip:active{cursor:grabbing;}
  #boardMapArea .dm-chip .dm-del{margin-left:5px;color:#cbd5e1;font-weight:900;font-size:11px;cursor:pointer;padding:0 2px;border-radius:3px;line-height:1;}
  #boardMapArea .dm-chip .dm-del:hover{color:#fff;background:#ef4444;}
@@ -4309,15 +4357,15 @@
                 .fm-floor-label:first-child { margin-top:2px; }
                 .fm-grid { display:grid; gap:5px; grid-auto-rows:minmax(60px,auto); }
                 .fm-room { border:1.5px solid #94a3b8; border-radius:6px; background:#fff; display:flex; flex-direction:column; overflow:hidden; min-height:60px; }
-                .fm-room.fm-intl { min-height:74px; }
+                .fm-room.fm-intl { min-height:92px; }
                 .fm-head { font-size:11px; font-weight:900; color:#475569; background:#f1f5f9; border-bottom:1.5px solid #cbd5e1; text-align:center; padding:2px 2px; line-height:1.5; white-space:nowrap; }
                 .fm-ext { font-size:9px; font-weight:700; opacity:.85; }
                 .fm-body { flex:1; display:flex; flex-wrap:wrap; align-items:center; justify-content:center; gap:4px 5px; padding:4px 3px; }
                 .fm-name { font-size:13px; font-weight:800; line-height:1.3; }
                 .fm-g { font-size:9px; font-weight:700; margin-left:1px; }
                 .fm-pill { display:inline-flex; align-items:center; border:1.5px solid; border-radius:11px; padding:2px 9px; font-size:12px; font-weight:800; line-height:1.35; white-space:nowrap; background:#fff; }
-                .fm-intl .fm-body { padding:5px 3px; align-items:stretch; }
-                .fm-intl .fm-pill { white-space:normal; word-break:break-word; overflow-wrap:anywhere; text-align:center; justify-content:center; max-width:100%; font-size:10.5px; line-height:1.25; padding:2px 5px; }
+                .fm-intl .fm-body { padding:4px; align-items:stretch; }
+                .fm-intl .fm-pill { white-space:normal; word-break:keep-all; overflow-wrap:anywhere; text-align:center; justify-content:center; width:100%; max-width:100%; box-sizing:border-box; font-size:10px; line-height:1.3; padding:3px 5px; } .fm-intl .fm-pg { display:inline-block; }
                 .fm-pg { font-size:9px; font-weight:700; margin-left:1px; }
                 .fm-flat { flex-direction:row; min-height:42px; }
                 .fm-flat .fm-head { display:flex; flex-direction:column; align-items:center; justify-content:center; border-bottom:none; border-right:1.5px solid #cbd5e1; min-width:70px; }
