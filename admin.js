@@ -8200,6 +8200,7 @@ annualPlanMgr.openEditorModal = async function() {
                 period:    c.period || ((c.startDate && c.endDate) ? `${c.startDate} ~ ${c.endDate}` : ''),
                 prof:      c.prof || '',
                 coord:     c.coord || '',
+                roomDetail: c.roomDetail || c.classroom || c.roomName || '',
                 weekKey:   c.weekKey || (c.startDate ? this._getMondayOf(c.startDate) : '')
             }))
             .sort((a, b) => (a.startDate || '').localeCompare(b.startDate || ''));
@@ -8248,6 +8249,7 @@ annualPlanMgr.renderEditor = function() {
                     <th style="width:140px; padding:10px; border:1px solid #e2e8f0;">종료일</th>
                     <th style="width:110px; padding:10px; border:1px solid #e2e8f0;">담임교수</th>
                     <th style="width:120px; padding:10px; border:1px solid #e2e8f0;">운영담당</th>
+                    <th style="min-width:170px; padding:10px; border:1px solid #e2e8f0;">???</th>
                     <th style="width:50px; padding:10px; border:1px solid #e2e8f0;">삭제</th>
                 </tr>
             </thead>
@@ -8281,6 +8283,7 @@ annualPlanMgr.renderEditor = function() {
                 <td style="${cellStyle}"><input type="date" value="${esc(c.endDate)}" onchange="annualPlanMgr.updateLocalData(${idx},'endDate',this.value)" style="${inpStyle}"></td>
                 <td style="${cellStyle}"><input type="text" value="${esc(c.prof)}" onchange="annualPlanMgr.updateLocalData(${idx},'prof',this.value)" style="${inpStyle}"></td>
                 <td style="${cellStyle}"><input type="text" value="${esc(c.coord)}" onchange="annualPlanMgr.updateLocalData(${idx},'coord',this.value)" style="${inpStyle}"></td>
+                <td style="${cellStyle}"><input type="text" value="${esc(c.roomDetail || '')}" onchange="annualPlanMgr.updateLocalData(${idx},'roomDetail',this.value)" placeholder="예: 하늘관 2층 B강의실" style="${inpStyle}"></td>
                 <td style="${cellStyle} text-align:center;"><button onclick="annualPlanMgr.deleteRow(${idx})" title="삭제" style="color:#ef4444; border:none; background:none; cursor:pointer; font-size:16px; font-weight:800;">✕</button></td>
             </tr>`;
     });
@@ -8326,7 +8329,7 @@ annualPlanMgr.confirmAdd = function() {
     // 새 과정 추가 후 시작일 순으로 정렬 (날짜에 맞는 위치에 들어가도록)
     this.currentEditingData.push({
         no: 0, name, startDate: start, endDate: end,
-        period: `${start} ~ ${end}`, prof: '', coord: '',
+        period: `${start} ~ ${end}`, prof: '', coord: '', roomDetail: '',
         weekKey: this._getMondayOf(start)
     });
     this.currentEditingData.sort((a, b) => (a.startDate || '').localeCompare(b.startDate || ''));
@@ -8376,6 +8379,7 @@ annualPlanMgr.saveAndSync = async function() {
                 period:    `${c.startDate} ~ ${c.endDate}`,
                 prof:      (c.prof || '').trim(),
                 coord:     (c.coord || '').trim(),
+                roomDetail: (c.roomDetail || c.classroom || c.roomName || '').trim(),
                 weekKey:   this._getMondayOf(c.startDate)
             }));
 
@@ -8471,6 +8475,7 @@ annualPlanMgr._syncRoomsLockAware = async function(courses) {
                 updates[`courses/${r}/settings/coordinatorName`] = coordFull;
                 updates[`courses/${r}/status/professorName`] = pc.prof;
                 updates[`courses/${r}/settings/kakaoLink`] = kakaoOf(pc.prof);
+                if (pc.roomDetail) updates[`courses/${r}/settings/roomDetailName`] = pc.roomDetail;
             }
             return; // 방 자체는 유지
         }
@@ -8478,6 +8483,7 @@ annualPlanMgr._syncRoomsLockAware = async function(courses) {
         // ── 열린 방 & 대상 주 과정 아님 → 비우고 재배치 대상 ──
         updates[`courses/${r}/settings/courseName`] = '';
         updates[`courses/${r}/settings/period`]     = '';
+        updates[`courses/${r}/settings/roomDetailName`] = '';
         updates[`courses/${r}/settings/coordinatorName`] = null;
         updates[`courses/${r}/status/professorName`] = '';
         updates[`courses/${r}/status/roomStatus`]   = 'idle';
@@ -8503,6 +8509,7 @@ annualPlanMgr._syncRoomsLockAware = async function(courses) {
         updates[`courses/${room}/status/professorName`] = course.prof;
         updates[`courses/${room}/status/roomStatus`]   = 'active';
         updates[`courses/${room}/settings/kakaoLink`]  = kakaoOf(course.prof);
+        if (course.roomDetail) updates[`courses/${room}/settings/roomDetailName`] = course.roomDetail;
         updates[`courses/${room}/status/ownerSessionId`] = null;
     }
     if (Object.keys(updates).length) {

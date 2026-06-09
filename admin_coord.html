@@ -2869,9 +2869,6 @@ function updateIndividualView() {
     actionTbody.innerHTML = "";
 
     // 09:00 기준 타임스탬프 계산
-    const now09 = new Date();
-    now09.setHours(9, 0, 0, 0);
-    const cutoff = now09.getTime(); // 오늘 09:00의 timestamp
 
     let actionItems = [];
     if (room.admin_actions) {
@@ -2881,7 +2878,7 @@ function updateIndividualView() {
                 Object.keys(dayActions).forEach(token => {
                     const item = dayActions[token];
                     // 당일 09:00 이후 신청 건만 포함
-                    if (item.timestamp && item.timestamp >= cutoff) {
+                    if (item && (item.type === 'outing' || item.type === 'overnight' || item.type === 'group_outing')) {
                         actionItems.push({ ...item, token: token, date: date });
                     }
                 });
@@ -2889,7 +2886,7 @@ function updateIndividualView() {
         });
     }
 
-    actionItems.sort((a, b) => a.timestamp - b.timestamp);
+    actionItems.sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
     
     if (actionItems.length === 0) {
         actionTbody.innerHTML = '<tr><td colspan="4" style="padding:20px; color:#94a3b8; text-align:center;">오늘 09:00 이후 신청 내역 없음</td></tr>';
@@ -2905,7 +2902,7 @@ function updateIndividualView() {
                     ${a.type==='group_outing'?'단체외출':a.type==='outing'?'외출':'외박'}
                 </td>
                 <td style="text-align:center;">
-                    ${new Date(a.timestamp).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}
+                    ${a.timestamp ? new Date(a.timestamp).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}) : '-'}
                 </td>
                 <td style="text-align:center;">
                     <!-- 삭제 버튼만 표시 (서명은 자동 처리) -->
@@ -5389,7 +5386,8 @@ const annualPlanMgrCoord = {
                     period:    c.period || ((c.startDate && c.endDate) ? `${c.startDate} ~ ${c.endDate}` : ''),
                     prof:      c.prof || '',
                     coord:     c.coord || '',
-                    weekKey:   c.weekKey || (c.startDate ? this._getMondayOf(c.startDate) : '')
+                roomDetail: c.roomDetail || c.classroom || c.roomName || '',
+                weekKey:   c.weekKey || (c.startDate ? this._getMondayOf(c.startDate) : '')
                 }))
                 .sort((a, b) => (a.startDate || '').localeCompare(b.startDate || ''));
             this.renderEditor();
@@ -5438,6 +5436,7 @@ const annualPlanMgrCoord = {
                 <th style="${th} width:140px;">종료일</th>
                 <th style="${th} width:100px;">담임교수</th>
                 <th style="${th} width:110px;">운영담당</th>
+                <th style="${th} min-width:170px;">???</th>
                 <th style="${th} width:46px;">삭제</th>
             </tr></thead><tbody>`;
         const _td2 = new Date().toISOString().slice(0,10);
@@ -5464,6 +5463,7 @@ const annualPlanMgrCoord = {
                 <td style="${td}"><input type="date" value="${esc(c.endDate)}" onchange="annualPlanMgrCoord.updateLocalData(${idx},'endDate',this.value)" style="${inp}"></td>
                 <td style="${td}"><input type="text" value="${esc(c.prof)}" onchange="annualPlanMgrCoord.updateLocalData(${idx},'prof',this.value)" style="${inp}"></td>
                 <td style="${td}"><input type="text" value="${esc(c.coord)}" onchange="annualPlanMgrCoord.updateLocalData(${idx},'coord',this.value)" style="${inp}"></td>
+                <td style="${td}"><input type="text" value="${esc(c.roomDetail || '')}" onchange="annualPlanMgrCoord.updateLocalData(${idx},'roomDetail',this.value)" placeholder="예: 하늘관 2층 B강의실" style="${inp}"></td>
                 <td style="${td} text-align:center;"><button onclick="annualPlanMgrCoord.deleteRow(${idx})" title="삭제" style="color:#ef4444; border:none; background:none; cursor:pointer; font-size:16px; font-weight:800;">✕</button></td>
             </tr>`;
         });
@@ -5503,7 +5503,7 @@ const annualPlanMgrCoord = {
         if (!start || !end) { err.innerText = '시작일과 종료일을 입력하세요.'; return; }
         if (end < start) { err.innerText = '종료일이 시작일보다 빠를 수 없습니다.'; return; }
         var mon = (this._getMondayOf ? this._getMondayOf(start) : '');
-        this.currentEditingData.push({ no:0, name:name, startDate:start, endDate:end, period:(start+' ~ '+end), prof:'', coord:'', weekKey:mon });
+        this.currentEditingData.push({ no:0, name:name, startDate:start, endDate:end, period:(start+' ~ '+end), prof:'', coord:'', roomDetail:'', weekKey:mon });
         this.currentEditingData.sort(function(a,b){ return (a.startDate||'').localeCompare(b.startDate||''); });
         document.getElementById('coordCourseAddPop').style.display = 'none';
         this.renderEditor();
@@ -5565,6 +5565,7 @@ const annualPlanMgrCoord = {
                 period: `${c.startDate} ~ ${c.endDate}`,
                 prof: (c.prof || '').trim(),
                 coord: (c.coord || '').trim(),
+                roomDetail: (c.roomDetail || c.classroom || c.roomName || '').trim(),
                 weekKey: this._getMondayOf(c.startDate)
             }));
         const planData = {};
@@ -5629,6 +5630,7 @@ const annualPlanMgrCoord = {
             if (nm && !inPlan && !touched) {
                 updates[`courses/${r}/settings/courseName`] = '';
                 updates[`courses/${r}/settings/period`]     = '';
+                updates[`courses/${r}/settings/roomDetailName`] = '';
                 updates[`courses/${r}/settings/coordinatorName`] = null;
                 updates[`courses/${r}/settings/kakaoLink`] = null;
                 updates[`courses/${r}/status/professorName`] = '';
@@ -5647,6 +5649,7 @@ const annualPlanMgrCoord = {
                     updates[`courses/${r}/settings/coordinatorName`] = coordFull;
                     updates[`courses/${r}/status/professorName`] = pc.prof;
                     updates[`courses/${r}/settings/kakaoLink`] = kakaoOf(pc.prof);
+                    if (pc.roomDetail) updates[`courses/${r}/settings/roomDetailName`] = pc.roomDetail;
                 }
                 return;
             }
@@ -5660,13 +5663,15 @@ const annualPlanMgrCoord = {
                 updates[`courses/${r}/settings/coordinatorName`] = coordFull;
                 updates[`courses/${r}/status/professorName`] = pc.prof;
                 updates[`courses/${r}/settings/kakaoLink`] = kakaoOf(pc.prof);
+                    if (pc.roomDetail) updates[`courses/${r}/settings/roomDetailName`] = pc.roomDetail;
                 return;
             }
 
             // 5) 그 외 열린 방 → 비우고 재배치 대상
             updates[`courses/${r}/settings/courseName`] = '';
             updates[`courses/${r}/settings/period`]     = '';
-            updates[`courses/${r}/settings/coordinatorName`] = null;
+                updates[`courses/${r}/settings/roomDetailName`] = '';
+                updates[`courses/${r}/settings/coordinatorName`] = null;
             updates[`courses/${r}/status/professorName`] = '';
             updates[`courses/${r}/status/roomStatus`]   = 'idle';
             updates[`courses/${r}/status/ownerSessionId`] = null;
@@ -5684,6 +5689,7 @@ const annualPlanMgrCoord = {
             updates[`courses/${room}/settings/coordinatorName`] = coordFull;
             updates[`courses/${room}/status/professorName`] = course.prof;
             updates[`courses/${room}/settings/kakaoLink`]  = kakaoOf(course.prof);
+            if (course.roomDetail) updates[`courses/${room}/settings/roomDetailName`] = course.roomDetail;
             updates[`courses/${room}/status/roomStatus`]   = 'active';
             updates[`courses/${room}/status/ownerSessionId`] = null;
         }
