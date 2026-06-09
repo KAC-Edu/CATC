@@ -18,6 +18,14 @@
     <link rel="stylesheet" href="admin.css">
 </head>
 <body class="day-mode">
+<!-- 강의 모니터링 마이크 권한 안내 배너 (권한 거부/미허용 시에만 표시) -->
+<div id="micMonitorBanner" style="display:none; position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:linear-gradient(135deg,#15803d,#22c55e); color:#fff; padding:13px 18px; border-radius:14px; font-size:13px; font-weight:800; box-shadow:0 12px 32px rgba(22,163,74,0.45); z-index:2147483646; display:flex; align-items:center; gap:12px; max-width:520px;">
+    <i class="fa-solid fa-microphone-lines" style="font-size:18px;"></i>
+    <span id="micMonitorBannerText" style="flex:1; line-height:1.4;">강의 모니터링을 위해 마이크 권한이 필요합니다. (강의 음성 청취용)</span>
+    <button onclick="lectureMonitor.requestMic()" style="flex-shrink:0; background:#fff; color:#15803d; border:none; border-radius:9px; padding:8px 14px; font-weight:900; font-size:13px; cursor:pointer;">마이크 허용</button>
+    <button onclick="document.getElementById('micMonitorBanner').style.display='none'" style="flex-shrink:0; background:rgba(255,255,255,0.22); border:none; color:#fff; width:28px; height:28px; border-radius:50%; cursor:pointer; font-size:13px;">✕</button>
+</div>
+
 <!-- 통합 배경음 플레이어 (주황 바 하나 — body 직속, 최상위 노출) -->
 <div id="bgmNowBubble" style="display:none; position:fixed; top:96px; right:24px; background:linear-gradient(135deg,#f97316,#fb923c); color:#fff; padding:12px 16px; border-radius:18px; font-size:13px; font-weight:800; box-shadow:0 10px 32px rgba(249,115,22,0.5); z-index:2147483647; flex-direction:column; gap:10px; border:2px solid rgba(255,255,255,0.85); min-width:280px;">
     <!-- 상단: 상태 + 닫기 -->
@@ -265,6 +273,7 @@
                         <a href="javascript:void(0)" onclick="ui.goFamilySite('meal', 'nutritionist.html')"><i class="fa-solid fa-utensils"></i> 영양사 전용 (식단)</a>
                         <a href="javascript:void(0)" onclick="ui.goFamilySite('facility', 'facility_admin.html')"><i class="fa-solid fa-broom"></i> 미화/시설 관리</a>
                         <a href="javascript:void(0)" onclick="ui.goFamilySite('none', 'student_leader.html')"><i class="fa-solid fa-crown"></i> 학생장 전용</a>
+                        <a href="javascript:void(0)" onclick="ui.goFamilySite('none', 'monitor.html')"><i class="fa-solid fa-headphones-simple" style="color:#22c55e;"></i> 강의 모니터링 (실시간 청취)</a>
                         <a href="javascript:void(0)" onclick="ui.goFamilySite('none', 'https://kac-edu.github.io/kac-cns-platform/index.html')"><i class="fa-solid fa-tower-broadcast"></i> CNS 통합 플랫폼</a>
                         <a href="javascript:void(0)" onclick="ui.goFamilySite('none', 'plan_converter.html')" style="border-top:1px solid rgba(255,255,255,0.1); margin-top:4px; padding-top:12px;"><i class="fa-solid fa-file-excel" style="color:#22c55e;"></i> 교육운영계획 변환기</a>
                     </div>

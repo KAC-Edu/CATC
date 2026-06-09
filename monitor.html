@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>강의 실시간 모니터링 — CATC</title>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+  <script src="config.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" rel="stylesheet">
+  <style>
+    :root {
+      --navy:#0f172a; --blue:#2563eb; --green:#16a34a; --green-soft:#dcfce7;
+      --bg:#f1f5f9; --card:#fff; --text:#1e293b; --muted:#64748b; --border:#e2e8f0;
+    }
+    * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; margin:0; padding:0; font-family:'Pretendard',sans-serif; }
+    body { background:var(--bg); color:var(--text); min-height:100dvh; }
+
+    .header {
+      min-height:74px; color:#fff; padding:14px 28px;
+      position:sticky; top:0; z-index:100;
+      display:flex; align-items:center; justify-content:space-between; gap:16px;
+      background:linear-gradient(135deg,#111827 0%,#172554 46%,#2563eb 100%);
+      box-shadow:0 12px 26px rgba(15,23,42,0.18);
+    }
+    .h-brand { display:flex; align-items:center; gap:13px; min-width:0; }
+    .h-mark { width:42px; height:42px; border-radius:13px; display:inline-flex; align-items:center; justify-content:center; background:rgba(255,255,255,0.14); border:1px solid rgba(255,255,255,0.24); }
+    .h-mark i { font-size:20px; color:#dbeafe; }
+    .h-kicker { font-size:11px; font-weight:900; letter-spacing:2px; color:rgba(219,234,254,0.78); }
+    .header h1 { font-size:20px; font-weight:950; margin-top:3px; }
+    .h-right { display:flex; align-items:center; gap:10px; }
+    .h-clock { text-align:right; font-size:13px; color:rgba(219,234,254,0.85); font-weight:700; }
+    .h-back { height:42px; padding:0 16px; border-radius:13px; background:rgba(255,255,255,0.14); border:1px solid rgba(255,255,255,0.24); color:#fff; font-weight:800; font-size:13px; cursor:pointer; display:inline-flex; align-items:center; gap:8px; text-decoration:none; }
+    .h-back:hover { background:rgba(255,255,255,0.22); }
+
+    .container { max-width:1100px; margin:0 auto; padding:22px 20px 60px; }
+
+    .intro { background:#eff6ff; border:1.5px solid #bfdbfe; border-radius:14px; padding:14px 18px; margin-bottom:18px; font-size:13px; color:#1e3a8a; line-height:1.6; display:flex; gap:12px; align-items:flex-start; }
+    .intro i { font-size:18px; color:#2563eb; margin-top:1px; }
+
+    .toolbar { display:flex; align-items:center; gap:10px; margin-bottom:16px; flex-wrap:wrap; }
+    .now-listening { display:none; align-items:center; gap:10px; background:#052e16; color:#86efac; border-radius:12px; padding:9px 16px; font-weight:800; font-size:13px; }
+    .now-listening .eq { display:inline-flex; gap:2px; align-items:flex-end; height:15px; }
+    .now-listening .eq span { width:3px; background:#4ade80; border-radius:2px; animation:eq 0.9s ease-in-out infinite; }
+    .now-listening .eq span:nth-child(2){ animation-delay:0.18s; } .now-listening .eq span:nth-child(3){ animation-delay:0.36s; } .now-listening .eq span:nth-child(4){ animation-delay:0.54s; }
+    @keyframes eq { 0%,100%{ height:5px; } 50%{ height:15px; } }
+    .stop-btn { margin-left:auto; background:#dc2626; color:#fff; border:none; border-radius:10px; padding:9px 16px; font-weight:800; font-size:13px; cursor:pointer; }
+
+    .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:14px; }
+
+    .room-card {
+      background:var(--card); border:1.5px solid var(--border); border-radius:16px;
+      padding:18px; display:flex; flex-direction:column; gap:12px;
+      box-shadow:0 1px 6px rgba(15,23,42,0.05); transition:all 0.18s;
+    }
+    .room-card.live { border-color:#86efac; box-shadow:0 6px 18px rgba(22,163,74,0.14); }
+    .room-card.active-listen { border-color:#16a34a; box-shadow:0 8px 24px rgba(22,163,74,0.28); }
+
+    .rc-top { display:flex; align-items:center; gap:10px; }
+    .rc-room { width:46px; height:46px; border-radius:13px; display:flex; align-items:center; justify-content:center; font-size:18px; font-weight:950; color:#fff; background:#94a3b8; flex-shrink:0; }
+    .room-card.live .rc-room { background:linear-gradient(135deg,#15803d,#22c55e); }
+    .rc-name { font-size:15px; font-weight:900; color:#0f172a; line-height:1.3; }
+    .rc-meta { font-size:12px; color:var(--muted); margin-top:2px; }
+
+    .rc-badge { display:inline-flex; align-items:center; gap:6px; font-size:12px; font-weight:800; padding:4px 11px; border-radius:20px; align-self:flex-start; }
+    .rc-badge.live { background:var(--green-soft); color:#15803d; }
+    .rc-badge.off  { background:#f1f5f9; color:#94a3b8; }
+    .rc-badge .dot { width:7px; height:7px; border-radius:50%; background:#16a34a; box-shadow:0 0 0 0 rgba(22,163,74,0.5); animation:pulse 1.6s infinite; }
+    @keyframes pulse { 0%{ box-shadow:0 0 0 0 rgba(22,163,74,0.55);} 70%{ box-shadow:0 0 0 8px rgba(22,163,74,0);} 100%{ box-shadow:0 0 0 0 rgba(22,163,74,0);} }
+
+    .rc-listen { display:flex; align-items:center; gap:10px; }
+    .listen-btn {
+      flex:1; height:46px; border:none; border-radius:12px; font-weight:900; font-size:14px; cursor:pointer;
+      display:flex; align-items:center; justify-content:center; gap:9px; transition:all 0.15s;
+    }
+    .listen-btn.on  { background:#16a34a; color:#fff; }
+    .listen-btn.on:hover { background:#15803d; }
+    .listen-btn.off { background:#f1f5f9; color:#94a3b8; cursor:not-allowed; }
+    .listen-btn.stop { background:#dc2626; color:#fff; }
+    .listen-btn.connecting { background:#f59e0b; color:#fff; }
+    .vol-wrap { display:none; align-items:center; gap:8px; }
+    .room-card.active-listen .vol-wrap { display:flex; }
+
+    .empty { text-align:center; color:var(--muted); padding:60px 20px; font-size:14px; }
+    .empty i { font-size:40px; color:#cbd5e1; display:block; margin-bottom:14px; }
+
+    .mic-note { font-size:11px; color:#b45309; background:#fffbeb; border:1px solid #fde68a; border-radius:8px; padding:6px 10px; margin-top:4px; display:none; }
+    .room-card.no-mic .mic-note { display:block; }
+  </style>
+</head>
+<body>
+  <header class="header">
+    <div class="h-brand">
+      <div class="h-mark"><i class="fa-solid fa-headphones-simple"></i></div>
+      <div>
+        <div class="h-kicker">KOREA AIRPORTS CORP. · CATC</div>
+        <h1>강의 실시간 모니터링</h1>
+      </div>
+    </div>
+    <div class="h-right">
+      <div class="h-clock" id="clock">--:--</div>
+      <button class="h-back" onclick="history.length>1?history.back():window.close()"><i class="fa-solid fa-arrow-left"></i> 뒤로</button>
+    </div>
+  </header>
+
+  <div class="container">
+    <div class="intro">
+      <i class="fa-solid fa-circle-info"></i>
+      <div>
+        강사플랫폼이 켜진 채 <b>강의가 진행 중</b>인 강의실이 <b style="color:#16a34a;">녹색</b>으로 활성화됩니다.
+        스피커 버튼을 누르면 해당 강의실 PC 마이크의 <b>주변 음성을 실시간으로 청취</b>합니다.
+        한 번에 한 강의실만 청취되며, 다른 강의실을 누르면 자동 전환됩니다.
+      </div>
+    </div>
+
+    <div class="toolbar">
+      <div class="now-listening" id="nowListening">
+        <span class="eq"><span></span><span></span><span></span><span></span></span>
+        <span id="nowListeningText">청취 중</span>
+      </div>
+      <button class="stop-btn" id="stopAllBtn" style="display:none;" onclick="stopListen()"><i class="fa-solid fa-stop"></i> 청취 중지</button>
+    </div>
+
+    <div class="grid" id="roomGrid">
+      <div class="empty" id="emptyState"><i class="fa-solid fa-satellite-dish"></i>활성화된 강의를 찾는 중입니다…</div>
+    </div>
+  </div>
+
+  <audio id="monitorAudio" autoplay playsinline></audio>
+
+  <script>
+    // ── Firebase ──
+    var db = null;
+    try { db = firebase.database(); } catch (e) { console.error('firebase init 실패', e); }
+
+    var ICE = { iceServers: [
+      { urls: 'stun:stun.l.google.com:19302' },
+      { urls: 'stun:stun1.l.google.com:19302' }
+    ] };
+
+    var LIVE_FRESH_MS = 45000;       // 이 시간 내 heartbeat면 'live'
+    var statusMap = {};              // room -> { live, micOn, ts }
+    var coursesMap = {};             // room -> course 데이터 (이름/교수)
+    var current = null;              // { room, listenerId, pc, statusRef, ... } 현재 청취 중
+
+    // ── 시계 ──
+    function tick(){ var d=new Date(); document.getElementById('clock').textContent =
+      String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')+':'+String(d.getSeconds()).padStart(2,'0'); }
+    setInterval(tick,1000); tick();
+
+    // ── 실시간 상태 구독 ──
+    if (db) {
+      db.ref('system/monitoring/status').on('value', function(s){ statusMap = s.val() || {}; render(); });
+      db.ref('courses').on('value', function(s){ coursesMap = s.val() || {}; render(); });
+    }
+
+    function isLive(room){
+      var st = statusMap[room];
+      return !!(st && st.live && st.ts && (Date.now() - st.ts) < LIVE_FRESH_MS);
+    }
+
+    function render(){
+      var grid = document.getElementById('roomGrid');
+      // 강의중(active) 또는 모니터링 라이브인 방만 표시
+      var rooms = {};
+      Object.keys(coursesMap || {}).forEach(function(room){
+        var c = coursesMap[room] || {};
+        var st = (c.status || {});
+        if (st.roomStatus === 'active') rooms[room] = true;
+      });
+      Object.keys(statusMap || {}).forEach(function(room){ if (isLive(room)) rooms[room] = true; });
+
+      var list = Object.keys(rooms).sort();
+      if (!list.length) {
+        grid.innerHTML = '<div class="empty"><i class="fa-solid fa-satellite-dish"></i>현재 진행 중인 강의가 없습니다.<br><span style="font-size:12px;">강사플랫폼에서 강의를 시작하면 여기에 표시됩니다.</span></div>';
+        return;
+      }
+
+      grid.innerHTML = list.map(function(room){
+        var c = coursesMap[room] || {};
+        var settings = c.settings || {};
+        var status = c.status || {};
+        var live = isLive(room);
+        var micOn = !!(statusMap[room] && statusMap[room].micOn);
+        var courseName = settings.courseName || ('ROOM ' + room);
+        var prof = status.professorName || '';
+        var isActiveListen = current && current.room === room;
+
+        var badge = live
+          ? '<span class="rc-badge live"><span class="dot"></span> 강의 진행중 · 청취 가능</span>'
+          : (status.roomStatus === 'active'
+              ? '<span class="rc-badge off"><i class="fa-solid fa-circle"></i> 강의중 (플랫폼 미연결)</span>'
+              : '<span class="rc-badge off"><i class="fa-solid fa-circle"></i> 대기</span>');
+
+        var btn;
+        if (!live) {
+          btn = '<button class="listen-btn off" disabled><i class="fa-solid fa-volume-xmark"></i> 청취 불가</button>';
+        } else if (isActiveListen) {
+          var label = current.connecting ? '<i class="fa-solid fa-spinner fa-spin"></i> 연결 중…' : '<i class="fa-solid fa-stop"></i> 청취 중지';
+          btn = '<button class="listen-btn ' + (current.connecting?'connecting':'stop') + '" onclick="stopListen()">' + label + '</button>';
+        } else {
+          btn = '<button class="listen-btn on" onclick="startListen(\'' + room + '\')"><i class="fa-solid fa-volume-high"></i> 청취하기</button>';
+        }
+
+        return '<div class="room-card ' + (live?'live':'') + ' ' + (isActiveListen?'active-listen':'') + ' ' + (live&&!micOn?'no-mic':'') + '">'
+          + '<div class="rc-top">'
+          +   '<div class="rc-room">' + room + '</div>'
+          +   '<div style="flex:1; min-width:0;"><div class="rc-name">' + esc(courseName) + '</div>'
+          +   '<div class="rc-meta">' + (prof ? '<i class="fa-solid fa-user-tie"></i> ' + esc(prof) + ' 교수' : 'ROOM ' + room) + '</div></div>'
+          + '</div>'
+          + badge
+          + '<div class="rc-listen">' + btn
+          +   '<div class="vol-wrap"><i class="fa-solid fa-volume-low" style="color:#64748b;"></i>'
+          +     '<input type="range" min="0" max="100" value="100" style="width:90px; accent-color:#16a34a;" oninput="setVol(this.value)"></div>'
+          + '</div>'
+          + '<div class="mic-note"><i class="fa-solid fa-triangle-exclamation"></i> 강의실 PC에서 마이크가 아직 허용되지 않았습니다.</div>'
+          + '</div>';
+      }).join('');
+
+      // 상단 청취 표시
+      var nl = document.getElementById('nowListening');
+      var sb = document.getElementById('stopAllBtn');
+      if (current && !current.connecting) {
+        var cname = (coursesMap[current.room] && coursesMap[current.room].settings && coursesMap[current.room].settings.courseName) || ('ROOM ' + current.room);
+        document.getElementById('nowListeningText').textContent = 'ROOM ' + current.room + ' · ' + cname + ' 청취 중';
+        nl.style.display = 'flex'; sb.style.display = 'inline-flex';
+      } else if (current && current.connecting) {
+        document.getElementById('nowListeningText').textContent = 'ROOM ' + current.room + ' 연결 중…';
+        nl.style.display = 'flex'; sb.style.display = 'inline-flex';
+      } else {
+        nl.style.display = 'none'; sb.style.display = 'none';
+      }
+    }
+
+    function esc(s){ return String(s||'').replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+    function setVol(v){ document.getElementById('monitorAudio').volume = Math.max(0, Math.min(1, v/100)); }
+
+    // ── 청취 시작 (리스너 = offerer) ──
+    async function startListen(room){
+      if (!db) { alert('연결 오류'); return; }
+      if (current) await stopListen();   // 한 번에 하나만
+
+      var listenerId = 'L' + Math.random().toString(36).substr(2,9);
+      var callBase = db.ref('system/monitoring/calls/' + room + '/' + listenerId);
+      var pc = new RTCPeerConnection(ICE);
+      current = { room: room, listenerId: listenerId, pc: pc, callBase: callBase, connecting: true, candAdded: {} };
+      render();
+
+      // 수신 전용 오디오
+      try { pc.addTransceiver('audio', { direction: 'recvonly' }); } catch(e){}
+
+      pc.ontrack = function(ev){
+        var audio = document.getElementById('monitorAudio');
+        audio.srcObject = ev.streams[0];
+        audio.play().catch(function(){ /* 사용자 제스처로 호출되므로 보통 통과 */ });
+      };
+      pc.onicecandidate = function(ev){
+        if (ev.candidate) callBase.child('listenerCandidates').push(ev.candidate.toJSON());
+      };
+      pc.onconnectionstatechange = function(){
+        if (!current || current.pc !== pc) return;
+        if (pc.connectionState === 'connected') { current.connecting = false; render(); }
+        if (pc.connectionState === 'failed' || pc.connectionState === 'disconnected' || pc.connectionState === 'closed') {
+          if (current && current.pc === pc) { stopListen(); }
+        }
+      };
+
+      // 방송측이 쓰는 answer 수신
+      callBase.child('answer').on('value', async function(s){
+        var ans = s.val();
+        if (ans && pc.signalingState !== 'stable' && !pc.currentRemoteDescription) {
+          try { await pc.setRemoteDescription(new RTCSessionDescription(ans)); } catch(e){ console.warn('answer 적용 실패', e); }
+        }
+      });
+      // 방송측 ICE 수신
+      callBase.child('broadcasterCandidates').on('child_added', async function(s){
+        var c = s.val(); if (!c) return;
+        try { await pc.addIceCandidate(new RTCIceCandidate(c)); } catch(e){ console.warn('ICE 추가 실패', e); }
+      });
+      // 방송측 오류(마이크 미허용 등)
+      callBase.child('error').on('value', function(s){
+        if (s.val()) { alert('강의실 PC에서 마이크가 허용되지 않아 청취할 수 없습니다.'); stopListen(); }
+      });
+
+      // offer 생성 → 업로드
+      try {
+        var offer = await pc.createOffer({ offerToReceiveAudio: true });
+        await pc.setLocalDescription(offer);
+        await callBase.update({ offer: { type: offer.type, sdp: offer.sdp }, ts: firebase.database.ServerValue.TIMESTAMP });
+        callBase.onDisconnect().remove();   // 모니터 창 닫히면 정리
+      } catch(e){ console.error('offer 실패', e); alert('연결을 시작하지 못했습니다.'); stopListen(); }
+    }
+
+    async function stopListen(){
+      if (!current) return;
+      var c = current; current = null;
+      try { if (c.callBase) { c.callBase.off(); c.callBase.remove(); c.callBase.onDisconnect().cancel(); } } catch(e){}
+      try { if (c.pc) c.pc.close(); } catch(e){}
+      var audio = document.getElementById('monitorAudio');
+      try { audio.srcObject = null; } catch(e){}
+      render();
+    }
+
+    window.addEventListener('beforeunload', function(){ try { if (current && current.callBase) current.callBase.remove(); } catch(e){} });
+    // 주기적 재렌더 (live 신선도 갱신)
+    setInterval(render, 5000);
+  </script>
+</body>
+</html>

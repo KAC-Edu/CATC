@@ -716,6 +716,9 @@ forceEnterRoom: async function(room) {
         const isOwner = (statusData.ownerSessionId === state.sessionId);
         const isActive = (statusData.roomStatus === 'active');
 
+        // [강의 모니터링] 이 기기가 소유자 + 강의중일 때만 마이크 송출(live)
+        try { lectureMonitor.syncStatus(cleanRoom, statusData, isOwner, isActive); } catch (e) { /* 무시 */ }
+
         // [세션 핸드오버] 내가 직전까지 이 방의 강사(소유자)였는데, 다른 기기가 제어권을 가져가
         //  ownerSessionId 가 '다른 값'으로 바뀐 순간을 감지 → 자동으로 옵저버 모드로 전환 + 알림.
         if (!state.isObserver
@@ -6926,6 +6929,167 @@ subjectMgr.addSubjectInModal = function() {
 
 
 
+// ════════════════════════════════════════════════════════════
+//  강의 실시간 모니터링 — 방송측 (이 PC 마이크 → 모니터링 페이지로 송출)
+//  · 강의가 active 이고 이 기기가 소유자(owner)일 때만 'live' 송출
+//  · WebRTC: 리스너(모니터 페이지)가 offer, 이쪽(방송)이 answer + 마이크 트랙 제공
+// ════════════════════════════════════════════════════════════
+const lectureMonitor = {
+    stream: null,
+    micReady: false,
+    micAsked: false,
+    currentRoom: null,
+    statusRef: null,
+    callsRef: null,
+    peers: {},          // listenerId -> { pc, candRef }
+    hbTimer: null,
+    _info: {},
+    ICE: { iceServers: [
+        { urls: 'stun:stun.l.google.com:19302' },
+        { urls: 'stun:stun1.l.google.com:19302' }
+    ] },
+
+    // 마이크 자동 요청 (최초 1회 브라우저 권한 팝업 → HTTPS에선 이후 기억됨)
+    requestMic: async function() {
+        this.micAsked = true;
+        if (this.micReady && this.stream) return true;
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+            console.warn('[강의모니터링] getUserMedia 미지원 (HTTPS 필요)');
+            this._setBanner('unsupported');
+            return false;
+        }
+        try {
+            this.stream = await navigator.mediaDevices.getUserMedia({
+                audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: true },
+                video: false
+            });
+            this.micReady = true;
+            this._setBanner(null);
+            console.log('[강의모니터링] 🎙️ 마이크 활성화 — 모니터링 송출 준비됨');
+            if (this.currentRoom) this._publishStatus();
+            return true;
+        } catch (e) {
+            this.micReady = false;
+            console.warn('[강의모니터링] 마이크 권한 거부/실패:', e && e.name);
+            this._setBanner('blocked');
+            if (this.currentRoom) this._publishStatus(); // micOn:false 라도 live 표시
+            return false;
+        }
+    },
+
+    _setBanner: function(kind) {
+        const el = document.getElementById('micMonitorBanner');
+        if (!el) return;
+        if (!kind) { el.style.display = 'none'; return; }
+        const msg = (kind === 'unsupported')
+            ? '강의 모니터링 마이크는 HTTPS 환경에서만 동작합니다.'
+            : '강의 모니터링을 위해 마이크 권한이 필요합니다. (강의 음성 청취용)';
+        const txtEl = document.getElementById('micMonitorBannerText');
+        if (txtEl) txtEl.textContent = msg;
+        el.style.display = 'flex';
+    },
+
+    // status 구독 콜백에서 호출 — 방송 여부 결정
+    syncStatus: function(room, statusData, isOwner, isActive) {
+        const shouldBroadcast = isOwner && isActive && !state.isObserver;
+        if (shouldBroadcast) {
+            this._info = {
+                courseName: (statusData && statusData.courseName) || '',
+                professorName: (statusData && statusData.professorName) || ''
+            };
+            if (this.currentRoom && this.currentRoom !== room) this._teardownRoom();
+            this.currentRoom = room;
+            if (!this.micAsked) this.requestMic();   // 강의 시작 시 마이크 자동 확보
+            this._publishStatus();
+            this._listenForCalls(room);
+            if (!this.hbTimer) this.hbTimer = setInterval(() => this._publishStatus(), 20000);
+        } else {
+            if (this.currentRoom) this._teardownRoom();
+        }
+    },
+
+    _publishStatus: function() {
+        if (!this.currentRoom) return;
+        try {
+            this.statusRef = firebase.database().ref(`system/monitoring/status/${this.currentRoom}`);
+            this.statusRef.set({
+                live: true,
+                micOn: !!this.micReady,
+                sessionId: state.sessionId,
+                ts: firebase.database.ServerValue.TIMESTAMP
+            });
+            this.statusRef.onDisconnect().remove();  // 탭/PC 종료 시 자동 해제
+        } catch (e) { console.warn('[강의모니터링] 상태 송출 실패', e); }
+    },
+
+    _listenForCalls: function(room) {
+        if (this.callsRef) this.callsRef.off();
+        this.callsRef = firebase.database().ref(`system/monitoring/calls/${room}`);
+        this.callsRef.on('child_added', snap => this._handleListener(room, snap.key, snap.val()));
+        this.callsRef.on('child_changed', snap => this._handleListener(room, snap.key, snap.val()));
+        this.callsRef.on('child_removed', snap => this._closePeer(snap.key));
+    },
+
+    _handleListener: async function(room, listenerId, data) {
+        if (!data || !data.offer || this.peers[listenerId]) return;  // offer 있고, 아직 처리 안 한 것만
+
+        const callBase = firebase.database().ref(`system/monitoring/calls/${room}/${listenerId}`);
+
+        // 마이크가 없으면 오류 플래그만 남기고 종료
+        if (!this.stream || !this.micReady) {
+            await this.requestMic();
+            if (!this.stream || !this.micReady) {
+                callBase.child('error').set('no-mic');
+                return;
+            }
+        }
+
+        const pc = new RTCPeerConnection(this.ICE);
+        this.peers[listenerId] = { pc, callBase };
+
+        // 이 PC 마이크 트랙 추가
+        this.stream.getTracks().forEach(t => pc.addTrack(t, this.stream));
+
+        pc.onicecandidate = ev => {
+            if (ev.candidate) callBase.child('broadcasterCandidates').push(ev.candidate.toJSON());
+        };
+        pc.onconnectionstatechange = () => {
+            if (['failed', 'closed', 'disconnected'].includes(pc.connectionState)) this._closePeer(listenerId);
+        };
+        // 리스너 ICE 수신
+        callBase.child('listenerCandidates').on('child_added', async s => {
+            const c = s.val(); if (!c) return;
+            try { await pc.addIceCandidate(new RTCIceCandidate(c)); } catch (e) { console.warn('[강의모니터링] ICE 추가 실패', e); }
+        });
+
+        try {
+            await pc.setRemoteDescription(new RTCSessionDescription(data.offer));
+            const answer = await pc.createAnswer();
+            await pc.setLocalDescription(answer);
+            await callBase.child('answer').set({ type: answer.type, sdp: answer.sdp });
+        } catch (e) {
+            console.error('[강의모니터링] answer 생성 실패', e);
+            this._closePeer(listenerId);
+        }
+    },
+
+    _closePeer: function(listenerId) {
+        const p = this.peers[listenerId];
+        if (!p) return;
+        try { if (p.callBase) p.callBase.child('listenerCandidates').off(); } catch (e) {}
+        try { if (p.pc) p.pc.close(); } catch (e) {}
+        delete this.peers[listenerId];
+    },
+
+    _teardownRoom: function() {
+        Object.keys(this.peers).forEach(id => this._closePeer(id));
+        if (this.callsRef) { try { this.callsRef.off(); } catch (e) {} this.callsRef = null; }
+        if (this.statusRef) { try { this.statusRef.onDisconnect().cancel(); this.statusRef.remove(); } catch (e) {} this.statusRef = null; }
+        if (this.hbTimer) { clearInterval(this.hbTimer); this.hbTimer = null; }
+        this.currentRoom = null;
+    }
+};
+
 // 파일 맨 아래 window.onload 부분도 이렇게 깔끔하게 바꿔야 실시간이 작동합니다!
 window.onload = function() { 
     dataMgr.checkMobile(); 
@@ -6934,6 +7098,8 @@ window.onload = function() {
     guideMgr.init();
     ui.startHeaderClock(); // 헤더 날짜/시간 시계 시작
     dataMgr.initSystem(); 
+    // [강의 모니터링] 플랫폼이 켜지면 마이크를 자동 확보 (최초 1회만 권한 팝업, HTTPS에선 이후 기억됨)
+    setTimeout(function(){ try { lectureMonitor.requestMic(); } catch (e) {} }, 1500);
 };
 
 
