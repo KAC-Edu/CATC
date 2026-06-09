@@ -1391,31 +1391,12 @@ body.pc-mode .entry-box:hover, body.pc-mode .entry-box-tablet:hover {
         height: 100dvh !important;
         max-height: 100dvh !important;
         border-radius: 0 !important;
-        margin: 0 !important;
     }
-    #annualPlanModalCoord {
-        padding: 0 !important;
-        align-items: flex-start !important;
-    }
-    #annualPlanEditorAreaCoord {
-        font-size: 11px;
-    }
-    #annualPlanEditorAreaCoord table {
-        min-width: 700px;
-    }
+    #annualPlanModalCoord { padding: 0 !important; align-items: flex-start !important; }
+    #annualPlanEditorAreaCoord { font-size: 11px; }
+    #annualPlanEditorAreaCoord table { min-width: 660px; }
     #annualPlanEditorAreaCoord input,
-    #annualPlanEditorAreaCoord select {
-        font-size: 12px !important;
-        padding: 4px !important;
-    }
-    /* 모달 하단 버튼 세로 배치 */
-    #annualPlanModalCoord > div > div:last-child {
-        flex-direction: column !important;
-    }
-    #annualPlanModalCoord .navy-btn {
-        width: 100% !important;
-        justify-content: center;
-    }
+    #annualPlanEditorAreaCoord select { font-size: 12px !important; padding: 4px !important; }
 }
 </style>
 </head>
@@ -1610,7 +1591,7 @@ body.pc-mode .entry-box:hover, body.pc-mode .entry-box-tablet:hover {
             <div class="chip-ic"><i class="fa-solid fa-bus"></i></div>
             <div class="chip-body">
                 <div class="chip-val"><span id="g-shuttle-count">0</span><small>명</small></div>
-                <div class="chip-label">교육생 퇴교</div>
+                <div class="chip-label">퇴교차량신청</div>
             </div>
         </div>
 
@@ -2890,7 +2871,7 @@ function updateIndividualView() {
         const leaders = Object.values(room.students).filter(s => s.isLeader === true);
         if (leaders.length > 0) {
             leaderTxt = leaders.map(l => {
-                const raw = l.leaderPhone || l.phone || '';
+                const raw = l.leaderPhone || '';
                 const displayPhone = raw ? formatPhone(raw) : '연락처 미등록';
                 return `${l.name}  ${displayPhone}`;
             }).join('  /  ');
@@ -2899,21 +2880,20 @@ function updateIndividualView() {
     const leaderEl = document.getElementById('ind-leader');
     if (leaderEl) leaderEl.innerText = leaderTxt;
 
-    // 4. 외출/외박 신청 명단 렌더링 (당일 09:00 ~ 익일 09:00 범위 신청만 표시)
+    // 4. 외출/외박 신청 명단 렌더링 (당일 09:00 ~ 익일 09:00 범위만 표시)
     const actionTbody = document.getElementById('indActionTableBody');
     actionTbody.innerHTML = "";
 
-    // 당일 09:00 타임스탬프와 익일 09:00 타임스탬프 계산
+    // 당일 09:00 ~ 익일 09:00 타임스탬프 계산
     const _now = new Date();
     const _today0900 = new Date(_now.getFullYear(), _now.getMonth(), _now.getDate(), 9, 0, 0, 0).getTime();
-    const _tmrw0900  = _today0900 + 24 * 60 * 60 * 1000; // 익일 09:00
+    const _tmrw0900  = _today0900 + 24 * 60 * 60 * 1000;
     const _todayStr  = _now.toISOString().slice(0, 10);
     const _ydayDate  = new Date(_now.getFullYear(), _now.getMonth(), _now.getDate() - 1);
     const _ydayStr   = _ydayDate.toISOString().slice(0, 10);
 
     let actionItems = [];
     if (room.admin_actions) {
-        // 오늘 + 어제 날짜 키만 탐색 (익일 09:00 이전 신청 포함 위해)
         [_ydayStr, _todayStr].forEach(date => {
             if (date < startDate || date > endDate) return;
             const dayActions = room.admin_actions[date];
@@ -2923,7 +2903,6 @@ function updateIndividualView() {
                 if (!item) return;
                 if (item.type !== 'outing' && item.type !== 'overnight' && item.type !== 'group_outing') return;
                 const ts = Number(item.timestamp || 0);
-                // 당일 09:00 ~ 익일 09:00 범위만 표시
                 if (ts >= _today0900 && ts < _tmrw0900) {
                     actionItems.push({ ...item, token: token, date: date });
                 }
@@ -5319,7 +5298,7 @@ async function saveGlobalNotice() {
 
 <!-- ══ 연간계획 편집 모달 (교육운영부) ══ -->
 <div id="annualPlanModalCoord" class="setup-modal" style="z-index:14000;">
-    <div class="setup-box" style="max-width:1100px; width:96%; max-height:90vh; display:flex; flex-direction:column; overflow:hidden;">
+    <div class="setup-box" style="max-width:1100px; width:96%; max-height:88vh; display:flex; flex-direction:column;">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
             <h3 style="margin:0; color:var(--navy-dark);"><i class="fa-solid fa-calendar-check"></i> 연간 교육운영계획 편집기</h3>
             <i class="fa-solid fa-xmark" style="cursor:pointer; font-size:22px;" onclick="document.getElementById('annualPlanModalCoord').style.display='none'"></i>
@@ -5469,8 +5448,8 @@ const annualPlanMgrCoord = {
             return;
         }
         const th = "padding:8px 6px; border:1px solid var(--border-blue); font-size:12px; white-space:nowrap;";
-        const td = "padding:3px; border:1px solid var(--border-blue);";
-        const inp = "width:100%; border:1px solid transparent; background:transparent; padding:5px 6px; font-size:13px; box-sizing:border-box; color:var(--navy-dark); min-width:60px;";
+        const td = "padding:4px; border:1px solid var(--border-blue);";
+        const inp = "width:100%; border:1px solid transparent; background:transparent; padding:6px; font-size:13px; box-sizing:border-box; color:var(--navy-dark);";
         // 행 배경색 분류
         const _t = new Date().toISOString().slice(0,10);
         const _mondayOf = (ds) => { const d=new Date(ds+'T00:00:00Z'); const dow=(d.getUTCDay()+6)%7; d.setUTCDate(d.getUTCDate()-dow); return d.toISOString().slice(0,10); };
@@ -5493,14 +5472,14 @@ const annualPlanMgrCoord = {
         </div>
         <table style="width:100%; border-collapse:collapse;">
             <thead style="position:sticky; top:37px; background:#f8fafc; z-index:10;"><tr>
-                <th style="${th} width:36px;">No</th>
-                <th style="${th} min-width:160px;">과정명</th>
-                <th style="${th} width:120px;">시작일</th>
-                <th style="${th} width:120px;">종료일</th>
-                <th style="${th} width:80px;">담임교수</th>
-                <th style="${th} width:80px;">운영담당</th>
+                <th style="${th} width:46px;">No</th>
+                <th style="${th} min-width:200px;">과정명</th>
+                <th style="${th} width:140px;">시작일</th>
+                <th style="${th} width:140px;">종료일</th>
+                <th style="${th} width:100px;">담임교수</th>
+                <th style="${th} width:110px;">운영담당</th>
                 <th style="${th} min-width:150px;">강의실 위치</th>
-                <th style="${th} width:36px;">삭제</th>
+                <th style="${th} width:46px;">삭제</th>
             </tr></thead><tbody>`;
         const _td2 = new Date().toISOString().slice(0,10);
         // 스크롤 대상: 진행 중 → 없으면 다가오는(미래 시작) 과정 중 가장 빠른 것
@@ -6111,40 +6090,31 @@ async function coordHandleRosterFile(ev) {
 }
 
 async function coordSaveRoster() {
-    // ── 저장된 명단 삭제 ──────────────────────────────────────────
-    if (typeof window._coordDeleteSavedRosterDefined === 'undefined') {
-    window._coordDeleteSavedRosterDefined = true;
+    // ── 저장된 명단 삭제 함수 ──
     window.coordDeleteSavedRoster = async function() {
-        if (!currentRID || !globalAllData[currentRID]) {
-            alert('삭제할 과정을 먼저 선택해주세요.'); return;
-        }
+        if (!currentRID) { alert('과정을 먼저 선택해주세요.'); return; }
         const ctx = _coordRosterContext();
         if (!ctx) { alert('과정 정보를 찾을 수 없습니다.'); return; }
         const { courseName, rosterKey } = ctx;
-        // 현재 저장된 명단 확인
         const snap = await firebase.database().ref(`courses/${currentRID}/coordRoster`).once('value');
         const existing = snap.val();
         if (!existing || !existing.list || !existing.list.length) {
             alert(`[${courseName}]에 저장된 명단이 없습니다.`); return;
         }
-        const cnt = existing.list.length;
-        if (!confirm(`[${courseName}] 저장된 명단 ${cnt}명을 전부 삭제하시겠습니까?\n\n교육지원부 생활관 배정에 공유된 명단도 함께 삭제됩니다.\n이 작업은 되돌릴 수 없습니다.`)) return;
+        if (!confirm(`[${courseName}] 저장된 명단 ${existing.list.length}명을 삭제하시겠습니까?\n교육지원부 공유 명단도 함께 삭제됩니다.`)) return;
         try {
             await firebase.database().ref(`courses/${currentRID}/coordRoster`).remove();
             await firebase.database().ref(`system/coord/rosters/${rosterKey}`).remove().catch(()=>{});
             _coordRosterData = [];
             const tbody = document.getElementById('coordRosterBody');
-            if (tbody) tbody.innerHTML = '<tr><td colspan="5" style="padding:24px; text-align:center; color:#94a3b8;">명단이 삭제되었습니다.</td></tr>';
+            if (tbody) tbody.innerHTML = '<tr><td colspan="5" style="padding:24px;text-align:center;color:#94a3b8;">명단이 삭제되었습니다.</td></tr>';
             const cntEl = document.getElementById('coordRosterCount');
             if (cntEl) cntEl.textContent = '총 0명';
             const statusEl = document.getElementById('coordRosterStatus');
             if (statusEl) statusEl.textContent = '✅ 명단 삭제 완료';
-            const sharedBox = document.getElementById('coordRosterSharedBox');
-            if (sharedBox) sharedBox.innerHTML = '저장된 명단이 없습니다.';
-            alert(`✅ [${courseName}] 명단 ${cnt}명이 삭제되었습니다.`);
+            alert(`✅ [${courseName}] 명단이 삭제되었습니다.`);
         } catch(e) { alert('삭제 실패: ' + e.message); }
     };
-    }
 
     if (!_coordRosterData.length) { alert('저장할 명단이 없습니다'); return; }
     if (!currentRID || !globalAllData[currentRID]) {

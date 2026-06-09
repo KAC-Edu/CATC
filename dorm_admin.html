@@ -1612,11 +1612,13 @@
                 const meta = dormRosterMeta[rk] || {};
                 // 아직 지원부가 반영하지 않은(또는 더 최신인) 교육운영부 명단 → '신규/변경'
                 const coordPending = coord && (Number(coord.updatedAt || 0) > Number(meta.coordUpdatedAt || 0));
+                const _safeRk = rk.replace(/'/g,'&#39;');
+                const _safeCn = (it.courseName||'').replace(/'/g,'&#39;').replace(/"/g,'&quot;');
                 const coordBadge = coord
                     ? `<span class="course-coord ${coordPending ? 'pending' : 'applied'}" title="교육운영부에서 공유한 명단입니다${coordPending ? ' (아직 생활관 명단에 반영되지 않음)' : ' (반영됨)'}">
                             <i class="fa-solid fa-user-tie"></i> 교육운영부 ${(coord.list || []).length}명${coordPending ? ' · 신규' : ''}
                        </span>
-                       <span onclick='event.stopPropagation(); deleteCoordRoster("${rk}", "${it.courseName.replace(/"/g,"&quot;")}")' title="교육운영부 공유 명단 삭제" style="flex-shrink:0; width:28px; height:28px; display:inline-flex; align-items:center; justify-content:center; border-radius:7px; background:#fef3c7; color:#92400e; cursor:pointer; font-size:12px; margin-left:2px;"><i class="fa-solid fa-trash-can"></i></span>`
+                       <span data-rk="${_safeRk}" data-cn="${_safeCn}" onclick='event.stopPropagation(); deleteCoordRoster(this.dataset.rk, this.dataset.cn, "${it.room||""}")' title="교육운영부 공유 명단 삭제" style="flex-shrink:0;width:28px;height:28px;display:inline-flex;align-items:center;justify-content:center;border-radius:7px;background:#fef3c7;color:#92400e;cursor:pointer;font-size:12px;margin-left:2px;"><i class="fa-solid fa-trash-can"></i></span>`
                     : '';
                 html += `
                     <div class="course-row ${sel ? 'sel' : ''} ${enrolled ? 'enrolled' : ''} ${coordPending ? 'coord-pending' : ''}" data-room="${it.room}" data-week="${it.weekKey}" onclick='selectCourse(${JSON.stringify(it).replace(/'/g, "&#39;")})'>
@@ -2826,6 +2828,7 @@
             const btn = document.getElementById('draftConfirmBtn');
             if (btn) { btn.disabled = true; btn.innerText = '저장 중…'; }
 
+            _showAssignLoading('결과 저장 중…', 85);
             db.ref(`system/dorm/assignments/${wk}`).set(cleanFirebaseValue(payload))
                 .then(() => {
                     _draftPayload = null;
@@ -2861,10 +2864,10 @@
                 <div style="font-size:52px;margin-bottom:12px;">✅</div>
                 <div style="font-size:20px;font-weight:900;color:#0f172a;margin-bottom:8px;">자동 배정 완료!</div>
                 <div style="font-size:15px;color:#334155;margin-bottom:6px;">총 <b>${totalAssigned}명</b> / ${totalPeople}명 배정</div>
-                ${totalAssigned < totalPeople ? `<div style="font-size:13px;color:#dc2626;margin-bottom:6px;">⚠️ 미배정 ${totalPeople - totalAssigned}명 — 방 용량을 확인하세요.</div>` : ''}
+                ${totalAssigned < totalPeople ? '<div style="font-size:13px;color:#dc2626;margin-bottom:6px;">⚠️ 미배정 '+(totalPeople-totalAssigned)+'명 — 방 용량을 확인하세요.</div>' : ''}
                 <div style="font-size:13px;color:#64748b;margin-bottom:20px;">${wk} 주간 배정 결과가 저장되었습니다.</div>
-                <button onclick="this.closest('div[style]').remove(); goStep(4);" style="width:100%;padding:14px;background:#2563eb;color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:900;cursor:pointer;">배치 현황 보기</button>
-                <button onclick="this.closest('div[style]').remove();" style="width:100%;margin-top:10px;padding:12px;background:#f1f5f9;color:#64748b;border:none;border-radius:12px;font-size:14px;font-weight:800;cursor:pointer;">닫기</button>
+                <button onclick="this.closest('div').parentNode.remove();goStep(4);" style="width:100%;padding:14px;background:#2563eb;color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:900;cursor:pointer;">배치 현황 보기</button>
+                <button onclick="this.closest('div').parentNode.remove();" style="width:100%;margin-top:10px;padding:12px;background:#f1f5f9;color:#64748b;border:none;border-radius:12px;font-size:14px;font-weight:800;cursor:pointer;">닫기</button>
             </div>`;
             document.body.appendChild(modal);
         }
@@ -2876,11 +2879,11 @@
             await refreshWeekRostersFromDb(wk);
             await loadHiddenCourses();
             renderWeekRosterList();
-            _showAssignLoading('방 정보 로드 중…', 25);
             if (!Object.keys(rooms).length) {
                 const rs = await db.ref('system/dorm/rooms').once('value');
                 rooms = rs.val() || {};
             }
+            _showAssignLoading('방 정보 로드 중…', 25);
             if (!Object.keys(rooms).length) { _hideAssignLoading(); showToast('STEP 1에서 방을 먼저 설정하세요'); return; }
             if (!Object.keys(weekRosters).length) {
                 await clearCourseAssignmentsForWeek(wk);
@@ -2894,8 +2897,8 @@
             );
             if (!Object.keys(activeRosters).length) { showToast('배정할 과정이 없습니다. 하나 이상 선택하세요'); return; }
 
-            _showAssignLoading('배정 알고리즘 실행 중…', 50);
             // ══ 공통 준비 ══
+            _showAssignLoading('배정 알고리즘 실행 중…', 50);
             const log = [];
             const unassignedList = [];
             const courseStats = [];
@@ -3180,7 +3183,6 @@
                 if (!confirm('이미 배정 결과가 있습니다. 덮어쓸까요?\n(수동으로 이동·추가·삭제한 내용이 사라집니다)')) return;
             }
 
-            _showAssignLoading('결과 저장 중…', 85);
             db.ref(`system/dorm/assignments/${wk}`).set(cleanFirebaseValue(payload))
                 .then(() => {
                     const pct = totalPeople ? Math.round(totalAssigned / totalPeople * 100) : 0;
@@ -3581,7 +3583,8 @@
                 : (viewAssign ? viewAssign.weekKey : null);
             if (!wk) { showToast(_instCtx === 'reserve' ? '먼저 배정할 주차를 선택하세요' : '먼저 주차를 선택하세요'); return; }
             _instWk = wk;
-            if (!Object.keys(rooms).length) { showToast('STEP 1에서 방을 먼저 설정하세요'); return; }
+            _showAssignLoading('방 정보 로드 중…', 25);
+            if (!Object.keys(rooms).length) { _hideAssignLoading(); showToast('STEP 1에서 방을 먼저 설정하세요'); return; }
             const _occ = await _roomOccByWeek(wk);
             document.getElementById('instRoom').innerHTML = _availRoomOptions(_occ) || '<option value="">(빈 방 없음)</option>';
             document.getElementById('instName').value = '';
@@ -3621,7 +3624,8 @@
         // 교육생 추가 (현재 배정 중인 과정 선택 → 성명/사번/성별 → 빈 방 배정)
         async function openStudentAdd() {
             if (!viewAssign || !viewAssign.weekKey) { showToast('먼저 주차를 선택하세요'); return; }
-            if (!Object.keys(rooms).length) { showToast('STEP 1에서 방을 먼저 설정하세요'); return; }
+            _showAssignLoading('방 정보 로드 중…', 25);
+            if (!Object.keys(rooms).length) { _hideAssignLoading(); showToast('STEP 1에서 방을 먼저 설정하세요'); return; }
             const wk = viewAssign.weekKey;
             const courses = (viewAssign.courses || []).map(c => c.courseName).filter(Boolean);
             if (!courses.length) { showToast('이 주차에 배정 중인 과정이 없습니다'); return; }
@@ -3874,18 +3878,15 @@
             return removed > 0;
         }
 
-        async function deleteCoordRoster(rk, courseName) {
-            if (!confirm(`[${courseName}]의 교육운영부 공유 명단을 삭제합니다.\n삭제 후 자동배정에 반영된 인원은 현황/출력에서도 제거됩니다.\n계속할까요?`)) return;
-            // rk = weekKey__room 형식
-            const parts = rk.split('__');
-            const room = parts[1];
+        async function deleteCoordRoster(rk, courseName, room) {
+            if (!confirm(`[${courseName}]의 교육운영부 공유 명단을 삭제합니다.\n생활관 자동배정에서도 제거됩니다. 계속할까요?`)) return;
             try {
-                if (room) await db.ref(`courses/${room}/coordRoster`).remove();
+                if (room) await db.ref(`courses/${room}/coordRoster`).remove().catch(()=>{});
                 await db.ref(`system/coord/rosters/${rk}`).remove().catch(()=>{});
-                delete coordRosters[rk];
+                if (typeof coordRosters !== 'undefined') delete coordRosters[rk];
                 showToast(`✅ [${courseName}] 교육운영부 명단 삭제 완료`);
                 renderCourseList();
-            } catch(e) { console.error(e); showToast('❌ 삭제 실패'); }
+            } catch(e) { showToast('❌ 삭제 실패: ' + e.message); }
         }
 
         async function deleteRoster(it) {
@@ -4168,14 +4169,14 @@
             const doc = f.contentWindow.document;
             doc.open();
             doc.write(_docHead(fileName) + (extraCss || '') + bodyHtml + '
-        <!-- ── 자동배정 로딩 오버레이 ── -->
-        <div id="assignLoadingOverlay" style="display:none; position:fixed; inset:0; z-index:99999; background:rgba(15,23,42,0.72); align-items:center; justify-content:center; flex-direction:column; gap:20px;">
-            <div style="background:#fff; border-radius:20px; padding:36px 44px; text-align:center; box-shadow:0 20px 60px rgba(0,0,0,0.35); min-width:280px;">
-                <div style="font-size:48px; margin-bottom:14px;">🏨</div>
-                <div style="font-size:18px; font-weight:900; color:#0f172a; margin-bottom:8px;">자동 배정 중…</div>
-                <div style="font-size:14px; color:#64748b; margin-bottom:20px;" id="assignLoadingMsg">생활관 방을 배정하고 있습니다.</div>
-                <div style="width:200px; height:6px; background:#e2e8f0; border-radius:99px; margin:0 auto; overflow:hidden;">
-                    <div id="assignLoadingBar" style="height:100%; width:0%; background:linear-gradient(90deg,#2563eb,#7c3aed); border-radius:99px; transition:width .4s;"></div>
+        <!-- 자동배정 로딩 오버레이 -->
+        <div id="assignLoadingOverlay" style="display:none;position:fixed;inset:0;z-index:99999;background:rgba(15,23,42,0.72);align-items:center;justify-content:center;flex-direction:column;">
+            <div style="background:#fff;border-radius:20px;padding:36px 44px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,0.35);min-width:280px;">
+                <div style="font-size:48px;margin-bottom:14px;">🏨</div>
+                <div style="font-size:18px;font-weight:900;color:#0f172a;margin-bottom:8px;">자동 배정 중…</div>
+                <div style="font-size:14px;color:#64748b;margin-bottom:20px;" id="assignLoadingMsg">생활관 방을 배정하고 있습니다.</div>
+                <div style="width:200px;height:6px;background:#e2e8f0;border-radius:99px;margin:0 auto;overflow:hidden;">
+                    <div id="assignLoadingBar" style="height:100%;width:0%;background:linear-gradient(90deg,#2563eb,#7c3aed);border-radius:99px;transition:width .4s;"></div>
                 </div>
             </div>
         </div>
@@ -4329,22 +4330,20 @@
                         <div class="legend" style="flex:1;margin:0;">${_legendHtml(P)}</div>
                         ${photo ? `<div style="flex-shrink:0;"><img src="${photo}" alt="${b}" style="width:190px;height:124px;object-fit:cover;border-radius:9px;border:1.5px solid #e2e8f0;" onerror="this.parentNode.style.display='none'"></div>` : ''}
                     </div>`;
-                // A4 세로 기준 헤더/범례 영역 제외 가용 행 수 계산 (1페이지는 범례 때문에 더 적음)
-                const PAGE1_ROWS = 15;  // 1페이지: 헤더+범례+사진 공간 고려
-                const PAGE_N_ROWS = 22; // 이후 페이지: 헤더만 반복
+                // 동적 페이지 분배: 1페이지(범례+사진)는 행이 적고 이후 페이지는 더 많이
+                const PAGE1_ROWS = 15;
+                const PAGE_N_ROWS = 22;
                 const chunks = [];
                 if (rows.length <= PAGE1_ROWS) {
                     chunks.push(rows);
                 } else {
                     chunks.push(rows.slice(0, PAGE1_ROWS));
-                    for (let i = PAGE1_ROWS; i < rows.length; i += PAGE_N_ROWS) {
-                        chunks.push(rows.slice(i, i + PAGE_N_ROWS));
-                    }
+                    for (let i = PAGE1_ROWS; i < rows.length; i += PAGE_N_ROWS) chunks.push(rows.slice(i, i + PAGE_N_ROWS));
                 }
                 return chunks.map((chunk, pi) => `<div${(bi>0 || pi>0) ? ' style="page-break-before:always;"' : ''}>
                     <table class="list" style="margin-top:0;">
                     <thead>
-                        <tr><td colspan="6" class="pf-listtop">${pi === 0 ? topHtml : _legendHtml(P)}</td></tr>
+                        <tr><td colspan="6" class="pf-listtop">${topHtml}</td></tr>
                         <tr><th class="bldg-bar" colspan="6" style="background:${bar};">\ud83c\udfe2 ${b}<span class="bbar-cnt">\u00b7 ${cnt}\uba85${chunks.length > 1 ? ` · ${pi + 1}/${chunks.length}페이지` : ''}</span></th></tr>
                         <tr><th style="width:120px;">호실</th><th>성명</th><th>사번</th><th>소속</th><th>성별</th><th>과정</th></tr>
                     </thead>

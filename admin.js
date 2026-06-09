@@ -7108,7 +7108,12 @@ const lectureMonitor = {
             this.stopMic(true);
             ui.showAlert('강의 음성 모니터링 마이크를 껐습니다.');
         } else {
-            await this.requestMic();
+            // 버튼 클릭 시: 동의를 이미 받았으면 바로 켜고, 아니면 동의 모달 표시
+            if (this._hasSessionConsent()) {
+                await this.requestMic();
+            } else {
+                this._askConsent(this.currentRoom);
+            }
         }
     },
     stopMic: function(keepRoom) {
@@ -7160,15 +7165,7 @@ const lectureMonitor = {
             this._listenForCalls(room);
             if (!this.hbTimer) this.hbTimer = setInterval(() => this._publishStatus(), 20000);
             this._updateToggleButton();
-            // 마이크가 아직 없으면 '이 강의실' 모니터링 동의를 받음 (방마다 1회)
-            if (!this.micReady) {
-                if (this._hasSessionConsent()) {
-                    this._consentRoomAsked = room;
-                    this.requestMic();
-                } else {
-                    this._askConsent(room);
-                }
-            }
+            // [수정] 마이크는 버튼 클릭 시에만 활성화 - 자동 활성화 제거
         } else {
             if (this.currentRoom || this.stream || this.micReady) this.stopMic(false);
             else this._updateToggleButton();
