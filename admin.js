@@ -1,3 +1,14 @@
+/* ============================================================
+   CATC · 강사 플랫폼 로직  (admin.js)
+   @version  A
+   @build    20260610-220210
+   ------------------------------------------------------------
+   [코드 수정 규칙 · AI/개발자 공통]
+   이 파일을 고치면 @version 을 A -> B -> ... -> Z -> A1 -> B1 ...
+   순으로 1단계 올리고, @build 를 수정 시각으로 갱신할 것.
+   적용 여부는 브라우저 콘솔 로그(vA)로 확인한다.
+============================================================ */
+try{console.log('%cCATC%c 강사 플랫폼 로직 (admin.js) %cvA%c build 20260610-220210','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}
 /* --- admin.js (Final Integrated Version - Fixed Syntax & Logic) --- */
 
 // --- [기본 데이터] 20문항 ---

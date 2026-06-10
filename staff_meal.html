@@ -1,6 +1,20 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
+<!-- ============================================================
+  CATC · 직원 식사 체크인  (staff_meal.html)
+  @version  A
+  @build    20260610-220210
+  ────────────────────────────────────────────────────────
+  [코드 수정 규칙 · AI/개발자 공통]
+  이 파일을 한 글자라도 고치면:
+    1) 위 @version 을 다음 순서로 딱 1단계 올린다
+       A → B → C → … → Z → A1 → B1 → … → Z1 → A2 → …
+    2) @build 를 수정 시각(YYYYMMDD-HHMMSS)으로 갱신한다
+    3) 아래 화면 배지(vA)와 콘솔 로그의 글자도 같이 맞춘다
+  화면 우측 하단의 작은 'v?' 배지 / 콘솔 로그를 보고
+  Shift+Ctrl+R(강력 새로고침) 후 최신본 적용 여부를 확인한다.
+============================================================ -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>KAC 식당 식사 체크인</title>
@@ -204,5 +218,9 @@ function resetProfile() {
     showRegisterForm();
 }
 </script>
+<!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
+<style>@media print{#__catcVer{display:none!important}}</style>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vA</div>
+<script>try{console.log('%cCATC%c 직원 식사 체크인 (staff_meal.html) %cvA%c build 20260610-220210','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}</script>
 </body>
 </html>
