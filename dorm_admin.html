@@ -3397,15 +3397,19 @@
             renderBoard();
         }
 
-        async function renderBoard() {
+        async function renderBoard(skipReload) {
             const wk = document.getElementById('viewWeekSelect').value;
             if (!wk) return;
             // 방 마스터도 최신 로드
             if (!Object.keys(rooms).length) {
                 const rs = await db.ref('system/dorm/rooms').once('value'); rooms = rs.val() || {};
             }
-            const snap = await db.ref(`system/dorm/assignments/${wk}`).once('value');
-            viewAssign = snap.val();
+            // skipReload=true면 방금 로컬에서 갱신한 viewAssign을 그대로 사용 (추가/삭제 직후 즉시 반영용)
+            if (!(skipReload && viewAssign && viewAssign.weekKey === wk)) {
+                const snap = await db.ref(`system/dorm/assignments/${wk}`).once('value');
+                viewAssign = snap.val();
+                if (viewAssign) viewAssign.weekKey = wk;   // skipReload 비교 및 추가/삭제 로직용
+            }
             if (!viewAssign || !viewAssign.students) {
                 document.getElementById('boardArea').innerHTML = `<div class="empty-floor">이 주차의 배정 결과가 없습니다.</div>`;
                 document.getElementById('boardStats').innerHTML = '';
@@ -3681,7 +3685,8 @@
                 .then(() => {
                     delete viewAssign.students[token];
                     showToast(`🗑️ ${s.name} 삭제 완료 - 자동배정에서도 제외됩니다`);
-                    renderBoardMap();
+                    if (typeof renderBoard === 'function') renderBoard(true);
+                    if (currentBoardTab === 'map' && typeof renderBoardMap === 'function') renderBoardMap();
                     if (typeof renderInstReserve === 'function' && document.getElementById('instReserveList')) renderInstReserve(wk);
                 })
                 .catch(e => { console.error(e); showToast('삭제 실패'); });
@@ -3798,10 +3803,13 @@
             try {
                 await db.ref(`system/dorm/assignments/${wk}/students/${token}`).update(rec);
                 await _clearDeletedMark(wk, name, empNo);
-                if (viewAssign && viewAssign.weekKey === wk) { if (!viewAssign.students) viewAssign.students = {}; viewAssign.students[token] = rec; }
+                if (!viewAssign) viewAssign = { weekKey: wk, students: {} };
+                viewAssign.weekKey = wk;
+                if (!viewAssign.students) viewAssign.students = {};
+                viewAssign.students[token] = rec;
                 closeStuPop();
                 showToast(`✅ ${name} 교육생 추가 (${dest.building} ${dest.no}호) - 현황/출력 및 PDF에 반영됩니다`);
-                if (typeof renderBoard === 'function') renderBoard();
+                if (typeof renderBoard === 'function') renderBoard(true);
                 if (currentBoardTab === 'map' && typeof renderBoardMap === 'function') renderBoardMap();
             } catch (e) { console.error(e); msg.innerText = '저장 실패'; }
         }
@@ -3845,8 +3853,13 @@
                 }
                 closeInstPop();
                 showToast(`✅ ${name} 강사 ${_instCtx === 'reserve' ? '사전배치' : '추가'} (${dest.building} ${dest.no}호)`);
-                if (_instCtx === 'reserve') renderInstReserve(wk);
-                else if (typeof renderBoardMap === 'function') renderBoardMap();
+                if (_instCtx === 'reserve') {
+                    renderInstReserve(wk);
+                } else {
+                    // 현황/출력에서 추가한 경우 리스트·배치도 모두 즉시 반영
+                    if (typeof renderBoard === 'function') renderBoard(true);
+                    if (currentBoardTab === 'map' && typeof renderBoardMap === 'function') renderBoardMap();
+                }
             } catch (e) { console.error(e); msg.innerText = '저장 실패'; }
         }
         // STEP3 강사 예약 목록
