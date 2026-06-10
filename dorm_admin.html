@@ -1942,9 +1942,22 @@
                 if (row) parsed.push(row);
             });
             // 외국인 과정 양식은 사번이 없고 성별(M/F)만 있는 경우가 많다.
+            //  연번(1~3자리)에서 시작해 가장 가까운 성별(M/F) 셀까지를 한 사람으로 자른다.
+            //  (slice를 고정 길이로 자르면 다음 줄의 '총계/당직 배정' 등이 섞여
+            //   헤더 제외 정규식에 걸려 마지막 인원이 통째로 누락되는 문제 방지)
+            const isGenderTok = v => /^(M|F|m|f)$/.test(v);
             arr.forEach((cell, idx) => {
                 if (!isSeq(cell)) return;
-                const slice = arr.slice(idx, Math.min(arr.length, idx + 10));
+                // 이 연번 다음에 나오는 첫 성별 셀 위치 찾기 (최대 9칸 내)
+                let gPos = -1;
+                for (let j = idx + 1; j < Math.min(arr.length, idx + 10); j++) {
+                    if (isGenderTok(arr[j])) { gPos = j; break; }
+                    // 다음 사람의 연번을 만나면 중단 (성별 없는 비정상 행)
+                    if (j > idx + 1 && isSeq(arr[j])) break;
+                }
+                // 성별 셀까지 포함해서 자름 (없으면 기존처럼 최대 10칸)
+                const end = gPos >= 0 ? gPos + 1 : Math.min(arr.length, idx + 10);
+                const slice = arr.slice(idx, end);
                 const row = parseRosterRow(slice);
                 if (row && !row.empNo) parsed.push(row);
             });
@@ -3655,6 +3668,7 @@
             document.getElementById('instMsg').innerText = '';
             const ttl = document.getElementById('instPopTitle');
             if (ttl) ttl.innerText = _instCtx === 'reserve' ? '강사 숙박 사전배치' : '강사·외부 숙박 추가';
+            _hideAssignLoading();
             document.getElementById('instPop').style.display = 'flex';
         }
         function closeInstPop() { document.getElementById('instPop').style.display = 'none'; }
@@ -3690,7 +3704,7 @@
             if (!Object.keys(rooms).length) { _hideAssignLoading(); showToast('STEP 1에서 방을 먼저 설정하세요'); return; }
             const wk = viewAssign.weekKey;
             const courses = (viewAssign.courses || []).map(c => c.courseName).filter(Boolean);
-            if (!courses.length) { showToast('이 주차에 배정 중인 과정이 없습니다'); return; }
+            if (!courses.length) { _hideAssignLoading(); showToast('이 주차에 배정 중인 과정이 없습니다'); return; }
             document.getElementById('stuCourse').innerHTML = courses.map(c => `<option value="${c}">${c}</option>`).join('');
             document.getElementById('stuName').value = '';
             document.getElementById('stuEmpNo').value = '';
@@ -3698,6 +3712,7 @@
             document.getElementById('stuMsg').innerText = '';
             const occ = await _roomOccByWeek(wk);
             document.getElementById('stuRoom').innerHTML = _availRoomOptions(occ) || '<option value="">(빈 방 없음)</option>';
+            _hideAssignLoading();
             document.getElementById('stuPop').style.display = 'flex';
         }
         function closeStuPop() { document.getElementById('stuPop').style.display = 'none'; }
