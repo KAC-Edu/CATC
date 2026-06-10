@@ -5024,6 +5024,45 @@ resetShuttleRequests: function() {
 
 // --- 4. Quiz Logic ---
 const quizMgr = {
+    // ── 브라우저 줌과 무관하게 퀴즈 화면을 항상 같은 비율로 고정 ──
+    //  원리: 브라우저 줌이 바뀌면 window.innerWidth(논리 px)가 변한다.
+    //  페이지가 처음 뜬 시점의 줌 상태에서의 기준폭을 100% 기준으로 삼고,
+    //  현재 줌으로 인한 폭 변화량만큼 퀴즈 화면을 역(逆)스케일해 항상 동일하게 보이게 한다.
+    _zoomFixBound: false,
+    _baseInnerWidth: 0,
+    applyZoomFix: function() {
+        const view = document.getElementById('view-quiz');
+        if (!view) return;
+        // 기준폭: outerWidth(브라우저 창 실제 픽셀폭)는 줌과 무관하게 거의 일정.
+        //  innerWidth/outerWidth 비율로 줌 배율을 추정한다. (스크롤바 오차 ±수십px 무시)
+        let zoom = 1;
+        if (window.outerWidth && window.innerWidth) {
+            // 줌 100%일 때 innerWidth ≈ outerWidth(창 테두리 제외).
+            //  줌 ↑ → innerWidth ↓ 이므로 배율 = 기준 / 현재
+            zoom = window.outerWidth / window.innerWidth;
+        }
+        // 보정 배율(역수): 줌이 1.25면 화면을 0.8배로 줄여 100% 기준 유지
+        // 단, 창 테두리/스크롤바로 인한 미세 오차 보정을 위해 흔한 줌 단계로 스냅
+        const steps = [0.5,0.67,0.75,0.8,0.9,1,1.1,1.25,1.5,1.75,2];
+        let snapped = steps.reduce((a,b)=> Math.abs(b-zoom)<Math.abs(a-zoom)?b:a, 1);
+        const inv = 1 / snapped;
+        if (Math.abs(inv - 1) < 0.03) {
+            view.style.zoom = '';     // 100%(±3%)면 보정 안 함
+        } else {
+            view.style.zoom = inv;
+        }
+        // 줌 변경(Ctrl +/-) 시 자동 재보정 (1회만 바인딩)
+        if (!this._zoomFixBound) {
+            this._zoomFixBound = true;
+            window.addEventListener('resize', () => {
+                const v = document.getElementById('view-quiz');
+                if (v && v.style.display !== 'none' && v.offsetParent !== null) {
+                    quizMgr.applyZoomFix();
+                }
+            });
+        }
+    },
+
 loadFile: function(e) {
         // [수정] 이벤트 객체에서 파일 입력창을 정확히 가져오도록 개선
         const fileInput = e.target; 
@@ -5239,6 +5278,7 @@ prevNext: function(d) {
     showQuiz: function() {
         const card = document.querySelector('.quiz-card');
         if(card) card.classList.remove('result-mode');
+        this.applyZoomFix();
         const q = state.quizList[state.currentQuizIdx];
         this.resetTimerUI(); 
         this.renderScreen(q);
@@ -5291,12 +5331,27 @@ renderScreen: function(q) {
             oDiv.style.display = 'flex';
             oDiv.innerHTML = "";
             q.options.forEach((o, i) => {
+                // O/X 모드: 맨 앞 O/X 기호는 크게, 괄호 설명은 작게 분리 표시
+                let optHtml;
+                if (q.isOX) {
+                    // "O (Yes, they do)" → mark="O", rest="(Yes, they do)"
+                    const m = String(o).match(/^\s*([OXox○✕])\s*(.*)$/);
+                    if (m) {
+                        const mark = m[1].toUpperCase();
+                        const rest = (m[2] || '').trim();
+                        optHtml = `<span class="ox-mark">${mark}</span>${rest ? `<span class="ox-rest">${rest}</span>` : ''}`;
+                    } else {
+                        optHtml = `<span class="ox-mark">${o}</span>`;
+                    }
+                } else {
+                    optHtml = o;
+                }
                 // opt-text-wrapper에 flex:1을 주어 우측 숫자를 끝으로 밀어내는 구조입니다.
                 oDiv.innerHTML += `
                     <div class="quiz-opt ${q.isOX ? 'ox-mode' : ''}" id="opt-${i+1}">
                         <div class="opt-text-wrapper">
                             ${q.isOX ? '' : `<div class="opt-num">${i+1}</div>`}
-                            <div class="opt-text">${o}</div>
+                            <div class="opt-text">${optHtml}</div>
                         </div>
                         <!-- 결과 숫자가 정렬되어 들어갈 자리 미리 생성 -->
                         <div class="opt-count-label" id="count-${i+1}"></div>

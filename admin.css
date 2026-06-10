@@ -323,7 +323,7 @@ body.night-mode .q-card.status-pin {
 }
 .quiz-opt.reveal-answer { border-color: #10b981; background: #ecfdf5; color: #065f46; transform: scale(1.02); box-shadow: 0 10px 25px rgba(16, 185, 129, 0.15); font-weight: 800; }
 .quiz-opt.reveal-answer .opt-num { background: #10b981; color: white; }
-.quiz-opt.ox-mode { flex: 1; min-height: 120px; font-size: 50px; justify-content: center; text-align: center; }
+.quiz-opt.ox-mode { flex: 1; min-height: 160px; font-size: 50px; justify-content: center; text-align: center; }
 .quiz-opt.ox-mode .opt-num { display: none; }
 .chart-area { display: none; width: 100%; height: 100%; flex-grow: 1; align-items: flex-end; justify-content: center; gap: 8%; padding-bottom: 20px; border-bottom: 2px solid #cbd5e1; margin-bottom: 20px; }
 .bar-wrapper { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; width: 100px; height: 100%; position: relative; }
@@ -3392,6 +3392,23 @@ body.night-mode .status-badge.status-arrived {
     font-weight: 900;
     text-align: center;
     padding-left: 0;
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    gap: 18px;
+    flex-wrap: wrap;
+}
+/* O/X 기호: 크게 */
+.quiz-opt.ox-mode .ox-mark {
+    font-size: 96px !important;
+    font-weight: 900;
+    line-height: 1;
+}
+/* O/X 뒤 설명: 작게 */
+.quiz-opt.ox-mode .ox-rest {
+    font-size: 30px !important;
+    font-weight: 700;
+    color: #475569;
 }
 
 .opt-result-bar {
