@@ -3,8 +3,8 @@
 <head>
 <!-- ============================================================
   CATC · 강사 플랫폼  (admin.html)
-  @version  D
-  @build    20260612-065019
+  @version  E
+  @build    20260612-065721
   ────────────────────────────────────────────────────────
   [코드 수정 규칙 · AI/개발자 공통]
   이 파일을 한 글자라도 고치면:
@@ -74,19 +74,10 @@
         <span id="bgmNowBubbleText" style="font-size:14px; font-weight:900;">배경음 재생 중</span>
         <button onclick="bgmPlayer.togglePanel()" style="margin-left:auto; background:rgba(255,255,255,0.25); border:none; color:#fff; cursor:pointer; width:24px; height:24px; border-radius:50%; font-size:13px; line-height:1;">✕</button>
     </div>
-    <!-- 컨트롤 버튼들 -->
+    <!-- 컨트롤: 배경음 켜기/끄기 토글 (켜면 무작위로 끊김없이 계속 재생) -->
     <div style="display:flex; align-items:center; gap:7px; width:100%;">
-        <button onclick="bgmPlayer.playRandom()" style="flex:1; height:36px; background:#fff; color:#ea580c; border:none; border-radius:10px; font-size:13px; font-weight:900; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px;">
-            <i class="fa-solid fa-shuffle"></i> 랜덤
-        </button>
-        <button onclick="bgmPlayer.pause()" title="일시정지" style="height:36px; width:40px; background:rgba(255,255,255,0.22); color:#fff; border:1.5px solid rgba(255,255,255,0.5); border-radius:10px; cursor:pointer; display:flex; align-items:center; justify-content:center;">
-            <i class="fa-solid fa-pause"></i>
-        </button>
-        <button onclick="bgmPlayer.play()" title="재생" style="height:36px; width:40px; background:rgba(255,255,255,0.22); color:#fff; border:1.5px solid rgba(255,255,255,0.5); border-radius:10px; cursor:pointer; display:flex; align-items:center; justify-content:center;">
-            <i class="fa-solid fa-play"></i>
-        </button>
-        <button onclick="bgmPlayer.stop()" title="정지" style="height:36px; width:40px; background:rgba(255,255,255,0.22); color:#fff; border:1.5px solid rgba(255,255,255,0.5); border-radius:10px; cursor:pointer; display:flex; align-items:center; justify-content:center;">
-            <i class="fa-solid fa-stop"></i>
+        <button id="bgmToggleBtn" onclick="bgmPlayer.toggleBgm()" style="flex:1; height:36px; background:#fff; color:#ea580c; border:none; border-radius:10px; font-size:13px; font-weight:900; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px;">
+            <i id="bgmToggleIcon" class="fa-solid fa-music"></i> <span id="bgmToggleLabel">배경음 켜기</span>
         </button>
     </div>
     <!-- 볼륨 -->
@@ -306,6 +297,7 @@
                         <i class="fa-solid fa-chevron-down" id="familyChevron" style="font-size:11px; transition:transform 0.2s;"></i>
                     </button>
                     <div id="familySiteMenu" class="family-site-menu-inline" style="display:none;">
+                        <a href="https://www.airport.co.kr/kcaa/index.do" target="_blank" rel="noopener"><i class="fa-solid fa-building-columns"></i> 항공기술훈련원 (KCAA)</a>
                         <a href="javascript:void(0)" onclick="ui.goFamilySite('coord', 'admin_coord.html')"><i class="fa-solid fa-user-tie"></i> 교육운영부 (행정)</a>
                         <a href="javascript:void(0)" onclick="ui.goFamilySite('support', 'dorm_admin.html')"><i class="fa-solid fa-bed"></i> 교육지원부 (생활관 배정)</a>
                         <a href="javascript:void(0)" onclick="ui.goFamilySite('driver', 'driver.html')"><i class="fa-solid fa-bus"></i> 기사 전용 (수송)</a>
@@ -2269,7 +2261,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
 <style>@media print{#__catcVer{display:none!important}}</style>
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vD</div>
-<script>try{console.log('%cCATC%c 강사 플랫폼 (admin.html) %cvD%c build 20260612-065019','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}</script>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vE</div>
+<script>try{console.log('%cCATC%c 강사 플랫폼 (admin.html) %cvE%c build 20260612-065721','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}</script>
 </body>
 </html>

@@ -1,7 +1,7 @@
 /* ============================================================
    CATC · 강사 플랫폼 로직  (admin.js)
-   @version  C
-   @build    20260612-065019
+   @version  D
+   @build    20260612-065721
    ------------------------------------------------------------
    [코드 수정 규칙 · AI/개발자 공통]
    이 파일을 고치면 @version 을 A -> B -> ... -> Z -> A1 -> B1 ...
@@ -7733,8 +7733,20 @@ const bgmPlayer = {
         let num;
         do {
             num = pool[Math.floor(Math.random() * pool.length)];
-        } while (num === this._prevNum);
+        } while (num === this._currentNum);   // 현재(방금) 곡과 다르게 → 연속 중복 방지
         return num;
+    },
+
+    // 배경음 켜기/끄기 토글 (켜면 무작위로 끊김없이 계속 재생)
+    toggleBgm: function() {
+        if (!this._audio) this.init();
+        if (this._isPlaying) {
+            this.stop();
+        } else if (this._currentNum > 0) {
+            this.play();        // 이어듣기
+        } else {
+            this.playRandom();  // 처음 켜기 → 무작위 시작
+        }
     },
 
     // 랜덤 트랙 재생
@@ -7784,6 +7796,11 @@ const bgmPlayer = {
                 }
             }
         }
+        // 켜기/끄기 토글 버튼 라벨·아이콘 동기화
+        const tLabel = document.getElementById('bgmToggleLabel');
+        const tIcon  = document.getElementById('bgmToggleIcon');
+        if (tLabel) tLabel.innerText = this._isPlaying ? '배경음 끄기' : '배경음 켜기';
+        if (tIcon)  tIcon.className  = this._isPlaying ? 'fa-solid fa-stop' : 'fa-solid fa-music';
     },
 
     _renderPanel: function() {

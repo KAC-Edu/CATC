@@ -1,20 +1,6 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-<!-- ============================================================
-  CATC · 교육생  (index.html)
-  @version  A
-  @build    20260610-220210
-  ────────────────────────────────────────────────────────
-  [코드 수정 규칙 · AI/개발자 공통]
-  이 파일을 한 글자라도 고치면:
-    1) 위 @version 을 다음 순서로 딱 1단계 올린다
-       A → B → C → … → Z → A1 → B1 → … → Z1 → A2 → …
-    2) @build 를 수정 시각(YYYYMMDD-HHMMSS)으로 갱신한다
-    3) 아래 화면 배지(vA)와 콘솔 로그의 글자도 같이 맞춘다
-  화면 우측 하단의 작은 'v?' 배지 / 콘솔 로그를 보고
-  Shift+Ctrl+R(강력 새로고침) 후 최신본 적용 여부를 확인한다.
-============================================================ -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>KAC Student Platform</title>
@@ -668,6 +654,7 @@
             <div class="menu-item" onclick="openAttendanceQR()"><i class="fa-solid fa-qrcode" style="color: #3b82f6;"></i> 출결 QR 확인</div>
             <div class="menu-item" onclick="openCnsPlatform()"><i class="fa-solid fa-tower-broadcast" style="color: #6366f1;"></i> CNS 표보재 플랫폼</div>
             <div class="menu-item" onclick="openSurveyModal()"><i class="fa-solid fa-square-poll-vertical" style="color: #3b82f6;"></i> 설문조사 (스카이캠퍼스)</div>
+            <div class="menu-item" onclick="openHrdAttendanceApp()" style="background:#eef2ff; color:#1e3a8a; font-weight:800;"><i class="fa-solid fa-id-card-clip" style="color:#2563eb;"></i> 고용노동부 출결 앱 (설치/실행)</div>
             <button onclick="document.getElementById('menuModal').style.display='none'" style="margin-top:15px; width:100%; padding:12px; border:none; border-radius:12px; background:#f1f5f9; font-weight:900; color:#475569;">닫기</button>
         </div>
     </div>
@@ -3751,6 +3738,24 @@ function openCnsPlatform() {
     window.open("https://kac-edu.github.io/kac-cns-platform/index.html", "_blank");
 }
 
+// 고용노동부(고용24) 직업훈련 출결관리 앱 — 설치돼 있으면 실행, 없으면 스토어로 이동
+function openHrdAttendanceApp() {
+    try { document.getElementById('menuModal').style.display = 'none'; } catch (e) {}
+    const playUrl = 'https://play.google.com/store/apps/details?id=kr.go.hrd.app';
+    const iosUrl  = 'https://apps.apple.com/kr/app/id588283412';
+    const ua = navigator.userAgent || '';
+    if (/Android/i.test(ua)) {
+        // 설치돼 있으면 앱 실행, 없으면 Play 스토어로 자동 폴백
+        window.location.href = 'intent://#Intent;package=kr.go.hrd.app;S.browser_fallback_url=' +
+            encodeURIComponent(playUrl) + ';end';
+    } else if (/iPhone|iPad|iPod/i.test(ua)) {
+        // iOS: 설치돼 있으면 App Store에서 '열기', 없으면 설치
+        window.location.href = iosUrl;
+    } else {
+        window.open(playUrl, '_blank');
+    }
+}
+
 function openSurveyModal() {
     document.getElementById('menuModal').style.display = 'none';
     document.getElementById('surveyModal').style.display = 'flex';
@@ -4355,9 +4360,6 @@ function closeTabletLoan() {
 })();
 </script>
 
-<!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
-<style>@media print{#__catcVer{display:none!important}}</style>
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vA</div>
-<script>try{console.log('%cCATC%c 교육생 (index.html) %cvA%c build 20260610-220210','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}</script>
 </body>
 </html>
+<!-- @build 20260612-065721 (고용노동부 출결앱 메뉴 추가) -->
