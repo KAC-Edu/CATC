@@ -3,8 +3,8 @@
 <head>
 <!-- ============================================================
   CATC · 교육지원부 · 생활관 배정  (dorm_admin.html)
-  @version  C
-  @build    20260611-140850
+  @version  D
+  @build    20260611-142512
   ────────────────────────────────────────────────────────
   [코드 수정 규칙 · AI/개발자 공통]
   이 파일을 한 글자라도 고치면:
@@ -21,6 +21,10 @@
       (기존엔 DB 최신 주차가 떠서 다른 주차가 보였음)
   vC: ② 블록 배정이 동·층 우선순위(청렴관 1층부터)를 따르도록 수정
       (기존 fit 점수 방식 → 우선순위 순서 정렬. 청렴관 1·2층 누락 방지)
+  vD: ① 현황/출력에서 같은 주가 6/7·6/8 등 두 개로 중복 표시되던 문제 수정
+      (weekKeyOf의 UTC 보정으로 KST 월요일이 전날로 밀려 생긴 중복 키를
+       표시 단계에서 같은 실제 주로 합침 — 기존 데이터 키는 보존)
+  vD: ② STEP4에 '이 주차 배정 삭제' 버튼 추가 (명단 유지, 현황만 정리)
 ============================================================ -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
@@ -566,6 +570,7 @@
                     <label style="font-size:13px; font-weight:800; color:var(--muted);">주차</label>
                     <select id="viewWeekSelect" style="padding:12px 40px 12px 14px; border:2px solid #2563eb; border-radius:12px; font-size:15px; min-width:260px; font-weight:900; color:#0f172a; background:#fff; box-shadow:0 4px 12px rgba(37,99,235,.12);" onchange="renderBoard()"></select>
                     <button class="h-btn" style="background:var(--blue);" onclick="loadViewWeeks()"><i class="fa-solid fa-rotate"></i> 새로고침</button>
+                    <button class="h-btn" style="background:#fee2e2; color:#dc2626; border:1px solid #fca5a5;" onclick="deleteWeekAssignment()" title="이 주차의 배정 현황만 삭제합니다 (명단은 유지). 잘못 남은 주차 정리용."><i class="fa-solid fa-trash-can"></i> 이 주차 배정 삭제</button>
                 </div>
 
                 <div id="boardStats" style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:14px;"></div>
@@ -1408,6 +1413,25 @@
             const dow = (dt.getDay() + 6) % 7;
             monday.setDate(dt.getDate() - dow);
             return monday.toISOString().slice(0, 10);
+        }
+
+        // 로컬 기준 YYYY-MM-DD (toISOString의 UTC 보정 문제 회피)
+        function _ymdLocal(d) {
+            return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+        }
+
+        // [신규] 주차 키 정규화: 같은 '실제 주(월~일)'를 가리키는 키를 하나로 모은다.
+        //  weekKeyOf가 toISOString(UTC)을 써서 KST 월요일이 전날(일)로 밀리는 탓에
+        //  같은 주가 6/7(일)·6/8(월) 두 키로 저장되어 현황 드롭다운에 '다른 주차'처럼
+        //  중복 표시되던 문제를 표시 단계에서 흡수한다. (기존 데이터 키는 건드리지 않음)
+        function canonicalWeekKey(dateStr) {
+            const d = new Date(String(dateStr || '') + 'T00:00:00');
+            if (isNaN(d)) return dateStr;
+            const dow = d.getDay();             // 0=일 .. 6=토
+            const mon = new Date(d);
+            if (dow === 0) mon.setDate(d.getDate() + 1);          // 일요일 키(UTC 보정 산물) → 다음 월요일 주
+            else mon.setDate(d.getDate() - ((dow + 6) % 7));      // 그 외 → 그 주 월요일
+            return _ymdLocal(mon);
         }
 
         function parsePeriod(periodStr) {
@@ -3432,22 +3456,65 @@
             const sel = document.getElementById('viewWeekSelect');
             const snap = await db.ref('system/dorm/assignments').once('value');
             const all = snap.val() || {};
-            const wks = Object.keys(all).sort().reverse();
-            if (!wks.length) {
+            const rawKeys = Object.keys(all);
+            if (!rawKeys.length) {
                 sel.innerHTML = `<option value="">배정 결과가 없습니다</option>`;
                 document.getElementById('boardArea').innerHTML = `<div class="empty-floor">STEP 3에서 자동 배정을 먼저 실행하세요.</div>`;
                 document.getElementById('boardStats').innerHTML = '';
                 return;
             }
-            sel.innerHTML = wks.map(wk => {
-                const wd = new Date(wk + 'T00:00:00');
+            // [신규] 같은 실제 주(월~일)를 가리키는 중복 키(로컬/UTC 산물)를 하나로 묶는다.
+            //  각 그룹 대표키 = 인원이 가장 많은(동률이면 최신) 키 → 드롭다운엔 주당 1개만 노출.
+            const groups = {};   // canonical → [{ key, count, at }]
+            rawKeys.forEach(k => {
+                const canon = canonicalWeekKey(k);
+                const count = (all[k] && all[k].students) ? Object.keys(all[k].students).length : 0;
+                const at = (all[k] && all[k].assignedAt) || 0;
+                (groups[canon] = groups[canon] || []).push({ key: k, count, at });
+            });
+            const reps = Object.entries(groups).map(([canon, arr]) => {
+                arr.sort((a, b) => (b.count - a.count) || (b.at - a.at));
+                return { canon, key: arr[0].key, dup: arr.length > 1 };
+            }).sort((a, b) => b.canon.localeCompare(a.canon));   // 최신 주 먼저
+            sel.innerHTML = reps.map(r => {
+                const wd = new Date(r.canon + 'T00:00:00');
                 const wEnd = new Date(wd); wEnd.setDate(wd.getDate() + 6);
                 const fmt = d => `${d.getMonth()+1}/${d.getDate()}`;
-                return `<option value="${wk}">${fmt(wd)} ~ ${fmt(wEnd)} 주간</option>`;
+                return `<option value="${r.key}">${fmt(wd)} ~ ${fmt(wEnd)} 주간${r.dup ? ' (중복 정리됨)' : ''}</option>`;
             }).join('');
-            // [신규] 방금 배정/확정한 주차가 있으면 그 주차를 선택 (없으면 최신 주차 기본)
-            if (preferWk && wks.includes(preferWk)) sel.value = preferWk;
+            // 방금 배정/확정한 주차가 있으면 그 주차(같은 그룹의 대표키)를 선택
+            if (preferWk) {
+                const pc = canonicalWeekKey(preferWk);
+                const hit = reps.find(r => r.canon === pc);
+                if (hit) sel.value = hit.key;
+            }
             renderBoard();
+        }
+
+        // [신규] 현재 보고 있는 주차의 배정 결과 삭제 (같은 실제 주의 중복 키까지 모두 정리)
+        //  명단(STEP2)은 그대로 두고 배치 현황/출력만 제거 → 잘못 남은 주차 청소용
+        async function deleteWeekAssignment() {
+            const wk = document.getElementById('viewWeekSelect').value;
+            if (!wk) { showToast('삭제할 주차가 없습니다'); return; }
+            const canon = canonicalWeekKey(wk);
+            const snap = await db.ref('system/dorm/assignments').once('value');
+            const all = snap.val() || {};
+            const keys = Object.keys(all).filter(k => canonicalWeekKey(k) === canon);
+            if (!keys.length) { showToast('삭제할 배정이 없습니다'); return; }
+            const wd = new Date(canon + 'T00:00:00');
+            const label = `${wd.getMonth()+1}/${wd.getDate()}`;
+            if (!confirm(`${label} 주간 배정 결과를 삭제합니다${keys.length > 1 ? ` (중복 키 ${keys.length}개 포함)` : ''}.\n\n· 교육생 명단(STEP 2)은 그대로 유지됩니다.\n· 배치 현황/출력만 지워집니다.\n\n계속할까요?`)) return;
+            try {
+                const updates = {};
+                keys.forEach(k => { updates[`system/dorm/assignments/${k}`] = null; });
+                await db.ref().update(updates);
+                viewAssign = null;
+                showToast(`✅ ${label} 주간 배정 삭제 완료`);
+                loadViewWeeks();
+            } catch (e) {
+                console.error('[주차 배정 삭제]', e);
+                showToast('⚠️ 삭제 실패 — 네트워크/권한을 확인하세요');
+            }
         }
 
         async function renderBoard(skipReload) {
@@ -5023,7 +5090,7 @@
     </div>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
 <style>@media print{#__catcVer{display:none!important}}</style>
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vC</div>
-<script>try{console.log('%cCATC%c 교육지원부 · 생활관 배정 (dorm_admin.html) %cvC%c build 20260611-140850','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}</script>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vD</div>
+<script>try{console.log('%cCATC%c 교육지원부 · 생활관 배정 (dorm_admin.html) %cvD%c build 20260611-142512','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}</script>
 </body>
 </html>
