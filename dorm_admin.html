@@ -3,8 +3,8 @@
 <head>
 <!-- ============================================================
   CATC · 교육지원부 · 생활관 배정  (dorm_admin.html)
-  @version  S
-  @build    20260611-204734
+  @version  T
+  @build    20260611-205519
   ────────────────────────────────────────────────────────
   [코드 수정 규칙 · AI/개발자 공통]
   이 파일을 한 글자라도 고치면:
@@ -57,6 +57,7 @@
   vR: ① 방마스터 각 층(청렴관 1층 등)도 접이식으로 — 층 헤더 클릭 시 펼침/접힘(기본 접힘), 재렌더 시 펼침 상태 유지.
       ② 아코디언 헤더(패널·층) 호버 시 테두리 진해짐 + 헤더 바 전체가 클릭 영역(이전엔 글자만).
   vS: 아코디언 패널(동·층 우선순위/배치 기준) 하단에 어긋나게 보이던 희미한 밑줄 제거 — 저장바의 음수 마진·sticky·border-top 제거로 깔끔한 푸터 처리.
+  vT: 방마스터 층 헤더(청렴관 1층 등) 아이콘·제목·개수 세로 정렬 보정 — 제목 묶음을 flex 가운데정렬로 변경(인라인 baseline 어긋남 해결).
 ============================================================ -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
@@ -161,6 +162,11 @@
         .floor-card.acc-fc > .acc-body > .acc-inner { overflow:hidden; min-height:0; }
         .floor-card.acc-fc.open > .acc-body > .acc-inner { padding:4px 16px 16px; }
         .fc-count { font-size:12px; color:var(--muted); font-weight:600; }
+        .floor-card.acc-fc > .fc-head .fc-title { display:flex; align-items:center; gap:8px; min-width:0; }
+        .floor-card.acc-fc > .fc-head .fc-title i { font-size:15px; line-height:1; flex-shrink:0; }
+        .floor-card.acc-fc > .fc-head .fc-name { line-height:1; }
+        .floor-card.acc-fc > .fc-head .fc-count { line-height:1; }
+        .floor-card.acc-fc > .fc-head .acc-chev { flex-shrink:0; }
         /* 아코디언 내부 저장바: 음수 마진/스티키/테두리 제거 → 어긋난 밑줄 제거, 깔끔한 푸터 */
         .acc-inner .save-bar { position:static; margin:16px 0 0; padding:0; background:transparent; border-top:none; border-radius:0; }
 
@@ -1204,7 +1210,7 @@
                 return `
                     <div class="floor-card acc-fc ${open ? 'open' : ''}" id="fc-${currentBldg}-${f}">
                         <h3 class="fc-head" onclick="toggleFloorAcc('${currentBldg}', ${f})">
-                            <span><i class="fa-solid fa-layer-group"></i> ${currentBldg} ${f}층 <span class="fc-count">(${floorRooms.length}개 방)</span></span>
+                            <span class="fc-title"><i class="fa-solid fa-layer-group"></i><span class="fc-name">${currentBldg} ${f}층</span><span class="fc-count">(${floorRooms.length}개 방)</span></span>
                             <i class="fa-solid fa-chevron-down acc-chev"></i>
                         </h3>
                         <div class="acc-body"><div class="acc-inner">
@@ -5531,8 +5537,8 @@
     </div>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
 <style>@media print{#__catcVer{display:none!important}}</style>
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vS</div>
-<script>try{console.log('%cCATC%c 교육지원부 · 생활관 배정 (dorm_admin.html) %cvS%c build 20260611-204734','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}</script>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vT</div>
+<script>try{console.log('%cCATC%c 교육지원부 · 생활관 배정 (dorm_admin.html) %cvT%c build 20260611-205519','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}</script>
 <script>
 /* 헤더 + 단계 메뉴(STEP 탭) 틀고정 — 어느 페이지에서든 항상 상단에 고정 표시.
    step-tabs를 헤더 바로 아래에 붙이기 위해 헤더 높이를 측정해 sticky 오프셋으로 사용. */
