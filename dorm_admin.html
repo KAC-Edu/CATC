@@ -3,8 +3,8 @@
 <head>
 <!-- ============================================================
   CATC · 교육지원부 · 생활관 배정  (dorm_admin.html)
-  @version  U
-  @build    20260611-210440
+  @version  V
+  @build    20260611-211234
   ────────────────────────────────────────────────────────
   [코드 수정 규칙 · AI/개발자 공통]
   이 파일을 한 글자라도 고치면:
@@ -60,6 +60,8 @@
   vT: 방마스터 층 헤더(청렴관 1층 등) 아이콘·제목·개수 세로 정렬 보정 — 제목 묶음을 flex 가운데정렬로 변경(인라인 baseline 어긋남 해결).
   vU: ① 아코디언 패널 제목 좌측 정렬 보정 — PC 모드 패널 padding(28px)에 아코디언 헤더/내용 padding 일치(이전 22px 고정 → 6px 어긋남 해결).
       ② 방마스터 층 버튼(청렴관 1층 등)에 파란 틴트 적용 — 배경 #eef4ff·테두리 파랑·파란 화살표, 호버/펼침 시 진해짐(클릭 가능 시인성 강화).
+  vV: ① 아코디언 제목 정렬 진짜 원인 수정 — PC 모드 'body.pc-mode .panel{padding:28px}'가 '.panel.acc{padding:0}'보다 우선해 패널+헤더 이중 들여쓰기(약 56px)가 발생. 'body.pc-mode .panel.acc{padding:0}'로 덮어써 헤더 제목을 방마스터와 동일 좌측(약 29px)으로 정렬.
+      ② 위 두 아코디언 헤더 두께 축소 — 세로 padding 24→17px(PC)/20→15px(기본).
 ============================================================ -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
@@ -144,7 +146,7 @@
         /* ── 접이식(아코디언) — 패널형 (동·층 우선순위 / 배치 기준 관리) ── */
         .panel.acc { padding:0; overflow:hidden; transition:border-color .15s ease, box-shadow .15s ease; }
         .panel.acc:hover { border-color:#94a3b8; box-shadow:0 3px 14px rgba(15,23,42,0.07); }
-        .panel.acc > .acc-head { cursor:pointer; display:flex; align-items:center; justify-content:space-between; margin:0; padding:20px 22px; user-select:none; border-radius:16px; transition:background .15s ease; }
+        .panel.acc > .acc-head { cursor:pointer; display:flex; align-items:center; justify-content:space-between; margin:0; padding:15px 22px; user-select:none; border-radius:16px; transition:background .15s ease; }
         .panel.acc.open > .acc-head { border-radius:16px 16px 0 0; }
         .panel.acc > .acc-head:hover { background:#f8fafc; }
         .acc-chev { font-size:14px; color:#94a3b8; transition:transform .25s ease; }
@@ -154,7 +156,8 @@
         .panel.acc > .acc-body > .acc-inner { overflow:hidden; min-height:0; }
         .panel.acc.open > .acc-body > .acc-inner { padding:6px 22px 20px; }
         /* PC 모드 패널 padding(28px)에 아코디언 헤더/내용 좌측 정렬 일치 */
-        body.pc-mode .panel.acc > .acc-head { padding:24px 28px; }
+        body.pc-mode .panel.acc { padding:0; }
+        body.pc-mode .panel.acc > .acc-head { padding:17px 28px; }
         body.pc-mode .panel.acc.open > .acc-body > .acc-inner { padding:6px 28px 24px; }
         /* ── 접이식 — 층 카드형 (청렴관 1층 등) ── */
         .floor-card.acc-fc { padding:0; overflow:hidden; border-color:#cdddff; transition:border-color .15s ease, box-shadow .15s ease; }
@@ -5543,8 +5546,8 @@
     </div>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
 <style>@media print{#__catcVer{display:none!important}}</style>
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vU</div>
-<script>try{console.log('%cCATC%c 교육지원부 · 생활관 배정 (dorm_admin.html) %cvU%c build 20260611-210440','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}</script>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vV</div>
+<script>try{console.log('%cCATC%c 교육지원부 · 생활관 배정 (dorm_admin.html) %cvV%c build 20260611-211234','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}</script>
 <script>
 /* 헤더 + 단계 메뉴(STEP 탭) 틀고정 — 어느 페이지에서든 항상 상단에 고정 표시.
    step-tabs를 헤더 바로 아래에 붙이기 위해 헤더 높이를 측정해 sticky 오프셋으로 사용. */
