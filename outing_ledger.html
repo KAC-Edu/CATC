@@ -1,20 +1,6 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-<!-- ============================================================
-  CATC · 외출·외박 대장  (outing_ledger.html)
-  @version  A
-  @build    20260610-220210
-  ────────────────────────────────────────────────────────
-  [코드 수정 규칙 · AI/개발자 공통]
-  이 파일을 한 글자라도 고치면:
-    1) 위 @version 을 다음 순서로 딱 1단계 올린다
-       A → B → C → … → Z → A1 → B1 → … → Z1 → A2 → …
-    2) @build 를 수정 시각(YYYYMMDD-HHMMSS)으로 갱신한다
-    3) 아래 화면 배지(vA)와 콘솔 로그의 글자도 같이 맞춘다
-  화면 우측 하단의 작은 'v?' 배지 / 콘솔 로그를 보고
-  Shift+Ctrl+R(강력 새로고침) 후 최신본 적용 여부를 확인한다.
-============================================================ -->
     <meta charset="UTF-8">
     <title>외출·외박 신청서(대장)</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
@@ -41,6 +27,10 @@
 
         .title { text-align:center; font-size:26px; font-weight:900; letter-spacing:8px; margin:0 0 6px 0; }
         .course-title { text-align:right; font-size:15px; font-weight:bold; border-bottom:2px solid #000; padding-bottom:4px; margin-bottom:8px; }
+        .period-line { text-align:right; font-size:13px; font-weight:600; color:#334155; margin-bottom:8px; }
+        /* 표 안 반복 헤더(제목 블록): 테두리 없이 깔끔하게, 데이터 그리드만 격자 */
+        table.ledger { border: none; }
+        .doc-head td { border: none; padding: 2px 2px 8px; background:#fff; }
 
         table { width:100%; border-collapse:collapse; border:2px solid #000; table-layout:fixed; }
         th, td { border:1px solid #000; text-align:center; vertical-align:middle; padding:2px 3px; }
@@ -75,41 +65,39 @@
         @media print {
             html, body { background:white !important; margin:0 !important; padding:0 !important; }
             .print-btn, .no-print { display:none !important; }
-            /* 브라우저가 자동 삽입하는 머리글/꼬리글 영역(주소·제목·날짜)을 최소화 */
             header, footer, nav { display:none !important; }
-            /* A4 가로, 여백 10mm로 잘림 방지 */
-            @page { size: A4 landscape; margin: 10mm; }
-            .page {
-                width: 100%;
-                margin: 0;
-                padding: 0;
-                box-shadow: none;
-            }
-            /* 배경색(단체외출 강조 등)이 인쇄에도 반영되도록 */
+            /* @page 여백 0 → 브라우저가 자동 삽입하는 머리글/꼬리글(주소·날짜·페이지번호) 제거 */
+            @page { size: A4 landscape; margin: 0; }
+            .page { width: 100%; margin: 0; padding: 0 8mm; box-shadow: none; }
+            /* 반복 헤더(제목·과정명·기간)에 페이지마다 상단 여백 부여 */
+            table.ledger thead .doc-head td { padding-top: 7mm !important; }
             * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-            /* 표가 페이지 경계에서 잘리지 않게 */
             table { page-break-inside: auto; }
-            thead { display: table-header-group; }
+            thead { display: table-header-group; }   /* 제목블록+컬럼헤더가 매 페이지 반복 */
             tbody tr { page-break-inside: avoid; }
-            /* [신규] 주차 구분 행 바로 뒤에서 페이지가 끊겨 헤더만 남는 것 방지 */
             tr.week-sep { page-break-after: avoid; }
+            /* 한 페이지 약 10명: 10명마다 강제 페이지 분할 */
+            tr.pgbreak { page-break-before: always; }
         }
     </style>
 </head>
 <body>
-    <button class="print-btn" onclick="window.print()">대장 인쇄하기</button>
+    <button class="print-btn" onclick="printLedger()">대장 인쇄하기</button>
 
     <div class="page">
         <div class="punch-hole hole-1"></div>
         <div class="punch-hole hole-2"></div>
 
-        <h1 class="title">외출 (외박) 신청서</h1>
-        <div class="course-title">◎ 과정명 : <span id="displayCourseName">-</span></div>
-        <div style="text-align:right; font-size:13px; font-weight:600; color:#334155; margin-bottom:8px;">교육기간 : <span id="displayPeriod">-</span></div>
-
-        <table>
+        <table class="ledger">
             <thead>
-                <tr>
+                <tr class="doc-head">
+                    <td colspan="8">
+                        <h1 class="title">외출 (외박) 신청서</h1>
+                        <div class="course-title">◎ 과정명 : <span id="displayCourseName">-</span></div>
+                        <div class="period-line">교육기간 : <span id="displayPeriod">-</span></div>
+                    </td>
+                </tr>
+                <tr class="col-head">
                     <th style="width:7%;">일자</th>
                     <th style="width:13%;">시간<br>(외출/복귀)</th>
                     <th style="width:11%;">소속</th>
@@ -136,6 +124,14 @@
         }
 
         const db = firebase.database();
+
+        // PDF 저장 시 파일명 = (외출외박대장)과정명. 인쇄 후 원래 제목 복원.
+        function printLedger() {
+            const cn = (document.getElementById('displayCourseName').innerText || '').trim();
+            document.title = cn && cn !== '-' ? `(외출외박대장)${cn}` : '외출외박대장';
+            window.print();
+        }
+        window.addEventListener('afterprint', () => { document.title = '외출·외박 신청서(대장)'; });
 
         async function init() {
             if (!room) return;
@@ -202,18 +198,26 @@
                 };
 
                 let curWeek = null;
+                let appOnPage = 0;        // 현재 페이지의 신청자 행 수
+                const PER_PAGE = 10;      // 페이지당 신청자 수(약 10명)
                 list.forEach(a => {
                     // [신규] 주차가 바뀌면 구분 행 삽입 (주 단위 그룹화)
                     const wk = weekKeyOf(a.date);
-                    if (wk && wk !== curWeek) {
+                    const newWeek = (wk && wk !== curWeek);
+                    let needBreak = (appOnPage >= PER_PAGE);
+                    if (newWeek) {
                         curWeek = wk;
                         const sep = document.createElement('tr');
                         sep.className = 'week-sep';
+                        // 페이지가 찼으면 주차 구분 행부터 새 페이지로 (구분행 고아 방지)
+                        if (needBreak) { sep.classList.add('pgbreak'); appOnPage = 0; needBreak = false; }
                         sep.innerHTML = `<td colspan="8"><i class="fa-regular fa-calendar-week"></i> 주간 (${wk})</td>`;
                         body.appendChild(sep);
                     }
 
                     const tr = document.createElement('tr');
+                    if (needBreak) { tr.classList.add('pgbreak'); appOnPage = 0; }
+                    appOnPage++;
                     const isGroup = (a.type === 'group_outing');
                     if (isGroup) tr.classList.add('group-row');
 
@@ -255,9 +259,9 @@
                     body.appendChild(tr);
                 });
 
-                // 빈 줄 최소 10줄 보장
-                const minRows = 10;
-                for (let i = list.length; i < minRows; i++) {
+                // 마지막 페이지를 10줄로 채우기(빈 줄). 신청자 없으면 한 페이지 빈 양식.
+                const pad = (list.length === 0) ? PER_PAGE : ((PER_PAGE - appOnPage) % PER_PAGE);
+                for (let i = 0; i < pad; i++) {
                     const tr = document.createElement('tr');
                     tr.innerHTML = '<td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>';
                     body.appendChild(tr);
@@ -267,9 +271,6 @@
 
         init();
     </script>
-<!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
-<style>@media print{#__catcVer{display:none!important}}</style>
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vA</div>
-<script>try{console.log('%cCATC%c 외출·외박 대장 (outing_ledger.html) %cvA%c build 20260610-220210','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}</script>
 </body>
 </html>
+<!-- @build 20260612-063746 (PDF: 파일명·머리꼬리말제거·페이지헤더반복·10명/쪽) -->

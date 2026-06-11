@@ -1,7 +1,7 @@
 /* ============================================================
    CATC · 강사 플랫폼 로직  (admin.js)
-   @version  A
-   @build    20260610-220210
+   @version  C
+   @build    20260612-065019
    ------------------------------------------------------------
    [코드 수정 규칙 · AI/개발자 공통]
    이 파일을 고치면 @version 을 A -> B -> ... -> Z -> A1 -> B1 ...
@@ -8291,6 +8291,7 @@ annualPlanMgr.openEditorModal = async function() {
                 prof:      c.prof || '',
                 coord:     c.coord || '',
                 roomDetail: c.roomDetail || c.classroom || c.roomName || '',
+                preAssign: !!c.preAssign,
                 weekKey:   c.weekKey || (c.startDate ? this._getMondayOf(c.startDate) : '')
             }))
             .sort((a, b) => (a.startDate || '').localeCompare(b.startDate || ''));
@@ -8339,7 +8340,8 @@ annualPlanMgr.renderEditor = function() {
                     <th style="width:140px; padding:10px; border:1px solid #e2e8f0;">종료일</th>
                     <th style="width:110px; padding:10px; border:1px solid #e2e8f0;">담임교수</th>
                     <th style="width:120px; padding:10px; border:1px solid #e2e8f0;">운영담당</th>
-                    <th style="min-width:170px; padding:10px; border:1px solid #e2e8f0;">???</th>
+                    <th style="min-width:170px; padding:10px; border:1px solid #e2e8f0;">강의실</th>
+                    <th style="width:92px; padding:10px; border:1px solid #e2e8f0;" title="체크하면 기간과 무관하게 저장 즉시 방에 배정됩니다">사전배정</th>
                     <th style="width:50px; padding:10px; border:1px solid #e2e8f0;">삭제</th>
                 </tr>
             </thead>
@@ -8374,6 +8376,7 @@ annualPlanMgr.renderEditor = function() {
                 <td style="${cellStyle}"><input type="text" value="${esc(c.prof)}" onchange="annualPlanMgr.updateLocalData(${idx},'prof',this.value)" style="${inpStyle}"></td>
                 <td style="${cellStyle}"><input type="text" value="${esc(c.coord)}" onchange="annualPlanMgr.updateLocalData(${idx},'coord',this.value)" style="${inpStyle}"></td>
                 <td style="${cellStyle}">${classroomDetailSelectHtmlInstructor(c.roomDetail || '', "annualPlanMgr.updateLocalData(" + idx + ",'roomDetail',this.value)", inpStyle)}</td>
+                <td style="${cellStyle} text-align:center;"><input type="checkbox" ${c.preAssign ? 'checked' : ''} onchange="annualPlanMgr.updateLocalData(${idx},'preAssign',this.checked)" title="체크하면 기간과 무관하게 저장 즉시 방에 배정됩니다" style="width:18px; height:18px; cursor:pointer; accent-color:#2563eb;"></td>
                 <td style="${cellStyle} text-align:center;"><button onclick="annualPlanMgr.deleteRow(${idx})" title="삭제" style="color:#ef4444; border:none; background:none; cursor:pointer; font-size:16px; font-weight:800;">✕</button></td>
             </tr>`;
     });
@@ -8470,6 +8473,7 @@ annualPlanMgr.saveAndSync = async function() {
                 prof:      (c.prof || '').trim(),
                 coord:     (c.coord || '').trim(),
                 roomDetail: (c.roomDetail || c.classroom || c.roomName || '').trim(),
+                preAssign: !!c.preAssign,
                 weekKey:   this._getMondayOf(c.startDate)
             }));
 
@@ -8479,10 +8483,14 @@ annualPlanMgr.saveAndSync = async function() {
         await firebase.database().ref(this.PLAN_KEY).set(planData);
 
         // 2) 잠금 인식 룸 재배치
-        await this._syncRoomsLockAware(clean);
+        const syncRes = await this._syncRoomsLockAware(clean);
 
         ui.hideLoading();
-        ui.showAlert(`✅ 저장 및 실시간 동기화가 완료되었습니다. (${clean.length}개 과정)`);
+        if (syncRes && syncRes.unplacedPreAssign && syncRes.unplacedPreAssign.length) {
+            ui.showAlert(`✅ 저장 완료 (${clean.length}개 과정).\n\n⚠️ 다만 비어 있는 방이 부족해 아래 사전배정 과정이 아직 배치되지 못했습니다:\n· ${syncRes.unplacedPreAssign.join('\n· ')}\n\n사용 중인 방은 건드리지 않았습니다. 방이 비면 자동 배치되며, 지금 바로 넣으려면 비어 있는 방을 하나 확보해 주세요.`);
+        } else {
+            ui.showAlert(`✅ 저장 및 실시간 동기화가 완료되었습니다. (${clean.length}개 과정)`);
+        }
         document.getElementById('annualPlanModal').style.display = 'none';
     } catch (e) {
         ui.hideLoading();
@@ -8514,16 +8522,20 @@ annualPlanMgr._syncRoomsLockAware = async function(courses) {
     const planByName = {};
     courses.forEach(c => { if (c.name) planByName[norm(c.name)] = c; });
 
-    // 대상 주에 걸치는 과정 풀 (시작일 순)
+    // 대상 주에 걸치는 과정 풀 (시작일 순). 단, '사전배정(preAssign)' 과정은 (아직 종료 전이면) 기간과 무관하게 즉시 포함.
     let pool = courses
         .filter(c => c.startDate && c.endDate)
-        .filter(c => c.startDate <= targetSun && c.endDate >= targetMon)
-        .sort((a, b) => a.startDate.localeCompare(b.startDate));
+        .filter(c => (c.preAssign && c.endDate >= today) || (c.startDate <= targetSun && c.endDate >= targetMon))
+        .sort((a, b) => {
+            // 사전배정 과정을 먼저 배치 → 빈 방을 우선 차지
+            if (!!a.preAssign !== !!b.preAssign) return a.preAssign ? -1 : 1;
+            return a.startDate.localeCompare(b.startDate);
+        });
 
-    // 수동 리셋된 과정은 이번 대상 주 배치에서 제외 (되살아나지 않도록)
+    // 수동 리셋된 과정은 이번 대상 주 배치에서 제외 (단, 사전배정 과정은 항상 포함)
     const dismissed = await this._getDismissedSet(targetMon);
     if (dismissed.size) {
-        pool = pool.filter(c => !dismissed.has(`${norm(c.name)}|${norm(c.period)}`));
+        pool = pool.filter(c => c.preAssign || !dismissed.has(`${norm(c.name)}|${norm(c.period)}`));
     }
 
     // 대상 주 과정명 집합 — 방에 이미 세팅된 과정이 풀에 있으면 보존 대상으로 분류
@@ -8584,7 +8596,8 @@ annualPlanMgr._syncRoomsLockAware = async function(courses) {
     // 2) 풀에서 '보존된 방에 이미 있는 과정명' 제외 → 나머지만 빈 방에 배치
     const toPlace = pool.filter(c => !keptNames.has(norm(c.name)));
 
-    for (let i = 0; i < Math.min(freeRooms.length, toPlace.length); i++) {
+    const placeCount = Math.min(freeRooms.length, toPlace.length);
+    for (let i = 0; i < placeCount; i++) {
         const room = freeRooms[i];
         const course = toPlace[i];
 
@@ -8604,8 +8617,13 @@ annualPlanMgr._syncRoomsLockAware = async function(courses) {
     }
     if (Object.keys(updates).length) {
         await firebase.database().ref().update(updates);
-        console.log('[annualPlanMgr] 동기화 완료. 대상주:', targetMon, '~', targetSun, '/ 보존:', [...keptNames].filter(Boolean).length, '/ 신규:', Math.min(freeRooms.length, toPlace.length));
+        console.log('[annualPlanMgr] 동기화 완료. 대상주:', targetMon, '~', targetSun, '/ 보존:', [...keptNames].filter(Boolean).length, '/ 신규:', placeCount);
     }
+    // 빈 방 부족으로 배치되지 못한 '사전배정' 과정 목록 반환 (사용 중인 방은 건드리지 않음)
+    const unplacedPreAssign = toPlace.slice(placeCount)
+        .filter(c => c.preAssign && c.endDate >= today)
+        .map(c => c.name);
+    return { unplacedPreAssign };
 };
 
 /* 강사 플랫폼 로드 시 자동 만료 체크 */
