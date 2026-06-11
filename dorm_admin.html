@@ -3,8 +3,8 @@
 <head>
 <!-- ============================================================
   CATC · 교육지원부 · 생활관 배정  (dorm_admin.html)
-  @version  Q
-  @build    20260611-202844
+  @version  R
+  @build    20260611-204226
   ────────────────────────────────────────────────────────
   [코드 수정 규칙 · AI/개발자 공통]
   이 파일을 한 글자라도 고치면:
@@ -54,6 +54,8 @@
   vP: 연간 교육계획 모달을 강사플랫폼 디자인으로 통일 — 카드형 행 표(행 사이 여백·라운드), 회색 헤더, 파란 액션 버튼, 라운드+blur 모달, 상태색(진행중/예정/종료) 행 카드 틴트.
   vQ: ① 연간계획표 모달 너비 확대(1160px) + 과정명·강의실 칸 확장(텍스트 잘림 완화).
       ② 방마스터 '동·층 배정 우선순위'·'배치 기준 관리'를 접이식(아코디언)으로 — 제목바 클릭 시 펼침/접힘, 기본 접힘(제목 위치·가로폭 동일).
+  vR: ① 방마스터 각 층(청렴관 1층 등)도 접이식으로 — 층 헤더 클릭 시 펼침/접힘(기본 접힘), 재렌더 시 펼침 상태 유지.
+      ② 아코디언 헤더(패널·층) 호버 시 테두리 진해짐 + 헤더 바 전체가 클릭 영역(이전엔 글자만).
 ============================================================ -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
@@ -135,13 +137,29 @@
             background: var(--bg); padding: 12px 0 10px; }
 
         /* ── 방마스터 접이식(아코디언) 섹션 ── */
-        .panel.acc > .acc-head { cursor:pointer; display:flex; align-items:center; justify-content:space-between; margin:0; user-select:none; }
-        .panel.acc > .acc-head .acc-chev { font-size:14px; color:#94a3b8; transition:transform .25s ease; }
+        /* ── 접이식(아코디언) — 패널형 (동·층 우선순위 / 배치 기준 관리) ── */
+        .panel.acc { padding:0; overflow:hidden; transition:border-color .15s ease, box-shadow .15s ease; }
+        .panel.acc:hover { border-color:#94a3b8; box-shadow:0 3px 14px rgba(15,23,42,0.07); }
+        .panel.acc > .acc-head { cursor:pointer; display:flex; align-items:center; justify-content:space-between; margin:0; padding:20px 22px; user-select:none; border-radius:16px; transition:background .15s ease; }
+        .panel.acc.open > .acc-head { border-radius:16px 16px 0 0; }
+        .panel.acc > .acc-head:hover { background:#f8fafc; }
+        .acc-chev { font-size:14px; color:#94a3b8; transition:transform .25s ease; }
         .panel.acc.open > .acc-head .acc-chev { transform:rotate(180deg); }
         .panel.acc > .acc-body { display:grid; grid-template-rows:0fr; transition:grid-template-rows .3s ease; }
         .panel.acc.open > .acc-body { grid-template-rows:1fr; }
         .panel.acc > .acc-body > .acc-inner { overflow:hidden; min-height:0; }
-        .panel.acc.open > .acc-body > .acc-inner { padding-top:6px; }
+        .panel.acc.open > .acc-body > .acc-inner { padding:6px 22px 20px; }
+        /* ── 접이식 — 층 카드형 (청렴관 1층 등) ── */
+        .floor-card.acc-fc { padding:0; overflow:hidden; transition:border-color .15s ease, box-shadow .15s ease; }
+        .floor-card.acc-fc:hover { border-color:#94a3b8; box-shadow:0 3px 12px rgba(15,23,42,0.06); }
+        .floor-card.acc-fc > .fc-head { margin:0; padding:14px 16px; cursor:pointer; display:flex; align-items:center; justify-content:space-between; user-select:none; border-radius:12px; transition:background .15s ease; }
+        .floor-card.acc-fc.open > .fc-head { border-radius:12px 12px 0 0; }
+        .floor-card.acc-fc > .fc-head:hover { background:#f8fafc; }
+        .floor-card.acc-fc > .acc-body { display:grid; grid-template-rows:0fr; transition:grid-template-rows .3s ease; }
+        .floor-card.acc-fc.open > .acc-body { grid-template-rows:1fr; }
+        .floor-card.acc-fc > .acc-body > .acc-inner { overflow:hidden; min-height:0; }
+        .floor-card.acc-fc.open > .acc-body > .acc-inner { padding:4px 16px 16px; }
+        .fc-count { font-size:12px; color:var(--muted); font-weight:600; }
 
         /* ── 연간 교육계획 모달: 강사플랫폼 디자인 적용 ── */
         #annualPop.pop-overlay { background: rgba(15,23,42,0.55); backdrop-filter: blur(8px); }
@@ -863,6 +881,14 @@
             const el = document.getElementById(id);
             if (el) el.classList.toggle('open');
         }
+        // 방마스터 층 카드 접이식 (재렌더 시에도 펼침 상태 유지)
+        let floorAccOpen = {};
+        function toggleFloorAcc(building, f) {
+            const key = `${building}_${f}`;
+            floorAccOpen[key] = !floorAccOpen[key];
+            const el = document.getElementById(`fc-${building}-${f}`);
+            if (el) el.classList.toggle('open', floorAccOpen[key]);
+        }
 
         // ── 동·층 배정 우선순위 ──
         // floorKey = `${building}_${floor}`  /  순서가 빠를수록 먼저 채움
@@ -1171,32 +1197,38 @@
                     ? floorRooms.map(([id, r]) => roomRowHtml(id, r)).join('')
                     : `<tr><td colspan="6" class="empty-floor">아직 등록된 방이 없습니다. 위에 방 번호를 입력해 추가하세요.</td></tr>`;
 
+                const open = !!floorAccOpen[`${currentBldg}_${f}`];
                 return `
-                    <div class="floor-card">
-                        <h3><i class="fa-solid fa-layer-group"></i> ${currentBldg} ${f}층 <span style="font-size:12px; color:var(--muted); font-weight:600;">(${floorRooms.length}개 방)</span></h3>
-                        <div class="hint">방 번호를 쉼표(,)로 여러 개, 또는 범위(201~210)로 한 번에 추가할 수 있어요.</div>
-                        <div class="floor-input-row">
-                            <input type="text" id="in-${currentBldg}-${f}" placeholder="방 번호 입력 (예: 201, 202 또는 201~210)"
-                                   onkeyup="if(event.key==='Enter') addRooms('${currentBldg}', ${f})">
-                            <button onclick="addRooms('${currentBldg}', ${f})"><i class="fa-solid fa-plus"></i> 추가</button>
-                        </div>
-                        ${floorBulkToolsHtml(currentBldg, f)}
-                        ${roomMapEditorHtml(currentBldg, f, floorRooms)}
-                        <div style="overflow-x:auto;">
-                            <table class="room-table">
-                                <thead>
-                                    <tr>
-                                        <th style="width:70px;">방번호</th>
-                                        <th style="width:110px;">정원</th>
-                                        <th style="width:90px;">우선 배정</th>
-                                        <th style="width:90px;">배정 제외</th>
-                                        <th>우선 배치 기준</th>
-                                        <th style="width:50px;">삭제</th>
-                                    </tr>
-                                </thead>
-                                <tbody>${tableBody}</tbody>
-                            </table>
-                        </div>
+                    <div class="floor-card acc-fc ${open ? 'open' : ''}" id="fc-${currentBldg}-${f}">
+                        <h3 class="fc-head" onclick="toggleFloorAcc('${currentBldg}', ${f})">
+                            <span><i class="fa-solid fa-layer-group"></i> ${currentBldg} ${f}층 <span class="fc-count">(${floorRooms.length}개 방)</span></span>
+                            <i class="fa-solid fa-chevron-down acc-chev"></i>
+                        </h3>
+                        <div class="acc-body"><div class="acc-inner">
+                            <div class="hint">방 번호를 쉼표(,)로 여러 개, 또는 범위(201~210)로 한 번에 추가할 수 있어요.</div>
+                            <div class="floor-input-row">
+                                <input type="text" id="in-${currentBldg}-${f}" placeholder="방 번호 입력 (예: 201, 202 또는 201~210)"
+                                       onkeyup="if(event.key==='Enter') addRooms('${currentBldg}', ${f})">
+                                <button onclick="addRooms('${currentBldg}', ${f})"><i class="fa-solid fa-plus"></i> 추가</button>
+                            </div>
+                            ${floorBulkToolsHtml(currentBldg, f)}
+                            ${roomMapEditorHtml(currentBldg, f, floorRooms)}
+                            <div style="overflow-x:auto;">
+                                <table class="room-table">
+                                    <thead>
+                                        <tr>
+                                            <th style="width:70px;">방번호</th>
+                                            <th style="width:110px;">정원</th>
+                                            <th style="width:90px;">우선 배정</th>
+                                            <th style="width:90px;">배정 제외</th>
+                                            <th>우선 배치 기준</th>
+                                            <th style="width:50px;">삭제</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>${tableBody}</tbody>
+                                </table>
+                            </div>
+                        </div></div>
                     </div>
                 `;
             }).join('');
@@ -5496,8 +5528,8 @@
     </div>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
 <style>@media print{#__catcVer{display:none!important}}</style>
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vQ</div>
-<script>try{console.log('%cCATC%c 교육지원부 · 생활관 배정 (dorm_admin.html) %cvQ%c build 20260611-202844','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}</script>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vR</div>
+<script>try{console.log('%cCATC%c 교육지원부 · 생활관 배정 (dorm_admin.html) %cvR%c build 20260611-204226','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}</script>
 <script>
 /* 헤더 + 단계 메뉴(STEP 탭) 틀고정 — 어느 페이지에서든 항상 상단에 고정 표시.
    step-tabs를 헤더 바로 아래에 붙이기 위해 헤더 높이를 측정해 sticky 오프셋으로 사용. */
