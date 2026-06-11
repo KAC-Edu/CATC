@@ -3,8 +3,8 @@
 <head>
 <!-- ============================================================
   CATC · 교육지원부 · 생활관 배정  (dorm_admin.html)
-  @version  J
-  @build    20260611-164539
+  @version  K
+  @build    20260611-165511
   ────────────────────────────────────────────────────────
   [코드 수정 규칙 · AI/개발자 공통]
   이 파일을 한 글자라도 고치면:
@@ -44,6 +44,7 @@
       ③ 현황/출력 배치도에 층(1·2층) 구분선 추가(건물색·얇은 선)
   vI: 현황/출력 배치도(보드·PDF)에도 배정제외 방을 식당처럼 빗살무늬+‘배정제외’로 표기(이전엔 방마스터 편집기에만 적용됨)
   vJ: 배정제외가 배치도에 안 뜨던 문제 수정 — 특수실(살림형 218·219, 창고)은 DB 저장 여부와 무관하게 기본 제외로 표기(_roomExcluded 폴백). 보드는 방 마스터 최신 로드.
+  vK: 방마스터에서 배정제외 저장 시 현황/출력 배치도에 즉시 반영 — 보드 진입(STEP4)마다 방 마스터를 항상 새로 읽도록 변경(이전엔 캐시본 사용으로 갱신 누락).
 ============================================================ -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
@@ -3609,8 +3610,9 @@
         async function renderBoard(skipReload) {
             const wk = document.getElementById('viewWeekSelect').value;
             if (!wk) return;
-            // 방 마스터도 최신 로드
-            if (!Object.keys(rooms).length) {
+            // 방 마스터 최신 로드 — 방마스터에서 배정제외 저장 후 즉시 반영되도록 항상 새로고침
+            //  (드래그앤드롭 재렌더(skipReload) 시에는 불필요하므로 비었을 때만)
+            if (!skipReload || !Object.keys(rooms).length) {
                 const rs = await db.ref('system/dorm/rooms').once('value'); rooms = rs.val() || {};
             }
             // skipReload=true면 방금 로컬에서 갱신한 viewAssign을 그대로 사용 (추가/삭제 직후 즉시 반영용)
@@ -5270,7 +5272,7 @@
     </div>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
 <style>@media print{#__catcVer{display:none!important}}</style>
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vJ</div>
-<script>try{console.log('%cCATC%c 교육지원부 · 생활관 배정 (dorm_admin.html) %cvJ%c build 20260611-164539','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}</script>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vK</div>
+<script>try{console.log('%cCATC%c 교육지원부 · 생활관 배정 (dorm_admin.html) %cvK%c build 20260611-165511','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}</script>
 </body>
 </html>
