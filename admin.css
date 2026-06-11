@@ -1,6 +1,6 @@
 /* ============================================================
    CATC · 강사 플랫폼 스타일  (admin.css)
-   @version  A   @build  20260610-220210
+   @version  B   @build  20260612-062736
    ------------------------------------------------------------
    [코드 수정 규칙] 수정 시 @version 을
    A -> B -> ... -> Z -> A1 -> B1 -> ... 순으로 1단계 올리고
@@ -3485,11 +3485,9 @@ body.night-mode .status-badge.status-arrived {
     content: " 👆";
 }
 
-/* ── 사이드바 슬라이드 전환 ── */
+/* ── 사이드바 슬라이드 전환 (margin-left: 글자 안 뭉개지고 통째로 좌측 이동) ── */
 .sidebar {
-    transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1),
-                min-width 0.3s cubic-bezier(0.4, 0, 0.2, 1),
-                padding 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    transition: margin-left 0.32s cubic-bezier(0.4, 0, 0.2, 1) !important;
 }
 #sidebarClipTab {
     position: fixed !important;
@@ -3533,22 +3531,15 @@ body.sidebar-hidden #sidebarClipTab { left: 0 !important; }
     top: auto !important;
     left: auto !important;
     box-shadow: 2px 0 12px rgba(0,0,0,0.18);
-    transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1),
-                min-width 0.3s cubic-bezier(0.4, 0, 0.2, 1),
-                padding 0.3s cubic-bezier(0.4, 0, 0.2, 1),
-                transform 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    transition: margin-left 0.32s cubic-bezier(0.4, 0, 0.2, 1) !important;
     flex-shrink: 0;
     overflow-y: auto;
     overflow-x: hidden;
 }
 
-/* 사이드바 숨김: 너비를 0으로 접어서 메인이 자동으로 전체 너비 차지 */
+/* 사이드바 숨김: 너비/패딩은 그대로 두고 통째로 좌측으로 밀어냄(슬라이드). 메인은 자동 확장. */
 body.sidebar-hidden .sidebar {
-    width: 0 !important;
-    min-width: 0 !important;
-    padding: 0 !important;
-    overflow: hidden !important;
-    border: none !important;
+    margin-left: calc(-1 * var(--sidebar-width)) !important;
     box-shadow: none !important;
 }
 
