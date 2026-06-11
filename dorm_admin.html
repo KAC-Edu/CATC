@@ -3,8 +3,8 @@
 <head>
 <!-- ============================================================
   CATC · 교육지원부 · 생활관 배정  (dorm_admin.html)
-  @version  E
-  @build    20260611-143219
+  @version  F
+  @build    20260611-144350
   ────────────────────────────────────────────────────────
   [코드 수정 규칙 · AI/개발자 공통]
   이 파일을 한 글자라도 고치면:
@@ -29,6 +29,9 @@
       ① 배정 0.5단계 신설: 외국인을 국제교육동에 가장 먼저 배정
       ② royal(청렴관 1층) 풀에서 외국인 제외 (108호 등 유입 차단)
       ③ 잔여구제도 외국인은 국제교육동에만 — 정원 부족 시 미배정 유지
+  vF: 특수실(청렴관 218·219 살림형, 상생관 208 창고) 배정제외 '해제' 시 재확인 팝업
+      개별 토글·'이 층 전체 설정' 양쪽 모두 적용. 층 전체 해제 시 특수실만 제외 유지 가능.
+      (일괄 우선배정에서도 특수실은 자동 제외 유지)
 ============================================================ -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
@@ -1136,15 +1139,43 @@
             </div>`;
         }
 
+        // [신규] 특수실(창고·살림형 등 사유 있는 배정제외 방) 제외 해제 시 재확인
+        function confirmUnexcludeSpecial(id) {
+            const sp = SPECIAL_ROOMS[id];
+            if (!sp) return true;
+            const r = rooms[id] || {};
+            return confirm(
+                `${r.building || ''} ${r.no || ''}호는 '${sp.label}' 용도로 사유가 있어 배정 제외된 특수실입니다.\n\n` +
+                `정말 자동 배정 대상에 포함하시겠습니까?`
+            );
+        }
+
         function bulkSetFloor(building, floor, key, val) {
+            // 특수실 보호: 층 전체 '배정제외'를 해제할 때, 사유 있는 특수실은 한 번 더 확인
+            let unexcludeSpecials = true;   // 특수실까지 함께 해제할지 여부
+            if (key === 'noAssign' && !val) {
+                const specialsOnFloor = Object.entries(rooms).filter(([id, r]) =>
+                    r && r.building === building && r.floor === floor && r.noAssign && SPECIAL_ROOMS[id]);
+                if (specialsOnFloor.length) {
+                    const list = specialsOnFloor.map(([id, r]) => `${r.no}호(${SPECIAL_ROOMS[id].label})`).join(', ');
+                    unexcludeSpecials = confirm(
+                        `${building} ${floor}층의 특수실 ${list}은(는) 사유가 있어 배정 제외된 방입니다.\n\n` +
+                        `[확인] 이 방들도 배정에 포함 (제외 해제)\n` +
+                        `[취소] 이 방들은 제외 유지 — 나머지 방만 해제`
+                    );
+                }
+            }
             Object.entries(rooms).forEach(([id, r]) => {
                 if (!r || r.building !== building || r.floor !== floor) return;
                 if (key === 'capacity') r.capacity = parseInt(val, 10) || 1;
                 if (key === 'royal') {
+                    if (SPECIAL_ROOMS[id]) return;   // 특수실은 일괄 우선배정 대상에서 제외(제외 상태 유지)
                     r.royal = !!val;
                     if (r.royal) r.noAssign = false;
                 }
                 if (key === 'noAssign') {
+                    // 해제 시 사용자가 [취소]를 누른 특수실은 건너뜀(제외 유지)
+                    if (!val && SPECIAL_ROOMS[id] && !unexcludeSpecials) return;
                     r.noAssign = !!val;
                     if (r.noAssign) r.royal = false;
                 }
@@ -1236,6 +1267,10 @@
             else if (key === 'gender') r.gender = val || '';
             else if (key === 'criteria') r.criteria = val || 'empno';
             else if (key === 'noAssign') {
+                // 특수실(208 창고, 218·219 살림형) 제외 해제 시 한 번 더 확인 — 취소하면 원상복구
+                if (!val && r.noAssign && SPECIAL_ROOMS[id]) {
+                    if (!confirmUnexcludeSpecial(id)) { renderFloors(); return; }
+                }
                 r.noAssign = !!val;
                 if (r.noAssign) r.royal = false; // 배정 제외 방은 우선배정 대상이 될 수 없음
             }
@@ -5117,7 +5152,7 @@
     </div>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
 <style>@media print{#__catcVer{display:none!important}}</style>
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vE</div>
-<script>try{console.log('%cCATC%c 교육지원부 · 생활관 배정 (dorm_admin.html) %cvE%c build 20260611-143219','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}</script>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vF</div>
+<script>try{console.log('%cCATC%c 교육지원부 · 생활관 배정 (dorm_admin.html) %cvF%c build 20260611-144350','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}</script>
 </body>
 </html>
