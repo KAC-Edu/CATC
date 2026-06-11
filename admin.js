@@ -1,7 +1,7 @@
 /* ============================================================
    CATC · 강사 플랫폼 로직  (admin.js)
-   @version  D
-   @build    20260612-065721
+   @version  E
+   @build    20260612-071734
    ------------------------------------------------------------
    [코드 수정 규칙 · AI/개발자 공통]
    이 파일을 고치면 @version 을 A -> B -> ... -> Z -> A1 -> B1 ...
@@ -6924,8 +6924,8 @@ loadCurrentSettings: function() {
         // 5. menuFeatures 체크박스 상태 로드
         // 기본값: 차량신청(shuttle) + 외출/외박(adminAction)만 ON, 나머지는 강사가 수동 체크
         const features = s.menuFeatures || {};
-        const defaultOn = ['shuttle', 'adminAction'];
-        const featureKeys = ['facility','shuttle','adminAction','meal','attendanceQr','cns','tabletLoan'];
+        const defaultOn = ['shuttle', 'adminAction', 'kakao', 'hrd'];
+        const featureKeys = ['facility','shuttle','adminAction','meal','attendanceQr','cns','tabletLoan','kakao','hrd'];
         featureKeys.forEach(key => {
             const el = document.getElementById(`feat-${key}`);
             if (!el) return;
@@ -7041,7 +7041,7 @@ saveAll: function() {
         updates[`courses/${state.room}/status/ownerSessionId`] = state.sessionId;
 
         // menuFeatures: 체크박스 상태 저장 (false일 때만 명시, true는 기본값)
-        const featureKeys = ['facility','shuttle','adminAction','meal','attendanceQr','cns','tabletLoan'];
+        const featureKeys = ['facility','shuttle','adminAction','meal','attendanceQr','cns','tabletLoan','kakao','hrd'];
         const menuFeatures = {};
         featureKeys.forEach(key => {
             const el = document.getElementById(`feat-${key}`);
@@ -8204,6 +8204,7 @@ const annualPlanMgr = {
             [`${rPath}/notice`]:              "",
             [`${rPath}/coordNotice`]:         "",
             [`${rPath}/coordNoticeHistory`]:  null,
+            [`${rPath}/settings/password`]:   btoa("7777"),  // [추가] 차주 새 과정 배치 전 비번 리셋 → 기본 7777 (이전 과정 비번 잔류 방지)
             [`${rPath}/status/ownerSessionId`]: null,
             [`${rPath}/status/resetKey`]:     newResetKey  // 교육생 강제 퇴출 신호
         };

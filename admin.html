@@ -3,8 +3,8 @@
 <head>
 <!-- ============================================================
   CATC · 강사 플랫폼  (admin.html)
-  @version  E
-  @build    20260612-065721
+  @version  F
+  @build    20260612-071734
   ────────────────────────────────────────────────────────
   [코드 수정 규칙 · AI/개발자 공통]
   이 파일을 한 글자라도 고치면:
@@ -297,7 +297,7 @@
                         <i class="fa-solid fa-chevron-down" id="familyChevron" style="font-size:11px; transition:transform 0.2s;"></i>
                     </button>
                     <div id="familySiteMenu" class="family-site-menu-inline" style="display:none;">
-                        <a href="https://www.airport.co.kr/kcaa/index.do" target="_blank" rel="noopener"><i class="fa-solid fa-building-columns"></i> 항공기술훈련원 (KCAA)</a>
+                        <a href="https://www.airport.co.kr/kcaa/index.do" target="_blank" rel="noopener"><i class="fa-solid fa-building-columns"></i> 항공기술훈련원 (CATC)</a>
                         <a href="javascript:void(0)" onclick="ui.goFamilySite('coord', 'admin_coord.html')"><i class="fa-solid fa-user-tie"></i> 교육운영부 (행정)</a>
                         <a href="javascript:void(0)" onclick="ui.goFamilySite('support', 'dorm_admin.html')"><i class="fa-solid fa-bed"></i> 교육지원부 (생활관 배정)</a>
                         <a href="javascript:void(0)" onclick="ui.goFamilySite('driver', 'driver.html')"><i class="fa-solid fa-bus"></i> 기사 전용 (수송)</a>
@@ -2048,6 +2048,14 @@
                             <input type="checkbox" id="feat-tabletLoan" checked style="width:15px; height:15px; accent-color:#6366f1;">
                             <i class="fa-solid fa-tablet-screen-button" style="color:#6366f1;"></i> 태블릿 대여
                         </label>
+                        <label style="display:flex; align-items:center; gap:6px; font-size:12px; font-weight:700; color:#334155; cursor:pointer;">
+                            <input type="checkbox" id="feat-kakao" checked style="width:15px; height:15px; accent-color:#FAE100;">
+                            <i class="fa-solid fa-comment" style="color:#3A1D1D;"></i> 오픈톡방
+                        </label>
+                        <label style="display:flex; align-items:center; gap:6px; font-size:12px; font-weight:700; color:#334155; cursor:pointer;">
+                            <input type="checkbox" id="feat-hrd" checked style="width:15px; height:15px; accent-color:#2563eb;">
+                            <i class="fa-solid fa-id-card-clip" style="color:#2563eb;"></i> 고용노동부 출결
+                        </label>
                     </div>
                 </div>
 
@@ -2261,7 +2269,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
 <style>@media print{#__catcVer{display:none!important}}</style>
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vE</div>
-<script>try{console.log('%cCATC%c 강사 플랫폼 (admin.html) %cvE%c build 20260612-065721','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}</script>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vF</div>
+<script>try{console.log('%cCATC%c 강사 플랫폼 (admin.html) %cvF%c build 20260612-071734','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}</script>
 </body>
 </html>

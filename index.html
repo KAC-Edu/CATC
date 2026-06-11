@@ -1387,9 +1387,10 @@ async function resolveRoomFromCode(code) {
 // [카카오톡 오픈톡방] 강사가 설정한 링크가 있을 때만 랜딩/메뉴 버튼을 노출
 function applyKakaoLink(link) {
     const url = (link || '').trim();
+    const enabled = (window._kakaoMenuEnabled !== false);  // 강사가 '오픈톡방' 체크 해제 시 숨김
     const menuBtn = document.getElementById('menu-kakao');
     const headerBtn = document.getElementById('headerKakaoBtn');
-    if (url) {
+    if (url && enabled) {
         if (menuBtn) menuBtn.style.display = 'block';
         if (headerBtn) { headerBtn.style.display = 'flex'; headerBtn.style.visibility = 'visible'; }
     } else {
@@ -1736,12 +1737,16 @@ function applyMenuFeatures(features) {
         { key: 'attendanceQr', selector: '[onclick="openAttendanceQR()"]' },
         { key: 'cns',          selector: '[onclick="openCnsPlatform()"]' },
         { key: 'tabletLoan',   selector: '[onclick="openTabletLoan()"]' },
+        { key: 'hrd',          selector: '[onclick="openHrdAttendanceApp()"]' },
     ];
     menuMap.forEach(({ key, selector }) => {
         const el = document.querySelector(selector);
         if (!el) return;
         el.style.display = features[key] !== false ? '' : 'none';
     });
+    // 오픈톡방: 카카오 링크 유무 + 활성화 플래그를 함께 반영 (링크 없으면 어차피 숨김)
+    window._kakaoMenuEnabled = (features.kakao !== false);
+    applyKakaoLink(window._kakaoLink || '');
 }
 function setupListeners() {
     // 1. 서버 시간 동기화 (이전 안테나 정리)
@@ -4362,4 +4367,4 @@ function closeTabletLoan() {
 
 </body>
 </html>
-<!-- @build 20260612-065721 (고용노동부 출결앱 메뉴 추가) -->
+<!-- @build 20260612-071734 (메뉴 활성화: 오픈톡방·고용노동부 출결 토글) -->

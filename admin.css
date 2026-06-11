@@ -1,6 +1,6 @@
 /* ============================================================
    CATC · 강사 플랫폼 스타일  (admin.css)
-   @version  B   @build  20260612-062736
+   @version  C   @build  20260612-071734
    ------------------------------------------------------------
    [코드 수정 규칙] 수정 시 @version 을
    A -> B -> ... -> Z -> A1 -> B1 -> ... 순으로 1단계 올리고
@@ -1712,6 +1712,7 @@ body.night-mode .header-room-badge { background-color: #003366 !important; borde
     width: 1000px !important;
     height: 600px !important;
     overflow: hidden;
+    position: relative; /* 닫기(X) 버튼이 화면이 아닌 카드 우상단을 기준으로 위치하도록 */
     box-shadow: 0 30px 70px rgba(0,0,0,0.2) !important;
 }
 

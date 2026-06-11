@@ -68,66 +68,68 @@
             header, footer, nav { display:none !important; }
             /* @page 여백 0 → 브라우저가 자동 삽입하는 머리글/꼬리글(주소·날짜·페이지번호) 제거 */
             @page { size: A4 landscape; margin: 0; }
-            .page { width: 100%; margin: 0; padding: 0 8mm; box-shadow: none; }
-            /* 반복 헤더(제목·과정명·기간)에 페이지마다 상단 여백 부여 */
-            table.ledger thead .doc-head td { padding-top: 7mm !important; }
+            /* 화면 카드 1장 = 인쇄 1페이지 */
+            .page { width: 100%; margin: 0; padding: 6mm 8mm; box-shadow: none; page-break-after: always; }
+            .page:last-child { page-break-after: auto; }
+            table.ledger thead .doc-head td { padding-top: 4mm !important; }
             * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-            table { page-break-inside: auto; }
-            thead { display: table-header-group; }   /* 제목블록+컬럼헤더가 매 페이지 반복 */
-            tbody tr { page-break-inside: avoid; }
-            tr.week-sep { page-break-after: avoid; }
-            /* 한 페이지 약 10명: 10명마다 강제 페이지 분할 */
-            tr.pgbreak { page-break-before: always; }
+            tr { page-break-inside: avoid; }
         }
     </style>
 </head>
 <body>
     <button class="print-btn" onclick="printLedger()">대장 인쇄하기</button>
 
-    <div class="page">
-        <div class="punch-hole hole-1"></div>
-        <div class="punch-hole hole-2"></div>
+    <div id="ledgerPages"></div>
 
-        <table class="ledger">
-            <thead>
-                <tr class="doc-head">
-                    <td colspan="8">
-                        <h1 class="title">외출 (외박) 신청서</h1>
-                        <div class="course-title">◎ 과정명 : <span id="displayCourseName">-</span></div>
-                        <div class="period-line">교육기간 : <span id="displayPeriod">-</span></div>
-                    </td>
-                </tr>
-                <tr class="col-head">
-                    <th style="width:7%;">일자</th>
-                    <th style="width:13%;">시간<br>(외출/복귀)</th>
-                    <th style="width:11%;">소속</th>
-                    <th style="width:10%;">성명</th>
-                    <th style="width:12%;">행선지</th>
-                    <th style="width:16%;">전화번호</th>
-                    <th style="width:21%;">사유</th>
-                    <th style="width:10%;">확인<br>(담임/담당)</th>
-                </tr>
-            </thead>
-            <tbody id="ledgerBody"></tbody>
-        </table>
-    </div>
+    <!-- 한 장(페이지) 템플릿: JS가 복제하여 페이지마다 제목블록+컬럼헤더+행(약 10명)을 채움 -->
+    <template id="pageTpl">
+        <div class="page">
+            <div class="punch-hole hole-1"></div>
+            <div class="punch-hole hole-2"></div>
+            <table class="ledger">
+                <thead>
+                    <tr class="doc-head">
+                        <td colspan="8">
+                            <h1 class="title">외출 (외박) 신청서</h1>
+                            <div class="course-title">◎ 과정명 : <span class="docCourseName">-</span></div>
+                            <div class="period-line">교육기간 : <span class="docPeriod">-</span></div>
+                        </td>
+                    </tr>
+                    <tr class="col-head">
+                        <th style="width:7%;">일자</th>
+                        <th style="width:13%;">시간<br>(외출/복귀)</th>
+                        <th style="width:11%;">소속</th>
+                        <th style="width:10%;">성명</th>
+                        <th style="width:12%;">행선지</th>
+                        <th style="width:16%;">전화번호</th>
+                        <th style="width:21%;">사유</th>
+                        <th style="width:10%;">확인<br>(담임/담당)</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    </template>
 
     <script>
         const params = new URLSearchParams(window.location.search);
         const room   = params.get('room');
 
         if (!room) {
-            document.querySelector('.page').innerHTML =
-                '<div style="text-align:center;padding:80px 20px;color:#64748b;">' +
+            document.getElementById('ledgerPages').innerHTML =
+                '<div class="page" style="text-align:center;padding:80px 20px;color:#64748b;">' +
                 '<h2>⚠️ 강의실 정보가 없습니다</h2>' +
                 '<p>강사 플랫폼 또는 교육운영부 플랫폼에서 버튼을 통해 접속해 주세요.</p></div>';
         }
 
         const db = firebase.database();
+        window._courseNameStr = '-';   // 페이지 제목블록·인쇄 파일명용
+        window._periodDisplay = '-';
 
         // PDF 저장 시 파일명 = (외출외박대장)과정명. 인쇄 후 원래 제목 복원.
         function printLedger() {
-            const cn = (document.getElementById('displayCourseName').innerText || '').trim();
+            const cn = (window._courseNameStr || '').trim();
             document.title = cn && cn !== '-' ? `(외출외박대장)${cn}` : '외출외박대장';
             window.print();
         }
@@ -138,7 +140,7 @@
 
             const setSnap = await db.ref(`courses/${room}/settings`).once('value');
             const settings = setSnap.val() || {};
-            document.getElementById('displayCourseName').innerText = settings.courseName || room;
+            window._courseNameStr = settings.courseName || room;
 
             // 기간 파싱 (먼저 실행)
             const periodStr = settings.period || '';
@@ -148,24 +150,22 @@
                 [startDate, endDate] = periodStr.split(sep).map(s => s.trim());
             }
 
-            // 기간 표시
-            const periodEl = document.getElementById('displayPeriod');
-            if (periodEl) {
-                if (startDate && endDate) {
-                    const fmt = (s) => {
-                        const d = new Date(s + 'T00:00:00');
-                        return `${d.getFullYear()}. ${d.getMonth()+1}. ${d.getDate()}.`;
-                    };
-                    periodEl.innerText = `${fmt(startDate)} ~ ${fmt(endDate)}`;
-                } else {
-                    periodEl.innerText = periodStr || '-';
-                }
+            // 기간 표시 문자열 (페이지 제목블록에 사용)
+            if (startDate && endDate) {
+                const fmt = (s) => {
+                    const d = new Date(s + 'T00:00:00');
+                    return `${d.getFullYear()}. ${d.getMonth()+1}. ${d.getDate()}.`;
+                };
+                window._periodDisplay = `${fmt(startDate)} ~ ${fmt(endDate)}`;
+            } else {
+                window._periodDisplay = periodStr || '-';
             }
 
             db.ref(`courses/${room}/admin_actions`).on('value', snap => {
                 const allData = snap.val() || {};
-                const body = document.getElementById('ledgerBody');
-                body.innerHTML = '';
+                const host = document.getElementById('ledgerPages');
+                host.innerHTML = '';
+                const tpl = document.getElementById('pageTpl');
 
                 let list = [];
                 Object.keys(allData).forEach(date => {
@@ -179,13 +179,12 @@
                 // 날짜 → 이름 순 정렬 (단체외출은 맨 위)
                 list.sort((a, b) => {
                     if (a.date !== b.date) return a.date.localeCompare(b.date);
-                    // 같은 날짜면 단체외출 먼저
                     if (a.type === 'group_outing' && b.type !== 'group_outing') return -1;
                     if (a.type !== 'group_outing' && b.type === 'group_outing') return 1;
                     return (a.timestamp || 0) - (b.timestamp || 0);
                 });
 
-                // [신규] 주(월요일 기준) 키 계산 헬퍼
+                // 주(월요일 기준) 키 계산 헬퍼
                 const weekKeyOf = (dateStr) => {
                     const dt = new Date(dateStr + 'T00:00:00');
                     if (isNaN(dt)) return '';
@@ -197,27 +196,40 @@
                     return `${fmt(monday)} ~ ${fmt(sun)}`;
                 };
 
+                const PER_PAGE = 10;      // 한 페이지(한 장)당 행 수
+                let curBody = null, rowsOnPage = 0;
+
+                // 새 A4 페이지 카드 생성 (제목블록·기간·컬럼헤더 포함)
+                function newPage() {
+                    const node = tpl.content.firstElementChild.cloneNode(true);
+                    node.querySelector('.docCourseName').textContent = window._courseNameStr || '-';
+                    node.querySelector('.docPeriod').textContent     = window._periodDisplay || '-';
+                    host.appendChild(node);
+                    curBody = node.querySelector('tbody');
+                    rowsOnPage = 0;
+                }
+                // 행 추가 전 페이지 여유 확보 (forSep=true면 구분행이 페이지 끝 고아가 안 되게)
+                function ensureRoom(forSep) {
+                    if (!curBody || rowsOnPage >= PER_PAGE) { newPage(); return; }
+                    if (forSep && rowsOnPage >= PER_PAGE - 1) newPage();
+                }
+
+                newPage();
                 let curWeek = null;
-                let appOnPage = 0;        // 현재 페이지의 신청자 행 수
-                const PER_PAGE = 10;      // 페이지당 신청자 수(약 10명)
                 list.forEach(a => {
-                    // [신규] 주차가 바뀌면 구분 행 삽입 (주 단위 그룹화)
                     const wk = weekKeyOf(a.date);
-                    const newWeek = (wk && wk !== curWeek);
-                    let needBreak = (appOnPage >= PER_PAGE);
-                    if (newWeek) {
+                    if (wk && wk !== curWeek) {
                         curWeek = wk;
+                        ensureRoom(true);
                         const sep = document.createElement('tr');
                         sep.className = 'week-sep';
-                        // 페이지가 찼으면 주차 구분 행부터 새 페이지로 (구분행 고아 방지)
-                        if (needBreak) { sep.classList.add('pgbreak'); appOnPage = 0; needBreak = false; }
                         sep.innerHTML = `<td colspan="8"><i class="fa-regular fa-calendar-week"></i> 주간 (${wk})</td>`;
-                        body.appendChild(sep);
+                        curBody.appendChild(sep);
+                        rowsOnPage++;
                     }
 
+                    ensureRoom(false);
                     const tr = document.createElement('tr');
-                    if (needBreak) { tr.classList.add('pgbreak'); appOnPage = 0; }
-                    appOnPage++;
                     const isGroup = (a.type === 'group_outing');
                     if (isGroup) tr.classList.add('group-row');
 
@@ -232,13 +244,11 @@
                         <div class="divider"></div>
                         <div class="time-in">복귀: ${endTimeDisplay}</div>
                     `;
-
                     const nameCellHtml = `
                         ${isGroup ? '<span class="badge-group">단체</span><br>' : ''}
                         ${a.name || ''}
                         ${a.returned ? `<span class="badge-return">[복귀:${a.returnReportTime || ''}]</span>` : ''}
                     `;
-
                     let confirmDisplay = '';
                     if (a.confirmedBySign) {
                         confirmDisplay = `<img src="${a.confirmedBySign}" class="stamp-img">`;
@@ -256,15 +266,16 @@
                         <td><span class="shrink-text">${a.reason || ''}</span></td>
                         <td>${confirmDisplay}</td>
                     `;
-                    body.appendChild(tr);
+                    curBody.appendChild(tr);
+                    rowsOnPage++;
                 });
 
                 // 마지막 페이지를 10줄로 채우기(빈 줄). 신청자 없으면 한 페이지 빈 양식.
-                const pad = (list.length === 0) ? PER_PAGE : ((PER_PAGE - appOnPage) % PER_PAGE);
-                for (let i = 0; i < pad; i++) {
+                const remaining = PER_PAGE - rowsOnPage;
+                for (let i = 0; i < remaining; i++) {
                     const tr = document.createElement('tr');
                     tr.innerHTML = '<td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>';
-                    body.appendChild(tr);
+                    curBody.appendChild(tr);
                 }
             });
         }
@@ -273,4 +284,4 @@
     </script>
 </body>
 </html>
-<!-- @build 20260612-063746 (PDF: 파일명·머리꼬리말제거·페이지헤더반복·10명/쪽) -->
+<!-- @build 20260612-071734 (화면도 A4 페이지 카드 단위로 분할) -->
