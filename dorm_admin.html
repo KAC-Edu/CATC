@@ -3,8 +3,8 @@
 <head>
 <!-- ============================================================
   CATC · 교육지원부 · 생활관 배정  (dorm_admin.html)
-  @version  G
-  @build    20260611-161424
+  @version  H
+  @build    20260611-163223
   ────────────────────────────────────────────────────────
   [코드 수정 규칙 · AI/개발자 공통]
   이 파일을 한 글자라도 고치면:
@@ -38,6 +38,10 @@
       ③ 방마스터 배정제외 방을 빗살무늬+‘배정제외’로 표시
       ④ 배치도 두 줄 사이에 ‘복도’ 띠 삽입(복층 오인 방지, 청렴관·상생관)
       ⑤ 성별 표기를 사람 아이콘(남=파랑/여=분홍)으로 — 보드·PDF
+  vH: 배치도 복도·구분선 보완
+      ① 국제교육동에 가로 복도 추가 → 가운데 세로 복도와 만나 십자(+) 형태
+      ② 복도를 '방이 있는 컬럼'에만 깔아 식당 등 세로 시설은 기존처럼 붙여 표시
+      ③ 현황/출력 배치도에 층(1·2층) 구분선 추가(건물색·얇은 선)
 ============================================================ -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
@@ -3797,7 +3801,8 @@
             }
             function bldg(building) {
                 const bar = DORM_BLDG_BAR[building] || '#0f2057';
-                const fls = (DORM_FORM[building] || []).map(fl => floor(building, fl)).join('');
+                const div = `<div class="fm-floor-div" style="border-top:2px solid ${bar};"></div>`;
+                const fls = (DORM_FORM[building] || []).map(fl => floor(building, fl)).join(div);
                 return `<div class="pf-block"><div class="pf-bldg-header" style="background:${bar};"><span class="bicon">\ud83c\udfe2</span>${building}</div><div class="pf-floor-wrap" style="border-color:${bar};">${fls}</div></div>`;
             }
             const hasInst = Object.values(students).some(s => (s.course || '') === '강사');
@@ -4540,34 +4545,33 @@
             return `${yy}.${mm}월 ${wom}주차`;
         }
 
-        // [신규] 같은 층의 두 줄(복층처럼 보이는 부분) 사이에 '복도' 띠를 삽입.
-        //  실제로는 복층이 아니라 좌우로 긴 복도가 있는 구조임을 시각화.
-        //  청렴관·상생관에만 적용(국제교육동은 기존 복도 레이아웃 유지). 현황/출력 배치도(보드·PDF) 전용.
+        // [수정] 같은 층 두 방 줄 사이에 '복도' 띠 삽입. 복층 오인 방지.
+        //  복도는 '방이 있는 컬럼'에만 깔리므로, 식당·세탁실 등 세로로 긴 시설은 기존처럼 붙어 보임.
+        //  세 생활관 모두 적용 — 국제교육동은 가운데 세로 복도(c7)와 만나 십자(+) 모양이 됨.
+        //  현황/출력 배치도(보드·PDF) 전용.
         function _withCorridor(building, fl) {
-            if (building !== '청렴관' && building !== '상생관') return fl;
             if (fl._corr) return fl;
-            const remap = rv => {
-                const parts = String(rv).split('/');
-                if (parts.length === 1) return String(2 * parseInt(parts[0], 10) - 1);
-                const a = parseInt(parts[0], 10), b = parseInt(parts[1], 10);
-                return `${2 * a - 1}/${2 * b - 2}`;
-            };
-            const cells = fl.cells.map(c => Object.assign({}, c, { r: remap(c.r) }));
-            const occupied = new Set();
-            cells.forEach(c => {
-                const rr = String(c.r).split('/');
-                const rs = parseInt(rr[0], 10), re = rr[1] ? parseInt(rr[1], 10) : rs + 1;
-                if (rs <= 2 && re > 2) {
+            // 1·2번째 줄(방 줄)에서 '방(시설 아님)'이 있는 컬럼만 수집 → 복도가 깔릴 컬럼
+            const roomCols = new Set();
+            fl.cells.forEach(c => {
+                if (c.fac !== undefined) return;
+                const r0 = String(c.r).split('/')[0];
+                if (r0 === '1' || r0 === '2') {
                     const cc = String(c.c).split('/');
                     const cs = parseInt(cc[0], 10), ce = cc[1] ? parseInt(cc[1], 10) : cs + 1;
-                    for (let xx = cs; xx < ce; xx++) occupied.add(xx);
+                    for (let x = cs; x < ce; x++) roomCols.add(x);
                 }
             });
+            if (!roomCols.size) return fl;
+            // 행 재배치: 1행→1, 그 외 n→n+1 (2행 자리에 복도 삽입). 범위 양끝도 동일 규칙.
+            const remap = rv => String(rv).split('/').map(v => { const n = parseInt(v, 10); return n === 1 ? 1 : n + 1; }).join('/');
+            const cells = fl.cells.map(c => Object.assign({}, c, { r: remap(c.r) }));
+            // 방 컬럼의 연속 구간마다 복도 셀 삽입(grid-row 2). 시설/빈 컬럼은 건너뜀 → 시설은 위아래로 붙음.
             let x = 1;
             while (x <= fl.cols) {
-                if (occupied.has(x)) { x++; continue; }
+                if (!roomCols.has(x)) { x++; continue; }
                 const start = x;
-                while (x <= fl.cols && !occupied.has(x)) x++;
+                while (x <= fl.cols && roomCols.has(x)) x++;
                 cells.push({ fac: '복도', corridor: true, c: `${start}/${x}`, r: '2' });
             }
             let maxLine = 1;
@@ -4668,6 +4672,7 @@
  #boardMapArea .fm-body{flex:1;display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:3px;padding:4px 3px;}
  #boardMapArea .fm-fac{border:1.5px dashed #b6c0cf;border-radius:6px;background:repeating-linear-gradient(45deg,#e9edf3,#e9edf3 4px,#f4f7fb 4px,#f4f7fb 11px);color:#64748b;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;text-align:center;}
  #boardMapArea .fm-corridor{min-height:0;border:1px dashed #cbd5e1;border-radius:4px;background:repeating-linear-gradient(45deg,#eef2f7,#eef2f7 5px,#f8fafc 5px,#f8fafc 12px);color:#94a3b8;font-size:9px;font-weight:800;letter-spacing:5px;padding:0;}
+ #boardMapArea .fm-floor-div{height:0;margin:13px 1px 3px;border-radius:2px;opacity:.55;}
  #boardMapArea .dm-chip{display:inline-flex;align-items:center;gap:1px;background:#fff;border:1.5px solid #94a3b8;border-radius:9px;padding:2px 8px;font-size:12px;font-weight:800;cursor:grab;line-height:1.3;user-select:none;white-space:nowrap;}
  #boardMapArea .fm-intl .dm-chip{white-space:normal;overflow-wrap:anywhere;word-break:break-word;font-size:10.5px;text-align:center;}
  #boardMapArea .dm-chip.dm-foreign{flex-direction:column;align-items:center;justify-content:center;gap:1px;padding:3px 6px;max-width:100%;}
@@ -4796,8 +4801,9 @@
                 '국제교육동': '자동심장충격기(AED)는 1층 정수기 앞에 비치되어 있습니다.',
             };
             function buildingHtml(building) {
-                const fls   = (FORM[building] || []).map(fl => floorHtml(building, fl)).join('');
                 const bar   = (typeof DORM_BLDG_BAR !== 'undefined' && DORM_BLDG_BAR[building]) || '#0f2057';
+                const div   = `<div class="fm-floor-div" style="border-top:2px solid ${bar};"></div>`;
+                const fls   = (FORM[building] || []).map(fl => floorHtml(building, fl)).join(div);
                 const photo = BLDG_PHOTO_LAYOUT[building] || '';
                 const aed   = AED_MSG[building] || '';
                 const aedHtml = aed
@@ -4837,6 +4843,7 @@
                 .fm-flat .fm-body { flex:1; }
                 .fm-fac { border:1.5px dashed #b6c0cf; border-radius:6px; background:repeating-linear-gradient(45deg,#e9edf3,#e9edf3 4px,#f4f7fb 4px,#f4f7fb 11px); color:#64748b; font-size:11px; font-weight:800; display:flex; align-items:center; justify-content:center; text-align:center; letter-spacing:-0.3px; }
                 .fm-corridor { min-height:0; border:1px dashed #cbd5e1; border-radius:4px; background:repeating-linear-gradient(45deg,#eef2f7,#eef2f7 5px,#f8fafc 5px,#f8fafc 12px); color:#94a3b8; font-size:9px; font-weight:800; letter-spacing:5px; padding:0; }
+                .fm-floor-div { height:0; margin:11px 1px 3px; border-radius:2px; opacity:.55; }
 </style>`;
 
             // 건물 사이 page-break-before 방식으로 변경 (thead 반복 없앰)
@@ -5225,7 +5232,7 @@
     </div>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
 <style>@media print{#__catcVer{display:none!important}}</style>
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vG</div>
-<script>try{console.log('%cCATC%c 교육지원부 · 생활관 배정 (dorm_admin.html) %cvG%c build 20260611-161424','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}</script>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vH</div>
+<script>try{console.log('%cCATC%c 교육지원부 · 생활관 배정 (dorm_admin.html) %cvH%c build 20260611-163223','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}</script>
 </body>
 </html>
