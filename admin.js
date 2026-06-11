@@ -1,7 +1,7 @@
 /* ============================================================
    CATC · 강사 플랫폼 로직  (admin.js)
-   @version  F
-   @build    20260612-072211
+   @version  G
+   @build    20260612-072444
    ------------------------------------------------------------
    [코드 수정 규칙 · AI/개발자 공통]
    이 파일을 고치면 @version 을 A -> B -> ... -> Z -> A1 -> B1 ...
@@ -167,8 +167,11 @@ const dataMgr = {
         const editor = document.getElementById('boardEditor');
         if(!editor) return;
         const html = editor.innerHTML;
+        // 보이는 텍스트가 없으면(빈 줄/<br>/&nbsp;만 남은 경우 포함) 게시하지 않고 내용을 비움
+        const visible = (editor.innerText || '').replace(/[\s\u00a0\u200b]/g, '');
+        const isEmpty = visible.length === 0;
         const payload = {
-            html,
+            html: isEmpty ? '' : html,
             updatedAt: firebase.database.ServerValue.TIMESTAMP
         };
         firebase.database().ref(`courses/${state.room}/boardNotice`).set(payload).then(() => {
@@ -176,7 +179,9 @@ const dataMgr = {
             const ts = `${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}`;
             const el = document.getElementById('boardLastSaved');
             if(el) el.textContent = `오늘 ${ts}`;
-            ui.showAlert("✅ 강의 안내 보드가 저장되어 교육생 앱에 게시되었습니다.");
+            ui.showAlert(isEmpty
+                ? "🧹 내용이 비어 있어 강의 안내 보드 게시를 내렸습니다.\n(교육생 앱에 표시되지 않습니다)"
+                : "✅ 강의 안내 보드가 저장되어 교육생 앱에 게시되었습니다.");
         });
     },
 

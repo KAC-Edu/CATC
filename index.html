@@ -1980,9 +1980,20 @@ let activeLectureBoardNotice = null;
 function lectureBoardNoticeKey(notice) {
     if (!notice) return null;
     const html = typeof notice === 'object' ? (notice.html || '') : String(notice || '');
-    if (!html.trim()) return null;
+    if (!_lectureBoardHasText(html)) return null;
     const version = (typeof notice === 'object' && notice.updatedAt) ? notice.updatedAt : _simpleLectureHash(html);
     return 'kac_board_notice_done_' + currentRoom + '_' + version;
+}
+
+// 태그/공백/&nbsp; 제거 후 실제 보이는 내용이 있는지 판정 (빈 보드 게시 방지)
+function _lectureBoardHasText(html) {
+    if (!html) return false;
+    const txt = String(html)
+        .replace(/<br\s*\/?>/gi, '')
+        .replace(/<[^>]+>/g, '')
+        .replace(/&nbsp;/gi, '')
+        .replace(/[\s\u00a0\u200b]/g, '');
+    return txt.length > 0;
 }
 
 function _simpleLectureHash(text) {
@@ -2010,7 +2021,7 @@ function normalizeLectureBoardHtml(html) {
 
 function handleLectureBoardUpdate(notice) {
     const html = typeof notice === 'object' ? (notice.html || '') : String(notice || '');
-    if (!html.trim()) {
+    if (!_lectureBoardHasText(html)) {
         activeLectureBoardNotice = null;
         const overlay = document.getElementById('lectureBoardOverlay');
         if (overlay) overlay.style.display = 'none';
@@ -3501,7 +3512,7 @@ async function openNotice() {
 
         let html = "";
 
-        if (boardHtml && String(boardHtml).trim()) {
+        if (_lectureBoardHasText(boardHtml)) {
             const cleanedBoard = (typeof normalizeLectureBoardHtml === 'function')
                 ? normalizeLectureBoardHtml(boardHtml)
                 : boardHtml;
@@ -4367,4 +4378,4 @@ function closeTabletLoan() {
 
 </body>
 </html>
-<!-- @build 20260612-071734 (메뉴 활성화: 오픈톡방·고용노동부 출결 토글) -->
+<!-- @build 20260612-072444 (강의안내보드 빈내용 게시방지) -->
