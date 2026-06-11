@@ -1,7 +1,7 @@
 /* ============================================================
    CATC · 강사 플랫폼 로직  (admin.js)
-   @version  E
-   @build    20260612-071734
+   @version  F
+   @build    20260612-072211
    ------------------------------------------------------------
    [코드 수정 규칙 · AI/개발자 공통]
    이 파일을 고치면 @version 을 A -> B -> ... -> Z -> A1 -> B1 ...
@@ -6219,13 +6219,19 @@ const scheduleMgr = {
                         const snap = await firebase.database().ref(path).once('value');
                         const rows = snap.val() || {};
                         Object.values(rows).forEach(row => {
-                            if (!row || String(row.room || '') !== String(state.room || '') || !row.schedule) return;
+                            if (!row || !row.schedule) return;
+                            const sameRoom   = String(row.room || '') === String(state.room || '');
+                            const sameCourse = norm(row.courseName) && norm(row.courseName) === norm(settings.courseName);
+                            // [수정] 방 또는 과정명 중 하나라도 일치하면 후보로.
+                            //  → 사전배정(연간계획 미리당김)으로 방이 바뀌어도 '과정명'으로 시간표를 찾는다.
+                            if (!sameRoom && !sameCourse) return;
                             const sched = row.schedule || {};
                             const schedLines = Array.isArray(sched.lines) ? sched.lines : String(sched.text || '').split(/[\n\r]+/).filter(Boolean);
                             if (!schedLines.length) return;
                             let score = baseScore;
-                            if (norm(row.courseName) && norm(row.courseName) === norm(settings.courseName || sched.courseName)) score += 100;
-                            if (norm(row.period) && norm(row.period) === norm(settings.period || sched.period)) score += 50;
+                            if (sameCourse) score += 1000;   // 과정명 일치 = 가장 신뢰도 높음 (방 변경에도 견고)
+                            if (norm(row.period) && norm(row.period) === norm(settings.period || sched.period)) score += 200;
+                            if (sameRoom) score += 50;
                             score += Number(row.updatedAt || sched.updatedAt || 0) / 100000000000000;
                             candidates.push({
                                 ...sched,
