@@ -3,8 +3,8 @@
 <head>
 <!-- ============================================================
   CATC · 교육지원부 · 생활관 배정  (dorm_admin.html)
-  @version  D
-  @build    20260611-142512
+  @version  E
+  @build    20260611-143219
   ────────────────────────────────────────────────────────
   [코드 수정 규칙 · AI/개발자 공통]
   이 파일을 한 글자라도 고치면:
@@ -25,6 +25,10 @@
       (weekKeyOf의 UTC 보정으로 KST 월요일이 전날로 밀려 생긴 중복 키를
        표시 단계에서 같은 실제 주로 합침 — 기존 데이터 키는 보존)
   vD: ② STEP4에 '이 주차 배정 삭제' 버튼 추가 (명단 유지, 현황만 정리)
+  vE: 외국인 교육생 → 국제교육동 하드 바인딩 복원
+      ① 배정 0.5단계 신설: 외국인을 국제교육동에 가장 먼저 배정
+      ② royal(청렴관 1층) 풀에서 외국인 제외 (108호 등 유입 차단)
+      ③ 잔여구제도 외국인은 국제교육동에만 — 정원 부족 시 미배정 유지
 ============================================================ -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
@@ -3143,6 +3147,27 @@
             } catch(e) { console.error('강사 예약 로드 실패', e); }
             if (instCount) log.push(`👨‍🏫 강사 사전배치: ${instCount}명`);
 
+            // ── 0.5) 외국인 → 국제교육동 하드 바인딩 ──
+            //  외국인 교육생은 반드시 국제교육동에만 배정한다.
+            //  royal(청렴관 1층)·타 건물 유입을 원천 차단하기 위해 가장 먼저 국제교육동을 채운다.
+            //  자리가 부족하면 타 건물로 보내지 않고 미배정으로 남겨 경고한다(아래 rescue에서 처리).
+            const intlRoomStates = sortedRooms()
+                .filter(r => r.building === '국제교육동' && !roomState[r.id].reserved && !roomState[r.id].noAssign)
+                .sort(roomNaturalSorter)
+                .map(r => roomState[r.id]);
+            const foreignSorted = people
+                .filter(p => p.foreign && !assigned[p.token])
+                .sort((a, b) => (a.gender || '').localeCompare(b.gender || ''));  // 동성끼리 모아 2인실 페어링 유도
+            let intlPlaced = 0;
+            foreignSorted.forEach(person => {
+                if (assigned[person.token]) return;
+                for (const rs of intlRoomStates) {
+                    if (rs.occupants.length >= rs.capacity) continue;
+                    if (placeInRoom(person, rs)) { intlPlaced++; break; }
+                }
+            });
+            if (intlPlaced) log.push(`🌐 외국인 국제교육동 우선배정: ${intlPlaced}명`);
+
             // ── 1) 우선 배정(royal) ──
             const royalRooms = sortedRooms()
                 .filter(r => roomState[r.id].royal && !roomState[r.id].reserved && !roomState[r.id].noAssign)
@@ -3151,7 +3176,7 @@
             royalRooms.forEach(r => {
                 const rs = roomState[r.id];
                 while (rs.occupants.length < rs.capacity && remaining.length) {
-                    let pool = remaining.filter(p => !assigned[p.token]);
+                    let pool = remaining.filter(p => !assigned[p.token] && !p.foreign);  // 외국인은 royal 제외(국제교육동 전용)
                     if (rs.fixedGender) pool = pool.filter(p => p.gender === rs.fixedGender);
                     if (rs.occupants[0]) pool = pool.filter(p => p.gender === rs.occupants[0].gender);
                     if (!pool.length) break;
@@ -3306,7 +3331,9 @@
                     return rs && !rs.reserved && rs.occupants.length < rs.capacity;
                 });
                 rescue.forEach(person => {
-                    for (const r of anyAvail) {
+                    // 외국인은 국제교육동에만 구제 배정 (정원 부족 시 미배정 유지 — 타 건물 금지)
+                    const pool = person.foreign ? anyAvail.filter(r => r.building === '국제교육동') : anyAvail;
+                    for (const r of pool) {
                         const rs = roomState[r.id];
                         if (rs.occupants.length >= rs.capacity) continue;
                         if (placeInRoom(person, rs)) {
@@ -5090,7 +5117,7 @@
     </div>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
 <style>@media print{#__catcVer{display:none!important}}</style>
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vD</div>
-<script>try{console.log('%cCATC%c 교육지원부 · 생활관 배정 (dorm_admin.html) %cvD%c build 20260611-142512','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}</script>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vE</div>
+<script>try{console.log('%cCATC%c 교육지원부 · 생활관 배정 (dorm_admin.html) %cvE%c build 20260611-143219','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}</script>
 </body>
 </html>
