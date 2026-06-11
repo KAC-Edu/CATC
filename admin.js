@@ -1,7 +1,7 @@
 /* ============================================================
    CATC · 강사 플랫폼 로직  (admin.js)
-   @version  G
-   @build    20260612-072444
+   @version  H
+   @build    20260612-074156
    ------------------------------------------------------------
    [코드 수정 규칙 · AI/개발자 공통]
    이 파일을 고치면 @version 을 A -> B -> ... -> Z -> A1 -> B1 ...
@@ -5852,6 +5852,92 @@ const scheduleMgr = {
             .replace(/\s+/g, ' ')
             .trim();
     },
+    // ── 일차별 일정표 전용 파서 (【 6.14(일), 0일차/인천 】 + 시간/내용/비고 형식) ──
+    //    '일차' 표기가 있을 때만 동작 → 일반 주간 그리드 과정에는 영향 없음
+    parseItinerary: function(lines) {
+        const clean = v => this.cleanLine(v);
+        const arr = (lines || [])
+            .flatMap(v => String(v || '').split('\u241F'))
+            .map(clean)
+            .filter(Boolean);
+        const dateRe = /(\d{1,2})\s*[.\-/]\s*(\d{1,2})/;
+        if (!arr.some(v => /일\s*차/.test(v) && dateRe.test(v))) return null;
+        const isHead = v => /일\s*차/.test(v) && dateRe.test(v);
+        const isTime = v => /^\d{1,2}\s*:\s*\d{2}/.test(v);
+        const isDash = v => /^[-–—~∼\s]+$/.test(v);
+        const startHour = v => { const m = String(v).match(/(\d{1,2})\s*:\s*(\d{2})/); return m ? Number(m[1]) + Number(m[2]) / 60 : -1; };
+        const normTime = v => String(v).replace(/\s*[∼~–—]\s*/g, '~').replace(/\s+/g, '');
+        const days = [];
+        let cur = null, pend = '', hour = -1, lastBucket = null;
+        const pushContent = (raw) => {
+            if (!cur) return;
+            const parts = String(raw).replace(/^[ㅇoO○•·∙]\s*/, '').split(/\s*\*+\s*/);
+            const content = (parts[0] || '').trim();
+            if (!content || /^\d{1,2}$/.test(content)) return;   // 페이지번호·빈값 제외
+            const label = pend ? `${pend} ${content}` : content;
+            const bucket = (hour >= 12) ? cur.afternoon : cur.morning;
+            bucket.push(label);
+            lastBucket = bucket;
+            parts.slice(1).forEach(nt => { nt = nt.trim(); if (nt && !bucket[bucket.length - 1].includes(nt)) bucket[bucket.length - 1] += ' *' + nt; });
+            pend = '';
+        };
+        arr.forEach(v => {
+            if (isHead(v)) {
+                const title = v.replace(/[【】]/g, '').replace(/(\d)\s*\.\s*(\d)/g, '$1.$2').replace(/\s*,\s*/g, ', ').replace(/\s{2,}/g, ' ').trim();
+                cur = { date: title, weekday: '', morning: [], afternoon: [] };
+                days.push(cur);
+                pend = ''; hour = -1; lastBucket = null;
+                return;
+            }
+            if (!cur) return;
+            if (isTime(v)) {
+                const tm = v.match(/^(\d{1,2}\s*:\s*\d{2}(?:\s*[∼~–—]\s*\d{1,2}\s*:\s*\d{2})?\s*~?)/);
+                pend = normTime(tm ? tm[1] : v);
+                hour = startHour(v);
+                const rest = (tm ? v.slice(tm[0].length) : '').trim();   // 같은 줄에 내용이 붙은 경우
+                if (rest) pushContent(rest);
+                return;
+            }
+            if (isDash(v)) { pend = ''; hour = -1; return; }
+            if (/^\*/.test(v)) {   // 비고 단독 줄 → 직전 항목에 덧붙임
+                const note = v.replace(/^\*+\s*/, '').trim();
+                if (note && lastBucket && lastBucket.length && !lastBucket[lastBucket.length - 1].includes(note)) {
+                    lastBucket[lastBucket.length - 1] += ' *' + note;
+                }
+                return;
+            }
+            pushContent(v);
+        });
+        return days.length ? days : null;
+    },
+    renderItinerary: function(days) {
+        const esc = v => this.escapeHtml(v);
+        const today = new Date();
+        const todayMD = `${today.getMonth() + 1}-${today.getDate()}`;
+        const dayMD = d => { const m = String(d.date || '').match(/(\d{1,2})\s*[.\-/]\s*(\d{1,2})/); return m ? `${Number(m[1])}-${Number(m[2])}` : ''; };
+        const fmtList = arr => {
+            if (!arr || !arr.length) return '<span style="color:#64748b; font-weight:800;">해당없음</span>';
+            return arr.map(v => {
+                const special = /청렴|체육|노조|입교|수료|설문|만찬|시티투어|친교|환영/.test(v);
+                const color = special ? '#b45309' : '#0f172a';
+                return `<span style="color:${color}; font-weight:800;">${esc(v)}</span>`;
+            }).join('<br>');
+        };
+        return `
+            <div style="display:flex; flex-direction:column; gap:12px; font-family:inherit;">
+                ${days.map(day => {
+                    const isToday = dayMD(day) === todayMD;
+                    return `
+                    <div style="box-sizing:border-box; border:1px solid ${isToday ? '#f8cdd6' : '#dbe4f0'}; border-radius:14px; background:${isToday ? '#fff6f8' : '#fff'}; padding:17px 19px;">
+                        <div style="font-size:18px; font-weight:900; color:#0f3f73; margin-bottom:10px;">${esc(day.date || '-')}</div>
+                        <div style="display:flex; flex-direction:column; gap:8px; color:#0f172a; font-size:15px; line-height:1.6; font-weight:700;">
+                            <div><span style="color:#2563eb; font-weight:900;">* 오전 :</span> ${fmtList(day.morning)}</div>
+                            <div><span style="color:#16a34a; font-weight:900;">* 오후 :</span> ${fmtList(day.afternoon)}</div>
+                        </div>
+                    </div>`;
+                }).join('')}
+            </div>`;
+    },
     parseLinearSummary: function(lines) {
         const cellSep = '\u241F';
         if ((lines || []).some(v => String(v || '').includes(cellSep))) return null;
@@ -6061,6 +6147,8 @@ const scheduleMgr = {
         return { days, rows };
     },
     renderSchedule: function(lines) {
+        const itinerary = this.parseItinerary(lines);
+        if (itinerary && itinerary.length) return this.renderItinerary(itinerary);
         const linearSummaries = this.parseLinearSummary(lines);
         const flexibleParsed = linearSummaries ? null : this.parseFlexibleTable(lines);
         const parsed = linearSummaries ? null : (flexibleParsed || this.parseTable(lines));
