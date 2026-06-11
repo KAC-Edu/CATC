@@ -3,8 +3,8 @@
 <head>
 <!-- ============================================================
   CATC · 교육지원부 · 생활관 배정  (dorm_admin.html)
-  @version  B
-  @build    20260611-093455
+  @version  C
+  @build    20260611-140850
   ────────────────────────────────────────────────────────
   [코드 수정 규칙 · AI/개발자 공통]
   이 파일을 한 글자라도 고치면:
@@ -17,6 +17,10 @@
   ──────────────────  변경 이력  ──────────────────
   vB: 한글/PDF 명단 업로드 시 교육 시간표(청렴교육·체육활동·점심식사)가
       교육생으로 오인식되던 문제 수정 (시각/교시 토큰 행 차단 + 명단표 게이트)
+  vC: ① 자동배정 완료/확정 팝업의 '배치 현황 보기' → 방금 배정한 주차로 바로 이동
+      (기존엔 DB 최신 주차가 떠서 다른 주차가 보였음)
+  vC: ② 블록 배정이 동·층 우선순위(청렴관 1층부터)를 따르도록 수정
+      (기존 fit 점수 방식 → 우선순위 순서 정렬. 청렴관 1·2층 누락 방지)
 ============================================================ -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
@@ -1301,7 +1305,7 @@
         }
 
         // ── 단계 이동 ──
-        function goStep(n) {
+        function goStep(n, opts) {
             const tab = document.getElementById(`stab-${n}`);
             if (tab.classList.contains('disabled')) {
                 showToast('이 단계는 다음 업데이트에서 열립니다');
@@ -1313,7 +1317,7 @@
             });
             if (n === 2) loadCourses(true);  // 주차 전환 후 캐시 불일치 방지 — 항상 새로 조회
             if (n === 3) loadWeeks();
-            if (n === 4) loadViewWeeks();
+            if (n === 4) loadViewWeeks(opts && opts.week);   // 방금 배정한 주차를 우선 표시
         }
 
         // ════════════ STEP 2: 과정 선택 + 명단 ════════════
@@ -2778,7 +2782,7 @@
                                     ${total}명 배정 · ${courses.length}개 과정${timeStr ? ' · ' + timeStr : ''}
                                 </div>
                             </div>
-                            <button onclick="goStep(4)" style="padding:9px 18px; background:#16a34a; color:#fff; border:none; border-radius:9px; font-weight:800; font-size:13px; cursor:pointer; flex-shrink:0;">
+                            <button onclick="goStep(4,{week:'${wk}'})" style="padding:9px 18px; background:#16a34a; color:#fff; border:none; border-radius:9px; font-weight:800; font-size:13px; cursor:pointer; flex-shrink:0;">
                                 <i class="fa-solid fa-table-list"></i> 배치 현황 보기
                             </button>
                         </div>
@@ -2974,7 +2978,7 @@
                 <div style="font-size:15px;color:#334155;margin-bottom:6px;">총 <b>${totalAssigned}명</b> / ${totalPeople}명 배정</div>
                 ${totalAssigned < totalPeople ? '<div style="font-size:13px;color:#dc2626;margin-bottom:6px;">⚠️ 미배정 '+(totalPeople-totalAssigned)+'명 — 방 용량을 확인하세요.</div>' : ''}
                 <div style="font-size:13px;color:#64748b;margin-bottom:20px;">${wk} 주간 배정 결과가 저장되었습니다.</div>
-                <button onclick="this.closest('div').parentNode.remove();goStep(4);" style="width:100%;padding:14px;background:#2563eb;color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:900;cursor:pointer;">배치 현황 보기</button>
+                <button onclick="this.closest('div').parentNode.remove();goStep(4,{week:'${wk}'});" style="width:100%;padding:14px;background:#2563eb;color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:900;cursor:pointer;">배치 현황 보기</button>
                 <button onclick="this.closest('div').parentNode.remove();" style="width:100%;margin-top:10px;padding:12px;background:#f1f5f9;color:#64748b;border:none;border-radius:12px;font-size:14px;font-weight:800;cursor:pointer;">닫기</button>
             </div>`;
             document.body.appendChild(modal);
@@ -3163,16 +3167,19 @@
                 const need = (activeRosters[ck].list || []).filter(p => !assigned[`${p.name}_${p.empNo||''}`]).length;
                 if (!need) { coursePlan[ck] = new Set(); return; }
 
-                // 각 층 블록에 대한 점수 계산
+                // 각 층 블록을 '동·층 우선순위' 순서로 정렬 (위에 있을수록 먼저 채움).
+                //  [수정] 기존엔 fit 점수가 높은(딱 맞는) 층을 먼저 골라서, 우선순위 1번인
+                //  청렴관 1·2층이 통째로 비고 상생관/국제교육동부터 채워지는 일이 잦았다.
+                //  이제 우선순위 인덱스(작을수록 먼저)를 1차 정렬키로 사용한다.
+                const _floorRank = {};
+                (floorPriority && floorPriority.length ? floorPriority : defaultFloorOrder())
+                    .forEach((f, i) => { _floorRank[f.key] = i; });
                 const blockScores = Object.values(floorBlockMap).map(block => {
                     const avail = block.rooms.filter(r => !claimedRooms.has(r.id));
                     const cap = avail.reduce((s, r) => s + (roomState[r.id].capacity - roomState[r.id].occupants.length), 0);
                     if (cap <= 0) return null;
-                    // 점수: 딱 맞게 들어가면 +100, 여유가 너무 많으면 -20(낭비), 못 맞으면 partial점수
-                    const fit = Math.min(cap, need) / need;
-                    const waste = cap > need ? (cap - need) / cap * 20 : 0;
-                    return { block, avail, cap, score: fit * 100 - waste };
-                }).filter(Boolean).sort((a, b) => b.score - a.score);
+                    return { block, avail, cap, rank: _floorRank[`${block.building}_${block.floor}`] ?? 999 };
+                }).filter(Boolean).sort((a, b) => a.rank - b.rank);
 
                 coursePlan[ck] = new Set();
                 let still = need;
@@ -3421,7 +3428,7 @@
         let viewAssign = null;   // 현재 보고있는 배정 { weekKey, students:{token:rec} }
         let moveTargetToken = null;
 
-        async function loadViewWeeks() {
+        async function loadViewWeeks(preferWk) {
             const sel = document.getElementById('viewWeekSelect');
             const snap = await db.ref('system/dorm/assignments').once('value');
             const all = snap.val() || {};
@@ -3438,6 +3445,8 @@
                 const fmt = d => `${d.getMonth()+1}/${d.getDate()}`;
                 return `<option value="${wk}">${fmt(wd)} ~ ${fmt(wEnd)} 주간</option>`;
             }).join('');
+            // [신규] 방금 배정/확정한 주차가 있으면 그 주차를 선택 (없으면 최신 주차 기본)
+            if (preferWk && wks.includes(preferWk)) sel.value = preferWk;
             renderBoard();
         }
 
@@ -5014,7 +5023,7 @@
     </div>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
 <style>@media print{#__catcVer{display:none!important}}</style>
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vB</div>
-<script>try{console.log('%cCATC%c 교육지원부 · 생활관 배정 (dorm_admin.html) %cvB%c build 20260611-093455','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}</script>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vC</div>
+<script>try{console.log('%cCATC%c 교육지원부 · 생활관 배정 (dorm_admin.html) %cvC%c build 20260611-140850','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}</script>
 </body>
 </html>
