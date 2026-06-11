@@ -3,8 +3,8 @@
 <head>
 <!-- ============================================================
   CATC · 교육지원부 · 생활관 배정  (dorm_admin.html)
-  @version  O
-  @build    20260611-174434
+  @version  P
+  @build    20260611-175952
   ────────────────────────────────────────────────────────
   [코드 수정 규칙 · AI/개발자 공통]
   이 파일을 한 글자라도 고치면:
@@ -51,6 +51,7 @@
       ② 틀고정 수정 — 헤더 대제목 + STEP1~4 탭을 어느 화면에서나 항상 상단 고정 표시(숨김 동작 제거). 그 아래 본문만 스크롤.
   vN: 배치도 탭을 펴 둔 상태에서 방마스터 배정제외 변경이 즉시 반영 안 되던 문제 수정 — renderBoard 갱신 시 현재 배치도 탭이면 배치도도 함께 다시 그림(이전엔 명단표→배치도 재클릭 시에만 반영).
   vO: ① 브라우저 탭 제목을 '생활관 배정 관리'로 고정(PDF 출력 후 파일명이 탭에 남던 문제 — afterprint로 확실히 원복). ② 헤더 대제목을 '항공기술훈련원 생활관 배정 관리'로 변경.
+  vP: 연간 교육계획 모달을 강사플랫폼 디자인으로 통일 — 카드형 행 표(행 사이 여백·라운드), 회색 헤더, 파란 액션 버튼, 라운드+blur 모달, 상태색(진행중/예정/종료) 행 카드 틴트.
 ============================================================ -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
@@ -130,6 +131,45 @@
         .step-tabs { display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap;
             position: sticky; top: var(--header-h, 80px); z-index: 90;
             background: var(--bg); padding: 12px 0 10px; }
+
+        /* ── 연간 교육계획 모달: 강사플랫폼 디자인 적용 ── */
+        #annualPop.pop-overlay { background: rgba(15,23,42,0.55); backdrop-filter: blur(8px); }
+        #annualPop .pop-box { border-radius: 20px; box-shadow: 0 25px 50px rgba(0,0,0,0.22); padding: 26px 28px; }
+        .ap-head { display:flex; align-items:center; gap:11px; }
+        .ap-head h3 { margin:0; font-size:21px; font-weight:900; color:#0f172a; display:flex; align-items:center; gap:9px; letter-spacing:-0.4px; }
+        .ap-head .ap-sub { font-size:12.5px; color:#64748b; font-weight:700; }
+        .ap-close { margin-left:auto; width:40px; height:40px; border-radius:12px; border:1px solid #e2e8f0; background:#fff; color:#475569; font-size:16px; cursor:pointer; transition:.15s; }
+        .ap-close:hover { background:#f1f5f9; color:#0f172a; }
+        .ap-note { font-size:12.5px; color:#64748b; font-weight:600; margin:12px 0 16px; line-height:1.55; }
+        .ap-toolbar { display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:8px; }
+        .ap-btn { border:1px solid #cbd5e1; background:#fff; color:#334155; font-weight:800; font-size:13px; padding:9px 15px; border-radius:10px; cursor:pointer; display:inline-flex; align-items:center; gap:7px; transition:all .15s ease; box-shadow:0 1px 2px rgba(0,0,0,0.04); }
+        .ap-btn:hover { border-color:#3b82f6; color:#2563eb; background:#eff6ff; }
+        .ap-btn.primary { background:#3b82f6; border-color:#3b82f6; color:#fff; box-shadow:0 2px 4px rgba(0,0,0,0.1); }
+        .ap-btn.primary:hover { background:#2563eb; color:#fff; box-shadow:0 5px 15px rgba(59,130,246,0.4); transform:translateY(-2px); }
+        .ap-count { margin-left:auto; font-size:13px; font-weight:800; color:#475569; }
+        .ap-legend { display:flex; gap:18px; flex-wrap:wrap; align-items:center; font-size:11.5px; color:#475569; font-weight:700; padding:8px 2px 4px; }
+        .ap-legend .sw { display:inline-block; width:11px; height:11px; border-radius:3px; vertical-align:middle; margin-right:5px; }
+        .ap-scroll { overflow:auto; flex:1; padding:0 2px; }
+        .ap-table { width:100%; border-collapse:separate; border-spacing:0 8px; font-size:13.5px; }
+        .ap-table thead th { position:sticky; top:0; z-index:3; background:var(--card); text-align:center; padding:10px 8px; font-size:12.5px; font-weight:800; color:#94a3b8; white-space:nowrap; }
+        .ap-table tbody td { background:#fff; text-align:center; vertical-align:middle; padding:8px; border-top:1px solid #eef2f7; border-bottom:1px solid #eef2f7; }
+        .ap-table tbody td:first-child { border-left:1px solid #eef2f7; border-top-left-radius:12px; border-bottom-left-radius:12px; }
+        .ap-table tbody td:last-child { border-right:1px solid #eef2f7; border-top-right-radius:12px; border-bottom-right-radius:12px; }
+        .ap-table tbody tr.s-now td { background:#eff6ff; border-color:#bfdbfe; }
+        .ap-table tbody tr.s-soon td { background:#f0fdf4; border-color:#bbf7d0; }
+        .ap-table tbody tr.s-done td { background:#f8fafc; }
+        .ap-table tbody tr.s-done td:not(:last-child) { color:#94a3b8; }
+        .ap-input { width:100%; border:none; outline:none; background:transparent; font-size:13px; text-align:center; color:#1e293b; font-weight:600; }
+        .ap-input.name { font-weight:800; text-align:left; }
+        .ap-cell-input { border:1px solid #e2e8f0; border-radius:8px; padding:6px 7px; background:#fff; }
+        .ap-cell-input:focus { border-color:#3b82f6; }
+        .ap-del { width:30px; height:30px; border-radius:8px; border:none; background:#fee2e2; color:#dc2626; cursor:pointer; font-size:13px; transition:.15s; }
+        .ap-del:hover { background:#dc2626; color:#fff; }
+        .ap-foot { display:flex; gap:10px; margin-top:16px; }
+        .ap-foot .ap-btn { justify-content:center; padding:12px; }
+        .ap-foot .cancel { flex:1; }
+        .ap-foot .save { flex:2; background:#3b82f6; border-color:#3b82f6; color:#fff; font-size:14px; }
+        .ap-foot .save:hover { background:#2563eb; color:#fff; box-shadow:0 6px 18px rgba(59,130,246,0.4); transform:translateY(-1px); }
         .step-tabs > .step-tab { flex: 1; min-width: 150px; background: var(--card); border: 1.5px solid var(--border); border-radius: 14px; padding: 14px 16px; cursor: pointer; transition: all 0.18s; position: relative; overflow: hidden; }
         .step-tabs > .step-tab:hover { border-color: #bfdbfe; box-shadow: 0 4px 12px rgba(15,23,42,0.07); transform: translateY(-1px); }
         .step-tabs > .step-tab.active { border-color: var(--blue); background: linear-gradient(135deg, #eff6ff, #fff); box-shadow: 0 4px 14px rgba(37,99,235,0.15); }
@@ -697,50 +737,49 @@
         </div>
     </div>
 
-    <!-- 연간계획 조회/추가 모달 -->
+    <!-- 연간계획 조회/추가 모달 (강사플랫폼 디자인) -->
     <div class="pop-overlay" id="annualPop" style="align-items:flex-start;">
-        <div class="pop-box" style="max-width:860px; width:100%; margin-top:40px; max-height:88vh; display:flex; flex-direction:column;">
-            <div style="display:flex; align-items:center; gap:10px; margin-bottom:8px;">
-                <h3 style="margin:0; font-size:18px;"><i class="fa-solid fa-calendar-days" style="color:#0ea5e9;"></i> 연간 교육계획</h3>
-                <span style="font-size:12px; color:var(--muted); font-weight:600;">과정·일정 확인 및 사전 등록</span>
-                <button onclick="annualPlan.close()" style="margin-left:auto; background:#f1f5f9; border:none; width:34px; height:34px; border-radius:9px; cursor:pointer; font-size:16px; color:var(--muted);"><i class="fa-solid fa-xmark"></i></button>
+        <div class="pop-box" style="max-width:880px; width:100%; margin-top:38px; max-height:88vh; display:flex; flex-direction:column;">
+            <div class="ap-head">
+                <h3><i class="fa-solid fa-calendar-days" style="color:#3b82f6;"></i> 연간 교육계획</h3>
+                <span class="ap-sub">과정·일정 확인 및 사전 등록</span>
+                <button class="ap-close" onclick="annualPlan.close()"><i class="fa-solid fa-xmark"></i></button>
             </div>
-            <p style="font-size:12px; color:var(--muted); margin:0 0 14px;">여기서 추가/수정한 과정은 STEP 2 과정 선택에도 나타나 생활관 배치를 미리 준비할 수 있습니다. (강사 플랫폼의 실제 강의실 배정은 변경되지 않습니다.)</p>
+            <p class="ap-note">여기서 추가/수정한 과정은 STEP 2 과정 선택에도 나타나 생활관 배치를 미리 준비할 수 있습니다. (강사 플랫폼의 실제 강의실 배정은 변경되지 않습니다.)</p>
 
-            <div style="display:flex; gap:8px; margin-bottom:12px; flex-wrap:wrap;">
-                <button class="refresh-btn" style="border-color:#bae6fd; color:#0369a1;" onclick="annualPlan.addRow()"><i class="fa-solid fa-plus"></i> 과정 추가</button>
-                <button class="refresh-btn" onclick="annualPlan.load()"><i class="fa-solid fa-rotate"></i> 새로고침</button>
-                <div style="flex:1;"></div>
-                <span id="annualCount" class="summary" style="align-self:center;">0개 과정</span>
+            <div class="ap-toolbar">
+                <button class="ap-btn primary" onclick="annualPlan.addRow()"><i class="fa-solid fa-plus"></i> 과정 추가</button>
+                <button class="ap-btn" onclick="annualPlan.load()"><i class="fa-solid fa-rotate"></i> 새로고침</button>
+                <span id="annualCount" class="ap-count">0개 과정</span>
+            </div>
+            <div class="ap-legend">
+                <span style="font-weight:800;color:#334155;">상태 색상</span>
+                <span><span class="sw" style="background:#dbeafe;"></span>진행 중</span>
+                <span><span class="sw" style="background:#dcfce7;"></span>예정</span>
+                <span><span class="sw" style="background:#e2e8f0;"></span>종료</span>
             </div>
 
-            <div style="overflow:auto; flex:1; border:1px solid var(--border); border-radius:12px;">
-                <div style="position:sticky; top:0; z-index:11; display:flex; gap:12px; flex-wrap:wrap; padding:0 12px; height:35px; box-sizing:border-box; font-size:11px; color:#475569; align-items:center; background:#fff; border-bottom:1px solid var(--border);">
-                    <span style="font-weight:800;">상태 색상:</span>
-                    <span><span style="display:inline-block; width:11px; height:11px; border-radius:3px; background:#dbeafe; vertical-align:middle; margin-right:4px;"></span>진행 중</span>
-                    <span><span style="display:inline-block; width:11px; height:11px; border-radius:3px; background:#dcfce7; vertical-align:middle; margin-right:4px;"></span>예정</span>
-                    <span><span style="display:inline-block; width:11px; height:11px; border-radius:3px; background:#f1f5f9; vertical-align:middle; margin-right:4px;"></span>종료</span>
-                </div>
-                <table style="width:100%; border-collapse:collapse; font-size:13px;">
+            <div class="ap-scroll">
+                <table class="ap-table">
                     <thead>
-                        <tr style="background:#f8fafc;">
-                            <th style="padding:9px; border:1px solid var(--border); width:42px; position:sticky; top:35px; background:#f8fafc; z-index:10;">연번</th>
-                            <th style="padding:9px; border:1px solid var(--border); min-width:160px; position:sticky; top:35px; background:#f8fafc; z-index:10;">과정명</th>
-                            <th style="padding:9px; border:1px solid var(--border); width:140px; position:sticky; top:35px; background:#f8fafc; z-index:10;">시작일</th>
-                            <th style="padding:9px; border:1px solid var(--border); width:140px; position:sticky; top:35px; background:#f8fafc; z-index:10;">종료일</th>
-                            <th style="padding:9px; border:1px solid var(--border); width:100px; position:sticky; top:35px; background:#f8fafc; z-index:10;">교수</th>
-                            <th style="padding:9px; border:1px solid var(--border); width:100px; position:sticky; top:35px; background:#f8fafc; z-index:10;">담당</th>
-                            <th style="padding:9px; border:1px solid var(--border); min-width:170px; position:sticky; top:35px; background:#f8fafc; z-index:10;">강의실</th>
-                            <th style="padding:9px; border:1px solid var(--border); width:46px; position:sticky; top:35px; background:#f8fafc; z-index:10;"></th>
+                        <tr>
+                            <th style="width:42px;">연번</th>
+                            <th style="min-width:170px;">과정명</th>
+                            <th style="width:140px;">시작일</th>
+                            <th style="width:140px;">종료일</th>
+                            <th style="width:92px;">교수</th>
+                            <th style="width:92px;">담당</th>
+                            <th style="min-width:170px;">강의실</th>
+                            <th style="width:46px;"></th>
                         </tr>
                     </thead>
                     <tbody id="annualBody"></tbody>
                 </table>
             </div>
 
-            <div style="display:flex; gap:8px; margin-top:14px;">
-                <button class="pop-cancel" style="flex:1;" onclick="annualPlan.close()">닫기</button>
-                <button class="pop-save" style="flex:2;" onclick="annualPlan.save()"><i class="fa-solid fa-floppy-disk"></i> 저장</button>
+            <div class="ap-foot">
+                <button class="ap-btn cancel" onclick="annualPlan.close()">닫기</button>
+                <button class="ap-btn save" onclick="annualPlan.save()"><i class="fa-solid fa-floppy-disk"></i> 저장</button>
             </div>
         </div>
     </div>
@@ -5310,22 +5349,23 @@
                 }
                 const today = new Date().toISOString().slice(0, 10);
                 body.innerHTML = this.data.map((c, i) => {
-                    let bg = '';
+                    let cls = '';
                     if (c.startDate && c.endDate) {
-                        if (c.endDate < today) bg = 'background:#f1f5f9;';
-                        else if (c.startDate <= today && c.endDate >= today) bg = 'background:#dbeafe;';
-                        else bg = 'background:#dcfce7;';
+                        if (c.endDate < today) cls = 's-done';
+                        else if (c.startDate <= today && c.endDate >= today) cls = 's-now';
+                        else cls = 's-soon';
                     }
-                    const inp = 'width:100%; border:none; outline:none; background:transparent; font-size:13px;';
-                    return `<tr style="${bg}">
-                        <td style="padding:4px; border:1px solid var(--border); text-align:center;">${i + 1}</td>
-                        <td style="padding:4px; border:1px solid var(--border);"><input value="${(c.name||'').replace(/"/g,'&quot;')}" oninput="annualPlan.edit(${i},'name',this.value)" style="${inp} font-weight:700;"></td>
-                        <td style="padding:4px; border:1px solid var(--border);"><input type="date" value="${c.startDate||''}" oninput="annualPlan.edit(${i},'startDate',this.value)" style="${inp}"></td>
-                        <td style="padding:4px; border:1px solid var(--border);"><input type="date" value="${c.endDate||''}" oninput="annualPlan.edit(${i},'endDate',this.value)" style="${inp}"></td>
-                        <td style="padding:4px; border:1px solid var(--border);"><input value="${(c.prof||'').replace(/"/g,'&quot;')}" oninput="annualPlan.edit(${i},'prof',this.value)" style="${inp}"></td>
-                        <td style="padding:4px; border:1px solid var(--border);"><input value="${(c.coord||'').replace(/"/g,'&quot;')}" oninput="annualPlan.edit(${i},'coord',this.value)" style="${inp}"></td>
-                        <td style="padding:4px; border:1px solid var(--border);">${classroomSelectHtml(c.roomDetail || '', "annualPlan.edit(" + i + ",'roomDetail',this.value)", inp)}</td>
-                        <td style="padding:4px; border:1px solid var(--border); text-align:center;"><span class="del-x" style="color:var(--danger); cursor:pointer;" onclick="annualPlan.del(${i})"><i class="fa-solid fa-xmark"></i></span></td>
+                    const esc = v => (v || '').replace(/"/g, '&quot;');
+                    const cellSel = 'width:100%;border:1px solid #e2e8f0;border-radius:8px;padding:6px 7px;font-size:13px;background:#fff;outline:none;';
+                    return `<tr class="${cls}">
+                        <td style="width:42px;font-weight:800;color:#64748b;">${i + 1}</td>
+                        <td style="min-width:170px;"><input class="ap-input name" value="${esc(c.name)}" oninput="annualPlan.edit(${i},'name',this.value)"></td>
+                        <td style="width:140px;"><input type="date" class="ap-input ap-cell-input" value="${c.startDate || ''}" oninput="annualPlan.edit(${i},'startDate',this.value)"></td>
+                        <td style="width:140px;"><input type="date" class="ap-input ap-cell-input" value="${c.endDate || ''}" oninput="annualPlan.edit(${i},'endDate',this.value)"></td>
+                        <td style="width:92px;"><input class="ap-input" value="${esc(c.prof)}" oninput="annualPlan.edit(${i},'prof',this.value)"></td>
+                        <td style="width:92px;"><input class="ap-input" value="${esc(c.coord)}" oninput="annualPlan.edit(${i},'coord',this.value)"></td>
+                        <td style="min-width:170px;">${classroomSelectHtml(c.roomDetail || '', "annualPlan.edit(" + i + ",'roomDetail',this.value)", cellSel)}</td>
+                        <td style="width:46px;"><button class="ap-del" onclick="annualPlan.del(${i})" title="삭제"><i class="fa-solid fa-xmark"></i></button></td>
                     </tr>`;
                 }).join('');
 
@@ -5435,8 +5475,8 @@
     </div>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
 <style>@media print{#__catcVer{display:none!important}}</style>
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vO</div>
-<script>try{console.log('%cCATC%c 교육지원부 · 생활관 배정 (dorm_admin.html) %cvO%c build 20260611-174434','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}</script>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vP</div>
+<script>try{console.log('%cCATC%c 교육지원부 · 생활관 배정 (dorm_admin.html) %cvP%c build 20260611-175952','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}</script>
 <script>
 /* 헤더 + 단계 메뉴(STEP 탭) 틀고정 — 어느 페이지에서든 항상 상단에 고정 표시.
    step-tabs를 헤더 바로 아래에 붙이기 위해 헤더 높이를 측정해 sticky 오프셋으로 사용. */
