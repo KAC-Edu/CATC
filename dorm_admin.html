@@ -3,8 +3,8 @@
 <head>
 <!-- ============================================================
   CATC · 교육지원부 · 생활관 배정  (dorm_admin.html)
-  @version  T
-  @build    20260611-205519
+  @version  U
+  @build    20260611-210440
   ────────────────────────────────────────────────────────
   [코드 수정 규칙 · AI/개발자 공통]
   이 파일을 한 글자라도 고치면:
@@ -58,6 +58,8 @@
       ② 아코디언 헤더(패널·층) 호버 시 테두리 진해짐 + 헤더 바 전체가 클릭 영역(이전엔 글자만).
   vS: 아코디언 패널(동·층 우선순위/배치 기준) 하단에 어긋나게 보이던 희미한 밑줄 제거 — 저장바의 음수 마진·sticky·border-top 제거로 깔끔한 푸터 처리.
   vT: 방마스터 층 헤더(청렴관 1층 등) 아이콘·제목·개수 세로 정렬 보정 — 제목 묶음을 flex 가운데정렬로 변경(인라인 baseline 어긋남 해결).
+  vU: ① 아코디언 패널 제목 좌측 정렬 보정 — PC 모드 패널 padding(28px)에 아코디언 헤더/내용 padding 일치(이전 22px 고정 → 6px 어긋남 해결).
+      ② 방마스터 층 버튼(청렴관 1층 등)에 파란 틴트 적용 — 배경 #eef4ff·테두리 파랑·파란 화살표, 호버/펼침 시 진해짐(클릭 가능 시인성 강화).
 ============================================================ -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
@@ -151,16 +153,20 @@
         .panel.acc.open > .acc-body { grid-template-rows:1fr; }
         .panel.acc > .acc-body > .acc-inner { overflow:hidden; min-height:0; }
         .panel.acc.open > .acc-body > .acc-inner { padding:6px 22px 20px; }
+        /* PC 모드 패널 padding(28px)에 아코디언 헤더/내용 좌측 정렬 일치 */
+        body.pc-mode .panel.acc > .acc-head { padding:24px 28px; }
+        body.pc-mode .panel.acc.open > .acc-body > .acc-inner { padding:6px 28px 24px; }
         /* ── 접이식 — 층 카드형 (청렴관 1층 등) ── */
-        .floor-card.acc-fc { padding:0; overflow:hidden; transition:border-color .15s ease, box-shadow .15s ease; }
-        .floor-card.acc-fc:hover { border-color:#94a3b8; box-shadow:0 3px 12px rgba(15,23,42,0.06); }
-        .floor-card.acc-fc > .fc-head { margin:0; padding:14px 16px; cursor:pointer; display:flex; align-items:center; justify-content:space-between; user-select:none; border-radius:12px; transition:background .15s ease; }
-        .floor-card.acc-fc.open > .fc-head { border-radius:12px 12px 0 0; }
-        .floor-card.acc-fc > .fc-head:hover { background:#f8fafc; }
+        .floor-card.acc-fc { padding:0; overflow:hidden; border-color:#cdddff; transition:border-color .15s ease, box-shadow .15s ease; }
+        .floor-card.acc-fc:hover { border-color:var(--blue); box-shadow:0 3px 12px rgba(37,99,235,0.14); }
+        .floor-card.acc-fc > .fc-head { margin:0; padding:14px 16px; cursor:pointer; display:flex; align-items:center; justify-content:space-between; user-select:none; border-radius:11px; background:#eef4ff; transition:background .15s ease; }
+        .floor-card.acc-fc.open > .fc-head { border-radius:11px 11px 0 0; background:#e2ecff; border-bottom:1px solid #cdddff; }
+        .floor-card.acc-fc > .fc-head:hover { background:#dde8ff; }
         .floor-card.acc-fc > .acc-body { display:grid; grid-template-rows:0fr; transition:grid-template-rows .3s ease; }
         .floor-card.acc-fc.open > .acc-body { grid-template-rows:1fr; }
-        .floor-card.acc-fc > .acc-body > .acc-inner { overflow:hidden; min-height:0; }
-        .floor-card.acc-fc.open > .acc-body > .acc-inner { padding:4px 16px 16px; }
+        .floor-card.acc-fc > .acc-body > .acc-inner { overflow:hidden; min-height:0; background:#fff; }
+        .floor-card.acc-fc.open > .acc-body > .acc-inner { padding:14px 16px 16px; }
+        .floor-card.acc-fc > .fc-head .acc-chev { color:var(--blue); }
         .fc-count { font-size:12px; color:var(--muted); font-weight:600; }
         .floor-card.acc-fc > .fc-head .fc-title { display:flex; align-items:center; gap:8px; min-width:0; }
         .floor-card.acc-fc > .fc-head .fc-title i { font-size:15px; line-height:1; flex-shrink:0; }
@@ -5537,8 +5543,8 @@
     </div>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
 <style>@media print{#__catcVer{display:none!important}}</style>
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vT</div>
-<script>try{console.log('%cCATC%c 교육지원부 · 생활관 배정 (dorm_admin.html) %cvT%c build 20260611-205519','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}</script>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vU</div>
+<script>try{console.log('%cCATC%c 교육지원부 · 생활관 배정 (dorm_admin.html) %cvU%c build 20260611-210440','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}</script>
 <script>
 /* 헤더 + 단계 메뉴(STEP 탭) 틀고정 — 어느 페이지에서든 항상 상단에 고정 표시.
    step-tabs를 헤더 바로 아래에 붙이기 위해 헤더 높이를 측정해 sticky 오프셋으로 사용. */
