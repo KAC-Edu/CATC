@@ -3,8 +3,8 @@
 <head>
 <!-- ============================================================
   CATC · 교육지원부 · 생활관 배정  (dorm_admin.html)
-  @version  P
-  @build    20260611-175952
+  @version  Q
+  @build    20260611-202844
   ────────────────────────────────────────────────────────
   [코드 수정 규칙 · AI/개발자 공통]
   이 파일을 한 글자라도 고치면:
@@ -52,6 +52,8 @@
   vN: 배치도 탭을 펴 둔 상태에서 방마스터 배정제외 변경이 즉시 반영 안 되던 문제 수정 — renderBoard 갱신 시 현재 배치도 탭이면 배치도도 함께 다시 그림(이전엔 명단표→배치도 재클릭 시에만 반영).
   vO: ① 브라우저 탭 제목을 '생활관 배정 관리'로 고정(PDF 출력 후 파일명이 탭에 남던 문제 — afterprint로 확실히 원복). ② 헤더 대제목을 '항공기술훈련원 생활관 배정 관리'로 변경.
   vP: 연간 교육계획 모달을 강사플랫폼 디자인으로 통일 — 카드형 행 표(행 사이 여백·라운드), 회색 헤더, 파란 액션 버튼, 라운드+blur 모달, 상태색(진행중/예정/종료) 행 카드 틴트.
+  vQ: ① 연간계획표 모달 너비 확대(1160px) + 과정명·강의실 칸 확장(텍스트 잘림 완화).
+      ② 방마스터 '동·층 배정 우선순위'·'배치 기준 관리'를 접이식(아코디언)으로 — 제목바 클릭 시 펼침/접힘, 기본 접힘(제목 위치·가로폭 동일).
 ============================================================ -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
@@ -131,6 +133,15 @@
         .step-tabs { display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap;
             position: sticky; top: var(--header-h, 80px); z-index: 90;
             background: var(--bg); padding: 12px 0 10px; }
+
+        /* ── 방마스터 접이식(아코디언) 섹션 ── */
+        .panel.acc > .acc-head { cursor:pointer; display:flex; align-items:center; justify-content:space-between; margin:0; user-select:none; }
+        .panel.acc > .acc-head .acc-chev { font-size:14px; color:#94a3b8; transition:transform .25s ease; }
+        .panel.acc.open > .acc-head .acc-chev { transform:rotate(180deg); }
+        .panel.acc > .acc-body { display:grid; grid-template-rows:0fr; transition:grid-template-rows .3s ease; }
+        .panel.acc.open > .acc-body { grid-template-rows:1fr; }
+        .panel.acc > .acc-body > .acc-inner { overflow:hidden; min-height:0; }
+        .panel.acc.open > .acc-body > .acc-inner { padding-top:6px; }
 
         /* ── 연간 교육계획 모달: 강사플랫폼 디자인 적용 ── */
         #annualPop.pop-overlay { background: rgba(15,23,42,0.55); backdrop-filter: blur(8px); }
@@ -488,38 +499,42 @@
 
         <!-- STEP 1: 방 마스터 -->
         <div id="step-1">
-            <!-- 동·층 배정 우선순위 -->
-            <div class="panel" style="margin-bottom:16px;">
-                <h2>동·층 배정 우선순위</h2>
-                <p class="desc">교육생을 채울 <b>동·층 순서</b>를 정합니다. 위에 있을수록 먼저 채웁니다. 항목을 끌어서(드래그) 순서를 바꾸고, 층별로 <b>성별 전용</b>을 지정할 수 있어요. (예: 청렴관 1·2층 여성 전용 → 여성을 다 채우면 남은 인원은 다음 순위로, 그 층엔 남성이 들어가지 않음)</p>
-                <div id="floorPriorityList" style="display:flex; flex-direction:column; gap:8px; margin:14px 0;"></div>
-                <div class="save-bar">
-                    <div class="summary" id="floorPrioSummary"></div>
-                    <button class="save-btn" onclick="saveFloorPriority()"><i class="fa-solid fa-floppy-disk"></i> 우선순위 저장</button>
-                </div>
+            <!-- 동·층 배정 우선순위 (아코디언) -->
+            <div class="panel acc" id="accFloorPrio" style="margin-bottom:16px;">
+                <h2 class="acc-head" onclick="toggleAcc('accFloorPrio')"><span>동·층 배정 우선순위</span><i class="fa-solid fa-chevron-down acc-chev"></i></h2>
+                <div class="acc-body"><div class="acc-inner">
+                    <p class="desc">교육생을 채울 <b>동·층 순서</b>를 정합니다. 위에 있을수록 먼저 채웁니다. 항목을 끌어서(드래그) 순서를 바꾸고, 층별로 <b>성별 전용</b>을 지정할 수 있어요. (예: 청렴관 1·2층 여성 전용 → 여성을 다 채우면 남은 인원은 다음 순위로, 그 층엔 남성이 들어가지 않음)</p>
+                    <div id="floorPriorityList" style="display:flex; flex-direction:column; gap:8px; margin:14px 0;"></div>
+                    <div class="save-bar">
+                        <div class="summary" id="floorPrioSummary"></div>
+                        <button class="save-btn" onclick="saveFloorPriority()"><i class="fa-solid fa-floppy-disk"></i> 우선순위 저장</button>
+                    </div>
+                </div></div>
             </div>
 
-            <!-- 배치 기준 관리 -->
-            <div class="panel" style="margin-bottom:16px;">
-                <h2>배치 기준 관리</h2>
-                <p class="desc">방에 적용할 <b>우선 배치 기준</b>을 직접 추가/삭제합니다. 기준 이름을 정하고 동작 방식을 고르세요. (방마다 적용 기준을 선택할 수 있습니다.)</p>
-                <div id="criteriaList" style="display:flex; flex-direction:column; gap:8px; margin:14px 0;"></div>
-                <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:12px;">
-                    <input type="text" id="newCritName" placeholder="기준 이름 (예: 여성 연장자 우선)" style="flex:1; min-width:180px; padding:10px 13px; border:1.5px solid #e2e8f0; border-radius:9px; font-size:14px; outline:none;">
-                    <select id="newCritType" style="padding:10px 13px; border:1.5px solid #e2e8f0; border-radius:9px; font-size:14px;">
-                        <option value="empno_asc">사번 낮은순(연장자) 우선</option>
-                        <option value="empno_desc">사번 높은순(연소자) 우선</option>
-                        <option value="female">여성 우선</option>
-                        <option value="male">남성 우선</option>
-                        <option value="foreign">외국인 교육생 우선</option>
-                        <option value="name_asc">가나다순</option>
-                    </select>
-                    <button onclick="addCriteria()" style="padding:10px 18px; border:none; border-radius:9px; background:#2563eb; color:#fff; font-weight:800; cursor:pointer;"><i class="fa-solid fa-plus"></i> 기준 추가</button>
-                </div>
-                <div class="save-bar" style="margin-top:12px;">
-                    <div class="summary" id="critSummary"></div>
-                    <button class="save-btn" onclick="saveCriteria()"><i class="fa-solid fa-floppy-disk"></i> 기준 저장</button>
-                </div>
+            <!-- 배치 기준 관리 (아코디언) -->
+            <div class="panel acc" id="accCriteria" style="margin-bottom:16px;">
+                <h2 class="acc-head" onclick="toggleAcc('accCriteria')"><span>배치 기준 관리</span><i class="fa-solid fa-chevron-down acc-chev"></i></h2>
+                <div class="acc-body"><div class="acc-inner">
+                    <p class="desc">방에 적용할 <b>우선 배치 기준</b>을 직접 추가/삭제합니다. 기준 이름을 정하고 동작 방식을 고르세요. (방마다 적용 기준을 선택할 수 있습니다.)</p>
+                    <div id="criteriaList" style="display:flex; flex-direction:column; gap:8px; margin:14px 0;"></div>
+                    <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:12px;">
+                        <input type="text" id="newCritName" placeholder="기준 이름 (예: 여성 연장자 우선)" style="flex:1; min-width:180px; padding:10px 13px; border:1.5px solid #e2e8f0; border-radius:9px; font-size:14px; outline:none;">
+                        <select id="newCritType" style="padding:10px 13px; border:1.5px solid #e2e8f0; border-radius:9px; font-size:14px;">
+                            <option value="empno_asc">사번 낮은순(연장자) 우선</option>
+                            <option value="empno_desc">사번 높은순(연소자) 우선</option>
+                            <option value="female">여성 우선</option>
+                            <option value="male">남성 우선</option>
+                            <option value="foreign">외국인 교육생 우선</option>
+                            <option value="name_asc">가나다순</option>
+                        </select>
+                        <button onclick="addCriteria()" style="padding:10px 18px; border:none; border-radius:9px; background:#2563eb; color:#fff; font-weight:800; cursor:pointer;"><i class="fa-solid fa-plus"></i> 기준 추가</button>
+                    </div>
+                    <div class="save-bar" style="margin-top:12px;">
+                        <div class="summary" id="critSummary"></div>
+                        <button class="save-btn" onclick="saveCriteria()"><i class="fa-solid fa-floppy-disk"></i> 기준 저장</button>
+                    </div>
+                </div></div>
             </div>
 
             <div class="panel">
@@ -739,7 +754,7 @@
 
     <!-- 연간계획 조회/추가 모달 (강사플랫폼 디자인) -->
     <div class="pop-overlay" id="annualPop" style="align-items:flex-start;">
-        <div class="pop-box" style="max-width:880px; width:100%; margin-top:38px; max-height:88vh; display:flex; flex-direction:column;">
+        <div class="pop-box" style="max-width:1160px; width:96%; margin-top:38px; max-height:88vh; display:flex; flex-direction:column;">
             <div class="ap-head">
                 <h3><i class="fa-solid fa-calendar-days" style="color:#3b82f6;"></i> 연간 교육계획</h3>
                 <span class="ap-sub">과정·일정 확인 및 사전 등록</span>
@@ -764,12 +779,12 @@
                     <thead>
                         <tr>
                             <th style="width:42px;">연번</th>
-                            <th style="min-width:170px;">과정명</th>
-                            <th style="width:140px;">시작일</th>
-                            <th style="width:140px;">종료일</th>
+                            <th style="min-width:260px;">과정명</th>
+                            <th style="width:150px;">시작일</th>
+                            <th style="width:150px;">종료일</th>
                             <th style="width:92px;">교수</th>
                             <th style="width:92px;">담당</th>
-                            <th style="min-width:170px;">강의실</th>
+                            <th style="min-width:230px;">강의실</th>
                             <th style="width:46px;"></th>
                         </tr>
                     </thead>
@@ -842,6 +857,12 @@
             '청렴관_2_218': { label: '살림형', defaultNoAssign: true },
             '청렴관_2_219': { label: '살림형', defaultNoAssign: true }
         };
+
+        // ── 접이식 섹션 토글 ──
+        function toggleAcc(id) {
+            const el = document.getElementById(id);
+            if (el) el.classList.toggle('open');
+        }
 
         // ── 동·층 배정 우선순위 ──
         // floorKey = `${building}_${floor}`  /  순서가 빠를수록 먼저 채움
@@ -5359,12 +5380,12 @@
                     const cellSel = 'width:100%;border:1px solid #e2e8f0;border-radius:8px;padding:6px 7px;font-size:13px;background:#fff;outline:none;';
                     return `<tr class="${cls}">
                         <td style="width:42px;font-weight:800;color:#64748b;">${i + 1}</td>
-                        <td style="min-width:170px;"><input class="ap-input name" value="${esc(c.name)}" oninput="annualPlan.edit(${i},'name',this.value)"></td>
-                        <td style="width:140px;"><input type="date" class="ap-input ap-cell-input" value="${c.startDate || ''}" oninput="annualPlan.edit(${i},'startDate',this.value)"></td>
-                        <td style="width:140px;"><input type="date" class="ap-input ap-cell-input" value="${c.endDate || ''}" oninput="annualPlan.edit(${i},'endDate',this.value)"></td>
+                        <td style="min-width:260px;"><input class="ap-input name" value="${esc(c.name)}" oninput="annualPlan.edit(${i},'name',this.value)"></td>
+                        <td style="width:150px;"><input type="date" class="ap-input ap-cell-input" value="${c.startDate || ''}" oninput="annualPlan.edit(${i},'startDate',this.value)"></td>
+                        <td style="width:150px;"><input type="date" class="ap-input ap-cell-input" value="${c.endDate || ''}" oninput="annualPlan.edit(${i},'endDate',this.value)"></td>
                         <td style="width:92px;"><input class="ap-input" value="${esc(c.prof)}" oninput="annualPlan.edit(${i},'prof',this.value)"></td>
                         <td style="width:92px;"><input class="ap-input" value="${esc(c.coord)}" oninput="annualPlan.edit(${i},'coord',this.value)"></td>
-                        <td style="min-width:170px;">${classroomSelectHtml(c.roomDetail || '', "annualPlan.edit(" + i + ",'roomDetail',this.value)", cellSel)}</td>
+                        <td style="min-width:230px;">${classroomSelectHtml(c.roomDetail || '', "annualPlan.edit(" + i + ",'roomDetail',this.value)", cellSel)}</td>
                         <td style="width:46px;"><button class="ap-del" onclick="annualPlan.del(${i})" title="삭제"><i class="fa-solid fa-xmark"></i></button></td>
                     </tr>`;
                 }).join('');
@@ -5475,8 +5496,8 @@
     </div>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
 <style>@media print{#__catcVer{display:none!important}}</style>
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vP</div>
-<script>try{console.log('%cCATC%c 교육지원부 · 생활관 배정 (dorm_admin.html) %cvP%c build 20260611-175952','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}</script>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vQ</div>
+<script>try{console.log('%cCATC%c 교육지원부 · 생활관 배정 (dorm_admin.html) %cvQ%c build 20260611-202844','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}</script>
 <script>
 /* 헤더 + 단계 메뉴(STEP 탭) 틀고정 — 어느 페이지에서든 항상 상단에 고정 표시.
    step-tabs를 헤더 바로 아래에 붙이기 위해 헤더 높이를 측정해 sticky 오프셋으로 사용. */
