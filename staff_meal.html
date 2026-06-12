@@ -200,15 +200,15 @@
         .meal-table { width:100%; border-collapse:collapse; background:#fff;
             --row-h:60px; --chk:46px; --name-fz:18px; --pos-fz:15px; --dept-fz:15px; }
         .meal-table thead tr { background:linear-gradient(135deg,#1e3a8a 0%,#2563eb 100%); }
-        .meal-table th { background:transparent; color:#fff; font-size:14px; font-weight:800; padding:11px 10px; white-space:nowrap; }
+        .meal-table th { background:transparent; color:#fff; font-size:15px; font-weight:800; padding:11px 10px; white-space:nowrap; }
         .meal-table td { border:1px solid #e2e8f0; padding:0 12px; height:var(--row-h); text-align:center; font-size:17px; }
         .meal-table tbody tr:nth-child(even) { background:#f8fafc; }   /* 줄무늬: 본인 줄 찾기 쉽게 */
         .meal-table tbody tr:hover { background:#eef4ff; }
         .meal-table td.c { cursor:pointer; padding:0; }
         .meal-table td.c.locked { cursor:not-allowed; }
-        .meal-table .dept-cell { background:#eff6ff; font-weight:900; color:#1e40af; font-size:var(--dept-fz); vertical-align:middle; white-space:nowrap; }
-        .meal-table .pos-cell { color:#64748b; font-weight:700; font-size:var(--pos-fz); white-space:nowrap; }
-        .meal-table .name-cell { font-weight:900; color:#0f172a; font-size:var(--name-fz); white-space:nowrap; }
+        .meal-table .dept-cell { background:#eff6ff; font-weight:900; color:#1e40af; font-size:var(--dept-fz); vertical-align:middle; white-space:nowrap; letter-spacing:.04em; }
+        .meal-table .pos-cell { color:#334155; font-weight:700; font-size:var(--pos-fz); white-space:nowrap; }
+        .meal-table .name-cell { font-weight:900; color:#0f172a; font-size:var(--name-fz); white-space:nowrap; letter-spacing:.26em; padding-left:.26em; }
         .mchk { display:inline-flex; vertical-align:middle; align-items:center; justify-content:center; width:var(--chk); height:var(--chk); border-radius:13px; border:2px solid #cbd5e1; background:#fff; color:#fff; font-size:calc(var(--chk) * .5); transition:transform .1s, background .12s, border-color .12s; pointer-events:none; }
         .meal-table td.c:active .mchk { transform:scale(.88); }
         .mchk.on { background:#22c55e; border-color:#16a34a; box-shadow:0 4px 12px rgba(34,197,94,.35); }
@@ -466,13 +466,13 @@ function fitTable(){
     let rowH = Math.floor(avail / maxRows);
     rowH = Math.max(30, Math.min(64, rowH));     // 30~64px 사이로 제한
     const chk    = Math.max(24, Math.min(48, rowH - 12));
-    const nameFz = Math.max(13, Math.min(19, Math.round(rowH * 0.32)));
+    const nameFz = Math.max(15, Math.min(22, Math.round(rowH * 0.42)));   // 이름: 충분히 크게(고령자 배려)
     tables.forEach(t=>{
         t.style.setProperty('--row-h', rowH + 'px');
         t.style.setProperty('--chk',   chk  + 'px');
         t.style.setProperty('--name-fz', nameFz + 'px');
-        t.style.setProperty('--pos-fz',  (nameFz - 3) + 'px');
-        t.style.setProperty('--dept-fz', (nameFz - 3) + 'px');
+        t.style.setProperty('--pos-fz',  nameFz + 'px');           // 직책 = 이름과 동일 크기
+        t.style.setProperty('--dept-fz', (nameFz + 2) + 'px');     // 소속 = 더 크게
     });
 }
 
@@ -728,7 +728,7 @@ function esc(v){ return String(v==null?'':v).replace(/[&<>"']/g,c=>({'&':'&amp;'
 /* 초기 진입은 위의 ?go 분기에서 처리됨 */
 </script>
 <style>@media print{#__ver{display:none!important}}</style>
-<div id="__ver" style="position:fixed;right:7px;bottom:7px;z-index:2147483000;background:rgba(15,23,42,.72);color:#cbd5e1;font:700 10px/1 monospace;padding:4px 8px;border-radius:7px;pointer-events:none;letter-spacing:.3px;">식당패널 vO · 260613-0050</div>
+<div id="__ver" style="position:fixed;right:7px;bottom:7px;z-index:2147483000;background:rgba(15,23,42,.72);color:#cbd5e1;font:700 10px/1 monospace;padding:4px 8px;border-radius:7px;pointer-events:none;letter-spacing:.3px;">식당패널 vP · 260613-0115</div>
 </body>
 </html>
-<!-- @build 20260613-005000 (식당패널 vO: 테스트모드 localStorage 영구저장(이동후 유지) / 설정창 "오늘 식수 초기화" 버튼 / 테스트배너 축약+종료버튼 / 아이콘 범례 / 석식예약 열 구분선 / 헤더 틀고정(sticky)) -->
+<!-- @build 20260613-011500 (식당패널 vP: 폰트 정리 — 이름 크게+글자간격(장 두 석), 직책=이름 동일크기, 소속 더 크게, 헤더 15px / 고령자 가독성) -->
