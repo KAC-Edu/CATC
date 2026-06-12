@@ -20,9 +20,11 @@
         .topbar { display:grid; grid-template-columns:1fr auto 1fr; align-items:center; gap:12px; padding:16px 24px;
                   background:linear-gradient(135deg,#1e3a8a 0%,#2563eb 60%,#3b82f6 100%); color:#fff; flex-shrink:0;
                   box-shadow:0 6px 20px rgba(37,99,235,.25); }
-        .topbar .ttl { font-size:20px; font-weight:900; letter-spacing:-.3px; }
-        .topbar .ttl small { display:block; font-size:11px; color:#bfdbfe; font-weight:700; letter-spacing:1.5px; margin-top:3px; }
-        .topbar .ttl { justify-self:start; }
+        .topbar .ttl { justify-self:start; min-width:0; max-width:48vw; line-height:1.22; }
+        .topbar .ttl .ttl-h { font-size:19px; font-weight:900; letter-spacing:-.3px; white-space:nowrap; }
+        .topbar .ttl .ttl-sub { font-size:12px; font-weight:700; color:#cfe0ff; margin-top:5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        .topbar .ttl .ttl-sub b { color:#fff; }
+        .topbar .ttl .ttl-sub .sep { opacity:.45; margin:0 5px; }
         .topbar #hdrClock { justify-self:center; }
         .topbar .info { justify-self:end; display:flex; align-items:center; gap:10px; }
         .htop-btn { display:inline-flex; align-items:center; gap:7px; height:44px; padding:0 15px; border-radius:11px; border:1px solid rgba(255,255,255,.28); background:rgba(255,255,255,.14); color:#fff; font-weight:800; font-size:14px; cursor:pointer; white-space:nowrap; transition:.12s; }
@@ -54,19 +56,23 @@
         .nutri-btn { display:inline-flex; align-items:center; gap:7px; background:rgba(255,255,255,.16); border:1px solid rgba(255,255,255,.4);
                      color:#fff; border-radius:12px; padding:10px 15px; font-size:14px; font-weight:800; cursor:pointer; white-space:nowrap; transition:background .15s; }
         .nutri-btn:hover { background:rgba(255,255,255,.28); }
-        /* ── 세로형 태블릿 등 좁은 화면: 시계를 좌측으로, 좌측 타이틀 숨김 ── */
-        @media (max-width:960px){
-            .topbar { grid-template-columns:auto 1fr; padding:12px 16px; gap:10px; }
-            .topbar .ttl { display:none; }
-            .topbar #hdrClock { justify-self:start; }
-            .topbar .info { justify-self:end; gap:8px; }
+        /* ── 좁은 화면(세로형 태블릿 등): 안내문구 숨김·버튼 축소, 더 좁으면 시계 숨김 ── */
+        @media (max-width:1100px){
+            .topbar { padding:12px 16px; gap:10px; }
+            .topbar .ttl { max-width:44vw; }
+            .topbar .ttl .ttl-sub { display:none; }
+            .topbar .ttl .ttl-h { font-size:17px; }
+            .topbar .info { gap:8px; }
+            .topbar .info .htop-btn, .topbar .info .nutri-btn { padding:0 12px; height:42px; font-size:13px; }
             #hdrClock { padding:4px 14px; gap:9px; }
             #hdrClock .clock-time { font-size:22px; }
             #hdrClock .clock-date { font-size:13px; }
         }
-        @media (max-width:680px){
-            .topbar .info .htop-btn, .topbar .info .nutri-btn { padding:0 11px; height:42px; font-size:13px; }
-            #hdrClock .clock-day { display:none; }
+        @media (max-width:860px){
+            .topbar { grid-template-columns:1fr auto; }
+            .topbar #hdrClock { display:none; }
+            .topbar .info { justify-self:end; }
+            .topbar .ttl { max-width:none; }
         }
         .stage { flex:1; display:flex; align-items:flex-start; justify-content:center; padding:18px 20px 30px; overflow:auto; }
 
@@ -81,6 +87,13 @@
         /* ── 테스트 모드 배너 ── */
         .test-banner { background:#fffbeb; border:1.5px solid #fcd34d; color:#b45309; border-radius:12px; padding:11px 16px; font-size:13.5px; font-weight:800; margin-bottom:16px; display:flex; align-items:center; gap:9px; }
         .test-banner i { color:#d97706; }
+        /* ── 전체화면 해제 진행 표시 ── */
+        #fsHold { position:fixed; inset:0; display:none; align-items:flex-start; justify-content:center; z-index:10001; pointer-events:none; }
+        #fsHold.show { display:flex; }
+        #fsHold .fsh-card { margin-top:20px; background:rgba(15,23,42,.92); color:#fff; padding:12px 18px; border-radius:14px; display:flex; align-items:center; gap:11px; font-weight:800; font-size:14px; box-shadow:0 12px 32px rgba(0,0,0,.35); }
+        #fsHold .fsh-card i { color:#60a5fa; }
+        #fsHold .fsh-track { width:120px; height:6px; background:rgba(255,255,255,.22); border-radius:6px; overflow:hidden; }
+        #fsHold .fsh-bar { width:0%; height:100%; background:#60a5fa; }
 
         /* 홈 */
         .home { width:100%; max-width:940px; text-align:center; }
@@ -157,16 +170,20 @@
         /* 직원 식수 표 */
         .meal-panel { width:100%; max-width:1080px; }
         .mtable-wrap { overflow-x:auto; border-radius:14px; box-shadow:0 8px 24px rgba(15,23,42,.08); }
-        .meal-table { width:100%; border-collapse:collapse; background:#fff; }
+        .meal-table { width:100%; border-collapse:collapse; background:#fff;
+            --row-h:60px; --chk:46px; --name-fz:18px; --pos-fz:15px; --dept-fz:15px; }
         .meal-table thead tr { background:linear-gradient(135deg,#1e3a8a 0%,#2563eb 100%); }
-        .meal-table th { background:transparent; color:#fff; font-size:14px; font-weight:800; padding:14px 10px; white-space:nowrap; }
-        .meal-table td { border:1px solid #e2e8f0; padding:17px 14px; text-align:center; font-size:17px; }
-        .meal-table .dept-cell { background:#eff6ff; font-weight:900; color:#1e40af; font-size:15px; vertical-align:middle; white-space:nowrap; }
-        .meal-table .pos-cell { color:#64748b; font-weight:700; white-space:nowrap; }
-        .meal-table .name-cell { font-weight:900; color:#0f172a; white-space:nowrap; }
-        .meal-table tbody tr:hover { background:#f8fafc; }
-        .mchk { display:inline-flex; align-items:center; justify-content:center; width:50px; height:50px; border-radius:13px; border:2px solid #cbd5e1; background:#fff; color:#fff; cursor:pointer; font-size:24px; transition:transform .1s, background .12s, border-color .12s; }
-        .mchk:active { transform:scale(.88); }
+        .meal-table th { background:transparent; color:#fff; font-size:14px; font-weight:800; padding:11px 10px; white-space:nowrap; }
+        .meal-table td { border:1px solid #e2e8f0; padding:0 12px; height:var(--row-h); text-align:center; font-size:17px; }
+        .meal-table tbody tr:nth-child(even) { background:#f8fafc; }   /* 줄무늬: 본인 줄 찾기 쉽게 */
+        .meal-table tbody tr:hover { background:#eef4ff; }
+        .meal-table td.c { cursor:pointer; padding:0; }
+        .meal-table td.c.locked { cursor:not-allowed; }
+        .meal-table .dept-cell { background:#eff6ff; font-weight:900; color:#1e40af; font-size:var(--dept-fz); vertical-align:middle; white-space:nowrap; }
+        .meal-table .pos-cell { color:#64748b; font-weight:700; font-size:var(--pos-fz); white-space:nowrap; }
+        .meal-table .name-cell { font-weight:900; color:#0f172a; font-size:var(--name-fz); white-space:nowrap; }
+        .mchk { display:inline-flex; vertical-align:middle; align-items:center; justify-content:center; width:var(--chk); height:var(--chk); border-radius:13px; border:2px solid #cbd5e1; background:#fff; color:#fff; font-size:calc(var(--chk) * .5); transition:transform .1s, background .12s, border-color .12s; pointer-events:none; }
+        .meal-table td.c:active .mchk { transform:scale(.88); }
         .mchk.on { background:#22c55e; border-color:#16a34a; box-shadow:0 4px 12px rgba(34,197,94,.35); }
         .note-inp { width:100%; min-width:130px; border:1.5px solid #e2e8f0; border-radius:9px; padding:9px 11px; font-size:14px; font-weight:600; outline:none; }
         .note-inp:focus { border-color:#2563eb; }
@@ -174,9 +191,13 @@
 </head>
 <body>
     <div class="topbar">
-        <div class="ttl">항공기술훈련원 식당 플랫폼</div>
+        <div class="ttl">
+            <div class="ttl-h">항공기술훈련원 직원 식수 체크</div>
+            <div class="ttl-sub">본인 줄에서 <b>아침·점심·저녁</b> 칸을 눌러 체크하세요. 다시 누르면 취소됩니다. <span class="sep">|</span> 강사는 상단 <b>QR</b> 버튼을 이용해 주세요.</div>
+        </div>
         <div id="hdrClock">-</div>
         <div class="info">
+            <button class="htop-btn snd" id="fsBtn" title="전체화면"><i class="fa-solid fa-expand"></i></button>
             <button class="htop-btn snd" id="settingsBtn" onclick="openSettings()" title="환경설정"><i class="fa-solid fa-gear"></i></button>
             <button class="htop-btn int" onclick="showInstrQr('internal')"><i class="fa-solid fa-id-card-clip"></i> KAC 임직원</button>
             <button class="htop-btn ext" onclick="showInstrQr('external')"><i class="fa-solid fa-user-tie"></i> 사외 강사</button>
@@ -184,6 +205,7 @@
         </div>
     </div>
     <div class="stage" id="stage"></div>
+    <div id="fsHold"><div class="fsh-card"><i class="fa-solid fa-compress"></i><span>전체화면 해제 중…</span><div class="fsh-track"><div class="fsh-bar" id="fsHoldBar"></div></div></div></div>
     <div class="overlay" id="overlay"><div class="ov-card" id="ovCard"></div></div>
 
 <script>
@@ -239,7 +261,7 @@ function renderStaffList(){
                     const cls='mchk'+(on?' on':'')+(key==='r'?' resv':'')+(act?'':' locked');
                     const oc=act?`toggleMeal('${id}','${key}')`:`lockMsg('${key}')`;
                     const inner = on ? '<i class="fa-solid fa-check"></i>' : (act?'':'<i class="fa-solid fa-lock"></i>');
-                    return `<td class="c"><span class="${cls}" onclick="${oc}">${inner}</span></td>`;
+                    return `<td class="c${act?'':' locked'}" onclick="${oc}"><span class="${cls}">${inner}</span></td>`;
                 };
                 rows += `<tr>
                     ${i===0?`<td class="dept-cell" rowspan="${grp.length}">${esc(d)}</td>`:''}
@@ -258,11 +280,10 @@ function renderStaffList(){
     }
     stage.innerHTML = `
         <div class="meal-panel">
-            <div class="screen-ttl">항공기술훈련원 직원 식수 체크</div>
-            <div class="screen-sub">본인 줄에서 <b>아침·점심·저녁</b> 칸을 눌러 체크하세요. 다시 누르면 취소됩니다. &nbsp;|&nbsp; 강사는 상단 <b>QR</b> 버튼을 이용해 주세요.</div>
             ${TEST_MODE?'<div class="test-banner"><i class="fa-solid fa-flask"></i> 테스트 모드 — 시간대 잠금이 해제되어 모든 칸을 누를 수 있습니다. (실제 식수로 기록되니 확인 후 취소하거나 테스트 모드를 꺼 주세요)</div>':''}
             ${inner}
         </div>`;
+    requestAnimationFrame(fitTable);
 }
 function toggleMeal(id, key){
     const r = ROSTER[id]; if(!r) return;
@@ -355,6 +376,75 @@ function renderSettings(){
         <div class="ov-actions"><button class="ov-btn gray" onclick="closeOverlay()">닫기</button></div>`;
 }
 function toggleTest(){ TEST_MODE=!TEST_MODE; if(CURRENT==='staff') renderStaffList(); renderSettings(); }
+
+/* ── 표 자동 맞춤: 인원수에 맞춰 행 높이·버튼·글자 크기를 화면에 꽉 차게 ── */
+function fitTable(){
+    if (CURRENT!=='staff') return;
+    const tbl = stage.querySelector('.meal-table'); if(!tbl) return;
+    const tbody = tbl.querySelector('tbody'); if(!tbody) return;
+    const rows = tbody.querySelectorAll('tr').length; if(!rows) return;
+    const panel = stage.querySelector('.meal-panel');
+    const thead = tbl.querySelector('thead');
+    const banner = panel ? panel.querySelector('.test-banner') : null;
+    const stageH = stage.clientHeight;
+    const stagePadV = 48;                       // .stage 상하 패딩(18+30)
+    const bannerH  = banner ? banner.offsetHeight + 16 : 0;
+    const headH    = thead ? thead.offsetHeight : 48;
+    const avail = stageH - stagePadV - bannerH - headH - 6;
+    let rowH = Math.floor(avail / rows);
+    rowH = Math.max(30, Math.min(64, rowH));     // 30~64px 사이로 제한
+    const chk    = Math.max(24, Math.min(48, rowH - 12));
+    const nameFz = Math.max(13, Math.min(19, Math.round(rowH * 0.32)));
+    tbl.style.setProperty('--row-h', rowH + 'px');
+    tbl.style.setProperty('--chk',   chk  + 'px');
+    tbl.style.setProperty('--name-fz', nameFz + 'px');
+    tbl.style.setProperty('--pos-fz',  (nameFz - 3) + 'px');
+    tbl.style.setProperty('--dept-fz', (nameFz - 3) + 'px');
+}
+
+/* ── 전체화면(키오스크): 진입=한 번 탭 / 해제=3초간 길게 누르기 ── */
+const FS_HOLD_MS = 3000;
+function _fsEl(){ return document.fullscreenElement || document.webkitFullscreenElement || null; }
+function isFs(){ return !!_fsEl(); }
+function enterFs(){
+    const el = document.documentElement;
+    const req = el.requestFullscreen || el.webkitRequestFullscreen;
+    if (req) { try { Promise.resolve(req.call(el)).catch(()=>toast('이 기기/브라우저는 전체화면을 지원하지 않습니다.')); } catch(e){ toast('이 기기/브라우저는 전체화면을 지원하지 않습니다.'); } }
+    else toast('이 기기/브라우저는 전체화면을 지원하지 않습니다. (아이패드 Safari는 홈 화면에 추가 후 실행해 주세요)');
+}
+function exitFs(){ const ex = document.exitFullscreen || document.webkitExitFullscreen; if (ex) { try { ex.call(document); } catch(e){} } }
+let _fsHoldTimer=null, _fsJustExited=false;
+function _fsHoldStart(ev){
+    if(!isFs()) return;             // 해제 길게누르기는 전체화면일 때만
+    ev.preventDefault();
+    const ind=document.getElementById('fsHold'), bar=document.getElementById('fsHoldBar');
+    if(ind) ind.classList.add('show');
+    if(bar){ bar.style.transition='none'; bar.style.width='0%'; void bar.offsetWidth; bar.style.transition=`width ${FS_HOLD_MS}ms linear`; bar.style.width='100%'; }
+    clearTimeout(_fsHoldTimer);
+    _fsHoldTimer=setTimeout(()=>{ _fsHoldEnd(); _fsJustExited=true; exitFs(); setTimeout(()=>{ _fsJustExited=false; }, 700); }, FS_HOLD_MS);
+}
+function _fsHoldEnd(){
+    clearTimeout(_fsHoldTimer); _fsHoldTimer=null;
+    const ind=document.getElementById('fsHold'), bar=document.getElementById('fsHoldBar');
+    if(ind) ind.classList.remove('show');
+    if(bar){ bar.style.transition='none'; bar.style.width='0%'; }
+}
+function onFsChange(){
+    const b=document.getElementById('fsBtn');
+    if(b){ const ic=b.querySelector('i'); if(ic) ic.className=isFs()?'fa-solid fa-compress':'fa-solid fa-expand'; b.title=isFs()?'전체화면 해제 (3초간 누르기)':'전체화면'; }
+    if(!isFs()) _fsHoldEnd();
+    if(CURRENT==='staff') setTimeout(fitTable, 80);
+}
+function initFsButton(){
+    const b=document.getElementById('fsBtn'); if(!b) return;
+    b.addEventListener('click', ()=>{ if(_fsJustExited){ _fsJustExited=false; return; } if(!isFs()) enterFs(); else toast('전체화면을 끄려면 버튼을 3초간 누르세요.'); });
+    b.addEventListener('pointerdown', _fsHoldStart);
+    b.addEventListener('pointerup',   _fsHoldEnd);
+    b.addEventListener('pointerleave',_fsHoldEnd);
+    b.addEventListener('pointercancel',_fsHoldEnd);
+    document.addEventListener('fullscreenchange', onFsChange);
+    document.addEventListener('webkitfullscreenchange', onFsChange);
+}
 function flashCheck(){
     const w=document.createElement('div'); w.className='check-burst';
     w.innerHTML='<div class="cb"><i class="fa-solid fa-check"></i></div>';
@@ -553,7 +643,9 @@ function showMobileDone(){
     const go = new URLSearchParams(location.search).get('go');
     if(go==='internal' || go==='external'){ MOBILE_MODE=go; goInstructor(go); }
     else { goHome(); }
-    startClock(); applySoundIcon(); _initAudio();
+    startClock(); applySoundIcon(); _initAudio(); initFsButton();
+    window.addEventListener('resize', ()=>{ if(CURRENT==='staff') fitTable(); });
+    window.addEventListener('orientationchange', ()=>setTimeout(()=>{ if(CURRENT==='staff') fitTable(); }, 300));
     setInterval(()=>{ if(CURRENT==='staff') renderStaffList(); }, 30000);
 })();
 
@@ -562,7 +654,7 @@ function esc(v){ return String(v==null?'':v).replace(/[&<>"']/g,c=>({'&':'&amp;'
 /* 초기 진입은 위의 ?go 분기에서 처리됨 */
 </script>
 <style>@media print{#__ver{display:none!important}}</style>
-<div id="__ver" style="position:fixed;right:7px;bottom:7px;z-index:2147483000;background:rgba(15,23,42,.72);color:#cbd5e1;font:700 10px/1 monospace;padding:4px 8px;border-radius:7px;pointer-events:none;letter-spacing:.3px;">식당패널 vK · 260612-2300</div>
+<div id="__ver" style="position:fixed;right:7px;bottom:7px;z-index:2147483000;background:rgba(15,23,42,.72);color:#cbd5e1;font:700 10px/1 monospace;padding:4px 8px;border-radius:7px;pointer-events:none;letter-spacing:.3px;">식당패널 vL · 260612-2330</div>
 </body>
 </html>
-<!-- @build 20260612-230000 (식당패널 vK: 시계 강사플랫폼 클론 / 식수표 상단정렬 / 환경설정 팝업(소리·테스트 모드=시간대잠금해제) / 좌측 타이틀 "항공기술훈련원 식당 플랫폼" 영문제거 / 세로형 태블릿 반응형(시계 좌측·타이틀 숨김)) -->
+<!-- @build 20260612-233000 (식당패널 vL: 표 자동맞춤(인원수에 맞춰 행·버튼 자동축소·셀전체탭·줄무늬) / 헤더문구를 상단바 좌측으로 이동 / 전체화면 버튼(진입=탭, 해제=3초 길게누르기) / 반응형 재정비) -->
