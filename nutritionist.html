@@ -405,6 +405,33 @@
         .hsum-skip .hs-val { color:#fca5a5; }
         .hsum-eat .hs-val { color:#86efac; }
         @media (max-width:1080px){ .header-summary .hs-lab{ font-size:9.5px; } .hsum{ min-width:64px; padding:6px 10px; } }
+        /* 월 이동 */
+        .month-nav { display:flex; align-items:center; gap:8px; margin-bottom:16px; }
+        .mn-btn { width:38px; height:38px; border:1.5px solid var(--border); background:#fff; border-radius:10px; cursor:pointer; font-size:14px; color:var(--navy); }
+        .mn-btn:hover { border-color:#2563eb; color:#2563eb; }
+        .mn-label { font-size:18px; font-weight:900; color:var(--navy); min-width:130px; text-align:center; }
+        /* 월별 집계 표 */
+        .cnt-table { width:100%; border-collapse:collapse; }
+        .cnt-table th { background:#f8fafc; font-size:12px; color:var(--muted); font-weight:800; padding:10px; border:1px solid var(--border); text-align:left; }
+        .cnt-table td { padding:11px 10px; border:1px solid var(--border); font-size:14px; }
+        .cnt-table td.c { text-align:center; }
+        .cnt-table .rname { font-weight:800; color:var(--navy); }
+        .cnt-row { cursor:pointer; transition:background .12s; }
+        .cnt-row:hover { background:#eff6ff; }
+        .cnt-chev { font-size:10px; color:#94a3b8; margin-left:4px; }
+        /* 식사 달력 */
+        .mealcal { max-width:540px; }
+        .cal-legend { font-size:11px; color:var(--muted); font-weight:700; margin-bottom:8px; display:flex; align-items:center; gap:4px; }
+        .cal-dows, .cal-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:4px; }
+        .cal-dow { text-align:center; font-size:11px; font-weight:800; color:var(--muted); padding:3px 0; }
+        .cal-dow.sun { color:#ef4444; } .cal-dow.sat { color:#2563eb; }
+        .cal-cell { min-height:46px; border:1px solid var(--border); border-radius:8px; padding:3px; background:#fff; }
+        .cal-cell.empty { border:none; background:transparent; }
+        .cal-cell.has { background:#f0f9ff; border-color:#bae6fd; }
+        .cal-dnum { font-size:11px; font-weight:700; color:#475569; }
+        .cal-marks { display:flex; flex-wrap:wrap; gap:2px; margin-top:2px; }
+        .cm { font-size:9px; font-weight:900; border-radius:4px; padding:1px 4px; color:#fff; line-height:1.4; }
+        .cm-b { background:#f59e0b; } .cm-l { background:#2563eb; } .cm-d { background:#16a34a; }
     </style>
 </head>
 <body>
@@ -487,9 +514,11 @@
         <div class="section-card tab-panel" id="sec-staff">
             <div class="section-title"><i class="fa-solid fa-utensils"></i> 직원 식수 관리 (터치패널 집계)</div>
 
-            <div style="display:flex; gap:8px; align-items:center; margin-bottom:14px; flex-wrap:wrap;">
-                <input type="month" id="staffMonth" style="flex:1; min-width:150px; padding:0 12px; height:40px; border:1.5px solid var(--border); border-radius:10px; font-weight:800; font-size:14px;">
-                <button class="mini-btn" onclick="loadStaffMeal()"><i class="fa-solid fa-magnifying-glass"></i> 조회</button>
+            <div class="month-nav">
+                <button class="mn-btn" onclick="shiftMonth(-1)"><i class="fa-solid fa-chevron-left"></i></button>
+                <span id="staffMonthLabel" class="mn-label">-</span>
+                <button class="mn-btn" onclick="shiftMonth(1)"><i class="fa-solid fa-chevron-right"></i></button>
+                <button class="mini-btn" onclick="setMonth(getToday().slice(0,7))" style="margin-left:8px;"><i class="fa-solid fa-calendar-day"></i> 이번 달</button>
             </div>
 
             <!-- 월 요약 카드 -->
@@ -910,18 +939,17 @@ let _breakfastToday = {};
 let _notesToday = {};
 let _editId = null;
 let _dragId = null;
+let _curMonth = null;
 const STAFF_ROSTER = 'system/staffMeal/roster';
 const STAFF_CHECKS = 'system/staffMeal/checks';
 
 window.addEventListener('DOMContentLoaded', () => {
-    const mEl = document.getElementById('staffMonth');
-    if (mEl) mEl.value = getToday().slice(0, 7);
     db.ref(STAFF_ROSTER).on('value', s => { _staffRoster = s.val() || {}; renderRoster(); renderMealStats(getToday()); });
     db.ref('system/staffMeal/dinner/' + getToday()).on('value', s => { _dinnerToday = s.val() || {}; renderRoster(); renderMealStats(getToday()); });
     db.ref(STAFF_CHECKS + '/' + getToday()).on('value', s => { _checksToday = s.val() || {}; renderRoster(); });
     db.ref('system/staffMeal/breakfast/' + getToday()).on('value', s => { _breakfastToday = s.val() || {}; renderRoster(); });
     db.ref('system/staffMeal/notes/' + getToday()).on('value', s => { _notesToday = s.val() || {}; renderRoster(); });
-    loadStaffMeal();
+    setMonth(getToday().slice(0,7));
     startClock();
 });
 
@@ -1069,54 +1097,97 @@ function deleteStaff(id){
 }
 
 function loadStaffMeal(){
-    const month=(document.getElementById('staffMonth')?.value)||getToday().slice(0,7);
-    db.ref(STAFF_CHECKS).once('value').then(s=>{
-        const all=s.val()||{};
+    const month = _curMonth || getToday().slice(0,7);
+    const root = db.ref('system/staffMeal');
+    Promise.all([
+        root.child('breakfast').once('value'),
+        root.child('checks').once('value'),
+        root.child('dinner').once('value'),
+        root.child('notes').once('value'),
+    ]).then(([bs,cs,ds,ns])=>{
+        const B=bs.val()||{}, C=cs.val()||{}, D=ds.val()||{}, N=ns.val()||{};
         const agg={};
-        const totals={ all:0, staff:0, internal:0, external:0 };
-        Object.entries(all).forEach(([date,recs])=>{
-            if(!date.startsWith(month) || !recs) return;
-            Object.entries(recs).forEach(([key,rec])=>{
-                if(!rec) return;
-                const cat = rec.category==='internal'?'internal':rec.category==='external'?'external':'staff';
-                const a=agg[key]||(agg[key]={ name:rec.name||'-', category:cat, idValue:rec.idValue||'', count:0, entries:[] });
-                a.name=rec.name||a.name;
-                a.count++; a.entries.push({ date, time:rec.time||'' });
-                totals.all++; totals[cat]++;
+        const ensure=(key,rec)=>{
+            const cat=(rec&&rec.category==='internal')?'internal':(rec&&rec.category==='external')?'external':'staff';
+            let a=agg[key];
+            if(!a){ a=agg[key]={ name:(rec&&rec.name)||'-', dept:(rec&&rec.dept)||'', position:(rec&&rec.position)||'', category:cat, idValue:(rec&&rec.idValue)||'', count:0, days:{}, notes:{} }; }
+            if(rec){ if(rec.name)a.name=rec.name; if(rec.dept)a.dept=rec.dept; if(rec.position)a.position=rec.position; if(rec.idValue)a.idValue=rec.idValue; if(rec.category&&rec.category!=='staff')a.category=rec.category; }
+            return a;
+        };
+        const addMeal=(node,mk)=>{
+            Object.entries(node).forEach(([date,recs])=>{
+                if(!date.startsWith(month)||!recs) return;
+                Object.entries(recs).forEach(([key,rec])=>{
+                    if(!rec) return;
+                    const a=ensure(key,rec);
+                    (a.days[date]||(a.days[date]={}))[mk]=true;
+                    a.count++;
+                });
             });
+        };
+        addMeal(B,'b'); addMeal(C,'l'); addMeal(D,'d');
+        Object.entries(N).forEach(([date,recs])=>{
+            if(!date.startsWith(month)||!recs) return;
+            Object.entries(recs).forEach(([key,rec])=>{ if(rec&&rec.note){ ensure(key,rec).notes[date]=rec.note; } });
         });
+        const totals={ all:0, staff:0, internal:0, external:0 };
+        Object.values(agg).forEach(a=>{ totals.all+=a.count; totals[a.category]+=a.count; });
         renderStaffSummary(totals, month);
-        renderStaffCounts(agg);
+        renderStaffCounts(agg, month);
     }).catch(()=>{ const box=document.getElementById('staffCountList'); if(box) box.innerHTML='<div class="empty-msg">조회 실패</div>'; });
 }
+/* 월 이동 */
+function setMonth(ym){ _curMonth=ym; const [y,m]=ym.split('-'); const lbl=document.getElementById('staffMonthLabel'); if(lbl) lbl.textContent=`${y}년 ${m}월`; loadStaffMeal(); }
+function shiftMonth(delta){ let [y,m]=(_curMonth||getToday().slice(0,7)).split('-').map(Number); m+=delta; while(m<1){m+=12;y--;} while(m>12){m-=12;y++;} setMonth(`${y}-${String(m).padStart(2,'0')}`); }
 function renderStaffSummary(t, month){
     const box=document.getElementById('staffSummary'); if(!box) return;
     const card=(lab,val,col)=>`<div style="background:${col}1a; border:1px solid ${col}55; border-radius:12px; padding:10px; text-align:center;"><div style="font-size:11px; color:var(--muted); font-weight:800;">${lab}</div><div style="font-size:22px; font-weight:900; color:${col};">${val}</div></div>`;
     box.innerHTML = card(month+' 총식사', t.all, '#0ea5e9') + card('직원', t.staff, '#10b981') + card('사내강사', t.internal, '#6366f1') + card('사외강사', t.external, '#f59e0b');
 }
-function renderStaffCounts(agg){
+function renderStaffCounts(agg, month){
     const box=document.getElementById('staffCountList'); if(!box) return;
-    const rows=Object.values(agg).sort((a,b)=>b.count-a.count);
+    const rows=Object.entries(agg).sort((a,b)=>b[1].count-a[1].count);
     if(!rows.length){ box.innerHTML='<div class="empty-msg">해당 월의 식사 기록이 없습니다.</div>'; return; }
     const catLabel={staff:'직원', internal:'사내강사', external:'사외강사'};
     const catColor={staff:'#10b981', internal:'#6366f1', external:'#f59e0b'};
-    box.innerHTML = rows.map(r=>{
-        const dates=r.entries.sort((a,b)=>a.date.localeCompare(b.date)).map(e=>`<span style="display:inline-block; background:#f1f5f9; border-radius:6px; padding:2px 7px; margin:2px; font-size:11px; font-weight:700;">${e.date.slice(5)} ${escH(e.time)}</span>`).join('');
-        const idTxt = r.idValue ? ` · ${r.category==='internal'?'사번':'연락처'} ${escH(r.idValue)}` : '';
-        const col=catColor[r.category]||'#10b981';
-        return `<details style="border:1px solid var(--border); border-radius:12px; padding:10px 12px; margin-bottom:6px;">
-            <summary style="display:flex; align-items:center; gap:8px; cursor:pointer;">
-                <span style="background:${col}1a; color:${col}; font-size:11px; font-weight:900; border-radius:6px; padding:3px 8px;">${catLabel[r.category]||'직원'}</span>
-                <b style="flex:1; font-size:15px;">${escH(r.name)}<span style="font-size:11px; color:var(--muted); font-weight:700;">${idTxt}</span></b>
-                <b style="font-size:18px; color:var(--navy);">${r.count}<small style="font-size:12px;">회</small></b>
-            </summary>
-            <div style="margin-top:8px;">${dates}</div>
-        </details>`;
-    }).join('');
+    let html=`<table class="cnt-table"><thead><tr><th>소속</th><th>직책</th><th>성함</th><th style="width:90px;">총 식수</th><th>비고</th></tr></thead><tbody>`;
+    rows.forEach(([key,a])=>{
+        const notes=[...new Set(Object.values(a.notes||{}).filter(Boolean))];
+        const noteTxt = notes.length ? escH(notes.join(', ')) : '<span style="color:#cbd5e1;">-</span>';
+        const deptCell = a.category==='staff' ? escH(a.dept||'-')
+            : `<span style="background:${catColor[a.category]}1a; color:${catColor[a.category]}; font-weight:800; border-radius:6px; padding:2px 8px; font-size:12px;">${catLabel[a.category]}</span>`;
+        const posCell = a.category==='staff' ? escH(a.position||'-') : (a.idValue?escH((a.category==='internal'?'사번 ':'연락처 ')+a.idValue):'-');
+        html+=`<tr class="cnt-row" onclick="toggleCal('${key}')">
+            <td>${deptCell}</td>
+            <td class="c" style="color:var(--muted); font-weight:700;">${posCell}</td>
+            <td class="rname">${escH(a.name)} <i class="fa-solid fa-chevron-down cnt-chev"></i></td>
+            <td class="c"><b style="font-size:17px; color:var(--navy);">${a.count}</b><small style="font-size:11px;">회</small></td>
+            <td style="font-size:13px;">${noteTxt}</td>
+        </tr>
+        <tr><td colspan="5" id="cal-${key}" style="display:none; background:#f8fafc; padding:14px;">${renderMealCalendar(a, month)}</td></tr>`;
+    });
+    html+=`</tbody></table>`;
+    box.innerHTML=html;
+}
+function toggleCal(key){ const el=document.getElementById('cal-'+key); if(el) el.style.display=(el.style.display==='none'?'table-cell':'none'); }
+function renderMealCalendar(a, month){
+    const [y,m]=month.split('-').map(Number);
+    const startDow=new Date(y,m-1,1).getDay();
+    const dim=new Date(y,m,0).getDate();
+    const dows=['일','월','화','수','목','금','토'];
+    let cells='';
+    for(let i=0;i<startDow;i++) cells+=`<div class="cal-cell empty"></div>`;
+    for(let d=1; d<=dim; d++){
+        const date=`${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+        const md=a.days[date], note=a.notes&&a.notes[date];
+        const marks=md?`<div class="cal-marks">${md.b?'<span class="cm cm-b">아</span>':''}${md.l?'<span class="cm cm-l">점</span>':''}${md.d?'<span class="cm cm-d">저</span>':''}</div>`:'';
+        cells+=`<div class="cal-cell ${md?'has':''}"${note?` title="${escH(note)}"`:''}><div class="cal-dnum">${d}</div>${marks}</div>`;
+    }
+    return `<div class="mealcal"><div class="cal-legend"><span class="cm cm-b">아</span>아침 <span class="cm cm-l">점</span>점심 <span class="cm cm-d">저</span>저녁</div><div class="cal-dows">${dows.map((n,i)=>`<div class="cal-dow ${i===0?'sun':''}${i===6?'sat':''}">${n}</div>`).join('')}</div><div class="cal-grid">${cells}</div></div>`;
 }
 </script>
 <style>@media print{#__ver{display:none!important}}</style>
-<div id="__ver" style="position:fixed;right:7px;bottom:7px;z-index:2147483000;background:rgba(15,23,42,.72);color:#cbd5e1;font:700 10px/1 monospace;padding:4px 8px;border-radius:7px;pointer-events:none;letter-spacing:.3px;">영양사 vI · 260612-1445</div>
+<div id="__ver" style="position:fixed;right:7px;bottom:7px;z-index:2147483000;background:rgba(15,23,42,.72);color:#cbd5e1;font:700 10px/1 monospace;padding:4px 8px;border-radius:7px;pointer-events:none;letter-spacing:.3px;">영양사 vJ · 260612-1448</div>
 </body>
 </html>
-<!-- @build 20260612-144559 (영양사 vI: 헤더 전체폭 레이아웃 깨짐 수정 - body flex 제거) -->
+<!-- @build 20260612-144841 (영양사 vJ: 월 ◀▶ 선택·월별집계 표(소속/직책/성함/총식수/비고)+클릭 시 달력) -->
