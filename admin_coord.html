@@ -3921,8 +3921,9 @@ function openOutingLedger() {
         showKacAlert("먼저 왼쪽 리스트에서 교육 과정을 선택해주세요.");
         return;
     }
-    // 새 창으로 출력용 페이지 열기 (과정 ID를 함께 보냄)
-    window.open(`outing_ledger.html?room=${currentRID}`, '_blank', 'width=1300,height=900,scrollbars=yes');
+    if (!confirm('외출·외박 관리대장을 PDF로 저장하시겠습니까?\n\n확인을 누르면 저장(인쇄) 화면이 열립니다.\n모바일에서는 "PDF로 저장"을 선택하세요.')) return;
+    // 모바일 팝업 차단 방지를 위해 창 크기 옵션 없이 새 탭으로 열고, 자동 저장(auto=1) 플래그 전달
+    window.open(`outing_ledger.html?room=${currentRID}&auto=1`, '_blank');
 }
 
 
@@ -3967,7 +3968,8 @@ function openAttendanceSheet() {
         showKacAlert("먼저 왼쪽 리스트에서 교육 과정을 선택해주세요.");
         return;
     }
-    window.open(`attendance_sheet.html?room=${currentRID}`, '_blank', 'width=1100,height=900,scrollbars=yes');
+    if (!confirm('출석부를 PDF로 저장하시겠습니까?\n\n확인을 누르면 저장(인쇄) 화면이 열립니다.\n모바일에서는 "PDF로 저장"을 선택하세요.')) return;
+    window.open(`attendance_sheet.html?room=${currentRID}&auto=1`, '_blank');
 }
 
 // [신규] 과정별 출석부 통합 관리 모달 — 운영 중 과정의 금일 출석 요약 + 출석부 인쇄 연결
@@ -6539,4 +6541,4 @@ function _coordParseRoster(text) {
 
 </body>
 </html>
-<!-- @build 20260612-085718 (교육시간표 사진 QR 업로드 추가·메뉴 정리) -->
+<!-- @build 20260612-113215 (외출외박·출석부 PDF저장 확인창+모바일 새탭) -->

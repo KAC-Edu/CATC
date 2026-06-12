@@ -90,6 +90,8 @@
 
 <script>
     const params = new URLSearchParams(window.location.search);
+    const autoSave = params.get('auto') === '1';   // 교육운영부 'PDF 저장' 확인 후 진입 시 자동 인쇄
+    let _autoDone = false;
     let courseInfo = {};
     let dateArray = [];
     let SHEET_ROOM = '';   // [수정] init 외의 함수(renderTable)에서도 방 번호를 참조할 수 있도록 전역 보관
@@ -136,6 +138,13 @@ async function init() {
             const attendanceData = attendanceSnap.val() || {};
             // 명단 그리기 함수 호출
             renderTable(studentsRaw, attendanceData);
+            // auto=1 진입 시 렌더 완료 후 자동으로 저장(인쇄) 창 띄움 — 1회만
+            if (autoSave && !_autoDone) {
+                _autoDone = true;
+                setTimeout(() => {
+                    try { document.title = '(출석부)' + (HEADER.courseName || ''); window.print(); } catch (e) {}
+                }, 1000);
+            }
         });
     });
 }
@@ -354,4 +363,4 @@ function renderTable(studentsRaw, attendanceData) {
 
 </body>
 </html>
-<!-- @build 20260612-065019 (인쇄: 머리/꼬리말 제거·한페이지 정렬) -->
+<!-- @build 20260612-113215 (auto=1 자동 인쇄) -->

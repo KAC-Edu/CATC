@@ -115,6 +115,8 @@
     <script>
         const params = new URLSearchParams(window.location.search);
         const room   = params.get('room');
+        const autoSave = params.get('auto') === '1';   // 교육운영부 버튼에서 'PDF 저장' 확인 후 진입 시 자동 인쇄
+        let _autoDone = false;
 
         if (!room) {
             document.getElementById('ledgerPages').innerHTML =
@@ -277,6 +279,12 @@
                     tr.innerHTML = '<td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>';
                     curBody.appendChild(tr);
                 }
+
+                // auto=1 진입 시(교육운영부 'PDF 저장' 확인 후) 렌더 완료 후 자동으로 저장(인쇄) 창 띄움 — 1회만
+                if (autoSave && !_autoDone) {
+                    _autoDone = true;
+                    setTimeout(() => { try { printLedger(); } catch (e) {} }, 800);
+                }
             });
         }
 
@@ -284,4 +292,4 @@
     </script>
 </body>
 </html>
-<!-- @build 20260612-071734 (화면도 A4 페이지 카드 단위로 분할) -->
+<!-- @build 20260612-113215 (auto=1 자동 인쇄) -->
