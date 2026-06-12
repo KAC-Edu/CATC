@@ -385,6 +385,8 @@
         .rchk.lunch { accent-color:#2563eb; }
         .r-actbtn { border:none; border-radius:8px; padding:6px 11px; font-weight:800; cursor:pointer; font-size:13px; }
         .r-edit { background:#eff6ff; color:#1e40af; } .r-del { background:#fef2f2; color:#dc2626; }
+        .r-note { width:100%; min-width:110px; border:1.5px solid var(--border); border-radius:8px; padding:7px 9px; font-size:13px; font-weight:600; outline:none; }
+        .r-note:focus { border-color:var(--blue); }
     </style>
 </head>
 <body>
@@ -515,8 +517,9 @@
             <div class="section-title"><i class="fa-solid fa-users-gear"></i> 직원 명단 관리</div>
             <div style="font-size:12.5px; color:var(--muted); font-weight:700; margin-bottom:12px;">소속과 직원 이름을 입력해 추가하세요. <b>같은 소속끼리 묶여서</b> 표시됩니다. 점심·석식 체크는 오늘 식수에 즉시 반영됩니다.</div>
             <div style="display:flex; gap:6px; margin-bottom:14px; flex-wrap:wrap;">
-                <input id="newStaffDept" placeholder="소속 (예: 교육운영부)" maxlength="20" style="flex:1.2; min-width:150px; padding:12px 14px; border:1.5px solid var(--border); border-radius:10px; font-weight:700;">
-                <input id="newStaffName" placeholder="직원 이름" maxlength="12" style="flex:1; min-width:130px; padding:12px 14px; border:1.5px solid var(--border); border-radius:10px; font-weight:700;">
+                <input id="newStaffDept" placeholder="소속 (예: 교육운영부)" maxlength="20" style="flex:1.2; min-width:140px; padding:12px 14px; border:1.5px solid var(--border); border-radius:10px; font-weight:700;">
+                <input id="newStaffPos" placeholder="직책 (예: 주무관)" maxlength="16" style="flex:.9; min-width:110px; padding:12px 14px; border:1.5px solid var(--border); border-radius:10px; font-weight:700;">
+                <input id="newStaffName" placeholder="직원 이름" maxlength="12" style="flex:1; min-width:120px; padding:12px 14px; border:1.5px solid var(--border); border-radius:10px; font-weight:700;">
                 <button class="mini-btn" onclick="addStaff()"><i class="fa-solid fa-plus"></i> 추가</button>
             </div>
             <div id="staffRosterList"><div class="empty-msg">등록된 직원이 없습니다.</div></div>
@@ -910,6 +913,8 @@ function showToast(msg) {
 let _staffRoster = {};
 let _dinnerToday = {};
 let _checksToday = {};
+let _breakfastToday = {};
+let _notesToday = {};
 const STAFF_ROSTER = 'system/staffMeal/roster';
 const STAFF_CHECKS = 'system/staffMeal/checks';
 
@@ -919,6 +924,8 @@ window.addEventListener('DOMContentLoaded', () => {
     db.ref(STAFF_ROSTER).on('value', s => { _staffRoster = s.val() || {}; renderRoster(); renderMealStats(getToday()); });
     db.ref('system/staffMeal/dinner/' + getToday()).on('value', s => { _dinnerToday = s.val() || {}; renderRoster(); renderMealStats(getToday()); });
     db.ref(STAFF_CHECKS + '/' + getToday()).on('value', s => { _checksToday = s.val() || {}; renderRoster(); });
+    db.ref('system/staffMeal/breakfast/' + getToday()).on('value', s => { _breakfastToday = s.val() || {}; renderRoster(); });
+    db.ref('system/staffMeal/notes/' + getToday()).on('value', s => { _notesToday = s.val() || {}; renderRoster(); });
     loadStaffMeal();
     startClock();
 });
@@ -967,56 +974,63 @@ function renderRoster(){
     const box = document.getElementById('staffRosterList'); if(!box) return;
     const items = Object.entries(_staffRoster);
     if(!items.length){ box.innerHTML='<div class="empty-msg">등록된 직원이 없습니다.</div>'; return; }
-    // 소속별 그룹화
     const groups = {};
     items.forEach(([id,r])=>{ const d=((r.dept||'').trim())||'(소속 미지정)'; (groups[d]||(groups[d]=[])).push([id,r]); });
     const depts = Object.keys(groups).sort((a,b)=>a.localeCompare(b,'ko'));
     box.innerHTML = depts.map(d=>{
         const rows = groups[d].sort((a,b)=>(a[1].name||'').localeCompare(b[1].name||'','ko'));
         const body = rows.map(([id,r])=>{
-            const lunchOn  = !!(_checksToday && _checksToday[id]);
-            const dinnerOn = !!(_dinnerToday && _dinnerToday[id]);
+            const chk=(key,on)=>`<input type="checkbox" class="rchk${key==='l'?' lunch':''}" ${on?'checked':''} onchange="toggleMeal3('${id}','${key}', this.checked)">`;
             return `<tr>
+                <td class="c" style="color:var(--muted); font-weight:700;">${escH(r.position||'-')}</td>
                 <td class="rname">${escH(r.name||'')}</td>
-                <td class="c"><input type="checkbox" class="rchk lunch" ${lunchOn?'checked':''} onchange="toggleLunch('${id}', this.checked)"></td>
-                <td class="c"><input type="checkbox" class="rchk" ${dinnerOn?'checked':''} onchange="toggleDinner('${id}', this.checked)"></td>
+                <td class="c">${chk('b', !!_breakfastToday[id])}</td>
+                <td class="c">${chk('l', !!_checksToday[id])}</td>
+                <td class="c">${chk('d', !!_dinnerToday[id])}</td>
+                <td><input class="r-note" value="${escH((_notesToday[id]&&_notesToday[id].note)||'')}" placeholder="-" onchange="saveStaffNote('${id}', this.value)"></td>
                 <td class="c"><button class="r-actbtn r-edit" onclick="editStaff('${id}')">수정</button> <button class="r-actbtn r-del" onclick="deleteStaff('${id}')">삭제</button></td>
             </tr>`;
         }).join('');
         return `<div class="roster-group">
             <div class="rg-head"><i class="fa-solid fa-building"></i> ${escH(d)} <span class="rg-count">${rows.length}명</span></div>
             <table class="rtable">
-                <thead><tr><th style="text-align:left;">직원 이름</th><th style="width:110px;">점심 식수</th><th style="width:90px;">석식</th><th style="width:150px;">관리</th></tr></thead>
+                <thead><tr><th style="width:120px;">직책</th><th style="text-align:left;">직원 이름</th><th style="width:60px;">아침</th><th style="width:60px;">점심</th><th style="width:60px;">저녁</th><th style="text-align:left;">비고</th><th style="width:140px;">관리</th></tr></thead>
                 <tbody>${body}</tbody>
             </table>
         </div>`;
     }).join('');
 }
-/* ── 오늘 점심/석식 체크 토글 ── */
-function toggleLunch(id, on){
-    const r=_staffRoster[id]; if(!r) return; const today=getToday();
-    const ref=db.ref(`${STAFF_CHECKS}/${today}/${id}`);
-    if(on){ ref.set({ name:r.name||'', dept:r.dept||'', category:'staff', staffId:id, time:nowTime(), ts:firebase.database.ServerValue.TIMESTAMP, month:today.slice(0,7) }); }
-    else  { ref.remove(); }
+/* ── 오늘 아침/점심/저녁 체크 토글 (식당 터치패널과 동일 노드) ── */
+function toggleMeal3(id, key, on){
+    const r=_staffRoster[id]; if(!r) return; const today=getToday(); const TS=firebase.database.ServerValue.TIMESTAMP;
+    let ref;
+    if(key==='b') ref=db.ref(`system/staffMeal/breakfast/${today}/${id}`);
+    else if(key==='l') ref=db.ref(`${STAFF_CHECKS}/${today}/${id}`);
+    else ref=db.ref(`system/staffMeal/dinner/${today}/${id}`);
+    if(!on){ ref.remove(); return; }
+    if(key==='l') ref.set({ name:r.name||'', dept:r.dept||'', position:r.position||'', category:'staff', staffId:id, time:nowTime(), ts:TS, month:today.slice(0,7) });
+    else if(key==='b') ref.set({ name:r.name||'', dept:r.dept||'', position:r.position||'', ts:TS, month:today.slice(0,7) });
+    else ref.set({ name:r.name||'', dept:r.dept||'', position:r.position||'', category:'staff', ts:TS });
 }
-function toggleDinner(id, on){
-    const r=_staffRoster[id]; if(!r) return; const today=getToday();
-    const ref=db.ref(`system/staffMeal/dinner/${today}/${id}`);
-    if(on){ ref.set({ name:r.name||'', category:'staff', ts:firebase.database.ServerValue.TIMESTAMP }); }
-    else  { ref.remove(); }
+function saveStaffNote(id, text){
+    const v=(text||'').trim(); const today=getToday();
+    const ref=db.ref(`system/staffMeal/notes/${today}/${id}`);
+    if(v) ref.set({ name:(_staffRoster[id]&&_staffRoster[id].name)||'', note:v, ts:firebase.database.ServerValue.TIMESTAMP }); else ref.remove();
 }
 function addStaff(){
     const n=(document.getElementById('newStaffName').value||'').trim();
     const d=(document.getElementById('newStaffDept').value||'').trim();
-    if(!n){ showToast('성명을 입력하세요.'); return; }
-    db.ref(STAFF_ROSTER).push({ name:n, dept:d, active:true, createdAt:firebase.database.ServerValue.TIMESTAMP })
-      .then(()=>{ document.getElementById('newStaffName').value=''; document.getElementById('newStaffDept').value=''; showToast('✅ 직원이 추가되었습니다.'); });
+    const p=(document.getElementById('newStaffPos')?.value||'').trim();
+    if(!n){ showToast('직원 이름을 입력하세요.'); return; }
+    db.ref(STAFF_ROSTER).push({ name:n, dept:d, position:p, active:true, createdAt:firebase.database.ServerValue.TIMESTAMP })
+      .then(()=>{ document.getElementById('newStaffName').value=''; document.getElementById('newStaffDept').value=''; const pe=document.getElementById('newStaffPos'); if(pe) pe.value=''; showToast('✅ 직원이 추가되었습니다.'); });
 }
 function editStaff(id){
     const r=_staffRoster[id]; if(!r) return;
-    const n=prompt('성명', r.name||''); if(n===null) return;
-    const d=prompt('부서/직책', r.dept||''); if(d===null) return;
-    db.ref(`${STAFF_ROSTER}/${id}`).update({ name:(n||'').trim(), dept:(d||'').trim() }).then(()=>showToast('수정되었습니다.'));
+    const d=prompt('소속', r.dept||''); if(d===null) return;
+    const p=prompt('직책', r.position||''); if(p===null) return;
+    const n=prompt('직원 이름', r.name||''); if(n===null) return;
+    db.ref(`${STAFF_ROSTER}/${id}`).update({ name:(n||'').trim(), dept:(d||'').trim(), position:(p||'').trim() }).then(()=>showToast('수정되었습니다.'));
 }
 function deleteStaff(id){
     const r=_staffRoster[id]; if(!r) return;
@@ -1072,7 +1086,7 @@ function renderStaffCounts(agg){
 }
 </script>
 <style>@media print{#__ver{display:none!important}}</style>
-<div id="__ver" style="position:fixed;right:7px;bottom:7px;z-index:2147483000;background:rgba(15,23,42,.72);color:#cbd5e1;font:700 10px/1 monospace;padding:4px 8px;border-radius:7px;pointer-events:none;letter-spacing:.3px;">영양사 vE · 260612-1404</div>
+<div id="__ver" style="position:fixed;right:7px;bottom:7px;z-index:2147483000;background:rgba(15,23,42,.72);color:#cbd5e1;font:700 10px/1 monospace;padding:4px 8px;border-radius:7px;pointer-events:none;letter-spacing:.3px;">영양사 vF · 260612-1422</div>
 </body>
 </html>
-<!-- @build 20260612-140416 (영양사 vE: 교육지원부 톤 전면리뉴얼·헤더/시계·직원명단 소속그룹+점심/석식 체크) -->
+<!-- @build 20260612-142206 (영양사 vF: 직원명단 직책 추가+아침/점심/저녁/비고 표) -->

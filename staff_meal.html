@@ -103,6 +103,21 @@
         .ov-btn.red { background:#ef4444; color:#fff; } .ov-btn.gray { background:#f1f5f9; color:#475569; } .ov-btn.green{ background:#22c55e; color:#fff; }
         .badge-done { display:inline-flex; width:120px; height:120px; margin:0 auto 22px; border-radius:50%; align-items:center; justify-content:center; font-size:58px; font-weight:900; }
         .badge-ok { background:#ecfdf5; color:#059669; } .badge-warn{ background:#fffbeb; color:#d97706; } .badge-cancel{ background:#fef2f2; color:#dc2626; }
+        /* 직원 식수 표 */
+        .meal-panel { width:100%; max-width:1080px; }
+        .mtable-wrap { overflow-x:auto; border-radius:14px; box-shadow:0 8px 24px rgba(15,23,42,.08); }
+        .meal-table { width:100%; border-collapse:collapse; background:#fff; }
+        .meal-table th { background:linear-gradient(135deg,#1e3a8a,#2563eb); color:#fff; font-size:14px; font-weight:800; padding:14px 10px; white-space:nowrap; }
+        .meal-table td { border:1px solid #e2e8f0; padding:10px; text-align:center; font-size:15px; }
+        .meal-table .dept-cell { background:#eff6ff; font-weight:900; color:#1e40af; font-size:15px; vertical-align:middle; white-space:nowrap; }
+        .meal-table .pos-cell { color:#64748b; font-weight:700; white-space:nowrap; }
+        .meal-table .name-cell { font-weight:900; color:#0f172a; white-space:nowrap; }
+        .meal-table tbody tr:hover { background:#f8fafc; }
+        .mchk { display:inline-flex; align-items:center; justify-content:center; width:40px; height:40px; border-radius:11px; border:2px solid #cbd5e1; background:#fff; color:#fff; cursor:pointer; font-size:18px; transition:transform .1s, background .12s, border-color .12s; }
+        .mchk:active { transform:scale(.88); }
+        .mchk.on { background:#22c55e; border-color:#16a34a; box-shadow:0 4px 12px rgba(34,197,94,.35); }
+        .note-inp { width:100%; min-width:130px; border:1.5px solid #e2e8f0; border-radius:9px; padding:9px 11px; font-size:14px; font-weight:600; outline:none; }
+        .note-inp:focus { border-color:#2563eb; }
     </style>
 </head>
 <body>
@@ -121,8 +136,11 @@
 
 <script>
 const db = firebase.database();
-let ROSTER = {};       // {id:{name,dept,active}}
-let TODAY_CHECKS = {}; // checks/{today} 전체
+let ROSTER = {};       // {id:{name,dept,position,active}}
+let TODAY_CHECKS = {}; // 점심: checks/{today}
+let TODAY_BREAKFAST = {}; // 아침
+let TODAY_DINNER = {};    // 저녁
+let TODAY_NOTES = {};     // 비고
 const today = (() => { const d=new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; })();
 const monthKey = today.slice(0,7);
 function nowTime(){ return new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'}); }
@@ -132,8 +150,17 @@ document.getElementById('todayLabel').textContent = today + ' (' + ['일','월',
 // 실시간 구독: 명단 + 오늘 체크 현황
 db.ref('system/staffMeal/roster').on('value', s => { ROSTER = s.val() || {}; if (CURRENT==='staff') renderStaffList(); refreshCount(); });
 db.ref(`system/staffMeal/checks/${today}`).on('value', s => { TODAY_CHECKS = s.val() || {}; if (CURRENT==='staff') renderStaffList(); refreshCount(); });
+db.ref(`system/staffMeal/breakfast/${today}`).on('value', s => { TODAY_BREAKFAST = s.val() || {}; if (CURRENT==='staff') renderStaffList(); refreshCount(); });
+db.ref(`system/staffMeal/dinner/${today}`).on('value', s => { TODAY_DINNER = s.val() || {}; if (CURRENT==='staff') renderStaffList(); refreshCount(); });
+db.ref(`system/staffMeal/notes/${today}`).on('value', s => { TODAY_NOTES = s.val() || {}; if (CURRENT==='staff') renderStaffList(); });
 
-function refreshCount(){ document.getElementById('todayCount').textContent = '오늘 식사 ' + Object.keys(TODAY_CHECKS).length + '명'; }
+function refreshCount(){
+    const ppl = new Set();
+    Object.keys(TODAY_BREAKFAST||{}).forEach(k=>ppl.add(k));
+    Object.keys(TODAY_CHECKS||{}).forEach(k=>ppl.add(k));
+    Object.keys(TODAY_DINNER||{}).forEach(k=>ppl.add(k));
+    document.getElementById('todayCount').textContent = '오늘 식사 ' + ppl.size + '명';
+}
 
 let CURRENT = 'home';
 const stage = document.getElementById('stage');
@@ -171,22 +198,61 @@ function goHome(){
 function goStaff(){ CURRENT='staff'; renderStaffList(); }
 function renderStaffList(){
     if (CURRENT!=='staff') return;
-    const items = Object.entries(ROSTER).filter(([id,r])=>r && r.active!==false)
-        .sort((a,b)=> (a[1].name||'').localeCompare(b[1].name||'','ko'));
-    const grid = items.length ? items.map(([id,r])=>{
-        const done = !!TODAY_CHECKS[id];
-        return `<button class="staff-btn ${done?'done':''}" onclick="tapStaff('${id}')">
-                    <div class="s-nm">${esc(r.name||'')}</div>
-                    <div class="s-dp">${esc(r.dept||'')}</div>
-                </button>`;
-    }).join('') : `<div class="empty">등록된 직원이 없습니다.<br>영양사 페이지에서 직원 명단을 추가해 주세요.</div>`;
+    const items = Object.entries(ROSTER).filter(([id,r])=>r && r.active!==false);
+    let inner;
+    if(!items.length){
+        inner = `<div class="empty">등록된 직원이 없습니다.<br>영양사 페이지에서 직원 명단을 추가해 주세요.</div>`;
+    } else {
+        const groups = {};
+        items.forEach(([id,r])=>{ const d=((r.dept||'').trim())||'(소속 미지정)'; (groups[d]||(groups[d]=[])).push([id,r]); });
+        const depts = Object.keys(groups).sort((a,b)=>a.localeCompare(b,'ko'));
+        let rows='';
+        depts.forEach(d=>{
+            const grp = groups[d].sort((a,b)=>(a[1].name||'').localeCompare(b[1].name||'','ko'));
+            grp.forEach(([id,r],i)=>{
+                const cell=(key,on)=>`<td class="c"><span class="mchk ${on?'on':''}" onclick="toggleMeal('${id}','${key}')">${on?'<i class="fa-solid fa-check"></i>':''}</span></td>`;
+                rows += `<tr>
+                    ${i===0?`<td class="dept-cell" rowspan="${grp.length}">${esc(d)}</td>`:''}
+                    <td class="pos-cell">${esc(r.position||'-')}</td>
+                    <td class="name-cell">${esc(r.name||'')}</td>
+                    ${cell('b', !!TODAY_BREAKFAST[id])}
+                    ${cell('l', !!TODAY_CHECKS[id])}
+                    ${cell('d', !!TODAY_DINNER[id])}
+                    <td><input class="note-inp" value="${esc((TODAY_NOTES[id]&&TODAY_NOTES[id].note)||'')}" placeholder="-" onchange="saveNote('${id}', this.value)"></td>
+                </tr>`;
+            });
+        });
+        inner = `<div class="mtable-wrap"><table class="meal-table">
+            <thead><tr><th>소속</th><th>직책</th><th>이름</th><th>아침</th><th>점심</th><th>저녁</th><th>비고</th></tr></thead>
+            <tbody>${rows}</tbody></table></div>`;
+    }
     stage.innerHTML = `
-        <div class="panel">
+        <div class="meal-panel">
             <button class="back" onclick="goHome()"><i class="fa-solid fa-arrow-left"></i> 처음으로</button>
-            <div class="screen-ttl">항공기술훈련원 직원</div>
-            <div class="screen-sub">본인 이름을 누르면 식사가 처리됩니다. 잘못 눌렀을 때는 다시 누르면 취소됩니다.</div>
-            <div class="staff-grid">${grid}</div>
+            <div class="screen-ttl">항공기술훈련원 직원 식수 체크</div>
+            <div class="screen-sub">본인 줄에서 <b>아침·점심·저녁</b> 칸을 눌러 체크하세요. 다시 누르면 취소됩니다.</div>
+            ${inner}
         </div>`;
+}
+function toggleMeal(id, key){
+    const r = ROSTER[id]; if(!r) return;
+    const TS = firebase.database.ServerValue.TIMESTAMP;
+    if(key==='b'){
+        const ref=db.ref(`system/staffMeal/breakfast/${today}/${id}`);
+        if(TODAY_BREAKFAST[id]) ref.remove(); else ref.set({ name:r.name||'', dept:r.dept||'', position:r.position||'', ts:TS, month:monthKey });
+    } else if(key==='l'){
+        const ref=db.ref(`system/staffMeal/checks/${today}/${id}`);
+        if(TODAY_CHECKS[id]) ref.remove(); else ref.set({ name:r.name||'', dept:r.dept||'', position:r.position||'', category:'staff', staffId:id, time:nowTime(), ts:TS, month:monthKey });
+    } else if(key==='d'){
+        const ref=db.ref(`system/staffMeal/dinner/${today}/${id}`);
+        if(TODAY_DINNER[id]) ref.remove(); else ref.set({ name:r.name||'', dept:r.dept||'', position:r.position||'', category:'staff', ts:TS });
+    }
+}
+function saveNote(id, text){
+    const r = ROSTER[id]; if(!r) return;
+    const v=(text||'').trim();
+    const ref=db.ref(`system/staffMeal/notes/${today}/${id}`);
+    if(v) ref.set({ name:r.name||'', note:v, ts:firebase.database.ServerValue.TIMESTAMP }); else ref.remove();
 }
 
 function tapStaff(id){
@@ -354,7 +420,7 @@ function esc(v){ return String(v==null?'':v).replace(/[&<>"']/g,c=>({'&':'&amp;'
 /* 초기 진입은 위의 ?go 분기에서 처리됨 */
 </script>
 <style>@media print{#__ver{display:none!important}}</style>
-<div id="__ver" style="position:fixed;right:7px;bottom:7px;z-index:2147483000;background:rgba(15,23,42,.72);color:#cbd5e1;font:700 10px/1 monospace;padding:4px 8px;border-radius:7px;pointer-events:none;letter-spacing:.3px;">식당패널 vD · 260612-1358</div>
+<div id="__ver" style="position:fixed;right:7px;bottom:7px;z-index:2147483000;background:rgba(15,23,42,.72);color:#cbd5e1;font:700 10px/1 monospace;padding:4px 8px;border-radius:7px;pointer-events:none;letter-spacing:.3px;">식당패널 vE · 260612-1422</div>
 </body>
 </html>
-<!-- @build 20260612-135810 (식당패널 vD: 사내·사외강사 QR→폰 입력) -->
+<!-- @build 20260612-142206 (식당패널 vE: 직원화면 표(소속·직책·이름·아침·점심·저녁·비고)) -->
