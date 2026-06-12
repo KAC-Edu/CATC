@@ -36,7 +36,8 @@
         }
         .app-container {
             width: 100%;
-            max-width: 600px;
+            max-width: 1180px;
+            margin: 0 auto;
             min-height: 100dvh;
             background: var(--bg);
             display: flex;
@@ -329,32 +330,58 @@
         #imgOverlay.open { display: flex; }
         #imgOverlay img { max-width: 100%; max-height: 90dvh; border-radius: 12px; }
         #imgOverlay button { position: absolute; top: 18px; right: 18px; background: rgba(255,255,255,.15); border: none; color: #fff; font-size: 22px; border-radius: 50%; width: 40px; height: 40px; cursor: pointer; }
+        /* ── 헤더 시계 ── */
+        .header-clock { margin-left:auto; margin-right:14px; text-align:right; color:#fff; line-height:1.15; }
+        .header-clock #clkDate { display:block; font-size:12px; color:#bfdbfe; font-weight:700; }
+        .header-clock #clkTime { font-size:18px; font-weight:900; font-variant-numeric:tabular-nums; letter-spacing:.5px; }
+
+        /* ── PC 탭 메뉴 ── */
+        .ntabs { display:flex; gap:10px; margin:2px 0 14px; flex-wrap:wrap; }
+        .ntab { flex:1; min-width:150px; background:#fff; border:1.5px solid var(--border); border-radius:14px; padding:13px 16px; cursor:pointer; text-align:left; transition:all .15s; }
+        .ntab:hover { border-color:#bbf7d0; transform:translateY(-1px); box-shadow:0 4px 12px rgba(15,23,42,.06); }
+        .ntab.active { border-color:#16a34a; background:linear-gradient(135deg,#f0fdf4,#fff); box-shadow:0 4px 14px rgba(22,163,74,.16); }
+        .ntab .nt-n { display:block; font-size:10px; font-weight:800; color:var(--muted); letter-spacing:.5px; }
+        .ntab.active .nt-n { color:#16a34a; }
+        .ntab .nt-t { display:block; font-size:14px; font-weight:800; color:var(--navy); margin-top:3px; }
+
+        /* ── 탭 패널 ── */
+        .tab-panel { display:none; }
+        .tab-panel.active { display:block; }
+
+        /* ── 모바일 접속 차단 ── */
+        #mobileBlockScreen { display:none; }
+        @media (max-width: 900px) {
+            #mobileBlockScreen { display:flex !important; position:fixed; inset:0; z-index:2147483647; background:linear-gradient(135deg,#1e3a8a,#2563eb); align-items:center; justify-content:center; padding:24px; }
+            #mobileBlockScreen .mb-card { background:#fff; border-radius:22px; padding:40px 28px; text-align:center; max-width:360px; width:100%; box-shadow:0 20px 60px rgba(0,0,0,.4); }
+            #mobileBlockScreen .mb-icon { font-size:60px; margin-bottom:16px; line-height:1; }
+            #mobileBlockScreen .mb-title { font-size:21px; font-weight:900; color:#0f172a; margin-bottom:12px; }
+            #mobileBlockScreen .mb-desc { font-size:14px; font-weight:700; color:#1e40af; line-height:1.6; }
+            body > *:not(#mobileBlockScreen) { display:none !important; }
+        }
     </style>
 </head>
 <body>
+<!-- 모바일 접속 차단 -->
+<div id="mobileBlockScreen">
+    <div class="mb-card">
+        <div class="mb-icon">🖥️</div>
+        <div class="mb-title">PC 전용 화면입니다</div>
+        <div class="mb-desc">영양사 관리 화면은 <b>PC(데스크톱)에 최적화</b>되어 있습니다.</div>
+        <div class="mb-sub" style="font-size:13px; color:#64748b; line-height:1.7; margin-top:12px;">모바일에서는 표·집계가 정상 표시되지 않습니다.<br>👉 <b>PC 브라우저</b>로 접속해 주세요.</div>
+    </div>
+</div>
 <div class="app-container">
 
     <!-- 헤더 -->
     <header class="app-header">
-        <button class="header-btn" onclick="toggleNavMenu()" aria-label="메뉴"><i class="fa-solid fa-bars"></i></button>
         <div class="header-title"><i class="fa-solid fa-utensils" style="margin-right:7px; color:#38bdf8;"></i>항기원 영양사 플랫폼</div>
+        <div class="header-clock"><span id="clkDate">-</span><span id="clkTime">--:--:--</span></div>
         <button class="header-btn" onclick="loadAll()" aria-label="새로고침"><i class="fa-solid fa-rotate-right"></i></button>
     </header>
 
-    <!-- 상단 드롭다운 메뉴 -->
-    <div class="nav-dropdown" id="navDropdown">
-        <button class="nav-item" onclick="navTo('sec-shortcut')"><span class="ni-ico" style="background:#22c55e;"><i class="fa-solid fa-tablet-screen-button"></i></span> 식당 터치패널 바로가기</button>
-        <button class="nav-item" onclick="navTo('sec-summary')"><span class="ni-ico" style="background:#0f172a;"><i class="fa-solid fa-bowl-rice"></i></span> 오늘 석식 식수 요약</button>
-        <button class="nav-item" onclick="navTo('sec-menu')"><span class="ni-ico" style="background:#0ea5e9;"><i class="fa-solid fa-calendar-week"></i></span> 금주 식단표 관리</button>
-        <button class="nav-item" onclick="navTo('sec-course')"><span class="ni-ico" style="background:#6366f1;"><i class="fa-solid fa-list-check"></i></span> 현재 운영 중인 과정 현황</button>
-        <button class="nav-item" onclick="navTo('sec-staff')"><span class="ni-ico" style="background:#f59e0b;"><i class="fa-solid fa-user-group"></i></span> 직원 식수 관리</button>
-    </div>
-    <div class="nav-backdrop" id="navBackdrop" onclick="toggleNavMenu(false)"></div>
 
     <main class="app-content">
 
-        <!-- 날짜 표시 -->
-        <div><span class="date-badge" id="todayBadge">-</span></div>
 
         <!-- 바로가기 -->
         <div class="section-card" id="sec-shortcut">
@@ -386,8 +413,16 @@
         </div>
 
         <!-- ② 금주 식단표 섹션 -->
-        <div class="section-card acc collapsed" id="sec-menu">
-            <div class="section-title" onclick="toggleAcc('sec-menu')"><i class="fa-solid fa-calendar-week"></i> 금주 식단표 관리 <span class="acc-chev"><i class="fa-solid fa-chevron-down"></i></span></div>
+        <!-- 탭 메뉴 (PC) -->
+        <div class="ntabs">
+            <button class="ntab active" data-tab="sec-menu" onclick="showTab('sec-menu')"><span class="nt-n">MENU</span><span class="nt-t">금주 식단표 관리</span></button>
+            <button class="ntab" data-tab="sec-course" onclick="showTab('sec-course')"><span class="nt-n">COURSE</span><span class="nt-t">현재 운영중인 과정 현황</span></button>
+            <button class="ntab" data-tab="sec-staff" onclick="showTab('sec-staff')"><span class="nt-n">MEALS</span><span class="nt-t">직원 식수 관리</span></button>
+            <button class="ntab" data-tab="sec-roster" onclick="showTab('sec-roster')"><span class="nt-n">ROSTER</span><span class="nt-t">직원 명단 관리</span></button>
+        </div>
+
+        <div class="section-card tab-panel active" id="sec-menu">
+            <div class="section-title"><i class="fa-solid fa-calendar-week"></i> 금주 식단표 관리</div>
 
             <!-- 업로드 상태 배너 -->
             <div id="menuBanner" class="menu-status-banner msb-no">
@@ -415,16 +450,16 @@
         </div>
 
         <!-- ③ 과정별 운영 현황 -->
-        <div class="section-card acc collapsed" id="sec-course">
-            <div class="section-title" onclick="toggleAcc('sec-course')"><i class="fa-solid fa-list-check"></i> 현재 운영 중인 과정 현황 <span class="acc-chev"><i class="fa-solid fa-chevron-down"></i></span></div>
+        <div class="section-card tab-panel" id="sec-course">
+            <div class="section-title"><i class="fa-solid fa-list-check"></i> 현재 운영 중인 과정 현황</div>
             <div id="courseStatusList">
                 <div class="spinner-wrap"><div class="spinner"></div><br>불러오는 중...</div>
             </div>
         </div>
 
         <!-- ④ 직원 식수 관리 -->
-        <div class="section-card acc collapsed" id="sec-staff">
-            <div class="section-title" onclick="toggleAcc('sec-staff')"><i class="fa-solid fa-utensils"></i> 직원 식수 관리 (터치패널 집계) <span class="acc-chev"><i class="fa-solid fa-chevron-down"></i></span></div>
+        <div class="section-card tab-panel" id="sec-staff">
+            <div class="section-title"><i class="fa-solid fa-utensils"></i> 직원 식수 관리 (터치패널 집계)</div>
 
             <div style="display:flex; gap:8px; align-items:center; margin-bottom:14px; flex-wrap:wrap;">
                 <input type="month" id="staffMonth" style="flex:1; min-width:150px; padding:0 12px; height:40px; border:1.5px solid var(--border); border-radius:10px; font-weight:800; font-size:14px;">
@@ -437,16 +472,18 @@
             <!-- 인원별 카운팅 -->
             <div id="staffCountList"><div class="empty-msg">월을 선택하고 조회하세요.</div></div>
 
-            <!-- 명단 관리 -->
-            <div style="margin-top:18px; border-top:1px dashed var(--border); padding-top:14px;">
-                <div style="font-size:14px; font-weight:900; color:var(--navy); margin-bottom:10px;"><i class="fa-solid fa-users-gear" style="color:#2563eb;"></i> 직원 명단 관리</div>
-                <div style="display:flex; gap:6px; margin-bottom:10px; flex-wrap:wrap;">
-                    <input id="newStaffName" placeholder="성명" maxlength="12" style="flex:1; min-width:90px; padding:11px 12px; border:1.5px solid var(--border); border-radius:10px; font-weight:700;">
-                    <input id="newStaffDept" placeholder="부서/직책 (선택)" maxlength="20" style="flex:1.4; min-width:110px; padding:11px 12px; border:1.5px solid var(--border); border-radius:10px; font-weight:700;">
-                    <button class="mini-btn" onclick="addStaff()"><i class="fa-solid fa-plus"></i> 추가</button>
-                </div>
-                <div id="staffRosterList"><div class="empty-msg">등록된 직원이 없습니다.</div></div>
+        </div>
+
+        <!-- 직원 명단 관리 (별도 탭) -->
+        <div class="section-card tab-panel" id="sec-roster">
+            <div class="section-title"><i class="fa-solid fa-users-gear"></i> 직원 명단 관리</div>
+            <div style="font-size:12.5px; color:var(--muted); font-weight:700; margin-bottom:12px;">신입·전보 시 여기에서 직원을 추가·수정·삭제하세요. (식당 터치패널 명단에 즉시 반영)</div>
+            <div style="display:flex; gap:6px; margin-bottom:12px; flex-wrap:wrap;">
+                <input id="newStaffName" placeholder="성명" maxlength="12" style="flex:1; min-width:120px; padding:12px 14px; border:1.5px solid var(--border); border-radius:10px; font-weight:700;">
+                <input id="newStaffDept" placeholder="부서/직책 (선택)" maxlength="20" style="flex:1.4; min-width:140px; padding:12px 14px; border:1.5px solid var(--border); border-radius:10px; font-weight:700;">
+                <button class="mini-btn" onclick="addStaff()"><i class="fa-solid fa-plus"></i> 추가</button>
             </div>
+            <div id="staffRosterList"><div class="empty-msg">등록된 직원이 없습니다.</div></div>
         </div>
 
     </main>
@@ -561,10 +598,12 @@ function renderMealStats(today) {
         skipStudents += Object.keys(skips).length;
     });
 
-    const eat = Math.max(0, totalStudents - skipStudents);
-    document.getElementById('totalMeals').textContent = totalStudents;
-    document.getElementById('skipCount').textContent  = skipStudents;
-    document.getElementById('eatCount').textContent   = eat;
+    const staffCount  = Object.values(_staffRoster || {}).filter(r => r && r.active !== false).length;
+    const staffDinner = Object.keys(_dinnerToday || {}).length;
+    const studentEat  = Math.max(0, totalStudents - skipStudents);
+    document.getElementById('totalMeals').textContent = totalStudents + staffCount;   // 전체 식수 인원 = 교육생 + 직원 명단
+    document.getElementById('skipCount').textContent  = skipStudents;                 // 석식 제외 신청자 (교육생)
+    document.getElementById('eatCount').textContent   = studentEat + staffDinner;     // 실제 식사 예정(석식) = (교육생−제외) + 직원 석식신청
 }
 
 function renderCourseStatus(today) {
@@ -833,15 +872,35 @@ function showToast(msg) {
    - checks: system/staffMeal/checks/{date}/{key} = {name,category,idValue,time,ts}
 ═══════════════════════════════════════════════════════════ */
 let _staffRoster = {};
+let _dinnerToday = {};
 const STAFF_ROSTER = 'system/staffMeal/roster';
 const STAFF_CHECKS = 'system/staffMeal/checks';
 
 window.addEventListener('DOMContentLoaded', () => {
     const mEl = document.getElementById('staffMonth');
     if (mEl) mEl.value = getToday().slice(0, 7);
-    db.ref(STAFF_ROSTER).on('value', s => { _staffRoster = s.val() || {}; renderRoster(); });
+    db.ref(STAFF_ROSTER).on('value', s => { _staffRoster = s.val() || {}; renderRoster(); renderMealStats(getToday()); });
+    db.ref('system/staffMeal/dinner/' + getToday()).on('value', s => { _dinnerToday = s.val() || {}; renderMealStats(getToday()); });
     loadStaffMeal();
+    startClock();
 });
+
+/* ── PC 탭 전환 ── */
+function showTab(id){
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.toggle('active', p.id === id));
+    document.querySelectorAll('.ntab').forEach(t => t.classList.toggle('active', t.getAttribute('data-tab') === id));
+}
+/* ── 헤더 시계 (강사플랫폼 스타일) ── */
+function startClock(){
+    const dEl = document.getElementById('clkDate'), tEl = document.getElementById('clkTime');
+    const days = ['일','월','화','수','목','금','토'];
+    const tick = () => {
+        const n = new Date(), p = x => String(x).padStart(2,'0');
+        if (dEl) dEl.textContent = `${n.getFullYear()}-${p(n.getMonth()+1)}-${p(n.getDate())} (${days[n.getDay()]})`;
+        if (tEl) tEl.textContent = `${p(n.getHours())}:${p(n.getMinutes())}:${p(n.getSeconds())}`;
+    };
+    tick(); setInterval(tick, 1000);
+}
 
 function escH(v){ return String(v==null?'':v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
@@ -938,7 +997,7 @@ function renderStaffCounts(agg){
 }
 </script>
 <style>@media print{#__ver{display:none!important}}</style>
-<div id="__ver" style="position:fixed;right:7px;bottom:7px;z-index:2147483000;background:rgba(15,23,42,.72);color:#cbd5e1;font:700 10px/1 monospace;padding:4px 8px;border-radius:7px;pointer-events:none;letter-spacing:.3px;">영양사 vC · 260612-1325</div>
+<div id="__ver" style="position:fixed;right:7px;bottom:7px;z-index:2147483000;background:rgba(15,23,42,.72);color:#cbd5e1;font:700 10px/1 monospace;padding:4px 8px;border-radius:7px;pointer-events:none;letter-spacing:.3px;">영양사 vD · 260612-1343</div>
 </body>
 </html>
-<!-- @build 20260612-132553 (영양사 vC: QR삭제·색상 산뜻·직원식수 버튼/요약 정리) -->
+<!-- @build 20260612-134359 (영양사 vD: PC 탭레이아웃·시계·모바일차단·식수정의(교육생+직원/직원석식)) -->

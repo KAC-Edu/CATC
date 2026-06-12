@@ -258,14 +258,30 @@ function spinThenSet(ref, payload, name, sub){
     overlay.classList.add('show');
     ref.set(payload).then(()=>{
         setTimeout(()=>{
+            const dkey = ref.key;
             ovCard.className='ov-card ov-ok';
             ovCard.innerHTML = `<div class="badge-done badge-ok">✓</div>
                 <div class="ov-ttl">식사 완료</div>
                 <div class="ov-name">${esc(name)}</div>
                 <div class="ov-sub">${esc(sub||'')}</div>
                 <div class="ov-time">${payload.time}</div>
-                <div class="ov-actions"><button class="ov-btn green" onclick="closeOverlay()">확인</button></div>`;
-            autoClose();
+                <div class="ov-sub" style="margin-top:6px; font-weight:800; color:#0f172a;">오늘 <b style="color:#d97706;">석식</b>도 드시나요?</div>
+                <div class="ov-actions">
+                    <button class="ov-btn gray" onclick="closeOverlay()">아니요</button>
+                    <button class="ov-btn green" id="dinnerYes">네, 석식 신청</button>
+                </div>`;
+            const dy = document.getElementById('dinnerYes');
+            if (dy) dy.onclick = ()=>{
+                db.ref('system/staffMeal/dinner/'+today+'/'+dkey).set({ name, category: payload.category||'staff', ts: firebase.database.ServerValue.TIMESTAMP }).catch(()=>{});
+                ovCard.className='ov-card ov-ok';
+                ovCard.innerHTML = `<div class="badge-done badge-ok">🍚</div>
+                    <div class="ov-ttl" style="color:#059669;">석식까지 신청 완료</div>
+                    <div class="ov-name">${esc(name)}</div>
+                    <div class="ov-sub">오늘 중식·석식 모두 식사 처리되었습니다.</div>
+                    <div class="ov-actions"><button class="ov-btn green" onclick="closeOverlay()">확인</button></div>`;
+                clearTimeout(_ac); _ac=setTimeout(closeOverlay, 2600);
+            };
+            clearTimeout(_ac); _ac=setTimeout(closeOverlay, 5000);
         }, 850);
     }).catch(()=>{
         ovCard.className='ov-card ov-cancel';
@@ -299,7 +315,7 @@ function esc(v){ return String(v==null?'':v).replace(/[&<>"']/g,c=>({'&':'&amp;'
 goHome();
 </script>
 <style>@media print{#__ver{display:none!important}}</style>
-<div id="__ver" style="position:fixed;right:7px;bottom:7px;z-index:2147483000;background:rgba(15,23,42,.72);color:#cbd5e1;font:700 10px/1 monospace;padding:4px 8px;border-radius:7px;pointer-events:none;letter-spacing:.3px;">식당패널 vB · 260612-1323</div>
+<div id="__ver" style="position:fixed;right:7px;bottom:7px;z-index:2147483000;background:rgba(15,23,42,.72);color:#cbd5e1;font:700 10px/1 monospace;padding:4px 8px;border-radius:7px;pointer-events:none;letter-spacing:.3px;">식당패널 vC · 260612-1343</div>
 </body>
 </html>
-<!-- @build 20260612-132331 (식당패널 vB) -->
+<!-- @build 20260612-134359 (식당패널 vC: 석식 신청 단계 추가) -->
