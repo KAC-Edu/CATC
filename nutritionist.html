@@ -63,7 +63,7 @@
         .header-kicker { font-size:10px; font-weight:800; letter-spacing:1.5px; color:#bfdbfe; }
         .app-header h1 { margin:4px 0 0; font-size:20px; line-height:1; font-weight:950; color:#fff; white-space:nowrap; }
         .header-right { display:flex; align-items:center; justify-content:flex-end; gap:8px; }
-        .h-btn { display:inline-flex; align-items:center; gap:7px; background:rgba(255,255,255,0.14); border:1px solid rgba(255,255,255,0.22); color:#fff; border-radius:11px; padding:10px 15px; font-size:14px; font-weight:800; cursor:pointer; white-space:nowrap; transition:background .15s, transform .15s; }
+        .h-btn { display:inline-flex; align-items:center; justify-content:center; gap:7px; height:48px; background:rgba(255,255,255,0.14); border:1px solid rgba(255,255,255,0.22); color:#fff; border-radius:12px; padding:0 16px; font-size:14px; font-weight:800; cursor:pointer; white-space:nowrap; transition:background .15s, transform .15s; }
         .h-btn:hover { background:rgba(255,255,255,0.24); transform:translateY(-1px); }
         .header-btn { font-size: 19px; color: #fff; border: none; background: rgba(255,255,255,.12); cursor: pointer; transition: opacity .2s, background .2s; width:38px; height:38px; border-radius:11px; display:flex; align-items:center; justify-content:center; }
         .header-btn:active { opacity: .7; }
@@ -397,7 +397,7 @@
         .h-btn.portal { background:rgba(255,255,255,0.18); }
         .header-summary { display:flex; align-items:center; gap:7px; justify-self:end; position:relative; z-index:1; }
         .h-btn.touch { background:rgba(255,255,255,0.22); margin-right:4px; }
-        .hsum { display:flex; flex-direction:column; align-items:center; gap:3px; background:rgba(255,255,255,0.18); border:1px solid rgba(255,255,255,0.34); border-radius:13px; padding:8px 16px; min-width:82px; }
+        .hsum { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; height:48px; background:rgba(255,255,255,0.18); border:1px solid rgba(255,255,255,0.34); border-radius:12px; padding:0 16px; min-width:82px; }
         .hsum .hs-lab { font-size:11px; font-weight:800; color:#f1f5f9; letter-spacing:.2px; white-space:nowrap; }
         .hsum .hs-val { font-size:24px; font-weight:950; line-height:1; color:#fff; text-shadow:0 1px 4px rgba(0,0,0,.3); }
         .hsum-total .hs-val { color:#dbeafe; }
@@ -434,6 +434,36 @@
         .cal-marks { display:flex; flex-wrap:wrap; gap:2px; margin-top:2px; }
         .cm { font-size:9px; font-weight:900; border-radius:4px; padding:1px 4px; color:#fff; line-height:1.4; }
         .cm-b { background:#f59e0b; } .cm-l { background:#2563eb; } .cm-d { background:#16a34a; }
+        /* ROSTER: 소속바/안내/그룹헤더 */
+        .dept-bar { display:flex; flex-wrap:wrap; align-items:center; gap:7px; margin-bottom:14px; }
+        .db-lab { font-size:12px; font-weight:800; color:var(--muted); margin-right:2px; }
+        .dept-chip { display:inline-flex; align-items:center; gap:7px; background:#eff6ff; border:1px solid #dbeafe; color:#1e40af; border-radius:999px; padding:5px 13px; font-size:13px; font-weight:800; }
+        .db-ic { font-size:11px; color:#64748b; cursor:pointer; }
+        .db-ic:hover { color:#2563eb; }
+        .rg-edit { border:none; background:transparent; color:#2563eb; cursor:pointer; font-size:12px; padding:2px 4px; }
+        .rg-hint { margin-left:8px; font-size:11px; color:var(--muted); font-weight:700; }
+        .rtable tbody tr.editing { background:#eff6ff; }
+        .rtable.guide td { color:#cbd5e1; }
+        .rtable.guide .guide-sample td { color:#94a3b8; background:#f8fafc; }
+        .rtable.guide .guide-sample .rname { color:#64748b; font-weight:800; }
+        .gs-tag { font-size:10px; background:#e2e8f0; color:#64748b; border-radius:5px; padding:1px 6px; font-weight:800; }
+        .guide-empty td { height:34px; }
+        /* COURSE: 주차 네비/카드 */
+        .cw-nav { display:flex; align-items:center; gap:7px; flex-wrap:wrap; margin-bottom:14px; }
+        .cw-btn { height:38px; padding:0 16px; border:1.5px solid var(--border); background:#fff; color:#475569; border-radius:10px; font-weight:800; font-size:13.5px; cursor:pointer; transition:.12s; }
+        .cw-btn:hover { border-color:#93c5fd; }
+        .cw-btn.on { background:#2563eb; border-color:#2563eb; color:#fff; }
+        .cw-range { margin-left:auto; font-size:13px; font-weight:800; color:var(--muted); display:inline-flex; align-items:center; gap:6px; }
+        .cw-card { border:1.5px solid var(--border); border-radius:14px; padding:14px 16px; margin-bottom:8px; }
+        .cw-card.running { border-color:#bbf7d0; background:#f0fdf4; }
+        .cw-top { display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:5px; }
+        .cw-name { font-size:15px; font-weight:900; color:var(--navy); }
+        .cw-live { font-size:11px; background:#10b981; color:#fff; border-radius:6px; padding:2px 8px; font-weight:800; vertical-align:middle; }
+        .cw-room { font-size:12px; font-weight:800; color:#1e40af; background:#eff6ff; border:1px solid #dbeafe; border-radius:8px; padding:4px 10px; white-space:nowrap; }
+        .cw-meta { font-size:13px; color:var(--muted); font-weight:700; }
+        /* MEALS: breakdown/합계 */
+        .cnt-bld { font-size:12px; color:var(--muted); font-weight:700; margin-left:6px; }
+        .cnt-total td { background:#f1f5f9; border-top:2px solid #cbd5e1; }
     </style>
 </head>
 <body>
@@ -509,7 +539,7 @@
 
         <!-- ③ 과정별 운영 현황 -->
         <div class="section-card tab-panel" id="sec-course">
-            <div class="section-title"><i class="fa-solid fa-list-check"></i> 현재 운영 중인 과정 현황</div>
+            <div class="section-title"><i class="fa-solid fa-list-check"></i> 운영 과정 현황 (연간계획 · 주차별)</div>
             <div id="courseStatusList">
                 <div class="spinner-wrap"><div class="spinner"></div><br>불러오는 중...</div>
             </div>
@@ -517,7 +547,7 @@
 
         <!-- ④ 직원 식수 관리 -->
         <div class="section-card tab-panel" id="sec-staff">
-            <div class="section-title"><i class="fa-solid fa-utensils"></i> 직원 식수 관리 (터치패널 집계)</div>
+            <div class="section-title"><i class="fa-solid fa-utensils"></i> 직원 식수 관리</div>
 
             <div class="month-nav">
                 <button class="mn-btn" onclick="shiftMonth(-1)"><i class="fa-solid fa-chevron-left"></i></button>
@@ -526,8 +556,6 @@
                 <button class="mini-btn" onclick="setMonth(getToday().slice(0,7))" style="margin-left:8px;"><i class="fa-solid fa-calendar-day"></i> 이번 달</button>
             </div>
 
-            <!-- 월 요약 카드 -->
-            <div id="staffSummary" style="display:grid; grid-template-columns:repeat(2,1fr); gap:8px; margin-bottom:14px;"></div>
 
             <!-- 인원별 카운팅 -->
             <div id="staffCountList"><div class="empty-msg">월을 선택하고 조회하세요.</div></div>
@@ -537,12 +565,13 @@
         <!-- 직원 명단 관리 (별도 탭) -->
         <div class="section-card tab-panel" id="sec-roster">
             <div class="section-title"><i class="fa-solid fa-users-gear"></i> 직원 명단 관리</div>
-            <div style="font-size:12.5px; color:var(--muted); font-weight:700; margin-bottom:12px;">소속과 직원 이름을 입력해 추가하세요. <b>같은 소속끼리 묶여서</b> 표시됩니다. 점심·석식 체크는 오늘 식수에 즉시 반영됩니다.</div>
-            <div style="display:flex; gap:6px; margin-bottom:14px; flex-wrap:wrap;">
-                <input id="newStaffDept" placeholder="소속 (예: 교육운영부)" maxlength="20" style="flex:1.2; min-width:140px; padding:12px 14px; border:1.5px solid var(--border); border-radius:10px; font-weight:700;">
-                <input id="newStaffPos" placeholder="직책" maxlength="16" style="flex:.9; min-width:110px; padding:12px 14px; border:1.5px solid var(--border); border-radius:10px; font-weight:700;">
-                <input id="newStaffName" placeholder="직원 이름" maxlength="12" style="flex:1; min-width:120px; padding:12px 14px; border:1.5px solid var(--border); border-radius:10px; font-weight:700;">
-                <button class="mini-btn" onclick="addStaff()"><i class="fa-solid fa-plus"></i> 추가</button>
+            <div style="font-size:12.5px; color:var(--muted); font-weight:700; margin-bottom:12px;"><b>소속을 선택</b>(또는 새로 추가)하고 직책·성함을 입력해 추가하세요. 같은 소속끼리 묶여 표시되며, <b>행을 드래그해 순서</b>를 바꿀 수 있습니다.</div>
+            <div style="display:flex; gap:6px; margin-bottom:14px; flex-wrap:wrap; align-items:center;">
+                <select id="newStaffDept" onchange="onDeptSelect()" style="flex:1.1; min-width:150px; height:46px; padding:0 12px; border:1.5px solid var(--border); border-radius:10px; font-weight:700; background:#fff;"></select>
+                <input id="newStaffDeptNew" placeholder="새 소속명" maxlength="20" style="display:none; flex:1; min-width:130px; height:46px; padding:0 12px; border:1.5px solid #2563eb; border-radius:10px; font-weight:700;">
+                <input id="newStaffPos" placeholder="직책" maxlength="16" style="flex:.8; min-width:100px; height:46px; padding:0 12px; border:1.5px solid var(--border); border-radius:10px; font-weight:700;">
+                <input id="newStaffName" placeholder="성함" maxlength="12" style="flex:1; min-width:110px; height:46px; padding:0 12px; border:1.5px solid var(--border); border-radius:10px; font-weight:700;">
+                <button class="mini-btn" style="height:46px;" onclick="addStaff()"><i class="fa-solid fa-plus"></i> 추가</button>
             </div>
             <div id="staffRosterList"><div class="empty-msg">등록된 직원이 없습니다.</div></div>
         </div>
@@ -626,14 +655,10 @@ function loadAll() {
 ══════════════════════════ */
 function loadRoomData() {
     const today = getToday();
-    document.getElementById('courseStatusList').innerHTML =
-        '<div class="spinner-wrap"><div class="spinner"></div><br>불러오는 중...</div>';
-
     db.ref('courses').on('value', snap => {
         allRoomData = snap.val() || {};
         renderMealStats(today);
-        renderCourseStatus(today);
-    });
+    }, err => { console.warn('[courses] read error', err); });
 }
 
 function renderMealStats(today) {
@@ -938,15 +963,13 @@ let _notesToday = {};
 let _editId = null;
 let _dragId = null;
 let _curMonth = null;
+let _deptPresets = {};
 const STAFF_ROSTER = 'system/staffMeal/roster';
 const STAFF_CHECKS = 'system/staffMeal/checks';
 
 window.addEventListener('DOMContentLoaded', () => {
-    db.ref(STAFF_ROSTER).on('value', s => { _staffRoster = s.val() || {}; renderRoster(); renderMealStats(getToday()); });
-    db.ref('system/staffMeal/dinner/' + getToday()).on('value', s => { _dinnerToday = s.val() || {}; renderRoster(); renderMealStats(getToday()); });
-    db.ref(STAFF_CHECKS + '/' + getToday()).on('value', s => { _checksToday = s.val() || {}; renderRoster(); });
-    db.ref('system/staffMeal/breakfast/' + getToday()).on('value', s => { _breakfastToday = s.val() || {}; renderRoster(); });
-    db.ref('system/staffMeal/notes/' + getToday()).on('value', s => { _notesToday = s.val() || {}; renderRoster(); });
+    db.ref(STAFF_ROSTER).on('value', s => { _staffRoster = s.val() || {}; renderRoster(); fillDeptOptions(); renderMealStats(getToday()); });
+    db.ref('system/staffMeal/depts').on('value', s => { _deptPresets = s.val() || {}; fillDeptOptions(); });
     setMonth(getToday().slice(0,7));
     startClock();
 });
@@ -955,6 +978,64 @@ window.addEventListener('DOMContentLoaded', () => {
 function showTab(id){
     document.querySelectorAll('.tab-panel').forEach(p => p.classList.toggle('active', p.id === id));
     document.querySelectorAll('.ntab').forEach(t => t.classList.toggle('active', t.getAttribute('data-tab') === id));
+    if(id==='sec-course') loadCourseWeek();
+}
+/* ══════════════════════════
+   COURSE: 연간교육계획 기반 주차별(토~금) 보기
+   - 토/일이면 차주로 전환(타 플랫폼과 동일 규칙)
+══════════════════════════ */
+let _courseWeekOffset = 0;
+function _cwAddDays(iso, n){ const d=new Date(iso+'T00:00:00'); d.setDate(d.getDate()+n); return toLocalStr(d); }
+function _cwTargetMonday(todayStr){
+    const d=new Date(todayStr+'T00:00:00'); const dow=d.getDay();   // 0=일 .. 6=토
+    const mon=getMondayOf(todayStr);
+    if(dow===6 || dow===0) return _cwAddDays(mon, 7);               // 토·일 → 차주 월요일
+    return mon;
+}
+function _fmtMD(iso){ const p=iso.split('-'); return `${p[1]}/${p[2]}`; }
+function courseWeekSet(off){ _courseWeekOffset=off; loadCourseWeek(); }
+function loadCourseWeek(){
+    const list=document.getElementById('courseStatusList'); if(!list) return;
+    list.innerHTML='<div class="spinner-wrap"><div class="spinner"></div><br>불러오는 중...</div>';
+    const today=getToday();
+    const baseMon=_cwTargetMonday(today);
+    const mon=_cwAddDays(baseMon, _courseWeekOffset*7);
+    const sat=_cwAddDays(mon,-2), fri=_cwAddDays(mon,4);            // 토 ~ 금
+    db.ref('system/annualPlan').once('value').then(snap=>{
+        const val=snap.val()||[];
+        const arr=Array.isArray(val)?val:Object.values(val);
+        const courses=arr
+            .filter(c=>c && c.name && c.startDate && c.endDate)
+            .filter(c=> c.startDate<=fri && c.endDate>=sat)          // 해당 주(토~금)에 걸치는 과정
+            .sort((a,b)=>(a.startDate||'').localeCompare(b.startDate||''));
+        renderCourseWeek(courses, {mon,sat,fri,today});
+    }).catch(e=>{
+        console.warn('[annualPlan] read error', e);
+        list.innerHTML='<div class="empty-msg">연간교육계획 데이터를 불러오지 못했습니다.<br><button class="mini-btn" style="margin-top:10px;" onclick="loadCourseWeek()"><i class="fa-solid fa-rotate-right"></i> 다시 시도</button></div>';
+    });
+}
+function renderCourseWeek(courses, ctx){
+    const list=document.getElementById('courseStatusList'); if(!list) return;
+    const nav = `<div class="cw-nav">`
+        + [0,1,2].map(i=>`<button class="cw-btn ${i===_courseWeekOffset?'on':''}" onclick="courseWeekSet(${i})">${i===0?'이번주':(i+1)+'주차'}</button>`).join('')
+        + `<span class="cw-range"><i class="fa-regular fa-calendar"></i> ${_fmtMD(ctx.sat)}(토) ~ ${_fmtMD(ctx.fri)}(금)</span></div>`;
+    if(!courses.length){
+        list.innerHTML = nav + '<div class="empty-msg" style="margin-top:6px;">해당 주에 운영 예정인 과정이 없습니다.</div>';
+        return;
+    }
+    const body = courses.map(c=>{
+        const running = (c.startDate<=ctx.today && c.endDate>=ctx.today);
+        const room = (c.roomDetail||c.classroom||c.roomName||'').trim();
+        const prof = (c.prof||'').trim();
+        return `<div class="cw-card${running?' running':''}">
+            <div class="cw-top">
+                <div class="cw-name">${escH(c.name)}${running?' <span class="cw-live">운영중</span>':''}</div>
+                ${room?`<span class="cw-room">${escH(room)}</span>`:''}
+            </div>
+            <div class="cw-meta"><i class="fa-regular fa-calendar"></i> ${escH(c.startDate)} ~ ${escH(c.endDate)}${prof?` &nbsp;·&nbsp; <i class="fa-solid fa-chalkboard-user"></i> ${escH(prof)}`:''}</div>
+        </div>`;
+    }).join('');
+    list.innerHTML = nav + body;
 }
 /* ── 헤더 시계 (강사플랫폼 스타일) ── */
 function startClock(){
@@ -993,44 +1074,85 @@ function nowTime(){ const d=new Date(),p=x=>String(x).padStart(2,'0'); return `$
 
 const _ord = r => (r && r.order!=null) ? r.order : 9999;
 function renderRoster(){
-    const box = document.getElementById('staffRosterList'); if(!box) return;
-    const items = Object.entries(_staffRoster);
-    if(!items.length){ box.innerHTML='<div class="empty-msg">등록된 직원이 없습니다.</div>'; return; }
-    const groups = {};
+    const box=document.getElementById('staffRosterList'); if(!box) return;
+    const items=Object.entries(_staffRoster);
+    const allDepts=[...new Set([...Object.keys(_deptPresets||{}), ...items.map(([id,r])=>((r.dept||'').trim())).filter(Boolean)])].sort((a,b)=>a.localeCompare(b,'ko'));
+    const deptBar = allDepts.length ? `<div class="dept-bar"><span class="db-lab">등록된 소속</span>${allDepts.map(d=>`<span class="dept-chip" data-dept="${escH(d)}">${escH(d)}<i class="fa-solid fa-pen db-ic" title="이름 변경" onclick="renameDept(this.parentNode.dataset.dept)"></i><i class="fa-solid fa-xmark db-ic" title="삭제" onclick="deleteDept(this.parentNode.dataset.dept)"></i></span>`).join('')}</div>` : '';
+    if(!items.length){ box.innerHTML = deptBar + renderRosterGuide(); return; }
+    const groups={};
     items.forEach(([id,r])=>{ const d=((r.dept||'').trim())||'(소속 미지정)'; (groups[d]||(groups[d]=[])).push([id,r]); });
-    const depts = Object.keys(groups).sort((a,b)=>a.localeCompare(b,'ko'));
-    box.innerHTML = depts.map(d=>{
-        const rows = groups[d].sort((a,b)=> (_ord(a[1])-_ord(b[1])) || (a[1].name||'').localeCompare(b[1].name||'','ko'));
-        const body = rows.map(([id,r])=>{
+    const depts=Object.keys(groups).sort((a,b)=>a.localeCompare(b,'ko'));
+    box.innerHTML = deptBar + depts.map(d=>{
+        const rows=groups[d].sort((a,b)=> (_ord(a[1])-_ord(b[1])) || (a[1].name||'').localeCompare(b[1].name||'','ko'));
+        const body=rows.map(([id,r])=>{
             if(id===_editId){
-                return `<tr><td colspan="7" style="background:#eff6ff; padding:12px;">
-                    <div style="display:flex; gap:6px; flex-wrap:wrap; align-items:center;">
-                        <input id="edit-dept" value="${escH(r.dept||'')}" placeholder="소속" style="flex:1; min-width:110px; padding:9px 11px; border:1.5px solid #2563eb; border-radius:8px; font-weight:700;">
-                        <input id="edit-pos" value="${escH(r.position||'')}" placeholder="직책" style="flex:.8; min-width:90px; padding:9px 11px; border:1.5px solid #2563eb; border-radius:8px; font-weight:700;">
-                        <input id="edit-name" value="${escH(r.name||'')}" placeholder="이름" style="flex:.9; min-width:90px; padding:9px 11px; border:1.5px solid #2563eb; border-radius:8px; font-weight:700;">
-                        <button class="r-actbtn" style="background:#16a34a; color:#fff;" onclick="saveEdit('${id}')"><i class="fa-solid fa-check"></i> 저장</button>
-                        <button class="r-actbtn" style="background:#e2e8f0; color:#475569;" onclick="cancelEdit()">취소</button>
-                    </div></td></tr>`;
+                const opts=allDepts.map(o=>`<option value="${escH(o)}" ${o===((r.dept||'').trim())?'selected':''}>${escH(o)}</option>`).join('');
+                return `<tr class="editing">
+                    <td><div style="display:flex; flex-direction:column; gap:4px;">
+                        <select id="edit-dept" style="height:34px; border:1.5px solid #2563eb; border-radius:7px; font-weight:700; background:#fff;">${opts}</select>
+                        <input id="edit-pos" value="${escH(r.position||'')}" placeholder="직책" style="height:34px; padding:0 9px; border:1.5px solid #2563eb; border-radius:7px; font-weight:700;">
+                    </div></td>
+                    <td><input id="edit-name" value="${escH(r.name||'')}" placeholder="성함" style="width:100%; height:34px; padding:0 9px; border:1.5px solid #2563eb; border-radius:7px; font-weight:700;"></td>
+                    <td><input id="edit-note" value="${escH(r.note||'')}" placeholder="비고" style="width:100%; height:34px; padding:0 9px; border:1.5px solid #2563eb; border-radius:7px; font-weight:600;"></td>
+                    <td class="c"><button class="r-actbtn" style="background:#16a34a;color:#fff;" onclick="saveEdit('${id}')"><i class="fa-solid fa-check"></i> 저장</button> <button class="r-actbtn" style="background:#e2e8f0;color:#475569;" onclick="cancelEdit()">취소</button></td>
+                </tr>`;
             }
-            const chk=(key,on)=>`<input type="checkbox" class="rchk${key==='l'?' lunch':''}" ${on?'checked':''} onchange="toggleMeal3('${id}','${key}', this.checked)">`;
             return `<tr draggable="true" ondragstart="rDragStart(event,'${id}')" ondragover="rDragOver(event)" ondrop="rDrop(event,'${id}')" ondragend="rDragEnd(event)">
                 <td class="c" style="color:var(--muted); font-weight:700;">${escH(r.position||'-')}</td>
                 <td class="rname"><i class="fa-solid fa-grip-vertical drag-grip"></i>${escH(r.name||'')}</td>
-                <td class="c">${chk('b', !!_breakfastToday[id])}</td>
-                <td class="c">${chk('l', !!_checksToday[id])}</td>
-                <td class="c">${chk('d', !!_dinnerToday[id])}</td>
-                <td><input class="r-note" value="${escH((_notesToday[id]&&_notesToday[id].note)||'')}" placeholder="-" onchange="saveStaffNote('${id}', this.value)"></td>
+                <td>${r.note?escH(r.note):'<span style="color:#cbd5e1;">-</span>'}</td>
                 <td class="c"><button class="r-actbtn r-edit" onclick="editStaff('${id}')">수정</button> <button class="r-actbtn r-del" onclick="deleteStaff('${id}')">삭제</button></td>
             </tr>`;
         }).join('');
         return `<div class="roster-group">
-            <div class="rg-head"><i class="fa-solid fa-building"></i> ${escH(d)} <span class="rg-count">${rows.length}명</span> <span style="margin-left:8px; font-size:11px; color:var(--muted); font-weight:700;">↕ 행을 드래그해 순서 변경</span></div>
+            <div class="rg-head"><i class="fa-solid fa-building"></i> ${escH(d)} <button class="rg-edit" data-dept="${escH(d)}" onclick="renameDept(this.dataset.dept)" title="소속명 변경"><i class="fa-solid fa-pen"></i></button> <span class="rg-count">${rows.length}명</span> <span class="rg-hint">↕ 행 드래그로 순서 변경</span></div>
             <table class="rtable">
-                <thead><tr><th style="width:120px;">직책</th><th style="text-align:left;">직원 이름</th><th style="width:60px;">아침</th><th style="width:60px;">점심</th><th style="width:60px;">저녁</th><th style="text-align:left;">비고</th><th style="width:140px;">관리</th></tr></thead>
-                <tbody>${body}</tbody>
-            </table>
+                <thead><tr><th style="width:150px;">직책</th><th style="text-align:left;">성함</th><th style="text-align:left;">비고</th><th style="width:150px;">관리</th></tr></thead>
+                <tbody>${body}</tbody></table>
         </div>`;
     }).join('');
+}
+function renderRosterGuide(){
+    let rows = `<tr class="guide-sample"><td class="c">주무관</td><td class="rname">홍길동 <span class="gs-tag">샘플</span></td><td>채식 / 알레르기 등</td><td class="c">—</td></tr>`;
+    for(let i=0;i<9;i++) rows+=`<tr class="guide-empty"><td>&nbsp;</td><td></td><td></td><td></td></tr>`;
+    return `<div class="roster-group">
+        <div class="rg-head"><i class="fa-solid fa-building"></i> 소속 (예시) <span class="rg-count">아직 직원 없음</span></div>
+        <table class="rtable guide">
+            <thead><tr><th style="width:150px;">직책</th><th style="text-align:left;">성함</th><th style="text-align:left;">비고</th><th style="width:150px;">관리</th></tr></thead>
+            <tbody>${rows}</tbody></table>
+        <div style="font-size:12px;color:var(--muted);margin-top:8px;">↑ 위 양식처럼 채워집니다. 위에서 <b>소속·직책·성함</b>을 입력하고 <b>추가</b>하면 첫 직원부터 등록됩니다.</div>
+    </div>`;
+}
+/* 소속 옵션/관리 */
+function fillDeptOptions(){
+    const sel=document.getElementById('newStaffDept'); if(!sel) return;
+    const prev=sel.value;
+    const set=new Set([...Object.keys(_deptPresets||{}), ...Object.values(_staffRoster||{}).map(r=>((r&&r.dept)||'').trim()).filter(Boolean)]);
+    const list=[...set].sort((a,b)=>a.localeCompare(b,'ko'));
+    sel.innerHTML = list.map(d=>`<option value="${escH(d)}">${escH(d)}</option>`).join('') + `<option value="__new__">+ 새 소속 추가…</option>`;
+    if(prev && (list.includes(prev)||prev==='__new__')) sel.value=prev;
+}
+function onDeptSelect(){
+    const sel=document.getElementById('newStaffDept'), ni=document.getElementById('newStaffDeptNew');
+    if(!sel||!ni) return;
+    if(sel.value==='__new__'){ ni.style.display=''; ni.focus(); } else { ni.style.display='none'; }
+}
+function renameDept(oldD){
+    if(!oldD) return;
+    const nn=prompt('소속 이름 변경', oldD); if(nn===null) return;
+    const v=(nn||'').trim(); if(!v||v===oldD) return;
+    const updates={};
+    Object.entries(_staffRoster||{}).forEach(([id,r])=>{ if(((r.dept||'').trim())===oldD) updates[`${STAFF_ROSTER}/${id}/dept`]=v; });
+    updates[`system/staffMeal/depts/${v}`]=true;
+    if(_deptPresets[oldD]!==undefined) updates[`system/staffMeal/depts/${oldD}`]=null;
+    db.ref().update(updates).then(()=>showToast('소속명이 변경되었습니다.'));
+}
+function deleteDept(d){
+    if(!d) return;
+    const members=Object.values(_staffRoster||{}).filter(r=>r&&((r.dept||'').trim())===d);
+    if(members.length){ showToast('해당 소속에 직원이 있어 삭제할 수 없습니다.'); return; }
+    if(!confirm(`소속 '${d}'을(를) 목록에서 삭제할까요?`)) return;
+    db.ref(`system/staffMeal/depts/${d}`).remove().then(()=>showToast('소속이 삭제되었습니다.'));
 }
 /* ── 드래그 정렬 ── */
 function rDragStart(e,id){ _dragId=id; e.dataTransfer.effectAllowed='move'; try{e.dataTransfer.setData('text/plain',id);}catch(_){} }
@@ -1053,40 +1175,33 @@ function rReorder(srcId,dstId){
     if(((src.dept||'').trim())!==dstDept) updates[`${STAFF_ROSTER}/${srcId}/dept`]=dstDept;
     db.ref().update(updates).then(()=>showToast('순서가 변경되었습니다.'));
 }
-/* ── 오늘 아침/점심/저녁 체크 토글 (식당 터치패널과 동일 노드) ── */
-function toggleMeal3(id, key, on){
-    const r=_staffRoster[id]; if(!r) return; const today=getToday(); const TS=firebase.database.ServerValue.TIMESTAMP;
-    let ref;
-    if(key==='b') ref=db.ref(`system/staffMeal/breakfast/${today}/${id}`);
-    else if(key==='l') ref=db.ref(`${STAFF_CHECKS}/${today}/${id}`);
-    else ref=db.ref(`system/staffMeal/dinner/${today}/${id}`);
-    if(!on){ ref.remove(); return; }
-    if(key==='l') ref.set({ name:r.name||'', dept:r.dept||'', position:r.position||'', category:'staff', staffId:id, time:nowTime(), ts:TS, month:today.slice(0,7) });
-    else if(key==='b') ref.set({ name:r.name||'', dept:r.dept||'', position:r.position||'', ts:TS, month:today.slice(0,7) });
-    else ref.set({ name:r.name||'', dept:r.dept||'', position:r.position||'', category:'staff', ts:TS });
-}
-function saveStaffNote(id, text){
-    const v=(text||'').trim(); const today=getToday();
-    const ref=db.ref(`system/staffMeal/notes/${today}/${id}`);
-    if(v) ref.set({ name:(_staffRoster[id]&&_staffRoster[id].name)||'', note:v, ts:firebase.database.ServerValue.TIMESTAMP }); else ref.remove();
-}
 function addStaff(){
+    const sel=document.getElementById('newStaffDept');
+    let d = (sel && sel.value==='__new__') ? (document.getElementById('newStaffDeptNew').value||'').trim() : ((sel&&sel.value)||'').trim();
+    const p=(document.getElementById('newStaffPos').value||'').trim();
     const n=(document.getElementById('newStaffName').value||'').trim();
-    const d=(document.getElementById('newStaffDept').value||'').trim();
-    const p=(document.getElementById('newStaffPos')?.value||'').trim();
-    if(!n){ showToast('직원 이름을 입력하세요.'); return; }
-    db.ref(STAFF_ROSTER).push({ name:n, dept:d, position:p, active:true, createdAt:firebase.database.ServerValue.TIMESTAMP })
-      .then(()=>{ document.getElementById('newStaffName').value=''; document.getElementById('newStaffDept').value=''; const pe=document.getElementById('newStaffPos'); if(pe) pe.value=''; showToast('✅ 직원이 추가되었습니다.'); });
+    if(!d || d==='__new__'){ showToast('소속을 선택하거나 입력하세요.'); return; }
+    if(!n){ showToast('성함을 입력하세요.'); return; }
+    const maxOrd=Object.values(_staffRoster||{}).filter(r=>r&&((r.dept||'').trim())===d).reduce((m,r)=>Math.max(m,(r.order!=null?r.order:0)),0);
+    db.ref(STAFF_ROSTER).push({ name:n, dept:d, position:p, note:'', order:maxOrd+10, active:true, createdAt:firebase.database.ServerValue.TIMESTAMP })
+      .then(()=>{
+        if(!_deptPresets[d]) db.ref(`system/staffMeal/depts/${d}`).set(true);
+        document.getElementById('newStaffName').value=''; document.getElementById('newStaffPos').value='';
+        const ni=document.getElementById('newStaffDeptNew'); if(ni){ ni.value=''; ni.style.display='none'; }
+        showToast('✅ 직원이 추가되었습니다.');
+      });
 }
 function editStaff(id){ _editId=id; renderRoster(); setTimeout(()=>{ const e=document.getElementById('edit-name'); if(e) e.focus(); }, 30); }
 function cancelEdit(){ _editId=null; renderRoster(); }
 function saveEdit(id){
-    const d=(document.getElementById('edit-dept').value||'').trim();
+    const dEl=document.getElementById('edit-dept');
+    const d=((dEl&&dEl.value)||'').trim();
     const p=(document.getElementById('edit-pos').value||'').trim();
     const n=(document.getElementById('edit-name').value||'').trim();
-    if(!n){ showToast('이름을 입력하세요.'); return; }
+    const note=(document.getElementById('edit-note').value||'').trim();
+    if(!n){ showToast('성함을 입력하세요.'); return; }
     _editId=null;
-    db.ref(`${STAFF_ROSTER}/${id}`).update({ dept:d, position:p, name:n }).then(()=>showToast('수정되었습니다.'));
+    db.ref(`${STAFF_ROSTER}/${id}`).update({ dept:d, position:p, name:n, note:note }).then(()=>showToast('수정되었습니다.'));
 }
 function deleteStaff(id){
     const r=_staffRoster[id]; if(!r) return;
@@ -1130,7 +1245,6 @@ function loadStaffMeal(){
         });
         const totals={ all:0, staff:0, internal:0, external:0 };
         Object.values(agg).forEach(a=>{ totals.all+=a.count; totals[a.category]+=a.count; });
-        renderStaffSummary(totals, month);
         renderStaffCounts(agg, month);
     }).catch(()=>{ const box=document.getElementById('staffCountList'); if(box) box.innerHTML='<div class="empty-msg">조회 실패</div>'; });
 }
@@ -1148,23 +1262,28 @@ function renderStaffCounts(agg, month){
     if(!rows.length){ box.innerHTML='<div class="empty-msg">해당 월의 식사 기록이 없습니다.</div>'; return; }
     const catLabel={staff:'직원', internal:'사내강사', external:'사외강사'};
     const catColor={staff:'#10b981', internal:'#6366f1', external:'#f59e0b'};
-    let html=`<table class="cnt-table"><thead><tr><th>소속</th><th>직책</th><th>성함</th><th style="width:90px;">총 식수</th><th>비고</th></tr></thead><tbody>`;
+    let gb=0,gl=0,gd=0;
+    let html=`<table class="cnt-table"><thead><tr><th style="width:78px;">구분</th><th>소속</th><th>직책</th><th>이름</th><th style="width:240px;">식사횟수 (아·점·저)</th><th>비고</th></tr></thead><tbody>`;
     rows.forEach(([key,a])=>{
+        let bc=0,lc=0,dc=0; Object.values(a.days||{}).forEach(md=>{ if(md.b)bc++; if(md.l)lc++; if(md.d)dc++; });
+        gb+=bc; gl+=lc; gd+=dc;
+        const tot=bc+lc+dc;
         const notes=[...new Set(Object.values(a.notes||{}).filter(Boolean))];
         const noteTxt = notes.length ? escH(notes.join(', ')) : '<span style="color:#cbd5e1;">-</span>';
-        const deptCell = a.category==='staff' ? escH(a.dept||'-')
-            : `<span style="background:${catColor[a.category]}1a; color:${catColor[a.category]}; font-weight:800; border-radius:6px; padding:2px 8px; font-size:12px;">${catLabel[a.category]}</span>`;
-        const posCell = a.category==='staff' ? escH(a.position||'-') : (a.idValue?escH((a.category==='internal'?'사번 ':'연락처 ')+a.idValue):'-');
+        const dept = a.category==='staff' ? escH(a.dept||'-') : '-';
+        const pos = a.category==='staff' ? escH(a.position||'-') : (a.idValue?escH((a.category==='internal'?'사번 ':'연락처 ')+a.idValue):'-');
         html+=`<tr class="cnt-row" onclick="toggleCal('${key}')">
-            <td>${deptCell}</td>
-            <td class="c" style="color:var(--muted); font-weight:700;">${posCell}</td>
-            <td class="rname">${escH(a.name)} <i class="fa-solid fa-chevron-down cnt-chev"></i></td>
-            <td class="c"><b style="font-size:17px; color:var(--navy);">${a.count}</b><small style="font-size:11px;">회</small></td>
+            <td class="c"><span style="background:${catColor[a.category]}1a; color:${catColor[a.category]}; font-weight:800; border-radius:6px; padding:2px 8px; font-size:12px;">${catLabel[a.category]||'직원'}</span></td>
+            <td>${dept}</td>
+            <td class="c" style="color:var(--muted); font-weight:700;">${pos}</td>
+            <td class="rname">${escH(a.name)}</td>
+            <td class="c"><b style="font-size:17px; color:var(--navy);">${tot}</b><small style="font-size:11px;">회</small> <span class="cnt-bld">아 ${bc} · 점 ${lc} · 저 ${dc}</span> <i class="fa-solid fa-chevron-down cnt-chev"></i></td>
             <td style="font-size:13px;">${noteTxt}</td>
         </tr>
-        <tr><td colspan="5" id="cal-${key}" style="display:none; background:#f8fafc; padding:14px;">${renderMealCalendar(a, month)}</td></tr>`;
+        <tr><td colspan="6" id="cal-${key}" style="display:none; background:#f8fafc; padding:14px;">${renderMealCalendar(a, month)}</td></tr>`;
     });
-    html+=`</tbody></table>`;
+    const gtot=gb+gl+gd;
+    html+=`</tbody><tfoot><tr class="cnt-total"><td colspan="4" style="text-align:right; font-weight:900; padding-right:14px;">총 합계</td><td class="c"><b style="font-size:18px; color:#2563eb;">${gtot}</b><small style="font-size:11px;">회</small> <span class="cnt-bld">아 ${gb} · 점 ${gl} · 저 ${gd}</span></td><td></td></tr></tfoot></table>`;
     box.innerHTML=html;
 }
 function toggleCal(key){ const el=document.getElementById('cal-'+key); if(el) el.style.display=(el.style.display==='none'?'table-cell':'none'); }
@@ -1185,7 +1304,7 @@ function renderMealCalendar(a, month){
 }
 </script>
 <style>@media print{#__ver{display:none!important}}</style>
-<div id="__ver" style="position:fixed;right:7px;bottom:7px;z-index:2147483000;background:rgba(15,23,42,.72);color:#cbd5e1;font:700 10px/1 monospace;padding:4px 8px;border-radius:7px;pointer-events:none;letter-spacing:.3px;">영양사 vK · 260612-1454</div>
+<div id="__ver" style="position:fixed;right:7px;bottom:7px;z-index:2147483000;background:rgba(15,23,42,.72);color:#cbd5e1;font:700 10px/1 monospace;padding:4px 8px;border-radius:7px;pointer-events:none;letter-spacing:.3px;">영양사 vM · 260612-1557</div>
 </body>
 </html>
-<!-- @build 20260612-145411 (영양사 vK: 헤더 터치패널버튼·식수 등식·시인성·직책예시제거·하단바로가기삭제) -->
+<!-- @build 20260612-155755 (영양사 vM: COURSE 연간계획 기반 주차별(토~금) 보기 + 2·3주차 미리보기 인덱스) -->
