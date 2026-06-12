@@ -47,7 +47,7 @@
         @keyframes cbpop { 0%{transform:scale(.4); opacity:0;} 28%{transform:scale(1); opacity:1;} 68%{transform:scale(1); opacity:1;} 100%{transform:scale(1.12); opacity:0;} }
         .mchk.locked { background:#f1f5f9; border-color:#e2e8f0; color:#cbd5e1; cursor:not-allowed; }
         .mchk.locked i { color:#cbd5e1; font-size:18px; }
-        .mchk.on.resv { background:#f59e0b; border-color:#f59e0b; }
+        .mchk.on.resv { background:#f59e0b; border-color:#d97706; box-shadow:0 4px 12px rgba(245,158,11,.45); }
         .kio-toast { position:fixed; left:50%; bottom:40px; transform:translateX(-50%) translateY(20px); background:#0f172a; color:#fff; padding:14px 24px; border-radius:14px; font-weight:800; font-size:16px; opacity:0; pointer-events:none; transition:.2s; z-index:10000; box-shadow:0 12px 32px rgba(0,0,0,.3); }
         .kio-toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
         .topbar .when { text-align:right; }
@@ -682,7 +682,7 @@ function esc(v){ return String(v==null?'':v).replace(/[&<>"']/g,c=>({'&':'&amp;'
 /* 초기 진입은 위의 ?go 분기에서 처리됨 */
 </script>
 <style>@media print{#__ver{display:none!important}}</style>
-<div id="__ver" style="position:fixed;right:7px;bottom:7px;z-index:2147483000;background:rgba(15,23,42,.72);color:#cbd5e1;font:700 10px/1 monospace;padding:4px 8px;border-radius:7px;pointer-events:none;letter-spacing:.3px;">식당패널 vM · 260612-2355</div>
+<div id="__ver" style="position:fixed;right:7px;bottom:7px;z-index:2147483000;background:rgba(15,23,42,.72);color:#cbd5e1;font:700 10px/1 monospace;padding:4px 8px;border-radius:7px;pointer-events:none;letter-spacing:.3px;">식당패널 vN · 260613-0020</div>
 </body>
 </html>
-<!-- @build 20260612-235500 (식당패널 vM: 가로 2단 배치(좌·우 절반씩, 인원 늘면 아래로) + 양 단 동시 자동맞춤 / 석식예약 열을 석식 우측으로 이동) -->
+<!-- @build 20260613-002000 (식당패널 vN: 가로 2단·자동맞춤·석식예약 우측이동에 더해 석식예약 ON 주황색+주황 글로우 적용) -->

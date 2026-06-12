@@ -62,6 +62,16 @@
         .header-mark i { font-size:20px; color:#dbeafe; }
         .header-kicker { font-size:10px; font-weight:800; letter-spacing:1.5px; color:#bfdbfe; }
         .app-header h1 { margin:0; font-size:20px; line-height:1; font-weight:950; color:#fff; white-space:nowrap; }
+        /* ── 세련된 좌측 브랜드 블록 ── */
+        .brand { display:flex; align-items:center; gap:12px; min-width:0; }
+        .brand-mark { width:44px; height:44px; border-radius:14px; display:inline-flex; align-items:center; justify-content:center; flex-shrink:0;
+            background:linear-gradient(135deg, rgba(96,165,250,.42), rgba(255,255,255,.10)); border:1px solid rgba(255,255,255,.30);
+            box-shadow:inset 0 1px 0 rgba(255,255,255,.28), 0 6px 16px rgba(37,99,235,.30); }
+        .brand-mark i { font-size:20px; color:#fff; }
+        .brand-text { min-width:0; }
+        .brand-kicker { font-size:10.5px; font-weight:800; letter-spacing:1.4px; color:#bfdbfe; }
+        .brand-text h1 { margin:3px 0 0; font-size:19px; line-height:1; font-weight:900; color:#fff; white-space:nowrap; letter-spacing:-.3px; }
+        .h-btn.icon-only { width:48px; padding:0; }
         .header-right { display:flex; align-items:center; justify-content:flex-end; gap:8px; }
         .h-btn { display:inline-flex; align-items:center; justify-content:center; gap:7px; height:48px; background:rgba(255,255,255,0.14); border:1px solid rgba(255,255,255,0.22); color:#fff; border-radius:12px; padding:0 16px; font-size:14px; font-weight:800; cursor:pointer; white-space:nowrap; transition:background .15s, transform .15s; }
         .h-btn:hover { background:rgba(255,255,255,0.24); transform:translateY(-1px); }
@@ -390,6 +400,18 @@
         .r-note:focus { border-color:var(--blue); }
         .drag-grip { color:#cbd5e1; margin-right:7px; cursor:grab; }
         .rtable .rnum { color:#94a3b8; font-weight:800; font-variant-numeric:tabular-nums; }
+        /* ── 단일 명단 표 ── */
+        .rtable-wrap { overflow:auto; max-height:62vh; border:1px solid var(--border); border-radius:12px; }
+        .rtable.flat { border-collapse:separate; border-spacing:0; }
+        .rtable.flat thead th { position:sticky; top:0; z-index:3; box-shadow:inset 0 -1px 0 var(--border); }
+        .rtable.flat .rdept { background:#eff6ff; color:#1e40af; font-weight:900; text-align:center; vertical-align:middle; white-space:nowrap; }
+        .rtable.flat .rnote { color:#475569; }
+        .rtable.flat .rmng { white-space:nowrap; }
+        .ord-btns { display:inline-flex; gap:3px; margin-right:7px; vertical-align:middle; }
+        .ord-btn { width:28px; height:28px; border:1px solid var(--border); background:#fff; border-radius:7px; color:#64748b; cursor:pointer; font-size:12px; line-height:1; }
+        .ord-btn:hover:not(:disabled) { background:#eff6ff; border-color:#93c5fd; color:#2563eb; }
+        .ord-btn:disabled { opacity:.3; cursor:default; }
+        .r-ein { width:100%; height:36px; padding:0 9px; border:1.5px solid #2563eb; border-radius:7px; font-weight:700; background:#fff; }
         .rtable tbody tr[draggable]:hover .drag-grip { color:#2563eb; }
         /* ── 전체폭 헤더 + 중앙정렬 본문 (교육지원부 방식) ── */
         body { background: var(--bg); }
@@ -464,19 +486,34 @@
         .cw-room { font-size:12px; font-weight:800; color:#1e40af; background:#eff6ff; border:1px solid #dbeafe; border-radius:8px; padding:4px 10px; white-space:nowrap; }
         .cw-meta { font-size:13px; color:var(--muted); font-weight:700; }
         /* 계좌 입력 박스 */
-        .acct-box { border:1.5px solid #bbf7d0; background:#f0fdf4; border-radius:14px; padding:14px 16px; margin-bottom:14px; }
-        .acct-ttl { font-size:13.5px; font-weight:900; color:#166534; margin-bottom:10px; }
-        .acct-ttl span { font-weight:700; color:#16a34a; font-size:12px; }
-        .acct-row { display:flex; gap:8px; flex-wrap:wrap; }
-        .acct-row input { height:42px; padding:0 12px; border:1.5px solid #d1fae5; border-radius:10px; font-weight:700; }
-        .acct-row #acctBank { flex:.7; min-width:90px; }
-        .acct-row #acctNo { flex:1.6; min-width:160px; }
-        .acct-row #acctHolder { flex:.8; min-width:100px; }
+        .acct-inp { height:46px; padding:0 14px; border:1.5px solid var(--border); border-radius:10px; font-weight:700; font-size:15px; outline:none; }
+        .acct-inp:focus { border-color:#16a34a; }
+        /* ── 명단 추가 영역 ── */
+        .add-grid { display:flex; flex-direction:column; gap:10px; margin-bottom:16px; }
+        .add-line { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+        .add-lab { display:inline-flex; align-items:center; gap:6px; font-size:13px; font-weight:800; color:var(--navy); min-width:52px; }
+        .add-lab i { color:#2563eb; }
+        .add-inp { height:46px; padding:0 12px; border:1.5px solid var(--border); border-radius:10px; font-weight:700; font-size:14px; background:#fff; }
+        .add-line select.add-inp { flex:0 0 200px; }
+        .add-line #newDeptOnly { flex:0 0 290px; }
+        .add-line #newStaffPos { flex:0 0 130px; }
+        .add-line #newStaffName { flex:0 0 170px; }
+        .mini-btn.ghost { background:#eef2ff; color:#1e40af; }
         /* MEALS: 수정/메모/빈줄 */
         .cnt-corr { font-size:10px; background:#fee2e2; color:#dc2626; border-radius:5px; padding:1px 6px; font-weight:800; }
         .memo-ic { color:#94a3b8; cursor:pointer; font-size:14px; }
         .memo-ic:hover { color:#2563eb; }
         .cnt-empty td { height:34px; }
+        /* ── 식수 표: 틀고정(헤더·합계 고정) + 펼침 ── */
+        .cnt-wrap { overflow:auto; max-height:60vh; border:1px solid var(--border); border-radius:12px; }
+        .cnt-table { border-collapse:separate; border-spacing:0; }
+        .cnt-table thead th { position:sticky; top:0; z-index:3; box-shadow:inset 0 -1px 0 var(--border); }
+        .cnt-table tfoot td { position:sticky; bottom:0; z-index:3; box-shadow:inset 0 1px 0 var(--border); }
+        .cnt-clk { cursor:pointer; display:inline-flex; align-items:center; gap:5px; }
+        .cnt-exp { font-size:11px; color:#94a3b8; transition:transform .2s; }
+        .cnt-row.open .cnt-exp { transform:rotate(180deg); }
+        .cal-sum { font-size:13px; font-weight:700; color:#334155; background:#fff; border:1px solid var(--border); border-radius:10px; padding:9px 13px; margin-bottom:12px; }
+        .cal-sum b { color:var(--navy); }
         /* MEALS: breakdown/합계 */
         .cnt-bld { font-size:12px; color:var(--muted); font-weight:700; margin-left:6px; }
         .cnt-total td { background:#f1f5f9; border-top:2px solid #cbd5e1; }
@@ -496,12 +533,17 @@
     <header class="app-header">
         <div class="header-left">
             <button class="h-btn portal" onclick="location.href='portal.html'"><i class="fa-solid fa-table-cells-large"></i> 포털</button>
-            <div class="header-titlewrap">
-                <h1>항공기술훈련원 식당 플랫폼</h1>
+            <div class="brand">
+                <div class="brand-mark"><i class="fa-solid fa-utensils"></i></div>
+                <div class="brand-text">
+                    <div class="brand-kicker">KAC 항공기술훈련원</div>
+                    <h1>식당 운영 플랫폼</h1>
+                </div>
             </div>
         </div>
         <div id="headerClock" class="header-clock"></div>
         <div class="header-summary">
+            <button class="h-btn icon-only" id="acctBtn" onclick="openAcctModal()" title="사외강사 식대 계좌 설정"><i class="fa-solid fa-gear"></i></button>
             <button class="h-btn touch" onclick="location.href='staff_meal.html'"><i class="fa-solid fa-utensils"></i> 터치패널</button>
             <div class="hsum hsum-total"><span class="hs-lab">전체 식수</span><span class="hs-val" id="totalMeals">-</span></div>
             <span class="hs-op">−</span>
@@ -566,15 +608,6 @@
         <div class="section-card tab-panel" id="sec-staff">
             <div class="section-title"><i class="fa-solid fa-utensils"></i> 직원 식수 관리</div>
 
-            <div class="acct-box">
-                <div class="acct-ttl"><i class="fa-solid fa-building-columns"></i> 사외강사 식대 계좌 <span>· 터치패널 "계좌입금" 버튼에 표시됩니다</span></div>
-                <div class="acct-row">
-                    <input id="acctBank" placeholder="은행 (예: 국민)" maxlength="20">
-                    <input id="acctNo" placeholder="계좌번호" maxlength="40">
-                    <input id="acctHolder" placeholder="예금주" maxlength="20">
-                    <button class="mini-btn" onclick="saveAccount()"><i class="fa-solid fa-floppy-disk"></i> 저장</button>
-                </div>
-            </div>
             <div class="month-nav">
                 <button class="mn-btn" onclick="shiftMonth(-1)"><i class="fa-solid fa-chevron-left"></i></button>
                 <span id="staffMonthLabel" class="mn-label">-</span>
@@ -593,13 +626,20 @@
         <!-- 직원 명단 관리 (별도 탭) -->
         <div class="section-card tab-panel" id="sec-roster">
             <div class="section-title"><i class="fa-solid fa-users-gear"></i> 직원 명단 관리</div>
-            <div style="font-size:12.5px; color:var(--muted); font-weight:700; margin-bottom:12px;"><b>소속을 선택</b>(또는 새로 추가)하고 직책·성함을 입력해 추가하세요. 같은 소속끼리 묶여 표시되며, <b>행을 드래그해 순서</b>를 바꿀 수 있습니다.</div>
-            <div style="display:flex; gap:6px; margin-bottom:14px; flex-wrap:wrap; align-items:center;">
-                <select id="newStaffDept" onchange="onDeptSelect()" style="flex:1.1; min-width:150px; height:46px; padding:0 12px; border:1.5px solid var(--border); border-radius:10px; font-weight:700; background:#fff;"></select>
-                <input id="newStaffDeptNew" placeholder="새 소속명" maxlength="20" style="display:none; flex:1; min-width:130px; height:46px; padding:0 12px; border:1.5px solid #2563eb; border-radius:10px; font-weight:700;">
-                <input id="newStaffPos" placeholder="직책" maxlength="16" style="flex:.8; min-width:100px; height:46px; padding:0 12px; border:1.5px solid var(--border); border-radius:10px; font-weight:700;">
-                <input id="newStaffName" placeholder="성함" maxlength="12" style="flex:1; min-width:110px; height:46px; padding:0 12px; border:1.5px solid var(--border); border-radius:10px; font-weight:700;">
-                <button class="mini-btn" style="height:46px;" onclick="addStaff()"><i class="fa-solid fa-plus"></i> 추가</button>
+            <div style="font-size:12.5px; color:var(--muted); font-weight:700; margin-bottom:12px;">소속을 먼저 추가한 뒤 직원을 등록하세요. 같은 소속은 자동으로 묶여 표시되며, <b>화살표(▲▼)</b> 또는 드래그로 순서를 바꿀 수 있습니다.</div>
+            <div class="add-grid">
+                <div class="add-line">
+                    <span class="add-lab"><i class="fa-solid fa-building"></i> 소속</span>
+                    <input id="newDeptOnly" class="add-inp" placeholder="새 소속명 (예: 교육지원부)" maxlength="20" onkeyup="if(event.key==='Enter')addDept()">
+                    <button class="mini-btn ghost" onclick="addDept()"><i class="fa-solid fa-plus"></i> 소속만 추가</button>
+                </div>
+                <div class="add-line">
+                    <span class="add-lab"><i class="fa-solid fa-user-plus"></i> 직원</span>
+                    <select id="newStaffDept" class="add-inp"></select>
+                    <input id="newStaffPos" class="add-inp" placeholder="직책" maxlength="16">
+                    <input id="newStaffName" class="add-inp" placeholder="성함" maxlength="12" onkeyup="if(event.key==='Enter')addStaff()">
+                    <button class="mini-btn" onclick="addStaff()"><i class="fa-solid fa-plus"></i> 직원 추가</button>
+                </div>
             </div>
             <div id="staffRosterList"><div class="empty-msg">등록된 직원이 없습니다.</div></div>
         </div>
@@ -615,6 +655,24 @@
             <div class="empty-msg">데이터 없음</div>
         </div>
         <button class="modal-close-btn" onclick="closeSkipModal()">닫기</button>
+    </div>
+</div>
+
+<!-- ── 사외강사 식대 계좌 설정 모달 ── -->
+<div class="modal-bg" id="acctModal">
+    <div class="modal-sheet">
+        <div class="modal-handle"></div>
+        <div class="modal-title"><i class="fa-solid fa-building-columns" style="color:#16a34a; margin-right:6px;"></i>사외강사 식대 계좌</div>
+        <div class="modal-body">
+            <div style="font-size:12.5px; color:var(--muted); font-weight:700; margin-bottom:14px; line-height:1.6;">아래 계좌가 <b>터치패널의 사외강사 안내</b>에 표시됩니다.</div>
+            <div style="display:flex; flex-direction:column; gap:10px;">
+                <input id="acctBank" class="acct-inp" placeholder="은행 (예: 국민)" maxlength="20">
+                <input id="acctNo" class="acct-inp" placeholder="계좌번호" maxlength="40">
+                <input id="acctHolder" class="acct-inp" placeholder="예금주" maxlength="20">
+            </div>
+        </div>
+        <button class="modal-close-btn" style="background:#16a34a;" onclick="saveAccount(); closeAcctModal();"><i class="fa-solid fa-floppy-disk"></i> 저장</button>
+        <button class="modal-close-btn" style="background:#e2e8f0; color:#475569; margin-top:8px;" onclick="closeAcctModal()">닫기</button>
     </div>
 </div>
 
@@ -1043,6 +1101,8 @@ function saveAccount(){
     const holder=(document.getElementById('acctHolder').value||'').trim();
     db.ref('system/staffMeal/account').set({ bank, number, holder, ts:firebase.database.ServerValue.TIMESTAMP }).then(()=>showToast('✅ 사외강사 계좌가 저장되었습니다.'));
 }
+function openAcctModal(){ const m=document.getElementById('acctModal'); if(m) m.classList.add('open'); }
+function closeAcctModal(){ const m=document.getElementById('acctModal'); if(m) m.classList.remove('open'); }
 function _cwAddDays(iso, n){ const d=new Date(iso+'T00:00:00'); d.setDate(d.getDate()+n); return toLocalStr(d); }
 function _cwTargetMonday(todayStr){
     const d=new Date(todayStr+'T00:00:00'); const dow=d.getDay();   // 0=일 .. 6=토
@@ -1137,50 +1197,92 @@ function renderRoster(){
     const allDepts=[...new Set([...Object.keys(_deptPresets||{}), ...items.map(([id,r])=>((r.dept||'').trim())).filter(Boolean)])].sort((a,b)=>a.localeCompare(b,'ko'));
     const deptBar = allDepts.length ? `<div class="dept-bar"><span class="db-lab">등록된 소속</span>${allDepts.map(d=>`<span class="dept-chip" data-dept="${escH(d)}">${escH(d)}<i class="fa-solid fa-pen db-ic" title="이름 변경" onclick="renameDept(this.parentNode.dataset.dept)"></i><i class="fa-solid fa-xmark db-ic" title="삭제" onclick="deleteDept(this.parentNode.dataset.dept)"></i></span>`).join('')}</div>` : '';
     if(!items.length){ box.innerHTML = deptBar + renderRosterGuide(); return; }
+
+    // 부서 정렬 → 부서 내 order 정렬 → 한 줄로 평탄화: [dept, id, r]
     const groups={};
     items.forEach(([id,r])=>{ const d=((r.dept||'').trim())||'(소속 미지정)'; (groups[d]||(groups[d]=[])).push([id,r]); });
     const depts=Object.keys(groups).sort((a,b)=>a.localeCompare(b,'ko'));
-    box.innerHTML = deptBar + depts.map(d=>{
-        const rows=groups[d].sort((a,b)=> (_ord(a[1])-_ord(b[1])) || (a[1].name||'').localeCompare(b[1].name||'','ko'));
-        const body=rows.map(([id,r],idx)=>{
+    const flat=[];
+    depts.forEach(d=>{ groups[d].sort((a,b)=> (_ord(a[1])-_ord(b[1])) || (a[1].name||'').localeCompare(b[1].name||'','ko')).forEach(([id,r])=>flat.push([d,id,r])); });
+
+    const optsOf = sel => allDepts.map(o=>`<option value="${escH(o)}" ${o===sel?'selected':''}>${escH(o)}</option>`).join('');
+
+    let bodyHtml='', i=0, seq=0;
+    while(i<flat.length){
+        const dept=flat[i][0];
+        let j=i; while(j<flat.length && flat[j][0]===dept) j++;
+        const run=flat.slice(i,j);
+        const runHasEdit = run.some(([d,id])=>id===_editId);
+        run.forEach(([d,id,r],k)=>{
+            seq++;
+            // 소속 셀: 편집 중인 부서는 행마다 표시(병합 해제), 그 외는 첫 행에 rowspan 병합
+            const deptCell = runHasEdit ? `<td class="rdept">${escH(dept)}</td>`
+                            : (k===0 ? `<td class="rdept" rowspan="${run.length}">${escH(dept)}</td>` : '');
             if(id===_editId){
-                const opts=allDepts.map(o=>`<option value="${escH(o)}" ${o===((r.dept||'').trim())?'selected':''}>${escH(o)}</option>`).join('');
-                return `<tr class="editing">
-                    <td class="c rnum">${idx+1}</td>
-                    <td><div style="display:flex; flex-direction:column; gap:4px;">
-                        <select id="edit-dept" style="height:34px; border:1.5px solid #2563eb; border-radius:7px; font-weight:700; background:#fff;">${opts}</select>
-                        <input id="edit-pos" value="${escH(r.position||'')}" placeholder="직책" style="height:34px; padding:0 9px; border:1.5px solid #2563eb; border-radius:7px; font-weight:700;">
-                    </div></td>
-                    <td><input id="edit-name" value="${escH(r.name||'')}" placeholder="성함" style="width:100%; height:34px; padding:0 9px; border:1.5px solid #2563eb; border-radius:7px; font-weight:700;"></td>
-                    <td><input id="edit-note" value="${escH(r.note||'')}" placeholder="비고" style="width:100%; height:34px; padding:0 9px; border:1.5px solid #2563eb; border-radius:7px; font-weight:600;"></td>
+                bodyHtml += `<tr class="editing">
+                    <td class="c rnum">${seq}</td>
+                    <td><select id="edit-dept" class="r-ein">${optsOf((r.dept||'').trim())}</select></td>
+                    <td><input id="edit-pos" class="r-ein" value="${escH(r.position||'')}" placeholder="직책"></td>
+                    <td><input id="edit-name" class="r-ein" value="${escH(r.name||'')}" placeholder="성함"></td>
+                    <td><input id="edit-note" class="r-ein" value="${escH(r.note||'')}" placeholder="비고"></td>
                     <td class="c"><button class="r-actbtn" style="background:#16a34a;color:#fff;" onclick="saveEdit('${id}')"><i class="fa-solid fa-check"></i> 저장</button> <button class="r-actbtn" style="background:#e2e8f0;color:#475569;" onclick="cancelEdit()">취소</button></td>
                 </tr>`;
+            } else {
+                const isFirst=(k===0), isLast=(k===run.length-1);
+                bodyHtml += `<tr draggable="true" ondragstart="rDragStart(event,'${id}')" ondragover="rDragOver(event)" ondrop="rDrop(event,'${id}')" ondragend="rDragEnd(event)">
+                    <td class="c rnum">${seq}</td>
+                    ${deptCell}
+                    <td class="c" style="color:var(--muted); font-weight:700;">${escH(r.position||'-')}</td>
+                    <td class="rname"><i class="fa-solid fa-grip-vertical drag-grip"></i>${escH(r.name||'')}</td>
+                    <td class="rnote">${r.note?escH(r.note):'<span style="color:#cbd5e1;">-</span>'}</td>
+                    <td class="c rmng">
+                        <span class="ord-btns">
+                            <button class="ord-btn" onclick="moveStaff('${id}',-1)" ${isFirst?'disabled':''} title="위로"><i class="fa-solid fa-chevron-up"></i></button>
+                            <button class="ord-btn" onclick="moveStaff('${id}',1)" ${isLast?'disabled':''} title="아래로"><i class="fa-solid fa-chevron-down"></i></button>
+                        </span>
+                        <button class="r-actbtn r-edit" onclick="editStaff('${id}')">수정</button>
+                        <button class="r-actbtn r-del" onclick="deleteStaff('${id}')">삭제</button>
+                    </td>
+                </tr>`;
             }
-            return `<tr draggable="true" ondragstart="rDragStart(event,'${id}')" ondragover="rDragOver(event)" ondrop="rDrop(event,'${id}')" ondragend="rDragEnd(event)">
-                <td class="c rnum">${idx+1}</td>
-                <td class="c" style="color:var(--muted); font-weight:700;">${escH(r.position||'-')}</td>
-                <td class="rname"><i class="fa-solid fa-grip-vertical drag-grip"></i>${escH(r.name||'')}</td>
-                <td>${r.note?escH(r.note):'<span style="color:#cbd5e1;">-</span>'}</td>
-                <td class="c"><button class="r-actbtn r-edit" onclick="editStaff('${id}')">수정</button> <button class="r-actbtn r-del" onclick="deleteStaff('${id}')">삭제</button></td>
-            </tr>`;
-        }).join('');
-        return `<div class="roster-group">
-            <div class="rg-head"><i class="fa-solid fa-building"></i> ${escH(d)} <button class="rg-edit" data-dept="${escH(d)}" onclick="renameDept(this.dataset.dept)" title="소속명 변경"><i class="fa-solid fa-pen"></i></button> <span class="rg-count">${rows.length}명</span> <span class="rg-hint">↕ 행 드래그로 순서 변경</span></div>
-            <table class="rtable">
-                <thead><tr><th style="width:58px;">연번</th><th style="width:150px;">직책</th><th style="text-align:left;">성함</th><th style="text-align:left;">비고</th><th style="width:150px;">관리</th></tr></thead>
-                <tbody>${body}</tbody></table>
+        });
+        i=j;
+    }
+    box.innerHTML = deptBar + `
+        <div class="rtable-wrap">
+            <table class="rtable flat">
+                <thead><tr>
+                    <th style="width:52px;">연번</th>
+                    <th style="width:128px;">소속</th>
+                    <th style="width:118px;">직책</th>
+                    <th style="text-align:left;">성함</th>
+                    <th style="width:150px; text-align:left;">비고</th>
+                    <th style="width:208px;">관리</th>
+                </tr></thead>
+                <tbody>${bodyHtml}</tbody>
+            </table>
         </div>`;
-    }).join('');
+}
+/* 화살표로 같은 소속 내 순서 한 칸 이동 */
+function moveStaff(id, dir){
+    const r=_staffRoster[id]; if(!r) return;
+    const dept=((r.dept||'').trim());
+    const ids=Object.entries(_staffRoster).filter(([i,x])=>((x.dept||'').trim())===dept)
+        .sort((a,b)=>(_ord(a[1])-_ord(b[1]))||(a[1].name||'').localeCompare(b[1].name||'','ko')).map(([i])=>i);
+    const idx=ids.indexOf(id), j=idx+dir;
+    if(idx<0 || j<0 || j>=ids.length) return;
+    [ids[idx],ids[j]]=[ids[j],ids[idx]];
+    const updates={}; ids.forEach((i,k)=>updates[`${STAFF_ROSTER}/${i}/order`]=k*10);
+    db.ref().update(updates).then(()=>showToast('순서가 변경되었습니다.'));
 }
 function renderRosterGuide(){
-    let rows = `<tr class="guide-sample"><td class="c rnum">1</td><td class="c">주무관</td><td class="rname">홍길동 <span class="gs-tag">샘플</span></td><td>채식 / 알레르기 등</td><td class="c">—</td></tr>`;
-    for(let i=0;i<9;i++) rows+=`<tr class="guide-empty"><td>&nbsp;</td><td></td><td></td><td></td><td></td></tr>`;
-    return `<div class="roster-group">
-        <div class="rg-head"><i class="fa-solid fa-building"></i> 소속 (예시) <span class="rg-count">아직 직원 없음</span></div>
-        <table class="rtable guide">
-            <thead><tr><th style="width:58px;">연번</th><th style="width:150px;">직책</th><th style="text-align:left;">성함</th><th style="text-align:left;">비고</th><th style="width:150px;">관리</th></tr></thead>
+    let rows = `<tr class="guide-sample"><td class="c rnum">1</td><td class="rdept">교육운영부</td><td class="c">주무관</td><td class="rname">홍길동 <span class="gs-tag">샘플</span></td><td class="rnote">채식 / 알레르기 등</td><td class="c">—</td></tr>`;
+    for(let i=0;i<7;i++) rows+=`<tr class="guide-empty"><td>&nbsp;</td><td></td><td></td><td></td><td></td><td></td></tr>`;
+    return `<div class="rtable-wrap">
+        <table class="rtable flat guide">
+            <thead><tr><th style="width:52px;">연번</th><th style="width:128px;">소속</th><th style="width:118px;">직책</th><th style="text-align:left;">성함</th><th style="width:150px; text-align:left;">비고</th><th style="width:208px;">관리</th></tr></thead>
             <tbody>${rows}</tbody></table>
-        <div style="font-size:12px;color:var(--muted);margin-top:8px;">↑ 위 양식처럼 채워집니다. 위에서 <b>소속·직책·성함</b>을 입력하고 <b>추가</b>하면 첫 직원부터 등록됩니다.</div>
+        <div style="font-size:12px;color:var(--muted);margin:10px 4px 0;">↑ 위 양식처럼 채워집니다. 먼저 <b>소속만 추가</b> 후, <b>직책·성함</b>을 입력해 직원을 등록하세요.</div>
     </div>`;
 }
 /* 소속 옵션/관리 */
@@ -1189,13 +1291,25 @@ function fillDeptOptions(){
     const prev=sel.value;
     const set=new Set([...Object.keys(_deptPresets||{}), ...Object.values(_staffRoster||{}).map(r=>((r&&r.dept)||'').trim()).filter(Boolean)]);
     const list=[...set].sort((a,b)=>a.localeCompare(b,'ko'));
-    sel.innerHTML = list.map(d=>`<option value="${escH(d)}">${escH(d)}</option>`).join('') + `<option value="__new__">+ 새 소속 추가…</option>`;
-    if(prev && (list.includes(prev)||prev==='__new__')) sel.value=prev;
+    sel.innerHTML = list.length
+        ? list.map(d=>`<option value="${escH(d)}">${escH(d)}</option>`).join('')
+        : `<option value="">먼저 소속을 추가하세요</option>`;
+    if(prev && list.includes(prev)) sel.value=prev;
 }
-function onDeptSelect(){
-    const sel=document.getElementById('newStaffDept'), ni=document.getElementById('newStaffDeptNew');
-    if(!sel||!ni) return;
-    if(sel.value==='__new__'){ ni.style.display=''; ni.focus(); } else { ni.style.display='none'; }
+function _validDeptName(v){ return v && !/[.#$\[\]\/]/.test(v); }
+function addDept(){
+    const el=document.getElementById('newDeptOnly'); if(!el) return;
+    const v=(el.value||'').trim();
+    if(!v){ showToast('추가할 소속명을 입력하세요.'); return; }
+    if(!_validDeptName(v)){ showToast('소속명에 . # $ [ ] / 는 사용할 수 없습니다.'); return; }
+    const exists = !!_deptPresets[v] || Object.values(_staffRoster||{}).some(r=>r&&((r.dept||'').trim())===v);
+    if(exists){ showToast('이미 등록된 소속입니다.'); el.value=''; return; }
+    db.ref(`system/staffMeal/depts/${v}`).set(true).then(()=>{
+        el.value=''; showToast('✅ 소속이 추가되었습니다.');
+        fillDeptOptions();
+        const sel=document.getElementById('newStaffDept'); if(sel) sel.value=v;
+        const pos=document.getElementById('newStaffPos'); if(pos) pos.focus();
+    });
 }
 function renameDept(oldD){
     if(!oldD) return;
@@ -1237,17 +1351,17 @@ function rReorder(srcId,dstId){
 }
 function addStaff(){
     const sel=document.getElementById('newStaffDept');
-    let d = (sel && sel.value==='__new__') ? (document.getElementById('newStaffDeptNew').value||'').trim() : ((sel&&sel.value)||'').trim();
+    const d = ((sel&&sel.value)||'').trim();
     const p=(document.getElementById('newStaffPos').value||'').trim();
     const n=(document.getElementById('newStaffName').value||'').trim();
-    if(!d || d==='__new__'){ showToast('소속을 선택하거나 입력하세요.'); return; }
+    if(!d){ showToast('먼저 소속을 추가하고 선택하세요.'); return; }
     if(!n){ showToast('성함을 입력하세요.'); return; }
     const maxOrd=Object.values(_staffRoster||{}).filter(r=>r&&((r.dept||'').trim())===d).reduce((m,r)=>Math.max(m,(r.order!=null?r.order:0)),0);
     db.ref(STAFF_ROSTER).push({ name:n, dept:d, position:p, note:'', order:maxOrd+10, active:true, createdAt:firebase.database.ServerValue.TIMESTAMP })
       .then(()=>{
         if(!_deptPresets[d]) db.ref(`system/staffMeal/depts/${d}`).set(true);
         document.getElementById('newStaffName').value=''; document.getElementById('newStaffPos').value='';
-        const ni=document.getElementById('newStaffDeptNew'); if(ni){ ni.value=''; ni.style.display='none'; }
+        document.getElementById('newStaffName').focus();
         showToast('✅ 직원이 추가되었습니다.');
       });
 }
@@ -1326,9 +1440,11 @@ function renderStaffCounts(agg, month){
     const catLabel={staff:'직원', internal:'사내강사', external:'사외강사'};
     const catColor={staff:'#10b981', internal:'#6366f1', external:'#f59e0b'};
     const catOrd={staff:0,internal:1,external:2};
+    const rosterOrder=key=>{ const r=_staffRoster[key]; return (r&&r.order!=null)?r.order:9999; };
     const rows=Object.entries(agg).sort((a,b)=>{
         const c=(catOrd[a[1].category]||0)-(catOrd[b[1].category]||0); if(c) return c;
         const d=(a[1].dept||'').localeCompare(b[1].dept||'','ko'); if(d) return d;
+        const o=rosterOrder(a[0])-rosterOrder(b[0]); if(o) return o;   // 명단 관리 순서와 동일하게
         return (a[1].name||'').localeCompare(b[1].name||'','ko');
     });
     let gb=0,gl=0,gd=0,gTot=0,tb='';
@@ -1345,7 +1461,7 @@ function renderStaffCounts(agg, month){
         if(key===_editCntId){
             cntCell=`<input id="edit-cnt" type="number" min="0" value="${shown}" style="width:64px; height:32px; text-align:center; border:1.5px solid #2563eb; border-radius:7px; font-weight:800;"> <button class="r-actbtn" style="background:#16a34a;color:#fff;" onclick="saveCnt('${key}',${actual})">저장</button> <button class="r-actbtn" style="background:#e2e8f0;color:#475569;" onclick="cancelCnt()">취소</button>`;
         } else {
-            cntCell=`<span style="cursor:pointer;" onclick="toggleCal('${key}')"><b style="font-size:17px; color:${corrected?'#dc2626':'var(--navy)'};">${shown}</b><small style="font-size:11px;">회</small> <span class="cnt-bld">아 ${bc}·점 ${lc}·저 ${dc}</span>${corrected?` <span class="cnt-corr" title="실제 ${actual}회">수정</span>`:''}</span> <button class="r-actbtn r-edit" onclick="editCnt('${key}')">수정</button>`;
+            cntCell=`<span class="cnt-clk" onclick="toggleCal('${key}')"><b style="font-size:17px; color:${corrected?'#dc2626':'var(--navy)'};">${shown}</b><small style="font-size:11px;">회</small>${corrected?` <span class="cnt-corr" title="실제 ${actual}회">수정</span>`:''} <i class="fa-solid fa-chevron-down cnt-exp"></i></span> <button class="r-actbtn r-edit" onclick="editCnt('${key}')">수정</button>`;
         }
         const memo=(adj&&adj.memo)||'';
         const noteCell=`${memo?`<span style="font-size:13px;">${escH(memo)}</span> `:''}<i class="fa-solid fa-pen-to-square memo-ic" title="메모 입력" onclick="editMemo('${key}')"></i>`;
@@ -1360,7 +1476,7 @@ function renderStaffCounts(agg, month){
         <tr><td colspan="6" id="cal-${key}" style="display:none; background:#f8fafc; padding:14px;">${renderMealCalendar(a, month)}</td></tr>`;
     });
     for(let i=rows.length;i<10;i++){ tb+=`<tr class="cnt-empty"><td>&nbsp;</td><td></td><td></td><td></td><td></td><td></td></tr>`; }
-    box.innerHTML=`<table class="cnt-table"><thead><tr><th style="width:78px;">구분</th><th>소속</th><th>직책</th><th>이름</th><th style="width:300px;">식사횟수 (아·점·저)</th><th>비고</th></tr></thead><tbody>${tb}</tbody><tfoot><tr class="cnt-total"><td colspan="4" style="text-align:right; font-weight:900; padding-right:14px;">총 합계</td><td class="c"><b style="font-size:18px; color:#2563eb;">${gTot}</b><small style="font-size:11px;">회</small> <span class="cnt-bld">아 ${gb}·점 ${gl}·저 ${gd}</span></td><td></td></tr></tfoot></table>`;
+    box.innerHTML=`<div class="cnt-wrap"><table class="cnt-table"><thead><tr><th style="width:78px;">구분</th><th>소속</th><th>직책</th><th>이름</th><th style="width:200px;">총 식사횟수</th><th>비고</th></tr></thead><tbody>${tb}</tbody><tfoot><tr class="cnt-total"><td colspan="4" style="text-align:right; font-weight:900; padding-right:14px;">총 합계</td><td class="c"><b style="font-size:18px; color:#2563eb;">${gTot}</b><small style="font-size:11px;">회</small> <span class="cnt-bld">아 ${gb}·점 ${gl}·저 ${gd}</span></td><td></td></tr></tfoot></table></div>`;
 }
 /* 총횟수 수정 / 메모 */
 function editCnt(key){ _editCntId=key; renderStaffCounts(_mealAgg,_mealMonth); }
@@ -1410,13 +1526,20 @@ function exportMealPDF(){
     const tbl=document.querySelector('#staffCountList table'); if(!tbl){ showToast('먼저 월을 조회하세요.'); return; }
     const w=window.open('','_mealpdf'); if(!w){ showToast('팝업이 차단되었습니다.'); return; }
     w.document.write(`<html><head><meta charset="utf-8"><title>직원 식수 ${_mealMonth}</title>
-      <style>body{font-family:'Malgun Gothic','맑은 고딕',sans-serif; padding:24px;} h2{text-align:center; margin:0 0 16px;} table{width:100%; border-collapse:collapse; font-size:13px;} th,td{border:1px solid #94a3b8; padding:7px 9px; text-align:center;} thead th{background:#1e3a8a; color:#fff;} tfoot td{background:#e2e8f0; font-weight:800;} .cnt-empty,td[id^=cal-]{display:none!important;} button,input{display:none!important;} .cnt-corr{color:#dc2626;} .memo-ic{display:none!important;}</style></head>
+      <style>body{font-family:'Malgun Gothic','맑은 고딕',sans-serif; padding:24px;} h2{text-align:center; margin:0 0 16px;} table{width:100%; border-collapse:collapse; font-size:13px;} th,td{border:1px solid #94a3b8; padding:7px 9px; text-align:center;} thead th{background:#1e3a8a; color:#fff;} tfoot td{background:#e2e8f0; font-weight:800;} .cnt-empty,td[id^=cal-]{display:none!important;} button,input{display:none!important;} .cnt-corr{color:#dc2626;} .memo-ic,.cnt-exp{display:none!important;}</style></head>
       <body><h2>직원 식수 관리 — ${_mealMonth}</h2>${tbl.outerHTML}</body></html>`);
     w.document.close(); w.focus(); setTimeout(()=>{ try{w.print();}catch(e){} }, 350);
 }
-function toggleCal(key){ const el=document.getElementById('cal-'+key); if(el) el.style.display=(el.style.display==='none'?'table-cell':'none'); }
+function toggleCal(key){
+    const el=document.getElementById('cal-'+key); if(!el) return;
+    const show = (el.style.display==='none' || !el.style.display);
+    el.style.display = show ? 'table-cell' : 'none';
+    const row = el.parentElement && el.parentElement.previousElementSibling;
+    if(row && row.classList.contains('cnt-row')) row.classList.toggle('open', show);
+}
 function renderMealCalendar(a, month){
     const [y,m]=month.split('-').map(Number);
+    let bc=0,lc=0,dc=0; Object.values(a.days||{}).forEach(md=>{ if(md.b)bc++; if(md.l)lc++; if(md.d)dc++; });
     const startDow=new Date(y,m-1,1).getDay();
     const dim=new Date(y,m,0).getDate();
     const dows=['일','월','화','수','목','금','토'];
@@ -1428,11 +1551,11 @@ function renderMealCalendar(a, month){
         const marks=md?`<div class="cal-marks">${md.b?'<span class="cm cm-b">아</span>':''}${md.l?'<span class="cm cm-l">점</span>':''}${md.d?'<span class="cm cm-d">저</span>':''}</div>`:'';
         cells+=`<div class="cal-cell ${md?'has':''}"${note?` title="${escH(note)}"`:''}><div class="cal-dnum">${d}</div>${marks}</div>`;
     }
-    return `<div class="mealcal"><div class="cal-legend"><span class="cm cm-b">아</span>아침 <span class="cm cm-l">점</span>점심 <span class="cm cm-d">저</span>저녁</div><div class="cal-dows">${dows.map((n,i)=>`<div class="cal-dow ${i===0?'sun':''}${i===6?'sat':''}">${n}</div>`).join('')}</div><div class="cal-grid">${cells}</div></div>`;
+    return `<div class="mealcal"><div class="cal-sum"><i class="fa-regular fa-calendar-check"></i> <b>${escH(a.name||'')}</b> · ${y}년 ${m}월 &nbsp;|&nbsp; 아침 <b>${bc}</b> · 점심 <b>${lc}</b> · 저녁 <b>${dc}</b> &nbsp;=&nbsp; 합계 <b style="color:var(--blue);">${bc+lc+dc}</b>회</div><div class="cal-legend"><span class="cm cm-b">아</span>아침 <span class="cm cm-l">점</span>점심 <span class="cm cm-d">저</span>저녁</div><div class="cal-dows">${dows.map((n,i)=>`<div class="cal-dow ${i===0?'sun':''}${i===6?'sat':''}">${n}</div>`).join('')}</div><div class="cal-grid">${cells}</div></div>`;
 }
 </script>
 <style>@media print{#__ver{display:none!important}}</style>
-<div id="__ver" style="position:fixed;right:7px;bottom:7px;z-index:2147483000;background:rgba(15,23,42,.72);color:#cbd5e1;font:700 10px/1 monospace;padding:4px 8px;border-radius:7px;pointer-events:none;letter-spacing:.3px;">영양사 vP · 260612-2355</div>
+<div id="__ver" style="position:fixed;right:7px;bottom:7px;z-index:2147483000;background:rgba(15,23,42,.72);color:#cbd5e1;font:700 10px/1 monospace;padding:4px 8px;border-radius:7px;pointer-events:none;letter-spacing:.3px;">영양사 vQ · 260613-0020</div>
 </body>
 </html>
-<!-- @build 20260612-235500 (영양사 vP: 직원 명단 관리에 연번 열 추가(소속별 1부터)) -->
+<!-- @build 20260613-002000 (영양사 vQ: 헤더 세련화 / 계좌 톱니버튼+모달 / 소속만 추가 분리 / 명단 단일표(연번·소속병합·화살표 순서변경) / 식수 총횟수만+클릭상세(달력·breakdown) / 명단·식수 순서 일치 / 헤더·합계 틀고정) -->
