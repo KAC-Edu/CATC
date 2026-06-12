@@ -1,7 +1,7 @@
 /* ============================================================
    CATC · 강사 플랫폼 로직  (admin.js)
-   @version  J
-   @build    20260612-090921
+   @version  K
+   @build    20260612-091609
    ------------------------------------------------------------
    [코드 수정 규칙 · AI/개발자 공통]
    이 파일을 고치면 @version 을 A -> B -> ... -> Z -> A1 -> B1 ...
@@ -6173,11 +6173,13 @@ const scheduleMgr = {
         const block = document.getElementById('schedulePhotoBlock');
         if (!block) return;
         if (data && data.dataUrl) {
+            this._lastPhotoSrc = data.dataUrl;
             let tsStr = '';
             if (data.updatedAt) { const d = new Date(data.updatedAt), p = n => String(n).padStart(2, '0'); tsStr = `${d.getFullYear()}.${p(d.getMonth()+1)}.${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`; }
             block.innerHTML = `
                 <div style="display:flex; flex-direction:column; align-items:center; gap:14px;">
-                    <img src="${data.dataUrl}" alt="교육 시간표 사진" style="max-width:100%; border-radius:14px; border:1px solid #e2e8f0; box-shadow:0 6px 18px rgba(15,23,42,.08);">
+                    <img src="${data.dataUrl}" alt="교육 시간표 사진" onclick="scheduleMgr.openPhotoFullscreen()" title="클릭하면 전체화면으로 크게 봅니다" style="max-width:100%; border-radius:14px; border:1px solid #e2e8f0; box-shadow:0 6px 18px rgba(15,23,42,.08); cursor:zoom-in;">
+                    <div style="font-size:12px; color:#94a3b8; font-weight:700;"><i class="fa-solid fa-magnifying-glass-plus"></i> 사진을 클릭하면 전체화면으로 볼 수 있습니다</div>
                     <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap; justify-content:center;">
                         ${tsStr ? `<span style="font-size:13px; color:#94a3b8; font-weight:700;">마지막 업로드: ${tsStr}</span>` : ''}
                         <button onclick="scheduleMgr.showPhotoQr()" style="background:#eef2ff; color:#1e3a8a; border:none; border-radius:10px; padding:9px 14px; font-weight:800; cursor:pointer;"><i class="fa-solid fa-qrcode"></i> QR로 교체</button>
@@ -6220,6 +6222,30 @@ const scheduleMgr = {
         firebase.database().ref(`courses/${room}/scheduleImage`).remove()
             .then(() => ui.showAlert('🗑️ 시간표 사진을 삭제했습니다.'))
             .catch(err => ui.showAlert('삭제 실패: ' + (err && err.message ? err.message : '')));
+    },
+    openPhotoFullscreen: function() {
+        const src = this._lastPhotoSrc;
+        if (!src) return;
+        const exist = document.getElementById('schedulePhotoFs');
+        if (exist) exist.remove();
+        const ov = document.createElement('div');
+        ov.id = 'schedulePhotoFs';
+        ov.style.cssText = 'position:fixed; inset:0; background:rgba(0,0,0,.92); z-index:2147483600; display:flex; align-items:center; justify-content:center; padding:16px; cursor:zoom-out;';
+        const img = document.createElement('img');
+        img.src = src;
+        img.style.cssText = 'max-width:100%; max-height:100%; object-fit:contain; border-radius:8px; box-shadow:0 10px 40px rgba(0,0,0,.5);';
+        const close = document.createElement('button');
+        close.innerHTML = '✕';
+        close.style.cssText = 'position:fixed; top:18px; right:18px; width:46px; height:46px; border-radius:50%; border:none; background:rgba(255,255,255,.92); color:#0f172a; font-size:22px; font-weight:900; cursor:pointer; display:flex; align-items:center; justify-content:center; z-index:1;';
+        const remove = () => { const e = document.getElementById('schedulePhotoFs'); if (e) e.remove(); document.removeEventListener('keydown', onKey); };
+        const onKey = e => { if (e.key === 'Escape') remove(); };
+        ov.onclick = remove;
+        close.onclick = (e) => { e.stopPropagation(); remove(); };
+        img.onclick = (e) => e.stopPropagation();   // 이미지 클릭은 닫기 방지(배경 클릭만 닫힘)
+        ov.appendChild(img);
+        ov.appendChild(close);
+        document.body.appendChild(ov);
+        document.addEventListener('keydown', onKey);
     },
     renderSchedule: function(lines) {
         const itinerary = this.parseItinerary(lines);
