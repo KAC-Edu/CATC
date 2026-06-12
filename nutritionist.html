@@ -109,6 +109,10 @@
         .section-card.acc.collapsed > .section-title:hover { background: #dcfce7; }
         .section-card.acc.collapsed > *:not(.section-title) { display: none; }
 
+        /* 카드 내부 액션 버튼 (조회/추가 등) */
+        .mini-btn { border:none; background:#2563eb; color:#fff; border-radius:10px; padding:0 16px; height:40px; font-size:14px; font-weight:800; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; gap:6px; white-space:nowrap; }
+        .mini-btn:active { opacity:.88; }
+
         /* ── 메인 콘텐츠 ── */
         .app-content { flex: 1; padding: 12px; display: flex; flex-direction: column; gap: 12px; overflow-y: auto; }
 
@@ -157,9 +161,9 @@
         .stat-card .sc-unit { font-size: 12px; font-weight: 700; }
         .stat-card i { font-size: 22px; opacity: .25; position: absolute; right: 10px; bottom: 8px; }
 
-        .sc-total { background: var(--navy); color: #fff; }
-        .sc-skip  { background: var(--red);  color: #fff; }
-        .sc-eat   { background: var(--green);color: #fff; }
+        .sc-total { background:#eff6ff; color:#1d4ed8; border:1.5px solid #dbeafe; }
+        .sc-skip  { background:#fef2f2; color:#dc2626; border:1.5px solid #fecaca; }
+        .sc-eat   { background:#ecfdf5; color:#059669; border:1.5px solid #a7f3d0; }
 
         /* ── 과정별 제외 신청자 모달 ── */
         .modal-bg {
@@ -353,17 +357,10 @@
         <div><span class="date-badge" id="todayBadge">-</span></div>
 
         <!-- 바로가기 -->
-        <div class="section-card" id="sec-shortcut" style="background:#0f172a;">
-            <div class="section-title" style="color:#fff;"><i class="fa-solid fa-utensils" style="color:#fbbf24;"></i> 식당 터치패널 바로가기</div>
-            <div style="font-size:12px; color:#cbd5e1; font-weight:700; margin-bottom:10px;">식당에 비치할 식사 체크인 화면입니다. 태블릿에서는 아래 QR을 스캔해 열어주세요.</div>
-            <div style="display:flex; gap:8px; flex-wrap:wrap;">
-                <button onclick="window.open('staff_meal.html','_blank')" style="flex:1; min-width:140px; padding:13px; border:none; border-radius:12px; background:#22c55e; color:#fff; font-weight:900; font-size:15px; cursor:pointer;"><i class="fa-solid fa-arrow-up-right-from-square"></i> 터치패널 열기</button>
-                <button onclick="toggleMealQr()" style="flex:1; min-width:140px; padding:13px; border:none; border-radius:12px; background:#334155; color:#fff; font-weight:900; font-size:15px; cursor:pointer;"><i class="fa-solid fa-qrcode"></i> QR로 열기 (태블릿용)</button>
-            </div>
-            <div id="mealQrBox" style="display:none; margin-top:14px; text-align:center; background:#fff; border-radius:14px; padding:16px;">
-                <div id="mealQr" style="display:inline-block;"></div>
-                <div style="font-size:12px; color:#475569; font-weight:800; margin-top:10px;">📱 식당 태블릿 카메라로 스캔하면 터치패널이 열립니다.</div>
-            </div>
+        <div class="section-card" id="sec-shortcut">
+            <div class="section-title"><i class="fa-solid fa-utensils"></i> 식당 터치패널 바로가기</div>
+            <div style="font-size:12.5px; color:var(--muted); font-weight:700; margin-bottom:12px;">식당에 비치할 식사 체크인(터치) 화면입니다.</div>
+            <button onclick="window.open('staff_meal.html','_blank')" style="width:100%; padding:15px; border:none; border-radius:14px; background:linear-gradient(135deg,#059669,#22c55e); color:#fff; font-weight:900; font-size:16px; cursor:pointer; box-shadow:0 6px 18px rgba(34,197,94,.28);"><i class="fa-solid fa-arrow-up-right-from-square"></i> 터치패널 열기</button>
         </div>
 
         <!-- ① 석식 요약 3칸 카드 -->
@@ -430,12 +427,12 @@
             <div class="section-title" onclick="toggleAcc('sec-staff')"><i class="fa-solid fa-utensils"></i> 직원 식수 관리 (터치패널 집계) <span class="acc-chev"><i class="fa-solid fa-chevron-down"></i></span></div>
 
             <div style="display:flex; gap:8px; align-items:center; margin-bottom:14px; flex-wrap:wrap;">
-                <input type="month" id="staffMonth" style="padding:10px 12px; border:1.5px solid var(--border); border-radius:10px; font-weight:800; font-size:14px;">
-                <button class="header-btn" style="width:auto; padding:0 16px;" onclick="loadStaffMeal()"><i class="fa-solid fa-magnifying-glass"></i> 조회</button>
+                <input type="month" id="staffMonth" style="flex:1; min-width:150px; padding:0 12px; height:40px; border:1.5px solid var(--border); border-radius:10px; font-weight:800; font-size:14px;">
+                <button class="mini-btn" onclick="loadStaffMeal()"><i class="fa-solid fa-magnifying-glass"></i> 조회</button>
             </div>
 
             <!-- 월 요약 카드 -->
-            <div id="staffSummary" style="display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-bottom:14px;"></div>
+            <div id="staffSummary" style="display:grid; grid-template-columns:repeat(2,1fr); gap:8px; margin-bottom:14px;"></div>
 
             <!-- 인원별 카운팅 -->
             <div id="staffCountList"><div class="empty-msg">월을 선택하고 조회하세요.</div></div>
@@ -446,7 +443,7 @@
                 <div style="display:flex; gap:6px; margin-bottom:10px; flex-wrap:wrap;">
                     <input id="newStaffName" placeholder="성명" maxlength="12" style="flex:1; min-width:90px; padding:11px 12px; border:1.5px solid var(--border); border-radius:10px; font-weight:700;">
                     <input id="newStaffDept" placeholder="부서/직책 (선택)" maxlength="20" style="flex:1.4; min-width:110px; padding:11px 12px; border:1.5px solid var(--border); border-radius:10px; font-weight:700;">
-                    <button class="header-btn" style="width:auto; padding:0 16px;" onclick="addStaff()"><i class="fa-solid fa-plus"></i> 추가</button>
+                    <button class="mini-btn" onclick="addStaff()"><i class="fa-solid fa-plus"></i> 추가</button>
                 </div>
                 <div id="staffRosterList"><div class="empty-msg">등록된 직원이 없습니다.</div></div>
             </div>
@@ -862,18 +859,6 @@ function navTo(id){
 }
 /* ── 아코디언 토글 (가로 버튼 클릭 → 펼침/접힘) ── */
 function toggleAcc(id){ const c=document.getElementById(id); if(c) c.classList.toggle('collapsed'); }
-/* ── 식당 터치패널 QR ── */
-function toggleMealQr(){
-    const box=document.getElementById('mealQrBox'); if(!box) return;
-    const open=(box.style.display==='none'||!box.style.display);
-    box.style.display=open?'block':'none';
-    if(open){
-        let url; try{ url=new URL('staff_meal.html', location.href).href; }catch(e){ url='staff_meal.html'; }
-        const el=document.getElementById('mealQr'); el.innerHTML='';
-        if(typeof QRCode!=='undefined'){ try{ new QRCode(el,{text:url,width:180,height:180,correctLevel:QRCode.CorrectLevel.H}); }catch(e){ el.textContent=url; } }
-        else { el.textContent=url; }
-    }
-}
 
 function renderRoster(){
     const box = document.getElementById('staffRosterList'); if(!box) return;
@@ -953,7 +938,7 @@ function renderStaffCounts(agg){
 }
 </script>
 <style>@media print{#__ver{display:none!important}}</style>
-<div id="__ver" style="position:fixed;right:7px;bottom:7px;z-index:2147483000;background:rgba(15,23,42,.72);color:#cbd5e1;font:700 10px/1 monospace;padding:4px 8px;border-radius:7px;pointer-events:none;letter-spacing:.3px;">영양사 vB · 260612-1323</div>
+<div id="__ver" style="position:fixed;right:7px;bottom:7px;z-index:2147483000;background:rgba(15,23,42,.72);color:#cbd5e1;font:700 10px/1 monospace;padding:4px 8px;border-radius:7px;pointer-events:none;letter-spacing:.3px;">영양사 vC · 260612-1325</div>
 </body>
 </html>
-<!-- @build 20260612-132331 (영양사 vB) -->
+<!-- @build 20260612-132553 (영양사 vC: QR삭제·색상 산뜻·직원식수 버튼/요약 정리) -->
