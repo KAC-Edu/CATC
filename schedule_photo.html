@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>교육 시간표 사진 업로드</title>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <script src="config.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body { margin:0; font-family:'Malgun Gothic','Apple SD Gothic Neo',sans-serif; background:#0f172a; color:#0f172a; }
+        .wrap { max-width:520px; margin:0 auto; min-height:100vh; background:#f1f5f9; display:flex; flex-direction:column; }
+        .top { background:linear-gradient(135deg,#1e3a8a,#2563eb); color:#fff; padding:22px 20px 18px; }
+        .top h1 { margin:0; font-size:19px; font-weight:900; display:flex; align-items:center; gap:8px; }
+        .top .sub { margin-top:6px; font-size:13px; opacity:.92; font-weight:600; }
+        .room-pill { display:inline-block; margin-top:10px; background:rgba(255,255,255,.18); border:1px solid rgba(255,255,255,.35); padding:5px 12px; border-radius:999px; font-size:13px; font-weight:800; }
+        .body { flex:1; padding:18px 18px 30px; }
+        .card { background:#fff; border-radius:18px; padding:18px; box-shadow:0 8px 24px rgba(15,23,42,.08); margin-bottom:16px; }
+        .guide { font-size:14px; color:#475569; font-weight:700; line-height:1.6; }
+        .guide b { color:#1e3a8a; }
+        .btn { display:flex; align-items:center; justify-content:center; gap:9px; width:100%; border:none; border-radius:14px; padding:17px; font-size:17px; font-weight:900; cursor:pointer; }
+        .btn-main { background:#2563eb; color:#fff; }
+        .btn-sub { background:#eef2ff; color:#1e3a8a; margin-top:11px; }
+        .btn-danger { background:#fef2f2; color:#dc2626; margin-top:11px; }
+        .btn:active { transform:scale(.985); }
+        .btn:disabled { opacity:.5; }
+        .preview { width:100%; border-radius:14px; border:1px solid #e2e8f0; display:block; }
+        .ph { height:200px; border:2px dashed #cbd5e1; border-radius:14px; display:flex; flex-direction:column; align-items:center; justify-content:center; color:#94a3b8; font-weight:800; gap:8px; }
+        .status { text-align:center; font-size:14px; font-weight:800; margin-top:14px; min-height:20px; }
+        .ok { color:#16a34a; } .err { color:#dc2626; } .muted { color:#64748b; }
+        .meta { font-size:12px; color:#94a3b8; font-weight:700; text-align:center; margin-top:6px; }
+        .spin { display:inline-block; width:18px; height:18px; border:3px solid rgba(255,255,255,.4); border-top-color:#fff; border-radius:50%; animation:sp .7s linear infinite; vertical-align:middle; }
+        @keyframes sp { to { transform:rotate(360deg); } }
+        input[type=file] { display:none; }
+    </style>
+</head>
+<body>
+<div class="wrap">
+    <div class="top">
+        <h1><i class="fa-solid fa-calendar-days"></i> 교육 시간표 사진</h1>
+        <div class="sub">사진을 촬영하거나 앨범에서 선택해 업로드하세요.</div>
+        <div class="room-pill" id="roomPill">강의실 확인 중…</div>
+    </div>
+    <div class="body">
+        <div class="card">
+            <div id="previewWrap">
+                <div class="ph"><i class="fa-regular fa-image" style="font-size:34px;"></i><span>아직 등록된 사진이 없습니다</span></div>
+            </div>
+            <div class="meta" id="curMeta"></div>
+        </div>
+
+        <button class="btn btn-main" id="pickBtn"><i class="fa-solid fa-camera"></i> 사진 촬영 / 앨범에서 선택</button>
+        <button class="btn btn-danger" id="delBtn" style="display:none;"><i class="fa-solid fa-trash"></i> 등록된 사진 삭제</button>
+        <input type="file" id="fileInput" accept="image/*">
+
+        <div class="status" id="status"></div>
+
+        <div class="card" style="margin-top:18px;">
+            <div class="guide">
+                <b>안내</b><br>
+                · 시간표가 또렷하게 보이도록 정면에서 촬영해 주세요.<br>
+                · 업로드하면 강사·교육생 화면에 <b>즉시</b> 반영됩니다.<br>
+                · 같은 강의실에 새로 올리면 이전 사진은 교체됩니다.
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+(function () {
+    const params = new URLSearchParams(location.search);
+    const room = (params.get('room') || '').trim().toUpperCase();
+    const statusEl = document.getElementById('status');
+    const roomPill = document.getElementById('roomPill');
+    const previewWrap = document.getElementById('previewWrap');
+    const curMeta = document.getElementById('curMeta');
+    const pickBtn = document.getElementById('pickBtn');
+    const delBtn = document.getElementById('delBtn');
+    const fileInput = document.getElementById('fileInput');
+
+    function setStatus(msg, cls) { statusEl.className = 'status ' + (cls || 'muted'); statusEl.innerHTML = msg; }
+
+    if (!room) {
+        roomPill.textContent = '강의실 정보 없음';
+        setStatus('강의실 정보가 없습니다. 강사/운영부 화면의 QR을 다시 스캔해 주세요.', 'err');
+        pickBtn.disabled = true;
+        return;
+    }
+    roomPill.textContent = 'Room ' + room;
+
+    let db;
+    try { db = firebase.database(); }
+    catch (e) { setStatus('서버 연결에 실패했습니다. 잠시 후 다시 시도해 주세요.', 'err'); pickBtn.disabled = true; return; }
+
+    const imgRef = db.ref('courses/' + room + '/scheduleImage');
+
+    // 과정명 표시
+    db.ref('courses/' + room + '/settings/courseName').once('value').then(s => {
+        const cn = s.val();
+        if (cn) roomPill.textContent = 'Room ' + room + ' · ' + cn;
+    }).catch(() => {});
+
+    function fmtTs(ts) {
+        if (!ts) return '';
+        const d = new Date(ts);
+        const p = n => String(n).padStart(2, '0');
+        return `${d.getFullYear()}.${p(d.getMonth()+1)}.${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+    }
+
+    function render(data) {
+        if (data && data.dataUrl) {
+            previewWrap.innerHTML = '<img class="preview" src="' + data.dataUrl + '" alt="교육 시간표">';
+            curMeta.textContent = data.updatedAt ? ('마지막 업로드: ' + fmtTs(data.updatedAt)) : '';
+            delBtn.style.display = 'flex';
+            pickBtn.innerHTML = '<i class="fa-solid fa-rotate"></i> 사진 다시 촬영 / 교체';
+        } else {
+            previewWrap.innerHTML = '<div class="ph"><i class="fa-regular fa-image" style="font-size:34px;"></i><span>아직 등록된 사진이 없습니다</span></div>';
+            curMeta.textContent = '';
+            delBtn.style.display = 'none';
+            pickBtn.innerHTML = '<i class="fa-solid fa-camera"></i> 사진 촬영 / 앨범에서 선택';
+        }
+    }
+
+    imgRef.on('value', s => render(s.val()));
+
+    // 이미지 압축: 가로 최대 1280px, JPEG 품질을 낮춰가며 ~480KB 이하로
+    function compress(file, cb) {
+        const reader = new FileReader();
+        reader.onload = e => {
+            const img = new Image();
+            img.onload = () => {
+                let w = img.width, h = img.height;
+                const MAX = 1280;
+                if (w > MAX) { h = Math.round(h * MAX / w); w = MAX; }
+                const canvas = document.createElement('canvas');
+                canvas.width = w; canvas.height = h;
+                canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+                let q = 0.62, url = canvas.toDataURL('image/jpeg', q);
+                while (url.length > 480 * 1024 && q > 0.32) { q -= 0.1; url = canvas.toDataURL('image/jpeg', q); }
+                cb(url, w, h);
+            };
+            img.onerror = () => cb(null);
+            img.src = e.target.result;
+        };
+        reader.onerror = () => cb(null);
+        reader.readAsDataURL(file);
+    }
+
+    pickBtn.addEventListener('click', () => fileInput.click());
+
+    fileInput.addEventListener('change', () => {
+        const file = fileInput.files && fileInput.files[0];
+        if (!file) return;
+        if (!/^image\//.test(file.type)) { setStatus('이미지 파일만 업로드할 수 있습니다.', 'err'); return; }
+        pickBtn.disabled = true;
+        setStatus('<span class="spin"></span> 사진을 처리하는 중…', 'muted');
+        compress(file, (dataUrl, w, h) => {
+            if (!dataUrl) { setStatus('사진을 읽지 못했습니다. 다른 사진으로 시도해 주세요.', 'err'); pickBtn.disabled = false; fileInput.value = ''; return; }
+            imgRef.set({ dataUrl: dataUrl, updatedAt: firebase.database.ServerValue.TIMESTAMP, w: w, h: h })
+                .then(() => { setStatus('✅ 업로드 완료! 강사 화면에 바로 표시됩니다.', 'ok'); })
+                .catch(err => { console.error(err); setStatus('업로드 실패: ' + (err && err.message ? err.message : '권한/용량을 확인해 주세요.'), 'err'); })
+                .finally(() => { pickBtn.disabled = false; fileInput.value = ''; });
+        });
+    });
+
+    delBtn.addEventListener('click', () => {
+        if (!confirm('등록된 시간표 사진을 삭제할까요?')) return;
+        delBtn.disabled = true;
+        setStatus('<span class="spin"></span> 삭제 중…', 'muted');
+        imgRef.remove()
+            .then(() => setStatus('🗑️ 삭제되었습니다.', 'ok'))
+            .catch(err => setStatus('삭제 실패: ' + (err && err.message ? err.message : ''), 'err'))
+            .finally(() => { delBtn.disabled = false; });
+    });
+})();
+</script>
+</body>
+</html>
+<!-- @build 20260612-085718 교육시간표 사진 업로드 -->

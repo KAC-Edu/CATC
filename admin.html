@@ -3,8 +3,8 @@
 <head>
 <!-- ============================================================
   CATC · 강사 플랫폼  (admin.html)
-  @version  I
-  @build    20260612-074156
+  @version  J
+  @build    20260612-085718
   ────────────────────────────────────────────────────────
   [코드 수정 규칙 · AI/개발자 공통]
   이 파일을 한 글자라도 고치면:
@@ -477,7 +477,7 @@
         </button>
         <div class="dropdown-content" id="menuDropdown">
             <a onclick="ui.setMode('waiting')"><i class="fa-solid fa-chart-line"></i> 과정 총 현황</a>
-            <a onclick="ui.setMode('schedule')"><i class="fa-solid fa-calendar-days"></i> 교육일정 요약</a>
+            <a onclick="ui.setMode('schedule')"><i class="fa-solid fa-calendar-days"></i> 교육 시간표</a>
             <a onclick="ui.setMode('quiz')"><i class="fa-solid fa-clipboard-question"></i> 퀴즈 모드</a>
             <a onclick="ui.setMode('dormitory')"><i class="fa-solid fa-bed"></i> 생활관 배치현황</a>
             <a onclick="ui.setMode('attendance')"><i class="fa-solid fa-qrcode"></i> 출결 QR</a>
@@ -1274,18 +1274,29 @@
 <!-- [개편] 항기원 퇴교 수송 현황 (명단 중심) -->
 <div id="view-schedule" style="display:none; width:100%; flex-direction:column; align-items:center;">
     <div class="view-header">
-        <h1><i class="fa-solid fa-calendar-days"></i> 교육일정 요약 <span class="room-badge" id="scheduleRoomBadge">Room #A</span></h1>
+        <h1><i class="fa-solid fa-calendar-days"></i> 교육 시간표 <span class="room-badge" id="scheduleRoomBadge">Room #A</span></h1>
     </div>
     <div style="width:92%; max-width:980px; background:#fff; border-radius:24px; padding:30px 34px; box-shadow:0 18px 45px rgba(15,23,42,0.08);">
         <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:16px; border-bottom:1px solid #dbe4f0; padding-bottom:18px; margin-bottom:20px;">
             <div>
-                <div id="scheduleCourseName" style="font-size:24px; font-weight:900; color:#0f172a; line-height:1.25;">교육일정 요약</div>
+                <div id="scheduleCourseName" style="font-size:24px; font-weight:900; color:#0f172a; line-height:1.25;">교육 시간표</div>
                 <div id="scheduleMeta" style="font-size:14px; font-weight:700; color:#64748b; margin-top:8px;">요일별 오전/오후 과정을 불러오는 중입니다.</div>
             </div>
             <button class="mode-btn" onclick="scheduleMgr.load()" style="height:44px; white-space:nowrap;"><i class="fa-solid fa-rotate"></i> 새로고침</button>
         </div>
-                            <div id="scheduleBody" style="display:flex; flex-direction:column; gap:12px; padding-bottom:140px;">
+                            <div id="scheduleBody" style="display:flex; flex-direction:column; gap:12px;">
             <div style="height:180px; display:flex; align-items:center; justify-content:center; color:#94a3b8; font-weight:800;">교육일정을 불러오는 중입니다.</div>
+        </div>
+    </div>
+
+    <!-- 교육 시간표 사진 블록 -->
+    <div style="width:92%; max-width:980px; background:#fff; border-radius:24px; padding:26px 34px 30px; box-shadow:0 18px 45px rgba(15,23,42,0.08); margin-top:18px; margin-bottom:140px;">
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; border-bottom:1px solid #dbe4f0; padding-bottom:14px; margin-bottom:18px;">
+            <div style="font-size:19px; font-weight:900; color:#0f172a;"><i class="fa-solid fa-image" style="color:#2563eb; margin-right:7px;"></i> 시간표 사진</div>
+            <button class="mode-btn" onclick="scheduleMgr.loadPhoto()" style="height:40px; white-space:nowrap;"><i class="fa-solid fa-rotate"></i> 새로고침</button>
+        </div>
+        <div id="schedulePhotoBlock" style="min-height:160px;">
+            <div style="height:160px; display:flex; align-items:center; justify-content:center; color:#94a3b8; font-weight:800;">불러오는 중…</div>
         </div>
     </div>
 </div>
@@ -2269,7 +2280,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
 <style>@media print{#__catcVer{display:none!important}}</style>
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vI</div>
-<script>try{console.log('%cCATC%c 강사 플랫폼 (admin.html) %cvI%c build 20260612-074156','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}</script>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vJ</div>
+<script>try{console.log('%cCATC%c 강사 플랫폼 (admin.html) %cvJ%c build 20260612-085718','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}</script>
 </body>
 </html>

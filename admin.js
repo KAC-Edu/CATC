@@ -1,7 +1,7 @@
 /* ============================================================
    CATC · 강사 플랫폼 로직  (admin.js)
-   @version  H
-   @build    20260612-074156
+   @version  I
+   @build    20260612-085718
    ------------------------------------------------------------
    [코드 수정 규칙 · AI/개발자 공통]
    이 파일을 고치면 @version 을 A -> B -> ... -> Z -> A1 -> B1 ...
@@ -6146,6 +6146,78 @@ const scheduleMgr = {
         }
         return { days, rows };
     },
+    // ── 교육 시간표 사진 (QR 업로드 / 표시 / 삭제) ──
+    _photoRef: null,
+    _photoUploadUrl: function() {
+        const room = state.room || '';
+        try { return new URL('schedule_photo.html', location.href).href + '?room=' + encodeURIComponent(room); }
+        catch (e) { return 'schedule_photo.html?room=' + encodeURIComponent(room); }
+    },
+    loadPhoto: function() {
+        const block = document.getElementById('schedulePhotoBlock');
+        if (!block) return;
+        const room = state.room;
+        if (this._photoRef) { try { this._photoRef.off(); } catch (e) {} this._photoRef = null; }
+        if (!room) { block.innerHTML = '<div style="height:160px; display:flex; align-items:center; justify-content:center; color:#94a3b8; font-weight:800;">먼저 강의실을 선택하세요.</div>'; return; }
+        block.innerHTML = '<div style="height:160px; display:flex; align-items:center; justify-content:center; color:#94a3b8; font-weight:800;">불러오는 중…</div>';
+        this._photoRef = firebase.database().ref(`courses/${room}/scheduleImage`);
+        this._photoRef.on('value', snap => {
+            if (state.room !== room) return;
+            this._renderPhoto(snap.val());
+        });
+    },
+    _renderPhoto: function(data) {
+        const block = document.getElementById('schedulePhotoBlock');
+        if (!block) return;
+        if (data && data.dataUrl) {
+            let tsStr = '';
+            if (data.updatedAt) { const d = new Date(data.updatedAt), p = n => String(n).padStart(2, '0'); tsStr = `${d.getFullYear()}.${p(d.getMonth()+1)}.${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`; }
+            block.innerHTML = `
+                <div style="display:flex; flex-direction:column; align-items:center; gap:14px;">
+                    <img src="${data.dataUrl}" alt="교육 시간표 사진" style="max-width:100%; border-radius:14px; border:1px solid #e2e8f0; box-shadow:0 6px 18px rgba(15,23,42,.08);">
+                    <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap; justify-content:center;">
+                        ${tsStr ? `<span style="font-size:13px; color:#94a3b8; font-weight:700;">마지막 업로드: ${tsStr}</span>` : ''}
+                        <button onclick="scheduleMgr.showPhotoQr()" style="background:#eef2ff; color:#1e3a8a; border:none; border-radius:10px; padding:9px 14px; font-weight:800; cursor:pointer;"><i class="fa-solid fa-qrcode"></i> QR로 교체</button>
+                        <button onclick="scheduleMgr.deletePhoto()" style="background:#fef2f2; color:#dc2626; border:none; border-radius:10px; padding:9px 14px; font-weight:800; cursor:pointer;"><i class="fa-solid fa-trash"></i> 삭제</button>
+                    </div>
+                </div>`;
+        } else {
+            block.innerHTML = `
+                <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; gap:14px; padding:18px 0;">
+                    <div style="color:#64748b; font-weight:800; font-size:15px;">등록된 시간표 사진이 없습니다. <span style="color:#94a3b8;">(내용 없음)</span></div>
+                    <button onclick="scheduleMgr.showPhotoQr()" style="background:#2563eb; color:#fff; border:none; border-radius:12px; padding:14px 22px; font-weight:900; font-size:16px; cursor:pointer; display:flex; align-items:center; gap:9px;"><i class="fa-solid fa-camera"></i> 사진 업로드</button>
+                </div>`;
+        }
+    },
+    showPhotoQr: function() {
+        const block = document.getElementById('schedulePhotoBlock');
+        if (!block) return;
+        if (!state.room) return ui.showAlert("강의실을 먼저 선택해 주세요.");
+        const url = this._photoUploadUrl();
+        block.innerHTML = `
+            <div style="display:flex; flex-direction:column; align-items:center; gap:16px; padding:10px 0;">
+                <div id="schedulePhotoQr" style="padding:14px; background:#fff; border:1px solid #e2e8f0; border-radius:14px;"></div>
+                <div style="text-align:center; color:#334155; font-weight:800; font-size:15px; line-height:1.75;">
+                    📱 <b>휴대폰 카메라로 위 QR을 스캔</b>하세요.<br>
+                    <span style="font-weight:700; color:#64748b;">사진 앱이 열리면 시간표를 <b>촬영</b>하거나 <b>앨범에서 선택</b>해 업로드합니다.<br>업로드하면 이 화면에 곧바로 표시됩니다.</span>
+                </div>
+                <button onclick="scheduleMgr.loadPhoto()" style="background:#f1f5f9; color:#475569; border:none; border-radius:10px; padding:10px 18px; font-weight:800; cursor:pointer;">← 취소 / 새로고침</button>
+            </div>`;
+        const qrDiv = document.getElementById('schedulePhotoQr');
+        if (qrDiv && typeof QRCode !== 'undefined') {
+            try { new QRCode(qrDiv, { text: url, width: 200, height: 200, correctLevel: QRCode.CorrectLevel.H }); }
+            catch (e) { qrDiv.textContent = url; }
+        } else if (qrDiv) { qrDiv.textContent = url; }
+    },
+    deletePhoto: function() {
+        if (state.isObserver) return ui.showAlert("👁️ 옵저버 모드에서는 수정할 수 없습니다.");
+        const room = state.room;
+        if (!room) return;
+        if (!confirm('등록된 시간표 사진을 삭제할까요?')) return;
+        firebase.database().ref(`courses/${room}/scheduleImage`).remove()
+            .then(() => ui.showAlert('🗑️ 시간표 사진을 삭제했습니다.'))
+            .catch(err => ui.showAlert('삭제 실패: ' + (err && err.message ? err.message : '')));
+    },
     renderSchedule: function(lines) {
         const itinerary = this.parseItinerary(lines);
         if (itinerary && itinerary.length) return this.renderItinerary(itinerary);
@@ -6285,6 +6357,7 @@ const scheduleMgr = {
         const title = document.getElementById('scheduleCourseName');
         const meta = document.getElementById('scheduleMeta');
         const badge = document.getElementById('scheduleRoomBadge');
+        this.loadPhoto();
         if (!body) return;
         if (badge) badge.innerText = `Room #${state.room || '-'}`;
         if (!state.room) {

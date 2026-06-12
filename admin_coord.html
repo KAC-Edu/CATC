@@ -1438,13 +1438,19 @@ body.pc-mode .entry-box:hover, body.pc-mode .entry-box-tablet:hover {
     </button>
 </div>
 
-<div id="side-individual-menu" style="display:none; flex-direction:column; gap:12px;">
+<div id="side-individual-menu" style="display:none; flex-direction:column; gap:10px;">
+          <div style="font-size:12px; font-weight:800; color:#94a3b8; letter-spacing:.4px; margin-top:2px;">과정 운영</div>
           <button class="navy-btn" style="background:var(--blue-deep); height:45px;" onclick="openSetupModalFromIndividual()">
               <i class="fa-solid fa-sliders"></i> 해당 과정 설정 수정
           </button>
           <button class="navy-btn" style="background:#2563eb; height:45px;" onclick="openRosterUpload(); toggleMenu(false);">
               <i class="fa-solid fa-file-arrow-up"></i> 교육생 명단 업로드
           </button>
+          <button class="navy-btn" style="background:#0ea5e9; height:45px;" onclick="openSchedulePhotoCoord()">
+              <i class="fa-solid fa-image"></i> 교육 시간표 사진
+          </button>
+
+          <div style="font-size:12px; font-weight:800; color:#94a3b8; letter-spacing:.4px; margin-top:8px;">현황 · 배정</div>
           <div class="section-card" style="padding:10px;">
               <div class="section-title"><i class="fa-solid fa-qrcode"></i> 출결 QR 관리</div>
               <div id="qrPreviewArea" style="background:#f8fafc; border:1px solid #eee; border-radius:8px; padding:10px; text-align:center;">
@@ -1454,14 +1460,15 @@ body.pc-mode .entry-box:hover, body.pc-mode .entry-box-tablet:hover {
               <input type="file" id="qrFile" accept="image/*" style="display:none;" onchange="handleQRUpload(this)">
               <button class="navy-btn" style="background:#64748b; height:35px; font-size:11px; margin-top:10px;" onclick="document.getElementById('qrFile').click()">QR 이미지 교체</button>
           </div>
-          <button class="navy-btn" style="background:#6366f1; height:45px;" onclick="openTransportModal()">
-              <i class="fa-solid fa-car-side"></i> 강사 수송 요청
-          </button>
-          <!-- 생활관 배정현황 버튼 추가 -->
           <button class="navy-btn" style="background:#10b981; height:45px;" onclick="openDormManager()">
               <i class="fa-solid fa-bed"></i> 생활관 배정현황 조회
           </button>
-          <button class="navy-btn red" style="height:45px; margin-top: 10px;" onclick="resetIndividualCourse()">
+          <button class="navy-btn" style="background:#6366f1; height:45px;" onclick="openTransportModal()">
+              <i class="fa-solid fa-car-side"></i> 강사 수송 요청
+          </button>
+
+          <div style="font-size:12px; font-weight:800; color:#fca5a5; letter-spacing:.4px; margin-top:8px;">위험 구역</div>
+          <button class="navy-btn red" style="height:45px;" onclick="resetIndividualCourse()">
               <i class="fa-solid fa-triangle-exclamation"></i> 교육과정 강제 리셋
           </button>
       </div>
@@ -4134,6 +4141,34 @@ function executePrintProcess(mode) {
     tick(); setInterval(tick, 1000);
 })();
 
+// 교육 시간표 사진 — 휴대폰 QR 업로드 모달 (현재 과정 강의실 기준)
+function openSchedulePhotoCoord() {
+    if (!currentRID) { showKacAlert('먼저 과정(강의실)을 선택해 주세요.'); return; }
+    const room = currentRID;
+    let url;
+    try { url = new URL('schedule_photo.html', location.href).href + '?room=' + encodeURIComponent(room); }
+    catch (e) { url = 'schedule_photo.html?room=' + encodeURIComponent(room); }
+    const old = document.getElementById('schedPhotoModal'); if (old) old.remove();
+    const ov = document.createElement('div');
+    ov.id = 'schedPhotoModal';
+    ov.style.cssText = 'position:fixed; inset:0; background:rgba(15,23,42,.6); z-index:99999; display:flex; align-items:center; justify-content:center; padding:20px;';
+    ov.onclick = e => { if (e.target === ov) ov.remove(); };
+    ov.innerHTML = `
+        <div style="background:#fff; border-radius:18px; padding:24px; max-width:340px; width:100%; text-align:center; box-shadow:0 20px 50px rgba(0,0,0,.3);">
+            <h3 style="margin:0 0 4px; color:#0f172a; font-size:18px;"><i class="fa-solid fa-image" style="color:#2563eb;"></i> 교육 시간표 사진</h3>
+            <div style="font-size:12px; color:#64748b; font-weight:700; margin-bottom:14px;">Room ${room}</div>
+            <div id="schedPhotoQrBox" style="display:flex; justify-content:center; padding:12px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px;"></div>
+            <div style="font-size:13px; color:#334155; font-weight:700; line-height:1.65; margin:14px 0;">📱 휴대폰 카메라로 QR을 스캔해<br>촬영하거나 앨범에서 선택해 올리세요.</div>
+            <a href="${url}" target="_blank" rel="noopener" style="display:block; background:#2563eb; color:#fff; text-decoration:none; border-radius:10px; padding:12px; font-weight:800;">이 기기에서 바로 업로드 →</a>
+            <button onclick="document.getElementById('schedPhotoModal').remove()" style="margin-top:10px; background:#f1f5f9; border:none; color:#475569; border-radius:10px; padding:10px 16px; font-weight:800; cursor:pointer; width:100%;">닫기</button>
+        </div>`;
+    document.body.appendChild(ov);
+    const box = document.getElementById('schedPhotoQrBox');
+    try { new QRCode(box, { text: url, width: 180, height: 180, correctLevel: QRCode.CorrectLevel.H }); }
+    catch (e) { if (box) box.textContent = url; }
+    if (typeof toggleMenu === 'function') toggleMenu(false);
+}
+
 function toggleMenu(open) { 
     const sideMenu = document.getElementById('sideMenu');
     const menuOverlay = document.getElementById('menuOverlay');
@@ -4404,38 +4439,6 @@ function clearNoticeHistory() {
 
 
 // 생활관 배정 현황 로직 추가
-    // [공용] 지원부 배정 결과 조회 — 실제 저장 경로는 system/dorm/assignments/{주차}/students/{token}
-    //   레코드 = {name, empNo, dept, gender, course, room, roomId, building, floor, no}
-    //   교육생 명단(courses/{rid}/students)과는 '이름'(필요시 +식별ID/사번)으로 매칭. (index.html과 동일 규칙)
-    async function _fetchDormLookup() {
-        const snap = await firebase.database().ref('system/dorm/assignments').once('value');
-        const allWeeks = snap.val() || {};
-        const byName = {}, byNameEmp = {};
-        Object.values(allWeeks).forEach(wk => {
-            if (!wk || !wk.students) return;
-            const at = wk.assignedAt || 0;
-            Object.values(wk.students).forEach(s => {
-                if (!s || !s.name) return;
-                const nm = String(s.name).trim();
-                if (!byName[nm] || at >= byName[nm].at) byName[nm] = { rec: s, at };
-                if (s.empNo && s.empNo !== '-') {
-                    const k = nm + '_' + String(s.empNo).trim();
-                    if (!byNameEmp[k] || at >= byNameEmp[k].at) byNameEmp[k] = { rec: s, at };
-                }
-            });
-        });
-        return { byName, byNameEmp };
-    }
-    function _matchDorm(lookup, name, idNum) {
-        const nm = String(name || '').trim();
-        let hit = null;
-        // 동명이인 대비: 식별ID(=phone)가 배정 레코드 사번(empNo)과 일치하면 우선
-        if (idNum) { const k = nm + '_' + String(idNum).trim(); if (lookup.byNameEmp[k]) hit = lookup.byNameEmp[k].rec; }
-        if (!hit && lookup.byName[nm]) hit = lookup.byName[nm].rec;
-        if (!hit || !hit.building) return { building: '-', floor: '', no: '', assigned: false };
-        return { building: hit.building, floor: hit.floor || '', no: hit.no || hit.room || '', assigned: true };
-    }
-
     async function openDormManager() {
         toggleMenu(false);
         const tbody = document.getElementById('dormTableBody');
@@ -4443,12 +4446,13 @@ function clearNoticeHistory() {
         document.getElementById('dormManagerModal').style.display = 'flex';
 
         try {
-            const [studentSnap, dormLookup] = await Promise.all([
+            const [studentSnap, dormSnap] = await Promise.all([
                 firebase.database().ref(`courses/${currentRID}/students`).once('value'),
-                _fetchDormLookup()
+                firebase.database().ref(`system/dormitory_assignments`).once('value')
             ]);
 
             const students = studentSnap.val() || {};
+            const dormData = dormSnap.val() || {};
             tbody.innerHTML = "";
 
             const studentList = Object.values(students)
@@ -4461,16 +4465,15 @@ function clearNoticeHistory() {
             }
 
             studentList.forEach(s => {
-                const sId = s.phone ? s.phone : "";
-                const d = _matchDorm(dormLookup, s.name, sId);
-                const bldgTxt = d.assigned ? `${d.building}${d.floor ? ' ' + d.floor + '층' : ''}` : '-';
-                const roomTxt = d.assigned ? `${d.no}호` : '미배정';
+                const sPhone = s.phone ? s.phone : "";
+                let assigned = dormData[`${s.name.trim()}_${sPhone}`] || dormData[s.name.trim()] || { building: "-", room: "미배정" };
+                
                 tbody.innerHTML += `
                     <tr>
                         <td style="font-weight:800;">${s.name}</td>
-                        <td style="color:#64748b;">${sId}</td>
-                        <td style="color:var(--blue-deep);">${bldgTxt}</td>
-                        <td style="font-weight:800;">${roomTxt}</td>
+                        <td style="color:#64748b;">${sPhone}</td>
+                        <td style="color:var(--blue-deep);">${assigned.building}</td>
+                        <td style="font-weight:800;">${assigned.room}${assigned.room !== '미배정' ? '호' : ''}</td>
                     </tr>`;
             });
         } catch (e) {
@@ -4995,8 +4998,9 @@ async function loadAllStudentData() {
 
     masterStudentList = [];
 
-    // 생활관 배정 정보 가져오기 (실제 경로: system/dorm/assignments)
-    const dormLookup = await _fetchDormLookup();
+    // 생활관 배정 정보 가져오기
+    const dormSnap = await firebase.database().ref('system/dormitory_assignments').once('value');
+    const dormData = dormSnap.val() || {};
 
     Object.keys(globalAllData).forEach(rid => {
         const room = globalAllData[rid];
@@ -5022,9 +5026,11 @@ async function loadAllStudentData() {
             if (!s.name || s.name === "undefined" || s.name.trim() === "") return;
 
             const phoneSuffix = s.phone ? s.phone : "0000";
+            const sKey = `${s.name.trim()}_${phoneSuffix}`;
 
-            // 생활관 매칭 (이름 + 식별ID/사번 기준, 최신 배정)
-            const d = _matchDorm(dormLookup, s.name, s.phone);
+            // 생활관 매칭 (정밀 키 또는 이름 기준)
+            let assigned = dormData[sKey] || dormData[s.name.trim()];
+            const dorm = assigned || { building: "-", room: "미배정" };
             
             // 퇴교 차량 정보 추출
             const shuttleReq = room.shuttle?.requests?.[stoken];
@@ -5045,8 +5051,8 @@ async function loadAllStudentData() {
                 courseName,
                 name: s.name,
                 phone: phoneSuffix,
-                dormBuilding: d.assigned ? `${d.building}${d.floor ? ' ' + d.floor + '층' : ''}` : '-',
-                dormRoom: d.assigned ? `${d.no}호` : "미배정",
+                dormBuilding: dorm.building,
+                dormRoom: dorm.room !== '미배정' ? (dorm.room.includes('호') ? dorm.room : `${dorm.room}호`) : "미배정",
                 shuttleText,
                 shuttleClass,
                 shuttleType,
@@ -6533,4 +6539,4 @@ function _coordParseRoster(text) {
 
 </body>
 </html>
-<!-- @build 20260612-063244 (생활관 연동 경로 수정: system/dorm/assignments) -->
+<!-- @build 20260612-085718 (교육시간표 사진 QR 업로드 추가·메뉴 정리) -->
