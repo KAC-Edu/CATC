@@ -370,13 +370,11 @@ function toggleMeal(id, key){
         return { name:r.name||'', dept:r.dept||'', position:r.position||'', category:'staff', ts:TS };
     };
     if(isOn){
-        // 모달 없이 즉시 취소 + 되돌리기 스낵바 (배식 줄 정체 방지)
-        ref.remove(); playSnd('cancel');
-        showUndo(`❌ ${esc(r.name)} · ${labels[key]} 취소됨`, '되돌리기', ()=>{ ref.set(buildPayload()); playSnd('sel'); });
+        // 잘못 체크한 경우 취소 전 확인 팝업 (사용자 선호 — 실수 취소 방지)
+        confirmMealCancel(r.name, labels[key], ()=>{ ref.remove(); playSnd('cancel'); });
         return;
     }
     playSnd('sel'); flashCheck(); ref.set(buildPayload());
-    showUndo(`✓ ${esc(r.name)} · ${labels[key]} 체크됨`, '취소', ()=>{ ref.remove(); playSnd('cancel'); });
 }
 /* ── 되돌리기 스낵바 (3.5초 내 즉시 취소/복구) ── */
 let _undoTimer=null;
@@ -798,7 +796,7 @@ function esc(v){ return String(v==null?'':v).replace(/[&<>"']/g,c=>({'&':'&amp;'
 /* 초기 진입은 위의 ?go 분기에서 처리됨 */
 </script>
 <style>@media print{#__ver{display:none!important}}</style>
-<div id="__ver" style="position:fixed;right:7px;bottom:7px;z-index:2147483000;background:rgba(15,23,42,.72);color:#cbd5e1;font:700 10px/1 monospace;padding:4px 8px;border-radius:7px;pointer-events:none;letter-spacing:.3px;">식당패널 vR · 260613-0210</div>
+<div id="__ver" style="position:fixed;right:7px;bottom:7px;z-index:2147483000;background:rgba(15,23,42,.72);color:#cbd5e1;font:700 10px/1 monospace;padding:4px 8px;border-radius:7px;pointer-events:none;letter-spacing:.3px;">식당패널 vS · 260613-0310</div>
 </body>
 </html>
-<!-- @build 20260613-021000 (식당패널 vR: 초기화 confirm을 자체 오버레이로 교체 — 전체화면 중 네이티브 팝업으로 인한 전체화면 해제 버그 수정) -->
+<!-- @build 20260613-031000 (식당패널 vS: 식사 취소 시 확인 팝업(유지/취소하기) 복원 — 사용자 선호. 체크는 기존처럼 즉시 처리) -->
