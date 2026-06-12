@@ -1,7 +1,7 @@
 /* ============================================================
    CATC · 강사 플랫폼 로직  (admin.js)
-   @version  I
-   @build    20260612-085718
+   @version  J
+   @build    20260612-090921
    ------------------------------------------------------------
    [코드 수정 규칙 · AI/개발자 공통]
    이 파일을 고치면 @version 을 A -> B -> ... -> Z -> A1 -> B1 ...
@@ -4897,6 +4897,9 @@ resetShuttleRequests: function() {
 
     // ── 홈 통계 팝업 ──
     openHomeStatModal: function(type) {
+        // 특정 과정(강의실)에 진입한 상태에서는 전 과정 통합 현황 팝업을 띄우지 않음.
+        // (이 팝업은 메인/포털 현황판 전용)
+        if (state.room) return;
         const modal=document.getElementById('homeStatModal');
         const title=document.getElementById('homeStatModalTitle');
         const body=document.getElementById('homeStatModalBody');
@@ -6353,83 +6356,28 @@ const scheduleMgr = {
             </div>`;
     },
     load: async function() {
-        const body = document.getElementById('scheduleBody');
         const title = document.getElementById('scheduleCourseName');
         const meta = document.getElementById('scheduleMeta');
         const badge = document.getElementById('scheduleRoomBadge');
-        this.loadPhoto();
-        if (!body) return;
         if (badge) badge.innerText = `Room #${state.room || '-'}`;
+        // 사진 전용 페이지: 헤더(과정명·기간)만 표시하고 사진 블록을 불러온다.
+        this.loadPhoto();
         if (!state.room) {
-            body.innerHTML = '<div style="height:180px; display:flex; align-items:center; justify-content:center; color:#94a3b8; font-weight:800;">먼저 강의실을 선택하세요.</div>';
+            if (title) title.innerText = '교육 시간표';
+            if (meta) meta.innerText = '먼저 강의실을 선택하세요.';
             return;
         }
-        body.innerHTML = '<div style="height:180px; display:flex; align-items:center; justify-content:center; color:#94a3b8; font-weight:800;">교육일정을 불러오는 중입니다.</div>';
         try {
             const settingsSnap = await firebase.database().ref(`courses/${state.room}/settings`).once('value');
             const settings = settingsSnap.val() || {};
-            let data = settings.schedule || {};
-            if (!(Array.isArray(data.lines) && data.lines.length) && !data.text) {
-                const snap = await firebase.database().ref(`courses/${state.room}/schedule`).once('value');
-                data = snap.val() || {};
-            }
-            let lines = Array.isArray(data.lines) ? data.lines : String(data.text || '').split(/[\n\r]+/).filter(Boolean);
-
-            // 교육지원부 생활관 명단 업로드는 시간표를 system/dorm/rosters에
-            // 함께 저장한다. 강사플랫폼 미러 경로 저장이 막혀도 여기서 다시 찾는다.
-            if (!lines.length) {
-                const norm = v => String(v || '').replace(/\s+/g, '').trim();
-                const candidates = [];
-                const addRosterSchedules = async (path, baseScore) => {
-                    try {
-                        const snap = await firebase.database().ref(path).once('value');
-                        const rows = snap.val() || {};
-                        Object.values(rows).forEach(row => {
-                            if (!row || !row.schedule) return;
-                            const sameRoom   = String(row.room || '') === String(state.room || '');
-                            const sameCourse = norm(row.courseName) && norm(row.courseName) === norm(settings.courseName);
-                            // [수정] 방 또는 과정명 중 하나라도 일치하면 후보로.
-                            //  → 사전배정(연간계획 미리당김)으로 방이 바뀌어도 '과정명'으로 시간표를 찾는다.
-                            if (!sameRoom && !sameCourse) return;
-                            const sched = row.schedule || {};
-                            const schedLines = Array.isArray(sched.lines) ? sched.lines : String(sched.text || '').split(/[\n\r]+/).filter(Boolean);
-                            if (!schedLines.length) return;
-                            let score = baseScore;
-                            if (sameCourse) score += 1000;   // 과정명 일치 = 가장 신뢰도 높음 (방 변경에도 견고)
-                            if (norm(row.period) && norm(row.period) === norm(settings.period || sched.period)) score += 200;
-                            if (sameRoom) score += 50;
-                            score += Number(row.updatedAt || sched.updatedAt || 0) / 100000000000000;
-                            candidates.push({
-                                ...sched,
-                                lines: schedLines,
-                                courseName: sched.courseName || row.courseName || settings.courseName || '',
-                                period: sched.period || row.period || settings.period || '',
-                                _score: score
-                            });
-                        });
-                    } catch (err) {
-                        console.warn(`[교육일정 요약] ${path} 조회 실패`, err);
-                    }
-                };
-                await addRosterSchedules('system/dorm/rosters', 1000);
-                await addRosterSchedules('system/coord/rosters', 500);
-                candidates.sort((a, b) => b._score - a._score);
-                if (candidates.length) {
-                    data = candidates[0];
-                    lines = candidates[0].lines;
-                }
-            }
-            if (title) title.innerText = data.courseName || settings.courseName || '교육일정 요약';
-            if (meta) meta.innerText = data.period || settings.period || '기간 미설정';
-            if (!lines.length) {
-                body.innerHTML = '<div style="height:180px; display:flex; align-items:center; justify-content:center; color:#94a3b8; font-weight:800;">업로드된 교육일정이 없습니다.</div>';
-                return;
-            }
-            body.innerHTML = this.renderSchedule(lines);
+            if (title) title.innerText = settings.courseName || '교육 시간표';
+            if (meta) meta.innerText = settings.period || '기간 미설정';
         } catch (e) {
-            console.error('[교육일정 요약 로드]', e);
-            body.innerHTML = '<div style="height:180px; display:flex; align-items:center; justify-content:center; color:#ef4444; font-weight:900;">교육일정을 불러오지 못했습니다.</div>';
+            console.warn('[교육 시간표] 과정 정보 로드 실패', e);
+            if (meta) meta.innerText = '';
         }
+        // 참고: 한글파일 파싱 텍스트 요약(renderSchedule/parseItinerary)은 보존되어 있으나
+        //       현재 사진 전용 페이지에서는 사용하지 않는다.
     }
 };
 
