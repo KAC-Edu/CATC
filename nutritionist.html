@@ -1,20 +1,6 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-<!-- ============================================================
-  CATC · 영양사  (nutritionist.html)
-  @version  A
-  @build    20260610-220210
-  ────────────────────────────────────────────────────────
-  [코드 수정 규칙 · AI/개발자 공통]
-  이 파일을 한 글자라도 고치면:
-    1) 위 @version 을 다음 순서로 딱 1단계 올린다
-       A → B → C → … → Z → A1 → B1 → … → Z1 → A2 → …
-    2) @build 를 수정 시각(YYYYMMDD-HHMMSS)으로 갱신한다
-    3) 아래 화면 배지(vA)와 콘솔 로그의 글자도 같이 맞춘다
-  화면 우측 하단의 작은 'v?' 배지 / 콘솔 로그를 보고
-  Shift+Ctrl+R(강력 새로고침) 후 최신본 적용 여부를 확인한다.
-============================================================ -->
     <meta charset="UTF-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"/>
     <title>항공기술훈련원 영양사 관리 플랫폼</title>
@@ -364,6 +350,33 @@
             <div class="section-title"><i class="fa-solid fa-list-check"></i> 현재 운영 중인 과정 현황</div>
             <div id="courseStatusList">
                 <div class="spinner-wrap"><div class="spinner"></div><br>불러오는 중...</div>
+            </div>
+        </div>
+
+        <!-- ④ 직원 식수 관리 -->
+        <div class="section-card">
+            <div class="section-title"><i class="fa-solid fa-utensils"></i> 직원 식수 관리 (터치패널 집계)</div>
+
+            <div style="display:flex; gap:8px; align-items:center; margin-bottom:14px; flex-wrap:wrap;">
+                <input type="month" id="staffMonth" style="padding:10px 12px; border:1.5px solid var(--border); border-radius:10px; font-weight:800; font-size:14px;">
+                <button class="header-btn" style="width:auto; padding:0 16px;" onclick="loadStaffMeal()"><i class="fa-solid fa-magnifying-glass"></i> 조회</button>
+            </div>
+
+            <!-- 월 요약 카드 -->
+            <div id="staffSummary" style="display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-bottom:14px;"></div>
+
+            <!-- 인원별 카운팅 -->
+            <div id="staffCountList"><div class="empty-msg">월을 선택하고 조회하세요.</div></div>
+
+            <!-- 명단 관리 -->
+            <div style="margin-top:18px; border-top:1px dashed var(--border); padding-top:14px;">
+                <div style="font-size:14px; font-weight:900; color:var(--navy); margin-bottom:10px;"><i class="fa-solid fa-users-gear" style="color:#2563eb;"></i> 직원 명단 관리</div>
+                <div style="display:flex; gap:6px; margin-bottom:10px; flex-wrap:wrap;">
+                    <input id="newStaffName" placeholder="성명" maxlength="12" style="flex:1; min-width:90px; padding:11px 12px; border:1.5px solid var(--border); border-radius:10px; font-weight:700;">
+                    <input id="newStaffDept" placeholder="부서/직책 (선택)" maxlength="20" style="flex:1.4; min-width:110px; padding:11px 12px; border:1.5px solid var(--border); border-radius:10px; font-weight:700;">
+                    <button class="header-btn" style="width:auto; padding:0 16px;" onclick="addStaff()"><i class="fa-solid fa-plus"></i> 추가</button>
+                </div>
+                <div id="staffRosterList"><div class="empty-msg">등록된 직원이 없습니다.</div></div>
             </div>
         </div>
 
@@ -742,10 +755,102 @@ function showToast(msg) {
     clearTimeout(_toastTimer);
     _toastTimer = setTimeout(() => t.classList.remove('show'), 3000);
 }
+
+/* ═══════════════════════════════════════════════════════════
+   ④ 직원 식수 관리 (터치패널 staff_meal.html 집계)
+   - roster: system/staffMeal/roster/{id} = {name,dept,active}
+   - checks: system/staffMeal/checks/{date}/{key} = {name,category,idValue,time,ts}
+═══════════════════════════════════════════════════════════ */
+let _staffRoster = {};
+const STAFF_ROSTER = 'system/staffMeal/roster';
+const STAFF_CHECKS = 'system/staffMeal/checks';
+
+window.addEventListener('DOMContentLoaded', () => {
+    const mEl = document.getElementById('staffMonth');
+    if (mEl) mEl.value = getToday().slice(0, 7);
+    db.ref(STAFF_ROSTER).on('value', s => { _staffRoster = s.val() || {}; renderRoster(); });
+    loadStaffMeal();
+});
+
+function escH(v){ return String(v==null?'':v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+function renderRoster(){
+    const box = document.getElementById('staffRosterList'); if(!box) return;
+    const items = Object.entries(_staffRoster).sort((a,b)=>(a[1].name||'').localeCompare(b[1].name||'','ko'));
+    if(!items.length){ box.innerHTML='<div class="empty-msg">등록된 직원이 없습니다.</div>'; return; }
+    box.innerHTML = items.map(([id,r])=>`
+        <div style="display:flex; align-items:center; gap:8px; padding:8px 10px; border:1px solid var(--border); border-radius:10px; margin-bottom:6px;">
+            <div style="flex:1;"><b style="font-size:14px;">${escH(r.name||'')}</b> <span style="font-size:12px; color:var(--muted);">${escH(r.dept||'')}</span></div>
+            <button onclick="editStaff('${id}')" style="border:none; background:#eff6ff; color:#1e40af; border-radius:8px; padding:6px 10px; font-weight:800; cursor:pointer;">수정</button>
+            <button onclick="deleteStaff('${id}')" style="border:none; background:#fef2f2; color:#dc2626; border-radius:8px; padding:6px 10px; font-weight:800; cursor:pointer;">삭제</button>
+        </div>`).join('');
+}
+function addStaff(){
+    const n=(document.getElementById('newStaffName').value||'').trim();
+    const d=(document.getElementById('newStaffDept').value||'').trim();
+    if(!n){ showToast('성명을 입력하세요.'); return; }
+    db.ref(STAFF_ROSTER).push({ name:n, dept:d, active:true, createdAt:firebase.database.ServerValue.TIMESTAMP })
+      .then(()=>{ document.getElementById('newStaffName').value=''; document.getElementById('newStaffDept').value=''; showToast('✅ 직원이 추가되었습니다.'); });
+}
+function editStaff(id){
+    const r=_staffRoster[id]; if(!r) return;
+    const n=prompt('성명', r.name||''); if(n===null) return;
+    const d=prompt('부서/직책', r.dept||''); if(d===null) return;
+    db.ref(`${STAFF_ROSTER}/${id}`).update({ name:(n||'').trim(), dept:(d||'').trim() }).then(()=>showToast('수정되었습니다.'));
+}
+function deleteStaff(id){
+    const r=_staffRoster[id]; if(!r) return;
+    if(!confirm(`'${r.name}' 직원을 명단에서 삭제할까요?\n(이미 기록된 식사 집계는 그대로 유지됩니다.)`)) return;
+    db.ref(`${STAFF_ROSTER}/${id}`).remove().then(()=>showToast('삭제되었습니다.'));
+}
+
+function loadStaffMeal(){
+    const month=(document.getElementById('staffMonth')?.value)||getToday().slice(0,7);
+    db.ref(STAFF_CHECKS).once('value').then(s=>{
+        const all=s.val()||{};
+        const agg={};
+        const totals={ all:0, staff:0, internal:0, external:0 };
+        Object.entries(all).forEach(([date,recs])=>{
+            if(!date.startsWith(month) || !recs) return;
+            Object.entries(recs).forEach(([key,rec])=>{
+                if(!rec) return;
+                const cat = rec.category==='internal'?'internal':rec.category==='external'?'external':'staff';
+                const a=agg[key]||(agg[key]={ name:rec.name||'-', category:cat, idValue:rec.idValue||'', count:0, entries:[] });
+                a.name=rec.name||a.name;
+                a.count++; a.entries.push({ date, time:rec.time||'' });
+                totals.all++; totals[cat]++;
+            });
+        });
+        renderStaffSummary(totals, month);
+        renderStaffCounts(agg);
+    }).catch(()=>{ const box=document.getElementById('staffCountList'); if(box) box.innerHTML='<div class="empty-msg">조회 실패</div>'; });
+}
+function renderStaffSummary(t, month){
+    const box=document.getElementById('staffSummary'); if(!box) return;
+    const card=(lab,val,col)=>`<div style="background:${col}1a; border:1px solid ${col}55; border-radius:12px; padding:10px; text-align:center;"><div style="font-size:11px; color:var(--muted); font-weight:800;">${lab}</div><div style="font-size:22px; font-weight:900; color:${col};">${val}</div></div>`;
+    box.innerHTML = card(month+' 총식사', t.all, '#0ea5e9') + card('직원', t.staff, '#10b981') + card('사내강사', t.internal, '#6366f1') + card('사외강사', t.external, '#f59e0b');
+}
+function renderStaffCounts(agg){
+    const box=document.getElementById('staffCountList'); if(!box) return;
+    const rows=Object.values(agg).sort((a,b)=>b.count-a.count);
+    if(!rows.length){ box.innerHTML='<div class="empty-msg">해당 월의 식사 기록이 없습니다.</div>'; return; }
+    const catLabel={staff:'직원', internal:'사내강사', external:'사외강사'};
+    const catColor={staff:'#10b981', internal:'#6366f1', external:'#f59e0b'};
+    box.innerHTML = rows.map(r=>{
+        const dates=r.entries.sort((a,b)=>a.date.localeCompare(b.date)).map(e=>`<span style="display:inline-block; background:#f1f5f9; border-radius:6px; padding:2px 7px; margin:2px; font-size:11px; font-weight:700;">${e.date.slice(5)} ${escH(e.time)}</span>`).join('');
+        const idTxt = r.idValue ? ` · ${r.category==='internal'?'사번':'연락처'} ${escH(r.idValue)}` : '';
+        const col=catColor[r.category]||'#10b981';
+        return `<details style="border:1px solid var(--border); border-radius:12px; padding:10px 12px; margin-bottom:6px;">
+            <summary style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+                <span style="background:${col}1a; color:${col}; font-size:11px; font-weight:900; border-radius:6px; padding:3px 8px;">${catLabel[r.category]||'직원'}</span>
+                <b style="flex:1; font-size:15px;">${escH(r.name)}<span style="font-size:11px; color:var(--muted); font-weight:700;">${idTxt}</span></b>
+                <b style="font-size:18px; color:var(--navy);">${r.count}<small style="font-size:12px;">회</small></b>
+            </summary>
+            <div style="margin-top:8px;">${dates}</div>
+        </details>`;
+    }).join('');
+}
 </script>
-<!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
-<style>@media print{#__catcVer{display:none!important}}</style>
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vA</div>
-<script>try{console.log('%cCATC%c 영양사 (nutritionist.html) %cvA%c build 20260610-220210','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}</script>
 </body>
 </html>
+<!-- @build 20260612-125323 (직원 식수 명단관리+월별 카운팅 추가) -->
