@@ -8,6 +8,7 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
     <script src="config.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/davidshimjs/qrcodejs/qrcode.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" rel="stylesheet">
     <style>
@@ -45,21 +46,47 @@
 
         /* ── 헤더 ── */
         .app-header {
-            height: 55px;
-            background: var(--navy);
+            height: 58px;
+            background: linear-gradient(135deg, #0f172a 0%, #0b3a66 55%, #0369a1 100%);
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 0 18px;
+            padding: 0 16px;
             position: sticky;
             top: 0;
             z-index: 200;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            box-shadow: 0 4px 14px rgba(3,16,33,0.28);
             flex-shrink: 0;
         }
-        .header-btn { font-size: 19px; color: #fff; border: none; background: none; cursor: pointer; transition: opacity .2s; padding: 4px; }
-        .header-btn:active { opacity: .6; }
-        .header-title { color: #fff; font-size: 16px; font-weight: 900; letter-spacing: -0.3px; }
+        .header-btn { font-size: 19px; color: #fff; border: none; background: rgba(255,255,255,.12); cursor: pointer; transition: opacity .2s, background .2s; width:38px; height:38px; border-radius:11px; display:flex; align-items:center; justify-content:center; }
+        .header-btn:active { opacity: .7; }
+        .header-title { color: #fff; font-size: 16px; font-weight: 900; letter-spacing: -0.3px; display:flex; align-items:center; }
+
+        /* ── 상단 드롭다운 메뉴 ── */
+        .nav-dropdown {
+            position: absolute; top: 58px; left: 0; right: 0; z-index: 199;
+            background: #fff; border-bottom: 1px solid var(--border);
+            box-shadow: 0 14px 30px rgba(3,16,33,0.18);
+            max-height: 0; overflow: hidden; transition: max-height .28s ease, padding .28s ease;
+            padding: 0 12px;
+        }
+        .nav-dropdown.open { max-height: 420px; padding: 10px 12px 14px; }
+        .nav-item {
+            display: flex; align-items: center; gap: 12px; width: 100%;
+            padding: 14px 14px; margin-top: 8px; border: 1px solid var(--border);
+            border-radius: 14px; background: #f8fafc; cursor: pointer;
+            font-size: 15px; font-weight: 800; color: var(--navy); text-align: left;
+            transition: background .15s, transform .1s;
+        }
+        .nav-item:first-child { margin-top: 0; }
+        .nav-item:active { transform: scale(.98); }
+        .nav-item:hover { background: #eef4fb; }
+        .nav-item .ni-ico { width: 34px; height: 34px; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 15px; flex-shrink: 0; }
+        .nav-backdrop { position: fixed; inset: 0; background: rgba(3,16,33,.35); z-index: 198; display: none; }
+        .nav-backdrop.open { display: block; }
+
+        /* ── 섹션 타이틀 좌측 강조 바 ── */
+        .section-title { position: relative; }
 
         /* ── 메인 콘텐츠 ── */
         .app-content { flex: 1; padding: 12px; display: flex; flex-direction: column; gap: 12px; overflow-y: auto; }
@@ -284,18 +311,42 @@
 
     <!-- 헤더 -->
     <header class="app-header">
-        <button class="header-btn" onclick="history.back()"><i class="fa-solid fa-chevron-left"></i></button>
-        <div class="header-title"><i class="fa-solid fa-utensils" style="margin-right:7px; color:#0ea5e9;"></i>항기원 영양사 플랫폼</div>
-        <button class="header-btn" onclick="loadAll()"><i class="fa-solid fa-rotate-right"></i></button>
+        <button class="header-btn" onclick="toggleNavMenu()" aria-label="메뉴"><i class="fa-solid fa-bars"></i></button>
+        <div class="header-title"><i class="fa-solid fa-utensils" style="margin-right:7px; color:#38bdf8;"></i>항기원 영양사 플랫폼</div>
+        <button class="header-btn" onclick="loadAll()" aria-label="새로고침"><i class="fa-solid fa-rotate-right"></i></button>
     </header>
+
+    <!-- 상단 드롭다운 메뉴 -->
+    <div class="nav-dropdown" id="navDropdown">
+        <button class="nav-item" onclick="navTo('sec-shortcut')"><span class="ni-ico" style="background:#22c55e;"><i class="fa-solid fa-tablet-screen-button"></i></span> 식당 터치패널 바로가기</button>
+        <button class="nav-item" onclick="navTo('sec-summary')"><span class="ni-ico" style="background:#0f172a;"><i class="fa-solid fa-bowl-rice"></i></span> 오늘 석식 식수 요약</button>
+        <button class="nav-item" onclick="navTo('sec-menu')"><span class="ni-ico" style="background:#0ea5e9;"><i class="fa-solid fa-calendar-week"></i></span> 금주 식단표 관리</button>
+        <button class="nav-item" onclick="navTo('sec-course')"><span class="ni-ico" style="background:#6366f1;"><i class="fa-solid fa-list-check"></i></span> 현재 운영 중인 과정 현황</button>
+        <button class="nav-item" onclick="navTo('sec-staff')"><span class="ni-ico" style="background:#f59e0b;"><i class="fa-solid fa-user-group"></i></span> 직원 식수 관리</button>
+    </div>
+    <div class="nav-backdrop" id="navBackdrop" onclick="toggleNavMenu(false)"></div>
 
     <main class="app-content">
 
         <!-- 날짜 표시 -->
         <div><span class="date-badge" id="todayBadge">-</span></div>
 
+        <!-- 바로가기 -->
+        <div class="section-card" id="sec-shortcut" style="background:#0f172a;">
+            <div class="section-title" style="color:#fff;"><i class="fa-solid fa-utensils" style="color:#fbbf24;"></i> 식당 터치패널 바로가기</div>
+            <div style="font-size:12px; color:#cbd5e1; font-weight:700; margin-bottom:10px;">식당에 비치할 식사 체크인 화면입니다. 태블릿에서는 아래 QR을 스캔해 열어주세요.</div>
+            <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                <button onclick="window.open('staff_meal.html','_blank')" style="flex:1; min-width:140px; padding:13px; border:none; border-radius:12px; background:#22c55e; color:#fff; font-weight:900; font-size:15px; cursor:pointer;"><i class="fa-solid fa-arrow-up-right-from-square"></i> 터치패널 열기</button>
+                <button onclick="toggleMealQr()" style="flex:1; min-width:140px; padding:13px; border:none; border-radius:12px; background:#334155; color:#fff; font-weight:900; font-size:15px; cursor:pointer;"><i class="fa-solid fa-qrcode"></i> QR로 열기 (태블릿용)</button>
+            </div>
+            <div id="mealQrBox" style="display:none; margin-top:14px; text-align:center; background:#fff; border-radius:14px; padding:16px;">
+                <div id="mealQr" style="display:inline-block;"></div>
+                <div style="font-size:12px; color:#475569; font-weight:800; margin-top:10px;">📱 식당 태블릿 카메라로 스캔하면 터치패널이 열립니다.</div>
+            </div>
+        </div>
+
         <!-- ① 석식 요약 3칸 카드 -->
-        <div class="stat-grid">
+        <div class="stat-grid" id="sec-summary">
             <div class="stat-card sc-total" onclick="void 0">
                 <div class="sc-label">전체<br>식수 인원</div>
                 <div><span class="sc-val" id="totalMeals">-</span><span class="sc-unit">명</span></div>
@@ -317,7 +368,7 @@
         </div>
 
         <!-- ② 금주 식단표 섹션 -->
-        <div class="section-card">
+        <div class="section-card" id="sec-menu">
             <div class="section-title"><i class="fa-solid fa-calendar-week"></i> 금주 식단표 관리</div>
 
             <!-- 업로드 상태 배너 -->
@@ -346,7 +397,7 @@
         </div>
 
         <!-- ③ 과정별 운영 현황 -->
-        <div class="section-card">
+        <div class="section-card" id="sec-course">
             <div class="section-title"><i class="fa-solid fa-list-check"></i> 현재 운영 중인 과정 현황</div>
             <div id="courseStatusList">
                 <div class="spinner-wrap"><div class="spinner"></div><br>불러오는 중...</div>
@@ -354,7 +405,7 @@
         </div>
 
         <!-- ④ 직원 식수 관리 -->
-        <div class="section-card">
+        <div class="section-card" id="sec-staff">
             <div class="section-title"><i class="fa-solid fa-utensils"></i> 직원 식수 관리 (터치패널 집계)</div>
 
             <div style="display:flex; gap:8px; align-items:center; margin-bottom:14px; flex-wrap:wrap;">
@@ -477,6 +528,7 @@ function renderMealStats(today) {
     Object.keys(allRoomData).forEach(rid => {
         const room = allRoomData[rid];
         if (!room?.status?.roomStatus || room.status.roomStatus !== 'active') return;
+        if (room?.settings?.hideFromBoard) return;   // 강사플랫폼에서 '총괄표 노출 제외'한 과정은 영양사 집계에서도 제외
 
         // 교육생 수 (온라인 포함 전체 등록자, 중복 제거)
         const students = room.students || {};
@@ -501,7 +553,7 @@ function renderCourseStatus(today) {
     const list = document.getElementById('courseStatusList');
     const activeRooms = Object.keys(allRoomData).filter(rid => {
         const r = allRoomData[rid];
-        return r?.status?.roomStatus === 'active';
+        return r?.status?.roomStatus === 'active' && !r?.settings?.hideFromBoard;
     });
 
     if (!activeRooms.length) {
@@ -564,7 +616,8 @@ function openSkipModal() {
     const body   = document.getElementById('skipModalBody');
 
     const activeRooms = Object.keys(allRoomData).filter(rid => {
-        return allRoomData[rid]?.status?.roomStatus === 'active';
+        const r = allRoomData[rid];
+        return r?.status?.roomStatus === 'active' && !r?.settings?.hideFromBoard;
     });
 
     if (!activeRooms.length) {
@@ -774,6 +827,31 @@ window.addEventListener('DOMContentLoaded', () => {
 
 function escH(v){ return String(v==null?'':v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
+/* ── 상단 드롭다운 메뉴 + 섹션 이동 ── */
+function toggleNavMenu(force){
+    const dd=document.getElementById('navDropdown'), bd=document.getElementById('navBackdrop');
+    if(!dd||!bd) return;
+    const open=(typeof force==='boolean')?force:!dd.classList.contains('open');
+    dd.classList.toggle('open',open); bd.classList.toggle('open',open);
+}
+function navTo(id){
+    toggleNavMenu(false);
+    const el=document.getElementById(id);
+    if(el) setTimeout(()=>el.scrollIntoView({behavior:'smooth', block:'start'}), 130);
+}
+/* ── 식당 터치패널 QR ── */
+function toggleMealQr(){
+    const box=document.getElementById('mealQrBox'); if(!box) return;
+    const open=(box.style.display==='none'||!box.style.display);
+    box.style.display=open?'block':'none';
+    if(open){
+        let url; try{ url=new URL('staff_meal.html', location.href).href; }catch(e){ url='staff_meal.html'; }
+        const el=document.getElementById('mealQr'); el.innerHTML='';
+        if(typeof QRCode!=='undefined'){ try{ new QRCode(el,{text:url,width:180,height:180,correctLevel:QRCode.CorrectLevel.H}); }catch(e){ el.textContent=url; } }
+        else { el.textContent=url; }
+    }
+}
+
 function renderRoster(){
     const box = document.getElementById('staffRosterList'); if(!box) return;
     const items = Object.entries(_staffRoster).sort((a,b)=>(a[1].name||'').localeCompare(b[1].name||'','ko'));
@@ -853,4 +931,4 @@ function renderStaffCounts(agg){
 </script>
 </body>
 </html>
-<!-- @build 20260612-125323 (직원 식수 명단관리+월별 카운팅 추가) -->
+<!-- @build 20260612-130549 (상단 드롭다운 메뉴+섹션이동+바로가기QR+디자인 정리) -->
