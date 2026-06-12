@@ -1,7 +1,7 @@
 /* ============================================================
    CATC · 강사 플랫폼 로직  (admin.js)
-   @version  L
-   @build    20260612-092324
+   @version  M
+   @build    20260612-112703
    ------------------------------------------------------------
    [코드 수정 규칙 · AI/개발자 공통]
    이 파일을 고치면 @version 을 A -> B -> ... -> Z -> A1 -> B1 ...
@@ -546,7 +546,7 @@ verifyTakeover: async function() {
         if (btO) btO.style.display = 'none';
         const micWrap = document.getElementById('entryMicConsentWrap');
         const micChk = document.getElementById('entryMicConsent');
-        if (micWrap) micWrap.style.display = 'flex';
+        if (micWrap) micWrap.style.display = 'none';
         if (micChk) micChk.checked = false;
         const modal = document.getElementById('takeoverModal');
         if (modal) modal.style.display = 'flex';
@@ -570,7 +570,7 @@ verifyTakeover: async function() {
         if (btO) btO.style.display = 'none';
         const micWrap = document.getElementById('entryMicConsentWrap');
         const micChk = document.getElementById('entryMicConsent');
-        if (micWrap) micWrap.style.display = 'flex';
+        if (micWrap) micWrap.style.display = 'none';
         if (micChk) micChk.checked = false;
         document.getElementById('takeoverModal').style.display = 'flex';
         setTimeout(() => document.getElementById('takeoverPwInput').focus(), 50);
