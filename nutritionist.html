@@ -348,13 +348,14 @@
         .hc-ampm { font-size:12px; font-weight:700; margin-left:3px; color:#60a5fa; }
         @media (max-width:1080px){ .header-clock{ display:none; } .app-header{ grid-template-columns:1fr auto; } }
 
-        /* ── PC 탭 메뉴 ── */
-        .ntabs { display:flex; gap:10px; margin:2px 0 14px; flex-wrap:wrap; }
-        .ntab { flex:1; min-width:150px; background:#fff; border:1.5px solid var(--border); border-radius:14px; padding:13px 16px; cursor:pointer; text-align:left; transition:all .15s; }
-        .ntab:hover { border-color:#bbf7d0; transform:translateY(-1px); box-shadow:0 4px 12px rgba(15,23,42,.06); }
-        .ntab.active { border-color:#16a34a; background:linear-gradient(135deg,#f0fdf4,#fff); box-shadow:0 4px 14px rgba(22,163,74,.16); }
-        .ntab .nt-n { display:block; font-size:10px; font-weight:800; color:var(--muted); letter-spacing:.5px; }
-        .ntab.active .nt-n { color:#16a34a; }
+        /* ── PC 탭 메뉴 (교육지원부 스타일) ── */
+        .ntabs { display:flex; gap:10px; margin:2px 0 16px; flex-wrap:wrap; }
+        .ntab { flex:1; min-width:150px; background:#fff; border:1.5px solid var(--border); border-radius:14px; padding:14px 16px; cursor:pointer; text-align:left; transition:all .18s; position:relative; overflow:hidden; }
+        .ntab:hover { border-color:#bfdbfe; transform:translateY(-1px); box-shadow:0 4px 12px rgba(15,23,42,.07); }
+        .ntab.active { border-color:#2563eb; background:linear-gradient(135deg,#eff6ff,#fff); box-shadow:0 4px 14px rgba(37,99,235,.15); }
+        .ntab.active::before { content:''; position:absolute; left:0; top:0; bottom:0; width:4px; background:#2563eb; }
+        .ntab .nt-n { display:block; font-size:11px; font-weight:800; color:var(--muted); letter-spacing:.5px; }
+        .ntab.active .nt-n { color:#2563eb; }
         .ntab .nt-t { display:block; font-size:14px; font-weight:800; color:var(--navy); margin-top:3px; }
 
         /* ── 탭 패널 ── */
@@ -387,6 +388,24 @@
         .r-edit { background:#eff6ff; color:#1e40af; } .r-del { background:#fef2f2; color:#dc2626; }
         .r-note { width:100%; min-width:110px; border:1.5px solid var(--border); border-radius:8px; padding:7px 9px; font-size:13px; font-weight:600; outline:none; }
         .r-note:focus { border-color:var(--blue); }
+        .drag-grip { color:#cbd5e1; margin-right:7px; cursor:grab; }
+        .rtable tbody tr[draggable]:hover .drag-grip { color:#2563eb; }
+        /* ── 전체폭 헤더 + 중앙정렬 본문 (교육지원부 방식) ── */
+        body { background: var(--bg); }
+        .app-content { max-width: 1180px; margin: 0 auto; width: 100%; }
+        .header-left { display:flex; align-items:center; gap:13px; min-width:0; position:relative; z-index:1; }
+        .header-titlewrap { min-width:0; }
+        .h-btn.portal { background:rgba(255,255,255,0.18); }
+        .header-summary { display:flex; align-items:center; gap:9px; justify-self:end; position:relative; z-index:1; }
+        .hsum { display:flex; flex-direction:column; align-items:center; gap:2px; background:rgba(255,255,255,0.12); border:1px solid rgba(255,255,255,0.24); border-radius:13px; padding:7px 16px; min-width:80px; }
+        .hsum .hs-lab { font-size:10.5px; font-weight:800; color:#cbd5e1; letter-spacing:.3px; white-space:nowrap; }
+        .hsum .hs-val { font-size:22px; font-weight:950; line-height:1; }
+        .hsum-total .hs-val { color:#93c5fd; }
+        .hsum-skip { cursor:pointer; transition:background .15s; }
+        .hsum-skip:hover { background:rgba(255,255,255,0.2); }
+        .hsum-skip .hs-val { color:#fca5a5; }
+        .hsum-eat .hs-val { color:#86efac; }
+        @media (max-width:1080px){ .header-summary .hs-lab{ font-size:9.5px; } .hsum{ min-width:64px; padding:6px 10px; } }
     </style>
 </head>
 <body>
@@ -399,56 +418,26 @@
         <div class="mb-sub" style="font-size:13px; color:#64748b; line-height:1.7; margin-top:12px;">모바일에서는 표·집계가 정상 표시되지 않습니다.<br>👉 <b>PC 브라우저</b>로 접속해 주세요.</div>
     </div>
 </div>
-<div class="app-container">
-
     <!-- 헤더 -->
     <header class="app-header">
-        <div class="header-brand">
-            <div class="header-mark"><i class="fa-solid fa-utensils"></i></div>
-            <div style="min-width:0;">
+        <div class="header-left">
+            <button class="h-btn portal" onclick="location.href='portal.html'"><i class="fa-solid fa-grip"></i> 포털</button>
+            <div class="header-titlewrap">
                 <div class="header-kicker">KOREA AIRPORTS CORP. · CATC</div>
                 <h1>영양사 식수 관리</h1>
             </div>
         </div>
         <div id="headerClock" class="header-clock"></div>
-        <div class="header-right">
-            <button class="h-btn" onclick="loadAll()"><i class="fa-solid fa-rotate-right"></i> 새로고침</button>
-            <button class="h-btn" onclick="location.href='portal.html'"><i class="fa-solid fa-grip"></i> 포털</button>
+        <div class="header-summary">
+            <div class="hsum hsum-total"><span class="hs-lab">전체 식수</span><span class="hs-val" id="totalMeals">-</span></div>
+            <div class="hsum hsum-skip" onclick="openSkipModal()"><span class="hs-lab">석식 제외</span><span class="hs-val" id="skipCount">-</span></div>
+            <div class="hsum hsum-eat"><span class="hs-lab">실제 식사</span><span class="hs-val" id="eatCount">-</span></div>
         </div>
     </header>
 
 
     <main class="app-content">
 
-
-        <!-- 바로가기 -->
-        <div class="section-card" id="sec-shortcut">
-            <div class="section-title"><i class="fa-solid fa-utensils"></i> 식당 터치패널 바로가기</div>
-            <div style="font-size:12.5px; color:var(--muted); font-weight:700; margin-bottom:12px;">식당에 비치할 식사 체크인(터치) 화면입니다.</div>
-            <button onclick="window.open('staff_meal.html','_blank')" style="width:100%; padding:15px; border:none; border-radius:14px; background:linear-gradient(135deg,#059669,#22c55e); color:#fff; font-weight:900; font-size:16px; cursor:pointer; box-shadow:0 6px 18px rgba(34,197,94,.28);"><i class="fa-solid fa-arrow-up-right-from-square"></i> 터치패널 열기</button>
-        </div>
-
-        <!-- ① 석식 요약 3칸 카드 -->
-        <div class="stat-grid" id="sec-summary">
-            <div class="stat-card sc-total" onclick="void 0">
-                <div class="sc-label">전체<br>식수 인원</div>
-                <div><span class="sc-val" id="totalMeals">-</span><span class="sc-unit">명</span></div>
-                <i class="fa-solid fa-users"></i>
-            </div>
-            <div class="stat-card sc-skip" onclick="openSkipModal()">
-                <div class="sc-label">석식 제외<br>신청자</div>
-                <div><span class="sc-val" id="skipCount">-</span><span class="sc-unit">명</span></div>
-                <i class="fa-solid fa-ban"></i>
-            </div>
-            <div class="stat-card sc-eat">
-                <div class="sc-label">실제<br>식사 예정</div>
-                <div><span class="sc-val" id="eatCount">-</span><span class="sc-unit">명</span></div>
-                <i class="fa-solid fa-bowl-rice"></i>
-            </div>
-        </div>
-        <div style="font-size:11px; color:var(--muted); text-align:right; margin-top:-6px;">
-            <i class="fa-solid fa-circle-info"></i> 제외 신청자 카드를 누르면 과정별 명단을 확인할 수 있습니다
-        </div>
 
         <!-- ② 금주 식단표 섹션 -->
         <!-- 탭 메뉴 (PC) -->
@@ -525,8 +514,13 @@
             <div id="staffRosterList"><div class="empty-msg">등록된 직원이 없습니다.</div></div>
         </div>
 
+        <!-- 식당 터치패널 바로가기 (맨 아래) -->
+        <div class="section-card" id="sec-shortcut" onclick="window.open('staff_meal.html','_blank')" style="cursor:pointer; margin-top:6px;">
+            <div class="section-title" style="display:flex; align-items:center; gap:8px;"><i class="fa-solid fa-utensils" style="color:#2563eb;"></i> 식당 터치패널 바로가기 <i class="fa-solid fa-arrow-up-right-from-square" style="margin-left:auto; color:#2563eb; font-size:14px;"></i></div>
+            <div style="font-size:12.5px; color:var(--muted); font-weight:700;">이 카드를 누르면 식당 터치패널(식사 체크인 화면)이 새 창으로 열립니다.</div>
+        </div>
+
     </main>
-</div>
 
 <!-- ── 과정별 제외 신청자 모달 ── -->
 <div class="modal-bg" id="skipModal">
@@ -915,6 +909,8 @@ let _dinnerToday = {};
 let _checksToday = {};
 let _breakfastToday = {};
 let _notesToday = {};
+let _editId = null;
+let _dragId = null;
 const STAFF_ROSTER = 'system/staffMeal/roster';
 const STAFF_CHECKS = 'system/staffMeal/checks';
 
@@ -970,6 +966,7 @@ function toggleAcc(id){ const c=document.getElementById(id); if(c) c.classList.t
 
 function nowTime(){ const d=new Date(),p=x=>String(x).padStart(2,'0'); return `${p(d.getHours())}:${p(d.getMinutes())}`; }
 
+const _ord = r => (r && r.order!=null) ? r.order : 9999;
 function renderRoster(){
     const box = document.getElementById('staffRosterList'); if(!box) return;
     const items = Object.entries(_staffRoster);
@@ -978,12 +975,22 @@ function renderRoster(){
     items.forEach(([id,r])=>{ const d=((r.dept||'').trim())||'(소속 미지정)'; (groups[d]||(groups[d]=[])).push([id,r]); });
     const depts = Object.keys(groups).sort((a,b)=>a.localeCompare(b,'ko'));
     box.innerHTML = depts.map(d=>{
-        const rows = groups[d].sort((a,b)=>(a[1].name||'').localeCompare(b[1].name||'','ko'));
+        const rows = groups[d].sort((a,b)=> (_ord(a[1])-_ord(b[1])) || (a[1].name||'').localeCompare(b[1].name||'','ko'));
         const body = rows.map(([id,r])=>{
+            if(id===_editId){
+                return `<tr><td colspan="7" style="background:#eff6ff; padding:12px;">
+                    <div style="display:flex; gap:6px; flex-wrap:wrap; align-items:center;">
+                        <input id="edit-dept" value="${escH(r.dept||'')}" placeholder="소속" style="flex:1; min-width:110px; padding:9px 11px; border:1.5px solid #2563eb; border-radius:8px; font-weight:700;">
+                        <input id="edit-pos" value="${escH(r.position||'')}" placeholder="직책" style="flex:.8; min-width:90px; padding:9px 11px; border:1.5px solid #2563eb; border-radius:8px; font-weight:700;">
+                        <input id="edit-name" value="${escH(r.name||'')}" placeholder="이름" style="flex:.9; min-width:90px; padding:9px 11px; border:1.5px solid #2563eb; border-radius:8px; font-weight:700;">
+                        <button class="r-actbtn" style="background:#16a34a; color:#fff;" onclick="saveEdit('${id}')"><i class="fa-solid fa-check"></i> 저장</button>
+                        <button class="r-actbtn" style="background:#e2e8f0; color:#475569;" onclick="cancelEdit()">취소</button>
+                    </div></td></tr>`;
+            }
             const chk=(key,on)=>`<input type="checkbox" class="rchk${key==='l'?' lunch':''}" ${on?'checked':''} onchange="toggleMeal3('${id}','${key}', this.checked)">`;
-            return `<tr>
+            return `<tr draggable="true" ondragstart="rDragStart(event,'${id}')" ondragover="rDragOver(event)" ondrop="rDrop(event,'${id}')" ondragend="rDragEnd(event)">
                 <td class="c" style="color:var(--muted); font-weight:700;">${escH(r.position||'-')}</td>
-                <td class="rname">${escH(r.name||'')}</td>
+                <td class="rname"><i class="fa-solid fa-grip-vertical drag-grip"></i>${escH(r.name||'')}</td>
                 <td class="c">${chk('b', !!_breakfastToday[id])}</td>
                 <td class="c">${chk('l', !!_checksToday[id])}</td>
                 <td class="c">${chk('d', !!_dinnerToday[id])}</td>
@@ -992,13 +999,34 @@ function renderRoster(){
             </tr>`;
         }).join('');
         return `<div class="roster-group">
-            <div class="rg-head"><i class="fa-solid fa-building"></i> ${escH(d)} <span class="rg-count">${rows.length}명</span></div>
+            <div class="rg-head"><i class="fa-solid fa-building"></i> ${escH(d)} <span class="rg-count">${rows.length}명</span> <span style="margin-left:8px; font-size:11px; color:var(--muted); font-weight:700;">↕ 행을 드래그해 순서 변경</span></div>
             <table class="rtable">
                 <thead><tr><th style="width:120px;">직책</th><th style="text-align:left;">직원 이름</th><th style="width:60px;">아침</th><th style="width:60px;">점심</th><th style="width:60px;">저녁</th><th style="text-align:left;">비고</th><th style="width:140px;">관리</th></tr></thead>
                 <tbody>${body}</tbody>
             </table>
         </div>`;
     }).join('');
+}
+/* ── 드래그 정렬 ── */
+function rDragStart(e,id){ _dragId=id; e.dataTransfer.effectAllowed='move'; try{e.dataTransfer.setData('text/plain',id);}catch(_){} }
+function rDragOver(e){ e.preventDefault(); e.dataTransfer.dropEffect='move'; }
+function rDragEnd(e){ _dragId=null; }
+function rDrop(e,dstId){ e.preventDefault(); const src=_dragId; _dragId=null; rReorder(src,dstId); }
+function rReorder(srcId,dstId){
+    if(!srcId || srcId===dstId) return;
+    const src=_staffRoster[srcId], dst=_staffRoster[dstId]; if(!src||!dst) return;
+    const dstDept=((dst.dept||'').trim());
+    let groupIds = Object.entries(_staffRoster)
+        .filter(([id,r])=>((r.dept||'').trim())===dstDept)
+        .sort((a,b)=> (_ord(a[1])-_ord(b[1])) || (a[1].name||'').localeCompare(b[1].name||'','ko'))
+        .map(([id])=>id);
+    groupIds = groupIds.filter(id=>id!==srcId);
+    const ti = groupIds.indexOf(dstId);
+    groupIds.splice(ti<0?groupIds.length:ti, 0, srcId);
+    const updates={};
+    groupIds.forEach((id,i)=>{ updates[`${STAFF_ROSTER}/${id}/order`]=i*10; });
+    if(((src.dept||'').trim())!==dstDept) updates[`${STAFF_ROSTER}/${srcId}/dept`]=dstDept;
+    db.ref().update(updates).then(()=>showToast('순서가 변경되었습니다.'));
 }
 /* ── 오늘 아침/점심/저녁 체크 토글 (식당 터치패널과 동일 노드) ── */
 function toggleMeal3(id, key, on){
@@ -1025,12 +1053,15 @@ function addStaff(){
     db.ref(STAFF_ROSTER).push({ name:n, dept:d, position:p, active:true, createdAt:firebase.database.ServerValue.TIMESTAMP })
       .then(()=>{ document.getElementById('newStaffName').value=''; document.getElementById('newStaffDept').value=''; const pe=document.getElementById('newStaffPos'); if(pe) pe.value=''; showToast('✅ 직원이 추가되었습니다.'); });
 }
-function editStaff(id){
-    const r=_staffRoster[id]; if(!r) return;
-    const d=prompt('소속', r.dept||''); if(d===null) return;
-    const p=prompt('직책', r.position||''); if(p===null) return;
-    const n=prompt('직원 이름', r.name||''); if(n===null) return;
-    db.ref(`${STAFF_ROSTER}/${id}`).update({ name:(n||'').trim(), dept:(d||'').trim(), position:(p||'').trim() }).then(()=>showToast('수정되었습니다.'));
+function editStaff(id){ _editId=id; renderRoster(); setTimeout(()=>{ const e=document.getElementById('edit-name'); if(e) e.focus(); }, 30); }
+function cancelEdit(){ _editId=null; renderRoster(); }
+function saveEdit(id){
+    const d=(document.getElementById('edit-dept').value||'').trim();
+    const p=(document.getElementById('edit-pos').value||'').trim();
+    const n=(document.getElementById('edit-name').value||'').trim();
+    if(!n){ showToast('이름을 입력하세요.'); return; }
+    _editId=null;
+    db.ref(`${STAFF_ROSTER}/${id}`).update({ dept:d, position:p, name:n }).then(()=>showToast('수정되었습니다.'));
 }
 function deleteStaff(id){
     const r=_staffRoster[id]; if(!r) return;
@@ -1086,7 +1117,7 @@ function renderStaffCounts(agg){
 }
 </script>
 <style>@media print{#__ver{display:none!important}}</style>
-<div id="__ver" style="position:fixed;right:7px;bottom:7px;z-index:2147483000;background:rgba(15,23,42,.72);color:#cbd5e1;font:700 10px/1 monospace;padding:4px 8px;border-radius:7px;pointer-events:none;letter-spacing:.3px;">영양사 vF · 260612-1422</div>
+<div id="__ver" style="position:fixed;right:7px;bottom:7px;z-index:2147483000;background:rgba(15,23,42,.72);color:#cbd5e1;font:700 10px/1 monospace;padding:4px 8px;border-radius:7px;pointer-events:none;letter-spacing:.3px;">영양사 vH · 260612-1441</div>
 </body>
 </html>
-<!-- @build 20260612-142206 (영양사 vF: 직원명단 직책 추가+아침/점심/저녁/비고 표) -->
+<!-- @build 20260612-144106 (영양사 vH: 헤더 전체폭+좌포털/우식수칩·바로가기 하단·명단 인라인수정+드래그정렬) -->

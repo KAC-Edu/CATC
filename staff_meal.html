@@ -208,7 +208,7 @@ function renderStaffList(){
         const depts = Object.keys(groups).sort((a,b)=>a.localeCompare(b,'ko'));
         let rows='';
         depts.forEach(d=>{
-            const grp = groups[d].sort((a,b)=>(a[1].name||'').localeCompare(b[1].name||'','ko'));
+            const grp = groups[d].sort((a,b)=> (((a[1].order!=null?a[1].order:9999)-(b[1].order!=null?b[1].order:9999))) || (a[1].name||'').localeCompare(b[1].name||'','ko'));
             grp.forEach(([id,r],i)=>{
                 const cell=(key,on)=>`<td class="c"><span class="mchk ${on?'on':''}" onclick="toggleMeal('${id}','${key}')">${on?'<i class="fa-solid fa-check"></i>':''}</span></td>`;
                 rows += `<tr>
@@ -420,7 +420,7 @@ function esc(v){ return String(v==null?'':v).replace(/[&<>"']/g,c=>({'&':'&amp;'
 /* 초기 진입은 위의 ?go 분기에서 처리됨 */
 </script>
 <style>@media print{#__ver{display:none!important}}</style>
-<div id="__ver" style="position:fixed;right:7px;bottom:7px;z-index:2147483000;background:rgba(15,23,42,.72);color:#cbd5e1;font:700 10px/1 monospace;padding:4px 8px;border-radius:7px;pointer-events:none;letter-spacing:.3px;">식당패널 vE · 260612-1422</div>
+<div id="__ver" style="position:fixed;right:7px;bottom:7px;z-index:2147483000;background:rgba(15,23,42,.72);color:#cbd5e1;font:700 10px/1 monospace;padding:4px 8px;border-radius:7px;pointer-events:none;letter-spacing:.3px;">식당패널 vF · 260612-1441</div>
 </body>
 </html>
-<!-- @build 20260612-142206 (식당패널 vE: 직원화면 표(소속·직책·이름·아침·점심·저녁·비고)) -->
+<!-- @build 20260612-144106 (식당패널 vF: 직원 표 순서 영양사 설정 반영) -->
