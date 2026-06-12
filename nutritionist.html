@@ -461,6 +461,20 @@
         .cw-live { font-size:11px; background:#10b981; color:#fff; border-radius:6px; padding:2px 8px; font-weight:800; vertical-align:middle; }
         .cw-room { font-size:12px; font-weight:800; color:#1e40af; background:#eff6ff; border:1px solid #dbeafe; border-radius:8px; padding:4px 10px; white-space:nowrap; }
         .cw-meta { font-size:13px; color:var(--muted); font-weight:700; }
+        /* 계좌 입력 박스 */
+        .acct-box { border:1.5px solid #bbf7d0; background:#f0fdf4; border-radius:14px; padding:14px 16px; margin-bottom:14px; }
+        .acct-ttl { font-size:13.5px; font-weight:900; color:#166534; margin-bottom:10px; }
+        .acct-ttl span { font-weight:700; color:#16a34a; font-size:12px; }
+        .acct-row { display:flex; gap:8px; flex-wrap:wrap; }
+        .acct-row input { height:42px; padding:0 12px; border:1.5px solid #d1fae5; border-radius:10px; font-weight:700; }
+        .acct-row #acctBank { flex:.7; min-width:90px; }
+        .acct-row #acctNo { flex:1.6; min-width:160px; }
+        .acct-row #acctHolder { flex:.8; min-width:100px; }
+        /* MEALS: 수정/메모/빈줄 */
+        .cnt-corr { font-size:10px; background:#fee2e2; color:#dc2626; border-radius:5px; padding:1px 6px; font-weight:800; }
+        .memo-ic { color:#94a3b8; cursor:pointer; font-size:14px; }
+        .memo-ic:hover { color:#2563eb; }
+        .cnt-empty td { height:34px; }
         /* MEALS: breakdown/합계 */
         .cnt-bld { font-size:12px; color:var(--muted); font-weight:700; margin-left:6px; }
         .cnt-total td { background:#f1f5f9; border-top:2px solid #cbd5e1; }
@@ -510,7 +524,9 @@
         </div>
 
         <div class="section-card tab-panel active" id="sec-menu">
-            <div class="section-title"><i class="fa-solid fa-calendar-week"></i> 금주 식단표 관리</div>
+            <div class="section-title"><i class="fa-solid fa-calendar-week"></i> 식단표 관리 (주차별)</div>
+            <div class="cw-nav" id="menuWeekBar" style="margin-bottom:6px;"></div>
+            <div style="font-size:12.5px; color:var(--muted); font-weight:700; margin-bottom:12px;">위에서 <b>식단표가 적용될 주차</b>를 선택하세요. 선택한 주(월~금) 기준으로 교육생에게 공지됩니다.</div>
 
             <!-- 업로드 상태 배너 -->
             <div id="menuBanner" class="menu-status-banner msb-no">
@@ -549,11 +565,22 @@
         <div class="section-card tab-panel" id="sec-staff">
             <div class="section-title"><i class="fa-solid fa-utensils"></i> 직원 식수 관리</div>
 
+            <div class="acct-box">
+                <div class="acct-ttl"><i class="fa-solid fa-building-columns"></i> 사외강사 식대 계좌 <span>· 터치패널 "계좌입금" 버튼에 표시됩니다</span></div>
+                <div class="acct-row">
+                    <input id="acctBank" placeholder="은행 (예: 국민)" maxlength="20">
+                    <input id="acctNo" placeholder="계좌번호" maxlength="40">
+                    <input id="acctHolder" placeholder="예금주" maxlength="20">
+                    <button class="mini-btn" onclick="saveAccount()"><i class="fa-solid fa-floppy-disk"></i> 저장</button>
+                </div>
+            </div>
             <div class="month-nav">
                 <button class="mn-btn" onclick="shiftMonth(-1)"><i class="fa-solid fa-chevron-left"></i></button>
                 <span id="staffMonthLabel" class="mn-label">-</span>
                 <button class="mn-btn" onclick="shiftMonth(1)"><i class="fa-solid fa-chevron-right"></i></button>
                 <button class="mini-btn" onclick="setMonth(getToday().slice(0,7))" style="margin-left:8px;"><i class="fa-solid fa-calendar-day"></i> 이번 달</button>
+                <button class="mini-btn" onclick="exportMealExcel()" style="margin-left:auto; background:#16a34a;"><i class="fa-solid fa-file-excel"></i> 엑셀</button>
+                <button class="mini-btn" onclick="exportMealPDF()" style="background:#dc2626;"><i class="fa-solid fa-file-pdf"></i> PDF</button>
             </div>
 
 
@@ -832,24 +859,22 @@ function renderMenuUI(data) {
 
     const thisWeek = getThisWeekKey();
 
-    if (data && data.weekKey === thisWeek && data.url) {
-        // ✅ 이번 주 식단 있음
+    if (data && data.url) {
         const uploadDate = data.uploadedAt
             ? new Date(data.uploadedAt).toLocaleString('ko-KR', { month:'numeric', day:'numeric', hour:'2-digit', minute:'2-digit' })
             : '날짜 미상';
+        const tag = data.weekKey===thisWeek ? '<span style="background:#2563eb;color:#fff;border-radius:6px;padding:2px 8px;font-size:11px;font-weight:800;">이번주 표시중</span>'
+                  : (data.weekKey>thisWeek ? '<span style="background:#f59e0b;color:#fff;border-radius:6px;padding:2px 8px;font-size:11px;font-weight:800;">예정 (해당 주에 자동 표시)</span>'
+                  : '<span style="background:#94a3b8;color:#fff;border-radius:6px;padding:2px 8px;font-size:11px;font-weight:800;">지난주</span>');
         banner.className = 'menu-status-banner msb-ok';
         banner.innerHTML = `
             <span class="msb-icon">✅</span>
             <div class="msb-text">
-                <div>금주 식단표가 등록되어 있습니다.</div>
-                <div class="msb-date">업로드: ${uploadDate} · ${data.fileName || ''}</div>
+                <div>식단표 등록됨 &nbsp;${tag}</div>
+                <div class="msb-date">기간: ${data.period || '기간미상'} · 업로드 ${uploadDate} · ${data.fileName || ''}</div>
             </div>`;
-        if (data.url.startsWith('data:image')) {
-            img.src = data.url;
-            preview.style.display = 'block';
-        } else {
-            preview.style.display = 'none';
-        }
+        if (data.url.startsWith('data:image')) { img.src = data.url; preview.style.display = 'block'; }
+        else { preview.style.display = 'none'; }
         delBtn.style.display = 'flex';
     } else {
         // ❌ 미등록 또는 지난 주 데이터
@@ -886,8 +911,10 @@ function handleFileSelect(e) {
     const reader = new FileReader();
     reader.onload = async function(ev) {
         const base64 = ev.target.result; // data:image/...;base64,...
+        const mon = _menuSelMonday();
         const payload = {
-            weekKey:    getThisWeekKey(),
+            weekKey:    mon,
+            period:     _menuPeriodStr(mon),
             uploadedAt: Date.now(),
             fileName:   file.name,
             url:        base64
@@ -964,12 +991,18 @@ let _editId = null;
 let _dragId = null;
 let _curMonth = null;
 let _deptPresets = {};
+let _adjust = {};
+let _mealAgg = null;
+let _mealMonth = null;
+let _editCntId = null;
 const STAFF_ROSTER = 'system/staffMeal/roster';
 const STAFF_CHECKS = 'system/staffMeal/checks';
 
 window.addEventListener('DOMContentLoaded', () => {
     db.ref(STAFF_ROSTER).on('value', s => { _staffRoster = s.val() || {}; renderRoster(); fillDeptOptions(); renderMealStats(getToday()); });
     db.ref('system/staffMeal/depts').on('value', s => { _deptPresets = s.val() || {}; fillDeptOptions(); });
+    renderMenuWeekBar();
+    loadAccount();
     setMonth(getToday().slice(0,7));
     startClock();
 });
@@ -985,6 +1018,30 @@ function showTab(id){
    - 토/일이면 차주로 전환(타 플랫폼과 동일 규칙)
 ══════════════════════════ */
 let _courseWeekOffset = 0;
+let _menuWeekOffset = 0;
+function _menuSelMonday(){ return _cwAddDays(getMondayOf(getToday()), _menuWeekOffset*7); }
+function _menuPeriodStr(mon){ const fri=_cwAddDays(mon,4); const f=iso=>{const p=iso.split('-');return `${p[0]}.${p[1]}.${p[2]}`;}; return `${f(mon)} ~ ${f(fri)} (월~금)`; }
+function menuWeekSet(off){ _menuWeekOffset=off; renderMenuWeekBar(); }
+function renderMenuWeekBar(){
+    const bar=document.getElementById('menuWeekBar'); if(!bar) return;
+    const mon=_menuSelMonday();
+    bar.innerHTML = [0,1,2].map(i=>`<button class="cw-btn ${i===_menuWeekOffset?'on':''}" onclick="menuWeekSet(${i})">${i===0?'이번주':(i+1)+'주차'}</button>`).join('')
+      + `<span class="cw-range"><i class="fa-regular fa-calendar"></i> ${_menuPeriodStr(mon)}</span>`;
+}
+/* 사외강사 계좌 */
+function loadAccount(){
+    db.ref('system/staffMeal/account').once('value').then(s=>{
+        const v=s.val()||{}; const acc=(typeof v==='object')?v:{number:String(v||'')};
+        const set=(id,val)=>{const e=document.getElementById(id); if(e)e.value=val||'';};
+        set('acctBank',acc.bank); set('acctNo',acc.number); set('acctHolder',acc.holder);
+    }).catch(()=>{});
+}
+function saveAccount(){
+    const bank=(document.getElementById('acctBank').value||'').trim();
+    const number=(document.getElementById('acctNo').value||'').trim();
+    const holder=(document.getElementById('acctHolder').value||'').trim();
+    db.ref('system/staffMeal/account').set({ bank, number, holder, ts:firebase.database.ServerValue.TIMESTAMP }).then(()=>showToast('✅ 사외강사 계좌가 저장되었습니다.'));
+}
 function _cwAddDays(iso, n){ const d=new Date(iso+'T00:00:00'); d.setDate(d.getDate()+n); return toLocalStr(d); }
 function _cwTargetMonday(todayStr){
     const d=new Date(todayStr+'T00:00:00'); const dow=d.getDay();   // 0=일 .. 6=토
@@ -1217,7 +1274,9 @@ function loadStaffMeal(){
         root.child('checks').once('value'),
         root.child('dinner').once('value'),
         root.child('notes').once('value'),
-    ]).then(([bs,cs,ds,ns])=>{
+        root.child('adjust').child(month).once('value'),
+    ]).then(([bs,cs,ds,ns,adjs])=>{
+        _adjust = adjs.val() || {};
         const B=bs.val()||{}, C=cs.val()||{}, D=ds.val()||{}, N=ns.val()||{};
         const agg={};
         const ensure=(key,rec)=>{
@@ -1243,8 +1302,11 @@ function loadStaffMeal(){
             if(!date.startsWith(month)||!recs) return;
             Object.entries(recs).forEach(([key,rec])=>{ if(rec&&rec.note){ ensure(key,rec).notes[date]=rec.note; } });
         });
-        const totals={ all:0, staff:0, internal:0, external:0 };
-        Object.values(agg).forEach(a=>{ totals.all+=a.count; totals[a.category]+=a.count; });
+        Object.entries(_staffRoster||{}).forEach(([id,r])=>{
+            if(!r) return;
+            if(!agg[id]) agg[id]={ name:r.name||'-', dept:r.dept||'', position:r.position||'', category:'staff', idValue:'', count:0, days:{}, notes:{} };
+        });
+        _mealAgg=agg; _mealMonth=month;
         renderStaffCounts(agg, month);
     }).catch(()=>{ const box=document.getElementById('staffCountList'); if(box) box.innerHTML='<div class="empty-msg">조회 실패</div>'; });
 }
@@ -1258,33 +1320,96 @@ function renderStaffSummary(t, month){
 }
 function renderStaffCounts(agg, month){
     const box=document.getElementById('staffCountList'); if(!box) return;
-    const rows=Object.entries(agg).sort((a,b)=>b[1].count-a[1].count);
-    if(!rows.length){ box.innerHTML='<div class="empty-msg">해당 월의 식사 기록이 없습니다.</div>'; return; }
     const catLabel={staff:'직원', internal:'사내강사', external:'사외강사'};
     const catColor={staff:'#10b981', internal:'#6366f1', external:'#f59e0b'};
-    let gb=0,gl=0,gd=0;
-    let html=`<table class="cnt-table"><thead><tr><th style="width:78px;">구분</th><th>소속</th><th>직책</th><th>이름</th><th style="width:240px;">식사횟수 (아·점·저)</th><th>비고</th></tr></thead><tbody>`;
+    const catOrd={staff:0,internal:1,external:2};
+    const rows=Object.entries(agg).sort((a,b)=>{
+        const c=(catOrd[a[1].category]||0)-(catOrd[b[1].category]||0); if(c) return c;
+        const d=(a[1].dept||'').localeCompare(b[1].dept||'','ko'); if(d) return d;
+        return (a[1].name||'').localeCompare(b[1].name||'','ko');
+    });
+    let gb=0,gl=0,gd=0,gTot=0,tb='';
     rows.forEach(([key,a])=>{
         let bc=0,lc=0,dc=0; Object.values(a.days||{}).forEach(md=>{ if(md.b)bc++; if(md.l)lc++; if(md.d)dc++; });
-        gb+=bc; gl+=lc; gd+=dc;
-        const tot=bc+lc+dc;
-        const notes=[...new Set(Object.values(a.notes||{}).filter(Boolean))];
-        const noteTxt = notes.length ? escH(notes.join(', ')) : '<span style="color:#cbd5e1;">-</span>';
+        const actual=bc+lc+dc;
+        const adj=_adjust[key];
+        const shown=(adj&&adj.count!=null)?adj.count:actual;
+        const corrected=(adj&&adj.count!=null&&adj.count!==actual);
+        gb+=bc; gl+=lc; gd+=dc; gTot+=shown;
         const dept = a.category==='staff' ? escH(a.dept||'-') : '-';
-        const pos = a.category==='staff' ? escH(a.position||'-') : (a.idValue?escH((a.category==='internal'?'사번 ':'연락처 ')+a.idValue):'-');
-        html+=`<tr class="cnt-row" onclick="toggleCal('${key}')">
+        const pos  = a.category==='staff' ? escH(a.position||'-') : (a.idValue?escH((a.category==='internal'?'사번 ':'연락처 ')+a.idValue):'-');
+        let cntCell;
+        if(key===_editCntId){
+            cntCell=`<input id="edit-cnt" type="number" min="0" value="${shown}" style="width:64px; height:32px; text-align:center; border:1.5px solid #2563eb; border-radius:7px; font-weight:800;"> <button class="r-actbtn" style="background:#16a34a;color:#fff;" onclick="saveCnt('${key}',${actual})">저장</button> <button class="r-actbtn" style="background:#e2e8f0;color:#475569;" onclick="cancelCnt()">취소</button>`;
+        } else {
+            cntCell=`<span style="cursor:pointer;" onclick="toggleCal('${key}')"><b style="font-size:17px; color:${corrected?'#dc2626':'var(--navy)'};">${shown}</b><small style="font-size:11px;">회</small> <span class="cnt-bld">아 ${bc}·점 ${lc}·저 ${dc}</span>${corrected?` <span class="cnt-corr" title="실제 ${actual}회">수정</span>`:''}</span> <button class="r-actbtn r-edit" onclick="editCnt('${key}')">수정</button>`;
+        }
+        const memo=(adj&&adj.memo)||'';
+        const noteCell=`${memo?`<span style="font-size:13px;">${escH(memo)}</span> `:''}<i class="fa-solid fa-pen-to-square memo-ic" title="메모 입력" onclick="editMemo('${key}')"></i>`;
+        tb+=`<tr class="cnt-row">
             <td class="c"><span style="background:${catColor[a.category]}1a; color:${catColor[a.category]}; font-weight:800; border-radius:6px; padding:2px 8px; font-size:12px;">${catLabel[a.category]||'직원'}</span></td>
             <td>${dept}</td>
             <td class="c" style="color:var(--muted); font-weight:700;">${pos}</td>
             <td class="rname">${escH(a.name)}</td>
-            <td class="c"><b style="font-size:17px; color:var(--navy);">${tot}</b><small style="font-size:11px;">회</small> <span class="cnt-bld">아 ${bc} · 점 ${lc} · 저 ${dc}</span> <i class="fa-solid fa-chevron-down cnt-chev"></i></td>
-            <td style="font-size:13px;">${noteTxt}</td>
+            <td class="c">${cntCell}</td>
+            <td>${noteCell}</td>
         </tr>
         <tr><td colspan="6" id="cal-${key}" style="display:none; background:#f8fafc; padding:14px;">${renderMealCalendar(a, month)}</td></tr>`;
     });
-    const gtot=gb+gl+gd;
-    html+=`</tbody><tfoot><tr class="cnt-total"><td colspan="4" style="text-align:right; font-weight:900; padding-right:14px;">총 합계</td><td class="c"><b style="font-size:18px; color:#2563eb;">${gtot}</b><small style="font-size:11px;">회</small> <span class="cnt-bld">아 ${gb} · 점 ${gl} · 저 ${gd}</span></td><td></td></tr></tfoot></table>`;
-    box.innerHTML=html;
+    for(let i=rows.length;i<10;i++){ tb+=`<tr class="cnt-empty"><td>&nbsp;</td><td></td><td></td><td></td><td></td><td></td></tr>`; }
+    box.innerHTML=`<table class="cnt-table"><thead><tr><th style="width:78px;">구분</th><th>소속</th><th>직책</th><th>이름</th><th style="width:300px;">식사횟수 (아·점·저)</th><th>비고</th></tr></thead><tbody>${tb}</tbody><tfoot><tr class="cnt-total"><td colspan="4" style="text-align:right; font-weight:900; padding-right:14px;">총 합계</td><td class="c"><b style="font-size:18px; color:#2563eb;">${gTot}</b><small style="font-size:11px;">회</small> <span class="cnt-bld">아 ${gb}·점 ${gl}·저 ${gd}</span></td><td></td></tr></tfoot></table>`;
+}
+/* 총횟수 수정 / 메모 */
+function editCnt(key){ _editCntId=key; renderStaffCounts(_mealAgg,_mealMonth); }
+function cancelCnt(){ _editCntId=null; renderStaffCounts(_mealAgg,_mealMonth); }
+function saveCnt(key, actual){
+    const v=parseInt(document.getElementById('edit-cnt').value,10);
+    if(isNaN(v)||v<0){ showToast('0 이상의 숫자를 입력하세요.'); return; }
+    _editCntId=null;
+    const ref=db.ref(`system/staffMeal/adjust/${_mealMonth}/${key}`);
+    if(v===actual){ ref.remove().then(()=>{ delete _adjust[key]; renderStaffCounts(_mealAgg,_mealMonth); }); return; }
+    const memo=prompt(`실제 식사횟수(${actual}회)와 다릅니다.\n사유(메모)를 남겨주세요. (선택, 취소 시 메모 없이 저장)`, (_adjust[key]&&_adjust[key].memo)||'');
+    const payload={ count:v, memo:(memo||'').trim(), ts:firebase.database.ServerValue.TIMESTAMP };
+    ref.set(payload).then(()=>{ _adjust[key]={count:v,memo:payload.memo}; renderStaffCounts(_mealAgg,_mealMonth); showToast('수정되었습니다.'); });
+}
+function editMemo(key){
+    const cur=(_adjust[key]&&_adjust[key].memo)||'';
+    const memo=prompt('비고 메모를 입력하세요.', cur); if(memo===null) return;
+    const ref=db.ref(`system/staffMeal/adjust/${_mealMonth}/${key}`);
+    const adj=_adjust[key]||{};
+    const payload={ memo:memo.trim(), ts:firebase.database.ServerValue.TIMESTAMP };
+    if(adj.count!=null) payload.count=adj.count;
+    if(!memo.trim() && adj.count==null){ ref.remove().then(()=>{ delete _adjust[key]; renderStaffCounts(_mealAgg,_mealMonth); }); return; }
+    ref.update(payload).then(()=>{ _adjust[key]={...adj, memo:memo.trim()}; renderStaffCounts(_mealAgg,_mealMonth); });
+}
+/* 엑셀 / PDF 다운로드 */
+function _mealRowsSorted(){
+    const catOrd={staff:0,internal:1,external:2};
+    return Object.entries(_mealAgg||{}).sort((a,b)=>((catOrd[a[1].category]||0)-(catOrd[b[1].category]||0))||((a[1].dept||'').localeCompare(b[1].dept||'','ko'))||((a[1].name||'').localeCompare(b[1].name||'','ko')));
+}
+function exportMealExcel(){
+    if(!_mealAgg){ showToast('먼저 월을 조회하세요.'); return; }
+    const catLabel={staff:'직원',internal:'사내강사',external:'사외강사'};
+    let body='', gb=0,gl=0,gd=0,gT=0;
+    _mealRowsSorted().forEach(([key,a])=>{
+        let bc=0,lc=0,dc=0; Object.values(a.days||{}).forEach(md=>{ if(md.b)bc++; if(md.l)lc++; if(md.d)dc++; });
+        const actual=bc+lc+dc; const adj=_adjust[key]; const shown=(adj&&adj.count!=null)?adj.count:actual;
+        gb+=bc;gl+=lc;gd+=dc;gT+=shown;
+        const memo=(adj&&adj.memo)||''; const corr=(adj&&adj.count!=null&&adj.count!==actual)?`(실제 ${actual})`:'';
+        const dept=a.category==='staff'?(a.dept||''):''; const pos=a.category==='staff'?(a.position||''):(a.idValue||'');
+        body+=`<tr><td>${catLabel[a.category]||'직원'}</td><td>${escH(dept)}</td><td>${escH(pos)}</td><td>${escH(a.name)}</td><td>${shown} ${corr}</td><td>${bc}</td><td>${lc}</td><td>${dc}</td><td>${escH(memo)}</td></tr>`;
+    });
+    const html=`<html><head><meta charset="utf-8"></head><body><table border="1"><thead><tr><th>구분</th><th>소속</th><th>직책</th><th>이름</th><th>총횟수</th><th>아침</th><th>점심</th><th>저녁</th><th>비고</th></tr></thead><tbody>${body}<tr><td colspan="4">총 합계</td><td>${gT}</td><td>${gb}</td><td>${gl}</td><td>${gd}</td><td></td></tr></tbody></table></body></html>`;
+    const blob=new Blob(['\ufeff'+html],{type:'application/vnd.ms-excel;charset=utf-8'});
+    const url=URL.createObjectURL(blob); const el=document.createElement('a'); el.href=url; el.download=`직원식수_${_mealMonth}.xls`; document.body.appendChild(el); el.click(); el.remove(); setTimeout(()=>URL.revokeObjectURL(url),1500);
+}
+function exportMealPDF(){
+    const tbl=document.querySelector('#staffCountList table'); if(!tbl){ showToast('먼저 월을 조회하세요.'); return; }
+    const w=window.open('','_mealpdf'); if(!w){ showToast('팝업이 차단되었습니다.'); return; }
+    w.document.write(`<html><head><meta charset="utf-8"><title>직원 식수 ${_mealMonth}</title>
+      <style>body{font-family:'Malgun Gothic','맑은 고딕',sans-serif; padding:24px;} h2{text-align:center; margin:0 0 16px;} table{width:100%; border-collapse:collapse; font-size:13px;} th,td{border:1px solid #94a3b8; padding:7px 9px; text-align:center;} thead th{background:#1e3a8a; color:#fff;} tfoot td{background:#e2e8f0; font-weight:800;} .cnt-empty,td[id^=cal-]{display:none!important;} button,input{display:none!important;} .cnt-corr{color:#dc2626;} .memo-ic{display:none!important;}</style></head>
+      <body><h2>직원 식수 관리 — ${_mealMonth}</h2>${tbl.outerHTML}</body></html>`);
+    w.document.close(); w.focus(); setTimeout(()=>{ try{w.print();}catch(e){} }, 350);
 }
 function toggleCal(key){ const el=document.getElementById('cal-'+key); if(el) el.style.display=(el.style.display==='none'?'table-cell':'none'); }
 function renderMealCalendar(a, month){
@@ -1304,7 +1429,7 @@ function renderMealCalendar(a, month){
 }
 </script>
 <style>@media print{#__ver{display:none!important}}</style>
-<div id="__ver" style="position:fixed;right:7px;bottom:7px;z-index:2147483000;background:rgba(15,23,42,.72);color:#cbd5e1;font:700 10px/1 monospace;padding:4px 8px;border-radius:7px;pointer-events:none;letter-spacing:.3px;">영양사 vM · 260612-1557</div>
+<div id="__ver" style="position:fixed;right:7px;bottom:7px;z-index:2147483000;background:rgba(15,23,42,.72);color:#cbd5e1;font:700 10px/1 monospace;padding:4px 8px;border-radius:7px;pointer-events:none;letter-spacing:.3px;">영양사 vN · 260612-1627</div>
 </body>
 </html>
-<!-- @build 20260612-155755 (영양사 vM: COURSE 연간계획 기반 주차별(토~금) 보기 + 2·3주차 미리보기 인덱스) -->
+<!-- @build 20260612-162758 (영양사 vN: MEALS 전직원·10줄·총횟수수정·메모·엑셀/PDF / MENU 주차선택+기간(월~금) / 사외강사 계좌입력) -->

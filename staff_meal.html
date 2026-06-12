@@ -22,7 +22,18 @@
                   box-shadow:0 6px 20px rgba(37,99,235,.25); }
         .topbar .ttl { font-size:20px; font-weight:900; letter-spacing:-.3px; }
         .topbar .ttl small { display:block; font-size:11px; color:#bfdbfe; font-weight:700; letter-spacing:1.5px; margin-top:3px; }
-        .topbar .info { display:flex; align-items:center; gap:16px; }
+        .topbar .info { display:flex; align-items:center; gap:10px; }
+        .htop-btn { display:inline-flex; align-items:center; gap:7px; height:44px; padding:0 15px; border-radius:11px; border:1px solid rgba(255,255,255,.28); background:rgba(255,255,255,.14); color:#fff; font-weight:800; font-size:14px; cursor:pointer; white-space:nowrap; transition:.12s; }
+        .htop-btn:hover { background:rgba(255,255,255,.24); }
+        .htop-btn.ext { background:rgba(245,158,11,.30); border-color:rgba(251,191,36,.55); }
+        .htop-btn.acc { background:rgba(16,185,129,.28); border-color:rgba(52,211,153,.55); }
+        .htop-btn.snd { width:44px; padding:0; justify-content:center; }
+        .htop-btn.snd.off { opacity:.55; }
+        .clock-pill { display:inline-flex; align-items:center; gap:8px; background:rgba(255,255,255,.16); border:1px solid rgba(255,255,255,.28); border-radius:12px; padding:0 16px; height:44px; font-weight:900; font-size:16px; letter-spacing:.3px; color:#fff; }
+        .clock-pill .ck-ap { font-size:12px; color:#bfdbfe; }
+        .check-burst { position:fixed; inset:0; display:flex; align-items:center; justify-content:center; pointer-events:none; z-index:9999; }
+        .check-burst .cb { width:150px; height:150px; border-radius:50%; background:rgba(34,197,94,.96); color:#fff; display:flex; align-items:center; justify-content:center; font-size:78px; box-shadow:0 14px 44px rgba(34,197,94,.5); animation:cbpop .6s ease forwards; }
+        @keyframes cbpop { 0%{transform:scale(.4); opacity:0;} 28%{transform:scale(1); opacity:1;} 68%{transform:scale(1); opacity:1;} 100%{transform:scale(1.12); opacity:0;} }
         .topbar .when { text-align:right; }
         .topbar .date { font-size:15px; font-weight:800; }
         .topbar .cnt  { font-size:13px; color:#bfdbfe; font-weight:800; margin-top:2px; }
@@ -107,13 +118,14 @@
         .meal-panel { width:100%; max-width:1080px; }
         .mtable-wrap { overflow-x:auto; border-radius:14px; box-shadow:0 8px 24px rgba(15,23,42,.08); }
         .meal-table { width:100%; border-collapse:collapse; background:#fff; }
-        .meal-table th { background:linear-gradient(135deg,#1e3a8a,#2563eb); color:#fff; font-size:14px; font-weight:800; padding:14px 10px; white-space:nowrap; }
-        .meal-table td { border:1px solid #e2e8f0; padding:10px; text-align:center; font-size:15px; }
+        .meal-table thead tr { background:linear-gradient(135deg,#1e3a8a 0%,#2563eb 100%); }
+        .meal-table th { background:transparent; color:#fff; font-size:14px; font-weight:800; padding:14px 10px; white-space:nowrap; }
+        .meal-table td { border:1px solid #e2e8f0; padding:17px 14px; text-align:center; font-size:17px; }
         .meal-table .dept-cell { background:#eff6ff; font-weight:900; color:#1e40af; font-size:15px; vertical-align:middle; white-space:nowrap; }
         .meal-table .pos-cell { color:#64748b; font-weight:700; white-space:nowrap; }
         .meal-table .name-cell { font-weight:900; color:#0f172a; white-space:nowrap; }
         .meal-table tbody tr:hover { background:#f8fafc; }
-        .mchk { display:inline-flex; align-items:center; justify-content:center; width:40px; height:40px; border-radius:11px; border:2px solid #cbd5e1; background:#fff; color:#fff; cursor:pointer; font-size:18px; transition:transform .1s, background .12s, border-color .12s; }
+        .mchk { display:inline-flex; align-items:center; justify-content:center; width:50px; height:50px; border-radius:13px; border:2px solid #cbd5e1; background:#fff; color:#fff; cursor:pointer; font-size:24px; transition:transform .1s, background .12s, border-color .12s; }
         .mchk:active { transform:scale(.88); }
         .mchk.on { background:#22c55e; border-color:#16a34a; box-shadow:0 4px 12px rgba(34,197,94,.35); }
         .note-inp { width:100%; min-width:130px; border:1.5px solid #e2e8f0; border-radius:9px; padding:9px 11px; font-size:14px; font-weight:600; outline:none; }
@@ -124,10 +136,12 @@
     <div class="topbar">
         <div class="ttl">KAC 항공기술훈련원 식당 <small>MEAL CHECK-IN</small></div>
         <div class="info">
-            <div class="when">
-                <div class="date" id="todayLabel">-</div>
-                <div class="cnt" id="todayCount">오늘 식사 0명</div>
-            </div>
+            <div class="clock-pill" id="hdrClock">-</div>
+            <div class="when"><div class="cnt" id="todayCount">오늘 식사 0명</div></div>
+            <button class="htop-btn snd" id="sndToggle" onclick="toggleSound()" title="소리 켜기/끄기"><i class="fa-solid fa-volume-high"></i></button>
+            <button class="htop-btn int" onclick="showInstrQr('internal')"><i class="fa-solid fa-qrcode"></i> 사내강사 QR</button>
+            <button class="htop-btn ext" onclick="showInstrQr('external')"><i class="fa-solid fa-qrcode"></i> 사외강사 QR</button>
+            <button class="htop-btn acc" onclick="showAccount()"><i class="fa-solid fa-building-columns"></i> 계좌입금</button>
             <button class="nutri-btn" onclick="location.href='nutritionist.html'"><i class="fa-solid fa-clipboard-list"></i> 영양사 관리</button>
         </div>
     </div>
@@ -145,7 +159,7 @@ const today = (() => { const d=new Date(); return `${d.getFullYear()}-${String(d
 const monthKey = today.slice(0,7);
 function nowTime(){ return new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'}); }
 
-document.getElementById('todayLabel').textContent = today + ' (' + ['일','월','화','수','목','금','토'][new Date().getDay()] + ')';
+startClock(); applySoundIcon();
 
 // 실시간 구독: 명단 + 오늘 체크 현황
 db.ref('system/staffMeal/roster').on('value', s => { ROSTER = s.val() || {}; if (CURRENT==='staff') renderStaffList(); refreshCount(); });
@@ -169,29 +183,7 @@ const stage = document.getElementById('stage');
 let MOBILE_MODE=null;   // QR로 폰 접속 시 'internal'|'external'
 function goHome(){
     if(MOBILE_MODE){ showMobileDone(); return; }
-    CURRENT='home';
-    stage.innerHTML = `
-        <div class="home">
-            <h2>식사하실 분을 선택해 주세요</h2>
-            <p>해당하는 구분을 누르면 식사 체크인 화면으로 이동합니다.</p>
-            <div class="cat-grid">
-                <div class="cat-btn cat-staff" onclick="goStaff()">
-                    <div class="ico"><i class="fa-solid fa-id-badge"></i></div>
-                    <div class="nm">항공기술훈련원 직원</div>
-                    <div class="sub">명단에서 본인 이름 터치</div>
-                </div>
-                <div class="cat-btn cat-int" onclick="showInstrQr('internal')">
-                    <div class="ico"><i class="fa-solid fa-qrcode"></i></div>
-                    <div class="nm">사내 강사 (KAC)</div>
-                    <div class="sub">QR 스캔 → 본인 폰에서 입력</div>
-                </div>
-                <div class="cat-btn cat-ext" onclick="showInstrQr('external')">
-                    <div class="ico"><i class="fa-solid fa-qrcode"></i></div>
-                    <div class="nm">사외 강사</div>
-                    <div class="sub">QR 스캔 → 본인 폰에서 입력</div>
-                </div>
-            </div>
-        </div>`;
+    goStaff();   // 키오스크 홈 = 직원 식수체크 표
 }
 
 // ── 직원 명단 ──
@@ -218,35 +210,74 @@ function renderStaffList(){
                     ${cell('b', !!TODAY_BREAKFAST[id])}
                     ${cell('l', !!TODAY_CHECKS[id])}
                     ${cell('d', !!TODAY_DINNER[id])}
-                    <td><input class="note-inp" value="${esc((TODAY_NOTES[id]&&TODAY_NOTES[id].note)||'')}" placeholder="-" onchange="saveNote('${id}', this.value)"></td>
                 </tr>`;
             });
         });
         inner = `<div class="mtable-wrap"><table class="meal-table">
-            <thead><tr><th>소속</th><th>직책</th><th>이름</th><th>아침</th><th>점심</th><th>저녁</th><th>비고</th></tr></thead>
+            <thead><tr><th>소속</th><th>직책</th><th>이름</th><th>아침</th><th>점심</th><th>저녁</th></tr></thead>
             <tbody>${rows}</tbody></table></div>`;
     }
     stage.innerHTML = `
         <div class="meal-panel">
-            <button class="back" onclick="goHome()"><i class="fa-solid fa-arrow-left"></i> 처음으로</button>
             <div class="screen-ttl">항공기술훈련원 직원 식수 체크</div>
-            <div class="screen-sub">본인 줄에서 <b>아침·점심·저녁</b> 칸을 눌러 체크하세요. 다시 누르면 취소됩니다.</div>
+            <div class="screen-sub">본인 줄에서 <b>아침·점심·저녁</b> 칸을 눌러 체크하세요. 다시 누르면 취소됩니다. &nbsp;|&nbsp; 강사는 상단 <b>QR</b> 버튼을 이용해 주세요.</div>
             ${inner}
         </div>`;
 }
 function toggleMeal(id, key){
     const r = ROSTER[id]; if(!r) return;
     const TS = firebase.database.ServerValue.TIMESTAMP;
-    if(key==='b'){
-        const ref=db.ref(`system/staffMeal/breakfast/${today}/${id}`);
-        if(TODAY_BREAKFAST[id]) ref.remove(); else ref.set({ name:r.name||'', dept:r.dept||'', position:r.position||'', ts:TS, month:monthKey });
-    } else if(key==='l'){
-        const ref=db.ref(`system/staffMeal/checks/${today}/${id}`);
-        if(TODAY_CHECKS[id]) ref.remove(); else ref.set({ name:r.name||'', dept:r.dept||'', position:r.position||'', category:'staff', staffId:id, time:nowTime(), ts:TS, month:monthKey });
-    } else if(key==='d'){
-        const ref=db.ref(`system/staffMeal/dinner/${today}/${id}`);
-        if(TODAY_DINNER[id]) ref.remove(); else ref.set({ name:r.name||'', dept:r.dept||'', position:r.position||'', category:'staff', ts:TS });
+    const ref = key==='b' ? db.ref(`system/staffMeal/breakfast/${today}/${id}`)
+              : key==='l' ? db.ref(`system/staffMeal/checks/${today}/${id}`)
+              :             db.ref(`system/staffMeal/dinner/${today}/${id}`);
+    const isOn = key==='b' ? !!TODAY_BREAKFAST[id] : key==='l' ? !!TODAY_CHECKS[id] : !!TODAY_DINNER[id];
+    const labels = { b:'아침', l:'점심', d:'저녁' };
+    if(isOn){
+        confirmMealCancel(r.name, labels[key], ()=>{ ref.remove(); playSnd('cancel'); });
+        return;
     }
+    let payload;
+    if(key==='b') payload={ name:r.name||'', dept:r.dept||'', position:r.position||'', ts:TS, month:monthKey };
+    else if(key==='l') payload={ name:r.name||'', dept:r.dept||'', position:r.position||'', category:'staff', staffId:id, time:nowTime(), ts:TS, month:monthKey };
+    else payload={ name:r.name||'', dept:r.dept||'', position:r.position||'', category:'staff', ts:TS };
+    ref.set(payload);
+    playSnd('sel'); flashCheck();
+}
+function confirmMealCancel(name, mealLabel, onYes){
+    ovCard.className='ov-card ov-dup';
+    ovCard.innerHTML = `<div class="badge-done badge-warn">!</div>
+        <div class="ov-ttl">체크 취소</div>
+        <div class="ov-name">${esc(name)} · ${esc(mealLabel)}</div>
+        <div class="ov-sub">이미 체크된 항목입니다.<br>취소하시겠습니까?</div>
+        <div class="ov-actions">
+            <button class="ov-btn gray" onclick="closeOverlay()">유지</button>
+            <button class="ov-btn red" id="ovMealCancelBtn">취소하기</button>
+        </div>`;
+    overlay.classList.add('show');
+    document.getElementById('ovMealCancelBtn').onclick = ()=>{ onYes(); closeOverlay(); };
+}
+/* ── 시계 / 사운드 / 체크 애니메이션 ── */
+function startClock(){
+    const el=document.getElementById('hdrClock'); if(!el) return;
+    const days=['일','월','화','수','목','금','토'];
+    const tick=()=>{ const n=new Date(), p=x=>String(x).padStart(2,'0');
+        let h=n.getHours(); const ap=h<12?'AM':'PM'; h=h%12||12;
+        el.innerHTML=`${n.getFullYear()}-${p(n.getMonth()+1)}-${p(n.getDate())} (${days[n.getDay()]}) ${p(h)}:${p(n.getMinutes())}:${p(n.getSeconds())} <span class="ck-ap">${ap}</span>`; };
+    tick(); setInterval(tick,1000);
+}
+let SOUND_ON = (()=>{ try{ return localStorage.getItem('kacMealSound')!=='off'; }catch(e){ return true; } })();
+const SND = { sel:'선택.mp3', cancel:'취소.mp3' };
+function playSnd(which){ if(!SOUND_ON) return; try{ const a=new Audio(encodeURI(SND[which])); a.volume=0.9; a.play().catch(()=>{}); }catch(e){} }
+function applySoundIcon(){
+    const b=document.getElementById('sndToggle'); if(!b) return;
+    b.classList.toggle('off', !SOUND_ON);
+    const ic=b.querySelector('i'); if(ic) ic.className = SOUND_ON ? 'fa-solid fa-volume-high' : 'fa-solid fa-volume-xmark';
+}
+function toggleSound(){ SOUND_ON=!SOUND_ON; try{ localStorage.setItem('kacMealSound', SOUND_ON?'on':'off'); }catch(e){} applySoundIcon(); }
+function flashCheck(){
+    const w=document.createElement('div'); w.className='check-burst';
+    w.innerHTML='<div class="cb"><i class="fa-solid fa-check"></i></div>';
+    document.body.appendChild(w); setTimeout(()=>w.remove(), 660);
 }
 function saveNote(id, text){
     const r = ROSTER[id]; if(!r) return;
@@ -396,6 +427,23 @@ function showInstrQr(mode){
     catch(e){ box.textContent = url.toString(); }
 }
 
+/* ── 사외강사 계좌 안내 ── */
+function showAccount(){
+    db.ref('system/staffMeal/account').once('value').then(s=>{
+        const v=s.val();
+        const acc=(v&&typeof v==='object')?v:{ bank:'', number:(typeof v==='string'?v:''), holder:'' };
+        const has=acc.number && String(acc.number).trim();
+        const line = has ? `${esc(acc.bank||'')} <span style="user-select:all;">${esc(acc.number)}</span>${acc.holder?`<div style="font-size:14px;font-weight:700;color:#64748b;margin-top:6px;">예금주 ${esc(acc.holder)}</div>`:''}` : '';
+        ovCard.className='ov-card';
+        ovCard.innerHTML = `
+            <div class="ov-ttl" style="color:#0f172a;">사외 강사 식대 계좌</div>
+            <div class="ov-sub" style="margin-bottom:16px;">아래 계좌로 식대를 입금해 주세요.</div>
+            <div style="font-size:23px; font-weight:900; color:#0f172a; background:#f0fdf4; border:1.5px solid #bbf7d0; border-radius:14px; padding:20px; line-height:1.4;">${has?line:'등록된 계좌가 없습니다.<br><span style="font-size:13px;font-weight:700;color:#64748b;">영양사 페이지에서 계좌를 입력해 주세요.</span>'}</div>
+            <div class="ov-actions"><button class="ov-btn gray" onclick="closeOverlay()">닫기</button></div>`;
+        overlay.classList.add('show');
+    }).catch(()=>{});
+}
+
 /* ── 폰 입력 완료 화면 ── */
 function showMobileDone(){
     CURRENT='done';
@@ -420,7 +468,7 @@ function esc(v){ return String(v==null?'':v).replace(/[&<>"']/g,c=>({'&':'&amp;'
 /* 초기 진입은 위의 ?go 분기에서 처리됨 */
 </script>
 <style>@media print{#__ver{display:none!important}}</style>
-<div id="__ver" style="position:fixed;right:7px;bottom:7px;z-index:2147483000;background:rgba(15,23,42,.72);color:#cbd5e1;font:700 10px/1 monospace;padding:4px 8px;border-radius:7px;pointer-events:none;letter-spacing:.3px;">식당패널 vF · 260612-1441</div>
+<div id="__ver" style="position:fixed;right:7px;bottom:7px;z-index:2147483000;background:rgba(15,23,42,.72);color:#cbd5e1;font:700 10px/1 monospace;padding:4px 8px;border-radius:7px;pointer-events:none;letter-spacing:.3px;">식당패널 vH · 260612-1625</div>
 </body>
 </html>
-<!-- @build 20260612-144106 (식당패널 vF: 직원 표 순서 영양사 설정 반영) -->
+<!-- @build 20260612-162514 (식당패널 vH: 상단 날짜·시계 / 비고열삭제·행확대 / 체크 선택음+체크애니 / 취소확인 팝업+취소음 / 사운드 on-off 토글) -->
