@@ -28,9 +28,8 @@
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; margin: 0; padding: 0; }
         body {
             font-family: 'Pretendard', sans-serif;
-            background: #cfd8e3;
-            display: flex;
-            justify-content: center;
+            background: var(--bg);
+            display: block;
             color: var(--text);
             overflow-x: hidden;
         }
@@ -392,7 +391,7 @@
         .rtable tbody tr[draggable]:hover .drag-grip { color:#2563eb; }
         /* ── 전체폭 헤더 + 중앙정렬 본문 (교육지원부 방식) ── */
         body { background: var(--bg); }
-        .app-content { max-width: 1180px; margin: 0 auto; width: 100%; }
+        .app-content { max-width: 1180px; margin: 0 auto; width: 100%; padding: 22px 22px 48px; overflow-y: visible; }
         .header-left { display:flex; align-items:center; gap:13px; min-width:0; position:relative; z-index:1; }
         .header-titlewrap { min-width:0; }
         .h-btn.portal { background:rgba(255,255,255,0.18); }
@@ -1117,7 +1116,7 @@ function renderStaffCounts(agg){
 }
 </script>
 <style>@media print{#__ver{display:none!important}}</style>
-<div id="__ver" style="position:fixed;right:7px;bottom:7px;z-index:2147483000;background:rgba(15,23,42,.72);color:#cbd5e1;font:700 10px/1 monospace;padding:4px 8px;border-radius:7px;pointer-events:none;letter-spacing:.3px;">영양사 vH · 260612-1441</div>
+<div id="__ver" style="position:fixed;right:7px;bottom:7px;z-index:2147483000;background:rgba(15,23,42,.72);color:#cbd5e1;font:700 10px/1 monospace;padding:4px 8px;border-radius:7px;pointer-events:none;letter-spacing:.3px;">영양사 vI · 260612-1445</div>
 </body>
 </html>
-<!-- @build 20260612-144106 (영양사 vH: 헤더 전체폭+좌포털/우식수칩·바로가기 하단·명단 인라인수정+드래그정렬) -->
+<!-- @build 20260612-144559 (영양사 vI: 헤더 전체폭 레이아웃 깨짐 수정 - body flex 제거) -->
