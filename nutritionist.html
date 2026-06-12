@@ -389,6 +389,7 @@
         .r-note { width:100%; min-width:110px; border:1.5px solid var(--border); border-radius:8px; padding:7px 9px; font-size:13px; font-weight:600; outline:none; }
         .r-note:focus { border-color:var(--blue); }
         .drag-grip { color:#cbd5e1; margin-right:7px; cursor:grab; }
+        .rtable .rnum { color:#94a3b8; font-weight:800; font-variant-numeric:tabular-nums; }
         .rtable tbody tr[draggable]:hover .drag-grip { color:#2563eb; }
         /* ── 전체폭 헤더 + 중앙정렬 본문 (교육지원부 방식) ── */
         body { background: var(--bg); }
@@ -1141,10 +1142,11 @@ function renderRoster(){
     const depts=Object.keys(groups).sort((a,b)=>a.localeCompare(b,'ko'));
     box.innerHTML = deptBar + depts.map(d=>{
         const rows=groups[d].sort((a,b)=> (_ord(a[1])-_ord(b[1])) || (a[1].name||'').localeCompare(b[1].name||'','ko'));
-        const body=rows.map(([id,r])=>{
+        const body=rows.map(([id,r],idx)=>{
             if(id===_editId){
                 const opts=allDepts.map(o=>`<option value="${escH(o)}" ${o===((r.dept||'').trim())?'selected':''}>${escH(o)}</option>`).join('');
                 return `<tr class="editing">
+                    <td class="c rnum">${idx+1}</td>
                     <td><div style="display:flex; flex-direction:column; gap:4px;">
                         <select id="edit-dept" style="height:34px; border:1.5px solid #2563eb; border-radius:7px; font-weight:700; background:#fff;">${opts}</select>
                         <input id="edit-pos" value="${escH(r.position||'')}" placeholder="직책" style="height:34px; padding:0 9px; border:1.5px solid #2563eb; border-radius:7px; font-weight:700;">
@@ -1155,6 +1157,7 @@ function renderRoster(){
                 </tr>`;
             }
             return `<tr draggable="true" ondragstart="rDragStart(event,'${id}')" ondragover="rDragOver(event)" ondrop="rDrop(event,'${id}')" ondragend="rDragEnd(event)">
+                <td class="c rnum">${idx+1}</td>
                 <td class="c" style="color:var(--muted); font-weight:700;">${escH(r.position||'-')}</td>
                 <td class="rname"><i class="fa-solid fa-grip-vertical drag-grip"></i>${escH(r.name||'')}</td>
                 <td>${r.note?escH(r.note):'<span style="color:#cbd5e1;">-</span>'}</td>
@@ -1164,18 +1167,18 @@ function renderRoster(){
         return `<div class="roster-group">
             <div class="rg-head"><i class="fa-solid fa-building"></i> ${escH(d)} <button class="rg-edit" data-dept="${escH(d)}" onclick="renameDept(this.dataset.dept)" title="소속명 변경"><i class="fa-solid fa-pen"></i></button> <span class="rg-count">${rows.length}명</span> <span class="rg-hint">↕ 행 드래그로 순서 변경</span></div>
             <table class="rtable">
-                <thead><tr><th style="width:150px;">직책</th><th style="text-align:left;">성함</th><th style="text-align:left;">비고</th><th style="width:150px;">관리</th></tr></thead>
+                <thead><tr><th style="width:58px;">연번</th><th style="width:150px;">직책</th><th style="text-align:left;">성함</th><th style="text-align:left;">비고</th><th style="width:150px;">관리</th></tr></thead>
                 <tbody>${body}</tbody></table>
         </div>`;
     }).join('');
 }
 function renderRosterGuide(){
-    let rows = `<tr class="guide-sample"><td class="c">주무관</td><td class="rname">홍길동 <span class="gs-tag">샘플</span></td><td>채식 / 알레르기 등</td><td class="c">—</td></tr>`;
-    for(let i=0;i<9;i++) rows+=`<tr class="guide-empty"><td>&nbsp;</td><td></td><td></td><td></td></tr>`;
+    let rows = `<tr class="guide-sample"><td class="c rnum">1</td><td class="c">주무관</td><td class="rname">홍길동 <span class="gs-tag">샘플</span></td><td>채식 / 알레르기 등</td><td class="c">—</td></tr>`;
+    for(let i=0;i<9;i++) rows+=`<tr class="guide-empty"><td>&nbsp;</td><td></td><td></td><td></td><td></td></tr>`;
     return `<div class="roster-group">
         <div class="rg-head"><i class="fa-solid fa-building"></i> 소속 (예시) <span class="rg-count">아직 직원 없음</span></div>
         <table class="rtable guide">
-            <thead><tr><th style="width:150px;">직책</th><th style="text-align:left;">성함</th><th style="text-align:left;">비고</th><th style="width:150px;">관리</th></tr></thead>
+            <thead><tr><th style="width:58px;">연번</th><th style="width:150px;">직책</th><th style="text-align:left;">성함</th><th style="text-align:left;">비고</th><th style="width:150px;">관리</th></tr></thead>
             <tbody>${rows}</tbody></table>
         <div style="font-size:12px;color:var(--muted);margin-top:8px;">↑ 위 양식처럼 채워집니다. 위에서 <b>소속·직책·성함</b>을 입력하고 <b>추가</b>하면 첫 직원부터 등록됩니다.</div>
     </div>`;
@@ -1429,7 +1432,7 @@ function renderMealCalendar(a, month){
 }
 </script>
 <style>@media print{#__ver{display:none!important}}</style>
-<div id="__ver" style="position:fixed;right:7px;bottom:7px;z-index:2147483000;background:rgba(15,23,42,.72);color:#cbd5e1;font:700 10px/1 monospace;padding:4px 8px;border-radius:7px;pointer-events:none;letter-spacing:.3px;">영양사 vO · 260612-2300</div>
+<div id="__ver" style="position:fixed;right:7px;bottom:7px;z-index:2147483000;background:rgba(15,23,42,.72);color:#cbd5e1;font:700 10px/1 monospace;padding:4px 8px;border-radius:7px;pointer-events:none;letter-spacing:.3px;">영양사 vP · 260612-2355</div>
 </body>
 </html>
-<!-- @build 20260612-230000 (영양사 vO: 시계 강사플랫폼 클론(콜론깜빡임) / 좌측 타이틀 "항공기술훈련원 식당 플랫폼" 영문제거 / 터치패널 버튼 동일창 전환) -->
+<!-- @build 20260612-235500 (영양사 vP: 직원 명단 관리에 연번 열 추가(소속별 1부터)) -->

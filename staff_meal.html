@@ -168,7 +168,11 @@
         .badge-done { display:inline-flex; width:120px; height:120px; margin:0 auto 22px; border-radius:50%; align-items:center; justify-content:center; font-size:58px; font-weight:900; }
         .badge-ok { background:#ecfdf5; color:#059669; } .badge-warn{ background:#fffbeb; color:#d97706; } .badge-cancel{ background:#fef2f2; color:#dc2626; }
         /* 직원 식수 표 */
-        .meal-panel { width:100%; max-width:1080px; }
+        .meal-panel { width:100%; max-width:1100px; }
+        .meal-panel.two { max-width:1720px; }
+        .split-wrap { display:flex; gap:16px; align-items:flex-start; justify-content:center; }
+        .split-wrap .mtable-wrap { flex:1 1 0; min-width:0; }
+        @media (max-width:820px){ .split-wrap { flex-direction:column; } }
         .mtable-wrap { overflow-x:auto; border-radius:14px; box-shadow:0 8px 24px rgba(15,23,42,.08); }
         .meal-table { width:100%; border-collapse:collapse; background:#fff;
             --row-h:60px; --chk:46px; --name-fz:18px; --pos-fz:15px; --dept-fz:15px; }
@@ -245,44 +249,67 @@ function goStaff(){ CURRENT='staff'; renderStaffList(); }
 function renderStaffList(){
     if (CURRENT!=='staff') return;
     const items = Object.entries(ROSTER).filter(([id,r])=>r && r.active!==false);
-    let inner;
+    const TEST_BANNER = TEST_MODE ? '<div class="test-banner"><i class="fa-solid fa-flask"></i> 테스트 모드 — 시간대 잠금이 해제되어 모든 칸을 누를 수 있습니다. (실제 식수로 기록되니 확인 후 취소하거나 테스트 모드를 꺼 주세요)</div>' : '';
     if(!items.length){
-        inner = `<div class="empty">등록된 직원이 없습니다.<br>영양사 페이지에서 직원 명단을 추가해 주세요.</div>`;
-    } else {
-        const groups = {};
-        items.forEach(([id,r])=>{ const d=((r.dept||'').trim())||'(소속 미지정)'; (groups[d]||(groups[d]=[])).push([id,r]); });
-        const depts = Object.keys(groups).sort((a,b)=>a.localeCompare(b,'ko'));
-        let rows='';
-        depts.forEach(d=>{
-            const grp = groups[d].sort((a,b)=> (((a[1].order!=null?a[1].order:9999)-(b[1].order!=null?b[1].order:9999))) || (a[1].name||'').localeCompare(b[1].name||'','ko'));
-            grp.forEach(([id,r],i)=>{
-                const cell=(key,on)=>{
-                    const act=isActive(key);
-                    const cls='mchk'+(on?' on':'')+(key==='r'?' resv':'')+(act?'':' locked');
-                    const oc=act?`toggleMeal('${id}','${key}')`:`lockMsg('${key}')`;
-                    const inner = on ? '<i class="fa-solid fa-check"></i>' : (act?'':'<i class="fa-solid fa-lock"></i>');
-                    return `<td class="c${act?'':' locked'}" onclick="${oc}"><span class="${cls}">${inner}</span></td>`;
-                };
-                rows += `<tr>
-                    ${i===0?`<td class="dept-cell" rowspan="${grp.length}">${esc(d)}</td>`:''}
+        stage.innerHTML = `<div class="meal-panel">${TEST_BANNER}<div class="empty">등록된 직원이 없습니다.<br>영양사 페이지에서 직원 명단을 추가해 주세요.</div></div>`;
+        return;
+    }
+    const deptOf = r => (((r.dept||'').trim()) || '(소속 미지정)');
+    // 부서별 그룹 → 부서 정렬 → 부서 내 order 정렬 → 한 줄로 평탄화
+    const groups = {};
+    items.forEach(([id,r])=>{ const d=deptOf(r); (groups[d]||(groups[d]=[])).push([id,r]); });
+    const depts = Object.keys(groups).sort((a,b)=>a.localeCompare(b,'ko'));
+    const flat = [];
+    depts.forEach(d=>{
+        groups[d].sort((a,b)=> (((a[1].order!=null?a[1].order:9999)-(b[1].order!=null?b[1].order:9999))) || (a[1].name||'').localeCompare(b[1].name||'','ko'))
+            .forEach(x=>flat.push(x));
+    });
+
+    const cell=(id,key,on)=>{
+        const act=isActive(key);
+        const cls='mchk'+(on?' on':'')+(key==='r'?' resv':'')+(act?'':' locked');
+        const oc=act?`toggleMeal('${id}','${key}')`:`lockMsg('${key}')`;
+        const ic = on ? '<i class="fa-solid fa-check"></i>' : (act?'':'<i class="fa-solid fa-lock"></i>');
+        return `<td class="c${act?'':' locked'}" onclick="${oc}"><span class="${cls}">${ic}</span></td>`;
+    };
+    // 한 컬럼(슬라이스)을 부서 묶음(rowspan) 표로 — 열: 아침·점심·석식·석식예약
+    const rowsOf=(arr)=>{
+        let html='', i=0;
+        while(i<arr.length){
+            const dept=deptOf(arr[i][1]);
+            let j=i; while(j<arr.length && deptOf(arr[j][1])===dept) j++;
+            const run=j-i;
+            for(let k=i;k<j;k++){
+                const [id,r]=arr[k];
+                html += `<tr>
+                    ${k===i?`<td class="dept-cell" rowspan="${run}">${esc(dept)}</td>`:''}
                     <td class="pos-cell">${esc(r.position||'-')}</td>
                     <td class="name-cell">${esc(r.name||'')}</td>
-                    ${cell('b', !!TODAY_BREAKFAST[id])}
-                    ${cell('l', !!TODAY_CHECKS[id])}
-                    ${cell('r', !!TODAY_RESV[id])}
-                    ${cell('d', !!TODAY_DINNER[id])}
+                    ${cell(id,'b', !!TODAY_BREAKFAST[id])}
+                    ${cell(id,'l', !!TODAY_CHECKS[id])}
+                    ${cell(id,'d', !!TODAY_DINNER[id])}
+                    ${cell(id,'r', !!TODAY_RESV[id])}
                 </tr>`;
-            });
-        });
-        inner = `<div class="mtable-wrap"><table class="meal-table">
-            <thead><tr><th>소속</th><th>직책</th><th>이름</th><th>아침</th><th>점심</th><th>석식<br>예약</th><th>석식</th></tr></thead>
-            <tbody>${rows}</tbody></table></div>`;
+            }
+            i=j;
+        }
+        return html;
+    };
+    const tableHTML=(body)=>`<div class="mtable-wrap"><table class="meal-table">
+        <thead><tr><th>소속</th><th>직책</th><th>이름</th><th>아침</th><th>점심</th><th>석식</th><th>석식<br>예약</th></tr></thead>
+        <tbody>${body}</tbody></table></div>`;
+
+    // 좌우 2단: 절반씩(좌측이 홀수 1명 더). 인원이 늘면 각 단이 아래로 길어짐.
+    const TWO_COL = flat.length >= 8;
+    let inner;
+    if(TWO_COL){
+        const mid=Math.ceil(flat.length/2);
+        const left=flat.slice(0,mid), right=flat.slice(mid);
+        inner = `<div class="split-wrap">${tableHTML(rowsOf(left))}${right.length?tableHTML(rowsOf(right)):''}</div>`;
+    } else {
+        inner = tableHTML(rowsOf(flat));
     }
-    stage.innerHTML = `
-        <div class="meal-panel">
-            ${TEST_MODE?'<div class="test-banner"><i class="fa-solid fa-flask"></i> 테스트 모드 — 시간대 잠금이 해제되어 모든 칸을 누를 수 있습니다. (실제 식수로 기록되니 확인 후 취소하거나 테스트 모드를 꺼 주세요)</div>':''}
-            ${inner}
-        </div>`;
+    stage.innerHTML = `<div class="meal-panel${TWO_COL?' two':''}">${TEST_BANNER}${inner}</div>`;
     requestAnimationFrame(fitTable);
 }
 function toggleMeal(id, key){
@@ -380,26 +407,27 @@ function toggleTest(){ TEST_MODE=!TEST_MODE; if(CURRENT==='staff') renderStaffLi
 /* ── 표 자동 맞춤: 인원수에 맞춰 행 높이·버튼·글자 크기를 화면에 꽉 차게 ── */
 function fitTable(){
     if (CURRENT!=='staff') return;
-    const tbl = stage.querySelector('.meal-table'); if(!tbl) return;
-    const tbody = tbl.querySelector('tbody'); if(!tbody) return;
-    const rows = tbody.querySelectorAll('tr').length; if(!rows) return;
+    const tables = stage.querySelectorAll('.meal-table'); if(!tables.length) return;
+    let maxRows=0, headH=48;
+    tables.forEach(t=>{ const tb=t.querySelector('tbody'); const n=tb?tb.querySelectorAll('tr').length:0; if(n>maxRows)maxRows=n; const th=t.querySelector('thead'); if(th) headH=th.offsetHeight; });
+    if(!maxRows) return;
     const panel = stage.querySelector('.meal-panel');
-    const thead = tbl.querySelector('thead');
     const banner = panel ? panel.querySelector('.test-banner') : null;
     const stageH = stage.clientHeight;
     const stagePadV = 48;                       // .stage 상하 패딩(18+30)
     const bannerH  = banner ? banner.offsetHeight + 16 : 0;
-    const headH    = thead ? thead.offsetHeight : 48;
     const avail = stageH - stagePadV - bannerH - headH - 6;
-    let rowH = Math.floor(avail / rows);
+    let rowH = Math.floor(avail / maxRows);
     rowH = Math.max(30, Math.min(64, rowH));     // 30~64px 사이로 제한
     const chk    = Math.max(24, Math.min(48, rowH - 12));
     const nameFz = Math.max(13, Math.min(19, Math.round(rowH * 0.32)));
-    tbl.style.setProperty('--row-h', rowH + 'px');
-    tbl.style.setProperty('--chk',   chk  + 'px');
-    tbl.style.setProperty('--name-fz', nameFz + 'px');
-    tbl.style.setProperty('--pos-fz',  (nameFz - 3) + 'px');
-    tbl.style.setProperty('--dept-fz', (nameFz - 3) + 'px');
+    tables.forEach(t=>{
+        t.style.setProperty('--row-h', rowH + 'px');
+        t.style.setProperty('--chk',   chk  + 'px');
+        t.style.setProperty('--name-fz', nameFz + 'px');
+        t.style.setProperty('--pos-fz',  (nameFz - 3) + 'px');
+        t.style.setProperty('--dept-fz', (nameFz - 3) + 'px');
+    });
 }
 
 /* ── 전체화면(키오스크): 진입=한 번 탭 / 해제=3초간 길게 누르기 ── */
@@ -654,7 +682,7 @@ function esc(v){ return String(v==null?'':v).replace(/[&<>"']/g,c=>({'&':'&amp;'
 /* 초기 진입은 위의 ?go 분기에서 처리됨 */
 </script>
 <style>@media print{#__ver{display:none!important}}</style>
-<div id="__ver" style="position:fixed;right:7px;bottom:7px;z-index:2147483000;background:rgba(15,23,42,.72);color:#cbd5e1;font:700 10px/1 monospace;padding:4px 8px;border-radius:7px;pointer-events:none;letter-spacing:.3px;">식당패널 vL · 260612-2330</div>
+<div id="__ver" style="position:fixed;right:7px;bottom:7px;z-index:2147483000;background:rgba(15,23,42,.72);color:#cbd5e1;font:700 10px/1 monospace;padding:4px 8px;border-radius:7px;pointer-events:none;letter-spacing:.3px;">식당패널 vM · 260612-2355</div>
 </body>
 </html>
-<!-- @build 20260612-233000 (식당패널 vL: 표 자동맞춤(인원수에 맞춰 행·버튼 자동축소·셀전체탭·줄무늬) / 헤더문구를 상단바 좌측으로 이동 / 전체화면 버튼(진입=탭, 해제=3초 길게누르기) / 반응형 재정비) -->
+<!-- @build 20260612-235500 (식당패널 vM: 가로 2단 배치(좌·우 절반씩, 인원 늘면 아래로) + 양 단 동시 자동맞춤 / 석식예약 열을 석식 우측으로 이동) -->
