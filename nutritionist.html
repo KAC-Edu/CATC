@@ -61,7 +61,7 @@
         .header-mark { width:42px; height:42px; border-radius:13px; display:inline-flex; align-items:center; justify-content:center; background:rgba(255,255,255,0.14); border:1px solid rgba(255,255,255,0.24); flex-shrink:0; }
         .header-mark i { font-size:20px; color:#dbeafe; }
         .header-kicker { font-size:10px; font-weight:800; letter-spacing:1.5px; color:#bfdbfe; }
-        .app-header h1 { margin:4px 0 0; font-size:20px; line-height:1; font-weight:950; color:#fff; white-space:nowrap; }
+        .app-header h1 { margin:0; font-size:20px; line-height:1; font-weight:950; color:#fff; white-space:nowrap; }
         .header-right { display:flex; align-items:center; justify-content:flex-end; gap:8px; }
         .h-btn { display:inline-flex; align-items:center; justify-content:center; gap:7px; height:48px; background:rgba(255,255,255,0.14); border:1px solid rgba(255,255,255,0.22); color:#fff; border-radius:12px; padding:0 16px; font-size:14px; font-weight:800; cursor:pointer; white-space:nowrap; transition:background .15s, transform .15s; }
         .h-btn:hover { background:rgba(255,255,255,0.24); transform:translateY(-1px); }
@@ -337,14 +337,15 @@
         #imgOverlay img { max-width: 100%; max-height: 90dvh; border-radius: 12px; }
         #imgOverlay button { position: absolute; top: 18px; right: 18px; background: rgba(255,255,255,.15); border: none; color: #fff; font-size: 22px; border-radius: 50%; width: 40px; height: 40px; cursor: pointer; }
         /* ── 헤더 시계 ── */
-        .header-clock { position:relative; z-index:1; color:#fff; white-space:nowrap; display:flex; align-items:center; gap:10px; justify-self:center;
-            background:rgba(15,23,42,0.34); padding:8px 18px; border-radius:999px; border:1px solid rgba(255,255,255,0.17);
-            box-shadow:inset 0 1px 0 rgba(255,255,255,0.12), 0 8px 24px rgba(15,23,42,0.16); }
-        .hc-date { font-size:13px; font-weight:500; letter-spacing:.5px; opacity:.8; line-height:1; }
-        .hc-day  { font-size:12px; font-weight:700; opacity:.6; }
-        .hc-div  { width:1px; height:20px; background:rgba(255,255,255,0.2); }
-        .hc-time { font-size:23px; font-weight:800; font-family:'Consolas','Roboto Mono',monospace; letter-spacing:-.5px; line-height:1; }
-        .hc-ampm { font-size:12px; font-weight:700; margin-left:3px; color:#60a5fa; }
+        .header-clock { position:relative; z-index:1; color:#fff; white-space:nowrap; display:flex; align-items:center; gap:12px; justify-self:center;
+            background:rgba(255,255,255,0.07); padding:5px 20px; border-radius:50px; border:1px solid rgba(255,255,255,0.13); }
+        .hc-date { font-size:14px; font-weight:400; letter-spacing:.5px; opacity:.75; line-height:1; }
+        .hc-day  { font-size:13px; font-weight:600; opacity:.6; letter-spacing:.3px; }
+        .hc-div  { width:1px; height:22px; background:rgba(255,255,255,0.2); }
+        .hc-time { font-size:26px; font-weight:800; font-family:'Consolas','Roboto Mono','SF Mono',monospace; letter-spacing:-.5px; line-height:1; color:#fff; }
+        .hc-ampm { font-size:13px; font-weight:700; margin-left:5px; color:#60a5fa; letter-spacing:.5px; }
+        .hc-blink { animation:hc-blink-animation 1s steps(2,start) infinite; }
+        @keyframes hc-blink-animation { to { visibility:hidden; } }
         @media (max-width:1080px){ .header-clock{ display:none; } .app-header{ grid-template-columns:1fr auto; } }
 
         /* ── PC 탭 메뉴 (교육지원부 스타일) ── */
@@ -495,13 +496,12 @@
         <div class="header-left">
             <button class="h-btn portal" onclick="location.href='portal.html'"><i class="fa-solid fa-table-cells-large"></i> 포털</button>
             <div class="header-titlewrap">
-                <div class="header-kicker">KOREA AIRPORTS CORP. · CATC</div>
-                <h1>영양사 식수 관리</h1>
+                <h1>항공기술훈련원 식당 플랫폼</h1>
             </div>
         </div>
         <div id="headerClock" class="header-clock"></div>
         <div class="header-summary">
-            <button class="h-btn touch" onclick="window.open('staff_meal.html','_blank')"><i class="fa-solid fa-utensils"></i> 터치패널</button>
+            <button class="h-btn touch" onclick="location.href='staff_meal.html'"><i class="fa-solid fa-utensils"></i> 터치패널</button>
             <div class="hsum hsum-total"><span class="hs-lab">전체 식수</span><span class="hs-val" id="totalMeals">-</span></div>
             <span class="hs-op">−</span>
             <div class="hsum hsum-skip" onclick="openSkipModal()"><span class="hs-lab">석식 제외</span><span class="hs-val" id="skipCount">-</span></div>
@@ -1105,7 +1105,7 @@ function startClock(){
             `<span class="hc-date">${n.getFullYear()}.${p(n.getMonth()+1)}.${p(n.getDate())}</span>` +
             `<span class="hc-day">${days[n.getDay()]}</span>` +
             `<span class="hc-div"></span>` +
-            `<span class="hc-time">${p(h)}:${p(n.getMinutes())}</span><span class="hc-ampm">${ampm}</span>`;
+            `<span class="hc-time">${p(h)}<span class="hc-blink">:</span>${p(n.getMinutes())}</span><span class="hc-ampm">${ampm}</span>`;
     };
     tick(); setInterval(tick, 1000);
 }
@@ -1429,7 +1429,7 @@ function renderMealCalendar(a, month){
 }
 </script>
 <style>@media print{#__ver{display:none!important}}</style>
-<div id="__ver" style="position:fixed;right:7px;bottom:7px;z-index:2147483000;background:rgba(15,23,42,.72);color:#cbd5e1;font:700 10px/1 monospace;padding:4px 8px;border-radius:7px;pointer-events:none;letter-spacing:.3px;">영양사 vN · 260612-1627</div>
+<div id="__ver" style="position:fixed;right:7px;bottom:7px;z-index:2147483000;background:rgba(15,23,42,.72);color:#cbd5e1;font:700 10px/1 monospace;padding:4px 8px;border-radius:7px;pointer-events:none;letter-spacing:.3px;">영양사 vO · 260612-2300</div>
 </body>
 </html>
-<!-- @build 20260612-162758 (영양사 vN: MEALS 전직원·10줄·총횟수수정·메모·엑셀/PDF / MENU 주차선택+기간(월~금) / 사외강사 계좌입력) -->
+<!-- @build 20260612-230000 (영양사 vO: 시계 강사플랫폼 클론(콜론깜빡임) / 좌측 타이틀 "항공기술훈련원 식당 플랫폼" 영문제거 / 터치패널 버튼 동일창 전환) -->
