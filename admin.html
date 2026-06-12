@@ -3,8 +3,8 @@
 <head>
 <!-- ============================================================
   CATC · 강사 플랫폼  (admin.html)
-  @version  L
-  @build    20260612-091609
+  @version  M
+  @build    20260612-092324
   ────────────────────────────────────────────────────────
   [코드 수정 규칙 · AI/개발자 공통]
   이 파일을 한 글자라도 고치면:
@@ -1976,6 +1976,16 @@
                     </label>
                 </div>
 
+                <div class="setup-group" style="margin-bottom:20px;">
+                    <label for="setup-keep-next-week" style="display:flex; align-items:center; gap:10px; cursor:pointer; padding:13px 15px; background:#fff7ed; border:1px solid #fed7aa; border-radius:12px;">
+                        <input type="checkbox" id="setup-keep-next-week" style="width:20px; height:20px; accent-color:#ea580c; cursor:pointer; flex-shrink:0;">
+                        <span>
+                            <span style="display:block; font-size:13px; font-weight:800; color:#9a3412;"><i class="fa-solid fa-lock" style="color:#ea580c;"></i> 차주 전환 시 자동 삭제하지 않음 (과정 유지)</span>
+                            <span style="display:block; font-size:11px; color:#b45309; margin-top:3px;">체크하면 다음 주가 되어도 연간계획 자동배치가 이 방의 과정을 지우거나 교체하지 않습니다.</span>
+                        </span>
+                    </label>
+                </div>
+
                 <div class="setup-group" style="padding:15px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px;">
                     <label style="display:block; font-size:12px; font-weight:900; color:#003366; margin-bottom:10px;">출강 강사 리스트</label>
                     <div id="setup-subject-list" style="max-height: 100px; overflow-y: auto; margin-bottom:10px;"></div>
@@ -2271,7 +2281,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
 <style>@media print{#__catcVer{display:none!important}}</style>
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vL</div>
-<script>try{console.log('%cCATC%c 강사 플랫폼 (admin.html) %cvL%c build 20260612-091609','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}</script>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vM</div>
+<script>try{console.log('%cCATC%c 강사 플랫폼 (admin.html) %cvM%c build 20260612-092324','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}</script>
 </body>
 </html>

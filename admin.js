@@ -1,7 +1,7 @@
 /* ============================================================
    CATC · 강사 플랫폼 로직  (admin.js)
-   @version  K
-   @build    20260612-091609
+   @version  L
+   @build    20260612-092324
    ------------------------------------------------------------
    [코드 수정 규칙 · AI/개발자 공통]
    이 파일을 고치면 @version 을 A -> B -> ... -> Z -> A1 -> B1 ...
@@ -327,6 +327,9 @@ loadInitialData: function() {
     
 // [수정 완료] 보안 검증 강화 및 데이터 유출 차단 로직
 switchRoomAttempt: async function(newRoom, silent = false) {
+    // [방 이동 시] 메인 통합 현황 팝업이 열려 있으면 닫는다
+    const _hsm = document.getElementById('homeStatModal');
+    if (_hsm) _hsm.style.display = 'none';
     // [방 이동 시 QR UI 강제 초기화]
     if (typeof ui !== 'undefined' && ui.closeQrModal) ui.closeQrModal();
     const _fqr = document.getElementById('floatingQR');
@@ -2820,25 +2823,13 @@ showAlert: function(msg, onConfirm) {
                     : '<span style="color:#cbd5e1;">-</span>';
 
                 const isMyRoom = (c === state.room && dataMgr.isMyOwnedRoom(c));
-                const isLocked = !!(settings.autoAssignLocked);
 
                 const rowNumCell = isMyRoom
                     ? `<span style="display:inline-flex; align-items:center; justify-content:center; width:28px; height:28px; background:#3b82f6; border-radius:50%;"><i class="fa-solid fa-check" style="color:#fff; font-size:13px;"></i></span>`
                     : rowNum;
 
-                const lockBtn = `
-                    <div style="margin-top:5px;" title="${isLocked ? '잠금 해제 (자동배치 허용)' : '잠금 (자동배치 제외)'}">
-                        <button onclick="event.stopPropagation(); dataMgr.toggleRoomLock('${c}', ${isLocked})"
-                            style="border:none; background:${isLocked ? '#fef3c7' : '#f1f5f9'};
-                                   border-radius:6px; padding:3px 7px; cursor:pointer;
-                                   font-size:12px; font-weight:800;
-                                   color:${isLocked ? '#d97706' : '#94a3b8'};
-                                   border:1px solid ${isLocked ? '#fde68a' : '#e2e8f0'};
-                                   transition:all .15s; display:flex; align-items:center; gap:4px;">
-                            <i class="fa-solid ${isLocked ? 'fa-lock' : 'fa-lock-open'}"></i>
-                            ${isLocked ? '잠금' : '열림'}
-                        </button>
-                    </div>`;
+                // 현황판 좌물쇠(잠금 토글) 제거 — '차주 유지'는 교육과정 환경설정 체크박스로 제어
+                const lockBtn = '';
 
                 row.innerHTML = `
                     <td>
@@ -6995,6 +6986,9 @@ loadCurrentSettings: function() {
         const showBoardInput = document.getElementById('setup-show-on-board');
         // hideFromBoard가 true면 체크 해제, 아니면(기본) 체크
         if (showBoardInput) showBoardInput.checked = !s.hideFromBoard;
+        // 차주 전환 시 자동 삭제 안 함 (autoAssignLocked)
+        const keepInput = document.getElementById('setup-keep-next-week');
+        if (keepInput) keepInput.checked = !!s.autoAssignLocked;
         document.getElementById('setup-prof-select').value = st.professorName || "";
         // coordinatorName 매칭: 저장값("백유민"/"백유민 과장"/"백유민과장" 등)을 명단의 정식 이름으로 정규화해 드롭다운 자동 선택
         const savedCoordName = s.coordinatorName || '';
@@ -7176,6 +7170,9 @@ saveAll: function() {
         // 전면 현황판 총괄표 노출 여부 — 체크 해제 시 hideFromBoard=true (총괄표에서 숨김)
         const showOnBoard = document.getElementById('setup-show-on-board');
         updates[`courses/${state.room}/settings/hideFromBoard`] = showOnBoard ? !showOnBoard.checked : false;
+        // 차주 전환 시 자동 삭제 안 함 — 체크 시 autoAssignLocked=true (연간계획 자동배치에서 이 방 보존)
+        const keepNextWeek = document.getElementById('setup-keep-next-week');
+        updates[`courses/${state.room}/settings/autoAssignLocked`] = (keepNextWeek && keepNextWeek.checked) ? true : null;
         
         // ★ 수정: 호텔 예약 방식으로 선택된 날짜 범위 ("시작일 ~ 종료일")를 그대로 저장합니다.
         updates[`courses/${state.room}/settings/period`] = periodRange;
