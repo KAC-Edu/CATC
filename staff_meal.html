@@ -84,9 +84,30 @@
         .set-hint { display:block; font-size:12px; font-weight:700; color:#94a3b8; margin-top:4px; }
         .set-toggle { flex-shrink:0; min-width:80px; padding:11px 16px; border:none; border-radius:12px; font-size:15px; font-weight:900; cursor:pointer; background:#e2e8f0; color:#64748b; transition:.12s; }
         .set-toggle.on { background:#22c55e; color:#fff; box-shadow:0 4px 12px rgba(34,197,94,.3); }
+        .set-toggle.danger { background:#fef2f2; color:#dc2626; box-shadow:none; }
+        .set-toggle.danger:active { background:#fee2e2; }
         /* ── 테스트 모드 배너 ── */
         .test-banner { background:#fffbeb; border:1.5px solid #fcd34d; color:#b45309; border-radius:12px; padding:11px 16px; font-size:13.5px; font-weight:800; margin-bottom:16px; display:flex; align-items:center; gap:9px; }
         .test-banner i { color:#d97706; }
+        .test-banner span { flex:1; min-width:0; }
+        .test-banner .tb-end { flex-shrink:0; border:none; background:#d97706; color:#fff; font-weight:900; font-size:13px; padding:8px 14px; border-radius:10px; cursor:pointer; }
+        .test-banner .tb-end:active { opacity:.9; }
+        /* ── 범례 ── */
+        .meal-legend { display:flex; flex-wrap:wrap; align-items:center; gap:8px 16px; margin-bottom:12px; padding:9px 14px; background:#fff; border:1px solid #e2e8f0; border-radius:12px; font-size:13px; font-weight:700; color:#475569; box-shadow:0 2px 8px rgba(15,23,42,.05); }
+        .meal-legend .lg-item { display:inline-flex; align-items:center; gap:7px; }
+        .lg-sw { width:24px; height:24px; border-radius:7px; display:inline-flex; align-items:center; justify-content:center; font-size:12px; border:2px solid #cbd5e1; background:#fff; color:#fff; }
+        .lg-sw.lg-on { background:#22c55e; border-color:#16a34a; }
+        .lg-sw.lg-resv { background:#f59e0b; border-color:#d97706; }
+        .lg-sw.lg-empty { background:#fff; }
+        .lg-sw.lg-lock { background:#f1f5f9; border-color:#e2e8f0; color:#cbd5e1; }
+        .meal-legend .lg-div { width:1px; height:18px; background:#e2e8f0; }
+        .meal-legend .lg-note { color:#94a3b8; font-weight:700; }
+        /* ── 석식예약 열 구분 (식사 기록 ↔ 예약) ── */
+        .meal-table th.sep, .meal-table td.sep { border-left:2px solid #f59e0b; }
+        .meal-table th.sep { background:#b45309; }
+        /* ── 헤더 고정(틀고정): 명단이 화면보다 길 때 ── */
+        .meal-table thead th { position:sticky; top:0; z-index:5; background:#1e40af; }
+        .meal-table thead th.sep { background:#b45309; }
         /* ── 전체화면 해제 진행 표시 ── */
         #fsHold { position:fixed; inset:0; display:none; align-items:flex-start; justify-content:center; z-index:10001; pointer-events:none; }
         #fsHold.show { display:flex; }
@@ -173,7 +194,9 @@
         .split-wrap { display:flex; gap:16px; align-items:flex-start; justify-content:center; }
         .split-wrap .mtable-wrap { flex:1 1 0; min-width:0; }
         @media (max-width:820px){ .split-wrap { flex-direction:column; } }
-        .mtable-wrap { overflow-x:auto; border-radius:14px; box-shadow:0 8px 24px rgba(15,23,42,.08); }
+        .mtable-wrap { overflow:visible; border-radius:14px; box-shadow:0 8px 24px rgba(15,23,42,.08); }
+        .meal-table thead th:first-child { border-top-left-radius:14px; }
+        .meal-table thead th:last-child { border-top-right-radius:14px; }
         .meal-table { width:100%; border-collapse:collapse; background:#fff;
             --row-h:60px; --chk:46px; --name-fz:18px; --pos-fz:15px; --dept-fz:15px; }
         .meal-table thead tr { background:linear-gradient(135deg,#1e3a8a 0%,#2563eb 100%); }
@@ -249,7 +272,7 @@ function goStaff(){ CURRENT='staff'; renderStaffList(); }
 function renderStaffList(){
     if (CURRENT!=='staff') return;
     const items = Object.entries(ROSTER).filter(([id,r])=>r && r.active!==false);
-    const TEST_BANNER = TEST_MODE ? '<div class="test-banner"><i class="fa-solid fa-flask"></i> 테스트 모드 — 시간대 잠금이 해제되어 모든 칸을 누를 수 있습니다. (실제 식수로 기록되니 확인 후 취소하거나 테스트 모드를 꺼 주세요)</div>' : '';
+    const TEST_BANNER = TEST_MODE ? '<div class="test-banner"><i class="fa-solid fa-flask"></i> <span>테스트 모드 — 모든 칸 체크 가능 (실제 기록됨)</span> <button class="tb-end" onclick="toggleTest()">테스트 종료</button></div>' : '';
     if(!items.length){
         stage.innerHTML = `<div class="meal-panel">${TEST_BANNER}<div class="empty">등록된 직원이 없습니다.<br>영양사 페이지에서 직원 명단을 추가해 주세요.</div></div>`;
         return;
@@ -270,7 +293,7 @@ function renderStaffList(){
         const cls='mchk'+(on?' on':'')+(key==='r'?' resv':'')+(act?'':' locked');
         const oc=act?`toggleMeal('${id}','${key}')`:`lockMsg('${key}')`;
         const ic = on ? '<i class="fa-solid fa-check"></i>' : (act?'':'<i class="fa-solid fa-lock"></i>');
-        return `<td class="c${act?'':' locked'}" onclick="${oc}"><span class="${cls}">${ic}</span></td>`;
+        return `<td class="c${key==='r'?' sep':''}${act?'':' locked'}" onclick="${oc}"><span class="${cls}">${ic}</span></td>`;
     };
     // 한 컬럼(슬라이스)을 부서 묶음(rowspan) 표로 — 열: 아침·점심·석식·석식예약
     const rowsOf=(arr)=>{
@@ -296,8 +319,16 @@ function renderStaffList(){
         return html;
     };
     const tableHTML=(body)=>`<div class="mtable-wrap"><table class="meal-table">
-        <thead><tr><th>소속</th><th>직책</th><th>이름</th><th>아침</th><th>점심</th><th>석식</th><th>석식<br>예약</th></tr></thead>
+        <thead><tr><th>소속</th><th>직책</th><th>이름</th><th>아침</th><th>점심</th><th>석식</th><th class="sep">석식<br>예약</th></tr></thead>
         <tbody>${body}</tbody></table></div>`;
+
+    const LEGEND = `<div class="meal-legend">
+        <span class="lg-item"><span class="lg-sw lg-on"><i class="fa-solid fa-check"></i></span> 체크 완료</span>
+        <span class="lg-item"><span class="lg-sw lg-resv"><i class="fa-solid fa-check"></i></span> 석식 예약</span>
+        <span class="lg-item"><span class="lg-sw lg-empty"></span> 미체크</span>
+        <span class="lg-item"><span class="lg-sw lg-lock"><i class="fa-solid fa-lock"></i></span> 시간대 아님</span>
+        <span class="lg-div"></span><span class="lg-note">석식예약 = 석식을 미리 신청</span>
+    </div>`;
 
     // 좌우 2단: 절반씩(좌측이 홀수 1명 더). 인원이 늘면 각 단이 아래로 길어짐.
     const TWO_COL = flat.length >= 8;
@@ -309,7 +340,7 @@ function renderStaffList(){
     } else {
         inner = tableHTML(rowsOf(flat));
     }
-    stage.innerHTML = `<div class="meal-panel${TWO_COL?' two':''}">${TEST_BANNER}${inner}</div>`;
+    stage.innerHTML = `<div class="meal-panel${TWO_COL?' two':''}">${TEST_BANNER}${LEGEND}${inner}</div>`;
     requestAnimationFrame(fitTable);
 }
 function toggleMeal(id, key){
@@ -376,7 +407,7 @@ function startClock(){
     tick(); setInterval(tick,1000);
 }
 let SOUND_ON = (()=>{ try{ return localStorage.getItem('kacMealSound')!=='off'; }catch(e){ return true; } })();
-let TEST_MODE = false;   // 환경설정 > 테스트: 시간대 잠금 일시 해제
+let TEST_MODE = (()=>{ try{ return localStorage.getItem('kacMealTest')==='on'; }catch(e){ return false; } })();   // 환경설정 > 테스트: 시간대 잠금 일시 해제 (페이지 이동 후에도 유지)
 const _audio = { sel:null, cancel:null };
 function _initAudio(){ try{ _audio.sel=new Audio(encodeURI('선택.mp3')); _audio.cancel=new Audio(encodeURI('취소.mp3')); _audio.sel.preload='auto'; _audio.cancel.preload='auto'; _audio.sel.load(); _audio.cancel.load(); }catch(e){} }
 function playSnd(which){ if(!SOUND_ON) return; try{ const a=_audio[which]; if(a){ a.currentTime=0; a.volume=0.95; a.play().catch(()=>{}); } }catch(e){} }
@@ -400,9 +431,25 @@ function renderSettings(){
             <div class="set-label"><i class="fa-solid fa-flask"></i> 테스트 모드<span class="set-hint">시간대 잠금 해제 · 모든 칸 체크 가능</span></div>
             <button class="set-toggle ${TEST_MODE?'on':''}" onclick="toggleTest();">${TEST_MODE?'켜짐':'꺼짐'}</button>
         </div>
+        <div class="set-row">
+            <div class="set-label"><i class="fa-solid fa-eraser"></i> 오늘 식수 초기화<span class="set-hint">오늘 모든 직원의 체크 삭제 (테스트 정리용)</span></div>
+            <button class="set-toggle danger" onclick="resetTodayChecks();">초기화</button>
+        </div>
         <div class="ov-actions"><button class="ov-btn gray" onclick="closeOverlay()">닫기</button></div>`;
 }
-function toggleTest(){ TEST_MODE=!TEST_MODE; if(CURRENT==='staff') renderStaffList(); renderSettings(); }
+function toggleTest(){ TEST_MODE=!TEST_MODE; try{ localStorage.setItem('kacMealTest', TEST_MODE?'on':'off'); }catch(e){} if(CURRENT==='staff') renderStaffList(); renderSettings(); }
+/* 오늘 식수 전체 초기화 (테스트 정리용) */
+function resetTodayChecks(){
+    if(!confirm('오늘('+today+') 등록된 모든 직원의 식수 체크\n(아침·점심·석식·석식예약)를 삭제합니다.\n\n계속하시겠습니까?')) return;
+    const updates={};
+    updates['system/staffMeal/breakfast/'+today]=null;
+    updates['system/staffMeal/checks/'+today]=null;
+    updates['system/staffMeal/dinner/'+today]=null;
+    updates['system/staffMeal/dinner_resv/'+today]=null;
+    db.ref().update(updates)
+      .then(()=>{ closeOverlay(); toast('오늘 식수 체크를 모두 초기화했습니다.'); })
+      .catch(()=>toast('초기화 실패 — 네트워크를 확인해 주세요.'));
+}
 
 /* ── 표 자동 맞춤: 인원수에 맞춰 행 높이·버튼·글자 크기를 화면에 꽉 차게 ── */
 function fitTable(){
@@ -411,12 +458,11 @@ function fitTable(){
     let maxRows=0, headH=48;
     tables.forEach(t=>{ const tb=t.querySelector('tbody'); const n=tb?tb.querySelectorAll('tr').length:0; if(n>maxRows)maxRows=n; const th=t.querySelector('thead'); if(th) headH=th.offsetHeight; });
     if(!maxRows) return;
-    const panel = stage.querySelector('.meal-panel');
-    const banner = panel ? panel.querySelector('.test-banner') : null;
-    const stageH = stage.clientHeight;
-    const stagePadV = 48;                       // .stage 상하 패딩(18+30)
-    const bannerH  = banner ? banner.offsetHeight + 16 : 0;
-    const avail = stageH - stagePadV - bannerH - headH - 6;
+    // 표 위쪽 영역(배너·범례 등)을 자동 반영: 첫 표의 위치부터 stage 하단까지가 가용 높이
+    const wrap = stage.querySelector('.mtable-wrap'); if(!wrap) return;
+    const wrapTop = wrap.getBoundingClientRect().top;
+    const stageBottom = stage.getBoundingClientRect().bottom;
+    const avail = stageBottom - wrapTop - 30 - headH - 6;   // 30=하단 여백
     let rowH = Math.floor(avail / maxRows);
     rowH = Math.max(30, Math.min(64, rowH));     // 30~64px 사이로 제한
     const chk    = Math.max(24, Math.min(48, rowH - 12));
@@ -682,7 +728,7 @@ function esc(v){ return String(v==null?'':v).replace(/[&<>"']/g,c=>({'&':'&amp;'
 /* 초기 진입은 위의 ?go 분기에서 처리됨 */
 </script>
 <style>@media print{#__ver{display:none!important}}</style>
-<div id="__ver" style="position:fixed;right:7px;bottom:7px;z-index:2147483000;background:rgba(15,23,42,.72);color:#cbd5e1;font:700 10px/1 monospace;padding:4px 8px;border-radius:7px;pointer-events:none;letter-spacing:.3px;">식당패널 vN · 260613-0020</div>
+<div id="__ver" style="position:fixed;right:7px;bottom:7px;z-index:2147483000;background:rgba(15,23,42,.72);color:#cbd5e1;font:700 10px/1 monospace;padding:4px 8px;border-radius:7px;pointer-events:none;letter-spacing:.3px;">식당패널 vO · 260613-0050</div>
 </body>
 </html>
-<!-- @build 20260613-002000 (식당패널 vN: 가로 2단·자동맞춤·석식예약 우측이동에 더해 석식예약 ON 주황색+주황 글로우 적용) -->
+<!-- @build 20260613-005000 (식당패널 vO: 테스트모드 localStorage 영구저장(이동후 유지) / 설정창 "오늘 식수 초기화" 버튼 / 테스트배너 축약+종료버튼 / 아이콘 범례 / 석식예약 열 구분선 / 헤더 틀고정(sticky)) -->
