@@ -102,6 +102,15 @@
         .lg-sw.lg-lock { background:#f1f5f9; border-color:#e2e8f0; color:#cbd5e1; }
         .meal-legend .lg-div { width:1px; height:18px; background:#e2e8f0; }
         .meal-legend .lg-note { color:#94a3b8; font-weight:700; }
+        .meal-legend .lg-status { font-weight:800; }
+        .lg-status .ms-open { color:#16a34a; } .lg-status .ms-open i { font-size:8px; vertical-align:middle; margin-right:4px; }
+        .lg-status .ms-wait { color:#64748b; } .lg-status .ms-wait i { margin-right:4px; }
+        .lg-status .ms-test { color:#b45309; } .lg-status .ms-test i { margin-right:4px; }
+        /* ── 되돌리기 스낵바 ── */
+        .kio-undo { position:fixed; left:50%; bottom:38px; transform:translateX(-50%) translateY(20px); background:#0f172a; color:#fff; padding:12px 14px 12px 22px; border-radius:16px; font-weight:800; font-size:17px; opacity:0; pointer-events:none; transition:.2s; z-index:10000; box-shadow:0 14px 36px rgba(0,0,0,.35); display:flex; align-items:center; gap:18px; }
+        .kio-undo.show { opacity:1; transform:translateX(-50%) translateY(0); pointer-events:auto; }
+        .kio-undo .ku-btn { border:none; background:#f59e0b; color:#fff; font-weight:900; font-size:16px; padding:11px 20px; border-radius:11px; cursor:pointer; white-space:nowrap; }
+        .kio-undo .ku-btn:active { opacity:.9; }
         /* ── 석식예약 열 구분 (식사 기록 ↔ 예약) ── */
         .meal-table th.sep, .meal-table td.sep { border-left:2px solid #f59e0b; }
         .meal-table th.sep { background:#b45309; }
@@ -327,7 +336,7 @@ function renderStaffList(){
         <span class="lg-item"><span class="lg-sw lg-resv"><i class="fa-solid fa-check"></i></span> 석식 예약</span>
         <span class="lg-item"><span class="lg-sw lg-empty"></span> 미체크</span>
         <span class="lg-item"><span class="lg-sw lg-lock"><i class="fa-solid fa-lock"></i></span> 시간대 아님</span>
-        <span class="lg-div"></span><span class="lg-note">석식예약 = 석식을 미리 신청</span>
+        <span class="lg-div"></span><span id="mealStatus" class="lg-status"></span>
     </div>`;
 
     // 좌우 2단: 절반씩(좌측이 홀수 1명 더). 인원이 늘면 각 단이 아래로 길어짐.
@@ -342,6 +351,7 @@ function renderStaffList(){
     }
     stage.innerHTML = `<div class="meal-panel${TWO_COL?' two':''}">${TEST_BANNER}${LEGEND}${inner}</div>`;
     requestAnimationFrame(fitTable);
+    updateMealStatus();
 }
 function toggleMeal(id, key){
     const r = ROSTER[id]; if(!r) return;
@@ -352,17 +362,31 @@ function toggleMeal(id, key){
               : key==='r' ? db.ref(`system/staffMeal/dinner_resv/${today}/${id}`)
               :             db.ref(`system/staffMeal/dinner/${today}/${id}`);
     const isOn = key==='b' ? !!TODAY_BREAKFAST[id] : key==='l' ? !!TODAY_CHECKS[id] : key==='r' ? !!TODAY_RESV[id] : !!TODAY_DINNER[id];
-    const labels = { b:'아침', l:'점심', r:'석식 예약', d:'석식' };
+    const labels = { b:'아침', l:'점심', r:'석식예약', d:'석식' };
+    const buildPayload = ()=>{
+        if(key==='b') return { name:r.name||'', dept:r.dept||'', position:r.position||'', ts:TS, month:monthKey };
+        if(key==='l') return { name:r.name||'', dept:r.dept||'', position:r.position||'', category:'staff', staffId:id, time:nowTime(), ts:TS, month:monthKey };
+        if(key==='r') return { name:r.name||'', dept:r.dept||'', position:r.position||'', ts:TS, month:monthKey };
+        return { name:r.name||'', dept:r.dept||'', position:r.position||'', category:'staff', ts:TS };
+    };
     if(isOn){
-        confirmMealCancel(r.name, labels[key], ()=>{ ref.remove(); playSnd('cancel'); });
+        // 모달 없이 즉시 취소 + 되돌리기 스낵바 (배식 줄 정체 방지)
+        ref.remove(); playSnd('cancel');
+        showUndo(`❌ ${esc(r.name)} · ${labels[key]} 취소됨`, '되돌리기', ()=>{ ref.set(buildPayload()); playSnd('sel'); });
         return;
     }
-    let payload;
-    if(key==='b') payload={ name:r.name||'', dept:r.dept||'', position:r.position||'', ts:TS, month:monthKey };
-    else if(key==='l') payload={ name:r.name||'', dept:r.dept||'', position:r.position||'', category:'staff', staffId:id, time:nowTime(), ts:TS, month:monthKey };
-    else if(key==='r') payload={ name:r.name||'', dept:r.dept||'', position:r.position||'', ts:TS, month:monthKey };
-    else payload={ name:r.name||'', dept:r.dept||'', position:r.position||'', category:'staff', ts:TS };
-    playSnd('sel'); flashCheck(); ref.set(payload);
+    playSnd('sel'); flashCheck(); ref.set(buildPayload());
+    showUndo(`✓ ${esc(r.name)} · ${labels[key]} 체크됨`, '취소', ()=>{ ref.remove(); playSnd('cancel'); });
+}
+/* ── 되돌리기 스낵바 (3.5초 내 즉시 취소/복구) ── */
+let _undoTimer=null;
+function showUndo(msg, actionLabel, onAction){
+    let t=document.getElementById('kioUndo');
+    if(!t){ t=document.createElement('div'); t.id='kioUndo'; t.className='kio-undo'; document.body.appendChild(t); }
+    t.innerHTML=`<span class="ku-msg">${msg}</span><button class="ku-btn">${actionLabel}</button>`;
+    t.querySelector('.ku-btn').onclick=()=>{ clearTimeout(_undoTimer); t.classList.remove('show'); try{ onAction(); }catch(e){} };
+    t.classList.add('show');
+    clearTimeout(_undoTimer); _undoTimer=setTimeout(()=>t.classList.remove('show'), 3500);
 }
 function confirmMealCancel(name, mealLabel, onYes){
     ovCard.className='ov-card ov-dup';
@@ -390,6 +414,29 @@ function isActive(key){
 }
 const _winMsg={ b:'아침 체크는 07:00~09:00에 가능합니다.', l:'점심 체크는 11:00~13:00에 가능합니다.', r:'석식 예약은 11:00~16:00에 가능합니다.', d:'석식 체크는 17:00~19:00에 가능합니다.' };
 function lockMsg(key){ toast(_winMsg[key]||'지금은 체크할 수 없습니다.'); }
+/* ── 현재 식사 시간대·남은 시간 안내 ── */
+const _mealWindows=[
+    {key:'b', label:'아침',     s:7*60,  e:9*60},
+    {key:'l', label:'점심',     s:11*60, e:13*60},
+    {key:'r', label:'석식예약', s:11*60, e:16*60},
+    {key:'d', label:'석식',     s:17*60, e:19*60},
+];
+function _fmtHM(m){ return `${String(Math.floor(m/60)).padStart(2,'0')}:${String(m%60).padStart(2,'0')}`; }
+function updateMealStatus(){
+    const el=document.getElementById('mealStatus'); if(!el) return;
+    if(TEST_MODE){ el.innerHTML='<span class="ms-test"><i class="fa-solid fa-flask"></i> 테스트 모드 — 모든 칸 열림</span>'; return; }
+    const t=_hm();
+    const open=_mealWindows.filter(w=>t>=w.s && t<=w.e);
+    if(open.length){
+        const parts=open.map(w=>`${w.label} <b>${w.e-t}분</b> 남음`);
+        el.innerHTML=`<span class="ms-open"><i class="fa-solid fa-circle"></i> 지금 체크 가능 — ${parts.join(' · ')}</span>`;
+    } else {
+        const next=_mealWindows.filter(w=>w.s>t).sort((a,b)=>a.s-b.s)[0];
+        el.innerHTML = next
+            ? `<span class="ms-wait"><i class="fa-regular fa-clock"></i> 현재 체크 가능한 식사 없음 · 다음 <b>${next.label} ${_fmtHM(next.s)}</b> (${next.s-t}분 후)</span>`
+            : `<span class="ms-wait"><i class="fa-regular fa-clock"></i> 오늘 식사 체크 시간이 모두 종료되었습니다</span>`;
+    }
+}
 function toast(msg){
     let t=document.getElementById('kioToast');
     if(!t){ t=document.createElement('div'); t.id='kioToast'; t.className='kio-toast'; document.body.appendChild(t); }
@@ -403,7 +450,8 @@ function startClock(){
     const tick=()=>{ const n=new Date(), p=x=>String(x).padStart(2,'0');
         const dateStr=`${n.getFullYear()}.${p(n.getMonth()+1)}.${p(n.getDate())}`;
         let h=n.getHours(); const ampm=h<12?'AM':'PM'; h=h%12||12;
-        el.innerHTML=`<span class="clock-date">${dateStr}</span><span class="clock-day">${DAYS[n.getDay()]}</span><span class="clock-divider"></span><span class="clock-time">${p(h)}<span class="blink">:</span>${p(n.getMinutes())}<span class="clock-ampm">${ampm}</span></span>`; };
+        el.innerHTML=`<span class="clock-date">${dateStr}</span><span class="clock-day">${DAYS[n.getDay()]}</span><span class="clock-divider"></span><span class="clock-time">${p(h)}<span class="blink">:</span>${p(n.getMinutes())}<span class="clock-ampm">${ampm}</span></span>`;
+        updateMealStatus(); };
     tick(); setInterval(tick,1000);
 }
 let SOUND_ON = (()=>{ try{ return localStorage.getItem('kacMealSound')!=='off'; }catch(e){ return true; } })();
@@ -438,17 +486,39 @@ function renderSettings(){
         <div class="ov-actions"><button class="ov-btn gray" onclick="closeOverlay()">닫기</button></div>`;
 }
 function toggleTest(){ TEST_MODE=!TEST_MODE; try{ localStorage.setItem('kacMealTest', TEST_MODE?'on':'off'); }catch(e){} if(CURRENT==='staff') renderStaffList(); renderSettings(); }
-/* 오늘 식수 전체 초기화 (테스트 정리용) */
+/* 오늘 식수 전체 초기화 (테스트 정리용) — 네이티브 confirm 대신 자체 오버레이(전체화면 유지) */
 function resetTodayChecks(){
-    if(!confirm('오늘('+today+') 등록된 모든 직원의 식수 체크\n(아침·점심·석식·석식예약)를 삭제합니다.\n\n계속하시겠습니까?')) return;
-    const updates={};
-    updates['system/staffMeal/breakfast/'+today]=null;
-    updates['system/staffMeal/checks/'+today]=null;
-    updates['system/staffMeal/dinner/'+today]=null;
-    updates['system/staffMeal/dinner_resv/'+today]=null;
-    db.ref().update(updates)
-      .then(()=>{ closeOverlay(); toast('오늘 식수 체크를 모두 초기화했습니다.'); })
-      .catch(()=>toast('초기화 실패 — 네트워크를 확인해 주세요.'));
+    customConfirm({
+        title:'오늘 식수 초기화',
+        msg:`오늘(${today}) 등록된 <b>모든 직원의 식수 체크</b><br>(아침·점심·석식·석식예약)를 삭제합니다.<br><br>계속하시겠습니까?`,
+        yesLabel:'전체 삭제', noLabel:'취소',
+        onNo: ()=>renderSettings(),
+        onYes: ()=>{
+            const updates={};
+            updates['system/staffMeal/breakfast/'+today]=null;
+            updates['system/staffMeal/checks/'+today]=null;
+            updates['system/staffMeal/dinner/'+today]=null;
+            updates['system/staffMeal/dinner_resv/'+today]=null;
+            db.ref().update(updates)
+              .then(()=>{ closeOverlay(); toast('오늘 식수 체크를 모두 초기화했습니다.'); })
+              .catch(()=>{ closeOverlay(); toast('초기화 실패 — 네트워크를 확인해 주세요.'); });
+        }
+    });
+}
+/* 자체 확인 모달 (네이티브 confirm/alert는 전체화면을 해제시키므로 사용하지 않음) */
+function customConfirm(opts){
+    opts=opts||{};
+    ovCard.className='ov-card ov-dup';
+    ovCard.innerHTML = `<div class="badge-done badge-warn">!</div>
+        <div class="ov-ttl">${opts.title||'확인'}</div>
+        <div class="ov-sub">${opts.msg||''}</div>
+        <div class="ov-actions">
+            <button class="ov-btn gray" id="ccNo">${opts.noLabel||'취소'}</button>
+            <button class="ov-btn red" id="ccYes">${opts.yesLabel||'확인'}</button>
+        </div>`;
+    overlay.classList.add('show');
+    document.getElementById('ccNo').onclick = ()=>{ if(opts.onNo) opts.onNo(); else closeOverlay(); };
+    document.getElementById('ccYes').onclick = ()=>{ if(opts.onYes) opts.onYes(); else closeOverlay(); };
 }
 
 /* ── 표 자동 맞춤: 인원수에 맞춰 행 높이·버튼·글자 크기를 화면에 꽉 차게 ── */
@@ -728,7 +798,7 @@ function esc(v){ return String(v==null?'':v).replace(/[&<>"']/g,c=>({'&':'&amp;'
 /* 초기 진입은 위의 ?go 분기에서 처리됨 */
 </script>
 <style>@media print{#__ver{display:none!important}}</style>
-<div id="__ver" style="position:fixed;right:7px;bottom:7px;z-index:2147483000;background:rgba(15,23,42,.72);color:#cbd5e1;font:700 10px/1 monospace;padding:4px 8px;border-radius:7px;pointer-events:none;letter-spacing:.3px;">식당패널 vP · 260613-0115</div>
+<div id="__ver" style="position:fixed;right:7px;bottom:7px;z-index:2147483000;background:rgba(15,23,42,.72);color:#cbd5e1;font:700 10px/1 monospace;padding:4px 8px;border-radius:7px;pointer-events:none;letter-spacing:.3px;">식당패널 vR · 260613-0210</div>
 </body>
 </html>
-<!-- @build 20260613-011500 (식당패널 vP: 폰트 정리 — 이름 크게+글자간격(장 두 석), 직책=이름 동일크기, 소속 더 크게, 헤더 15px / 고령자 가독성) -->
+<!-- @build 20260613-021000 (식당패널 vR: 초기화 confirm을 자체 오버레이로 교체 — 전체화면 중 네이티브 팝업으로 인한 전체화면 해제 버그 수정) -->
