@@ -6,6 +6,7 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <script src="config.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.2/dist/html2pdf.bundle.min.js"></script>
     <style>
         @import url("https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css");
         * { box-sizing: border-box; font-family: "Pretendard", sans-serif; }
@@ -129,11 +130,29 @@
         window._courseNameStr = '-';   // 페이지 제목블록·인쇄 파일명용
         window._periodDisplay = '-';
 
-        // PDF 저장 시 파일명 = (외출외박대장)과정명. 인쇄 후 원래 제목 복원.
+        // 실제 PDF 파일 생성·다운로드 (모바일/인앱 브라우저에서도 동작). 미지원 시 인쇄로 폴백.
         function printLedger() {
             const cn = (window._courseNameStr || '').trim();
-            document.title = cn && cn !== '-' ? `(외출외박대장)${cn}` : '외출외박대장';
-            window.print();
+            const base = (cn && cn !== '-') ? `(외출외박대장)${cn}` : '외출외박대장';
+            const el = document.getElementById('ledgerPages');
+            if (!el) return;
+            if (typeof html2pdf === 'undefined') { document.title = base; window.print(); return; }
+            const btn = document.querySelector('.print-btn');
+            const oldTxt = btn ? btn.innerHTML : '';
+            if (btn) { btn.disabled = true; btn.innerHTML = '⏳ PDF 생성 중…'; }
+            // 캡처용 임시 스타일 (카드 여백·그림자 제거 → 깔끔한 페이지)
+            const tmp = document.createElement('style');
+            tmp.innerHTML = '#ledgerPages .page{margin:0 !important;box-shadow:none !important;border-radius:0 !important;}';
+            document.head.appendChild(tmp);
+            const done = () => { tmp.remove(); if (btn) { btn.disabled = false; btn.innerHTML = oldTxt; } };
+            html2pdf().set({
+                margin: 0,
+                filename: base + '.pdf',
+                image: { type: 'jpeg', quality: 0.95 },
+                html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff' },
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' },
+                pagebreak: { mode: ['css', 'legacy'], before: '.page' }
+            }).from(el).save().then(done).catch(() => { done(); document.title = base; window.print(); });
         }
         window.addEventListener('afterprint', () => { document.title = '외출·외박 신청서(대장)'; });
 
@@ -292,4 +311,4 @@
     </script>
 </body>
 </html>
-<!-- @build 20260612-113215 (auto=1 자동 인쇄) -->
+<!-- @build 20260612-121932 (html2pdf 실제 PDF 다운로드(모바일 대응)) -->

@@ -6,6 +6,7 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <script src="config.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.2/dist/html2pdf.bundle.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         body { font-family: 'Malgun Gothic', sans-serif; padding: 20px; background: #f1f5f9; }
@@ -79,7 +80,7 @@
 <body>
 
     <div class="no-print" style="text-align:center; margin-bottom:20px;">
-        <button onclick="window.print()" style="padding:10px 30px; background:#003366; color:white; border:none; border-radius:5px; cursor:pointer; font-weight:bold;">출석부 인쇄하기 (A4)</button>
+        <button onclick="printSheet()" style="padding:10px 30px; background:#003366; color:white; border:none; border-radius:5px; cursor:pointer; font-weight:bold;">출석부 PDF 저장 / 인쇄 (A4)</button>
     </div>
 
     <!-- 주차별 출석부 페이지가 자동 생성됩니다 -->
@@ -102,6 +103,28 @@
 
 
 
+
+// 실제 PDF 파일 생성·다운로드 (모바일/인앱 브라우저에서도 동작). 미지원 시 인쇄로 폴백.
+function printSheet() {
+    const base = '(출석부)' + (HEADER.courseName || '');
+    const el = document.getElementById('sheets-root') || document.getElementById('print-area') || document.body;
+    if (typeof html2pdf === 'undefined' || !el) { document.title = base; window.print(); return; }
+    const btn = document.querySelector('button[onclick="printSheet()"]');
+    const oldTxt = btn ? btn.innerHTML : '';
+    if (btn) { btn.disabled = true; btn.innerHTML = '⏳ PDF 생성 중…'; }
+    const tmp = document.createElement('style');
+    tmp.innerHTML = '.sheet-container{box-shadow:none !important;margin:0 auto !important;}';
+    document.head.appendChild(tmp);
+    const done = () => { tmp.remove(); if (btn) { btn.disabled = false; btn.innerHTML = oldTxt; } };
+    html2pdf().set({
+        margin: 0,
+        filename: base + '.pdf',
+        image: { type: 'jpeg', quality: 0.95 },
+        html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff' },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+        pagebreak: { mode: ['css', 'legacy'], before: '.sheet-container' }
+    }).from(el).save().then(done).catch(() => { done(); document.title = base; window.print(); });
+}
 
 async function init() {
     // 1. 주소창에서 방 번호(room)를 정확히 가져옵니다.
@@ -142,7 +165,7 @@ async function init() {
             if (autoSave && !_autoDone) {
                 _autoDone = true;
                 setTimeout(() => {
-                    try { document.title = '(출석부)' + (HEADER.courseName || ''); window.print(); } catch (e) {}
+                    try { printSheet(); } catch (e) {}
                 }, 1000);
             }
         });
@@ -363,4 +386,4 @@ function renderTable(studentsRaw, attendanceData) {
 
 </body>
 </html>
-<!-- @build 20260612-113215 (auto=1 자동 인쇄) -->
+<!-- @build 20260612-121932 (html2pdf 실제 PDF 다운로드(모바일 대응)) -->
