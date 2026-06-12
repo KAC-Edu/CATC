@@ -1,7 +1,7 @@
 /* ============================================================
    CATC · 강사 플랫폼 로직  (admin.js)
-   @version  M
-   @build    20260612-112703
+   @version  N
+   @build    20260612-123725
    ------------------------------------------------------------
    [코드 수정 규칙 · AI/개발자 공통]
    이 파일을 고치면 @version 을 A -> B -> ... -> Z -> A1 -> B1 ...
@@ -6147,6 +6147,47 @@ const scheduleMgr = {
         try { return new URL('schedule_photo.html', location.href).href + '?room=' + encodeURIComponent(room); }
         catch (e) { return 'schedule_photo.html?room=' + encodeURIComponent(room); }
     },
+    // ── IndexedDB 로컬 캐시: 시간표 사진을 이 PC에 1회 저장 후 재사용 (Firebase 반복 다운로드 방지) ──
+    _idbOpen: function() {
+        return new Promise((resolve, reject) => {
+            try {
+                const req = indexedDB.open('catcScheduleCache', 1);
+                req.onupgradeneeded = () => { const db = req.result; if (!db.objectStoreNames.contains('photos')) db.createObjectStore('photos'); };
+                req.onsuccess = () => resolve(req.result);
+                req.onerror = () => reject(req.error);
+            } catch (e) { reject(e); }
+        });
+    },
+    _idbGet: async function(room) {
+        try {
+            const db = await this._idbOpen();
+            return await new Promise(resolve => {
+                const r = db.transaction('photos', 'readonly').objectStore('photos').get(room);
+                r.onsuccess = () => resolve(r.result || null);
+                r.onerror = () => resolve(null);
+            });
+        } catch (e) { return null; }
+    },
+    _idbSet: async function(room, val) {
+        try {
+            const db = await this._idbOpen();
+            await new Promise(resolve => {
+                const tx = db.transaction('photos', 'readwrite');
+                tx.objectStore('photos').put(val, room);
+                tx.oncomplete = () => resolve(); tx.onerror = () => resolve();
+            });
+        } catch (e) {}
+    },
+    _idbDelete: async function(room) {
+        try {
+            const db = await this._idbOpen();
+            await new Promise(resolve => {
+                const tx = db.transaction('photos', 'readwrite');
+                tx.objectStore('photos').delete(room);
+                tx.oncomplete = () => resolve(); tx.onerror = () => resolve();
+            });
+        } catch (e) {}
+    },
     loadPhoto: function() {
         const block = document.getElementById('schedulePhotoBlock');
         if (!block) return;
@@ -6154,10 +6195,27 @@ const scheduleMgr = {
         if (this._photoRef) { try { this._photoRef.off(); } catch (e) {} this._photoRef = null; }
         if (!room) { block.innerHTML = '<div style="height:160px; display:flex; align-items:center; justify-content:center; color:#94a3b8; font-weight:800;">먼저 강의실을 선택하세요.</div>'; return; }
         block.innerHTML = '<div style="height:160px; display:flex; align-items:center; justify-content:center; color:#94a3b8; font-weight:800;">불러오는 중…</div>';
-        this._photoRef = firebase.database().ref(`courses/${room}/scheduleImage`);
-        this._photoRef.on('value', snap => {
+        // 변경 감지는 아주 작은 updatedAt 값만 구독한다. 큰 이미지(dataUrl)는 로컬 캐시를 우선 사용.
+        this._photoRef = firebase.database().ref(`courses/${room}/scheduleImage/updatedAt`);
+        this._photoRef.on('value', async snap => {
             if (state.room !== room) return;
-            this._renderPhoto(snap.val());
+            const ts = snap.val();
+            // 사진 없음(미업로드/삭제/과정 종료) → 이 PC 캐시도 정리 후 '내용 없음'
+            if (!ts) { await this._idbDelete(room); if (state.room === room) this._renderPhoto(null); return; }
+            // 1) 이 PC 캐시가 최신이면 → Firebase에서 이미지 다시 받지 않고 캐시로 표시
+            const cached = await this._idbGet(room);
+            if (cached && cached.updatedAt === ts && cached.dataUrl) {
+                if (state.room === room) this._renderPhoto({ dataUrl: cached.dataUrl, updatedAt: ts, _cached: true });
+                return;
+            }
+            // 2) 캐시 없음/오래됨(새 사진) → 큰 이미지를 '1회만' 내려받아 이 PC에 저장
+            try {
+                const dataSnap = await firebase.database().ref(`courses/${room}/scheduleImage/dataUrl`).once('value');
+                const dataUrl = dataSnap.val();
+                if (!dataUrl) { if (state.room === room) this._renderPhoto(null); return; }
+                await this._idbSet(room, { updatedAt: ts, dataUrl });
+                if (state.room === room) this._renderPhoto({ dataUrl, updatedAt: ts });
+            } catch (e) { console.warn('[시간표 사진] 다운로드 실패', e); }
         });
     },
     _renderPhoto: function(data) {
@@ -6167,6 +6225,7 @@ const scheduleMgr = {
             this._lastPhotoSrc = data.dataUrl;
             let tsStr = '';
             if (data.updatedAt) { const d = new Date(data.updatedAt), p = n => String(n).padStart(2, '0'); tsStr = `${d.getFullYear()}.${p(d.getMonth()+1)}.${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`; }
+            if (data._cached) tsStr += ' · 이 PC에 저장됨';
             block.innerHTML = `
                 <div style="display:flex; flex-direction:column; align-items:center; gap:14px;">
                     <img src="${data.dataUrl}" alt="교육 시간표 사진" onclick="scheduleMgr.openPhotoFullscreen()" title="클릭하면 전체화면으로 크게 봅니다" style="max-width:100%; border-radius:14px; border:1px solid #e2e8f0; box-shadow:0 6px 18px rgba(15,23,42,.08); cursor:zoom-in;">
@@ -6211,7 +6270,7 @@ const scheduleMgr = {
         if (!room) return;
         if (!confirm('등록된 시간표 사진을 삭제할까요?')) return;
         firebase.database().ref(`courses/${room}/scheduleImage`).remove()
-            .then(() => ui.showAlert('🗑️ 시간표 사진을 삭제했습니다.'))
+            .then(() => { this._idbDelete(room); ui.showAlert('🗑️ 시간표 사진을 삭제했습니다.'); })
             .catch(err => ui.showAlert('삭제 실패: ' + (err && err.message ? err.message : '')));
     },
     openPhotoFullscreen: function() {
@@ -8343,6 +8402,7 @@ const annualPlanMgr = {
             [`${rPath}/activeQuiz`]:          null,
             [`${rPath}/quizFinalResults`]:    null,
             [`${rPath}/attendanceQR`]:        null,
+            [`${rPath}/scheduleImage`]:       null,  // [추가] 차주 전환(과정 종료) 시 교육 시간표 사진 자동 삭제
             [`${rPath}/boardNotice`]:         "",
             [`${rPath}/notice`]:              "",
             [`${rPath}/coordNotice`]:         "",
