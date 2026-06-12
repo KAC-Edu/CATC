@@ -88,6 +88,27 @@
         /* ── 섹션 타이틀 좌측 강조 바 ── */
         .section-title { position: relative; }
 
+        /* ── 아코디언(가로 긴 버튼) 섹션 — 지원부 스타일, 연두 계열 ── */
+        .section-card.acc { overflow: hidden; }
+        .section-card.acc > .section-title {
+            margin: -18px -18px 14px;
+            padding: 16px 18px;
+            border: none; border-radius: 16px 16px 0 0;
+            background: #dcfce7; color: #15803d;
+            cursor: pointer; font-size: 15px; font-weight: 900;
+            display: flex; align-items: center; gap: 9px;
+            transition: background .15s;
+        }
+        .section-card.acc > .section-title i { color: #16a34a; }
+        .section-card.acc > .section-title:hover { background: #bbf7d0; }
+        .section-card.acc > .section-title .acc-chev { margin-left: auto; color: #16a34a; transition: transform .25s; }
+        .section-card.acc:not(.collapsed) > .section-title .acc-chev { transform: rotate(180deg); }
+        .section-card.acc.collapsed > .section-title {
+            margin: -18px; border-radius: 16px; background: #f0fdf4;
+        }
+        .section-card.acc.collapsed > .section-title:hover { background: #dcfce7; }
+        .section-card.acc.collapsed > *:not(.section-title) { display: none; }
+
         /* ── 메인 콘텐츠 ── */
         .app-content { flex: 1; padding: 12px; display: flex; flex-direction: column; gap: 12px; overflow-y: auto; }
 
@@ -368,8 +389,8 @@
         </div>
 
         <!-- ② 금주 식단표 섹션 -->
-        <div class="section-card" id="sec-menu">
-            <div class="section-title"><i class="fa-solid fa-calendar-week"></i> 금주 식단표 관리</div>
+        <div class="section-card acc collapsed" id="sec-menu">
+            <div class="section-title" onclick="toggleAcc('sec-menu')"><i class="fa-solid fa-calendar-week"></i> 금주 식단표 관리 <span class="acc-chev"><i class="fa-solid fa-chevron-down"></i></span></div>
 
             <!-- 업로드 상태 배너 -->
             <div id="menuBanner" class="menu-status-banner msb-no">
@@ -397,16 +418,16 @@
         </div>
 
         <!-- ③ 과정별 운영 현황 -->
-        <div class="section-card" id="sec-course">
-            <div class="section-title"><i class="fa-solid fa-list-check"></i> 현재 운영 중인 과정 현황</div>
+        <div class="section-card acc collapsed" id="sec-course">
+            <div class="section-title" onclick="toggleAcc('sec-course')"><i class="fa-solid fa-list-check"></i> 현재 운영 중인 과정 현황 <span class="acc-chev"><i class="fa-solid fa-chevron-down"></i></span></div>
             <div id="courseStatusList">
                 <div class="spinner-wrap"><div class="spinner"></div><br>불러오는 중...</div>
             </div>
         </div>
 
         <!-- ④ 직원 식수 관리 -->
-        <div class="section-card" id="sec-staff">
-            <div class="section-title"><i class="fa-solid fa-utensils"></i> 직원 식수 관리 (터치패널 집계)</div>
+        <div class="section-card acc collapsed" id="sec-staff">
+            <div class="section-title" onclick="toggleAcc('sec-staff')"><i class="fa-solid fa-utensils"></i> 직원 식수 관리 (터치패널 집계) <span class="acc-chev"><i class="fa-solid fa-chevron-down"></i></span></div>
 
             <div style="display:flex; gap:8px; align-items:center; margin-bottom:14px; flex-wrap:wrap;">
                 <input type="month" id="staffMonth" style="padding:10px 12px; border:1.5px solid var(--border); border-radius:10px; font-weight:800; font-size:14px;">
@@ -837,8 +858,10 @@ function toggleNavMenu(force){
 function navTo(id){
     toggleNavMenu(false);
     const el=document.getElementById(id);
-    if(el) setTimeout(()=>el.scrollIntoView({behavior:'smooth', block:'start'}), 130);
+    if(el){ el.classList.remove('collapsed'); setTimeout(()=>el.scrollIntoView({behavior:'smooth', block:'start'}), 130); }
 }
+/* ── 아코디언 토글 (가로 버튼 클릭 → 펼침/접힘) ── */
+function toggleAcc(id){ const c=document.getElementById(id); if(c) c.classList.toggle('collapsed'); }
 /* ── 식당 터치패널 QR ── */
 function toggleMealQr(){
     const box=document.getElementById('mealQrBox'); if(!box) return;
@@ -930,7 +953,7 @@ function renderStaffCounts(agg){
 }
 </script>
 <style>@media print{#__ver{display:none!important}}</style>
-<div id="__ver" style="position:fixed;right:7px;bottom:7px;z-index:2147483000;background:rgba(15,23,42,.72);color:#cbd5e1;font:700 10px/1 monospace;padding:4px 8px;border-radius:7px;pointer-events:none;letter-spacing:.3px;">영양사 v1 · 260612-1310</div>
+<div id="__ver" style="position:fixed;right:7px;bottom:7px;z-index:2147483000;background:rgba(15,23,42,.72);color:#cbd5e1;font:700 10px/1 monospace;padding:4px 8px;border-radius:7px;pointer-events:none;letter-spacing:.3px;">영양사 v2 · 260612-1317</div>
 </body>
 </html>
-<!-- @build 20260612-131009 (영양사 v1 버전배지 표시) -->
+<!-- @build 20260612-131738 (영양사 v2 섹션 아코디언(연두 가로버튼)+드롭다운) -->
