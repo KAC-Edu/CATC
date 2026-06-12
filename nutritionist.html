@@ -395,16 +395,18 @@
         .header-left { display:flex; align-items:center; gap:13px; min-width:0; position:relative; z-index:1; }
         .header-titlewrap { min-width:0; }
         .h-btn.portal { background:rgba(255,255,255,0.18); }
-        .header-summary { display:flex; align-items:center; gap:9px; justify-self:end; position:relative; z-index:1; }
-        .hsum { display:flex; flex-direction:column; align-items:center; gap:2px; background:rgba(255,255,255,0.12); border:1px solid rgba(255,255,255,0.24); border-radius:13px; padding:7px 16px; min-width:80px; }
-        .hsum .hs-lab { font-size:10.5px; font-weight:800; color:#cbd5e1; letter-spacing:.3px; white-space:nowrap; }
-        .hsum .hs-val { font-size:22px; font-weight:950; line-height:1; }
-        .hsum-total .hs-val { color:#93c5fd; }
+        .header-summary { display:flex; align-items:center; gap:7px; justify-self:end; position:relative; z-index:1; }
+        .h-btn.touch { background:rgba(255,255,255,0.22); margin-right:4px; }
+        .hsum { display:flex; flex-direction:column; align-items:center; gap:3px; background:rgba(255,255,255,0.18); border:1px solid rgba(255,255,255,0.34); border-radius:13px; padding:8px 16px; min-width:82px; }
+        .hsum .hs-lab { font-size:11px; font-weight:800; color:#f1f5f9; letter-spacing:.2px; white-space:nowrap; }
+        .hsum .hs-val { font-size:24px; font-weight:950; line-height:1; color:#fff; text-shadow:0 1px 4px rgba(0,0,0,.3); }
+        .hsum-total .hs-val { color:#dbeafe; }
         .hsum-skip { cursor:pointer; transition:background .15s; }
-        .hsum-skip:hover { background:rgba(255,255,255,0.2); }
-        .hsum-skip .hs-val { color:#fca5a5; }
-        .hsum-eat .hs-val { color:#86efac; }
-        @media (max-width:1080px){ .header-summary .hs-lab{ font-size:9.5px; } .hsum{ min-width:64px; padding:6px 10px; } }
+        .hsum-skip:hover { background:rgba(255,255,255,0.28); }
+        .hsum-skip .hs-val { color:#fecdd3; }
+        .hsum-eat .hs-val { color:#bbf7d0; }
+        .hs-op { color:#fff; font-size:19px; font-weight:900; opacity:.9; padding:0 1px; }
+        @media (max-width:1180px){ .header-summary .hs-lab{ font-size:9.5px; } .hsum{ min-width:62px; padding:7px 10px; } .hsum .hs-val{ font-size:20px; } }
         /* 월 이동 */
         .month-nav { display:flex; align-items:center; gap:8px; margin-bottom:16px; }
         .mn-btn { width:38px; height:38px; border:1.5px solid var(--border); background:#fff; border-radius:10px; cursor:pointer; font-size:14px; color:var(--navy); }
@@ -447,7 +449,7 @@
     <!-- 헤더 -->
     <header class="app-header">
         <div class="header-left">
-            <button class="h-btn portal" onclick="location.href='portal.html'"><i class="fa-solid fa-grip"></i> 포털</button>
+            <button class="h-btn portal" onclick="location.href='portal.html'"><i class="fa-solid fa-table-cells-large"></i> 포털</button>
             <div class="header-titlewrap">
                 <div class="header-kicker">KOREA AIRPORTS CORP. · CATC</div>
                 <h1>영양사 식수 관리</h1>
@@ -455,8 +457,11 @@
         </div>
         <div id="headerClock" class="header-clock"></div>
         <div class="header-summary">
+            <button class="h-btn touch" onclick="window.open('staff_meal.html','_blank')"><i class="fa-solid fa-utensils"></i> 터치패널</button>
             <div class="hsum hsum-total"><span class="hs-lab">전체 식수</span><span class="hs-val" id="totalMeals">-</span></div>
+            <span class="hs-op">−</span>
             <div class="hsum hsum-skip" onclick="openSkipModal()"><span class="hs-lab">석식 제외</span><span class="hs-val" id="skipCount">-</span></div>
+            <span class="hs-op">=</span>
             <div class="hsum hsum-eat"><span class="hs-lab">실제 식사</span><span class="hs-val" id="eatCount">-</span></div>
         </div>
     </header>
@@ -535,17 +540,11 @@
             <div style="font-size:12.5px; color:var(--muted); font-weight:700; margin-bottom:12px;">소속과 직원 이름을 입력해 추가하세요. <b>같은 소속끼리 묶여서</b> 표시됩니다. 점심·석식 체크는 오늘 식수에 즉시 반영됩니다.</div>
             <div style="display:flex; gap:6px; margin-bottom:14px; flex-wrap:wrap;">
                 <input id="newStaffDept" placeholder="소속 (예: 교육운영부)" maxlength="20" style="flex:1.2; min-width:140px; padding:12px 14px; border:1.5px solid var(--border); border-radius:10px; font-weight:700;">
-                <input id="newStaffPos" placeholder="직책 (예: 주무관)" maxlength="16" style="flex:.9; min-width:110px; padding:12px 14px; border:1.5px solid var(--border); border-radius:10px; font-weight:700;">
+                <input id="newStaffPos" placeholder="직책" maxlength="16" style="flex:.9; min-width:110px; padding:12px 14px; border:1.5px solid var(--border); border-radius:10px; font-weight:700;">
                 <input id="newStaffName" placeholder="직원 이름" maxlength="12" style="flex:1; min-width:120px; padding:12px 14px; border:1.5px solid var(--border); border-radius:10px; font-weight:700;">
                 <button class="mini-btn" onclick="addStaff()"><i class="fa-solid fa-plus"></i> 추가</button>
             </div>
             <div id="staffRosterList"><div class="empty-msg">등록된 직원이 없습니다.</div></div>
-        </div>
-
-        <!-- 식당 터치패널 바로가기 (맨 아래) -->
-        <div class="section-card" id="sec-shortcut" onclick="window.open('staff_meal.html','_blank')" style="cursor:pointer; margin-top:6px;">
-            <div class="section-title" style="display:flex; align-items:center; gap:8px;"><i class="fa-solid fa-utensils" style="color:#2563eb;"></i> 식당 터치패널 바로가기 <i class="fa-solid fa-arrow-up-right-from-square" style="margin-left:auto; color:#2563eb; font-size:14px;"></i></div>
-            <div style="font-size:12.5px; color:var(--muted); font-weight:700;">이 카드를 누르면 식당 터치패널(식사 체크인 화면)이 새 창으로 열립니다.</div>
         </div>
 
     </main>
@@ -659,12 +658,11 @@ function renderMealStats(today) {
         skipStudents += Object.keys(skips).length;
     });
 
-    const staffCount  = Object.values(_staffRoster || {}).filter(r => r && r.active !== false).length;
-    const staffDinner = Object.keys(_dinnerToday || {}).length;
-    const studentEat  = Math.max(0, totalStudents - skipStudents);
-    document.getElementById('totalMeals').textContent = totalStudents + staffCount;   // 전체 식수 인원 = 교육생 + 직원 명단
-    document.getElementById('skipCount').textContent  = skipStudents;                 // 석식 제외 신청자 (교육생)
-    document.getElementById('eatCount').textContent   = studentEat + staffDinner;     // 실제 식사 예정(석식) = (교육생−제외) + 직원 석식신청
+    const staffCount = Object.values(_staffRoster || {}).filter(r => r && r.active !== false).length;
+    const total = totalStudents + staffCount;
+    document.getElementById('totalMeals').textContent = total;                            // 전체 식수 = 교육생 + 직원 명단
+    document.getElementById('skipCount').textContent  = skipStudents;                     // 석식 제외 (교육생)
+    document.getElementById('eatCount').textContent   = Math.max(0, total - skipStudents);// 실제 식사 = 전체 − 석식제외
 }
 
 function renderCourseStatus(today) {
@@ -1187,7 +1185,7 @@ function renderMealCalendar(a, month){
 }
 </script>
 <style>@media print{#__ver{display:none!important}}</style>
-<div id="__ver" style="position:fixed;right:7px;bottom:7px;z-index:2147483000;background:rgba(15,23,42,.72);color:#cbd5e1;font:700 10px/1 monospace;padding:4px 8px;border-radius:7px;pointer-events:none;letter-spacing:.3px;">영양사 vJ · 260612-1448</div>
+<div id="__ver" style="position:fixed;right:7px;bottom:7px;z-index:2147483000;background:rgba(15,23,42,.72);color:#cbd5e1;font:700 10px/1 monospace;padding:4px 8px;border-radius:7px;pointer-events:none;letter-spacing:.3px;">영양사 vK · 260612-1454</div>
 </body>
 </html>
-<!-- @build 20260612-144841 (영양사 vJ: 월 ◀▶ 선택·월별집계 표(소속/직책/성함/총식수/비고)+클릭 시 달력) -->
+<!-- @build 20260612-145411 (영양사 vK: 헤더 터치패널버튼·식수 등식·시인성·직책예시제거·하단바로가기삭제) -->
