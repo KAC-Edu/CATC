@@ -9,6 +9,7 @@
     <script src="config.js"></script>
     <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
         * { box-sizing:border-box; margin:0; padding:0; font-family:'Pretendard',sans-serif; -webkit-tap-highlight-color:transparent; user-select:none; }
         html,body { height:100%; }
@@ -138,7 +139,9 @@ let CURRENT = 'home';
 const stage = document.getElementById('stage');
 
 // ── 홈 ──
+let MOBILE_MODE=null;   // QR로 폰 접속 시 'internal'|'external'
 function goHome(){
+    if(MOBILE_MODE){ showMobileDone(); return; }
     CURRENT='home';
     stage.innerHTML = `
         <div class="home">
@@ -150,15 +153,15 @@ function goHome(){
                     <div class="nm">항공기술훈련원 직원</div>
                     <div class="sub">명단에서 본인 이름 터치</div>
                 </div>
-                <div class="cat-btn cat-int" onclick="goInstructor('internal')">
-                    <div class="ico"><i class="fa-solid fa-chalkboard-user"></i></div>
+                <div class="cat-btn cat-int" onclick="showInstrQr('internal')">
+                    <div class="ico"><i class="fa-solid fa-qrcode"></i></div>
                     <div class="nm">사내 강사 (KAC)</div>
-                    <div class="sub">사번 · 성함 입력</div>
+                    <div class="sub">QR 스캔 → 본인 폰에서 입력</div>
                 </div>
-                <div class="cat-btn cat-ext" onclick="goInstructor('external')">
-                    <div class="ico"><i class="fa-solid fa-user-tie"></i></div>
+                <div class="cat-btn cat-ext" onclick="showInstrQr('external')">
+                    <div class="ico"><i class="fa-solid fa-qrcode"></i></div>
                     <div class="nm">사외 강사</div>
-                    <div class="sub">연락처 · 성함 입력</div>
+                    <div class="sub">QR 스캔 → 본인 폰에서 입력</div>
                 </div>
             </div>
         </div>`;
@@ -310,12 +313,48 @@ let _ac=null;
 function autoClose(){ clearTimeout(_ac); _ac=setTimeout(closeOverlay, 2200); }
 function closeOverlay(){ clearTimeout(_ac); overlay.classList.remove('show'); if(CURRENT==='instr') goHome(); }
 
+/* ── 강사 QR 표시 (키오스크) ── */
+function showInstrQr(mode){
+    const isInt = mode==='internal';
+    const url = new URL('staff_meal.html', location.href);
+    url.searchParams.set('go', mode);
+    ovCard.className='ov-card';
+    ovCard.innerHTML = `
+        <div class="ov-ttl" style="color:#0f172a;">${isInt?'사내 강사 (KAC)':'사외 강사'}</div>
+        <div class="ov-sub" style="margin-bottom:16px;">스마트폰 카메라로 아래 QR을 스캔해<br><b>본인 휴대폰에서 직접 입력</b>해 주세요.</div>
+        <div id="instrQr" style="display:flex; justify-content:center; padding:14px; background:#fff; border-radius:16px; border:1.5px solid #e2e8f0;"></div>
+        <div class="ov-actions"><button class="ov-btn gray" onclick="closeOverlay()">닫기</button></div>`;
+    overlay.classList.add('show');
+    const box = document.getElementById('instrQr'); box.innerHTML='';
+    try { new QRCode(box, { text:url.toString(), width:220, height:220, correctLevel:QRCode.CorrectLevel.M }); }
+    catch(e){ box.textContent = url.toString(); }
+}
+
+/* ── 폰 입력 완료 화면 ── */
+function showMobileDone(){
+    CURRENT='done';
+    stage.innerHTML = `
+        <div class="home">
+            <div class="ico" style="width:84px;height:84px;margin:0 auto 18px;border-radius:22px;background:#ecfdf5;color:#059669;display:flex;align-items:center;justify-content:center;font-size:40px;"><i class="fa-solid fa-circle-check"></i></div>
+            <h2>식사 신청이 완료되었습니다</h2>
+            <p>창을 닫으셔도 됩니다.</p>
+            <div style="margin-top:20px;"><button class="back" onclick="goInstructor(MOBILE_MODE)"><i class="fa-solid fa-pen"></i> 다시 입력하기</button></div>
+        </div>`;
+}
+
+/* ── 진입 분기: QR(폰) ↔ 키오스크 ── */
+(function(){
+    const go = new URLSearchParams(location.search).get('go');
+    if(go==='internal' || go==='external'){ MOBILE_MODE=go; goInstructor(go); }
+    else { goHome(); }
+})();
+
 function esc(v){ return String(v==null?'':v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
-goHome();
+/* 초기 진입은 위의 ?go 분기에서 처리됨 */
 </script>
 <style>@media print{#__ver{display:none!important}}</style>
-<div id="__ver" style="position:fixed;right:7px;bottom:7px;z-index:2147483000;background:rgba(15,23,42,.72);color:#cbd5e1;font:700 10px/1 monospace;padding:4px 8px;border-radius:7px;pointer-events:none;letter-spacing:.3px;">식당패널 vC · 260612-1343</div>
+<div id="__ver" style="position:fixed;right:7px;bottom:7px;z-index:2147483000;background:rgba(15,23,42,.72);color:#cbd5e1;font:700 10px/1 monospace;padding:4px 8px;border-radius:7px;pointer-events:none;letter-spacing:.3px;">식당패널 vD · 260612-1358</div>
 </body>
 </html>
-<!-- @build 20260612-134359 (식당패널 vC: 석식 신청 단계 추가) -->
+<!-- @build 20260612-135810 (식당패널 vD: 사내·사외강사 QR→폰 입력) -->
