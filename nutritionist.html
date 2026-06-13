@@ -2234,7 +2234,8 @@ function renderStaffCounts(agg, month){
         }
         const memo=(adj&&adj.memo)||'';
         const memoIc = _monthLocked ? '' : `<i class="fa-solid fa-pen-to-square memo-ic" title="메모 입력" onclick="editMemo('${key}')"></i>`;
-        const noteCell=`${memo?`<span style="font-size:13px;">${escH(memo)}</span> `:''}${memoIc}`;
+        const delBtn = (a.category!=='staff' && !_monthLocked) ? ` <button class="r-actbtn" style="background:#fee2e2; color:#dc2626;" onclick="deleteInstructor('${key}')" title="이 강사의 이번 달 식사 기록 삭제"><i class="fa-solid fa-trash"></i> 삭제</button>` : '';
+        const noteCell=`${memo?`<span style="font-size:13px;">${escH(memo)}</span> `:''}${memoIc}${delBtn}`;
         tb+=`<tr class="cnt-row${shown>0?' has-meal':''}" onclick="rowCalClick(event,'${key}')" style="cursor:pointer;">
             <td class="c"><span style="background:${catColor[a.category]}1a; color:${catColor[a.category]}; font-weight:800; border-radius:6px; padding:2px 8px; font-size:12px; white-space:nowrap; display:inline-block;">${catLabel[a.category]||'직원'}</span></td>
             <td>${dept}</td>
@@ -2263,6 +2264,25 @@ function saveCnt(key, actual){
     _editCntId=null;
     const payload={ count:v, memo:reason, ts:firebase.database.ServerValue.TIMESTAMP };
     ref.set(payload).then(()=>{ _adjust[key]={count:v,memo:reason}; renderStaffCounts(_mealAgg,_mealMonth); showToast('수정되었습니다.'); });
+}
+function deleteInstructor(key){
+    const a = _mealAgg && _mealAgg[key]; if(!a) return;
+    if(a.category==='staff'){ showToast('직원은 [직원 명단 관리]에서 삭제하세요.'); return; }
+    if(_monthLocked){ showToast('확정(잠금)된 달입니다. 잠금을 해제해야 삭제할 수 있습니다.'); return; }
+    const label = (a.category==='internal'?'사내강사':'사외강사');
+    if(!confirm(`${label} '${a.name||''}'${a.idValue?` (${a.idValue})`:''} 님의 ${_mealMonth} 식사 기록을 모두 삭제할까요?\n되돌릴 수 없습니다.`)) return;
+    const updates={};
+    Object.entries(a.days||{}).forEach(([date,md])=>{
+        if(!md) return;
+        if(md.b) updates[`system/staffMeal/breakfast/${date}/${key}`]=null;
+        if(md.l) updates[`system/staffMeal/checks/${date}/${key}`]=null;
+        if(md.d) updates[`system/staffMeal/dinner/${date}/${key}`]=null;
+        updates[`system/staffMeal/dinner_resv/${date}/${key}`]=null;
+    });
+    Object.keys(a.notes||{}).forEach(date=>{ updates[`system/staffMeal/notes/${date}/${key}`]=null; });
+    updates[`system/staffMeal/adjust/${_mealMonth}/${key}`]=null;
+    if(!Object.keys(updates).length){ showToast('삭제할 기록이 없습니다.'); return; }
+    db.ref().update(updates).then(()=>{ delete _adjust[key]; loadStaffMeal(); showToast(`✅ ${label} 식사 기록을 삭제했습니다.`); }).catch(e=>showToast('삭제 실패: '+((e&&e.message)||e)));
 }
 function editMemo(key){
     if(_monthLocked){ showToast('확정된 달은 수정할 수 없습니다.'); return; }
@@ -2413,7 +2433,7 @@ function renderMealCalendar(a, month){
 }
 </script>
 <style>@media print{#__ver{display:none!important}}</style>
-<div id="__ver" style="position:fixed;right:7px;bottom:7px;z-index:2147483000;background:rgba(15,23,42,.72);color:#cbd5e1;font:700 10px/1 monospace;padding:4px 8px;border-radius:7px;pointer-events:none;letter-spacing:.3px;">영양사 vLL · 260613-1610</div>
+<div id="__ver" style="position:fixed;right:7px;bottom:7px;z-index:2147483000;background:rgba(15,23,42,.72);color:#cbd5e1;font:700 10px/1 monospace;padding:4px 8px;border-radius:7px;pointer-events:none;letter-spacing:.3px;">영양사 vMM · 260613-1625</div>
 <div id="notifyStack" class="notify-stack"></div>
 </body>
 </html>
