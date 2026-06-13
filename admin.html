@@ -1130,7 +1130,7 @@
     <!-- catc.png: 원본 전체 비율 노출 -->
     <div class="dashboard-campus-banner" style="max-width:1100px; width:100%; margin-bottom:20px;">
         <img src="catc.png" alt="항공기술훈련원 전경"
-             style="width:100%; height:auto; aspect-ratio:1879/837; object-fit:contain; display:block; border-radius:18px;">
+             style="max-width:100%; max-height:46vh; width:auto; height:auto; object-fit:contain; display:block; margin:0 auto; border-radius:18px;">
     </div>
 
     <!-- 3개 통계 블록 (슬림) -->
@@ -2292,8 +2292,9 @@
   function fit(){
     var el = document.documentElement;
     el.style.zoom = '';                 // 항상 원래(100%) 크기로 되돌린 뒤 측정 → 반복 적용해도 안전
+    el.style.removeProperty('--app-h'); // 높이 보정도 해제하고 자연 상태에서 측정
 
-    // 1) 가로 초과 비율
+    // 1) 가로 초과 비율 (body가 가로 스크롤 컨테이너라 body.scrollWidth 병행)
     var wRatio = window.innerWidth / Math.max(1, el.scrollWidth, (document.body?document.body.scrollWidth:0));
 
     // 2) 세로 초과 비율 — 본문 스크롤 영역(.content-area)이 한 화면을 넘치는지 확인
@@ -2303,9 +2304,13 @@
       hRatio = ca.clientHeight / ca.scrollHeight;
     }
 
-    var z = Math.min(wRatio, hRatio, 1);   // 축소만(절대 확대하지 않음)
-    z = Math.max(MIN_ZOOM, z);
-    el.style.zoom = (z < 0.995) ? z.toFixed(4) : '';   // 거의 1이면 보정 생략(선명도 유지)
+    var z = Math.max(MIN_ZOOM, Math.min(wRatio, hRatio, 1));   // 축소만(절대 확대하지 않음)
+    if (z < 0.995) {
+      // [핵심] zoom을 걸면 height:100vh 컨테이너(사이드바·메인)가 화면보다 작게 렌더되어
+      //  하단 여백/사이드바 잘림이 생긴다 → 높이를 배율만큼 키워(innerHeight/z) 줌 후 정확히 꽉 차게 보정.
+      el.style.setProperty('--app-h', (window.innerHeight / z) + 'px');
+      el.style.zoom = z.toFixed(4);
+    }
   }
 
   function soon(){ clearTimeout(t); t = setTimeout(fit, 80); }
@@ -2329,7 +2334,7 @@
 </script>
 <!-- @catc-version-badge · 전 페이지 통일 디자인 (개발자 확인용 · 사용자에게는 거의 안 보임) -->
 <style>@media print{#__catcVer{display:none!important}}</style>
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">JDS260613(V1)</div>
-<script>try{console.log('%cCATC%c 강사 플랫폼 (admin.html) %cJDS260613(V1)%c build 20260613','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}</script>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">JDS260613(V2)</div>
+<script>try{console.log('%cCATC%c 강사 플랫폼 (admin.html) %cJDS260613(V2)%c build 20260613','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}</script>
 </body>
 </html>
