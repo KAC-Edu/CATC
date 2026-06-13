@@ -210,6 +210,17 @@
         .overlay.show { display:flex; }
         .ov-card { background:#fff; border-radius:26px; padding:36px 30px; text-align:center; max-width:430px; width:100%; box-shadow:0 30px 70px rgba(15,23,42,.35); }
         .ov-card.ext-acct-card { max-width:500px; padding:34px 30px; }
+        .ov-card.pat-card { max-width:380px; }
+        .pat-pad { position:relative; width:240px; height:240px; margin:6px auto 4px; touch-action:none; user-select:none; -webkit-user-select:none; }
+        .pat-svg { position:absolute; inset:0; width:100%; height:100%; pointer-events:none; }
+        .pat-dot { position:absolute; width:22px; height:22px; border-radius:50%; background:#cbd5e1; transform:translate(-50%,-50%); box-shadow:0 0 0 8px rgba(203,213,225,.18); transition:background .1s, box-shadow .1s; pointer-events:none; }
+        .pat-dot.on { background:#2563eb; box-shadow:0 0 0 11px rgba(37,99,235,.22); }
+        .pw-dots { font-size:34px; font-weight:900; letter-spacing:12px; color:#0f172a; min-height:46px; margin-bottom:14px; }
+        .pw-keypad { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; max-width:300px; margin:0 auto; }
+        .pw-key { height:62px; border:1.5px solid #e2e8f0; background:#fff; border-radius:14px; font-size:23px; font-weight:800; color:#0f172a; cursor:pointer; }
+        .pw-key:active { background:#eff6ff; }
+        .pw-key.pw-ok { background:#2563eb; color:#fff; border-color:#2563eb; font-size:17px; }
+        .pw-key.pw-del { color:#64748b; }
         .coin { width:120px; height:120px; margin:0 auto 22px; border-radius:50%;
                 background:linear-gradient(135deg,#fde68a,#f59e0b); color:#7c2d12;
                 display:flex; align-items:center; justify-content:center; font-size:52px; font-weight:900;
@@ -483,6 +494,7 @@ function toast(msg){
     clearTimeout(t._h); t._h=setTimeout(()=>t.classList.remove('show'),2200);
 }
 /* ── 시계 / 사운드 / 체크 애니메이션 ── */
+let _lastActiveSig='';
 function startClock(){
     const el=document.getElementById('hdrClock'); if(!el) return;
     const DAYS=['SUN','MON','TUE','WED','THU','FRI','SAT'];
@@ -490,7 +502,10 @@ function startClock(){
         const dateStr=`${n.getFullYear()}.${p(n.getMonth()+1)}.${p(n.getDate())}`;
         let h=n.getHours(); const ampm=h<12?'AM':'PM'; h=h%12||12;
         el.innerHTML=`<span class="clock-date">${dateStr}</span><span class="clock-day">${DAYS[n.getDay()]}</span><span class="clock-divider"></span><span class="clock-time">${p(h)}<span class="blink">:</span>${p(n.getMinutes())}<span class="clock-ampm">${ampm}</span></span>`;
-        updateMealStatus(); };
+        updateMealStatus();
+        const sig=_mealWindows.map(w=>isActive(w.key)?1:0).join('')+(TEST_MODE?'T':'')+(WEEKEND_OK?'W':'');
+        if(sig!==_lastActiveSig){ _lastActiveSig=sig; if(CURRENT==='staff') renderStaffList(); }
+    };
     tick(); setInterval(tick,1000);
 }
 let SOUND_ON = (()=>{ try{ return localStorage.getItem('kacMealSound')!=='off'; }catch(e){ return true; } })();
@@ -505,7 +520,8 @@ function applySoundIcon(){
 }
 function toggleSound(){ SOUND_ON=!SOUND_ON; try{ localStorage.setItem('kacMealSound', SOUND_ON?'on':'off'); }catch(e){} applySoundIcon(); }
 /* ── 환경설정 팝업 (소리 / 테스트 모드) ── */
-function openSettings(){ renderSettings(); overlay.classList.add('show'); }
+function openSettings(){ requireUnlock(_openSettingsReal); }
+function _openSettingsReal(){ renderSettings(); overlay.classList.add('show'); }
 function renderSettings(){
     ovCard.className='ov-card';
     ovCard.innerHTML = `
@@ -523,10 +539,96 @@ function renderSettings(){
             <button class="set-toggle ${WEEKEND_OK?'on':''}" onclick="toggleWeekend();">${WEEKEND_OK?'켜짐':'꺼짐'}</button>
         </div>
         <div class="set-row">
+            <div class="set-label"><i class="fa-solid fa-shield-halved"></i> 설정 잠금 패턴<span class="set-hint">${_patGet()?'설정됨 · 설정 진입 시 패턴 필요':'미설정 · 누구나 진입 가능'}</span></div>
+            <div style="display:flex; gap:6px;">${_patGet()
+                ? `<button class="set-toggle" onclick="_patStartSet()">변경</button><button class="set-toggle danger" onclick="_patReset0()">초기화</button>`
+                : `<button class="set-toggle on" onclick="_patStartSet()">등록</button>`}</div>
+        </div>
+        <div class="set-row">
             <div class="set-label"><i class="fa-solid fa-eraser"></i> 오늘 식수 초기화<span class="set-hint">오늘 모든 직원의 체크 삭제 (테스트 정리용)</span></div>
             <button class="set-toggle danger" onclick="resetTodayChecks();">초기화</button>
         </div>
         <div class="ov-actions"><button class="ov-btn gray" onclick="closeOverlay()">닫기</button></div>`;
+}
+/* ── 설정 잠금: 패턴 + 비밀번호 ── */
+const PAT_KEY='kacMealPattern', PAT_PW='13281';
+let _patState=null, _pw='';
+function _patGet(){ try{ return localStorage.getItem(PAT_KEY)||''; }catch(e){ return ''; } }
+function _patSetStore(v){ try{ if(v) localStorage.setItem(PAT_KEY,v); else localStorage.removeItem(PAT_KEY); }catch(e){} }
+function _patCenter(i){ const col=i%3,row=Math.floor(i/3); return { x:40+col*80, y:40+row*80 }; }
+function _patCleanup(){ try{ window.removeEventListener('pointerup',_patUp); }catch(_){} _patState=null; }
+function requireUnlock(onOk){ if(!_patGet()){ onOk(); return; } _openPatModal('unlock', onOk); }
+function _patStartSet(){ _openPatModal('set1', _openSettingsReal); }
+function _patReset0(){ if(confirm('설정 잠금 패턴을 초기화할까요?\n이후 누구나 설정에 들어올 수 있습니다.')){ _patSetStore(''); toast('패턴이 초기화되었습니다.'); renderSettings(); } }
+function _patMsg(t, err){ const el=document.getElementById('patMsg'); if(el){ el.textContent=t; el.style.color=err?'#dc2626':'#64748b'; } }
+function _openPatModal(mode, onOk, first){
+    _patState={ mode, onOk, first:first||null, cur:[], drawing:false };
+    const titles={ unlock:'패턴을 그려 잠금을 해제하세요', set1:'새 패턴을 그리세요 (점 3개 이상)', set2:'한 번 더 그려 확인하세요' };
+    const dots=[0,1,2,3,4,5,6,7,8].map(i=>{ const c=_patCenter(i); return `<div class="pat-dot" data-i="${i}" style="left:${c.x}px;top:${c.y}px;"></div>`; }).join('');
+    ovCard.className='ov-card pat-card';
+    ovCard.innerHTML = `
+        <div class="ov-ttl" style="color:#0f172a;"><i class="fa-solid fa-shield-halved" style="color:#2563eb;"></i> 설정 잠금</div>
+        <div class="ov-sub" id="patMsg" style="margin-bottom:12px;">${titles[mode]||''}</div>
+        <div class="pat-pad" id="patPad"><svg class="pat-svg" id="patSvg" viewBox="0 0 240 240"></svg>${dots}</div>
+        <div class="ov-actions" style="flex-direction:column; gap:8px; margin-top:8px;">
+            ${mode==='unlock'?'<button class="ov-btn" style="background:#eff6ff;color:#2563eb;" onclick="_patForgot()">패턴을 잊으셨나요? 비밀번호로 풀기</button>':''}
+            <button class="ov-btn gray" onclick="closeOverlay()">닫기</button>
+        </div>`;
+    overlay.classList.add('show');
+    const pad=document.getElementById('patPad');
+    if(pad){ pad.addEventListener('pointerdown', _patDown); pad.addEventListener('pointermove', _patMove); }
+    window.removeEventListener('pointerup',_patUp); window.addEventListener('pointerup',_patUp);
+}
+function _patHit(e){ const pad=document.getElementById('patPad'); if(!pad) return -1; const r=pad.getBoundingClientRect(); const x=(e.clientX-r.left)/r.width*240, y=(e.clientY-r.top)/r.height*240; for(let i=0;i<9;i++){ const c=_patCenter(i); if(Math.hypot(x-c.x,y-c.y)<30) return i; } return -1; }
+function _patDown(e){ if(!_patState) return; e.preventDefault(); _patState.drawing=true; _patState.cur=[]; const i=_patHit(e); if(i>=0) _patState.cur.push(i); _patDraw(); }
+function _patMove(e){ if(!_patState||!_patState.drawing) return; const i=_patHit(e); if(i>=0 && _patState.cur.indexOf(i)<0){ _patState.cur.push(i); _patDraw(); } }
+function _patUp(e){ if(!_patState||!_patState.drawing) return; _patState.drawing=false; _patFinish(); }
+function _patDraw(){ if(!_patState) return; const cur=_patState.cur; document.querySelectorAll('.pat-dot').forEach(d=>{ d.classList.toggle('on', cur.indexOf(+d.getAttribute('data-i'))>=0); }); const svg=document.getElementById('patSvg'); if(svg){ const pts=cur.map(i=>{const c=_patCenter(i);return c.x+','+c.y;}).join(' '); svg.innerHTML = cur.length>1?`<polyline points="${pts}" fill="none" stroke="#2563eb" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>`:''; } }
+function _patReset(){ if(_patState) _patState.cur=[]; _patDraw(); }
+function _patFinish(){
+    const cur=(_patState&&_patState.cur)||[], code=cur.join('-'), mode=_patState&&_patState.mode, onOk=_patState&&_patState.onOk;
+    if(cur.length<3){ _patMsg('점을 3개 이상 이어 주세요', true); setTimeout(_patReset,250); return; }
+    if(mode==='unlock'){
+        if(code===_patGet()){ _patCleanup(); if(onOk) onOk(); } else { _patMsg('패턴이 일치하지 않습니다', true); setTimeout(_patReset,250); }
+    } else if(mode==='set1'){ _openPatModal('set2', onOk, code); }
+    else if(mode==='set2'){
+        if(code===((_patState&&_patState.first)||'')){ _patSetStore(code); _patCleanup(); toast('패턴이 설정되었습니다.'); if(onOk) onOk(); }
+        else { _patMsg('두 패턴이 다릅니다. 처음부터 다시 그려 주세요', true); setTimeout(()=>_openPatModal('set1', onOk),400); }
+    }
+}
+function _patForgot(){ _patCleanup(); _openPwModal(); }
+function _openPwModal(){
+    _pw='';
+    ovCard.className='ov-card';
+    ovCard.innerHTML = `
+        <div class="ov-ttl" style="color:#0f172a;"><i class="fa-solid fa-key" style="color:#2563eb;"></i> 비밀번호 입력</div>
+        <div class="ov-sub" style="margin-bottom:14px;">관리자 비밀번호를 입력하세요.</div>
+        <div class="pw-dots" id="pwDots"></div>
+        <div class="pw-keypad">${[1,2,3,4,5,6,7,8,9].map(n=>`<button class="pw-key" onclick="_pwIn('${n}')">${n}</button>`).join('')}<button class="pw-key pw-del" onclick="_pwDel()">⌫</button><button class="pw-key" onclick="_pwIn('0')">0</button><button class="pw-key pw-ok" onclick="_pwOk()">확인</button></div>
+        <div class="ov-actions" style="margin-top:10px;"><button class="ov-btn gray" onclick="closeOverlay()">닫기</button></div>`;
+    overlay.classList.add('show'); _pwRender();
+}
+function _pwIn(d){ if(_pw.length>=8) return; _pw+=String(d); _pwRender(); }
+function _pwDel(){ _pw=_pw.slice(0,-1); _pwRender(); }
+function _pwRender(){ const el=document.getElementById('pwDots'); if(el) el.textContent=_pw.replace(/./g,'*'); }
+function _pwOk(){ if(_pw===PAT_PW){ toast('확인되었습니다.'); _openSettingsReal(); } else { toast('비밀번호가 올바르지 않습니다.'); _pw=''; _pwRender(); } }
+
+/* ── 사외강사 계좌 (폰에서 QR 스캔 시 표시) ── */
+function showMobileAccount(){
+    CURRENT='acct';
+    db.ref('system/staffMeal/account').once('value').then(s=>{
+        const v=s.val(); const acc=(v&&typeof v==='object')?v:{ bank:'', number:(typeof v==='string'?v:''), holder:'' };
+        const has=acc.number && String(acc.number).trim();
+        stage.innerHTML = `
+            <div class="home">
+                <div class="ico" style="width:84px;height:84px;margin:0 auto 18px;border-radius:22px;background:#ecfdf5;color:#059669;display:flex;align-items:center;justify-content:center;font-size:38px;"><i class="fa-solid fa-building-columns"></i></div>
+                <h2>사외 강사 식대 계좌</h2>
+                <p>아래 계좌로 식대를 <b>계좌이체</b> 해 주세요.</p>
+                <div style="margin-top:18px; background:#f0fdf4; border:2px solid #bbf7d0; border-radius:18px; padding:24px 18px; text-align:center;">
+                    ${has?`<div style="font-size:20px;font-weight:800;color:#0f172a;">${esc(acc.bank||'')}</div><div style="font-size:34px;font-weight:900;color:#0f172a;letter-spacing:.5px;user-select:all;word-break:break-all;line-height:1.1;margin-top:2px;">${esc(acc.number)}</div>${acc.holder?`<div style="font-size:16px;font-weight:700;color:#64748b;margin-top:10px;">예금주 ${esc(acc.holder)}</div>`:''}`:'<div style="font-size:15px;color:#94a3b8;font-weight:700;">등록된 계좌가 없습니다.</div>'}
+                </div>
+            </div>`;
+    }).catch(()=>{});
 }
 let _nutriT=null;
 function nutriGo(){ try{ nutriUp(); }catch(_){} location.href='nutritionist.html'; }
@@ -807,7 +909,7 @@ function showCancelConfirm(name, time, onCancel, msg){
 }
 let _ac=null;
 function autoClose(){ clearTimeout(_ac); _ac=setTimeout(closeOverlay, 2200); }
-function closeOverlay(){ clearTimeout(_ac); _clearExtTimers(); overlay.classList.remove('show'); if(CURRENT==='instr') goHome(); }
+function closeOverlay(){ clearTimeout(_ac); _clearExtTimers(); _patCleanup(); overlay.classList.remove('show'); if(CURRENT==='instr') goHome(); }
 
 /* ── 강사 QR 표시 (키오스크) ── */
 let _extCloseT=null, _extCountT=null;
@@ -835,7 +937,7 @@ function showInstrQr(mode){
     db.ref('system/staffMeal/account').once('value').then(s=>{
         const v=s.val(); const acc=(v&&typeof v==='object')?v:{ bank:'', number:(typeof v==='string'?v:''), holder:'' };
         const has=acc.number && String(acc.number).trim();
-        const qrText = has ? `[식대 입금 계좌]\n${acc.bank||''} ${acc.number}${acc.holder?('\n예금주 '+acc.holder):''}` : '식대 계좌가 등록되지 않았습니다.';
+        const acctUrl = (function(){ const u=new URL('staff_meal.html', location.href); u.searchParams.set('go','acct'); return u.toString(); })();
         const acctBox = has
           ? `<div style="font-size:21px; font-weight:800; color:#0f172a;">${esc(acc.bank||'')}</div>
              <div style="font-size:38px; font-weight:900; color:#0f172a; letter-spacing:0.5px; user-select:all; margin-top:2px; word-break:break-all; line-height:1.1;">${esc(acc.number)}</div>
@@ -853,8 +955,8 @@ function showInstrQr(mode){
             <div class="ov-actions"><button class="ov-btn gray" onclick="closeOverlay()">닫기 <span id="extCountdown" style="opacity:.65; font-weight:800;"></span></button></div>`;
         overlay.classList.add('show');
         const box = document.getElementById('instrQr'); box.innerHTML='';
-        try { new QRCode(box, { text:qrText, width:200, height:200, correctLevel:QRCode.CorrectLevel.M }); }
-        catch(e){ box.textContent = qrText; }
+        try { new QRCode(box, { text:acctUrl, width:200, height:200, correctLevel:QRCode.CorrectLevel.M }); }
+        catch(e){ box.textContent = acctUrl; }
         // 3초 자동 닫힘 + 카운트다운 (시간 조정은 아래 숫자만 변경)
         let n=3; const cd=()=>{ const el=document.getElementById('extCountdown'); if(el) el.textContent='('+n+')'; };
         cd(); _extCountT=setInterval(()=>{ n--; if(n<0)n=0; cd(); }, 1000);
@@ -895,6 +997,7 @@ function showMobileDone(){
 (function(){
     const go = new URLSearchParams(location.search).get('go');
     if(go==='internal' || go==='external'){ MOBILE_MODE=go; goInstructor(go); }
+    else if(go==='acct'){ showMobileAccount(); }
     else { goHome(); }
     startClock(); applySoundIcon(); _initAudio(); initFsButton();
     window.addEventListener('resize', ()=>{ if(CURRENT==='staff') fitTable(); });
@@ -907,7 +1010,7 @@ function esc(v){ return String(v==null?'':v).replace(/[&<>"']/g,c=>({'&':'&amp;'
 /* 초기 진입은 위의 ?go 분기에서 처리됨 */
 </script>
 <style>@media print{#__ver{display:none!important}}</style>
-<div id="__ver" style="position:fixed;right:7px;bottom:7px;z-index:2147483000;background:rgba(15,23,42,.72);color:#cbd5e1;font:700 10px/1 monospace;padding:4px 8px;border-radius:7px;pointer-events:none;letter-spacing:.3px;">식당패널 vDD · 260613-1812</div>
+<div id="__ver" style="position:fixed;right:7px;bottom:7px;z-index:2147483000;background:rgba(15,23,42,.72);color:#cbd5e1;font:700 10px/1 monospace;padding:4px 8px;border-radius:7px;pointer-events:none;letter-spacing:.3px;">식당패널 vEE · 260613-1835</div>
 </body>
 </html>
-<!-- @build 20260613-181200 (식당패널 vDD: 사외강사 — QR을 입력폼이 아닌 "계좌정보 QR"로 변경(스캔 시 폰에 은행·계좌번호·예금주 표시, 이름 입력 불필요). 팝업 계좌번호 크게(38px)+팝업 확장. 3초 후 자동 닫힘(카운트다운). KAC 임직원 QR은 기존 입력방식 유지) -->
+<!-- @build 20260613-183500 (식당패널 vEE: ①사외강사 QR 수정 — 한글텍스트가 qrcodejs에서 깨져 ASCII URL(staff_meal.html?go=acct)로 변경. 스캔 시 폰에 계좌(은행·번호·예금주) 표시(showMobileAccount). ②설정버튼 패턴잠금 — 3x3 드래그 패턴 등록/변경/초기화, 패턴 분실 시 비밀번호 13281(****마스킹) 입력으로 해제. ③시간대 잠금 실시간 — 시계 틱마다 활성 시간대 변화 감지해 새로고침 없이 자동으로 풀림/잠김) -->
