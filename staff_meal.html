@@ -306,6 +306,14 @@ db.ref(`system/staffMeal/checks/${today}`).on('value', s => { TODAY_CHECKS = s.v
 db.ref(`system/staffMeal/breakfast/${today}`).on('value', s => { TODAY_BREAKFAST = s.val() || {}; if (CURRENT==='staff') renderStaffList(); refreshCount(); });
 db.ref(`system/staffMeal/dinner/${today}`).on('value', s => { TODAY_DINNER = s.val() || {}; if (CURRENT==='staff') renderStaffList(); refreshCount(); });
 
+/* ── 이름 마스킹(개인정보 보호): 김지은→김*은, 권영택→권*택, 김은→김* ── */
+function maskName(nm){
+    const s=(nm||'').toString().trim().replace(/\s+/g,'');
+    if(s.length<=1) return s;
+    if(s.length===2) return s[0]+'*';
+    return s[0]+'*'.repeat(s.length-2)+s[s.length-1];
+}
+
 /* ── 식수 데이터 자동 정리: 약 3개월 보관, 그 이전 자동 삭제 ── */
 async function autoCleanMeals(){
     try{
@@ -395,7 +403,7 @@ function renderStaffList(){
                 html += `<tr class="dept-band${trCls}" style="background:${c.w};--da:${c.ac}">
                     ${startRow?`<td class="dept-cell" rowspan="${run}" style="background:${c.w};color:${c.fg};border-left:5px solid ${c.ac};">${esc(dept)}</td>`:''}
                     <td class="pos-cell">${esc(r.position||'-')}</td>
-                    <td class="name-cell" onclick="showMyCount('${id}')" title="이번 달 식사 횟수 보기">${esc(r.name||'')}</td>
+                    <td class="name-cell" onclick="showMyCount('${id}')" title="이번 달 식사 횟수 보기">${esc(maskName(r.name))}</td>
                     ${cell(id,'b', !!TODAY_BREAKFAST[id])}
                     ${cell(id,'l', !!TODAY_CHECKS[id])}
                     ${cell(id,'d', !!TODAY_DINNER[id])}
@@ -1059,7 +1067,7 @@ function esc(v){ return String(v==null?'':v).replace(/[&<>"']/g,c=>({'&':'&amp;'
 /* 초기 진입은 위의 ?go 분기에서 처리됨 */
 </script>
 <style>@media print{#__ver{display:none!important}}</style>
-<div id="__ver" style="position:fixed;right:7px;bottom:7px;z-index:2147483000;background:rgba(15,23,42,.72);color:#cbd5e1;font:700 10px/1 monospace;padding:4px 8px;border-radius:7px;pointer-events:none;letter-spacing:.3px;">식당패널 vJJ · 260613-2230</div>
+<div id="__ver" style="position:fixed;right:7px;bottom:7px;z-index:2147483000;background:rgba(15,23,42,.72);color:#cbd5e1;font:700 10px/1 monospace;padding:4px 8px;border-radius:7px;pointer-events:none;letter-spacing:.3px;">식당패널 vKK · 260613-2240</div>
 </body>
 </html>
 <!-- @build 20260613-192000 (식당패널 vGG: KAC임직원 QR 팝업도 사외강사처럼 "닫기 (3)(2)(1)" 카운트다운 + 3초 자동닫힘 + 즉시 닫기 버튼. QR 팝업은 자체 타이머로 닫으므로 일괄 옵저버에서 제외(keep)) -->

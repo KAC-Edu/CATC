@@ -1045,49 +1045,67 @@ function loadRoomData() {
         _dormRosterIdx = _buildExtIdx(snap.val());
         _refreshCourseTab();
     }, err => { console.warn('[dorm/rosters] read error', err); });
+    // 연간교육계획 구독 → 상단바 점심·석식 예상인원에 교육생 반영(날짜 기준)
+    db.ref('system/annualPlan').on('value', snap => {
+        const v = snap.val() || [];
+        _annualPlan = Array.isArray(v) ? v : Object.values(v);
+        renderMealStats(getToday());
+    }, err => { console.warn('[annualPlan top] read error', err); });
 }
 
 function renderMealStats(today) {
-    let totalStudents = 0, skipStudents = 0;
+    const todayStr = today || getToday();
+    // 교육생: 연간교육계획(과정 시작·종료일) 기준
+    //   · 점심: 시작일 ≤ 오늘 ≤ 종료일  (첫날~마지막날 매일)
+    //   · 석식: 시작일 ≤ 오늘 < 종료일   (마지막날 제외 = 점심까지만 식사)
+    const plan = Array.isArray(_annualPlan) ? _annualPlan : Object.values(_annualPlan || {});
+    let lunchStudents = 0, dinnerStudents = 0, dinnerSkip = 0;
     const courses = [];
-    Object.keys(allRoomData).forEach(rid => {
-        const room = allRoomData[rid];
-        if (!room?.status?.roomStatus || room.status.roomStatus !== 'active') return;
-        if (room?.settings?.hideFromBoard) return;
-        const students = room.students || {};
-        const names = new Set();
-        Object.values(students).forEach(s => { if (s?.name && s.name !== 'undefined') names.add(s.name.trim()); });
-        const cnt = names.size;
-        const skips = room.dinner_skips?.[today] || {};
-        const sk = Object.keys(skips).length;
-        totalStudents += cnt; skipStudents += sk;
-        courses.push({ name: room.settings?.courseName || ('Room ' + rid), n: cnt, skip: sk });
-    });
+    plan.filter(c => c && c.name && c.startDate && c.endDate)
+        .sort((a, b) => (a.startDate || '').localeCompare(b.startDate || ''))
+        .forEach(c => {
+            const eatsLunch  = (c.startDate <= todayStr && todayStr <= c.endDate);
+            const eatsDinner = (c.startDate <= todayStr && todayStr <  c.endDate);
+            if (!eatsLunch && !eatsDinner) return;
+            const n = (_courseCounts(c).total) || 0;
+            let sk = 0;
+            if (eatsDinner) {
+                const m = _roomMatchForCourse(c);
+                const skips = (m && m.room && m.room.dinner_skips) ? (m.room.dinner_skips[todayStr] || {}) : {};
+                sk = Math.min(Object.keys(skips).length, n);
+            }
+            if (eatsLunch)  lunchStudents  += n;
+            if (eatsDinner) { dinnerStudents += n; dinnerSkip += sk; }
+            courses.push({ name: c.name, n, skip: sk, lunch: eatsLunch, dinner: eatsDinner, last: (todayStr === c.endDate) });
+        });
     const staffCount  = Object.values(_staffRoster || {}).filter(r => r && r.active !== false).length;
-    const staffDinner = Object.keys((_staffDinner || {})[today] || {}).length;   // 직원 터치패널 석식 신청
-    const lunchEst  = totalStudents + staffCount;
-    const dinnerEst = Math.max(0, totalStudents - skipStudents) + staffDinner;
+    const staffDinner = Object.keys((_staffDinner || {})[todayStr] || {}).length;   // 직원 터치패널 석식 신청
+    const lunchEst  = lunchStudents + staffCount;
+    const dinnerEst = Math.max(0, dinnerStudents - dinnerSkip) + staffDinner;
     const le = document.getElementById('lunchEst');  if (le) le.textContent  = lunchEst + '명';
     const de = document.getElementById('dinnerEst'); if (de) de.textContent  = dinnerEst + '명';
-    _estData = { today, totalStudents, skipStudents, staffCount, staffDinner, lunchEst, dinnerEst, courses };
+    _estData = { today: todayStr, lunchStudents, dinnerStudents, dinnerSkip, staffCount, staffDinner, lunchEst, dinnerEst, courses };
 }
 function openEstModal(kind){
     const d = _estData || {}; const body=document.getElementById('estModalBody'); const title=document.getElementById('estModalTitle');
     if(!body) return;
     if(kind==='lunch'){
         title.innerHTML = '<i class="fa-solid fa-bowl-rice" style="color:#f59e0b;margin-right:6px;"></i>점심 예상인원 산정 근거';
-        const rows=(d.courses||[]).map(c=>`<tr><td>${escH(c.name)}</td><td class="c">${c.n}명</td></tr>`).join('');
-        body.innerHTML = `<div class="est-form">점심은 <b>운영중 과정 교육생 전원 + 직원 명단 전원</b>으로 산정합니다.</div>
+        const rows=(d.courses||[]).filter(c=>c.lunch).map(c=>`<tr><td>${escH(c.name)}${c.last?' <span style="color:#d97706;font-size:11px;font-weight:800;">(마지막날·점심까지)</span>':''}</td><td class="c">${c.n}명</td></tr>`).join('');
+        body.innerHTML = `<div class="est-form">점심은 <b>운영중 과정 교육생(첫날 점심부터 마지막날 점심까지) + 직원 명단 전원</b>으로 산정합니다.</div>
             <div class="est-big">${d.lunchEst||0}<small>명</small></div>
-            <div class="est-eq">교육생 ${d.totalStudents||0}명 <span>+</span> 직원 ${d.staffCount||0}명 <span>=</span> <b>${d.lunchEst||0}명</b></div>
-            <table class="est-table"><thead><tr><th>과정</th><th>교육생</th></tr></thead><tbody>${rows||'<tr><td colspan="2" class="c">운영중 과정 없음</td></tr>'}<tr class="est-staff"><td>직원 명단</td><td class="c">${d.staffCount||0}명</td></tr></tbody></table>`;
+            <div class="est-eq">교육생 ${d.lunchStudents||0}명 <span>+</span> 직원 ${d.staffCount||0}명 <span>=</span> <b>${d.lunchEst||0}명</b></div>
+            <table class="est-table"><thead><tr><th>과정</th><th>교육생</th></tr></thead><tbody>${rows||'<tr><td colspan="2" class="c">오늘 점심 대상 과정 없음</td></tr>'}<tr class="est-staff"><td>직원 명단</td><td class="c">${d.staffCount||0}명</td></tr></tbody></table>`;
     } else {
         title.innerHTML = '<i class="fa-solid fa-moon" style="color:#7c3aed;margin-right:6px;"></i>석식 예상인원 산정 근거';
-        const rows=(d.courses||[]).map(c=>`<tr><td>${escH(c.name)}</td><td class="c">${c.n}명</td><td class="c" style="color:#dc2626;">-${c.skip||0}</td><td class="c">${Math.max(0,c.n-(c.skip||0))}명</td></tr>`).join('');
-        body.innerHTML = `<div class="est-form">석식은 <b>교육생 − 외출·외박(석식 제외) 신청자 + 직원 터치패널 석식 신청자</b>로 산정합니다.</div>
+        const rows=(d.courses||[]).filter(c=>c.dinner).map(c=>`<tr><td>${escH(c.name)}</td><td class="c">${c.n}명</td><td class="c" style="color:#dc2626;">-${c.skip||0}</td><td class="c">${Math.max(0,c.n-(c.skip||0))}명</td></tr>`).join('');
+        const lastList=(d.courses||[]).filter(c=>c.last && c.lunch && !c.dinner).map(c=>escH(c.name));
+        const lastNote=lastList.length?`<div class="est-form" style="margin-top:8px;color:#b45309;"><i class="fa-solid fa-circle-info"></i> 오늘이 <b>마지막날</b>이라 점심까지만 산정(석식 제외): ${lastList.join(', ')}</div>`:'';
+        body.innerHTML = `<div class="est-form">석식은 <b>교육생(마지막날 제외) − 외출·외박(석식 제외) + 직원 터치패널 석식 신청</b>으로 산정합니다.</div>
             <div class="est-big">${d.dinnerEst||0}<small>명</small></div>
-            <div class="est-eq">교육생 ${d.totalStudents||0}명 <span>−</span> 석식제외 ${d.skipStudents||0}명 <span>+</span> 직원석식 ${d.staffDinner||0}명 <span>=</span> <b>${d.dinnerEst||0}명</b></div>
-            <table class="est-table"><thead><tr><th>과정</th><th>교육생</th><th>제외</th><th>석식</th></tr></thead><tbody>${rows||'<tr><td colspan="4" class="c">운영중 과정 없음</td></tr>'}<tr class="est-staff"><td>직원 석식 신청</td><td class="c">-</td><td class="c">-</td><td class="c">+${d.staffDinner||0}명</td></tr></tbody></table>
+            <div class="est-eq">교육생 ${d.dinnerStudents||0}명 <span>−</span> 석식제외 ${d.dinnerSkip||0}명 <span>+</span> 직원석식 ${d.staffDinner||0}명 <span>=</span> <b>${d.dinnerEst||0}명</b></div>
+            <table class="est-table"><thead><tr><th>과정</th><th>교육생</th><th>제외</th><th>석식</th></tr></thead><tbody>${rows||'<tr><td colspan="4" class="c">오늘 석식 대상 과정 없음</td></tr>'}<tr class="est-staff"><td>직원 석식 신청</td><td class="c">-</td><td class="c">-</td><td class="c">+${d.staffDinner||0}명</td></tr></tbody></table>
+            ${lastNote}
             <button class="est-skipbtn" onclick="closeEstModal(); openSkipModal();"><i class="fa-solid fa-ban"></i> 외출·외박 석식 제외 명단 자세히 보기</button>`;
     }
     const m=document.getElementById('estModal'); if(m) m.classList.add('open');
@@ -1524,6 +1542,7 @@ function showToast(msg) {
    - checks: system/staffMeal/checks/{date}/{key} = {name,category,idValue,time,ts}
 ═══════════════════════════════════════════════════════════ */
 let _staffRoster = {};
+let _annualPlan = [];   // 연간교육계획(과정 시작·종료일) 캐시 — 예상인원 산정용
 let _dinnerToday = {};
 let _checksToday = {};
 let _breakfastToday = {};
@@ -2648,8 +2667,8 @@ function renderMealCalendar(a, month){
 }
 </script>
 <style>@media print{#__ver{display:none!important}}</style>
-<div id="__ver" style="position:fixed;right:7px;bottom:7px;z-index:2147483000;background:rgba(15,23,42,.72);color:#cbd5e1;font:700 10px/1 monospace;padding:4px 8px;border-radius:7px;pointer-events:none;letter-spacing:.3px;">영양사 vWW · 260613-2140</div>
+<div id="__ver" style="position:fixed;right:7px;bottom:7px;z-index:2147483000;background:rgba(15,23,42,.72);color:#cbd5e1;font:700 10px/1 monospace;padding:4px 8px;border-radius:7px;pointer-events:none;letter-spacing:.3px;">영양사 vXX · 260613-2240</div>
 <div id="notifyStack" class="notify-stack"></div>
 </body>
 </html>
-<!-- @build 20260613-214000 (영양사 vWW: 배치순서번호 중복 자동밀기 — 직원추가(addSingle)/인라인수정(saveEdit) 시 같은 소속에 동일 번호가 있으면 confirm 팝업 후 그 번호 이상(숫자)을 +1씩 뒤로 밀어 자리확보(_empNoConflictUpdates, 멀티패스 update). 수정은 번호를 실제로 바꿨을 때만 검사. 직전 vVV: 식수데이터 3개월 보관 자동정리) -->
+<!-- @build 20260613-224000 (영양사 vXX: 상단 점심·석식 예상인원에 교육생 날짜기준 반영 — system/annualPlan 구독, 점심=시작일≤오늘≤종료일, 석식=시작일≤오늘<종료일(마지막날 점심까지·석식제외). renderMealStats 재작성+산정근거 모달 갱신. 직전 vWW: 배치순서번호 중복 자동밀기) -->
