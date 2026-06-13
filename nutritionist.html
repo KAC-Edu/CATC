@@ -467,11 +467,13 @@
         .rl-row:hover .rl-grip { color:#2563eb; }
         .rl-grip:active { cursor:grabbing; }
         .rl-seq { color:#94a3b8; font-weight:800; font-variant-numeric:tabular-nums; text-align:center; font-size:15px; }
-        .rl-pos { color:var(--muted); font-weight:700; font-size:15.5px; }
-        .rl-name { font-weight:800; color:var(--navy); font-size:16.5px; }
-        .rl-note { color:#475569; font-size:13px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+        .rl-pos { color:var(--muted); font-weight:700; font-size:15.5px; text-align:center; }
+        .rl-name { font-weight:800; color:var(--navy); font-size:16.5px; text-align:center; }
+        .rl-note { color:#475569; font-size:13px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; text-align:center; }
         .rl-dash { color:#cbd5e1; }
-        .rl-ctrl { display:inline-flex; align-items:center; gap:6px; justify-content:flex-end; }
+        .rl-ctrl { display:inline-flex; align-items:center; gap:6px; justify-content:center; }
+        .rl-colhead { display:grid; grid-template-columns:30px 46px 120px minmax(90px,1fr) 160px auto; gap:10px; padding:9px 16px; background:#f8fafc; border-bottom:1px solid #e2e8f0; }
+        .rl-colhead span { text-align:center; font-size:12.5px; font-weight:800; color:#94a3b8; }
         .rl-arw { width:32px; height:32px; border:1px solid var(--border); background:#fff; border-radius:8px; color:#64748b; cursor:pointer; font-size:12px; display:inline-flex; align-items:center; justify-content:center; }
         .rl-arw:hover:not(:disabled) { background:#eff6ff; border-color:#93c5fd; color:#2563eb; }
         .rl-arw:disabled { opacity:.32; cursor:default; }
@@ -493,7 +495,7 @@
         .add-tab { flex:1; padding:9px 0; border:1.5px solid var(--border); background:#fff; border-radius:9px; font-weight:800; font-size:13.5px; color:#64748b; cursor:pointer; }
         .add-tab.active { background:#2563eb; color:#fff; border-color:#2563eb; }
         .am-row { display:flex; align-items:center; gap:10px; margin-bottom:9px; }
-        .am-lab { width:64px; flex:none; font-weight:800; color:#475569; font-size:13px; }
+        .am-lab { width:92px; flex:none; font-weight:800; color:#475569; font-size:13px; white-space:nowrap; }
         .am-inp { flex:1; height:40px; padding:0 12px; border:1.5px solid #cbd5e1; border-radius:9px; font-size:14px; font-weight:700; box-sizing:border-box; background:#fff; }
         .am-inp:focus { border-color:#2563eb; outline:none; }
         .am-newbtn { width:40px; height:40px; flex:none; border:1.5px solid #2563eb; background:#eff6ff; color:#2563eb; border-radius:9px; cursor:pointer; font-size:14px; }
@@ -515,7 +517,14 @@
         .earow input:focus, .earow select:focus { border-color:#2563eb; outline:none; }
         .earow.dirty input, .earow.dirty select { border-color:#f59e0b; background:#fffbeb; }
         .bgrid-add { width:100%; margin-top:8px; padding:9px 0; border:1.5px dashed #93c5fd; background:#f8fafc; color:#2563eb; border-radius:9px; font-weight:800; cursor:pointer; font-size:13px; }
-        .dm-row { display:flex; align-items:center; gap:8px; padding:9px 10px; border:1px solid var(--border); border-radius:9px; margin-bottom:6px; background:#fff; }
+        .dm-row { display:flex; align-items:center; gap:8px; padding:11px 12px; border:1px solid var(--border); border-radius:9px; margin-bottom:6px; background:#fff; cursor:pointer; transition:.12s; }
+        .dm-row:hover { border-color:#bfdbfe; }
+        .dm-row.sel { border-color:#2563eb; background:#eff6ff; box-shadow:0 0 0 2px rgba(37,99,235,.18); }
+        .dm-movebar { display:flex; align-items:center; gap:8px; margin-top:12px; padding:11px 12px; background:#f8fafc; border:1px solid var(--border); border-radius:10px; }
+        .dm-mvsel { flex:1; font-size:13.5px; font-weight:700; color:#475569; }
+        .dm-mvbtn { height:40px; padding:0 16px; border:1px solid #cbd5e1; background:#fff; border-radius:9px; font-weight:800; font-size:14.5px; color:#2563eb; cursor:pointer; }
+        .dm-mvbtn:hover:not(:disabled) { background:#eff6ff; border-color:#93c5fd; }
+        .dm-mvbtn:disabled { opacity:.35; cursor:default; color:#94a3b8; }
         .dm-name { flex:1; font-weight:800; color:var(--navy); font-size:14px; }
         .dm-cnt { font-size:11.5px; font-weight:800; color:#2563eb; background:#dbeafe; padding:1px 8px; border-radius:999px; }
         .dm-ic { width:30px; height:30px; border:1px solid var(--border); background:#fff; border-radius:7px; cursor:pointer; color:#64748b; font-size:11px; }
@@ -548,7 +557,7 @@
         .mn-label { font-size:23px; font-weight:900; color:var(--navy); min-width:150px; text-align:center; }
         /* 월별 집계 표 */
         .cnt-table { width:100%; border-collapse:collapse; }
-        .cnt-table th { background:#f8fafc; font-size:14px; color:var(--muted); font-weight:800; padding:13px 12px; border:1px solid var(--border); text-align:left; }
+        .cnt-table th { background:#f8fafc; font-size:14px; color:var(--muted); font-weight:800; padding:13px 12px; border:1px solid var(--border); text-align:center; }
         .cnt-table td { padding:14px 12px; border:1px solid var(--border); font-size:15.5px; }
         .cnt-table td.c { text-align:center; }
         .cnt-table .rname { font-weight:800; color:var(--navy); }
@@ -654,8 +663,14 @@
         .notify-card { pointer-events:auto; min-width:250px; max-width:340px; background:#fff; border:1px solid var(--border); border-left:5px solid #2563eb; border-radius:13px; box-shadow:0 12px 34px rgba(15,23,42,.20); padding:12px 16px; transform:translateY(24px) scale(.97); opacity:0; transition:transform .38s cubic-bezier(.16,1,.3,1), opacity .38s; }
         .notify-card.show { transform:translateY(0) scale(1); opacity:1; }
         .notify-card.dinner { border-left-color:#7c3aed; } .notify-card.breakfast { border-left-color:#f59e0b; } .notify-card.meal { border-left-color:#16a34a; }
-        .notify-card .nt-t { font-size:13.5px; font-weight:900; color:var(--navy); display:flex; align-items:center; gap:6px; }
-        .notify-card .nt-s { font-size:12.5px; font-weight:700; color:var(--muted); margin-top:4px; }
+        .notify-card .nt-line1 { line-height:1.18; }
+        .notify-card .nt-line2 { margin-top:6px; line-height:1.18; }
+        .notify-card .nt-name { font-size:22px; font-weight:900; color:var(--navy); letter-spacing:-0.3px; }
+        .notify-card .nt-meal { font-size:21px; font-weight:900; letter-spacing:-0.3px; }
+        .notify-card.meal .nt-meal { color:#16a34a; }
+        .notify-card.breakfast .nt-meal { color:#f59e0b; }
+        .notify-card.dinner .nt-meal { color:#7c3aed; }
+        .notify-card .nt-sfx { font-size:13px; font-weight:700; color:var(--muted); margin-left:3px; }
     </style>
 </head>
 <body>
@@ -847,7 +862,7 @@
         <div class="modal-body">
             <div class="am-row"><input id="dm-new" class="am-inp" placeholder="새 소속명 (예: 교육지원부)" maxlength="20" onkeyup="if(event.key==='Enter')dmAdd()"><button class="am-newbtn" onclick="dmAdd()" title="추가"><i class="fa-solid fa-plus"></i></button></div>
             <div id="dm-list" style="margin-top:6px;"></div>
-            <div style="font-size:12px; color:var(--muted); font-weight:700; margin-top:10px; line-height:1.6;">▲▼ 순서 변경 · ✏️ 이름 수정 · 🗑 삭제. <b>이 순서대로</b> 명단·식수관리·터치패널에 표시됩니다.</div>
+            <div style="font-size:12px; color:var(--muted); font-weight:700; margin-top:10px; line-height:1.6;">소속을 클릭해 선택한 뒤 아래 <b>▲ 위로 / ▼ 아래로</b>로 순서를 바꿉니다 · ✏️ 이름 수정 · 🗑 삭제. <b>이 순서대로</b> 명단·식수관리·터치패널에 표시됩니다.</div>
         </div>
         <button class="modal-close-btn" style="background:#e2e8f0; color:#475569;" onclick="closeDeptModal()">닫기</button>
     </div>
@@ -1041,27 +1056,37 @@ function openEstModal(kind){
     const m=document.getElementById('estModal'); if(m) m.classList.add('open');
 }
 function closeEstModal(){ const m=document.getElementById('estModal'); if(m) m.classList.remove('open'); }
-function notifyMeal(title, sub, cls){
+function notifyMeal(who, mealLabel, cls){
     const stack=document.getElementById('notifyStack'); if(!stack) return;
     const card=document.createElement('div'); card.className='notify-card '+(cls||'');
-    card.innerHTML=`<div class="nt-t">${title}</div><div class="nt-s">${escH(sub)}</div>`;
+    card.innerHTML=`<div class="nt-line1"><span class="nt-name">${escH(who)}</span><span class="nt-sfx">님께서</span></div>`
+                 + `<div class="nt-line2"><span class="nt-meal">${escH(mealLabel)}</span><span class="nt-sfx">체크하셨습니다</span></div>`;
     stack.appendChild(card);
     requestAnimationFrame(()=>card.classList.add('show'));
     setTimeout(()=>{ card.classList.remove('show'); setTimeout(()=>card.remove(),420); }, 5200);
 }
+let _mealRefreshT=null;
+function _refreshMealsSoon(){
+    if(_mealRefreshT) return;
+    _mealRefreshT=setTimeout(()=>{ _mealRefreshT=null;
+        if((_curMonth||getToday().slice(0,7))===getToday().slice(0,7)){ try{ loadStaffMeal(); }catch(_){} }
+    }, 700);
+}
+function _whoLabel(v){ const pos=((v&&v.position)||'').toString().trim(); const nm=((v&&v.name)||'').toString().trim()||'누군가'; return pos?`${pos} ${nm}`:nm; }
 function _watchMealNotify(){
     const today=getToday();
-    [['checks','식사','<i class="fa-solid fa-utensils"></i>','meal'],
-     ['breakfast','조식','<i class="fa-solid fa-mug-hot"></i>','breakfast'],
-     ['dinner','석식','<i class="fa-solid fa-moon"></i>','dinner']].forEach(([node,label,ic,cls])=>{
+    [['checks','점심','meal'],
+     ['breakfast','아침','breakfast'],
+     ['dinner','저녁','dinner']].forEach(([node,label,cls])=>{
         const ref=db.ref(`system/staffMeal/${node}/${today}`);
         ref.once('value').then(snap=>{
             const seen=new Set(Object.keys(snap.val()||{}));
             ref.on('child_added', c=>{
+                _refreshMealsSoon();
                 if(seen.has(c.key)) return; seen.add(c.key);
-                const v=c.val()||{}; const nm=(v.name||'누군가');
-                notifyMeal(`${ic} ${label} 신청`, `${nm} 님이 ${label}을(를) 신청했습니다.`, cls);
+                notifyMeal(_whoLabel(c.val()||{}), label, cls);
             });
+            ref.on('child_removed', c=>{ seen.delete(c.key); _refreshMealsSoon(); });
         }).catch(()=>{});
     });
 }
@@ -1592,20 +1617,26 @@ function _allDeptsOrdered(){
     const fc={}; Object.values(_staffRoster||{}).forEach(r=>{ if(!r)return; const d=((r.dept||'').trim()); const c=(r.createdAt!=null?r.createdAt:Infinity); if(fc[d]==null||c<fc[d]) fc[d]=c; });
     return [...set].filter(Boolean).sort((a,b)=> (_deptRank(a,fc[a])-_deptRank(b,fc[b])) || a.localeCompare(b,'ko'));
 }
-function openDeptModal(){ const m=document.getElementById('deptModal'); if(m) m.classList.add('open'); renderDeptModal(); const ni=document.getElementById('dm-new'); if(ni) ni.value=''; }
+function openDeptModal(){ _dmSel=null; const m=document.getElementById('deptModal'); if(m) m.classList.add('open'); renderDeptModal(); const ni=document.getElementById('dm-new'); if(ni) ni.value=''; }
 function closeDeptModal(){ const m=document.getElementById('deptModal'); if(m) m.classList.remove('open'); }
+let _dmSel=null;
+function dmPick(d){ _dmSel = (_dmSel===d? null : d); renderDeptModal(); }
+function dmMoveSel(dir){ if(!_dmSel) return; dmMove(_dmSel, dir); }
 function renderDeptModal(){
     const dmOpen=document.getElementById('deptModal'); if(!dmOpen || !dmOpen.classList.contains('open')) return;
     const box=document.getElementById('dm-list'); if(!box) return;
     const list=_allDeptsOrdered();
     const cnt={}; Object.values(_staffRoster||{}).forEach(r=>{ if(!r)return; const d=((r.dept||'').trim()); if(d) cnt[d]=(cnt[d]||0)+1; });
-    box.innerHTML = list.length ? list.map((d,i)=>`<div class="dm-row">
-        <button class="dm-ic" ${i===0?'disabled':''} onclick="dmMove('${escJ(d)}',-1)" title="위로">▲</button>
-        <button class="dm-ic" ${i===list.length-1?'disabled':''} onclick="dmMove('${escJ(d)}',1)" title="아래로">▼</button>
+    if(_dmSel && list.indexOf(_dmSel)<0) _dmSel=null;
+    box.innerHTML = list.length ? (list.map((d,i)=>`<div class="dm-row${d===_dmSel?' sel':''}" onclick="dmPick('${escJ(d)}')">
         <span class="dm-name">${escH(d)}</span><span class="dm-cnt">${cnt[d]||0}명</span>
-        <button class="dm-ic" title="이름 수정" onclick="dmRename('${escJ(d)}')"><i class="fa-solid fa-pen"></i></button>
-        <button class="dm-ic del" title="삭제" onclick="dmDelete('${escJ(d)}')"><i class="fa-solid fa-trash"></i></button>
-    </div>`).join('') : '<div style="text-align:center; color:#94a3b8; font-weight:700; padding:18px 0;">등록된 소속이 없습니다. 위에서 추가하세요.</div>';
+        <button class="dm-ic" title="이름 수정" onclick="event.stopPropagation();dmRename('${escJ(d)}')"><i class="fa-solid fa-pen"></i></button>
+        <button class="dm-ic del" title="삭제" onclick="event.stopPropagation();dmDelete('${escJ(d)}')"><i class="fa-solid fa-trash"></i></button>
+    </div>`).join('') + `<div class="dm-movebar">
+        <span class="dm-mvsel">${_dmSel?('선택: <b>'+escH(_dmSel)+'</b>'):'순서를 바꿀 소속을 클릭해 선택하세요'}</span>
+        <button class="dm-mvbtn" ${(!_dmSel||list.indexOf(_dmSel)<=0)?'disabled':''} onclick="dmMoveSel(-1)">▲ 위로</button>
+        <button class="dm-mvbtn" ${(!_dmSel||list.indexOf(_dmSel)>=list.length-1)?'disabled':''} onclick="dmMoveSel(1)">▼ 아래로</button>
+    </div>`) : '<div style="text-align:center; color:#94a3b8; font-weight:700; padding:18px 0;">등록된 소속이 없습니다. 위에서 추가하세요.</div>';
 }
 function dmAdd(){
     const el=document.getElementById('dm-new'); const v=((el&&el.value)||'').trim();
@@ -1919,6 +1950,7 @@ function renderRoster(){
         });
         sectionsHtml += `<div class="rl-group">
             <div class="rl-ghead"><span class="rl-gname">${escH(d)}</span><span class="rl-gcount">${members.length}명</span></div>
+            <div class="rl-colhead"><span></span><span>연번</span><span>직책</span><span>성명</span><span>비고</span><span>관리</span></div>
             <div class="rl-rows">${rowsHtml}</div>
         </div>`;
     });
@@ -2241,9 +2273,9 @@ function renderStaffCounts(agg, month){
         const noteCell=`${memo?`<span style="font-size:13px;">${escH(memo)}</span> `:''}${memoIc}${delBtn}`;
         tb+=`<tr class="cnt-row${shown>0?' has-meal':''}" onclick="rowCalClick(event,'${key}')" style="cursor:pointer;">
             <td class="c"><span style="background:${catColor[a.category]}1a; color:${catColor[a.category]}; font-weight:800; border-radius:6px; padding:2px 8px; font-size:12px; white-space:nowrap; display:inline-block;">${catLabel[a.category]||'직원'}</span></td>
-            <td>${dept}</td>
+            <td class="c">${dept}</td>
             <td class="c" style="color:var(--muted); font-weight:700;">${pos}</td>
-            <td class="rname">${escH(a.name)}</td>
+            <td class="rname c">${escH(a.name)}</td>
             <td class="c">${cntCell}</td>
             <td>${noteCell}</td>
         </tr>
@@ -2436,7 +2468,7 @@ function renderMealCalendar(a, month){
 }
 </script>
 <style>@media print{#__ver{display:none!important}}</style>
-<div id="__ver" style="position:fixed;right:7px;bottom:7px;z-index:2147483000;background:rgba(15,23,42,.72);color:#cbd5e1;font:700 10px/1 monospace;padding:4px 8px;border-radius:7px;pointer-events:none;letter-spacing:.3px;">영양사 vPP · 260613-1710</div>
+<div id="__ver" style="position:fixed;right:7px;bottom:7px;z-index:2147483000;background:rgba(15,23,42,.72);color:#cbd5e1;font:700 10px/1 monospace;padding:4px 8px;border-radius:7px;pointer-events:none;letter-spacing:.3px;">영양사 vRR · 260613-1748</div>
 <div id="notifyStack" class="notify-stack"></div>
 </body>
 </html>

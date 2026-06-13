@@ -373,13 +373,13 @@ function renderStaffList(){
         <span class="lg-div"></span><span id="mealStatus" class="lg-status"></span>
     </div>`;
 
-    // 좌우 2단: 절반씩(좌측이 홀수 1명 더). 인원이 늘면 각 단이 아래로 길어짐.
-    const TWO_COL = flat.length >= 8;
+    // 채움 순서: 좌측을 위에서부터 20줄까지 먼저 채우고, 넘치면 우측을 위에서부터 이어 채운다.
+    const LEFT_MAX = 20;
+    const TWO_COL = flat.length > LEFT_MAX;
     let inner;
     if(TWO_COL){
-        const mid=Math.ceil(flat.length/2);
-        const left=flat.slice(0,mid), right=flat.slice(mid);
-        inner = `<div class="split-wrap">${tableHTML(rowsOf(left))}${right.length?tableHTML(rowsOf(right)):''}</div>`;
+        const left=flat.slice(0,LEFT_MAX), right=flat.slice(LEFT_MAX);
+        inner = `<div class="split-wrap">${tableHTML(rowsOf(left))}${tableHTML(rowsOf(right))}</div>`;
     } else {
         inner = tableHTML(rowsOf(flat));
     }
@@ -861,7 +861,7 @@ function esc(v){ return String(v==null?'':v).replace(/[&<>"']/g,c=>({'&':'&amp;'
 /* 초기 진입은 위의 ?go 분기에서 처리됨 */
 </script>
 <style>@media print{#__ver{display:none!important}}</style>
-<div id="__ver" style="position:fixed;right:7px;bottom:7px;z-index:2147483000;background:rgba(15,23,42,.72);color:#cbd5e1;font:700 10px/1 monospace;padding:4px 8px;border-radius:7px;pointer-events:none;letter-spacing:.3px;">식당패널 vAA · 260613-1710</div>
+<div id="__ver" style="position:fixed;right:7px;bottom:7px;z-index:2147483000;background:rgba(15,23,42,.72);color:#cbd5e1;font:700 10px/1 monospace;padding:4px 8px;border-radius:7px;pointer-events:none;letter-spacing:.3px;">식당패널 vBB · 260613-1730</div>
 </body>
 </html>
-<!-- @build 20260613-171000 (식당패널 vAA: 범례 안내 "소속·사번 순" → "소속·배치순서 순"으로 변경. QR 키패드 강사 본인 사번 입력은 유지) -->
+<!-- @build 20260613-173000 (식당패널 vBB: 좌우 균등분할 → 좌측 위에서부터 20줄 먼저 채우고 넘치면 우측 위에서부터 이어 채움(순서 혼동 제거). 20명 이하는 단일 컬럼) -->
