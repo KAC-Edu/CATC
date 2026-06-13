@@ -268,8 +268,7 @@
 <body>
     <div class="topbar">
         <div class="ttl">
-            <div class="ttl-h">항공기술훈련원 직원 식수 체크</div>
-            <div class="ttl-sub">본인 줄에서 <b>아침·점심·저녁</b> 칸을 눌러 체크하세요. 다시 누르면 취소됩니다. <span class="sep">|</span> 강사는 상단 <b>QR</b> 버튼을 이용해 주세요.</div>
+            <div class="ttl-h">항공기술훈련원 직원 식수체크 플랫폼</div>
         </div>
         <div id="hdrClock">-</div>
         <div class="info">
@@ -597,12 +596,12 @@ function renderSettings(){
 }
 /* ── 설정 잠금: 패턴 + 비밀번호 ── */
 const PAT_KEY='kacMealPattern', PAT_PW='13281';
-let _patState=null, _pw='';
+let _patState=null, _pw='', _pwOnOk=null;
 function _patGet(){ if(_lockPatFB) return _lockPatFB; try{ return localStorage.getItem(PAT_KEY)||''; }catch(e){ return ''; } }
 function _patSetStore(v){ try{ if(v) localStorage.setItem(PAT_KEY,v); else localStorage.removeItem(PAT_KEY); }catch(e){} _lockPatFB = v||''; try{ db.ref('system/staffMeal/config/lockPattern').set(v||null).catch(function(){}); }catch(e){} }
 function _patCenter(i){ const col=i%3,row=Math.floor(i/3); return { x:40+col*80, y:40+row*80 }; }
 function _patCleanup(){ try{ window.removeEventListener('pointerup',_patUp); }catch(_){} _patState=null; }
-function requireUnlock(onOk){ if(!_patGet()){ onOk(); return; } _openPatModal('unlock', onOk); }
+function requireUnlock(onOk){ if(_patGet()){ _openPatModal('unlock', onOk); } else { _openPwModal(onOk); } }   // [JDS260613] 패턴 미설정이어도 관리자 비밀번호 요구 → 어느 PC에서도 설정은 잠김
 function _patStartSet(){ _openPatModal('set1', _openSettingsReal); }
 function _patReset0(){ if(confirm('설정 잠금 패턴을 초기화할까요?\n이후 누구나 설정에 들어올 수 있습니다.')){ _patSetStore(''); toast('패턴이 초기화되었습니다.'); renderSettings(); } }
 function _patMsg(t, err){ const el=document.getElementById('patMsg'); if(el){ el.textContent=t; el.style.color=err?'#dc2626':'#64748b'; } }
@@ -641,9 +640,9 @@ function _patFinish(){
         else { _patMsg('두 패턴이 다릅니다. 처음부터 다시 그려 주세요', true); setTimeout(()=>_openPatModal('set1', onOk),400); }
     }
 }
-function _patForgot(){ _patCleanup(); _openPwModal(); }
-function _openPwModal(){
-    _pw='';
+function _patForgot(){ var ok=(_patState&&_patState.onOk)||_openSettingsReal; _patCleanup(); _openPwModal(ok); }
+function _openPwModal(onOk){
+    _pw=''; _pwOnOk = onOk || _openSettingsReal;
     ovCard.className='ov-card';
     ovCard.innerHTML = `
         <div class="ov-ttl" style="color:#0f172a;"><i class="fa-solid fa-key" style="color:#2563eb;"></i> 비밀번호 입력</div>
@@ -656,7 +655,7 @@ function _openPwModal(){
 function _pwIn(d){ if(_pw.length>=8) return; _pw+=String(d); _pwRender(); }
 function _pwDel(){ _pw=_pw.slice(0,-1); _pwRender(); }
 function _pwRender(){ const el=document.getElementById('pwDots'); if(el) el.textContent=_pw.replace(/./g,'*'); }
-function _pwOk(){ if(_pw===PAT_PW){ toast('확인되었습니다.'); _openSettingsReal(); } else { toast('비밀번호가 올바르지 않습니다.'); _pw=''; _pwRender(); } }
+function _pwOk(){ if(_pw===PAT_PW){ toast('확인되었습니다.'); var ok=_pwOnOk||_openSettingsReal; _pwOnOk=null; ok(); } else { toast('비밀번호가 올바르지 않습니다.'); _pw=''; _pwRender(); } }
 
 /* ── 사외강사 계좌 (폰에서 QR 스캔 시 표시) ── */
 function showMobileAccount(){
@@ -1096,8 +1095,8 @@ function esc(v){ return String(v==null?'':v).replace(/[&<>"']/g,c=>({'&':'&amp;'
 </script>
 <!-- @catc-version-badge · 전 페이지 통일 디자인 (개발자 확인용 · 사용자에게는 거의 안 보임) -->
 <style>@media print{#__catcVer{display:none!important}}</style>
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">JDS260613(V1)</div>
-<script>try{console.log('%cCATC%c 식당 식수 터치패널 (staff_meal.html) %cJDS260613(V1)%c build 20260613','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}</script>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">JDS260613(V2)</div>
+<script>try{console.log('%cCATC%c 식당 식수 터치패널 (staff_meal.html) %cJDS260613(V2)%c build 20260613','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}</script>
 </body>
 </html>
 <!-- @build 20260613-192000 (식당패널 vGG: KAC임직원 QR 팝업도 사외강사처럼 "닫기 (3)(2)(1)" 카운트다운 + 3초 자동닫힘 + 즉시 닫기 버튼. QR 팝업은 자체 타이머로 닫으므로 일괄 옵저버에서 제외(keep)) -->
