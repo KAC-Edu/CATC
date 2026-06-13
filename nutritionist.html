@@ -9,6 +9,7 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
     <script src="config.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/davidshimjs/qrcodejs/qrcode.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" rel="stylesheet">
     <style>
@@ -193,7 +194,7 @@
             justify-content: center;
         }
         .modal-bg.open { display: flex; }
-        .roster-tools { display:none; gap:10px; align-items:center; margin-bottom:12px; flex-wrap:wrap; }
+        .roster-tools { display:flex; gap:10px; align-items:center; margin-bottom:12px; flex-wrap:wrap; }
         .rt-search { display:flex; align-items:center; gap:7px; background:#fff; border:1.5px solid #cbd5e1; border-radius:10px; padding:0 12px; height:40px; }
         .rt-search i { color:#94a3b8; }
         .rt-search input { border:none; outline:none; font-size:14px; font-weight:600; width:180px; background:transparent; }
@@ -484,6 +485,14 @@
         .rl-ein { height:38px; padding:0 11px; border:1.5px solid #2563eb; border-radius:8px; font-weight:700; background:#fff; font-size:14px; }
         .rl-ein-dept { min-width:130px; }
         .rl-editing .rl-ein:not(.rl-ein-dept) { flex:1; min-width:90px; }
+        .rl-emp { color:#94a3b8; font-weight:700; font-size:11.5px; margin-left:5px; }
+        .add-tabs { display:flex; gap:6px; margin:4px 0 14px; }
+        .add-tab { flex:1; padding:9px 0; border:1.5px solid var(--border); background:#fff; border-radius:9px; font-weight:800; font-size:13.5px; color:#64748b; cursor:pointer; }
+        .add-tab.active { background:#2563eb; color:#fff; border-color:#2563eb; }
+        .am-row { display:flex; align-items:center; gap:10px; margin-bottom:9px; }
+        .am-lab { width:64px; flex:none; font-weight:800; color:#475569; font-size:13px; }
+        .am-inp { flex:1; height:40px; padding:0 12px; border:1.5px solid #cbd5e1; border-radius:9px; font-size:14px; font-weight:700; box-sizing:border-box; background:#fff; }
+        .am-inp:focus { border-color:#2563eb; outline:none; }
         /* ── 전체폭 헤더 + 중앙정렬 본문 (교육지원부 방식) ── */
         body { background: var(--bg); }
         .app-content { max-width: 1180px; margin: 0 auto; width: 100%; padding: 22px 22px 48px; overflow-y: visible; }
@@ -698,26 +707,12 @@
         <!-- 직원 명단 관리 (별도 탭) -->
         <div class="section-card tab-panel" id="sec-roster">
             <div class="section-title"><i class="fa-solid fa-users-gear"></i> 직원 명단 관리</div>
-            <div style="font-size:12.5px; color:var(--muted); font-weight:700; margin-bottom:12px;">소속을 먼저 추가한 뒤 직원을 등록하세요. 같은 소속은 자동으로 묶여 표시되며, <b>화살표(▲▼)</b> 또는 드래그로 순서를 바꿀 수 있습니다.</div>
-            <div class="add-grid">
-                <div class="add-line">
-                    <span class="add-lab"><i class="fa-solid fa-building"></i> 소속</span>
-                    <input id="newDeptOnly" class="add-inp" placeholder="새 소속명 (예: 교육지원부)" maxlength="20" onkeyup="if(event.key==='Enter')addDept()">
-                    <button class="mini-btn ghost" onclick="addDept()"><i class="fa-solid fa-plus"></i> 소속만 추가</button>
-                </div>
-                <div class="add-line">
-                    <span class="add-lab"><i class="fa-solid fa-user-plus"></i> 직원</span>
-                    <select id="newStaffDept" class="add-inp"></select>
-                    <input id="newStaffPos" class="add-inp" placeholder="직책" maxlength="16">
-                    <input id="newStaffName" class="add-inp" placeholder="성함" maxlength="12" onkeyup="if(event.key==='Enter')addStaff()">
-                    <button class="mini-btn" onclick="addStaff()"><i class="fa-solid fa-plus"></i> 직원 추가</button>
-                </div>
-            </div>
+            <div style="font-size:12.5px; color:var(--muted); font-weight:700; margin-bottom:12px;">명단이 아래에 표시됩니다. 추가하려면 우측 <b>+ 직원 추가</b> 버튼을 누르세요. 같은 소속 안에서는 <b>사번 순</b>으로 정렬되며, 사번이 없으면 화살표(▲▼)·드래그로 순서를 바꿉니다.</div>
             <div class="roster-tools">
                 <div class="rt-search"><i class="fa-solid fa-magnifying-glass"></i><input id="rosterSearch" placeholder="이름·직책 검색" oninput="applyRosterFilter()"></div>
                 <select id="rosterDeptFilter" class="rt-sel" onchange="applyRosterFilter()"><option value="">전체 소속</option></select>
-                <button class="mini-btn ghost" onclick="openBulkModal()"><i class="fa-solid fa-file-import"></i> 일괄 등록</button>
                 <span id="rosterFilterInfo" class="rt-info"></span>
+                <button class="mini-btn" style="margin-left:auto;" onclick="openAddModal()"><i class="fa-solid fa-plus"></i> 직원 추가</button>
             </div>
             <div id="staffRosterList"><div class="empty-msg">등록된 직원이 없습니다.</div></div>
         </div>
@@ -754,21 +749,46 @@
     </div>
 </div>
 
-<!-- ── 직원 일괄 등록 ── -->
-<div class="modal-bg" id="bulkModal">
-    <div class="modal-sheet">
+<!-- ── 직원 추가 (팝업) ── -->
+<div class="modal-bg" id="addModal">
+    <div class="modal-sheet" style="max-width:560px;">
         <div class="modal-handle"></div>
-        <div class="modal-title"><i class="fa-solid fa-file-import" style="color:#2563eb; margin-right:6px;"></i>직원 일괄 등록</div>
-        <div class="modal-body">
-            <div style="font-size:12.5px; color:var(--muted); font-weight:700; margin-bottom:10px; line-height:1.7;">
-                엑셀에서 <b>소속 · 직책 · 성함 · 비고</b> 열을 복사해 아래에 붙여넣으세요. (한 줄에 한 명, 쉼표 또는 탭 구분)<br>
-                <span style="color:#94a3b8;">예) 교육운영부, 교수, 장두석, 비고</span>
-            </div>
-            <textarea id="bulkText" placeholder="교육운영부, 교수, 장두석&#10;교육지원부, 주임, 홍길동, 야간" style="width:100%; height:200px; border:1.5px solid #cbd5e1; border-radius:10px; padding:12px; font-size:14px; font-family:inherit; resize:vertical; box-sizing:border-box;"></textarea>
-            <div id="bulkPreview" style="font-size:12.5px; font-weight:700; color:#2563eb; margin-top:8px; min-height:18px;"></div>
+        <div class="modal-title"><i class="fa-solid fa-user-plus" style="color:#2563eb; margin-right:6px;"></i>직원 추가</div>
+        <div class="add-tabs">
+            <button id="atab-one"  class="add-tab active" onclick="switchAddTab('one')">직접 입력</button>
+            <button id="atab-bulk" class="add-tab" onclick="switchAddTab('bulk')">수기 일괄</button>
+            <button id="atab-xlsx" class="add-tab" onclick="switchAddTab('xlsx')">엑셀</button>
         </div>
-        <button class="modal-close-btn" style="background:#2563eb;" onclick="runBulkAdd()"><i class="fa-solid fa-check"></i> 등록하기</button>
-        <button class="modal-close-btn" style="background:#e2e8f0; color:#475569; margin-top:8px;" onclick="closeBulkModal()">닫기</button>
+        <div class="modal-body">
+            <div id="apane-one" class="add-pane">
+                <div class="am-row"><label class="am-lab">소속</label><select id="am-dept" class="am-inp"></select></div>
+                <div class="am-row"><label class="am-lab">새 소속</label><input id="am-newdept" class="am-inp" placeholder="새 소속을 만들려면 입력 (선택)" maxlength="20"></div>
+                <div class="am-row"><label class="am-lab">직책</label><input id="am-pos" class="am-inp" placeholder="예: 주임" maxlength="16"></div>
+                <div class="am-row"><label class="am-lab">성함</label><input id="am-name" class="am-inp" placeholder="성함" maxlength="12" onkeyup="if(event.key==='Enter')addSingle()"></div>
+                <div class="am-row"><label class="am-lab">사번</label><input id="am-empno" class="am-inp" placeholder="사번 (선택 · 같은 부서 내 정렬 기준)" maxlength="20" inputmode="numeric"></div>
+                <div class="am-row"><label class="am-lab">비고</label><input id="am-note" class="am-inp" placeholder="비고 (선택)" maxlength="30"></div>
+                <button class="modal-close-btn" style="background:#2563eb;" onclick="addSingle()"><i class="fa-solid fa-plus"></i> 추가</button>
+            </div>
+            <div id="apane-bulk" class="add-pane" style="display:none;">
+                <div class="am-row"><label class="am-lab">소속</label><select id="am-bulk-dept" class="am-inp"></select></div>
+                <div style="font-size:12px; color:var(--muted); font-weight:700; margin:8px 2px; line-height:1.7;">
+                    선택한 소속에, <b>한 줄에 한 명</b>씩 <b>직책,성함,사번,비고</b> 순으로 콤마로 구분해 입력하세요. (성함만 필수)<br>
+                    <span style="color:#94a3b8;">예) 주임,홍길동,20180312<br>예) 김철수  (성함만)</span>
+                </div>
+                <textarea id="am-bulk-text" placeholder="주임,홍길동,20180312&#10;과장,김영희,20150905,야간" style="width:100%; height:170px; border:1.5px solid #cbd5e1; border-radius:10px; padding:12px; font-size:14px; font-family:inherit; resize:vertical; box-sizing:border-box;"></textarea>
+                <div id="am-bulk-preview" style="font-size:12.5px; font-weight:700; color:#2563eb; margin-top:8px; min-height:18px;"></div>
+                <button class="modal-close-btn" style="background:#2563eb;" onclick="runManualBulk()"><i class="fa-solid fa-check"></i> 일괄 등록</button>
+            </div>
+            <div id="apane-xlsx" class="add-pane" style="display:none;">
+                <div style="font-size:12.5px; color:var(--muted); font-weight:700; margin:2px 2px 12px; line-height:1.7;">
+                    ① 샘플 양식을 받아 <b>소속·직책·성함·사번·비고</b>를 채운 뒤<br>② 파일을 업로드하면 일괄 등록됩니다.
+                </div>
+                <button class="modal-close-btn" style="background:#16a34a;" onclick="downloadSampleXlsx()"><i class="fa-solid fa-file-arrow-down"></i> 샘플 엑셀 양식 다운로드</button>
+                <label class="modal-close-btn" style="background:#2563eb; margin-top:10px; cursor:pointer; display:block; text-align:center;"><i class="fa-solid fa-file-arrow-up"></i> 엑셀 파일 업로드<input type="file" id="am-xlsx-file" accept=".xlsx,.xls,.csv" style="display:none;" onchange="handleXlsxUpload(this.files[0]); this.value='';"></label>
+                <div id="am-xlsx-info" style="font-size:12.5px; font-weight:700; color:#2563eb; margin-top:10px; min-height:18px;"></div>
+            </div>
+        </div>
+        <button class="modal-close-btn" style="background:#e2e8f0; color:#475569; margin-top:8px;" onclick="closeAddModal()">닫기</button>
     </div>
 </div>
 
@@ -1404,6 +1424,112 @@ function _normalizeRosterOrders(){
     });
     if(Object.keys(updates).length) db.ref().update(updates);
 }
+/* ── 사번(숫자 우선) ── */
+function _empNo(r){ const v=((r&&r.empNo)||'').toString().trim(); if(!v) return Infinity; const n=parseInt(v.replace(/\D/g,''),10); return isNaN(n)?Infinity:n; }
+
+/* ── 직원 추가 팝업 ── */
+function openAddModal(){ fillDeptOptions(); const m=document.getElementById('addModal'); if(m) m.classList.add('open'); switchAddTab('one'); const t=document.getElementById('am-bulk-text'); if(t){ t.value=''; t.oninput=_amBulkPreview; } _amBulkPreview(); const xi=document.getElementById('am-xlsx-info'); if(xi) xi.textContent=''; setTimeout(()=>{ const e=document.getElementById('am-name'); if(e) e.focus(); },40); }
+function closeAddModal(){ const m=document.getElementById('addModal'); if(m) m.classList.remove('open'); }
+function switchAddTab(t){ ['one','bulk','xlsx'].forEach(k=>{ const tab=document.getElementById('atab-'+k); const pane=document.getElementById('apane-'+k); if(tab) tab.classList.toggle('active',k===t); if(pane) pane.style.display=(k===t?'block':'none'); }); }
+function _amBulkPreview(){ const t=document.getElementById('am-bulk-text'); const pv=document.getElementById('am-bulk-preview'); if(!pv) return; const n=(t?t.value:'').split(/\r?\n/).filter(l=>l.trim()).length; pv.textContent = n?(n+'명 입력됨'):''; }
+
+function addSingle(){
+    let dept=((document.getElementById('am-newdept')||{}).value||'').trim();
+    if(!dept) dept=((document.getElementById('am-dept')||{}).value||'').trim();
+    const pos=((document.getElementById('am-pos')||{}).value||'').trim();
+    const name=((document.getElementById('am-name')||{}).value||'').trim();
+    const empNo=((document.getElementById('am-empno')||{}).value||'').trim();
+    const note=((document.getElementById('am-note')||{}).value||'').trim();
+    if(!dept){ showToast('소속을 선택하거나 새 소속을 입력하세요.'); return; }
+    if(!_validDeptName(dept)){ showToast('소속명에 . # $ [ ] / 는 쓸 수 없습니다.'); return; }
+    if(!name){ showToast('성함을 입력하세요.'); return; }
+    const maxOrd=Object.values(_staffRoster||{}).filter(r=>r&&((r.dept||'').trim())===dept).reduce((m,r)=>Math.max(m,(r.order!=null?r.order:0)),0);
+    const key=db.ref(STAFF_ROSTER).push().key;
+    const updates={};
+    updates[`${STAFF_ROSTER}/${key}`]={ name, dept, position:pos, empNo, note, order:maxOrd+10, active:true, createdAt:firebase.database.ServerValue.TIMESTAMP };
+    if(!_deptPresets[dept]) updates[`system/staffMeal/depts/${dept}`]=true;
+    db.ref().update(updates).then(()=>{
+        ['am-name','am-empno','am-note','am-newdept'].forEach(id=>{ const e=document.getElementById(id); if(e) e.value=''; });
+        fillDeptOptions(); const ds=document.getElementById('am-dept'); if(ds && [...ds.options].some(o=>o.value===dept)) ds.value=dept;
+        const nm=document.getElementById('am-name'); if(nm) nm.focus();
+        showToast('✅ 직원이 추가되었습니다. (이어서 추가 가능)');
+    }).catch(e=>showToast('❌ 추가 실패: '+((e&&e.message)||e)+' — Firebase 권한(rules)일 수 있습니다.'));
+}
+
+/* 공통 일괄 커밋 (수기/엑셀) */
+function _commitBulk(rows, label){
+    if(!rows.length){ showToast('등록할 항목이 없습니다. 형식을 확인하세요.'); return; }
+    const seen={};
+    Object.values(_staffRoster||{}).forEach(r=>{ if(!r)return; const d=((r.dept||'').trim()); seen[d]=Math.max(seen[d]||0,(r.order!=null?r.order:0)); });
+    const updates={};
+    rows.forEach(row=>{
+        const key=db.ref(STAFF_ROSTER).push().key;
+        seen[row.dept]=(seen[row.dept]!=null?seen[row.dept]:0)+10;
+        updates[`${STAFF_ROSTER}/${key}`]={ name:row.name, dept:row.dept, position:row.pos||'', empNo:row.empNo||'', note:row.note||'', order:seen[row.dept], active:true, createdAt:firebase.database.ServerValue.TIMESTAMP };
+        if(!_deptPresets[row.dept]) updates[`system/staffMeal/depts/${row.dept}`]=true;
+    });
+    db.ref().update(updates).then(()=>{ closeAddModal(); showToast(`✅ ${rows.length}명을 ${label} 등록했습니다.`); }).catch(e=>showToast('❌ 등록 실패: '+((e&&e.message)||e)));
+}
+
+function runManualBulk(){
+    const dept=((document.getElementById('am-bulk-dept')||{}).value||'').trim();
+    if(!dept){ showToast('먼저 소속을 선택하세요.'); return; }
+    if(!_validDeptName(dept)){ showToast('소속명에 사용할 수 없는 문자가 있습니다.'); return; }
+    const text=((document.getElementById('am-bulk-text')||{}).value||'');
+    const rows=[];
+    text.split(/\r?\n/).forEach(line=>{
+        const ln=line.trim(); if(!ln) return;
+        const p=ln.split(',').map(x=>x.trim());
+        let pos='',name='',empNo='',note='';
+        if(p.length===1){ name=p[0]; } else { pos=p[0]||''; name=p[1]||''; empNo=p[2]||''; note=p[3]||''; }
+        if(!name) return;
+        rows.push({dept,pos,name,empNo,note});
+    });
+    _commitBulk(rows,'수기 일괄');
+}
+
+/* 엑셀 샘플 다운로드 / 업로드 (SheetJS) */
+function downloadSampleXlsx(){
+    if(typeof XLSX==='undefined'){ showToast('엑셀 라이브러리 로드 실패 — 인터넷 연결을 확인하세요.'); return; }
+    const aoa=[['소속','직책','성함','사번','비고'],
+               ['항공기술훈련원','원장','권영택','20010101',''],
+               ['교육운영부','부장','박종배','20100315',''],
+               ['교육운영부','주임','홍길동','20180312','야간']];
+    const ws=XLSX.utils.aoa_to_sheet(aoa);
+    ws['!cols']=[{wch:16},{wch:10},{wch:12},{wch:14},{wch:14}];
+    const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,'직원명단');
+    XLSX.writeFile(wb,'직원명단_양식.xlsx');
+}
+function handleXlsxUpload(file){
+    if(!file) return;
+    if(typeof XLSX==='undefined'){ showToast('엑셀 라이브러리 로드 실패'); return; }
+    const info=document.getElementById('am-xlsx-info'); if(info) info.textContent='읽는 중…';
+    const reader=new FileReader();
+    reader.onload=ev=>{
+        try{
+            const wb=XLSX.read(ev.target.result,{type:'array'});
+            const ws=wb.Sheets[wb.SheetNames[0]];
+            const arr=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+            const rows=[];
+            arr.forEach((r,i)=>{
+                const dept=(r[0]!=null?r[0]:'').toString().trim();
+                if(i===0 && (dept==='소속'||dept==='')) return;     // 헤더 스킵
+                const pos=(r[1]!=null?r[1]:'').toString().trim();
+                const name=(r[2]!=null?r[2]:'').toString().trim();
+                const empNo=(r[3]!=null?r[3]:'').toString().trim();
+                const note=(r[4]!=null?r[4]:'').toString().trim();
+                if(!dept || !name) return;
+                if(!_validDeptName(dept)) return;
+                rows.push({dept,pos,name,empNo,note});
+            });
+            if(!rows.length){ if(info) info.textContent='등록할 행이 없습니다. 양식(소속·직책·성함·사번·비고)을 확인하세요.'; return; }
+            if(info) info.textContent = rows.length+'명 확인 — 등록합니다.';
+            _commitBulk(rows,'엑셀');
+        }catch(err){ if(info) info.textContent=''; showToast('엑셀 읽기 실패: '+((err&&err.message)||err)); }
+    };
+    reader.readAsArrayBuffer(file);
+}
+
 function renderRoster(){
     const box=document.getElementById('staffRosterList'); if(!box) return;
     const items=Object.entries(_staffRoster);
@@ -1419,7 +1545,7 @@ function renderRoster(){
     const _deptFirst={};
     Object.entries(groups).forEach(([d,arr])=>{ _deptFirst[d]=Math.min.apply(null, arr.map(([id,r])=>(r.createdAt!=null?r.createdAt:Infinity))); });
     const depts=Object.keys(groups).sort((a,b)=> ((_deptFirst[a]===Infinity?9e15:_deptFirst[a])-(_deptFirst[b]===Infinity?9e15:_deptFirst[b])) || a.localeCompare(b,'ko'));
-    Object.keys(groups).forEach(d=>{ groups[d].sort((a,b)=> (_ord(a[1])-_ord(b[1])) || (a[1].name||'').localeCompare(b[1].name||'','ko')); });
+    Object.keys(groups).forEach(d=>{ groups[d].sort((a,b)=> (_empNo(a[1])-_empNo(b[1])) || (_ord(a[1])-_ord(b[1])) || (a[1].name||'').localeCompare(b[1].name||'','ko')); });
 
     const dfSel=document.getElementById('rosterDeptFilter');
     if(dfSel){ dfSel.innerHTML='<option value="">전체 소속</option>'+allDepts.map(d=>`<option value="${escH(d)}" ${d===_rosterDeptFilter?'selected':''}>${escH(d)}</option>`).join(''); }
@@ -1442,6 +1568,7 @@ function renderRoster(){
                     <select id="edit-dept" class="rl-ein rl-ein-dept no-drag">${optsOf((r.dept||'').trim())}</select>
                     <input id="edit-pos" class="rl-ein no-drag" value="${escH(r.position||'')}" placeholder="직책">
                     <input id="edit-name" class="rl-ein no-drag" value="${escH(r.name||'')}" placeholder="성함">
+                    <input id="edit-empno" class="rl-ein no-drag" value="${escH(r.empNo||'')}" placeholder="사번">
                     <input id="edit-note" class="rl-ein no-drag" value="${escH(r.note||'')}" placeholder="비고">
                     <span class="rl-ctrl no-drag">
                         <button class="rl-act rl-save" onclick="saveEdit('${id}')"><i class="fa-solid fa-check"></i> 저장</button>
@@ -1453,7 +1580,7 @@ function renderRoster(){
                     <span class="rl-grip" title="드래그하여 순서 변경"><i class="fa-solid fa-grip-vertical"></i></span>
                     <span class="rl-seq">${seq}</span>
                     <span class="rl-pos">${escH(r.position||'-')}</span>
-                    <span class="rl-name">${escH(r.name||'')}</span>
+                    <span class="rl-name">${escH(r.name||'')}${r.empNo?` <span class="rl-emp">#${escH(r.empNo)}</span>`:''}</span>
                     <span class="rl-note">${r.note?escH(r.note):'<span class="rl-dash">-</span>'}</span>
                     <span class="rl-ctrl no-drag">
                         <button class="rl-arw" onclick="moveStaff('${id}',-1)" ${isFirst?'disabled':''} title="위로"><i class="fa-solid fa-chevron-up"></i></button>
@@ -1560,14 +1687,14 @@ function renderRosterGuide(){
 }
 /* 소속 옵션/관리 */
 function fillDeptOptions(){
-    const sel=document.getElementById('newStaffDept'); if(!sel) return;
-    const prev=sel.value;
     const set=new Set([...Object.keys(_deptPresets||{}), ...Object.values(_staffRoster||{}).map(r=>((r&&r.dept)||'').trim()).filter(Boolean)]);
     const list=[...set].sort((a,b)=>a.localeCompare(b,'ko'));
-    sel.innerHTML = list.length
-        ? list.map(d=>`<option value="${escH(d)}">${escH(d)}</option>`).join('')
-        : `<option value="">먼저 소속을 추가하세요</option>`;
-    if(prev && list.includes(prev)) sel.value=prev;
+    ['am-dept','am-bulk-dept'].forEach(id=>{
+        const sel=document.getElementById(id); if(!sel) return;
+        const prev=sel.value;
+        sel.innerHTML = list.length ? list.map(d=>`<option value="${escH(d)}">${escH(d)}</option>`).join('') : `<option value="">새 소속을 먼저 입력하세요</option>`;
+        if(prev && list.includes(prev)) sel.value=prev;
+    });
 }
 function _validDeptName(v){ return v && !/[.#$\[\]\/]/.test(v); }
 function addDept(){
@@ -1671,9 +1798,10 @@ function saveEdit(id){
     const p=(document.getElementById('edit-pos').value||'').trim();
     const n=(document.getElementById('edit-name').value||'').trim();
     const note=(document.getElementById('edit-note').value||'').trim();
+    const _eno=document.getElementById('edit-empno'); const empNo=((_eno&&_eno.value)||'').trim();
     if(!n){ showToast('성함을 입력하세요.'); return; }
     const cur=_staffRoster[id]||{};
-    const patch={ dept:d, position:p, name:n, note:note };
+    const patch={ dept:d, position:p, name:n, note:note, empNo:empNo };
     if(((cur.dept||'').trim())!==d){
         // 소속이 바뀌면 새 소속의 맨 아래로 배치 (병합·순서 안정화)
         const maxOrd=Object.entries(_staffRoster).filter(([i,x])=>i!==id && x && ((x.dept||'').trim())===d).reduce((m,[i,x])=>Math.max(m,(x.order!=null?x.order:0)),-10);
@@ -1758,6 +1886,7 @@ function renderStaffCounts(agg, month){
         const c=(catOrd[a[1].category]||0)-(catOrd[b[1].category]||0); if(c) return c;
         const dr=deptRank(a[1].dept)-deptRank(b[1].dept); if(dr) return dr;
         const d=(a[1].dept||'').localeCompare(b[1].dept||'','ko'); if(d) return d;
+        const eo=_empNo(_staffRoster[a[0]]||{})-_empNo(_staffRoster[b[0]]||{}); if(eo) return eo;   // 같은 부서 내 사번 우선
         const o=rosterOrder(a[0])-rosterOrder(b[0]); if(o) return o;   // 명단 관리 순서와 동일하게
         return (a[1].name||'').localeCompare(b[1].name||'','ko');
     });
@@ -1903,7 +2032,7 @@ function renderMealCalendar(a, month){
 }
 </script>
 <style>@media print{#__ver{display:none!important}}</style>
-<div id="__ver" style="position:fixed;right:7px;bottom:7px;z-index:2147483000;background:rgba(15,23,42,.72);color:#cbd5e1;font:700 10px/1 monospace;padding:4px 8px;border-radius:7px;pointer-events:none;letter-spacing:.3px;">영양사 vAA · 260613-1045</div>
+<div id="__ver" style="position:fixed;right:7px;bottom:7px;z-index:2147483000;background:rgba(15,23,42,.72);color:#cbd5e1;font:700 10px/1 monospace;padding:4px 8px;border-radius:7px;pointer-events:none;letter-spacing:.3px;">영양사 vBB · 260613-1130</div>
 </body>
 </html>
 <!-- @build 20260613-104500 (영양사 vAA: ★초기화 크래시 수정 — 없어진 todayBadge 요소 접근에서 TypeError(nutritionist:823)가 나며 loadAll/loadRoomData가 통째로 중단 → 명단 리스너 미부착으로 COURSE 인원수 항상 미표시였음. todayBadge/menuFileInput 널가드로 초기화 완주 보장. 직전 vZ: [직원 명단관리] div 카드형 리스트로 재구성 — 행 전체 드래그가 버튼클릭을 가로채던 문제 제거(.no-drag), rowspan 제거, 화살표·드래그·드롭안내선 안정화 / [COURSE 탭] 운영부 system/coord/rosters · 지원부 system/dorm/rosters 전역 명단을 직접 구독해 과정명으로 인원수 반영 → 라이브 방 미개설/방명 불일치여도 명단 표시) -->
