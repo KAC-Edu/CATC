@@ -179,6 +179,8 @@
         .staff-btn:active { transform:scale(.96); }
         .staff-btn .s-nm { font-size:20px; font-weight:900; }
         .staff-btn .s-dp { font-size:12px; color:#64748b; font-weight:700; margin-top:4px; min-height:15px; }
+        .name-cell { cursor:pointer; }
+        .name-cell:hover { color:#2563eb; text-decoration:underline; }
         .staff-btn.done { background:#ecfdf5; border-color:#34d399; }
         .staff-btn.done::after { content:'✓ 식사완료'; position:absolute; top:8px; right:10px; font-size:11px; font-weight:900; color:#059669; }
         .empty { text-align:center; color:#94a3b8; font-weight:700; padding:60px 0; font-size:16px; }
@@ -304,6 +306,7 @@ function goHome(){
 
 // ── 직원 명단 ──
 function goStaff(){ CURRENT='staff'; renderStaffList(); }
+let _countTimer=null;
 function renderStaffList(){
     if (CURRENT!=='staff') return;
     const items = Object.entries(ROSTER).filter(([id,r])=>r && r.active!==false);
@@ -346,7 +349,7 @@ function renderStaffList(){
                 html += `<tr>
                     ${k===i?`<td class="dept-cell" rowspan="${run}">${esc(dept)}</td>`:''}
                     <td class="pos-cell">${esc(r.position||'-')}</td>
-                    <td class="name-cell">${esc(r.name||'')}</td>
+                    <td class="name-cell" onclick="showMyCount('${id}')" title="이번 달 식사 횟수 보기">${esc(r.name||'')}</td>
                     ${cell(id,'b', !!TODAY_BREAKFAST[id])}
                     ${cell(id,'l', !!TODAY_CHECKS[id])}
                     ${cell(id,'d', !!TODAY_DINNER[id])}
@@ -651,6 +654,29 @@ function tapStaff(id){
     });
 }
 
+// ── 이름 클릭 시: 이번 달 본인 식사 횟수 팝업 (센터·닫기·2초 자동닫힘) ──
+function showMyCount(id){
+    const r = ROSTER[id]; if(!r) return;
+    const mk = monthKey;   // 'YYYY-MM'
+    const cnt = snap => { let c=0; const v=snap.val()||{}; Object.entries(v).forEach(([date,recs])=>{ if(date.indexOf(mk)===0 && recs && recs[id]) c++; }); return c; };
+    const q = node => db.ref('system/staffMeal/'+node).orderByKey().startAt(mk+'-01').endAt(mk+'-31').once('value');
+    Promise.all([ q('breakfast'), q('checks'), q('dinner') ])
+        .then(([b,l,d])=>{ showCountPopup(r.name||'', cnt(b)+cnt(l)+cnt(d)); })
+        .catch(()=>{ showCountPopup(r.name||'', null); });
+}
+function showCountPopup(name, tot){
+    const m = parseInt((monthKey.split('-')[1]||'0'),10);
+    ovCard.className = 'ov-card ov-ok';
+    ovCard.innerHTML = `<div class="badge-done badge-ok"><i class="fa-solid fa-bowl-food"></i></div>
+        <div class="ov-ttl" style="color:#0f172a;">${esc(name)} 님</div>
+        <div class="ov-sub">${m}월 식사 횟수</div>
+        <div class="ov-time" style="color:#2563eb;">${tot==null?'-':tot}<span style="font-size:24px; font-weight:800;"> 회</span></div>
+        <div class="ov-actions"><button class="ov-btn gray" onclick="closeOverlay()">닫기</button></div>`;
+    overlay.classList.add('show');
+    clearTimeout(_countTimer);
+    _countTimer = setTimeout(()=>{ closeOverlay(); }, 2000);
+}
+
 // ── 강사(사내/사외) 키패드 ──
 let KP = { mode:'internal', num:'', name:'' };
 function goInstructor(mode){
@@ -834,7 +860,7 @@ function esc(v){ return String(v==null?'':v).replace(/[&<>"']/g,c=>({'&':'&amp;'
 /* 초기 진입은 위의 ?go 분기에서 처리됨 */
 </script>
 <style>@media print{#__ver{display:none!important}}</style>
-<div id="__ver" style="position:fixed;right:7px;bottom:7px;z-index:2147483000;background:rgba(15,23,42,.72);color:#cbd5e1;font:700 10px/1 monospace;padding:4px 8px;border-radius:7px;pointer-events:none;letter-spacing:.3px;">식당패널 vX · 260613-1450</div>
+<div id="__ver" style="position:fixed;right:7px;bottom:7px;z-index:2147483000;background:rgba(15,23,42,.72);color:#cbd5e1;font:700 10px/1 monospace;padding:4px 8px;border-radius:7px;pointer-events:none;letter-spacing:.3px;">식당패널 vY · 260613-1555</div>
 </body>
 </html>
-<!-- @build 20260613-145000 (식당패널 vX: 주말(토·일) 식사 운영 토글 — 환경설정 추가, system/staffMeal/config/weekendOk Firebase 공유, isActive 주말 게이트/잠금 메시지/상태안내 연동) -->
+<!-- @build 20260613-155500 (식당패널 vY: 터치패널 이름 클릭 시 이번 달 본인 식사 횟수 팝업(센터·닫기 버튼·2초 자동 닫힘, 횟수만 표시)) -->
