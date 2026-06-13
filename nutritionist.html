@@ -571,10 +571,11 @@
         .guide-empty td { height:34px; }
         /* COURSE: 주차 네비/카드 */
         .cw-nav { display:flex; align-items:center; gap:7px; flex-wrap:wrap; margin-bottom:14px; }
-        .cw-btn { height:38px; padding:0 16px; border:1.5px solid var(--border); background:#fff; color:#475569; border-radius:10px; font-weight:800; font-size:13.5px; cursor:pointer; transition:.12s; }
+        .cw-btn { height:50px; padding:0 26px; border:1.5px solid var(--border); background:#fff; color:#475569; border-radius:12px; font-weight:800; font-size:16px; cursor:pointer; transition:.12s; }
         .cw-btn:hover { border-color:#93c5fd; }
         .cw-btn.on { background:#2563eb; border-color:#2563eb; color:#fff; }
-        .cw-range { margin-left:auto; font-size:13px; font-weight:800; color:var(--muted); display:inline-flex; align-items:center; gap:6px; }
+        .cw-range { margin-left:auto; font-size:16.5px; font-weight:900; color:var(--navy); background:#eff6ff; border:1.5px solid #bfdbfe; border-radius:11px; padding:9px 16px; display:inline-flex; align-items:center; gap:8px; }
+        .cw-range i { color:#2563eb; }
         .cw-card { border:1.5px solid var(--border); border-radius:14px; padding:14px 16px; margin-bottom:8px; }
         .cw-card.running { border-color:#bbf7d0; background:#f0fdf4; }
         .cw-top { display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:5px; }
@@ -614,6 +615,31 @@
         /* MEALS: breakdown/합계 */
         .cnt-bld { font-size:12px; color:var(--muted); font-weight:700; margin-left:6px; }
         .cnt-total td { background:#f1f5f9; border-top:2px solid #cbd5e1; }
+        /* 상단바 예상인원 버튼 */
+        .hsum { cursor:pointer; font-family:inherit; }
+        .hsum-lunch, .hsum-dinner { border:1px solid rgba(255,255,255,.25); background:rgba(255,255,255,.10); transition:.15s; }
+        .hsum-lunch:hover, .hsum-dinner:hover { background:rgba(255,255,255,.22); transform:translateY(-1px); }
+        .hsum-dinner .hs-lab i { color:#c4b5fd; } .hsum-lunch .hs-lab i { color:#fde68a; }
+        /* 예상인원 산정 모달 */
+        .est-form { font-size:13.5px; font-weight:700; color:#475569; background:#f8fafc; border:1px solid var(--border); border-radius:11px; padding:12px 14px; margin-bottom:14px; line-height:1.6; }
+        .est-big { text-align:center; font-size:52px; font-weight:900; color:var(--navy); line-height:1; margin:6px 0 4px; }
+        .est-big small { font-size:20px; margin-left:4px; color:var(--muted); }
+        .est-eq { text-align:center; font-size:15px; font-weight:800; color:#475569; margin-bottom:16px; }
+        .est-eq span { color:#94a3b8; margin:0 5px; } .est-eq b { color:#2563eb; font-size:17px; }
+        .est-table { width:100%; border-collapse:collapse; font-size:13.5px; }
+        .est-table th { background:#1e3a8a; color:#fff; padding:9px; font-weight:800; }
+        .est-table td { border:1px solid var(--border); padding:8px 10px; }
+        .est-table td.c { text-align:center; font-weight:800; }
+        .est-table tr.est-staff td { background:#eff6ff; color:#1e40af; font-weight:900; }
+        .est-skipbtn { width:100%; margin-top:14px; padding:11px; border:1.5px solid #fecaca; background:#fef2f2; color:#b91c1c; border-radius:10px; font-weight:800; cursor:pointer; font-size:13.5px; }
+        .est-skipbtn:hover { background:#fee2e2; }
+        /* 우하단 실시간 알림 (카톡 스타일) */
+        .notify-stack { position:fixed; right:18px; bottom:18px; z-index:3000; display:flex; flex-direction:column; gap:10px; align-items:flex-end; pointer-events:none; }
+        .notify-card { pointer-events:auto; min-width:250px; max-width:340px; background:#fff; border:1px solid var(--border); border-left:5px solid #2563eb; border-radius:13px; box-shadow:0 12px 34px rgba(15,23,42,.20); padding:12px 16px; transform:translateY(24px) scale(.97); opacity:0; transition:transform .38s cubic-bezier(.16,1,.3,1), opacity .38s; }
+        .notify-card.show { transform:translateY(0) scale(1); opacity:1; }
+        .notify-card.dinner { border-left-color:#7c3aed; } .notify-card.breakfast { border-left-color:#f59e0b; } .notify-card.meal { border-left-color:#16a34a; }
+        .notify-card .nt-t { font-size:13.5px; font-weight:900; color:var(--navy); display:flex; align-items:center; gap:6px; }
+        .notify-card .nt-s { font-size:12.5px; font-weight:700; color:var(--muted); margin-top:4px; }
     </style>
 </head>
 <body>
@@ -908,6 +934,10 @@ function loadRoomData() {
         }
     }, err => { console.warn('[courses] read error', err); });
 
+    // 직원 터치패널 석식 신청 → 석식 예상인원 반영
+    db.ref('system/staffMeal/dinner').on('value', s => { _staffDinner = s.val() || {}; renderMealStats(getToday()); }, e=>console.warn('[staffDinner]',e));
+    _watchMealNotify();
+
     // ── 운영부/지원부가 저장한 명단(전역 저장소)도 직접 구독 → COURSE 탭 인원수에 반영 ──
     db.ref('system/coord/rosters').on('value', snap => {
         _coordRosterIdx = _buildExtIdx(snap.val());
@@ -920,32 +950,74 @@ function loadRoomData() {
 }
 
 function renderMealStats(today) {
-    let totalStudents = 0;
-    let skipStudents  = 0;
-
+    let totalStudents = 0, skipStudents = 0;
+    const courses = [];
     Object.keys(allRoomData).forEach(rid => {
         const room = allRoomData[rid];
         if (!room?.status?.roomStatus || room.status.roomStatus !== 'active') return;
-        if (room?.settings?.hideFromBoard) return;   // 강사플랫폼에서 '총괄표 노출 제외'한 과정은 영양사 집계에서도 제외
-
-        // 교육생 수 (온라인 포함 전체 등록자, 중복 제거)
+        if (room?.settings?.hideFromBoard) return;
         const students = room.students || {};
         const names = new Set();
-        Object.values(students).forEach(s => {
-            if (s?.name && s.name !== 'undefined') names.add(s.name.trim());
-        });
-        totalStudents += names.size;
-
-        // 석식 제외 신청자
+        Object.values(students).forEach(s => { if (s?.name && s.name !== 'undefined') names.add(s.name.trim()); });
+        const cnt = names.size;
         const skips = room.dinner_skips?.[today] || {};
-        skipStudents += Object.keys(skips).length;
+        const sk = Object.keys(skips).length;
+        totalStudents += cnt; skipStudents += sk;
+        courses.push({ name: room.settings?.courseName || ('Room ' + rid), n: cnt, skip: sk });
     });
-
-    const staffCount = Object.values(_staffRoster || {}).filter(r => r && r.active !== false).length;
-    const total = totalStudents + staffCount;
-    document.getElementById('totalMeals').textContent = total;                            // 전체 식수 = 교육생 + 직원 명단
-    document.getElementById('skipCount').textContent  = skipStudents;                     // 석식 제외 (교육생)
-    document.getElementById('eatCount').textContent   = Math.max(0, total - skipStudents);// 실제 식사 = 전체 − 석식제외
+    const staffCount  = Object.values(_staffRoster || {}).filter(r => r && r.active !== false).length;
+    const staffDinner = Object.keys((_staffDinner || {})[today] || {}).length;   // 직원 터치패널 석식 신청
+    const lunchEst  = totalStudents + staffCount;
+    const dinnerEst = Math.max(0, totalStudents - skipStudents) + staffDinner;
+    const le = document.getElementById('lunchEst');  if (le) le.textContent  = lunchEst + '명';
+    const de = document.getElementById('dinnerEst'); if (de) de.textContent  = dinnerEst + '명';
+    _estData = { today, totalStudents, skipStudents, staffCount, staffDinner, lunchEst, dinnerEst, courses };
+}
+function openEstModal(kind){
+    const d = _estData || {}; const body=document.getElementById('estModalBody'); const title=document.getElementById('estModalTitle');
+    if(!body) return;
+    if(kind==='lunch'){
+        title.innerHTML = '<i class="fa-solid fa-bowl-rice" style="color:#f59e0b;margin-right:6px;"></i>점심 예상인원 산정 근거';
+        const rows=(d.courses||[]).map(c=>`<tr><td>${escH(c.name)}</td><td class="c">${c.n}명</td></tr>`).join('');
+        body.innerHTML = `<div class="est-form">점심은 <b>운영중 과정 교육생 전원 + 직원 명단 전원</b>으로 산정합니다.</div>
+            <div class="est-big">${d.lunchEst||0}<small>명</small></div>
+            <div class="est-eq">교육생 ${d.totalStudents||0}명 <span>+</span> 직원 ${d.staffCount||0}명 <span>=</span> <b>${d.lunchEst||0}명</b></div>
+            <table class="est-table"><thead><tr><th>과정</th><th>교육생</th></tr></thead><tbody>${rows||'<tr><td colspan="2" class="c">운영중 과정 없음</td></tr>'}<tr class="est-staff"><td>직원 명단</td><td class="c">${d.staffCount||0}명</td></tr></tbody></table>`;
+    } else {
+        title.innerHTML = '<i class="fa-solid fa-moon" style="color:#7c3aed;margin-right:6px;"></i>석식 예상인원 산정 근거';
+        const rows=(d.courses||[]).map(c=>`<tr><td>${escH(c.name)}</td><td class="c">${c.n}명</td><td class="c" style="color:#dc2626;">-${c.skip||0}</td><td class="c">${Math.max(0,c.n-(c.skip||0))}명</td></tr>`).join('');
+        body.innerHTML = `<div class="est-form">석식은 <b>교육생 − 외출·외박(석식 제외) 신청자 + 직원 터치패널 석식 신청자</b>로 산정합니다.</div>
+            <div class="est-big">${d.dinnerEst||0}<small>명</small></div>
+            <div class="est-eq">교육생 ${d.totalStudents||0}명 <span>−</span> 석식제외 ${d.skipStudents||0}명 <span>+</span> 직원석식 ${d.staffDinner||0}명 <span>=</span> <b>${d.dinnerEst||0}명</b></div>
+            <table class="est-table"><thead><tr><th>과정</th><th>교육생</th><th>제외</th><th>석식</th></tr></thead><tbody>${rows||'<tr><td colspan="4" class="c">운영중 과정 없음</td></tr>'}<tr class="est-staff"><td>직원 석식 신청</td><td class="c">-</td><td class="c">-</td><td class="c">+${d.staffDinner||0}명</td></tr></tbody></table>
+            <button class="est-skipbtn" onclick="closeEstModal(); openSkipModal();"><i class="fa-solid fa-ban"></i> 외출·외박 석식 제외 명단 자세히 보기</button>`;
+    }
+    const m=document.getElementById('estModal'); if(m) m.classList.add('open');
+}
+function closeEstModal(){ const m=document.getElementById('estModal'); if(m) m.classList.remove('open'); }
+function notifyMeal(title, sub, cls){
+    const stack=document.getElementById('notifyStack'); if(!stack) return;
+    const card=document.createElement('div'); card.className='notify-card '+(cls||'');
+    card.innerHTML=`<div class="nt-t">${title}</div><div class="nt-s">${escH(sub)}</div>`;
+    stack.appendChild(card);
+    requestAnimationFrame(()=>card.classList.add('show'));
+    setTimeout(()=>{ card.classList.remove('show'); setTimeout(()=>card.remove(),420); }, 5200);
+}
+function _watchMealNotify(){
+    const today=getToday();
+    [['checks','식사','<i class="fa-solid fa-utensils"></i>','meal'],
+     ['breakfast','조식','<i class="fa-solid fa-mug-hot"></i>','breakfast'],
+     ['dinner','석식','<i class="fa-solid fa-moon"></i>','dinner']].forEach(([node,label,ic,cls])=>{
+        const ref=db.ref(`system/staffMeal/${node}/${today}`);
+        ref.once('value').then(snap=>{
+            const seen=new Set(Object.keys(snap.val()||{}));
+            ref.on('child_added', c=>{
+                if(seen.has(c.key)) return; seen.add(c.key);
+                const v=c.val()||{}; const nm=(v.name||'누군가');
+                notifyMeal(`${ic} ${label} 신청`, `${nm} 님이 ${label}을(를) 신청했습니다.`, cls);
+            });
+        }).catch(()=>{});
+    });
 }
 
 function renderCourseStatus(today) {
@@ -1238,6 +1310,8 @@ let _editId = null;
 let _dragId = null;
 let _curMonth = null;
 let _deptPresets = {};
+let _staffDinner = {};   // system/staffMeal/dinner (석식 신청)
+let _estData = {};       // 예상인원 산정 근거 캐시
 let _adjust = {};
 let _mealAgg = null;
 let _deptOrder = {};   // 소속 표시 순서: {소속명: 순번}
@@ -1251,8 +1325,8 @@ const STAFF_CHECKS = 'system/staffMeal/checks';
 
 window.addEventListener('DOMContentLoaded', () => {
     db.ref(STAFF_ROSTER).on('value', s => { _staffRoster = s.val() || {}; _normalizeRosterOrders(); renderRoster(); fillDeptOptions(); renderMealStats(getToday()); if(_mealMonth) loadStaffMeal(); });
-    db.ref('system/staffMeal/deptOrder').on('value', s => { _deptOrder = s.val() || {}; renderRoster(); if(_mealMonth && _mealAgg) renderStaffCounts(_mealAgg,_mealMonth); });
-    db.ref('system/staffMeal/depts').on('value', s => { _deptPresets = s.val() || {}; fillDeptOptions(); });
+    db.ref('system/staffMeal/deptOrder').on('value', s => { _deptOrder = s.val() || {}; renderRoster(); renderDeptModal(); if(_mealMonth && _mealAgg) renderStaffCounts(_mealAgg,_mealMonth); });
+    db.ref('system/staffMeal/depts').on('value', s => { _deptPresets = s.val() || {}; fillDeptOptions(); renderRoster(); renderDeptModal(); });
     renderMenuWeekBar();
     loadAccount();
     setMonth(getToday().slice(0,7));
@@ -1475,6 +1549,7 @@ function _allDeptsOrdered(){
 function openDeptModal(){ renderDeptModal(); const m=document.getElementById('deptModal'); if(m) m.classList.add('open'); const ni=document.getElementById('dm-new'); if(ni) ni.value=''; }
 function closeDeptModal(){ const m=document.getElementById('deptModal'); if(m) m.classList.remove('open'); }
 function renderDeptModal(){
+    const dmOpen=document.getElementById('deptModal'); if(!dmOpen || !dmOpen.classList.contains('open')) return;
     const box=document.getElementById('dm-list'); if(!box) return;
     const list=_allDeptsOrdered();
     const cnt={}; Object.values(_staffRoster||{}).forEach(r=>{ if(!r)return; const d=((r.dept||'').trim()); if(d) cnt[d]=(cnt[d]||0)+1; });
@@ -2147,16 +2222,31 @@ function exportMealExcel(){
 function _mealFileTitle(){ const pr=(_mealMonth||'').split('-'); const yy=(pr[0]||'').slice(2); const mm=parseInt(pr[1]||'0',10); return `${yy}년도_${mm}월_항공기술훈련원 식수 현황자료`; }
 function exportMealPDF(){
     const tbl=document.querySelector('#staffCountList table'); if(!tbl){ showToast('먼저 월을 조회하세요.'); return; }
+    if(!window.jspdf || !window.html2canvas){ showToast('PDF 모듈 로딩 중입니다. 잠시 후 다시 시도하세요.'); return; }
     const title=_mealFileTitle();
-    const html=`<!DOCTYPE html><html><head><meta charset="utf-8"><title>${escH(title)}</title>`+
-      `<style>@page{margin:12mm;}body{font-family:'Malgun Gothic','맑은 고딕',sans-serif; margin:0;} h2{text-align:center; margin:0 0 14px;} table{width:100%; border-collapse:collapse; font-size:13px;} th,td{border:1px solid #94a3b8; padding:7px 9px; text-align:center;} thead th{background:#1e3a8a; color:#fff;} tfoot td{background:#e2e8f0; font-weight:800;} .cnt-empty,td[id^=cal-]{display:none!important;} button,input{display:none!important;} .cnt-corr{color:#dc2626;} .memo-ic,.cnt-exp{display:none!important;}</style></head>`+
-      `<body><h2>직원 식수 관리 — ${_mealMonth}</h2>${tbl.outerHTML}</body></html>`;
-    let ifr=document.getElementById('_mealPdfFrame'); if(ifr) ifr.remove();
-    ifr=document.createElement('iframe'); ifr.id='_mealPdfFrame';
-    ifr.style.cssText='position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden;';
-    document.body.appendChild(ifr);
-    const doc=ifr.contentWindow.document; doc.open(); doc.write(html); doc.close();
-    setTimeout(()=>{ try{ ifr.contentWindow.focus(); ifr.contentWindow.print(); }catch(e){ showToast('인쇄 실패: '+((e&&e.message)||e)); } }, 450);
+    // 화면 밖에 깨끗한 표(버튼·달력행 제거)를 그려 캡처 → 진짜 PDF (브라우저 머리글/꼬리말 없음)
+    const wrap=document.createElement('div');
+    wrap.style.cssText="position:fixed;left:-99999px;top:0;width:780px;background:#fff;padding:24px;font-family:'Malgun Gothic','맑은 고딕',sans-serif;";
+    const clone=tbl.cloneNode(true);
+    clone.querySelectorAll('button,input,.memo-ic,.cnt-exp').forEach(e=>e.remove());
+    clone.querySelectorAll('tr').forEach(tr=>{ if(tr.querySelector('td[id^=cal-]')||tr.classList.contains('cnt-empty')) tr.remove(); });
+    clone.style.cssText='width:100%;border-collapse:collapse;font-size:13px;';
+    clone.querySelectorAll('th,td').forEach(c=>{ c.style.border='1px solid #94a3b8'; c.style.padding='7px 9px'; c.style.textAlign='center'; });
+    clone.querySelectorAll('thead th').forEach(c=>{ c.style.background='#1e3a8a'; c.style.color='#fff'; });
+    clone.querySelectorAll('tfoot td').forEach(c=>{ c.style.background='#e2e8f0'; c.style.fontWeight='800'; });
+    wrap.innerHTML=`<h2 style="text-align:center;margin:0 0 14px;color:#1e293b;">직원 식수 관리 — ${_mealMonth}</h2>`;
+    wrap.appendChild(clone);
+    document.body.appendChild(wrap);
+    window.html2canvas(wrap,{scale:2,backgroundColor:'#ffffff'}).then(canvas=>{
+        const img=canvas.toDataURL('image/png');
+        const { jsPDF }=window.jspdf;
+        const pdf=new jsPDF('p','mm','a4');
+        const margin=10, pw=pdf.internal.pageSize.getWidth()-margin*2;
+        const ph=canvas.height*pw/canvas.width;
+        pdf.addImage(img,'PNG',margin,margin,pw,ph);
+        pdf.save(title+'.pdf');
+        wrap.remove();
+    }).catch(e=>{ wrap.remove(); showToast('PDF 생성 실패: '+((e&&e.message)||e)); });
 }
 function toggleCal(key){
     const el=document.getElementById('cal-'+key); if(!el) return;
@@ -2193,7 +2283,8 @@ function renderMealCalendar(a, month){
 }
 </script>
 <style>@media print{#__ver{display:none!important}}</style>
-<div id="__ver" style="position:fixed;right:7px;bottom:7px;z-index:2147483000;background:rgba(15,23,42,.72);color:#cbd5e1;font:700 10px/1 monospace;padding:4px 8px;border-radius:7px;pointer-events:none;letter-spacing:.3px;">영양사 vDD · 260613-1320</div>
+<div id="__ver" style="position:fixed;right:7px;bottom:7px;z-index:2147483000;background:rgba(15,23,42,.72);color:#cbd5e1;font:700 10px/1 monospace;padding:4px 8px;border-radius:7px;pointer-events:none;letter-spacing:.3px;">영양사 vEE · 260613-1410</div>
+<div id="notifyStack" class="notify-stack"></div>
 </body>
 </html>
 <!-- @build 20260613-104500 (영양사 vAA: ★초기화 크래시 수정 — 없어진 todayBadge 요소 접근에서 TypeError(nutritionist:823)가 나며 loadAll/loadRoomData가 통째로 중단 → 명단 리스너 미부착으로 COURSE 인원수 항상 미표시였음. todayBadge/menuFileInput 널가드로 초기화 완주 보장. 직전 vZ: [직원 명단관리] div 카드형 리스트로 재구성 — 행 전체 드래그가 버튼클릭을 가로채던 문제 제거(.no-drag), rowspan 제거, 화살표·드래그·드롭안내선 안정화 / [COURSE 탭] 운영부 system/coord/rosters · 지원부 system/dorm/rosters 전역 명단을 직접 구독해 과정명으로 인원수 반영 → 라이브 방 미개설/방명 불일치여도 명단 표시) -->
