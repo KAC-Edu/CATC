@@ -369,6 +369,7 @@ function renderStaffList(){
         <span class="lg-item"><span class="lg-sw lg-resv"><i class="fa-solid fa-check"></i></span> 석식 예약</span>
         <span class="lg-item"><span class="lg-sw lg-empty"></span> 미체크</span>
         <span class="lg-item"><span class="lg-sw lg-lock"><i class="fa-solid fa-lock"></i></span> 시간대 아님</span>
+        <span class="lg-div"></span><span class="lg-note"><i class="fa-solid fa-arrow-down-1-9"></i> 소속·사번 순 정렬</span>
         <span class="lg-div"></span><span id="mealStatus" class="lg-status"></span>
     </div>`;
 
@@ -860,7 +861,7 @@ function esc(v){ return String(v==null?'':v).replace(/[&<>"']/g,c=>({'&':'&amp;'
 /* 초기 진입은 위의 ?go 분기에서 처리됨 */
 </script>
 <style>@media print{#__ver{display:none!important}}</style>
-<div id="__ver" style="position:fixed;right:7px;bottom:7px;z-index:2147483000;background:rgba(15,23,42,.72);color:#cbd5e1;font:700 10px/1 monospace;padding:4px 8px;border-radius:7px;pointer-events:none;letter-spacing:.3px;">식당패널 vY · 260613-1555</div>
+<div id="__ver" style="position:fixed;right:7px;bottom:7px;z-index:2147483000;background:rgba(15,23,42,.72);color:#cbd5e1;font:700 10px/1 monospace;padding:4px 8px;border-radius:7px;pointer-events:none;letter-spacing:.3px;">식당패널 vZ · 260613-1640</div>
 </body>
 </html>
-<!-- @build 20260613-155500 (식당패널 vY: 터치패널 이름 클릭 시 이번 달 본인 식사 횟수 팝업(센터·닫기 버튼·2초 자동 닫힘, 횟수만 표시)) -->
+<!-- @build 20260613-164000 (식당패널 vZ: 범례에 "소속·사번 순 정렬" 안내 살짝 추가) -->

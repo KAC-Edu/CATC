@@ -1899,15 +1899,18 @@ function renderRoster(){
                     </span>
                 </div>`;
             } else {
-                rowsHtml += `<div class="rl-row" draggable="true" data-id="${id}" ondragstart="rDragStart(event,'${id}')" ondragover="rDragOver(event,'${id}')" ondrop="rDrop(event,'${id}')" ondragend="rDragEnd(event)">
-                    <span class="rl-grip" title="드래그하여 순서 변경"><i class="fa-solid fa-grip-vertical"></i></span>
+                const _hasEmp = !!((r.empNo||'').toString().trim());
+                const _grip = _hasEmp ? '<span class="rl-grip" style="cursor:default; color:transparent;"></span>'
+                                      : '<span class="rl-grip" title="드래그하여 순서 변경"><i class="fa-solid fa-grip-vertical"></i></span>';
+                const _arws = _hasEmp ? '' : `<button class="rl-arw" onclick="moveStaff('${id}',-1)" ${isFirst?'disabled':''} title="위로"><i class="fa-solid fa-chevron-up"></i></button><button class="rl-arw" onclick="moveStaff('${id}',1)" ${isLast?'disabled':''} title="아래로"><i class="fa-solid fa-chevron-down"></i></button>`;
+                rowsHtml += `<div class="rl-row" draggable="${_hasEmp?'false':'true'}" data-id="${id}" ondragstart="rDragStart(event,'${id}')" ondragover="rDragOver(event,'${id}')" ondrop="rDrop(event,'${id}')" ondragend="rDragEnd(event)">
+                    ${_grip}
                     <span class="rl-seq">${seq}</span>
                     <span class="rl-pos">${escH(r.position||'-')}</span>
                     <span class="rl-name">${escH(r.name||'')}${r.empNo?` <span class="rl-emp">#${escH(r.empNo)}</span>`:''}</span>
                     <span class="rl-note">${r.note?escH(r.note):'<span class="rl-dash">-</span>'}</span>
                     <span class="rl-ctrl no-drag">
-                        <button class="rl-arw" onclick="moveStaff('${id}',-1)" ${isFirst?'disabled':''} title="위로"><i class="fa-solid fa-chevron-up"></i></button>
-                        <button class="rl-arw" onclick="moveStaff('${id}',1)" ${isLast?'disabled':''} title="아래로"><i class="fa-solid fa-chevron-down"></i></button>
+                        ${_arws}
                         <button class="rl-act rl-edit" onclick="editStaff('${id}')">수정</button>
                         <button class="rl-act rl-del" onclick="deleteStaff('${id}')">삭제</button>
                     </span>
@@ -2433,7 +2436,7 @@ function renderMealCalendar(a, month){
 }
 </script>
 <style>@media print{#__ver{display:none!important}}</style>
-<div id="__ver" style="position:fixed;right:7px;bottom:7px;z-index:2147483000;background:rgba(15,23,42,.72);color:#cbd5e1;font:700 10px/1 monospace;padding:4px 8px;border-radius:7px;pointer-events:none;letter-spacing:.3px;">영양사 vMM · 260613-1625</div>
+<div id="__ver" style="position:fixed;right:7px;bottom:7px;z-index:2147483000;background:rgba(15,23,42,.72);color:#cbd5e1;font:700 10px/1 monospace;padding:4px 8px;border-radius:7px;pointer-events:none;letter-spacing:.3px;">영양사 vNN · 260613-1640</div>
 <div id="notifyStack" class="notify-stack"></div>
 </body>
 </html>
