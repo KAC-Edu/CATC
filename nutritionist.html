@@ -816,14 +816,16 @@ let uploadedMenuData = null;   // system/weeklyMenu 값
 
 /* ── 초기화 ── */
 window.addEventListener('DOMContentLoaded', () => {
-    // 헤더 날짜 배지
+    // 헤더 날짜 배지 (요소 없으면 건너뜀 — 헤더 개편으로 제거될 수 있음)
     const today = getToday();
     const dNames = ['일','월','화','수','목','금','토'];
     const d = new Date();
-    document.getElementById('todayBadge').textContent = `${today} (${dNames[d.getDay()]})`;
+    const _tb = document.getElementById('todayBadge');
+    if(_tb) _tb.textContent = `${today} (${dNames[d.getDay()]})`;
 
     // 파일 선택 이벤트
-    document.getElementById('menuFileInput').addEventListener('change', handleFileSelect);
+    const _mfi = document.getElementById('menuFileInput');
+    if(_mfi) _mfi.addEventListener('change', handleFileSelect);
 
     loadAll();
     autoCleanMenu(); // 차주가 되면 지난 주 식단 자동 삭제
@@ -1901,7 +1903,7 @@ function renderMealCalendar(a, month){
 }
 </script>
 <style>@media print{#__ver{display:none!important}}</style>
-<div id="__ver" style="position:fixed;right:7px;bottom:7px;z-index:2147483000;background:rgba(15,23,42,.72);color:#cbd5e1;font:700 10px/1 monospace;padding:4px 8px;border-radius:7px;pointer-events:none;letter-spacing:.3px;">영양사 vZ · 260613-1035</div>
+<div id="__ver" style="position:fixed;right:7px;bottom:7px;z-index:2147483000;background:rgba(15,23,42,.72);color:#cbd5e1;font:700 10px/1 monospace;padding:4px 8px;border-radius:7px;pointer-events:none;letter-spacing:.3px;">영양사 vAA · 260613-1045</div>
 </body>
 </html>
-<!-- @build 20260613-103500 (영양사 vZ: [직원 명단관리] div 카드형 리스트로 재구성 — 행 전체 드래그가 버튼클릭을 가로채던 문제 제거(.no-drag), rowspan 제거, 화살표·드래그·드롭안내선 안정화 / [COURSE 탭] 운영부 system/coord/rosters · 지원부 system/dorm/rosters 전역 명단을 직접 구독해 과정명으로 인원수 반영 → 라이브 방 미개설/방명 불일치여도 명단 표시) -->
+<!-- @build 20260613-104500 (영양사 vAA: ★초기화 크래시 수정 — 없어진 todayBadge 요소 접근에서 TypeError(nutritionist:823)가 나며 loadAll/loadRoomData가 통째로 중단 → 명단 리스너 미부착으로 COURSE 인원수 항상 미표시였음. todayBadge/menuFileInput 널가드로 초기화 완주 보장. 직전 vZ: [직원 명단관리] div 카드형 리스트로 재구성 — 행 전체 드래그가 버튼클릭을 가로채던 문제 제거(.no-drag), rowspan 제거, 화살표·드래그·드롭안내선 안정화 / [COURSE 탭] 운영부 system/coord/rosters · 지원부 system/dorm/rosters 전역 명단을 직접 구독해 과정명으로 인원수 반영 → 라이브 방 미개설/방명 불일치여도 명단 표시) -->
