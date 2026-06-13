@@ -446,6 +446,10 @@
         .ord-btn:disabled { opacity:.3; cursor:default; }
         .r-ein { width:100%; height:36px; padding:0 9px; border:1.5px solid #2563eb; border-radius:7px; font-weight:700; background:#fff; }
         .rtable tbody tr[draggable]:hover .drag-grip { color:#2563eb; }
+        .rtable tbody tr.dragging { opacity:.4; }
+        .rtable tbody tr.drop-before td { box-shadow: inset 0 3px 0 0 #2563eb; }
+        .rtable tbody tr.drop-after td { box-shadow: inset 0 -3px 0 0 #2563eb; }
+        .rtable tbody tr.drop-blocked td { box-shadow: inset 0 0 0 2px #fca5a5; }
         /* ── 전체폭 헤더 + 중앙정렬 본문 (교육지원부 방식) ── */
         body { background: var(--bg); }
         .app-content { max-width: 1180px; margin: 0 auto; width: 100%; padding: 22px 22px 48px; overflow-y: visible; }
@@ -1139,7 +1143,7 @@ const STAFF_ROSTER = 'system/staffMeal/roster';
 const STAFF_CHECKS = 'system/staffMeal/checks';
 
 window.addEventListener('DOMContentLoaded', () => {
-    db.ref(STAFF_ROSTER).on('value', s => { _staffRoster = s.val() || {}; _normalizeRosterOrders(); renderRoster(); fillDeptOptions(); renderMealStats(getToday()); });
+    db.ref(STAFF_ROSTER).on('value', s => { _staffRoster = s.val() || {}; _normalizeRosterOrders(); renderRoster(); fillDeptOptions(); renderMealStats(getToday()); if(_mealMonth) loadStaffMeal(); });
     db.ref('system/staffMeal/depts').on('value', s => { _deptPresets = s.val() || {}; fillDeptOptions(); });
     renderMenuWeekBar();
     loadAccount();
@@ -1152,6 +1156,7 @@ function showTab(id){
     document.querySelectorAll('.tab-panel').forEach(p => p.classList.toggle('active', p.id === id));
     document.querySelectorAll('.ntab').forEach(t => t.classList.toggle('active', t.getAttribute('data-tab') === id));
     if(id==='sec-course') loadCourseWeek();
+    if(id==='sec-meals') loadStaffMeal();
 }
 /* ══════════════════════════
    COURSE: 연간교육계획 기반 주차별(토~금) 보기
@@ -1373,7 +1378,7 @@ function renderRoster(){
                 </tr>`;
             } else {
                 const isFirst=(k===0), isLast=(k===run.length-1);
-                bodyHtml += `<tr draggable="true" ondragstart="rDragStart(event,'${id}')" ondragover="rDragOver(event)" ondrop="rDrop(event,'${id}')" ondragend="rDragEnd(event)">
+                bodyHtml += `<tr draggable="true" ondragstart="rDragStart(event,'${id}')" ondragover="rDragOver(event,'${id}')" ondrop="rDrop(event,'${id}')" ondragend="rDragEnd(event)">
                     <td class="c rnum">${seq}</td>
                     ${deptCell}
                     <td class="c" style="color:var(--muted); font-weight:700;">${escH(r.position||'-')}</td>
@@ -1533,12 +1538,29 @@ function deleteDept(d){
     if(!confirm(`소속 '${d}'을(를) 목록에서 삭제할까요?`)) return;
     db.ref(`system/staffMeal/depts/${d}`).remove().then(()=>showToast('소속이 삭제되었습니다.'));
 }
-/* ── 드래그 정렬 ── */
-function rDragStart(e,id){ _dragId=id; e.dataTransfer.effectAllowed='move'; try{e.dataTransfer.setData('text/plain',id);}catch(_){} }
-function rDragOver(e){ e.preventDefault(); e.dataTransfer.dropEffect='move'; }
-function rDragEnd(e){ _dragId=null; }
-function rDrop(e,dstId){ e.preventDefault(); const src=_dragId; _dragId=null; rReorder(src,dstId); }
-function rReorder(srcId,dstId){
+/* ── 드래그 정렬 (드롭 위치 안내선 + 위/아래 정확 삽입) ── */
+function _clearDropMarks(){ document.querySelectorAll('.rtable tr.drop-before,.rtable tr.drop-after,.rtable tr.drop-blocked').forEach(el=>el.classList.remove('drop-before','drop-after','drop-blocked')); }
+function rDragStart(e,id){ _dragId=id; e.dataTransfer.effectAllowed='move'; try{e.dataTransfer.setData('text/plain',id);}catch(_){} if(e.currentTarget) e.currentTarget.classList.add('dragging'); }
+function rDragOver(e,dstId){
+    e.preventDefault(); e.dataTransfer.dropEffect='move';
+    const tr=e.currentTarget; if(!tr) return;
+    _clearDropMarks();
+    if(!_dragId || _dragId===dstId) return;
+    const src=_staffRoster[_dragId], dst=_staffRoster[dstId]; if(!src||!dst) return;
+    if(((src.dept||'').trim())!==((dst.dept||'').trim())){ tr.classList.add('drop-blocked'); return; }
+    const rect=tr.getBoundingClientRect();
+    tr.classList.add(((e.clientY-rect.top) > rect.height/2) ? 'drop-after' : 'drop-before');
+}
+function rDragEnd(e){ _dragId=null; _clearDropMarks(); document.querySelectorAll('.rtable tr.dragging').forEach(el=>el.classList.remove('dragging')); }
+function rDrop(e,dstId){
+    e.preventDefault();
+    const tr=e.currentTarget; let after=false;
+    if(tr){ const rect=tr.getBoundingClientRect(); after=(e.clientY-rect.top) > rect.height/2; }
+    _clearDropMarks();
+    const src=_dragId; _dragId=null;
+    rReorder(src,dstId,after);
+}
+function rReorder(srcId,dstId,after){
     if(!srcId || srcId===dstId) return;
     const src=_staffRoster[srcId], dst=_staffRoster[dstId]; if(!src||!dst) return;
     const srcDept=((src.dept||'').trim()), dstDept=((dst.dept||'').trim());
@@ -1548,8 +1570,9 @@ function rReorder(srcId,dstId){
         .sort((a,b)=> (_ord(a[1])-_ord(b[1])) || (a[1].name||'').localeCompare(b[1].name||'','ko'))
         .map(([id])=>id);
     groupIds = groupIds.filter(id=>id!==srcId);
-    const ti = groupIds.indexOf(dstId);
-    groupIds.splice(ti<0?groupIds.length:ti, 0, srcId);
+    let ti = groupIds.indexOf(dstId);
+    if(ti<0) ti=groupIds.length; else if(after) ti+=1;
+    groupIds.splice(ti, 0, srcId);
     const updates={};
     groupIds.forEach((id,i)=>{ updates[`${STAFF_ROSTER}/${id}/order`]=i*10; });
     db.ref().update(updates).then(()=>showToast('순서가 변경되었습니다.'));
@@ -1806,7 +1829,7 @@ function renderMealCalendar(a, month){
 }
 </script>
 <style>@media print{#__ver{display:none!important}}</style>
-<div id="__ver" style="position:fixed;right:7px;bottom:7px;z-index:2147483000;background:rgba(15,23,42,.72);color:#cbd5e1;font:700 10px/1 monospace;padding:4px 8px;border-radius:7px;pointer-events:none;letter-spacing:.3px;">영양사 vV · 260613-0540</div>
+<div id="__ver" style="position:fixed;right:7px;bottom:7px;z-index:2147483000;background:rgba(15,23,42,.72);color:#cbd5e1;font:700 10px/1 monospace;padding:4px 8px;border-radius:7px;pointer-events:none;letter-spacing:.3px;">영양사 vW · 260613-0640</div>
 </body>
 </html>
-<!-- @build 20260613-054000 (영양사 vV: 식수집계 명단에 없는 직원 기록 제외(사내·사외강사 유지) / 소속 그룹 정렬을 가나다→먼저 등록한 순으로 / 드래그 시 다른 소속으로 끌면 소속이 바뀌던 버그 차단(같은 소속 내 순서변경만)) -->
+<!-- @build 20260613-064000 (영양사 vW: 명단 변경 시 식수관리 실시간 반영(탭 전환·로스터 리스너) / 드래그 드롭 위치 안내선+위아래 정확 삽입+같은소속외 차단표시) -->

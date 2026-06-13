@@ -287,10 +287,12 @@ function renderStaffList(){
         return;
     }
     const deptOf = r => (((r.dept||'').trim()) || '(소속 미지정)');
-    // 부서별 그룹 → 부서 정렬 → 부서 내 order 정렬 → 한 줄로 평탄화
+    // 부서별 그룹 → 부서 정렬(영양사 명단과 동일: 먼저 등록한 소속 먼저) → 부서 내 order 정렬 → 한 줄로 평탄화
     const groups = {};
     items.forEach(([id,r])=>{ const d=deptOf(r); (groups[d]||(groups[d]=[])).push([id,r]); });
-    const depts = Object.keys(groups).sort((a,b)=>a.localeCompare(b,'ko'));
+    const _deptFirst={};
+    Object.entries(groups).forEach(([d,arr])=>{ _deptFirst[d]=Math.min.apply(null, arr.map(([id,r])=>(r.createdAt!=null?r.createdAt:Infinity))); });
+    const depts = Object.keys(groups).sort((a,b)=> ((_deptFirst[a]===Infinity?9e15:_deptFirst[a])-(_deptFirst[b]===Infinity?9e15:_deptFirst[b])) || a.localeCompare(b,'ko'));
     const flat = [];
     depts.forEach(d=>{
         groups[d].sort((a,b)=> (((a[1].order!=null?a[1].order:9999)-(b[1].order!=null?b[1].order:9999))) || (a[1].name||'').localeCompare(b[1].name||'','ko'))
@@ -796,7 +798,7 @@ function esc(v){ return String(v==null?'':v).replace(/[&<>"']/g,c=>({'&':'&amp;'
 /* 초기 진입은 위의 ?go 분기에서 처리됨 */
 </script>
 <style>@media print{#__ver{display:none!important}}</style>
-<div id="__ver" style="position:fixed;right:7px;bottom:7px;z-index:2147483000;background:rgba(15,23,42,.72);color:#cbd5e1;font:700 10px/1 monospace;padding:4px 8px;border-radius:7px;pointer-events:none;letter-spacing:.3px;">식당패널 vS · 260613-0310</div>
+<div id="__ver" style="position:fixed;right:7px;bottom:7px;z-index:2147483000;background:rgba(15,23,42,.72);color:#cbd5e1;font:700 10px/1 monospace;padding:4px 8px;border-radius:7px;pointer-events:none;letter-spacing:.3px;">식당패널 vT · 260613-0640</div>
 </body>
 </html>
-<!-- @build 20260613-031000 (식당패널 vS: 식사 취소 시 확인 팝업(유지/취소하기) 복원 — 사용자 선호. 체크는 기존처럼 즉시 처리) -->
+<!-- @build 20260613-064000 (식당패널 vT: 소속 표시 순서를 영양사 직원명단관리와 동일하게(먼저 등록한 소속 먼저)) -->
