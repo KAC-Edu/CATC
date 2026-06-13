@@ -563,6 +563,9 @@
         .hsum-skip .hs-val { color:#fecdd3; }
         .hsum-eat .hs-val { color:#bbf7d0; }
         .hsum-break .hs-val { color:#fde68a; }
+        .mw-leg { font-size:13.5px; font-weight:800; color:#475569; margin-bottom:10px; padding:9px 13px; background:#f1f5f9; border-radius:10px; text-align:center; }
+        .mw-leg .mw-leg-st { color:#1d4ed8; }
+        .mw-leg .mw-leg-sf { color:#0f766e; }
         .mw-nav { display:flex; gap:6px; align-items:center; margin-bottom:12px; flex-wrap:wrap; }
         .mw-nav .mwb { border:1.5px solid #cbd5e1; background:#fff; color:#475569; border-radius:9px; padding:7px 14px; font-size:13.5px; font-weight:800; cursor:pointer; }
         .mw-nav .mwb.on { background:#2563eb; border-color:#2563eb; color:#fff; }
@@ -1069,6 +1072,7 @@ function loadRoomData() {
     // 직원 터치패널 석식 신청 → 석식 예상인원 반영
     db.ref('system/staffMeal/dinner').on('value', s => { _staffDinner = s.val() || {}; renderMealStats(getToday()); }, e=>console.warn('[staffDinner]',e));
     db.ref('system/staffMeal/breakfast').on('value', s => { _staffBreakfast = s.val() || {}; renderMealStats(getToday()); }, e=>console.warn('[staffBreakfast]',e));
+    db.ref('system/staffMeal/config/weekendOk').on('value', s => { _weekendOk = (s.val()===true); renderMealStats(getToday()); }, e=>console.warn('[weekendOk]',e));
     _watchMealNotify();
 
     // ── 운영부/지원부가 저장한 명단(전역 저장소)도 직접 구독 → COURSE 탭 인원수에 반영 ──
@@ -1128,6 +1132,14 @@ function _mealDayCounts(D) {
 }
 function renderMealStats(today) {
     const todayStr = today || getToday();
+    const dow = new Date(todayStr + 'T00:00:00').getDay();   // 0=일, 6=토
+    const isWeekend = (dow === 0 || dow === 6);
+    // 주말은 터치설정에서 주말 운영을 켜지 않은 한 '미운영'으로 표기(혼동 방지)
+    if (isWeekend && !_weekendOk) {
+        ['breakfastEst','lunchEst','dinnerEst'].forEach(id => { const e = document.getElementById(id); if (e) e.innerHTML = '<span style="font-size:13px; font-weight:800;">미운영</span>'; });
+        _estData = { today: todayStr, weekendOff: true };
+        return;
+    }
     const r = _mealDayCounts(todayStr);
     const set = (id, v) => { const e = document.getElementById(id); if (e) e.textContent = v + '명'; };
     set('breakfastEst', r.breakfast); set('lunchEst', r.lunch); set('dinnerEst', r.dinner);
@@ -1162,6 +1174,7 @@ function _renderMealWeek() {
     const clist = wc.map(c => { const n = (_courseCounts(c).total) || 0; return `<div class="mw-crow"><span class="mw-cn">${escH(c.name)}</span><span class="mw-cd">${escH(c.startDate)}~${escH(c.endDate)}</span><span class="mw-ch">${n ? n+'명' : '대기'}</span></div>`; }).join('') || '<div class="mw-crow" style="color:#94a3b8;">이 주 운영 과정 없음</div>';
     const staffCount = Object.values(_staffRoster || {}).filter(r => r && r.active !== false).length;
     body.innerHTML = nav
+        + `<div class="mw-leg"><i class="fa-solid fa-circle-info"></i> 표 안 숫자 = <b class="mw-leg-st">교육생</b> <span style="color:#94a3b8;">＋</span> <b class="mw-leg-sf">상주직원</b> 합계</div>`
         + `<div style="overflow-x:auto;"><table class="mw-table"><thead>${head}</thead><tbody>${rows}</tbody></table></div>`
         + `<div class="mw-note"><i class="fa-solid fa-circle-info"></i> 교육생은 과정 <b>첫날 점심부터 마지막날 점심까지</b>로 산정합니다(첫날 아침·마지막날 저녁 제외). 직원은 <b>점심 전원(${staffCount}명)</b>이고, 아침·저녁은 <b>당일 터치패널 신청</b> 기준이라 지난·오늘 날짜에만 반영됩니다.</div>`
         + `<div class="mw-courses"><div style="font-size:12.5px;font-weight:900;color:#475569;margin-bottom:4px;"><i class="fa-solid fa-graduation-cap"></i> 이 주 운영 과정 · 교육인원</div>${clist}<div class="mw-crow"><span class="mw-cn"><i class="fa-solid fa-id-badge" style="color:#64748b;"></i> 직원 명단(점심 전원)</span><span class="mw-cd"></span><span class="mw-ch">${staffCount}명</span></div></div>`;
@@ -1633,6 +1646,7 @@ let _curMonth = null;
 let _deptPresets = {};
 let _staffDinner = {};   // system/staffMeal/dinner (석식 신청)
 let _staffBreakfast = {};   // system/staffMeal/breakfast (조식 신청)
+let _weekendOk = false;   // 주말(토·일) 식사 운영 여부(터치설정)
 let _mealWeekOff = 0, _mealWeekKind = 'lunch';   // 주간 식수현황 모달 상태
 let _estData = {};       // 예상인원 산정 근거 캐시
 let _adjust = {};
@@ -2751,8 +2765,8 @@ function renderMealCalendar(a, month){
 }
 </script>
 <style>@media print{#__ver{display:none!important}}</style>
-<div id="__ver" style="position:fixed;right:7px;bottom:7px;z-index:2147483000;background:rgba(15,23,42,.72);color:#cbd5e1;font:700 10px/1 monospace;padding:4px 8px;border-radius:7px;pointer-events:none;letter-spacing:.3px;">영양사 vZZ · 260613-2340</div>
+<div id="__ver" style="position:fixed;right:7px;bottom:7px;z-index:2147483000;background:rgba(15,23,42,.72);color:#cbd5e1;font:700 10px/1 monospace;padding:4px 8px;border-radius:7px;pointer-events:none;letter-spacing:.3px;">영양사 vAAA · 260614-0010</div>
 <div id="notifyStack" class="notify-stack"></div>
 </body>
 </html>
-<!-- @build 20260613-234000 (영양사 vZZ: 상단바에 아침 예상 버튼 추가(아침/점심/저녁) + 누르면 주간 식수현황 모달(요일 월~금 × 끼니, 교육생+직원 합계, 오늘 강조, 이번주/2·3주차 nav, 과정별·직원 분해). 공통 헬퍼 _mealDayCounts(D): 아침=시작<D≤종료, 점심=시작≤D≤종료, 석식=시작≤D<종료. 직원 점심 전원·아침/저녁 당일신청. breakfast 구독 추가. 직전 vYY: 명단 화살표 단독인원 숨김) -->
+<!-- @build 20260614-001000 (영양사 vAAA: 주말 가드 — 토·일은 터치설정 weekendOk가 꺼져있으면 상단 예상식수를 "미운영" 표기(혼동 방지). 주간 식수현황 표 상단에 "교육생+상주직원" 컬러 안내 추가. 직전 vZZ: 아침버튼+주간 식수현황 모달) -->
