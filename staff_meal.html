@@ -127,7 +127,7 @@
         .lg-sw.lg-lock { background:#f1f5f9; border-color:#e2e8f0; color:#cbd5e1; }
         .meal-legend .lg-div { width:1px; height:18px; background:#e2e8f0; }
         .meal-legend .lg-note { color:#94a3b8; font-weight:700; }
-        .meal-legend .lg-status { font-weight:800; }
+        .meal-legend .lg-status { font-weight:800; margin-left:auto; }
         .lg-status .ms-open { color:#16a34a; } .lg-status .ms-open i { font-size:8px; vertical-align:middle; margin-right:4px; }
         .lg-status .ms-wait { color:#64748b; } .lg-status .ms-wait i { margin-right:4px; }
         .lg-status .ms-test { color:#b45309; } .lg-status .ms-test i { margin-right:4px; }
@@ -358,7 +358,7 @@ let _countTimer=null;
 function renderStaffList(){
     if (CURRENT!=='staff') return;
     const items = Object.entries(ROSTER).filter(([id,r])=>r && r.active!==false);
-    const TEST_BANNER = TEST_MODE ? '<div class="test-banner"><i class="fa-solid fa-flask"></i> <span>테스트 모드 — 모든 칸 체크 가능 (실제 기록됨)</span> <button class="tb-end" onclick="toggleTest()">테스트 종료</button></div>' : '';
+    const TEST_BANNER = '';   // [JDS260613] 표 위 테스트 배너 제거 — 표 크기를 테스트/실사용 동일하게 유지(테스트 표기는 범례 우측으로 이동)
     if(!items.length){
         stage.innerHTML = `<div class="meal-panel">${TEST_BANNER}<div class="empty">등록된 직원이 없습니다.<br>영양사 페이지에서 직원 명단을 추가해 주세요.</div></div>`;
         return;
@@ -429,7 +429,7 @@ function renderStaffList(){
         <span class="lg-item"><span class="lg-sw lg-empty"></span> 미체크</span>
         <span class="lg-item"><span class="lg-sw lg-lock"><i class="fa-solid fa-lock"></i></span> 시간대 아님</span>
         <span class="lg-div"></span><span class="lg-note"><i class="fa-solid fa-arrow-down-1-9"></i> 소속·배치순서 순 정렬</span>
-        <span class="lg-div"></span><span id="mealStatus" class="lg-status"></span>
+        <span id="mealStatus" class="lg-status"></span>
     </div>`;
 
     // 채움 순서: 좌측을 위에서부터 20줄까지 먼저 채우고, 넘치면 우측을 위에서부터 이어 채운다.
@@ -517,7 +517,7 @@ const _mealWindows=[
 function _fmtHM(m){ return `${String(Math.floor(m/60)).padStart(2,'0')}:${String(m%60).padStart(2,'0')}`; }
 function updateMealStatus(){
     const el=document.getElementById('mealStatus'); if(!el) return;
-    if(TEST_MODE){ el.innerHTML='<span class="ms-test"><i class="fa-solid fa-flask"></i> 테스트 모드 — 모든 칸 열림</span>'; return; }
+    if(TEST_MODE){ el.innerHTML='<span onclick="toggleTest()" title="클릭하면 테스트 모드를 종료합니다" style="cursor:pointer; display:inline-flex; align-items:center; gap:6px; background:#fef3c7; color:#b45309; border:1px solid #fcd34d; padding:4px 12px; border-radius:999px; font-weight:900;"><i class="fa-solid fa-flask"></i> 테스트 모드 · 실제 기록됨 <b style="text-decoration:underline;">종료</b></span>'; return; }
     if(_isWeekendToday() && !WEEKEND_OK){ el.innerHTML='<span class="ms-wait"><i class="fa-regular fa-calendar-xmark"></i> 주말(토·일)은 식사 미운영입니다 — 환경설정에서 허용 가능</span>'; return; }
     const t=_hm();
     const open=_mealWindows.filter(w=>t>=w.s && t<=w.e);
@@ -1095,8 +1095,8 @@ function esc(v){ return String(v==null?'':v).replace(/[&<>"']/g,c=>({'&':'&amp;'
 </script>
 <!-- @catc-version-badge · 전 페이지 통일 디자인 (개발자 확인용 · 사용자에게는 거의 안 보임) -->
 <style>@media print{#__catcVer{display:none!important}}</style>
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">JDS260613(V2)</div>
-<script>try{console.log('%cCATC%c 식당 식수 터치패널 (staff_meal.html) %cJDS260613(V2)%c build 20260613','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}</script>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">JDS260613(V3)</div>
+<script>try{console.log('%cCATC%c 식당 식수 터치패널 (staff_meal.html) %cJDS260613(V3)%c build 20260613','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}</script>
 </body>
 </html>
 <!-- @build 20260613-192000 (식당패널 vGG: KAC임직원 QR 팝업도 사외강사처럼 "닫기 (3)(2)(1)" 카운트다운 + 3초 자동닫힘 + 즉시 닫기 버튼. QR 팝업은 자체 타이머로 닫으므로 일괄 옵저버에서 제외(keep)) -->
