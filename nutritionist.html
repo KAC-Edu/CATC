@@ -10,6 +10,8 @@
     <script src="config.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/davidshimjs/qrcodejs/qrcode.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" rel="stylesheet">
     <style>
@@ -211,23 +213,23 @@
         .cw-sum i { color:var(--blue); }
         .cw-sum b { color:var(--blue); font-size:23px; margin-left:4px; }
         .cw-sum-pend { color:#94a3b8; font-weight:700; font-size:12px; }
-        .cw-card2 { display:flex; align-items:center; gap:14px; background:#fff; border:1.5px solid var(--border); border-left:5px solid #cbd5e1; border-radius:14px; padding:14px 18px; margin-bottom:10px; }
+        .cw-card2 { display:flex; align-items:center; gap:18px; background:#fff; border:1.5px solid var(--border); border-left:6px solid #cbd5e1; border-radius:16px; padding:20px 24px; margin-bottom:13px; box-shadow:0 2px 10px rgba(15,23,42,.04); }
         .cw-card2.live { border-left-color:#10b981; }
         .cw-card2.soon { border-left-color:#3b82f6; }
         .cw-card2.done { border-left-color:#cbd5e1; opacity:.82; }
-        .cw-stat { display:inline-flex; align-items:center; gap:5px; font-size:12.5px; font-weight:800; padding:7px 13px; border-radius:9px; white-space:nowrap; flex-shrink:0; }
+        .cw-stat { display:inline-flex; align-items:center; gap:6px; font-size:13.5px; font-weight:800; padding:9px 16px; border-radius:10px; white-space:nowrap; flex-shrink:0; }
         .cw-stat i { font-size:9px; }
         .cw-stat-live { background:#ecfdf5; color:#059669; } .cw-stat-live i { font-size:8px; }
         .cw-stat-soon { background:#eff6ff; color:#2563eb; }
         .cw-stat-done { background:#f1f5f9; color:#94a3b8; }
         .cw-main { flex:1; min-width:0; }
-        .cw-name2 { font-size:16px; font-weight:900; color:var(--navy); margin-bottom:4px; }
-        .cw-meta2 { font-size:12.5px; color:var(--muted); font-weight:700; }
+        .cw-name2 { font-size:18.5px; font-weight:900; color:var(--navy); margin-bottom:7px; letter-spacing:-.2px; }
+        .cw-meta2 { font-size:14px; color:var(--muted); font-weight:700; line-height:1.5; }
         .cw-meta2 i { margin-right:3px; }
-        .cw-right { display:flex; align-items:center; gap:9px; flex-shrink:0; }
-        .cw-head { display:inline-flex; align-items:center; gap:6px; background:#ecfdf5; color:#059669; font-size:15px; font-weight:900; padding:8px 15px; border-radius:10px; white-space:nowrap; }
-        .cw-head.pending { background:#fef9c3; color:#a16207; font-size:13px; font-weight:800; }
-        .cw-prof { display:inline-flex; align-items:center; gap:5px; background:#f1f5f9; color:#475569; font-size:13px; font-weight:800; padding:8px 13px; border-radius:10px; white-space:nowrap; }
+        .cw-right { display:flex; align-items:center; gap:12px; flex-shrink:0; }
+        .cw-head { display:inline-flex; align-items:center; gap:7px; background:#ecfdf5; color:#059669; font-size:17px; font-weight:900; padding:11px 18px; border-radius:11px; white-space:nowrap; }
+        .cw-head.pending { background:#fef9c3; color:#a16207; font-size:14px; font-weight:800; }
+        .cw-prof { display:inline-flex; align-items:center; gap:6px; background:#f1f5f9; color:#475569; font-size:14.5px; font-weight:800; padding:11px 16px; border-radius:11px; white-space:nowrap; }
         .modal-sheet {
             background: var(--white);
             border-radius: 20px;
@@ -671,11 +673,8 @@
         <div class="header-summary">
             <button class="h-btn icon-only" id="acctBtn" onclick="openAcctModal()" title="사외강사 식대 계좌 설정"><i class="fa-solid fa-gear"></i></button>
             <button class="h-btn touch" onclick="location.href='staff_meal.html'"><i class="fa-solid fa-utensils"></i> 터치패널</button>
-            <div class="hsum hsum-total"><span class="hs-lab">전체 식수</span><span class="hs-val" id="totalMeals">-</span></div>
-            <span class="hs-op">−</span>
-            <div class="hsum hsum-skip" onclick="openSkipModal()"><span class="hs-lab">석식 제외</span><span class="hs-val" id="skipCount">-</span></div>
-            <span class="hs-op">=</span>
-            <div class="hsum hsum-eat"><span class="hs-lab">실제 식사</span><span class="hs-val" id="eatCount">-</span></div>
+            <button class="hsum hsum-lunch" onclick="openEstModal('lunch')" title="산정 근거 보기"><span class="hs-lab"><i class="fa-solid fa-bowl-rice"></i> 점심 예상</span><span class="hs-val" id="lunchEst">-</span></button>
+            <button class="hsum hsum-dinner" onclick="openEstModal('dinner')" title="산정 근거 보기"><span class="hs-lab"><i class="fa-solid fa-moon"></i> 석식 예상</span><span class="hs-val" id="dinnerEst">-</span></button>
         </div>
     </header>
 
@@ -768,7 +767,7 @@
 
 <!-- ── 과정별 제외 신청자 모달 ── -->
 <div class="modal-bg" id="skipModal">
-    <div class="modal-sheet">
+    <div class="modal-sheet" style="max-width:780px;">
         <div class="modal-handle"></div>
         <div class="modal-title"><i class="fa-solid fa-ban" style="color:var(--red); margin-right:6px;"></i>석식 제외 신청자 — 과정별 명단</div>
         <div class="modal-body" id="skipModalBody">
@@ -793,6 +792,16 @@
         </div>
         <button class="modal-close-btn" style="background:#16a34a;" onclick="saveAccount(); closeAcctModal();"><i class="fa-solid fa-floppy-disk"></i> 저장</button>
         <button class="modal-close-btn" style="background:#e2e8f0; color:#475569; margin-top:8px;" onclick="closeAcctModal()">닫기</button>
+    </div>
+</div>
+
+<!-- ── 예상 인원 산정 근거 ── -->
+<div class="modal-bg" id="estModal">
+    <div class="modal-sheet" style="max-width:760px;">
+        <div class="modal-handle"></div>
+        <div class="modal-title" id="estModalTitle">예상 인원 산정 근거</div>
+        <div class="modal-body" id="estModalBody"></div>
+        <button class="modal-close-btn" style="background:#e2e8f0; color:#475569;" onclick="closeEstModal()">닫기</button>
     </div>
 </div>
 
@@ -2305,7 +2314,7 @@ function renderMealCalendar(a, month){
 }
 </script>
 <style>@media print{#__ver{display:none!important}}</style>
-<div id="__ver" style="position:fixed;right:7px;bottom:7px;z-index:2147483000;background:rgba(15,23,42,.72);color:#cbd5e1;font:700 10px/1 monospace;padding:4px 8px;border-radius:7px;pointer-events:none;letter-spacing:.3px;">영양사 vGG · 260613-1450</div>
+<div id="__ver" style="position:fixed;right:7px;bottom:7px;z-index:2147483000;background:rgba(15,23,42,.72);color:#cbd5e1;font:700 10px/1 monospace;padding:4px 8px;border-radius:7px;pointer-events:none;letter-spacing:.3px;">영양사 vJJ · 260613-1535</div>
 <div id="notifyStack" class="notify-stack"></div>
 </body>
 </html>
