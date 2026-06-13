@@ -190,8 +190,9 @@
             inset: 0;
             background: rgba(0,0,0,.55);
             z-index: 1000;
-            align-items: flex-end;
+            align-items: center;
             justify-content: center;
+            padding: 16px;
         }
         .modal-bg.open { display: flex; }
         .roster-tools { display:flex; gap:10px; align-items:center; margin-bottom:12px; flex-wrap:wrap; }
@@ -229,7 +230,7 @@
         .cw-prof { display:inline-flex; align-items:center; gap:5px; background:#f1f5f9; color:#475569; font-size:13px; font-weight:800; padding:8px 13px; border-radius:10px; white-space:nowrap; }
         .modal-sheet {
             background: var(--white);
-            border-radius: 24px 24px 0 0;
+            border-radius: 20px;
             width: 100%;
             max-width: 600px;
             max-height: 80dvh;
@@ -493,6 +494,15 @@
         .am-lab { width:64px; flex:none; font-weight:800; color:#475569; font-size:13px; }
         .am-inp { flex:1; height:40px; padding:0 12px; border:1.5px solid #cbd5e1; border-radius:9px; font-size:14px; font-weight:700; box-sizing:border-box; background:#fff; }
         .am-inp:focus { border-color:#2563eb; outline:none; }
+        .am-newbtn { width:40px; height:40px; flex:none; border:1.5px solid #2563eb; background:#eff6ff; color:#2563eb; border-radius:9px; cursor:pointer; font-size:14px; }
+        .bgrid-head { display:grid; grid-template-columns:1fr 1.2fr 1fr 1fr 34px; gap:6px; padding:2px 2px 5px; font-size:11.5px; font-weight:800; color:#94a3b8; }
+        #bulk-grid { display:flex; flex-direction:column; gap:5px; max-height:260px; overflow-y:auto; }
+        .bgrow { display:grid; grid-template-columns:1fr 1.2fr 1fr 1fr 34px; gap:6px; }
+        .bgrow input { height:36px; padding:0 9px; border:1.5px solid #cbd5e1; border-radius:8px; font-size:13.5px; font-weight:700; box-sizing:border-box; width:100%; }
+        .bgrow input:focus { border-color:#2563eb; outline:none; }
+        .bgrow .bgdel { border:none; background:#fee2e2; color:#dc2626; border-radius:8px; cursor:pointer; font-size:12px; }
+        .bgrid-add { width:100%; margin-top:8px; padding:9px 0; border:1.5px dashed #93c5fd; background:#f8fafc; color:#2563eb; border-radius:9px; font-weight:800; cursor:pointer; font-size:13px; }
+        .cnt-row[onclick]:hover td { background:#eff6ff !important; }
         /* ── 전체폭 헤더 + 중앙정렬 본문 (교육지원부 방식) ── */
         body { background: var(--bg); }
         .app-content { max-width: 1180px; margin: 0 auto; width: 100%; padding: 22px 22px 48px; overflow-y: visible; }
@@ -749,6 +759,16 @@
     </div>
 </div>
 
+<!-- ── 식수 달력 팝업 ── -->
+<div class="modal-bg" id="calModal">
+    <div class="modal-sheet" style="max-width:560px;">
+        <div class="modal-handle"></div>
+        <div class="modal-title"><i class="fa-regular fa-calendar-check" style="color:#2563eb; margin-right:6px;"></i><span id="calModalName">식수 달력</span></div>
+        <div class="modal-body" id="calModalBody"></div>
+        <button class="modal-close-btn" style="background:#e2e8f0; color:#475569; margin-top:8px;" onclick="closeCalModal()">닫기</button>
+    </div>
+</div>
+
 <!-- ── 직원 추가 (팝업) ── -->
 <div class="modal-bg" id="addModal">
     <div class="modal-sheet" style="max-width:560px;">
@@ -761,23 +781,19 @@
         </div>
         <div class="modal-body">
             <div id="apane-one" class="add-pane">
-                <div class="am-row"><label class="am-lab">소속</label><select id="am-dept" class="am-inp"></select></div>
-                <div class="am-row"><label class="am-lab">새 소속</label><input id="am-newdept" class="am-inp" placeholder="새 소속을 만들려면 입력 (선택)" maxlength="20"></div>
+                <div class="am-row"><label class="am-lab">소속</label><select id="am-dept" class="am-inp"></select><button class="am-newbtn" onclick="addNewDeptInline()" title="새 소속 추가"><i class="fa-solid fa-plus"></i></button></div>
+                <div class="am-row"><label class="am-lab">사번</label><input id="am-empno" class="am-inp" placeholder="사번 (같은 부서 내 정렬 기준)" maxlength="20" inputmode="numeric"></div>
                 <div class="am-row"><label class="am-lab">직책</label><input id="am-pos" class="am-inp" placeholder="예: 주임" maxlength="16"></div>
                 <div class="am-row"><label class="am-lab">성함</label><input id="am-name" class="am-inp" placeholder="성함" maxlength="12" onkeyup="if(event.key==='Enter')addSingle()"></div>
-                <div class="am-row"><label class="am-lab">사번</label><input id="am-empno" class="am-inp" placeholder="사번 (선택 · 같은 부서 내 정렬 기준)" maxlength="20" inputmode="numeric"></div>
-                <div class="am-row"><label class="am-lab">비고</label><input id="am-note" class="am-inp" placeholder="비고 (선택)" maxlength="30"></div>
                 <button class="modal-close-btn" style="background:#2563eb;" onclick="addSingle()"><i class="fa-solid fa-plus"></i> 추가</button>
             </div>
             <div id="apane-bulk" class="add-pane" style="display:none;">
                 <div class="am-row"><label class="am-lab">소속</label><select id="am-bulk-dept" class="am-inp"></select></div>
-                <div style="font-size:12px; color:var(--muted); font-weight:700; margin:8px 2px; line-height:1.7;">
-                    선택한 소속에, <b>한 줄에 한 명</b>씩 <b>직책,성함,사번,비고</b> 순으로 콤마로 구분해 입력하세요. (성함만 필수)<br>
-                    <span style="color:#94a3b8;">예) 주임,홍길동,20180312<br>예) 김철수  (성함만)</span>
-                </div>
-                <textarea id="am-bulk-text" placeholder="주임,홍길동,20180312&#10;과장,김영희,20150905,야간" style="width:100%; height:170px; border:1.5px solid #cbd5e1; border-radius:10px; padding:12px; font-size:14px; font-family:inherit; resize:vertical; box-sizing:border-box;"></textarea>
-                <div id="am-bulk-preview" style="font-size:12.5px; font-weight:700; color:#2563eb; margin-top:8px; min-height:18px;"></div>
-                <button class="modal-close-btn" style="background:#2563eb;" onclick="runManualBulk()"><i class="fa-solid fa-check"></i> 일괄 등록</button>
+                <div style="font-size:12px; color:var(--muted); font-weight:700; margin:8px 2px; line-height:1.6;">엑셀처럼 셀에 입력하세요. 행이 모자라면 <b>+ 행 추가</b>. 엑셀에서 복사한 표를 셀에 <b>붙여넣기</b>하면 자동으로 채워집니다. (성함만 필수)</div>
+                <div class="bgrid-head"><span>직책</span><span>성함</span><span>사번</span><span>비고</span><span></span></div>
+                <div id="bulk-grid"></div>
+                <button class="bgrid-add" onclick="addBulkRow()"><i class="fa-solid fa-plus"></i> 행 추가</button>
+                <button class="modal-close-btn" style="background:#2563eb; margin-top:10px;" onclick="runManualBulk()"><i class="fa-solid fa-check"></i> 일괄 등록</button>
             </div>
             <div id="apane-xlsx" class="add-pane" style="display:none;">
                 <div style="font-size:12.5px; color:var(--muted); font-weight:700; margin:2px 2px 12px; line-height:1.7;">
@@ -1428,19 +1444,29 @@ function _normalizeRosterOrders(){
 function _empNo(r){ const v=((r&&r.empNo)||'').toString().trim(); if(!v) return Infinity; const n=parseInt(v.replace(/\D/g,''),10); return isNaN(n)?Infinity:n; }
 
 /* ── 직원 추가 팝업 ── */
-function openAddModal(){ fillDeptOptions(); const m=document.getElementById('addModal'); if(m) m.classList.add('open'); switchAddTab('one'); const t=document.getElementById('am-bulk-text'); if(t){ t.value=''; t.oninput=_amBulkPreview; } _amBulkPreview(); const xi=document.getElementById('am-xlsx-info'); if(xi) xi.textContent=''; setTimeout(()=>{ const e=document.getElementById('am-name'); if(e) e.focus(); },40); }
+function openAddModal(){ fillDeptOptions(); const m=document.getElementById('addModal'); if(m) m.classList.add('open'); switchAddTab('one'); _initBulkGrid(); const xi=document.getElementById('am-xlsx-info'); if(xi) xi.textContent=''; setTimeout(()=>{ const e=document.getElementById('am-name'); if(e) e.focus(); },40); }
 function closeAddModal(){ const m=document.getElementById('addModal'); if(m) m.classList.remove('open'); }
 function switchAddTab(t){ ['one','bulk','xlsx'].forEach(k=>{ const tab=document.getElementById('atab-'+k); const pane=document.getElementById('apane-'+k); if(tab) tab.classList.toggle('active',k===t); if(pane) pane.style.display=(k===t?'block':'none'); }); }
 function _amBulkPreview(){ const t=document.getElementById('am-bulk-text'); const pv=document.getElementById('am-bulk-preview'); if(!pv) return; const n=(t?t.value:'').split(/\r?\n/).filter(l=>l.trim()).length; pv.textContent = n?(n+'명 입력됨'):''; }
 
+function addNewDeptInline(){
+    const v=(prompt('새 소속명을 입력하세요 (예: 교육지원부)')||'').trim();
+    if(!v) return;
+    if(!_validDeptName(v)){ showToast('소속명에 . # $ [ ] / 는 쓸 수 없습니다.'); return; }
+    db.ref(`system/staffMeal/depts/${v}`).set(true).then(()=>{
+        fillDeptOptions();
+        const ds=document.getElementById('am-dept'); if(ds) ds.value=v;
+        const bs=document.getElementById('am-bulk-dept'); if(bs) bs.value=v;
+        showToast('✅ 소속이 추가되었습니다.');
+    }).catch(e=>showToast('소속 추가 실패: '+((e&&e.message)||e)));
+}
 function addSingle(){
-    let dept=((document.getElementById('am-newdept')||{}).value||'').trim();
-    if(!dept) dept=((document.getElementById('am-dept')||{}).value||'').trim();
+    const dept=((document.getElementById('am-dept')||{}).value||'').trim();
     const pos=((document.getElementById('am-pos')||{}).value||'').trim();
     const name=((document.getElementById('am-name')||{}).value||'').trim();
     const empNo=((document.getElementById('am-empno')||{}).value||'').trim();
-    const note=((document.getElementById('am-note')||{}).value||'').trim();
-    if(!dept){ showToast('소속을 선택하거나 새 소속을 입력하세요.'); return; }
+    const note='';
+    if(!dept){ showToast('소속을 선택하세요. (없으면 + 버튼으로 새 소속 추가)'); return; }
     if(!_validDeptName(dept)){ showToast('소속명에 . # $ [ ] / 는 쓸 수 없습니다.'); return; }
     if(!name){ showToast('성함을 입력하세요.'); return; }
     const maxOrd=Object.values(_staffRoster||{}).filter(r=>r&&((r.dept||'').trim())===dept).reduce((m,r)=>Math.max(m,(r.order!=null?r.order:0)),0);
@@ -1449,7 +1475,7 @@ function addSingle(){
     updates[`${STAFF_ROSTER}/${key}`]={ name, dept, position:pos, empNo, note, order:maxOrd+10, active:true, createdAt:firebase.database.ServerValue.TIMESTAMP };
     if(!_deptPresets[dept]) updates[`system/staffMeal/depts/${dept}`]=true;
     db.ref().update(updates).then(()=>{
-        ['am-name','am-empno','am-note','am-newdept'].forEach(id=>{ const e=document.getElementById(id); if(e) e.value=''; });
+        ['am-name','am-empno','am-pos'].forEach(id=>{ const e=document.getElementById(id); if(e) e.value=''; });
         fillDeptOptions(); const ds=document.getElementById('am-dept'); if(ds && [...ds.options].some(o=>o.value===dept)) ds.value=dept;
         const nm=document.getElementById('am-name'); if(nm) nm.focus();
         showToast('✅ 직원이 추가되었습니다. (이어서 추가 가능)');
@@ -1459,31 +1485,63 @@ function addSingle(){
 /* 공통 일괄 커밋 (수기/엑셀) */
 function _commitBulk(rows, label){
     if(!rows.length){ showToast('등록할 항목이 없습니다. 형식을 확인하세요.'); return; }
-    const seen={};
+    // 중복 방지: 동일 사번+성함, 또는 (사번 없을 때) 동일 소속+성함은 제외
+    const existEmp=new Set(), existDN=new Set();
+    Object.values(_staffRoster||{}).forEach(r=>{ if(!r)return; const nm=(r.name||'').trim(); const en=(r.empNo||'').toString().trim(); if(en&&nm) existEmp.add(en+'|'+nm); if(nm) existDN.add(((r.dept||'').trim())+'|'+nm); });
+    const seenEmp=new Set(), seenDN=new Set();
+    const seen={}; let added=0, skipped=0;
     Object.values(_staffRoster||{}).forEach(r=>{ if(!r)return; const d=((r.dept||'').trim()); seen[d]=Math.max(seen[d]||0,(r.order!=null?r.order:0)); });
     const updates={};
     rows.forEach(row=>{
+        const nm=(row.name||'').trim(); const en=(row.empNo||'').toString().trim();
+        const kEmp=en?(en+'|'+nm):null; const kDN=(row.dept+'|'+nm);
+        const dup=(kEmp && (existEmp.has(kEmp)||seenEmp.has(kEmp))) || (!en && (existDN.has(kDN)||seenDN.has(kDN)));
+        if(dup){ skipped++; return; }
+        if(kEmp) seenEmp.add(kEmp); seenDN.add(kDN);
         const key=db.ref(STAFF_ROSTER).push().key;
         seen[row.dept]=(seen[row.dept]!=null?seen[row.dept]:0)+10;
-        updates[`${STAFF_ROSTER}/${key}`]={ name:row.name, dept:row.dept, position:row.pos||'', empNo:row.empNo||'', note:row.note||'', order:seen[row.dept], active:true, createdAt:firebase.database.ServerValue.TIMESTAMP };
+        updates[`${STAFF_ROSTER}/${key}`]={ name:nm, dept:row.dept, position:row.pos||'', empNo:en, note:row.note||'', order:seen[row.dept], active:true, createdAt:firebase.database.ServerValue.TIMESTAMP };
         if(!_deptPresets[row.dept]) updates[`system/staffMeal/depts/${row.dept}`]=true;
+        added++;
     });
-    db.ref().update(updates).then(()=>{ closeAddModal(); showToast(`✅ ${rows.length}명을 ${label} 등록했습니다.`); }).catch(e=>showToast('❌ 등록 실패: '+((e&&e.message)||e)));
+    if(!added){ showToast(`등록할 신규 인원이 없습니다. (중복 ${skipped}명 제외)`); return; }
+    db.ref().update(updates).then(()=>{ closeAddModal(); showToast(`✅ ${added}명 등록${skipped?` · 중복 ${skipped}명 제외`:''} (${label})`); }).catch(e=>showToast('❌ 등록 실패: '+((e&&e.message)||e)));
 }
 
+function _bulkRowHtml(){
+    return `<div class="bgrow">
+        <input class="bg-pos" placeholder="직책" maxlength="16">
+        <input class="bg-name" placeholder="성함" maxlength="12" onpaste="bulkPaste(event,this)">
+        <input class="bg-emp" placeholder="사번" maxlength="20" inputmode="numeric">
+        <input class="bg-note" placeholder="비고" maxlength="30">
+        <button class="bgdel" onclick="this.parentNode.remove()" title="행 삭제"><i class="fa-solid fa-xmark"></i></button>
+    </div>`;
+}
+function _initBulkGrid(){ const g=document.getElementById('bulk-grid'); if(!g) return; g.innerHTML=''; for(let i=0;i<6;i++) g.insertAdjacentHTML('beforeend', _bulkRowHtml()); }
+function addBulkRow(){ const g=document.getElementById('bulk-grid'); if(!g) return; g.insertAdjacentHTML('beforeend', _bulkRowHtml()); const last=g.lastElementChild; const fi=last&&last.querySelector('.bg-pos'); if(fi) fi.focus(); }
+function bulkPaste(e, inputEl){
+    const cd=(e.clipboardData||window.clipboardData); if(!cd) return;
+    const txt=cd.getData('text'); if(!txt || !/[\t\n]/.test(txt)) return;   // 단일 셀이면 기본 붙여넣기
+    e.preventDefault();
+    const cols=['pos','name','emp','note'];
+    const lines=txt.replace(/\r/g,'').split('\n').filter(l=>l.length);
+    const m=(inputEl.className.match(/bg-(pos|name|emp|note)/)||[]); const startCol=Math.max(0,cols.indexOf(m[1]));
+    const grid=document.getElementById('bulk-grid');
+    let rowEl=inputEl.closest('.bgrow');
+    lines.forEach(line=>{
+        if(!rowEl){ addBulkRow(); rowEl=grid.lastElementChild; }
+        line.split('\t').forEach((val,ci)=>{ const colIdx=startCol+ci; if(colIdx>3) return; const inp=rowEl.querySelector('.bg-'+cols[colIdx]); if(inp) inp.value=val.trim(); });
+        rowEl=rowEl.nextElementSibling;
+    });
+}
 function runManualBulk(){
     const dept=((document.getElementById('am-bulk-dept')||{}).value||'').trim();
     if(!dept){ showToast('먼저 소속을 선택하세요.'); return; }
     if(!_validDeptName(dept)){ showToast('소속명에 사용할 수 없는 문자가 있습니다.'); return; }
-    const text=((document.getElementById('am-bulk-text')||{}).value||'');
     const rows=[];
-    text.split(/\r?\n/).forEach(line=>{
-        const ln=line.trim(); if(!ln) return;
-        const p=ln.split(',').map(x=>x.trim());
-        let pos='',name='',empNo='',note='';
-        if(p.length===1){ name=p[0]; } else { pos=p[0]||''; name=p[1]||''; empNo=p[2]||''; note=p[3]||''; }
-        if(!name) return;
-        rows.push({dept,pos,name,empNo,note});
+    document.querySelectorAll('#bulk-grid .bgrow').forEach(r=>{
+        const name=((r.querySelector('.bg-name')||{}).value||'').trim(); if(!name) return;
+        rows.push({ dept, pos:((r.querySelector('.bg-pos')||{}).value||'').trim(), name, empNo:((r.querySelector('.bg-emp')||{}).value||'').trim(), note:((r.querySelector('.bg-note')||{}).value||'').trim() });
     });
     _commitBulk(rows,'수기 일괄');
 }
@@ -1905,12 +1963,12 @@ function renderStaffCounts(agg, month){
             cntCell=`<div class="cnt-edit"><div class="cnt-edit-top"><input id="edit-cnt" type="number" min="0" value="${shown}" class="cnt-edit-num"> <button class="r-actbtn" style="background:#16a34a;color:#fff;" onclick="saveCnt('${key}',${actual})">저장</button> <button class="r-actbtn" style="background:#e2e8f0;color:#475569;" onclick="cancelCnt()">취소</button></div><input id="edit-cnt-reason" class="cnt-reason" placeholder="수정 사유 (필수)" value="${escH((adj&&adj.memo)||'')}" maxlength="40"></div>`;
         } else {
             const editBtn = _monthLocked ? '' : ` <button class="r-actbtn r-edit" onclick="editCnt('${key}')">수정</button>`;
-            cntCell=`<span class="cnt-clk" onclick="toggleCal('${key}')"><b style="font-size:17px; color:${shown===0?'#cbd5e1':(corrected?'#dc2626':'var(--navy)')};">${shown}</b><small style="font-size:11px;">회</small>${corrected?` <span class="cnt-corr" title="실제 ${actual}회">수정</span>`:''} <i class="fa-solid fa-chevron-down cnt-exp"></i></span>${editBtn}`;
+            cntCell=`<span class="cnt-clk"><b style="font-size:17px; color:${shown===0?'#cbd5e1':(corrected?'#dc2626':'var(--navy)')};">${shown}</b><small style="font-size:11px;">회</small>${corrected?` <span class="cnt-corr" title="실제 ${actual}회">수정</span>`:''} <i class="fa-solid fa-chevron-down cnt-exp"></i></span>${editBtn}`;
         }
         const memo=(adj&&adj.memo)||'';
         const memoIc = _monthLocked ? '' : `<i class="fa-solid fa-pen-to-square memo-ic" title="메모 입력" onclick="editMemo('${key}')"></i>`;
         const noteCell=`${memo?`<span style="font-size:13px;">${escH(memo)}</span> `:''}${memoIc}`;
-        tb+=`<tr class="cnt-row${shown>0?' has-meal':''}">
+        tb+=`<tr class="cnt-row${shown>0?' has-meal':''}" onclick="rowCalClick(event,'${key}')" style="cursor:pointer;">
             <td class="c"><span style="background:${catColor[a.category]}1a; color:${catColor[a.category]}; font-weight:800; border-radius:6px; padding:2px 8px; font-size:12px;">${catLabel[a.category]||'직원'}</span></td>
             <td>${dept}</td>
             <td class="c" style="color:var(--muted); font-weight:700;">${pos}</td>
@@ -2014,6 +2072,16 @@ function toggleCal(key){
     const row = el.parentElement && el.parentElement.previousElementSibling;
     if(row && row.classList.contains('cnt-row')) row.classList.toggle('open', show);
 }
+function rowCalClick(e, key){
+    if(e && e.target && e.target.closest && e.target.closest('button, input, .memo-ic, .r-actbtn, .cnt-corr, .cnt-edit')) return;
+    openCalModal(key);
+}
+function openCalModal(key){
+    const src=document.getElementById('cal-'+key); if(!src) return;
+    const body=document.getElementById('calModalBody'); if(body) body.innerHTML=src.innerHTML;
+    const m=document.getElementById('calModal'); if(m) m.classList.add('open');
+}
+function closeCalModal(){ const m=document.getElementById('calModal'); if(m) m.classList.remove('open'); }
 function renderMealCalendar(a, month){
     const [y,m]=month.split('-').map(Number);
     let bc=0,lc=0,dc=0; Object.values(a.days||{}).forEach(md=>{ if(md.b)bc++; if(md.l)lc++; if(md.d)dc++; });
@@ -2032,7 +2100,7 @@ function renderMealCalendar(a, month){
 }
 </script>
 <style>@media print{#__ver{display:none!important}}</style>
-<div id="__ver" style="position:fixed;right:7px;bottom:7px;z-index:2147483000;background:rgba(15,23,42,.72);color:#cbd5e1;font:700 10px/1 monospace;padding:4px 8px;border-radius:7px;pointer-events:none;letter-spacing:.3px;">영양사 vBB · 260613-1130</div>
+<div id="__ver" style="position:fixed;right:7px;bottom:7px;z-index:2147483000;background:rgba(15,23,42,.72);color:#cbd5e1;font:700 10px/1 monospace;padding:4px 8px;border-radius:7px;pointer-events:none;letter-spacing:.3px;">영양사 vCC · 260613-1230</div>
 </body>
 </html>
 <!-- @build 20260613-104500 (영양사 vAA: ★초기화 크래시 수정 — 없어진 todayBadge 요소 접근에서 TypeError(nutritionist:823)가 나며 loadAll/loadRoomData가 통째로 중단 → 명단 리스너 미부착으로 COURSE 인원수 항상 미표시였음. todayBadge/menuFileInput 널가드로 초기화 완주 보장. 직전 vZ: [직원 명단관리] div 카드형 리스트로 재구성 — 행 전체 드래그가 버튼클릭을 가로채던 문제 제거(.no-drag), rowspan 제거, 화살표·드래그·드롭안내선 안정화 / [COURSE 탭] 운영부 system/coord/rosters · 지원부 system/dorm/rosters 전역 명단을 직접 구독해 과정명으로 인원수 반영 → 라이브 방 미개설/방명 불일치여도 명단 표시) -->
