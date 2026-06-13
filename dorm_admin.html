@@ -3,8 +3,8 @@
 <head>
 <!-- ============================================================
   CATC · 교육지원부 · 생활관 배정  (dorm_admin.html)
-  @version  W
-  @build    20260611-212424
+  @version  X
+  @build    20260613-061500  (명단 사라짐 근본수정: roster 키가 weekKey__room이라 방 변경 시 고아화되던 문제 → 과정명 기준 폴백+현재키 자동이관 self-heal, 카운트/로드/복구 모두 적용)
   ────────────────────────────────────────────────────────
   [코드 수정 규칙 · AI/개발자 공통]
   이 파일을 한 글자라도 고치면:
@@ -1626,6 +1626,17 @@
         let rosterCounts = {};   // rosterKey -> 등재 인원수
         let coordRosters = {};   // rosterKey -> 교육운영부 공유 명단 payload (applyToDorm=true 인 것만)
         let dormRosterMeta = {}; // rosterKey -> { count, updatedAt, coordUpdatedAt } (최신 여부 비교용)
+        // 방 변경으로 weekKey__room 키가 어긋난 명단을 과정명으로 찾기 위한 보조 인덱스
+        let _rosterByCourse = {}; // `${weekKey}__${정규화과정명}` -> { key, count, updatedAt, coordUpdatedAt }
+        function _normCourseName(s){ return (s || '').replace(/\s+/g, '').toLowerCase(); }
+        function _shiftDayKey(ymd, n){ const d = new Date(ymd + 'T00:00:00'); if (isNaN(d)) return ymd; d.setDate(d.getDate() + n); return _ymdLocal(d); }
+        function _findRosterByCourse(it){
+            if (!it || !it.courseName || !it.weekKey) return null;
+            const nm = _normCourseName(it.courseName);
+            const cands = [it.weekKey, _shiftDayKey(it.weekKey, 1), _shiftDayKey(it.weekKey, -1)];
+            for (const wk of cands){ const e = _rosterByCourse[`${wk}__${nm}`]; if (e) return e; }
+            return null;
+        }
 
         // ── 명단 복구: 배치 현황(system/dorm/assignments)에서 rosters를 역으로 재생성 ──
         //  배치 실행 이후 rosters 데이터가 지워진 경우 STEP4 데이터로 복원
@@ -1745,13 +1756,22 @@
                 const rsAll = rsSnap.val() || {};
                 rosterCounts = {};
                 dormRosterMeta = {};
+                _rosterByCourse = {};
                 Object.entries(rsAll).forEach(([k, v]) => {
-                    rosterCounts[k] = Array.isArray(v.list) ? v.list.length : 0;
+                    const cnt = Array.isArray(v.list) ? v.list.length : 0;
+                    rosterCounts[k] = cnt;
                     dormRosterMeta[k] = {
-                        count: Array.isArray(v.list) ? v.list.length : 0,
+                        count: cnt,
                         updatedAt: v.updatedAt || 0,
                         coordUpdatedAt: v.coordUpdatedAt || 0
                     };
+                    // 과정명 보조 인덱스 (방 변경으로 키 어긋난 명단 폴백용) — 인원 많은 것 우선
+                    if (cnt > 0 && v.courseName && v.weekKey) {
+                        const cKey = `${v.weekKey}__${_normCourseName(v.courseName)}`;
+                        if (!_rosterByCourse[cKey] || cnt > _rosterByCourse[cKey].count) {
+                            _rosterByCourse[cKey] = { key: k, count: cnt, updatedAt: v.updatedAt || 0, coordUpdatedAt: v.coordUpdatedAt || 0 };
+                        }
+                    }
                 });
                 // 교육운영부가 공유(applyToDorm)한 명단 수집 — courses 스냅샷에 이미 포함됨 (별도 조회 불필요)
                 //  ⚠️ coord와 dorm의 weekKey 계산 방식이 달라(로컬 vs UTC), coord의 weekKey 필드 대신
@@ -1863,11 +1883,12 @@
             items.forEach(it => {
                 const sel = selectedCourse && selectedCourse.room === it.room && selectedCourse.weekKey === it.weekKey;
                 const rk = `${it.weekKey}__${it.room}`;
-                const cnt = rosterCounts[rk] || 0;
+                const _byC = (!rosterCounts[rk]) ? _findRosterByCourse(it) : null;  // 방 변경 등으로 키 어긋난 명단 폴백
+                const cnt = rosterCounts[rk] || (_byC ? _byC.count : 0);
                 const enrolled = cnt > 0;
                 // ── 교육운영부 공유 명단 표시 ──
                 const coord = coordRosters[rk];
-                const meta = dormRosterMeta[rk] || {};
+                const meta = dormRosterMeta[rk] || (_byC ? { count: _byC.count, updatedAt: _byC.updatedAt, coordUpdatedAt: _byC.coordUpdatedAt } : {});
                 // 아직 지원부가 반영하지 않은(또는 더 최신인) 교육운영부 명단 → '신규/변경'
                 const coordPending = coord && (Number(coord.updatedAt || 0) > Number(meta.coordUpdatedAt || 0));
                 const _safeRk = rk.replace(/'/g,'&#39;');
@@ -2003,26 +2024,52 @@
                 rosterEditCourse = it;
                 rosterDirty = false;  // DB에서 로드한 시점엔 항상 클린 상태
                 console.log('[명단 로드] 결과:', v ? `${roster.length}명 (list 존재: ${!!v.list})` : '⚠️ Firebase에 데이터 없음 (null)');
-                if (!v) {
-                    // 데이터가 없을 경우 — 인접 키도 시도 (UTC/KST 하루 차이 대비)
+                if (!v || !roster.length) {
                     const [wkPart, roomPart] = key.split('__');
-                    const wkDate = new Date(wkPart + 'T00:00:00');
-                    wkDate.setDate(wkDate.getDate() + 1); // 하루 뒤 키로 재시도
-                    const altKey = `${wkDate.toISOString().slice(0,10)}__${roomPart}`;
-                    if (altKey !== key) {
-                        console.log('[명단 로드] 대체 키 시도:', `system/dorm/rosters/${altKey}`);
-                        db.ref(`system/dorm/rosters/${altKey}`).once('value', snap2 => {
-                            const v2 = snap2.val();
-                            if (v2 && Array.isArray(v2.list) && v2.list.length > 0) {
-                                console.log('[명단 로드] 대체 키에서 발견:', v2.list.length + '명 → 이 키로 로드');
-                                roster = v2.list;
-                                currentScheduleData = v2.schedule || null;
-                                rosterEditCourse = it;
-                            }
-                            renderRoster();
-                        });
-                        return;
-                    }
+                    const altKey = `${_shiftDayKey(wkPart, 1)}__${roomPart}`;
+                    // 2차: 과정명 기준 폴백 — 방이 바뀌어 키가 어긋난 명단을 찾아 현재 키로 자동 이관(self-heal)
+                    const afterAlt = (found) => {
+                        if (found) { renderRoster(); return; }
+                        const byC = _findRosterByCourse(it);
+                        if (byC && byC.key !== key) {
+                            db.ref(`system/dorm/rosters/${byC.key}`).once('value', s3 => {
+                                const v3 = s3.val();
+                                if (v3 && Array.isArray(v3.list) && v3.list.length > 0) {
+                                    console.log('[명단 로드] 과정명 폴백 발견:', byC.key, '→ 현재 키', key, '로 이관');
+                                    roster = v3.list;
+                                    currentScheduleData = v3.schedule || null;
+                                    rosterEditCourse = it;
+                                    const healed = Object.assign({}, v3, {
+                                        room: it.room,
+                                        courseName: it.courseName || v3.courseName,
+                                        period: it.period || v3.period,
+                                        weekKey: it.weekKey || v3.weekKey,
+                                        updatedAt: firebase.database.ServerValue.TIMESTAMP
+                                    });
+                                    db.ref(`system/dorm/rosters/${key}`).set(healed).catch(() => {});
+                                }
+                                renderRoster();
+                            });
+                            return;
+                        }
+                        renderRoster();
+                    };
+                    // 1차: UTC/KST 하루 차이 대체 키
+                    if (altKey === key) { afterAlt(false); return; }
+                    console.log('[명단 로드] 대체 키 시도:', `system/dorm/rosters/${altKey}`);
+                    db.ref(`system/dorm/rosters/${altKey}`).once('value', snap2 => {
+                        const v2 = snap2.val();
+                        if (v2 && Array.isArray(v2.list) && v2.list.length > 0) {
+                            console.log('[명단 로드] 대체 키에서 발견:', v2.list.length + '명');
+                            roster = v2.list;
+                            currentScheduleData = v2.schedule || null;
+                            rosterEditCourse = it;
+                            afterAlt(true);
+                        } else {
+                            afterAlt(false);
+                        }
+                    });
+                    return;
                 }
                 renderRoster();
             });
@@ -5560,7 +5607,7 @@
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
 <style>@media print{#__catcVer{display:none!important}}</style>
 <div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vW</div>
-<script>try{console.log('%cCATC%c 교육지원부 · 생활관 배정 (dorm_admin.html) %cvW%c build 20260611-212424','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}</script>
+<script>try{console.log('%cCATC%c 교육지원부 · 생활관 배정 (dorm_admin.html) %cvX%c build 20260613-061500','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}</script>
 <script>
 /* 헤더 + 단계 메뉴(STEP 탭) 틀고정 — 어느 페이지에서든 항상 상단에 고정 표시.
    step-tabs를 헤더 바로 아래에 붙이기 위해 헤더 높이를 측정해 sticky 오프셋으로 사용. */
