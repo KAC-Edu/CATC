@@ -1,14 +1,14 @@
 /* ============================================================
    CATC · 강사 플랫폼 로직  (admin.js)
-   @version  N
-   @build    20260612-123725
+   @version  O
+   @build    20260613-042000  (연간계획 강의실 미반영/지난주 강의실 잔류 버그 수정)
    ------------------------------------------------------------
    [코드 수정 규칙 · AI/개발자 공통]
    이 파일을 고치면 @version 을 A -> B -> ... -> Z -> A1 -> B1 ...
    순으로 1단계 올리고, @build 를 수정 시각으로 갱신할 것.
    적용 여부는 브라우저 콘솔 로그(vA)로 확인한다.
 ============================================================ */
-try{console.log('%cCATC%c 강사 플랫폼 로직 (admin.js) %cvA%c build 20260610-220210','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}
+try{console.log('%cCATC%c 강사 플랫폼 로직 (admin.js) %cvO%c build 20260613-042000','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}
 /* --- admin.js (Final Integrated Version - Fixed Syntax & Logic) --- */
 
 // --- [기본 데이터] 20문항 ---
@@ -8370,6 +8370,9 @@ const annualPlanMgr = {
                 updates[`courses/${room}/status/professorName`] = course.prof;
                 updates[`courses/${room}/status/roomStatus`]   = 'active';
                 updates[`courses/${room}/settings/kakaoLink`]  = _kakaoOf(course.prof);
+                // 연간계획 강의실 반영 (과정 교체 시 지난주 강의실 잔류 방지)
+                if (course.roomDetail) updates[`courses/${room}/settings/roomDetailName`] = course.roomDetail;
+                else if (course.name !== prevName) updates[`courses/${room}/settings/roomDetailName`] = '';
                 updates[`courses/${room}/status/ownerSessionId`] = null;
                 assigned.push(`${room}: ${course.name}`);
             }
@@ -8428,6 +8431,8 @@ const annualPlanMgr = {
             targetSunObj.setUTCDate(targetSunObj.getUTCDate() + 6);
             const targetSun = targetSunObj.toISOString().split('T')[0];
             const norm = s => (s || '').trim();
+            const planByName = {};
+            courses.forEach(c => { if (c.name) planByName[norm(c.name)] = c; });
 
             // 수동 리셋되어 이번 주 배치 제외할 과정
             const dismissed = await this._getDismissedSet(targetMon);
@@ -8454,6 +8459,13 @@ const annualPlanMgr = {
 
                 // (2) 과정 만료 → 재배치
                 if (endDate && endDate < today) { needsUpdate = true; break; }
+
+                // (2-1) 연간계획 강의실과 현재 방 강의실 불일치 → 재배치(강의실 갱신)
+                const pcc = planByName[courseName];
+                if (pcc && expected.has(courseName)) {
+                    const planRoom = norm(pcc.roomDetail);
+                    if (planRoom && planRoom !== norm(settings.roomDetailName)) { needsUpdate = true; break; }
+                }
             }
 
             // (3) 대상 주 과정 중 아직 어느 방에도 안 들어간 게 있으면 → 재배치
@@ -8833,7 +8845,7 @@ annualPlanMgr._syncRoomsLockAware = async function(courses) {
         updates[`courses/${room}/status/professorName`] = course.prof;
         updates[`courses/${room}/status/roomStatus`]   = 'active';
         updates[`courses/${room}/settings/kakaoLink`]  = kakaoOf(course.prof);
-        if (course.roomDetail) updates[`courses/${room}/settings/roomDetailName`] = course.roomDetail;
+        updates[`courses/${room}/settings/roomDetailName`] = course.roomDetail || '';
         updates[`courses/${room}/status/ownerSessionId`] = null;
     }
     if (Object.keys(updates).length) {
