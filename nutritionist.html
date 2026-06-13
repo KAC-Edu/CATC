@@ -1824,6 +1824,19 @@ function dmDelete(d){
     db.ref().update(updates).then(()=>{ renderDeptModal(); showToast('소속이 삭제되었습니다.'); }).catch(e=>showToast('삭제 실패: '+((e&&e.message)||e)));
 }
 function _empNo(r){ const v=((r&&r.empNo)||'').toString().trim(); if(!v) return Infinity; const n=parseInt(v.replace(/\D/g,''),10); return isNaN(n)?Infinity:n; }
+/* 같은 소속 내 배치순서번호 충돌 시: 신규 번호 이상(숫자)을 +1씩 뒤로 밀어 자리 확보 */
+function _empNoConflictUpdates(dept, newEmpNo, excludeId){
+    const sEmp=(newEmpNo||'').toString().trim();
+    if(!/^\d+$/.test(sEmp)) return { hasConflict:false, updates:{}, count:0 };  // 숫자 아닌 번호는 자동밀기 제외
+    const newInt=parseInt(sEmp,10);
+    const dept2=(dept||'').trim();
+    const entries=Object.entries(_staffRoster||{}).filter(([id,r])=> id!==excludeId && r && ((r.dept||'').trim())===dept2);
+    const direct=entries.some(([id,r])=>{ const v=(r.empNo||'').toString().trim(); return /^\d+$/.test(v) && parseInt(v,10)===newInt; });
+    if(!direct) return { hasConflict:false, updates:{}, count:0 };
+    const updates={}; let count=0;
+    entries.forEach(([id,r])=>{ const v=(r.empNo||'').toString().trim(); if(/^\d+$/.test(v)){ const iv=parseInt(v,10); if(iv>=newInt){ updates[`${STAFF_ROSTER}/${id}/empNo`]=String(iv+1); count++; } } });
+    return { hasConflict:true, updates, count };
+}
 
 /* ── 직원 일괄 수정 ── */
 function openEditAllModal(){
@@ -1921,6 +1934,12 @@ function addSingle(){
     const updates={};
     updates[`${STAFF_ROSTER}/${key}`]={ name, dept, position:pos, empNo, note, order:maxOrd+10, active:true, createdAt:firebase.database.ServerValue.TIMESTAMP };
     if(!_deptPresets[dept]) updates[`system/staffMeal/depts/${dept}`]=true;
+    // 배치순서번호 중복 시 → 기존 번호부터 차례로 뒤로 밀기 (확인)
+    const _cf=_empNoConflictUpdates(dept, empNo, null);
+    if(_cf.hasConflict){
+        if(!confirm(`'${dept}'에 배치순서번호 ${empNo}번이 이미 있습니다.\n\n기존 ${empNo}번부터 차례로 한 칸씩 뒤로 밀고(${_cf.count}명 이동),\n이 직원을 ${empNo}번에 넣을까요?`)) return;
+        Object.assign(updates, _cf.updates);
+    }
     db.ref().update(updates).then(()=>{
         ['am-name','am-empno','am-pos'].forEach(id=>{ const e=document.getElementById(id); if(e) e.value=''; });
         fillDeptOptions(); const ds=document.getElementById('am-dept'); if(ds && [...ds.options].some(o=>o.value===dept)) ds.value=dept;
@@ -2316,8 +2335,18 @@ function saveEdit(id){
         const maxOrd=Object.entries(_staffRoster).filter(([i,x])=>i!==id && x && ((x.dept||'').trim())===d).reduce((m,[i,x])=>Math.max(m,(x.order!=null?x.order:0)),-10);
         patch.order=maxOrd+10;
     }
+    const _oldEmp=(cur.empNo||'').toString().trim();
+    const rootUpdates={};
+    Object.keys(patch).forEach(k=> rootUpdates[`${STAFF_ROSTER}/${id}/${k}`]=patch[k]);
+    if(empNo!==_oldEmp){  // 번호를 바꿨을 때만 중복 검사
+        const _cf=_empNoConflictUpdates(d, empNo, id);
+        if(_cf.hasConflict){
+            if(!confirm(`'${d}'에 배치순서번호 ${empNo}번이 이미 있습니다.\n\n기존 ${empNo}번부터 차례로 한 칸씩 뒤로 밀고(${_cf.count}명 이동),\n이 직원을 ${empNo}번에 넣을까요?`)) return; // 취소 시 편집 유지
+            Object.assign(rootUpdates, _cf.updates);
+        }
+    }
     _editId=null;
-    db.ref(`${STAFF_ROSTER}/${id}`).update(patch).then(()=>showToast('수정되었습니다.')).catch(e=>showToast('❌ 저장 실패: '+((e&&e.message)||e)+' — Firebase 권한(rules)일 수 있습니다.'));
+    db.ref().update(rootUpdates).then(()=>showToast('수정되었습니다.')).catch(e=>showToast('❌ 저장 실패: '+((e&&e.message)||e)+' — Firebase 권한(rules)일 수 있습니다.'));
 }
 function deleteStaff(id){
     const r=_staffRoster[id]; if(!r) return;
@@ -2619,8 +2648,8 @@ function renderMealCalendar(a, month){
 }
 </script>
 <style>@media print{#__ver{display:none!important}}</style>
-<div id="__ver" style="position:fixed;right:7px;bottom:7px;z-index:2147483000;background:rgba(15,23,42,.72);color:#cbd5e1;font:700 10px/1 monospace;padding:4px 8px;border-radius:7px;pointer-events:none;letter-spacing:.3px;">영양사 vVV · 260613-2100</div>
+<div id="__ver" style="position:fixed;right:7px;bottom:7px;z-index:2147483000;background:rgba(15,23,42,.72);color:#cbd5e1;font:700 10px/1 monospace;padding:4px 8px;border-radius:7px;pointer-events:none;letter-spacing:.3px;">영양사 vWW · 260613-2140</div>
 <div id="notifyStack" class="notify-stack"></div>
 </body>
 </html>
-<!-- @build 20260613-210000 (영양사 vVV: 식수 데이터 약 3개월 보관 자동정리 추가 — autoCleanMeals(): checks/breakfast/dinner/dinner_resv/notes(일자키) 및 adjust(월키)에서 3개월 이전분을 orderByKey().endAt() 조회 후 멀티패스 update(null)로 삭제. 로드 시 maybeCleanMeals()로 하루 1회 실행(localStorage kacMealCleanDay 가드, 식당패널과 공유). 직전 vUU: 식단표 사진→AI(Gemini Vision) 추출→편집검토→텍스트 저장. 식수 라벨/정렬, 알림팝업, 실시간 반영 등 누적) -->
+<!-- @build 20260613-214000 (영양사 vWW: 배치순서번호 중복 자동밀기 — 직원추가(addSingle)/인라인수정(saveEdit) 시 같은 소속에 동일 번호가 있으면 confirm 팝업 후 그 번호 이상(숫자)을 +1씩 뒤로 밀어 자리확보(_empNoConflictUpdates, 멀티패스 update). 수정은 번호를 실제로 바꿨을 때만 검사. 직전 vVV: 식수데이터 3개월 보관 자동정리) -->
