@@ -1,14 +1,14 @@
 /* ============================================================
    CATC · 강사 플랫폼 로직  (admin.js)
-   @version  O
-   @build    20260613-042000  (연간계획 강의실 미반영/지난주 강의실 잔류 버그 수정)
+   @version  P
+   @build    20260613-104500  (vP: 과정 리셋/재배치 시 강사 비번 7777 미리셋 버그 — 방 비우기(clear) 분기에도 비번 7777 리셋 추가. _cleanStartUpdates에 이미 있던 리셋과 합쳐 모든 배치경로에서 7777 보장)
    ------------------------------------------------------------
    [코드 수정 규칙 · AI/개발자 공통]
    이 파일을 고치면 @version 을 A -> B -> ... -> Z -> A1 -> B1 ...
    순으로 1단계 올리고, @build 를 수정 시각으로 갱신할 것.
    적용 여부는 브라우저 콘솔 로그(vA)로 확인한다.
 ============================================================ */
-try{console.log('%cCATC%c 강사 플랫폼 로직 (admin.js) %cvO%c build 20260613-042000','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}
+try{console.log('%cCATC%c 강사 플랫폼 로직 (admin.js) %cvP%c build 20260613-104500','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}
 /* --- admin.js (Final Integrated Version - Fixed Syntax & Logic) --- */
 
 // --- [기본 데이터] 20문항 ---
@@ -8819,6 +8819,7 @@ annualPlanMgr._syncRoomsLockAware = async function(courses) {
         updates[`courses/${r}/settings/courseName`] = '';
         updates[`courses/${r}/settings/period`]     = '';
         updates[`courses/${r}/settings/roomDetailName`] = '';
+        updates[`courses/${r}/settings/password`]   = btoa("7777");  // [추가] 방 비울 때 비번도 기본 7777로 리셋 (이전 과정 강사 비번 잔류 방지)
         updates[`courses/${r}/settings/coordinatorName`] = null;
         updates[`courses/${r}/status/professorName`] = '';
         updates[`courses/${r}/status/roomStatus`]   = 'idle';

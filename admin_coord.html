@@ -3803,6 +3803,8 @@ async function saveIntegratedSettings() {
     if(!rid || !name || !start || !end || !prof || !loc) return showKacAlert("필수 항목 입력 필요"); 
     
     const updates = {}; 
+    // 과정명이 바뀌는 경우(=새 과정 개강) 강사 비번을 기본 7777로 초기화 (이전 과정 강사 비번 잔류 방지)
+    try { const _cn = await firebase.database().ref(`courses/${rid}/settings/courseName`).once('value'); if (((_cn.val()||'').trim()) !== name) updates[`courses/${rid}/settings/password`] = btoa("7777"); } catch(_){}
     updates[`courses/${rid}/settings/courseName`] = name; 
     updates[`courses/${rid}/settings/period`] = `${start} ~ ${end}`; 
     updates[`courses/${rid}/status/professorName`] = prof; 
