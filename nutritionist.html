@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"/>
-    <title>항공기술훈련원 영양사 관리 플랫폼</title>
+    <title>식당 운영 관리</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
@@ -1227,7 +1227,9 @@ function _roomMatchForCourse(c){
     Object.keys(allRoomData||{}).forEach(rid=>{
         const room=allRoomData[rid]; if(!room) return;
         if(room?.settings?.hideFromBoard) return;
-        if(_normCourse(room.settings?.courseName)!==target) return;
+        const okSettings = _normCourse(room.settings?.courseName)===target;
+        const okCoord = _normCourse(room.coordRoster?.courseName)===target;   // 교육운영부 공유 명단도 매칭
+        if(!okSettings && !okCoord) return;
         const active = room?.status?.roomStatus==='active';
         if(!best || (active && !best.active)) best={rid, room, active};
     });
@@ -1236,9 +1238,14 @@ function _roomMatchForCourse(c){
 function _courseCounts(c){
     const m=_roomMatchForCourse(c);
     if(!m) return {found:false, total:0};
-    const students=m.room.students||{};
     const names=new Set();
+    const students=m.room.students||{};
     Object.values(students).forEach(s=>{ if(s?.name && s.name!=='undefined') names.add(String(s.name).trim()); });
+    // 강사 입력 명단이 없으면 교육운영부 공유 명단으로 폴백
+    if(names.size===0){
+        const list=m.room.coordRoster && Array.isArray(m.room.coordRoster.list) ? m.room.coordRoster.list : [];
+        list.forEach(s=>{ const nm=((s&&s.name)||'').trim(); if(nm && nm!=='undefined') names.add(nm); });
+    }
     return {found:true, total:names.size};
 }
 function renderCourseWeek(courses, ctx){
@@ -1833,7 +1840,7 @@ function renderMealCalendar(a, month){
 }
 </script>
 <style>@media print{#__ver{display:none!important}}</style>
-<div id="__ver" style="position:fixed;right:7px;bottom:7px;z-index:2147483000;background:rgba(15,23,42,.72);color:#cbd5e1;font:700 10px/1 monospace;padding:4px 8px;border-radius:7px;pointer-events:none;letter-spacing:.3px;">영양사 vX · 260613-0710</div>
+<div id="__ver" style="position:fixed;right:7px;bottom:7px;z-index:2147483000;background:rgba(15,23,42,.72);color:#cbd5e1;font:700 10px/1 monospace;padding:4px 8px;border-radius:7px;pointer-events:none;letter-spacing:.3px;">영양사 vY · 260613-1020</div>
 </body>
 </html>
-<!-- @build 20260613-071000 (영양사 vX: 식수관리 소속 정렬을 명단관리와 동일한 등록순으로 일치 / 저장·순서변경·삭제·추가·소속변경 모든 명단 쓰기에 실패 알림(catch) 추가 → 조용한 실패 가시화) -->
+<!-- @build 20260613-102000 (영양사 vY: 브라우저 탭 제목을 "식당 운영 관리"로 변경 / COURSE 탭 교육생 명단 매칭·카운트를 coordRoster(교육운영부 공유 명단)까지 반영 → "명단 대기" 해소) -->
