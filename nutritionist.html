@@ -76,7 +76,7 @@
         .brand-text h1 { margin:3px 0 0; font-size:19px; line-height:1; font-weight:900; color:#fff; white-space:nowrap; letter-spacing:-.3px; }
         .h-btn.icon-only { width:48px; padding:0; }
         .header-right { display:flex; align-items:center; justify-content:flex-end; gap:8px; }
-        .h-btn { display:inline-flex; align-items:center; justify-content:center; gap:7px; height:48px; background:rgba(255,255,255,0.14); border:1px solid rgba(255,255,255,0.22); color:#fff; border-radius:12px; padding:0 16px; font-size:14px; font-weight:800; cursor:pointer; white-space:nowrap; transition:background .15s, transform .15s; }
+        .h-btn { display:inline-flex; align-items:center; justify-content:center; gap:7px; height:48px; background:rgba(255,255,255,0.14); border:1px solid rgba(255,255,255,0.22); color:#fff; border-radius:12px; padding:0 18px; font-size:15px; font-weight:800; cursor:pointer; white-space:nowrap; transition:background .15s, transform .15s; }
         .h-btn:hover { background:rgba(255,255,255,0.24); transform:translateY(-1px); }
         .header-btn { font-size: 19px; color: #fff; border: none; background: rgba(255,255,255,.12); cursor: pointer; transition: opacity .2s, background .2s; width:38px; height:38px; border-radius:11px; display:flex; align-items:center; justify-content:center; }
         .header-btn:active { opacity: .7; }
@@ -130,7 +130,7 @@
         .section-card.acc.collapsed > *:not(.section-title) { display: none; }
 
         /* 카드 내부 액션 버튼 (조회/추가 등) */
-        .mini-btn { border:none; background:#2563eb; color:#fff; border-radius:10px; padding:0 16px; height:40px; font-size:14px; font-weight:800; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; gap:6px; white-space:nowrap; }
+        .mini-btn { border:none; background:#2563eb; color:#fff; border-radius:11px; padding:0 20px; height:46px; font-size:15.5px; font-weight:800; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; gap:7px; white-space:nowrap; }
         .mini-btn:active { opacity:.88; }
 
         /* ── 메인 콘텐츠 ── */
@@ -145,8 +145,8 @@
             box-shadow: 0 4px 15px rgba(0,0,0,0.03);
         }
         .section-title {
-            font-size: 13px;
-            font-weight: 800;
+            font-size: 18px;
+            font-weight: 900;
             color: var(--deep);
             margin-bottom: 14px;
             display: flex;
@@ -397,13 +397,13 @@
 
         /* ── PC 탭 메뉴 (교육지원부 스타일) ── */
         .ntabs { display:flex; gap:10px; margin:2px 0 16px; flex-wrap:wrap; }
-        .ntab { flex:1; min-width:150px; background:#fff; border:1.5px solid var(--border); border-radius:14px; padding:14px 16px; cursor:pointer; text-align:left; transition:all .18s; position:relative; overflow:hidden; }
+        .ntab { flex:1; min-width:160px; background:#fff; border:1.5px solid var(--border); border-radius:14px; padding:18px 20px; cursor:pointer; text-align:left; transition:all .18s; position:relative; overflow:hidden; }
         .ntab:hover { border-color:#bfdbfe; transform:translateY(-1px); box-shadow:0 4px 12px rgba(15,23,42,.07); }
         .ntab.active { border-color:#2563eb; background:linear-gradient(135deg,#eff6ff,#fff); box-shadow:0 4px 14px rgba(37,99,235,.15); }
         .ntab.active::before { content:''; position:absolute; left:0; top:0; bottom:0; width:4px; background:#2563eb; }
-        .ntab .nt-n { display:block; font-size:11px; font-weight:800; color:var(--muted); letter-spacing:.5px; }
+        .ntab .nt-n { display:block; font-size:12.5px; font-weight:800; color:var(--muted); letter-spacing:.5px; }
         .ntab.active .nt-n { color:#2563eb; }
-        .ntab .nt-t { display:block; font-size:14px; font-weight:800; color:var(--navy); margin-top:3px; }
+        .ntab .nt-t { display:block; font-size:18px; font-weight:900; color:var(--navy); margin-top:5px; }
 
         /* ── 탭 패널 ── */
         .tab-panel { display:none; }
@@ -431,7 +431,7 @@
         .rtable tbody tr:hover { background:#f8fafc; }
         .rchk { width:22px; height:22px; cursor:pointer; accent-color:#16a34a; }
         .rchk.lunch { accent-color:#2563eb; }
-        .r-actbtn { border:none; border-radius:8px; padding:6px 11px; font-weight:800; cursor:pointer; font-size:13px; }
+        .r-actbtn { border:none; border-radius:9px; padding:9px 15px; font-weight:800; cursor:pointer; font-size:14.5px; }
         .r-edit { background:#eff6ff; color:#1e40af; } .r-del { background:#fef2f2; color:#dc2626; }
         .r-note { width:100%; min-width:110px; border:1.5px solid var(--border); border-radius:8px; padding:7px 9px; font-size:13px; font-weight:600; outline:none; }
         .r-note:focus { border-color:var(--blue); }
@@ -457,25 +457,25 @@
         /* ── 직원 명단 리스트 (카드형 · 드래그/화살표 정렬) ── */
         .rlist { border:1px solid var(--border); border-radius:12px; overflow:hidden; background:#fff; }
         .rl-group + .rl-group { border-top:2px solid var(--border); }
-        .rl-ghead { display:flex; align-items:center; gap:9px; padding:9px 15px; background:#eff6ff; border-bottom:1px solid #dbeafe; }
-        .rl-gname { font-weight:900; color:#1e40af; font-size:14.5px; }
-        .rl-gcount { font-size:12px; font-weight:800; color:#2563eb; background:#dbeafe; padding:2px 10px; border-radius:999px; }
-        .rl-row { display:grid; grid-template-columns:30px 46px 116px minmax(90px,1fr) 160px auto; align-items:center; gap:10px; padding:9px 15px; border-bottom:1px solid #f1f5f9; background:#fff; }
+        .rl-ghead { display:flex; align-items:center; gap:9px; padding:13px 16px; background:#eff6ff; border-bottom:1px solid #dbeafe; }
+        .rl-gname { font-weight:900; color:#1e40af; font-size:17px; }
+        .rl-gcount { font-size:13.5px; font-weight:800; color:#2563eb; background:#dbeafe; padding:3px 12px; border-radius:999px; }
+        .rl-row { display:grid; grid-template-columns:30px 46px 120px minmax(90px,1fr) 160px auto; align-items:center; gap:10px; padding:13px 16px; border-bottom:1px solid #f1f5f9; background:#fff; }
         .rl-row:last-child { border-bottom:none; }
         .rl-row:hover { background:#f8fafc; }
         .rl-grip { color:#cbd5e1; cursor:grab; text-align:center; font-size:13px; }
         .rl-row:hover .rl-grip { color:#2563eb; }
         .rl-grip:active { cursor:grabbing; }
-        .rl-seq { color:#94a3b8; font-weight:800; font-variant-numeric:tabular-nums; text-align:center; }
-        .rl-pos { color:var(--muted); font-weight:700; font-size:14px; }
-        .rl-name { font-weight:800; color:var(--navy); font-size:14.5px; }
+        .rl-seq { color:#94a3b8; font-weight:800; font-variant-numeric:tabular-nums; text-align:center; font-size:15px; }
+        .rl-pos { color:var(--muted); font-weight:700; font-size:15.5px; }
+        .rl-name { font-weight:800; color:var(--navy); font-size:16.5px; }
         .rl-note { color:#475569; font-size:13px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
         .rl-dash { color:#cbd5e1; }
         .rl-ctrl { display:inline-flex; align-items:center; gap:6px; justify-content:flex-end; }
         .rl-arw { width:32px; height:32px; border:1px solid var(--border); background:#fff; border-radius:8px; color:#64748b; cursor:pointer; font-size:12px; display:inline-flex; align-items:center; justify-content:center; }
         .rl-arw:hover:not(:disabled) { background:#eff6ff; border-color:#93c5fd; color:#2563eb; }
         .rl-arw:disabled { opacity:.32; cursor:default; }
-        .rl-act { border:none; border-radius:8px; padding:7px 13px; font-weight:800; cursor:pointer; font-size:13px; }
+        .rl-act { border:none; border-radius:9px; padding:9px 16px; font-weight:800; cursor:pointer; font-size:14.5px; }
         .rl-edit { background:#eff6ff; color:#2563eb; }
         .rl-del { background:#fee2e2; color:#dc2626; }
         .rl-save { background:#16a34a; color:#fff; }
@@ -488,7 +488,7 @@
         .rl-ein { height:38px; padding:0 11px; border:1.5px solid #2563eb; border-radius:8px; font-weight:700; background:#fff; font-size:14px; }
         .rl-ein-dept { min-width:130px; }
         .rl-editing .rl-ein:not(.rl-ein-dept) { flex:1; min-width:90px; }
-        .rl-emp { color:#94a3b8; font-weight:700; font-size:11.5px; margin-left:5px; }
+        .rl-emp { color:#94a3b8; font-weight:700; font-size:13px; margin-left:5px; }
         .add-tabs { display:flex; gap:6px; margin:4px 0 14px; }
         .add-tab { flex:1; padding:9px 0; border:1.5px solid var(--border); background:#fff; border-radius:9px; font-weight:800; font-size:13.5px; color:#64748b; cursor:pointer; }
         .add-tab.active { background:#2563eb; color:#fff; border-color:#2563eb; }
@@ -543,13 +543,13 @@
         @media (max-width:1180px){ .header-summary .hs-lab{ font-size:9.5px; } .hsum{ min-width:62px; padding:7px 10px; } .hsum .hs-val{ font-size:20px; } }
         /* 월 이동 */
         .month-nav { display:flex; align-items:center; gap:8px; margin-bottom:16px; }
-        .mn-btn { width:38px; height:38px; border:1.5px solid var(--border); background:#fff; border-radius:10px; cursor:pointer; font-size:14px; color:var(--navy); }
+        .mn-btn { width:46px; height:46px; border:1.5px solid var(--border); background:#fff; border-radius:11px; cursor:pointer; font-size:16px; color:var(--navy); }
         .mn-btn:hover { border-color:#2563eb; color:#2563eb; }
-        .mn-label { font-size:18px; font-weight:900; color:var(--navy); min-width:130px; text-align:center; }
+        .mn-label { font-size:23px; font-weight:900; color:var(--navy); min-width:150px; text-align:center; }
         /* 월별 집계 표 */
         .cnt-table { width:100%; border-collapse:collapse; }
-        .cnt-table th { background:#f8fafc; font-size:12px; color:var(--muted); font-weight:800; padding:10px; border:1px solid var(--border); text-align:left; }
-        .cnt-table td { padding:11px 10px; border:1px solid var(--border); font-size:14px; }
+        .cnt-table th { background:#f8fafc; font-size:14px; color:var(--muted); font-weight:800; padding:13px 12px; border:1px solid var(--border); text-align:left; }
+        .cnt-table td { padding:14px 12px; border:1px solid var(--border); font-size:15.5px; }
         .cnt-table td.c { text-align:center; }
         .cnt-table .rname { font-weight:800; color:var(--navy); }
         .cnt-row { cursor:pointer; transition:background .12s; }
@@ -2436,7 +2436,7 @@ function renderMealCalendar(a, month){
 }
 </script>
 <style>@media print{#__ver{display:none!important}}</style>
-<div id="__ver" style="position:fixed;right:7px;bottom:7px;z-index:2147483000;background:rgba(15,23,42,.72);color:#cbd5e1;font:700 10px/1 monospace;padding:4px 8px;border-radius:7px;pointer-events:none;letter-spacing:.3px;">영양사 vNN · 260613-1640</div>
+<div id="__ver" style="position:fixed;right:7px;bottom:7px;z-index:2147483000;background:rgba(15,23,42,.72);color:#cbd5e1;font:700 10px/1 monospace;padding:4px 8px;border-radius:7px;pointer-events:none;letter-spacing:.3px;">영양사 vOO · 260613-1655</div>
 <div id="notifyStack" class="notify-stack"></div>
 </body>
 </html>
