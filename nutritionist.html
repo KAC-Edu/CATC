@@ -2099,6 +2099,7 @@ function renderRoster(){
     depts.forEach(d=>{
         if(_rosterDeptFilter && d!==_rosterDeptFilter) return;
         const members=groups[d];
+        const _emptyCnt = members.filter(([mid,mr])=>!((mr.empNo||'').toString().trim())).length;  // 번호없는 인원 수
         const view = q ? members.filter(([id,r])=>(((r.name||'')+' '+(r.position||'')).toLowerCase().includes(q))) : members;
         if(!view.length) return;
         let rowsHtml='';
@@ -2120,10 +2121,11 @@ function renderRoster(){
                 </div>`;
             } else {
                 const _hasEmp = !!((r.empNo||'').toString().trim());
-                const _grip = _hasEmp ? '<span class="rl-grip" style="cursor:default; color:transparent;"></span>'
-                                      : '<span class="rl-grip" title="드래그하여 순서 변경"><i class="fa-solid fa-grip-vertical"></i></span>';
-                const _arws = _hasEmp ? '' : `<button class="rl-arw" onclick="moveStaff('${id}',-1)" ${isFirst?'disabled':''} title="위로"><i class="fa-solid fa-chevron-up"></i></button><button class="rl-arw" onclick="moveStaff('${id}',1)" ${isLast?'disabled':''} title="아래로"><i class="fa-solid fa-chevron-down"></i></button>`;
-                rowsHtml += `<div class="rl-row" draggable="${_hasEmp?'false':'true'}" data-id="${id}" ondragstart="rDragStart(event,'${id}')" ondragover="rDragOver(event,'${id}')" ondrop="rDrop(event,'${id}')" ondragend="rDragEnd(event)">
+                const _canReorder = !_hasEmp && _emptyCnt >= 2;   // 정렬할 형제(번호없는 인원)가 2명 이상일 때만
+                const _grip = _canReorder ? '<span class="rl-grip" title="드래그하여 순서 변경"><i class="fa-solid fa-grip-vertical"></i></span>'
+                                          : '<span class="rl-grip" style="cursor:default; color:transparent;"></span>';
+                const _arws = _canReorder ? `<button class="rl-arw" onclick="moveStaff('${id}',-1)" ${isFirst?'disabled':''} title="위로"><i class="fa-solid fa-chevron-up"></i></button><button class="rl-arw" onclick="moveStaff('${id}',1)" ${isLast?'disabled':''} title="아래로"><i class="fa-solid fa-chevron-down"></i></button>` : '';
+                rowsHtml += `<div class="rl-row" draggable="${_canReorder?'true':'false'}" data-id="${id}" ondragstart="rDragStart(event,'${id}')" ondragover="rDragOver(event,'${id}')" ondrop="rDrop(event,'${id}')" ondragend="rDragEnd(event)">
                     ${_grip}
                     <span class="rl-seq">${seq}</span>
                     <span class="rl-pos">${escH(r.position||'-')}</span>
@@ -2667,8 +2669,8 @@ function renderMealCalendar(a, month){
 }
 </script>
 <style>@media print{#__ver{display:none!important}}</style>
-<div id="__ver" style="position:fixed;right:7px;bottom:7px;z-index:2147483000;background:rgba(15,23,42,.72);color:#cbd5e1;font:700 10px/1 monospace;padding:4px 8px;border-radius:7px;pointer-events:none;letter-spacing:.3px;">영양사 vXX · 260613-2240</div>
+<div id="__ver" style="position:fixed;right:7px;bottom:7px;z-index:2147483000;background:rgba(15,23,42,.72);color:#cbd5e1;font:700 10px/1 monospace;padding:4px 8px;border-radius:7px;pointer-events:none;letter-spacing:.3px;">영양사 vYY · 260613-2310</div>
 <div id="notifyStack" class="notify-stack"></div>
 </body>
 </html>
-<!-- @build 20260613-224000 (영양사 vXX: 상단 점심·석식 예상인원에 교육생 날짜기준 반영 — system/annualPlan 구독, 점심=시작일≤오늘≤종료일, 석식=시작일≤오늘<종료일(마지막날 점심까지·석식제외). renderMealStats 재작성+산정근거 모달 갱신. 직전 vWW: 배치순서번호 중복 자동밀기) -->
+<!-- @build 20260613-231000 (영양사 vYY: 명단 정렬 화살표/드래그를 "번호없는 인원이 같은 소속에 2명 이상"일 때만 표시(혼자면 숨김 — 원장 등 단독 인원 화살표 제거). 직전 vXX: 점심·석식 예상에 교육생 날짜기준 반영) -->
