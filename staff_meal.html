@@ -257,6 +257,8 @@ const monthKey = today.slice(0,7);
 function nowTime(){ return new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'}); }
 
 // 실시간 구독: 명단 + 오늘 체크 현황
+let _deptOrder = {};
+db.ref('system/staffMeal/deptOrder').on('value', s => { _deptOrder = s.val() || {}; if (CURRENT==='staff') renderStaffList(); });
 db.ref('system/staffMeal/roster').on('value', s => { ROSTER = s.val() || {}; if (CURRENT==='staff') renderStaffList(); refreshCount(); });
 db.ref(`system/staffMeal/checks/${today}`).on('value', s => { TODAY_CHECKS = s.val() || {}; if (CURRENT==='staff') renderStaffList(); refreshCount(); });
 db.ref(`system/staffMeal/breakfast/${today}`).on('value', s => { TODAY_BREAKFAST = s.val() || {}; if (CURRENT==='staff') renderStaffList(); refreshCount(); });
@@ -292,7 +294,8 @@ function renderStaffList(){
     items.forEach(([id,r])=>{ const d=deptOf(r); (groups[d]||(groups[d]=[])).push([id,r]); });
     const _deptFirst={};
     Object.entries(groups).forEach(([d,arr])=>{ _deptFirst[d]=Math.min.apply(null, arr.map(([id,r])=>(r.createdAt!=null?r.createdAt:Infinity))); });
-    const depts = Object.keys(groups).sort((a,b)=> ((_deptFirst[a]===Infinity?9e15:_deptFirst[a])-(_deptFirst[b]===Infinity?9e15:_deptFirst[b])) || a.localeCompare(b,'ko'));
+    const _drank=(d,fc)=>{ const o=_deptOrder[(d||'').trim()]; if(o!=null) return o; const v=(fc==null||fc===Infinity)?9e14:fc; return 1e15+v; };
+    const depts = Object.keys(groups).sort((a,b)=> (_drank(a,_deptFirst[a])-_drank(b,_deptFirst[b])) || a.localeCompare(b,'ko'));
     const flat = [];
     const _en=r=>{const v=((r&&r.empNo)||'').toString().trim();if(!v)return Infinity;const n=parseInt(v.replace(/\D/g,''),10);return isNaN(n)?Infinity:n;};
     depts.forEach(d=>{
@@ -799,7 +802,7 @@ function esc(v){ return String(v==null?'':v).replace(/[&<>"']/g,c=>({'&':'&amp;'
 /* 초기 진입은 위의 ?go 분기에서 처리됨 */
 </script>
 <style>@media print{#__ver{display:none!important}}</style>
-<div id="__ver" style="position:fixed;right:7px;bottom:7px;z-index:2147483000;background:rgba(15,23,42,.72);color:#cbd5e1;font:700 10px/1 monospace;padding:4px 8px;border-radius:7px;pointer-events:none;letter-spacing:.3px;">식당패널 vU · 260613-1130</div>
+<div id="__ver" style="position:fixed;right:7px;bottom:7px;z-index:2147483000;background:rgba(15,23,42,.72);color:#cbd5e1;font:700 10px/1 monospace;padding:4px 8px;border-radius:7px;pointer-events:none;letter-spacing:.3px;">식당패널 vV · 260613-1320</div>
 </body>
 </html>
-<!-- @build 20260613-113000 (식당패널 vU: 소속 내 정렬에 사번(empNo) 오름차순 우선 추가 — 영양사 명단관리와 동일 순서. 사번 자체는 화면 미표시) -->
+<!-- @build 20260613-132000 (식당패널 vV: 소속 표시순서 system/staffMeal/deptOrder 반영 — 영양사 소속 관리 순서와 동일하게 정렬) -->

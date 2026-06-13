@@ -502,6 +502,13 @@
         .bgrow input:focus { border-color:#2563eb; outline:none; }
         .bgrow .bgdel { border:none; background:#fee2e2; color:#dc2626; border-radius:8px; cursor:pointer; font-size:12px; }
         .bgrid-add { width:100%; margin-top:8px; padding:9px 0; border:1.5px dashed #93c5fd; background:#f8fafc; color:#2563eb; border-radius:9px; font-weight:800; cursor:pointer; font-size:13px; }
+        .dm-row { display:flex; align-items:center; gap:8px; padding:9px 10px; border:1px solid var(--border); border-radius:9px; margin-bottom:6px; background:#fff; }
+        .dm-name { flex:1; font-weight:800; color:var(--navy); font-size:14px; }
+        .dm-cnt { font-size:11.5px; font-weight:800; color:#2563eb; background:#dbeafe; padding:1px 8px; border-radius:999px; }
+        .dm-ic { width:30px; height:30px; border:1px solid var(--border); background:#fff; border-radius:7px; cursor:pointer; color:#64748b; font-size:11px; }
+        .dm-ic:hover:not(:disabled) { background:#eff6ff; color:#2563eb; border-color:#93c5fd; }
+        .dm-ic:disabled { opacity:.3; cursor:default; }
+        .dm-ic.del { background:#fee2e2; color:#dc2626; border-color:#fecaca; }
         .cnt-row[onclick]:hover td { background:#eff6ff !important; }
         /* ── 전체폭 헤더 + 중앙정렬 본문 (교육지원부 방식) ── */
         body { background: var(--bg); }
@@ -536,12 +543,12 @@
         .cnt-row:hover { background:#eff6ff; }
         .cnt-chev { font-size:10px; color:#94a3b8; margin-left:4px; }
         /* 식사 달력 */
-        .mealcal { max-width:540px; }
+        .mealcal { max-width:700px; margin:0 auto; }
         .cal-legend { font-size:11px; color:var(--muted); font-weight:700; margin-bottom:8px; display:flex; align-items:center; gap:4px; }
         .cal-dows, .cal-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:4px; }
         .cal-dow { text-align:center; font-size:11px; font-weight:800; color:var(--muted); padding:3px 0; }
         .cal-dow.sun { color:#ef4444; } .cal-dow.sat { color:#2563eb; }
-        .cal-cell { min-height:46px; border:1px solid var(--border); border-radius:8px; padding:3px; background:#fff; }
+        .cal-cell { min-height:66px; border:1px solid var(--border); border-radius:8px; padding:5px; background:#fff; font-size:13px; }
         .cal-cell.empty { border:none; background:transparent; }
         .cal-cell.has { background:#f0f9ff; border-color:#bae6fd; }
         .cal-dnum { font-size:11px; font-weight:700; color:#475569; }
@@ -722,7 +729,8 @@
                 <div class="rt-search"><i class="fa-solid fa-magnifying-glass"></i><input id="rosterSearch" placeholder="이름·직책 검색" oninput="applyRosterFilter()"></div>
                 <select id="rosterDeptFilter" class="rt-sel" onchange="applyRosterFilter()"><option value="">전체 소속</option></select>
                 <span id="rosterFilterInfo" class="rt-info"></span>
-                <button class="mini-btn" style="margin-left:auto;" onclick="openAddModal()"><i class="fa-solid fa-plus"></i> 직원 추가</button>
+                <button class="mini-btn ghost" style="margin-left:auto;" onclick="openDeptModal()"><i class="fa-solid fa-building"></i> 소속 관리</button>
+                <button class="mini-btn" onclick="openAddModal()"><i class="fa-solid fa-plus"></i> 직원 추가</button>
             </div>
             <div id="staffRosterList"><div class="empty-msg">등록된 직원이 없습니다.</div></div>
         </div>
@@ -759,9 +767,23 @@
     </div>
 </div>
 
+<!-- ── 소속 관리 ── -->
+<div class="modal-bg" id="deptModal">
+    <div class="modal-sheet" style="max-width:480px;">
+        <div class="modal-handle"></div>
+        <div class="modal-title"><i class="fa-solid fa-building" style="color:#2563eb; margin-right:6px;"></i>소속 관리</div>
+        <div class="modal-body">
+            <div class="am-row"><input id="dm-new" class="am-inp" placeholder="새 소속명 (예: 교육지원부)" maxlength="20" onkeyup="if(event.key==='Enter')dmAdd()"><button class="am-newbtn" onclick="dmAdd()" title="추가"><i class="fa-solid fa-plus"></i></button></div>
+            <div id="dm-list" style="margin-top:6px;"></div>
+            <div style="font-size:12px; color:var(--muted); font-weight:700; margin-top:10px; line-height:1.6;">▲▼ 순서 변경 · ✏️ 이름 수정 · 🗑 삭제. <b>이 순서대로</b> 명단·식수관리·터치패널에 표시됩니다.</div>
+        </div>
+        <button class="modal-close-btn" style="background:#e2e8f0; color:#475569;" onclick="closeDeptModal()">닫기</button>
+    </div>
+</div>
+
 <!-- ── 식수 달력 팝업 ── -->
 <div class="modal-bg" id="calModal">
-    <div class="modal-sheet" style="max-width:560px;">
+    <div class="modal-sheet" style="max-width:760px;">
         <div class="modal-handle"></div>
         <div class="modal-title"><i class="fa-regular fa-calendar-check" style="color:#2563eb; margin-right:6px;"></i><span id="calModalName">식수 달력</span></div>
         <div class="modal-body" id="calModalBody"></div>
@@ -1218,6 +1240,7 @@ let _curMonth = null;
 let _deptPresets = {};
 let _adjust = {};
 let _mealAgg = null;
+let _deptOrder = {};   // 소속 표시 순서: {소속명: 순번}
 let _mealMonth = null;
 let _editCntId = null;
 let _rosterQuery = '';
@@ -1228,6 +1251,7 @@ const STAFF_CHECKS = 'system/staffMeal/checks';
 
 window.addEventListener('DOMContentLoaded', () => {
     db.ref(STAFF_ROSTER).on('value', s => { _staffRoster = s.val() || {}; _normalizeRosterOrders(); renderRoster(); fillDeptOptions(); renderMealStats(getToday()); if(_mealMonth) loadStaffMeal(); });
+    db.ref('system/staffMeal/deptOrder').on('value', s => { _deptOrder = s.val() || {}; renderRoster(); if(_mealMonth && _mealAgg) renderStaffCounts(_mealAgg,_mealMonth); });
     db.ref('system/staffMeal/depts').on('value', s => { _deptPresets = s.val() || {}; fillDeptOptions(); });
     renderMenuWeekBar();
     loadAccount();
@@ -1441,6 +1465,61 @@ function _normalizeRosterOrders(){
     if(Object.keys(updates).length) db.ref().update(updates);
 }
 /* ── 사번(숫자 우선) ── */
+function escJ(s){ return String(s==null?'':s).replace(/\\/g,'\\\\').replace(/'/g,"\\'"); }
+function _deptRank(d, fc){ const o=_deptOrder[(d||'').trim()]; if(o!=null) return o; const v=(fc==null||fc===Infinity)?9e14:fc; return 1e15+v; }
+function _allDeptsOrdered(){
+    const set=new Set([...Object.keys(_deptPresets||{}), ...Object.values(_staffRoster||{}).map(r=>((r&&r.dept)||'').trim()).filter(Boolean)]);
+    const fc={}; Object.values(_staffRoster||{}).forEach(r=>{ if(!r)return; const d=((r.dept||'').trim()); const c=(r.createdAt!=null?r.createdAt:Infinity); if(fc[d]==null||c<fc[d]) fc[d]=c; });
+    return [...set].filter(Boolean).sort((a,b)=> (_deptRank(a,fc[a])-_deptRank(b,fc[b])) || a.localeCompare(b,'ko'));
+}
+function openDeptModal(){ renderDeptModal(); const m=document.getElementById('deptModal'); if(m) m.classList.add('open'); const ni=document.getElementById('dm-new'); if(ni) ni.value=''; }
+function closeDeptModal(){ const m=document.getElementById('deptModal'); if(m) m.classList.remove('open'); }
+function renderDeptModal(){
+    const box=document.getElementById('dm-list'); if(!box) return;
+    const list=_allDeptsOrdered();
+    const cnt={}; Object.values(_staffRoster||{}).forEach(r=>{ if(!r)return; const d=((r.dept||'').trim()); if(d) cnt[d]=(cnt[d]||0)+1; });
+    box.innerHTML = list.length ? list.map((d,i)=>`<div class="dm-row">
+        <button class="dm-ic" ${i===0?'disabled':''} onclick="dmMove('${escJ(d)}',-1)" title="위로">▲</button>
+        <button class="dm-ic" ${i===list.length-1?'disabled':''} onclick="dmMove('${escJ(d)}',1)" title="아래로">▼</button>
+        <span class="dm-name">${escH(d)}</span><span class="dm-cnt">${cnt[d]||0}명</span>
+        <button class="dm-ic" title="이름 수정" onclick="dmRename('${escJ(d)}')"><i class="fa-solid fa-pen"></i></button>
+        <button class="dm-ic del" title="삭제" onclick="dmDelete('${escJ(d)}')"><i class="fa-solid fa-trash"></i></button>
+    </div>`).join('') : '<div style="text-align:center; color:#94a3b8; font-weight:700; padding:18px 0;">등록된 소속이 없습니다. 위에서 추가하세요.</div>';
+}
+function dmAdd(){
+    const el=document.getElementById('dm-new'); const v=((el&&el.value)||'').trim();
+    if(!v){ showToast('소속명을 입력하세요.'); return; }
+    if(!_validDeptName(v)){ showToast('소속명에 . # $ [ ] / 는 쓸 수 없습니다.'); return; }
+    const exists=!!(_deptPresets||{})[v] || Object.values(_staffRoster||{}).some(r=>r&&((r.dept||'').trim())===v);
+    if(exists){ showToast('이미 등록된 소속입니다.'); return; }
+    const nums=Object.values(_deptOrder||{}).filter(x=>typeof x==='number'); const maxO=nums.length?Math.max.apply(null,nums):-10;
+    const updates={}; updates[`system/staffMeal/depts/${v}`]=true; updates[`system/staffMeal/deptOrder/${v}`]=maxO+10;
+    db.ref().update(updates).then(()=>{ if(el)el.value=''; showToast('✅ 소속이 추가되었습니다.'); }).catch(e=>showToast('추가 실패: '+((e&&e.message)||e)));
+}
+function dmMove(d, dir){
+    const list=_allDeptsOrdered(); const i=list.indexOf(d); const j=i+dir;
+    if(i<0||j<0||j>=list.length) return;
+    const t=list[i]; list[i]=list[j]; list[j]=t;
+    const updates={}; list.forEach((name,k)=>{ updates[`system/staffMeal/deptOrder/${name}`]=k*10; });
+    db.ref().update(updates).then(()=>renderDeptModal()).catch(e=>showToast('순서변경 실패: '+((e&&e.message)||e)));
+}
+function dmRename(oldD){
+    const nv=(prompt('새 소속명을 입력하세요.', oldD)||'').trim();
+    if(!nv||nv===oldD) return;
+    if(!_validDeptName(nv)){ showToast('소속명에 . # $ [ ] / 는 쓸 수 없습니다.'); return; }
+    const updates={};
+    Object.entries(_staffRoster||{}).forEach(([id,r])=>{ if(r&&((r.dept||'').trim())===oldD) updates[`${STAFF_ROSTER}/${id}/dept`]=nv; });
+    updates[`system/staffMeal/depts/${oldD}`]=null; updates[`system/staffMeal/depts/${nv}`]=true;
+    const ord=(_deptOrder||{})[oldD]; updates[`system/staffMeal/deptOrder/${oldD}`]=null; if(ord!=null) updates[`system/staffMeal/deptOrder/${nv}`]=ord;
+    db.ref().update(updates).then(()=>{ renderDeptModal(); showToast('소속명이 변경되었습니다.'); }).catch(e=>showToast('변경 실패: '+((e&&e.message)||e)));
+}
+function dmDelete(d){
+    const members=Object.values(_staffRoster||{}).filter(r=>r&&((r.dept||'').trim())===d).length;
+    if(members>0){ showToast(`이 소속에 직원 ${members}명이 있습니다. 먼저 이동/삭제 후 다시 시도하세요.`); return; }
+    if(!confirm(`'${d}' 소속을 삭제할까요?`)) return;
+    const updates={}; updates[`system/staffMeal/depts/${d}`]=null; updates[`system/staffMeal/deptOrder/${d}`]=null;
+    db.ref().update(updates).then(()=>{ renderDeptModal(); showToast('소속이 삭제되었습니다.'); }).catch(e=>showToast('삭제 실패: '+((e&&e.message)||e)));
+}
 function _empNo(r){ const v=((r&&r.empNo)||'').toString().trim(); if(!v) return Infinity; const n=parseInt(v.replace(/\D/g,''),10); return isNaN(n)?Infinity:n; }
 
 /* ── 직원 추가 팝업 ── */
@@ -1592,7 +1671,7 @@ function renderRoster(){
     const box=document.getElementById('staffRosterList'); if(!box) return;
     const items=Object.entries(_staffRoster);
     const allDepts=[...new Set([...Object.keys(_deptPresets||{}), ...items.map(([id,r])=>((r.dept||'').trim())).filter(Boolean)])].sort((a,b)=>a.localeCompare(b,'ko'));
-    const deptBar = allDepts.length ? `<div class="dept-bar"><span class="db-lab">등록된 소속</span>${allDepts.map(d=>`<span class="dept-chip" data-dept="${escH(d)}">${escH(d)}<i class="fa-solid fa-pen db-ic" title="이름 변경" onclick="renameDept(this.parentNode.dataset.dept)"></i><i class="fa-solid fa-xmark db-ic" title="삭제" onclick="deleteDept(this.parentNode.dataset.dept)"></i></span>`).join('')}</div>` : '';
+    const deptBar = '';  // 소속 칩줄 제거 → 소속 관리 모달로 이동
     const _tools=document.querySelector('.roster-tools');
     if(!items.length){ if(_tools)_tools.style.display='none'; box.innerHTML = deptBar + renderRosterGuide(); return; }
     if(_tools)_tools.style.display='flex';
@@ -1602,7 +1681,7 @@ function renderRoster(){
     items.forEach(([id,r])=>{ const d=((r.dept||'').trim())||'(소속 미지정)'; (groups[d]||(groups[d]=[])).push([id,r]); });
     const _deptFirst={};
     Object.entries(groups).forEach(([d,arr])=>{ _deptFirst[d]=Math.min.apply(null, arr.map(([id,r])=>(r.createdAt!=null?r.createdAt:Infinity))); });
-    const depts=Object.keys(groups).sort((a,b)=> ((_deptFirst[a]===Infinity?9e15:_deptFirst[a])-(_deptFirst[b]===Infinity?9e15:_deptFirst[b])) || a.localeCompare(b,'ko'));
+    const depts=Object.keys(groups).sort((a,b)=> (_deptRank(a,_deptFirst[a])-_deptRank(b,_deptFirst[b])) || a.localeCompare(b,'ko'));
     Object.keys(groups).forEach(d=>{ groups[d].sort((a,b)=> (_empNo(a[1])-_empNo(b[1])) || (_ord(a[1])-_ord(b[1])) || (a[1].name||'').localeCompare(b[1].name||'','ko')); });
 
     const dfSel=document.getElementById('rosterDeptFilter');
@@ -1918,6 +1997,8 @@ function loadStaffMeal(){
         });
         // 직원 명단 관리에 없는 '직원' 기록은 제외 (과거 삭제/테스트 인원 노출 방지). 사내·사외강사는 유지.
         Object.keys(agg).forEach(k=>{ if(agg[k].category==='staff' && !_staffRoster[k]) delete agg[k]; });
+        // 명단(ROSTER)과 실시간 일치: staff 항목의 소속·직책·성함·사번을 현재 명단값으로 갱신
+        Object.keys(agg).forEach(k=>{ if(agg[k].category==='staff' && _staffRoster[k]){ const r=_staffRoster[k]; agg[k].dept=r.dept||''; agg[k].position=r.position||''; agg[k].name=r.name||agg[k].name; agg[k].empNo=r.empNo||''; } });
         _mealAgg=agg; _mealMonth=month;
         renderStaffCounts(agg, month);
         updateLockBtn();
@@ -1939,7 +2020,7 @@ function renderStaffCounts(agg, month){
     const rosterOrder=key=>{ const r=_staffRoster[key]; return (r&&r.order!=null)?r.order:9999; };
     const _deptFirst={};
     Object.values(_staffRoster||{}).forEach(r=>{ if(!r)return; const dp=((r.dept||'').trim()); const cc=(r.createdAt!=null?r.createdAt:Infinity); if(_deptFirst[dp]==null||cc<_deptFirst[dp]) _deptFirst[dp]=cc; });
-    const deptRank=dp=>{ const v=_deptFirst[(dp||'').trim()]; return (v==null||v===Infinity)?9e15:v; };
+    const deptRank=dp=>_deptRank(dp,_deptFirst[(dp||'').trim()]);
     const rows=Object.entries(agg).sort((a,b)=>{
         const c=(catOrd[a[1].category]||0)-(catOrd[b[1].category]||0); if(c) return c;
         const dr=deptRank(a[1].dept)-deptRank(b[1].dept); if(dr) return dr;
@@ -2013,22 +2094,27 @@ function _mealRowsSorted(){
     const catOrd={staff:0,internal:1,external:2};
     return Object.entries(_mealAgg||{}).sort((a,b)=>((catOrd[a[1].category]||0)-(catOrd[b[1].category]||0))||((a[1].dept||'').localeCompare(b[1].dept||'','ko'))||((a[1].name||'').localeCompare(b[1].name||'','ko')));
 }
-function _xc(v, num){ return num ? `<Cell><Data ss:Type="Number">${v}</Data></Cell>` : `<Cell><Data ss:Type="String">${escH(v==null?'':v)}</Data></Cell>`; }
+function _xc(v, num, sid){ const st=` ss:StyleID="${sid||'c'}"`; return num ? `<Cell${st}><Data ss:Type="Number">${v}</Data></Cell>` : `<Cell${st}><Data ss:Type="String">${escH(v==null?'':v)}</Data></Cell>`; }
 function _xrow(cells){ return `<Row>${cells}</Row>`; }
 function exportMealExcel(){
     if(!_mealAgg){ showToast('먼저 월을 조회하세요.'); return; }
     const catLabel={staff:'직원',internal:'사내강사',external:'사외강사'};
     // ── 시트1: 전체 직원 식수 ──
-    let r1=[ _xrow(['구분','소속','직책','이름','총횟수','아침','점심','저녁','비고'].map(h=>_xc(h))) ];
+    let r1=[ _xrow(['구분','소속','직책','이름','총횟수','아침','점심','저녁','비고'].map(h=>_xc(h,0,'h'))) ];
     let gb=0,gl=0,gd=0,gT=0; const ext=[];
+    const merged={}, order=[];
     _mealRowsSorted().forEach(([key,a])=>{
         let bc=0,lc=0,dc=0; Object.values(a.days||{}).forEach(md=>{ if(md.b)bc++; if(md.l)lc++; if(md.d)dc++; });
         const actual=bc+lc+dc; const adj=_adjust[key]; const shown=(adj&&adj.count!=null)?adj.count:actual;
-        gb+=bc;gl+=lc;gd+=dc;gT+=shown;
         const memo=(adj&&adj.memo)||''; const corr=(adj&&adj.count!=null&&adj.count!==actual)?`(실제 ${actual})`:'';
         const dept=a.category==='staff'?(a.dept||''):''; const pos=a.category==='staff'?(a.position||''):(a.idValue||'');
-        r1.push(_xrow([_xc(catLabel[a.category]||'직원'),_xc(dept),_xc(pos),_xc(a.name),_xc(shown,1),_xc(bc,1),_xc(lc,1),_xc(dc,1),_xc((memo+(corr?(' '+corr):'')).trim())]));
-        if(a.category==='external') ext.push({name:a.name||'', contact:a.idValue||'', bc, lc, dc, total:shown});
+        const idk=`${a.category}|${dept}|${pos}|${a.name||''}`;
+        if(!merged[idk]){ merged[idk]={category:a.category,dept,pos,name:a.name||'',idValue:a.idValue||'',bc:0,lc:0,dc:0,shown:0,memo:''}; order.push(idk); }
+        const M=merged[idk]; M.bc+=bc; M.lc+=lc; M.dc+=dc; M.shown+=shown; const mm=(memo+(corr?(' '+corr):'')).trim(); if(mm) M.memo=(M.memo?M.memo+' ':'')+mm;
+    });
+    order.forEach(idk=>{ const M=merged[idk]; gb+=M.bc; gl+=M.lc; gd+=M.dc; gT+=M.shown;
+        r1.push(_xrow([_xc(catLabel[M.category]||'직원'),_xc(M.dept),_xc(M.pos),_xc(M.name),_xc(M.shown,1),_xc(M.bc,1),_xc(M.lc,1),_xc(M.dc,1),_xc(M.memo)]));
+        if(M.category==='external') ext.push({name:M.name, contact:M.idValue, bc:M.bc, lc:M.lc, dc:M.dc, total:M.shown});
     });
     r1.push(_xrow([_xc('총 합계'),_xc(''),_xc(''),_xc(''),_xc(gT,1),_xc(gb,1),_xc(gl,1),_xc(gd,1),_xc('')]));
 
@@ -2042,7 +2128,7 @@ function exportMealExcel(){
         _xrow([_xc('대상 월'),_xc(_mealMonth)]),
         _xrow([_xc('입금 계좌'),_xc(accStr)]),
         _xrow([_xc('')]),
-        _xrow(['연번','이름','연락처','아침','점심','저녁','총 식사횟수'].map(h=>_xc(h)))
+        _xrow(['연번','이름','연락처','아침','점심','저녁','총 식사횟수'].map(h=>_xc(h,0,'h')))
     ];
     let i=0, eb=0,el=0,ed=0,et=0;
     ext.forEach(e=>{ i++; eb+=e.bc; el+=e.lc; ed+=e.dc; et+=e.total;
@@ -2053,17 +2139,24 @@ function exportMealExcel(){
     const ws=(name,rows)=>`<Worksheet ss:Name="${escH(name)}"><Table>${rows.join('')}</Table></Worksheet>`;
     const xml=`<?xml version="1.0" encoding="UTF-8"?><?mso-application progid="Excel.Sheet"?>`+
         `<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">`+
+        `<Styles><Style ss:ID="c"><Alignment ss:Horizontal="Center" ss:Vertical="Center"/></Style><Style ss:ID="h"><Alignment ss:Horizontal="Center" ss:Vertical="Center"/><Font ss:Bold="1" ss:Color="#FFFFFF"/><Interior ss:Color="#1E3A8A" ss:Pattern="Solid"/></Style></Styles>`+
         ws('직원 식수', r1) + ws('사외강사 정산', r2) + `</Workbook>`;
     const blob=new Blob(['\ufeff'+xml],{type:'application/vnd.ms-excel;charset=utf-8'});
-    const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download=`직원식수_${_mealMonth}.xls`; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url),1500);
+    const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download=_mealFileTitle()+'.xls'; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url),1500);
 }
+function _mealFileTitle(){ const pr=(_mealMonth||'').split('-'); const yy=(pr[0]||'').slice(2); const mm=parseInt(pr[1]||'0',10); return `${yy}년도_${mm}월_항공기술훈련원 식수 현황자료`; }
 function exportMealPDF(){
     const tbl=document.querySelector('#staffCountList table'); if(!tbl){ showToast('먼저 월을 조회하세요.'); return; }
-    const w=window.open('','_mealpdf'); if(!w){ showToast('팝업이 차단되었습니다.'); return; }
-    w.document.write(`<html><head><meta charset="utf-8"><title>직원 식수 ${_mealMonth}</title>
-      <style>body{font-family:'Malgun Gothic','맑은 고딕',sans-serif; padding:24px;} h2{text-align:center; margin:0 0 16px;} table{width:100%; border-collapse:collapse; font-size:13px;} th,td{border:1px solid #94a3b8; padding:7px 9px; text-align:center;} thead th{background:#1e3a8a; color:#fff;} tfoot td{background:#e2e8f0; font-weight:800;} .cnt-empty,td[id^=cal-]{display:none!important;} button,input{display:none!important;} .cnt-corr{color:#dc2626;} .memo-ic,.cnt-exp{display:none!important;}</style></head>
-      <body><h2>직원 식수 관리 — ${_mealMonth}</h2>${tbl.outerHTML}</body></html>`);
-    w.document.close(); w.focus(); setTimeout(()=>{ try{w.print();}catch(e){} }, 350);
+    const title=_mealFileTitle();
+    const html=`<!DOCTYPE html><html><head><meta charset="utf-8"><title>${escH(title)}</title>`+
+      `<style>@page{margin:12mm;}body{font-family:'Malgun Gothic','맑은 고딕',sans-serif; margin:0;} h2{text-align:center; margin:0 0 14px;} table{width:100%; border-collapse:collapse; font-size:13px;} th,td{border:1px solid #94a3b8; padding:7px 9px; text-align:center;} thead th{background:#1e3a8a; color:#fff;} tfoot td{background:#e2e8f0; font-weight:800;} .cnt-empty,td[id^=cal-]{display:none!important;} button,input{display:none!important;} .cnt-corr{color:#dc2626;} .memo-ic,.cnt-exp{display:none!important;}</style></head>`+
+      `<body><h2>직원 식수 관리 — ${_mealMonth}</h2>${tbl.outerHTML}</body></html>`;
+    let ifr=document.getElementById('_mealPdfFrame'); if(ifr) ifr.remove();
+    ifr=document.createElement('iframe'); ifr.id='_mealPdfFrame';
+    ifr.style.cssText='position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden;';
+    document.body.appendChild(ifr);
+    const doc=ifr.contentWindow.document; doc.open(); doc.write(html); doc.close();
+    setTimeout(()=>{ try{ ifr.contentWindow.focus(); ifr.contentWindow.print(); }catch(e){ showToast('인쇄 실패: '+((e&&e.message)||e)); } }, 450);
 }
 function toggleCal(key){
     const el=document.getElementById('cal-'+key); if(!el) return;
@@ -2100,7 +2193,7 @@ function renderMealCalendar(a, month){
 }
 </script>
 <style>@media print{#__ver{display:none!important}}</style>
-<div id="__ver" style="position:fixed;right:7px;bottom:7px;z-index:2147483000;background:rgba(15,23,42,.72);color:#cbd5e1;font:700 10px/1 monospace;padding:4px 8px;border-radius:7px;pointer-events:none;letter-spacing:.3px;">영양사 vCC · 260613-1230</div>
+<div id="__ver" style="position:fixed;right:7px;bottom:7px;z-index:2147483000;background:rgba(15,23,42,.72);color:#cbd5e1;font:700 10px/1 monospace;padding:4px 8px;border-radius:7px;pointer-events:none;letter-spacing:.3px;">영양사 vDD · 260613-1320</div>
 </body>
 </html>
 <!-- @build 20260613-104500 (영양사 vAA: ★초기화 크래시 수정 — 없어진 todayBadge 요소 접근에서 TypeError(nutritionist:823)가 나며 loadAll/loadRoomData가 통째로 중단 → 명단 리스너 미부착으로 COURSE 인원수 항상 미표시였음. todayBadge/menuFileInput 널가드로 초기화 완주 보장. 직전 vZ: [직원 명단관리] div 카드형 리스트로 재구성 — 행 전체 드래그가 버튼클릭을 가로채던 문제 제거(.no-drag), rowspan 제거, 화살표·드래그·드롭안내선 안정화 / [COURSE 탭] 운영부 system/coord/rosters · 지원부 system/dorm/rosters 전역 명단을 직접 구독해 과정명으로 인원수 반영 → 라이브 방 미개설/방명 불일치여도 명단 표시) -->
