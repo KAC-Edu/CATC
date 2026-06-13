@@ -763,7 +763,7 @@
         <!-- 직원 명단 관리 (별도 탭) -->
         <div class="section-card tab-panel" id="sec-roster">
             <div class="section-title"><i class="fa-solid fa-users-gear"></i> 직원 명단 관리</div>
-            <div style="font-size:12.5px; color:var(--muted); font-weight:700; margin-bottom:12px;">명단이 아래에 표시됩니다. 추가하려면 우측 <b>+ 직원 추가</b> 버튼을 누르세요. 같은 소속 안에서는 <b>사번 순</b>으로 정렬되며, 사번이 없으면 화살표(▲▼)·드래그로 순서를 바꿉니다.</div>
+            <div style="font-size:12.5px; color:var(--muted); font-weight:700; margin-bottom:12px;">명단이 아래에 표시됩니다. 추가하려면 우측 <b>+ 직원 추가</b> 버튼을 누르세요. 같은 소속 안에서는 <b>배치순서번호 순</b>으로 정렬되며, 번호가 없으면 화살표(▲▼)·드래그로 순서를 바꿉니다.</div>
             <div class="roster-tools">
                 <div class="rt-search"><i class="fa-solid fa-magnifying-glass"></i><input id="rosterSearch" placeholder="이름·직책 검색" oninput="applyRosterFilter()"></div>
                 <select id="rosterDeptFilter" class="rt-sel" onchange="applyRosterFilter()"><option value="">전체 소속</option></select>
@@ -823,7 +823,7 @@
         <div class="modal-handle"></div>
         <div class="modal-title"><i class="fa-solid fa-pen-to-square" style="color:#2563eb; margin-right:6px;"></i>직원 일괄 수정</div>
         <div class="modal-body">
-            <div style="font-size:12px; color:var(--muted); font-weight:700; margin-bottom:10px; line-height:1.6;">등록된 직원을 표에서 직접 수정하세요. 상단의 <b>일괄 적용</b>으로 소속·직책을 전체에 한 번에 넣을 수 있고, 빈 <b>사번</b>도 칸마다 채워 넣을 수 있습니다. <b>모두 저장</b>을 누르면 변경분만 반영됩니다.</div>
+            <div style="font-size:12px; color:var(--muted); font-weight:700; margin-bottom:10px; line-height:1.6;">등록된 직원을 표에서 직접 수정하세요. 상단의 <b>일괄 적용</b>으로 소속·직책을 전체에 한 번에 넣을 수 있고, 빈 <b>배치순서번호</b>도 칸마다 채워 넣을 수 있습니다. <b>모두 저장</b>을 누르면 변경분만 반영됩니다.</div>
             <div class="ea-bulk">
                 <span>일괄 적용</span>
                 <select id="ea-bulk-dept" class="ea-binp"></select>
@@ -831,7 +831,7 @@
                 <input id="ea-bulk-pos" class="ea-binp" placeholder="직책 (예: 교수)" maxlength="16">
                 <button onclick="eaApply('pos')">직책 전체적용</button>
             </div>
-            <div class="ea-head"><span></span><span>소속</span><span>직책</span><span>성함</span><span>사번</span><span>비고</span></div>
+            <div class="ea-head"><span></span><span>소속</span><span>직책</span><span>성함</span><span>배치순서번호</span><span>비고</span></div>
             <div id="editAllGrid"></div>
         </div>
         <button class="modal-close-btn" style="background:#2563eb;" onclick="saveEditAll()"><i class="fa-solid fa-check"></i> 모두 저장</button>
@@ -876,7 +876,7 @@
         <div class="modal-body">
             <div id="apane-one" class="add-pane">
                 <div class="am-row"><label class="am-lab">소속</label><select id="am-dept" class="am-inp"></select><button class="am-newbtn" onclick="addNewDeptInline()" title="새 소속 추가"><i class="fa-solid fa-plus"></i></button></div>
-                <div class="am-row"><label class="am-lab">사번</label><input id="am-empno" class="am-inp" placeholder="사번 (같은 부서 내 정렬 기준)" maxlength="20" inputmode="numeric"></div>
+                <div class="am-row"><label class="am-lab">배치순서번호</label><input id="am-empno" class="am-inp" placeholder="배치순서번호 (작을수록 위 · 정렬 기준)" maxlength="20" inputmode="numeric"></div>
                 <div class="am-row"><label class="am-lab">직책</label><input id="am-pos" class="am-inp" placeholder="예: 주임" maxlength="16"></div>
                 <div class="am-row"><label class="am-lab">성함</label><input id="am-name" class="am-inp" placeholder="성함" maxlength="12" onkeyup="if(event.key==='Enter')addSingle()"></div>
                 <button class="modal-close-btn" style="background:#2563eb;" onclick="addSingle()"><i class="fa-solid fa-plus"></i> 추가</button>
@@ -884,14 +884,14 @@
             <div id="apane-bulk" class="add-pane" style="display:none;">
                 <div class="am-row"><label class="am-lab">소속</label><select id="am-bulk-dept" class="am-inp"></select></div>
                 <div style="font-size:12px; color:var(--muted); font-weight:700; margin:8px 2px; line-height:1.6;">엑셀처럼 셀에 입력하세요. 행이 모자라면 <b>+ 행 추가</b>. 엑셀에서 복사한 표를 셀에 <b>붙여넣기</b>하면 자동으로 채워집니다. (성함만 필수)</div>
-                <div class="bgrid-head"><span>직책</span><span>성함</span><span>사번</span><span>비고</span><span></span></div>
+                <div class="bgrid-head"><span>직책</span><span>성함</span><span>배치순서번호</span><span>비고</span><span></span></div>
                 <div id="bulk-grid"></div>
                 <button class="bgrid-add" onclick="addBulkRow()"><i class="fa-solid fa-plus"></i> 행 추가</button>
                 <button class="modal-close-btn" style="background:#2563eb; margin-top:10px;" onclick="runManualBulk()"><i class="fa-solid fa-check"></i> 일괄 등록</button>
             </div>
             <div id="apane-xlsx" class="add-pane" style="display:none;">
                 <div style="font-size:12.5px; color:var(--muted); font-weight:700; margin:2px 2px 12px; line-height:1.7;">
-                    ① 샘플 양식을 받아 <b>소속·직책·성함·사번·비고</b>를 채운 뒤<br>② 파일을 업로드하면 일괄 등록됩니다.
+                    ① 샘플 양식을 받아 <b>소속·직책·성함·배치순서번호·비고</b>를 채운 뒤<br>② 파일을 업로드하면 일괄 등록됩니다.
                 </div>
                 <button class="modal-close-btn" style="background:#16a34a;" onclick="downloadSampleXlsx()"><i class="fa-solid fa-file-arrow-down"></i> 샘플 엑셀 양식 다운로드</button>
                 <label class="modal-close-btn" style="background:#2563eb; margin-top:10px; cursor:pointer; display:block; text-align:center;"><i class="fa-solid fa-file-arrow-up"></i> 엑셀 파일 업로드<input type="file" id="am-xlsx-file" accept=".xlsx,.xls,.csv" style="display:none;" onchange="handleXlsxUpload(this.files[0]); this.value='';"></label>
@@ -1675,7 +1675,7 @@ function renderEditAllGrid(){
             <select class="ea-dept">${extra}${dopt}</select>
             <input class="ea-pos"  value="${escH(r.position||'')}" placeholder="직책" maxlength="16">
             <input class="ea-name" value="${escH(r.name||'')}" placeholder="성함" maxlength="12">
-            <input class="ea-emp"  value="${escH(r.empNo||'')}" placeholder="사번" maxlength="20" inputmode="numeric">
+            <input class="ea-emp"  value="${escH(r.empNo||'')}" placeholder="배치순서번호" maxlength="20" inputmode="numeric">
             <input class="ea-note" value="${escH(r.note||'')}" placeholder="비고" maxlength="30">
         </div>`;
     }).join('');
@@ -1777,7 +1777,7 @@ function _bulkRowHtml(){
     return `<div class="bgrow">
         <input class="bg-pos" placeholder="직책" maxlength="16">
         <input class="bg-name" placeholder="성함" maxlength="12" onpaste="bulkPaste(event,this)">
-        <input class="bg-emp" placeholder="사번" maxlength="20" inputmode="numeric">
+        <input class="bg-emp" placeholder="배치순서번호" maxlength="20" inputmode="numeric">
         <input class="bg-note" placeholder="비고" maxlength="30">
         <button class="bgdel" onclick="this.parentNode.remove()" title="행 삭제"><i class="fa-solid fa-xmark"></i></button>
     </div>`;
@@ -1814,7 +1814,7 @@ function runManualBulk(){
 /* 엑셀 샘플 다운로드 / 업로드 (SheetJS) */
 function downloadSampleXlsx(){
     if(typeof XLSX==='undefined'){ showToast('엑셀 라이브러리 로드 실패 — 인터넷 연결을 확인하세요.'); return; }
-    const aoa=[['소속','직책','성함','사번','비고'],
+    const aoa=[['소속','직책','성함','배치순서번호','비고'],
                ['항공기술훈련원','원장','권영택','20010101',''],
                ['교육운영부','부장','박종배','20100315',''],
                ['교육운영부','주임','홍길동','20180312','야간']];
@@ -1845,7 +1845,7 @@ function handleXlsxUpload(file){
                 if(!_validDeptName(dept)) return;
                 rows.push({dept,pos,name,empNo,note});
             });
-            if(!rows.length){ if(info) info.textContent='등록할 행이 없습니다. 양식(소속·직책·성함·사번·비고)을 확인하세요.'; return; }
+            if(!rows.length){ if(info) info.textContent='등록할 행이 없습니다. 양식(소속·직책·성함·배치순서번호·비고)을 확인하세요.'; return; }
             if(info) info.textContent = rows.length+'명 확인 — 등록합니다.';
             _commitBulk(rows,'엑셀');
         }catch(err){ if(info) info.textContent=''; showToast('엑셀 읽기 실패: '+((err&&err.message)||err)); }
@@ -1891,7 +1891,7 @@ function renderRoster(){
                     <select id="edit-dept" class="rl-ein rl-ein-dept no-drag">${optsOf((r.dept||'').trim())}</select>
                     <input id="edit-pos" class="rl-ein no-drag" value="${escH(r.position||'')}" placeholder="직책">
                     <input id="edit-name" class="rl-ein no-drag" value="${escH(r.name||'')}" placeholder="성함">
-                    <input id="edit-empno" class="rl-ein no-drag" value="${escH(r.empNo||'')}" placeholder="사번">
+                    <input id="edit-empno" class="rl-ein no-drag" value="${escH(r.empNo||'')}" placeholder="배치순서번호">
                     <input id="edit-note" class="rl-ein no-drag" value="${escH(r.note||'')}" placeholder="비고">
                     <span class="rl-ctrl no-drag">
                         <button class="rl-act rl-save" onclick="saveEdit('${id}')"><i class="fa-solid fa-check"></i> 저장</button>
@@ -2436,7 +2436,7 @@ function renderMealCalendar(a, month){
 }
 </script>
 <style>@media print{#__ver{display:none!important}}</style>
-<div id="__ver" style="position:fixed;right:7px;bottom:7px;z-index:2147483000;background:rgba(15,23,42,.72);color:#cbd5e1;font:700 10px/1 monospace;padding:4px 8px;border-radius:7px;pointer-events:none;letter-spacing:.3px;">영양사 vOO · 260613-1655</div>
+<div id="__ver" style="position:fixed;right:7px;bottom:7px;z-index:2147483000;background:rgba(15,23,42,.72);color:#cbd5e1;font:700 10px/1 monospace;padding:4px 8px;border-radius:7px;pointer-events:none;letter-spacing:.3px;">영양사 vPP · 260613-1710</div>
 <div id="notifyStack" class="notify-stack"></div>
 </body>
 </html>
