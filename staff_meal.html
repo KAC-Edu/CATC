@@ -209,6 +209,7 @@
         .overlay { position:fixed; inset:0; background:rgba(15,23,42,.5); backdrop-filter:blur(4px); display:none; align-items:center; justify-content:center; z-index:100; padding:24px; }
         .overlay.show { display:flex; }
         .ov-card { background:#fff; border-radius:26px; padding:36px 30px; text-align:center; max-width:430px; width:100%; box-shadow:0 30px 70px rgba(15,23,42,.35); }
+        .ov-card.ext-acct-card { max-width:500px; padding:34px 30px; }
         .coin { width:120px; height:120px; margin:0 auto 22px; border-radius:50%;
                 background:linear-gradient(135deg,#fde68a,#f59e0b); color:#7c2d12;
                 display:flex; align-items:center; justify-content:center; font-size:52px; font-weight:900;
@@ -806,34 +807,59 @@ function showCancelConfirm(name, time, onCancel, msg){
 }
 let _ac=null;
 function autoClose(){ clearTimeout(_ac); _ac=setTimeout(closeOverlay, 2200); }
-function closeOverlay(){ clearTimeout(_ac); overlay.classList.remove('show'); if(CURRENT==='instr') goHome(); }
+function closeOverlay(){ clearTimeout(_ac); _clearExtTimers(); overlay.classList.remove('show'); if(CURRENT==='instr') goHome(); }
 
 /* ── 강사 QR 표시 (키오스크) ── */
+let _extCloseT=null, _extCountT=null;
+function _clearExtTimers(){ try{clearTimeout(_extCloseT);}catch(_){} try{clearInterval(_extCountT);}catch(_){} _extCloseT=null; _extCountT=null; }
 function showInstrQr(mode){
     const isInt = mode==='internal';
-    const url = new URL('staff_meal.html', location.href);
-    url.searchParams.set('go', mode);
-    ovCard.className='ov-card';
-    ovCard.innerHTML = `
-        <div class="ov-ttl" style="color:#0f172a;">${isInt?'KAC 임직원':'사외 강사'}</div>
-        <div class="ov-sub" style="margin-bottom:16px;">스마트폰 카메라로 아래 QR을 스캔해<br><b>본인 휴대폰에서 직접 입력</b>해 주세요.</div>
-        <div id="instrQr" style="display:flex; justify-content:center; padding:14px; background:#fff; border-radius:16px; border:1.5px solid #e2e8f0;"></div>
-        ${isInt?'':'<div id="extAcct" style="margin-top:14px;"></div>'}
-        <div class="ov-actions"><button class="ov-btn gray" onclick="closeOverlay()">닫기</button></div>`;
-    overlay.classList.add('show');
-    const box = document.getElementById('instrQr'); box.innerHTML='';
-    try { new QRCode(box, { text:url.toString(), width:220, height:220, correctLevel:QRCode.CorrectLevel.M }); }
-    catch(e){ box.textContent = url.toString(); }
-    if(!isInt){
-        db.ref('system/staffMeal/account').once('value').then(s=>{
-            const v=s.val(); const acc=(v&&typeof v==='object')?v:{ bank:'', number:(typeof v==='string'?v:''), holder:'' };
-            const has=acc.number && String(acc.number).trim();
-            const el=document.getElementById('extAcct'); if(!el) return;
-            el.innerHTML = has
-              ? `<div style="background:#f0fdf4; border:1.5px solid #bbf7d0; border-radius:14px; padding:14px;"><div style="font-size:12px; font-weight:800; color:#16a34a; margin-bottom:6px;"><i class="fa-solid fa-building-columns"></i> 식대 입금 계좌</div><div style="font-size:19px; font-weight:900; color:#0f172a;">${esc(acc.bank||'')} <span style="user-select:all;">${esc(acc.number)}</span></div>${acc.holder?`<div style="font-size:13px; font-weight:700; color:#64748b; margin-top:4px;">예금주 ${esc(acc.holder)}</div>`:''}</div>`
-              : `<div style="font-size:13px; color:#94a3b8; font-weight:700;">등록된 계좌가 없습니다. (영양사 페이지에서 입력)</div>`;
-        }).catch(()=>{});
+    _clearExtTimers();
+    if(isInt){
+        // KAC 임직원: 기존처럼 본인 휴대폰에서 입력하는 QR
+        const url = new URL('staff_meal.html', location.href);
+        url.searchParams.set('go', mode);
+        ovCard.className='ov-card';
+        ovCard.innerHTML = `
+            <div class="ov-ttl" style="color:#0f172a;">KAC 임직원</div>
+            <div class="ov-sub" style="margin-bottom:16px;">스마트폰 카메라로 아래 QR을 스캔해<br><b>본인 휴대폰에서 직접 입력</b>해 주세요.</div>
+            <div id="instrQr" style="display:flex; justify-content:center; padding:14px; background:#fff; border-radius:16px; border:1.5px solid #e2e8f0;"></div>
+            <div class="ov-actions"><button class="ov-btn gray" onclick="closeOverlay()">닫기</button></div>`;
+        overlay.classList.add('show');
+        const box = document.getElementById('instrQr'); box.innerHTML='';
+        try { new QRCode(box, { text:url.toString(), width:220, height:220, correctLevel:QRCode.CorrectLevel.M }); }
+        catch(e){ box.textContent = url.toString(); }
+        return;
     }
+    // 사외 강사: 입력 없이 계좌이체 안내. QR=계좌정보(스캔 시 폰에 계좌 표시), 계좌번호 크게, 3초 자동 닫힘.
+    db.ref('system/staffMeal/account').once('value').then(s=>{
+        const v=s.val(); const acc=(v&&typeof v==='object')?v:{ bank:'', number:(typeof v==='string'?v:''), holder:'' };
+        const has=acc.number && String(acc.number).trim();
+        const qrText = has ? `[식대 입금 계좌]\n${acc.bank||''} ${acc.number}${acc.holder?('\n예금주 '+acc.holder):''}` : '식대 계좌가 등록되지 않았습니다.';
+        const acctBox = has
+          ? `<div style="font-size:21px; font-weight:800; color:#0f172a;">${esc(acc.bank||'')}</div>
+             <div style="font-size:38px; font-weight:900; color:#0f172a; letter-spacing:0.5px; user-select:all; margin-top:2px; word-break:break-all; line-height:1.1;">${esc(acc.number)}</div>
+             ${acc.holder?`<div style="font-size:16px; font-weight:700; color:#64748b; margin-top:10px;">예금주 ${esc(acc.holder)}</div>`:''}`
+          : `<div style="font-size:15px; color:#94a3b8; font-weight:700;">등록된 계좌가 없습니다.<br>(영양사 페이지에서 입력)</div>`;
+        ovCard.className='ov-card ext-acct-card';
+        ovCard.innerHTML = `
+            <div class="ov-ttl" style="color:#0f172a;">사외 강사 식대 계좌</div>
+            <div class="ov-sub" style="margin-bottom:14px;">QR을 스캔하거나 아래 계좌로<br>식대를 <b>계좌이체</b> 해 주세요.</div>
+            <div id="instrQr" style="display:flex; justify-content:center; padding:12px; background:#fff; border-radius:16px; border:1.5px solid #e2e8f0;"></div>
+            <div style="margin-top:16px; background:#f0fdf4; border:2px solid #bbf7d0; border-radius:16px; padding:22px 18px;">
+                <div style="font-size:14px; font-weight:800; color:#16a34a; margin-bottom:10px;"><i class="fa-solid fa-building-columns"></i> 식대 입금 계좌</div>
+                ${acctBox}
+            </div>
+            <div class="ov-actions"><button class="ov-btn gray" onclick="closeOverlay()">닫기 <span id="extCountdown" style="opacity:.65; font-weight:800;"></span></button></div>`;
+        overlay.classList.add('show');
+        const box = document.getElementById('instrQr'); box.innerHTML='';
+        try { new QRCode(box, { text:qrText, width:200, height:200, correctLevel:QRCode.CorrectLevel.M }); }
+        catch(e){ box.textContent = qrText; }
+        // 3초 자동 닫힘 + 카운트다운 (시간 조정은 아래 숫자만 변경)
+        let n=3; const cd=()=>{ const el=document.getElementById('extCountdown'); if(el) el.textContent='('+n+')'; };
+        cd(); _extCountT=setInterval(()=>{ n--; if(n<0)n=0; cd(); }, 1000);
+        _extCloseT=setTimeout(()=>{ _clearExtTimers(); closeOverlay(); }, 3000);
+    }).catch(()=>{});
 }
 
 /* ── 사외강사 계좌 안내 ── */
@@ -881,7 +907,7 @@ function esc(v){ return String(v==null?'':v).replace(/[&<>"']/g,c=>({'&':'&amp;'
 /* 초기 진입은 위의 ?go 분기에서 처리됨 */
 </script>
 <style>@media print{#__ver{display:none!important}}</style>
-<div id="__ver" style="position:fixed;right:7px;bottom:7px;z-index:2147483000;background:rgba(15,23,42,.72);color:#cbd5e1;font:700 10px/1 monospace;padding:4px 8px;border-radius:7px;pointer-events:none;letter-spacing:.3px;">식당패널 vCC · 260613-1758</div>
+<div id="__ver" style="position:fixed;right:7px;bottom:7px;z-index:2147483000;background:rgba(15,23,42,.72);color:#cbd5e1;font:700 10px/1 monospace;padding:4px 8px;border-radius:7px;pointer-events:none;letter-spacing:.3px;">식당패널 vDD · 260613-1812</div>
 </body>
 </html>
-<!-- @build 20260613-175800 (식당패널 vCC: "영양사 관리" 버튼 — 평상시 3초 길게 누르기로만 이동(진행바 표시, 직원 오터치 화면전환 방지). 테스트 모드 켜져 있으면 지연 없이 즉시 이동) -->
+<!-- @build 20260613-181200 (식당패널 vDD: 사외강사 — QR을 입력폼이 아닌 "계좌정보 QR"로 변경(스캔 시 폰에 은행·계좌번호·예금주 표시, 이름 입력 불필요). 팝업 계좌번호 크게(38px)+팝업 확장. 3초 후 자동 닫힘(카운트다운). KAC 임직원 QR은 기존 입력방식 유지) -->
