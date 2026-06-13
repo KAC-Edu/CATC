@@ -1059,7 +1059,7 @@
     <div style="width:95%; max-width:600px; background:white; border-radius:20px; padding:10px; position:relative; overflow:hidden;">
         
         <div style="display:flex; justify-content:space-between; align-items:center; padding:5px 10px 10px 10px;">
-            <span style="font-size:12px; font-weight:800; color:#3b82f6;"><i class="fa-solid fa-magnifying-glass-plus"></i> 두 손가락으로 확대 가능</span>
+            <span id="mealZoomHint" style="font-size:12px; font-weight:800; color:#3b82f6;"><i class="fa-solid fa-magnifying-glass-plus"></i> 두 손가락으로 확대 가능</span>
             <i class="fa-solid fa-circle-xmark" style="font-size:24px; color:#64748b; cursor:pointer;" onclick="closeMealMenu()"></i>
         </div>
 
@@ -1075,6 +1075,7 @@
             <img id="mealMenuImage" src="" style="width:100%; display:none; transform-origin: center; z-index:1; will-change: transform; cursor: grab;" alt="식단표">
         </div>
         
+        <div id="mealMenuText" style="display:none; width:100%; max-height:72vh; overflow:auto; padding:2px;"></div>
         <p style="margin-top:10px; font-size:11px; text-align:center; color:#94a3b8;">배경을 터치하거나 X를 누르면 닫힙니다.</p>
     </div>
 </div>
@@ -3429,6 +3430,17 @@ function showMainDashboard() {
 
 
 
+// 구조화 식단표(JSON) → 표 HTML
+function _menuTableHTML(menu){
+    const days=(menu&&menu.days)||[]; if(!days.length) return '';
+    const esc=v=>String(v==null?'':v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    const meals=[['breakfast','아침'],['lunch','점심'],['dinner','저녁']];
+    const head='<tr><th style="background:#1e293b;color:#fff;padding:8px 6px;font-size:12px;border:1px solid #334155;">구분</th>'+days.map(d=>`<th style="background:#1e293b;color:#fff;padding:8px 6px;font-size:12.5px;border:1px solid #334155;">${esc(d.dow||'')}<br><span style="font-weight:600;color:#94a3b8;font-size:10.5px;">${esc(d.date||'')}</span></th>`).join('')+'</tr>';
+    const rows=meals.map(([k,lbl])=>`<tr><td style="background:#eff6ff;color:#1e40af;font-weight:800;text-align:center;white-space:nowrap;padding:8px 6px;border:1px solid #dbeafe;font-size:12.5px;">${lbl}</td>`+days.map(d=>`<td style="padding:8px 7px;border:1px solid #e2e8f0;vertical-align:top;font-size:12px;line-height:1.6;color:#334155;">${((d[k]||[]).map(x=>esc(x)).join('<br>'))||'-'}</td>`).join('')+'</tr>').join('');
+    const note = (menu.period)?`<div style="text-align:center;font-weight:800;color:#475569;font-size:13px;margin:2px 0 10px;">${esc(menu.period)}</div>`:'';
+    return note+`<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;min-width:520px;">${head}${rows}</table></div>`;
+}
+
 // 식단표 보기 함수 (성능 최적화 버전)
 async function viewMealMenu() {
     document.getElementById('menuModal').style.display = 'none';
@@ -3444,14 +3456,31 @@ async function viewMealMenu() {
     loader.style.display = 'flex';
     modal.style.display = 'flex';
 
+    // 진입 시 상태 초기화(텍스트표 ↔ 이미지 전환 대비)
+    (function(){ const c=document.getElementById('mealImageContainer'); if(c) c.style.display='flex';
+        const t=document.getElementById('mealMenuText'); if(t){ t.style.display='none'; t.innerHTML=''; }
+        const h=document.getElementById('mealZoomHint'); if(h) h.style.display='';
+        const em=document.getElementById('mealEmptyMsg'); if(em) em.style.display='none'; })();
+
     const showMsg = (txt)=>{ loader.style.display='none'; const m=document.getElementById('mealEmptyMsg'); if(m){ m.style.display='block'; m.innerText=txt; } else { showKacAlert(txt); modal.style.display='none'; } };
     const _mondayOf = (dt)=>{ const x=new Date(dt.getFullYear(),dt.getMonth(),dt.getDate()); const dow=(x.getDay()+6)%7; x.setDate(x.getDate()-dow); const z=n=>String(n).padStart(2,'0'); return `${x.getFullYear()}-${z(x.getMonth()+1)}-${z(x.getDate())}`; };
     const _thisMon = _mondayOf(new Date());
     const _render = (data)=>{
         if(!data){ showMsg('아직 식단표가 업로드되지 않았습니다.'); return; }
-        const wk = data.weekKey || '';
+        const wk = (typeof data==='object' && data.weekKey) || '';
         if(wk && wk > _thisMon){ showMsg('이번 주 식단표는 아직 준비 중입니다.'); return; }
         if(wk && wk < _thisMon){ showMsg('식단표 기간이 만료되었습니다.'); return; }
+        // 구조화(텍스트) 식단표 우선 — 용량 최소
+        if(typeof data==='object' && data.menu && Array.isArray(data.menu.days) && data.menu.days.length){
+            const cont=document.getElementById('mealImageContainer');
+            const txt=document.getElementById('mealMenuText');
+            const hint=document.getElementById('mealZoomHint');
+            loader.style.display='none';
+            if(cont) cont.style.display='none';
+            if(hint) hint.style.display='none';
+            if(txt){ txt.innerHTML=_menuTableHTML(data.menu); txt.style.display='block'; }
+            return;
+        }
         const imageUrl = (typeof data==='string') ? data : (data.url || data.image || '');
         if(!imageUrl){ showMsg('아직 식단표가 업로드되지 않았습니다.'); return; }
         img.onload = function(){ loader.style.display='none'; img.style.display='block'; };
@@ -3467,18 +3496,18 @@ async function viewMealMenu() {
         let cache = null;
         try { cache = JSON.parse(localStorage.getItem('kacMenuCache') || 'null'); } catch(_) {}
         if (remoteUp == null) { try{ localStorage.removeItem('kacMenuCache'); }catch(_){} showMsg('아직 식단표가 업로드되지 않았습니다.'); return; }
-        if (cache && cache.uploadedAt === remoteUp && cache.url) { _render(cache); return; }   // 변경 없음 → 캐시 사용
+        if (cache && cache.uploadedAt === remoteUp && (cache.url || cache.menu)) { _render(cache); return; }   // 변경 없음 → 캐시 사용
         // 변경됨(또는 캐시 없음) → 전체 1회 다운로드 후 캐시 저장
         const snap = await ref.once('value');
         const data = snap.val();
-        if (data && (data.url || data.image)) {
-            try { localStorage.setItem('kacMenuCache', JSON.stringify({ uploadedAt:data.uploadedAt, weekKey:data.weekKey, period:data.period, url:(data.url || data.image) })); } catch(_) {}
+        if (data && (data.url || data.image || data.menu)) {
+            try { localStorage.setItem('kacMenuCache', JSON.stringify({ uploadedAt:data.uploadedAt, weekKey:data.weekKey, period:data.period, url:(data.url || data.image || null), menu:(data.menu || null) })); } catch(_) {}
         }
         _render(data);
     } catch (e) {
         console.error("식단 로딩 에러:", e);
         let cache=null; try{ cache=JSON.parse(localStorage.getItem('kacMenuCache')||'null'); }catch(_){}
-        if (cache && cache.url) { _render(cache); } else { modal.style.display = 'none'; }   // 네트워크 오류 시 캐시 폴백
+        if (cache && (cache.url || cache.menu)) { _render(cache); } else { modal.style.display = 'none'; }   // 네트워크 오류 시 캐시 폴백
     }
 }
 
@@ -4383,4 +4412,4 @@ function closeTabletLoan() {
 
 </body>
 </html>
-<!-- @build 20260613-201500 (식단표: 읽기 경로 system/nutrition_menu→system/weeklyMenu 로 영양사 저장경로와 일치, weekKey(이번주 월요일) 기준 표시·예정·만료 판정. 업로드시각(uploadedAt)으로 기기 캐시 — 같은 식단표는 재다운로드 없이 localStorage 사용, 변경 시에만 1회 다운로드. 네트워크 오류 시 캐시 폴백) -->
+<!-- @build 20260613-202500 (식단표: weeklyMenu 경로 + 캐싱(이전) + 구조화 menu(JSON) 지원 — data.menu 있으면 이미지 대신 깔끔한 텍스트 표로 렌더(모바일 확대 불필요), 캐시도 menu 포함. 이미지면 기존대로 이미지+핀치줌) -->
