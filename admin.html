@@ -2283,20 +2283,52 @@
 <style>@media print{#__catcVer{display:none!important}}</style>
 <div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vP</div>
 <script>try{console.log('%cCATC%c 강사 플랫폼 (admin.html) %cvP%c build 20260612-123725','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}</script>
-<!-- ── 화면 자동 맞춤(auto-fit): 입장 시 가로폭 초과하면 화면에 맞게 자동 축소 · JDS260614 ── -->
+<!-- ── 화면 자동 맞춤(auto-fit): 가로+세로 모두 화면에 맞게 자동 축소 · JDS260613 ──
+     원인: Windows 디스플레이 배율(125%/150%)·저해상도 화면에서 유효 뷰포트가 작아져
+           1400px 고정 디자인이 안 맞고, 본문 세로 콘텐츠(건물 사진 등)가 화면 밖으로 밀려 잘림.
+     해결: 가로 초과량(documentElement.scrollWidth)과 세로 초과량(.content-area)을 모두 측정해
+           더 많이 넘치는 쪽 기준으로 zoom 축소 → 어느 PC에서도 한 화면에 전부 표시. -->
 <script>
 (function(){
+  var MIN_ZOOM = 0.5;   // 너무 작아져 글씨가 안 보이지 않도록 하한
+  var t;
+
   function fit(){
-    var el=document.documentElement;
-    el.style.zoom='';
-    var need=el.scrollWidth, have=window.innerWidth;
-    if(need>have+2) el.style.zoom=Math.max(0.4, have/need).toFixed(4);
+    var el = document.documentElement;
+    el.style.zoom = '';                 // 항상 원래(100%) 크기로 되돌린 뒤 측정 → 반복 적용해도 안전
+
+    // 1) 가로 초과 비율
+    var wRatio = window.innerWidth / Math.max(1, el.scrollWidth);
+
+    // 2) 세로 초과 비율 — 본문 스크롤 영역(.content-area)이 한 화면을 넘치는지 확인
+    var hRatio = 1;
+    var ca = document.querySelector('.content-area');
+    if (ca && ca.scrollHeight > ca.clientHeight + 2) {
+      hRatio = ca.clientHeight / ca.scrollHeight;
+    }
+
+    var z = Math.min(wRatio, hRatio, 1);   // 축소만(절대 확대하지 않음)
+    z = Math.max(MIN_ZOOM, z);
+    el.style.zoom = (z < 0.995) ? z.toFixed(4) : '';   // 거의 1이면 보정 생략(선명도 유지)
   }
-  var t; function soon(){ clearTimeout(t); t=setTimeout(fit,80); }
+
+  function soon(){ clearTimeout(t); t = setTimeout(fit, 80); }
+
   window.addEventListener('resize', soon);
   window.addEventListener('load', fit);
   document.addEventListener('DOMContentLoaded', fit);
-  [300,900,2000].forEach(function(ms){ setTimeout(fit,ms); });
+  [300, 900, 2000].forEach(function(ms){ setTimeout(fit, ms); });
+
+  // 뷰 전환·실시간 데이터 갱신·이미지 로드로 본문 높이가 바뀌면 다시 맞춤
+  document.addEventListener('DOMContentLoaded', function(){
+    var ca = document.querySelector('.content-area');
+    if (ca && window.MutationObserver) {
+      new MutationObserver(soon).observe(ca, {
+        childList: true, subtree: true,
+        attributes: true, attributeFilter: ['style', 'class']
+      });
+    }
+  });
 })();
 </script>
 </body>
