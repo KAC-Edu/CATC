@@ -562,6 +562,29 @@
         .hsum-skip:hover { background:rgba(255,255,255,0.28); }
         .hsum-skip .hs-val { color:#fecdd3; }
         .hsum-eat .hs-val { color:#bbf7d0; }
+        .hsum-break .hs-val { color:#fde68a; }
+        .mw-nav { display:flex; gap:6px; align-items:center; margin-bottom:12px; flex-wrap:wrap; }
+        .mw-nav .mwb { border:1.5px solid #cbd5e1; background:#fff; color:#475569; border-radius:9px; padding:7px 14px; font-size:13.5px; font-weight:800; cursor:pointer; }
+        .mw-nav .mwb.on { background:#2563eb; border-color:#2563eb; color:#fff; }
+        .mw-nav .mw-range { margin-left:auto; font-size:13px; font-weight:800; color:#1e40af; }
+        .mw-table { width:100%; border-collapse:collapse; font-size:14px; }
+        .mw-table th, .mw-table td { border:1px solid #e2e8f0; padding:10px 8px; text-align:center; }
+        .mw-table thead th { background:#1e40af; color:#fff; font-weight:800; }
+        .mw-table thead th.mw-today { background:#f59e0b; }
+        .mw-table .mw-meal { font-weight:900; white-space:nowrap; }
+        .mw-table .mw-meal.b { background:#fffbeb; color:#b45309; }
+        .mw-table .mw-meal.l { background:#eff6ff; color:#1e40af; }
+        .mw-table .mw-meal.d { background:#faf5ff; color:#7e22ce; }
+        .mw-table td.mw-num { font-size:18px; font-weight:900; color:#0f172a; }
+        .mw-table td.mw-today { background:#fff7ed; }
+        .mw-table tr.mw-sel td.mw-num { background:#eff6ff; }
+        .mw-zero { color:#cbd5e1; font-weight:700; }
+        .mw-note { font-size:12.5px; color:#64748b; font-weight:700; margin-top:12px; line-height:1.6; }
+        .mw-courses { margin-top:10px; border-top:1px dashed #e2e8f0; padding-top:10px; }
+        .mw-crow { display:flex; align-items:center; gap:8px; font-size:13px; padding:6px 0; border-bottom:1px solid #f1f5f9; }
+        .mw-crow .mw-cn { font-weight:800; color:#0f172a; }
+        .mw-crow .mw-cd { color:#94a3b8; font-weight:700; margin-left:auto; }
+        .mw-crow .mw-ch { font-weight:900; color:#2563eb; min-width:48px; text-align:right; }
         .hs-op { color:#fff; font-size:19px; font-weight:900; opacity:.9; padding:0 1px; }
         @media (max-width:1180px){ .header-summary .hs-lab{ font-size:9.5px; } .hsum{ min-width:62px; padding:7px 10px; } .hsum .hs-val{ font-size:20px; } }
         /* 월 이동 */
@@ -713,8 +736,9 @@
         <div class="header-summary">
             <button class="h-btn icon-only" id="acctBtn" onclick="openAcctModal()" title="사외강사 식대 계좌 설정"><i class="fa-solid fa-gear"></i></button>
             <button class="h-btn touch" onclick="location.href='staff_meal.html'"><i class="fa-solid fa-utensils"></i> 터치패널</button>
-            <button class="hsum hsum-lunch" onclick="openEstModal('lunch')" title="산정 근거 보기"><span class="hs-lab"><i class="fa-solid fa-bowl-rice"></i> 점심 예상</span><span class="hs-val" id="lunchEst">-</span></button>
-            <button class="hsum hsum-dinner" onclick="openEstModal('dinner')" title="산정 근거 보기"><span class="hs-lab"><i class="fa-solid fa-moon"></i> 석식 예상</span><span class="hs-val" id="dinnerEst">-</span></button>
+            <button class="hsum hsum-break" onclick="openMealWeek('breakfast')" title="주간 식수현황 보기"><span class="hs-lab"><i class="fa-solid fa-mug-hot"></i> 아침 예상</span><span class="hs-val" id="breakfastEst">-</span></button>
+            <button class="hsum hsum-lunch" onclick="openMealWeek('lunch')" title="주간 식수현황 보기"><span class="hs-lab"><i class="fa-solid fa-bowl-rice"></i> 점심 예상</span><span class="hs-val" id="lunchEst">-</span></button>
+            <button class="hsum hsum-dinner" onclick="openMealWeek('dinner')" title="주간 식수현황 보기"><span class="hs-lab"><i class="fa-solid fa-moon"></i> 석식 예상</span><span class="hs-val" id="dinnerEst">-</span></button>
         </div>
     </header>
 
@@ -849,6 +873,16 @@
         <div class="modal-title" id="estModalTitle">예상 인원 산정 근거</div>
         <div class="modal-body" id="estModalBody"></div>
         <button class="modal-close-btn" style="background:#e2e8f0; color:#475569;" onclick="closeEstModal()">닫기</button>
+    </div>
+</div>
+
+<!-- ── 주간 식수현황 ── -->
+<div class="modal-bg" id="mealWeekModal">
+    <div class="modal-sheet" style="max-width:920px;">
+        <div class="modal-handle"></div>
+        <div class="modal-title"><i class="fa-solid fa-utensils" style="color:#2563eb; margin-right:6px;"></i>주간 식수현황</div>
+        <div class="modal-body" id="mealWeekBody"></div>
+        <button class="modal-close-btn" style="background:#e2e8f0; color:#475569;" onclick="closeMealWeek()">닫기</button>
     </div>
 </div>
 
@@ -1034,6 +1068,7 @@ function loadRoomData() {
 
     // 직원 터치패널 석식 신청 → 석식 예상인원 반영
     db.ref('system/staffMeal/dinner').on('value', s => { _staffDinner = s.val() || {}; renderMealStats(getToday()); }, e=>console.warn('[staffDinner]',e));
+    db.ref('system/staffMeal/breakfast').on('value', s => { _staffBreakfast = s.val() || {}; renderMealStats(getToday()); }, e=>console.warn('[staffBreakfast]',e));
     _watchMealNotify();
 
     // ── 운영부/지원부가 저장한 명단(전역 저장소)도 직접 구독 → COURSE 탭 인원수에 반영 ──
@@ -1053,38 +1088,83 @@ function loadRoomData() {
     }, err => { console.warn('[annualPlan top] read error', err); });
 }
 
-function renderMealStats(today) {
-    const todayStr = today || getToday();
-    // 교육생: 연간교육계획(과정 시작·종료일) 기준
-    //   · 점심: 시작일 ≤ 오늘 ≤ 종료일  (첫날~마지막날 매일)
-    //   · 석식: 시작일 ≤ 오늘 < 종료일   (마지막날 제외 = 점심까지만 식사)
+// 특정 날짜(D)의 끼니별 식수 = 교육생(과정 날짜·끼니 규칙) + 직원
+//   · 아침: 시작일 < D ≤ 종료일  (첫날 아침 제외)
+//   · 점심: 시작일 ≤ D ≤ 종료일  (첫날~마지막날 매일)
+//   · 석식: 시작일 ≤ D < 종료일   (마지막날 제외 = 점심까지만)
+function _mealDayCounts(D) {
     const plan = Array.isArray(_annualPlan) ? _annualPlan : Object.values(_annualPlan || {});
-    let lunchStudents = 0, dinnerStudents = 0, dinnerSkip = 0;
+    let bS = 0, lS = 0, dS = 0, dSkip = 0;
     const courses = [];
     plan.filter(c => c && c.name && c.startDate && c.endDate)
         .sort((a, b) => (a.startDate || '').localeCompare(b.startDate || ''))
         .forEach(c => {
-            const eatsLunch  = (c.startDate <= todayStr && todayStr <= c.endDate);
-            const eatsDinner = (c.startDate <= todayStr && todayStr <  c.endDate);
-            if (!eatsLunch && !eatsDinner) return;
+            const eb = (c.startDate <  D && D <= c.endDate);
+            const el = (c.startDate <= D && D <= c.endDate);
+            const ed = (c.startDate <= D && D <  c.endDate);
+            if (!eb && !el && !ed) return;
             const n = (_courseCounts(c).total) || 0;
             let sk = 0;
-            if (eatsDinner) {
+            if (ed) {
                 const m = _roomMatchForCourse(c);
-                const skips = (m && m.room && m.room.dinner_skips) ? (m.room.dinner_skips[todayStr] || {}) : {};
+                const skips = (m && m.room && m.room.dinner_skips) ? (m.room.dinner_skips[D] || {}) : {};
                 sk = Math.min(Object.keys(skips).length, n);
             }
-            if (eatsLunch)  lunchStudents  += n;
-            if (eatsDinner) { dinnerStudents += n; dinnerSkip += sk; }
-            courses.push({ name: c.name, n, skip: sk, lunch: eatsLunch, dinner: eatsDinner, last: (todayStr === c.endDate) });
+            if (eb) bS += n;
+            if (el) lS += n;
+            if (ed) { dS += n; dSkip += sk; }
+            courses.push({ name: c.name, n, breakfast: eb, lunch: el, dinner: ed, skip: sk, last: (D === c.endDate) });
         });
     const staffCount  = Object.values(_staffRoster || {}).filter(r => r && r.active !== false).length;
-    const staffDinner = Object.keys((_staffDinner || {})[todayStr] || {}).length;   // 직원 터치패널 석식 신청
-    const lunchEst  = lunchStudents + staffCount;
-    const dinnerEst = Math.max(0, dinnerStudents - dinnerSkip) + staffDinner;
-    const le = document.getElementById('lunchEst');  if (le) le.textContent  = lunchEst + '명';
-    const de = document.getElementById('dinnerEst'); if (de) de.textContent  = dinnerEst + '명';
-    _estData = { today: todayStr, lunchStudents, dinnerStudents, dinnerSkip, staffCount, staffDinner, lunchEst, dinnerEst, courses };
+    const staffBreak  = Object.keys((_staffBreakfast || {})[D] || {}).length;
+    const staffDinner = Object.keys((_staffDinner    || {})[D] || {}).length;
+    return {
+        breakfast: bS + staffBreak,
+        lunch:     lS + staffCount,
+        dinner:    Math.max(0, dS - dSkip) + staffDinner,
+        bStudents: bS, lStudents: lS, dStudents: dS, dSkip,
+        staffCount, staffBreak, staffDinner, courses
+    };
+}
+function renderMealStats(today) {
+    const todayStr = today || getToday();
+    const r = _mealDayCounts(todayStr);
+    const set = (id, v) => { const e = document.getElementById(id); if (e) e.textContent = v + '명'; };
+    set('breakfastEst', r.breakfast); set('lunchEst', r.lunch); set('dinnerEst', r.dinner);
+    _estData = Object.assign({ today: todayStr }, r);
+}
+// 주간 식수현황 (상단바 아침·점심·저녁 버튼 → 열림)
+function openMealWeek(kind) { _mealWeekKind = kind || 'lunch'; _mealWeekOff = 0; _renderMealWeek(); const m = document.getElementById('mealWeekModal'); if (m) m.classList.add('open'); }
+function mealWeekNav(off) { _mealWeekOff = off; _renderMealWeek(); }
+function closeMealWeek() { const m = document.getElementById('mealWeekModal'); if (m) m.classList.remove('open'); }
+function _renderMealWeek() {
+    const body = document.getElementById('mealWeekBody'); if (!body) return;
+    const today = getToday();
+    const mon = _cwAddDays(_cwTargetMonday(today), _mealWeekOff * 7);
+    const days = [0,1,2,3,4].map(i => _cwAddDays(mon, i));
+    const fri = days[4];
+    const dow = ['월','화','수','목','금'];
+    const dd = days.map(D => ({ D, c: _mealDayCounts(D) }));
+    const nav = `<div class="mw-nav">`
+        + [0,1,2].map(i => `<button class="mwb ${i === _mealWeekOff ? 'on' : ''}" onclick="mealWeekNav(${i})">${i === 0 ? '이번주' : (i+1)+'주차'}</button>`).join('')
+        + `<span class="mw-range"><i class="fa-regular fa-calendar"></i> ${_fmtMD(mon)}(월) ~ ${_fmtMD(fri)}(금)</span></div>`;
+    const head = `<tr><th style="background:#0f172a;">끼니</th>` + days.map((D,i) => `<th class="${D===today?'mw-today':''}">${dow[i]}<br><span style="font-weight:700;font-size:11px;opacity:.85;">${_fmtMD(D)}</span></th>`).join('') + `</tr>`;
+    const meals = [['breakfast','아침','b'],['lunch','점심','l'],['dinner','저녁','d']];
+    const rows = meals.map(([k,lab,cls]) => {
+        const sel = (k === _mealWeekKind) ? ' mw-sel' : '';
+        return `<tr class="mw-mrow${sel}"><td class="mw-meal ${cls}">${lab}</td>`
+            + dd.map(({D,c}) => `<td class="mw-num ${D===today?'mw-today':''}">${c[k] > 0 ? c[k] : '<span class="mw-zero">-</span>'}</td>`).join('')
+            + `</tr>`;
+    }).join('');
+    const plan = Array.isArray(_annualPlan) ? _annualPlan : Object.values(_annualPlan || {});
+    const wc = plan.filter(c => c && c.name && c.startDate && c.endDate && c.startDate <= fri && c.endDate >= mon)
+                   .sort((a,b) => (a.startDate||'').localeCompare(b.startDate||''));
+    const clist = wc.map(c => { const n = (_courseCounts(c).total) || 0; return `<div class="mw-crow"><span class="mw-cn">${escH(c.name)}</span><span class="mw-cd">${escH(c.startDate)}~${escH(c.endDate)}</span><span class="mw-ch">${n ? n+'명' : '대기'}</span></div>`; }).join('') || '<div class="mw-crow" style="color:#94a3b8;">이 주 운영 과정 없음</div>';
+    const staffCount = Object.values(_staffRoster || {}).filter(r => r && r.active !== false).length;
+    body.innerHTML = nav
+        + `<div style="overflow-x:auto;"><table class="mw-table"><thead>${head}</thead><tbody>${rows}</tbody></table></div>`
+        + `<div class="mw-note"><i class="fa-solid fa-circle-info"></i> 교육생은 과정 <b>첫날 점심부터 마지막날 점심까지</b>로 산정합니다(첫날 아침·마지막날 저녁 제외). 직원은 <b>점심 전원(${staffCount}명)</b>이고, 아침·저녁은 <b>당일 터치패널 신청</b> 기준이라 지난·오늘 날짜에만 반영됩니다.</div>`
+        + `<div class="mw-courses"><div style="font-size:12.5px;font-weight:900;color:#475569;margin-bottom:4px;"><i class="fa-solid fa-graduation-cap"></i> 이 주 운영 과정 · 교육인원</div>${clist}<div class="mw-crow"><span class="mw-cn"><i class="fa-solid fa-id-badge" style="color:#64748b;"></i> 직원 명단(점심 전원)</span><span class="mw-cd"></span><span class="mw-ch">${staffCount}명</span></div></div>`;
 }
 function openEstModal(kind){
     const d = _estData || {}; const body=document.getElementById('estModalBody'); const title=document.getElementById('estModalTitle');
@@ -1552,6 +1632,8 @@ let _dragId = null;
 let _curMonth = null;
 let _deptPresets = {};
 let _staffDinner = {};   // system/staffMeal/dinner (석식 신청)
+let _staffBreakfast = {};   // system/staffMeal/breakfast (조식 신청)
+let _mealWeekOff = 0, _mealWeekKind = 'lunch';   // 주간 식수현황 모달 상태
 let _estData = {};       // 예상인원 산정 근거 캐시
 let _adjust = {};
 let _mealAgg = null;
@@ -2669,8 +2751,8 @@ function renderMealCalendar(a, month){
 }
 </script>
 <style>@media print{#__ver{display:none!important}}</style>
-<div id="__ver" style="position:fixed;right:7px;bottom:7px;z-index:2147483000;background:rgba(15,23,42,.72);color:#cbd5e1;font:700 10px/1 monospace;padding:4px 8px;border-radius:7px;pointer-events:none;letter-spacing:.3px;">영양사 vYY · 260613-2310</div>
+<div id="__ver" style="position:fixed;right:7px;bottom:7px;z-index:2147483000;background:rgba(15,23,42,.72);color:#cbd5e1;font:700 10px/1 monospace;padding:4px 8px;border-radius:7px;pointer-events:none;letter-spacing:.3px;">영양사 vZZ · 260613-2340</div>
 <div id="notifyStack" class="notify-stack"></div>
 </body>
 </html>
-<!-- @build 20260613-231000 (영양사 vYY: 명단 정렬 화살표/드래그를 "번호없는 인원이 같은 소속에 2명 이상"일 때만 표시(혼자면 숨김 — 원장 등 단독 인원 화살표 제거). 직전 vXX: 점심·석식 예상에 교육생 날짜기준 반영) -->
+<!-- @build 20260613-234000 (영양사 vZZ: 상단바에 아침 예상 버튼 추가(아침/점심/저녁) + 누르면 주간 식수현황 모달(요일 월~금 × 끼니, 교육생+직원 합계, 오늘 강조, 이번주/2·3주차 nav, 과정별·직원 분해). 공통 헬퍼 _mealDayCounts(D): 아침=시작<D≤종료, 점심=시작≤D≤종료, 석식=시작≤D<종료. 직원 점심 전원·아침/저녁 당일신청. breakfast 구독 추가. 직전 vYY: 명단 화살표 단독인원 숨김) -->
