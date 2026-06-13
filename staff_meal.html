@@ -74,6 +74,28 @@
             .topbar .info { justify-self:end; }
             .topbar .ttl { max-width:none; }
         }
+        /* ── 휴대폰(QR 강사 접속): 상단 단순화 + 키패드 한 화면 ── */
+        @media (max-width:560px){
+            .topbar { grid-template-columns:1fr; gap:0; padding:9px 14px; }
+            .topbar .ttl { max-width:none; }
+            .topbar .ttl .ttl-h { font-size:16px; white-space:normal; line-height:1.2; }
+            .topbar .ttl .ttl-sub { display:none; }
+            .topbar .info { display:none; }       /* 강사 접속 시 관리 버튼 숨김 */
+            .topbar #hdrClock { display:none; }
+            .stage { padding:12px 14px 20px; }
+            .keypad-wrap { max-width:none; }
+            .back { margin-bottom:12px; padding:8px 14px; font-size:14px; }
+            .screen-ttl { font-size:20px; }
+            .screen-sub { font-size:12.5px; margin-bottom:12px; }
+            .name-input { padding:11px 14px; font-size:17px; margin-bottom:9px; }
+            .kp-field { padding:9px 14px; margin-bottom:9px; }
+            .kp-field .val { font-size:19px; min-height:24px; }
+            .keypad { gap:7px; margin-top:4px; }
+            .key { padding:11px 0; font-size:20px; border-radius:12px; }
+            .key.wide { font-size:14px; }
+            .submit-btn { padding:13px; font-size:17px; margin-top:10px; border-radius:14px; }
+            #__ver { font-size:8px; padding:2px 5px; opacity:.5; }
+        }
         .stage { flex:1; display:flex; align-items:flex-start; justify-content:center; padding:18px 20px 30px; overflow:auto; }
 
         /* ── 환경설정 팝업 ── */
@@ -802,7 +824,7 @@ function esc(v){ return String(v==null?'':v).replace(/[&<>"']/g,c=>({'&':'&amp;'
 /* 초기 진입은 위의 ?go 분기에서 처리됨 */
 </script>
 <style>@media print{#__ver{display:none!important}}</style>
-<div id="__ver" style="position:fixed;right:7px;bottom:7px;z-index:2147483000;background:rgba(15,23,42,.72);color:#cbd5e1;font:700 10px/1 monospace;padding:4px 8px;border-radius:7px;pointer-events:none;letter-spacing:.3px;">식당패널 vV · 260613-1320</div>
+<div id="__ver" style="position:fixed;right:7px;bottom:7px;z-index:2147483000;background:rgba(15,23,42,.72);color:#cbd5e1;font:700 10px/1 monospace;padding:4px 8px;border-radius:7px;pointer-events:none;letter-spacing:.3px;">식당패널 vW · 260613-1430</div>
 </body>
 </html>
-<!-- @build 20260613-132000 (식당패널 vV: 소속 표시순서 system/staffMeal/deptOrder 반영 — 영양사 소속 관리 순서와 동일하게 정렬) -->
+<!-- @build 20260613-143000 (식당패널 vW: 휴대폰(≤560px) QR 강사 접속 화면 — 상단 관리버튼 숨김·타이틀 축소로 글자 겹침 해소 / 키패드·입력·체크인 축소해 성함+사번+체크인 한 화면에 표시) -->

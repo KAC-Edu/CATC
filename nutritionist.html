@@ -207,9 +207,9 @@
         .cnt-reason { width:172px; height:30px; border:1.5px solid #f59e0b; border-radius:7px; padding:0 9px; font-size:12.5px; font-weight:700; box-sizing:border-box; }
         .cnt-reason::placeholder { color:#f59e0b; opacity:.75; }
         .cnt-row.has-meal td { background:#eff6ff; }
-        .cw-sum { display:flex; align-items:center; gap:7px; font-size:13px; font-weight:800; color:var(--navy); background:#eff6ff; border:1px solid #dbeafe; border-radius:10px; padding:9px 14px; margin:6px 0 12px; }
+        .cw-sum { display:flex; align-items:center; gap:9px; font-size:17px; font-weight:800; color:var(--navy); background:#eff6ff; border:1.5px solid #bfdbfe; border-radius:12px; padding:15px 18px; margin:8px 0 14px; }
         .cw-sum i { color:var(--blue); }
-        .cw-sum b { color:var(--blue); font-size:15px; margin-left:3px; }
+        .cw-sum b { color:var(--blue); font-size:23px; margin-left:4px; }
         .cw-sum-pend { color:#94a3b8; font-weight:700; font-size:12px; }
         .cw-card2 { display:flex; align-items:center; gap:14px; background:#fff; border:1.5px solid var(--border); border-left:5px solid #cbd5e1; border-radius:14px; padding:14px 18px; margin-bottom:10px; }
         .cw-card2.live { border-left-color:#10b981; }
@@ -551,6 +551,9 @@
         .cal-cell { min-height:66px; border:1px solid var(--border); border-radius:8px; padding:5px; background:#fff; font-size:13px; }
         .cal-cell.empty { border:none; background:transparent; }
         .cal-cell.has { background:#f0f9ff; border-color:#bae6fd; }
+        .cal-cell.sat { background:#f4f6fb; } .cal-cell.sat .cal-dnum { color:#2563eb; }
+        .cal-cell.sun { background:#fdf4f4; } .cal-cell.sun .cal-dnum { color:#ef4444; }
+        .cal-cell.sat.has, .cal-cell.sun.has { background:#eef6ff; }
         .cal-dnum { font-size:11px; font-weight:700; color:#475569; }
         .cal-marks { display:flex; flex-wrap:wrap; gap:2px; margin-top:2px; }
         .cm { font-size:9px; font-weight:900; border-radius:4px; padding:1px 4px; color:#fff; line-height:1.4; }
@@ -683,13 +686,13 @@
         <!-- ② 금주 식단표 섹션 -->
         <!-- 탭 메뉴 (PC) -->
         <div class="ntabs">
-            <button class="ntab active" data-tab="sec-menu" onclick="showTab('sec-menu')"><span class="nt-n">MENU</span><span class="nt-t">금주 식단표 관리</span></button>
+            <button class="ntab active" data-tab="sec-staff" onclick="showTab('sec-staff')"><span class="nt-n">MEALS</span><span class="nt-t">직원 식수 관리</span></button>
+            <button class="ntab" data-tab="sec-menu" onclick="showTab('sec-menu')"><span class="nt-n">MENU</span><span class="nt-t">금주 식단표 관리</span></button>
             <button class="ntab" data-tab="sec-course" onclick="showTab('sec-course')"><span class="nt-n">COURSE</span><span class="nt-t">현재 운영중인 과정 현황</span></button>
-            <button class="ntab" data-tab="sec-staff" onclick="showTab('sec-staff')"><span class="nt-n">MEALS</span><span class="nt-t">직원 식수 관리</span></button>
             <button class="ntab" data-tab="sec-roster" onclick="showTab('sec-roster')"><span class="nt-n">ROSTER</span><span class="nt-t">직원 명단 관리</span></button>
         </div>
 
-        <div class="section-card tab-panel active" id="sec-menu">
+        <div class="section-card tab-panel" id="sec-menu">
             <div class="section-title"><i class="fa-solid fa-calendar-week"></i> 식단표 관리 (주차별)</div>
             <div class="cw-nav" id="menuWeekBar" style="margin-bottom:6px;"></div>
             <div style="font-size:12.5px; color:var(--muted); font-weight:700; margin-bottom:12px;">위에서 <b>식단표가 적용될 주차</b>를 선택하세요. 선택한 주(월~금) 기준으로 교육생에게 공지됩니다.</div>
@@ -728,7 +731,7 @@
         </div>
 
         <!-- ④ 직원 식수 관리 -->
-        <div class="section-card tab-panel" id="sec-staff">
+        <div class="section-card tab-panel active" id="sec-staff">
             <div class="section-title"><i class="fa-solid fa-utensils"></i> 직원 식수 관리</div>
 
             <div class="month-nav">
@@ -1748,7 +1751,7 @@ function renderRoster(){
     const allDepts=[...new Set([...Object.keys(_deptPresets||{}), ...items.map(([id,r])=>((r.dept||'').trim())).filter(Boolean)])].sort((a,b)=>a.localeCompare(b,'ko'));
     const deptBar = '';  // 소속 칩줄 제거 → 소속 관리 모달로 이동
     const _tools=document.querySelector('.roster-tools');
-    if(!items.length){ if(_tools)_tools.style.display='none'; box.innerHTML = deptBar + renderRosterGuide(); return; }
+    if(!items.length){ if(_tools)_tools.style.display='flex'; box.innerHTML = deptBar + renderRosterGuide(); return; }
     if(_tools)_tools.style.display='flex';
 
     // 소속 그룹 → 소속 정렬(등록순) → 소속 내 order 정렬
@@ -1888,13 +1891,13 @@ function toggleMonthLock(){
     }
 }
 function renderRosterGuide(){
-    let rows = `<tr class="guide-sample"><td class="c rnum">1</td><td class="rdept">교육운영부</td><td class="c">주무관</td><td class="rname">홍길동 <span class="gs-tag">샘플</span></td><td class="rnote">채식 / 알레르기 등</td><td class="c">—</td></tr>`;
+    let rows = `<tr class="guide-sample"><td class="c rnum">1</td><td class="rdept">교육운영부</td><td class="c">—</td><td class="rname">홍길동 <span class="gs-tag">샘플</span></td><td class="rnote">채식 / 알레르기 등</td><td class="c">—</td></tr>`;
     for(let i=0;i<7;i++) rows+=`<tr class="guide-empty"><td>&nbsp;</td><td></td><td></td><td></td><td></td><td></td></tr>`;
     return `<div class="rtable-wrap">
         <table class="rtable flat guide">
             <thead><tr><th style="width:52px;">연번</th><th style="width:128px;">소속</th><th style="width:118px;">직책</th><th style="text-align:left;">성함</th><th style="width:150px; text-align:left;">비고</th><th style="width:208px;">관리</th></tr></thead>
             <tbody>${rows}</tbody></table>
-        <div style="font-size:12px;color:var(--muted);margin:10px 4px 0;">↑ 위 양식처럼 채워집니다. 먼저 <b>소속만 추가</b> 후, <b>직책·성함</b>을 입력해 직원을 등록하세요.</div>
+        <div style="font-size:12px;color:var(--muted);margin:10px 4px 0;">↑ 위 양식처럼 채워집니다. 우측 <b>+ 직원 추가</b> 버튼으로 등록하세요. 소속은 <b>소속 관리</b>에서 추가·수정할 수 있습니다.</div>
     </div>`;
 }
 /* 소속 옵션/관리 */
@@ -2275,15 +2278,16 @@ function renderMealCalendar(a, month){
     for(let i=0;i<startDow;i++) cells+=`<div class="cal-cell empty"></div>`;
     for(let d=1; d<=dim; d++){
         const date=`${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+        const dow=new Date(y,m-1,d).getDay(); const we=dow===0?' sun':(dow===6?' sat':'');
         const md=a.days[date], note=a.notes&&a.notes[date];
         const marks=md?`<div class="cal-marks">${md.b?'<span class="cm cm-b">아</span>':''}${md.l?'<span class="cm cm-l">점</span>':''}${md.d?'<span class="cm cm-d">저</span>':''}</div>`:'';
-        cells+=`<div class="cal-cell ${md?'has':''}"${note?` title="${escH(note)}"`:''}><div class="cal-dnum">${d}</div>${marks}</div>`;
+        cells+=`<div class="cal-cell ${md?'has':''}${we}"${note?` title="${escH(note)}"`:''}><div class="cal-dnum">${d}</div>${marks}</div>`;
     }
     return `<div class="mealcal"><div class="cal-sum"><i class="fa-regular fa-calendar-check"></i> <b>${escH(a.name||'')}</b> · ${y}년 ${m}월 &nbsp;|&nbsp; 아침 <b>${bc}</b> · 점심 <b>${lc}</b> · 저녁 <b>${dc}</b> &nbsp;=&nbsp; 합계 <b style="color:var(--blue);">${bc+lc+dc}</b>회</div><div class="cal-legend"><span class="cm cm-b">아</span>아침 <span class="cm cm-l">점</span>점심 <span class="cm cm-d">저</span>저녁</div><div class="cal-dows">${dows.map((n,i)=>`<div class="cal-dow ${i===0?'sun':''}${i===6?'sat':''}">${n}</div>`).join('')}</div><div class="cal-grid">${cells}</div></div>`;
 }
 </script>
 <style>@media print{#__ver{display:none!important}}</style>
-<div id="__ver" style="position:fixed;right:7px;bottom:7px;z-index:2147483000;background:rgba(15,23,42,.72);color:#cbd5e1;font:700 10px/1 monospace;padding:4px 8px;border-radius:7px;pointer-events:none;letter-spacing:.3px;">영양사 vEE · 260613-1410</div>
+<div id="__ver" style="position:fixed;right:7px;bottom:7px;z-index:2147483000;background:rgba(15,23,42,.72);color:#cbd5e1;font:700 10px/1 monospace;padding:4px 8px;border-radius:7px;pointer-events:none;letter-spacing:.3px;">영양사 vFF · 260613-1430</div>
 <div id="notifyStack" class="notify-stack"></div>
 </body>
 </html>
