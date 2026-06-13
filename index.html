@@ -3432,48 +3432,53 @@ function showMainDashboard() {
 // 식단표 보기 함수 (성능 최적화 버전)
 async function viewMealMenu() {
     document.getElementById('menuModal').style.display = 'none';
-    
+
     const modal = document.getElementById('mealMenuModal');
     const loader = document.getElementById('mealLoading');
     const img = document.getElementById('mealMenuImage');
 
     // 위치 및 배율 초기화
-    scale = 1; lastScale = 1; posX = 0; posY = 0; 
+    scale = 1; lastScale = 1; posX = 0; posY = 0;
     img.style.transform = `translate(0px, 0px) scale(1)`;
-    img.style.display = 'none'; // 새 사진 불러올 때까지 일단 숨김
-    loader.style.display = 'flex'; // 로딩 스피너 보이기
-
+    img.style.display = 'none';
+    loader.style.display = 'flex';
     modal.style.display = 'flex';
 
-    try {
-        // 데이터베이스에서 주소 가져오기
-        const snap = await firebase.database().ref('system/nutrition_menu').once('value');
-        const data = snap.val();
-        if (!data) {
-            loader.style.display = 'none';
-            const msg = document.getElementById('mealEmptyMsg');
-            if (msg) { msg.style.display = 'block'; msg.innerText = '아직 식단표가 업로드되지 않았습니다.'; }
-            else { showKacAlert('아직 식단표가 업로드되지 않았습니다.'); modal.style.display = 'none'; }
-            return;
-        }
-        let imageUrl = '';
-        if (typeof data === 'string') { imageUrl = data; }
-        else {
-            const today = getTodayString();
-            if (data.expireAt && data.expireAt < today) {
-                loader.style.display = 'none';
-                const msg = document.getElementById('mealEmptyMsg');
-                if (msg) { msg.style.display = 'block'; msg.innerText = `식단표 기간이 만료되었습니다.`; }
-                else { showKacAlert('식단표 기간이 만료되었습니다.'); modal.style.display = 'none'; }
-                return;
-            }
-            imageUrl = data.image;
-        }
+    const showMsg = (txt)=>{ loader.style.display='none'; const m=document.getElementById('mealEmptyMsg'); if(m){ m.style.display='block'; m.innerText=txt; } else { showKacAlert(txt); modal.style.display='none'; } };
+    const _mondayOf = (dt)=>{ const x=new Date(dt.getFullYear(),dt.getMonth(),dt.getDate()); const dow=(x.getDay()+6)%7; x.setDate(x.getDate()-dow); const z=n=>String(n).padStart(2,'0'); return `${x.getFullYear()}-${z(x.getMonth()+1)}-${z(x.getDate())}`; };
+    const _thisMon = _mondayOf(new Date());
+    const _render = (data)=>{
+        if(!data){ showMsg('아직 식단표가 업로드되지 않았습니다.'); return; }
+        const wk = data.weekKey || '';
+        if(wk && wk > _thisMon){ showMsg('이번 주 식단표는 아직 준비 중입니다.'); return; }
+        if(wk && wk < _thisMon){ showMsg('식단표 기간이 만료되었습니다.'); return; }
+        const imageUrl = (typeof data==='string') ? data : (data.url || data.image || '');
+        if(!imageUrl){ showMsg('아직 식단표가 업로드되지 않았습니다.'); return; }
+        img.onload = function(){ loader.style.display='none'; img.style.display='block'; };
+        img.onerror = function(){ showMsg('식단표 이미지를 불러오지 못했습니다.'); };
         img.src = imageUrl;
-        img.onload = function() { loader.style.display = 'none'; img.style.display = 'block'; };
+    };
+
+    try {
+        // 업로드 시각만 먼저 가볍게 확인 → 변경 없으면 기기 캐시 사용(대용량 이미지 재다운로드 방지)
+        const ref = firebase.database().ref('system/weeklyMenu');
+        let remoteUp = null;
+        try { const us = await ref.child('uploadedAt').once('value'); remoteUp = us.val(); } catch(_) {}
+        let cache = null;
+        try { cache = JSON.parse(localStorage.getItem('kacMenuCache') || 'null'); } catch(_) {}
+        if (remoteUp == null) { try{ localStorage.removeItem('kacMenuCache'); }catch(_){} showMsg('아직 식단표가 업로드되지 않았습니다.'); return; }
+        if (cache && cache.uploadedAt === remoteUp && cache.url) { _render(cache); return; }   // 변경 없음 → 캐시 사용
+        // 변경됨(또는 캐시 없음) → 전체 1회 다운로드 후 캐시 저장
+        const snap = await ref.once('value');
+        const data = snap.val();
+        if (data && (data.url || data.image)) {
+            try { localStorage.setItem('kacMenuCache', JSON.stringify({ uploadedAt:data.uploadedAt, weekKey:data.weekKey, period:data.period, url:(data.url || data.image) })); } catch(_) {}
+        }
+        _render(data);
     } catch (e) {
         console.error("식단 로딩 에러:", e);
-        modal.style.display = 'none';
+        let cache=null; try{ cache=JSON.parse(localStorage.getItem('kacMenuCache')||'null'); }catch(_){}
+        if (cache && cache.url) { _render(cache); } else { modal.style.display = 'none'; }   // 네트워크 오류 시 캐시 폴백
     }
 }
 
@@ -4378,4 +4383,4 @@ function closeTabletLoan() {
 
 </body>
 </html>
-<!-- @build 20260612-072444 (강의안내보드 빈내용 게시방지) -->
+<!-- @build 20260613-201500 (식단표: 읽기 경로 system/nutrition_menu→system/weeklyMenu 로 영양사 저장경로와 일치, weekKey(이번주 월요일) 기준 표시·예정·만료 판정. 업로드시각(uploadedAt)으로 기기 캐시 — 같은 식단표는 재다운로드 없이 localStorage 사용, 변경 시에만 1회 다운로드. 네트워크 오류 시 캐시 폴백) -->
