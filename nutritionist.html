@@ -555,8 +555,8 @@
         .cal-cell.sun { background:#fdf4f4; } .cal-cell.sun .cal-dnum { color:#ef4444; }
         .cal-cell.sat.has, .cal-cell.sun.has { background:#eef6ff; }
         .cal-dnum { font-size:11px; font-weight:700; color:#475569; }
-        .cal-marks { display:flex; flex-wrap:wrap; gap:2px; margin-top:2px; }
-        .cm { font-size:9px; font-weight:900; border-radius:4px; padding:1px 4px; color:#fff; line-height:1.4; }
+        .cal-marks { display:flex; flex-direction:column; gap:2px; margin-top:3px; align-items:flex-start; }
+        .cm { font-size:9.5px; font-weight:900; border-radius:5px; padding:1px 6px; color:#fff; line-height:1.55; }
         .cm-b { background:#f59e0b; } .cm-l { background:#2563eb; } .cm-d { background:#16a34a; }
         /* ROSTER: 소속바/안내/그룹헤더 */
         .dept-bar { display:flex; flex-wrap:wrap; align-items:center; gap:7px; margin-bottom:14px; }
@@ -2138,7 +2138,7 @@ function renderStaffCounts(agg, month){
         <tr><td colspan="6" id="cal-${key}" style="display:none; background:#f8fafc; padding:14px;">${renderMealCalendar(a, month)}</td></tr>`;
     });
     for(let i=rows.length;i<10;i++){ tb+=`<tr class="cnt-empty"><td>&nbsp;</td><td></td><td></td><td></td><td></td><td></td></tr>`; }
-    box.innerHTML=`<div class="cnt-wrap"><table class="cnt-table"><thead><tr><th style="width:78px;">구분</th><th>소속</th><th>직책</th><th>이름</th><th style="width:200px;">총 식사횟수</th><th>비고</th></tr></thead><tbody>${tb}</tbody><tfoot><tr class="cnt-total"><td colspan="4" style="text-align:right; font-weight:900; padding-right:14px;">총 합계</td><td class="c"><b style="font-size:18px; color:#2563eb;">${gTot}</b><small style="font-size:11px;">회</small> <span class="cnt-bld">아 ${gb}·점 ${gl}·저 ${gd}</span></td><td></td></tr></tfoot></table></div>`;
+    box.innerHTML=`<div class="cnt-wrap"><table class="cnt-table"><thead><tr><th style="width:78px;">구분</th><th>소속</th><th>직책</th><th>이름</th><th style="width:200px;">총 식사횟수</th><th>비고</th></tr></thead><tbody>${tb}</tbody><tfoot><tr class="cnt-total"><td colspan="4" style="text-align:right; font-weight:900; padding-right:14px;">총 합계</td><td class="c"><b style="font-size:18px; color:#2563eb;">${gTot}</b><small style="font-size:11px;">회</small> <span class="cnt-bld">아침 ${gb} · 점심 ${gl} · 저녁 ${gd}</span></td><td></td></tr></tfoot></table></div>`;
 }
 /* 총횟수 수정 / 메모 */
 function editCnt(key){ if(_monthLocked){ showToast('확정(잠금)된 달입니다. 잠금을 해제해야 수정할 수 있습니다.'); return; } _editCntId=key; renderStaffCounts(_mealAgg,_mealMonth); }
@@ -2214,11 +2214,29 @@ function exportMealExcel(){
     if(!ext.length) r2.push(_xrow([_xc('사외강사 식사 기록이 없습니다.')]));
     else r2.push(_xrow([_xc('합계'),_xc(''),_xc(''),_xc(eb,1),_xc(el,1),_xc(ed,1),_xc(et,1)]));
 
+    // ── 시트3: 일자별 식수 (주말 회색) ──
+    const dayMap={};
+    _mealRowsSorted().forEach(([key,a])=>{
+        Object.entries(a.days||{}).forEach(([date,md])=>{ if(!date.startsWith(_mealMonth)||!md) return; const o=dayMap[date]||(dayMap[date]={b:0,l:0,d:0}); if(md.b)o.b++; if(md.l)o.l++; if(md.d)o.d++; });
+    });
+    const _pm=(_mealMonth||'').split('-').map(Number); const _yy=_pm[0], _mm=_pm[1];
+    const _dim=new Date(_yy,_mm,0).getDate(); const _dow=['일','월','화','수','목','금','토'];
+    let r3=[ _xrow(['날짜','요일','아침','점심','저녁','합계','비고'].map(h=>_xc(h,0,'h'))) ];
+    let tb=0,tl=0,td=0;
+    for(let dd=1; dd<=_dim; dd++){
+        const date=`${_yy}-${String(_mm).padStart(2,'0')}-${String(dd).padStart(2,'0')}`;
+        const wd=new Date(_yy,_mm-1,dd).getDay(); const we=(wd===0||wd===6); const sid=we?'wk':'c';
+        const o=dayMap[date]||{b:0,l:0,d:0}; const sum=o.b+o.l+o.d; tb+=o.b; tl+=o.l; td+=o.d;
+        const note=wd===0?'일요일':(wd===6?'토요일':'');
+        r3.push(_xrow([_xc(`${_mm}/${dd}`,0,sid),_xc(_dow[wd],0,sid),_xc(o.b,1,sid),_xc(o.l,1,sid),_xc(o.d,1,sid),_xc(sum,1,sid),_xc(note,0,sid)]));
+    }
+    r3.push(_xrow([_xc('합계',0,'h'),_xc('',0,'h'),_xc(tb,1,'h'),_xc(tl,1,'h'),_xc(td,1,'h'),_xc(tb+tl+td,1,'h'),_xc('',0,'h')]));
+
     const ws=(name,rows)=>`<Worksheet ss:Name="${escH(name)}"><Table>${rows.join('')}</Table></Worksheet>`;
     const xml=`<?xml version="1.0" encoding="UTF-8"?><?mso-application progid="Excel.Sheet"?>`+
         `<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">`+
-        `<Styles><Style ss:ID="c"><Alignment ss:Horizontal="Center" ss:Vertical="Center"/></Style><Style ss:ID="h"><Alignment ss:Horizontal="Center" ss:Vertical="Center"/><Font ss:Bold="1" ss:Color="#FFFFFF"/><Interior ss:Color="#1E3A8A" ss:Pattern="Solid"/></Style></Styles>`+
-        ws('직원 식수', r1) + ws('사외강사 정산', r2) + `</Workbook>`;
+        `<Styles><Style ss:ID="c"><Alignment ss:Horizontal="Center" ss:Vertical="Center"/></Style><Style ss:ID="h"><Alignment ss:Horizontal="Center" ss:Vertical="Center"/><Font ss:Bold="1" ss:Color="#FFFFFF"/><Interior ss:Color="#1E3A8A" ss:Pattern="Solid"/></Style><Style ss:ID="wk"><Alignment ss:Horizontal="Center" ss:Vertical="Center"/><Font ss:Color="#475569"/><Interior ss:Color="#E5E7EB" ss:Pattern="Solid"/></Style></Styles>`+
+        ws('직원 식수', r1) + ws('일자별 식수', r3) + ws('사외강사 정산', r2) + `</Workbook>`;
     const blob=new Blob(['\ufeff'+xml],{type:'application/vnd.ms-excel;charset=utf-8'});
     const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download=_mealFileTitle()+'.xls'; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url),1500);
 }
@@ -2280,14 +2298,14 @@ function renderMealCalendar(a, month){
         const date=`${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
         const dow=new Date(y,m-1,d).getDay(); const we=dow===0?' sun':(dow===6?' sat':'');
         const md=a.days[date], note=a.notes&&a.notes[date];
-        const marks=md?`<div class="cal-marks">${md.b?'<span class="cm cm-b">아</span>':''}${md.l?'<span class="cm cm-l">점</span>':''}${md.d?'<span class="cm cm-d">저</span>':''}</div>`:'';
+        const marks=md?`<div class="cal-marks">${md.b?'<span class="cm cm-b">아침</span>':''}${md.l?'<span class="cm cm-l">점심</span>':''}${md.d?'<span class="cm cm-d">저녁</span>':''}</div>`:'';
         cells+=`<div class="cal-cell ${md?'has':''}${we}"${note?` title="${escH(note)}"`:''}><div class="cal-dnum">${d}</div>${marks}</div>`;
     }
-    return `<div class="mealcal"><div class="cal-sum"><i class="fa-regular fa-calendar-check"></i> <b>${escH(a.name||'')}</b> · ${y}년 ${m}월 &nbsp;|&nbsp; 아침 <b>${bc}</b> · 점심 <b>${lc}</b> · 저녁 <b>${dc}</b> &nbsp;=&nbsp; 합계 <b style="color:var(--blue);">${bc+lc+dc}</b>회</div><div class="cal-legend"><span class="cm cm-b">아</span>아침 <span class="cm cm-l">점</span>점심 <span class="cm cm-d">저</span>저녁</div><div class="cal-dows">${dows.map((n,i)=>`<div class="cal-dow ${i===0?'sun':''}${i===6?'sat':''}">${n}</div>`).join('')}</div><div class="cal-grid">${cells}</div></div>`;
+    return `<div class="mealcal"><div class="cal-sum"><i class="fa-regular fa-calendar-check"></i> <b>${escH(a.name||'')}</b> · ${y}년 ${m}월 &nbsp;|&nbsp; 아침 <b>${bc}</b> · 점심 <b>${lc}</b> · 저녁 <b>${dc}</b> &nbsp;=&nbsp; 합계 <b style="color:var(--blue);">${bc+lc+dc}</b>회</div><div class="cal-legend"><span class="cm cm-b">아침</span> <span class="cm cm-l">점심</span> <span class="cm cm-d">저녁</span></div><div class="cal-dows">${dows.map((n,i)=>`<div class="cal-dow ${i===0?'sun':''}${i===6?'sat':''}">${n}</div>`).join('')}</div><div class="cal-grid">${cells}</div></div>`;
 }
 </script>
 <style>@media print{#__ver{display:none!important}}</style>
-<div id="__ver" style="position:fixed;right:7px;bottom:7px;z-index:2147483000;background:rgba(15,23,42,.72);color:#cbd5e1;font:700 10px/1 monospace;padding:4px 8px;border-radius:7px;pointer-events:none;letter-spacing:.3px;">영양사 vFF · 260613-1430</div>
+<div id="__ver" style="position:fixed;right:7px;bottom:7px;z-index:2147483000;background:rgba(15,23,42,.72);color:#cbd5e1;font:700 10px/1 monospace;padding:4px 8px;border-radius:7px;pointer-events:none;letter-spacing:.3px;">영양사 vGG · 260613-1450</div>
 <div id="notifyStack" class="notify-stack"></div>
 </body>
 </html>
