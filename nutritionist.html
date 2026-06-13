@@ -205,7 +205,27 @@
         .cnt-reason { width:172px; height:30px; border:1.5px solid #f59e0b; border-radius:7px; padding:0 9px; font-size:12.5px; font-weight:700; box-sizing:border-box; }
         .cnt-reason::placeholder { color:#f59e0b; opacity:.75; }
         .cnt-row.has-meal td { background:#eff6ff; }
-        .cnt-row.has-meal:hover td { background:#e0ecff; }
+        .cw-sum { display:flex; align-items:center; gap:7px; font-size:13px; font-weight:800; color:var(--navy); background:#eff6ff; border:1px solid #dbeafe; border-radius:10px; padding:9px 14px; margin:6px 0 12px; }
+        .cw-sum i { color:var(--blue); }
+        .cw-sum b { color:var(--blue); font-size:15px; margin-left:3px; }
+        .cw-sum-pend { color:#94a3b8; font-weight:700; font-size:12px; }
+        .cw-card2 { display:flex; align-items:center; gap:14px; background:#fff; border:1.5px solid var(--border); border-left:5px solid #cbd5e1; border-radius:14px; padding:14px 18px; margin-bottom:10px; }
+        .cw-card2.live { border-left-color:#10b981; }
+        .cw-card2.soon { border-left-color:#3b82f6; }
+        .cw-card2.done { border-left-color:#cbd5e1; opacity:.82; }
+        .cw-stat { display:inline-flex; align-items:center; gap:5px; font-size:12.5px; font-weight:800; padding:7px 13px; border-radius:9px; white-space:nowrap; flex-shrink:0; }
+        .cw-stat i { font-size:9px; }
+        .cw-stat-live { background:#ecfdf5; color:#059669; } .cw-stat-live i { font-size:8px; }
+        .cw-stat-soon { background:#eff6ff; color:#2563eb; }
+        .cw-stat-done { background:#f1f5f9; color:#94a3b8; }
+        .cw-main { flex:1; min-width:0; }
+        .cw-name2 { font-size:16px; font-weight:900; color:var(--navy); margin-bottom:4px; }
+        .cw-meta2 { font-size:12.5px; color:var(--muted); font-weight:700; }
+        .cw-meta2 i { margin-right:3px; }
+        .cw-right { display:flex; align-items:center; gap:9px; flex-shrink:0; }
+        .cw-head { display:inline-flex; align-items:center; gap:6px; background:#ecfdf5; color:#059669; font-size:15px; font-weight:900; padding:8px 15px; border-radius:10px; white-space:nowrap; }
+        .cw-head.pending { background:#fef9c3; color:#a16207; font-size:13px; font-weight:800; }
+        .cw-prof { display:inline-flex; align-items:center; gap:5px; background:#f1f5f9; color:#475569; font-size:13px; font-weight:800; padding:8px 13px; border-radius:10px; white-space:nowrap; }
         .modal-sheet {
             background: var(--white);
             border-radius: 24px 24px 0 0;
@@ -782,6 +802,10 @@ function loadRoomData() {
     db.ref('courses').on('value', snap => {
         allRoomData = snap.val() || {};
         renderMealStats(today);
+        // 지원부/운영부에서 명단 업로드 시 과정 탭 입교 인원 즉시 반영
+        if(_courseCache && document.getElementById('sec-course')?.classList.contains('active')){
+            renderCourseWeek(_courseCache.courses, _courseCache.ctx);
+        }
     }, err => { console.warn('[courses] read error', err); });
 }
 
@@ -1115,7 +1139,7 @@ const STAFF_ROSTER = 'system/staffMeal/roster';
 const STAFF_CHECKS = 'system/staffMeal/checks';
 
 window.addEventListener('DOMContentLoaded', () => {
-    db.ref(STAFF_ROSTER).on('value', s => { _staffRoster = s.val() || {}; renderRoster(); fillDeptOptions(); renderMealStats(getToday()); });
+    db.ref(STAFF_ROSTER).on('value', s => { _staffRoster = s.val() || {}; _normalizeRosterOrders(); renderRoster(); fillDeptOptions(); renderMealStats(getToday()); });
     db.ref('system/staffMeal/depts').on('value', s => { _deptPresets = s.val() || {}; fillDeptOptions(); });
     renderMenuWeekBar();
     loadAccount();
@@ -1134,6 +1158,7 @@ function showTab(id){
    - 토/일이면 차주로 전환(타 플랫폼과 동일 규칙)
 ══════════════════════════ */
 let _courseWeekOffset = 0;
+let _courseCache = null;
 let _menuWeekOffset = 0;
 function _menuSelMonday(){ return _cwAddDays(getMondayOf(getToday()), _menuWeekOffset*7); }
 function _menuPeriodStr(mon){ const fri=_cwAddDays(mon,4); const f=iso=>{const p=iso.split('-');return `${p[0]}.${p[1]}.${p[2]}`;}; return `${f(mon)} ~ ${f(fri)} (월~금)`; }
@@ -1184,10 +1209,32 @@ function loadCourseWeek(){
             .filter(c=> c.startDate<=fri && c.endDate>=sat)          // 해당 주(토~금)에 걸치는 과정
             .sort((a,b)=>(a.startDate||'').localeCompare(b.startDate||''));
         renderCourseWeek(courses, {mon,sat,fri,today});
+        _courseCache={courses, ctx:{mon,sat,fri,today}};
     }).catch(e=>{
         console.warn('[annualPlan] read error', e);
         list.innerHTML='<div class="empty-msg">연간교육계획 데이터를 불러오지 못했습니다.<br><button class="mini-btn" style="margin-top:10px;" onclick="loadCourseWeek()"><i class="fa-solid fa-rotate-right"></i> 다시 시도</button></div>';
     });
+}
+function _normCourse(s){ return (s||'').replace(/\s+/g,'').toLowerCase(); }
+function _roomMatchForCourse(c){
+    const target=_normCourse(c.name); if(!target) return null;
+    let best=null;
+    Object.keys(allRoomData||{}).forEach(rid=>{
+        const room=allRoomData[rid]; if(!room) return;
+        if(room?.settings?.hideFromBoard) return;
+        if(_normCourse(room.settings?.courseName)!==target) return;
+        const active = room?.status?.roomStatus==='active';
+        if(!best || (active && !best.active)) best={rid, room, active};
+    });
+    return best;
+}
+function _courseCounts(c){
+    const m=_roomMatchForCourse(c);
+    if(!m) return {found:false, total:0};
+    const students=m.room.students||{};
+    const names=new Set();
+    Object.values(students).forEach(s=>{ if(s?.name && s.name!=='undefined') names.add(String(s.name).trim()); });
+    return {found:true, total:names.size};
 }
 function renderCourseWeek(courses, ctx){
     const list=document.getElementById('courseStatusList'); if(!list) return;
@@ -1198,19 +1245,33 @@ function renderCourseWeek(courses, ctx){
         list.innerHTML = nav + '<div class="empty-msg" style="margin-top:6px;">해당 주에 운영 예정인 과정이 없습니다.</div>';
         return;
     }
+    let sumKnown=0, anyPending=false;
     const body = courses.map(c=>{
-        const running = (c.startDate<=ctx.today && c.endDate>=ctx.today);
         const room = (c.roomDetail||c.classroom||c.roomName||'').trim();
         const prof = (c.prof||'').trim();
-        return `<div class="cw-card${running?' running':''}">
-            <div class="cw-top">
-                <div class="cw-name">${escH(c.name)}${running?' <span class="cw-live">운영중</span>':''}</div>
-                ${room?`<span class="cw-room">${escH(room)}</span>`:''}
+        let stat, statCls, statIc;
+        if(c.endDate<ctx.today){ stat='종료'; statCls='done'; statIc='<i class="fa-solid fa-flag-checkered"></i>'; }
+        else if(c.startDate>ctx.today){ stat='예정'; statCls='soon'; statIc='<i class="fa-regular fa-clock"></i>'; }
+        else { stat='운영중'; statCls='live'; statIc='<i class="fa-solid fa-circle"></i>'; }
+        const cc=_courseCounts(c);
+        if(cc.found) sumKnown+=cc.total; else anyPending=true;
+        const headBadge = cc.found
+            ? `<span class="cw-head"><i class="fa-solid fa-circle-check"></i> ${cc.total}명</span>`
+            : `<span class="cw-head pending"><i class="fa-regular fa-clock"></i> 명단 대기</span>`;
+        return `<div class="cw-card2 ${statCls}">
+            <span class="cw-stat cw-stat-${statCls}">${statIc} ${stat}</span>
+            <div class="cw-main">
+                <div class="cw-name2">${escH(c.name)}</div>
+                <div class="cw-meta2"><i class="fa-regular fa-calendar"></i> ${escH(c.startDate)} ~ ${escH(c.endDate)}${room?` &nbsp;·&nbsp; <i class="fa-solid fa-location-dot"></i> ${escH(room)}`:''}</div>
             </div>
-            <div class="cw-meta"><i class="fa-regular fa-calendar"></i> ${escH(c.startDate)} ~ ${escH(c.endDate)}${prof?` &nbsp;·&nbsp; <i class="fa-solid fa-chalkboard-user"></i> ${escH(prof)}`:''}</div>
+            <div class="cw-right">
+                ${headBadge}
+                ${prof?`<span class="cw-prof"><i class="fa-solid fa-user"></i> ${escH(prof)}</span>`:''}
+            </div>
         </div>`;
     }).join('');
-    list.innerHTML = nav + body;
+    const summary = `<div class="cw-sum"><i class="fa-solid fa-users"></i> 이 주 입교 인원 합계 <b>${sumKnown}명</b>${anyPending?' <span class="cw-sum-pend">· 일부 과정 명단 대기</span>':''}</div>`;
+    list.innerHTML = nav + summary + body;
 }
 /* ── 헤더 시계 (강사플랫폼 스타일) ── */
 function startClock(){
@@ -1248,6 +1309,17 @@ function toggleAcc(id){ const c=document.getElementById(id); if(c) c.classList.t
 function nowTime(){ const d=new Date(),p=x=>String(x).padStart(2,'0'); return `${p(d.getHours())}:${p(d.getMinutes())}`; }
 
 const _ord = r => (r && r.order!=null) ? r.order : 9999;
+/* 레거시/중복 order 값 정리 — 소속별 0,10,20… 재부여 (순서·병합·추가위치 안정화) */
+function _normalizeRosterOrders(){
+    const byDept={};
+    Object.entries(_staffRoster||{}).forEach(([id,r])=>{ if(!r)return; const d=((r.dept||'').trim()); (byDept[d]||(byDept[d]=[])).push([id,r]); });
+    const updates={};
+    Object.values(byDept).forEach(arr=>{
+        arr.sort((a,b)=> (_ord(a[1])-_ord(b[1])) || ((a[1].createdAt||0)-(b[1].createdAt||0)) || (a[1].name||'').localeCompare(b[1].name||'','ko'));
+        arr.forEach(([id,r],i)=>{ const want=i*10; if(r.order!==want){ r.order=want; updates[`${STAFF_ROSTER}/${id}/order`]=want; } });
+    });
+    if(Object.keys(updates).length) db.ref().update(updates);
+}
 function renderRoster(){
     const box=document.getElementById('staffRosterList'); if(!box) return;
     const items=Object.entries(_staffRoster);
@@ -1505,8 +1577,15 @@ function saveEdit(id){
     const n=(document.getElementById('edit-name').value||'').trim();
     const note=(document.getElementById('edit-note').value||'').trim();
     if(!n){ showToast('성함을 입력하세요.'); return; }
+    const cur=_staffRoster[id]||{};
+    const patch={ dept:d, position:p, name:n, note:note };
+    if(((cur.dept||'').trim())!==d){
+        // 소속이 바뀌면 새 소속의 맨 아래로 배치 (병합·순서 안정화)
+        const maxOrd=Object.entries(_staffRoster).filter(([i,x])=>i!==id && x && ((x.dept||'').trim())===d).reduce((m,[i,x])=>Math.max(m,(x.order!=null?x.order:0)),-10);
+        patch.order=maxOrd+10;
+    }
     _editId=null;
-    db.ref(`${STAFF_ROSTER}/${id}`).update({ dept:d, position:p, name:n, note:note }).then(()=>showToast('수정되었습니다.'));
+    db.ref(`${STAFF_ROSTER}/${id}`).update(patch).then(()=>showToast('수정되었습니다.'));
 }
 function deleteStaff(id){
     const r=_staffRoster[id]; if(!r) return;
@@ -1723,7 +1802,7 @@ function renderMealCalendar(a, month){
 }
 </script>
 <style>@media print{#__ver{display:none!important}}</style>
-<div id="__ver" style="position:fixed;right:7px;bottom:7px;z-index:2147483000;background:rgba(15,23,42,.72);color:#cbd5e1;font:700 10px/1 monospace;padding:4px 8px;border-radius:7px;pointer-events:none;letter-spacing:.3px;">영양사 vS · 260613-0245</div>
+<div id="__ver" style="position:fixed;right:7px;bottom:7px;z-index:2147483000;background:rgba(15,23,42,.72);color:#cbd5e1;font:700 10px/1 monospace;padding:4px 8px;border-radius:7px;pointer-events:none;letter-spacing:.3px;">영양사 vT · 260613-0345</div>
 </body>
 </html>
-<!-- @build 20260613-024500 (영양사 vS: 명단 이름·소속 검색필터 / 직원 일괄등록(붙여넣기·CSV) / 식수 0회 흐리게+기록행 강조 / 월 확정(잠금) / 식수 수정 사유 필수입력) -->
+<!-- @build 20260613-034500 (영양사 vT: 과정 현황에 입교 인원 실시간 표시(annualPlan↔courses 명단 매칭, 지원부/운영부 업로드 즉시 반영, image2 블록 카드) / 명단 order 정규화로 순서·병합·추가위치 버그 수정 / 소속 변경 시 새 소속 맨 아래 배치) -->
