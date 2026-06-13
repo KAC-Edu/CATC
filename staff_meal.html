@@ -521,7 +521,7 @@ function applySoundIcon(){
 function toggleSound(){ SOUND_ON=!SOUND_ON; try{ localStorage.setItem('kacMealSound', SOUND_ON?'on':'off'); }catch(e){} applySoundIcon(); }
 /* ── 환경설정 팝업 (소리 / 테스트 모드) ── */
 function openSettings(){ requireUnlock(_openSettingsReal); }
-function _openSettingsReal(){ renderSettings(); overlay.classList.add('show'); }
+function _openSettingsReal(){ _overlayKeep=true; renderSettings(); overlay.classList.add('show'); }
 function renderSettings(){
     ovCard.className='ov-card';
     ovCard.innerHTML = `
@@ -574,7 +574,7 @@ function _openPatModal(mode, onOk, first){
             ${mode==='unlock'?'<button class="ov-btn" style="background:#eff6ff;color:#2563eb;" onclick="_patForgot()">패턴을 잊으셨나요? 비밀번호로 풀기</button>':''}
             <button class="ov-btn gray" onclick="closeOverlay()">닫기</button>
         </div>`;
-    overlay.classList.add('show');
+    _overlayKeep=true; overlay.classList.add('show');
     const pad=document.getElementById('patPad');
     if(pad){ pad.addEventListener('pointerdown', _patDown); pad.addEventListener('pointermove', _patMove); }
     window.removeEventListener('pointerup',_patUp); window.addEventListener('pointerup',_patUp);
@@ -606,7 +606,7 @@ function _openPwModal(){
         <div class="pw-dots" id="pwDots"></div>
         <div class="pw-keypad">${[1,2,3,4,5,6,7,8,9].map(n=>`<button class="pw-key" onclick="_pwIn('${n}')">${n}</button>`).join('')}<button class="pw-key pw-del" onclick="_pwDel()">⌫</button><button class="pw-key" onclick="_pwIn('0')">0</button><button class="pw-key pw-ok" onclick="_pwOk()">확인</button></div>
         <div class="ov-actions" style="margin-top:10px;"><button class="ov-btn gray" onclick="closeOverlay()">닫기</button></div>`;
-    overlay.classList.add('show'); _pwRender();
+    _overlayKeep=true; overlay.classList.add('show'); _pwRender();
 }
 function _pwIn(d){ if(_pw.length>=8) return; _pw+=String(d); _pwRender(); }
 function _pwDel(){ _pw=_pw.slice(0,-1); _pwRender(); }
@@ -720,7 +720,7 @@ function enterFs(){
     else toast('이 기기/브라우저는 전체화면을 지원하지 않습니다. (아이패드 Safari는 홈 화면에 추가 후 실행해 주세요)');
 }
 function exitFs(){ const ex = document.exitFullscreen || document.webkitExitFullscreen; if (ex) { try { ex.call(document); } catch(e){} } }
-let _fsHoldTimer=null, _fsJustExited=false;
+let _fsHoldTimer=null, _fsJustExited=false, _fsIntentExit=false;
 function _fsHoldStart(ev){
     if(!isFs()) return;             // 해제 길게누르기는 전체화면일 때만
     ev.preventDefault();
@@ -728,7 +728,7 @@ function _fsHoldStart(ev){
     if(ind) ind.classList.add('show');
     if(bar){ bar.style.transition='none'; bar.style.width='0%'; void bar.offsetWidth; bar.style.transition=`width ${FS_HOLD_MS}ms linear`; bar.style.width='100%'; }
     clearTimeout(_fsHoldTimer);
-    _fsHoldTimer=setTimeout(()=>{ _fsHoldEnd(); _fsJustExited=true; exitFs(); setTimeout(()=>{ _fsJustExited=false; }, 700); }, FS_HOLD_MS);
+    _fsHoldTimer=setTimeout(()=>{ _fsHoldEnd(); _fsJustExited=true; _fsIntentExit=true; exitFs(); setTimeout(()=>{ _fsJustExited=false; }, 700); }, FS_HOLD_MS);
 }
 function _fsHoldEnd(){
     clearTimeout(_fsHoldTimer); _fsHoldTimer=null;
@@ -736,15 +736,21 @@ function _fsHoldEnd(){
     if(ind) ind.classList.remove('show');
     if(bar){ bar.style.transition='none'; bar.style.width='0%'; }
 }
+function _armFsReenter(){
+    toast('전체화면이 해제되었습니다. 화면을 누르면 다시 전체화면으로 전환됩니다.');
+    const h=()=>{ document.removeEventListener('pointerdown',h,true); if(!isFs() && !TEST_MODE){ try{ enterFs(); }catch(_){} } };
+    document.addEventListener('pointerdown',h,true);
+}
 function onFsChange(){
     const b=document.getElementById('fsBtn');
     if(b){ const ic=b.querySelector('i'); if(ic) ic.className=isFs()?'fa-solid fa-compress':'fa-solid fa-expand'; b.title=isFs()?'전체화면 해제 (3초간 누르기)':'전체화면'; }
-    if(!isFs()) _fsHoldEnd();
+    if(!isFs()){ _fsHoldEnd(); if(!TEST_MODE && !_fsIntentExit) _armFsReenter(); }   // 비테스트: 의도치 않은(ESC 등) 해제는 다음 터치에 재진입
+    _fsIntentExit=false;
     if(CURRENT==='staff') setTimeout(fitTable, 80);
 }
 function initFsButton(){
     const b=document.getElementById('fsBtn'); if(!b) return;
-    b.addEventListener('click', ()=>{ if(_fsJustExited){ _fsJustExited=false; return; } if(!isFs()) enterFs(); else toast('전체화면을 끄려면 버튼을 3초간 누르세요.'); });
+    b.addEventListener('click', ()=>{ if(_fsJustExited){ _fsJustExited=false; return; } if(!isFs()){ enterFs(); return; } if(TEST_MODE){ _fsIntentExit=true; exitFs(); return; } toast('전체화면을 끄려면 버튼을 3초간 누르세요.'); });
     b.addEventListener('pointerdown', _fsHoldStart);
     b.addEventListener('pointerup',   _fsHoldEnd);
     b.addEventListener('pointerleave',_fsHoldEnd);
@@ -853,6 +859,15 @@ function submitInstructor(){
 
 // ── 코인 회전 후 기록 ──
 const overlay=document.getElementById('overlay'), ovCard=document.getElementById('ovCard');
+/* 안전장치: 켜진 팝업은 기본 3초 뒤 자동으로 닫힘(설정·패턴·비밀번호 등 상호작용 팝업은 _overlayKeep=true 로 제외) */
+let _overlayKeep=false, _ocSafetyT=null;
+(function(){ try{
+    const mo=new MutationObserver(()=>{
+        clearTimeout(_ocSafetyT);
+        if(overlay.classList.contains('show') && !_overlayKeep){ _ocSafetyT=setTimeout(()=>{ try{ closeOverlay(); }catch(_){} }, 3000); }
+    });
+    mo.observe(overlay, { attributes:true, attributeFilter:['class'] });
+}catch(e){} })();
 function spinThenSet(ref, payload, name, sub){
     ovCard.className='ov-card';
     ovCard.innerHTML = `<div class="coin">₩</div><div class="ov-ttl" style="color:#fbbf24;">식수 처리 중…</div><div class="ov-name">${esc(name)}</div>`;
@@ -909,14 +924,14 @@ function showCancelConfirm(name, time, onCancel, msg){
 }
 let _ac=null;
 function autoClose(){ clearTimeout(_ac); _ac=setTimeout(closeOverlay, 2200); }
-function closeOverlay(){ clearTimeout(_ac); _clearExtTimers(); _patCleanup(); overlay.classList.remove('show'); if(CURRENT==='instr') goHome(); }
+function closeOverlay(){ clearTimeout(_ac); _clearExtTimers(); _patCleanup(); _overlayKeep=false; clearTimeout(_ocSafetyT); overlay.classList.remove('show'); if(CURRENT==='instr') goHome(); }
 
 /* ── 강사 QR 표시 (키오스크) ── */
 let _extCloseT=null, _extCountT=null;
 function _clearExtTimers(){ try{clearTimeout(_extCloseT);}catch(_){} try{clearInterval(_extCountT);}catch(_){} _extCloseT=null; _extCountT=null; }
 function showInstrQr(mode){
     const isInt = mode==='internal';
-    _clearExtTimers();
+    _clearExtTimers(); _overlayKeep=false;
     if(isInt){
         // KAC 임직원: 기존처럼 본인 휴대폰에서 입력하는 QR
         const url = new URL('staff_meal.html', location.href);
@@ -1010,7 +1025,7 @@ function esc(v){ return String(v==null?'':v).replace(/[&<>"']/g,c=>({'&':'&amp;'
 /* 초기 진입은 위의 ?go 분기에서 처리됨 */
 </script>
 <style>@media print{#__ver{display:none!important}}</style>
-<div id="__ver" style="position:fixed;right:7px;bottom:7px;z-index:2147483000;background:rgba(15,23,42,.72);color:#cbd5e1;font:700 10px/1 monospace;padding:4px 8px;border-radius:7px;pointer-events:none;letter-spacing:.3px;">식당패널 vEE · 260613-1835</div>
+<div id="__ver" style="position:fixed;right:7px;bottom:7px;z-index:2147483000;background:rgba(15,23,42,.72);color:#cbd5e1;font:700 10px/1 monospace;padding:4px 8px;border-radius:7px;pointer-events:none;letter-spacing:.3px;">식당패널 vFF · 260613-1858</div>
 </body>
 </html>
-<!-- @build 20260613-183500 (식당패널 vEE: ①사외강사 QR 수정 — 한글텍스트가 qrcodejs에서 깨져 ASCII URL(staff_meal.html?go=acct)로 변경. 스캔 시 폰에 계좌(은행·번호·예금주) 표시(showMobileAccount). ②설정버튼 패턴잠금 — 3x3 드래그 패턴 등록/변경/초기화, 패턴 분실 시 비밀번호 13281(****마스킹) 입력으로 해제. ③시간대 잠금 실시간 — 시계 틱마다 활성 시간대 변화 감지해 새로고침 없이 자동으로 풀림/잠김) -->
+<!-- @build 20260613-185800 (식당패널 vFF: ①KAC임직원·사외강사 QR 팝업 + 그 외 모든 팝업 기본 3초 자동닫힘(설정·패턴·비밀번호 상호작용 팝업만 제외) — MutationObserver 안전장치. ②전체화면 잠금 강화 — 비테스트 상태에선 전체화면 버튼 3초 홀드로만 해제, 상단바·일반탭으로는 절대 해제 안 됨, ESC 등 의도치 않은 해제 시 다음 터치에 자동 재진입. 테스트 모드에선 버튼 탭으로 즉시 해제 허용) -->
