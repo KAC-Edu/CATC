@@ -255,6 +255,7 @@
         .meal-table td.c { cursor:pointer; padding:0; }
         .meal-table td.c.locked { cursor:not-allowed; }
         .meal-table .dept-cell { background:#eff6ff; font-weight:900; color:#1e40af; font-size:var(--dept-fz); vertical-align:middle; white-space:nowrap; letter-spacing:.04em; }
+        .meal-table tbody tr.dt-start > td { border-top:3px solid var(--da,#cbd5e1); }   /* 소속부서 구분선 */
         .meal-table .pos-cell { color:#334155; font-weight:700; font-size:var(--pos-fz); white-space:nowrap; }
         .meal-table .name-cell { font-weight:900; color:#0f172a; font-size:var(--name-fz); white-space:nowrap; letter-spacing:.26em; padding-left:.26em; }
         .mchk { display:inline-flex; vertical-align:middle; align-items:center; justify-content:center; width:var(--chk); height:var(--chk); border-radius:13px; border:2px solid #cbd5e1; background:#fff; color:#fff; font-size:calc(var(--chk) * .5); transition:transform .1s, background .12s, border-color .12s; pointer-events:none; }
@@ -357,6 +358,13 @@ function renderStaffList(){
     Object.entries(groups).forEach(([d,arr])=>{ _deptFirst[d]=Math.min.apply(null, arr.map(([id,r])=>(r.createdAt!=null?r.createdAt:Infinity))); });
     const _drank=(d,fc)=>{ const o=_deptOrder[(d||'').trim()]; if(o!=null) return o; const v=(fc==null||fc===Infinity)?9e14:fc; return 1e15+v; };
     const depts = Object.keys(groups).sort((a,b)=> (_drank(a,_deptFirst[a])-_drank(b,_deptFirst[b])) || a.localeCompare(b,'ko'));
+    // 소속부서별 색상 (등록/정렬 순서대로 순환) — 배경(bg)·강조선(ac)·글자(fg)
+    const DEPT_PALETTE=[
+        {bg:'#eff6ff',ac:'#3b82f6',fg:'#1e40af'}, {bg:'#f0fdf4',ac:'#22c55e',fg:'#15803d'},
+        {bg:'#fff7ed',ac:'#fb923c',fg:'#c2410c'}, {bg:'#faf5ff',ac:'#a855f7',fg:'#7e22ce'},
+        {bg:'#fdf2f8',ac:'#ec4899',fg:'#be185d'}, {bg:'#f0fdfa',ac:'#14b8a6',fg:'#0f766e'},
+        {bg:'#eef2ff',ac:'#6366f1',fg:'#4338ca'}, {bg:'#fef2f2',ac:'#ef4444',fg:'#b91c1c'}];
+    const deptColor={}; depts.forEach((d,i)=>{ deptColor[d]=DEPT_PALETTE[i%DEPT_PALETTE.length]; });
     const flat = [];
     const _en=r=>{const v=((r&&r.empNo)||'').toString().trim();if(!v)return Infinity;const n=parseInt(v.replace(/\D/g,''),10);return isNaN(n)?Infinity:n;};
     depts.forEach(d=>{
@@ -378,10 +386,15 @@ function renderStaffList(){
             const dept=deptOf(arr[i][1]);
             let j=i; while(j<arr.length && deptOf(arr[j][1])===dept) j++;
             const run=j-i;
+            const c=deptColor[dept]||DEPT_PALETTE[0];
+            const firstBlock=(i===0);
             for(let k=i;k<j;k++){
                 const [id,r]=arr[k];
-                html += `<tr>
-                    ${k===i?`<td class="dept-cell" rowspan="${run}">${esc(dept)}</td>`:''}
+                const startRow=(k===i);
+                const trCls=(startRow && !firstBlock)?' class="dt-start"':'';
+                const trStyle=startRow?` style="--da:${c.ac}"`:'';
+                html += `<tr${trCls}${trStyle}>
+                    ${startRow?`<td class="dept-cell" rowspan="${run}" style="background:${c.bg};color:${c.fg};border-left:7px solid ${c.ac};">${esc(dept)}</td>`:''}
                     <td class="pos-cell">${esc(r.position||'-')}</td>
                     <td class="name-cell" onclick="showMyCount('${id}')" title="이번 달 식사 횟수 보기">${esc(r.name||'')}</td>
                     ${cell(id,'b', !!TODAY_BREAKFAST[id])}
@@ -1047,7 +1060,7 @@ function esc(v){ return String(v==null?'':v).replace(/[&<>"']/g,c=>({'&':'&amp;'
 /* 초기 진입은 위의 ?go 분기에서 처리됨 */
 </script>
 <style>@media print{#__ver{display:none!important}}</style>
-<div id="__ver" style="position:fixed;right:7px;bottom:7px;z-index:2147483000;background:rgba(15,23,42,.72);color:#cbd5e1;font:700 10px/1 monospace;padding:4px 8px;border-radius:7px;pointer-events:none;letter-spacing:.3px;">식당패널 vHH · 260613-2100</div>
+<div id="__ver" style="position:fixed;right:7px;bottom:7px;z-index:2147483000;background:rgba(15,23,42,.72);color:#cbd5e1;font:700 10px/1 monospace;padding:4px 8px;border-radius:7px;pointer-events:none;letter-spacing:.3px;">식당패널 vII · 260613-2200</div>
 </body>
 </html>
 <!-- @build 20260613-192000 (식당패널 vGG: KAC임직원 QR 팝업도 사외강사처럼 "닫기 (3)(2)(1)" 카운트다운 + 3초 자동닫힘 + 즉시 닫기 버튼. QR 팝업은 자체 타이머로 닫으므로 일괄 옵저버에서 제외(keep)) -->
