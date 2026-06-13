@@ -56,6 +56,9 @@
         .nutri-btn { display:inline-flex; align-items:center; gap:7px; background:rgba(255,255,255,.16); border:1px solid rgba(255,255,255,.4);
                      color:#fff; border-radius:12px; padding:10px 15px; font-size:14px; font-weight:800; cursor:pointer; white-space:nowrap; transition:background .15s; }
         .nutri-btn:hover { background:rgba(255,255,255,.28); }
+        .nutri-btn { position:relative; overflow:hidden; user-select:none; -webkit-user-select:none; touch-action:none; }
+        .nutri-btn.holding { background:rgba(251,191,36,.30); border-color:rgba(251,191,36,.9); }
+        .nutri-btn .nb-fill { position:absolute; left:0; bottom:0; height:4px; width:0; background:#fbbf24; box-shadow:0 0 6px rgba(251,191,36,.8); }
         /* ── 좁은 화면(세로형 태블릿 등): 안내문구 숨김·버튼 축소, 더 좁으면 시계 숨김 ── */
         @media (max-width:1100px){
             .topbar { padding:12px 16px; gap:10px; }
@@ -261,7 +264,7 @@
             <button class="htop-btn snd" id="settingsBtn" onclick="openSettings()" title="환경설정"><i class="fa-solid fa-gear"></i></button>
             <button class="htop-btn int" onclick="showInstrQr('internal')"><i class="fa-solid fa-id-card-clip"></i> KAC 임직원</button>
             <button class="htop-btn ext" onclick="showInstrQr('external')"><i class="fa-solid fa-user-tie"></i> 사외 강사</button>
-            <button class="nutri-btn" onclick="location.href='nutritionist.html'"><i class="fa-solid fa-clipboard-list"></i> 영양사 관리</button>
+            <button class="nutri-btn" id="nutriBtn" title="3초간 꾹 누르면 영양사 관리로 이동합니다" onpointerdown="nutriDown(event)" onpointerup="nutriUp()" onpointerleave="nutriUp()" onpointercancel="nutriUp()" oncontextmenu="return false;"><i class="fa-solid fa-clipboard-list"></i> 영양사 관리<span class="nb-fill" id="nbFill"></span></button>
         </div>
     </div>
     <div class="stage" id="stage"></div>
@@ -523,6 +526,23 @@ function renderSettings(){
             <button class="set-toggle danger" onclick="resetTodayChecks();">초기화</button>
         </div>
         <div class="ov-actions"><button class="ov-btn gray" onclick="closeOverlay()">닫기</button></div>`;
+}
+let _nutriT=null;
+function nutriGo(){ try{ nutriUp(); }catch(_){} location.href='nutritionist.html'; }
+function nutriDown(e){
+    if(e&&e.preventDefault){ try{e.preventDefault();}catch(_){} }
+    if(TEST_MODE){ nutriGo(); return; }   // 테스트 모드: 즉시 이동(지연 없음)
+    const b=document.getElementById('nutriBtn'), f=document.getElementById('nbFill');
+    if(b) b.classList.add('holding');
+    if(f){ f.style.transition='none'; f.style.width='0%'; requestAnimationFrame(()=>{ f.style.transition='width 3s linear'; f.style.width='100%'; }); }
+    clearTimeout(_nutriT);
+    _nutriT=setTimeout(()=>{ _nutriT=null; nutriGo(); }, 3000);
+}
+function nutriUp(){
+    clearTimeout(_nutriT); _nutriT=null;
+    const b=document.getElementById('nutriBtn'), f=document.getElementById('nbFill');
+    if(b) b.classList.remove('holding');
+    if(f){ f.style.transition='width .15s'; f.style.width='0%'; }
 }
 function toggleTest(){ TEST_MODE=!TEST_MODE; try{ localStorage.setItem('kacMealTest', TEST_MODE?'on':'off'); }catch(e){} if(CURRENT==='staff') renderStaffList(); renderSettings(); }
 function toggleWeekend(){ WEEKEND_OK=!WEEKEND_OK; db.ref('system/staffMeal/config/weekendOk').set(WEEKEND_OK).catch(()=>{}); try{ localStorage.setItem('kacMealWeekend', WEEKEND_OK?'on':'off'); }catch(e){} if(CURRENT==='staff') renderStaffList(); if(typeof updateMealStatus==='function') updateMealStatus(); renderSettings(); }
@@ -861,7 +881,7 @@ function esc(v){ return String(v==null?'':v).replace(/[&<>"']/g,c=>({'&':'&amp;'
 /* 초기 진입은 위의 ?go 분기에서 처리됨 */
 </script>
 <style>@media print{#__ver{display:none!important}}</style>
-<div id="__ver" style="position:fixed;right:7px;bottom:7px;z-index:2147483000;background:rgba(15,23,42,.72);color:#cbd5e1;font:700 10px/1 monospace;padding:4px 8px;border-radius:7px;pointer-events:none;letter-spacing:.3px;">식당패널 vBB · 260613-1730</div>
+<div id="__ver" style="position:fixed;right:7px;bottom:7px;z-index:2147483000;background:rgba(15,23,42,.72);color:#cbd5e1;font:700 10px/1 monospace;padding:4px 8px;border-radius:7px;pointer-events:none;letter-spacing:.3px;">식당패널 vCC · 260613-1758</div>
 </body>
 </html>
-<!-- @build 20260613-173000 (식당패널 vBB: 좌우 균등분할 → 좌측 위에서부터 20줄 먼저 채우고 넘치면 우측 위에서부터 이어 채움(순서 혼동 제거). 20명 이하는 단일 컬럼) -->
+<!-- @build 20260613-175800 (식당패널 vCC: "영양사 관리" 버튼 — 평상시 3초 길게 누르기로만 이동(진행바 표시, 직원 오터치 화면전환 방지). 테스트 모드 켜져 있으면 지연 없이 즉시 이동) -->
