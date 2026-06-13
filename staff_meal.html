@@ -931,7 +931,7 @@ let _extCloseT=null, _extCountT=null;
 function _clearExtTimers(){ try{clearTimeout(_extCloseT);}catch(_){} try{clearInterval(_extCountT);}catch(_){} _extCloseT=null; _extCountT=null; }
 function showInstrQr(mode){
     const isInt = mode==='internal';
-    _clearExtTimers(); _overlayKeep=false;
+    _clearExtTimers(); _overlayKeep=true;
     if(isInt){
         // KAC 임직원: 기존처럼 본인 휴대폰에서 입력하는 QR
         const url = new URL('staff_meal.html', location.href);
@@ -941,11 +941,14 @@ function showInstrQr(mode){
             <div class="ov-ttl" style="color:#0f172a;">KAC 임직원</div>
             <div class="ov-sub" style="margin-bottom:16px;">스마트폰 카메라로 아래 QR을 스캔해<br><b>본인 휴대폰에서 직접 입력</b>해 주세요.</div>
             <div id="instrQr" style="display:flex; justify-content:center; padding:14px; background:#fff; border-radius:16px; border:1.5px solid #e2e8f0;"></div>
-            <div class="ov-actions"><button class="ov-btn gray" onclick="closeOverlay()">닫기</button></div>`;
+            <div class="ov-actions"><button class="ov-btn gray" onclick="closeOverlay()">닫기 <span id="extCountdown" style="opacity:.65; font-weight:800;"></span></button></div>`;
         overlay.classList.add('show');
         const box = document.getElementById('instrQr'); box.innerHTML='';
         try { new QRCode(box, { text:url.toString(), width:220, height:220, correctLevel:QRCode.CorrectLevel.M }); }
         catch(e){ box.textContent = url.toString(); }
+        let n=3; const cd=()=>{ const el=document.getElementById('extCountdown'); if(el) el.textContent='('+n+')'; };
+        cd(); _extCountT=setInterval(()=>{ n--; if(n<0)n=0; cd(); }, 1000);
+        _extCloseT=setTimeout(()=>{ _clearExtTimers(); closeOverlay(); }, 3000);
         return;
     }
     // 사외 강사: 입력 없이 계좌이체 안내. QR=계좌정보(스캔 시 폰에 계좌 표시), 계좌번호 크게, 3초 자동 닫힘.
@@ -1025,7 +1028,7 @@ function esc(v){ return String(v==null?'':v).replace(/[&<>"']/g,c=>({'&':'&amp;'
 /* 초기 진입은 위의 ?go 분기에서 처리됨 */
 </script>
 <style>@media print{#__ver{display:none!important}}</style>
-<div id="__ver" style="position:fixed;right:7px;bottom:7px;z-index:2147483000;background:rgba(15,23,42,.72);color:#cbd5e1;font:700 10px/1 monospace;padding:4px 8px;border-radius:7px;pointer-events:none;letter-spacing:.3px;">식당패널 vFF · 260613-1858</div>
+<div id="__ver" style="position:fixed;right:7px;bottom:7px;z-index:2147483000;background:rgba(15,23,42,.72);color:#cbd5e1;font:700 10px/1 monospace;padding:4px 8px;border-radius:7px;pointer-events:none;letter-spacing:.3px;">식당패널 vGG · 260613-1920</div>
 </body>
 </html>
-<!-- @build 20260613-185800 (식당패널 vFF: ①KAC임직원·사외강사 QR 팝업 + 그 외 모든 팝업 기본 3초 자동닫힘(설정·패턴·비밀번호 상호작용 팝업만 제외) — MutationObserver 안전장치. ②전체화면 잠금 강화 — 비테스트 상태에선 전체화면 버튼 3초 홀드로만 해제, 상단바·일반탭으로는 절대 해제 안 됨, ESC 등 의도치 않은 해제 시 다음 터치에 자동 재진입. 테스트 모드에선 버튼 탭으로 즉시 해제 허용) -->
+<!-- @build 20260613-192000 (식당패널 vGG: KAC임직원 QR 팝업도 사외강사처럼 "닫기 (3)(2)(1)" 카운트다운 + 3초 자동닫힘 + 즉시 닫기 버튼. QR 팝업은 자체 타이머로 닫으므로 일괄 옵저버에서 제외(keep)) -->
