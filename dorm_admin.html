@@ -3,8 +3,8 @@
 <head>
 <!-- ============================================================
   CATC · 교육지원부 · 생활관 배정  (dorm_admin.html)
-  @version  X
-  @build    20260613-061500  (명단 사라짐 근본수정: roster 키가 weekKey__room이라 방 변경 시 고아화되던 문제 → 과정명 기준 폴백+현재키 자동이관 self-heal, 카운트/로드/복구 모두 적용)
+  @version  Y
+  @build    20260613-072000 (vY: STEP3 과정 중복 표시 수정 — self-heal을 복사→이관(원본 고아 키 삭제)으로 변경 + 수집 시 과정명 기준 중복 제거 + 드롭다운 개수 중복 제거) ※직전 vX:  (명단 사라짐 근본수정: roster 키가 weekKey__room이라 방 변경 시 고아화되던 문제 → 과정명 기준 폴백+현재키 자동이관 self-heal, 카운트/로드/복구 모두 적용)
   ────────────────────────────────────────────────────────
   [코드 수정 규칙 · AI/개발자 공통]
   이 파일을 한 글자라도 고치면:
@@ -2046,7 +2046,9 @@
                                         weekKey: it.weekKey || v3.weekKey,
                                         updatedAt: firebase.database.ServerValue.TIMESTAMP
                                     });
-                                    db.ref(`system/dorm/rosters/${key}`).set(healed).catch(() => {});
+                                    db.ref(`system/dorm/rosters/${key}`).set(healed)
+                                        .then(() => { if (byC.key !== key) db.ref(`system/dorm/rosters/${byC.key}`).remove().catch(() => {}); })
+                                        .catch(() => {});
                                 }
                                 renderRoster();
                             });
@@ -2822,12 +2824,30 @@
         async function refreshWeekRostersFromDb(wk) {
             const snap = await db.ref('system/dorm/rosters').once('value');
             const all = snap.val() || {};
-            weekRosters = {};
+            // 1) 이번 주차 항목 수집
+            const collected = [];
             Object.entries(all).forEach(([k, v]) => {
                 if (!v) return;
                 const keyWeek = v.weekKey || k.split('__')[0];
-                if (keyWeek === wk) weekRosters[k] = v;
+                if (keyWeek === wk) collected.push([k, v]);
             });
+            // 2) 같은 과정이 여러 키로 중복 저장된 경우 1개만 유지 (실제 방 키 > 인원 많은 쪽 > 최신)
+            const _isAP = k => /(^|__)AP_/.test(k);
+            const _better = (a, b) => {            // a가 b보다 나으면 true (a,b = [k,v])
+                const apA = _isAP(a[0]), apB = _isAP(b[0]);
+                if (apA !== apB) return !apA;
+                const lA = (a[1].list || []).length, lB = (b[1].list || []).length;
+                if (lA !== lB) return lA > lB;
+                return Number(a[1].updatedAt || 0) >= Number(b[1].updatedAt || 0);
+            };
+            const byCourse = {};
+            collected.forEach(([k, v]) => {
+                const nm = _normCourseName(v.courseName || '') || ('__' + k);
+                const cur = byCourse[nm];
+                if (!cur || _better([k, v], [cur.k, cur.v])) byCourse[nm] = { k, v };
+            });
+            weekRosters = {};
+            Object.values(byCourse).forEach(({ k, v }) => { weekRosters[k] = v; });
             return weekRosters;
         }
 
@@ -2905,7 +2925,7 @@
                     const wd = new Date(canonicalWeekKey(wk) + 'T00:00:00');   // 표준 월요일 기준 표기 (현황/출력과 일치)
                     const wEnd = new Date(wd); wEnd.setDate(wd.getDate() + 6);
                     const fmt = d => `${d.getMonth()+1}/${d.getDate()}`;
-                    const cnt = weeks[wk].length;
+                    const cnt = new Set(weeks[wk].map((v, i) => _normCourseName(v.courseName || '') || ('__c' + i))).size;
                     return `<option value="${wk}">${fmt(wd)} ~ ${fmt(wEnd)} 주간 (과정 ${cnt}개)</option>`;
                 }).join('');
                 // 기본 선택: 강사 플랫폼과 동일하게 토·일엔 차주, 평일엔 이번주 명단을 기본 표시
@@ -5606,8 +5626,8 @@
     </div>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
 <style>@media print{#__catcVer{display:none!important}}</style>
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vX</div>
-<script>try{console.log('%cCATC%c 교육지원부 · 생활관 배정 (dorm_admin.html) %cvX%c build 20260613-061500','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}</script>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vY</div>
+<script>try{console.log('%cCATC%c 교육지원부 · 생활관 배정 (dorm_admin.html) %cvY%c build 20260613-072000','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}</script>
 <script>
 /* 헤더 + 단계 메뉴(STEP 탭) 틀고정 — 어느 페이지에서든 항상 상단에 고정 표시.
    step-tabs를 헤더 바로 아래에 붙이기 위해 헤더 높이를 측정해 sticky 오프셋으로 사용. */
