@@ -1422,7 +1422,7 @@ function moveStaff(id, dir){
     if(idx<0 || j<0 || j>=ids.length) return;
     [ids[idx],ids[j]]=[ids[j],ids[idx]];
     const updates={}; ids.forEach((i,k)=>updates[`${STAFF_ROSTER}/${i}/order`]=k*10);
-    db.ref().update(updates).then(()=>showToast('순서가 변경되었습니다.'));
+    db.ref().update(updates).then(()=>showToast('순서가 변경되었습니다.')).catch(e=>showToast('❌ 순서변경 실패: '+((e&&e.message)||e)+' — Firebase 권한(rules)일 수 있습니다.'));
 }
 /* 명단 검색·소속 필터 */
 function applyRosterFilter(){
@@ -1529,14 +1529,14 @@ function renameDept(oldD){
     Object.entries(_staffRoster||{}).forEach(([id,r])=>{ if(((r.dept||'').trim())===oldD) updates[`${STAFF_ROSTER}/${id}/dept`]=v; });
     updates[`system/staffMeal/depts/${v}`]=true;
     if(_deptPresets[oldD]!==undefined) updates[`system/staffMeal/depts/${oldD}`]=null;
-    db.ref().update(updates).then(()=>showToast('소속명이 변경되었습니다.'));
+    db.ref().update(updates).then(()=>showToast('소속명이 변경되었습니다.')).catch(e=>showToast('❌ 소속명 변경 실패: '+((e&&e.message)||e)));
 }
 function deleteDept(d){
     if(!d) return;
     const members=Object.values(_staffRoster||{}).filter(r=>r&&((r.dept||'').trim())===d);
     if(members.length){ showToast('해당 소속에 직원이 있어 삭제할 수 없습니다.'); return; }
     if(!confirm(`소속 '${d}'을(를) 목록에서 삭제할까요?`)) return;
-    db.ref(`system/staffMeal/depts/${d}`).remove().then(()=>showToast('소속이 삭제되었습니다.'));
+    db.ref(`system/staffMeal/depts/${d}`).remove().then(()=>showToast('소속이 삭제되었습니다.')).catch(e=>showToast('❌ 소속 삭제 실패: '+((e&&e.message)||e)));
 }
 /* ── 드래그 정렬 (드롭 위치 안내선 + 위/아래 정확 삽입) ── */
 function _clearDropMarks(){ document.querySelectorAll('.rtable tr.drop-before,.rtable tr.drop-after,.rtable tr.drop-blocked').forEach(el=>el.classList.remove('drop-before','drop-after','drop-blocked')); }
@@ -1575,7 +1575,7 @@ function rReorder(srcId,dstId,after){
     groupIds.splice(ti, 0, srcId);
     const updates={};
     groupIds.forEach((id,i)=>{ updates[`${STAFF_ROSTER}/${id}/order`]=i*10; });
-    db.ref().update(updates).then(()=>showToast('순서가 변경되었습니다.'));
+    db.ref().update(updates).then(()=>showToast('순서가 변경되었습니다.')).catch(e=>showToast('❌ 순서변경 실패: '+((e&&e.message)||e)+' — Firebase 권한(rules)일 수 있습니다.'));
 }
 function addStaff(){
     const sel=document.getElementById('newStaffDept');
@@ -1591,7 +1591,7 @@ function addStaff(){
         document.getElementById('newStaffName').value=''; document.getElementById('newStaffPos').value='';
         document.getElementById('newStaffName').focus();
         showToast('✅ 직원이 추가되었습니다.');
-      });
+      }).catch(e=>showToast('❌ 추가 실패: '+((e&&e.message)||e)+' — Firebase 권한(rules)일 수 있습니다.'));
 }
 function editStaff(id){ _editId=id; renderRoster(); setTimeout(()=>{ const e=document.getElementById('edit-name'); if(e) e.focus(); }, 30); }
 function cancelEdit(){ _editId=null; renderRoster(); }
@@ -1610,12 +1610,12 @@ function saveEdit(id){
         patch.order=maxOrd+10;
     }
     _editId=null;
-    db.ref(`${STAFF_ROSTER}/${id}`).update(patch).then(()=>showToast('수정되었습니다.'));
+    db.ref(`${STAFF_ROSTER}/${id}`).update(patch).then(()=>showToast('수정되었습니다.')).catch(e=>showToast('❌ 저장 실패: '+((e&&e.message)||e)+' — Firebase 권한(rules)일 수 있습니다.'));
 }
 function deleteStaff(id){
     const r=_staffRoster[id]; if(!r) return;
     if(!confirm(`'${r.name}' 직원을 명단에서 삭제할까요?\n(이미 기록된 식사 집계는 그대로 유지됩니다.)`)) return;
-    db.ref(`${STAFF_ROSTER}/${id}`).remove().then(()=>showToast('삭제되었습니다.'));
+    db.ref(`${STAFF_ROSTER}/${id}`).remove().then(()=>showToast('삭제되었습니다.')).catch(e=>showToast('❌ 삭제 실패: '+((e&&e.message)||e)));
 }
 
 function loadStaffMeal(){
@@ -1681,8 +1681,12 @@ function renderStaffCounts(agg, month){
     const catColor={staff:'#10b981', internal:'#6366f1', external:'#f59e0b'};
     const catOrd={staff:0,internal:1,external:2};
     const rosterOrder=key=>{ const r=_staffRoster[key]; return (r&&r.order!=null)?r.order:9999; };
+    const _deptFirst={};
+    Object.values(_staffRoster||{}).forEach(r=>{ if(!r)return; const dp=((r.dept||'').trim()); const cc=(r.createdAt!=null?r.createdAt:Infinity); if(_deptFirst[dp]==null||cc<_deptFirst[dp]) _deptFirst[dp]=cc; });
+    const deptRank=dp=>{ const v=_deptFirst[(dp||'').trim()]; return (v==null||v===Infinity)?9e15:v; };
     const rows=Object.entries(agg).sort((a,b)=>{
         const c=(catOrd[a[1].category]||0)-(catOrd[b[1].category]||0); if(c) return c;
+        const dr=deptRank(a[1].dept)-deptRank(b[1].dept); if(dr) return dr;
         const d=(a[1].dept||'').localeCompare(b[1].dept||'','ko'); if(d) return d;
         const o=rosterOrder(a[0])-rosterOrder(b[0]); if(o) return o;   // 명단 관리 순서와 동일하게
         return (a[1].name||'').localeCompare(b[1].name||'','ko');
@@ -1829,7 +1833,7 @@ function renderMealCalendar(a, month){
 }
 </script>
 <style>@media print{#__ver{display:none!important}}</style>
-<div id="__ver" style="position:fixed;right:7px;bottom:7px;z-index:2147483000;background:rgba(15,23,42,.72);color:#cbd5e1;font:700 10px/1 monospace;padding:4px 8px;border-radius:7px;pointer-events:none;letter-spacing:.3px;">영양사 vW · 260613-0640</div>
+<div id="__ver" style="position:fixed;right:7px;bottom:7px;z-index:2147483000;background:rgba(15,23,42,.72);color:#cbd5e1;font:700 10px/1 monospace;padding:4px 8px;border-radius:7px;pointer-events:none;letter-spacing:.3px;">영양사 vX · 260613-0710</div>
 </body>
 </html>
-<!-- @build 20260613-064000 (영양사 vW: 명단 변경 시 식수관리 실시간 반영(탭 전환·로스터 리스너) / 드래그 드롭 위치 안내선+위아래 정확 삽입+같은소속외 차단표시) -->
+<!-- @build 20260613-071000 (영양사 vX: 식수관리 소속 정렬을 명단관리와 동일한 등록순으로 일치 / 저장·순서변경·삭제·추가·소속변경 모든 명단 쓰기에 실패 알림(catch) 추가 → 조용한 실패 가시화) -->
