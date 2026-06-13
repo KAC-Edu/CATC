@@ -450,6 +450,40 @@
         .rtable tbody tr.drop-before td { box-shadow: inset 0 3px 0 0 #2563eb; }
         .rtable tbody tr.drop-after td { box-shadow: inset 0 -3px 0 0 #2563eb; }
         .rtable tbody tr.drop-blocked td { box-shadow: inset 0 0 0 2px #fca5a5; }
+        /* ── 직원 명단 리스트 (카드형 · 드래그/화살표 정렬) ── */
+        .rlist { border:1px solid var(--border); border-radius:12px; overflow:hidden; background:#fff; }
+        .rl-group + .rl-group { border-top:2px solid var(--border); }
+        .rl-ghead { display:flex; align-items:center; gap:9px; padding:9px 15px; background:#eff6ff; border-bottom:1px solid #dbeafe; }
+        .rl-gname { font-weight:900; color:#1e40af; font-size:14.5px; }
+        .rl-gcount { font-size:12px; font-weight:800; color:#2563eb; background:#dbeafe; padding:2px 10px; border-radius:999px; }
+        .rl-row { display:grid; grid-template-columns:30px 46px 116px minmax(90px,1fr) 160px auto; align-items:center; gap:10px; padding:9px 15px; border-bottom:1px solid #f1f5f9; background:#fff; }
+        .rl-row:last-child { border-bottom:none; }
+        .rl-row:hover { background:#f8fafc; }
+        .rl-grip { color:#cbd5e1; cursor:grab; text-align:center; font-size:13px; }
+        .rl-row:hover .rl-grip { color:#2563eb; }
+        .rl-grip:active { cursor:grabbing; }
+        .rl-seq { color:#94a3b8; font-weight:800; font-variant-numeric:tabular-nums; text-align:center; }
+        .rl-pos { color:var(--muted); font-weight:700; font-size:14px; }
+        .rl-name { font-weight:800; color:var(--navy); font-size:14.5px; }
+        .rl-note { color:#475569; font-size:13px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+        .rl-dash { color:#cbd5e1; }
+        .rl-ctrl { display:inline-flex; align-items:center; gap:6px; justify-content:flex-end; }
+        .rl-arw { width:32px; height:32px; border:1px solid var(--border); background:#fff; border-radius:8px; color:#64748b; cursor:pointer; font-size:12px; display:inline-flex; align-items:center; justify-content:center; }
+        .rl-arw:hover:not(:disabled) { background:#eff6ff; border-color:#93c5fd; color:#2563eb; }
+        .rl-arw:disabled { opacity:.32; cursor:default; }
+        .rl-act { border:none; border-radius:8px; padding:7px 13px; font-weight:800; cursor:pointer; font-size:13px; }
+        .rl-edit { background:#eff6ff; color:#2563eb; }
+        .rl-del { background:#fee2e2; color:#dc2626; }
+        .rl-save { background:#16a34a; color:#fff; }
+        .rl-cancel { background:#e2e8f0; color:#475569; }
+        .rl-row.dragging { opacity:.45; }
+        .rl-row.drop-before { box-shadow: inset 0 3px 0 0 #2563eb; }
+        .rl-row.drop-after { box-shadow: inset 0 -3px 0 0 #2563eb; }
+        .rl-row.drop-blocked { box-shadow: inset 0 0 0 2px #fca5a5; }
+        .rl-row.rl-editing { display:flex; flex-wrap:wrap; gap:8px; background:#eff6ff; }
+        .rl-ein { height:38px; padding:0 11px; border:1.5px solid #2563eb; border-radius:8px; font-weight:700; background:#fff; font-size:14px; }
+        .rl-ein-dept { min-width:130px; }
+        .rl-editing .rl-ein:not(.rl-ein-dept) { flex:1; min-width:90px; }
         /* ── 전체폭 헤더 + 중앙정렬 본문 (교육지원부 방식) ── */
         body { background: var(--bg); }
         .app-content { max-width: 1180px; margin: 0 auto; width: 100%; padding: 22px 22px 48px; overflow-y: visible; }
@@ -776,6 +810,8 @@ function getThisWeekKey() { return getMondayOf(getToday()); }
 
 /* ── 전역 상태 ── */
 let allRoomData = {};          // { room: { settings, status, students, dinner_skips } }
+let _coordRosterIdx = {};      // 운영부 저장 명단: '__'+정규화과정명 -> 인원수
+let _dormRosterIdx = {};       // 지원부 저장 명단: '__'+정규화과정명 -> 인원수
 let uploadedMenuData = null;   // system/weeklyMenu 값
 
 /* ── 초기화 ── */
@@ -811,6 +847,16 @@ function loadRoomData() {
             renderCourseWeek(_courseCache.courses, _courseCache.ctx);
         }
     }, err => { console.warn('[courses] read error', err); });
+
+    // ── 운영부/지원부가 저장한 명단(전역 저장소)도 직접 구독 → COURSE 탭 인원수에 반영 ──
+    db.ref('system/coord/rosters').on('value', snap => {
+        _coordRosterIdx = _buildExtIdx(snap.val());
+        _refreshCourseTab();
+    }, err => { console.warn('[coord/rosters] read error', err); });
+    db.ref('system/dorm/rosters').on('value', snap => {
+        _dormRosterIdx = _buildExtIdx(snap.val());
+        _refreshCourseTab();
+    }, err => { console.warn('[dorm/rosters] read error', err); });
 }
 
 function renderMealStats(today) {
@@ -1235,18 +1281,42 @@ function _roomMatchForCourse(c){
     });
     return best;
 }
+function _buildExtIdx(all){
+    const idx={};
+    Object.values(all||{}).forEach(v=>{
+        if(!v || !Array.isArray(v.list)) return;
+        const nm=_normCourse(v.courseName||''); if(!nm) return;
+        const cnt=v.list.filter(s=>s && (s.name||'').trim()).length;
+        const k='__'+nm;            // 과정명 기준(주차 무관) 최대 인원
+        if(!idx[k] || cnt>idx[k]) idx[k]=cnt;
+    });
+    return idx;
+}
+function _extCourseCount(c){
+    const nm=_normCourse(c && c.name); if(!nm) return 0;
+    const k='__'+nm;
+    return Math.max(_coordRosterIdx[k]||0, _dormRosterIdx[k]||0);
+}
+function _refreshCourseTab(){
+    const sec=document.getElementById('sec-course');
+    if(_courseCache && sec && sec.classList.contains('active')) renderCourseWeek(_courseCache.courses, _courseCache.ctx);
+}
 function _courseCounts(c){
-    const m=_roomMatchForCourse(c);
-    if(!m) return {found:false, total:0};
     const names=new Set();
-    const students=m.room.students||{};
-    Object.values(students).forEach(s=>{ if(s?.name && s.name!=='undefined') names.add(String(s.name).trim()); });
-    // 강사 입력 명단이 없으면 교육운영부 공유 명단으로 폴백
-    if(names.size===0){
-        const list=m.room.coordRoster && Array.isArray(m.room.coordRoster.list) ? m.room.coordRoster.list : [];
-        list.forEach(s=>{ const nm=((s&&s.name)||'').trim(); if(nm && nm!=='undefined') names.add(nm); });
+    const m=_roomMatchForCourse(c);
+    if(m){
+        const students=m.room.students||{};
+        Object.values(students).forEach(s=>{ if(s?.name && s.name!=='undefined') names.add(String(s.name).trim()); });
+        if(names.size===0){
+            const list=m.room.coordRoster && Array.isArray(m.room.coordRoster.list) ? m.room.coordRoster.list : [];
+            list.forEach(s=>{ const nm=((s&&s.name)||'').trim(); if(nm && nm!=='undefined') names.add(nm); });
+        }
     }
-    return {found:true, total:names.size};
+    if(names.size>0) return {found:true, total:names.size};
+    // 라이브 방에 명단이 없으면 운영부/지원부가 저장한 전역 명단에서 직접 가져옴
+    const ext=_extCourseCount(c);
+    if(ext>0) return {found:true, total:ext};
+    return {found:false, total:0};
 }
 function renderCourseWeek(courses, ctx){
     const list=document.getElementById('courseStatusList'); if(!list) return;
@@ -1341,83 +1411,67 @@ function renderRoster(){
     if(!items.length){ if(_tools)_tools.style.display='none'; box.innerHTML = deptBar + renderRosterGuide(); return; }
     if(_tools)_tools.style.display='flex';
 
-    // 부서 정렬 → 부서 내 order 정렬 → 한 줄로 평탄화: [dept, id, r]
+    // 소속 그룹 → 소속 정렬(등록순) → 소속 내 order 정렬
     const groups={};
     items.forEach(([id,r])=>{ const d=((r.dept||'').trim())||'(소속 미지정)'; (groups[d]||(groups[d]=[])).push([id,r]); });
     const _deptFirst={};
     Object.entries(groups).forEach(([d,arr])=>{ _deptFirst[d]=Math.min.apply(null, arr.map(([id,r])=>(r.createdAt!=null?r.createdAt:Infinity))); });
     const depts=Object.keys(groups).sort((a,b)=> ((_deptFirst[a]===Infinity?9e15:_deptFirst[a])-(_deptFirst[b]===Infinity?9e15:_deptFirst[b])) || a.localeCompare(b,'ko'));
-    const flat=[];
-    depts.forEach(d=>{ groups[d].sort((a,b)=> (_ord(a[1])-_ord(b[1])) || (a[1].name||'').localeCompare(b[1].name||'','ko')).forEach(([id,r])=>flat.push([d,id,r])); });
+    Object.keys(groups).forEach(d=>{ groups[d].sort((a,b)=> (_ord(a[1])-_ord(b[1])) || (a[1].name||'').localeCompare(b[1].name||'','ko')); });
 
-    // 검색·소속 필터
     const dfSel=document.getElementById('rosterDeptFilter');
     if(dfSel){ dfSel.innerHTML='<option value="">전체 소속</option>'+allDepts.map(d=>`<option value="${escH(d)}" ${d===_rosterDeptFilter?'selected':''}>${escH(d)}</option>`).join(''); }
     const q=_rosterQuery.trim().toLowerCase();
-    let view=flat;
-    if(q) view=view.filter(([d,id,r])=>(((r.name||'')+' '+(r.position||'')).toLowerCase().includes(q)));
-    if(_rosterDeptFilter) view=view.filter(([d])=>d===_rosterDeptFilter);
-    const info=document.getElementById('rosterFilterInfo');
-    if(info) info.textContent = (q||_rosterDeptFilter) ? `${view.length}명 표시 · 전체 ${flat.length}명` : `전체 ${flat.length}명`;
-    if(!view.length){ box.innerHTML = deptBar + '<div class="empty-msg">검색 결과가 없습니다.</div>'; return; }
-
     const optsOf = sel => allDepts.map(o=>`<option value="${escH(o)}" ${o===sel?'selected':''}>${escH(o)}</option>`).join('');
 
-    let bodyHtml='', i=0, seq=0;
-    while(i<view.length){
-        const dept=view[i][0];
-        let j=i; while(j<view.length && view[j][0]===dept) j++;
-        const run=view.slice(i,j);
-        const runHasEdit = run.some(([d,id])=>id===_editId);
-        run.forEach(([d,id,r],k)=>{
-            seq++;
-            // 소속 셀: 편집 중인 부서는 행마다 표시(병합 해제), 그 외는 첫 행에 rowspan 병합
-            const deptCell = runHasEdit ? `<td class="rdept">${escH(dept)}</td>`
-                            : (k===0 ? `<td class="rdept" rowspan="${run.length}">${escH(dept)}</td>` : '');
+    let seq=0, shown=0, sectionsHtml='';
+    depts.forEach(d=>{
+        if(_rosterDeptFilter && d!==_rosterDeptFilter) return;
+        const members=groups[d];
+        const view = q ? members.filter(([id,r])=>(((r.name||'')+' '+(r.position||'')).toLowerCase().includes(q))) : members;
+        if(!view.length) return;
+        let rowsHtml='';
+        view.forEach(([id,r])=>{
+            seq++; shown++;
+            const isFirst = members[0][0]===id, isLast = members[members.length-1][0]===id;
             if(id===_editId){
-                bodyHtml += `<tr class="editing">
-                    <td class="c rnum">${seq}</td>
-                    <td><select id="edit-dept" class="r-ein">${optsOf((r.dept||'').trim())}</select></td>
-                    <td><input id="edit-pos" class="r-ein" value="${escH(r.position||'')}" placeholder="직책"></td>
-                    <td><input id="edit-name" class="r-ein" value="${escH(r.name||'')}" placeholder="성함"></td>
-                    <td><input id="edit-note" class="r-ein" value="${escH(r.note||'')}" placeholder="비고"></td>
-                    <td class="c"><button class="r-actbtn" style="background:#16a34a;color:#fff;" onclick="saveEdit('${id}')"><i class="fa-solid fa-check"></i> 저장</button> <button class="r-actbtn" style="background:#e2e8f0;color:#475569;" onclick="cancelEdit()">취소</button></td>
-                </tr>`;
+                rowsHtml += `<div class="rl-row rl-editing">
+                    <span class="rl-seq">${seq}</span>
+                    <select id="edit-dept" class="rl-ein rl-ein-dept no-drag">${optsOf((r.dept||'').trim())}</select>
+                    <input id="edit-pos" class="rl-ein no-drag" value="${escH(r.position||'')}" placeholder="직책">
+                    <input id="edit-name" class="rl-ein no-drag" value="${escH(r.name||'')}" placeholder="성함">
+                    <input id="edit-note" class="rl-ein no-drag" value="${escH(r.note||'')}" placeholder="비고">
+                    <span class="rl-ctrl no-drag">
+                        <button class="rl-act rl-save" onclick="saveEdit('${id}')"><i class="fa-solid fa-check"></i> 저장</button>
+                        <button class="rl-act rl-cancel" onclick="cancelEdit()">취소</button>
+                    </span>
+                </div>`;
             } else {
-                const isFirst=(k===0), isLast=(k===run.length-1);
-                bodyHtml += `<tr draggable="true" ondragstart="rDragStart(event,'${id}')" ondragover="rDragOver(event,'${id}')" ondrop="rDrop(event,'${id}')" ondragend="rDragEnd(event)">
-                    <td class="c rnum">${seq}</td>
-                    ${deptCell}
-                    <td class="c" style="color:var(--muted); font-weight:700;">${escH(r.position||'-')}</td>
-                    <td class="rname"><i class="fa-solid fa-grip-vertical drag-grip"></i>${escH(r.name||'')}</td>
-                    <td class="rnote">${r.note?escH(r.note):'<span style="color:#cbd5e1;">-</span>'}</td>
-                    <td class="c rmng">
-                        <span class="ord-btns">
-                            <button class="ord-btn" onclick="moveStaff('${id}',-1)" ${isFirst?'disabled':''} title="위로"><i class="fa-solid fa-chevron-up"></i></button>
-                            <button class="ord-btn" onclick="moveStaff('${id}',1)" ${isLast?'disabled':''} title="아래로"><i class="fa-solid fa-chevron-down"></i></button>
-                        </span>
-                        <button class="r-actbtn r-edit" onclick="editStaff('${id}')">수정</button>
-                        <button class="r-actbtn r-del" onclick="deleteStaff('${id}')">삭제</button>
-                    </td>
-                </tr>`;
+                rowsHtml += `<div class="rl-row" draggable="true" data-id="${id}" ondragstart="rDragStart(event,'${id}')" ondragover="rDragOver(event,'${id}')" ondrop="rDrop(event,'${id}')" ondragend="rDragEnd(event)">
+                    <span class="rl-grip" title="드래그하여 순서 변경"><i class="fa-solid fa-grip-vertical"></i></span>
+                    <span class="rl-seq">${seq}</span>
+                    <span class="rl-pos">${escH(r.position||'-')}</span>
+                    <span class="rl-name">${escH(r.name||'')}</span>
+                    <span class="rl-note">${r.note?escH(r.note):'<span class="rl-dash">-</span>'}</span>
+                    <span class="rl-ctrl no-drag">
+                        <button class="rl-arw" onclick="moveStaff('${id}',-1)" ${isFirst?'disabled':''} title="위로"><i class="fa-solid fa-chevron-up"></i></button>
+                        <button class="rl-arw" onclick="moveStaff('${id}',1)" ${isLast?'disabled':''} title="아래로"><i class="fa-solid fa-chevron-down"></i></button>
+                        <button class="rl-act rl-edit" onclick="editStaff('${id}')">수정</button>
+                        <button class="rl-act rl-del" onclick="deleteStaff('${id}')">삭제</button>
+                    </span>
+                </div>`;
             }
         });
-        i=j;
-    }
-    box.innerHTML = deptBar + `
-        <div class="rtable-wrap">
-            <table class="rtable flat">
-                <thead><tr>
-                    <th style="width:52px;">연번</th>
-                    <th style="width:128px;">소속</th>
-                    <th style="width:118px;">직책</th>
-                    <th style="text-align:left;">성함</th>
-                    <th style="width:150px; text-align:left;">비고</th>
-                    <th style="width:208px;">관리</th>
-                </tr></thead>
-                <tbody>${bodyHtml}</tbody>
-            </table>
+        sectionsHtml += `<div class="rl-group">
+            <div class="rl-ghead"><span class="rl-gname">${escH(d)}</span><span class="rl-gcount">${members.length}명</span></div>
+            <div class="rl-rows">${rowsHtml}</div>
         </div>`;
+    });
+
+    const info=document.getElementById('rosterFilterInfo');
+    if(info) info.textContent = (q||_rosterDeptFilter) ? `${shown}명 표시 · 전체 ${items.length}명` : `전체 ${items.length}명`;
+
+    box.innerHTML = deptBar + (sectionsHtml ? `<div class="rlist">${sectionsHtml}</div>` : '<div class="empty-msg">검색 결과가 없습니다.</div>');
 }
 /* 화살표로 같은 소속 내 순서 한 칸 이동 */
 function moveStaff(id, dir){
@@ -1546,25 +1600,32 @@ function deleteDept(d){
     db.ref(`system/staffMeal/depts/${d}`).remove().then(()=>showToast('소속이 삭제되었습니다.')).catch(e=>showToast('❌ 소속 삭제 실패: '+((e&&e.message)||e)));
 }
 /* ── 드래그 정렬 (드롭 위치 안내선 + 위/아래 정확 삽입) ── */
-function _clearDropMarks(){ document.querySelectorAll('.rtable tr.drop-before,.rtable tr.drop-after,.rtable tr.drop-blocked').forEach(el=>el.classList.remove('drop-before','drop-after','drop-blocked')); }
-function rDragStart(e,id){ _dragId=id; e.dataTransfer.effectAllowed='move'; try{e.dataTransfer.setData('text/plain',id);}catch(_){} if(e.currentTarget) e.currentTarget.classList.add('dragging'); }
-function rDragOver(e,dstId){
-    e.preventDefault(); e.dataTransfer.dropEffect='move';
-    const tr=e.currentTarget; if(!tr) return;
-    _clearDropMarks();
-    if(!_dragId || _dragId===dstId) return;
-    const src=_staffRoster[_dragId], dst=_staffRoster[dstId]; if(!src||!dst) return;
-    if(((src.dept||'').trim())!==((dst.dept||'').trim())){ tr.classList.add('drop-blocked'); return; }
-    const rect=tr.getBoundingClientRect();
-    tr.classList.add(((e.clientY-rect.top) > rect.height/2) ? 'drop-after' : 'drop-before');
+function _clearDropLines(){ document.querySelectorAll('.rl-row.drop-before,.rl-row.drop-after,.rl-row.drop-blocked').forEach(el=>el.classList.remove('drop-before','drop-after','drop-blocked')); }
+function _clearDropMarks(){ _clearDropLines(); document.querySelectorAll('.rl-row.dragging').forEach(el=>el.classList.remove('dragging')); }
+function rDragStart(e,id){
+    // 버튼·입력(.no-drag)에서 시작된 드래그는 취소 → 클릭이 정상 동작
+    if(e.target && e.target.closest && e.target.closest('.no-drag')){ try{e.preventDefault();}catch(_){} return; }
+    _dragId=id; e.dataTransfer.effectAllowed='move'; try{e.dataTransfer.setData('text/plain',id);}catch(_){}
+    if(e.currentTarget) e.currentTarget.classList.add('dragging');
 }
-function rDragEnd(e){ _dragId=null; _clearDropMarks(); document.querySelectorAll('.rtable tr.dragging').forEach(el=>el.classList.remove('dragging')); }
+function rDragOver(e,dstId){
+    if(!_dragId) return;
+    e.preventDefault(); e.dataTransfer.dropEffect='move';
+    const row=e.currentTarget; if(!row) return;
+    _clearDropLines();
+    if(_dragId===dstId) return;
+    const src=_staffRoster[_dragId], dst=_staffRoster[dstId]; if(!src||!dst) return;
+    if(((src.dept||'').trim())!==((dst.dept||'').trim())){ row.classList.add('drop-blocked'); return; }
+    const rect=row.getBoundingClientRect();
+    row.classList.add(((e.clientY-rect.top) > rect.height/2) ? 'drop-after' : 'drop-before');
+}
+function rDragEnd(e){ _dragId=null; _clearDropMarks(); }
 function rDrop(e,dstId){
     e.preventDefault();
-    const tr=e.currentTarget; let after=false;
-    if(tr){ const rect=tr.getBoundingClientRect(); after=(e.clientY-rect.top) > rect.height/2; }
-    _clearDropMarks();
-    const src=_dragId; _dragId=null;
+    if(!_dragId){ _clearDropMarks(); return; }
+    const row=e.currentTarget; let after=false;
+    if(row){ const rect=row.getBoundingClientRect(); after=(e.clientY-rect.top) > rect.height/2; }
+    const src=_dragId; _dragId=null; _clearDropMarks();
     rReorder(src,dstId,after);
 }
 function rReorder(srcId,dstId,after){
@@ -1840,7 +1901,7 @@ function renderMealCalendar(a, month){
 }
 </script>
 <style>@media print{#__ver{display:none!important}}</style>
-<div id="__ver" style="position:fixed;right:7px;bottom:7px;z-index:2147483000;background:rgba(15,23,42,.72);color:#cbd5e1;font:700 10px/1 monospace;padding:4px 8px;border-radius:7px;pointer-events:none;letter-spacing:.3px;">영양사 vY · 260613-1020</div>
+<div id="__ver" style="position:fixed;right:7px;bottom:7px;z-index:2147483000;background:rgba(15,23,42,.72);color:#cbd5e1;font:700 10px/1 monospace;padding:4px 8px;border-radius:7px;pointer-events:none;letter-spacing:.3px;">영양사 vZ · 260613-1035</div>
 </body>
 </html>
-<!-- @build 20260613-102000 (영양사 vY: 브라우저 탭 제목을 "식당 운영 관리"로 변경 / COURSE 탭 교육생 명단 매칭·카운트를 coordRoster(교육운영부 공유 명단)까지 반영 → "명단 대기" 해소) -->
+<!-- @build 20260613-103500 (영양사 vZ: [직원 명단관리] div 카드형 리스트로 재구성 — 행 전체 드래그가 버튼클릭을 가로채던 문제 제거(.no-drag), rowspan 제거, 화살표·드래그·드롭안내선 안정화 / [COURSE 탭] 운영부 system/coord/rosters · 지원부 system/dorm/rosters 전역 명단을 직접 구독해 과정명으로 인원수 반영 → 라이브 방 미개설/방명 불일치여도 명단 표시) -->
