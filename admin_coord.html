@@ -5068,9 +5068,21 @@ async function loadAllStudentData() {
 
     masterStudentList = [];
 
-    // 생활관 배정 정보 가져오기
-    const dormSnap = await firebase.database().ref('system/dormitory_assignments').once('value');
-    const dormData = dormSnap.val() || {};
+    // 생활관 배정 정보 가져오기 — [JDS260613] 레거시(system/dormitory_assignments, 미사용) → 실제 경로(system/dorm/assignments)
+    const dormSnap = await firebase.database().ref('system/dorm/assignments').once('value');
+    const dormData = {};   // 이름 / 이름_사번 -> {building, room(호수)} · 최신 배정 우선
+    Object.values(dormSnap.val() || {}).forEach(wk => {
+        const when = (wk && wk.assignedAt) ? wk.assignedAt : 0;
+        const students = (wk && wk.students) ? wk.students : {};
+        Object.values(students).forEach(s => {
+            if (!s || !s.name) return;
+            const nm = s.name.trim();
+            const entry = { building: s.building || (s.room ? String(s.room).split(' ')[0] : '-'), room: s.no || s.room || '미배정', _when: when };
+            const ks = [nm];
+            if (s.empNo) ks.push(`${nm}_${s.empNo}`);
+            ks.forEach(k => { const p = dormData[k]; if (!p || when >= (p._when || 0)) dormData[k] = entry; });
+        });
+    });
 
     Object.keys(globalAllData).forEach(rid => {
         const room = globalAllData[rid];
@@ -6726,8 +6738,8 @@ function _coordParseRoster(text) {
 </script>
 <!-- @catc-version-badge · 전 페이지 통일 디자인 (개발자 확인용 · 사용자에게는 거의 안 보임) -->
 <style>@media print{#__catcVer{display:none!important}}</style>
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">JDS260613(V10)</div>
-<script>try{console.log('%cCATC%c 교육운영부 (admin_coord.html) %cJDS260613(V10)%c build 20260613','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}</script>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">JDS260613(V11)</div>
+<script>try{console.log('%cCATC%c 교육운영부 (admin_coord.html) %cJDS260613(V11)%c build 20260613','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}</script>
 </body>
 </html>
 <!-- @build 20260612-132331 (교육운영부 vA) -->
