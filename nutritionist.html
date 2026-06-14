@@ -824,10 +824,10 @@
                 <i class="fa-solid fa-cloud-arrow-up"></i> 금주 식단표 업로드 (이미지)
             </button>
             <button class="upload-btn" onclick="aiExtractMenu()" style="background:#7c3aed; color:#fff; margin-bottom:6px;">
-                <i class="fa-solid fa-wand-magic-sparkles"></i> 사진 분석으로 자동 입력 (AI)
+                <i class="fa-solid fa-wand-magic-sparkles"></i> 사진·PDF 분석으로 자동 입력 (AI)
             </button>
-            <input type="file" id="menuAiInput" accept="image/*" style="display:none;">
-            <div style="font-size:11.5px; color:var(--muted); font-weight:700; margin:0 2px 8px;">식단표 사진을 올리면 AI가 요일별 메뉴를 읽어 표로 만들어 줍니다(용량 최소). <a href="#" onclick="_setGeminiKey();return false;" style="color:#7c3aed; font-weight:800;">AI 키 설정</a></div>
+            <input type="file" id="menuAiInput" accept="image/*,application/pdf" style="display:none;">
+            <div style="font-size:11.5px; color:var(--muted); font-weight:700; margin:0 2px 8px;">식단표 사진 또는 PDF를 올리면 AI가 요일별 메뉴(아침·점심·저녁)만 읽어 표로 만들어 줍니다. 인원수·원산지·안내문은 제외됩니다. <a href="#" onclick="_setGeminiKey();return false;" style="color:#7c3aed; font-weight:800;">AI 키 설정</a></div>
             <!-- 삭제 버튼 (업로드 후 노출) -->
             <button id="menuDeleteBtn" class="upload-btn btn-red" onclick="deleteMenu()" style="display:none;">
                 <i class="fa-solid fa-trash-can"></i> 이번 주 식단표 삭제
@@ -1546,23 +1546,34 @@ function aiExtractMenu(){
 }
 function _onAiFile(e){
     const file=e.target.files&&e.target.files[0]; if(!file) return; e.target.value='';
-    if(!file.type.startsWith('image/')){ showToast('⚠️ 이미지 파일만 가능합니다.'); return; }
+    const isPdf = file.type==='application/pdf' || /\.pdf$/i.test(file.name||'');
+    const isImg = (file.type||'').startsWith('image/');
+    if(!isImg && !isPdf){ showToast('⚠️ 이미지 또는 PDF 파일만 가능합니다.'); return; }
     showToast('⏳ AI가 식단표를 분석 중입니다... (약 5~15초)');
+    if(isPdf){
+        if(file.size > 18*1024*1024){ showToast('⚠️ PDF 용량이 큽니다(18MB 이하 권장). 이미지로 올려주세요.'); return; }
+        const fr=new FileReader();
+        fr.onload=async ()=>{ try{ const b64=String(fr.result).split(',')[1]; const menu=await _callGeminiMenu(b64,'application/pdf'); openMenuAiReview(menu); }
+            catch(err){ showToast('❌ AI 분석 실패: '+((err&&err.message)||err)); } };
+        fr.onerror=()=>showToast('❌ PDF를 읽지 못했습니다.');
+        fr.readAsDataURL(file);
+        return;
+    }
     compressMenuImage(file, async (dataUrl)=>{
         if(!dataUrl){ showToast('❌ 이미지를 읽지 못했습니다.'); return; }
         try{ const menu=await _callGeminiMenu(dataUrl.split(',')[1]); openMenuAiReview(menu); }
         catch(err){ showToast('❌ AI 분석 실패: '+((err&&err.message)||err)); }
     });
 }
-async function _callGeminiMenu(b64){
+async function _callGeminiMenu(b64, mime){
     const key=_getGeminiKey(); if(!key) throw new Error('AI 키 없음');
     const model=(localStorage.getItem('kacGeminiModel')||'gemini-2.0-flash');
     const url=`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(key)}`;
-    const prompt='다음은 한 주(월~금) 주간 식단표 사진입니다. 요일별로 아침/점심/저녁 메뉴를 읽어 JSON으로만 출력하세요. '
+    const prompt='다음은 한 주(월~금) 주간 식단표(사진 또는 PDF)입니다. 요일별로 아침/점심/저녁 메뉴를 읽어 JSON으로만 출력하세요. '
         +'각 끼니의 음식명을 배열로 넣고(밥·국·반찬을 각각 한 항목으로), 인원수/원산지/제목/안내문은 제외하되 date에는 표의 날짜표기(예 6/8)를 넣으세요. '
         +'별표(*)나 특수문자는 그대로 유지. 비어있는 칸은 빈 배열. 코드블록 없이 JSON만. '
         +'형식: {"period":"2026.06.08 ~ 2026.06.12","days":[{"dow":"월","date":"6/8","breakfast":[],"lunch":[],"dinner":[]}]}';
-    const body={ contents:[{ parts:[ {inline_data:{mime_type:'image/jpeg',data:b64}}, {text:prompt} ] }], generationConfig:{ temperature:0.1, responseMimeType:'application/json' } };
+    const body={ contents:[{ parts:[ {inline_data:{mime_type:(mime||'image/jpeg'),data:b64}}, {text:prompt} ] }], generationConfig:{ temperature:0.1, responseMimeType:'application/json' } };
     const res=await fetch(url,{ method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
     if(!res.ok){ const t=await res.text(); throw new Error('서버 '+res.status+' '+(t||'').slice(0,140)); }
     const data=await res.json();
@@ -2864,8 +2875,8 @@ function renderMealCalendar(a, month){
 </script>
 <!-- @catc-version-badge · 전 페이지 통일 디자인 (개발자 확인용 · 사용자에게는 거의 안 보임) -->
 <style>@media print{#__catcVer{display:none!important}}</style>
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">JDS260613(V7)</div>
-<script>try{console.log('%cCATC%c 영양사 (nutritionist.html) %cJDS260613(V7)%c build 20260613','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}</script>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">JDS260613(V8)</div>
+<script>try{console.log('%cCATC%c 영양사 (nutritionist.html) %cJDS260613(V8)%c build 20260613','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}</script>
 <div id="notifyStack" class="notify-stack"></div>
 <!-- ── 화면 자동 맞춤(auto-fit): 입장 시 가로폭 초과하면 화면에 맞게 자동 축소 · JDS260614 ── -->
 <script>
