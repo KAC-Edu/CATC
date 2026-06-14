@@ -411,12 +411,17 @@
 
         /* ── PC 탭 메뉴 (교육지원부 스타일) ── */
         .ntabs { display:flex; gap:10px; margin:0 0 16px; flex-wrap:wrap; position:sticky; top:76px; z-index:150; background:var(--bg); padding:12px 0 10px; }
-        /* [JDS260613] 식수 기준 선택 토글 (헤더) */
-        .est-basis-toggle { display:flex; align-items:center; gap:3px; background:rgba(255,255,255,0.15); border-radius:10px; padding:3px 4px; margin-right:4px; }
-        .est-basis-toggle .eb-lab { color:rgba(255,255,255,0.85); font-size:10px; font-weight:800; padding:0 4px 0 5px; white-space:nowrap; }
-        .eb-opt { background:transparent; color:rgba(255,255,255,0.75); border:none; font-size:11px; font-weight:800; padding:5px 9px; border-radius:7px; cursor:pointer; font-family:inherit; white-space:nowrap; }
-        .eb-opt.on { background:#fff; color:#1e3a8a; box-shadow:0 1px 4px rgba(0,0,0,0.15); }
-        @media (max-width:1180px){ .est-basis-toggle .eb-lab{ display:none; } }
+        /* [JDS260613] 식수 인원 기준 선택 (주간 식수현황 팝업 내부) */
+        .mw-basis { display:flex; align-items:center; justify-content:space-between; gap:10px; background:#f1f5f9; border:1px solid #e2e8f0; border-radius:12px; padding:9px 12px; margin:2px 0 8px; flex-wrap:wrap; }
+        .mw-basis-lab { font-size:13px; font-weight:900; color:#334155; white-space:nowrap; }
+        .mw-basis-lab i { color:#2563eb; margin-right:5px; }
+        .mw-basis-seg { display:flex; gap:3px; background:#e2e8f0; border-radius:9px; padding:3px; }
+        .mwb-opt { background:transparent; color:#64748b; border:none; font-size:12.5px; font-weight:800; padding:7px 14px; border-radius:7px; cursor:pointer; font-family:inherit; white-space:nowrap; }
+        .mwb-opt.on { background:#2563eb; color:#fff; box-shadow:0 1px 4px rgba(37,99,235,0.35); }
+        .mw-basis-note { font-size:12px; line-height:1.6; border-radius:10px; padding:9px 12px; margin:0 0 8px; }
+        .mw-basis-note.arr { background:#eff6ff; border:1px solid #bfdbfe; color:#1e40af; }
+        .mw-basis-note.muted { background:#f8fafc; border:1px solid #e2e8f0; color:#64748b; }
+        .mw-basis-note i { margin-right:5px; }
         .ntab { flex:1; min-width:160px; background:#fff; border:1.5px solid var(--border); border-radius:14px; padding:18px 20px; cursor:pointer; text-align:left; transition:all .18s; position:relative; overflow:hidden; }
         .ntab:hover { border-color:#bfdbfe; transform:translateY(-1px); box-shadow:0 4px 12px rgba(15,23,42,.07); }
         .ntab.active { border-color:#2563eb; background:linear-gradient(135deg,#eff6ff,#fff); box-shadow:0 4px 14px rgba(37,99,235,.15); }
@@ -745,11 +750,6 @@
         <div class="header-summary">
             <button class="h-btn icon-only" id="acctBtn" onclick="openAcctModal()" title="사외강사 식대 계좌 설정"><i class="fa-solid fa-gear"></i></button>
             <button class="h-btn touch" onclick="location.href='staff_meal.html'"><i class="fa-solid fa-utensils"></i> 터치패널</button>
-            <div class="est-basis-toggle" title="식수 예상 인원 기준 선택">
-                <span class="eb-lab">식수기준</span>
-                <button id="basis-roster" class="eb-opt on" onclick="_setEstBasis('roster')">명단</button>
-                <button id="basis-arrived" class="eb-opt" onclick="_setEstBasis('arrived')">실입교</button>
-            </div>
             <button class="hsum hsum-break" onclick="openMealWeek('breakfast')" title="주간 식수현황 보기"><span class="hs-lab"><i class="fa-solid fa-mug-hot"></i> 아침 예상</span><span class="hs-val" id="breakfastEst">-</span></button>
             <button class="hsum hsum-lunch" onclick="openMealWeek('lunch')" title="주간 식수현황 보기"><span class="hs-lab"><i class="fa-solid fa-bowl-rice"></i> 점심 예상</span><span class="hs-val" id="lunchEst">-</span></button>
             <button class="hsum hsum-dinner" onclick="openMealWeek('dinner')" title="주간 식수현황 보기"><span class="hs-lab"><i class="fa-solid fa-moon"></i> 석식 예상</span><span class="hs-val" id="dinnerEst">-</span></button>
@@ -1182,9 +1182,20 @@ function _renderMealWeek() {
     const plan = Array.isArray(_annualPlan) ? _annualPlan : Object.values(_annualPlan || {});
     const wc = plan.filter(c => c && c.name && c.startDate && c.endDate && c.startDate <= fri && c.endDate >= mon)
                    .sort((a,b) => (a.startDate||'').localeCompare(b.startDate||''));
-    const clist = wc.map(c => { const n = (_courseCounts(c).total) || 0; return `<div class="mw-crow"><span class="mw-cn">${escH(c.name)}</span><span class="mw-cd">${escH(c.startDate)}~${escH(c.endDate)}</span><span class="mw-ch">${n ? n+'명' : '대기'}</span></div>`; }).join('') || '<div class="mw-crow" style="color:#94a3b8;">이 주 운영 과정 없음</div>';
+    const clist = wc.map(c => { const n = _courseHeadByBasis(c) || 0; return `<div class="mw-crow"><span class="mw-cn">${escH(c.name)}</span><span class="mw-cd">${escH(c.startDate)}~${escH(c.endDate)}</span><span class="mw-ch">${n ? n+'명' : (_estBasis==='arrived'?'0명':'대기')}</span></div>`; }).join('') || '<div class="mw-crow" style="color:#94a3b8;">이 주 운영 과정 없음</div>';
     const staffCount = Object.values(_staffRoster || {}).filter(r => r && r.active !== false).length;
+    const basisBar = `<div class="mw-basis">
+            <span class="mw-basis-lab"><i class="fa-solid fa-users-gear"></i> 식수 인원 기준</span>
+            <div class="mw-basis-seg">
+                <button class="mwb-opt ${_estBasis==='roster'?'on':''}" onclick="_setEstBasis('roster')">교육생 명단</button>
+                <button class="mwb-opt ${_estBasis==='arrived'?'on':''}" onclick="_setEstBasis('arrived')">실제 입교</button>
+            </div>
+        </div>`
+        + (_estBasis === 'arrived'
+            ? `<div class="mw-basis-note arr"><i class="fa-solid fa-circle-info"></i> <b>실제 입교</b>란 항공기술훈련원 강의실에 <b>실제로 입실(출석)</b>한 교육생 수를 말합니다. 아직 입교 전이면 0명으로 표시될 수 있습니다.</div>`
+            : `<div class="mw-basis-note muted"><i class="fa-regular fa-circle-question"></i> <b>교육생 명단</b>은 운영부·지원부가 올린 예정 인원 기준입니다. 실제 강의실 입실 인원으로 보려면 <b>‘실제 입교’</b>를 선택하세요.</div>`);
     body.innerHTML = nav
+        + basisBar
         + `<div class="mw-leg"><i class="fa-solid fa-circle-info"></i> 표 안 숫자 = <b class="mw-leg-st">교육생</b> <span style="color:#94a3b8;">＋</span> <b class="mw-leg-sf">상주직원</b> 합계</div>`
         + `<div style="overflow-x:auto;"><table class="mw-table"><thead>${head}</thead><tbody>${rows}</tbody></table></div>`
         + `<div class="mw-note"><i class="fa-solid fa-circle-info"></i> 교육생은 과정 <b>첫날 점심부터 마지막날 점심까지</b>로 산정합니다(첫날 아침·마지막날 저녁 제외). 직원은 <b>점심 전원(${staffCount}명)</b>이고, 아침·저녁은 <b>당일 터치패널 신청</b> 기준이라 지난·오늘 날짜에만 반영됩니다.</div>`
@@ -1679,7 +1690,6 @@ window.addEventListener('DOMContentLoaded', () => {
     loadAccount();
     setMonth(getToday().slice(0,7));
     startClock();
-    _updateBasisToggle();
 });
 function showTab(id){
     document.querySelectorAll('.tab-panel').forEach(p => p.classList.toggle('active', p.id === id));
@@ -1802,19 +1812,14 @@ function _courseCounts(c){
     return {found:false, total:0};
 }
 
-// [JDS260613] 식수 예상 인원 기준: 'roster'(운영부·지원부가 올린 명단) | 'arrived'(실제 입교완료)
-let _estBasis = (function(){ try { return localStorage.getItem('catc_estBasis') || 'roster'; } catch(e){ return 'roster'; } })();
+// [JDS260613] 식수 예상 인원 기준: 'roster'(운영부·지원부가 올린 명단) | 'arrived'(실제 입교완료). 기본값 = 명단
+let _estBasis = (function(){ try { return localStorage.getItem('catc_estBasis_v2') || 'roster'; } catch(e){ return 'roster'; } })();
 function _setEstBasis(v){
     _estBasis = (v === 'arrived') ? 'arrived' : 'roster';
-    try { localStorage.setItem('catc_estBasis', _estBasis); } catch(e){}
-    _updateBasisToggle();
-    if (typeof renderMealStats === 'function') renderMealStats();
-    if (_courseCache) renderCourseWeek(_courseCache.courses, _courseCache.ctx);
-}
-function _updateBasisToggle(){
-    const r = document.getElementById('basis-roster'), a = document.getElementById('basis-arrived');
-    if (r) r.classList.toggle('on', _estBasis === 'roster');
-    if (a) a.classList.toggle('on', _estBasis === 'arrived');
+    try { localStorage.setItem('catc_estBasis_v2', _estBasis); } catch(e){}
+    if (typeof _renderMealWeek === 'function') _renderMealWeek();   // 주간 식수현황 팝업 갱신
+    if (typeof renderMealStats === 'function') renderMealStats();   // 상단 아침·점심·석식 예상값
+    if (_courseCache) renderCourseWeek(_courseCache.courses, _courseCache.ctx); // 과정 현황 카드
 }
 // 실제 입교완료(students)와 올린 명단(roster)을 분리해 반환
 function _courseCounts2(c){
@@ -2815,8 +2820,8 @@ function renderMealCalendar(a, month){
 </script>
 <!-- @catc-version-badge · 전 페이지 통일 디자인 (개발자 확인용 · 사용자에게는 거의 안 보임) -->
 <style>@media print{#__catcVer{display:none!important}}</style>
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">JDS260613(V4)</div>
-<script>try{console.log('%cCATC%c 영양사 (nutritionist.html) %cJDS260613(V4)%c build 20260613','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}</script>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">JDS260613(V5)</div>
+<script>try{console.log('%cCATC%c 영양사 (nutritionist.html) %cJDS260613(V5)%c build 20260613','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}</script>
 <div id="notifyStack" class="notify-stack"></div>
 <!-- ── 화면 자동 맞춤(auto-fit): 입장 시 가로폭 초과하면 화면에 맞게 자동 축소 · JDS260614 ── -->
 <script>
