@@ -43,19 +43,22 @@
             background:rgba(255,255,255,.08); color:#dbeafe; font-size:16px; cursor:pointer; }
         .gear:hover{ background:rgba(255,255,255,.16); }
 
-        /* ── 생활관별 세로 블록 ── */
-        .wrap{ padding:22px 26px 40px; }
-        .blocks{ display:flex; gap:18px; align-items:flex-start; flex-wrap:wrap; }
-        .bblock{ flex:1; min-width:300px; background:#fff; border:1.5px solid var(--border); border-radius:18px;
-            box-shadow:0 4px 16px rgba(15,30,80,.06); overflow:hidden; display:flex; flex-direction:column; }
-        .bb-hd{ padding:15px 18px; display:flex; align-items:center; justify-content:space-between; color:#fff; }
+        /* ── 생활관별 세로 블록 (전체 높이, 블록별 독립 스크롤) ── */
+        .wrap{ padding:18px 22px; height:calc(100vh - 68px); }
+        .blocks{ display:flex; gap:16px; align-items:stretch; height:100%; }
+        .bblock{ flex:1 1 0; min-width:0; background:#fff; border:1.5px solid var(--border); border-radius:18px;
+            box-shadow:0 4px 16px rgba(15,30,80,.06); overflow:hidden; display:flex; flex-direction:column; height:100%; }
+        .bb-hd{ padding:15px 18px; display:flex; align-items:center; justify-content:space-between; color:#fff; flex:none; }
         .bb-hd.청렴관{ background:linear-gradient(135deg,#1d4ed8,#3b82f6); }
         .bb-hd.상생관{ background:linear-gradient(135deg,#047857,#10b981); }
         .bb-hd.국제동{ background:linear-gradient(135deg,#6d28d9,#8b5cf6); }
         .bb-hd .nm{ font-size:18px; font-weight:900; display:flex; align-items:center; gap:9px; }
         .bb-hd .wn{ font-size:13px; font-weight:900; background:rgba(255,255,255,.22); border-radius:20px; padding:3px 13px; }
-        .bb-body{ padding:12px; display:flex; flex-direction:column; gap:10px; min-height:90px; }
-        .bb-empty{ text-align:center; color:#cbd5e1; font-size:14px; font-weight:800; padding:34px 0; }
+        .bb-body{ padding:12px; display:flex; flex-direction:column; gap:10px; flex:1; overflow-y:auto; }
+        .bb-body::-webkit-scrollbar{ width:9px; }
+        .bb-body::-webkit-scrollbar-thumb{ background:#cbd5e1; border-radius:5px; }
+        .bb-body::-webkit-scrollbar-track{ background:transparent; }
+        .bb-empty{ margin:auto; text-align:center; color:#cbd5e1; font-size:14px; font-weight:800; padding:34px 0; }
 
         /* 호수 카드 (접힘: 호수+건수 / 펼침: 신청내용+처리) */
         .rcard{ border:1.5px solid var(--border); border-radius:13px; overflow:hidden; transition:.15s; }
@@ -113,7 +116,9 @@
         @media (max-width:860px){
             .top{ flex-wrap:wrap; height:auto; padding:10px 14px; gap:10px; }
             .clock{ margin-left:0; } .brand h1{ font-size:16px; }
-            .blocks{ flex-direction:column; } .bblock{ width:100%; }
+            .wrap{ height:auto; }
+            .blocks{ flex-direction:column; height:auto; } .bblock{ width:100%; height:auto; }
+            .bb-body{ overflow:visible; }
         }
     </style>
 </head>
@@ -129,6 +134,7 @@
         <div class="scard done"><div class="sn" id="s-done">0</div><div class="sl">오늘 완료</div></div>
     </div>
     <div class="clock" id="clock"></div>
+    <button class="gear" onclick="openReport()" title="월간 리포트" style="margin-right:8px;"><i class="fa-solid fa-chart-column"></i></button>
     <button class="gear" onclick="openSet()" title="설정"><i class="fa-solid fa-gear"></i></button>
 </div>
 
@@ -146,6 +152,21 @@
             <span class="lab" style="font-size:12.5px; color:#94a3b8; font-weight:700;">요청이 새로 접수되면 알림음이 울립니다.</span>
         </div>
         <button class="set-close" onclick="closeSet()">닫기</button>
+    </div>
+</div>
+
+<!-- 월간 리포트 -->
+<div class="ov" id="rpOv" onclick="if(event.target===this)closeReport()">
+    <div class="set" style="width:760px; max-width:95vw; max-height:90vh; overflow-y:auto;">
+        <h3 style="justify-content:space-between;"><span><i class="fa-solid fa-chart-column" style="color:#2563eb;"></i> 미화 · 비품 월간 리포트</span>
+            <span style="display:flex; gap:8px; align-items:center;">
+                <select id="rpMonth" onchange="renderReport()" style="font-size:13px; font-weight:800; padding:7px 10px; border:1.5px solid #e2e8f0; border-radius:9px;"></select>
+                <button onclick="printReport()" style="font-size:13px; font-weight:800; padding:8px 14px; border:none; border-radius:9px; background:#2563eb; color:#fff; cursor:pointer;"><i class="fa-solid fa-print"></i> 인쇄 / PDF</button>
+            </span>
+        </h3>
+        <div style="font-size:12px; color:#94a3b8; font-weight:700; margin-bottom:14px;">민원 데이터는 3개월간 보관되며, 반복 민원 호수·품목 소진·처리시간을 개선 자료로 활용하세요.</div>
+        <div id="rpBody"></div>
+        <button class="set-close" onclick="closeReport()">닫기</button>
     </div>
 </div>
 
@@ -287,10 +308,110 @@
 
     function markDone(id, rk){
         const el=document.getElementById('rc-'+rk); if(el) el.classList.add('resolving');   // 회색 비활성 → 곧 사라짐
-        setTimeout(()=>{ db.child(id).update({status:'처리완료'}); }, 320);
+        setTimeout(()=>{ db.child(id).update({status:'처리완료', resolvedAt: firebase.database.ServerValue.TIMESTAMP}); }, 320);
     }
-    function markReject(id){ const r=prompt('처리 불가 사유 (생략 가능)'); const u={status:'처리불가'}; if(r)u.reason=r; db.child(id).update(u); }
-    function undoStatus(id){ db.child(id).update({status:'대기', reason:null}); }
+    function markReject(id){ const r=prompt('처리 불가 사유 (생략 가능)'); const u={status:'처리불가', resolvedAt: firebase.database.ServerValue.TIMESTAMP}; if(r)u.reason=r; db.child(id).update(u); }
+    function undoStatus(id){ db.child(id).update({status:'대기', reason:null, resolvedAt:null}); }
+
+    /* ── 3개월 자동 보관/정리 (그 이전 민원 자동 삭제) ── */
+    function autoCleanFacility(){
+        try{
+            const cut = Date.now() - 92*24*60*60*1000;   // 약 3개월
+            db.once('value').then(snap=>{
+                const data=snap.val()||{}; const upd={}; let n=0;
+                Object.entries(data).forEach(([k,v])=>{ const ts=Number(v&&v.timestamp||0); if(ts && ts<cut){ upd[k]=null; n++; } });
+                if(n){ db.update(upd).then(()=>console.log('[미화] 3개월 경과 민원 '+n+'건 자동삭제')); }
+            });
+        }catch(e){ console.warn('[미화] 자동정리 오류',e); }
+    }
+    (function(){ try{ const d=new Date().toISOString().slice(0,10); if(localStorage.getItem('kacFacilityCleanDay')===d) return; localStorage.setItem('kacFacilityCleanDay', d); }catch(e){} autoCleanFacility(); })();
+
+    /* ── 월간 리포트 (빅데이터: 반복 호수·품목 소진·건물비교·처리시간·요일/시간 패턴) ── */
+    function _ym(ts){ const d=new Date(ts); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`; }
+    function _analyze(ym){
+        const data=cache||{};
+        const all=Object.keys(data).map(k=>({id:k,...data[k]})).filter(r=>r.timestamp && _ym(r.timestamp)===ym);
+        const st={'대기':0,'확인':0,'처리완료':0,'처리불가':0};
+        const byB={'청렴관':0,'상생관':0,'국제동':0,'기타':0};
+        const byItem={}; const byRoom={}; const byDow=[0,0,0,0,0,0,0]; const byHour=new Array(24).fill(0);
+        let resolveMs=0, resolveN=0;
+        all.forEach(r=>{
+            st[r.status]=(st[r.status]||0)+1;
+            const b=bldgOf(r.dorm); byB[b]=(byB[b]||0)+1;
+            const items=Array.isArray(r.items)&&r.items.length?r.items:['기타(직접입력)'];
+            items.forEach(it=>{ byItem[it]=(byItem[it]||0)+1; });
+            const roomKey=`${b} ${roomNoOf(r.dorm)}`; byRoom[roomKey]=(byRoom[roomKey]||0)+1;
+            const d=new Date(r.timestamp); byDow[d.getDay()]++; byHour[d.getHours()]++;
+            if(r.resolvedAt && r.timestamp && (r.status==='처리완료'||r.status==='처리불가')){ resolveMs+=(r.resolvedAt-r.timestamp); resolveN++; }
+        });
+        const total=all.length;
+        const done=st['처리완료']||0, rej=st['처리불가']||0;
+        const itemRank=Object.entries(byItem).sort((a,b)=>b[1]-a[1]);
+        const roomRank=Object.entries(byRoom).sort((a,b)=>b[1]-a[1]);
+        const avgResolveMin=resolveN?Math.round(resolveMs/resolveN/60000):null;
+        return {ym, all, total, st, byB, itemRank, roomRank, byDow, byHour, done, rej, avgResolveMin,
+            resolveRate: total?Math.round((done)/total*100):0};
+    }
+    function _bar(label, val, max, color){
+        const pct=max?Math.round(val/max*100):0;
+        return `<div style="display:flex;align-items:center;gap:10px;margin:5px 0;">
+            <span style="width:120px;font-size:13px;font-weight:700;color:#334155;flex:none;text-align:right;">${h(label)}</span>
+            <div style="flex:1;background:#f1f5f9;border-radius:6px;height:18px;overflow:hidden;"><div style="width:${pct}%;height:100%;background:${color};border-radius:6px;"></div></div>
+            <span style="width:46px;font-size:13px;font-weight:900;color:#0f172a;flex:none;">${val}건</span></div>`;
+    }
+    function _reportInner(a){
+        const dow=['일','월','화','수','목','금','토'];
+        const itemMax=a.itemRank.length?a.itemRank[0][1]:0;
+        const dowMax=Math.max(...a.byDow,1);
+        const bMax=Math.max(a.byB['청렴관'],a.byB['상생관'],a.byB['국제동'],1);
+        const peakHour=a.byHour.indexOf(Math.max(...a.byHour));
+        return `
+        <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:18px;">
+            ${[['총 민원',a.total,'#2563eb'],['처리완료',a.done,'#10b981'],['처리불가',a.rej,'#dc2626'],['처리율',a.resolveRate+'%','#7c3aed'],['평균 처리시간',a.avgResolveMin==null?'-':(a.avgResolveMin>=60?Math.floor(a.avgResolveMin/60)+'시간 '+(a.avgResolveMin%60)+'분':a.avgResolveMin+'분'),'#0891b2']].map(([l,v,c])=>`<div style="flex:1;min-width:120px;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:12px;padding:12px 14px;"><div style="font-size:12px;font-weight:800;color:#64748b;">${l}</div><div style="font-size:22px;font-weight:900;color:${c};margin-top:3px;">${v}</div></div>`).join('')}
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:22px;">
+            <div><h4 style="font-size:14px;font-weight:900;color:#0f172a;margin-bottom:8px;">🏢 생활관별 민원</h4>
+                ${_bar('청렴관',a.byB['청렴관'],bMax,'#3b82f6')}${_bar('상생관',a.byB['상생관'],bMax,'#10b981')}${_bar('국제동',a.byB['국제동'],bMax,'#8b5cf6')}</div>
+            <div><h4 style="font-size:14px;font-weight:900;color:#0f172a;margin-bottom:8px;">📦 품목별 요청 (소진 빈도)</h4>
+                ${a.itemRank.length?a.itemRank.slice(0,6).map(([k,v])=>_bar(k,v,itemMax,'#f59e0b')).join(''):'<div style="color:#94a3b8;font-size:13px;">데이터 없음</div>'}</div>
+            <div><h4 style="font-size:14px;font-weight:900;color:#0f172a;margin-bottom:8px;">🔁 반복 민원 호수 (상위 8)</h4>
+                ${a.roomRank.length?`<table style="width:100%;border-collapse:collapse;font-size:13px;">${a.roomRank.slice(0,8).map(([k,v],i)=>`<tr style="border-bottom:1px solid #eef2f7;"><td style="padding:6px 4px;font-weight:${v>=2?'900':'600'};color:${v>=3?'#dc2626':'#334155'};">${i+1}. ${h(k)}</td><td style="padding:6px 4px;text-align:right;font-weight:900;">${v}건</td></tr>`).join('')}</table>`:'<div style="color:#94a3b8;font-size:13px;">데이터 없음</div>'}</div>
+            <div><h4 style="font-size:14px;font-weight:900;color:#0f172a;margin-bottom:8px;">📅 요일별 분포 · ⏰ 피크</h4>
+                ${a.byDow.map((v,i)=>_bar(dow[i]+'요일',v,dowMax,'#6366f1')).join('')}
+                <div style="margin-top:8px;font-size:13px;color:#475569;font-weight:700;">가장 많은 시간대: <b style="color:#0f172a;">${a.total?peakHour+'시경':'-'}</b></div></div>
+        </div>`;
+    }
+    function openReport(){
+        const months=[]; const now=new Date();
+        for(let i=0;i<3;i++){ const d=new Date(now.getFullYear(),now.getMonth()-i,1); months.push(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`); }
+        const sel=document.getElementById('rpMonth');
+        sel.innerHTML=months.map(m=>`<option value="${m}">${m.split('-')[0]}년 ${parseInt(m.split('-')[1])}월</option>`).join('');
+        renderReport(); document.getElementById('rpOv').classList.add('show');
+    }
+    function renderReport(){ const ym=document.getElementById('rpMonth').value; document.getElementById('rpBody').innerHTML=_reportInner(_analyze(ym)); }
+    function closeReport(){ document.getElementById('rpOv').classList.remove('show'); }
+    function printReport(){
+        const ym=document.getElementById('rpMonth').value; const a=_analyze(ym);
+        const rows=a.all.sort((x,y)=>x.timestamp-y.timestamp).map(r=>{ const d=new Date(r.timestamp); const p=x=>String(x).padStart(2,'0');
+            const items=(Array.isArray(r.items)&&r.items.length?r.items.join(', '):'')+(r.text&&!(r.items||[]).length?(' '+r.text):'');
+            return `<tr><td>${d.getMonth()+1}/${d.getDate()} ${p(d.getHours())}:${p(d.getMinutes())}</td><td>${h(bldgOf(r.dorm))}</td><td>${h(roomNoOf(r.dorm))}</td><td>${h(items||'-')}</td><td>${h(r.name||'')}</td><td>${h(r.status)}</td></tr>`; }).join('');
+        const w=window.open('','_blank'); if(!w){ alert('팝업이 차단되었습니다. 팝업을 허용해 주세요.'); return; }
+        w.document.write(`<html><head><meta charset="utf-8"><title>미화·비품 월간 리포트 ${a.ym}</title>
+        <style>body{font-family:'Malgun Gothic',sans-serif;padding:28px;color:#1e293b;}h1{font-size:22px;}h2{font-size:16px;margin:20px 0 8px;border-bottom:2px solid #1e3a8a;padding-bottom:5px;}
+        table{width:100%;border-collapse:collapse;font-size:12px;margin-top:6px;}th,td{border:1px solid #cbd5e1;padding:6px 8px;text-align:left;}th{background:#1e3a8a;color:#fff;}
+        .sum{display:flex;gap:10px;flex-wrap:wrap;margin:10px 0;}.sc{border:1.5px solid #cbd5e1;border-radius:8px;padding:8px 14px;}.sc b{font-size:18px;}</style></head><body>
+        <h1>🧹 미화 · 비품 월간 리포트 — ${a.ym.split('-')[0]}년 ${parseInt(a.ym.split('-')[1])}월</h1>
+        <div class="sum"><div class="sc">총 민원 <b>${a.total}</b>건</div><div class="sc">처리완료 <b>${a.done}</b></div><div class="sc">처리불가 <b>${a.rej}</b></div><div class="sc">처리율 <b>${a.resolveRate}%</b></div><div class="sc">평균 처리시간 <b>${a.avgResolveMin==null?'-':a.avgResolveMin+'분'}</b></div></div>
+        <h2>생활관별 민원</h2><table><tr><th>청렴관</th><th>상생관</th><th>국제동</th></tr><tr><td>${a.byB['청렴관']}건</td><td>${a.byB['상생관']}건</td><td>${a.byB['국제동']}건</td></tr></table>
+        <h2>품목별 요청 (소진 빈도 / 재고 참고)</h2><table><tr><th>품목</th><th>요청 건수</th></tr>${a.itemRank.map(([k,v])=>`<tr><td>${h(k)}</td><td>${v}건</td></tr>`).join('')||'<tr><td colspan=2>없음</td></tr>'}</table>
+        <h2>반복 민원 호수 (개선 우선)</h2><table><tr><th>순위</th><th>위치</th><th>건수</th></tr>${a.roomRank.map(([k,v],i)=>`<tr><td>${i+1}</td><td>${h(k)}</td><td>${v}건</td></tr>`).join('')||'<tr><td colspan=3>없음</td></tr>'}</table>
+        <h2>전체 민원 내역</h2><table><tr><th>일시</th><th>생활관</th><th>호수</th><th>요청내용</th><th>요청자</th><th>상태</th></tr>${rows||'<tr><td colspan=6>없음</td></tr>'}</table>
+        <p style="margin-top:20px;font-size:11px;color:#64748b;">생성: ${new Date().toLocaleString('ko-KR')} · KAC 항공기술훈련원 미화·비품관리</p>
+        <!-- @build JDS260614 미화·비품: 전체높이 블록·블록별 독립스크롤, 3개월 보관 자동정리, 월간 리포트(반복호수·품목소진·건물비교·처리시간·요일/시간 패턴) + 인쇄/PDF, 새요청 알림음, 설정 -->
+</body></html>`);
+        w.document.close(); w.focus(); setTimeout(()=>{ try{w.print();}catch(e){} }, 400);
+    }
 </script>
+<!-- @build JDS260614 미화·비품: 전체높이 블록·블록별 독립스크롤, 3개월 보관 자동정리, 월간 리포트(반복호수·품목소진·건물비교·처리시간·요일/시간 패턴) + 인쇄/PDF, 새요청 알림음, 설정 -->
 </body>
 </html>
