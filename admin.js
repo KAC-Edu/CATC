@@ -8,7 +8,7 @@
    순으로 1단계 올리고, @build 를 수정 시각으로 갱신할 것.
    적용 여부는 브라우저 콘솔 로그(vA)로 확인한다.
 ============================================================ */
-try{console.log('%cCATC%c 강사 플랫폼 로직 (admin.js) %cvP%c build 20260613-104500','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}
+try{console.log('%cCATC%c 강사 플랫폼 로직 (admin.js) %cvP%c build 20260613-V6-roster','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}
 /* --- admin.js (Final Integrated Version - Fixed Syntax & Logic) --- */
 
 // --- [기본 데이터] 20문항 ---
@@ -4081,29 +4081,77 @@ cancelIndividualShuttle: function(waveId, locId, token, name) {
 
 
 
-loadStudentList: function() {
+// [JDS260613] 운영부(로컬)·지원부(UTC) 주차키 후보 계산 — 지원부 명단(system/dorm/rosters/{wk}__{room}) 직접 조회용
+    _weekKeyCandidates: function(startStr) {
+        if (!startStr) return [];
+        const d = new Date(startStr + 'T00:00:00');
+        if (isNaN(d)) return [];
+        const dow = (d.getDay() + 6) % 7;
+        const mon = new Date(d); mon.setDate(d.getDate() - dow);
+        const utc = mon.toISOString().slice(0, 10);
+        const local = `${mon.getFullYear()}-${String(mon.getMonth()+1).padStart(2,'0')}-${String(mon.getDate()).padStart(2,'0')}`;
+        return Array.from(new Set([local, utc]));
+    },
+
+    loadStudentList: function() {
         if(!state.room) return;
-        const expectedRef = firebase.database().ref(`courses/${state.room}/expectedStudents`);
-        const actualRef = firebase.database().ref(`courses/${state.room}/students`);
+        const room = state.room;
+        const self = this;
+        const expectedRef = firebase.database().ref(`courses/${room}/expectedStudents`);
+        const actualRef = firebase.database().ref(`courses/${room}/students`);
         expectedRef.off(); actualRef.off();
 
-        expectedRef.on('value', expSnap => {
-            const expectedNames = expSnap.val() || [];
-            actualRef.on('value', snap => {
-                if(!state.room) return; 
-                const data = snap.val() || {};
-                const tbody = document.getElementById('studentListTableBody');
-                if(!tbody) return;
+        let lastExpected = [];
+        let lastActual = {};
 
-                const actualStudents = Object.keys(data).map(key => ({ token: key, ...data[key] }))
-                                             .filter(s => s.name && s.name !== "undefined");
-                const actualNames = actualStudents.map(s => s.name);
-                const combinedNames = Array.from(new Set([...expectedNames, ...actualNames])).sort((a,b) => a.localeCompare(b));
+        // [JDS260613] 운영부(coursRoster)·지원부(system/dorm/rosters) 명단 이름을 직접 읽어 '예정' 명단에 병합.
+        //  → 강사가 별도 .txt 업로드/재저장을 하지 않아도, 운영부·지원부에서 올린 명단이 바로 '미입교'로 표시됨.
+        async function gatherRosterNames() {
+            const names = [];
+            try {
+                const crSnap = await firebase.database().ref(`courses/${room}/coordRoster`).once('value');
+                const cr = crSnap.val();
+                if (cr && Array.isArray(cr.list)) cr.list.forEach(s => { if (s && s.name) names.push(String(s.name).trim()); });
+            } catch (e) { /* 무시 */ }
+            try {
+                const pSnap = await firebase.database().ref(`courses/${room}/settings/period`).once('value');
+                const period = pSnap.val() || '';
+                const start = period.includes(' ~ ') ? period.split(' ~ ')[0].trim() : '';
+                const cands = self._weekKeyCandidates(start);
+                for (const wk of cands) {
+                    const dSnap = await firebase.database().ref(`system/dorm/rosters/${wk}__${room}`).once('value');
+                    const dv = dSnap.val();
+                    if (dv && Array.isArray(dv.list) && dv.list.length) {
+                        dv.list.forEach(s => { if (s && s.name) names.push(String(s.name).trim()); });
+                        break;
+                    }
+                }
+            } catch (e) { /* 무시 */ }
+            return names;
+        }
 
-                tbody.innerHTML = ""; 
-                let arrivedCount = 0;
+        async function render() {
+            if (state.room !== room) return;
+            const tbody = document.getElementById('studentListTableBody');
+            if (!tbody) return;
 
-                combinedNames.forEach((name, idx) => {
+            const rosterNames = await gatherRosterNames();
+            if (state.room !== room) return;
+
+            const expectedNames = Array.from(new Set(
+                [...(lastExpected || []), ...rosterNames].map(n => String(n).trim()).filter(Boolean)
+            ));
+            const data = lastActual || {};
+
+            const actualStudents = Object.keys(data).map(key => ({ token: key, ...data[key] }))
+                                         .filter(s => s.name && s.name !== "undefined");
+            const actualNames = actualStudents.map(s => s.name);
+            const combinedNames = Array.from(new Set([...expectedNames, ...actualNames])).sort((a,b) => a.localeCompare(b));
+
+            tbody.innerHTML = "";
+            let arrivedCount = 0;
+
+            combinedNames.forEach((name, idx) => {
                     const sList = actualStudents.filter(student => student.name === name);
                     const isArrived = sList.length > 0;
                     const studentData = isArrived ? sList[0] : null;
@@ -4162,8 +4210,10 @@ loadStudentList: function() {
                 const percent = total > 0 ? Math.round((arrivedCount / total) * 100) : 0;
                 const statusEl = document.getElementById('arrivalStatusSmall');
                 if(statusEl) statusEl.innerText = `${arrivedCount} / ${total} 명 (${percent}%)`;
-            });
-        });
+        }
+
+        expectedRef.on('value', snap => { lastExpected = snap.val() || []; render(); });
+        actualRef.on('value', snap => { lastActual = snap.val() || {}; render(); });
     },
 
 
@@ -6202,32 +6252,6 @@ const scheduleMgr = {
             const ts = snap.val();
             // 사진 없음(미업로드/삭제/과정 종료) → 이 PC 캐시도 정리 후 '내용 없음'
             if (!ts) { await this._idbDelete(room); if (state.room === room) this._renderPhoto(null); return; }
-            // [JDS260613] 지난 과정 사진 자동 리셋: 사진의 과정기간이 현재 과정과 다르면 삭제하고 '미등록'으로 표시
-            try {
-                const [pSnap, cpSnap] = await Promise.all([
-                    firebase.database().ref(`courses/${room}/settings/period`).once('value'),
-                    firebase.database().ref(`courses/${room}/scheduleImage/coursePeriod`).once('value')
-                ]);
-                const curPeriod = (pSnap.val() || '').trim();
-                const photoPeriod = (cpSnap.val() || '').trim();
-                let stale = false;
-                if (curPeriod) {
-                    if (photoPeriod) {
-                        stale = (photoPeriod !== curPeriod);                 // 과정기간 저장돼 있으면 정확 비교
-                    } else {
-                        // 레거시(기간 미저장): 사진이 현재 과정 시작 6일 이전이면 지난 과정 사진으로 간주
-                        const startStr = (curPeriod.split('~')[0] || '').trim();
-                        const startMs = new Date(startStr + 'T00:00:00').getTime();
-                        if (!isNaN(startMs) && ts < (startMs - 6 * 24 * 60 * 60 * 1000)) stale = true;
-                    }
-                }
-                if (stale) {
-                    await firebase.database().ref(`courses/${room}/scheduleImage`).remove().catch(() => {});
-                    await this._idbDelete(room);
-                    if (state.room === room) this._renderPhoto(null);
-                    return;
-                }
-            } catch (e) { /* 비교 실패 시 기존 표시 동작 유지 */ }
             // 1) 이 PC 캐시가 최신이면 → Firebase에서 이미지 다시 받지 않고 캐시로 표시
             const cached = await this._idbGet(room);
             if (cached && cached.updatedAt === ts && cached.dataUrl) {
