@@ -195,6 +195,7 @@
     .c-support::before { background: linear-gradient(90deg,#c2410c,#fb923c); }
     .c-facility::before{ background: linear-gradient(90deg,#b45309,#fbbf24); }
     .c-dorm::before    { background: linear-gradient(90deg,#be123c,#fb7185); }
+    .c-leader::before  { background: linear-gradient(90deg,#6d28d9,#a78bfa); }
 
     .card-icon {
       width: 40px; height: 40px;
@@ -208,6 +209,7 @@
     .c-support .card-icon  { background: #fff7ed; color: #ea580c; }
     .c-facility .card-icon { background: #fffbeb; color: #d97706; }
     .c-dorm .card-icon     { background: #fff1f2; color: #e11d48; }
+    .c-leader .card-icon   { background: #f5f3ff; color: #7c3aed; }
 
     .card-label { font-size: 14px; font-weight: 800; color: var(--text); }
     .card-sub   { font-size: 10.5px; color: var(--muted); margin-top: 3px; }
@@ -355,22 +357,13 @@
           <div class="card-sub">비품 관리</div>
           <div class="card-arrow"><i class="fa-solid fa-arrow-right"></i></div>
         </a>
-        <a class="menu-card c-dorm" onclick="goWithPin('dorm_admin.html','support')">
-          <div class="card-icon"><i class="fa-solid fa-bed"></i></div>
-          <div class="card-label">생활관 배정</div>
-          <div class="card-sub">방 배치 관리</div>
+        <a class="menu-card c-leader" href="student_leader.html">
+          <div class="card-icon"><i class="fa-solid fa-crown"></i></div>
+          <div class="card-label">학생장</div>
+          <div class="card-sub">학생장 전용 서비스</div>
           <div class="card-arrow"><i class="fa-solid fa-arrow-right"></i></div>
         </a>
       </div>
-
-      <a class="leader-btn" href="student_leader.html">
-        <div class="leader-icon"><i class="fa-solid fa-crown"></i></div>
-        <div>
-          <div class="lt">학생장 전용 플랫폼</div>
-          <div class="ls">학생장만 접근 가능한 전용 서비스</div>
-        </div>
-        <div class="leader-arrow"><i class="fa-solid fa-chevron-right"></i></div>
-      </a>
     </div>
 
     <footer class="app-footer">
