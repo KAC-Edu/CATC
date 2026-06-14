@@ -6283,6 +6283,15 @@ async function coordSaveRoster() {
         // 1) 정식 보관 위치 (교육지원부가 courses 스냅샷에서 바로 읽음)
         await firebase.database().ref(`courses/${currentRID}/coordRoster`).set(payload);
 
+        // 1-b) [JDS260613] 강사플랫폼 수강생 현황에 '예정(미입교)'로 표시되도록 예정명단(이름 배열) 동기화
+        //      실제 입실 전이므로 status는 '미입교'로 보이고, 교육생이 입실하면 '입교 완료'로 전환됨
+        try {
+            const expectedNames = Array.from(new Set(cleanList.map(s => (s.name || '').trim()).filter(Boolean)));
+            await firebase.database().ref(`courses/${currentRID}/expectedStudents`).set(expectedNames);
+        } catch (expErr) {
+            console.warn('[예정명단(강사플랫폼) 동기화 생략]', expErr);
+        }
+
         // 2) 강사플랫폼 교육요약이 읽는 경로 (system/coord/rosters) — 시간표 동기화
         try {
             await firebase.database().ref(`system/coord/rosters/${rosterKey}`).set(payload);
@@ -6665,8 +6674,8 @@ function _coordParseRoster(text) {
 </script>
 <!-- @catc-version-badge · 전 페이지 통일 디자인 (개발자 확인용 · 사용자에게는 거의 안 보임) -->
 <style>@media print{#__catcVer{display:none!important}}</style>
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">JDS260613(V4)</div>
-<script>try{console.log('%cCATC%c 교육운영부 (admin_coord.html) %cJDS260613(V4)%c build 20260613','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}</script>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">JDS260613(V5)</div>
+<script>try{console.log('%cCATC%c 교육운영부 (admin_coord.html) %cJDS260613(V5)%c build 20260613','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}</script>
 </body>
 </html>
 <!-- @build 20260612-132331 (교육운영부 vA) -->
