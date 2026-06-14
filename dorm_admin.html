@@ -1595,7 +1595,7 @@
             const monday = new Date(dt);
             const dow = (dt.getDay() + 6) % 7;
             monday.setDate(dt.getDate() - dow);
-            return monday.toISOString().slice(0, 10);
+            return _ymdLocal(monday);   // [JDS260613] UTC(toISOString) → 로컬 기준으로 통일 (운영부 키와 일치, 중복 키 근본 차단)
         }
 
         // 로컬 기준 YYYY-MM-DD (toISOString의 UTC 보정 문제 회피)
@@ -2697,6 +2697,22 @@
             const rk = rosterKey(saveCourse);
             db.ref(`system/dorm/rosters/${rk}`).set(payload)
                 .then(async () => {
+                    // [JDS260613] 같은 실제 주(canonical)+같은 방의 옛 중복 키(과거 UTC 주차키 등) 제거 → 자동배정에 1개만 표시
+                    try {
+                        const allSnap = await db.ref('system/dorm/rosters').once('value');
+                        const all = allSnap.val() || {};
+                        const myCanon = canonicalWeekKey(saveCourse.weekKey);
+                        const myRoom = String(saveCourse.room);
+                        const dels = {};
+                        Object.keys(all).forEach(k => {
+                            if (k === rk) return;
+                            const v = all[k]; if (!v) return;
+                            const kw = v.weekKey || k.split('__')[0];
+                            const kr = (v.room != null && v.room !== '') ? String(v.room) : (k.split('__')[1] || '');
+                            if (canonicalWeekKey(kw) === myCanon && kr === myRoom) dels[`system/dorm/rosters/${k}`] = null;
+                        });
+                        if (Object.keys(dels).length) await db.ref().update(dels);
+                    } catch (dupErr) { console.warn('[중복 명단 정리 생략]', dupErr); }
                     // [JDS260613] 강사플랫폼 수강생 현황에 '예정(미입교)'로 표시되도록 예정명단(이름 배열) 동기화
                     try {
                         const expectedNames = Array.from(new Set(payload.list.map(s => (s.name || '').trim()).filter(Boolean)));
@@ -2808,7 +2824,7 @@
             const today = new Date();
             const base = mondayOf(today);
             if (today.getDay() === 6 || today.getDay() === 0) base.setDate(base.getDate() + 7);
-            return base.toISOString().slice(0, 10);
+            return _ymdLocal(base);   // [JDS260613] UTC → 로컬 통일
         }
 
         async function loadWeeks() {
@@ -5633,7 +5649,7 @@
 </script>
 <!-- @catc-version-badge · 전 페이지 통일 디자인 (개발자 확인용 · 사용자에게는 거의 안 보임) -->
 <style>@media print{#__catcVer{display:none!important}}</style>
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">JDS260613(V5)</div>
-<script>try{console.log('%cCATC%c 교육지원부·생활관 (dorm_admin.html) %cJDS260613(V5)%c build 20260613','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}</script>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">JDS260613(V6)</div>
+<script>try{console.log('%cCATC%c 교육지원부·생활관 (dorm_admin.html) %cJDS260613(V6)%c build 20260613','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}</script>
 </body>
 </html>
