@@ -2003,26 +2003,31 @@
                 rosterEditCourse = it;
                 rosterDirty = false;  // DB에서 로드한 시점엔 항상 클린 상태
                 console.log('[명단 로드] 결과:', v ? `${roster.length}명 (list 존재: ${!!v.list})` : '⚠️ Firebase에 데이터 없음 (null)');
-                if (!v) {
-                    // 데이터가 없을 경우 — 인접 키도 시도 (UTC/KST 하루 차이 대비)
+                if (!v || !Array.isArray(v.list) || v.list.length === 0) {
+                    // 저장 키가 UTC든 KST든(또는 과거 잔존 키) — 같은 주(canonical)·같은 강의실이면 찾아냄
                     const [wkPart, roomPart] = key.split('__');
-                    const wkDate = new Date(wkPart + 'T00:00:00');
-                    wkDate.setDate(wkDate.getDate() + 1); // 하루 뒤 키로 재시도
-                    const altKey = `${wkDate.toISOString().slice(0,10)}__${roomPart}`;
-                    if (altKey !== key) {
-                        console.log('[명단 로드] 대체 키 시도:', `system/dorm/rosters/${altKey}`);
-                        db.ref(`system/dorm/rosters/${altKey}`).once('value', snap2 => {
-                            const v2 = snap2.val();
-                            if (v2 && Array.isArray(v2.list) && v2.list.length > 0) {
-                                console.log('[명단 로드] 대체 키에서 발견:', v2.list.length + '명 → 이 키로 로드');
-                                roster = v2.list;
-                                currentScheduleData = v2.schedule || null;
-                                rosterEditCourse = it;
-                            }
-                            renderRoster();
+                    const wantCanon = canonicalWeekKey(wkPart);
+                    db.ref('system/dorm/rosters').once('value', allSnap => {
+                        const all = allSnap.val() || {};
+                        let best = null, bestT = -1, bestKey = '';
+                        Object.keys(all).forEach(k => {
+                            const [wk, rm] = k.split('__');
+                            if (rm !== roomPart) return;
+                            if (canonicalWeekKey(wk) !== wantCanon) return;
+                            const e = all[k];
+                            if (!e || !Array.isArray(e.list) || e.list.length === 0) return;
+                            const t = Number(e.updatedAt || 0);
+                            if (t >= bestT) { bestT = t; best = e; bestKey = k; }
                         });
-                        return;
-                    }
+                        if (best) {
+                            roster = best.list;
+                            currentScheduleData = best.schedule || null;
+                            rosterEditCourse = it;
+                            console.log('[명단 로드] canonical 스캔으로 발견:', `${best.list.length}명 (키: ${bestKey})`);
+                        }
+                        renderRoster();
+                    });
+                    return;
                 }
                 renderRoster();
             });
@@ -5649,7 +5654,7 @@
 </script>
 <!-- @catc-version-badge · 전 페이지 통일 디자인 (개발자 확인용 · 사용자에게는 거의 안 보임) -->
 <style>@media print{#__catcVer{display:none!important}}</style>
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">JDS260613(V8)</div>
-<script>try{console.log('%cCATC%c 교육지원부·생활관 (dorm_admin.html) %cJDS260613(V8)%c build 20260613','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}</script>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">JDS260613(V9)</div>
+<script>try{console.log('%cCATC%c 교육지원부·생활관 (dorm_admin.html) %cJDS260613(V9)%c build 20260613','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}</script>
 </body>
 </html>
