@@ -6331,7 +6331,7 @@ async function coordSaveRoster() {
 }
 
 // [JDS260613] 메인 헤더 '과정담당'에 직책을 무조건 포함해 표시 (저장값이 직책 없이 "장영근"이어도 관리 명단에서 보강)
-function _coordRefreshCoordTitle(roomObj) {
+function _coordRefreshCoordTitle(roomObj, _tries) {
     const el = document.getElementById('ind-coord');
     if (!el) return;
     const room = roomObj || ((typeof currentRID !== 'undefined' && currentRID && globalAllData[currentRID]) ? globalAllData[currentRID] : null);
@@ -6339,10 +6339,16 @@ function _coordRefreshCoordTitle(roomObj) {
     if (!cn) { el.innerText = "-"; return; }
     const RANK = /\s*(차장|부장|팀장|실장|원장|과장|대리|주임|사원|교수)\s*$/;
     let disp = cn;
-    if (!RANK.test(cn) && window.coordMgr && Array.isArray(coordMgr.list)) {
-        const strip = v => String(v || "").replace(RANK, "").trim();
-        const m = coordMgr.list.find(c => c.name === cn || strip(c.name) === cn);
-        if (m) disp = m.name;
+    if (!RANK.test(cn)) {
+        const list = (window.coordMgr && Array.isArray(coordMgr.list)) ? coordMgr.list : [];
+        if (list.length) {
+            const strip = v => String(v || "").replace(RANK, "").trim();
+            const m = list.find(c => c.name === cn || strip(c.name) === cn);
+            if (m) disp = m.name;
+        } else if ((_tries || 0) < 8) {
+            // 담당자 관리 명단이 아직 로드 전 → 잠시 후 재시도 (직책 포함 이름 확보될 때까지)
+            setTimeout(() => _coordRefreshCoordTitle(roomObj, (_tries || 0) + 1), 500);
+        }
     }
     el.innerText = disp;
 }
@@ -6683,8 +6689,8 @@ function _coordParseRoster(text) {
 </script>
 <!-- @catc-version-badge · 전 페이지 통일 디자인 (개발자 확인용 · 사용자에게는 거의 안 보임) -->
 <style>@media print{#__catcVer{display:none!important}}</style>
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">JDS260613(V7)</div>
-<script>try{console.log('%cCATC%c 교육운영부 (admin_coord.html) %cJDS260613(V7)%c build 20260613','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}</script>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">JDS260613(V8)</div>
+<script>try{console.log('%cCATC%c 교육운영부 (admin_coord.html) %cJDS260613(V8)%c build 20260613','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}</script>
 </body>
 </html>
 <!-- @build 20260612-132331 (교육운영부 vA) -->
