@@ -2997,104 +2997,100 @@ function _buildMonthMatrix(){
 }
 function _xc(v, num, sid){ const st=` ss:StyleID="${sid||'c'}"`; return num ? `<Cell${st}><Data ss:Type="Number">${v}</Data></Cell>` : `<Cell${st}><Data ss:Type="String">${escH(v==null?'':v)}</Data></Cell>`; }
 function _xrow(cells){ return `<Row>${cells}</Row>`; }
+const _BD='<Borders><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1"/></Borders>';
+function _xlStyles(deptStyleXml){
+    return `<Styles>`+
+    `<Style ss:ID="c"><Alignment ss:Horizontal="Center" ss:Vertical="Center"/>${_BD}</Style>`+
+    `<Style ss:ID="cl"><Alignment ss:Horizontal="Left" ss:Vertical="Center"/>${_BD}</Style>`+
+    `<Style ss:ID="h"><Alignment ss:Horizontal="Center" ss:Vertical="Center" ss:WrapText="1"/><Font ss:Bold="1" ss:Color="#FFFFFF"/><Interior ss:Color="#1E3A8A" ss:Pattern="Solid"/>${_BD}</Style>`+
+    `<Style ss:ID="hwk"><Alignment ss:Horizontal="Center" ss:Vertical="Center" ss:WrapText="1"/><Font ss:Bold="1" ss:Color="#FFFFFF"/><Interior ss:Color="#64748B" ss:Pattern="Solid"/>${_BD}</Style>`+
+    `<Style ss:ID="wk"><Alignment ss:Horizontal="Center" ss:Vertical="Center"/><Font ss:Color="#475569"/><Interior ss:Color="#E5E7EB" ss:Pattern="Solid"/>${_BD}</Style>`+
+    `<Style ss:ID="tot"><Alignment ss:Horizontal="Center" ss:Vertical="Center"/><Font ss:Bold="1" ss:Color="#1E3A8A"/><Interior ss:Color="#DBEAFE" ss:Pattern="Solid"/>${_BD}</Style>`+
+    (deptStyleXml||'')+`</Styles>`;
+}
+function _deptStyles(){
+    const cmap=_deptColorMap(); const ids={}; const xml=[];
+    Object.keys(cmap).forEach((d,i)=>{ const id=`dp${i}`; ids[d]=id; xml.push(`<Style ss:ID="${id}"><Alignment ss:Horizontal="Center" ss:Vertical="Center"/><Interior ss:Color="${cmap[d]}" ss:Pattern="Solid"/>${_BD}</Style>`); });
+    return { ids, xml: xml.join('') };
+}
+function _xlWsCol(name, cols, rows){ return `<Worksheet ss:Name="${escH(name)}"><Table ss:DefaultColumnWidth="54">${cols||''}${rows.join('')}</Table></Worksheet>`; }
+function _xlHead(){ return `<?xml version="1.0" encoding="UTF-8"?><?mso-application progid="Excel.Sheet"?><Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">`; }
+function _xlDownload(xml){ const blob=new Blob(['\ufeff'+xml],{type:'application/vnd.ms-excel;charset=utf-8'}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download=_mealFileTitle()+'.xls'; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url),1500); }
+function _extRows(){ const ext=[]; _mealRowsRosterOrder().forEach(([key,a])=>{ if(a.category!=='external')return; let bc=0,lc=0,dc=0; Object.values(a.days||{}).forEach(md=>{ if(md.b)bc++; if(md.l)lc++; if(md.d)dc++; }); const adj=_adjust[key]; const shown=(adj&&adj.count!=null)?adj.count:(bc+lc+dc); ext.push({name:a.name||'',contact:a.idValue||'',bc,lc,dc,total:shown}); }); return ext; }
+function _sheetSettle(){
+    const bank=(document.getElementById('acctBank')||{}).value||'';
+    const accNo=(document.getElementById('acctNo')||{}).value||'';
+    const holder=(document.getElementById('acctHolder')||{}).value||'';
+    const accStr=((bank?bank+' ':'')+accNo+(holder?(' / 예금주 '+holder):'')).trim() || '(미등록)';
+    let r2=[ _xrow([_xc('사외강사 식대 정산',0,'h')]), _xrow([_xc('대상 월',0,'c'),_xc(_mealMonth,0,'c')]), _xrow([_xc('입금 계좌',0,'c'),_xc(accStr,0,'cl')]), _xrow([_xc('',0,'c')]),
+        _xrow(['연번','이름','연락처','아침','점심','저녁','총 식사횟수'].map(h=>_xc(h,0,'h'))) ];
+    let i=0,eb=0,el=0,ed=0,et=0; const ext=_extRows();
+    ext.forEach(e=>{ i++; eb+=e.bc; el+=e.lc; ed+=e.dc; et+=e.total; r2.push(_xrow([_xc(i,1),_xc(e.name),_xc(e.contact),_xc(e.bc,1),_xc(e.lc,1),_xc(e.dc,1),_xc(e.total,1,'tot')])); });
+    if(!ext.length) r2.push(_xrow([_xc('사외강사 식사 기록이 없습니다.',0,'cl')]));
+    else r2.push(_xrow([_xc('합계',0,'h'),_xc('',0,'h'),_xc('',0,'h'),_xc(eb,1,'h'),_xc(el,1,'h'),_xc(ed,1,'h'),_xc(et,1,'tot')]));
+    const cols=`<Column ss:Width="64"/><Column ss:Width="120"/><Column ss:Width="150"/><Column ss:Width="48"/><Column ss:Width="48"/><Column ss:Width="48"/><Column ss:Width="100"/>`;
+    return _xlWsCol('사외강사 정산', cols, r2);
+}
+/* [메인 엑셀 — PDF 양식과 동일한 셀 구성: 구분/소속/직책/이름/총 식사횟수/비고 + 테두리] */
 function exportMealExcel(){
     if(!_mealAgg){ showToast('먼저 월을 조회하세요.'); return; }
     const catLabel={staff:'직원',internal:'사내강사',external:'사외강사'};
-    const cmap=_deptColorMap();
-    // 소속별 스타일 ID 매핑 (엑셀 Interior 색)
-    const deptStyleIds={}; const deptStyleXml=[];
-    Object.keys(cmap).forEach((d,i)=>{ const id=`dp${i}`; deptStyleIds[d]=id;
-        deptStyleXml.push(`<Style ss:ID="${id}"><Alignment ss:Horizontal="Center" ss:Vertical="Center"/><Interior ss:Color="${cmap[d]}" ss:Pattern="Solid"/></Style>`); });
-    const sidOf=a=>deptStyleIds[_catColorKey(a)]||'c';
-
-    // ── 시트0: 월간 개인별 식수 (일별 매트릭스) ── [핵심]
-    const MX=_buildMonthMatrix();
-    let r0=[];
-    // 헤더 1행: 구분/소속/직책/이름 + 날짜(요일 줄바꿈) + 합계
-    let h1=[_xc('구분',0,'h'),_xc('소속',0,'h'),_xc('직책',0,'h'),_xc('이름',0,'h')];
-    MX.days.forEach(dy=>{ h1.push(_xc(`${dy.d}\n${dy.dow}`,0, dy.weekend?'hwk':'h')); });
-    h1.push(_xc('합계',0,'h'));
-    r0.push(_xrow(h1));
-    // 본문: 인원별
-    const dayTot={}; MX.days.forEach(dy=>dayTot[dy.date]=0); let grand=0;
-    MX.rows.forEach(row=>{
-        const ds=deptStyleIds[_catColorKey({category:row.cat,dept:row.dept})]||'c';
-        const cells=[_xc(row.catLabel),_xc(row.dept,0,ds),_xc(row.pos),_xc(row.name,0,ds)];
-        MX.days.forEach(dy=>{ const c=row.perDay[dy.date]||0; dayTot[dy.date]+=c; cells.push(_xc(c>0?c:'',c>0?1:0, dy.weekend?'wk':'c')); });
-        cells.push(_xc(row.total,1,'tot')); grand+=row.total;
-        r0.push(_xrow(cells));
-    });
-    // 합계행 (일별 총합)
-    let foot=[_xc('합계',0,'h'),_xc('',0,'h'),_xc('',0,'h'),_xc('',0,'h')];
-    MX.days.forEach(dy=>foot.push(_xc(dayTot[dy.date]||'',dayTot[dy.date]?1:0, dy.weekend?'wk':'h')));
-    foot.push(_xc(grand,1,'tot')); r0.push(_xrow(foot));
-
-    // ── 시트1: 전체 직원 식수 (명부 순서 + 소속 색상) ──
-    let r1=[ _xrow(['구분','소속','직책','이름','총횟수','아침','점심','저녁','비고'].map(h=>_xc(h,0,'h'))) ];
-    let gb=0,gl=0,gd=0,gT=0; const ext=[];
+    const ds=_deptStyles(); const sidOf=a=>ds.ids[_catColorKey(a)]||'c';
+    // ── 시트1: 직원 식수 (PDF 양식) ──
+    let r1=[ _xrow(['구분','소속','직책','이름','총 식사횟수','비고'].map(h=>_xc(h,0,'h'))) ];
+    let gb=0,gl=0,gd=0,gT=0;
     _mealRowsRosterOrder().forEach(([key,a])=>{
         let bc=0,lc=0,dc=0; Object.values(a.days||{}).forEach(md=>{ if(md.b)bc++; if(md.l)lc++; if(md.d)dc++; });
         const actual=bc+lc+dc; const adj=_adjust[key]; const shown=(adj&&adj.count!=null)?adj.count:actual;
         const memo=(adj&&adj.memo)||''; const corr=(adj&&adj.count!=null&&adj.count!==actual)?`(실제 ${actual})`:'';
         const dept=a.category==='staff'?(a.dept||''):''; const pos=a.category==='staff'?(a.position||''):(a.idValue||'');
-        const ds=sidOf(a);
         gb+=bc; gl+=lc; gd+=dc; gT+=shown;
-        r1.push(_xrow([_xc(catLabel[a.category]||'직원'),_xc(dept,0,ds),_xc(pos),_xc(a.name||'',0,ds),_xc(shown,1),_xc(bc,1),_xc(lc,1),_xc(dc,1),_xc((memo+(corr?(' '+corr):'')).trim())]));
-        if(a.category==='external') ext.push({name:a.name||'', contact:a.idValue||'', bc, lc, dc, total:shown});
+        r1.push(_xrow([_xc(catLabel[a.category]||'직원'),_xc(dept,0,sidOf(a)),_xc(pos),_xc(a.name||'',0,sidOf(a)),_xc(shown,1),_xc((memo+(corr?(' '+corr):'')).trim(),0,'cl')]));
     });
-    r1.push(_xrow([_xc('총 합계',0,'h'),_xc('',0,'h'),_xc('',0,'h'),_xc('',0,'h'),_xc(gT,1,'tot'),_xc(gb,1,'h'),_xc(gl,1,'h'),_xc(gd,1,'h'),_xc('',0,'h')]));
-
-    // ── 시트2: 사외강사 식대 정산 ──
-    const bank=(document.getElementById('acctBank')||{}).value||'';
-    const accNo=(document.getElementById('acctNo')||{}).value||'';
-    const holder=(document.getElementById('acctHolder')||{}).value||'';
-    const accStr=((bank?bank+' ':'')+accNo+(holder?(' / 예금주 '+holder):'')).trim() || '(미등록)';
-    let r2=[
-        _xrow([_xc('사외강사 식대 정산')]),
-        _xrow([_xc('대상 월'),_xc(_mealMonth)]),
-        _xrow([_xc('입금 계좌'),_xc(accStr)]),
-        _xrow([_xc('')]),
-        _xrow(['연번','이름','연락처','아침','점심','저녁','총 식사횟수'].map(h=>_xc(h,0,'h')))
-    ];
-    let i=0, eb=0,el=0,ed=0,et=0;
-    ext.forEach(e=>{ i++; eb+=e.bc; el+=e.lc; ed+=e.dc; et+=e.total;
-        r2.push(_xrow([_xc(i,1),_xc(e.name),_xc(e.contact),_xc(e.bc,1),_xc(e.lc,1),_xc(e.dc,1),_xc(e.total,1)])); });
-    if(!ext.length) r2.push(_xrow([_xc('사외강사 식사 기록이 없습니다.')]));
-    else r2.push(_xrow([_xc('합계'),_xc(''),_xc(''),_xc(eb,1),_xc(el,1),_xc(ed,1),_xc(et,1)]));
-
-    // ── 시트3: 일자별 식수 (주말 회색) ──
+    r1.push(`<Row><Cell ss:MergeAcross="3" ss:StyleID="h"><Data ss:Type="String">총 합계</Data></Cell><Cell ss:StyleID="tot"><Data ss:Type="Number">${gT}</Data></Cell><Cell ss:StyleID="cl"><Data ss:Type="String">아침 ${gb} · 점심 ${gl} · 저녁 ${gd}</Data></Cell></Row>`);
+    const cols1=`<Column ss:Width="60"/><Column ss:Width="150"/><Column ss:Width="60"/><Column ss:Width="90"/><Column ss:Width="120"/><Column ss:Width="180"/>`;
+    // ── 시트2: 일자별 식수 ──
     const dayMap={};
-    _mealRowsRosterOrder().forEach(([key,a])=>{
-        Object.entries(a.days||{}).forEach(([date,md])=>{ if(!date.startsWith(_mealMonth)||!md) return; const o=dayMap[date]||(dayMap[date]={b:0,l:0,d:0}); if(md.b)o.b++; if(md.l)o.l++; if(md.d)o.d++; });
-    });
+    _mealRowsRosterOrder().forEach(([key,a])=>{ Object.entries(a.days||{}).forEach(([date,md])=>{ if(!date.startsWith(_mealMonth)||!md)return; const o=dayMap[date]||(dayMap[date]={b:0,l:0,d:0}); if(md.b)o.b++; if(md.l)o.l++; if(md.d)o.d++; }); });
     const _pm=(_mealMonth||'').split('-').map(Number); const _yy=_pm[0], _mm=_pm[1];
     const _dim=new Date(_yy,_mm,0).getDate(); const _dow=['일','월','화','수','목','금','토'];
     let r3=[ _xrow(['날짜','요일','아침','점심','저녁','합계','비고'].map(h=>_xc(h,0,'h'))) ];
     let tb=0,tl=0,td=0;
-    for(let dd=1; dd<=_dim; dd++){
-        const date=`${_yy}-${String(_mm).padStart(2,'0')}-${String(dd).padStart(2,'0')}`;
+    for(let dd=1; dd<=_dim; dd++){ const date=`${_yy}-${String(_mm).padStart(2,'0')}-${String(dd).padStart(2,'0')}`;
         const wd=new Date(_yy,_mm-1,dd).getDay(); const we=(wd===0||wd===6); const sid=we?'wk':'c';
         const o=dayMap[date]||{b:0,l:0,d:0}; const sum=o.b+o.l+o.d; tb+=o.b; tl+=o.l; td+=o.d;
         const note=wd===0?'일요일':(wd===6?'토요일':'');
-        r3.push(_xrow([_xc(`${_mm}/${dd}`,0,sid),_xc(_dow[wd],0,sid),_xc(o.b,1,sid),_xc(o.l,1,sid),_xc(o.d,1,sid),_xc(sum,1,sid),_xc(note,0,sid)]));
-    }
-    r3.push(_xrow([_xc('합계',0,'h'),_xc('',0,'h'),_xc(tb,1,'h'),_xc(tl,1,'h'),_xc(td,1,'h'),_xc(tb+tl+td,1,'h'),_xc('',0,'h')]));
-
-    const ws=(name,rows)=>`<Worksheet ss:Name="${escH(name)}"><Table>${rows.join('')}</Table></Worksheet>`;
-    const xml=`<?xml version="1.0" encoding="UTF-8"?><?mso-application progid="Excel.Sheet"?>`+
-        `<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">`+
-        `<Styles>`+
-        `<Style ss:ID="c"><Alignment ss:Horizontal="Center" ss:Vertical="Center"/></Style>`+
-        `<Style ss:ID="h"><Alignment ss:Horizontal="Center" ss:Vertical="Center" ss:WrapText="1"/><Font ss:Bold="1" ss:Color="#FFFFFF"/><Interior ss:Color="#1E3A8A" ss:Pattern="Solid"/></Style>`+
-        `<Style ss:ID="hwk"><Alignment ss:Horizontal="Center" ss:Vertical="Center" ss:WrapText="1"/><Font ss:Bold="1" ss:Color="#FFFFFF"/><Interior ss:Color="#64748B" ss:Pattern="Solid"/></Style>`+
-        `<Style ss:ID="wk"><Alignment ss:Horizontal="Center" ss:Vertical="Center"/><Font ss:Color="#475569"/><Interior ss:Color="#E5E7EB" ss:Pattern="Solid"/></Style>`+
-        `<Style ss:ID="tot"><Alignment ss:Horizontal="Center" ss:Vertical="Center"/><Font ss:Bold="1" ss:Color="#1E3A8A"/><Interior ss:Color="#DBEAFE" ss:Pattern="Solid"/></Style>`+
-        deptStyleXml.join('')+
-        `</Styles>`+
-        ws('월간 개인별 식수', r0) + ws('직원 식수', r1) + ws('일자별 식수', r3) + ws('사외강사 정산', r2) + `</Workbook>`;
-    const blob=new Blob(['\ufeff'+xml],{type:'application/vnd.ms-excel;charset=utf-8'});
-    const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download=_mealFileTitle()+'.xls'; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url),1500);
+        r3.push(_xrow([_xc(`${_mm}/${dd}`,0,sid),_xc(_dow[wd],0,sid),_xc(o.b,1,sid),_xc(o.l,1,sid),_xc(o.d,1,sid),_xc(sum,1,sid),_xc(note,0,sid)])); }
+    r3.push(_xrow([_xc('합계',0,'h'),_xc('',0,'h'),_xc(tb,1,'h'),_xc(tl,1,'h'),_xc(td,1,'h'),_xc(tb+tl+td,1,'tot'),_xc('',0,'h')]));
+    const cols3=`<Column ss:Width="70"/><Column ss:Width="48"/><Column ss:Width="54"/><Column ss:Width="54"/><Column ss:Width="54"/><Column ss:Width="60"/><Column ss:Width="90"/>`;
+    const xml=_xlHead()+_xlStyles(ds.xml)+ _xlWsCol('직원 식수', cols1, r1) + _xlWsCol('일자별 식수', cols3, r3) + _sheetSettle() + `</Workbook>`;
+    _xlDownload(xml);
 }
+/* [시트뷰 엑셀로 — 파일형식.xml 동일: 월간 개인별 일별 매트릭스 + 테두리 + 열너비] */
+function exportMatrixExcel(){
+    if(!_mealAgg){ showToast('먼저 월을 조회하세요.'); return; }
+    const MX=_buildMonthMatrix(); const ds=_deptStyles();
+    let h1=[_xc('구분',0,'h'),_xc('소속',0,'h'),_xc('직책',0,'h'),_xc('이름',0,'h')];
+    MX.days.forEach(dy=> h1.push(_xc(`${dy.d} ${dy.dow}`,0, dy.weekend?'hwk':'h')) );
+    h1.push(_xc('합계',0,'h'));
+    let r0=[_xrow(h1)];
+    const dayTot={}; MX.days.forEach(dy=>dayTot[dy.date]=0); let grand=0;
+    MX.rows.forEach(row=>{
+        const dsid=ds.ids[_catColorKey({category:row.cat,dept:row.dept})]||'c';
+        const cells=[_xc(row.catLabel),_xc(row.dept,0,dsid),_xc(row.pos),_xc(row.name,0,dsid)];
+        MX.days.forEach(dy=>{ const c=row.perDay[dy.date]||0; dayTot[dy.date]+=c; cells.push(_xc(c>0?c:'',c>0?1:0, dy.weekend?'wk':'c')); });
+        cells.push(_xc(row.total,1,'tot')); grand+=row.total; r0.push(_xrow(cells));
+    });
+    let foot=[_xc('합계',0,'h'),_xc('',0,'h'),_xc('',0,'h'),_xc('',0,'h')];
+    MX.days.forEach(dy=> foot.push(_xc(dayTot[dy.date]||'',dayTot[dy.date]?1:0, dy.weekend?'wk':'h')) );
+    foot.push(_xc(grand,1,'tot')); r0.push(_xrow(foot));
+    let cols=`<Column ss:Width="54"/><Column ss:Width="107.25"/><Column ss:Width="42"/><Column ss:AutoFitWidth="0" ss:Width="68.25"/>`;
+    MX.days.forEach(()=> cols+=`<Column ss:AutoFitWidth="0" ss:Width="27.375"/>`);
+    cols+=`<Column ss:Width="54"/>`;
+    const xml=_xlHead()+_xlStyles(ds.xml)+ _xlWsCol('월간 개인별 식수', cols, r0) + _sheetSettle() + `</Workbook>`;
+    _xlDownload(xml);
+}
+
 /* [JDS260613] 시트로 보기 — 월간 개인별 일별 식수 매트릭스 (화면) */
 function _ensureSheetViewCss(){
     if(document.getElementById('sheetVwCss')) return;
@@ -3151,7 +3147,7 @@ function openSheetView(){
     foot+=`<td class="sv-tot">${grand}</td></tr>`;
     ov.innerHTML=`<div class="sheetv-panel">
         <div class="sheetv-hd"><div class="sheetv-ti"><i class="fa-solid fa-table-cells"></i> 월간 개인별 식수 현황 — ${monthLbl}</div>
-          <div><button onclick="exportMealExcel()" class="sheetv-x" style="background:#16a34a;"><i class="fa-solid fa-file-excel"></i> 엑셀로</button><button onclick="closeSheetView()" class="sheetv-x" style="background:#0f172a;">닫기</button></div></div>
+          <div><button onclick="exportMatrixExcel()" class="sheetv-x" style="background:#16a34a;"><i class="fa-solid fa-file-excel"></i> 엑셀로</button><button onclick="closeSheetView()" class="sheetv-x" style="background:#0f172a;">닫기</button></div></div>
         <div class="sheetv-legend">칸의 숫자 = 그날 식사 횟수(아침·점심·저녁 중, 최대 3). 빈칸 = 0회 · 초록 = 3회 모두 · 가장 오른쪽 = ${MX.mm}월 총합. 소속별 색상으로 구분됩니다.</div>
         <div class="sheetv-scroll"><table class="sheetv-tbl"><thead>${head}</thead><tbody>${body}${foot}</tbody></table></div>
     </div>`;
@@ -3163,26 +3159,40 @@ function exportMealPDF(){
     const tbl=document.querySelector('#staffCountList table'); if(!tbl){ showToast('먼저 월을 조회하세요.'); return; }
     if(!window.jspdf || !window.html2canvas){ showToast('PDF 모듈 로딩 중입니다. 잠시 후 다시 시도하세요.'); return; }
     const title=_mealFileTitle();
-    // 화면 밖에 깨끗한 표(버튼·달력행 제거)를 그려 캡처 → 진짜 PDF (브라우저 머리글/꼬리말 없음)
     const wrap=document.createElement('div');
     wrap.style.cssText="position:fixed;left:-99999px;top:0;width:780px;background:#fff;padding:24px;font-family:'Malgun Gothic','맑은 고딕',sans-serif;";
     const clone=tbl.cloneNode(true);
     clone.querySelectorAll('button,input,.memo-ic,.cnt-exp').forEach(e=>e.remove());
     clone.querySelectorAll('tr').forEach(tr=>{ if(tr.querySelector('td[id^=cal-]')||tr.classList.contains('cnt-empty')) tr.remove(); });
+    // [JDS260613] 총 합계(tfoot)가 표 중간에 찍히는 html2canvas 버그 → tfoot 행을 tbody 맨 끝으로 이동
+    const tf=clone.querySelector('tfoot'); const tbody=clone.querySelector('tbody');
+    if(tf && tbody){ Array.from(tf.querySelectorAll('tr')).forEach(tr=>tbody.appendChild(tr)); tf.remove(); }
     clone.style.cssText='width:100%;border-collapse:collapse;font-size:13px;';
     clone.querySelectorAll('th,td').forEach(c=>{ c.style.border='1px solid #94a3b8'; c.style.padding='7px 9px'; c.style.textAlign='center'; });
     clone.querySelectorAll('thead th').forEach(c=>{ c.style.background='#1e3a8a'; c.style.color='#fff'; });
-    clone.querySelectorAll('tfoot td').forEach(c=>{ c.style.background='#e2e8f0'; c.style.fontWeight='800'; });
+    clone.querySelectorAll('tr.cnt-total td').forEach(c=>{ c.style.background='#e2e8f0'; c.style.fontWeight='800'; });
     wrap.innerHTML=`<h2 style="text-align:center;margin:0 0 14px;color:#1e293b;">직원 식수 관리 — ${_mealMonth}</h2>`;
     wrap.appendChild(clone);
     document.body.appendChild(wrap);
-    window.html2canvas(wrap,{scale:2,backgroundColor:'#ffffff'}).then(canvas=>{
+    window.html2canvas(wrap,{scale:3,backgroundColor:'#ffffff',useCORS:true}).then(canvas=>{
         const img=canvas.toDataURL('image/png');
         const { jsPDF }=window.jspdf;
         const pdf=new jsPDF('p','mm','a4');
-        const margin=10, pw=pdf.internal.pageSize.getWidth()-margin*2;
-        const ph=canvas.height*pw/canvas.width;
-        pdf.addImage(img,'PNG',margin,margin,pw,ph);
+        const margin=10;
+        const pw=pdf.internal.pageSize.getWidth()-margin*2;
+        const pageH=pdf.internal.pageSize.getHeight();
+        const usableH=pageH-margin*2;
+        const ph=canvas.height*pw/canvas.width;   // 전체 이미지 높이(mm)
+        // 긴 명단 → 페이지 분할
+        let heightLeft=ph; let y=margin;
+        pdf.addImage(img,'PNG',margin,y,pw,ph,'','FAST');
+        heightLeft-=usableH;
+        while(heightLeft>0){
+            y=margin-(ph-heightLeft);
+            pdf.addPage();
+            pdf.addImage(img,'PNG',margin,y,pw,ph,'','FAST');
+            heightLeft-=usableH;
+        }
         pdf.save(title+'.pdf');
         wrap.remove();
     }).catch(e=>{ wrap.remove(); showToast('PDF 생성 실패: '+((e&&e.message)||e)); });
@@ -3224,8 +3234,8 @@ function renderMealCalendar(a, month){
 </script>
 <!-- @catc-version-badge · 전 페이지 통일 디자인 (개발자 확인용 · 사용자에게는 거의 안 보임) -->
 <style>@media print{#__catcVer{display:none!important}}</style>
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">JDS260613(V14)</div>
-<script>try{console.log('%cCATC%c 영양사 (nutritionist.html) %cJDS260613(V14)%c build 20260613','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}</script>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">JDS260613(V15)</div>
+<script>try{console.log('%cCATC%c 영양사 (nutritionist.html) %cJDS260613(V15)%c build 20260613','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}</script>
 <div id="notifyStack" class="notify-stack"></div>
 <!-- ── 화면 자동 맞춤(auto-fit): 입장 시 가로폭 초과하면 화면에 맞게 자동 축소 · JDS260614 ── -->
 <script>
