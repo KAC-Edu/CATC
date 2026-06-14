@@ -1640,6 +1640,7 @@
 
                 let totalRecovered = 0;
                 const updates = {};
+                const roomSyncs = [];   // [JDS260613] 강사·영양사 best-effort 동기화 대상
 
                 for (const wk of weeks) {
                     const a = allAssign[wk] || {};
@@ -1697,22 +1698,14 @@
 
                     if (noKeyCount > 0) console.warn(`[명단 복구] rosterKey·과정명 모두 없는 학생 ${noKeyCount}명 제외`);
 
-                    // Firebase 업데이트 준비 (학생 있는 것만)
+                    // Firebase 업데이트 준비 (학생 있는 것만) — 핵심 복구는 system/dorm/rosters 뿐(권한 OK)
                     Object.entries(rosterMap).forEach(([rk, v]) => {
                         if (!v.list.length) return;
                         updates[`system/dorm/rosters/${rk}`] = v;
-                        // [JDS260613] 강사플랫폼·영양사 플랫폼도 함께 복원
                         const room = v.room || (rk.split('__')[1] || '');
-                        if (room) {
-                            const names = Array.from(new Set(v.list.map(s => (s.name || '').trim()).filter(Boolean)));
-                            updates[`courses/${room}/expectedStudents`] = names;                 // 강사플랫폼 예정 명단
-                            updates[`courses/${room}/coordRoster`] = {                            // 영양사·운영부 공유 명단
-                                courseName: v.courseName || '', period: v.period || '',
-                                list: v.list, updatedAt: Date.now()
-                            };
-                        }
+                        if (room) roomSyncs.push({ room, courseName: v.courseName || '', period: v.period || '', list: v.list });
                         totalRecovered++;
-                        console.log(`[명단 복구] ${rk}: ${v.list.length}명 (${v.courseName}) → 지원부·강사·영양사 복원`);
+                        console.log(`[명단 복구] ${rk}: ${v.list.length}명 (${v.courseName})`);
                     });
                 }
 
@@ -1727,13 +1720,25 @@
                     return;
                 }
 
+                // ① 핵심 복구: 권한 있는 경로만 원자적으로 (강사·영양사는 이 명단을 직접 읽으므로 이것만으로 표시됨)
                 await db.ref().update(updates);
-                showToast(`✅ ${totalRecovered}개 과정 명단 복구 완료 (지원부·강사·영양사 반영)`);
+
+                // ② 강사플랫폼·영양사 동기화는 best-effort — 권한(PERMISSION_DENIED) 없으면 조용히 생략, 복구는 그대로 성공
+                let syncOk = 0;
+                for (const rs of roomSyncs) {
+                    const names = Array.from(new Set(rs.list.map(s => (s.name || '').trim()).filter(Boolean)));
+                    try { await db.ref(`courses/${rs.room}/expectedStudents`).set(names); syncOk++; }
+                    catch (e) { console.warn('[명단 복구] expectedStudents 동기화 생략', rs.room, e.code || e.message); }
+                    try { await db.ref(`courses/${rs.room}/coordRoster`).set({ courseName: rs.courseName, period: rs.period, list: rs.list, updatedAt: Date.now() }); }
+                    catch (e) { console.warn('[명단 복구] coordRoster 동기화 생략', rs.room, e.code || e.message); }
+                }
+
+                showToast(`✅ ${totalRecovered}개 과정 명단 복구 완료`);
                 coursesCache = null;
                 await loadCourses(true);
             } catch (e) {
                 console.error('[명단 복구]', e);
-                showToast('❌ 복구 실패: ' + e.message);
+                showToast('❌ 복구 실패: ' + (e.code || e.message));
             }
         }
 
@@ -5664,7 +5669,7 @@
 </script>
 <!-- @catc-version-badge · 전 페이지 통일 디자인 (개발자 확인용 · 사용자에게는 거의 안 보임) -->
 <style>@media print{#__catcVer{display:none!important}}</style>
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">JDS260613(V10)</div>
-<script>try{console.log('%cCATC%c 교육지원부·생활관 (dorm_admin.html) %cJDS260613(V10)%c build 20260613','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}</script>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">JDS260613(V11)</div>
+<script>try{console.log('%cCATC%c 교육지원부·생활관 (dorm_admin.html) %cJDS260613(V11)%c build 20260613','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}</script>
 </body>
 </html>
