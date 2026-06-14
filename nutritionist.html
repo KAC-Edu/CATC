@@ -482,6 +482,17 @@
         /* ── 직원 명단 리스트 (카드형 · 드래그/화살표 정렬) ── */
         .rlist { border:1px solid var(--border); border-radius:12px; overflow:hidden; background:#fff; }
         .rl-group + .rl-group { border-top:2px solid var(--border); }
+        /* [JDS260613] 부서별 아코디언 바 */
+        .rl-group { margin-bottom:12px; border-top:none !important; }
+        .rl-gbar { width:100%; display:flex; align-items:center; justify-content:space-between; gap:10px; border:none; cursor:pointer; padding:14px 18px; border-radius:13px; background:linear-gradient(135deg,#0e7490 0%,#1d4ed8 100%); color:#fff; font-family:inherit; box-shadow:0 3px 10px rgba(13,110,160,.28); transition:filter .15s, border-radius .2s; }
+        .rl-gbar:hover { filter:brightness(1.08); }
+        .rl-gbar-l { display:flex; align-items:center; gap:10px; font-size:16px; font-weight:900; }
+        .rl-gchev { transition:transform .2s; font-size:13px; opacity:.92; }
+        .rl-group.open .rl-gchev { transform:rotate(90deg); }
+        .rl-group.open .rl-gbar { border-radius:13px 13px 0 0; box-shadow:0 3px 10px rgba(13,110,160,.18); }
+        .rl-gbar .rl-gcount { background:rgba(255,255,255,.24); color:#fff; padding:3px 12px; border-radius:999px; font-size:13.5px; font-weight:800; }
+        .rl-gbody { display:none; border:1.5px solid #cbd5e1; border-top:none; border-radius:0 0 13px 13px; overflow:hidden; }
+        .rl-group.open .rl-gbody { display:block; }
         .rl-ghead { display:flex; align-items:center; gap:9px; padding:13px 16px; background:#eff6ff; border-bottom:1px solid #dbeafe; }
         .rl-gname { font-weight:900; color:#1e40af; font-size:17px; }
         .rl-gcount { font-size:13.5px; font-weight:800; color:#2563eb; background:#dbeafe; padding:3px 12px; border-radius:999px; }
@@ -1695,6 +1706,7 @@ let _deptOrder = {};   // 소속 표시 순서: {소속명: 순번}
 let _mealMonth = null;
 let _editCntId = null;
 let _rosterQuery = '';
+let _openDepts = new Set();   // [JDS260613] 펼쳐진 부서 아코디언
 let _rosterDeptFilter = '';
 let _monthLocked = false;
 const STAFF_ROSTER = 'system/staffMeal/roster';
@@ -2307,10 +2319,16 @@ function renderRoster(){
                 </div>`;
             }
         });
-        sectionsHtml += `<div class="rl-group">
-            <div class="rl-ghead"><span class="rl-gname">${escH(d)}</span><span class="rl-gcount">${members.length}명</span></div>
-            <div class="rl-colhead"><span></span><span>연번</span><span>직책</span><span>성명</span><span>비고</span><span>관리</span></div>
-            <div class="rl-rows">${rowsHtml}</div>
+        const _deptOpen = _openDepts.has(d) || !!q || !!_rosterDeptFilter;   // 검색·필터 시 자동 펼침
+        sectionsHtml += `<div class="rl-group ${_deptOpen?'open':''}">
+            <button type="button" class="rl-gbar" data-dept="${escH(d)}" onclick="toggleDept(this)">
+                <span class="rl-gbar-l"><i class="fa-solid fa-chevron-right rl-gchev"></i> <span class="rl-gname" style="color:#fff;">${escH(d)}</span></span>
+                <span class="rl-gcount">${members.length}명</span>
+            </button>
+            <div class="rl-gbody">
+                <div class="rl-colhead"><span></span><span>연번</span><span>직책</span><span>성명</span><span>비고</span><span>관리</span></div>
+                <div class="rl-rows">${rowsHtml}</div>
+            </div>
         </div>`;
     });
 
@@ -2318,6 +2336,14 @@ function renderRoster(){
     if(info) info.textContent = (q||_rosterDeptFilter) ? `${shown}명 표시 · 전체 ${items.length}명` : `전체 ${items.length}명`;
 
     box.innerHTML = deptBar + (sectionsHtml ? `<div class="rlist">${sectionsHtml}</div>` : '<div class="empty-msg">검색 결과가 없습니다.</div>');
+}
+/* 부서 아코디언 열고/닫기 */
+function toggleDept(btn){
+    const d = btn && btn.dataset ? btn.dataset.dept : '';
+    if(!d) return;
+    if(_openDepts.has(d)) _openDepts.delete(d); else _openDepts.add(d);
+    const grp = btn.closest('.rl-group');
+    if(grp) grp.classList.toggle('open', _openDepts.has(d));
 }
 /* 화살표로 같은 소속 내 순서 한 칸 이동 */
 function moveStaff(id, dir){
@@ -2838,8 +2864,8 @@ function renderMealCalendar(a, month){
 </script>
 <!-- @catc-version-badge · 전 페이지 통일 디자인 (개발자 확인용 · 사용자에게는 거의 안 보임) -->
 <style>@media print{#__catcVer{display:none!important}}</style>
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">JDS260613(V6)</div>
-<script>try{console.log('%cCATC%c 영양사 (nutritionist.html) %cJDS260613(V6)%c build 20260613','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}</script>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">JDS260613(V7)</div>
+<script>try{console.log('%cCATC%c 영양사 (nutritionist.html) %cJDS260613(V7)%c build 20260613','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}</script>
 <div id="notifyStack" class="notify-stack"></div>
 <!-- ── 화면 자동 맞춤(auto-fit): 입장 시 가로폭 초과하면 화면에 맞게 자동 축소 · JDS260614 ── -->
 <script>
