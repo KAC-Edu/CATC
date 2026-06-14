@@ -8,7 +8,7 @@
    순으로 1단계 올리고, @build 를 수정 시각으로 갱신할 것.
    적용 여부는 브라우저 콘솔 로그(vA)로 확인한다.
 ============================================================ */
-try{console.log('%cCATC%c 강사 플랫폼 로직 (admin.js) %cvP%c build 20260613-V6-roster','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}
+try{console.log('%cCATC%c 강사 플랫폼 로직 (admin.js) %cvP%c build 20260613-V7-dormview','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}
 /* --- admin.js (Final Integrated Version - Fixed Syntax & Logic) --- */
 
 // --- [기본 데이터] 20문항 ---
@@ -4093,6 +4093,31 @@ cancelIndividualShuttle: function(waveId, locId, token, name) {
         return Array.from(new Set([local, utc]));
     },
 
+    // [JDS260613] 운영부(coordRoster)·지원부(system/dorm/rosters) 명단 이름을 직접 수집 — 재저장 없이도 명단 표시
+    _gatherRosterNames: async function(room) {
+        const names = [];
+        try {
+            const crSnap = await firebase.database().ref(`courses/${room}/coordRoster`).once('value');
+            const cr = crSnap.val();
+            if (cr && Array.isArray(cr.list)) cr.list.forEach(s => { if (s && s.name) names.push(String(s.name).trim()); });
+        } catch (e) { /* 무시 */ }
+        try {
+            const pSnap = await firebase.database().ref(`courses/${room}/settings/period`).once('value');
+            const period = pSnap.val() || '';
+            const start = period.includes(' ~ ') ? period.split(' ~ ')[0].trim() : '';
+            const cands = this._weekKeyCandidates(start);
+            for (const wk of cands) {
+                const dSnap = await firebase.database().ref(`system/dorm/rosters/${wk}__${room}`).once('value');
+                const dv = dSnap.val();
+                if (dv && Array.isArray(dv.list) && dv.list.length) {
+                    dv.list.forEach(s => { if (s && s.name) names.push(String(s.name).trim()); });
+                    break;
+                }
+            }
+        } catch (e) { /* 무시 */ }
+        return names;
+    },
+
     loadStudentList: function() {
         if(!state.room) return;
         const room = state.room;
@@ -4225,6 +4250,8 @@ cancelIndividualShuttle: function(waveId, locId, token, name) {
 // [추가 1] 생활관 중복 제거 및 데이터 로드 함수
 loadDormitoryData: function() {
         if(!state.room) return;
+        const room = state.room;
+        const self = this;
         const tbody = document.getElementById('dormitoryTableBody');
         const statusEl = document.getElementById('dormArrivalStatus');
         if(!tbody) return;
@@ -4265,8 +4292,12 @@ loadDormitoryData: function() {
             return out;
         };
 
-        const renderAll = (expData, actData, assignData, settings) => {
-            const expectedNames = expData || [];
+        const renderAll = async (expData, actData, assignData, settings) => {
+            const rosterNames = await self._gatherRosterNames(room);
+            if (state.room !== room) return;
+            const expectedNames = Array.from(new Set(
+                [...(expData || []), ...rosterNames].map(n => String(n).trim()).filter(Boolean)
+            ));
             const actualStudents = Object.entries(actData || {})
                 .map(([token, s]) => ({ token, ...s }))
                 .filter(s => s.name && s.name !== "undefined");
