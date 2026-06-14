@@ -1535,11 +1535,11 @@
             const wrap = document.getElementById('weekPills');
             let html = '';
             // 이번주 키 미리 계산
-            const baseKey = new Date(base).toISOString().slice(0, 10);
+            const baseKey = _ymdLocal(base);   // [JDS260613] UTC(toISOString) → 로컬 통일 (weekKeyOf·저장 명단 키와 일치)
             // 유효한 주차 키 집합 계산
             const validKeys = Array.from({length: 4}, (_, i) => {
                 const wk = new Date(base); wk.setDate(base.getDate() + i * 7);
-                return wk.toISOString().slice(0, 10);
+                return _ymdLocal(wk);
             });
             // selectedWeekKey가 없거나 현재 유효 범위 밖(이전 세션 잔류)이면 이번주로 초기화
             if (!selectedWeekKey || !validKeys.includes(selectedWeekKey)) {
@@ -1547,7 +1547,7 @@
             }
             for (let i = 0; i < 4; i++) {
                 const wk = new Date(base); wk.setDate(base.getDate() + i * 7);
-                const key = wk.toISOString().slice(0, 10);
+                const key = _ymdLocal(wk);
                 const wEnd = new Date(wk); wEnd.setDate(wk.getDate() + 6);
                 const fmt = d => `${d.getMonth()+1}/${d.getDate()}`;
                 html += `<button class="${selectedWeekKey === key ? 'on' : ''}" data-wk="${key}" onclick="selectWeek('${key}')">${labels[i]}<br><span style="font-size:10px; opacity:0.8;">${fmt(wk)}~${fmt(wEnd)}</span></button>`;
@@ -2844,7 +2844,7 @@
                 const prevCutoff = (function() {
                     const d = new Date(targetMon + 'T00:00:00');
                     d.setDate(d.getDate() - 1); // targetMon 하루 전까지만 삭제
-                    return d.toISOString().slice(0, 10);
+                    return _ymdLocal(d);   // [JDS260613] UTC → 로컬 통일 (대상 주 키와 동일 기준)
                 })();
                 const pastKeys = Object.keys(all).filter(k => {
                     const wk = (all[k] && all[k].weekKey) || k.split('__')[0];
@@ -5649,7 +5649,7 @@
 </script>
 <!-- @catc-version-badge · 전 페이지 통일 디자인 (개발자 확인용 · 사용자에게는 거의 안 보임) -->
 <style>@media print{#__catcVer{display:none!important}}</style>
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">JDS260613(V6)</div>
-<script>try{console.log('%cCATC%c 교육지원부·생활관 (dorm_admin.html) %cJDS260613(V6)%c build 20260613','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}</script>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">JDS260613(V7)</div>
+<script>try{console.log('%cCATC%c 교육지원부·생활관 (dorm_admin.html) %cJDS260613(V7)%c build 20260613','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}</script>
 </body>
 </html>
