@@ -8,7 +8,7 @@
    순으로 1단계 올리고, @build 를 수정 시각으로 갱신할 것.
    적용 여부는 브라우저 콘솔 로그(vA)로 확인한다.
 ============================================================ */
-try{console.log('%cCATC%c 강사 플랫폼 로직 (admin.js) %cvP%c build 20260613-V8-dormdiag','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}
+try{console.log('%cCATC%c 강사 플랫폼 로직 (admin.js) %cvP%c build 20260613-V9-dormrace','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}
 /* --- admin.js (Final Integrated Version - Fixed Syntax & Logic) --- */
 
 // --- [기본 데이터] 20문항 ---
@@ -4304,14 +4304,13 @@ loadDormitoryData: function() {
             const actualNames = actualStudents.map(s => s.name);
             const combinedNames = Array.from(new Set([...expectedNames, ...actualNames])).sort((a,b) => a.localeCompare(b));
             const dormData = makeDormIndex(assignData, settings || {});
-            // [JDS260613] 진단: 배정 색인/이름 매칭 상태 (미배정 원인 추적용)
+            // [JDS260613] 진단: 매칭 실패가 있을 때만 출력
             try {
-                const idxNames = Object.keys(dormData).filter(k => !k.includes('_'));
                 const missNames = combinedNames.filter(n => !dormData[norm(String(n).trim())]);
-                const weekCnt = Object.keys(assignData || {}).length;
-                console.log(`[생활관배치] 배정주차 ${weekCnt}개 · 배정색인 ${idxNames.length}명 · 이 방 명단 ${combinedNames.length}명 · 미매칭 ${missNames.length}명`);
-                console.log('[생활관배치] 색인된 이름 샘플:', idxNames.slice(0, 12));
-                if (missNames.length) console.log('[생활관배치] 매칭 실패한 명단 이름:', missNames);
+                if (missNames.length) {
+                    const idxNames = Object.keys(dormData).filter(k => !k.includes('_'));
+                    console.log(`[생활관배치] 미매칭 ${missNames.length}/${combinedNames.length}명 · 배정색인 ${idxNames.length}명 · 배정주차 ${Object.keys(assignData||{}).length}개`, missNames);
+                }
             } catch (e) {}
 
             let arrivedCount = 0;
@@ -4367,11 +4366,18 @@ loadDormitoryData: function() {
             });
         };
 
-        let cacheExp = [], cacheAct = {}, cacheDorm = {}, cacheSettings = {};
-        expectedRef.on('value', s => { cacheExp = s.val(); renderAll(cacheExp, cacheAct, cacheDorm, cacheSettings); });
-        actualRef.on('value', s => { cacheAct = s.val(); renderAll(cacheExp, cacheAct, cacheDorm, cacheSettings); });
-        settingsRef.on('value', s => { cacheSettings = s.val() || {}; renderAll(cacheExp, cacheAct, cacheDorm, cacheSettings); });
-        dormRef.on('value', s => { cacheDorm = s.val() || {}; renderAll(cacheExp, cacheAct, cacheDorm, cacheSettings); });
+        let cacheExp = [], cacheAct = {}, cacheSettings = {};
+        // [JDS260613] 배정 데이터는 공유 캐시로 유지 — expected/actual/settings 리스너가 빈 배정으로 덮어쓰는 경합 방지
+        if (!self._dormAssignCache) self._dormAssignCache = {};
+        expectedRef.on('value', s => { cacheExp = s.val(); renderAll(cacheExp, cacheAct, self._dormAssignCache, cacheSettings); });
+        actualRef.on('value', s => { cacheAct = s.val(); renderAll(cacheExp, cacheAct, self._dormAssignCache, cacheSettings); });
+        settingsRef.on('value', s => { cacheSettings = s.val() || {}; renderAll(cacheExp, cacheAct, self._dormAssignCache, cacheSettings); });
+        dormRef.on('value', s => {
+            const v = s.val() || {};
+            // 비어있지 않을 때만 갱신(또는 아직 캐시가 비어있을 때만) — 일시적 빈 값이 좋은 배정을 지우지 않도록
+            if (Object.keys(v).length || !Object.keys(self._dormAssignCache).length) self._dormAssignCache = v;
+            renderAll(cacheExp, cacheAct, self._dormAssignCache, cacheSettings);
+        });
     },
 
 
