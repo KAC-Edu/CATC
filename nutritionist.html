@@ -3162,28 +3162,41 @@ function exportMealPDF(){
     const theadHTML=(tbl.querySelector('thead')||{}).outerHTML||'';
     const dataRows=Array.from(tbl.querySelectorAll('tbody > tr.cnt-row'));
     const totalRow=tbl.querySelector('tr.cnt-total');
-    // 행 클론 정리(버튼·입력·아이콘 제거)
     const cleanRow=tr=>{ const c=tr.cloneNode(true); c.querySelectorAll('button,input,.memo-ic,.cnt-exp').forEach(e=>e.remove()); c.removeAttribute('onclick'); c.style.cursor=''; return c.outerHTML; };
-    // [JDS260613] 행 단위 페이지 분할 — 한 페이지 N명, 행이 잘리거나 중복되지 않음, 하단 여백 유지
-    const PER=20;
-    const chunks=[]; for(let i=0;i<dataRows.length;i+=PER) chunks.push(dataRows.slice(i,i+PER));
+    const allRowHTML=dataRows.map(cleanRow); if(totalRow) allRowHTML.push(cleanRow(totalRow));
+
+    const PAGE_W=780, PAD=24, BOTTOM=12;
+    const pagePx=PAGE_W*(297/210);   // A4 비율로 환산한 1페이지 높이(px) ≈ 1103
+    const styleCells=el=>{ el.querySelectorAll('th,td').forEach(c=>{ c.style.border='1px solid #94a3b8'; c.style.padding='7px 9px'; c.style.textAlign='center'; }); el.querySelectorAll('thead th').forEach(c=>{ c.style.background='#1e3a8a'; c.style.color='#fff'; }); el.querySelectorAll('tr.cnt-total td').forEach(c=>{ c.style.background='#e2e8f0'; c.style.fontWeight='800'; }); };
+
+    // ── 1) 측정: 실제 렌더 높이로 페이지당 행 수 산출 (여백 최소·행 안 잘림) ──
+    const meas=document.createElement('div');
+    meas.style.cssText=`position:fixed;left:-99999px;top:0;width:${PAGE_W}px;background:#fff;padding:${PAD}px;font-family:'Malgun Gothic','맑은 고딕',sans-serif;`;
+    meas.innerHTML=`<h2 style="text-align:center;margin:0 0 14px;color:#1e293b;">직원 식수 관리 — ${_mealMonth}</h2>`+
+        `<table style="width:100%;border-collapse:collapse;font-size:13px;">${theadHTML}<tbody>${allRowHTML.join('')}</tbody></table>`;
+    styleCells(meas); document.body.appendChild(meas);
+    const hT=(meas.querySelector('h2')||{}).offsetHeight||40;
+    const hHead=(meas.querySelector('thead')||{}).offsetHeight||40;
+    const bodyTrs=Array.from(meas.querySelectorAll('tbody tr'));
+    const usable=pagePx-PAD*2-hT-14-hHead-BOTTOM;   // 페이지당 본문 가용 높이(px)
+    const chunks=[]; let cur=[]; let curH=0;
+    bodyTrs.forEach((tr,i)=>{ const h=tr.offsetHeight||34; if(curH+h>usable && cur.length){ chunks.push(cur); cur=[]; curH=0; } cur.push(i); curH+=h; });
+    if(cur.length) chunks.push(cur);
+    document.body.removeChild(meas);
     if(!chunks.length) chunks.push([]);
+
+    // ── 2) 페이지별 렌더 ──
     const { jsPDF }=window.jspdf;
     const pdf=new jsPDF('p','mm','a4');
     const margin=10; const pw=pdf.internal.pageSize.getWidth()-margin*2;
     const renderChunk=idx=>{
-        const isLast=(idx===chunks.length-1);
         const info=chunks.length>1?` (${idx+1} / ${chunks.length})`:'';
-        let rowsHTML=chunks[idx].map(cleanRow).join('');
-        if(isLast && totalRow) rowsHTML+=cleanRow(totalRow);
+        const rowsHTML=chunks[idx].map(i=>allRowHTML[i]).join('');
         const wrap=document.createElement('div');
-        wrap.style.cssText="position:fixed;left:-99999px;top:0;width:780px;background:#fff;padding:24px;font-family:'Malgun Gothic','맑은 고딕',sans-serif;";
+        wrap.style.cssText=`position:fixed;left:-99999px;top:0;width:${PAGE_W}px;background:#fff;padding:${PAD}px;font-family:'Malgun Gothic','맑은 고딕',sans-serif;`;
         wrap.innerHTML=`<h2 style="text-align:center;margin:0 0 14px;color:#1e293b;">직원 식수 관리 — ${_mealMonth}${info}</h2>`+
             `<table style="width:100%;border-collapse:collapse;font-size:13px;">${theadHTML}<tbody>${rowsHTML}</tbody></table>`;
-        wrap.querySelectorAll('th,td').forEach(c=>{ c.style.border='1px solid #94a3b8'; c.style.padding='7px 9px'; c.style.textAlign='center'; });
-        wrap.querySelectorAll('thead th').forEach(c=>{ c.style.background='#1e3a8a'; c.style.color='#fff'; });
-        wrap.querySelectorAll('tr.cnt-total td').forEach(c=>{ c.style.background='#e2e8f0'; c.style.fontWeight='800'; });
-        document.body.appendChild(wrap);
+        styleCells(wrap); document.body.appendChild(wrap);
         return window.html2canvas(wrap,{scale:3,backgroundColor:'#ffffff',useCORS:true}).then(canvas=>{
             const img=canvas.toDataURL('image/png');
             const ph=canvas.height*pw/canvas.width;
@@ -3233,8 +3246,8 @@ function renderMealCalendar(a, month){
 </script>
 <!-- @catc-version-badge · 전 페이지 통일 디자인 (개발자 확인용 · 사용자에게는 거의 안 보임) -->
 <style>@media print{#__catcVer{display:none!important}}</style>
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">JDS260613(V16)</div>
-<script>try{console.log('%cCATC%c 영양사 (nutritionist.html) %cJDS260613(V16)%c build 20260613','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}</script>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">JDS260613(V17)</div>
+<script>try{console.log('%cCATC%c 영양사 (nutritionist.html) %cJDS260613(V17)%c build 20260613','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}</script>
 <div id="notifyStack" class="notify-stack"></div>
 <!-- ── 화면 자동 맞춤(auto-fit): 입장 시 가로폭 초과하면 화면에 맞게 자동 축소 · JDS260614 ── -->
 <script>
