@@ -3,7 +3,7 @@
 <head>
 <!-- ============================================================
   CATC · 교육생 자동연결  (go.html)
-  @version  A
+  @version  B
   @build    20260610-220210
   ────────────────────────────────────────────────────────
   [코드 수정 규칙 · AI/개발자 공통]
@@ -42,9 +42,9 @@
         .btn:disabled { opacity: 0.5; }
         .btn-sub { background: transparent; color: #94a3b8; border: 1.5px solid rgba(255,255,255,0.2); margin-top: 10px; }
         .match-card { background: rgba(255,255,255,0.08); border: 1.5px solid rgba(250,204,21,0.4); border-radius: 14px; padding: 18px; margin: 16px 0; }
-        .match-room { font-size: 26px; font-weight: 900; color: #facc15; }
-        .match-course { font-size: 15px; color: #e2e8f0; margin-top: 4px; font-weight: 700; }
-        .match-prof { font-size: 13px; color: #94a3b8; margin-top: 6px; }
+        .match-room { display:inline-block; font-size: 12.5px; font-weight: 800; color: #cbd5e1; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.18); border-radius: 999px; padding: 4px 13px; letter-spacing: 0.5px; }
+        .match-course { font-size: 25px; font-weight: 900; color: #facc15; margin-top: 12px; line-height: 1.3; word-break: keep-all; }
+        .match-prof { font-size: 14px; color: #94a3b8; margin-top: 8px; font-weight: 700; }
         .err { color: #fca5a5; font-size: 13px; margin: 8px 0; min-height: 16px; }
         .link-find { margin-top: 16px; font-size: 13px; color: #facc15; text-decoration: underline; cursor: pointer; background: none; border: none; }
     </style>
@@ -293,7 +293,7 @@
     </script>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
 <style>@media print{#__catcVer{display:none!important}}</style>
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vA</div>
-<script>try{console.log('%cCATC%c 교육생 자동연결 (go.html) %cvA%c build 20260610-220210','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}</script>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vB</div>
+<script>try{console.log('%cCATC%c 교육생 자동연결 (go.html) %cvB%c build 20260614-roomconfirm (과정명 강조: 노란색·대형, ROOM 칩)','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}</script>
 </body>
 </html>
