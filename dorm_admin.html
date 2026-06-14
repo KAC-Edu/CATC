@@ -5573,60 +5573,35 @@
     else init();
 })();
 </script>
-<!-- ── 화면 자동 맞춤(auto-fit): 가로+세로 모두 화면에 맞게 자동 축소 · JDS260613 ──
-     원인: Windows 디스플레이 배율(125%/150%)·저해상도 화면에서 유효 뷰포트가 작아져
-           고정폭 디자인이 안 맞고 세로 콘텐츠가 화면 밖으로 밀려 잘림.
-     해결: 가로 초과량(scrollWidth) + 세로 콘텐츠 실제 높이(문서 전체 및 내부 스크롤 컨테이너)를
-           모두 측정해 더 많이 넘치는 쪽 기준으로 zoom 축소 → 어느 PC에서도 한 화면에 표시. -->
+<!-- ── 화면 자동 맞춤(auto-fit): 가로폭 기준 일정 배율 · JDS260613 ──
+     배율은 '창 가로폭' 하나로만 결정 → 어느 화면(뷰)에 들어가도 항상 같은 크기 유지.
+     세로로 긴 내용(식단표·명단·표 등)은 줄으로 줄이지 않고 해당 영역에서 스크롤됨.
+     (이전: 화면마다 내용 높이를 재서 줄이 달라져 긴 화면만 작아지는 문제) -->
 <script>
 (function(){
-  var MIN_ZOOM = 0.5;                 // 글씨가 안 보일 만큼 작아지지 않도록 하한
-  // 이 페이지에서 화면을 넘길 수 있는 내부 스크롤 컨테이너 후보(없으면 문서 전체 기준)
-  var SCROLLERS = '.content-area,.app-content,.ap-scroll,.modal-scroll-area';
+  var MIN_ZOOM = 0.5;
   var t;
-
-  function neededHeight(){
-    var need = document.documentElement.scrollHeight;     // 문서 전체(자연 스크롤·body 클리핑 모두 포함)
-    var list = document.querySelectorAll(SCROLLERS);
-    for (var i=0; i<list.length; i++){
-      var sc = list[i];
-      if (sc.offsetParent === null) continue;             // 숨김 요소 제외
-      if (sc.scrollHeight > sc.clientHeight + 2){          // 내부에서 넘쳐 스크롤되는 컨테이너
-        var top = sc.getBoundingClientRect().top + (window.scrollY||0);
-        need = Math.max(need, top + sc.scrollHeight + 20);
-      }
-    }
-    return need;
-  }
-
   function fit(){
-    var el = document.documentElement;
-    el.style.zoom = '';                                   // 항상 100%로 되돌린 뒤 측정(반복 적용해도 안전)
-    var wRatio = window.innerWidth  / Math.max(1, el.scrollWidth, (document.body?document.body.scrollWidth:0));
-    var hRatio = window.innerHeight / Math.max(1, neededHeight());
-    var z = Math.max(MIN_ZOOM, Math.min(wRatio, hRatio, 1));   // 축소만(확대 안 함)
-    el.style.zoom = (z < 0.995) ? z.toFixed(4) : '';
+    var el = document.documentElement, b = document.body;
+    el.style.zoom = '';
+    el.style.removeProperty('--app-h');
+    var needW = Math.max(1, el.scrollWidth, b ? b.scrollWidth : 0);
+    var z = Math.max(MIN_ZOOM, Math.min(window.innerWidth / needW, 1));   // 가로폭 기준, 축소만(확대 안 함)
+    if (z < 0.995){
+      el.style.setProperty('--app-h', (window.innerHeight / z) + 'px');   // zoom 시 100vh 여백/잘림 방지(해당 CSS가 var(--app-h) 사용 시)
+      el.style.zoom = z.toFixed(4);
+    }
   }
   function soon(){ clearTimeout(t); t = setTimeout(fit, 80); }
-
   window.addEventListener('resize', soon);
   window.addEventListener('load', fit);
   document.addEventListener('DOMContentLoaded', fit);
   [300,900,2000].forEach(function(ms){ setTimeout(fit, ms); });
-
-  // 뷰 전환·실시간 데이터 갱신·이미지 로드로 본문 높이가 바뀌면 다시 맞춤
-  if (window.MutationObserver){
-    document.addEventListener('DOMContentLoaded', function(){
-      new MutationObserver(soon).observe(document.body, {
-        childList:true, subtree:true, attributes:true, attributeFilter:['style','class']
-      });
-    });
-  }
 })();
 </script>
 <!-- @catc-version-badge · 전 페이지 통일 디자인 (개발자 확인용 · 사용자에게는 거의 안 보임) -->
 <style>@media print{#__catcVer{display:none!important}}</style>
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">JDS260613(V1)</div>
-<script>try{console.log('%cCATC%c 교육지원부·생활관 (dorm_admin.html) %cJDS260613(V1)%c build 20260613','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}</script>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">JDS260613(V2)</div>
+<script>try{console.log('%cCATC%c 교육지원부·생활관 (dorm_admin.html) %cJDS260613(V2)%c build 20260613','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}</script>
 </body>
 </html>
