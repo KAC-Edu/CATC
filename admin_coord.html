@@ -2449,6 +2449,8 @@ const coordMgr = {
             // 이 함수들이 실행되어야 비로소 눈에 보입니다.
             coordMgr.renderSelects();
             coordMgr.renderManageList();
+            // [JDS260613] 담당자 목록이 (늦게) 로드/변경되면 메인 헤더의 과정담당 직책도 다시 채움
+            if (typeof _coordRefreshCoordTitle === 'function') _coordRefreshCoordTitle();
 
             console.log("운영담당자 리스트 렌더링 완료. 인원:", coordMgr.list.length);
         });
@@ -2876,17 +2878,7 @@ function updateIndividualView() {
     document.getElementById('ind-period').innerText = periodStr;
     document.getElementById('ind-prof').innerText = (room.status?.professorName || "-") + " 교수";
     // [JDS260613] 과정담당 표시: 저장값에 직책이 없으면(예: "장영근") 관리 명단에서 직책 포함 이름으로 보강
-    (function(){
-        const cn = (room.settings?.coordinatorName || "").trim();
-        let disp = cn || "-";
-        const RANK = /\s*(차장|부장|팀장|실장|원장|과장|대리|주임|사원|교수)\s*$/;
-        if (cn && !RANK.test(cn) && window.coordMgr && Array.isArray(coordMgr.list)) {
-            const strip = v => String(v || "").replace(RANK, "").trim();
-            const m = coordMgr.list.find(c => c.name === cn || strip(c.name) === cn);
-            if (m) disp = m.name;
-        }
-        document.getElementById('ind-coord').innerText = disp;
-    })();
+    _coordRefreshCoordTitle(room);
     document.getElementById('ind-room-loc').innerText = room.settings?.roomDetailName || "-";
 
     // 3. [핵심 추가] 학생장 정보 표시 (성함 + 강사가 입력한 전체 전화번호)
@@ -6338,6 +6330,23 @@ async function coordSaveRoster() {
     }
 }
 
+// [JDS260613] 메인 헤더 '과정담당'에 직책을 무조건 포함해 표시 (저장값이 직책 없이 "장영근"이어도 관리 명단에서 보강)
+function _coordRefreshCoordTitle(roomObj) {
+    const el = document.getElementById('ind-coord');
+    if (!el) return;
+    const room = roomObj || ((typeof currentRID !== 'undefined' && currentRID && globalAllData[currentRID]) ? globalAllData[currentRID] : null);
+    const cn = (room && room.settings && room.settings.coordinatorName ? room.settings.coordinatorName : "").trim();
+    if (!cn) { el.innerText = "-"; return; }
+    const RANK = /\s*(차장|부장|팀장|실장|원장|과장|대리|주임|사원|교수)\s*$/;
+    let disp = cn;
+    if (!RANK.test(cn) && window.coordMgr && Array.isArray(coordMgr.list)) {
+        const strip = v => String(v || "").replace(RANK, "").trim();
+        const m = coordMgr.list.find(c => c.name === cn || strip(c.name) === cn);
+        if (m) disp = m.name;
+    }
+    el.innerText = disp;
+}
+
 function _coordRosterContext() {
     if (!currentRID || !globalAllData[currentRID]) return null;
     const room = globalAllData[currentRID] || {};
@@ -6674,8 +6683,8 @@ function _coordParseRoster(text) {
 </script>
 <!-- @catc-version-badge · 전 페이지 통일 디자인 (개발자 확인용 · 사용자에게는 거의 안 보임) -->
 <style>@media print{#__catcVer{display:none!important}}</style>
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">JDS260613(V5)</div>
-<script>try{console.log('%cCATC%c 교육운영부 (admin_coord.html) %cJDS260613(V5)%c build 20260613','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}</script>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">JDS260613(V6)</div>
+<script>try{console.log('%cCATC%c 교육운영부 (admin_coord.html) %cJDS260613(V6)%c build 20260613','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}</script>
 </body>
 </html>
 <!-- @build 20260612-132331 (교육운영부 vA) -->
