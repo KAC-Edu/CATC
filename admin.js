@@ -8,7 +8,7 @@
    순으로 1단계 올리고, @build 를 수정 시각으로 갱신할 것.
    적용 여부는 브라우저 콘솔 로그(vA)로 확인한다.
 ============================================================ */
-try{console.log('%cCATC%c 강사 플랫폼 로직 (admin.js) %cvP%c build 20260613-V9-dormrace','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}
+try{console.log('%cCATC%c 강사 플랫폼 로직 (admin.js) %cvP%c build 20260613-V10-dormgen','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}
 /* --- admin.js (Final Integrated Version - Fixed Syntax & Logic) --- */
 
 // --- [기본 데이터] 20문항 ---
@@ -4293,8 +4293,11 @@ loadDormitoryData: function() {
         };
 
         const renderAll = async (expData, actData, assignData, settings) => {
+            self._dormRenderGen = (self._dormRenderGen || 0) + 1;
+            const myGen = self._dormRenderGen;            // [JDS260613] 렌더 세대 토큰
             const rosterNames = await self._gatherRosterNames(room);
             if (state.room !== room) return;
+            if (myGen !== self._dormRenderGen) return;       // 더 늦게 시작된 렌더가 있으면 이 렌더는 폐기(빈 배정으로 덮어쓰기 방지)
             const expectedNames = Array.from(new Set(
                 [...(expData || []), ...rosterNames].map(n => String(n).trim()).filter(Boolean)
             ));
@@ -4303,13 +4306,15 @@ loadDormitoryData: function() {
                 .filter(s => s.name && s.name !== "undefined");
             const actualNames = actualStudents.map(s => s.name);
             const combinedNames = Array.from(new Set([...expectedNames, ...actualNames])).sort((a,b) => a.localeCompare(b));
-            const dormData = makeDormIndex(assignData, settings || {});
+            // await 이후 최신 배정 캐시를 다시 읽음 — 호출 시점에 비어있었어도 그 사이 도착한 배정을 사용
+            const assignNow = (self._dormAssignCache && Object.keys(self._dormAssignCache).length) ? self._dormAssignCache : (assignData || {});
+            const dormData = makeDormIndex(assignNow, settings || {});
             // [JDS260613] 진단: 매칭 실패가 있을 때만 출력
             try {
                 const missNames = combinedNames.filter(n => !dormData[norm(String(n).trim())]);
                 if (missNames.length) {
                     const idxNames = Object.keys(dormData).filter(k => !k.includes('_'));
-                    console.log(`[생활관배치] 미매칭 ${missNames.length}/${combinedNames.length}명 · 배정색인 ${idxNames.length}명 · 배정주차 ${Object.keys(assignData||{}).length}개`, missNames);
+                    console.log(`[생활관배치] 미매칭 ${missNames.length}/${combinedNames.length}명 · 배정색인 ${idxNames.length}명 · 배정주차 ${Object.keys(assignNow||{}).length}개`, missNames);
                 }
             } catch (e) {}
 
