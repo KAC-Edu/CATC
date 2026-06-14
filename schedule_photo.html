@@ -158,7 +158,10 @@
         setStatus('<span class="spin"></span> 사진을 처리하는 중…', 'muted');
         compress(file, (dataUrl, w, h) => {
             if (!dataUrl) { setStatus('사진을 읽지 못했습니다. 다른 사진으로 시도해 주세요.', 'err'); pickBtn.disabled = false; fileInput.value = ''; return; }
-            imgRef.set({ dataUrl: dataUrl, updatedAt: firebase.database.ServerValue.TIMESTAMP, w: w, h: h })
+            db.ref('courses/' + room + '/settings/period').once('value').then(ps => {
+                const cp = (ps.val() || '').trim();   // 업로드 시점의 현재 과정 기간을 함께 저장 → 차주 과정 전환 시 자동 리셋 판단용
+                return imgRef.set({ dataUrl: dataUrl, updatedAt: firebase.database.ServerValue.TIMESTAMP, w: w, h: h, coursePeriod: cp });
+            })
                 .then(() => { setStatus('✅ 업로드 완료! 강사 화면에 바로 표시됩니다.', 'ok'); })
                 .catch(err => { console.error(err); setStatus('업로드 실패: ' + (err && err.message ? err.message : '권한/용량을 확인해 주세요.'), 'err'); })
                 .finally(() => { pickBtn.disabled = false; fileInput.value = ''; });

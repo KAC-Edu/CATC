@@ -6202,6 +6202,32 @@ const scheduleMgr = {
             const ts = snap.val();
             // 사진 없음(미업로드/삭제/과정 종료) → 이 PC 캐시도 정리 후 '내용 없음'
             if (!ts) { await this._idbDelete(room); if (state.room === room) this._renderPhoto(null); return; }
+            // [JDS260613] 지난 과정 사진 자동 리셋: 사진의 과정기간이 현재 과정과 다르면 삭제하고 '미등록'으로 표시
+            try {
+                const [pSnap, cpSnap] = await Promise.all([
+                    firebase.database().ref(`courses/${room}/settings/period`).once('value'),
+                    firebase.database().ref(`courses/${room}/scheduleImage/coursePeriod`).once('value')
+                ]);
+                const curPeriod = (pSnap.val() || '').trim();
+                const photoPeriod = (cpSnap.val() || '').trim();
+                let stale = false;
+                if (curPeriod) {
+                    if (photoPeriod) {
+                        stale = (photoPeriod !== curPeriod);                 // 과정기간 저장돼 있으면 정확 비교
+                    } else {
+                        // 레거시(기간 미저장): 사진이 현재 과정 시작 6일 이전이면 지난 과정 사진으로 간주
+                        const startStr = (curPeriod.split('~')[0] || '').trim();
+                        const startMs = new Date(startStr + 'T00:00:00').getTime();
+                        if (!isNaN(startMs) && ts < (startMs - 6 * 24 * 60 * 60 * 1000)) stale = true;
+                    }
+                }
+                if (stale) {
+                    await firebase.database().ref(`courses/${room}/scheduleImage`).remove().catch(() => {});
+                    await this._idbDelete(room);
+                    if (state.room === room) this._renderPhoto(null);
+                    return;
+                }
+            } catch (e) { /* 비교 실패 시 기존 표시 동작 유지 */ }
             // 1) 이 PC 캐시가 최신이면 → Firebase에서 이미지 다시 받지 않고 캐시로 표시
             const cached = await this._idbGet(room);
             if (cached && cached.updatedAt === ts && cached.dataUrl) {
