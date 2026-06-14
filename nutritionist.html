@@ -10,6 +10,9 @@
     <script src="config.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/davidshimjs/qrcodejs/qrcode.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -824,10 +827,10 @@
                 <i class="fa-solid fa-cloud-arrow-up"></i> 금주 식단표 업로드 (이미지)
             </button>
             <button class="upload-btn" onclick="aiExtractMenu()" style="background:#7c3aed; color:#fff; margin-bottom:6px;">
-                <i class="fa-solid fa-wand-magic-sparkles"></i> 사진·PDF 분석으로 자동 입력 (AI)
+                <i class="fa-solid fa-wand-magic-sparkles"></i> 식단표 파일 분석으로 자동 입력
             </button>
-            <input type="file" id="menuAiInput" accept="image/*,application/pdf" style="display:none;">
-            <div style="font-size:11.5px; color:var(--muted); font-weight:700; margin:0 2px 8px;">식단표 사진 또는 PDF를 올리면 AI가 요일별 메뉴(아침·점심·저녁)만 읽어 표로 만들어 줍니다. 인원수·원산지·안내문은 제외됩니다. <a href="#" onclick="_setGeminiKey();return false;" style="color:#7c3aed; font-weight:800;">AI 키 설정</a></div>
+            <input type="file" id="menuAiInput" accept="image/*,application/pdf,.pdf,.hwp,.hwpx" style="display:none;">
+            <div style="font-size:11.5px; color:var(--muted); font-weight:700; margin:0 2px 8px;">PDF·한글(HWP/HWPX)은 AI 없이 바로 판독합니다. 사진(이미지)·스캔형 PDF만 AI(Gemini)를 사용합니다. 요일별 아침·점심·저녁 메뉴만 추출되고 인원수·원산지·안내문은 제외됩니다. <a href="#" onclick="_setGeminiKey();return false;" style="color:#7c3aed; font-weight:800;">AI 키 설정</a></div>
             <!-- 삭제 버튼 (업로드 후 노출) -->
             <button id="menuDeleteBtn" class="upload-btn btn-red" onclick="deleteMenu()" style="display:none;">
                 <i class="fa-solid fa-trash-can"></i> 이번 주 식단표 삭제
@@ -1540,30 +1543,174 @@ function _setGeminiKey(){
 }
 let _aiMenu=null;
 function aiExtractMenu(){
-    if(!_getGeminiKey()){ if(confirm('AI 분석을 쓰려면 Gemini API 키가 필요합니다. 지금 입력할까요?')) _setGeminiKey(); if(!_getGeminiKey()) return; }
+    // 로컬 파싱(PDF·HWP·HWPX)이 먼저라 키 없이도 진입 가능. (이미지/사진PDF만 AI 필요)
     const inp=document.getElementById('menuAiInput'); if(!inp) return;
     inp.value=''; inp.onchange=_onAiFile; inp.click();
 }
 function _onAiFile(e){
     const file=e.target.files&&e.target.files[0]; if(!file) return; e.target.value='';
-    const isPdf = file.type==='application/pdf' || /\.pdf$/i.test(file.name||'');
-    const isImg = (file.type||'').startsWith('image/');
-    if(!isImg && !isPdf){ showToast('⚠️ 이미지 또는 PDF 파일만 가능합니다.'); return; }
+    const nm=(file.name||'').toLowerCase();
+    const isPdf  = file.type==='application/pdf' || nm.endsWith('.pdf');
+    const isHwpx = nm.endsWith('.hwpx');
+    const isHwp  = nm.endsWith('.hwp');
+    const isImg  = (file.type||'').startsWith('image/');
+    if(!isImg && !isPdf && !isHwpx && !isHwp){ showToast('⚠️ 이미지 · PDF · 한글(HWP/HWPX)만 가능합니다.'); return; }
+    if(isImg){ _aiFromImage(file); return; }                  // 사진 → 글자 없음 → AI
+    showToast('⏳ 식단표를 분석 중입니다... (로컬 판독)');
+    _localParseMenu(file, {isPdf,isHwpx,isHwp}).then(menu=>{
+        if(menu && (menu.days||[]).some(d=>d.breakfast.length||d.lunch.length||d.dinner.length)){
+            showToast('✅ 로컬 판독 완료 — 내용을 확인/수정 후 저장하세요.');
+            openMenuAiReview(menu);
+        } else {
+            _aiFallback(file, {isPdf,isHwp,isHwpx});            // 글자 추출 실패 → AI 폴백
+        }
+    }).catch(err=>{ console.warn('[식단 로컬파싱]',err); _aiFallback(file, {isPdf,isHwp,isHwpx}); });
+}
+async function _localParseMenu(file, t){
+    if(t.isHwpx){ const rows=await _gridFromHwpx(file); return _menuFromCellRows(rows); }
+    if(t.isPdf){  return await _menuFromPdfFile(file); }
+    if(t.isHwp){  const rows=await _gridFromHwp(file);  return _menuFromCellRows(rows); }
+    return null;
+}
+function _aiFromImage(file){
+    if(!_ensureKey('사진(이미지) 분석엔 AI가 필요합니다. 키를 입력할까요?')) return;
     showToast('⏳ AI가 식단표를 분석 중입니다... (약 5~15초)');
-    if(isPdf){
-        if(file.size > 18*1024*1024){ showToast('⚠️ PDF 용량이 큽니다(18MB 이하 권장). 이미지로 올려주세요.'); return; }
-        const fr=new FileReader();
-        fr.onload=async ()=>{ try{ const b64=String(fr.result).split(',')[1]; const menu=await _callGeminiMenu(b64,'application/pdf'); openMenuAiReview(menu); }
-            catch(err){ showToast('❌ AI 분석 실패: '+((err&&err.message)||err)); } };
-        fr.onerror=()=>showToast('❌ PDF를 읽지 못했습니다.');
-        fr.readAsDataURL(file);
-        return;
-    }
-    compressMenuImage(file, async (dataUrl)=>{
-        if(!dataUrl){ showToast('❌ 이미지를 읽지 못했습니다.'); return; }
+    compressMenuImage(file, async (dataUrl)=>{ if(!dataUrl){ showToast('❌ 이미지를 읽지 못했습니다.'); return; }
         try{ const menu=await _callGeminiMenu(dataUrl.split(',')[1]); openMenuAiReview(menu); }
-        catch(err){ showToast('❌ AI 분석 실패: '+((err&&err.message)||err)); }
+        catch(err){ showToast('❌ AI 분석 실패: '+((err&&err.message)||err)); } });
+}
+function _aiFallback(file, t){
+    if(t.isHwp || t.isHwpx){ showToast('⚠️ 한글 파일에서 글자를 못 읽었습니다. PDF 또는 사진으로 다시 올려주세요.'); return; }
+    if(!t.isPdf){ showToast('⚠️ 분석할 수 없는 파일입니다.'); return; }
+    if(!_ensureKey('이 PDF는 글자 추출이 안 됩니다(사진/스캔형). AI(Gemini)로 분석할까요? (키 필요)')) return;
+    if(file.size>18*1024*1024){ showToast('⚠️ PDF가 큽니다(18MB↓ 권장).'); return; }
+    showToast('⏳ AI로 분석 중...');
+    const fr=new FileReader();
+    fr.onload=async ()=>{ try{ const b64=String(fr.result).split(',')[1]; const menu=await _callGeminiMenu(b64,'application/pdf'); openMenuAiReview(menu); }
+        catch(err){ showToast('❌ AI 분석 실패: '+((err&&err.message)||err)); } };
+    fr.onerror=()=>showToast('❌ 파일을 읽지 못했습니다.');
+    fr.readAsDataURL(file);
+}
+function _ensureKey(askMsg){ if(_getGeminiKey()) return true; if(confirm(askMsg)){ _setGeminiKey(); return !!_getGeminiKey(); } return false; }
+
+/* ── 로컬 식단표 파서 (PDF·HWP·HWPX, AI 미사용) ──────────────────────
+   ※ 실제 식단표 양식이 정해지면 _menuFromCellRows / _menuFromPdfFile 휴리스틱을 그 양식에 맞춰 다듬을 것.
+   인식 신뢰도: HWPX(표 구조 그대로) > 디지털 PDF(좌표) > HWP(구 바이너리, 불안정) */
+if (window.pdfjsLib) pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+const _DOW5=['월','화','수','목','금'];
+const _MEALS=[['breakfast',['아침','조식']],['lunch',['점심','중식']],['dinner',['저녁','석식','만찬']]];
+function _mealOf(s){ s=(s||''); for(const [k,kw] of _MEALS){ if(kw.some(w=>s.includes(w))) return k; } return ''; }
+function _isMenuJunk(s){ s=(s||'').trim(); if(!s) return true;
+    if(/^[\d,\.\s명인()]+$/.test(s)) return true;                                  // 숫자(인원수)만
+    return /인원|원산지|지표|상기|식단은|변경|운영위|향상교육|실습으로|네트워크|^요일$|^구분$/.test(s);
+}
+function _splitDishes(cellText){
+    return (cellText||'').split(/[\n\r\u241F]+/).map(x=>x.replace(/\s+/g,' ').trim()).filter(x=>x && !_isMenuJunk(x));
+}
+// 셀 행렬(rows[][]) → 식단 구조  (HWPX/HWP용 — 열 인덱스가 요일에 고정될 때)
+function _menuFromCellRows(rows){
+    if(!rows || !rows.length) return null;
+    let headerIdx=-1, best=0, dayCol={};
+    rows.forEach((cells,ri)=>{
+        let cnt=0, map={};
+        cells.forEach((c,ci)=>{ const t=(c||'').replace(/\s/g,''); const dow=_DOW5.find(d=>t.includes(d));
+            if(dow){ cnt++; const dm=t.match(/(\d{1,2})[\/\.월](\d{1,2})/); map[ci]={dow, date:dm?`${dm[1]}/${dm[2]}`:''}; } });
+        if(cnt>best){ best=cnt; headerIdx=ri; dayCol=map; }
     });
+    if(headerIdx<0 || best<3) return null;
+    const cols=Object.keys(dayCol).map(Number).sort((a,b)=>a-b);
+    const days=cols.map(ci=>({ dow:dayCol[ci].dow, date:dayCol[ci].date, breakfast:[], lunch:[], dinner:[] }));
+    const colIdx={}; cols.forEach((ci,i)=>colIdx[ci]=i);
+    let curMeal='';
+    for(let ri=headerIdx+1; ri<rows.length; ri++){
+        const cells=rows[ri], rowText=cells.join(' ');
+        if(/인원|원산지|상기|지표/.test(rowText) && !_mealOf(rowText)) continue;
+        const m=_mealOf(rowText); if(m) curMeal=m;
+        if(!curMeal) continue;
+        cols.forEach(ci=>{ const dishes=_splitDishes(cells[ci]); if(dishes.length) days[colIdx[ci]][curMeal]=days[colIdx[ci]][curMeal].concat(dishes); });
+    }
+    if(!days.some(d=>d.breakfast.length||d.lunch.length||d.dinner.length)) return null;
+    const dts=days.map(d=>d.date).filter(Boolean);
+    return { period: dts.length?`${dts[0]} ~ ${dts[dts.length-1]}`:'', days };
+}
+// HWPX → 표 tr/tc → rows[][]
+async function _gridFromHwpx(file){
+    if(!window.JSZip) throw new Error('JSZip 미로드');
+    const zip=await JSZip.loadAsync(file);
+    const names=Object.keys(zip.files).filter(n=>/\.xml$/i.test(n)&&!zip.files[n].dir);
+    const rows=[];
+    for(const n of names){
+        const xml=await zip.files[n].async('string');
+        if(!/<[a-z]*:?tr[ >]/i.test(xml)) continue;
+        const doc=new DOMParser().parseFromString(xml,'application/xml');
+        const trs=Array.from(doc.getElementsByTagName('*')).filter(el=>el.localName==='tr');
+        trs.forEach(tr=>{
+            const tcs=Array.from(tr.getElementsByTagName('*')).filter(el=>el.localName==='tc'); if(!tcs.length) return;
+            const pos=tcs.map((tc,idx)=>{ const addr=Array.from(tc.children||[]).find(el=>el.localName==='cellAddr');
+                const col=addr?parseInt(addr.getAttribute('colAddr')||idx,10):idx;
+                const ps=Array.from(tc.getElementsByTagName('*')).filter(el=>el.localName==='p');
+                const text=ps.length? ps.map(p=>(p.textContent||'').trim()).filter(Boolean).join('\n') : (tc.textContent||'').trim();
+                return { col:Number.isFinite(col)?col:idx, text }; });
+            const maxCol=pos.reduce((m,c)=>Math.max(m,c.col+1),0);
+            const arr=Array.from({length:Math.max(maxCol,pos.length)},()=>'');
+            pos.forEach(c=>{ arr[c.col]=c.text; });
+            rows.push(arr);
+        });
+    }
+    return rows;
+}
+// PDF → 토큰 좌표(x,y) 기반 요일열·끼니밴드 배치
+async function _menuFromPdfFile(file){
+    if(!window.pdfjsLib) throw new Error('pdf.js 미로드');
+    const buf=await file.arrayBuffer();
+    const pdf=await pdfjsLib.getDocument(new Uint8Array(buf)).promise;
+    let toks=[];
+    for(let p=1;p<=pdf.numPages;p++){ const page=await pdf.getPage(p); const c=await page.getTextContent();
+        c.items.forEach(it=>{ const s=(it.str||'').trim(); if(s) toks.push({s, x:it.transform[4], y:it.transform[5]}); }); }
+    if(!toks.length) return null;                                  // 글자 없음(사진 PDF)
+    const cols=[];
+    _DOW5.forEach(d=>{ const t=toks.find(t=>t.s.replace(/\s/g,'').startsWith(d)); if(t){ const dm=t.s.match(/(\d{1,2})[\/\.월](\d{1,2})/); cols.push({dow:d, x:t.x, y:t.y, date:dm?`${dm[1]}/${dm[2]}`:''}); } });
+    if(cols.length<3) return null;
+    const headerY=Math.max(...cols.map(c=>c.y));
+    const labelMaxX=Math.min(...cols.map(c=>c.x))-5;
+    const mealY={}; toks.forEach(t=>{ const m=_mealOf(t.s); if(m && t.y<headerY){ if(mealY[m]==null||t.y>mealY[m]) mealY[m]=t.y; } });
+    const bands=Object.keys(mealY).map(m=>({m,y:mealY[m]})).sort((a,b)=>b.y-a.y);
+    if(!bands.length) return null;
+    const days=cols.map(c=>({dow:c.dow,date:c.date,breakfast:[],lunch:[],dinner:[]}));
+    const colOf=x=>{ let bi=0,bd=1e9; cols.forEach((c,i)=>{ const d=Math.abs(x-c.x); if(d<bd){bd=d;bi=i;} }); return bi; };
+    const bandOf=y=>{ for(let i=0;i<bands.length;i++){ const top=bands[i].y, bot=(i+1<bands.length)?bands[i+1].y:-1e9; if(y<=top+2 && y>bot) return bands[i].m; } return ''; };
+    toks.forEach(t=>{ if(t.y>=headerY-1) return; if(t.x<labelMaxX) return; if(_isMenuJunk(t.s)) return; if(_mealOf(t.s)) return;
+        const band=bandOf(t.y); if(!band) return; days[colOf(t.x)][band].push(t.s.replace(/\s+/g,' ').trim()); });
+    if(!days.some(d=>d.breakfast.length||d.lunch.length||d.dinner.length)) return null;
+    const dts=days.map(d=>d.date).filter(Boolean);
+    return { period: dts.length?`${dts[0]} ~ ${dts[dts.length-1]}`:'', days };
+}
+// HWP(구 바이너리) → CFB + pako → PARA_TEXT 추출 → 2칸 이상 공백으로 셀 분리(불안정)
+async function _gridFromHwp(file){
+    if(!(window.XLSX && XLSX.CFB)) throw new Error('CFB 미지원');
+    if(!window.pako) throw new Error('pako 미로드');
+    const buf=await file.arrayBuffer();
+    const cfb=XLSX.CFB.read(new Uint8Array(buf),{type:'array'});
+    const secs=(cfb.FileIndex||[]).filter(e=>/BodyText[\\/]+Section\d+$/i.test(e.name)&&e.content)
+        .sort((a,b)=>a.name.localeCompare(b.name,undefined,{numeric:true}));
+    let text='';
+    secs.forEach(e=>{ let b=new Uint8Array(e.content);
+        try{ b=pako.inflateRaw(b); }catch(_){ try{ b=pako.inflate(b);}catch(__){} }
+        text += _hwpRecordsToText(b)+'\n'; });
+    return text.split(/[\n\r]+/).map(l=>l.split(/\s{2,}|\t/).map(s=>s.trim()).filter(Boolean)).filter(r=>r.length);
+}
+function _hwpRecordsToText(bytes){
+    let out='', p=0; if(!bytes||!bytes.length) return '';
+    const dv=new DataView(bytes.buffer,bytes.byteOffset,bytes.byteLength);
+    while(p+4<=bytes.length){
+        const h=dv.getUint32(p,true); p+=4;
+        const tag=h&0x3ff; let size=(h>>>20)&0xfff;
+        if(size===0xfff){ if(p+4>bytes.length) break; size=dv.getUint32(p,true); p+=4; }
+        if(p+size>bytes.length) break;
+        if(tag===67){ for(let i=0;i+1<size;i+=2){ const ch=dv.getUint16(p+i,true); if(ch>=32 && ch!==0xffff) out+=String.fromCharCode(ch); } out+='\n'; }
+        p+=size;
+    }
+    return out;
 }
 async function _callGeminiMenu(b64, mime){
     const key=_getGeminiKey(); if(!key) throw new Error('AI 키 없음');
@@ -2875,8 +3022,8 @@ function renderMealCalendar(a, month){
 </script>
 <!-- @catc-version-badge · 전 페이지 통일 디자인 (개발자 확인용 · 사용자에게는 거의 안 보임) -->
 <style>@media print{#__catcVer{display:none!important}}</style>
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">JDS260613(V8)</div>
-<script>try{console.log('%cCATC%c 영양사 (nutritionist.html) %cJDS260613(V8)%c build 20260613','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}</script>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">JDS260613(V9)</div>
+<script>try{console.log('%cCATC%c 영양사 (nutritionist.html) %cJDS260613(V9)%c build 20260613','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}</script>
 <div id="notifyStack" class="notify-stack"></div>
 <!-- ── 화면 자동 맞춤(auto-fit): 입장 시 가로폭 초과하면 화면에 맞게 자동 축소 · JDS260614 ── -->
 <script>
