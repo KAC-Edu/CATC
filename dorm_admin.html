@@ -2902,27 +2902,53 @@
         }
 
         async function refreshWeekRostersFromDb(wk) {
-            const snap = await db.ref('system/dorm/rosters').once('value');
+            const [snap, cSnap] = await Promise.all([
+                db.ref('system/dorm/rosters').once('value'),
+                db.ref('courses').once('value')
+            ]);
             const all = snap.val() || {};
-            // [JDS260613] 주차키 UTC/로컬 불일치(운영부=로컬, 지원부=UTC)로 같은 과정이
-            //  2026-06-15__A / 2026-06-14__A 두 키로 저장되어 중복되던 문제를 표시 단계에서 흡수.
-            //  '같은 실제 주(canonicalWeekKey) + 같은 방'은 하나로 합치고 최신(updatedAt) 항목만 사용.
+            const coursesObj = cSnap.val() || {};
+            // [JDS260613] 주차키 UTC/로컬 불일치 흡수 + 다주차(계획 외/장기) 과정 기간겹침 포함
             const canon = canonicalWeekKey(wk);
-            const picked = {};  // sig -> { key, v }
+            const picked = {};  // sig -> { key, v, sameWeek }
             Object.entries(all).forEach(([k, v]) => {
                 if (!v) return;
                 const keyWeek = v.weekKey || k.split('__')[0];
-                if (canonicalWeekKey(keyWeek) !== canon) return;
                 const room = (v.room != null && v.room !== '') ? String(v.room) : (k.split('__')[1] || '');
+                const sameWeek = canonicalWeekKey(keyWeek) === canon;
+                // 저장 주차가 달라도 과정 기간이 이 주(월~일)에 겹치면 포함 (예: 6/8~6/30 과정이 6/15 주에도 보여야 함)
+                const overlaps = !sameWeek && _rosterOverlapsWeek(v, room, coursesObj, wk);
+                if (!sameWeek && !overlaps) return;
                 const sig = `${canon}__${room}`;
                 const prev = picked[sig];
-                if (!prev || Number(v.updatedAt || 0) >= Number(prev.v.updatedAt || 0)) {
-                    picked[sig] = { key: k, v };
-                }
+                // 같은 방이면 '정확히 이 주' 명단을 겹침보다 우선, 그다음 최신(updatedAt)
+                const score = (sameWeek ? 1e15 : 0) + Number(v.updatedAt || 0);
+                const prevScore = prev ? ((prev.sameWeek ? 1e15 : 0) + Number(prev.v.updatedAt || 0)) : -1;
+                if (!prev || score >= prevScore) picked[sig] = { key: k, v, sameWeek };
             });
             weekRosters = {};
             Object.values(picked).forEach(({ key, v }) => { weekRosters[key] = v; });
             return weekRosters;
+        }
+
+        // [JDS260613] 다주차 과정 판정 헬퍼 — 명단의 과정 기간이 선택 주에 겹치는지
+        function _rosterPeriodParts(v, room, coursesObj) {
+            let p = (v && v.period) || '';
+            if (!p && coursesObj && room && coursesObj[room]) {
+                const c = coursesObj[room];
+                p = (c.settings && c.settings.period) || (c.coordRoster && c.coordRoster.period) || '';
+            }
+            return parsePeriod(p);
+        }
+        function _rosterOverlapsWeek(v, room, coursesObj, weekKeyStr) {
+            const { start, end } = _rosterPeriodParts(v, room, coursesObj);
+            if (!start) return false;
+            const ws = new Date(canonicalWeekKey(weekKeyStr) + 'T00:00:00');
+            if (isNaN(ws)) return false;
+            const we = new Date(ws); we.setDate(ws.getDate() + 6); we.setHours(23, 59, 59);
+            const s = new Date(start + 'T00:00:00'), e = new Date((end || start) + 'T23:59:59');
+            if (isNaN(s)) return false;
+            return s <= we && e >= ws;
         }
 
         // STEP 2·3 공통 — 현재 기준 대상 주(월요일 키) 계산: 토·일엔 차주가 기준
@@ -2954,19 +2980,25 @@
                 })();
                 // [JDS260613] 강사플랫폼에서 '차주 유지'(settings.autoAssignLocked) 체크된 방은 명단 보존 — 체크 풀릴 때까지 절대 삭제 안 함
                 let lockedRooms = new Set();
+                let cLockAll = {};
                 try {
                     const cLockSnap = await db.ref('courses').once('value');
-                    const cLockAll = cLockSnap.val() || {};
+                    cLockAll = cLockSnap.val() || {};
                     Object.entries(cLockAll).forEach(([room, c]) => {
                         if (c && c.settings && c.settings.autoAssignLocked === true) lockedRooms.add(String(room));
                     });
                 } catch (e) { console.warn('[생활관] 차주유지 확인 생략', e); }
 
+                const _targetMonDt = new Date(targetMon + 'T00:00:00');
                 const pastKeys = Object.keys(all).filter(k => {
                     const wk = (all[k] && all[k].weekKey) || k.split('__')[0];
                     const rm = (all[k] && all[k].room != null && all[k].room !== '') ? String(all[k].room) : (k.split('__')[1] || '');
                     if (lockedRooms.has(rm)) return false;   // 차주 유지 과정 → 삭제 금지
-                    return wk <= prevCutoff; // targetMon과 같은 주는 절대 포함 안 됨
+                    if (wk > prevCutoff) return false;       // 지난 주차 아님 → 유지
+                    // [JDS260613] 다주차(계획 외/장기) 과정: 과정 종료일이 대상 주 이후면(아직 운영 중) 삭제 금지
+                    const per = _rosterPeriodParts(all[k], rm, cLockAll);
+                    if (per.start) { const e = new Date((per.end || per.start) + 'T23:59:59'); if (!isNaN(e) && e >= _targetMonDt) return false; }
+                    return true; // 지난 주차 + 종료된 과정 → 삭제
                 });
                 if (pastKeys.length) {
                     const delUpdates = {};
@@ -2986,9 +3018,11 @@
                 });
 
                 // ── 교육운영부가 공유했지만 아직 지원부 명단이 없는 주차도 드롭다운에 포함 ──
+                let _coursesForWeeks = {};
                 try {
                     const cSnap = await db.ref('courses').once('value');
                     const courses = cSnap.val() || {};
+                    _coursesForWeeks = courses;
                     Object.entries(courses).forEach(([room, c]) => {
                         const cr = c && c.coordRoster;
                         if (!cr || !cr.applyToDorm || !Array.isArray(cr.list) || !cr.list.length) return;
@@ -3018,6 +3052,37 @@
                         const room = (v && v.room != null && v.room !== '') ? String(v.room) : ((v && v.courseName) || '');
                         g.rooms.add(room);
                     });
+                });
+                // [JDS260613] 다주차(계획 외/장기) 과정 — 겹치는 모든 주(옵션·카운트)에 반영
+                const _weekMondaysInPeriod = (start, end) => {
+                    const out = []; if (!start) return out;
+                    let cur = new Date(canonicalWeekKey(start) + 'T00:00:00');
+                    const e = new Date((end || start) + 'T00:00:00'); if (isNaN(cur) || isNaN(e)) return out;
+                    const floor = new Date(targetMon + 'T00:00:00');
+                    let guard = 0;
+                    while (cur <= e && guard++ < 70) { if (cur >= floor) out.push(_ymdLocal(cur)); cur = new Date(cur); cur.setDate(cur.getDate() + 7); }
+                    return out;
+                };
+                const _addSpan = (start, end, room) => {
+                    if (!room) return;
+                    _weekMondaysInPeriod(start, end).forEach(mon => {
+                        const canon = canonicalWeekKey(mon);
+                        const g = byCanon[canon] || (byCanon[canon] = { rep: mon, rooms: new Set() });
+                        g.rooms.add(String(room));
+                    });
+                };
+                Object.entries(all).forEach(([k, v]) => {
+                    if (!v || isRosterHidden(v)) return;
+                    const room = (v.room != null && v.room !== '') ? String(v.room) : (k.split('__')[1] || '');
+                    const { start, end } = _rosterPeriodParts(v, room, _coursesForWeeks);
+                    _addSpan(start, end, room);
+                });
+                Object.entries(_coursesForWeeks).forEach(([room, c]) => {
+                    const cr = c && c.coordRoster;
+                    if (!cr || !cr.applyToDorm || !Array.isArray(cr.list) || !cr.list.length) return;
+                    if (isRosterHidden({ courseName: cr.courseName, room })) return;
+                    const { start, end } = parsePeriod(cr.period || '');
+                    _addSpan(start, end, room);
                 });
                 const canonList = Object.keys(byCanon).sort();
                 sel.innerHTML = canonList.map(canon => {
@@ -3092,12 +3157,15 @@
                     if (!cr || !cr.applyToDorm || !Array.isArray(cr.list) || !cr.list.length) return;
                     const start = parsePeriod(cr.period || '').start;
                     const crWk = start ? weekKeyOf(start) : (cr.weekKey || '');
-                    if (crWk !== wk) return;
-                    const rk = `${crWk}__${room}`;
-                    const dorm = weekRosters[rk];
-                    const dormCoordVer = dorm ? Number(dorm.coordUpdatedAt || 0) : 0;
-                    // 지원부에 없거나, 교육운영부 명단이 더 최신이면 반영 대상
-                    if (!dorm || Number(cr.updatedAt || 0) > dormCoordVer) {
+                    // [JDS260613] 정확히 이 주 OR 다주차 과정 기간이 이 주에 겹치면 대상
+                    const overlaps = _rosterOverlapsWeek({ period: cr.period }, room, courses, wk);
+                    if (crWk !== wk && !overlaps) return;
+                    // 이 주 weekRosters에 같은 방 명단이 이미 있는지(겹침 포함) — 있으면 더 최신일 때만 반영(중복 방지)
+                    const existing = Object.values(weekRosters).find(rv => String((rv && rv.room != null ? rv.room : '')) === String(room));
+                    const existingCoordVer = existing ? Number(existing.coordUpdatedAt || 0) : 0;
+                    const useWk = (crWk === wk) ? crWk : canonicalWeekKey(wk);
+                    const rk = `${useWk}__${room}`;
+                    if (!existing || Number(cr.updatedAt || 0) > existingCoordVer) {
                         pending.push({ rk, room, coord: cr });
                     }
                 });
@@ -5775,7 +5843,7 @@
 </script>
 <!-- @catc-version-badge · 전 페이지 통일 디자인 (개발자 확인용 · 사용자에게는 거의 안 보임) -->
 <style>@media print{#__catcVer{display:none!important}}</style>
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">JDS260613(V14)</div>
-<script>try{console.log('%cCATC%c 교육지원부·생활관 (dorm_admin.html) %cJDS260613(V14)%c build 20260613','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}</script>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">JDS260613(V15)</div>
+<script>try{console.log('%cCATC%c 교육지원부·생활관 (dorm_admin.html) %cJDS260613(V15)%c build 20260613','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}</script>
 </body>
 </html>
