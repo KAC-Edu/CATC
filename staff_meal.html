@@ -253,15 +253,16 @@
         .meal-table tbody tr:nth-child(even) { background:#f8fafc; }   /* 줄무늬: 본인 줄 찾기 쉽게 */
         .meal-table tbody tr:hover { background:#eef4ff; }
         .meal-table td.c { cursor:pointer; padding:0; }
-        .meal-table td.c.locked { cursor:not-allowed; background:#f8fafc; }
-        /* ── 현재 시간대 칼럼 강조 / 그 외 흐림 ── */
-        .meal-table td.c.act { background:#e8f1ff; }
-        .meal-table td.c.act.sep { background:#fff5e6; }   /* 석식예약 활성 = 호박색 톤 */
-        .meal-table th.act { box-shadow:inset 0 -5px 0 #fbbf24; }
-        .meal-table th.act.sep { box-shadow:inset 0 -5px 0 #fde047; }
-        .meal-table th .now-dot { display:none; }
-        .meal-table th.act .now-dot { display:block; font-size:10px; font-weight:900; color:#fde68a; letter-spacing:.06em; margin-top:2px; }
-        .meal-table th.dimmed { opacity:.55; }
+        .meal-table td.c.locked { cursor:not-allowed; background:#f3f5f8; }
+        /* ── 현재 시간대 칼럼 강조(또렷) / 그 외 칼럼 흐림 ── */
+        .meal-table td.c.act { background:#dbeafe; }
+        .meal-table td.c.act.sep { background:#fdecc8; }   /* 석식예약 활성 = 호박색 톤 */
+        .meal-table th.act { background:rgba(255,255,255,.16); }
+        .meal-table th.act.sep { background:#b45309; }
+        .meal-table th.dimmed { opacity:.5; }
+        .meal-table th .now-dot, .meal-table th .lock-dot { display:none; }
+        .meal-table th.act .now-dot { display:block; font-size:11px; font-weight:900; color:#fde68a; letter-spacing:.05em; margin-top:3px; }
+        .meal-table th.dimmed .lock-dot { display:block; font-size:12px; color:#cbd5e1; margin-top:3px; }
         .meal-table .dept-cell { background:#eff6ff; font-weight:900; color:#1e40af; font-size:var(--dept-fz); vertical-align:middle; white-space:nowrap; letter-spacing:.04em; }
         .meal-table tbody tr.dt-start > td { border-top:2px solid #1e40af; }   /* 소속부서 구분선(헤더와 동일 파랑) */
         .meal-table .pos-cell { color:#334155; font-weight:700; font-size:var(--pos-fz); white-space:nowrap; }
@@ -395,10 +396,13 @@ function renderStaffList(){
 
     const cell=(id,key,on)=>{
         const act=isActive(key);
-        const cls='mchk'+(on?' on':'')+(key==='r'?' resv':'')+(act?'':' locked');
+        const cls='mchk'+(on?' on':'')+(key==='r'?' resv':'');
         const oc=act?`toggleMeal('${id}','${key}')`:`lockMsg('${key}')`;
-        const ic = on ? '<i class="fa-solid fa-check"></i>' : (act?'':'<i class="fa-solid fa-lock"></i>');
-        return `<td class="c${key==='r'?' sep':''}${act?' act':' locked'}" onclick="${oc}"><span class="${cls}">${ic}</span></td>`;
+        // 잠긴 칸: 행별 자물쇠 제거 → 체크된 것만 보이고 빈 칸은 깔끔히 비움(칼럼 전체가 흐림 처리됨)
+        let inner='';
+        if(on) inner=`<span class="${cls}"><i class="fa-solid fa-check"></i></span>`;
+        else if(act) inner=`<span class="${cls}"></span>`;   // 활성: 탭할 빈 동그라미
+        return `<td class="c${key==='r'?' sep':''}${act?' act':' locked'}" onclick="${oc}">${inner}</td>`;
     };
     // 한 컬럼(슬라이스)을 부서 묶음(rowspan) 표로 — 열: 아침·점심·석식·석식예약
     const rowsOf=(arr)=>{
@@ -429,7 +433,8 @@ function renderStaffList(){
     };
     const _thh=(label,key,extra)=>{
         const a=isActive(key);
-        return `<th class="${extra||''}${a?' act':' dimmed'}">${label}<div class="now-dot">● 지금</div></th>`;
+        const mark = a ? '<div class="now-dot">● 지금</div>' : '<div class="lock-dot"><i class="fa-solid fa-lock"></i></div>';
+        return `<th class="${extra||''}${a?' act':' dimmed'}">${label}${mark}</th>`;
     };
     const tableHTML=(body)=>`<div class="mtable-wrap"><table class="meal-table">
         <thead><tr><th>소속</th><th>직책</th><th>이름</th>${_thh('아침','b')}${_thh('점심','l')}${_thh('석식','d')}${_thh('석식<br>예약','r','sep')}</tr></thead>
@@ -1108,8 +1113,8 @@ function esc(v){ return String(v==null?'':v).replace(/[&<>"']/g,c=>({'&':'&amp;'
 </script>
 <!-- @catc-version-badge · 전 페이지 통일 디자인 (개발자 확인용 · 사용자에게는 거의 안 보임) -->
 <style>@media print{#__catcVer{display:none!important}}</style>
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">JDS260613(V6)</div>
-<script>try{console.log('%cCATC%c 식당 식수 터치패널 (staff_meal.html) %cJDS260613(V6)%c build 20260613','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}</script>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">JDS260613(V7)</div>
+<script>try{console.log('%cCATC%c 식당 식수 터치패널 (staff_meal.html) %cJDS260613(V7)%c build 20260613','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}</script>
 </body>
 </html>
 <!-- @build 20260613-192000 (식당패널 vGG: KAC임직원 QR 팝업도 사외강사처럼 "닫기 (3)(2)(1)" 카운트다운 + 3초 자동닫힘 + 즉시 닫기 버튼. QR 팝업은 자체 타이머로 닫으므로 일괄 옵저버에서 제외(keep)) -->
