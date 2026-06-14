@@ -627,9 +627,9 @@
 
                 <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px;">
                     <input type="file" id="pdfInput" accept=".pdf,.hwp,.hwpx,application/pdf,application/x-hwp,application/haansofthwp,application/vnd.hancom.hwpx" style="display:none;" onchange="handleRosterFile(event)">
-                    <button class="save-btn" style="background:var(--blue);" onclick="beginRosterUpload()"><i class="fa-solid fa-file-arrow-up"></i> PDF/HWP 업로드</button>
-                    <button class="h-btn" style="background:#475569;" onclick="addRosterRow()"><i class="fa-solid fa-plus"></i> 행 추가</button>
-                    <button class="h-btn" style="background:#475569;" onclick="clearRoster()"><i class="fa-solid fa-eraser"></i> 비우기</button>
+                    <button class="save-btn" id="btnRosterUpload" style="background:var(--blue);" onclick="beginRosterUpload()"><i class="fa-solid fa-file-arrow-up"></i> PDF/HWP 업로드</button>
+                    <button class="h-btn" id="btnRosterAddRow" style="background:#475569;" onclick="addRosterRow()"><i class="fa-solid fa-plus"></i> 행 추가</button>
+                    <button class="h-btn" id="btnRosterClear" style="background:#475569;" onclick="clearRoster()"><i class="fa-solid fa-eraser"></i> 비우기</button>
                     <div style="flex:1;"></div>
                     <span class="summary" id="rosterCount" style="align-self:center;">0명</span>
                 </div>
@@ -654,7 +654,8 @@
 
                 <div class="save-bar">
                     <div class="summary" id="rosterSaveSummary">선택된 과정 없음</div>
-                    <button class="save-btn" onclick="saveRoster()"><i class="fa-solid fa-floppy-disk"></i> 이 과정 명단 저장</button>
+                    <div id="rosterLockNote" style="display:none; margin-bottom:10px; padding:11px 14px; border-radius:10px; background:#fef9c3; border:1.5px solid #fde047; color:#854d0e; font-weight:800; font-size:13px;"><i class="fa-solid fa-lock"></i> 이 주차는 배정이 잠겨 있어 명단 업로드·수정·저장이 불가합니다. (STEP4에서 잠금 해제)</div>
+                    <button class="save-btn" id="btnRosterSave" onclick="saveRoster()"><i class="fa-solid fa-floppy-disk"></i> 이 과정 명단 저장</button>
                 </div>
             </div>
         </div>
@@ -672,7 +673,7 @@
                 <div id="weekCourseInfo" style="font-size:13px; color:var(--muted); margin-bottom:14px;"></div>
 
                 <div style="display:flex; gap:10px; flex-wrap:wrap;">
-                    <button class="save-btn" onclick="runAssign()"><i class="fa-solid fa-wand-magic-sparkles"></i> 자동 배정 실행</button>
+                    <button class="save-btn" id="btnRunAssign" data-assign-run onclick="runAssign()"><i class="fa-solid fa-wand-magic-sparkles"></i> 자동 배정 실행</button>
                 </div>
 
                 <div style="margin-top:16px; padding:14px 16px; border:1.5px dashed #cbd5e1; border-radius:12px; background:#f8fafc;">
@@ -696,6 +697,11 @@
                     <select id="viewWeekSelect" style="padding:12px 40px 12px 14px; border:2px solid #2563eb; border-radius:12px; font-size:15px; min-width:260px; font-weight:900; color:#0f172a; background:#fff; box-shadow:0 4px 12px rgba(37,99,235,.12);" onchange="renderBoard()"></select>
                     <button class="h-btn" style="background:var(--blue);" onclick="loadViewWeeks()"><i class="fa-solid fa-rotate"></i> 새로고침</button>
                     <button class="h-btn" style="background:#fee2e2; color:#dc2626; border:1px solid #fca5a5;" onclick="deleteWeekAssignment()" title="이 주차의 배정 현황만 삭제합니다 (명단은 유지). 잘못 남은 주차 정리용."><i class="fa-solid fa-trash-can"></i> 이 주차 배정 삭제</button>
+                    <button id="weekLockBtn" class="h-btn" style="background:#ecfdf5; color:#047857; border:1px solid #6ee7b7;" onclick="toggleWeekLock()" title="배정을 잠그면 이 주차의 자동배정·명단 업로드/수정/삭제·배정 이동/삭제가 모두 차단됩니다."><i class="fa-solid fa-lock-open"></i> 배정 잠금</button>
+                </div>
+                <div id="weekLockBanner" style="display:none; align-items:center; gap:10px; margin:-6px 0 14px; padding:12px 16px; border-radius:12px; background:#fef9c3; border:1.5px solid #fde047; color:#854d0e; font-weight:800; font-size:13.5px;">
+                    <i class="fa-solid fa-lock" style="font-size:16px;"></i>
+                    <span>이 주차 배정은 <b>잠금 상태</b>입니다. 자동배정·명단 업로드/수정/삭제·배정 이동/삭제가 차단됩니다. 변경하려면 <b>잠금 해제</b>를 누르세요.</span>
                 </div>
 
                 <div id="boardStats" style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:14px;"></div>
@@ -1157,6 +1163,8 @@
             db.ref('system/dorm/rooms').on('value', () => renderDormStatusBar());
             // 전체 배정 경로 구독 (주차 상관없이 최신 반영)
             db.ref('system/dorm/assignments').on('value', () => renderDormStatusBar());
+            // [JDS260613] 주차 잠금 상태 구독
+            db.ref('system/dorm/locks').on('value', s => { _lockedWeeks = s.val() || {}; _applyLockUI(); });
         }
 
         async function renderDormStatusBar() {
@@ -1557,6 +1565,7 @@
 
         function selectWeek(key) {
             selectedWeekKey = key;
+            setTimeout(_applyLockUI, 0);
             document.querySelectorAll('#weekPills button').forEach(b => b.classList.toggle('on', b.dataset.wk === key));
             // 주차를 바꾸면 이전 주차에서 열어둔 교육생 명단 패널을 닫고 선택 초기화
             selectedCourse = null;
@@ -1615,6 +1624,66 @@
             if (dow === 0) mon.setDate(d.getDate() + 1);          // 일요일 키(UTC 보정 산물) → 다음 월요일 주
             else mon.setDate(d.getDate() - ((dow + 6) % 7));      // 그 외 → 그 주 월요일
             return _ymdLocal(mon);
+        }
+
+        // ── [JDS260613] 주차 배정 잠금(락) ── 잠그면 그 주차의 자동배정·명단 업로드/수정/삭제·배정 이동/삭제 차단
+        let _lockedWeeks = {};                                  // { canonicalWeekKey: {locked, at} }
+        function isWeekLocked(wk) { return !!_lockedWeeks[canonicalWeekKey(wk || '')]; }
+        function _lockGuard(wk, action) {
+            if (isWeekLocked(wk)) {
+                showToast(`🔒 잠금된 주차입니다 — ${action || '변경'} 불가. STEP4에서 잠금을 먼저 해제하세요.`);
+                return true;
+            }
+            return false;
+        }
+        function _step4WeekKey() { const el = document.getElementById('viewWeekSelect'); return el ? el.value : ''; }
+        async function toggleWeekLock() {
+            const wkRaw = _step4WeekKey();
+            if (!wkRaw) { showToast('주차를 먼저 선택하세요'); return; }
+            const canon = canonicalWeekKey(wkRaw);
+            if (_lockedWeeks[canon]) {
+                if (!confirm('이 주차 배정 잠금을 해제할까요?\n\n해제하면 명단 업로드·수정·자동배정이 다시 가능해집니다.')) return;
+                try { await db.ref(`system/dorm/locks/${canon}`).remove(); showToast('🔓 잠금이 해제되었습니다'); }
+                catch (e) { showToast('❌ 해제 실패: ' + (e.code || e.message)); }
+            } else {
+                if (!confirm('이 주차 배정을 잠글까요?\n\n잠그면 이 주차의\n· 자동배정\n· 명단 업로드/수정/삭제\n· 배정 이동/삭제\n가 모두 차단됩니다.')) return;
+                try { await db.ref(`system/dorm/locks/${canon}`).set({ locked: true, at: Date.now() }); showToast('🔒 이 주차 배정이 잠겼습니다'); }
+                catch (e) { showToast('❌ 잠금 실패: ' + (e.code || e.message)); }
+            }
+        }
+        // 잠금 상태에 따라 버튼/배너 시각 갱신
+        function _applyLockUI() {
+            // STEP4 잠금 토글 버튼 + 배너
+            const wk4 = _step4WeekKey();
+            const locked4 = wk4 ? isWeekLocked(wk4) : false;
+            const btn = document.getElementById('weekLockBtn');
+            if (btn) {
+                btn.innerHTML = locked4 ? '<i class="fa-solid fa-lock"></i> 잠금 해제' : '<i class="fa-solid fa-lock-open"></i> 배정 잠금';
+                btn.style.background = locked4 ? '#fef9c3' : '#ecfdf5';
+                btn.style.color = locked4 ? '#a16207' : '#047857';
+                btn.style.border = locked4 ? '1px solid #fde047' : '1px solid #6ee7b7';
+            }
+            const banner = document.getElementById('weekLockBanner');
+            if (banner) banner.style.display = locked4 ? 'flex' : 'none';
+            // STEP3 자동배정 버튼 비활성화 (선택 주 잠금 시)
+            const wk3 = (document.getElementById('weekSelect') || {}).value || '';
+            const targetLocked = wk3 ? isWeekLocked(wk3) : false;
+            document.querySelectorAll('.save-btn[onclick="runAssign()"], [data-assign-run]').forEach(b => {
+                b.disabled = targetLocked;
+                b.style.opacity = targetLocked ? '0.45' : '';
+                b.style.cursor = targetLocked ? 'not-allowed' : '';
+                b.title = targetLocked ? '🔒 이 주차는 잠겨 있어 자동배정할 수 없습니다' : '';
+            });
+            // STEP2 업로드/수정 버튼 비활성화 (선택 주 잠금 시)
+            const lockedSel = (typeof selectedWeekKey !== 'undefined' && selectedWeekKey) ? isWeekLocked(selectedWeekKey) : false;
+            ['btnRosterUpload','btnRosterAddRow','btnRosterClear','btnRosterSave'].forEach(id => {
+                const e = document.getElementById(id); if (!e) return;
+                e.disabled = lockedSel;
+                e.style.opacity = lockedSel ? '0.45' : '';
+                e.style.cursor = lockedSel ? 'not-allowed' : '';
+            });
+            const s2note = document.getElementById('rosterLockNote');
+            if (s2note) s2note.style.display = lockedSel ? 'block' : 'none';
         }
 
         function parsePeriod(periodStr) {
@@ -1979,6 +2048,7 @@
         }
 
         function beginRosterUpload() {
+            if (_lockGuard(selectedWeekKey, '명단 업로드')) return;
             if (!selectedCourse) { showToast('먼저 과정을 선택하세요'); return; }
             rosterUploadCourse = Object.assign({}, selectedCourse);
             document.getElementById('rosterPreview').innerText = '';
@@ -2063,6 +2133,7 @@
         }
 
         async function handleRosterFile(ev) {
+            if (isWeekLocked(selectedWeekKey)) { showToast('🔒 잠금된 주차 — 명단 업로드 불가'); if (ev && ev.target) ev.target.value=''; return; }
             const file = ev.target.files[0];
             if (!file) return;
             const targetCourse = rosterUploadCourse ? Object.assign({}, rosterUploadCourse) : (selectedCourse ? Object.assign({}, selectedCourse) : null);
@@ -2695,9 +2766,9 @@
         }
 
         function editRoster(i, key, val) { if (roster[i]) roster[i][key] = val.trim(); }
-        function addRosterRow() { roster.push({ seq: roster.length + 1, name: '', empNo: '', dept: '', gender: '' }); rosterDirty = true; renderRoster(); }
+        function addRosterRow() { if (_lockGuard(selectedWeekKey, '명단 수정')) return; roster.push({ seq: roster.length + 1, name: '', empNo: '', dept: '', gender: '' }); rosterDirty = true; renderRoster(); }
         function delRosterRow(i) { roster.splice(i, 1); rosterDirty = true; renderRoster(); }
-        function clearRoster() { if (confirm('명단을 모두 비우시겠습니까?')) { roster = []; rosterDirty = true; renderRoster(); } }
+        function clearRoster() { if (_lockGuard(selectedWeekKey, '명단 수정')) return; if (confirm('명단을 모두 비우시겠습니까?')) { roster = []; rosterDirty = true; renderRoster(); } }
 
         function courseRoomDetail(course, settings) {
             const c = course || {};
@@ -2708,6 +2779,7 @@
         function saveRoster() {
             const saveCourse = rosterEditCourse || selectedCourse;
             if (!saveCourse) { showToast('먼저 과정을 선택하세요'); return; }
+            if (_lockGuard((saveCourse && saveCourse.weekKey) || selectedWeekKey, '명단 저장')) return;
             if (!selectedCourse || rosterKey(selectedCourse) !== rosterKey(saveCourse)) {
                 syncRosterPanelCourse(saveCourse);
             }
@@ -2994,6 +3066,7 @@
         }
 
         async function onWeekChange() {
+            _applyLockUI();
             const wk = document.getElementById('weekSelect').value;
             if (!wk) return;
             excludedRosterKeys = new Set();
@@ -3289,6 +3362,7 @@
             try {
             const wk = document.getElementById('weekSelect').value;
             if (!wk) { showToast('배정할 주차를 선택하세요'); return; }
+            if (_lockGuard(wk, '자동배정')) return;
             _showAssignLoading('명단 및 방 정보를 불러오는 중…', 10);
             await refreshWeekRostersFromDb(wk);
             await loadHiddenCourses();
@@ -3808,6 +3882,7 @@
         async function deleteWeekAssignment() {
             const wk = document.getElementById('viewWeekSelect').value;
             if (!wk) { showToast('삭제할 주차가 없습니다'); return; }
+            if (_lockGuard(wk, '배정 삭제')) return;
             const canon = canonicalWeekKey(wk);
             const snap = await db.ref('system/dorm/assignments').once('value');
             const all = snap.val() || {};
@@ -3831,6 +3906,7 @@
 
         async function renderBoard(skipReload) {
             const wk = document.getElementById('viewWeekSelect').value;
+            _applyLockUI();
             if (!wk) return;
             // 방 마스터 — 같은 세션의 즉시 편집(in-memory)을 존중하기 위해 비었을 때만 로드.
             //  (배정제외 토글은 setRoomField에서 즉시 DB에도 반영되므로 새 세션/새로고침에서도 정확)
@@ -4150,6 +4226,7 @@
         //  reserve = STEP3 자동배정 전 사전배치 / now = STEP4 즉시 추가
         let _instCtx = 'now', _instWk = null;
         async function openInstructorAdd(ctx) {
+            if (_lockGuard(_step4WeekKey(), '강사·외부 숙박 추가')) return;
             _instCtx = (ctx === 'reserve') ? 'reserve' : 'now';
             const wk = _instCtx === 'reserve'
                 ? (document.getElementById('weekSelect') ? document.getElementById('weekSelect').value : null)
@@ -4197,6 +4274,7 @@
 
         // 교육생 추가 (현재 배정 중인 과정 선택 → 성명/사번/성별 → 빈 방 배정)
         async function openStudentAdd() {
+            if (_lockGuard(_step4WeekKey(), '교육생 추가')) return;
             if (!viewAssign || !viewAssign.weekKey) { showToast('먼저 주차를 선택하세요'); return; }
             _showAssignLoading('방 정보 로드 중…', 25);
             if (!Object.keys(rooms).length) { _hideAssignLoading(); showToast('STEP 1에서 방을 먼저 설정하세요'); return; }
@@ -4342,6 +4420,7 @@
         // ── 이동 ──
 
         function openMovePop(token) {
+            if (_lockGuard((viewAssign && viewAssign.weekKey) || _step4WeekKey(), '배정 이동')) return;
             moveTargetToken = token;
             const s = viewAssign.students[token];
             document.getElementById('moveTitle').innerText = `${s.name} 이동 (현재: ${s.building} ${s.no}호)`;
@@ -4531,6 +4610,7 @@
         }
 
         function deleteStudent(token) {
+            if (_lockGuard((viewAssign && viewAssign.weekKey) || _step4WeekKey(), '배정 삭제')) return;
             const s = viewAssign.students[token];
             if (!confirm(`${s.name}(${s.empNo})을(를) 배정에서 삭제하시겠습니까?\n(명단에서 지우는 게 아니라 이 주차 배정에서만 제외됩니다)`)) return;
             const wk = viewAssign.weekKey;
@@ -5695,7 +5775,7 @@
 </script>
 <!-- @catc-version-badge · 전 페이지 통일 디자인 (개발자 확인용 · 사용자에게는 거의 안 보임) -->
 <style>@media print{#__catcVer{display:none!important}}</style>
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">JDS260613(V13)</div>
-<script>try{console.log('%cCATC%c 교육지원부·생활관 (dorm_admin.html) %cJDS260613(V13)%c build 20260613','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}</script>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">JDS260613(V14)</div>
+<script>try{console.log('%cCATC%c 교육지원부·생활관 (dorm_admin.html) %cJDS260613(V14)%c build 20260613','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}</script>
 </body>
 </html>
