@@ -926,20 +926,96 @@ function paintNum(){
     syncSubmit();
 }
 function syncSubmit(){ const b=document.getElementById('kpSubmit'); if(b) b.disabled = !(KP.num.trim() && KP.name.trim()); }
+// ── 현재 시각의 끼니 결정 (영양사 터치패널과 동일 창: 아침07~09·점심11~13·석식17~19) ──
+function _currentInstrMeal(){
+    const t=_hm(); let k='';
+    if(t>=7*60 && t<=9*60) k='b';
+    else if(t>=11*60 && t<=13*60) k='l';
+    else if(t>=17*60 && t<=19*60) k='d';
+    else if(TEST_MODE) k='l';   // 테스트 모드: 시간 무관 점심
+    if(!k) return null;
+    return { key:k, path:(k==='b'?'breakfast':k==='l'?'checks':'dinner'), label:(k==='b'?'아침':k==='l'?'점심':'석식') };
+}
 function submitInstructor(){
     const name=KP.name.trim(), num=KP.num.trim(); if(!name||!num) return;
     const isInt = KP.mode==='internal';
+    const meal=_currentInstrMeal();
+    if(!meal){ _instrNotMealTime(); return; }                 // 식사 시간 아님
     const key = (isInt?'int_':'ext_') + num.replace(/[^0-9]/g,'');
-    const ref = db.ref(`system/staffMeal/checks/${today}/${key}`);
+    const ref = db.ref(`system/staffMeal/${meal.path}/${today}/${key}`);
     ref.once('value').then(s=>{
         if (s.exists()){
-            const prev=s.val();
-            showCancelConfirm(prev.name||name, prev.time, ()=> ref.remove(), '이미 식사 처리된 ' + (isInt?'사번':'연락처') + '입니다.');
+            _instrAlready(s.val()||{}, name, num, isInt, meal, ref);   // 이 끼니 이미 접수 → 수정/취소
         } else {
-            spinThenSet(ref, { name, category:isInt?'internal':'external', idValue:num, time:nowTime(), ts:firebase.database.ServerValue.TIMESTAMP, month:monthKey }, name, (isInt?'사번 ':'연락처 ')+num);
+            _instrSpinSet(ref, { name, category:isInt?'internal':'external', idValue:num, meal:meal.label, time:nowTime(), ts:firebase.database.ServerValue.TIMESTAMP, month:monthKey }, name, num, isInt, meal);
         }
     });
 }
+function _instrNotMealTime(){
+    ovCard.className='ov-card ov-dup';
+    ovCard.innerHTML=`<div class="badge-done badge-warn"><i class="fa-solid fa-clock"></i></div>
+        <div class="ov-ttl">지금은 식사 시간이 아닙니다</div>
+        <div class="ov-sub">아침 07:00~09:00 · 점심 11:00~13:00 · 석식 17:00~19:00<br>식사 시간에 다시 체크인해 주세요.</div>
+        <div class="ov-actions"><button class="ov-btn gray" onclick="closeOverlay()">확인</button></div>`;
+    overlay.classList.add('show'); clearTimeout(_ac); _ac=setTimeout(closeOverlay,3800);
+}
+function _instrSpinSet(ref, payload, name, num, isInt, meal){
+    const idLab=isInt?'사번':'연락처';
+    ovCard.className='ov-card';
+    ovCard.innerHTML=`<div class="coin">🍚</div><div class="ov-ttl" style="color:#fbbf24;">${meal.label} 식수 처리 중…</div><div class="ov-name">${esc(name)}</div>`;
+    overlay.classList.add('show');
+    ref.set(payload).then(()=>{
+        playSnd('sel');
+        setTimeout(()=>{
+            _overlayKeep=true;
+            ovCard.className='ov-card ov-ok';
+            ovCard.innerHTML=`<div class="badge-done badge-ok">✓</div>
+                <div class="ov-ttl"><b style="color:#059669;">${meal.label}</b> 식사 완료</div>
+                <div class="ov-name">${esc(name)}</div>
+                <div class="ov-sub">${idLab} ${esc(num)}</div>
+                <div class="ov-time">${payload.time}</div>
+                <div class="ov-sub" style="margin-top:6px; color:#64748b; font-size:12.5px;">다른 끼니도 드시면 <b>그 시간대에 다시 체크인</b>하세요.</div>
+                <div class="ov-actions" style="flex-wrap:wrap;">
+                    <button class="ov-btn gray" id="instrEditNow"><i class="fa-solid fa-pen"></i> 이름 수정 / 취소</button>
+                    <button class="ov-btn green" onclick="closeOverlay()">확인</button>
+                </div>`;
+            const e=document.getElementById('instrEditNow'); if(e) e.onclick=()=>{ clearTimeout(_ac); _instrAlready(payload, payload.name, num, isInt, meal, ref); };
+            clearTimeout(_ac); _ac=setTimeout(()=>{ _overlayKeep=false; closeOverlay(); }, 5200);
+        }, 800);
+    }).catch(()=>{
+        ovCard.className='ov-card ov-cancel';
+        ovCard.innerHTML=`<div class="badge-done badge-cancel">!</div><div class="ov-ttl">처리 실패</div><div class="ov-sub">네트워크를 확인해 주세요.</div><div class="ov-actions"><button class="ov-btn gray" onclick="closeOverlay()">닫기</button></div>`;
+    });
+}
+// 이미 접수된 끼니 → 이름 수정 / 식사 취소 / 유지
+function _instrAlready(prev, typedName, num, isInt, meal, ref){
+    const idLab=isInt?'사번':'연락처';
+    const nameChanged = !!(prev.name && typedName && prev.name!==typedName);
+    _overlayKeep=true; clearTimeout(_ac);
+    ovCard.className='ov-card ov-dup';
+    ovCard.innerHTML=`<div class="badge-done badge-warn">!</div>
+        <div class="ov-ttl">이미 <b>${meal.label}</b> 접수됨</div>
+        <div class="ov-name">${esc(prev.name||typedName)}</div>
+        <div class="ov-sub">${idLab} ${esc(num)} · 체크인 ${prev.time||'-'}
+            ${nameChanged?`<br><b style="color:#dc2626;">입력한 이름이 다릅니다 → '${esc(typedName)}'</b>`:''}</div>
+        <div class="ov-actions" style="flex-wrap:wrap; gap:8px;">
+            ${nameChanged?`<button class="ov-btn green" id="instrFix">이름 '${esc(typedName)}'(으)로 수정</button>`:''}
+            <button class="ov-btn red" id="instrCancel">식사 취소</button>
+            <button class="ov-btn gray" onclick="closeOverlay()">유지</button>
+        </div>`;
+    overlay.classList.add('show');
+    const fix=document.getElementById('instrFix'); if(fix) fix.onclick=()=>{ ref.update({name:typedName, month:monthKey}).then(()=>{ _overlayKeep=false; _instrDone('이름 수정 완료', typedName, meal.label+' · '+idLab+' '+num); }).catch(()=>_instrFail()); };
+    const c=document.getElementById('instrCancel'); if(c) c.onclick=()=>{ ref.remove().then(()=>{ _overlayKeep=false; playSnd('cancel'); _instrDone(meal.label+' 식사 취소됨', prev.name||typedName, idLab+' '+num, true); }).catch(()=>_instrFail()); };
+}
+function _instrDone(title, name, sub, cancel){
+    ovCard.className='ov-card '+(cancel?'ov-cancel':'ov-ok');
+    ovCard.innerHTML=`<div class="badge-done ${cancel?'badge-cancel':'badge-ok'}">${cancel?'✕':'✓'}</div>
+        <div class="ov-ttl">${esc(title)}</div><div class="ov-name">${esc(name)}</div>
+        <div class="ov-sub">${esc(sub||'')}</div>
+        <div class="ov-actions"><button class="ov-btn ${cancel?'gray':'green'}" onclick="closeOverlay()">확인</button></div>`;
+    clearTimeout(_ac); _ac=setTimeout(closeOverlay, 2400);
+}
+function _instrFail(){ ovCard.className='ov-card ov-cancel'; ovCard.innerHTML=`<div class="badge-done badge-cancel">!</div><div class="ov-ttl">처리 실패</div><div class="ov-sub">네트워크를 확인해 주세요.</div><div class="ov-actions"><button class="ov-btn gray" onclick="closeOverlay()">닫기</button></div>`; }
 
 // ── 코인 회전 후 기록 ──
 const overlay=document.getElementById('overlay'), ovCard=document.getElementById('ovCard');
@@ -1113,8 +1189,8 @@ function esc(v){ return String(v==null?'':v).replace(/[&<>"']/g,c=>({'&':'&amp;'
 </script>
 <!-- @catc-version-badge · 전 페이지 통일 디자인 (개발자 확인용 · 사용자에게는 거의 안 보임) -->
 <style>@media print{#__catcVer{display:none!important}}</style>
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">JDS260613(V9)</div>
-<script>try{console.log('%cCATC%c 식당 식수 터치패널 (staff_meal.html) %cJDS260613(V9)%c build 20260613','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}</script>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">JDS260613(V10)</div>
+<script>try{console.log('%cCATC%c 식당 식수 터치패널 (staff_meal.html) %cJDS260613(V10)%c build 20260613','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}</script>
 </body>
 </html>
 <!-- @build 20260613-192000 (식당패널 vGG: KAC임직원 QR 팝업도 사외강사처럼 "닫기 (3)(2)(1)" 카운트다운 + 3초 자동닫힘 + 즉시 닫기 버튼. QR 팝업은 자체 타이머로 닫으므로 일괄 옵저버에서 제외(keep)) -->
