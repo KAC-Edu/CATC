@@ -1140,7 +1140,7 @@ function loadRoomData() {
 //   · 점심: 시작일 ≤ D ≤ 종료일  (첫날~마지막날 매일)
 //   · 석식: 시작일 ≤ D < 종료일   (마지막날 제외 = 점심까지만)
 function _mealDayCounts(D) {
-    const plan = Array.isArray(_annualPlan) ? _annualPlan : Object.values(_annualPlan || {});
+    const plan = _mergedCourses();   // 연간계획 + 계획 외(운영 중·노출) 병합
     let bS = 0, lS = 0, dS = 0, dSkip = 0;
     const courses = [];
     plan.filter(c => c && c.name && c.startDate && c.endDate)
@@ -1218,9 +1218,8 @@ function _renderMealWeek() {
             + dd.map(({D,c}) => `<td class="mw-num ${D===today?'mw-today':''}">${c[k] > 0 ? c[k] : '<span class="mw-zero">-</span>'}</td>`).join('')
             + `</tr>`;
     }).join('');
-    const plan = Array.isArray(_annualPlan) ? _annualPlan : Object.values(_annualPlan || {});
-    const wc = plan.filter(c => c && c.name && c.startDate && c.endDate && c.startDate <= fri && c.endDate >= mon)
-                   .filter(c => !_isCourseHidden(c))
+    const wc = _mergedCourses()
+                   .filter(c => c.name && c.startDate && c.endDate && c.startDate <= fri && c.endDate >= mon)
                    .sort((a,b) => (a.startDate||'').localeCompare(b.startDate||''));
     const clist = wc.map(c => { const n = _courseHeadByBasis(c) || 0; return `<div class="mw-crow"><span class="mw-cn">${escH(c.name)}</span><span class="mw-cd">${escH(c.startDate)}~${escH(c.endDate)}</span><span class="mw-ch">${n ? n+'명' : (_estBasis==='arrived'?'0명':'대기')}</span></div>`; }).join('') || '<div class="mw-crow" style="color:#94a3b8;">이 주 운영 과정 없음</div>';
     const staffCount = Object.values(_staffRoster || {}).filter(r => r && r.active !== false).length;
@@ -1983,6 +1982,32 @@ function _isCourseHidden(c){
     });
     return hiddenActive && !visibleActive;   // 노출 방이 따로 없고, 운영 중 방이 비노출이면 숨김
 }
+// [JDS260613] 연간계획 + 계획 외(강사플랫폼 courses에만 있는 운영 과정) 병합 — 비노출 제외, 과정명 중복 제거
+function _mergedCourses(){
+    const plan = Array.isArray(_annualPlan) ? _annualPlan : Object.values(_annualPlan || {});
+    const out = []; const norms = new Set();
+    plan.filter(c => c && c.name && c.startDate && c.endDate).forEach(c => {
+        if(_isCourseHidden(c)) return;                 // 비노출 과정 제외
+        out.push(c); norms.add(_normCourse(c.name));
+    });
+    Object.keys(allRoomData||{}).forEach(rid => {
+        const room = allRoomData[rid]; if(!room) return;
+        const s = room.settings||{}, st = room.status||{};
+        const nm = (s.courseName||'').trim(); if(!nm) return;
+        if(st.roomStatus !== 'active') return;          // 운영 중인 방만
+        if(s.hideFromBoard) return;                      // 비노출 제외
+        const norm = _normCourse(nm); if(norms.has(norm)) return;   // 연간계획에 이미 있으면 중복 방지
+        let sd='', ed='';
+        if(s.period && s.period.includes('~')){ const p=s.period.split('~'); sd=(p[0]||'').trim(); ed=(p[1]||'').trim(); }
+        else { sd=(s.startDate||'').trim(); ed=(s.endDate||s.startDate||'').trim(); }
+        if(!sd) return;
+        out.push({ name:nm, startDate:sd, endDate:(ed||sd),
+            roomDetail:(s.roomDetail||s.classroom||s.roomName||'').trim(),
+            prof:(s.profName||s.prof||'').trim(), _outOfPlan:true });
+        norms.add(norm);
+    });
+    return out;
+}
 function _buildExtIdx(all){
     const idx={};
     Object.values(all||{}).forEach(v=>{
@@ -2057,7 +2082,10 @@ function _courseHeadByBasis(c){
 
 function renderCourseWeek(courses, ctx){
     const list=document.getElementById('courseStatusList'); if(!list) return;
-    courses = (courses||[]).filter(c=>!_isCourseHidden(c));   // 비노출(hideFromBoard) 과정 제외 — 실시간 반영
+    // 연간계획 + 계획 외(운영 중·노출) 병합, 비노출 제외, 해당 주 겹침만 — 실시간 반영
+    courses = _mergedCourses()
+        .filter(c => c.startDate <= ctx.sun && c.endDate >= ctx.mon)
+        .sort((a,b)=>(a.startDate||'').localeCompare(b.startDate||''));
     const nav = `<div class="cw-nav">`
         + [0,1,2].map(i=>`<button class="cw-btn ${i===_courseWeekOffset?'on':''}" onclick="courseWeekSet(${i})">${i===0?'이번주':(i+1)+'주차'}</button>`).join('')
         + `<span class="cw-range"><i class="fa-regular fa-calendar"></i> ${_fmtMD(ctx.mon)}(월) ~ ${_fmtMD(ctx.sun)}(일)</span></div>`;
@@ -3046,8 +3074,8 @@ function renderMealCalendar(a, month){
 </script>
 <!-- @catc-version-badge · 전 페이지 통일 디자인 (개발자 확인용 · 사용자에게는 거의 안 보임) -->
 <style>@media print{#__catcVer{display:none!important}}</style>
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">JDS260613(V11)</div>
-<script>try{console.log('%cCATC%c 영양사 (nutritionist.html) %cJDS260613(V11)%c build 20260613','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}</script>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">JDS260613(V12)</div>
+<script>try{console.log('%cCATC%c 영양사 (nutritionist.html) %cJDS260613(V12)%c build 20260613','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}</script>
 <div id="notifyStack" class="notify-stack"></div>
 <!-- ── 화면 자동 맞춤(auto-fit): 입장 시 가로폭 초과하면 화면에 맞게 자동 축소 · JDS260614 ── -->
 <script>
