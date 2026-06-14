@@ -2875,7 +2875,18 @@ function updateIndividualView() {
     document.getElementById('ind-course-name').innerText = room.settings?.courseName || "과정명 미설정";
     document.getElementById('ind-period').innerText = periodStr;
     document.getElementById('ind-prof').innerText = (room.status?.professorName || "-") + " 교수";
-    document.getElementById('ind-coord').innerText = room.settings?.coordinatorName || "-";
+    // [JDS260613] 과정담당 표시: 저장값에 직책이 없으면(예: "장영근") 관리 명단에서 직책 포함 이름으로 보강
+    (function(){
+        const cn = (room.settings?.coordinatorName || "").trim();
+        let disp = cn || "-";
+        const RANK = /\s*(차장|부장|팀장|실장|원장|과장|대리|주임|사원|교수)\s*$/;
+        if (cn && !RANK.test(cn) && window.coordMgr && Array.isArray(coordMgr.list)) {
+            const strip = v => String(v || "").replace(RANK, "").trim();
+            const m = coordMgr.list.find(c => c.name === cn || strip(c.name) === cn);
+            if (m) disp = m.name;
+        }
+        document.getElementById('ind-coord').innerText = disp;
+    })();
     document.getElementById('ind-room-loc').innerText = room.settings?.roomDetailName || "-";
 
     // 3. [핵심 추가] 학생장 정보 표시 (성함 + 강사가 입력한 전체 전화번호)
@@ -3731,14 +3742,26 @@ async function loadRoomSettings(rid) {
     // 4. 담당자 값 선택 (옵션이 이미 그려진 상태여야 함)
     const coordSelect = document.getElementById('setup-coord-select');
     if (coordSelect) {
-        const cn = settings.coordinatorName || "";
+        const cn = (settings.coordinatorName || "").trim();
         coordSelect.value = cn;
-        // [JDS260613] 저장된 담당자가 옵션 목록(관리 명단)에 없으면(예: 연간계획에서 지정된 담당자) 옵션을 추가해 표시
+        // [JDS260613] 저장값이 옵션과 정확히 일치하지 않을 때(예: 직책 없이 "장영근"만 저장)
+        // 이름 부분으로 매칭해 직책 포함 옵션을 선택(강사플랫폼처럼 "장영근 과장" 표시). 못 찾으면 옵션 추가.
         if (cn && coordSelect.value !== cn) {
-            const opt = document.createElement('option');
-            opt.value = cn; opt.textContent = cn;
-            coordSelect.appendChild(opt);
-            coordSelect.value = cn;
+            const RANK = /\s*(차장|부장|팀장|실장|원장|과장|대리|주임|사원|교수)\s*$/;
+            const strip = v => String(v || "").replace(RANK, "").trim();
+            const bare = strip(cn);
+            const opts = Array.from(coordSelect.options);
+            const match = opts.find(o => {
+                const ov = (o.value || "").trim();
+                return ov === cn || strip(ov) === cn || ov === bare || strip(ov) === bare;
+            });
+            if (match) {
+                coordSelect.value = match.value;
+            } else {
+                const opt = new Option(cn, cn);
+                coordSelect.add(opt);
+                coordSelect.value = cn;
+            }
         }
     }
 
@@ -6642,8 +6665,8 @@ function _coordParseRoster(text) {
 </script>
 <!-- @catc-version-badge · 전 페이지 통일 디자인 (개발자 확인용 · 사용자에게는 거의 안 보임) -->
 <style>@media print{#__catcVer{display:none!important}}</style>
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">JDS260613(V3)</div>
-<script>try{console.log('%cCATC%c 교육운영부 (admin_coord.html) %cJDS260613(V3)%c build 20260613','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}</script>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">JDS260613(V4)</div>
+<script>try{console.log('%cCATC%c 교육운영부 (admin_coord.html) %cJDS260613(V4)%c build 20260613','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}</script>
 </body>
 </html>
 <!-- @build 20260612-132331 (교육운영부 vA) -->
