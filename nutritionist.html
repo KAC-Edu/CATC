@@ -411,6 +411,12 @@
 
         /* ── PC 탭 메뉴 (교육지원부 스타일) ── */
         .ntabs { display:flex; gap:10px; margin:0 0 16px; flex-wrap:wrap; position:sticky; top:76px; z-index:150; background:var(--bg); padding:12px 0 10px; }
+        /* [JDS260613] 식수 기준 선택 토글 (헤더) */
+        .est-basis-toggle { display:flex; align-items:center; gap:3px; background:rgba(255,255,255,0.15); border-radius:10px; padding:3px 4px; margin-right:4px; }
+        .est-basis-toggle .eb-lab { color:rgba(255,255,255,0.85); font-size:10px; font-weight:800; padding:0 4px 0 5px; white-space:nowrap; }
+        .eb-opt { background:transparent; color:rgba(255,255,255,0.75); border:none; font-size:11px; font-weight:800; padding:5px 9px; border-radius:7px; cursor:pointer; font-family:inherit; white-space:nowrap; }
+        .eb-opt.on { background:#fff; color:#1e3a8a; box-shadow:0 1px 4px rgba(0,0,0,0.15); }
+        @media (max-width:1180px){ .est-basis-toggle .eb-lab{ display:none; } }
         .ntab { flex:1; min-width:160px; background:#fff; border:1.5px solid var(--border); border-radius:14px; padding:18px 20px; cursor:pointer; text-align:left; transition:all .18s; position:relative; overflow:hidden; }
         .ntab:hover { border-color:#bfdbfe; transform:translateY(-1px); box-shadow:0 4px 12px rgba(15,23,42,.07); }
         .ntab.active { border-color:#2563eb; background:linear-gradient(135deg,#eff6ff,#fff); box-shadow:0 4px 14px rgba(37,99,235,.15); }
@@ -739,6 +745,11 @@
         <div class="header-summary">
             <button class="h-btn icon-only" id="acctBtn" onclick="openAcctModal()" title="사외강사 식대 계좌 설정"><i class="fa-solid fa-gear"></i></button>
             <button class="h-btn touch" onclick="location.href='staff_meal.html'"><i class="fa-solid fa-utensils"></i> 터치패널</button>
+            <div class="est-basis-toggle" title="식수 예상 인원 기준 선택">
+                <span class="eb-lab">식수기준</span>
+                <button id="basis-roster" class="eb-opt on" onclick="_setEstBasis('roster')">명단</button>
+                <button id="basis-arrived" class="eb-opt" onclick="_setEstBasis('arrived')">실입교</button>
+            </div>
             <button class="hsum hsum-break" onclick="openMealWeek('breakfast')" title="주간 식수현황 보기"><span class="hs-lab"><i class="fa-solid fa-mug-hot"></i> 아침 예상</span><span class="hs-val" id="breakfastEst">-</span></button>
             <button class="hsum hsum-lunch" onclick="openMealWeek('lunch')" title="주간 식수현황 보기"><span class="hs-lab"><i class="fa-solid fa-bowl-rice"></i> 점심 예상</span><span class="hs-val" id="lunchEst">-</span></button>
             <button class="hsum hsum-dinner" onclick="openMealWeek('dinner')" title="주간 식수현황 보기"><span class="hs-lab"><i class="fa-solid fa-moon"></i> 석식 예상</span><span class="hs-val" id="dinnerEst">-</span></button>
@@ -1107,7 +1118,7 @@ function _mealDayCounts(D) {
             const el = (c.startDate <= D && D <= c.endDate);
             const ed = (c.startDate <= D && D <  c.endDate);
             if (!eb && !el && !ed) return;
-            const n = (_courseCounts(c).total) || 0;
+            const n = _courseHeadByBasis(c) || 0;
             let sk = 0;
             if (ed) {
                 const m = _roomMatchForCourse(c);
@@ -1668,9 +1679,8 @@ window.addEventListener('DOMContentLoaded', () => {
     loadAccount();
     setMonth(getToday().slice(0,7));
     startClock();
+    _updateBasisToggle();
 });
-
-/* ── PC 탭 전환 ── */
 function showTab(id){
     document.querySelectorAll('.tab-panel').forEach(p => p.classList.toggle('active', p.id === id));
     document.querySelectorAll('.ntab').forEach(t => t.classList.toggle('active', t.getAttribute('data-tab') === id));
@@ -1791,6 +1801,44 @@ function _courseCounts(c){
     if(ext>0) return {found:true, total:ext};
     return {found:false, total:0};
 }
+
+// [JDS260613] 식수 예상 인원 기준: 'roster'(운영부·지원부가 올린 명단) | 'arrived'(실제 입교완료)
+let _estBasis = (function(){ try { return localStorage.getItem('catc_estBasis') || 'roster'; } catch(e){ return 'roster'; } })();
+function _setEstBasis(v){
+    _estBasis = (v === 'arrived') ? 'arrived' : 'roster';
+    try { localStorage.setItem('catc_estBasis', _estBasis); } catch(e){}
+    _updateBasisToggle();
+    if (typeof renderMealStats === 'function') renderMealStats();
+    if (_courseCache) renderCourseWeek(_courseCache.courses, _courseCache.ctx);
+}
+function _updateBasisToggle(){
+    const r = document.getElementById('basis-roster'), a = document.getElementById('basis-arrived');
+    if (r) r.classList.toggle('on', _estBasis === 'roster');
+    if (a) a.classList.toggle('on', _estBasis === 'arrived');
+}
+// 실제 입교완료(students)와 올린 명단(roster)을 분리해 반환
+function _courseCounts2(c){
+    let arrived = 0, roster = 0;
+    const m = _roomMatchForCourse(c);
+    if(m){
+        const aN = new Set();
+        Object.values(m.room.students || {}).forEach(s => { if(s && s.name && s.name !== 'undefined') aN.add(String(s.name).trim()); });
+        arrived = aN.size;
+        const list = (m.room.coordRoster && Array.isArray(m.room.coordRoster.list)) ? m.room.coordRoster.list : [];
+        const rN = new Set();
+        list.forEach(s => { const nm = ((s && s.name) || '').trim(); if(nm && nm !== 'undefined') rN.add(nm); });
+        roster = rN.size;
+    }
+    if(!roster){ const ext = _extCourseCount(c); if(ext > 0) roster = ext; }
+    if(!roster && arrived > 0) roster = arrived;   // 명단이 전혀 없으면 실입교 수로 대체
+    return { found: (arrived > 0 || roster > 0), arrived, roster };
+}
+// 현재 선택된 기준에 따른 1개 과정 인원
+function _courseHeadByBasis(c){
+    const cc = _courseCounts2(c);
+    return _estBasis === 'arrived' ? cc.arrived : cc.roster;
+}
+
 function renderCourseWeek(courses, ctx){
     const list=document.getElementById('courseStatusList'); if(!list) return;
     const nav = `<div class="cw-nav">`
@@ -1808,10 +1856,11 @@ function renderCourseWeek(courses, ctx){
         if(c.endDate<ctx.today){ stat='종료'; statCls='done'; statIc='<i class="fa-solid fa-flag-checkered"></i>'; }
         else if(c.startDate>ctx.today){ stat='예정'; statCls='soon'; statIc='<i class="fa-regular fa-clock"></i>'; }
         else { stat='운영중'; statCls='live'; statIc='<i class="fa-solid fa-circle"></i>'; }
-        const cc=_courseCounts(c);
-        if(cc.found) sumKnown+=cc.total; else anyPending=true;
+        const cc=_courseCounts2(c);
+        if(cc.found) sumKnown += (_estBasis==='arrived' ? cc.arrived : cc.roster); else anyPending=true;
         const headBadge = cc.found
-            ? `<span class="cw-head"><i class="fa-solid fa-circle-check"></i> ${cc.total}명</span>`
+            ? `<span class="cw-head"><i class="fa-solid fa-clipboard-list"></i> 명단 ${cc.roster}명</span>
+               <span class="cw-head" style="background:#dbeafe;color:#1d4ed8;"><i class="fa-solid fa-user-check"></i> 입교 ${cc.arrived}명</span>`
             : `<span class="cw-head pending"><i class="fa-regular fa-clock"></i> 명단 대기</span>`;
         return `<div class="cw-card2 ${statCls}">
             <span class="cw-stat cw-stat-${statCls}">${statIc} ${stat}</span>
@@ -1821,7 +1870,7 @@ function renderCourseWeek(courses, ctx){
             </div>
             <div class="cw-right">
                 ${headBadge}
-                ${prof?`<span class="cw-prof"><i class="fa-solid fa-user"></i> ${escH(prof)}</span>`:''}
+                ${prof?`<span class="cw-prof"><i class="fa-solid fa-user"></i> ${escH(prof)} 교수</span>`:''}
             </div>
         </div>`;
     }).join('');
@@ -2766,8 +2815,8 @@ function renderMealCalendar(a, month){
 </script>
 <!-- @catc-version-badge · 전 페이지 통일 디자인 (개발자 확인용 · 사용자에게는 거의 안 보임) -->
 <style>@media print{#__catcVer{display:none!important}}</style>
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">JDS260613(V3)</div>
-<script>try{console.log('%cCATC%c 영양사 (nutritionist.html) %cJDS260613(V3)%c build 20260613','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}</script>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">JDS260613(V4)</div>
+<script>try{console.log('%cCATC%c 영양사 (nutritionist.html) %cJDS260613(V4)%c build 20260613','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}</script>
 <div id="notifyStack" class="notify-stack"></div>
 <!-- ── 화면 자동 맞춤(auto-fit): 입장 시 가로폭 초과하면 화면에 맞게 자동 축소 · JDS260614 ── -->
 <script>
