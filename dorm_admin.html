@@ -1701,8 +1701,18 @@
                     Object.entries(rosterMap).forEach(([rk, v]) => {
                         if (!v.list.length) return;
                         updates[`system/dorm/rosters/${rk}`] = v;
+                        // [JDS260613] 강사플랫폼·영양사 플랫폼도 함께 복원
+                        const room = v.room || (rk.split('__')[1] || '');
+                        if (room) {
+                            const names = Array.from(new Set(v.list.map(s => (s.name || '').trim()).filter(Boolean)));
+                            updates[`courses/${room}/expectedStudents`] = names;                 // 강사플랫폼 예정 명단
+                            updates[`courses/${room}/coordRoster`] = {                            // 영양사·운영부 공유 명단
+                                courseName: v.courseName || '', period: v.period || '',
+                                list: v.list, updatedAt: Date.now()
+                            };
+                        }
                         totalRecovered++;
-                        console.log(`[명단 복구] ${rk}: ${v.list.length}명 (${v.courseName})`);
+                        console.log(`[명단 복구] ${rk}: ${v.list.length}명 (${v.courseName}) → 지원부·강사·영양사 복원`);
                     });
                 }
 
@@ -1718,7 +1728,7 @@
                 }
 
                 await db.ref().update(updates);
-                showToast(`✅ ${totalRecovered}개 과정 명단 복구 완료`);
+                showToast(`✅ ${totalRecovered}개 과정 명단 복구 완료 (지원부·강사·영양사 반영)`);
                 coursesCache = null;
                 await loadCourses(true);
             } catch (e) {
@@ -5654,7 +5664,7 @@
 </script>
 <!-- @catc-version-badge · 전 페이지 통일 디자인 (개발자 확인용 · 사용자에게는 거의 안 보임) -->
 <style>@media print{#__catcVer{display:none!important}}</style>
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">JDS260613(V9)</div>
-<script>try{console.log('%cCATC%c 교육지원부·생활관 (dorm_admin.html) %cJDS260613(V9)%c build 20260613','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}</script>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">JDS260613(V10)</div>
+<script>try{console.log('%cCATC%c 교육지원부·생활관 (dorm_admin.html) %cJDS260613(V10)%c build 20260613','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}</script>
 </body>
 </html>
