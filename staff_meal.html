@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>KAC 항공기술훈련원 식당 — 식사 체크인</title>
+    <title>식수인원 터치패널</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <script src="config.js"></script>
@@ -697,9 +697,9 @@ function toggleWeekend(){ WEEKEND_OK=!WEEKEND_OK; db.ref('system/staffMeal/confi
 /* 오늘 식수 전체 초기화 (테스트 정리용) — 네이티브 confirm 대신 자체 오버레이(전체화면 유지) */
 function resetTodayChecks(){
     customConfirm({
-        title:'오늘 식수 초기화',
-        msg:`오늘(${today}) 등록된 <b>모든 직원의 식수 체크</b><br>(아침·점심·석식·석식예약)를 삭제합니다.<br><br>계속하시겠습니까?`,
-        yesLabel:'전체 삭제', noLabel:'취소',
+        title:'⚠️ 금일 식수 초기화',
+        msg:`이 버튼을 누르면 <b style="color:#dc2626;">금일(${today}) 모든 직원의<br>식수 체크가 전부 0회 상태로 초기화</b>됩니다.<br>(아침·점심·석식·석식예약 전부)<br><br><span style="color:#475569;font-size:.92em;">※ 이전 날짜의 식수 데이터는 영향받지 않습니다.</span><br><br><b>계속하시겠습니까?</b>`,
+        yesLabel:'금일 0회로 초기화', noLabel:'취소',
         onNo: ()=>renderSettings(),
         onYes: ()=>{
             const updates={};
@@ -1096,8 +1096,8 @@ function esc(v){ return String(v==null?'':v).replace(/[&<>"']/g,c=>({'&':'&amp;'
 </script>
 <!-- @catc-version-badge · 전 페이지 통일 디자인 (개발자 확인용 · 사용자에게는 거의 안 보임) -->
 <style>@media print{#__catcVer{display:none!important}}</style>
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">JDS260613(V4)</div>
-<script>try{console.log('%cCATC%c 식당 식수 터치패널 (staff_meal.html) %cJDS260613(V4)%c build 20260613','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}</script>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">JDS260613(V5)</div>
+<script>try{console.log('%cCATC%c 식당 식수 터치패널 (staff_meal.html) %cJDS260613(V5)%c build 20260613','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}</script>
 </body>
 </html>
 <!-- @build 20260613-192000 (식당패널 vGG: KAC임직원 QR 팝업도 사외강사처럼 "닫기 (3)(2)(1)" 카운트다운 + 3초 자동닫힘 + 즉시 닫기 버튼. QR 팝업은 자체 타이머로 닫으므로 일괄 옵저버에서 제외(keep)) -->
