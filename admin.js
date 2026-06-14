@@ -1,14 +1,14 @@
 /* ============================================================
    CATC · 강사 플랫폼 로직  (admin.js)
    @version  P
-   @build    20260613-104500  (vP: 과정 리셋/재배치 시 강사 비번 7777 미리셋 버그 — 방 비우기(clear) 분기에도 비번 7777 리셋 추가. _cleanStartUpdates에 이미 있던 리셋과 합쳐 모든 배치경로에서 7777 보장)
+   @build    20260614-warnhide (vP+: 전면 현황판 비노출 해제 시 연동 끊김 경고 팝업)  (vP: 과정 리셋/재배치 시 강사 비번 7777 미리셋 버그 — 방 비우기(clear) 분기에도 비번 7777 리셋 추가. _cleanStartUpdates에 이미 있던 리셋과 합쳐 모든 배치경로에서 7777 보장)
    ------------------------------------------------------------
    [코드 수정 규칙 · AI/개발자 공통]
    이 파일을 고치면 @version 을 A -> B -> ... -> Z -> A1 -> B1 ...
    순으로 1단계 올리고, @build 를 수정 시각으로 갱신할 것.
    적용 여부는 브라우저 콘솔 로그(vA)로 확인한다.
 ============================================================ */
-try{console.log('%cCATC%c 강사 플랫폼 로직 (admin.js) %cvP%c build 20260613-V10-dormgen','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}
+try{console.log('%cCATC%c 강사 플랫폼 로직 (admin.js) %cvP%c build 20260613-104500','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}
 /* --- admin.js (Final Integrated Version - Fixed Syntax & Logic) --- */
 
 // --- [기본 데이터] 20문항 ---
@@ -4081,102 +4081,29 @@ cancelIndividualShuttle: function(waveId, locId, token, name) {
 
 
 
-// [JDS260613] 운영부(로컬)·지원부(UTC) 주차키 후보 계산 — 지원부 명단(system/dorm/rosters/{wk}__{room}) 직접 조회용
-    _weekKeyCandidates: function(startStr) {
-        if (!startStr) return [];
-        const d = new Date(startStr + 'T00:00:00');
-        if (isNaN(d)) return [];
-        const dow = (d.getDay() + 6) % 7;
-        const mon = new Date(d); mon.setDate(d.getDate() - dow);
-        const utc = mon.toISOString().slice(0, 10);
-        const local = `${mon.getFullYear()}-${String(mon.getMonth()+1).padStart(2,'0')}-${String(mon.getDate()).padStart(2,'0')}`;
-        return Array.from(new Set([local, utc]));
-    },
-
-    // [JDS260613] 운영부(coordRoster)·지원부(system/dorm/rosters) 명단 이름을 직접 수집 — 재저장 없이도 명단 표시
-    _gatherRosterNames: async function(room) {
-        const names = [];
-        try {
-            const crSnap = await firebase.database().ref(`courses/${room}/coordRoster`).once('value');
-            const cr = crSnap.val();
-            if (cr && Array.isArray(cr.list)) cr.list.forEach(s => { if (s && s.name) names.push(String(s.name).trim()); });
-        } catch (e) { /* 무시 */ }
-        try {
-            const pSnap = await firebase.database().ref(`courses/${room}/settings/period`).once('value');
-            const period = pSnap.val() || '';
-            const start = period.includes(' ~ ') ? period.split(' ~ ')[0].trim() : '';
-            const cands = this._weekKeyCandidates(start);
-            for (const wk of cands) {
-                const dSnap = await firebase.database().ref(`system/dorm/rosters/${wk}__${room}`).once('value');
-                const dv = dSnap.val();
-                if (dv && Array.isArray(dv.list) && dv.list.length) {
-                    dv.list.forEach(s => { if (s && s.name) names.push(String(s.name).trim()); });
-                    break;
-                }
-            }
-        } catch (e) { /* 무시 */ }
-        return names;
-    },
-
-    loadStudentList: function() {
+loadStudentList: function() {
         if(!state.room) return;
-        const room = state.room;
-        const self = this;
-        const expectedRef = firebase.database().ref(`courses/${room}/expectedStudents`);
-        const actualRef = firebase.database().ref(`courses/${room}/students`);
+        const expectedRef = firebase.database().ref(`courses/${state.room}/expectedStudents`);
+        const actualRef = firebase.database().ref(`courses/${state.room}/students`);
         expectedRef.off(); actualRef.off();
 
-        let lastExpected = [];
-        let lastActual = {};
+        expectedRef.on('value', expSnap => {
+            const expectedNames = expSnap.val() || [];
+            actualRef.on('value', snap => {
+                if(!state.room) return; 
+                const data = snap.val() || {};
+                const tbody = document.getElementById('studentListTableBody');
+                if(!tbody) return;
 
-        // [JDS260613] 운영부(coursRoster)·지원부(system/dorm/rosters) 명단 이름을 직접 읽어 '예정' 명단에 병합.
-        //  → 강사가 별도 .txt 업로드/재저장을 하지 않아도, 운영부·지원부에서 올린 명단이 바로 '미입교'로 표시됨.
-        async function gatherRosterNames() {
-            const names = [];
-            try {
-                const crSnap = await firebase.database().ref(`courses/${room}/coordRoster`).once('value');
-                const cr = crSnap.val();
-                if (cr && Array.isArray(cr.list)) cr.list.forEach(s => { if (s && s.name) names.push(String(s.name).trim()); });
-            } catch (e) { /* 무시 */ }
-            try {
-                const pSnap = await firebase.database().ref(`courses/${room}/settings/period`).once('value');
-                const period = pSnap.val() || '';
-                const start = period.includes(' ~ ') ? period.split(' ~ ')[0].trim() : '';
-                const cands = self._weekKeyCandidates(start);
-                for (const wk of cands) {
-                    const dSnap = await firebase.database().ref(`system/dorm/rosters/${wk}__${room}`).once('value');
-                    const dv = dSnap.val();
-                    if (dv && Array.isArray(dv.list) && dv.list.length) {
-                        dv.list.forEach(s => { if (s && s.name) names.push(String(s.name).trim()); });
-                        break;
-                    }
-                }
-            } catch (e) { /* 무시 */ }
-            return names;
-        }
+                const actualStudents = Object.keys(data).map(key => ({ token: key, ...data[key] }))
+                                             .filter(s => s.name && s.name !== "undefined");
+                const actualNames = actualStudents.map(s => s.name);
+                const combinedNames = Array.from(new Set([...expectedNames, ...actualNames])).sort((a,b) => a.localeCompare(b));
 
-        async function render() {
-            if (state.room !== room) return;
-            const tbody = document.getElementById('studentListTableBody');
-            if (!tbody) return;
+                tbody.innerHTML = ""; 
+                let arrivedCount = 0;
 
-            const rosterNames = await gatherRosterNames();
-            if (state.room !== room) return;
-
-            const expectedNames = Array.from(new Set(
-                [...(lastExpected || []), ...rosterNames].map(n => String(n).trim()).filter(Boolean)
-            ));
-            const data = lastActual || {};
-
-            const actualStudents = Object.keys(data).map(key => ({ token: key, ...data[key] }))
-                                         .filter(s => s.name && s.name !== "undefined");
-            const actualNames = actualStudents.map(s => s.name);
-            const combinedNames = Array.from(new Set([...expectedNames, ...actualNames])).sort((a,b) => a.localeCompare(b));
-
-            tbody.innerHTML = "";
-            let arrivedCount = 0;
-
-            combinedNames.forEach((name, idx) => {
+                combinedNames.forEach((name, idx) => {
                     const sList = actualStudents.filter(student => student.name === name);
                     const isArrived = sList.length > 0;
                     const studentData = isArrived ? sList[0] : null;
@@ -4235,10 +4162,8 @@ cancelIndividualShuttle: function(waveId, locId, token, name) {
                 const percent = total > 0 ? Math.round((arrivedCount / total) * 100) : 0;
                 const statusEl = document.getElementById('arrivalStatusSmall');
                 if(statusEl) statusEl.innerText = `${arrivedCount} / ${total} 명 (${percent}%)`;
-        }
-
-        expectedRef.on('value', snap => { lastExpected = snap.val() || []; render(); });
-        actualRef.on('value', snap => { lastActual = snap.val() || {}; render(); });
+            });
+        });
     },
 
 
@@ -4250,8 +4175,6 @@ cancelIndividualShuttle: function(waveId, locId, token, name) {
 // [추가 1] 생활관 중복 제거 및 데이터 로드 함수
 loadDormitoryData: function() {
         if(!state.room) return;
-        const room = state.room;
-        const self = this;
         const tbody = document.getElementById('dormitoryTableBody');
         const statusEl = document.getElementById('dormArrivalStatus');
         if(!tbody) return;
@@ -4292,31 +4215,14 @@ loadDormitoryData: function() {
             return out;
         };
 
-        const renderAll = async (expData, actData, assignData, settings) => {
-            self._dormRenderGen = (self._dormRenderGen || 0) + 1;
-            const myGen = self._dormRenderGen;            // [JDS260613] 렌더 세대 토큰
-            const rosterNames = await self._gatherRosterNames(room);
-            if (state.room !== room) return;
-            if (myGen !== self._dormRenderGen) return;       // 더 늦게 시작된 렌더가 있으면 이 렌더는 폐기(빈 배정으로 덮어쓰기 방지)
-            const expectedNames = Array.from(new Set(
-                [...(expData || []), ...rosterNames].map(n => String(n).trim()).filter(Boolean)
-            ));
+        const renderAll = (expData, actData, assignData, settings) => {
+            const expectedNames = expData || [];
             const actualStudents = Object.entries(actData || {})
                 .map(([token, s]) => ({ token, ...s }))
                 .filter(s => s.name && s.name !== "undefined");
             const actualNames = actualStudents.map(s => s.name);
             const combinedNames = Array.from(new Set([...expectedNames, ...actualNames])).sort((a,b) => a.localeCompare(b));
-            // await 이후 최신 배정 캐시를 다시 읽음 — 호출 시점에 비어있었어도 그 사이 도착한 배정을 사용
-            const assignNow = (self._dormAssignCache && Object.keys(self._dormAssignCache).length) ? self._dormAssignCache : (assignData || {});
-            const dormData = makeDormIndex(assignNow, settings || {});
-            // [JDS260613] 진단: 매칭 실패가 있을 때만 출력
-            try {
-                const missNames = combinedNames.filter(n => !dormData[norm(String(n).trim())]);
-                if (missNames.length) {
-                    const idxNames = Object.keys(dormData).filter(k => !k.includes('_'));
-                    console.log(`[생활관배치] 미매칭 ${missNames.length}/${combinedNames.length}명 · 배정색인 ${idxNames.length}명 · 배정주차 ${Object.keys(assignNow||{}).length}개`, missNames);
-                }
-            } catch (e) {}
+            const dormData = makeDormIndex(assignData, settings || {});
 
             let arrivedCount = 0;
             combinedNames.forEach(name => { if(actualNames.includes(name)) arrivedCount++; });
@@ -4371,18 +4277,11 @@ loadDormitoryData: function() {
             });
         };
 
-        let cacheExp = [], cacheAct = {}, cacheSettings = {};
-        // [JDS260613] 배정 데이터는 공유 캐시로 유지 — expected/actual/settings 리스너가 빈 배정으로 덮어쓰는 경합 방지
-        if (!self._dormAssignCache) self._dormAssignCache = {};
-        expectedRef.on('value', s => { cacheExp = s.val(); renderAll(cacheExp, cacheAct, self._dormAssignCache, cacheSettings); });
-        actualRef.on('value', s => { cacheAct = s.val(); renderAll(cacheExp, cacheAct, self._dormAssignCache, cacheSettings); });
-        settingsRef.on('value', s => { cacheSettings = s.val() || {}; renderAll(cacheExp, cacheAct, self._dormAssignCache, cacheSettings); });
-        dormRef.on('value', s => {
-            const v = s.val() || {};
-            // 비어있지 않을 때만 갱신(또는 아직 캐시가 비어있을 때만) — 일시적 빈 값이 좋은 배정을 지우지 않도록
-            if (Object.keys(v).length || !Object.keys(self._dormAssignCache).length) self._dormAssignCache = v;
-            renderAll(cacheExp, cacheAct, self._dormAssignCache, cacheSettings);
-        });
+        let cacheExp = [], cacheAct = {}, cacheDorm = {}, cacheSettings = {};
+        expectedRef.on('value', s => { cacheExp = s.val(); renderAll(cacheExp, cacheAct, cacheDorm, cacheSettings); });
+        actualRef.on('value', s => { cacheAct = s.val(); renderAll(cacheExp, cacheAct, cacheDorm, cacheSettings); });
+        settingsRef.on('value', s => { cacheSettings = s.val() || {}; renderAll(cacheExp, cacheAct, cacheDorm, cacheSettings); });
+        dormRef.on('value', s => { cacheDorm = s.val() || {}; renderAll(cacheExp, cacheAct, cacheDorm, cacheSettings); });
     },
 
 
@@ -9270,3 +9169,21 @@ const surveyMgr = {
         return String(s == null ? '' : s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
     }
 };
+
+/* [JDS260613] 전면 현황판 총괄표 비노출(hideFromBoard) 해제 시 경고 — 연동 플랫폼 데이터 끊김 안내 */
+function warnHideFromBoard(cb){
+    if(!cb) return;
+    if(!cb.checked){
+        const ok = confirm(
+            '⚠️ 이 과정을 [전면 현황판 총괄표]에서 숨깁니다.\n\n' +
+            '숨기면 이 과정은 아래 연동 플랫폼에 표시되지 않고 데이터가 연동되지 않습니다:\n' +
+            '· 생활관(기숙사) 배정\n' +
+            '· 영양사(식당) 식수 집계\n' +
+            '· 미화 · 비품 관리\n' +
+            '· 기타 총괄표 기반 플랫폼\n\n' +
+            '※ 테스트 · 내부 운용 과정에만 사용하세요.\n\n계속하시겠습니까?'
+        );
+        if(!ok){ cb.checked = true; }   // 취소 → 노출 상태로 되돌림
+    }
+}
+window.warnHideFromBoard = warnHideFromBoard;

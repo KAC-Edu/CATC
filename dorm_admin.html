@@ -1165,6 +1165,18 @@
             db.ref('system/dorm/assignments').on('value', () => renderDormStatusBar());
             // [JDS260613] 주차 잠금 상태 구독
             db.ref('system/dorm/locks').on('value', s => { _lockedWeeks = s.val() || {}; _applyLockUI(); });
+            // [JDS260613] 강사플랫폼 hideFromBoard 등 courses 변경 실시간 반영 (새로고침 불필요)
+            db.ref('courses').on('value', snap => {
+                coursesCache = snap.val() || {};
+                _step3Hidden = new Set(); _step3HiddenRooms = new Set();
+                Object.entries(coursesCache).forEach(([room, c]) => {
+                    const st = (c && c.settings) || {};
+                    if (st.hideFromBoard) { if (st.courseName) _step3Hidden.add((st.courseName || '').trim()); _step3HiddenRooms.add(String(room)); }
+                });
+                try { if (typeof renderCourseList === 'function') renderCourseList(); } catch (e) {}
+                try { if (weekRosters && Object.keys(weekRosters).length) renderWeekRosterList(); } catch (e) {}
+                try { renderDormStatusBar(); } catch (e) {}
+            });
         }
 
         async function renderDormStatusBar() {
@@ -5843,7 +5855,7 @@
 </script>
 <!-- @catc-version-badge · 전 페이지 통일 디자인 (개발자 확인용 · 사용자에게는 거의 안 보임) -->
 <style>@media print{#__catcVer{display:none!important}}</style>
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">JDS260613(V15)</div>
-<script>try{console.log('%cCATC%c 교육지원부·생활관 (dorm_admin.html) %cJDS260613(V15)%c build 20260613','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}</script>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">JDS260613(V16)</div>
+<script>try{console.log('%cCATC%c 교육지원부·생활관 (dorm_admin.html) %cJDS260613(V16)%c build 20260613','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}</script>
 </body>
 </html>
