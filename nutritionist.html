@@ -1146,10 +1146,17 @@ function _mealDayCounts(D) {
     plan.filter(c => c && c.name && c.startDate && c.endDate)
         .sort((a, b) => (a.startDate || '').localeCompare(b.startDate || ''))
         .forEach(c => {
-            const eb = (c.startDate <  D && D <= c.endDate);
-            const el = (c.startDate <= D && D <= c.endDate);
-            const ed = (c.startDate <= D && D <  c.endDate);
-            if (!eb && !el && !ed) return;
+            // [JDS260613] 다주차 과정도 '매주 월 입교·금 퇴소, 주말 미식사' — 주차별 입교/퇴소 경계로 계산
+            if (D < c.startDate || D > c.endDate) return;          // 과정 기간 밖
+            const _dow = new Date(D + 'T00:00:00').getDay();
+            if (_dow === 0 || _dow === 6) return;                  // 주말은 식사 없음
+            const _monW = getMondayOf(D);
+            const _friW = _cwAddDays(_monW, 4);
+            const _checkIn  = (c.startDate > _monW) ? c.startDate : _monW;  // 이번 주 입교일
+            const _checkOut = (c.endDate   < _friW) ? c.endDate   : _friW;  // 이번 주 퇴소일
+            const eb = (D > _checkIn);     // 입교일 아침 제외
+            const el = true;              // 점심은 매 평일
+            const ed = (D < _checkOut);    // 퇴소일 저녁 제외
             const n = _courseHeadByBasis(c) || 0;
             let sk = 0;
             if (ed) {
@@ -1160,7 +1167,7 @@ function _mealDayCounts(D) {
             if (eb) bS += n;
             if (el) lS += n;
             if (ed) { dS += n; dSkip += sk; }
-            courses.push({ name: c.name, n, breakfast: eb, lunch: el, dinner: ed, skip: sk, last: (D === c.endDate) });
+            courses.push({ name: c.name, n, breakfast: eb, lunch: el, dinner: ed, skip: sk, last: (D === _checkOut) });
         });
     const staffCount  = Object.values(_staffRoster || {}).filter(r => r && r.active !== false).length;
     const staffBreak  = Object.keys((_staffBreakfast || {})[D] || {}).length;
@@ -3022,8 +3029,8 @@ function renderMealCalendar(a, month){
 </script>
 <!-- @catc-version-badge · 전 페이지 통일 디자인 (개발자 확인용 · 사용자에게는 거의 안 보임) -->
 <style>@media print{#__catcVer{display:none!important}}</style>
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">JDS260613(V9)</div>
-<script>try{console.log('%cCATC%c 영양사 (nutritionist.html) %cJDS260613(V9)%c build 20260613','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}</script>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">JDS260613(V10)</div>
+<script>try{console.log('%cCATC%c 영양사 (nutritionist.html) %cJDS260613(V10)%c build 20260613','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}</script>
 <div id="notifyStack" class="notify-stack"></div>
 <!-- ── 화면 자동 맞춤(auto-fit): 입장 시 가로폭 초과하면 화면에 맞게 자동 축소 · JDS260614 ── -->
 <script>
