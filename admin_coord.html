@@ -5498,7 +5498,7 @@ const annualPlanMgrCoord = {
     PLAN_KEY: 'system/annualPlan',
     currentEditingData: [],
 
-    _today: function() { return new Date().toISOString().split('T')[0]; },
+    _today: function() { return getTodayString(); },
 
     // 대상 주(월~일)의 월요일 키. 토(6)·일(0)이면 다음 주 → 토요일부터 차주 과정 전환
     _getTargetMonday: function(todayStr) {
@@ -5605,7 +5605,7 @@ const annualPlanMgrCoord = {
         const td = "padding:4px; border:1px solid var(--border-blue);";
         const inp = "width:100%; border:1px solid transparent; background:transparent; padding:6px; font-size:13px; box-sizing:border-box; color:var(--navy-dark);";
         // 행 배경색 분류
-        const _t = new Date().toISOString().slice(0,10);
+        const _t = getTodayString();
         const _mondayOf = (ds) => { const d=new Date(ds+'T00:00:00Z'); const dow=(d.getUTCDay()+6)%7; d.setUTCDate(d.getUTCDate()-dow); return d.toISOString().slice(0,10); };
         const _thisMon = _mondayOf(_t);
         const _nextMon = (()=>{ const d=new Date(_thisMon+'T00:00:00Z'); d.setUTCDate(d.getUTCDate()+7); return d.toISOString().slice(0,10); })();
@@ -5635,7 +5635,7 @@ const annualPlanMgrCoord = {
                 <th style="${th} min-width:130px;">강의실 위치</th>
                 <th style="${th} width:36px;">삭제</th>
             </tr></thead><tbody>`;
-        const _td2 = new Date().toISOString().slice(0,10);
+        const _td2 = getTodayString();
         // 스크롤 대상: 진행 중 → 없으면 다가오는(미래 시작) 과정 중 가장 빠른 것
         let _tIdx = -1;
         this.currentEditingData.forEach((c, idx) => {
@@ -6726,8 +6726,8 @@ function _coordParseRoster(text) {
 </script>
 <!-- @catc-version-badge · 전 페이지 통일 디자인 (개발자 확인용 · 사용자에게는 거의 안 보임) -->
 <style>@media print{#__catcVer{display:none!important}}</style>
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">JDS260613(V9)</div>
-<script>try{console.log('%cCATC%c 교육운영부 (admin_coord.html) %cJDS260613(V9)%c build 20260613','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}</script>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">JDS260613(V10)</div>
+<script>try{console.log('%cCATC%c 교육운영부 (admin_coord.html) %cJDS260613(V10)%c build 20260613','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}</script>
 </body>
 </html>
 <!-- @build 20260612-132331 (교육운영부 vA) -->

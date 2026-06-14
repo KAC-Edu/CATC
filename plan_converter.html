@@ -389,7 +389,7 @@ async function uploadToFirebase() {
 /* ── 주차 자동 배치 (잠긴 방 자동 제외) ── */
 async function assignRooms(courses) {
     const ALL_ROOMS = ['A','B','C'];
-    const today     = new Date().toISOString().split('T')[0];
+    const today     = (()=>{const _d=new Date();return `${_d.getFullYear()}-${String(_d.getMonth()+1).padStart(2,'0')}-${String(_d.getDate()).padStart(2,'0')}`;})();
 
     // Firebase에서 잠금 상태 읽기
     const snap        = await firebase.database().ref('courses').get();

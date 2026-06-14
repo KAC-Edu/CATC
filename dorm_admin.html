@@ -5279,7 +5279,7 @@
 
             // ── 강의실 자동배치 (강사 플랫폼과 동일: 토요일 규칙 + 진행중/잠금 보존) ──
             ROOMS: ['A', 'B', 'C'],
-            _todayStr() { return new Date().toISOString().split('T')[0]; },
+            _todayStr() { return _ymdLocal(new Date()); },
 
             _targetMonday(todayStr) {
                 const d = new Date(todayStr + 'T00:00:00Z');
@@ -5479,7 +5479,7 @@
                     body.innerHTML = `<tr><td colspan="8" style="padding:20px; text-align:center; color:var(--muted);">등록된 과정이 없습니다. "과정 추가"로 입력하세요.</td></tr>`;
                     return;
                 }
-                const today = new Date().toISOString().slice(0, 10);
+                const today = _ymdLocal(new Date());
                 body.innerHTML = this.data.map((c, i) => {
                     let cls = '';
                     if (c.startDate && c.endDate) {
@@ -5504,7 +5504,7 @@
                 // 진행 중(없으면 다가오는) 과정 행을 중앙으로 스크롤
                 setTimeout(() => {
                     const rows = body.querySelectorAll('tr');
-                    const td = new Date().toISOString().slice(0, 10);
+                    const td = _ymdLocal(new Date());
                     let targetIdx = -1;
                     // ① 진행 중
                     for (let k = 0; k < this.data.length; k++) {
@@ -5649,7 +5649,7 @@
 </script>
 <!-- @catc-version-badge · 전 페이지 통일 디자인 (개발자 확인용 · 사용자에게는 거의 안 보임) -->
 <style>@media print{#__catcVer{display:none!important}}</style>
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">JDS260613(V7)</div>
-<script>try{console.log('%cCATC%c 교육지원부·생활관 (dorm_admin.html) %cJDS260613(V7)%c build 20260613','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}</script>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">JDS260613(V8)</div>
+<script>try{console.log('%cCATC%c 교육지원부·생활관 (dorm_admin.html) %cJDS260613(V8)%c build 20260613','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}</script>
 </body>
 </html>

@@ -1018,7 +1018,7 @@ async function confirmDepartureNotice() {
   const room = allCourses[rid];
   
   // 기본값은 오늘 날짜
-  let depDate = new Date().toISOString().split('T')[0]; 
+  let depDate = (()=>{const _d=new Date();return `${_d.getFullYear()}-${String(_d.getMonth()+1).padStart(2,'0')}-${String(_d.getDate()).padStart(2,'0')}`;})(); 
 
   if (room.settings?.period && room.settings.period.includes(" ~ ")) {
     const parts = room.settings.period.split(" ~ ");
@@ -1571,7 +1571,7 @@ function captureSchedule() {
   const element = document.getElementById('schedule-capture-area');
   html2canvas(element, { scale: 2 }).then(canvas => {
     const link = document.createElement('a');
-    link.download = `일정표_${new Date().toISOString().split('T')[0]}.png`;
+    link.download = `일정표_${(()=>{const _d=new Date();return `${_d.getFullYear()}-${String(_d.getMonth()+1).padStart(2,'0')}-${String(_d.getDate()).padStart(2,'0')}`;})()}.png`;
     link.href = canvas.toDataURL();
     link.click();
     alert('일정표가 저장되었습니다!');

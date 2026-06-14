@@ -3324,7 +3324,7 @@ async function saveProfile() {
     const newUToken = `${name}_${phone}`;
 
     // 이름 재입력 시 오늘 날짜 출결 기록 초기화 (테스트/재등록 대응)
-    const todayStr = new Date().toISOString().split('T')[0];
+    const todayStr = (()=>{const _d=new Date();return `${_d.getFullYear()}-${String(_d.getMonth()+1).padStart(2,'0')}-${String(_d.getDate()).padStart(2,'0')}`;})();
     // 이전 토큰과 다른 경우에만 초기화 (완전히 다른 사람으로 재등록)
     const oldToken = localStorage.getItem('uToken');
     if (oldToken !== newUToken) {
@@ -4412,8 +4412,8 @@ function closeTabletLoan() {
 
 <!-- @catc-version-badge · 전 페이지 통일 디자인 (개발자 확인용 · 사용자에게는 거의 안 보임) -->
 <style>@media print{#__catcVer{display:none!important}}</style>
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">JDS260613(V1)</div>
-<script>try{console.log('%cCATC%c 교육생 플랫폼 (index.html) %cJDS260613(V1)%c build 20260613','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}</script>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">JDS260613(V2)</div>
+<script>try{console.log('%cCATC%c 교육생 플랫폼 (index.html) %cJDS260613(V2)%c build 20260613','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}</script>
 </body>
 </html>
 <!-- @build 20260613-202500 (식단표: weeklyMenu 경로 + 캐싱(이전) + 구조화 menu(JSON) 지원 — data.menu 있으면 이미지 대신 깔끔한 텍스트 표로 렌더(모바일 확대 불필요), 캐시도 menu 포함. 이미지면 기존대로 이미지+핀치줌) -->
