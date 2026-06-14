@@ -1701,11 +1701,17 @@
                     // Firebase 업데이트 준비 (학생 있는 것만) — 핵심 복구는 system/dorm/rosters 뿐(권한 OK)
                     Object.entries(rosterMap).forEach(([rk, v]) => {
                         if (!v.list.length) return;
-                        updates[`system/dorm/rosters/${rk}`] = v;
-                        const room = v.room || (rk.split('__')[1] || '');
+                        const [origWk, roomPart] = rk.split('__');
+                        const room = (v.room != null && v.room !== '') ? String(v.room) : (roomPart || '');
+                        // [JDS260613] 명단 로드 1차 키(= canonical 로컬 월요일__방)로 기록 → 스캔 없이 바로 적중
+                        const canonWk = canonicalWeekKey(origWk || v.weekKey || '');
+                        const canonKey = `${canonWk}__${room}`;
+                        v.weekKey = canonWk;
+                        v.room = room;
+                        updates[`system/dorm/rosters/${canonKey}`] = v;
                         if (room) roomSyncs.push({ room, courseName: v.courseName || '', period: v.period || '', list: v.list });
                         totalRecovered++;
-                        console.log(`[명단 복구] ${rk}: ${v.list.length}명 (${v.courseName})`);
+                        console.log(`[명단 복구] ${rk} → ${canonKey}: ${v.list.length}명 (${v.courseName})`);
                     });
                 }
 
@@ -1721,13 +1727,13 @@
                 }
 
                 // ① 핵심 복구: 권한 있는 경로만 원자적으로 (강사·영양사는 이 명단을 직접 읽으므로 이것만으로 표시됨)
+                console.log('[명단 복구] 기록 키:', Object.keys(updates));
                 await db.ref().update(updates);
 
                 // ② 강사플랫폼·영양사 동기화는 best-effort — 권한(PERMISSION_DENIED) 없으면 조용히 생략, 복구는 그대로 성공
-                let syncOk = 0;
                 for (const rs of roomSyncs) {
                     const names = Array.from(new Set(rs.list.map(s => (s.name || '').trim()).filter(Boolean)));
-                    try { await db.ref(`courses/${rs.room}/expectedStudents`).set(names); syncOk++; }
+                    try { await db.ref(`courses/${rs.room}/expectedStudents`).set(names); }
                     catch (e) { console.warn('[명단 복구] expectedStudents 동기화 생략', rs.room, e.code || e.message); }
                     try { await db.ref(`courses/${rs.room}/coordRoster`).set({ courseName: rs.courseName, period: rs.period, list: rs.list, updatedAt: Date.now() }); }
                     catch (e) { console.warn('[명단 복구] coordRoster 동기화 생략', rs.room, e.code || e.message); }
@@ -1736,6 +1742,8 @@
                 showToast(`✅ ${totalRecovered}개 과정 명단 복구 완료`);
                 coursesCache = null;
                 await loadCourses(true);
+                // 열려 있던 명단 패널 즉시 새로고침
+                if (selectedCourse) { try { loadRoster(selectedCourse); } catch (e) {} }
             } catch (e) {
                 console.error('[명단 복구]', e);
                 showToast('❌ 복구 실패: ' + (e.code || e.message));
@@ -1761,12 +1769,18 @@
                 rosterCounts = {};
                 dormRosterMeta = {};
                 Object.entries(rsAll).forEach(([k, v]) => {
-                    rosterCounts[k] = Array.isArray(v.list) ? v.list.length : 0;
-                    dormRosterMeta[k] = {
-                        count: Array.isArray(v.list) ? v.list.length : 0,
-                        updatedAt: v.updatedAt || 0,
-                        coordUpdatedAt: v.coordUpdatedAt || 0
-                    };
+                    const cnt = Array.isArray(v.list) ? v.list.length : 0;
+                    const meta = { count: cnt, updatedAt: v.updatedAt || 0, coordUpdatedAt: v.coordUpdatedAt || 0 };
+                    rosterCounts[k] = cnt;
+                    dormRosterMeta[k] = meta;
+                    // [JDS260613] 옛 UTC 키로 저장된 명단도 과정 행에 보이도록 canonical 키로도 색인
+                    const kw = v.weekKey || k.split('__')[0];
+                    const kr = (v.room != null && v.room !== '') ? String(v.room) : (k.split('__')[1] || '');
+                    const ck = `${canonicalWeekKey(kw)}__${kr}`;
+                    if (ck !== k && (!(ck in rosterCounts) || cnt >= rosterCounts[ck])) {
+                        rosterCounts[ck] = cnt;
+                        dormRosterMeta[ck] = meta;
+                    }
                 });
                 // 교육운영부가 공유(applyToDorm)한 명단 수집 — courses 스냅샷에 이미 포함됨 (별도 조회 불필요)
                 //  ⚠️ coord와 dorm의 weekKey 계산 방식이 달라(로컬 vs UTC), coord의 weekKey 필드 대신
@@ -5669,7 +5683,7 @@
 </script>
 <!-- @catc-version-badge · 전 페이지 통일 디자인 (개발자 확인용 · 사용자에게는 거의 안 보임) -->
 <style>@media print{#__catcVer{display:none!important}}</style>
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">JDS260613(V11)</div>
-<script>try{console.log('%cCATC%c 교육지원부·생활관 (dorm_admin.html) %cJDS260613(V11)%c build 20260613','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}</script>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">JDS260613(V12)</div>
+<script>try{console.log('%cCATC%c 교육지원부·생활관 (dorm_admin.html) %cJDS260613(V12)%c build 20260613','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}</script>
 </body>
 </html>
