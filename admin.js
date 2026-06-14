@@ -8,7 +8,7 @@
    순으로 1단계 올리고, @build 를 수정 시각으로 갱신할 것.
    적용 여부는 브라우저 콘솔 로그(vA)로 확인한다.
 ============================================================ */
-try{console.log('%cCATC%c 강사 플랫폼 로직 (admin.js) %cvP%c build 20260613-V7-dormview','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}
+try{console.log('%cCATC%c 강사 플랫폼 로직 (admin.js) %cvP%c build 20260613-V8-dormdiag','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}
 /* --- admin.js (Final Integrated Version - Fixed Syntax & Logic) --- */
 
 // --- [기본 데이터] 20문항 ---
@@ -4304,6 +4304,15 @@ loadDormitoryData: function() {
             const actualNames = actualStudents.map(s => s.name);
             const combinedNames = Array.from(new Set([...expectedNames, ...actualNames])).sort((a,b) => a.localeCompare(b));
             const dormData = makeDormIndex(assignData, settings || {});
+            // [JDS260613] 진단: 배정 색인/이름 매칭 상태 (미배정 원인 추적용)
+            try {
+                const idxNames = Object.keys(dormData).filter(k => !k.includes('_'));
+                const missNames = combinedNames.filter(n => !dormData[norm(String(n).trim())]);
+                const weekCnt = Object.keys(assignData || {}).length;
+                console.log(`[생활관배치] 배정주차 ${weekCnt}개 · 배정색인 ${idxNames.length}명 · 이 방 명단 ${combinedNames.length}명 · 미매칭 ${missNames.length}명`);
+                console.log('[생활관배치] 색인된 이름 샘플:', idxNames.slice(0, 12));
+                if (missNames.length) console.log('[생활관배치] 매칭 실패한 명단 이름:', missNames);
+            } catch (e) {}
 
             let arrivedCount = 0;
             combinedNames.forEach(name => { if(actualNames.includes(name)) arrivedCount++; });
