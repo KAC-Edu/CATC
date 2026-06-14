@@ -171,7 +171,9 @@
 
         .back { display:inline-flex; align-items:center; gap:8px; background:#fff; border:1.5px solid #e2e8f0; color:#475569; border-radius:12px; padding:11px 18px; font-size:15px; font-weight:800; cursor:pointer; margin-bottom:20px; box-shadow:0 2px 8px rgba(15,23,42,.05); }
         .back:active { transform:scale(.97); }
-        .screen-ttl { font-size:24px; font-weight:900; color:#0f172a; margin-bottom:4px; }
+        .screen-ttl { display:flex; align-items:center; justify-content:center; gap:10px; font-size:24px; font-weight:900; color:#0f172a; margin-bottom:4px; }
+        .back-mini { display:inline-flex; align-items:center; justify-content:center; width:34px; height:34px; flex:none; border-radius:10px; background:#fff; border:1.5px solid #e2e8f0; color:#64748b; font-size:15px; cursor:pointer; box-shadow:0 2px 6px rgba(15,23,42,.05); }
+        .back-mini:active { transform:scale(.94); }
         .screen-sub { font-size:13px; color:#64748b; font-weight:700; margin-bottom:22px; }
 
         /* 직원 명단 */
@@ -898,8 +900,7 @@ function goInstructor(mode){
     const isInt = mode==='internal';
     stage.innerHTML = `
         <div class="keypad-wrap">
-            <button class="back" onclick="goHome()"><i class="fa-solid fa-arrow-left"></i> 처음으로</button>
-            <div class="screen-ttl">${isInt?'사내 강사 (KAC)':'사외 강사'}</div>
+            <div class="screen-ttl"><button class="back-mini" onclick="goHome()" title="처음으로" aria-label="처음으로"><i class="fa-solid fa-arrow-left"></i></button>${isInt?'사내 강사 (KAC)':'사외 강사'}</div>
             <div class="screen-sub">${isInt?'사번과 성함을 입력해 주세요.':'연락처와 성함을 입력해 주세요.'}</div>
             <input class="name-input" id="kpName" type="text" placeholder="성함 입력 (예: 홍길동)" maxlength="12"
                    oninput="KP.name=this.value; syncSubmit()">
@@ -1113,8 +1114,8 @@ function esc(v){ return String(v==null?'':v).replace(/[&<>"']/g,c=>({'&':'&amp;'
 </script>
 <!-- @catc-version-badge · 전 페이지 통일 디자인 (개발자 확인용 · 사용자에게는 거의 안 보임) -->
 <style>@media print{#__catcVer{display:none!important}}</style>
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">JDS260613(V7)</div>
-<script>try{console.log('%cCATC%c 식당 식수 터치패널 (staff_meal.html) %cJDS260613(V7)%c build 20260613','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}</script>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">JDS260613(V8)</div>
+<script>try{console.log('%cCATC%c 식당 식수 터치패널 (staff_meal.html) %cJDS260613(V8)%c build 20260613','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}</script>
 </body>
 </html>
 <!-- @build 20260613-192000 (식당패널 vGG: KAC임직원 QR 팝업도 사외강사처럼 "닫기 (3)(2)(1)" 카운트다운 + 3초 자동닫힘 + 즉시 닫기 버튼. QR 팝업은 자체 타이머로 닫으므로 일괄 옵저버에서 제외(keep)) -->
