@@ -3,15 +3,15 @@
 <head>
 <!-- ============================================================
   CATC · 교육생 대표  (student_leader.html)
-  @version  B
-  @build    20260615-REWIRE
+  @version  C
+  @build    20260615-PORTAL
   ────────────────────────────────────────────────────────
   연동(읽기 전용):
-   · courses/{rid}/students        : 입실 명부 / 학생장(isLeader) / 입실(isOnline)  ← 강사(admin)·교육생(index)
+   · courses/{rid}/students        : 입실 명부 / 학생장(isLeader) / 입실(isOnline)
    · courses/{rid}/settings.courseName, status.professorName, status.roomStatus
-   · courses/{rid}/dinner_skips/{today}/{token}  = "이름(뒷번호)"               ← 교육생(index)
-   · courses/{rid}/admin_actions/{today}/{token} = {name,dept,type,startTime,
-       endTime,returnDate,destination,reason,phone,returned}                    ← 교육생(index)
+   · courses/{rid}/dinner_skips/{today}/{token}  = "이름(뒷번호)"
+   · courses/{rid}/admin_actions/{today}/{token} = {name,dept,type,startTime,endTime,returnDate,destination,reason,phone}
+  디자인: 포털(portal.html) 톤 — 네이비→블루 그라데이션 헤더 / 카드 상단 액센트
 ============================================================ -->
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
@@ -20,85 +20,113 @@
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" rel="stylesheet">
+  <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@500;700;800&family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">
 
   <style>
     :root{
-      --navy:#0f172a; --navy2:#1e293b; --indigo:#6366f1; --indigo-d:#4f46e5;
-      --indigo-soft:#eef2ff; --text:#1e293b; --muted:#64748b; --line:#eef2f7;
-      --emerald:#10b981; --orange:#ea580c; --rose:#e11d48; --amber:#d97706;
-      --bg:#f1f5f9; --shadow:0 8px 24px -8px rgba(15,23,42,.12);
+      --blue:#2563eb; --blue-light:#3b82f6; --navy:#1e3a8a;
+      --green:#059669; --orange:#ea580c; --rose:#e11d48; --indigo:#4f46e5;
+      --text:#1e293b; --muted:#64748b; --border:#e2e8f0; --bg-page:#e8eef8;
     }
     *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
-    body{ margin:0; font-family:'Pretendard',sans-serif; background:var(--bg); color:var(--text); display:flex; justify-content:center; }
-    .app{ width:100%; max-width:600px; min-height:100dvh; background:var(--bg); position:relative; display:flex; flex-direction:column; box-shadow:0 0 40px rgba(0,0,0,.08); }
+    body{
+      margin:0; min-height:100dvh; font-family:'Noto Sans KR','DM Sans',sans-serif;
+      color:var(--text); display:flex; justify-content:center; align-items:flex-start; padding:24px 16px;
+      background:var(--bg-page);
+      background-image:linear-gradient(rgba(37,99,235,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(37,99,235,.05) 1px,transparent 1px);
+      background-size:22px 22px;
+    }
+    @media (max-width:540px){ body{ padding:0; align-items:stretch; } }
 
-    /* 인증 */
-    #authOverlay{ position:fixed; inset:0; max-width:600px; margin:0 auto; background:#fff; z-index:2000;
-      display:flex; flex-direction:column; align-items:center; justify-content:center; padding:40px; }
-    .auth-crown{ width:74px; height:74px; background:var(--indigo-soft); border-radius:22px; display:flex; align-items:center; justify-content:center; margin-bottom:22px; }
-    .auth-crown i{ font-size:32px; color:var(--indigo); }
-    .auth-title{ font-size:25px; font-weight:900; color:var(--navy); margin-bottom:10px; }
-    .auth-desc{ font-size:14px; color:var(--muted); text-align:center; line-height:1.6; margin-bottom:36px; }
-    .auth-input{ width:100%; height:56px; border-radius:16px; border:2px solid #eef2f7; margin-bottom:12px; padding:0 18px; font-size:16px; font-weight:700; background:#f8fafc; color:var(--navy); outline:none; transition:.2s; }
-    .auth-input:focus{ border-color:var(--indigo); background:#fff; }
-    .auth-btn{ width:100%; height:56px; border-radius:16px; border:none; background:var(--indigo); color:#fff; font-size:17px; font-weight:800; cursor:pointer; box-shadow:0 10px 20px -6px rgba(99,102,241,.45); transition:.15s; }
-    .auth-btn:active{ transform:scale(.98); }
-    .auth-btn:disabled{ opacity:.7; }
-    #authError{ margin-top:18px; color:#ef4444; font-size:13px; font-weight:700; display:none; }
+    .app{ width:100%; max-width:460px; background:#fff; border-radius:28px; overflow:hidden;
+      box-shadow:0 20px 60px rgba(15,23,42,.14), 0 4px 16px rgba(15,23,42,.08); display:flex; flex-direction:column; }
+    @media (max-width:540px){ .app{ max-width:100%; border-radius:0; min-height:100dvh; box-shadow:none; } }
 
-    /* 헤더/푸터 */
-    .hd{ position:sticky; top:0; height:60px; background:var(--navy); display:flex; align-items:center; justify-content:space-between; padding:0 18px; z-index:1000; }
-    .hd-title{ color:#fff; font-size:15.5px; font-weight:800; display:flex; align-items:center; gap:9px; }
-    .hd-title i{ color:#a5b4fc; }
-    .hd-btn{ font-size:18px; color:#cbd5e1; background:none; border:none; cursor:pointer; padding:6px; }
-    .ft{ height:50px; background:var(--navy); color:#94a3b8; display:flex; align-items:center; justify-content:space-between; padding:0 18px; font-size:11px; }
-    .ft img{ height:16px; filter:brightness(0) invert(1); opacity:.65; }
+    /* ── 헤더 (포털과 동일한 네이비→블루 그라데이션) ── */
+    .app-header{ background:linear-gradient(135deg,#1e3a8a 0%,#2563eb 60%,#3b82f6 100%); padding:20px 20px 22px; position:relative; overflow:hidden; }
+    .app-header::before{ content:''; position:absolute; top:-30px; right:-30px; width:130px; height:130px; border-radius:50%; background:rgba(255,255,255,.08); }
+    .app-header::after{ content:''; position:absolute; bottom:-26px; left:36px; width:90px; height:90px; border-radius:50%; background:rgba(255,255,255,.06); }
+    .hdr-top{ display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; position:relative; z-index:1; }
+    .hdr-brand{ display:flex; align-items:center; gap:10px; }
+    .hdr-badge{ width:38px; height:38px; background:rgba(255,255,255,.22); border:1.5px solid rgba(255,255,255,.35); border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:16px; color:#fbbf24; }
+    .hdr-sub{ font-size:9px; color:rgba(255,255,255,.65); font-weight:700; letter-spacing:1.5px; text-transform:uppercase; }
+    .hdr-title{ font-size:14px; font-weight:900; color:#fff; margin-top:1px; }
+    .hdr-pw{ width:38px; height:38px; background:rgba(255,255,255,.18); border:1px solid rgba(255,255,255,.28); border-radius:11px; display:flex; align-items:center; justify-content:center; color:rgba(255,255,255,.9); cursor:pointer; font-size:15px; }
+    .hdr-info{ display:flex; align-items:flex-end; justify-content:space-between; gap:12px; position:relative; z-index:1; }
+    .hi-l{ min-width:0; }
+    #cName{ font-size:21px; font-weight:900; color:#fff; line-height:1.2; display:block; word-break:keep-all; }
+    #cProf{ font-size:12px; color:rgba(255,255,255,.78); margin-top:4px; display:block; font-weight:500; }
+    .hi-r{ text-align:right; flex-shrink:0; }
+    #clock-display{ font-size:24px; font-weight:800; color:#fff; font-family:'DM Sans',monospace; letter-spacing:-.5px; line-height:1; }
+    #cDate{ font-size:11px; color:rgba(255,255,255,.65); margin-top:4px; font-weight:600; display:block; }
 
-    .content{ flex:1; padding:16px; display:none; }
+    /* 통계 칩 */
+    .stats{ display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-top:18px; position:relative; z-index:1; }
+    .stat{ background:rgba(255,255,255,.16); border:1px solid rgba(255,255,255,.18); border-radius:14px; padding:11px 4px; text-align:center; }
+    .stat .n{ font-size:20px; font-weight:900; color:#fff; font-family:'DM Sans',sans-serif; }
+    .stat .l{ font-size:10.5px; color:rgba(255,255,255,.8); margin-top:3px; font-weight:600; }
 
-    /* 과정 카드 */
-    .hero{ background:linear-gradient(135deg,#4f46e5,#6366f1); border-radius:22px; padding:20px; color:#fff; box-shadow:0 12px 28px -10px rgba(79,70,229,.5); margin-bottom:14px; }
-    .hero .cn{ font-size:21px; font-weight:900; line-height:1.25; }
-    .hero .pf{ font-size:13px; opacity:.9; font-weight:600; margin-top:5px; }
-    .hero .dt{ font-size:12px; opacity:.8; margin-top:2px; }
-    .stats{ display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin:14px 0 2px; }
-    .stat{ background:rgba(255,255,255,.16); border-radius:14px; padding:10px 4px; text-align:center; }
-    .stat .n{ font-size:19px; font-weight:900; }
-    .stat .l{ font-size:10.5px; opacity:.9; margin-top:2px; }
+    /* ── 본문 ── */
+    .app-body{ background:#f8fafc; padding:16px; display:flex; flex-direction:column; gap:13px; flex:1; }
+    .card{ background:#fff; border:1.5px solid var(--border); border-radius:18px; padding:15px 15px 13px; position:relative; overflow:hidden; box-shadow:0 1px 6px rgba(15,23,42,.05); }
+    .card::before{ content:''; position:absolute; top:0; left:0; right:0; height:3.5px; border-radius:18px 18px 0 0; }
+    .card.c-act::before{ background:linear-gradient(90deg,#4f46e5,#818cf8); }
+    .card.c-meal::before{ background:linear-gradient(90deg,#047857,#34d399); }
+    .card.c-ros::before{ background:linear-gradient(90deg,#1e3a8a,#3b82f6); }
+    .card-h{ display:flex; align-items:center; gap:10px; margin-bottom:12px; }
+    .ch-ic{ width:34px; height:34px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:15px; flex-shrink:0; }
+    .c-act .ch-ic{ background:#eef2ff; color:#4f46e5; }
+    .c-meal .ch-ic{ background:#ecfdf5; color:#059669; }
+    .c-ros .ch-ic{ background:#eff6ff; color:#1e3a8a; }
+    .ch-t{ font-size:14.5px; font-weight:800; color:var(--text); }
+    .ch-cnt{ margin-left:auto; min-width:24px; height:24px; padding:0 9px; border-radius:20px; color:#fff; font-size:12.5px; font-weight:800; display:inline-flex; align-items:center; justify-content:center; }
+    .c-act .ch-cnt{ background:#4f46e5; } .c-meal .ch-cnt{ background:#059669; } .c-ros .ch-cnt{ background:#1e3a8a; }
 
-    .card{ background:#fff; border-radius:20px; padding:16px; margin-bottom:14px; border:1px solid var(--line); box-shadow:var(--shadow); }
-    .card-h{ font-size:13.5px; font-weight:800; margin-bottom:13px; display:flex; align-items:center; gap:8px; }
-    .card-h .cnt{ margin-left:auto; font-size:12px; font-weight:800; color:#fff; background:var(--indigo); border-radius:20px; padding:2px 10px; }
-    .h-meal{ color:var(--emerald); } .h-meal .cnt{ background:var(--emerald); }
-    .h-act{ color:var(--indigo-d); }
-    .h-ros{ color:var(--navy2); } .h-ros .cnt{ background:var(--navy2); }
-
-    .row{ display:flex; align-items:center; gap:12px; padding:13px 14px; background:#fff; border:1.5px solid var(--line); border-radius:16px; margin-bottom:9px; }
+    .row{ display:flex; align-items:center; gap:12px; padding:12px 13px; background:#fff; border:1.5px solid #f1f5f9; border-radius:14px; margin-bottom:9px; }
     .row:last-child{ margin-bottom:0; }
     .row .info{ flex:1; min-width:0; }
-    .nm{ font-size:15.5px; font-weight:800; color:var(--navy); display:flex; align-items:center; gap:6px; }
-    .sub{ font-size:12.5px; color:var(--muted); font-weight:600; margin-top:3px; line-height:1.45; }
-    .sub b{ color:var(--text); font-weight:800; }
-    .ph{ font-size:13px; color:var(--indigo); font-weight:800; letter-spacing:.2px; }
+    .nm{ font-size:15px; font-weight:800; color:var(--navy); display:flex; align-items:center; gap:6px; }
+    .sub{ font-size:12.5px; color:var(--muted); font-weight:500; margin-top:3px; line-height:1.45; }
+    .sub b{ color:var(--text); font-weight:700; }
+    .ph{ font-size:13px; color:var(--blue); font-weight:800; letter-spacing:.2px; margin-top:3px; }
     .ph.muted{ color:var(--muted); font-weight:600; }
-    .badge{ padding:6px 11px; border-radius:11px; font-size:12px; font-weight:800; white-space:nowrap; flex-shrink:0; }
-    .b-out{ background:#fff7ed; color:var(--orange); }
-    .b-over{ background:#fef2f2; color:var(--rose); }
-    .b-group{ background:#eff6ff; color:#2563eb; }
-    .b-etc{ background:#f1f5f9; color:#475569; }
-    .b-meal{ background:#ecfdf5; color:var(--emerald); }
-    .b-in{ background:#f0fdf4; color:#16a34a; }
-    .b-off{ background:#f8fafc; color:#94a3b8; }
+    .ret b{ color:#16a34a; }
+    .badge{ padding:6px 11px; border-radius:10px; font-size:12px; font-weight:800; white-space:nowrap; flex-shrink:0; }
+    .b-out{ background:#fff7ed; color:#ea580c; } .b-over{ background:#fef2f2; color:#e11d48; }
+    .b-group{ background:#eff6ff; color:#2563eb; } .b-etc{ background:#f1f5f9; color:#475569; }
+    .b-meal{ background:#ecfdf5; color:#059669; }
+    .b-in{ background:#f0fdf4; color:#16a34a; } .b-off{ background:#f8fafc; color:#94a3b8; }
     .dot{ width:8px; height:8px; border-radius:50%; flex-shrink:0; }
-    .dot.on{ background:#22c55e; } .dot.off{ background:#cbd5e1; }
-    .empty{ text-align:center; padding:30px 0; color:#cbd5e1; font-size:13.5px; font-weight:700; }
-    .ret{ color:#16a34a !important; } .ret b{ color:#16a34a; }
+    .dot.on{ background:#22c55e; box-shadow:0 0 0 3px rgba(34,197,94,.15); } .dot.off{ background:#cbd5e1; }
+    .empty{ text-align:center; padding:26px 0; color:#cbd5e1; font-size:13px; font-weight:700; }
+
+    /* ── 푸터 ── */
+    .app-footer{ background:#f8fafc; border-top:1px solid var(--border); padding:11px 18px; display:flex; align-items:center; justify-content:space-between; }
+    #footer-date{ font-size:11px; color:var(--muted); font-weight:600; }
+    .ft-brand{ display:flex; align-items:center; gap:7px; }
+    .ft-brand img{ height:15px; opacity:.55; }
+    .ft-ver{ font-size:11px; color:#cbd5e1; font-weight:700; }
+
+    /* ── 인증 ── */
+    #authOverlay{ position:fixed; inset:0; background:var(--bg-page);
+      background-image:linear-gradient(rgba(37,99,235,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(37,99,235,.05) 1px,transparent 1px); background-size:22px 22px;
+      z-index:2000; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:34px; }
+    .auth-card{ width:100%; max-width:360px; background:#fff; border:1px solid var(--border); border-radius:24px; padding:34px 26px; box-shadow:0 20px 50px rgba(15,23,42,.12); text-align:center; }
+    .auth-crown{ width:72px; height:72px; margin:0 auto 20px; border-radius:20px; background:linear-gradient(135deg,#1e3a8a,#3b82f6); display:flex; align-items:center; justify-content:center; box-shadow:0 10px 22px -8px rgba(30,58,138,.5); }
+    .auth-crown i{ font-size:30px; color:#fbbf24; }
+    .auth-title{ font-size:23px; font-weight:900; color:var(--navy); margin-bottom:9px; }
+    .auth-desc{ font-size:13.5px; color:var(--muted); line-height:1.6; margin-bottom:26px; }
+    .auth-input{ width:100%; height:54px; border-radius:14px; border:1.5px solid var(--border); margin-bottom:11px; padding:0 16px; font-size:16px; font-weight:700; background:#f8fafc; color:var(--navy); outline:none; transition:.2s; font-family:inherit; }
+    .auth-input:focus{ border-color:var(--blue); background:#fff; }
+    .auth-btn{ width:100%; height:54px; border-radius:14px; border:none; background:linear-gradient(135deg,#1e3a8a,#2563eb); color:#fff; font-size:16px; font-weight:800; cursor:pointer; box-shadow:0 10px 22px -8px rgba(37,99,235,.5); transition:.15s; font-family:inherit; margin-top:4px; }
+    .auth-btn:active{ transform:scale(.98); } .auth-btn:disabled{ opacity:.7; }
+    #authError{ margin-top:16px; color:#ef4444; font-size:13px; font-weight:700; display:none; }
   </style>
 </head>
 <body>
-  <div class="app">
-    <div id="authOverlay">
+  <div id="authOverlay">
+    <div class="auth-card">
       <div class="auth-crown"><i class="fa-solid fa-crown"></i></div>
       <div class="auth-title">학생장 본인확인</div>
       <div class="auth-desc">담당 교수님으로부터 <b>학생장 권한</b>을 부여받은<br>교육생만 접속할 수 있습니다.</div>
@@ -107,44 +135,47 @@
       <button class="auth-btn" onclick="verifyLeaderAccess()">권한 확인 및 입장</button>
       <div id="authError"></div>
     </div>
+  </div>
 
-    <header class="hd">
-      <div class="hd-title"><i class="fa-solid fa-crown"></i> 학생장 대시보드</div>
-      <button class="hd-btn" onclick="location.reload()" title="새로고침/로그아웃"><i class="fa-solid fa-power-off"></i></button>
+  <div class="app" id="mainContent" style="display:none;">
+    <header class="app-header">
+      <div class="hdr-top">
+        <div class="hdr-brand">
+          <div class="hdr-badge"><i class="fa-solid fa-crown"></i></div>
+          <div><div class="hdr-sub">STUDENT LEADER</div><div class="hdr-title">학생장 대시보드</div></div>
+        </div>
+        <button class="hdr-pw" onclick="location.reload()" title="새로고침 / 로그아웃"><i class="fa-solid fa-power-off"></i></button>
+      </div>
+      <div class="hdr-info">
+        <div class="hi-l"><span id="cName">과정명 불러오는 중…</span><span id="cProf">담당교수 로드 중</span></div>
+        <div class="hi-r"><div id="clock-display">--:--</div><span id="cDate"></span></div>
+      </div>
+      <div class="stats">
+        <div class="stat"><div class="n" id="stStu">0</div><div class="l">수강생</div></div>
+        <div class="stat"><div class="n" id="stOut">0</div><div class="l">외출</div></div>
+        <div class="stat"><div class="n" id="stOver">0</div><div class="l">외박</div></div>
+        <div class="stat"><div class="n" id="stMeal">0</div><div class="l">석식제외</div></div>
+      </div>
     </header>
 
-    <main id="mainContent" class="content">
-      <div class="hero">
-        <div class="cn" id="cName">과정명 불러오는 중…</div>
-        <div class="pf" id="cProf">담당교수 로드 중</div>
-        <div class="dt" id="cDate"></div>
-        <div class="stats">
-          <div class="stat"><div class="n" id="stStu">0</div><div class="l">수강생</div></div>
-          <div class="stat"><div class="n" id="stOut">0</div><div class="l">외출</div></div>
-          <div class="stat"><div class="n" id="stOver">0</div><div class="l">외박</div></div>
-          <div class="stat"><div class="n" id="stMeal">0</div><div class="l">석식제외</div></div>
-        </div>
-      </div>
-
-      <div class="card">
-        <div class="card-h h-act"><i class="fa-solid fa-person-walking-arrow-right"></i> 외출 · 외박 신청 현황 <span class="cnt" id="cntAct">0</span></div>
+    <main class="app-body">
+      <div class="card c-act">
+        <div class="card-h"><span class="ch-ic"><i class="fa-solid fa-person-walking-arrow-right"></i></span><span class="ch-t">외출 · 외박 신청 현황</span><span class="ch-cnt" id="cntAct">0</span></div>
         <div id="actionList"><div class="empty">불러오는 중…</div></div>
       </div>
-
-      <div class="card">
-        <div class="card-h h-meal"><i class="fa-solid fa-utensils"></i> 금일 석식 제외 <span class="cnt" id="cntMeal">0</span></div>
+      <div class="card c-meal">
+        <div class="card-h"><span class="ch-ic"><i class="fa-solid fa-utensils"></i></span><span class="ch-t">금일 석식 제외</span><span class="ch-cnt" id="cntMeal">0</span></div>
         <div id="dinnerSkipList"><div class="empty">불러오는 중…</div></div>
       </div>
-
-      <div class="card">
-        <div class="card-h h-ros"><i class="fa-solid fa-users"></i> 수강생 입실 명부 <span class="cnt" id="cntRos">0</span></div>
+      <div class="card c-ros">
+        <div class="card-h"><span class="ch-ic"><i class="fa-solid fa-users"></i></span><span class="ch-t">수강생 입실 명부</span><span class="ch-cnt" id="cntRos">0</span></div>
         <div id="studentList"></div>
       </div>
     </main>
 
-    <footer class="ft">
+    <footer class="app-footer">
       <div id="footer-date">0000년 00월 00일 (요일) 00:00</div>
-      <div class="footer-logo"><img src="logo.png" alt="KAC"></div>
+      <div class="ft-brand"><img src="logo.png" alt="KAC"><span class="ft-ver">학생장</span></div>
     </footer>
   </div>
 
@@ -156,7 +187,9 @@
     function getTodayString(){ const t=new Date(); return `${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,'0')}-${String(t.getDate()).padStart(2,'0')}`; }
     function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
     function runClock(){ const n=new Date(); const w=['일','월','화','수','목','금','토'];
-      document.getElementById('footer-date').innerText=`${n.getFullYear()}년 ${n.getMonth()+1}월 ${n.getDate()}일 (${w[n.getDay()]}) ${String(n.getHours()).padStart(2,'0')}:${String(n.getMinutes()).padStart(2,'0')}`; }
+      const hm=`${String(n.getHours()).padStart(2,'0')}:${String(n.getMinutes()).padStart(2,'0')}`;
+      const fd=document.getElementById('footer-date'); if(fd) fd.innerText=`${n.getFullYear()}년 ${n.getMonth()+1}월 ${n.getDate()}일 (${w[n.getDay()]}) ${hm}`;
+      const cd=document.getElementById('clock-display'); if(cd) cd.innerText=hm; }
     setInterval(runClock,1000); runClock();
     function setStats(){ document.getElementById('stStu').innerText=_cntStu; document.getElementById('stOut').innerText=_cntOut; document.getElementById('stOver').innerText=_cntOver; document.getElementById('stMeal').innerText=_cntMeal; }
     function resetBtn(b){ b.innerText="권한 확인 및 입장"; b.disabled=false; }
@@ -190,7 +223,7 @@
         }
         if(found){
           document.getElementById('authOverlay').style.display='none';
-          document.getElementById('mainContent').style.display='block';
+          document.getElementById('mainContent').style.display='flex';
           document.getElementById('cDate').innerText=getTodayString().replace(/-/g,'.');
           loadLeaderData();
         } else { errorEl.innerText="정보가 일치하지 않거나 권한이 없습니다."; errorEl.style.display="block"; resetBtn(btn); }
@@ -204,7 +237,6 @@
       if(!myRoomID) return;
       const today=getTodayString();
 
-      // 과정 정보 + 입실 명부
       firebase.database().ref(`courses/${myRoomID}`).on('value',snap=>{
         const data=snap.val()||{};
         document.getElementById('cName').innerText=(data.settings&&data.settings.courseName)||'과정명 미지정';
@@ -228,7 +260,6 @@
         });
       });
 
-      // 석식 제외
       firebase.database().ref(`courses/${myRoomID}/dinner_skips/${today}`).on('value',snap=>{
         const box=document.getElementById('dinnerSkipList'); box.innerHTML="";
         const data=snap.val()||{}; const entries=Object.values(data);
@@ -241,7 +272,6 @@
         });
       });
 
-      // 외출 / 외박
       firebase.database().ref(`courses/${myRoomID}/admin_actions/${today}`).on('value',snap=>{
         const box=document.getElementById('actionList'); box.innerHTML="";
         const data=snap.val()||{}; const items=Object.values(data).filter(x=>x&&x.type&&x.type!=='none');
@@ -276,7 +306,7 @@
     }
   </script>
 <style>@media print{#__catcVer{display:none!important}}</style>
-<div id="__catcVer" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vB</div>
-<script>try{console.log('%cCATC%c 교육생 대표 (student_leader.html) %cvB%c build 20260615-REWIRE','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}</script>
+<div id="__catcVer" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vC</div>
+<script>try{console.log('%cCATC%c 교육생 대표 (student_leader.html) %cvC%c build 20260615-PORTAL','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}</script>
 </body>
 </html>
