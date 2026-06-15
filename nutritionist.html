@@ -3138,6 +3138,10 @@ function _ensureSheetViewCss(){
     .sheetv-tbl thead th.sv-tot{ right:0; z-index:4; }
     .sv-foot td{ background:#e2e8f0 !important; font-weight:900; }
     .sv-cat{ font-size:10px; color:#6366f1; font-weight:800; }
+    .sheetv-tbl td.ds-emp{ background:#eff6ff; color:#1e40af; font-weight:800; } .sheetv-tbl thead th.ds-h-emp{ background:#1e40af; }
+    .sheetv-tbl td.ds-svc{ background:#ecfdfa; color:#0f766e; font-weight:800; } .sheetv-tbl thead th.ds-h-svc{ background:#0f766e; }
+    .sheetv-tbl td.ds-int{ background:#f5f3ff; color:#7c3aed; font-weight:800; } .sheetv-tbl thead th.ds-h-int{ background:#7c3aed; }
+    .sheetv-tbl td.ds-ext{ background:#fff7ed; color:#c2410c; font-weight:800; } .sheetv-tbl thead th.ds-h-ext{ background:#c2410c; }
     @media (max-width:700px){ .sheetv-panel{ width:100vw; height:100vh; border-radius:0; } .sheetv-ti{ font-size:15px; } }
     `;
     document.head.appendChild(st);
@@ -3172,17 +3176,31 @@ function openSheetView(){
     ov.classList.add('open');
 }
 function closeSheetView(){ const ov=document.getElementById('sheetViewOv'); if(ov) ov.classList.remove('open'); }
-/* [JDS260615] 일일 식수 통계 — 날짜별 아침/점심/저녁/합계 (화면) */
+/* [JDS260615] 일일 식수 통계 — 날짜별 구분(임직원/공항서비스/사내강사/사외강사) + 끼니 합계 */
+function _dailyBucket(a){
+    if(!a) return 'emp';
+    if(a.category==='external') return 'ext';
+    if(a.category==='internal') return 'int';
+    return companyOfDept(a.dept)==='service' ? 'svc' : 'emp';
+}
+const DAILY_CATS=[
+    {k:'emp', l:'임직원', c:'#1e40af'},
+    {k:'svc', l:'공항서비스', c:'#0f766e'},
+    {k:'int', l:'사내강사', c:'#7c3aed'},
+    {k:'ext', l:'사외강사', c:'#c2410c'}
+];
 function _buildDailyStats(){
     const pm=(_mealMonth||getToday().slice(0,7)).split('-').map(Number); const yy=pm[0], mm=pm[1];
     const dim=new Date(yy,mm,0).getDate(); const DOW=['일','월','화','수','목','금','토'];
     const map={}; const days=[];
     for(let dd=1; dd<=dim; dd++){ const date=`${yy}-${String(mm).padStart(2,'0')}-${String(dd).padStart(2,'0')}`; const wd=new Date(yy,mm-1,dd).getDay();
-        const o={ d:dd, date, dow:DOW[wd], weekend:(wd===0||wd===6), sun:wd===0, sat:wd===6, b:0, l:0, d3:0 }; map[date]=o; days.push(o); }
-    Object.values(_mealAgg||{}).forEach(a=>{ Object.entries(a.days||{}).forEach(([date,md])=>{ const o=map[date]; if(!o||!md)return; if(md.b)o.b++; if(md.l)o.l++; if(md.d)o.d3++; }); });
-    let tb=0,tl=0,td=0; days.forEach(o=>{ o.sum=o.b+o.l+o.d3; tb+=o.b; tl+=o.l; td+=o.d3; });
+        const o={ d:dd, date, dow:DOW[wd], weekend:(wd===0||wd===6), sun:wd===0, sat:wd===6, b:0, l:0, d3:0, emp:0, svc:0, int:0, ext:0 }; map[date]=o; days.push(o); }
+    Object.values(_mealAgg||{}).forEach(a=>{ const bk=_dailyBucket(a); Object.entries(a.days||{}).forEach(([date,md])=>{ const o=map[date]; if(!o||!md)return;
+        let n=0; if(md.b){o.b++;n++;} if(md.l){o.l++;n++;} if(md.d){o.d3++;n++;} o[bk]+=n; }); });
+    const T={tb:0,tl:0,td:0,emp:0,svc:0,int:0,ext:0,total:0};
+    days.forEach(o=>{ o.sum=o.b+o.l+o.d3; T.tb+=o.b; T.tl+=o.l; T.td+=o.d3; T.emp+=o.emp; T.svc+=o.svc; T.int+=o.int; T.ext+=o.ext; T.total+=o.sum; });
     const peak=Math.max(1,...days.map(o=>o.sum));
-    return { yy, mm, days, tb, tl, td, total:tb+tl+td, peak };
+    return { yy, mm, days, peak, ...T };
 }
 function openDailyStats(){
     if(!_mealAgg){ showToast('먼저 월을 조회하세요.'); return; }
@@ -3193,20 +3211,21 @@ function openDailyStats(){
     const rows=S.days.map(o=>{
         const barW=Math.round((o.sum/S.peak)*100);
         return `<tr class="${o.weekend?'sv-we':''}">
-            <td class="sv-fix sv-c1">${o.mm||S.mm}/${o.d} <span class="sv-dow ${o.sun?'sun':''}${o.sat?'sat':''}">${o.dow}</span></td>
+            <td class="sv-fix sv-c1">${S.mm}/${o.d} <span class="sv-dow ${o.sun?'sun':''}${o.sat?'sat':''}">${o.dow}</span></td>
             <td>${o.b||''}</td><td>${o.l||''}</td><td>${o.d3||''}</td>
+            <td class="ds-emp">${o.emp||''}</td><td class="ds-svc">${o.svc||''}</td><td class="ds-int">${o.int||''}</td><td class="ds-ext">${o.ext||''}</td>
             <td class="sv-tot">${o.sum||''}</td>
-            <td style="min-width:160px;"><div style="background:#ede9fe;border-radius:6px;height:14px;width:100%;overflow:hidden;"><div style="background:#7c3aed;height:100%;width:${barW}%;"></div></div></td>
+            <td style="min-width:140px;"><div style="background:#ede9fe;border-radius:6px;height:14px;width:100%;overflow:hidden;"><div style="background:#7c3aed;height:100%;width:${barW}%;"></div></div></td>
         </tr>`;
     }).join('');
     ov.innerHTML=`<div class="sheetv-panel">
         <div class="sheetv-hd" style="background:linear-gradient(120deg,#5b21b6,#7c3aed);"><div class="sheetv-ti"><i class="fa-solid fa-chart-column"></i> 일일 식수 통계 — ${S.yy}년 ${S.mm}월</div>
           <div><button onclick="exportMealExcel()" class="sheetv-x" style="background:#16a34a;"><i class="fa-solid fa-file-excel"></i> 엑셀</button><button onclick="closeDailyStats()" class="sheetv-x" style="background:#0f172a;">닫기</button></div></div>
-        <div class="sheetv-legend">월 합계 — 아침 <b>${S.tb}</b> · 점심 <b>${S.tl}</b> · 저녁 <b>${S.td}</b> · <b style="color:#7c3aed;">총 ${S.total}회</b> · 일 최대 ${S.peak}회</div>
+        <div class="sheetv-legend">월 합계 — 임직원 <b style="color:#1e40af;">${S.emp}</b> · 공항서비스 <b style="color:#0f766e;">${S.svc}</b> · 사내강사 <b style="color:#7c3aed;">${S.int}</b> · 사외강사 <b style="color:#c2410c;">${S.ext}</b> · <b>총 ${S.total}회</b> (아침 ${S.tb}·점심 ${S.tl}·저녁 ${S.td})</div>
         <div class="sheetv-scroll"><table class="sheetv-tbl">
-          <thead><tr><th class="sv-fix sv-c1">날짜</th><th>아침</th><th>점심</th><th>저녁</th><th class="sv-tot">합계</th><th>일별 추이</th></tr></thead>
+          <thead><tr><th class="sv-fix sv-c1">날짜</th><th>아침</th><th>점심</th><th>저녁</th><th class="ds-h-emp">임직원</th><th class="ds-h-svc">공항서비스</th><th class="ds-h-int">사내강사</th><th class="ds-h-ext">사외강사</th><th class="sv-tot">합계</th><th>일별 추이</th></tr></thead>
           <tbody>${rows}
-            <tr class="sv-foot"><td class="sv-fix sv-c1">합계</td><td>${S.tb}</td><td>${S.tl}</td><td>${S.td}</td><td class="sv-tot">${S.total}</td><td></td></tr>
+            <tr class="sv-foot"><td class="sv-fix sv-c1">합계</td><td>${S.tb}</td><td>${S.tl}</td><td>${S.td}</td><td>${S.emp}</td><td>${S.svc}</td><td>${S.int}</td><td>${S.ext}</td><td class="sv-tot">${S.total}</td><td></td></tr>
           </tbody></table></div>
     </div>`;
     ov.classList.add('open');
@@ -3304,8 +3323,8 @@ function renderMealCalendar(a, month){
 </script>
 <!-- @catc-version-badge · 전 페이지 통일 디자인 (개발자 확인용 · 사용자에게는 거의 안 보임) -->
 <style>@media print{#__catcVer{display:none!important}}</style>
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">JDS260613(V18)</div>
-<script>try{console.log('%cCATC%c 영양사 (nutritionist.html) %cJDS260613(V18)%c build 20260613','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}</script>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">JDS260613(V19)</div>
+<script>try{console.log('%cCATC%c 영양사 (nutritionist.html) %cJDS260613(V19)%c build 20260613','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}</script>
 <div id="notifyStack" class="notify-stack"></div>
 <!-- ── 화면 자동 맞춤(auto-fit): 입장 시 가로폭 초과하면 화면에 맞게 자동 축소 · JDS260614 ── -->
 <script>
