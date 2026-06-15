@@ -411,6 +411,9 @@
 
 
         .menu-item { padding: 15px; border-bottom: 1px solid #eee; font-weight: 600; cursor: pointer; color: #333; }
+        /* [JDS260615] 전면현황판 미허용 시 신청 비활성 */
+        .menu-item.svc-locked { opacity:.45; position:relative; cursor:not-allowed; }
+        .menu-item.svc-locked::after { content:"\f023"; font-family:"Font Awesome 6 Free"; font-weight:900; position:absolute; right:15px; top:50%; transform:translateY(-50%); color:#94a3b8; font-size:13px; }
 
 
 /* 공지사항 및 QR 디자인 */
@@ -647,10 +650,11 @@
             <div class="menu-item" id="menu-survey-instant" style="display:none; background:#e0f2fe; color:#0369a1; font-weight:900; text-align:center;" onclick="document.getElementById('menuModal').style.display='none'; openInstantSurvey();"><i class="fa-solid fa-square-poll-vertical"></i> 설문 응답 / 수정</div>
             <div class="menu-item" onclick="openNotice()"><i class="fa-solid fa-bullhorn" style="color: #facc15;"></i> 공지사항 </div>
             <div class="menu-item" onclick="viewMealMenu()"><i class="fa-solid fa-utensils"></i> 금주 식단보기</div>
-            <div class="menu-item" onclick="openFacilityRequest()"><i class="fa-solid fa-soap" style="color: #10b981;"></i> 생활관 비품 요청</div>
-            <div class="menu-item" onclick="openShuttleApply()"><i class="fa-solid fa-bus"></i> 차량 신청</div>
-            <div class="menu-item" onclick="openAdminAction()"><i class="fa-solid fa-file-signature"></i> 외출·외박 / 석식제외</div>
-            <div class="menu-item" id="menu-tabletLoan" onclick="openTabletLoan()"><i class="fa-solid fa-tablet-screen-button" style="color:#6366f1;"></i> 태블릿 대여 신청</div>
+            <div id="svcGateBanner" style="display:none; background:#fff7ed; border:1px solid #fed7aa; color:#b45309; border-radius:12px; padding:11px 13px; font-size:12.5px; font-weight:700; line-height:1.5; margin-bottom:4px;"><i class="fa-solid fa-lock" style="margin-right:5px;"></i> 현재 담당 교수님이 신청 기능을 열어두지 않아 <b>차량·외출/외박·석식·비품·태블릿 신청이 비활성화</b>되어 있습니다.</div>
+            <div class="menu-item svc-gate" onclick="openFacilityRequest()"><i class="fa-solid fa-soap" style="color: #10b981;"></i> 생활관 비품 요청</div>
+            <div class="menu-item svc-gate" onclick="openShuttleApply()"><i class="fa-solid fa-bus"></i> 차량 신청</div>
+            <div class="menu-item svc-gate" onclick="openAdminAction()"><i class="fa-solid fa-file-signature"></i> 외출·외박 / 석식제외</div>
+            <div class="menu-item svc-gate" id="menu-tabletLoan" onclick="openTabletLoan()"><i class="fa-solid fa-tablet-screen-button" style="color:#6366f1;"></i> 태블릿 대여 신청</div>
             <div class="menu-item" onclick="openAttendanceQR()"><i class="fa-solid fa-qrcode" style="color: #3b82f6;"></i> 출결 QR 확인</div>
             <div class="menu-item" onclick="openCnsPlatform()"><i class="fa-solid fa-tower-broadcast" style="color: #6366f1;"></i> CNS 표보재 플랫폼</div>
             <div class="menu-item" onclick="openSurveyModal()"><i class="fa-solid fa-square-poll-vertical" style="color: #3b82f6;"></i> 설문조사 (스카이캠퍼스)</div>
@@ -1324,7 +1328,7 @@ async function resolveRoomFromCode(code) {
         const settingsSnap = await db.ref(`${rPath}/settings`).once('value');
         const s = settingsSnap.val() || {};
         // 전면현황판 비노출(비공식 운영) 과정 여부 — 미화 비품신청 제한에 사용
-        window._hideFromBoard = (s.hideFromBoard === true);
+        window._hideFromBoard = (s.hideFromBoard === true); if(typeof _applyServiceGate==='function') _applyServiceGate();
         if (s.courseName) {
             const lt = document.getElementById('landingTitle');
             if (lt) lt.textContent = s.courseName;
@@ -1526,6 +1530,7 @@ function openMainMenu() {
     });
 
     document.getElementById('menuModal').style.display = 'flex';
+    if(typeof _applyServiceGate==='function') _applyServiceGate();
 }
 
 
@@ -2491,6 +2496,7 @@ function forceCloseQuiz() {
             const box = document.getElementById('roomList'); box.innerHTML = "";
             for(let i=65; i<=90; i++) { let c = String.fromCharCode(i); box.innerHTML += `<div class="menu-item" onclick="changeRoom('${c}')">Room ${c}</div>`; }
             document.getElementById('menuModal').style.display = 'flex';
+    if(typeof _applyServiceGate==='function') _applyServiceGate();
         }
         function changeRoom(r) {
             const pw = prompt(`Room ${r} 입장 비밀번호를 입력하세요:`); if (!pw) return;
@@ -2511,6 +2517,7 @@ let currentShuttleData = null; // 나의 신청 데이터 저장용
 // 1. 차량 신청 팝업 열기
 // [수정] 기사님이 설정한 출발 시간을 실시간으로 연동하도록 변경된 함수
 async function openShuttleApply() {
+    if (await _svcGateBlocked('차량 신청')) return;
     document.getElementById('menuModal').style.display = 'none';
     document.getElementById('shuttleModal').style.display = 'flex';
 
@@ -2694,6 +2701,7 @@ let selectedAdminType = 'none'; // 외출/외박 선택 상태 저장
 // [최종 통합] 행정 신청 메뉴 열기 (외출/외박 + 석식 제외 동시 체크)
 // [최종] 행정 신청 메뉴 열기 (상황별 버튼 제어 로직 포함)
 async function openAdminAction() {
+    if (await _svcGateBlocked('외출·외박 / 석식 신청')) return;
 
     // --- [추가] 자동완성 목록 불러오기 ---
     const loadHistory = (id, datalistId) => {
@@ -3578,9 +3586,36 @@ async function openNotice() {
 
 
 
+// [JDS260615] 전면 현황판 노출 미허용(settings.hideFromBoard=true) 과정은 모든 신청(차량·외출외박·석식·비품·태블릿) 차단
+async function _svcGateBlocked(label){
+    let hide = (window._hideFromBoard === true);
+    try {
+        const snap = await firebase.database().ref(`courses/${currentRoom}/settings/hideFromBoard`).once('value');
+        hide = (snap.val() === true);  // 최신값 반영
+        window._hideFromBoard = hide;
+    } catch(e) { /* 읽기 실패 시 캐시값 사용 */ }
+    if (typeof _applyServiceGate === 'function') _applyServiceGate();
+    if (hide) {
+        const mm = document.getElementById('menuModal'); if (mm) mm.style.display = 'none';
+        showKacAlert(
+            '<div style="font-size:17px;font-weight:900;color:#b45309;margin-bottom:6px;">🚫 '+(label||'신청')+' 제한</div>'
+            + '현재 담당 교수님이 <b>전면 현황판 노출(신청 기능)</b>을 열어두지 않아<br>'+(label||'해당 신청')+'이 제한됩니다.<br>'
+            + '<span style="display:block;margin-top:8px;font-size:13px;color:#64748b;">필요 시 담당 교수님께 문의해 주세요.</span>',
+            null, { html: true }
+        );
+        return true;
+    }
+    return false;
+}
+// 신청 메뉴 시각 비활성/안내배너
+function _applyServiceGate(){
+    const blocked = (window._hideFromBoard === true);
+    document.querySelectorAll('.menu-item.svc-gate').forEach(el=>{ el.classList.toggle('svc-locked', blocked); });
+    const bn = document.getElementById('svcGateBanner'); if (bn) bn.style.display = blocked ? 'block' : 'none';
+}
+
 // 생활관 비품 요청 팝업 열기 (현황 확인 로직 추가)
 async function openFacilityRequest() {
-    // ── 전면현황판 비노출(비공식 운영) 과정은 미화 비품 신청 제한 ──
     // 관리자가 현황판 노출 체크를 해제한 과정(settings.hideFromBoard=true)이면 신청 차단
     let hideFromBoard = (window._hideFromBoard === true);
     try {
@@ -4241,7 +4276,8 @@ if (imageContainer && mealImg) {
 
     
 // ─── 태블릿 대여 신청 ───────────────────────────────────────────────
-function openTabletLoan() {
+async function openTabletLoan() {
+    if (await _svcGateBlocked('태블릿 대여 신청')) return;
     document.getElementById('menuModal').style.display = 'none';
     document.getElementById('tabletLoanModal').style.display = 'flex';
     const uToken = localStorage.getItem('uToken');
@@ -4412,8 +4448,8 @@ function closeTabletLoan() {
 
 <!-- @catc-version-badge · 전 페이지 통일 디자인 (개발자 확인용 · 사용자에게는 거의 안 보임) -->
 <style>@media print{#__catcVer{display:none!important}}</style>
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">JDS260613(V2)</div>
-<script>try{console.log('%cCATC%c 교육생 플랫폼 (index.html) %cJDS260613(V2)%c build 20260613','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}</script>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">JDS260613(V3)</div>
+<script>try{console.log('%cCATC%c 교육생 플랫폼 (index.html) %cJDS260613(V3)%c build 20260613','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}</script>
 </body>
 </html>
 <!-- @build 20260613-202500 (식단표: weeklyMenu 경로 + 캐싱(이전) + 구조화 menu(JSON) 지원 — data.menu 있으면 이미지 대신 깔끔한 텍스트 표로 렌더(모바일 확대 불필요), 캐시도 menu 포함. 이미지면 기존대로 이미지+핀치줌) -->
