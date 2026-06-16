@@ -1660,6 +1660,7 @@ body.pc-mode .entry-box:hover, body.pc-mode .entry-box-tablet:hover {
         </div>
         <div style="overflow-x: auto;">
 <!-- 수송 리스트를 담을 모바일 대응 컨테이너 -->
+<div id="dayoffBanner"></div>
 <div id="pickupCardContainer" style="display: flex; flex-direction: column; gap: 12px; margin-top: 10px;">
     <!-- 자바스크립트가 여기에 카드들을 채워넣습니다 -->
 </div>
@@ -2029,62 +2030,61 @@ body.pc-mode .entry-box:hover, body.pc-mode .entry-box-tablet:hover {
 
 <!-- 수송 요청 모달 수정본 -->
 <div id="transportModal" class="setup-modal" style="z-index: 8000;">
-    <div class="setup-box" style="max-width: 450px;">
+    <div class="setup-box" style="max-width: 440px;">
         <div style="background:#6366f1; color:white; padding:18px; display:flex; justify-content:space-between; align-items:center; margin:-25px -25px 20px -25px; border-radius:24px 24px 0 0;">
-            <h3 style="margin:0; font-size:17px;">🚖 강사 수송 요청 관리</h3>
+            <h3 style="margin:0; font-size:17px;">🚖 강사 픽업 요청</h3>
             <i class="fa-solid fa-xmark" style="cursor:pointer; font-size:20px;" onclick="closeTransportModal()"></i>
         </div>
-        <div style="display:flex; flex-direction:column; gap:15px;">
-            <!-- 과정 선택 영역 -->
+        <div style="display:flex; flex-direction:column; gap:13px;">
             <div id="reqCourseSelectRow" style="display:none;">
-                <label class="setup-label">대상 교육과정</label>
+                <label class="setup-label">대상 교육과정 (선택)</label>
                 <select id="reqCourseRID" class="navy-select">
                     <option value="">--- 과정을 선택하세요 ---</option>
                 </select>
             </div>
 
-            <div>
-                <label class="setup-label">픽업 장소</label>
-                <select id="reqLoc" class="navy-select" onchange="updateTransLabels()">
-                    <option value="오송역">오송역</option>
-                    <option value="청주터미널">청주터미널</option>
-                    <option value="청주공항">청주공항</option>
-                </select>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                <div><label class="setup-label">강사 성함</label>
+                    <input type="text" id="reqProf" class="navy-input" placeholder="홍길동"></div>
+                <div><label class="setup-label">연락처</label>
+                    <input type="tel" id="reqPhone" class="navy-input" placeholder="010-0000-0000"></div>
             </div>
 
-            <div>
-                <label class="setup-label">수송 날짜</label>
-                <input type="date" id="reqDate" class="navy-input">
-            </div>
-            
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; background: #f8fafc; padding: 12px; border-radius: 12px; border: 1.5px solid #e2e8f0;">
-                <div style="display: flex; flex-direction: column; gap: 5px;">
-                    <label id="labelTo" style="font-size: 10px; font-weight: 800; color: #64748b;">오송역 → 항기원</label>
-                    <input type="time" id="reqTimeTo" class="navy-input">
-                </div>
-                <div style="display: flex; flex-direction: column; gap: 5px;">
-                    <label id="labelFrom" style="font-size: 10px; font-weight: 800; color: #64748b;">항기원 → 오송역</label>
-                    <input type="time" id="reqTimeFrom" class="navy-input">
-                </div>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                <div><label class="setup-label">픽업 장소</label>
+                    <select id="reqLoc" class="navy-select">
+                        <option value="오송역">오송역</option>
+                        <option value="청주터미널">청주터미널</option>
+                        <option value="청주공항">청주공항</option>
+                    </select></div>
+                <div><label class="setup-label">구분</label>
+                    <select id="reqDir" class="navy-select">
+                        <option value="arr">모셔오기 (역→항기원)</option>
+                        <option value="dep">모셔다드리기 (항기원→역)</option>
+                    </select></div>
             </div>
 
-            <input type="text" id="reqProf" class="navy-input" placeholder="강사명 성함">
-            <input type="tel" id="reqPhone" class="navy-input" placeholder="강사 연락처">
-            
-            <button class="navy-btn" style="background:#6366f1; height:45px;" onclick="submitTransReq()">수송 예약 등록</button>
-            
-            <!-- 🚩 [변경] 실시간 예약 리스트 삭제 후 현황 보기 버튼 추가 -->
-            <div style="margin-top:15px; border-top:1px dashed #eee; padding-top:20px; text-align: center;">
-                <button class="navy-btn" style="background: #1e293b; width: 100%; height: 45px;" onclick="goToPickupView()">
-                    <i class="fa-solid fa-comments"></i> 실시간 수송 신청현황(톡) 보기
-                </button>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                <div><label class="setup-label">픽업 날짜</label>
+                    <input type="date" id="reqDate" class="navy-input"></div>
+                <div><label class="setup-label">픽업 시간</label>
+                    <input type="time" id="reqTime" class="navy-input"></div>
+            </div>
+
+            <div><label class="setup-label">특이사항 (메시지)</label>
+                <textarea id="reqMemo" class="navy-input" style="min-height:64px; resize:vertical; padding-top:10px;" placeholder="예: 캐리어 2개, 동승자 1명 등"></textarea></div>
+
+            <button class="navy-btn" style="background:#6366f1; height:48px; font-size:15px;" onclick="submitTransReq()">
+                <i class="fa-solid fa-paper-plane"></i> &nbsp;SEND (기사님께 전송)</button>
+
+            <div style="margin-top:8px; border-top:1px dashed #eee; padding-top:16px; text-align:center;">
+                <button class="navy-btn" style="background:#1e293b; width:100%; height:44px;" onclick="goToPickupView()">
+                    <i class="fa-solid fa-list-check"></i> 신청 현황 (확인/미확인/불가) 보기</button>
             </div>
         </div>
-        <button class="navy-btn" style="margin-top:15px; background:#64748b;" onclick="closeTransportModal()">닫기</button>
+        <button class="navy-btn" style="margin-top:14px; background:#64748b;" onclick="closeTransportModal()">닫기</button>
     </div>
 </div>
-
-
 
 
 <!-- 생활관 배정현황 모달 -->
@@ -3217,106 +3217,47 @@ function openTransportModal() {
 
 
 async function submitTransReq() {
-    const rid = document.getElementById('reqCourseRID').value;
-    const loc = document.getElementById('reqLoc').value;
-    const date = document.getElementById('reqDate').value; // YYYY-MM-DD
-    const timeTo = document.getElementById('reqTimeTo').value;
-    const timeFrom = document.getElementById('reqTimeFrom').value;
-    const prof = document.getElementById('reqProf').value.trim();
+    const rid   = (document.getElementById('reqCourseRID') || {}).value || '';
+    const place = document.getElementById('reqLoc').value;
+    const dir   = document.getElementById('reqDir').value;   // arr | dep
+    const date  = document.getElementById('reqDate').value;  // YYYY-MM-DD
+    const time  = document.getElementById('reqTime').value;
+    const prof  = document.getElementById('reqProf').value.trim();
     const phone = document.getElementById('reqPhone').value.trim();
+    const memo  = document.getElementById('reqMemo').value.trim();
 
-    if(!rid || !date || !prof || (!timeTo && !timeFrom)) return showKacAlert("필수 항목을 모두 입력하세요.");
+    if(!prof || !phone || !date || !time) return showKacAlert("강사 성함·연락처·날짜·시간을 입력하세요.");
 
     try {
-        // 1. 기사님 운행불가 일정 확인 (system/transport_requests 전체 조회)
-        const snap = await firebase.database().ref('system/transport_requests').once('value');
-        const allReqs = snap.val() || {};
-        
-        // 해당 날짜에 '운행중단' 설정이 있는지 체크
-        const dayOff = Object.values(allReqs).find(r => 
-            r.date === date && 
-            r.prof === '운행중단' && 
-            r.status !== 'cancelled'
-        );
-
-        if (dayOff) {
-            showKacAlert(`❌ 기사님 운행 불가일입니다.\n사유: ${dayOff.dir}\n해당 일자는 신청이 불가능합니다.`);
-            return; // 함수 종료 (신청 막음)
+        // 기사님 휴가/운행불가일 사전 안내
+        const offSnap = await firebase.database().ref('system/driver_dayoff').once('value');
+        const offs = offSnap.val() || {};
+        const hit = Object.values(offs).find(o => date >= o.start && date <= (o.end || o.start));
+        if (hit) {
+            const ok = await showKacConfirm(`⚠️ 해당 날짜는 기사님 휴가/운행불가일입니다.\n사유: ${hit.reason || '-'}\n\n그래도 신청하시겠습니까?`);
+            if(!ok) return;
         }
 
-        let warningMsg = "";
-
-        // 2. 교육생 퇴교 수송(셔틀) 일정과 중복 확인
-        // 퇴교 수송은 보통 전 노선을 돌기 때문에 전후 2시간 정도의 여유가 필요함
-        Object.keys(globalAllData).forEach(roomKey => {
-            const departure = globalAllData[roomKey].shuttle?.departure;
-            if (departure && departure.date === date && departure.time) {
-                const shuttleTime = departure.time;
-                const courseName = globalAllData[roomKey].settings?.courseName || roomKey;
-
-                const checkShuttleOverlap = (targetTime) => {
-                    if(!targetTime) return false;
-                    const tMin = parseInt(targetTime.split(':')[0])*60 + parseInt(targetTime.split(':')[1]);
-                    const sMin = parseInt(shuttleTime.split(':')[0])*60 + parseInt(shuttleTime.split(':')[1]);
-                    return Math.abs(tMin - sMin) < 120; // 퇴교 시간 기준 2시간(120분) 이내인 경우 중복으로 간주
-                };
-
-                if (checkShuttleOverlap(timeTo) || checkShuttleOverlap(timeFrom)) {
-                    warningMsg += `⚠️ [퇴교중복] 해당 날짜 ${shuttleTime}에 [${courseName}] 퇴교 수송이 예정되어 있습니다.\n`;
-                }
-            }
+        await firebase.database().ref('system/pickup').push({
+            courseRID: rid || null,
+            prof, phone, place, dir, date, time, memo,
+            status: 'pending',
+            createdAt: firebase.database.ServerValue.TIMESTAMP
         });
 
-        // 3. 기존 강사 수송 일정과 중복 확인 (기존 로직)
-        Object.values(allReqs).forEach(req => {
-            if(req.date === date && req.status !== 'cancelled' && req.prof !== '운행중단') {
-                const checkTime = (newT) => {
-                    if(!newT) return false;
-                    const m1 = parseInt(newT.split(':')[0])*60 + parseInt(newT.split(':')[1]);
-                    const m2 = parseInt(req.time.split(':')[0])*60 + parseInt(req.time.split(':')[1]);
-                    return Math.abs(m1 - m2) < 60; // 1시간 이내 중복
-                }
-
-                if(checkTime(timeTo)) {
-                    const advice = RouteManager.analyzeConflict(req, timeTo, `${loc}→항기원`);
-                    warningMsg += advice ? advice.msg : `⚠️ [강사중복] ${req.time} ${req.prof}님 일정과 겹칩니다.\n`;
-                }
-                if(checkTime(timeFrom)) {
-                    const advice = RouteManager.analyzeConflict(req, timeFrom, `항기원→${loc}`);
-                    warningMsg += advice ? advice.msg : `⚠️ [강사중복] ${req.time} ${req.prof}님 일정과 겹칩니다.\n`;
-                }
-            }
-        });
-
-        // 최종 컨펌
-        if(warningMsg) {
-            if(!(await showKacConfirm(warningMsg + "\n배차가 어려울 수 있습니다. 그래도 신청하시겠습니까?"))) return;
-        }
-
-        // 저장 로직
-        const requests = [];
-        if(timeTo) requests.push({ courseRID: rid, dir: `${loc}→항기원`, date, time: timeTo, prof, phone, status: 'pending', timestamp: firebase.database.ServerValue.TIMESTAMP });
-        if(timeFrom) requests.push({ courseRID: rid, dir: `항기원→${loc}`, date, time: timeFrom, prof, phone, status: 'pending', timestamp: firebase.database.ServerValue.TIMESTAMP });
-
-        for(let r of requests) await firebase.database().ref('system/transport_requests').push(r);
-        showKacAlert("✅ 수송 예약이 등록되었습니다.");
-        closeTransportModal();
+        showKacAlert("✅ 기사님께 전송되었습니다.\n응답(확인/불가)은 현황에서 확인할 수 있습니다.");
+        document.getElementById('reqProf').value = '';
+        document.getElementById('reqPhone').value = '';
+        document.getElementById('reqTime').value = '';
+        document.getElementById('reqMemo').value = '';
+        goToPickupView();
     } catch(e) { showKacAlert("오류: " + e.message); }
 }
 
-
-
-
-
-
-
-// [수정] 요청을 삭제하는 대신 'cancelled' 상태로 변경하여 채팅 기록 유지
-async function deleteTrans(id) { 
-    if(await showKacConfirm("해당 수송 요청을 취소하시겠습니까? (채팅창에 취소 내역이 남습니다)")) {
-        await firebase.database().ref(`system/transport_requests/${id}`).update({
-            status: 'cancelled'
-        });
-        showKacAlert("취소되었습니다.");
+async function deleteTrans(id) {
+    if(await showKacConfirm("이 픽업 신청을 삭제할까요?")) {
+        await firebase.database().ref('system/pickup/' + id).remove();
+        showKacAlert("삭제되었습니다.");
     }
 }
 
@@ -4611,6 +4552,7 @@ function showPickupView() {
     
     // 데이터 렌더링 시작
     renderPickupTable();
+    renderDayoffBanner();
     
     // 뷰 전환 시점에 스크롤 한 번 더 시도
     setTimeout(scrollToBottomPickup, 150);
@@ -4645,167 +4587,70 @@ function showStudentShuttleView() {
 function renderPickupTable() {
     const container = document.getElementById('pickupCardContainer');
     if(!container) return;
-    
-    firebase.database().ref('system/transport_requests').on('value', snap => {
+    const esc = t => (''+t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    const ph  = p => { const d=(''+(p||'')).replace(/[^0-9]/g,''); if(d.length===11) return d.replace(/(\d{3})(\d{4})(\d{4})/,'$1-$2-$3'); if(d.length===10) return d.replace(/(\d{3})(\d{3})(\d{4})/,'$1-$2-$3'); return p||''; };
+    const route = (place,dir) => dir==='dep' ? `항기원→${place}` : `${place}→항기원`;
+
+    firebase.database().ref('system/pickup').on('value', snap => {
         const data = snap.val() || {};
-        const now = new Date();
-        const updates = {};
-        let hasUpdates = false;
+        let items = Object.keys(data).map(k => ({ id:k, ...data[k] }));
+        if (currentRID) items = items.filter(r => r.courseRID === currentRID);
 
-// 1. 데이터 배열화 및 마감 로직
-const items = Object.keys(data).map(k => {
-    const item = { id: k, ...data[k] };
-    if (item.status === 'approved' && item.date && item.time) {
-        const scheduledTime = new Date(item.date + ' ' + item.time);
-        const limitTime = new Date(scheduledTime.getTime() + 2 * 60 * 60 * 1000); 
-        if (now > limitTime && !isNaN(scheduledTime.getTime())) {
-            updates[`system/transport_requests/${k}/status`] = 'finished'; // 2시간 지나면 자동 종료 처리
-            item.status = 'finished';
-            hasUpdates = true;
-        }
-    }
-    return item;
-});
-
-        if (hasUpdates) firebase.database().ref().update(updates);
-
-        if (items.length === 0) {
-            container.innerHTML = '<div style="padding:50px; color:#fff; text-align:center; font-size:14px; font-weight:800;">수송 내역이 없습니다.</div>';
+        if (!items.length) {
+            container.innerHTML = '<div style="padding:50px; text-align:center; color:#94a3b8; font-size:14px; font-weight:800;">픽업 신청 내역이 없습니다.</div>';
             return;
         }
-
-        const validItems = items.filter(r => r.prof && r.date && r.courseRID);
-        const grouped = {};
-        validItems.forEach(r => {
-            const requestDate = r.timestamp ? new Date(r.timestamp).toISOString().split('T')[0] : r.date;
-            const groupKey = `${requestDate}_${r.prof}_${r.courseRID}`;
-            if (!grouped[groupKey]) {
-                grouped[groupKey] = { requestDate, prof: r.prof, phone: r.phone || "", courseRID: r.courseRID, requests: [] };
-            }
-            grouped[groupKey].requests.push(r);
-        });
-
-        const sortedGroups = Object.values(grouped).sort((a, b) => a.requestDate.localeCompare(b.requestDate));
-        let htmlContent = ""; 
-        let lastDividerDate = "";
+        items.sort((a,b) => ((b.date||'')+(b.time||'')).localeCompare((a.date||'')+(a.time||'')));
         const dayNames = ["일","월","화","수","목","금","토"];
 
-        sortedGroups.forEach(group => {
-            if(group.requestDate !== lastDividerDate) {
-                htmlContent += `<div class="chat-date-line"><span>${group.requestDate} 요청건</span></div>`;
-                lastDividerDate = group.requestDate;
+        container.innerHTML = items.map(r => {
+            let badge, border;
+            if (r.status === 'confirmed') {
+                border = '#22c55e';
+                badge  = '<span style="background:#22c55e; color:#fff; padding:3px 9px; border-radius:6px; font-size:11px; font-weight:900;">✓ 확인 (배차완료)</span>';
+            } else if (r.status === 'rejected') {
+                border = '#ef4444';
+                badge  = '<span style="background:#ef4444; color:#fff; padding:3px 9px; border-radius:6px; font-size:11px; font-weight:900;">✕ 불가</span>';
+            } else {
+                border = '#f59e0b';
+                badge  = '<span style="background:#f59e0b; color:#fff; padding:3px 9px; border-radius:6px; font-size:11px; font-weight:900;">● 미확인 (대기중)</span>';
             }
-
-            const roomInfo = globalAllData[group.courseRID];
-            const cName = roomInfo?.settings?.courseName || `과정 정보 없음`;
-
-            // --- [상태 판별 로직 수정: 우선순위 변경] ---
-            const isAnyPending = group.requests.some(r => r.status === 'pending'); // 대기중(재신청 포함)이 하나라도 있는가
-            const isAnyApproved = group.requests.some(r => r.status === 'approved'); // 승인된 건이 있는가
-            const isAllFinished = group.requests.every(r => r.status === 'finished' || r.status === 'completed' || r.status === 'cancelled');
-            const isAllCancelled = group.requests.every(r => r.status === 'cancelled');
-
-            let statusBadge = "";
-            let bubbleStyle = ""; 
-
-            // 1순위: 대기 중인 건이 하나라도 있으면 무조건 활성화 (재신청 대응)
-            if (isAnyPending) {
-                bubbleStyle = "background: #fff; border: 2.5px solid #f59e0b;"; // 흰색 배경에 주황색 강조 테두리
-                statusBadge = `<span class="status-stamp-admin" style="background:#f59e0b; color:#fff; padding:2px 6px; border-radius:4px; font-size:10px; font-weight:900; margin-bottom:8px; display:inline-block;">● 승인 대기중 (재신청)</span>`;
-            } 
-            // 2순위: 대기 중은 없지만 승인된 건이 하나라도 있으면 초록색
-            else if (isAnyApproved) {
-                bubbleStyle = "background: #dcfce7; color: #166534; border: 1.5px solid #22c55e;";
-                statusBadge = `<span class="status-stamp-admin" style="background:#22c55e; color:#fff; padding:2px 6px; border-radius:4px; font-size:10px; font-weight:900; margin-bottom:8px; display:inline-block;">✓ 배차 승인됨</span>`;
-            }
-            // 3순위: 모두 종료되었거나 취소된 경우 (운행 종료)
-            else if (isAllFinished && !isAllCancelled) {
-                bubbleStyle = "background: #e5e7eb; color: #6b7280; border: 1.5px solid #d1d5db;";
-                statusBadge = `<span class="status-stamp-admin" style="background:#475569; color:#fff; padding:2px 6px; border-radius:4px; font-size:10px; font-weight:900; margin-bottom:8px; display:inline-block;">운행 종료</span>`;
-            }
-            // 4순위: 전부 취소된 경우만 회색 처리
-            else {
-                bubbleStyle = "background: #f1f5f9; color: #64748b; border: 1.5px solid #cbd5e1;";
-                statusBadge = `<span class="status-stamp-admin" style="background:#94a3b8; color:#fff; padding:2px 6px; border-radius:4px; font-size:10px; font-weight:900; margin-bottom:8px; display:inline-block;">✕ 요청 취소됨</span>`;
-            }
-
-            const targetDate = group.requests[0].date;
-            const d = new Date(targetDate);
-            const dateWithDay = `${targetDate}(${dayNames[d.getDay()]})`;
-
-            group.requests.sort((a,b) => (a.time || "").localeCompare(b.time || ""));
-
-            let scheduleHtml = group.requests.map(r => {
-                const isCan = r.status === 'cancelled';
-                const isFin = r.status === 'finished' || r.status === 'completed';
-                const itemStyle = isCan ? 'text-decoration:line-through; opacity:0.5;' : (isFin ? 'color:#94a3b8;' : '');
-                return `<div style="${itemStyle} font-size:14px; margin-bottom:2px;"><b>${r.time}</b> ${r.dir.replace('→',' > ')} ${isCan?'(취소)':isFin?'(완료)':''}</div>`;
-            }).join('');
-            
-            const cancelButtons = group.requests.map(r => 
-                (r.status === 'pending' || r.status === 'approved') 
-                ? `<button class="btn-cancel-talk" onclick="deleteTrans('${r.id}')" style="color:${r.status==='approved'?'#94a3b8':'#ef4444'}">취소(${r.time})</button>` : ''
-            ).join('');
-
-            // [운영부 말풍선]
-            htmlContent += `
-                <div class="chat-bubble chat-right">
-                    <div class="talk-header" style="text-align:right;">강사 수송 요청</div>
-                    <div class="bubble-admin" style="${bubbleStyle} padding:15px; border-radius:12px 0 12px 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
-                        ${statusBadge}
-                        <div style="font-size:14px; line-height:1.5; font-weight:700;">
-                            ${cName}<br>
-                            ${group.prof} 강사님 (${formatPhone(group.phone)})
-                        </div>
-                        <div style="border-top:1px dashed rgba(0,0,0,0.1); margin:10px 0;"></div>
-                        <div style="font-size:14px; font-weight:800; margin-bottom:5px;">[${dateWithDay}]</div>
-                        <div class="talk-body">${scheduleHtml}</div>
-                        ${cancelButtons ? `<div class="talk-footer" style="justify-content: flex-end; margin-top:8px;">${cancelButtons}</div>` : ''}
+            const cName = (globalAllData[r.courseRID] && globalAllData[r.courseRID].settings && globalAllData[r.courseRID].settings.courseName) || '';
+            let dd = ''; if(r.date){ const dt=new Date(r.date); if(!isNaN(dt)) dd=`(${dayNames[dt.getDay()]})`; }
+            return `
+                <div style="background:#fff; border:1.5px solid ${border}; border-radius:14px; padding:15px; box-shadow:0 2px 6px rgba(0,0,0,0.04);">
+                    <div style="display:flex; align-items:center; gap:8px; margin-bottom:9px;">
+                        <b style="font-size:16px; color:#0f172a;">${esc(r.prof||'강사')}</b>
+                        <span style="color:#64748b; font-size:13px; font-weight:700;">${ph(r.phone)}</span>
+                        <span style="margin-left:auto;">${badge}</span>
                     </div>
-                    <div class="chat-time">운영부</div>
+                    ${cName ? `<div style="font-size:11px; color:#94a3b8; font-weight:800; margin-bottom:3px;">[${esc(cName)}]</div>` : ''}
+                    <div style="font-size:14px; font-weight:700; line-height:1.6; color:#1e293b;">
+                        📅 ${r.date} ${dd} &nbsp;<b style="color:#6366f1;">${r.time||''}</b><br>
+                        📍 ${route(r.place, r.dir)}
+                    </div>
+                    ${r.memo ? `<div style="background:#f8fafc; border-radius:8px; padding:8px 10px; font-size:12px; color:#475569; font-weight:600; margin-top:8px; white-space:pre-wrap;">📝 ${esc(r.memo)}</div>` : ''}
+                    ${r.status==='rejected' && r.rejectReason ? `<div style="color:#dc2626; font-size:12px; font-weight:800; margin-top:8px;">↳ 불가 사유: ${esc(r.rejectReason)}</div>` : ''}
+                    ${r.status==='pending' ? `<div style="text-align:right; margin-top:10px;"><button onclick="deleteTrans('${r.id}')" style="background:#fee2e2; color:#ef4444; border:none; padding:7px 14px; border-radius:8px; font-weight:800; cursor:pointer; font-size:12px;">신청 취소</button></div>` : ''}
                 </div>`;
-
-            // [기사님 답장 말풍선] - 승인된 건이 하나라도 있거나 종료된 경우 표시
-            if (isAnyApproved || (isAllFinished && !isAllCancelled)) {
-                const isFin = isAllFinished;
-                htmlContent += `
-                    <div class="chat-bubble chat-left">
-                        <div class="talk-header">기사님 회신</div>
-                        <div class="bubble-driver" style="${isFin ? 'background:#f1f5f9; color:#94a3b8;' : 'background:#fff;'} padding:12px; border-radius:0 12px 12px 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.05);">
-                            <div style="font-weight:800; font-size:13px; color:${isFin?'#94a3b8':'#059669'};">
-                                ${isFin ? '✅ 수송 업무가 종료되었습니다.' : '확인했습니다. 배차 확정 및 일정표에 등록했습니다!'}
-                            </div>
-                        </div>
-                        <div class="chat-time">배차실</div>
-                    </div>`;
-            }
-        });
-
-        htmlContent += `<div id="chat-bottom-anchor" style="height:10px; width:100%; clear:both;"></div>`;
-        container.innerHTML = htmlContent;
-
-        setTimeout(() => {
-            const anchor = document.getElementById('chat-bottom-anchor');
-            if(anchor) {
-                anchor.scrollIntoView({ behavior: 'smooth', block: 'end' });
-            }
-        }, 100);
+        }).join('');
     });
 }
 
-
-
-
-
-
-
-
-
-
-
- 
-
-
+function renderDayoffBanner() {
+    const el = document.getElementById('dayoffBanner');
+    if(!el) return;
+    firebase.database().ref('system/driver_dayoff').on('value', snap => {
+        const data = snap.val() || {};
+        const today = getTodayString();
+        const list = Object.values(data).filter(o => (o.end || o.start) >= today).sort((a,b) => (a.start||'').localeCompare(b.start||''));
+        if(!list.length){ el.innerHTML = ''; return; }
+        el.innerHTML = `<div style="background:#fff7ed; border:1.5px solid #fdba74; border-radius:12px; padding:12px 15px; margin-bottom:12px;">
+            <div style="font-weight:900; color:#9a3412; font-size:13px; margin-bottom:6px;"><i class="fa-solid fa-triangle-exclamation"></i> 기사님 휴가/운행불가 예정 — 픽업 신청 시 참고하세요</div>
+            ${list.map(o => { const r = (o.end && o.end !== o.start) ? `${o.start} ~ ${o.end}` : o.start; return `<div style="font-size:13px; color:#7c2d12; font-weight:700;">· ${r} : ${(o.reason||'휴가')}</div>`; }).join('')}
+        </div>`;
+    });
+}
 
 // [수정] 교육생 퇴교차량 통합 테이블 (기간 지난 과정 제외 필터 추가)
 function renderShuttleTotalTable() {

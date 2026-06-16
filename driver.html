@@ -2,1774 +2,646 @@
 <html lang="ko">
 <head>
 <!-- ============================================================
-  CATC · 차량·기사  (driver.html)
-  @version  A
-  @build    20260610-220210
+  CATC · 차량·기사  (driver.html)  — 전면 리뉴얼본
+  @version  R1
+  @build    20260616-renewal
   ────────────────────────────────────────────────────────
-  [코드 수정 규칙 · AI/개발자 공통]
-  이 파일을 한 글자라도 고치면:
-    1) 위 @version 을 다음 순서로 딱 1단계 올린다
-       A → B → C → … → Z → A1 → B1 → … → Z1 → A2 → …
-    2) @build 를 수정 시각(YYYYMMDD-HHMMSS)으로 갱신한다
-    3) 아래 화면 배지(vA)와 콘솔 로그의 글자도 같이 맞춘다
-  화면 우측 하단의 작은 'v?' 배지 / 콘솔 로그를 보고
-  Shift+Ctrl+R(강력 새로고침) 후 최신본 적용 여부를 확인한다.
+  PC용 기사 운행관리 대시보드
+   - 신청 인박스(강사 픽업): 확인 / 불가(사유)
+   - 주간 스케줄 보드: 확정 픽업 · 입교/퇴교 고정버스 · 휴가 · 퇴교차량
+   - 중복(겹침) 자동 감지
+   - 입교/퇴교 고정버스 등록
+   - 휴가 등록 → 운영부에 사전 고지(system/driver_dayoff)
+   - 퇴교차량: 교육생 신청 확인 + 출발시간 공지(교육생/강사 화면 공유)
+  데이터 모델
+   - system/pickup/{id}        : {prof, phone, place, dir, date, time, memo, status, rejectReason, createdAt, respondedAt}
+                                  status = pending(미확인) | confirmed(확인) | rejected(불가)
+   - system/driver_dayoff/{id} : {start, end, reason, createdAt}
+   - system/driver_fixed/{id}  : {kind('입교'|'퇴교'), date, time, note, createdAt}
+   - courses/{room}/shuttle/*  : 기존 유지(교육생 퇴교차량 신청·출발시간 공지 연동)
 ============================================================ -->
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=3.0, user-scalable=yes, viewport-fit=cover" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>항공기술훈련원 차량지원시스템</title>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" rel="stylesheet">
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-
-
-
 <style>
-    :root {
-      --navy: #0f172a; --blue: #0ea5e9; --blue-deep: #0369a1;
-      --bg: #f1f5f9; --card: #ffffff; --border: #e2e8f0;
-      --success: #10b981; --danger: #ef4444; --warning: #f59e0b;
-    }
-    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; font-family: 'Pretendard', sans-serif; }
-    body { margin: 0; padding: 0; background: #cfd8e3; display: flex; justify-content: center; height: 100dvh; overflow: hidden; }
-    
-    .app-container { width: 100%; max-width: 600px; height: 100%; background: var(--bg); display: flex; flex-direction: column; position: relative; box-shadow: 0 0 50px rgba(0,0,0,0.2); }
-    .app-header { height: 60px; background: var(--navy); display: flex; align-items: center; justify-content: space-between; padding: 0 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.15); z-index: 1000; }
-    .header-btn { color: #fff; font-size: 20px; font-weight: 900; cursor: pointer; padding: 10px; }
-    .header-title { font-size: 16px; font-weight: 900; color: #fff; letter-spacing: -0.5px; }
+  :root{
+    --navy:#0f172a; --navy2:#1e293b; --blue:#0ea5e9; --blue-deep:#0369a1;
+    --bg:#eef2f7; --card:#fff; --border:#e2e8f0; --muted:#64748b;
+    --success:#16a34a; --danger:#ef4444; --warn:#f59e0b; --indigo:#6366f1; --teal:#0d9488;
+  }
+  *{box-sizing:border-box; font-family:'Pretendard',sans-serif; -webkit-tap-highlight-color:transparent;}
+  body{margin:0; background:var(--bg); color:var(--navy); }
+  .wrap{max-width:1480px; margin:0 auto; padding:0 18px 60px;}
 
-    .sidebar { position: absolute; top: 0; right: -280px; width: 280px; height: 100%; background: #fff; z-index: 10000; transition: 0.3s; box-shadow: -5px 0 15px rgba(0,0,0,0.2); }
-    .sidebar.open { right: 0; }
-    .sidebar-header { padding: 30px 20px; background: var(--navy); color: #fff; }
-    .sidebar-menu { padding: 10px; }
-    .menu-item { padding: 15px; display: flex; align-items: center; gap: 12px; font-weight: 700; color: #334155; border-radius: 8px; cursor: pointer; border-bottom: 1px solid #f1f5f9; }
+  /* 헤더 */
+  .topbar{background:var(--navy); color:#fff; position:sticky; top:0; z-index:50; box-shadow:0 2px 10px rgba(0,0,0,.18);}
+  .topbar-in{max-width:1480px; margin:0 auto; padding:0 18px; height:60px; display:flex; align-items:center; gap:16px;}
+  .brand{font-size:18px; font-weight:900; letter-spacing:-.5px; display:flex; align-items:center; gap:9px;}
+  .brand i{color:var(--blue);}
+  .today-chip{margin-left:6px; font-size:13px; font-weight:700; color:#cbd5e1;}
+  .top-spacer{flex:1;}
+  .top-btn{background:#1e293b; color:#fff; border:1px solid #334155; border-radius:9px; padding:8px 13px; font-size:13px; font-weight:800; cursor:pointer; display:inline-flex; align-items:center; gap:7px;}
+  .top-btn:hover{background:#334155;}
 
-    .tab-bar { display: flex; background: #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.08); flex-shrink: 0; }
-    .tab-btn { flex: 1; padding: 14px 0; border: none; background: none; font-size: 15px; font-weight: 800; color: #94a3b8; cursor: pointer; border-bottom: 3px solid transparent; position: relative; }
-    .tab-btn.active { color: var(--blue-deep); border-bottom-color: var(--blue); background: #f8fafc; }
-    .badge { position: absolute; top: 5px; right: 5px; background: var(--danger); color: #fff; font-size: 10px; padding: 2px 6px; border-radius: 10px; }
+  /* 탭 */
+  .tabs{display:flex; gap:6px; margin:16px 0 14px;}
+  .tab{flex:0 0 auto; padding:11px 20px; border-radius:11px; background:#fff; border:1.5px solid var(--border); font-size:14px; font-weight:800; color:var(--muted); cursor:pointer; position:relative;}
+  .tab.active{background:var(--navy); color:#fff; border-color:var(--navy);}
+  .tab .cnt{display:inline-block; min-width:18px; height:18px; line-height:18px; text-align:center; background:var(--danger); color:#fff; border-radius:9px; font-size:11px; font-weight:900; margin-left:7px; padding:0 5px;}
+  .tab.active .cnt{background:var(--warn);}
 
-    .app-content { flex: 1; overflow-y: auto; padding: 10px; display: flex; flex-direction: column; gap: 10px; }
+  .view{display:none;}
+  .view.active{display:block;}
 
-    .schedule-wrapper { background: #fff; border: 2px solid #000; border-radius: 8px; overflow-x: auto; }
-    .schedule-table { width: 100%; border-collapse: collapse; min-width: 450px; table-layout: fixed; }
-    .schedule-table th, .schedule-table td { border: 1px solid #ddd; text-align: center; height: 45px !important; font-size: 13px; vertical-align: middle; position: relative; padding: 0 2px !important; overflow: hidden; }
-    .cell-container { width: 100%; height: 100%; overflow-y: auto; display: flex; flex-direction: column; gap: 2px; }
-    .schedule-table th { background: #f1f5f9; font-weight: 900; color: var(--navy); }
-    .time-col { width: 50px; background: #f1f5f9 !important; font-weight: 800; border-right: 2px solid var(--navy) !important; }
-    .drop-target { background-color: #e0f2fe !important; }
-    .cell-event { border-radius: 4px; padding: 2px; height: 38px; font-size: 9px; font-weight: 800; line-height: 1.1; cursor: pointer; display: flex; flex-direction: column; justify-content: center; box-shadow: 0 1px 2px rgba(0,0,0,0.1); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .block-entry { background: #eff6ff; color: #1e40af; border: 1px solid #1e40af; }
-    .block-prof { background: #fae8ff; color: #a21caf; border: 1px solid #a21caf; }
-    .block-departure { background: #ecfdf5; color: #047857; border: 1px solid #047857; }
-    .block-off { background: #fee2e2; color: #ef4444; border: 1px dashed #ef4444; position: relative; }
-    .block-off::before { content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: repeating-linear-gradient(45deg, transparent, transparent 5px, rgba(239,68,68,0.2) 5px, rgba(239,68,68,0.2) 10px); }
-    .cell-휴 { background: #fafafa; color: #999; font-size: 9px; }
+  /* 운행관리 레이아웃 */
+  .grid2{display:grid; grid-template-columns:minmax(0,1fr) 380px; gap:16px; align-items:start;}
+  @media(max-width:1100px){ .grid2{grid-template-columns:1fr;} }
 
+  .panel{background:var(--card); border:1px solid var(--border); border-radius:16px; box-shadow:0 4px 14px rgba(15,23,42,.05); overflow:hidden;}
+  .panel-head{padding:13px 16px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:9px; font-weight:900; font-size:15px;}
+  .panel-head .sub{font-size:12px; color:var(--muted); font-weight:700; margin-left:auto;}
+  .panel-body{padding:14px 16px;}
 
-/* 도착(빨강) 및 출발(파랑) 색상 정의 */
-    .block-arr { background: #fee2e2 !important; color: #991b1b !important; border: 1px solid #f87171 !important; } /* 도착: 연빨강 */
-    .block-dep { background: #e0f2fe !important; color: #075985 !important; border: 1px solid #7dd3fc !important; } /* 출발: 연파랑 */
+  /* 주차 네비 */
+  .week-nav{display:flex; align-items:center; gap:10px;}
+  .week-nav button{width:32px; height:32px; border-radius:8px; border:1px solid var(--border); background:#fff; cursor:pointer; font-size:14px; color:var(--navy2); font-weight:900;}
+  .week-nav button:hover{background:#f1f5f9;}
+  .week-label{font-weight:900; font-size:14px;}
 
+  /* 스케줄 보드 */
+  .board{width:100%; border-collapse:collapse; table-layout:fixed;}
+  .board th,.board td{border:1px solid #e6ebf1; text-align:center; vertical-align:top;}
+  .board thead th{background:#f1f5f9; color:var(--navy); font-weight:900; font-size:13px; height:46px; padding:4px;}
+  .board thead th .d{font-size:11px; font-weight:700; color:var(--muted); margin-top:2px;}
+  .board thead th.today-col{background:#e0f2fe; color:var(--blue-deep);}
+  .board .timecol{width:58px; background:#f8fafc; font-weight:800; font-size:12px; color:var(--muted); border-right:2px solid var(--navy);}
+  .board td.slot{height:46px; padding:3px; cursor:pointer; transition:background .12s;}
+  .board td.slot:hover{background:#f0f9ff;}
+  .board td.today-col{background:#f5fbff;}
+  .ev{border-radius:7px; padding:3px 5px; font-size:11px; font-weight:800; line-height:1.25; margin-bottom:2px; text-align:left; cursor:pointer; overflow:hidden;}
+  .ev small{font-weight:700; opacity:.85; font-size:10px;}
+  .ev-arr{background:#fee2e2; color:#991b1b; border:1px solid #fca5a5;}      /* 역→항기원 도착픽업 */
+  .ev-dep{background:#e0f2fe; color:#075985; border:1px solid #7dd3fc;}      /* 항기원→역 샌딩 */
+  .ev-entry{background:#eef2ff; color:#3730a3; border:1px solid #a5b4fc;}    /* 입교버스 */
+  .ev-leave{background:#ecfdf5; color:#065f46; border:1px solid #6ee7b7;}    /* 퇴교버스 */
+  .ev-off{background:repeating-linear-gradient(45deg,#fef2f2,#fef2f2 6px,#fee2e2 6px,#fee2e2 12px); color:#b91c1c; border:1px dashed #f87171; text-align:center;}
+  .ev-lunch{color:#cbd5e1; font-size:10px; font-weight:700;}
 
+  /* 인박스 */
+  .inbox-empty{text-align:center; padding:38px 14px; color:#94a3b8; font-size:13px; font-weight:700;}
+  .req{border:1.5px solid var(--border); border-radius:13px; padding:12px 13px; margin-bottom:11px; background:#fff;}
+  .req.pending{border-color:#fcd34d; box-shadow:0 0 0 3px rgba(245,158,11,.08);}
+  .req-top{display:flex; align-items:center; gap:8px; margin-bottom:7px;}
+  .req-prof{font-size:15px; font-weight:900;}
+  .req-phone{font-size:12px; color:var(--muted); font-weight:700;}
+  .tag{font-size:10px; font-weight:900; padding:3px 7px; border-radius:6px; margin-left:auto;}
+  .tag-pending{background:#fff7ed; color:#c2410c; border:1px solid #fdba74;}
+  .tag-confirmed{background:#f0fdf4; color:#15803d; border:1px solid #86efac;}
+  .tag-rejected{background:#fef2f2; color:#dc2626; border:1px solid #fca5a5;}
+  .req-line{font-size:13px; font-weight:700; margin:3px 0; display:flex; gap:7px; align-items:center;}
+  .req-line i{width:15px; color:var(--muted); text-align:center;}
+  .req-memo{background:#f8fafc; border-radius:8px; padding:8px 10px; font-size:12px; color:#475569; font-weight:600; margin-top:6px; white-space:pre-wrap;}
+  .req-conflict{background:#fff1f2; border:1px solid #fda4af; color:#be123c; border-radius:8px; padding:7px 10px; font-size:11px; font-weight:800; margin-top:8px; line-height:1.5;}
+  .req-btns{display:flex; gap:8px; margin-top:11px;}
+  .btn{flex:1; padding:10px; border-radius:10px; border:none; font-size:13px; font-weight:900; cursor:pointer;}
+  .btn-ok{background:var(--success); color:#fff;}
+  .btn-no{background:#fff; color:var(--danger); border:1.5px solid #fca5a5;}
+  .btn-undo{background:#f1f5f9; color:var(--muted); font-size:12px;}
+  .reject-reason{font-size:11.5px; color:#b91c1c; font-weight:800; margin-top:7px;}
 
+  .done-row{display:flex; align-items:center; gap:10px; padding:9px 4px; border-bottom:1px solid #f1f5f9; font-size:13px;}
+  .done-row:last-child{border-bottom:none;}
+  .done-row .nm{font-weight:800;}
+  .done-row .meta{color:var(--muted); font-weight:700; font-size:12px; margin-left:auto;}
 
-    .chat-container { background: #abc1d1; padding: 10px; display: flex; flex-direction: column; gap: 8px; min-height: 100%; }
-    .req-card { background: #fff; border-radius: 10px; padding: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); width: auto; max-width: 70%; position: relative; align-self: flex-start; font-size: 11px; line-height: 1.4; }
-    .req-card.mine { align-self: flex-end; background: #fee500; }
-/* [추가] 강사수송 카드 상태별 색상 */
-    .req-card.approved { background: #dcfce7 !important; border: 1.5px solid #22c55e !important; } /* 승인: 연초록 */
-    .req-card.cancelled { background: #f1f5f9 !important; border: 1.5px solid #cbd5e1 !important; opacity: 0.7; } /* 취소: 연회색 */
-    
-    /* 상태 도장(글자) 스타일 */
-    .status-stamp {
-        font-size: 10px; font-weight: 900; padding: 2px 6px; border-radius: 4px; margin-bottom: 5px; display: inline-block;
-    }
+  /* 퇴교차량 카드 */
+  .leave-card{display:grid; grid-template-columns:1.4fr .7fr 1.2fr .6fr; gap:10px; align-items:center; background:#fff; border:1px solid var(--border); border-radius:13px; padding:13px 15px; margin-bottom:10px;}
+  .leave-card .cn{font-weight:900; font-size:14px;}
+  .leave-card .sub{font-size:11px; color:var(--danger); font-weight:700; margin-top:2px;}
+  .cnt-badge{background:#e0f2fe; color:var(--blue-deep); font-weight:900; border-radius:8px; padding:5px 9px; font-size:13px; text-align:center;}
+  .leave-sel{width:100%; padding:9px; border-radius:10px; border:1.5px solid var(--border); font-weight:800; color:var(--blue-deep); text-align:center;}
+  .ann-btn{width:42px; height:42px; border-radius:11px; border:none; background:#f1f5f9; color:#cbd5e1; font-size:17px; cursor:pointer;}
+  .ann-btn.on{background:#d1fae5; color:var(--success); box-shadow:0 0 10px rgba(16,185,129,.3);}
+  .breakdown{display:flex; gap:6px; flex-wrap:wrap; margin-top:4px;}
+  .bd{font-size:10px; font-weight:800; padding:2px 6px; border-radius:5px; background:#f1f5f9; color:#475569;}
 
+  /* 관리 리스트(고정/휴가) */
+  .mlist{list-style:none; margin:0; padding:0;}
+  .mitem{display:flex; align-items:center; gap:10px; padding:11px 12px; border:1px solid var(--border); border-radius:11px; margin-bottom:8px; background:#fff; font-size:13px;}
+  .mitem .ic{width:34px; height:34px; border-radius:9px; display:flex; align-items:center; justify-content:center; font-size:15px;}
+  .mitem .ic.entry{background:#eef2ff; color:var(--indigo);}
+  .mitem .ic.leave{background:#ecfdf5; color:var(--teal);}
+  .mitem .ic.off{background:#fef2f2; color:var(--danger);}
+  .mitem .t{font-weight:800;}
+  .mitem .s{color:var(--muted); font-weight:700; font-size:12px;}
+  .mitem .del{margin-left:auto; background:none; border:none; color:#cbd5e1; cursor:pointer; font-size:15px;}
+  .mitem .del:hover{color:var(--danger);}
 
+  .addbar{display:flex; gap:9px; flex-wrap:wrap; margin-bottom:14px;}
+  .addbar button{padding:11px 16px; border-radius:11px; border:none; font-weight:900; font-size:13px; cursor:pointer; color:#fff; display:inline-flex; align-items:center; gap:8px;}
+  .add-entry{background:var(--indigo);} .add-leave{background:var(--teal);} .add-off{background:var(--danger);}
 
+  /* 모달 */
+  .ov{display:none; position:fixed; inset:0; background:rgba(15,23,42,.55); z-index:9000; align-items:center; justify-content:center; padding:18px;}
+  .ov.open{display:flex;}
+  .modal{background:#fff; width:100%; max-width:440px; border-radius:18px; overflow:hidden; box-shadow:0 20px 50px rgba(0,0,0,.3);}
+  .modal-head{padding:16px 18px; font-weight:900; font-size:16px; color:#fff; display:flex; justify-content:space-between; align-items:center;}
+  .modal-body{padding:18px; display:flex; flex-direction:column; gap:13px;}
+  .fld label{display:block; font-size:12px; font-weight:800; color:var(--muted); margin-bottom:5px;}
+  .fld input,.fld select,.fld textarea{width:100%; padding:11px; border:1.5px solid var(--border); border-radius:10px; font-size:14px; font-weight:700; font-family:inherit;}
+  .fld textarea{min-height:70px; resize:vertical;}
+  .modal-foot{padding:0 18px 18px; display:flex; gap:10px;}
+  .modal-foot button{flex:1; padding:13px; border-radius:11px; border:none; font-weight:900; font-size:14px; cursor:pointer;}
+  .mf-cancel{background:#f1f5f9; color:var(--muted);}
+  .mf-ok{color:#fff;}
 
-
-
-    .req-card.mine::after { content: ''; position: absolute; top: 10px; right: -8px; border-left: 10px solid #fee500; border-bottom: 10px solid transparent; }
-    .req-card:not(.mine)::after { content: ''; position: absolute; top: 10px; left: -8px; border-right: 10px solid #fff; border-bottom: 10px solid transparent; }
-    .req-btn-group { display: flex; gap: 5px; margin-top: 8px; }
-    .mini-btn { padding: 6px 10px; border-radius: 4px; border: 1px solid #ddd; background: #fff; font-size: 11px; font-weight: 800; cursor: pointer; }
-    .mini-btn.primary { background: var(--blue); color:#fff; border:none; }
-    .cancel-notice { text-align: center; margin: 8px 0; }
-    .cancel-notice span { background: rgba(0,0,0,0.1); padding: 4px 12px; border-radius: 10px; font-size: 10px; color: #666; }
-    .req-card.mine[style*="grayscale"] { background: #d0d0d0 !important; }
-    .req-card.mine[style*="grayscale"]::after { border-left-color: #d0d0d0 !important; }
-
-    .list-wrapper { background: transparent; border: none; overflow: hidden; }
-    .list-header { display: grid; grid-template-columns: 1.5fr 0.6fr 1.5fr 0.5fr; padding: 12px 15px; background: #f8fafc; border-radius: 12px; margin-bottom: 10px; font-size: 11px; font-weight: 800; color: #64748b; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
-    .course-row { display: grid; grid-template-columns: 1.5fr 0.6fr 1.5fr 0.5fr; background: #fff; border-radius: 15px; margin-bottom: 8px; padding: 10px 5px; align-items: center; text-align: center; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); border: 1px solid #f1f5f9; transition: transform 0.2s; }
-    .course-row:active { transform: scale(0.98); }
-    .t-cell { padding: 8px 2px; font-size: 12px; font-weight: 700; color: var(--navy); }
-    .count-badge { background: #e0f2fe; color: #0369a1; padding: 4px 8px; border-radius: 8px; font-size: 11px; font-weight: 900; }
-    .time-select-custom { width: 90%; padding: 8px; border-radius: 10px; border: 1.5px solid #e2e8f0; background: #fcfcfc; font-size: 12px; font-weight: 800; color: var(--blue-deep); text-align: center; outline: none; }
-    .notice-btn { border: none; background: #f1f5f9; width: 36px; height: 36px; border-radius: 10px; font-size: 18px; cursor: pointer; color: #cbd5e1; transition: 0.3s; }
-    .notice-btn.active { background: #d1fae5; color: var(--success); box-shadow: 0 0 10px rgba(16, 185, 129, 0.3); }
-
-    .timeline-card { background: #fff; border-radius: 10px; padding: 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 8px; }
-    .timeline-time { font-size: 16px; font-weight: 900; color: var(--blue-deep); margin-bottom: 8px; }
-    .timeline-item { padding: 8px 0; border-left: 3px solid var(--blue); padding-left: 12px; margin-left: 5px; font-size: 12px; font-weight: 700; }
-    .timeline-route { color: #047857; font-weight: 800; }
-
-    .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 10000; align-items: center; justify-content: center; padding: 20px; }
-    .modal-box { background: #fff; width: 100%; max-width: 400px; border-radius: 20px; padding: 20px; max-height: 90vh; overflow-y: auto; }
-    .modal-input { width: 100%; height: 45px; border: 1.5px solid #ddd; border-radius: 8px; padding: 0 10px; margin-bottom: 10px; font-size: 14px; font-weight: 700; }
-
-    .context-menu { position: absolute; background: #fff; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); padding: 5px; z-index: 15000; min-width: 120px; }
-    .context-item { padding: 10px 15px; cursor: pointer; font-size: 12px; font-weight: 700; border-radius: 6px; display: flex; align-items: center; gap: 8px; }
-    .context-item:hover { background: #f1f5f9; }
-    .context-item.danger { color: var(--danger); }
-
-    #view-0 { background: var(--bg); min-height: 100%; }
-    #view-1 { background: var(--bg); min-height: 100%; }
-    #view-2 { background: #f1f5f9; min-height: 100%; } 
-    #view-3 { background: var(--bg); min-height: 100%; }
-
-
-    #prof-info-area { background: #e0f2fe !important; border: 1px solid #7dd3fc !important; } /* 강사정보: 연파랑 */
-    #route-info-area { background: #fef3c7 !important; border: 1px solid #fcd34d !important; } /* 이동정보: 연노랑 */
-    #passengers-area { background: #dcfce7 !important; border: 1px solid #86efac !important; } /* 동승객: 연초록 */
-    #off-reason-area { background: #fee2e2 !important; border: 1px solid #fecaca !important; } /* 운행불가: 연빨강 */
-
-
-
-/* [추가] 하단 중앙 플로팅 홈 버튼 스타일 */
-    #floatingHomeBtn {
-        width: 56px; height: 56px;
-        background: var(--blue); color: #fff;
-        border-radius: 50%;
-        display: none; /* 기본은 숨김 */
-        align-items: center; justify-content: center;
-        position: fixed; bottom: 30px; left: 50%;
-        transform: translateX(-50%);
-        box-shadow: 0 8px 20px rgba(0,0,0,0.3);
-        cursor: pointer;
-        border: 4px solid #fff;
-        z-index: 10000;
-        transition: 0.2s;
-    }
-    #floatingHomeBtn:active { transform: translateX(-50%) scale(0.9); }
-    #floatingHomeBtn i { font-size: 22px; }
-
-    /* ── 강사수송 게시판 테이블 스타일 ── */
-    .filter-chip {
-        padding: 5px 12px; border-radius: 16px; font-size: 12px; font-weight: 800;
-        border: 1.5px solid #e2e8f0; background: white; color: #64748b; cursor: pointer;
-    }
-    .filter-chip.on { background: var(--navy); color: white; border-color: var(--navy); }
-
-    /* 게시판 테이블 */
-    .brd-table { width: 100%; border-collapse: collapse; }
-    .brd-table thead tr { background: #f1f5f9; border-bottom: 2px solid #e2e8f0; }
-    .brd-table th {
-        padding: 10px 8px; font-size: 11px; font-weight: 800;
-        color: #64748b; text-align: center; white-space: nowrap;
-    }
-    .brd-table tbody tr {
-        border-bottom: 1px solid #f1f5f9; cursor: pointer;
-        transition: background 0.1s;
-    }
-    .brd-table tbody tr:active { background: #f8fafc; }
-    .brd-table td {
-        padding: 10px 6px; font-size: 13px; font-weight: 700;
-        color: #1e293b; text-align: center; vertical-align: middle;
-    }
-
-    /* 상태 뱃지 */
-    .st-badge {
-        display: inline-block; padding: 3px 7px; border-radius: 6px;
-        font-size: 10px; font-weight: 900; white-space: nowrap;
-    }
-    .st-pending  { background: #fef2f2; color: #dc2626; border: 1px solid #fca5a5; }
-    .st-approved { background: #f0fdf4; color: #16a34a; border: 1px solid #86efac; }
-    .st-finished { background: #f8fafc; color: #64748b; border: 1px solid #cbd5e1; }
-    .st-cancelled{ background: #f8fafc; color: #94a3b8; border: 1px solid #e2e8f0; }
-
-    /* 방향 뱃지 */
-    .dir-arr { color: #991b1b; font-size: 11px; font-weight: 800; }
-    .dir-dep { color: #075985; font-size: 11px; font-weight: 800; }
-
-    /* 상세 드로어 */
-    .brd-drawer {
-        background: #f8fafc; border-bottom: 2px solid #e2e8f0;
-        padding: 12px 14px; display: none;
-    }
-    .brd-drawer.open { display: block; }
-    .drawer-row { display: flex; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
-    .drawer-item {
-        background: white; border-radius: 8px; padding: 7px 12px;
-        font-size: 12px; flex: 1; min-width: 110px;
-    }
-    .drawer-label { font-size: 10px; color: #94a3b8; font-weight: 800; margin-bottom: 2px; }
-    .drawer-val   { font-weight: 900; color: #0f172a; }
-    .drawer-conflict {
-        background: #fff1f2; border: 1px solid #fda4af; color: #be123c;
-        border-radius: 8px; padding: 8px 12px; font-size: 11px; font-weight: 800;
-        margin-bottom: 8px; line-height: 1.5;
-    }
-    .drawer-actions { display: flex; gap: 8px; margin-top: 4px; }
-    .d-btn {
-        flex: 1; padding: 10px; border-radius: 10px; border: none;
-        font-size: 13px; font-weight: 900; cursor: pointer;
-    }
-    .d-btn.approve  { background: #22c55e; color: white; }
-    .d-btn.reject   { background: #fff; color: #ef4444; border: 1.5px solid #fca5a5; }
-    .d-btn.complete { background: #0ea5e9; color: white; }
-    .d-btn.revert   { background: #f1f5f9; color: #64748b; font-size: 12px; }
-    .d-btn.cancel   { background: #f1f5f9; color: #64748b; font-size: 12px; }
-
-    .req-empty {
-        text-align: center; padding: 60px 20px; color: #94a3b8;
-        font-size: 14px; font-weight: 700;
-    }
-
-
-
-
-
-
-
-
-
+  #spinner{position:fixed; inset:0; background:rgba(255,255,255,.7); display:flex; align-items:center; justify-content:center; z-index:9999;}
+  #spinner i{font-size:34px; color:var(--blue);}
+  .vbadge{position:fixed; right:10px; bottom:8px; font-size:10px; color:#94a3b8; font-weight:800;}
 </style>
-
-
-
-
-
-
 </head>
 <body>
-
-<!-- 알림 소리를 재생할 오디오 태그 -->
 <audio id="alarm-sound" src="car_sound.mp3" preload="auto"></audio>
 
-
-<div class="sidebar-overlay" onclick="toggleSidebar()" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:9999;"></div>
-<div class="sidebar" id="sidebar">
-    <div class="sidebar-header"><div style="font-size:18px; font-weight:900;">기사 전용 설정</div></div>
-    <div class="sidebar-menu">
-        <div class="menu-item" onclick="captureSchedule()"><i class="fa-solid fa-camera"></i> 일정표 캡처</div>
-    </div>
-</div>
-
-<div class="app-container">
-  <header class="app-header">
-    <div class="header-btn" onclick="handleBack()">&lt;&lt;</div>
-    <div class="header-title">항공기술훈련원 차량지원</div>
-    <div class="header-btn" onclick="toggleSidebar()"><i class="fa-solid fa-bars"></i></div>
-  </header>
-
-  <div class="tab-bar">
-    <button id="tab0" class="tab-btn active" onclick="switchTab(0)">종합일정표</button>
-    <button id="tab1" class="tab-btn" onclick="switchTab(1)">금일일정</button>
-    <button id="tab2" class="tab-btn" onclick="switchTab(2)">강사수송 <span id="badge-count" class="badge" style="display:none;">0</span></button>
-    <button id="tab3" class="tab-btn" onclick="switchTab(3)">퇴교수송</button>
-  </div>
-
-<div id="loading-spinner" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:20000; align-items:center; justify-content:center;">
-  <div style="background:#fff; padding:20px; border-radius:10px; text-align:center;">
-    <i class="fa-solid fa-spinner fa-spin" style="font-size:30px; color:var(--blue);"></i>
-    <div style="margin-top:10px; font-weight:800;">데이터 로딩중...</div>
+<div class="topbar">
+  <div class="topbar-in">
+    <div class="brand"><i class="fa-solid fa-van-shuttle"></i> 차량지원 운행관리 <span class="today-chip" id="todayChip"></span></div>
+    <div class="top-spacer"></div>
+    <button class="top-btn" onclick="location.href='portal.html'"><i class="fa-solid fa-house"></i> 포털</button>
+    <button class="top-btn" onclick="location.reload()"><i class="fa-solid fa-rotate"></i> 새로고침</button>
   </div>
 </div>
 
-  <main class="app-content">
-    <div id="view-0" style="display: block;">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-          <button class="mini-btn primary" onclick="goToday()"><i class="fa-solid fa-calendar-day"></i> 오늘</button>
-          <div style="display:flex; align-items:center; gap:8px;">
-            <i class="fa-solid fa-circle-chevron-left" style="font-size:22px; color:var(--blue); cursor:pointer;" onclick="changeWeek(-1)"></i>
-            <span id="week-range" style="font-weight:900; font-size:13px; min-width:120px; text-align:center;">...</span>
-            <i class="fa-solid fa-circle-chevron-right" style="font-size:22px; color:var(--blue); cursor:pointer;" onclick="changeWeek(1)"></i>
+<div class="wrap">
+  <div class="tabs">
+    <div class="tab active" data-view="manage" onclick="switchView('manage')"><i class="fa-solid fa-calendar-week"></i> 운행관리 <span class="cnt" id="tabCnt" style="display:none;">0</span></div>
+    <div class="tab" data-view="leave" onclick="switchView('leave')"><i class="fa-solid fa-bus"></i> 퇴교차량</div>
+    <div class="tab" data-view="fixed" onclick="switchView('fixed')"><i class="fa-solid fa-gear"></i> 고정일정·휴가</div>
+  </div>
+
+  <!-- ============ 운행관리 ============ -->
+  <div class="view active" id="view-manage">
+    <div class="grid2">
+      <!-- 주간 보드 -->
+      <div class="panel">
+        <div class="panel-head">
+          <i class="fa-solid fa-calendar-week" style="color:var(--blue-deep);"></i> 주간 운행 스케줄
+          <div class="sub" style="margin-left:auto;">
+            <div class="week-nav">
+              <button onclick="moveWeek(-1)">‹</button>
+              <span class="week-label" id="weekLabel"></span>
+              <button onclick="moveWeek(1)">›</button>
+              <button onclick="moveWeek(0)" title="이번주" style="width:auto; padding:0 10px; font-size:12px;">오늘</button>
+            </div>
           </div>
-          <button class="mini-btn" onclick="openNewSchedule()"><i class="fa-solid fa-plus"></i> 신규</button>
         </div>
-        <div class="schedule-wrapper" id="schedule-capture-area">
-          <table class="schedule-table">
-            <thead id="sched-head"></thead>
-            <tbody id="sched-body"></tbody>
+        <div class="panel-body" style="overflow-x:auto;">
+          <table class="board">
+            <thead id="boardHead"></thead>
+            <tbody id="boardBody"></tbody>
           </table>
+          <div style="display:flex; gap:14px; flex-wrap:wrap; margin-top:12px; font-size:11px; font-weight:700; color:var(--muted);">
+            <span><b style="color:#991b1b;">■</b> 도착(역→항기원)</span>
+            <span><b style="color:#075985;">■</b> 샌딩(항기원→역)</span>
+            <span><b style="color:#3730a3;">■</b> 입교버스</span>
+            <span><b style="color:#065f46;">■</b> 퇴교버스</span>
+            <span><b style="color:#b91c1c;">▨</b> 휴가</span>
+          </div>
         </div>
-<!-- 표 바로 아래 우측 정렬된 버튼 영역 -->
-        <div style="display:flex; justify-content:center; margin-top:20px; padding-bottom:30px;">
-  <button class="mini-btn" style="background:var(--danger); color:white; width:100%; height:50px; font-size:15px; border-radius:12px; box-shadow:0 4px 10px rgba(239,68,68,0.3);" onclick="openNewDayOff()">
-    <i class="fa-solid fa-calendar-xmark"></i> 운행불가 일정 등록하기
-  </button>
-</div>
-    </div>
-
-    <div id="view-1" style="display: none;">
-      <div style="background:#fff; padding:10px; border-radius:8px; margin-bottom:10px; text-align:center;">
-        <div style="font-size:16px; font-weight:900; color:var(--blue-deep);" id="today-date-display">오늘의 수송 일정</div>
       </div>
-      <div id="today-timeline-container" style="display:flex; flex-direction:column; gap:10px;"></div>
-    </div>
 
-    <div id="view-2" style="display: none; height:100%; flex-direction:column;">
-      <!-- 필터 바 -->
-      <div style="padding:8px 10px; background:#fff; border-bottom:1px solid #e2e8f0; flex-shrink:0; display:flex; gap:6px; align-items:center; justify-content:space-between;">
-        <div style="display:flex; gap:5px;">
-          <button class="filter-chip on" id="chip-all"      onclick="setReqFilter('all',this)">전체</button>
-          <button class="filter-chip"    id="chip-pending"  onclick="setReqFilter('pending',this)">🔴 신규</button>
-          <button class="filter-chip"    id="chip-approved" onclick="setReqFilter('approved',this)">✅ 승인</button>
-          <button class="filter-chip"    id="chip-done"     onclick="setReqFilter('done',this)">완료</button>
+      <!-- 인박스 -->
+      <div style="display:flex; flex-direction:column; gap:16px;">
+        <div class="panel">
+          <div class="panel-head"><i class="fa-solid fa-bell" style="color:var(--warn);"></i> 신규 픽업 신청 <span class="sub" id="pendingSub">0건</span></div>
+          <div class="panel-body" id="inboxBody"><div class="inbox-empty">대기 중인 신청이 없습니다.</div></div>
         </div>
-        <button class="mini-btn" style="white-space:nowrap;" onclick="clearFinished()">
-          <i class="fa-solid fa-broom"></i>
-        </button>
-      </div>
-      <!-- 게시판 테이블 -->
-      <div style="flex:1; overflow-y:auto; background:#fff;">
-        <table class="brd-table">
-          <thead>
-            <tr>
-              <th style="width:52px;">상태</th>
-              <th style="width:58px;">날짜</th>
-              <th style="width:44px;">시간</th>
-              <th>강사명</th>
-              <th>경로</th>
-            </tr>
-          </thead>
-          <tbody id="req-list-inner"></tbody>
-        </table>
-      </div>
-    </div>
-
-    <div id="view-3" style="display: none;">
-      <div class="list-wrapper">
-        <div class="list-header">
-          <div>과정명</div>
-          <div>인원</div>
-          <div>출발시간</div>
-          <div>공지</div>
+        <div class="panel">
+          <div class="panel-head"><i class="fa-solid fa-list-check" style="color:var(--muted);"></i> 처리 완료 (최근)</div>
+          <div class="panel-body" id="doneBody" style="max-height:280px; overflow-y:auto;"><div class="inbox-empty" style="padding:20px;">처리 내역 없음</div></div>
         </div>
-        <div id="trainee-list-body"></div>
       </div>
     </div>
-  </main>
-</div>
+  </div>
 
-<!-- 운행불가 공지 모달 -->
-<div id="dayOffModal" class="modal-overlay" onclick="if(event.target==this) closeModal('dayOffModal')">
-  <div class="modal-box">
-    <div style="font-weight:900; font-size:17px; margin-bottom:15px; border-bottom:2px solid var(--danger); padding-bottom:8px;">운행불가 일정 등록</div>
-    <input type="date" id="off-date" class="modal-input">
-    <select id="off-reason" class="modal-input">
-        <option value="건강검진">건강검진</option>
-        <option value="연차">연차</option>
-        <option value="차량고장">차량고장</option>
-        <option value="직접입력">직접입력</option>
-    </select>
-    <input type="text" id="off-custom" class="modal-input" placeholder="직접 입력 시 사유를 적어주세요" style="display:none;">
-    <div style="display:flex; gap:10px; margin-top:10px;">
-        <button class="modal-input" style="background:#f1f5f9; border:none;" onclick="closeModal('dayOffModal')">취소</button>
-        <button class="modal-input" style="background:var(--danger); color:#fff; border:none;" onclick="saveDayOff()">등록</button>
+  <!-- ============ 퇴교차량 ============ -->
+  <div class="view" id="view-leave">
+    <div class="panel">
+      <div class="panel-head"><i class="fa-solid fa-bus" style="color:var(--teal);"></i> 퇴교차량 — 신청 인원 확인 & 출발시간 공지
+        <span class="sub">공지하면 교육생·강사 화면에 시간이 표시됩니다</span>
+      </div>
+      <div class="panel-body" id="leaveBody"><div class="inbox-empty">이번 주 퇴교 예정 과정이 없습니다.</div></div>
+    </div>
+  </div>
+
+  <!-- ============ 고정일정·휴가 ============ -->
+  <div class="view" id="view-fixed">
+    <div class="addbar">
+      <button class="add-entry" onclick="openFixed('입교')"><i class="fa-solid fa-plus"></i> 입교버스 추가</button>
+      <button class="add-leave" onclick="openFixed('퇴교')"><i class="fa-solid fa-plus"></i> 퇴교버스 추가</button>
+      <button class="add-off" onclick="openOff()"><i class="fa-solid fa-calendar-xmark"></i> 휴가 등록</button>
+    </div>
+    <div class="grid2">
+      <div class="panel">
+        <div class="panel-head"><i class="fa-solid fa-bus-simple" style="color:var(--indigo);"></i> 입교 / 퇴교 고정버스</div>
+        <div class="panel-body"><ul class="mlist" id="fixedList"><li class="inbox-empty" style="border:none;">등록된 고정버스가 없습니다.</li></ul></div>
+      </div>
+      <div class="panel">
+        <div class="panel-head"><i class="fa-solid fa-umbrella-beach" style="color:var(--danger);"></i> 휴가 / 운행불가
+          <span class="sub">등록 시 운영부에 자동 고지됩니다</span>
+        </div>
+        <div class="panel-body"><ul class="mlist" id="offList"><li class="inbox-empty" style="border:none;">등록된 휴가가 없습니다.</li></ul></div>
+      </div>
     </div>
   </div>
 </div>
 
-<!-- 일정 관리 모달 (신규/수정) -->
-<div id="scheduleModal" class="modal-overlay" onclick="if(event.target==this) closeModal('scheduleModal')">
-  <div class="modal-box">
-    <div style="font-weight:900; font-size:17px; margin-bottom:15px; border-bottom:2px solid var(--blue); padding-bottom:8px;" id="schedule-modal-title">일정 관리</div>
-    
-    <input type="date" id="s-date" class="modal-input">
-<div id="time-section">
-  <input type="time" id="s-time" class="modal-input">
-</div>
-
-<select id="s-schedule-type" class="modal-input" onchange="toggleScheduleType()">
-  <option value="prof">강사 수송</option>
-  <option value="off">운행 불가</option>
-</select>
-
-
-
-
-    <div id="prof-info-area"  style="border:1px solid #e2e8f0; padding:12px; border-radius:10px; margin-bottom:10px; background:#fafafa;">
-      <div style="font-size:12px; font-weight:800; color:#64748b; margin-bottom:8px;">강사 정보</div>
-      <input type="text" id="s-prof" class="modal-input" placeholder="강사 성함 (예: 홍길동)" style="margin-bottom:5px;">
-      <input type="tel" id="s-phone" class="modal-input" placeholder="연락처" style="margin-bottom:0;">
+<!-- 불가 사유 모달 -->
+<div class="ov" id="rejectOv">
+  <div class="modal">
+    <div class="modal-head" style="background:var(--danger);">운행 불가 처리 <i class="fa-solid fa-xmark" style="cursor:pointer;" onclick="closeOv('rejectOv')"></i></div>
+    <div class="modal-body">
+      <div style="font-size:13px; color:var(--muted); font-weight:700;" id="rejectTarget"></div>
+      <div class="fld"><label>불가 사유 (운영부에 전달됩니다)</label>
+        <select id="rejectPreset" onchange="onRejectPreset()">
+          <option value="">직접 입력</option>
+          <option value="다른 운행과 시간 겹침">다른 운행과 시간 겹침</option>
+          <option value="휴가/운행불가 일정">휴가/운행불가 일정</option>
+          <option value="입교/퇴교 버스 운행">입교/퇴교 버스 운행</option>
+        </select>
+      </div>
+      <div class="fld"><textarea id="rejectReason" placeholder="사유를 입력하세요"></textarea></div>
     </div>
-
-    <div id="route-info-area" style="border:1px solid #e2e8f0; padding:12px; border-radius:10px; margin-bottom:10px; background:#fafafa;">
-      <div style="font-size:12px; font-weight:800; color:#64748b; margin-bottom:8px;">이동 정보</div>
-      <select id="s-dir-type" class="modal-input">
-        <option value="arrival">항기원 도착</option>
-        <option value="departure">항기원 출발</option>
-      </select>
-      <select id="s-dir-loc" class="modal-input">
-        <option value="오송역">오송역</option>
-        <option value="청주공항">청주공항</option>
-        <option value="청주터미널">청주터미널</option>
-        <option value="직접입력">직접입력</option>
-      </select>
-      <input type="text" id="s-dir-custom" class="modal-input" placeholder="목적지 직접 입력" style="display:none;">
-    </div>
-
-    <div id="passengers-area" style="border:1px solid #e2e8f0; padding:12px; border-radius:10px; margin-bottom:10px; background:#fafafa;">
-      <div style="font-size:12px; font-weight:800; color:#64748b; margin-bottom:8px;">동승객 추가</div>
-      <div id="passengers-list" style="margin-bottom:8px;"></div>
-      <button class="mini-btn" onclick="addPassenger()" style="width:100%;"><i class="fa-solid fa-user-plus"></i> 동승객 추가</button>
-    </div>
-
-
-<!-- 🔥 운행불가 사유 입력 (숨김 상태로 시작) -->
-<div id="off-reason-area" style="display:none; border:1px solid #e2e8f0; padding:12px; border-radius:10px; margin-bottom:10px; background:#fff3cd;">
-  <div style="font-size:12px; font-weight:800; color:#856404; margin-bottom:8px;">운행불가 사유</div>
-  <select id="s-off-reason" class="modal-input">
-    <option value="건강검진">건강검진</option>
-    <option value="연차">연차</option>
-    <option value="차량고장">차량고장</option>
-    <option value="직접입력">직접입력</option>
-  </select>
-  <input type="text" id="s-off-custom" class="modal-input" placeholder="사유를 직접 입력하세요" style="display:none;">
-</div>
-
-
-
-
-
-    <div style="display:flex; gap:10px; margin-top:15px;">
-        <button class="modal-input" style="background:#f1f5f9; border:none; flex:1;" onclick="closeModal('scheduleModal')">취소</button>
-        <button id="delete-schedule-btn" class="modal-input" style="background:var(--danger); color:#fff; border:none; flex:1; display:none;" onclick="deleteSchedule()">삭제</button>
-        <button class="modal-input" style="background:var(--blue); color:#fff; border:none; flex:1;" onclick="saveSchedule()">저장</button>
+    <div class="modal-foot">
+      <button class="mf-cancel" onclick="closeOv('rejectOv')">취소</button>
+      <button class="mf-ok" style="background:var(--danger);" onclick="submitReject()">불가 처리</button>
     </div>
   </div>
 </div>
 
-<!-- 퇴교 시간 확인 모달 -->
-<div id="departureConfirmModal" class="modal-overlay" onclick="if(event.target==this) closeModal('departureConfirmModal')">
-  <div class="modal-box" style="text-align:center;">
-    <div style="font-size:18px; font-weight:900; margin-bottom:20px; color:var(--blue-deep);">
-      <i class="fa-solid fa-bullhorn"></i> 공지 확인
+<!-- 고정버스 모달 -->
+<div class="ov" id="fixedOv">
+  <div class="modal">
+    <div class="modal-head" id="fixedHead" style="background:var(--indigo);">고정버스 추가 <i class="fa-solid fa-xmark" style="cursor:pointer;" onclick="closeOv('fixedOv')"></i></div>
+    <div class="modal-body">
+      <div class="fld"><label>구분</label><input id="fixedKind" readonly style="background:#f8fafc;"></div>
+      <div class="fld"><label>날짜</label><input type="date" id="fixedDate"></div>
+      <div class="fld"><label>시간</label><input type="time" id="fixedTime"></div>
+      <div class="fld"><label>메모 (선택)</label><input id="fixedNote" placeholder="예: 신규 교육생 32명 / 정문 집결"></div>
     </div>
-    <div id="confirm-message" style="font-size:14px; font-weight:700; margin-bottom:20px; line-height:1.6;"></div>
-    <div style="display:flex; gap:10px;">
-      <button class="modal-input" style="background:#f1f5f9; border:none; flex:1;" onclick="closeModal('departureConfirmModal')">취소</button>
-      <button class="modal-input" style="background:var(--success); color:#fff; border:none; flex:1;" onclick="confirmDepartureNotice()">공지 완료</button>
+    <div class="modal-foot">
+      <button class="mf-cancel" onclick="closeOv('fixedOv')">취소</button>
+      <button class="mf-ok" id="fixedSave" style="background:var(--indigo);" onclick="saveFixed()">등록</button>
     </div>
   </div>
 </div>
 
-<div id="context-menu" class="context-menu" style="display:none;"></div>
+<!-- 휴가 모달 -->
+<div class="ov" id="offOv">
+  <div class="modal">
+    <div class="modal-head" style="background:var(--danger);">휴가 / 운행불가 등록 <i class="fa-solid fa-xmark" style="cursor:pointer;" onclick="closeOv('offOv')"></i></div>
+    <div class="modal-body">
+      <div style="background:#fff7ed; border:1px solid #fdba74; color:#9a3412; border-radius:10px; padding:10px 12px; font-size:12px; font-weight:700;">
+        <i class="fa-solid fa-circle-info"></i> 등록하면 운영부 플랫폼에 사전 고지되어, 해당 기간 픽업 신청 시 대비할 수 있습니다.
+      </div>
+      <div class="fld"><label>시작일</label><input type="date" id="offStart"></div>
+      <div class="fld"><label>종료일 (하루면 시작일과 동일)</label><input type="date" id="offEnd"></div>
+      <div class="fld"><label>사유</label><input id="offReason" placeholder="예: 연차 / 차량 정비 / 출장"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="mf-cancel" onclick="closeOv('offOv')">취소</button>
+      <button class="mf-ok" style="background:var(--danger);" onclick="saveOff()">등록</button>
+    </div>
+  </div>
+</div>
+
+<!-- 출발시간 공지 확인 모달 -->
+<div class="ov" id="annOv">
+  <div class="modal">
+    <div class="modal-head" style="background:var(--teal);">퇴교차량 출발시간 공지 <i class="fa-solid fa-xmark" style="cursor:pointer;" onclick="closeOv('annOv')"></i></div>
+    <div class="modal-body"><div id="annMsg" style="font-size:14px; font-weight:700; line-height:1.6;"></div></div>
+    <div class="modal-foot">
+      <button class="mf-cancel" onclick="closeOv('annOv')">취소</button>
+      <button class="mf-ok" style="background:var(--teal);" onclick="confirmAnnounce()">공지하기</button>
+    </div>
+  </div>
+</div>
+
+<div id="spinner"><i class="fa-solid fa-spinner fa-spin"></i></div>
+<div class="vbadge">vR1 · 20260616</div>
 
 <script src="config.js"></script>
 <script>
-  let allCourses = {}, profReqs = [], weekOffset = 0, currentTab = 0;
-  let currentEditId = null, currentPassengers = [];
-  let pendingDepartureData = null;
-  let knownRequestIds = []; // 이미 확인한 요청들의 고유 ID 목록을 저장합니다.
-  let isFirstLoad = true;   // 처음 앱을 켰을 때 기존 목록에 소리 나는 것을 방지합니다.
+/* ===================== 상태 ===================== */
+let allCourses = {};            // courses 스냅샷
+let pickups = [];               // system/pickup 배열
+let dayoffs = [];               // system/driver_dayoff 배열
+let fixeds = [];                // system/driver_fixed 배열
+let weekOffset = 0;
+let currentView = 'manage';
+let knownPickupIds = [];
+let isFirstLoad = true;
+let pendingFixedKind = '입교';
+let pendingRejectId = null;
+let pendingAnnounce = null;
 
+/* ===================== 유틸 ===================== */
+const PLACES = ['오송역','청주터미널','청주공항'];
+const pad = n => String(n).padStart(2,'0');
+function ymd(d){ return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`; }
+function todayStr(){ return ymd(new Date()); }
+function normDate(s){ return s ? String(s).replace(/\./g,'-').replace(/\s/g,'') : ''; }
+function toMin(t){ if(!t) return null; const [h,m]=t.split(':'); return parseInt(h)*60+parseInt(m||0); }
+function fmtPhone(p){ if(!p) return ''; const d=(''+p).replace(/[^0-9]/g,''); if(d.length===11) return d.replace(/(\d{3})(\d{4})(\d{4})/,'$1-$2-$3'); if(d.length===10) return d.replace(/(\d{3})(\d{3})(\d{4})/,'$1-$2-$3'); return p; }
+function dirText(p){ return { arr:`${p}→항기원`, dep:`항기원→${p}` }; }
+function getWeekDates(off){
+  const now=new Date();
+  // 월요일 기준
+  const dow=(now.getDay()+6)%7; // 월=0
+  const mon=new Date(now); mon.setDate(now.getDate()-dow + off*7);
+  return Array.from({length:5},(_,i)=>{ const d=new Date(mon); d.setDate(mon.getDate()+i); return ymd(d); });
+}
 
+/* ===================== 초기화 ===================== */
+function init(){
+  document.getElementById('todayChip').textContent = todayStr().replace(/-/g,'.');
+  const dow=new Date().getDay();
+  weekOffset = (dow===5||dow===6||dow===0) ? 1 : 0; // 금/토/일이면 다음주
 
+  firebase.database().ref('courses').on('value', s=>{ allCourses=s.val()||{}; renderAll(); document.getElementById('spinner').style.display='none'; });
 
-function init() {
-  document.getElementById('loading-spinner').style.display = 'flex';
-
-  const now = new Date();
-  const day = now.getDay(); 
-  weekOffset = (day === 5 || day === 6 || day === 0) ? 1 : 0;
-
-  firebase.database().ref('courses').on('value', snap => { 
-    allCourses = snap.val() || {}; 
-    renderAll(); 
-    document.getElementById('loading-spinner').style.display = 'none';
-  });
-
-firebase.database().ref('system/transport_requests').on('value', snap => {
-    const raw = snap.val() || {};
-    let pendingCount = 0;
-    const currentIds = Object.keys(raw); // 현재 서버에 있는 모든 요청 ID들
-
-    // 새로운 요청이 있는지 체크
-    let hasNewRequest = false;
-    currentIds.forEach(id => {
-      // 1. 기존에 몰랐던 ID이고 2. 상태가 'pending'(대기)인 경우
-      if (!knownRequestIds.includes(id) && raw[id].status === 'pending') {
-        hasNewRequest = true;
-      }
-    });
-
-    // 데이터 분석 (기존 로직 유지)
-    profReqs = currentIds.map(k => {
-      const item = { id: k, ...raw[k] };
-      if(item.status === 'pending') pendingCount++;
-      return item;
-    }).sort((a,b) => (a.timestamp || 0) - (b.timestamp || 0));
-
-    // ★ 소리 재생 결정 ★
-    if (!isFirstLoad && hasNewRequest) {
-      const sound = document.getElementById('alarm-sound');
-      if (sound) {
-        sound.currentTime = 0; // 소리를 처음부터 재생
-        sound.play().catch(e => console.log("클릭 필요"));
-      }
-    }
-
-    // 현재 ID 목록을 기억하고, 첫 로딩 표시를 해제
-    knownRequestIds = currentIds;
-    isFirstLoad = false;
-
-    updateBadge(pendingCount);
+  firebase.database().ref('system/pickup').on('value', s=>{
+    const raw=s.val()||{}; const ids=Object.keys(raw);
+    let hasNew=false;
+    ids.forEach(id=>{ if(!knownPickupIds.includes(id) && raw[id].status==='pending') hasNew=true; });
+    pickups = ids.map(id=>({id, ...raw[id]})).sort((a,b)=>(a.createdAt||0)-(b.createdAt||0));
+    if(!isFirstLoad && hasNew){ const a=document.getElementById('alarm-sound'); if(a){ a.currentTime=0; a.play().catch(()=>{}); } }
+    knownPickupIds=ids; isFirstLoad=false;
     renderAll();
   });
 
-  document.getElementById('off-reason').addEventListener('change', function() {
-    document.getElementById('off-custom').style.display = this.value === '직접입력' ? 'block' : 'none';
-  });
-
-  document.getElementById('s-dir-loc').addEventListener('change', function() {
-    document.getElementById('s-dir-custom').style.display = this.value === '직접입력' ? 'block' : 'none';
-  });
-
-  document.addEventListener('click', () => {
-    document.getElementById('context-menu').style.display = 'none';
-  });
+  firebase.database().ref('system/driver_dayoff').on('value', s=>{ const raw=s.val()||{}; dayoffs=Object.keys(raw).map(id=>({id,...raw[id]})); renderAll(); });
+  firebase.database().ref('system/driver_fixed').on('value', s=>{ const raw=s.val()||{}; fixeds=Object.keys(raw).map(id=>({id,...raw[id]})); renderAll(); });
 }
 
-
-
-
-
-
-
-
-
-
-function renderSchedule() {
-  const head = document.getElementById('sched-head'), body = document.getElementById('sched-body');
-  const range = getWeekDates(weekOffset);
-  document.getElementById('week-range').innerText = `${range[0]} ~ ${range[4].substring(5)}`;
-
-  // 1. 상단 날짜 헤더 부분 수정 (요일 크게, 날짜 아래에)
-  const days = ['월', '화', '수', '목', '금'];
-  let headerHtml = `<tr style="height:65px;"><th class="time-col" style="font-size:14px;">시간</th>`;
-  
-  days.forEach((day, i) => {
-    // 2026-01-26 형태에서 월과 일을 추출합니다.
-    const [y, m, d] = range[i].split('-');
-    const formattedDate = `(${parseInt(m)}월 ${parseInt(d)}일)`; // 예: (1월 26일)
-    
-    headerHtml += `<th>
-      <div style="font-size:17px; margin-bottom:3px;">${day}</div>
-      <div style="font-size:11px; font-weight:normal; color:#666;">${formattedDate}</div>
-    </th>`;
-  });
-  headerHtml += `</tr>`;
-  head.innerHTML = headerHtml;
-
-  let html = '';
-  for(let h=8; h<=18; h++) {
-    // 8시, 9시는 08:00, 09:00으로 표시 (입력창 인식용)
-    const timeLabel = h < 10 ? "0" + h + ":00" : h + ":00";
-    
-    // 2. 시간 표시칸 글자 크기 살짝 키움 (13px)
-    html += `<tr><td class="time-col" style="font-size:13px; font-weight:bold;">${timeLabel}</td>`;
-    
-    for(let d=0; d<5; d++) {
-      const curDate = range[d];
-      let cell = '';
-
-      const offDayItem = profReqs.find(r => r.date === curDate && r.prof === '운행중단' && r.status !== 'cancelled');
-
-      if(offDayItem && h !== 12) {
-        cell = `<div class="cell-event block-off" draggable="true" ondragstart="onDragStart(event, '${offDayItem.id}')" onclick="cancelDayOff('${offDayItem.id}')">운행불가<br>${offDayItem?.dir || ''}</div>`;
-      }
-      else if(d === 0 && (h === 9 || h === 10)) {
-        cell = `<div class="cell-event block-entry">입교수송</div>`;
-      }
-      else if(h === 12) {
-        cell = `<div class="cell-휴" style="font-size:11px;">휴게시간</div>`;
-      }
-      else {
-        const items = profReqs.filter(r => {
-  if (!r.date || !r.time) return false;
-  
-  // 날짜 형식 통일 (예: 2024.01.25 -> 2024-01-25)
-  const formattedDBDate = r.date.replace(/\./g, '-').replace(/\s/g, '');
-  const formattedCurDate = curDate.replace(/\./g, '-').replace(/\s/g, '');
-  
-  return formattedDBDate === formattedCurDate && 
-         parseInt(r.time.split(':')[0]) === h && 
-         (r.status === 'approved' || r.status === 'finished') &&
-         r.prof !== '운행중단';
-});
-
-        if(items.length > 0) {
-          const groups = {};
-          items.forEach(item => {
-            if(!groups[item.dir]) groups[item.dir] = [];
-            groups[item.dir].push(item);
-          });
-
-          const firstDir = Object.keys(groups)[0];
-          const groupItems = groups[firstDir];
-          const nameDisplay = groupItems.length > 1 ? `${groupItems[0].prof} 외 ${groupItems.length-1}` : groupItems[0].prof;
-          const hasMultipleDirs = Object.keys(groups).length > 1;
-          const finalName = hasMultipleDirs ? `${nameDisplay} (경로다름)` : nameDisplay;
-
-          // 방향에 따라 색상 클래스 결정 (도착: 빨강계열, 출발: 파랑계열)
-          let dirClass = "block-prof"; 
-          if (firstDir.includes("→항기원")) {
-            dirClass = "block-arr"; 
-          } else if (firstDir.includes("항기원→")) {
-            dirClass = "block-dep"; 
-          }
-
-          let passengerText = "";
-          if(groupItems[0].passengers && groupItems[0].passengers.length > 0) {
-            passengerText = `<br><span style="font-size:8.5px; opacity:0.8;">(동승:${groupItems[0].passengers.join(',')})</span>`;
-          }
-
-          cell = `<div class="cell-event ${dirClass}" draggable="true" ondragstart="onDragStart(event, '${groupItems[0].id}')" onclick="openEditSchedule('${groupItems[0].id}')">
-            ${firstDir}<br>${finalName}${passengerText}
-          </div>`;
-        }
-        
-        if(!cell) {
-          for(let rid in allCourses) {
-            const dep = allCourses[rid]?.shuttle?.departure;
-            if(dep && dep.date === curDate && parseInt(dep.time?.split(':')[0]) === h) {
-              cell = `<div class="cell-event block-departure" onclick="switchTab(3)">퇴교수송</div>`;
-              break;
-            }
-          }
-        }
-      }
-      let clickAction = cell === '' ? `onclick="clickCellNewSchedule('${curDate}', '${timeLabel}')"` : '';
-      html += `<td ondragover="allowDrop(event)" ondrop="onDrop(event, '${curDate}', '${h}:00')" ${clickAction} style="cursor:pointer;">${cell}</td>`;
-    }
-    html += `</tr>`;
-  }
-  body.innerHTML = html;
-}
-
-
-
-
-
-
-
-
-
-
-
-function renderTodayTimeline() {
-  const container = document.getElementById('today-timeline-container');
-  
-  // [수정] 한국 시간 기준으로 오늘 날짜(YYYY-MM-DD) 구하기
-  const now = new Date();
-  const today = now.getFullYear() + '-' + 
-                String(now.getMonth() + 1).padStart(2, '0') + '-' + 
-                String(now.getDate()).padStart(2, '0');
-
-  document.getElementById('today-date-display').innerText = `${today} 수송 일정`;
-
-  const todaySchedule = [];
-  
-  // 1. 입교수송 (월요일 체크)
-  const dayOfWeek = now.getDay();
-  if(dayOfWeek === 1) {
-    todaySchedule.push({ time: '09:00', type: '입교수송', desc: '신규 교육생 입교 수송' });
-    todaySchedule.push({ time: '10:00', type: '입교수송', desc: '신규 교육생 입교 수송' });
-  }
-
-  // 2. 강사수송 필터링 (날짜가 오늘인 것만)
-  profReqs.filter(r => r.date === today && r.status !== 'cancelled').forEach(item => {
-    if(item.prof === '운행중단') {
-      todaySchedule.push({ id: item.id, time: item.time, type: '운행불가', desc: item.dir || '사유 없음', route: '', completed: item.status === 'finished' });
-    } else {
-      todaySchedule.push({ id: item.id, time: item.time, type: '강사수송', desc: `${item.prof || '강사'} 픽업`, route: item.dir || '구간 정보 없음', completed: item.status === 'finished' });
-    }
-  });
-
-  // 3. [핵심 수정] 퇴교수송 필터링 (DB에 저장된 날짜가 '오늘'과 정확히 일치하는 것만)
-  for(let rid in allCourses) {
-    const dep = allCourses[rid]?.shuttle?.departure;
-    
-    // 조건: 공지가 되었고(announced), 저장된 날짜(dep.date)가 오늘(today)인 경우만!
-    if(dep && dep.announced === true && dep.date === today) {
-      const courseName = allCourses[rid].settings?.courseName || '과정명 없음';
-      const total = Object.values(allCourses[rid].shuttle?.requests || {}).filter(r => r.type !== 'car').length;
-      todaySchedule.push({ 
-        time: dep.time, 
-        type: '퇴교수송', 
-        desc: `${courseName} (${total}명)`, 
-        route: '항기원 → 청주공항/오송역'
-      });
-    }
-  }
-
-  todaySchedule.sort((a, b) => (a.time || '').localeCompare(b.time || ''));
-
-  let html = '';
-  if(todaySchedule.length === 0) {
-    html = '<div class="timeline-card"><div style="text-align:center; color:#999; padding:20px;">오늘은 예정된 수송 일정이 없습니다.</div></div>';
-  } else {
-    todaySchedule.forEach(item => {
-      html += `<div class="timeline-card" style="${item.completed ? 'opacity:0.5; background:#f1f5f9;' : ''}">
-        <div style="display:flex; justify-content:space-between; align-items:center;">
-          <div class="timeline-time"><i class="fa-solid fa-clock"></i> ${item.time}</div>
-          ${item.id ? `<label style="display:flex; align-items:center; gap:5px; cursor:pointer;">
-            <input type="checkbox" ${item.completed ? 'checked' : ''} onchange="toggleComplete('${item.id}')" style="width:20px; height:20px; cursor:pointer;">
-            <span style="font-size:10px; color:#64748b;">완료</span>
-          </label>` : ''}
-        </div>
-        <div class="timeline-item">
-          <div style="font-size:14px; font-weight:900; margin-bottom:4px; ${item.completed ? 'text-decoration:line-through; color:#999;' : ''}">${item.type}</div>
-          <div style="${item.completed ? 'color:#94a3b8;' : ''}">${item.desc}</div>
-          ${item.route ? `<div class="timeline-route"><i class="fa-solid fa-route"></i> ${item.route}</div>` : ''}
-        </div>
-      </div>`;
-    });
-  }
-  container.innerHTML = html;
-}
-
-
-
-
-
-
-
-let reqFilter = 'all';
-let openDrawerId = null;
-
-function setReqFilter(f, el) {
-    reqFilter = f;
-    openDrawerId = null;
-    document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('on'));
-    el.classList.add('on');
-    renderInstructorChat();
-}
-
-function toggleDrawer(id) {
-    openDrawerId = openDrawerId === id ? null : id;
-    renderInstructorChat();
-}
-
-function renderInstructorChat() {
-    if (currentTab !== 2) return;
-    const tbody = document.getElementById('req-list-inner');
-    if (!tbody) return;
-
-    // 필터
-    let list = [...profReqs];
-    if      (reqFilter === 'pending')  list = list.filter(r => r.status === 'pending');
-    else if (reqFilter === 'approved') list = list.filter(r => r.status === 'approved');
-    else if (reqFilter === 'done')     list = list.filter(r => r.status === 'finished' || r.status === 'cancelled');
-    else /* all */                     list = list.filter(r => r.status !== 'cancelled');
-
-    if (list.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="5"><div class="req-empty"><i class="fa-solid fa-inbox" style="font-size:30px;display:block;margin-bottom:10px;opacity:0.3;"></i>해당 요청이 없습니다.</div></td></tr>`;
-        return;
-    }
-
-    let html = '';
-    list.forEach(r => {
-        const isPending   = r.status === 'pending';
-        const isApproved  = r.status === 'approved';
-        const isFinished  = r.status === 'finished';
-        const isCancelled = r.status === 'cancelled';
-        const isOpen      = openDrawerId === r.id;
-
-        // 상태 뱃지
-        const stBadge = isPending   ? `<span class="st-badge st-pending">신규</span>`
-                      : isApproved  ? `<span class="st-badge st-approved">승인</span>`
-                      : isFinished  ? `<span class="st-badge st-finished">종료</span>`
-                      :               `<span class="st-badge st-cancelled">취소</span>`;
-
-        // 날짜 짧게 (MM/DD)
-        const dateShort = r.date ? r.date.substring(5).replace('-','/') : '--';
-
-        // 경로 짧게
-        const dir = r.dir || '';
-        const dirShort = dir.includes('→항기원')
-            ? `<span class="dir-arr">↓도착</span>`
-            : dir.includes('항기원→')
-            ? `<span class="dir-dep">↑출발</span>`
-            : `<span style="font-size:11px;color:#94a3b8;">-</span>`;
-
-        // 경로 텍스트 (오송역, 청주공항 등만)
-        const routeTxt = dir.replace('→항기원','').replace('항기원→','').trim();
-
-        // 강사명 (중복 있으면 ⚠️ 표시)
-        let hasConflict = false;
-        if (isPending && r.date && r.time) {
-            const rMin = parseInt(r.time.split(':')[0])*60 + parseInt(r.time.split(':')[1]);
-            profReqs.forEach(o => {
-                if (o.id!==r.id && o.date===r.date && (o.status==='approved'||o.status==='finished') && o.prof!=='운행중단') {
-                    const oMin = parseInt(o.time.split(':')[0])*60 + parseInt(o.time.split(':')[1]);
-                    if (Math.abs(rMin-oMin) < 60) hasConflict = true;
-                }
-            });
-            for (let rid in allCourses) {
-                const dep = allCourses[rid].shuttle?.departure;
-                if (dep && dep.date===r.date && dep.time && dep.announced) {
-                    const dMin = parseInt(dep.time.split(':')[0])*60 + parseInt(dep.time.split(':')[1]);
-                    if (Math.abs(rMin-dMin) < 120) hasConflict = true;
-                }
-            }
-        }
-        const nameCell = `${hasConflict ? '⚠️ ' : ''}${r.prof||'미입력'}`;
-
-        // ── 행
-        html += `<tr onclick="toggleDrawer('${r.id}')" style="${isOpen ? 'background:#f0f9ff;' : ''}${isCancelled||isFinished ? 'opacity:0.55;' : ''}">
-            <td>${stBadge}</td>
-            <td style="font-size:12px; color:#64748b;">${dateShort}</td>
-            <td style="font-weight:900; color:var(--blue-deep);">${r.time||'--:--'}</td>
-            <td style="text-align:left; padding-left:8px; font-weight:800;">${nameCell}</td>
-            <td style="text-align:left;">${dirShort} <span style="font-size:11px; color:#475569;">${routeTxt}</span></td>
-        </tr>`;
-
-        // ── 드로어 (클릭 시 펼쳐지는 상세)
-        if (isOpen) {
-            // 중복 경고 텍스트
-            let conflictLines = [];
-            if (isPending && r.date && r.time) {
-                const rMin = parseInt(r.time.split(':')[0])*60 + parseInt(r.time.split(':')[1]);
-                profReqs.forEach(o => {
-                    if (o.id!==r.id && o.date===r.date && (o.status==='approved'||o.status==='finished') && o.prof!=='운행중단') {
-                        const oMin = parseInt(o.time.split(':')[0])*60 + parseInt(o.time.split(':')[1]);
-                        if (Math.abs(rMin-oMin) < 60) conflictLines.push(`${o.time} ${o.prof} 강사 일정과 1시간 이내 중복`);
-                    }
-                });
-                for (let rid in allCourses) {
-                    const dep = allCourses[rid].shuttle?.departure;
-                    if (dep && dep.date===r.date && dep.time && dep.announced) {
-                        const dMin = parseInt(dep.time.split(':')[0])*60 + parseInt(dep.time.split(':')[1]);
-                        if (Math.abs(rMin-dMin) < 120) conflictLines.push(`${dep.time} 퇴교수송과 2시간 이내 중복`);
-                    }
-                }
-            }
-
-            // 버튼
-            let btns = '';
-            if (isPending) {
-                btns = `<button class="d-btn approve" onclick="event.stopPropagation();approveRequest('${r.id}')"><i class="fa-solid fa-check"></i> 승인</button>
-                        <button class="d-btn reject"  onclick="event.stopPropagation();cancelRequest('${r.id}')"><i class="fa-solid fa-xmark"></i> 불가</button>`;
-            } else if (isApproved) {
-                btns = `<button class="d-btn complete" onclick="event.stopPropagation();toggleComplete('${r.id}')"><i class="fa-solid fa-flag-checkered"></i> 운행 완료</button>
-                        <button class="d-btn cancel"   onclick="event.stopPropagation();if(confirm('배차를 취소할까요?'))cancelRequest('${r.id}')">취소</button>`;
-            } else if (isFinished) {
-                btns = `<button class="d-btn revert" onclick="event.stopPropagation();toggleComplete('${r.id}')"><i class="fa-solid fa-rotate-left"></i> 승인으로 되돌리기</button>`;
-            }
-
-            html += `<tr><td colspan="5" style="padding:0;">
-                <div class="brd-drawer open">
-                    ${conflictLines.length ? `<div class="drawer-conflict"><i class="fa-solid fa-triangle-exclamation"></i> ${conflictLines.join('<br>')}</div>` : ''}
-                    <div class="drawer-row">
-                        <div class="drawer-item"><div class="drawer-label">경로</div><div class="drawer-val">${dir||'-'}</div></div>
-                        <div class="drawer-item"><div class="drawer-label">예상 도착</div><div class="drawer-val">${calculateETA(r.time,dir)}</div></div>
-                    </div>
-                    <div class="drawer-row">
-                        ${r.phone ? `<div class="drawer-item"><div class="drawer-label">연락처</div><div class="drawer-val"><a href="tel:${r.phone}" style="color:var(--blue);text-decoration:none;">${r.phone}</a></div></div>` : ''}
-                        ${r.passengers?.length ? `<div class="drawer-item"><div class="drawer-label">동승객</div><div class="drawer-val">${r.passengers.join(', ')}</div></div>` : ''}
-                    </div>
-                    ${btns ? `<div class="drawer-actions">${btns}</div>` : ''}
-                </div>
-            </td></tr>`;
-        }
-    });
-
-    tbody.innerHTML = html;
-}
-
-function renderTraineeGrid() {
-  const container = document.getElementById('trainee-list-body');
-  let html = "";
-  
-  // 오늘 날짜 구하기
-  const now = new Date();
-  const todayStr = now.getFullYear() + '-' + 
-                 String(now.getMonth() + 1).padStart(2, '0') + '-' + 
-                 String(now.getDate()).padStart(2, '0');
-
-  if (Object.keys(allCourses).length === 0) {
-    container.innerHTML = `<div style="text-align:center; padding:50px; color:#94a3b8; font-size:13px; font-weight:700;">현재 진행 중인 교육 과정이 없습니다.</div>`;
-    return;
-  }
-
-  Object.keys(allCourses).forEach(rid => {
-    const room = allCourses[rid]; 
-    if(room.status?.roomStatus !== 'active') return;
-    
-    const settings = room.settings || {};
-    let displayEndDate = "미정";
-
-    // [날짜 계산 로직 추가]
-    if (settings.period && settings.period.includes(" ~ ")) {
-      const parts = settings.period.split(" ~ ");
-      const startDate = new Date(parts[0]);
-      const finalEndDateStr = parts[1];
-      const finalEndDate = new Date(finalEndDateStr);
-
-      // 오늘 날짜가 최종 종료일보다 이미 지났으면 리스트에서 제외
-      if (new Date(todayStr) > finalEndDate) {
-        return; 
-      }
-
-      // 1주차 금요일 계산
-      let firstFriday = new Date(startDate);
-      let dayToFri = (5 - startDate.getDay() + 7) % 7; 
-      firstFriday.setDate(startDate.getDate() + dayToFri);
-
-      // 비교용 날짜 생성
-      const compareToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-      const compareFirstFriday = new Date(firstFriday.getFullYear(), firstFriday.getMonth(), firstFriday.getDate());
-
-      // 오늘이 1주차 금요일 전이면 1주차 금요일 표시, 지났으면 최종 종료일 표시
-      if (compareToday <= compareFirstFriday) {
-        displayEndDate = firstFriday.toISOString().split('T')[0];
-      } else {
-        displayEndDate = finalEndDateStr;
-      }
-    }
-    
-    const dep = room.shuttle?.departure || { time: "", announced: false };
-    const total = Object.values(room.shuttle?.requests || {}).filter(r => r.type !== 'car').length;
-    
-    let timeOptions = `<option value="">시간 선택</option>`;
-    for(let h=13; h<=18; h++) {
-      const t = h + ":00";
-      timeOptions += `<option value="${t}" ${dep.time===t?'selected':''}>${t}</option>`;
-    }
-
-    html += `
-      <div class="course-row">
-        <div class="t-cell" style="text-align:left; padding-left:10px; font-size:11px; line-height:1.3;">
-          <div style="font-weight:800;">${settings.courseName || rid}</div>
-          <div style="color:#ef4444; font-size:10px;">퇴교일: ${displayEndDate}</div>
-        </div>
-        <div class="t-cell">
-          <span class="count-badge">${total}명</span>
-        </div>
-        <div class="t-cell">
-          <select class="time-select-custom" onchange="confirmDepartureTime('${rid}', this.value)">
-            ${timeOptions}
-          </select>
-        </div>
-        <div class="t-cell">
-          <button class="notice-btn ${dep.announced?'active':''}" onclick="toggleNotice('${rid}', ${dep.announced})">
-            <i class="fa-solid fa-${dep.announced?'check':'bullhorn'}"></i>
-          </button>
-        </div>
-      </div>`;
-  });
-  container.innerHTML = html;
-  
-  if (html === "") {
-    container.innerHTML = `<div style="text-align:center; padding:50px; color:#94a3b8; font-size:13px; font-weight:700;">이번 주 예정된 퇴교 수송 과정이 없습니다.</div>`;
-  }
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-function confirmDepartureTime(rid, time) {
-  if(!time) return;
-  
-  const room = allCourses[rid];
-  const courseName = room.settings?.courseName || '과정명';
-  const total = Object.values(room.shuttle?.requests || {}).filter(r => r.type !== 'car').length;
-  
-  pendingDepartureData = { rid, time };
-  
-  document.getElementById('confirm-message').innerHTML = `
-    <strong>${courseName}</strong><br>
-    출발시간: <strong style="color:var(--blue-deep);">${time}</strong><br>
-    인원: <strong>${total}명</strong><br><br>
-    해당 시간으로 공지하시겠습니까?
-  `;
-  
-  document.getElementById('departureConfirmModal').style.display = 'flex';
-}
-
-
-
-
-
-
-async function confirmDepartureNotice() {
-  if(!pendingDepartureData) return;
-  
-  const { rid, time } = pendingDepartureData;
-  const room = allCourses[rid];
-  
-  // 기본값은 오늘 날짜
-  let depDate = (()=>{const _d=new Date();return `${_d.getFullYear()}-${String(_d.getMonth()+1).padStart(2,'0')}-${String(_d.getDate()).padStart(2,'0')}`;})(); 
-
-  if (room.settings?.period && room.settings.period.includes(" ~ ")) {
-    const parts = room.settings.period.split(" ~ ");
-    const startDate = new Date(parts[0]); // 교육 시작일
-    const endDate = new Date(parts[1]);   // 교육 종료일
-    const today = new Date();             // 오늘
-
-    // [로직 추가] 1주차 금요일 계산
-    // 시작일(월요일 등)로부터 해당 주의 금요일 날짜를 구합니다.
-    let firstFriday = new Date(startDate);
-    let dayToFri = (5 - startDate.getDay() + 7) % 7; 
-    firstFriday.setDate(startDate.getDate() + dayToFri);
-
-    // 오늘이 1주차 금요일(밤 12시 기준) 이전이거나 당일이면 -> 1주차 금요일로 공지
-    // 오늘이 1주차 금요일을 지났으면 -> 최종 교육 종료일로 공지
-    const compareToday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-    const compareFirstFriday = new Date(firstFriday.getFullYear(), firstFriday.getMonth(), firstFriday.getDate());
-
-    if (compareToday <= compareFirstFriday) {
-      depDate = firstFriday.toISOString().split('T')[0];
-    } else {
-      depDate = parts[1]; // 최종 교육 종료일 (2주차 금요일)
-    }
-  }
-  
-  await firebase.database().ref(`courses/${rid}/shuttle/departure`).update({ 
-    time, 
-    date: depDate, 
-    announced: true 
-  });
-  
-  closeModal('departureConfirmModal');
-  pendingDepartureData = null;
-  alert(`✅ ${depDate} 퇴교 공지가 완료되었습니다!`);
-}
-
-
-
-
-
-
-
-
-async function toggleNotice(rid, stat) { 
-  if(confirm(`${stat?'공지를 취소할까요?':'확성기 공지를 완료했습니까?'}`)) {
-    await firebase.database().ref(`courses/${rid}/shuttle/departure`).update({ announced: !stat });
-  }
-}
-
-
-
-
-
-
-
-
-async function approveRequest(id) {
-  const req = profReqs.find(r => r.id === id);
-  if(!req) return;
-
-  const normalizeDate = (d) => d ? d.replace(/\./g, '-').replace(/\s/g, '') : '';
-  const targetDate = normalizeDate(req.date);
-  const reqMin = parseInt(req.time.split(':')[0]) * 60 + parseInt(req.time.split(':')[1]);
-
-  // --- [1] 퇴교 수송 중복 체크 (120분 이내) ---
-  let shuttleConflict = "";
-  for (let rid in allCourses) {
-    const dep = allCourses[rid].shuttle?.departure;
-    if (dep && dep.date === req.date && dep.time && dep.announced) {
-      const depMin = parseInt(dep.time.split(':')[0]) * 60 + parseInt(dep.time.split(':')[1]);
-      if (Math.abs(reqMin - depMin) < 120) {
-        const cName = allCourses[rid].settings?.courseName || rid;
-        shuttleConflict = `⚠️ [퇴교중복 알림]\n해당 날짜 ${dep.time}에 [${cName}] 퇴교 수송이 예정되어 있습니다.`;
-      }
-    }
-  }
-  if (shuttleConflict) {
-    if (!confirm(shuttleConflict + "\n\n기사님 일정이 겹칠 수 있습니다. 그래도 승인하시겠습니까?")) return;
-  }
-
-  try {
-    // --- [2] 병합 대상 확인 (날짜/시간/경로 완전 일치 시 동승자로 자동 합치기) ---
-    const existingSchedule = profReqs.find(r => 
-      r.id !== id &&
-      normalizeDate(r.date) === targetDate && 
-      r.time === req.time && 
-      r.dir === req.dir &&
-      (r.status === 'approved' || r.status === 'finished') &&
-      r.prof !== '운행중단'
-    );
-
-    if(existingSchedule) {
-      const msg = `⚠️ 해당 시간/경로에 이미 승인된 일정([${existingSchedule.prof}] 강사님)이 있습니다.\n\n[${req.prof}] 강사님을 기존 차량의 '동승자'로 추가하여 통합 배차하시겠습니까?\n\n('확인' 클릭 시 동승자로 통합되어 하나로 표시됩니다.)`;
-      
-      if(confirm(msg)) {
-        // 동승자 명단 업데이트 (기존 명단 + 새 강사님)
-        let updatedPassengers = existingSchedule.passengers ? [...existingSchedule.passengers] : [];
-        if(!updatedPassengers.includes(req.prof)) {
-            updatedPassengers.push(req.prof); 
-        }
-        
-        // (1) 기존 대표 일정 업데이트 (동승자 목록 갱신)
-        await firebase.database().ref(`system/transport_requests/${existingSchedule.id}`).update({ 
-          passengers: updatedPassengers 
-        });
-
-        // (2) 현재 요청은 '운행종료(finished)' 처리 (채팅창에서 제거 및 병합 기록)
-        await firebase.database().ref(`system/transport_requests/${id}`).update({ 
-          status: 'finished',
-          mergedInto: existingSchedule.id,
-          note: `[${existingSchedule.prof}] 차량으로 통합됨`
-        });
-
-        alert(`✅ 통합 완료: [${req.prof}] 강사님이 [${existingSchedule.prof}] 강사님 차량의 동승자로 등록되었습니다.`);
-        renderAll(); // 화면 갱신 (스케줄표에 '외 N명'으로 표시됨)
-        return;
-      }
-    }
-
-    // --- [3] 근접 시간 강사 수송 경고 (60분 이내) ---
-    const nearbySchedule = profReqs.find(r => 
-      r.id !== id &&
-      normalizeDate(r.date) === targetDate && 
-      Math.abs((parseInt(r.time.split(':')[0]) * 60 + parseInt(r.time.split(':')[1])) - reqMin) < 60 &&
-      (r.status === 'approved' || r.status === 'finished') &&
-      r.prof !== '운행중단'
-    );
-
-    if (nearbySchedule) {
-      if (!confirm(`⚠️ [시간근접 경고]\n이미 ${nearbySchedule.time}에 [${nearbySchedule.prof}] 강사님 배차가 있습니다.\n시간이 1시간 이내로 가깝습니다. 그래도 별도 승인하시겠습니까?`)) return;
-    }
-
-    // --- [4] 일반 승인 로직 (중복/병합 사항 없을 때) ---
-    if(!confirm(`[${req.prof}] 강사님 배차 요청을 승인하시겠습니까?`)) return;
-    
-    await firebase.database().ref(`system/transport_requests/${id}`).update({ 
-      status: 'approved' 
-    });
-
-    alert("✅ 승인이 완료되었습니다.");
-    renderAll(); 
-
-  } catch (error) {
-    console.error("승인 업데이트 오류:", error);
-    alert("처리 중 오류가 발생했습니다.");
-  }
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-async function cancelRequest(id) { 
-  if(confirm("불가 처리하시겠습니까?")) {
-    await firebase.database().ref(`system/transport_requests/${id}`).update({ status: 'cancelled' }); 
-  }
-}
-
-async function toggleComplete(id) {
-  const item = profReqs.find(r => r.id === id);
-  if(!item) return;
-  await firebase.database().ref(`system/transport_requests/${id}`).update({
-    status: item.status === 'finished' ? 'approved' : 'finished'
-  });
-}
-
-function openNewSchedule() {
-  currentEditId = null;
-  currentPassengers = [];
-  document.getElementById('schedule-modal-title').innerText = '신규 일정 추가';
-  document.getElementById('s-schedule-type').value = 'prof';  // 🔥 추가
-  document.getElementById('s-date').value = '';
-  document.getElementById('s-time').value = '';
-  document.getElementById('s-prof').value = '홍길동';
-  document.getElementById('s-phone').value = '';
-  document.getElementById('s-dir-type').value = 'arrival';
-  document.getElementById('s-dir-loc').value = '오송역';
-  document.getElementById('s-dir-custom').value = '';
-  document.getElementById('s-dir-custom').style.display = 'none';
-  document.getElementById('delete-schedule-btn').style.display = 'none';
-  toggleScheduleType();  // 🔥 추가
-  renderPassengers();
-  document.getElementById('scheduleModal').style.display = 'flex';
-}
-
-
-
-
-
-
-
-
-function openEditSchedule(id) {
-  // 1. 해당 ID의 일정을 데이터(profReqs)에서 찾기
-  const item = profReqs.find(r => r.id === id);
-  if(!item) return;
-  
-  // 2. 수정 중인 ID 저장 및 동승객 목록 복사
-  // (중요: item.passengers가 있으면 그 내용을 가져오고, 없으면 빈 배열로 초기화)
-  currentEditId = id;
-  currentPassengers = item.passengers ? [...item.passengers] : [];
-  
-  // 3. 모달 제목 설정
-  document.getElementById('schedule-modal-title').innerText = '일정 수정';
-  
-  // 4. 기본 정보 채우기 (날짜, 시간, 연락처)
-  document.getElementById('s-date').value = item.date || '';
-  document.getElementById('s-time').value = item.time || '';
-  document.getElementById('s-phone').value = item.phone || '';
-  
-  // 5. 강사명 설정 (운행중단일 때는 입력창을 비워둠)
-  document.getElementById('s-prof').value = item.prof === '운행중단' ? '' : (item.prof || '');
-  
-  // 6. 이동 경로 및 장소 설정
-  const dirText = item.dir || '';
-  if(dirText.includes('→항기원')) {
-    document.getElementById('s-dir-type').value = 'arrival';
-    const loc = dirText.replace('→항기원', '');
-    setLocValue(loc); // 직접입력 여부 판단 함수
-  } else if(dirText.includes('항기원→')) {
-    document.getElementById('s-dir-type').value = 'departure';
-    const loc = dirText.replace('항기원→', '');
-    setLocValue(loc); // 직접입력 여부 판단 함수
-  }
-  
-  // 7. 일정 타입 설정 (강사 수송 vs 운행 불가)
-  if(item.prof === '운행중단') {
-    document.getElementById('s-schedule-type').value = 'off';
-    
-    // 운행불가 사유 처리 (기존에 정의된 사유인지 직접 입력인지 판단)
-    const reasonSelect = document.getElementById('s-off-reason');
-    const customInput = document.getElementById('s-off-custom');
-    if(['건강검진', '연차', '차량고장'].includes(item.dir)) {
-        reasonSelect.value = item.dir;
-        customInput.style.display = 'none';
-    } else {
-        reasonSelect.value = '직접입력';
-        customInput.value = item.dir || '';
-        customInput.style.display = 'block';
-    }
-  } else {
-    document.getElementById('s-schedule-type').value = 'prof';
-  }
-  
-  // 8. 하단 버튼 설정 (삭제 버튼 표시)
-  document.getElementById('delete-schedule-btn').style.display = 'block';
-  
-  // 9. 타입(수송/불가)에 따라 화면 UI 영역(색상 박스들) 보임/숨김 처리
-  toggleScheduleType(); 
-  
-  // 10. ★ 핵심: 동승객 명단 그리기 ★
-  // 복사해온 currentPassengers 배열을 바탕으로 초록색 박스 안에 이름을 뿌려줍니다.
-  renderPassengers();
-  
-  // 11. 모달 열기
-  document.getElementById('scheduleModal').style.display = 'flex';
-}
-
-
-
-
-
-
-
-
-function setLocValue(loc) {
-  const locSelect = document.getElementById('s-dir-loc');
-  const customInput = document.getElementById('s-dir-custom');
-  if(['오송역', '청주공항', '청주터미널'].includes(loc)) {
-    locSelect.value = loc;
-    customInput.style.display = 'none';
-  } else {
-    locSelect.value = '직접입력';
-    customInput.value = loc;
-    customInput.style.display = 'block';
-  }
-}
-
-function addPassenger() {
-  const name = prompt('동승객 이름을 입력하세요:');
-  if(name && name.trim()) {
-    currentPassengers.push(name.trim());
-    renderPassengers();
-  }
-}
-
-function removePassenger(index) {
-  currentPassengers.splice(index, 1);
-  renderPassengers();
-}
-
-
-// 🔥 일정 타입 전환 함수
-function toggleScheduleType() {
-  const type = document.getElementById('s-schedule-type').value;
-  const timeSection = document.getElementById('time-section');
-  
-  if(type === 'off') {
-    // 운행불가일 때
-    document.getElementById('prof-info-area').style.display = 'none';
-    document.getElementById('route-info-area').style.display = 'none';
-    document.getElementById('passengers-area').style.display = 'none';
-    document.getElementById('off-reason-area').style.display = 'block';
-    timeSection.style.display = 'none'; // 시간 숨기기
-  } else {
-    // 강사수송일 때
-    document.getElementById('prof-info-area').style.display = 'block';
-    document.getElementById('route-info-area').style.display = 'block';
-    document.getElementById('passengers-area').style.display = 'block';
-    document.getElementById('off-reason-area').style.display = 'none';
-    timeSection.style.display = 'block'; // 시간 보이기
-  }
-}
-
-
-
-
-// 🔥 운행불가 사유 직접입력 토글
-document.addEventListener('DOMContentLoaded', function() {
-  const offReasonSelect = document.getElementById('s-off-reason');
-  if(offReasonSelect) {
-    offReasonSelect.addEventListener('change', function() {
-      document.getElementById('s-off-custom').style.display = 
-        this.value === '직접입력' ? 'block' : 'none';
-    });
-  }
-});
-
-
-
-
-
-
-
-
-
-
-
-
-function renderPassengers() {
-  const container = document.getElementById('passengers-list');
-  if(currentPassengers.length === 0) {
-    container.innerHTML = '<div style="text-align:center; color:#999; font-size:11px; padding:10px;">동승객 없음</div>';
-  } else {
-    container.innerHTML = currentPassengers.map((name, i) => `
-      <div style="display:flex; justify-content:space-between; align-items:center; background:#fff; padding:8px; border-radius:6px; margin-bottom:5px;">
-        <span style="font-size:12px; font-weight:700;">${name}</span>
-        <button class="mini-btn" onclick="removePassenger(${i})" style="padding:4px 8px; background:var(--danger); color:#fff; border:none;">
-          <i class="fa-solid fa-times"></i>
-        </button>
-      </div>
-    `).join('');
-  }
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-async function saveSchedule() {
-  const type = document.getElementById('s-schedule-type').value;
-  const date = document.getElementById('s-date').value;
-  
-  // ★ 시간 변수 설정 (운행불가 시 09:00 자동 할당을 위해 let 사용)
-  let time = document.getElementById('s-time').value;
-  
-  // 1. 유효성 검사
-  if(type === 'off') {
-    // 운행 불가(off)일 때
-    if(!date) { alert('날짜를 선택해주세요.'); return; }
-    if(!time || time === "") { time = "09:00"; } // 시간이 없으면 기본값 설정
-  } else {
-    // 강사 수송(prof)일 때
-    if(!date || !time) {
-      alert('날짜와 시간을 모두 입력해주세요.');
-      return;
-    }
-  }
-  
-  // 2. 공통 데이터 구조 생성
-  let data = { 
-    date: date, 
-    time: time, 
-    status: 'approved', 
-    timestamp: Date.now() 
-  };
-  
-  // 3. 타입별 세부 데이터 설정
-  if(type === 'off') {
-    // [운행불가 모드]
-    const reasonSel = document.getElementById('s-off-reason').value;
-    const customReason = document.getElementById('s-off-custom').value;
-    const reason = reasonSel === '직접입력' ? customReason : reasonSel;
-    
-    data.prof = '운행중단';
-    data.dir = reason;
-    data.phone = '';
-    data.passengers = []; // 운행불가일 때는 동승객 없음
-  } else {
-    // [강사수송 모드]
-    const prof = document.getElementById('s-prof').value.trim();
-    const phone = document.getElementById('s-phone').value.trim();
-    const dirType = document.getElementById('s-dir-type').value;
-    const dirLoc = document.getElementById('s-dir-loc').value;
-    const customLoc = document.getElementById('s-dir-custom').value.trim();
-    
-    if(!prof) {
-      alert('강사명은 필수입니다.');
-      return;
-    }
-    
-    const finalLoc = (dirLoc === '직접입력') ? customLoc : dirLoc;
-    const finalDir = (dirType === 'arrival') ? `${finalLoc}→항기원` : `항기원→${finalLoc}`;
-    
-    data.prof = prof;
-    data.phone = phone;
-    data.dir = finalDir;
-    // ★ 핵심: 현재 모달 리스트에 표시된 동승객 배열을 그대로 저장
-    data.passengers = currentPassengers; 
-  }
-  
-  try {
-    // 4. Firebase 저장 실행
-    if(currentEditId) {
-      // 수정 모드
-      await firebase.database().ref(`system/transport_requests/${currentEditId}`).update(data);
-    } else {
-      // 신규 등록 모드
-      await firebase.database().ref('system/transport_requests').push(data);
-    }
-    
-    // 5. 마무리 및 UI 갱신
-    closeModal('scheduleModal');
-    currentEditId = null;
-    currentPassengers = []; // 전역 변수 초기화
-    
-    alert('저장되었습니다.');
-    renderAll(); // 스케줄표 즉시 새로고침
-    
-  } catch (error) {
-    console.error("저장 중 오류 발생:", error);
-    alert("저장에 실패했습니다. 다시 시도해주세요.");
-  }
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-async function deleteSchedule() {
-  if(confirm('이 일정을 삭제할까요?')) {
-    await firebase.database().ref(`system/transport_requests/${currentEditId}`).remove();
-    closeModal('scheduleModal');
-    currentEditId = null;
-  }
-}
-
-async function saveDayOff() {
-  const date = document.getElementById('off-date').value;
-  const reasonSel = document.getElementById('off-reason').value;
-  const customReason = document.getElementById('off-custom').value;
-  const reason = reasonSel === '직접입력' ? customReason : reasonSel;
-  
-  if(!date || !reason) {
-    alert('날짜와 사유를 모두 입력해주세요');
-    return;
-  }
-
-  const existingSchedules = profReqs.filter(r => 
-    r.date === date && r.prof !== '운행중단' && r.status !== 'cancelled'
-  );
-  
-  if(existingSchedules.length > 0) {
-    const list = existingSchedules.map(s => `${s.time} ${s.prof}`).join('\n');
-    if(!confirm(`⚠️ 해당 날짜에 아래 일정이 있습니다:\n\n${list}\n\n운행불가로 설정하시겠습니까?`)) {
-      return;
-    }
-  }
-
-  const data = { 
-    date, time: '09:00', prof: '운행중단', dir: reason, 
-    status: 'approved', timestamp: Date.now() 
-  };
-  
-  await firebase.database().ref('system/transport_requests').push(data);
-  closeModal('dayOffModal');
-  alert('운행불가 일정이 등록되었습니다');
-}
-
-function showContextMenu(event, id) {
-  event.preventDefault();
-  const menu = document.getElementById('context-menu');
-  menu.innerHTML = `
-    <div class="context-item danger" onclick="deleteFromChat('${id}')">
-      <i class="fa-solid fa-trash"></i> 삭제
-    </div>
-  `;
-  menu.style.display = 'block';
-  menu.style.left = event.pageX + 'px';
-  menu.style.top = event.pageY + 'px';
-}
-
-async function deleteFromChat(id) {
-  if(confirm('이 항목을 삭제하시겠습니까?')) {
-    await firebase.database().ref(`system/transport_requests/${id}`).remove();
-  }
-  document.getElementById('context-menu').style.display = 'none';
-}
-
-async function clearFinished() { 
-  if(confirm("완료된 내역을 정리할까요?")) { 
-    profReqs.filter(r => r.status==='finished' || r.status==='cancelled')
-      .forEach(t => firebase.database().ref(`system/transport_requests/${t.id}`).remove()); 
-  } 
-}
-
-function captureSchedule() {
-  toggleSidebar();
-  const element = document.getElementById('schedule-capture-area');
-  html2canvas(element, { scale: 2 }).then(canvas => {
-    const link = document.createElement('a');
-    link.download = `일정표_${(()=>{const _d=new Date();return `${_d.getFullYear()}-${String(_d.getMonth()+1).padStart(2,'0')}-${String(_d.getDate()).padStart(2,'0')}`;})()}.png`;
-    link.href = canvas.toDataURL();
-    link.click();
-    alert('일정표가 저장되었습니다!');
-  });
-}
-
-let draggedItemId = null;
-
-function onDragStart(event, id) {
-  draggedItemId = id;
-  event.dataTransfer.effectAllowed = 'move';
-}
-
-function allowDrop(event) {
-  event.preventDefault();
-  event.dataTransfer.dropEffect = 'move';
-}
-
-async function onDrop(event, date, time) {
-  event.preventDefault();
-  if(!draggedItemId) return;
-  
-  const req = profReqs.find(r => r.id === draggedItemId);
-  if(!req) return;
-  
-  const newTime = time.split(':')[0] + ':' + (req.time ? req.time.split(':')[1] : '00');
-  
-  if(confirm(`${date} ${newTime}으로 변경할까요?`)) {
-    await firebase.database().ref(`system/transport_requests/${draggedItemId}`).update({ 
-      date, 
-      time: newTime 
-    });
-  }
-  
-  draggedItemId = null;
-}
-
-function getWeekDates(offset) {
-  const now = new Date();
-  const day = now.getDay();
-  const diff = (day === 0 ? -6 : 1 - day);
-  const monday = new Date(now);
-  monday.setDate(now.getDate() + diff + (offset * 7));
-  const res = [];
-  for(let i=0; i<5; i++) {
-    const d = new Date(monday); 
-    d.setDate(monday.getDate()+i);
-    res.push(d.toISOString().split('T')[0]);
-  }
-  return res;
-}
-
-function calculateETA(startTime, route) {
-  if(!startTime || !route) return '시간 미정';
-  const [hour, min] = startTime.split(':').map(Number);
-  let totalMinutes = hour * 60 + min;
-  const segments = route.split('→').length - 1;
-  totalMinutes += segments * 30;
-  const etaHour = Math.floor(totalMinutes / 60);
-  const etaMin = totalMinutes % 60;
-  return `${String(etaHour).padStart(2,'0')}:${String(etaMin).padStart(2,'0')}`;
-}
-
-function toggleSidebar() { 
-  const sb = document.getElementById('sidebar');
-  const ol = document.querySelector('.sidebar-overlay');
-  const isOpen = sb.classList.contains('open'); 
-  sb.classList.toggle('open', !isOpen); 
-  ol.style.display = isOpen ? 'none' : 'block'; 
-}
-
-function switchTab(n) { 
-  currentTab = n; 
-  document.querySelectorAll('.tab-btn').forEach((b, i) => b.classList.toggle('active', i === n)); 
-  
-  // 모든 뷰를 일단 숨김 (인라인 스타일 찌꺼기 제거)
-  document.querySelectorAll('[id^="view-"]').forEach((v) => {
-    v.style.display = 'none';
-  });
-
-  // 선택한 뷰만 적절한 방식으로 노출
-  const targetView = document.getElementById(`view-${n}`);
-  if (n === 2) {
-      targetView.style.display = 'flex'; // 강사수송(채팅)은 flex로
-  } else {
-      targetView.style.display = 'block'; // 나머지는 block으로
-  }
-  
-  // 홈 버튼 제어
-  const homeBtn = document.getElementById('floatingHomeBtn');
-  homeBtn.style.display = (n === 0) ? 'none' : 'flex';
-  
-  renderAll(); 
-}
-
-
-
-
-
-
-
-function updateBadge(count) { 
-  const b = document.getElementById('badge-count'); 
-  if(count > 0) { 
-    b.innerText = count; 
-    b.style.display = 'block'; 
-  } else {
-    b.style.display = 'none'; 
-  }
-}
-
-function renderAll() { 
-  renderSchedule(); 
-  if(currentTab === 1) renderTodayTimeline();
-  if(currentTab === 2) renderInstructorChat();
-  if(currentTab === 3) renderTraineeGrid();
-}
-
-function changeWeek(n) { 
-  weekOffset += n; 
-  renderAll(); 
-}
-
-function goToday() { 
-  const now = new Date();
-  const day = now.getDay(); 
-  weekOffset = (day === 5 || day === 6 || day === 0) ? 1 : 0;
+/* ===================== 탭/주차 ===================== */
+function switchView(v){
+  currentView=v;
+  document.querySelectorAll('.view').forEach(e=>e.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(e=>e.classList.remove('active'));
+  document.getElementById('view-'+v).classList.add('active');
+  document.querySelector(`.tab[data-view="${v}"]`).classList.add('active');
   renderAll();
 }
+function moveWeek(d){ weekOffset = d===0 ? ((()=>{const dw=new Date().getDay();return (dw===5||dw===6||dw===0)?1:0;})()) : weekOffset+d; renderSchedule(); }
 
-function closeModal(id) { 
-  document.getElementById(id).style.display = 'none'; 
+/* ===================== 렌더 ===================== */
+function renderAll(){ renderInbox(); renderDone(); renderSchedule(); renderLeave(); renderFixedList(); renderOffList(); updateTabCount(); }
+
+function updateTabCount(){
+  const n=pickups.filter(p=>p.status==='pending').length;
+  const t=document.getElementById('tabCnt'); const sub=document.getElementById('pendingSub');
+  if(n>0){ t.style.display='inline-block'; t.textContent=n; } else t.style.display='none';
+  sub.textContent=`${n}건`;
 }
 
-function handleBack() { 
-  if (currentTab === 0) {
-    // 종합일정표일 때만 포탈로 이동
-    if(confirm("포탈로 이동할까요?")) location.href = 'potal.html'; 
-  } else {
-    // 서브페이지일 때는 종합일정표(탭 0)로 이동
-    switchTab(0);
-  }
+/* ---- 겹침(중복) 감지 ---- */
+function getConflicts(date, time, excludeId){
+  const d=normDate(date), m=toMin(time); const out=[];
+  if(m===null) return out;
+  // 확정 픽업
+  pickups.forEach(p=>{ if(p.id===excludeId) return; if(p.status!=='confirmed') return; if(normDate(p.date)!==d) return;
+    if(Math.abs(toMin(p.time)-m)<90) out.push(`${p.time} ${p.prof} (${dirText(p.place)[p.dir||'arr']})`); });
+  // 고정버스
+  fixeds.forEach(f=>{ if(normDate(f.date)!==d) return; if(Math.abs(toMin(f.time)-m)<90) out.push(`${f.time} ${f.kind}버스`); });
+  // 퇴교차량 공지
+  for(const rid in allCourses){ const dep=allCourses[rid]?.shuttle?.departure; if(dep&&dep.announced&&normDate(dep.date)===d&&dep.time){ if(Math.abs(toMin(dep.time)-m)<90){ const cn=allCourses[rid].settings?.courseName||rid; out.push(`${dep.time} ${cn} 퇴교차량`); } } }
+  // 휴가
+  dayoffs.forEach(o=>{ if(d>=normDate(o.start)&&d<=normDate(o.end||o.start)) out.push(`${o.reason||'휴가'} (운행불가일)`); });
+  return out;
 }
 
-
-
-function openNewDayOff() {
-  openNewSchedule(); // 일단 신규 창을 열고
-  document.getElementById('s-schedule-type').value = 'off'; // 타입을 운행불가로 변경
-  toggleScheduleType(); // 화면 구성 변경
-  document.getElementById('schedule-modal-title').innerText = '운행불가 등록';
+/* ---- 인박스 ---- */
+function renderInbox(){
+  const box=document.getElementById('inboxBody');
+  const list=pickups.filter(p=>p.status==='pending').sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));
+  if(!list.length){ box.innerHTML='<div class="inbox-empty">대기 중인 신청이 없습니다.</div>'; return; }
+  box.innerHTML=list.map(p=>{
+    const dir=p.dir||'arr'; const route=dirText(p.place)[dir];
+    const conf=getConflicts(p.date,p.time,p.id);
+    return `<div class="req pending">
+      <div class="req-top"><span class="req-prof">${p.prof||'강사'}</span><span class="req-phone">${fmtPhone(p.phone)}</span><span class="tag tag-pending">● 미확인</span></div>
+      <div class="req-line"><i class="fa-solid fa-calendar"></i> ${fmtD(p.date)} <b>${p.time||''}</b></div>
+      <div class="req-line"><i class="fa-solid fa-route"></i> ${route}</div>
+      ${p.memo?`<div class="req-memo">📝 ${escapeHtml(p.memo)}</div>`:''}
+      ${conf.length?`<div class="req-conflict">⚠️ 겹침 주의<br>${conf.map(c=>'· '+c).join('<br>')}</div>`:''}
+      <div class="req-btns">
+        <button class="btn btn-ok" onclick="confirmPickup('${p.id}')"><i class="fa-solid fa-check"></i> 확인(배차)</button>
+        <button class="btn btn-no" onclick="openReject('${p.id}')"><i class="fa-solid fa-ban"></i> 불가</button>
+      </div>
+    </div>`;
+  }).join('');
 }
 
-// 스케줄표 칸을 클릭했을 때 실행되는 함수
-function clickCellNewSchedule(date, time) {
-  openNewSchedule(); 
-  document.getElementById('s-date').value = date;
-  document.getElementById('s-time').value = time; // 이제 08:00이 그대로 들어갑니다.
+function renderDone(){
+  const box=document.getElementById('doneBody');
+  const list=pickups.filter(p=>p.status==='confirmed'||p.status==='rejected')
+    .sort((a,b)=>(b.respondedAt||0)-(a.respondedAt||0)).slice(0,30);
+  if(!list.length){ box.innerHTML='<div class="inbox-empty" style="padding:20px;">처리 내역 없음</div>'; return; }
+  box.innerHTML=list.map(p=>{
+    const dir=p.dir||'arr';
+    const tag = p.status==='confirmed' ? '<span class="tag tag-confirmed">확인</span>' : '<span class="tag tag-rejected">불가</span>';
+    return `<div class="done-row">
+      <span class="nm">${p.prof||'강사'}</span>
+      <span style="color:var(--muted); font-weight:700; font-size:12px;">${fmtD(p.date)} ${p.time} · ${dirText(p.place)[dir]}</span>
+      ${tag}
+      <button class="btn-undo" style="margin-left:6px; padding:5px 9px; border-radius:8px; border:none; cursor:pointer;" onclick="undoPickup('${p.id}')">되돌리기</button>
+    </div>${p.status==='rejected'&&p.rejectReason?`<div class="reject-reason" style="padding:0 4px 8px;">↳ 사유: ${escapeHtml(p.rejectReason)}</div>`:''}`;
+  }).join('');
 }
 
+/* ---- 픽업 처리 ---- */
+async function confirmPickup(id){
+  const p=pickups.find(x=>x.id===id); if(!p) return;
+  const conf=getConflicts(p.date,p.time,id);
+  if(conf.length){ if(!confirm('⚠️ 같은 시간대에 겹치는 운행이 있습니다.\n\n'+conf.map(c=>'· '+c).join('\n')+'\n\n그래도 확인(배차)하시겠습니까?')) return; }
+  await firebase.database().ref('system/pickup/'+id).update({ status:'confirmed', rejectReason:null, respondedAt:firebase.database.ServerValue.TIMESTAMP });
+}
+function openReject(id){
+  pendingRejectId=id; const p=pickups.find(x=>x.id===id);
+  document.getElementById('rejectTarget').textContent = p?`${p.prof} 강사 · ${fmtD(p.date)} ${p.time} · ${dirText(p.place)[p.dir||'arr']}`:'';
+  document.getElementById('rejectPreset').value=''; document.getElementById('rejectReason').value='';
+  openOv('rejectOv');
+}
+function onRejectPreset(){ const v=document.getElementById('rejectPreset').value; if(v) document.getElementById('rejectReason').value=v; }
+async function submitReject(){
+  const reason=document.getElementById('rejectReason').value.trim();
+  if(!reason){ alert('불가 사유를 입력하세요.'); return; }
+  await firebase.database().ref('system/pickup/'+pendingRejectId).update({ status:'rejected', rejectReason:reason, respondedAt:firebase.database.ServerValue.TIMESTAMP });
+  closeOv('rejectOv'); pendingRejectId=null;
+}
+async function undoPickup(id){ if(!confirm('미확인 상태로 되돌릴까요?')) return; await firebase.database().ref('system/pickup/'+id).update({ status:'pending', rejectReason:null, respondedAt:null }); }
 
+/* ---- 주간 보드 ---- */
+function fmtD(s){ if(!s) return ''; const [y,m,d]=s.split('-'); return `${parseInt(m)}.${parseInt(d)}`; }
+function renderSchedule(){
+  const dates=getWeekDates(weekOffset);
+  document.getElementById('weekLabel').textContent=`${fmtD(dates[0])} ~ ${fmtD(dates[4])}`;
+  const days=['월','화','수','목','금']; const today=todayStr();
+  let head=`<tr><th class="timecol">시간</th>`;
+  dates.forEach((dt,i)=>{ const isT=dt===today; head+=`<th class="${isT?'today-col':''}">${days[i]}<div class="d">${fmtD(dt)}</div></th>`; });
+  head+=`</tr>`; document.getElementById('boardHead').innerHTML=head;
 
-
-// 운행불가 블록 클릭 시 실행되는 함수
-async function cancelDayOff(id) {
-  if (confirm("운행불가를 취소할까요?")) {
-    try {
-      await firebase.database().ref(`system/transport_requests/${id}`).remove();
-      alert("운행불가 일정이 취소(삭제)되었습니다.");
-    } catch (error) {
-      alert("오류가 발생했습니다: " + error.message);
+  let body='';
+  for(let h=6; h<=20; h++){
+    body+=`<tr><td class="timecol">${pad(h)}:00</td>`;
+    for(let i=0;i<5;i++){
+      const dt=dates[i]; const isT=dt===today; let cell='';
+      // 휴가(종일)
+      const off=dayoffs.find(o=>dt>=normDate(o.start)&&dt<=normDate(o.end||o.start));
+      if(off && h===6){ cell+=`<div class="ev ev-off" title="${escapeHtml(off.reason||'휴가')}">휴가 · ${escapeHtml(off.reason||'')}</div>`; }
+      // 점심
+      if(h===12) cell+=`<div class="ev-lunch">휴게</div>`;
+      // 확정 픽업
+      pickups.filter(p=>p.status==='confirmed'&&normDate(p.date)===dt&&toMin(p.time)!==null&&Math.floor(toMin(p.time)/60)===h).forEach(p=>{
+        const dir=p.dir||'arr'; const cls=dir==='arr'?'ev-arr':'ev-dep';
+        cell+=`<div class="ev ${cls}" title="${p.prof}">${p.time} ${dirText(p.place)[dir]}<br><small>${p.prof}</small></div>`;
+      });
+      // 고정버스
+      fixeds.filter(f=>normDate(f.date)===dt&&toMin(f.time)!==null&&Math.floor(toMin(f.time)/60)===h).forEach(f=>{
+        const cls=f.kind==='입교'?'ev-entry':'ev-leave';
+        cell+=`<div class="ev ${cls}">${f.time} ${f.kind}버스${f.note?`<br><small>${escapeHtml(f.note)}</small>`:''}</div>`;
+      });
+      // 퇴교차량 공지
+      for(const rid in allCourses){ const dep=allCourses[rid]?.shuttle?.departure; if(dep&&dep.announced&&normDate(dep.date)===dt&&toMin(dep.time)!==null&&Math.floor(toMin(dep.time)/60)===h){ const cn=allCourses[rid].settings?.courseName||rid; const tot=Object.values(allCourses[rid].shuttle?.requests||{}).filter(r=>r.type!=='car').length; cell+=`<div class="ev ev-leave" onclick="switchView('leave')">${dep.time} 퇴교<br><small>${cn} ${tot}명</small></div>`; } }
+      body+=`<td class="slot ${isT?'today-col':''}">${cell}</td>`;
     }
+    body+=`</tr>`;
   }
+  document.getElementById('boardBody').innerHTML=body;
 }
 
-init();
+/* ---- 퇴교차량 ---- */
+function renderLeave(){
+  const box=document.getElementById('leaveBody');
+  const rows=[];
+  for(const rid in allCourses){
+    const room=allCourses[rid]; const reqs=room.shuttle?.requests||{};
+    const arr=Object.values(reqs);
+    const tot=arr.filter(r=>r.type!=='car').length;
+    if(!room.settings?.courseName && !tot) continue;
+    // 신청이 있거나 퇴교 임박한 과정만
+    if(tot===0 && !(room.shuttle?.departure)) continue;
+    const counts={osong:0,terminal:0,airport:0,car:0};
+    arr.forEach(r=>{ if(counts[r.type]!==undefined) counts[r.type]++; });
+    rows.push({rid, room, tot, counts, dep:room.shuttle?.departure||{}});
+  }
+  if(!rows.length){ box.innerHTML='<div class="inbox-empty">신청된 퇴교차량이 없습니다.</div>'; return; }
+  box.innerHTML=rows.map(r=>{
+    const dep=r.dep; let opts='<option value="">시간 선택</option>';
+    for(let h=12;h<=19;h++){ const t=pad(h)+':00'; opts+=`<option value="${t}" ${dep.time===t?'selected':''}>${t}</option>`; }
+    const cn=r.room.settings?.courseName||r.rid;
+    return `<div class="leave-card">
+      <div><div class="cn">${cn}</div>
+        <div class="breakdown"><span class="bd">오송 ${r.counts.osong}</span><span class="bd">터미널 ${r.counts.terminal}</span><span class="bd">공항 ${r.counts.airport}</span><span class="bd">자차 ${r.counts.car}</span></div>
+      </div>
+      <div class="cnt-badge">${r.tot}명</div>
+      <select class="leave-sel" onchange="askAnnounce('${r.rid}', this.value)">${opts}</select>
+      <button class="ann-btn ${dep.announced?'on':''}" title="${dep.announced?'공지됨(클릭시 해제)':'공지하기'}" onclick="toggleAnnounce('${r.rid}', ${!!dep.announced})"><i class="fa-solid fa-${dep.announced?'check':'bullhorn'}"></i></button>
+    </div>${dep.announced&&dep.time?`<div style="font-size:11px; color:var(--success); font-weight:800; margin:-4px 0 12px 4px;">✓ ${fmtFull(dep.date)} ${dep.time} 출발 — 교육생·강사 화면에 공유됨</div>`:''}`;
+  }).join('');
+}
+function fmtFull(s){ if(!s) return ''; return s.replace(/-/g,'.'); }
+function askAnnounce(rid, time){
+  if(!time) return;
+  const room=allCourses[rid]; const cn=room.settings?.courseName||rid;
+  const tot=Object.values(room.shuttle?.requests||{}).filter(r=>r.type!=='car').length;
+  const depDate=calcLeaveDate(room);
+  pendingAnnounce={rid, time, date:depDate};
+  document.getElementById('annMsg').innerHTML=`<b>${cn}</b><br>출발일: <b>${fmtFull(depDate)}</b><br>출발시간: <b style="color:var(--teal);">${time}</b><br>예상 인원: <b>${tot}명</b><br><br>이 시간으로 공지하면 교육생·강사 화면 퇴교차량 페이지에 표시됩니다.`;
+  openOv('annOv');
+}
+function calcLeaveDate(room){
+  let depDate=todayStr();
+  const per=room.settings?.period;
+  if(per && per.includes(' ~ ')){
+    const parts=per.split(' ~ '); const start=new Date(parts[0]); const today=new Date();
+    let firstFri=new Date(start); firstFri.setDate(start.getDate()+((5-start.getDay()+7)%7));
+    const cT=new Date(today.getFullYear(),today.getMonth(),today.getDate());
+    const cF=new Date(firstFri.getFullYear(),firstFri.getMonth(),firstFri.getDate());
+    depDate = cT<=cF ? ymd(firstFri) : parts[1];
+  }
+  return depDate;
+}
+async function confirmAnnounce(){
+  if(!pendingAnnounce) return; const {rid,time,date}=pendingAnnounce;
+  await firebase.database().ref(`courses/${rid}/shuttle/departure`).update({ time, date, announced:true });
+  closeOv('annOv'); pendingAnnounce=null;
+}
+async function toggleAnnounce(rid, on){
+  if(!confirm(on?'공지를 해제할까요?':'출발시간을 공지(확정)할까요? 시간을 먼저 선택했는지 확인하세요.')) return;
+  const dep=allCourses[rid]?.shuttle?.departure;
+  if(!on && (!dep||!dep.time)){ alert('먼저 출발 시간을 선택하세요.'); return; }
+  await firebase.database().ref(`courses/${rid}/shuttle/departure`).update({ announced:!on });
+}
 
+/* ---- 고정버스 ---- */
+function openFixed(kind){ pendingFixedKind=kind;
+  document.getElementById('fixedKind').value=kind+'버스';
+  document.getElementById('fixedHead').style.background=kind==='입교'?'var(--indigo)':'var(--teal)';
+  document.getElementById('fixedSave').style.background=kind==='입교'?'var(--indigo)':'var(--teal)';
+  document.getElementById('fixedDate').value=todayStr(); document.getElementById('fixedTime').value=kind==='입교'?'09:00':'16:00'; document.getElementById('fixedNote').value='';
+  openOv('fixedOv');
+}
+async function saveFixed(){
+  const date=document.getElementById('fixedDate').value, time=document.getElementById('fixedTime').value, note=document.getElementById('fixedNote').value.trim();
+  if(!date||!time){ alert('날짜와 시간을 입력하세요.'); return; }
+  await firebase.database().ref('system/driver_fixed').push({ kind:pendingFixedKind, date, time, note, createdAt:firebase.database.ServerValue.TIMESTAMP });
+  closeOv('fixedOv');
+}
+function renderFixedList(){
+  const ul=document.getElementById('fixedList');
+  const list=fixeds.slice().sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));
+  if(!list.length){ ul.innerHTML='<li class="inbox-empty" style="border:none;">등록된 고정버스가 없습니다.</li>'; return; }
+  ul.innerHTML=list.map(f=>`<li class="mitem">
+    <div class="ic ${f.kind==='입교'?'entry':'leave'}"><i class="fa-solid fa-bus"></i></div>
+    <div><div class="t">${f.kind}버스 · ${f.time}</div><div class="s">${fmtFull(f.date)}${f.note?' · '+escapeHtml(f.note):''}</div></div>
+    <button class="del" onclick="delFixed('${f.id}')"><i class="fa-solid fa-trash"></i></button>
+  </li>`).join('');
+}
+async function delFixed(id){ if(!confirm('이 고정버스를 삭제할까요?')) return; await firebase.database().ref('system/driver_fixed/'+id).remove(); }
 
+/* ---- 휴가 ---- */
+function openOff(){ const t=todayStr(); document.getElementById('offStart').value=t; document.getElementById('offEnd').value=t; document.getElementById('offReason').value=''; openOv('offOv'); }
+async function saveOff(){
+  const start=document.getElementById('offStart').value, end=document.getElementById('offEnd').value||start, reason=document.getElementById('offReason').value.trim();
+  if(!start){ alert('시작일을 입력하세요.'); return; }
+  if(end<start){ alert('종료일이 시작일보다 빠릅니다.'); return; }
+  await firebase.database().ref('system/driver_dayoff').push({ start, end, reason, createdAt:firebase.database.ServerValue.TIMESTAMP });
+  closeOv('offOv');
+}
+function renderOffList(){
+  const ul=document.getElementById('offList');
+  const list=dayoffs.slice().sort((a,b)=>(a.start||'').localeCompare(b.start||''));
+  if(!list.length){ ul.innerHTML='<li class="inbox-empty" style="border:none;">등록된 휴가가 없습니다.</li>'; return; }
+  ul.innerHTML=list.map(o=>{ const range=o.end&&o.end!==o.start?`${fmtFull(o.start)} ~ ${fmtFull(o.end)}`:fmtFull(o.start);
+    return `<li class="mitem"><div class="ic off"><i class="fa-solid fa-umbrella-beach"></i></div>
+      <div><div class="t">${escapeHtml(o.reason||'휴가')}</div><div class="s">${range}</div></div>
+      <button class="del" onclick="delOff('${o.id}')"><i class="fa-solid fa-trash"></i></button></li>`; }).join('');
+}
+async function delOff(id){ if(!confirm('이 휴가를 삭제할까요? (운영부 고지도 사라집니다)')) return; await firebase.database().ref('system/driver_dayoff/'+id).remove(); }
 
+/* ---- 공통 ---- */
+function openOv(id){ document.getElementById(id).classList.add('open'); }
+function closeOv(id){ document.getElementById(id).classList.remove('open'); }
+function escapeHtml(s){ return (''+s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+window.addEventListener('DOMContentLoaded', init);
+try{ console.log('%cCATC%c 차량지원 운행관리 (driver.html) %cvR1%c build 20260616-renewal','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8'); }catch(e){}
 </script>
-
-
-<!-- 하단 플로팅 홈 버튼 -->
-<div id="floatingHomeBtn" onclick="switchTab(0)">
-    <i class="fa-solid fa-house"></i>
-</div>
-
-
-
-<!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
-<style>@media print{#__catcVer{display:none!important}}</style>
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vA</div>
-<script>try{console.log('%cCATC%c 차량·기사 (driver.html) %cvA%c build 20260610-220210','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}</script>
 </body>
-
-
 </html>
-
-
-
-
