@@ -1855,10 +1855,11 @@ body.pc-mode .entry-box:hover, body.pc-mode .entry-box-tablet:hover {
           </div>
 
 <!-- 퇴교 차량 출발 시간 공지 (맨 아래로 이동) -->
-<div id="ind-departure-card" class="section-card" style="background:linear-gradient(135deg,#1e3a8a,#1d4ed8); color:white; padding:16px; margin-bottom:50px;">
-    <div class="section-title" style="color:white; margin-bottom:12px;">
-        <i class="fa-solid fa-bus"></i> 퇴교차량 출발 시간 공지
+<div id="ind-departure-card" class="section-card acc collapsed" style="background:linear-gradient(135deg,#1e3a8a,#1d4ed8); color:white; padding:16px; margin-bottom:50px;">
+    <div class="section-title acc-h" onclick="toggleAcc(this)" style="color:white; margin-bottom:12px; cursor:pointer; justify-content:space-between;">
+        <span><i class="fa-solid fa-bus"></i> 퇴교차량 출발 시간 공지</span><i class="fa-solid fa-chevron-down acc-ic" style="color:rgba(255,255,255,0.85);"></i>
     </div>
+    <div class="acc-body">
     <div id="coord-departure-status" style="font-size:12px; font-weight:700; color:rgba(255,255,255,0.7); margin-bottom:12px;">
         상태 확인 중...
     </div>
@@ -1877,6 +1878,7 @@ body.pc-mode .entry-box:hover, body.pc-mode .entry-box-tablet:hover {
         <button onclick="coordCancelDeparture()" style="padding:10px 12px; background:rgba(255,255,255,0.2); color:white; border:1px solid rgba(255,255,255,0.4); border-radius:10px; font-size:13px; font-weight:700; cursor:pointer;">
             취소
         </button>
+    </div>
     </div>
 </div>
       </div>
@@ -2064,7 +2066,6 @@ body.pc-mode .entry-box:hover, body.pc-mode .entry-box-tablet:hover {
                     <i class="fa-solid fa-list-check"></i> 신청 현황 (확인/미확인/불가) 보기</button>
             </div>
         </div>
-        <button class="navy-btn" style="margin-top:14px; background:#64748b;" onclick="closeTransportModal()">닫기</button>
     </div>
 </div>
 

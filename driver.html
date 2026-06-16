@@ -301,7 +301,10 @@
       <div style="background:#eef2ff; border:1px solid #c7d2fe; color:#3730a3; border-radius:10px; padding:9px 11px; font-size:12px; font-weight:700;"><i class="fa-solid fa-rotate"></i> 매주 반복 고정 — 주가 바뀌어도 시간표에 계속 표시됩니다.</div>
       <div class="fld"><label>요일</label>
         <select id="fixedDow"><option value="1">월요일</option><option value="2">화요일</option><option value="3">수요일</option><option value="4">목요일</option><option value="5">금요일</option></select></div>
-      <div class="fld"><label>시간</label><input type="time" id="fixedTime"></div>
+      <div class="fld" style="display:grid; grid-template-columns:1fr 1fr; gap:10px; align-items:end;">
+        <div><label>시작 시간</label><select id="fixedTime"></select></div>
+        <div><label>종료 시간</label><select id="fixedEnd"></select></div>
+      </div>
       <div class="fld"><label>메모 (선택)</label><input id="fixedNote" placeholder="예: 신규 교육생 32명 / 정문 집결"></div>
     </div>
     <div class="modal-foot">
@@ -368,6 +371,7 @@ function ymd(d){ return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDa
 function todayStr(){ return ymd(new Date()); }
 /* 운영 주(週) 시작(월요일). 금요일까지는 이번주, 토·일이면 다음주로 자동 전환 */
 function opWeekStart(){ const n=new Date(); const dow=n.getDay(); const mon=new Date(n); mon.setDate(n.getDate()-((dow+6)%7)); if(dow===6||dow===0) mon.setDate(mon.getDate()+7); return ymd(mon); }
+function fillTimeOptions(sel, selected){ if(!sel) return; let html=''; for(let h=6; h<=21; h++){ for(const mm of ['00','30']){ const t=`${pad(h)}:${mm}`; html+=`<option value="${t}" ${t===selected?'selected':''}>${t}</option>`; } } sel.innerHTML=html; }
 function normDate(s){ return s ? String(s).replace(/\./g,'-').replace(/\s/g,'') : ''; }
 function toMin(t){ if(!t) return null; const [h,m]=t.split(':'); return parseInt(h)*60+parseInt(m||0); }
 function fmtPhone(p){ if(!p) return ''; const d=(''+p).replace(/[^0-9]/g,''); if(d.length===11) return d.replace(/(\d{3})(\d{4})(\d{4})/,'$1-$2-$3'); if(d.length===10) return d.replace(/(\d{3})(\d{3})(\d{4})/,'$1-$2-$3'); return p; }
@@ -531,7 +535,8 @@ function renderSchedule(){
       // 고정버스 (매주 반복: 해당 요일 칸에 표시)
       fixeds.filter(f=>Number(f.dow)===(i+1)&&toMin(f.time)!==null&&Math.floor(toMin(f.time)/60)===h).forEach(f=>{
         const cls=f.kind==='입교'?'ev-entry':'ev-leave';
-        cell+=`<div class="ev ${cls}" title="매주 ${DOW[f.dow]}요일 반복">${f.time} ${f.kind}버스 <small>(매주)</small>${f.note?`<br><small>${escapeHtml(f.note)}</small>`:''}</div>`;
+        const span=f.endTime?`${f.time}~${f.endTime}`:f.time;
+        cell+=`<div class="ev ${cls}" title="매주 ${DOW[f.dow]}요일 반복">${span} ${f.kind}버스 <small>(매주)</small>${f.note?`<br><small>${escapeHtml(f.note)}</small>`:''}</div>`;
       });
       // 퇴교차량 공지
       for(const rid in allCourses){ const dep=allCourses[rid]?.shuttle?.departure; if(dep&&dep.announced&&normDate(dep.date)===dt&&toMin(dep.time)!==null&&Math.floor(toMin(dep.time)/60)===h){ const cn=allCourses[rid].settings?.courseName||rid; const tot=Object.values(allCourses[rid].shuttle?.requests||{}).filter(r=>r.type!=='car').length; cell+=`<div class="ev ev-leave" onclick="switchView('leave')">${dep.time} 퇴교<br><small>${cn} ${tot}명</small></div>`; } }
@@ -612,24 +617,29 @@ function openFixed(kind){ pendingFixedKind=kind;
   document.getElementById('fixedHead').style.background=kind==='입교'?'var(--indigo)':'var(--teal)';
   document.getElementById('fixedSave').style.background=kind==='입교'?'var(--indigo)':'var(--teal)';
   document.getElementById('fixedDow').value=kind==='입교'?'1':'5'; // 입교=월, 퇴교=금 기본
-  document.getElementById('fixedTime').value=kind==='입교'?'09:00':'16:00'; document.getElementById('fixedNote').value='';
+  fillTimeOptions(document.getElementById('fixedTime'), kind==='입교'?'09:00':'16:00');
+  fillTimeOptions(document.getElementById('fixedEnd'),  kind==='입교'?'10:00':'17:00');
+  document.getElementById('fixedNote').value='';
   openOv('fixedOv');
 }
 async function saveFixed(){
-  const dow=document.getElementById('fixedDow').value, time=document.getElementById('fixedTime').value, note=document.getElementById('fixedNote').value.trim();
-  if(!time){ alert('시간을 입력하세요.'); return; }
-  await firebase.database().ref('system/driver_fixed').push({ kind:pendingFixedKind, dow:Number(dow), time, note, weekly:true, createdAt:firebase.database.ServerValue.TIMESTAMP });
-  closeOv('fixedOv');
+  const dow=document.getElementById('fixedDow').value, time=document.getElementById('fixedTime').value, endTime=document.getElementById('fixedEnd').value, note=document.getElementById('fixedNote').value.trim();
+  if(!time){ alert('시작 시간을 선택하세요.'); return; }
+  if(endTime && endTime<=time){ alert('종료 시간은 시작 시간보다 늦어야 합니다.'); return; }
+  try{
+    await firebase.database().ref('system/driver_fixed').push({ kind:pendingFixedKind, dow:Number(dow), time, endTime, note, weekly:true, createdAt:firebase.database.ServerValue.TIMESTAMP });
+    closeOv('fixedOv');
+  }catch(e){ alert('저장 실패: '+(e&&e.message||e)); }
 }
 function renderFixedList(){
   const ul=document.getElementById('fixedList');
   const list=fixeds.slice().sort((a,b)=>(Number(a.dow)-Number(b.dow))||(a.time||'').localeCompare(b.time||''));
   if(!list.length){ ul.innerHTML='<li class="inbox-empty" style="border:none;">등록된 고정버스가 없습니다.</li>'; return; }
-  ul.innerHTML=list.map(f=>`<li class="mitem">
+  ul.innerHTML=list.map(f=>{ const span=f.endTime?`${f.time}~${f.endTime}`:f.time; return `<li class="mitem">
     <div class="ic ${f.kind==='입교'?'entry':'leave'}"><i class="fa-solid fa-bus"></i></div>
-    <div><div class="t">${f.kind}버스 · 매주 ${DOW[f.dow]}요일 ${f.time}</div><div class="s">반복 고정${f.note?' · '+escapeHtml(f.note):''}</div></div>
+    <div><div class="t">${f.kind}버스 · 매주 ${DOW[f.dow]}요일 ${span}</div><div class="s">반복 고정${f.note?' · '+escapeHtml(f.note):''}</div></div>
     <button class="del" onclick="delFixed('${f.id}')"><i class="fa-solid fa-trash"></i></button>
-  </li>`).join('');
+  </li>`; }).join('');
 }
 async function delFixed(id){ if(!confirm('이 고정버스를 삭제할까요?')) return; await firebase.database().ref('system/driver_fixed/'+id).remove(); }
 
