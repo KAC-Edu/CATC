@@ -371,7 +371,7 @@
 <!-- 일회성 일정 추가 모달 -->
 <div class="ov" id="schedOv">
   <div class="modal">
-    <div class="modal-head" style="background:#ca8a04;">일정 추가 <i class="fa-solid fa-xmark" style="cursor:pointer;" onclick="closeOv('schedOv')"></i></div>
+    <div class="modal-head" style="background:#ca8a04;"><span id="schedHeadTitle">일정 추가</span> <i class="fa-solid fa-xmark" style="cursor:pointer;" onclick="closeOv('schedOv')"></i></div>
     <div class="modal-body">
       <div style="font-size:13px; color:var(--muted); font-weight:800;" id="schedDateLabel"></div>
       <div class="fld"><label>내용</label><input id="schedTitle" placeholder="예: 차량 점검 / 외부 운행 / 회의"></div>
@@ -382,7 +382,8 @@
     </div>
     <div class="modal-foot">
       <button class="mf-cancel" onclick="closeOv('schedOv')">취소</button>
-      <button class="mf-ok" style="background:#ca8a04;" onclick="saveSchedule()">등록</button>
+      <button class="mf-ok" id="schedDelBtn" style="background:#ef4444; display:none;" onclick="schedDelete()">삭제</button>
+      <button class="mf-ok" id="schedSaveBtn" style="background:#ca8a04;" onclick="saveSchedule()">등록</button>
     </div>
   </div>
 </div>
@@ -578,7 +579,7 @@ function renderSchedule(){
   // 고정버스(매주, 시작~종료 통 블록)
   fixeds.forEach(f=>{ if(toMin(f.time)===null) return; const i=Number(f.dow)-1; if(i<0||i>4) return; const sMin=toMin(f.time),eMin=f.endTime?toMin(f.endTime):sMin+60; const pl=placeOf(sMin,eMin); const span=f.endTime?`${f.time}~${f.endTime}`:f.time; evs.push({col:i+2,sRow:pl.sRow,span:pl.span,cls:f.kind==='입교'?'ev-entry':'ev-leave',html:`${span} ${f.kind}버스 <small>(매주)</small>${f.note?`<br><small>${escapeHtml(f.note)}</small>`:''}`,title:`매주 ${DOW[f.dow]}요일 반복`}); });
   // 일회성 일정
-  schedules.forEach(x=>{ const i=dates.indexOf(normDate(x.date)); if(i<0||toMin(x.time)===null) return; const sMin=toMin(x.time),eMin=x.endTime?toMin(x.endTime):sMin+60; const pl=placeOf(sMin,eMin); const span=x.endTime?`${x.time}~${x.endTime}`:x.time; evs.push({col:i+2,sRow:pl.sRow,span:pl.span,cls:'ev-memo',html:`${span} ${escapeHtml(x.title||'일정')}`,title:'클릭하여 삭제',onclick:`event.stopPropagation(); delSchedule('${x.id}')`}); });
+  schedules.forEach(x=>{ const i=dates.indexOf(normDate(x.date)); if(i<0||toMin(x.time)===null) return; const sMin=toMin(x.time),eMin=x.endTime?toMin(x.endTime):sMin+60; const pl=placeOf(sMin,eMin); const span=x.endTime?`${x.time}~${x.endTime}`:x.time; evs.push({col:i+2,sRow:pl.sRow,span:pl.span,cls:'ev-memo',html:`${span} ${escapeHtml(x.title||'일정')}`,title:'클릭하여 수정',onclick:`event.stopPropagation(); openScheduleEdit('${x.id}')`}); });
   // 퇴교차량 공지
   for(const rid in allCourses){ const dep=allCourses[rid]?.shuttle?.departure; if(dep&&dep.announced&&toMin(dep.time)!==null){ const i=dates.indexOf(normDate(dep.date)); if(i<0) continue; const sMin=toMin(dep.time),eMin=sMin+60; const pl=placeOf(sMin,eMin); const cn=allCourses[rid].settings?.courseName||rid; const tot=Object.values(allCourses[rid].shuttle?.requests||{}).filter(r=>r.type!=='car').length; evs.push({col:i+2,sRow:pl.sRow,span:pl.span,cls:'ev-leave',html:`${dep.time} 퇴교<br><small>${escapeHtml(cn)} ${tot}명</small>`,onclick:`switchView('leave')`}); } }
   // 같은 날(열) 안에서 시간이 겹치는 일정은 좌우로 나란히 배치(레인 분할)
@@ -722,14 +723,38 @@ function captureBoard(){
 }
 /* ---- 빈 칸 클릭 → 일회성 일정 추가 ---- */
 let pendingSlot=null;
+let editingScheduleId=null;
 function slotClick(ev, date, h){
   if(ev && ev.target && ev.target.closest('.ev')) return; // 일정 블록 클릭은 무시
+  editingScheduleId=null;
   pendingSlot={date};
+  document.getElementById('schedHeadTitle').textContent='일정 추가';
+  document.getElementById('schedSaveBtn').textContent='등록';
+  document.getElementById('schedDelBtn').style.display='none';
   document.getElementById('schedDateLabel').textContent=`${fmtFull(date)} (${DOW[new Date(date).getDay()]})`;
   fillTimeOptions(document.getElementById('schedTime'), pad(h)+':00');
   fillTimeOptions(document.getElementById('schedEnd'), pad(Math.min(h+1,21))+':00');
   document.getElementById('schedTitle').value='';
   openOv('schedOv'); setTimeout(()=>{ const t=document.getElementById('schedTitle'); if(t) t.focus(); },120);
+}
+function openScheduleEdit(id){
+  const x=schedules.find(s=>s.id===id); if(!x) return;
+  editingScheduleId=id;
+  pendingSlot={date:x.date};
+  document.getElementById('schedHeadTitle').textContent='일정 수정';
+  document.getElementById('schedSaveBtn').textContent='수정';
+  document.getElementById('schedDelBtn').style.display='';
+  document.getElementById('schedDateLabel').textContent=`${fmtFull(x.date)} (${DOW[new Date(x.date).getDay()]})`;
+  fillTimeOptions(document.getElementById('schedTime'), x.time||'09:00');
+  fillTimeOptions(document.getElementById('schedEnd'), x.endTime||'10:00');
+  document.getElementById('schedTitle').value=x.title||'';
+  openOv('schedOv');
+}
+async function schedDelete(){
+  if(!editingScheduleId) return;
+  if(!confirm('이 일정을 삭제할까요?')) return;
+  try{ await firebase.database().ref('system/driver_schedule/'+editingScheduleId).remove(); closeOv('schedOv'); editingScheduleId=null; }
+  catch(e){ alert('삭제 실패: '+((e&&e.message)||e)); }
 }
 async function saveSchedule(){
   if(!pendingSlot) return;
@@ -737,8 +762,14 @@ async function saveSchedule(){
   const time=document.getElementById('schedTime').value, endTime=document.getElementById('schedEnd').value;
   if(!title){ alert('일정 내용을 입력하세요.'); return; }
   if(endTime && endTime<=time){ alert('종료 시간은 시작 시간보다 늦어야 합니다.'); return; }
-  try{ await firebase.database().ref('system/driver_schedule').push({ date:pendingSlot.date, time, endTime, title, createdAt:firebase.database.ServerValue.TIMESTAMP }); closeOv('schedOv'); pendingSlot=null; }
-  catch(e){ alert('저장 실패: '+((e&&e.message)||e)); }
+  try{
+    if(editingScheduleId){
+      await firebase.database().ref('system/driver_schedule/'+editingScheduleId).update({ date:pendingSlot.date, time, endTime, title });
+    } else {
+      await firebase.database().ref('system/driver_schedule').push({ date:pendingSlot.date, time, endTime, title, createdAt:firebase.database.ServerValue.TIMESTAMP });
+    }
+    closeOv('schedOv'); editingScheduleId=null; pendingSlot=null;
+  } catch(e){ alert('저장 실패: '+((e&&e.message)||e)); }
 }
 async function delSchedule(id){ if(!confirm('이 일정을 삭제할까요?')) return; await firebase.database().ref('system/driver_schedule/'+id).remove(); }
 
