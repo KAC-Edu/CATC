@@ -1441,6 +1441,10 @@ body.pc-mode .entry-box:hover, body.pc-mode .entry-box-tablet:hover {
 .cpop-name{ background:#f1f5f9; border-radius:8px; padding:6px 11px; font-size:13px; font-weight:700; }
 .cpop-name small{ color:#94a3b8; font-weight:600; margin-left:4px; }
 .cpop-datebar{ font-weight:800; color:#475569; margin-bottom:10px; }
+.acc .acc-body{ display:block; }
+.acc.collapsed .acc-body{ display:none; }
+.acc .acc-ic{ transition:transform .2s; margin-left:6px; color:#94a3b8; font-size:12px; }
+.acc.collapsed .acc-ic{ transform:rotate(-90deg); }
 </style>
 </head>
 <body>
@@ -1809,8 +1813,49 @@ body.pc-mode .entry-box:hover, body.pc-mode .entry-box-tablet:hover {
           </div>
           </div>
 
-<!-- 퇴교 차량 출발 시간 공지 -->
-<div id="ind-departure-card" class="section-card" style="background:linear-gradient(135deg,#1e3a8a,#1d4ed8); color:white; padding:16px;">
+
+<div id="ind-notice-card" class="section-card acc collapsed" style="background:white; padding:16px; border:1px solid #e2e8f0;">
+    <div class="section-title acc-h" onclick="toggleAcc(this)" style="color:#1e293b; margin-bottom:12px; padding-bottom:10px; border-bottom:2px solid #e2e8f0; cursor:pointer; justify-content:space-between;">
+        <span><i class="fa-solid fa-comment-dots"></i> 담당 과정 공지 (해당 과정 교육생 공지)</span><i class="fa-solid fa-chevron-down acc-ic"></i>
+    </div>
+    <div class="acc-body">
+    <textarea id="courseNotice" class="notice-area"
+        onclick="clearLastNoticePlaceholder(this)"
+        oninput="onNoticeInput(this)"
+        style="background:#eff6ff; color:#1e40af; font-style:italic; border:1.5px solid #bfdbfe; border-radius:10px; font-size:14px; padding:12px;"
+        data-placeholder="true"></textarea>
+    <button class="navy-btn" style="background:#10b981; border:none; box-shadow:0 4px 10px rgba(16,185,129,0.4); margin-top:8px; width:100%;" onclick="saveCourseNotice()">
+        <i class="fa-solid fa-paper-plane"></i> 과정 공지 업데이트
+    </button>
+    </div>
+</div>
+
+
+          <div id="ind-outing-card" class="section-card acc collapsed" style="margin-bottom: 14px; background:white; padding:16px; border:1px solid #e2e8f0;">
+              <div class="section-title" style="color:#1e293b; margin-bottom:12px; padding-bottom:10px; border-bottom:2px solid #e2e8f0; justify-content:space-between; flex-wrap:nowrap; align-items:center; gap:8px;">
+                  <span onclick="toggleAcc(this)" style="white-space:nowrap; font-size:13px; font-weight:800; flex-shrink:0; cursor:pointer;"><i class="fa-solid fa-user-clock"></i> 외출/외박 신청자 명단 <i class="fa-solid fa-chevron-down acc-ic"></i></span>
+                  <div style="display:flex; gap:5px; flex-shrink:0;">
+                      <button class="navy-btn" style="width:auto; padding:0 8px; height:30px; font-size:11px; background:#eff6ff; border:1px solid #bfdbfe; color:#1e40af; white-space:nowrap;" onclick="openAttendanceSheet()"><i class="fa-solid fa-clipboard-user"></i> 출석부</button>
+                      <button class="navy-btn" style="width:auto; padding:0 8px; height:30px; font-size:11px; background:#1e293b; color:#ffffff; border:1px solid #334155; white-space:nowrap;" onclick="openOutingLedger()"><i class="fa-solid fa-book"></i> 외출대장</button>
+                  </div>
+              </div>
+              <div class="acc-body"><div style="overflow-x: auto; background:rgba(255,255,255,0.1); border-radius:10px; overflow:hidden; border:1px solid rgba(255,255,255,0.2);">
+                  <table class="navy-table" style="background:transparent;">
+                      <thead>
+                          <tr>
+                              <th>신청자</th>
+                              <th>구분</th>
+                              <th>시간</th>
+                              <th width="100">담당 확인</th>
+                          </tr>
+                      </thead>
+                      <tbody id="indActionTableBody"></tbody>
+                  </table>
+              </div></div>
+          </div>
+
+<!-- 퇴교 차량 출발 시간 공지 (맨 아래로 이동) -->
+<div id="ind-departure-card" class="section-card" style="background:linear-gradient(135deg,#1e3a8a,#1d4ed8); color:white; padding:16px; margin-bottom:50px;">
     <div class="section-title" style="color:white; margin-bottom:12px;">
         <i class="fa-solid fa-bus"></i> 퇴교차량 출발 시간 공지
     </div>
@@ -1834,44 +1879,6 @@ body.pc-mode .entry-box:hover, body.pc-mode .entry-box-tablet:hover {
         </button>
     </div>
 </div>
-
-<div id="ind-notice-card" class="section-card" style="background:white; padding:16px; border:1px solid #e2e8f0;">
-    <div class="section-title" style="color:#1e293b; margin-bottom:12px; padding-bottom:10px; border-bottom:2px solid #e2e8f0;">
-        <i class="fa-solid fa-comment-dots"></i> 담당 과정 공지 (해당 과정 교육생 공지)
-    </div>
-    <textarea id="courseNotice" class="notice-area"
-        onclick="clearLastNoticePlaceholder(this)"
-        oninput="onNoticeInput(this)"
-        style="background:#eff6ff; color:#1e40af; font-style:italic; border:1.5px solid #bfdbfe; border-radius:10px; font-size:14px; padding:12px;"
-        data-placeholder="true"></textarea>
-    <button class="navy-btn" style="background:#10b981; border:none; box-shadow:0 4px 10px rgba(16,185,129,0.4); margin-top:8px; width:100%;" onclick="saveCourseNotice()">
-        <i class="fa-solid fa-paper-plane"></i> 과정 공지 업데이트
-    </button>
-</div>
-
-
-          <div id="ind-outing-card" class="section-card" style="margin-bottom: 50px; background:white; padding:16px; border:1px solid #e2e8f0;">
-              <div class="section-title" style="color:#1e293b; margin-bottom:12px; padding-bottom:10px; border-bottom:2px solid #e2e8f0; justify-content:space-between; flex-wrap:nowrap; align-items:center; gap:8px;">
-                  <span style="white-space:nowrap; font-size:13px; font-weight:800; flex-shrink:0;"><i class="fa-solid fa-user-clock"></i> 외출/외박 신청자 명단</span>
-                  <div style="display:flex; gap:5px; flex-shrink:0;">
-                      <button class="navy-btn" style="width:auto; padding:0 8px; height:30px; font-size:11px; background:#eff6ff; border:1px solid #bfdbfe; color:#1e40af; white-space:nowrap;" onclick="openAttendanceSheet()"><i class="fa-solid fa-clipboard-user"></i> 출석부</button>
-                      <button class="navy-btn" style="width:auto; padding:0 8px; height:30px; font-size:11px; background:#1e293b; color:#ffffff; border:1px solid #334155; white-space:nowrap;" onclick="openOutingLedger()"><i class="fa-solid fa-book"></i> 외출대장</button>
-                  </div>
-              </div>
-              <div style="overflow-x: auto; background:rgba(255,255,255,0.1); border-radius:10px; overflow:hidden; border:1px solid rgba(255,255,255,0.2);">
-                  <table class="navy-table" style="background:transparent;">
-                      <thead>
-                          <tr>
-                              <th>신청자</th>
-                              <th>구분</th>
-                              <th>시간</th>
-                              <th width="100">담당 확인</th>
-                          </tr>
-                      </thead>
-                      <tbody id="indActionTableBody"></tbody>
-                  </table>
-              </div>
-          </div>
       </div>
     </main>
 
@@ -6648,6 +6655,7 @@ function openShuttleSummary(){
     : '<div class="cpop-empty">신청된 퇴교차량이 없습니다.</div>';
   _cpop('<i class="fa-solid fa-bus"></i> 퇴교차량 신청 총괄', html);
 }
+function toggleAcc(el){ const card=el.closest('.acc'); if(card) card.classList.toggle('collapsed'); }
 </script>
 </body>
 </html>

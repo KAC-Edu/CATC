@@ -637,4 +637,29 @@ async function delFixed(id){ if(!confirm('이 고정버스를 삭제할까요?')
 function openOff(){ const t=todayStr(); document.getElementById('offStart').value=t; document.getElementById('offEnd').value=t; document.getElementById('offReason').value=''; openOv('offOv'); }
 async function saveOff(){
   const start=document.getElementById('offStart').value, end=document.getElementById('offEnd').value||start, reason=document.getElementById('offReason').value.trim();
-  if(!start){ alert('시작일을 입력
+  if(!start){ alert('시작일을 입력하세요.'); return; }
+  if(end<start){ alert('종료일이 시작일보다 빠릅니다.'); return; }
+  await firebase.database().ref('system/driver_dayoff').push({ start, end, reason, createdAt:firebase.database.ServerValue.TIMESTAMP });
+  closeOv('offOv');
+}
+function renderOffList(){
+  const ul=document.getElementById('offList');
+  const list=dayoffs.slice().sort((a,b)=>(a.start||'').localeCompare(b.start||''));
+  if(!list.length){ ul.innerHTML='<li class="inbox-empty" style="border:none;">등록된 휴가가 없습니다.</li>'; return; }
+  ul.innerHTML=list.map(o=>{ const range=o.end&&o.end!==o.start?`${fmtFull(o.start)} ~ ${fmtFull(o.end)}`:fmtFull(o.start);
+    return `<li class="mitem"><div class="ic off"><i class="fa-solid fa-umbrella-beach"></i></div>
+      <div><div class="t">${escapeHtml(o.reason||'휴가')}</div><div class="s">${range}</div></div>
+      <button class="del" onclick="delOff('${o.id}')"><i class="fa-solid fa-trash"></i></button></li>`; }).join('');
+}
+async function delOff(id){ if(!confirm('이 휴가를 삭제할까요? (운영부 고지도 사라집니다)')) return; await firebase.database().ref('system/driver_dayoff/'+id).remove(); }
+
+/* ---- 공통 ---- */
+function openOv(id){ document.getElementById(id).classList.add('open'); }
+function closeOv(id){ document.getElementById(id).classList.remove('open'); }
+function escapeHtml(s){ return (''+s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+window.addEventListener('DOMContentLoaded', init);
+try{ console.log('%cCATC%c 차량지원 운행관리 (driver.html) %cvR1%c build 20260616-renewal','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8'); }catch(e){}
+</script>
+</body>
+</html>
