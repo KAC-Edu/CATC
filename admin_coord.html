@@ -1418,6 +1418,30 @@ body.pc-mode .entry-box:hover, body.pc-mode .entry-box-tablet:hover {
     min-width: 600px;
 }
 </style>
+<style id="coord-renewal-css">
+.coord-nav4{ display:grid; grid-template-columns:repeat(4,1fr); gap:10px; width:100%; }
+.coord-nav4 .hero-badge.nav-btn{ cursor:pointer; transition:.15s; }
+.coord-nav4 .hero-badge.nav-btn:hover{ transform:translateY(-2px); box-shadow:0 8px 18px rgba(0,0,0,.20); }
+@media(max-width:640px){ .coord-nav4{ grid-template-columns:repeat(2,1fr); } }
+.cpop-ov{ display:none; position:fixed; inset:0; background:rgba(15,23,42,.55); z-index:9500; align-items:center; justify-content:center; padding:18px; }
+.cpop-ov.open{ display:flex; }
+.cpop{ background:#fff; width:100%; max-width:760px; max-height:86vh; border-radius:18px; overflow:hidden; display:flex; flex-direction:column; box-shadow:0 20px 50px rgba(0,0,0,.3); }
+.cpop-head{ background:#0f2a4a; color:#fff; padding:15px 18px; font-weight:900; font-size:16px; display:flex; justify-content:space-between; align-items:center; }
+.cpop-head .x{ cursor:pointer; font-size:20px; }
+.cpop-body{ padding:16px 18px; overflow-y:auto; }
+.cpop-table{ width:100%; border-collapse:collapse; }
+.cpop-table th{ background:#f1f5f9; color:#475569; font-size:12px; font-weight:800; padding:9px 6px; border-bottom:2px solid #e2e8f0; }
+.cpop-table td{ text-align:center; font-size:13px; padding:9px 6px; border-bottom:1px solid #f1f5f9; }
+.cpop-empty{ text-align:center; color:#94a3b8; font-weight:700; padding:40px; }
+.cpop-search{ width:100%; padding:11px; border:1.5px solid #e2e8f0; border-radius:10px; font-size:14px; margin-bottom:12px; box-sizing:border-box; }
+.cpop-course{ border:1px solid #e2e8f0; border-radius:12px; margin-bottom:12px; overflow:hidden; }
+.cpop-course-h{ background:#f8fafc; padding:10px 13px; font-weight:900; font-size:14px; display:flex; justify-content:space-between; }
+.cpop-course-h span{ color:#0ea5e9; font-size:12px; }
+.cpop-roster{ padding:10px 13px; display:flex; flex-wrap:wrap; gap:7px; }
+.cpop-name{ background:#f1f5f9; border-radius:8px; padding:6px 11px; font-size:13px; font-weight:700; }
+.cpop-name small{ color:#94a3b8; font-weight:600; margin-left:4px; }
+.cpop-datebar{ font-weight:800; color:#475569; margin-bottom:10px; }
+</style>
 </head>
 <body>
 
@@ -1447,6 +1471,9 @@ body.pc-mode .entry-box:hover, body.pc-mode .entry-box-tablet:hover {
         </button>
         <button class="menu-tile" style="background:#003366;" onclick="annualPlanMgrCoord.openEditorModal()">
             <i class="fa-solid fa-calendar-days"></i> 연간계획
+        </button>
+        <button class="menu-tile" style="background:#0d9488;" onclick="openAttendanceManager(); toggleMenu(false);">
+            <i class="fa-solid fa-clipboard-user"></i> 출석부 관리
         </button>
     </div>
 </div>
@@ -1562,75 +1589,23 @@ body.pc-mode .entry-box:hover, body.pc-mode .entry-box-tablet:hover {
                 <i class="fa-solid fa-building-columns"></i> 항공기술훈련원 교육 운영 현황
                 <small>교육운영부</small>
             </div>
-            <div class="coord-hero__badges">
-                <div class="hero-badge">
+            <div class="coord-hero__badges coord-nav4">
+                <div class="hero-badge nav-btn" onclick="openCourseOverview()">
                     <i class="fa-solid fa-graduation-cap"></i>
-                    <div>
-                        <div class="hb-label">운영 과정</div>
-                        <div class="hb-value"><span id="hero-active-courses">0</span><small>개</small></div>
-                    </div>
+                    <div><div class="hb-label">운영 과정</div><div class="hb-value"><span id="hero-active-courses">0</span><small>개</small></div></div>
                 </div>
-                <div class="hero-badge">
+                <div class="hero-badge nav-btn" onclick="openStudentRosterPopup()">
                     <i class="fa-solid fa-users"></i>
-                    <div>
-                        <div class="hb-label">전체 입교생</div>
-                        <div class="hb-value"><span id="hero-total-students">0</span><small>명</small></div>
-                    </div>
+                    <div><div class="hb-label">전체 교육생</div><div class="hb-value"><span id="g-total-students">0</span><small>명</small></div></div>
                 </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- 상단 상황판: 컴팩트 한 줄 스트립 (가로 스크롤) -->
-    <!-- PC 전용 퀵 액션 툴바 -->
-    <div id="pcQuickBar">
-        <span class="pc-qb-label"><i class="fa-solid fa-bolt"></i> 바로가기</span>
-        <button class="pc-qb-btn" onclick="openGlobalNoticeModal()"><i class="fa-solid fa-bullhorn"></i> 전체 공지</button>
-        <button class="pc-qb-btn" onclick="openAttendanceManager()"><i class="fa-solid fa-clipboard-user"></i> 출석부 관리</button>
-        <button class="pc-qb-btn" onclick="showPickupView()"><i class="fa-solid fa-car-side"></i> 강사 픽업</button>
-        <button class="pc-qb-btn" onclick="showStudentShuttleView()"><i class="fa-solid fa-bus"></i> 셔틀 현황</button>
-        <button class="pc-qb-btn" onclick="showTotalStudentList()"><i class="fa-solid fa-users"></i> 전체 교육생</button>
-        <button class="pc-qb-btn" onclick="annualPlanMgrCoord.openEditorModal()"><i class="fa-solid fa-calendar-days"></i> 연간계획</button>
-    </div>
-
-    <div class="stat-strip">
-        <div class="stat-chip chip-students" onclick="showTotalStudentList()">
-            <div class="chip-ic"><i class="fa-solid fa-users"></i></div>
-            <div class="chip-body">
-                <div class="chip-val"><span id="g-total-students">0</span><small>명</small></div>
-                <div class="chip-label">전체 교육생</div>
-            </div>
-        </div>
-
-        <div class="stat-chip chip-outing" onclick="openOutingManager()">
-            <div class="chip-ic"><i class="fa-solid fa-file-signature"></i></div>
-            <div class="chip-body">
-                <div class="chip-val"><span id="g-today-actions">0</span><small>건</small></div>
-                <div class="chip-label">금일 외출·외박</div>
-            </div>
-        </div>
-
-        <div class="stat-chip chip-pickup" onclick="showPickupView()">
-            <div class="chip-ic"><i class="fa-solid fa-car-side"></i></div>
-            <div class="chip-body">
-                <div class="chip-val"><span id="g-pickup-count">0</span><small>건</small></div>
-                <div class="chip-label">강사 픽업요청</div>
-            </div>
-        </div>
-
-        <div class="stat-chip chip-shuttle" onclick="showStudentShuttleView()">
-            <div class="chip-ic"><i class="fa-solid fa-bus"></i></div>
-            <div class="chip-body">
-                <div class="chip-val"><span id="g-shuttle-count">0</span><small>명</small></div>
-                <div class="chip-label">교육생 퇴교</div>
-            </div>
-        </div>
-
-        <div class="stat-chip chip-attend" onclick="openAttendanceManager()">
-            <div class="chip-ic"><i class="fa-solid fa-clipboard-user"></i></div>
-            <div class="chip-body">
-                <div class="chip-val"><span id="g-attend-active">0</span><small>과정</small></div>
-                <div class="chip-label">출석부 관리</div>
+                <div class="hero-badge nav-btn" onclick="openOutingSummary()">
+                    <i class="fa-solid fa-file-signature"></i>
+                    <div><div class="hb-label">외출·외박</div><div class="hb-value"><span id="g-today-actions">0</span><small>건</small></div></div>
+                </div>
+                <div class="hero-badge nav-btn" onclick="openShuttleSummary()">
+                    <i class="fa-solid fa-bus"></i>
+                    <div><div class="hb-label">퇴교차량</div><div class="hb-value"><span id="g-shuttle-count">0</span><small>명</small></div></div>
+                </div>
             </div>
         </div>
     </div>
@@ -4595,6 +4570,8 @@ function renderPickupTable() {
         const data = snap.val() || {};
         let items = Object.keys(data).map(k => ({ id:k, ...data[k] }));
         if (currentRID) items = items.filter(r => r.courseRID === currentRID);
+        const _cut = _coordOpWeekStart();   // 토요일이면 차주 신청내역으로 자동 전환
+        items = items.filter(r => (r.date || '') >= _cut);
 
         if (!items.length) {
             container.innerHTML = '<div style="padding:50px; text-align:center; color:#94a3b8; font-size:14px; font-weight:800;">픽업 신청 내역이 없습니다.</div>';
@@ -6585,6 +6562,93 @@ function _coordParseRoster(text) {
 <style>@media print{#__catcVer{display:none!important}}</style>
 <div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">JDS260613(V11)</div>
 <script>try{console.log('%cCATC%c 교육운영부 (admin_coord.html) %cJDS260613(V11)%c build 20260613','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}</script>
+<div id="coordPopup" class="cpop-ov" onclick="if(event.target===this)cpopClose()">
+  <div class="cpop">
+    <div class="cpop-head"><span id="cpopTitle"></span><i class="fa-solid fa-xmark x" onclick="cpopClose()"></i></div>
+    <div class="cpop-body" id="cpopBody"></div>
+  </div>
+</div>
+<script>
+/* ===== 운영부 대시보드 요약 팝업 (개편) ===== */
+function _coordOpWeekStart(){ const n=new Date(); const dow=n.getDay(); const mon=new Date(n); mon.setDate(n.getDate()-((dow+6)%7)); if(dow===6||dow===0) mon.setDate(mon.getDate()+7); return `${mon.getFullYear()}-${String(mon.getMonth()+1).padStart(2,'0')}-${String(mon.getDate()).padStart(2,'0')}`; }
+function _coordToday(){ return (typeof getTodayString==='function') ? getTodayString() : new Date().toISOString().split('T')[0]; }
+function _esc(t){ return (''+(t==null?'':t)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function _cpop(title, html){ document.getElementById('cpopTitle').innerHTML=title; document.getElementById('cpopBody').innerHTML=html; document.getElementById('coordPopup').classList.add('open'); }
+function cpopClose(){ document.getElementById('coordPopup').classList.remove('open'); }
+
+function _coordActiveRooms(){
+  const today=_coordToday(); const out=[];
+  for(let i=65;i<=90;i++){ const rid=String.fromCharCode(i); const room=(typeof globalAllData!=='undefined')?globalAllData[rid]:null; if(!room) continue;
+    const ss=room.settings||{}, st=room.status||{};
+    if(st.roomStatus!=='active') continue;
+    if(ss.hideFromBoard) continue;
+    if(ss.period && ss.period.includes(' ~ ')){ const end=(ss.period.split(' ~ ')[1]||'').trim(); if(end && end<today) continue; }
+    out.push({rid, s:ss, st, room});
+  }
+  return out;
+}
+function _studentsOf(room){ return room.students ? Object.values(room.students).filter(x=>x && x.name && (''+x.name).trim() && x.name!=='undefined') : []; }
+
+/* 1) 운영 과정: 강의실/과정명/담당자/담임교수/기간/인원 */
+function openCourseOverview(){
+  const rooms=_coordActiveRooms();
+  const html = rooms.length
+    ? `<table class="cpop-table"><thead><tr><th>강의실</th><th>과정명</th><th>담당자</th><th>담임교수</th><th>기간</th><th>인원</th></tr></thead><tbody>`
+      + rooms.map(r=>`<tr><td style="font-weight:900;">ROOM ${r.rid}</td><td style="text-align:left;">${_esc(r.s.courseName||'-')}</td><td>${_esc(r.s.coordinatorName||'-')}</td><td>${_esc(r.st.professorName||'-')}</td><td style="font-size:11px;">${_esc(r.s.period||'-')}</td><td><b>${_studentsOf(r.room).length}</b>명</td></tr>`).join('')
+      + `</tbody></table>`
+    : '<div class="cpop-empty">운영 중인 과정이 없습니다.</div>';
+  _cpop('<i class="fa-solid fa-graduation-cap"></i> 운영 과정 현황', html);
+}
+
+/* 2) 전체 교육생: 과정별 명단 (검색 가능) */
+function openStudentRosterPopup(){
+  const rooms=_coordActiveRooms();
+  const search=`<input id="cpopSearch" class="cpop-search" placeholder="🔍 이름·소속 검색" oninput="_filterRoster(this.value)">`;
+  let blocks=rooms.map(r=>{ const studs=_studentsOf(r.room).sort((a,b)=>(a.seq||0)-(b.seq||0)||(''+(a.name||'')).localeCompare(''+(b.name||'')));
+    if(!studs.length) return '';
+    return `<div class="cpop-course"><div class="cpop-course-h">ROOM ${r.rid} · ${_esc(r.s.courseName||'-')} <span>${studs.length}명</span></div>
+      <div class="cpop-roster">${studs.map(st=>`<span class="cpop-name" data-n="${_esc(((st.name||'')+(st.dept||st.position||'')).toLowerCase())}">${_esc(st.name)}${(st.dept||st.position)?`<small>${_esc(st.dept||st.position)}</small>`:''}</span>`).join('')}</div></div>`;
+  }).join('');
+  if(!blocks.trim()) blocks='<div class="cpop-empty">등록된 명단이 없습니다.</div>';
+  _cpop('<i class="fa-solid fa-users"></i> 과정별 교육생 명단', search+blocks);
+}
+function _filterRoster(q){ q=(q||'').toLowerCase().trim();
+  document.querySelectorAll('#cpopBody .cpop-name').forEach(el=>{ const k=el.getAttribute('data-n')||''; el.style.display=(!q||k.includes(q))?'':'none'; });
+  document.querySelectorAll('#cpopBody .cpop-course').forEach(c=>{ const any=[...c.querySelectorAll('.cpop-name')].some(e=>e.style.display!=='none'); c.style.display=any?'':'none'; });
+}
+
+/* 3) 외출·외박 현황 (선택 날짜 기준) */
+function openOutingSummary(){
+  const date=(typeof selectedDate!=='undefined' && selectedDate) ? selectedDate : _coordToday();
+  const rooms=_coordActiveRooms(); const rows=[];
+  rooms.forEach(r=>{ const acts=r.room.admin_actions && r.room.admin_actions[date]; if(!acts) return;
+    const list=Object.values(acts); if(!list.length) return;
+    rows.push({ cName:r.s.courseName||r.rid, out:list.filter(a=>a.type==='outing').map(a=>a.name), over:list.filter(a=>a.type!=='outing').map(a=>a.name) });
+  });
+  let html=`<div class="cpop-datebar">📅 ${date} 기준</div>`;
+  html += rows.length ? rows.map(r=>`<div class="cpop-course"><div class="cpop-course-h">${_esc(r.cName)} <span>외출 ${r.out.length} · 외박 ${r.over.length}</span></div>
+      <div style="padding:9px 13px; font-size:13px; line-height:1.8;">
+        ${r.out.length?`<div><b style="color:#ea580c;">외출</b> ${r.out.map(_esc).join(', ')}</div>`:''}
+        ${r.over.length?`<div><b style="color:#dc2626;">외박</b> ${r.over.map(_esc).join(', ')}</div>`:''}
+      </div></div>`).join('') : '<div class="cpop-empty">해당 날짜 외출·외박 신청이 없습니다.</div>';
+  _cpop('<i class="fa-solid fa-file-signature"></i> 외출·외박 현황', html);
+}
+
+/* 4) 퇴교차량 신청 총괄 */
+function openShuttleSummary(){
+  const rooms=_coordActiveRooms(); const rows=[];
+  rooms.forEach(r=>{ const reqs=r.room.shuttle && r.room.shuttle.requests; if(!reqs) return; const arr=Object.values(reqs); if(!arr.length) return;
+    const c={osong:0,terminal:0,airport:0,car:0}; arr.forEach(x=>{ if(c[x.type]!==undefined) c[x.type]++; });
+    rows.push({ cName:r.s.courseName||r.rid, c, tot:arr.filter(x=>x.type!=='car').length, dep:r.room.shuttle.departure });
+  });
+  const html = rows.length
+    ? `<table class="cpop-table"><thead><tr><th>과정명</th><th>오송역</th><th>터미널</th><th>공항</th><th>자차</th><th>버스계</th><th>출발</th></tr></thead><tbody>`
+      + rows.map(r=>`<tr><td style="text-align:left; font-weight:800;">${_esc(r.cName)}</td><td>${r.c.osong}</td><td>${r.c.terminal}</td><td>${r.c.airport}</td><td>${r.c.car}</td><td><b>${r.tot}</b></td><td style="font-size:11px; color:${(r.dep&&r.dep.announced)?'#16a34a':'#94a3b8'};">${(r.dep&&r.dep.announced&&r.dep.time)?(r.dep.time+' 공지'):'미공지'}</td></tr>`).join('')
+      + `</tbody></table>`
+    : '<div class="cpop-empty">신청된 퇴교차량이 없습니다.</div>';
+  _cpop('<i class="fa-solid fa-bus"></i> 퇴교차량 신청 총괄', html);
+}
+</script>
 </body>
 </html>
 <!-- @build 20260612-132331 (교육운영부 vA) -->
