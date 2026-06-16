@@ -132,6 +132,19 @@
   .bgrid .gevt .ev-t{ font-size:11px; font-weight:900; line-height:1.18; }
   .bgrid .gevt .ev-s{ font-size:10px; font-weight:700; opacity:.85; line-height:1.18; }
   .bgrid .gevt .ev-n{ font-size:9px; font-weight:700; line-height:1.15; width:100%; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-top:1px; }
+  .lv-run{ border:1px solid var(--border); border-radius:14px; padding:14px 16px; margin-bottom:12px; background:#fff; }
+  .lv-run.pending{ background:#fffbeb; border-color:#fde68a; }
+  .lv-run-h{ display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; gap:8px; }
+  .lv-time{ font-weight:900; font-size:15px; color:var(--teal); }
+  .lv-tot{ font-weight:900; font-size:18px; color:var(--blue-deep); white-space:nowrap; }
+  .lv-bd{ display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px; }
+  .bd2{ font-size:12px; font-weight:800; padding:4px 10px; border-radius:8px; background:#f1f5f9; color:#475569; }
+  .bd2.osong{ background:#fee2e2; color:#b91c1c; } .bd2.term{ background:#e0f2fe; color:#075985; } .bd2.air{ background:#ecfdf5; color:#065f46; } .bd2.car{ background:#f1f5f9; color:#64748b; }
+  .lv-courses{ border-top:1px dashed #e2e8f0; padding-top:8px; display:flex; flex-direction:column; gap:6px; }
+  .lv-c{ display:flex; align-items:center; gap:8px; font-size:13px; }
+  .lv-c span{ font-weight:800; }
+  .lv-c b{ color:var(--blue-deep); }
+  .lv-c small{ color:#94a3b8; font-weight:700; margin-left:auto; white-space:nowrap; }
 
   /* 인박스 */
   .inbox-empty{text-align:center; padding:38px 14px; color:#94a3b8; font-size:13px; font-weight:700;}
@@ -286,8 +299,8 @@
   <!-- ============ 퇴교차량 ============ -->
   <div class="view" id="view-leave">
     <div class="panel">
-      <div class="panel-head"><i class="fa-solid fa-bus" style="color:var(--teal);"></i> 퇴교차량 — 신청 인원 확인 & 출발시간 공지
-        <span class="sub">공지하면 교육생·강사 화면에 시간이 표시됩니다</span>
+      <div class="panel-head"><i class="fa-solid fa-bus" style="color:var(--teal);"></i> 퇴교차량 — 차수별 인원 집계
+        <span class="sub">출발시간은 운영부에서 과정별로 공지합니다</span>
       </div>
       <div class="panel-body" id="leaveBody"><div class="inbox-empty">이번 주 퇴교 예정 과정이 없습니다.</div></div>
     </div>
@@ -675,32 +688,36 @@ function renderSchedule(){
 /* ---- 퇴교차량 ---- */
 function renderLeave(){
   const box=document.getElementById('leaveBody');
-  const rows=[];
+  const groups={}; const pending=[];
+  const sumLine=c=>`오송${c.osong}·터미널${c.terminal}·공항${c.airport}${c.car?'·자차'+c.car:''}`;
   for(const rid in allCourses){
-    const room=allCourses[rid]; const reqs=room.shuttle?.requests||{};
-    const arr=Object.values(reqs);
-    const tot=arr.filter(r=>r.type!=='car').length;
-    if(!room.settings?.courseName && !tot) continue;
-    // 신청이 있거나 퇴교 임박한 과정만
-    if(tot===0 && !(room.shuttle?.departure)) continue;
-    const counts={osong:0,terminal:0,airport:0,car:0};
-    arr.forEach(r=>{ if(counts[r.type]!==undefined) counts[r.type]++; });
-    rows.push({rid, room, tot, counts, dep:room.shuttle?.departure||{}});
+    const room=allCourses[rid]; const reqs=room.shuttle&&room.shuttle.requests; if(!reqs) continue;
+    const arr=Object.values(reqs); if(!arr.length) continue;
+    const counts={osong:0,terminal:0,airport:0,car:0}; arr.forEach(r=>{ if(counts[r.type]!==undefined) counts[r.type]++; });
+    const busTot=counts.osong+counts.terminal+counts.airport;
+    const cn=(room.settings&&room.settings.courseName)||rid;
+    const dep=room.shuttle&&room.shuttle.departure;
+    if(dep && dep.announced && dep.time){
+      const key=(dep.date||'')+'__'+dep.time;
+      if(!groups[key]) groups[key]={date:dep.date||'', time:dep.time, counts:{osong:0,terminal:0,airport:0,car:0}, busTot:0, courses:[]};
+      const g=groups[key]; ['osong','terminal','airport','car'].forEach(k=>g.counts[k]+=counts[k]); g.busTot+=busTot; g.courses.push({cn, counts, busTot});
+    } else { pending.push({cn, counts, busTot}); }
   }
-  if(!rows.length){ box.innerHTML='<div class="inbox-empty">신청된 퇴교차량이 없습니다.</div>'; return; }
-  box.innerHTML=rows.map(r=>{
-    const dep=r.dep; let opts='<option value="">시간 선택</option>';
-    for(let h=12;h<=19;h++){ const t=pad(h)+':00'; opts+=`<option value="${t}" ${dep.time===t?'selected':''}>${t}</option>`; }
-    const cn=r.room.settings?.courseName||r.rid;
-    return `<div class="leave-card">
-      <div><div class="cn">${cn}</div>
-        <div class="breakdown"><span class="bd">오송 ${r.counts.osong}</span><span class="bd">터미널 ${r.counts.terminal}</span><span class="bd">공항 ${r.counts.airport}</span><span class="bd">자차 ${r.counts.car}</span></div>
-      </div>
-      <div class="cnt-badge">${r.tot}명</div>
-      <select class="leave-sel" onchange="askAnnounce('${r.rid}', this.value)">${opts}</select>
-      <button class="ann-btn ${dep.announced?'on':''}" title="${dep.announced?'공지됨(클릭시 해제)':'공지하기'}" onclick="toggleAnnounce('${r.rid}', ${!!dep.announced})"><i class="fa-solid fa-${dep.announced?'check':'bullhorn'}"></i></button>
-    </div>${dep.announced&&dep.time?`<div style="font-size:11px; color:var(--success); font-weight:800; margin:-4px 0 12px 4px;">✓ ${fmtFull(dep.date)} ${dep.time} 출발 — 교육생·강사 화면에 공유됨</div>`:''}`;
-  }).join('');
+  const gkeys=Object.keys(groups).sort((a,b)=>a.localeCompare(b));
+  if(!gkeys.length && !pending.length){ box.innerHTML='<div class="inbox-empty">신청된 퇴교차량이 없습니다.</div>'; return; }
+  let html='';
+  gkeys.forEach(k=>{ const g=groups[k];
+    html+=`<div class="lv-run">
+      <div class="lv-run-h"><span class="lv-time"><i class="fa-solid fa-bus"></i> ${fmtFull(g.date)} ${g.time} 출발</span><span class="lv-tot">${g.busTot}명</span></div>
+      <div class="lv-bd"><span class="bd2 osong">오송 ${g.counts.osong}</span><span class="bd2 term">터미널 ${g.counts.terminal}</span><span class="bd2 air">공항 ${g.counts.airport}</span><span class="bd2 car">자차 ${g.counts.car}</span></div>
+      <div class="lv-courses">${g.courses.map(c=>`<div class="lv-c"><span>${escapeHtml(c.cn)}</span><b>${c.busTot}명</b><small>${sumLine(c.counts)}</small></div>`).join('')}</div>
+    </div>`;
+  });
+  if(pending.length){
+    html+=`<div class="lv-run pending"><div class="lv-run-h"><span class="lv-time" style="color:#b45309;"><i class="fa-solid fa-clock"></i> 출발시간 미공지 (운영부 공지 대기)</span></div>
+      <div class="lv-courses">${pending.map(c=>`<div class="lv-c"><span>${escapeHtml(c.cn)}</span><b>${c.busTot}명</b><small>${sumLine(c.counts)}</small></div>`).join('')}</div></div>`;
+  }
+  box.innerHTML=html;
 }
 function fmtFull(s){ if(!s) return ''; return s.replace(/-/g,'.'); }
 function askAnnounce(rid, time){
