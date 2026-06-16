@@ -581,7 +581,15 @@ function renderSchedule(){
   schedules.forEach(x=>{ const i=dates.indexOf(normDate(x.date)); if(i<0||toMin(x.time)===null) return; const sMin=toMin(x.time),eMin=x.endTime?toMin(x.endTime):sMin+60; const pl=placeOf(sMin,eMin); const span=x.endTime?`${x.time}~${x.endTime}`:x.time; evs.push({col:i+2,sRow:pl.sRow,span:pl.span,cls:'ev-memo',html:`${span} ${escapeHtml(x.title||'일정')}`,title:'클릭하여 삭제',onclick:`event.stopPropagation(); delSchedule('${x.id}')`}); });
   // 퇴교차량 공지
   for(const rid in allCourses){ const dep=allCourses[rid]?.shuttle?.departure; if(dep&&dep.announced&&toMin(dep.time)!==null){ const i=dates.indexOf(normDate(dep.date)); if(i<0) continue; const sMin=toMin(dep.time),eMin=sMin+60; const pl=placeOf(sMin,eMin); const cn=allCourses[rid].settings?.courseName||rid; const tot=Object.values(allCourses[rid].shuttle?.requests||{}).filter(r=>r.type!=='car').length; evs.push({col:i+2,sRow:pl.sRow,span:pl.span,cls:'ev-leave',html:`${dep.time} 퇴교<br><small>${escapeHtml(cn)} ${tot}명</small>`,onclick:`switchView('leave')`}); } }
-  evs.forEach(e=>{ H+=`<div class="gevt ${e.cls}" style="grid-column:${e.col};grid-row:${e.sRow} / span ${e.span};"${e.onclick?` onclick="${e.onclick}"`:''}${e.title?` title="${e.title}"`:''}>${e.html}</div>`; });
+  // 같은 날(열) 안에서 시간이 겹치는 일정은 좌우로 나란히 배치(레인 분할)
+  const _byCol={}; evs.forEach(e=>{ (_byCol[e.col]=_byCol[e.col]||[]).push(e); });
+  Object.values(_byCol).forEach(list=>{
+    list.sort((a,b)=> a.sRow-b.sRow || (a.sRow+a.span)-(b.sRow+b.span));
+    const laneEnds=[];
+    list.forEach(it=>{ let placed=false; for(let l=0;l<laneEnds.length;l++){ if(it.sRow>=laneEnds[l]){ it.lane=l; laneEnds[l]=it.sRow+it.span; placed=true; break; } } if(!placed){ it.lane=laneEnds.length; laneEnds.push(it.sRow+it.span); } });
+    list.forEach(it=>{ let mx=it.lane; list.forEach(o=>{ if(o!==it && it.sRow<o.sRow+o.span && o.sRow<it.sRow+it.span) mx=Math.max(mx,o.lane); }); it.lanes=mx+1; });
+  });
+  evs.forEach(e=>{ const lanes=e.lanes||1, lane=e.lane||0; const w=100/lanes; const pos = lanes>1 ? `width:calc(${w}% - 5px); margin-left:calc(${lane*w}% + 2px); margin-right:0; justify-self:start; font-size:10px; padding:3px 4px;` : ''; H+=`<div class="gevt ${e.cls}" style="grid-column:${e.col};grid-row:${e.sRow} / span ${e.span};${pos}"${e.onclick?` onclick="${e.onclick}"`:''}${e.title?` title="${e.title}"`:''}>${e.html}</div>`; });
   document.getElementById('bgrid').innerHTML=H;
 }
 
