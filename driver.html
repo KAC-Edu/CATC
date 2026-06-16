@@ -117,6 +117,16 @@
   .dayrow{ display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:10px; margin-bottom:7px; border:1px solid var(--border); }
   .dayrow .daytime{ font-weight:900; font-size:13px; min-width:96px; }
   .dayrow .daylabel{ font-weight:700; font-size:13px; }
+  .wc-row{ display:flex; align-items:center; gap:10px; padding:9px 4px; border-bottom:1px solid #f1f5f9; }
+  .wc-row:last-child{ border-bottom:none; }
+  .wc-main{ min-width:0; flex:1; }
+  .wc-name{ font-weight:800; font-size:13px; }
+  .wc-name .wc-plan{ font-size:10px; background:#eef2ff; color:#3730a3; border-radius:5px; padding:1px 5px; margin-left:4px; font-weight:800; }
+  .wc-sub{ font-size:11px; color:var(--muted); font-weight:700; margin-top:2px; }
+  .wc-cnt{ font-weight:900; color:var(--blue-deep); font-size:14px; white-space:nowrap; }
+  .plan-row{ padding:11px 12px; border:1px solid var(--border); border-radius:10px; margin-bottom:8px; }
+  .plan-name{ font-weight:900; font-size:14px; }
+  .plan-period{ font-size:12px; color:var(--muted); font-weight:700; margin-top:3px; }
   .bgrid .gevt small{ font-weight:700; opacity:.85; font-size:10px; }
 
   /* 인박스 */
@@ -208,6 +218,7 @@
     <div class="brand"><i class="fa-solid fa-van-shuttle"></i> 차량지원 운행관리 <span class="today-chip" id="todayChip"></span></div>
     <div class="top-spacer"></div>
     <button class="top-btn" id="installBtn" onclick="pwaInstall()" style="background:#0ea5e9; border-color:#0ea5e9;"><i class="fa-solid fa-circle-down"></i> 앱 설치</button>
+    <button class="top-btn" onclick="openPlanList()"><i class="fa-solid fa-calendar-days"></i> 연간계획</button>
     <button class="top-btn" onclick="location.href='portal.html'"><i class="fa-solid fa-house"></i> 포털</button>
     <button class="top-btn" onclick="location.reload()"><i class="fa-solid fa-rotate"></i> 새로고침</button>
   </div>
@@ -258,7 +269,11 @@
         </div>
         <div class="panel">
           <div class="panel-head"><i class="fa-solid fa-list-check" style="color:var(--muted);"></i> 처리 완료 (최근)</div>
-          <div class="panel-body" id="doneBody" style="max-height:280px; overflow-y:auto;"><div class="inbox-empty" style="padding:20px;">처리 내역 없음</div></div>
+          <div class="panel-body" id="doneBody" style="max-height:240px; overflow-y:auto;"><div class="inbox-empty" style="padding:20px;">처리 내역 없음</div></div>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><i class="fa-solid fa-graduation-cap" style="color:var(--indigo);"></i> 금주 과정 현황 <span class="sub" id="weekCourseSub"></span></div>
+          <div class="panel-body" id="weekCourseBody" style="max-height:340px; overflow-y:auto;"><div class="inbox-empty" style="padding:18px;">-</div></div>
         </div>
       </div>
     </div>
@@ -401,6 +416,15 @@
   </div>
 </div>
 
+<!-- 연간 교육계획 모달 -->
+<div class="ov" id="planOv">
+  <div class="modal" style="max-width:520px;">
+    <div class="modal-head" style="background:#003366;">연간 교육계획 (과정명 · 기간) <i class="fa-solid fa-xmark" style="cursor:pointer;" onclick="closeOv('planOv')"></i></div>
+    <div class="modal-body" id="planListBody" style="max-height:70vh; overflow-y:auto;"></div>
+    <div class="modal-foot"><button class="mf-cancel" onclick="closeOv('planOv')">닫기</button></div>
+  </div>
+</div>
+
 <div id="spinner"><i class="fa-solid fa-spinner fa-spin"></i></div>
 <div class="vbadge">vR1 · 20260616</div>
 
@@ -412,6 +436,7 @@ let pickups = [];               // system/pickup 배열
 let dayoffs = [];               // system/driver_dayoff 배열
 let fixeds = [];                // system/driver_fixed 배열
 let schedules = [];             // system/driver_schedule 배열(일회성)
+let annualPlan = [];            // system/annualPlan (연간 교육계획)
 let weekOffset = 0;
 let currentView = 'manage';
 let knownPickupIds = [];
@@ -462,6 +487,7 @@ function init(){
   firebase.database().ref('system/driver_dayoff').on('value', s=>{ const raw=s.val()||{}; dayoffs=Object.keys(raw).map(id=>({id,...raw[id]})); renderAll(); });
   firebase.database().ref('system/driver_fixed').on('value', s=>{ const raw=s.val()||{}; fixeds=Object.keys(raw).map(id=>({id,...raw[id]})); renderAll(); });
   firebase.database().ref('system/driver_schedule').on('value', s=>{ const raw=s.val()||{}; schedules=Object.keys(raw).map(id=>({id,...raw[id]})); renderAll(); });
+  firebase.database().ref('system/annualPlan').on('value', s=>{ const raw=s.val()||{}; annualPlan=Object.values(raw).filter(Boolean); renderAll(); });
 }
 
 /* ===================== 탭/주차 ===================== */
@@ -476,7 +502,7 @@ function switchView(v){
 function moveWeek(d){ weekOffset = d===0 ? ((()=>{const dw=new Date().getDay();return (dw===5||dw===6||dw===0)?1:0;})()) : weekOffset+d; renderSchedule(); }
 
 /* ===================== 렌더 ===================== */
-function renderAll(){ renderInbox(); renderDone(); renderSchedule(); renderLeave(); renderFixedList(); renderOffList(); updateTabCount(); }
+function renderAll(){ renderInbox(); renderDone(); renderSchedule(); renderLeave(); renderFixedList(); renderOffList(); updateTabCount(); renderWeekCourses(); renderPlanList(); }
 
 function updateTabCount(){
   const cutoff=opWeekStart();
@@ -833,6 +859,38 @@ function openDayList(date){
     return `<div class="dayrow ${it.cls}"${clickable}><span class="daytime">${tt}</span><span class="daylabel">${escapeHtml(it.label)}</span>${hint}</div>`;
   }).join('') : '<div class="inbox-empty">일정이 없습니다.</div>';
   openOv('dayOv');
+}
+
+/* ---- 금주 과정 현황 (그 주 운영/예정 과정 + 대략 인원) ---- */
+function renderWeekCourses(){
+  const box=document.getElementById('weekCourseBody'); if(!box) return;
+  const dates=getWeekDates(weekOffset); const wkStart=dates[0];
+  const sun=new Date(dates[0]); sun.setDate(sun.getDate()+6); const wkEnd=ymd(sun);
+  const overlaps=(a,b)=> a && b && a<=wkEnd && b>=wkStart;
+  const rows=[]; const shown=new Set();
+  for(const rid in allCourses){ const room=allCourses[rid]; const st=room.status||{}, se=room.settings||{};
+    if(st.roomStatus!=='active') continue;
+    let a='',b=''; if(se.period && se.period.includes(' ~ ')){ const pp=se.period.split(' ~ '); a=pp[0].trim(); b=pp[1].trim(); }
+    if(!overlaps(a,b)) continue;
+    const cnt=room.students?Object.values(room.students).filter(x=>x&&x.name&&(''+x.name).trim()&&x.name!=='undefined').length:0;
+    const nm=se.courseName||('Room '+rid);
+    rows.push({nm, prof:st.professorName||'', a, b, cnt, planned:false}); shown.add(nm.trim());
+  }
+  annualPlan.forEach(c=>{ if(!c||!c.name) return; if(shown.has((c.name||'').trim())) return; if(!overlaps(c.startDate,c.endDate)) return; rows.push({nm:c.name, prof:c.prof||'', a:c.startDate, b:c.endDate, cnt:null, planned:true}); });
+  rows.sort((x,y)=>(x.a||'').localeCompare(y.a||''));
+  document.getElementById('weekCourseSub').textContent = rows.length?`${rows.length}개 과정`:'';
+  box.innerHTML = rows.length ? rows.map(r=>`<div class="wc-row">
+    <div class="wc-main"><div class="wc-name">${escapeHtml(r.nm)}${r.planned?'<span class="wc-plan">예정</span>':''}</div>
+      <div class="wc-sub">${r.prof?escapeHtml(r.prof)+' · ':''}${fmtD(r.a)}~${fmtD(r.b)}</div></div>
+    <div class="wc-cnt">${r.cnt==null?'예정':r.cnt+'명'}</div>
+  </div>`).join('') : '<div class="inbox-empty" style="padding:18px;">이번 주 예정된 교육 과정이 없습니다.</div>';
+}
+/* ---- 연간 교육계획 보기 ---- */
+function openPlanList(){ renderPlanList(); openOv('planOv'); }
+function renderPlanList(){
+  const box=document.getElementById('planListBody'); if(!box) return;
+  const list=annualPlan.slice().filter(c=>c&&c.name).sort((a,b)=>(a.startDate||'').localeCompare(b.startDate||''));
+  box.innerHTML = list.length ? list.map(c=>`<div class="plan-row"><div class="plan-name">${escapeHtml(c.name)}</div><div class="plan-period">${(c.startDate||'').replace(/-/g,'.')} ~ ${(c.endDate||'').replace(/-/g,'.')}${c.prof?' · '+escapeHtml(c.prof):''}</div></div>`).join('') : '<div class="inbox-empty">등록된 연간계획이 없습니다.</div>';
 }
 
 window.addEventListener('DOMContentLoaded', init);
