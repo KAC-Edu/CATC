@@ -768,10 +768,46 @@ function closeOv(id){ document.getElementById(id).classList.remove('open'); }
 function escapeHtml(s){ return (''+s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
 /* ---- 시간표 이미지 캡처 ---- */
+function _roundRect(ctx,x,y,w,h,r){ r=Math.min(r,w/2,h/2); ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); }
+function _fit(ctx,t,maxW){ t=''+t; if(ctx.measureText(t).width<=maxW) return t; while(t.length>1 && ctx.measureText(t+'…').width>maxW) t=t.slice(0,-1); return t+'…'; }
+/* 시간표를 캔버스에 직접 그려 PNG로 저장 (그리드 라이브러리 한계 회피 — 모든 블록 정확히 포함) */
 function captureBoard(){
-  const el=document.getElementById('schedPanel'); if(!el) return;
-  if(!window.html2canvas){ alert('캡처 모듈 로딩 중입니다. 잠시 후 다시 시도하세요.'); return; }
-  html2canvas(el,{scale:2,backgroundColor:'#ffffff'}).then(c=>{ const a=document.createElement('a'); a.download='운행스케줄_'+((document.getElementById('weekLabel').textContent||'').replace(/[^0-9]/g,'-'))+'.png'; a.href=c.toDataURL('image/png'); a.click(); }).catch(e=>alert('캡처 실패: '+((e&&e.message)||e)));
+  const dates=getWeekDates(weekOffset); const days=['월','화','수','목','금']; const today=todayStr();
+  const ROW0=6, ROWN=20, rowsN=ROWN-ROW0+1;
+  const sc=2, timeW=70, dayW=210, headH=56, rowH=54;
+  const W=timeW+dayW*5, H=headH+rowH*rowsN;
+  const cv=document.createElement('canvas'); cv.width=W*sc; cv.height=H*sc;
+  const ctx=cv.getContext('2d'); ctx.scale(sc,sc); ctx.textBaseline='middle';
+  ctx.fillStyle='#ffffff'; ctx.fillRect(0,0,W,H);
+  // 헤더
+  ctx.fillStyle='#f1f5f9'; ctx.fillRect(0,0,W,headH);
+  dates.forEach((dt,i)=>{ if(dt===today){ ctx.fillStyle='#e0f2fe'; ctx.fillRect(timeW+dayW*i,0,dayW,headH);} });
+  ctx.textAlign='center'; ctx.fillStyle='#0f172a'; ctx.font='800 13px Pretendard,sans-serif'; ctx.fillText('시간',timeW/2,headH/2);
+  dates.forEach((dt,i)=>{ const x=timeW+dayW*i; ctx.fillStyle=(dt===today)?'#0369a1':'#0f172a'; ctx.font='800 15px Pretendard,sans-serif'; ctx.fillText(days[i],x+dayW/2,headH/2-9); ctx.fillStyle='#64748b'; ctx.font='700 11px Pretendard,sans-serif'; ctx.fillText(fmtD(dt),x+dayW/2,headH/2+10); });
+  // 시간 라벨 + 휴게
+  for(let h=ROW0;h<=ROWN;h++){ const y=headH+rowH*(h-ROW0); ctx.fillStyle='#f8fafc'; ctx.fillRect(0,y,timeW,rowH); ctx.fillStyle='#64748b'; ctx.font='800 12px Pretendard,sans-serif'; ctx.textAlign='center'; ctx.fillText(pad(h)+':00',timeW/2,y+rowH/2);
+    if(h===12){ for(let i=0;i<5;i++){ ctx.fillStyle='#cbd5e1'; ctx.font='700 11px Pretendard,sans-serif'; ctx.fillText('휴게',timeW+dayW*i+dayW/2,y+rowH/2);} } }
+  // 격자
+  ctx.strokeStyle='#e6ebf1'; ctx.lineWidth=1;
+  for(let r=0;r<=rowsN;r++){ const y=headH+rowH*r; ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke(); }
+  for(let c=0;c<=5;c++){ const x=timeW+dayW*c; ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,H); ctx.stroke(); }
+  // 이벤트 수집
+  const COL={'ev-arr':['#fee2e2','#991b1b','#fca5a5'],'ev-dep':['#e0f2fe','#075985','#7dd3fc'],'ev-entry':['#eef2ff','#3730a3','#a5b4fc'],'ev-leave':['#ecfdf5','#065f46','#6ee7b7'],'ev-memo':['#fef9c3','#854d0e','#fde047'],'ev-off':['#fee2e2','#b91c1b','#f87171']};
+  const evs=[];
+  dates.forEach((dt,i)=>{ const off=dayoffs.find(o=>dt>=normDate(o.start)&&dt<=normDate(o.end||o.start)); if(off) evs.push({i, s:ROW0*60, e:(ROWN+1)*60, cls:'ev-off', lines:['휴가', off.reason||'']}); });
+  pickups.filter(p=>p.status==='confirmed').forEach(p=>{ const i=dates.indexOf(normDate(p.date)); if(i<0||toMin(p.time)===null) return; const dir=p.dir||'arr'; evs.push({i, s:toMin(p.time), e:toMin(p.time)+60, cls:dir==='arr'?'ev-arr':'ev-dep', lines:[`${p.time} ${dirText(p.place)[dir]}`, p.prof||'']}); });
+  fixeds.forEach(f=>{ if(toMin(f.time)===null) return; const i=Number(f.dow)-1; if(i<0||i>4) return; const e=f.endTime?toMin(f.endTime):toMin(f.time)+60; const span=f.endTime?`${f.time}~${f.endTime}`:f.time; evs.push({i, s:toMin(f.time), e, cls:f.kind==='입교'?'ev-entry':'ev-leave', lines:[`${span} ${f.kind}버스`, f.note||'(매주)']}); });
+  schedules.forEach(x=>{ const i=dates.indexOf(normDate(x.date)); if(i<0||toMin(x.time)===null) return; const e=x.endTime?toMin(x.endTime):toMin(x.time)+60; const span=x.endTime?`${x.time}~${x.endTime}`:x.time; evs.push({i, s:toMin(x.time), e, cls:'ev-memo', lines:[`${span} ${x.title||'일정'}`]}); });
+  for(const rid in allCourses){ const dep=allCourses[rid]&&allCourses[rid].shuttle&&allCourses[rid].shuttle.departure; if(dep&&dep.announced&&toMin(dep.time)!==null){ const i=dates.indexOf(normDate(dep.date)); if(i<0) continue; const cn=(allCourses[rid].settings&&allCourses[rid].settings.courseName)||rid; const tot=Object.values(allCourses[rid].shuttle.requests||{}).filter(r=>r.type!=='car').length; evs.push({i, s:toMin(dep.time), e:toMin(dep.time)+60, cls:'ev-leave', lines:[`${dep.time} 퇴교`, `${cn} ${tot}명`]}); } }
+  // 겹침 → 좌우 레인 분할
+  const byCol={}; evs.forEach(e=>{ (byCol[e.i]=byCol[e.i]||[]).push(e); });
+  Object.values(byCol).forEach(list=>{ list.sort((a,b)=>a.s-b.s); const ends=[]; list.forEach(it=>{ let pl=false; for(let l=0;l<ends.length;l++){ if(it.s>=ends[l]){ it.lane=l; ends[l]=it.e; pl=true; break; } } if(!pl){ it.lane=ends.length; ends.push(it.e);} }); list.forEach(it=>{ let mx=it.lane; list.forEach(o=>{ if(o!==it && it.s<o.e && o.s<it.e) mx=Math.max(mx,o.lane);}); it.lanes=mx+1; }); });
+  evs.forEach(e=>{ let sH=Math.floor(e.s/60),eH=Math.ceil(e.e/60); if(sH<ROW0)sH=ROW0; if(eH>ROWN+1)eH=ROWN+1; if(eH<=sH)eH=sH+1;
+    const lanes=e.lanes||1, lane=e.lane||0; const colX=timeW+dayW*e.i; const lw=(dayW-6)/lanes; const x=colX+3+lane*lw, y=headH+rowH*(sH-ROW0)+3, w=lw-3, hgt=rowH*(eH-sH)-6;
+    const c=COL[e.cls]||COL['ev-memo']; ctx.fillStyle=c[0]; ctx.strokeStyle=c[2]; ctx.lineWidth=1.2; _roundRect(ctx,x,y,w,hgt,7); ctx.fill(); ctx.stroke();
+    ctx.fillStyle=c[1]; ctx.textAlign='center'; const cx=x+w/2, cy=y+hgt/2; const lines=e.lines.filter(Boolean);
+    lines.forEach((ln,idx)=>{ ctx.font=(idx===0?('800 '+(lanes>1?10:12)):('700 '+(lanes>1?9:11)))+'px Pretendard,sans-serif'; ctx.fillText(_fit(ctx,ln,w-8), cx, cy+(idx-(lines.length-1)/2)*15); }); });
+  const a=document.createElement('a'); a.download='운행스케줄_'+((document.getElementById('weekLabel').textContent||'').replace(/[^0-9]/g,'-'))+'.png'; a.href=cv.toDataURL('image/png'); a.click();
 }
 /* ---- 빈 칸 클릭 → 일회성 일정 추가 ---- */
 let pendingSlot=null;
@@ -867,8 +903,9 @@ function renderWeekCourses(){
   const dates=getWeekDates(weekOffset); const wkStart=dates[0];
   const sun=new Date(dates[0]); sun.setDate(sun.getDate()+6); const wkEnd=ymd(sun);
   const overlaps=(a,b)=> a && b && a<=wkEnd && b>=wkStart;
-  const rows=[]; const shown=new Set();
+  const rows=[]; const shown=new Set(); const hiddenNames=new Set();
   for(const rid in allCourses){ const room=allCourses[rid]; const st=room.status||{}, se=room.settings||{};
+    if(se.hideFromBoard){ if(se.courseName) hiddenNames.add((''+se.courseName).trim()); continue; } // 강사가 노출 해제한 과정 제외
     if(st.roomStatus!=='active') continue;
     let a='',b=''; if(se.period && se.period.includes(' ~ ')){ const pp=se.period.split(' ~ '); a=pp[0].trim(); b=pp[1].trim(); }
     if(!overlaps(a,b)) continue;
@@ -876,7 +913,7 @@ function renderWeekCourses(){
     const nm=se.courseName||('Room '+rid);
     rows.push({nm, prof:st.professorName||'', a, b, cnt, planned:false}); shown.add(nm.trim());
   }
-  annualPlan.forEach(c=>{ if(!c||!c.name) return; if(shown.has((c.name||'').trim())) return; if(!overlaps(c.startDate,c.endDate)) return; rows.push({nm:c.name, prof:c.prof||'', a:c.startDate, b:c.endDate, cnt:null, planned:true}); });
+  annualPlan.forEach(c=>{ if(!c||!c.name) return; const _n=(c.name||'').trim(); if(shown.has(_n)||hiddenNames.has(_n)) return; if(!overlaps(c.startDate,c.endDate)) return; rows.push({nm:c.name, prof:c.prof||'', a:c.startDate, b:c.endDate, cnt:null, planned:true}); });
   rows.sort((x,y)=>(x.a||'').localeCompare(y.a||''));
   document.getElementById('weekCourseSub').textContent = rows.length?`${rows.length}개 과정`:'';
   box.innerHTML = rows.length ? rows.map(r=>`<div class="wc-row">
