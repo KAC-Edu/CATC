@@ -128,6 +128,11 @@
   .plan-row{ padding:11px 12px; border:1px solid var(--border); border-radius:10px; margin-bottom:8px; }
   .plan-name{ font-weight:900; font-size:14px; }
   .plan-period{ font-size:12px; color:var(--muted); font-weight:700; margin-top:3px; }
+  .plan-table{ width:100%; border-collapse:collapse; }
+  .plan-table th{ background:#f1f5f9; color:#475569; font-size:12px; font-weight:800; padding:9px 8px; border-bottom:2px solid #e2e8f0; white-space:nowrap; text-align:center; }
+  .plan-table td{ font-size:13px; padding:9px 8px; border-bottom:1px solid #f1f5f9; text-align:center; }
+  .plan-table td.pt-name{ text-align:left; font-weight:800; }
+  .plan-table td.pt-period{ font-size:12px; color:#64748b; white-space:nowrap; }
   .bgrid .gevt small{ font-weight:700; opacity:.85; font-size:10px; }
   .bgrid .gevt .ev-t{ font-size:11px; font-weight:900; line-height:1.18; }
   .bgrid .gevt .ev-s{ font-size:10px; font-weight:700; opacity:.85; line-height:1.18; }
@@ -457,8 +462,8 @@
 
 <!-- 연간 교육계획 모달 -->
 <div class="ov" id="planOv">
-  <div class="modal" style="max-width:520px;">
-    <div class="modal-head" style="background:#003366;">연간 교육계획 (과정명 · 기간) <i class="fa-solid fa-xmark" style="cursor:pointer;" onclick="closeOv('planOv')"></i></div>
+  <div class="modal" style="max-width:680px;">
+    <div class="modal-head" style="background:#003366;">연간 교육계획 (조회) <i class="fa-solid fa-xmark" style="cursor:pointer;" onclick="closeOv('planOv')"></i></div>
     <div class="modal-body" id="planListBody" style="max-height:70vh; overflow-y:auto;"></div>
     <div class="modal-foot"><button class="mf-cancel" onclick="closeOv('planOv')">닫기</button></div>
   </div>
@@ -992,7 +997,11 @@ function openPlanList(){ renderPlanList(); openOv('planOv'); }
 function renderPlanList(){
   const box=document.getElementById('planListBody'); if(!box) return;
   const list=annualPlan.slice().filter(c=>c&&c.name).sort((a,b)=>(a.startDate||'').localeCompare(b.startDate||''));
-  box.innerHTML = list.length ? list.map(c=>`<div class="plan-row"><div class="plan-name">${escapeHtml(c.name)}</div><div class="plan-period">${(c.startDate||'').replace(/-/g,'.')} ~ ${(c.endDate||'').replace(/-/g,'.')}${c.prof?' · '+escapeHtml(c.prof):''}</div></div>`).join('') : '<div class="inbox-empty">등록된 연간계획이 없습니다.</div>';
+  if(!list.length){ box.innerHTML='<div class="inbox-empty">등록된 연간계획이 없습니다.</div>'; return; }
+  const per=c=>((c.period?c.period:((c.startDate||'')+' ~ '+(c.endDate||''))).replace(/-/g,'.'));
+  box.innerHTML='<div style="overflow-x:auto;"><table class="plan-table"><thead><tr><th>과정</th><th>담당자</th><th>담임교수</th><th>기간</th></tr></thead><tbody>'
+    + list.map(c=>`<tr><td class="pt-name">${escapeHtml(c.name)}</td><td>${escapeHtml(c.coord||'-')}</td><td>${escapeHtml(c.prof||'-')}</td><td class="pt-period">${per(c)}</td></tr>`).join('')
+    + '</tbody></table></div>';
 }
 
 window.addEventListener('DOMContentLoaded', init);
