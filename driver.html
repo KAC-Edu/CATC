@@ -387,6 +387,28 @@
   </div>
 </div>
 
+<!-- 픽업 일정: 기사 메모/조정 모달 (운영부 통보 없음) -->
+<div class="ov" id="pickupOv">
+  <div class="modal">
+    <div class="modal-head" style="background:#0ea5e9;">픽업 일정 (기사 조정) <i class="fa-solid fa-xmark" style="cursor:pointer;" onclick="closeOv('pickupOv')"></i></div>
+    <div class="modal-body">
+      <div style="font-size:15px; font-weight:900;" id="pkProf"></div>
+      <div id="pkPhone" style="font-size:13px; font-weight:700;"></div>
+      <div id="pkCoordMemo" style="display:none; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:8px 10px; font-size:12px; color:#475569;"></div>
+      <div class="fld" style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+        <div><label>픽업 장소</label><select id="pkPlace"><option value="오송역">오송역</option><option value="청주터미널">청주터미널</option><option value="청주공항">청주공항</option></select></div>
+        <div><label>구분</label><select id="pkDir"><option value="arr">모셔오기 (역→항기원)</option><option value="dep">모셔다드리기 (항기원→역)</option></select></div>
+      </div>
+      <div class="fld"><label>시간</label><input type="time" id="pkTime"></div>
+      <div class="fld"><label>기사 메모 <span style="color:#94a3b8; font-weight:600;">(운영부에 통보되지 않음)</span></label><textarea id="pkNote" placeholder="예: 동승 1명 추가 / 다른 픽업과 묶어서 이동"></textarea></div>
+    </div>
+    <div class="modal-foot">
+      <button class="mf-cancel" onclick="closeOv('pickupOv')">취소</button>
+      <button class="mf-ok" style="background:#0ea5e9;" onclick="savePickupEdit()">저장</button>
+    </div>
+  </div>
+</div>
+
 <!-- 일회성 일정 추가 모달 -->
 <div class="ov" id="schedOv">
   <div class="modal">
@@ -614,7 +636,7 @@ function renderSchedule(){
   // 휴가(종일 통 블록)
   dates.forEach((dt,i)=>{ const off=dayoffs.find(o=>dt>=normDate(o.start)&&dt<=normDate(o.end||o.start)); if(off) evs.push({col:i+2,sRow:2,span:(ROWN-ROW0+1),cls:'ev-off',html:`휴가 · ${escapeHtml(off.reason||'')}`,title:escapeHtml(off.reason||'휴가')}); });
   // 확정 픽업
-  pickups.filter(p=>p.status==='confirmed').forEach(p=>{ const i=dates.indexOf(normDate(p.date)); if(i<0||toMin(p.time)===null) return; const sMin=toMin(p.time),eMin=sMin+60; const dir=p.dir||'arr'; const pl=placeOf(sMin,eMin); evs.push({col:i+2,sRow:pl.sRow,span:pl.span,cls:dir==='arr'?'ev-arr':'ev-dep',html:`${p.time} ${dirText(p.place)[dir]}<br><small>${escapeHtml(p.prof||'')}</small>`,title:escapeHtml(p.prof||'')}); });
+  pickups.filter(p=>p.status==='confirmed').forEach(p=>{ const i=dates.indexOf(normDate(p.date)); if(i<0||toMin(p.time)===null) return; const sMin=toMin(p.time),eMin=sMin+60; const dir=p.dir||'arr'; const pl=placeOf(sMin,eMin); evs.push({col:i+2,sRow:pl.sRow,span:pl.span,cls:dir==='arr'?'ev-arr':'ev-dep',html:`${p.time} ${dirText(p.place)[dir]}<br><small>${escapeHtml(p.prof||'')}</small>${p.driverNote?`<br><small>📝${escapeHtml(p.driverNote)}</small>`:''}`,title:escapeHtml(p.prof||''),onclick:`event.stopPropagation(); openPickupEdit('${p.id}')`}); });
   // 고정버스(매주, 시작~종료 통 블록)
   fixeds.forEach(f=>{ if(toMin(f.time)===null) return; const i=Number(f.dow)-1; if(i<0||i>4) return; const sMin=toMin(f.time),eMin=f.endTime?toMin(f.endTime):sMin+60; const pl=placeOf(sMin,eMin); const span=f.endTime?`${f.time}~${f.endTime}`:f.time; evs.push({col:i+2,sRow:pl.sRow,span:pl.span,cls:f.kind==='입교'?'ev-entry':'ev-leave',html:`${span} ${f.kind}버스 <small>(매주)</small>${f.note?`<br><small>${escapeHtml(f.note)}</small>`:''}`,title:`매주 ${DOW[f.dow]}요일 반복`}); });
   // 일회성 일정
@@ -882,7 +904,7 @@ window.addEventListener('load', ()=>{
 function openDayList(date){
   const d=normDate(date), dow=new Date(d).getDay(), items=[];
   fixeds.forEach(f=>{ if(Number(f.dow)===dow) items.push({t:f.time,e:f.endTime,label:`${f.kind}버스${f.note?' · '+f.note:''}`,cls:f.kind==='입교'?'ev-entry':'ev-leave'}); });
-  pickups.filter(p=>p.status==='confirmed'&&normDate(p.date)===d).forEach(p=>{ const dir=p.dir||'arr'; items.push({t:p.time,label:`${dirText(p.place)[dir]} · ${p.prof||''}`,cls:dir==='arr'?'ev-arr':'ev-dep'}); });
+  pickups.filter(p=>p.status==='confirmed'&&normDate(p.date)===d).forEach(p=>{ const dir=p.dir||'arr'; items.push({t:p.time,label:`${dirText(p.place)[dir]} · ${p.prof||''}`,cls:dir==='arr'?'ev-arr':'ev-dep',pkId:p.id}); });
   schedules.filter(x=>normDate(x.date)===d).forEach(x=>{ items.push({t:x.time,e:x.endTime,label:x.title||'일정',cls:'ev-memo',editId:x.id}); });
   for(const rid in allCourses){ const dep=allCourses[rid]?.shuttle?.departure; if(dep&&dep.announced&&normDate(dep.date)===d){ items.push({t:dep.time,label:`퇴교차량 · ${(allCourses[rid].settings?.courseName||rid)}`,cls:'ev-leave'}); } }
   dayoffs.forEach(o=>{ if(d>=normDate(o.start)&&d<=normDate(o.end||o.start)) items.push({t:'',label:`휴가 · ${o.reason||''}`,cls:'ev-off'}); });
@@ -890,11 +912,33 @@ function openDayList(date){
   document.getElementById('dayHeadTitle').textContent=`${fmtFull(d)} (${DOW[dow]}) 일정`;
   document.getElementById('dayListBody').innerHTML = items.length ? items.map(it=>{
     const tt = it.t ? (it.e?`${it.t}~${it.e}`:it.t) : '종일';
-    const clickable = it.editId ? ` onclick="closeOv('dayOv'); openScheduleEdit('${it.editId}')" style="cursor:pointer;"` : '';
-    const hint = it.editId ? '<span style="margin-left:auto; color:#0ea5e9; font-weight:800; font-size:12px;">수정 ›</span>' : '';
+    let clickable='', hint='';
+    if(it.editId){ clickable=` onclick="closeOv('dayOv'); openScheduleEdit('${it.editId}')" style="cursor:pointer;"`; hint='<span style="margin-left:auto; color:#0ea5e9; font-weight:800; font-size:12px;">수정 ›</span>'; }
+    else if(it.pkId){ clickable=` onclick="closeOv('dayOv'); openPickupEdit('${it.pkId}')" style="cursor:pointer;"`; hint='<span style="margin-left:auto; color:#0ea5e9; font-weight:800; font-size:12px;">메모/조정 ›</span>'; }
     return `<div class="dayrow ${it.cls}"${clickable}><span class="daytime">${tt}</span><span class="daylabel">${escapeHtml(it.label)}</span>${hint}</div>`;
   }).join('') : '<div class="inbox-empty">일정이 없습니다.</div>';
   openOv('dayOv');
+}
+
+let editingPickupId=null;
+function openPickupEdit(id){
+  const p=pickups.find(x=>x.id===id); if(!p) return; editingPickupId=id;
+  document.getElementById('pkProf').textContent=(p.prof||'강사')+' 강사';
+  const digits=(''+(p.phone||'')).replace(/[^0-9]/g,''); const ph=fmtPhone(p.phone);
+  document.getElementById('pkPhone').innerHTML = ph?`<a href="tel:${digits}" style="color:#0ea5e9; text-decoration:none;"><i class="fa-solid fa-phone"></i> ${ph}</a>`:'';
+  const cm=document.getElementById('pkCoordMemo'); if(p.memo){ cm.style.display='block'; cm.innerHTML='<b>운영부 특이사항:</b> '+escapeHtml(p.memo); } else cm.style.display='none';
+  document.getElementById('pkPlace').value=p.place||'오송역';
+  document.getElementById('pkDir').value=p.dir||'arr';
+  document.getElementById('pkTime').value=p.time||'';
+  document.getElementById('pkNote').value=p.driverNote||'';
+  openOv('pickupOv');
+}
+async function savePickupEdit(){
+  if(!editingPickupId) return;
+  const place=document.getElementById('pkPlace').value, dir=document.getElementById('pkDir').value, time=document.getElementById('pkTime').value, driverNote=document.getElementById('pkNote').value.trim();
+  if(!time){ alert('시간을 입력하세요.'); return; }
+  try{ await firebase.database().ref('system/pickup/'+editingPickupId).update({ place, dir, time, driverNote }); closeOv('pickupOv'); editingPickupId=null; }
+  catch(e){ alert('저장 실패: '+((e&&e.message)||e)); }
 }
 
 /* ---- 금주 과정 현황 (그 주 운영/예정 과정 + 대략 인원) ---- */
