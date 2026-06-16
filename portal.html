@@ -18,6 +18,12 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <title>CATC 교육플랫폼 포털</title>
+  <link rel="manifest" href="portal.manifest.json">
+  <meta name="theme-color" content="#0f172a">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="CATC포털">
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
@@ -309,8 +315,11 @@
             <div class="header-title">교육플랫폼 통합포털</div>
           </div>
         </div>
+        <div style="display:flex; align-items:center; gap:8px;">
+        <div class="header-gear" id="installBtn" onclick="pwaInstall()" title="앱 설치"><i class="fa-solid fa-circle-down" style="font-size:15px;"></i></div>
         <div class="header-gear" onclick="openAdminSettings()">
           <i class="fa-solid fa-gear" style="font-size:15px;"></i>
+        </div>
         </div>
       </div>
       <div class="header-info">
@@ -466,6 +475,25 @@
 <!-- @catc-version-badge · 전 페이지 통일 디자인 (개발자 확인용 · 사용자에게는 거의 안 보임) -->
 <style>@media print{#__catcVer{display:none!important}}</style>
 <div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">JDS260613(V2)</div>
+<script>
+/* ---- 앱 설치(PWA) 공통 ---- */
+var _deferredPrompt=null;
+window.addEventListener('beforeinstallprompt', function(e){ e.preventDefault(); _deferredPrompt=e; var b=document.getElementById('installBtn'); if(b) b.style.display=''; });
+window.addEventListener('appinstalled', function(){ var b=document.getElementById('installBtn'); if(b) b.style.display='none'; });
+function pwaInstall(){
+  var standalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+  if(standalone){ alert('이미 앱으로 설치되어 있습니다. 바탕화면 아이콘으로 실행하세요.'); return; }
+  if(_deferredPrompt){ _deferredPrompt.prompt(); _deferredPrompt.userChoice.finally(function(){ _deferredPrompt=null; }); return; }
+  var ua=navigator.userAgent;
+  if(/iPhone|iPad|iPod/i.test(ua)) alert('\uD83D\uDCF1 아이폰 설치 방법\n\n1) 사파리 하단의 [공유] 버튼(\u2191) 누르기\n2) "홈 화면에 추가" 선택\n3) 추가 \u2192 바탕화면에 아이콘 생성');
+  else alert('\uD83D\uDCF1 설치 방법\n\n크롬 우측 상단 메뉴(\u22EE) \u2192 "앱 설치" 또는 "홈 화면에 추가"\n(PC는 주소창 오른쪽의 설치 아이콘을 눌러도 됩니다)');
+}
+window.addEventListener('load', function(){
+  var standalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+  if(standalone){ var b=document.getElementById('installBtn'); if(b) b.style.display='none'; }
+  if('serviceWorker' in navigator){ navigator.serviceWorker.register('sw.js').catch(function(){}); }
+});
+</script>
 <script>try{console.log('%cCATC%c 포털 (portal.html) %cJDS260613(V2)%c build 20260613','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}</script>
 </body>
 </html>
