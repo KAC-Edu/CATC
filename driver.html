@@ -105,7 +105,8 @@
   .bgrid .gh{ background:#f1f5f9; font-weight:900; font-size:13px; color:var(--navy); display:flex; flex-direction:column; align-items:center; justify-content:center; border-right:1px solid #e6ebf1; border-bottom:1px solid #e6ebf1; }
   .bgrid .gh .d{ font-size:11px; font-weight:700; color:var(--muted); margin-top:2px; }
   .bgrid .gh.today{ background:#e0f2fe; color:var(--blue-deep); }
-  .bgrid .gt{ background:#f8fafc; font-weight:800; font-size:12px; color:var(--muted); display:flex; align-items:center; justify-content:center; border-right:2px solid var(--navy); border-bottom:1px solid #eef1f4; }
+  .bgrid .gt{ position:relative; background:#f8fafc; border-right:2px solid var(--navy); border-bottom:1px solid #eef1f4; }
+  .bgrid .gt span{ position:absolute; top:0; right:7px; transform:translateY(-50%); font-weight:800; font-size:12px; color:var(--muted); background:#f8fafc; padding:0 3px; }
   .bgrid .gc{ border-right:1px solid #eef1f4; border-bottom:1px solid #eef1f4; cursor:pointer; position:relative; }
   .bgrid .gc:hover{ background:#f0f9ff; }
   .bgrid .gc.today{ background:#f5fbff; }
@@ -629,7 +630,7 @@ function renderSchedule(){
   H+=`<div class="gh" style="grid-column:1;grid-row:1;">시간</div>`;
   dates.forEach((dt,i)=>{ const isT=dt===today; H+=`<div class="gh ${isT?'today':''}" style="grid-column:${i+2};grid-row:1;">${days[i]}<div class="d">${fmtD(dt)}</div></div>`; });
   for(let h=ROW0; h<=ROWN; h++){ const row=rowOf(h);
-    H+=`<div class="gt" style="grid-column:1;grid-row:${row};">${pad(h)}:00</div>`;
+    H+=`<div class="gt" style="grid-column:1;grid-row:${row};"><span>${pad(h)}:00</span></div>`;
     for(let i=0;i<5;i++){ const dt=dates[i]; const isT=dt===today;
       if(h===12){ H+=`<div class="glunch ${isT?'today':''}" style="grid-column:${i+2};grid-row:${row};">휴게</div>`; }
       else { H+=`<div class="gc ${isT?'today':''} empty" style="grid-column:${i+2};grid-row:${row};" onclick="slotClick(event,'${dt}',${h})"></div>`; }
@@ -639,7 +640,7 @@ function renderSchedule(){
   // 휴가(종일 통 블록)
   dates.forEach((dt,i)=>{ const off=dayoffs.find(o=>dt>=normDate(o.start)&&dt<=normDate(o.end||o.start)); if(off) evs.push({col:i+2,sRow:2,span:(ROWN-ROW0+1),cls:'ev-off',html:`휴가 · ${escapeHtml(off.reason||'')}`,title:escapeHtml(off.reason||'휴가')}); });
   // 확정 픽업
-  pickups.filter(p=>p.status==='confirmed').forEach(p=>{ const i=dates.indexOf(normDate(p.date)); if(i<0||toMin(p.time)===null) return; const sMin=toMin(p.time),eMin=sMin+60; const dir=p.dir||'arr'; const pl=placeOf(sMin,eMin); evs.push({col:i+2,sRow:pl.sRow,span:pl.span,cls:dir==='arr'?'ev-arr':'ev-dep',html:`<div class="ev-t">${p.time} ${dirText(p.place)[dir]}</div><div class="ev-s">${escapeHtml(p.prof||'')}</div>${p.driverNote?`<div class="ev-n">📝${escapeHtml(p.driverNote)}</div>`:''}`,title:(p.prof||'')+(p.driverNote?(' / '+p.driverNote):''),onclick:`event.stopPropagation(); openPickupEdit('${p.id}')`}); });
+  pickups.filter(p=>p.status==='confirmed').forEach(p=>{ const i=dates.indexOf(normDate(p.date)); if(i<0||toMin(p.time)===null) return; const sMin=toMin(p.time),eMin=sMin+60; const dir=p.dir||'arr'; const pl=placeOf(sMin,eMin); evs.push({col:i+2,sRow:pl.sRow,span:pl.span,cls:dir==='arr'?'ev-arr':'ev-dep',html:`<div class="ev-t">${p.time} ${dirText(p.place)[dir]}</div><div class="ev-s">${escapeHtml(p.prof||'')}</div>${(p.driverNote||p.memo)?`<div class="ev-n">📝${escapeHtml(p.driverNote||p.memo)}</div>`:''}`,title:(p.prof||'')+((p.driverNote||p.memo)?(' / '+(p.driverNote||p.memo)):''),onclick:`event.stopPropagation(); openPickupEdit('${p.id}')`}); });
   // 고정버스(매주, 시작~종료 통 블록)
   fixeds.forEach(f=>{ if(toMin(f.time)===null) return; const i=Number(f.dow)-1; if(i<0||i>4) return; const sMin=toMin(f.time),eMin=f.endTime?toMin(f.endTime):sMin+60; const pl=placeOf(sMin,eMin); const span=f.endTime?`${f.time}~${f.endTime}`:f.time; evs.push({col:i+2,sRow:pl.sRow,span:pl.span,cls:f.kind==='입교'?'ev-entry':'ev-leave',html:`${span} ${f.kind}버스 <small>(매주)</small>${f.note?`<br><small>${escapeHtml(f.note)}</small>`:''}`,title:`매주 ${DOW[f.dow]}요일 반복`}); });
   // 일회성 일정
@@ -810,7 +811,7 @@ function captureBoard(){
   ctx.textAlign='center'; ctx.fillStyle='#0f172a'; ctx.font='800 13px Pretendard,sans-serif'; ctx.fillText('시간',timeW/2,headH/2);
   dates.forEach((dt,i)=>{ const x=timeW+dayW*i; ctx.fillStyle=(dt===today)?'#0369a1':'#0f172a'; ctx.font='800 15px Pretendard,sans-serif'; ctx.fillText(days[i],x+dayW/2,headH/2-9); ctx.fillStyle='#64748b'; ctx.font='700 11px Pretendard,sans-serif'; ctx.fillText(fmtD(dt),x+dayW/2,headH/2+10); });
   // 시간 라벨 + 휴게
-  for(let h=ROW0;h<=ROWN;h++){ const y=headH+rowH*(h-ROW0); ctx.fillStyle='#f8fafc'; ctx.fillRect(0,y,timeW,rowH); ctx.fillStyle='#64748b'; ctx.font='800 12px Pretendard,sans-serif'; ctx.textAlign='center'; ctx.fillText(pad(h)+':00',timeW/2,y+rowH/2);
+  for(let h=ROW0;h<=ROWN;h++){ const y=headH+rowH*(h-ROW0); ctx.fillStyle='#f8fafc'; ctx.fillRect(0,y,timeW,rowH); ctx.fillStyle='#64748b'; ctx.font='800 12px Pretendard,sans-serif'; ctx.textAlign='right'; ctx.fillText(pad(h)+':00',timeW-7,y);
     if(h===12){ for(let i=0;i<5;i++){ ctx.fillStyle='#cbd5e1'; ctx.font='700 11px Pretendard,sans-serif'; ctx.fillText('휴게',timeW+dayW*i+dayW/2,y+rowH/2);} } }
   // 격자
   ctx.strokeStyle='#e6ebf1'; ctx.lineWidth=1;
@@ -933,7 +934,7 @@ function openPickupEdit(id){
   document.getElementById('pkPlace').value=p.place||'오송역';
   document.getElementById('pkDir').value=p.dir||'arr';
   document.getElementById('pkTime').value=p.time||'';
-  document.getElementById('pkNote').value=p.driverNote||'';
+  document.getElementById('pkNote').value = p.driverNote || p.memo || '';
   openOv('pickupOv');
 }
 async function savePickupEdit(){
