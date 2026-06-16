@@ -94,6 +94,20 @@
   .ev-memo{background:#fef9c3; color:#854d0e; border:1px solid #fde047;}
   .ev-cont{opacity:.5;}
   .board td.slot.empty:hover::after{content:'+ 일정'; position:absolute; top:3px; left:5px; font-size:9px; color:#94a3b8; font-weight:800;}
+  /* 스케줄 보드 (CSS 그리드: 시간 범위가 하나의 통 블록으로 연결) */
+  .bgrid{ display:grid; grid-template-columns:58px repeat(5,1fr); grid-auto-rows:46px; border:1px solid #e6ebf1; border-radius:10px; overflow:hidden; min-width:680px; }
+  .bgrid .gh{ background:#f1f5f9; font-weight:900; font-size:13px; color:var(--navy); display:flex; flex-direction:column; align-items:center; justify-content:center; border-right:1px solid #e6ebf1; border-bottom:1px solid #e6ebf1; }
+  .bgrid .gh .d{ font-size:11px; font-weight:700; color:var(--muted); margin-top:2px; }
+  .bgrid .gh.today{ background:#e0f2fe; color:var(--blue-deep); }
+  .bgrid .gt{ background:#f8fafc; font-weight:800; font-size:12px; color:var(--muted); display:flex; align-items:center; justify-content:center; border-right:2px solid var(--navy); border-bottom:1px solid #eef1f4; }
+  .bgrid .gc{ border-right:1px solid #eef1f4; border-bottom:1px solid #eef1f4; cursor:pointer; position:relative; }
+  .bgrid .gc:hover{ background:#f0f9ff; }
+  .bgrid .gc.today{ background:#f5fbff; }
+  .bgrid .gc.empty:hover::after{ content:'+ 일정'; position:absolute; top:4px; left:6px; font-size:9px; color:#94a3b8; font-weight:800; }
+  .bgrid .glunch{ background:#fff; display:flex; align-items:center; justify-content:center; color:#cbd5e1; font-size:10px; font-weight:700; border-right:1px solid #eef1f4; border-bottom:1px solid #eef1f4; }
+  .bgrid .glunch.today{ background:#f5fbff; }
+  .bgrid .gevt{ margin:2px; border-radius:7px; padding:4px 7px; font-size:11px; font-weight:800; line-height:1.3; overflow:hidden; cursor:pointer; z-index:2; }
+  .bgrid .gevt small{ font-weight:700; opacity:.85; font-size:10px; }
 
   /* 인박스 */
   .inbox-empty{text-align:center; padding:38px 14px; color:#94a3b8; font-size:13px; font-weight:700;}
@@ -214,10 +228,7 @@
           </div>
         </div>
         <div class="panel-body" style="overflow-x:auto;">
-          <table class="board">
-            <thead id="boardHead"></thead>
-            <tbody id="boardBody"></tbody>
-          </table>
+          <div class="bgrid" id="bgrid"></div>
           <div style="display:flex; gap:14px; flex-wrap:wrap; margin-top:12px; font-size:11px; font-weight:700; color:var(--muted);">
             <span><b style="color:#991b1b;">■</b> 도착(역→항기원)</span>
             <span><b style="color:#075985;">■</b> 샌딩(항기원→역)</span>
@@ -539,51 +550,32 @@ function renderSchedule(){
   const dates=getWeekDates(weekOffset);
   document.getElementById('weekLabel').textContent=`${fmtD(dates[0])} ~ ${fmtD(dates[4])}`;
   const days=['월','화','수','목','금']; const today=todayStr();
-  let head=`<tr><th class="timecol">시간</th>`;
-  dates.forEach((dt,i)=>{ const isT=dt===today; head+=`<th class="${isT?'today-col':''}">${days[i]}<div class="d">${fmtD(dt)}</div></th>`; });
-  head+=`</tr>`; document.getElementById('boardHead').innerHTML=head;
-
-  let body='';
-  for(let h=6; h<=20; h++){
-    body+=`<tr><td class="timecol">${pad(h)}:00</td>`;
-    for(let i=0;i<5;i++){
-      const dt=dates[i]; const isT=dt===today; let cell='';
-      // 휴가(종일)
-      const off=dayoffs.find(o=>dt>=normDate(o.start)&&dt<=normDate(o.end||o.start));
-      if(off && h===6){ cell+=`<div class="ev ev-off" title="${escapeHtml(off.reason||'휴가')}">휴가 · ${escapeHtml(off.reason||'')}</div>`; }
-      // 점심
-      if(h===12) cell+=`<div class="ev-lunch">휴게</div>`;
-      // 확정 픽업
-      pickups.filter(p=>p.status==='confirmed'&&normDate(p.date)===dt&&toMin(p.time)!==null&&Math.floor(toMin(p.time)/60)===h).forEach(p=>{
-        const dir=p.dir||'arr'; const cls=dir==='arr'?'ev-arr':'ev-dep';
-        cell+=`<div class="ev ${cls}" title="${p.prof}">${p.time} ${dirText(p.place)[dir]}<br><small>${p.prof}</small></div>`;
-      });
-      // 고정버스 (매주 반복: 시작~종료 시간 범위만큼 칸 채움)
-      fixeds.filter(f=>Number(f.dow)===(i+1)&&toMin(f.time)!==null).forEach(f=>{
-        const sMin=toMin(f.time), eMin=f.endTime?toMin(f.endTime):sMin+60;
-        if(sMin<(h+1)*60 && eMin>h*60){
-          const cls=f.kind==='입교'?'ev-entry':'ev-leave';
-          const span=f.endTime?`${f.time}~${f.endTime}`:f.time;
-          if(Math.floor(sMin/60)===h) cell+=`<div class="ev ${cls}" title="매주 ${DOW[f.dow]}요일 반복">${span} ${f.kind}버스 <small>(매주)</small>${f.note?`<br><small>${escapeHtml(f.note)}</small>`:''}</div>`;
-          else cell+=`<div class="ev ${cls} ev-cont">${f.kind}버스</div>`;
-        }
-      });
-      // 일회성 일정(빈 칸 클릭으로 추가) : 시작~종료 범위만큼 칸 채움
-      schedules.filter(x=>normDate(x.date)===dt&&toMin(x.time)!==null).forEach(x=>{
-        const sMin=toMin(x.time), eMin=x.endTime?toMin(x.endTime):sMin+60;
-        if(sMin<(h+1)*60 && eMin>h*60){
-          const span=x.endTime?`${x.time}~${x.endTime}`:x.time;
-          if(Math.floor(sMin/60)===h) cell+=`<div class="ev ev-memo" title="클릭하여 삭제" onclick="event.stopPropagation(); delSchedule('${x.id}')">${span} ${escapeHtml(x.title||'일정')}</div>`;
-          else cell+=`<div class="ev ev-memo ev-cont" onclick="event.stopPropagation(); delSchedule('${x.id}')">${escapeHtml(x.title||'일정')}</div>`;
-        }
-      });
-      // 퇴교차량 공지
-      for(const rid in allCourses){ const dep=allCourses[rid]?.shuttle?.departure; if(dep&&dep.announced&&normDate(dep.date)===dt&&toMin(dep.time)!==null&&Math.floor(toMin(dep.time)/60)===h){ const cn=allCourses[rid].settings?.courseName||rid; const tot=Object.values(allCourses[rid].shuttle?.requests||{}).filter(r=>r.type!=='car').length; cell+=`<div class="ev ev-leave" onclick="switchView('leave')">${dep.time} 퇴교<br><small>${cn} ${tot}명</small></div>`; } }
-      body+=`<td class="slot ${isT?'today-col':''} ${cell?'':'empty'}" onclick="slotClick(event,'${dt}',${h})">${cell}</td>`;
+  const ROW0=6, ROWN=20;
+  const rowOf=h=>2+(h-ROW0);
+  const placeOf=(sMin,eMin)=>{ let sH=Math.floor(sMin/60), eH=Math.ceil(eMin/60); if(sH<ROW0)sH=ROW0; if(eH>ROWN+1)eH=ROWN+1; if(eH<=sH)eH=sH+1; return {sRow:rowOf(sH), span:Math.max(1,eH-sH)}; };
+  let H='';
+  H+=`<div class="gh" style="grid-column:1;grid-row:1;">시간</div>`;
+  dates.forEach((dt,i)=>{ const isT=dt===today; H+=`<div class="gh ${isT?'today':''}" style="grid-column:${i+2};grid-row:1;">${days[i]}<div class="d">${fmtD(dt)}</div></div>`; });
+  for(let h=ROW0; h<=ROWN; h++){ const row=rowOf(h);
+    H+=`<div class="gt" style="grid-column:1;grid-row:${row};">${pad(h)}:00</div>`;
+    for(let i=0;i<5;i++){ const dt=dates[i]; const isT=dt===today;
+      if(h===12){ H+=`<div class="glunch ${isT?'today':''}" style="grid-column:${i+2};grid-row:${row};">휴게</div>`; }
+      else { H+=`<div class="gc ${isT?'today':''} empty" style="grid-column:${i+2};grid-row:${row};" onclick="slotClick(event,'${dt}',${h})"></div>`; }
     }
-    body+=`</tr>`;
   }
-  document.getElementById('boardBody').innerHTML=body;
+  const evs=[];
+  // 휴가(종일 통 블록)
+  dates.forEach((dt,i)=>{ const off=dayoffs.find(o=>dt>=normDate(o.start)&&dt<=normDate(o.end||o.start)); if(off) evs.push({col:i+2,sRow:2,span:(ROWN-ROW0+1),cls:'ev-off',html:`휴가 · ${escapeHtml(off.reason||'')}`,title:escapeHtml(off.reason||'휴가')}); });
+  // 확정 픽업
+  pickups.filter(p=>p.status==='confirmed').forEach(p=>{ const i=dates.indexOf(normDate(p.date)); if(i<0||toMin(p.time)===null) return; const sMin=toMin(p.time),eMin=sMin+60; const dir=p.dir||'arr'; const pl=placeOf(sMin,eMin); evs.push({col:i+2,sRow:pl.sRow,span:pl.span,cls:dir==='arr'?'ev-arr':'ev-dep',html:`${p.time} ${dirText(p.place)[dir]}<br><small>${escapeHtml(p.prof||'')}</small>`,title:escapeHtml(p.prof||'')}); });
+  // 고정버스(매주, 시작~종료 통 블록)
+  fixeds.forEach(f=>{ if(toMin(f.time)===null) return; const i=Number(f.dow)-1; if(i<0||i>4) return; const sMin=toMin(f.time),eMin=f.endTime?toMin(f.endTime):sMin+60; const pl=placeOf(sMin,eMin); const span=f.endTime?`${f.time}~${f.endTime}`:f.time; evs.push({col:i+2,sRow:pl.sRow,span:pl.span,cls:f.kind==='입교'?'ev-entry':'ev-leave',html:`${span} ${f.kind}버스 <small>(매주)</small>${f.note?`<br><small>${escapeHtml(f.note)}</small>`:''}`,title:`매주 ${DOW[f.dow]}요일 반복`}); });
+  // 일회성 일정
+  schedules.forEach(x=>{ const i=dates.indexOf(normDate(x.date)); if(i<0||toMin(x.time)===null) return; const sMin=toMin(x.time),eMin=x.endTime?toMin(x.endTime):sMin+60; const pl=placeOf(sMin,eMin); const span=x.endTime?`${x.time}~${x.endTime}`:x.time; evs.push({col:i+2,sRow:pl.sRow,span:pl.span,cls:'ev-memo',html:`${span} ${escapeHtml(x.title||'일정')}`,title:'클릭하여 삭제',onclick:`event.stopPropagation(); delSchedule('${x.id}')`}); });
+  // 퇴교차량 공지
+  for(const rid in allCourses){ const dep=allCourses[rid]?.shuttle?.departure; if(dep&&dep.announced&&toMin(dep.time)!==null){ const i=dates.indexOf(normDate(dep.date)); if(i<0) continue; const sMin=toMin(dep.time),eMin=sMin+60; const pl=placeOf(sMin,eMin); const cn=allCourses[rid].settings?.courseName||rid; const tot=Object.values(allCourses[rid].shuttle?.requests||{}).filter(r=>r.type!=='car').length; evs.push({col:i+2,sRow:pl.sRow,span:pl.span,cls:'ev-leave',html:`${dep.time} 퇴교<br><small>${escapeHtml(cn)} ${tot}명</small>`,onclick:`switchView('leave')`}); } }
+  evs.forEach(e=>{ H+=`<div class="gevt ${e.cls}" style="grid-column:${e.col};grid-row:${e.sRow} / span ${e.span};"${e.onclick?` onclick="${e.onclick}"`:''}${e.title?` title="${e.title}"`:''}>${e.html}</div>`; });
+  document.getElementById('bgrid').innerHTML=H;
 }
 
 /* ---- 퇴교차량 ---- */
