@@ -131,17 +131,39 @@
             show('find');
             setTimeout(function () { var el = document.getElementById('findName'); if (el) el.focus(); }, 150);
         }
-        // ── 진입: 저장된 '이름'으로 현재 강의실을 자동 검색 (옛 방으로 자동복귀하지 않음) ──
+        // ── 진입 로직 (교육생이 카톡↔플랫폼을 오갈 때 '벽'이 안 생기게) ──
+        //  1) 링크에 ?room= (또는 ?code=)가 있으면 → 묻지 말고 그 방으로 직행 (uid 있으면 함께 전달)
+        //  2) 저장된 이름이 있으면 → 현재 진행중 과정에서 검색 → 단일매칭이면 확인없이 자동입장
+        //  3) 정말 아무 정보도 없는 '브라우저 최초 1회'에만 성함 입력 화면
         (function () {
-            var savedName = null;
-            try { savedName = localStorage.getItem('kac_last_visited_name'); } catch (e) {}
-            if (!db) { goFindScreen(); return; }
-            if (savedName && savedName.trim()) {
-                show('connecting');
-                findRoom(savedName.trim());
-            } else {
-                goFindScreen();
+            var qs;
+            try { qs = new URLSearchParams(location.search); } catch (e) { qs = { get: function () { return null; } }; }
+            var roomParam = (qs.get('room') || '').trim();
+            var codeParam = (qs.get('code') || '').trim();
+            var uidParam  = (qs.get('uid')  || '').trim();
+            function goIndex(room, code, uid) {
+                var u = 'index.html?';
+                if (room) u += 'room=' + encodeURIComponent(room);
+                else if (code) u += 'code=' + encodeURIComponent(code);
+                if (uid) u += '&uid=' + encodeURIComponent(uid);
+                u += '&t=' + Date.now();
+                location.replace(u);
             }
+            // 1) 방/코드가 링크에 지정돼 있으면 바로 직행 (벽 없음)
+            if (roomParam || codeParam) {
+                show('connecting');
+                var uid = uidParam;
+                if (!uid) { try { uid = (localStorage.getItem('uToken') || '').trim(); } catch (e) {} }
+                goIndex(roomParam, codeParam, uid);
+                return;
+            }
+            // 2) 같은 브라우저 재방문: 저장된 이름으로 현재 강의실 자동 검색
+            var savedName = '';
+            try { savedName = (localStorage.getItem('kac_last_visited_name') || localStorage.getItem('kac_user_name') || '').trim(); } catch (e) {}
+            if (!db) { goFindScreen(); return; }
+            if (savedName) { show('connecting'); findRoom(savedName); return; }
+            // 3) 브라우저 최초 1회 — 누구인지 전혀 모를 때만
+            goFindScreen();
         })();
 
         // ── 2) 이름으로 강의실 찾기 ──
@@ -271,6 +293,6 @@
     </script>
 <style>@media print{#__catcVer{display:none!important}}</style>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vA</div>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vC</div>
 </body>
 </html>
