@@ -500,12 +500,20 @@ function renderStaffList(){
         <span id="mealStatus" class="lg-status"></span>
     </div>`;
 
-    // 채움 순서: 좌측을 위에서부터 20줄까지 먼저 채우고, 넘치면 우측을 위에서부터 이어 채운다.
-    const LEFT_MAX = 20;
-    const TWO_COL = flat.length > LEFT_MAX;
+    // [균등 분할] 좌우를 비슷한 줄 수로 나눈다(가장 긴 열이 짧아져 버튼이 커짐).
+    //  - 가능하면 소속(부서) 경계에서 잘라 같은 부서가 두 열로 쪼개지지 않게 함.
+    const TWO_COL = flat.length > 16;   // 인원이 적으면 1열로 크게
     let inner;
     if(TWO_COL){
-        const left=flat.slice(0,LEFT_MAX), right=flat.slice(LEFT_MAX);
+        const mid = Math.ceil(flat.length/2);
+        const win = Math.max(2, Math.floor(flat.length*0.25));
+        let cut = mid;
+        for(let off=0; off<=win; off++){
+            const a = mid-off, b = mid+off;
+            if(a>0 && deptOf(flat[a][1])!==deptOf(flat[a-1][1])){ cut=a; break; }
+            if(b<flat.length && deptOf(flat[b][1])!==deptOf(flat[b-1][1])){ cut=b; break; }
+        }
+        const left=flat.slice(0,cut), right=flat.slice(cut);
         inner = `<div class="split-wrap">${tableHTML(rowsOf(left))}${tableHTML(rowsOf(right))}</div>`;
     } else {
         inner = tableHTML(rowsOf(flat));
@@ -1238,7 +1246,7 @@ function esc(v){ return String(v==null?'':v).replace(/[&<>"']/g,c=>({'&':'&amp;'
 </script>
 <style>@media print{#__catcVer{display:none!important}}</style>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vA</div>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vB</div>
 </body>
 </html>
 <!-- @build 20260613-192000 (식당패널 vGG: KAC임직원 QR 팝업도 사외강사처럼 "닫기 (3)(2)(1)" 카운트다운 + 3초 자동닫힘 + 즉시 닫기 버튼. QR 팝업은 자체 타이머로 닫으므로 일괄 옵저버에서 제외(keep)) -->
