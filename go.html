@@ -171,22 +171,16 @@
                     var settings = c.settings || {};
                     if (st.roomStatus !== 'active') return;
                     var period = settings.period || '';
-                    var startMs = null;
                     if (period.indexOf(' ~ ') > -1) {
                         var ps = period.split(' ~ ');
-                        var startDt = new Date(ps[0].trim() + 'T00:00:00');
                         var endDt = new Date(ps[1].trim() + 'T23:59:59');
-                        if (!isNaN(startDt)) startMs = startDt.getTime() - 86400000; // 하루 여유
-                        if (!isNaN(endDt) && endDt < today) return; // 기간 지난 과정 제외
+                        if (!isNaN(endDt) && endDt < today) return; // 기간 지난 과정만 제외
                     }
                     var students = c.students || {};
                     var found = Object.keys(students).some(function (tk) {
                         var s = students[tk] || {};
                         var nm = (s.name || tk.split('_')[0] || '').trim();
-                        if (nm !== name) return false;
-                        // 재배정으로 남은 옛 명단 제외: 가입시점이 현재 과정 시작 이전이면 무시
-                        if (startMs != null && typeof s.joinedAt === 'number' && s.joinedAt < startMs) return false;
-                        return true;
+                        return nm === name;
                     });
                     if (found) {
                         _matches.push({ room: room, course: settings.courseName || ('ROOM ' + room), prof: (st.professorName || '') });
@@ -200,7 +194,7 @@
                     if (errEl) errEl.textContent = '"' + name + '" 님으로 등록된 현재 강의실을 찾지 못했어요. 성함을 확인해 주세요.';
                     return;
                 }
-                if (_matches.length === 1) { showConfirm(0); }
+                if (_matches.length === 1) { _pickedRoom = _matches[0].room; confirmEnter(); }  // 단일 매칭 → 확인 없이 바로 입장
                 else { showPicker(); }
             }).catch(function (e) {
                 console.error(e);
