@@ -171,8 +171,8 @@ body {
     z-index: 1000;      
     
     background: var(--bg-color) !important; 
-    padding: 20px 0;    
-    margin-bottom: 15px;
+    padding: 8px 0 10px;   /* 위로 끌어올림 */
+    margin-bottom: 10px;
     width: 100%;
 }
 
@@ -190,8 +190,7 @@ body {
     flex-wrap: wrap; /* 강사가 많아지면 다음 줄로 자동 줄바꿈 (핵심) */
     gap: 8px; 
     margin: 0; 
-    padding: 15px 0 0 0; 
-    border-top: 1px solid #f1f5f9; /* 상단과 구분선 */
+    padding: 0;   /* 기본 상태탭 제거로 단독 줄 → 구분선·상단여백 없앰 */
 }
 
 /* 공통 필터 칩 디자인 (예전 디자인 복구 및 세련미 추가) */

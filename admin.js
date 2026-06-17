@@ -3621,13 +3621,7 @@ renderQaList: function(f) {
         const doneCnt = grp.filter(i => i.status === 'done' || i.status === 'pin-done').length;
 
         if (isToday) {
-            // 오늘: 헤더 + 카드 바로 표시 (펼침 고정)
-            htmlBuffer += `
-            <div style="display:flex; align-items:center; gap:10px; margin:8px 0 6px; padding:8px 12px; background:#eff6ff; border-radius:10px; border-left:4px solid #3b82f6;">
-                <span style="font-weight:900; color:#1d4ed8; font-size:14px;">${label}</span>
-                <span style="font-size:12px; color:#64748b; font-weight:600;">${cnt}건</span>
-                ${doneCnt > 0 ? `<span style="font-size:11px; color:#10b981; font-weight:700;">✅ 답변완료 ${doneCnt}건</span>` : ''}
-            </div>`;
+            // 오늘: 머리말 없이 카드만 바로 표시
             grp.forEach(i => { htmlBuffer += buildCard(i); });
         } else {
             // 과거 날짜: 접기/펼치기 아코디언
