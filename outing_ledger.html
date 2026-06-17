@@ -161,14 +161,17 @@
 
             const setSnap = await db.ref(`courses/${room}/settings`).once('value');
             const settings = setSnap.val() || {};
-            window._courseNameStr = settings.courseName || room;
+            const _p = new URLSearchParams(location.search);
+            const _qTitle = _p.get('title'), _qStart = _p.get('start'), _qEnd = _p.get('end');
+            window._courseNameStr = _qTitle || settings.courseName || room;
 
-            // 기간 파싱 (먼저 실행)
+            // 기간 파싱 — start/end 파라미터가 있으면 우선 (지난 기록 조회용)
             const periodStr = settings.period || '';
             let startDate = '', endDate = '';
-            const sep = periodStr.includes(' ~ ') ? ' ~ ' : '~';
-            if (periodStr.includes(sep)) {
-                [startDate, endDate] = periodStr.split(sep).map(s => s.trim());
+            if (_qStart || _qEnd) { startDate = _qStart || ''; endDate = _qEnd || ''; }
+            else {
+                const sep = periodStr.includes(' ~ ') ? ' ~ ' : '~';
+                if (periodStr.includes(sep)) { [startDate, endDate] = periodStr.split(sep).map(s => s.trim()); }
             }
 
             // 기간 표시 문자열 (페이지 제목블록에 사용)
