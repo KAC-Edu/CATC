@@ -505,14 +505,8 @@ function renderStaffList(){
     const TWO_COL = flat.length > 16;   // 인원이 적으면 1열로 크게
     let inner;
     if(TWO_COL){
-        const mid = Math.ceil(flat.length/2);
-        const win = Math.max(2, Math.floor(flat.length*0.25));
-        let cut = mid;
-        for(let off=0; off<=win; off++){
-            const a = mid-off, b = mid+off;
-            if(a>0 && deptOf(flat[a][1])!==deptOf(flat[a-1][1])){ cut=a; break; }
-            if(b<flat.length && deptOf(flat[b][1])!==deptOf(flat[b-1][1])){ cut=b; break; }
-        }
+        // 좌우 줄 수가 같아야 표 바닥이 가지런함 → 부서와 무관하게 정확히 반반으로 자른다.
+        const cut = Math.ceil(flat.length/2);
         const left=flat.slice(0,cut), right=flat.slice(cut);
         inner = `<div class="split-wrap">${tableHTML(rowsOf(left))}${tableHTML(rowsOf(right))}</div>`;
     } else {
@@ -818,9 +812,9 @@ function fitTable(){
     const stageBottom = stage.getBoundingClientRect().bottom;
     const avail = stageBottom - wrapTop - 30 - headH - 6;   // 30=하단 여백
     let rowH = Math.floor(avail / maxRows);
-    rowH = Math.max(30, Math.min(64, rowH));     // 30~64px 사이로 제한
-    const chk    = Math.max(24, Math.min(48, rowH - 12));
-    const nameFz = Math.max(15, Math.min(22, Math.round(rowH * 0.42)));   // 이름: 충분히 크게(고령자 배려)
+    rowH = Math.max(30, Math.min(74, rowH));     // 30~74px (여유 있으면 더 크게)
+    const chk    = Math.max(24, Math.min(58, rowH - 12));   // 체크 버튼 상한 ↑ (터치 쉽게)
+    const nameFz = Math.max(15, Math.min(24, Math.round(rowH * 0.42)));   // 이름: 충분히 크게(고령자 배려)
     tables.forEach(t=>{
         t.style.setProperty('--row-h', rowH + 'px');
         t.style.setProperty('--chk',   chk  + 'px');
@@ -1246,7 +1240,7 @@ function esc(v){ return String(v==null?'':v).replace(/[&<>"']/g,c=>({'&':'&amp;'
 </script>
 <style>@media print{#__catcVer{display:none!important}}</style>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vB</div>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vD</div>
 </body>
 </html>
 <!-- @build 20260613-192000 (식당패널 vGG: KAC임직원 QR 팝업도 사외강사처럼 "닫기 (3)(2)(1)" 카운트다운 + 3초 자동닫힘 + 즉시 닫기 버튼. QR 팝업은 자체 타이머로 닫으므로 일괄 옵저버에서 제외(keep)) -->
