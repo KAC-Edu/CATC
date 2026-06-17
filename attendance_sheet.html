@@ -10,8 +10,8 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         body { font-family: 'Malgun Gothic', sans-serif; padding: 20px; background: #f1f5f9; }
-        .sheet-container { background: white; padding: 40px; width: 210mm; min-height: 297mm; margin: 0 auto; box-shadow: 0 0 20px rgba(0,0,0,0.1); position: relative; }
-        .title { text-align: center; font-size: 28px; font-weight: 900; text-decoration: underline; margin-bottom: 30px; }
+        .sheet-container { background: white; padding: 26px 30px; width: 210mm; min-height: 297mm; margin: 0 auto; box-shadow: 0 0 20px rgba(0,0,0,0.1); position: relative; }
+        .title { text-align: center; font-size: 22px; font-weight: 900; text-decoration: underline; margin-bottom: 12px; }
         
         /* 상단 서명란 */
         .sign-area { display: flex; justify-content: flex-end; margin-bottom: 20px; }
@@ -21,25 +21,15 @@
         .sign-box img { max-height: 50px; mix-blend-mode: multiply; }
 
 /* 메인 테이블 스타일 수정 */
-        .main-table { 
-            width: 100%;                 /* [수정] A4 가로폭 전체 사용 (쏠림 방지) */
-            border-collapse: collapse; 
-            font-size: 11px; 
-            table-layout: fixed; /* 열 너비를 고정 비율로 균등 배분 */
-            word-break: break-all;
-        }
-        .main-table th, .main-table td { 
-            border: 1px solid #000; 
-            padding: 4px 2px; 
-            text-align: center; 
-            overflow: hidden; /* 내용이 넘쳐도 틀이 깨지지 않게 합니다 */
-            height: 50px;     /* [고정] 출석 여부/이름 길이와 무관하게 행 높이 고정 */
-        }
-        .main-table th { background: #f8fafc; height: 40px; }
+        .main-table { width: 100%; border-collapse: collapse; font-size: 10px; table-layout: fixed; word-break: break-all; }
+        .main-table th, .main-table td { border: 1px solid #000; padding: 1px 2px; text-align: center; overflow: hidden; height: 17px; }
+        .main-table th { background: #f8fafc; height: 30px; font-size:10px; }
+        .main-table td.hol { background: #f1f5f9; }
+        .main-table th.hol { background: #e2e8f0; color:#64748b; }
         
         /* No·성명만 고정폭, 날짜 열은 남은 공간을 균등 분할(3일→3등분, 5일→5등분) */
-        .no-col { width: 38px; }
-        .name-col { width: 110px; font-weight: bold; }
+        .no-col { width: 28px; }
+        .name-col { width: 92px; font-weight: bold; }
         /* .day-col 은 폭 미지정 → table-layout:fixed 가 남은 폭을 균등 분배 */
 
         /* 주차 페이지/라벨 */
@@ -47,7 +37,7 @@
         .week-label { display:inline-block; font-size:13px; font-weight:800; color:#1e3a8a; margin:4px 0 12px; padding:3px 12px; border:1px solid #1e3a8a; border-radius:14px; }
         
         /* 도장 스타일 */
-        .stamp { color: #dc2626; font-weight: 900; border: 2px solid #dc2626; border-radius: 50%; width: 22px; height: 22px; display: inline-flex; align-items: center; justify-content: center; font-size: 10px; transform: rotate(-10deg); }
+        .stamp { color: #dc2626; font-weight: 900; border: 1.5px solid #dc2626; border-radius: 50%; width: 13px; height: 13px; display: inline-flex; align-items: center; justify-content: center; font-size: 7px; transform: rotate(-10deg); margin:0 auto; }
 
         @media print {
             .no-print { display: none; }
@@ -189,7 +179,18 @@ async function init() {
 
 
 
-function renderTable(studentsRaw, attendanceData) {
+// 대한민국 공휴일(평일에 걸친 날만 의미 있음) — 필요시 갱신
+    const HOLIDAYS = {
+        '2026-01-01':'신정','2026-02-16':'설날','2026-02-17':'설날','2026-02-18':'설날',
+        '2026-03-01':'삼일절','2026-03-02':'대체공휴일','2026-05-05':'어린이날','2026-05-25':'부처님오신날',
+        '2026-06-06':'현충일','2026-08-15':'광복절','2026-08-17':'대체공휴일',
+        '2026-09-24':'추석','2026-09-25':'추석','2026-09-26':'추석','2026-10-03':'개천절','2026-10-05':'대체공휴일',
+        '2026-10-09':'한글날','2026-12-25':'성탄절',
+        '2027-01-01':'신정','2027-02-06':'설날','2027-02-08':'설날','2027-02-09':'설날','2027-03-01':'삼일절'
+    };
+    function isHoliday(d){ return HOLIDAYS[d] || null; }
+
+    function renderTable(studentsRaw, attendanceData) {
         const root = document.getElementById('sheets-root');
         if (!root) return;
         root.innerHTML = "";
@@ -202,61 +203,41 @@ function renderTable(studentsRaw, attendanceData) {
                 uniqueStudentsMap.set(id, { name: s.name.trim(), phone: cleanPhone });
             }
         });
-
         const sortedStudents = Array.from(uniqueStudentsMap.values()).sort((a, b) => a.name.localeCompare(b.name));
-
         if (sortedStudents.length === 0) {
             root.innerHTML = `<div class="sheet-container"><div class="title">교 육 생 출 석 부</div><div style="padding:50px; color:#999; text-align:center;">현재 입교 완료된 교육생이 없습니다.</div></div>`;
             return;
         }
 
-        // expectedStudents 데이터 로드 (없어도 렌더링 진행)
         const _renderWithExp = (rawList) => {
-            const weeks = chunkDatesByWeek(dateArray);
-            const pages = weeks.length ? weeks : [[]];
-            const totalPages = pages.length;
-            pages.forEach((weekDates, wIdx) => {
-                root.appendChild(buildWeekPage(weekDates, wIdx, totalPages, sortedStudents, attendanceData, rawList));
+            // 날짜는 12일(약 2주반)씩, 학생은 42명씩 한 페이지 — 90명·2주 → 2페이지
+            const MAXCOLS = 12, MAXROWS = 42;
+            const colBlocks = [];
+            for (let i = 0; i < dateArray.length; i += MAXCOLS) colBlocks.push(dateArray.slice(i, i + MAXCOLS));
+            if (!colBlocks.length) colBlocks.push([]);
+            const stuPages = [];
+            for (let i = 0; i < sortedStudents.length; i += MAXROWS) stuPages.push({ list: sortedStudents.slice(i, i + MAXROWS), start: i });
+            if (!stuPages.length) stuPages.push({ list: [], start: 0 });
+            const total = colBlocks.length * stuPages.length;
+            let pno = 0;
+            colBlocks.forEach(dates => {
+                stuPages.forEach(sp => { pno++; root.appendChild(buildPage(dates, sp.list, sp.start, pno, total, attendanceData, rawList)); });
             });
         };
         if (window._archiveMode) { _renderWithExp(window._archiveExpected); }
         else { db.ref(`courses/${SHEET_ROOM}/expectedStudents`).once('value', expSnap => _renderWithExp(expSnap.val())); }
     }
 
-    // [신규] 평일 날짜 배열을 '주(월요일 기준)' 단위로 묶는다
-    function chunkDatesByWeek(dates) {
-        const groups = [];
-        let curKey = null, cur = null;
-        dates.forEach(d => {
-            const dt = new Date(d + 'T00:00:00');
-            const monday = new Date(dt);
-            const dow = (dt.getDay() + 6) % 7; // 월=0 ... 일=6
-            monday.setDate(dt.getDate() - dow);
-            const key = `${monday.getFullYear()}-${monday.getMonth()}-${monday.getDate()}`;
-            if (key !== curKey) { cur = []; groups.push(cur); curKey = key; }
-            cur.push(d);
-        });
-        return groups;
-    }
-
-    // [신규] 한 주(週) 분량의 출석부 페이지(헤더+결재란+표)를 생성. 헤더/결재란은 매 페이지 반복.
-    function buildWeekPage(weekDates, wIdx, totalPages, students, attendanceData, rawList) {
+    function buildPage(dates, students, startIdx, pageNo, totalPages, attendanceData, rawList) {
         const page = document.createElement('div');
         page.className = 'sheet-container';
-
-        const pageInfo = totalPages > 1 ? ` (${wIdx + 1}/${totalPages} 주차)` : '';
-        const weekRange = weekDates.length
-            ? `${weekDates[0].slice(5).replace('-', '/')} ~ ${weekDates[weekDates.length - 1].slice(5).replace('-', '/')}`
-            : '';
-
+        const pageInfo = totalPages > 1 ? ` (${pageNo}/${totalPages})` : '';
+        const range = dates.length ? `${dates[0].slice(5).replace('-', '/')} ~ ${dates[dates.length - 1].slice(5).replace('-', '/')}` : '';
         const head = document.createElement('div');
         head.innerHTML = `
             <div class="title">교 육 생 출 석 부${pageInfo}</div>
-            <div style="margin-bottom:10px; font-weight:bold;">
-                과정명: ${HEADER.courseName}<br>
-                기간: ${HEADER.period}
-            </div>
-            ${weekRange ? `<div class="week-label">${weekRange}</div>` : ''}
+            <div style="margin-bottom:8px; font-weight:bold; font-size:13px;">과정명: ${HEADER.courseName}<br>기간: ${HEADER.period}</div>
+            ${range ? `<div class="week-label">${range}</div>` : ''}
             <div class="sign-area">
                 <table class="sign-table">
                     <tr><td rowspan="2" style="width:20px; background:#eee;">결<br>재</td><td>과정담당</td><td>담임교수</td></tr>
@@ -270,35 +251,23 @@ function renderTable(studentsRaw, attendanceData) {
 
         const table = document.createElement('table');
         table.className = 'main-table';
-        // [수정] 표 너비는 CSS의 width:100% 를 사용 → A4 가로폭을 꽉 채우고 날짜 열이 균등 배분됨
-
         let cols = '<col class="no-col"><col class="name-col">';
-        weekDates.forEach(() => { cols += '<col class="day-col">'; });
-
+        dates.forEach(() => { cols += '<col class="day-col">'; });
         let thead = '<tr><th class="no-col">No</th><th class="name-col">성명</th>';
-        weekDates.forEach(d => {
-            thead += `<th class="day-col">${d.split('-')[1]}/${d.split('-')[2]}<br>${getDayName(d)}</th>`;
-        });
+        dates.forEach(d => { const h = isHoliday(d); thead += `<th class="day-col${h ? ' hol' : ''}">${d.split('-')[1]}/${d.split('-')[2]}<br>${h ? '공휴일' : getDayName(d)}</th>`; });
         thead += '</tr>';
 
         let tbody = '';
         students.forEach((s, idx) => {
-            const isExpected = rawList && (Array.isArray(rawList)
-                ? rawList.includes(s.name)
-                : Object.values(rawList).includes(s.name));
+            const isExpected = rawList && (Array.isArray(rawList) ? rawList.includes(s.name) : Object.values(rawList).includes(s.name));
             const icon = isExpected
-                ? '<i class="fa-solid fa-book-open" title="명단 등록" style="font-size:12px; color:#059669; margin-right:4px;"></i>'
-                : '<i class="fa-solid fa-qrcode" title="QR 신규 입교" style="font-size:12px; color:#059669; margin-right:4px;"></i>';
-            let row = `<td>${idx + 1}</td><td class="name-col">${icon}${s.name}</td>`;
-            weekDates.forEach(d => {
+                ? '<i class="fa-solid fa-book-open" style="font-size:10px; color:#059669; margin-right:3px;"></i>'
+                : '<i class="fa-solid fa-qrcode" style="font-size:10px; color:#059669; margin-right:3px;"></i>';
+            let row = `<td>${startIdx + idx + 1}</td><td class="name-col">${icon}${s.name}</td>`;
+            dates.forEach(d => {
+                if (isHoliday(d)) { row += '<td class="hol"></td>'; return; }
                 const info = findAttendanceRecord(attendanceData[d], s.name, s.phone);
-                if (info) {
-                    // [간소화] 빨간 도장(출석) + 인증번호(Auth ID)만 표시 — 시간 등 부가 텍스트 제거
-                    const authId = (info && info.authId) ? info.authId : '';
-                    row += `<td><div style="display:flex; flex-direction:column; align-items:center; gap:3px;"><div class="stamp">출석</div><div style="font-size:8px; color:#888; font-weight:normal; line-height:1;">${authId}</div></div></td>`;
-                } else {
-                    row += `<td></td>`;
-                }
+                row += info ? '<td><div class="stamp">출석</div></td>' : '<td></td>';
             });
             tbody += `<tr>${row}</tr>`;
         });
@@ -308,7 +277,6 @@ function renderTable(studentsRaw, attendanceData) {
         return page;
     }
 
-    // [수정] 출석 데이터에서 학생 기록을 찾는다 (이름 + 식별번호(사번/전화) 기준, 키 표기 차이 흡수)
     function findAttendanceRecord(dayData, name, phone) {
         if (!dayData) return null;
         const nm = (name || '').trim();
