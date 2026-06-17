@@ -4011,3 +4011,17 @@ body:-webkit-full-screen .main-stage {
 .mic-monitor-toggle.is-off {
     color: #94a3b8 !important;
 }
+
+/* [과정설정 모달] 우측 자료관리 — 접이식 아코디언 바 (클릭 시 펼침, 공간 절약) */
+.setup-acc { display:flex; flex-direction:column; gap:10px; }
+.setup-acc .acc-item { border:1px solid #e2e8f0; border-radius:12px; overflow:hidden; background:#fff; }
+.setup-acc .acc-head {
+    width:100%; display:flex; align-items:center; justify-content:space-between; gap:10px;
+    padding:13px 15px; background:#f8fafc; border:none; cursor:pointer;
+    font-size:13px; font-weight:800; color:#1e293b; text-align:left;
+}
+.setup-acc .acc-head:hover { background:#eef2f7; }
+.setup-acc .acc-arrow { transition:transform .2s; font-size:11px; color:#94a3b8; flex-shrink:0; }
+.setup-acc .acc-item.open .acc-arrow { transform:rotate(180deg); }
+.setup-acc .acc-body { display:none; padding:15px; border-top:1px solid #eef2f7; }
+.setup-acc .acc-item.open .acc-body { display:block; }
