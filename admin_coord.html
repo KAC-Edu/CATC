@@ -1880,6 +1880,7 @@ body.pc-mode .entry-box:hover, body.pc-mode .entry-box-tablet:hover {
     <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
         <select id="coord-departure-time" style="flex:1; padding:10px 12px; border-radius:10px; border:none; font-size:15px; font-weight:800; color:#1e3a8a; outline:none; min-width:110px; background:rgba(255,255,255,0.9);">
             <option value="">시간 선택</option>
+            <option value="미정">미정 (시간 추후 공지)</option>
             <option value="13:00">13:00</option><option value="13:30">13:30</option>
             <option value="14:00">14:00</option><option value="14:30">14:30</option>
             <option value="15:00">15:00</option><option value="15:30">15:30</option>
@@ -3005,7 +3006,7 @@ function updateIndividualView() {
     const depTimeEl   = document.getElementById('coord-departure-time');
     if (depStatusEl) {
         if (dep && dep.announced && dep.time) {
-            depStatusEl.innerHTML = `<i class="fa-solid fa-circle-check" style="color:#4ade80;margin-right:5px;"></i>공지 완료 &mdash; <b style="color:white;">${dep.date||''} ${dep.time}</b> 출발 공지됨`;
+            depStatusEl.innerHTML = `<i class="fa-solid fa-circle-check" style="color:#4ade80;margin-right:5px;"></i>공지 완료 &mdash; <b style="color:white;">${dep.date||''} ${dep.time==='미정'?'출발시간 미정':dep.time+' 출발'}</b> 공지됨`;
             if (depTimeEl) depTimeEl.value = dep.time;
         } else if (dep && dep.time) {
             depStatusEl.innerHTML = `<i class="fa-solid fa-clock" style="color:#fbbf24;margin-right:5px;"></i>시간 설정됨 &mdash; <b style="color:white;">${dep.time}</b> (공지 미완료)`;
@@ -3873,15 +3874,16 @@ async function coordSetDepartureTime() {
     }
 
     const courseName = room?.settings?.courseName || currentRID;
-    if (!(await showKacConfirm(`[${courseName}] 퇴교 공지\n출발일: ${depDate} / 시간: ${time}\n\n교육생·강사·기사 플랫폼에 즉시 전달됩니다.`))) return;
+    const timeLabel = (time === '미정') ? '출발시간 미정(추후 공지)' : (time + ' 출발');
+    if (!(await showKacConfirm(`[${courseName}] 퇴교 공지\n출발일: ${depDate} / ${timeLabel}\n\n교육생·강사·기사 플랫폼에 즉시 전달됩니다.`))) return;
 
     await firebase.database().ref(`courses/${currentRID}/shuttle/departure`).update({
         time, date: depDate, announced: true
     });
     // system/shuttle_notice도 함께 저장 (모든 플랫폼 fallback)
-    await firebase.database().ref('system/shuttle_notice').set(`${depDate} ${time} 퇴교차량 출발 예정`);
+    await firebase.database().ref('system/shuttle_notice').set(`${depDate} ${timeLabel} 퇴교차량`);
 
-    showKacAlert(`✅ 퇴교 공지 완료! ${depDate} ${time} 출발`);
+    showKacAlert(`✅ 퇴교 공지 완료! ${depDate} ${timeLabel}`);
     updateIndividualView();
 }
 

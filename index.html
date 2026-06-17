@@ -2619,11 +2619,18 @@ async function openShuttleApply() {
         const today = getTodayString();
         if (dep && dep.time && dep.date && dep.date >= today) {
             const dateFmt = dep.date.replace(/-/g, '.');
-            const h = dep.time.split(':')[0].replace(/^0/, '');
-            timeEl.textContent = `${dateFmt}  ${h}시 출발 예정`;
-            timeEl.style.color = '#1d4ed8';
-            timeEl.style.fontSize = '22px';   // 시간: 크게
-            currentDepTime = dep.time;
+            if (dep.time === '미정') {
+                timeEl.textContent = `${dateFmt}  출발시간 미정 (추후 공지)`;
+                timeEl.style.color = '#b45309';
+                timeEl.style.fontSize = '17px';
+                currentDepTime = null;
+            } else {
+                const h = dep.time.split(':')[0].replace(/^0/, '');
+                timeEl.textContent = `${dateFmt}  ${h}시 출발 예정`;
+                timeEl.style.color = '#1d4ed8';
+                timeEl.style.fontSize = '22px';   // 시간: 크게
+                currentDepTime = dep.time;
+            }
         } else {
             timeEl.textContent = dep ? '출발 일정이 없습니다.' : '기사님이 출발 시간을 설정 중입니다.';
             timeEl.style.color = dep ? '#94a3b8' : '#64748b';

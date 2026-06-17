@@ -713,7 +713,7 @@ function renderLeave(){
   let html='';
   gkeys.forEach(k=>{ const g=groups[k];
     html+=`<div class="lv-run">
-      <div class="lv-run-h"><span class="lv-time"><i class="fa-solid fa-bus"></i> ${fmtFull(g.date)} ${g.time} 출발</span><span class="lv-tot">${g.busTot}명</span></div>
+      <div class="lv-run-h"><span class="lv-time"><i class="fa-solid fa-bus"></i> ${fmtFull(g.date)} ${g.time==='미정'?'출발시간 미정':(g.time+' 출발')}</span><span class="lv-tot">${g.busTot}명</span></div>
       <div class="lv-bd"><span class="bd2 osong">오송 ${g.counts.osong}</span><span class="bd2 term">터미널 ${g.counts.terminal}</span><span class="bd2 air">공항 ${g.counts.airport}</span><span class="bd2 car">자차 ${g.counts.car}</span></div>
       <div class="lv-courses">${g.courses.map(c=>`<div class="lv-c"><span>${escapeHtml(c.cn)}</span><b>${c.busTot}명</b><small>${sumLine(c.counts)}</small></div>`).join('')}</div>
     </div>`;
