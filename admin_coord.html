@@ -6666,19 +6666,37 @@ function _filterRoster(q){ q=(q||'').toLowerCase().trim();
 
 /* 3) 외출·외박 현황 (선택 날짜 기준) */
 function openOutingSummary(){
-  const date=(typeof selectedDate!=='undefined' && selectedDate) ? selectedDate : _coordToday();
-  const rooms=_coordActiveRooms(); const rows=[];
-  rooms.forEach(r=>{ const acts=r.room.admin_actions && r.room.admin_actions[date]; if(!acts) return;
-    const list=Object.values(acts); if(!list.length) return;
-    rows.push({ cName:r.s.courseName||r.rid, out:list.filter(a=>a.type==='outing').map(a=>a.name), over:list.filter(a=>a.type!=='outing').map(a=>a.name) });
-  });
-  let html=`<div class="cpop-datebar">📅 ${date} 기준</div>`;
-  html += rows.length ? rows.map(r=>`<div class="cpop-course"><div class="cpop-course-h">${_esc(r.cName)} <span>외출 ${r.out.length} · 외박 ${r.over.length}</span></div>
-      <div style="padding:9px 13px; font-size:13px; line-height:1.8;">
-        ${r.out.length?`<div><b style="color:#ea580c;">외출</b> ${r.out.map(_esc).join(', ')}</div>`:''}
-        ${r.over.length?`<div><b style="color:#dc2626;">외박</b> ${r.over.map(_esc).join(', ')}</div>`:''}
-      </div></div>`).join('') : '<div class="cpop-empty">해당 날짜 외출·외박 신청이 없습니다.</div>';
-  _cpop('<i class="fa-solid fa-file-signature"></i> 외출·외박 현황', html);
+  const cutoff=(()=>{ const d=new Date(); d.setMonth(d.getMonth()-3); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; })();
+  const rows=[];
+  for(let i=65;i<=90;i++){
+    const rid=String.fromCharCode(i); const room=(typeof globalAllData!=='undefined')?globalAllData[rid]:null; if(!room) continue;
+    const s=room.settings||{}; const aa=room.admin_actions||{};
+    const hasName=!!(s.courseName && (''+s.courseName).trim());
+    if(!hasName && !Object.keys(aa).length) continue;
+    let start='',end=''; if(s.period && s.period.includes(' ~ ')){ const pp=s.period.split(' ~ '); start=pp[0].trim(); end=pp[1].trim(); }
+    if(end && end<cutoff) continue; // 최근 3개월 이전 종료 과정 제외
+    let cnt=0,outc=0,overc=0;
+    Object.keys(aa).forEach(dt=>{ if(start&&dt<start) return; if(end&&dt>end) return; const acts=aa[dt]||{}; Object.values(acts).forEach(a=>{ cnt++; if(a&&a.type==='outing') outc++; else overc++; }); });
+    rows.push({rid, cName:s.courseName||('Room '+rid), start, end, cnt, outc, overc, active:(room.status&&room.status.roomStatus==='active')});
+  }
+  rows.sort((a,b)=>(b.start||'').localeCompare(a.start||''));
+  let html='<div style="font-size:12px; color:#64748b; font-weight:700; margin-bottom:12px;">최근 3개월 과정의 외출·외박 대장입니다. 과정을 선택해 PDF로 저장·출력하세요.</div>';
+  html += rows.length ? `<table class="cpop-table"><thead><tr><th>과정명</th><th>교육기간</th><th>외출</th><th>외박</th><th>합계</th><th>대장</th></tr></thead><tbody>`
+    + rows.map(r=>`<tr>
+        <td style="text-align:left; font-weight:800;">${_esc(r.cName)}${r.active?' <span style="font-size:10px;color:#16a34a;font-weight:800;">●진행중</span>':''}</td>
+        <td style="font-size:11px; white-space:nowrap;">${_esc((r.start||'').replace(/-/g,'.'))}${r.end?(' ~ '+_esc(r.end.replace(/-/g,'.'))):''}</td>
+        <td style="color:#ea580c; font-weight:800;">${r.outc}</td>
+        <td style="color:#dc2626; font-weight:800;">${r.overc}</td>
+        <td><b>${r.cnt}</b>건</td>
+        <td><button onclick="openOutingLedgerFor('${r.rid}')" style="background:#1e293b; color:#fff; border:none; border-radius:7px; padding:6px 12px; font-size:11px; font-weight:800; cursor:pointer;"><i class="fa-solid fa-file-pdf"></i> PDF</button></td>
+      </tr>`).join('')
+    + `</tbody></table>` : '<div class="cpop-empty">최근 3개월 내 과정이 없습니다.</div>';
+  _cpop('<i class="fa-solid fa-file-signature"></i> 외출·외박 대장 (과정별)', html);
+}
+function openOutingLedgerFor(rid){
+  if(!rid) return;
+  if(!confirm('이 과정의 외출·외박 대장을 PDF로 저장할까요?\n저장(인쇄) 화면이 열립니다. 모바일에서는 "PDF로 저장"을 선택하세요.')) return;
+  window.open('outing_ledger.html?room='+encodeURIComponent(rid)+'&auto=1','_blank');
 }
 
 /* 4) 퇴교차량 신청 총괄 */
