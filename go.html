@@ -168,7 +168,7 @@
                     });
                 }
                 // 유효: 운영 중 + 미만료 + (이름 저장 안됐거나 명단에 있음)
-                if (active && !expired && (!savedName || nameInRoom)) {
+                if (active && !expired && savedName && nameInRoom) {
                     var badge = document.getElementById('roomBadge');
                     if (badge) { badge.textContent = 'ROOM ' + room; badge.style.display = 'inline-block'; }
                     location.replace('index.html?room=' + encodeURIComponent(room));

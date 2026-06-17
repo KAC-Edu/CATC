@@ -1302,6 +1302,7 @@ async function resolveRoomFromCode(code) {
     }
 
     localStorage.setItem('kac_last_visited_room', currentRoom);
+    try { const _ln = localStorage.getItem('kac_user_name'); if (_ln) localStorage.setItem('kac_last_visited_name', _ln); } catch(e){}
 
     document.getElementById('roomBadge').innerText = `Room ${currentRoom}`;
     // 랜딩 배지: ROOM 알약 + 과정명. 과정명은 settings 로드 후 채워진다.
@@ -3401,6 +3402,7 @@ async function saveProfile() {
         localStorage.setItem('kac_user_name', name);
         localStorage.setItem('kac_user_phone', phone);
         localStorage.setItem('uToken', newUToken);
+        try { localStorage.setItem('kac_last_visited_name', name); if (currentRoom) localStorage.setItem('kac_last_visited_room', currentRoom); } catch(e){}
 
         await firebase.database().ref(`courses/${currentRoom}/students/${newUToken}`).update({
             name: name,
