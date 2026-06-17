@@ -581,6 +581,11 @@
                 <h2>방 마스터 설정</h2>
                 <p class="desc">건물·층별로 방 번호를 입력하고 저장하세요. 각 방은 <b>정원(1·2인)</b>, <b>우선 배정 지정</b>, <b>배정 제외</b>를 설정할 수 있습니다. 성별 우선/전용 조건은 우선 배치 기준에서 관리합니다.</p>
 
+                <div id="masterWeekBar" style="display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin:4px 0 14px; padding:11px 13px; background:#eff6ff; border:1px solid #bfdbfe; border-radius:12px;">
+                    <span style="font-weight:900; color:#1e40af; font-size:13px; white-space:nowrap;"><i class="fa-solid fa-calendar-week"></i> 편집할 방마스터</span>
+                    <select id="masterWeekSelect" onchange="onMasterWeekChange()" style="padding:9px 12px; border:2px solid #2563eb; border-radius:10px; font-weight:800; font-size:14px; color:#0f172a; background:#fff;"></select>
+                    <span id="masterWeekHint" style="font-size:11px; color:#64748b; font-weight:700;"></span>
+                </div>
                 <div class="bldg-tabs" id="bldgTabs"></div>
                 <div id="floorArea"></div>
 
@@ -949,12 +954,17 @@
         }
 
         function loadCriteria() {
-            db.ref('system/dorm/criteria').once('value', snap => {
-                const v = snap.val();
+            db.ref(masterPath('criteria')).once('value', snap => {
+                let v = snap.val();
+                if ((!Array.isArray(v) || !v.length) && masterWeekKey !== '__base__') {
+                    db.ref('system/dorm/criteria').once('value', bs => {
+                        const bv = bs.val(); criteriaList = (Array.isArray(bv) && bv.length) ? bv : defaultCriteria();
+                        ensureBuiltinCriteria(); renderCriteriaManager(); renderFloors();
+                    });
+                    return;
+                }
                 criteriaList = (Array.isArray(v) && v.length) ? v : defaultCriteria();
-                ensureBuiltinCriteria();
-                renderCriteriaManager();
-                renderFloors(); // 드롭다운 갱신
+                ensureBuiltinCriteria(); renderCriteriaManager(); renderFloors();
             });
         }
 
@@ -1000,7 +1010,7 @@
         }
 
         function saveCriteria() {
-            db.ref('system/dorm/criteria').set(criteriaList)
+            db.ref(masterPath('criteria')).set(criteriaList)
                 .then(() => showToast('✅ 배치 기준이 저장되었습니다.'))
                 .catch(() => showToast('⚠️ 저장 실패'));
         }
@@ -1014,23 +1024,13 @@
         }
 
         function loadFloorPriority() {
-            db.ref('system/dorm/floorPriority').once('value', snap => {
-                const saved = snap.val();
-                const def = defaultFloorOrder();
-                if (Array.isArray(saved) && saved.length) {
-                    const seen = new Set();
-                    floorPriority = [];
-                    saved.forEach(entry => {
-                        // 구버전(문자열 key) / 신버전({key,gender}) 모두 지원
-                        const k = (typeof entry === 'string') ? entry : entry.key;
-                        const g = (typeof entry === 'object' && entry) ? (entry.gender || '') : '';
-                        const found = def.find(d => d.key === k);
-                        if (found && !seen.has(k)) { floorPriority.push({ ...found, gender: g }); seen.add(k); }
-                    });
-                    def.forEach(d => { if (!seen.has(d.key)) floorPriority.push({ ...d, gender: '' }); });
-                } else {
-                    floorPriority = def.map(d => ({ ...d, gender: '' }));
+            db.ref(masterPath('floorPriority')).once('value', snap => {
+                let saved = snap.val();
+                if ((!Array.isArray(saved) || !saved.length) && masterWeekKey !== '__base__') {
+                    db.ref('system/dorm/floorPriority').once('value', bs => { floorPriority = _buildFloorPriority(bs.val()); renderFloorPriority(); });
+                    return;
                 }
+                floorPriority = _buildFloorPriority(saved);
                 renderFloorPriority();
             });
         }
@@ -1088,9 +1088,8 @@
         }
 
         function saveFloorPriority() {
-            // {key, gender} 배열로 저장 (순서 + 층별 성별전용)
             const order = floorPriority.map(f => ({ key: f.key, gender: f.gender || '' }));
-            db.ref('system/dorm/floorPriority').set(order)
+            db.ref(masterPath('floorPriority')).set(order)
                 .then(() => showToast('✅ 동·층 우선순위가 저장되었습니다.'))
                 .catch(() => showToast('⚠️ 저장 실패'));
         }
@@ -1101,6 +1100,8 @@
             loadRooms();
             loadFloorPriority();
             loadCriteria();
+            populateMasterWeeks();
+            updateMasterHint();
             // 연간계획 자동 동기화 (운영부와 동일: 추가/저장된 과정이 해당 주에 즉시 반영)
             if (typeof annualPlan !== 'undefined' && annualPlan.autoSync) annualPlan.autoSync();
         }
@@ -1120,17 +1121,50 @@
 
         let roomMapEditorOpen = {};
 
+        // ── 주차별 방마스터(프리셋) ──
+        let masterWeekKey = '__base__';   // '__base__' = 기본(모든 주차 공통), 그 외 = 해당 주 월요일(canonical)
+        function _mwYmd(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+        function masterPath(sub){ return (masterWeekKey==='__base__') ? ('system/dorm/'+sub) : ('system/dorm/weekMaster/'+masterWeekKey+'/'+sub); }
+        function _buildFloorPriority(saved){
+            const def = defaultFloorOrder();
+            if (Array.isArray(saved) && saved.length){
+                const seen=new Set(); const out=[];
+                saved.forEach(entry=>{ const k=(typeof entry==='string')?entry:entry.key; const g=(typeof entry==='object'&&entry)?(entry.gender||''):''; const f=def.find(d=>d.key===k); if(f&&!seen.has(k)){ out.push(Object.assign({},f,{gender:g})); seen.add(k); } });
+                def.forEach(d=>{ if(!seen.has(d.key)) out.push(Object.assign({},d,{gender:''})); });
+                return out;
+            }
+            return def.map(d=>Object.assign({},d,{gender:''}));
+        }
+        function populateMasterWeeks(){
+            const sel=document.getElementById('masterWeekSelect'); if(!sel) return;
+            const opts=['<option value="__base__">기본 (모든 주차 공통)</option>'];
+            const base=mondayOf(new Date());
+            for(let i=0;i<6;i++){ const m=new Date(base); m.setDate(base.getDate()+7*i); const wk=_mwYmd(m); const we=new Date(m); we.setDate(m.getDate()+6); const fmt=d=>(d.getMonth()+1)+'/'+d.getDate(); opts.push('<option value="'+wk+'">'+fmt(m)+'~'+fmt(we)+' 주차</option>'); }
+            const cur = masterWeekKey;
+            sel.innerHTML=opts.join('');
+            sel.value = cur; if(!sel.value){ sel.value='__base__'; masterWeekKey='__base__'; }
+        }
+        function updateMasterHint(){
+            const el=document.getElementById('masterWeekHint'); if(!el) return;
+            el.textContent = (masterWeekKey==='__base__') ? '기본 설정 편집 중 — 새 주차를 고르면 그 주 전용으로 저장됩니다.' : '이 주차 전용 방마스터 편집 중 — 저장 시 이 주차에만 반영됩니다.';
+        }
+        function reloadMaster(){ loadRooms(); loadCriteria(); loadFloorPriority(); updateMasterHint(); }
+        function onMasterWeekChange(){ masterWeekKey = document.getElementById('masterWeekSelect').value || '__base__'; reloadMaster(); }
+
         function loadRooms() {
-            db.ref('system/dorm/rooms').once('value', snap => {
-                rooms = snap.val() || {};
-                Object.values(rooms).forEach(r => { if (r) r.gender = ''; });
-                renderFloors();
-                updateSummary();
+            db.ref(masterPath('rooms')).once('value', snap => {
+                let v = snap.val();
+                if ((!v || !Object.keys(v).length) && masterWeekKey !== '__base__') {
+                    db.ref('system/dorm/rooms').once('value', bs => {
+                        rooms = bs.val() || {}; Object.values(rooms).forEach(r => { if (r) r.gender = ''; });
+                        renderFloors(); updateSummary();
+                    });
+                    return;
+                }
+                rooms = v || {}; Object.values(rooms).forEach(r => { if (r) r.gender = ''; });
+                renderFloors(); updateSummary();
             });
-            // 시계 시작
-            startDormClock();
-            // 생활관 현황 바 (실시간 구독)
-            startDormStatusBar();
+            if (!window._dormClockStarted) { window._dormClockStarted = true; startDormClock(); startDormStatusBar(); }
         }
 
         // ── 헤더 시계 ─────────────────────────────────────────────
@@ -1507,8 +1541,8 @@
 
         // ── 저장 ──
         function saveRooms() {
-            db.ref('system/dorm/rooms').set(rooms)
-                .then(() => showToast('✅ 방 마스터가 저장되었습니다'))
+            db.ref(masterPath('rooms')).set(rooms)
+                .then(() => showToast(masterWeekKey === '__base__' ? '✅ 기본 방마스터가 저장되었습니다' : '✅ 이 주차 방마스터가 저장되었습니다'))
                 .catch(e => { console.error(e); showToast('⚠️ 저장 실패 — 네트워크를 확인하세요'); });
         }
 
@@ -1523,6 +1557,7 @@
                 document.getElementById(`step-${i}`).style.display = (i === n) ? 'block' : 'none';
                 document.getElementById(`stab-${i}`).classList.toggle('active', i === n);
             });
+            if (n === 1) { populateMasterWeeks(); reloadMaster(); }
             if (n === 2) loadCourses(true);  // 주차 전환 후 캐시 불일치 방지 — 항상 새로 조회
             if (n === 3) loadWeeks();
             if (n === 4) loadViewWeeks(opts && opts.week);   // 방금 배정한 주차를 우선 표시
@@ -3443,6 +3478,28 @@
             const wk = document.getElementById('weekSelect').value;
             if (!wk) { showToast('배정할 주차를 선택하세요'); return; }
             if (_lockGuard(wk, '자동배정')) return;
+            // ── 주차별 방마스터 로드 + 적용 확인 ──
+            {
+                const _canon = canonicalWeekKey(wk);
+                const _wmSnap = await db.ref('system/dorm/weekMaster/' + _canon).once('value');
+                const _wm = _wmSnap.val() || {};
+                let _usingWeek = false;
+                if (_wm.rooms && Object.keys(_wm.rooms).length) {
+                    rooms = _wm.rooms; Object.values(rooms).forEach(r => { if (r) r.gender = ''; });
+                    if (Array.isArray(_wm.criteria) && _wm.criteria.length) criteriaList = _wm.criteria;
+                    floorPriority = _buildFloorPriority(_wm.floorPriority);
+                    _usingWeek = true;
+                } else {
+                    const rs = await db.ref('system/dorm/rooms').once('value'); rooms = rs.val() || {}; Object.values(rooms).forEach(r => { if (r) r.gender = ''; });
+                    const cs = await db.ref('system/dorm/criteria').once('value'); const cv = cs.val(); if (Array.isArray(cv) && cv.length) criteriaList = cv;
+                    const fs = await db.ref('system/dorm/floorPriority').once('value'); floorPriority = _buildFloorPriority(fs.val());
+                }
+                if (typeof ensureBuiltinCriteria === 'function') ensureBuiltinCriteria();
+                const _wd = new Date(_canon + 'T00:00:00'); const _we = new Date(_wd); _we.setDate(_wd.getDate() + 6);
+                const _f = d => (d.getMonth()+1) + '/' + d.getDate();
+                const _ok = confirm('[' + _f(_wd) + ' ~ ' + _f(_we) + '] 주차를 ' + (_usingWeek ? '★이 주차 전용 방마스터' : '기본 방마스터') + ' 로 자동 배정합니다.\n\n적용 기준이 맞습니까?');
+                if (!_ok) { _hideAssignLoading(); return; }
+            }
             _showAssignLoading('명단 및 방 정보를 불러오는 중…', 10);
             await refreshWeekRostersFromDb(wk);
             await loadHiddenCourses();
