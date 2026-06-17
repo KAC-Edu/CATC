@@ -6681,58 +6681,59 @@ function _filterRoster(q){ q=(q||'').toLowerCase().trim();
 
 /* 3) 외출·외박 현황 (선택 날짜 기준) */
 async function openOutingSummary(){
-  const d90=new Date(); d90.setDate(d90.getDate()-90);
-  const cut=`${d90.getFullYear()}-${String(d90.getMonth()+1).padStart(2,'0')}-${String(d90.getDate()).padStart(2,'0')}`;
+  const _ymd=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+  const d90=new Date(); d90.setDate(d90.getDate()-90); const cut=_ymd(d90);
   const isDate=d=>/^\d{4}-\d{2}-\d{2}$/.test(d);
   const countActs=(aa,from,to)=>{ let c=0,o=0,v=0; Object.keys(aa||{}).forEach(dt=>{ if(!isDate(dt)) return; if(from&&dt<from) return; if(to&&dt>to) return; Object.values(aa[dt]||{}).forEach(a=>{ c++; if(a&&a.type==='outing') o++; else v++; }); }); return {c,o,v}; };
-  const rows=[]; const pastRows=[];
+  const mondayList=(s,e)=>{ if(!s&&!e) return []; s=s||e; e=e||s; const out=[]; let d=new Date(s+'T00:00:00'); if(isNaN(d)) return []; const dow=(d.getDay()+6)%7; d.setDate(d.getDate()-dow); const end=new Date(e+'T00:00:00'); let g=0; while(d<=end && g<60){ out.push(_ymd(d)); d=new Date(d); d.setDate(d.getDate()+7); g++; } return out; };
+  const all=[];
   for(let i=65;i<=90;i++){
     const rid=String.fromCharCode(i); const room=(typeof globalAllData!=='undefined')?globalAllData[rid]:null; if(!room) continue;
     const s=room.settings||{}; const aa=room.admin_actions||{};
     let cs='',ce=''; if(s.period&&s.period.includes(' ~ ')){ const pp=s.period.split(' ~ '); cs=pp[0].trim(); ce=pp[1].trim(); }
     const hasName=!!(s.courseName&&(''+s.courseName).trim());
-    if(!s.hideFromBoard && hasName && (!ce || ce>=cut)){ const k=countActs(aa,cs,ce); rows.push({rid, cName:s.courseName||('Room '+rid), start:cs, end:ce, cnt:k.c, outc:k.o, overc:k.v, active:(room.status&&room.status.roomStatus==='active')}); }
+    if(!s.hideFromBoard && hasName && (!ce || ce>=cut)){ const k=countActs(aa,cs,ce); const active=(room.status&&room.status.roomStatus==='active');
+      all.push({start:cs,end:ce,tr:`<tr>
+        <td style="text-align:left; font-weight:800;">${_esc(s.courseName||('Room '+rid))}${active?' <span style="font-size:10px;color:#16a34a;font-weight:800;">●진행중</span>':''}</td>
+        <td style="font-size:11px; white-space:nowrap;">${_esc((cs||'').replace(/-/g,'.'))}${ce?(' ~ '+_esc(ce.replace(/-/g,'.'))):''}</td>
+        <td style="color:#ea580c; font-weight:800;">${k.o}</td><td style="color:#dc2626; font-weight:800;">${k.v}</td><td><b>${k.c}</b>건</td>
+        <td><button onclick="openOutingLedgerFor('${rid}')" style="background:#1e293b; color:#fff; border:none; border-radius:7px; padding:6px 12px; font-size:11px; font-weight:800; cursor:pointer;"><i class="fa-solid fa-file-pdf"></i> PDF</button></td></tr>`}); }
     const orphan=Object.keys(aa).filter(d=>isDate(d)&&d>=cut&&(!cs||!ce||d<cs||d>ce)).sort();
-    if(orphan.length){
-      const blocks=[]; let curB=null;
+    if(orphan.length){ const blocks=[]; let curB=null;
       orphan.forEach(d=>{ if(!curB){curB=[d];} else { const gap=(new Date(d)-new Date(curB[curB.length-1]))/86400000; if(gap>7){blocks.push(curB); curB=[d];} else curB.push(d);} });
       if(curB) blocks.push(curB);
-      blocks.forEach(b=>{ const st=b[0], en=b[b.length-1]; const k=countActs(aa,st,en); if(k.c>0) pastRows.push({rid, start:st, end:en, cnt:k.c, outc:k.o, overc:k.v}); });
+      blocks.forEach(b=>{ const st=b[0], en=b[b.length-1]; const k=countActs(aa,st,en); if(k.c>0) all.push({start:st,end:en,tr:`<tr style="background:#fafafa;">
+        <td style="text-align:left; font-weight:800; color:#64748b;">ROOM ${rid} <span style="font-size:10px;color:#b45309;">지난 기록</span></td>
+        <td style="font-size:11px; white-space:nowrap;">${_esc(st.replace(/-/g,'.'))} ~ ${_esc(en.replace(/-/g,'.'))}</td>
+        <td style="color:#ea580c; font-weight:800;">${k.o}</td><td style="color:#dc2626; font-weight:800;">${k.v}</td><td><b>${k.c}</b>건</td>
+        <td><button onclick="openOutingLedgerFor('${rid}','${st}','${en}')" style="background:#475569; color:#fff; border:none; border-radius:7px; padding:6px 12px; font-size:11px; font-weight:800; cursor:pointer;"><i class="fa-solid fa-file-pdf"></i> PDF</button></td></tr>`}); });
     }
   }
-  // 아카이브(리셋·종료된 과정) 불러오기
-  const arRows=[];
   try {
     const arSnap = await firebase.database().ref('system/course_archive').once('value');
     const arch = arSnap.val() || {};
-    Object.keys(arch).forEach(id=>{ const a=arch[id]||{}; const k=countActs(a.admin_actions||{}); arRows.push({id, cName:a.courseName||('Room '+(a.room||'')), period:a.period||'', cnt:k.c, outc:k.o, overc:k.v, hasAttend: !!(a.internal_attendance&&Object.keys(a.internal_attendance).length)}); });
-    arRows.sort((x,y)=>(y.period||'').localeCompare(x.period||''));
+    Object.keys(arch).forEach(id=>{ const a=arch[id]||{}; const k=countActs(a.admin_actions||{}); let ps='',pe=''; if(a.period&&a.period.includes(' ~ ')){ const pp=a.period.split(' ~ '); ps=pp[0].trim(); pe=pp[1].trim(); } const hasAttend=!!(a.internal_attendance&&Object.keys(a.internal_attendance).length);
+      all.push({start:ps,end:pe,tr:`<tr style="background:#f5f3ff;">
+        <td style="text-align:left; font-weight:800;">${_esc(a.courseName||('Room '+(a.room||'')))} <span style="font-size:10px;color:#7c3aed;font-weight:800;">보관됨</span></td>
+        <td style="font-size:11px; white-space:nowrap;">${_esc((a.period||'').replace(/-/g,'.'))}</td>
+        <td style="color:#ea580c; font-weight:800;">${k.o}</td><td style="color:#dc2626; font-weight:800;">${k.v}</td><td><b>${k.c}</b>건</td>
+        <td style="white-space:nowrap;"><button onclick="openArchiveLedger('${id}')" style="background:#6d28d9; color:#fff; border:none; border-radius:7px; padding:6px 9px; font-size:11px; font-weight:800; cursor:pointer;"><i class="fa-solid fa-file-pdf"></i> 외출</button>${hasAttend?` <button onclick="openArchiveAttendance('${id}')" style="background:#0369a1; color:#fff; border:none; border-radius:7px; padding:6px 9px; font-size:11px; font-weight:800; cursor:pointer;"><i class="fa-solid fa-clipboard-user"></i> 출석부</button>`:''}</td></tr>`}); });
   } catch(e){}
-  rows.sort((a,b)=>(b.start||'').localeCompare(a.start||''));
-  pastRows.sort((a,b)=>(b.start||'').localeCompare(a.start||''));
-  let html='<div style="font-size:12px; color:#64748b; font-weight:700; margin-bottom:12px;">최근 3개월 외출·외박 대장입니다. 과정을 선택해 PDF로 저장·출력하세요. (리셋된 과정도 ‘보관됨’으로 조회됩니다)</div>';
-  const anyRow = rows.length||pastRows.length||arRows.length;
-  html += anyRow ? `<table class="cpop-table"><thead><tr><th>과정명</th><th>교육기간</th><th>외출</th><th>외박</th><th>합계</th><th>대장</th></tr></thead><tbody>`
-    + rows.map(r=>`<tr>
-        <td style="text-align:left; font-weight:800;">${_esc(r.cName)}${r.active?' <span style="font-size:10px;color:#16a34a;font-weight:800;">●진행중</span>':''}</td>
-        <td style="font-size:11px; white-space:nowrap;">${_esc((r.start||'').replace(/-/g,'.'))}${r.end?(' ~ '+_esc(r.end.replace(/-/g,'.'))):''}</td>
-        <td style="color:#ea580c; font-weight:800;">${r.outc}</td><td style="color:#dc2626; font-weight:800;">${r.overc}</td><td><b>${r.cnt}</b>건</td>
-        <td><button onclick="openOutingLedgerFor('${r.rid}')" style="background:#1e293b; color:#fff; border:none; border-radius:7px; padding:6px 12px; font-size:11px; font-weight:800; cursor:pointer;"><i class="fa-solid fa-file-pdf"></i> PDF</button></td>
-      </tr>`).join('')
-    + pastRows.map(r=>`<tr style="background:#fafafa;">
-        <td style="text-align:left; font-weight:800; color:#64748b;">ROOM ${r.rid} <span style="font-size:10px;color:#b45309;">지난 기록</span></td>
-        <td style="font-size:11px; white-space:nowrap;">${_esc(r.start.replace(/-/g,'.'))} ~ ${_esc(r.end.replace(/-/g,'.'))}</td>
-        <td style="color:#ea580c; font-weight:800;">${r.outc}</td><td style="color:#dc2626; font-weight:800;">${r.overc}</td><td><b>${r.cnt}</b>건</td>
-        <td><button onclick="openOutingLedgerFor('${r.rid}','${r.start}','${r.end}')" style="background:#475569; color:#fff; border:none; border-radius:7px; padding:6px 12px; font-size:11px; font-weight:800; cursor:pointer;"><i class="fa-solid fa-file-pdf"></i> PDF</button></td>
-      </tr>`).join('')
-    + arRows.map(r=>`<tr style="background:#f5f3ff;">
-        <td style="text-align:left; font-weight:800;">${_esc(r.cName)} <span style="font-size:10px;color:#7c3aed;font-weight:800;">보관됨</span></td>
-        <td style="font-size:11px; white-space:nowrap;">${_esc((r.period||'').replace(/-/g,'.'))}</td>
-        <td style="color:#ea580c; font-weight:800;">${r.outc}</td><td style="color:#dc2626; font-weight:800;">${r.overc}</td><td><b>${r.cnt}</b>건</td>
-        <td style="white-space:nowrap;"><button onclick="openArchiveLedger('${r.id}')" style="background:#6d28d9; color:#fff; border:none; border-radius:7px; padding:6px 9px; font-size:11px; font-weight:800; cursor:pointer;"><i class="fa-solid fa-file-pdf"></i> 외출</button>${r.hasAttend?` <button onclick="openArchiveAttendance('${r.id}')" style="background:#0369a1; color:#fff; border:none; border-radius:7px; padding:6px 9px; font-size:11px; font-weight:800; cursor:pointer;"><i class="fa-solid fa-clipboard-user"></i> 출석부</button>`:''}</td>
-      </tr>`).join('')
-    + `</tbody></table>` : '<div class="cpop-empty">최근 3개월 내 외출·외박 기록이 없습니다.</div>';
-  _cpop('<i class="fa-solid fa-file-signature"></i> 외출·외박 대장 (과정별)', html);
+  all.sort((a,b)=>(b.start||'').localeCompare(a.start||''));
+  // 주차 옵션
+  const wkSet={}; all.forEach(r=>{ mondayList(r.start,r.end).forEach(m=>{ if(m>=cut) wkSet[m]=1; }); });
+  const weeks=Object.keys(wkSet).sort().reverse();
+  window._outingRows=all;
+  const fmt=s=>{ const d=new Date(s+'T00:00:00'); const e=new Date(d); e.setDate(d.getDate()+6); const f=x=>(x.getMonth()+1)+'/'+x.getDate(); return f(d)+'~'+f(e); };
+  let sel='<div style="margin-bottom:12px; display:flex; align-items:center; gap:8px; flex-wrap:wrap;"><span style="font-size:12px; color:#64748b; font-weight:800;">주차 선택</span><select id="outWeekSel" onchange="_renderOutingTable(this.value)" style="padding:8px 12px; border:1.5px solid #cbd5e1; border-radius:9px; font-weight:800; font-size:13px;"><option value="all">전체 (최근 3개월)</option>'+weeks.map(m=>'<option value="'+m+'">'+fmt(m)+' 주차</option>').join('')+'</select></div>';
+  _cpop('<i class="fa-solid fa-file-signature"></i> 외출·외박 대장 (과정별)', sel+'<div id="outTableWrap"></div>');
+  _renderOutingTable('all');
+}
+function _renderOutingTable(sel){
+  const wrap=document.getElementById('outTableWrap'); if(!wrap) return;
+  let rows=window._outingRows||[];
+  if(sel && sel!=='all'){ const mon=sel; const d=new Date(mon+'T00:00:00'); d.setDate(d.getDate()+6); const sun=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); rows=rows.filter(r=>{ const rs=r.start||r.end, re=r.end||r.start; if(!rs) return false; return rs<=sun && re>=mon; }); }
+  wrap.innerHTML = rows.length ? '<table class="cpop-table"><thead><tr><th>과정명</th><th>교육기간</th><th>외출</th><th>외박</th><th>합계</th><th>대장</th></tr></thead><tbody>'+rows.map(r=>r.tr).join('')+'</tbody></table>' : '<div class="cpop-empty">해당 주차에 외출·외박 기록이 없습니다.</div>';
 }
 function openOutingLedgerFor(rid, start, end){
   if(!rid) return;
