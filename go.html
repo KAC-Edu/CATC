@@ -183,13 +183,31 @@
             var btn = document.getElementById('findBtn');
             if (btn) { btn.disabled = true; btn.textContent = '찾는 중…'; }
 
-            db.ref('courses').once('value').then(function (snap) {
-                var courses = snap.val() || {};
+            // [성능] courses 전체(이미지·출결·외출 포함 수MB)를 받지 않는다.
+            //   방 목록은 shallow(키만)로, 각 방은 status/settings/students(가벼움)만 병렬 조회.
+            //   → attendanceQR/scheduleImage(base64)·admin_actions·internal_attendance 는 안 받음.
+            var _dbURL = '';
+            try { _dbURL = (firebase.app().options.databaseURL || '').replace(/\/$/, ''); } catch (e) {}
+            var _keysP = _dbURL
+                ? fetch(_dbURL + '/courses.json?shallow=true').then(function (r) { return r.json(); }).then(function (k) { return Object.keys(k || {}); }).catch(function () { return db.ref('courses').once('value').then(function (s) { return Object.keys(s.val() || {}); }); })
+                : db.ref('courses').once('value').then(function (s) { return Object.keys(s.val() || {}); });
+
+            _keysP.then(function (rooms) {
+                return Promise.all(rooms.map(function (room) {
+                    return Promise.all([
+                        db.ref('courses/' + room + '/status').once('value'),
+                        db.ref('courses/' + room + '/settings').once('value'),
+                        db.ref('courses/' + room + '/students').once('value')
+                    ]).then(function (r) {
+                        return { room: room, status: r[0].val() || {}, settings: r[1].val() || {}, students: r[2].val() || {} };
+                    });
+                }));
+            }).then(function (list) {
                 var today = new Date(); today.setHours(0, 0, 0, 0);
                 _matches = [];
 
-                Object.keys(courses).forEach(function (room) {
-                    var c = courses[room] || {};
+                list.forEach(function (c) {
+                    var room = c.room;
                     var st = c.status || {};
                     var settings = c.settings || {};
                     if (st.roomStatus !== 'active') return;
@@ -219,7 +237,7 @@
                     }
                     goFindScreen();
                     if (errEl) errEl.textContent = isAuto
-                        ? '이전 강의실이 종료/삭제된 것 같아요. 현재 강의실에 등록한 성함을 입력해 주세요.'
+                        ? '이전 강의실 정보를 불러오지 못했어요. 지금 강의실에 등록한 성함을 입력해 주세요.'
                         : '"' + name + '" 님으로 등록된 현재 강의실을 찾지 못했어요. 성함을 확인해 주세요.';
                     return;
                 }
@@ -300,6 +318,6 @@
     </script>
 <style>@media print{#__catcVer{display:none!important}}</style>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vD</div>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vF</div>
 </body>
 </html>
