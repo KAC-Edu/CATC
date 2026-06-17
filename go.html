@@ -215,7 +215,8 @@
                     if (period.indexOf(' ~ ') > -1) {
                         var ps = period.split(' ~ ');
                         var endDt = new Date(ps[1].trim() + 'T23:59:59');
-                        if (!isNaN(endDt) && endDt < today) return; // 기간 지난 과정만 제외
+                        // 종료 후 하루 여유 — 자정 지나자마자 과정이 사라지는 것 방지
+                        if (!isNaN(endDt) && endDt.getTime() < (today.getTime() - 86400000)) return;
                     }
                     var students = c.students || {};
                     var found = Object.keys(students).some(function (tk) {
@@ -237,8 +238,8 @@
                     }
                     goFindScreen();
                     if (errEl) errEl.textContent = isAuto
-                        ? '이전 강의실 정보를 불러오지 못했어요. 지금 강의실에 등록한 성함을 입력해 주세요.'
-                        : '"' + name + '" 님으로 등록된 현재 강의실을 찾지 못했어요. 성함을 확인해 주세요.';
+                        ? '진행 중인 강의실을 찾지 못했어요. (과정이 종료되었을 수 있어요) 성함을 다시 입력해 보세요.'
+                        : '"' + name + '" 님으로 등록된 진행 중인 강의실이 없어요. 성함을 확인하시거나, 과정이 종료되지 않았는지 확인해 주세요.';
                     return;
                 }
                 if (_matches.length === 1) { _pickedRoom = _matches[0].room; confirmEnter(); }  // 단일 매칭 → 확인 없이 바로 입장
@@ -318,6 +319,6 @@
     </script>
 <style>@media print{#__catcVer{display:none!important}}</style>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vG</div>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vH</div>
 </body>
 </html>
