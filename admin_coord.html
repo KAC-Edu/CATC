@@ -6674,11 +6674,10 @@ function openOutingSummary(){
   for(let i=65;i<=90;i++){
     const rid=String.fromCharCode(i); const room=(typeof globalAllData!=='undefined')?globalAllData[rid]:null; if(!room) continue;
     const s=room.settings||{}; const aa=room.admin_actions||{};
-    if(s.hideFromBoard) continue; // 비공개 과정 제외
     let cs='',ce=''; if(s.period&&s.period.includes(' ~ ')){ const pp=s.period.split(' ~ '); cs=pp[0].trim(); ce=pp[1].trim(); }
     const hasName=!!(s.courseName&&(''+s.courseName).trim());
-    // 1) 현재(진행/최근) 과정
-    if(hasName && (!ce || ce>=cut)){ const k=countActs(aa,cs,ce); rows.push({rid, cName:s.courseName||('Room '+rid), start:cs, end:ce, cnt:k.c, outc:k.o, overc:k.v, active:(room.status&&room.status.roomStatus==='active')}); }
+    // 1) 현재(진행/최근) 과정 — 강사가 비공개(전면 비노출)한 과정만 제외
+    if(!s.hideFromBoard && hasName && (!ce || ce>=cut)){ const k=countActs(aa,cs,ce); rows.push({rid, cName:s.courseName||('Room '+rid), start:cs, end:ce, cnt:k.c, outc:k.o, overc:k.v, active:(room.status&&room.status.roomStatus==='active')}); }
     // 2) 지난 기록(고아): 현재 기간 밖 + 최근 90일 내 날짜를 블록으로 묶음
     const orphan=Object.keys(aa).filter(d=>isDate(d)&&d>=cut&&(!cs||!ce||d<cs||d>ce)).sort();
     if(orphan.length){
