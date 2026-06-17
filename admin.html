@@ -2338,8 +2338,21 @@ function setupAcc(btn){
   [300, 900, 2000].forEach(function(ms){ setTimeout(fit, ms); });
 })();
 </script>
+<script>
+/* 전체화면 버튼 ↔ 사이드바 연동: 전체화면이면 사이드바 자동 접힘, 해제(ESC 포함) 시 복원 */
+(function(){
+  function syncFS(){
+    var fs = !!(document.fullscreenElement || document.webkitFullscreenElement);
+    document.body.classList.toggle('sidebar-hidden', fs);
+    var fsIcon = document.querySelector('.control-icon-btn i.fa-expand, .control-icon-btn i.fa-compress');
+    if (fsIcon){ fsIcon.classList.toggle('fa-expand', !fs); fsIcon.classList.toggle('fa-compress', fs); }
+  }
+  document.addEventListener('fullscreenchange', syncFS);
+  document.addEventListener('webkitfullscreenchange', syncFS);
+})();
+</script>
 <style>@media print{#__catcVer{display:none!important}}</style>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vF</div>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vG</div>
 </body>
 </html>
