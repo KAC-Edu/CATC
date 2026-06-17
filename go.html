@@ -281,7 +281,31 @@
                 localStorage.setItem('kac_last_visited_room', _pickedRoom);
                 if (_pickedName) localStorage.setItem('kac_last_visited_name', _pickedName);
             } catch (e) {}
-            location.replace('index.html?room=' + encodeURIComponent(_pickedRoom));
+            // [추가] 해당 방의 내 학생기록에서 프로필(이름·식별번호)을 복원 →
+            //  index.html에서 이름/사번 재입력 창이 다시 뜨지 않게 함
+            var goNow = function (uid) { var u = 'index.html?room=' + encodeURIComponent(_pickedRoom); if (uid) u += '&uid=' + encodeURIComponent(uid); location.replace(u); };
+            try {
+                if (db && _pickedName) {
+                    db.ref('courses/' + _pickedRoom + '/students').once('value').then(function (snap) {
+                        var studs = snap.val() || {};
+                        var mKey = null, mVal = null;
+                        Object.keys(studs).forEach(function (k) {
+                            var st = studs[k] || {};
+                            var nm = (st.name || k.split('_')[0] || '').trim();
+                            if (nm === _pickedName.trim() && !mKey) { mKey = k; mVal = st; }
+                        });
+                        if (mKey) {
+                            var phone = (mVal && mVal.phone) ? String(mVal.phone) : (mKey.split('_').slice(1).join('_') || '');
+                            try {
+                                localStorage.setItem('kac_user_name', (mVal && mVal.name) ? mVal.name : _pickedName);
+                                if (phone) localStorage.setItem('kac_user_phone', phone);
+                                localStorage.setItem('uToken', mKey);
+                            } catch (e) {}
+                        }
+                        goNow(mKey);
+                    }).catch(function(){ goNow(); });
+                } else { goNow(); }
+            } catch (e) { goNow(); }
         }
 
         // 엔터로 검색

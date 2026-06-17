@@ -1377,6 +1377,19 @@ async function resolveRoomFromCode(code) {
 
     // [자동 입장] 이미 등록을 마친 교육생(유효 프로필 보유)은 '입장하기' 버튼을 누르지 않고
     //  바로 채팅방(메인앱)으로 진입시킨다. 신규/미등록자만 랜딩의 입장하기 버튼을 보게 된다.
+    // [Kakao 인앱 등 localStorage 분리 대응] go.html이 URL로 넘긴 uid로 프로필 복원 → 재입력 방지
+    try {
+        const _uid = new URLSearchParams(location.search).get('uid');
+        if (_uid && currentRoom && !isValidProfile()) {
+            const _us = await firebase.database().ref(`courses/${currentRoom}/students/${_uid}`).once('value');
+            const _u = _us.val();
+            if (_u && _u.name) {
+                localStorage.setItem('uToken', _uid);
+                localStorage.setItem('kac_user_name', _u.name);
+                localStorage.setItem('kac_user_phone', String(_u.phone || '').trim());
+            }
+        }
+    } catch(e) {}
     try {
         if (isValidProfile()) {
             enterApp();
