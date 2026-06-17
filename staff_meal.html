@@ -283,7 +283,8 @@
         .meal-table th.act .now-dot { display:block; font-size:11px; font-weight:900; color:#fde68a; letter-spacing:.05em; margin-top:3px; }
         .meal-table th.dimmed .lock-dot { display:block; font-size:12px; color:#cbd5e1; margin-top:3px; }
         .meal-table .dept-cell { background:#eff6ff; font-weight:900; color:#1e40af; font-size:var(--dept-fz); vertical-align:middle; white-space:nowrap; letter-spacing:.04em; }
-        .meal-table tbody tr.dt-start > td { border-top:2px solid #1e40af; }   /* 소속부서 구분선(헤더와 동일 파랑) */
+        .meal-table tbody tr.dt-start > td { border-top:1px solid #cbd5e1; }   /* 소속부서 구분선(약하게) */
+        .meal-table tbody tr.filler-row td { background:#f1f5f9 !important; cursor:default; }   /* 빈(음영) 칸 — 체크 불가 */
         .meal-table .pos-cell { color:#334155; font-weight:700; font-size:var(--pos-fz); white-space:nowrap; }
         .meal-table .name-cell { font-weight:900; color:#0f172a; font-size:var(--name-fz); white-space:nowrap; letter-spacing:.26em; padding-left:.26em; }
         .mchk { display:inline-flex; vertical-align:middle; align-items:center; justify-content:center; width:var(--chk); height:var(--chk); border-radius:13px; border:2px solid #cbd5e1; background:#fff; color:#fff; font-size:calc(var(--chk) * .5); transition:transform .1s, background .12s, border-color .12s; pointer-events:none; }
@@ -502,13 +503,17 @@ function renderStaffList(){
 
     // [균등 분할] 좌우를 비슷한 줄 수로 나눈다(가장 긴 열이 짧아져 버튼이 커짐).
     //  - 가능하면 소속(부서) 경계에서 잘라 같은 부서가 두 열로 쪼개지지 않게 함.
-    const TWO_COL = flat.length > 16;   // 인원이 적으면 1열로 크게
+    const TWO_COL = (COMPANY !== 'service') && flat.length > 16;   // 공항서비스는 1열 고정, 그 외 17명↑이면 2열
     let inner;
     if(TWO_COL){
         // 좌우 줄 수가 같아야 표 바닥이 가지런함 → 부서와 무관하게 정확히 반반으로 자른다.
         const cut = Math.ceil(flat.length/2);
         const left=flat.slice(0,cut), right=flat.slice(cut);
-        inner = `<div class="split-wrap">${tableHTML(rowsOf(left))}${tableHTML(rowsOf(right))}</div>`;
+        let rightBody = rowsOf(right);
+        for(let k=right.length; k<left.length; k++){   // 우측이 모자라면 음영 빈칸으로 채워 높이를 좌측과 맞춤
+            rightBody += `<tr class="filler-row"><td></td><td></td><td></td><td class="c"></td><td class="c"></td><td class="c"></td><td class="c sep"></td></tr>`;
+        }
+        inner = `<div class="split-wrap">${tableHTML(rowsOf(left))}${tableHTML(rightBody)}</div>`;
     } else {
         inner = tableHTML(rowsOf(flat));
     }
@@ -1240,7 +1245,7 @@ function esc(v){ return String(v==null?'':v).replace(/[&<>"']/g,c=>({'&':'&amp;'
 </script>
 <style>@media print{#__catcVer{display:none!important}}</style>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vD</div>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vE</div>
 </body>
 </html>
 <!-- @build 20260613-192000 (식당패널 vGG: KAC임직원 QR 팝업도 사외강사처럼 "닫기 (3)(2)(1)" 카운트다운 + 3초 자동닫힘 + 즉시 닫기 버튼. QR 팝업은 자체 타이머로 닫으므로 일괄 옵저버에서 제외(keep)) -->
