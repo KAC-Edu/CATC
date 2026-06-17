@@ -3396,10 +3396,7 @@ function renderMealCalendar(a, month){
     return `<div class="mealcal"><div class="cal-sum"><i class="fa-regular fa-calendar-check"></i> <b>${escH(a.name||'')}</b> · ${y}년 ${m}월 &nbsp;|&nbsp; 아침 <b>${bc}</b> · 점심 <b>${lc}</b> · 저녁 <b>${dc}</b> &nbsp;=&nbsp; 합계 <b style="color:var(--blue);">${bc+lc+dc}</b>회</div><div class="cal-legend"><span class="cm cm-b">아침</span> <span class="cm cm-l">점심</span> <span class="cm cm-d">저녁</span></div><div class="cal-dows">${dows.map((n,i)=>`<div class="cal-dow ${i===0?'sun':''}${i===6?'sat':''}">${n}</div>`).join('')}</div><div class="cal-grid">${cells}</div></div>`;
 }
 </script>
-<!-- @catc-version-badge · 전 페이지 통일 디자인 (개발자 확인용 · 사용자에게는 거의 안 보임) -->
 <style>@media print{#__catcVer{display:none!important}}</style>
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">JDS260613(V23)</div>
-<script>try{console.log('%cCATC%c 영양사 (nutritionist.html) %cJDS260613(V23)%c build 20260613','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}</script>
 <div id="notifyStack" class="notify-stack"></div>
 <!-- ── 화면 자동 맞춤(auto-fit): 입장 시 가로폭 초과하면 화면에 맞게 자동 축소 · JDS260614 ── -->
 <script>
@@ -3417,6 +3414,8 @@ function renderMealCalendar(a, month){
   [300,900,2000].forEach(function(ms){ setTimeout(fit,ms); });
 })();
 </script>
+<!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vA</div>
 </body>
 </html>
 <!-- @build 20260614-004000 (영양사 vBBB: 화면 자동 맞춤(auto-fit) 추가 — 입장 시 가로폭이 뷰어보다 넓으면 자동 축소(수동 Ctrl-− 불필요). 강사·교육운영부·지원부·포털에도 동일 적용. 직전 vAAA: 주말 미운영 표기) -->
