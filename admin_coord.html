@@ -3836,6 +3836,14 @@ async function resetIndividualCourse() {
         updates[`${rPath}/status/resetKey`] = "KICK_COORD_" + Date.now();
 
         try {
+            try {
+                const _cs = await firebase.database().ref(`courses/${currentRID}`).once('value');
+                const _c=_cs.val()||{}; const _aa=_c.admin_actions||{}, _ia=_c.internal_attendance||{}, _stu=_c.students||{};
+                if(Object.keys(_aa).length||Object.keys(_ia).length||Object.keys(_stu).length){
+                    const _st=_c.settings||{}, _stt=_c.status||{};
+                    await firebase.database().ref('system/course_archive/'+currentRID+'_'+Date.now()).set({ room:currentRID, courseName:_st.courseName||'', period:_st.period||'', prof:_stt.professorName||'', coord:_st.coordinatorName||'', admin_actions:_aa, internal_attendance:_ia, students:_stu, expectedStudents:(_c.expectedStudents||null), archivedAt: firebase.database.ServerValue.TIMESTAMP });
+                }
+            } catch(_e){ console.warn('아카이브 실패', _e); }
             await firebase.database().ref().update(updates);
             showKacAlert("✅ 교육과정이 정상적으로 초기화 및 종료되었습니다.");
             currentRID = ""; // 선택 해제
@@ -4027,8 +4035,15 @@ async function purgeOldOutingRecords() {
 
         if (cnt > 0) {
             await firebase.database().ref().update(updates);
-            console.log(`[보존정책] 60일 경과 외출·외박 기록 ${cnt}건 자동 삭제 (${limit} 이전)`);
+            console.log(`[보존정책] 90일 경과 외출·외박 기록 ${cnt}건 자동 삭제 (${limit} 이전)`);
         }
+        // 아카이브(course_archive)도 90일 경과분 삭제
+        try {
+            const arSnap = await firebase.database().ref('system/course_archive').once('value');
+            const ar = arSnap.val() || {}; const arUpd = {}; const cut90 = Date.now() - 90*86400000;
+            Object.keys(ar).forEach(id => { const at = ar[id] && ar[id].archivedAt; if (typeof at === 'number' && at < cut90) arUpd['system/course_archive/'+id] = null; });
+            if (Object.keys(arUpd).length) await firebase.database().ref().update(arUpd);
+        } catch(e2) { console.warn('[보존정책] 아카이브 정리 오류:', e2); }
     } catch (e) {
         console.warn('[보존정책] 정리 중 오류:', e);
     }
@@ -6665,43 +6680,56 @@ function _filterRoster(q){ q=(q||'').toLowerCase().trim();
 }
 
 /* 3) 외출·외박 현황 (선택 날짜 기준) */
-function openOutingSummary(){
+async function openOutingSummary(){
   const d90=new Date(); d90.setDate(d90.getDate()-90);
   const cut=`${d90.getFullYear()}-${String(d90.getMonth()+1).padStart(2,'0')}-${String(d90.getDate()).padStart(2,'0')}`;
   const isDate=d=>/^\d{4}-\d{2}-\d{2}$/.test(d);
   const countActs=(aa,from,to)=>{ let c=0,o=0,v=0; Object.keys(aa||{}).forEach(dt=>{ if(!isDate(dt)) return; if(from&&dt<from) return; if(to&&dt>to) return; Object.values(aa[dt]||{}).forEach(a=>{ c++; if(a&&a.type==='outing') o++; else v++; }); }); return {c,o,v}; };
-  const rows=[]; const past=[];
+  const rows=[]; const pastRows=[];
   for(let i=65;i<=90;i++){
     const rid=String.fromCharCode(i); const room=(typeof globalAllData!=='undefined')?globalAllData[rid]:null; if(!room) continue;
     const s=room.settings||{}; const aa=room.admin_actions||{};
     let cs='',ce=''; if(s.period&&s.period.includes(' ~ ')){ const pp=s.period.split(' ~ '); cs=pp[0].trim(); ce=pp[1].trim(); }
     const hasName=!!(s.courseName&&(''+s.courseName).trim());
-    // 1) 현재(진행/최근) 과정 — 강사가 비공개(전면 비노출)한 과정만 제외
     if(!s.hideFromBoard && hasName && (!ce || ce>=cut)){ const k=countActs(aa,cs,ce); rows.push({rid, cName:s.courseName||('Room '+rid), start:cs, end:ce, cnt:k.c, outc:k.o, overc:k.v, active:(room.status&&room.status.roomStatus==='active')}); }
-    // 2) 지난 기록(고아): 현재 기간 밖 + 최근 90일 내 날짜를 블록으로 묶음
     const orphan=Object.keys(aa).filter(d=>isDate(d)&&d>=cut&&(!cs||!ce||d<cs||d>ce)).sort();
     if(orphan.length){
       const blocks=[]; let curB=null;
       orphan.forEach(d=>{ if(!curB){curB=[d];} else { const gap=(new Date(d)-new Date(curB[curB.length-1]))/86400000; if(gap>7){blocks.push(curB); curB=[d];} else curB.push(d);} });
       if(curB) blocks.push(curB);
-      blocks.forEach(b=>{ const st=b[0], en=b[b.length-1]; const k=countActs(aa,st,en); if(k.c>0) past.push({rid, start:st, end:en, cnt:k.c, outc:k.o, overc:k.v}); });
+      blocks.forEach(b=>{ const st=b[0], en=b[b.length-1]; const k=countActs(aa,st,en); if(k.c>0) pastRows.push({rid, start:st, end:en, cnt:k.c, outc:k.o, overc:k.v}); });
     }
   }
+  // 아카이브(리셋·종료된 과정) 불러오기
+  const arRows=[];
+  try {
+    const arSnap = await firebase.database().ref('system/course_archive').once('value');
+    const arch = arSnap.val() || {};
+    Object.keys(arch).forEach(id=>{ const a=arch[id]||{}; const k=countActs(a.admin_actions||{}); arRows.push({id, cName:a.courseName||('Room '+(a.room||'')), period:a.period||'', cnt:k.c, outc:k.o, overc:k.v, hasAttend: !!(a.internal_attendance&&Object.keys(a.internal_attendance).length)}); });
+    arRows.sort((x,y)=>(y.period||'').localeCompare(x.period||''));
+  } catch(e){}
   rows.sort((a,b)=>(b.start||'').localeCompare(a.start||''));
-  past.sort((a,b)=>(b.start||'').localeCompare(a.start||''));
-  let html='<div style="font-size:12px; color:#64748b; font-weight:700; margin-bottom:12px;">최근 3개월 외출·외박 대장입니다. 과정을 선택해 PDF로 저장·출력하세요.</div>';
-  html += (rows.length||past.length) ? `<table class="cpop-table"><thead><tr><th>과정명</th><th>교육기간</th><th>외출</th><th>외박</th><th>합계</th><th>대장</th></tr></thead><tbody>`
+  pastRows.sort((a,b)=>(b.start||'').localeCompare(a.start||''));
+  let html='<div style="font-size:12px; color:#64748b; font-weight:700; margin-bottom:12px;">최근 3개월 외출·외박 대장입니다. 과정을 선택해 PDF로 저장·출력하세요. (리셋된 과정도 ‘보관됨’으로 조회됩니다)</div>';
+  const anyRow = rows.length||pastRows.length||arRows.length;
+  html += anyRow ? `<table class="cpop-table"><thead><tr><th>과정명</th><th>교육기간</th><th>외출</th><th>외박</th><th>합계</th><th>대장</th></tr></thead><tbody>`
     + rows.map(r=>`<tr>
         <td style="text-align:left; font-weight:800;">${_esc(r.cName)}${r.active?' <span style="font-size:10px;color:#16a34a;font-weight:800;">●진행중</span>':''}</td>
         <td style="font-size:11px; white-space:nowrap;">${_esc((r.start||'').replace(/-/g,'.'))}${r.end?(' ~ '+_esc(r.end.replace(/-/g,'.'))):''}</td>
         <td style="color:#ea580c; font-weight:800;">${r.outc}</td><td style="color:#dc2626; font-weight:800;">${r.overc}</td><td><b>${r.cnt}</b>건</td>
         <td><button onclick="openOutingLedgerFor('${r.rid}')" style="background:#1e293b; color:#fff; border:none; border-radius:7px; padding:6px 12px; font-size:11px; font-weight:800; cursor:pointer;"><i class="fa-solid fa-file-pdf"></i> PDF</button></td>
       </tr>`).join('')
-    + past.map(r=>`<tr style="background:#fafafa;">
+    + pastRows.map(r=>`<tr style="background:#fafafa;">
         <td style="text-align:left; font-weight:800; color:#64748b;">ROOM ${r.rid} <span style="font-size:10px;color:#b45309;">지난 기록</span></td>
         <td style="font-size:11px; white-space:nowrap;">${_esc(r.start.replace(/-/g,'.'))} ~ ${_esc(r.end.replace(/-/g,'.'))}</td>
         <td style="color:#ea580c; font-weight:800;">${r.outc}</td><td style="color:#dc2626; font-weight:800;">${r.overc}</td><td><b>${r.cnt}</b>건</td>
         <td><button onclick="openOutingLedgerFor('${r.rid}','${r.start}','${r.end}')" style="background:#475569; color:#fff; border:none; border-radius:7px; padding:6px 12px; font-size:11px; font-weight:800; cursor:pointer;"><i class="fa-solid fa-file-pdf"></i> PDF</button></td>
+      </tr>`).join('')
+    + arRows.map(r=>`<tr style="background:#f5f3ff;">
+        <td style="text-align:left; font-weight:800;">${_esc(r.cName)} <span style="font-size:10px;color:#7c3aed;font-weight:800;">보관됨</span></td>
+        <td style="font-size:11px; white-space:nowrap;">${_esc((r.period||'').replace(/-/g,'.'))}</td>
+        <td style="color:#ea580c; font-weight:800;">${r.outc}</td><td style="color:#dc2626; font-weight:800;">${r.overc}</td><td><b>${r.cnt}</b>건</td>
+        <td style="white-space:nowrap;"><button onclick="openArchiveLedger('${r.id}')" style="background:#6d28d9; color:#fff; border:none; border-radius:7px; padding:6px 9px; font-size:11px; font-weight:800; cursor:pointer;"><i class="fa-solid fa-file-pdf"></i> 외출</button>${r.hasAttend?` <button onclick="openArchiveAttendance('${r.id}')" style="background:#0369a1; color:#fff; border:none; border-radius:7px; padding:6px 9px; font-size:11px; font-weight:800; cursor:pointer;"><i class="fa-solid fa-clipboard-user"></i> 출석부</button>`:''}</td>
       </tr>`).join('')
     + `</tbody></table>` : '<div class="cpop-empty">최근 3개월 내 외출·외박 기록이 없습니다.</div>';
   _cpop('<i class="fa-solid fa-file-signature"></i> 외출·외박 대장 (과정별)', html);
@@ -6712,6 +6740,16 @@ function openOutingLedgerFor(rid, start, end){
   let url='outing_ledger.html?room='+encodeURIComponent(rid)+'&auto=1';
   if(start&&end){ url+='&start='+encodeURIComponent(start)+'&end='+encodeURIComponent(end)+'&title='+encodeURIComponent('지난기록 '+start+'~'+end); }
   window.open(url,'_blank');
+}
+function openArchiveLedger(id){
+  if(!id) return;
+  if(!confirm('보관된 외출·외박 대장을 PDF로 저장할까요?')) return;
+  window.open('outing_ledger.html?archive='+encodeURIComponent(id)+'&auto=1','_blank');
+}
+function openArchiveAttendance(id){
+  if(!id) return;
+  if(!confirm('보관된 출석부를 PDF로 저장할까요?')) return;
+  window.open('attendance_sheet.html?archive='+encodeURIComponent(id)+'&auto=1','_blank');
 }
 
 /* 4) 퇴교차량 신청 총괄 */

@@ -1251,7 +1251,7 @@ _executeReset: function() {
         [`${rPath}/attendanceQR`]:        null
     };
 
-    firebase.database().ref().update(resetUpdates).then(() => {
+    firebase.database().ref(rPath).once('value').then(function(_cs){ var _c=_cs.val()||{}; var _aa=_c.admin_actions||{}, _ia=_c.internal_attendance||{}, _stu=_c.students||{}; if(!Object.keys(_aa).length && !Object.keys(_ia).length && !Object.keys(_stu).length) return null; var _st=_c.settings||{}, _stt=_c.status||{}; return firebase.database().ref('system/course_archive/'+state.room+'_'+Date.now()).set({ room: state.room, courseName:_st.courseName||'', period:_st.period||'', prof:_stt.professorName||'', coord:_st.coordinatorName||'', admin_actions:_aa, internal_attendance:_ia, students:_stu, expectedStudents:(_c.expectedStudents||null), archivedAt: firebase.database.ServerValue.TIMESTAMP }); }).catch(function(){}).then(() => firebase.database().ref().update(resetUpdates)).then(() => {
         return _dismissPromise;
     }).then(() => {
         ui.showAlert(`✅ Room ${state.room}이 성공적으로 초기화되었습니다.`);

@@ -129,6 +129,17 @@ function printSheet() {
 async function init() {
     // 1. 주소창에서 방 번호(room)를 정확히 가져옵니다.
     const params = new URLSearchParams(window.location.search);
+    const _archiveId = params.get('archive');
+    if (_archiveId) {
+        const arSnap = await db.ref('system/course_archive/' + _archiveId).once('value');
+        const ar = arSnap.val() || {};
+        SHEET_ROOM = null; window._archiveMode = true; window._archiveExpected = ar.expectedStudents || null;
+        HEADER.courseName = ar.courseName || '지난 과정'; HEADER.period = ar.period || '-'; HEADER.coordName = ar.coord || '-'; HEADER.profName = ar.prof ? ar.prof + ' 교수' : '-';
+        dateArray = generateDates(ar.period || '');
+        renderTable(ar.students || {}, ar.internal_attendance || {});
+        if (autoSave && !_autoDone) { _autoDone = true; setTimeout(() => { try { printSheet(); } catch (e) {} }, 1000); }
+        return;
+    }
     const roomFromUrl = params.get('room');
     SHEET_ROOM = roomFromUrl;   // [수정] 전역 보관 (renderTable에서 사용)
 
@@ -200,18 +211,16 @@ function renderTable(studentsRaw, attendanceData) {
         }
 
         // expectedStudents 데이터 로드 (없어도 렌더링 진행)
-        db.ref(`courses/${SHEET_ROOM}/expectedStudents`).once('value', expSnap => {
-            const rawList = expSnap.val();
-
-            // [신규] 전체 기간을 1주일(월~금) 단위로 분할하여 각각 별도 페이지로 출력
+        const _renderWithExp = (rawList) => {
             const weeks = chunkDatesByWeek(dateArray);
             const pages = weeks.length ? weeks : [[]];
             const totalPages = pages.length;
-
             pages.forEach((weekDates, wIdx) => {
                 root.appendChild(buildWeekPage(weekDates, wIdx, totalPages, sortedStudents, attendanceData, rawList));
             });
-        });
+        };
+        if (window._archiveMode) { _renderWithExp(window._archiveExpected); }
+        else { db.ref(`courses/${SHEET_ROOM}/expectedStudents`).once('value', expSnap => _renderWithExp(expSnap.val())); }
     }
 
     // [신규] 평일 날짜 배열을 '주(월요일 기준)' 단위로 묶는다

@@ -157,13 +157,22 @@
         window.addEventListener('afterprint', () => { document.title = '외출·외박 신청서(대장)'; });
 
         async function init() {
-            if (!room) return;
-
-            const setSnap = await db.ref(`courses/${room}/settings`).once('value');
-            const settings = setSnap.val() || {};
             const _p = new URLSearchParams(location.search);
+            const archiveId = _p.get('archive');
+            let settings = {}, dataRef = null;
+            if (archiveId) {
+                const arSnap = await db.ref('system/course_archive/' + archiveId).once('value');
+                const ar = arSnap.val() || {};
+                settings = { courseName: ar.courseName || '', period: ar.period || '' };
+                dataRef = db.ref('system/course_archive/' + archiveId + '/admin_actions');
+            } else {
+                if (!room) return;
+                const setSnap = await db.ref(`courses/${room}/settings`).once('value');
+                settings = setSnap.val() || {};
+                dataRef = db.ref(`courses/${room}/admin_actions`);
+            }
             const _qTitle = _p.get('title'), _qStart = _p.get('start'), _qEnd = _p.get('end');
-            window._courseNameStr = _qTitle || settings.courseName || room;
+            window._courseNameStr = _qTitle || settings.courseName || room || '지난 과정';
 
             // 기간 파싱 — start/end 파라미터가 있으면 우선 (지난 기록 조회용)
             const periodStr = settings.period || '';
@@ -185,7 +194,7 @@
                 window._periodDisplay = periodStr || '-';
             }
 
-            db.ref(`courses/${room}/admin_actions`).on('value', snap => {
+            dataRef.on('value', snap => {
                 const allData = snap.val() || {};
                 const host = document.getElementById('ledgerPages');
                 host.innerHTML = '';
