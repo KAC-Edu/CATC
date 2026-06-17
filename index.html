@@ -3437,19 +3437,9 @@ async function checkProfile() {
                 showMainDashboard();
                 return;
             }
-            // [추가] 이 브라우저에 유효한 프로필(localStorage)이 있는데 이 방의 등록 기록만 없는 경우
-            //  (예: 카카오 오픈톡방을 다녀와 재진입했을 때) → 재입력 팝업 없이 자동 재등록 후 바로 입장.
-            if (isValidProfile()) {
-                const _name  = (localStorage.getItem('kac_user_name')  || '').trim();
-                const _phone = (localStorage.getItem('kac_user_phone') || '').trim();
-                await firebase.database().ref(`courses/${currentRoom}/students/${uToken}`).update({
-                    name: _name, phone: _phone,
-                    joinedAt: firebase.database.ServerValue.TIMESTAMP, isOnline: true
-                });
-                if (typeof startPresence === 'function') { try { startPresence(); } catch (e) {} }
-                showMainDashboard();
-                return;
-            }
+            // [정책] 서버 명단에 내 기록이 없으면(운영자가 삭제했거나 과정이 리셋됨)
+            //  자동 재등록하지 않고 이름·사번을 다시 입력받는다.
+            //  (정상 재입장자는 접속 종료 시 isOnline만 false가 되고 기록은 남으므로 위 분기에서 이미 통과함)
         } catch (e) {}
     }
     document.getElementById('userName').value = "";
