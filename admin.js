@@ -7427,19 +7427,32 @@ saveAll: function() {
 
         const self = this;
         const commitUpdates = () => {
-            firebase.database().ref().update(updates).then(() => {
-            document.getElementById('courseNameInput').value = name;
-            document.getElementById('roomPw').value = rawPw;
-            document.getElementById('displayCourseTitle').innerText = name;
-            localStorage.setItem('last_owned_room', state.room);
-            
-            ui.showAlert("✅ 설정이 저장되었습니다.");
-            
-            // 1. 팝업창 닫기
-            self.closeSetupModal();
-
-            // 2. [핵심 추가] 즉시 방에 다시 입장하여 잠금 화면을 치우고 대시보드를 보여줌
-            dataMgr.forceEnterRoom(state.room);
+            const _room = state.room;
+            const _newKey = () => 'rk_' + Date.now() + '_' + Math.random().toString(36).slice(2,7);
+            // [차수 구분] 미개설→개설 이거나 과정명이 바뀌면 '새 차수' → resetKey 새로 발급
+            //  → 그 방의 옛 교육생은 다시 이름·사번을 입력하도록 유도(잘못된 자동입장 방지).
+            //  (진행 중인 같은 과정의 설정만 수정할 때는 키를 그대로 둬서 현재 교육생이 튕기지 않음)
+            Promise.all([
+                firebase.database().ref(`courses/${_room}/status/roomStatus`).once('value'),
+                firebase.database().ref(`courses/${_room}/settings/courseName`).once('value')
+            ]).then(function(res){
+                const prevActive = (res[0].val() === 'active');
+                const prevName = ((res[1].val() || '') + '').trim();
+                if (!prevActive || (prevName && prevName !== name)) {
+                    updates[`courses/${_room}/status/resetKey`] = _newKey();
+                }
+            }).catch(function(){
+                updates[`courses/${_room}/status/resetKey`] = _newKey();   // 조회 실패 시 안전하게 재등록 유도
+            }).then(function(){
+                return firebase.database().ref().update(updates);
+            }).then(() => {
+                document.getElementById('courseNameInput').value = name;
+                document.getElementById('roomPw').value = rawPw;
+                document.getElementById('displayCourseTitle').innerText = name;
+                localStorage.setItem('last_owned_room', state.room);
+                ui.showAlert("✅ 설정이 저장되었습니다.");
+                self.closeSetupModal();
+                dataMgr.forceEnterRoom(state.room);
             });
         };
 
