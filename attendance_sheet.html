@@ -22,7 +22,7 @@
 
 /* 메인 테이블 스타일 수정 */
         .main-table { width: 100%; border-collapse: collapse; font-size: 10px; table-layout: fixed; word-break: break-all; }
-        .main-table th, .main-table td { border: 1px solid #000; padding: 1px 2px; text-align: center; overflow: hidden; height: 17px; }
+        .main-table th, .main-table td { border: 1px solid #000; padding: 1px 2px; text-align: center; overflow: hidden; height: var(--rh, 24px); }
         .main-table th { background: #f8fafc; height: 30px; font-size:10px; }
         .main-table td.hol { background: #f1f5f9; }
         .main-table th.hol { background: #e2e8f0; color:#64748b; }
@@ -37,7 +37,7 @@
         .week-label { display:inline-block; font-size:13px; font-weight:800; color:#1e3a8a; margin:4px 0 12px; padding:3px 12px; border:1px solid #1e3a8a; border-radius:14px; }
         
         /* 도장 스타일 */
-        .stamp { color: #dc2626; font-weight: 900; border: 1.5px solid #dc2626; border-radius: 50%; width: 13px; height: 13px; display: inline-flex; align-items: center; justify-content: center; font-size: 7px; transform: rotate(-10deg); margin:0 auto; }
+        .stamp { color: #dc2626; font-weight: 900; border: 1.5px solid #dc2626; border-radius: 50%; width: var(--sw,16px); height: var(--sw,16px); display: inline-flex; align-items: center; justify-content: center; font-size: var(--sf,8px); transform: rotate(-10deg); margin:0 auto; }
 
         @media print {
             .no-print { display: none; }
@@ -211,7 +211,12 @@ async function init() {
 
         const _renderWithExp = (rawList) => {
             // 날짜는 12일(약 2주반)씩, 학생은 42명씩 한 페이지 — 90명·2주 → 2페이지
-            const MAXCOLS = 12, MAXROWS = 42;
+            const _n = sortedStudents.length;
+            let _rowH, _sw, _sf, MAXROWS;
+            if (_n <= 25)      { _rowH = 40; _sw = 22; _sf = 10; MAXROWS = 60; }
+            else if (_n <= 45) { _rowH = 25; _sw = 16; _sf = 8;  MAXROWS = 60; }
+            else               { _rowH = 17; _sw = 13; _sf = 7;  MAXROWS = 42; }
+            const MAXCOLS = 12;
             const colBlocks = [];
             for (let i = 0; i < dateArray.length; i += MAXCOLS) colBlocks.push(dateArray.slice(i, i + MAXCOLS));
             if (!colBlocks.length) colBlocks.push([]);
@@ -221,14 +226,14 @@ async function init() {
             const total = colBlocks.length * stuPages.length;
             let pno = 0;
             colBlocks.forEach(dates => {
-                stuPages.forEach(sp => { pno++; root.appendChild(buildPage(dates, sp.list, sp.start, pno, total, attendanceData, rawList)); });
+                stuPages.forEach(sp => { pno++; root.appendChild(buildPage(dates, sp.list, sp.start, pno, total, attendanceData, rawList, _rowH, _sw, _sf)); });
             });
         };
         if (window._archiveMode) { _renderWithExp(window._archiveExpected); }
         else { db.ref(`courses/${SHEET_ROOM}/expectedStudents`).once('value', expSnap => _renderWithExp(expSnap.val())); }
     }
 
-    function buildPage(dates, students, startIdx, pageNo, totalPages, attendanceData, rawList) {
+    function buildPage(dates, students, startIdx, pageNo, totalPages, attendanceData, rawList, rowH, sw, sf) {
         const page = document.createElement('div');
         page.className = 'sheet-container';
         const pageInfo = totalPages > 1 ? ` (${pageNo}/${totalPages})` : '';
@@ -251,6 +256,7 @@ async function init() {
 
         const table = document.createElement('table');
         table.className = 'main-table';
+        table.style.cssText = '--rh:' + (rowH||24) + 'px; --sw:' + (sw||16) + 'px; --sf:' + (sf||8) + 'px;';
         let cols = '<col class="no-col"><col class="name-col">';
         dates.forEach(() => { cols += '<col class="day-col">'; });
         let thead = '<tr><th class="no-col">No</th><th class="name-col">성명</th>';
