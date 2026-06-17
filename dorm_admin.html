@@ -3926,10 +3926,19 @@
                 const at = (all[k] && all[k].assignedAt) || 0;
                 (groups[canon] = groups[canon] || []).push({ key: k, count, at });
             });
-            const reps = Object.entries(groups).map(([canon, arr]) => {
+            let reps = Object.entries(groups).map(([canon, arr]) => {
                 arr.sort((a, b) => (b.at - a.at) || (b.count - a.count));   // 최신 저장 우선
                 return { canon, key: arr[0].key, dup: arr.length > 1 };
             }).sort((a, b) => a.canon.localeCompare(b.canon));   // 오름차순(자동배정 페이지와 동일 순서)
+            // [추가] 이미 종료된(지난) 주차는 배치현황 드롭다운에서 제외 — 오늘이 속한 주 이후만 표시
+            const _t0 = new Date(); _t0.setHours(0,0,0,0);
+            reps = reps.filter(r => { const wd=new Date(r.canon+'T00:00:00'); const we=new Date(wd); we.setDate(wd.getDate()+6); we.setHours(23,59,59,999); return we >= _t0; });
+            if (!reps.length) {
+                sel.innerHTML = `<option value="">표시할 주차가 없습니다</option>`;
+                document.getElementById('boardArea').innerHTML = `<div class="empty-floor">현재 또는 다가오는 주차의 배정 결과가 없습니다.</div>`;
+                document.getElementById('boardStats').innerHTML = '';
+                return;
+            }
             sel.innerHTML = reps.map(r => {
                 const wd = new Date(r.canon + 'T00:00:00');
                 const wEnd = new Date(wd); wEnd.setDate(wd.getDate() + 6);

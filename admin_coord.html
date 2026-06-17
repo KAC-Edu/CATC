@@ -4000,13 +4000,13 @@ function openAttendanceManager() {
     modal.style.display = 'flex';
 }
 
-// [신규] 데이터 보존 정책 — 외출·외박 기록을 60일(약 2개월)간 보관하고 이후 자동 삭제
+// [신규] 데이터 보존 정책 — 외출·외박 기록을 90일(약 3개월)간 보관하고 이후 자동 삭제
 //   admin_actions는 날짜(YYYY-MM-DD)별로 저장되므로, 기준일 이전 날짜 노드를 일괄 정리한다.
 //   (과정 종료 후에도 해당 기록은 발생일로부터 60일간 유지된 뒤 제거됨)
 async function purgeOldOutingRecords() {
     try {
         const d = new Date();
-        d.setDate(d.getDate() - 60);
+        d.setDate(d.getDate() - 90);   // 외출·외박 기록 90일(약 3개월) 보관 후 자동 삭제
         const limit = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 
         const snap = await firebase.database().ref('courses').once('value');
@@ -6672,6 +6672,7 @@ function openOutingSummary(){
     const rid=String.fromCharCode(i); const room=(typeof globalAllData!=='undefined')?globalAllData[rid]:null; if(!room) continue;
     const s=room.settings||{}; const aa=room.admin_actions||{};
     const hasName=!!(s.courseName && (''+s.courseName).trim());
+    if(s.hideFromBoard) continue; // 강사가 비공개(전면 비노출) 처리한 과정 제외
     if(!hasName && !Object.keys(aa).length) continue;
     let start='',end=''; if(s.period && s.period.includes(' ~ ')){ const pp=s.period.split(' ~ '); start=pp[0].trim(); end=pp[1].trim(); }
     if(end && end<cutoff) continue; // 최근 3개월 이전 종료 과정 제외
