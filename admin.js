@@ -4760,6 +4760,16 @@ resetShuttleRequests: function() {
     openContactDev: function() {
         const DEV_NAME = '장두석 교수';
         const DEV_EMAIL = 'jds0616@gmail.com';
+        const PLAT_VERS = [
+            { name: '교육생', ver: 'vA' },
+            { name: '강사', ver: 'vG' },
+            { name: '교육운영부', ver: 'vC' },
+            { name: '교육지원부', ver: 'vA' },
+            { name: '기사(차량)', ver: 'vA' },
+            { name: '영양사', ver: 'vA' },
+            { name: '자동연결(go)', ver: 'vG' },
+            { name: '학생장', ver: 'vA' }
+        ];
         const mailSubject = encodeURIComponent('[KAC 항공기술훈련원 플랫폼 문의]');
         const mailUrl = `mailto:${DEV_EMAIL}?subject=${mailSubject}`;
 
@@ -4799,6 +4809,21 @@ resetShuttleRequests: function() {
                     <button onclick="ui.copyDevEmail('${DEV_EMAIL}')" style="flex:1; padding:12px 0; background:#e2e8f0; color:#475569; border:none; border-radius:10px; font-size:14px; font-weight:800; cursor:pointer;">
                         <i class="fa-solid fa-copy"></i> 주소 복사
                     </button>
+                </div>
+
+                <div style="background:#f0f7ff; border:1px solid #dbeafe; border-radius:12px; padding:14px 16px; margin-bottom:14px;">
+                    <div style="font-size:13px; font-weight:900; color:#1d4ed8; margin-bottom:10px;"><i class="fa-solid fa-code-branch"></i> 현재 플랫폼 버전</div>
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px 14px;">
+                        ${PLAT_VERS.map(v=>`<div style="display:flex; align-items:center; justify-content:space-between; font-size:12px;"><span style="color:#475569; font-weight:700;">${v.name}</span><span style="font-family:ui-monospace,Menlo,Consolas,monospace; font-weight:800; color:#0f172a; background:#dbeafe; padding:1px 8px; border-radius:6px;">${v.ver}</span></div>`).join('')}
+                    </div>
+                </div>
+
+                <div style="border:1px solid #e2e8f0; border-radius:12px; overflow:hidden; margin-bottom:14px;">
+                    <button type="button" onclick="ui.toggleDevHistory()" style="width:100%; display:flex; align-items:center; justify-content:space-between; gap:10px; padding:13px 15px; background:#f8fafc; border:none; cursor:pointer; font-size:13px; font-weight:800; color:#1e293b; text-align:left;">
+                        <span><i class="fa-solid fa-clock-rotate-left" style="color:#7c3aed;"></i> 개발 이력 보기</span>
+                        <i id="devHistArrow" class="fa-solid fa-chevron-down" style="font-size:11px; color:#94a3b8; transition:transform .2s;"></i>
+                    </button>
+                    <div id="devHistoryBody" style="display:none; padding:15px; border-top:1px solid #eef2f7; max-height:40vh; overflow-y:auto; font-size:12.5px; line-height:1.7; color:#334155;"></div>
                 </div>
 
                 <div style="border-top:1px dashed #cbd5e1; padding-top:14px;">
@@ -4843,6 +4868,47 @@ resetShuttleRequests: function() {
             try { document.execCommand('copy'); } catch(e) {}
             document.body.removeChild(t); done();
         }
+    },
+
+    // [개발 이력] 아코디언 토글 + 최초 펼침 시 GitHub의 CHANGELOG.md 불러와 렌더
+    toggleDevHistory: function() {
+        const body = document.getElementById('devHistoryBody');
+        const arrow = document.getElementById('devHistArrow');
+        if (!body) return;
+        const isOpen = body.style.display !== 'none';
+        body.style.display = isOpen ? 'none' : 'block';
+        if (arrow) arrow.style.transform = isOpen ? '' : 'rotate(180deg)';
+        if (!isOpen && !body.dataset.loaded) {
+            body.dataset.loaded = '1';
+            body.innerHTML = '<div style="color:#94a3b8; text-align:center; padding:20px 0;">불러오는 중…</div>';
+            const url = 'https://raw.githubusercontent.com/kac-edu/CATC/main/CHANGELOG.md?t=' + Date.now();
+            fetch(url).then(r => r.ok ? r.text() : Promise.reject(r.status)).then(md => {
+                body.innerHTML = ui._mdToHtml(md);
+            }).catch(() => {
+                body.dataset.loaded = '';
+                body.innerHTML = '<div style="color:#ef4444; text-align:center; padding:20px 0; line-height:1.6;">개발 이력을 불러오지 못했습니다.<br><span style="font-size:11px; color:#94a3b8;">CHANGELOG.md 가 GitHub 저장소에 업로드되었는지 확인해 주세요.</span></div>';
+            });
+        }
+    },
+    _mdToHtml: function(md) {
+        const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+        const inline = t => t.replace(/\*\*([^*]+)\*\*/g,'<b>$1</b>').replace(/`([^`]+)`/g,'<code style="background:#f1f5f9; padding:1px 5px; border-radius:4px; font-size:11px;">$1</code>');
+        const lines = esc(md).split(/\r?\n/);
+        let html = '', inUl = false;
+        const closeUl = () => { if (inUl) { html += '</ul>'; inUl = false; } };
+        lines.forEach(raw => {
+            const line = raw.trim();
+            if (/^>\s?/.test(line)) { closeUl(); html += '<div style="border-left:3px solid #cbd5e1; padding-left:10px; color:#94a3b8; font-size:11.5px; margin:4px 0;">'+inline(line.replace(/^>\s?/,''))+'</div>'; }
+            else if (/^###\s+/.test(line)) { closeUl(); html += '<div style="font-size:13px; font-weight:800; color:#1e293b; margin:12px 0 4px;">'+inline(line.replace(/^###\s+/,''))+'</div>'; }
+            else if (/^##\s+/.test(line)) { closeUl(); html += '<div style="font-size:15px; font-weight:900; color:#0f172a; margin:16px 0 6px; padding-bottom:4px; border-bottom:2px solid #e2e8f0;">'+inline(line.replace(/^##\s+/,''))+'</div>'; }
+            else if (/^#\s+/.test(line)) { closeUl(); html += '<div style="font-size:17px; font-weight:900; color:#0f172a; margin:6px 0 10px;">'+inline(line.replace(/^#\s+/,''))+'</div>'; }
+            else if (/^---+$/.test(line)) { closeUl(); html += '<hr style="border:none; border-top:1px solid #e2e8f0; margin:12px 0;">'; }
+            else if (/^[-*]\s+/.test(line)) { if (!inUl) { html += '<ul style="margin:4px 0; padding-left:18px;">'; inUl = true; } html += '<li style="margin:3px 0;">'+inline(line.replace(/^[-*]\s+/,''))+'</li>'; }
+            else if (line === '') { closeUl(); }
+            else { closeUl(); html += '<div style="margin:3px 0;">'+inline(line)+'</div>'; }
+        });
+        closeUl();
+        return html;
     },
 
 // [강사 플랫폼: 로고 클릭 시 모든 정보를 초기화하고 현황판으로 이동]
