@@ -1381,7 +1381,7 @@ async function resolveRoomFromCode(code) {
     // [Kakao 인앱 등 localStorage 분리 대응] go.html이 URL로 넘긴 uid로 프로필 복원 → 재입력 방지
     try {
         const _uid = new URLSearchParams(location.search).get('uid');
-        if (_uid && currentRoom && !isValidProfile()) {
+        if (_uid && currentRoom) {
             const _us = await firebase.database().ref(`courses/${currentRoom}/students/${_uid}`).once('value');
             const _u = _us.val();
             if (_u && _u.name) {

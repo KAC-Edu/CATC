@@ -171,7 +171,7 @@
                 if (active && !expired && savedName && nameInRoom) {
                     var badge = document.getElementById('roomBadge');
                     if (badge) { badge.textContent = 'ROOM ' + room; badge.style.display = 'inline-block'; }
-                    location.replace('index.html?room=' + encodeURIComponent(room));
+                    location.replace('index.html?room=' + encodeURIComponent(room) + '&t=' + Date.now());
                 } else {
                     // 방이 리셋됐거나 명단에 없음 → 저장 삭제 후 이름 검색
                     clearSaved();
@@ -283,7 +283,7 @@
             } catch (e) {}
             // [추가] 해당 방의 내 학생기록에서 프로필(이름·식별번호)을 복원 →
             //  index.html에서 이름/사번 재입력 창이 다시 뜨지 않게 함
-            var goNow = function (uid) { var u = 'index.html?room=' + encodeURIComponent(_pickedRoom); if (uid) u += '&uid=' + encodeURIComponent(uid); location.replace(u); };
+            var goNow = function (uid) { var u = 'index.html?room=' + encodeURIComponent(_pickedRoom); if (uid) u += '&uid=' + encodeURIComponent(uid); u += '&t=' + Date.now(); location.replace(u); };
             try {
                 if (db && _pickedName) {
                     db.ref('courses/' + _pickedRoom + '/students').once('value').then(function (snap) {
