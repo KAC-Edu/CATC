@@ -127,57 +127,21 @@
             setTimeout(function () { document.getElementById('findName').focus(); }, 100);
         }
 
-        // ── 1) 최근 확정한 강의실 자동 복귀 (유효성 검증 후) ──
+        function goFindScreen() {
+            show('find');
+            setTimeout(function () { var el = document.getElementById('findName'); if (el) el.focus(); }, 150);
+        }
+        // ── 진입: 저장된 '이름'으로 현재 강의실을 자동 검색 (옛 방으로 자동복귀하지 않음) ──
         (function () {
-            var room = null, savedName = null;
-            try {
-                room = localStorage.getItem('kac_last_visited_room');
-                savedName = localStorage.getItem('kac_last_visited_name');
-            } catch (e) {}
-
-            function goFind() {
-                show('find');
-                setTimeout(function () { var el = document.getElementById('findName'); if (el) el.focus(); }, 150);
+            var savedName = null;
+            try { savedName = localStorage.getItem('kac_last_visited_name'); } catch (e) {}
+            if (!db) { goFindScreen(); return; }
+            if (savedName && savedName.trim()) {
+                show('connecting');
+                findRoom(savedName.trim());
+            } else {
+                goFindScreen();
             }
-            function clearSaved() {
-                try { localStorage.removeItem('kac_last_visited_room'); localStorage.removeItem('kac_last_visited_name'); } catch (e) {}
-            }
-
-            if (!room || !String(room).trim() || !db) { goFind(); return; }
-
-            // 저장된 방이 아직 운영 중이고, 내 이름이 명단에 있는지 검증
-            show('connecting');
-            db.ref('courses/' + room).once('value').then(function (snap) {
-                var c = snap.val() || {};
-                var st = c.status || {};
-                var active = (st.roomStatus === 'active');
-                // 기간 만료 체크
-                var period = (c.settings && c.settings.period) || '';
-                var expired = false;
-                if (period.indexOf(' ~ ') > -1) {
-                    var end = new Date(period.split(' ~ ')[1]); end.setHours(23,59,59,999);
-                    var today = new Date();
-                    if (!isNaN(end) && today > end) expired = true;
-                }
-                // 명단에 내 이름 존재 여부
-                var nameInRoom = false;
-                if (savedName && c.students) {
-                    nameInRoom = Object.keys(c.students).some(function (k) {
-                        var s = c.students[k] || {};
-                        return (s.name || '').trim() === savedName.trim();
-                    });
-                }
-                // 유효: 운영 중 + 미만료 + (이름 저장 안됐거나 명단에 있음)
-                if (active && !expired && savedName && nameInRoom) {
-                    var badge = document.getElementById('roomBadge');
-                    if (badge) { badge.textContent = 'ROOM ' + room; badge.style.display = 'inline-block'; }
-                    location.replace('index.html?room=' + encodeURIComponent(room) + '&t=' + Date.now());
-                } else {
-                    // 방이 리셋됐거나 명단에 없음 → 저장 삭제 후 이름 검색
-                    clearSaved();
-                    goFind();
-                }
-            }).catch(function () { goFind(); });
         })();
 
         // ── 2) 이름으로 강의실 찾기 ──
@@ -185,68 +149,64 @@
         var _pickedRoom = null;
         var _pickedName = null;
 
-        function findRoom() {
-            var name = (document.getElementById('findName').value || '').trim();
+        function findRoom(presetName) {
+            var name = ((presetName != null ? presetName : (document.getElementById('findName').value || '')) + '').trim();
             var errEl = document.getElementById('findErr');
-            errEl.textContent = '';
-            if (!name) { errEl.textContent = '성함을 입력해 주세요.'; return; }
-            if (!db) { errEl.textContent = '연결 오류입니다. QR로 입장해 주세요.'; return; }
-            _pickedName = name;  // 입장 확정 시 저장용
+            if (errEl) errEl.textContent = '';
+            if (!name) { goFindScreen(); if (errEl) errEl.textContent = '성함을 입력해 주세요.'; return; }
+            if (!db) { goFindScreen(); if (errEl) errEl.textContent = '연결 오류입니다. QR로 입장해 주세요.'; return; }
+            _pickedName = name;
 
             var btn = document.getElementById('findBtn');
-            btn.disabled = true; btn.textContent = '찾는 중…';
+            if (btn) { btn.disabled = true; btn.textContent = '찾는 중…'; }
 
             db.ref('courses').once('value').then(function (snap) {
                 var courses = snap.val() || {};
-                var today = new Date(); today.setHours(0,0,0,0);
+                var today = new Date(); today.setHours(0, 0, 0, 0);
                 _matches = [];
 
                 Object.keys(courses).forEach(function (room) {
                     var c = courses[room] || {};
                     var st = c.status || {};
                     var settings = c.settings || {};
-                    // 운영 중(active)인 강의실만 대상
                     if (st.roomStatus !== 'active') return;
-                    // 기간이 지난 과정 제외
                     var period = settings.period || '';
+                    var startMs = null;
                     if (period.indexOf(' ~ ') > -1) {
-                        var endStr = period.split(' ~ ')[1].trim();
-                        var endDt = new Date(endStr + 'T23:59:59');
-                        if (!isNaN(endDt) && endDt < today) return;
+                        var ps = period.split(' ~ ');
+                        var startDt = new Date(ps[0].trim() + 'T00:00:00');
+                        var endDt = new Date(ps[1].trim() + 'T23:59:59');
+                        if (!isNaN(startDt)) startMs = startDt.getTime() - 86400000; // 하루 여유
+                        if (!isNaN(endDt) && endDt < today) return; // 기간 지난 과정 제외
                     }
-                    // 학생 명단에서 이름 일치 검색
                     var students = c.students || {};
                     var found = Object.keys(students).some(function (tk) {
                         var s = students[tk] || {};
                         var nm = (s.name || tk.split('_')[0] || '').trim();
-                        return nm === name;
+                        if (nm !== name) return false;
+                        // 재배정으로 남은 옛 명단 제외: 가입시점이 현재 과정 시작 이전이면 무시
+                        if (startMs != null && typeof s.joinedAt === 'number' && s.joinedAt < startMs) return false;
+                        return true;
                     });
                     if (found) {
-                        _matches.push({
-                            room: room,
-                            course: settings.courseName || ('ROOM ' + room),
-                            prof: (st.professorName || '')
-                        });
+                        _matches.push({ room: room, course: settings.courseName || ('ROOM ' + room), prof: (st.professorName || '') });
                     }
                 });
 
-                btn.disabled = false; btn.textContent = '강의실 찾기';
+                if (btn) { btn.disabled = false; btn.textContent = '강의실 찾기'; }
 
                 if (_matches.length === 0) {
-                    errEl.textContent = '"' + name + '" 님으로 등록된 강의실을 찾지 못했어요. 성함을 다시 확인해 주세요.';
+                    goFindScreen();
+                    if (errEl) errEl.textContent = '"' + name + '" 님으로 등록된 현재 강의실을 찾지 못했어요. 성함을 확인해 주세요.';
                     return;
                 }
-                if (_matches.length === 1) {
-                    // 단일 매치 → 바로 확인 화면
-                    showConfirm(0);
-                } else {
-                    // 동명이인 → 과정명으로 본인 강의실 선택하게 안내
-                    showPicker();
-                }
+                if (_matches.length === 1) { showConfirm(0); }
+                else { showPicker(); }
             }).catch(function (e) {
                 console.error(e);
-                btn.disabled = false; btn.textContent = '강의실 찾기';
-                errEl.textContent = '조회 중 오류가 발생했습니다. 잠시 후 다시 시도하거나 QR로 입장해 주세요.';
+                if (btn) { btn.disabled = false; btn.textContent = '강의실 찾기'; }
+                goFindScreen();
+                if (errEl) errEl.textContent = '조회 중 오류가 발생했습니다. 다시 시도하거나 QR로 입장해 주세요.';
             });
         }
 
