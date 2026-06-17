@@ -1982,6 +1982,7 @@ function setupListeners() {
 let activeSurveyData = null;
 let mySurveyChoice = null;
 let activeLectureBoardNotice = null;
+let _currentPopupKey = null;
 
 function lectureBoardNoticeKey(notice) {
     if (!notice) return null;
@@ -2036,14 +2037,30 @@ function handleLectureBoardUpdate(notice) {
     activeLectureBoardNotice = notice;
     const key = lectureBoardNoticeKey(notice);
     if (key && localStorage.getItem(key)) return;
+    _currentPopupKey = key;
     const body = document.getElementById('lectureBoardBody');
     if (body) body.innerHTML = normalizeLectureBoardHtml(html);
     const overlay = document.getElementById('lectureBoardOverlay');
     if (overlay) overlay.style.display = 'flex';
 }
 
+function _showOrgNoticePopup(notice, prefix){
+    const html = typeof notice === 'object' ? (notice.html || '') : String(notice || '');
+    if(!_lectureBoardHasText(html)) return;
+    const version = (typeof notice === 'object' && notice.updatedAt) ? notice.updatedAt : _simpleLectureHash(html);
+    const key = 'kac_' + prefix + '_done_' + currentRoom + '_' + version;
+    if(localStorage.getItem(key)) return;
+    _currentPopupKey = key;
+    const body = document.getElementById('lectureBoardBody');
+    if(body) body.innerHTML = normalizeLectureBoardHtml(html);
+    const overlay = document.getElementById('lectureBoardOverlay');
+    if(overlay) overlay.style.display = 'flex';
+}
+function handleCoordNoticeUpdate(notice){ _showOrgNoticePopup(notice, 'coordnotice'); }
+function handleGlobalNoticeUpdate(notice){ _showOrgNoticePopup(notice, 'globalnotice'); }
+
 function confirmLectureBoardNotice() {
-    const key = lectureBoardNoticeKey(activeLectureBoardNotice);
+    const key = _currentPopupKey;
     if (key) {
         try { localStorage.setItem(key, '1'); } catch(e) {}
     }
@@ -2077,6 +2094,19 @@ function handleSurveyUpdate() {
     }
     // 활성 설문 — 이미 응답했으면 자동으로 띄우지 않음 (메뉴로만 재수정)
     if (hasAnsweredSurvey()) return;
+    // 로컬 기록이 없어도 서버에 내 응답이 있으면 다시 띄우지 않음 (localStorage 유실/키 불일치 대비)
+    const _ut = localStorage.getItem('uToken');
+    if (_ut && dbRef && dbRef.surveyAns) {
+        dbRef.surveyAns.child(_ut).once('value', function(ansSnap){
+            if (ansSnap.exists()) {
+                try { const k = surveyDoneKey(); if(k){ const v=ansSnap.val(); localStorage.setItem(k, String((v&&v.choice!=null)?v.choice:'')); } } catch(e){}
+                const ov = document.getElementById('instantSurveyOverlay'); if (ov) ov.style.display='none';
+                return;
+            }
+            openInstantSurvey();
+        });
+        return;
+    }
     openInstantSurvey();
 }
 
@@ -3953,6 +3983,8 @@ function watchNotices() {
     if(!currentRoom) return;
     firebase.database().ref(`courses/${currentRoom}/coordNotice`).on('value', updateMiniNotice);
     firebase.database().ref('system/globalNotice').on('value', updateMiniNotice);
+    firebase.database().ref(`courses/${currentRoom}/coordNotice`).on('value', s=>handleCoordNoticeUpdate(s.val()));
+    firebase.database().ref('system/globalNotice').on('value', s=>handleGlobalNoticeUpdate(s.val()));
 }
 // --- 미니 공지 바 관련 함수 끝 ---
 

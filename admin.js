@@ -1391,6 +1391,22 @@ toggleLeader: function(token, currentName) {
         }
     },
 
+    // [신규] 업로드(예정) 명단에서 개별 이름 삭제
+    deleteExpectedName: function(rawName) {
+        if(state.isObserver) { ui.showAlert("👁️ 옵저버 모드에서는 삭제할 수 없습니다."); return; }
+        if(!state.room) return;
+        let name = rawName; try { name = decodeURIComponent(rawName); } catch(e){}
+        if(!confirm(`[${name}] 님을 예정 명단에서 삭제하시겠습니까?`)) return;
+        const ref = firebase.database().ref(`courses/${state.room}/expectedStudents`);
+        ref.once('value', snap => {
+            let arr = snap.val();
+            if(Array.isArray(arr)) arr = arr.filter(n => String(n).trim() !== String(name).trim());
+            else if(arr && typeof arr === 'object') arr = Object.values(arr).filter(n => String(n).trim() !== String(name).trim());
+            else arr = [];
+            ref.set(arr.length ? arr : null).then(() => ui.showAlert("✅ 예정 명단에서 삭제되었습니다."));
+        });
+    },
+
     downloadStudentSample: function() {
         const content = "홍길동\n김철수\n이영희\n박사임";
         const blob = new Blob([content], { type: "text/plain" });
@@ -4227,7 +4243,7 @@ cancelIndividualShuttle: function(waveId, locId, token, name) {
                                         <button class="btn-table-action" onclick="dataMgr.deleteStudent('${studentData.token}')" 
                                                 style="background:#ef4444; color:white; padding:5px 10px; border-radius:6px; font-size:11px; border:none; cursor:pointer;">삭제</button>
                                     </div>
-                                ` : `-`}
+                                ` : `<button class="btn-table-action" onclick="dataMgr.deleteExpectedName('${encodeURIComponent(name)}')" style="background:#fff; color:#ef4444; border:1px solid #fecaca; padding:5px 10px; border-radius:6px; font-size:11px; cursor:pointer;">명단삭제</button>`}
                             </td>
                         </tr>`;
                 });
@@ -7015,20 +7031,17 @@ onProfChange: function() {
     const profName = (document.getElementById('setup-prof-select')?.value || '').trim();
     const kakaoInput = document.getElementById('setup-kakao-link');
     if (!kakaoInput) return;
-    if (!profName) return;
-
-    // 1) 캐시에 있으면 즉시 반영 (지연 없음)
+    // 교수를 바꾸면 항상 그 교수의 카카오링크로 덮어쓴다 (수동 입력값/이전 교수 링크 잔존 방지)
+    if (!profName) { kakaoInput.value = ''; return; }
     if (this._profKakaoCache && Object.prototype.hasOwnProperty.call(this._profKakaoCache, profName)) {
-        const cached = (this._profKakaoCache[profName] || '').trim();
-        if (cached) kakaoInput.value = cached;
+        kakaoInput.value = (this._profKakaoCache[profName] || '').trim();
         return;
     }
-    // 2) 캐시에 없으면 즉시 조회 후 반영 + 캐시에 저장
     firebase.database().ref(`system/professorProfiles/${profName}/kakaoLink`).once('value', s => {
         const link = (s.val() || '').trim();
         if (!this._profKakaoCache) this._profKakaoCache = {};
         this._profKakaoCache[profName] = link;
-        if (link) kakaoInput.value = link;
+        kakaoInput.value = link;
     });
 },
 
