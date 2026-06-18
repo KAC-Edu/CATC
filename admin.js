@@ -1513,7 +1513,9 @@ const profMgr = {
         document.getElementById('pp-phone').value = "";
         document.getElementById('pp-email').value = "";
         document.getElementById('pp-msg').value = "";
+        if(document.getElementById('pp-eng-msg')) document.getElementById('pp-eng-msg').value = "";
         if(document.getElementById('pp-bio-rows')) profMgr.renderBioRows([]);
+        if(document.getElementById('pp-bio-en-rows')) profMgr.renderBioRowsEn([]);
         const previewImg = document.getElementById('pp-photo-preview').querySelector('img');
         if(previewImg) previewImg.style.display = 'none';
 
@@ -1526,7 +1528,9 @@ const profMgr = {
                 document.getElementById('pp-email').value = p.email || "";
                 if (kakaoEl) kakaoEl.value = p.kakaoLink || "";
                 document.getElementById('pp-msg').value = p.msg || "";
+                if(document.getElementById('pp-eng-msg')) document.getElementById('pp-eng-msg').value = p.engMsg || "";
                 profMgr.renderBioRows(Array.isArray(p.bioList) ? p.bioList : profMgr._parseBio(p.bio || ""));
+                profMgr.renderBioRowsEn(Array.isArray(p.engBioList) ? p.engBioList : profMgr._parseBio(p.engBio || ""));
                 if(p.photo && previewImg) {
                     previewImg.src = p.photo;
                     previewImg.style.display = 'block';
@@ -1578,7 +1582,10 @@ const profMgr = {
                 kakaoLink: (document.getElementById('pp-kakao')?.value || '').trim(),
                 msg: document.getElementById('pp-msg').value,
                 bio: profMgr.collectBioRows().map(r => (r.year ? r.year + " " : "") + r.text).join("\n"),
-                bioList: profMgr.collectBioRows()
+                bioList: profMgr.collectBioRows(),
+                engMsg: (document.getElementById('pp-eng-msg') ? document.getElementById('pp-eng-msg').value : ""),
+                engBio: profMgr.collectBioRowsEn().map(r => (r.year ? r.year + " " : "") + r.text).join("\n"),
+                engBioList: profMgr.collectBioRowsEn()
             };
             firebase.database().ref(`system/professorProfiles/${name}`).set(profileData).then(() => {
                 ui.showAlert("✅ 담임 교수 프로필이 성공적으로 저장되었습니다.", () => ui.closeProfProfileModal());
@@ -1619,7 +1626,32 @@ profMgr.collectBioRows = function(){
         text: (r.querySelector('.bio-text-in') ? r.querySelector('.bio-text-in').value : '').trim()
     })).filter(o => o.year || o.text);
 };
+// [영문 약력 입력] 연도/경력 분리 행
+profMgr.addBioRowEn = function(year, text){
+    var wrap = document.getElementById('pp-bio-en-rows'); if(!wrap) return;
+    var esc = s => String(s==null?'':s).replace(/"/g,'&quot;');
+    var row = document.createElement('div'); row.className='bio-row';
+    row.style.cssText='display:flex; gap:8px; margin-bottom:8px; align-items:center;';
+    row.innerHTML = '<input class="setting-input bio-year-in" style="flex:0 0 120px;" placeholder="Year (e.g. 21~)" value="'+esc(year)+'">'
+        + '<input class="setting-input bio-text-in" style="flex:1;" placeholder="Career (e.g. Professor, CATC)" value="'+esc(text)+'">'
+        + '<button type="button" onclick="this.closest(\'.bio-row\').remove()" style="flex:0 0 auto; width:38px; height:38px; border:1px solid #fecaca; background:#fef2f2; color:#ef4444; border-radius:9px; cursor:pointer; font-weight:900;">✕</button>';
+    wrap.appendChild(row);
+};
+profMgr.renderBioRowsEn = function(list){
+    var wrap = document.getElementById('pp-bio-en-rows'); if(!wrap) return;
+    wrap.innerHTML=''; var arr = Array.isArray(list)?list:[];
+    if(!arr.length){ this.addBioRowEn('',''); return; }
+    arr.forEach(it => this.addBioRowEn((it&&it.year)||'', (it&&it.text)||''));
+};
+profMgr.collectBioRowsEn = function(){
+    var wrap = document.getElementById('pp-bio-en-rows'); if(!wrap) return [];
+    return Array.from(wrap.querySelectorAll('.bio-row')).map(r => ({
+        year: (r.querySelector('.bio-year-in') ? r.querySelector('.bio-year-in').value : '').trim(),
+        text: (r.querySelector('.bio-text-in') ? r.querySelector('.bio-text-in').value : '').trim()
+    })).filter(o => o.year || o.text);
+};
 profMgr._parseBio = function(bioStr){
+
     return String(bioStr||'').split('\n').map(l=>l.trim()).filter(Boolean).map(t=>{
         t = t.replace(/^[•\-•]\s*/,'');
         const m = t.match(/^([`'\d~\-\s]*?)\s*([^`'\d~\-\s].*)$/);
@@ -2173,15 +2205,21 @@ const ui = {
 
 // [5.9차 수정] "교수 [성함] ([영문])" 형식 및 데이터 주입 로직
     showProfPresentation: function(name) {
+        ui._lastProfName = name;
         firebase.database().ref(`system/professorProfiles/${name}`).once('value', snap => {
             const p = snap.val();
             if(!p) return ui.showAlert("상세 프로필을 먼저 등록해주세요.");
             
             // 1. 성함 포맷팅 (교수 성함 (English Name))
+            const _EN = (window.KAC_LANG==='en');
             const fullNameEl = document.getElementById('pres-display-full-name');
             if(fullNameEl) {
-                const engPart = p.engName ? `<span class="eng-txt">(${p.engName})</span>` : "";
-                fullNameEl.innerHTML = `<span class="rank-txt">교수</span> ${name} ${engPart}`;
+                if(_EN){
+                    fullNameEl.innerHTML = `<span class="rank-txt">Prof.</span> ${p.engName||name}`;
+                } else {
+                    const engPart = p.engName ? `<span class="eng-txt">(${p.engName})</span>` : "";
+                    fullNameEl.innerHTML = `<span class="rank-txt">교수</span> ${name} ${engPart}`;
+                }
             }
             
             // 2. 사진 및 텍스트 주입
@@ -2190,17 +2228,20 @@ const ui = {
             
             document.getElementById('pres-phone').innerText = p.phone || "연락처 미등록";
             document.getElementById('pres-email').innerText = p.email || "이메일 미등록";
-            document.getElementById('pres-msg').innerText = p.msg ? `"${p.msg}"` : "";
+            const _msgT = _EN ? (p.engMsg||p.msg) : p.msg; document.getElementById('pres-msg').innerText = _msgT ? `"${_msgT}"` : "";
             
             // 3. 약력 리스트 (불렛 로직 포함)
             const bioArea = document.getElementById('pres-bio');
             if(bioArea) {
                 const esc = x => String(x).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-                let _entries = [];
-                if (Array.isArray(p.bioList) && p.bioList.length) {
-                    _entries = p.bioList.map(it => ({ year:(it&&it.year)||'', text:(it&&it.text)||'' }));
-                } else if (p.bio) {
-                    _entries = String(p.bio).split('\n').map(l=>l.trim()).filter(Boolean).map(t=>{
+let _entries = [];
+                let _bioArr=null, _bioStr=null;
+                if (_EN){ if (Array.isArray(p.engBioList)&&p.engBioList.length) _bioArr=p.engBioList; else if (p.engBio) _bioStr=p.engBio; }
+                if (!_bioArr && !_bioStr){ if (Array.isArray(p.bioList)&&p.bioList.length) _bioArr=p.bioList; else if (p.bio) _bioStr=p.bio; }
+                if (_bioArr) {
+                    _entries = _bioArr.map(it => ({ year:(it&&it.year)||'', text:(it&&it.text)||'' }));
+                } else if (_bioStr) {
+                    _entries = String(_bioStr).split('\n').map(l=>l.trim()).filter(Boolean).map(t=>{
                         t = t.replace(/^[•\-•]\s*/,'');
                         const m = t.match(/^([`'\d~\-\s]*?)\s*([^`'\d~\-\s].*)$/);
                         if (m && m[1] && /\d/.test(m[1])) return { year:m[1].replace(/`/g,"'").replace(/\s+/g,' ').trim(), text:m[2].trim() };
@@ -2212,7 +2253,7 @@ const ui = {
                         ? '<div class="bio-line"><span class="bio-year">'+esc(e.year)+'</span><span class="bio-text">'+esc(e.text)+'</span></div>'
                         : '<div class="bio-line"><span class="bio-text">'+esc(e.text)+'</span></div>').join('');
                 } else {
-                    bioArea.innerText = "등록된 약력이 없습니다.";
+                    bioArea.innerText = _EN ? "No career registered." : "등록된 약력이 없습니다.";
                 }
             }
             
@@ -2220,6 +2261,7 @@ const ui = {
         });
     },
     closeProfProfileModal: function() { document.getElementById('profProfileModal').style.display = 'none'; },
+    refreshProfLang: function(){ try{ if(state.currentMode==='prof-presentation' && ui._lastProfName) ui.showProfPresentation(ui._lastProfName); }catch(e){} },
 
 
 

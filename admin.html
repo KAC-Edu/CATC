@@ -447,6 +447,7 @@
                 #bgmIconBtn.bgm-playing i { animation: bgmIconPulse 1.1s ease-in-out infinite; }
             </style>
             <!-- 전체화면 버튼 (주야간 버튼 제거) -->
+            <div class="control-icon-btn" id="langToggleBtn" onclick="kacToggleLang()" title="Language / 언어" style="width:auto; padding:0 12px; font-weight:800; font-size:13px;">ENG</div>
             <div class="control-icon-btn" onclick="ui.toggleFullScreen()" title="Full Screen">
                 <i class="fa-solid fa-expand"></i>
             </div>
@@ -464,30 +465,30 @@
 
 <!-- ── 배경음악: 통합 주황 플레이어 바(상단 #bgmNowBubble)로 일원화됨 ── -->
 <div class="mode-tabs">
-    <button class="mode-btn active" id="tab-dashboard" onclick="ui.setMode('dashboard')"><i class="fa-solid fa-gauge-high"></i> 과정 현황</button>
-    <button class="mode-btn" id="tab-guide" onclick="ui.setMode('guide')"><i class="fa-solid fa-file-pdf"></i> 입교안내</button>
-    <button class="mode-btn" id="tab-notice" onclick="ui.setMode('notice')"><i class="fa-solid fa-bullhorn"></i> 공지 관리 <span id="coordNoticeBadge" style="display:none; background:#ef4444; color:white; font-size:10px; font-weight:800; padding:2px 5px; border-radius:8px; margin-left:4px; vertical-align:middle;">NEW</span></button>
-    <button class="mode-btn" id="tab-students" onclick="ui.setMode('students')"><i class="fa-solid fa-users-viewfinder"></i> 수강생 현황</button>
-    <button class="mode-btn" id="tab-qa" onclick="ui.setMode('qa')"><i class="fa-regular fa-comments"></i> Q&A 현황</button>
+    <button class="mode-btn active" id="tab-dashboard" onclick="ui.setMode('dashboard')"><i class="fa-solid fa-gauge-high"></i> <span class="i18n" data-en="Course Status">과정 현황</span></button>
+    <button class="mode-btn" id="tab-guide" onclick="ui.setMode('guide')"><i class="fa-solid fa-file-pdf"></i> <span class="i18n" data-en="Guide">입교안내</span></button>
+    <button class="mode-btn" id="tab-notice" onclick="ui.setMode('notice')"><i class="fa-solid fa-bullhorn"></i> <span class="i18n" data-en="Notices">공지 관리</span> <span id="coordNoticeBadge" style="display:none; background:#ef4444; color:white; font-size:10px; font-weight:800; padding:2px 5px; border-radius:8px; margin-left:4px; vertical-align:middle;">NEW</span></button>
+    <button class="mode-btn" id="tab-students" onclick="ui.setMode('students')"><i class="fa-solid fa-users-viewfinder"></i> <span class="i18n" data-en="Students">수강생 현황</span></button>
+    <button class="mode-btn" id="tab-qa" onclick="ui.setMode('qa')"><i class="fa-regular fa-comments"></i> <span class="i18n" data-en="Q&A">Q&A 현황</span></button>
 
     <!-- 행정 메뉴 드롭다운 -->
     <div class="mode-dropdown">
         <button class="mode-btn dropdown-trigger" onclick="ui.toggleMenuDropdown()">
-            <i class="fa-solid fa-ellipsis-vertical"></i> 교육 관리 <i class="fa-solid fa-caret-down"></i>
+            <i class="fa-solid fa-ellipsis-vertical"></i> <span class="i18n" data-en="Manage">교육 관리</span> <i class="fa-solid fa-caret-down"></i>
         </button>
         <div class="dropdown-content" id="menuDropdown">
-            <a onclick="ui.setMode('waiting')"><i class="fa-solid fa-chart-line" style="color:#6366f1;"></i> 과정 총 현황</a>
-            <a onclick="ui.setMode('schedule')"><i class="fa-solid fa-calendar-days" style="color:#6366f1;"></i> 교육 시간표</a>
-            <a onclick="ui.setMode('quiz')"><i class="fa-solid fa-clipboard-question" style="color:#6366f1;"></i> 퀴즈 모드</a>
-            <a onclick="ui.setMode('dormitory')"><i class="fa-solid fa-bed" style="color:#6366f1;"></i> 생활관 배치현황</a>
-            <a onclick="ui.setMode('attendance')"><i class="fa-solid fa-qrcode" style="color:#6366f1;"></i> 출결 QR</a>
+            <a onclick="ui.setMode('waiting')"><i class="fa-solid fa-chart-line" style="color:#6366f1;"></i> <span class="i18n" data-en="Overview">과정 총 현황</span></a>
+            <a onclick="ui.setMode('schedule')"><i class="fa-solid fa-calendar-days" style="color:#6366f1;"></i> <span class="i18n" data-en="Schedule">교육 시간표</span></a>
+            <a onclick="ui.setMode('quiz')"><i class="fa-solid fa-clipboard-question" style="color:#6366f1;"></i> <span class="i18n" data-en="Quiz Mode">퀴즈 모드</span></a>
+            <a onclick="ui.setMode('dormitory')"><i class="fa-solid fa-bed" style="color:#6366f1;"></i> <span class="i18n" data-en="Dormitory">생활관 배치현황</span></a>
+            <a onclick="ui.setMode('attendance')"><i class="fa-solid fa-qrcode" style="color:#6366f1;"></i> <span class="i18n" data-en="Attendance QR">출결 QR</span></a>
             <a onclick="ui.setMode('shuttle')" style="position: relative;">
-    <i class="fa-solid fa-bus" style="color:#6366f1;"></i> 차량 수요조사
+    <i class="fa-solid fa-bus" style="color:#6366f1;"></i> <span class="i18n" data-en="Shuttle Survey">차량 수요조사</span>
     <span id="shuttleNewBadge" style="display:none; background:#ef4444; color:white; width:16px; height:16px; border-radius:50%; font-size:10px; font-weight:bold; align-items:center; justify-content:center; margin-left:5px;">N</span>
 </a>
-            <a onclick="ui.setMode('admin-action')"><i class="fa-solid fa-person-walking-arrow-right" style="color:#6366f1;"></i> 외출/외박</a>
-            <a onclick="ui.setMode('dinner-skip')"><i class="fa-solid fa-utensils" style="color:#6366f1;"></i> 석식 제외</a>
-            <a onclick="ui.setMode('tablet-loan')"><i class="fa-solid fa-tablet-screen-button" style="color:#6366f1;"></i> 태블릿 대여 관리</a>
+            <a onclick="ui.setMode('admin-action')"><i class="fa-solid fa-person-walking-arrow-right" style="color:#6366f1;"></i> <span class="i18n" data-en="Leave / Overnight">외출/외박</span></a>
+            <a onclick="ui.setMode('dinner-skip')"><i class="fa-solid fa-utensils" style="color:#6366f1;"></i> <span class="i18n" data-en="Dinner Skip">석식 제외</span></a>
+            <a onclick="ui.setMode('tablet-loan')"><i class="fa-solid fa-tablet-screen-button" style="color:#6366f1;"></i> <span class="i18n" data-en="Tablet Loans">태블릿 대여 관리</span></a>
         </div>
     </div>
 </div>
@@ -716,7 +717,7 @@
                 <div class="card-content combined-stats">
 <!-- 수강생 현황 (입교 인원 강조형) -->
                     <div class="stat-row" onclick="ui.setMode('students')" style="cursor:pointer; padding:6px 0;">
-                        <span class="card-label">수강생 입교 현황</span>
+                        <span class="card-label"><span class="i18n" data-en="Enrolled">수강생 입교 현황</span></span>
                         <div class="card-value">
                             <b id="dashArrivedCount">0</b>
                             <span style="font-size: 13px; color: #94a3b8; font-weight: 600; margin-left: 2px;">
@@ -729,7 +730,7 @@
 
                     <!-- 자체 출석 현황 (클릭 시 출결 관리 → 항기원 자체 출석체크로 바로 이동) -->
                     <div class="stat-row" onclick="ui.setMode('attendance'); ui.toggleAttendanceMode('internal');" style="cursor:pointer; padding:6px 0;">
-                        <span class="card-label"><i class="fa-solid fa-qrcode" style="color:#0ea5e9; margin-right:5px;"></i>자체 출석 현황 (금일)</span>
+                        <span class="card-label"><i class="fa-solid fa-qrcode" style="color:#0ea5e9; margin-right:5px;"></i><span class="i18n" data-en="Attendance (Today)">자체 출석 현황 (금일)</span></span>
                         <div class="card-value" style="color:#0ea5e9;"><b id="dashAttendCount">0</b><small> / <span id="dashAttendTotal">0</span>명</small></div>
                     </div>
 
@@ -737,7 +738,7 @@
 
                     <!-- 외출/외박 현황 -->
                     <div class="stat-row" onclick="ui.setMode('admin-action')" style="cursor:pointer; padding:6px 0;">
-                        <span class="card-label">외출/외박 현황 (금일)</span>
+                        <span class="card-label"><span class="i18n" data-en="Leave / Overnight (Today)">외출/외박 현황 (금일)</span></span>
                         <div class="card-value color-coral"><b id="dashActionCount">0</b><small>명</small></div>
                     </div>
 
@@ -745,7 +746,7 @@
 
                     <!-- 석식 제외 현황 -->
                     <div class="stat-row" onclick="ui.setMode('dinner-skip')" style="cursor:pointer; padding:6px 0;">
-                        <span class="card-label">금일 석식 제외 신청</span>
+                        <span class="card-label"><span class="i18n" data-en="Dinner Skip (Today)">금일 석식 제외 신청</span></span>
                         <div class="card-value" style="color: #10b981;"><b id="dashDinnerSkipCount">0</b><small>명</small></div>
                     </div>
                 </div>
@@ -767,16 +768,16 @@
                 <!-- Q&A 현황 -->
                 <!-- 전자기기 대여 신청 (좌측에서 이동) -->
                 <div class="stat-row" onclick="event.stopPropagation(); ui.setMode('tablet-loan');" style="cursor:pointer; margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px dashed #e2e8f0;">
-                    <span class="card-label-shuttle" style="margin-bottom:0; color:#003366;"><i class="fa-solid fa-tablet-screen-button" style="color:#6366f1; margin-right:5px;"></i>전자기기 대여 신청</span>
+                    <span class="card-label-shuttle" style="margin-bottom:0; color:#003366;"><i class="fa-solid fa-tablet-screen-button" style="color:#6366f1; margin-right:5px;"></i><span class="i18n" data-en="Tablet Loans">전자기기 대여 신청</span></span>
                     <div class="card-value" style="color: #6366f1;"><b id="dashTabletLoanCount">0</b><small>명</small></div>
                 </div>
                 <div class="stat-row" onclick="event.stopPropagation(); ui.setMode('qa');" style="cursor:pointer; margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px dashed #e2e8f0;">
-                    <span class="card-label-shuttle" style="margin-bottom:0; color:#003366;">실시간 질문 현황</span>
+                    <span class="card-label-shuttle" style="margin-bottom:0; color:#003366;"><span class="i18n" data-en="Live Questions">실시간 질문 현황</span></span>
                     <div class="card-value" style="color: #3b82f6;"><b id="dashQaCount">0</b><small>건</small></div>
                 </div>
 
                 <div class="card-label-shuttle" style="color:#003366; margin-bottom:10px;">
-                    셔틀 탑승 수요 현황<span id="dashShuttleTimeInline" style="font-size:12px; color:#92400e; font-weight:700; margin-left:6px;"></span>
+                    <span class="i18n" data-en="Shuttle Demand">셔틀 탑승 수요 현황</span><span id="dashShuttleTimeInline" style="font-size:12px; color:#92400e; font-weight:700; margin-left:6px;"></span>
                 </div>
 
                 <!-- 기사님 실시간 공지 영역 -->
@@ -1866,6 +1867,13 @@
                 <div id="pp-bio-rows"></div>
                 <button type="button" class="btn-action" onclick="profMgr.addBioRow()" style="margin-top:6px; background:#eff6ff; color:#1d4ed8; border:1px dashed #93c5fd; font-weight:800; width:100%;"><i class="fa-solid fa-plus"></i> 경력 추가</button>
             </div>
+            <div style="border-top:1px dashed #cbd5e1; margin:8px 0 10px; padding-top:10px; font-size:12px; font-weight:800; color:#1d4ed8;"><i class="fa-solid fa-language"></i> 영문 프로필 <span style="font-weight:600; color:#94a3b8;">(영문 전환 시 표시)</span></div>
+            <div class="setting-group"><label class="setting-label">English one-line message</label><input type="text" id="pp-eng-msg" class="setting-input" placeholder="A short message for trainees"></div>
+            <div class="setting-group">
+                <label class="setting-label">English career <span style="font-weight:600; color:#94a3b8; font-size:12px;">(year + description)</span></label>
+                <div id="pp-bio-en-rows"></div>
+                <button type="button" class="btn-action" onclick="profMgr.addBioRowEn()" style="margin-top:6px; background:#eff6ff; color:#1d4ed8; border:1px dashed #93c5fd; font-weight:800; width:100%;"><i class="fa-solid fa-plus"></i> Add career</button>
+            </div>
         </div>
         <div style="margin-top:16px; padding:10px 14px; background:#eff6ff; border:1px solid #bfdbfe; border-radius:10px; font-size:12px; color:#1e40af; line-height:1.5;">
             <i class="fa-solid fa-circle-info"></i> 이 프로필은 <b>교수님 단위로 즉시 저장</b>됩니다. 과정 개설 시 자동으로 불러와지므로, 아래 "모든 설정 저장"과는 <b>별개</b>입니다.
@@ -2464,8 +2472,30 @@ function setupAcc(btn){
 })();
 </script>
 
+<script>
+/* [i18n] 한국어/영문 토글 — .i18n[data-en] 요소의 텍스트만 교체 (아이콘 보존) */
+(function(){
+  function apply(lang){
+    document.querySelectorAll('.i18n').forEach(function(el){
+      if(!el.getAttribute('data-ko')) el.setAttribute('data-ko', el.textContent);
+      el.textContent = (lang==='en' && el.getAttribute('data-en')) ? el.getAttribute('data-en') : el.getAttribute('data-ko');
+    });
+    document.body.classList.toggle('lang-en', lang==='en');
+    var b=document.getElementById('langToggleBtn'); if(b) b.textContent=(lang==='en'?'한국어':'ENG');
+    window.KAC_LANG=lang; try{ localStorage.setItem('kac_admin_lang',lang); }catch(e){}
+    if (window.ui && typeof ui.refreshProfLang==='function'){ try{ ui.refreshProfLang(); }catch(e){} }
+  }
+  window.kacSetLang=apply;
+  window.kacToggleLang=function(){ apply((window.KAC_LANG==='en')?'ko':'en'); };
+  var saved='ko'; try{ saved=localStorage.getItem('kac_admin_lang')||'ko'; }catch(e){}
+  window.KAC_LANG=saved;
+  function init(){ apply(saved); }
+  if(document.readyState!=='loading') init(); else document.addEventListener('DOMContentLoaded', init);
+  [800,2000].forEach(function(ms){ setTimeout(function(){ apply(window.KAC_LANG); }, ms); });
+})();
+</script>
 <style>@media print{#__catcVer{display:none!important}}</style>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vT</div>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vV</div>
 </body>
 </html>
