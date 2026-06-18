@@ -2371,83 +2371,98 @@ function setupAcc(btn){
   document.addEventListener('webkitfullscreenchange', syncFS);
 })();
 </script>
-<!-- ── [강사 보조] 옵저버→강사 화면 동기화 (페이지 동기화 · 드래그 패널) ── -->
+<!-- ── [강사 보조] 옵저버→강사 화면 동기화 (페이지 동기화 · 드래그 · 진단) ── -->
 <script>
 (function(){
   if (typeof firebase === 'undefined' || typeof state === 'undefined') return;
   var db = firebase.database();
-  var curRoom = null, ref = null, base = false;
+  var curRoom = null, ref = null, lastTs = null;
 
-  // ── 강사(소유자) 측: 보조자 신호 즉시 수신 ──
+  function toast(msg){
+    var t=document.getElementById('coToast');
+    if(!t){ t=document.createElement('div'); t.id='coToast'; t.style.cssText='position:fixed;left:50%;top:12px;transform:translateX(-50%);z-index:2147483646;background:#16a34a;color:#fff;padding:9px 16px;border-radius:10px;font-weight:800;font-size:13px;box-shadow:0 6px 18px rgba(0,0,0,.25);'; document.body.appendChild(t); }
+    t.textContent=msg; t.style.opacity='1';
+    clearTimeout(t._tm); t._tm=setTimeout(function(){ t.style.opacity='0'; }, 1600);
+  }
+
+  // ── 강사(소유자) 측 수신 ──
   function attach(room){
-    if (ref) { try{ ref.off(); }catch(e){} ref = null; }
-    curRoom = room; base = false;
+    if (ref) { try{ ref.off(); }catch(e){} ref=null; }
+    curRoom = room; lastTs = null;
     if (!room) return;
     ref = db.ref('courses/' + room + '/status');
     ref.on('value', function(snap){
       var st = snap.val() || {};
-      if (state.isObserver) return;          // 보조자 본인은 수신 안 함
-      if (!base) { base = true; return; }     // 첫 스냅샷=기준(원치 않는 자동 점프 방지)
-      if (st.coSyncOn && st.coViewMode && state.currentMode !== st.coViewMode) {
-        try { ui.setMode(st.coViewMode); } catch(e){}
+      if (state.isObserver) { lastTs = st.coViewTs||0; return; }   // 보조자 본인은 수신 안 함
+      if (!st.coSyncOn || !st.coViewMode) return;
+      if (lastTs === null) { lastTs = st.coViewTs||0; return; }      // 첫 스냅샷=기준
+      if ((st.coViewTs||0) !== lastTs) {
+        lastTs = st.coViewTs||0;
+        if (state.currentMode !== st.coViewMode) {
+          try { ui.setMode(st.coViewMode); toast('보조자 동기화 → ' + st.coViewMode); } catch(e){}
+        }
       }
     });
   }
-  setInterval(function(){ if (state.room !== curRoom) attach(state.room); }, 700);
+  setInterval(function(){ if (state.room !== curRoom) attach(state.room); }, 500);
   attach(state.room);
 
-  // ── 보조자 패널: 방 안 + 옵저버 + 메인(홈/현황판) 아닐 때만, 우하단, 드래그 이동 ──
-  function showable(){
-    return state.isObserver && state.room && state.currentMode
-        && state.currentMode !== 'home' && state.currentMode !== 'waiting';
-  }
+  // ── 보조자 패널 (방 안 + 옵저버 + 메인 아님), 우하단, 드래그 ──
+  function showable(){ return state.isObserver && state.room && state.currentMode && state.currentMode!=='home' && state.currentMode!=='waiting'; }
   function ensurePanel(){
-    var p = document.getElementById('coPanel');
-    if (!showable()) { if (p) p.remove(); return; }
-    if (p) return;
-    p = document.createElement('div'); p.id = 'coPanel';
-    p.style.cssText = 'position:fixed;right:16px;bottom:16px;z-index:2147483645;background:#0f172a;color:#fff;border-radius:14px;padding:12px 14px;box-shadow:0 12px 30px rgba(0,0,0,.35);font-size:13px;min-width:190px;user-select:none;';
-    try { var pos = JSON.parse(localStorage.getItem('coPanelPos')||'null'); if (pos && pos.left) { p.style.left=pos.left; p.style.top=pos.top; p.style.right='auto'; p.style.bottom='auto'; } } catch(e){}
-    p.innerHTML = '<div id="coDrag" style="font-weight:900;margin-bottom:9px;display:flex;align-items:center;gap:7px;cursor:move;"><i class="fa-solid fa-headset" style="color:#60a5fa;"></i> 강사 보조 <i class="fa-solid fa-up-down-left-right" style="margin-left:auto;opacity:.45;font-size:11px;"></i></div>'
-      + '<button id="coSyncBtn" onclick="coToggleSync()" style="width:100%;padding:11px;border:none;border-radius:10px;font-weight:800;cursor:pointer;background:#334155;color:#cbd5e1;">화면 동기화 OFF</button>';
+    var p=document.getElementById('coPanel');
+    if(!showable()){ if(p) p.remove(); return; }
+    if(p) return;
+    p=document.createElement('div'); p.id='coPanel';
+    p.style.cssText='position:fixed;right:16px;bottom:16px;z-index:2147483645;background:#0f172a;color:#fff;border-radius:14px;padding:12px 14px;box-shadow:0 12px 30px rgba(0,0,0,.35);font-size:13px;min-width:190px;user-select:none;';
+    try{ var pos=JSON.parse(localStorage.getItem('coPanelPos')||'null'); if(pos&&pos.left){ p.style.left=pos.left;p.style.top=pos.top;p.style.right='auto';p.style.bottom='auto'; } }catch(e){}
+    p.innerHTML='<div id="coDrag" style="font-weight:900;margin-bottom:9px;display:flex;align-items:center;gap:7px;cursor:move;"><i class="fa-solid fa-headset" style="color:#60a5fa;"></i> 강사 보조 <i class="fa-solid fa-up-down-left-right" style="margin-left:auto;opacity:.45;font-size:11px;"></i></div>'
+      + '<button id="coSyncBtn" onclick="coToggleSync()" style="width:100%;padding:11px;border:none;border-radius:10px;font-weight:800;cursor:pointer;background:#334155;color:#cbd5e1;">화면 동기화 OFF</button>'
+      + '<div id="coSyncMsg" style="font-size:11px;margin-top:7px;color:#94a3b8;line-height:1.4;text-align:center;">동기화 OFF</div>';
     document.body.appendChild(p);
-    var btn = document.getElementById('coSyncBtn');
-    if (btn && window._coSync) { btn.textContent='화면 동기화 ON'; btn.style.background='#16a34a'; btn.style.color='#fff'; }
+    var btn=document.getElementById('coSyncBtn');
+    if(btn&&window._coSync){ btn.textContent='화면 동기화 ON'; btn.style.background='#16a34a'; btn.style.color='#fff'; var m=document.getElementById('coSyncMsg'); if(m){m.textContent='● 동기화 중';m.style.color='#4ade80';} }
     makeDraggable(p, document.getElementById('coDrag'));
   }
-  setInterval(ensurePanel, 700); ensurePanel();
+  setInterval(ensurePanel, 600); ensurePanel();
 
   function makeDraggable(panel, handle){
-    if (!handle) return;
-    var dx=0, dy=0, drag=false;
+    if(!handle) return; var dx=0,dy=0,drag=false;
     function start(e){ drag=true; var pt=e.touches?e.touches[0]:e; var r=panel.getBoundingClientRect(); dx=pt.clientX-r.left; dy=pt.clientY-r.top; if(e.cancelable)e.preventDefault(); }
-    function move(e){ if(!drag) return; var pt=e.touches?e.touches[0]:e; var l=Math.max(4,Math.min(window.innerWidth-panel.offsetWidth-4, pt.clientX-dx)); var t=Math.max(4,Math.min(window.innerHeight-panel.offsetHeight-4, pt.clientY-dy)); panel.style.left=l+'px'; panel.style.top=t+'px'; panel.style.right='auto'; panel.style.bottom='auto'; }
-    function end(){ if(!drag) return; drag=false; try{ localStorage.setItem('coPanelPos', JSON.stringify({left:panel.style.left, top:panel.style.top})); }catch(e){} }
+    function move(e){ if(!drag)return; var pt=e.touches?e.touches[0]:e; var l=Math.max(4,Math.min(window.innerWidth-panel.offsetWidth-4,pt.clientX-dx)); var t=Math.max(4,Math.min(window.innerHeight-panel.offsetHeight-4,pt.clientY-dy)); panel.style.left=l+'px';panel.style.top=t+'px';panel.style.right='auto';panel.style.bottom='auto'; }
+    function end(){ if(!drag)return; drag=false; try{ localStorage.setItem('coPanelPos',JSON.stringify({left:panel.style.left,top:panel.style.top})); }catch(e){} }
     handle.addEventListener('mousedown',start); document.addEventListener('mousemove',move); document.addEventListener('mouseup',end);
     handle.addEventListener('touchstart',start,{passive:false}); document.addEventListener('touchmove',move,{passive:false}); document.addEventListener('touchend',end);
   }
 
-  window._coSync = false;
-  window.coToggleSync = function(){
-    window._coSync = !window._coSync;
-    var btn = document.getElementById('coSyncBtn');
-    if (btn) { btn.textContent = window._coSync?'화면 동기화 ON':'화면 동기화 OFF'; btn.style.background = window._coSync?'#16a34a':'#334155'; btn.style.color = window._coSync?'#fff':'#cbd5e1'; }
-    if (state.room) db.ref('courses/'+state.room+'/status').update({ coSyncOn: window._coSync, coViewMode: state.currentMode||'home', coViewTs: Date.now() });
+  function msg(txt,color){ var m=document.getElementById('coSyncMsg'); if(m){ m.textContent=txt; m.style.color=color||'#94a3b8'; } }
+  function broadcast(mode){
+    if(!state.room) return;
+    db.ref('courses/'+state.room+'/status').update({ coSyncOn: !!window._coSync, coViewMode: mode, coViewTs: Date.now() })
+      .then(function(){ if(window._coSync) msg('● 동기화 중 ('+mode+')','#4ade80'); })
+      .catch(function(e){ msg('⚠ 전송 실패: 규칙 미발행?\n'+(e&&e.code||''),'#fca5a5'); console.error('[copilot] write fail', e); });
+  }
+
+  window._coSync=false;
+  window.coToggleSync=function(){
+    window._coSync=!window._coSync;
+    var btn=document.getElementById('coSyncBtn');
+    if(btn){ btn.textContent=window._coSync?'화면 동기화 ON':'화면 동기화 OFF'; btn.style.background=window._coSync?'#16a34a':'#334155'; btn.style.color=window._coSync?'#fff':'#cbd5e1'; }
+    if(window._coSync) broadcast(state.currentMode||'home'); else { msg('동기화 OFF'); if(state.room) db.ref('courses/'+state.room+'/status').update({coSyncOn:false}).catch(function(){}); }
   };
 
-  // setMode 브로드캐스트(보조자 + 동기화 ON) — 즉시 전송
   function patch(){
-    if (!window.ui || typeof ui.setMode !== 'function' || ui.__coPatched) return;
-    var orig = ui.setMode.bind(ui);
-    ui.setMode = function(m){ orig(m); if (state.isObserver && window._coSync && state.room){ try{ db.ref('courses/'+state.room+'/status').update({ coSyncOn:true, coViewMode:m, coViewTs:Date.now() }); }catch(e){} } if (state.isObserver) ensurePanel(); };
-    ui.__coPatched = true;
+    if(!window.ui || typeof ui.setMode!=='function' || ui.__coPatched) return;
+    var orig=ui.setMode.bind(ui);
+    ui.setMode=function(m){ orig(m); if(state.isObserver){ if(window._coSync) broadcast(m); ensurePanel(); } };
+    ui.__coPatched=true;
   }
-  patch(); setTimeout(patch, 1500);
+  patch(); setTimeout(patch,1200); setTimeout(patch,3000);
 })();
 </script>
 
 <style>@media print{#__catcVer{display:none!important}}</style>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vP</div>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vQ</div>
 </body>
 </html>
