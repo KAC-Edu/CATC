@@ -513,13 +513,13 @@
         .rl-group + .rl-group { border-top:2px solid var(--border); }
         /* [JDS260613] 부서별 아코디언 바 */
         .rl-group { margin-bottom:12px; border-top:none !important; }
-        .rl-gbar { width:100%; display:flex; align-items:center; justify-content:space-between; gap:10px; border:none; cursor:pointer; padding:14px 18px; border-radius:13px; background:linear-gradient(135deg,#0e7490 0%,#1d4ed8 100%); color:#fff; font-family:inherit; box-shadow:0 3px 10px rgba(13,110,160,.28); transition:filter .15s, border-radius .2s; }
-        .rl-gbar:hover { filter:brightness(1.08); }
+        .rl-gbar { width:100%; display:flex; align-items:center; justify-content:space-between; gap:10px; cursor:pointer; padding:13px 16px; border-radius:12px; background:#eef2f7; color:#1e293b; font-family:inherit; border:1px solid #e2e8f0; box-shadow:none; transition:background .15s, border-radius .2s; }
+        .rl-gbar:hover { background:#e3e9f0; }
         .rl-gbar-l { display:flex; align-items:center; gap:10px; font-size:16px; font-weight:900; }
-        .rl-gchev { transition:transform .2s; font-size:13px; opacity:.92; }
+        .rl-gchev { transition:transform .2s; font-size:13px; color:#64748b; }
         .rl-group.open .rl-gchev { transform:rotate(90deg); }
-        .rl-group.open .rl-gbar { border-radius:13px 13px 0 0; box-shadow:0 3px 10px rgba(13,110,160,.18); }
-        .rl-gbar .rl-gcount { background:rgba(255,255,255,.24); color:#fff; padding:3px 12px; border-radius:999px; font-size:13.5px; font-weight:800; }
+        .rl-group.open .rl-gbar { border-radius:12px 12px 0 0; background:#e3e9f0; }
+        .rl-gbar .rl-gcount { background:#dbeafe; color:#1d4ed8; padding:3px 12px; border-radius:999px; font-size:13px; font-weight:800; }
         .rl-gbody { display:none; border:1.5px solid #cbd5e1; border-top:none; border-radius:0 0 13px 13px; overflow:hidden; }
         .rl-group.open .rl-gbody { display:block; }
         .rl-ghead { display:flex; align-items:center; gap:9px; padding:13px 16px; background:#eff6ff; border-bottom:1px solid #dbeafe; }
@@ -635,8 +635,8 @@
         .mw-nav .mw-range { margin-left:auto; font-size:13px; font-weight:800; color:#1e40af; }
         .mw-table { width:100%; border-collapse:collapse; font-size:14px; }
         .mw-table th, .mw-table td { border:1px solid #e2e8f0; padding:10px 8px; text-align:center; }
-        .mw-table thead th { background:#1e40af; color:#fff; font-weight:800; }
-        .mw-table thead th.mw-today { background:#f59e0b; }
+        .mw-table thead th { background:#64748b; color:#fff; font-weight:800; }
+        .mw-table thead th.mw-today { background:#e09b4a; }
         .mw-table .mw-meal { font-weight:900; white-space:nowrap; }
         .mw-table .mw-meal.b { background:#fffbeb; color:#b45309; }
         .mw-table .mw-meal.l { background:#eff6ff; color:#1e40af; }
@@ -1241,7 +1241,7 @@ function _renderMealWeek() {
     const nav = `<div class="mw-nav">`
         + [0,1,2].map(i => `<button class="mwb ${i === _mealWeekOff ? 'on' : ''}" onclick="mealWeekNav(${i})">${i === 0 ? '이번주' : (i+1)+'주차'}</button>`).join('')
         + `<span class="mw-range"><i class="fa-regular fa-calendar"></i> ${_fmtMD(mon)}(월) ~ ${_fmtMD(fri)}(금)</span></div>`;
-    const head = `<tr><th style="background:#0f172a;">끼니</th>` + days.map((D,i) => `<th class="${D===today?'mw-today':''}">${dow[i]}<br><span style="font-weight:700;font-size:11px;opacity:.85;">${_fmtMD(D)}</span></th>`).join('') + `</tr>`;
+    const head = `<tr><th style="background:#334155;">끼니</th>` + days.map((D,i) => `<th class="${D===today?'mw-today':''}">${dow[i]}<br><span style="font-weight:700;font-size:11px;opacity:.85;">${_fmtMD(D)}</span></th>`).join('') + `</tr>`;
     const meals = [['breakfast','아침','b'],['lunch','점심','l'],['dinner','저녁','d']];
     const rows = meals.map(([k,lab,cls]) => {
         const sel = (k === _mealWeekKind) ? ' mw-sel' : '';
@@ -1256,13 +1256,8 @@ function _renderMealWeek() {
     const staffCount = Object.values(_staffRoster || {}).filter(r => r && r.active !== false).length;
     const basisBar = `<div class="mw-basis">
             <span class="mw-basis-lab"><i class="fa-solid fa-users-gear"></i> 식수 인원 기준</span>
-            <button class="mwb-basis-btn ${_estBasis==='arrived'?'arr':''}" onclick="openBasisCompare()" title="교육생 명단 / 실제 입교 비교 후 변경">
-                <b>${_estBasis==='arrived'?'실제 입교':'교육생 명단'}</b> <i class="fa-solid fa-right-left"></i> 비교 · 변경
-            </button>
-        </div>`
-        + (_estBasis === 'arrived'
-            ? `<div class="mw-basis-note arr"><i class="fa-solid fa-circle-info"></i> <b>실제 입교</b>란 항공기술훈련원 강의실에 <b>실제로 입실(출석)</b>한 교육생 수를 말합니다. 아직 입교 전이면 0명으로 표시될 수 있습니다.</div>`
-            : `<div class="mw-basis-note muted"><i class="fa-regular fa-circle-question"></i> <b>교육생 명단</b>(예정 인원) 기준으로 표시 중입니다. 실제 입실 인원과 비교하거나 기준을 바꾸려면 위 <b>‘비교 · 변경’</b>을 누르세요.</div>`);
+            <span style="font-weight:900; color:#1d4ed8; font-size:13px; white-space:nowrap;"><i class="fa-solid fa-list-check" style="margin-right:5px;"></i>교육생 명단(예정 인원) 기준으로 책정</span>
+        </div>`;
     body.innerHTML = nav
         + basisBar
         + `<div class="mw-leg"><i class="fa-solid fa-circle-info"></i> 표 안 숫자 = <b class="mw-leg-st">교육생</b> <span style="color:#94a3b8;">＋</span> <b class="mw-leg-sf">상주직원</b> 합계</div>`
@@ -3415,7 +3410,7 @@ function renderMealCalendar(a, month){
 })();
 </script>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vA</div>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vB</div>
 </body>
 </html>
 <!-- @build 20260614-004000 (영양사 vBBB: 화면 자동 맞춤(auto-fit) 추가 — 입장 시 가로폭이 뷰어보다 넓으면 자동 축소(수동 Ctrl-− 불필요). 강사·교육운영부·지원부·포털에도 동일 적용. 직전 vAAA: 주말 미운영 표기) -->
