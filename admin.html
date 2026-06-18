@@ -2371,101 +2371,75 @@ function setupAcc(btn){
   document.addEventListener('webkitfullscreenchange', syncFS);
 })();
 </script>
-<!-- ── [강사 보조] 옵저버→강사 화면 동기화 (페이지 동기화 + 전체화면/알림 우회) ── -->
+<!-- ── [강사 보조] 옵저버→강사 화면 동기화 (페이지 동기화 · 드래그 패널) ── -->
 <script>
 (function(){
   if (typeof firebase === 'undefined' || typeof state === 'undefined') return;
   var db = firebase.database();
-  var curRoom = null, ref = null, base = false, lastFs = 0, lastAttn = 0;
-  window._coSync = false;
+  var curRoom = null, ref = null, base = false;
 
-  function refOf(room){ return db.ref('courses/' + room + '/status'); }
-
-  // ── 강사(소유자) 측 수신 ──
+  // ── 강사(소유자) 측: 보조자 신호 즉시 수신 ──
   function attach(room){
     if (ref) { try{ ref.off(); }catch(e){} ref = null; }
-    curRoom = room; base = false; lastFs = 0; lastAttn = 0;
+    curRoom = room; base = false;
     if (!room) return;
-    ref = refOf(room);
+    ref = db.ref('courses/' + room + '/status');
     ref.on('value', function(snap){
       var st = snap.val() || {};
-      if (!base) { base = true; lastFs = st.coFsReq||0; lastAttn = st.coAttn||0; return; } // 첫 스냅샷=기준
-      if (state.isObserver) { lastFs = st.coFsReq||0; lastAttn = st.coAttn||0; return; }   // 보조자 본인은 수신 안 함
-      // 1) 페이지 동기화
+      if (state.isObserver) return;          // 보조자 본인은 수신 안 함
+      if (!base) { base = true; return; }     // 첫 스냅샷=기준(원치 않는 자동 점프 방지)
       if (st.coSyncOn && st.coViewMode && state.currentMode !== st.coViewMode) {
         try { ui.setMode(st.coViewMode); } catch(e){}
       }
-      // 2) 전체화면 요청
-      if ((st.coFsReq||0) > lastFs) { lastFs = st.coFsReq; tryFs(); }
-      // 3) 화면 깨우기(알림)
-      if ((st.coAttn||0) > lastAttn) { lastAttn = st.coAttn; flash(); }
     });
   }
-  setInterval(function(){ if (state.room !== curRoom) attach(state.room); }, 1200);
+  setInterval(function(){ if (state.room !== curRoom) attach(state.room); }, 700);
   attach(state.room);
 
-  function tryFs(){
-    if (document.fullscreenElement || document.webkitFullscreenElement) return;
-    var el = document.documentElement, req = el.requestFullscreen || el.webkitRequestFullscreen;
-    try { var r = req && req.call(el); if (r && r.catch) r.catch(fsBanner); } catch(e){}
-    setTimeout(function(){ if (!(document.fullscreenElement||document.webkitFullscreenElement)) fsBanner(); }, 450);
+  // ── 보조자 패널: 방 안 + 옵저버 + 메인(홈/현황판) 아닐 때만, 우하단, 드래그 이동 ──
+  function showable(){
+    return state.isObserver && state.room && state.currentMode
+        && state.currentMode !== 'home' && state.currentMode !== 'waiting';
   }
-  function fsBanner(){
-    if (document.getElementById('coFsBanner')) return;
-    var b = document.createElement('div'); b.id='coFsBanner';
-    b.style.cssText='position:fixed;left:50%;top:14px;transform:translateX(-50%);z-index:2147483646;background:#1d4ed8;color:#fff;padding:13px 22px;border-radius:13px;font-weight:800;font-size:15px;box-shadow:0 10px 28px rgba(0,0,0,.3);cursor:pointer;display:flex;align-items:center;gap:10px;';
-    b.innerHTML='<i class="fa-solid fa-expand"></i> 보조자가 전체화면을 요청했습니다 — 여기를 누르면 전환';
-    b.onclick=function(){ var el=document.documentElement, req=el.requestFullscreen||el.webkitRequestFullscreen; try{ req&&req.call(el); }catch(e){} b.remove(); };
-    document.body.appendChild(b);
-    setTimeout(function(){ if(b.parentNode) b.remove(); }, 12000);
-  }
-
-  var _origTitle = document.title, _flashTimer = null;
-  function flash(){
-    var bn = document.getElementById('coAttnBanner');
-    if (!bn){ bn=document.createElement('div'); bn.id='coAttnBanner';
-      bn.style.cssText='position:fixed;left:0;right:0;top:0;z-index:2147483646;background:#dc2626;color:#fff;padding:14px;text-align:center;font-weight:900;font-size:16px;box-shadow:0 6px 18px rgba(0,0,0,.25);cursor:pointer;';
-      bn.innerHTML='🔔 운영자(보조)가 이 화면을 안내 중입니다 — 화면을 확인해 주세요';
-      bn.onclick=function(){ bn.remove(); stopFlash(); };
-      document.body.appendChild(bn);
-    }
-    var on=false;
-    if(_flashTimer) clearInterval(_flashTimer);
-    _flashTimer=setInterval(function(){ document.title = (on?_origTitle:'🔔 보조 호출 — 확인!'); on=!on; }, 700);
-    setTimeout(function(){ var x=document.getElementById('coAttnBanner'); if(x) x.remove(); stopFlash(); }, 15000);
-  }
-  function stopFlash(){ if(_flashTimer){ clearInterval(_flashTimer); _flashTimer=null; } document.title=_origTitle; }
-  window.addEventListener('focus', stopFlash);
-
-  // ── 옵저버(보조자) 측 컨트롤 패널 ──
   function ensurePanel(){
-    if (!state.isObserver){ var p=document.getElementById('coPanel'); if(p) p.remove(); return; }
-    if (document.getElementById('coPanel')) return;
-    var p=document.createElement('div'); p.id='coPanel';
-    p.style.cssText='position:fixed;left:14px;bottom:14px;z-index:2147483645;background:#0f172a;color:#fff;border-radius:14px;padding:12px 14px;box-shadow:0 12px 30px rgba(0,0,0,.35);font-size:13px;min-width:210px;';
-    p.innerHTML=''
-      + '<div style="font-weight:900;margin-bottom:9px;display:flex;align-items:center;gap:7px;"><i class="fa-solid fa-headset" style="color:#60a5fa;"></i> 강사 보조 (옵저버)</div>'
-      + '<button id="coSyncBtn" onclick="coToggleSync()" style="width:100%;margin-bottom:7px;padding:9px;border:none;border-radius:9px;font-weight:800;cursor:pointer;background:#334155;color:#cbd5e1;">화면 동기화 OFF</button>'
-      + '<button onclick="coReqFs()" style="width:100%;margin-bottom:7px;padding:9px;border:none;border-radius:9px;font-weight:800;cursor:pointer;background:#1d4ed8;color:#fff;"><i class="fa-solid fa-expand"></i> 강사 전체화면 요청</button>'
-      + '<button onclick="coAttnPing()" style="width:100%;padding:9px;border:none;border-radius:9px;font-weight:800;cursor:pointer;background:#dc2626;color:#fff;"><i class="fa-solid fa-bell"></i> 강사 화면 깨우기</button>';
+    var p = document.getElementById('coPanel');
+    if (!showable()) { if (p) p.remove(); return; }
+    if (p) return;
+    p = document.createElement('div'); p.id = 'coPanel';
+    p.style.cssText = 'position:fixed;right:16px;bottom:16px;z-index:2147483645;background:#0f172a;color:#fff;border-radius:14px;padding:12px 14px;box-shadow:0 12px 30px rgba(0,0,0,.35);font-size:13px;min-width:190px;user-select:none;';
+    try { var pos = JSON.parse(localStorage.getItem('coPanelPos')||'null'); if (pos && pos.left) { p.style.left=pos.left; p.style.top=pos.top; p.style.right='auto'; p.style.bottom='auto'; } } catch(e){}
+    p.innerHTML = '<div id="coDrag" style="font-weight:900;margin-bottom:9px;display:flex;align-items:center;gap:7px;cursor:move;"><i class="fa-solid fa-headset" style="color:#60a5fa;"></i> 강사 보조 <i class="fa-solid fa-up-down-left-right" style="margin-left:auto;opacity:.45;font-size:11px;"></i></div>'
+      + '<button id="coSyncBtn" onclick="coToggleSync()" style="width:100%;padding:11px;border:none;border-radius:10px;font-weight:800;cursor:pointer;background:#334155;color:#cbd5e1;">화면 동기화 OFF</button>';
     document.body.appendChild(p);
+    var btn = document.getElementById('coSyncBtn');
+    if (btn && window._coSync) { btn.textContent='화면 동기화 ON'; btn.style.background='#16a34a'; btn.style.color='#fff'; }
+    makeDraggable(p, document.getElementById('coDrag'));
   }
-  setInterval(ensurePanel, 1200); ensurePanel();
+  setInterval(ensurePanel, 700); ensurePanel();
 
+  function makeDraggable(panel, handle){
+    if (!handle) return;
+    var dx=0, dy=0, drag=false;
+    function start(e){ drag=true; var pt=e.touches?e.touches[0]:e; var r=panel.getBoundingClientRect(); dx=pt.clientX-r.left; dy=pt.clientY-r.top; if(e.cancelable)e.preventDefault(); }
+    function move(e){ if(!drag) return; var pt=e.touches?e.touches[0]:e; var l=Math.max(4,Math.min(window.innerWidth-panel.offsetWidth-4, pt.clientX-dx)); var t=Math.max(4,Math.min(window.innerHeight-panel.offsetHeight-4, pt.clientY-dy)); panel.style.left=l+'px'; panel.style.top=t+'px'; panel.style.right='auto'; panel.style.bottom='auto'; }
+    function end(){ if(!drag) return; drag=false; try{ localStorage.setItem('coPanelPos', JSON.stringify({left:panel.style.left, top:panel.style.top})); }catch(e){} }
+    handle.addEventListener('mousedown',start); document.addEventListener('mousemove',move); document.addEventListener('mouseup',end);
+    handle.addEventListener('touchstart',start,{passive:false}); document.addEventListener('touchmove',move,{passive:false}); document.addEventListener('touchend',end);
+  }
+
+  window._coSync = false;
   window.coToggleSync = function(){
     window._coSync = !window._coSync;
-    var btn=document.getElementById('coSyncBtn');
-    if(btn){ btn.textContent = window._coSync ? '화면 동기화 ON' : '화면 동기화 OFF'; btn.style.background = window._coSync ? '#16a34a' : '#334155'; btn.style.color = window._coSync ? '#fff' : '#cbd5e1'; }
-    if(state.room){ db.ref('courses/'+state.room+'/status').update({ coSyncOn: window._coSync, coViewMode: state.currentMode || 'home', coViewTs: firebase.database.ServerValue.TIMESTAMP }); }
+    var btn = document.getElementById('coSyncBtn');
+    if (btn) { btn.textContent = window._coSync?'화면 동기화 ON':'화면 동기화 OFF'; btn.style.background = window._coSync?'#16a34a':'#334155'; btn.style.color = window._coSync?'#fff':'#cbd5e1'; }
+    if (state.room) db.ref('courses/'+state.room+'/status').update({ coSyncOn: window._coSync, coViewMode: state.currentMode||'home', coViewTs: Date.now() });
   };
-  window.coReqFs = function(){ if(state.room) db.ref('courses/'+state.room+'/status').update({ coFsReq: Date.now() }); };
-  window.coAttnPing = function(){ if(state.room) db.ref('courses/'+state.room+'/status').update({ coAttn: Date.now() }); };
 
-  // ── setMode 브로드캐스트(보조자 + 동기화 ON 일 때만) ──
+  // setMode 브로드캐스트(보조자 + 동기화 ON) — 즉시 전송
   function patch(){
-    if (!window.ui || typeof ui.setMode !== 'function' || ui.__coPatched) { return; }
+    if (!window.ui || typeof ui.setMode !== 'function' || ui.__coPatched) return;
     var orig = ui.setMode.bind(ui);
-    ui.setMode = function(m){ orig(m); if (state.isObserver && window._coSync && state.room){ try{ db.ref('courses/'+state.room+'/status').update({ coSyncOn:true, coViewMode:m, coViewTs: firebase.database.ServerValue.TIMESTAMP }); }catch(e){} } };
+    ui.setMode = function(m){ orig(m); if (state.isObserver && window._coSync && state.room){ try{ db.ref('courses/'+state.room+'/status').update({ coSyncOn:true, coViewMode:m, coViewTs:Date.now() }); }catch(e){} } if (state.isObserver) ensurePanel(); };
     ui.__coPatched = true;
   }
   patch(); setTimeout(patch, 1500);
@@ -2474,6 +2448,6 @@ function setupAcc(btn){
 
 <style>@media print{#__catcVer{display:none!important}}</style>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vO</div>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vP</div>
 </body>
 </html>
