@@ -1844,9 +1844,10 @@
 
 <!-- [우선순위 수정] 교수님 상세 프로필 등록 모달 (z-index를 22000으로 상향) -->
 <div id="profProfileModal" class="modal-overlay" style="z-index: 22000 !important;">
-    <div class="modal-box" style="width: 500px;">
+    <div class="modal-box" style="width: 880px; max-width:95vw; max-height:92vh; display:flex; flex-direction:column;">
         <div class="modal-header"><h3><i class="fa-solid fa-id-card"></i> 교수 프로필 상세 등록</h3></div>
-        <div class="setting-container">
+        <div class="setting-container" style="display:flex; gap:26px; align-items:flex-start; overflow-y:auto; flex:1 1 auto; min-height:0;">
+            <div style="flex:1; min-width:0;">
             <div class="setting-group">
                 <label class="setting-label">교수 사진 업로드</label>
                 <div style="display:flex; gap:10px; align-items:center;">
@@ -1862,6 +1863,8 @@
             <div class="setting-group"><label class="setting-label">이메일</label><input type="text" id="pp-email" class="setting-input" placeholder="kac@airport.co.kr"></div>
             <div class="setting-group"><label class="setting-label"><i class="fa-solid fa-comment" style="color:#FAE100;"></i> 카카오톡 오픈톡방 링크 <span style="font-weight:600; color:#94a3b8;">(선택 — 과정 개설 시 자동 적용)</span></label><input type="text" id="pp-kakao" class="setting-input" placeholder="https://open.kakao.com/o/xxxxxxx"></div>
             <div class="setting-group"><label class="setting-label">한 줄 메시지</label><input type="text" id="pp-msg" class="setting-input" placeholder="교육생에게 전하는 한 마디"></div>
+            </div>
+            <div style="flex:1; min-width:0;">
             <div class="setting-group">
                 <label class="setting-label">주요 약력 <span style="font-weight:600; color:#94a3b8; font-size:12px;">(연도와 경력사항을 칸에 나눠 입력하세요)</span></label>
                 <div id="pp-bio-rows"></div>
@@ -1873,6 +1876,7 @@
                 <label class="setting-label">English career <span style="font-weight:600; color:#94a3b8; font-size:12px;">(year + description)</span></label>
                 <div id="pp-bio-en-rows"></div>
                 <button type="button" class="btn-action" onclick="profMgr.addBioRowEn()" style="margin-top:6px; background:#eff6ff; color:#1d4ed8; border:1px dashed #93c5fd; font-weight:800; width:100%;"><i class="fa-solid fa-plus"></i> Add career</button>
+            </div>
             </div>
         </div>
         <div style="margin-top:16px; padding:10px 14px; background:#eff6ff; border:1px solid #bfdbfe; border-radius:10px; font-size:12px; color:#1e40af; line-height:1.5;">
@@ -2496,6 +2500,6 @@ function setupAcc(btn){
 </script>
 <style>@media print{#__catcVer{display:none!important}}</style>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vV</div>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vX</div>
 </body>
 </html>
