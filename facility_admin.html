@@ -74,8 +74,8 @@
         .rc-body{ display:none; padding:4px 15px 14px; border-top:1px dashed var(--border); background:#fcfdff; }
         .rcard.open .rc-body{ display:block; }
 
-        .req{ padding:11px 0; border-bottom:1px dashed #eef2f7; }
-        .req:last-child{ border-bottom:none; }
+        .req{ background:#f1f6ff; border:1.5px solid #dbeafe; border-radius:12px; padding:13px 14px; margin-bottom:10px; }
+        .req:last-child{ margin-bottom:0; }
         .req-meta{ font-size:12px; color:var(--muted); font-weight:700; margin-bottom:7px; display:flex; gap:8px; flex-wrap:wrap; }
         .req-time{ color:#94a3b8; }
         .items{ display:flex; flex-wrap:wrap; gap:6px; margin-bottom:9px; }
@@ -301,7 +301,6 @@
                     const chipsHtml=chips.length?chips.map(chip).join(''):chip('비품 요청');
                     const extraHtml=extra?`<div class="extra-box"><i class="fa-solid fa-pen-to-square" style="color:#94a3b8"></i> ${h(extra)}</div>`:'';
                     return `<div class="req">
-                        <div class="req-meta"><span><i class="fa-solid fa-user" style="color:#94a3b8"></i> ${h(req.name||'')}</span><span>${h(req.courseName||'')}</span><span class="req-time"><i class="fa-regular fa-clock"></i> ${whenStr(req.timestamp)}</span></div>
                         <div class="items">${chipsHtml}</div>${extraHtml}
                         <div class="acts">
                             <button class="btn btn-ok" onclick="event.stopPropagation();markDone('${req.id}','${rk.replace(/'/g,"")}')"><i class="fa-solid fa-check"></i> 해결 완료</button>
@@ -457,6 +456,6 @@
 </script>
 <!-- @build JDS260614 미화·비품: 전체높이 블록·블록별 독립스크롤, 3개월 보관 자동정리, 월간 리포트(반복호수·품목소진·건물비교·처리시간·요일/시간 패턴) + 인쇄/PDF, 새요청 알림음, 설정 -->
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vB</div>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vC</div>
 </body>
 </html>

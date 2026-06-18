@@ -8603,25 +8603,24 @@ const annualPlanMgr = {
             const prevName = ((curRooms[room] || {}).settings || {}).courseName || '';
 
             if (course) {
-                // [Clean Start] 과정명이 바뀌었거나 현재 비어 있는 방에 새 과정 배치 시 데이터 소거.
-                //  "과정명이 같으면 리셋하지 말고, 없는 과정이면 리셋 후 배치" 규칙 적용.
                 if (course.name !== prevName) {
+                    // 새/다른 과정 → 리셋 후 배치
                     Object.assign(updates, this._cleanStartUpdates(room));
                     wiped.push(`${room}(${prevName || '비어있음'}→${course.name})`);
+                    updates[`courses/${room}/settings/courseName`] = course.name;
+                    updates[`courses/${room}/settings/period`]     = course.period;
+                    const coordFull = coordMgr.matchName(course.coord) || (course.coord || '');
+                    updates[`courses/${room}/settings/coordinatorName`] = coordFull;
+                    updates[`courses/${room}/status/professorName`] = course.prof;
+                    updates[`courses/${room}/status/roomStatus`]   = 'active';
+                    updates[`courses/${room}/settings/kakaoLink`]  = _kakaoOf(course.prof);
+                    if (course.roomDetail) updates[`courses/${room}/settings/roomDetailName`] = course.roomDetail;
+                    else updates[`courses/${room}/settings/roomDetailName`] = '';
+                    updates[`courses/${room}/status/ownerSessionId`] = null;
+                    assigned.push(`${room}: ${course.name}`);
                 }
-                updates[`courses/${room}/settings/courseName`] = course.name;
-                updates[`courses/${room}/settings/period`]     = course.period;
-                // [수정] coord 표기 차이(공백/직급)를 흡수해 명단의 정식 이름으로 정규화. 매칭 실패 시 원문 유지
-                const coordFull = coordMgr.matchName(course.coord) || (course.coord || '');
-                updates[`courses/${room}/settings/coordinatorName`] = coordFull;
-                updates[`courses/${room}/status/professorName`] = course.prof;
-                updates[`courses/${room}/status/roomStatus`]   = 'active';
-                updates[`courses/${room}/settings/kakaoLink`]  = _kakaoOf(course.prof);
-                // 연간계획 강의실 반영 (과정 교체 시 지난주 강의실 잔류 방지)
-                if (course.roomDetail) updates[`courses/${room}/settings/roomDetailName`] = course.roomDetail;
-                else if (course.name !== prevName) updates[`courses/${room}/settings/roomDetailName`] = '';
-                updates[`courses/${room}/status/ownerSessionId`] = null;
-                assigned.push(`${room}: ${course.name}`);
+                // course.name === prevName → 이미 같은 과정이 운영 중:
+                //   강사가 직접 조정한 '기간·강의실' 등 설정을 자동배치가 덮어쓰지 않고 그대로 보존한다.
             }
             // course 가 없으면(배정 대상 없음) 기존 동작 유지: 방을 건드리지 않는다.
         }
