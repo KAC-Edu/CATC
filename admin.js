@@ -2198,6 +2198,7 @@ loadDashboardStats: function() {
         action: firebase.database().ref(`courses/${room}/admin_actions/${today}`),
         dinner: firebase.database().ref(`courses/${room}/dinner_skips/${today}`),
         tablet: firebase.database().ref(`courses/${room}/tablet_loans`),
+        attend: firebase.database().ref(`courses/${room}/internal_attendance/${today}`),
         departure: firebase.database().ref(`courses/${room}/shuttle/departure`),
         shuttleReq: firebase.database().ref(`courses/${room}/shuttle/requests`)
     };
@@ -2258,6 +2259,8 @@ loadDashboardStats: function() {
         // (A) 대시보드 "수강생 입교 현황" 좌측 숫자 업데이트
         const dashArrivedEl = document.getElementById('dashArrivedCount');
         if (dashArrivedEl) dashArrivedEl.innerText = arrivedCount;
+        const dashAttendTotalEl = document.getElementById('dashAttendTotal');
+        if (dashAttendTotalEl) dashAttendTotalEl.innerText = arrivedCount;
 
         // (A-2) 분모(총원)도 함께 재계산 — 학생이 새로 들어와도 즉시 반영
         recalcTotal(data);
@@ -2300,6 +2303,12 @@ loadDashboardStats: function() {
         if (state.room !== room) return;
         const count = Object.keys(s.val() || {}).length;
         if (document.getElementById('dashTabletLoanCount')) document.getElementById('dashTabletLoanCount').innerText = count;
+    });
+    refs.attend.on('value', s => {
+        if (state.room !== room) return;
+        const count = Object.keys(s.val() || {}).length;
+        const el = document.getElementById('dashAttendCount');
+        if (el) el.innerText = count;
     });
 
 
@@ -3037,6 +3046,7 @@ updateObserverButton: function() {
         clear('dashCoordName', '-');
         clear('dashProfNameOnly', '-');
         clear('dashArrivedCount', '0');
+        clear('dashAttendCount', '0');
         clear('dashTotalCount', '0');
         clear('dashOutingCount', '0');
         clear('dashDinnerCount', '0');
