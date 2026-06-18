@@ -2449,21 +2449,23 @@ function setupAcc(btn){
     window._coSync=!window._coSync;
     var btn=document.getElementById('coSyncBtn');
     if(btn){ btn.textContent=window._coSync?'화면 동기화 ON':'화면 동기화 OFF'; btn.style.background=window._coSync?'#16a34a':'#334155'; btn.style.color=window._coSync?'#fff':'#cbd5e1'; }
-    if(window._coSync) broadcast(state.currentMode||'home'); else { msg('동기화 OFF'); if(state.room) db.ref('courses/'+state.room+'/status').update({coSyncOn:false}).catch(function(){}); }
+    if(window._coSync){ window._coLastMode = state.currentMode||'home'; broadcast(window._coLastMode); } else { msg('동기화 OFF'); if(state.room) db.ref('courses/'+state.room+'/status').update({coSyncOn:false}).catch(function(){}); }
   };
 
-  function patch(){
-    if(!window.ui || typeof ui.setMode!=='function' || ui.__coPatched) return;
-    var orig=ui.setMode.bind(ui);
-    ui.setMode=function(m){ orig(m); if(state.isObserver){ if(window._coSync) broadcast(m); ensurePanel(); } };
-    ui.__coPatched=true;
-  }
-  patch(); setTimeout(patch,1200); setTimeout(patch,3000);
+  // 보조자: 현재 보는 화면(state.currentMode)이 바뀌면 자동 전송 — 메뉴 클릭 방식과 무관하게 보장
+  window._coLastMode = null;
+  setInterval(function(){
+    if (state.isObserver) ensurePanel();
+    if (state.isObserver && window._coSync && state.room && state.currentMode && state.currentMode !== window._coLastMode){
+      window._coLastMode = state.currentMode;
+      broadcast(state.currentMode);
+    }
+  }, 300);
 })();
 </script>
 
 <style>@media print{#__catcVer{display:none!important}}</style>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vR</div>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vS</div>
 </body>
 </html>
