@@ -1513,7 +1513,7 @@ const profMgr = {
         document.getElementById('pp-phone').value = "";
         document.getElementById('pp-email').value = "";
         document.getElementById('pp-msg').value = "";
-        document.getElementById('pp-bio').value = "";
+        if(document.getElementById('pp-bio-rows')) profMgr.renderBioRows([]);
         const previewImg = document.getElementById('pp-photo-preview').querySelector('img');
         if(previewImg) previewImg.style.display = 'none';
 
@@ -1526,7 +1526,7 @@ const profMgr = {
                 document.getElementById('pp-email').value = p.email || "";
                 if (kakaoEl) kakaoEl.value = p.kakaoLink || "";
                 document.getElementById('pp-msg').value = p.msg || "";
-                document.getElementById('pp-bio').value = p.bio || "";
+                profMgr.renderBioRows(Array.isArray(p.bioList) ? p.bioList : profMgr._parseBio(p.bio || ""));
                 if(p.photo && previewImg) {
                     previewImg.src = p.photo;
                     previewImg.style.display = 'block';
@@ -1577,7 +1577,8 @@ const profMgr = {
                 email: document.getElementById('pp-email').value,
                 kakaoLink: (document.getElementById('pp-kakao')?.value || '').trim(),
                 msg: document.getElementById('pp-msg').value,
-                bio: document.getElementById('pp-bio').value
+                bio: profMgr.collectBioRows().map(r => (r.year ? r.year + " " : "") + r.text).join("\n"),
+                bioList: profMgr.collectBioRows()
             };
             firebase.database().ref(`system/professorProfiles/${name}`).set(profileData).then(() => {
                 ui.showAlert("✅ 담임 교수 프로필이 성공적으로 저장되었습니다.", () => ui.closeProfProfileModal());
@@ -1591,6 +1592,42 @@ const profMgr = {
         }
     } // <--- 함수의 끝
 }; // <--- 중요!! profMgr라는 큰 바구니를 여기서 완전히 닫습니다. (콤마 없음)
+
+// [약력 입력] 연도/경력사항 분리 행 관리
+profMgr.addBioRow = function(year, text){
+    const wrap = document.getElementById('pp-bio-rows'); if(!wrap) return;
+    const esc = s => String(s==null?'':s).replace(/"/g,'&quot;');
+    const row = document.createElement('div');
+    row.className = 'bio-row';
+    row.style.cssText = 'display:flex; gap:8px; margin-bottom:8px; align-items:center;';
+    row.innerHTML = '<input class="setting-input bio-year-in" style="flex:0 0 120px;" placeholder="연도 (예: 21~)" value="'+esc(year)+'">'
+        + '<input class="setting-input bio-text-in" style="flex:1;" placeholder="경력사항 (예: 항공기술훈련원 교수)" value="'+esc(text)+'">'
+        + '<button type="button" title="이 줄 삭제" onclick="this.closest(\'.bio-row\').remove()" style="flex:0 0 auto; width:38px; height:38px; border:1px solid #fecaca; background:#fef2f2; color:#ef4444; border-radius:9px; cursor:pointer; font-weight:900;">✕</button>';
+    wrap.appendChild(row);
+};
+profMgr.renderBioRows = function(list){
+    const wrap = document.getElementById('pp-bio-rows'); if(!wrap) return;
+    wrap.innerHTML = '';
+    const arr = Array.isArray(list) ? list : [];
+    if(!arr.length){ this.addBioRow('',''); return; }
+    arr.forEach(it => this.addBioRow((it&&it.year)||'', (it&&it.text)||''));
+};
+profMgr.collectBioRows = function(){
+    const wrap = document.getElementById('pp-bio-rows'); if(!wrap) return [];
+    return Array.from(wrap.querySelectorAll('.bio-row')).map(r => ({
+        year: (r.querySelector('.bio-year-in') ? r.querySelector('.bio-year-in').value : '').trim(),
+        text: (r.querySelector('.bio-text-in') ? r.querySelector('.bio-text-in').value : '').trim()
+    })).filter(o => o.year || o.text);
+};
+profMgr._parseBio = function(bioStr){
+    return String(bioStr||'').split('\n').map(l=>l.trim()).filter(Boolean).map(t=>{
+        t = t.replace(/^[•\-•]\s*/,'');
+        const m = t.match(/^([`'\d~\-\s]*?)\s*([^`'\d~\-\s].*)$/);
+        if(m && m[1] && /\d/.test(m[1])) return { year: m[1].replace(/`/g,"'").replace(/\s+/g,' ').trim(), text: m[2].trim() };
+        return { year:'', text:t };
+    });
+};
+
 
 
 
@@ -2158,18 +2195,22 @@ const ui = {
             // 3. 약력 리스트 (불렛 로직 포함)
             const bioArea = document.getElementById('pres-bio');
             if(bioArea) {
-                if(p.bio) {
-                    const esc = x => String(x).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-                    const lines = p.bio.split('\n').filter(l => l.trim() !== "");
-                    bioArea.innerHTML = lines.map(l => {
-                        const t = l.trim().replace(/^[•\-\u2022]\s*/, '');   // 앞 불릿 제거
+                const esc = x => String(x).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+                let _entries = [];
+                if (Array.isArray(p.bioList) && p.bioList.length) {
+                    _entries = p.bioList.map(it => ({ year:(it&&it.year)||'', text:(it&&it.text)||'' }));
+                } else if (p.bio) {
+                    _entries = String(p.bio).split('\n').map(l=>l.trim()).filter(Boolean).map(t=>{
+                        t = t.replace(/^[•\-•]\s*/,'');
                         const m = t.match(/^([`'\d~\-\s]*?)\s*([^`'\d~\-\s].*)$/);
-                        if (m && m[1] && /\d/.test(m[1])) {
-                            const year = m[1].replace(/`/g, "'").replace(/\s+/g, ' ').trim();
-                            return `<div class="bio-line"><span class="bio-year">${esc(year)}</span><span class="bio-text">${esc(m[2].trim())}</span></div>`;
-                        }
-                        return `<div class="bio-line"><span class="bio-text">${esc(t)}</span></div>`;
-                    }).join('');
+                        if (m && m[1] && /\d/.test(m[1])) return { year:m[1].replace(/`/g,"'").replace(/\s+/g,' ').trim(), text:m[2].trim() };
+                        return { year:'', text:t };
+                    });
+                }
+                if (_entries.length) {
+                    bioArea.innerHTML = _entries.map(e => e.year
+                        ? '<div class="bio-line"><span class="bio-year">'+esc(e.year)+'</span><span class="bio-text">'+esc(e.text)+'</span></div>'
+                        : '<div class="bio-line"><span class="bio-text">'+esc(e.text)+'</span></div>').join('');
                 } else {
                     bioArea.innerText = "등록된 약력이 없습니다.";
                 }
