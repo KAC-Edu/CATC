@@ -779,12 +779,7 @@
         <!-- 3. 요청 입력창 -->
         <div id="facilityInputArea" style="text-align:left;">
             <label style="font-size:12px; font-weight:800; color:#64748b; margin-left:5px;">필요한 비품 선택</label>
-            <div id="amenityChecks" style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin:8px 0 14px;">
-                <label class="amenity-chip"><input type="checkbox" value="수건"> <i class="fa-solid fa-bath" style="color:#0ea5e9;"></i> 수건</label>
-                <label class="amenity-chip"><input type="checkbox" value="샴푸"> <i class="fa-solid fa-pump-soap" style="color:#8b5cf6;"></i> 샴푸</label>
-                <label class="amenity-chip"><input type="checkbox" value="바디샤워"> <i class="fa-solid fa-soap" style="color:#10b981;"></i> 바디샤워</label>
-                <label class="amenity-chip"><input type="checkbox" value="치약"> <i class="fa-solid fa-tooth" style="color:#f59e0b;"></i> 치약</label>
-            </div>
+            <div id="amenityChecks" style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin:8px 0 14px;"></div>
             <label style="font-size:12px; font-weight:800; color:#64748b; margin-left:5px;">추가 요청 (직접 입력)</label>
             <textarea id="facilityReqText" placeholder="그 외 필요한 물품이나 요청사항을 적어주세요. (선택)" style="width:100%; height:72px; border:2px solid #e2e8f0; border-radius:15px; padding:15px; font-size:15px; outline:none; resize:none; margin-top:5px; margin-bottom:15px; background:#fff; line-height:1.5;"></textarea>
         </div>
@@ -4491,8 +4486,34 @@ function closeTabletLoan() {
 </script>
 
 <style>@media print{#__catcVer{display:none!important}}</style>
+<!-- [생활관 비품] 신청 가능 항목을 미화 설정(system/facility_items)에서 동적으로 -->
+<script>
+(function(){
+  if (typeof firebase === 'undefined') return;
+  var DEF = ['수건','샴푸','바디샤워','치약'];
+  var IC = {'수건':['fa-bath','#0ea5e9'],'샴푸':['fa-pump-soap','#8b5cf6'],'바디샤워':['fa-soap','#10b981'],'치약':['fa-tooth','#f59e0b'],'린스':['fa-pump-soap','#ec4899'],'칫솔':['fa-tooth','#0891b2'],'비누':['fa-soap','#22c55e'],'전기장판':['fa-plug','#ef4444'],'이불':['fa-bed','#6366f1'],'베개':['fa-bed','#8b5cf6'],'화장지':['fa-toilet-paper','#0ea5e9']};
+  window._facilityItems = null;
+  window.renderAmenityChecks = function(){
+    var box = document.getElementById('amenityChecks'); if(!box) return;
+    var items = (window._facilityItems && window._facilityItems.length) ? window._facilityItems : DEF;
+    box.innerHTML = items.map(function(it){
+      var m = IC[it] || ['fa-box','#64748b'];
+      var e = String(it).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
+      return '<label class="amenity-chip"><input type="checkbox" value="'+e+'"> <i class="fa-solid '+m[0]+'" style="color:'+m[1]+';"></i> '+e+'</label>';
+    }).join('');
+  };
+  try {
+    firebase.database().ref('system/facility_items').on('value', function(s){
+      var v = s.val();
+      window._facilityItems = Array.isArray(v) ? v : (v && typeof v==='object' ? Object.values(v) : null);
+      window.renderAmenityChecks();
+    });
+  } catch(e){ window.renderAmenityChecks(); }
+})();
+</script>
+
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vA</div>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vB</div>
 </body>
 </html>
 <!-- @build 20260613-202500 (식단표: weeklyMenu 경로 + 캐싱(이전) + 구조화 menu(JSON) 지원 — data.menu 있으면 이미지 대신 깔끔한 텍스트 표로 렌더(모바일 확대 불필요), 캐시도 menu 포함. 이미지면 기존대로 이미지+핀치줌) -->

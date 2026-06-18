@@ -111,6 +111,8 @@
         .switch.on{ background:#10b981; }
         .switch .kn{ position:absolute; top:3px; left:3px; width:24px; height:24px; border-radius:50%; background:#fff; transition:.18s; box-shadow:0 1px 4px rgba(0,0,0,.2); }
         .switch.on .kn{ left:25px; }
+        .rej-chip{ padding:8px 13px; border:1.5px solid #fecaca; background:#fef2f2; color:#b91c1c; border-radius:10px; font-size:13px; font-weight:800; cursor:pointer; }
+        .rej-chip:hover{ background:#fee2e2; }
         .set-close{ width:100%; margin-top:16px; padding:12px; border:none; border-radius:12px; background:#0f172a; color:#fff; font-size:14px; font-weight:800; cursor:pointer; }
 
         @media (max-width:860px){
@@ -151,7 +153,35 @@
         <div class="set-row" style="border:none;">
             <span class="lab" style="font-size:12.5px; color:#94a3b8; font-weight:700;">요청이 새로 접수되면 알림음이 울립니다.</span>
         </div>
+        <div class="set-row" style="display:block; border:none; padding-top:6px;">
+            <div class="lab" style="margin-bottom:9px;"><i class="fa-solid fa-box-open" style="color:#10b981; margin-right:7px;"></i> 신청 가능 비품 항목</div>
+            <div id="itemList" style="display:flex; flex-wrap:wrap; gap:6px; margin-bottom:9px;"></div>
+            <div style="display:flex; gap:6px;">
+                <input id="newItem" placeholder="비품명 (예: 전기장판)" onkeydown="if(event.key==='Enter')addItem()" style="flex:1; padding:9px 11px; border:1.5px solid #e2e8f0; border-radius:9px; font-size:13px; outline:none;">
+                <button onclick="addItem()" style="padding:9px 15px; border:none; border-radius:9px; background:#2563eb; color:#fff; font-weight:800; cursor:pointer;">추가</button>
+            </div>
+            <div style="font-size:11px; color:#94a3b8; margin-top:7px; line-height:1.5;">여기서 추가/삭제하면 교육생 앱 비품 신청 목록에 바로 반영됩니다. (예: 겨울철 전기장판 추가, 미제공 품목 삭제)</div>
+        </div>
         <button class="set-close" onclick="closeSet()">닫기</button>
+    </div>
+</div>
+
+<!-- [처리 불가 사유] 프리셋 + 직접입력 모달 -->
+<div class="ov" id="rejOv" onclick="if(event.target===this)closeRej()">
+    <div class="set">
+        <h3><i class="fa-solid fa-circle-xmark" style="color:#dc2626;"></i> 처리 불가 사유</h3>
+        <div style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:12px;">
+            <button type="button" class="rej-chip" onclick="rejPick('주별 허용 수량 초과')">주별 허용 수량 초과</button>
+            <button type="button" class="rej-chip" onclick="rejPick('재고 소진')">재고 소진</button>
+            <button type="button" class="rej-chip" onclick="rejPick('신청 대상 품목 아님')">신청 대상 품목 아님</button>
+            <button type="button" class="rej-chip" onclick="rejPick('중복 신청')">중복 신청</button>
+            <button type="button" class="rej-chip" onclick="rejPick('이미 직접 배부 완료')">직접 배부 완료</button>
+        </div>
+        <textarea id="rejText" placeholder="사유 직접 입력 (생략 가능)" style="width:100%; height:64px; border:1.5px solid #e2e8f0; border-radius:11px; padding:11px; font-size:14px; outline:none; resize:none;"></textarea>
+        <div style="display:flex; gap:8px; margin-top:14px;">
+            <button onclick="confirmRej()" style="flex:1; padding:12px; border:none; border-radius:11px; background:#dc2626; color:#fff; font-weight:800; cursor:pointer;">처리 불가 확정</button>
+            <button onclick="closeRej()" style="flex:1; padding:12px; border:none; border-radius:11px; background:#e2e8f0; color:#475569; font-weight:800; cursor:pointer;">취소</button>
+        </div>
     </div>
 </div>
 
@@ -310,7 +340,20 @@
         const el=document.getElementById('rc-'+rk); if(el) el.classList.add('resolving');   // 회색 비활성 → 곧 사라짐
         setTimeout(()=>{ db.child(id).update({status:'처리완료', resolvedAt: firebase.database.ServerValue.TIMESTAMP}); }, 320);
     }
-    function markReject(id){ const r=prompt('처리 불가 사유 (생략 가능)'); const u={status:'처리불가', resolvedAt: firebase.database.ServerValue.TIMESTAMP}; if(r)u.reason=r; db.child(id).update(u); }
+    let _rejId=null;
+    function markReject(id){ _rejId=id; var t=document.getElementById('rejText'); if(t)t.value=''; document.getElementById('rejOv').classList.add('show'); }
+    function rejPick(s){ var t=document.getElementById('rejText'); if(t)t.value=s; }
+    function confirmRej(){ const r=(document.getElementById('rejText').value||'').trim(); const u={status:'처리불가', resolvedAt: firebase.database.ServerValue.TIMESTAMP}; if(r)u.reason=r; if(_rejId) db.child(_rejId).update(u); closeRej(); }
+    function closeRej(){ document.getElementById('rejOv').classList.remove('show'); _rejId=null; }
+    /* ── 신청 가능 비품 항목 관리 (교육생 앱과 연동) ── */
+    const _itemsRef = firebase.database().ref('system/facility_items');
+    const _DEF_ITEMS=['수건','샴푸','바디샤워','치약'];
+    let _ITEMS=_DEF_ITEMS.slice();
+    _itemsRef.on('value', s=>{ const v=s.val(); _ITEMS = (Array.isArray(v)&&v.length) ? v : (v&&typeof v==='object'&&Object.keys(v).length ? Object.values(v) : _DEF_ITEMS.slice()); renderItemList(); });
+    function _escI(x){ return String(x).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;'); }
+    function renderItemList(){ const el=document.getElementById('itemList'); if(!el)return; el.innerHTML = _ITEMS.length ? _ITEMS.map((it,i)=>`<span style="display:inline-flex;align-items:center;gap:6px;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:9px;padding:6px 10px;font-weight:800;font-size:13px;">${_escI(it)} <i class="fa-solid fa-xmark" onclick="removeItem(${i})" style="color:#ef4444;cursor:pointer;"></i></span>`).join('') : '<span style="color:#94a3b8;font-size:12px;">기본 항목이 표시됩니다. 항목을 추가해 주세요.</span>'; }
+    function addItem(){ const inp=document.getElementById('newItem'); const v=(inp.value||'').trim(); if(!v)return; if(_ITEMS.indexOf(v)>=0){ inp.value=''; return; } _itemsRef.set(_ITEMS.concat([v])); inp.value=''; }
+    function removeItem(i){ const next=_ITEMS.slice(); next.splice(i,1); _itemsRef.set(next.length?next:null); }
     function undoStatus(id){ db.child(id).update({status:'대기', reason:null, resolvedAt:null}); }
 
     /* ── 3개월 자동 보관/정리 (그 이전 민원 자동 삭제) ── */
@@ -414,6 +457,6 @@
 </script>
 <!-- @build JDS260614 미화·비품: 전체높이 블록·블록별 독립스크롤, 3개월 보관 자동정리, 월간 리포트(반복호수·품목소진·건물비교·처리시간·요일/시간 패턴) + 인쇄/PDF, 새요청 알림음, 설정 -->
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vA</div>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vB</div>
 </body>
 </html>
