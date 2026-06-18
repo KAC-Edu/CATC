@@ -2159,8 +2159,17 @@ const ui = {
             const bioArea = document.getElementById('pres-bio');
             if(bioArea) {
                 if(p.bio) {
+                    const esc = x => String(x).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
                     const lines = p.bio.split('\n').filter(l => l.trim() !== "");
-                    bioArea.innerHTML = lines.map(l => `<div class="bio-line">${l.trim()}</div>`).join('');
+                    bioArea.innerHTML = lines.map(l => {
+                        const t = l.trim().replace(/^[•\-\u2022]\s*/, '');   // 앞 불릿 제거
+                        const m = t.match(/^([`'\d~\-\s]*?)\s*([^`'\d~\-\s].*)$/);
+                        if (m && m[1] && /\d/.test(m[1])) {
+                            const year = m[1].replace(/`/g, "'").replace(/\s+/g, ' ').trim();
+                            return `<div class="bio-line"><span class="bio-year">${esc(year)}</span><span class="bio-text">${esc(m[2].trim())}</span></div>`;
+                        }
+                        return `<div class="bio-line"><span class="bio-text">${esc(t)}</span></div>`;
+                    }).join('');
                 } else {
                     bioArea.innerText = "등록된 약력이 없습니다.";
                 }

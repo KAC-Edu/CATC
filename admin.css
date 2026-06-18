@@ -4024,3 +4024,14 @@ body:-webkit-full-screen .main-stage {
 .setup-acc .acc-item.open .acc-arrow { transform:rotate(180deg); }
 .setup-acc .acc-body { display:none; padding:15px; border-top:1px solid #eef2f7; }
 .setup-acc .acc-item.open .acc-body { display:block; }
+
+/* [교수 프로필 약력] 연도 배지 + 내용 타임라인 (pres-bio = .bio-body-list 에만 적용) */
+.bio-body-list .bio-line { display:flex; align-items:flex-start; gap:14px; padding-left:0; margin-bottom:12px; }
+.bio-body-list .bio-line::before { content:none !important; }
+.bio-body-list .bio-year {
+    flex:0 0 auto; min-width:62px; text-align:center;
+    background:#eff6ff; color:#1d4ed8; font-weight:800;
+    border-radius:9px; padding:4px 10px; font-size:14px; line-height:1.6;
+    border:1px solid #dbeafe; white-space:nowrap;
+}
+.bio-body-list .bio-text { flex:1; color:#334155; }
