@@ -1196,18 +1196,33 @@ _executeReset: function() {
     const _curName   = (document.getElementById('setup-course-name')?.value || '').trim();
     let _dismissPromise = Promise.resolve();
     try {
+        const _rmRoom = state.room;
         _dismissPromise = firebase.database().ref(`${rPath}/settings`).once('value').then(s => {
             const st = s.val() || {};
             const nm = (st.courseName || '').trim();
             const pd = (st.period || '').trim();
-            if (!nm) return;
-            // 대상 주 키 계산 (annualPlanMgr와 동일 기준)
-            let weekKey = '';
-            try { weekKey = annualPlanMgr._getTargetMonday(annualPlanMgr._today()); } catch(e) {}
-            const key = `${nm}|${pd}`.replace(/[.#$/\[\]]/g, '_');
             const upd = {};
-            upd[`system/dismissedCourses/${weekKey}/${key}`] = { name: nm, period: pd, at: Date.now() };
-            return firebase.database().ref().update(upd);
+            // [리셋 정합성] 지난 과정의 지원부 생활관 명단(주차__방)도 함께 제거 (새 과정에 옛 명단/배정이 끌려오는 문제 방지)
+            try {
+                const start = pd.includes(' ~ ') ? pd.split(' ~ ')[0].trim() : (pd.split('~')[0] || '').trim();
+                if (start) {
+                    const d = new Date(start + 'T00:00:00');
+                    if (!isNaN(d)) {
+                        const dow = (d.getDay() + 6) % 7;
+                        const mon = new Date(d); mon.setDate(d.getDate() - dow);
+                        const utc = mon.toISOString().slice(0, 10);
+                        const local = mon.getFullYear() + '-' + String(mon.getMonth()+1).padStart(2,'0') + '-' + String(mon.getDate()).padStart(2,'0');
+                        [local, utc].forEach(wk => { upd[`system/dorm/rosters/${wk}__${_rmRoom}`] = null; });
+                    }
+                }
+            } catch(e) {}
+            if (nm) {
+                let weekKey = '';
+                try { weekKey = annualPlanMgr._getTargetMonday(annualPlanMgr._today()); } catch(e) {}
+                const key = `${nm}|${pd}`.replace(/[.#$/\[\]]/g, '_');
+                upd[`system/dismissedCourses/${weekKey}/${key}`] = { name: nm, period: pd, at: Date.now() };
+            }
+            if (Object.keys(upd).length) return firebase.database().ref().update(upd);
         });
     } catch(e) {}
 
@@ -1245,6 +1260,7 @@ _executeReset: function() {
         [`${rPath}/connections`]:         null,
         [`${rPath}/quizAnswers`]:         null,
         [`${rPath}/expectedStudents`]:    null,
+        [`${rPath}/coordRoster`]:         null,
         [`${rPath}/activeQuiz`]:          null,
         [`${rPath}/quizFinalResults`]:    null,
         [`${rPath}/quizBank`]:            null,
@@ -8708,6 +8724,22 @@ const annualPlanMgr = {
                 if (course.name !== prevName) {
                     // 새/다른 과정 → 리셋 후 배치
                     Object.assign(updates, this._cleanStartUpdates(room));
+                    // [리셋 정합성] 지난 과정의 지원부 생활관 명단(주차__방)도 비움 (방마스터 설정은 유지)
+                    try {
+                        var _prevPd = ((curRooms[room] || {}).settings || {}).period || '';
+                        var _st = _prevPd.includes(' ~ ') ? _prevPd.split(' ~ ')[0].trim() : (_prevPd.split('~')[0] || '').trim();
+                        if (_st) {
+                            var _d = new Date(_st + 'T00:00:00');
+                            if (!isNaN(_d)) {
+                                var _dw = (_d.getDay() + 6) % 7;
+                                var _mo = new Date(_d); _mo.setDate(_d.getDate() - _dw);
+                                var _utc = _mo.toISOString().slice(0, 10);
+                                var _loc = _mo.getFullYear() + '-' + String(_mo.getMonth()+1).padStart(2,'0') + '-' + String(_mo.getDate()).padStart(2,'0');
+                                updates['system/dorm/rosters/' + _utc + '__' + room] = null;
+                                updates['system/dorm/rosters/' + _loc + '__' + room] = null;
+                            }
+                        }
+                    } catch(e) {}
                     wiped.push(`${room}(${prevName || '비어있음'}→${course.name})`);
                     updates[`courses/${room}/settings/courseName`] = course.name;
                     updates[`courses/${room}/settings/period`]     = course.period;
@@ -8750,6 +8782,7 @@ const annualPlanMgr = {
             [`${rPath}/connections`]:         null,
             [`${rPath}/quizAnswers`]:         null,
             [`${rPath}/expectedStudents`]:    null,
+            [`${rPath}/coordRoster`]:         null,
             [`${rPath}/activeQuiz`]:          null,
             [`${rPath}/quizFinalResults`]:    null,
             [`${rPath}/attendanceQR`]:        null,
