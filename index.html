@@ -927,24 +927,23 @@
 
             <!-- 시간 선택 영역 (외출/외박 분기) -->
 
-            <!-- 외출 시간 (한 줄) -->
-            <div id="outingTimeArea" style="background:#f8fafc; padding:11px 12px; border-radius:12px; border:1px solid #e2e8f0;">
-                <div style="display:flex; align-items:center; gap:8px;">
-                    <div style="flex:1; text-align:center; padding:9px 6px; background:#e0f2fe; border-radius:8px; font-size:14px; font-weight:900; color:#0369a1;">출발 18:00</div>
-                    <span style="color:#94a3b8; font-weight:800;">→</span>
-                    <select id="endTime" style="flex:1; padding:9px 6px; border:1.5px solid #cbd5e1; border-radius:8px; font-size:15px; font-weight:800; background:white; outline:none; color:#0f172a;">
-                        <option value="18:30">복귀 18:30</option>
-                        <option value="19:00">복귀 19:00</option>
-                        <option value="19:30">복귀 19:30</option>
-                        <option value="20:00" selected>복귀 20:00</option>
-                        <option value="20:30">복귀 20:30</option>
-                        <option value="21:00">복귀 21:00</option>
-                        <option value="21:30">복귀 21:30</option>
-                        <option value="22:00">복귀 22:00</option>
+            <!-- 외출 시간 -->
+            <div id="outingTimeArea" style="background:#f8fafc; padding:14px; border-radius:12px; border:1px solid #e2e8f0;">
+                <div style="font-size:12px; font-weight:900; color:#0369a1; margin-bottom:10px;">🕕 수업 종료(18:00) 후 외출</div>
+                <div style="display:flex; align-items:center; gap:12px;">
+                    <span style="font-size:14px; font-weight:800; color:#475569; white-space:nowrap;">복귀 시간</span>
+                    <select id="endTime" style="flex:1; padding:12px; border:1.5px solid #cbd5e1; border-radius:10px; font-size:16px; font-weight:800; background:white; outline:none; color:#0f172a;">
+                        <option value="18:30">18:30</option>
+                        <option value="19:00">19:00</option>
+                        <option value="19:30">19:30</option>
+                        <option value="20:00" selected>20:00</option>
+                        <option value="20:30">20:30</option>
+                        <option value="21:00">21:00</option>
+                        <option value="21:30">21:30</option>
+                        <option value="22:00">22:00</option>
                     </select>
                 </div>
                 <input type="hidden" id="startTime" value="18:00">
-                <div style="font-size:10.5px; color:#94a3b8; margin-top:6px; font-weight:700;">수업 종료(18:00) 후 외출 · 복귀시간 선택</div>
             </div>
 
             <!-- 외박 날짜 영역 (외박 선택 시만 표시) -->
@@ -4541,9 +4540,9 @@ function closeTabletLoan() {
 .menu-overlay { background:linear-gradient(180deg,#eef5ff 0%,#dbe9ff 100%) !important; -webkit-backdrop-filter:none !important; backdrop-filter:none !important; }
 .menu-box { box-shadow:0 18px 44px rgba(37,99,235,.16) !important; }
 /* 외출·외박 신청서: 한 화면에 보이게 (높이 확대 + 여백 축소) */
-#adminActionModal { align-items:flex-start !important; padding-top:6px !important; }
-#adminActionModal .menu-box { max-height:98vh !important; width:96% !important; max-width:470px !important; padding:12px 14px !important; }
-#adminActionForm { gap:9px !important; }
+#adminActionModal { align-items:flex-start !important; padding-top:10px !important; }
+#adminActionModal .menu-box { max-height:96vh !important; width:96% !important; max-width:470px !important; padding:16px 18px !important; }
+#adminActionForm { gap:13px !important; }
 /* 내 정보 카드 입체감 */
 .user-profile-card { box-shadow:0 4px 14px rgba(15,23,42,.06); border:1px solid #eef2f7; border-radius:18px !important; }
 .btn-edit-profile { border-radius:10px !important; }
@@ -4608,7 +4607,7 @@ input:not([type=checkbox]):not([type=radio]):not([type=file]), textarea, select 
 </script>
 
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vM</div>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vN</div>
 </body>
 </html>
 <!-- @build 20260613-202500 (식단표: weeklyMenu 경로 + 캐싱(이전) + 구조화 menu(JSON) 지원 — data.menu 있으면 이미지 대신 깔끔한 텍스트 표로 렌더(모바일 확대 불필요), 캐시도 menu 포함. 이미지면 기존대로 이미지+핀치줌) -->
