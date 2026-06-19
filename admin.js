@@ -6898,7 +6898,7 @@ init: function() {
             <div style="flex:0 0 38%;${photoCss}">${photoInner}</div>
             <div style="flex:1;min-width:0;padding:40px 44px;display:flex;flex-direction:column;">
                 <div><span style="display:inline-block;background:#1e293b;color:#fff;font-size:12px;font-weight:800;padding:5px 15px;border-radius:14px;letter-spacing:.02em;">과정 담임</span></div>
-                <div style="margin-top:18px;font-size:17px;color:#64748b;font-weight:700;">교수 <span style="font-size:34px;font-weight:900;color:#1e3a8a;margin:0 4px;vertical-align:-2px;">${name}</span>${eng}</div>
+                <div style="margin-top:24px;line-height:1.3;font-size:17px;color:#64748b;font-weight:700;">교수 <span style="font-size:32px;font-weight:900;color:#1e3a8a;margin:0 4px;">${name}</span>${eng}</div>
                 <div style="height:1px;background:#e2e8f0;margin:20px 0 0;"></div>
                 ${quote}
                 ${contactHtml}

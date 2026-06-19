@@ -1535,7 +1535,6 @@ body.night-mode .badge-idle {
     width: auto !important;
     height: auto !important;
     border-radius: 0 !important;
-    display: block !important;
 }
 /* 전체화면에서 담임교수 프로필 페이지 — 모니터 가득 채우기 */
 #pdfWrapper:fullscreen #guideProfile,
@@ -1547,7 +1546,17 @@ body.night-mode .badge-idle {
     overflow-y: auto !important;
     border-radius: 0 !important;
     box-shadow: none !important;
-    background: #fff !important;
+    background: #0f172a !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 3vh 3vw !important;
+    box-sizing: border-box !important;
+}
+#pdfWrapper:fullscreen #guideProfile > div,
+#pdfWrapper:-webkit-full-screen #guideProfile > div {
+    width: 100% !important;
+    max-width: 1200px !important;
 }
 
 
