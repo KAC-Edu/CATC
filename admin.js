@@ -7041,6 +7041,13 @@ init: function() {
         }
     },
 
+    // 첫 페이지로 이동
+    goFirst: function() {
+        const slot = guideMgr._slot();
+        if (!slot.pdfDoc || guideMgr.isRendering) return;
+        guideMgr.renderPage(1);
+    },
+
     // 6. PDF 영역만 전체화면
     toggleFullScreen: function() {
         const wrapper = document.getElementById('pdfWrapper');

@@ -651,7 +651,7 @@
 
             <h3 style="margin-bottom:15px; font-size:16px; color:#64748b;">메뉴 서비스</h3>
             <div class="menu-item" id="menu-kakao" style="display:none; background:#FAE100; color:#3A1D1D; font-weight:900; text-align:center;" onclick="openKakaoChat()"><svg viewBox="0 0 24 24" width="18" height="18" style="vertical-align:-3px;" aria-hidden="true"><path d="M12 5C7 5 3.2 8.1 3.2 11.9c0 2.45 1.66 4.6 4.2 5.78-.18.66-.66 2.42-.74 2.78-.1.45.16.45.35.33.16-.1 2.5-1.7 3.5-2.4.49.07.98.1 1.49.1 5 0 8.8-3.1 8.8-6.9S17 5 12 5z" fill="#3A1D1D"/></svg> 카카오톡 오픈톡방 입장</div>
-            <div class="menu-item" id="menu-survey-instant" style="display:none; background:#e0f2fe; color:#0369a1; font-weight:900; text-align:center;" onclick="document.getElementById('menuModal').style.display='none'; openInstantSurvey();"><i class="fa-solid fa-square-poll-vertical"></i> 설문 응답 / 수정</div>
+            <div class="menu-item" id="menu-survey-instant" style="display:none; background:#e0f2fe; color:#0369a1; font-weight:900; text-align:center;" onclick="openInstantSurvey();"><i class="fa-solid fa-square-poll-vertical"></i> 설문 응답 / 수정</div>
             <div class="menu-item" onclick="openNotice()"><i class="fa-solid fa-bullhorn" style="color: #facc15;"></i> 공지사항 </div>
             <div class="menu-item" onclick="viewMealMenu()"><i class="fa-solid fa-utensils"></i> 금주 식단보기</div>
             <div id="svcGateBanner" style="display:none; background:#fff7ed; border:1px solid #fed7aa; color:#b45309; border-radius:12px; padding:11px 13px; font-size:12.5px; font-weight:700; line-height:1.5; margin-bottom:4px;"><i class="fa-solid fa-lock" style="margin-right:5px;"></i> 현재 담당 교수님이 신청 기능을 열어두지 않아 <b>차량·외출/외박·석식·비품·태블릿 신청이 비활성화</b>되어 있습니다.</div>
@@ -1840,9 +1840,15 @@ function setupListeners() {
         const data = s.val() || {};
         const sel = document.getElementById('subjectSelect');
         if(!sel) return;
+        const _honorific = (s) => {
+            s = String(s || '').trim();
+            if (!s || s.endsWith('님')) return s;
+            if (/(교수|강사|부장|차장|과장|팀장|실장|원장|소장|센터장|선생|박사|교관|담당|위원)$/.test(s)) return s + '님';
+            return s;
+        };
         let html = '<option value="공통질문">질문 대상 선택 (기본: 공통질문)</option>';
         Object.values(data).forEach(name => {
-            html += `<option value="${name}">${name}</option>`;
+            html += `<option value="${name}">${_honorific(name)}</option>`;
         });
         sel.innerHTML = html;
     });
@@ -2585,7 +2591,6 @@ let currentShuttleData = null; // 나의 신청 데이터 저장용
 // [수정] 기사님이 설정한 출발 시간을 실시간으로 연동하도록 변경된 함수
 async function openShuttleApply() {
     if (await _svcGateBlocked('차량 신청')) return;
-    document.getElementById('menuModal').style.display = 'none';
     document.getElementById('shuttleModal').style.display = 'flex';
 
     const uToken = localStorage.getItem('uToken');
@@ -3588,7 +3593,6 @@ function _menuTableHTML(menu){
 
 // 식단표 보기 함수 (성능 최적화 버전)
 async function viewMealMenu() {
-    document.getElementById('menuModal').style.display = 'none';
 
     const modal = document.getElementById('mealMenuModal');
     const loader = document.getElementById('mealLoading');
@@ -3670,7 +3674,6 @@ async function viewMealMenu() {
 
 // 공지사항 불러오기: 센터 공지 + 운영부 공지
 async function openNotice() {
-    document.getElementById('menuModal').style.display = 'none';
     const container = document.getElementById('noticeContainer');
     
     container.innerHTML = "<div style='text-align:center; padding:20px;'>데이터를 불러오는 중...</div>";
@@ -3771,7 +3774,6 @@ async function openFacilityRequest() {
         return;
     }
 
-    document.getElementById('menuModal').style.display = 'none';
     document.getElementById('facilityModal').style.display = 'flex';
     
     const dormInfo = document.getElementById('displayMyDorm').innerText;
@@ -3936,7 +3938,6 @@ async function submitFacilityRequest() {
 
 // [신규] 출결 QR 불러오기
 async function openAttendanceQR() {
-    document.getElementById('menuModal').style.display = 'none';
     const img = document.getElementById('qrImage');
     const msg = document.getElementById('qrEmptyMsg');
     img.style.display = 'none'; msg.style.display = 'none';
@@ -3979,7 +3980,6 @@ function openHrdAttendanceApp() {
 }
 
 function openSurveyModal() {
-    document.getElementById('menuModal').style.display = 'none';
     document.getElementById('surveyModal').style.display = 'flex';
 }
 
@@ -4417,7 +4417,6 @@ if (imageContainer && mealImg) {
 // ─── 태블릿 대여 신청 ───────────────────────────────────────────────
 async function openTabletLoan() {
     if (await _svcGateBlocked('태블릿 대여 신청')) return;
-    document.getElementById('menuModal').style.display = 'none';
     document.getElementById('tabletLoanModal').style.display = 'flex';
     const uToken = localStorage.getItem('uToken');
 
@@ -4720,6 +4719,6 @@ input:not([type=checkbox]):not([type=radio]):not([type=file]), textarea, select 
 })();
 </script>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vV</div>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vX</div>
 </body>
 </html>
