@@ -9726,33 +9726,44 @@ window.simpleMode = (function(){
 })();
 
 
-/* ===== [임시 진단] home화면(showWaitingRoom)을 누가 부르는지 화면에 표시 ===== */
+
+/* ===== [임시 진단 v2] 입장 시 호출 흐름을 화면에 표시 ===== */
 (function(){
-  function install(){
-    if(!window.ui || typeof ui.showWaitingRoom !== 'function' || ui.__diagWrapped) { return false; }
-    ui.__diagWrapped = true;
-    var _orig = ui.showWaitingRoom.bind(ui);
-    ui.showWaitingRoom = function(){
+  window.__diagLog = function(msg){
+    try{
+      var box=document.getElementById('__diagBox');
+      if(!box){
+        box=document.createElement('div'); box.id='__diagBox';
+        box.style.cssText='position:fixed;left:0;right:0;bottom:0;z-index:2147483647;max-height:45vh;overflow:auto;background:#0b3b0b;color:#bbf7d0;font:12px/1.55 monospace;padding:10px 12px;white-space:pre-wrap;border-top:3px solid #22c55e;';
+        var btn=document.createElement('button'); btn.textContent='지우기'; btn.style.cssText='position:absolute;top:6px;right:8px;background:#fff;color:#0b3b0b;border:none;border-radius:6px;padding:4px 10px;font-weight:800;cursor:pointer;';
+        btn.onclick=function(){ box.querySelectorAll('.ln').forEach(function(e){e.remove();}); };
+        box.appendChild(btn);
+        document.body.appendChild(box);
+      }
+      var t=new Date().toLocaleTimeString();
+      var ln=document.createElement('div'); ln.className='ln'; ln.textContent='● ['+t+'] '+msg;
+      box.appendChild(ln);
+    }catch(e){}
+  };
+  function wrap(obj,name,label){
+    if(!obj || typeof obj[name]!=='function' || obj['__w_'+name]) return false;
+    obj['__w_'+name]=true;
+    var _o=obj[name].bind(obj);
+    obj[name]=function(){
       try{
-        var stk = (new Error()).stack || '(no stack)';
-        var box = document.getElementById('__diagBox');
-        if(!box){
-          box = document.createElement('div'); box.id='__diagBox';
-          box.style.cssText='position:fixed;left:0;right:0;bottom:0;z-index:2147483647;max-height:45vh;overflow:auto;background:#7f1d1d;color:#fff;font:12px/1.5 monospace;padding:10px 12px;white-space:pre-wrap;border-top:3px solid #fff;';
-          var btn=document.createElement('button'); btn.textContent='닫기'; btn.style.cssText='position:absolute;top:6px;right:8px;background:#fff;color:#7f1d1d;border:none;border-radius:6px;padding:4px 10px;font-weight:800;cursor:pointer;';
-          btn.onclick=function(){ box.style.display='none'; };
-          box.appendChild(btn);
-          document.body.appendChild(box);
-        }
-        box.style.display='block';
-        var t = new Date().toLocaleTimeString();
-        box.insertBefore(document.createTextNode('● ['+t+'] showWaitingRoom() 호출\n'+stk+'\n\n'), box.firstChild.nextSibling || null);
+        var a=Array.prototype.slice.call(arguments).map(function(x){return (typeof x==='object')?'{..}':String(x);}).join(',');
+        window.__diagLog(label+'('+a+')');
+        if(label==='showWaitingRoom'){ window.__diagLog('   ↳ stack: '+((new Error()).stack||'').split('\n').slice(2,5).join(' | ')); }
       }catch(e){}
-      return _orig.apply(this, arguments);
+      return _o.apply(this,arguments);
     };
     return true;
   }
-  if(!install()){
-    var tries=0; var iv=setInterval(function(){ tries++; if(install()||tries>40) clearInterval(iv); }, 250);
+  function install(){
+    var ok=true;
+    if(window.ui){ wrap(ui,'setMode','setMode'); wrap(ui,'showWaitingRoom','showWaitingRoom'); } else ok=false;
+    if(window.dataMgr){ wrap(dataMgr,'forceEnterRoom','forceEnterRoom'); wrap(dataMgr,'verifyTakeover','verifyTakeover'); wrap(dataMgr,'switchRoomAttempt','switchRoomAttempt'); } else ok=false;
+    return ok;
   }
+  if(!install()){ var n=0; var iv=setInterval(function(){ n++; if(install()||n>40) clearInterval(iv); },250); }
 })();
