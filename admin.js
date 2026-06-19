@@ -9650,6 +9650,25 @@ window.simpleMode = (function(){
       var m=document.getElementById('simplePwModal'); if(m) m.style.display='none';
       document.body.classList.remove('simple-landing');
       if (window.dataMgr && dataMgr.verifyTakeover) dataMgr.verifyTakeover();
+      SM._enforceDashboard(room);
+    },
+    // 입장 후 어떤 경로로든 메인 home화면(통합 현황판)으로 빠지면 과정현황으로 강제 복귀
+    _enforceDashboard: function(room){
+      if (SM._enf) clearInterval(SM._enf);
+      var n = 0;
+      SM._enf = setInterval(function(){
+        n++;
+        var vh = document.getElementById('view-home');
+        var homeShown = vh && window.getComputedStyle(vh).display !== 'none';
+        if (homeShown) {
+          localStorage.setItem('kac_last_mode','dashboard');
+          if (state.room !== room && window.dataMgr && dataMgr.forceEnterRoom) {
+            dataMgr.forceEnterRoom(room);
+          }
+          if (window.ui && ui.setMode) ui.setMode('dashboard');
+        }
+        if (n >= 16) clearInterval(SM._enf);
+      }, 250);
     },
     closePw: function(){ var m=document.getElementById('simplePwModal'); if(m) m.style.display='none'; },
     submitPw: async function(){
