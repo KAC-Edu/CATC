@@ -2817,7 +2817,7 @@ async function openAdminAction() {
         // 초기 상태: 외출 시간 영역 표시
         const oa = document.getElementById('outingTimeArea');
         const on = document.getElementById('overnightArea');
-        if (oa) oa.style.display = 'flex';
+        if (oa) oa.style.display = 'block';
         if (on) on.style.display = 'none';
 
         // [기능 추가] 이전 신청 정보가 있으면 그대로 불러올지 물어본다
@@ -2971,7 +2971,7 @@ function selectAdminType(type) {
         document.getElementById('endTime').value   = '08:00';
     } else {
         // 외출: 시간 영역 표시
-        if (outingArea)    outingArea.style.display    = 'flex';
+        if (outingArea)    outingArea.style.display    = 'block';
         if (overnightArea) overnightArea.style.display = 'none';
         // 시작 고정, 종료 기본값 20:00
         document.getElementById('startTime').value = '18:00';
@@ -3000,7 +3000,7 @@ function showAdminStep(n){
     if(n===4){
         var oa=document.getElementById('outingTimeArea'), on=document.getElementById('overnightArea');
         if(selectedAdminType==='overnight'){ if(oa)oa.style.display='none'; if(on)on.style.display='flex'; }
-        else { if(oa)oa.style.display='flex'; if(on)on.style.display='none'; }
+        else { if(oa)oa.style.display='block'; if(on)on.style.display='none'; }
     }
     if(n===5){
         var ch=document.getElementById('wizDinnerBox'), as=document.getElementById('wizDinnerAssumed');
@@ -4622,6 +4622,9 @@ function closeTabletLoan() {
 /* 메뉴: 본화면 안 비치게 밝은 단독 화면 */
 .menu-overlay { background:linear-gradient(180deg,#eef5ff 0%,#dbe9ff 100%) !important; -webkit-backdrop-filter:none !important; backdrop-filter:none !important; }
 .menu-box { box-shadow:0 18px 44px rgba(37,99,235,.16) !important; }
+/* 메인 메뉴: 바깥 흰 카드 제거 — 항목들이 배경 위에 바로 놓이게 */
+#menuModal > .menu-box { background:transparent !important; box-shadow:none !important; max-width:400px !important; width:92% !important; padding:8px 6px 14px !important; }
+
 /* 외출·외박 신청서: 화면 중앙 정렬 + 내용 넘치면 박스 안에서 스크롤 */
 #adminActionModal { align-items:center !important; justify-content:center !important; padding:16px 0 !important; }
 #adminActionModal .menu-box { max-height:90vh !important; overflow-y:auto !important; -webkit-overflow-scrolling:touch !important; width:92% !important; max-width:440px !important; padding:18px 18px !important; }
@@ -4690,8 +4693,34 @@ input:not([type=checkbox]):not([type=radio]):not([type=file]), textarea, select 
 })();
 </script>
 
+<script>
+/* 닫기 버튼 색상·크기 통일 (시인성) — 텍스트가 정확히 '닫기'인 버튼만 */
+(function(){
+  function normalizeCloseButtons(){
+    document.querySelectorAll('button').forEach(function(b){
+      if(b.id==='adminCloseX') return;
+      if(((b.textContent||'').trim())==='닫기'){
+        b.style.background='#334155';
+        b.style.color='#ffffff';
+        b.style.border='none';
+        b.style.borderRadius='12px';
+        b.style.padding='13px';
+        b.style.fontSize='15px';
+        b.style.fontWeight='800';
+        b.style.cursor='pointer';
+        b.style.boxShadow='0 2px 8px rgba(51,65,85,.18)';
+        if(!b.style.width || b.style.width==='') b.style.width='100%';
+      }
+    });
+  }
+  window.normalizeCloseButtons=normalizeCloseButtons;
+  if(document.readyState!=='loading') normalizeCloseButtons();
+  else document.addEventListener('DOMContentLoaded', normalizeCloseButtons);
+  window.addEventListener('load', normalizeCloseButtons);
+})();
+</script>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vT</div>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vU</div>
 </body>
 </html>
                                     
