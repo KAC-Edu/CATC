@@ -9724,3 +9724,35 @@ window.simpleMode = (function(){
   };
   return SM;
 })();
+
+
+/* ===== [임시 진단] home화면(showWaitingRoom)을 누가 부르는지 화면에 표시 ===== */
+(function(){
+  function install(){
+    if(!window.ui || typeof ui.showWaitingRoom !== 'function' || ui.__diagWrapped) { return false; }
+    ui.__diagWrapped = true;
+    var _orig = ui.showWaitingRoom.bind(ui);
+    ui.showWaitingRoom = function(){
+      try{
+        var stk = (new Error()).stack || '(no stack)';
+        var box = document.getElementById('__diagBox');
+        if(!box){
+          box = document.createElement('div'); box.id='__diagBox';
+          box.style.cssText='position:fixed;left:0;right:0;bottom:0;z-index:2147483647;max-height:45vh;overflow:auto;background:#7f1d1d;color:#fff;font:12px/1.5 monospace;padding:10px 12px;white-space:pre-wrap;border-top:3px solid #fff;';
+          var btn=document.createElement('button'); btn.textContent='닫기'; btn.style.cssText='position:absolute;top:6px;right:8px;background:#fff;color:#7f1d1d;border:none;border-radius:6px;padding:4px 10px;font-weight:800;cursor:pointer;';
+          btn.onclick=function(){ box.style.display='none'; };
+          box.appendChild(btn);
+          document.body.appendChild(box);
+        }
+        box.style.display='block';
+        var t = new Date().toLocaleTimeString();
+        box.insertBefore(document.createTextNode('● ['+t+'] showWaitingRoom() 호출\n'+stk+'\n\n'), box.firstChild.nextSibling || null);
+      }catch(e){}
+      return _orig.apply(this, arguments);
+    };
+    return true;
+  }
+  if(!install()){
+    var tries=0; var iv=setInterval(function(){ tries++; if(install()||tries>40) clearInterval(iv); }, 250);
+  }
+})();
