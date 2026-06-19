@@ -530,7 +530,7 @@
     </script>
 
     <div id="landingPage" class="landing-page">
-        <div class="landing-brand"><img src="logo.webp" alt="KAC" class="landing-brand-logo"><span>항공기술훈련원 교육생 플랫폼</span></div>
+        <div class="landing-brand"><i class="fa-solid fa-plane-departure" style="color:#2563eb; font-size:17px;"></i><span>항공기술훈련원 교육생 플랫폼</span></div>
         <div class="landing-hero">
             <img src="catc.webp" alt="항공기술훈련원" class="landing-banner">
             <div class="landing-welcome"><i class="fa-solid fa-hand-sparkles"></i> 환영합니다</div>
@@ -4491,6 +4491,10 @@ function closeTabletLoan() {
 
 <style id="kac-theme-refresh-2026">
 /* ── 교육생 플랫폼 테마 리프레시 (포탈 톤: 산뜻·클린) ── */
+/* 첫 로딩 화면도 랜딩과 동일한 밝은 톤으로 통일 */
+#global-loader { background: linear-gradient(180deg,#eef5ff 0%,#dbe9ff 55%,#c7ddff 100%) !important; }
+#global-loader .loader-banner { border:1px solid rgba(255,255,255,.85) !important; box-shadow:0 16px 40px rgba(37,99,235,.20) !important; border-radius:18px !important; }
+#global-loader .loader-text { color:#1e40af !important; font-weight:700; }
 .menu-overlay { background: rgba(15,23,42,.55) !important; -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); }
 .menu-box { border-radius:22px !important; max-width:382px !important; padding:18px !important; box-shadow:0 24px 60px rgba(15,23,42,.35) !important; }
 .menu-box .menu-item {
@@ -4561,7 +4565,7 @@ input:not([type=checkbox]):not([type=radio]):not([type=file]), textarea, select 
 </script>
 
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vF</div>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vG</div>
 </body>
 </html>
 <!-- @build 20260613-202500 (식단표: weeklyMenu 경로 + 캐싱(이전) + 구조화 menu(JSON) 지원 — data.menu 있으면 이미지 대신 깔끔한 텍스트 표로 렌더(모바일 확대 불필요), 캐시도 menu 포함. 이미지면 기존대로 이미지+핀치줌) -->
