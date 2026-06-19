@@ -1004,17 +1004,15 @@
                     </div>
                 </div>
 
-                <div style="display:flex; gap:8px; margin-top:12px;">
-                    <div style="flex:1;">
-                        <label style="font-size:11px; font-weight:800; color:#64748b;">행선지</label>
-                        <input type="text" id="destination" list="destHistory" placeholder="예: 청주시내" style="width:100%; padding:11px 12px; border:1.5px solid #e2e8f0; border-radius:10px; outline:none; font-size:15px;">
-                        <datalist id="destHistory"></datalist>
-                    </div>
-                    <div style="flex:1;">
-                        <label style="font-size:11px; font-weight:800; color:#64748b;">신청 사유</label>
-                        <input type="text" id="outingReason" list="reasonHistory" placeholder="예: 개인용무" style="width:100%; padding:11px 12px; border:1.5px solid #e2e8f0; border-radius:10px; outline:none; font-size:15px;">
-                        <datalist id="reasonHistory"></datalist>
-                    </div>
+                <div style="margin-top:12px;">
+                    <label style="font-size:12px; font-weight:800; color:#64748b;">행선지</label>
+                    <input type="text" id="destination" list="destHistory" placeholder="예: 청주시내" style="width:100%; margin-top:4px; padding:12px; border:1.5px solid #e2e8f0; border-radius:10px; outline:none; font-size:15px;">
+                    <datalist id="destHistory"></datalist>
+                </div>
+                <div style="margin-top:10px;">
+                    <label style="font-size:12px; font-weight:800; color:#64748b;">신청 사유</label>
+                    <input type="text" id="outingReason" list="reasonHistory" placeholder="예: 개인용무" style="width:100%; margin-top:4px; padding:12px; border:1.5px solid #e2e8f0; border-radius:10px; outline:none; font-size:15px;">
+                    <datalist id="reasonHistory"></datalist>
                 </div>
 
                 <div style="display:flex; gap:8px; margin-top:16px;">
@@ -4624,10 +4622,11 @@ function closeTabletLoan() {
 /* 메뉴: 본화면 안 비치게 밝은 단독 화면 */
 .menu-overlay { background:linear-gradient(180deg,#eef5ff 0%,#dbe9ff 100%) !important; -webkit-backdrop-filter:none !important; backdrop-filter:none !important; }
 .menu-box { box-shadow:0 18px 44px rgba(37,99,235,.16) !important; }
-/* 외출·외박 신청서: 한 화면에 보이게 (높이 확대 + 여백 축소) */
-#adminActionModal { align-items:flex-start !important; padding-top:10px !important; }
-#adminActionModal .menu-box { max-height:96vh !important; width:96% !important; max-width:470px !important; padding:16px 18px !important; }
+/* 외출·외박 신청서: 화면 중앙 정렬 + 내용 넘치면 박스 안에서 스크롤 */
+#adminActionModal { align-items:center !important; justify-content:center !important; padding:16px 0 !important; }
+#adminActionModal .menu-box { max-height:90vh !important; overflow-y:auto !important; -webkit-overflow-scrolling:touch !important; width:92% !important; max-width:440px !important; padding:18px 18px !important; }
 #adminActionForm { gap:13px !important; }
+#adminActionForm input, #adminActionForm select { box-sizing:border-box !important; max-width:100% !important; }
 /* 내 정보 카드 입체감 */
 .user-profile-card { box-shadow:0 4px 14px rgba(15,23,42,.06); border:1px solid #eef2f7; border-radius:18px !important; }
 .btn-edit-profile { border-radius:10px !important; }
@@ -4644,7 +4643,7 @@ input:not([type=checkbox]):not([type=radio]):not([type=file]), textarea, select 
 }
 .landing-brand { display:flex; align-items:center; gap:9px; font-size:14px; font-weight:800; color:#1e3a8a; margin-bottom:20px; }
 .landing-brand-logo { width:50px; height:auto; }
-.landing-hero { background:#fff; border-radius:26px; padding:14px 14px 18px; width:90%; max-width:400px; margin-bottom:26px; display:flex; flex-direction:column; align-items:center; box-shadow:0 24px 54px rgba(37,99,235,.20); }
+.landing-hero { background:transparent; border-radius:0; padding:0; width:90%; max-width:400px; margin-bottom:26px; display:flex; flex-direction:column; align-items:center; box-shadow:none; }
 .landing-hero .landing-banner { width:100% !important; max-width:100% !important; margin:0 0 13px 0 !important; border-radius:18px !important; box-shadow:0 8px 20px rgba(37,99,235,.14) !important; border:none !important; }
 .landing-welcome { font-size:13px; font-weight:800; color:#2563eb; margin-bottom:11px; letter-spacing:.01em; }
 .landing-welcome i { margin-right:5px; }
@@ -4692,7 +4691,7 @@ input:not([type=checkbox]):not([type=radio]):not([type=file]), textarea, select 
 </script>
 
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vR</div>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vT</div>
 </body>
 </html>
-<!-- @build 20260613-202500 (식단표: weeklyMenu 경로 + 캐싱(이전) + 구조화 menu(JSON) 지원 — data.menu 있으면 이미지 대신 깔끔한 텍스트 표로 렌더(모바일 확대 불필요), 캐시도 menu 포함. 이미지면 기존대로 이미지+핀치줌) -->
+                                    
