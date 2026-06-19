@@ -9585,9 +9585,44 @@ window.simpleMode = (function(){
       grid.innerHTML = html || '<div class="sl-empty">현재 운영 중인 과정이 없습니다.</div>';
     },
     enterCourse: function(room){
-      document.body.classList.remove('simple-landing');
-      if (window.dataMgr && dataMgr.forceEnterRoom) dataMgr.forceEnterRoom(room);
-      setTimeout(function(){ if(window.ui && ui.setMode) ui.setMode('dashboard'); }, 350);
+      SM._pendingRoom = room;
+      var d = window.latestCoursesData || {};
+      var se = (d[room] && d[room].settings) || {};
+      var st = (d[room] && d[room].status) || {};
+      var label = se.courseName ? String(se.courseName).trim() : ('Room ' + room);
+      var prof = st.professorName ? (' · ' + st.professorName) : '';
+      var lc=document.getElementById('simplePwCourse'); if(lc) lc.textContent = label + prof;
+      var msg=document.getElementById('simplePwMsg'); if(msg) msg.textContent='';
+      var inp=document.getElementById('simplePwInput'); if(inp) inp.value='';
+      var modal=document.getElementById('simplePwModal'); if(modal) modal.style.display='flex';
+      setTimeout(function(){ var i=document.getElementById('simplePwInput'); if(i) i.focus(); }, 60);
+    },
+    closePw: function(){ var m=document.getElementById('simplePwModal'); if(m) m.style.display='none'; },
+    submitPw: async function(){
+      var room = SM._pendingRoom;
+      var inp = document.getElementById('simplePwInput');
+      var val = inp ? (inp.value||'').trim() : '';
+      if(!room || !val) return;
+      try {
+        var settingSnap = await firebase.database().ref('courses/'+room+'/settings').get();
+        var settings = settingSnap.val() || {};
+        var dbPw = settings.password || btoa('7777');
+        if (btoa(val) === dbPw) {
+          state.isObserver = false; sessionStorage.removeItem('kac_observer_room');
+          await firebase.database().ref('courses/'+room+'/status').update({ ownerSessionId: state.sessionId, ownerLastSeen: firebase.database.ServerValue.TIMESTAMP, roomStatus: 'active' });
+          try { localStorage.setItem('last_owned_room', room); if(window.dataMgr && dataMgr.addOwnedRoom) dataMgr.addOwnedRoom(room); } catch(e){}
+          if (window.lectureMonitor && lectureMonitor.stopMic) { try { lectureMonitor._consentRoomAsked = room; lectureMonitor.stopMic(true); } catch(e){} }
+          SM.closePw();
+          document.body.classList.remove('simple-landing');
+          if (window.dataMgr && dataMgr.forceEnterRoom) dataMgr.forceEnterRoom(room);
+          setTimeout(function(){ if(window.ui && ui.setMode) ui.setMode('dashboard'); }, 350);
+        } else {
+          var m=document.getElementById('simplePwMsg'); if(m) m.textContent='비밀번호가 올바르지 않습니다.';
+          if(inp){ inp.value=''; inp.focus(); }
+        }
+      } catch(e){
+        var m2=document.getElementById('simplePwMsg'); if(m2) m2.textContent='오류가 발생했습니다. 다시 시도해 주세요.';
+      }
     },
     installClipHold: function(){
       var clip=document.getElementById('sidebarToggleTab');

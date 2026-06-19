@@ -544,6 +544,20 @@ body.simple-mode #sidebarToggleTab { opacity:0.22; }
             <div class="sl-head"><h2>과정을 선택하세요</h2><p>담당하시는 과정을 눌러 바로 입장합니다</p></div>
             <div class="sl-grid" id="simpleCourseGrid"></div>
         </div>
+        <!-- 딸깍 과정 비밀번호 모달 (크게) -->
+        <div id="simplePwModal" style="display:none; position:fixed; inset:0; z-index:100001; background:rgba(15,23,42,.55); align-items:center; justify-content:center; padding:24px;">
+            <div style="background:#fff; border-radius:28px; padding:46px 42px; width:560px; max-width:94vw; text-align:center; box-shadow:0 30px 80px rgba(0,0,0,.35);">
+                <div style="font-size:44px; margin-bottom:8px;">🔒</div>
+                <div id="simplePwCourse" style="font-size:23px; font-weight:900; color:#0f172a; margin-bottom:6px;"></div>
+                <div style="font-size:16px; color:#64748b; margin-bottom:26px;">과정 비밀번호를 입력하세요 <span style="color:#94a3b8;">(초기 7777)</span></div>
+                <input id="simplePwInput" type="password" inputmode="numeric" maxlength="12" placeholder="••••" onkeyup="if(event.key==='Enter') simpleMode.submitPw()" style="width:100%; box-sizing:border-box; text-align:center; font-size:42px; font-weight:900; letter-spacing:16px; padding:22px 16px; border:3px solid #cbd5e1; border-radius:18px; outline:none; color:#0f172a;">
+                <div id="simplePwMsg" style="min-height:24px; margin-top:12px; color:#ef4444; font-weight:800; font-size:15px;"></div>
+                <div style="display:flex; gap:12px; margin-top:18px;">
+                    <button onclick="simpleMode.closePw()" style="flex:1; padding:18px; border:none; border-radius:14px; background:#e2e8f0; color:#334155; font-size:18px; font-weight:800; cursor:pointer;">취소</button>
+                    <button onclick="simpleMode.submitPw()" style="flex:2; padding:18px; border:none; border-radius:14px; background:#2563eb; color:#fff; font-size:20px; font-weight:900; cursor:pointer;">입장하기</button>
+                </div>
+            </div>
+        </div>
 
         <!-- [핵심 수정] Modals inside Main Stage (전체화면 시 보이도록 이동) -->
         <div id="qaModal" class="modal-overlay" onclick="ui.closeQaModal(event)">
@@ -2553,6 +2567,6 @@ function setupAcc(btn){
 </script>
 <style>@media print{#__catcVer{display:none!important}}</style>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vF1</div>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vG1</div>
 </body>
 </html>
