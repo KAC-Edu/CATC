@@ -5188,12 +5188,12 @@ resetShuttleRequests: function() {
             title.textContent='🏫 현재 강의 중인 과정 (이번 주)';
             const rows=weekRooms.filter(([,r])=>(r.status||{}).roomStatus==='active').map(([room,r])=>{
                 const prof=(r.status||{}).professorName||'-', course=(r.settings||{}).courseName||'-';
-                return `<div style="display:flex;justify-content:space-between;align-items:center;padding:20px 24px;background:#eff6ff;border:1px solid #dbeafe;border-radius:14px;margin-bottom:12px;">
+                return `<div onclick="document.getElementById('homeStatModal').style.display='none'; dataMgr.switchRoomAttempt('${room}');" title="클릭하면 이 과정으로 입장합니다" style="display:flex;justify-content:space-between;align-items:center;padding:20px 24px;background:#eff6ff;border:1px solid #dbeafe;border-radius:14px;margin-bottom:12px;cursor:pointer;transition:background .15s, transform .15s, box-shadow .15s;" onmouseover="this.style.background='#dbeafe';this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 20px rgba(37,99,235,.18)';" onmouseout="this.style.background='#eff6ff';this.style.transform='none';this.style.boxShadow='none';">
                     <div style="display:flex;align-items:center;gap:16px;">
                         <span style="font-weight:900;color:#fff;background:#3b82f6;padding:6px 14px;border-radius:10px;font-size:16px;">Room ${room}</span>
                         <span style="font-size:18px;color:#0f172a;font-weight:700;">${course}</span>
                     </div>
-                    <span style="font-size:15px;color:#475569;font-weight:800;">${prof} 교수</span></div>`;
+                    <span style="font-size:15px;color:#475569;font-weight:800;">${prof} 교수 <i class="fa-solid fa-arrow-right-to-bracket" style="margin-left:8px;color:#3b82f6;"></i></span></div>`;
             }).join('');
             body.innerHTML=rows||'<p style="color:#94a3b8;text-align:center;padding:30px;font-size:16px;">이번 주 강의 중인 과정이 없습니다.</p>';
         } else if(type==='students'){
