@@ -928,11 +928,15 @@
             <!-- 시간 선택 영역 (외출/외박 분기) -->
 
             <!-- 외출 시간 -->
-            <div id="outingTimeArea" style="background:#f8fafc; padding:14px; border-radius:12px; border:1px solid #e2e8f0;">
-                <div style="font-size:12px; font-weight:900; color:#0369a1; margin-bottom:10px;">🕕 수업 종료(18:00) 후 외출</div>
-                <div style="display:flex; align-items:center; gap:12px;">
-                    <span style="font-size:14px; font-weight:800; color:#475569; white-space:nowrap;">복귀 시간</span>
-                    <select id="endTime" style="flex:1; padding:12px; border:1.5px solid #cbd5e1; border-radius:10px; font-size:16px; font-weight:800; background:white; outline:none; color:#0f172a;">
+            <div id="outingTimeArea" style="background:#f8fafc; padding:14px 16px; border-radius:12px; border:1px solid #e2e8f0;">
+                <div style="font-size:12px; font-weight:900; color:#0369a1; margin-bottom:12px;">🕕 수업 종료 후 외출 기준</div>
+                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:11px;">
+                    <span style="font-size:14px; font-weight:800; color:#475569;">외출 시작</span>
+                    <span style="padding:9px 16px; background:#e0f2fe; border-radius:9px; font-size:15px; font-weight:900; color:#0369a1;">18:00</span>
+                </div>
+                <div style="display:flex; align-items:center; justify-content:space-between;">
+                    <span style="font-size:14px; font-weight:800; color:#475569;">복귀 시간</span>
+                    <select id="endTime" style="width:48%; padding:11px; border:1.5px solid #cbd5e1; border-radius:9px; font-size:16px; font-weight:800; background:white; outline:none; color:#0f172a;">
                         <option value="18:30">18:30</option>
                         <option value="19:00">19:00</option>
                         <option value="19:30">19:30</option>
@@ -3906,45 +3910,39 @@ function initKeyboardFix() {
     const inputDock = document.getElementById('inputDock');
     const scrollContainer = document.getElementById('scrollContainer');
     const qInput = document.getElementById('qInput');
+    if (!inputDock) return;
+    inputDock.style.bottom = '0px';
 
-    // 1. VisualViewport 지원 브라우저 (최신 아이폰/안드로이드)
-    if (window.visualViewport) {
-        window.visualViewport.addEventListener('resize', () => {
-            const offset = window.innerHeight - window.visualViewport.height;
-            if (offset > 50) { // 키보드가 올라왔다고 판단되는 높이
-                inputDock.style.bottom = offset + 'px';
-                // 채팅 목록 하단에 여백을 줘서 마지막 메시지가 키보드 위로 보이게 함
-                scrollContainer.style.paddingBottom = (offset + 150) + 'px';
-                
-                // 글 쓰는 칸이 바로 보이도록 스크롤 아래로 고정
-                setTimeout(() => {
-                    window.scrollTo(0, 0);
-                    scrollContainer.scrollTop = scrollContainer.scrollHeight;
-                }, 100);
+    // [iOS 견고화] 키보드가 올라온 만큼 입력창을 위로 '붙임'.
+    //  visualViewport.offsetTop 까지 반영 + resize·scroll 모두 처리해 흔들림/튐 방지.
+    const vv = window.visualViewport;
+    if (vv) {
+        let raf = null;
+        const apply = () => {
+            const kb = Math.max(0, Math.round(window.innerHeight - vv.height - vv.offsetTop));
+            if (kb > 60) {
+                inputDock.style.transform = 'translateY(' + (-kb) + 'px)';
+                if (scrollContainer) scrollContainer.style.paddingBottom = (kb + 150) + 'px';
             } else {
-                inputDock.style.bottom = '0px';
-                scrollContainer.style.paddingBottom = '150px';
+                inputDock.style.transform = '';
+                if (scrollContainer) scrollContainer.style.paddingBottom = '150px';
             }
-        });
+        };
+        const onVV = () => { if (raf) cancelAnimationFrame(raf); raf = requestAnimationFrame(apply); };
+        vv.addEventListener('resize', onVV);
+        vv.addEventListener('scroll', onVV);
+        apply();
     }
 
-    // 2. 입력창 클릭 시 강제 화면 보정 (아이폰 사파리 전용)
-    qInput.addEventListener('focus', () => {
-        // 키보드가 올라오는 시간을 고려해 약간의 지연 후 실행
-        setTimeout(() => {
-            // 입력창이 화면 중앙에 오도록 강제 스크롤
-            qInput.scrollIntoView({ block: "center", behavior: "smooth" });
-            
-            // 전체 윈도우 스크롤이 튀는 현상 방지
-            window.scrollTo(0, 0);
-        }, 300);
-    });
-
-    qInput.addEventListener('blur', () => {
-        inputDock.style.bottom = '0px';
-        scrollContainer.style.paddingBottom = '150px';
-        window.scrollTo(0, 0);
-    });
+    if (qInput) {
+        qInput.addEventListener('focus', () => {
+            setTimeout(() => { try { scrollContainer.scrollTop = scrollContainer.scrollHeight; } catch(e){} }, 300);
+        });
+        qInput.addEventListener('blur', () => {
+            inputDock.style.transform = '';
+            if (scrollContainer) scrollContainer.style.paddingBottom = '150px';
+        });
+    }
 }
 
 
@@ -4607,7 +4605,7 @@ input:not([type=checkbox]):not([type=radio]):not([type=file]), textarea, select 
 </script>
 
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vN</div>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vP</div>
 </body>
 </html>
 <!-- @build 20260613-202500 (식단표: weeklyMenu 경로 + 캐싱(이전) + 구조화 menu(JSON) 지원 — data.menu 있으면 이미지 대신 깔끔한 텍스트 표로 렌더(모바일 확대 불필요), 캐시도 menu 포함. 이미지면 기존대로 이미지+핀치줌) -->
