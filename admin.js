@@ -9649,7 +9649,7 @@ window.simpleMode = (function(){
       var ti = document.getElementById('takeoverPwInput'); if(ti) ti.value = val;
       var m=document.getElementById('simplePwModal'); if(m) m.style.display='none';
       document.body.classList.remove('simple-landing');
-      if (window.dataMgr && dataMgr.verifyTakeover) dataMgr.verifyTakeover();
+      if (dataMgr && dataMgr.verifyTakeover) dataMgr.verifyTakeover();
       SM._enforceDashboard(room);
     },
     // 입장 후 어떤 경로로든 메인 home화면(통합 현황판)으로 빠지면 과정현황으로 강제 복귀
@@ -9662,10 +9662,10 @@ window.simpleMode = (function(){
         var homeShown = vh && window.getComputedStyle(vh).display !== 'none';
         if (homeShown) {
           localStorage.setItem('kac_last_mode','dashboard');
-          if (state.room !== room && window.dataMgr && dataMgr.forceEnterRoom) {
+          if (state.room !== room && dataMgr && dataMgr.forceEnterRoom) {
             dataMgr.forceEnterRoom(room);
           }
-          if (window.ui && ui.setMode) ui.setMode('dashboard');
+          if (ui && ui.setMode) ui.setMode('dashboard');
         }
         if (n >= 16) clearInterval(SM._enf);
       }, 250);
@@ -9697,7 +9697,7 @@ window.simpleMode = (function(){
       var ti = document.getElementById('takeoverPwInput'); if(ti) ti.value = val;
       SM.closePw();
       document.body.classList.remove('simple-landing');
-      if (window.dataMgr && dataMgr.verifyTakeover) dataMgr.verifyTakeover();
+      if (dataMgr && dataMgr.verifyTakeover) dataMgr.verifyTakeover();
     },
     installClipHold: function(){
       var clip=document.getElementById('sidebarToggleTab');
@@ -9726,44 +9726,3 @@ window.simpleMode = (function(){
 })();
 
 
-
-/* ===== [임시 진단 v2] 입장 시 호출 흐름을 화면에 표시 ===== */
-(function(){
-  window.__diagLog = function(msg){
-    try{
-      var box=document.getElementById('__diagBox');
-      if(!box){
-        box=document.createElement('div'); box.id='__diagBox';
-        box.style.cssText='position:fixed;left:0;right:0;bottom:0;z-index:2147483647;max-height:45vh;overflow:auto;background:#0b3b0b;color:#bbf7d0;font:12px/1.55 monospace;padding:10px 12px;white-space:pre-wrap;border-top:3px solid #22c55e;';
-        var btn=document.createElement('button'); btn.textContent='지우기'; btn.style.cssText='position:absolute;top:6px;right:8px;background:#fff;color:#0b3b0b;border:none;border-radius:6px;padding:4px 10px;font-weight:800;cursor:pointer;';
-        btn.onclick=function(){ box.querySelectorAll('.ln').forEach(function(e){e.remove();}); };
-        box.appendChild(btn);
-        document.body.appendChild(box);
-      }
-      var t=new Date().toLocaleTimeString();
-      var ln=document.createElement('div'); ln.className='ln'; ln.textContent='● ['+t+'] '+msg;
-      box.appendChild(ln);
-    }catch(e){}
-  };
-  function wrap(obj,name,label){
-    if(!obj || typeof obj[name]!=='function' || obj['__w_'+name]) return false;
-    obj['__w_'+name]=true;
-    var _o=obj[name].bind(obj);
-    obj[name]=function(){
-      try{
-        var a=Array.prototype.slice.call(arguments).map(function(x){return (typeof x==='object')?'{..}':String(x);}).join(',');
-        window.__diagLog(label+'('+a+')');
-        if(label==='showWaitingRoom'){ window.__diagLog('   ↳ stack: '+((new Error()).stack||'').split('\n').slice(2,5).join(' | ')); }
-      }catch(e){}
-      return _o.apply(this,arguments);
-    };
-    return true;
-  }
-  function install(){
-    var ok=true;
-    if(window.ui){ wrap(ui,'setMode','setMode'); wrap(ui,'showWaitingRoom','showWaitingRoom'); } else ok=false;
-    if(window.dataMgr){ wrap(dataMgr,'forceEnterRoom','forceEnterRoom'); wrap(dataMgr,'verifyTakeover','verifyTakeover'); wrap(dataMgr,'switchRoomAttempt','switchRoomAttempt'); } else ok=false;
-    return ok;
-  }
-  if(!install()){ var n=0; var iv=setInterval(function(){ n++; if(install()||n>40) clearInterval(iv); },250); }
-})();
