@@ -530,6 +530,7 @@
     </script>
 
     <div id="landingPage" class="landing-page">
+        <div id="landingVer" style="position:absolute; top:10px; right:14px; font-size:10px; font-weight:600; color:rgba(100,116,139,.35); letter-spacing:.3px; pointer-events:none;"></div>
         <div class="landing-brand"><i class="fa-solid fa-plane-departure" style="color:#2563eb; font-size:17px;"></i><span>항공기술훈련원 교육생 플랫폼</span></div>
         <div class="landing-hero">
             <img src="catc.webp" alt="항공기술훈련원" class="landing-banner">
@@ -588,10 +589,16 @@
         <div class="input-dock" id="inputDock">
 
 <!-- [신규] 질문 대상(과목) 선택창 -->
-<div style="padding: 0 15px 8px 15px;">
-    <select id="subjectSelect" onchange="handleSubjectChange()" style="width:100%; padding:10px; border-radius:12px; border:2px solid #e2e8f0; font-size:14px; font-weight:800; color:var(--accent-color); background:white; outline:none;">
+<div style="padding: 0 15px 8px 15px; position:relative;">
+    <select id="subjectSelect" onchange="handleSubjectChange()" style="display:none;">
         <option value="공통질문">질문 대상 선택 (기본: 공통질문)</option>
     </select>
+    <button type="button" id="subjectDropBtn" onclick="toggleSubjectDrop(event)" style="width:100%; display:flex; align-items:center; gap:9px; padding:10px 14px; border-radius:12px; border:2px solid #cfe0ff; background:#f3f8ff; font-size:14px; font-weight:800; color:var(--accent-color); cursor:pointer; text-align:left; box-sizing:border-box;">
+        <span id="subjectDropIcon" style="width:26px; height:26px; border-radius:50%; background:#e0ecff; display:inline-flex; align-items:center; justify-content:center; flex-shrink:0;"><i class="fa-solid fa-users" style="font-size:12px; color:#2563eb;"></i></span>
+        <span id="subjectDropLabel" style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">질문 대상 선택 (기본: 공통질문)</span>
+        <i class="fa-solid fa-chevron-down" style="font-size:11px; color:#94a3b8;"></i>
+    </button>
+    <div id="subjectDropList" style="display:none; position:absolute; left:15px; right:15px; bottom:calc(100% - 2px); z-index:60; background:#fff; border:1.5px solid #cfe0ff; border-radius:14px; box-shadow:0 -10px 30px rgba(15,23,42,.18); overflow:hidden; max-height:46vh; overflow-y:auto;"></div>
 </div>
             <div class="input-box">
                 <textarea id="qInput" class="real-input" rows="1" 
@@ -664,7 +671,6 @@
             <div class="menu-item" onclick="openSurveyModal()"><i class="fa-solid fa-square-poll-vertical" style="color: #3b82f6;"></i> 설문조사 (스카이캠퍼스)</div>
             <div class="menu-item" onclick="openHrdAttendanceApp()" style="background:#eef2ff; color:#1e3a8a; font-weight:800;"><i class="fa-solid fa-id-card-clip" style="color:#2563eb;"></i> 고용노동부 출결 앱 (설치/실행)</div>
             <button onclick="closeMainMenu()" style="margin-top:15px; width:100%; padding:13px; border:none; border-radius:12px; background:#334155; color:#fff; font-weight:900; font-size:15px; cursor:pointer;">닫기</button>
-            <div id="menuVerLine" style="text-align:center; margin-top:12px; font-size:11px; color:#94a3b8; font-weight:700; letter-spacing:.3px;">버전 -</div>
         </div>
     </div>
 
@@ -1865,24 +1871,8 @@ function setupListeners() {
     const subjectRef = firebase.database().ref(`courses/${currentRoom}/settings/subjects`);
     subjectRef.off();
     subjectRef.on('value', s => {
-        const data = s.val() || {};
-        const sel = document.getElementById('subjectSelect');
-        if(!sel) return;
-        const _honorific = (s) => {
-            s = String(s || '').trim();
-            if (!s) return s;
-            if (s === '공통질문' || s === '일반') return s;
-            const titles = ["본부장","공항장","센터장","부장","차장","과장","주임","교수","강사"];
-            const hasTitle = titles.some(t => s.includes(t));
-            if (!hasTitle) return s + ' 강사님';
-            if (!s.includes('님')) return s + '님';
-            return s;
-        };
-        let html = '<option value="공통질문">질문 대상 선택 (기본: 공통질문)</option>';
-        Object.values(data).forEach(name => {
-            html += `<option value="${name}">${_honorific(name)}</option>`;
-        });
-        sel.innerHTML = html;
+        window._subjectData = s.val() || {};
+        if (typeof renderSubjectUI === 'function') renderSubjectUI(window._subjectData);
     });
 
     // 5. 강의실 상태 감시 (모드 전환 및 강제 퇴출)
@@ -2325,7 +2315,6 @@ function renderList(data) {
         else if (!hasTitle) displayName = targetName + " 강사님";
         else if (!targetName.includes("님")) displayName = targetName + "님";
         else displayName = targetName;
-        const targetIcon = (targetName === '일반' || targetName === '공통질문') ? 'fa-users' : 'fa-paper-plane';
 
         // 색상 테마 설정 (인디고 vs 블루)
         const tagBg = isMine ? "#e0e7ff" : "#eff6ff";
@@ -2333,7 +2322,7 @@ function renderList(data) {
         const tagBorder = isMine ? "#c7d2fe" : "#dbeafe";
 
         const myIdentityBadge = isMine ? `<span style="background:#4338ca; color:white; font-size:10px; padding:1px 5px; border-radius:4px; margin-right:5px; font-weight:800; vertical-align:middle;">내 질문</span>` : "";
-        const instructorTag = `<span style="display:inline-block; background:${tagBg}; color:${tagColor}; font-size:10px; padding:1px 6px; border-radius:4px; margin-right:6px; border:1px solid ${tagBorder}; font-weight:800; vertical-align:middle;">To. <i class="fa-solid ${targetIcon}" style="font-size:9px; margin:0 2px;"></i>${displayName}</span>`;
+        const instructorTag = `<span style="display:inline-block; background:${tagBg}; color:${tagColor}; font-size:10px; padding:1px 6px; border-radius:4px; margin-right:6px; border:1px solid ${tagBorder}; font-weight:800; vertical-align:middle;">To. ${displayName}</span>`;
 
         let metaHtml = `<div class="q-meta" style="justify-content: flex-start;"><span>${formatTime(item.timestamp)}</span>`;
         if(isMine && (Date.now() - myQs[item.id] < 300000)) {
@@ -2381,6 +2370,86 @@ list.innerHTML += `
 
 
 
+function _subjHonorific(s){
+    s=String(s||'').trim();
+    if(!s) return s;
+    if(s==='공통질문'||s==='일반') return s;
+    var titles=["본부장","공항장","센터장","부장","차장","과장","주임","교수","강사"];
+    var hasTitle=titles.some(function(t){return s.indexOf(t)!==-1;});
+    if(!hasTitle) return s+' 강사님';
+    if(s.indexOf('님')===-1) return s+'님';
+    return s;
+}
+function _subjIcon(name){ return (name==='공통질문'||name==='일반') ? 'fa-users' : 'fa-chalkboard-user'; }
+function renderSubjectUI(data){
+    data = data || window._subjectData || {};
+    var sel=document.getElementById('subjectSelect');
+    var list=document.getElementById('subjectDropList');
+    if(!sel) return;
+    var cur = sel.value || '공통질문';
+    var opt='<option value="공통질문">질문 대상 선택 (기본: 공통질문)</option>';
+    var items=[{v:'공통질문', label:'공통질문 (전체 강사)'}];
+    Object.values(data).forEach(function(name){
+        opt += '<option value="'+name+'">'+_subjHonorific(name)+'</option>';
+        items.push({v:name, label:_subjHonorific(name)});
+    });
+    sel.innerHTML=opt;
+    sel.value = cur;
+    if(list){
+        list.innerHTML = items.map(function(it){
+            var ic=_subjIcon(it.v);
+            var active=(it.v===sel.value);
+            return '<div data-v="'+it.v+'" onclick="selectSubject(this.dataset.v)" style="display:flex; align-items:center; gap:11px; padding:12px 14px; cursor:pointer; border-bottom:1px solid #f1f5f9;'+(active?' background:#eff6ff;':'')+'">'
+                + '<span style="width:30px;height:30px;border-radius:50%;background:#e0ecff;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="fa-solid '+ic+'" style="font-size:14px;color:#2563eb;"></i></span>'
+                + '<span style="flex:1;font-size:14px;font-weight:800;color:#1e293b;">'+it.label+'</span>'
+                + (active?'<i class="fa-solid fa-check" style="color:#2563eb;font-size:13px;"></i>':'')
+                + '</div>';
+        }).join('');
+    }
+    _syncSubjectBtn();
+}
+function _syncSubjectBtn(){
+    var sel=document.getElementById('subjectSelect'); if(!sel) return;
+    var v=sel.value||'공통질문';
+    var lbl=document.getElementById('subjectDropLabel');
+    var icoWrap=document.getElementById('subjectDropIcon');
+    if(lbl) lbl.textContent = (v==='공통질문') ? '질문 대상 선택 (기본: 공통질문)' : _subjHonorific(v);
+    if(icoWrap) icoWrap.innerHTML = '<i class="fa-solid '+_subjIcon(v)+'" style="font-size:12px;color:#2563eb;"></i>';
+}
+function toggleSubjectDrop(e){ if(e) e.stopPropagation(); var list=document.getElementById('subjectDropList'); if(!list) return; list.style.display=(list.style.display==='block')?'none':'block'; }
+function selectSubject(v){
+    var sel=document.getElementById('subjectSelect'); if(!sel) return;
+    sel.value=v;
+    var list=document.getElementById('subjectDropList'); if(list) list.style.display='none';
+    _syncSubjectBtn();
+    if(typeof renderSubjectUI==='function') renderSubjectUI(window._subjectData);
+    if(typeof handleSubjectChange==='function') handleSubjectChange();
+}
+document.addEventListener('click', function(e){
+    var list=document.getElementById('subjectDropList'); var btn=document.getElementById('subjectDropBtn');
+    if(!list || list.style.display!=='block') return;
+    if(btn && btn.contains(e.target)) return;
+    if(list.contains(e.target)) return;
+    list.style.display='none';
+});
+// 상단바를 아래로 쓸어내리면 메뉴(커튼) 열기
+(function(){
+    function initHeaderPull(){
+        var hd=document.querySelector('.header'); if(!hd || hd._pullSet) return; hd._pullSet=true;
+        var sy=null, moved=0;
+        hd.addEventListener('touchstart', function(e){ sy=e.touches[0].clientY; moved=0; }, {passive:true});
+        hd.addEventListener('touchmove', function(e){ if(sy===null) return; moved=e.touches[0].clientY - sy; }, {passive:true});
+        hd.addEventListener('touchend', function(){
+            if(sy!==null && moved>45){
+                var m=document.getElementById('menuModal');
+                var hidden = !m || m.style.display==='none' || m.style.display==='';
+                if(hidden && typeof openMainMenu==='function') openMainMenu();
+            }
+            sy=null; moved=0;
+        }, {passive:true});
+    }
+    if(document.readyState!=='loading') initHeaderPull(); else document.addEventListener('DOMContentLoaded', initHeaderPull);
+})();
 function handleSubjectChange() {
     // 1. 선택된 강사명을 가져와서 필터 변수에 저장
     currentFilter = document.getElementById('subjectSelect').value;
@@ -4698,7 +4767,7 @@ input:not([type=checkbox]):not([type=radio]):not([type=file]), textarea, select 
 <script>
 /* 버전 배지는 본화면에 숨기고, 메뉴 안에서만 표시 (배지값과 자동 동기화) */
 (function(){
-  function setV(){ var b=document.getElementById('__catcVer'), m=document.getElementById('menuVerLine'); if(b&&m) m.textContent='버전 '+((b.textContent||'').trim()); }
+  function setV(){ var b=document.getElementById('__catcVer'), m=document.getElementById('landingVer'); if(b&&m) m.textContent=((b.textContent||'').trim()); }
   if(document.readyState!=='loading') setV(); else document.addEventListener('DOMContentLoaded', setV);
   setTimeout(setV, 1200);
 })();
@@ -4757,6 +4826,6 @@ input:not([type=checkbox]):not([type=radio]):not([type=file]), textarea, select 
 })();
 </script>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vB1</div>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vD1</div>
 </body>
 </html>
