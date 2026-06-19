@@ -4534,12 +4534,17 @@ function closeTabletLoan() {
 /* 상단바 하단 모서리 라운딩 */
 .header { border-bottom-left-radius:18px !important; border-bottom-right-radius:18px !important; }
 /* 채팅 입력 영역 색감 */
-.input-dock { background:#e7f0ff !important; }
+.input-dock { background:linear-gradient(135deg,#0f172a 0%,#1e3a8a 72%,#2563eb 128%) !important; box-shadow:0 -6px 22px rgba(15,23,42,.30) !important; }
+.input-dock .char-counter, .input-dock .cooldown-text { color:rgba(255,255,255,.75) !important; }
 .input-box { background:#f3f8ff !important; border:1.5px solid #cfe0ff !important; }
 #subjectSelect { background:#f3f8ff !important; border-color:#cfe0ff !important; }
 /* 메뉴: 본화면 안 비치게 밝은 단독 화면 */
 .menu-overlay { background:linear-gradient(180deg,#eef5ff 0%,#dbe9ff 100%) !important; -webkit-backdrop-filter:none !important; backdrop-filter:none !important; }
 .menu-box { box-shadow:0 18px 44px rgba(37,99,235,.16) !important; }
+/* 외출·외박 신청서: 한 화면에 보이게 (높이 확대 + 여백 축소) */
+#adminActionModal .menu-box { max-height:95vh !important; width:96% !important; max-width:470px !important; padding:14px 16px !important; }
+#adminActionModal .menu-box h3 { margin-bottom:2px !important; font-size:17px; }
+#adminActionModal .menu-box > p { margin-bottom:10px !important; }
 /* 내 정보 카드 입체감 */
 .user-profile-card { box-shadow:0 4px 14px rgba(15,23,42,.06); border:1px solid #eef2f7; border-radius:18px !important; }
 .btn-edit-profile { border-radius:10px !important; }
@@ -4604,7 +4609,7 @@ input:not([type=checkbox]):not([type=radio]):not([type=file]), textarea, select 
 </script>
 
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vK</div>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vL</div>
 </body>
 </html>
 <!-- @build 20260613-202500 (식단표: weeklyMenu 경로 + 캐싱(이전) + 구조화 menu(JSON) 지원 — data.menu 있으면 이미지 대신 깔끔한 텍스트 표로 렌더(모바일 확대 불필요), 캐시도 menu 포함. 이미지면 기존대로 이미지+핀치줌) -->
