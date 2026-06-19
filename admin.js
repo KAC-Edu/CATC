@@ -8723,6 +8723,7 @@ const annualPlanMgr = {
         const weekCourses = courses
             .filter(c => c.startDate && c.endDate)
             .filter(c => c.startDate <= targetSun && c.endDate >= targetMon)
+            .filter(c => c.endDate >= today)
             .sort((a, b) => a.startDate.localeCompare(b.startDate));
 
         // [Clean Start 준비] 각 방의 현재 과정명을 먼저 읽어둔다 (과정 교체 감지용)
@@ -8886,6 +8887,7 @@ const annualPlanMgr = {
             const expected = new Set(
                 courses
                     .filter(c => c.startDate && c.endDate && c.startDate <= targetSun && c.endDate >= targetMon)
+                    .filter(c => c.endDate >= today)
                     .filter(c => !dismissed.has(`${norm(c.name)}|${norm(c.period)}`))
                     .map(c => norm(c.name))
             );
@@ -9310,6 +9312,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (typeof firebase !== 'undefined' && firebase.auth) {
         firebase.auth().onAuthStateChanged(user => {
             if (user) {
+                if (typeof kacExpireEndedCourses === 'function') kacExpireEndedCourses();
                 annualPlanMgr.checkAndReset();
 
                 // 탭을 열어 두어도 KST 날짜가 바뀌면 자동으로 재체크 (10분 간격).
@@ -9633,3 +9636,45 @@ function warnHideFromBoard(cb){
 }
 window.warnHideFromBoard = warnHideFromBoard;
 
+
+
+/* ===== [공용] 종료된 과정 자동 정리 — 종료일이 지난 방을 다음날 미개설로 비움 =====
+   모든 플랫폼(강사·운영부·지원부·영양사)이 로드 시 1회 호출. 하루 1회만 실제 스캔(브라우저별). */
+window.kacExpireEndedCourses = async function(){
+  try{
+    var today=(function(){var d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})();
+    try{ if(localStorage.getItem('kac_expire_done')===today) return; }catch(e){}
+    if(typeof firebase==='undefined'||!firebase.database) return;
+    var snap=await firebase.database().ref('courses').once('value');
+    var rooms=snap.val()||{};
+    var updates={}; var archives=[];
+    for(var i=65;i<=90;i++){
+      var room=String.fromCharCode(i); var rd=rooms[room]; if(!rd) continue;
+      var st=rd.settings||{}, stt=rd.status||{};
+      if(st.autoAssignLocked) continue;            // 차주 유지 방 보존
+      if(stt.roomStatus!=='active') continue;
+      var nm=(st.courseName||'').trim(); var pd=(st.period||'').trim();
+      var end=pd.indexOf('~')>=0?pd.split('~').pop().trim():'';
+      if(!nm||!end) continue;
+      if(end < today){                              // 종료일 지남 → 비움
+        var aa=rd.admin_actions||{}, ia=rd.internal_attendance||{}, stu=rd.students||{};
+        if(Object.keys(aa).length||Object.keys(ia).length||Object.keys(stu).length){
+          archives.push(firebase.database().ref('system/course_archive/'+room+'_'+Date.now()).set({room:room,courseName:nm,period:pd,prof:stt.professorName||'',coord:st.coordinatorName||'',admin_actions:aa,internal_attendance:ia,students:stu,expectedStudents:(rd.expectedStudents||null),archivedAt:firebase.database.ServerValue.TIMESTAMP}).catch(function(){}));
+        }
+        var b='courses/'+room+'/';
+        ['students','internal_attendance','questions','admin_actions','shuttle','dinner_skips','tablet_loans','connections','quizAnswers','expectedStudents','coordRoster','activeQuiz','quizFinalResults','attendanceQR','scheduleImage','coordNoticeHistory'].forEach(function(k){ updates[b+k]=null; });
+        updates[b+'boardNotice']=''; updates[b+'notice']=''; updates[b+'coordNotice']='';
+        updates[b+'settings/courseName']=''; updates[b+'settings/period']=null; updates[b+'settings/coordinatorName']=null; updates[b+'settings/password']=btoa('7777');
+        updates[b+'status/professorName']=''; updates[b+'status/roomStatus']='idle'; updates[b+'status/ownerSessionId']=null; updates[b+'status/resetKey']='rk_'+Date.now()+'_'+Math.random().toString(36).slice(2,7);
+        try{ var s=pd.indexOf(' ~ ')>=0?pd.split(' ~ ')[0].trim():(pd.split('~')[0]||'').trim();
+          if(s){ var d=new Date(s+'T00:00:00'); if(!isNaN(d)){ var dw=(d.getDay()+6)%7; var mo=new Date(d); mo.setDate(d.getDate()-dw);
+            var u=mo.toISOString().slice(0,10); var l=mo.getFullYear()+'-'+String(mo.getMonth()+1).padStart(2,'0')+'-'+String(mo.getDate()).padStart(2,'0');
+            updates['system/dorm/rosters/'+u+'__'+room]=null; updates['system/dorm/rosters/'+l+'__'+room]=null; }}
+        }catch(e){}
+      }
+    }
+    if(archives.length){ try{ await Promise.all(archives); }catch(e){} }
+    if(Object.keys(updates).length){ await firebase.database().ref().update(updates); console.log('[KAC] 종료 과정 자동 정리 완료'); }
+    try{ localStorage.setItem('kac_expire_done', today); }catch(e){}
+  }catch(e){ console.warn('[KAC expire] 스킵:', e && e.message); }
+};
