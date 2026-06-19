@@ -9606,11 +9606,67 @@ window.simpleMode = (function(){
       grid.innerHTML = html || '<div class="sl-empty">현재 운영 중인 과정이 없습니다.</div>';
     },
     enterCourse: function(room){
-      // 현황판에서 방 선택할 때와 '완전히 동일한' 검증/입장 경로 사용
-      document.body.classList.remove('simple-landing');
-      localStorage.setItem('kac_last_mode','dashboard');
-      if (window.dataMgr && dataMgr.switchRoomAttempt) {
-        dataMgr.switchRoomAttempt(String(room).toUpperCase());
+      room = String(room).toUpperCase();
+      SM._pendingRoom = room;
+      var d = window.latestCoursesData || {};
+      var se = (d[room] && d[room].settings) || {};
+      var st = (d[room] && d[room].status) || {};
+      var label = se.courseName ? String(se.courseName).trim() : ('Room ' + room);
+      var prof = st.professorName ? (' · ' + st.professorName + ' 교수') : '';
+      var lc=document.getElementById('simplePwCourse'); if(lc) lc.textContent = label + prof;
+      var msg=document.getElementById('simplePwMsg'); if(msg) msg.textContent='';
+      var inp=document.getElementById('simplePwInput'); if(inp) inp.value='';
+      var modal=document.getElementById('simplePwModal'); if(modal) modal.style.display='flex';
+      setTimeout(function(){ var i=document.getElementById('simplePwInput'); if(i) i.focus(); }, 60);
+    },
+    closePw: function(){
+      var m=document.getElementById('simplePwModal'); if(m) m.style.display='none';
+      // 취소 시 통합현황판이 아니라 '과정 카드'로 복귀
+      if(document.body.classList.contains('simple-mode')) SM.showLanding();
+    },
+    submitPw: async function(){
+      var room = SM._pendingRoom;
+      var inp = document.getElementById('simplePwInput');
+      var val = inp ? (inp.value||'').trim() : '';
+      if(!room || !val) return;
+      var msgEl = document.getElementById('simplePwMsg');
+      try {
+        var snap = await firebase.database().ref('courses/'+room+'/settings').get();
+        var settings = snap.val() || {};
+        var dbPw = settings.password || btoa('7777');
+        if (btoa(val) !== dbPw) {
+          if(msgEl) msgEl.textContent='비밀번호가 올바르지 않습니다.';
+          if(inp){ inp.value=''; inp.focus(); }
+          return;
+        }
+        // 소유권 확보 후 입장 (검증된 verifyTakeover와 동일한 절차)
+        state.isObserver = false;
+        sessionStorage.removeItem('kac_observer_room');
+        await firebase.database().ref('courses/'+room+'/status').update({
+          ownerSessionId: state.sessionId,
+          ownerLastSeen: firebase.database.ServerValue.TIMESTAMP,
+          roomStatus: 'active'
+        });
+        try { localStorage.setItem('last_owned_room', room); if(window.dataMgr && dataMgr.addOwnedRoom) dataMgr.addOwnedRoom(room); } catch(e){}
+        if (window.lectureMonitor && lectureMonitor.stopMic) { try { lectureMonitor._consentRoomAsked = room; lectureMonitor.stopMic(true); } catch(e){} }
+        localStorage.setItem('kac_last_mode','dashboard');
+        var m2=document.getElementById('simplePwModal'); if(m2) m2.style.display='none';
+        document.body.classList.remove('simple-landing');
+        if (window.dataMgr && dataMgr.forceEnterRoom) dataMgr.forceEnterRoom(room);
+        if (window.ui && ui.setMode) ui.setMode('dashboard');
+        // 통합현황판(view-home) 잔류 시 강제로 과정현황 고정 (최대 3초)
+        var tries=0;
+        var iv=setInterval(function(){
+          tries++;
+          if (state.room === room && window.ui && ui.setMode) {
+            var vh=document.getElementById('view-home');
+            var vd=document.getElementById('view-dashboard');
+            if ((vh && vh.style.display!=='none') || (vd && vd.style.display==='none')) ui.setMode('dashboard');
+          }
+          if (tries>=15) clearInterval(iv);
+        }, 200);
+      } catch(e){
+        if(msgEl) msgEl.textContent='오류가 발생했습니다. 다시 시도해 주세요.';
       }
     },
     closePw: function(){ var m=document.getElementById('simplePwModal'); if(m) m.style.display='none'; },
