@@ -302,6 +302,9 @@ loadInitialData: function() {
             ui.openQrModal(); 
         };
     }
+
+    // 딸깍(원터치) 모드 진입 판단
+    if (window.simpleMode) simpleMode.afterLogin();
 },
 
 
@@ -2860,6 +2863,7 @@ showAlert: function(msg, onConfirm) {
                 window.latestCoursesData = s.val() || {}; // 전역에 데이터 저장
                 window.isRoomListenerSet = true;
                 this.initRoomSelect(); // 데이터가 오면 화면을 다시 그림
+                if (window.simpleMode && document.body.classList.contains('simple-landing')) simpleMode.renderCourses();
             });
             return;
         }
@@ -9535,3 +9539,78 @@ function warnHideFromBoard(cb){
     }
 }
 window.warnHideFromBoard = warnHideFromBoard;
+
+
+/* ================= 딸깍(원터치) 모드 ================= */
+window.simpleMode = (function(){
+  function slEsc(s){ s = (s==null?'':String(s)); return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  var SM = {
+    afterLogin: function(){
+      var m = localStorage.getItem('kac_uimode');
+      if (m === 'simple') { SM.enable(); }
+      else if (m === 'detailed') { /* 기존 상세 화면 그대로 */ }
+      else { SM.showPicker(); }
+    },
+    showPicker: function(){ var el=document.getElementById('modePickerOverlay'); if(el) el.style.display='flex'; },
+    choose: function(mode){
+      localStorage.setItem('kac_uimode', mode);
+      var el=document.getElementById('modePickerOverlay'); if(el) el.style.display='none';
+      if(mode==='simple') SM.enable();
+    },
+    enable: function(){
+      document.body.classList.add('simple-mode');
+      document.body.classList.add('sidebar-hidden');
+      SM.installClipHold();
+      SM.showLanding();
+    },
+    switchToDetailed: function(){ localStorage.setItem('kac_uimode','detailed'); location.reload(); },
+    showLanding: function(){ document.body.classList.add('simple-landing'); SM.renderCourses(); },
+    renderCourses: function(){
+      var grid=document.getElementById('simpleCourseGrid'); if(!grid) return;
+      var d = window.latestCoursesData || {};
+      var html='';
+      for(var i=65;i<=90;i++){
+        var c=String.fromCharCode(i);
+        var rd=d[c]||{}; var st=rd.status||{}; var se=rd.settings||{};
+        var active = (st.roomStatus==='active');
+        var cname = se.courseName ? String(se.courseName).trim() : '';
+        if(!active || !cname || se.hideFromBoard) continue;
+        var prof = st.professorName ? st.professorName : '-';
+        html += '<div class="sl-card" onclick="simpleMode.enterCourse(\''+c+'\')">'
+              + '<span class="room">Room '+c+'</span>'
+              + '<div class="cname">'+slEsc(cname)+'</div>'
+              + '<div class="prof"><i class="fa-solid fa-chalkboard-user"></i>'+slEsc(prof)+'</div>'
+              + '</div>';
+      }
+      grid.innerHTML = html || '<div class="sl-empty">현재 운영 중인 과정이 없습니다.</div>';
+    },
+    enterCourse: function(room){
+      document.body.classList.remove('simple-landing');
+      if (window.dataMgr && dataMgr.forceEnterRoom) dataMgr.forceEnterRoom(room);
+      setTimeout(function(){ if(window.ui && ui.setMode) ui.setMode('dashboard'); }, 350);
+    },
+    installClipHold: function(){
+      var clip=document.getElementById('sidebarToggleTab');
+      if(!clip || clip._smHold) return; clip._smHold=true;
+      var timer=null;
+      var start=function(e){
+        if(!document.body.classList.contains('simple-mode')) return;
+        e.preventDefault(); e.stopPropagation();
+        timer=setTimeout(function(){ document.body.classList.remove('sidebar-hidden'); }, 3000);
+      };
+      var cancel=function(){ if(timer){ clearTimeout(timer); timer=null; } };
+      clip.addEventListener('click', function(e){
+        if(!document.body.classList.contains('simple-mode')) return;
+        e.preventDefault(); e.stopPropagation();
+        if(!document.body.classList.contains('sidebar-hidden')) document.body.classList.add('sidebar-hidden');
+      }, true);
+      clip.addEventListener('mousedown', start, true);
+      clip.addEventListener('touchstart', start, {capture:true, passive:false});
+      clip.addEventListener('mouseup', cancel, true);
+      clip.addEventListener('mouseleave', cancel, true);
+      clip.addEventListener('touchend', cancel, true);
+      clip.addEventListener('touchcancel', cancel, true);
+    }
+  };
+  return SM;
+})();
