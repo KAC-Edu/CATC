@@ -286,6 +286,8 @@ body.simple-mode #tab-dashboard,
 body.simple-mode #tab-notice,
 body.simple-mode .mode-dropdown { display:none !important; }
 body.simple-mode #sidebarToggleTab { opacity:0.22; }
+#simpleDetailToggle { display:none; }
+body.simple-mode #simpleDetailToggle { display:inline-flex; }
 </style>
     <div class="sidebar" id="mainSidebar">
         <div class="sidebar-top">
@@ -551,6 +553,9 @@ body.simple-mode #sidebarToggleTab { opacity:0.22; }
             <div class="sl-head"><h2>과정을 선택하세요</h2><p>담당하시는 과정을 눌러 바로 입장합니다</p></div>
             <div class="sl-grid" id="simpleCourseGrid"></div>
         </div>
+        <!-- 딸깍 상세 전환 토글 (항상 보임) -->
+        <button id="simpleDetailToggle" onclick="simpleMode.switchToDetailed()" title="상세(기존) 강사 화면으로 전환" style="position:fixed; left:20px; bottom:20px; z-index:90000; align-items:center; gap:8px; padding:12px 18px; background:#1e293b; color:#fff; border:none; border-radius:14px; font-size:14px; font-weight:800; cursor:pointer; box-shadow:0 8px 22px rgba(15,23,42,.28);"><i class="fa-solid fa-table-columns"></i> 상세 버전으로</button>
+
         <!-- 딸깍 과정 비밀번호 모달 (크게) -->
         <div id="simplePwModal" style="display:none; position:fixed; inset:0; z-index:100001; background:rgba(15,23,42,.55); align-items:center; justify-content:center; padding:24px;">
             <div style="background:#fff; border-radius:28px; padding:46px 42px; width:560px; max-width:94vw; text-align:center; box-shadow:0 30px 80px rgba(0,0,0,.35);">
@@ -2574,6 +2579,6 @@ function setupAcc(btn){
 </script>
 <style>@media print{#__catcVer{display:none!important}}</style>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vJ1</div>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vK1</div>
 </body>
 </html>
