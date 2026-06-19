@@ -9546,6 +9546,7 @@ window.simpleMode = (function(){
   function slEsc(s){ s = (s==null?'':String(s)); return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
   var SM = {
     afterLogin: function(){
+      SM.updateToggleLabel();
       var m = localStorage.getItem('kac_uimode');
       if (m === 'simple') { SM.enable(); }
       else if (m === 'detailed') { /* 기존 상세 화면 그대로 */ }
@@ -9564,6 +9565,21 @@ window.simpleMode = (function(){
       SM.showLanding();
     },
     switchToDetailed: function(){ localStorage.setItem('kac_uimode','detailed'); location.reload(); },
+    switchToSimple: function(){ localStorage.setItem('kac_uimode','simple'); location.reload(); },
+    toggleMode: function(){
+      var cur = localStorage.getItem('kac_uimode');
+      var isSimple = (cur === 'simple') || document.body.classList.contains('simple-mode');
+      localStorage.setItem('kac_uimode', isSimple ? 'detailed' : 'simple');
+      location.reload();
+    },
+    updateToggleLabel: function(){
+      var b = document.getElementById('uiModeToggleBtn');
+      if(!b) return;
+      var isSimple = (localStorage.getItem('kac_uimode') === 'simple') || document.body.classList.contains('simple-mode');
+      b.innerHTML = isSimple
+        ? '<i class="fa-solid fa-table-columns"></i> 상세(기존) 버전으로'
+        : '<i class="fa-solid fa-hand-pointer"></i> 원터치(딸깍) 버전으로';
+    },
     showLanding: function(){ document.body.classList.add('simple-landing'); SM.renderCourses(); },
     renderCourses: function(){
       var grid=document.getElementById('simpleCourseGrid'); if(!grid) return;
