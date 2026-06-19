@@ -6868,33 +6868,42 @@ init: function() {
     _profileHTML: function(p) {
         const esc = s => (s == null ? '' : String(s)).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
         const name = esc(p._name || '');
-        const eng = p.engName ? `<span style="font-size:18px;font-weight:600;color:#64748b;margin-left:8px;">${esc(p.engName)}</span>` : '';
-        const photo = p.photo
-            ? `<img src="${p.photo}" alt="${name}" style="width:200px;height:250px;object-fit:cover;border-radius:18px;box-shadow:0 12px 30px rgba(0,51,102,.22);flex-shrink:0;">`
-            : `<div style="width:200px;height:250px;border-radius:18px;background:#e8eef6;display:flex;align-items:center;justify-content:center;font-size:80px;color:#9fb4d0;flex-shrink:0;"><i class="fa-solid fa-user-tie"></i></div>`;
+        const eng = p.engName ? `<span style="font-size:18px;color:#94a3b8;font-weight:600;margin-left:8px;">(${esc(p.engName)})</span>` : '';
+        const photoCss = p.photo
+            ? `background:#e8eef6 url('${String(p.photo).replace(/'/g, "%27")}') center/cover no-repeat;`
+            : `background:#e8eef6;`;
+        const photoInner = p.photo ? '' : `<div style="display:flex;align-items:center;justify-content:center;height:100%;font-size:90px;color:#9fb4d0;"><i class="fa-solid fa-user-tie"></i></div>`;
         const contacts = [];
-        if (p.phone) contacts.push(`<span style="display:inline-flex;align-items:center;gap:6px;"><i class="fa-solid fa-phone" style="color:#0369a1;"></i> ${esc(p.phone)}</span>`);
-        if (p.email) contacts.push(`<span style="display:inline-flex;align-items:center;gap:6px;"><i class="fa-solid fa-envelope" style="color:#0369a1;"></i> ${esc(p.email)}</span>`);
-        const contactHtml = contacts.length ? `<div style="display:flex;flex-wrap:wrap;gap:18px;margin-top:14px;font-size:15px;font-weight:700;color:#334155;">${contacts.join('')}</div>` : '';
-        const msg = p.msg ? `<div style="margin-top:14px;font-size:16px;line-height:1.7;color:#475569;white-space:pre-wrap;">${esc(p.msg)}</div>` : '';
-        const bio = (Array.isArray(p.bioList) ? p.bioList : []).filter(r => r && (r.year || r.text));
-        const bioHtml = bio.length
-            ? `<div style="margin-top:18px;"><div style="font-size:14px;font-weight:900;color:#0369a1;margin-bottom:8px;letter-spacing:.02em;">주요 약력</div>${bio.map(r => `<div style="display:flex;gap:12px;margin-bottom:6px;font-size:15px;"><span style="min-width:64px;font-weight:800;color:#0369a1;">${esc(r.year || '')}</span><span style="color:#334155;">${esc(r.text || '')}</span></div>`).join('')}</div>`
-            : '';
-        return `<div style="background:#fff;width:100%;box-sizing:border-box;padding:40px 44px;display:flex;flex-direction:column;">
-            <div style="display:flex;align-items:center;gap:10px;margin-bottom:24px;">
-                <span style="width:6px;height:30px;background:#003366;border-radius:3px;"></span>
-                <span style="font-size:22px;font-weight:900;color:#003366;">담임 교수 소개</span>
+        if (p.phone) contacts.push(`<span style="display:inline-flex;align-items:center;gap:7px;"><i class="fa-solid fa-phone" style="color:#1e3a8a;"></i> ${esc(p.phone)}</span>`);
+        if (p.email) contacts.push(`<span style="display:inline-flex;align-items:center;gap:7px;"><i class="fa-solid fa-envelope" style="color:#1e3a8a;"></i> ${esc(p.email)}</span>`);
+        const contactHtml = contacts.length ? `<div style="display:flex;flex-wrap:wrap;gap:26px;margin-top:18px;font-size:15px;font-weight:700;color:#334155;">${contacts.join('')}</div>` : '';
+        const quote = p.msg ? `<div style="border-left:4px solid #2563eb;padding-left:13px;margin-top:20px;font-size:16px;font-weight:800;color:#2563eb;line-height:1.5;">"${esc(p.msg)}"</div>` : '';
+        let bio = (Array.isArray(p.bioList) ? p.bioList : []).filter(r => r && (r.year || r.text));
+        if (!bio.length && p.bio) {
+            bio = String(p.bio).split(/\r?\n/).map(line => {
+                line = line.trim(); if (!line) return null;
+                const m = line.match(/^([0-9][0-9.\-~\s]*[0-9]|[0-9]{4})\s+(.*)$/);
+                return m ? { year: m[1], text: m[2] } : { year: '', text: line };
+            }).filter(Boolean);
+        }
+        const bioRows = bio.map(r => `<div style="display:flex;align-items:center;gap:14px;">
+            <span style="flex:0 0 auto;min-width:56px;text-align:center;background:#eff6ff;border:1px solid #dbeafe;color:#1e40af;font-weight:800;font-size:13px;padding:5px 12px;border-radius:9px;white-space:nowrap;">${esc(r.year || '·')}</span>
+            <span style="color:#334155;font-size:15px;line-height:1.5;word-break:keep-all;">${esc(r.text || '')}</span>
+        </div>`).join('');
+        const bioHtml = bio.length ? `<div style="margin-top:24px;">
+            <div style="font-size:15px;font-weight:900;color:#1e3a8a;margin-bottom:14px;display:flex;align-items:center;gap:8px;"><i class="fa-solid fa-user-graduate" style="color:#2563eb;"></i> 주요 약력 및 경력사항</div>
+            <div style="display:flex;flex-direction:column;gap:11px;">${bioRows}</div>
+        </div>` : '';
+        return `<div style="display:flex;background:#fff;border-radius:20px;overflow:hidden;box-shadow:0 18px 44px rgba(15,23,42,.12);min-height:430px;">
+            <div style="flex:0 0 38%;${photoCss}">${photoInner}</div>
+            <div style="flex:1;min-width:0;padding:40px 44px;display:flex;flex-direction:column;">
+                <div><span style="display:inline-block;background:#1e293b;color:#fff;font-size:12px;font-weight:800;padding:5px 15px;border-radius:14px;letter-spacing:.02em;">과정 담임</span></div>
+                <div style="margin-top:18px;font-size:17px;color:#64748b;font-weight:700;">교수 <span style="font-size:34px;font-weight:900;color:#1e3a8a;margin:0 4px;vertical-align:-2px;">${name}</span>${eng}</div>
+                <div style="height:1px;background:#e2e8f0;margin:20px 0 0;"></div>
+                ${quote}
+                ${contactHtml}
+                ${bioHtml}
             </div>
-            <div style="display:flex;gap:32px;align-items:flex-start;">
-                ${photo}
-                <div style="flex:1;min-width:0;">
-                    <div style="font-size:30px;font-weight:900;color:#0f172a;">${name}<span style="font-size:17px;font-weight:700;color:#64748b;"> 교수</span>${eng}</div>
-                    ${contactHtml}
-                    ${msg}
-                </div>
-            </div>
-            ${bioHtml}
         </div>`;
     },
 
