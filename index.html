@@ -232,7 +232,7 @@
 .notice-text {
     display: inline-block;
     padding-left: 100%;
-    animation: marquee 20s linear infinite;
+    animation: marquee 14s linear 1;
     font-size: 13px;
     font-weight: 700;
     color: #92400e;
@@ -554,7 +554,7 @@
     <div class="app-container" id="mainApp">
 <div class="header">
     <div class="header-btn" id="headerKakaoBtn" onclick="openKakaoChat()" style="color:#FAE100; visibility:hidden;" title="카카오톡 오픈톡방">
-        <i class="fa-solid fa-comment" style="font-size:22px;"></i>
+        <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><rect width="24" height="24" rx="6.5" fill="#FEE500"/><path d="M12 6.2c-3.53 0-6.4 2.16-6.4 4.83 0 1.72 1.16 3.23 2.92 4.1-.13.45-.46 1.66-.53 1.92-.08.32.12.32.25.23.1-.07 1.6-1.08 2.25-1.52.47.07.95.1 1.51.1 3.53 0 6.4-2.16 6.4-4.83S15.53 6.2 12 6.2z" fill="#3A1D1D"/></svg>
     </div>
     <div class="header-center">
         <div class="header-title" id="roomTitle">Course Name</div>
@@ -650,7 +650,7 @@
             </div>
 
             <h3 style="margin-bottom:15px; font-size:16px; color:#64748b;">메뉴 서비스</h3>
-            <div class="menu-item" id="menu-kakao" style="display:none; background:#FAE100; color:#3A1D1D; font-weight:900; text-align:center;" onclick="openKakaoChat()"><i class="fa-solid fa-comment"></i> 카카오톡 오픈톡방 입장</div>
+            <div class="menu-item" id="menu-kakao" style="display:none; background:#FAE100; color:#3A1D1D; font-weight:900; text-align:center;" onclick="openKakaoChat()"><svg viewBox="0 0 24 24" width="18" height="18" style="vertical-align:-3px;" aria-hidden="true"><path d="M12 5C7 5 3.2 8.1 3.2 11.9c0 2.45 1.66 4.6 4.2 5.78-.18.66-.66 2.42-.74 2.78-.1.45.16.45.35.33.16-.1 2.5-1.7 3.5-2.4.49.07.98.1 1.49.1 5 0 8.8-3.1 8.8-6.9S17 5 12 5z" fill="#3A1D1D"/></svg> 카카오톡 오픈톡방 입장</div>
             <div class="menu-item" id="menu-survey-instant" style="display:none; background:#e0f2fe; color:#0369a1; font-weight:900; text-align:center;" onclick="document.getElementById('menuModal').style.display='none'; openInstantSurvey();"><i class="fa-solid fa-square-poll-vertical"></i> 설문 응답 / 수정</div>
             <div class="menu-item" onclick="openNotice()"><i class="fa-solid fa-bullhorn" style="color: #facc15;"></i> 공지사항 </div>
             <div class="menu-item" onclick="viewMealMenu()"><i class="fa-solid fa-utensils"></i> 금주 식단보기</div>
@@ -1002,7 +1002,7 @@
 
 
 <!-- 석식 제외 체크박스 추가 -->
-            <div style="background: #fdf2f2; padding: 12px; border-radius: 12px; border: 1px solid #fee2e2; margin-top: 5px;">
+            <div id="dinnerSkipGroup" style="background: #fdf2f2; padding: 12px; border-radius: 12px; border: 1px solid #fee2e2; margin-top: 5px;">
                 <label style="display:flex; align-items:center; gap:10px; cursor:pointer;">
                     <input type="checkbox" id="skipDinner" style="width:20px; height:20px; accent-color: #ef4444;" onchange="checkDinnerTime(this)">
                     <span style="font-size:15px; font-weight:800; color:#b91c1c;">오늘 저녁 식사를 하지 않습니다.</span>
@@ -1011,6 +1011,9 @@
                     ※ 16:00 이후에는 변경이 불가합니다.
                     <span id="dinnerClosedMsg" style="display:none; color:#ef4444; font-weight:800; font-size:12px; display:block; margin-top:4px;">🚫 16시 이후 신청 마감 — 식당(<a href="tel:043-290-2325" style="color:#dc2626; text-decoration:underline; font-weight:900;">☎ 043-290-2325</a>)에 직접 연락 바랍니다.</span>
                 </p>
+            </div>
+            <div id="dinnerAssumedMsg" style="display:none; background:#eff6ff; border:1px solid #bfdbfe; border-radius:12px; padding:12px 14px; margin-top:5px; font-size:13px; color:#1e40af; font-weight:600; line-height:1.6;">
+                <i class="fa-solid fa-circle-info" style="margin-right:5px;"></i> 16시 이후 외출·외박 신청은 <b>석식을 드시는 것</b>으로 간주됩니다. 식사 제외가 필요하신 경우 식당(<a href="tel:043-290-2325" style="color:#1d4ed8; font-weight:800;">☎ 043-290-2325</a>)으로 문의해 주시기 바랍니다.
             </div>
 
 
@@ -2861,6 +2864,11 @@ async function openAdminAction() {
     }
 
     document.getElementById('adminActionDate').innerText = `오늘 날짜: ${today}`;
+    // 16시 이후: 석식 제외 선택 숨김 + '석식 포함 간주' 안내 표시
+    const _dsg = document.getElementById('dinnerSkipGroup');
+    const _dam = document.getElementById('dinnerAssumedMsg');
+    if (new Date().getHours() >= 16) { if(_dsg) _dsg.style.display='none'; if(_dam) _dam.style.display='block'; }
+    else { if(_dsg) _dsg.style.display=''; if(_dam) _dam.style.display='none'; }
     document.getElementById('adminActionModal').style.display = 'flex';
 }
 
@@ -3979,6 +3987,12 @@ async function updateMiniNotice() {
     if (updatedLastClosed !== finalNoticeText) {
         textEl.innerText = finalNoticeText;
         bar.style.display = 'flex';
+        // 마키 1회만 지나가면 바를 숨겨 공간 확보 (그 공지는 본 것으로 처리)
+        textEl.style.animation = 'none'; void textEl.offsetWidth; textEl.style.animation = '';
+        textEl.addEventListener('animationend', function(){
+            try { localStorage.setItem('lastClosedNotice', finalNoticeText); } catch(e){}
+            bar.style.display = 'none';
+        }, { once:true });
     } else {
         bar.style.display = 'none';
     }
@@ -4516,6 +4530,15 @@ function closeTabletLoan() {
 .sort-chip { background:#fff !important; color:#475569 !important; border:1px solid #e2e8f0 !important; box-shadow:0 1px 2px rgba(15,23,42,.04); }
 .sort-chip.active { background:var(--accent-color) !important; color:#fff !important; border-color:var(--accent-color) !important; }
 .q-card { box-shadow:0 4px 12px rgba(37,99,235,.08) !important; }
+/* 상단바 하단 모서리 라운딩 */
+.header { border-bottom-left-radius:18px !important; border-bottom-right-radius:18px !important; }
+/* 채팅 입력 영역 색감 */
+.input-dock { background:#e7f0ff !important; }
+.input-box { background:#f3f8ff !important; border:1.5px solid #cfe0ff !important; }
+#subjectSelect { background:#f3f8ff !important; border-color:#cfe0ff !important; }
+/* 메뉴: 본화면 안 비치게 밝은 단독 화면 */
+.menu-overlay { background:linear-gradient(180deg,#eef5ff 0%,#dbe9ff 100%) !important; -webkit-backdrop-filter:none !important; backdrop-filter:none !important; }
+.menu-box { box-shadow:0 18px 44px rgba(37,99,235,.16) !important; }
 /* 내 정보 카드 입체감 */
 .user-profile-card { box-shadow:0 4px 14px rgba(15,23,42,.06); border:1px solid #eef2f7; border-radius:18px !important; }
 .btn-edit-profile { border-radius:10px !important; }
@@ -4571,7 +4594,7 @@ input:not([type=checkbox]):not([type=radio]):not([type=file]), textarea, select 
 </script>
 
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vH</div>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vJ</div>
 </body>
 </html>
 <!-- @build 20260613-202500 (식단표: weeklyMenu 경로 + 캐싱(이전) + 구조화 menu(JSON) 지원 — data.menu 있으면 이미지 대신 깔끔한 텍스트 표로 렌더(모바일 확대 불필요), 캐시도 menu 포함. 이미지면 기존대로 이미지+핀치줌) -->
