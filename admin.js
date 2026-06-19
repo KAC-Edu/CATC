@@ -271,8 +271,9 @@ loadInitialData: function() {
     // 항상 현황판 먼저 표시 (새로고침 시 "확인 중..." 화면 방지)
     ui.showWaitingRoom();
 
-    if (lastRoom && lastRoom !== "null" && lastRoom !== "") {
+    if (lastRoom && lastRoom !== "null" && lastRoom !== "" && localStorage.getItem('kac_uimode') !== 'simple') {
         // 현황판 표시 후 백그라운드에서 방 복구 시도 (새로고침 시 비밀번호창 안 띄움)
+        // ※ 딸깍(원터치) 모드에서는 자동복구가 showWaitingRoom을 호출해 화면을 되돌리므로 건너뜀
         setTimeout(() => {
             this.switchRoomAttempt(lastRoom.toUpperCase(), true); // silent=true
         }, 100);
@@ -9632,42 +9633,23 @@ window.simpleMode = (function(){
       var msgEl = document.getElementById('simplePwMsg');
       try {
         var snap = await firebase.database().ref('courses/'+room+'/settings').get();
-        var settings = snap.val() || {};
-        var dbPw = settings.password || btoa('7777');
+        var dbPw = (snap.val() && snap.val().password) || btoa('7777');
         if (btoa(val) !== dbPw) {
           if(msgEl) msgEl.textContent='비밀번호가 올바르지 않습니다.';
           if(inp){ inp.value=''; inp.focus(); }
           return;
         }
-        // 소유권 확보 후 입장 (검증된 verifyTakeover와 동일한 절차)
-        state.isObserver = false;
-        sessionStorage.removeItem('kac_observer_room');
-        await firebase.database().ref('courses/'+room+'/status').update({
-          ownerSessionId: state.sessionId,
-          ownerLastSeen: firebase.database.ServerValue.TIMESTAMP,
-          roomStatus: 'active'
-        });
-        try { localStorage.setItem('last_owned_room', room); if(window.dataMgr && dataMgr.addOwnedRoom) dataMgr.addOwnedRoom(room); } catch(e){}
-        if (window.lectureMonitor && lectureMonitor.stopMic) { try { lectureMonitor._consentRoomAsked = room; lectureMonitor.stopMic(true); } catch(e){} }
-        localStorage.setItem('kac_last_mode','dashboard');
-        var m2=document.getElementById('simplePwModal'); if(m2) m2.style.display='none';
-        document.body.classList.remove('simple-landing');
-        if (window.dataMgr && dataMgr.forceEnterRoom) dataMgr.forceEnterRoom(room);
-        if (window.ui && ui.setMode) ui.setMode('dashboard');
-        // 통합현황판(view-home) 잔류 시 강제로 과정현황 고정 (최대 3초)
-        var tries=0;
-        var iv=setInterval(function(){
-          tries++;
-          if (state.room === room && window.ui && ui.setMode) {
-            var vh=document.getElementById('view-home');
-            var vd=document.getElementById('view-dashboard');
-            if ((vh && vh.style.display!=='none') || (vd && vd.style.display==='none')) ui.setMode('dashboard');
-          }
-          if (tries>=15) clearInterval(iv);
-        }, 200);
       } catch(e){
         if(msgEl) msgEl.textContent='오류가 발생했습니다. 다시 시도해 주세요.';
+        return;
       }
+      // 비번 OK → '현황판 입장하기'와 완전히 동일한 검증/입장 함수(verifyTakeover) 호출
+      localStorage.setItem('kac_last_mode','dashboard');
+      state.pendingRoom = room;
+      var ti = document.getElementById('takeoverPwInput'); if(ti) ti.value = val;
+      var m=document.getElementById('simplePwModal'); if(m) m.style.display='none';
+      document.body.classList.remove('simple-landing');
+      if (window.dataMgr && dataMgr.verifyTakeover) dataMgr.verifyTakeover();
     },
     closePw: function(){ var m=document.getElementById('simplePwModal'); if(m) m.style.display='none'; },
     submitPw: async function(){
