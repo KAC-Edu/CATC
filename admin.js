@@ -9678,3 +9678,56 @@ window.kacExpireEndedCourses = async function(){
     try{ localStorage.setItem('kac_expire_done', today); }catch(e){}
   }catch(e){ console.warn('[KAC expire] 스킵:', e && e.message); }
 };
+
+// ===== 과정현황 항목 인라인 수정 (과정명·기간·장소·교수·과정담당) =====
+ui.openFieldEdit = function(field){
+  if (state.isObserver) { ui.showAlert("👁️ 옵저버 모드에서는 수정할 수 없습니다."); return; }
+  if (!state.room) { ui.showAlert("강의실을 먼저 선택하세요."); return; }
+  ui._editField = field;
+  var titleEl=document.getElementById('fieldEditTitle');
+  var bodyEl=document.getElementById('fieldEditBody');
+  var msg=document.getElementById('fieldEditMsg'); if(msg) msg.textContent='';
+  var inS='width:100%; padding:12px; border:1.5px solid #cbd5e1; border-radius:10px; font-size:15px; outline:none; box-sizing:border-box;';
+  var get=function(id){ var e=document.getElementById(id); return e? (e.innerText||'').trim() : ''; };
+  if(field==='period'){
+    titleEl.textContent='교육 기간 수정';
+    var pd=get('dashPeriod'), s='', e='';
+    if(pd.indexOf('~')>=0){ var pp=pd.split('~'); s=(pp[0]||'').trim(); e=(pp[1]||'').trim(); }
+    bodyEl.innerHTML='<label style="font-size:12px;font-weight:800;color:#64748b;">시작일</label>'
+      +'<input type="date" id="fe-start" value="'+s+'" style="'+inS+'margin:4px 0 12px;">'
+      +'<label style="font-size:12px;font-weight:800;color:#64748b;">종료일</label>'
+      +'<input type="date" id="fe-end" value="'+e+'" style="'+inS+'margin-top:4px;">';
+  } else {
+    var map={courseName:['과정명','dashCourseTitle'], roomDetail:['교육 장소','dashRoomDetail'], prof:['담임 교수','dashProfNameOnly'], coord:['과정 담당','dashCoordName']};
+    var m=map[field]; if(!m) return;
+    titleEl.textContent=m[0]+' 수정';
+    var cur=get(m[1]); if(cur==='-'||cur==='장소 미설정'||cur==='과정명을 설정해주세요.') cur='';
+    bodyEl.innerHTML='<input type="text" id="fe-val" value="'+cur.replace(/"/g,'&quot;')+'" placeholder="'+m[0]+' 입력" style="'+inS+'">';
+  }
+  document.getElementById('fieldEditModal').style.display='flex';
+  setTimeout(function(){ var i=document.getElementById('fe-val')||document.getElementById('fe-start'); if(i){ i.focus(); if(i.select) i.select(); } }, 60);
+};
+ui.closeFieldEdit = function(){ var m=document.getElementById('fieldEditModal'); if(m) m.style.display='none'; };
+ui.saveFieldEdit = async function(){
+  var f=ui._editField, room=state.room; if(!room) return;
+  var msg=document.getElementById('fieldEditMsg');
+  var updates={};
+  if(f==='period'){
+    var s=(document.getElementById('fe-start')||{}).value||'', e=(document.getElementById('fe-end')||{}).value||'';
+    if(!s||!e){ if(msg)msg.textContent='시작일과 종료일을 모두 선택하세요.'; return; }
+    if(e<s){ if(msg)msg.textContent='종료일이 시작일보다 빠릅니다.'; return; }
+    updates['courses/'+room+'/settings/period']=s+' ~ '+e;
+  } else {
+    var v=((document.getElementById('fe-val')||{}).value||'').trim();
+    if(f==='courseName'){ if(!v){ if(msg)msg.textContent='과정명을 입력하세요.'; return; } updates['courses/'+room+'/settings/courseName']=v; }
+    else if(f==='roomDetail'){ updates['courses/'+room+'/settings/roomDetailName']=v; }
+    else if(f==='prof'){ updates['courses/'+room+'/status/professorName']=v; }
+    else if(f==='coord'){ updates['courses/'+room+'/settings/coordinatorName']=v; }
+    else return;
+  }
+  try{
+    await firebase.database().ref().update(updates);
+    ui.closeFieldEdit();
+    ui.showAlert('✅ 저장되었습니다. 모든 화면에 반영됩니다.');
+  }catch(err){ if(msg)msg.textContent='저장 중 오류가 발생했습니다.'; }
+};
