@@ -9590,17 +9590,12 @@ window.simpleMode = (function(){
       grid.innerHTML = html || '<div class="sl-empty">현재 운영 중인 과정이 없습니다.</div>';
     },
     enterCourse: function(room){
-      SM._pendingRoom = room;
-      var d = window.latestCoursesData || {};
-      var se = (d[room] && d[room].settings) || {};
-      var st = (d[room] && d[room].status) || {};
-      var label = se.courseName ? String(se.courseName).trim() : ('Room ' + room);
-      var prof = st.professorName ? (' · ' + st.professorName) : '';
-      var lc=document.getElementById('simplePwCourse'); if(lc) lc.textContent = label + prof;
-      var msg=document.getElementById('simplePwMsg'); if(msg) msg.textContent='';
-      var inp=document.getElementById('simplePwInput'); if(inp) inp.value='';
-      var modal=document.getElementById('simplePwModal'); if(modal) modal.style.display='flex';
-      setTimeout(function(){ var i=document.getElementById('simplePwInput'); if(i) i.focus(); }, 60);
+      // 현황판에서 방 선택할 때와 '완전히 동일한' 검증/입장 경로 사용
+      document.body.classList.remove('simple-landing');
+      localStorage.setItem('kac_last_mode','dashboard');
+      if (window.dataMgr && dataMgr.switchRoomAttempt) {
+        dataMgr.switchRoomAttempt(String(room).toUpperCase());
+      }
     },
     closePw: function(){ var m=document.getElementById('simplePwModal'); if(m) m.style.display='none'; },
     submitPw: async function(){

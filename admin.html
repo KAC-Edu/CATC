@@ -288,6 +288,14 @@ body.simple-mode .mode-dropdown { display:none !important; }
 body.simple-mode #sidebarToggleTab { opacity:0.22; }
 #simpleDetailToggle { display:none; }
 body.simple-mode #simpleDetailToggle { display:inline-flex; }
+/* 딸깍: 비밀번호/권한 선택 팝업을 크게 */
+body.simple-mode #takeoverModal .modal-box,
+body.simple-mode #roleChoiceModal .modal-box { width:540px !important; max-width:94vw !important; padding:40px 38px !important; border-radius:24px !important; }
+body.simple-mode #takeoverPwInput { font-size:38px !important; letter-spacing:14px !important; padding:20px 16px !important; text-align:center !important; }
+body.simple-mode #takeoverModal .modal-box h3,
+body.simple-mode #roleChoiceModal .modal-box h3 { font-size:22px !important; }
+body.simple-mode #takeoverModal .m-btn,
+body.simple-mode #roleChoiceModal .m-btn { font-size:17px !important; padding:15px 18px !important; }
 </style>
     <div class="sidebar" id="mainSidebar">
         <div class="sidebar-top">
@@ -2579,6 +2587,6 @@ function setupAcc(btn){
 </script>
 <style>@media print{#__catcVer{display:none!important}}</style>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vK1</div>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vL1</div>
 </body>
 </html>
