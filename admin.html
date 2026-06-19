@@ -264,13 +264,19 @@ body.simple-landing .mode-tabs { display:none !important; }
 .sl-head { text-align:center; margin-bottom:28px; }
 .sl-head h2 { font-size:28px; font-weight:900; color:#0f172a; margin:0 0 6px; }
 .sl-head p { font-size:15px; color:#64748b; margin:0; }
-.sl-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:20px; max-width:1080px; margin:0 auto; }
-.sl-card { background:#fff; border-radius:20px; padding:26px 24px; box-shadow:0 10px 30px rgba(15,23,42,.08); border:2px solid #eef2f7; cursor:pointer; transition:transform .15s,box-shadow .15s,border-color .15s; }
-.sl-card:hover { transform:translateY(-3px); box-shadow:0 16px 40px rgba(37,99,235,.16); border-color:#bfdbfe; }
-.sl-card .room { display:inline-block; background:#eff6ff; color:#1d4ed8; font-size:13px; font-weight:800; padding:4px 12px; border-radius:8px; margin-bottom:14px; }
-.sl-card .cname { font-size:21px; font-weight:900; color:#0f172a; line-height:1.35; margin-bottom:12px; word-break:keep-all; }
-.sl-card .prof { font-size:15px; color:#475569; font-weight:700; }
-.sl-card .prof i { color:#3b82f6; margin-right:6px; }
+.sl-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:24px; max-width:1120px; margin:0 auto; }
+.sl-card { position:relative; background:#fff; border-radius:22px; padding:30px 26px 24px; box-shadow:0 10px 30px rgba(15,23,42,.07); border:1px solid #eef2f7; cursor:pointer; overflow:hidden; display:flex; flex-direction:column; min-height:192px; transition:transform .18s ease, box-shadow .18s ease; }
+.sl-card::before { content:''; position:absolute; left:0; top:0; right:0; height:6px; background:linear-gradient(90deg,#1e3a8a,#3b82f6); }
+.sl-card:hover { transform:translateY(-6px); box-shadow:0 22px 50px rgba(37,99,235,.20); }
+.sl-card-top { display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; }
+.sl-room { display:inline-flex; align-items:center; gap:6px; background:linear-gradient(135deg,#1e3a8a,#2563eb); color:#fff; font-size:12.5px; font-weight:800; letter-spacing:.03em; padding:6px 13px; border-radius:999px; box-shadow:0 4px 10px rgba(37,99,235,.25); }
+.sl-enter { font-size:13px; font-weight:800; color:#cbd5e1; display:inline-flex; align-items:center; gap:5px; transition:color .18s, transform .18s; }
+.sl-card:hover .sl-enter { color:#2563eb; transform:translateX(3px); }
+.sl-cname { font-size:21px; font-weight:900; color:#0f172a; line-height:1.4; margin-bottom:auto; word-break:keep-all; }
+.sl-prof { display:flex; align-items:center; gap:11px; margin-top:18px; padding-top:16px; border-top:1px solid #f1f5f9; }
+.sl-ava { width:38px; height:38px; border-radius:50%; flex-shrink:0; background:linear-gradient(135deg,#dbeafe,#bfdbfe); color:#1e3a8a; font-size:16px; font-weight:900; display:flex; align-items:center; justify-content:center; }
+.sl-pname { font-size:16px; font-weight:800; color:#0f172a; }
+.sl-prole { font-size:13px; font-weight:700; color:#94a3b8; margin-left:4px; }
 .sl-empty { grid-column:1/-1; text-align:center; color:#94a3b8; font-weight:700; padding:60px 0; }
 .simple-only { display:none !important; }
 body.simple-mode .simple-only { display:inline-flex !important; }
@@ -541,6 +547,7 @@ body.simple-mode #sidebarToggleTab { opacity:0.22; }
             </div>
         </div>
         <div id="simpleLanding">
+            <button onclick="simpleMode.switchToDetailed()" title="상세(기존) 강사 화면으로 전환" style="position:absolute; top:18px; right:22px; padding:11px 18px; background:#fff; border:1.5px solid #cbd5e1; border-radius:12px; font-size:14px; font-weight:800; color:#334155; cursor:pointer; box-shadow:0 4px 12px rgba(15,23,42,.10); display:inline-flex; align-items:center; gap:8px; z-index:6;"><i class="fa-solid fa-desktop"></i> 상세 버전으로</button>
             <div class="sl-head"><h2>과정을 선택하세요</h2><p>담당하시는 과정을 눌러 바로 입장합니다</p></div>
             <div class="sl-grid" id="simpleCourseGrid"></div>
         </div>
@@ -2567,6 +2574,6 @@ function setupAcc(btn){
 </script>
 <style>@media print{#__catcVer{display:none!important}}</style>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vG1</div>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vJ1</div>
 </body>
 </html>

@@ -9575,11 +9575,16 @@ window.simpleMode = (function(){
         var active = (st.roomStatus==='active');
         var cname = se.courseName ? String(se.courseName).trim() : '';
         if(!active || !cname || se.hideFromBoard) continue;
-        var prof = st.professorName ? st.professorName : '-';
+        var prof = st.professorName ? String(st.professorName).trim() : '';
+        var hasProf = !!prof;
+        var initial = hasProf ? prof.charAt(0) : '·';
+        var pnameHtml = hasProf
+          ? ('<span class="sl-pname">'+slEsc(prof)+'</span><span class="sl-prole">교수</span>')
+          : '<span class="sl-pname" style="color:#94a3b8;">담당 미지정</span>';
         html += '<div class="sl-card" onclick="simpleMode.enterCourse(\''+c+'\')">'
-              + '<span class="room">Room '+c+'</span>'
-              + '<div class="cname">'+slEsc(cname)+'</div>'
-              + '<div class="prof"><i class="fa-solid fa-chalkboard-user"></i>'+slEsc(prof)+'</div>'
+              + '<div class="sl-card-top"><span class="sl-room"><i class="fa-solid fa-door-open"></i> Room '+c+'</span><span class="sl-enter">입장 <i class="fa-solid fa-arrow-right-long"></i></span></div>'
+              + '<div class="sl-cname">'+slEsc(cname)+'</div>'
+              + '<div class="sl-prof"><span class="sl-ava">'+slEsc(initial)+'</span><span>'+pnameHtml+'</span></div>'
               + '</div>';
       }
       grid.innerHTML = html || '<div class="sl-empty">현재 운영 중인 과정이 없습니다.</div>';
@@ -9614,8 +9619,22 @@ window.simpleMode = (function(){
           if (window.lectureMonitor && lectureMonitor.stopMic) { try { lectureMonitor._consentRoomAsked = room; lectureMonitor.stopMic(true); } catch(e){} }
           SM.closePw();
           document.body.classList.remove('simple-landing');
+          localStorage.setItem('kac_last_mode','dashboard');
           if (window.dataMgr && dataMgr.forceEnterRoom) dataMgr.forceEnterRoom(room);
-          setTimeout(function(){ if(window.ui && ui.setMode) ui.setMode('dashboard'); }, 350);
+          // 입장 직후 화면을 확실히 '과정현황(dashboard)'으로 고정 (view-home 잔류 방지)
+          if (window.ui && ui.setMode) ui.setMode('dashboard');
+          var _tries = 0;
+          var _iv = setInterval(function(){
+            _tries++;
+            if (state.room === room && window.ui && ui.setMode) {
+              var vh = document.getElementById('view-home');
+              var vd = document.getElementById('view-dashboard');
+              if ((vh && vh.style.display !== 'none') || (vd && vd.style.display === 'none')) {
+                ui.setMode('dashboard');
+              }
+            }
+            if (_tries >= 12) clearInterval(_iv);
+          }, 200);
         } else {
           var m=document.getElementById('simplePwMsg'); if(m) m.textContent='비밀번호가 올바르지 않습니다.';
           if(inp){ inp.value=''; inp.focus(); }
