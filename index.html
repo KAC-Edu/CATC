@@ -664,6 +664,7 @@
             <div class="menu-item" onclick="openSurveyModal()"><i class="fa-solid fa-square-poll-vertical" style="color: #3b82f6;"></i> 설문조사 (스카이캠퍼스)</div>
             <div class="menu-item" onclick="openHrdAttendanceApp()" style="background:#eef2ff; color:#1e3a8a; font-weight:800;"><i class="fa-solid fa-id-card-clip" style="color:#2563eb;"></i> 고용노동부 출결 앱 (설치/실행)</div>
             <button onclick="document.getElementById('menuModal').style.display='none'" style="margin-top:15px; width:100%; padding:12px; border:none; border-radius:12px; background:#f1f5f9; font-weight:900; color:#475569;">닫기</button>
+            <div id="menuVerLine" style="text-align:center; margin-top:12px; font-size:11px; color:#94a3b8; font-weight:700; letter-spacing:.3px;">버전 -</div>
         </div>
     </div>
 
@@ -4566,6 +4567,15 @@ input:not([type=checkbox]):not([type=radio]):not([type=file]), textarea, select 
 .landing-page > *:not(.landing-foot) { animation: kacFadeUp .5s ease both; }
 @keyframes kacFadeUp { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:none; } }
 </style>
+<style>#__catcVer{ display:none !important; }</style>
+<script>
+/* 버전 배지는 본화면에 숨기고, 메뉴 안에서만 표시 (배지값과 자동 동기화) */
+(function(){
+  function setV(){ var b=document.getElementById('__catcVer'), m=document.getElementById('menuVerLine'); if(b&&m) m.textContent='버전 '+((b.textContent||'').trim()); }
+  if(document.readyState!=='loading') setV(); else document.addEventListener('DOMContentLoaded', setV);
+  setTimeout(setV, 1200);
+})();
+</script>
 <style>@media print{#__catcVer{display:none!important}}</style>
 <!-- [생활관 비품] 신청 가능 항목을 미화 설정(system/facility_items)에서 동적으로 -->
 <script>
@@ -4594,7 +4604,7 @@ input:not([type=checkbox]):not([type=radio]):not([type=file]), textarea, select 
 </script>
 
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vJ</div>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vK</div>
 </body>
 </html>
 <!-- @build 20260613-202500 (식단표: weeklyMenu 경로 + 캐싱(이전) + 구조화 menu(JSON) 지원 — data.menu 있으면 이미지 대신 깔끔한 텍스트 표로 렌더(모바일 확대 불필요), 캐시도 menu 포함. 이미지면 기존대로 이미지+핀치줌) -->
