@@ -1139,6 +1139,8 @@
             const sel=document.getElementById('masterWeekSelect'); if(!sel) return;
             const opts=['<option value="__base__">기본 (모든 주차 공통)</option>'];
             const base=mondayOf(new Date());
+            // 토·일이면 차주가 준비 대상 → 과정·명단 주차칩과 동일하게 기준 주를 한 주 앞당김 (지난 주 표시 방지)
+            { const _t=new Date(); if(_t.getDay()===6 || _t.getDay()===0) base.setDate(base.getDate()+7); }
             for(let i=0;i<6;i++){ const m=new Date(base); m.setDate(base.getDate()+7*i); const wk=_mwYmd(m); const we=new Date(m); we.setDate(m.getDate()+6); const fmt=d=>(d.getMonth()+1)+'/'+d.getDate(); opts.push('<option value="'+wk+'">'+fmt(m)+'~'+fmt(we)+' 주차</option>'); }
             const cur = masterWeekKey;
             sel.innerHTML=opts.join('');
@@ -5921,6 +5923,6 @@
 </script>
 <style>@media print{#__catcVer{display:none!important}}</style>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vA</div>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vB</div>
 </body>
 </html>
