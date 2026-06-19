@@ -1537,6 +1537,18 @@ body.night-mode .badge-idle {
     border-radius: 0 !important;
     display: block !important;
 }
+/* 전체화면에서 담임교수 프로필 페이지 — 모니터 가득 채우기 */
+#pdfWrapper:fullscreen #guideProfile,
+#pdfWrapper:-webkit-full-screen #guideProfile {
+    width: 100vw !important;
+    height: 100vh !important;
+    max-width: 100vw !important;
+    max-height: 100vh !important;
+    overflow-y: auto !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    background: #fff !important;
+}
 
 
 

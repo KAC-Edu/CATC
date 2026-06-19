@@ -6836,14 +6836,66 @@ init: function() {
     // 탭 전환 시 PDF 재렌더링 (setMode에서 호출)
     // 현재 방 캐시에 pdfDoc이 있으면 저장된 페이지 그대로 재개,
     // 없으면 GitHub URL에서 on-demand 로드 (첫 진입 시)
-    refresh: function() {
+    refresh: async function() {
         const slot = guideMgr._slot();
+        await guideMgr._loadProfile();
         if (slot.pdfDoc) {
             guideMgr.isRendering = false;
-            guideMgr.renderPage(slot.pageNum);
+            guideMgr.renderPage(slot.pageNum || 1);
         } else {
             guideMgr.loadPDF(guideMgr.GUIDE_PDF_URL);
         }
+    },
+
+    // 담임 교수 프로필 로드 (현재 방의 professorName -> professorProfiles)
+    _loadProfile: async function() {
+        const slot = guideMgr._slot();
+        try {
+            const room = guideMgr._room();
+            const nameSnap = await firebase.database().ref(`courses/${room}/status/professorName`).once('value');
+            const name = (nameSnap.val() || '').trim();
+            if (!name) { slot.profile = null; return; }
+            const pSnap = await firebase.database().ref(`system/professorProfiles/${name}`).once('value');
+            const pr = pSnap.val();
+            const hasContent = pr && (pr.photo || pr.msg || pr.bio || (Array.isArray(pr.bioList) && pr.bioList.length) || pr.phone || pr.email);
+            if (hasContent) { pr._name = name; slot.profile = pr; } else { slot.profile = null; }
+        } catch (e) { slot.profile = null; }
+    },
+    _hasProfile: function() { return !!(guideMgr._slot().profile); },
+    _vtotal: function() { const s = guideMgr._slot(); if (!s.pdfDoc) return 0; return s.pdfDoc.numPages + (guideMgr._hasProfile() ? 1 : 0); },
+    _isProfilePage: function(v) { return guideMgr._hasProfile() && v === 2; },
+    _toPdfPage: function(v) { if (!guideMgr._hasProfile()) return v; if (v <= 1) return 1; if (v === 2) return null; return v - 1; },
+    _profileHTML: function(p) {
+        const esc = s => (s == null ? '' : String(s)).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+        const name = esc(p._name || '');
+        const eng = p.engName ? `<span style="font-size:18px;font-weight:600;color:#64748b;margin-left:8px;">${esc(p.engName)}</span>` : '';
+        const photo = p.photo
+            ? `<img src="${p.photo}" alt="${name}" style="width:200px;height:250px;object-fit:cover;border-radius:18px;box-shadow:0 12px 30px rgba(0,51,102,.22);flex-shrink:0;">`
+            : `<div style="width:200px;height:250px;border-radius:18px;background:#e8eef6;display:flex;align-items:center;justify-content:center;font-size:80px;color:#9fb4d0;flex-shrink:0;"><i class="fa-solid fa-user-tie"></i></div>`;
+        const contacts = [];
+        if (p.phone) contacts.push(`<span style="display:inline-flex;align-items:center;gap:6px;"><i class="fa-solid fa-phone" style="color:#0369a1;"></i> ${esc(p.phone)}</span>`);
+        if (p.email) contacts.push(`<span style="display:inline-flex;align-items:center;gap:6px;"><i class="fa-solid fa-envelope" style="color:#0369a1;"></i> ${esc(p.email)}</span>`);
+        const contactHtml = contacts.length ? `<div style="display:flex;flex-wrap:wrap;gap:18px;margin-top:14px;font-size:15px;font-weight:700;color:#334155;">${contacts.join('')}</div>` : '';
+        const msg = p.msg ? `<div style="margin-top:14px;font-size:16px;line-height:1.7;color:#475569;white-space:pre-wrap;">${esc(p.msg)}</div>` : '';
+        const bio = (Array.isArray(p.bioList) ? p.bioList : []).filter(r => r && (r.year || r.text));
+        const bioHtml = bio.length
+            ? `<div style="margin-top:18px;"><div style="font-size:14px;font-weight:900;color:#0369a1;margin-bottom:8px;letter-spacing:.02em;">주요 약력</div>${bio.map(r => `<div style="display:flex;gap:12px;margin-bottom:6px;font-size:15px;"><span style="min-width:64px;font-weight:800;color:#0369a1;">${esc(r.year || '')}</span><span style="color:#334155;">${esc(r.text || '')}</span></div>`).join('')}</div>`
+            : '';
+        return `<div style="background:#fff;width:100%;box-sizing:border-box;padding:40px 44px;display:flex;flex-direction:column;">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:24px;">
+                <span style="width:6px;height:30px;background:#003366;border-radius:3px;"></span>
+                <span style="font-size:22px;font-weight:900;color:#003366;">담임 교수 소개</span>
+            </div>
+            <div style="display:flex;gap:32px;align-items:flex-start;">
+                ${photo}
+                <div style="flex:1;min-width:0;">
+                    <div style="font-size:30px;font-weight:900;color:#0f172a;">${name}<span style="font-size:17px;font-weight:700;color:#64748b;"> 교수</span>${eng}</div>
+                    ${contactHtml}
+                    ${msg}
+                </div>
+            </div>
+            ${bioHtml}
+        </div>`;
     },
 
     // 2. 가이드 업로드 — 정식 버전 출시 전까지 업로드 제한
@@ -6891,11 +6943,33 @@ init: function() {
     // 4. 화면 렌더링
     renderPage: async function(num) {
         const slot = guideMgr._slot();
-        if (!slot.pdfDoc || guideMgr.isRendering) return;
+        if (!slot.pdfDoc) return;
+
+        const _total = guideMgr._vtotal();
+        if (num < 1) num = 1;
+        if (num > _total) num = _total;
+
+        const _canvasEl = document.getElementById('guideCanvas');
+        const _profEl = document.getElementById('guideProfile');
+
+        // 담임 교수 프로필 (가상 2페이지)
+        if (guideMgr._isProfilePage(num)) {
+            guideMgr.isRendering = false;
+            if (_canvasEl) _canvasEl.style.display = 'none';
+            if (_profEl) { _profEl.innerHTML = guideMgr._profileHTML(slot.profile); _profEl.style.display = 'block'; }
+            slot.pageNum = num;
+            const _ind = document.getElementById('guidePageInfo');
+            if (_ind) _ind.innerText = `${num} / ${_total}`;
+            return;
+        }
+
+        if (_profEl) _profEl.style.display = 'none';
+        if (_canvasEl) _canvasEl.style.display = 'block';
+        if (guideMgr.isRendering) return;
         guideMgr.isRendering = true;
 
         try {
-            const page = await slot.pdfDoc.getPage(num);
+            const page = await slot.pdfDoc.getPage(guideMgr._toPdfPage(num));
             const canvas = document.getElementById('guideCanvas');
             if (!canvas) { guideMgr.isRendering = false; return; }
 
@@ -6907,8 +6981,9 @@ init: function() {
 
             let cssScale = containerW / unscaledViewport.width;
             if (document.fullscreenElement) {
-                const hScale = (window.innerHeight * 0.95) / unscaledViewport.height;
-                cssScale = Math.min(cssScale, hScale);
+                const hScale = window.innerHeight / unscaledViewport.height;
+                const wScale = window.innerWidth  / unscaledViewport.width;
+                cssScale = Math.min(hScale, wScale);
             }
             const renderScale = cssScale * dpr;
             const viewport = page.getViewport({scale: renderScale});
@@ -6937,7 +7012,7 @@ init: function() {
             guideMgr._slot().pageNum = num;
 
             const indicator = document.getElementById('guidePageInfo');
-            if (indicator) indicator.innerText = `${num} / ${slot.pdfDoc.numPages}`;
+            if (indicator) indicator.innerText = `${num} / ${guideMgr._vtotal()}`;
 
         } catch (err) {
             if (err && err.name !== 'RenderingCancelledException') {
@@ -6951,8 +7026,8 @@ init: function() {
     changePage: function(offset) {
         const slot = guideMgr._slot();
         if (!slot.pdfDoc || guideMgr.isRendering) return;
-        const newPage = slot.pageNum + offset;
-        if (newPage > 0 && newPage <= slot.pdfDoc.numPages) {
+        const newPage = (slot.pageNum || 1) + offset;
+        if (newPage > 0 && newPage <= guideMgr._vtotal()) {
             guideMgr.renderPage(newPage);
         }
     },
