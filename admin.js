@@ -1406,27 +1406,21 @@ toggleLeader: function(token, currentName) {
             [`courses/${room}/expectedStudents`]: null,
             [`courses/${room}/coordRoster`]: null
         };
-        firebase.database().ref(`courses/${room}/settings/period`).once('value').then(function(s){
-            const pd = (s.val() || '').trim();
-            try {
-                const start = pd.includes(' ~ ') ? pd.split(' ~ ')[0].trim() : (pd.split('~')[0] || '').trim();
-                if (start) {
-                    const d = new Date(start + 'T00:00:00');
-                    if (!isNaN(d)) {
-                        const dw = (d.getDay() + 6) % 7;
-                        const mo = new Date(d); mo.setDate(d.getDate() - dw);
-                        const utc = mo.toISOString().slice(0, 10);
-                        const loc = mo.getFullYear() + '-' + String(mo.getMonth()+1).padStart(2,'0') + '-' + String(mo.getDate()).padStart(2,'0');
-                        updates['system/dorm/rosters/' + utc + '__' + room] = null;
-                        updates['system/dorm/rosters/' + loc + '__' + room] = null;
-                    }
-                }
-            } catch(e) {}
+        // 지원부 생활관 명단: 주차 계산에 의존하지 않고, 이 방(__room)으로 끝나는 모든 키를 전부 제거
+        firebase.database().ref('system/dorm/rosters').once('value').then(function(snap){
+            const all = snap.val() || {};
+            Object.keys(all).forEach(function(k){ if (k.endsWith('__' + room)) updates['system/dorm/rosters/' + k] = null; });
             return firebase.database().ref().update(updates);
         }).then(function(){
             ui.showAlert("✅ 명단이 모두 비워졌습니다.");
             if (window.ui && ui.loadStudentList) ui.loadStudentList();
-        }).catch(function(){ ui.showAlert("명단 비우기 중 오류가 발생했습니다."); });
+        }).catch(function(){
+            // system/dorm/rosters 읽기 실패 시에도 운영부·예정 명단은 비움
+            firebase.database().ref().update(updates).then(function(){
+                ui.showAlert("✅ 명단이 비워졌습니다.");
+                if (window.ui && ui.loadStudentList) ui.loadStudentList();
+            }).catch(function(){ ui.showAlert("명단 비우기 중 오류가 발생했습니다."); });
+        });
     },
 
     // [신규] 업로드(예정) 명단에서 개별 이름 삭제
