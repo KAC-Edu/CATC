@@ -530,11 +530,15 @@
     </script>
 
     <div id="landingPage" class="landing-page">
-        <img src="catc.webp" alt="항공기술훈련원" class="landing-banner">
+        <div class="landing-brand"><img src="logo.webp" alt="KAC" class="landing-brand-logo"><span>항공기술훈련원 교육생 플랫폼</span></div>
+        <div class="landing-hero">
+            <img src="catc.webp" alt="항공기술훈련원" class="landing-banner">
+            <div class="landing-welcome"><i class="fa-solid fa-hand-sparkles"></i> 환영합니다</div>
+            <div class="landing-room" id="landingBadge">Room ...</div>
+        </div>
         <div class="landing-course" id="landingTitle" style="display:none;">Loading...</div>
-        <div class="landing-room" id="landingBadge">Room ...</div>
         <button class="btn-enter" onclick="enterApp()">입장하기 <i class="fa-solid fa-arrow-right-to-bracket"></i></button>
-        <img src="logo.webp" alt="KAC" class="landing-logo">
+        <div class="landing-foot">© KAC 한국공항공사 · 항공기술훈련원</div>
     </div>
 
     <!-- [신규] 출결 QR 전용 — 출결 처리 완료 화면 (입장 랜딩으로 진행하지 않음) -->
@@ -4510,19 +4514,23 @@ function closeTabletLoan() {
 .mini-notice-bar { border-radius:0 0 14px 14px; }
 /* 입력류 라운드(체크/라디오 제외) */
 input:not([type=checkbox]):not([type=radio]):not([type=file]), textarea, select { border-radius:12px; }
-/* ── 입장(랜딩) 화면 — 밝고 산뜻한 톤 (항기원 사진 유지) ── */
+/* ── 입장(랜딩) 화면 — 밝고 산뜻한 히어로 카드 ── */
 .landing-page {
-  background: radial-gradient(900px 460px at 50% -8%, rgba(255,255,255,.65), transparent 60%),
-              linear-gradient(180deg,#eef5ff 0%,#d8e8ff 58%,#c4dbff 100%) !important;
-  color:#0f172a !important;
+  background: radial-gradient(900px 460px at 50% -8%, rgba(255,255,255,.7), transparent 60%),
+              linear-gradient(180deg,#eef5ff 0%,#dbe9ff 55%,#c7ddff 100%) !important;
+  color:#0f172a !important; justify-content:center !important; gap:0;
 }
-.landing-banner { border-radius:24px !important; box-shadow:0 16px 40px rgba(37,99,235,.22) !important; border:1px solid rgba(255,255,255,.85) !important; }
-.landing-course { color:#0f172a !important; letter-spacing:-.01em; text-shadow:none; }
-.landing-room { background:rgba(255,255,255,.78) !important; border:1px solid #bfdbfe !important; color:#1e40af !important; box-shadow:0 6px 16px rgba(37,99,235,.14) !important; -webkit-backdrop-filter:blur(6px); backdrop-filter:blur(6px); }
+.landing-brand { display:flex; align-items:center; gap:9px; font-size:14px; font-weight:800; color:#1e3a8a; margin-bottom:20px; }
+.landing-brand-logo { width:50px; height:auto; }
+.landing-hero { background:#fff; border-radius:26px; padding:14px 14px 18px; width:90%; max-width:400px; margin-bottom:26px; display:flex; flex-direction:column; align-items:center; box-shadow:0 24px 54px rgba(37,99,235,.20); }
+.landing-hero .landing-banner { width:100% !important; max-width:100% !important; margin:0 0 13px 0 !important; border-radius:18px !important; box-shadow:0 8px 20px rgba(37,99,235,.14) !important; border:none !important; }
+.landing-welcome { font-size:13px; font-weight:800; color:#2563eb; margin-bottom:11px; letter-spacing:.01em; }
+.landing-welcome i { margin-right:5px; }
+.landing-hero .landing-room { margin:0 !important; background:#f1f6ff !important; border:1px solid #dbeafe !important; color:#1e40af !important; box-shadow:none !important; max-width:100%; }
 .landing-room .room-course { color:#1e40af !important; opacity:1; }
-.btn-enter { background:linear-gradient(135deg,#3b82f6,#2563eb) !important; color:#fff !important; box-shadow:0 14px 32px rgba(37,99,235,.42) !important; height:58px !important; border-radius:32px !important; }
-.landing-logo { opacity:.9; }
-.landing-page > * { animation: kacFadeUp .5s ease both; }
+.btn-enter { background:linear-gradient(135deg,#3b82f6,#2563eb) !important; color:#fff !important; box-shadow:0 14px 32px rgba(37,99,235,.42) !important; height:58px !important; width:230px !important; border-radius:32px !important; }
+.landing-foot { position:absolute; bottom:26px; font-size:11px; color:#64748b; font-weight:600; opacity:.85; }
+.landing-page > *:not(.landing-foot) { animation: kacFadeUp .5s ease both; }
 @keyframes kacFadeUp { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:none; } }
 </style>
 <style>@media print{#__catcVer{display:none!important}}</style>
@@ -4553,7 +4561,7 @@ input:not([type=checkbox]):not([type=radio]):not([type=file]), textarea, select 
 </script>
 
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vE</div>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vF</div>
 </body>
 </html>
 <!-- @build 20260613-202500 (식단표: weeklyMenu 경로 + 캐싱(이전) + 구조화 menu(JSON) 지원 — data.menu 있으면 이미지 대신 깔끔한 텍스트 표로 렌더(모바일 확대 불필요), 캐시도 menu 포함. 이미지면 기존대로 이미지+핀치줌) -->
