@@ -885,7 +885,8 @@
 
 <!-- [최종 수정] 외출/외박 신청 및 복귀 시스템 팝업 -->
 <div id="adminActionModal" class="menu-overlay" style="display:none; z-index: 7000;">
-    <div class="menu-box" style="width:95%; padding: 20px; border-radius: 20px; max-width: 450px;">
+    <div class="menu-box" style="width:95%; padding: 20px; border-radius: 20px; max-width: 450px; position:relative;">
+        <button type="button" id="adminCloseX" onclick="closeAdminAction()" aria-label="닫기" style="position:absolute; top:12px; right:14px; width:34px; height:34px; border:none; border-radius:50%; background:#f1f5f9; color:#475569; font-size:22px; font-weight:800; line-height:1; cursor:pointer; z-index:5; display:flex; align-items:center; justify-content:center;">&times;</button>
         <p id="adminActionDate" style="display:none;">오늘 날짜: 2026-01-20</p>
 
         <!-- [현황 영역] 이미 신청했을 때만 보임 -->
@@ -913,112 +914,135 @@
         </div>
 
 <!-- [최종] 자동완성 기능이 추가된 입력 양식 영역 -->
-        <div id="adminActionForm" style="display: none; text-align: left; flex-direction: column; gap: 12px;">
-            <div style="display: flex; gap: 8px;">
-                <button class="quiz-opt-btn admin-type-btn" id="btn-outing" onclick="selectAdminType('outing')" style="height:45px; font-size:14px; flex:1; margin-bottom:0;">외출 (당일)</button>
-                <button class="quiz-opt-btn admin-type-btn" id="btn-overnight" onclick="selectAdminType('overnight')" style="height:45px; font-size:14px; flex:1; margin-bottom:0;">외박 (익일)</button>
-            </div>
+        <div id="adminActionForm" style="display: none; text-align: left; flex-direction: column; gap: 14px;">
 
-            <div>
-                <label style="font-size:11px; font-weight:800; color:#64748b;">소속 <span style="font-weight:600; color:#94a3b8;">(지원부 명단 자동)</span></label>
-                <input type="text" id="userDept" list="deptHistory" placeholder="소속 부서" style="width:100%; padding:11px 12px; border:1.5px solid #e2e8f0; border-radius:10px; outline:none; font-size:15px;">
-                <datalist id="deptHistory"></datalist>
-            </div>
+            <!-- 진행 표시 -->
+            <div id="adminStepBar" style="display:flex; gap:6px; justify-content:center; margin-bottom:2px;"></div>
 
-            <!-- 시간 선택 영역 (외출/외박 분기) -->
-
-            <!-- 외출 시간 -->
-            <div id="outingTimeArea" style="background:#f8fafc; padding:14px 16px; border-radius:12px; border:1px solid #e2e8f0;">
-                <div style="font-size:12px; font-weight:900; color:#0369a1; margin-bottom:12px;">🕕 수업 종료 후 외출 기준</div>
-                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:11px;">
-                    <span style="font-size:14px; font-weight:800; color:#475569;">외출 시작</span>
-                    <span style="padding:9px 16px; background:#e0f2fe; border-radius:9px; font-size:15px; font-weight:900; color:#0369a1;">18:00</span>
-                </div>
-                <div style="display:flex; align-items:center; justify-content:space-between;">
-                    <span style="font-size:14px; font-weight:800; color:#475569;">복귀 시간</span>
-                    <select id="endTime" style="width:48%; padding:11px; border:1.5px solid #cbd5e1; border-radius:9px; font-size:16px; font-weight:800; background:white; outline:none; color:#0f172a;">
-                        <option value="18:30">18:30</option>
-                        <option value="19:00">19:00</option>
-                        <option value="19:30">19:30</option>
-                        <option value="20:00" selected>20:00</option>
-                        <option value="20:30">20:30</option>
-                        <option value="21:00">21:00</option>
-                        <option value="21:30">21:30</option>
-                        <option value="22:00">22:00</option>
-                    </select>
-                </div>
-                <input type="hidden" id="startTime" value="18:00">
-            </div>
-
-            <!-- 외박 날짜 영역 (외박 선택 시만 표시) -->
-            <div id="overnightArea" style="display:none; background:#fff1f2; padding:14px; border-radius:12px; border:1px solid #fecaca; flex-direction:column; gap:10px;">
-                <div style="font-size:11px; font-weight:900; color:#dc2626; margin-bottom:2px;">
-                    🌙 외박 — 수업 종료 후 출발, 익일 08:00 복귀 기준
-                </div>
-                <div style="display:flex; align-items:center; justify-content:space-between;">
-                    <label style="font-size:13px; font-weight:800; color:#64748b;">외박 날짜</label>
-                    <input type="date" id="returnDate" style="width:60%; padding:10px; border:1.5px solid #fca5a5; border-radius:8px; font-size:14px; font-weight:800; outline:none;">
-                </div>
-                <div style="display:flex; justify-content:space-between; font-size:12px; font-weight:700; color:#64748b;">
-                    <span>출발</span><span style="font-weight:900; color:#dc2626;">18:00 (수업 종료)</span>
-                </div>
-                <div style="display:flex; justify-content:space-between; font-size:12px; font-weight:700; color:#64748b;">
-                    <span>복귀</span><span style="font-weight:900; color:#059669;">익일 08:00 자동 설정</span>
+            <!-- STEP 1: 유형 선택 -->
+            <div class="admin-step" data-astep="1">
+                <div style="font-size:16px; font-weight:900; color:#0f172a; text-align:center; margin-bottom:14px;">어떤 신청인가요?</div>
+                <div style="display:flex; gap:10px;">
+                    <button type="button" class="quiz-opt-btn admin-type-btn" id="btn-outing" onclick="selectAdminType('outing')" style="height:96px; font-size:17px; flex:1; margin-bottom:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px;">🚶 외출<span style="font-size:11px; font-weight:600; color:#94a3b8;">당일 복귀</span></button>
+                    <button type="button" class="quiz-opt-btn admin-type-btn" id="btn-overnight" onclick="selectAdminType('overnight')" style="height:96px; font-size:17px; flex:1; margin-bottom:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px;">🌙 외박<span style="font-size:11px; font-weight:600; color:#94a3b8;">익일 복귀</span></button>
                 </div>
             </div>
 
-            <div style="display:flex; gap:8px;">
-                <div style="flex:1;">
-                    <label style="font-size:11px; font-weight:800; color:#64748b;">행선지</label>
-                    <input type="text" id="destination" list="destHistory" placeholder="예: 청주시내" style="width:100%; padding:11px 12px; border:1.5px solid #e2e8f0; border-radius:10px; outline:none; font-size:15px;">
-                    <datalist id="destHistory"></datalist>
+            <!-- STEP 2: 소속·성명 확인 -->
+            <div class="admin-step" data-astep="2" style="display:none;">
+                <div style="font-size:16px; font-weight:900; color:#0f172a; text-align:center; margin-bottom:14px;">본인 정보가 맞나요?</div>
+                <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:16px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px dashed #e2e8f0;">
+                        <span style="font-size:13px; font-weight:800; color:#64748b;">성명</span>
+                        <span id="wzName" style="font-size:16px; font-weight:900; color:#0f172a;">-</span>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 0 4px;">
+                        <span style="font-size:13px; font-weight:800; color:#64748b;">소속</span>
+                        <span id="wzDeptText" style="font-size:16px; font-weight:900; color:#0f172a;">-</span>
+                    </div>
+                    <input type="text" id="userDept" list="deptHistory" placeholder="소속 부서를 입력하세요" style="display:none; width:100%; margin-top:8px; padding:11px 12px; border:1.5px solid #e2e8f0; border-radius:10px; outline:none; font-size:15px;">
+                    <datalist id="deptHistory"></datalist>
                 </div>
-                <div style="flex:1;">
-                    <label style="font-size:11px; font-weight:800; color:#64748b;">신청 사유</label>
-                    <input type="text" id="outingReason" list="reasonHistory" placeholder="예: 개인용무" style="width:100%; padding:11px 12px; border:1.5px solid #e2e8f0; border-radius:10px; outline:none; font-size:15px;">
-                    <datalist id="reasonHistory"></datalist>
+                <div style="display:flex; gap:8px; margin-top:14px;">
+                    <button type="button" onclick="showAdminStep(1)" style="flex:1; padding:13px; border:none; border-radius:12px; background:#f1f5f9; color:#475569; font-size:15px; font-weight:800; cursor:pointer;">이전</button>
+                    <button type="button" onclick="adminStep2Next()" style="flex:2; padding:13px; background:#3b82f6; color:white; border:none; border-radius:12px; font-size:16px; font-weight:900; cursor:pointer;">네, 맞아요 →</button>
                 </div>
             </div>
 
-            <div>
-                <label style="font-size:11px; font-weight:800; color:#64748b;">비상 연락처</label>
-                <input type="tel" id="fullPhone" placeholder="010-0000-0000" maxlength="13" oninput="formatPhoneInput(this)" style="width:100%; padding:12px; border:1.5px solid #e2e8f0; border-radius:10px; outline:none; font-size:15px;">
+            <!-- STEP 3: 연락처 -->
+            <div class="admin-step" data-astep="3" style="display:none;">
+                <div style="font-size:16px; font-weight:900; color:#0f172a; text-align:center; margin-bottom:6px;">비상 연락처</div>
+                <div style="font-size:12px; color:#94a3b8; text-align:center; margin-bottom:14px;">외출·외박 중 연락 가능한 번호를 입력해 주세요</div>
+                <input type="tel" id="fullPhone" placeholder="010-0000-0000" maxlength="13" oninput="formatPhoneInput(this)" style="width:100%; padding:14px; border:1.5px solid #e2e8f0; border-radius:12px; outline:none; font-size:18px; text-align:center; font-weight:800; letter-spacing:1px;">
+                <div style="display:flex; gap:8px; margin-top:16px;">
+                    <button type="button" onclick="showAdminStep(2)" style="flex:1; padding:13px; border:none; border-radius:12px; background:#f1f5f9; color:#475569; font-size:15px; font-weight:800; cursor:pointer;">이전</button>
+                    <button type="button" onclick="adminStep3Next()" style="flex:2; padding:13px; background:#3b82f6; color:white; border:none; border-radius:12px; font-size:16px; font-weight:900; cursor:pointer;">다음 →</button>
+                </div>
             </div>
 
+            <!-- STEP 4: 행선지·사유·시간 -->
+            <div class="admin-step" data-astep="4" style="display:none;">
+                <div style="font-size:16px; font-weight:900; color:#0f172a; text-align:center; margin-bottom:12px;">상세 정보</div>
 
+                <!-- 외출 시간 -->
+                <div id="outingTimeArea" style="background:#f8fafc; padding:14px 16px; border-radius:12px; border:1px solid #e2e8f0;">
+                    <div style="font-size:12px; font-weight:900; color:#0369a1; margin-bottom:12px;">🕕 수업 종료 후 외출 기준</div>
+                    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:11px;">
+                        <span style="font-size:14px; font-weight:800; color:#475569;">외출 시작</span>
+                        <span style="padding:9px 16px; background:#e0f2fe; border-radius:9px; font-size:15px; font-weight:900; color:#0369a1;">18:00</span>
+                    </div>
+                    <div style="display:flex; align-items:center; justify-content:space-between;">
+                        <span style="font-size:14px; font-weight:800; color:#475569;">복귀 시간</span>
+                        <select id="endTime" style="width:48%; padding:11px; border:1.5px solid #cbd5e1; border-radius:9px; font-size:16px; font-weight:800; background:white; outline:none; color:#0f172a;">
+                            <option value="18:30">18:30</option>
+                            <option value="19:00">19:00</option>
+                            <option value="19:30">19:30</option>
+                            <option value="20:00" selected>20:00</option>
+                            <option value="20:30">20:30</option>
+                            <option value="21:00">21:00</option>
+                            <option value="21:30">21:30</option>
+                            <option value="22:00">22:00</option>
+                        </select>
+                    </div>
+                    <input type="hidden" id="startTime" value="18:00">
+                </div>
 
+                <!-- 외박 날짜 영역 -->
+                <div id="overnightArea" style="display:none; background:#fff1f2; padding:14px; border-radius:12px; border:1px solid #fecaca; flex-direction:column; gap:10px;">
+                    <div style="font-size:11px; font-weight:900; color:#dc2626; margin-bottom:2px;">
+                        🌙 외박 — 수업 종료 후 출발, 익일 08:00 복귀 기준
+                    </div>
+                    <div style="display:flex; align-items:center; justify-content:space-between;">
+                        <label style="font-size:13px; font-weight:800; color:#64748b;">외박 날짜</label>
+                        <input type="date" id="returnDate" style="width:60%; padding:10px; border:1.5px solid #fca5a5; border-radius:8px; font-size:14px; font-weight:800; outline:none;">
+                    </div>
+                    <div style="display:flex; justify-content:space-between; font-size:12px; font-weight:700; color:#64748b;">
+                        <span>출발</span><span style="font-weight:900; color:#dc2626;">18:00 (수업 종료)</span>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; font-size:12px; font-weight:700; color:#64748b;">
+                        <span>복귀</span><span style="font-weight:900; color:#059669;">익일 08:00 자동 설정</span>
+                    </div>
+                </div>
 
+                <div style="display:flex; gap:8px; margin-top:12px;">
+                    <div style="flex:1;">
+                        <label style="font-size:11px; font-weight:800; color:#64748b;">행선지</label>
+                        <input type="text" id="destination" list="destHistory" placeholder="예: 청주시내" style="width:100%; padding:11px 12px; border:1.5px solid #e2e8f0; border-radius:10px; outline:none; font-size:15px;">
+                        <datalist id="destHistory"></datalist>
+                    </div>
+                    <div style="flex:1;">
+                        <label style="font-size:11px; font-weight:800; color:#64748b;">신청 사유</label>
+                        <input type="text" id="outingReason" list="reasonHistory" placeholder="예: 개인용무" style="width:100%; padding:11px 12px; border:1.5px solid #e2e8f0; border-radius:10px; outline:none; font-size:15px;">
+                        <datalist id="reasonHistory"></datalist>
+                    </div>
+                </div>
 
-
-
-
-
-
-
-
-
-
-<!-- 석식 제외 체크박스 추가 -->
-            <div id="dinnerSkipGroup" style="background: #fdf2f2; padding: 12px; border-radius: 12px; border: 1px solid #fee2e2; margin-top: 5px;">
-                <label style="display:flex; align-items:center; gap:10px; cursor:pointer;">
-                    <input type="checkbox" id="skipDinner" style="width:20px; height:20px; accent-color: #ef4444;" onchange="checkDinnerTime(this)">
-                    <span style="font-size:15px; font-weight:800; color:#b91c1c;">오늘 저녁 식사를 하지 않습니다.</span>
-                </label>
-                <p style="font-size:11px; color:#ef4444; margin: 8px 0 0 30px; font-weight: 600;">
-                    ※ 16:00 이후에는 변경이 불가합니다.
-                    <span id="dinnerClosedMsg" style="display:none; color:#ef4444; font-weight:800; font-size:12px; display:block; margin-top:4px;">🚫 16시 이후 신청 마감 — 식당(<a href="tel:043-290-2325" style="color:#dc2626; text-decoration:underline; font-weight:900;">☎ 043-290-2325</a>)에 직접 연락 바랍니다.</span>
-                </p>
+                <div style="display:flex; gap:8px; margin-top:16px;">
+                    <button type="button" onclick="showAdminStep(3)" style="flex:1; padding:13px; border:none; border-radius:12px; background:#f1f5f9; color:#475569; font-size:15px; font-weight:800; cursor:pointer;">이전</button>
+                    <button type="button" onclick="submitAdminAction()" style="flex:2; padding:13px; background:#10b981; color:white; border:none; border-radius:12px; font-size:16px; font-weight:900; cursor:pointer;">신청서 제출</button>
+                </div>
             </div>
-            <div id="dinnerAssumedMsg" style="display:none; background:#eff6ff; border:1px solid #bfdbfe; border-radius:12px; padding:12px 14px; margin-top:5px; font-size:13px; color:#1e40af; font-weight:600; line-height:1.6;">
-                <i class="fa-solid fa-circle-info" style="margin-right:5px;"></i> 16시 이후 외출·외박 신청은 <b>석식을 드시는 것</b>으로 간주됩니다. 식사 제외가 필요하신 경우 식당(<a href="tel:043-290-2325" style="color:#1d4ed8; font-weight:800;">☎ 043-290-2325</a>)으로 문의해 주시기 바랍니다.
-            </div>
 
+            <!-- STEP 5: 완료 + 석식 -->
+            <div class="admin-step" data-astep="5" style="display:none; text-align:center;">
+                <div style="font-size:46px; margin-bottom:6px;">✅</div>
+                <div style="font-size:18px; font-weight:900; color:#0f172a; margin-bottom:4px;">신청이 완료되었습니다</div>
+                <div style="font-size:13px; color:#64748b; margin-bottom:18px;">외출·외박 대장에 정상 접수되었습니다.</div>
 
+                <div id="wizDinnerBox" style="display:none; background:#fff7ed; border:1px solid #fed7aa; border-radius:14px; padding:16px;">
+                    <div style="font-size:15px; font-weight:900; color:#9a3412; margin-bottom:4px;">🍽️ 오늘 석식은 어떻게 하시나요?</div>
+                    <div style="font-size:12px; color:#c2730a; margin-bottom:14px;">석식을 안 드시면 식수 인원에서 제외됩니다.</div>
+                    <div style="display:flex; gap:8px;">
+                        <button type="button" onclick="wizDinnerChoice(false)" style="flex:1; padding:13px; border:1.5px solid #cbd5e1; border-radius:12px; background:#fff; color:#475569; font-size:14px; font-weight:800; cursor:pointer;">석식 먹어요</button>
+                        <button type="button" onclick="wizDinnerChoice(true)" style="flex:1; padding:13px; border:none; border-radius:12px; background:#ef4444; color:#fff; font-size:14px; font-weight:800; cursor:pointer;">석식 제외 신청</button>
+                    </div>
+                </div>
 
+                <div id="wizDinnerAssumed" style="display:none; background:#eff6ff; border:1px solid #bfdbfe; border-radius:14px; padding:14px; font-size:13px; color:#1e40af; font-weight:600; line-height:1.6; text-align:left;">
+                    <i class="fa-solid fa-circle-info" style="margin-right:5px;"></i> 16시 이후 신청은 <b>석식을 드시는 것</b>으로 간주됩니다. 제외가 필요하시면 식당(<a href="tel:043-290-2325" style="color:#1d4ed8; font-weight:800;">☎ 043-290-2325</a>)으로 문의해 주세요.
+                </div>
 
-            <div style="display:flex; gap:8px; margin-top:6px;">
-                <button onclick="document.getElementById('adminActionModal').style.display='none'" style="flex:1; padding:13px; border:none; border-radius:12px; background:#f1f5f9; color:#475569; font-size:15px; font-weight:800; cursor:pointer;">닫기</button>
-                <button onclick="submitAdminAction()" style="flex:2; padding:13px; background:#10b981; color:white; border:none; border-radius:12px; font-size:16px; font-weight:900;">신청서 제출</button>
+                <button type="button" onclick="closeAdminAction()" style="width:100%; margin-top:16px; padding:13px; border:none; border-radius:12px; background:#0f172a; color:#fff; font-size:15px; font-weight:900; cursor:pointer;">완료</button>
             </div>
         </div>
     </div>
@@ -2817,6 +2841,17 @@ async function openAdminAction() {
                 setVal('fullPhone', lastOuting.phone);
             });
         }
+
+        // === 단계별 마법사 초기화 ===
+        (function(){
+            var nm=(localStorage.getItem('kac_user_name')||'').trim();
+            var dp=(window._myDept||'').trim();
+            var wzN=document.getElementById('wzName'); if(wzN) wzN.textContent = nm || '미등록';
+            var wzD=document.getElementById('wzDeptText'); var ud=document.getElementById('userDept');
+            if(dp){ if(wzD){ wzD.style.display=''; wzD.textContent=dp; } if(ud){ ud.style.display='none'; ud.value=dp; } }
+            else { if(wzD){ wzD.style.display='none'; } if(ud){ ud.style.display='block'; } }
+        })();
+        showAdminStep(1);
     } 
     // 2. 신청 내역이 있을 때
     else {
@@ -2945,9 +2980,73 @@ function selectAdminType(type) {
         document.getElementById('startTime').value = '18:00';
         document.getElementById('endTime').value   = '20:00';
     }
+    showAdminStep(2);
 }
 
+// ===== 외출/외박 단계별 마법사 컨트롤러 =====
+var _adminStep = 1;
+function showAdminStep(n){
+    _adminStep = n;
+    var steps = document.querySelectorAll('#adminActionForm .admin-step');
+    for(var i=0;i<steps.length;i++){
+        steps[i].style.display = (parseInt(steps[i].getAttribute('data-astep'),10)===n) ? 'block' : 'none';
+    }
+    var bar = document.getElementById('adminStepBar');
+    if(bar){
+        if(n>=1 && n<=4){
+            bar.style.display='flex';
+            var h='';
+            for(var k=1;k<=4;k++){ h += '<div style="width:26px; height:5px; border-radius:3px; background:'+(k<=n?'#3b82f6':'#e2e8f0')+';"></div>'; }
+            bar.innerHTML=h;
+        } else { bar.style.display='none'; }
+    }
+    if(n===4){
+        var oa=document.getElementById('outingTimeArea'), on=document.getElementById('overnightArea');
+        if(selectedAdminType==='overnight'){ if(oa)oa.style.display='none'; if(on)on.style.display='flex'; }
+        else { if(oa)oa.style.display='flex'; if(on)on.style.display='none'; }
+    }
+    if(n===5){
+        var ch=document.getElementById('wizDinnerBox'), as=document.getElementById('wizDinnerAssumed');
+        if(new Date().getHours()>=16){ if(ch)ch.style.display='none'; if(as)as.style.display='block'; }
+        else { if(ch)ch.style.display='block'; if(as)as.style.display='none'; }
+    }
+}
 
+function adminStep2Next(){
+    var ud=document.getElementById('userDept');
+    if(ud && ud.style.display!=='none' && !ud.value.trim()){ showKacAlert('소속 부서를 입력해주세요.'); return; }
+    showAdminStep(3);
+}
+
+function adminStep3Next(){
+    var p=document.getElementById('fullPhone');
+    var v=(p?p.value:'').replace(/\D/g,'');
+    if(v.length<9){ showKacAlert('비상 연락처를 정확히 입력해주세요.'); return; }
+    showAdminStep(4);
+}
+
+function closeAdminAction(){
+    var m=document.getElementById('adminActionModal'); if(m) m.style.display='none';
+    showAdminStep(1);
+}
+
+async function wizDinnerChoice(skip){
+    if(skip){
+        if(new Date().getHours()>=16){
+            showKacAlert('16시 이후 석식 변경은 마감되었습니다. 제외가 필요하시면 식당(☎ 043-290-2325)으로 문의해 주세요.');
+            closeAdminAction(); return;
+        }
+        try{
+            var today=getTodayString();
+            var uToken=localStorage.getItem('uToken');
+            var name=localStorage.getItem('kac_user_name');
+            var phoneShort=localStorage.getItem('kac_user_phone');
+            await firebase.database().ref(`courses/${currentRoom}/dinner_skips/${today}/${uToken}`).set(`${name}(${phoneShort})`);
+            showKacAlert('🍽️ 오늘 석식 제외 신청이 완료되었습니다.');
+        }catch(e){ showKacAlert('석식 신청 처리 중 오류가 발생했습니다.'); }
+    }
+    closeAdminAction();
+}
 
 function updateAdminTypeButtons() {
     const types = ['outing', 'overnight'];
@@ -2999,11 +3098,10 @@ async function submitAdminAction() {
     const dest = document.getElementById('destination').value.trim();
     const reason = document.getElementById('outingReason').value.trim();
     const fullPhone = document.getElementById('fullPhone').value.trim();
-    const skipDinner = document.getElementById('skipDinner').checked;
 
-    // 3. 아무것도 선택/체크 안 한 경우 차단
-    if (selectedAdminType === 'none' && !skipDinner) {
-        showKacAlert("외출 유형을 선택하거나 '석식 제외'에 체크해주세요.");
+    // 3. 유형 미선택 차단
+    if (selectedAdminType === 'none') {
+        showKacAlert("외출 또는 외박을 선택해주세요.");
         return;
     }
 
@@ -3074,25 +3172,15 @@ async function submitAdminAction() {
             } catch(e) {}
         }
 
-        // 6. 석식 제외 데이터 저장 (체크했을 때만)
-        if (skipDinner) {
-            const now = new Date();
-            if (now.getHours() >= 16) {
-                showKacAlert("⚠️ 석식 신청/취소는 16시에 마감되었습니다.\n(외출 신청은 정상 접수되었습니다)");
-            } else {
-                // 관리자/식당 앱에서 보기 편하게 "이름(뒷자리)" 형식으로 저장
-                await firebase.database().ref(`courses/${currentRoom}/dinner_skips/${today}/${uToken}`).set(`${name}(${phoneShort})`);
-            }
-        }
-
-        showKacAlert("✅ 행정 신청서가 정상적으로 접수되었습니다.");
-        document.getElementById('adminActionModal').style.display = 'none';
-        // 복귀 알림 시스템 시작
+        // 6. 복귀 알림 시스템 시작
         if (selectedAdminType === 'outing') {
             startOutingReturnAlerts();
         } else if (selectedAdminType === 'overnight') {
             startOvernightReturnAlerts();
         }
+
+        // 7. 완료 단계로 이동 (석식 제외 여부 선택)
+        showAdminStep(5);
 
     } catch (e) {
         console.error(e);
@@ -4605,7 +4693,7 @@ input:not([type=checkbox]):not([type=radio]):not([type=file]), textarea, select 
 </script>
 
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vP</div>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vQ</div>
 </body>
 </html>
 <!-- @build 20260613-202500 (식단표: weeklyMenu 경로 + 캐싱(이전) + 구조화 menu(JSON) 지원 — data.menu 있으면 이미지 대신 깔끔한 텍스트 표로 렌더(모바일 확대 불필요), 캐시도 menu 포함. 이미지면 기존대로 이미지+핀치줌) -->
