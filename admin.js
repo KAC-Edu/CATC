@@ -7629,28 +7629,54 @@ saveAll: function() {
         const commitUpdates = () => {
             const _room = state.room;
             const _newKey = () => 'rk_' + Date.now() + '_' + Math.random().toString(36).slice(2,7);
-            // [차수 구분] 미개설→개설 이거나 과정명이 바뀌면 '새 차수' → resetKey 새로 발급
-            //  → 그 방의 옛 교육생은 다시 이름·사번을 입력하도록 유도(잘못된 자동입장 방지).
-            //  (진행 중인 같은 과정의 설정만 수정할 때는 키를 그대로 둬서 현재 교육생이 튕기지 않음)
-            Promise.all([
-                firebase.database().ref(`courses/${_room}/status/roomStatus`).once('value'),
-                firebase.database().ref(`courses/${_room}/settings/courseName`).once('value')
-            ]).then(function(res){
-                const prevActive = (res[0].val() === 'active');
-                const prevName = ((res[1].val() || '') + '').trim();
-                if (!prevActive || (prevName && prevName !== name)) {
+            // [차수 구분/리셋] 미개설→개설 이거나 과정명이 바뀌면 '새 과정' →
+            //   ① resetKey 새로 발급(옛 교육생 자동입장 차단)
+            //   ② 옛 과정 데이터(수강생·명단·생활관 명단·출결·신청 등) 비움 — "리셋 후 개설"
+            //   ③ 비우기 전 출결·외출외박은 보관소(course_archive)에 3개월 보존용으로 아카이브
+            //   (진행 중인 같은 과정의 설정만 수정할 때는 그대로 둬서 현재 교육생이 안 튕김)
+            firebase.database().ref(`courses/${_room}`).once('value').then(function(snap){
+                const _c = snap.val() || {};
+                const prevActive = ((_c.status || {}).roomStatus === 'active');
+                const prevName = (((_c.settings || {}).courseName) || '').trim();
+                const prevPeriod = (((_c.settings || {}).period) || '').trim();
+                const isNewCourse = (!prevActive) || (prevName && prevName !== name);
+                let pre = Promise.resolve();
+                if (isNewCourse) {
                     updates[`courses/${_room}/status/resetKey`] = _newKey();
+                    // 아카이브 (출결·외출외박·수강생 3개월 보존)
+                    const _aa = _c.admin_actions || {}, _ia = _c.internal_attendance || {}, _stu = _c.students || {};
+                    if (Object.keys(_aa).length || Object.keys(_ia).length || Object.keys(_stu).length) {
+                        pre = firebase.database().ref('system/course_archive/' + _room + '_' + Date.now()).set({
+                            room: _room, courseName: prevName, period: prevPeriod,
+                            prof: ((_c.status || {}).professorName) || '', coord: ((_c.settings || {}).coordinatorName) || '',
+                            admin_actions: _aa, internal_attendance: _ia, students: _stu,
+                            expectedStudents: (_c.expectedStudents || null), archivedAt: firebase.database.ServerValue.TIMESTAMP
+                        }).catch(function(){});
+                    }
+                    // 데이터 노드 비움 (settings/status 는 새 값으로 이미 updates 에 들어있어 제외)
+                    ['students','expectedStudents','coordRoster','internal_attendance','admin_actions','dinner_skips','shuttle','tablet_loans','quizAnswers','questions','activeQuiz','quizFinalResults','attendanceQR','scheduleImage','coordNoticeHistory','connections'].forEach(function(k){ updates[`courses/${_room}/${k}`] = null; });
+                    updates[`courses/${_room}/boardNotice`] = "";
+                    updates[`courses/${_room}/coordNotice`] = "";
+                    // 지원부 생활관 명단(옛 과정 주차)도 비움 (방마스터 설정은 유지)
+                    try {
+                        const start = prevPeriod.includes(' ~ ') ? prevPeriod.split(' ~ ')[0].trim() : (prevPeriod.split('~')[0] || '').trim();
+                        if (start) { const d = new Date(start + 'T00:00:00'); if (!isNaN(d)) { const dw=(d.getDay()+6)%7; const mo=new Date(d); mo.setDate(d.getDate()-dw);
+                            const utc=mo.toISOString().slice(0,10);
+                            const loc=mo.getFullYear()+'-'+String(mo.getMonth()+1).padStart(2,'0')+'-'+String(mo.getDate()).padStart(2,'0');
+                            updates['system/dorm/rosters/'+utc+'__'+_room]=null;
+                            updates['system/dorm/rosters/'+loc+'__'+_room]=null;
+                        }}
+                    } catch(e) {}
                 }
-            }).catch(function(){
-                updates[`courses/${_room}/status/resetKey`] = _newKey();   // 조회 실패 시 안전하게 재등록 유도
-            }).then(function(){
-                return firebase.database().ref().update(updates);
-            }).then(() => {
+                return pre;
+            }).catch(function(){ updates[`courses/${_room}/status/resetKey`] = _newKey(); })
+              .then(function(){ return firebase.database().ref().update(updates); })
+              .then(() => {
                 document.getElementById('courseNameInput').value = name;
                 document.getElementById('roomPw').value = rawPw;
                 document.getElementById('displayCourseTitle').innerText = name;
                 localStorage.setItem('last_owned_room', state.room);
-                ui.showAlert("✅ 설정이 저장되었습니다.");
+                ui.showAlert("✅ 설정이 저장되었습니다. (새 과정이면 이전 명단·수강생은 자동 정리됨)");
                 self.closeSetupModal();
                 dataMgr.forceEnterRoom(state.room);
             });
@@ -8777,8 +8803,30 @@ const annualPlanMgr = {
                 }
                 // course.name === prevName → 이미 같은 과정이 운영 중:
                 //   강사가 직접 조정한 '기간·강의실' 등 설정을 자동배치가 덮어쓰지 않고 그대로 보존한다.
+            } else {
+                // [리셋 정합성] 배정 대상 없음 + 현재 방의 과정이 이미 기간 종료됐으면 → 미개설로 리셋
+                //   (차주 유지(autoAssignLocked) 방은 openRooms 에서 이미 제외돼 보존됨)
+                const _rd = curRooms[room] || {};
+                const _act = (_rd.status || {}).roomStatus === 'active';
+                const _nm = ((_rd.settings || {}).courseName || '').trim();
+                const _pd = ((_rd.settings || {}).period || '').trim();
+                const _end = _pd.includes('~') ? _pd.split('~').pop().trim() : '';
+                if (_act && _nm && _end && _end < targetMon) {
+                    Object.assign(updates, this._cleanStartUpdates(room));
+                    updates[`courses/${room}/settings/courseName`] = '';
+                    updates[`courses/${room}/settings/period`] = null;
+                    updates[`courses/${room}/settings/coordinatorName`] = null;
+                    updates[`courses/${room}/status/professorName`] = '';
+                    updates[`courses/${room}/status/roomStatus`] = 'idle';
+                    try {
+                        const _s = _pd.includes(' ~ ') ? _pd.split(' ~ ')[0].trim() : (_pd.split('~')[0] || '').trim();
+                        if (_s) { const _d = new Date(_s + 'T00:00:00'); if (!isNaN(_d)) { const _dw=(_d.getDay()+6)%7; const _mo=new Date(_d); _mo.setDate(_d.getDate()-_dw);
+                            const _u=_mo.toISOString().slice(0,10); const _l=_mo.getFullYear()+'-'+String(_mo.getMonth()+1).padStart(2,'0')+'-'+String(_mo.getDate()).padStart(2,'0');
+                            updates['system/dorm/rosters/'+_u+'__'+room]=null; updates['system/dorm/rosters/'+_l+'__'+room]=null; }}
+                    } catch(e) {}
+                    wiped.push(`${room}(${_nm} 종료→미개설)`);
+                }
             }
-            // course 가 없으면(배정 대상 없음) 기존 동작 유지: 방을 건드리지 않는다.
         }
 
         if (Object.keys(updates).length) {
