@@ -271,9 +271,8 @@ loadInitialData: function() {
     // 항상 현황판 먼저 표시 (새로고침 시 "확인 중..." 화면 방지)
     ui.showWaitingRoom();
 
-    if (lastRoom && lastRoom !== "null" && lastRoom !== "" && localStorage.getItem('kac_uimode') !== 'simple') {
+    if (lastRoom && lastRoom !== "null" && lastRoom !== "") {
         // 현황판 표시 후 백그라운드에서 방 복구 시도 (새로고침 시 비밀번호창 안 띄움)
-        // ※ 딸깍(원터치) 모드에서는 자동복구가 showWaitingRoom을 호출해 화면을 되돌리므로 건너뜀
         setTimeout(() => {
             this.switchRoomAttempt(lastRoom.toUpperCase(), true); // silent=true
         }, 100);
@@ -303,9 +302,6 @@ loadInitialData: function() {
             ui.openQrModal(); 
         };
     }
-
-    // 딸깍(원터치) 모드 진입 판단
-    if (window.simpleMode) simpleMode.afterLogin();
 },
 
 
@@ -2864,7 +2860,6 @@ showAlert: function(msg, onConfirm) {
                 window.latestCoursesData = s.val() || {}; // 전역에 데이터 저장
                 window.isRoomListenerSet = true;
                 this.initRoomSelect(); // 데이터가 오면 화면을 다시 그림
-                if (window.simpleMode && document.body.classList.contains('simple-landing')) simpleMode.renderCourses();
             });
             return;
         }
@@ -9540,189 +9535,4 @@ function warnHideFromBoard(cb){
     }
 }
 window.warnHideFromBoard = warnHideFromBoard;
-
-
-/* ================= 딸깍(원터치) 모드 ================= */
-window.simpleMode = (function(){
-  function slEsc(s){ s = (s==null?'':String(s)); return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
-  var SM = {
-    afterLogin: function(){
-      SM.updateToggleLabel();
-      var m = localStorage.getItem('kac_uimode');
-      if (m === 'simple') { SM.enable(); }
-      else if (m === 'detailed') { /* 기존 상세 화면 그대로 */ }
-      else { SM.showPicker(); }
-    },
-    showPicker: function(){ var el=document.getElementById('modePickerOverlay'); if(el) el.style.display='flex'; },
-    choose: function(mode){
-      localStorage.setItem('kac_uimode', mode);
-      var el=document.getElementById('modePickerOverlay'); if(el) el.style.display='none';
-      if(mode==='simple') SM.enable();
-    },
-    enable: function(){
-      document.body.classList.add('simple-mode');
-      document.body.classList.add('sidebar-hidden');
-      SM.installClipHold();
-      SM.showLanding();
-    },
-    switchToDetailed: function(){ localStorage.setItem('kac_uimode','detailed'); location.reload(); },
-    switchToSimple: function(){ localStorage.setItem('kac_uimode','simple'); location.reload(); },
-    toggleMode: function(){
-      var cur = localStorage.getItem('kac_uimode');
-      var isSimple = (cur === 'simple') || document.body.classList.contains('simple-mode');
-      localStorage.setItem('kac_uimode', isSimple ? 'detailed' : 'simple');
-      location.reload();
-    },
-    updateToggleLabel: function(){
-      var b = document.getElementById('uiModeToggleBtn');
-      if(!b) return;
-      var isSimple = (localStorage.getItem('kac_uimode') === 'simple') || document.body.classList.contains('simple-mode');
-      b.innerHTML = isSimple
-        ? '<i class="fa-solid fa-table-columns"></i> 상세(기존) 버전으로'
-        : '<i class="fa-solid fa-hand-pointer"></i> 원터치(딸깍) 버전으로';
-    },
-    showLanding: function(){ document.body.classList.add('simple-landing'); SM.renderCourses(); },
-    renderCourses: function(){
-      var grid=document.getElementById('simpleCourseGrid'); if(!grid) return;
-      var d = window.latestCoursesData || {};
-      var html='';
-      for(var i=65;i<=90;i++){
-        var c=String.fromCharCode(i);
-        var rd=d[c]||{}; var st=rd.status||{}; var se=rd.settings||{};
-        var active = (st.roomStatus==='active');
-        var cname = se.courseName ? String(se.courseName).trim() : '';
-        if(!active || !cname || se.hideFromBoard) continue;
-        var prof = st.professorName ? String(st.professorName).trim() : '';
-        var hasProf = !!prof;
-        var initial = hasProf ? prof.charAt(0) : '·';
-        var pnameHtml = hasProf
-          ? ('<span class="sl-pname">'+slEsc(prof)+'</span><span class="sl-prole">교수</span>')
-          : '<span class="sl-pname" style="color:#94a3b8;">담당 미지정</span>';
-        html += '<div class="sl-card" onclick="simpleMode.enterCourse(\''+c+'\')">'
-              + '<div class="sl-card-top"><span class="sl-room"><i class="fa-solid fa-door-open"></i> Room '+c+'</span><span class="sl-enter">입장 <i class="fa-solid fa-arrow-right-long"></i></span></div>'
-              + '<div class="sl-cname">'+slEsc(cname)+'</div>'
-              + '<div class="sl-prof"><span class="sl-ava">'+slEsc(initial)+'</span><span>'+pnameHtml+'</span></div>'
-              + '</div>';
-      }
-      grid.innerHTML = html || '<div class="sl-empty">현재 운영 중인 과정이 없습니다.</div>';
-    },
-    enterCourse: function(room){
-      room = String(room).toUpperCase();
-      SM._pendingRoom = room;
-      var d = window.latestCoursesData || {};
-      var se = (d[room] && d[room].settings) || {};
-      var st = (d[room] && d[room].status) || {};
-      var label = se.courseName ? String(se.courseName).trim() : ('Room ' + room);
-      var prof = st.professorName ? (' · ' + st.professorName + ' 교수') : '';
-      var lc=document.getElementById('simplePwCourse'); if(lc) lc.textContent = label + prof;
-      var msg=document.getElementById('simplePwMsg'); if(msg) msg.textContent='';
-      var inp=document.getElementById('simplePwInput'); if(inp) inp.value='';
-      var modal=document.getElementById('simplePwModal'); if(modal) modal.style.display='flex';
-      setTimeout(function(){ var i=document.getElementById('simplePwInput'); if(i) i.focus(); }, 60);
-    },
-    closePw: function(){
-      var m=document.getElementById('simplePwModal'); if(m) m.style.display='none';
-      // 취소 시 통합현황판이 아니라 '과정 카드'로 복귀
-      if(document.body.classList.contains('simple-mode')) SM.showLanding();
-    },
-    submitPw: async function(){
-      var room = SM._pendingRoom;
-      var inp = document.getElementById('simplePwInput');
-      var val = inp ? (inp.value||'').trim() : '';
-      if(!room || !val) return;
-      var msgEl = document.getElementById('simplePwMsg');
-      try {
-        var snap = await firebase.database().ref('courses/'+room+'/settings').get();
-        var dbPw = (snap.val() && snap.val().password) || btoa('7777');
-        if (btoa(val) !== dbPw) {
-          if(msgEl) msgEl.textContent='비밀번호가 올바르지 않습니다.';
-          if(inp){ inp.value=''; inp.focus(); }
-          return;
-        }
-      } catch(e){
-        if(msgEl) msgEl.textContent='오류가 발생했습니다. 다시 시도해 주세요.';
-        return;
-      }
-      // 비번 OK → '현황판 입장하기'와 완전히 동일한 검증/입장 함수(verifyTakeover) 호출
-      localStorage.setItem('kac_last_mode','dashboard');
-      state.pendingRoom = room;
-      var ti = document.getElementById('takeoverPwInput'); if(ti) ti.value = val;
-      var m=document.getElementById('simplePwModal'); if(m) m.style.display='none';
-      document.body.classList.remove('simple-landing');
-      if (dataMgr && dataMgr.verifyTakeover) dataMgr.verifyTakeover();
-      SM._enforceDashboard(room);
-    },
-    // 입장 후 어떤 경로로든 메인 home화면(통합 현황판)으로 빠지면 과정현황으로 강제 복귀
-    _enforceDashboard: function(room){
-      if (SM._enf) clearInterval(SM._enf);
-      var n = 0;
-      SM._enf = setInterval(function(){
-        n++;
-        var vh = document.getElementById('view-home');
-        var homeShown = vh && window.getComputedStyle(vh).display !== 'none';
-        if (homeShown) {
-          localStorage.setItem('kac_last_mode','dashboard');
-          if (state.room !== room && dataMgr && dataMgr.forceEnterRoom) {
-            dataMgr.forceEnterRoom(room);
-          }
-          if (ui && ui.setMode) ui.setMode('dashboard');
-        }
-        if (n >= 16) clearInterval(SM._enf);
-      }, 250);
-    },
-    closePw: function(){ var m=document.getElementById('simplePwModal'); if(m) m.style.display='none'; },
-    submitPw: async function(){
-      var room = SM._pendingRoom;
-      var inp = document.getElementById('simplePwInput');
-      var val = inp ? (inp.value||'').trim() : '';
-      if(!room || !val) return;
-      try {
-        var settingSnap = await firebase.database().ref('courses/'+room+'/settings').get();
-        var settings = settingSnap.val() || {};
-        var dbPw = settings.password || btoa('7777');
-        if (btoa(val) !== dbPw) {
-          var m=document.getElementById('simplePwMsg'); if(m) m.textContent='비밀번호가 올바르지 않습니다.';
-          if(inp){ inp.value=''; inp.focus(); }
-          return;
-        }
-      } catch(e){
-        var m2=document.getElementById('simplePwMsg'); if(m2) m2.textContent='오류가 발생했습니다. 다시 시도해 주세요.';
-        return;
-      }
-      // 검증 통과 → 기존 검증/입장 로직(verifyTakeover) 그대로 재사용 → 과정현황 진입
-      localStorage.setItem('kac_last_mode','dashboard');
-      state.pendingRoom = room;
-      state.isObserver = false;
-      sessionStorage.removeItem('kac_observer_room');
-      var ti = document.getElementById('takeoverPwInput'); if(ti) ti.value = val;
-      SM.closePw();
-      document.body.classList.remove('simple-landing');
-      if (dataMgr && dataMgr.verifyTakeover) dataMgr.verifyTakeover();
-    },
-    installClipHold: function(){
-      var clip=document.getElementById('sidebarToggleTab');
-      if(!clip || clip._smHold) return; clip._smHold=true;
-      var timer=null;
-      var start=function(e){
-        if(!document.body.classList.contains('simple-mode')) return;
-        e.preventDefault(); e.stopPropagation();
-        timer=setTimeout(function(){ document.body.classList.remove('sidebar-hidden'); }, 3000);
-      };
-      var cancel=function(){ if(timer){ clearTimeout(timer); timer=null; } };
-      clip.addEventListener('click', function(e){
-        if(!document.body.classList.contains('simple-mode')) return;
-        e.preventDefault(); e.stopPropagation();
-        if(!document.body.classList.contains('sidebar-hidden')) document.body.classList.add('sidebar-hidden');
-      }, true);
-      clip.addEventListener('mousedown', start, true);
-      clip.addEventListener('touchstart', start, {capture:true, passive:false});
-      clip.addEventListener('mouseup', cancel, true);
-      clip.addEventListener('mouseleave', cancel, true);
-      clip.addEventListener('touchend', cancel, true);
-      clip.addEventListener('touchcancel', cancel, true);
-    }
-  };
-  return SM;
-})();
-
 

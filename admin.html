@@ -248,55 +248,6 @@
     </div>
 
     <!-- 2. 사라졌던 사이드바 다시 생성 -->
-<style id="simple-mode-css">
-#modePickerOverlay { display:none; position:fixed; inset:0; z-index:100000; background:linear-gradient(180deg,#eef5ff,#dbe9ff); align-items:center; justify-content:center; flex-direction:column; gap:24px; padding:24px; }
-.mp-title { font-size:30px; font-weight:900; color:#0f172a; text-align:center; }
-.mp-sub { font-size:16px; color:#64748b; margin-top:-12px; text-align:center; }
-.mp-cards { display:flex; gap:24px; flex-wrap:wrap; justify-content:center; }
-.mp-card { width:300px; max-width:80vw; background:#fff; border-radius:24px; padding:40px 28px; box-shadow:0 18px 44px rgba(15,23,42,.14); cursor:pointer; text-align:center; border:3px solid transparent; transition:transform .15s,border-color .15s; }
-.mp-card:hover { transform:translateY(-4px); border-color:#3b82f6; }
-.mp-card .ic { font-size:56px; margin-bottom:16px; }
-.mp-card h3 { font-size:24px; font-weight:900; color:#0f172a; margin:0 0 10px; }
-.mp-card p { font-size:15px; color:#64748b; line-height:1.6; margin:0; }
-#simpleLanding { display:none; position:absolute; left:0; right:0; top:60px; bottom:0; z-index:60; background:linear-gradient(180deg,#f8fbff,#eef4fb); overflow-y:auto; padding:34px 24px 60px; }
-body.simple-landing #simpleLanding { display:block; }
-body.simple-landing .mode-tabs { display:none !important; }
-.sl-head { text-align:center; margin-bottom:28px; }
-.sl-head h2 { font-size:28px; font-weight:900; color:#0f172a; margin:0 0 6px; }
-.sl-head p { font-size:15px; color:#64748b; margin:0; }
-.sl-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:24px; max-width:1120px; margin:0 auto; }
-.sl-card { position:relative; background:#fff; border-radius:22px; padding:30px 26px 24px; box-shadow:0 10px 30px rgba(15,23,42,.07); border:1px solid #eef2f7; cursor:pointer; overflow:hidden; display:flex; flex-direction:column; min-height:192px; transition:transform .18s ease, box-shadow .18s ease; }
-.sl-card::before { content:''; position:absolute; left:0; top:0; right:0; height:6px; background:linear-gradient(90deg,#1e3a8a,#3b82f6); }
-.sl-card:hover { transform:translateY(-6px); box-shadow:0 22px 50px rgba(37,99,235,.20); }
-.sl-card-top { display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; }
-.sl-room { display:inline-flex; align-items:center; gap:6px; background:linear-gradient(135deg,#1e3a8a,#2563eb); color:#fff; font-size:12.5px; font-weight:800; letter-spacing:.03em; padding:6px 13px; border-radius:999px; box-shadow:0 4px 10px rgba(37,99,235,.25); }
-.sl-enter { font-size:13px; font-weight:800; color:#cbd5e1; display:inline-flex; align-items:center; gap:5px; transition:color .18s, transform .18s; }
-.sl-card:hover .sl-enter { color:#2563eb; transform:translateX(3px); }
-.sl-cname { font-size:21px; font-weight:900; color:#0f172a; line-height:1.4; margin-bottom:auto; word-break:keep-all; }
-.sl-prof { display:flex; align-items:center; gap:11px; margin-top:18px; padding-top:16px; border-top:1px solid #f1f5f9; }
-.sl-ava { width:38px; height:38px; border-radius:50%; flex-shrink:0; background:linear-gradient(135deg,#dbeafe,#bfdbfe); color:#1e3a8a; font-size:16px; font-weight:900; display:flex; align-items:center; justify-content:center; }
-.sl-pname { font-size:16px; font-weight:800; color:#0f172a; }
-.sl-prole { font-size:13px; font-weight:700; color:#94a3b8; margin-left:4px; }
-.sl-empty { grid-column:1/-1; text-align:center; color:#94a3b8; font-weight:700; padding:60px 0; }
-.simple-only { display:none !important; }
-body.simple-mode .simple-only { display:inline-flex !important; }
-.simple-only-block { display:none; }
-body.simple-mode .simple-only-block { display:block !important; }
-body.simple-mode #tab-dashboard,
-body.simple-mode #tab-notice,
-body.simple-mode .mode-dropdown { display:none !important; }
-body.simple-mode #sidebarToggleTab { opacity:0.22; }
-#simpleDetailToggle { display:none; }
-body.simple-mode #simpleDetailToggle { display:inline-flex; }
-/* 딸깍: 비밀번호/권한 선택 팝업을 크게 */
-body.simple-mode #takeoverModal .modal-box,
-body.simple-mode #roleChoiceModal .modal-box { width:540px !important; max-width:94vw !important; padding:40px 38px !important; border-radius:24px !important; }
-body.simple-mode #takeoverPwInput { font-size:38px !important; letter-spacing:14px !important; padding:20px 16px !important; text-align:center !important; }
-body.simple-mode #takeoverModal .modal-box h3,
-body.simple-mode #roleChoiceModal .modal-box h3 { font-size:22px !important; }
-body.simple-mode #takeoverModal .m-btn,
-body.simple-mode #roleChoiceModal .m-btn { font-size:17px !important; padding:15px 18px !important; }
-</style>
     <div class="sidebar" id="mainSidebar">
         <div class="sidebar-top">
             <div class="sidebar-header" onclick="location.reload()" style="cursor:pointer;" title="새로고침">KAC Training Platform</div>
@@ -359,7 +310,6 @@ body.simple-mode #roleChoiceModal .m-btn { font-size:17px !important; padding:15
                     </div>
                 </div>
 
-            <button id="uiModeToggleBtn" onclick="simpleMode.toggleMode()" style="width:100%; margin-top:10px; padding:12px 0; background:#1d4ed8; border:none; border-radius:8px; color:#fff; font-size:13px; font-weight:800; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px;"><i class="fa-solid fa-rotate"></i> 화면 버전 전환</button>
             <button onclick="ui.openContactDev()" style="width:100%; margin-top:8px; padding:9px 0; background:transparent; border:1px solid rgba(255,255,255,0.12); border-radius:8px; color:#64748b; font-size:12px; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px; transition:background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.06)'" onmouseout="this.style.background='transparent'">
                 <i class="fa-solid fa-envelope"></i> 개발자 문의 / 저작권 안내
             </button>
@@ -521,9 +471,6 @@ body.simple-mode #roleChoiceModal .m-btn { font-size:17px !important; padding:15
     <button class="mode-btn" id="tab-students" onclick="ui.setMode('students')"><i class="fa-solid fa-users-viewfinder"></i> <span class="i18n" data-en="Students">수강생 현황</span></button>
     <button class="mode-btn" id="tab-qa" onclick="ui.setMode('qa')"><i class="fa-regular fa-comments"></i> <span class="i18n" data-en="Q&A">Q&A 현황</span></button>
 
-    <button class="mode-btn simple-only" onclick="ui.openQrModal()"><i class="fa-solid fa-qrcode"></i> 교육생 접속 QR</button>
-    <button class="mode-btn simple-only" onclick="simpleMode.showLanding()"><i class="fa-solid fa-table-cells-large"></i> 과정 선택</button>
-
     <!-- 행정 메뉴 드롭다운 -->
     <div class="mode-dropdown">
         <button class="mode-btn dropdown-trigger" onclick="ui.toggleMenuDropdown()">
@@ -547,38 +494,6 @@ body.simple-mode #roleChoiceModal .m-btn { font-size:17px !important; padding:15
 </div>
 
         
-        <!-- ===== 딸깍(원터치) 모드 화면 ===== -->
-        <div id="modePickerOverlay">
-            <div class="mp-title">화면 방식을 선택하세요</div>
-            <div class="mp-sub">나중에 사이드바에서 다시 바꿀 수 있어요</div>
-            <div class="mp-cards">
-                <div class="mp-card" onclick="simpleMode.choose('detailed')"><div class="ic">🖥️</div><h3>상세 버전</h3><p>모든 기능을 사용하는<br>기존 강사 화면입니다.</p></div>
-                <div class="mp-card" onclick="simpleMode.choose('simple')"><div class="ic">👆</div><h3>원터치 버전</h3><p>과정만 누르면 바로 입장하는<br>간편 화면입니다.</p></div>
-            </div>
-        </div>
-        <div id="simpleLanding">
-            <button onclick="simpleMode.switchToDetailed()" title="상세(기존) 강사 화면으로 전환" style="position:absolute; top:18px; right:22px; padding:11px 18px; background:#fff; border:1.5px solid #cbd5e1; border-radius:12px; font-size:14px; font-weight:800; color:#334155; cursor:pointer; box-shadow:0 4px 12px rgba(15,23,42,.10); display:inline-flex; align-items:center; gap:8px; z-index:6;"><i class="fa-solid fa-desktop"></i> 상세 버전으로</button>
-            <div class="sl-head"><h2>과정을 선택하세요</h2><p>담당하시는 과정을 눌러 바로 입장합니다</p></div>
-            <div class="sl-grid" id="simpleCourseGrid"></div>
-        </div>
-        <!-- 딸깍 상세 전환 토글 (항상 보임) -->
-        <button id="simpleDetailToggle" onclick="simpleMode.switchToDetailed()" title="상세(기존) 강사 화면으로 전환" style="position:fixed; left:20px; bottom:20px; z-index:90000; align-items:center; gap:8px; padding:12px 18px; background:#1e293b; color:#fff; border:none; border-radius:14px; font-size:14px; font-weight:800; cursor:pointer; box-shadow:0 8px 22px rgba(15,23,42,.28);"><i class="fa-solid fa-table-columns"></i> 상세 버전으로</button>
-
-        <!-- 딸깍 과정 비밀번호 모달 (크게) -->
-        <div id="simplePwModal" style="display:none; position:fixed; inset:0; z-index:100001; background:rgba(15,23,42,.55); align-items:center; justify-content:center; padding:24px;">
-            <div style="background:#fff; border-radius:28px; padding:46px 42px; width:560px; max-width:94vw; text-align:center; box-shadow:0 30px 80px rgba(0,0,0,.35);">
-                <div style="font-size:44px; margin-bottom:8px;">🔒</div>
-                <div id="simplePwCourse" style="font-size:23px; font-weight:900; color:#0f172a; margin-bottom:6px;"></div>
-                <div style="font-size:16px; color:#64748b; margin-bottom:26px;">과정 비밀번호를 입력하세요</div>
-                <input id="simplePwInput" type="password" inputmode="numeric" maxlength="12" placeholder="••••" onkeyup="if(event.key==='Enter') simpleMode.submitPw()" style="width:100%; box-sizing:border-box; text-align:center; font-size:42px; font-weight:900; letter-spacing:16px; padding:22px 16px; border:3px solid #cbd5e1; border-radius:18px; outline:none; color:#0f172a;">
-                <div id="simplePwMsg" style="min-height:24px; margin-top:12px; color:#ef4444; font-weight:800; font-size:15px;"></div>
-                <div style="display:flex; gap:12px; margin-top:18px;">
-                    <button onclick="simpleMode.closePw()" style="flex:1; padding:18px; border:none; border-radius:14px; background:#e2e8f0; color:#334155; font-size:18px; font-weight:800; cursor:pointer;">취소</button>
-                    <button onclick="simpleMode.submitPw()" style="flex:2; padding:18px; border:none; border-radius:14px; background:#2563eb; color:#fff; font-size:20px; font-weight:900; cursor:pointer;">입장하기</button>
-                </div>
-            </div>
-        </div>
-
         <!-- [핵심 수정] Modals inside Main Stage (전체화면 시 보이도록 이동) -->
         <div id="qaModal" class="modal-overlay" onclick="ui.closeQaModal(event)">
             <div class="modal-box">
@@ -2587,6 +2502,6 @@ function setupAcc(btn){
 </script>
 <style>@media print{#__catcVer{display:none!important}}</style>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vQ1</div>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vR1</div>
 </body>
 </html>
