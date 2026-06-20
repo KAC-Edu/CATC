@@ -7006,10 +7006,10 @@ init: function() {
         return `<div style="display:flex;align-items:stretch;background:linear-gradient(135deg,#003366 0%,#0055aa 100%);border-radius:20px;overflow:hidden;min-height:470px;box-shadow:0 18px 44px rgba(15,23,42,.18);color:#fff;">
             <div style="flex:1;min-width:0;padding:52px 46px;display:flex;flex-direction:column;justify-content:center;">
                 <div style="font-size:13px;font-weight:800;letter-spacing:.18em;color:#9fc4ff;">COURSE ENTRY</div>
-                <div style="font-size:36px;font-weight:900;line-height:1.25;margin-top:14px;">교육 과정<br>입장 안내</div>
-                ${course ? `<div style="font-size:20px;font-weight:800;margin-top:18px;color:#dbeafe;word-break:keep-all;">${course}</div>` : ''}
-                <div style="font-size:17px;font-weight:600;margin-top:16px;color:#cbd5e1;line-height:1.6;">휴대폰 카메라로 오른쪽 QR을 스캔하면<br>교육 과정에 바로 입장합니다</div>
-                <div style="margin-top:24px;font-size:15px;font-weight:700;color:#9fc4ff;"><i class="fa-solid fa-door-open"></i> Room ${esc(room)}</div>
+                <div style="font-size:32px;font-weight:900;line-height:1.2;margin-top:14px;white-space:nowrap;">교육 과정 입장 안내</div>
+                ${course ? `<div style="font-size:22px;font-weight:800;margin-top:44px;color:#dbeafe;word-break:keep-all;">${course}</div>` : ''}
+                <div style="font-size:17px;font-weight:600;margin-top:22px;color:#cbd5e1;line-height:1.6;">휴대폰 카메라로 오른쪽 QR을 스캔하면<br>교육 과정에 바로 입장합니다</div>
+                <div style="margin-top:30px;font-size:15px;font-weight:700;color:#9fc4ff;"><i class="fa-solid fa-door-open"></i> Room ${esc(room)}</div>
             </div>
             <div style="flex:0 0 48%;background:rgba(255,255,255,0.08);display:flex;align-items:center;justify-content:center;padding:40px;">
                 <div id="guideQrBig" style="background:#fff;padding:22px;border-radius:20px;box-shadow:0 12px 30px rgba(0,0,0,.28);line-height:0;"></div>
