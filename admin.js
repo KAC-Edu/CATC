@@ -5223,7 +5223,7 @@ resetShuttleRequests: function() {
     },
 
     // ── 홈 통계 팝업 ──
-    openHomeStatModal: function(type) {
+    openHomeStatModal: async function(type) {
         // 특정 과정(강의실)에 진입한 상태에서는 전 과정 통합 현황 팝업을 띄우지 않음.
         // (이 팝업은 메인/포털 현황판 전용)
         if (state.room) return;
@@ -5255,11 +5255,16 @@ resetShuttleRequests: function() {
             body.innerHTML=rows||'<p style="color:#94a3b8;text-align:center;padding:30px;font-size:16px;">이번 주 강의 중인 과정이 없습니다.</p>';
         } else if(type==='students'){
             title.textContent='👩‍🎓 과정별 교육생 현황 (이번 주)';
+            let dormAll={};
+            try{ dormAll=(await firebase.database().ref('system/dorm/rosters').once('value')).val()||{}; }catch(e){}
             const rows=weekRooms.map(([room,r])=>{
                 const course=(r.settings||{}).courseName||'-';
-                const list=(r.coordRoster && Array.isArray(r.coordRoster.list))?r.coordRoster.list:[];
-                const stuCnt=new Set(Object.values(r.students||{}).filter(s=>s.name&&s.name!=='undefined').map(s=>s.name)).size;
-                const cnt=list.length||stuCnt;
+                const _period=(r.settings||{}).period||'';
+                const _start=_period.indexOf('~')>=0?_period.split('~')[0].trim():'';
+                let list=[];
+                try{ const _cands=dataMgr._weekKeyCandidates(_start); for(let _ci=0;_ci<_cands.length;_ci++){ const _dv=dormAll[_cands[_ci]+'__'+room]; if(_dv && Array.isArray(_dv.list) && _dv.list.length){ list=_dv.list; break; } } }catch(e){}
+                if(!list.length && r.coordRoster && Array.isArray(r.coordRoster.list)) list=r.coordRoster.list;
+                const cnt=list.length;
                 const uid='hsR_'+room;
                 let detail;
                 if(list.length){
