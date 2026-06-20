@@ -10080,12 +10080,11 @@ ui.saveFieldEdit = async function(){
 };
 
 /* __JSVER_STAMP__ */
-(function stampJsVer(){try{var b=document.getElementById('__catcVer');if(b){if(b.textContent.indexOf('Je')<0)b.textContent=b.textContent+'\u00b7Je';}else{setTimeout(stampJsVer,200);}}catch(e){}})();
+(function stampJsVer(){try{var b=document.getElementById('__catcVer');if(b){if(b.textContent.indexOf('Jf')<0)b.textContent=b.textContent+'\u00b7Jf';}else{setTimeout(stampJsVer,200);}}catch(e){}})();
 
 /* ===== [공항별 입교 현황 지도] 수강생현황 → 지도로 보기 ===== */
 ui._mapRegions = {
-  '서울':{x:134.4,y:179.4,air:false},
-  '김포':{x:114.4,y:180.7,air:true},
+  '서울':{x:120.0,y:180.0,air:true},
   '인천':{x:73.2,y:194.2,air:false},
   '강원':{x:273.9,y:153.8,air:false},
   '양양':{x:306.6,y:113.5,air:true},
@@ -10110,10 +10109,11 @@ ui._deptToRegion = function(dept){
   var d = String(dept||'');
   if(!d.trim()) return '';
   if(d.indexOf('본사')>=0) return '서울';
+  if(d.indexOf('김포')>=0) return '서울';
   if(d.indexOf('인천')>=0) return '인천';
   if(d.indexOf('항로시설본부')>=0) return '대구';
   if(d.indexOf('한라레이더')>=0) return '제주';
-  var keys=['김포','양양','원주','청주','예천','군산','포항','울산','부안','광주','무안','여수','사천','김해','부산','제주','대구','강원','송탄'];
+  var keys=['양양','원주','청주','예천','군산','포항','울산','부안','광주','무안','여수','사천','김해','부산','제주','대구','강원','송탄'];
   for(var i=0;i<keys.length;i++){ if(d.indexOf(keys[i])>=0) return keys[i]; }
   return '';
 };
