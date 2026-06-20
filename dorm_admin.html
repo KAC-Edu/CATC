@@ -1848,14 +1848,9 @@
                 console.log('[명단 복구] 기록 키:', Object.keys(updates));
                 await db.ref().update(updates);
 
-                // ② 강사플랫폼·영양사 동기화는 best-effort — 권한(PERMISSION_DENIED) 없으면 조용히 생략, 복구는 그대로 성공
-                for (const rs of roomSyncs) {
-                    const names = Array.from(new Set(rs.list.map(s => (s.name || '').trim()).filter(Boolean)));
-                    try { await db.ref(`courses/${rs.room}/expectedStudents`).set(names); }
-                    catch (e) { console.warn('[명단 복구] expectedStudents 동기화 생략', rs.room, e.code || e.message); }
-                    try { await db.ref(`courses/${rs.room}/coordRoster`).set({ courseName: rs.courseName, period: rs.period, list: rs.list, updatedAt: Date.now() }); }
-                    catch (e) { console.warn('[명단 복구] coordRoster 동기화 생략', rs.room, e.code || e.message); }
-                }
+                // ② [명단 통일] 방 단위(coordRoster·expectedStudents) 덮어쓰기 제거 —
+                //    주차별 명단(system/dorm/rosters)만 복구. 강사플랫폼은 현재 과정 주차의 이 명단을 직접 읽으므로
+                //    지난주 명단이 차주 과정에 섞이지 않음.
 
                 showToast(`✅ ${totalRecovered}개 과정 명단 복구 완료`);
                 coursesCache = null;
@@ -5923,7 +5918,7 @@
 </script>
 <style>@media print{#__catcVer{display:none!important}}</style>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vD</div>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vE</div>
 <script>
 /* ===== [공용] 종료된 과정 자동 정리 (모든 플랫폼 공통) — 종료일 지난 방을 다음날 미개설로 비움. 브라우저별 하루 1회 ===== */
 window.kacExpireEndedCourses = async function(){
