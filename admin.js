@@ -5309,8 +5309,12 @@ resetShuttleRequests: function() {
                 const _arrivedSet=new Set(Object.values(r.students||{}).filter(s=>s&&s.name&&s.name!=='undefined').map(s=>String(s.name).trim())); const stuCnt=_arrivedSet.size;
                 const cnt=list.length;
                 const uid='hsR_'+room;
+                // 명단(예정)에 없어도 QR로 입교한 교육생은 표에 추가 표시
+                const _rosterNm=new Set(list.map(x=>String(x&&x.name||'').trim()).filter(Boolean));
+                const _qrOnly=Object.values(r.students||{}).filter(s=>s&&s.name&&s.name!=='undefined'&&!_rosterNm.has(String(s.name).trim())).map(s=>({name:s.name,empNo:(s.empNo||s.employeeNo||''),dept:(s.dept||''),_qr:true}));
+                const _disp=list.concat(_qrOnly);
                 let detail;
-                if(list.length){
+                if(_disp.length){
                     detail='<table style="width:100%;border-collapse:collapse;font-size:13px;margin-top:10px;">'
                       +'<thead><tr style="color:#64748b;background:#f8fafc;">'
                       +'<th style="padding:8px;text-align:center;border-bottom:1px solid #e2e8f0;width:54px;">연번</th>'
@@ -5318,15 +5322,15 @@ resetShuttleRequests: function() {
                       +'<th style="padding:8px;text-align:left;border-bottom:1px solid #e2e8f0;">소속</th>'
                       +'<th style="padding:8px;text-align:left;border-bottom:1px solid #e2e8f0;">이름</th>'
                       +'</tr></thead><tbody>'
-                      +list.map((s,i)=>'<tr>'
+                      +_disp.map((s,i)=>'<tr>'
                           +'<td style="padding:7px 8px;text-align:center;border-bottom:1px solid #f1f5f9;color:#94a3b8;">'+(_arrivedSet.has(String(s.name||'').trim()) ? '<span title="입교 완료" style="display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:6px;background:#10b981;color:#fff;font-size:12px;"><i class="fa-solid fa-check"></i></span>' : (s.seq||i+1))+'</td>'
                           +'<td style="padding:7px 8px;text-align:center;border-bottom:1px solid #f1f5f9;color:#64748b;white-space:nowrap;">'+esc(s.empNo||'-')+'</td>'
-                          +'<td style="padding:7px 8px;border-bottom:1px solid #f1f5f9;color:#475569;word-break:keep-all;">'+esc(s.dept||'-')+'</td>'
+                          +'<td style="padding:7px 8px;border-bottom:1px solid #f1f5f9;color:#475569;word-break:keep-all;">'+(s._qr&&!s.dept ? '<span style="color:#10b981;font-weight:700;">QR 입교(명단 외)</span>' : esc(s.dept||'-'))+'</td>'
                           +'<td style="padding:7px 8px;border-bottom:1px solid #f1f5f9;font-weight:800;color:#0f172a;">'+esc(s.name||'-')+'</td>'
                       +'</tr>').join('')
                       +'</tbody></table>';
                 } else {
-                    detail='<p style="color:#94a3b8;text-align:center;padding:18px;font-size:14px;">운영부에서 올린 명단이 아직 없습니다.</p>';
+                    detail='<p style="color:#94a3b8;text-align:center;padding:18px;font-size:14px;">운영부 명단도, 입교한 교육생도 아직 없습니다.</p>';
                 }
                 return '<div style="background:#f0fdf4;border:1px solid #dcfce7;border-radius:14px;margin-bottom:12px;overflow:hidden;">'
                   +'<div onclick="ui.toggleHomeDetail(\''+uid+'\')" title="클릭하면 명단을 봅니다" style="display:flex;justify-content:space-between;align-items:center;padding:18px 22px;cursor:pointer;">'
@@ -10076,4 +10080,4 @@ ui.saveFieldEdit = async function(){
 };
 
 /* __JSVER_STAMP__ */
-(function stampJsVer(){try{var b=document.getElementById('__catcVer');if(b){if(b.textContent.indexOf('Jb')<0)b.textContent=b.textContent+'\u00b7Jb';}else{setTimeout(stampJsVer,200);}}catch(e){}})();
+(function stampJsVer(){try{var b=document.getElementById('__catcVer');if(b){if(b.textContent.indexOf('Jc')<0)b.textContent=b.textContent+'\u00b7Jc';}else{setTimeout(stampJsVer,200);}}catch(e){}})();
