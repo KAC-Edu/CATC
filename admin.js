@@ -2452,7 +2452,7 @@ loadDashboardStats: function() {
     });
 
     // [본 과정 수강생(예정)] 명단(과정명 매칭) 기반으로 직접 세팅 — 예정명단(expectedStudents)이 비어 있어도 정확
-    (async function(){
+    const _refreshDashRoster = async () => {
         try {
             const _rn = await dataMgr._gatherRosterNames(room);
             if (state.room !== room) return;
@@ -2461,7 +2461,11 @@ loadDashboardStats: function() {
             if (state.room !== room) return;
             recalcTotal(_aSnap.val() || {});
         } catch(e){}
-    })();
+    };
+    _refreshDashRoster();
+    // [실시간] 지원부 명단(system/dorm/rosters)이 올라오거나 바뀌면 분모(예정) 즉시 갱신
+    refs.dormRosters = firebase.database().ref('system/dorm/rosters');
+    refs.dormRosters.on('value', () => { if (state.room === room) _refreshDashRoster(); });
 
     // 7. 행정 신청(외출/석식) 실시간 카운트
     refs.action.on('value', s => {
@@ -7112,17 +7116,19 @@ init: function() {
                 ${course ? `<div style="font-size:21px;font-weight:800;margin-top:12px;color:#dbeafe;word-break:keep-all;">${course}</div>` : ''}
                 <div style="font-size:16px;font-weight:600;margin-top:30px;color:#cbd5e1;line-height:1.6;">휴대폰 카메라로 오른쪽 QR을 스캔하면<br>교육 과정에 바로 입장합니다</div>
                 <div style="margin-top:30px;font-size:16px;font-weight:800;color:#9fc4ff;"><i class="fa-solid fa-door-open"></i> Room #${esc(room)}</div>
-                <div style="margin-top:24px;display:inline-flex;align-items:flex-end;gap:14px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.18);border-radius:16px;padding:16px 26px;align-self:flex-start;">
-                    <div style="text-align:center;">
-                        <div style="font-size:12px;font-weight:800;color:#9fc4ff;letter-spacing:.05em;margin-bottom:4px;">입교 (QR)</div>
-                        <div style="font-size:44px;font-weight:900;color:#fde047;line-height:1;"><span id="guideQrEntered">0</span></div>
+                <div style="margin-top:24px;display:inline-flex;flex-direction:column;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.18);border-radius:16px;padding:14px 24px;align-self:flex-start;">
+                    <div style="display:flex;align-items:flex-end;gap:8px;">
+                        <span style="width:58px;text-align:center;font-size:12px;font-weight:800;color:#9fc4ff;letter-spacing:.03em;">입교 (QR)</span>
+                        <span style="width:22px;"></span>
+                        <span style="width:58px;text-align:center;font-size:12px;font-weight:800;color:#9fc4ff;letter-spacing:.03em;">예정</span>
+                        <span style="width:26px;"></span>
                     </div>
-                    <div style="font-size:32px;font-weight:800;color:#9fc4ff;padding-bottom:4px;">/</div>
-                    <div style="text-align:center;">
-                        <div style="font-size:12px;font-weight:800;color:#9fc4ff;letter-spacing:.05em;margin-bottom:4px;">예정</div>
-                        <div style="font-size:44px;font-weight:900;color:#fff;line-height:1;"><span id="guideQrTotal">0</span></div>
+                    <div style="display:flex;align-items:baseline;gap:8px;margin-top:6px;">
+                        <span id="guideQrEntered" style="width:58px;text-align:center;font-size:44px;font-weight:900;color:#fde047;line-height:1;">0</span>
+                        <span style="width:22px;text-align:center;font-size:30px;font-weight:800;color:#9fc4ff;">/</span>
+                        <span id="guideQrTotal" style="width:58px;text-align:center;font-size:44px;font-weight:900;color:#fff;line-height:1;">0</span>
+                        <span style="width:26px;text-align:left;font-size:16px;font-weight:700;color:#cbd5e1;">명</span>
                     </div>
-                    <div style="font-size:18px;font-weight:700;color:#cbd5e1;padding-bottom:6px;">명</div>
                 </div>
             </div>
             <div style="flex:0 0 48%;background:rgba(255,255,255,0.08);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px;gap:14px;">
@@ -7757,16 +7763,17 @@ loadCurrentSettings: function() {
         requestAnimationFrame(applyFpDate);
         
         // 5. menuFeatures 체크박스 상태 로드
-        // 기본값: 차량신청(shuttle) + 외출/외박(adminAction)만 ON, 나머지는 강사가 수동 체크
+        // [디폴트=전부 ON] 교육생 앱은 '명시적으로 false인 메뉴만 숨김'이 기본이므로,
+        // 저장된 설정이 없을 때 체크박스도 전부 ON으로 맞춘다(앱 기본=전부 표시와 일치).
+        // 강사는 끄고 싶은 메뉴만 체크 해제하면 됨.
         const features = s.menuFeatures || {};
-        const defaultOn = ['shuttle', 'adminAction', 'kakao', 'hrd'];
         const featureKeys = ['facility','shuttle','adminAction','meal','attendanceQr','cns','tabletLoan','kakao','hrd'];
         featureKeys.forEach(key => {
             const el = document.getElementById(`feat-${key}`);
             if (!el) return;
             if (Object.keys(features).length === 0) {
-                // DB에 저장된 값 없으면 기본값 적용
-                el.checked = defaultOn.includes(key);
+                // DB에 저장된 값 없으면 전부 활성화(디폴트)
+                el.checked = true;
             } else {
                 el.checked = (features[key] !== false);
             }
@@ -10012,7 +10019,6 @@ ui.closeFieldEdit = function(){
   try{ var fp=document.getElementById('fe-period'); if(fp&&fp._flatpickr) fp._flatpickr.destroy(); }catch(e){}
   var m=document.getElementById('fieldEditModal'); if(m) m.style.display='none';
 };
-
 ui.saveFieldEdit = async function(){
   var f=ui._editField, room=state.room; if(!room) return;
   var msg=document.getElementById('fieldEditMsg'); var updates={};
