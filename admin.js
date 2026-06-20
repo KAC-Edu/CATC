@@ -4293,6 +4293,14 @@ cancelIndividualShuttle: function(waveId, locId, token, name) {
                 }
             }
         } catch (e) { /* 무시 */ }
+        // [폴백] 현재 주차 지원부 명단이 없으면 운영부(coordRoster) 명단 사용 (운영부가 올린 명단 보존)
+        if (!names.length) {
+            try {
+                const crSnap = await firebase.database().ref(`courses/${room}/coordRoster`).once('value');
+                const cr = crSnap.val();
+                if (cr && Array.isArray(cr.list)) cr.list.forEach(s => { if (s && s.name) names.push(String(s.name).trim()); });
+            } catch (e) { /* 무시 */ }
+        }
         return names;
     },
 
@@ -4326,6 +4334,14 @@ cancelIndividualShuttle: function(waveId, locId, token, name) {
                     }
                 }
             } catch (e) { /* 무시 */ }
+            // [폴백] 현재 주차 지원부 명단이 없으면 운영부(coordRoster) 명단 사용
+            if (!names.length) {
+                try {
+                    const crSnap = await firebase.database().ref(`courses/${room}/coordRoster`).once('value');
+                    const cr = crSnap.val();
+                    if (cr && Array.isArray(cr.list)) cr.list.forEach(s => { if (s && s.name) names.push(String(s.name).trim()); });
+                } catch (e) { /* 무시 */ }
+            }
             return names;
         }
 
