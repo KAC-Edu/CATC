@@ -4437,12 +4437,12 @@ cancelIndividualShuttle: function(waveId, locId, token, name) {
                 const _plan = expectedNames.length;
                 const sb = document.getElementById('stuSummaryBar');
                 if (sb) {
-                    const cell = (label, val, color, bg) => '<div style="flex:1;background:'+bg+';border-radius:14px;padding:14px 10px;text-align:center;">'
-                        +'<div style="font-size:12px;font-weight:800;color:#64748b;margin-bottom:4px;">'+label+'</div>'
+                    const cell = (label, val, color, bg, bd) => '<div style="flex:1;background:'+bg+';border:1.5px solid '+bd+';border-radius:14px;padding:14px 10px;text-align:center;box-shadow:0 2px 8px rgba(15,23,42,.06);">'
+                        +'<div style="font-size:12px;font-weight:800;color:#475569;margin-bottom:4px;">'+label+'</div>'
                         +'<div style="font-size:30px;font-weight:900;color:'+color+';line-height:1;">'+val+'</div></div>';
-                    sb.innerHTML = cell('예정 인원', _plan, '#1e3a8a', '#eff6ff')
-                        + cell('입교 완료', arrivedCount, '#059669', '#ecfdf5')
-                        + cell('입교율', percent + '<span style=\'font-size:15px;\'>%</span>', '#0ea5e9', '#f0f9ff');
+                    sb.innerHTML = cell('예정 인원', _plan, '#1e3a8a', '#eef4ff', '#bfd4fe')
+                        + cell('입교 완료', arrivedCount, '#047857', '#eafaf1', '#a7e3c5')
+                        + cell('입교율', percent + '<span style=\'font-size:15px;\'>%</span>', '#0284c7', '#e9f6fe', '#a8dcf5');
                 }
         }
 
@@ -5091,6 +5091,15 @@ resetShuttleRequests: function() {
         if (fsIcon) {
             fsIcon.classList.toggle('fa-expand', !isHidden);
             fsIcon.classList.toggle('fa-compress', isHidden);
+        }
+        // [자동 접힘] 사용자가 펼치면(숨김 아님) 10초 뒤 자동으로 다시 접기
+        if (this._sidebarAutoTimer) { clearTimeout(this._sidebarAutoTimer); this._sidebarAutoTimer = null; }
+        if (!isHidden) {
+            this._sidebarAutoTimer = setTimeout(function() {
+                document.body.classList.add('sidebar-hidden');
+                const fi = document.querySelector('.control-icon-btn i.fa-expand, .control-icon-btn i.fa-compress');
+                if (fi) { fi.classList.add('fa-expand'); fi.classList.remove('fa-compress'); }
+            }, 10000);
         }
     },
 
@@ -10061,4 +10070,4 @@ ui.saveFieldEdit = async function(){
 };
 
 /* __JSVER_STAMP__ */
-(function stampJsVer(){try{var b=document.getElementById('__catcVer');if(b){if(b.textContent.indexOf('J7')<0)b.textContent=b.textContent+'\u00b7J7';}else{setTimeout(stampJsVer,200);}}catch(e){}})();
+(function stampJsVer(){try{var b=document.getElementById('__catcVer');if(b){if(b.textContent.indexOf('J8')<0)b.textContent=b.textContent+'\u00b7J8';}else{setTimeout(stampJsVer,200);}}catch(e){}})();
