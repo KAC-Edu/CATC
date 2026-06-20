@@ -7084,38 +7084,49 @@ init: function() {
         const esc = s => (s == null ? '' : String(s)).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
         const course = esc(courseNm && courseNm !== '과정명을 설정해주세요.' ? courseNm : '');
         return `<div style="display:flex;align-items:stretch;background:linear-gradient(135deg,#003366 0%,#0055aa 100%);border-radius:20px;overflow:hidden;min-height:470px;box-shadow:0 18px 44px rgba(15,23,42,.18);color:#fff;">
-            <div style="flex:1;min-width:0;padding:30px 34px;display:flex;flex-direction:column;">
-                <div style="font-size:12px;font-weight:800;letter-spacing:.16em;color:#9fc4ff;">COURSE ENTRY</div>
-                <div style="font-size:26px;font-weight:900;line-height:1.2;margin-top:8px;">교육 과정 입장 안내</div>
-                ${course ? `<div style="font-size:18px;font-weight:800;margin-top:8px;color:#dbeafe;word-break:keep-all;">${course}</div>` : ''}
-                <div style="font-size:13px;font-weight:700;margin-top:8px;color:#9fc4ff;"><i class="fa-solid fa-door-open"></i> Room ${esc(room)} · 입장하면 이름이 <span style="color:#fde047;">노란색</span>으로 표시됩니다</div>
-                <div id="guideQrRoster" style="margin-top:14px;display:flex;flex-wrap:wrap;gap:8px;align-content:flex-start;overflow-y:auto;max-height:330px;"></div>
+            <div style="flex:1;min-width:0;padding:48px 46px;display:flex;flex-direction:column;justify-content:center;">
+                <div style="font-size:13px;font-weight:800;letter-spacing:.18em;color:#9fc4ff;">COURSE ENTRY</div>
+                <div style="font-size:32px;font-weight:900;line-height:1.2;margin-top:14px;white-space:nowrap;">교육 과정 입장 안내</div>
+                ${course ? `<div style="font-size:21px;font-weight:800;margin-top:18px;color:#dbeafe;word-break:keep-all;">${course}</div>` : ''}
+                <div style="font-size:16px;font-weight:600;margin-top:14px;color:#cbd5e1;line-height:1.6;">휴대폰 카메라로 오른쪽 QR을 스캔하면<br>교육 과정에 바로 입장합니다</div>
+                <div style="margin-top:18px;font-size:15px;font-weight:700;color:#9fc4ff;"><i class="fa-solid fa-door-open"></i> Room ${esc(room)}</div>
+                <div style="margin-top:24px;display:inline-flex;align-items:flex-end;gap:14px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.18);border-radius:16px;padding:16px 26px;align-self:flex-start;">
+                    <div style="text-align:center;">
+                        <div style="font-size:12px;font-weight:800;color:#9fc4ff;letter-spacing:.05em;margin-bottom:4px;">입교 (QR)</div>
+                        <div style="font-size:44px;font-weight:900;color:#fde047;line-height:1;"><span id="guideQrEntered">0</span></div>
+                    </div>
+                    <div style="font-size:32px;font-weight:800;color:#9fc4ff;padding-bottom:4px;">/</div>
+                    <div style="text-align:center;">
+                        <div style="font-size:12px;font-weight:800;color:#9fc4ff;letter-spacing:.05em;margin-bottom:4px;">예정</div>
+                        <div style="font-size:44px;font-weight:900;color:#fff;line-height:1;"><span id="guideQrTotal">0</span></div>
+                    </div>
+                    <div style="font-size:18px;font-weight:700;color:#cbd5e1;padding-bottom:6px;">명</div>
+                </div>
             </div>
-            <div style="flex:0 0 42%;background:rgba(255,255,255,0.08);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:28px;gap:12px;">
+            <div style="flex:0 0 48%;background:rgba(255,255,255,0.08);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px;gap:14px;">
                 <div style="font-size:14px;font-weight:700;color:#dbeafe;">휴대폰으로 스캔 → 바로 입장</div>
-                <div id="guideQrBig" style="background:#fff;padding:18px;border-radius:18px;box-shadow:0 12px 30px rgba(0,0,0,.28);line-height:0;"></div>
+                <div id="guideQrBig" style="background:#fff;padding:22px;border-radius:20px;box-shadow:0 12px 30px rgba(0,0,0,.28);line-height:0;"></div>
             </div>
         </div>`;
     },
-
     // 앱 사용법(매뉴얼) 가상 페이지 HTML
     _manualHTML: function() {
-        const card = (bg, fg, icon, t, d) => `<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:16px;padding:20px;">
-            <div style="width:46px;height:46px;border-radius:12px;background:${bg};color:${fg};display:flex;align-items:center;justify-content:center;font-size:20px;margin-bottom:12px;"><i class="fa-solid ${icon}"></i></div>
-            <div style="font-size:18px;font-weight:900;color:#0f172a;">${t}</div>
-            <div style="font-size:14px;color:#475569;margin-top:7px;line-height:1.55;">${d}</div>
+        const card = (bg, fg, icon, t, d) => `<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:16px;padding:26px 26px;">
+            <div style="width:50px;height:50px;border-radius:13px;background:${bg};color:${fg};display:flex;align-items:center;justify-content:center;font-size:22px;margin-bottom:16px;"><i class="fa-solid ${icon}"></i></div>
+            <div style="font-size:19px;font-weight:900;color:#0f172a;line-height:1.4;">${t}</div>
+            <div style="font-size:15px;color:#475569;margin-top:12px;line-height:1.85;">${d}</div>
         </div>`;
-        return `<div style="background:#fff;border-radius:20px;box-shadow:0 18px 44px rgba(15,23,42,.12);padding:36px 40px;min-height:440px;">
-            <div style="font-size:13px;font-weight:800;letter-spacing:.16em;color:#2563eb;">STUDENT PLATFORM GUIDE</div>
-            <div style="font-size:28px;font-weight:900;color:#0f172a;margin-top:8px;"><i class="fa-solid fa-mobile-screen-button" style="color:#2563eb;"></i> 교육생 플랫폼 사용법</div>
-            <div style="font-size:15px;color:#64748b;margin-top:8px;margin-bottom:22px;">QR로 입장한 뒤 교육생이 사용하는 핵심 기능입니다.</div>
-            <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:16px;">
+        return `<div style="background:#fff;border-radius:20px;box-shadow:0 18px 44px rgba(15,23,42,.12);padding:40px 44px;min-height:440px;">
+            <div style="font-size:13px;font-weight:800;letter-spacing:.16em;color:#2563eb;margin-bottom:10px;">STUDENT PLATFORM GUIDE</div>
+            <div style="font-size:28px;font-weight:900;color:#0f172a;line-height:1.35;"><i class="fa-solid fa-mobile-screen-button" style="color:#2563eb;"></i> 교육생 플랫폼 사용법</div>
+            <div style="font-size:15px;color:#64748b;margin-top:12px;margin-bottom:28px;line-height:1.7;">QR로 입장한 뒤 교육생이 사용하는 핵심 기능입니다.</div>
+            <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:20px;">
                 ${card('#FAE100','#3A1D1D','fa-comment','오픈톡방 이동','메인 화면의 말풍선 아이콘을 누르면 과정 오픈톡방으로 이동합니다.')}
                 ${card('#3b82f6','#fff','fa-person-walking-arrow-right','외출·외박 신청','외출/외박이 필요할 때 신청 메뉴에서 날짜·시간·사유를 입력합니다.')}
                 ${card('#10b981','#fff','fa-bus','퇴교차량 신청','퇴교 차량 수요조사에서 이용할 차량·터미널 이동 여부를 선택합니다.')}
                 ${card('#7c3aed','#fff','fa-comments','Q&A 사용','수업 중 질문은 Q&A 메뉴에 입력하면 강사가 확인 후 답변합니다.')}
             </div>
-            <div style="margin-top:20px;background:#0f172a;color:#fff;border-radius:12px;padding:14px 18px;font-size:14px;font-weight:700;"><i class="fa-solid fa-circle-info"></i> 교육생은 QR 접속 후 이름·사번을 입력하면 해당 과정 플랫폼으로 들어갑니다.</div>
+            <div style="margin-top:24px;background:#0f172a;color:#fff;border-radius:12px;padding:16px 20px;font-size:14px;font-weight:700;line-height:1.6;"><i class="fa-solid fa-circle-info"></i> 교육생은 QR 접속 후 이름·사번을 입력하면 해당 과정 플랫폼으로 들어갑니다.</div>
         </div>`;
     },
 
@@ -7208,24 +7219,17 @@ init: function() {
                         new QRCode(tgt, { text: url, width: 300, height: 300, correctLevel: QRCode.CorrectLevel.H });
                     }
                 } catch (e) { console.warn('QR 생성 실패:', e); }
-                // 교육생 명단 + 실시간 입교 하이라이트 (입장 시 노란색)
+                // 실시간 입교 인원 카운터 (입교 / 예정)
                 (async function(){
                     let names = [];
                     try { names = await dataMgr._gatherRosterNames(room); } catch(e){}
-                    const box = document.getElementById('guideQrRoster');
-                    if (!box) return;
-                    if (!names.length) { box.innerHTML = '<div style="color:#9fc4ff;font-size:14px;font-weight:600;">지원부에서 올린 명단이 아직 없습니다.</div>'; return; }
-                    const e2 = s => (s==null?'':String(s)).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-                    box.innerHTML = names.map(n => '<span class="qr-rname" data-name="'+e2(n)+'" style="background:rgba(255,255,255,0.14);color:#cbd5e1;font-weight:800;font-size:15px;padding:7px 14px;border-radius:10px;transition:all .2s;">'+e2(n)+'</span>').join('');
+                    const tEl = document.getElementById('guideQrTotal'); if (tEl) tEl.innerText = names.length;
                     if (guideMgr._qrStuRef) { try { guideMgr._qrStuRef.off(); } catch(e){} }
                     guideMgr._qrStuRef = firebase.database().ref('courses/'+room+'/students');
                     guideMgr._qrStuRef.on('value', function(s){
-                        const stu = s.val() || {}; const entered = {};
-                        Object.values(stu).forEach(x=>{ if(x&&x.name) entered[String(x.name).trim()] = true; });
-                        document.querySelectorAll('#guideQrRoster .qr-rname').forEach(function(el){
-                            if (entered[el.getAttribute('data-name')]) { el.style.background='#fde047'; el.style.color='#1e293b'; el.style.boxShadow='0 4px 12px rgba(250,204,21,.5)'; }
-                            else { el.style.background='rgba(255,255,255,0.14)'; el.style.color='#cbd5e1'; el.style.boxShadow='none'; }
-                        });
+                        const stu = s.val() || {};
+                        const cnt = new Set(Object.values(stu).filter(x=>x&&x.name&&x.name!=='undefined').map(x=>String(x.name).trim())).size;
+                        const eEl = document.getElementById('guideQrEntered'); if (eEl) eEl.innerText = cnt;
                     });
                 })();
             }
