@@ -2443,7 +2443,7 @@ loadDashboardStats: function() {
         if (state.room !== room) return;
         let _names = expSnap.val() || [];
         // [분모 정합] 지원부 명단(과정명 매칭)도 합산 → 예정명단이 비어 있어도 전체 인원(분모) 정확
-        try { const _rn = await dataMgr._gatherRosterNames(room); if (_rn && _rn.length) _names = Array.from(new Set([..._names, ..._rn])); } catch(e){}
+        try { const _rn = await ui._gatherRosterNames(room); if (_rn && _rn.length) _names = Array.from(new Set([..._names, ..._rn])); } catch(e){}
         if (state.room !== room) return;
         _expectedNamesCache = _names;
         firebase.database().ref(`courses/${room}/students`).once('value', snap => {
@@ -7263,7 +7263,7 @@ init: function() {
                 // 실시간 입교 인원 카운터 (입교 / 예정)
                 (async function(){
                     let names = [];
-                    try { names = await dataMgr._gatherRosterNames(room); } catch(e){}
+                    try { names = await ui._gatherRosterNames(room); } catch(e){}
                     const tEl = document.getElementById('guideQrTotal'); if (tEl) tEl.innerText = names.length;
                     if (guideMgr._qrStuRef) { try { guideMgr._qrStuRef.off(); } catch(e){} }
                     guideMgr._qrStuRef = firebase.database().ref('courses/'+room+'/students');
@@ -10061,4 +10061,4 @@ ui.saveFieldEdit = async function(){
 };
 
 /* __JSVER_STAMP__ */
-(function stampJsVer(){try{var b=document.getElementById('__catcVer');if(b){if(b.textContent.indexOf('J6')<0)b.textContent=b.textContent+'\u00b7J6';}else{setTimeout(stampJsVer,200);}}catch(e){}})();
+(function stampJsVer(){try{var b=document.getElementById('__catcVer');if(b){if(b.textContent.indexOf('J7')<0)b.textContent=b.textContent+'\u00b7J7';}else{setTimeout(stampJsVer,200);}}catch(e){}})();
