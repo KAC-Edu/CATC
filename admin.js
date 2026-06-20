@@ -2439,9 +2439,13 @@ loadDashboardStats: function() {
     });
 
     // 6. 전체 명단(분모) 계산 — expected 명단 변경 시 캐시 갱신 후 재계산
-    refs.expected.on('value', expSnap => {
+    refs.expected.on('value', async expSnap => {
         if (state.room !== room) return;
-        _expectedNamesCache = expSnap.val() || [];
+        let _names = expSnap.val() || [];
+        // [분모 정합] 지원부 명단(과정명 매칭)도 합산 → 예정명단이 비어 있어도 전체 인원(분모) 정확
+        try { const _rn = await dataMgr._gatherRosterNames(room); if (_rn && _rn.length) _names = Array.from(new Set([..._names, ..._rn])); } catch(e){}
+        if (state.room !== room) return;
+        _expectedNamesCache = _names;
         firebase.database().ref(`courses/${room}/students`).once('value', snap => {
             recalcTotal(snap.val() || {});
         });
