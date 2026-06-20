@@ -7020,17 +7020,21 @@ init: function() {
     },
     _hasProfile: function() { return !!(guideMgr._slot().profile); },
     _hasQR: function() { return !!guideMgr._room(); },
-    _extras: function() { return (guideMgr._hasProfile() ? 1 : 0) + (guideMgr._hasQR() ? 1 : 0); },
+    _hasManual: function() { return true; },
+    _extras: function() { return (guideMgr._hasProfile() ? 1 : 0) + (guideMgr._hasQR() ? 1 : 0) + (guideMgr._hasManual() ? 1 : 0); },
     _qrPageNum: function() { return guideMgr._hasQR() ? (2 + (guideMgr._hasProfile() ? 1 : 0)) : -1; },
+    _manualPageNum: function() { return 2 + (guideMgr._hasProfile() ? 1 : 0) + (guideMgr._hasQR() ? 1 : 0); },
     _vtotal: function() { const s = guideMgr._slot(); if (!s.pdfDoc) return 0; return s.pdfDoc.numPages + guideMgr._extras(); },
     _isProfilePage: function(v) { return guideMgr._hasProfile() && v === 2; },
     _isQRPage: function(v) { return guideMgr._hasQR() && v === guideMgr._qrPageNum(); },
+    _isManualPage: function(v) { return guideMgr._hasManual() && v === guideMgr._manualPageNum(); },
     _toPdfPage: function(v) {
         const extras = guideMgr._extras();
         if (extras === 0) return v;
         if (v <= 1) return 1;                       // 표지(1페이지)
         if (guideMgr._isProfilePage(v)) return null; // 교수 프로필(가상)
         if (guideMgr._isQRPage(v)) return null;      // QR 안내(가상)
+        if (guideMgr._isManualPage(v)) return null;  // 앱 사용법(가상)
         return v - extras;                          // 원본 PDF 2페이지 이후
     },
     _profileHTML: function(p) {
@@ -7080,16 +7084,38 @@ init: function() {
         const esc = s => (s == null ? '' : String(s)).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
         const course = esc(courseNm && courseNm !== '과정명을 설정해주세요.' ? courseNm : '');
         return `<div style="display:flex;align-items:stretch;background:linear-gradient(135deg,#003366 0%,#0055aa 100%);border-radius:20px;overflow:hidden;min-height:470px;box-shadow:0 18px 44px rgba(15,23,42,.18);color:#fff;">
-            <div style="flex:1;min-width:0;padding:52px 46px;display:flex;flex-direction:column;justify-content:center;">
-                <div style="font-size:13px;font-weight:800;letter-spacing:.18em;color:#9fc4ff;">COURSE ENTRY</div>
-                <div style="font-size:32px;font-weight:900;line-height:1.2;margin-top:14px;white-space:nowrap;">교육 과정 입장 안내</div>
-                ${course ? `<div style="font-size:22px;font-weight:800;margin-top:44px;color:#dbeafe;word-break:keep-all;">${course}</div>` : ''}
-                <div style="font-size:17px;font-weight:600;margin-top:22px;color:#cbd5e1;line-height:1.6;">휴대폰 카메라로 오른쪽 QR을 스캔하면<br>교육 과정에 바로 입장합니다</div>
-                <div style="margin-top:30px;font-size:15px;font-weight:700;color:#9fc4ff;"><i class="fa-solid fa-door-open"></i> Room ${esc(room)}</div>
+            <div style="flex:1;min-width:0;padding:30px 34px;display:flex;flex-direction:column;">
+                <div style="font-size:12px;font-weight:800;letter-spacing:.16em;color:#9fc4ff;">COURSE ENTRY</div>
+                <div style="font-size:26px;font-weight:900;line-height:1.2;margin-top:8px;">교육 과정 입장 안내</div>
+                ${course ? `<div style="font-size:18px;font-weight:800;margin-top:8px;color:#dbeafe;word-break:keep-all;">${course}</div>` : ''}
+                <div style="font-size:13px;font-weight:700;margin-top:8px;color:#9fc4ff;"><i class="fa-solid fa-door-open"></i> Room ${esc(room)} · 입장하면 이름이 <span style="color:#fde047;">노란색</span>으로 표시됩니다</div>
+                <div id="guideQrRoster" style="margin-top:14px;display:flex;flex-wrap:wrap;gap:8px;align-content:flex-start;overflow-y:auto;max-height:330px;"></div>
             </div>
-            <div style="flex:0 0 48%;background:rgba(255,255,255,0.08);display:flex;align-items:center;justify-content:center;padding:40px;">
-                <div id="guideQrBig" style="background:#fff;padding:22px;border-radius:20px;box-shadow:0 12px 30px rgba(0,0,0,.28);line-height:0;"></div>
+            <div style="flex:0 0 42%;background:rgba(255,255,255,0.08);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:28px;gap:12px;">
+                <div style="font-size:14px;font-weight:700;color:#dbeafe;">휴대폰으로 스캔 → 바로 입장</div>
+                <div id="guideQrBig" style="background:#fff;padding:18px;border-radius:18px;box-shadow:0 12px 30px rgba(0,0,0,.28);line-height:0;"></div>
             </div>
+        </div>`;
+    },
+
+    // 앱 사용법(매뉴얼) 가상 페이지 HTML
+    _manualHTML: function() {
+        const card = (bg, fg, icon, t, d) => `<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:16px;padding:20px;">
+            <div style="width:46px;height:46px;border-radius:12px;background:${bg};color:${fg};display:flex;align-items:center;justify-content:center;font-size:20px;margin-bottom:12px;"><i class="fa-solid ${icon}"></i></div>
+            <div style="font-size:18px;font-weight:900;color:#0f172a;">${t}</div>
+            <div style="font-size:14px;color:#475569;margin-top:7px;line-height:1.55;">${d}</div>
+        </div>`;
+        return `<div style="background:#fff;border-radius:20px;box-shadow:0 18px 44px rgba(15,23,42,.12);padding:36px 40px;min-height:440px;">
+            <div style="font-size:13px;font-weight:800;letter-spacing:.16em;color:#2563eb;">STUDENT PLATFORM GUIDE</div>
+            <div style="font-size:28px;font-weight:900;color:#0f172a;margin-top:8px;"><i class="fa-solid fa-mobile-screen-button" style="color:#2563eb;"></i> 교육생 플랫폼 사용법</div>
+            <div style="font-size:15px;color:#64748b;margin-top:8px;margin-bottom:22px;">QR로 입장한 뒤 교육생이 사용하는 핵심 기능입니다.</div>
+            <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:16px;">
+                ${card('#FAE100','#3A1D1D','fa-comment','오픈톡방 이동','메인 화면의 말풍선 아이콘을 누르면 과정 오픈톡방으로 이동합니다.')}
+                ${card('#3b82f6','#fff','fa-person-walking-arrow-right','외출·외박 신청','외출/외박이 필요할 때 신청 메뉴에서 날짜·시간·사유를 입력합니다.')}
+                ${card('#10b981','#fff','fa-bus','퇴교차량 신청','퇴교 차량 수요조사에서 이용할 차량·터미널 이동 여부를 선택합니다.')}
+                ${card('#7c3aed','#fff','fa-comments','Q&A 사용','수업 중 질문은 Q&A 메뉴에 입력하면 강사가 확인 후 답변합니다.')}
+            </div>
+            <div style="margin-top:20px;background:#0f172a;color:#fff;border-radius:12px;padding:14px 18px;font-size:14px;font-weight:700;"><i class="fa-solid fa-circle-info"></i> 교육생은 QR 접속 후 이름·사번을 입력하면 해당 과정 플랫폼으로 들어갑니다.</div>
         </div>`;
     },
 
@@ -7147,6 +7173,9 @@ init: function() {
         const _canvasEl = document.getElementById('guideCanvas');
         const _profEl = document.getElementById('guideProfile');
 
+        // 이전 QR 실시간 명단 리스너 해제 (페이지 이동 시)
+        if (guideMgr._qrStuRef) { try { guideMgr._qrStuRef.off(); } catch(e){} guideMgr._qrStuRef = null; }
+
         // 담임 교수 프로필 (가상 2페이지)
         if (guideMgr._isProfilePage(num)) {
             guideMgr.isRendering = false;
@@ -7176,13 +7205,44 @@ init: function() {
                     const tgt = document.getElementById('guideQrBig');
                     if (tgt && typeof QRCode !== 'undefined') {
                         tgt.innerHTML = '';
-                        new QRCode(tgt, { text: url, width: 380, height: 380, correctLevel: QRCode.CorrectLevel.H });
+                        new QRCode(tgt, { text: url, width: 300, height: 300, correctLevel: QRCode.CorrectLevel.H });
                     }
                 } catch (e) { console.warn('QR 생성 실패:', e); }
+                // 교육생 명단 + 실시간 입교 하이라이트 (입장 시 노란색)
+                (async function(){
+                    let names = [];
+                    try { names = await dataMgr._gatherRosterNames(room); } catch(e){}
+                    const box = document.getElementById('guideQrRoster');
+                    if (!box) return;
+                    if (!names.length) { box.innerHTML = '<div style="color:#9fc4ff;font-size:14px;font-weight:600;">지원부에서 올린 명단이 아직 없습니다.</div>'; return; }
+                    const e2 = s => (s==null?'':String(s)).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+                    box.innerHTML = names.map(n => '<span class="qr-rname" data-name="'+e2(n)+'" style="background:rgba(255,255,255,0.14);color:#cbd5e1;font-weight:800;font-size:15px;padding:7px 14px;border-radius:10px;transition:all .2s;">'+e2(n)+'</span>').join('');
+                    if (guideMgr._qrStuRef) { try { guideMgr._qrStuRef.off(); } catch(e){} }
+                    guideMgr._qrStuRef = firebase.database().ref('courses/'+room+'/students');
+                    guideMgr._qrStuRef.on('value', function(s){
+                        const stu = s.val() || {}; const entered = {};
+                        Object.values(stu).forEach(x=>{ if(x&&x.name) entered[String(x.name).trim()] = true; });
+                        document.querySelectorAll('#guideQrRoster .qr-rname').forEach(function(el){
+                            if (entered[el.getAttribute('data-name')]) { el.style.background='#fde047'; el.style.color='#1e293b'; el.style.boxShadow='0 4px 12px rgba(250,204,21,.5)'; }
+                            else { el.style.background='rgba(255,255,255,0.14)'; el.style.color='#cbd5e1'; el.style.boxShadow='none'; }
+                        });
+                    });
+                })();
             }
             slot.pageNum = num;
             const _ind2 = document.getElementById('guidePageInfo');
             if (_ind2) _ind2.innerText = `${num} / ${_total}`;
+            return;
+        }
+
+        // 앱 사용법 (가상 페이지)
+        if (guideMgr._isManualPage(num)) {
+            guideMgr.isRendering = false;
+            if (_canvasEl) _canvasEl.style.display = 'none';
+            if (_profEl) { _profEl.innerHTML = guideMgr._manualHTML(); _profEl.style.display = 'block'; }
+            slot.pageNum = num;
+            const _indM = document.getElementById('guidePageInfo');
+            if (_indM) _indM.innerText = `${num} / ${_total}`;
             return;
         }
 
