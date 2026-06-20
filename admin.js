@@ -4293,14 +4293,6 @@ cancelIndividualShuttle: function(waveId, locId, token, name) {
                 }
             }
         } catch (e) { /* 무시 */ }
-        // [폴백] 현재 주차 지원부 명단이 없으면 운영부(coordRoster) 명단 사용 (운영부가 올린 명단 보존)
-        if (!names.length) {
-            try {
-                const crSnap = await firebase.database().ref(`courses/${room}/coordRoster`).once('value');
-                const cr = crSnap.val();
-                if (cr && Array.isArray(cr.list)) cr.list.forEach(s => { if (s && s.name) names.push(String(s.name).trim()); });
-            } catch (e) { /* 무시 */ }
-        }
         return names;
     },
 
@@ -4334,14 +4326,6 @@ cancelIndividualShuttle: function(waveId, locId, token, name) {
                     }
                 }
             } catch (e) { /* 무시 */ }
-            // [폴백] 현재 주차 지원부 명단이 없으면 운영부(coordRoster) 명단 사용
-            if (!names.length) {
-                try {
-                    const crSnap = await firebase.database().ref(`courses/${room}/coordRoster`).once('value');
-                    const cr = crSnap.val();
-                    if (cr && Array.isArray(cr.list)) cr.list.forEach(s => { if (s && s.name) names.push(String(s.name).trim()); });
-                } catch (e) { /* 무시 */ }
-            }
             return names;
         }
 
@@ -5263,7 +5247,6 @@ resetShuttleRequests: function() {
                 const _start=_period.indexOf('~')>=0?_period.split('~')[0].trim():'';
                 let list=[];
                 try{ const _cands=dataMgr._weekKeyCandidates(_start); for(let _ci=0;_ci<_cands.length;_ci++){ const _dv=dormAll[_cands[_ci]+'__'+room]; if(_dv && Array.isArray(_dv.list) && _dv.list.length){ list=_dv.list; break; } } }catch(e){}
-                if(!list.length && r.coordRoster && Array.isArray(r.coordRoster.list)) list=r.coordRoster.list;
                 const cnt=list.length;
                 const uid='hsR_'+room;
                 let detail;
