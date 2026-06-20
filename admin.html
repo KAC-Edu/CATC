@@ -451,7 +451,7 @@
                 <i class="fa-solid fa-expand"></i>
             </div>
         </div>
-        <img src="logo.png" alt="Logo" class="kac-logo" onclick="ui.setMode('home')" title="통합 교육 현황판으로 이동" style="cursor:pointer;" onerror="this.style.display='none'"> 
+        <img src="logo.png" alt="Logo" class="kac-logo" onclick="ui.goHomePortal()" title="통합 교육 현황판으로 이동" style="cursor:pointer;" onerror="this.style.display='none'"> 
     </div>
 </header>
 
@@ -1920,7 +1920,7 @@
                         <input type="text" id="setup-course-name" class="setup-input" placeholder="정확한 과정명 입력">
                     </div>
                     <div class="setup-group">
-                        <label style="display:block; font-size:12px; font-weight:800; color:#64748b; margin-bottom:8px;">과정 비밀번호 설정 <span style="color:#0ea5e9; font-weight:900;">(옵션사항)</span> <span style="color:#94a3b8; font-weight:600;">— 비워두면 비번 없이 자유 입장</span></label>
+                        <label style="display:block; font-size:12px; font-weight:800; color:#64748b; margin-bottom:8px;">과정 비밀번호 설정 <span style="color:#0ea5e9; font-weight:900;">(옵션사항)</span></label>
                         <input type="password" id="setup-room-pw" class="setup-input" maxlength="4" placeholder="설정 안 함 (선택 입력 · 숫자 4자리)">
                     </div>
                 </div>
@@ -2501,7 +2501,7 @@ function setupAcc(btn){
 </script>
 <style>@media print{#__catcVer{display:none!important}}</style>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vC3</div>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vE3</div>
 <div id="fieldEditModal" class="modal-overlay" onclick="if(event.target===this) ui.closeFieldEdit()" style="z-index:10050;">
   <div class="modal-box" style="width:440px; max-width:94vw; text-align:left;">
     <h3 id="fieldEditTitle" style="margin-top:0; color:#0f172a;">수정</h3>

@@ -5083,6 +5083,16 @@ resetShuttleRequests: function() {
         location.reload();
     },
 
+    // KAC 로고 → 통합 현황판(포털)로 안전 이동: 방 컨텍스트 해제 + 오버레이 제거(클릭 살리기)
+    goHomePortal: function() {
+        try { state.room = null; state.isObserver = false; } catch(e) {}
+        try { localStorage.removeItem('kac_last_room'); } catch(e) {}
+        var ov = document.getElementById('statusOverlay'); if (ov) ov.style.display = 'none';
+        var qr = document.getElementById('floatingQR'); if (qr) qr.style.display = 'none';
+        try { ui._qrUserClosed = true; } catch(e) {}
+        ui.setMode('home');
+    },
+
     // ── 헤더 날짜/시간 실시간 시계 (Pill 위젯, 요일 포함) ──
     startHeaderClock: function() {
         const DAYS = ['SUN','MON','TUE','WED','THU','FRI','SAT'];
