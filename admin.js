@@ -2016,6 +2016,16 @@ init: function() {
     });
 },
 
+// 이름 뒤에 '강사' 직함 붙이기 (이미 직함 있으면 중복 방지)
+    _withTitle: function(name) {
+        var n = (name || '').trim();
+        if (!n) return n;
+        // 이미 직함/호칭으로 끝나면 그대로 (부장 강사·강사 강사 중복 방지)
+        var titles = ['강사','교수','교수님','부장','과장','차장','대리','주임','사원','원장','팀장','실장','센터장','교관','선생님','선생','님'];
+        for (var i = 0; i < titles.length; i++) { if (n.endsWith(titles[i])) return n; }
+        return n + ' 강사';
+    },
+
 // [리포트 반영] 과목 필터 바 렌더링 (공통질문 필터 추가)
     renderFilters: function() {
         const bar = document.getElementById('subjectFilterBar');
@@ -2027,7 +2037,7 @@ init: function() {
         html += `<div class="filter-chip ${this.selectedFilter === '공통질문' ? 'active' : ''}" onclick="subjectMgr.setFilter('공통질문')">공통질문</div>`;
         
         this.list.forEach(item => {
-            html += `<div class="filter-chip ${this.selectedFilter === item.name ? 'active' : ''}" onclick="subjectMgr.setFilter('${item.name}')">${item.name}</div>`;
+            html += `<div class="filter-chip ${this.selectedFilter === item.name ? 'active' : ''}" onclick="subjectMgr.setFilter('${item.name}')">${subjectMgr._withTitle(item.name)}</div>`;
         });
         bar.innerHTML = html;
     },
