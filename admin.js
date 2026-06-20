@@ -10080,4 +10080,77 @@ ui.saveFieldEdit = async function(){
 };
 
 /* __JSVER_STAMP__ */
-(function stampJsVer(){try{var b=document.getElementById('__catcVer');if(b){if(b.textContent.indexOf('Jc')<0)b.textContent=b.textContent+'\u00b7Jc';}else{setTimeout(stampJsVer,200);}}catch(e){}})();
+(function stampJsVer(){try{var b=document.getElementById('__catcVer');if(b){if(b.textContent.indexOf('Jd')<0)b.textContent=b.textContent+'\u00b7Jd';}else{setTimeout(stampJsVer,200);}}catch(e){}})();
+
+/* ===== [공항별 입교 현황 지도] 수강생현황 → 지도로 보기 ===== */
+ui._mapRegions = {
+  '서울':{x:150,y:118,air:false}, '김포':{x:130,y:114,air:true}, '인천':{x:108,y:126,air:false},
+  '강원':{x:250,y:100,air:false}, '양양':{x:264,y:120,air:true}, '원주':{x:206,y:150,air:true},
+  '송탄':{x:158,y:160,air:false}, '청주':{x:176,y:198,air:true}, '예천':{x:242,y:188,air:false},
+  '군산':{x:124,y:252,air:true}, '대구':{x:258,y:244,air:true}, '포항':{x:316,y:232,air:true},
+  '울산':{x:308,y:284,air:true}, '부안':{x:118,y:280,air:false}, '광주':{x:140,y:324,air:true},
+  '무안':{x:104,y:332,air:true}, '여수':{x:182,y:364,air:true}, '사천':{x:228,y:348,air:true},
+  '김해':{x:292,y:314,air:true}, '부산':{x:306,y:330,air:false}, '제주':{x:150,y:472,air:true}
+};
+ui._deptToRegion = function(dept){
+  var d = String(dept||'');
+  if(!d.trim()) return '';
+  if(d.indexOf('본사')>=0) return '서울';
+  if(d.indexOf('인천')>=0) return '인천';
+  if(d.indexOf('항로시설본부')>=0) return '대구';
+  if(d.indexOf('한라레이더')>=0) return '제주';
+  var keys=['김포','양양','원주','청주','예천','군산','포항','울산','부안','광주','무안','여수','사천','김해','부산','제주','대구','강원','송탄'];
+  for(var i=0;i<keys.length;i++){ if(d.indexOf(keys[i])>=0) return keys[i]; }
+  return '';
+};
+ui.closeStudentMap = function(){ var m=document.getElementById('studentMapModal'); if(m) m.remove(); };
+ui.openStudentMap = async function(){
+  if(!state.room){ ui.showAlert('강의실을 먼저 선택하세요.'); return; }
+  var room = state.room;
+  var list=[], course='';
+  try{
+    var cs=await firebase.database().ref('courses/'+room+'/settings/courseName').once('value');
+    course=String(cs.val()||'').trim();
+    var ds=await firebase.database().ref('system/dorm/rosters').once('value');
+    var all=ds.val()||{}; var best=null;
+    for(var k in all){ var dv=all[k]; if(dv&&Array.isArray(dv.list)&&dv.list.length&&String(dv.courseName||'').trim()===course){ if(!best||(dv.updatedAt||0)>(best.updatedAt||0)) best=dv; } }
+    if(best) list=best.list;
+  }catch(e){}
+  var counts={}, unknown=0, total=0;
+  list.forEach(function(pp){ var reg=ui._deptToRegion(pp&&pp.dept||''); if(reg){ counts[reg]=(counts[reg]||0)+1; total++; } else { unknown++; } });
+  // 지도 핀
+  var pins='';
+  Object.keys(ui._mapRegions).forEach(function(name){
+    var r=ui._mapRegions[name]; var c=counts[name]||0;
+    if(c>0){
+      pins += '<g>'
+        + '<text x="'+r.x+'" y="'+(r.y-19)+'" text-anchor="middle" font-size="12" font-weight="800" fill="#0f172a">'+name+'</text>'
+        + '<circle cx="'+r.x+'" cy="'+r.y+'" r="15" fill="#10b981" stroke="#fff" stroke-width="2.5"/>'
+        + '<text x="'+r.x+'" y="'+(r.y+5)+'" text-anchor="middle" font-size="14" font-weight="900" fill="#fff">'+c+'</text>'
+        + '</g>';
+    } else if(r.air){
+      pins += '<g>'
+        + '<circle cx="'+r.x+'" cy="'+r.y+'" r="3.5" fill="#cbd5e1"/>'
+        + '<text x="'+r.x+'" y="'+(r.y-7)+'" text-anchor="middle" font-size="9.5" font-weight="700" fill="#b6c2d2">'+name+'</text>'
+        + '</g>';
+    }
+  });
+  var outline='<path d="M148,86 C130,95 120,110 112,128 C104,150 104,175 100,200 C96,225 98,255 104,285 C110,315 122,340 142,356 C160,368 180,375 200,366 C222,356 248,346 272,338 C296,330 312,312 318,288 C324,262 320,235 314,210 C308,185 302,160 288,135 C274,112 255,95 232,88 C205,80 172,78 148,86 Z" fill="#f1f7ff" stroke="#cfe0ff" stroke-width="2"/>'
+    + '<ellipse cx="150" cy="472" rx="34" ry="20" fill="#f1f7ff" stroke="#cfe0ff" stroke-width="2"/>';
+  // 요약 리스트(인원 많은 순)
+  var sorted=Object.keys(counts).sort(function(a,b){return counts[b]-counts[a];});
+  var rows = sorted.length ? sorted.map(function(n){ return '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;border-bottom:1px solid #f1f5f9;"><span style="font-weight:700;color:#334155;">'+n+'</span><span style="font-weight:900;color:#10b981;">'+counts[n]+'명</span></div>'; }).join('') : '<div style="padding:18px;color:#94a3b8;text-align:center;">명단이 없습니다.</div>';
+  var unknownNote = unknown ? '<div style="margin-top:8px;font-size:12px;color:#94a3b8;">· 소속 구분 불가 '+unknown+'명은 지도에서 제외</div>' : '';
+  var html = '<div id="studentMapModal" style="position:fixed;inset:0;background:rgba(15,23,42,.6);z-index:99998;display:flex;align-items:center;justify-content:center;padding:20px;" onclick="if(event.target===this)ui.closeStudentMap()">'
+    + '<div style="background:#fff;border-radius:22px;max-width:880px;width:100%;max-height:92vh;overflow:auto;padding:26px 30px;position:relative;box-shadow:0 24px 60px rgba(15,23,42,.35);">'
+    + '<button onclick="ui.closeStudentMap()" style="position:absolute;top:16px;right:16px;width:38px;height:38px;border-radius:50%;border:none;background:#eef2f7;color:#475569;font-size:18px;cursor:pointer;">✕</button>'
+    + '<h2 style="margin:0 0 4px;font-size:22px;font-weight:900;color:#0f172a;">🗺️ 공항별 입교 현황</h2>'
+    + '<div style="font-size:13px;color:#64748b;font-weight:700;margin-bottom:14px;">Room '+room+' · '+ (course||'-') +' · 예정 명단 소속 기준 (총 '+total+'명)</div>'
+    + '<div style="display:flex;gap:22px;flex-wrap:wrap;align-items:flex-start;">'
+    +   '<div style="flex:1;min-width:330px;"><svg viewBox="0 0 380 540" style="width:100%;height:auto;">'+outline+pins+'</svg></div>'
+    +   '<div style="width:240px;min-width:220px;"><div style="font-size:13px;font-weight:800;color:#475569;margin-bottom:6px;">공항별 인원</div><div style="border:1px solid #e2e8f0;border-radius:12px;overflow:hidden;">'+rows+'</div>'+unknownNote+'</div>'
+    + '</div>'
+    + '</div></div>';
+  var wrap=document.createElement('div'); wrap.innerHTML=html; document.body.appendChild(wrap.firstChild);
+};
+
