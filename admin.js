@@ -3071,7 +3071,7 @@ toggleMiniQR: function() {
         ui.showAlert("⚠️ 좌측 상단에서 강의실(Room)을 먼저 선택해 주세요.");
         return;
     }
-    if (qrBox && qrBox.style.display === 'flex') { qrBox.style.display = 'none'; }
+    if (qrBox && qrBox.style.display === 'flex') { qrBox.style.display = 'none'; ui._qrUserClosed = true; }
     else { ui.showMiniQR(); }
 },
 
@@ -3080,6 +3080,7 @@ showMiniQR: function() {
     const qrBox = document.getElementById('floatingQR');
     if (!qrBox || !state.room || state.room === 'null') return;
     qrBox.style.display = 'flex';
+    ui._qrUserClosed = false;
     const target = document.getElementById('miniQRElement');
     const label = document.querySelector('.qr-label');
     if (!target) return;
@@ -3368,6 +3369,14 @@ openQrModal: function() {
 
 
 setMode: function(mode) {
+        // [QR] 현황판(waiting)에선 입장 QR 숨김, 과정현황(dashboard)에선 표시(사용자가 X로 닫지 않은 경우)
+        try {
+            var _qr = document.getElementById('floatingQR');
+            if (_qr) {
+                if (mode === 'waiting') { _qr.style.display = 'none'; }
+                else if (mode === 'dashboard' && !ui._qrUserClosed) { ui.showMiniQR(); }
+            }
+        } catch(e) {}
         // [추가] 강의실에 입장한 상태라면 숨겨졌던 메뉴 탭(mode-tabs)을 다시 보여줍니다.
         const tabs = document.querySelector('.mode-tabs');
         if (state.room && tabs) {

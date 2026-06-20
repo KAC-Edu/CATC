@@ -464,11 +464,11 @@
 
 <!-- ── 배경음악: 통합 주황 플레이어 바(상단 #bgmNowBubble)로 일원화됨 ── -->
 <div class="mode-tabs">
-    <button class="mode-btn active" id="tab-dashboard" onclick="ui.setMode('dashboard')"><i class="fa-solid fa-gauge-high"></i> <span class="i18n" data-en="Course Status">과정 현황</span></button>
-    <button class="mode-btn" id="tab-guide" onclick="ui.setMode('guide')"><i class="fa-solid fa-file-pdf"></i> <span class="i18n" data-en="Guide">입교안내</span></button>
-    <button class="mode-btn" id="tab-notice" onclick="ui.setMode('notice')"><i class="fa-solid fa-bullhorn"></i> <span class="i18n" data-en="Notices">공지 관리</span> <span id="coordNoticeBadge" style="display:none; background:#ef4444; color:white; font-size:10px; font-weight:800; padding:2px 5px; border-radius:8px; margin-left:4px; vertical-align:middle;">NEW</span></button>
-    <button class="mode-btn" id="tab-students" onclick="ui.setMode('students')"><i class="fa-solid fa-users-viewfinder"></i> <span class="i18n" data-en="Students">수강생 현황</span></button>
-    <button class="mode-btn" id="tab-qa" onclick="ui.setMode('qa')"><i class="fa-regular fa-comments"></i> <span class="i18n" data-en="Q&A">Q&A 현황</span></button>
+    <button class="mode-btn active" id="tab-dashboard" onclick="ui.setMode('dashboard')"><i class="fa-solid fa-gauge-high" style="color:#6366f1;"></i> <span class="i18n" data-en="Course Status">과정 현황</span></button>
+    <button class="mode-btn" id="tab-guide" onclick="ui.setMode('guide')"><i class="fa-solid fa-file-pdf" style="color:#ef4444;"></i> <span class="i18n" data-en="Guide">입교안내</span></button>
+    <button class="mode-btn" id="tab-notice" onclick="ui.setMode('notice')"><i class="fa-solid fa-bullhorn" style="color:#f59e0b;"></i> <span class="i18n" data-en="Notices">공지 관리</span> <span id="coordNoticeBadge" style="display:none; background:#ef4444; color:white; font-size:10px; font-weight:800; padding:2px 5px; border-radius:8px; margin-left:4px; vertical-align:middle;">NEW</span></button>
+    <button class="mode-btn" id="tab-students" onclick="ui.setMode('students')"><i class="fa-solid fa-users-viewfinder" style="color:#3b82f6;"></i> <span class="i18n" data-en="Students">수강생 현황</span></button>
+    <button class="mode-btn" id="tab-qa" onclick="ui.setMode('qa')"><i class="fa-regular fa-comments" style="color:#10b981;"></i> <span class="i18n" data-en="Q&A">Q&A 현황</span></button>
 
     <!-- 행정 메뉴 드롭다운 -->
     <div class="mode-dropdown">
@@ -2501,7 +2501,7 @@ function setupAcc(btn){
 </script>
 <style>@media print{#__catcVer{display:none!important}}</style>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vV2</div>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vY2</div>
 <div id="fieldEditModal" class="modal-overlay" onclick="if(event.target===this) ui.closeFieldEdit()" style="z-index:10050;">
   <div class="modal-box" style="width:440px; max-width:94vw; text-align:left;">
     <h3 id="fieldEditTitle" style="margin-top:0; color:#0f172a;">수정</h3>
