@@ -4278,20 +4278,16 @@ cancelIndividualShuttle: function(waveId, locId, token, name) {
     // [JDS260613] 운영부(coordRoster)·지원부(system/dorm/rosters) 명단 이름을 직접 수집 — 재저장 없이도 명단 표시
     _gatherRosterNames: async function(room) {
         const names = [];
-        // [명단 통일] 운영부 coordRoster 미참조 (주차 혼입 방지). 현재 과정 주차의 지원부 명단만.
+        // [명단 통일] 지원부 명단(system/dorm/rosters)을 '과정명'으로 매칭 — 주차·방 키 차이와 무관하게 정확히 조회.
         try {
-            const pSnap = await firebase.database().ref(`courses/${room}/settings/period`).once('value');
-            const period = pSnap.val() || '';
-            const start = period.includes(' ~ ') ? period.split(' ~ ')[0].trim() : '';
-            const cands = this._weekKeyCandidates(start);
-            for (const wk of cands) {
-                const dSnap = await firebase.database().ref(`system/dorm/rosters/${wk}__${room}`).once('value');
-                const dv = dSnap.val();
-                if (dv && Array.isArray(dv.list) && dv.list.length) {
-                    dv.list.forEach(s => { if (s && s.name) names.push(String(s.name).trim()); });
-                    break;
-                }
-            }
+            const cs = await firebase.database().ref(`courses/${room}/settings/courseName`).once('value');
+            const cn = String(cs.val() || '').trim();
+            if (!cn) return names;
+            const ds = await firebase.database().ref('system/dorm/rosters').once('value');
+            const all = ds.val() || {};
+            let best = null;
+            for (const k in all) { const dv = all[k]; if (dv && Array.isArray(dv.list) && dv.list.length && String(dv.courseName||'').trim() === cn) { if (!best || (dv.updatedAt||0) > (best.updatedAt||0)) best = dv; } }
+            if (best) best.list.forEach(s => { if (s && s.name) names.push(String(s.name).trim()); });
         } catch (e) { /* 무시 */ }
         return names;
     },
@@ -4311,20 +4307,16 @@ cancelIndividualShuttle: function(waveId, locId, token, name) {
         //  → 강사가 별도 .txt 업로드/재저장을 하지 않아도, 운영부·지원부에서 올린 명단이 바로 '미입교'로 표시됨.
         async function gatherRosterNames() {
             const names = [];
-            // [명단 통일] 운영부 coordRoster(주차 구분 없음) 미참조 — 복구/지난주 명단 혼입 방지. 현재 과정 주차의 지원부 명단만 사용.
+            // [명단 통일] 지원부 명단을 '과정명'으로 매칭 (주차·방 키 차이 무관)
             try {
-                const pSnap = await firebase.database().ref(`courses/${room}/settings/period`).once('value');
-                const period = pSnap.val() || '';
-                const start = period.includes(' ~ ') ? period.split(' ~ ')[0].trim() : '';
-                const cands = self._weekKeyCandidates(start);
-                for (const wk of cands) {
-                    const dSnap = await firebase.database().ref(`system/dorm/rosters/${wk}__${room}`).once('value');
-                    const dv = dSnap.val();
-                    if (dv && Array.isArray(dv.list) && dv.list.length) {
-                        dv.list.forEach(s => { if (s && s.name) names.push(String(s.name).trim()); });
-                        break;
-                    }
-                }
+                const cs = await firebase.database().ref(`courses/${room}/settings/courseName`).once('value');
+                const cn = String(cs.val() || '').trim();
+                if (!cn) return names;
+                const ds = await firebase.database().ref('system/dorm/rosters').once('value');
+                const all = ds.val() || {};
+                let best = null;
+                for (const k in all) { const dv = all[k]; if (dv && Array.isArray(dv.list) && dv.list.length && String(dv.courseName||'').trim() === cn) { if (!best || (dv.updatedAt||0) > (best.updatedAt||0)) best = dv; } }
+                if (best) best.list.forEach(s => { if (s && s.name) names.push(String(s.name).trim()); });
             } catch (e) { /* 무시 */ }
             return names;
         }
@@ -5164,9 +5156,9 @@ resetShuttleRequests: function() {
                 studentTotal += cnt;
                 // 예정(지원부 업로드) 인원 — 현재 과정 주차의 지원부 명단
                 try {
-                    const _start = period.indexOf('~')>=0 ? period.split('~')[0].trim() : '';
-                    const _cands = dataMgr._weekKeyCandidates(_start);
-                    for (let _i=0;_i<_cands.length;_i++){ const _dv=dorm[_cands[_i]+'__'+room]; if(_dv && Array.isArray(_dv.list) && _dv.list.length){ plannedTotal += _dv.list.length; break; } }
+                    const _cn = String(settings.courseName||'').trim(); let _best=null;
+                    for (const _k in dorm){ const _dv=dorm[_k]; if(_dv && Array.isArray(_dv.list) && _dv.list.length && String(_dv.courseName||'').trim()===_cn){ if(!_best||(_dv.updatedAt||0)>(_best.updatedAt||0)) _best=_dv; } }
+                    if(_best) plannedTotal += _best.list.length;
                 } catch(e){}
                 Object.values(actions).forEach(a=>{
                     if(a&&(a.type==='outing'||a.type==='overnight'||a.type==='group_outing')) outingTotal++;
@@ -5260,7 +5252,7 @@ resetShuttleRequests: function() {
                 const _period=(r.settings||{}).period||'';
                 const _start=_period.indexOf('~')>=0?_period.split('~')[0].trim():'';
                 let list=[];
-                try{ const _cands=dataMgr._weekKeyCandidates(_start); for(let _ci=0;_ci<_cands.length;_ci++){ const _dv=dormAll[_cands[_ci]+'__'+room]; if(_dv && Array.isArray(_dv.list) && _dv.list.length){ list=_dv.list; break; } } }catch(e){}
+                try{ const _cn=String(course).trim(); let _best=null; for(const _k in dormAll){ const _dv=dormAll[_k]; if(_dv && Array.isArray(_dv.list) && _dv.list.length && String(_dv.courseName||'').trim()===_cn){ if(!_best||(_dv.updatedAt||0)>(_best.updatedAt||0)) _best=_dv; } } if(_best) list=_best.list; }catch(e){}
                 const stuCnt=new Set(Object.values(r.students||{}).filter(s=>s&&s.name&&s.name!=='undefined').map(s=>s.name)).size;
                 const cnt=list.length;
                 const uid='hsR_'+room;
