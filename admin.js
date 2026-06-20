@@ -6943,9 +6943,20 @@ init: function() {
         } catch (e) { slot.profile = null; }
     },
     _hasProfile: function() { return !!(guideMgr._slot().profile); },
-    _vtotal: function() { const s = guideMgr._slot(); if (!s.pdfDoc) return 0; return s.pdfDoc.numPages + (guideMgr._hasProfile() ? 1 : 0); },
+    _hasQR: function() { return !!guideMgr._room(); },
+    _extras: function() { return (guideMgr._hasProfile() ? 1 : 0) + (guideMgr._hasQR() ? 1 : 0); },
+    _qrPageNum: function() { return guideMgr._hasQR() ? (2 + (guideMgr._hasProfile() ? 1 : 0)) : -1; },
+    _vtotal: function() { const s = guideMgr._slot(); if (!s.pdfDoc) return 0; return s.pdfDoc.numPages + guideMgr._extras(); },
     _isProfilePage: function(v) { return guideMgr._hasProfile() && v === 2; },
-    _toPdfPage: function(v) { if (!guideMgr._hasProfile()) return v; if (v <= 1) return 1; if (v === 2) return null; return v - 1; },
+    _isQRPage: function(v) { return guideMgr._hasQR() && v === guideMgr._qrPageNum(); },
+    _toPdfPage: function(v) {
+        const extras = guideMgr._extras();
+        if (extras === 0) return v;
+        if (v <= 1) return 1;                       // 표지(1페이지)
+        if (guideMgr._isProfilePage(v)) return null; // 교수 프로필(가상)
+        if (guideMgr._isQRPage(v)) return null;      // QR 안내(가상)
+        return v - extras;                          // 원본 PDF 2페이지 이후
+    },
     _profileHTML: function(p) {
         const esc = s => (s == null ? '' : String(s)).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
         const name = esc(p._name || '');
@@ -6985,6 +6996,20 @@ init: function() {
                 ${contactHtml}
                 ${bioHtml}
             </div>
+        </div>`;
+    },
+
+    // QR 안내 가상 페이지 HTML
+    _qrHTML: function(room, courseNm) {
+        const esc = s => (s == null ? '' : String(s)).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+        const course = esc(courseNm && courseNm !== '과정명을 설정해주세요.' ? courseNm : '');
+        return `<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;background:linear-gradient(135deg,#003366 0%,#0055aa 100%);border-radius:20px;min-height:430px;padding:46px 30px;color:#fff;text-align:center;box-shadow:0 18px 44px rgba(15,23,42,.12);">
+            <div style="font-size:13px;font-weight:800;letter-spacing:.18em;color:#9fc4ff;">COURSE ENTRY</div>
+            <div style="font-size:30px;font-weight:900;margin-top:10px;">교육 과정 입장 안내</div>
+            ${course ? `<div style="font-size:19px;font-weight:800;margin-top:8px;color:#dbeafe;">${course}</div>` : ''}
+            <div style="font-size:16px;font-weight:600;margin-top:10px;color:#cbd5e1;line-height:1.5;">휴대폰 카메라로 아래 QR을 스캔하면<br>교육 과정에 바로 입장합니다</div>
+            <div id="guideQrBig" style="background:#fff;padding:18px;border-radius:18px;margin-top:26px;box-shadow:0 12px 30px rgba(0,0,0,.28);display:inline-block;line-height:0;"></div>
+            <div style="margin-top:20px;font-size:14px;font-weight:700;color:#9fc4ff;"><i class="fa-solid fa-door-open"></i> Room ${esc(room)}</div>
         </div>`;
     },
 
@@ -7050,6 +7075,34 @@ init: function() {
             slot.pageNum = num;
             const _ind = document.getElementById('guidePageInfo');
             if (_ind) _ind.innerText = `${num} / ${_total}`;
+            return;
+        }
+
+        // QR 안내 (가상 페이지)
+        if (guideMgr._isQRPage(num)) {
+            guideMgr.isRendering = false;
+            if (_canvasEl) _canvasEl.style.display = 'none';
+            if (_profEl) {
+                _profEl.style.display = 'block';
+                const room = guideMgr._room();
+                const path = window.location.pathname;
+                const directory = path.substring(0, path.lastIndexOf('/'));
+                const baseUrl = window.location.origin + directory + '/';
+                const url = baseUrl + 'index.html?room=' + room;
+                let courseNm = '';
+                try { courseNm = (document.getElementById('dashCourseTitle') || {}).innerText || ''; } catch (e) {}
+                _profEl.innerHTML = guideMgr._qrHTML(room, courseNm);
+                try {
+                    const tgt = document.getElementById('guideQrBig');
+                    if (tgt && typeof QRCode !== 'undefined') {
+                        tgt.innerHTML = '';
+                        new QRCode(tgt, { text: url, width: 300, height: 300, correctLevel: QRCode.CorrectLevel.H });
+                    }
+                } catch (e) { console.warn('QR 생성 실패:', e); }
+            }
+            slot.pageNum = num;
+            const _ind2 = document.getElementById('guidePageInfo');
+            if (_ind2) _ind2.innerText = `${num} / ${_total}`;
             return;
         }
 
