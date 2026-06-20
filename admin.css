@@ -449,7 +449,7 @@ body.night-mode .q-card.status-pin .q-content { color: #fecaca; }
 
 /* Floating QR Style */
 .floating-qr-box {
-    position: absolute; bottom: 30px; left: 30px;
+    position: absolute; top: 180px; left: 28px;
     background: white; padding: 15px; border-radius: 20px;
     box-shadow: 0 15px 50px rgba(0,0,0,0.3);
     z-index: 1500; display: none;

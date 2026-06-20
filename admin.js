@@ -928,6 +928,8 @@ forceEnterRoom: async function(room) {
     });
 
     this.fetchCodeAndRenderQr(cleanRoom);
+    // [추가] 입장 시 학생 입장 QR 자동 표시 (처음 오는 분도 바로 보이게)
+    setTimeout(() => { try { ui.showMiniQR(); } catch(e) {} }, 500);
 
     // 퀴즈 mode 자동복구는 강사가 직접 퀴즈 탭에서 나갈 때만 처리 (forceEnterRoom에서 제거)
 
@@ -3064,41 +3066,32 @@ showAlert: function(msg, onConfirm) {
 
 toggleMiniQR: function() {
     const qrBox = document.getElementById('floatingQR');
-    
     // [보안] 강의실 선택 확인
     if (!state.room || state.room === 'null') {
         ui.showAlert("⚠️ 좌측 상단에서 강의실(Room)을 먼저 선택해 주세요.");
         return;
     }
+    if (qrBox && qrBox.style.display === 'flex') { qrBox.style.display = 'none'; }
+    else { ui.showMiniQR(); }
+},
 
-    if (qrBox.style.display === 'flex') {
-        qrBox.style.display = 'none';
-    } else {
-        qrBox.style.display = 'flex';
-        const target = document.getElementById('miniQRElement');
-        const label = document.querySelector('.qr-label');
-        if(!target) return;
-
-        target.innerHTML = ""; 
-        
-        // 경로 계산 보정
-        const path = window.location.pathname;
-        const directory = path.substring(0, path.lastIndexOf('/'));  // ← 인자 순서 수정
-        const baseUrl = window.location.origin + directory + "/";
-        const forcedUrl = `${baseUrl}index.html?room=${state.room}`;
-        
-        const ctEl = document.getElementById('displayCourseTitle');
-        const courseNm = (ctEl && ctEl.innerText.trim()) ? ctEl.innerText.trim() : '';
-        label.innerText = `ROOM ${state.room} Join` + (courseNm ? ` · ${courseNm}` : '');
-        
-        // QR 생성
-        new QRCode(target, {
-            text: forcedUrl,
-            width: 140,
-            height: 140,
-            correctLevel: QRCode.CorrectLevel.H
-        });
-    }
+// 플로팅 QR 표시 + 렌더 (자동 표시 / 상단바 버튼 공용)
+showMiniQR: function() {
+    const qrBox = document.getElementById('floatingQR');
+    if (!qrBox || !state.room || state.room === 'null') return;
+    qrBox.style.display = 'flex';
+    const target = document.getElementById('miniQRElement');
+    const label = document.querySelector('.qr-label');
+    if (!target) return;
+    target.innerHTML = "";
+    const path = window.location.pathname;
+    const directory = path.substring(0, path.lastIndexOf('/'));
+    const baseUrl = window.location.origin + directory + "/";
+    const forcedUrl = `${baseUrl}index.html?room=${state.room}`;
+    const ctEl = document.getElementById('displayCourseTitle');
+    const courseNm = (ctEl && ctEl.innerText.trim()) ? ctEl.innerText.trim() : '';
+    if (label) label.innerText = `ROOM ${state.room} Join` + (courseNm ? ` · ${courseNm}` : '');
+    try { new QRCode(target, { text: forcedUrl, width: 140, height: 140, correctLevel: QRCode.CorrectLevel.H }); } catch(e) {}
 },
 
 
