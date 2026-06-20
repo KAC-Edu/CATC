@@ -5144,7 +5144,8 @@ resetShuttleRequests: function() {
     loadHomeStats: function() {
         const computeAndRender = (d) => {
             const today = getTodayString();
-            let activeCount=0, studentTotal=0, outingTotal=0;
+            let activeCount=0, studentTotal=0, outingTotal=0, plannedTotal=0;
+            const dorm = window._dormRosters || {};
             Object.entries(d).forEach(([room, r]) => {
                 if (!r) return;
                 const st=r.status||{}, settings=r.settings||{}, students=r.students||{};
@@ -5158,14 +5159,21 @@ resetShuttleRequests: function() {
                 const include = (isActive && hasCourse) || ui._isThisWeek(period);
                 if (!include) return;
                 if (isActive) activeCount++;
+                // 입교(QR 입실) 인원
                 const cnt = new Set(Object.values(students).filter(s=>s&&s.name&&s.name!=='undefined').map(s=>s.name)).size;
                 studentTotal += cnt;
+                // 예정(지원부 업로드) 인원 — 현재 과정 주차의 지원부 명단
+                try {
+                    const _start = period.indexOf('~')>=0 ? period.split('~')[0].trim() : '';
+                    const _cands = dataMgr._weekKeyCandidates(_start);
+                    for (let _i=0;_i<_cands.length;_i++){ const _dv=dorm[_cands[_i]+'__'+room]; if(_dv && Array.isArray(_dv.list) && _dv.list.length){ plannedTotal += _dv.list.length; break; } }
+                } catch(e){}
                 Object.values(actions).forEach(a=>{
                     if(a&&(a.type==='outing'||a.type==='overnight'||a.type==='group_outing')) outingTotal++;
                 });
             });
             ui._setStat('stat-active-count', activeCount);
-            ui._setStat('stat-student-count', studentTotal);
+            ui._setStat('stat-student-count', plannedTotal + ' / ' + studentTotal);
             ui._setStat('stat-outing-count', outingTotal);
             window._homeStatsData=d; window._homeStatsToday=today;
         };
@@ -5173,6 +5181,11 @@ resetShuttleRequests: function() {
         // 실시간 리스너는 1회만 등록 (중복 등록 방지). 등록 시 즉시 최초값으로 렌더된다.
         if (!ui._homeStatsBound) {
             ui._homeStatsBound = true;
+            // 지원부 명단(예정 인원) 실시간 구독 → 변동 시 카드 재계산
+            firebase.database().ref('system/dorm/rosters').on('value', s => {
+                window._dormRosters = s.val() || {};
+                if (window._homeStatsData) computeAndRender(window._homeStatsData);
+            }, () => {});
             firebase.database().ref('courses').on('value', snap => {
                 computeAndRender(snap.val() || {});
             }, err => {
@@ -5239,6 +5252,7 @@ resetShuttleRequests: function() {
             body.innerHTML=rows||'<p style="color:#94a3b8;text-align:center;padding:30px;font-size:16px;">이번 주 강의 중인 과정이 없습니다.</p>';
         } else if(type==='students'){
             title.textContent='👩‍🎓 과정별 교육생 현황 (이번 주)';
+            const _legend='<div style="font-size:12px;color:#64748b;font-weight:700;margin:-12px 0 14px;">숫자 표기: <b style="color:#0f172a;">예정</b>(지원부 업로드) / <b style="color:#0f172a;">입교</b>(QR 입실)</div>';
             let dormAll={};
             try{ dormAll=(await firebase.database().ref('system/dorm/rosters').once('value')).val()||{}; }catch(e){}
             const rows=weekRooms.map(([room,r])=>{
@@ -5247,6 +5261,7 @@ resetShuttleRequests: function() {
                 const _start=_period.indexOf('~')>=0?_period.split('~')[0].trim():'';
                 let list=[];
                 try{ const _cands=dataMgr._weekKeyCandidates(_start); for(let _ci=0;_ci<_cands.length;_ci++){ const _dv=dormAll[_cands[_ci]+'__'+room]; if(_dv && Array.isArray(_dv.list) && _dv.list.length){ list=_dv.list; break; } } }catch(e){}
+                const stuCnt=new Set(Object.values(r.students||{}).filter(s=>s&&s.name&&s.name!=='undefined').map(s=>s.name)).size;
                 const cnt=list.length;
                 const uid='hsR_'+room;
                 let detail;
@@ -5275,12 +5290,12 @@ resetShuttleRequests: function() {
                       +'<span style="font-size:18px;color:#0f172a;font-weight:700;">'+esc(course)+'</span>'
                       +'<i class="fa-solid fa-chevron-right hs-chev" style="color:#10b981;font-size:13px;transition:transform .2s;"></i>'
                     +'</div>'
-                    +'<span style="font-size:28px;font-weight:900;color:#0f172a;">'+cnt+'<span style="font-size:14px;color:#64748b;font-weight:800;"> 명</span></span>'
+                    +'<span style="font-size:24px;font-weight:900;color:#0f172a;white-space:nowrap;">'+cnt+'<span style="font-size:13px;color:#94a3b8;font-weight:700;"> / </span>'+stuCnt+'<span style="font-size:13px;color:#64748b;font-weight:800;"> 명</span></span>'
                   +'</div>'
                   +'<div id="'+uid+'" style="display:none;padding:0 22px 18px;">'+detail+'</div>'
                 +'</div>';
             }).join('');
-            body.innerHTML=rows||'<p style="color:#94a3b8;text-align:center;padding:30px;font-size:16px;">이번 주 교육생 정보가 없습니다.</p>';
+            body.innerHTML=(rows?(_legend+rows):'<p style="color:#94a3b8;text-align:center;padding:30px;font-size:16px;">이번 주 교육생 정보가 없습니다.</p>');
         } else if(type==='outing'){
             title.textContent='🚶 과정별 외출/외박 신청 현황 (금일)';
             const rows=weekRooms.map(([room,r])=>{
