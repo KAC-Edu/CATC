@@ -3803,15 +3803,16 @@ async function resetIndividualCourse() {
 
     // 1. 해당 과정의 관리자 비밀번호를 서버에서 가져옴
     const snap = await firebase.database().ref(`courses/${currentRID}/settings/password`).once('value');
-    const dbPw = snap.val() || btoa("7777"); // 데이터가 없으면 기본값 7777 (암호화됨)
+    const dbPw = snap.val(); // [비번 옵션화] 비번 미설정이면 null
 
     // 2. 사용자에게 비밀번호 입력 요청
-    const userInput = await showKacPrompt("🚨 [주의] 모든 데이터(명단, 신청내역 등)가 삭제됩니다.\n계속하시려면 이 과정의 관리자 비밀번호를 입력하세요.");
+    let userInput = '__NOPW__';
+    if (dbPw) userInput = await showKacPrompt("🚨 [주의] 모든 데이터(명단, 신청내역 등)가 삭제됩니다.\n계속하시려면 이 과정의 관리자 비밀번호를 입력하세요.");
 
     if (!userInput) return; // 입력 안 하거나 취소 누르면 중단
 
     // 3. 비밀번호 대조 (입력값을 Base64로 변환하여 비교)
-    if (btoa(userInput) === dbPw) {
+    if (!dbPw || btoa(userInput) === dbPw) {
         // 비밀번호가 맞을 경우 최종 확인
         if (!(await showKacConfirm("정말 초기화하시겠습니까?\n이 작업은 절대로 되돌릴 수 없으며 모든 교육생이 퇴출됩니다."))) return;
 
@@ -6792,7 +6793,7 @@ window.addEventListener('load', function(){
 });
 </script>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vF</div>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vG</div>
 <script>
 /* ===== [공용] 종료된 과정 자동 정리 (모든 플랫폼 공통) — 종료일 지난 방을 다음날 미개설로 비움. 브라우저별 하루 1회 ===== */
 window.kacExpireEndedCourses = async function(){
