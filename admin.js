@@ -2451,6 +2451,18 @@ loadDashboardStats: function() {
         });
     });
 
+    // [본 과정 수강생(예정)] 명단(과정명 매칭) 기반으로 직접 세팅 — 예정명단(expectedStudents)이 비어 있어도 정확
+    (async function(){
+        try {
+            const _rn = await dataMgr._gatherRosterNames(room);
+            if (state.room !== room) return;
+            if (_rn && _rn.length) _expectedNamesCache = Array.from(new Set([..._expectedNamesCache, ..._rn]));
+            const _aSnap = await firebase.database().ref(`courses/${room}/students`).once('value');
+            if (state.room !== room) return;
+            recalcTotal(_aSnap.val() || {});
+        } catch(e){}
+    })();
+
     // 7. 행정 신청(외출/석식) 실시간 카운트
     refs.action.on('value', s => {
         if (state.room !== room) return;
@@ -4405,6 +4417,16 @@ cancelIndividualShuttle: function(waveId, locId, token, name) {
                 const percent = total > 0 ? Math.round((arrivedCount / total) * 100) : 0;
                 const statusEl = document.getElementById('arrivalStatusSmall');
                 if(statusEl) statusEl.innerText = `${arrivedCount} / ${total} 명 (${percent}%)`;
+                const _plan = expectedNames.length;
+                const sb = document.getElementById('stuSummaryBar');
+                if (sb) {
+                    const cell = (label, val, color, bg) => '<div style="flex:1;background:'+bg+';border-radius:14px;padding:14px 10px;text-align:center;">'
+                        +'<div style="font-size:12px;font-weight:800;color:#64748b;margin-bottom:4px;">'+label+'</div>'
+                        +'<div style="font-size:30px;font-weight:900;color:'+color+';line-height:1;">'+val+'</div></div>';
+                    sb.innerHTML = cell('예정 인원', _plan, '#1e3a8a', '#eff6ff')
+                        + cell('입교 완료', arrivedCount, '#059669', '#ecfdf5')
+                        + cell('입교율', percent + '<span style=\'font-size:15px;\'>%</span>', '#0ea5e9', '#f0f9ff');
+                }
         }
 
         expectedRef.on('value', snap => { lastExpected = snap.val() || []; render(); });
@@ -7087,9 +7109,9 @@ init: function() {
             <div style="flex:1;min-width:0;padding:48px 46px;display:flex;flex-direction:column;justify-content:center;">
                 <div style="font-size:13px;font-weight:800;letter-spacing:.18em;color:#9fc4ff;">COURSE ENTRY</div>
                 <div style="font-size:32px;font-weight:900;line-height:1.2;margin-top:14px;white-space:nowrap;">교육 과정 입장 안내</div>
-                ${course ? `<div style="font-size:21px;font-weight:800;margin-top:18px;color:#dbeafe;word-break:keep-all;">${course}</div>` : ''}
-                <div style="font-size:16px;font-weight:600;margin-top:14px;color:#cbd5e1;line-height:1.6;">휴대폰 카메라로 오른쪽 QR을 스캔하면<br>교육 과정에 바로 입장합니다</div>
-                <div style="margin-top:18px;font-size:15px;font-weight:700;color:#9fc4ff;"><i class="fa-solid fa-door-open"></i> Room ${esc(room)}</div>
+                ${course ? `<div style="font-size:21px;font-weight:800;margin-top:12px;color:#dbeafe;word-break:keep-all;">${course}</div>` : ''}
+                <div style="font-size:16px;font-weight:600;margin-top:30px;color:#cbd5e1;line-height:1.6;">휴대폰 카메라로 오른쪽 QR을 스캔하면<br>교육 과정에 바로 입장합니다</div>
+                <div style="margin-top:30px;font-size:16px;font-weight:800;color:#9fc4ff;"><i class="fa-solid fa-door-open"></i> Room #${esc(room)}</div>
                 <div style="margin-top:24px;display:inline-flex;align-items:flex-end;gap:14px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.18);border-radius:16px;padding:16px 26px;align-self:flex-start;">
                     <div style="text-align:center;">
                         <div style="font-size:12px;font-weight:800;color:#9fc4ff;letter-spacing:.05em;margin-bottom:4px;">입교 (QR)</div>
