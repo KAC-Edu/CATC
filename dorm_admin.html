@@ -1568,6 +1568,7 @@
         // ════════════ STEP 2: 과정 선택 + 명단 ════════════
         // 선택된 주(월요일 키). 기본 = 이번주
         let selectedWeekKey = null;
+        let lastRenderedItems = [];   // 현재 주차에 표시된 과정 목록 (명단 복구용)
         let coursesCache = null;   // courses 데이터 캐시 (렌더 속도 개선)
         let annualCache = [];      // 연간계획 캐시 (룸 미배정 과정 표시용)
 
@@ -1747,54 +1748,42 @@
 
         // ── 명단 복구: 배치 현황(system/dorm/assignments)에서 rosters를 역으로 재생성 ──
         //  배치 실행 이후 rosters 데이터가 지워진 경우 STEP4 데이터로 복원
-        // [현재 주차만] STEP4 배정 현황 → STEP2 명단으로 복구 (선택한 주차의 과정만)
+        // [현재 주차 표시 과정만] 배정 현황 → STEP2 명단 복구. 과정명으로 매칭(주차/방 오프셋 무관).
         async function recoverRostersFromAssignment() {
-            const selWk = canonicalWeekKey(selectedWeekKey || '');
-            if (!selWk) { showToast('⚠️ 먼저 주차를 선택하세요'); return; }
-            const _lbl = (function(){ const d=new Date(selWk+'T00:00:00'); const e=new Date(d); e.setDate(d.getDate()+4); const f=x=>(x.getMonth()+1)+'/'+x.getDate(); return f(d)+' ~ '+f(e); })();
-            if (!confirm('['+_lbl+'] 주차의 과정 명단을 배정 현황(STEP 4)에서 복구합니다.\n\n계속할까요?')) return;
+            const items = (lastRenderedItems || []).filter(it => it && it.courseName);
+            if (!items.length) { showToast('⚠️ 이 주차에 표시된 과정이 없습니다'); return; }
+            if (!confirm('현재 주차에 표시된 ' + items.length + '개 과정의 명단을 배정 현황(STEP 4)에서 복구합니다.\n\n계속할까요?')) return;
             try {
                 showToast('🔄 복구 중...');
                 const asnap = await db.ref('system/dorm/assignments').once('value');
                 const allAssign = asnap.val() || {};
-                // 현재 주차에 해당하는 배정 레코드 찾기 (canonical 일치, 학생 많은 것 우선)
-                let best = null;
-                Object.entries(allAssign).forEach(([k, a]) => {
-                    if (!a) return;
-                    const wkRaw = a.weekKey || (k.split('__')[0]) || k;
-                    if (canonicalWeekKey(wkRaw) !== selWk) return;
-                    const cnt = a.students ? Object.keys(a.students).length : 0;
-                    if (!best || cnt > best.cnt) best = { a, cnt };
-                });
-                if (!best || !best.cnt) {
-                    showToast('⚠️ 이 주차의 배정 현황이 없습니다.\nSTEP4에서 자동배정을 했거나 명단을 직접 업로드해야 복구됩니다.');
-                    return;
-                }
-                const a = best.a;
-                // 방별 과정 정보
-                const courseByRoom = {};
-                const rawCourses = a.courses || {};
-                (Array.isArray(rawCourses) ? rawCourses : Object.values(rawCourses)).forEach(c => {
-                    if (c && c.room != null) courseByRoom[String(c.room)] = { courseName: c.courseName || '', period: c.period || '' };
-                });
-                // 방별 학생 그룹
-                const byRoom = {};
-                Object.values(a.students || {}).forEach(s => {
-                    if (!s || !s.name) return;
-                    let room = (s.room != null && s.room !== '') ? String(s.room) : (s.rosterKey ? (s.rosterKey.split('__')[1] || '') : '');
-                    if (!room) return;
-                    (byRoom[room] = byRoom[room] || []).push({ name: s.name || '', empNo: s.empNo || s.empno || '', dept: s.dept || '', gender: s.gender || '' });
+                // 모든 배정에서 과정명별로 학생 수집 (주차 무관)
+                const byCourse = {};
+                Object.values(allAssign).forEach(a => {
+                    if (!a || !a.students) return;
+                    Object.values(a.students).forEach(s => {
+                        if (!s || !s.name || !s.course) return;
+                        const cn = String(s.course).trim();
+                        (byCourse[cn] = byCourse[cn] || []).push(s);
+                    });
                 });
                 const updates = {};
                 let n = 0;
-                Object.entries(byRoom).forEach(([room, list]) => {
+                items.forEach(it => {
+                    const cn = String(it.courseName || '').trim();
+                    const arr = byCourse[cn] || [];
+                    if (!arr.length) return;
+                    const seen = {}; const list = [];
+                    arr.forEach(s => {
+                        const id = (s.name || '').trim() + '|' + String(s.empNo || s.empno || '').trim();
+                        if (seen[id]) return; seen[id] = 1;
+                        list.push({ seq: list.length + 1, name: s.name || '', empNo: s.empNo || s.empno || '', dept: s.dept || '', gender: s.gender || '' });
+                    });
                     if (!list.length) return;
-                    list.forEach((x, i) => { x.seq = i + 1; });
-                    const meta = courseByRoom[room] || {};
-                    updates['system/dorm/rosters/' + selWk + '__' + room] = { courseName: meta.courseName || '', period: meta.period || '', list: list, weekKey: selWk, room: room, updatedAt: Date.now() };
+                    updates['system/dorm/rosters/' + rosterKey(it)] = { courseName: cn, period: it.period || '', list: list, weekKey: it.weekKey, room: it.room, updatedAt: Date.now() };
                     n++;
                 });
-                if (!n) { showToast('⚠️ 복구할 명단이 없습니다'); return; }
+                if (!n) { showToast('⚠️ 배정 현황에서 일치하는 과정 명단을 찾지 못했습니다.\n(해당 과정을 자동배정한 적이 없으면 명단을 직접 업로드하세요)'); return; }
                 await db.ref().update(updates);
                 showToast('✅ ' + n + '개 과정 명단 복구 완료');
                 coursesCache = null;
@@ -1934,6 +1923,7 @@
             });
 
             items.sort((a, b) => (a.start || '').localeCompare(b.start || '') || a.room.localeCompare(b.room));
+            lastRenderedItems = items.slice();
 
             if (!items.length) {
                 listEl.innerHTML = `<div class="empty-floor">이 주차에 진행되는 과정이 없습니다.</div>`;
@@ -5861,7 +5851,7 @@
 </script>
 <style>@media print{#__catcVer{display:none!important}}</style>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vH</div>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vJ</div>
 <script>
 /* ===== [공용] 종료된 과정 자동 정리 (모든 플랫폼 공통) — 종료일 지난 방을 다음날 미개설로 비움. 브라우저별 하루 1회 ===== */
 window.kacExpireEndedCourses = async function(){
