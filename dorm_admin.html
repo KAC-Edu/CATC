@@ -499,7 +499,7 @@
 
     <div class="header">
         <!-- 좌측: 타이틀 -->
-        <div class="header-brand">
+        <div class="header-brand" onclick="if(typeof rosterDirty!=='undefined' &amp;&amp; rosterDirty){ if(confirm('저장하지 않은 명단이 있습니다.\n저장 없이 메인으로 이동하면 변경사항이 사라집니다. 그래도 이동할까요?')) location.reload(); } else { location.reload(); }" style="cursor:pointer;" title="메인으로 (새로고침)">
             <div class="header-mark"><i class="fa-solid fa-bed"></i></div>
             <div style="min-width:0;">
                 <div class="header-kicker">KOREA AIRPORTS CORP. · CATC</div>
@@ -5851,7 +5851,7 @@
 </script>
 <style>@media print{#__catcVer{display:none!important}}</style>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vJ</div>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vK</div>
 <script>
 /* ===== [공용] 종료된 과정 자동 정리 (모든 플랫폼 공통) — 종료일 지난 방을 다음날 미개설로 비움. 브라우저별 하루 1회 ===== */
 window.kacExpireEndedCourses = async function(){
