@@ -589,7 +589,7 @@
         <div class="input-dock" id="inputDock">
 
 <!-- [신규] 질문 대상(과목) 선택창 -->
-<div style="padding: 0 15px 8px 15px; position:relative;">
+<div id="subjectWrap" style="padding: 0 15px 8px 15px; position:relative;">
     <select id="subjectSelect" onchange="handleSubjectChange()" style="display:none;">
         <option value="공통질문">질문 대상 선택 (기본: 공통질문)</option>
     </select>
@@ -2432,23 +2432,44 @@ document.addEventListener('click', function(e){
     if(list.contains(e.target)) return;
     list.style.display='none';
 });
-// 상단바를 아래로 쓸어내리면 메뉴(커튼) 열기
+// 상단바를 아래로 쓸어내리면 메뉴(커튼) 열기 — 스와이프 도중 즉시 반응
 (function(){
     function initHeaderPull(){
         var hd=document.querySelector('.header'); if(!hd || hd._pullSet) return; hd._pullSet=true;
-        var sy=null, moved=0;
-        hd.addEventListener('touchstart', function(e){ sy=e.touches[0].clientY; moved=0; }, {passive:true});
-        hd.addEventListener('touchmove', function(e){ if(sy===null) return; moved=e.touches[0].clientY - sy; }, {passive:true});
-        hd.addEventListener('touchend', function(){
-            if(sy!==null && moved>45){
-                var m=document.getElementById('menuModal');
-                var hidden = !m || m.style.display==='none' || m.style.display==='';
-                if(hidden && typeof openMainMenu==='function') openMainMenu();
-            }
-            sy=null; moved=0;
+        var sy=null, opened=false;
+        function openIfHidden(){
+            var m=document.getElementById('menuModal');
+            var hidden = !m || m.style.display==='none' || m.style.display==='';
+            if(hidden && typeof openMainMenu==='function') openMainMenu();
+        }
+        hd.addEventListener('touchstart', function(e){ sy=e.touches[0].clientY; opened=false; }, {passive:true});
+        hd.addEventListener('touchmove', function(e){
+            if(sy===null || opened) return;
+            if((e.touches[0].clientY - sy) > 28){ opened=true; openIfHidden(); }
         }, {passive:true});
+        hd.addEventListener('touchend', function(){ sy=null; opened=false; }, {passive:true});
+        hd.addEventListener('touchcancel', function(){ sy=null; opened=false; }, {passive:true});
     }
     if(document.readyState!=='loading') initHeaderPull(); else document.addEventListener('DOMContentLoaded', initHeaderPull);
+})();
+
+// 질문대상 선택: 평소엔 숨김, 입력창에 커서 놓으면 위로 미끄러져 표시
+(function(){
+    function initSubjReveal(){
+        var qi=document.getElementById('qInput');
+        var sw=document.getElementById('subjectWrap');
+        if(!qi || !sw) return;
+        qi.addEventListener('focus', function(){ sw.classList.add('subj-open'); });
+        qi.addEventListener('blur', function(){
+            setTimeout(function(){
+                var list=document.getElementById('subjectDropList');
+                var dropOpen = list && list.style.display==='block';
+                var inWrap = sw.contains(document.activeElement);
+                if(!dropOpen && !inWrap && document.activeElement!==qi){ sw.classList.remove('subj-open'); }
+            }, 220);
+        });
+    }
+    if(document.readyState!=='loading') initSubjReveal(); else document.addEventListener('DOMContentLoaded', initSubjReveal);
 })();
 function handleSubjectChange() {
     // 1. 선택된 강사명을 가져와서 필터 변수에 저장
@@ -4763,6 +4784,8 @@ input:not([type=checkbox]):not([type=radio]):not([type=file]), textarea, select 
 .btn-enter { background:linear-gradient(135deg,#3b82f6,#2563eb) !important; color:#fff !important; box-shadow:0 14px 32px rgba(37,99,235,.42) !important; height:58px !important; width:230px !important; border-radius:32px !important; }
 .landing-foot { position:absolute; bottom:26px; font-size:11px; color:#64748b; font-weight:600; opacity:.85; }
 .landing-page > *:not(.landing-foot) { animation: kacFadeUp .5s ease both; }
+#subjectWrap{ max-height:0; opacity:0; overflow:hidden; padding-top:0 !important; padding-bottom:0 !important; transform:translateY(8px); transition:max-height .3s ease, opacity .25s ease, transform .3s ease, padding .3s ease; pointer-events:none; }
+#subjectWrap.subj-open{ max-height:140px; opacity:1; transform:none; overflow:visible; padding-bottom:8px !important; pointer-events:auto; }
 @keyframes kacFadeUp { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:none; } }
 </style>
 <style>#__catcVer{ display:none !important; }</style>
@@ -4828,7 +4851,7 @@ input:not([type=checkbox]):not([type=radio]):not([type=file]), textarea, select 
 })();
 </script>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vH1</div>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vI1</div>
 <script>
 /* ===== [공용] 종료된 과정 자동 정리 (교육생 포함 전 플랫폼) — 종료일 지난 방을 다음날 미개설로 비움. 브라우저별 하루 1회 ===== */
 window.kacExpireEndedCourses = async function(){
