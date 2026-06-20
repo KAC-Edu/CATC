@@ -3411,7 +3411,8 @@ setMode: function(mode) {
         try {
             var _qr = document.getElementById('floatingQR');
             if (_qr) {
-                if (mode === 'waiting') { _qr.style.display = 'none'; }
+                // 현황판(waiting)·출결화면(attendance)에선 교육생용 입장 QR 숨김(QR 2개 혼동 방지)
+                if (mode === 'waiting' || mode === 'attendance') { _qr.style.display = 'none'; }
                 else if (mode === 'dashboard' && !ui._qrUserClosed) { ui.showMiniQR(); }
             }
         } catch(e) {}
@@ -5305,7 +5306,7 @@ resetShuttleRequests: function() {
                 const _start=_period.indexOf('~')>=0?_period.split('~')[0].trim():'';
                 let list=[];
                 try{ const _cn=String(course).trim(); let _best=null; for(const _k in dormAll){ const _dv=dormAll[_k]; if(_dv && Array.isArray(_dv.list) && _dv.list.length && String(_dv.courseName||'').trim()===_cn){ if(!_best||(_dv.updatedAt||0)>(_best.updatedAt||0)) _best=_dv; } } if(_best) list=_best.list; }catch(e){}
-                const stuCnt=new Set(Object.values(r.students||{}).filter(s=>s&&s.name&&s.name!=='undefined').map(s=>s.name)).size;
+                const _arrivedSet=new Set(Object.values(r.students||{}).filter(s=>s&&s.name&&s.name!=='undefined').map(s=>String(s.name).trim())); const stuCnt=_arrivedSet.size;
                 const cnt=list.length;
                 const uid='hsR_'+room;
                 let detail;
@@ -5318,7 +5319,7 @@ resetShuttleRequests: function() {
                       +'<th style="padding:8px;text-align:left;border-bottom:1px solid #e2e8f0;">이름</th>'
                       +'</tr></thead><tbody>'
                       +list.map((s,i)=>'<tr>'
-                          +'<td style="padding:7px 8px;text-align:center;border-bottom:1px solid #f1f5f9;color:#94a3b8;">'+(s.seq||i+1)+'</td>'
+                          +'<td style="padding:7px 8px;text-align:center;border-bottom:1px solid #f1f5f9;color:#94a3b8;">'+(_arrivedSet.has(String(s.name||'').trim()) ? '<span title="입교 완료" style="display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:6px;background:#10b981;color:#fff;font-size:12px;"><i class="fa-solid fa-check"></i></span>' : (s.seq||i+1))+'</td>'
                           +'<td style="padding:7px 8px;text-align:center;border-bottom:1px solid #f1f5f9;color:#64748b;white-space:nowrap;">'+esc(s.empNo||'-')+'</td>'
                           +'<td style="padding:7px 8px;border-bottom:1px solid #f1f5f9;color:#475569;word-break:keep-all;">'+esc(s.dept||'-')+'</td>'
                           +'<td style="padding:7px 8px;border-bottom:1px solid #f1f5f9;font-weight:800;color:#0f172a;">'+esc(s.name||'-')+'</td>'
@@ -10075,4 +10076,4 @@ ui.saveFieldEdit = async function(){
 };
 
 /* __JSVER_STAMP__ */
-(function stampJsVer(){try{var b=document.getElementById('__catcVer');if(b){if(b.textContent.indexOf('J9')<0)b.textContent=b.textContent+'\u00b7J9';}else{setTimeout(stampJsVer,200);}}catch(e){}})();
+(function stampJsVer(){try{var b=document.getElementById('__catcVer');if(b){if(b.textContent.indexOf('Jb')<0)b.textContent=b.textContent+'\u00b7Jb';}else{setTimeout(stampJsVer,200);}}catch(e){}})();
