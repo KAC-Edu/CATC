@@ -2799,8 +2799,8 @@ loadAttendanceView: function() {
         try {
             new QRCode(target, {
                 text: internalUrl,
-                width: 260,
-                height: 260,
+                width: 280,
+                height: 280,
                 correctLevel: QRCode.CorrectLevel.H // 인식률 향상을 위해 높은 오류 복구 수준 설정
             });
             
@@ -10080,7 +10080,7 @@ ui.saveFieldEdit = async function(){
 };
 
 /* __JSVER_STAMP__ */
-(function stampJsVer(){try{var b=document.getElementById('__catcVer');if(b){if(b.textContent.indexOf('Jf')<0)b.textContent=b.textContent+'\u00b7Jf';}else{setTimeout(stampJsVer,200);}}catch(e){}})();
+(function stampJsVer(){try{var b=document.getElementById('__catcVer');if(b){if(b.textContent.indexOf('Jh')<0)b.textContent=b.textContent+'\u00b7Jh';}else{setTimeout(stampJsVer,200);}}catch(e){}})();
 
 /* ===== [공항별 입교 현황 지도] 수강생현황 → 지도로 보기 ===== */
 ui._mapRegions = {

@@ -1020,13 +1020,13 @@
 
 <!-- 출결 QR 코드 게시판 (E-HRD 및 자체 출석 통합) -->
 <div id="view-attendance" style="display:none; width:100%; flex-direction:column; align-items:center;">
-    <div class="view-header">
+    <div class="view-header" style="margin-bottom:6px;">
         <h1><i class="fa-solid fa-qrcode"></i> 출결 관리 시스템 <span class="header-room-badge room-badge-global"></span></h1>
-        <p id="attendanceSubTitle">E-HRD 출결 처리를 위한 QR 코드입니다.</p>
+        <p id="attendanceSubTitle" style="display:none;"></p>
     </div>
 
     <!-- 모드 전환 버튼 -->
-    <div style="margin-bottom: 20px; display: flex; gap: 10px;">
+    <div style="margin-top:6px; margin-bottom: 12px; display: flex; gap: 10px;">
         <button id="btn-mode-official" class="btn-action" style="width:auto; padding:10px 20px; background:#003366; color:white; border-radius:50px; font-weight:800;" onclick="ui.toggleAttendanceMode('official')">공식 E-HRD QR</button>
         <button id="btn-mode-internal" class="btn-action" style="width:auto; padding:10px 20px; background:#f1f5f9; color:#64748b; border-radius:50px; font-weight:800;" onclick="ui.toggleAttendanceMode('internal')">항기원 자체 출석체크</button>
     </div>
@@ -1044,8 +1044,8 @@
 
 
 <!-- [2] 항기원 자체 출석체크 영역 (슬림 버전) -->
-    <div id="area-internal-qr" class="modern-white-card" style="display:none; text-align: center; max-width: 600px;">
-        <div style="display: flex; flex-direction: column; align-items: center; gap: 20px;">
+    <div id="area-internal-qr" class="modern-white-card" style="display:none; text-align: center; max-width: 600px; padding:18px;">
+        <div style="display: flex; flex-direction: column; align-items: center; gap: 12px;">
             <!-- QR 코드 -->
             <div style="background:#fff; padding:15px; border-radius:15px; border:2px solid #003366;">
                 <div id="internalQrTarget"></div>
@@ -1053,7 +1053,7 @@
             </div>
 
             <!-- [안내] 교육생이 무엇을 해야 하는지 명확히 — 휴대폰 카메라로 스캔 -->
-            <div style="display:flex; align-items:center; justify-content:center; gap:14px; background:#eff6ff; border:1.5px solid #bfdbfe; border-radius:14px; padding:14px 18px; max-width:440px;">
+            <div style="display:flex; align-items:center; justify-content:center; gap:14px; background:#eff6ff; border:1.5px solid #bfdbfe; border-radius:14px; padding:10px 16px; max-width:440px;">
                 <i class="fa-solid fa-camera" style="font-size:30px; color:#2563eb; flex-shrink:0;"></i>
                 <div style="text-align:left; line-height:1.5;">
                     <div style="font-size:16px; font-weight:900; color:#1d4ed8;">휴대폰 <u>카메라</u>로 이 QR을 비춰 주세요</div>
@@ -1062,15 +1062,15 @@
             </div>
 
             <!-- 현황 요약 및 버튼 -->
-            <div style="width:100%; border-top:1px dashed #cbd5e1; padding-top:20px;">
-                <div style="font-size:20px; font-weight:900; color:#1e293b; margin-bottom:15px;">
+            <div style="width:100%; border-top:1px dashed #cbd5e1; padding-top:12px;">
+                <div style="font-size:20px; font-weight:900; color:#1e293b; margin-bottom:10px;">
                     출석 완료: <span id="checkInCount" style="color:#10b981;">0</span> / <span id="totalMemberCount">0</span> 명
                 </div>
                 <div style="display:flex; gap:10px; justify-content:center; flex-wrap:wrap;">
-                    <button class="btn-action" style="background:#f59e0b; width:180px; height:50px; font-size:15px; margin:0;" onclick="ui.openMissingAttendanceModal()">
+                    <button class="btn-action" style="background:#f59e0b; width:180px; height:44px; font-size:15px; margin:0;" onclick="ui.openMissingAttendanceModal()">
                         <i class="fa-solid fa-user-clock"></i> 미완료자 확인
                     </button>
-                    <button class="btn-action" style="background:#3b82f6; width:200px; height:50px; font-size:16px; margin:0;" onclick="ui.openFullAttendanceSheet()">
+                    <button class="btn-action" style="background:#3b82f6; width:200px; height:44px; font-size:16px; margin:0;" onclick="ui.openFullAttendanceSheet()">
                         <i class="fa-solid fa-table-list"></i> 전체 출석부 관리/인쇄
                     </button>
                 </div>
@@ -2498,7 +2498,7 @@ function setupAcc(btn){
 </script>
 <style>@media print{#__catcVer{display:none!important}}</style>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vU6</div>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vU7</div>
 <div id="fieldEditModal" class="modal-overlay" onclick="if(event.target===this) ui.closeFieldEdit()" style="z-index:10050;">
   <div class="modal-box" style="width:440px; max-width:94vw; text-align:left;">
     <h3 id="fieldEditTitle" style="margin-top:0; color:#0f172a;">수정</h3>
