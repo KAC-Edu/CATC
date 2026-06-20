@@ -2451,26 +2451,34 @@ loadDashboardStats: function() {
         });
     });
 
-    // [본 과정 수강생(예정)] 명단(과정명 매칭) 기반으로 직접 세팅 — 예정명단(expectedStudents)이 비어 있어도 정확
-    const _refreshDashRoster = async () => {
+    // [본 과정 수강생(예정)] 수강생현황과 100% 동일한 로직을 인라인으로 직접 실행 — 리스너/캐시/메서드 의존 없이 무조건 표시
+    const _refreshDashRoster = async (retry) => {
         try {
-            const _rn = await dataMgr._gatherRosterNames(room);
             if (state.room !== room) return;
-            if (_rn && _rn.length) _expectedNamesCache = Array.from(new Set([..._expectedNamesCache, ..._rn]));
-            const _aSnap = await firebase.database().ref(`courses/${room}/students`).once('value');
+            // (수강생현황 gatherRosterNames와 동일) 과정명으로 지원부 명단 매칭
+            const _cs = await firebase.database().ref('courses/' + room + '/settings/courseName').once('value');
+            const _cn = String(_cs.val() || '').trim();
+            const _ds = await firebase.database().ref('system/dorm/rosters').once('value');
+            const _all = _ds.val() || {};
+            let _best = null;
+            for (const k in _all) { const dv = _all[k]; if (dv && Array.isArray(dv.list) && dv.list.length && String(dv.courseName || '').trim() === _cn) { if (!_best || (dv.updatedAt || 0) > (_best.updatedAt || 0)) _best = dv; } }
+            const _rn = _best ? _best.list.map(x => x && x.name).filter(Boolean).map(n => String(n).trim()) : [];
+            const _aSnap = await firebase.database().ref('courses/' + room + '/students').once('value');
             if (state.room !== room) return;
             const _actNames = Object.values(_aSnap.val() || {}).map(s => s && s.name).filter(n => n && n !== "undefined");
-            // 공유 캐시 경로(recalcTotal)와, 직접 세팅 경로를 함께 적용 — 순서/캐시 영향 없이 확실히 표시
-            recalcTotal(_aSnap.val() || {});
-            const _combined = Array.from(new Set([...(_rn || []), ..._actNames]));
+            const _combined = Array.from(new Set([..._rn, ..._actNames]));
+            _expectedNamesCache = Array.from(new Set([..._expectedNamesCache, ..._rn]));
             const _el = document.getElementById('dashTotalCount');
             if (_el) _el.innerText = _combined.length;
-        } catch(e){}
+            // 런타임 증거: 배지에 ·R(명단수) 표기
+            try { var _b = document.getElementById('__catcVer'); if (_b) _b.textContent = _b.textContent.replace(/\u00b7R\d+/, '') + '\u00b7R' + _rn.length; } catch(e){}
+            if (!_rn.length && !retry) setTimeout(() => _refreshDashRoster(true), 1200);
+        } catch(e){ if (!retry) setTimeout(() => _refreshDashRoster(true), 1200); }
     };
-    _refreshDashRoster();
+    _refreshDashRoster(false);
     // [실시간] 지원부 명단(system/dorm/rosters)이 올라오거나 바뀌면 분모(예정) 즉시 갱신
     refs.dormRosters = firebase.database().ref('system/dorm/rosters');
-    refs.dormRosters.on('value', () => { if (state.room === room) _refreshDashRoster(); });
+    refs.dormRosters.on('value', () => { if (state.room === room) _refreshDashRoster(true); });
 
     // 7. 행정 신청(외출/석식) 실시간 카운트
     refs.action.on('value', s => {
@@ -10053,4 +10061,4 @@ ui.saveFieldEdit = async function(){
 };
 
 /* __JSVER_STAMP__ */
-(function stampJsVer(){try{var b=document.getElementById('__catcVer');if(b){if(b.textContent.indexOf('J5')<0)b.textContent=b.textContent+'\u00b7J5';}else{setTimeout(stampJsVer,200);}}catch(e){}})();
+(function stampJsVer(){try{var b=document.getElementById('__catcVer');if(b){if(b.textContent.indexOf('J6')<0)b.textContent=b.textContent+'\u00b7J6';}else{setTimeout(stampJsVer,200);}}catch(e){}})();
