@@ -3088,9 +3088,7 @@ showMiniQR: function() {
     const directory = path.substring(0, path.lastIndexOf('/'));
     const baseUrl = window.location.origin + directory + "/";
     const forcedUrl = `${baseUrl}index.html?room=${state.room}`;
-    const ctEl = document.getElementById('displayCourseTitle');
-    const courseNm = (ctEl && ctEl.innerText.trim()) ? ctEl.innerText.trim() : '';
-    if (label) label.innerText = `ROOM ${state.room} Join` + (courseNm ? ` · ${courseNm}` : '');
+    if (label) label.innerText = `ROOM ${state.room}`;
     try { new QRCode(target, { text: forcedUrl, width: 140, height: 140, correctLevel: QRCode.CorrectLevel.H }); } catch(e) {}
 },
 
