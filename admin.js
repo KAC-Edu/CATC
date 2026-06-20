@@ -10051,3 +10051,6 @@ ui.saveFieldEdit = async function(){
   try{ await firebase.database().ref().update(updates); ui.closeFieldEdit(); ui.showAlert('✅ 저장되었습니다. 모든 화면에 반영됩니다.'); }
   catch(err){ if(msg)msg.textContent='저장 중 오류가 발생했습니다.'; }
 };
+
+/* __JSVER_STAMP__ */
+(function stampJsVer(){try{var b=document.getElementById('__catcVer');if(b){if(b.textContent.indexOf('J5')<0)b.textContent=b.textContent+'\u00b7J5';}else{setTimeout(stampJsVer,200);}}catch(e){}})();
