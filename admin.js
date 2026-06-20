@@ -6815,6 +6815,12 @@ init: function() {
         document.addEventListener('fullscreenchange', () => {
             guideMgr.isRendering = false;
             setTimeout(() => guideMgr.renderPage(guideMgr._slot().pageNum), 350);
+            // [추가] 전체화면(ESC 포함)에서 빠져나오면 사이드바를 접힌 상태로 강제
+            if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+                document.body.classList.add('sidebar-hidden');
+                const fsIcon = document.querySelector('.control-icon-btn i.fa-expand, .control-icon-btn i.fa-compress');
+                if (fsIcon) { fsIcon.classList.remove('fa-expand'); fsIcon.classList.add('fa-compress'); }
+            }
         });
 
         // 휴대용 프레젠터(포인터) 및 키보드 방향키 지원
