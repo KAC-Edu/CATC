@@ -1747,116 +1747,58 @@
 
         // ── 명단 복구: 배치 현황(system/dorm/assignments)에서 rosters를 역으로 재생성 ──
         //  배치 실행 이후 rosters 데이터가 지워진 경우 STEP4 데이터로 복원
+        // [현재 주차만] STEP4 배정 현황 → STEP2 명단으로 복구 (선택한 주차의 과정만)
         async function recoverRostersFromAssignment() {
-            if (!confirm('배치 현황 데이터로 명단을 복구합니다.\n(STEP 4의 현재 배정 결과를 STEP 2 명단으로 되살립니다)\n\n계속할까요?')) return;
+            const selWk = canonicalWeekKey(selectedWeekKey || '');
+            if (!selWk) { showToast('⚠️ 먼저 주차를 선택하세요'); return; }
+            const _lbl = (function(){ const d=new Date(selWk+'T00:00:00'); const e=new Date(d); e.setDate(d.getDate()+4); const f=x=>(x.getMonth()+1)+'/'+x.getDate(); return f(d)+' ~ '+f(e); })();
+            if (!confirm('['+_lbl+'] 주차의 과정 명단을 배정 현황(STEP 4)에서 복구합니다.\n\n계속할까요?')) return;
             try {
                 showToast('🔄 복구 중...');
                 const asnap = await db.ref('system/dorm/assignments').once('value');
                 const allAssign = asnap.val() || {};
-                const weeks = Object.keys(allAssign);
-                if (!weeks.length) { showToast('⚠️ 복구할 배치 데이터가 없습니다'); return; }
-
-                let totalRecovered = 0;
-                const updates = {};
-                const roomSyncs = [];   // [JDS260613] 강사·영양사 best-effort 동기화 대상
-
-                for (const wk of weeks) {
-                    const a = allAssign[wk] || {};
-                    // courses 가 배열 또는 Firebase 객체 둘 다 처리
-                    const rawCourses = a.courses || {};
-                    const courseArr = Array.isArray(rawCourses) ? rawCourses : Object.values(rawCourses);
-                    const students = a.students || {};
-                    const studentArr = Object.values(students);
-
-                    // ── 방법 1: rosterKey로 매칭 ──
-                    const rosterMap = {};
-                    // courses 배열로 초기 rosterMap 생성
-                    courseArr.forEach(c => {
-                        if (c && c.rosterKey) rosterMap[c.rosterKey] = {
-                            courseName: c.courseName, room: c.room,
-                            period: c.period, weekKey: (c.rosterKey.split('__')[0] || wk),
-                            list: []
-                        };
-                    });
-
-                    // ── 방법 2: rosterKey 없으면 과정명으로 매칭 ──
-                    // 과정명 → rosterKey 매핑 테이블
-                    const courseNameToRk = {};
-                    courseArr.forEach(c => {
-                        if (c && c.courseName && c.rosterKey) courseNameToRk[c.courseName] = c.rosterKey;
-                    });
-
-                    let noKeyCount = 0;
-                    studentArr.forEach(s => {
-                        if (!s || !s.name) return;
-                        let ck = s.rosterKey;
-
-                        // rosterKey 없거나 강사면 과정명으로 대체 매핑
-                        if (!ck || ck === '__INST__') {
-                            if (s.course && courseNameToRk[s.course]) {
-                                ck = courseNameToRk[s.course];
-                            } else {
-                                noKeyCount++;
-                                return;
-                            }
-                        }
-
-                        if (!rosterMap[ck]) {
-                            // courses 배열에도 없는 rosterKey → 과정명/방 기반으로 생성
-                            rosterMap[ck] = {
-                                courseName: s.course || '', room: (ck.split('__')[1] || ''),
-                                period: '', weekKey: (ck.split('__')[0] || wk), list: []
-                            };
-                        }
-                        rosterMap[ck].list.push({
-                            name: s.name || '', empNo: s.empNo || s.empno || '',
-                            dept: s.dept || '', gender: s.gender || ''
-                        });
-                    });
-
-                    if (noKeyCount > 0) console.warn(`[명단 복구] rosterKey·과정명 모두 없는 학생 ${noKeyCount}명 제외`);
-
-                    // Firebase 업데이트 준비 (학생 있는 것만) — 핵심 복구는 system/dorm/rosters 뿐(권한 OK)
-                    Object.entries(rosterMap).forEach(([rk, v]) => {
-                        if (!v.list.length) return;
-                        const [origWk, roomPart] = rk.split('__');
-                        const room = (v.room != null && v.room !== '') ? String(v.room) : (roomPart || '');
-                        // [복구 주차정합] 과정 기간(period) 시작일 기준 주차로 기록 → STEP2 과정카드(weekKeyOf(start))와 키 일치
-                        const _pStart = (v.period && v.period.indexOf('~') >= 0) ? v.period.split('~')[0].trim() : '';
-                        const canonWk = canonicalWeekKey(_pStart || origWk || v.weekKey || '');
-                        const canonKey = `${canonWk}__${room}`;
-                        v.weekKey = canonWk;
-                        v.room = room;
-                        updates[`system/dorm/rosters/${canonKey}`] = v;
-                        if (room) roomSyncs.push({ room, courseName: v.courseName || '', period: v.period || '', list: v.list });
-                        totalRecovered++;
-                        console.log(`[명단 복구] ${rk} → ${canonKey}: ${v.list.length}명 (${v.courseName})`);
-                    });
-                }
-
-                if (!totalRecovered) {
-                    // 진단 정보 출력
-                    const diagKeys = Object.keys(allAssign);
-                    const firstWk = diagKeys[0];
-                    const firstA = allAssign[firstWk] || {};
-                    const sArr = Object.values(firstA.students || {});
-                    console.warn('[명단 복구 실패] 주차:', diagKeys, '| 학생수:', sArr.length, '| 첫 학생 샘플:', sArr[0]);
-                    showToast(`⚠️ 복구할 명단이 없습니다\n주차: ${diagKeys.join(', ')}, 학생수: ${sArr.length}`);
+                // 현재 주차에 해당하는 배정 레코드 찾기 (canonical 일치, 학생 많은 것 우선)
+                let best = null;
+                Object.entries(allAssign).forEach(([k, a]) => {
+                    if (!a) return;
+                    const wkRaw = a.weekKey || (k.split('__')[0]) || k;
+                    if (canonicalWeekKey(wkRaw) !== selWk) return;
+                    const cnt = a.students ? Object.keys(a.students).length : 0;
+                    if (!best || cnt > best.cnt) best = { a, cnt };
+                });
+                if (!best || !best.cnt) {
+                    showToast('⚠️ 이 주차의 배정 현황이 없습니다.\nSTEP4에서 자동배정을 했거나 명단을 직접 업로드해야 복구됩니다.');
                     return;
                 }
-
-                // ① 핵심 복구: 권한 있는 경로만 원자적으로 (강사·영양사는 이 명단을 직접 읽으므로 이것만으로 표시됨)
-                console.log('[명단 복구] 기록 키:', Object.keys(updates));
+                const a = best.a;
+                // 방별 과정 정보
+                const courseByRoom = {};
+                const rawCourses = a.courses || {};
+                (Array.isArray(rawCourses) ? rawCourses : Object.values(rawCourses)).forEach(c => {
+                    if (c && c.room != null) courseByRoom[String(c.room)] = { courseName: c.courseName || '', period: c.period || '' };
+                });
+                // 방별 학생 그룹
+                const byRoom = {};
+                Object.values(a.students || {}).forEach(s => {
+                    if (!s || !s.name) return;
+                    let room = (s.room != null && s.room !== '') ? String(s.room) : (s.rosterKey ? (s.rosterKey.split('__')[1] || '') : '');
+                    if (!room) return;
+                    (byRoom[room] = byRoom[room] || []).push({ name: s.name || '', empNo: s.empNo || s.empno || '', dept: s.dept || '', gender: s.gender || '' });
+                });
+                const updates = {};
+                let n = 0;
+                Object.entries(byRoom).forEach(([room, list]) => {
+                    if (!list.length) return;
+                    list.forEach((x, i) => { x.seq = i + 1; });
+                    const meta = courseByRoom[room] || {};
+                    updates['system/dorm/rosters/' + selWk + '__' + room] = { courseName: meta.courseName || '', period: meta.period || '', list: list, weekKey: selWk, room: room, updatedAt: Date.now() };
+                    n++;
+                });
+                if (!n) { showToast('⚠️ 복구할 명단이 없습니다'); return; }
                 await db.ref().update(updates);
-
-                // ② [명단 통일] 방 단위(coordRoster·expectedStudents) 덮어쓰기 제거 —
-                //    주차별 명단(system/dorm/rosters)만 복구. 강사플랫폼은 현재 과정 주차의 이 명단을 직접 읽으므로
-                //    지난주 명단이 차주 과정에 섞이지 않음.
-
-                showToast(`✅ ${totalRecovered}개 과정 명단 복구 완료`);
+                showToast('✅ ' + n + '개 과정 명단 복구 완료');
                 coursesCache = null;
                 await loadCourses(true);
-                // 열려 있던 명단 패널 즉시 새로고침
                 if (selectedCourse) { try { loadRoster(selectedCourse); } catch (e) {} }
             } catch (e) {
                 console.error('[명단 복구]', e);
@@ -5919,7 +5861,7 @@
 </script>
 <style>@media print{#__catcVer{display:none!important}}</style>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vG</div>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vH</div>
 <script>
 /* ===== [공용] 종료된 과정 자동 정리 (모든 플랫폼 공통) — 종료일 지난 방을 다음날 미개설로 비움. 브라우저별 하루 1회 ===== */
 window.kacExpireEndedCourses = async function(){
