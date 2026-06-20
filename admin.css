@@ -2228,7 +2228,7 @@ body.night-mode .header-room-badge { background-color: #003366 !important; borde
 /* --- [5.4차 최종] 프리미엄 에듀-대시보드 신규 스타일 --- */
 
 /* 1. 헤더 & 컨테이너 정리 */
-.dash-hero-header { margin-bottom: 8px !important; }
+.dash-hero-header { margin-bottom: 56px !important; }
 
 .dash-title-main { display: flex; align-items: center; justify-content: center; gap: 12px; }
 .dash-title-main i { font-size: 32px; color: #3b82f6; }
@@ -2261,6 +2261,7 @@ body.night-mode .header-room-badge { background-color: #003366 !important; borde
 .course-hero-banner::after {
     content: ''; position: absolute; top: -50px; right: -50px;
     width: 200px; height: 200px; background: rgba(59, 130, 246, 0.1); border-radius: 50%;
+    pointer-events: none;
 }
 
 .hero-tag {
