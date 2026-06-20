@@ -5296,7 +5296,7 @@ resetShuttleRequests: function() {
             body.innerHTML=rows||'<p style="color:#94a3b8;text-align:center;padding:30px;font-size:16px;">이번 주 강의 중인 과정이 없습니다.</p>';
         } else if(type==='students'){
             title.textContent='👩‍🎓 과정별 교육생 현황 (이번 주)';
-            const _legend='<div style="font-size:12px;color:#64748b;font-weight:700;margin:-12px 0 14px;">숫자 표기: <b style="color:#0f172a;">입교</b>(QR 입실) / <b style="color:#0f172a;">예정</b>(지원부 업로드)</div>';
+            const _legend='';
             let dormAll={};
             try{ dormAll=(await firebase.database().ref('system/dorm/rosters').once('value')).val()||{}; }catch(e){}
             const rows=weekRooms.map(([room,r])=>{
@@ -5334,7 +5334,12 @@ resetShuttleRequests: function() {
                       +'<span style="font-size:18px;color:#0f172a;font-weight:700;">'+esc(course)+'</span>'
                       +'<i class="fa-solid fa-chevron-right hs-chev" style="color:#10b981;font-size:13px;transition:transform .2s;"></i>'
                     +'</div>'
-                    +'<span style="font-size:24px;font-weight:900;color:#0f172a;white-space:nowrap;">'+stuCnt+'<span style="font-size:13px;color:#94a3b8;font-weight:700;"> / </span>'+cnt+'<span style="font-size:13px;color:#64748b;font-weight:800;"> 명</span></span>'
+                    +'<div style="display:flex;align-items:flex-end;gap:8px;white-space:nowrap;">'
+                      +'<div style="text-align:center;"><div style="font-size:11px;color:#64748b;font-weight:800;margin-bottom:2px;">입교</div><div style="font-size:24px;font-weight:900;color:#10b981;line-height:1;">'+stuCnt+'</div></div>'
+                      +'<div style="font-size:18px;color:#94a3b8;font-weight:700;padding-bottom:2px;">/</div>'
+                      +'<div style="text-align:center;"><div style="font-size:11px;color:#64748b;font-weight:800;margin-bottom:2px;">예정</div><div style="font-size:24px;font-weight:900;color:#0f172a;line-height:1;">'+cnt+'</div></div>'
+                      +'<div style="font-size:13px;color:#64748b;font-weight:800;padding-bottom:2px;">명</div>'
+                    +'</div>'
                   +'</div>'
                   +'<div id="'+uid+'" style="display:none;padding:0 22px 18px;">'+detail+'</div>'
                 +'</div>';
@@ -10070,4 +10075,4 @@ ui.saveFieldEdit = async function(){
 };
 
 /* __JSVER_STAMP__ */
-(function stampJsVer(){try{var b=document.getElementById('__catcVer');if(b){if(b.textContent.indexOf('J8')<0)b.textContent=b.textContent+'\u00b7J8';}else{setTimeout(stampJsVer,200);}}catch(e){}})();
+(function stampJsVer(){try{var b=document.getElementById('__catcVer');if(b){if(b.textContent.indexOf('J9')<0)b.textContent=b.textContent+'\u00b7J9';}else{setTimeout(stampJsVer,200);}}catch(e){}})();
