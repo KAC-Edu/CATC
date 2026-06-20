@@ -698,14 +698,14 @@
                     <div class="prof-details">
                         <span class="prof-label">과정 담임</span>
                         <div class="prof-name-row">
-                            <strong id="dashProfNameOnly" onclick="event.stopPropagation(); ui.openFieldEdit('prof')" title="클릭하여 교수 수정" style="cursor:pointer; text-decoration:underline dotted; text-underline-offset:3px;">-</strong> <span>교수님</span>
+                            <strong id="dashProfNameOnly" onclick="event.stopPropagation(); ui.openFieldEdit('prof')" title="클릭하여 교수 수정" style="cursor:pointer;">-</strong> <span>교수님</span>
                         </div>
                     </div>
                     <i class="fa-solid fa-chevron-right prof-arrow"></i>
                 </div>
                 <!-- 하단 날짜 표시 -->
                 <div class="date-minimal-box" style="color: rgba(255,255,255,0.9) !important; font-weight: 800;">
-                    <i class="fa-solid fa-user-tie"></i> 과정담당: <span id="dashCoordName" onclick="ui.openFieldEdit('coord')" title="클릭하여 과정담당 수정" style="margin-left:5px; cursor:pointer; text-decoration:underline dotted; text-underline-offset:3px;">-</span>
+                    <i class="fa-solid fa-user-tie"></i> 과정담당: <span id="dashCoordName" onclick="ui.openFieldEdit('coord')" title="클릭하여 과정담당 수정" style="margin-left:5px; cursor:pointer;">-</span>
                 </div>
             </div>
         </div> 
@@ -1920,8 +1920,8 @@
                         <input type="text" id="setup-course-name" class="setup-input" placeholder="정확한 과정명 입력">
                     </div>
                     <div class="setup-group">
-                        <label style="display:block; font-size:12px; font-weight:800; color:#64748b; margin-bottom:8px;">과정 비밀번호 설정</label>
-                        <input type="password" id="setup-room-pw" class="setup-input" maxlength="4" placeholder="숫자 4자리">
+                        <label style="display:block; font-size:12px; font-weight:800; color:#64748b; margin-bottom:8px;">과정 비밀번호 설정 <span style="color:#0ea5e9; font-weight:900;">(옵션사항)</span> <span style="color:#94a3b8; font-weight:600;">— 비워두면 비번 없이 자유 입장</span></label>
+                        <input type="password" id="setup-room-pw" class="setup-input" maxlength="4" placeholder="설정 안 함 (선택 입력 · 숫자 4자리)">
                     </div>
                 </div>
 
@@ -2501,7 +2501,7 @@ function setupAcc(btn){
 </script>
 <style>@media print{#__catcVer{display:none!important}}</style>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vA2</div>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vC2</div>
 <div id="fieldEditModal" class="modal-overlay" onclick="if(event.target===this) ui.closeFieldEdit()" style="z-index:10050;">
   <div class="modal-box" style="width:440px; max-width:94vw; text-align:left;">
     <h3 id="fieldEditTitle" style="margin-top:0; color:#0f172a;">수정</h3>

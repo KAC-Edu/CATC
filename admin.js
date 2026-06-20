@@ -370,8 +370,9 @@ switchRoomAttempt: async function(newRoom, silent = false) {
     const hasOwnerRecord = !!st.ownerSessionId;
     // ownerSessionId가 있으면 실제 강사권이 남아있는 것으로 보고 권한 선택을 먼저 띄운다.
     // 오래된 기록이어도 자동으로 뺏지 않고, 사용자가 "강사 권한 가져오기"로 명시 처리한다.
-    const blocked = isActive && hasOwnerRecord && !isOwner && !state.isObserver;
-    const needsPasswordOnly = isActive && !hasOwnerRecord && !isOwner && !state.isObserver;
+    // [비번 옵션화] 비밀번호가 설정된 방만 인증을 요구. 비번 없는 방은 자유 입장/퇴장.
+    const blocked = roomHasPassword && isActive && hasOwnerRecord && !isOwner && !state.isObserver;
+    const needsPasswordOnly = roomHasPassword && isActive && !hasOwnerRecord && !isOwner && !state.isObserver;
 
     // 3. [보안 핵심] 인증 전 버튼 및 기능 물리적 잠금
     const setupBtn = document.getElementById('btnSetupModal');
@@ -453,13 +454,14 @@ verifyTakeover: async function() {
         const newRoom = state.pendingRoom;
         let input = document.getElementById('takeoverPwInput').value;
         if(input) input = input.trim(); 
-        if (!newRoom || !input) return;
+        if (!newRoom) return;
 
         const settingSnap = await firebase.database().ref(`courses/${newRoom}/settings`).get();
         const settings = settingSnap.val() || {};
-        const dbPw = settings.password || btoa("7777"); 
+        const hasPw = !!settings.password;
+        if (hasPw && !input) return;
 
-        if (btoa(input) === dbPw) {
+        if (!hasPw || btoa(input) === settings.password) {
             // [수정] 강사 입장 시 해당 방의 옵저버 기록만 정밀 삭제
             state.isObserver = false; 
             sessionStorage.removeItem('kac_observer_room');
@@ -553,11 +555,30 @@ verifyTakeover: async function() {
         setTimeout(() => input && input.focus(), 50);
     },
 
+    // [비번 옵션화] 비번 없는 방에 인증 없이 강사로 직접 입장
+    _directTeacherEnter: async function(newRoom) {
+        if (!newRoom) return;
+        state.isObserver = false;
+        sessionStorage.removeItem('kac_observer_room');
+        await firebase.database().ref(`courses/${newRoom}/status`).update({
+            ownerSessionId: state.sessionId,
+            ownerLastSeen: firebase.database.ServerValue.TIMESTAMP,
+            roomStatus: 'active'
+        });
+        localStorage.setItem('last_owned_room', newRoom);
+        dataMgr.addOwnedRoom(newRoom);
+        const tm = document.getElementById('takeoverModal');
+        if (tm) tm.style.display = 'none';
+        dataMgr.forceEnterRoom(newRoom);
+    },
+
     // [입장 방식 선택] 강사 권한 가져오기 → 비밀번호 입력창으로
-    chooseTakeover: function() {
+    chooseTakeover: async function() {
         document.getElementById('roleChoiceModal').style.display = 'none';
         state.entryIntent = 'teacher';
         const newRoom = state.pendingRoom;
+        // [비번 옵션화] 비번 없는 방이면 인증 없이 바로 강사 입장
+        try { const _ps = await firebase.database().ref(`courses/${newRoom}/settings/password`).get(); if (!_ps.val()) { await dataMgr._directTeacherEnter(newRoom); return; } } catch(e){}
         document.getElementById('takeoverPwInput').value = "";
         const lbl = document.getElementById('takeoverRoomLabel');
         if (lbl) lbl.innerText = `Room #${newRoom}`;
@@ -577,10 +598,12 @@ verifyTakeover: async function() {
     },
 
     // [입장 방식 선택] 옵저버 → 비밀번호 입력창으로(옵저버 의도 유지)
-    chooseObserver: function() {
+    chooseObserver: async function() {
         document.getElementById('roleChoiceModal').style.display = 'none';
         state.entryIntent = 'observer';
         const newRoom = state.pendingRoom;
+        // [비번 옵션화] 비번 없는 방이면 인증 없이 바로 옵저버 입장
+        try { const _ps = await firebase.database().ref(`courses/${newRoom}/settings/password`).get(); if (!_ps.val()) { state.isObserver = true; sessionStorage.setItem('kac_observer_room', newRoom); const _tm=document.getElementById('takeoverModal'); if(_tm) _tm.style.display='none'; dataMgr.forceEnterRoom(newRoom); return; } } catch(e){}
         document.getElementById('takeoverPwInput').value = "";
         const lbl = document.getElementById('takeoverRoomLabel');
         if (lbl) lbl.innerText = `Room #${newRoom}`;
@@ -621,24 +644,23 @@ enterAsObserver: async function() {
         const newRoom = state.pendingRoom;
         if (!newRoom) return;
 
-        // [추가] 옵저버 모드도 비밀번호 인증 요구 (단순 모니터링이라도 해당 강의실 비번 필요)
-        let input = document.getElementById('takeoverPwInput').value;
-        if (input) input = input.trim();
-        if (!input) {
-            ui.showAlert("👁️ 옵저버 모드 입장에도 해당 강의실 비밀번호가 필요합니다.\n비밀번호를 입력해주세요.");
-            document.getElementById('takeoverPwInput').focus();
-            return;
-        }
-
         const settingSnap = await firebase.database().ref(`courses/${newRoom}/settings`).get();
         const settings = settingSnap.val() || {};
-        const dbPw = settings.password || btoa("7777");
-
-        if (btoa(input) !== dbPw) {
-            ui.showAlert("⛔ 비밀번호가 올바르지 않습니다.");
-            document.getElementById('takeoverPwInput').value = "";
-            document.getElementById('takeoverPwInput').focus();
-            return;
+        const hasPw = !!settings.password;
+        let input = document.getElementById('takeoverPwInput').value;
+        if (input) input = input.trim();
+        if (hasPw) {
+            if (!input) {
+                ui.showAlert("👁️ 이 강의실은 비밀번호가 설정돼 있습니다.\n비밀번호를 입력해주세요.");
+                document.getElementById('takeoverPwInput').focus();
+                return;
+            }
+            if (btoa(input) !== settings.password) {
+                ui.showAlert("⛔ 비밀번호가 올바르지 않습니다.");
+                document.getElementById('takeoverPwInput').value = "";
+                document.getElementById('takeoverPwInput').focus();
+                return;
+            }
         }
 
         // 인증 성공 → 옵저버로 입장 (제어권은 가져오지 않음)
@@ -1034,7 +1056,7 @@ fetchCodeAndRenderQr: function(room) {
         const newName = document.getElementById('courseNameInput').value;
         const statusVal = document.getElementById('roomStatusSelect').value;
         const selectedProf = document.getElementById('profSelect').value;
-        const encryptedPw = rawPw ? btoa(rawPw) : btoa("7777");
+        const encryptedPw = rawPw ? btoa(rawPw) : null;
 
         // 설정을 저장하면서 내 세션ID를 다시 한 번 서버에 등록
         const updates = {};
@@ -1098,13 +1120,13 @@ deactivateAllRooms: async function() {
         // [보안] 누구나 임의로 잠금 상태를 바꾸지 못하도록, 해당 강의실의 4자리 비밀번호를 확인한 뒤에만 허용
         const settingSnap = await firebase.database().ref(`courses/${room}/settings`).get();
         const settings = settingSnap.val() || {};
-        const dbPw = settings.password || btoa("7777"); // 기본값 7777 (기존 비밀번호 정책과 동일)
-
-        const input = await showPasswordPrompt(`🔐 Room ${room}의 잠금 상태를 변경하려면
-강의실 비밀번호(4자리)를 입력하세요.`);
-        if (input === null) return;                       // 취소 시 아무 동작 안 함
-        if (btoa(input.trim()) !== dbPw) {
-            return ui.showAlert("❌ 비밀번호가 일치하지 않습니다.");
+        // [비번 옵션화] 비번이 설정된 방만 확인. 없으면 바로 토글.
+        if (settings.password) {
+            const input = await showPasswordPrompt(`🔐 Room ${room}의 잠금 상태를 변경하려면\n강의실 비밀번호를 입력하세요.`);
+            if (input === null) return;                       // 취소 시 아무 동작 안 함
+            if (btoa(input.trim()) !== settings.password) {
+                return ui.showAlert("❌ 비밀번호가 일치하지 않습니다.");
+            }
         }
 
         const nextLocked = !currentLocked;
@@ -5233,7 +5255,17 @@ resetShuttleRequests: function() {
 
 // [강사 플랫폼 전용: 유관 시스템 보안 하이패스 함수]
     // ── 강의실 초기화 인증 모달 ──
-    openResetAuthModal: function() {
+    openResetAuthModal: async function() {
+        // [비번 옵션화] 비번 없는 방은 비밀번호 입력 없이 확인만으로 초기화
+        try {
+            const _ps = await firebase.database().ref(`courses/${state.room}/settings/password`).get();
+            if (!_ps.val()) {
+                if (confirm(`Room ${state.room} 과정을 초기화하시겠습니까?\n(이 강의실은 비밀번호가 설정돼 있지 않습니다.)`)) {
+                    dataMgr._executeReset();
+                }
+                return;
+            }
+        } catch(e) {}
         const label = document.getElementById('resetAuthRoomLabel');
         const input = document.getElementById('resetAuthInput');
         if (label) label.innerText = `Room ${state.room}`;
@@ -5274,8 +5306,8 @@ resetShuttleRequests: function() {
         try {
             const snap = await firebase.database().ref(`courses/${room}/settings`).once('value');
             const settings = snap.val() || {};
-            const storedPw = settings.password || btoa("7777"); // 미설정 시 기본값 7777
-            if (btoa(inputPw) === storedPw) {
+            const storedPw = settings.password; // [비번 옵션화] 미설정이면 마스터키만 허용
+            if (storedPw && btoa(inputPw) === storedPw) {
                 ui.closeResetAuthModal();
                 dataMgr._executeReset();
             } else {
@@ -7554,7 +7586,6 @@ saveAll: function() {
         const reqChecks = [
             { val: name,        id: 'setup-course-name',  label: '과정명' },
             { val: periodRange, id: 'setup-period-range',  label: '교육기간' },
-            { val: rawPw,       id: 'setup-room-pw',       label: '암호' },
             { val: roomName,    id: (roomSelectVal === 'direct' ? 'setup-room-direct' : 'setup-room-select'), label: '장소' }
         ];
         // 먼저 모든 표시 초기화
@@ -7590,7 +7621,7 @@ saveAll: function() {
 
         const updates = {};
         updates[`courses/${state.room}/settings/courseName`] = name;
-        updates[`courses/${state.room}/settings/password`] = btoa(rawPw);
+        updates[`courses/${state.room}/settings/password`] = rawPw ? btoa(rawPw) : null;
         // 카카오톡 오픈톡방 링크 (선택) — 입력값 정리 후 저장
         const kakaoLinkVal = (document.getElementById('setup-kakao-link')?.value || '').trim();
         updates[`courses/${state.room}/settings/kakaoLink`] = kakaoLinkVal;
@@ -8856,7 +8887,7 @@ const annualPlanMgr = {
             [`${rPath}/notice`]:              "",
             [`${rPath}/coordNotice`]:         "",
             [`${rPath}/coordNoticeHistory`]:  null,
-            [`${rPath}/settings/password`]:   btoa("7777"),  // [추가] 차주 새 과정 배치 전 비번 리셋 → 기본 7777 (이전 과정 비번 잔류 방지)
+            [`${rPath}/settings/password`]:   null,  // [비번 옵션화] 차주 새 과정 배치 전 비번 제거(없음 상태)
             [`${rPath}/status/ownerSessionId`]: null,
             [`${rPath}/status/resetKey`]:     newResetKey  // 교육생 강제 퇴출 신호
         };
@@ -9266,7 +9297,7 @@ annualPlanMgr._syncRoomsLockAware = async function(courses) {
         updates[`courses/${r}/settings/courseName`] = '';
         updates[`courses/${r}/settings/period`]     = '';
         updates[`courses/${r}/settings/roomDetailName`] = '';
-        updates[`courses/${r}/settings/password`]   = btoa("7777");  // [추가] 방 비울 때 비번도 기본 7777로 리셋 (이전 과정 강사 비번 잔류 방지)
+        updates[`courses/${r}/settings/password`]   = null;  // [비번 옵션화] 방 비울 때 비번 제거(없음 상태)
         updates[`courses/${r}/settings/coordinatorName`] = null;
         updates[`courses/${r}/status/professorName`] = '';
         updates[`courses/${r}/status/roomStatus`]   = 'idle';
@@ -9664,7 +9695,7 @@ window.kacExpireEndedCourses = async function(){
         var b='courses/'+room+'/';
         ['students','internal_attendance','questions','admin_actions','shuttle','dinner_skips','tablet_loans','connections','quizAnswers','expectedStudents','coordRoster','activeQuiz','quizFinalResults','attendanceQR','scheduleImage','coordNoticeHistory'].forEach(function(k){ updates[b+k]=null; });
         updates[b+'boardNotice']=''; updates[b+'notice']=''; updates[b+'coordNotice']='';
-        updates[b+'settings/courseName']=''; updates[b+'settings/period']=null; updates[b+'settings/coordinatorName']=null; updates[b+'settings/password']=btoa('7777');
+        updates[b+'settings/courseName']=''; updates[b+'settings/period']=null; updates[b+'settings/coordinatorName']=null; updates[b+'settings/password']=null;
         updates[b+'status/professorName']=''; updates[b+'status/roomStatus']='idle'; updates[b+'status/ownerSessionId']=null; updates[b+'status/resetKey']='rk_'+Date.now()+'_'+Math.random().toString(36).slice(2,7);
         try{ var s=pd.indexOf(' ~ ')>=0?pd.split(' ~ ')[0].trim():(pd.split('~')[0]||'').trim();
           if(s){ var d=new Date(s+'T00:00:00'); if(!isNaN(d)){ var dw=(d.getDay()+6)%7; var mo=new Date(d); mo.setDate(d.getDate()-dw);
@@ -9679,55 +9710,111 @@ window.kacExpireEndedCourses = async function(){
   }catch(e){ console.warn('[KAC expire] 스킵:', e && e.message); }
 };
 
-// ===== 과정현황 항목 인라인 수정 (과정명·기간·장소·교수·과정담당) =====
-ui.openFieldEdit = function(field){
+// ===== 과정현황 항목 인라인 수정 (달력·드롭다운 팝업) =====
+ui.openFieldEdit = async function(field){
   if (state.isObserver) { ui.showAlert("👁️ 옵저버 모드에서는 수정할 수 없습니다."); return; }
   if (!state.room) { ui.showAlert("강의실을 먼저 선택하세요."); return; }
   ui._editField = field;
+  var modal=document.getElementById('fieldEditModal');
+  var box=modal.querySelector('.modal-box');
   var titleEl=document.getElementById('fieldEditTitle');
   var bodyEl=document.getElementById('fieldEditBody');
   var msg=document.getElementById('fieldEditMsg'); if(msg) msg.textContent='';
-  var inS='width:100%; padding:12px; border:1.5px solid #cbd5e1; border-radius:10px; font-size:15px; outline:none; box-sizing:border-box;';
   var get=function(id){ var e=document.getElementById(id); return e? (e.innerText||'').trim() : ''; };
+  var selStyle='width:100%; padding:12px; border:1.5px solid #cbd5e1; border-radius:10px; font-size:15px; outline:none; box-sizing:border-box; background:#fff;';
+  if(box) box.style.width = (field==='period') ? '860px' : '440px';
+
   if(field==='period'){
     titleEl.textContent='교육 기간 수정';
-    var pd=get('dashPeriod'), s='', e='';
-    if(pd.indexOf('~')>=0){ var pp=pd.split('~'); s=(pp[0]||'').trim(); e=(pp[1]||'').trim(); }
-    bodyEl.innerHTML='<label style="font-size:12px;font-weight:800;color:#64748b;">시작일</label>'
-      +'<input type="date" id="fe-start" value="'+s+'" style="'+inS+'margin:4px 0 12px;">'
-      +'<label style="font-size:12px;font-weight:800;color:#64748b;">종료일</label>'
-      +'<input type="date" id="fe-end" value="'+e+'" style="'+inS+'margin-top:4px;">';
-  } else {
-    var map={courseName:['과정명','dashCourseTitle'], roomDetail:['교육 장소','dashRoomDetail'], prof:['담임 교수','dashProfNameOnly'], coord:['과정 담당','dashCoordName']};
-    var m=map[field]; if(!m) return;
-    titleEl.textContent=m[0]+' 수정';
-    var cur=get(m[1]); if(cur==='-'||cur==='장소 미설정'||cur==='과정명을 설정해주세요.') cur='';
-    bodyEl.innerHTML='<input type="text" id="fe-val" value="'+cur.replace(/"/g,'&quot;')+'" placeholder="'+m[0]+' 입력" style="'+inS+'">';
+    bodyEl.innerHTML='<input type="text" id="fe-period" style="display:none;"><div style="display:flex; justify-content:center;"></div>';
+    modal.style.display='flex';
+    setTimeout(function(){
+      try{ var ex=document.getElementById('fe-period')._flatpickr; if(ex) ex.destroy(); }catch(e){}
+      var pd=get('dashPeriod'); var defaults=[];
+      if(pd.indexOf('~')>=0){ var pp=pd.split('~'); var a=(pp[0]||'').trim(), b=(pp[1]||'').trim(); if(a)defaults.push(a); if(b)defaults.push(b); }
+      flatpickr('#fe-period', { mode:'range', locale:'ko', dateFormat:'Y-m-d', showMonths:2, inline:true, closeOnSelect:false, disableMobile:'true', defaultDate: defaults.length?defaults:null });
+    }, 60);
+    return;
   }
-  document.getElementById('fieldEditModal').style.display='flex';
-  setTimeout(function(){ var i=document.getElementById('fe-val')||document.getElementById('fe-start'); if(i){ i.focus(); if(i.select) i.select(); } }, 60);
+
+  if(field==='roomDetail'){
+    titleEl.textContent='교육 장소 수정';
+    var src=document.getElementById('setup-room-select');
+    var inner = src ? src.innerHTML : '<option value="">--- 장소 선택 ---</option>';
+    bodyEl.innerHTML='<select id="fe-val" style="'+selStyle+'">'+inner+'</select>'
+      +'<input type="text" id="fe-direct" placeholder="위치 직접 작성" style="'+selStyle+'display:none; margin-top:8px;">';
+    var selEl=document.getElementById('fe-val'); var dirEl=document.getElementById('fe-direct');
+    selEl.onchange=function(){ dirEl.style.display=(this.value==='direct')?'block':'none'; };
+    try{
+      var snap=await firebase.database().ref('courses').get(); var all=snap.val()||{}; var occ=[];
+      Object.keys(all).forEach(function(r){ if(r!==state.room && all[r].status && all[r].status.roomStatus==='active'){ var loc=all[r].settings&&all[r].settings.roomDetailName; if(loc) occ.push(loc); } });
+      Array.from(selEl.options).forEach(function(opt){ if(opt.value && occ.indexOf(opt.value)>=0){ opt.text=opt.text+' (이미 사용 중)'; opt.disabled=true; opt.style.color='#cbd5e1'; } });
+    }catch(e){}
+    var cur=get('dashRoomDetail'); if(cur && cur!=='-' && cur!=='장소 미설정') selEl.value=cur;
+    modal.style.display='flex'; return;
+  }
+
+  if(field==='prof'){
+    titleEl.textContent='담임 교수 수정';
+    var opts='<option value="">(선택 안함)</option>';
+    (profMgr.list||[]).forEach(function(pp){ opts+='<option value="'+pp.name+'">'+pp.name+' 교수</option>'; });
+    bodyEl.innerHTML='<select id="fe-val" style="'+selStyle+'">'+opts+'</select>';
+    var cur2=get('dashProfNameOnly'); if(cur2 && cur2!=='-') document.getElementById('fe-val').value=cur2;
+    modal.style.display='flex'; return;
+  }
+
+  if(field==='coord'){
+    titleEl.textContent='과정 담당 수정';
+    var clist=(coordMgr && coordMgr.list)?coordMgr.list:[];
+    var opts2='<option value="">--- 담당자 선택 ---</option>';
+    clist.forEach(function(c){ opts2+='<option value="'+c.name+'">'+c.name+'</option>'; });
+    bodyEl.innerHTML='<select id="fe-val" style="'+selStyle+'">'+opts2+'</select>';
+    var selC=document.getElementById('fe-val');
+    if(!clist.length){
+      try{ var cs=await firebase.database().ref('system/coordinators').get(); var co=cs.val()||{}; var h='<option value="">--- 담당자 선택 ---</option>'; Object.values(co).forEach(function(c){ h+='<option value="'+c.name+'">'+c.name+'</option>'; }); selC.innerHTML=h; }catch(e){}
+    }
+    var curc=get('dashCoordName');
+    if(curc && curc!=='-' && curc!=='미지정'){ selC.value=curc; if(!selC.value && coordMgr && coordMgr.matchName){ var cn=coordMgr.matchName(curc); if(cn) selC.value=cn; } }
+    modal.style.display='flex'; return;
+  }
+
+  // courseName (텍스트)
+  titleEl.textContent='과정명 수정';
+  var v=get('dashCourseTitle'); if(v==='과정명을 설정해주세요.') v='';
+  bodyEl.innerHTML='<input type="text" id="fe-val" value="'+v.replace(/"/g,'&quot;')+'" placeholder="과정명 입력" style="'+selStyle+'">';
+  modal.style.display='flex';
+  setTimeout(function(){ var i=document.getElementById('fe-val'); if(i){ i.focus(); if(i.select) i.select(); } },60);
 };
-ui.closeFieldEdit = function(){ var m=document.getElementById('fieldEditModal'); if(m) m.style.display='none'; };
+
+ui.closeFieldEdit = function(){
+  try{ var fp=document.getElementById('fe-period'); if(fp&&fp._flatpickr) fp._flatpickr.destroy(); }catch(e){}
+  var m=document.getElementById('fieldEditModal'); if(m) m.style.display='none';
+};
+
 ui.saveFieldEdit = async function(){
   var f=ui._editField, room=state.room; if(!room) return;
-  var msg=document.getElementById('fieldEditMsg');
-  var updates={};
+  var msg=document.getElementById('fieldEditMsg'); var updates={};
   if(f==='period'){
-    var s=(document.getElementById('fe-start')||{}).value||'', e=(document.getElementById('fe-end')||{}).value||'';
-    if(!s||!e){ if(msg)msg.textContent='시작일과 종료일을 모두 선택하세요.'; return; }
-    if(e<s){ if(msg)msg.textContent='종료일이 시작일보다 빠릅니다.'; return; }
-    updates['courses/'+room+'/settings/period']=s+' ~ '+e;
-  } else {
-    var v=((document.getElementById('fe-val')||{}).value||'').trim();
-    if(f==='courseName'){ if(!v){ if(msg)msg.textContent='과정명을 입력하세요.'; return; } updates['courses/'+room+'/settings/courseName']=v; }
-    else if(f==='roomDetail'){ updates['courses/'+room+'/settings/roomDetailName']=v; }
-    else if(f==='prof'){ updates['courses/'+room+'/status/professorName']=v; }
-    else if(f==='coord'){ updates['courses/'+room+'/settings/coordinatorName']=v; }
-    else return;
-  }
-  try{
-    await firebase.database().ref().update(updates);
-    ui.closeFieldEdit();
-    ui.showAlert('✅ 저장되었습니다. 모든 화면에 반영됩니다.');
-  }catch(err){ if(msg)msg.textContent='저장 중 오류가 발생했습니다.'; }
+    var fp=(document.getElementById('fe-period')||{})._flatpickr;
+    var ds=(fp&&fp.selectedDates)?fp.selectedDates:[];
+    if(!ds.length){ if(msg)msg.textContent='기간을 선택하세요.'; return; }
+    var fmt=function(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); };
+    updates['courses/'+room+'/settings/period']=fmt(ds[0])+' ~ '+fmt(ds[ds.length-1]);
+  } else if(f==='roomDetail'){
+    var sv=(document.getElementById('fe-val')||{}).value||'';
+    if(sv==='direct'){ sv=((document.getElementById('fe-direct')||{}).value||'').trim(); if(!sv){ if(msg)msg.textContent='장소를 입력하세요.'; return; } }
+    updates['courses/'+room+'/settings/roomDetailName']=sv;
+  } else if(f==='prof'){
+    var pv=(document.getElementById('fe-val')||{}).value||'';
+    updates['courses/'+room+'/status/professorName']=pv;
+    try{ var ks=await firebase.database().ref('system/professorProfiles/'+pv+'/kakaoLink').get(); updates['courses/'+room+'/settings/kakaoLink']=ks.val()||''; }catch(e){}
+  } else if(f==='coord'){
+    updates['courses/'+room+'/settings/coordinatorName']=(document.getElementById('fe-val')||{}).value||'';
+  } else if(f==='courseName'){
+    var cv=((document.getElementById('fe-val')||{}).value||'').trim();
+    if(!cv){ if(msg)msg.textContent='과정명을 입력하세요.'; return; }
+    updates['courses/'+room+'/settings/courseName']=cv;
+  } else return;
+  try{ await firebase.database().ref().update(updates); ui.closeFieldEdit(); ui.showAlert('✅ 저장되었습니다. 모든 화면에 반영됩니다.'); }
+  catch(err){ if(msg)msg.textContent='저장 중 오류가 발생했습니다.'; }
 };
