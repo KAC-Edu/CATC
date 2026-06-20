@@ -2459,7 +2459,12 @@ loadDashboardStats: function() {
             if (_rn && _rn.length) _expectedNamesCache = Array.from(new Set([..._expectedNamesCache, ..._rn]));
             const _aSnap = await firebase.database().ref(`courses/${room}/students`).once('value');
             if (state.room !== room) return;
+            const _actNames = Object.values(_aSnap.val() || {}).map(s => s && s.name).filter(n => n && n !== "undefined");
+            // 공유 캐시 경로(recalcTotal)와, 직접 세팅 경로를 함께 적용 — 순서/캐시 영향 없이 확실히 표시
             recalcTotal(_aSnap.val() || {});
+            const _combined = Array.from(new Set([...(_rn || []), ..._actNames]));
+            const _el = document.getElementById('dashTotalCount');
+            if (_el) _el.innerText = _combined.length;
         } catch(e){}
     };
     _refreshDashRoster();
