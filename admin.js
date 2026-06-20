@@ -4278,11 +4278,7 @@ cancelIndividualShuttle: function(waveId, locId, token, name) {
     // [JDS260613] 운영부(coordRoster)·지원부(system/dorm/rosters) 명단 이름을 직접 수집 — 재저장 없이도 명단 표시
     _gatherRosterNames: async function(room) {
         const names = [];
-        try {
-            const crSnap = await firebase.database().ref(`courses/${room}/coordRoster`).once('value');
-            const cr = crSnap.val();
-            if (cr && Array.isArray(cr.list)) cr.list.forEach(s => { if (s && s.name) names.push(String(s.name).trim()); });
-        } catch (e) { /* 무시 */ }
+        // [명단 통일] 운영부 coordRoster 미참조 (주차 혼입 방지). 현재 과정 주차의 지원부 명단만.
         try {
             const pSnap = await firebase.database().ref(`courses/${room}/settings/period`).once('value');
             const period = pSnap.val() || '';
@@ -4315,11 +4311,7 @@ cancelIndividualShuttle: function(waveId, locId, token, name) {
         //  → 강사가 별도 .txt 업로드/재저장을 하지 않아도, 운영부·지원부에서 올린 명단이 바로 '미입교'로 표시됨.
         async function gatherRosterNames() {
             const names = [];
-            try {
-                const crSnap = await firebase.database().ref(`courses/${room}/coordRoster`).once('value');
-                const cr = crSnap.val();
-                if (cr && Array.isArray(cr.list)) cr.list.forEach(s => { if (s && s.name) names.push(String(s.name).trim()); });
-            } catch (e) { /* 무시 */ }
+            // [명단 통일] 운영부 coordRoster(주차 구분 없음) 미참조 — 복구/지난주 명단 혼입 방지. 현재 과정 주차의 지원부 명단만 사용.
             try {
                 const pSnap = await firebase.database().ref(`courses/${room}/settings/period`).once('value');
                 const period = pSnap.val() || '';
