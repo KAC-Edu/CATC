@@ -6999,17 +6999,21 @@ init: function() {
         </div>`;
     },
 
-    // QR 안내 가상 페이지 HTML
+    // QR 안내 가상 페이지 HTML (좌: 안내글 / 우: 큰 QR)
     _qrHTML: function(room, courseNm) {
         const esc = s => (s == null ? '' : String(s)).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
         const course = esc(courseNm && courseNm !== '과정명을 설정해주세요.' ? courseNm : '');
-        return `<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;background:linear-gradient(135deg,#003366 0%,#0055aa 100%);border-radius:20px;min-height:430px;padding:46px 30px;color:#fff;text-align:center;box-shadow:0 18px 44px rgba(15,23,42,.12);">
-            <div style="font-size:13px;font-weight:800;letter-spacing:.18em;color:#9fc4ff;">COURSE ENTRY</div>
-            <div style="font-size:30px;font-weight:900;margin-top:10px;">교육 과정 입장 안내</div>
-            ${course ? `<div style="font-size:19px;font-weight:800;margin-top:8px;color:#dbeafe;">${course}</div>` : ''}
-            <div style="font-size:16px;font-weight:600;margin-top:10px;color:#cbd5e1;line-height:1.5;">휴대폰 카메라로 아래 QR을 스캔하면<br>교육 과정에 바로 입장합니다</div>
-            <div id="guideQrBig" style="background:#fff;padding:18px;border-radius:18px;margin-top:26px;box-shadow:0 12px 30px rgba(0,0,0,.28);display:inline-block;line-height:0;"></div>
-            <div style="margin-top:20px;font-size:14px;font-weight:700;color:#9fc4ff;"><i class="fa-solid fa-door-open"></i> Room ${esc(room)}</div>
+        return `<div style="display:flex;align-items:stretch;background:linear-gradient(135deg,#003366 0%,#0055aa 100%);border-radius:20px;overflow:hidden;min-height:470px;box-shadow:0 18px 44px rgba(15,23,42,.18);color:#fff;">
+            <div style="flex:1;min-width:0;padding:52px 46px;display:flex;flex-direction:column;justify-content:center;">
+                <div style="font-size:13px;font-weight:800;letter-spacing:.18em;color:#9fc4ff;">COURSE ENTRY</div>
+                <div style="font-size:36px;font-weight:900;line-height:1.25;margin-top:14px;">교육 과정<br>입장 안내</div>
+                ${course ? `<div style="font-size:20px;font-weight:800;margin-top:18px;color:#dbeafe;word-break:keep-all;">${course}</div>` : ''}
+                <div style="font-size:17px;font-weight:600;margin-top:16px;color:#cbd5e1;line-height:1.6;">휴대폰 카메라로 오른쪽 QR을 스캔하면<br>교육 과정에 바로 입장합니다</div>
+                <div style="margin-top:24px;font-size:15px;font-weight:700;color:#9fc4ff;"><i class="fa-solid fa-door-open"></i> Room ${esc(room)}</div>
+            </div>
+            <div style="flex:0 0 48%;background:rgba(255,255,255,0.08);display:flex;align-items:center;justify-content:center;padding:40px;">
+                <div id="guideQrBig" style="background:#fff;padding:22px;border-radius:20px;box-shadow:0 12px 30px rgba(0,0,0,.28);line-height:0;"></div>
+            </div>
         </div>`;
     },
 
@@ -7096,7 +7100,7 @@ init: function() {
                     const tgt = document.getElementById('guideQrBig');
                     if (tgt && typeof QRCode !== 'undefined') {
                         tgt.innerHTML = '';
-                        new QRCode(tgt, { text: url, width: 300, height: 300, correctLevel: QRCode.CorrectLevel.H });
+                        new QRCode(tgt, { text: url, width: 380, height: 380, correctLevel: QRCode.CorrectLevel.H });
                     }
                 } catch (e) { console.warn('QR 생성 실패:', e); }
             }
