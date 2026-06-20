@@ -3031,9 +3031,14 @@ showAlert: function(msg, onConfirm) {
                     <td style="font-weight:700;">${userCount}명</td>
                     <td>${roomCell}</td>
                     <td>
-                        <button class="btn-table-action" onclick="dataMgr.switchRoomAttempt('${c}')">입장하기</button>
+                        <button class="btn-table-action" onclick="event.stopPropagation(); dataMgr.switchRoomAttempt('${c}')">입장하기</button>
                     </td>
                 `;
+
+                // [행 전체 클릭] 어느 칸을 눌러도 그 과정으로 입장
+                row.style.cursor = 'pointer';
+                row.title = '클릭하면 이 과정으로 입장합니다';
+                (function(rc){ row.addEventListener('click', function(){ dataMgr.switchRoomAttempt(rc); }); })(c);
 
                 // 연한 파란 배경: 현재 방이면서 비번 인증된 방만
                 if (isMyRoom) {
@@ -5210,6 +5215,7 @@ resetShuttleRequests: function() {
         if(!modal) return;
         const d=window._homeStatsData||{}, today=window._homeStatsToday||getTodayString();
         modal.style.display='flex';
+        const esc=function(s){return (s==null?'':String(s)).replace(/[&<>"]/g,function(c){return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]);});};
         // 카드 집계와 동일 기준: 현재 과정이 배정된 active 방 OR 이번 주와 겹치는 과정
         const weekRooms=Object.entries(d).filter(([,r])=>{
             const s=(r&&r.settings)||{}, st=(r&&r.status)||{};
@@ -5233,13 +5239,40 @@ resetShuttleRequests: function() {
             title.textContent='👩‍🎓 과정별 교육생 현황 (이번 주)';
             const rows=weekRooms.map(([room,r])=>{
                 const course=(r.settings||{}).courseName||'-';
-                const cnt=new Set(Object.values(r.students||{}).filter(s=>s.name&&s.name!=='undefined').map(s=>s.name)).size;
-                return `<div style="display:flex;justify-content:space-between;align-items:center;padding:20px 24px;background:#f0fdf4;border:1px solid #dcfce7;border-radius:14px;margin-bottom:12px;">
-                    <div style="display:flex;align-items:center;gap:16px;">
-                        <span style="font-weight:900;color:#fff;background:#10b981;padding:6px 14px;border-radius:10px;font-size:16px;">Room ${room}</span>
-                        <span style="font-size:18px;color:#0f172a;font-weight:700;">${course}</span>
-                    </div>
-                    <span style="font-size:30px;font-weight:900;color:#0f172a;">${cnt}<span style="font-size:15px;color:#64748b;font-weight:800;"> 명</span></span></div>`;
+                const list=(r.coordRoster && Array.isArray(r.coordRoster.list))?r.coordRoster.list:[];
+                const stuCnt=new Set(Object.values(r.students||{}).filter(s=>s.name&&s.name!=='undefined').map(s=>s.name)).size;
+                const cnt=list.length||stuCnt;
+                const uid='hsR_'+room;
+                let detail;
+                if(list.length){
+                    detail='<table style="width:100%;border-collapse:collapse;font-size:13px;margin-top:10px;">'
+                      +'<thead><tr style="color:#64748b;background:#f8fafc;">'
+                      +'<th style="padding:8px;text-align:center;border-bottom:1px solid #e2e8f0;width:54px;">연번</th>'
+                      +'<th style="padding:8px;text-align:center;border-bottom:1px solid #e2e8f0;">사번</th>'
+                      +'<th style="padding:8px;text-align:left;border-bottom:1px solid #e2e8f0;">소속</th>'
+                      +'<th style="padding:8px;text-align:left;border-bottom:1px solid #e2e8f0;">이름</th>'
+                      +'</tr></thead><tbody>'
+                      +list.map((s,i)=>'<tr>'
+                          +'<td style="padding:7px 8px;text-align:center;border-bottom:1px solid #f1f5f9;color:#94a3b8;">'+(s.seq||i+1)+'</td>'
+                          +'<td style="padding:7px 8px;text-align:center;border-bottom:1px solid #f1f5f9;color:#64748b;white-space:nowrap;">'+esc(s.empNo||'-')+'</td>'
+                          +'<td style="padding:7px 8px;border-bottom:1px solid #f1f5f9;color:#475569;word-break:keep-all;">'+esc(s.dept||'-')+'</td>'
+                          +'<td style="padding:7px 8px;border-bottom:1px solid #f1f5f9;font-weight:800;color:#0f172a;">'+esc(s.name||'-')+'</td>'
+                      +'</tr>').join('')
+                      +'</tbody></table>';
+                } else {
+                    detail='<p style="color:#94a3b8;text-align:center;padding:18px;font-size:14px;">운영부에서 올린 명단이 아직 없습니다.</p>';
+                }
+                return '<div style="background:#f0fdf4;border:1px solid #dcfce7;border-radius:14px;margin-bottom:12px;overflow:hidden;">'
+                  +'<div onclick="ui.toggleHomeDetail(\''+uid+'\')" title="클릭하면 명단을 봅니다" style="display:flex;justify-content:space-between;align-items:center;padding:18px 22px;cursor:pointer;">'
+                    +'<div style="display:flex;align-items:center;gap:14px;">'
+                      +'<span style="font-weight:900;color:#fff;background:#10b981;padding:6px 14px;border-radius:10px;font-size:16px;">Room '+room+'</span>'
+                      +'<span style="font-size:18px;color:#0f172a;font-weight:700;">'+esc(course)+'</span>'
+                      +'<i class="fa-solid fa-chevron-right hs-chev" style="color:#10b981;font-size:13px;transition:transform .2s;"></i>'
+                    +'</div>'
+                    +'<span style="font-size:28px;font-weight:900;color:#0f172a;">'+cnt+'<span style="font-size:14px;color:#64748b;font-weight:800;"> 명</span></span>'
+                  +'</div>'
+                  +'<div id="'+uid+'" style="display:none;padding:0 22px 18px;">'+detail+'</div>'
+                +'</div>';
             }).join('');
             body.innerHTML=rows||'<p style="color:#94a3b8;text-align:center;padding:30px;font-size:16px;">이번 주 교육생 정보가 없습니다.</p>';
         } else if(type==='outing'){
@@ -5249,20 +5282,46 @@ resetShuttleRequests: function() {
                 const acts=(r.admin_actions||{})[today]||{};
                 const outs=Object.values(acts).filter(a=>a&&(a.type==='outing'||a.type==='overnight'||a.type==='group_outing'));
                 if(!outs.length) return '';
-                return `<div style="padding:20px 24px;background:#fffbeb;border:1px solid #fef3c7;border-radius:14px;margin-bottom:12px;">
-                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-                        <div style="display:flex;align-items:center;gap:16px;">
-                            <span style="font-weight:900;color:#fff;background:#f59e0b;padding:6px 14px;border-radius:10px;font-size:16px;">Room ${room}</span>
-                            <span style="font-size:18px;color:#0f172a;font-weight:700;">${course}</span>
-                        </div>
-                        <span style="font-size:30px;font-weight:900;color:#0f172a;">${outs.length}<span style="font-size:15px;color:#64748b;font-weight:800;"> 명</span></span></div>
-                    ${outs.map(a=>`<div style="font-size:14px;color:#78716c;padding:8px 0;border-top:1px solid #fde68a;"><b>${a.name||'-'}</b> · ${a.type==='overnight'?'외박':'외출'} · ${a.destination||''} (${a.startTime||''}~${a.endTime||''})</div>`).join('')}
-                </div>`;
+                const tbl='<table style="width:100%;border-collapse:collapse;font-size:13px;margin-top:10px;">'
+                  +'<thead><tr style="color:#92400e;background:#fffbeb;">'
+                  +'<th style="padding:8px;text-align:center;border-bottom:1px solid #fde68a;width:54px;">연번</th>'
+                  +'<th style="padding:8px;text-align:left;border-bottom:1px solid #fde68a;">이름</th>'
+                  +'<th style="padding:8px;text-align:center;border-bottom:1px solid #fde68a;width:70px;">구분</th>'
+                  +'<th style="padding:8px;text-align:left;border-bottom:1px solid #fde68a;">행선지</th>'
+                  +'<th style="padding:8px;text-align:center;border-bottom:1px solid #fde68a;">시간</th>'
+                  +'</tr></thead><tbody>'
+                  +outs.map((a,i)=>'<tr>'
+                      +'<td style="padding:7px 8px;text-align:center;border-bottom:1px solid #fef3c7;color:#a8a29e;">'+(i+1)+'</td>'
+                      +'<td style="padding:7px 8px;border-bottom:1px solid #fef3c7;font-weight:800;color:#0f172a;">'+esc(a.name||'-')+'</td>'
+                      +'<td style="padding:7px 8px;text-align:center;border-bottom:1px solid #fef3c7;"><span style="background:'+(a.type==='overnight'?'#fee2e2;color:#b91c1c':'#fef3c7;color:#92400e')+';padding:2px 9px;border-radius:8px;font-weight:800;font-size:12px;">'+(a.type==='overnight'?'외박':'외출')+'</span></td>'
+                      +'<td style="padding:7px 8px;border-bottom:1px solid #fef3c7;color:#475569;word-break:keep-all;">'+esc(a.destination||'-')+'</td>'
+                      +'<td style="padding:7px 8px;text-align:center;border-bottom:1px solid #fef3c7;color:#64748b;white-space:nowrap;">'+esc((a.startTime||'')+(a.endTime?(' ~ '+a.endTime):''))+'</td>'
+                  +'</tr>').join('')
+                  +'</tbody></table>';
+                return '<div style="background:#fffbeb;border:1px solid #fef3c7;border-radius:14px;margin-bottom:12px;padding:18px 22px;">'
+                  +'<div style="display:flex;justify-content:space-between;align-items:center;">'
+                    +'<div style="display:flex;align-items:center;gap:14px;">'
+                      +'<span style="font-weight:900;color:#fff;background:#f59e0b;padding:6px 14px;border-radius:10px;font-size:16px;">Room '+room+'</span>'
+                      +'<span style="font-size:18px;color:#0f172a;font-weight:700;">'+esc(course)+'</span>'
+                    +'</div>'
+                    +'<span style="font-size:28px;font-weight:900;color:#0f172a;">'+outs.length+'<span style="font-size:14px;color:#64748b;font-weight:800;"> 명</span></span>'
+                  +'</div>'+tbl
+                +'</div>';
             }).filter(Boolean).join('');
             body.innerHTML=rows||'<p style="color:#94a3b8;text-align:center;padding:30px;font-size:16px;">금일 외출/외박 신청자가 없습니다.</p>';
         }
     },
 
+
+    // 홈 통계 팝업: 과정 행 펼치기/접기
+    toggleHomeDetail: function(uid){
+        var x=document.getElementById(uid); if(!x) return;
+        var open=(x.style.display!=='none');
+        x.style.display=open?'none':'block';
+        var hdr=x.previousElementSibling;
+        var chev=hdr&&hdr.querySelector('.hs-chev');
+        if(chev) chev.style.transform=open?'':'rotate(90deg)';
+    },
 
 // [강사 플랫폼 전용: 유관 시스템 보안 하이패스 함수]
     // ── 강의실 초기화 인증 모달 ──
