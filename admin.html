@@ -716,23 +716,18 @@
 <!-- (1) 수강생 현황 및 행정 신청 (클릭 시 각각의 탭으로 이동) -->
             <div class="stat-premium-card card-blue" style="padding:18px;">
                 <div class="card-content combined-stats">
-<!-- 수강생 현황 (입교 인원 강조형) -->
+<!-- 본 과정 수강생 (명단 인원) -->
                     <div class="stat-row" onclick="ui.setMode('students')" style="cursor:pointer; padding:6px 0;">
-                        <span class="card-label"><span class="i18n" data-en="Enrolled">수강생 입교 현황</span></span>
-                        <div class="card-value">
-                            <b id="dashArrivedCount">0</b>
-                            <span style="font-size: 13px; color: #94a3b8; font-weight: 600; margin-left: 2px;">
-                                / <span id="dashTotalCount">0</span>명
-                            </span>
-                        </div>
+                        <span class="card-label">본 과정 수강생</span>
+                        <div class="card-value"><b id="dashTotalCount">0</b><small>명</small><span id="dashArrivedCount" style="display:none;">0</span></div>
                     </div>
                     
                     <div class="stat-divider"></div>
 
-                    <!-- 자체 출석 현황 (클릭 시 출결 관리 → 항기원 자체 출석체크로 바로 이동) -->
-                    <div class="stat-row" onclick="ui.setMode('attendance'); ui.toggleAttendanceMode('internal');" style="cursor:pointer; padding:6px 0;">
-                        <span class="card-label"><i class="fa-solid fa-qrcode" style="color:#0ea5e9; margin-right:5px;"></i><span class="i18n" data-en="Attendance (Today)">자체 출석 현황 (금일)</span></span>
-                        <div class="card-value" style="color:#0ea5e9;"><b id="dashAttendCount">0</b><small> / <span id="dashAttendTotal">0</span>명</small></div>
+                    <!-- 항기원 자체 출결 체크 (버튼) -->
+                    <div class="stat-row" onclick="ui.setMode('attendance'); ui.toggleAttendanceMode('internal');" style="cursor:pointer; padding:8px 0;">
+                        <span class="card-label"><i class="fa-solid fa-qrcode" style="color:#0ea5e9; margin-right:5px;"></i>항공기술훈련원 자체 출결 체크</span>
+                        <div class="card-value" style="color:#0ea5e9;"><i class="fa-solid fa-arrow-right-to-bracket"></i><span id="dashAttendCount" style="display:none;">0</span><span id="dashAttendTotal" style="display:none;">0</span></div>
                     </div>
 
                     <div class="stat-divider" style="border-top: 1px dashed #e2e8f0; margin: 2px 0;"></div>
@@ -1167,7 +1162,7 @@
             </div>
             <div class="stat-value-row">
                 <span class="stat-number" id="stat-student-count">-</span>
-                <span class="stat-unit">명 (예정/입교)</span>
+                <span class="stat-unit">명 (입교/예정)</span>
             </div>
         </div>
 
@@ -2501,7 +2496,7 @@ function setupAcc(btn){
 </script>
 <style>@media print{#__catcVer{display:none!important}}</style>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vM3</div>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vO3</div>
 <div id="fieldEditModal" class="modal-overlay" onclick="if(event.target===this) ui.closeFieldEdit()" style="z-index:10050;">
   <div class="modal-box" style="width:440px; max-width:94vw; text-align:left;">
     <h3 id="fieldEditTitle" style="margin-top:0; color:#0f172a;">수정</h3>
