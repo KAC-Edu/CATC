@@ -7822,19 +7822,10 @@ saveAll: function() {
                         }).catch(function(){});
                     }
                     // 데이터 노드 비움 (settings/status 는 새 값으로 이미 updates 에 들어있어 제외)
-                    ['students','expectedStudents','coordRoster','internal_attendance','admin_actions','dinner_skips','shuttle','tablet_loans','quizAnswers','questions','activeQuiz','quizFinalResults','attendanceQR','scheduleImage','coordNoticeHistory','connections'].forEach(function(k){ updates[`courses/${_room}/${k}`] = null; });
+                    ['students','internal_attendance','admin_actions','dinner_skips','shuttle','tablet_loans','quizAnswers','questions','activeQuiz','quizFinalResults','attendanceQR','scheduleImage','coordNoticeHistory','connections'].forEach(function(k){ updates[`courses/${_room}/${k}`] = null; });
                     updates[`courses/${_room}/boardNotice`] = "";
                     updates[`courses/${_room}/coordNotice`] = "";
-                    // 지원부 생활관 명단(옛 과정 주차)도 비움 (방마스터 설정은 유지)
-                    try {
-                        const start = prevPeriod.includes(' ~ ') ? prevPeriod.split(' ~ ')[0].trim() : (prevPeriod.split('~')[0] || '').trim();
-                        if (start) { const d = new Date(start + 'T00:00:00'); if (!isNaN(d)) { const dw=(d.getDay()+6)%7; const mo=new Date(d); mo.setDate(d.getDate()-dw);
-                            const utc=mo.toISOString().slice(0,10);
-                            const loc=mo.getFullYear()+'-'+String(mo.getMonth()+1).padStart(2,'0')+'-'+String(mo.getDate()).padStart(2,'0');
-                            updates['system/dorm/rosters/'+utc+'__'+_room]=null;
-                            updates['system/dorm/rosters/'+loc+'__'+_room]=null;
-                        }}
-                    } catch(e) {}
+                    // [명단 보존] 신규 개설 시에도 지원부·운영부 미리 올린 명단은 보존 (삭제는 과정 종료 expire/수동 리셋만)
                 }
                 return pre;
             }).catch(function(){ updates[`courses/${_room}/status/resetKey`] = _newKey(); })
@@ -7844,7 +7835,7 @@ saveAll: function() {
                 document.getElementById('roomPw').value = rawPw;
                 document.getElementById('displayCourseTitle').innerText = name;
                 localStorage.setItem('last_owned_room', state.room);
-                ui.showAlert("✅ 설정이 저장되었습니다. (새 과정이면 이전 명단·수강생은 자동 정리됨)");
+                ui.showAlert("✅ 설정이 저장되었습니다. (미리 올린 교육생 명단은 보존됩니다)");
                 self.closeSetupModal();
                 dataMgr.forceEnterRoom(state.room);
             });
@@ -8941,22 +8932,7 @@ const annualPlanMgr = {
                 if (course.name !== prevName) {
                     // 새/다른 과정 → 리셋 후 배치
                     Object.assign(updates, this._cleanStartUpdates(room));
-                    // [리셋 정합성] 지난 과정의 지원부 생활관 명단(주차__방)도 비움 (방마스터 설정은 유지)
-                    try {
-                        var _prevPd = ((curRooms[room] || {}).settings || {}).period || '';
-                        var _st = _prevPd.includes(' ~ ') ? _prevPd.split(' ~ ')[0].trim() : (_prevPd.split('~')[0] || '').trim();
-                        if (_st) {
-                            var _d = new Date(_st + 'T00:00:00');
-                            if (!isNaN(_d)) {
-                                var _dw = (_d.getDay() + 6) % 7;
-                                var _mo = new Date(_d); _mo.setDate(_d.getDate() - _dw);
-                                var _utc = _mo.toISOString().slice(0, 10);
-                                var _loc = _mo.getFullYear() + '-' + String(_mo.getMonth()+1).padStart(2,'0') + '-' + String(_mo.getDate()).padStart(2,'0');
-                                updates['system/dorm/rosters/' + _utc + '__' + room] = null;
-                                updates['system/dorm/rosters/' + _loc + '__' + room] = null;
-                            }
-                        }
-                    } catch(e) {}
+                    // [명단 보존] 자동배치는 지원부·운영부 명단을 지우지 않음 (삭제는 과정 종료 expire에서만)
                     wiped.push(`${room}(${prevName || '비어있음'}→${course.name})`);
                     updates[`courses/${room}/settings/courseName`] = course.name;
                     updates[`courses/${room}/settings/period`]     = course.period;
@@ -8987,12 +8963,6 @@ const annualPlanMgr = {
                     updates[`courses/${room}/settings/coordinatorName`] = null;
                     updates[`courses/${room}/status/professorName`] = '';
                     updates[`courses/${room}/status/roomStatus`] = 'idle';
-                    try {
-                        const _s = _pd.includes(' ~ ') ? _pd.split(' ~ ')[0].trim() : (_pd.split('~')[0] || '').trim();
-                        if (_s) { const _d = new Date(_s + 'T00:00:00'); if (!isNaN(_d)) { const _dw=(_d.getDay()+6)%7; const _mo=new Date(_d); _mo.setDate(_d.getDate()-_dw);
-                            const _u=_mo.toISOString().slice(0,10); const _l=_mo.getFullYear()+'-'+String(_mo.getMonth()+1).padStart(2,'0')+'-'+String(_mo.getDate()).padStart(2,'0');
-                            updates['system/dorm/rosters/'+_u+'__'+room]=null; updates['system/dorm/rosters/'+_l+'__'+room]=null; }}
-                    } catch(e) {}
                     wiped.push(`${room}(${_nm} 종료→미개설)`);
                 }
             }
@@ -9020,8 +8990,6 @@ const annualPlanMgr = {
             [`${rPath}/tablet_loans`]:        null,
             [`${rPath}/connections`]:         null,
             [`${rPath}/quizAnswers`]:         null,
-            [`${rPath}/expectedStudents`]:    null,
-            [`${rPath}/coordRoster`]:         null,
             [`${rPath}/activeQuiz`]:          null,
             [`${rPath}/quizFinalResults`]:    null,
             [`${rPath}/attendanceQR`]:        null,
