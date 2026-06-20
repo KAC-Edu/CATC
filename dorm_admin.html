@@ -1141,7 +1141,7 @@
             const base=mondayOf(new Date());
             // 토·일이면 차주가 준비 대상 → 과정·명단 주차칩과 동일하게 기준 주를 한 주 앞당김 (지난 주 표시 방지)
             { const _t=new Date(); if(_t.getDay()===6 || _t.getDay()===0) base.setDate(base.getDate()+7); }
-            for(let i=0;i<6;i++){ const m=new Date(base); m.setDate(base.getDate()+7*i); const wk=_mwYmd(m); const we=new Date(m); we.setDate(m.getDate()+6); const fmt=d=>(d.getMonth()+1)+'/'+d.getDate(); opts.push('<option value="'+wk+'">'+fmt(m)+'~'+fmt(we)+' 주차</option>'); }
+            for(let i=0;i<6;i++){ const m=new Date(base); m.setDate(base.getDate()+7*i); const wk=_mwYmd(m); const we=new Date(m); we.setDate(m.getDate()+4); const fmt=d=>(d.getMonth()+1)+'/'+d.getDate(); opts.push('<option value="'+wk+'">'+fmt(m)+'~'+fmt(we)+' 주차</option>'); }
             const cur = masterWeekKey;
             sel.innerHTML=opts.join('');
             sel.value = cur; if(!sel.value){ sel.value='__base__'; masterWeekKey='__base__'; }
@@ -1605,7 +1605,7 @@
             for (let i = 0; i < 4; i++) {
                 const wk = new Date(base); wk.setDate(base.getDate() + i * 7);
                 const key = _ymdLocal(wk);
-                const wEnd = new Date(wk); wEnd.setDate(wk.getDate() + 6);
+                const wEnd = new Date(wk); wEnd.setDate(wk.getDate() + 4);
                 const fmt = d => `${d.getMonth()+1}/${d.getDate()}`;
                 html += `<button class="${selectedWeekKey === key ? 'on' : ''}" data-wk="${key}" onclick="selectWeek('${key}')">${labels[i]}<br><span style="font-size:10px; opacity:0.8;">${fmt(wk)}~${fmt(wEnd)}</span></button>`;
             }
@@ -1999,7 +1999,7 @@
 
             // 선택 주차 헤더 1개 + 과정 행들
             const wkStart = new Date(selectedWeekKey + 'T00:00:00');
-            const wkEnd = new Date(wkStart); wkEnd.setDate(wkStart.getDate() + 6);
+            const wkEnd = new Date(wkStart); wkEnd.setDate(wkStart.getDate() + 4);
             const fmt = d => `${d.getMonth()+1}/${d.getDate()}`;
             let html = `<div class="week-section"><div class="week-head"><i class="fa-regular fa-calendar-week"></i> ${fmt(wkStart)} ~ ${fmt(wkEnd)} 주간 <span class="cnt">과정 ${items.length}개</span></div>`;
             items.forEach(it => {
@@ -3131,7 +3131,7 @@
                 const canonList = Object.keys(byCanon).sort();
                 sel.innerHTML = canonList.map(canon => {
                     const wd = new Date(canon + 'T00:00:00');
-                    const wEnd = new Date(wd); wEnd.setDate(wd.getDate() + 6);
+                    const wEnd = new Date(wd); wEnd.setDate(wd.getDate() + 4);
                     const fmt = d => `${d.getMonth()+1}/${d.getDate()}`;
                     const cnt = byCanon[canon].rooms.size;
                     return `<option value="${byCanon[canon].rep}">${fmt(wd)} ~ ${fmt(wEnd)} 주간 (과정 ${cnt}개)</option>`;
@@ -3492,7 +3492,7 @@
                     const fs = await db.ref('system/dorm/floorPriority').once('value'); floorPriority = _buildFloorPriority(fs.val());
                 }
                 if (typeof ensureBuiltinCriteria === 'function') ensureBuiltinCriteria();
-                const _wd = new Date(_canon + 'T00:00:00'); const _we = new Date(_wd); _we.setDate(_wd.getDate() + 6);
+                const _wd = new Date(_canon + 'T00:00:00'); const _we = new Date(_wd); _we.setDate(_wd.getDate() + 4);
                 const _f = d => (d.getMonth()+1) + '/' + d.getDate();
                 const _ok = confirm('[' + _f(_wd) + ' ~ ' + _f(_we) + '] 주차를 ' + (_usingWeek ? '★이 주차 전용 방마스터' : '기본 방마스터') + ' 로 자동 배정합니다.\n\n적용 기준이 맞습니까?');
                 if (!_ok) { _hideAssignLoading(); return; }
@@ -3995,7 +3995,7 @@
             }
             sel.innerHTML = reps.map(r => {
                 const wd = new Date(r.canon + 'T00:00:00');
-                const wEnd = new Date(wd); wEnd.setDate(wd.getDate() + 6);
+                const wEnd = new Date(wd); wEnd.setDate(wd.getDate() + 4);
                 const fmt = d => `${d.getMonth()+1}/${d.getDate()}`;
                 return `<option value="${r.key}">${fmt(wd)} ~ ${fmt(wEnd)} 주간${r.dup ? ' (중복 정리됨)' : ''}</option>`;
             }).join('');
@@ -5021,7 +5021,7 @@
         async function _prepPrint() {
             const wk = viewAssign.weekKey;
             const wd = new Date(canonicalWeekKey(wk) + 'T00:00:00');   // 표준 월요일 기준 (현황/출력 표기와 일치)
-            const wEnd = new Date(wd); wEnd.setDate(wd.getDate() + 6);
+            const wEnd = new Date(wd); wEnd.setDate(wd.getDate() + 4);
             const fmt = d => `${d.getMonth()+1}.${d.getDate()}.`;
             const allStudents = viewAssign.students || {};
             const [coursesSnap, annualSnap, rosterSnap, roomsSnap] = await Promise.all([
@@ -5918,7 +5918,7 @@
 </script>
 <style>@media print{#__catcVer{display:none!important}}</style>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vE</div>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vF</div>
 <script>
 /* ===== [공용] 종료된 과정 자동 정리 (모든 플랫폼 공통) — 종료일 지난 방을 다음날 미개설로 비움. 브라우저별 하루 1회 ===== */
 window.kacExpireEndedCourses = async function(){
