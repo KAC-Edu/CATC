@@ -9418,6 +9418,7 @@ document.addEventListener('DOMContentLoaded', () => {
         firebase.auth().onAuthStateChanged(user => {
             if (user) {
                 if (typeof kacExpireEndedCourses === 'function') kacExpireEndedCourses();
+                if (typeof kacClearDefaultPw === 'function') kacClearDefaultPw();
                 annualPlanMgr.checkAndReset();
 
                 // 탭을 열어 두어도 KST 날짜가 바뀌면 자동으로 재체크 (10분 간격).
@@ -9745,6 +9746,23 @@ window.warnHideFromBoard = warnHideFromBoard;
 
 /* ===== [공용] 종료된 과정 자동 정리 — 종료일이 지난 방을 다음날 미개설로 비움 =====
    모든 플랫폼(강사·운영부·지원부·영양사)이 로드 시 1회 호출. 하루 1회만 실제 스캔(브라우저별). */
+// [비번 옵션화] 예전 기본비번(7777) 잔재를 한 번만 자동 제거 (사용자가 일부러 설정한 비번은 보존)
+window.kacClearDefaultPw = async function(){
+  try{ if(localStorage.getItem('kac_pwclear_v1')==='1') return; }catch(e){}
+  try{
+    var DEF = btoa('7777');
+    var snap = await firebase.database().ref('courses').get();
+    var all = snap.val() || {};
+    var updates = {};
+    Object.keys(all).forEach(function(r){
+      var pw = all[r] && all[r].settings && all[r].settings.password;
+      if (pw === DEF) updates['courses/'+r+'/settings/password'] = null;
+    });
+    if (Object.keys(updates).length) { await firebase.database().ref().update(updates); console.log('[KAC] 기본비번 7777 잔재 제거:', Object.keys(updates).length); }
+    try{ localStorage.setItem('kac_pwclear_v1','1'); }catch(e){}
+  }catch(e){ console.warn('[KAC pwclear] 스킵:', e && e.message); }
+};
+
 window.kacExpireEndedCourses = async function(){
   try{
     var today=(function(){var d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})();
