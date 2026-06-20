@@ -63,6 +63,7 @@
           border-radius: 24px; overflow: hidden;
         }
         @media (max-width: 540px) { .app-container { max-width: 100%; border-radius: 0; box-shadow: none; } }
+        @media (max-width: 540px) { .input-dock { max-width: 100%; } }
         .header { height: 56px; background: var(--header-bg); color: white; display: flex; align-items: center; justify-content: space-between; padding: 0 15px; flex-shrink: 0; z-index: 100; box-shadow: 0 2px 10px rgba(0,0,0,0.2); }
         .header-btn { width: 40px; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 20px; cursor: pointer; color: white; }
         .header-center { flex-grow: 1; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; overflow: hidden; }
@@ -168,7 +169,7 @@
 /* 5. 하단 입력창 영역 (고정 바) */
 .input-dock { 
     position: fixed; 
-    bottom: 0; left: 0; width: 100%; 
+    bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 500px; 
     background: #f8fafc; 
     border-top-left-radius: 20px; border-top-right-radius: 20px; 
     padding: 10px 15px calc(15px + var(--safe-area-bottom)) 15px; 
@@ -4828,7 +4829,7 @@ input:not([type=checkbox]):not([type=radio]):not([type=file]), textarea, select 
 })();
 </script>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vH1</div>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vH2</div>
 <script>
 /* ===== [공용] 종료된 과정 자동 정리 (교육생 포함 전 플랫폼) — 종료일 지난 방을 다음날 미개설로 비움. 브라우저별 하루 1회 ===== */
 window.kacExpireEndedCourses = async function(){
