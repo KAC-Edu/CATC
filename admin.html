@@ -21,6 +21,7 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <script src="//dapi.kakao.com/v2/maps/sdk.js?appkey=742b0e2c307454d10b66d28b9c62482f&libraries=services&autoload=false"></script>
     <script src="config.js?v=b260620c"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -517,9 +518,11 @@ body.in-course #moreToggleTab{ display:flex !important; }
     <a class="more-item" onclick="ui.setMode('quiz'); ui.closeMorePanel();"><i class="fa-solid fa-clipboard-question" style="color:#6366f1;"></i> 퀴즈 모드</a>
     <a class="more-item" onclick="ui.setMode('waiting'); ui.closeMorePanel();"><i class="fa-solid fa-chart-line" style="color:#6366f1;"></i> 과정 총 현황</a>
     <a class="more-item" onclick="ui.setMode('schedule'); ui.closeMorePanel();"><i class="fa-solid fa-calendar-days" style="color:#6366f1;"></i> 교육 시간표</a>
+    <div id="moreFoodSection" style="display:none;">
     <hr class="more-div">
     <div class="more-sec" style="color:#f59e0b;">정보 · 소식</div>
     <a class="more-item" onclick="ui.setMode('foodnews'); ui.closeMorePanel();"><i class="fa-solid fa-burger" style="color:#f59e0b;"></i> 도움이 되는 소식 (맛집)</a>
+    </div>
 </div>
 
         
@@ -839,7 +842,29 @@ body.in-course #moreToggleTab{ display:flex !important; }
         <h1><i class="fa-solid fa-burger" style="color:#f59e0b;"></i> 도움이 되는 소식 — 항기원 맛집 <span class="header-room-badge room-badge-global"></span></h1>
     </div>
     <div class="modern-white-card" style="width:100%; max-width:1080px; padding:26px 30px;">
-        <div style="font-size:13px; color:#64748b; font-weight:700; margin-bottom:16px;">교육생들이 익명으로 추천한 맛집입니다 · 추천순 정렬 · 거리/시간은 <b>자가용 기준</b>(길찾기에서 확인)</div>
+        <div style="font-size:13px; color:#64748b; font-weight:700; margin-bottom:14px;">교육생·강사가 함께 보는 공용 자료입니다(과정 종료 후에도 보존) · 추천순 정렬 · 거리는 <b>자가용 기준</b> 길찾기에서 확인 · 강사는 추가/수정/삭제 가능</div>
+        <button type="button" onclick="ui.openFoodNewsAdd()" style="padding:10px 18px; border:none; border-radius:10px; background:#2563eb; color:#fff; font-weight:800; font-size:14px; cursor:pointer; margin-bottom:14px;"><i class="fa-solid fa-plus"></i> 맛집 추가</button>
+        <div id="foodNewsAddForm" style="display:none; background:#f8fafc; border:1px solid #e2e8f0; border-radius:14px; padding:16px; margin-bottom:18px; max-width:520px;">
+            <div id="fnEditNote" style="display:none; font-size:12px; font-weight:800; color:#d97706; margin-bottom:8px;">✏️ 수정 중 — 가게를 다시 검색하면 위치가 변경됩니다.</div>
+            <div style="display:flex; gap:8px; margin-bottom:8px;">
+                <input id="fnSearch" type="text" placeholder="가게명 검색 (예: 칼국수, 카페)" onkeydown="if(event.key==='Enter'){event.preventDefault();ui.foodNewsSearch();}" style="flex:1; padding:12px; border:1px solid #cbd5e1; border-radius:10px; font-size:14px; box-sizing:border-box;">
+                <button type="button" onclick="ui.foodNewsSearch()" style="padding:0 18px; border:none; border-radius:10px; background:#1e3a8a; color:#fff; font-weight:800; cursor:pointer; white-space:nowrap;">검색</button>
+            </div>
+            <div id="fnSearchResults" style="max-height:240px; overflow-y:auto; margin-bottom:8px;"></div>
+            <div id="fnSelectedBox" style="display:none; background:#eef4ff; border:1px solid #cfe0ff; border-radius:10px; padding:10px 12px; margin-bottom:8px;">
+                <div style="font-size:11px; color:#2563eb; font-weight:800;">✓ 선택한 가게</div>
+                <div id="fnSelName" style="font-size:15px; font-weight:900; color:#0f172a;"></div>
+                <div id="fnSelAddr" style="font-size:12px; color:#64748b;"></div>
+            </div>
+            <select id="fnCat" style="width:100%; padding:12px; border:1px solid #cbd5e1; border-radius:10px; margin-bottom:8px; font-size:14px; box-sizing:border-box; background:#fff;">
+                <option value="식당">🍚 식당</option><option value="카페">☕ 카페</option><option value="분식">🍜 분식</option><option value="술집">🍻 술집</option><option value="기타">🧁 기타</option>
+            </select>
+            <textarea id="fnComment" rows="2" maxlength="100" placeholder="한줄평 (선택)" style="width:100%; padding:12px; border:1px solid #cbd5e1; border-radius:10px; margin-bottom:10px; font-size:14px; box-sizing:border-box; resize:none;"></textarea>
+            <div style="display:flex; gap:8px;">
+                <button type="button" onclick="ui.closeFoodNewsAdd()" style="flex:1; padding:11px; border:1px solid #e2e8f0; border-radius:10px; background:#fff; color:#475569; font-weight:800; cursor:pointer;">취소</button>
+                <button type="button" onclick="ui.foodNewsSubmit()" style="flex:1; padding:11px; border:none; border-radius:10px; background:#2563eb; color:#fff; font-weight:800; cursor:pointer;">저장</button>
+            </div>
+        </div>
         <div id="foodNewsFilters" style="display:flex; gap:8px; margin-bottom:18px; flex-wrap:wrap;"></div>
         <div id="foodNewsList" style="display:flex; flex-direction:column; gap:12px;"></div>
     </div>
@@ -2146,6 +2171,10 @@ body.in-course #moreToggleTab{ display:flex !important; }
                             <input type="checkbox" id="feat-hrd" checked style="width:15px; height:15px; accent-color:#2563eb;">
                             <i class="fa-solid fa-id-card-clip" style="color:#2563eb;"></i> 고용노동부 출결
                         </label>
+                        <label style="display:flex; align-items:center; gap:6px; font-size:12px; font-weight:700; color:#334155; cursor:pointer;">
+                            <input type="checkbox" id="feat-foodspots" style="width:15px; height:15px; accent-color:#f59e0b;">
+                            <i class="fa-solid fa-burger" style="color:#f59e0b;"></i> 항기원 맛집
+                        </label>
                             </div>
                         </div>
                     </div>
@@ -2559,6 +2588,6 @@ function setupAcc(btn){
 </div>
 <style>@media print{#__catcVer{display:none!important}}</style>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vVL</div>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vVO</div>
 </body>
 </html>
