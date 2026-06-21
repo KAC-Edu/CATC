@@ -3805,17 +3805,17 @@ renderQaList: function(f) {
 
             return `
             <div class="q-card ${cls} ${isNew ? 'is-new' : ''}" onclick="ui.openQaModal('${i.id}')">
-                <div class="q-content">
-                    ${newBadge}
-                    <span style="display:inline-block; background:#eff6ff; color:#3b82f6; font-size:10px; padding:2px 7px; border-radius:4px; margin-right:8px; vertical-align:middle; border:1px solid #dbeafe; font-weight:800;">
-                        To. ${displayName}
+                <div class="q-content" style="display:flex; align-items:flex-start; gap:8px; flex:1; min-width:0;">
+                    <span style="flex-shrink:0; display:inline-flex; align-items:center; gap:4px;">
+                        ${newBadge}
+                        <span style="background:#eff6ff; color:#3b82f6; font-size:10px; padding:2px 7px; border-radius:4px; border:1px solid #dbeafe; font-weight:800; white-space:nowrap;">To. ${displayName}</span>
                     </span>
-                    <span style="${isDone ? 'text-decoration:line-through; opacity:0.6;' : ''}">
+                    <span style="flex:1; min-width:0; word-break:break-word; ${isDone ? 'text-decoration:line-through; opacity:0.6;' : ''}">
                         ${icon}${i.text}
+                        <button class="btn-translate" onclick="event.stopPropagation(); ui.translateQa('${i.id}')" title="번역">
+                            <i class="fa-solid fa-language"></i> 번역
+                        </button>
                     </span>
-                    <button class="btn-translate" onclick="event.stopPropagation(); ui.translateQa('${i.id}')" title="번역">
-                        <i class="fa-solid fa-language"></i> 번역
-                    </button>
                 </div>
                 <div class="q-meta">
                     <div class="q-like-badge">👍 ${i.likes}</div>
@@ -10157,7 +10157,7 @@ ui.saveFieldEdit = async function(){
 };
 
 /* __JSVER_STAMP__ */
-(function stampJsVer(){try{var b=document.getElementById('__catcVer');if(b){if(b.textContent.indexOf('Ja')<0)b.textContent=b.textContent+'\u00b7Ja';}else{setTimeout(stampJsVer,200);}}catch(e){}})();
+(function stampJsVer(){try{var b=document.getElementById('__catcVer');if(b){if(b.textContent.indexOf('Jb')<0)b.textContent=b.textContent+'\u00b7Jb';}else{setTimeout(stampJsVer,200);}}catch(e){}})();
 
 /* ===== [공항별 입교 현황 지도] 수강생현황 → 지도로 보기 ===== */
 ui._mapRegions = {

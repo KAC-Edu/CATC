@@ -681,7 +681,7 @@
 
 <!-- 태블릿 대여 신청 모달 -->
 <!-- 설문조사 안내 모달 -->
-<div id="surveyModal" class="menu-overlay" style="display:none; z-index:9500;" onclick="if(event.target==this)this.style.display='none'">
+<div id="surveyModal" class="menu-overlay" style="display:none; z-index:9500;" onclick="if(event.target==this)closePanelSmooth('surveyModal')">
     <div class="menu-box" style="width:90%; max-width:400px; padding:25px; border-radius:24px;">
         <h3 style="margin:0 0 16px 0; font-weight:900; color:#1e3a8a;">
             <i class="fa-solid fa-square-poll-vertical" style="color:#3b82f6; margin-right:8px;"></i>설문조사 참여
@@ -695,7 +695,7 @@
             <div style="display:flex; gap:10px; margin-bottom:11px;"><b style="color:#2563eb; flex-shrink:0;">2</b><span><b>마이페이지</b> → 수강 중인 과정 입장</span></div>
             <div style="display:flex; gap:10px;"><b style="color:#2563eb; flex-shrink:0;">3</b><span>좌측 하단 <b>[항기원 교육과정운영 설문평가]</b> 참여</span></div>
         </div>
-        <button onclick="document.getElementById('surveyModal').style.display='none'"
+        <button onclick="closePanelSmooth('surveyModal')"
             style="margin-top:16px; width:100%; padding:13px; border:none; border-radius:12px; background:#f1f5f9; color:#475569; font-weight:800; font-size:14px; cursor:pointer;">닫기</button>
     </div>
 </div>
@@ -900,7 +900,7 @@
                 <div id="afterReturnGroup" style="display:none;">
                     <button onclick="undoReturnAction()" style="width:100%; padding: 12px; background: #64748b; color: white; border: none; border-radius: 8px; font-weight: bold;">복귀 보고 취소 (재수정)</button>
                 </div>
-                <button onclick="document.getElementById('adminActionModal').style.display='none'" style="width:100%; margin-top:4px; padding:11px; border:none; border-radius:10px; background:#f1f5f9; color:#475569; font-weight:800; cursor:pointer;">닫기</button>
+                <button onclick="closePanelSmooth('adminActionModal')" style="width:100%; margin-top:4px; padding:11px; border:none; border-radius:10px; background:#f1f5f9; color:#475569; font-weight:800; cursor:pointer;">닫기</button>
 <!-- [찾을 위치] afterReturnGroup 가 끝나는 </div> 바로 아래에 붙여넣으세요 -->
 <div id="dinnerOnlyGroup" style="display:none;">
     <button onclick="cancelDinnerOnly()" style="width:100%; padding: 12px; background: #64748b; color: white; border: none; border-radius: 8px; font-weight: bold;">
@@ -914,13 +914,15 @@
 <!-- [최종] 자동완성 기능이 추가된 입력 양식 영역 -->
         <div id="adminActionForm" style="display: none; text-align: left; flex-direction: column; gap: 14px;">
 
-            <!-- 이전 신청 불러오기 배너 (중앙 팝업 대신 패널 내부) -->
-            <div id="prevOutingBanner" style="display:none; background:#eef4ff; border:1px solid #cfe0ff; border-radius:14px; padding:14px; margin-bottom:2px;">
-                <div style="font-size:14px; font-weight:900; color:#1e40af; margin-bottom:6px;">📋 이전에 신청한 정보가 있어요</div>
-                <div id="prevOutingPreview" style="font-size:12.5px; color:#475569; line-height:1.6; white-space:pre-line; margin-bottom:12px;"></div>
-                <div style="display:flex; gap:8px;">
-                    <button type="button" onclick="applyPrevOuting()" style="flex:1; padding:11px; border:none; border-radius:10px; background:#2563eb; color:#fff; font-weight:800; cursor:pointer;">그대로 불러오기</button>
-                    <button type="button" onclick="dismissPrevOuting()" style="flex:1; padding:11px; border:1px solid #e2e8f0; border-radius:10px; background:#fff; color:#475569; font-weight:800; cursor:pointer;">새로 작성</button>
+            <!-- 이전 신청 정보 화면(별도 페이지, 가운데 정렬) -->
+            <div id="prevOutingBanner" style="display:none; flex-direction:column; align-items:center; justify-content:center; text-align:center; gap:14px; padding:18px 14px;">
+                <div style="font-size:42px; line-height:1;">📋</div>
+                <div style="font-size:19px; font-weight:900; color:#1e40af;">이전에 신청한 정보가 있어요</div>
+                <div style="font-size:13px; color:#94a3b8; font-weight:600;">아래 내용을 그대로 불러올 수 있어요</div>
+                <div id="prevOutingPreview" style="width:100%; max-width:320px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:16px; font-size:13.5px; color:#334155; line-height:1.8; white-space:pre-line; text-align:left;"></div>
+                <div style="display:flex; gap:10px; width:100%; max-width:320px; margin-top:4px;">
+                    <button type="button" onclick="dismissPrevOuting()" style="flex:1; padding:13px; border:1px solid #e2e8f0; border-radius:12px; background:#fff; color:#475569; font-weight:800; cursor:pointer;">새로 작성</button>
+                    <button type="button" onclick="applyPrevOuting()" style="flex:1; padding:13px; border:none; border-radius:12px; background:#2563eb; color:#fff; font-weight:800; cursor:pointer;">그대로 불러오기</button>
                 </div>
             </div>
 
@@ -1083,22 +1085,22 @@
 
 
 <!-- [신규] 공지사항 팝업 -->
-    <div id="noticeModal" class="menu-overlay" style="display:none; z-index: 9000;" onclick="if(event.target==this)this.style.display='none'">
+    <div id="noticeModal" class="menu-overlay" style="display:none; z-index: 9000;" onclick="if(event.target==this)closePanelSmooth('noticeModal')">
         <div class="menu-box">
             <h3 style="margin-bottom:20px;">📢 중요 공지사항</h3>
             <div id="noticeContainer"></div>
-            <button onclick="document.getElementById('noticeModal').style.display='none'" style="margin-top:15px; width:100%; padding:12px; border:none; border-radius:8px; background:#e2e8f0; font-weight:bold;">닫기</button>
+            <button onclick="closePanelSmooth('noticeModal')" style="margin-top:15px; width:100%; padding:12px; border:none; border-radius:8px; background:#e2e8f0; font-weight:bold;">닫기</button>
         </div>
     </div>
 
     <!-- [신규] 출결 QR 확인 팝업 -->
-    <div id="qrModal" class="menu-overlay" style="display:none; z-index: 9001;" onclick="if(event.target==this)this.style.display='none'">
+    <div id="qrModal" class="menu-overlay" style="display:none; z-index: 9001;" onclick="if(event.target==this)closePanelSmooth('qrModal')">
         <div class="menu-box">
             <h3 style="margin-bottom:15px;">출
 결 QR (고용노동부)</h3>
             <img id="qrImage" src="" class="qr-img-full" style="display:none;">
             <div id="qrEmptyMsg" style="padding:40px 0; color:#94a3b8; font-weight:bold; display:none;">등록된 QR이 없습니다.</div>
-            <button onclick="document.getElementById('qrModal').style.display='none'" style="margin-top:20px; width:100%; padding:12px; border:none; border-radius:8px; background:#e2e8f0; font-weight:bold;">닫기</button>
+            <button onclick="closePanelSmooth('qrModal')" style="margin-top:20px; width:100%; padding:12px; border:none; border-radius:8px; background:#e2e8f0; font-weight:bold;">닫기</button>
         </div>
     </div>
 
@@ -1107,7 +1109,7 @@
 
 
 <!-- [수정] 식단표 이미지 팝업 (로딩 레이어 추가) -->
-<div id="mealMenuModal" class="menu-overlay" style="display:none; z-index: 8000;" onclick="if(event.target==this) closeMealMenu()">
+<div id="mealMenuModal" class="menu-overlay" style="display:none; z-index: 8000;" onclick="if(event.target==this) closePanelSmooth('mealMenuModal')">
     <div style="width:95%; max-width:600px; background:white; border-radius:20px; padding:10px; position:relative; overflow:hidden;">
         
         <div style="display:flex; justify-content:space-between; align-items:center; padding:5px 10px 10px 10px;">
@@ -1363,6 +1365,25 @@ async function resolveRoomFromCode(code) {
         installPanelSwipeClose('surveyModal', function(){ var m=document.getElementById('surveyModal'); if(m) m.style.display='none'; });
         installPanelSwipeClose('mealMenuModal', (typeof closeMealMenu==='function')?closeMealMenu:function(){ var m=document.getElementById('mealMenuModal'); if(m) m.style.display='none'; });
         installPanelSwipeClose('qrModal', function(){ var m=document.getElementById('qrModal'); if(m) m.style.display='none'; });
+    }catch(e){}
+    try{
+        window._panelRawClose = {
+            shuttleModal: closeShuttleModal,
+            adminActionModal: closeAdminAction,
+            facilityModal: closeFacilityModal,
+            tabletLoanModal: closeTabletLoan,
+            mealMenuModal: (typeof closeMealMenu==='function'?closeMealMenu:function(){var m=document.getElementById('mealMenuModal');if(m)m.style.display='none';}),
+            noticeModal: function(){var m=document.getElementById('noticeModal');if(m)m.style.display='none';},
+            surveyModal: function(){var m=document.getElementById('surveyModal');if(m)m.style.display='none';},
+            qrModal: function(){var m=document.getElementById('qrModal');if(m)m.style.display='none';}
+        };
+        if(!window._closeWrapped){ window._closeWrapped=true;
+            window.closeShuttleModal=function(){ closePanelSmooth('shuttleModal'); };
+            window.closeAdminAction=function(){ closePanelSmooth('adminActionModal'); };
+            window.closeFacilityModal=function(){ closePanelSmooth('facilityModal'); };
+            window.closeTabletLoan=function(){ closePanelSmooth('tabletLoanModal'); };
+            window.closeMealMenu=function(){ closePanelSmooth('mealMenuModal'); };
+        }
     }catch(e){}
     // 랜딩 배지: ROOM 알약 + 과정명. 과정명은 settings 로드 후 채워진다.
     document.getElementById('landingBadge').innerHTML =
@@ -1666,7 +1687,11 @@ function applyPrevOuting(){
     setVal('userDept', lo.dept); setVal('destination', lo.destination); setVal('outingReason', lo.reason); setVal('fullPhone', lo.phone);
     dismissPrevOuting();
 }
-function dismissPrevOuting(){ var b=document.getElementById('prevOutingBanner'); if(b) b.style.display='none'; }
+function dismissPrevOuting(){
+    var b=document.getElementById('prevOutingBanner'); if(b) b.style.display='none';
+    var bar=document.getElementById('adminStepBar'); if(bar) bar.style.display='flex';
+    if(typeof showAdminStep==='function') showAdminStep(1);
+}
 window.applyPrevOuting=applyPrevOuting; window.dismissPrevOuting=dismissPrevOuting;
 
 function installPanelSwipeClose(modalId, closeFn){
@@ -1688,10 +1713,23 @@ function installPanelSwipeClose(modalId, closeFn){
         if(!wd) return;
         var w=box.offsetWidth||window.innerWidth;
         // 거리(폭의 32%) 또는 오른쪽 플릭 속도(0.45px/ms) 중 하나라도 충족하면 → 항상 동일한 부드러운 닫힘
-        if(dx > w*0.32 || vx > 0.45){ finishClose(); } else { snapBack(); }
+        if(dx > w*0.32 || vx > 0.45){ closePanelSmooth(modalId); } else { snapBack(); }
     }, {passive:true});
 }
 window.installPanelSwipeClose=installPanelSwipeClose;
+
+// ===== 우측 패널 닫기를 항상 부드럽게(슬라이드 아웃) 통일 =====
+function closePanelSmooth(modalId){
+    var modal=document.getElementById(modalId);
+    var raw=(window._panelRawClose||{})[modalId] || function(){ if(modal) modal.style.display='none'; };
+    if(!modal){ raw(); return; }
+    var box=modal.querySelector('.menu-box') || modal.querySelector(':scope > div');
+    if(!box){ raw(); return; }
+    box.style.transition='transform .32s cubic-bezier(.22,1,.36,1)';
+    box.style.transform='translateX(110%)';
+    setTimeout(function(){ box.style.transform=''; box.style.transition=''; raw(); }, 320);
+}
+window.closePanelSmooth=closePanelSmooth;
 
 
 
@@ -3055,7 +3093,12 @@ async function openAdminAction() {
                 `비상연락처: ${lastOuting.phone || '-'}`;
             window._lastOutingCache = lastOuting;
             const _pv = document.getElementById('prevOutingPreview'); if (_pv) _pv.textContent = preview;
-            const _pob = document.getElementById('prevOutingBanner'); if (_pob) _pob.style.display = 'block';
+            const _pob = document.getElementById('prevOutingBanner'); if (_pob) _pob.style.display = 'flex';
+            // 이전정보 화면만 보이도록 위자드(단계바+스텝) 숨김
+            var _sb0 = document.getElementById('adminStepBar'); if (_sb0) _sb0.style.display = 'none';
+            document.querySelectorAll('#adminActionForm .admin-step').forEach(function(el){ el.style.display='none'; });
+        } else {
+            var _sb1 = document.getElementById('adminStepBar'); if (_sb1) _sb1.style.display = 'flex';
         }
 
         // === 단계별 마법사 초기화 ===
@@ -3067,7 +3110,9 @@ async function openAdminAction() {
             if(dp){ if(wzD){ wzD.style.display=''; wzD.textContent=dp; } if(ud){ ud.style.display='none'; ud.value=dp; } }
             else { if(wzD){ wzD.style.display='none'; } if(ud){ ud.style.display='block'; } }
         })();
-        showAdminStep(1);
+        if (!(window._lastOutingCache && document.getElementById('prevOutingBanner') && document.getElementById('prevOutingBanner').style.display !== 'none')) {
+            showAdminStep(1);
+        }
     } 
     // 2. 신청 내역이 있을 때
     else {
@@ -5110,7 +5155,7 @@ input:not([type=checkbox]):not([type=radio]):not([type=file]), textarea, select 
 })();
 </script>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vH30</div>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vH32</div>
 <script>
 /* ===== [공용] 종료된 과정 자동 정리 (교육생 포함 전 플랫폼) — 종료일 지난 방을 다음날 미개설로 비움. 브라우저별 하루 1회 ===== */
 window.kacExpireEndedCourses = async function(){
