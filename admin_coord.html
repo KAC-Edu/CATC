@@ -5752,6 +5752,19 @@ const annualPlanMgrCoord = {
                 return;
             }
 
+            // 4-b) 계획에 있고 대상주(이번 배정주)에 걸치는 과정 → 보존(미리 배정 유지, 중복 생성 방지)
+            if (nm && inPlan && pool.some(c => norm(c.name) === nm)) {
+                keptNames.add(nm);
+                const pc = planByName[nm];
+                const coordFull = (typeof coordMgr !== 'undefined' && coordMgr.matchName ? coordMgr.matchName(pc.coord) : '') || (pc.coord || '');
+                updates[`courses/${r}/settings/period`] = pc.period;
+                updates[`courses/${r}/settings/coordinatorName`] = coordFull;
+                updates[`courses/${r}/status/professorName`] = pc.prof;
+                updates[`courses/${r}/settings/kakaoLink`] = kakaoOf(pc.prof);
+                if (pc.roomDetail) updates[`courses/${r}/settings/roomDetailName`] = pc.roomDetail;
+                return;
+            }
+
             // 5) 그 외 열린 방 → 비우고 재배치 대상
             updates[`courses/${r}/settings/courseName`] = '';
             updates[`courses/${r}/settings/period`]     = '';
@@ -5763,11 +5776,14 @@ const annualPlanMgrCoord = {
             freeRooms.push(r);
         });
 
-        // 2) 보존된 과정 제외하고 빈 방에 배치
-        const toPlace = pool.filter(c => !keptNames.has(norm(c.name)));
-        for (let i = 0; i < Math.min(freeRooms.length, toPlace.length); i++) {
-            const room = freeRooms[i];
-            const course = toPlace[i];
+        // 2) 빈 방에 배치 — 같은 과정명이 이미 다른 방에 있으면 중복 배치 금지
+        const usedNames = new Set(keptNames);
+        let _ri = 0;
+        for (const course of pool) {
+            const cnm = norm(course.name);
+            if (usedNames.has(cnm)) continue;           // 이미 배정/보존된 과정 → 중복 생성 방지
+            if (_ri >= freeRooms.length) break;
+            const room = freeRooms[_ri++];
             const coordFull = (typeof coordMgr !== 'undefined' && coordMgr.matchName ? coordMgr.matchName(course.coord) : '') || (course.coord || '');
             updates[`courses/${room}/settings/courseName`] = course.name;
             updates[`courses/${room}/settings/period`]     = course.period;
@@ -5777,6 +5793,7 @@ const annualPlanMgrCoord = {
             if (course.roomDetail) updates[`courses/${room}/settings/roomDetailName`] = course.roomDetail;
             updates[`courses/${room}/status/roomStatus`]   = 'active';
             updates[`courses/${room}/status/ownerSessionId`] = null;
+            usedNames.add(cnm);
         }
         if (Object.keys(updates).length) {
             await firebase.database().ref().update(updates);
@@ -6793,7 +6810,7 @@ window.addEventListener('load', function(){
 });
 </script>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vH</div>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vH1</div>
 <script>
 /* ===== [공용] 종료된 과정 자동 정리 (모든 플랫폼 공통) — 종료일 지난 방을 다음날 미개설로 비움. 브라우저별 하루 1회 ===== */
 window.kacExpireEndedCourses = async function(){
