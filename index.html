@@ -918,6 +918,18 @@
 
             <!-- STEP 1: 유형 선택 -->
             <div class="admin-step" data-astep="1">
+                <div style="margin-bottom:16px;">
+                    <div style="font-size:13px; font-weight:800; color:#64748b; text-align:center; margin-bottom:8px;">신청 인원</div>
+                    <div style="display:flex; gap:8px;">
+                        <button type="button" id="grpBtnSolo" onclick="setGroupMode('solo')" style="flex:1; height:48px; border-radius:12px; border:2px solid #2563eb; background:#eef4ff; color:#1e40af; font-weight:800; cursor:pointer;">👤 개인</button>
+                        <button type="button" id="grpBtnGroup" onclick="setGroupMode('group')" style="flex:1; height:48px; border-radius:12px; border:2px solid #e2e8f0; background:#fff; color:#475569; font-weight:800; cursor:pointer;">👥 2인 이상</button>
+                    </div>
+                    <div id="groupMemberArea" style="display:none; margin-top:10px;">
+                        <div style="font-size:12px; color:#64748b; font-weight:700; margin-bottom:6px;">같이 갈 교육생을 선택하세요 <span style="color:#94a3b8;">(QR 입교자)</span></div>
+                        <div id="groupMemberList" style="max-height:32vh; overflow:auto; display:flex; flex-direction:column; gap:6px; border:1px solid #e2e8f0; border-radius:12px; padding:8px;"></div>
+                        <div id="groupPickCount" style="font-size:12px; font-weight:800; color:#2563eb; text-align:right; margin-top:6px;"></div>
+                    </div>
+                </div>
                 <div style="font-size:16px; font-weight:900; color:#0f172a; text-align:center; margin-bottom:14px;">어떤 신청인가요?</div>
                 <div style="display:flex; gap:10px;">
                     <button type="button" class="quiz-opt-btn admin-type-btn" id="btn-outing" onclick="selectAdminType('outing')" style="height:96px; font-size:17px; flex:1; margin-bottom:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px;">🚶 외출<span style="font-size:11px; font-weight:600; color:#94a3b8;">당일 복귀</span></button>
@@ -2875,6 +2887,7 @@ function closeShuttleModal() {
 // --- [복구] 통합 행정 신청(외출/외박/석식) 로직 ---
 
 let selectedAdminType = 'none'; // 외출/외박 선택 상태 저장
+let groupApplyMode = 'solo'; let selectedGroupMembers = []; // 2인 이상 그룹 신청
 
 
 
@@ -2907,6 +2920,15 @@ async function openAdminAction() {
     const existingData = actionSnap.val();
     const hasDinnerSkip = dinnerSnap.exists();
 
+    // [그룹] 내가 '일행'으로 포함된 신청이 이미 있으면 → 현황 팝업(재신청 차단)
+    if (!existingData) {
+        try {
+            const _allS = await firebase.database().ref(`courses/${currentRoom}/admin_actions/${today}`).once('value');
+            const _all = _allS.val() || {}; const _my = (localStorage.getItem('kac_user_name')||'').trim();
+            for (const _k in _all) { const _v=_all[_k]; if (_v && _v.groupId && !_v.isRep && (_v.name||'').trim()===_my) { showGroupMemberPopup(_v, _k); return; } }
+        } catch(e){}
+    }
+
     // 1. 아무것도 신청 안 했을 때
     if (!existingData && !hasDinnerSkip) {
         document.getElementById('adminActionForm').style.display = 'flex';
@@ -2920,6 +2942,7 @@ async function openAdminAction() {
         document.getElementById('outingReason').value = "";
         selectedAdminType = 'none';
         updateAdminTypeButtons();
+        try { setGroupMode('solo'); } catch(e){}
         // 초기 상태: 외출 시간 영역 표시
         const oa = document.getElementById('outingTimeArea');
         const on = document.getElementById('overnightArea');
@@ -2977,6 +3000,10 @@ async function openAdminAction() {
                             <span style="font-size:13px; color:#64748b;">유형: ${typeNm}</span><br>
                             <span style="font-size:13px; color:#64748b;">시간: ${existingData.startTime} ~ ${existingData.endTime}</span>
                           </div>`;
+            if (existingData.groupId) {
+                const _others=(existingData.members||[]).filter(n=>n!==existingData.repName);
+                statusTxt += `<div style="margin-top:8px; background:#eef4ff; border:1px solid #cfe0ff; border-radius:8px; padding:10px; font-size:13px; color:#1e3a8a; line-height:1.6;"><b>👥 그룹 신청 · 대표 ${existingData.repName}</b><br><span style="color:#475569;">일행: ${_others.join(', ')||'-'}</span><br><span style="color:#475569;">장소: ${existingData.destination||'-'} / 사유: ${existingData.reason||'-'}</span><br><span style="color:#475569;">대표 연락처: ${existingData.phone||'-'}</span></div>`;
+            }
         }
         document.getElementById('adminStatusText').innerHTML = statusTxt;
 
@@ -3239,20 +3266,27 @@ async function submitAdminAction() {
     try {
         // 5. 외출/외박 데이터 저장 (선택했을 때만)
         if (selectedAdminType !== 'none') {
-            const actionData = {
-                name: name,
-                dept: dept,
-                startTime: startTime,
-                endTime: endTime,
+            const baseData = {
+                dept: dept, startTime: startTime, endTime: endTime,
                 returnDate: (selectedAdminType === 'overnight' ? returnDate : today),
-                destination: dest,
-                reason: reason,
-                phone: fullPhone,
-                type: selectedAdminType,
-                timestamp: firebase.database.ServerValue.TIMESTAMP,
-                returned: false
+                destination: dest, reason: reason, phone: fullPhone, type: selectedAdminType,
+                timestamp: firebase.database.ServerValue.TIMESTAMP, returned: false
             };
-            await firebase.database().ref(`courses/${currentRoom}/admin_actions/${today}/${uToken}`).set(actionData);
+            if (groupApplyMode === 'group' && selectedGroupMembers.length) {
+                const groupId = 'grp_' + Date.now() + '_' + Math.random().toString(36).slice(2,6);
+                const memberNames = [name, ...selectedGroupMembers];
+                const sani = s => String(s).replace(/[.#$\/\[\]]/g, '_');
+                const ups = {};
+                ups[`courses/${currentRoom}/admin_actions/${today}/${uToken}`] = Object.assign({}, baseData, { name: name, groupId, isRep: true, repName: name, repToken: uToken, members: memberNames });
+                selectedGroupMembers.forEach(mn => {
+                    const key = 'g_' + groupId + '__' + sani(mn);
+                    ups[`courses/${currentRoom}/admin_actions/${today}/${key}`] = Object.assign({}, baseData, { name: mn, groupId, isRep: false, repName: name, repToken: uToken, members: memberNames });
+                });
+                await firebase.database().ref().update(ups);
+            } else {
+                const actionData = Object.assign({}, baseData, { name: name });
+                await firebase.database().ref(`courses/${currentRoom}/admin_actions/${today}/${uToken}`).set(actionData);
+            }
 
             // [기능 추가] 자동완성을 위해 로컬 스토리지에 입력 내용 저장
             const saveAutoHistory = (id, val) => {
@@ -3307,9 +3341,17 @@ async function cancelAdminAction() {
     const uToken = localStorage.getItem('uToken');
 
     try {
-        // 1. 외출/외박 내역 삭제
-        await firebase.database().ref(`courses/${currentRoom}/admin_actions/${today}/${uToken}`).remove();
-        
+        // 1. 외출/외박 내역 삭제 (대표면 그룹 전원 취소)
+        const _ownS = await firebase.database().ref(`courses/${currentRoom}/admin_actions/${today}/${uToken}`).once('value');
+        const _own = _ownS.val() || {};
+        if (_own.groupId && _own.isRep) {
+            const _allS = await firebase.database().ref(`courses/${currentRoom}/admin_actions/${today}`).once('value');
+            const _all = _allS.val() || {}; const _ups = {};
+            for (const _k in _all) { if (_all[_k] && _all[_k].groupId === _own.groupId) _ups[`courses/${currentRoom}/admin_actions/${today}/${_k}`]=null; }
+            await firebase.database().ref().update(_ups);
+        } else {
+            await firebase.database().ref(`courses/${currentRoom}/admin_actions/${today}/${uToken}`).remove();
+        }
         // 2. 석식 제외도 같이 신청했다면 삭제
         await firebase.database().ref(`courses/${currentRoom}/dinner_skips/${today}/${uToken}`).remove();
 
@@ -3321,6 +3363,64 @@ async function cancelAdminAction() {
     } catch (e) {
         showKacAlert("취소 처리 중 오류가 발생했습니다.");
     }
+}
+
+// ===== [2인 이상 그룹 외출/외박] =====
+function setGroupMode(mode){
+    groupApplyMode = (mode==='group') ? 'group' : 'solo';
+    const solo=document.getElementById('grpBtnSolo'), grp=document.getElementById('grpBtnGroup'), area=document.getElementById('groupMemberArea');
+    const on='2px solid #2563eb', off='2px solid #e2e8f0';
+    if(solo){ solo.style.border=groupApplyMode==='solo'?on:off; solo.style.background=groupApplyMode==='solo'?'#eef4ff':'#fff'; solo.style.color=groupApplyMode==='solo'?'#1e40af':'#475569'; }
+    if(grp){ grp.style.border=groupApplyMode==='group'?on:off; grp.style.background=groupApplyMode==='group'?'#eef4ff':'#fff'; grp.style.color=groupApplyMode==='group'?'#1e40af':'#475569'; }
+    selectedGroupMembers=[];
+    if(area) area.style.display = groupApplyMode==='group' ? 'block' : 'none';
+    const cnt=document.getElementById('groupPickCount'); if(cnt) cnt.textContent='';
+    if(groupApplyMode==='group') loadGroupCandidates();
+}
+async function loadGroupCandidates(){
+    const box=document.getElementById('groupMemberList'); if(!box) return;
+    box.innerHTML='<div style="color:#94a3b8; font-size:13px; padding:10px; text-align:center;">불러오는 중…</div>';
+    const myName=(localStorage.getItem('kac_user_name')||'').trim();
+    try{
+        const snap=await firebase.database().ref(`courses/${currentRoom}/students`).once('value');
+        const all=snap.val()||{};
+        const names=Array.from(new Set(Object.values(all).map(s=>s&&s.name).filter(n=>n&&n!=='undefined'&&String(n).trim()!==myName).map(n=>String(n).trim())));
+        if(!names.length){ box.innerHTML='<div style="color:#94a3b8; font-size:13px; padding:14px; text-align:center;">QR로 입교한 다른 교육생이 없습니다.</div>'; return; }
+        box.innerHTML=names.map(n=>'<label style="display:flex; align-items:center; gap:10px; padding:9px 11px; border:1.5px solid #e2e8f0; border-radius:10px; cursor:pointer; font-size:15px; font-weight:700; color:#334155;"><input type="checkbox" onchange="toggleGroupMember(\''+n.replace(/'/g,"&#39;")+'\', this)" style="width:18px; height:18px; accent-color:#2563eb;"> '+n+'</label>').join('');
+    }catch(e){ box.innerHTML='<div style="color:#ef4444; font-size:13px; padding:10px;">명단을 불러오지 못했습니다.</div>'; }
+}
+function toggleGroupMember(name, el){
+    const lab=el.closest('label');
+    if(el.checked){ if(!selectedGroupMembers.includes(name)) selectedGroupMembers.push(name); if(lab){ lab.style.background='#eef4ff'; lab.style.borderColor='#2563eb'; } }
+    else { selectedGroupMembers=selectedGroupMembers.filter(n=>n!==name); if(lab){ lab.style.background=''; lab.style.borderColor='#e2e8f0'; } }
+    const cnt=document.getElementById('groupPickCount'); if(cnt) cnt.textContent = selectedGroupMembers.length ? ('선택: '+selectedGroupMembers.length+'명') : '';
+}
+function showGroupMemberPopup(rec, key){
+    const form=document.getElementById('adminActionForm'), area=document.getElementById('adminStatusArea');
+    if(form) form.style.display='none';
+    if(area) area.style.display='block';
+    ['beforeReturnGroup','afterReturnGroup','dinnerOnlyGroup'].forEach(id=>{ const e=document.getElementById(id); if(e) e.style.display='none'; });
+    const others=(rec.members||[]).filter(n=>n!==rec.repName);
+    const typeNm = rec.type==='outing' ? '외출(당일)' : '외박(익일)';
+    const retTxt = rec.returned ? '<b style="color:#059669;">복귀 완료</b>' : '<b style="color:#b91c1c;">외출 중</b>';
+    const html='<div style="background:#fff; border:1px solid #dbeafe; border-radius:10px; padding:12px; line-height:1.7;">'
+        +'<div style="font-size:14px; font-weight:900; color:#2563eb; margin-bottom:6px;">👥 이미 그룹으로 신청되어 있습니다</div>'
+        +retTxt+' · <span style="color:#64748b; font-size:13px;">'+typeNm+'</span><br>'
+        +'<span style="font-size:13px; color:#475569;">대표: <b>'+(rec.repName||'-')+'</b></span><br>'
+        +'<span style="font-size:13px; color:#475569;">일행: '+(others.join(', ')||'-')+'</span><br>'
+        +'<span style="font-size:13px; color:#475569;">장소: '+(rec.destination||'-')+' / 사유: '+(rec.reason||'-')+'</span><br>'
+        +'<span style="font-size:13px; color:#475569;">시간: '+(rec.startTime||'-')+' ~ '+(rec.endTime||'-')+'</span><br>'
+        +'<span style="font-size:13px; color:#475569;">대표 연락처: '+(rec.phone||'-')+'</span></div>'
+        +'<button onclick="cancelMyGroupMember(\''+String(key).replace(/'/g,"&#39;")+'\')" style="width:100%; margin-top:12px; padding:12px; background:#fff; color:#ef4444; border:1.5px solid #fecaca; border-radius:10px; font-weight:800; cursor:pointer;">내 신청만 취소</button>'
+        +'<button onclick="document.getElementById(\'adminActionModal\').style.display=\'none\'" style="width:100%; margin-top:8px; padding:11px; background:#f1f5f9; color:#475569; border:none; border-radius:10px; font-weight:800; cursor:pointer;">닫기</button>';
+    document.getElementById('adminStatusText').innerHTML=html;
+    document.getElementById('adminActionModal').style.display='flex';
+}
+async function cancelMyGroupMember(key){
+    if(!(await showKacConfirm('내 신청만 취소하시겠습니까?\n(다시 필요하면 별도로 새로 신청해야 합니다.)'))) return;
+    try{ await firebase.database().ref(`courses/${currentRoom}/admin_actions/${getTodayString()}/${key}`).remove(); }catch(e){}
+    showKacAlert('내 신청이 취소되었습니다. 필요 시 새로 신청해 주세요.');
+    document.getElementById('adminActionModal').style.display='none';
 }
 
 
@@ -3431,11 +3531,18 @@ async function confirmReturnAction() {
     
     try {
         const nowTime = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-        await firebase.database().ref(`courses/${currentRoom}/admin_actions/${today}/${uToken}`).update({
-            returned: true,
-            returnReportTime: nowTime
-        });
-        showKacAlert("✅ 복귀 보고 완료!");
+        const _ownS = await firebase.database().ref(`courses/${currentRoom}/admin_actions/${today}/${uToken}`).once('value');
+        const _own = _ownS.val() || {};
+        if (_own.groupId && _own.isRep) {
+            const _allS = await firebase.database().ref(`courses/${currentRoom}/admin_actions/${today}`).once('value');
+            const _all = _allS.val() || {}; const _ups = {};
+            for (const _k in _all) { if (_all[_k] && _all[_k].groupId === _own.groupId) { _ups[`courses/${currentRoom}/admin_actions/${today}/${_k}/returned`]=true; _ups[`courses/${currentRoom}/admin_actions/${today}/${_k}/returnReportTime`]=nowTime; } }
+            await firebase.database().ref().update(_ups);
+            showKacAlert("✅ 그룹 전원 복귀 보고 완료!");
+        } else {
+            await firebase.database().ref(`courses/${currentRoom}/admin_actions/${today}/${uToken}`).update({ returned: true, returnReportTime: nowTime });
+            showKacAlert("✅ 복귀 보고 완료!");
+        }
         openAdminAction(); // 화면 갱신
     } catch (e) { showKacAlert("처리 오류"); }
 }
@@ -4877,7 +4984,7 @@ input:not([type=checkbox]):not([type=radio]):not([type=file]), textarea, select 
 })();
 </script>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vH19</div>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vH20</div>
 <script>
 /* ===== [공용] 종료된 과정 자동 정리 (교육생 포함 전 플랫폼) — 종료일 지난 방을 다음날 미개설로 비움. 브라우저별 하루 1회 ===== */
 window.kacExpireEndedCourses = async function(){
