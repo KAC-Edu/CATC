@@ -3851,7 +3851,7 @@ renderQaList: function(f) {
                     ${doneCnt > 0 ? `<span style="font-size:11px; color:#10b981; font-weight:700;">✅ ${doneCnt}건 답변</span>` : ''}
                     <span style="margin-left:auto; font-size:11px; color:#cbd5e1;">클릭하여 펼치기</span>
                 </button>
-                <div id="${uid}" style="display:none; padding-top:4px;">
+                <div id="${uid}" style="display:none; flex-direction:column; gap:14px; padding-top:10px;">
                     ${grp.map(buildCard).join('')}
                 </div>
             </div>`;
@@ -3871,7 +3871,7 @@ renderQaList: function(f) {
         const icon = document.getElementById(uid + '_icon');
         if(!box) return;
         const isOpen = box.style.display !== 'none';
-        box.style.display = isOpen ? 'none' : 'block';
+        box.style.display = isOpen ? 'none' : 'flex';
         if(icon) icon.style.transform = isOpen ? '' : 'rotate(90deg)';
     },
 
@@ -10410,7 +10410,7 @@ ui.foodNewsRouteById=function(id){
 };
 
 /* __JSVER_STAMP__ */
-(function stampJsVer(){try{var b=document.getElementById('__catcVer');if(b){if(b.textContent.indexOf('Jn')<0)b.textContent=b.textContent+'\u00b7Jn';}else{setTimeout(stampJsVer,200);}}catch(e){}})();
+(function stampJsVer(){try{var b=document.getElementById('__catcVer');if(b){if(b.textContent.indexOf('Jo')<0)b.textContent=b.textContent+'\u00b7Jo';}else{setTimeout(stampJsVer,200);}}catch(e){}})();
 
 /* ===== [공항별 입교 현황 지도] 수강생현황 → 지도로 보기 ===== */
 ui._mapRegions = {
