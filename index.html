@@ -1758,8 +1758,8 @@ function installPanelSwipeClose(modalId, closeFn){
         if(sx===null) return; var t=e.touches[0]; dx=t.clientX-sx; dy=t.clientY-sy;
         var now=Date.now(), ddt=now-lastT; if(ddt>0){ vx=(t.clientX-lastX)/ddt; } lastX=t.clientX; lastT=now;
         if(!drag){ if(dx>6 && Math.abs(dx)>Math.abs(dy)){ drag=true; box.style.animation='none'; box.style.transition='none'; box.style.overflow='hidden'; box.style.willChange='transform'; } else if(Math.abs(dy)>Math.abs(dx)+6){ sx=null; return; } }
-        if(drag){ var v=Math.max(0, dx); box.style.transform='translateX('+v+'px)'; }
-    }, {passive:true});
+        if(drag){ if(e.cancelable) e.preventDefault(); var v=Math.max(0, dx); box.style.transform='translateX('+v+'px)'; }
+    }, {passive:false});
     box.addEventListener('touchend', function(){
         if(sx===null) return; var wd=drag; sx=null; drag=false;
         if(!wd) return;
@@ -1987,8 +1987,8 @@ function closePanelSmooth(modalId){
     box.style.animation='none';
     box.style.overflow='hidden';
     box.style.willChange='transform';
-    box.style.transform='translateX(0)';
     box.style.transition='none';
+    // ※ 현재 위치(손가락으로 밀어둔 지점)를 그대로 시작점으로 둠 — 0으로 리셋하면 '2중 닫힘'처럼 보임
     // 2) 강제 리플로우 — 이게 없으면 iOS Safari가 트랜지션을 건너뛰고 '딱' 사라짐
     void box.offsetWidth;
     // 3) 다음 프레임에 슬라이드 아웃 (확실히 애니메이션 재생)
