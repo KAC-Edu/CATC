@@ -10190,28 +10190,38 @@ ui._renderFoodNewsList = function(){
     var el=document.getElementById('foodNewsList'); if(!el) return;
     var list=ui._foodNewsCache.filter(function(o){ return ui._foodNewsFilter==='전체' || o.category===ui._foodNewsFilter; });
     if(!list.length){ el.innerHTML='<div style="padding:40px 0; text-align:center; color:#94a3b8; font-weight:700;">아직 등록된 맛집이 없습니다.</div>'; return; }
-    el.innerHTML=list.map(function(o){
+    var esc=function(t){ return String(t||'').replace(/</g,'&lt;'); };
+    var th='padding:10px 8px; font-size:12px; font-weight:800; color:#64748b; border-bottom:2px solid #e2e8f0; white-space:nowrap;';
+    var td='padding:10px 8px; font-size:13px; border-bottom:1px solid #eef2f7; vertical-align:middle;';
+    var miniBtn='padding:5px 10px; border:none; border-radius:8px; font-weight:800; font-size:12px; cursor:pointer; white-space:nowrap;';
+    var rows=list.map(function(o,i){
         var cat=o.category||'기타'; var col=ui._foodCatColor(cat);
-        var esc=function(t){ return String(t||'').replace(/</g,'&lt;'); };
-        var nm=esc(o.name), cm=esc(o.comment), ad=esc(o.address);
-        var hasLL=(o.lat&&o.lng);
-        var mapv=hasLL?('https://map.kakao.com/link/map/'+encodeURIComponent(o.name)+','+o.lat+','+o.lng):('https://map.naver.com/p/search/'+encodeURIComponent(o.name||o.address||''));
-
-        var distTxt=(o.distanceKm!=null)?('📍 약 '+o.distanceKm+'km (직선)'):'';
-        return '<div style="display:flex; align-items:center; gap:16px; background:#fff; border:1px solid #e8eef8; border-radius:14px; padding:16px 18px; box-shadow:0 2px 8px rgba(15,23,42,.05);">'
-          +'<div style="display:flex; flex-direction:column; align-items:center; gap:2px; min-width:54px;"><div style="font-size:20px;">👍</div><div style="font-size:18px; font-weight:900; color:#0f172a;">'+(o.likes||0)+'</div></div>'
-          +'<div style="flex:1; min-width:0;">'
-          +'<div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;"><span style="background:'+col+'; color:#fff; font-size:12px; font-weight:800; padding:2px 9px; border-radius:6px;">'+cat+'</span><span style="font-size:18px; font-weight:900; color:#0f172a;">'+nm+'</span></div>'
-          +(ad?'<div style="font-size:13px; color:#64748b; margin-bottom:2px;"><i class="fa-solid fa-location-dot" style="color:#94a3b8;"></i> '+ad+'</div>':'')
-          +(distTxt?'<div style="font-size:12.5px; color:#2563eb; font-weight:800; margin-bottom:2px;">'+distTxt+'</div>':'')
-          +(cm?'<div style="font-size:14px; color:#334155; line-height:1.5;">'+cm+'</div>':'')
-          +'</div>'
-          +'<div style="display:flex; flex-direction:column; gap:6px; flex-shrink:0;">'
-          +'<a href="'+mapv+'" target="_blank" rel="noopener" style="text-align:center; padding:7px 14px; border-radius:10px; background:#eef4ff; color:#1e3a8a; font-weight:800; font-size:12.5px; text-decoration:none; white-space:nowrap;"><i class="fa-solid fa-map"></i> 지도</a>'
-          +'<button type="button" onclick="ui.foodNewsRouteById(\''+o.id+'\')" style="text-align:center; padding:7px 14px; border-radius:10px; background:#eafff4; color:#047857; font-weight:800; font-size:12.5px; border:none; cursor:pointer; white-space:nowrap;">🚗 길찾기</button>'
-          +'<div style="display:flex; gap:6px;"><button onclick="ui.foodNewsEdit(\''+o.id+'\')" style="flex:1; padding:6px 0; border:1px solid #e2e8f0; border-radius:8px; background:#fff; color:#475569; font-weight:800; font-size:12px; cursor:pointer;">수정</button><button onclick="ui.foodNewsDelete(\''+o.id+'\')" style="flex:1; padding:6px 0; border:none; border-radius:8px; background:#fee2e2; color:#b91c1c; font-weight:800; font-size:12px; cursor:pointer;">삭제</button></div>'
-          +'</div></div>';
+        var dist=(o.distanceKm!=null)?(o.distanceKm+'km'):'-';
+        return '<tr>'
+          +'<td style="'+td+' text-align:center; color:#94a3b8; font-weight:700;">'+(i+1)+'</td>'
+          +'<td style="'+td+'"><span style="background:'+col+'; color:#fff; font-size:10px; font-weight:800; padding:2px 7px; border-radius:5px; margin-right:6px;">'+cat+'</span><b style="font-size:14px; color:#0f172a;">'+esc(o.name)+'</b>'+(o.comment?'<span style="color:#94a3b8; font-size:12px;"> · '+esc(o.comment)+'</span>':'')+'</td>'
+          +'<td style="'+td+' text-align:center; color:#2563eb; font-weight:800; white-space:nowrap;">'+dist+'</td>'
+          +'<td style="'+td+' text-align:center; font-weight:900; color:#0f172a; white-space:nowrap;">👍 '+(o.likes||0)+'</td>'
+          +'<td style="'+td+' text-align:center;"><button onclick="ui.foodNewsMapById(\''+o.id+'\')" style="'+miniBtn+' background:#eef4ff; color:#1e3a8a;">지도</button></td>'
+          +'<td style="'+td+' text-align:center;"><button onclick="ui.foodNewsRouteById(\''+o.id+'\')" style="'+miniBtn+' background:#eafff4; color:#047857;">길찾기</button></td>'
+          +'<td style="'+td+' text-align:center; white-space:nowrap;"><button onclick="ui.foodNewsEdit(\''+o.id+'\')" style="'+miniBtn+' background:#fff; color:#475569; border:1px solid #e2e8f0; margin-right:4px;">수정</button><button onclick="ui.foodNewsDelete(\''+o.id+'\')" style="'+miniBtn+' background:#fee2e2; color:#b91c1c;">삭제</button></td>'
+          +'</tr>';
     }).join('');
+    el.innerHTML='<div style="overflow-x:auto;"><table style="width:100%; border-collapse:collapse; min-width:680px;">'
+      +'<thead><tr>'
+      +'<th style="'+th+' text-align:center; width:46px;">연번</th>'
+      +'<th style="'+th+' text-align:left;">가게명</th>'
+      +'<th style="'+th+' text-align:center;">항기원 거리</th>'
+      +'<th style="'+th+' text-align:center;">추천수</th>'
+      +'<th style="'+th+' text-align:center;">지도</th>'
+      +'<th style="'+th+' text-align:center;">길찾기</th>'
+      +'<th style="'+th+' text-align:center;">수정/삭제</th>'
+      +'</tr></thead><tbody>'+rows+'</tbody></table></div>';
+};
+ui.foodNewsMapById=function(id){
+    var o=ui._foodNewsCache.filter(function(x){return x.id===id;})[0]; if(!o) return;
+    if(o.lat&&o.lng){ window.open('https://map.kakao.com/link/map/'+encodeURIComponent(o.name)+','+o.lat+','+o.lng,'_blank'); }
+    else { window.open('https://map.naver.com/p/search/'+encodeURIComponent(o.name||o.address||''),'_blank'); }
 };
 // ===== 강사: 맛집 추가/수정/삭제 (카카오 검색) =====
 ui._fnKakaoReady=false; ui._fnPlaces=null; ui._fnGeocoder=null; ui._fnHANGIWON_LL=null;
@@ -10226,28 +10236,31 @@ ui._fnInitKakao=function(){
     });
 };
 ui._fnRenderMap=function(){
-    try{
-        var mc=document.getElementById('fnMap'); if(!mc) return;
-        if(!ui._fnKakaoReady || !ui._fnSelected || !ui._fnSelected.lat || !ui._fnSelected.lng){ mc.style.display='none'; return; }
-        mc.style.display='block';
-        var pos=new kakao.maps.LatLng(ui._fnSelected.lat, ui._fnSelected.lng);
-        if(!ui._fnMap){ ui._fnMap=new kakao.maps.Map(mc,{center:pos, level:3}); ui._fnMarker=new kakao.maps.Marker({position:pos}); ui._fnMarker.setMap(ui._fnMap); }
-        else { ui._fnMap.setCenter(pos); ui._fnMarker.setPosition(pos); }
-        setTimeout(function(){ try{ ui._fnMap.relayout(); ui._fnMap.setCenter(pos); }catch(e){} }, 60);
-    }catch(e){}
+    var mc=document.getElementById('fnMap'); if(!mc) return;
+    if(!ui._fnKakaoReady){ ui._fnInitKakao(); setTimeout(ui._fnRenderMap, 400); return; }
+    var hasSel=!!(ui._fnSelected && ui._fnSelected.lat && ui._fnSelected.lng);
+    var center;
+    if(hasSel){ center=new kakao.maps.LatLng(ui._fnSelected.lat, ui._fnSelected.lng); }
+    else if(ui._fnHANGIWON_LL){ center=new kakao.maps.LatLng(ui._fnHANGIWON_LL.lat, ui._fnHANGIWON_LL.lng); }
+    else { if(ui._fnGeocoder){ ui._fnGeocoder.addressSearch(ui._HANGIWON, function(res,st){ if(st===kakao.maps.services.Status.OK && res[0]){ ui._fnHANGIWON_LL={lat:parseFloat(res[0].y), lng:parseFloat(res[0].x)}; ui._fnRenderMap(); } }); } return; }
+    if(!ui._fnMap){ ui._fnMap=new kakao.maps.Map(mc,{center:center, level:hasSel?3:6}); }
+    else { ui._fnMap.setCenter(center); ui._fnMap.setLevel(hasSel?3:6); }
+    if(hasSel){ if(!ui._fnMarker){ ui._fnMarker=new kakao.maps.Marker({position:center}); } ui._fnMarker.setPosition(center); ui._fnMarker.setMap(ui._fnMap); }
+    else if(ui._fnMarker){ ui._fnMarker.setMap(null); }
+    setTimeout(function(){ try{ ui._fnMap.relayout(); ui._fnMap.setCenter(center); }catch(e){} }, 80);
 };
 ui._fnHaversine=function(aLat,aLng,bLat,bLng){ var R=6371,t=Math.PI/180; var dLat=(bLat-aLat)*t,dLng=(bLng-aLng)*t; var x=Math.sin(dLat/2)*Math.sin(dLat/2)+Math.cos(aLat*t)*Math.cos(bLat*t)*Math.sin(dLng/2)*Math.sin(dLng/2); return R*2*Math.atan2(Math.sqrt(x),Math.sqrt(1-x)); };
 ui._fnAutoCat=function(cn){ cn=cn||''; if(cn.indexOf('카페')>=0||cn.indexOf('디저트')>=0||cn.indexOf('베이커리')>=0) return '카페'; if(cn.indexOf('주점')>=0||cn.indexOf('호프')>=0||cn.indexOf('술집')>=0) return '술집'; if(cn.indexOf('분식')>=0) return '분식'; return '식당'; };
 ui.openFoodNewsAdd=function(){
     ui._fnInitKakao(); ui._fnEditId=null; ui._fnSelected=null;
-    var f=document.getElementById('foodNewsAddForm'); if(f) f.style.display='block';
+    var f=document.getElementById('foodNewsAddModal'); if(f) f.style.display='flex';
     var en=document.getElementById('fnEditNote'); if(en) en.style.display='none';
     ['fnSearch','fnComment'].forEach(function(id){ var e=document.getElementById(id); if(e) e.value=''; });
     var sb=document.getElementById('fnSelectedBox'); if(sb) sb.style.display='none';
     var sr=document.getElementById('fnSearchResults'); if(sr) sr.innerHTML='';
-    var mc=document.getElementById('fnMap'); if(mc) mc.style.display='none';
+    ui._fnRenderMap();
 };
-ui.closeFoodNewsAdd=function(){ var f=document.getElementById('foodNewsAddForm'); if(f) f.style.display='none'; ui._fnEditId=null; ui._fnSelected=null; };
+ui.closeFoodNewsAdd=function(){ var f=document.getElementById('foodNewsAddModal'); if(f) f.style.display='none'; ui._fnEditId=null; ui._fnSelected=null; };
 ui.foodNewsSearch=function(){
     var q=(document.getElementById('fnSearch').value||'').trim(); if(!q) return;
     ui._fnInitKakao();
@@ -10286,13 +10299,19 @@ ui.foodNewsSubmit=function(){
         return;
     }
     if(!ui._fnSelected || !ui._fnSelected.name){ ui.showAlert('가게명을 검색해서 선택해주세요.'); return; }
+    var exist=ui._foodNewsCache.filter(function(x){ return x.name===ui._fnSelected.name && (x.address||'')===(ui._fnSelected.address||''); })[0];
+    if(exist){
+        if(cm){ firebase.database().ref('system/foodspots/'+exist.id+'/comments').push({ text:cm, ts:Date.now() }); }
+        ui.closeFoodNewsAdd(); ui.showAlert(cm?'이미 등록된 가게라 한줄평만 추가했습니다.':'이미 등록된 가게입니다.');
+        return;
+    }
     var dist=null; if(ui._fnHANGIWON_LL && ui._fnSelected.lat && ui._fnSelected.lng){ dist=Math.round(ui._fnHaversine(ui._fnHANGIWON_LL.lat,ui._fnHANGIWON_LL.lng,ui._fnSelected.lat,ui._fnSelected.lng)*10)/10; }
     firebase.database().ref('system/foodspots').push({ name:ui._fnSelected.name, category:cat, address:ui._fnSelected.address||'', lat:ui._fnSelected.lat||null, lng:ui._fnSelected.lng||null, distanceKm:dist, comment:cm, likes:0, ts:Date.now() }).then(function(){ ui.closeFoodNewsAdd(); ui.showAlert('✅ 맛집이 등록되었습니다.'); }).catch(function(){ ui.showAlert('등록 중 오류가 발생했습니다.'); });
 };
 ui.foodNewsEdit=function(id){
     var o=ui._foodNewsCache.filter(function(x){ return x.id===id; })[0]; if(!o) return;
     ui._fnInitKakao();
-    var f=document.getElementById('foodNewsAddForm'); if(f) f.style.display='block';
+    var f=document.getElementById('foodNewsAddModal'); if(f) f.style.display='flex';
     ui._fnEditId=id;
     ui._fnSelected={ name:o.name, address:o.address||'', lat:o.lat||null, lng:o.lng||null };
     var en=document.getElementById('fnEditNote'); if(en) en.style.display='block';
@@ -10324,7 +10343,7 @@ ui.foodNewsRouteById=function(id){
 };
 
 /* __JSVER_STAMP__ */
-(function stampJsVer(){try{var b=document.getElementById('__catcVer');if(b){if(b.textContent.indexOf('Jh')<0)b.textContent=b.textContent+'\u00b7Jh';}else{setTimeout(stampJsVer,200);}}catch(e){}})();
+(function stampJsVer(){try{var b=document.getElementById('__catcVer');if(b){if(b.textContent.indexOf('Jj')<0)b.textContent=b.textContent+'\u00b7Jj';}else{setTimeout(stampJsVer,200);}}catch(e){}})();
 
 /* ===== [공항별 입교 현황 지도] 수강생현황 → 지도로 보기 ===== */
 ui._mapRegions = {
