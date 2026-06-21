@@ -1517,6 +1517,7 @@
         <!-- [신규] 우측 상단 슬림 업데이트 배지 -->
         <div style="position: absolute; top: 25px; right: 35px; display: flex; align-items: center; gap: 10px; color: #94a3b8; font-size: 12px; font-weight: 800;">
             <button onclick="ui.openStudentMap()" title="공항별 입교 현황 지도" style="display:flex;align-items:center;gap:6px;background:#eef4ff;color:#1e40af;padding:5px 13px;border-radius:50px;border:1px solid #bfd4fe;font-size:12px;font-weight:800;cursor:pointer;"><i class="fa-solid fa-map-location-dot" style="font-size:12px;"></i> 지도로 보기</button>
+            <button onclick="ui.openLeaderRoulette()" title="학생장 룰렛 뽑기" style="display:flex;align-items:center;gap:6px;background:#fff7ed;color:#b45309;padding:5px 13px;border-radius:50px;border:1px solid #fed7aa;font-size:12px;font-weight:800;cursor:pointer;"><i class="fa-solid fa-trophy" style="font-size:12px;"></i> 학생장 룰렛</button>
             <div style="display: flex; align-items: center; gap: 5px; background: #f8fafc; padding: 4px 12px; border-radius: 50px; border: 1px solid #e2e8f0;">
                 <i class="fa-solid fa-sync fa-spin" style="color: #3b82f6; font-size: 11px;"></i>
                 <span id="arrivalStatusSmall">0 / 0 명 (0%)</span>
@@ -2512,7 +2513,7 @@ function setupAcc(btn){
 </script>
 <style>@media print{#__catcVer{display:none!important}}</style>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vV5</div>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vV6</div>
 <div id="fieldEditModal" class="modal-overlay" onclick="if(event.target===this) ui.closeFieldEdit()" style="z-index:10050;">
   <div class="modal-box" style="width:440px; max-width:94vw; text-align:left;">
     <h3 id="fieldEditTitle" style="margin-top:0; color:#0f172a;">수정</h3>
