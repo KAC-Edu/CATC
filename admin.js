@@ -5093,14 +5093,29 @@ resetShuttleRequests: function() {
             fsIcon.classList.toggle('fa-expand', !isHidden);
             fsIcon.classList.toggle('fa-compress', isHidden);
         }
-        // [자동 접힘] 사용자가 펼치면(숨김 아님) 10초 뒤 자동으로 다시 접기
+        // [자동 접힘] 펼친 뒤 10초 비활성 시 접힘. 단, 사이드바를 쓰는 중(마우스 올려둠)에는 대기.
+        var self = this;
         if (this._sidebarAutoTimer) { clearTimeout(this._sidebarAutoTimer); this._sidebarAutoTimer = null; }
         if (!isHidden) {
-            this._sidebarAutoTimer = setTimeout(function() {
+            var collapseSb = function() {
                 document.body.classList.add('sidebar-hidden');
-                const fi = document.querySelector('.control-icon-btn i.fa-expand, .control-icon-btn i.fa-compress');
+                var fi = document.querySelector('.control-icon-btn i.fa-expand, .control-icon-btn i.fa-compress');
                 if (fi) { fi.classList.add('fa-expand'); fi.classList.remove('fa-compress'); }
-            }, 10000);
+            };
+            self._sidebarStart = function() { if (self._sidebarAutoTimer) clearTimeout(self._sidebarAutoTimer); self._sidebarAutoTimer = setTimeout(collapseSb, 10000); };
+            self._sidebarStop  = function() { if (self._sidebarAutoTimer) { clearTimeout(self._sidebarAutoTimer); self._sidebarAutoTimer = null; } };
+            var sb = document.getElementById('mainSidebar');
+            if (sb && !sb._autoHideBound) {
+                sb._autoHideBound = true;
+                // 마우스를 올려 쓰는 중엔 타이머 정지, 벗어나면 10초 재시작
+                sb.addEventListener('mouseenter', function(){ self._sidebarStop(); });
+                sb.addEventListener('mouseleave', function(){ self._sidebarStart(); });
+                sb.addEventListener('mousemove',  function(){ self._sidebarStop(); });
+                sb.addEventListener('focusin',    function(){ self._sidebarStop(); });
+                sb.addEventListener('focusout',   function(){ self._sidebarStart(); });
+            }
+            // 펼친 직후: 마우스가 사이드바 위에 없으면 10초 후 접힘(위에 있으면 mouseenter/move가 정지)
+            self._sidebarStart();
         }
     },
 
@@ -10080,7 +10095,7 @@ ui.saveFieldEdit = async function(){
 };
 
 /* __JSVER_STAMP__ */
-(function stampJsVer(){try{var b=document.getElementById('__catcVer');if(b){if(b.textContent.indexOf('Jh')<0)b.textContent=b.textContent+'\u00b7Jh';}else{setTimeout(stampJsVer,200);}}catch(e){}})();
+(function stampJsVer(){try{var b=document.getElementById('__catcVer');if(b){if(b.textContent.indexOf('Ji')<0)b.textContent=b.textContent+'\u00b7Ji';}else{setTimeout(stampJsVer,200);}}catch(e){}})();
 
 /* ===== [공항별 입교 현황 지도] 수강생현황 → 지도로 보기 ===== */
 ui._mapRegions = {

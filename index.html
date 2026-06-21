@@ -555,8 +555,8 @@
 
     <div class="app-container" id="mainApp">
 <div class="header">
-    <div class="header-btn" id="headerKakaoBtn" onclick="openKakaoChat()" style="color:#FAE100; visibility:hidden;" title="카카오톡 오픈톡방">
-        <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><rect width="24" height="24" rx="6.5" fill="#FEE500"/><path d="M12 6.2c-3.53 0-6.4 2.16-6.4 4.83 0 1.72 1.16 3.23 2.92 4.1-.13.45-.46 1.66-.53 1.92-.08.32.12.32.25.23.1-.07 1.6-1.08 2.25-1.52.47.07.95.1 1.51.1 3.53 0 6.4-2.16 6.4-4.83S15.53 6.2 12 6.2z" fill="#3A1D1D"/></svg>
+    <div class="header-btn" onclick="openMainMenu()" title="메뉴">
+        <i class="fa-solid fa-bars"></i>
     </div>
     <div class="header-center">
         <div class="header-title" id="roomTitle">Course Name</div>
@@ -565,8 +565,8 @@
             <span id="realUserCount">0명 접속</span> · <span id="roomBadge">Room A</span>
         </div>
     </div>
-    <div class="header-btn" onclick="openMainMenu()">
-        <i class="fa-solid fa-bars"></i>
+    <div class="header-btn" id="headerKakaoBtn" onclick="openKakaoChat()" style="color:#FAE100; visibility:hidden;" title="카카오톡 오픈톡방">
+        <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><rect width="24" height="24" rx="6.5" fill="#FEE500"/><path d="M12 6.2c-3.53 0-6.4 2.16-6.4 4.83 0 1.72 1.16 3.23 2.92 4.1-.13.45-.46 1.66-.53 1.92-.08.32.12.32.25.23.1-.07 1.6-1.08 2.25-1.52.47.07.95.1 1.51.1 3.53 0 6.4-2.16 6.4-4.83S15.53 6.2 12 6.2z" fill="#3A1D1D"/></svg>
     </div>
 </div>
 
@@ -589,27 +589,21 @@
         <div class="scroll-container" id="scrollContainer"><div id="qList" class="q-list"></div></div>
         <div class="input-dock" id="inputDock">
 
-<!-- [신규] 질문 대상(과목) 선택창 -->
-<div style="padding: 0 15px 8px 15px; position:relative;">
-    <select id="subjectSelect" onchange="handleSubjectChange()" style="display:none;">
-        <option value="공통질문">질문 대상 선택 (기본: 공통질문)</option>
-    </select>
-    <button type="button" id="subjectDropBtn" onclick="toggleSubjectDrop(event)" style="width:100%; display:flex; align-items:center; gap:9px; padding:10px 14px; border-radius:12px; border:2px solid #cfe0ff; background:#f3f8ff; font-size:14px; font-weight:800; color:var(--accent-color); cursor:pointer; text-align:left; box-sizing:border-box;">
-        <span id="subjectDropIcon" style="width:26px; height:26px; border-radius:50%; background:#e0ecff; display:inline-flex; align-items:center; justify-content:center; flex-shrink:0;"><i class="fa-solid fa-users" style="font-size:12px; color:#2563eb;"></i></span>
-        <span id="subjectDropLabel" style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">질문 대상 선택 (기본: 공통질문)</span>
-        <i class="fa-solid fa-chevron-down" style="font-size:11px; color:#94a3b8;"></i>
-    </button>
-    <div id="subjectDropList" style="display:none; position:absolute; left:15px; right:15px; bottom:calc(100% - 2px); z-index:60; background:#fff; border:1.5px solid #cfe0ff; border-radius:14px; box-shadow:0 -10px 30px rgba(15,23,42,.18); overflow:hidden; max-height:46vh; overflow-y:auto;"></div>
+<!-- [신규] 질문 대상 pill + 입력 (청색) -->
+<div style="position:relative; padding:0 12px;">
+  <select id="subjectSelect" onchange="handleSubjectChange()" style="display:none;"><option value="공통질문">질문 대상 선택 (기본: 공통질문)</option></select>
+  <div id="subjectDropList" style="display:none; position:absolute; left:12px; right:12px; bottom:calc(100% + 4px); z-index:60; background:#fff; border:1.5px solid #cfe0ff; border-radius:14px; box-shadow:0 -10px 30px rgba(15,23,42,.18); overflow:hidden; max-height:46vh; overflow-y:auto;"></div>
+  <div class="input-box" style="flex-direction:column; align-items:stretch; gap:10px;">
+      <textarea id="qInput" class="real-input" rows="1" placeholder="질문을 입력하세요" maxlength="100"></textarea>
+      <div style="display:flex; align-items:center; gap:8px;">
+          <button type="button" onclick="toggleSubjectDrop(event)" title="질문 대상 선택" style="width:34px;height:34px;border-radius:50%;border:1px solid #cfe0ff;background:#fff;color:#1e3a8a;font-size:17px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="fa-solid fa-plus"></i></button>
+          <button type="button" id="subjectDropBtn" onclick="toggleSubjectDrop(event)" style="display:flex;align-items:center;gap:7px;padding:7px 13px;border-radius:50px;border:1px solid #cfe0ff;background:#eef4ff;color:#1e3a8a;font-size:13px;font-weight:800;cursor:pointer;max-width:62%;"><i class="fa-solid fa-users" style="font-size:11px;"></i><span id="subjectDropLabel" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">공통질문</span><i class="fa-solid fa-chevron-up" style="font-size:9px;opacity:.55;"></i></button>
+          <div style="flex:1;"></div>
+          <button id="submitBtn" class="send-btn" onmousedown="event.preventDefault();" onclick="submitQ()"><i class="fa-solid fa-paper-plane"></i></button>
+      </div>
+  </div>
+  <div class="input-info-row"><span id="coolTimer" class="cooldown-text"></span><span id="charCount" class="char-counter">0 / 100</span></div>
 </div>
-            <div class="input-box">
-                <textarea id="qInput" class="real-input" rows="1" 
-          placeholder="익명이에요 · 예의 있는 질문 부탁드려요 🙂" 
-          maxlength="100" ...></textarea>
-<button id="submitBtn" class="send-btn" onmousedown="event.preventDefault();" onclick="submitQ()">
-    <i class="fa-solid fa-paper-plane"></i>
-</button>
-            </div>
-            <div class="input-info-row"><span id="coolTimer" class="cooldown-text"></span><span id="charCount" class="char-counter">0 / 100</span></div>
         </div>
     </div>
     <div id="quizOverlay" class="quiz-overlay">
@@ -2297,7 +2291,11 @@ function renderList(data) {
         const emptyMsg = currentFilter === "공통질문" 
             ? "등록된 질문이 없습니다." 
             : `'${currentFilter}'님께 등록된 질문이 없습니다.`;
-        list.innerHTML = `<div style="text-align:center; padding:80px 20px; color:#94a3b8; font-size:14px;">${emptyMsg}</div>`;
+        list.innerHTML = `<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:64px 24px;text-align:center;">
+            <img src="logo.png" alt="" style="width:74px;height:74px;object-fit:contain;border-radius:18px;margin-bottom:18px;opacity:.95;">
+            <div style="font-size:18px;font-weight:800;color:#1e3a8a;margin-bottom:6px;">항공기술훈련원 입교를 환영합니다</div>
+            <div style="font-size:13px;color:#94a3b8;">${emptyMsg}</div>
+        </div>`;
         return;
     }
 
@@ -4829,7 +4827,7 @@ input:not([type=checkbox]):not([type=radio]):not([type=file]), textarea, select 
 })();
 </script>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vH2</div>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vH3</div>
 <script>
 /* ===== [공용] 종료된 과정 자동 정리 (교육생 포함 전 플랫폼) — 종료일 지난 방을 다음날 미개설로 비움. 브라우저별 하루 1회 ===== */
 window.kacExpireEndedCourses = async function(){
