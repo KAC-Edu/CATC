@@ -865,7 +865,7 @@
 
 <div id="shuttleModal" class="menu-overlay" style="display:none; z-index: 7000;">
     <div class="menu-box" style="width:90%; padding:25px 20px; border-radius:24px; max-width:400px;">
-        <h3 style="margin-bottom:12px; color:#1e293b; font-weight:900;">퇴교 차량 신청</h3>
+        <div class="kac-pbar"><span class="kac-pt">퇴교 차량 신청</span><button type="button" class="kac-px" onclick="closeShuttleModal()" aria-label="닫기"><i class="fa-solid fa-xmark"></i></button></div>
 
         <!-- 출발 예정 시간 -->
         <div id="driverNoticeBar" style="background:#eff6ff; border:1.5px solid #bfdbfe; padding:14px 18px; border-radius:14px; margin-bottom:18px; text-align:center;">
@@ -934,7 +934,7 @@
 <!-- [최종 수정] 외출/외박 신청 및 복귀 시스템 팝업 -->
 <div id="adminActionModal" class="menu-overlay" style="display:none; z-index: 7000;">
     <div class="menu-box" style="width:95%; padding: 20px; border-radius: 20px; max-width: 450px; position:relative;">
-        <button type="button" id="adminCloseX" onclick="closeAdminAction()" aria-label="닫기" style="position:absolute; top:12px; right:14px; width:34px; height:34px; border:none; border-radius:50%; background:#f1f5f9; color:#475569; font-size:22px; font-weight:800; line-height:1; cursor:pointer; z-index:5; display:flex; align-items:center; justify-content:center;">&times;</button>
+        <div class="kac-pbar"><span class="kac-pt">외출 · 외박 신청</span><button type="button" id="adminCloseX" class="kac-px" onclick="closeAdminAction()" aria-label="닫기"><i class="fa-solid fa-xmark"></i></button></div>
         <p id="adminActionDate" style="display:none;">오늘 날짜: 2026-01-20</p>
 
         <!-- [현황 영역] 이미 신청했을 때만 보임 -->
@@ -1137,7 +1137,7 @@
 <!-- [신규] 공지사항 팝업 -->
     <div id="noticeModal" class="menu-overlay" style="display:none; z-index: 9000;" onclick="if(event.target==this)closePanelSmooth('noticeModal')">
         <div class="menu-box">
-            <h3 style="margin-bottom:20px;">📢 중요 공지사항</h3>
+            <div class="kac-pbar"><span class="kac-pt">📢 공지사항</span><button type="button" class="kac-px" onclick="closePanelSmooth('noticeModal')" aria-label="닫기"><i class="fa-solid fa-xmark"></i></button></div>
             <div id="noticeContainer"></div>
             <button onclick="closePanelSmooth('noticeModal')" style="margin-top:15px; width:100%; padding:12px; border:none; border-radius:8px; background:#e2e8f0; font-weight:bold;">닫기</button>
         </div>
@@ -5635,6 +5635,23 @@ html, body {
   from { transform: translate3d(100%,0,0); }
   to   { transform: translate3d(0,0,0); }
 }
+/* ── [우측 패널 흰색 상단바] 외출외박·차량·공지 — 시안 적용 ── */
+#shuttleModal>.menu-box, #noticeModal>.menu-box, #adminActionModal>.menu-box{
+  justify-content:flex-start !important;
+  padding-top:0 !important;
+  background:#f6f9fe !important;
+}
+.kac-pbar{
+  position:sticky; top:0; z-index:8;
+  margin:0 -20px 18px; padding:14px 18px;
+  background:#fff; border-bottom:1px solid #eef2f7;
+  border-radius:18px 0 0 0;
+  display:flex; align-items:center; justify-content:space-between; gap:10px;
+  flex-shrink:0;
+}
+.kac-pbar .kac-pt{ font-size:16px; font-weight:800; color:#1e293b; letter-spacing:-.3px; }
+.kac-pbar .kac-px{ width:32px; height:32px; flex-shrink:0; border:none; border-radius:50%; background:#f1f5f9; color:#64748b; font-size:15px; cursor:pointer; display:flex; align-items:center; justify-content:center; padding:0; }
+.kac-pbar .kac-px:active{ background:#e2e8f0; transform:scale(.94); }
 
 /* 3) 패널 열린 동안 뒤 화면은 정지 — 레이아웃 흔들림(repaint flicker) 차단 */
 body.kac-panel-on #mainApp,
