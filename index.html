@@ -231,12 +231,15 @@
 }
 
 .notice-text {
-    display: inline-block;
-    padding-left: 100%;
-    animation: marquee 14s linear 1;
+    display: block;
+    padding-left: 0;
+    animation: none;
     font-size: 13px;
     font-weight: 700;
     color: #92400e;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 @keyframes marquee {
@@ -590,7 +593,7 @@
         <div class="input-dock" id="inputDock">
 
 <!-- [신규] 질문 대상 pill + 입력 (청색) -->
-<div style="position:relative; padding:0 12px;">
+<div style="position:relative; padding:0 6px;">
   <select id="subjectSelect" onchange="handleSubjectChange()" style="display:none;"><option value="공통질문">질문 대상 선택 (기본: 공통질문)</option></select>
   <div id="subjectDropList" style="display:none; position:absolute; left:12px; right:12px; bottom:calc(100% + 4px); z-index:60; background:#fff; border:1.5px solid #cfe0ff; border-radius:14px; box-shadow:0 -10px 30px rgba(15,23,42,.18); overflow:hidden; max-height:46vh; overflow-y:auto;"></div>
   <div class="input-box" style="flex-direction:column; align-items:stretch; gap:10px;">
@@ -1585,18 +1588,16 @@ function installMenuSwipe(){
     var m=document.getElementById('menuModal'); if(!m) return;
     var box=m.querySelector('.menu-box'); if(!box || box._swipeSet) return;
     box._swipeSet=true;
-    var startX=null, dx=0;
-    box.addEventListener('touchstart', function(e){ startX=e.touches[0].clientX; dx=0; }, {passive:true});
+    var startX=null, startY=null, dx=0, dy=0;
+    box.addEventListener('touchstart', function(e){ startX=e.touches[0].clientX; startY=e.touches[0].clientY; dx=0; dy=0; }, {passive:true});
     box.addEventListener('touchmove', function(e){
         if(startX===null) return;
-        var d=e.touches[0].clientX-startX;
-        if(d<0){ dx=d; box.style.transition='none'; box.style.transform='translateX('+d+'px)'; }
+        dx=e.touches[0].clientX-startX; dy=e.touches[0].clientY-startY;
     }, {passive:true});
     box.addEventListener('touchend', function(){
         if(startX===null) return;
-        box.style.transition='';
-        if(dx < -60){ closeMainMenu(); } else { box.style.transform=''; }
-        startX=null; dx=0;
+        if(dx < -70 && Math.abs(dx) > Math.abs(dy)*1.5){ closeMainMenu(); }
+        startX=null; startY=null; dx=0; dy=0;
     }, {passive:true});
 }
 
@@ -2293,7 +2294,6 @@ function renderList(data) {
             ? "등록된 질문이 없습니다." 
             : `'${currentFilter}'님께 등록된 질문이 없습니다.`;
         list.innerHTML = `<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:64px 24px;text-align:center;">
-            <img src="logo.png" alt="" style="width:74px;height:74px;object-fit:contain;border-radius:18px;margin-bottom:18px;opacity:.95;">
             <div style="font-size:18px;font-weight:800;color:#1e3a8a;margin-bottom:6px;">항공기술훈련원 입교를 환영합니다</div>
             <div style="font-size:13px;color:#94a3b8;">${emptyMsg}</div>
         </div>`;
@@ -4778,7 +4778,7 @@ input:not([type=checkbox]):not([type=radio]):not([type=file]), textarea, select 
 #mainApp { padding-top:56px; }
 .mini-notice-bar { margin-top:4px; }
 /* 하단바: 바 배경 제거 → 떠있는 둥근 입력 카드 */
-.input-dock { background:transparent !important; box-shadow:none !important; border-top-left-radius:0 !important; border-top-right-radius:0 !important; padding:8px 10px calc(10px + var(--safe-area-bottom)) 10px !important; }
+.input-dock { background:transparent !important; box-shadow:none !important; border-top-left-radius:0 !important; border-top-right-radius:0 !important; padding:4px 4px calc(4px + var(--safe-area-bottom)) 4px !important; }
 .input-dock .input-box { background:#fff !important; border:1px solid #e6ebf2 !important; border-radius:26px !important; box-shadow:0 8px 26px rgba(15,23,42,.13) !important; padding:12px 14px !important; }
 
 </style>
@@ -4845,7 +4845,7 @@ input:not([type=checkbox]):not([type=radio]):not([type=file]), textarea, select 
 })();
 </script>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vH8</div>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vH9</div>
 <script>
 /* ===== [공용] 종료된 과정 자동 정리 (교육생 포함 전 플랫폼) — 종료일 지난 방을 다음날 미개설로 비움. 브라우저별 하루 1회 ===== */
 window.kacExpireEndedCourses = async function(){

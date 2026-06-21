@@ -7814,13 +7814,14 @@ loadCurrentSettings: function() {
         // 저장된 설정이 없을 때 체크박스도 전부 ON으로 맞춘다(앱 기본=전부 표시와 일치).
         // 강사는 끄고 싶은 메뉴만 체크 해제하면 됨.
         const features = s.menuFeatures || {};
+        // [첫 개설 디폴트] 차량(shuttle)·외출외박(adminAction)·오픈톡방(kakao)만 체크, 나머지는 강사가 추가
+        const defaultOn = ['shuttle','adminAction','kakao'];
         const featureKeys = ['facility','shuttle','adminAction','meal','attendanceQr','cns','tabletLoan','kakao','hrd'];
         featureKeys.forEach(key => {
             const el = document.getElementById(`feat-${key}`);
             if (!el) return;
             if (Object.keys(features).length === 0) {
-                // DB에 저장된 값 없으면 전부 활성화(디폴트)
-                el.checked = true;
+                el.checked = defaultOn.includes(key);
             } else {
                 el.checked = (features[key] !== false);
             }
@@ -10095,7 +10096,7 @@ ui.saveFieldEdit = async function(){
 };
 
 /* __JSVER_STAMP__ */
-(function stampJsVer(){try{var b=document.getElementById('__catcVer');if(b){if(b.textContent.indexOf('Ji')<0)b.textContent=b.textContent+'\u00b7Ji';}else{setTimeout(stampJsVer,200);}}catch(e){}})();
+(function stampJsVer(){try{var b=document.getElementById('__catcVer');if(b){if(b.textContent.indexOf('Jj')<0)b.textContent=b.textContent+'\u00b7Jj';}else{setTimeout(stampJsVer,200);}}catch(e){}})();
 
 /* ===== [공항별 입교 현황 지도] 수강생현황 → 지도로 보기 ===== */
 ui._mapRegions = {
