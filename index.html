@@ -1653,19 +1653,23 @@ window.installMenuDragClose=installMenuDragClose;
 function installPanelSwipeClose(modalId, closeFn){
     var modal=document.getElementById(modalId); if(!modal || modal._swipeClose) return;
     var box=modal.querySelector('.menu-box') || modal.querySelector(':scope > div'); if(!box) return; modal._swipeClose=true;
-    var sx=null, sy=null, dx=0, dy=0, drag=false;
-    box.addEventListener('touchstart', function(e){ sx=e.touches[0].clientX; sy=e.touches[0].clientY; dx=0; dy=0; drag=false; }, {passive:true});
+    var sx=null, sy=null, dx=0, dy=0, drag=false, lastX=0, lastT=0, vx=0;
+    var EASE='transform .3s cubic-bezier(.22,1,.36,1)';
+    function finishClose(){ box.style.transition=EASE; box.style.transform='translateX(110%)'; setTimeout(function(){ box.style.transform=''; box.style.transition=''; if(typeof closeFn==='function') closeFn(); else modal.style.display='none'; }, 300); }
+    function snapBack(){ box.style.transition=EASE; box.style.transform='translateX(0)'; setTimeout(function(){ box.style.transform=''; box.style.transition=''; }, 300); }
+    box.addEventListener('touchstart', function(e){ var t=e.touches[0]; sx=t.clientX; sy=t.clientY; dx=0; dy=0; drag=false; lastX=t.clientX; lastT=Date.now(); vx=0; }, {passive:true});
     box.addEventListener('touchmove', function(e){
-        if(sx===null) return; dx=e.touches[0].clientX-sx; dy=e.touches[0].clientY-sy;
-        if(!drag){ if(dx>8 && Math.abs(dx)>Math.abs(dy)){ drag=true; box.style.transition='none'; } else if(Math.abs(dy)>Math.abs(dx)+6){ sx=null; return; } }
+        if(sx===null) return; var t=e.touches[0]; dx=t.clientX-sx; dy=t.clientY-sy;
+        var now=Date.now(), ddt=now-lastT; if(ddt>0){ vx=(t.clientX-lastX)/ddt; } lastX=t.clientX; lastT=now;
+        if(!drag){ if(dx>6 && Math.abs(dx)>Math.abs(dy)){ drag=true; box.style.transition='none'; } else if(Math.abs(dy)>Math.abs(dx)+6){ sx=null; return; } }
         if(drag){ var v=Math.max(0, dx); box.style.transform='translateX('+v+'px)'; }
     }, {passive:true});
     box.addEventListener('touchend', function(){
         if(sx===null) return; var wd=drag; sx=null; drag=false;
-        if(!wd){ box.style.transform=''; box.style.transition=''; return; }
-        box.style.transition='transform .25s ease';
-        if(dx>90){ box.style.transform='translateX(110%)'; setTimeout(function(){ box.style.transform=''; box.style.transition=''; if(typeof closeFn==='function') closeFn(); else modal.style.display='none'; }, 220); }
-        else { box.style.transform='translateX(0)'; setTimeout(function(){ box.style.transform=''; box.style.transition=''; }, 220); }
+        if(!wd) return;
+        var w=box.offsetWidth||window.innerWidth;
+        // 거리(폭의 32%) 또는 오른쪽 플릭 속도(0.45px/ms) 중 하나라도 충족하면 → 항상 동일한 부드러운 닫힘
+        if(dx > w*0.32 || vx > 0.45){ finishClose(); } else { snapBack(); }
     }, {passive:true});
 }
 window.installPanelSwipeClose=installPanelSwipeClose;
@@ -5091,7 +5095,7 @@ input:not([type=checkbox]):not([type=radio]):not([type=file]), textarea, select 
 })();
 </script>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vH28</div>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vH29</div>
 <script>
 /* ===== [공용] 종료된 과정 자동 정리 (교육생 포함 전 플랫폼) — 종료일 지난 방을 다음날 미개설로 비움. 브라우저별 하루 1회 ===== */
 window.kacExpireEndedCourses = async function(){
