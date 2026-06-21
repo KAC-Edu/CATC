@@ -73,7 +73,7 @@
         .sort-bar { padding: 10px 15px; background: var(--bg-color); display: flex; gap: 10px; z-index: 80; flex-shrink: 0; }
         .sort-chip { padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 600; background: rgba(255,255,255,0.1); color: #94a3b8; cursor: pointer; transition: 0.2s; border: 1px solid transparent; }
         .sort-chip.active { background: var(--accent-color); color: white; border-color: var(--accent-color); }
-        .scroll-container { flex-grow: 1; overflow-y: auto; position: relative; padding: 0 15px 120px 15px; scrollbar-width: none; -webkit-overflow-scrolling: touch; -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 22px, #000 calc(100% - 26px), transparent 100%); mask-image: linear-gradient(to bottom, transparent 0, #000 22px, #000 calc(100% - 26px), transparent 100%); }
+        .scroll-container { flex-grow: 1; overflow-y: auto; position: relative; padding: 0 15px 120px 15px; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
         .scroll-container::-webkit-scrollbar { display: none; }
 
 
@@ -681,23 +681,17 @@
 <!-- 설문조사 안내 모달 -->
 <div id="surveyModal" class="menu-overlay" style="display:none; z-index:9500;" onclick="if(event.target==this)this.style.display='none'">
     <div class="menu-box" style="width:90%; max-width:400px; padding:25px; border-radius:24px;">
-        <h3 style="margin:0 0 20px 0; font-weight:900; color:#003366;">
-            <i class="fa-solid fa-square-poll-vertical" style="color:#3b82f6; margin-right:8px;"></i>설문조사 참여 방법
+        <h3 style="margin:0 0 16px 0; font-weight:900; color:#1e3a8a;">
+            <i class="fa-solid fa-square-poll-vertical" style="color:#3b82f6; margin-right:8px;"></i>설문조사 참여
         </h3>
-        <div style="text-align:left; font-size:14px; line-height:1.8; color:#475569;">
-            <div style="margin-bottom:18px; padding:14px; background:#f8fafc; border-radius:12px; border-left:4px solid #3b82f6;">
-                <b style="color:#003366; font-size:15px;">1단계.</b>&nbsp; 스카이캠퍼스 접속 및 공사직원 로그인<br>
-                <button onclick="window.open('https://skycampus.airport.co.kr/', '_blank')"
-                    style="width:100%; margin-top:10px; padding:13px; background:#3b82f6; color:white; border:none; border-radius:10px; font-weight:800; font-size:14px; cursor:pointer;">
-                    <i class="fa-solid fa-globe"></i>&nbsp; 스카이캠퍼스 바로가기
-                </button>
-            </div>
-            <div style="margin-bottom:18px; padding:14px; background:#f8fafc; border-radius:12px; border-left:4px solid #3b82f6;">
-                <b style="color:#003366; font-size:15px;">2단계.</b>&nbsp; <b>마이페이지</b> → 현재 수강 중인 과정 입장
-            </div>
-            <div style="padding:14px; background:#f8fafc; border-radius:12px; border-left:4px solid #3b82f6;">
-                <b style="color:#003366; font-size:15px;">3단계.</b>&nbsp; 좌측 하단 <b>[항기원 교육과정운영 설문평가]</b> 선택 후 참여
-            </div>
+        <button onclick="window.open('https://skycampus.airport.co.kr/', '_blank')"
+            style="width:100%; padding:14px; background:linear-gradient(135deg,#3b82f6,#2563eb); color:#fff; border:none; border-radius:12px; font-weight:900; font-size:15px; cursor:pointer; box-shadow:0 8px 20px rgba(37,99,235,.28);">
+            <i class="fa-solid fa-globe"></i>&nbsp; 스카이캠퍼스 바로가기
+        </button>
+        <div style="text-align:left; font-size:14px; line-height:1.6; color:#475569; margin-top:18px;">
+            <div style="display:flex; gap:10px; margin-bottom:11px;"><b style="color:#2563eb; flex-shrink:0;">1</b><span>스카이캠퍼스 접속 → <b>공사직원 로그인</b></span></div>
+            <div style="display:flex; gap:10px; margin-bottom:11px;"><b style="color:#2563eb; flex-shrink:0;">2</b><span><b>마이페이지</b> → 수강 중인 과정 입장</span></div>
+            <div style="display:flex; gap:10px;"><b style="color:#2563eb; flex-shrink:0;">3</b><span>좌측 하단 <b>[항기원 교육과정운영 설문평가]</b> 참여</span></div>
         </div>
         <button onclick="document.getElementById('surveyModal').style.display='none'"
             style="margin-top:16px; width:100%; padding:13px; border:none; border-radius:12px; background:#f1f5f9; color:#475569; font-weight:800; font-size:14px; cursor:pointer;">닫기</button>
@@ -2613,7 +2607,7 @@ function resetInput() {
         const remain = Math.ceil((120000 - diff) / 1000);
         const mm = Math.floor(remain / 60);
         const ss = remain % 60;
-        timerEl.innerText = `⏳ [${subject}] 질문 대기: ${mm}:${ss.toString().padStart(2, '0')}`;
+        timerEl.innerText = `[${subject}] 대기 ${mm}:${ss.toString().padStart(2, '0')}`;
         btn.disabled = true;
         btn.style.opacity = 0.5;
         input.disabled = true;
@@ -4722,7 +4716,7 @@ function closeTabletLoan() {
 .header { border-bottom-left-radius:18px !important; border-bottom-right-radius:18px !important; }
 /* 채팅 입력 영역 색감 */
 .input-dock { background:linear-gradient(135deg,#0f2a33 0%,#0e6e6e 70%,#14b8a6 130%) !important; box-shadow:0 -6px 22px rgba(13,60,60,.30) !important; }
-.input-dock .char-counter, .input-dock .cooldown-text { color:rgba(255,255,255,.75) !important; }
+.input-dock .char-counter { color:#64748b !important; } .input-dock .cooldown-text { color:#ef4444 !important; }
 .input-box { background:#f3f8ff !important; border:1.5px solid #cfe0ff !important; }
 #subjectSelect { background:#f3f8ff !important; border-color:#cfe0ff !important; }
 /* 메뉴: 본화면 안 비치게 밝은 단독 화면 */
@@ -4770,10 +4764,18 @@ input:not([type=checkbox]):not([type=radio]):not([type=file]), textarea, select 
 .landing-foot { position:absolute; bottom:26px; font-size:11px; color:#64748b; font-weight:600; opacity:.85; }
 .landing-page > *:not(.landing-foot) { animation: kacFadeUp .5s ease both; }
 @keyframes kacFadeUp { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:none; } }
-/* [클로드 스타일] 외출외박·차량 신청 → 우측 슬라이드 패널 */
-#adminActionModal, #shuttleModal { justify-content:flex-end !important; align-items:stretch !important; padding:0 !important; }
-#adminActionModal .menu-box, #shuttleModal .menu-box { position:relative !important; margin:0 !important; height:100dvh !important; max-height:100dvh !important; width:92% !important; max-width:440px !important; border-radius:18px 0 0 18px !important; overflow-y:auto !important; -webkit-overflow-scrolling:touch !important; animation:slideInRight .34s cubic-bezier(.22,1,.36,1); }
-@keyframes slideInRight { from { transform:translateX(100%); opacity:.4; } to { transform:translateX(0); opacity:1; } }
+/* [클로드 스타일] 외출외박·차량·설문 → 우측 슬라이드 패널 (부드럽게) */
+#adminActionModal, #shuttleModal, #surveyModal { justify-content:flex-end !important; align-items:stretch !important; padding:0 !important; }
+#adminActionModal .menu-box, #shuttleModal .menu-box, #surveyModal .menu-box { position:relative !important; margin:0 !important; height:100dvh !important; max-height:100dvh !important; width:90% !important; max-width:420px !important; border-radius:18px 0 0 18px !important; overflow-y:auto !important; -webkit-overflow-scrolling:touch !important; padding-top:calc(22px + env(safe-area-inset-top)) !important; will-change:transform; animation:slideInRight .32s cubic-bezier(.16,.84,.44,1) both; }
+@keyframes slideInRight { from { transform:translate3d(100%,0,0); } to { transform:translate3d(0,0,0); } }
+/* 차량 신청: 글자/버튼 크기 메뉴 수준으로 축소 */
+#shuttleModal .shuttle-btn { height:54px !important; }
+#shuttleModal .shuttle-btn span[style*="font-weight:800"] { font-size:15px !important; }
+#shuttleModal .shuttle-btn span[style*="line-height:1"] { font-size:26px !important; }
+#shuttleModal #departureTimeText { font-size:18px !important; }
+#shuttleModal h3, #adminActionModal h3, #surveyModal h3 { font-size:18px !important; }
+/* 공지: 전체화면 아닌 컴팩트 중앙 카드 */
+#noticeModal .menu-box { width:90% !important; max-width:420px !important; max-height:72vh !important; overflow-y:auto !important; }
 
 /* ===== [클로드 스타일] 상단바/하단바 제거 ===== */
 /* 상단바: 바 없애고 떠있는 원형 버튼만 */
@@ -4850,7 +4852,7 @@ input:not([type=checkbox]):not([type=radio]):not([type=file]), textarea, select 
 })();
 </script>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vH10</div>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vH11</div>
 <script>
 /* ===== [공용] 종료된 과정 자동 정리 (교육생 포함 전 플랫폼) — 종료일 지난 방을 다음날 미개설로 비움. 브라우저별 하루 1회 ===== */
 window.kacExpireEndedCourses = async function(){
