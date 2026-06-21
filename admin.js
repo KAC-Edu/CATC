@@ -5065,18 +5065,32 @@ resetShuttleRequests: function() {
         }
     },
 
-    // [버전 실시간 로드] 각 플랫폼 파일의 우하단 배지(__catcVer)를 읽어 그대로 표시
+    // [최신 버전 기준] 개발자가 아는 각 플랫폼의 최신 배지. 새 파일을 올리면 이 값과 같아야 함.
+    //  파일을 수정/배포할 때마다 여기 값도 같이 올려주세요(배지값과 동일하게).
+    _LATEST_VER: {
+        'index.html':'vH14', 'admin.html':'vU9', 'admin_coord.html':'vH1', 'dorm_admin.html':'vK2',
+        'driver.html':'vD', 'nutritionist.html':'vE', 'facility_admin.html':'vC', 'go.html':'vI', 'student_leader.html':'vA'
+    },
+    // [버전 실시간 로드] 각 플랫폼 파일의 우하단 배지(__catcVer)를 읽어 최신본과 비교 표시
     _loadPlatVersions: function(list){
         const box = document.getElementById('platVerList'); if(!box) return;
+        const LATEST = ui._LATEST_VER || {};
         Promise.all(list.map(function(it){
             return fetch(it.file + '?t=' + Date.now())
                 .then(function(r){ return r.ok ? r.text() : ''; })
-                .then(function(t){ var m = t.match(/id="__catcVer"[^>]*>([^<]+)</); return { name: it.name, ver: (m ? m[1].trim() : '-') }; })
-                .catch(function(){ return { name: it.name, ver: '-' }; });
+                .then(function(t){ var m = t.match(/id="__catcVer"[^>]*>([^<·]+)/); return { name: it.name, file: it.file, ver: (m ? m[1].trim() : '-') }; })
+                .catch(function(){ return { name: it.name, file: it.file, ver: '-' }; });
         })).then(function(arr){
+            var stale = 0;
             box.innerHTML = arr.map(function(v){
-                return '<div style="display:flex; align-items:center; justify-content:space-between; font-size:12px;"><span style="color:#475569; font-weight:700;">'+v.name+'</span><span style="font-family:ui-monospace,Menlo,Consolas,monospace; font-weight:800; color:#0f172a; background:#dbeafe; padding:1px 8px; border-radius:6px;">'+v.ver+'</span></div>';
-            }).join('');
+                var latest = LATEST[v.file] || null;
+                var isOld = latest && v.ver !== '-' && v.ver !== latest;
+                if (isOld) stale++;
+                var verBg = isOld ? '#fee2e2' : '#dbeafe';
+                var verCol = isOld ? '#b91c1c' : '#0f172a';
+                var note = isOld ? '<span style="font-size:10px; color:#b91c1c; font-weight:800; margin-left:5px;">구버전·최신 '+latest+'</span>' : '';
+                return '<div style="display:flex; align-items:center; justify-content:space-between; font-size:12px;"><span style="color:#475569; font-weight:700;">'+v.name+(isOld?' <i class=\'fa-solid fa-triangle-exclamation\' style=\'color:#f59e0b;\'></i>':'')+'</span><span><span style="font-family:ui-monospace,Menlo,Consolas,monospace; font-weight:800; color:'+verCol+'; background:'+verBg+'; padding:1px 8px; border-radius:6px;">'+v.ver+'</span>'+note+'</span></div>';
+            }).join('') + (stale ? '<div style="grid-column:1/-1; margin-top:8px; padding:9px 11px; background:#fff7ed; border:1px solid #fed7aa; border-radius:9px; color:#b45309; font-size:11.5px; font-weight:800; line-height:1.5;"><i class="fa-solid fa-triangle-exclamation"></i> 최신이 아닌 플랫폼 '+stale+'개 — 빨간 항목의 새 파일을 다시 업로드하세요.</div>' : '<div style="grid-column:1/-1; margin-top:8px; padding:9px 11px; background:#ecfdf5; border:1px solid #a7f3d0; border-radius:9px; color:#047857; font-size:11.5px; font-weight:800;"><i class="fa-solid fa-circle-check"></i> 모든 플랫폼이 최신 버전입니다.</div>');
         });
     },
 
@@ -10092,7 +10106,7 @@ ui.saveFieldEdit = async function(){
 };
 
 /* __JSVER_STAMP__ */
-(function stampJsVer(){try{var b=document.getElementById('__catcVer');if(b){if(b.textContent.indexOf('Jm')<0)b.textContent=b.textContent+'\u00b7Jm';}else{setTimeout(stampJsVer,200);}}catch(e){}})();
+(function stampJsVer(){try{var b=document.getElementById('__catcVer');if(b){if(b.textContent.indexOf('Jn')<0)b.textContent=b.textContent+'\u00b7Jn';}else{setTimeout(stampJsVer,200);}}catch(e){}})();
 
 /* ===== [공항별 입교 현황 지도] 수강생현황 → 지도로 보기 ===== */
 ui._mapRegions = {
