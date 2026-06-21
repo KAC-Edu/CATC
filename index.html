@@ -663,7 +663,7 @@
             <div class="menu-item" onclick="viewMealMenu()"><i class="fa-solid fa-utensils"></i> 금주 식단보기</div>
             <div id="svcGateBanner" style="display:none; background:#fff7ed; border:1px solid #fed7aa; color:#b45309; border-radius:12px; padding:11px 13px; font-size:12.5px; font-weight:700; line-height:1.5; margin-bottom:4px;"><i class="fa-solid fa-lock" style="margin-right:5px;"></i> 현재 담당 교수님이 신청 기능을 열어두지 않아 <b>차량·외출/외박·석식·비품·태블릿 신청이 비활성화</b>되어 있습니다.</div>
             <div class="menu-item svc-gate" onclick="openFacilityRequest()"><i class="fa-solid fa-soap" style="color: #10b981;"></i> 생활관 비품 요청</div>
-            <div class="menu-item svc-gate" onclick="openShuttleApply()"><i class="fa-solid fa-bus"></i> 차량 신청</div>
+            <div class="menu-item svc-gate" id="menu-shuttle" style="display:none;" onclick="openShuttleApply()"><i class="fa-solid fa-bus"></i> 차량 신청</div>
             <div class="menu-item svc-gate" onclick="openAdminAction()"><i class="fa-solid fa-file-signature"></i> 외출·외박 / 석식제외</div>
             <div class="menu-item svc-gate" id="menu-tabletLoan" onclick="openTabletLoan()"><i class="fa-solid fa-tablet-screen-button" style="color:#6366f1;"></i> 태블릿 대여 신청</div>
             <div class="menu-item" onclick="openAttendanceQR()"><i class="fa-solid fa-qrcode" style="color: #3b82f6;"></i> 출결 QR 확인</div>
@@ -1343,6 +1343,7 @@ async function resolveRoomFromCode(code) {
     try { const _ln = localStorage.getItem('kac_user_name'); if (_ln) localStorage.setItem('kac_last_visited_name', _ln); } catch(e){}
 
     document.getElementById('roomBadge').innerText = `Room ${currentRoom}`;
+    try{ setupShuttleTimeGate(); }catch(e){}
     // 랜딩 배지: ROOM 알약 + 과정명. 과정명은 settings 로드 후 채워진다.
     document.getElementById('landingBadge').innerHTML =
         `<span class="room-pill"><i class="fa-solid fa-door-open"></i> ROOM ${currentRoom}</span>` +
@@ -2730,6 +2731,20 @@ function forceCloseQuiz() {
 let currentShuttleData = null; // 나의 신청 데이터 저장용
 
 // 1. 차량 신청 팝업 열기
+// [추가] 운영부가 '정확한' 출발시간을 설정했을 때만 '차량 신청' 메뉴 노출 (미정/미설정이면 숨김)
+function setupShuttleTimeGate(){
+    if(!currentRoom) return;
+    try{ if(window._shuttleGateRef) window._shuttleGateRef.off(); }catch(e){}
+    window._shuttleGateRef = firebase.database().ref('courses/'+currentRoom+'/shuttle/departure');
+    window._shuttleGateRef.on('value', function(snap){
+        var dep = snap.val();
+        var today = getTodayString();
+        var ok = !!(dep && dep.time && dep.time !== '미정' && dep.date && dep.date >= today);
+        var el = document.getElementById('menu-shuttle');
+        if(el) el.style.display = ok ? '' : 'none';
+    });
+}
+
 // [수정] 기사님이 설정한 출발 시간을 실시간으로 연동하도록 변경된 함수
 async function openShuttleApply() {
     if (await _svcGateBlocked('차량 신청')) return;
@@ -2801,25 +2816,21 @@ async function openShuttleApply() {
         const timeEl = document.getElementById('departureTimeText');
         if (!timeEl) return;
         const today = getTodayString();
-        if (dep && dep.time && dep.date && dep.date >= today) {
+        if (dep && dep.time && dep.time !== '미정' && dep.date && dep.date >= today) {
             const dateFmt = dep.date.replace(/-/g, '.');
-            if (dep.time === '미정') {
-                timeEl.textContent = `${dateFmt}  출발시간 미정 (추후 공지)`;
-                timeEl.style.color = '#b45309';
-                timeEl.style.fontSize = '17px';
-                currentDepTime = null;
-            } else {
-                const h = dep.time.split(':')[0].replace(/^0/, '');
-                timeEl.textContent = `${dateFmt}  ${h}시 출발 예정`;
-                timeEl.style.color = '#1d4ed8';
-                timeEl.style.fontSize = '22px';   // 시간: 크게
-                currentDepTime = dep.time;
-            }
+            const h = dep.time.split(':')[0].replace(/^0/, '');
+            timeEl.textContent = `${dateFmt}  ${h}시 출발 예정`;
+            timeEl.style.color = '#1d4ed8';
+            timeEl.style.fontSize = '22px';   // 시간: 크게
+            currentDepTime = dep.time;
         } else {
-            timeEl.textContent = dep ? '출발 일정이 없습니다.' : '기사님이 출발 시간을 설정 중입니다.';
-            timeEl.style.color = dep ? '#94a3b8' : '#64748b';
-            timeEl.style.fontSize = '15px';   // 안내문: 작게 (한 줄 유지)
+            // 운영부가 정확한 출발시간을 아직 설정하지 않음 → 신청 불가 (미정/설정중 표시 안 함)
+            timeEl.textContent = '아직 퇴교차량 출발시간이 설정되지 않았습니다.';
+            timeEl.style.color = '#94a3b8';
+            timeEl.style.fontSize = '15px';
             currentDepTime = null;
+            const _sa = document.getElementById('shuttleSelectionArea'); if (_sa) _sa.style.display = 'none';
+            const _ca = document.getElementById('shuttleCancelArea'); if (_ca) _ca.style.display = 'none';
         }
         refresh();
     });
@@ -5029,7 +5040,7 @@ input:not([type=checkbox]):not([type=radio]):not([type=file]), textarea, select 
 })();
 </script>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vH24</div>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vH25</div>
 <script>
 /* ===== [공용] 종료된 과정 자동 정리 (교육생 포함 전 플랫폼) — 종료일 지난 방을 다음날 미개설로 비움. 브라우저별 하루 1회 ===== */
 window.kacExpireEndedCourses = async function(){

@@ -3592,7 +3592,7 @@ body.sidebar-hidden .sidebar {
 }
 
 /* 사이드바 라운딩: 우측 위·아래 모서리. 라운딩 홈은 body 배경(상단바색)과 맞물려 흰색이 비치지 않음 */
-#mainSidebar { border-radius: 0 20px 20px 0 !important; }
+#mainSidebar { border-radius: 0 20px 0 0 !important; }
 
 /* 메인 스테이지: 사이드바 유무에 따라 자동으로 너비 결정 */
 .main-stage {
