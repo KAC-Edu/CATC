@@ -3594,8 +3594,8 @@ body.sidebar-hidden .sidebar {
 /* 사이드바 라운딩: 우측 위·아래 모서리. 라운딩 홈은 body 배경(상단바색)과 맞물려 흰색이 비치지 않음 */
 /* 사이드바: 우측 위·아래 모서리 라운딩. 상단 라운딩 뒤 흰색 방지용 채움막(#sidebarTopFill)을 사이드바 뒤에 배치 */
 #mainSidebar { border-radius: 0 20px 20px 0 !important; }
-#sidebarTopFill { position:fixed; top:0; left:0; width:var(--sidebar-width); height:64px; background:var(--header-bg); z-index:9998; pointer-events:none; }
-body.sidebar-hidden #sidebarTopFill { display:none; }
+/* 상단바와 동일 높이(60px)·상단바 아래 레이어로 깔아 라운딩 뒤 흰색 비침/두께 차이 방지. 항상 유지(접힘 시 헤더가 덮음) */
+#sidebarTopFill { position:fixed; top:0; left:0; width:var(--sidebar-width); height:60px; background:var(--header-bg); z-index:50; pointer-events:none; }
 
 /* 메인 스테이지: 사이드바 유무에 따라 자동으로 너비 결정 */
 .main-stage {
