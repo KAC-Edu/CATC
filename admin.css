@@ -31,7 +31,7 @@ body:-webkit-full-screen {
 * { box-sizing: border-box; font-family: 'Pretendard', sans-serif; }
 body { 
     margin: 0; 
-    background: var(--header-bg); 
+    background: var(--bg-color); 
     color: var(--text-color); 
     height: var(--app-h, 100vh); 
     display: flex; 
@@ -3592,7 +3592,10 @@ body.sidebar-hidden .sidebar {
 }
 
 /* 사이드바 라운딩: 우측 위·아래 모서리. 라운딩 홈은 body 배경(상단바색)과 맞물려 흰색이 비치지 않음 */
-#mainSidebar { border-radius: 0 20px 0 0 !important; }
+/* 사이드바: 우측 위·아래 모서리 라운딩. 상단 라운딩 뒤 흰색 방지용 채움막(#sidebarTopFill)을 사이드바 뒤에 배치 */
+#mainSidebar { border-radius: 0 20px 20px 0 !important; }
+#sidebarTopFill { position:fixed; top:0; left:0; width:var(--sidebar-width); height:64px; background:var(--header-bg); z-index:9998; pointer-events:none; }
+body.sidebar-hidden #sidebarTopFill { display:none; }
 
 /* 메인 스테이지: 사이드바 유무에 따라 자동으로 너비 결정 */
 .main-stage {
