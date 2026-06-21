@@ -9618,6 +9618,31 @@ annualPlanMgr._syncRoomsLockAware = async function(courses) {
         updates[`courses/${room}/settings/roomDetailName`] = course.roomDetail || '';
         updates[`courses/${room}/status/ownerSessionId`] = null;
     }
+    // [중복 과정 정리] 같은 과정명이 두 방 이상이면, 학생·명단·장소 있는 방만 남기고 비움
+    (function(){
+        var finalName = {};
+        this.ROOMS.forEach(function(r){
+            var k='courses/'+r+'/settings/courseName';
+            var fn = Object.prototype.hasOwnProperty.call(updates,k) ? updates[k] : ((roomsData[r]&&roomsData[r].settings&&roomsData[r].settings.courseName)||'');
+            finalName[r]=norm(fn);
+        });
+        var byName={};
+        Object.keys(finalName).forEach(function(r){ var n=finalName[r]; if(!n) return; (byName[n]=byName[n]||[]).push(r); });
+        Object.keys(byName).forEach(function(n){
+            var rooms=byName[n]; if(rooms.length<2) return;
+            var score=function(r){ var c=roomsData[r]||{}, s=c.settings||{}, st=c.status||{}; var stu=c.students?Object.keys(c.students).length:0; return stu*1000+(st.ownerSessionId?100:0)+((s.roomDetailName||'').trim()?10:0)+(s.autoAssignLocked?500:0); };
+            rooms.sort(function(a,b){ return score(b)-score(a); });
+            rooms.slice(1).forEach(function(r){
+                updates['courses/'+r+'/settings/courseName']='';
+                updates['courses/'+r+'/settings/period']='';
+                updates['courses/'+r+'/settings/roomDetailName']='';
+                updates['courses/'+r+'/settings/coordinatorName']=null;
+                updates['courses/'+r+'/status/professorName']='';
+                updates['courses/'+r+'/status/roomStatus']='idle';
+                updates['courses/'+r+'/status/ownerSessionId']=null;
+            });
+        });
+    }).call(this);
     if (Object.keys(updates).length) {
         await firebase.database().ref().update(updates);
         console.log('[annualPlanMgr] 동기화 완료. 대상주:', targetMon, '~', targetSun, '/ 보존:', [...keptNames].filter(Boolean).length, '/ 신규:', placeCount);
@@ -10128,7 +10153,7 @@ ui.saveFieldEdit = async function(){
 };
 
 /* __JSVER_STAMP__ */
-(function stampJsVer(){try{var b=document.getElementById('__catcVer');if(b){if(b.textContent.indexOf('Jq')<0)b.textContent=b.textContent+'\u00b7Jq';}else{setTimeout(stampJsVer,200);}}catch(e){}})();
+(function stampJsVer(){try{var b=document.getElementById('__catcVer');if(b){if(b.textContent.indexOf('Jr')<0)b.textContent=b.textContent+'\u00b7Jr';}else{setTimeout(stampJsVer,200);}}catch(e){}})();
 
 /* ===== [공항별 입교 현황 지도] 수강생현황 → 지도로 보기 ===== */
 ui._mapRegions = {

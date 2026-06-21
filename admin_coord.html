@@ -5795,6 +5795,31 @@ const annualPlanMgrCoord = {
             updates[`courses/${room}/status/ownerSessionId`] = null;
             usedNames.add(cnm);
         }
+        // [중복 과정 정리] 같은 과정명이 두 방 이상이면, 학생·명단·장소 있는 방만 남기고 비움
+        (function(){
+            var finalName = {};
+            this.ROOMS.forEach(function(r){
+                var k='courses/'+r+'/settings/courseName';
+                var fn = Object.prototype.hasOwnProperty.call(updates,k) ? updates[k] : ((roomsData[r]&&roomsData[r].settings&&roomsData[r].settings.courseName)||'');
+                finalName[r]=norm(fn);
+            });
+            var byName={};
+            Object.keys(finalName).forEach(function(r){ var n=finalName[r]; if(!n) return; (byName[n]=byName[n]||[]).push(r); });
+            Object.keys(byName).forEach(function(n){
+                var rooms=byName[n]; if(rooms.length<2) return;
+                var score=function(r){ var c=roomsData[r]||{}, s=c.settings||{}, st=c.status||{}; var stu=c.students?Object.keys(c.students).length:0; return stu*1000+(st.ownerSessionId?100:0)+((s.roomDetailName||'').trim()?10:0)+(s.autoAssignLocked?500:0); };
+                rooms.sort(function(a,b){ return score(b)-score(a); });
+                rooms.slice(1).forEach(function(r){
+                    updates['courses/'+r+'/settings/courseName']='';
+                    updates['courses/'+r+'/settings/period']='';
+                    updates['courses/'+r+'/settings/roomDetailName']='';
+                    updates['courses/'+r+'/settings/coordinatorName']=null;
+                    updates['courses/'+r+'/status/professorName']='';
+                    updates['courses/'+r+'/status/roomStatus']='idle';
+                    updates['courses/'+r+'/status/ownerSessionId']=null;
+                });
+            });
+        }).call(this);
         if (Object.keys(updates).length) {
             await firebase.database().ref().update(updates);
             console.log('[annualPlanMgrCoord] 동기화 완료. 대상주:', targetMon, '~', targetSun);
@@ -6810,7 +6835,7 @@ window.addEventListener('load', function(){
 });
 </script>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vH1</div>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vH2</div>
 <script>
 /* ===== [공용] 종료된 과정 자동 정리 (모든 플랫폼 공통) — 종료일 지난 방을 다음날 미개설로 비움. 브라우저별 하루 1회 ===== */
 window.kacExpireEndedCourses = async function(){
