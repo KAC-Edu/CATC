@@ -3407,6 +3407,8 @@ openQrModal: function() {
 
 
 setMode: function(mode) {
+        // [U턴 버튼] 과정(방)에 들어가 있고 현황판/홈이 아닐 때만 표시
+        try { document.body.classList.toggle('in-course', !!state.room && mode !== 'waiting' && mode !== 'home' && mode !== 'prof-presentation'); } catch(e){}
         // [QR] 현황판(waiting)에선 입장 QR 숨김, 과정현황(dashboard)에선 표시(사용자가 X로 닫지 않은 경우)
         try {
             var _qr = document.getElementById('floatingQR');
@@ -10126,7 +10128,7 @@ ui.saveFieldEdit = async function(){
 };
 
 /* __JSVER_STAMP__ */
-(function stampJsVer(){try{var b=document.getElementById('__catcVer');if(b){if(b.textContent.indexOf('Jp')<0)b.textContent=b.textContent+'\u00b7Jp';}else{setTimeout(stampJsVer,200);}}catch(e){}})();
+(function stampJsVer(){try{var b=document.getElementById('__catcVer');if(b){if(b.textContent.indexOf('Jq')<0)b.textContent=b.textContent+'\u00b7Jq';}else{setTimeout(stampJsVer,200);}}catch(e){}})();
 
 /* ===== [공항별 입교 현황 지도] 수강생현황 → 지도로 보기 ===== */
 ui._mapRegions = {
