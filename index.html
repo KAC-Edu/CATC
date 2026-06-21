@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content">
     <title>KAC Student Platform</title>
     <!-- PWA -->
     <link rel="manifest" href="manifest.json">
@@ -73,7 +73,7 @@
         .sort-bar { padding: 10px 15px; background: var(--bg-color); display: flex; gap: 10px; z-index: 80; flex-shrink: 0; }
         .sort-chip { padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 600; background: rgba(255,255,255,0.1); color: #94a3b8; cursor: pointer; transition: 0.2s; border: 1px solid transparent; }
         .sort-chip.active { background: var(--accent-color); color: white; border-color: var(--accent-color); }
-        .scroll-container { flex-grow: 1; overflow-y: auto; position: relative; padding: 0 15px 120px 15px; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+        .scroll-container { flex-grow: 1; overflow-y: auto; position: relative; padding: 0 15px 120px 15px; scrollbar-width: none; -webkit-overflow-scrolling: touch; -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 22px, #000 calc(100% - 26px), transparent 100%); mask-image: linear-gradient(to bottom, transparent 0, #000 22px, #000 calc(100% - 26px), transparent 100%); }
         .scroll-container::-webkit-scrollbar { display: none; }
 
 
@@ -1567,7 +1567,7 @@ function openMainMenu() {
         }
     });
 
-    (function(){ var _mm=document.getElementById('menuModal'); _mm.style.display='flex'; if(typeof installMenuSwipe==='function') installMenuSwipe(); requestAnimationFrame(function(){ requestAnimationFrame(function(){ _mm.classList.add('menu-open'); }); }); })();
+    (function(){ var _mm=document.getElementById('menuModal'); _mm.style.display='flex'; document.body.classList.add('menu-open'); if(typeof installMenuSwipe==='function') installMenuSwipe(); requestAnimationFrame(function(){ requestAnimationFrame(function(){ _mm.classList.add('menu-open'); }); }); })();
     if(typeof _applyServiceGate==='function') _applyServiceGate();
 }
 
@@ -1577,25 +1577,26 @@ function closeMainMenu(){
     var box=m.querySelector('.menu-box');
     if(box){ box.style.transition=''; box.style.transform=''; }
     m.classList.remove('menu-open');
-    setTimeout(function(){ m.style.display='none'; }, 430);
+    document.body.classList.remove('menu-open');
+    setTimeout(function(){ m.style.display='none'; }, 400);
 }
 window.closeMainMenu=closeMainMenu;
 function installMenuSwipe(){
     var m=document.getElementById('menuModal'); if(!m) return;
     var box=m.querySelector('.menu-box'); if(!box || box._swipeSet) return;
     box._swipeSet=true;
-    var startY=null, dy=0, atTop=false;
-    box.addEventListener('touchstart', function(e){ startY=e.touches[0].clientY; dy=0; atTop=(box.scrollTop<=0); }, {passive:true});
+    var startX=null, dx=0;
+    box.addEventListener('touchstart', function(e){ startX=e.touches[0].clientX; dx=0; }, {passive:true});
     box.addEventListener('touchmove', function(e){
-        if(startY===null || !atTop) return;
-        var d=e.touches[0].clientY-startY;
-        if(d<0){ dy=d; box.style.transition='none'; box.style.transform='translateY('+d+'px)'; }
+        if(startX===null) return;
+        var d=e.touches[0].clientX-startX;
+        if(d<0){ dx=d; box.style.transition='none'; box.style.transform='translateX('+d+'px)'; }
     }, {passive:true});
     box.addEventListener('touchend', function(){
-        if(startY===null) return;
+        if(startX===null) return;
         box.style.transition='';
-        if(dy < -70){ closeMainMenu(); } else { box.style.transform=''; }
-        startY=null; dy=0;
+        if(dx < -60){ closeMainMenu(); } else { box.style.transform=''; }
+        startX=null; dx=0;
     }, {passive:true});
 }
 
@@ -1621,7 +1622,7 @@ function editProfile() {
     const agree = document.getElementById('privacyAgree');
     if (agree) agree.checked = true;
 
-    document.getElementById('menuModal').style.display = 'none';
+    document.getElementById('menuModal').style.display = 'none'; document.body.classList.remove('menu-open');
     document.getElementById('profileOverlay').style.display = 'flex';
 }
 
@@ -2671,6 +2672,8 @@ function forceCloseQuiz() {
             const box = document.getElementById('roomList'); box.innerHTML = "";
             for(let i=65; i<=90; i++) { let c = String.fromCharCode(i); box.innerHTML += `<div class="menu-item" onclick="changeRoom('${c}')">Room ${c}</div>`; }
             document.getElementById('menuModal').style.display = 'flex';
+            document.body.classList.add('menu-open');
+            requestAnimationFrame(function(){ requestAnimationFrame(function(){ document.getElementById('menuModal').classList.add('menu-open'); }); });
     if(typeof _applyServiceGate==='function') _applyServiceGate();
         }
         function changeRoom(r) {
@@ -3449,7 +3452,7 @@ async function confirmReturnAction() {
 
 // 4. 강의실 이동 메뉴 클릭 시
 function openRoomMove() {
-    document.getElementById('menuModal').style.display = 'none';
+    document.getElementById('menuModal').style.display = 'none'; document.body.classList.remove('menu-open');
     if(typeof openMenu === 'function') openMenu(); 
 }
 
@@ -3868,7 +3871,7 @@ async function openFacilityRequest() {
         window._hideFromBoard = hideFromBoard;
     } catch (e) { /* 읽기 실패 시 캐시된 값 사용 */ }
     if (hideFromBoard) {
-        document.getElementById('menuModal').style.display = 'none';
+        document.getElementById('menuModal').style.display = 'none'; document.body.classList.remove('menu-open');
         showKacAlert(
             '<div style="font-size:17px;font-weight:900;color:#b45309;margin-bottom:6px;">🚫 비품 신청 제한</div>'
             + '현재 <b>비공식적으로 과정이 운영 중</b>이어서<br>미화 비품 신청이 제한됩니다.<br>'
@@ -4060,14 +4063,14 @@ async function openAttendanceQR() {
 
 function openCnsPlatform() {
     // 메뉴창 닫기
-    document.getElementById('menuModal').style.display = 'none';
+    document.getElementById('menuModal').style.display = 'none'; document.body.classList.remove('menu-open');
     // CNS 플랫폼 주소로 새 창 열기
     window.open("https://kac-edu.github.io/kac-cns-platform/index.html", "_blank");
 }
 
 // 고용노동부(고용24) 직업훈련 출결관리 앱 — 설치돼 있으면 실행, 없으면 스토어로 이동
 function openHrdAttendanceApp() {
-    try { document.getElementById('menuModal').style.display = 'none'; } catch (e) {}
+    try { document.getElementById('menuModal').style.display = 'none'; document.body.classList.remove('menu-open'); } catch (e) {}
     const playUrl = 'https://play.google.com/store/apps/details?id=kr.go.hrd.app';
     const iosUrl  = 'https://apps.apple.com/kr/app/id588283412';
     const ua = navigator.userAgent || '';
@@ -4110,10 +4113,10 @@ function initKeyboardFix() {
         const apply = () => {
             const kb = Math.max(0, Math.round(window.innerHeight - vv.height - vv.offsetTop));
             if (kb > 60) {
-                inputDock.style.transform = 'translateY(' + (-kb) + 'px)';
+                inputDock.style.transform = 'translateX(-50%) translateY(' + (-kb) + 'px)';
                 if (scrollContainer) scrollContainer.style.paddingBottom = (kb + 150) + 'px';
             } else {
-                inputDock.style.transform = '';
+                inputDock.style.transform = 'translateX(-50%)';
                 if (scrollContainer) scrollContainer.style.paddingBottom = '150px';
             }
         };
@@ -4128,7 +4131,7 @@ function initKeyboardFix() {
             setTimeout(() => { try { scrollContainer.scrollTop = scrollContainer.scrollHeight; } catch(e){} }, 300);
         });
         qInput.addEventListener('blur', () => {
-            inputDock.style.transform = '';
+            inputDock.style.transform = 'translateX(-50%)';
             if (scrollContainer) scrollContainer.style.paddingBottom = '150px';
         });
     }
@@ -4727,10 +4730,14 @@ function closeTabletLoan() {
 .menu-box { box-shadow:0 18px 44px rgba(37,99,235,.16) !important; }
 /* 메인 메뉴: 바깥 흰 카드 제거 — 항목들이 배경 위에 바로 놓이게 */
 /* 커튼형 메뉴: 위에서 내려오고, 아래 모서리 라운딩 + 파란 띠, 위로 스와이프로 닫기 */
-#menuModal { align-items:flex-start !important; justify-content:center !important; background:rgba(15,23,42,.45) !important; -webkit-backdrop-filter:blur(2px) !important; backdrop-filter:blur(2px) !important; }
-#menuModal > .menu-box { width:96% !important; max-width:480px !important; margin:0 auto !important; background:linear-gradient(180deg,#f5faff 0%,#e6effe 100%) !important; border:1px solid #cfe0ff !important; border-top:none !important; border-bottom:5px solid #2563eb !important; border-radius:0 0 28px 28px !important; box-shadow:0 20px 46px rgba(30,58,138,.30) !important; padding:16px 14px 20px !important; max-height:90vh !important; overflow-y:auto !important; transform:translateY(-120%); transition:transform .42s cubic-bezier(.22,1,.36,1); }
-#menuModal.menu-open > .menu-box { transform:translateY(0); }
-#menuModal > .menu-box::after { content:"\25B2  \C704\B85C \C62C\B824 \B2EB\AE30"; display:block; text-align:center; font-size:11px; font-weight:700; color:#94a3b8; margin-top:8px; }
+#menuModal { align-items:stretch !important; justify-content:flex-start !important; background:rgba(15,23,42,.40) !important; -webkit-backdrop-filter:none !important; backdrop-filter:none !important; opacity:0; transition:opacity .3s ease; }
+#menuModal.menu-open { opacity:1; }
+#menuModal > .menu-box { position:fixed !important; top:0 !important; left:0 !important; bottom:0 !important; width:82% !important; max-width:330px !important; margin:0 !important; background:linear-gradient(180deg,#f5faff 0%,#e6effe 100%) !important; border:none !important; border-right:1px solid #cfe0ff !important; border-radius:0 18px 18px 0 !important; box-shadow:6px 0 30px rgba(15,23,42,.25) !important; padding:18px 16px calc(20px + env(safe-area-inset-bottom)) !important; max-height:100vh !important; overflow-y:auto !important; transform:translateX(-100%); transition:transform .38s cubic-bezier(.22,1,.36,1); }
+#menuModal.menu-open > .menu-box { transform:translateX(0); }
+#menuModal > .menu-box::after { content:none !important; }
+#mainApp { transition:transform .38s cubic-bezier(.22,1,.36,1), border-radius .38s; }
+body.menu-open #mainApp { transform:translateX(80%) !important; border-radius:20px; overflow:hidden; }
+@media (min-width:541px){ body.menu-open #mainApp { transform:translateX(290px) !important; } }
 
 /* 외출·외박 신청서: 화면 중앙 정렬 + 내용 넘치면 박스 안에서 스크롤 */
 #adminActionModal { align-items:center !important; justify-content:center !important; padding:16px 0 !important; }
@@ -4827,7 +4834,7 @@ input:not([type=checkbox]):not([type=radio]):not([type=file]), textarea, select 
 })();
 </script>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vH3</div>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vH6</div>
 <script>
 /* ===== [공용] 종료된 과정 자동 정리 (교육생 포함 전 플랫폼) — 종료일 지난 방을 다음날 미개설로 비움. 브라우저별 하루 1회 ===== */
 window.kacExpireEndedCourses = async function(){
