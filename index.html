@@ -1344,7 +1344,16 @@ async function resolveRoomFromCode(code) {
 
     document.getElementById('roomBadge').innerText = `Room ${currentRoom}`;
     try{ setupShuttleTimeGate(); }catch(e){}
-    try{ installPanelSwipeClose('shuttleModal', closeShuttleModal); installPanelSwipeClose('adminActionModal', closeAdminAction); installPanelSwipeClose('facilityModal', closeFacilityModal); installPanelSwipeClose('tabletLoanModal', closeTabletLoan); }catch(e){}
+    try{
+        installPanelSwipeClose('shuttleModal', closeShuttleModal);
+        installPanelSwipeClose('adminActionModal', closeAdminAction);
+        installPanelSwipeClose('facilityModal', closeFacilityModal);
+        installPanelSwipeClose('tabletLoanModal', closeTabletLoan);
+        installPanelSwipeClose('noticeModal', function(){ var m=document.getElementById('noticeModal'); if(m) m.style.display='none'; });
+        installPanelSwipeClose('surveyModal', function(){ var m=document.getElementById('surveyModal'); if(m) m.style.display='none'; });
+        installPanelSwipeClose('mealMenuModal', (typeof closeMealMenu==='function')?closeMealMenu:function(){ var m=document.getElementById('mealMenuModal'); if(m) m.style.display='none'; });
+        installPanelSwipeClose('qrModal', function(){ var m=document.getElementById('qrModal'); if(m) m.style.display='none'; });
+    }catch(e){}
     // 랜딩 배지: ROOM 알약 + 과정명. 과정명은 settings 로드 후 채워진다.
     document.getElementById('landingBadge').innerHTML =
         `<span class="room-pill"><i class="fa-solid fa-door-open"></i> ROOM ${currentRoom}</span>` +
@@ -1643,7 +1652,7 @@ window.installMenuDragClose=installMenuDragClose;
 // ===== 우측 슬라이드 패널(퇴교차량/외출외박 등) 좌→우 스와이프로 닫기 =====
 function installPanelSwipeClose(modalId, closeFn){
     var modal=document.getElementById(modalId); if(!modal || modal._swipeClose) return;
-    var box=modal.querySelector('.menu-box'); if(!box) return; modal._swipeClose=true;
+    var box=modal.querySelector('.menu-box') || modal.querySelector(':scope > div'); if(!box) return; modal._swipeClose=true;
     var sx=null, sy=null, dx=0, dy=0, drag=false;
     box.addEventListener('touchstart', function(e){ sx=e.touches[0].clientX; sy=e.touches[0].clientY; dx=0; dy=0; drag=false; }, {passive:true});
     box.addEventListener('touchmove', function(e){
@@ -4959,6 +4968,22 @@ input:not([type=checkbox]):not([type=radio]):not([type=file]), textarea, select 
 #shuttleModal, #adminActionModal, #noticeModal, #facilityModal, #tabletLoanModal, #surveyModal { background: rgba(15,23,42,.32) !important; -webkit-backdrop-filter:none !important; backdrop-filter:none !important; }
 #adminActionModal .menu-box, #shuttleModal .menu-box, #surveyModal .menu-box, #noticeModal .menu-box { box-shadow:-16px 0 48px rgba(15,23,42,.34) !important; }
 #facilityModal .menu-box, #tabletLoanModal .menu-box { box-shadow:0 24px 60px rgba(15,23,42,.30) !important; }
+/* ===== [통일] 모든 메뉴 패널: 우측 도킹 + 우측에서 슬라이드 + 뒤 메뉴 비침(반투명) ===== */
+#noticeModal, #surveyModal, #shuttleModal, #adminActionModal, #facilityModal, #tabletLoanModal, #mealMenuModal, #qrModal {
+  justify-content:flex-end !important; align-items:stretch !important;
+  background:rgba(15,23,42,.32) !important; -webkit-backdrop-filter:none !important; backdrop-filter:none !important;
+  padding:0 !important; animation:overlayFadeIn .2s ease both !important;
+}
+#noticeModal > .menu-box, #surveyModal > .menu-box, #shuttleModal > .menu-box, #adminActionModal > .menu-box, #facilityModal > .menu-box, #tabletLoanModal > .menu-box, #qrModal > .menu-box, #mealMenuModal > div {
+  position:relative !important; height:100dvh !important; max-height:100dvh !important;
+  width:92% !important; max-width:430px !important; margin:0 !important;
+  border-radius:18px 0 0 18px !important;
+  box-shadow:-16px 0 48px rgba(15,23,42,.34) !important;
+  overflow-y:auto !important; -webkit-overflow-scrolling:touch !important;
+  display:flex !important; flex-direction:column !important; justify-content:safe center !important;
+  padding:24px 20px calc(24px + env(safe-area-inset-bottom)) !important;
+  animation:slideInRight .34s cubic-bezier(.16,.84,.44,1) both; will-change:transform;
+}
 /* 차량 신청: 글자/버튼 크기 메뉴 수준으로 축소 */
 #shuttleModal .shuttle-btn { height:54px !important; }
 #shuttleModal .shuttle-btn span[style*="font-weight:800"] { font-size:15px !important; }
@@ -5066,7 +5091,7 @@ input:not([type=checkbox]):not([type=radio]):not([type=file]), textarea, select 
 })();
 </script>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vH27</div>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vH28</div>
 <script>
 /* ===== [공용] 종료된 과정 자동 정리 (교육생 포함 전 플랫폼) — 종료일 지난 방을 다음날 미개설로 비움. 브라우저별 하루 1회 ===== */
 window.kacExpireEndedCourses = async function(){
