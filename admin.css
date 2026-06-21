@@ -1,6 +1,6 @@
 /* ============================================================
    CATC · 강사 플랫폼 스타일  (admin.css)
-   @version  C   @build  20260612-071734
+   @version  D   @build  20260622-000000
    ------------------------------------------------------------
    [코드 수정 규칙] 수정 시 @version 을
    A -> B -> ... -> Z -> A1 -> B1 -> ... 순으로 1단계 올리고
@@ -4076,3 +4076,52 @@ body:-webkit-full-screen .main-stage {
 .flatpickr-calendar { box-shadow:0 24px 64px rgba(15,23,42,.45) !important; border:2px solid #2563eb !important; border-radius:16px !important; background:#fff !important; }
 .flatpickr-calendar:before, .flatpickr-calendar:after { display:none !important; }
 .flatpickr-confirm, .flatpickr-calendar .flatpickr-confirm { background:#2563eb !important; color:#fff !important; font-weight:800 !important; border-radius:10px !important; }
+
+/* ════════════════════════════════════════════════════════════════════
+   KAC 공통 디자인 토큰 v1 — 추가 적용 블록 (2026)
+   ※ 위 기존 규칙은 손대지 않음. 이 블록만 지우면 원상복구됨.
+   ════════════════════════════════════════════════════════════════════ */
+:root{
+  /* 메인 액센트: 한 톤 깊은 블루(대비 ↑) */
+  --accent-color:#2563eb;
+  /* 기능 그룹 색 (운영/지원/진행) */
+  --grp-operate:#2563eb;   --grp-operate-soft:#eff4ff;
+  --grp-support:#059669;   --grp-support-soft:#ecfdf5;
+  --grp-progress:#4f46e5;  --grp-progress-soft:#eef2ff;
+  /* 의미 색 */
+  --c-danger:#dc2626; --c-warning:#d97706; --c-success:#16a34a; --c-info:#2563eb;
+  /* 라운드 3단계 + 알약 */
+  --r-sm:8px; --r-md:12px; --r-lg:20px; --r-pill:999px;
+  /* 그림자 3단계 */
+  --sh-sm:0 1px 3px rgba(15,23,42,.10);
+  --sh-md:0 4px 16px rgba(15,23,42,.12);
+  --sh-lg:0 16px 44px rgba(15,23,42,.20);
+}
+
+/* ── 1. 상단 모드탭: '무지개' 제거 → 선택된 탭만 강조, 나머지는 차분한 회색 ── */
+.mode-btn:not(.active) i{ color:#94a3b8 !important; transition:color .2s; }
+.mode-btn:not(.active):hover i{ color:#64748b !important; }
+.mode-btn.active{ box-shadow:0 2px 10px rgba(37,99,235,.30) !important; }
+
+/* ── 2. 위험 액션 정리: 'Reset' 하나만 명확한 빨강, 'All Idle'은 중립 회색으로 ── */
+button[onclick*="allIdle"]{
+  background:#475569 !important; color:#fff !important;
+}
+.btn-danger{
+  background:#fff5f5 !important; color:var(--c-danger) !important;
+  border:1px solid #fca5a5 !important;
+}
+.btn-danger:hover{ background:#fee2e2 !important; filter:none !important; }
+
+/* ── 3. 배경음 플레이어: 시선 뺏는 맥동 애니메이션만 정지(기능·색은 유지) ── */
+#bgmNowBubble.playing{ animation:none !important; }
+
+/* ── 4. 카드·모달 라운드/그림자 통일(토큰 적용) ── */
+.modern-white-card{ border-radius:var(--r-lg) !important; }
+.modal-box{ border-radius:var(--r-lg) !important; box-shadow:var(--sh-lg) !important; }
+
+/* ── 5. 포커스 링 통일: 입력창 포커스 시 액센트 블루 ── */
+.setting-input:focus, .setting-select:focus, .login-input:focus{
+  border-color:var(--accent-color) !important;
+  box-shadow:0 0 0 3px rgba(37,99,235,.12) !important;
+}
