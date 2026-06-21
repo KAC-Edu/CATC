@@ -10157,7 +10157,7 @@ ui.saveFieldEdit = async function(){
 };
 
 /* __JSVER_STAMP__ */
-(function stampJsVer(){try{var b=document.getElementById('__catcVer');if(b){if(b.textContent.indexOf('Jy')<0)b.textContent=b.textContent+'\u00b7Jy';}else{setTimeout(stampJsVer,200);}}catch(e){}})();
+(function stampJsVer(){try{var b=document.getElementById('__catcVer');if(b){if(b.textContent.indexOf('Jz')<0)b.textContent=b.textContent+'\u00b7Jz';}else{setTimeout(stampJsVer,200);}}catch(e){}})();
 
 /* ===== [공항별 입교 현황 지도] 수강생현황 → 지도로 보기 ===== */
 ui._mapRegions = {
@@ -10324,3 +10324,35 @@ ui.rouletteAssign = async function(){
 };
 ui.closeLeaderRoulette = function(){ var m=document.getElementById('leaderRouletteModal'); if(m) m.remove(); if(ui._roulette) ui._roulette.spinning=false; };
 
+
+// ===== 상단 '더보기' 우측 슬라이드 패널 (10초 미사용 시 자동 접힘) =====
+ui._moreArmAutoClose = function(){
+    if(ui._moreTimer){ clearTimeout(ui._moreTimer); }
+    ui._moreTimer = setTimeout(function(){ ui.closeMorePanel(); }, 10000);
+    var p=document.getElementById('moreMenuPanel');
+    if(p && !p._autoBound){ p._autoBound=true;
+        ['mousemove','touchstart','wheel','scroll','click','keydown'].forEach(function(ev){
+            p.addEventListener(ev, function(){ if(p.classList.contains('open')){ if(ui._moreTimer) clearTimeout(ui._moreTimer); ui._moreTimer=setTimeout(function(){ ui.closeMorePanel(); }, 10000); } }, {passive:true});
+        });
+    }
+};
+ui.openMorePanel = function(){
+    var p=document.getElementById('moreMenuPanel'), b=document.getElementById('moreMenuBackdrop');
+    if(!p) return;
+    if(b) b.style.display='block';
+    p.classList.add('open');
+    requestAnimationFrame(function(){ p.style.transform='translateX(0)'; });
+    ui._moreArmAutoClose();
+};
+ui.closeMorePanel = function(){
+    var p=document.getElementById('moreMenuPanel'), b=document.getElementById('moreMenuBackdrop');
+    if(!p) return;
+    p.classList.remove('open');
+    p.style.transform='translateX(100%)';
+    if(ui._moreTimer){ clearTimeout(ui._moreTimer); ui._moreTimer=null; }
+    setTimeout(function(){ if(!p.classList.contains('open') && b) b.style.display='none'; }, 340);
+};
+ui.toggleMorePanel = function(){
+    var p=document.getElementById('moreMenuPanel'); if(!p) return;
+    if(p.classList.contains('open')) ui.closeMorePanel(); else ui.openMorePanel();
+};
