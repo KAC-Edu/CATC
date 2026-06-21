@@ -514,6 +514,9 @@
     <a class="more-item" onclick="ui.setMode('quiz'); ui.closeMorePanel();"><i class="fa-solid fa-clipboard-question" style="color:#6366f1;"></i> 퀴즈 모드</a>
     <a class="more-item" onclick="ui.setMode('waiting'); ui.closeMorePanel();"><i class="fa-solid fa-chart-line" style="color:#6366f1;"></i> 과정 총 현황</a>
     <a class="more-item" onclick="ui.setMode('schedule'); ui.closeMorePanel();"><i class="fa-solid fa-calendar-days" style="color:#6366f1;"></i> 교육 시간표</a>
+    <hr class="more-div">
+    <div class="more-sec" style="color:#f59e0b;">정보 · 소식</div>
+    <a class="more-item" onclick="ui.setMode('foodnews'); ui.closeMorePanel();"><i class="fa-solid fa-burger" style="color:#f59e0b;"></i> 도움이 되는 소식 (맛집)</a>
 </div>
 
         
@@ -826,6 +829,18 @@
         </div> <!-- dash-premium-grid 끝 -->
     </div> <!-- modern-white-card dash-hero-container 끝 -->
 </div> <!-- view-dashboard 끝 -->
+
+<!-- 도움이 되는 소식: 항기원 맛집 -->
+<div id="view-foodnews" style="display:none; width:100%; flex-direction:column; align-items:center;">
+    <div class="view-header">
+        <h1><i class="fa-solid fa-burger" style="color:#f59e0b;"></i> 도움이 되는 소식 — 항기원 맛집 <span class="header-room-badge room-badge-global"></span></h1>
+    </div>
+    <div class="modern-white-card" style="width:100%; max-width:1080px; padding:26px 30px;">
+        <div style="font-size:13px; color:#64748b; font-weight:700; margin-bottom:16px;">교육생들이 익명으로 추천한 맛집입니다 · 추천순 정렬 · 거리/시간은 <b>자가용 기준</b>(길찾기에서 확인)</div>
+        <div id="foodNewsFilters" style="display:flex; gap:8px; margin-bottom:18px; flex-wrap:wrap;"></div>
+        <div id="foodNewsList" style="display:flex; flex-direction:column; gap:12px;"></div>
+    </div>
+</div>
 
 
 
@@ -2541,6 +2556,6 @@ function setupAcc(btn){
 </div>
 <style>@media print{#__catcVer{display:none!important}}</style>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vVJ</div>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vVK</div>
 </body>
 </html>

@@ -661,6 +661,7 @@
             <div class="menu-item" id="menu-survey-instant" style="display:none; background:#e0f2fe; color:#0369a1; font-weight:900; text-align:center;" onclick="openInstantSurvey();"><i class="fa-solid fa-square-poll-vertical"></i> 설문 응답 / 수정</div>
             <div class="menu-item" onclick="openNotice()"><i class="fa-solid fa-bullhorn" style="color: #facc15;"></i> 공지사항 </div>
             <div class="menu-item" onclick="viewMealMenu()"><i class="fa-solid fa-utensils"></i> 금주 식단보기</div>
+            <div class="menu-item" onclick="openFoodModal()"><i class="fa-solid fa-burger" style="color:#f59e0b;"></i> 항기원 맛집 추천</div>
             <div id="svcGateBanner" style="display:none; background:#fff7ed; border:1px solid #fed7aa; color:#b45309; border-radius:12px; padding:11px 13px; font-size:12.5px; font-weight:700; line-height:1.5; margin-bottom:4px;"><i class="fa-solid fa-lock" style="margin-right:5px;"></i> 현재 담당 교수님이 신청 기능을 열어두지 않아 <b>차량·외출/외박·석식·비품·태블릿 신청이 비활성화</b>되어 있습니다.</div>
             <div class="menu-item svc-gate" onclick="openFacilityRequest()"><i class="fa-solid fa-soap" style="color: #10b981;"></i> 생활관 비품 요청</div>
             <div class="menu-item svc-gate" id="menu-shuttle" style="display:none;" onclick="openShuttleApply()"><i class="fa-solid fa-bus"></i> 차량 신청</div>
@@ -813,6 +814,30 @@
 
 
 <!-- [개편] 차량 신청 팝업 -->
+<!-- 항기원 맛집 추천 패널 -->
+<div id="foodModal" class="menu-overlay" style="display:none; z-index:8300;">
+    <div class="menu-box" style="position:relative;">
+        <button type="button" onclick="closePanelSmooth('foodModal')" aria-label="닫기" style="position:absolute; top:12px; right:14px; width:34px; height:34px; border:none; border-radius:50%; background:#f1f5f9; color:#475569; font-size:22px; font-weight:800; cursor:pointer; z-index:5;">&times;</button>
+        <h3 style="margin:0 0 4px; color:#1e293b; font-weight:900; font-size:20px;">🍜 항기원 맛집 추천</h3>
+        <div style="font-size:12.5px; color:#94a3b8; font-weight:600; margin-bottom:14px;">익명으로 맛집을 공유하고 공감해요 · 🚗 자가용 길찾기 제공</div>
+        <button type="button" onclick="openFoodAddForm()" style="width:100%; padding:12px; border:none; border-radius:12px; background:#2563eb; color:#fff; font-weight:800; font-size:14px; cursor:pointer; margin-bottom:12px;"><i class="fa-solid fa-plus"></i> 맛집 추가하기</button>
+        <div id="foodAddForm" style="display:none; background:#f8fafc; border:1px solid #e2e8f0; border-radius:14px; padding:14px; margin-bottom:14px; text-align:left;">
+            <input id="foodName" type="text" maxlength="40" placeholder="가게명" style="width:100%; padding:11px; border:1px solid #cfe0ff; border-radius:10px; margin-bottom:8px; font-size:14px; box-sizing:border-box;">
+            <select id="foodCat" style="width:100%; padding:11px; border:1px solid #cfe0ff; border-radius:10px; margin-bottom:8px; font-size:14px; box-sizing:border-box; background:#fff;">
+                <option value="식당">식당</option><option value="카페">카페</option><option value="분식">분식</option><option value="술집">술집</option><option value="기타">기타</option>
+            </select>
+            <input id="foodAddr" type="text" maxlength="80" placeholder="주소 또는 위치 (예: 청주 상당구 ...)" style="width:100%; padding:11px; border:1px solid #cfe0ff; border-radius:10px; margin-bottom:8px; font-size:14px; box-sizing:border-box;">
+            <textarea id="foodComment" rows="2" maxlength="100" placeholder="한줄평 (선택)" style="width:100%; padding:11px; border:1px solid #cfe0ff; border-radius:10px; margin-bottom:10px; font-size:14px; box-sizing:border-box; resize:none;"></textarea>
+            <div style="display:flex; gap:8px;">
+                <button type="button" onclick="closeFoodAddForm()" style="flex:1; padding:11px; border:1px solid #e2e8f0; border-radius:10px; background:#fff; color:#475569; font-weight:800; cursor:pointer;">취소</button>
+                <button type="button" onclick="submitFoodSpot()" style="flex:1; padding:11px; border:none; border-radius:10px; background:#2563eb; color:#fff; font-weight:800; cursor:pointer;">등록</button>
+            </div>
+        </div>
+        <div id="foodFilters" style="display:flex; flex-wrap:wrap; gap:6px; margin-bottom:12px;"></div>
+        <div id="foodList" style="display:flex; flex-direction:column; gap:10px;"></div>
+    </div>
+</div>
+
 <div id="shuttleModal" class="menu-overlay" style="display:none; z-index: 7000;">
     <div class="menu-box" style="width:90%; padding:25px 20px; border-radius:24px; max-width:400px;">
         <h3 style="margin-bottom:12px; color:#1e293b; font-weight:900;">퇴교 차량 신청</h3>
@@ -1365,6 +1390,7 @@ async function resolveRoomFromCode(code) {
         installPanelSwipeClose('surveyModal', function(){ var m=document.getElementById('surveyModal'); if(m) m.style.display='none'; });
         installPanelSwipeClose('mealMenuModal', (typeof closeMealMenu==='function')?closeMealMenu:function(){ var m=document.getElementById('mealMenuModal'); if(m) m.style.display='none'; });
         installPanelSwipeClose('qrModal', function(){ var m=document.getElementById('qrModal'); if(m) m.style.display='none'; });
+        installPanelSwipeClose('foodModal', function(){ var m=document.getElementById('foodModal'); if(m) m.style.display='none'; });
     }catch(e){}
     try{
         window._panelRawClose = {
@@ -1375,7 +1401,8 @@ async function resolveRoomFromCode(code) {
             mealMenuModal: (typeof closeMealMenu==='function'?closeMealMenu:function(){var m=document.getElementById('mealMenuModal');if(m)m.style.display='none';}),
             noticeModal: function(){var m=document.getElementById('noticeModal');if(m)m.style.display='none';},
             surveyModal: function(){var m=document.getElementById('surveyModal');if(m)m.style.display='none';},
-            qrModal: function(){var m=document.getElementById('qrModal');if(m)m.style.display='none';}
+            qrModal: function(){var m=document.getElementById('qrModal');if(m)m.style.display='none';},
+            foodModal: function(){var m=document.getElementById('foodModal');if(m)m.style.display='none';}
         };
         if(!window._closeWrapped){ window._closeWrapped=true;
             window.closeShuttleModal=function(){ closePanelSmooth('shuttleModal'); };
@@ -1719,6 +1746,76 @@ function installPanelSwipeClose(modalId, closeFn){
 window.installPanelSwipeClose=installPanelSwipeClose;
 
 // ===== 우측 패널 닫기를 항상 부드럽게(슬라이드 아웃) 통일 =====
+// ===== 항기원 맛집 추천 =====
+var FOOD_CATS=['식당','카페','분식','술집','기타'];
+var HANGIWON_ADDR='충북 청주시 상당구 문의면 남계길 22-55';
+var _foodFilter='전체';
+var _foodCache=[];
+function openFoodModal(){
+    var m=document.getElementById('foodModal'); if(!m) return;
+    m.style.display='flex'; closeFoodAddForm(); renderFoodFilters();
+    if(window._foodRef){ try{ window._foodRef.off(); }catch(e){} }
+    window._foodRef=firebase.database().ref('system/foodspots');
+    window._foodRef.on('value', function(snap){
+        var v=snap.val()||{};
+        _foodCache=Object.keys(v).map(function(k){ var o=v[k]||{}; o.id=k; return o; });
+        _foodCache.sort(function(a,b){ return (b.likes||0)-(a.likes||0) || (b.ts||0)-(a.ts||0); });
+        renderFoodList();
+    });
+}
+function setFoodFilter(c){ _foodFilter=c; renderFoodFilters(); renderFoodList(); }
+function renderFoodFilters(){
+    var el=document.getElementById('foodFilters'); if(!el) return;
+    var cats=['전체'].concat(FOOD_CATS);
+    el.innerHTML=cats.map(function(c){ var on=(_foodFilter===c);
+        return '<button type="button" onclick="setFoodFilter(\''+c+'\')" style="padding:7px 13px; border-radius:50px; border:1px solid '+(on?'#2563eb':'#cfe0ff')+'; background:'+(on?'#2563eb':'#fff')+'; color:'+(on?'#fff':'#1e3a8a')+'; font-size:13px; font-weight:800; cursor:pointer;">'+c+'</button>';
+    }).join('');
+}
+function _foodCatColor(c){ return ({'식당':'#f59e0b','카페':'#10b981','분식':'#ef4444','술집':'#8b5cf6','기타':'#64748b'})[c]||'#64748b'; }
+function renderFoodList(){
+    var el=document.getElementById('foodList'); if(!el) return;
+    var likes=JSON.parse(localStorage.getItem('kac_food_likes')||'{}');
+    var list=_foodCache.filter(function(o){ return _foodFilter==='전체' || o.category===_foodFilter; });
+    if(!list.length){ el.innerHTML='<div style="padding:30px 0; text-align:center; color:#94a3b8; font-weight:700; line-height:1.6;">아직 등록된 맛집이 없어요.<br>첫 맛집을 추가해보세요!</div>'; return; }
+    el.innerHTML=list.map(function(o){
+        var liked=!!likes[o.id]; var cat=o.category||'기타'; var col=_foodCatColor(cat);
+        var nm=(o.name||'').replace(/</g,'&lt;'); var cm=(o.comment||'').replace(/</g,'&lt;'); var ad=(o.address||'').replace(/</g,'&lt;');
+        var q=encodeURIComponent(o.name||o.address||'');
+        var mapv='https://map.naver.com/p/search/'+q;
+        var route='https://map.kakao.com/?sName='+encodeURIComponent(HANGIWON_ADDR)+'&eName='+encodeURIComponent(((o.name||'')+' '+(o.address||'')).trim());
+        return '<div style="background:#fff; border:1px solid #e8eef8; border-radius:14px; padding:14px; box-shadow:0 2px 8px rgba(15,23,42,.05); text-align:left;">'
+          +'<div style="display:flex; align-items:center; gap:7px; margin-bottom:6px;"><span style="background:'+col+'; color:#fff; font-size:11px; font-weight:800; padding:2px 8px; border-radius:6px;">'+cat+'</span><span style="font-size:16px; font-weight:900; color:#0f172a;">'+nm+'</span></div>'
+          +(ad?'<div style="font-size:12.5px; color:#64748b; margin-bottom:4px;"><i class="fa-solid fa-location-dot" style="color:#94a3b8;"></i> '+ad+'</div>':'')
+          +(cm?'<div style="font-size:13.5px; color:#334155; line-height:1.5; margin-bottom:10px;">'+cm+'</div>':'<div style="margin-bottom:8px;"></div>')
+          +'<div style="display:flex; align-items:center; gap:8px;">'
+          +'<button type="button" onclick="toggleFoodLike(\''+o.id+'\')" style="display:flex; align-items:center; gap:5px; padding:7px 12px; border-radius:50px; border:1px solid '+(liked?'#fecaca':'#e2e8f0')+'; background:'+(liked?'#fff1f2':'#f8fafc')+'; color:'+(liked?'#e11d48':'#475569')+'; font-weight:800; font-size:13px; cursor:pointer; flex-shrink:0;">👍 '+(o.likes||0)+'</button>'
+          +'<a href="'+mapv+'" target="_blank" rel="noopener" style="flex:1; text-align:center; padding:8px 0; border-radius:10px; background:#eef4ff; color:#1e3a8a; font-weight:800; font-size:12.5px; text-decoration:none;"><i class="fa-solid fa-map"></i> 지도</a>'
+          +'<a href="'+route+'" target="_blank" rel="noopener" style="flex:1; text-align:center; padding:8px 0; border-radius:10px; background:#eafff4; color:#047857; font-weight:800; font-size:12.5px; text-decoration:none;">🚗 길찾기</a>'
+          +'</div></div>';
+    }).join('');
+}
+function openFoodAddForm(){ if(typeof isValidProfile==='function' && !isValidProfile()){ if(typeof requireProfile==='function') requireProfile(); return; } var f=document.getElementById('foodAddForm'); if(f) f.style.display='block'; }
+function closeFoodAddForm(){ var f=document.getElementById('foodAddForm'); if(f) f.style.display='none'; }
+function submitFoodSpot(){
+    var nm=(document.getElementById('foodName').value||'').trim();
+    var cat=(document.getElementById('foodCat').value||'기타');
+    var ad=(document.getElementById('foodAddr').value||'').trim();
+    var cm=(document.getElementById('foodComment').value||'').trim();
+    if(!nm){ if(typeof showKacAlert==='function') showKacAlert('가게명을 입력해주세요.'); return; }
+    firebase.database().ref('system/foodspots').push({ name:nm, category:cat, address:ad, comment:cm, likes:0, ts:Date.now() }).then(function(){
+        document.getElementById('foodName').value=''; document.getElementById('foodAddr').value=''; document.getElementById('foodComment').value='';
+        closeFoodAddForm();
+        if(typeof showKacAlert==='function') showKacAlert('✅ 맛집이 등록되었습니다. 감사합니다!');
+    }).catch(function(){ if(typeof showKacAlert==='function') showKacAlert('등록 중 오류가 발생했습니다.'); });
+}
+function toggleFoodLike(id){
+    var likes=JSON.parse(localStorage.getItem('kac_food_likes')||'{}'); var liked=!!likes[id];
+    if(liked){ delete likes[id]; } else { likes[id]=true; }
+    localStorage.setItem('kac_food_likes', JSON.stringify(likes));
+    firebase.database().ref('system/foodspots/'+id+'/likes').transaction(function(c){ c=c||0; return liked ? Math.max(0,c-1) : c+1; });
+}
+window.openFoodModal=openFoodModal; window.setFoodFilter=setFoodFilter; window.openFoodAddForm=openFoodAddForm; window.closeFoodAddForm=closeFoodAddForm; window.submitFoodSpot=submitFoodSpot; window.toggleFoodLike=toggleFoodLike;
+
 function closePanelSmooth(modalId){
     var modal=document.getElementById(modalId);
     var raw=(window._panelRawClose||{})[modalId] || function(){ if(modal) modal.style.display='none'; };
@@ -5033,12 +5130,12 @@ input:not([type=checkbox]):not([type=radio]):not([type=file]), textarea, select 
 #adminActionModal .menu-box, #shuttleModal .menu-box, #surveyModal .menu-box, #noticeModal .menu-box { box-shadow:-16px 0 48px rgba(15,23,42,.34) !important; }
 #facilityModal .menu-box, #tabletLoanModal .menu-box { box-shadow:0 24px 60px rgba(15,23,42,.30) !important; }
 /* ===== [통일] 모든 메뉴 패널: 우측 도킹 + 우측에서 슬라이드 + 뒤 메뉴 비침(반투명) ===== */
-#noticeModal, #surveyModal, #shuttleModal, #adminActionModal, #facilityModal, #tabletLoanModal, #mealMenuModal, #qrModal {
+#noticeModal, #surveyModal, #shuttleModal, #adminActionModal, #facilityModal, #tabletLoanModal, #mealMenuModal, #qrModal, #foodModal {
   justify-content:flex-end !important; align-items:stretch !important;
   background:rgba(15,23,42,.32) !important; -webkit-backdrop-filter:none !important; backdrop-filter:none !important;
   padding:0 !important; animation:overlayFadeIn .2s ease both !important;
 }
-#noticeModal > .menu-box, #surveyModal > .menu-box, #shuttleModal > .menu-box, #adminActionModal > .menu-box, #facilityModal > .menu-box, #tabletLoanModal > .menu-box, #qrModal > .menu-box, #mealMenuModal > div {
+#noticeModal > .menu-box, #surveyModal > .menu-box, #shuttleModal > .menu-box, #adminActionModal > .menu-box, #facilityModal > .menu-box, #tabletLoanModal > .menu-box, #qrModal > .menu-box, #foodModal > .menu-box, #mealMenuModal > div {
   position:relative !important; height:100dvh !important; max-height:100dvh !important;
   width:92% !important; max-width:430px !important; margin:0 !important;
   border-radius:18px 0 0 18px !important;
@@ -5155,7 +5252,7 @@ input:not([type=checkbox]):not([type=radio]):not([type=file]), textarea, select 
 })();
 </script>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vH32</div>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vH33</div>
 <script>
 /* ===== [공용] 종료된 과정 자동 정리 (교육생 포함 전 플랫폼) — 종료일 지난 방을 다음날 미개설로 비움. 브라우저별 하루 1회 ===== */
 window.kacExpireEndedCourses = async function(){

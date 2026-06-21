@@ -3478,6 +3478,7 @@ setMode: function(mode) {
         } else if (mode === 'waiting') {
             ui.initRoomSelect();
         }
+        else if (mode === 'foodnews') { if(typeof ui.loadFoodNews==='function') ui.loadFoodNews(); }
 
         // 4. 상단 탭 활성화 표시
         document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
@@ -10156,8 +10157,58 @@ ui.saveFieldEdit = async function(){
   catch(err){ if(msg)msg.textContent='저장 중 오류가 발생했습니다.'; }
 };
 
+// ===== 도움이 되는 소식: 항기원 맛집 (강사 뷰) =====
+ui._foodNewsFilter = '전체';
+ui._foodNewsCache = [];
+ui._FOOD_CATS = ['식당','카페','분식','술집','기타'];
+ui._HANGIWON = '충북 청주시 상당구 문의면 남계길 22-55';
+ui._foodCatColor = function(c){ return ({'식당':'#f59e0b','카페':'#10b981','분식':'#ef4444','술집':'#8b5cf6','기타':'#64748b'})[c]||'#64748b'; };
+ui.loadFoodNews = function(){
+    ui._renderFoodNewsFilters();
+    try{ if(ui._foodNewsRef) ui._foodNewsRef.off(); }catch(e){}
+    ui._foodNewsRef = firebase.database().ref('system/foodspots');
+    ui._foodNewsRef.on('value', function(snap){
+        var v=snap.val()||{};
+        ui._foodNewsCache = Object.keys(v).map(function(k){ var o=v[k]||{}; o.id=k; return o; });
+        ui._foodNewsCache.sort(function(a,b){ return (b.likes||0)-(a.likes||0) || (b.ts||0)-(a.ts||0); });
+        ui._renderFoodNewsList();
+    });
+};
+ui.setFoodNewsFilter = function(c){ ui._foodNewsFilter=c; ui._renderFoodNewsFilters(); ui._renderFoodNewsList(); };
+ui._renderFoodNewsFilters = function(){
+    var el=document.getElementById('foodNewsFilters'); if(!el) return;
+    var cats=['전체'].concat(ui._FOOD_CATS);
+    el.innerHTML=cats.map(function(c){ var on=(ui._foodNewsFilter===c);
+        return '<button onclick="ui.setFoodNewsFilter(\''+c+'\')" style="padding:8px 16px; border-radius:50px; border:1px solid '+(on?'#2563eb':'#cbd5e1')+'; background:'+(on?'#2563eb':'#fff')+'; color:'+(on?'#fff':'#334155')+'; font-size:14px; font-weight:800; cursor:pointer;">'+c+'</button>';
+    }).join('');
+};
+ui._renderFoodNewsList = function(){
+    var el=document.getElementById('foodNewsList'); if(!el) return;
+    var list=ui._foodNewsCache.filter(function(o){ return ui._foodNewsFilter==='전체' || o.category===ui._foodNewsFilter; });
+    if(!list.length){ el.innerHTML='<div style="padding:40px 0; text-align:center; color:#94a3b8; font-weight:700;">아직 등록된 맛집이 없습니다.</div>'; return; }
+    el.innerHTML=list.map(function(o){
+        var cat=o.category||'기타'; var col=ui._foodCatColor(cat);
+        var esc=function(t){ return String(t||'').replace(/</g,'&lt;'); };
+        var nm=esc(o.name), cm=esc(o.comment), ad=esc(o.address);
+        var q=encodeURIComponent(o.name||o.address||'');
+        var mapv='https://map.naver.com/p/search/'+q;
+        var route='https://map.kakao.com/?sName='+encodeURIComponent(ui._HANGIWON)+'&eName='+encodeURIComponent(((o.name||'')+' '+(o.address||'')).trim());
+        return '<div style="display:flex; align-items:center; gap:16px; background:#fff; border:1px solid #e8eef8; border-radius:14px; padding:16px 18px; box-shadow:0 2px 8px rgba(15,23,42,.05);">'
+          +'<div style="display:flex; flex-direction:column; align-items:center; gap:2px; min-width:58px;"><div style="font-size:22px; font-weight:900; color:#e11d48;">👍</div><div style="font-size:18px; font-weight:900; color:#0f172a;">'+(o.likes||0)+'</div></div>'
+          +'<div style="flex:1; min-width:0;">'
+          +'<div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;"><span style="background:'+col+'; color:#fff; font-size:12px; font-weight:800; padding:2px 9px; border-radius:6px;">'+cat+'</span><span style="font-size:18px; font-weight:900; color:#0f172a;">'+nm+'</span></div>'
+          +(ad?'<div style="font-size:13px; color:#64748b; margin-bottom:2px;"><i class="fa-solid fa-location-dot" style="color:#94a3b8;"></i> '+ad+'</div>':'')
+          +(cm?'<div style="font-size:14px; color:#334155; line-height:1.5;">'+cm+'</div>':'')
+          +'</div>'
+          +'<div style="display:flex; flex-direction:column; gap:6px; flex-shrink:0;">'
+          +'<a href="'+mapv+'" target="_blank" rel="noopener" style="text-align:center; padding:8px 16px; border-radius:10px; background:#eef4ff; color:#1e3a8a; font-weight:800; font-size:13px; text-decoration:none; white-space:nowrap;"><i class="fa-solid fa-map"></i> 지도보기</a>'
+          +'<a href="'+route+'" target="_blank" rel="noopener" style="text-align:center; padding:8px 16px; border-radius:10px; background:#eafff4; color:#047857; font-weight:800; font-size:13px; text-decoration:none; white-space:nowrap;">🚗 자가용 길찾기</a>'
+          +'</div></div>';
+    }).join('');
+};
+
 /* __JSVER_STAMP__ */
-(function stampJsVer(){try{var b=document.getElementById('__catcVer');if(b){if(b.textContent.indexOf('Jb')<0)b.textContent=b.textContent+'\u00b7Jb';}else{setTimeout(stampJsVer,200);}}catch(e){}})();
+(function stampJsVer(){try{var b=document.getElementById('__catcVer');if(b){if(b.textContent.indexOf('Jc')<0)b.textContent=b.textContent+'\u00b7Jc';}else{setTimeout(stampJsVer,200);}}catch(e){}})();
 
 /* ===== [공항별 입교 현황 지도] 수강생현황 → 지도로 보기 ===== */
 ui._mapRegions = {
