@@ -1712,21 +1712,26 @@ function installMenuSwipe(){
 function installMenuDragClose(){
     var tap=document.getElementById('menuTapClose'); if(!tap || tap._dragSet) return; tap._dragSet=true;
     var main=document.getElementById('mainApp');
-    var sx=null, sy=null, openPx=0, dragging=false, lastDx=0;
+    var sx=null, sy=null, openPx=0, dragging=false, lastDx=0, lastX=0, lastT=0, vx=0;
+    var SPRING='transform .36s cubic-bezier(.22,1,.36,1)';
     function maxPx(){ return window.innerWidth<=540 ? main.offsetWidth*0.8 : 290; }
-    function snapOpen(){ main.style.transition='transform .28s cubic-bezier(.22,1,.36,1)'; main.style.transform=''; setTimeout(function(){ main.style.transition=''; },300); }
-    function snapClose(){ main.style.transition='transform .28s cubic-bezier(.22,1,.36,1)'; main.style.transform='translateX(0)'; document.body.classList.remove('menu-open'); setTimeout(function(){ main.style.transform=''; main.style.transition=''; var m=document.getElementById('menuModal'); if(m) m.style.display='none'; },300); }
-    tap.addEventListener('touchstart', function(e){ sx=e.touches[0].clientX; sy=e.touches[0].clientY; openPx=maxPx(); dragging=false; lastDx=0; }, {passive:true});
+    function snapOpen(){ main.style.transition=SPRING; main.style.transform=''; setTimeout(function(){ main.style.transition=''; main.style.willChange=''; },360); }
+    function snapClose(){ main.style.transition=SPRING; main.style.transform='translateX(0)'; document.body.classList.remove('menu-open'); setTimeout(function(){ main.style.transform=''; main.style.transition=''; main.style.willChange=''; var m=document.getElementById('menuModal'); if(m) m.style.display='none'; },360); }
+    tap.addEventListener('touchstart', function(e){ sx=e.touches[0].clientX; sy=e.touches[0].clientY; openPx=maxPx(); dragging=false; lastDx=0; lastX=sx; lastT=Date.now(); vx=0; }, {passive:true});
     tap.addEventListener('touchmove', function(e){
-        if(sx===null) return; var dx=e.touches[0].clientX-sx, dy=e.touches[0].clientY-sy; lastDx=dx;
-        if(!dragging){ if(dx < -8 && Math.abs(dx) > Math.abs(dy)){ dragging=true; main.style.transition='none'; } else if(Math.abs(dy) > Math.abs(dx)+6){ sx=null; return; } }
+        if(sx===null) return; var x=e.touches[0].clientX, dx=x-sx, dy=e.touches[0].clientY-sy; lastDx=dx;
+        var now=Date.now(), dt=now-lastT; if(dt>0){ vx=(x-lastX)/dt; } lastX=x; lastT=now;
+        if(!dragging){ if(dx < -8 && Math.abs(dx) > Math.abs(dy)){ dragging=true; main.style.transition='none'; main.style.willChange='transform'; } else if(Math.abs(dy) > Math.abs(dx)+6){ sx=null; return; } }
         if(dragging){ var v=Math.max(0, Math.min(openPx, openPx+dx)); main.style.transform='translateX('+v+'px)'; }
     }, {passive:true});
     tap.addEventListener('touchend', function(){
         if(sx===null) return; var wasDragging=dragging; sx=null; sy=null; dragging=false;
         if(!wasDragging) return; // 단순 탭 → click 핸들러가 닫음
         tap._suppressClick=true;
-        if(openPx+lastDx < openPx*0.6){ snapClose(); } else { snapOpen(); }
+        // 속도(플릭) 우선 → 위치 임계값 보조: 자연스러운 관성 느낌
+        if(vx < -0.45){ snapClose(); }
+        else if(vx > 0.45){ snapOpen(); }
+        else if(openPx+lastDx < openPx*0.55){ snapClose(); } else { snapOpen(); }
     }, {passive:true});
     tap.addEventListener('click', function(){ if(tap._suppressClick){ tap._suppressClick=false; return; } closeMainMenu(); });
 }
@@ -5358,10 +5363,44 @@ input:not([type=checkbox]):not([type=radio]):not([type=file]), textarea, select 
     sc.addEventListener('scroll', fade, {passive:true});
     try{ new MutationObserver(function(){ setTimeout(fade,30); }).observe(ql,{childList:true,subtree:true}); }catch(e){}
     setTimeout(fade,80);
-    var sx=null, sy=null, edge=false;
-    document.addEventListener('touchstart', function(e){ var t=e.touches[0]; sx=t.clientX; sy=t.clientY; edge=(sx<=30)&&!document.body.classList.contains('menu-open'); }, {passive:true});
-    document.addEventListener('touchmove', function(e){ if(!edge||sx===null) return; var t=e.touches[0]; var dx=t.clientX-sx, dy=t.clientY-sy; if(dx>50 && Math.abs(dx)>Math.abs(dy)*1.5){ edge=false; sx=null; if(typeof openMainMenu==='function') openMainMenu(); } }, {passive:true});
-    document.addEventListener('touchend', function(){ sx=null; sy=null; edge=false; }, {passive:true});
+    var sx=null, sy=null, edge=false, opening=false, mp=0, lastX=0, lastT=0, vx=0;
+    var main=document.getElementById('mainApp');
+    function _mp(){ return window.innerWidth<=540 ? main.offsetWidth*0.8 : 290; }
+    var ESPRING='transform .38s cubic-bezier(.22,1,.36,1)';
+    document.addEventListener('touchstart', function(e){
+        var t=e.touches[0]; sx=t.clientX; sy=t.clientY;
+        edge=(sx<=28)&&!document.body.classList.contains('menu-open');
+        opening=false; mp=_mp(); lastX=sx; lastT=Date.now(); vx=0;
+    }, {passive:true});
+    document.addEventListener('touchmove', function(e){
+        if(!edge||sx===null) return; var t=e.touches[0]; var dx=t.clientX-sx, dy=t.clientY-sy;
+        var now=Date.now(), dt=now-lastT; if(dt>0){ vx=(t.clientX-lastX)/dt; } lastX=t.clientX; lastT=now;
+        if(!opening){
+            if(dx>10 && Math.abs(dx)>Math.abs(dy)*1.2){
+                opening=true;
+                var m=document.getElementById('menuModal'); if(m) m.style.display='flex';
+                if(typeof installMenuSwipe==='function') installMenuSwipe();
+                main.style.transition='none'; main.style.willChange='transform';
+            } else if(Math.abs(dy)>Math.abs(dx)+8){ edge=false; sx=null; return; }
+        }
+        if(opening){ var v=Math.max(0, Math.min(mp, dx)); main.style.transform='translateX('+v+'px)'; }
+    }, {passive:true});
+    document.addEventListener('touchend', function(){
+        if(opening){
+            var left = main.getBoundingClientRect().left;
+            var commit = (vx>0.35) || (left > mp*0.4);
+            if(commit){
+                if(typeof openMainMenu==='function') openMainMenu();   // 콘텐츠 채움 + body.menu-open
+                main.style.transition=ESPRING; main.style.transform='';
+                setTimeout(function(){ main.style.transition=''; main.style.willChange=''; }, 380);
+            } else {
+                document.body.classList.remove('menu-open');
+                main.style.transition=ESPRING; main.style.transform='translateX(0)';
+                setTimeout(function(){ main.style.transform=''; main.style.transition=''; main.style.willChange=''; var m=document.getElementById('menuModal'); if(m) m.style.display='none'; }, 380);
+            }
+        }
+        sx=null; sy=null; edge=false; opening=false;
+    }, {passive:true});
   }
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', setup); else setup();
 })();
@@ -5565,6 +5604,102 @@ html, body {
   overscroll-behavior: contain !important;
   -webkit-overflow-scrolling: touch !important;
 }
+
+/* ════════════════════════════════════════════════════════════════════
+   [전환 안정화 v2] 우측 패널을 '단일 표면'으로 — 깜빡임/2중닫힘 제거
+   ※ 핵심: 뒤 레이어(메뉴+밀려난 채팅)가 반투명 딤 너머로 비쳐서
+     패널이 들어올 때 같이 움직여 보이던 게 '번쩍임'의 원인.
+     → 패널 뒤를 단색 딤으로 덮고, 박스를 GPU 레이어로 고정,
+       열기/닫기 이징·시간을 동일하게 맞춰 연속적인 슬라이드로 통일.
+   ════════════════════════════════════════════════════════════════════ */
+
+/* 1) 뒤 레이어가 안 비치도록 단색 딤(움직임이 안 보이게) */
+#noticeModal, #surveyModal, #shuttleModal, #adminActionModal,
+#facilityModal, #tabletLoanModal, #mealMenuModal, #qrModal, #foodModal {
+  background: rgba(15,23,42,.58) !important;
+  -webkit-backdrop-filter: none !important; backdrop-filter: none !important;
+}
+
+/* 2) 패널 박스: GPU 레이어 고정 + 동일한 진입 이징 (대칭) */
+#noticeModal > .menu-box, #surveyModal > .menu-box, #shuttleModal > .menu-box,
+#adminActionModal > .menu-box, #facilityModal > .menu-box, #tabletLoanModal > .menu-box,
+#qrModal > .menu-box, #foodModal > .menu-box, #mealMenuModal > div {
+  background: #ffffff !important;            /* 불투명 단일 표면 */
+  transform: translateZ(0);
+  -webkit-backface-visibility: hidden; backface-visibility: hidden;
+  -webkit-transform-style: preserve-3d; transform-style: preserve-3d;
+  animation: kacPanelIn .34s cubic-bezier(.22,1,.36,1) both !important;
+  will-change: transform;
+}
+@keyframes kacPanelIn {
+  from { transform: translate3d(100%,0,0); }
+  to   { transform: translate3d(0,0,0); }
+}
+
+/* 3) 패널 열린 동안 뒤 화면은 정지 — 레이아웃 흔들림(repaint flicker) 차단 */
+body.kac-panel-on #mainApp,
+body.kac-panel-on #menuModal > .menu-box { transition: none !important; }
 </style>
+<script>
+/* [전환 안정화 v2] 모든 우측 패널 닫기를 동일한 슬라이드 아웃으로 통일.
+   - 급하게 display:none 하던 닫기 함수들을 감싸 슬라이드 후 원래 로직 실행
+     (firebase off 등 정리 로직은 그대로 보존 → 지연 호출만).
+   - 이미 closePanelSmooth로 애니메이션되는 함수는 건드리지 않음. */
+(function(){
+  var EASE = 'transform .32s cubic-bezier(.22,1,.36,1)';
+  // 패널이 하나라도 열리면 body에 표식 (뒤 화면 정지용)
+  var PANELS = ['noticeModal','surveyModal','shuttleModal','adminActionModal','facilityModal','tabletLoanModal','qrModal','foodModal','mealMenuModal'];
+  function anyOpen(){ return PANELS.some(function(id){ var m=document.getElementById(id); return m && m.style.display!=='none' && m.style.display!==''; }); }
+  function syncFlag(){ document.body.classList.toggle('kac-panel-on', anyOpen()); }
+  // display 변화를 감시해 표식 동기화
+  function watch(){
+    PANELS.forEach(function(id){
+      var m=document.getElementById(id); if(!m || m._kacWatch) return; m._kacWatch=true;
+      try{ new MutationObserver(syncFlag).observe(m,{attributes:true,attributeFilter:['style']}); }catch(e){}
+    });
+    syncFlag();
+  }
+
+  // 닫기 함수 래핑: 슬라이드 아웃 → 원래 닫기 실행
+  function wrapClose(name, modalId){
+    var orig = window[name]; if(typeof orig!=='function') return;
+    if(orig._kacWrapped) return;
+    var wrapped = function(){
+      var self=this, args=arguments;
+      var m=document.getElementById(modalId);
+      var box = m && (m.querySelector('.menu-box') || m.querySelector(':scope > div'));
+      if(!m || m.style.display==='none' || !box){ return orig.apply(self,args); }
+      if(box._kacClosing){ return; }
+      box._kacClosing = true;
+      box.style.animation='none'; box.style.willChange='transform'; box.style.overflow='hidden';
+      void box.offsetWidth;
+      requestAnimationFrame(function(){
+        box.style.transition = EASE;
+        box.style.transform = 'translateX(110%)';
+      });
+      setTimeout(function(){
+        box.style.transform=''; box.style.transition=''; box.style.animation=''; box.style.overflow=''; box.style.willChange='';
+        box._kacClosing=false;
+        try{ orig.apply(self,args); }catch(e){ if(m) m.style.display='none'; }
+        syncFlag();
+      }, 330);
+    };
+    wrapped._kacWrapped = true;
+    window[name] = wrapped;
+  }
+
+  function install(){
+    watch();
+    wrapClose('closeShuttleModal','shuttleModal');
+    wrapClose('closeAdminAction','adminActionModal');
+    wrapClose('closeFacilityModal','facilityModal');
+    wrapClose('closeTabletLoan','tabletLoanModal');
+    wrapClose('closeSurvey','surveyModal');
+    wrapClose('closeSurveyModal','surveyModal');
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', function(){ setTimeout(install,600); });
+  else setTimeout(install,600);
+})();
+</script>
 </body>
 </html>
