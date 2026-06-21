@@ -832,6 +832,7 @@
                 <div style="font-size:11px; color:#2563eb; font-weight:800;">✓ 선택한 가게</div>
                 <div id="foodSelName" style="font-size:15px; font-weight:900; color:#0f172a;"></div>
                 <div id="foodSelAddr" style="font-size:12px; color:#64748b;"></div>
+                <div id="foodMap" style="width:100%; height:170px; border-radius:10px; margin-top:8px;"></div>
             </div>
             <select id="foodCat" style="width:100%; padding:13px; border:1px solid #cfe0ff; border-radius:10px; margin-bottom:8px; font-size:15px; box-sizing:border-box; background:#fff;">
                 <option value="식당">🍚 식당</option><option value="카페">☕ 카페</option><option value="분식">🍜 분식</option><option value="술집">🍻 술집</option><option value="기타">🧁 기타</option>
@@ -1762,7 +1763,7 @@ var HANGIWON_ADDR='충북 청주시 상당구 문의면 남계길 22-55';
 var _foodFilter='전체';
 var _foodCache=[];
 var _kakaoReady=false, _kakaoPlaces=null, _kakaoGeocoder=null, _HANGIWON_LL=null;
-var _foodResults=[], _foodSelected=null;
+var _foodResults=[], _foodSelected=null, _foodMap=null, _foodMarker=null;
 function initKakao(){
     if(_kakaoReady) return;
     if(typeof kakao==='undefined' || !kakao.maps || !kakao.maps.load) return;
@@ -1819,6 +1820,15 @@ function foodPickPlace(i){
     document.getElementById('foodSelectedBox').style.display='block';
     document.getElementById('foodSearchResults').innerHTML='';
     try{ document.getElementById('foodCat').value=_foodAutoCat(d.category_name); }catch(e){}
+    try{
+        var mc=document.getElementById('foodMap');
+        if(mc && _kakaoReady && _foodSelected.lat && _foodSelected.lng){
+            var pos=new kakao.maps.LatLng(_foodSelected.lat,_foodSelected.lng);
+            if(!_foodMap){ _foodMap=new kakao.maps.Map(mc,{center:pos, level:3}); _foodMarker=new kakao.maps.Marker({position:pos}); _foodMarker.setMap(_foodMap); }
+            else { _foodMap.setCenter(pos); _foodMarker.setPosition(pos); }
+            setTimeout(function(){ try{ _foodMap.relayout(); _foodMap.setCenter(pos); }catch(e){} }, 60);
+        }
+    }catch(e){}
 }
 function openFoodAddForm(){
     if(typeof isValidProfile==='function' && !isValidProfile()){ if(typeof requireProfile==='function') requireProfile(); return; }
@@ -5312,7 +5322,7 @@ input:not([type=checkbox]):not([type=radio]):not([type=file]), textarea, select 
 })();
 </script>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vH36</div>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vH37</div>
 <script>
 /* ===== [공용] 종료된 과정 자동 정리 (교육생 포함 전 플랫폼) — 종료일 지난 방을 다음날 미개설로 비움. 브라우저별 하루 1회 ===== */
 window.kacExpireEndedCourses = async function(){

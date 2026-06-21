@@ -10214,7 +10214,7 @@ ui._renderFoodNewsList = function(){
 };
 // ===== 강사: 맛집 추가/수정/삭제 (카카오 검색) =====
 ui._fnKakaoReady=false; ui._fnPlaces=null; ui._fnGeocoder=null; ui._fnHANGIWON_LL=null;
-ui._fnResults=[]; ui._fnSelected=null; ui._fnEditId=null;
+ui._fnResults=[]; ui._fnSelected=null; ui._fnEditId=null; ui._fnMap=null; ui._fnMarker=null;
 ui._fnInitKakao=function(){
     if(ui._fnKakaoReady) return;
     if(typeof kakao==='undefined' || !kakao.maps || !kakao.maps.load) return;
@@ -10223,6 +10223,17 @@ ui._fnInitKakao=function(){
         try{ ui._fnPlaces=new kakao.maps.services.Places(); ui._fnGeocoder=new kakao.maps.services.Geocoder(); }catch(e){}
         if(ui._fnGeocoder){ ui._fnGeocoder.addressSearch(ui._HANGIWON, function(res,st){ if(st===kakao.maps.services.Status.OK && res[0]){ ui._fnHANGIWON_LL={lat:parseFloat(res[0].y), lng:parseFloat(res[0].x)}; } }); }
     });
+};
+ui._fnRenderMap=function(){
+    try{
+        var mc=document.getElementById('fnMap'); if(!mc) return;
+        if(!ui._fnKakaoReady || !ui._fnSelected || !ui._fnSelected.lat || !ui._fnSelected.lng){ mc.style.display='none'; return; }
+        mc.style.display='block';
+        var pos=new kakao.maps.LatLng(ui._fnSelected.lat, ui._fnSelected.lng);
+        if(!ui._fnMap){ ui._fnMap=new kakao.maps.Map(mc,{center:pos, level:3}); ui._fnMarker=new kakao.maps.Marker({position:pos}); ui._fnMarker.setMap(ui._fnMap); }
+        else { ui._fnMap.setCenter(pos); ui._fnMarker.setPosition(pos); }
+        setTimeout(function(){ try{ ui._fnMap.relayout(); ui._fnMap.setCenter(pos); }catch(e){} }, 60);
+    }catch(e){}
 };
 ui._fnHaversine=function(aLat,aLng,bLat,bLng){ var R=6371,t=Math.PI/180; var dLat=(bLat-aLat)*t,dLng=(bLng-aLng)*t; var x=Math.sin(dLat/2)*Math.sin(dLat/2)+Math.cos(aLat*t)*Math.cos(bLat*t)*Math.sin(dLng/2)*Math.sin(dLng/2); return R*2*Math.atan2(Math.sqrt(x),Math.sqrt(1-x)); };
 ui._fnAutoCat=function(cn){ cn=cn||''; if(cn.indexOf('카페')>=0||cn.indexOf('디저트')>=0||cn.indexOf('베이커리')>=0) return '카페'; if(cn.indexOf('주점')>=0||cn.indexOf('호프')>=0||cn.indexOf('술집')>=0) return '술집'; if(cn.indexOf('분식')>=0) return '분식'; return '식당'; };
@@ -10233,6 +10244,7 @@ ui.openFoodNewsAdd=function(){
     ['fnSearch','fnComment'].forEach(function(id){ var e=document.getElementById(id); if(e) e.value=''; });
     var sb=document.getElementById('fnSelectedBox'); if(sb) sb.style.display='none';
     var sr=document.getElementById('fnSearchResults'); if(sr) sr.innerHTML='';
+    var mc=document.getElementById('fnMap'); if(mc) mc.style.display='none';
 };
 ui.closeFoodNewsAdd=function(){ var f=document.getElementById('foodNewsAddForm'); if(f) f.style.display='none'; ui._fnEditId=null; ui._fnSelected=null; };
 ui.foodNewsSearch=function(){
@@ -10258,6 +10270,7 @@ ui.foodNewsPick=function(i){
     document.getElementById('fnSelectedBox').style.display='block';
     document.getElementById('fnSearchResults').innerHTML='';
     try{ document.getElementById('fnCat').value=ui._fnAutoCat(d.category_name); }catch(e){}
+    ui._fnRenderMap();
 };
 ui.foodNewsSubmit=function(){
     var cat=(document.getElementById('fnCat').value||'기타');
@@ -10289,6 +10302,7 @@ ui.foodNewsEdit=function(id){
     document.getElementById('fnSearch').value='';
     try{ document.getElementById('fnCat').value=o.category||'기타'; }catch(e){}
     document.getElementById('fnComment').value=o.comment||'';
+    ui._fnRenderMap();
     try{ f.scrollIntoView({behavior:'smooth', block:'center'}); }catch(e){}
 };
 ui.foodNewsDelete=function(id){
@@ -10300,7 +10314,7 @@ ui.foodNewsDelete=function(id){
 };
 
 /* __JSVER_STAMP__ */
-(function stampJsVer(){try{var b=document.getElementById('__catcVer');if(b){if(b.textContent.indexOf('Jf')<0)b.textContent=b.textContent+'\u00b7Jf';}else{setTimeout(stampJsVer,200);}}catch(e){}})();
+(function stampJsVer(){try{var b=document.getElementById('__catcVer');if(b){if(b.textContent.indexOf('Jg')<0)b.textContent=b.textContent+'\u00b7Jg';}else{setTimeout(stampJsVer,200);}}catch(e){}})();
 
 /* ===== [공항별 입교 현황 지도] 수강생현황 → 지도로 보기 ===== */
 ui._mapRegions = {
