@@ -5309,6 +5309,8 @@ input:not([type=checkbox]):not([type=radio]):not([type=file]), textarea, select 
   padding:24px 20px calc(24px + env(safe-area-inset-bottom)) !important;
   animation:slideInRight .34s cubic-bezier(.16,.84,.44,1) both; will-change:transform;
 }
+/* 맛집 패널: 목록 스크롤 시 위아래 튐 방지 — 상단 정렬 고정 */
+#foodModal > .menu-box{ justify-content:flex-start !important; }
 /* 차량 신청: 글자/버튼 크기 메뉴 수준으로 축소 */
 #shuttleModal .shuttle-btn { height:54px !important; }
 #shuttleModal .shuttle-btn span[style*="font-weight:800"] { font-size:15px !important; }
@@ -5416,7 +5418,7 @@ input:not([type=checkbox]):not([type=radio]):not([type=file]), textarea, select 
 })();
 </script>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vH46</div>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vH47</div>
 <script>
 /* ===== [공용] 종료된 과정 자동 정리 (교육생 포함 전 플랫폼) — 종료일 지난 방을 다음날 미개설로 비움. 브라우저별 하루 1회 ===== */
 window.kacExpireEndedCourses = async function(){
