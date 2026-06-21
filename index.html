@@ -1894,9 +1894,11 @@ function renderFoodList(){
         var cat=o.category||'기타'; var col=_foodCatColor(cat);
         var esc=function(t){return String(t||'').replace(/</g,'&lt;');};
         var dist=(o.distanceKm!=null)?('📍 '+o.distanceKm+'km'):'';
-        return '<div onclick="openFoodDetail(\''+o.id+'\')" style="display:flex; align-items:center; gap:10px; background:#fff; border:1px solid #e8eef8; border-radius:12px; padding:13px 14px; box-shadow:0 1px 4px rgba(15,23,42,.04); cursor:pointer;">'
-          +'<div style="flex:1; min-width:0; overflow:hidden; white-space:nowrap; text-overflow:ellipsis;"><span style="background:'+col+'; color:#fff; font-size:10px; font-weight:800; padding:2px 7px; border-radius:5px; margin-right:6px;">'+cat+'</span><b style="font-size:15px; color:#0f172a;">'+esc(o.name)+'</b></div>'
-          +'<div style="text-align:right; flex-shrink:0;">'+(dist?'<div style="font-size:12px; color:#2563eb; font-weight:800;">'+dist+'</div>':'')+'<div style="font-size:13px; font-weight:900; color:#e11d48;">👍 '+(o.likes||0)+'</div></div>'
+        return '<div onclick="openFoodDetail(\''+o.id+'\')" style="display:flex; align-items:center; gap:10px; background:#fff; border:1px solid #e8eef8; border-radius:12px; padding:12px 14px; box-shadow:0 1px 4px rgba(15,23,42,.04); cursor:pointer; text-align:left;">'
+          +'<span style="background:'+col+'; color:#fff; font-size:10px; font-weight:800; padding:2px 7px; border-radius:5px; flex-shrink:0;">'+cat+'</span>'
+          +'<b style="flex:1; min-width:0; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; font-size:15px; color:#0f172a;">'+esc(o.name)+'</b>'
+          +(dist?'<span style="flex-shrink:0; font-size:12.5px; color:#2563eb; font-weight:800; white-space:nowrap;">'+dist+'</span>':'')
+          +'<span style="flex-shrink:0; font-size:13px; font-weight:900; color:#e11d48; white-space:nowrap;">👍 '+(o.likes||0)+'</span>'
           +'</div>';
     }).join('');
 }
@@ -5404,7 +5406,7 @@ input:not([type=checkbox]):not([type=radio]):not([type=file]), textarea, select 
 })();
 </script>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vH44</div>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vH45</div>
 <script>
 /* ===== [공용] 종료된 과정 자동 정리 (교육생 포함 전 플랫폼) — 종료일 지난 방을 다음날 미개설로 비움. 브라우저별 하루 1회 ===== */
 window.kacExpireEndedCourses = async function(){
