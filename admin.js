@@ -9244,10 +9244,10 @@ const annualPlanMgr = {
                 }
             }
 
+            // [충돌 방지] 강사 플랫폼은 방 자동 재배치를 하지 않음 — 방 배정은 운영부에서만 수행.
+            //  (여러 플랫폼이 동시에 배정하면 같은 과정이 방마다 번갈아 생기는 충돌이 발생)
             if (needsUpdate) {
-                // 진행 중 방·잠금 방은 보존하고, dismissed는 제외하는 keep-in-place 동기화 사용
-                await this._syncRoomsLockAware(courses);
-                console.log('[annualPlanMgr] 자동 재배치 완료 (대상 주:', targetMon, '~', targetSun, ')');
+                console.log('[annualPlanMgr] 재배치 필요 감지 — 강사 플랫폼에선 미수행(운영부 전담).');
             }
         } catch (err) {
             console.warn('[annualPlanMgr] checkAndReset 오류:', err);
@@ -10153,7 +10153,7 @@ ui.saveFieldEdit = async function(){
 };
 
 /* __JSVER_STAMP__ */
-(function stampJsVer(){try{var b=document.getElementById('__catcVer');if(b){if(b.textContent.indexOf('Jr')<0)b.textContent=b.textContent+'\u00b7Jr';}else{setTimeout(stampJsVer,200);}}catch(e){}})();
+(function stampJsVer(){try{var b=document.getElementById('__catcVer');if(b){if(b.textContent.indexOf('Js')<0)b.textContent=b.textContent+'\u00b7Js';}else{setTimeout(stampJsVer,200);}}catch(e){}})();
 
 /* ===== [공항별 입교 현황 지도] 수강생현황 → 지도로 보기 ===== */
 ui._mapRegions = {
