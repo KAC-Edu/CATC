@@ -478,8 +478,6 @@
     <button class="mode-btn" id="tab-guide" onclick="ui.setMode('guide')"><i class="fa-solid fa-file-pdf" style="color:#ef4444;"></i> <span class="i18n" data-en="Guide">입교안내</span></button>
     <button class="mode-btn" id="tab-notice" onclick="ui.setMode('notice')"><i class="fa-solid fa-bullhorn" style="color:#f59e0b;"></i> <span class="i18n" data-en="Notices">공지 관리</span> <span id="coordNoticeBadge" style="display:none; background:#ef4444; color:white; font-size:10px; font-weight:800; padding:2px 5px; border-radius:8px; margin-left:4px; vertical-align:middle;">NEW</span></button>
     <button class="mode-btn" id="tab-students" onclick="ui.setMode('students')"><i class="fa-solid fa-users-viewfinder" style="color:#3b82f6;"></i> <span class="i18n" data-en="Students">수강생 현황</span></button>
-    <!-- 더보기: 우측 슬라이드 패널 트리거 -->
-    <button class="mode-btn" id="tab-more" onclick="ui.toggleMorePanel()"><i class="fa-solid fa-ellipsis"></i> <span class="i18n" data-en="More">더보기</span> <i class="fa-solid fa-caret-down"></i></button>
 </div>
 
 <!-- 더보기 우측 슬라이드 패널 -->
@@ -490,6 +488,10 @@
 #moreMenuPanel .more-sec{ font-size:12.5px; font-weight:900; letter-spacing:.3px; padding:14px 12px 6px; }
 #moreMenuPanel .more-div{ height:1px; background:#eef2f7; margin:6px 10px; border:0; }
 </style>
+<!-- 더보기 우측 클립 손잡이 (좌측 사이드바와 동일 스타일) -->
+<div id="moreToggleTab" onclick="ui.toggleMorePanel()" title="더보기 메뉴" style="position:fixed; right:0; top:50%; transform:translateY(-50%); width:22px; height:56px; background:#1e293b; border-radius:8px 0 0 8px; display:flex; align-items:center; justify-content:center; cursor:pointer; z-index:6002; border:1px solid rgba(255,255,255,0.12); border-right:none; transition:right 0.34s cubic-bezier(.22,1,.36,1); box-shadow:-3px 0 8px rgba(0,0,0,0.3);">
+    <i id="moreToggleIcon" class="fa-solid fa-chevron-left" style="color:#94a3b8; font-size:11px; transition:transform 0.3s;"></i>
+</div>
 <div id="moreMenuBackdrop" onclick="ui.closeMorePanel()" style="display:none; position:fixed; inset:0; background:rgba(15,23,42,.28); z-index:6000;"></div>
 <div id="moreMenuPanel" style="position:fixed; top:0; right:0; height:100vh; width:300px; max-width:86vw; background:#fff; box-shadow:-14px 0 44px rgba(15,23,42,.22); z-index:6001; transform:translateX(100%); transition:transform .34s cubic-bezier(.22,1,.36,1); display:flex; flex-direction:column; padding:16px 12px calc(16px + env(safe-area-inset-bottom)); overflow-y:auto;">
     <div style="display:flex; align-items:center; justify-content:space-between; padding:6px 8px 12px; border-bottom:1px solid #eef2f7; margin-bottom:8px;">
@@ -2526,6 +2528,6 @@ function setupAcc(btn){
 </script>
 <style>@media print{#__catcVer{display:none!important}}</style>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vVE</div>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vVF</div>
 </body>
 </html>

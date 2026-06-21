@@ -10157,7 +10157,7 @@ ui.saveFieldEdit = async function(){
 };
 
 /* __JSVER_STAMP__ */
-(function stampJsVer(){try{var b=document.getElementById('__catcVer');if(b){if(b.textContent.indexOf('Jz')<0)b.textContent=b.textContent+'\u00b7Jz';}else{setTimeout(stampJsVer,200);}}catch(e){}})();
+(function stampJsVer(){try{var b=document.getElementById('__catcVer');if(b){if(b.textContent.indexOf('Ja')<0)b.textContent=b.textContent+'\u00b7Ja';}else{setTimeout(stampJsVer,200);}}catch(e){}})();
 
 /* ===== [공항별 입교 현황 지도] 수강생현황 → 지도로 보기 ===== */
 ui._mapRegions = {
@@ -10342,6 +10342,9 @@ ui.openMorePanel = function(){
     if(b) b.style.display='block';
     p.classList.add('open');
     requestAnimationFrame(function(){ p.style.transform='translateX(0)'; });
+    var tab=document.getElementById('moreToggleTab'), ic=document.getElementById('moreToggleIcon');
+    if(tab){ tab.style.right = (p.getBoundingClientRect().width||300)+'px'; }
+    if(ic){ ic.style.transform='rotate(180deg)'; }
     ui._moreArmAutoClose();
 };
 ui.closeMorePanel = function(){
@@ -10349,6 +10352,9 @@ ui.closeMorePanel = function(){
     if(!p) return;
     p.classList.remove('open');
     p.style.transform='translateX(100%)';
+    var tab=document.getElementById('moreToggleTab'), ic=document.getElementById('moreToggleIcon');
+    if(tab){ tab.style.right='0'; }
+    if(ic){ ic.style.transform='rotate(0deg)'; }
     if(ui._moreTimer){ clearTimeout(ui._moreTimer); ui._moreTimer=null; }
     setTimeout(function(){ if(!p.classList.contains('open') && b) b.style.display='none'; }, 340);
 };
