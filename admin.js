@@ -10157,7 +10157,7 @@ ui.saveFieldEdit = async function(){
 };
 
 /* __JSVER_STAMP__ */
-(function stampJsVer(){try{var b=document.getElementById('__catcVer');if(b){if(b.textContent.indexOf('Jv')<0)b.textContent=b.textContent+'\u00b7Jv';}else{setTimeout(stampJsVer,200);}}catch(e){}})();
+(function stampJsVer(){try{var b=document.getElementById('__catcVer');if(b){if(b.textContent.indexOf('Jw')<0)b.textContent=b.textContent+'\u00b7Jw';}else{setTimeout(stampJsVer,200);}}catch(e){}})();
 
 /* ===== [공항별 입교 현황 지도] 수강생현황 → 지도로 보기 ===== */
 ui._mapRegions = {
@@ -10232,6 +10232,7 @@ ui.openStudentMap = async function(){
   var sorted=Object.keys(counts).sort(function(a,b){return counts[b]-counts[a];});
   var rows = sorted.length ? sorted.map(function(n){ return '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;border-bottom:1px solid #f1f5f9;"><span style="font-weight:700;color:#334155;">'+n+'</span><span style="font-weight:900;color:#10b981;">'+counts[n]+'명</span></div>'; }).join('') : '<div style="padding:18px;color:#94a3b8;text-align:center;">명단이 없습니다.</div>';
   var unknownNote = unknown ? '<div style="margin-top:8px;font-size:12px;color:#94a3b8;">· 소속 구분 불가 '+unknown+'명은 지도에서 제외</div>' : '';
+  var totalRow = '<div style="display:flex;justify-content:space-between;align-items:center;padding:11px 12px;background:#f0f7ff;border-top:2px solid #dbeafe;"><span style="font-weight:900;color:#1e3a8a;">합계</span><span style="font-weight:900;color:#2563eb;">'+(total+unknown)+'명</span></div>';
   var html = '<div id="studentMapModal" style="position:fixed;inset:0;background:rgba(15,23,42,.6);z-index:99998;display:flex;align-items:center;justify-content:center;padding:20px;" onclick="if(event.target===this)ui.closeStudentMap()">'
     + '<div style="background:#fff;border-radius:22px;max-width:880px;width:100%;max-height:92vh;overflow:auto;padding:26px 30px;position:relative;box-shadow:0 24px 60px rgba(15,23,42,.35);">'
     + '<button onclick="ui.closeStudentMap()" style="position:absolute;top:16px;right:16px;width:38px;height:38px;border-radius:50%;border:none;background:#eef2f7;color:#475569;font-size:18px;cursor:pointer;">✕</button>'
@@ -10239,7 +10240,7 @@ ui.openStudentMap = async function(){
     + '<div style="font-size:13px;color:#64748b;font-weight:700;margin-bottom:14px;">Room '+room+' · '+ (course||'-') +' · 예정 명단 소속 기준 (총 '+total+'명)</div>'
     + '<div style="display:flex;gap:22px;flex-wrap:wrap;align-items:flex-start;">'
     +   '<div style="flex:1;min-width:330px;"><svg viewBox="0 0 440 801.1" style="width:100%;height:auto;max-height:74vh;">'+outline+pins+'</svg></div>'
-    +   '<div style="width:240px;min-width:220px;"><div style="font-size:13px;font-weight:800;color:#475569;margin-bottom:6px;">공항별 인원</div><div style="border:1px solid #e2e8f0;border-radius:12px;overflow:hidden;">'+rows+'</div>'+unknownNote+'</div>'
+    +   '<div style="width:240px;min-width:220px;"><div style="font-size:13px;font-weight:800;color:#475569;margin-bottom:6px;">공항별 인원</div><div style="border:1px solid #e2e8f0;border-radius:12px;overflow:hidden;">'+rows+totalRow+'</div>'+unknownNote+'</div>'
     + '</div>'
     + '</div></div>';
   var wrap=document.createElement('div'); wrap.innerHTML=html; document.body.appendChild(wrap.firstChild);
