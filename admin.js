@@ -10260,6 +10260,7 @@ ui.openFoodNewsAdd=function(){
     var sr=document.getElementById('fnSearchResults'); if(sr) sr.innerHTML='';
     ui._fnRenderMap();
 };
+ui.fillFnPreset=function(t){ var e=document.getElementById('fnComment'); if(e){ e.value=t; e.focus(); } };
 ui.closeFoodNewsAdd=function(){ var f=document.getElementById('foodNewsAddModal'); if(f) f.style.display='none'; ui._fnEditId=null; ui._fnSelected=null; };
 ui.foodNewsSearch=function(){
     var q=(document.getElementById('fnSearch').value||'').trim(); if(!q) return;
@@ -10343,7 +10344,7 @@ ui.foodNewsRouteById=function(id){
 };
 
 /* __JSVER_STAMP__ */
-(function stampJsVer(){try{var b=document.getElementById('__catcVer');if(b){if(b.textContent.indexOf('Jj')<0)b.textContent=b.textContent+'\u00b7Jj';}else{setTimeout(stampJsVer,200);}}catch(e){}})();
+(function stampJsVer(){try{var b=document.getElementById('__catcVer');if(b){if(b.textContent.indexOf('Jk')<0)b.textContent=b.textContent+'\u00b7Jk';}else{setTimeout(stampJsVer,200);}}catch(e){}})();
 
 /* ===== [공항별 입교 현황 지도] 수강생현황 → 지도로 보기 ===== */
 ui._mapRegions = {

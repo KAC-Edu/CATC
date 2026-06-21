@@ -823,7 +823,7 @@
         <button type="button" onclick="openFoodAddForm()" style="width:100%; padding:12px; border:none; border-radius:12px; background:#2563eb; color:#fff; font-weight:800; font-size:14px; cursor:pointer; margin-bottom:12px;"><i class="fa-solid fa-plus"></i> 맛집 추가하기</button>
         <div id="foodAddForm" style="display:none; background:#f8fafc; border:1px solid #e2e8f0; border-radius:14px; padding:14px; margin-bottom:14px; text-align:left;">
             <div style="display:flex; gap:8px; margin-bottom:8px;">
-                <input id="foodSearch" type="text" placeholder="가게명 검색 (예: 칼국수, 카페)" onkeydown="if(event.key==='Enter'){event.preventDefault();foodSearchPlaces();}" style="flex:1; padding:13px; border:1px solid #cfe0ff; border-radius:10px; font-size:15px; box-sizing:border-box;">
+                <input id="foodSearch" type="text" placeholder="가게명 검색 (예: 화당털보식당, 강민주의 들밥)" onkeydown="if(event.key==='Enter'){event.preventDefault();foodSearchPlaces();}" style="flex:1; padding:13px; border:1px solid #cfe0ff; border-radius:10px; font-size:15px; box-sizing:border-box;">
                 <button type="button" onclick="foodSearchPlaces()" style="padding:0 18px; border:none; border-radius:10px; background:#1e3a8a; color:#fff; font-weight:800; cursor:pointer; white-space:nowrap;">검색</button>
             </div>
             <div id="foodSearchResults" style="max-height:34vh; overflow-y:auto; margin-bottom:8px;"></div>
@@ -836,7 +836,8 @@
             <select id="foodCat" style="width:100%; padding:13px; border:1px solid #cfe0ff; border-radius:10px; margin-bottom:8px; font-size:15px; box-sizing:border-box; background:#fff;">
                 <option value="식당">🍚 식당</option><option value="카페">☕ 카페</option><option value="분식">🍜 분식</option><option value="술집">🍻 술집</option><option value="기타">🧁 기타</option>
             </select>
-            <textarea id="foodComment" rows="2" maxlength="100" placeholder="한줄평 (선택)" style="width:100%; padding:12px; border:1px solid #cfe0ff; border-radius:10px; margin-bottom:8px; font-size:14px; box-sizing:border-box; resize:none;"></textarea>
+            <div style="display:flex; flex-wrap:wrap; gap:6px; margin-bottom:8px;"><button type="button" onclick="fillTextPreset('foodComment','가게가 깔끔해요')" style="padding:5px 10px; border-radius:50px; border:1px solid #fed7aa; background:#fff7ed; color:#c2410c; font-size:11.5px; font-weight:700; cursor:pointer;">가게가 깔끔해요</button><button type="button" onclick="fillTextPreset('foodComment','음식이 맛있어요')" style="padding:5px 10px; border-radius:50px; border:1px solid #fed7aa; background:#fff7ed; color:#c2410c; font-size:11.5px; font-weight:700; cursor:pointer;">음식이 맛있어요</button><button type="button" onclick="fillTextPreset('foodComment','가격이 착해요')" style="padding:5px 10px; border-radius:50px; border:1px solid #fed7aa; background:#fff7ed; color:#c2410c; font-size:11.5px; font-weight:700; cursor:pointer;">가격이 착해요</button><button type="button" onclick="fillTextPreset('foodComment','양이 푸짐해요')" style="padding:5px 10px; border-radius:50px; border:1px solid #fed7aa; background:#fff7ed; color:#c2410c; font-size:11.5px; font-weight:700; cursor:pointer;">양이 푸짐해요</button><button type="button" onclick="fillTextPreset('foodComment','혼밥하기 좋아요')" style="padding:5px 10px; border-radius:50px; border:1px solid #fed7aa; background:#fff7ed; color:#c2410c; font-size:11.5px; font-weight:700; cursor:pointer;">혼밥하기 좋아요</button><button type="button" onclick="fillTextPreset('foodComment','단체모임 추천')" style="padding:5px 10px; border-radius:50px; border:1px solid #fed7aa; background:#fff7ed; color:#c2410c; font-size:11.5px; font-weight:700; cursor:pointer;">단체모임 추천</button><button type="button" onclick="fillTextPreset('foodComment','주차 편해요')" style="padding:5px 10px; border-radius:50px; border:1px solid #fed7aa; background:#fff7ed; color:#c2410c; font-size:11.5px; font-weight:700; cursor:pointer;">주차 편해요</button><button type="button" onclick="fillTextPreset('foodComment','재방문 의사 100%')" style="padding:5px 10px; border-radius:50px; border:1px solid #fed7aa; background:#fff7ed; color:#c2410c; font-size:11.5px; font-weight:700; cursor:pointer;">재방문 의사 100%</button></div>
+            <textarea id="foodComment" rows="2" maxlength="100" placeholder="한줄평 직접 입력 (선택)" style="width:100%; padding:12px; border:1px solid #cfe0ff; border-radius:10px; margin-bottom:8px; font-size:14px; box-sizing:border-box; resize:none;"></textarea>
             <div style="font-size:12px; color:#94a3b8; font-weight:600; margin-bottom:10px; line-height:1.5;">💡 가게명을 검색해서 선택하면 위치·거리·길찾기가 자동으로 들어가요.</div>
             <div style="display:flex; gap:8px;">
                 <button type="button" onclick="closeFoodAddForm()" style="flex:1; padding:11px; border:1px solid #e2e8f0; border-radius:10px; background:#fff; color:#475569; font-weight:800; cursor:pointer;">취소</button>
@@ -1762,6 +1763,7 @@ var FOOD_CATS=['식당','카페','분식','술집','기타'];
 var HANGIWON_ADDR='충북 청주시 상당구 문의면 남계길 22-55';
 var _foodFilter='전체';
 var _foodSort='likes';
+var FOOD_PRESETS=['가게가 깔끔해요','음식이 맛있어요','가격이 착해요','양이 푸짐해요','혼밥하기 좋아요','단체모임 추천','주차 편해요','재방문 의사 100%'];
 var _foodCache=[];
 var _kakaoReady=false, _kakaoPlaces=null, _kakaoGeocoder=null, _HANGIWON_LL=null;
 var _foodResults=[], _foodSelected=null, _foodMap=null, _foodMarker=null;
@@ -1899,11 +1901,14 @@ function renderFoodList(){
           +'<button type="button" onclick="foodMapById(\''+o.id+'\')" style="'+btn+' background:#eef4ff; color:#1e3a8a;">🗺️ 지도</button>'
           +'<button type="button" onclick="foodRouteById(\''+o.id+'\')" style="'+btn+' background:#eafff4; color:#047857;">🚗 길찾기</button>'
           +'</div>'
-          +'<div id="foodCmt_'+o.id+'" style="display:none; margin-top:8px;"><div style="display:flex; gap:6px;"><input id="foodCmtInput_'+o.id+'" maxlength="100" placeholder="이 가게 한줄평 추가" style="flex:1; padding:10px; border:1px solid #cfe0ff; border-radius:9px; font-size:13px; box-sizing:border-box;" onkeydown="if(event.key===\'Enter\'){event.preventDefault();addFoodComment(\''+o.id+'\');}"><button type="button" onclick="addFoodComment(\''+o.id+'\')" style="padding:0 14px; border:none; border-radius:9px; background:#2563eb; color:#fff; font-weight:800; cursor:pointer;">등록</button></div></div>'
+          +'<div id="foodCmt_'+o.id+'" style="display:none; margin-top:8px;"><div style="display:flex; flex-wrap:wrap; gap:5px; margin-bottom:6px;">'+FOOD_PRESETS.map(function(t){ return '<button type="button" onclick="fillFoodCmt(\''+o.id+'\',\''+t+'\')" style="padding:4px 9px; border-radius:50px; border:1px solid #fed7aa; background:#fff7ed; color:#c2410c; font-size:11px; font-weight:700; cursor:pointer;">'+t+'</button>'; }).join('')+'</div><div style="display:flex; gap:6px;"><input id="foodCmtInput_'+o.id+'" maxlength="100" placeholder="이 가게 한줄평 추가" style="flex:1; padding:10px; border:1px solid #cfe0ff; border-radius:9px; font-size:13px; box-sizing:border-box;" onkeydown="if(event.key===\'Enter\'){event.preventDefault();addFoodComment(\''+o.id+'\');}"><button type="button" onclick="addFoodComment(\''+o.id+'\')" style="padding:0 14px; border:none; border-radius:9px; background:#2563eb; color:#fff; font-weight:800; cursor:pointer;">등록</button></div></div>'
           +'</div>';
     }).join('');
 }
 function toggleFoodCmt(id){ var d=document.getElementById('foodCmt_'+id); if(d){ d.style.display=(d.style.display==='none'?'block':'none'); if(d.style.display==='block'){ var i=document.getElementById('foodCmtInput_'+id); if(i) i.focus(); } } }
+function fillTextPreset(id,t){ var e=document.getElementById(id); if(e){ e.value=t; e.focus(); } }
+function fillFoodCmt(id,t){ var i=document.getElementById('foodCmtInput_'+id); if(i){ i.value=t; i.focus(); } }
+window.fillTextPreset=fillTextPreset; window.fillFoodCmt=fillFoodCmt;
 function addFoodComment(id){
     var i=document.getElementById('foodCmtInput_'+id); if(!i) return;
     var t=(i.value||'').trim(); if(!t){ return; }
@@ -5358,7 +5363,7 @@ input:not([type=checkbox]):not([type=radio]):not([type=file]), textarea, select 
 })();
 </script>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vH41</div>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vH43</div>
 <script>
 /* ===== [공용] 종료된 과정 자동 정리 (교육생 포함 전 플랫폼) — 종료일 지난 방을 다음날 미개설로 비움. 브라우저별 하루 1회 ===== */
 window.kacExpireEndedCourses = async function(){
