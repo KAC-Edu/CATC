@@ -10157,7 +10157,7 @@ ui.saveFieldEdit = async function(){
 };
 
 /* __JSVER_STAMP__ */
-(function stampJsVer(){try{var b=document.getElementById('__catcVer');if(b){if(b.textContent.indexOf('Jx')<0)b.textContent=b.textContent+'\u00b7Jx';}else{setTimeout(stampJsVer,200);}}catch(e){}})();
+(function stampJsVer(){try{var b=document.getElementById('__catcVer');if(b){if(b.textContent.indexOf('Jy')<0)b.textContent=b.textContent+'\u00b7Jy';}else{setTimeout(stampJsVer,200);}}catch(e){}})();
 
 /* ===== [공항별 입교 현황 지도] 수강생현황 → 지도로 보기 ===== */
 ui._mapRegions = {
@@ -10190,6 +10190,7 @@ ui._deptToRegion = function(dept){
   if(d.indexOf('인천')>=0) return '인천';
   if(d.indexOf('항로시설본부')>=0) return '대구';
   if(d.indexOf('한라레이더')>=0) return '제주';
+  if(d.indexOf('항공교육훈련센터')>=0||d.indexOf('항공훈련센터')>=0||d.indexOf('강서')>=0) return '서울';
   if(d.indexOf('훈련원')>=0||d.indexOf('항공기술')>=0||d.indexOf('오송')>=0) return '청주';
   var keys=['양양','원주','청주','예천','군산','포항','울산','부안','광주','무안','여수','사천','김해','부산','제주','대구','강원','송탄'];
   for(var i=0;i<keys.length;i++){ if(d.indexOf(keys[i])>=0) return keys[i]; }
