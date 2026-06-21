@@ -719,13 +719,13 @@
 <!-- [강의 안내 보드] 교육생 1회 확인 팝업 -->
 <div id="lectureBoardOverlay" class="menu-overlay" style="display:none; z-index:9550; align-items:center; justify-content:center; padding:20px;" onclick="if(event.target==this)confirmLectureBoardNotice()">
     <div class="menu-box" style="width:100%; max-width:420px; padding:0; border-radius:20px; overflow:hidden;">
-        <div style="background:linear-gradient(135deg,#7c3aed,#a855f7); padding:16px 20px; display:flex; align-items:center; gap:9px;">
+        <div style="background:linear-gradient(135deg,#3b82f6,#2563eb); padding:16px 20px; display:flex; align-items:center; gap:9px;">
             <i class="fa-solid fa-chalkboard" style="color:#fff; font-size:17px;"></i>
             <span style="color:#fff; font-weight:900; font-size:15px;">강의 안내 보드</span>
         </div>
         <div style="padding:20px;">
             <div id="lectureBoardBody" style="max-height:46vh; overflow:auto; padding:16px; background:#f8fafc; border:1.5px solid #e2e8f0; border-radius:14px; color:#0f172a; font-size:15px; line-height:1.65; word-break:keep-all;"></div>
-            <button onclick="confirmLectureBoardNotice()" style="width:100%; margin-top:16px; padding:15px; background:#7c3aed; color:#fff; border:none; border-radius:13px; font-size:16px; font-weight:900; cursor:pointer;">확인</button>
+            <button onclick="confirmLectureBoardNotice()" style="width:100%; margin-top:16px; padding:15px; background:linear-gradient(135deg,#3b82f6,#2563eb); color:#fff; border:none; border-radius:13px; font-size:16px; font-weight:900; cursor:pointer; box-shadow:0 8px 20px rgba(37,99,235,.28);">확인</button>
         </div>
     </div>
 </div>
@@ -4876,7 +4876,7 @@ input:not([type=checkbox]):not([type=radio]):not([type=file]), textarea, select 
 })();
 </script>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vH16</div>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vH17</div>
 <script>
 /* ===== [공용] 종료된 과정 자동 정리 (교육생 포함 전 플랫폼) — 종료일 지난 방을 다음날 미개설로 비움. 브라우저별 하루 1회 ===== */
 window.kacExpireEndedCourses = async function(){
