@@ -914,6 +914,16 @@
 <!-- [최종] 자동완성 기능이 추가된 입력 양식 영역 -->
         <div id="adminActionForm" style="display: none; text-align: left; flex-direction: column; gap: 14px;">
 
+            <!-- 이전 신청 불러오기 배너 (중앙 팝업 대신 패널 내부) -->
+            <div id="prevOutingBanner" style="display:none; background:#eef4ff; border:1px solid #cfe0ff; border-radius:14px; padding:14px; margin-bottom:2px;">
+                <div style="font-size:14px; font-weight:900; color:#1e40af; margin-bottom:6px;">📋 이전에 신청한 정보가 있어요</div>
+                <div id="prevOutingPreview" style="font-size:12.5px; color:#475569; line-height:1.6; white-space:pre-line; margin-bottom:12px;"></div>
+                <div style="display:flex; gap:8px;">
+                    <button type="button" onclick="applyPrevOuting()" style="flex:1; padding:11px; border:none; border-radius:10px; background:#2563eb; color:#fff; font-weight:800; cursor:pointer;">그대로 불러오기</button>
+                    <button type="button" onclick="dismissPrevOuting()" style="flex:1; padding:11px; border:1px solid #e2e8f0; border-radius:10px; background:#fff; color:#475569; font-weight:800; cursor:pointer;">새로 작성</button>
+                </div>
+            </div>
+
             <!-- 진행 표시 -->
             <div id="adminStepBar" style="display:flex; gap:6px; justify-content:center; margin-bottom:2px;"></div>
 
@@ -1650,6 +1660,15 @@ function installMenuDragClose(){
 window.installMenuDragClose=installMenuDragClose;
 
 // ===== 우측 슬라이드 패널(퇴교차량/외출외박 등) 좌→우 스와이프로 닫기 =====
+function applyPrevOuting(){
+    var lo = window._lastOutingCache || {};
+    var setVal = function(id, v){ var el=document.getElementById(id); if(el && v) el.value = v; };
+    setVal('userDept', lo.dept); setVal('destination', lo.destination); setVal('outingReason', lo.reason); setVal('fullPhone', lo.phone);
+    dismissPrevOuting();
+}
+function dismissPrevOuting(){ var b=document.getElementById('prevOutingBanner'); if(b) b.style.display='none'; }
+window.applyPrevOuting=applyPrevOuting; window.dismissPrevOuting=dismissPrevOuting;
+
 function installPanelSwipeClose(modalId, closeFn){
     var modal=document.getElementById(modalId); if(!modal || modal._swipeClose) return;
     var box=modal.querySelector('.menu-box') || modal.querySelector(':scope > div'); if(!box) return; modal._swipeClose=true;
@@ -3024,6 +3043,7 @@ async function openAdminAction() {
         if (oa) oa.style.display = 'block';
         if (on) on.style.display = 'none';
 
+        var _pobInit = document.getElementById('prevOutingBanner'); if (_pobInit) _pobInit.style.display = 'none';
         // [기능 추가] 이전 신청 정보가 있으면 그대로 불러올지 물어본다
         let lastOuting = null;
         try { lastOuting = JSON.parse(localStorage.getItem('kac_last_outing') || 'null'); } catch(e) {}
@@ -3033,14 +3053,9 @@ async function openAdminAction() {
                 `행선지: ${lastOuting.destination || '-'}\n` +
                 `사유: ${lastOuting.reason || '-'}\n` +
                 `비상연락처: ${lastOuting.phone || '-'}`;
-            showKacConfirm(`📋 이전에 신청한 정보를 그대로 불러올까요?\n\n${preview}`).then(ok => {
-                if (!ok) return;
-                const setVal = (id, v) => { const el = document.getElementById(id); if (el && v) el.value = v; };
-                setVal('userDept', lastOuting.dept);
-                setVal('destination', lastOuting.destination);
-                setVal('outingReason', lastOuting.reason);
-                setVal('fullPhone', lastOuting.phone);
-            });
+            window._lastOutingCache = lastOuting;
+            const _pv = document.getElementById('prevOutingPreview'); if (_pv) _pv.textContent = preview;
+            const _pob = document.getElementById('prevOutingBanner'); if (_pob) _pob.style.display = 'block';
         }
 
         // === 단계별 마법사 초기화 ===
@@ -5095,7 +5110,7 @@ input:not([type=checkbox]):not([type=radio]):not([type=file]), textarea, select 
 })();
 </script>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vH29</div>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vH30</div>
 <script>
 /* ===== [공용] 종료된 과정 자동 정리 (교육생 포함 전 플랫폼) — 종료일 지난 방을 다음날 미개설로 비움. 브라우저별 하루 1회 ===== */
 window.kacExpireEndedCourses = async function(){
