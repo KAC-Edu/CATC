@@ -5017,6 +5017,7 @@ resetShuttleRequests: function() {
                     <div id="platVerList" style="display:grid; grid-template-columns:1fr 1fr; gap:6px 14px;">
                         <div style="grid-column:1/-1; color:#94a3b8; font-size:12px;">버전 확인 중…</div>
                     </div>
+                    <button onclick="ui.savePlatVersionsBaseline()" style="margin-top:11px; width:100%; padding:9px; border:1px dashed #93c5fd; background:#fff; color:#1d4ed8; border-radius:9px; font-size:12px; font-weight:800; cursor:pointer;"><i class="fa-solid fa-bookmark"></i> 지금 배포본을 '최신 기준'으로 등록</button>
                 </div>
 
 
@@ -5037,6 +5038,7 @@ resetShuttleRequests: function() {
             </div>
         `;
         modal.style.display = 'flex';
+        ui._platFiles = PLAT_FILES;
         ui._loadPlatVersions(PLAT_FILES);
 
         const closeHandler = (e) => {
@@ -5068,19 +5070,22 @@ resetShuttleRequests: function() {
     // [최신 버전 기준] 개발자가 아는 각 플랫폼의 최신 배지. 새 파일을 올리면 이 값과 같아야 함.
     //  파일을 수정/배포할 때마다 여기 값도 같이 올려주세요(배지값과 동일하게).
     _LATEST_VER: {
-        'index.html':'vH14', 'admin.html':'vU9', 'admin_coord.html':'vH1', 'dorm_admin.html':'vK2',
+        'index.html':'vH14', 'admin.html':'vV0', 'admin_coord.html':'vH1', 'dorm_admin.html':'vK2',
         'driver.html':'vD', 'nutritionist.html':'vE', 'facility_admin.html':'vC', 'go.html':'vI', 'student_leader.html':'vA'
     },
-    // [버전 실시간 로드] 각 플랫폼 파일의 우하단 배지(__catcVer)를 읽어 최신본과 비교 표시
+    // [버전 실시간 로드] 각 플랫폼 파일 배지를 읽어 'Firebase 최신 기준'과 비교 (없으면 코드 기본값)
     _loadPlatVersions: function(list){
         const box = document.getElementById('platVerList'); if(!box) return;
-        const LATEST = ui._LATEST_VER || {};
-        Promise.all(list.map(function(it){
+        const fbP = firebase.database().ref('system/platformVersions').once('value').then(function(s){ return s.val()||null; }).catch(function(){ return null; });
+        const filesP = Promise.all(list.map(function(it){
             return fetch(it.file + '?t=' + Date.now())
                 .then(function(r){ return r.ok ? r.text() : ''; })
                 .then(function(t){ var m = t.match(/id="__catcVer"[^>]*>([^<·]+)/); return { name: it.name, file: it.file, ver: (m ? m[1].trim() : '-') }; })
                 .catch(function(){ return { name: it.name, file: it.file, ver: '-' }; });
-        })).then(function(arr){
+        }));
+        Promise.all([fbP, filesP]).then(function(res){
+            var LATEST = res[0] || ui._LATEST_VER || {};
+            var arr = res[1]; ui._lastPlatVers = arr;
             var stale = 0;
             box.innerHTML = arr.map(function(v){
                 var latest = LATEST[v.file] || null;
@@ -5092,6 +5097,17 @@ resetShuttleRequests: function() {
                 return '<div style="display:flex; align-items:center; justify-content:space-between; font-size:12px;"><span style="color:#475569; font-weight:700;">'+v.name+(isOld?' <i class=\'fa-solid fa-triangle-exclamation\' style=\'color:#f59e0b;\'></i>':'')+'</span><span><span style="font-family:ui-monospace,Menlo,Consolas,monospace; font-weight:800; color:'+verCol+'; background:'+verBg+'; padding:1px 8px; border-radius:6px;">'+v.ver+'</span>'+note+'</span></div>';
             }).join('') + (stale ? '<div style="grid-column:1/-1; margin-top:8px; padding:9px 11px; background:#fff7ed; border:1px solid #fed7aa; border-radius:9px; color:#b45309; font-size:11.5px; font-weight:800; line-height:1.5;"><i class="fa-solid fa-triangle-exclamation"></i> 최신이 아닌 플랫폼 '+stale+'개 — 빨간 항목의 새 파일을 다시 업로드하세요.</div>' : '<div style="grid-column:1/-1; margin-top:8px; padding:9px 11px; background:#ecfdf5; border:1px solid #a7f3d0; border-radius:9px; color:#047857; font-size:11.5px; font-weight:800;"><i class="fa-solid fa-circle-check"></i> 모든 플랫폼이 최신 버전입니다.</div>');
         });
+    },
+
+    // [버전 기준 등록] 지금 화면에 뜬 배포본 버전을 Firebase에 '최신 기준'으로 저장 → 이후 이 값과 비교
+    savePlatVersionsBaseline: function(){
+        var arr = ui._lastPlatVers || [];
+        if(!arr.length){ ui.showAlert('버전 정보를 아직 불러오는 중입니다. 잠시 후 다시 시도하세요.'); return; }
+        var map = {}; arr.forEach(function(v){ if(v.ver && v.ver!=='-') map[v.file]=v.ver; });
+        firebase.database().ref('system/platformVersions').set(map).then(function(){
+            ui.showAlert('✅ 현재 배포본을 최신 기준으로 등록했습니다.\n이후 이 버전보다 낮으면 빨갛게 표시됩니다.');
+            ui._loadPlatVersions(ui._platFiles || []);
+        }).catch(function(){ ui.showAlert('저장에 실패했습니다. 네트워크를 확인하세요.'); });
     },
 
 // [강사 플랫폼: 로고 클릭 시 모든 정보를 초기화하고 현황판으로 이동]
@@ -10106,7 +10122,7 @@ ui.saveFieldEdit = async function(){
 };
 
 /* __JSVER_STAMP__ */
-(function stampJsVer(){try{var b=document.getElementById('__catcVer');if(b){if(b.textContent.indexOf('Jn')<0)b.textContent=b.textContent+'\u00b7Jn';}else{setTimeout(stampJsVer,200);}}catch(e){}})();
+(function stampJsVer(){try{var b=document.getElementById('__catcVer');if(b){if(b.textContent.indexOf('Jo')<0)b.textContent=b.textContent+'\u00b7Jo';}else{setTimeout(stampJsVer,200);}}catch(e){}})();
 
 /* ===== [공항별 입교 현황 지도] 수강생현황 → 지도로 보기 ===== */
 ui._mapRegions = {
