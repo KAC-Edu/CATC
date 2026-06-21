@@ -10182,10 +10182,16 @@ ui.loadFoodNews = function(){
 };
 ui.setFoodNewsFilter = function(c){ ui._foodNewsFilter=c; ui._renderFoodNewsFilters(); ui._renderFoodNewsList(); };
 ui.setFoodNewsSort = function(v){ ui._foodNewsSort=v; ui._renderFoodNewsSort(); ui._renderFoodNewsList(); };
+ui.foodNewsSortBy = function(col){
+    var cur=ui._foodNewsSort;
+    if(col==='dist'){ ui._foodNewsSort=(cur==='dist-asc')?'dist-desc':'dist-asc'; }
+    else if(col==='likes'){ ui._foodNewsSort=(cur==='likes-desc'||cur==='likes')?'likes-asc':'likes-desc'; }
+    ui._renderFoodNewsSort(); ui._renderFoodNewsList();
+};
 ui._renderFoodNewsSort = function(){
     var el=document.getElementById('foodNewsSortBar'); if(!el) return;
     var opts=[['likes','추천순'],['recent','최신순']];
-    el.innerHTML=opts.map(function(o){ var on=(ui._foodNewsSort===o[0]);
+    el.innerHTML=opts.map(function(o){ var sv=ui._foodNewsSort; var on=(o[0]==='likes')?(sv==='likes'||sv==='likes-desc'||sv==='likes-asc'):(sv===o[0]);
         return '<button onclick="ui.setFoodNewsSort(\''+o[0]+'\')" style="padding:6px 14px; border-radius:50px; border:1px solid '+(on?'#2563eb':'#cbd5e1')+'; background:'+(on?'#2563eb':'#fff')+'; color:'+(on?'#fff':'#64748b')+'; font-size:13px; font-weight:800; cursor:pointer;">'+o[1]+'</button>';
     }).join('');
 };
@@ -10199,7 +10205,16 @@ ui._renderFoodNewsFilters = function(){
 ui._renderFoodNewsList = function(){
     var el=document.getElementById('foodNewsList'); if(!el) return;
     var list=ui._foodNewsCache.filter(function(o){ return ui._foodNewsFilter==='전체' || o.category===ui._foodNewsFilter; });
-    list.sort(ui._foodNewsSort==='recent' ? function(a,b){ return (b.ts||0)-(a.ts||0); } : function(a,b){ return (b.likes||0)-(a.likes||0) || (b.ts||0)-(a.ts||0); });
+    var _sort=ui._foodNewsSort;
+    list.sort(function(a,b){
+        if(_sort==='recent') return (b.ts||0)-(a.ts||0);
+        if(_sort==='dist-asc') return (a.distanceKm==null?9e9:a.distanceKm)-(b.distanceKm==null?9e9:b.distanceKm);
+        if(_sort==='dist-desc') return (b.distanceKm==null?-1:b.distanceKm)-(a.distanceKm==null?-1:a.distanceKm);
+        if(_sort==='likes-asc') return (a.likes||0)-(b.likes||0);
+        return (b.likes||0)-(a.likes||0) || (b.ts||0)-(a.ts||0);
+    });
+    var _da=(_sort==='dist-asc')?' \u25B2':((_sort==='dist-desc')?' \u25BC':'');
+    var _la=(_sort==='likes-asc')?' \u25B2':((_sort==='likes-desc'||_sort==='likes')?' \u25BC':'');
     if(!list.length){ el.innerHTML='<div style="padding:40px 0; text-align:center; color:#94a3b8; font-weight:700;">아직 등록된 맛집이 없습니다.</div>'; return; }
     var esc=function(t){ return String(t||'').replace(/</g,'&lt;'); };
     var th='padding:10px 8px; font-size:12px; font-weight:800; color:#64748b; border-bottom:2px solid #e2e8f0; white-space:nowrap;';
@@ -10222,8 +10237,8 @@ ui._renderFoodNewsList = function(){
       +'<thead><tr>'
       +'<th style="'+th+' text-align:center; width:46px;">연번</th>'
       +'<th style="'+th+' text-align:left;">가게명</th>'
-      +'<th style="'+th+' text-align:center;">항기원 거리</th>'
-      +'<th style="'+th+' text-align:center;">추천수</th>'
+      +'<th onclick="ui.foodNewsSortBy(\'dist\')" style="'+th+' text-align:center; cursor:pointer; user-select:none;">항기원 거리'+_da+'</th>'
+      +'<th onclick="ui.foodNewsSortBy(\'likes\')" style="'+th+' text-align:center; cursor:pointer; user-select:none;">추천수'+_la+'</th>'
       +'<th style="'+th+' text-align:center;">지도</th>'
       +'<th style="'+th+' text-align:center;">길찾기</th>'
       +'<th style="'+th+' text-align:center;">수정/삭제</th>'
@@ -10395,7 +10410,7 @@ ui.foodNewsRouteById=function(id){
 };
 
 /* __JSVER_STAMP__ */
-(function stampJsVer(){try{var b=document.getElementById('__catcVer');if(b){if(b.textContent.indexOf('Jm')<0)b.textContent=b.textContent+'\u00b7Jm';}else{setTimeout(stampJsVer,200);}}catch(e){}})();
+(function stampJsVer(){try{var b=document.getElementById('__catcVer');if(b){if(b.textContent.indexOf('Jn')<0)b.textContent=b.textContent+'\u00b7Jn';}else{setTimeout(stampJsVer,200);}}catch(e){}})();
 
 /* ===== [공항별 입교 현황 지도] 수강생현황 → 지도로 보기 ===== */
 ui._mapRegions = {
