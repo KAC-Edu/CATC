@@ -594,7 +594,7 @@
   <select id="subjectSelect" onchange="handleSubjectChange()" style="display:none;"><option value="공통질문">질문 대상 선택 (기본: 공통질문)</option></select>
   <div id="subjectDropList" style="display:none; position:absolute; left:12px; right:12px; bottom:calc(100% + 4px); z-index:60; background:#fff; border:1.5px solid #cfe0ff; border-radius:14px; box-shadow:0 -10px 30px rgba(15,23,42,.18); overflow:hidden; max-height:46vh; overflow-y:auto;"></div>
   <div class="input-box" style="flex-direction:column; align-items:stretch; gap:10px;">
-      <textarea id="qInput" class="real-input" rows="1" placeholder="질문을 입력하세요" maxlength="100"></textarea>
+      <textarea id="qInput" class="real-input" rows="1" placeholder="질문을 입력하세요" maxlength="100" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" inputmode="text" name="catcQ" data-1p-ignore data-lpignore="true" data-form-type="other"></textarea>
       <div style="display:flex; align-items:center; gap:8px;">
           <button type="button" onclick="toggleSubjectDrop(event)" title="질문 대상 선택" style="width:34px;height:34px;border-radius:50%;border:1px solid #cfe0ff;background:#fff;color:#1e3a8a;font-size:17px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="fa-solid fa-plus"></i></button>
           <button type="button" id="subjectDropBtn" onclick="toggleSubjectDrop(event)" style="display:flex;align-items:center;gap:7px;padding:7px 13px;border-radius:50px;border:1px solid #cfe0ff;background:#eef4ff;color:#1e3a8a;font-size:13px;font-weight:800;cursor:pointer;max-width:62%;"><i class="fa-solid fa-users" style="font-size:11px;"></i><span id="subjectDropLabel" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">공통질문</span><i class="fa-solid fa-chevron-up" style="font-size:9px;opacity:.55;"></i></button>
@@ -4845,7 +4845,7 @@ input:not([type=checkbox]):not([type=radio]):not([type=file]), textarea, select 
 })();
 </script>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vH7</div>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vH8</div>
 <script>
 /* ===== [공용] 종료된 과정 자동 정리 (교육생 포함 전 플랫폼) — 종료일 지난 방을 다음날 미개설로 비움. 브라우저별 하루 1회 ===== */
 window.kacExpireEndedCourses = async function(){
