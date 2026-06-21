@@ -820,7 +820,6 @@
     <div class="menu-box" style="position:relative;">
         <button type="button" onclick="closePanelSmooth('foodModal')" aria-label="닫기" style="position:absolute; top:12px; right:14px; width:34px; height:34px; border:none; border-radius:50%; background:#f1f5f9; color:#475569; font-size:22px; font-weight:800; cursor:pointer; z-index:5;">&times;</button>
         <h3 style="margin:0 0 4px; color:#1e293b; font-weight:900; font-size:20px;">🍜 항기원 맛집 추천</h3>
-        <div style="font-size:12.5px; color:#94a3b8; font-weight:600; margin-bottom:14px;">익명으로 맛집을 공유하고 공감해요 · 🚗 자가용 길찾기 제공</div>
         <button type="button" onclick="openFoodAddForm()" style="width:100%; padding:12px; border:none; border-radius:12px; background:#2563eb; color:#fff; font-weight:800; font-size:14px; cursor:pointer; margin-bottom:12px;"><i class="fa-solid fa-plus"></i> 맛집 추가하기</button>
         <div id="foodAddForm" style="display:none; background:#f8fafc; border:1px solid #e2e8f0; border-radius:14px; padding:14px; margin-bottom:14px; text-align:left;">
             <div style="display:flex; gap:8px; margin-bottom:8px;">
@@ -844,7 +843,7 @@
                 <button type="button" onclick="submitFoodSpot()" style="flex:1; padding:11px; border:none; border-radius:10px; background:#2563eb; color:#fff; font-weight:800; cursor:pointer;">등록</button>
             </div>
         </div>
-        <div id="foodFilters" style="display:flex; flex-wrap:wrap; gap:6px; margin-bottom:12px;"></div>
+        <div id="foodFilters" style="display:flex; flex-wrap:nowrap; gap:6px; margin-bottom:12px; overflow-x:auto; -webkit-overflow-scrolling:touch; padding-bottom:2px;"></div>
         <div id="foodList" style="display:flex; flex-direction:column; gap:10px;"></div>
     </div>
 </div>
@@ -1794,7 +1793,7 @@ function renderFoodFilters(){
     var el=document.getElementById('foodFilters'); if(!el) return;
     var cats=['전체'].concat(FOOD_CATS);
     el.innerHTML=cats.map(function(c){ var on=(_foodFilter===c);
-        return '<button type="button" onclick="setFoodFilter(\''+c+'\')" style="padding:7px 13px; border-radius:50px; border:1px solid '+(on?'#2563eb':'#cfe0ff')+'; background:'+(on?'#2563eb':'#fff')+'; color:'+(on?'#fff':'#1e3a8a')+'; font-size:13px; font-weight:800; cursor:pointer;">'+c+'</button>';
+        return '<button type="button" onclick="setFoodFilter(\''+c+'\')" style="padding:7px 13px; border-radius:50px; border:1px solid '+(on?'#2563eb':'#cfe0ff')+'; background:'+(on?'#2563eb':'#fff')+'; color:'+(on?'#fff':'#1e3a8a')+'; font-size:13px; font-weight:800; cursor:pointer; white-space:nowrap; flex-shrink:0;">'+c+'</button>';
     }).join('');
 }
 function foodSearchPlaces(){
@@ -1844,11 +1843,26 @@ function submitFoodSpot(){
     if(!_foodSelected || !_foodSelected.name){ if(typeof showKacAlert==='function') showKacAlert('가게명을 검색해서 선택해주세요.'); return; }
     var cat=(document.getElementById('foodCat').value||'기타');
     var cm=(document.getElementById('foodComment').value||'').trim();
+    // 이미 등록된 가게면 한줄평만 추가
+    var exist=_foodCache.filter(function(x){ return x.name===_foodSelected.name && (x.address||'')===(_foodSelected.address||''); })[0];
+    if(exist){
+        if(cm){ firebase.database().ref('system/foodspots/'+exist.id+'/comments').push({ text:cm, ts:Date.now() }); }
+        document.getElementById('foodComment').value=''; _foodSelected=null; closeFoodAddForm();
+        if(typeof showKacAlert==='function') showKacAlert(cm?'이미 등록된 가게라 한줄평만 추가했어요. 감사합니다!':'이미 등록된 가게입니다.');
+        return;
+    }
     var dist=null; if(_HANGIWON_LL && _foodSelected.lat && _foodSelected.lng){ dist=Math.round(_haversineKm(_HANGIWON_LL.lat,_HANGIWON_LL.lng,_foodSelected.lat,_foodSelected.lng)*10)/10; }
     firebase.database().ref('system/foodspots').push({ name:_foodSelected.name, category:cat, address:_foodSelected.address||'', lat:_foodSelected.lat||null, lng:_foodSelected.lng||null, distanceKm:dist, comment:cm, likes:0, ts:Date.now() }).then(function(){
         document.getElementById('foodComment').value=''; _foodSelected=null; closeFoodAddForm();
         if(typeof showKacAlert==='function') showKacAlert('✅ 맛집이 등록되었습니다. 감사합니다!');
     }).catch(function(){ if(typeof showKacAlert==='function') showKacAlert('등록 중 오류가 발생했습니다.'); });
+}
+function _foodComments(o){
+    var arr=[];
+    if(o.comment && String(o.comment).trim()) arr.push({text:o.comment, ts:o.ts||0});
+    if(o.comments){ Object.keys(o.comments).forEach(function(k){ var c=o.comments[k]; if(c&&c.text) arr.push({text:c.text, ts:c.ts||0}); }); }
+    arr.sort(function(a,b){ return (a.ts||0)-(b.ts||0); });
+    return arr;
 }
 function renderFoodList(){
     var el=document.getElementById('foodList'); if(!el) return;
@@ -1858,30 +1872,33 @@ function renderFoodList(){
     el.innerHTML=list.map(function(o){
         var liked=!!likes[o.id]; var cat=o.category||'기타'; var col=_foodCatColor(cat);
         var esc=function(t){return String(t||'').replace(/</g,'&lt;');};
-        var nm=esc(o.name), cm=esc(o.comment), ad=esc(o.address);
-        var hasLL=(o.lat&&o.lng);
-        var mapv=hasLL?('https://map.kakao.com/link/map/'+encodeURIComponent(o.name)+','+o.lat+','+o.lng):('https://map.naver.com/p/search/'+encodeURIComponent(o.name||o.address||''));
-
-        var distTxt=(o.distanceKm!=null)?('📍 약 '+o.distanceKm+'km (직선) · 자가용 길찾기→'):'';
+        var nm=esc(o.name);
+        var distTxt=(o.distanceKm!=null)?('📍 약 '+o.distanceKm+'km (직선)'):'';
+        var cmts=_foodComments(o);
+        var cmtsHtml=cmts.map(function(c){ return '<div style="font-size:13px; color:#334155; line-height:1.5; padding:6px 10px; background:#f8fafc; border-radius:8px; margin-bottom:4px;">💬 '+esc(c.text)+'</div>'; }).join('');
+        var btn='display:flex; align-items:center; justify-content:center; gap:4px; flex:1; padding:8px 0; border-radius:10px; font-weight:800; font-size:12.5px; cursor:pointer; text-decoration:none; border:none;';
         return '<div style="background:#fff; border:1px solid #e8eef8; border-radius:14px; padding:14px; box-shadow:0 2px 8px rgba(15,23,42,.05); text-align:left;">'
-          +'<div style="display:flex; align-items:center; gap:7px; margin-bottom:6px;"><span style="background:'+col+'; color:#fff; font-size:11px; font-weight:800; padding:2px 8px; border-radius:6px;">'+cat+'</span><span style="font-size:16px; font-weight:900; color:#0f172a;">'+nm+'</span></div>'
-          +(ad?'<div style="font-size:12.5px; color:#64748b; margin-bottom:3px;"><i class="fa-solid fa-location-dot" style="color:#94a3b8;"></i> '+ad+'</div>':'')
-          +(distTxt?'<div style="font-size:12px; color:#2563eb; font-weight:800; margin-bottom:6px;">'+distTxt+'</div>':'')
-          +(cm?'<div style="font-size:13.5px; color:#334155; line-height:1.5; margin-bottom:10px;">'+cm+'</div>':'<div style="margin-bottom:6px;"></div>')
-          +'<div style="display:flex; align-items:center; gap:8px;">'
-          +'<button type="button" onclick="toggleFoodLike(\''+o.id+'\')" style="display:flex; align-items:center; gap:5px; padding:7px 12px; border-radius:50px; border:1px solid '+(liked?'#fecaca':'#e2e8f0')+'; background:'+(liked?'#fff1f2':'#f8fafc')+'; color:'+(liked?'#e11d48':'#475569')+'; font-weight:800; font-size:13px; cursor:pointer; flex-shrink:0;">👍 '+(o.likes||0)+'</button>'
-          +'<a href="'+mapv+'" target="_blank" rel="noopener" style="flex:1; text-align:center; padding:8px 0; border-radius:10px; background:#eef4ff; color:#1e3a8a; font-weight:800; font-size:12.5px; text-decoration:none;"><i class="fa-solid fa-map"></i> 지도</a>'
-          +'<button type="button" onclick="foodRouteById(\''+o.id+'\')" style="flex:1; text-align:center; padding:8px 0; border-radius:10px; background:#eafff4; color:#047857; font-weight:800; font-size:12.5px; border:none; cursor:pointer;">🚗 길찾기</button>'
-          +'</div></div>';
+          +'<div style="display:flex; align-items:center; gap:7px; margin-bottom:4px;"><span style="background:'+col+'; color:#fff; font-size:11px; font-weight:800; padding:2px 8px; border-radius:6px;">'+cat+'</span><span style="font-size:16px; font-weight:900; color:#0f172a;">'+nm+'</span></div>'
+          +(distTxt?'<div style="font-size:12px; color:#2563eb; font-weight:800; margin-bottom:8px;">'+distTxt+'</div>':'<div style="margin-bottom:6px;"></div>')
+          +(cmtsHtml?'<div style="margin-bottom:8px;">'+cmtsHtml+'</div>':'')
+          +'<div style="display:flex; align-items:center; gap:6px;">'
+          +'<button type="button" onclick="toggleFoodLike(\''+o.id+'\')" style="'+btn+' background:'+(liked?'#fff1f2':'#f8fafc')+'; color:'+(liked?'#e11d48':'#475569')+'; border:1px solid '+(liked?'#fecaca':'#e2e8f0')+';">👍 '+(o.likes||0)+'</button>'
+          +'<button type="button" onclick="toggleFoodCmt(\''+o.id+'\')" style="'+btn+' background:#fff7ed; color:#c2410c;">💬 한줄평</button>'
+          +'<button type="button" onclick="foodMapById(\''+o.id+'\')" style="'+btn+' background:#eef4ff; color:#1e3a8a;">🗺️ 지도</button>'
+          +'<button type="button" onclick="foodRouteById(\''+o.id+'\')" style="'+btn+' background:#eafff4; color:#047857;">🚗 길찾기</button>'
+          +'</div>'
+          +'<div id="foodCmt_'+o.id+'" style="display:none; margin-top:8px;"><div style="display:flex; gap:6px;"><input id="foodCmtInput_'+o.id+'" maxlength="100" placeholder="이 가게 한줄평 추가" style="flex:1; padding:10px; border:1px solid #cfe0ff; border-radius:9px; font-size:13px; box-sizing:border-box;" onkeydown="if(event.key===\'Enter\'){event.preventDefault();addFoodComment(\''+o.id+'\');}"><button type="button" onclick="addFoodComment(\''+o.id+'\')" style="padding:0 14px; border:none; border-radius:9px; background:#2563eb; color:#fff; font-weight:800; cursor:pointer;">등록</button></div></div>'
+          +'</div>';
     }).join('');
 }
-function foodRouteById(id){
-    var o=_foodCache.filter(function(x){return x.id===id;})[0]; if(!o) return;
-    // 교육생: 내 현재 위치 → 가게 (카카오맵이 현위치를 출발지로 길찾기)
-    if(o.lat&&o.lng){ window.open('https://map.kakao.com/link/to/'+encodeURIComponent(o.name)+','+o.lat+','+o.lng,'_blank'); }
-    else { window.open('https://map.kakao.com/link/search/'+encodeURIComponent(o.name||o.address||''),'_blank'); }
+function toggleFoodCmt(id){ var d=document.getElementById('foodCmt_'+id); if(d){ d.style.display=(d.style.display==='none'?'block':'none'); if(d.style.display==='block'){ var i=document.getElementById('foodCmtInput_'+id); if(i) i.focus(); } } }
+function addFoodComment(id){
+    var i=document.getElementById('foodCmtInput_'+id); if(!i) return;
+    var t=(i.value||'').trim(); if(!t){ return; }
+    firebase.database().ref('system/foodspots/'+id+'/comments').push({ text:t, ts:Date.now() }).then(function(){ i.value=''; var d=document.getElementById('foodCmt_'+id); if(d) d.style.display='none'; });
 }
-window.foodRouteById=foodRouteById;
+function foodMapById(id){ var o=_foodCache.filter(function(x){return x.id===id;})[0]; if(!o) return; if(o.lat&&o.lng){ window.open('https://map.kakao.com/link/map/'+encodeURIComponent(o.name)+','+o.lat+','+o.lng,'_blank'); } else { window.open('https://map.naver.com/p/search/'+encodeURIComponent(o.name||o.address||''),'_blank'); } }
+window.toggleFoodCmt=toggleFoodCmt; window.addFoodComment=addFoodComment; window.foodMapById=foodMapById;
 function toggleFoodLike(id){
     var likes=JSON.parse(localStorage.getItem('kac_food_likes')||'{}'); var liked=!!likes[id];
     if(liked){ delete likes[id]; } else { likes[id]=true; }
@@ -5329,7 +5346,7 @@ input:not([type=checkbox]):not([type=radio]):not([type=file]), textarea, select 
 })();
 </script>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vH39</div>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vH40</div>
 <script>
 /* ===== [공용] 종료된 과정 자동 정리 (교육생 포함 전 플랫폼) — 종료일 지난 방을 다음날 미개설로 비움. 브라우저별 하루 1회 ===== */
 window.kacExpireEndedCourses = async function(){
