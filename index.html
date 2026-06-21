@@ -844,6 +844,7 @@
             </div>
         </div>
         <div id="foodFilters" style="display:flex; flex-wrap:nowrap; gap:6px; margin-bottom:12px; overflow-x:auto; -webkit-overflow-scrolling:touch; padding-bottom:2px;"></div>
+        <div id="foodSortBar" style="display:flex; justify-content:flex-end; gap:6px; margin-bottom:10px;"></div>
         <div id="foodList" style="display:flex; flex-direction:column; gap:10px;"></div>
     </div>
 </div>
@@ -1760,6 +1761,7 @@ window.installPanelSwipeClose=installPanelSwipeClose;
 var FOOD_CATS=['식당','카페','분식','술집','기타'];
 var HANGIWON_ADDR='충북 청주시 상당구 문의면 남계길 22-55';
 var _foodFilter='전체';
+var _foodSort='likes';
 var _foodCache=[];
 var _kakaoReady=false, _kakaoPlaces=null, _kakaoGeocoder=null, _HANGIWON_LL=null;
 var _foodResults=[], _foodSelected=null, _foodMap=null, _foodMarker=null;
@@ -1778,7 +1780,7 @@ function _foodCatColor(c){ return ({'식당':'#f59e0b','카페':'#10b981','분�
 function _foodAutoCat(cn){ cn=cn||''; if(cn.indexOf('카페')>=0||cn.indexOf('디저트')>=0||cn.indexOf('베이커리')>=0) return '카페'; if(cn.indexOf('주점')>=0||cn.indexOf('호프')>=0||cn.indexOf('술집')>=0||cn.indexOf('바')>=0) return '술집'; if(cn.indexOf('분식')>=0) return '분식'; return '식당'; }
 function openFoodModal(){
     var m=document.getElementById('foodModal'); if(!m) return;
-    m.style.display='flex'; closeFoodAddForm(); renderFoodFilters(); initKakao();
+    m.style.display='flex'; closeFoodAddForm(); renderFoodFilters(); renderFoodSort(); initKakao();
     if(window._foodRef){ try{ window._foodRef.off(); }catch(e){} }
     window._foodRef=firebase.database().ref('system/foodspots');
     window._foodRef.on('value', function(snap){
@@ -1789,6 +1791,15 @@ function openFoodModal(){
     });
 }
 function setFoodFilter(c){ _foodFilter=c; renderFoodFilters(); renderFoodList(); }
+function setFoodSort(v){ _foodSort=v; renderFoodSort(); renderFoodList(); }
+function renderFoodSort(){
+    var el=document.getElementById('foodSortBar'); if(!el) return;
+    var opts=[['likes','추천순'],['recent','최신순']];
+    el.innerHTML=opts.map(function(o){ var on=(_foodSort===o[0]);
+        return '<button type="button" onclick="setFoodSort(\''+o[0]+'\')" style="padding:5px 12px; border-radius:50px; border:1px solid '+(on?'#2563eb':'#e2e8f0')+'; background:'+(on?'#2563eb':'#fff')+'; color:'+(on?'#fff':'#64748b')+'; font-size:12px; font-weight:800; cursor:pointer;">'+o[1]+'</button>';
+    }).join('');
+}
+window.setFoodSort=setFoodSort;
 function renderFoodFilters(){
     var el=document.getElementById('foodFilters'); if(!el) return;
     var cats=['전체'].concat(FOOD_CATS);
@@ -1868,6 +1879,7 @@ function renderFoodList(){
     var el=document.getElementById('foodList'); if(!el) return;
     var likes=JSON.parse(localStorage.getItem('kac_food_likes')||'{}');
     var list=_foodCache.filter(function(o){ return _foodFilter==='전체' || o.category===_foodFilter; });
+    list.sort(_foodSort==='recent' ? function(a,b){ return (b.ts||0)-(a.ts||0); } : function(a,b){ return (b.likes||0)-(a.likes||0) || (b.ts||0)-(a.ts||0); });
     if(!list.length){ el.innerHTML='<div style="padding:30px 0; text-align:center; color:#94a3b8; font-weight:700; line-height:1.6;">아직 등록된 맛집이 없어요.<br>첫 맛집을 추가해보세요!</div>'; return; }
     el.innerHTML=list.map(function(o){
         var liked=!!likes[o.id]; var cat=o.category||'기타'; var col=_foodCatColor(cat);
@@ -5346,7 +5358,7 @@ input:not([type=checkbox]):not([type=radio]):not([type=file]), textarea, select 
 })();
 </script>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vH40</div>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vH41</div>
 <script>
 /* ===== [공용] 종료된 과정 자동 정리 (교육생 포함 전 플랫폼) — 종료일 지난 방을 다음날 미개설로 비움. 브라우저별 하루 1회 ===== */
 window.kacExpireEndedCourses = async function(){
