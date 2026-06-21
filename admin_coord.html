@@ -1451,6 +1451,12 @@ body.pc-mode .entry-box:hover, body.pc-mode .entry-box-tablet:hover {
 .acc.collapsed .acc-body{ display:none; }
 .acc .acc-ic{ transition:transform .2s; margin-left:6px; color:#94a3b8; font-size:12px; }
 .acc.collapsed .acc-ic{ transform:rotate(-90deg); }
+/* [접힘 affordance] 닫힌 상태를 명확히 — 구분선 제거 + 연한 배경 + '눌러서 펼치기' 안내 */
+#ind-notice-card.collapsed, #ind-outing-card.collapsed { background:#f5f9ff !important; }
+#ind-notice-card.collapsed .acc-h, #ind-outing-card.collapsed .section-title { border-bottom:none !important; margin-bottom:0 !important; padding-bottom:0 !important; }
+#ind-notice-card.collapsed .acc-ic, #ind-outing-card.collapsed .acc-ic { color:#2563eb !important; }
+#ind-notice-card.collapsed .acc-h > span:first-child::after,
+#ind-outing-card.collapsed .section-title > span:first-child::after { content:'  ·  눌러서 펼치기'; font-size:11px; font-weight:800; color:#2563eb; }
 .apm-card{ background:#fff; border:1px solid #e2e8f0; border-radius:12px; padding:13px 15px; margin-bottom:10px; }
 .apm-name{ font-size:15px; font-weight:900; color:#0f172a; margin-bottom:8px; }
 .apm-row{ display:flex; justify-content:space-between; gap:10px; font-size:13px; padding:3px 0; }
@@ -1869,7 +1875,7 @@ body.pc-mode .entry-box:hover, body.pc-mode .entry-box-tablet:hover {
           </div>
 
 <!-- 퇴교 차량 출발 시간 공지 (맨 아래로 이동) -->
-<div id="ind-departure-card" class="section-card acc collapsed" style="background:linear-gradient(135deg,#1e3a8a,#1d4ed8); color:white; padding:16px; margin-bottom:50px;">
+<div id="ind-departure-card" class="section-card acc" style="background:linear-gradient(135deg,#1e3a8a,#1d4ed8); color:white; padding:16px; margin-bottom:50px;">
     <div class="section-title acc-h" onclick="toggleAcc(this)" style="color:white; margin-bottom:12px; cursor:pointer; justify-content:space-between;">
         <span><i class="fa-solid fa-bus"></i> 퇴교차량 출발 시간 공지</span><i class="fa-solid fa-chevron-down acc-ic" style="color:rgba(255,255,255,0.85);"></i>
     </div>
@@ -6833,7 +6839,7 @@ window.addEventListener('load', function(){
 });
 </script>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vH3</div>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vH4</div>
 <script>
 /* ===== [공용] 종료된 과정 자동 정리 (모든 플랫폼 공통) — 종료일 지난 방을 다음날 미개설로 비움. 브라우저별 하루 1회 ===== */
 window.kacExpireEndedCourses = async function(){
