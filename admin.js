@@ -5086,21 +5086,13 @@ resetShuttleRequests: function() {
         const body = document.body;
         const icon = document.getElementById('sidebarToggleIcon');
         body.classList.toggle('sidebar-hidden');
-        // 전체화면 버튼 아이콘도 동기화
-        const fsIcon = document.querySelector('.control-icon-btn i.fa-expand, .control-icon-btn i.fa-compress');
         const isHidden = body.classList.contains('sidebar-hidden');
-        if (fsIcon) {
-            fsIcon.classList.toggle('fa-expand', !isHidden);
-            fsIcon.classList.toggle('fa-compress', isHidden);
-        }
         // [자동 접힘] 펼친 뒤 10초 비활성 시 접힘. 단, 사이드바를 쓰는 중(마우스 올려둠)에는 대기.
         var self = this;
         if (this._sidebarAutoTimer) { clearTimeout(this._sidebarAutoTimer); this._sidebarAutoTimer = null; }
         if (!isHidden) {
             var collapseSb = function() {
                 document.body.classList.add('sidebar-hidden');
-                var fi = document.querySelector('.control-icon-btn i.fa-expand, .control-icon-btn i.fa-compress');
-                if (fi) { fi.classList.add('fa-expand'); fi.classList.remove('fa-compress'); }
             };
             self._sidebarStart = function() { if (self._sidebarAutoTimer) clearTimeout(self._sidebarAutoTimer); self._sidebarAutoTimer = setTimeout(collapseSb, 10000); };
             self._sidebarStop  = function() { if (self._sidebarAutoTimer) { clearTimeout(self._sidebarAutoTimer); self._sidebarAutoTimer = null; } };
@@ -10096,7 +10088,7 @@ ui.saveFieldEdit = async function(){
 };
 
 /* __JSVER_STAMP__ */
-(function stampJsVer(){try{var b=document.getElementById('__catcVer');if(b){if(b.textContent.indexOf('Jj')<0)b.textContent=b.textContent+'\u00b7Jj';}else{setTimeout(stampJsVer,200);}}catch(e){}})();
+(function stampJsVer(){try{var b=document.getElementById('__catcVer');if(b){if(b.textContent.indexOf('Jl')<0)b.textContent=b.textContent+'\u00b7Jl';}else{setTimeout(stampJsVer,200);}}catch(e){}})();
 
 /* ===== [공항별 입교 현황 지도] 수강생현황 → 지도로 보기 ===== */
 ui._mapRegions = {
@@ -10184,3 +10176,5 @@ ui.openStudentMap = async function(){
   var wrap=document.createElement('div'); wrap.innerHTML=html; document.body.appendChild(wrap.firstChild);
 };
 
+/* 출석완료 숫자 클릭 → 관리 액션 팝업 */
+ui.openAttendanceActions = function(){ var m=document.getElementById('attendanceActionsModal'); if(m) m.style.display='flex'; };
