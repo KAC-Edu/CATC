@@ -10162,6 +10162,7 @@ ui.saveFieldEdit = async function(){
 
 // ===== 도움이 되는 소식: 항기원 맛집 (강사 뷰) =====
 ui._foodNewsFilter = '전체';
+ui._foodNewsSort = 'likes';
 ui._foodNewsCache = [];
 ui._FOOD_CATS = ['식당','카페','분식','술집','기타'];
 ui._HANGIWON = '충북 청주시 상당구 문의면 남계길 22-55';
@@ -10169,6 +10170,7 @@ ui._foodCatColor = function(c){ return ({'식당':'#f59e0b','카페':'#10b981','
 ui.loadFoodNews = function(){
     ui._fnInitKakao();
     ui._renderFoodNewsFilters();
+    ui._renderFoodNewsSort();
     try{ if(ui._foodNewsRef) ui._foodNewsRef.off(); }catch(e){}
     ui._foodNewsRef = firebase.database().ref('system/foodspots');
     ui._foodNewsRef.on('value', function(snap){
@@ -10179,6 +10181,14 @@ ui.loadFoodNews = function(){
     });
 };
 ui.setFoodNewsFilter = function(c){ ui._foodNewsFilter=c; ui._renderFoodNewsFilters(); ui._renderFoodNewsList(); };
+ui.setFoodNewsSort = function(v){ ui._foodNewsSort=v; ui._renderFoodNewsSort(); ui._renderFoodNewsList(); };
+ui._renderFoodNewsSort = function(){
+    var el=document.getElementById('foodNewsSortBar'); if(!el) return;
+    var opts=[['likes','추천순'],['recent','최신순']];
+    el.innerHTML=opts.map(function(o){ var on=(ui._foodNewsSort===o[0]);
+        return '<button onclick="ui.setFoodNewsSort(\''+o[0]+'\')" style="padding:6px 14px; border-radius:50px; border:1px solid '+(on?'#2563eb':'#cbd5e1')+'; background:'+(on?'#2563eb':'#fff')+'; color:'+(on?'#fff':'#64748b')+'; font-size:13px; font-weight:800; cursor:pointer;">'+o[1]+'</button>';
+    }).join('');
+};
 ui._renderFoodNewsFilters = function(){
     var el=document.getElementById('foodNewsFilters'); if(!el) return;
     var cats=['전체'].concat(ui._FOOD_CATS);
@@ -10189,6 +10199,7 @@ ui._renderFoodNewsFilters = function(){
 ui._renderFoodNewsList = function(){
     var el=document.getElementById('foodNewsList'); if(!el) return;
     var list=ui._foodNewsCache.filter(function(o){ return ui._foodNewsFilter==='전체' || o.category===ui._foodNewsFilter; });
+    list.sort(ui._foodNewsSort==='recent' ? function(a,b){ return (b.ts||0)-(a.ts||0); } : function(a,b){ return (b.likes||0)-(a.likes||0) || (b.ts||0)-(a.ts||0); });
     if(!list.length){ el.innerHTML='<div style="padding:40px 0; text-align:center; color:#94a3b8; font-weight:700;">아직 등록된 맛집이 없습니다.</div>'; return; }
     var esc=function(t){ return String(t||'').replace(/</g,'&lt;'); };
     var th='padding:10px 8px; font-size:12px; font-weight:800; color:#64748b; border-bottom:2px solid #e2e8f0; white-space:nowrap;';
@@ -10384,7 +10395,7 @@ ui.foodNewsRouteById=function(id){
 };
 
 /* __JSVER_STAMP__ */
-(function stampJsVer(){try{var b=document.getElementById('__catcVer');if(b){if(b.textContent.indexOf('Jl')<0)b.textContent=b.textContent+'\u00b7Jl';}else{setTimeout(stampJsVer,200);}}catch(e){}})();
+(function stampJsVer(){try{var b=document.getElementById('__catcVer');if(b){if(b.textContent.indexOf('Jm')<0)b.textContent=b.textContent+'\u00b7Jm';}else{setTimeout(stampJsVer,200);}}catch(e){}})();
 
 /* ===== [공항별 입교 현황 지도] 수강생현황 → 지도로 보기 ===== */
 ui._mapRegions = {
