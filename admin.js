@@ -5084,18 +5084,22 @@ resetShuttleRequests: function() {
                 .catch(function(){ return { name: it.name, file: it.file, ver: '-' }; });
         }));
         Promise.all([fbP, filesP]).then(function(res){
-            var LATEST = res[0] || ui._LATEST_VER || {};
+            var baseline = res[0];                       // Firebase 등록 기준만 사용(코드 폴백으로 빨강 오표시 방지)
+            var hasBase = baseline && Object.keys(baseline).length > 0;
             var arr = res[1]; ui._lastPlatVers = arr;
-            var stale = 0;
+            var diffN = 0;
             box.innerHTML = arr.map(function(v){
-                var latest = LATEST[v.file] || null;
-                var isOld = latest && v.ver !== '-' && v.ver !== latest;
-                if (isOld) stale++;
-                var verBg = isOld ? '#fee2e2' : '#dbeafe';
-                var verCol = isOld ? '#b91c1c' : '#0f172a';
-                var note = isOld ? '<span style="font-size:10px; color:#b91c1c; font-weight:800; margin-left:5px;">구버전·최신 '+latest+'</span>' : '';
-                return '<div style="display:flex; align-items:center; justify-content:space-between; font-size:12px;"><span style="color:#475569; font-weight:700;">'+v.name+(isOld?' <i class=\'fa-solid fa-triangle-exclamation\' style=\'color:#f59e0b;\'></i>':'')+'</span><span><span style="font-family:ui-monospace,Menlo,Consolas,monospace; font-weight:800; color:'+verCol+'; background:'+verBg+'; padding:1px 8px; border-radius:6px;">'+v.ver+'</span>'+note+'</span></div>';
-            }).join('') + (stale ? '<div style="grid-column:1/-1; margin-top:8px; padding:9px 11px; background:#fff7ed; border:1px solid #fed7aa; border-radius:9px; color:#b45309; font-size:11.5px; font-weight:800; line-height:1.5;"><i class="fa-solid fa-triangle-exclamation"></i> 최신이 아닌 플랫폼 '+stale+'개 — 빨간 항목의 새 파일을 다시 업로드하세요.</div>' : '<div style="grid-column:1/-1; margin-top:8px; padding:9px 11px; background:#ecfdf5; border:1px solid #a7f3d0; border-radius:9px; color:#047857; font-size:11.5px; font-weight:800;"><i class="fa-solid fa-circle-check"></i> 모든 플랫폼이 최신 버전입니다.</div>');
+                var base = hasBase ? (baseline[v.file] || null) : null;
+                var isDiff = base && v.ver !== '-' && v.ver !== base;
+                if (isDiff) diffN++;
+                var verBg = isDiff ? '#fee2e2' : '#dbeafe';
+                var verCol = isDiff ? '#b91c1c' : '#0f172a';
+                var note = isDiff ? '<span style="font-size:10px; color:#b91c1c; font-weight:800; margin-left:5px;">기준 '+base+'</span>' : '';
+                return '<div style="display:flex; align-items:center; justify-content:space-between; font-size:12px;"><span style="color:#475569; font-weight:700;">'+v.name+(isDiff?' <i class=\'fa-solid fa-triangle-exclamation\' style=\'color:#f59e0b;\'></i>':'')+'</span><span><span style="font-family:ui-monospace,Menlo,Consolas,monospace; font-weight:800; color:'+verCol+'; background:'+verBg+'; padding:1px 8px; border-radius:6px;">'+v.ver+'</span>'+note+'</span></div>';
+            }).join('') + (
+                !hasBase ? '<div style="grid-column:1/-1; margin-top:8px; padding:9px 11px; background:#eff6ff; border:1px solid #bfdbfe; border-radius:9px; color:#1d4ed8; font-size:11.5px; font-weight:800; line-height:1.5;"><i class="fa-solid fa-circle-info"></i> 최신 기준이 등록되지 않았습니다. 모든 파일을 올린 뒤 아래 버튼으로 등록하세요.</div>'
+                : diffN ? '<div style="grid-column:1/-1; margin-top:8px; padding:9px 11px; background:#fff7ed; border:1px solid #fed7aa; border-radius:9px; color:#b45309; font-size:11.5px; font-weight:800; line-height:1.5;"><i class="fa-solid fa-triangle-exclamation"></i> 기준과 다른 플랫폼 '+diffN+'개 — 빨간 항목을 확인하세요. (새로 배포했다면 아래 버튼으로 기준 갱신)</div>'
+                : '<div style="grid-column:1/-1; margin-top:8px; padding:9px 11px; background:#ecfdf5; border:1px solid #a7f3d0; border-radius:9px; color:#047857; font-size:11.5px; font-weight:800;"><i class="fa-solid fa-circle-check"></i> 모든 플랫폼이 기준과 일치합니다.</div>');
         });
     },
 
@@ -10122,7 +10126,7 @@ ui.saveFieldEdit = async function(){
 };
 
 /* __JSVER_STAMP__ */
-(function stampJsVer(){try{var b=document.getElementById('__catcVer');if(b){if(b.textContent.indexOf('Jo')<0)b.textContent=b.textContent+'\u00b7Jo';}else{setTimeout(stampJsVer,200);}}catch(e){}})();
+(function stampJsVer(){try{var b=document.getElementById('__catcVer');if(b){if(b.textContent.indexOf('Jp')<0)b.textContent=b.textContent+'\u00b7Jp';}else{setTimeout(stampJsVer,200);}}catch(e){}})();
 
 /* ===== [공항별 입교 현황 지도] 수강생현황 → 지도로 보기 ===== */
 ui._mapRegions = {
