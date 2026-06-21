@@ -939,6 +939,10 @@
 
             <!-- STEP 2: 소속·성명 확인 -->
             <div class="admin-step" data-astep="2" style="display:none;">
+                <div id="wzGroupBanner" style="display:none; background:#eef4ff; border:1px solid #cfe0ff; border-radius:12px; padding:12px 14px; margin-bottom:12px; text-align:left;">
+                    <div style="font-size:14px; font-weight:900; color:#1e40af;">👥 단체 신청</div>
+                    <div id="wzGroupBannerText" style="font-size:13px; color:#475569; font-weight:700; margin-top:3px; line-height:1.5;"></div>
+                </div>
                 <div style="font-size:16px; font-weight:900; color:#0f172a; text-align:center; margin-bottom:14px;">본인 정보가 맞나요?</div>
                 <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:16px;">
                     <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px dashed #e2e8f0;">
@@ -3130,6 +3134,16 @@ function showAdminStep(n){
             bar.innerHTML=h;
         } else { bar.style.display='none'; }
     }
+    if(n===2){
+        var gb=document.getElementById('wzGroupBanner'), gt=document.getElementById('wzGroupBannerText');
+        if(gb){
+            if(groupApplyMode==='group' && selectedGroupMembers.length){
+                var _rep=(localStorage.getItem('kac_user_name')||'').trim()||'본인';
+                gb.style.display='block';
+                if(gt) gt.textContent='외출자: '+_rep+' 외 '+selectedGroupMembers.length+'명  ('+[_rep].concat(selectedGroupMembers).join(', ')+')';
+            } else { gb.style.display='none'; }
+        }
+    }
     if(n===4){
         var oa=document.getElementById('outingTimeArea'), on=document.getElementById('overnightArea');
         if(selectedAdminType==='overnight'){ if(oa)oa.style.display='none'; if(on)on.style.display='flex'; }
@@ -4984,7 +4998,7 @@ input:not([type=checkbox]):not([type=radio]):not([type=file]), textarea, select 
 })();
 </script>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vH20</div>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vH21</div>
 <script>
 /* ===== [공용] 종료된 과정 자동 정리 (교육생 포함 전 플랫폼) — 종료일 지난 방을 다음날 미개설로 비움. 브라우저별 하루 1회 ===== */
 window.kacExpireEndedCourses = async function(){
