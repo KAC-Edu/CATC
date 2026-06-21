@@ -1751,13 +1751,13 @@ function installPanelSwipeClose(modalId, closeFn){
     var box=modal.querySelector('.menu-box') || modal.querySelector(':scope > div'); if(!box) return; modal._swipeClose=true;
     var sx=null, sy=null, dx=0, dy=0, drag=false, lastX=0, lastT=0, vx=0;
     var EASE='transform .3s cubic-bezier(.22,1,.36,1)';
-    function finishClose(){ box.style.animation='none'; box.style.transition=EASE; box.style.transform='translateX(110%)'; setTimeout(function(){ box.style.transform=''; box.style.transition=''; box.style.animation=''; if(typeof closeFn==='function') closeFn(); else modal.style.display='none'; }, 300); }
-    function snapBack(){ box.style.transition=EASE; box.style.transform='translateX(0)'; setTimeout(function(){ box.style.transform=''; box.style.transition=''; box.style.animation=''; }, 300); }
+    function finishClose(){ box.style.animation='none'; box.style.overflow='hidden'; box.style.willChange='transform'; box.style.transition=EASE; box.style.transform='translateX(110%)'; setTimeout(function(){ box.style.transform=''; box.style.transition=''; box.style.animation=''; box.style.overflow=''; box.style.willChange=''; if(typeof closeFn==='function') closeFn(); else modal.style.display='none'; }, 320); }
+    function snapBack(){ box.style.transition=EASE; box.style.transform='translateX(0)'; setTimeout(function(){ box.style.transform=''; box.style.transition=''; box.style.animation=''; box.style.overflow=''; box.style.willChange=''; }, 320); }
     box.addEventListener('touchstart', function(e){ var t=e.touches[0]; sx=t.clientX; sy=t.clientY; dx=0; dy=0; drag=false; lastX=t.clientX; lastT=Date.now(); vx=0; }, {passive:true});
     box.addEventListener('touchmove', function(e){
         if(sx===null) return; var t=e.touches[0]; dx=t.clientX-sx; dy=t.clientY-sy;
         var now=Date.now(), ddt=now-lastT; if(ddt>0){ vx=(t.clientX-lastX)/ddt; } lastX=t.clientX; lastT=now;
-        if(!drag){ if(dx>6 && Math.abs(dx)>Math.abs(dy)){ drag=true; box.style.animation='none'; box.style.transition='none'; } else if(Math.abs(dy)>Math.abs(dx)+6){ sx=null; return; } }
+        if(!drag){ if(dx>6 && Math.abs(dx)>Math.abs(dy)){ drag=true; box.style.animation='none'; box.style.transition='none'; box.style.overflow='hidden'; box.style.willChange='transform'; } else if(Math.abs(dy)>Math.abs(dx)+6){ sx=null; return; } }
         if(drag){ var v=Math.max(0, dx); box.style.transform='translateX('+v+'px)'; }
     }, {passive:true});
     box.addEventListener('touchend', function(){
@@ -1983,10 +1983,20 @@ function closePanelSmooth(modalId){
     if(!modal){ raw(); return; }
     var box=modal.querySelector('.menu-box') || modal.querySelector(':scope > div');
     if(!box){ raw(); return; }
+    // 1) 진입 애니메이션 해제 + 닫는 동안 안쪽 스크롤 출렁임(위아래 튐) 방지
     box.style.animation='none';
-    box.style.transition='transform .32s cubic-bezier(.22,1,.36,1)';
-    box.style.transform='translateX(110%)';
-    setTimeout(function(){ box.style.transform=''; box.style.transition=''; box.style.animation=''; raw(); }, 320);
+    box.style.overflow='hidden';
+    box.style.willChange='transform';
+    box.style.transform='translateX(0)';
+    box.style.transition='none';
+    // 2) 강제 리플로우 — 이게 없으면 iOS Safari가 트랜지션을 건너뛰고 '딱' 사라짐
+    void box.offsetWidth;
+    // 3) 다음 프레임에 슬라이드 아웃 (확실히 애니메이션 재생)
+    requestAnimationFrame(function(){
+        box.style.transition='transform .34s cubic-bezier(.22,1,.36,1)';
+        box.style.transform='translateX(110%)';
+    });
+    setTimeout(function(){ box.style.transform=''; box.style.transition=''; box.style.animation=''; box.style.overflow=''; box.style.willChange=''; raw(); }, 360);
 }
 window.closePanelSmooth=closePanelSmooth;
 
