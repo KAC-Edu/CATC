@@ -9559,10 +9559,14 @@ annualPlanMgr._syncRoomsLockAware = async function(courses) {
     // 2) 풀에서 '보존된 방에 이미 있는 과정명' 제외 → 나머지만 빈 방에 배치
     const toPlace = pool.filter(c => !keptNames.has(norm(c.name)));
 
-    const placeCount = Math.min(freeRooms.length, toPlace.length);
-    for (let i = 0; i < placeCount; i++) {
-        const room = freeRooms[i];
-        const course = toPlace[i];
+    const usedNames = new Set(keptNames);
+    let placeCount = 0, _ri = 0;
+    for (const course of toPlace) {
+        const _cnm = norm(course.name);
+        if (usedNames.has(_cnm)) continue;        // 같은 과정명 중복 배치 금지(중복 생성 원천 차단)
+        if (_ri >= freeRooms.length) break;
+        const room = freeRooms[_ri++]; placeCount++;
+        usedNames.add(_cnm);
 
         // [Clean Start] 새 과정 배치 시 이전 기수 데이터 일괄 소거
         //  (학생 명단·출결·질문·설문·셔틀·석식 등 전부 초기화 → 이전 기수 잔류 방지)
@@ -10088,7 +10092,7 @@ ui.saveFieldEdit = async function(){
 };
 
 /* __JSVER_STAMP__ */
-(function stampJsVer(){try{var b=document.getElementById('__catcVer');if(b){if(b.textContent.indexOf('Jl')<0)b.textContent=b.textContent+'\u00b7Jl';}else{setTimeout(stampJsVer,200);}}catch(e){}})();
+(function stampJsVer(){try{var b=document.getElementById('__catcVer');if(b){if(b.textContent.indexOf('Jm')<0)b.textContent=b.textContent+'\u00b7Jm';}else{setTimeout(stampJsVer,200);}}catch(e){}})();
 
 /* ===== [공항별 입교 현황 지도] 수강생현황 → 지도로 보기 ===== */
 ui._mapRegions = {
