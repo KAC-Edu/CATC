@@ -10167,6 +10167,7 @@ ui._FOOD_CATS = ['식당','카페','분식','술집','기타'];
 ui._HANGIWON = '충북 청주시 상당구 문의면 남계길 22-55';
 ui._foodCatColor = function(c){ return ({'식당':'#f59e0b','카페':'#10b981','분식':'#ef4444','술집':'#8b5cf6','기타':'#64748b'})[c]||'#64748b'; };
 ui.loadFoodNews = function(){
+    ui._fnInitKakao();
     ui._renderFoodNewsFilters();
     try{ if(ui._foodNewsRef) ui._foodNewsRef.off(); }catch(e){}
     ui._foodNewsRef = firebase.database().ref('system/foodspots');
@@ -10195,7 +10196,7 @@ ui._renderFoodNewsList = function(){
         var nm=esc(o.name), cm=esc(o.comment), ad=esc(o.address);
         var hasLL=(o.lat&&o.lng);
         var mapv=hasLL?('https://map.kakao.com/link/map/'+encodeURIComponent(o.name)+','+o.lat+','+o.lng):('https://map.naver.com/p/search/'+encodeURIComponent(o.name||o.address||''));
-        var route='https://map.kakao.com/?sName='+encodeURIComponent(ui._HANGIWON)+'&eName='+encodeURIComponent(((o.name||'')+' '+(o.address||'')).trim());
+
         var distTxt=(o.distanceKm!=null)?('📍 약 '+o.distanceKm+'km (직선)'):'';
         return '<div style="display:flex; align-items:center; gap:16px; background:#fff; border:1px solid #e8eef8; border-radius:14px; padding:16px 18px; box-shadow:0 2px 8px rgba(15,23,42,.05);">'
           +'<div style="display:flex; flex-direction:column; align-items:center; gap:2px; min-width:54px;"><div style="font-size:20px;">👍</div><div style="font-size:18px; font-weight:900; color:#0f172a;">'+(o.likes||0)+'</div></div>'
@@ -10207,7 +10208,7 @@ ui._renderFoodNewsList = function(){
           +'</div>'
           +'<div style="display:flex; flex-direction:column; gap:6px; flex-shrink:0;">'
           +'<a href="'+mapv+'" target="_blank" rel="noopener" style="text-align:center; padding:7px 14px; border-radius:10px; background:#eef4ff; color:#1e3a8a; font-weight:800; font-size:12.5px; text-decoration:none; white-space:nowrap;"><i class="fa-solid fa-map"></i> 지도</a>'
-          +'<a href="'+route+'" target="_blank" rel="noopener" style="text-align:center; padding:7px 14px; border-radius:10px; background:#eafff4; color:#047857; font-weight:800; font-size:12.5px; text-decoration:none; white-space:nowrap;">🚗 길찾기</a>'
+          +'<button type="button" onclick="ui.foodNewsRouteById(\''+o.id+'\')" style="text-align:center; padding:7px 14px; border-radius:10px; background:#eafff4; color:#047857; font-weight:800; font-size:12.5px; border:none; cursor:pointer; white-space:nowrap;">🚗 길찾기</button>'
           +'<div style="display:flex; gap:6px;"><button onclick="ui.foodNewsEdit(\''+o.id+'\')" style="flex:1; padding:6px 0; border:1px solid #e2e8f0; border-radius:8px; background:#fff; color:#475569; font-weight:800; font-size:12px; cursor:pointer;">수정</button><button onclick="ui.foodNewsDelete(\''+o.id+'\')" style="flex:1; padding:6px 0; border:none; border-radius:8px; background:#fee2e2; color:#b91c1c; font-weight:800; font-size:12px; cursor:pointer;">삭제</button></div>'
           +'</div></div>';
     }).join('');
@@ -10312,9 +10313,18 @@ ui.foodNewsDelete=function(id){
         firebase.database().ref('system/foodspots/'+id).remove().then(function(){ ui.showAlert('🗑️ 삭제되었습니다.'); }).catch(function(){ ui.showAlert('삭제 중 오류가 발생했습니다.'); });
     });
 };
+ui.foodNewsRouteById=function(id){
+    var o=ui._foodNewsCache.filter(function(x){return x.id===id;})[0]; if(!o) return;
+    if(!(o.lat&&o.lng)){ window.open('https://map.kakao.com/link/search/'+encodeURIComponent(o.name||o.address||''),'_blank'); return; }
+    function go(h){ window.open('https://map.kakao.com/link/by/car/'+encodeURIComponent('항공기술훈련원')+','+h.lat+','+h.lng+'/'+encodeURIComponent(o.name)+','+o.lat+','+o.lng,'_blank'); }
+    if(ui._fnHANGIWON_LL){ go(ui._fnHANGIWON_LL); return; }
+    ui._fnInitKakao();
+    if(ui._fnGeocoder){ ui._fnGeocoder.addressSearch(ui._HANGIWON, function(res,st){ if(st===kakao.maps.services.Status.OK && res[0]){ ui._fnHANGIWON_LL={lat:parseFloat(res[0].y), lng:parseFloat(res[0].x)}; go(ui._fnHANGIWON_LL); } else { window.open('https://map.kakao.com/link/to/'+encodeURIComponent(o.name)+','+o.lat+','+o.lng,'_blank'); } }); }
+    else { window.open('https://map.kakao.com/link/to/'+encodeURIComponent(o.name)+','+o.lat+','+o.lng,'_blank'); }
+};
 
 /* __JSVER_STAMP__ */
-(function stampJsVer(){try{var b=document.getElementById('__catcVer');if(b){if(b.textContent.indexOf('Jg')<0)b.textContent=b.textContent+'\u00b7Jg';}else{setTimeout(stampJsVer,200);}}catch(e){}})();
+(function stampJsVer(){try{var b=document.getElementById('__catcVer');if(b){if(b.textContent.indexOf('Jh')<0)b.textContent=b.textContent+'\u00b7Jh';}else{setTimeout(stampJsVer,200);}}catch(e){}})();
 
 /* ===== [공항별 입교 현황 지도] 수강생현황 → 지도로 보기 ===== */
 ui._mapRegions = {
