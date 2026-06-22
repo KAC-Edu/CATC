@@ -778,6 +778,27 @@
             </div>
         </div>
     </div>
+    <div class="pop-overlay" id="stuEditPop">
+        <div class="pop-box">
+            <h3>명단 수정 (즉석)</h3>
+            <input type="hidden" id="seToken">
+            <div class="opt-group"><label>성명</label>
+                <input id="seName" type="text" style="width:100%; padding:11px; border:1.5px solid var(--border); border-radius:9px; font-size:14px;"></div>
+            <div class="opt-group"><label>사번</label>
+                <input id="seEmpNo" type="text" style="width:100%; padding:11px; border:1.5px solid var(--border); border-radius:9px; font-size:14px;"></div>
+            <div class="opt-group"><label>소속</label>
+                <input id="seDept" type="text" style="width:100%; padding:11px; border:1.5px solid var(--border); border-radius:9px; font-size:14px;"></div>
+            <div class="opt-group"><label>성별</label>
+                <select id="seGender" style="width:100%; padding:11px; border:1.5px solid var(--border); border-radius:9px; font-size:14px;"><option value="M">남</option><option value="F">여</option></select></div>
+            <div class="opt-group"><label>과정명</label>
+                <input id="seCourse" type="text" style="width:100%; padding:11px; border:1.5px solid var(--border); border-radius:9px; font-size:14px;"></div>
+            <div id="seMsg" style="font-size:12px; min-height:16px; margin-bottom:8px;"></div>
+            <div class="pop-actions">
+                <button class="pop-cancel" onclick="closeStuEditPop()">취소</button>
+                <button class="pop-save" onclick="confirmStudentEdit()">저장</button>
+            </div>
+        </div>
+    </div>
     <div class="pop-overlay" id="instPop">
         <div class="pop-box">
             <h3 id="instPopTitle">강사·외부 숙박 추가</h3>
@@ -3250,6 +3271,7 @@
         }
 
         async function deleteRosterByKey(key, courseName, cnt) {
+            if (isWeekLocked((key||'').split('__')[0])) { alert(`🔒 "${courseName}" 과정이 속한 주차의 배정이 잠겨 있어 명단을 삭제할 수 없습니다.\n\n현황/출력(STEP4)에서 '배정 잠금 해제' 후 다시 시도하세요.\n(이미 설정된 명단은 과정 리셋 전까지 유지됩니다.)`); return; }
             const msg = cnt > 0
                 ? `[${courseName}]에 업로드/저장된 교육생 명단 ${cnt}명을 전부 삭제합니다.\n\n자동배정이 이미 되어 있으면 현황/출력/PDF에서도 이 과정 인원이 함께 제거됩니다.\n이 작업은 되돌릴 수 없습니다. 계속할까요?`
                 : `[${courseName}]에 저장된 교육생 명단을 삭제합니다.\n\n자동배정이 이미 되어 있으면 현황/출력/PDF에서도 이 과정 인원이 함께 제거됩니다.\n계속할까요?`;
@@ -4091,7 +4113,7 @@
                                 <th style="width:110px;">사번</th>
                                 <th>과정명</th>
                                 <th style="width:70px;">성별</th>
-                                <th style="width:110px;">관리</th>
+                                <th style="width:140px;">관리</th>
                             </tr></thead><tbody>`;
                     let _lf = null, _sh = false;
                     list.forEach(p => {
@@ -4108,6 +4130,7 @@
                             <td><span style="display:inline-block; width:9px; height:9px; border-radius:50%; background:${col}; margin-right:7px;"></span>${p.course || '-'}</td>
                             <td><span style="font-weight:800; color:${gCol};">${gLabel}</span></td>
                             <td>
+                                <span class="room-opt" style="background:#fef9c3;color:#a16207;" onclick="openStudentEdit('${p.token}')" title="명단 수정"><i class="fa-solid fa-pen"></i></span>
                                 <span class="room-opt" style="background:#eef2ff;color:#4338ca;" onclick="openMovePop('${p.token}')" title="방 이동"><i class="fa-solid fa-right-left"></i></span>
                                 <span class="room-opt" style="background:#fee2e2;color:#dc2626;" onclick="deleteStudent('${p.token}')" title="삭제"><i class="fa-solid fa-xmark"></i></span>
                             </td>
@@ -4206,10 +4229,26 @@
             const legend = Object.keys(courseColors).filter(c => c !== '강사' || hasInst)
                 .map(c => `<span class="leg-item"><span class="leg-swatch" style="background:${courseColors[c]}"></span><span style="color:${courseColors[c]}">${c}</span></span>`).join('');
             const toolbar = `<div class="dm-toolbar">
-                <div class="dm-hint"><i class="fa-solid fa-arrows-up-down-left-right"></i> 이름을 드래그해 다른 방에 놓으면 즉시 이동(찬 방이면 서로 자리 교환), 이름 옆 <b>✕</b>로 삭제됩니다.</div>
+                <div class="dm-hint"><i class="fa-solid fa-arrows-up-down-left-right"></i> 이름을 드래그해 다른 방에 놓으면 즉시 이동(찬 방이면 자리 교환). 우측 <b>⏸ 대기열</b>로 끌면 임시 보관 후 다시 방으로 배치할 수 있어요. 이름 옆 <b>✕</b>는 삭제.</div>
             </div>`;
             const buildings = ['청렴관', '상생관', '국제교육동'].map(bldg).join('');
-            area.innerHTML = DORM_FORM_CSS + toolbar + `<div class="legend" style="margin:6px 0 16px;">${legend}</div>` + buildings;
+            // ── 임시 대기열(블록 밖 세로 한 줄): 인원 재배치용 임시 보관 ──
+            const waiting = Object.entries(students).filter(([tk, s]) => !s.roomId);
+            const waitChips = waiting.map(([tk, s]) => chip(Object.assign({ tk }, s))).join('');
+            const holdCol = `<div class="dm-wait-col" id="dmWaitCol">
+                    <div class="dm-wait-head">⏸ 대기열<span style="font-size:11px;opacity:.7;margin-left:4px;">(${waiting.length})</span></div>
+                    <div class="dm-wait-body" id="dmWaitBody">${waitChips || '<div class="dm-wait-empty">여기로 이름을<br>끌어다 놓으면<br>임시 보관돼요</div>'}</div>
+                </div>`;
+            const WAIT_CSS = `<style>
+                #boardMapArea .dm-layout{display:flex;gap:14px;align-items:flex-start;}
+                #boardMapArea .dm-buildings{flex:1;min-width:0;}
+                #boardMapArea .dm-wait-col{flex-shrink:0;width:152px;position:sticky;top:8px;background:#fff7ed;border:2px dashed #fdba74;border-radius:12px;padding:10px 9px;max-height:84vh;overflow-y:auto;}
+                #boardMapArea .dm-wait-col.dm-over{background:#ffedd5;border-color:#f97316;box-shadow:0 0 0 3px rgba(249,115,22,.18);}
+                #boardMapArea .dm-wait-head{font-size:13px;font-weight:900;color:#c2410c;margin-bottom:9px;text-align:center;}
+                #boardMapArea .dm-wait-body{display:flex;flex-direction:column;gap:6px;min-height:130px;}
+                #boardMapArea .dm-wait-empty{font-size:11px;color:#fdba74;font-weight:700;text-align:center;padding:24px 4px;line-height:1.6;}
+            </style>`;
+            area.innerHTML = DORM_FORM_CSS + WAIT_CSS + toolbar + `<div class="legend" style="margin:6px 0 16px;">${legend}</div>` + `<div class="dm-layout"><div class="dm-buildings">${buildings}</div>${holdCol}</div>`;
 
             area.querySelectorAll('.dm-chip').forEach(el => {
                 el.addEventListener('dragstart', e => { _dragToken = el.getAttribute('data-token'); el.style.opacity = '0.4'; e.dataTransfer.effectAllowed = 'move'; try { e.dataTransfer.setData('text/plain', _dragToken); } catch (_) {} });
@@ -4225,6 +4264,17 @@
                     _dragToken = null;
                 });
             });
+            const _wc = area.querySelector('#dmWaitCol');
+            if (_wc) {
+                _wc.addEventListener('dragover', e => { e.preventDefault(); _wc.classList.add('dm-over'); });
+                _wc.addEventListener('dragleave', () => _wc.classList.remove('dm-over'));
+                _wc.addEventListener('drop', e => {
+                    e.preventDefault(); _wc.classList.remove('dm-over');
+                    const tk = _dragToken || (e.dataTransfer && e.dataTransfer.getData('text/plain'));
+                    if (tk) _dormPark(tk);
+                    _dragToken = null;
+                });
+            }
         }
 
         // 드래그 드롭 이동 (기존 검증·저장 로직 재사용)
@@ -4270,6 +4320,19 @@
                 showToast(`🔄 ${s.name} ↔ ${swapS.name} 자리 교환`);
                 renderBoardMap();
             }).catch(e => { console.error(e); showToast('교환 저장 실패'); });
+        }
+
+        // 배치도 편집기: 대기열로 임시 이동(roomId 비움) — 재배치용
+        function _dormPark(token) {
+            if (_lockGuard((viewAssign && viewAssign.weekKey) || _step4WeekKey(), '대기열 이동')) return;
+            const s = (viewAssign && viewAssign.students) ? viewAssign.students[token] : null;
+            if (!s) return;
+            if (!s.roomId) { return; } // 이미 대기열
+            const wk = viewAssign.weekKey;
+            const upd = { roomId: '', building: '대기', no: '대기', floor: 0 };
+            db.ref(`system/dorm/assignments/${wk}/students/${token}`).update(upd)
+                .then(() => { Object.assign(viewAssign.students[token], upd); showToast(`⏸ ${s.name} 대기열로 임시 이동`); renderBoardMap(); if (typeof renderBoard === 'function') renderBoard(true); })
+                .catch(e => { console.error(e); showToast('대기열 이동 실패'); });
         }
 
         // 배치도 편집기: 인원 삭제 (교육생·강사 공통). 강사는 예약 목록에서도 제거.
@@ -4370,6 +4433,43 @@
             document.getElementById('stuPop').style.display = 'flex';
         }
         function closeStuPop() { document.getElementById('stuPop').style.display = 'none'; }
+        function closeStuEditPop() { document.getElementById('stuEditPop').style.display = 'none'; }
+        function openStudentEdit(token) {
+            if (_lockGuard((viewAssign && viewAssign.weekKey) || _step4WeekKey(), '명단 수정')) return;
+            if (!viewAssign || !viewAssign.students || !viewAssign.students[token]) { showToast('대상을 찾을 수 없습니다'); return; }
+            const s = viewAssign.students[token];
+            document.getElementById('seToken').value = token;
+            document.getElementById('seName').value = s.name || '';
+            document.getElementById('seEmpNo').value = (s.empNo && s.empNo !== '-') ? s.empNo : '';
+            document.getElementById('seDept').value = s.dept || '';
+            document.getElementById('seGender').value = s.gender || 'M';
+            document.getElementById('seCourse').value = s.course || '';
+            document.getElementById('seMsg').innerText = '';
+            document.getElementById('stuEditPop').style.display = 'flex';
+        }
+        async function confirmStudentEdit() {
+            const token = document.getElementById('seToken').value;
+            if (!viewAssign || !viewAssign.students || !viewAssign.students[token]) { closeStuEditPop(); return; }
+            const wk = viewAssign.weekKey;
+            const name = (document.getElementById('seName').value || '').trim();
+            const msg = document.getElementById('seMsg');
+            if (!name) { msg.innerHTML = '<span style="color:var(--danger);font-weight:700;">성명을 입력하세요.</span>'; return; }
+            const upd = {
+                name: name,
+                empNo: (document.getElementById('seEmpNo').value || '').trim() || '-',
+                dept: (document.getElementById('seDept').value || '').trim(),
+                gender: document.getElementById('seGender').value,
+                course: (document.getElementById('seCourse').value || '').trim()
+            };
+            try {
+                await db.ref('system/dorm/assignments/' + wk + '/students/' + token).update(upd);
+                Object.assign(viewAssign.students[token], upd);
+                closeStuEditPop();
+                showToast('✏️ 명단 수정 완료 - 현황/출력 및 PDF에 반영됩니다');
+                if (typeof renderBoard === 'function') renderBoard(true);
+                if (currentBoardTab === 'map' && typeof renderBoardMap === 'function') renderBoardMap();
+            } catch (e) { console.error(e); msg.innerText = '저장 실패'; }
+        }
         // 인원을 다시 추가할 때 삭제 차단 목록에서 제거 (삭제→재추가 가능하게)
         async function _clearDeletedMark(wk, name, empNo) {
             try {
@@ -4787,6 +4887,7 @@
         }
 
         async function deleteRoster(it) {
+            if (isWeekLocked(it.weekKey)) { alert(`🔒 "${it.courseName}" 과정이 속한 주차의 배정이 잠겨 있어 명단을 삭제할 수 없습니다.\n\n현황/출력(STEP4)에서 '배정 잠금 해제'를 한 뒤 다시 시도하세요.\n(이미 설정된 명단은 과정이 리셋되기 전까지 그대로 유지됩니다.)`); return; }
             const key = rosterKey(it);
             const cnt = rosterCounts[key] || (selectedCourse && selectedCourse.room === it.room ? roster.length : 0);
             const msg = cnt > 0
@@ -5059,6 +5160,22 @@
         }
 
         // 새 창 없이 숨김 iframe으로 바로 인쇄(파일명 = 문서 제목 → PDF 저장 시 그대로 사용)
+        // [추가] PDF 출력 = 확정 → 현재 주차 명단/배치도 잠금 제안
+        function _offerLockAfterPdf() {
+            try {
+                if (!viewAssign || !viewAssign.weekKey) return;
+                if (isWeekLocked(viewAssign.weekKey)) return; // 이미 잠김
+                const canon = canonicalWeekKey(viewAssign.weekKey);
+                setTimeout(function () {
+                    db.ref('system/dorm/locks/' + canon).set({ locked: true, at: Date.now() })
+                        .then(function () {
+                            alert('📋 PDF를 출력했습니다.\n출력 = 확정으로 보고 현재 명단·배치도를 잠금합니다.\n\n이후 자동배정·명단 업로드/수정/삭제·배정 이동/삭제가 차단됩니다.\n(변경이 필요하면 STEP4에서 잠금을 해제하세요.)');
+                            showToast('🔒 현재 주차 배정이 잠겼습니다 (확정)');
+                        })
+                        .catch(function (e) { showToast('❌ 잠금 실패: ' + (e.code || e.message)); });
+                }, 700);
+            } catch (e) {}
+        }
         function _printDoc(fileName, bodyHtml, extraCss) {
             const old = document.getElementById('_kacPrintFrame'); if (old) old.remove();
             const f = document.createElement('iframe');
@@ -5316,6 +5433,7 @@
                 <div class="sub">${P.fmt(P.wd)} ~ ${P.fmt(P.wEnd)} 주간 · 총 ${Object.keys(P.students).length}명 · 출력일 ${new Date().toLocaleDateString('ko-KR')}</div>`;
             const bodyHtml = `<table class="pwrap"><thead><tr><td>${header}</td></tr></thead><tbody><tr><td>${sections || '<div style="padding:20px;color:#94a3b8;">배정된 인원이 없습니다.</div>'}</td></tr></tbody></table>`;
             _printDoc(`(${_kacWeekTag(P.wd)}_리스트) 항공기술훈련원 방 배정 현황표`, bodyHtml);
+            _offerLockAfterPdf();
         }
 
         // ── 2부: 건물 배치도 PDF ──
@@ -5434,6 +5552,7 @@
                 <div class="sub">${P.fmt(P.wd)} ~ ${P.fmt(P.wEnd)} 주간 · 총 ${totalCount}명 · 출력일 ${new Date().toLocaleDateString('ko-KR')}</div>`;
             const bodyHtml = `<table class="pwrap"><thead><tr><td>${header}</td></tr></thead><tbody><tr><td>${layoutSection}</td></tr></tbody></table>`;
             _printDoc(`(${_kacWeekTag(P.wd)}_배치도) 항공기술훈련원 방 배정 현황표`, bodyHtml, FORM_CSS);
+            _offerLockAfterPdf();
         }
 
         // 구버전 호환
@@ -5894,7 +6013,7 @@
 </script>
 <style>@media print{#__catcVer{display:none!important}}</style>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vK4</div>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vK5</div>
 <script>
 /* ===== [공용] 종료된 과정 자동 정리 (모든 플랫폼 공통) — 종료일 지난 방을 다음날 미개설로 비움. 브라우저별 하루 1회 ===== */
 window.kacExpireEndedCourses = async function(){
