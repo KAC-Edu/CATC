@@ -5313,12 +5313,13 @@ resetShuttleRequests: function() {
     loadHomeStats: function() {
         const computeAndRender = (d) => {
             const today = getTodayString();
+            const _ow = getOutingWindowKST(); // 외출/외박: 자정이 아닌 익일 09:00 기준 운영일 윈도우
             let activeCount=0, studentTotal=0, outingTotal=0, plannedTotal=0;
             const dorm = window._dormRosters || {};
             Object.entries(d).forEach(([room, r]) => {
                 if (!r) return;
                 const st=r.status||{}, settings=r.settings||{}, students=r.students||{};
-                const actions=(r.admin_actions||{})[today]||{};
+                const _allActs=r.admin_actions||{};
                 const period = settings.period || '';
                 const hasCourse = !!(settings.courseName && String(settings.courseName).trim());
                 const isActive  = st.roomStatus === 'active';
@@ -5337,8 +5338,13 @@ resetShuttleRequests: function() {
                     for (const _k in dorm){ const _dv=dorm[_k]; if(_dv && Array.isArray(_dv.list) && _dv.list.length && String(_dv.courseName||'').trim()===_cn){ if(!_best||(_dv.updatedAt||0)>(_best.updatedAt||0)) _best=_dv; } }
                     if(_best) plannedTotal += _best.list.length;
                 } catch(e){}
-                Object.values(actions).forEach(a=>{
-                    if(a&&(a.type==='outing'||a.type==='overnight'||a.type==='group_outing')) outingTotal++;
+                Object.keys(_allActs).forEach(_dt=>{
+                    Object.values(_allActs[_dt]||{}).forEach(a=>{
+                        if(a&&(a.type==='outing'||a.type==='overnight'||a.type==='group_outing')){
+                            const _ts=a.timestamp||0;
+                            if(_ts>=_ow.start && _ts<_ow.end) outingTotal++;
+                        }
+                    });
                 });
             });
             ui._setStat('stat-active-count', activeCount);
