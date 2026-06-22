@@ -1183,11 +1183,11 @@ body.modal-open .app-content {
 .pcs-foot-btn { background:none; border:none; color:#475569; font-size:14px; cursor:pointer; padding:7px; border-radius:8px; transition:all 0.15s; }
 .pcs-foot-btn:hover { background:rgba(255,255,255,0.07); color:#94a3b8; }
 
-/* ══ PC 모드 레이아웃 ══ */
-body.pc-mode { display:flex; flex-direction:row; min-height:100vh; background:#eef2f7; }
-body.pc-mode #pcSidebar { display:flex; order:-1; }
-body.pc-mode .app-container { flex:1; max-width:none; min-width:0; box-shadow:none; background:#f1f5f9; }
-body.pc-mode .app-header { display:none; }
+/* ══ PC 모드 레이아웃 (교육지원부·영양사 컨셉: 헤더 유지 + 컨테이너 중앙 확장) ══ */
+body.pc-mode { background:#eef2f7; }
+#pcSidebar { display:none !important; }
+body.pc-mode .app-container { max-width:1240px; min-width:0; margin:0 auto; box-shadow:0 0 50px rgba(15,23,42,0.10); background:#f1f5f9; min-height:100dvh; }
+body.pc-mode .app-header { padding-left:28px; padding-right:28px; }
 body.pc-mode #totalStatusView { padding:24px 28px !important; background:#f1f5f9; }
 body.pc-mode #activeCourseList { display:grid !important; grid-template-columns:repeat(auto-fill, minmax(260px, 1fr)) !important; gap:14px !important; margin-top:0 !important; }
 body.pc-mode .course-item-card { margin:0 !important; border-radius:14px !important; box-shadow:0 2px 12px rgba(0,0,0,0.07) !important; border:1.5px solid #e2e8f0 !important; transition:box-shadow 0.15s, transform 0.15s !important; }
@@ -1570,6 +1570,7 @@ body.pc-mode .entry-box:hover, body.pc-mode .entry-box-tablet:hover {
       <div id="coordHeaderTime" style="font-size:17px;font-weight:800;color:#fff;letter-spacing:-0.5px;line-height:1;">--:--</div>
       <div id="coordHeaderDate" style="font-size:10px;color:rgba(255,255,255,0.65);margin-top:2px;font-weight:600;">----.--.--(---)</div>
     </div>
+    <button id="pcModeBtn" class="header-btn" onclick="togglePcMode()" title="PC / 모바일 화면 전환" style="height:33px;background:rgba(255,255,255,0.18);border:1px solid rgba(255,255,255,0.28);border-radius:10px;display:flex;align-items:center;gap:6px;justify-content:center;font-size:12px;font-weight:800;padding:0 12px;color:#fff;"><i class="fa-solid fa-display"></i><span class="pcmode-label">PC</span></button>
     <button class="header-btn" onclick="toggleMenu(true)" style="width:33px;height:33px;background:rgba(255,255,255,0.18);border:1px solid rgba(255,255,255,0.28);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:14px;padding:0;"><i class="fa-solid fa-bars"></i></button>
   </div>
 </header>
@@ -5937,16 +5938,22 @@ if (window.pdfjsLib) pdfjsLib.GlobalWorkerOptions.workerSrc =
     'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
 
 // ══ PC 모드 ══════════════════════════════════════════════════
+function _coordSetPcBtn(isPc) {
+    const btn = document.getElementById('pcModeBtn');
+    if (!btn) return;
+    btn.innerHTML = isPc
+        ? '<i class="fa-solid fa-mobile-screen"></i><span class="pcmode-label">모바일</span>'
+        : '<i class="fa-solid fa-display"></i><span class="pcmode-label">PC</span>';
+}
 function togglePcMode() {
     const isPc = document.body.classList.toggle('pc-mode');
-    // 사용자가 직접 고른 값은 명시적으로 저장(1=PC, 0=모바일) → 자동감지보다 우선
     localStorage.setItem('coord_pc_mode', isPc ? '1' : '0');
-    const btn = document.getElementById('pcModeBtn');
-    if (btn) btn.innerHTML = isPc ? '<i class="fa-solid fa-mobile-screen"></i>' : '<i class="fa-solid fa-display"></i>';
-    if (isPc) { pcsSyncCourseList(); pcUpdateNav(); }
+    _coordSetPcBtn(isPc);
+    if (isPc) { try { pcsSyncCourseList(); pcUpdateNav(); } catch(e){} }
+    window.scrollTo(0, 0);
 }
 
-// 접속 기기 자동 감지: 넓은 화면 + 마우스(정밀 포인터) = PC로 판단
+// 접속 기기 자동 감지: 넓은 화면 + 마우스(정밀 포인터) = PC
 function _coordDetectPc() {
     try {
         const wide = window.innerWidth >= 1024;
@@ -5956,26 +5963,22 @@ function _coordDetectPc() {
     } catch (e) { return window.innerWidth >= 1024; }
 }
 
-// PC 모드 버튼 표시 + 자동 전환(저장된 선택이 있으면 우선)
-(function() {
-    const btn = document.getElementById('pcModeBtn');
-    const show = () => { if (btn) btn.style.display = window.innerWidth >= 768 ? '' : 'none'; };
-    show();
-    window.addEventListener('resize', show);
-
+// DOM 준비 후 자동 전환(저장된 선택 우선) — 버튼은 항상 노출
+function _coordInitViewMode() {
     const saved = localStorage.getItem('coord_pc_mode');   // '1' | '0' | null
     let usePc;
-    if (saved === '1') usePc = window.innerWidth >= 768;          // 사용자가 PC 고정
-    else if (saved === '0') usePc = false;                        // 사용자가 모바일 고정
-    else usePc = _coordDetectPc();                               // 선택 이력 없으면 자동 감지
-
-    if (usePc) {
-        document.body.classList.add('pc-mode');
-        if (btn) btn.innerHTML = '<i class="fa-solid fa-mobile-screen"></i>';
-        // 데이터가 준비되면 사이드바/네비 채움
-        setTimeout(function(){ try { pcsSyncCourseList(); pcUpdateNav(); } catch(e){} }, 600);
-    }
-})();
+    if (saved === '1') usePc = window.innerWidth >= 768;
+    else if (saved === '0') usePc = false;
+    else usePc = _coordDetectPc();
+    if (usePc) document.body.classList.add('pc-mode');
+    _coordSetPcBtn(usePc);
+    if (usePc) setTimeout(function(){ try { pcsSyncCourseList(); pcUpdateNav(); } catch(e){} }, 700);
+}
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', _coordInitViewMode);
+} else {
+    _coordInitViewMode();
+}
 
 // ── 사이드바 과정 목록 동기화 ──────────────────────────────
 const PCS_COLORS = ['#3b82f6','#22c55e','#f59e0b','#ec4899','#8b5cf6','#14b8a6'];
