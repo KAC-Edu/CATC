@@ -834,12 +834,14 @@
 #foodModal .food-add-btn:active{ transform:scale(.97); background:#dbeafe; }
 #foodModal .food-close-btn{ flex:1; padding:15px 0; border:none; border-radius:13px; background:#0f172a; color:#fff; font-weight:800; font-size:15px; cursor:pointer; }
 #foodModal .food-close-btn:active{ transform:scale(.97); filter:brightness(1.15); }
-/* 추가 팝업 */
-.food-add-pop{ position:fixed; inset:0; z-index:16600; background:rgba(15,23,42,.55); overflow-y:auto; -webkit-overflow-scrolling:touch; }
-.food-add-pop .food-add-card{ background:#fff; border-radius:18px; width:92%; max-width:430px; margin:7vh auto; padding:18px; box-shadow:0 24px 60px rgba(15,23,42,.4); text-align:left; }
-.food-add-head{ display:flex; align-items:center; justify-content:space-between; margin-bottom:15px; }
-.food-add-head span{ font-size:18px; font-weight:900; color:#0f172a; }
-.food-add-head .kac-px{ width:32px; height:32px; flex-shrink:0; border:none; border-radius:50%; background:#f1f5f9; color:#64748b; font-size:15px; cursor:pointer; display:flex; align-items:center; justify-content:center; padding:0; }
+/* 맛집 추가: 팝업이 아니라 패널 안에서 '화면 전환'(슬라이드 인) — 뒤 리스트 완전 차단 */
+.food-add-pop{ position:absolute; inset:0; z-index:40; background:#f6f9fe; display:flex; flex-direction:column; animation:foodAddIn .28s cubic-bezier(.22,1,.36,1) both; }
+@keyframes foodAddIn{ from{ transform:translateX(100%); } to{ transform:translateX(0); } }
+.food-add-pop .food-add-card{ flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch; background:transparent; width:auto; max-width:none; margin:0; padding:0 16px 24px; box-shadow:none; border-radius:0; text-align:left; }
+.food-add-pop .food-add-card::-webkit-scrollbar{ display:none; }
+.food-add-head{ position:sticky; top:0; z-index:2; background:#f6f9fe; display:flex; align-items:center; gap:10px; padding:15px 0 12px; margin-bottom:6px; border-bottom:1px solid #eef2f7; }
+.food-add-head span{ font-size:17px; font-weight:900; color:#0f172a; }
+.food-add-head .kac-px{ width:34px; height:34px; flex-shrink:0; border:none; border-radius:50%; background:#eef2f7; color:#475569; font-size:16px; cursor:pointer; display:flex; align-items:center; justify-content:center; padding:0; }
 .food-add-head .kac-px:active{ background:#e2e8f0; }
 </style>
 <!-- 항기원 맛집 추천 패널 -->
@@ -5440,6 +5442,32 @@ input:not([type=checkbox]):not([type=radio]):not([type=file]), textarea, select 
     }, {passive:true});
   }
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', setup); else setup();
+})();
+</script>
+<script>
+/* [뒤로가기 가드] 좌→우 스와이프(또는 하드웨어 뒤로가기)로 앱을 벗어나 카카오/이전 페이지로
+   튀지 않게 한다. 열린 패널/메뉴가 있으면 닫고, 없으면 그 자리에 머무른다. */
+(function(){
+  function arm(){ try{ history.pushState({kac:1}, '', location.href); }catch(e){} }
+  var PIDS=['foodDetailModal','foodModal','noticeModal','surveyModal','shuttleModal','adminActionModal','facilityModal','tabletLoanModal','mealMenuModal','qrModal'];
+  function closeTopMost(){
+    // 1) 맛집 추가 화면이 열려 있으면 그것부터 닫기
+    var addf=document.getElementById('foodAddForm');
+    if(addf){ var ad=''; try{ ad=getComputedStyle(addf).display; }catch(e){} if(ad && ad!=='none'){ if(typeof closeFoodAddForm==='function') closeFoodAddForm(); else addf.style.display='none'; return true; } }
+    // 2) 열린 우측 패널/상세 닫기
+    for(var i=0;i<PIDS.length;i++){ var m=document.getElementById(PIDS[i]); if(!m) continue; var d=''; try{ d=getComputedStyle(m).display; }catch(e){} if(d && d!=='none'){
+        try{ if(m.id==='foodDetailModal' && typeof closeFoodDetail==='function') closeFoodDetail();
+             else if(typeof closePanelSmooth==='function') closePanelSmooth(m.id);
+             else m.style.display='none'; }catch(e){ m.style.display='none'; }
+        return true; } }
+    // 3) 메인 메뉴 닫기
+    if(document.body.classList.contains('menu-open')){ if(typeof closeMainMenu==='function'){ closeMainMenu(); return true; } }
+    return false;
+  }
+  window.addEventListener('popstate', function(){ closeTopMost(); arm(); });
+  function check(){ var a=document.getElementById('mainApp'); if(a){ var d=''; try{ d=getComputedStyle(a).display; }catch(e){} if(d && d!=='none' && !window._kacHistArmed){ window._kacHistArmed=true; arm(); } } }
+  if(document.readyState!=='loading') check(); else document.addEventListener('DOMContentLoaded', check);
+  setInterval(check, 1200);
 })();
 </script>
 <style>#__catcVer{ display:none !important; }</style>
