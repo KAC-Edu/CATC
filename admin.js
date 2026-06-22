@@ -58,13 +58,6 @@ function getOutingWindowKST() {
     if (h < 9) start -= 24 * 60 * 60 * 1000;                  // 09:00 이전이면 어제 09:00부터
     return { start: start, end: start + 24 * 60 * 60 * 1000 };// [start, start+24h) = 익일 09:00
 }
-// 외출/외박 한 건이 현재 운영일 윈도우(09:00~익일09:00)에 속하는지
-function isOutingInTodayWindow(item) {
-    if (!item) return false;
-    const w = getOutingWindowKST();
-    const ts = item.timestamp || 0;
-    return ts >= w.start && ts < w.end;
-}
 
 const state = {
     sessionId: (function() {

@@ -3665,7 +3665,6 @@ function renderCourseSelectors() {
             const _profNm = (status.professorName||'').trim();
             const _profTxt = _profNm ? (_profNm + ' 교수') : '';
             const _coordTxt = (typeof _coordFullName==='function') ? _coordFullName(settings.coordinatorName) : (settings.coordinatorName||'');
-            const _staffLine = [ _profTxt ? ('담임 '+_profTxt) : '', _coordTxt ? ('담당 '+_coordTxt) : '' ].filter(Boolean).join('   ·   ') || '담임·담당 미지정';
             const color = barColors[i % barColors.length]; // 알파벳 순서대로 컬러 배정
 
             const card = document.createElement('div');
@@ -7679,7 +7678,6 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
     if(typeof _coordActiveRooms!=='function'){ return; }
     var rooms=_coordActiveRooms();
     if(!rooms.length){ box.innerHTML='<div style="text-align:center;padding:30px;color:#94a3b8;font-weight:700;">현재 운영 중인 과정이 없습니다.</div>'; return; }
-    var full=function(nm){ return (typeof _coordFullName==='function')?(_coordFullName(nm)||(nm||'-')):(nm||'-'); };
     box.innerHTML=rooms.map(function(r){
       var prof=(r.st.professorName||'').trim();
       // [학생장] 강사플랫폼에서 지정(students.isLeader)된 학생장 이름+사번 표기
@@ -7707,10 +7705,6 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
   // ── 섹션3: 과정별 입교/예정 — 정형 리스트(연번·소속·사번·성명) ──
   window._coordEnrollExt = window._coordEnrollExt || {};
   // [과정별 명단 업로드] 해당 과정(방)을 현재 대상으로 잡고 명단 업로드 모달 열기 (모바일/PC 공용)
-  window.coordOpenRosterFor = function(rid){
-    try { currentRID = rid; } catch(e){}
-    if (typeof openRosterUpload==='function') openRosterUpload();
-  };
   window.coordToggleEnroll = function(ei){
     var b=document.getElementById('coordEnrollBody'+ei), c=document.getElementById('coordEnrChev'+ei);
     if(!b) return; var open=(b.style.display==='none'||!b.style.display);
@@ -7790,20 +7784,6 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
     if(checked) ref.update({held:true, returned:null, autoReturn:null});
     else ref.update({held:null});
     setTimeout(function(){ try{ if(window._coordPcSec==='4') coordRenderOutingSection(); }catch(e){} }, 300);
-  };
-  window.coordToggleHold = function(rid,date,key){
-    if(typeof firebase==='undefined') return;
-    var ref=firebase.database().ref('courses/'+rid+'/admin_actions/'+date+'/'+key);
-    ref.once('value').then(function(s){
-      var a=s.val()||{};
-      if(a.held){
-        if(!confirm('['+(a.name||'')+'] 미복귀 표시를 해제할까요?')) return;
-        ref.update({held:null});
-      } else {
-        if(!confirm('['+(a.name||'')+'] 미복귀로 표시할까요?\n\n사고·문제 등으로 복귀 미완료 시 사용합니다.\n표시하면 자동 복귀완료가 적용되지 않습니다.')) return;
-        ref.update({held:true, returned:null, autoReturn:null});
-      }
-    }).then(function(){ try{ if(window._coordPcSec==='4') coordRenderOutingSection(); }catch(e){} }).catch(function(){});
   };
   // [자동 복귀완료] 외출자가 복귀완료를 깜빡한 경우: 다음날 08:50까지 미복귀 표시가 없으면 22:00 복귀완료(자동) 처리
   window._coordAutoReturnSweep = function(){
