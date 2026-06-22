@@ -934,7 +934,10 @@ forceEnterRoom: async function(room) {
 
     // 퀴즈 mode 자동복구는 강사가 직접 퀴즈 탭에서 나갈 때만 처리 (forceEnterRoom에서 제거)
 
-    const lastMode = localStorage.getItem('kac_last_mode') || 'dashboard';
+    // [수정] 방 입장 시엔 항상 과정 대시보드로 — lastMode가 전역 보드(현황판/홈/발표)면 dashboard로 강제
+    //  (연간계획·현황판·홈을 쓴 뒤 방에 들어가면 상단 과정명/뒤로가기가 사라지던 문제 방지)
+    let lastMode = localStorage.getItem('kac_last_mode') || 'dashboard';
+    if (lastMode === 'waiting' || lastMode === 'home' || lastMode === 'prof-presentation' || !lastMode) lastMode = 'dashboard';
     ui.setMode(lastMode); 
     subjectMgr.init();
     guideMgr.init();
@@ -10457,7 +10460,7 @@ ui.foodNewsRouteById=function(id){
 };
 
 /* __JSVER_STAMP__ */
-(function stampJsVer(){try{var b=document.getElementById('__catcVer');if(b){if(b.textContent.indexOf('Jq')<0)b.textContent=b.textContent+'\u00b7Jq';}else{setTimeout(stampJsVer,200);}}catch(e){}})();
+(function stampJsVer(){try{var b=document.getElementById('__catcVer');if(b){if(b.textContent.indexOf('Jr')<0)b.textContent=b.textContent+'\u00b7Jr';}else{setTimeout(stampJsVer,200);}}catch(e){}})();
 
 /* ===== [공항별 입교 현황 지도] 수강생현황 → 지도로 보기 ===== */
 ui._mapRegions = {
