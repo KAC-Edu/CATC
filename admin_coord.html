@@ -1562,7 +1562,7 @@ body.pc-mode .entry-box:hover, body.pc-mode .entry-box-tablet:hover {
 @media(max-width:640px){ .coord-nav4{ grid-template-columns:repeat(2,1fr); } }
 .cpop-ov{ display:none; position:fixed; inset:0; background:rgba(15,23,42,.55); z-index:9500; align-items:center; justify-content:center; padding:18px; }
 .cpop-ov.open{ display:flex; }
-.cpop{ background:#fff; width:100%; max-width:960px; max-height:88vh; border-radius:18px; overflow:hidden; display:flex; flex-direction:column; box-shadow:0 20px 50px rgba(0,0,0,.3); }
+.cpop{ background:#fff; width:100%; max-width:1180px; max-height:88vh; border-radius:18px; overflow:hidden; display:flex; flex-direction:column; box-shadow:0 20px 50px rgba(0,0,0,.3); }
 .cpop-head{ background:#0f2a4a; color:#fff; padding:16px 20px; font-weight:900; font-size:18px; display:flex; justify-content:space-between; align-items:center; }
 .cpop-head .x{ cursor:pointer; font-size:20px; }
 .cpop-body{ padding:16px 18px; overflow-y:auto; }
@@ -7466,10 +7466,16 @@ function openShuttleSummary(){
           +'<div style="text-align:center;min-width:44px;"><div style="font-size:12.5px;font-weight:800;color:#10b981;">공항</div><div style="font-size:24px;font-weight:900;color:#10b981;line-height:1.15;">'+c.airport+'</div></div>'
           +'<div style="width:1px;height:38px;background:#e2e8f0;"></div>'
           +'<div style="text-align:center;min-width:58px;"><div style="font-size:12.5px;font-weight:800;color:#0f172a;">총 신청</div><div style="font-size:30px;font-weight:900;color:#1e3a8a;line-height:1.1;">'+tot+'</div></div>'
+          +'<div style="width:1px;height:40px;background:#e2e8f0;"></div>'
+          +'<div onclick="event.stopPropagation();" style="display:flex;align-items:center;gap:7px;flex-shrink:0;">'
+            +'<div style="display:flex;flex-direction:column;gap:2px;text-align:right;"><span style="font-size:11px;font-weight:800;color:#1e3a8a;white-space:nowrap;"><i class="fa-solid fa-bus"></i> 출발시간</span><span style="font-size:10.5px;font-weight:700;color:'+(_depAnn?'#16a34a':'#94a3b8')+';white-space:nowrap;">'+_depTxt+'</span></div>'
+            +'<select id="coordShtDepSel'+idx+'" style="padding:8px 10px;border:1.5px solid #cbd5e1;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;">'+_dopts+'</select>'
+            +'<button onclick="coordSetDepartureFor(\''+_esc(r.rid)+'\', document.getElementById(\'coordShtDepSel'+idx+'\').value)" style="padding:8px 14px;background:#22c55e;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:800;cursor:pointer;white-space:nowrap;"><i class="fa-solid fa-bullhorn"></i> 공지</button>'
+            +(_depAnn?'<button onclick="coordCancelDepartureFor(\''+_esc(r.rid)+'\')" style="padding:8px 10px;background:#f1f5f9;color:#64748b;border:1px solid #e2e8f0;border-radius:8px;font-size:12px;cursor:pointer;">취소</button>':'')
+          +'</div>'
           +'<i class="fa-solid fa-chevron-down crow-chev" id="coordShtChev'+idx+'" style="margin-left:6px;"></i>'
         +'</div>'
       +'</div>'
-      +'<div style="display:flex;align-items:center;gap:8px;padding:10px 22px;border-top:1px solid #f1f5f9;background:#f8fafc;flex-wrap:wrap;"><span style="font-size:12px;font-weight:800;color:#1e3a8a;flex-shrink:0;"><i class="fa-solid fa-bus"></i> 퇴교 출발시간</span><span style="font-size:12px;font-weight:700;color:'+(_depAnn?'#16a34a':'#94a3b8')+';flex:1;min-width:70px;">'+_depTxt+'</span><select id="coordShtDepSel'+idx+'" onclick="event.stopPropagation();" style="padding:7px 10px;border:1.5px solid #cbd5e1;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;">'+_dopts+'</select><button onclick="event.stopPropagation(); coordSetDepartureFor(\''+_esc(r.rid)+'\', document.getElementById(\'coordShtDepSel'+idx+'\').value)" style="padding:7px 13px;background:#22c55e;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:800;cursor:pointer;white-space:nowrap;"><i class="fa-solid fa-bullhorn"></i> 저장</button>'+(_depAnn?'<button onclick="event.stopPropagation(); coordCancelDepartureFor(\''+_esc(r.rid)+'\')" style="padding:7px 11px;background:#f1f5f9;color:#64748b;border:1px solid #e2e8f0;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;">취소</button>':'')+'</div>'
       +'<div id="coordShtBody'+idx+'" style="display:none;border-top:1px solid #eef2f7;overflow-x:auto;"><table class="cpop-table" style="width:100%;table-layout:fixed;"><colgroup><col style="width:12%"><col style="width:30%"><col style="width:33%"><col style="width:25%"></colgroup><thead><tr><th>연번</th><th>성명</th><th>목적지</th><th>신청시간</th></tr></thead><tbody>'+rows+'</tbody></table></div>'
     +'</div>';
   }).join('');
