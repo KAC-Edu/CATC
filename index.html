@@ -4740,6 +4740,10 @@ async function updateMiniNotice() {
     const textEl = document.getElementById('miniNoticeText');
     if(!bar || !textEl) return;
 
+    // [요청] 상단 흐르는 띠 공지 비활성화 — 항상 숨김 처리
+    bar.style.display = 'none';
+    return;
+
     // 운영부/센터 공지 데이터를 한 번에 가져옴
     const [coordSnap, globalSnap] = await Promise.all([
         firebase.database().ref(`courses/${currentRoom}/coordNotice`).once('value'),
