@@ -672,6 +672,7 @@
             <div class="menu-item" onclick="openCnsPlatform()"><i class="fa-solid fa-tower-broadcast" style="color: #6366f1;"></i> CNS 표보재 플랫폼</div>
             <div class="menu-item" onclick="openSurveyModal()"><i class="fa-solid fa-square-poll-vertical" style="color: #3b82f6;"></i> 설문조사 (스카이캠퍼스)</div>
             <div class="menu-item" onclick="openHrdAttendanceApp()" style="background:#eef2ff; color:#1e3a8a; font-weight:800;"><i class="fa-solid fa-id-card-clip" style="color:#2563eb;"></i> 고용노동부 출결 앱 (설치/실행)</div>
+            <div class="menu-item" onclick="openInstallGuide()" style="background:linear-gradient(135deg,#1d4ed8,#2563eb); color:#fff; font-weight:800;"><i class="fa-solid fa-mobile-screen-button" style="color:#fff;"></i> 앱 설치 (홈 화면에 추가)</div>
             <button onclick="closeMainMenu()" style="margin-top:15px; width:100%; padding:13px; border:none; border-radius:12px; background:#334155; color:#fff; font-weight:900; font-size:15px; cursor:pointer;">닫기</button>
         </div>
     </div>
@@ -832,8 +833,8 @@
     </div>
 </div>
 <style>
-#foodModal .food-sticky{ position:sticky; top:0; z-index:6; background:#fff; padding-top:4px; }
-#foodModal .food-sticky::after{ content:''; position:absolute; left:0; right:0; bottom:-14px; height:14px; background:linear-gradient(180deg, #fff, rgba(255,255,255,0)); pointer-events:none; }
+#foodModal .food-sticky{ position:sticky; top:0; z-index:6; background:rgba(255,255,255,.78); -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px); padding-top:4px; }
+#foodModal .food-sticky::after{ content:''; position:absolute; left:0; right:0; bottom:-16px; height:16px; background:linear-gradient(180deg, rgba(255,255,255,.85), rgba(255,255,255,0)); pointer-events:none; }
 /* ── [맛집 패널 재구성] 하단 고정 바 + 추가 팝업 ── */
 #foodModal > .menu-box{ padding:0 !important; overflow:hidden !important; }
 /* 맛집 리스트 상단: 카테고리 칩 위로 스크롤되는 항목을 부드럽게 페이드(채팅 입력창과 동일 처리) */
@@ -5806,13 +5807,16 @@ body.kac-panel-on #menuModal > .menu-box { transition: none !important; }
 #qInput.real-input::placeholder{ font-size:14px !important; line-height:1.5 !important; white-space:nowrap !important; overflow:hidden !important; text-overflow:ellipsis !important; }
 .input-dock .input-box{ padding-top:13px !important; }
 
-/* ── [입력창 시인성] 입력 카드 위 채팅을 '자연스럽게'만 페이드 (프로스트 블러 제거) ── */
+/* ── [입력창 시인성] 입력 카드 위~뒤까지 '연속 블러'가 이어지게 (마스크로 부드럽게) ── */
 html, body { overscroll-behavior-x: none !important; }
-.input-dock{ position:fixed; background:linear-gradient(to top, #eef4fb 0%, #eef4fb 40%, rgba(238,244,251,0) 100%) !important; -webkit-backdrop-filter:none !important; backdrop-filter:none !important; }
+.input-dock{ position:fixed; background:transparent !important; -webkit-backdrop-filter:none !important; backdrop-filter:none !important; }
 .input-dock::before{
-  content:''; position:absolute; left:0; right:0; bottom:100%;
-  height:38px; pointer-events:none;
-  background:linear-gradient(to top, rgba(238,244,251,.85) 0%, rgba(238,244,251,0) 100%);
+  content:''; position:absolute; left:0; right:0; bottom:0; top:-95px;
+  z-index:-1; pointer-events:none;
+  background:linear-gradient(to top, #eef4fb 0%, #eef4fb 34%, rgba(238,244,251,.55) 70%, rgba(238,244,251,0) 100%);
+  -webkit-backdrop-filter:blur(6px); backdrop-filter:blur(6px);
+  -webkit-mask-image:linear-gradient(to top, #000 70%, transparent 100%);
+  mask-image:linear-gradient(to top, #000 70%, transparent 100%);
 }
 /* ── [설문 패널 복구] 가로(row) 플렉스로 글자가 세로로 쪼개지던 문제 → 세로(column) 강제 ── */
 #surveyModal{ justify-content:flex-end !important; align-items:stretch !important; }
@@ -5827,5 +5831,99 @@ html, body { overscroll-behavior-x: none !important; }
 #surveyModal > .menu-box > button{ width:100% !important; flex-shrink:0 !important; }
 #surveyModal > .menu-box > div{ flex-shrink:0 !important; }
 </style>
+<!-- ───────── 앱 설치(홈 화면에 추가) 안내 팝업 ───────── -->
+<div id="installGuideModal" class="menu-overlay" style="display:none; z-index:17000;" onclick="if(event.target===this) closeInstallGuide()">
+  <div class="menu-box" style="width:90%; max-width:400px; padding:0; border-radius:22px; overflow:hidden; display:flex; flex-direction:column;">
+    <div style="background:linear-gradient(135deg,#0f172a,#1e3a8a 70%,#2563eb); padding:22px 20px 20px; text-align:center; position:relative;">
+      <button type="button" onclick="closeInstallGuide()" aria-label="닫기" style="position:absolute; top:14px; right:14px; width:32px; height:32px; border:none; border-radius:50%; background:rgba(255,255,255,.18); color:#fff; font-size:15px; cursor:pointer;"><i class="fa-solid fa-xmark"></i></button>
+      <div style="width:56px; height:56px; margin:0 auto 10px; border-radius:16px; background:rgba(255,255,255,.16); display:flex; align-items:center; justify-content:center; font-size:26px; color:#fff;"><i class="fa-solid fa-mobile-screen-button"></i></div>
+      <div style="color:#fff; font-size:18px; font-weight:900;">앱으로 설치하기</div>
+      <div style="color:#bfdbfe; font-size:12.5px; font-weight:600; margin-top:4px;">홈 화면에 추가하면 앱처럼 빠르게 열려요</div>
+    </div>
+    <div style="padding:18px 20px 20px; background:#f8fafc;">
+      <!-- 안드로이드 자동 설치 버튼 (가능할 때만) -->
+      <button type="button" id="installNativeBtn" onclick="triggerNativeInstall()" style="display:none; width:100%; padding:15px; border:none; border-radius:13px; background:#2563eb; color:#fff; font-size:15px; font-weight:800; cursor:pointer; margin-bottom:16px; box-shadow:0 8px 20px rgba(37,99,235,.28);"><i class="fa-solid fa-circle-down" style="margin-right:7px;"></i> 지금 바로 설치</button>
+
+      <!-- iOS 안내 -->
+      <div id="installIos" style="display:none;">
+        <div style="display:flex; align-items:center; gap:7px; font-size:13px; font-weight:800; color:#1e293b; margin-bottom:12px;"><i class="fa-brands fa-apple" style="font-size:16px;"></i> 아이폰 (Safari)</div>
+        <div style="display:flex; flex-direction:column; gap:11px;">
+          <div style="display:flex; gap:11px; align-items:flex-start;"><span style="flex-shrink:0; width:22px; height:22px; border-radius:50%; background:#dbeafe; color:#1d4ed8; font-size:12px; font-weight:900; display:flex; align-items:center; justify-content:center;">1</span><div style="font-size:13.5px; color:#334155; font-weight:600; line-height:1.5;">하단의 <b>공유 버튼</b> <i class="fa-solid fa-arrow-up-from-bracket" style="color:#2563eb;"></i> 을 누르세요</div></div>
+          <div style="display:flex; gap:11px; align-items:flex-start;"><span style="flex-shrink:0; width:22px; height:22px; border-radius:50%; background:#dbeafe; color:#1d4ed8; font-size:12px; font-weight:900; display:flex; align-items:center; justify-content:center;">2</span><div style="font-size:13.5px; color:#334155; font-weight:600; line-height:1.5;">목록에서 <b>‘홈 화면에 추가’</b> <i class="fa-regular fa-square-plus" style="color:#2563eb;"></i> 를 선택</div></div>
+          <div style="display:flex; gap:11px; align-items:flex-start;"><span style="flex-shrink:0; width:22px; height:22px; border-radius:50%; background:#dbeafe; color:#1d4ed8; font-size:12px; font-weight:900; display:flex; align-items:center; justify-content:center;">3</span><div style="font-size:13.5px; color:#334155; font-weight:600; line-height:1.5;">오른쪽 위 <b>‘추가’</b> 를 누르면 완료!</div></div>
+        </div>
+      </div>
+
+      <!-- Android 안내 (자동 설치 안될 때) -->
+      <div id="installAos" style="display:none;">
+        <div style="display:flex; align-items:center; gap:7px; font-size:13px; font-weight:800; color:#1e293b; margin-bottom:12px;"><i class="fa-brands fa-android" style="font-size:16px; color:#3ddc84;"></i> 안드로이드 (Chrome)</div>
+        <div style="display:flex; flex-direction:column; gap:11px;">
+          <div style="display:flex; gap:11px; align-items:flex-start;"><span style="flex-shrink:0; width:22px; height:22px; border-radius:50%; background:#dcfce7; color:#15803d; font-size:12px; font-weight:900; display:flex; align-items:center; justify-content:center;">1</span><div style="font-size:13.5px; color:#334155; font-weight:600; line-height:1.5;">오른쪽 위 <b>⋮ 메뉴</b> 를 누르세요</div></div>
+          <div style="display:flex; gap:11px; align-items:flex-start;"><span style="flex-shrink:0; width:22px; height:22px; border-radius:50%; background:#dcfce7; color:#15803d; font-size:12px; font-weight:900; display:flex; align-items:center; justify-content:center;">2</span><div style="font-size:13.5px; color:#334155; font-weight:600; line-height:1.5;"><b>‘앱 설치’</b> 또는 <b>‘홈 화면에 추가’</b> 를 선택</div></div>
+          <div style="display:flex; gap:11px; align-items:flex-start;"><span style="flex-shrink:0; width:22px; height:22px; border-radius:50%; background:#dcfce7; color:#15803d; font-size:12px; font-weight:900; display:flex; align-items:center; justify-content:center;">3</span><div style="font-size:13.5px; color:#334155; font-weight:600; line-height:1.5;"><b>‘설치’</b> 를 누르면 완료!</div></div>
+        </div>
+      </div>
+
+      <div style="margin-top:16px; padding:11px 13px; background:#eff6ff; border:1px solid #dbeafe; border-radius:11px; font-size:12px; color:#1e40af; font-weight:600; line-height:1.5;"><i class="fa-solid fa-circle-info" style="margin-right:5px;"></i> 설치하면 주소창 없이 전체화면으로 열리고, 화면 넘김도 더 부드러워져요.</div>
+      <button type="button" onclick="closeInstallGuide()" style="margin-top:16px; width:100%; padding:14px; border:none; border-radius:13px; background:#0f172a; color:#fff; font-size:15px; font-weight:800; cursor:pointer;">닫기</button>
+    </div>
+  </div>
+</div>
+<script>
+/* ───────── PWA 설치 (홈 화면에 추가) ───────── */
+(function(){
+  // 1) manifest + iOS 메타 동적 주입 (head 손대지 않고 안전하게)
+  try{
+    var mf = {
+      name: "항기원 교육생", short_name: "항기원",
+      start_url: "./index.html", scope: "./",
+      display: "standalone", orientation: "portrait",
+      background_color: "#eef4fb", theme_color: "#0f172a",
+      icons: [
+        { src: "logo.webp", sizes: "192x192", type: "image/webp", purpose: "any" },
+        { src: "logo.webp", sizes: "512x512", type: "image/webp", purpose: "any" },
+        { src: "catc.webp", sizes: "512x512", type: "image/webp", purpose: "any maskable" }
+      ]
+    };
+    var blob = new Blob([JSON.stringify(mf)], { type: "application/manifest+json" });
+    var l = document.createElement('link'); l.rel = 'manifest'; l.href = URL.createObjectURL(blob);
+    document.head.appendChild(l);
+    function meta(n,c,prop){ var m=document.createElement('meta'); if(prop) m.setAttribute('property',n); else m.name=n; m.content=c; document.head.appendChild(m); }
+    meta('theme-color', '#0f172a');
+    meta('apple-mobile-web-app-capable', 'yes');
+    meta('apple-mobile-web-app-status-bar-style', 'black-translucent');
+    meta('apple-mobile-web-app-title', '항기원');
+    var al=document.createElement('link'); al.rel='apple-touch-icon'; al.href='logo.webp'; document.head.appendChild(al);
+  }catch(e){}
+
+  // 2) 안드로이드 설치 프롬프트 가로채기
+  window._deferredInstall = null;
+  window.addEventListener('beforeinstallprompt', function(e){ e.preventDefault(); window._deferredInstall = e; });
+  window.addEventListener('appinstalled', function(){ window._deferredInstall = null; try{ if(typeof showKacAlert==='function') showKacAlert('✅ 앱이 설치되었습니다. 홈 화면에서 실행해 주세요!'); }catch(e){} });
+
+  function isIOS(){ return /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform==='MacIntel' && navigator.maxTouchPoints>1); }
+  function isStandalone(){ return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true; }
+
+  window.openInstallGuide = function(){
+    if(typeof closeMainMenu==='function'){ try{ closeMainMenu(); }catch(e){} }
+    if(isStandalone()){ if(typeof showKacAlert==='function') showKacAlert('이미 앱으로 설치되어 실행 중입니다 😊'); return; }
+    var ios = document.getElementById('installIos');
+    var aos = document.getElementById('installAos');
+    var nativeBtn = document.getElementById('installNativeBtn');
+    var onIOS = isIOS();
+    if(ios) ios.style.display = onIOS ? 'block' : 'none';
+    if(aos) aos.style.display = onIOS ? 'none' : 'block';
+    if(nativeBtn) nativeBtn.style.display = (!onIOS && window._deferredInstall) ? 'block' : 'none';
+    var m=document.getElementById('installGuideModal'); if(m) m.style.display='flex';
+  };
+  window.closeInstallGuide = function(){ var m=document.getElementById('installGuideModal'); if(m) m.style.display='none'; };
+  window.triggerNativeInstall = function(){
+    var dp = window._deferredInstall;
+    if(!dp){ if(typeof showKacAlert==='function') showKacAlert('자동 설치가 지원되지 않는 환경입니다. 아래 안내대로 진행해 주세요.'); return; }
+    dp.prompt();
+    dp.userChoice.finally(function(){ window._deferredInstall=null; var b=document.getElementById('installNativeBtn'); if(b) b.style.display='none'; window.closeInstallGuide(); });
+  };
+})();
+</script>
 </body>
 </html>
