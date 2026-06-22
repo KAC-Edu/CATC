@@ -7610,7 +7610,7 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
                  : a.returned ? '<span style="color:#16a34a;font-weight:800;">복귀완료</span>'
                  : a.confirmed ? '<span style="color:#2563eb;font-weight:700;">서명완료</span>'
                  : '<span style="color:#94a3b8;">대기</span>';
-        return '<tr><td style="color:#94a3b8;">'+(i+1)+'</td><td style="font-weight:800;">'+esc(a.name||'-')+'</td><td>'+kind+'</td><td style="color:#64748b;white-space:nowrap;">'+t+'</td><td>'+stat+'</td><td style="text-align:center;white-space:nowrap;"><input type="checkbox" '+(a.held?'checked':'')+' onclick="coordSetHold(\''+esc(r.rid)+'\',\''+today+'\',\''+esc(a.__key)+'\',this.checked)" title="미복귀(자동 복귀완료 제외)" style="cursor:pointer;accent-color:#dc2626;width:16px;height:16px;"></td></tr>';
+        return '<tr><td style="color:#94a3b8;">'+(i+1)+'</td><td style="font-weight:800;">'+esc(a.name||'-')+'</td><td>'+kind+'</td><td style="color:#64748b;white-space:nowrap;">'+t+'</td><td>'+stat+'</td><td style="text-align:center;white-space:nowrap;">'+(a.returned ? '<span style="color:#cbd5e1;">-</span>' : '<input type="checkbox" '+(a.held?'checked':'')+' onclick="coordSetHold(\''+esc(r.rid)+'\',\''+today+'\',\''+esc(a.__key)+'\',this.checked)" title="미복귀(자동 복귀완료 제외)" style="cursor:pointer;accent-color:#dc2626;width:16px;height:16px;">')+'</td></tr>';
       }).join('') : '<tr><td colspan="6" style="text-align:center;color:#94a3b8;padding:18px;">금일 외출·외박 신청이 없습니다.</td></tr>';
       return '<div class="csec-card">'
         +'<div class="csec-card-head" onclick="coordToggleOuting('+idx+')" style="cursor:pointer;display:flex;align-items:center;gap:14px;padding:14px 16px;">'
