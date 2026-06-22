@@ -7846,6 +7846,8 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
   function _coordPcBoot(){
     if(!document.body.classList.contains('pc-mode')) return;
     _coordInjectClose();
+    // [안전장치] 로드 시 과정 미선택이면 상세 팝업 닫고 전체 현황 표시 (새로고침 시 팝업 자동노출 방지)
+    if(!currentRID){ try{ var _iv=document.getElementById('individualStatusView'); if(_iv) _iv.style.display='none'; var _tv=document.getElementById('totalStatusView'); if(_tv) _tv.style.display=''; }catch(e){} }
     if(!window._coordPcSec) coordPcSection('2');
   }
   document.addEventListener('DOMContentLoaded', function(){ setTimeout(_coordPcBoot, 800); });
