@@ -1222,7 +1222,7 @@ body.pc-mode .coord-pc-tabs {
 .coord-ptab.active::before { content:''; position:absolute; left:0; top:0; bottom:0; width:5px; background:#2563eb; }
 .coord-ptab .cn { width:46px; height:46px; flex-shrink:0; border-radius:13px; background:#eff4ff; color:#2563eb; display:flex; align-items:center; justify-content:center; font-size:20px; }
 .coord-ptab.active .cn { background:#003366; color:#fff; }
-.coord-ptab .ct { font-size:16px; font-weight:900; color:#1e293b; line-height:1.25; letter-spacing:-.3px; word-break:keep-all; }
+.coord-ptab .ct { font-size:21px; font-weight:900; color:#1e293b; line-height:1.25; letter-spacing:-.3px; word-break:keep-all; }
 .coord-ptab .cs { font-size:11.5px; font-weight:700; color:#94a3b8; margin-top:3px; }
 .coord-ptab.active .ct { color:#003366; }
 
@@ -1247,7 +1247,7 @@ body.pc-mode .coord-sec-panel { background:#fff; border:1px solid #eef2f7; borde
 .crow-room { flex-shrink:0; background:#2563eb; color:#fff; font-weight:800; font-size:12px; letter-spacing:.3px; padding:6px 12px; border-radius:8px; white-space:nowrap; }
 .crow-room .rid-big{ font-size:18px; font-weight:900; margin-left:2px; line-height:1; vertical-align:-1px; }
 .crow-main { flex:1; min-width:0; }
-.crow-name { font-size:16px; font-weight:900; color:#0f172a; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; word-break:keep-all; }
+.crow-name { font-size:19px; font-weight:900; color:#0f172a; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; word-break:keep-all; }
 .crow-sub { font-size:12px; color:#94a3b8; font-weight:700; margin-top:3px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .crow-chips { display:flex; align-items:center; gap:20px; flex-shrink:0; }
 .cchip { text-align:center; min-width:42px; }
@@ -1587,7 +1587,7 @@ body.cpop-locked{ overflow:hidden !important; }
 .cpop-empty{ text-align:center; color:#94a3b8; font-weight:700; padding:40px; }
 .cpop-search{ width:100%; padding:11px; border:1.5px solid #e2e8f0; border-radius:10px; font-size:14px; margin-bottom:12px; box-sizing:border-box; }
 .cpop-course{ border:1px solid #e2e8f0; border-radius:12px; margin-bottom:12px; overflow:hidden; }
-.cpop-course-h{ background:#e0f2fe; color:#0c4a6e; border-left:4px solid #38bdf8; padding:13px 16px; font-weight:900; font-size:16px; display:flex; justify-content:space-between; align-items:center; }
+.cpop-course-h{ background:#e0f2fe; color:#0c4a6e; border-left:4px solid #38bdf8; padding:13px 16px; font-weight:900; font-size:18px; display:flex; justify-content:space-between; align-items:center; }
 .cpop-course-h span{ color:#0ea5e9; font-size:12px; }
 .cpop-roster{ padding:10px 13px; display:flex; flex-wrap:wrap; gap:7px; }
 .cpop-name{ background:#f1f5f9; border-radius:8px; padding:6px 11px; font-size:13px; font-weight:700; }
@@ -7309,7 +7309,7 @@ function _courseOverviewHTML(){
   const full = (nm)=> (typeof _coordFullName==='function') ? (_coordFullName(nm)|| (nm||'-')) : (nm||'-');
   return rooms.length
     ? `<table class="cpop-table"><thead><tr><th>강의실</th><th>과정명</th><th>담당자</th><th>담임교수</th><th>기간</th><th>인원</th></tr></thead><tbody>`
-      + rooms.map(r=>`<tr><td style="font-weight:900;">ROOM #${r.rid}</td><td style="text-align:left;font-size:16px;font-weight:800;">${_esc(r.s.courseName||'-')}</td><td style="font-weight:700;">${_esc(full(r.s.coordinatorName)||'-')}</td><td>${_esc((r.st.professorName||'').trim()? (r.st.professorName.trim()+' 교수') :'-')}</td><td style="font-size:12px;">${_esc(r.s.period||'-')}</td><td><b style="font-size:20px;color:#2563eb;">${_studentsOf(r.room).length}</b>명</td></tr>`).join('')
+      + rooms.map(r=>`<tr><td style="font-weight:900;">ROOM #${r.rid}</td><td style="text-align:left;font-size:18px;font-weight:800;">${_esc(r.s.courseName||'-')}</td><td style="font-weight:700;">${_esc(full(r.s.coordinatorName)||'-')}</td><td>${_esc((r.st.professorName||'').trim()? (r.st.professorName.trim()+' 교수') :'-')}</td><td style="font-size:12px;">${_esc(r.s.period||'-')}</td><td><b style="font-size:20px;color:#2563eb;">${_studentsOf(r.room).length}</b>명</td></tr>`).join('')
       + `</tbody></table>`
     : '<div class="cpop-empty">운영 중인 과정이 없습니다.</div>';
 }
@@ -7476,7 +7476,7 @@ function openShuttleSummary(){
     var _dopts='<option value="">시간 선택</option>'+_dtimes.map(function(tm){return '<option value="'+tm+'"'+(tm===_depCur?' selected':'')+'>'+(tm==='미정'?'미정(추후 공지)':tm)+'</option>';}).join('');
     return '<div class="csec-card">'
       +'<div class="csec-card-head" onclick="coordToggleShuttle('+idx+')" style="cursor:pointer;display:flex;align-items:center;gap:18px;padding:12px 22px;">'
-        +'<div style="flex:1;min-width:0;display:flex;align-items:center;gap:12px;"><span class="crow-room" style="flex-shrink:0;">ROOM <span class="rid-big">#'+_esc(r.rid)+'</span></span><span style="font-size:17px;font-weight:900;color:#0f172a;word-break:keep-all;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+_esc(r.s.courseName||'-')+'</span></div>'
+        +'<div style="flex:1;min-width:0;display:flex;align-items:center;gap:12px;"><span class="crow-room" style="flex-shrink:0;">ROOM <span class="rid-big">#'+_esc(r.rid)+'</span></span><span style="font-size:20px;font-weight:900;color:#0f172a;word-break:keep-all;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+_esc(r.s.courseName||'-')+'</span></div>'
         +'<div style="display:flex;align-items:center;gap:22px;flex-shrink:0;">'
           +'<div style="text-align:center;min-width:44px;"><div style="font-size:12.5px;font-weight:800;color:#64748b;">자차</div><div style="font-size:24px;font-weight:900;color:#64748b;line-height:1.15;">'+c.car+'</div></div>'
           +'<div style="text-align:center;min-width:44px;"><div style="font-size:12.5px;font-weight:800;color:#ef4444;">오송역</div><div style="font-size:24px;font-weight:900;color:#ef4444;line-height:1.15;">'+c.osong+'</div></div>'
