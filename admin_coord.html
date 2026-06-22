@@ -1224,12 +1224,34 @@ body.pc-mode .coord-sec-panel { background:#fff; border:1px solid #eef2f7; borde
 .csec-btn.ghost:hover { background:#eff6ff; }
 .csec-btn.amber { background:#fff7ed; color:#b45309; border-color:#fed7aa; }
 .csec-btn.amber:hover { background:#ffedd5; }
-body.pc-mode #activeCourseList { display:grid !important; grid-template-columns:repeat(auto-fill, minmax(260px, 1fr)) !important; gap:14px !important; margin-top:0 !important; }
+body.pc-mode #activeCourseList { display:flex !important; flex-direction:column !important; gap:10px !important; margin-top:0 !important; }
 body.pc-mode .course-item-card { margin:0 !important; border-radius:14px !important; box-shadow:0 2px 12px rgba(0,0,0,0.07) !important; border:1.5px solid #e2e8f0 !important; transition:box-shadow 0.15s, transform 0.15s !important; }
 body.pc-mode .course-item-card:hover { box-shadow:0 6px 24px rgba(0,0,0,0.11) !important; transform:translateY(-2px) !important; }
 
-/* PC 개별 과정 뷰: 3열 그리드 */
-body.pc-mode #individualStatusView { display:grid !important; grid-template-columns:280px 1fr 1fr !important; gap:16px !important; padding:24px 28px !important; background:#f1f5f9 !important; align-items:start !important; }
+/* PC 개별 과정 뷰: 중앙 팝업(요청: 하단 인라인 펼침 → 팝업) — display는 JS(none/flex)가 제어하므로 강제하지 않음 */
+body.pc-mode #individualStatusView {
+    position:fixed !important; left:50%; top:50%; transform:translate(-50%,-50%) !important;
+    flex-direction:column !important; align-items:stretch !important;
+    width:min(880px, 94vw) !important; max-height:90vh !important; overflow-y:auto !important;
+    -webkit-overflow-scrolling:touch; gap:14px !important;
+    padding:22px !important; background:#f1f5f9 !important; border-radius:20px !important;
+    box-shadow:0 0 0 100vmax rgba(15,23,42,.55), 0 30px 80px rgba(0,0,0,.45) !important;
+    z-index:9600 !important;
+}
+/* PC 상단바: 라운딩 제거(요청) */
+body.pc-mode .app-container { border-radius:0 !important; }
+body.pc-mode .app-header { border-radius:0 !important; }
+/* PC: 교육운영현황 히어로 블록 전체 숨김(요청) → 탭이 상단으로 */
+body.pc-mode .coord-hero { display:none !important; }
+/* PC 개별뷰 팝업 닫기 버튼 */
+.pc-indiv-close { display:none; }
+body.pc-mode .pc-indiv-close {
+    display:flex; position:sticky; top:0; margin-left:auto; align-self:flex-end;
+    width:38px; height:38px; align-items:center; justify-content:center;
+    background:#fff; border:1px solid #e2e8f0; border-radius:50%; cursor:pointer;
+    font-size:20px; color:#475569; box-shadow:0 3px 10px rgba(0,0,0,.1); z-index:5; flex-shrink:0;
+}
+body.pc-mode .pc-indiv-close:hover { background:#f1f5f9; color:#0f172a; }
 body.pc-mode #indCourseHeader { grid-column:1 / -1 !important; border-radius:16px !important; }
 body.pc-mode .dashboard-split { grid-column:1 !important; display:flex !important; flex-direction:column !important; gap:12px !important; }
 body.pc-mode .dashboard-split .col-1-4,
@@ -1373,8 +1395,8 @@ body.pc-mode #totalStatusView > .section-card .section-title {
     padding-bottom: 14px !important;
 }
 body.pc-mode #activeCourseList {
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)) !important;
-    gap: 16px !important;
+    display:flex !important; flex-direction:column !important;
+    gap: 10px !important;
 }
 body.pc-mode .course-item-card {
     border-radius: 16px !important;
@@ -1589,22 +1611,18 @@ body.pc-mode .entry-box:hover, body.pc-mode .entry-box-tablet:hover {
 
 <!-- 상단 헤더 부분 (수정됨) -->
 <header class="app-header">
-  <!-- 좌: 뒤로가기 -->
+  <!-- 좌: 뒤로가기 + 브랜드 -->
   <button class="header-btn coord-back-btn" onclick="handleBackNav()" title="뒤로가기"><i class="fa-solid fa-chevron-left"></i></button>
-  <!-- 중: 브랜드 뱃지 (클릭 시 메인 새로고침) -->
-  <div onclick="location.reload()" title="메인으로 (새로고침)" style="display:flex;align-items:center;gap:10px;flex:1;margin:0 12px;cursor:pointer;">
-    <div style="display:none;"><i class="fa-solid fa-building-columns"></i></div>
-    <div>
-      <div style="font-size:9px;color:rgba(255,255,255,0.6);font-weight:700;letter-spacing:1.2px;text-transform:uppercase;line-height:1;">Korea Airports Corp. · CATC</div>
-      <div style="font-size:14px;font-weight:900;color:#fff;margin-top:2px;line-height:1;">교육운영부</div>
-    </div>
+  <div onclick="location.reload()" title="메인으로 (새로고침)" style="display:flex;align-items:center;gap:8px;flex-shrink:0;margin-left:8px;cursor:pointer;">
+    <div style="font-size:15px;font-weight:900;color:#fff;line-height:1;white-space:nowrap;">과정운영 플랫폼</div>
   </div>
-  <!-- 우: 시계 + 메뉴 버튼 -->
-  <div style="display:flex;align-items:center;gap:10px;flex-shrink:0;">
-    <div style="text-align:right;">
-      <div id="coordHeaderTime" style="font-size:17px;font-weight:800;color:#fff;letter-spacing:-0.5px;line-height:1;">--:--</div>
-      <div id="coordHeaderDate" style="font-size:10px;color:rgba(255,255,255,0.65);margin-top:2px;font-weight:600;">----.--.--(---)</div>
-    </div>
+  <!-- 중: 시계 (강사플랫폼 스타일) -->
+  <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:0;">
+    <div id="coordHeaderTime" style="font-size:18px;font-weight:800;color:#fff;letter-spacing:-0.3px;line-height:1.05;white-space:nowrap;">--:--</div>
+    <div id="coordHeaderDate" style="font-size:10.5px;color:rgba(255,255,255,0.7);margin-top:3px;font-weight:600;white-space:nowrap;">----.--.--(---)</div>
+  </div>
+  <!-- 우: PC전환 + 메뉴 버튼 -->
+  <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
     <button id="pcModeBtn" class="header-btn" onclick="togglePcMode()" title="PC / 모바일 화면 전환" style="height:33px;background:rgba(255,255,255,0.18);border:1px solid rgba(255,255,255,0.28);border-radius:10px;display:flex;align-items:center;gap:6px;justify-content:center;font-size:12px;font-weight:800;padding:0 12px;color:#fff;"><i class="fa-solid fa-display"></i><span class="pcmode-label">PC</span></button>
     <button class="header-btn" onclick="toggleMenu(true)" style="width:33px;height:33px;background:rgba(255,255,255,0.18);border:1px solid rgba(255,255,255,0.28);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:14px;padding:0;"><i class="fa-solid fa-bars"></i></button>
   </div>
@@ -7042,7 +7060,7 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
     var c2=document.getElementById('csec-2'); if(c2) c2.style.display='';
   };
 
-  // ── 섹션1: 연간계획 미리보기(읽기전용) ──
+  // ── 섹션1: 연간계획 미리보기(읽기전용, 종료→위 / 진행중 강조) ──
   window.coordRenderAnnualPreview = function(){
     var box=document.getElementById('csecAnnualPreview'); if(!box) return;
     if(typeof firebase==='undefined'){ box.innerHTML='<p style="padding:24px;text-align:center;color:#94a3b8;">연결 대기 중…</p>'; return; }
@@ -7051,63 +7069,93 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
       if(Array.isArray(v)) list=v.filter(Boolean);
       else if(v&&typeof v==='object') list=Object.values(v).filter(Boolean);
       if(!list.length){ box.innerHTML='<p style="padding:30px;text-align:center;color:#94a3b8;font-weight:700;">등록된 연간계획이 없습니다. 우측 상단 [편집기 열기]로 추가하세요.</p>'; return; }
-      var rows=list.map(function(c){
-        var name=c.courseName||c.name||'-';
-        var period=c.period||((c.start&&c.end)?(c.start+' ~ '+c.end):'-');
-        var room=c.room||c.classroom||'-';
-        var coord=c.coord||c.coordinatorName||c.manager||'-';
-        var prof=c.professor||c.professorName||c.prof||'-';
-        return '<tr><td style="text-align:left;font-weight:800;">'+esc(name)+'</td><td style="font-size:12px;white-space:nowrap;">'+esc(period)+'</td><td>'+esc(room)+'</td><td>'+esc(coord)+'</td><td>'+esc(prof)+'</td></tr>';
+      var today=(new Date()).toISOString().slice(0,10);
+      // 종료된 과정을 위로, 진행/예정을 아래로 — 시작일순 정렬
+      list.sort(function(a,b){ return (''+(a.startDate||'')).localeCompare(''+(b.startDate||'')); });
+      var firstActiveIdx=-1;
+      var rows=list.map(function(c,i){
+        var name=c.name||c.courseName||'-';
+        var sd=c.startDate||'', ed=c.endDate||'';
+        var period=(sd&&ed)?(sd+' ~ '+ed):(c.period||'-');
+        var room=c.roomDetail||c.room||'-';
+        var coord=c.coord||c.coordinatorName||'-';
+        var prof=c.prof||c.professorName||'-';
+        var ended=(ed && ed<today);
+        var active=(sd&&ed&&sd<=today&&ed>=today);
+        if(active && firstActiveIdx<0) firstActiveIdx=i;
+        var bg = ended?'background:#f1f5f9;color:#94a3b8;' : (active?'background:#dbeafe;':'');
+        var tag = ended?'<span style="font-size:10px;font-weight:800;color:#94a3b8;">종료</span>' : (active?'<span style="font-size:10px;font-weight:800;color:#1d4ed8;">● 진행중</span>':'<span style="font-size:10px;font-weight:800;color:#16a34a;">예정</span>');
+        return '<tr data-row="'+i+'" style="'+bg+'"><td style="text-align:left;font-weight:800;">'+esc(name)+' '+tag+'</td><td style="font-size:12px;white-space:nowrap;">'+esc(period)+'</td><td>'+esc(room)+'</td><td>'+esc(coord)+'</td><td>'+esc(prof)+'</td></tr>';
       }).join('');
-      box.innerHTML='<table class="cpop-table" style="width:100%;"><thead><tr><th style="text-align:left;">과정명</th><th>교육기간</th><th>강의실</th><th>과정담당</th><th>담임교수</th></tr></thead><tbody>'+rows+'</tbody></table>';
+      box.innerHTML='<div style="max-height:62vh;overflow-y:auto;border:1px solid #eef2f7;border-radius:12px;"><table class="cpop-table" style="width:100%;"><thead style="position:sticky;top:0;z-index:2;"><tr><th style="text-align:left;">과정명</th><th>교육기간</th><th>강의실</th><th>과정담당</th><th>담임교수</th></tr></thead><tbody>'+rows+'</tbody></table></div>';
+      // 진행중 행이 보이도록 내부 스크롤 위치 조정(페이지 전체가 아닌 컨테이너만)
+      if(firstActiveIdx>0){ var sc=box.querySelector('div'); var tr=box.querySelector('tr[data-row="'+firstActiveIdx+'"]'); if(sc&&tr){ sc.scrollTop=Math.max(0, tr.offsetTop-90); } }
     }).catch(function(){ box.innerHTML='<p style="padding:24px;text-align:center;color:#ef4444;">불러오기 오류 — 편집기에서 확인하세요.</p>'; });
   };
 
-  // ── 섹션3: 과정별 입교/예정 ──
+  // ── 섹션3: 과정별 입교/예정 — 정형 리스트(연번·소속·사번·성명) ──
   window.coordRenderEnroll = function(){
     var box=document.getElementById('csecEnrollList'); if(!box) return;
     if(typeof _coordActiveRooms!=='function'){ box.innerHTML='<p style="padding:24px;text-align:center;color:#94a3b8;">연결 대기 중…</p>'; return; }
     var rooms=_coordActiveRooms();
     if(!rooms.length){ box.innerHTML='<p style="padding:30px;text-align:center;color:#94a3b8;font-weight:700;">운영 중인 과정이 없습니다.</p>'; return; }
     box.innerHTML=rooms.map(function(r){
-      var studs=(typeof _studentsOf==='function')?_studentsOf(r.room):[];
+      var studs=((typeof _studentsOf==='function')?_studentsOf(r.room):[]).slice().sort(function(a,b){ return (a.seq||0)-(b.seq||0)||(''+(a.name||'')).localeCompare(''+(b.name||'')); });
       var arrived=studs.filter(function(s){ return s && (s.status==='입교' || s.arrived || s.checkedIn); }).length;
-      var total=studs.length;
-      var expected=Math.max(0,total-arrived);
-      return '<div style="display:flex;align-items:center;gap:16px;background:#f8fafc;border:1px solid #eef2f7;border-radius:14px;padding:15px 18px;">'
-        +'<div style="flex:1;min-width:0;"><div style="font-size:11px;font-weight:800;color:#2563eb;">ROOM '+esc(r.rid)+'</div><div style="font-size:15px;font-weight:800;color:#0f172a;margin-top:2px;word-break:keep-all;">'+esc(r.s.courseName||'-')+'</div><div style="font-size:11.5px;color:#94a3b8;font-weight:600;margin-top:3px;">'+esc(r.s.period||'-')+'</div></div>'
-        +'<div style="text-align:center;min-width:62px;"><div style="font-size:11px;color:#64748b;font-weight:800;">입교</div><div style="font-size:22px;font-weight:900;color:#16a34a;">'+arrived+'</div></div>'
-        +'<div style="text-align:center;min-width:62px;"><div style="font-size:11px;color:#64748b;font-weight:800;">예정</div><div style="font-size:22px;font-weight:900;color:#2563eb;">'+expected+'</div></div>'
-        +'<button class="csec-btn ghost" style="flex-shrink:0;" onclick="openStudentRosterPopup()"><i class="fa-solid fa-list"></i> 명단</button>'
+      var total=studs.length, expected=Math.max(0,total-arrived);
+      var body = studs.length ? studs.map(function(s,i){
+        var ar=(s && (s.status==='입교' || s.arrived || s.checkedIn));
+        return '<tr><td style="text-align:center;color:#94a3b8;">'+(i+1)+'</td><td style="color:#475569;">'+esc(s.dept||'-')+'</td><td style="color:#64748b;white-space:nowrap;">'+esc(s.empNo||'-')+'</td><td style="font-weight:800;">'+esc(s.name||'-')+'</td><td style="text-align:center;">'+(ar?'<span style="color:#16a34a;font-weight:800;">입교</span>':'<span style="color:#2563eb;font-weight:700;">예정</span>')+'</td></tr>';
+      }).join('') : '<tr><td colspan="5" style="text-align:center;color:#94a3b8;padding:18px;">등록된 명단이 없습니다.</td></tr>';
+      return '<div style="border:1px solid #eef2f7;border-radius:14px;overflow:hidden;margin-bottom:12px;">'
+        +'<div style="display:flex;align-items:center;gap:12px;background:#f8fafc;padding:12px 16px;border-bottom:1px solid #eef2f7;">'
+          +'<div style="flex:1;min-width:0;"><span style="font-size:11px;font-weight:800;color:#2563eb;">ROOM '+esc(r.rid)+'</span><div style="font-size:15px;font-weight:900;color:#0f172a;word-break:keep-all;">'+esc(r.s.courseName||'-')+'</div></div>'
+          +'<div style="text-align:center;"><div style="font-size:10.5px;color:#64748b;font-weight:800;">입교</div><div style="font-size:18px;font-weight:900;color:#16a34a;">'+arrived+'</div></div>'
+          +'<div style="text-align:center;"><div style="font-size:10.5px;color:#64748b;font-weight:800;">예정</div><div style="font-size:18px;font-weight:900;color:#2563eb;">'+expected+'</div></div>'
+          +'<div style="text-align:center;"><div style="font-size:10.5px;color:#64748b;font-weight:800;">계</div><div style="font-size:18px;font-weight:900;color:#0f172a;">'+total+'</div></div>'
+        +'</div>'
+        +'<div style="overflow-x:auto;"><table class="cpop-table" style="width:100%;"><thead><tr><th style="width:42px;">연번</th><th style="text-align:left;">소속</th><th>사번</th><th>성명</th><th style="width:60px;">상태</th></tr></thead><tbody>'+body+'</tbody></table></div>'
         +'</div>';
     }).join('');
   };
 
-  // ── 섹션4: 외출·외박 (과정별 버튼 + 출력) ──
+  // ── 섹션4: 외출·외박 (과정별 1줄 1블록, 클릭→신청명단 팝업) ──
   window.coordRenderOutingSection = function(){
     var box=document.getElementById('csecOutingWrap'); if(!box) return;
     if(typeof _coordActiveRooms!=='function'){ box.innerHTML='<p style="padding:24px;text-align:center;color:#94a3b8;">연결 대기 중…</p>'; return; }
     var rooms=_coordActiveRooms();
-    var head='<div style="font-size:12.5px;color:#64748b;font-weight:700;margin-bottom:14px;">과정을 선택하면 외출·외박자 현황과 대장(PDF) 출력 화면이 열립니다.</div>';
+    var head='<div style="font-size:12.5px;color:#64748b;font-weight:700;margin-bottom:14px;">과정을 선택하면 해당 과정의 외출·외박 신청 명단이 팝업으로 열립니다. (대장 PDF 출력은 팝업/상단 [출력 미리보기]에서)</div>';
     if(!rooms.length){ box.innerHTML=head+'<p style="padding:24px;text-align:center;color:#94a3b8;font-weight:700;">운영 중인 과정이 없습니다.</p>'; return; }
     var btns=rooms.map(function(r){
       var nm=esc(r.s.courseName||'-'), period=esc(r.s.period||'');
-      return '<button onclick="coordOpenOutingFor(\''+r.rid+'\')" style="text-align:left;background:#fff;border:1.5px solid #e2e8f0;border-radius:14px;padding:15px 17px;cursor:pointer;display:flex;align-items:center;gap:13px;transition:all .15s;" onmouseover="this.style.borderColor=\'#bfdbfe\';this.style.boxShadow=\'0 4px 12px rgba(15,23,42,.07)\';" onmouseout="this.style.borderColor=\'#e2e8f0\';this.style.boxShadow=\'none\';">'
+      return '<button onclick="coordOpenOutingFor(\''+r.rid+'\')" style="text-align:left;width:100%;background:#fff;border:1.5px solid #e2e8f0;border-radius:14px;padding:15px 17px;cursor:pointer;display:flex;align-items:center;gap:13px;transition:all .15s;" onmouseover="this.style.borderColor=&quot;#bfdbfe&quot;;this.style.boxShadow=&quot;0 4px 12px rgba(15,23,42,.07)&quot;;" onmouseout="this.style.borderColor=&quot;#e2e8f0&quot;;this.style.boxShadow=&quot;none&quot;;">'
         +'<span style="width:38px;height:38px;border-radius:11px;background:#fff7ed;color:#ea580c;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;"><i class="fa-solid fa-person-walking-luggage"></i></span>'
         +'<span style="flex:1;min-width:0;"><span style="display:block;font-size:11px;font-weight:800;color:#2563eb;">ROOM '+esc(r.rid)+'</span><span style="display:block;font-size:15px;font-weight:800;color:#0f172a;word-break:keep-all;">'+nm+'</span><span style="display:block;font-size:11px;color:#94a3b8;font-weight:600;margin-top:2px;">'+period+'</span></span>'
         +'<i class="fa-solid fa-chevron-right" style="color:#cbd5e1;"></i></button>';
     }).join('');
-    box.innerHTML=head+'<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:11px;">'+btns+'</div>';
+    box.innerHTML=head+'<div style="display:flex;flex-direction:column;gap:10px;">'+btns+'</div>';
   };
-  // 과정 선택 → 전체 외출·외박 현황 팝업(과정별 PDF 버튼 포함)
+  // 과정 선택 → 해당 과정 상세(외출·외박 신청명단 포함)를 중앙 팝업으로 표시
   window.coordOpenOutingFor = function(rid){
-    try { if(typeof openOutingSummary==='function'){ openOutingSummary(); return; } } catch(e){}
-    try { if(typeof openPrintModal==='function') openPrintModal(); } catch(e){}
+    try { currentRID = rid; if(typeof handleRoomSelection==='function') handleRoomSelection(); if(typeof updateEntryCnt==='function') updateEntryCnt(rid);
+      // 외출·외박 카드를 펼쳐서 보여줌
+      setTimeout(function(){ var c=document.getElementById('ind-outing-card'); if(c) c.classList.remove('collapsed'); }, 120);
+    } catch(e){ console.warn('[coordOpenOutingFor]', e); }
   };
+
+  // PC 개별뷰 팝업 닫기(X) 버튼 1회 주입
+  function _coordInjectClose(){
+    var v=document.getElementById('individualStatusView'); if(!v || v.querySelector('.pc-indiv-close')) return;
+    var b=document.createElement('button'); b.className='pc-indiv-close'; b.innerHTML='\u00d7'; b.title='닫기';
+    b.onclick=function(){ try{ if(typeof handleBackNav==='function') handleBackNav(); }catch(e){} };
+    v.insertBefore(b, v.firstChild);
+  }
+  document.addEventListener('DOMContentLoaded', function(){ setTimeout(_coordInjectClose, 900); });
 
   // PC 모드 진입 시 기본 섹션(과정현황) 활성화 + 데이터 준비되면 현재 섹션 재렌더
   function _coordPcBoot(){
     if(!document.body.classList.contains('pc-mode')) return;
+    _coordInjectClose();
     if(!window._coordPcSec) coordPcSection('2');
   }
   document.addEventListener('DOMContentLoaded', function(){ setTimeout(_coordPcBoot, 800); });
