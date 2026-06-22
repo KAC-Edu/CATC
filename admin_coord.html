@@ -7404,6 +7404,33 @@ function delArchiveRow(id){
 }
 
 /* 4) 퇴교차량 신청 총괄 */
+window.coordSetDepartureFor = async function(rid, time){
+  if(!rid) return;
+  if(!time){ showKacAlert('출발 시간을 선택해주세요.'); return; }
+  var room=globalAllData[rid]||{}; var period=(room.settings&&room.settings.period)||'';
+  var depDate=getTodayString();
+  if(period.indexOf(' ~ ')>=0){
+    var parts=period.split(' ~ ').map(function(s){return s.trim();}); var startStr=parts[0], endStr=parts[1];
+    var sd=new Date(startStr); var ff=new Date(sd); var dtf=(5-sd.getDay()+7)%7; ff.setDate(sd.getDate()+dtf);
+    var ct=new Date(); ct.setHours(0,0,0,0); var cf=new Date(ff); cf.setHours(0,0,0,0);
+    depDate = ct<=cf ? ff.toISOString().split('T')[0] : endStr;
+  }
+  var courseName=(room.settings&&room.settings.courseName)||rid;
+  var timeLabel=(time==='미정')?'출발시간 미정(추후 공지)':(time+' 출발');
+  if(!(await showKacConfirm('['+courseName+'] 퇴교 공지\n출발일: '+depDate+' / '+timeLabel+'\n\n교육생·강사·기사 플랫폼에 즉시 전달됩니다.'))) return;
+  await firebase.database().ref('courses/'+rid+'/shuttle/departure').update({ time:time, date:depDate, announced:true });
+  await firebase.database().ref('system/shuttle_notice').set(depDate+' '+timeLabel+' 퇴교차량');
+  showKacAlert('✅ 퇴교 공지 완료! '+depDate+' '+timeLabel);
+  try{ if(window._coordPopupRefresh) window._coordPopupRefresh(); }catch(e){}
+};
+window.coordCancelDepartureFor = async function(rid){
+  if(!rid) return;
+  if(!(await showKacConfirm('퇴교 공지를 취소하시겠습니까?'))) return;
+  await firebase.database().ref('courses/'+rid+'/shuttle/departure').update({ announced:false });
+  await firebase.database().ref('system/shuttle_notice').remove();
+  showKacAlert('퇴교 공지가 취소되었습니다.');
+  try{ if(window._coordPopupRefresh) window._coordPopupRefresh(); }catch(e){}
+};
 function coordToggleShuttle(idx){
   var target=document.getElementById('coordShtBody'+idx);
   var willOpen = target && (target.style.display==='none' || !target.style.display);
@@ -7425,6 +7452,10 @@ function openShuttleSummary(){
         var col=_colorMap[a.type]||'#475569';
         return '<tr><td style="color:#94a3b8;">'+(i+1)+'</td><td style="font-weight:800;">'+_esc(a.name||'-')+'</td><td><span style="color:'+col+';font-weight:800;">'+_esc(dest)+'</span></td><td style="color:#64748b;white-space:nowrap;">'+dt+'</td></tr>';
     }).join('') : '<tr><td colspan="4" style="text-align:center;color:#94a3b8;padding:18px;">신청 내역이 없습니다.</td></tr>';
+    var _dep=r.room.shuttle&&r.room.shuttle.departure; var _depAnn=!!(_dep&&_dep.announced);
+    var _depCur=_depAnn?(_dep.time||''):''; var _depTxt=_depAnn?((_dep.time==='미정'?'미정(추후공지)':(_dep.time+' 출발'))+(_dep.date?(' · '+_dep.date):'')):'미설정';
+    var _dtimes=['미정','13:00','13:30','14:00','14:30','15:00','15:30','16:00','16:30','17:00'];
+    var _dopts='<option value="">시간 선택</option>'+_dtimes.map(function(tm){return '<option value="'+tm+'"'+(tm===_depCur?' selected':'')+'>'+(tm==='미정'?'미정(추후 공지)':tm)+'</option>';}).join('');
     return '<div class="csec-card">'
       +'<div class="csec-card-head" onclick="coordToggleShuttle('+idx+')" style="cursor:pointer;display:flex;align-items:center;gap:18px;padding:12px 22px;">'
         +'<div style="flex:1;min-width:0;"><span class="crow-room">ROOM <span class="rid-big">#'+_esc(r.rid)+'</span></span><div style="font-size:17px;font-weight:900;color:#0f172a;word-break:keep-all;margin-top:5px;">'+_esc(r.s.courseName||'-')+'</div></div>'
@@ -7438,6 +7469,7 @@ function openShuttleSummary(){
           +'<i class="fa-solid fa-chevron-down crow-chev" id="coordShtChev'+idx+'" style="margin-left:6px;"></i>'
         +'</div>'
       +'</div>'
+      +'<div style="display:flex;align-items:center;gap:8px;padding:10px 22px;border-top:1px solid #f1f5f9;background:#f8fafc;flex-wrap:wrap;"><span style="font-size:12px;font-weight:800;color:#1e3a8a;flex-shrink:0;"><i class="fa-solid fa-bus"></i> 퇴교 출발시간</span><span style="font-size:12px;font-weight:700;color:'+(_depAnn?'#16a34a':'#94a3b8')+';flex:1;min-width:70px;">'+_depTxt+'</span><select id="coordShtDepSel'+idx+'" onclick="event.stopPropagation();" style="padding:7px 10px;border:1.5px solid #cbd5e1;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;">'+_dopts+'</select><button onclick="event.stopPropagation(); coordSetDepartureFor(\''+_esc(r.rid)+'\', document.getElementById(\'coordShtDepSel'+idx+'\').value)" style="padding:7px 13px;background:#22c55e;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:800;cursor:pointer;white-space:nowrap;"><i class="fa-solid fa-bullhorn"></i> 저장</button>'+(_depAnn?'<button onclick="event.stopPropagation(); coordCancelDepartureFor(\''+_esc(r.rid)+'\')" style="padding:7px 11px;background:#f1f5f9;color:#64748b;border:1px solid #e2e8f0;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;">취소</button>':'')+'</div>'
       +'<div id="coordShtBody'+idx+'" style="display:none;border-top:1px solid #eef2f7;overflow-x:auto;"><table class="cpop-table" style="width:100%;table-layout:fixed;"><colgroup><col style="width:12%"><col style="width:30%"><col style="width:33%"><col style="width:25%"></colgroup><thead><tr><th>연번</th><th>성명</th><th>목적지</th><th>신청시간</th></tr></thead><tbody>'+rows+'</tbody></table></div>'
     +'</div>';
   }).join('');
