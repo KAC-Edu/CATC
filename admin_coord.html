@@ -1277,7 +1277,7 @@ body.pc-mode .app-header { border-radius:0 !important; }
 /* PC: 교육운영현황 히어로 블록 전체 숨김(요청) → 탭이 상단으로 */
 body.pc-mode .coord-hero { display:none !important; }
 /* PC 개별뷰 팝업 닫기 버튼 */
-.pc-indiv-close { display:none; }
+.pc-indiv-close { display:none !important; }
 body.pc-mode .pc-indiv-close {
     display:flex; position:sticky; top:0; margin-left:auto; align-self:flex-end;
     width:38px; height:38px; align-items:center; justify-content:center;
@@ -1287,8 +1287,8 @@ body.pc-mode .pc-indiv-close {
 body.pc-mode .pc-indiv-close:hover { background:#f1f5f9; color:#0f172a; }
 body.pc-mode #sideMenu .pc-hide { display:none !important; }
 .pc-indiv-bottomclose { display:none; }
-body.pc-mode .pc-indiv-bottomclose { display:flex; align-items:center; justify-content:center; gap:8px; width:100%; margin-top:8px; padding:14px; border:none; border-radius:12px; background:#64748b; color:#fff; font-weight:800; font-size:14px; cursor:pointer; }
-body.pc-mode .pc-indiv-bottomclose:hover { background:#475569; }
+body.pc-mode .pc-indiv-bottomclose { display:flex; align-items:center; justify-content:center; width:50px; height:50px; margin:10px auto 2px; padding:0; border:1px solid #e2e8f0; border-radius:50%; background:#fff; color:#64748b; font-weight:800; font-size:26px; line-height:1; cursor:pointer; transition:all .2s ease; }
+body.pc-mode .pc-indiv-bottomclose:hover { background:#ef4444; color:#fff; border-color:#ef4444; transform:rotate(90deg); }
 body.pc-mode #indCourseHeader { grid-column:1 / -1 !important; border-radius:16px !important; }
 body.pc-mode .dashboard-split { display:flex !important; flex-direction:row !important; gap:8px !important; align-items:stretch !important; }
 body.pc-mode .dashboard-split .col-1-4 { width:auto !important; flex:1 !important; }
@@ -1549,16 +1549,16 @@ body.pc-mode .entry-box:hover, body.pc-mode .entry-box-tablet:hover {
 /* 닫힘=아래(펼치기 유도) · 열림=위. '>' 회전 제거, 명확한 원형 화살표 사용 */
 .acc .acc-ic{ transform:rotate(180deg); }
 .acc.collapsed .acc-ic{ transform:rotate(0deg); }
-/* [청렴관 1층 스타일] 과정 상세 팝업 — 공지/외출명단 헤더를 하늘색 바로, 여백 최소화 */
-#ind-notice-card, #ind-outing-card { background:#fff !important; padding:8px !important; border:1px solid #e8edf5 !important; margin-bottom:10px !important; }
+/* [청렴관 1층 스타일] 과정 상세 팝업 — 공지/외출명단 헤더를 카드 전체 폭 하늘색 바로 */
+#ind-notice-card, #ind-outing-card { background:#fff !important; padding:0 !important; border:1px solid #cdddff !important; border-radius:12px !important; overflow:hidden !important; margin-bottom:10px !important; }
 #ind-notice-card .acc-h, #ind-outing-card .section-title {
-    background:#eef4ff !important; border:1px solid #cdddff !important; border-radius:10px !important;
-    padding:11px 14px !important; margin-bottom:0 !important; border-bottom:none !important;
-    cursor:pointer; transition:background .15s ease, border-color .15s ease;
+    background:#eef4ff !important; border:none !important; border-radius:0 !important;
+    padding:14px 16px !important; margin-bottom:0 !important; border-bottom:none !important;
+    cursor:pointer; transition:background .15s ease;
 }
-#ind-notice-card:not(.collapsed) .acc-h, #ind-outing-card:not(.collapsed) .section-title { margin-bottom:10px !important; }
-#ind-notice-card .acc-h:hover, #ind-outing-card .section-title:hover { background:#e2ecff !important; border-color:#2563eb !important; }
+#ind-notice-card .acc-h:hover, #ind-outing-card .section-title:hover { background:#e2ecff !important; }
 #ind-notice-card .acc-h > span:first-child, #ind-outing-card .section-title > span:first-child { color:#2563eb !important; }
+#ind-notice-card .acc-body, #ind-outing-card .acc-body { padding:14px 16px !important; }
 #ind-outing-card .section-title { flex-wrap:wrap !important; row-gap:8px; }
 #ind-outing-card .section-title > span:first-child { min-width:0; }
 .apm-card{ background:#fff; border:1px solid #e2e8f0; border-radius:12px; padding:13px 15px; margin-bottom:10px; }
@@ -2052,11 +2052,11 @@ body.pc-mode .coord-right{ justify-self:end !important; }
 
 
           <div id="ind-outing-card" class="section-card acc collapsed" style="margin-bottom: 14px; background:white; padding:16px; border:1px solid #e2e8f0;">
-              <div class="section-title" style="color:#1e293b; margin-bottom:12px; padding-bottom:10px; border-bottom:2px solid #e2e8f0; justify-content:space-between; flex-wrap:nowrap; align-items:center; gap:8px;">
-                  <span onclick="toggleAcc(this)" style="white-space:nowrap; font-size:13px; font-weight:800; flex-shrink:0; cursor:pointer;"><i class="fa-solid fa-user-clock"></i> 외출/외박 신청자 명단 <i class="fa-solid fa-circle-chevron-down acc-ic"></i></span>
+              <div class="section-title" onclick="toggleAcc(this)" style="color:#1e293b; margin-bottom:12px; padding-bottom:10px; border-bottom:2px solid #e2e8f0; justify-content:space-between; flex-wrap:nowrap; align-items:center; gap:8px; cursor:pointer;">
+                  <span style="white-space:nowrap; font-size:13px; font-weight:800; flex-shrink:0;"><i class="fa-solid fa-user-clock"></i> 외출/외박 신청자 명단 <i class="fa-solid fa-circle-chevron-down acc-ic"></i></span>
                   <div style="display:flex; gap:5px; flex-shrink:0;">
-                      <button class="navy-btn" style="width:auto; padding:0 8px; height:30px; font-size:11px; background:#eff6ff; border:1px solid #bfdbfe; color:#1e40af; white-space:nowrap;" onclick="openAttendanceSheet()"><i class="fa-solid fa-clipboard-user"></i> 출석부</button>
-                      <button class="navy-btn" style="width:auto; padding:0 8px; height:30px; font-size:11px; background:#1e293b; color:#ffffff; border:1px solid #334155; white-space:nowrap;" onclick="openOutingLedger()"><i class="fa-solid fa-book"></i> 외출대장</button>
+                      <button class="navy-btn" style="width:auto; padding:0 8px; height:30px; font-size:11px; background:#eff6ff; border:1px solid #bfdbfe; color:#1e40af; white-space:nowrap;" onclick="event.stopPropagation(); openAttendanceSheet()"><i class="fa-solid fa-clipboard-user"></i> 출석부</button>
+                      <button class="navy-btn" style="width:auto; padding:0 8px; height:30px; font-size:11px; background:#1e293b; color:#ffffff; border:1px solid #334155; white-space:nowrap;" onclick="event.stopPropagation(); openOutingLedger()"><i class="fa-solid fa-book"></i> 외출대장</button>
                   </div>
               </div>
               <div class="acc-body"><div style="overflow-x: auto; background:rgba(255,255,255,0.1); border-radius:10px; overflow:hidden; border:1px solid rgba(255,255,255,0.2);">
@@ -7213,10 +7213,19 @@ function openShuttleSummary(){
   const rooms=_coordActiveRooms();
   let blocks=rooms.map(r=>{ const reqs=r.room.shuttle&&r.room.shuttle.requests; const arr=reqs?Object.values(reqs):[]; const tot=arr.length;
     const c={osong:0,terminal:0,airport:0,car:0}; arr.forEach(x=>{ if(c[x.type]!==undefined) c[x.type]++; });
-    return `<div style="display:flex;align-items:center;gap:18px;border:1px solid #eef2f7;border-radius:14px;padding:16px 22px;margin-bottom:10px;">
-      <div style="flex:1;min-width:0;"><div style="font-size:11px;color:#2563eb;font-weight:800;">ROOM ${_esc(r.rid)}</div><div style="font-size:17px;font-weight:900;color:#0f172a;word-break:keep-all;">${_esc(r.s.courseName||'-')}</div>
-        <div style="font-size:12px;color:#94a3b8;font-weight:700;margin-top:4px;">오송 ${c.osong} · 터미널 ${c.terminal} · 공항 ${c.airport} · 자차 ${c.car}</div></div>
-      <div style="text-align:center;flex-shrink:0;"><div style="font-size:12px;color:#64748b;font-weight:800;">신청</div><div style="font-size:36px;font-weight:900;color:#2563eb;line-height:1;">${tot}</div><div style="font-size:11px;color:#94a3b8;font-weight:700;">명</div></div>
+    return `<div class="csec-card" style="display:flex;align-items:center;gap:18px;padding:18px 22px;margin-bottom:12px;">
+      <div style="flex:1;min-width:0;">
+        <span class="crow-room">ROOM ${_esc(r.rid)}</span>
+        <div style="font-size:18px;font-weight:900;color:#0f172a;word-break:keep-all;margin-top:8px;">${_esc(r.s.courseName||'-')}</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:22px;flex-shrink:0;">
+        <div style="text-align:center;min-width:44px;"><div style="font-size:12.5px;font-weight:800;color:#64748b;">자차</div><div style="font-size:27px;font-weight:900;color:#64748b;line-height:1.15;">${c.car}</div></div>
+        <div style="text-align:center;min-width:44px;"><div style="font-size:12.5px;font-weight:800;color:#ef4444;">오송역</div><div style="font-size:27px;font-weight:900;color:#ef4444;line-height:1.15;">${c.osong}</div></div>
+        <div style="text-align:center;min-width:44px;"><div style="font-size:12.5px;font-weight:800;color:#3b82f6;">터미널</div><div style="font-size:27px;font-weight:900;color:#3b82f6;line-height:1.15;">${c.terminal}</div></div>
+        <div style="text-align:center;min-width:44px;"><div style="font-size:12.5px;font-weight:800;color:#10b981;">공항</div><div style="font-size:27px;font-weight:900;color:#10b981;line-height:1.15;">${c.airport}</div></div>
+        <div style="width:1px;height:46px;background:#e2e8f0;"></div>
+        <div style="text-align:center;min-width:58px;"><div style="font-size:12.5px;font-weight:800;color:#0f172a;">총 신청</div><div style="font-size:37px;font-weight:900;color:#1e3a8a;line-height:1.1;">${tot}</div></div>
+      </div>
     </div>`;
   }).join('');
   if(!blocks.trim()) blocks='<div class="cpop-empty">신청된 퇴교차량이 없습니다.</div>';
@@ -7439,7 +7448,7 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
           +'<div class="csec-card-head" onclick="coordToggleEnroll('+ei+')" style="cursor:pointer;display:flex;align-items:center;gap:14px;padding:14px 16px;">'
             +'<span class="crow-room">ROOM '+esc(r.rid)+'</span>'
             +'<div style="flex:1;min-width:0;"><div class="crow-name">'+esc(r.s.courseName||'-')+'</div></div>'
-            +'<span class="cstat-line">입교 <b style="color:#16a34a;">'+arrived+'</b> &nbsp;·&nbsp; 예정 <b style="color:#2563eb;">'+expected+'</b></span>'
+            +'<span class="cstat-line">입교 <b style="color:#16a34a;">'+arrived+'</b> &nbsp;·&nbsp; 예정 <b style="color:#2563eb;">'+total+'</b></span>'
             +'<span class="cstat-pill">입교율 '+(total>0?Math.round(arrived/total*100):0)+'%</span>'
             +'<button onclick="event.stopPropagation(); coordOpenRosterFor(\''+esc(r.rid)+'\')" title="이 과정 명단 업로드/확인" style="flex-shrink:0;padding:7px 12px;background:#2563eb;color:#fff;border:none;border-radius:9px;font-weight:800;font-size:12px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;"><i class="fa-solid fa-file-arrow-up"></i> 명단 업로드</button>'
             +'<i class="fa-solid fa-chevron-down crow-chev" id="coordEnrChev'+ei+'"></i>'
@@ -7496,13 +7505,10 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
   };
   function _coordInjectClose(){
     var v=document.getElementById('individualStatusView'); if(!v) return;
-    if(!v.querySelector('.pc-indiv-close')){
-      var b=document.createElement('button'); b.className='pc-indiv-close'; b.innerHTML='×'; b.title='닫기';
-      b.onclick=function(){ try{ if(typeof handleBackNav==='function') handleBackNav(); }catch(e){} };
-      v.insertBefore(b, v.firstChild);
-    }
+    // 상단 X 제거: 더 이상 주입하지 않음 (하단 X 버튼만 사용)
+    var legacy=v.querySelector('.pc-indiv-close'); if(legacy) legacy.remove();
     if(!v.querySelector('.pc-indiv-bottomclose')){
-      var bb=document.createElement('button'); bb.className='pc-indiv-bottomclose'; bb.innerHTML='<i class="fa-solid fa-xmark"></i> 닫기';
+      var bb=document.createElement('button'); bb.className='pc-indiv-bottomclose'; bb.innerHTML='×'; bb.title='닫기';
       bb.onclick=function(){ try{ if(typeof handleBackNav==='function') handleBackNav(); }catch(e){} };
       v.appendChild(bb);
     }
