@@ -464,7 +464,7 @@
                 <i class="fa-solid fa-expand"></i>
             </div>
         </div>
-        <img src="logo.png" alt="Logo" class="kac-logo" onerror="this.style.display='none'">
+        <img src="logo.png" alt="Logo" class="kac-logo" onclick="ui.goHomePortal()" title="항공기술훈련원 통합 교육 현황판으로 이동" style="cursor:pointer;" onerror="this.style.display='none'">
     </div>
 </header>
 
@@ -2261,7 +2261,7 @@ function setupAcc(btn){
 
 
 <!-- [추가] 우측 하단 플로팅 홈 버튼 -->
-    <div id="floatingHomeBtn" class="floating-home-btn" onclick="ui.setMode('dashboard')">
+    <div id="floatingHomeBtn" class="floating-home-btn" onclick="ui.goHomeSmart()">
         <i class="fa-solid fa-house"></i>
         <span>홈으로</span>
     </div>
@@ -2625,6 +2625,6 @@ function setupAcc(btn){
 </div>
 <style>@media print{#__catcVer{display:none!important}}</style>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vVW</div>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vVX</div>
 </body>
 </html>

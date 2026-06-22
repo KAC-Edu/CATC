@@ -5184,6 +5184,12 @@ resetShuttleRequests: function() {
         ui.setMode('home');
     },
 
+    // [홈으로] 과정에 들어가 있으면 그 과정 현황(dashboard), 아니면 통합 교육 현황판(home)
+    goHomeSmart: function() {
+        if (state.room) { ui.setMode('dashboard'); }
+        else { ui.goHomePortal(); }
+    },
+
     // ── 헤더 날짜/시간 실시간 시계 (Pill 위젯, 요일 포함) ──
     startHeaderClock: function() {
         const DAYS = ['SUN','MON','TUE','WED','THU','FRI','SAT'];
@@ -10460,7 +10466,7 @@ ui.foodNewsRouteById=function(id){
 };
 
 /* __JSVER_STAMP__ */
-(function stampJsVer(){try{var b=document.getElementById('__catcVer');if(b){if(b.textContent.indexOf('Js')<0)b.textContent=b.textContent+'\u00b7Js';}else{setTimeout(stampJsVer,200);}}catch(e){}})();
+(function stampJsVer(){try{var b=document.getElementById('__catcVer');if(b){if(b.textContent.indexOf('Jt')<0)b.textContent=b.textContent+'\u00b7Jt';}else{setTimeout(stampJsVer,200);}}catch(e){}})();
 
 /* ===== [공항별 입교 현황 지도] 수강생현황 → 지도로 보기 ===== */
 ui._mapRegions = {
