@@ -4154,3 +4154,21 @@ button[onclick*="allIdle"]{
 }
 body.night-mode .side-rail-btn{ background:#1e293b; border-color:#334155; }
 body.night-mode .side-rail-lbl{ color:#cbd5e1; }
+
+/* ── 7. 입교안내 PDF 전체화면: 와이드 모니터에서 한 페이지만 중앙 레터박스 ── */
+#pdfWrapper:fullscreen,
+#pdfWrapper:-webkit-full-screen{
+  width:100vw !important; height:100vh !important; max-width:none !important;
+  display:flex !important; align-items:center !important; justify-content:center !important;
+  background:#000 !important; margin:0 !important; padding:0 !important; overflow:hidden !important;
+  cursor:pointer;
+}
+#pdfWrapper:fullscreen > #guideCanvas,
+#pdfWrapper:-webkit-full-screen > #guideCanvas{
+  max-width:100vw !important; max-height:100vh !important;
+  border-radius:0 !important; box-shadow:none !important; display:block !important;
+}
+#pdfWrapper:fullscreen > #guideProfile,
+#pdfWrapper:-webkit-full-screen > #guideProfile{
+  width:92vw !important; max-width:1180px !important; max-height:94vh !important; overflow:auto !important;
+}
