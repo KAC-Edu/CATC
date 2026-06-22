@@ -1215,13 +1215,17 @@ body.pc-mode .coord-pc-tabs {
 body.pc-mode .coord-psec-only { display:block; }
 body.pc-mode .coord-sec-panel { background:#fff; border:1px solid #eef2f7; border-radius:18px; padding:26px 28px; box-shadow:0 4px 14px rgba(15,23,42,.05); margin-top:4px; }
 /* ── 섹션 헤더: 청렴관 1층(방마스터) 스타일 ── */
-.coord-sec-head { display:flex; align-items:center; justify-content:space-between; gap:14px; margin-bottom:18px; padding:14px 16px; background:#eef4ff; border:1px solid #cdddff; border-radius:11px; flex-wrap:wrap; transition:background .15s ease, border-color .15s ease; }
+.coord-sec-head { display:flex; align-items:center; justify-content:space-between; gap:14px; margin-bottom:18px; padding:14px 16px; min-height:64px; box-sizing:border-box; background:#eef4ff; border:1px solid #cdddff; border-radius:11px; flex-wrap:wrap; transition:background .15s ease, border-color .15s ease; }
 .coord-sec-head:hover { background:#e2ecff; border-color:#2563eb; }
 .coord-sec-head h2 { margin:0; font-size:19px; font-weight:900; color:#2563eb; display:flex; align-items:center; gap:9px; line-height:1; letter-spacing:-.3px; }
 .coord-sec-head h2 i { color:#2563eb; font-size:17px; line-height:1; }
 /* ── 표준 과정 행(.crow): 섹션 2·3·4 공통 ── */
 .crow { display:flex; align-items:center; gap:14px; width:100%; box-sizing:border-box; min-height:66px; padding:14px 16px; background:#fff; border:1.5px solid #e8edf5; border-radius:14px; transition:background .15s, box-shadow .15s, border-color .15s, transform .12s; }
 .crow:hover { border-color:#2563eb; background:linear-gradient(135deg,#eff6ff 0%,#dbeafe 100%); box-shadow:0 8px 22px rgba(37,99,235,.18); }
+.csec-card { border:1.5px solid #e8edf5; border-radius:14px; overflow:hidden; transition:border-color .15s, box-shadow .15s; }
+.csec-card:hover { border-color:#2563eb; box-shadow:0 8px 22px rgba(37,99,235,.18); }
+.csec-card-head { background:#fff; transition:background .15s; }
+.csec-card:hover > .csec-card-head { background:linear-gradient(135deg,#eff6ff 0%,#dbeafe 100%); }
 .crow.clickable { cursor:pointer; }
 .crow.clickable:active { transform:scale(.995); }
 .crow-room { flex-shrink:0; background:#2563eb; color:#fff; font-weight:800; font-size:12px; letter-spacing:.3px; padding:6px 12px; border-radius:8px; white-space:nowrap; }
@@ -1240,13 +1244,13 @@ body.pc-mode .coord-sec-panel { background:#fff; border:1px solid #eef2f7; borde
 .cmeta .mv { font-size:14px; color:#0f172a; font-weight:800; margin-top:3px; }
 .cmeta-div { width:1px; height:30px; background:#e8edf5; flex-shrink:0; }
 /* 섹션3·4 우측 요약 */
-.cstat-line { font-size:12px; color:#64748b; font-weight:700; white-space:nowrap; width:150px; text-align:right; flex-shrink:0; }
+.cstat-line { font-size:14px; color:#475569; font-weight:700; white-space:nowrap; width:172px; text-align:right; flex-shrink:0; }
 .cstat-line b { display:inline-block; min-width:18px; text-align:right; }
-.cstat-pill { background:#eef4ff; color:#1e3a8a; font-weight:900; font-size:14px; padding:6px 13px; border-radius:9px; white-space:nowrap; min-width:78px; text-align:center; flex-shrink:0; }
+.cstat-pill { background:#eef4ff; color:#1e3a8a; font-weight:900; font-size:15px; padding:7px 14px; border-radius:9px; white-space:nowrap; min-width:92px; text-align:center; flex-shrink:0; }
 .cstat-pill.amber { background:#fff5ec; color:#c2410c; }
 #csecAnnualPreview table.cpop-table thead th { background:#1e3a8a !important; color:#fff !important; border-bottom:none !important; }
 .coord-sec-actions { display:flex; gap:9px; flex-wrap:wrap; }
-.csec-btn { display:inline-flex; align-items:center; gap:7px; padding:11px 17px; border-radius:11px; font-size:13.5px; font-weight:800; cursor:pointer; border:1px solid transparent; transition:all .15s; }
+.csec-btn { display:inline-flex; align-items:center; gap:7px; height:36px; padding:0 16px; box-sizing:border-box; border-radius:11px; font-size:13.5px; font-weight:800; cursor:pointer; border:1px solid transparent; transition:all .15s; }
 .csec-btn.primary { background:#003366; color:#fff; }
 .csec-btn.primary:hover { background:#0055aa; box-shadow:0 5px 14px rgba(0,51,102,.28); }
 .csec-btn.ghost { background:#fff; color:#1e40af; border-color:#dbe7fb; }
@@ -1592,9 +1596,6 @@ body.pc-mode .entry-box:hover, body.pc-mode .entry-box-tablet:hover {
         <button class="menu-tile pc-hide" style="background:#1e293b;" onclick="openCenterQrModal(); toggleMenu(false);">
             <i class="fa-solid fa-qrcode"></i> 행정 접속 QR
         </button>
-        <button class="menu-tile pc-hide" style="background:#003366;" onclick="annualPlanMgrCoord.openEditorModal()">
-            <i class="fa-solid fa-calendar-days"></i> 연간계획
-        </button>
         <button class="menu-tile pc-hide" style="background:#0d9488;" onclick="openAttendanceManager(); toggleMenu(false);">
             <i class="fa-solid fa-clipboard-user"></i> 출석부 관리
         </button>
@@ -1660,18 +1661,18 @@ body.pc-mode .entry-box:hover, body.pc-mode .entry-box-tablet:hover {
 .t-full{ display:none; }
 .coord-brand-mark i{ color:#dbeafe; font-size:16px; }
 .coord-brand-title{ margin:0; font-size:15px; font-weight:900; color:#fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.coord-clock{ color:#fff; display:flex; align-items:center; gap:7px; white-space:nowrap; flex-shrink:0; }
+.coord-clock{ color:#fff; display:flex; align-items:center; gap:8px; white-space:nowrap; flex-shrink:0; align-self:center; line-height:1; }
 .coord-right{ display:flex; align-items:center; gap:8px; flex:1; justify-content:flex-end; }
 .coord-pc-only{ display:none; }
 body.pc-mode .coord-pc-only{ display:flex !important; }
-#coordHeaderClock .hc-date{ font-size:11px; font-weight:400; opacity:.75; }
-#coordHeaderClock .hc-day{ font-size:10px; font-weight:600; opacity:.6; }
-#coordHeaderClock .hc-div{ width:1px; height:16px; background:rgba(255,255,255,.2); }
-#coordHeaderClock .hc-time{ font-size:16px; font-weight:800; font-family:'Consolas','Roboto Mono',monospace; }
-#coordHeaderClock .hc-ampm{ font-size:10px; font-weight:700; margin-left:3px; color:#93c5fd; }
+#coordHeaderClock .hc-date{ font-size:13px; font-weight:500; opacity:.8; }
+#coordHeaderClock .hc-day{ font-size:12px; font-weight:600; opacity:.7; }
+#coordHeaderClock .hc-div{ width:1px; height:18px; background:rgba(255,255,255,.25); }
+#coordHeaderClock .hc-time{ font-size:21px; font-weight:800; font-family:'Consolas','Roboto Mono',monospace; line-height:1; }
+#coordHeaderClock .hc-ampm{ font-size:12px; font-weight:700; margin-left:3px; color:#93c5fd; }
 @keyframes blink-kst{ to{ visibility:hidden; } }
 #coordHeaderClock .hc-blink{ animation:blink-kst 1s steps(2,start) infinite; }
-@media (max-width:430px){ .coord-clock{ display:none; } }
+@media (max-width:360px){ .coord-clock{ display:none; } }
 @media (max-width:560px){ .coord-brand-title{ font-size:14px; } }
 /* PC 모드 — 지원부와 동일한 형태(브랜드 + 중앙 시계 pill) */
 body.pc-mode .app-header{ display:grid !important; grid-template-columns:minmax(220px,1fr) auto minmax(180px,1fr) !important; gap:18px !important; align-items:center !important; min-height:76px !important; padding:14px 32px !important; background:linear-gradient(135deg,#111827 0%,#172554 46%,#2563eb 100%) !important; width:100vw !important; margin-left:calc(50% - 50vw) !important; }
@@ -1835,7 +1836,7 @@ body.pc-mode .coord-right{ justify-self:end !important; }
 
     <!-- ✅ [복구 완료] 현재 운영 중인 과정 리스트 섹션 (= 섹션 2) -->
     <div id="csec-2" class="section-card" style="background:white; padding:18px 16px; border:1px solid #eef2f7; box-shadow:0 4px 14px rgba(15,23,42,0.05);">
-        <div class="section-title" style="color:#1e3a8a; font-size:19px; font-weight:900; margin-bottom:18px; padding:14px 18px; background:linear-gradient(90deg,#eef3ff 0%,#f2f0fe 100%); border:1px solid #e0e7fb; border-left:5px solid #4f6ef2; border-radius:12px; display:flex; align-items:center; gap:10px;"><i class="fa-solid fa-list-ul" style="color:#4f6ef2;"></i> 현재 운영 중인 과정</div>
+        <div class="coord-sec-head"><h2><i class="fa-solid fa-list-ul"></i> 현재 운영 중인 과정</h2></div>
         <div id="activeCourseList" style="display:flex; flex-direction:column; gap:8px;">
             <!-- 자바스크립트가 여기에 ROOM A, ROOM C 등의 카드를 채워넣습니다 -->
         </div>
@@ -3678,7 +3679,7 @@ function renderCourseSelectors() {
                     <span style="background:linear-gradient(135deg,#2563eb,#1d4ed8); color:#fff; font-weight:800; font-size:12px; letter-spacing:.3px; padding:7px 12px; border-radius:9px; flex-shrink:0; box-shadow:0 3px 8px rgba(37,99,235,.28);">ROOM ${rid}</span>
                     <div style="flex:1; min-width:0;">
                         <div style="font-weight:900; font-size:17px; color:var(--navy-dark); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${cName}</div>
-                        <div style="font-size:12px; color:#94a3b8; font-weight:700; margin-top:3px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">담임 <b style="color:#475569;">${_profNm||'-'}</b> &nbsp;·&nbsp; 담당 <b style="color:#475569;">${(settings.coordinatorName||'-')}</b></div>
+                        <div style="font-size:12px; color:#94a3b8; font-weight:700; margin-top:3px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">담임 <b style="color:#475569;">${_coordStripRank(_profNm)||'-'}</b> &nbsp;·&nbsp; 담당 <b style="color:#475569;">${_coordStripRank(settings.coordinatorName)||'-'}</b></div>
                     </div>
                     <span class="course-chevron" style="margin-left:4px;"><i class="fa-solid fa-chevron-right"></i></span>
                 </div>
@@ -6378,6 +6379,15 @@ if (_origHRS) {
 async function openRosterUpload() {
     const m = document.getElementById('rosterUploadModal');
     if (m) m.style.display = 'flex';
+    // [상태 초기화] 다른 과정(다른 강의실) 명단이 남아 보이지 않도록 모달 열 때마다 초기화
+    _coordRosterData = [];
+    _coordSharedRosterData = null;
+    _coordScheduleData = null;
+    var _tbReset = document.getElementById('coordRosterBody');
+    if (_tbReset) _tbReset.innerHTML = '<tr><td colspan="5" style="padding:24px; text-align:center; color:#94a3b8;">\ud30c\uc77c\uc744 \uc5c5\ub85c\ub4dc\ud558\uba74 \uba85\ub2e8\uc774 \ud45c\uc2dc\ub429\ub2c8\ub2e4</td></tr>';
+    var _cntReset = document.getElementById('coordRosterCount'); if (_cntReset) _cntReset.textContent = '';
+    var _stReset = document.getElementById('coordRosterStatus'); if (_stReset) _stReset.textContent = '';
+    var _shReset = document.getElementById('coordRosterSharedBox'); if (_shReset) _shReset.textContent = '\uc9c0\uc6d0\ubd80 \uacf5\uc720 \uba85\ub2e8 \ud655\uc778 \uc911...';
     coordLoadSharedRoster();
     coordReloadSavedRoster();   // 이전에 저장한 교육운영부 명단이 있으면 표에 복원
     // [잠금 연동] 지원부가 이 주차를 잠갔으면 안내 표시 (업로드/저장은 별도 가드로 차단됨)
@@ -6696,6 +6706,7 @@ function _coordFullName(nm){
     try{ _coordLoadTitleMap(); }catch(e){}
     return nm;
 }
+window._coordStripRank = function(n){ return String(n==null?'':n).replace(/\s*(차장|부장|팀장|실장|원장|과장|대리|주임|사원|교수)\s*$/,'').trim(); };
 // [JDS260613] 메인 헤더 '과정담당'에 직책을 무조건 포함해 표시 (저장값이 "장영근"이어도 "장영근 과장"으로 표기)
 function _coordRefreshCoordTitle(roomObj) {
     const el = document.getElementById('ind-coord');
@@ -7375,9 +7386,9 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
         +'<span class="crow-room">ROOM '+esc(r.rid)+'</span>'
         +'<div class="crow-main"><div class="crow-name">'+esc(r.s.courseName||'-')+'</div></div>'
         +'<div class="crow-chips">'
-          +'<div class="cmeta"><span class="ml">담임교수</span><span class="mv">'+esc(prof||'-')+'</span></div>'
+          +'<div class="cmeta"><span class="ml">담임교수</span><span class="mv">'+esc(_coordStripRank(prof)||'-')+'</span></div>'
           +'<div class="cmeta-div"></div>'
-          +'<div class="cmeta"><span class="ml">과정담당</span><span class="mv">'+esc(r.s.coordinatorName||'-')+'</span></div>'
+          +'<div class="cmeta"><span class="ml">과정담당</span><span class="mv">'+esc(_coordStripRank(r.s.coordinatorName)||'-')+'</span></div>'
         +'</div>'
         +'<i class="fa-solid fa-chevron-right crow-chev"></i>'
       +'</div>';
@@ -7424,12 +7435,12 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
           var ar=arrivedSet[norm(s.name)];
           return '<tr><td style="text-align:center;color:#94a3b8;">'+(i+1)+'</td><td style="color:#475569;">'+esc(s.dept||s.affil||s.org||'-')+'</td><td style="color:#64748b;white-space:nowrap;">'+esc(s.empNo||s.sabun||s.id||'-')+'</td><td style="font-weight:800;">'+esc(s.name||'-')+'</td><td style="text-align:center;">'+(ar?'<span style="color:#16a34a;font-weight:800;">입교</span>':'<span style="color:#2563eb;font-weight:700;">예정</span>')+'</td></tr>';
         }).join('') : '<tr><td colspan="5" style="text-align:center;color:#94a3b8;padding:18px;">등록된 명단이 없습니다.</td></tr>';
-        return '<div style="border:1.5px solid #e8edf5;border-radius:14px;overflow:hidden;margin-bottom:10px;">'
-          +'<div onclick="coordToggleEnroll('+ei+')" style="cursor:pointer;display:flex;align-items:center;gap:14px;background:#fff;padding:14px 16px;">'
+        return '<div class="csec-card" style="margin-bottom:10px;">'
+          +'<div class="csec-card-head" onclick="coordToggleEnroll('+ei+')" style="cursor:pointer;display:flex;align-items:center;gap:14px;padding:14px 16px;">'
             +'<span class="crow-room">ROOM '+esc(r.rid)+'</span>'
             +'<div style="flex:1;min-width:0;"><div class="crow-name">'+esc(r.s.courseName||'-')+'</div></div>'
             +'<span class="cstat-line">입교 <b style="color:#16a34a;">'+arrived+'</b> &nbsp;·&nbsp; 예정 <b style="color:#2563eb;">'+expected+'</b></span>'
-            +'<span class="cstat-pill">계 '+total+'명</span>'
+            +'<span class="cstat-pill">입교율 '+(total>0?Math.round(arrived/total*100):0)+'%</span>'
             +'<button onclick="event.stopPropagation(); coordOpenRosterFor(\''+esc(r.rid)+'\')" title="이 과정 명단 업로드/확인" style="flex-shrink:0;padding:7px 12px;background:#2563eb;color:#fff;border:none;border-radius:9px;font-weight:800;font-size:12px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;"><i class="fa-solid fa-file-arrow-up"></i> 명단 업로드</button>'
             +'<i class="fa-solid fa-chevron-down crow-chev" id="coordEnrChev'+ei+'"></i>'
           +'</div>'
@@ -7466,8 +7477,8 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
         var stat=a.returned?'<span style="color:#16a34a;font-weight:800;">복귀</span>':(a.confirmed?'<span style="color:#2563eb;font-weight:700;">서명완료</span>':'<span style="color:#94a3b8;">대기</span>');
         return '<tr><td style="color:#94a3b8;">'+(i+1)+'</td><td style="font-weight:800;">'+esc(a.name||'-')+'</td><td>'+kind+'</td><td style="color:#64748b;white-space:nowrap;">'+t+'</td><td>'+stat+'</td></tr>';
       }).join('') : '<tr><td colspan="5" style="text-align:center;color:#94a3b8;padding:18px;">금일 외출·외박 신청이 없습니다.</td></tr>';
-      return '<div style="border:1.5px solid #e8edf5;border-radius:14px;overflow:hidden;">'
-        +'<div onclick="coordToggleOuting('+idx+')" style="cursor:pointer;display:flex;align-items:center;gap:14px;padding:14px 16px;background:#fff;">'
+      return '<div class="csec-card">'
+        +'<div class="csec-card-head" onclick="coordToggleOuting('+idx+')" style="cursor:pointer;display:flex;align-items:center;gap:14px;padding:14px 16px;">'
           +'<span class="crow-room">ROOM '+esc(r.rid)+'</span>'
           +'<span style="flex:1;min-width:0;"><span class="crow-name" style="display:block;">'+esc(r.s.courseName||'-')+'</span></span>'
           +'<span class="cstat-pill amber">금일 '+cnt+'건</span>'
