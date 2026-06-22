@@ -4142,11 +4142,23 @@ function renderAdminList(todayData, yesterdayData) {
                 const timeStr = new Date(item.timestamp).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
                 const targetDate = isYesterday ? getYesterdayString() : getTodayString();
 
-                // 복귀 여부 표시
-                const isReturned = item.returned === true || item.returnReportTime;
-                const returnedBadge = isReturned
-                    ? '<span style="color:#10b981; font-weight:800; font-size:12px;">✅ 복귀완료</span>'
-                    : '<span style="color:#ef4444; font-weight:800; font-size:12px;">⏳ 미복귀</span>';
+                // 복귀 여부 / 미복귀(held) 표시
+                const isHeld = item.held === true;                                  // 미복귀 처리됨(자동복귀 제외)
+                const isReturned = !isHeld && (item.returned === true || !!item.returnReportTime);
+                let returnedBadge;
+                if (isHeld) {
+                    returnedBadge = '<span style="color:#dc2626; font-weight:800; font-size:12px;">🚫 미복귀</span>';
+                } else if (isReturned && item.autoReturn) {
+                    returnedBadge = '<span style="color:#0891b2; font-weight:800; font-size:12px;">✅ 복귀완료(자동)</span>';
+                } else if (isReturned) {
+                    returnedBadge = '<span style="color:#10b981; font-weight:800; font-size:12px;">✅ 복귀완료</span>';
+                } else {
+                    returnedBadge = '<span style="color:#f59e0b; font-weight:800; font-size:12px;">⏳ 대기</span>';
+                }
+                // 미복귀 체크박스: 이미 복귀완료한 사람은 표시하지 않음
+                const holdCellHtml = isReturned
+                    ? ''
+                    : `<div style="margin-top:5px;"><label style="display:inline-flex; align-items:center; gap:4px; cursor:pointer; font-size:11px; color:#dc2626; font-weight:700;"><input type="checkbox" ${isHeld ? 'checked' : ''} data-hold-token="${token}" data-hold-date="${targetDate}" style="cursor:pointer; accent-color:#dc2626; width:15px; height:15px; margin:0;"> 미복귀</label></div>`;
 
                 // tr 생성 (innerHTML 따옴표 충돌 방지 위해 DOM API 사용)
                 const returnedStr = isReturned ? 'true' : 'false';
@@ -4160,7 +4172,7 @@ function renderAdminList(todayData, yesterdayData) {
                     <td style="font-weight:bold;">${item.name}</td>
                     <td style="white-space:nowrap;">${item.phone}</td>
                     <td style="color:#94a3b8; font-size:13px; white-space:nowrap;">${timeStr}</td>
-                    <td style="text-align:center;">${returnedBadge}</td>
+                    <td style="text-align:center;">${returnedBadge}${holdCellHtml}</td>
                     <td>
                         <button class="btn-table-action cancel-btn" style="background-color:#64748b; font-size:11px; padding:5px 8px;" data-cancel-token="${token}" data-cancel-date="${targetDate}">
                             취소
@@ -4172,6 +4184,11 @@ function renderAdminList(todayData, yesterdayData) {
                 const cancelBtn = tr.querySelector('[data-cancel-token]');
                 if (cancelBtn) {
                     cancelBtn.addEventListener('click', () => ui.cancelIndividualAdminAction(targetDate, token));
+                }
+                // 미복귀 체크박스 이벤트 바인딩
+                const holdBox = tr.querySelector('[data-hold-token]');
+                if (holdBox) {
+                    holdBox.addEventListener('change', () => ui.setOutingHold(targetDate, token, holdBox.checked, holdBox));
                 }
 
                 tbody.appendChild(tr);
@@ -4286,6 +4303,23 @@ cancelIndividualAdminAction: function(date, token) {
         if(!confirm("해당 외출/외박 신청을 취소하시겠습니까?")) return;
         firebase.database().ref(`courses/${state.room}/admin_actions/${date}/${token}`).remove()
             .then(() => { ui.showAlert("✅ 신청 내역이 삭제되었습니다."); });
+    },
+
+    // [신규] 외출/외박 미복귀 처리 — 교육운영부와 동일한 held 플래그 사용
+    //  held:true → 자동 복귀완료(다음날 08:50) 제외 + 외출외박일지에 [미복귀] 이력
+    setOutingHold: function(date, token, checked, boxEl) {
+        if(!state.room) { if(boxEl) boxEl.checked = !checked; return; }
+        if(state.isObserver) { if(boxEl) boxEl.checked = !checked; return ui.showAlert("👁️ 옵저버는 미복귀 처리를 할 수 없습니다."); }
+        const ref = firebase.database().ref(`courses/${state.room}/admin_actions/${date}/${token}`);
+        if(checked) {
+            if(!confirm("해당 교육생을 미복귀로 표시할까요?\n\n사고·복귀 미완료 등에 사용합니다.\n표시하면 자동 복귀완료가 적용되지 않고, 외출외박일지에 미복귀로 기록됩니다.")) {
+                if(boxEl) boxEl.checked = false;   // 취소 시 체크 원복
+                return;
+            }
+            ref.update({ held:true, returned:null, autoReturn:null });
+        } else {
+            ref.update({ held:null });
+        }
     },
 
 
@@ -8393,13 +8427,105 @@ const lectureMonitor = {
 };
 
 // 파일 맨 아래 window.onload 부분도 이렇게 깔끔하게 바꿔야 실시간이 작동합니다!
-window.onload = function() { 
-    dataMgr.checkMobile(); 
-    profMgr.init();   
-    coordMgr.init(); 
+// ──────────────────────────────────────────────────────────────
+// [외출·외박 복귀 확인 팝업]
+//  다음날 08:50~08:59 사이에만, 어제 외출/외박자 중 '복귀완료를 누르지 않은(대기)' 인원을
+//  강사에게 정중히 확인. 미복귀 체크 시 held 처리(자동복귀 제외 + 일지 기록).
+//  09:00 이후에는 더 이상 노출하지 않으며, 미응답 인원은 기존 자동 복귀완료가 적용됨.
+// ──────────────────────────────────────────────────────────────
+const outingReturnCheck = {
+    _timer: null,
+    init: function() {
+        if (this._timer) clearInterval(this._timer);
+        // 1분마다 점검 (08:50~08:59 구간 진입 감지)
+        this._timer = setInterval(() => { try { this.maybeShow(); } catch (e) {} }, 60000);
+        setTimeout(() => { try { this.maybeShow(); } catch (e) {} }, 4000);
+    },
+    _inWindow: function() {
+        const n = new Date();
+        const mins = n.getHours() * 60 + n.getMinutes();
+        return mins >= (8 * 60 + 50) && mins < (9 * 60); // 08:50 ~ 08:59
+    },
+    maybeShow: async function() {
+        if (typeof firebase === 'undefined') return;
+        if (!state.room || state.isObserver) return;
+        if (!this._inWindow()) return;                      // 09:00 넘으면 노출 안 함
+        const modal = document.getElementById('outingReturnCheckModal');
+        if (!modal || modal.style.display === 'flex') return; // 이미 떠 있으면 중복 방지
+        const room = state.room;
+        const date = getYesterdayString();
+        try {
+            const ackSnap = await firebase.database().ref(`courses/${room}/returnCheckAck/${date}`).once('value');
+            if (ackSnap.val()) return;                      // 이미 확인 완료
+            const snap = await firebase.database().ref(`courses/${room}/admin_actions/${date}`).once('value');
+            const data = snap.val() || {};
+            // '복귀완료를 누르지 않은' 대기 인원만 (이미 복귀/미복귀 제외)
+            const pending = Object.keys(data)
+                .map(token => Object.assign({}, data[token], { token }))
+                .filter(a => a && a.name && !a.returned && !a.returnReportTime && a.held !== true);
+            if (!pending.length) return;                    // 대상 없으면 팝업 안 띄움
+            this._render(room, date, pending);
+        } catch (e) { /* 무시 */ }
+    },
+    _render: function(room, date, pending) {
+        const modal = document.getElementById('outingReturnCheckModal');
+        const listEl = document.getElementById('outingReturnCheckList');
+        if (!modal || !listEl) return;
+        modal.dataset.room = room;
+        modal.dataset.date = date;
+        const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+        listEl.innerHTML = pending.map(a => {
+            const kind = a.type === 'overnight' ? '외박' : (a.type === 'group_outing' ? '단체외출' : '외출');
+            return `<label style="display:flex; align-items:center; justify-content:space-between; gap:10px; padding:10px 12px; border:1px solid #fde68a; background:#fffbeb; border-radius:10px; cursor:pointer;">
+                <span style="font-weight:800; color:#92400e;">${esc(a.name)} <small style="color:#b45309; font-weight:600;">(${kind})</small></span>
+                <span style="display:inline-flex; align-items:center; gap:6px; font-size:12px; color:#dc2626; font-weight:800; white-space:nowrap;">
+                    <input type="checkbox" data-rc-token="${esc(a.token)}" style="width:17px; height:17px; accent-color:#dc2626; cursor:pointer;"> 미복귀
+                </span>
+            </label>`;
+        }).join('');
+        modal.style.display = 'flex';
+    },
+    confirm: async function() {
+        const modal = document.getElementById('outingReturnCheckModal');
+        if (!modal) return;
+        const room = modal.dataset.room, date = modal.dataset.date;
+        if (!room || !date) { modal.style.display = 'none'; return; }
+        const boxes = modal.querySelectorAll('[data-rc-token]');
+        const updates = {};
+        let heldCount = 0;
+        boxes.forEach(b => {
+            if (b.checked) {
+                const t = b.getAttribute('data-rc-token');
+                updates[`courses/${room}/admin_actions/${date}/${t}/held`] = true;
+                updates[`courses/${room}/admin_actions/${date}/${t}/returned`] = null;
+                updates[`courses/${room}/admin_actions/${date}/${t}/autoReturn`] = null;
+                heldCount++;
+            }
+        });
+        updates[`courses/${room}/returnCheckAck/${date}`] = { at: firebase.database.ServerValue.TIMESTAMP, by: state.sessionId || '', held: heldCount };
+        try { await firebase.database().ref().update(updates); } catch (e) {}
+        modal.style.display = 'none';
+        if (typeof ui !== 'undefined' && ui.showAlert) {
+            ui.showAlert(heldCount > 0
+                ? `✅ 확인 완료.\n미복귀 ${heldCount}명은 자동 복귀완료에서 제외되고 외출외박일지에 기록됩니다.`
+                : '✅ 확인 완료. 모두 정상 복귀로 처리되었습니다.');
+        }
+    },
+    dismiss: function() {
+        const modal = document.getElementById('outingReturnCheckModal');
+        if (modal) modal.style.display = 'none';
+    }
+};
+window.outingReturnCheck = outingReturnCheck;
+
+window.onload = function() {
+    dataMgr.checkMobile();
+    profMgr.init();
+    coordMgr.init();
     guideMgr.init();
     ui.startHeaderClock(); // 헤더 날짜/시간 시계 시작
-    dataMgr.initSystem(); 
+    dataMgr.initSystem();
+    outingReturnCheck.init(); // 외출·외박 복귀 확인 팝업(08:50~08:59) 점검 시작
     // [강의 모니터링] 마이크는 강의실에 입장(강의 시작)할 때 동의받아 켭니다. (lectureMonitor.syncStatus)
 };
 

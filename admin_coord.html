@@ -1296,7 +1296,7 @@ body.pc-mode .course-item-card:hover { box-shadow:0 6px 24px rgba(0,0,0,0.11) !i
 body.pc-mode #individualStatusView {
     position:fixed !important; left:50%; top:50%; transform:translate(-50%,-50%) !important;
     flex-direction:column !important; align-items:stretch !important;
-    width:min(720px, 94vw) !important; max-height:90vh !important; overflow-y:auto !important;
+    width:min(720px, 94vw) !important; max-height:94vh !important; overflow-y:auto !important;
     -webkit-overflow-scrolling:touch; gap:14px !important;
     padding:22px !important; background:#f1f5f9 !important; border-radius:20px !important;
     box-shadow:0 0 0 100vmax rgba(15,23,42,.55), 0 30px 80px rgba(0,0,0,.45) !important;
@@ -2051,7 +2051,7 @@ body.pc-mode .coord-right{ justify-self:end !important; }
     <textarea id="courseNotice" class="notice-area"
         onclick="clearLastNoticePlaceholder(this)"
         oninput="onNoticeInput(this)"
-        style="background:#eff6ff; color:#1e40af; font-style:italic; border:1.5px solid #bfdbfe; border-radius:10px; font-size:14px; padding:12px;"
+        style="background:#eff6ff; color:#1e40af; font-style:italic; border:1.5px solid #bfdbfe; border-radius:10px; font-size:14px; padding:12px; min-height:90px;"
         data-placeholder="true"></textarea>
     <button class="navy-btn" style="background:#10b981; border:none; box-shadow:0 4px 10px rgba(16,185,129,0.4); margin-top:8px; width:100%;" onclick="saveCourseNotice()">
         <i class="fa-solid fa-paper-plane"></i> 과정 공지 업데이트
@@ -7516,7 +7516,6 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
             +'<span class="crow-room">ROOM <span class="rid-big">#'+esc(r.rid)+'</span></span>'
             +'<div style="flex:1;min-width:0;"><div class="crow-name">'+esc(r.s.courseName||'-')+'</div></div>'
             +'<span class="cstat-pill" onclick="event.stopPropagation(); coordShowEnrollInfo('+arrived+','+total+')" title="입교/예정 인원 보기" style="cursor:pointer;'+((total>0&&Math.round(arrived/total*100)>0)?'background:#dcfce7;color:#16a34a;':'background:#f1f5f9;color:#94a3b8;border:1px solid #e2e8f0;')+'">입교율 '+(total>0?Math.round(arrived/total*100):0)+'%</span>'
-            +'<button onclick="event.stopPropagation(); coordOpenRosterFor(\''+esc(r.rid)+'\')" title="이 과정 명단 업로드/확인" style="flex-shrink:0;padding:7px 12px;background:#2563eb;color:#fff;border:none;border-radius:9px;font-weight:800;font-size:12px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;"><i class="fa-solid fa-file-arrow-up"></i> 명단 업로드</button>'
             +'<i class="fa-solid fa-chevron-down crow-chev" id="coordEnrChev'+ei+'"></i>'
           +'</div>'
           +'<div id="coordEnrollBody'+ei+'" style="display:none;border-top:1px solid #eef2f7;overflow-x:auto;"><table class="cpop-table" style="width:100%;table-layout:fixed;"><colgroup><col style="width:11%"><col style="width:40%"><col style="width:18%"><col style="width:17%"><col style="width:14%"></colgroup><thead><tr><th>연번</th><th style="text-align:left;">소속</th><th>사번</th><th>성명</th><th>상태</th></tr></thead><tbody>'+body+'</tbody></table></div>'
