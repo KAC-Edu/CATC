@@ -7115,6 +7115,138 @@ window.kacExpireEndedCourses = async function(){
 };
 document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){ if(typeof kacExpireEndedCourses==='function') kacExpireEndedCourses(); }, 3000); });
 </script>
+
+<!-- ══ PC 전용: 4개 대제목 탭 섹션 전환 + 인라인 렌더 ══ -->
+<script>
+(function(){
+  function esc(t){ return (''+(t==null?'':t)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+  // ── 섹션 전환 ──
+  window.coordPcSection = function(n){
+    n = String(n);
+    document.querySelectorAll('.coord-ptab').forEach(function(t){ t.classList.toggle('active', t.getAttribute('data-sec')===n); });
+    ['1','3','4'].forEach(function(s){ var el=document.getElementById('csec-'+s); if(el) el.style.display=(n===s)?'block':'none'; });
+    var c2=document.getElementById('csec-2'); if(c2) c2.style.display=(n==='2')?'':'none';
+    window._coordPcSec=n;
+    try {
+      if(n==='1') coordRenderAnnualPreview();
+      else if(n==='3') coordRenderEnroll();
+      else if(n==='4') coordRenderOutingSection();
+    } catch(e){ console.warn('[coordPcSection]', e); }
+  };
+
+  // PC→모바일 전환 시 인라인 패널 표시상태 초기화(클래스가 다시 지배 → 모바일에서 안 보이도록)
+  window._coordResetSecs = function(){
+    ['1','3','4'].forEach(function(s){ var el=document.getElementById('csec-'+s); if(el) el.style.display=''; });
+    var c2=document.getElementById('csec-2'); if(c2) c2.style.display='';
+  };
+
+  // ── 섹션1: 연간계획 미리보기(읽기전용, 종료→위 / 진행중 강조) ──
+  window.coordRenderAnnualPreview = function(){
+    var box=document.getElementById('csecAnnualPreview'); if(!box) return;
+    if(typeof firebase==='undefined'){ box.innerHTML='<p style="padding:24px;text-align:center;color:#94a3b8;">연결 대기 중…</p>'; return; }
+    firebase.database().ref('system/annualPlan').once('value').then(function(snap){
+      var v=snap.val(); var list=[];
+      if(Array.isArray(v)) list=v.filter(Boolean);
+      else if(v&&typeof v==='object') list=Object.values(v).filter(Boolean);
+      if(!list.length){ box.innerHTML='<p style="padding:30px;text-align:center;color:#94a3b8;font-weight:700;">등록된 연간계획이 없습니다. 우측 상단 [편집기 열기]로 추가하세요.</p>'; return; }
+      var today=(new Date()).toISOString().slice(0,10);
+      // 종료된 과정을 위로, 진행/예정을 아래로 — 시작일순 정렬
+      list.sort(function(a,b){ return (''+(a.startDate||'')).localeCompare(''+(b.startDate||'')); });
+      var firstActiveIdx=-1;
+      var rows=list.map(function(c,i){
+        var name=c.name||c.courseName||'-';
+        var sd=c.startDate||'', ed=c.endDate||'';
+        var period=(sd&&ed)?(sd+' ~ '+ed):(c.period||'-');
+        var room=c.roomDetail||c.room||'-';
+        var coord=c.coord||c.coordinatorName||'-';
+        var prof=c.prof||c.professorName||'-';
+        var ended=(ed && ed<today);
+        var active=(sd&&ed&&sd<=today&&ed>=today);
+        if(active && firstActiveIdx<0) firstActiveIdx=i;
+        var bg = ended?'background:#f1f5f9;color:#94a3b8;' : (active?'background:#dbeafe;':'');
+        var tag = ended?'<span style="font-size:10px;font-weight:800;color:#94a3b8;">종료</span>' : (active?'<span style="font-size:10px;font-weight:800;color:#1d4ed8;">● 진행중</span>':'<span style="font-size:10px;font-weight:800;color:#16a34a;">예정</span>');
+        return '<tr data-row="'+i+'" style="'+bg+'"><td style="text-align:left;font-weight:800;">'+esc(name)+' '+tag+'</td><td style="font-size:12px;white-space:nowrap;">'+esc(period)+'</td><td>'+esc(room)+'</td><td>'+esc(coord)+'</td><td>'+esc(prof)+'</td></tr>';
+      }).join('');
+      box.innerHTML='<div style="max-height:62vh;overflow-y:auto;border:1px solid #eef2f7;border-radius:12px;"><table class="cpop-table" style="width:100%;"><thead style="position:sticky;top:0;z-index:2;"><tr><th style="text-align:left;">과정명</th><th>교육기간</th><th>강의실</th><th>과정담당</th><th>담임교수</th></tr></thead><tbody>'+rows+'</tbody></table></div>';
+      // 진행중 행이 보이도록 내부 스크롤 위치 조정(페이지 전체가 아닌 컨테이너만)
+      if(firstActiveIdx>0){ var sc=box.querySelector('div'); var tr=box.querySelector('tr[data-row="'+firstActiveIdx+'"]'); if(sc&&tr){ sc.scrollTop=Math.max(0, tr.offsetTop-90); } }
+    }).catch(function(){ box.innerHTML='<p style="padding:24px;text-align:center;color:#ef4444;">불러오기 오류 — 편집기에서 확인하세요.</p>'; });
+  };
+
+  // ── 섹션3: 과정별 입교/예정 — 정형 리스트(연번·소속·사번·성명) ──
+  window.coordRenderEnroll = function(){
+    var box=document.getElementById('csecEnrollList'); if(!box) return;
+    if(typeof _coordActiveRooms!=='function'){ box.innerHTML='<p style="padding:24px;text-align:center;color:#94a3b8;">연결 대기 중…</p>'; return; }
+    var rooms=_coordActiveRooms();
+    if(!rooms.length){ box.innerHTML='<p style="padding:30px;text-align:center;color:#94a3b8;font-weight:700;">운영 중인 과정이 없습니다.</p>'; return; }
+    box.innerHTML=rooms.map(function(r){
+      var studs=((typeof _studentsOf==='function')?_studentsOf(r.room):[]).slice().sort(function(a,b){ return (a.seq||0)-(b.seq||0)||(''+(a.name||'')).localeCompare(''+(b.name||'')); });
+      var arrived=studs.filter(function(s){ return s && (s.status==='입교' || s.arrived || s.checkedIn); }).length;
+      var total=studs.length, expected=Math.max(0,total-arrived);
+      var body = studs.length ? studs.map(function(s,i){
+        var ar=(s && (s.status==='입교' || s.arrived || s.checkedIn));
+        return '<tr><td style="text-align:center;color:#94a3b8;">'+(i+1)+'</td><td style="color:#475569;">'+esc(s.dept||'-')+'</td><td style="color:#64748b;white-space:nowrap;">'+esc(s.empNo||'-')+'</td><td style="font-weight:800;">'+esc(s.name||'-')+'</td><td style="text-align:center;">'+(ar?'<span style="color:#16a34a;font-weight:800;">입교</span>':'<span style="color:#2563eb;font-weight:700;">예정</span>')+'</td></tr>';
+      }).join('') : '<tr><td colspan="5" style="text-align:center;color:#94a3b8;padding:18px;">등록된 명단이 없습니다.</td></tr>';
+      return '<div style="border:1px solid #eef2f7;border-radius:14px;overflow:hidden;margin-bottom:12px;">'
+        +'<div style="display:flex;align-items:center;gap:12px;background:#f8fafc;padding:12px 16px;border-bottom:1px solid #eef2f7;">'
+          +'<div style="flex:1;min-width:0;"><span style="font-size:11px;font-weight:800;color:#2563eb;">ROOM '+esc(r.rid)+'</span><div style="font-size:15px;font-weight:900;color:#0f172a;word-break:keep-all;">'+esc(r.s.courseName||'-')+'</div></div>'
+          +'<div style="text-align:center;"><div style="font-size:10.5px;color:#64748b;font-weight:800;">입교</div><div style="font-size:18px;font-weight:900;color:#16a34a;">'+arrived+'</div></div>'
+          +'<div style="text-align:center;"><div style="font-size:10.5px;color:#64748b;font-weight:800;">예정</div><div style="font-size:18px;font-weight:900;color:#2563eb;">'+expected+'</div></div>'
+          +'<div style="text-align:center;"><div style="font-size:10.5px;color:#64748b;font-weight:800;">계</div><div style="font-size:18px;font-weight:900;color:#0f172a;">'+total+'</div></div>'
+        +'</div>'
+        +'<div style="overflow-x:auto;"><table class="cpop-table" style="width:100%;"><thead><tr><th style="width:42px;">연번</th><th style="text-align:left;">소속</th><th>사번</th><th>성명</th><th style="width:60px;">상태</th></tr></thead><tbody>'+body+'</tbody></table></div>'
+        +'</div>';
+    }).join('');
+  };
+
+  // ── 섹션4: 외출·외박 (과정별 1줄 1블록, 클릭→신청명단 팝업) ──
+  window.coordRenderOutingSection = function(){
+    var box=document.getElementById('csecOutingWrap'); if(!box) return;
+    if(typeof _coordActiveRooms!=='function'){ box.innerHTML='<p style="padding:24px;text-align:center;color:#94a3b8;">연결 대기 중…</p>'; return; }
+    var rooms=_coordActiveRooms();
+    var head='<div style="font-size:12.5px;color:#64748b;font-weight:700;margin-bottom:14px;">과정을 선택하면 해당 과정의 외출·외박 신청 명단이 팝업으로 열립니다. (대장 PDF 출력은 팝업/상단 [출력 미리보기]에서)</div>';
+    if(!rooms.length){ box.innerHTML=head+'<p style="padding:24px;text-align:center;color:#94a3b8;font-weight:700;">운영 중인 과정이 없습니다.</p>'; return; }
+    var btns=rooms.map(function(r){
+      var nm=esc(r.s.courseName||'-'), period=esc(r.s.period||'');
+      return '<button onclick="coordOpenOutingFor(\''+r.rid+'\')" style="text-align:left;width:100%;background:#fff;border:1.5px solid #e2e8f0;border-radius:14px;padding:15px 17px;cursor:pointer;display:flex;align-items:center;gap:13px;transition:all .15s;" onmouseover="this.style.borderColor=&quot;#bfdbfe&quot;;this.style.boxShadow=&quot;0 4px 12px rgba(15,23,42,.07)&quot;;" onmouseout="this.style.borderColor=&quot;#e2e8f0&quot;;this.style.boxShadow=&quot;none&quot;;">'
+        +'<span style="width:38px;height:38px;border-radius:11px;background:#fff7ed;color:#ea580c;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;"><i class="fa-solid fa-person-walking-luggage"></i></span>'
+        +'<span style="flex:1;min-width:0;"><span style="display:block;font-size:11px;font-weight:800;color:#2563eb;">ROOM '+esc(r.rid)+'</span><span style="display:block;font-size:15px;font-weight:800;color:#0f172a;word-break:keep-all;">'+nm+'</span><span style="display:block;font-size:11px;color:#94a3b8;font-weight:600;margin-top:2px;">'+period+'</span></span>'
+        +'<i class="fa-solid fa-chevron-right" style="color:#cbd5e1;"></i></button>';
+    }).join('');
+    box.innerHTML=head+'<div style="display:flex;flex-direction:column;gap:10px;">'+btns+'</div>';
+  };
+  // 과정 선택 → 해당 과정 상세(외출·외박 신청명단 포함)를 중앙 팝업으로 표시
+  window.coordOpenOutingFor = function(rid){
+    try { currentRID = rid; if(typeof handleRoomSelection==='function') handleRoomSelection(); if(typeof updateEntryCnt==='function') updateEntryCnt(rid);
+      // 외출·외박 카드를 펼쳐서 보여줌
+      setTimeout(function(){ var c=document.getElementById('ind-outing-card'); if(c) c.classList.remove('collapsed'); }, 120);
+    } catch(e){ console.warn('[coordOpenOutingFor]', e); }
+  };
+
+  // PC 개별뷰 팝업 닫기(X) 버튼 1회 주입
+  function _coordInjectClose(){
+    var v=document.getElementById('individualStatusView'); if(!v || v.querySelector('.pc-indiv-close')) return;
+    var b=document.createElement('button'); b.className='pc-indiv-close'; b.innerHTML='\u00d7'; b.title='닫기';
+    b.onclick=function(){ try{ if(typeof handleBackNav==='function') handleBackNav(); }catch(e){} };
+    v.insertBefore(b, v.firstChild);
+  }
+  document.addEventListener('DOMContentLoaded', function(){ setTimeout(_coordInjectClose, 900); });
+
+  // PC 모드 진입 시 기본 섹션(과정현황) 활성화 + 데이터 준비되면 현재 섹션 재렌더
+  function _coordPcBoot(){
+    if(!document.body.classList.contains('pc-mode')) return;
+    _coordInjectClose();
+    if(!window._coordPcSec) coordPcSection('2');
+  }
+  document.addEventListener('DOMContentLoaded', function(){ setTimeout(_coordPcBoot, 800); });
+  // Firebase 데이터가 늦게 와도 현재 보고 있는 섹션을 다시 채움
+  [1500, 3500].forEach(function(ms){ setTimeout(function(){
+    if(!document.body.classList.contains('pc-mode')) return;
+    var n=window._coordPcSec; if(n==='1') coordRenderAnnualPreview(); else if(n==='3') coordRenderEnroll(); else if(n==='4') coordRenderOutingSection();
+  }, ms); });
+})();
+</script>
 <script>
 // [공용 강의실] system/classrooms 실시간 — 운영부 과정설정(setup-room-dropdown) 즉시 반영
 (function initCustomRoomsCoord(){
