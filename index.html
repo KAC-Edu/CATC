@@ -5806,15 +5806,26 @@ body.kac-panel-on #menuModal > .menu-box { transition: none !important; }
 #qInput.real-input::placeholder{ font-size:14px !important; line-height:1.5 !important; white-space:nowrap !important; overflow:hidden !important; text-overflow:ellipsis !important; }
 .input-dock .input-box{ padding-top:13px !important; }
 
-/* ── [입력창 시인성] 입력 카드 바로 위 채팅 블록을 부드럽게 페이드 → 입력영역이 도드라지게 ── */
+/* ── [입력창 시인성] 입력 카드 위 채팅을 '자연스럽게'만 페이드 (프로스트 블러 제거) ── */
 html, body { overscroll-behavior-x: none !important; }
-.input-dock{ position:fixed; background:linear-gradient(to top, #eef4fb 0%, #eef4fb 58%, rgba(238,244,251,0) 100%) !important; -webkit-backdrop-filter:blur(2.5px); backdrop-filter:blur(2.5px); }
+.input-dock{ position:fixed; background:linear-gradient(to top, #eef4fb 0%, #eef4fb 40%, rgba(238,244,251,0) 100%) !important; -webkit-backdrop-filter:none !important; backdrop-filter:none !important; }
 .input-dock::before{
   content:''; position:absolute; left:0; right:0; bottom:100%;
-  height:64px; pointer-events:none;
-  background:linear-gradient(to top, rgba(238,244,251,.98) 0%, rgba(238,244,251,.7) 42%, rgba(238,244,251,0) 100%);
-  -webkit-backdrop-filter:blur(2.5px); backdrop-filter:blur(2.5px);
+  height:38px; pointer-events:none;
+  background:linear-gradient(to top, rgba(238,244,251,.85) 0%, rgba(238,244,251,0) 100%);
 }
+/* ── [설문 패널 복구] 가로(row) 플렉스로 글자가 세로로 쪼개지던 문제 → 세로(column) 강제 ── */
+#surveyModal{ justify-content:flex-end !important; align-items:stretch !important; }
+#surveyModal > .menu-box{
+  display:flex !important; flex-direction:column !important;
+  width:92% !important; max-width:430px !important; height:100dvh !important; max-height:100dvh !important;
+  margin:0 !important; padding:0 16px 16px !important; overflow-y:auto !important;
+  border-radius:18px 0 0 18px !important; background:#f6f9fe !important;
+}
+#surveyModal .kac-pbar{ margin:0 -16px 16px !important; }
+#surveyModal > .menu-box > img,
+#surveyModal > .menu-box > button{ width:100% !important; flex-shrink:0 !important; }
+#surveyModal > .menu-box > div{ flex-shrink:0 !important; }
 </style>
 </body>
 </html>
