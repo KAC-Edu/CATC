@@ -7458,7 +7458,7 @@ function openShuttleSummary(){
     var _dopts='<option value="">시간 선택</option>'+_dtimes.map(function(tm){return '<option value="'+tm+'"'+(tm===_depCur?' selected':'')+'>'+(tm==='미정'?'미정(추후 공지)':tm)+'</option>';}).join('');
     return '<div class="csec-card">'
       +'<div class="csec-card-head" onclick="coordToggleShuttle('+idx+')" style="cursor:pointer;display:flex;align-items:center;gap:18px;padding:12px 22px;">'
-        +'<div style="flex:1;min-width:0;"><span class="crow-room">ROOM <span class="rid-big">#'+_esc(r.rid)+'</span></span><div style="font-size:17px;font-weight:900;color:#0f172a;word-break:keep-all;margin-top:5px;">'+_esc(r.s.courseName||'-')+'</div></div>'
+        +'<div style="flex:1;min-width:0;display:flex;align-items:center;gap:12px;"><span class="crow-room" style="flex-shrink:0;">ROOM <span class="rid-big">#'+_esc(r.rid)+'</span></span><span style="font-size:17px;font-weight:900;color:#0f172a;word-break:keep-all;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+_esc(r.s.courseName||'-')+'</span></div>'
         +'<div style="display:flex;align-items:center;gap:22px;flex-shrink:0;">'
           +'<div style="text-align:center;min-width:44px;"><div style="font-size:12.5px;font-weight:800;color:#64748b;">자차</div><div style="font-size:24px;font-weight:900;color:#64748b;line-height:1.15;">'+c.car+'</div></div>'
           +'<div style="text-align:center;min-width:44px;"><div style="font-size:12.5px;font-weight:800;color:#ef4444;">오송역</div><div style="font-size:24px;font-weight:900;color:#ef4444;line-height:1.15;">'+c.osong+'</div></div>'
