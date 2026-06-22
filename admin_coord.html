@@ -5374,7 +5374,7 @@ const annualPlanMgrCoord = {
         var names = (annualPlanMgrCoord._profList || []).filter(Boolean);
         var opts = '<option value="">(선택)</option>'; var seen=false;
         names.forEach(function(n){ if(n===cur) seen=true; opts += '<option value="'+esc(n)+'"'+(n===cur?' selected':'')+'>'+esc(n)+'</option>'; });
-        if(cur && !seen) opts += '<option value="'+esc(cur)+'" selected>'+esc(cur)+' (목록 외)</option>';
+        if(cur && !seen) opts += '<option value="'+esc(cur)+'" selected>'+esc(cur)+'</option>';
         return opts;
     },
     _coordOptions: function(cur){
@@ -5382,7 +5382,7 @@ const annualPlanMgrCoord = {
         var names = (typeof coordMgr!=='undefined' && coordMgr.list)? coordMgr.list.map(function(c){return c.name;}).filter(Boolean):[];
         var opts = '<option value="">(선택)</option>'; var seen=false;
         names.forEach(function(n){ if(n===cur) seen=true; opts += '<option value="'+esc(n)+'"'+(n===cur?' selected':'')+'>'+esc(n)+'</option>'; });
-        if(cur && !seen) opts += '<option value="'+esc(cur)+'" selected>'+esc(cur)+' (목록 외)</option>';
+        if(cur && !seen) opts += '<option value="'+esc(cur)+'" selected>'+esc(cur)+'</option>';
         return opts;
     },
     _openPeriodPicker: function(idx, el){
@@ -5553,8 +5553,8 @@ const annualPlanMgrCoord = {
                 <th style="${th} width:36px;">No</th>
                 <th style="${th} min-width:150px;">과정명</th>
                 <th style="${th} width:200px;">기간 <span style="font-weight:600; color:#94a3b8;">(클릭→달력)</span></th>
-                <th style="${th} width:80px;">담임교수</th>
-                <th style="${th} width:80px;">운영담당</th>
+                <th style="${th} width:118px;">담임교수</th>
+                <th style="${th} width:134px;">운영담당</th>
                 <th style="${th} min-width:130px;">강의실 위치</th>
                 <th style="${th} width:36px;">삭제</th>
             </tr></thead><tbody>`;
@@ -6871,7 +6871,7 @@ window.addEventListener('load', function(){
 });
 </script>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vH7</div>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vH8</div>
 <script>
 /* ===== [공용] 종료된 과정 자동 정리 (모든 플랫폼 공통) — 종료일 지난 방을 다음날 미개설로 비움. 브라우저별 하루 1회 ===== */
 window.kacExpireEndedCourses = async function(){

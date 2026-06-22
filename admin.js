@@ -9285,7 +9285,7 @@ annualPlanMgr._profOptions = function(cur){
     var names = (typeof profMgr !== 'undefined' && profMgr.list) ? profMgr.list.map(function(p){return p.name;}).filter(Boolean) : [];
     var opts = '<option value="">(선택)</option>'; var seen=false;
     names.forEach(function(n){ if(n===cur) seen=true; opts += '<option value="'+esc(n)+'"'+(n===cur?' selected':'')+'>'+esc(n)+'</option>'; });
-    if(cur && !seen) opts += '<option value="'+esc(cur)+'" selected>'+esc(cur)+' (목록 외)</option>';
+    if(cur && !seen) opts += '<option value="'+esc(cur)+'" selected>'+esc(cur)+'</option>';
     return opts;
 };
 annualPlanMgr._coordOptions = function(cur){
@@ -9294,7 +9294,7 @@ annualPlanMgr._coordOptions = function(cur){
     var names = (typeof coordMgr !== 'undefined' && coordMgr.list) ? coordMgr.list.map(function(c){return c.name;}).filter(Boolean) : [];
     var opts = '<option value="">(선택)</option>'; var seen=false;
     names.forEach(function(n){ if(n===cur) seen=true; opts += '<option value="'+esc(n)+'"'+(n===cur?' selected':'')+'>'+esc(n)+'</option>'; });
-    if(cur && !seen) opts += '<option value="'+esc(cur)+'" selected>'+esc(cur)+' (목록 외)</option>';
+    if(cur && !seen) opts += '<option value="'+esc(cur)+'" selected>'+esc(cur)+'</option>';
     return opts;
 };
 annualPlanMgr._openPeriodPicker = function(idx, el){
@@ -10460,7 +10460,7 @@ ui.foodNewsRouteById=function(id){
 };
 
 /* __JSVER_STAMP__ */
-(function stampJsVer(){try{var b=document.getElementById('__catcVer');if(b){if(b.textContent.indexOf('Jr')<0)b.textContent=b.textContent+'\u00b7Jr';}else{setTimeout(stampJsVer,200);}}catch(e){}})();
+(function stampJsVer(){try{var b=document.getElementById('__catcVer');if(b){if(b.textContent.indexOf('Js')<0)b.textContent=b.textContent+'\u00b7Js';}else{setTimeout(stampJsVer,200);}}catch(e){}})();
 
 /* ===== [공항별 입교 현황 지도] 수강생현황 → 지도로 보기 ===== */
 ui._mapRegions = {
