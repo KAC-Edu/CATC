@@ -5315,6 +5315,10 @@ function closeTabletLoan() {
 .menu-box .menu-close-x:hover { background:#e2e8f0; }
 .menu-box .menu-close-x:active, .menu-box .menu-close-x.spin { transform:rotate(90deg); background:#fee2e2; color:#dc2626; }
 .menu-box .menu-item.svc-locked { box-shadow:none; }
+/* [특수] 카카오 오픈톡방 — 카카오 노란색 버튼으로 강조 */
+#menu-kakao { background:#FAE100 !important; color:#3A1D1D !important; border:1px solid #f5d800 !important; font-weight:900 !important; }
+#menu-kakao:hover { background:#ffe600 !important; }
+#menu-kakao svg path { fill:#3A1D1D !important; }
 .menu-box h3 { color:#94a3b8 !important; font-size:13px !important; letter-spacing:.02em; }
 /* 헤더 — 은은한 네이비 그라데이션 */
 .header { background:linear-gradient(135deg,#0f172a 0%,#1e3a8a 72%,#2563eb 128%) !important; box-shadow:0 2px 14px rgba(15,23,42,.25) !important; }
@@ -5498,11 +5502,8 @@ input:not([type=checkbox]):not([type=radio]):not([type=file]), textarea, select 
                 main.style.transition=ESPRING; main.style.transform='translateX(0)';
                 setTimeout(function(){ main.style.transform=''; main.style.transition=''; main.style.willChange=''; var m=document.getElementById('menuModal'); if(m) m.style.display='none'; }, 380);
             }
-        } else if(kCand && kDx < -70 && Math.abs(kDx) > Math.abs(kDy)*1.6){
-            // 우 → 좌 스와이프: 카카오톡 오픈톡방 (링크가 등록돼 있을 때만)
-            var lk=(window._kakaoLink||'').trim();
-            if(lk && typeof openKakaoChat==='function'){ openKakaoChat(); }
         }
+        // [요청] 우→좌 스와이프로 카카오 이동 기능 제거 — 카카오는 상단 버튼/메뉴로만 진입
         sx=null; sy=null; edge=false; opening=false; kCand=false; kDx=0; kDy=0;
     }, {passive:true});
   }
