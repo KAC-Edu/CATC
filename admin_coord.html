@@ -709,6 +709,7 @@
     z-index: 5000; 
     transition: 0.3s; 
     box-shadow: -5px 0 15px rgba(0,0,0,0.1); 
+    border-radius: 20px 0 0 20px; 
     padding: 20px; 
     display: flex; 
     flex-direction: column; 
@@ -1252,7 +1253,7 @@ body.pc-mode .coord-sec-panel { background:#fff; border:1px solid #eef2f7; borde
 .cmeta-div { width:1px; height:30px; background:#e8edf5; flex-shrink:0; }
 /* 섹션3·4 우측 요약 */
 .cstat-line { font-size:14px; color:#475569; font-weight:700; white-space:nowrap; width:172px; text-align:right; flex-shrink:0; }
-.cstat-line b { display:inline-block; min-width:18px; text-align:right; }
+.cstat-line b { display:inline-block; min-width:26px; text-align:right; }
 .cstat-pill { background:#eef4ff; color:#1e3a8a; font-weight:900; font-size:15px; padding:7px 14px; border-radius:9px; white-space:nowrap; min-width:92px; text-align:center; flex-shrink:0; }
 .cstat-pill.amber { background:#fff5ec; color:#c2410c; }
 #csecAnnualPreview table.cpop-table thead th { background:#1e3a8a !important; color:#fff !important; border-bottom:none !important; }
@@ -4383,7 +4384,7 @@ function toggleMenu(open) {
     sideMenu.classList.toggle('open', open); 
     menuOverlay.style.display = open ? "block" : "none"; 
 
-    var _clip=document.getElementById('coordSideClip'); if(_clip){ _clip.style.right = open ? '280px' : '0'; }
+    var _clip=document.getElementById('coordSideClip'); if(_clip){ _clip.style.right = open ? (sideMenu.offsetWidth + 'px') : '0'; }
     // [자동 닫힘] 10초간 메뉴 미조작 시 자동으로 닫힘 (조작하면 타이머 재시작)
     if (open) {
         if(!sideMenu._coordAutoBound){
@@ -7477,7 +7478,7 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
             +'<span class="crow-room">ROOM '+esc(r.rid)+'</span>'
             +'<div style="flex:1;min-width:0;"><div class="crow-name">'+esc(r.s.courseName||'-')+'</div></div>'
             +'<span class="cstat-line">입교 <b style="color:#16a34a;">'+arrived+'</b> &nbsp;·&nbsp; 예정 <b style="color:#2563eb;">'+total+'</b></span>'
-            +'<span class="cstat-pill">입교율 '+(total>0?Math.round(arrived/total*100):0)+'%</span>'
+            +'<span class="cstat-pill" style="'+((total>0&&Math.round(arrived/total*100)>0)?'background:#dcfce7;color:#16a34a;':'background:#f1f5f9;color:#94a3b8;border:1px solid #e2e8f0;')+'">입교율 '+(total>0?Math.round(arrived/total*100):0)+'%</span>'
             +'<button onclick="event.stopPropagation(); coordOpenRosterFor(\''+esc(r.rid)+'\')" title="이 과정 명단 업로드/확인" style="flex-shrink:0;padding:7px 12px;background:#2563eb;color:#fff;border:none;border-radius:9px;font-weight:800;font-size:12px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;"><i class="fa-solid fa-file-arrow-up"></i> 명단 업로드</button>'
             +'<i class="fa-solid fa-chevron-down crow-chev" id="coordEnrChev'+ei+'"></i>'
           +'</div>'
