@@ -4558,17 +4558,19 @@ function clearNoticeHistory() {
     function showEntryMemberList() {
         const room = globalAllData[currentRID];
         const valid = Object.values(room.students || {}).filter(s => s.name && s.name !== 'undefined');
-        const names = Array.from(new Set(valid.map(s => s.name))).sort();
+        valid.sort((a,b)=> String(a.name||'').localeCompare(String(b.name||'')));
         const modal = document.getElementById('entryMemberListModal');
         const tbody = document.getElementById('entryMemberListBody');
         if (!modal || !tbody) return;
-        if (names.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="2" style="padding:20px; text-align:center; color:#94a3b8; font-size:13px;">입교자가 없습니다.</td></tr>`;
+        if (valid.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="4" style="padding:20px; text-align:center; color:#94a3b8; font-size:13px;">입교자가 없습니다.</td></tr>`;
         } else {
-            tbody.innerHTML = names.map((name, i) =>
+            tbody.innerHTML = valid.map((s, i) =>
                 `<tr style="border-bottom:1px solid #f1f5f9;">
                     <td style="padding:8px 12px; font-size:13px; color:#64748b; text-align:center;">${i + 1}</td>
-                    <td style="padding:8px 12px; font-size:13px; font-weight:700; color:#1e293b;">${name}</td>
+                    <td style="padding:8px 12px; font-size:13px; font-weight:700; color:#1e293b;">${s.name}</td>
+                    <td style="padding:8px 12px; font-size:13px; color:#475569;">${s.empNo||s.phone||s.sabun||'-'}</td>
+                    <td style="padding:8px 12px; font-size:12px; color:#475569; word-break:keep-all;">${s.dept||s.affil||s.org||'-'}</td>
                 </tr>`
             ).join('');
         }
@@ -5426,8 +5428,10 @@ async function saveGlobalNotice() {
             <table style="width:100%; border-collapse:collapse;">
                 <thead>
                     <tr style="background:#f0f7ff; border-bottom:2px solid #bfdbfe;">
-                        <th style="padding:9px 12px; font-size:12px; color:var(--blue-deep); font-weight:800; text-align:center; width:40px;">No.</th>
-                        <th style="padding:9px 12px; font-size:12px; color:var(--blue-deep); font-weight:800; text-align:left;">이름</th>
+                        <th style="padding:9px 12px; font-size:12px; color:var(--blue-deep); font-weight:800; text-align:center; width:48px;">연번</th>
+                        <th style="padding:9px 12px; font-size:12px; color:var(--blue-deep); font-weight:800; text-align:left; width:90px;">이름</th>
+                        <th style="padding:9px 12px; font-size:12px; color:var(--blue-deep); font-weight:800; text-align:left; width:90px;">사번</th>
+                        <th style="padding:9px 12px; font-size:12px; color:var(--blue-deep); font-weight:800; text-align:left;">소속</th>
                     </tr>
                 </thead>
                 <tbody id="entryMemberListBody"></tbody>
