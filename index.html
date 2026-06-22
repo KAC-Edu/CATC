@@ -839,11 +839,11 @@
 #foodModal > .menu-box{ padding:0 !important; overflow:hidden !important; }
 /* 맛집 리스트 상단: 카테고리 칩 위로 스크롤되는 항목을 부드럽게 가림(프로스트) */
 #foodModal > .menu-box::before{
-  content:''; position:absolute; top:0; left:0; right:0; height:62px; z-index:5; pointer-events:none;
-  background:linear-gradient(to bottom, rgba(255,255,255,.92) 0%, rgba(255,255,255,.7) 55%, rgba(255,255,255,0) 100%);
-  -webkit-backdrop-filter:blur(7px); backdrop-filter:blur(7px);
-  -webkit-mask-image:linear-gradient(to bottom, #000 60%, transparent 100%);
-  mask-image:linear-gradient(to bottom, #000 60%, transparent 100%);
+  content:''; position:absolute; top:0; left:0; right:0; height:140px; z-index:5; pointer-events:none;
+  background:linear-gradient(to bottom, rgba(255,255,255,.95) 0%, rgba(255,255,255,.85) 55%, rgba(255,255,255,.5) 80%, rgba(255,255,255,0) 100%);
+  -webkit-backdrop-filter:blur(8px); backdrop-filter:blur(8px);
+  -webkit-mask-image:linear-gradient(to bottom, #000 70%, transparent 100%);
+  mask-image:linear-gradient(to bottom, #000 70%, transparent 100%);
 }
 #foodModal .food-scroll{ scrollbar-width:none; }
 #foodModal .food-scroll::-webkit-scrollbar{ display:none; }
@@ -5832,6 +5832,10 @@ html, body { overscroll-behavior-x: none !important; }
 #surveyModal > .menu-box > img,
 #surveyModal > .menu-box > button{ width:100% !important; flex-shrink:0 !important; }
 #surveyModal > .menu-box > div{ flex-shrink:0 !important; }
+/* ── [좌측 메뉴] 프로필 상단 고정 + 항목만 스크롤 + 흔들림(바운스) 제거 ── */
+#menuModal > .menu-box{ overflow-y:auto !important; overscroll-behavior:contain !important; -webkit-overflow-scrolling:touch !important; padding-top:0 !important; }
+#menuModal .user-profile-card{ position:sticky !important; top:0 !important; z-index:6 !important; margin:0 0 14px !important; padding:16px 16px 14px !important; background:#fff !important; box-shadow:0 6px 14px rgba(15,23,42,.07) !important; border-radius:0 0 16px 16px !important; }
+#menuModal h3{ display:none !important; }
 </style>
 <!-- ───────── 앱 설치(홈 화면에 추가) 안내 팝업 ───────── -->
 <div id="installGuideModal" class="menu-overlay" style="display:none; z-index:17000;" onclick="if(event.target===this) closeInstallGuide()">
