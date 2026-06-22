@@ -685,11 +685,20 @@
 <!-- 설문조사 안내 모달 -->
 <div id="surveyModal" class="menu-overlay" style="display:none; z-index:9500;" onclick="if(event.target==this)closePanelSmooth('surveyModal')">
     <div class="menu-box" style="width:90%; max-width:400px; padding:25px; border-radius:24px;">
-        <h3 style="margin:0 0 16px 0; font-weight:900; color:#1e3a8a;">
-            <i class="fa-solid fa-square-poll-vertical" style="color:#3b82f6; margin-right:8px;"></i>설문조사 참여
-        </h3>
+        <div class="kac-pbar"><span class="kac-pt">설문조사 참여</span><button type="button" class="kac-px" onclick="closePanelSmooth('surveyModal')" aria-label="닫기"><i class="fa-solid fa-xmark"></i></button></div>
+        <img src="skycampus_banner.png" alt="KAC SKY CAMPUS+" style="width:100%; border-radius:12px; border:1px solid #e8edf3; display:block; margin-bottom:16px; box-shadow:0 2px 8px rgba(15,23,42,.06);">
         <button onclick="window.open('https://skycampus.airport.co.kr/', '_blank')"
-            style="width:100%; padding:14px; background:linear-gradient(135deg,#3b82f6,#2563eb); color:#fff; border:none; border-radius:12px; font-weight:900; font-size:15px; cursor:pointer; box-shadow:0 8px 20px rgba(37,99,235,.28);">
+            style="width:100%; padding:15px; background:linear-gradient(135deg,#3b82f6,#2563eb); color:#fff; border:none; border-radius:13px; font-weight:900; font-size:15px; cursor:pointer; box-shadow:0 8px 20px rgba(37,99,235,.28);">
+            <i class="fa-solid fa-globe"></i>&nbsp; 스카이캠퍼스 바로가기
+        </button>
+        <div style="text-align:left; font-size:14px; line-height:1.6; color:#475569; margin-top:18px;">
+            <div style="display:flex; gap:10px; margin-bottom:11px;"><b style="color:#2563eb; flex-shrink:0;">1</b><span>스카이캠퍼스 접속 → <b>공사직원 로그인</b></span></div>
+            <div style="display:flex; gap:10px; margin-bottom:11px;"><b style="color:#2563eb; flex-shrink:0;">2</b><span><b>마이페이지</b> → 수강 중인 과정 입장</span></div>
+            <div style="display:flex; gap:10px;"><b style="color:#2563eb; flex-shrink:0;">3</b><span>좌측 하단 <b>[항기원 교육과정운영 설문평가]</b> 참여</span></div>
+        </div>
+        <button onclick="closePanelSmooth('surveyModal')"
+            style="margin-top:20px; width:100%; padding:15px; border:none; border-radius:13px; background:#0f172a; color:#fff; font-weight:800; font-size:15px; cursor:pointer;">닫기</button>
+    </div>w:0 8px 20px rgba(37,99,235,.28);">
             <i class="fa-solid fa-globe"></i>&nbsp; 스카이캠퍼스 바로가기
         </button>
         <div style="text-align:left; font-size:14px; line-height:1.6; color:#475569; margin-top:18px;">
@@ -904,13 +913,13 @@
 
                 <button class="quiz-opt-btn shuttle-btn" onclick="selectShuttle('car','자차(개별이동)')"
                     style="display:flex; align-items:center; justify-content:flex-start; gap:16px; height:68px; padding:0 20px; background:#f8fafc; border-color:#e2e8f0; color:#475569; border-radius:14px;">
-                    <span style="font-size:36px; line-height:1; flex-shrink:0;">🚗</span>
+                    <span style="width:44px; height:44px; flex-shrink:0; border-radius:12px; background:#eff4ff; color:#2563eb; display:flex; align-items:center; justify-content:center; font-size:20px;"><i class="fa-solid fa-car-side"></i></span>
                     <span style="font-size:18px; font-weight:800;">자차 &nbsp;<small style="font-size:13px; font-weight:600; opacity:0.55;">개별이동</small></span>
                 </button>
 
                 <button class="quiz-opt-btn shuttle-btn" onclick="selectShuttle('osong','오송역')"
                     style="display:flex; align-items:center; justify-content:flex-start; gap:16px; height:68px; padding:0 20px; border-color:#fca5a5; color:#b91c1c; border-radius:14px;">
-                    <span style="font-size:36px; line-height:1; flex-shrink:0;">🚄</span>
+                    <span style="width:44px; height:44px; flex-shrink:0; border-radius:12px; background:#fef2f2; color:#ef4444; display:flex; align-items:center; justify-content:center; font-size:20px;"><i class="fa-solid fa-train"></i></span>
                     <div style="display:flex; flex-direction:column; align-items:flex-start; line-height:1.3;">
                         <span style="font-size:18px; font-weight:800;">오송역</span>
                         <span id="arrival-osong" style="font-size:13px; font-weight:700; color:#ef4444; opacity:0.85;"></span>
@@ -919,7 +928,7 @@
 
                 <button class="quiz-opt-btn shuttle-btn" onclick="selectShuttle('terminal','청주터미널')"
                     style="display:flex; align-items:center; justify-content:flex-start; gap:16px; height:68px; padding:0 20px; border-color:#93c5fd; color:#1e40af; border-radius:14px;">
-                    <span style="font-size:36px; line-height:1; flex-shrink:0;">🚌</span>
+                    <span style="width:44px; height:44px; flex-shrink:0; border-radius:12px; background:#eff6ff; color:#2563eb; display:flex; align-items:center; justify-content:center; font-size:20px;"><i class="fa-solid fa-bus"></i></span>
                     <div style="display:flex; flex-direction:column; align-items:flex-start; line-height:1.3;">
                         <span style="font-size:18px; font-weight:800;">청주 터미널</span>
                         <span id="arrival-terminal" style="font-size:13px; font-weight:700; color:#1d4ed8; opacity:0.85;"></span>
@@ -928,7 +937,7 @@
 
                 <button class="quiz-opt-btn shuttle-btn" onclick="selectShuttle('airport','청주공항')"
                     style="display:flex; align-items:center; justify-content:flex-start; gap:16px; height:68px; padding:0 20px; border-color:#86efac; color:#166534; border-radius:14px;">
-                    <span style="font-size:36px; line-height:1; flex-shrink:0;">✈️</span>
+                    <span style="width:44px; height:44px; flex-shrink:0; border-radius:12px; background:#ecfdf5; color:#16a34a; display:flex; align-items:center; justify-content:center; font-size:20px;"><i class="fa-solid fa-plane-departure"></i></span>
                     <div style="display:flex; flex-direction:column; align-items:flex-start; line-height:1.3;">
                         <span style="font-size:18px; font-weight:800;">청주국제공항</span>
                         <span id="arrival-airport" style="font-size:13px; font-weight:700; color:#16a34a; opacity:0.85;"></span>
@@ -945,7 +954,7 @@
             <button onclick="cancelShuttleRequest()" style="width:100%; padding:15px; background:#ef4444; color:white; border:none; border-radius:12px; font-size:15px; font-weight:bold;">신청 취소하기</button>
         </div>
 
-        <button onclick="closeShuttleModal()" style="margin-top:20px; width:100%; padding:15px; border:none; border-radius:15px; background:#f1f5f9; color:#475569; font-size:18px; font-weight:900;">닫기</button>
+        <button onclick="closeShuttleModal()" style="margin-top:20px; width:100%; padding:15px; border:none; border-radius:13px; background:#0f172a; color:#fff; font-size:15px; font-weight:800;">닫기</button>
     </div>
 </div>
 
@@ -1144,7 +1153,7 @@
                 <button type="button" onclick="closeAdminAction()" style="width:100%; margin-top:16px; padding:13px; border:none; border-radius:12px; background:#0f172a; color:#fff; font-size:15px; font-weight:900; cursor:pointer;">완료</button>
             </div>
             <!-- 각 단계 하단 공통 닫기(엄지 닿는 위치) -->
-            <button type="button" onclick="closeAdminAction()" style="width:100%; margin-top:12px; padding:13px; border:1px solid #e2e8f0; border-radius:12px; background:#fff; color:#64748b; font-size:14px; font-weight:800; cursor:pointer;">✕ 닫기</button>
+            <button type="button" onclick="closeAdminAction()" style="width:100%; margin-top:12px; padding:15px; border:none; border-radius:13px; background:#0f172a; color:#fff; font-size:15px; font-weight:800; cursor:pointer;">닫기</button>
         </div>
     </div>
 </div>
@@ -5700,8 +5709,8 @@ html, body {
   from { transform: translate3d(100%,0,0); }
   to   { transform: translate3d(0,0,0); }
 }
-/* ── [우측 패널 흰색 상단바] 외출외박·차량·공지 — 시안 적용 ── */
-#shuttleModal>.menu-box, #noticeModal>.menu-box, #adminActionModal>.menu-box{
+/* ── [우측 패널 흰색 상단바] 외출외박·차량·공지·설문 — 시안 적용 ── */
+#shuttleModal>.menu-box, #noticeModal>.menu-box, #adminActionModal>.menu-box, #surveyModal>.menu-box{
   justify-content:flex-start !important;
   padding-top:0 !important;
   background:#f6f9fe !important;
@@ -5783,5 +5792,20 @@ body.kac-panel-on #menuModal > .menu-box { transition: none !important; }
   else setTimeout(install,600);
 })();
 </script>
+<style>
+/* ── [입력창 가독성] 플레이스홀더가 카드 상단선에 걸치지 않게 + 한 줄 유지 ── */
+#qInput.real-input{ line-height:1.5 !important; padding-top:2px !important; }
+#qInput.real-input::placeholder{ font-size:14px !important; line-height:1.5 !important; white-space:nowrap !important; overflow:hidden !important; text-overflow:ellipsis !important; }
+.input-dock .input-box{ padding-top:13px !important; }
+
+/* ── [입력창 시인성] 입력 카드 바로 위 채팅 블록을 부드럽게 페이드 → 입력영역이 도드라지게 ── */
+.input-dock{ position:fixed; }
+.input-dock::before{
+  content:''; position:absolute; left:0; right:0; bottom:100%;
+  height:56px; pointer-events:none;
+  background:linear-gradient(to top, rgba(238,244,251,.97) 0%, rgba(238,244,251,.65) 45%, rgba(238,244,251,0) 100%);
+  -webkit-backdrop-filter:blur(1.5px); backdrop-filter:blur(1.5px);
+}
+</style>
 </body>
 </html>
