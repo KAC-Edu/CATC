@@ -1732,7 +1732,7 @@ body.pc-mode .coord-right{ justify-self:end !important; }
 </header>
 
 <!-- 우측 사이드 클립 (행정 지원 메뉴 열기) -->
-<div id="coordSideClip" onclick="toggleMenu(true)" title="행정 지원 메뉴" style="position:fixed; right:0; top:50%; transform:translateY(-50%); width:26px; height:88px; background:linear-gradient(135deg,#1a3a8a,#2563eb); border-radius:16px 0 0 16px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:7px; cursor:pointer; z-index:6002; border:1px solid rgba(255,255,255,0.18); border-right:none; box-shadow:-4px 0 14px rgba(15,23,42,0.28); transition:background .15s, width .15s;">
+<div id="coordSideClip" onclick="coordClipToggle()" title="행정 지원 메뉴" style="position:fixed; right:0; top:50%; transform:translateY(-50%); width:26px; height:88px; background:linear-gradient(135deg,#1a3a8a,#2563eb); border-radius:16px 0 0 16px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:7px; cursor:pointer; z-index:6002; border:1px solid rgba(255,255,255,0.18); border-right:none; box-shadow:-4px 0 14px rgba(15,23,42,0.28); transition:background .15s, width .15s;">
   <i class="fa-solid fa-bars" style="color:#fff; font-size:15px;"></i>
   <span style="writing-mode:vertical-rl; color:#dbeafe; font-size:11px; font-weight:800; letter-spacing:1px;">메뉴</span>
 </div>
@@ -4374,6 +4374,7 @@ function openSchedulePhotoCoord() {
     if (typeof toggleMenu === 'function') toggleMenu(false);
 }
 
+function coordClipToggle(){ var sm=document.getElementById("sideMenu"); toggleMenu(!(sm&&sm.classList.contains("open"))); }
 function _coordArmMenuTimer(){ clearTimeout(window._coordMenuTimer); window._coordMenuTimer=setTimeout(function(){ try{ toggleMenu(false); }catch(e){} }, 10000); }
 function toggleMenu(open) { 
     const sideMenu = document.getElementById('sideMenu');
@@ -4382,6 +4383,7 @@ function toggleMenu(open) {
     sideMenu.classList.toggle('open', open); 
     menuOverlay.style.display = open ? "block" : "none"; 
 
+    var _clip=document.getElementById('coordSideClip'); if(_clip){ _clip.style.right = open ? '280px' : '0'; }
     // [자동 닫힘] 10초간 메뉴 미조작 시 자동으로 닫힘 (조작하면 타이머 재시작)
     if (open) {
         if(!sideMenu._coordAutoBound){
@@ -6289,7 +6291,20 @@ function _coordInitViewMode() {
     if (usePc) document.body.classList.add('pc-mode');
     _coordSetPcBtn(usePc);
     if (usePc) setTimeout(function(){ try { pcsSyncCourseList(); pcUpdateNav(); } catch(e){} }, 700);
+    setTimeout(_coordFitHeader, 300); setTimeout(_coordFitHeader, 1000);
 }
+// [헤더 겹침 방지] 시계/날짜 우선 — 통계가 시계와 겹치면 통계를 숨김(좁은 화면)
+function _coordFitHeader(){
+    var clock=document.getElementById('coordHeaderClock');
+    var stats=document.getElementById('coordHdrStats');
+    if(!clock||!stats) return;
+    if(!document.body.classList.contains('pc-mode')){ stats.style.display=''; return; }
+    stats.style.display='';                       // 우선 표시 후 실제 위치 측정
+    var cr=clock.getBoundingClientRect();
+    var sr=stats.getBoundingClientRect();
+    if(sr.width && cr.width && sr.left < cr.right + 12){ stats.style.display='none'; }   // 겹치면 통계 숨김
+}
+window.addEventListener('resize', function(){ try{ _coordFitHeader(); }catch(e){} });
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', _coordInitViewMode);
 } else {
