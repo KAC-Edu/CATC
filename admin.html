@@ -158,16 +158,12 @@
             <span id="roleChoiceRoomLabel" style="font-size:20px; font-weight:900; color:#ea580c;">Room #-</span><br>
             <span id="roleChoiceStatusText" style="font-size:13px; color:#9a3412; font-weight:700;">입장 방식을 선택해주세요.</span>
         </div>
-        <p style="font-size:13px; color:#64748b; text-align:center; line-height:1.6; margin:14px 0 18px;">
-            <b>강사 권한을 가져오면</b> 기존에 운영 중이던 강사는 옵저버로 전환됩니다.<br>
-            단순히 화면만 보려면 <b>옵저버</b>로 입장하세요.
-        </p>
-        <div style="display:flex; flex-direction:column; gap:10px;">
+        <div style="display:flex; flex-direction:column; gap:10px; margin-top:18px;">
             <button class="m-btn m-btn-done" onclick="dataMgr.chooseTakeover()" style="width:100%; justify-content:center; font-weight:900; padding:14px;">
-                <i class="fa-solid fa-chalkboard-user"></i> 강사 권한 가져오기 (비밀번호 필요)
+                <i class="fa-solid fa-chalkboard-user"></i> 강사로 입장하기
             </button>
             <button class="m-btn" onclick="dataMgr.chooseObserver()" style="background:#e0f2fe; color:#0369a1; width:100%; justify-content:center; font-weight:900; padding:14px;">
-                <i class="fa-solid fa-eye"></i> 옵저버로 입장 (모니터링만)
+                <i class="fa-solid fa-eye"></i> 옵저버로 입장하기
             </button>
             <button class="m-btn" onclick="dataMgr.cancelRoleChoice()" style="background:#fff; color:#94a3b8; border:1.5px solid #e2e8f0; width:100%; justify-content:center; font-weight:700;">취소</button>
         </div>

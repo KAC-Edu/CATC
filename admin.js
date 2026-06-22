@@ -367,11 +367,15 @@ switchRoomAttempt: async function(newRoom, silent = false) {
 
     const isActive = (st.roomStatus === 'active');
     const isOwner = (st.ownerSessionId === state.sessionId);
-    const hasOwnerRecord = !!st.ownerSessionId;
-    // ownerSessionId가 있으면 실제 강사권이 남아있는 것으로 보고 권한 선택을 먼저 띄운다.
-    // 오래된 기록이어도 자동으로 뺏지 않고, 사용자가 "강사 권한 가져오기"로 명시 처리한다.
+    // [오탐 방지] 강사가 로그아웃 없이 브라우저/탭만 닫으면 ownerSessionId가 남아
+    //  실제로 아무도 없는데 '운영 중'으로 보일 수 있다. 생존신호(ownerLastSeen, 20초마다 갱신)가
+    //  60초 이상 끊긴 방은 주인이 없는 빈 방으로 간주한다.
+    const OWNER_STALE_MS = 60000;
+    const ownerLastSeen0 = Number(st.ownerLastSeen || 0);
+    const ownerIsStale = !ownerLastSeen0 || (Date.now() - ownerLastSeen0 > OWNER_STALE_MS);
+    const hasOwnerRecord = !!st.ownerSessionId && !ownerIsStale; // 생존신호가 살아있는 주인만 유효
+    // 살아있는 주인이 있으면 '옵저버/강사' 선택을 먼저 띄운다. (끊긴 주인은 빈 방 취급)
     // [비번 옵션화] 비밀번호가 설정된 방만 인증을 요구. 비번 없는 방은 자유 입장/퇴장.
-    // [수정] 비번 유무와 무관하게 — 다른 기기가 이미 강사로 운영 중이면 항상 '옵저버/강사권' 선택을 묻는다
     const blocked = isActive && hasOwnerRecord && !isOwner && !state.isObserver;
     const needsPasswordOnly = roomHasPassword && isActive && !hasOwnerRecord && !isOwner && !state.isObserver;
 
@@ -811,7 +815,10 @@ forceEnterRoom: async function(room) {
         const isOwner = (statusData.ownerSessionId === state.sessionId);
         const isActive = (statusData.roomStatus === 'active');
         const ownerLastSeen = Number(statusData.ownerLastSeen || 0);
-        const hasOtherOwnerRecord = !!statusData.ownerSessionId && statusData.ownerSessionId !== state.sessionId;
+        // [오탐 방지] 생존신호(20초마다 갱신)가 60초 이상 끊긴 주인은 자리를 떠난 것으로 보고 빈 방 취급
+        const OWNER_STALE_MS = 60000;
+        const ownerIsStale = !ownerLastSeen || (Date.now() - ownerLastSeen > OWNER_STALE_MS);
+        const hasOtherOwnerRecord = !!statusData.ownerSessionId && statusData.ownerSessionId !== state.sessionId && !ownerIsStale;
 
         // [강의 모니터링] 이 기기가 소유자 + 강의중일 때만 마이크 송출(live)
         try { lectureMonitor.syncStatus(cleanRoom, statusData, isOwner, isActive); } catch (e) { /* 무시 */ }
@@ -885,8 +892,8 @@ forceEnterRoom: async function(room) {
                 const tm = document.getElementById('takeoverModal');
                 if (tm) tm.style.display = 'none';
 
-            } else if (isActive && !isOwner && !statusData.ownerSessionId) {
-                // ④-a 자동배치 등으로 주인이 아직 없는 방 → 입장하는 강사가 소유권 획득
+            } else if (isActive && !isOwner && (!statusData.ownerSessionId || ownerIsStale)) {
+                // ④-a 주인이 아직 없거나(자동배치 등) 생존신호가 끊긴 빈 방 → 입장하는 강사가 소유권 획득
                 firebase.database().ref(`courses/${cleanRoom}/status`).update({ ownerSessionId: state.sessionId, ownerLastSeen: firebase.database.ServerValue.TIMESTAMP });
                 dataMgr.addOwnedRoom(cleanRoom);
                 overlay.style.display = 'none';
@@ -10845,15 +10852,11 @@ ui.openMorePanel = function(){
 ui.closeMorePanel = function(){
     var p=document.getElementById('moreMenuPanel'), b=document.getElementById('moreMenuBackdrop');
     if(!p) return;
-    p.classList.remove('open');
+    if(ui._moreTimer){ clearTimeout(ui._moreTimer); ui._moreTimer=null; }
     p.style.transform='translateX(100%)';
+    p.classList.remove('open');
+    if(b) b.style.display='none';
     var tab=document.getElementById('moreToggleTab'), ic=document.getElementById('moreToggleIcon');
     if(tab){ tab.style.right='0'; }
     if(ic){ ic.style.transform='rotate(0deg)'; }
-    if(ui._moreTimer){ clearTimeout(ui._moreTimer); ui._moreTimer=null; }
-    setTimeout(function(){ if(!p.classList.contains('open') && b) b.style.display='none'; }, 340);
-};
-ui.toggleMorePanel = function(){
-    var p=document.getElementById('moreMenuPanel'); if(!p) return;
-    if(p.classList.contains('open')) ui.closeMorePanel(); else ui.openMorePanel();
 };

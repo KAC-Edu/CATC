@@ -1189,7 +1189,7 @@ body.pc-mode { background:#eef2f7; }
 #pcSidebar { display:none !important; }
 body.pc-mode .app-container { max-width:1240px; min-width:0; margin:0 auto; box-shadow:0 0 50px rgba(15,23,42,0.10); background:#f1f5f9; min-height:100dvh; }
 body.pc-mode .app-header { padding-left:28px; padding-right:28px; }
-body.pc-mode #totalStatusView { padding:24px 28px !important; background:#f1f5f9; }
+body.pc-mode #totalStatusView { padding:14px 28px 24px !important; background:#f1f5f9; }
 
 /* ══ PC 전용 대제목 탭 (지원부 step-tab 컨셉) ══ */
 .coord-pc-tabs { display:none; }
@@ -1590,13 +1590,13 @@ body.pc-mode .entry-box:hover, body.pc-mode .entry-box-tablet:hover {
         <button class="menu-tile pc-hide" style="background:#3b82f6;" onclick="openSetupModal()">
             <i class="fa-solid fa-plus-circle"></i> 과정 추가·설정
         </button>
-        <button class="menu-tile pc-hide" style="background:#f97316;" onclick="openGlobalNoticeModal(); toggleMenu(false);">
+        <button class="menu-tile" style="background:#f97316;" onclick="openGlobalNoticeModal(); toggleMenu(false);">
             <i class="fa-solid fa-bullhorn"></i> 전체 공지
         </button>
         <button class="menu-tile pc-hide" style="background:#1e293b;" onclick="openCenterQrModal(); toggleMenu(false);">
             <i class="fa-solid fa-qrcode"></i> 행정 접속 QR
         </button>
-        <button class="menu-tile pc-hide" style="background:#0d9488;" onclick="openAttendanceManager(); toggleMenu(false);">
+        <button class="menu-tile" style="background:#0d9488;" onclick="openAttendanceManager(); toggleMenu(false);">
             <i class="fa-solid fa-clipboard-user"></i> 출석부 관리
         </button>
         <button class="menu-tile" style="background:#7c3aed;" onclick="coordMgr.openManage(); toggleMenu(false);">
@@ -1665,6 +1665,20 @@ body.pc-mode .entry-box:hover, body.pc-mode .entry-box-tablet:hover {
 .coord-right{ display:flex; align-items:center; gap:8px; flex:1; justify-content:flex-end; }
 .coord-pc-only{ display:none; }
 body.pc-mode .coord-pc-only{ display:flex !important; }
+.coord-right{ flex:0 0 auto !important; }
+.coord-hdr-stats{ display:flex; align-items:center; gap:8px; flex:1; min-width:0; overflow-x:auto; justify-content:center; }
+.coord-hdr-stats::-webkit-scrollbar{ height:0; }
+.hdr-stat{ display:flex; align-items:center; gap:9px; background:rgba(255,255,255,0.12); border:1px solid rgba(255,255,255,0.2); border-radius:12px; padding:7px 13px; cursor:pointer; white-space:nowrap; flex-shrink:0; transition:background .15s, transform .12s; }
+.hdr-stat:hover{ background:rgba(255,255,255,0.24); transform:translateY(-1px); }
+.hdr-stat > i{ color:#93c5fd; font-size:16px; flex-shrink:0; }
+.hdr-stat .hb-label{ font-size:11px; font-weight:700; color:#cbd5e1; line-height:1.15; }
+.hdr-stat .hb-value{ font-size:20px; font-weight:900; color:#fff; line-height:1.05; letter-spacing:-.5px; }
+.hdr-stat .hb-value small{ font-size:11px; font-weight:700; color:#93c5fd; margin-left:2px; }
+body.pc-mode .coord-hdr-stats{ gap:10px; justify-content:center; }
+body.pc-mode .hdr-stat{ padding:8px 18px; }
+body.pc-mode .hdr-stat > i{ font-size:18px; }
+body.pc-mode .hdr-stat .hb-label{ font-size:12.5px; }
+body.pc-mode .hdr-stat .hb-value{ font-size:26px; }
 #coordHeaderClock .hc-date{ font-size:13px; font-weight:500; opacity:.8; }
 #coordHeaderClock .hc-day{ font-size:12px; font-weight:600; opacity:.7; }
 #coordHeaderClock .hc-div{ width:1px; height:18px; background:rgba(255,255,255,.25); }
@@ -1675,7 +1689,7 @@ body.pc-mode .coord-pc-only{ display:flex !important; }
 @media (max-width:360px){ .coord-clock{ display:none; } }
 @media (max-width:560px){ .coord-brand-title{ font-size:14px; } }
 /* PC 모드 — 지원부와 동일한 형태(브랜드 + 중앙 시계 pill) */
-body.pc-mode .app-header{ display:grid !important; grid-template-columns:minmax(220px,1fr) auto minmax(180px,1fr) !important; gap:18px !important; align-items:center !important; min-height:76px !important; padding:14px 32px !important; background:linear-gradient(135deg,#111827 0%,#172554 46%,#2563eb 100%) !important; width:100vw !important; margin-left:calc(50% - 50vw) !important; }
+body.pc-mode .app-header{ display:flex !important; gap:16px !important; align-items:center !important; min-height:74px !important; padding:12px 28px !important; background:linear-gradient(135deg,#111827 0%,#172554 46%,#2563eb 100%) !important; width:100vw !important; margin-left:calc(50% - 50vw) !important; }
 body.pc-mode .coord-brand-mark{ display:flex !important; }
 body.pc-mode .t-full{ display:inline !important; }
 body.pc-mode .coord-right{ flex:none !important; }
@@ -1700,12 +1714,15 @@ body.pc-mode .coord-right{ justify-self:end !important; }
       <h1 class="coord-brand-title"><span class="t-full">항공기술훈련원 </span>교육운영 플랫폼</h1>
     </div>
   </div>
-  <div id="coordHeaderClock" class="coord-clock"></div>
+  <div class="coord-hdr-stats" id="coordHdrStats">
+    <div class="hdr-stat" onclick="openCourseOverview()" title="운영 과정 현황"><i class="fa-solid fa-graduation-cap"></i><div class="hdr-stat-txt"><div class="hb-label">운영 과정</div><div class="hb-value"><span id="hero-active-courses">0</span><small>개</small></div></div></div>
+    <div class="hdr-stat" onclick="openStudentRosterPopup()" title="전체 교육생 명단"><i class="fa-solid fa-users"></i><div class="hdr-stat-txt"><div class="hb-label">전체 교육생</div><div class="hb-value"><span id="g-total-students">0</span><small>명</small></div></div></div>
+    <div class="hdr-stat" onclick="openOutingSummary()" title="외출·외박 현황"><i class="fa-solid fa-file-signature"></i><div class="hdr-stat-txt"><div class="hb-label">외출·외박</div><div class="hb-value"><span id="g-today-actions">0</span><small>건</small></div></div></div>
+    <div class="hdr-stat" onclick="openShuttleSummary()" title="퇴교차량 신청자"><i class="fa-solid fa-bus"></i><div class="hdr-stat-txt"><div class="hb-label">퇴교차량</div><div class="hb-value"><span id="g-shuttle-count">0</span><small>명</small></div></div></div>
+  </div>
   <div class="coord-right">
-    <button class="header-btn coord-pc-only" onclick="openGlobalNoticeModal()" title="전체 공지" style="width:36px;height:36px;background:rgba(255,255,255,0.18);border:1px solid rgba(255,255,255,0.28);border-radius:10px;color:#fff;align-items:center;justify-content:center;font-size:14px;cursor:pointer;"><i class="fa-solid fa-bullhorn"></i></button>
-    <button class="header-btn coord-pc-only" onclick="openAttendanceManager()" title="출석부 관리" style="width:36px;height:36px;background:rgba(255,255,255,0.18);border:1px solid rgba(255,255,255,0.28);border-radius:10px;color:#fff;align-items:center;justify-content:center;font-size:14px;cursor:pointer;"><i class="fa-solid fa-clipboard-user"></i></button>
-    <button id="pcModeBtn" class="header-btn" onclick="togglePcMode()" title="PC / 모바일 화면 전환" style="height:33px;background:rgba(255,255,255,0.18);border:1px solid rgba(255,255,255,0.28);border-radius:10px;display:flex;align-items:center;gap:6px;justify-content:center;font-size:12px;font-weight:800;padding:0 12px;color:#fff;"><i class="fa-solid fa-display"></i><span class="pcmode-label">PC</span></button>
-    <button class="header-btn" onclick="toggleMenu(true)" style="width:33px;height:33px;background:rgba(255,255,255,0.18);border:1px solid rgba(255,255,255,0.28);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:14px;padding:0;color:#fff;"><i class="fa-solid fa-bars"></i></button>
+    <div id="coordHeaderClock" class="coord-clock"></div>
+    <button class="header-btn" onclick="toggleMenu(true)" title="메뉴" style="width:38px;height:38px;background:rgba(255,255,255,0.18);border:1px solid rgba(255,255,255,0.28);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:15px;padding:0;color:#fff;"><i class="fa-solid fa-bars"></i></button>
   </div>
 </header>
 
@@ -1743,36 +1760,6 @@ body.pc-mode .coord-right{ justify-self:end !important; }
     <main class="app-content">
 <!-- [뷰 1] 전체 과정 현황 (메인) -->
 <div id="totalStatusView" style="display:flex; flex-direction:column; gap:12px;">
-
-    <!-- 히어로 배너 (훈련원 전경 + 실시간 요약 배지) -->
-    <div class="coord-hero">
-        <img class="coord-hero__img" id="coordHeroImg" src="catc.webp" alt="항공기술훈련원 전경"
-             onerror="if(!this.dataset.fb){this.dataset.fb=1; this.src=window.__CATC_HERO__||'';}">
-        <div class="coord-hero__overlay"></div>
-        <div class="coord-hero__content">
-            <div class="coord-hero__title">
-                <i class="fa-solid fa-building-columns"></i> 항공기술훈련원 교육 운영 현황
-            </div>
-            <div class="coord-hero__badges coord-nav4">
-                <div class="hero-badge nav-btn" onclick="openCourseOverview()">
-                    <i class="fa-solid fa-graduation-cap"></i>
-                    <div><div class="hb-label">운영 과정</div><div class="hb-value"><span id="hero-active-courses">0</span><small>개</small></div></div>
-                </div>
-                <div class="hero-badge nav-btn" onclick="openStudentRosterPopup()">
-                    <i class="fa-solid fa-users"></i>
-                    <div><div class="hb-label">전체 교육생</div><div class="hb-value"><span id="g-total-students">0</span><small>명</small></div></div>
-                </div>
-                <div class="hero-badge nav-btn" onclick="openOutingSummary()">
-                    <i class="fa-solid fa-file-signature"></i>
-                    <div><div class="hb-label">외출·외박</div><div class="hb-value"><span id="g-today-actions">0</span><small>건</small></div></div>
-                </div>
-                <div class="hero-badge nav-btn" onclick="openShuttleSummary()">
-                    <i class="fa-solid fa-bus"></i>
-                    <div><div class="hb-label">퇴교차량 신청자</div><div class="hb-value"><span id="g-shuttle-count">0</span><small>명</small></div></div>
-                </div>
-            </div>
-        </div>
-    </div>
 
     <!-- ══ PC 전용: 4개 대제목 탭 ══ -->
     <div class="coord-pc-tabs" id="coordPcTabs">
@@ -3619,6 +3606,7 @@ function renderCourseSelectors() {
     if (!list || !setupRoom) return;
 
     list.innerHTML = "";
+    const _isPcView = document.body.classList.contains('pc-mode');
     setupRoom.innerHTML = '<option value="">강의실 선택 (A~Z)</option>';
 
     // 오늘 날짜 구하기 (YYYY-MM-DD 형식)
@@ -3684,14 +3672,16 @@ function renderCourseSelectors() {
                     <span class="course-chevron" style="margin-left:4px;"><i class="fa-solid fa-chevron-right"></i></span>
                 </div>
             `;
-            list.appendChild(card);
+            if(!_isPcView) list.appendChild(card);
         }
     }
 
     // 만약 필터링 후 활성화된 과정이 하나도 없다면 안내 메시지 표시 (선택사항)
-    if (list.innerHTML === "") {
+    if (!_isPcView && list.innerHTML === "") {
         list.innerHTML = `<div style="text-align:center; padding:30px; color:#94a3b8; font-size:13px; font-weight:600;">현재 진행 중인 과정이 없습니다.</div>`;
     }
+    // [PC 충돌 방지] PC 모드에서는 모바일 카드 대신 항상 PC 렌더러가 그린다 (과거 데이터 깜빡임 방지)
+    if (_isPcView) { try { if (typeof coordRenderActiveCourses === 'function') coordRenderActiveCourses(); } catch(e){} }
 }
 
 
@@ -6273,11 +6263,8 @@ function _coordDetectPc() {
 
 // DOM 준비 후 자동 전환(저장된 선택 우선) — 버튼은 항상 노출
 function _coordInitViewMode() {
-    const saved = localStorage.getItem('coord_pc_mode');   // '1' | '0' | null
-    let usePc;
-    if (saved === '1') usePc = window.innerWidth >= 768;
-    else if (saved === '0') usePc = false;
-    else usePc = _coordDetectPc();
+    // [토글 제거] 접속 기기로만 자동 판별 (PC=PC화면 · 모바일=모바일화면)
+    let usePc = _coordDetectPc();
     if (usePc) document.body.classList.add('pc-mode');
     _coordSetPcBtn(usePc);
     if (usePc) setTimeout(function(){ try { pcsSyncCourseList(); pcUpdateNav(); } catch(e){} }, 700);
