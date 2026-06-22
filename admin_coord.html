@@ -1494,17 +1494,17 @@ body.pc-mode .entry-box:hover, body.pc-mode .entry-box-tablet:hover {
 @media(max-width:640px){ .coord-nav4{ grid-template-columns:repeat(2,1fr); } }
 .cpop-ov{ display:none; position:fixed; inset:0; background:rgba(15,23,42,.55); z-index:9500; align-items:center; justify-content:center; padding:18px; }
 .cpop-ov.open{ display:flex; }
-.cpop{ background:#fff; width:100%; max-width:760px; max-height:86vh; border-radius:18px; overflow:hidden; display:flex; flex-direction:column; box-shadow:0 20px 50px rgba(0,0,0,.3); }
-.cpop-head{ background:#0f2a4a; color:#fff; padding:15px 18px; font-weight:900; font-size:16px; display:flex; justify-content:space-between; align-items:center; }
+.cpop{ background:#fff; width:100%; max-width:960px; max-height:88vh; border-radius:18px; overflow:hidden; display:flex; flex-direction:column; box-shadow:0 20px 50px rgba(0,0,0,.3); }
+.cpop-head{ background:#0f2a4a; color:#fff; padding:16px 20px; font-weight:900; font-size:18px; display:flex; justify-content:space-between; align-items:center; }
 .cpop-head .x{ cursor:pointer; font-size:20px; }
 .cpop-body{ padding:16px 18px; overflow-y:auto; }
 .cpop-table{ width:100%; border-collapse:collapse; }
-.cpop-table th{ background:#f1f5f9; color:#475569; font-size:12px; font-weight:800; padding:9px 6px; border-bottom:2px solid #e2e8f0; }
-.cpop-table td{ text-align:center; font-size:13px; padding:9px 6px; border-bottom:1px solid #f1f5f9; }
+.cpop-table th{ background:#f1f5f9; color:#475569; font-size:13.5px; font-weight:800; padding:11px 8px; border-bottom:2px solid #e2e8f0; }
+.cpop-table td{ text-align:center; font-size:15px; padding:11px 8px; border-bottom:1px solid #f1f5f9; }
 .cpop-empty{ text-align:center; color:#94a3b8; font-weight:700; padding:40px; }
 .cpop-search{ width:100%; padding:11px; border:1.5px solid #e2e8f0; border-radius:10px; font-size:14px; margin-bottom:12px; box-sizing:border-box; }
 .cpop-course{ border:1px solid #e2e8f0; border-radius:12px; margin-bottom:12px; overflow:hidden; }
-.cpop-course-h{ background:#f8fafc; padding:10px 13px; font-weight:900; font-size:14px; display:flex; justify-content:space-between; }
+.cpop-course-h{ background:#f8fafc; padding:13px 16px; font-weight:900; font-size:16px; display:flex; justify-content:space-between; align-items:center; }
 .cpop-course-h span{ color:#0ea5e9; font-size:12px; }
 .cpop-roster{ padding:10px 13px; display:flex; flex-wrap:wrap; gap:7px; }
 .cpop-name{ background:#f1f5f9; border-radius:8px; padding:6px 11px; font-size:13px; font-weight:700; }
@@ -1627,6 +1627,8 @@ body.pc-mode .entry-box:hover, body.pc-mode .entry-box-tablet:hover {
 .coord-brand-title{ margin:0; font-size:15px; font-weight:900; color:#fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .coord-clock{ color:#fff; display:flex; align-items:center; gap:7px; white-space:nowrap; flex-shrink:0; }
 .coord-right{ display:flex; align-items:center; gap:8px; flex:1; justify-content:flex-end; }
+.coord-pc-only{ display:none; }
+body.pc-mode .coord-pc-only{ display:flex !important; }
 #coordHeaderClock .hc-date{ font-size:11px; font-weight:400; opacity:.75; }
 #coordHeaderClock .hc-day{ font-size:10px; font-weight:600; opacity:.6; }
 #coordHeaderClock .hc-div{ width:1px; height:16px; background:rgba(255,255,255,.2); }
@@ -1664,6 +1666,8 @@ body.pc-mode .coord-right{ justify-self:end !important; }
   </div>
   <div id="coordHeaderClock" class="coord-clock"></div>
   <div class="coord-right">
+    <button class="header-btn coord-pc-only" onclick="openGlobalNoticeModal()" title="전체 공지" style="width:36px;height:36px;background:rgba(255,255,255,0.18);border:1px solid rgba(255,255,255,0.28);border-radius:10px;color:#fff;align-items:center;justify-content:center;font-size:14px;cursor:pointer;"><i class="fa-solid fa-bullhorn"></i></button>
+    <button class="header-btn coord-pc-only" onclick="openAttendanceManager()" title="출석부 관리" style="width:36px;height:36px;background:rgba(255,255,255,0.18);border:1px solid rgba(255,255,255,0.28);border-radius:10px;color:#fff;align-items:center;justify-content:center;font-size:14px;cursor:pointer;"><i class="fa-solid fa-clipboard-user"></i></button>
     <button id="pcModeBtn" class="header-btn" onclick="togglePcMode()" title="PC / 모바일 화면 전환" style="height:33px;background:rgba(255,255,255,0.18);border:1px solid rgba(255,255,255,0.28);border-radius:10px;display:flex;align-items:center;gap:6px;justify-content:center;font-size:12px;font-weight:800;padding:0 12px;color:#fff;"><i class="fa-solid fa-display"></i><span class="pcmode-label">PC</span></button>
     <button class="header-btn" onclick="toggleMenu(true)" style="width:33px;height:33px;background:rgba(255,255,255,0.18);border:1px solid rgba(255,255,255,0.28);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:14px;padding:0;color:#fff;"><i class="fa-solid fa-bars"></i></button>
   </div>
@@ -1712,7 +1716,6 @@ body.pc-mode .coord-right{ justify-self:end !important; }
         <div class="coord-hero__content">
             <div class="coord-hero__title">
                 <i class="fa-solid fa-building-columns"></i> 항공기술훈련원 교육 운영 현황
-                <small>교육운영부</small>
             </div>
             <div class="coord-hero__badges coord-nav4">
                 <div class="hero-badge nav-btn" onclick="openCourseOverview()">
@@ -3637,13 +3640,14 @@ function renderCourseSelectors() {
             card.innerHTML = `
                 <div class="course-color-bar" style="background: ${color};"></div>
                 <div class="course-info-content" style="display:flex; align-items:center; gap:18px; flex-wrap:wrap;">
-                    <div style="flex:1; min-width:160px;">
+                    <div style="flex:1; min-width:170px;">
                         <span style="font-size:11px; color:${color}; font-weight:800; letter-spacing:0.3px;">ROOM ${rid}</span>
-                        <div style="font-weight:900; font-size:17px; color:var(--navy-dark); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; margin-top:3px;">${cName}</div>
+                        <div style="font-weight:900; font-size:20px; color:var(--navy-dark); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; margin-top:3px;">${cName}</div>
                     </div>
-                    <div style="display:flex; align-items:center; gap:28px; flex-shrink:0;">
-                        <div style="text-align:left;"><div style="font-size:10.5px; color:#94a3b8; font-weight:800; margin-bottom:3px;"><i class="fa-solid fa-chalkboard-user" style="margin-right:4px;color:#cbd5e1;"></i>담임교수</div><div style="font-size:13.5px; color:#0f172a; font-weight:800; white-space:nowrap;">${_profTxt||'-'}</div></div>
-                        <div style="text-align:left;"><div style="font-size:10.5px; color:#94a3b8; font-weight:800; margin-bottom:3px;"><i class="fa-solid fa-user-tie" style="margin-right:4px;color:#cbd5e1;"></i>과정담당</div><div style="font-size:13.5px; color:#0f172a; font-weight:800; white-space:nowrap;">${_coordTxt||'-'}</div></div>
+                    <div style="display:flex; align-items:center; flex-shrink:0;">
+                        <div style="padding:2px 26px; white-space:nowrap;"><span style="color:#94a3b8; font-weight:800; font-size:13px;">담임교수</span><span style="color:#cbd5e1; margin:0 8px;">:</span><span style="color:#0f172a; font-weight:800; font-size:16px;">${_profNm||'-'}</span></div>
+                        <div style="width:1px; height:34px; background:#e2e8f0;"></div>
+                        <div style="padding:2px 26px; white-space:nowrap;"><span style="color:#94a3b8; font-weight:800; font-size:13px;">과정담당</span><span style="color:#cbd5e1; margin:0 8px;">:</span><span style="color:#0f172a; font-weight:800; font-size:16px;">${_coordTxt||'-'}</span></div>
                     </div>
                     <span class="course-chevron" style="margin-left:4px;"><i class="fa-solid fa-chevron-right"></i></span>
                 </div>
@@ -6980,7 +6984,7 @@ function openCourseOverview(){
   const rooms=_coordActiveRooms();
   const html = rooms.length
     ? `<table class="cpop-table"><thead><tr><th>강의실</th><th>과정명</th><th>담당자</th><th>담임교수</th><th>기간</th><th>인원</th></tr></thead><tbody>`
-      + rooms.map(r=>`<tr><td style="font-weight:900;">ROOM ${r.rid}</td><td style="text-align:left;">${_esc(r.s.courseName||'-')}</td><td>${_esc(r.s.coordinatorName||'-')}</td><td>${_esc(r.st.professorName||'-')}</td><td style="font-size:11px;">${_esc(r.s.period||'-')}</td><td><b>${_studentsOf(r.room).length}</b>명</td></tr>`).join('')
+      + rooms.map(r=>`<tr><td style="font-weight:900;">ROOM ${r.rid}</td><td style="text-align:left;font-size:16px;font-weight:800;">${_esc(r.s.courseName||'-')}</td><td>${_esc(r.s.coordinatorName||'-')}</td><td>${_esc(r.st.professorName||'-')}</td><td style="font-size:12px;">${_esc(r.s.period||'-')}</td><td><b style="font-size:20px;color:#2563eb;">${_studentsOf(r.room).length}</b>명</td></tr>`).join('')
       + `</tbody></table>`
     : '<div class="cpop-empty">운영 중인 과정이 없습니다.</div>';
   _cpop('<i class="fa-solid fa-graduation-cap"></i> 운영 과정 현황', html);
@@ -6992,66 +6996,32 @@ function openStudentRosterPopup(){
   const search=`<input id="cpopSearch" class="cpop-search" placeholder="🔍 이름·소속 검색" oninput="_filterRoster(this.value)">`;
   let blocks=rooms.map(r=>{ const studs=_studentsOf(r.room).sort((a,b)=>(a.seq||0)-(b.seq||0)||(''+(a.name||'')).localeCompare(''+(b.name||'')));
     if(!studs.length) return '';
-    return `<div class="cpop-course"><div class="cpop-course-h">ROOM ${r.rid} · ${_esc(r.s.courseName||'-')} <span>${studs.length}명</span></div>
-      <div class="cpop-roster">${studs.map(st=>`<span class="cpop-name" data-n="${_esc(((st.name||'')+(st.dept||st.position||'')).toLowerCase())}">${_esc(st.name)}${(st.dept||st.position)?`<small>${_esc(st.dept||st.position)}</small>`:''}</span>`).join('')}</div></div>`;
+    const rows=studs.map((st,i)=>`<tr class="rosterRow" data-n="${_esc(((st.name||'')+(st.dept||st.position||'')).toLowerCase())}"><td style="color:#94a3b8;">${i+1}</td><td style="text-align:left;color:#475569;">${_esc(st.dept||st.position||'-')}</td><td style="color:#64748b;">${_esc(st.empNo||st.sabun||'-')}</td><td style="font-weight:800;">${_esc(st.name||'-')}</td></tr>`).join('');
+    return `<div class="cpop-course"><div class="cpop-course-h">ROOM ${_esc(r.rid)} · ${_esc(r.s.courseName||'-')} <span style="color:#0ea5e9;font-size:14px;">${studs.length}명</span></div>
+      <table class="cpop-table"><thead><tr><th style="width:46px;">연번</th><th style="text-align:left;">소속</th><th style="width:90px;">사번</th><th style="width:90px;">성명</th></tr></thead><tbody>${rows}</tbody></table></div>`;
   }).join('');
   if(!blocks.trim()) blocks='<div class="cpop-empty">등록된 명단이 없습니다.</div>';
   _cpop('<i class="fa-solid fa-users"></i> 과정별 교육생 명단', search+blocks);
 }
 function _filterRoster(q){ q=(q||'').toLowerCase().trim();
-  document.querySelectorAll('#cpopBody .cpop-name').forEach(el=>{ const k=el.getAttribute('data-n')||''; el.style.display=(!q||k.includes(q))?'':'none'; });
-  document.querySelectorAll('#cpopBody .cpop-course').forEach(c=>{ const any=[...c.querySelectorAll('.cpop-name')].some(e=>e.style.display!=='none'); c.style.display=any?'':'none'; });
+  document.querySelectorAll('#cpopBody .rosterRow').forEach(el=>{ const k=el.getAttribute('data-n')||''; el.style.display=(!q||k.includes(q))?'':'none'; });
+  document.querySelectorAll('#cpopBody .cpop-course').forEach(c=>{ const any=[...c.querySelectorAll('.rosterRow')].some(e=>e.style.display!=='none'); c.style.display=any?'':'none'; });
 }
 
 /* 3) 외출·외박 현황 (선택 날짜 기준) */
-async function openOutingSummary(){
-  const _ymd=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
-  const d90=new Date(); d90.setDate(d90.getDate()-90); const cut=_ymd(d90);
-  const isDate=d=>/^\d{4}-\d{2}-\d{2}$/.test(d);
-  const countActs=(aa,from,to)=>{ let c=0,o=0,v=0; Object.keys(aa||{}).forEach(dt=>{ if(!isDate(dt)) return; if(from&&dt<from) return; if(to&&dt>to) return; Object.values(aa[dt]||{}).forEach(a=>{ c++; if(a&&a.type==='outing') o++; else v++; }); }); return {c,o,v}; };
-  const mondayList=(s,e)=>{ if(!s&&!e) return []; s=s||e; e=e||s; const out=[]; let d=new Date(s+'T00:00:00'); if(isNaN(d)) return []; const dow=(d.getDay()+6)%7; d.setDate(d.getDate()-dow); const end=new Date(e+'T00:00:00'); let g=0; while(d<=end && g<60){ out.push(_ymd(d)); d=new Date(d); d.setDate(d.getDate()+7); g++; } return out; };
-  const all=[];
-  for(let i=65;i<=90;i++){
-    const rid=String.fromCharCode(i); const room=(typeof globalAllData!=='undefined')?globalAllData[rid]:null; if(!room) continue;
-    const s=room.settings||{}; const aa=room.admin_actions||{};
-    let cs='',ce=''; if(s.period&&s.period.includes(' ~ ')){ const pp=s.period.split(' ~ '); cs=pp[0].trim(); ce=pp[1].trim(); }
-    const hasName=!!(s.courseName&&(''+s.courseName).trim());
-    if(!s.hideFromBoard && hasName && (!ce || ce>=cut)){ const k=countActs(aa,cs,ce); const active=(room.status&&room.status.roomStatus==='active');
-      if(k.c>0) all.push({start:cs,end:ce,tr:`<tr>
-        <td style="text-align:left; font-weight:800;">${_esc(s.courseName||('Room '+rid))}${active?' <span style="font-size:10px;color:#16a34a;font-weight:800;">●진행중</span>':''}</td>
-        <td style="font-size:11px; white-space:nowrap;">${_esc((cs||'').replace(/-/g,'.'))}${ce?(' ~ '+_esc(ce.replace(/-/g,'.'))):''}</td>
-        <td style="color:#ea580c; font-weight:800;">${k.o}</td><td style="color:#dc2626; font-weight:800;">${k.v}</td><td><b>${k.c}</b>건</td>
-        <td style="white-space:nowrap;"><button onclick="openOutingLedgerFor('${rid}')" style="background:#1e293b; color:#fff; border:none; border-radius:7px; padding:6px 10px; font-size:11px; font-weight:800; cursor:pointer;"><i class="fa-solid fa-file-pdf"></i> PDF</button> <button onclick="delOutingRoom('${rid}','${cs}','${ce}')" title="대장 삭제" style="background:#fee2e2; color:#dc2626; border:1px solid #fecaca; border-radius:7px; padding:6px 9px; font-size:11px; font-weight:800; cursor:pointer;"><i class="fa-solid fa-trash"></i></button></td></tr>`}); }
-    const orphan=Object.keys(aa).filter(d=>isDate(d)&&d>=cut&&(!cs||!ce||d<cs||d>ce)).sort();
-    if(orphan.length){ const blocks=[]; let curB=null;
-      orphan.forEach(d=>{ if(!curB){curB=[d];} else { const gap=(new Date(d)-new Date(curB[curB.length-1]))/86400000; if(gap>7){blocks.push(curB); curB=[d];} else curB.push(d);} });
-      if(curB) blocks.push(curB);
-      blocks.forEach(b=>{ const st=b[0], en=b[b.length-1]; const k=countActs(aa,st,en); if(k.c>0) all.push({start:st,end:en,tr:`<tr style="background:#fafafa;">
-        <td style="text-align:left; font-weight:800; color:#64748b;">ROOM ${rid} <span style="font-size:10px;color:#b45309;">지난 기록</span></td>
-        <td style="font-size:11px; white-space:nowrap;">${_esc(st.replace(/-/g,'.'))} ~ ${_esc(en.replace(/-/g,'.'))}</td>
-        <td style="color:#ea580c; font-weight:800;">${k.o}</td><td style="color:#dc2626; font-weight:800;">${k.v}</td><td><b>${k.c}</b>건</td>
-        <td style="white-space:nowrap;"><button onclick="openOutingLedgerFor('${rid}','${st}','${en}')" style="background:#475569; color:#fff; border:none; border-radius:7px; padding:6px 10px; font-size:11px; font-weight:800; cursor:pointer;"><i class="fa-solid fa-file-pdf"></i> PDF</button> <button onclick="delOutingRoom('${rid}','${st}','${en}')" title="기록 삭제" style="background:#fee2e2; color:#dc2626; border:1px solid #fecaca; border-radius:7px; padding:6px 9px; font-size:11px; font-weight:800; cursor:pointer;"><i class="fa-solid fa-trash"></i></button></td></tr>`}); });
-    }
-  }
-  try {
-    const arSnap = await firebase.database().ref('system/course_archive').once('value');
-    const arch = arSnap.val() || {};
-    Object.keys(arch).forEach(id=>{ const a=arch[id]||{}; const k=countActs(a.admin_actions||{}); let ps='',pe=''; if(a.period&&a.period.includes(' ~ ')){ const pp=a.period.split(' ~ '); ps=pp[0].trim(); pe=pp[1].trim(); } const hasAttend=!!(a.internal_attendance&&Object.keys(a.internal_attendance).length);
-      if(k.c>0||hasAttend) all.push({start:ps,end:pe,tr:`<tr style="background:#f5f3ff;">
-        <td style="text-align:left; font-weight:800;">${_esc(a.courseName||('Room '+(a.room||'')))} <span style="font-size:10px;color:#7c3aed;font-weight:800;">보관됨</span></td>
-        <td style="font-size:11px; white-space:nowrap;">${_esc((a.period||'').replace(/-/g,'.'))}</td>
-        <td style="color:#ea580c; font-weight:800;">${k.o}</td><td style="color:#dc2626; font-weight:800;">${k.v}</td><td><b>${k.c}</b>건</td>
-        <td style="white-space:nowrap;"><button onclick="openArchiveLedger('${id}')" style="background:#6d28d9; color:#fff; border:none; border-radius:7px; padding:6px 9px; font-size:11px; font-weight:800; cursor:pointer;"><i class="fa-solid fa-file-pdf"></i> 외출</button>${hasAttend?` <button onclick="openArchiveAttendance('${id}')" style="background:#0369a1; color:#fff; border:none; border-radius:7px; padding:6px 9px; font-size:11px; font-weight:800; cursor:pointer;"><i class="fa-solid fa-clipboard-user"></i> 출석부</button>`:''} <button onclick="delArchiveRow('${id}')" title="보관 대장 삭제" style="background:#fee2e2; color:#dc2626; border:1px solid #fecaca; border-radius:7px; padding:6px 9px; font-size:11px; font-weight:800; cursor:pointer;"><i class="fa-solid fa-trash"></i></button></td></tr>`}); });
-  } catch(e){}
-  all.sort((a,b)=>(b.start||'').localeCompare(a.start||''));
-  // 주차 옵션
-  const wkSet={}; all.forEach(r=>{ mondayList(r.start,r.end).forEach(m=>{ if(m>=cut) wkSet[m]=1; }); });
-  const weeks=Object.keys(wkSet).sort().reverse();
-  window._outingRows=all;
-  const fmt=s=>{ const d=new Date(s+'T00:00:00'); const e=new Date(d); e.setDate(d.getDate()+6); const f=x=>(x.getMonth()+1)+'/'+x.getDate(); return f(d)+'~'+f(e); };
-  let sel='<div style="margin-bottom:12px; display:flex; align-items:center; gap:8px; flex-wrap:wrap;"><span style="font-size:12px; color:#64748b; font-weight:800;">주차 선택</span><select id="outWeekSel" onchange="_renderOutingTable(this.value)" style="padding:8px 12px; border:1.5px solid #cbd5e1; border-radius:9px; font-weight:800; font-size:13px;"><option value="all">전체 (최근 3개월)</option>'+weeks.map(m=>'<option value="'+m+'">'+fmt(m)+' 주차</option>').join('')+'</select></div>';
-  _cpop('<i class="fa-solid fa-file-signature"></i> 외출·외박 대장 (과정별)', sel+'<div id="outTableWrap"></div>');
-  _renderOutingTable('all');
+function openOutingSummary(){
+  const rooms=_coordActiveRooms();
+  let blocks=rooms.map(r=>{ const aa=r.room.admin_actions||{};
+    let list=[];
+    Object.keys(aa).forEach(dt=>{ if(!/^\d{4}-\d{2}-\d{2}$/.test(dt)) return; Object.values(aa[dt]||{}).forEach(a=>{ if(a&&a.name) list.push(Object.assign({date:dt},a)); }); });
+    if(!list.length) return '';
+    list.sort((a,b)=>(''+(a.date||'')).localeCompare(''+(b.date||''))||((a.timestamp||0)-(b.timestamp||0)));
+    const rows=list.map((a,i)=>{ const kind=(a.type==='outing')?'<span style="color:#ea580c;font-weight:800;">외출</span>':'<span style="color:#dc2626;font-weight:800;">외박</span>'; return `<tr><td style="color:#94a3b8;">${i+1}</td><td style="font-weight:800;">${_esc(a.name||'-')}</td><td>${kind}</td><td style="text-align:left;color:#475569;">${_esc(a.dept||'-')}</td><td>${_esc(a.date?a.date.substring(5):'-')}</td><td style="text-align:left;">${_esc(a.destination||'-')}</td></tr>`; }).join('');
+    return `<div class="cpop-course"><div class="cpop-course-h">ROOM ${_esc(r.rid)} · ${_esc(r.s.courseName||'-')} <span style="color:#ea580c;font-size:14px;">${list.length}건</span></div>
+      <table class="cpop-table"><thead><tr><th style="width:46px;">연번</th><th style="width:90px;">성명</th><th style="width:60px;">구분</th><th style="text-align:left;">소속</th><th style="width:64px;">일자</th><th style="text-align:left;">행선지</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+  }).join('');
+  if(!blocks.trim()) blocks='<div class="cpop-empty">현재 외출·외박 신청자가 없습니다.</div>';
+  _cpop('<i class="fa-solid fa-file-signature"></i> 외출·외박 신청 현황 (과정별)', blocks);
 }
 function _renderOutingTable(sel){
   const wrap=document.getElementById('outTableWrap'); if(!wrap) return;
@@ -7093,17 +7063,17 @@ function delArchiveRow(id){
 
 /* 4) 퇴교차량 신청 총괄 */
 function openShuttleSummary(){
-  const rooms=_coordActiveRooms(); const rows=[];
-  rooms.forEach(r=>{ const reqs=r.room.shuttle && r.room.shuttle.requests; if(!reqs) return; const arr=Object.values(reqs); if(!arr.length) return;
+  const rooms=_coordActiveRooms();
+  let blocks=rooms.map(r=>{ const reqs=r.room.shuttle&&r.room.shuttle.requests; const arr=reqs?Object.values(reqs):[]; const tot=arr.length;
     const c={osong:0,terminal:0,airport:0,car:0}; arr.forEach(x=>{ if(c[x.type]!==undefined) c[x.type]++; });
-    rows.push({ cName:r.s.courseName||r.rid, c, tot:arr.filter(x=>x.type!=='car').length, dep:r.room.shuttle.departure });
-  });
-  const html = rows.length
-    ? `<table class="cpop-table"><thead><tr><th>과정명</th><th>오송역</th><th>터미널</th><th>공항</th><th>자차</th><th>버스계</th><th>출발</th></tr></thead><tbody>`
-      + rows.map(r=>`<tr><td style="text-align:left; font-weight:800;">${_esc(r.cName)}</td><td>${r.c.osong}</td><td>${r.c.terminal}</td><td>${r.c.airport}</td><td>${r.c.car}</td><td><b>${r.tot}</b></td><td style="font-size:11px; color:${(r.dep&&r.dep.announced)?'#16a34a':'#94a3b8'};">${(r.dep&&r.dep.announced&&r.dep.time)?(r.dep.time+' 공지'):'미공지'}</td></tr>`).join('')
-      + `</tbody></table>`
-    : '<div class="cpop-empty">신청된 퇴교차량이 없습니다.</div>';
-  _cpop('<i class="fa-solid fa-bus"></i> 퇴교차량 신청 총괄', html);
+    return `<div style="display:flex;align-items:center;gap:18px;border:1px solid #eef2f7;border-radius:14px;padding:16px 22px;margin-bottom:10px;">
+      <div style="flex:1;min-width:0;"><div style="font-size:11px;color:#2563eb;font-weight:800;">ROOM ${_esc(r.rid)}</div><div style="font-size:17px;font-weight:900;color:#0f172a;word-break:keep-all;">${_esc(r.s.courseName||'-')}</div>
+        <div style="font-size:12px;color:#94a3b8;font-weight:700;margin-top:4px;">오송 ${c.osong} · 터미널 ${c.terminal} · 공항 ${c.airport} · 자차 ${c.car}</div></div>
+      <div style="text-align:center;flex-shrink:0;"><div style="font-size:12px;color:#64748b;font-weight:800;">신청</div><div style="font-size:36px;font-weight:900;color:#2563eb;line-height:1;">${tot}</div><div style="font-size:11px;color:#94a3b8;font-weight:700;">명</div></div>
+    </div>`;
+  }).join('');
+  if(!blocks.trim()) blocks='<div class="cpop-empty">신청된 퇴교차량이 없습니다.</div>';
+  _cpop('<i class="fa-solid fa-bus"></i> 퇴교차량 신청 현황 (과정별)', blocks);
 }
 function toggleAcc(el){ const card=el.closest('.acc'); if(card) card.classList.toggle('collapsed'); }
 </script>
@@ -7127,7 +7097,7 @@ window.addEventListener('load', function(){
 });
 </script>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vH18</div>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vH20</div>
 <script>
 /* ===== [공용] 종료된 과정 자동 정리 (모든 플랫폼 공통) — 종료일 지난 방을 다음날 미개설로 비움. 브라우저별 하루 1회 ===== */
 window.kacExpireEndedCourses = async function(){

@@ -15,7 +15,7 @@
         /* ── 화면 미리보기용 ── */
         .page {
             width: 277mm;          /* A4 가로(297mm) - 좌우여백 각 10mm */
-            padding: 8mm 10mm;
+            padding: 8mm 10mm 8mm 22mm;   /* 좌측 22mm: 펀치(천공) 여백 */
             margin: 10mm auto;
             background: white;
             box-shadow: 0 0 15px rgba(0,0,0,0.1);
@@ -23,7 +23,7 @@
         }
 
         /* 펀치 구멍 가이드 */
-        .punch-hole { position:absolute; left:3mm; width:5mm; height:5mm; background:#cbd5e1; border-radius:50%; }
+        .punch-hole { position:absolute; left:9mm; width:5mm; height:5mm; background:#cbd5e1; border-radius:50%; }
         .hole-1 { top:60mm; } .hole-2 { bottom:60mm; }
 
         .title { text-align:center; font-size:26px; font-weight:900; letter-spacing:8px; margin:0 0 6px 0; }
@@ -70,7 +70,7 @@
             /* @page 여백 0 → 브라우저가 자동 삽입하는 머리글/꼬리글(주소·날짜·페이지번호) 제거 */
             @page { size: A4 landscape; margin: 0; }
             /* 화면 카드 1장 = 인쇄 1페이지 */
-            .page { width: 100%; margin: 0; padding: 6mm 8mm; box-shadow: none; page-break-after: always; }
+            .page { width: 100%; margin: 0; padding: 6mm 8mm 6mm 20mm; box-shadow: none; page-break-after: always; }
             .page:last-child { page-break-after: auto; }
             table.ledger thead .doc-head td { padding-top: 4mm !important; }
             * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
@@ -79,7 +79,7 @@
     </style>
 </head>
 <body>
-    <button class="print-btn" onclick="printLedger()">대장 인쇄하기</button>
+    <button class="print-btn" onclick="printLedger()">PDF저장</button>
 
     <div id="ledgerPages"></div>
 
@@ -130,29 +130,12 @@
         window._courseNameStr = '-';   // 페이지 제목블록·인쇄 파일명용
         window._periodDisplay = '-';
 
-        // 실제 PDF 파일 생성·다운로드 (모바일/인앱 브라우저에서도 동작). 미지원 시 인쇄로 폴백.
+        // 브라우저 인쇄 미리보기 → 'PDF로 저장' 선택 (미리보기 확인 후 저장, 빈 페이지 없음)
         function printLedger() {
             const cn = (window._courseNameStr || '').trim();
             const base = (cn && cn !== '-') ? `(외출외박대장)${cn}` : '외출외박대장';
-            const el = document.getElementById('ledgerPages');
-            if (!el) return;
-            if (typeof html2pdf === 'undefined') { document.title = base; window.print(); return; }
-            const btn = document.querySelector('.print-btn');
-            const oldTxt = btn ? btn.innerHTML : '';
-            if (btn) { btn.disabled = true; btn.innerHTML = '⏳ PDF 생성 중…'; }
-            // 캡처용 임시 스타일 (카드 여백·그림자 제거 → 깔끔한 페이지)
-            const tmp = document.createElement('style');
-            tmp.innerHTML = '#ledgerPages .page{margin:0 !important;box-shadow:none !important;border-radius:0 !important;}';
-            document.head.appendChild(tmp);
-            const done = () => { tmp.remove(); if (btn) { btn.disabled = false; btn.innerHTML = oldTxt; } };
-            html2pdf().set({
-                margin: 0,
-                filename: base + '.pdf',
-                image: { type: 'jpeg', quality: 0.95 },
-                html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff' },
-                jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' },
-                pagebreak: { mode: ['css', 'legacy'], before: '.page' }
-            }).from(el).save().then(done).catch(() => { done(); document.title = base; window.print(); });
+            document.title = base;     // 저장 시 기본 파일명
+            window.print();
         }
         window.addEventListener('afterprint', () => { document.title = '외출·외박 신청서(대장)'; });
 
@@ -322,9 +305,9 @@
         init();
     </script>
 <style>@media print{#__ver{display:none!important}}</style>
-<div id="__ver" style="position:fixed;right:7px;bottom:7px;z-index:2147483000;background:rgba(15,23,42,.72);color:#cbd5e1;font:700 10px/1 monospace;padding:4px 8px;border-radius:7px;pointer-events:none;letter-spacing:.3px;">외출대장 vA · 260612-1323</div>
+<div id="__ver" style="position:fixed;right:7px;bottom:7px;z-index:2147483000;background:rgba(15,23,42,.72);color:#cbd5e1;font:700 10px/1 monospace;padding:4px 8px;border-radius:7px;pointer-events:none;letter-spacing:.3px;">외출대장 vB · 260622</div>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vA</div>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vB</div>
 </body>
 </html>
 <!-- @build 20260612-132331 (외출대장 vA) -->

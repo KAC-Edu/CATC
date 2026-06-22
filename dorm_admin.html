@@ -151,12 +151,14 @@
 
         /* ── 방마스터 접이식(아코디언) 섹션 ── */
         /* ── 접이식(아코디언) — 패널형 (동·층 우선순위 / 배치 기준 관리) ── */
-        .panel.acc { padding:0; overflow:hidden; transition:border-color .15s ease, box-shadow .15s ease; }
-        .panel.acc:hover { border-color:#94a3b8; box-shadow:0 3px 14px rgba(15,23,42,0.07); }
-        .panel.acc > .acc-head { cursor:pointer; display:flex; align-items:center; justify-content:space-between; margin:0; padding:15px 22px; user-select:none; border-radius:16px; transition:background .15s ease; }
-        .panel.acc.open > .acc-head { border-radius:16px 16px 0 0; }
-        .panel.acc > .acc-head:hover { background:#f8fafc; }
+        .panel.acc { padding:0; overflow:hidden; border-color:#cdddff; transition:border-color .15s ease, box-shadow .15s ease; }
+        .panel.acc:hover { border-color:var(--blue); box-shadow:0 3px 14px rgba(37,99,235,0.14); }
+        .panel.acc > .acc-head { cursor:pointer; display:flex; align-items:center; justify-content:space-between; margin:0; padding:15px 22px; user-select:none; border-radius:16px; background:#eef4ff; transition:background .15s ease; }
+        .panel.acc.open > .acc-head { border-radius:16px 16px 0 0; background:#e2ecff; border-bottom:1px solid #cdddff; }
+        .panel.acc > .acc-head:hover { background:#dde8ff; }
+        .panel.acc > .acc-head > span { color:#1e3a8a; font-weight:900; }
         .acc-chev { font-size:14px; color:#94a3b8; transition:transform .25s ease; }
+        .panel.acc > .acc-head .acc-chev { color:var(--blue); }
         .panel.acc.open > .acc-head .acc-chev { transform:rotate(180deg); }
         .panel.acc > .acc-body { display:grid; grid-template-rows:0fr; transition:grid-template-rows .3s ease; }
         .panel.acc.open > .acc-body { grid-template-rows:1fr; }
@@ -6101,7 +6103,7 @@
 </script>
 <style>@media print{#__catcVer{display:none!important}}</style>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vK10</div>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vK11</div>
 <script>
 /* ===== [공용] 종료된 과정 자동 정리 (모든 플랫폼 공통) — 종료일 지난 방을 다음날 미개설로 비움. 브라우저별 하루 1회 ===== */
 window.kacExpireEndedCourses = async function(){
