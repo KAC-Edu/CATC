@@ -5481,7 +5481,7 @@ resetShuttleRequests: function() {
             }).join('');
             body.innerHTML=(rows?(_legend+rows):'<p style="color:#94a3b8;text-align:center;padding:30px;font-size:16px;">이번 주 교육생 정보가 없습니다.</p>');
         } else if(type==='outing'){
-            title.textContent='🚶 과정별 외출/외박 신청 현황 (AM 09:00~익일 AM 09:00)';
+            title.innerHTML='🚶 과정별 외출/외박 신청 현황<br><span style="font-size:14px; font-weight:600; color:#94a3b8;">AM 09:00 ~ 익일 AM 09:00</span>';
             const rows=weekRooms.map(([room,r])=>{
                 const course=(r.settings||{}).courseName||'-';
                 // [09:00 운영일 윈도우] 자정이 아닌 익일 09:00 기준으로 금일 외출/외박 집계
