@@ -1988,7 +1988,7 @@ body.pc-mode .coord-right{ justify-self:end !important; }
           <div id="indCourseHeader" style="background: linear-gradient(140deg, #0f2747 0%, #1e426f 100%); border-radius: 16px; padding: 18px 20px; margin-bottom: 4px; color: #ffffff; box-shadow: 0 8px 22px rgba(15, 39, 71, 0.28); position:relative; overflow:hidden;">
               <div style="position:absolute; right:-30px; top:-30px; width:130px; height:130px; border-radius:50%; background:rgba(96,165,250,0.12);"></div>
               <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 14px; flex-wrap: wrap;">
-                  <span style="background:rgba(96,165,250,0.22); color:#bfdbfe; font-weight:800; font-size:12px; padding:5px 11px; border-radius:8px; letter-spacing:.3px; white-space:nowrap; flex-shrink:0;">ROOM <span id="ind-room-id">-</span></span>
+                  <span style="background:rgba(96,165,250,0.22); color:#bfdbfe; font-weight:800; font-size:12px; padding:5px 11px; border-radius:8px; letter-spacing:.3px; white-space:nowrap; flex-shrink:0;">ROOM #<span id="ind-room-id">-</span></span>
                   <span id="ind-course-name" style="font-weight: 800; font-size: 18px; line-height: 1.3; letter-spacing:-.3px; word-break: keep-all; overflow-wrap: break-word;">과정명 로딩 중...</span>
               </div>
               <div style="display: grid; grid-template-columns:1fr 1fr; gap: 9px 24px; font-size: 13px;">
@@ -3678,7 +3678,7 @@ function renderCourseSelectors() {
             card.innerHTML = `
                 <div class="course-info-content" style="display:flex; align-items:center; gap:13px; padding:4px 6px;">
                     <span style="align-self:stretch; width:5px; border-radius:4px; background:${color}; flex-shrink:0;"></span>
-                    <span style="background:linear-gradient(135deg,#2563eb,#1d4ed8); color:#fff; font-weight:800; font-size:12px; letter-spacing:.3px; padding:7px 12px; border-radius:9px; flex-shrink:0; box-shadow:0 3px 8px rgba(37,99,235,.28);">ROOM ${rid}</span>
+                    <span style="background:linear-gradient(135deg,#2563eb,#1d4ed8); color:#fff; font-weight:800; font-size:12px; letter-spacing:.3px; padding:7px 12px; border-radius:9px; flex-shrink:0; box-shadow:0 3px 8px rgba(37,99,235,.28);">ROOM #${rid}</span>
                     <div style="flex:1; min-width:0;">
                         <div style="font-weight:900; font-size:17px; color:var(--navy-dark); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${cName}</div>
                         <div style="font-size:12px; color:#94a3b8; font-weight:700; margin-top:3px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">담임 <b style="color:#475569;">${_coordStripRank(_profNm)||'-'}</b> &nbsp;·&nbsp; 담당 <b style="color:#475569;">${_coordStripRank(settings.coordinatorName)||'-'}</b></div>
@@ -6376,7 +6376,7 @@ function pcsSyncCourseList() {
     }
     cards.forEach((card, i) => {
         const spans = card.querySelectorAll('span');
-        const room = (spans[0]?.textContent || '').replace('ROOM ','').trim() || String.fromCharCode(65+i);
+        const room = (spans[0]?.textContent || '').replace('ROOM ','').replace('#','').trim() || String.fromCharCode(65+i);
         const name = spans[1]?.textContent?.trim() || '과정명';
         const color = PCS_COLORS[i % PCS_COLORS.length];
         const btn = document.createElement('button');
@@ -6384,7 +6384,7 @@ function pcsSyncCourseList() {
         btn.dataset.rid = room;
         btn.innerHTML = `<span class="pcs-course-dot" style="background:${color};"></span>
             <span class="pcs-course-info">
-                <div class="pcs-course-room">ROOM ${room}</div>
+                <div class="pcs-course-room">ROOM #${room}</div>
                 <div class="pcs-course-name">${name}</div>
             </span>`;
         btn.onclick = () => {
@@ -7290,7 +7290,7 @@ function _courseOverviewHTML(){
   const full = (nm)=> (typeof _coordFullName==='function') ? (_coordFullName(nm)|| (nm||'-')) : (nm||'-');
   return rooms.length
     ? `<table class="cpop-table"><thead><tr><th>강의실</th><th>과정명</th><th>담당자</th><th>담임교수</th><th>기간</th><th>인원</th></tr></thead><tbody>`
-      + rooms.map(r=>`<tr><td style="font-weight:900;">ROOM ${r.rid}</td><td style="text-align:left;font-size:16px;font-weight:800;">${_esc(r.s.courseName||'-')}</td><td style="font-weight:700;">${_esc(full(r.s.coordinatorName)||'-')}</td><td>${_esc((r.st.professorName||'').trim()? (r.st.professorName.trim()+' 교수') :'-')}</td><td style="font-size:12px;">${_esc(r.s.period||'-')}</td><td><b style="font-size:20px;color:#2563eb;">${_studentsOf(r.room).length}</b>명</td></tr>`).join('')
+      + rooms.map(r=>`<tr><td style="font-weight:900;">ROOM #${r.rid}</td><td style="text-align:left;font-size:16px;font-weight:800;">${_esc(r.s.courseName||'-')}</td><td style="font-weight:700;">${_esc(full(r.s.coordinatorName)||'-')}</td><td>${_esc((r.st.professorName||'').trim()? (r.st.professorName.trim()+' 교수') :'-')}</td><td style="font-size:12px;">${_esc(r.s.period||'-')}</td><td><b style="font-size:20px;color:#2563eb;">${_studentsOf(r.room).length}</b>명</td></tr>`).join('')
       + `</tbody></table>`
     : '<div class="cpop-empty">운영 중인 과정이 없습니다.</div>';
 }
@@ -7330,7 +7330,7 @@ function openStudentRosterPopup(){
       roster=roster.slice().filter(st=>st&&(''+(st.name||'')).trim());
       if(!roster.length) return '';
       const rows=roster.map((st,i)=>`<tr class="rosterRow" data-n="${_esc(((st.name||'')+(st.dept||st.position||st.affil||'')).toLowerCase())}"><td style="color:#94a3b8;">${i+1}</td><td style="text-align:left;color:#475569;">${_esc(st.dept||st.position||st.affil||st.org||'-')}</td><td style="color:#64748b;">${_esc(st.empNo||st.sabun||st.id||'-')}</td><td style="font-weight:800;">${_esc(st.name||'-')}</td></tr>`).join('');
-      return `<div class="cpop-course"><div class="cpop-course-h">ROOM ${_esc(r.rid)} · ${_esc(r.s.courseName||'-')} <span style="color:#0ea5e9;font-size:14px;">${roster.length}명</span></div>
+      return `<div class="cpop-course"><div class="cpop-course-h">ROOM #${_esc(r.rid)} · ${_esc(r.s.courseName||'-')} <span style="color:#0ea5e9;font-size:14px;">${roster.length}명</span></div>
         <table class="cpop-table" style="table-layout:fixed;"><colgroup><col style="width:12%"><col style="width:46%"><col style="width:21%"><col style="width:21%"></colgroup><thead><tr><th>연번</th><th style="text-align:left;">소속</th><th>사번</th><th>성명</th></tr></thead><tbody>${rows}</tbody></table></div>`;
     }).join('');
     if(!blocks.trim()) blocks='<div class="cpop-empty">등록된 명단이 없습니다.</div>';
@@ -7357,7 +7357,7 @@ function openOutingSummary(){
     if(!list.length) return '';
     list.sort((a,b)=>(''+(a.date||'')).localeCompare(''+(b.date||''))||((a.timestamp||0)-(b.timestamp||0)));
     const rows=list.map((a,i)=>{ const kind=(a.type==='outing')?'<span style="color:#ea580c;font-weight:800;">외출</span>':'<span style="color:#dc2626;font-weight:800;">외박</span>'; return `<tr><td style="color:#94a3b8;">${i+1}</td><td style="font-weight:800;">${_esc(a.name||'-')}</td><td>${kind}</td><td style="text-align:left;color:#475569;">${_esc(a.dept||'-')}</td><td>${_esc(a.date?a.date.substring(5):'-')}</td><td style="text-align:left;">${_esc(a.destination||'-')}</td></tr>`; }).join('');
-    return `<div class="cpop-course"><div class="cpop-course-h">ROOM ${_esc(r.rid)} · ${_esc(r.s.courseName||'-')} <span style="color:#ea580c;font-size:14px;">${list.length}건</span></div>
+    return `<div class="cpop-course"><div class="cpop-course-h">ROOM #${_esc(r.rid)} · ${_esc(r.s.courseName||'-')} <span style="color:#ea580c;font-size:14px;">${list.length}건</span></div>
       <table class="cpop-table" style="table-layout:fixed;"><colgroup><col style="width:8%"><col style="width:17%"><col style="width:12%"><col style="width:25%"><col style="width:13%"><col style="width:25%"></colgroup><thead><tr><th>연번</th><th>성명</th><th>구분</th><th style="text-align:left;">소속</th><th>일자</th><th style="text-align:left;">행선지</th></tr></thead><tbody>${rows}</tbody></table></div>`;
   }).join('');
   if(!blocks.trim()) blocks='<div class="cpop-empty">현재 외출·외박 신청자가 없습니다.</div>';
