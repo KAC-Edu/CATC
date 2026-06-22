@@ -2944,7 +2944,7 @@ function updateGlobalStatus() {
     let globalList = []; 
     let todayA = 0; 
     let totalShuttle = 0; 
-    const tStr = getTodayString(); // 오늘 날짜 (YYYY-MM-DD)
+    const tStr = (typeof _coordOpDate==='function'?_coordOpDate():getTodayString()); // 외출·외박 집계: 운영일(KST 09시 롤오버)
 
     // 비교용 오늘 날짜 객체 생성
     const now = new Date();
@@ -7260,6 +7260,14 @@ function _coordParseRoster(text) {
 /* ===== 운영부 대시보드 요약 팝업 (개편) ===== */
 function _coordOpWeekStart(){ const n=new Date(); const dow=n.getDay(); const mon=new Date(n); mon.setDate(n.getDate()-((dow+6)%7)); if(dow===6||dow===0) mon.setDate(mon.getDate()+7); return `${mon.getFullYear()}-${String(mon.getMonth()+1).padStart(2,'0')}-${String(mon.getDate()).padStart(2,'0')}`; }
 function _coordToday(){ return (typeof getTodayString==='function') ? getTodayString() : new Date().toISOString().split('T')[0]; }
+// [외출/외박 운영일] 한국시간(KST) 기준, 오전 9시 이전이면 전날을 '금일'로 사용 (자정이 아닌 익일 09시에 초기화)
+function _coordOpDate(){
+  var now=new Date();
+  var kst=new Date(now.getTime() + (now.getTimezoneOffset()*60000) + (9*3600000));
+  if(kst.getHours()<9){ kst.setDate(kst.getDate()-1); }
+  return kst.getFullYear()+'-'+String(kst.getMonth()+1).padStart(2,'0')+'-'+String(kst.getDate()).padStart(2,'0');
+}
+window._coordOpDate=_coordOpDate;
 function _esc(t){ return (''+(t==null?'':t)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 function _cpop(title, html){ document.getElementById('cpopTitle').innerHTML=title; document.getElementById('cpopBody').innerHTML=html; document.getElementById('coordPopup').classList.add('open'); }
 function cpopClose(){ document.getElementById('coordPopup').classList.remove('open'); window._coordPopupRefresh=null; }
@@ -7786,7 +7794,7 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
     var box=document.getElementById('csecOutingWrap'); if(!box) return;
     if(typeof _coordActiveRooms!=='function'){ box.innerHTML='<p style="padding:24px;text-align:center;color:#94a3b8;">연결 대기 중…</p>'; return; }
     var rooms=_coordActiveRooms().filter(function(r){ return !/온라인|zoom/i.test(String((r.s&&r.s.roomDetailName)||'')); });
-    var today=_coordToday();
+    var today=(typeof _coordOpDate==='function'?_coordOpDate():_coordToday());
     var head='';
     if(!rooms.length){ box.innerHTML=head+'<p style="padding:24px;text-align:center;color:#94a3b8;font-weight:700;">운영 중인 과정이 없습니다.</p>'; return; }
     box.innerHTML=head+'<div style="display:flex;flex-direction:column;gap:10px;">'+rooms.map(function(r,idx){
