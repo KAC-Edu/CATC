@@ -2066,7 +2066,8 @@ function closePanelSmooth(modalId){
         box.style.transition='transform .34s cubic-bezier(.22,1,.36,1)';
         box.style.transform='translateX(110%)';
     });
-    setTimeout(function(){ box.style.transform=''; box.style.transition=''; box.style.animation=''; box.style.overflow=''; box.style.willChange=''; raw(); }, 360);
+    // [수정] 먼저 패널을 숨긴 뒤 스타일을 정리해야 가운데로 튕겨 돌아오는 '잔상(휙휙)'이 안 보인다
+    setTimeout(function(){ raw(); box.style.transform=''; box.style.transition=''; box.style.animation=''; box.style.overflow=''; box.style.willChange=''; }, 360);
 }
 window.closePanelSmooth=closePanelSmooth;
 
