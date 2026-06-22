@@ -1252,6 +1252,7 @@ body.pc-mode .pc-indiv-close {
     font-size:20px; color:#475569; box-shadow:0 3px 10px rgba(0,0,0,.1); z-index:5; flex-shrink:0;
 }
 body.pc-mode .pc-indiv-close:hover { background:#f1f5f9; color:#0f172a; }
+body.pc-mode #sideMenu .pc-hide { display:none !important; }
 .pc-indiv-bottomclose { display:none; }
 body.pc-mode .pc-indiv-bottomclose { display:flex; align-items:center; justify-content:center; gap:8px; width:100%; margin-top:8px; padding:14px; border:none; border-radius:12px; background:#64748b; color:#fff; font-weight:800; font-size:14px; cursor:pointer; }
 body.pc-mode .pc-indiv-bottomclose:hover { background:#475569; }
@@ -1547,22 +1548,25 @@ body.pc-mode .entry-box:hover, body.pc-mode .entry-box-tablet:hover {
 
 <div id="side-global-menu" style="display:none; flex-direction:column; gap:10px;">
     <div class="menu-grid">
-        <button class="menu-tile" style="background:#3b82f6;" onclick="openSetupModal()">
+        <button class="menu-tile pc-hide" style="background:#3b82f6;" onclick="openSetupModal()">
             <i class="fa-solid fa-plus-circle"></i> 과정 추가·설정
         </button>
-        <button class="menu-tile" style="background:#f97316;" onclick="openGlobalNoticeModal(); toggleMenu(false);">
+        <button class="menu-tile pc-hide" style="background:#f97316;" onclick="openGlobalNoticeModal(); toggleMenu(false);">
             <i class="fa-solid fa-bullhorn"></i> 전체 공지
         </button>
-        <button class="menu-tile" style="background:#1e293b;" onclick="openCenterQrModal(); toggleMenu(false);">
+        <button class="menu-tile pc-hide" style="background:#1e293b;" onclick="openCenterQrModal(); toggleMenu(false);">
             <i class="fa-solid fa-qrcode"></i> 행정 접속 QR
         </button>
-        <button class="menu-tile" style="background:#003366;" onclick="annualPlanMgrCoord.openEditorModal()">
+        <button class="menu-tile pc-hide" style="background:#003366;" onclick="annualPlanMgrCoord.openEditorModal()">
             <i class="fa-solid fa-calendar-days"></i> 연간계획
         </button>
-        <button class="menu-tile" style="background:#0d9488;" onclick="openAttendanceManager(); toggleMenu(false);">
+        <button class="menu-tile pc-hide" style="background:#0d9488;" onclick="openAttendanceManager(); toggleMenu(false);">
             <i class="fa-solid fa-clipboard-user"></i> 출석부 관리
         </button>
-        <button class="menu-tile" style="background:#0ea5e9;" onclick="pwaInstall(); toggleMenu(false);">
+        <button class="menu-tile" style="background:#7c3aed;" onclick="coordMgr.openManage(); toggleMenu(false);">
+            <i class="fa-solid fa-user-gear"></i> 운영담당자 관리
+        </button>
+        <button class="menu-tile pc-hide" style="background:#0ea5e9;" onclick="pwaInstall(); toggleMenu(false);">
             <i class="fa-solid fa-circle-down"></i> 앱 설치
         </button>
     </div>
@@ -1617,11 +1621,12 @@ body.pc-mode .entry-box:hover, body.pc-mode .entry-box-tablet:hover {
 /* 운영부 상단바 — 모바일 기본(반응형) */
 .coord-left{ display:flex; align-items:center; gap:10px; min-width:0; flex:1; }
 .coord-brand{ display:flex; align-items:center; gap:10px; min-width:0; cursor:pointer; }
-.coord-brand-mark{ width:34px; height:34px; border-radius:10px; background:rgba(255,255,255,.14); border:1px solid rgba(255,255,255,.24); display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.coord-brand-mark{ display:none; width:34px; height:34px; border-radius:10px; background:rgba(255,255,255,.14); border:1px solid rgba(255,255,255,.24); align-items:center; justify-content:center; flex-shrink:0; }
+.t-full{ display:none; }
 .coord-brand-mark i{ color:#dbeafe; font-size:16px; }
 .coord-brand-title{ margin:0; font-size:15px; font-weight:900; color:#fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .coord-clock{ color:#fff; display:flex; align-items:center; gap:7px; white-space:nowrap; flex-shrink:0; }
-.coord-right{ display:flex; align-items:center; gap:8px; flex-shrink:0; }
+.coord-right{ display:flex; align-items:center; gap:8px; flex:1; justify-content:flex-end; }
 #coordHeaderClock .hc-date{ font-size:11px; font-weight:400; opacity:.75; }
 #coordHeaderClock .hc-day{ font-size:10px; font-weight:600; opacity:.6; }
 #coordHeaderClock .hc-div{ width:1px; height:16px; background:rgba(255,255,255,.2); }
@@ -1629,9 +1634,13 @@ body.pc-mode .entry-box:hover, body.pc-mode .entry-box-tablet:hover {
 #coordHeaderClock .hc-ampm{ font-size:10px; font-weight:700; margin-left:3px; color:#93c5fd; }
 @keyframes blink-kst{ to{ visibility:hidden; } }
 #coordHeaderClock .hc-blink{ animation:blink-kst 1s steps(2,start) infinite; }
-@media (max-width:560px){ .coord-clock{ display:none; } .coord-brand-title{ font-size:14px; } }
+@media (max-width:430px){ .coord-clock{ display:none; } }
+@media (max-width:560px){ .coord-brand-title{ font-size:14px; } }
 /* PC 모드 — 지원부와 동일한 형태(브랜드 + 중앙 시계 pill) */
-body.pc-mode .app-header{ display:grid !important; grid-template-columns:minmax(220px,1fr) auto minmax(180px,1fr) !important; gap:18px !important; align-items:center !important; min-height:76px !important; padding:14px 28px !important; background:linear-gradient(135deg,#111827 0%,#172554 46%,#2563eb 100%) !important; }
+body.pc-mode .app-header{ display:grid !important; grid-template-columns:minmax(220px,1fr) auto minmax(180px,1fr) !important; gap:18px !important; align-items:center !important; min-height:76px !important; padding:14px 32px !important; background:linear-gradient(135deg,#111827 0%,#172554 46%,#2563eb 100%) !important; width:100vw !important; margin-left:calc(50% - 50vw) !important; }
+body.pc-mode .coord-brand-mark{ display:flex !important; }
+body.pc-mode .t-full{ display:inline !important; }
+body.pc-mode .coord-right{ flex:none !important; }
 body.pc-mode .coord-left{ flex:none !important; }
 body.pc-mode .coord-brand{ gap:13px !important; }
 body.pc-mode .coord-brand-mark{ width:42px !important; height:42px !important; border-radius:13px !important; }
@@ -1650,7 +1659,7 @@ body.pc-mode .coord-right{ justify-self:end !important; }
     <button class="header-btn coord-back-btn" onclick="handleBackNav()" title="뒤로가기"><i class="fa-solid fa-chevron-left"></i></button>
     <div class="coord-brand" onclick="location.reload()" title="메인으로 (새로고침)">
       <div class="coord-brand-mark"><i class="fa-solid fa-graduation-cap"></i></div>
-      <h1 class="coord-brand-title">항공기술훈련원 교육운영 플랫폼</h1>
+      <h1 class="coord-brand-title"><span class="t-full">항공기술훈련원 </span>교육운영 플랫폼</h1>
     </div>
   </div>
   <div id="coordHeaderClock" class="coord-clock"></div>
@@ -3627,13 +3636,16 @@ function renderCourseSelectors() {
 
             card.innerHTML = `
                 <div class="course-color-bar" style="background: ${color};"></div>
-                <div class="course-info-content">
-                    <div style="display:flex; flex-direction:column; gap:3px; min-width:0; flex:1;">
+                <div class="course-info-content" style="display:flex; align-items:center; gap:18px; flex-wrap:wrap;">
+                    <div style="flex:1; min-width:160px;">
                         <span style="font-size:11px; color:${color}; font-weight:800; letter-spacing:0.3px;">ROOM ${rid}</span>
-                        <span style="font-weight:800; font-size:14.5px; color:var(--navy-dark); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${cName}</span>
-                        <span style="font-size:11.5px; color:#64748b; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${_staffLine}</span>
+                        <div style="font-weight:900; font-size:17px; color:var(--navy-dark); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; margin-top:3px;">${cName}</div>
                     </div>
-                    <span class="course-chevron" style="margin-left:10px;"><i class="fa-solid fa-chevron-right"></i></span>
+                    <div style="display:flex; align-items:center; gap:28px; flex-shrink:0;">
+                        <div style="text-align:left;"><div style="font-size:10.5px; color:#94a3b8; font-weight:800; margin-bottom:3px;"><i class="fa-solid fa-chalkboard-user" style="margin-right:4px;color:#cbd5e1;"></i>담임교수</div><div style="font-size:13.5px; color:#0f172a; font-weight:800; white-space:nowrap;">${_profTxt||'-'}</div></div>
+                        <div style="text-align:left;"><div style="font-size:10.5px; color:#94a3b8; font-weight:800; margin-bottom:3px;"><i class="fa-solid fa-user-tie" style="margin-right:4px;color:#cbd5e1;"></i>과정담당</div><div style="font-size:13.5px; color:#0f172a; font-weight:800; white-space:nowrap;">${_coordTxt||'-'}</div></div>
+                    </div>
+                    <span class="course-chevron" style="margin-left:4px;"><i class="fa-solid fa-chevron-right"></i></span>
                 </div>
             `;
             list.appendChild(card);
@@ -7115,7 +7127,7 @@ window.addEventListener('load', function(){
 });
 </script>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vH13</div>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vH18</div>
 <script>
 /* ===== [공용] 종료된 과정 자동 정리 (모든 플랫폼 공통) — 종료일 지난 방을 다음날 미개설로 비움. 브라우저별 하루 1회 ===== */
 window.kacExpireEndedCourses = async function(){
@@ -7291,7 +7303,7 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
         +'<div onclick="coordToggleOuting('+idx+')" style="cursor:pointer;display:flex;align-items:center;gap:13px;padding:14px 16px;background:#fff;">'
           +'<span style="width:38px;height:38px;border-radius:11px;background:#fff7ed;color:#ea580c;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;"><i class="fa-solid fa-person-walking-luggage"></i></span>'
           +'<span style="flex:1;min-width:0;"><span style="display:block;font-size:11px;font-weight:800;color:#2563eb;">ROOM '+esc(r.rid)+'</span><span style="display:block;font-size:15px;font-weight:800;color:#0f172a;word-break:keep-all;">'+esc(r.s.courseName||'-')+'</span></span>'
-          +'<span style="font-size:12px;font-weight:800;color:#ea580c;white-space:nowrap;">금일 '+cnt+'건</span>'
+          +'<span style="font-size:13px;font-weight:800;color:#64748b;white-space:nowrap;">금일 <b style="font-size:19px;color:#ea580c;">'+cnt+'</b>건</span>'
           +'<button onclick="event.stopPropagation();window.open(\'outing_ledger.html?room='+r.rid+'&auto=1\',\'_blank\');" style="background:#1e293b;color:#fff;border:none;border-radius:9px;padding:8px 14px;font-size:12px;font-weight:800;cursor:pointer;white-space:nowrap;"><i class="fa-solid fa-print"></i> 출력</button>'
           +'<i class="fa-solid fa-chevron-down" id="coordOutChev'+idx+'" style="color:#cbd5e1;transition:transform .15s;"></i>'
         +'</div>'
