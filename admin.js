@@ -7290,8 +7290,6 @@ init: function() {
         const _total = guideMgr._vtotal();
         if (num < 1) num = 1;
         if (num > _total) num = _total;
-        const _fsInd = document.getElementById('guidePageInfoFs');
-        if (_fsInd) _fsInd.innerText = `${num} / ${_total}`;
 
         const _canvasEl = document.getElementById('guideCanvas');
         const _profEl = document.getElementById('guideProfile');
@@ -9277,6 +9275,42 @@ annualPlanMgr._escapeHtml = function(s) {
         .replace(/&/g, '&amp;').replace(/"/g, '&quot;')
         .replace(/</g, '&lt;').replace(/>/g, '&gt;');
 };
+annualPlanMgr._profOptions = function(cur){
+    cur = cur || '';
+    var esc = this._escapeHtml;
+    var names = (typeof profMgr !== 'undefined' && profMgr.list) ? profMgr.list.map(function(p){return p.name;}).filter(Boolean) : [];
+    var opts = '<option value="">(선택)</option>'; var seen=false;
+    names.forEach(function(n){ if(n===cur) seen=true; opts += '<option value="'+esc(n)+'"'+(n===cur?' selected':'')+'>'+esc(n)+'</option>'; });
+    if(cur && !seen) opts += '<option value="'+esc(cur)+'" selected>'+esc(cur)+' (목록 외)</option>';
+    return opts;
+};
+annualPlanMgr._coordOptions = function(cur){
+    cur = cur || '';
+    var esc = this._escapeHtml;
+    var names = (typeof coordMgr !== 'undefined' && coordMgr.list) ? coordMgr.list.map(function(c){return c.name;}).filter(Boolean) : [];
+    var opts = '<option value="">(선택)</option>'; var seen=false;
+    names.forEach(function(n){ if(n===cur) seen=true; opts += '<option value="'+esc(n)+'"'+(n===cur?' selected':'')+'>'+esc(n)+'</option>'; });
+    if(cur && !seen) opts += '<option value="'+esc(cur)+'" selected>'+esc(cur)+' (목록 외)</option>';
+    return opts;
+};
+annualPlanMgr._openPeriodPicker = function(idx, el){
+    var c = this.currentEditingData[idx]; if(!c) return; var self=this;
+    var fmt = function(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); };
+    if(el._fp){ el._fp.open(); return; }
+    el._fp = flatpickr(el, {
+        mode:'range', locale:'ko', dateFormat:'Y-m-d', disableMobile:'true',
+        defaultDate: (c.startDate && c.endDate) ? [c.startDate, c.endDate] : null,
+        onClose: function(dates){
+            if(dates && dates.length === 2){
+                c.startDate = fmt(dates[0]); c.endDate = fmt(dates[1]);
+                c.period = c.startDate + ' ~ ' + c.endDate;
+                c.weekKey = self._getMondayOf(c.startDate);
+                self.renderEditor(idx);
+            }
+        }
+    });
+    el._fp.open();
+};
 
 annualPlanMgr.openEditorModal = async function() {
     const modal = document.getElementById('annualPlanModal');
@@ -9310,7 +9344,7 @@ annualPlanMgr.openEditorModal = async function() {
     }
 };
 
-annualPlanMgr.renderEditor = function() {
+annualPlanMgr.renderEditor = function(keepIdx) {
     const area = document.getElementById('annualPlanEditorArea');
     if (!area) return;
     const esc = this._escapeHtml;
@@ -9344,8 +9378,7 @@ annualPlanMgr.renderEditor = function() {
                 <tr>
                     <th style="width:48px; padding:10px; border:1px solid #e2e8f0;">No</th>
                     <th style="padding:10px; border:1px solid #e2e8f0; min-width:220px;">과정명</th>
-                    <th style="width:140px; padding:10px; border:1px solid #e2e8f0;">시작일</th>
-                    <th style="width:140px; padding:10px; border:1px solid #e2e8f0;">종료일</th>
+                    <th style="width:240px; padding:10px; border:1px solid #e2e8f0;">기간 <span style="font-weight:600; color:#94a3b8;">(클릭→달력)</span></th>
                     <th style="width:110px; padding:10px; border:1px solid #e2e8f0;">담임교수</th>
                     <th style="width:120px; padding:10px; border:1px solid #e2e8f0;">운영담당</th>
                     <th style="min-width:170px; padding:10px; border:1px solid #e2e8f0;">강의실</th>
@@ -9379,10 +9412,9 @@ annualPlanMgr.renderEditor = function() {
             <tr data-cur="${isCur ? '1' : '0'}" data-target="${idx === _targetIdx ? '1' : '0'}" style="${rowBg(c)}">
                 <td style="${cellStyle} text-align:center; color:#64748b;">${idx + 1}</td>
                 <td style="${cellStyle}"><input type="text" value="${esc(c.name)}" onchange="annualPlanMgr.updateLocalData(${idx},'name',this.value)" style="${inpStyle} font-weight:700;"></td>
-                <td style="${cellStyle}"><input type="date" value="${esc(c.startDate)}" onchange="annualPlanMgr.updateLocalData(${idx},'startDate',this.value)" style="${inpStyle}"></td>
-                <td style="${cellStyle}"><input type="date" value="${esc(c.endDate)}" onchange="annualPlanMgr.updateLocalData(${idx},'endDate',this.value)" style="${inpStyle}"></td>
-                <td style="${cellStyle}"><input type="text" value="${esc(c.prof)}" onchange="annualPlanMgr.updateLocalData(${idx},'prof',this.value)" style="${inpStyle}"></td>
-                <td style="${cellStyle}"><input type="text" value="${esc(c.coord)}" onchange="annualPlanMgr.updateLocalData(${idx},'coord',this.value)" style="${inpStyle}"></td>
+                <td style="${cellStyle}"><input type="text" readonly data-idx="${idx}" value="${(c.startDate&&c.endDate)?esc(c.startDate+' ~ '+c.endDate):''}" placeholder="기간 선택" onclick="annualPlanMgr._openPeriodPicker(${idx}, this)" style="${inpStyle} cursor:pointer; background:#fff; text-align:center;"></td>
+                <td style="${cellStyle}"><select onchange="annualPlanMgr.updateLocalData(${idx},'prof',this.value)" style="${inpStyle} cursor:pointer; background:#fff;">${annualPlanMgr._profOptions(c.prof)}</select></td>
+                <td style="${cellStyle}"><select onchange="annualPlanMgr.updateLocalData(${idx},'coord',this.value)" style="${inpStyle} cursor:pointer; background:#fff;">${annualPlanMgr._coordOptions(c.coord)}</select></td>
                 <td style="${cellStyle}">${classroomDetailSelectHtmlInstructor(c.roomDetail || '', "annualPlanMgr.updateLocalData(" + idx + ",'roomDetail',this.value)", inpStyle)}</td>
                 <td style="${cellStyle} text-align:center;"><input type="checkbox" ${c.preAssign ? 'checked' : ''} onchange="annualPlanMgr.updateLocalData(${idx},'preAssign',this.checked)" title="체크하면 기간과 무관하게 저장 즉시 방에 배정됩니다" style="width:18px; height:18px; cursor:pointer; accent-color:#2563eb;"></td>
                 <td style="${cellStyle} text-align:center;"><button onclick="annualPlanMgr.deleteRow(${idx})" title="삭제" style="color:#ef4444; border:none; background:none; cursor:pointer; font-size:16px; font-weight:800;">✕</button></td>
@@ -9393,6 +9425,12 @@ annualPlanMgr.renderEditor = function() {
 
     // 진행 중(없으면 차주/다가오는) 과정 행을 화면 중앙으로 스크롤
     setTimeout(() => {
+        if (keepIdx != null) {
+            const rows = area.querySelectorAll('tbody tr');
+            const r = rows[keepIdx];
+            if (r && r.scrollIntoView) r.scrollIntoView({ block: 'nearest' });
+            return; // 편집 중인 행 유지 — 자동 스크롤 안 함
+        }
         const targetRow = area.querySelector('tr[data-target="1"]') || area.querySelector('tr[data-cur="1"]');
         if (targetRow && targetRow.scrollIntoView) targetRow.scrollIntoView({ block: 'center' });
     }, 50);
@@ -9406,26 +9444,32 @@ annualPlanMgr.updateLocalData = function(idx, field, value) {
         c.period  = (c.startDate && c.endDate) ? `${c.startDate} ~ ${c.endDate}` : '';
         c.weekKey = c.startDate ? this._getMondayOf(c.startDate) : '';
         // 날짜가 바뀌면 상태 색상도 갱신되도록 다시 그린다 (입력 포커스 유지를 위해 약간 지연)
-        setTimeout(() => this.renderEditor(), 0);
+        setTimeout(() => this.renderEditor(idx), 0);
     }
 };
 
 annualPlanMgr.addRow = function() {
     document.getElementById('ca-name').value = '';
-    document.getElementById('ca-start').value = '';
-    document.getElementById('ca-end').value = '';
     document.getElementById('ca-err').innerText = '';
+    var pe = document.getElementById('ca-period');
+    if (pe) {
+        if (!pe._flatpickr) { flatpickr(pe, { mode:'range', locale:'ko', dateFormat:'Y-m-d', disableMobile:'true' }); }
+        if (pe._flatpickr) pe._flatpickr.clear();
+        pe.value = '';
+    }
     document.getElementById('courseAddPop').style.display = 'flex';
     setTimeout(() => document.getElementById('ca-name').focus(), 100);
 };
 
 annualPlanMgr.confirmAdd = function() {
     const name = (document.getElementById('ca-name').value || '').trim();
-    const start = document.getElementById('ca-start').value;
-    const end = document.getElementById('ca-end').value;
     const err = document.getElementById('ca-err');
+    const pe = document.getElementById('ca-period');
+    const ds = (pe && pe._flatpickr && pe._flatpickr.selectedDates) ? pe._flatpickr.selectedDates : [];
     if (!name) { err.innerText = '과정명을 입력하세요.'; return; }
-    if (!start || !end) { err.innerText = '시작일과 종료일을 입력하세요.'; return; }
+    if (ds.length < 2) { err.innerText = '기간(시작~종료)을 달력에서 선택하세요.'; return; }
+    const _fmt = d => d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+    const start = _fmt(ds[0]); const end = _fmt(ds[1]);
     if (end < start) { err.innerText = '종료일이 시작일보다 빠를 수 없습니다.'; return; }
     // 새 과정 추가 후 시작일 순으로 정렬 (날짜에 맞는 위치에 들어가도록)
     this.currentEditingData.push({
@@ -10412,7 +10456,7 @@ ui.foodNewsRouteById=function(id){
 };
 
 /* __JSVER_STAMP__ */
-(function stampJsVer(){try{var b=document.getElementById('__catcVer');if(b){if(b.textContent.indexOf('Jo')<0)b.textContent=b.textContent+'\u00b7Jo';}else{setTimeout(stampJsVer,200);}}catch(e){}})();
+(function stampJsVer(){try{var b=document.getElementById('__catcVer');if(b){if(b.textContent.indexOf('Jp')<0)b.textContent=b.textContent+'\u00b7Jp';}else{setTimeout(stampJsVer,200);}}catch(e){}})();
 
 /* ===== [공항별 입교 현황 지도] 수강생현황 → 지도로 보기 ===== */
 ui._mapRegions = {
