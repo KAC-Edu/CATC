@@ -1665,8 +1665,7 @@ body.pc-mode .entry-box:hover, body.pc-mode .entry-box-tablet:hover {
 .coord-right{ display:flex; align-items:center; gap:8px; flex:1; justify-content:flex-end; }
 .coord-pc-only{ display:none; }
 body.pc-mode .coord-pc-only{ display:flex !important; }
-.coord-right{ flex:0 0 auto !important; }
-.coord-hdr-stats{ display:flex; align-items:center; gap:8px; flex:1; min-width:0; overflow-x:auto; justify-content:center; }
+.coord-hdr-stats{ display:flex; align-items:center; gap:8px; min-width:0; overflow-x:auto; }
 .coord-hdr-stats::-webkit-scrollbar{ height:0; }
 .hdr-stat{ display:flex; align-items:center; gap:9px; background:rgba(255,255,255,0.12); border:1px solid rgba(255,255,255,0.2); border-radius:12px; padding:7px 13px; cursor:pointer; white-space:nowrap; flex-shrink:0; transition:background .15s, transform .12s; }
 .hdr-stat:hover{ background:rgba(255,255,255,0.24); transform:translateY(-1px); }
@@ -1674,7 +1673,7 @@ body.pc-mode .coord-pc-only{ display:flex !important; }
 .hdr-stat .hb-label{ font-size:11px; font-weight:700; color:#cbd5e1; line-height:1.15; }
 .hdr-stat .hb-value{ font-size:20px; font-weight:900; color:#fff; line-height:1.05; letter-spacing:-.5px; }
 .hdr-stat .hb-value small{ font-size:11px; font-weight:700; color:#93c5fd; margin-left:2px; }
-body.pc-mode .coord-hdr-stats{ gap:10px; justify-content:center; }
+body.pc-mode .coord-hdr-stats{ gap:10px; }
 body.pc-mode .hdr-stat{ padding:8px 18px; }
 body.pc-mode .hdr-stat > i{ font-size:18px; }
 body.pc-mode .hdr-stat .hb-label{ font-size:12.5px; }
@@ -1689,7 +1688,7 @@ body.pc-mode .hdr-stat .hb-value{ font-size:26px; }
 @media (max-width:360px){ .coord-clock{ display:none; } }
 @media (max-width:560px){ .coord-brand-title{ font-size:14px; } }
 /* PC 모드 — 지원부와 동일한 형태(브랜드 + 중앙 시계 pill) */
-body.pc-mode .app-header{ display:flex !important; gap:16px !important; align-items:center !important; min-height:74px !important; padding:12px 28px !important; background:linear-gradient(135deg,#111827 0%,#172554 46%,#2563eb 100%) !important; width:100vw !important; margin-left:calc(50% - 50vw) !important; }
+body.pc-mode .app-header{ display:grid !important; grid-template-columns:minmax(0,1fr) auto minmax(0,1fr) !important; gap:16px !important; align-items:center !important; min-height:74px !important; padding:12px 28px !important; background:linear-gradient(135deg,#111827 0%,#172554 46%,#2563eb 100%) !important; width:100vw !important; margin-left:calc(50% - 50vw) !important; }
 body.pc-mode .coord-brand-mark{ display:flex !important; }
 body.pc-mode .t-full{ display:inline !important; }
 body.pc-mode .coord-right{ flex:none !important; }
@@ -1714,15 +1713,15 @@ body.pc-mode .coord-right{ justify-self:end !important; }
       <h1 class="coord-brand-title"><span class="t-full">항공기술훈련원 </span>교육운영 플랫폼</h1>
     </div>
   </div>
-  <div class="coord-hdr-stats" id="coordHdrStats">
-    <div class="hdr-stat" onclick="openCourseOverview()" title="운영 과정 현황"><i class="fa-solid fa-graduation-cap"></i><div class="hdr-stat-txt"><div class="hb-label">운영 과정</div><div class="hb-value"><span id="hero-active-courses">0</span><small>개</small></div></div></div>
-    <div class="hdr-stat" onclick="openStudentRosterPopup()" title="전체 교육생 명단"><i class="fa-solid fa-users"></i><div class="hdr-stat-txt"><div class="hb-label">전체 교육생</div><div class="hb-value"><span id="g-total-students">0</span><small>명</small></div></div></div>
-    <div class="hdr-stat" onclick="openOutingSummary()" title="외출·외박 현황"><i class="fa-solid fa-file-signature"></i><div class="hdr-stat-txt"><div class="hb-label">외출·외박</div><div class="hb-value"><span id="g-today-actions">0</span><small>건</small></div></div></div>
-    <div class="hdr-stat" onclick="openShuttleSummary()" title="퇴교차량 신청자"><i class="fa-solid fa-bus"></i><div class="hdr-stat-txt"><div class="hb-label">퇴교차량</div><div class="hb-value"><span id="g-shuttle-count">0</span><small>명</small></div></div></div>
-  </div>
+  <div id="coordHeaderClock" class="coord-clock"></div>
   <div class="coord-right">
-    <div id="coordHeaderClock" class="coord-clock"></div>
-    <button class="header-btn" onclick="toggleMenu(true)" title="메뉴" style="width:38px;height:38px;background:rgba(255,255,255,0.18);border:1px solid rgba(255,255,255,0.28);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:15px;padding:0;color:#fff;"><i class="fa-solid fa-bars"></i></button>
+    <div class="coord-hdr-stats" id="coordHdrStats">
+      <div class="hdr-stat" onclick="openCourseOverview()" title="운영 과정 현황"><i class="fa-solid fa-graduation-cap"></i><div class="hdr-stat-txt"><div class="hb-label">운영 과정</div><div class="hb-value"><span id="hero-active-courses">0</span><small>개</small></div></div></div>
+      <div class="hdr-stat" onclick="openStudentRosterPopup()" title="전체 교육생 명단"><i class="fa-solid fa-users"></i><div class="hdr-stat-txt"><div class="hb-label">전체 교육생</div><div class="hb-value"><span id="g-total-students">0</span><small>명</small></div></div></div>
+      <div class="hdr-stat" onclick="openOutingSummary()" title="외출·외박 현황"><i class="fa-solid fa-file-signature"></i><div class="hdr-stat-txt"><div class="hb-label">외출·외박</div><div class="hb-value"><span id="g-today-actions">0</span><small>건</small></div></div></div>
+      <div class="hdr-stat" onclick="openShuttleSummary()" title="퇴교차량 신청자"><i class="fa-solid fa-bus"></i><div class="hdr-stat-txt"><div class="hb-label">퇴교차량</div><div class="hb-value"><span id="g-shuttle-count">0</span><small>명</small></div></div></div>
+    </div>
+    <button class="header-btn" onclick="toggleMenu(true)" title="메뉴" style="width:38px;height:38px;background:rgba(255,255,255,0.18);border:1px solid rgba(255,255,255,0.28);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:15px;padding:0;color:#fff;flex-shrink:0;"><i class="fa-solid fa-bars"></i></button>
   </div>
 </header>
 
@@ -7378,9 +7377,13 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
     var full=function(nm){ return (typeof _coordFullName==='function')?(_coordFullName(nm)||(nm||'-')):(nm||'-'); };
     box.innerHTML=rooms.map(function(r){
       var prof=(r.st.professorName||'').trim();
+      // [학생장] 강사플랫폼에서 지정(students.isLeader)된 학생장 이름+사번 표기
+      var _ldr=((typeof _studentsOf==='function'?_studentsOf(r.room):[])||[]).filter(function(s){return s&&s.isLeader===true;})[0];
+      var _ldrNo=_ldr?(_ldr.empNo||_ldr.sabun||_ldr.id||_ldr.studentId||''):'';
+      var _ldrSub=_ldr?('<div class="crow-sub" style="color:#b45309;margin-top:4px;"><i class="fa-solid fa-crown" style="color:#f59e0b;margin-right:4px;"></i>학생장 : <b style="color:#92400e;">'+esc(_ldr.name||'-')+'</b>'+(_ldrNo?' <span style="color:#a16207;font-weight:700;">('+esc(_ldrNo)+')</span>':'')+'</div>'):'';
       return '<div class="crow clickable" onclick="coordOpenCourse(\''+esc(r.rid)+'\')">'
         +'<span class="crow-room">ROOM '+esc(r.rid)+'</span>'
-        +'<div class="crow-main"><div class="crow-name">'+esc(r.s.courseName||'-')+'</div></div>'
+        +'<div class="crow-main"><div class="crow-name">'+esc(r.s.courseName||'-')+'</div>'+_ldrSub+'</div>'
         +'<div class="crow-chips">'
           +'<div class="cmeta"><span class="ml">담임교수</span><span class="mv">'+esc(_coordStripRank(prof)||'-')+'</span></div>'
           +'<div class="cmeta-div"></div>'
@@ -7461,7 +7464,7 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
     if(typeof _coordActiveRooms!=='function'){ box.innerHTML='<p style="padding:24px;text-align:center;color:#94a3b8;">연결 대기 중…</p>'; return; }
     var rooms=_coordActiveRooms().filter(function(r){ return !/온라인|zoom/i.test(String((r.s&&r.s.roomDetailName)||'')); });
     var today=_coordToday();
-    var head='<div style="font-size:12.5px;color:#64748b;font-weight:700;margin-bottom:14px;">과정을 누르면 <b>금일 외출·외박자 현황</b>이 펼쳐집니다. <b>[출력]</b>은 해당 과정의 <b>외출·외박 대장</b>을 PDF(새 탭)로 엽니다.</div>';
+    var head='';
     if(!rooms.length){ box.innerHTML=head+'<p style="padding:24px;text-align:center;color:#94a3b8;font-weight:700;">운영 중인 과정이 없습니다.</p>'; return; }
     box.innerHTML=head+'<div style="display:flex;flex-direction:column;gap:10px;">'+rooms.map(function(r,idx){
       var actions=(r.room.admin_actions && r.room.admin_actions[today])||{};
