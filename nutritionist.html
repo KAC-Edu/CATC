@@ -1183,6 +1183,10 @@ function _mealDayCounts(D) {
             if (D < c.startDate || D > c.endDate) return;          // 과정 기간 밖
             const _dow = new Date(D + 'T00:00:00').getDay();
             if (_dow === 0 || _dow === 6) return;                  // 주말은 식사 없음
+            if (_isOnlineCourse(c)) {                               // [온라인] 비대면 과정은 식수 산정 제외(목록엔 표시)
+                courses.push({ name: c.name, n: (_courseHeadByBasis(c) || 0), breakfast:false, lunch:false, dinner:false, skip:0, last:false, online:true });
+                return;
+            }
             const _monW = getMondayOf(D);
             const _friW = _cwAddDays(_monW, 4);
             const _checkIn  = (c.startDate > _monW) ? c.startDate : _monW;  // 이번 주 입교일
@@ -1254,7 +1258,9 @@ function _renderMealWeek() {
     const wc = _mergedCourses()
                    .filter(c => c.name && c.startDate && c.endDate && c.startDate <= fri && c.endDate >= mon)
                    .sort((a,b) => (a.startDate||'').localeCompare(b.startDate||''));
-    const clist = wc.map(c => { const n = _courseHeadByBasis(c) || 0; return `<div class="mw-crow"><span class="mw-cn">${escH(c.name)}</span><span class="mw-cd">${escH(c.startDate)}~${escH(c.endDate)}</span><span class="mw-ch">${n ? n+'명' : (_estBasis==='arrived'?'0명':'대기')}</span></div>`; }).join('') || '<div class="mw-crow" style="color:#94a3b8;">이 주 운영 과정 없음</div>';
+    const clist = wc.map(c => {
+                       if(_isOnlineCourse(c)){ return `<div class="mw-crow" style="opacity:.7;"><span class="mw-cn">${escH(c.name)} <span style="background:#ede9fe;color:#6d28d9;font-size:10.5px;font-weight:800;padding:2px 7px;border-radius:999px;margin-left:4px;">🖥 온라인</span></span><span class="mw-cd">${escH(c.startDate)}~${escH(c.endDate)}</span><span class="mw-ch" style="color:#94a3b8;font-weight:700;font-size:11.5px;">식사제외</span></div>`; }
+                       const n = _courseHeadByBasis(c) || 0; return `<div class="mw-crow"><span class="mw-cn">${escH(c.name)}</span><span class="mw-cd">${escH(c.startDate)}~${escH(c.endDate)}</span><span class="mw-ch">${n ? n+'명' : (_estBasis==='arrived'?'0명':'대기')}</span></div>`; }).join('') || '<div class="mw-crow" style="color:#94a3b8;">이 주 운영 과정 없음</div>';
     const staffCount = Object.values(_staffRoster || {}).filter(r => r && r.active !== false).length;
     const basisBar = `<div class="mw-basis">
             <span class="mw-basis-lab"><i class="fa-solid fa-users-gear"></i> 식수 인원 기준</span>
@@ -2035,6 +2041,15 @@ function _roomMatchForCourse(c){
     });
     return best;
 }
+// [온라인] 비대면(온라인 Zoom) 과정 판별 — 식수 합계에서 제외 (강의실 상세 위치/연간계획 장소가 '온라인'이면 true)
+function _isOnlineLoc(v){ return /온라인|zoom/i.test(String(v||'')); }
+function _isOnlineCourse(c){
+    if(!c) return false;
+    if(_isOnlineLoc(c.roomDetail)) return true;
+    const m=_roomMatchForCourse(c);
+    if(m && m.room && m.room.settings && _isOnlineLoc(m.room.settings.roomDetailName)) return true;
+    return false;
+}
 // [JDS260613] 강사플랫폼 '전면 현황판 총괄표 노출' 해제(hideFromBoard) 과정은 식당 플랫폼에서 완전 제외 (실시간·새로고침 모두)
 function _isCourseHidden(c){
     const target=_normCourse(c && c.name); if(!target) return false;
@@ -2068,7 +2083,7 @@ function _mergedCourses(){
         else { sd=(s.startDate||'').trim(); ed=(s.endDate||s.startDate||'').trim(); }
         if(!sd) return;
         out.push({ name:nm, startDate:sd, endDate:(ed||sd),
-            roomDetail:(s.roomDetail||s.classroom||s.roomName||'').trim(),
+            roomDetail:(s.roomDetailName||s.roomDetail||s.classroom||s.roomName||'').trim(),
             prof:(s.profName||s.prof||'').trim(), _outOfPlan:true });
         norms.add(norm);
     });
@@ -2176,12 +2191,15 @@ function renderCourseWeek(courses, ctx){
         if(c.endDate<ctx.today){ stat='종료'; statCls='done'; statIc='<i class="fa-solid fa-flag-checkered"></i>'; }
         else if(c.startDate>ctx.today){ stat='예정'; statCls='soon'; statIc='<i class="fa-regular fa-clock"></i>'; }
         else { stat='운영중'; statCls='live'; statIc='<i class="fa-solid fa-circle"></i>'; }
+        const online = _isOnlineCourse(c);
         const cc=_courseCounts2(c);
-        if(cc.found) sumKnown += (_estBasis==='arrived' ? cc.arrived : cc.roster); else anyPending=true;
-        const headBadge = cc.found
+        if(!online){ if(cc.found) sumKnown += (_estBasis==='arrived' ? cc.arrived : cc.roster); else anyPending=true; }
+        const headBadge = online
+            ? `<span class="cw-head" style="background:#ede9fe;color:#6d28d9;"><i class="fa-solid fa-desktop"></i> 🖥 온라인 · 식사제외</span>`
+            : (cc.found
             ? `<span class="cw-head"><i class="fa-solid fa-clipboard-list"></i> 명단 ${cc.roster}명</span>
                <span class="cw-head" style="background:#dbeafe;color:#1d4ed8;"><i class="fa-solid fa-user-check"></i> 입교 ${cc.arrived}명</span>`
-            : `<span class="cw-head pending"><i class="fa-regular fa-clock"></i> 명단 대기</span>`;
+            : `<span class="cw-head pending"><i class="fa-regular fa-clock"></i> 명단 대기</span>`);
         return `<div class="cw-card2 ${statCls}" style="border-left-color:${pal.bar}; background:${pal.bg};">
             <span class="cw-stat cw-stat-${statCls}">${statIc} ${stat}</span>
             <div class="cw-main">
@@ -3412,7 +3430,7 @@ function renderMealCalendar(a, month){
 })();
 </script>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vE</div>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vF</div>
 <script>
 /* ===== [공용] 종료된 과정 자동 정리 (모든 플랫폼 공통) — 종료일 지난 방을 다음날 미개설로 비움. 브라우저별 하루 1회 ===== */
 window.kacExpireEndedCourses = async function(){
