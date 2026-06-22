@@ -10494,11 +10494,42 @@ ui.openStudentMap = async function(){
     + '<h2 style="margin:0 0 4px;font-size:22px;font-weight:900;color:#0f172a;">🗺️ 공항별 입교 현황</h2>'
     + '<div style="font-size:13px;color:#64748b;font-weight:700;margin-bottom:14px;">Room '+room+' · '+ (course||'-') +' · 예정 명단 소속 기준 (총 '+total+'명)</div>'
     + '<div style="display:flex;gap:22px;flex-wrap:wrap;align-items:flex-start;">'
-    +   '<div style="flex:1;min-width:330px;"><svg viewBox="0 0 440 801.1" style="width:100%;height:auto;max-height:74vh;">'+outline+pins+'</svg></div>'
+    +   '<div style="flex:1;min-width:330px;"><div id="studentMapKakao" style="width:100%;height:72vh;min-height:420px;border-radius:14px;overflow:hidden;border:1px solid #e2e8f0;background:#eaf2fb;"></div></div>'
     +   '<div style="width:240px;min-width:220px;"><div style="font-size:13px;font-weight:800;color:#475569;margin-bottom:6px;">공항별 인원</div><div style="border:1px solid #e2e8f0;border-radius:12px;overflow:hidden;">'+rows+totalRow+'</div>'+unknownNote+'</div>'
     + '</div>'
     + '</div></div>';
   var wrap=document.createElement('div'); wrap.innerHTML=html; document.body.appendChild(wrap.firstChild);
+  // ===== 실제 카카오맵 + 지역별 인원 마커 =====
+  ui._regionLL = ui._regionLL || {
+    '서울':[37.5586,126.7906], '인천':[37.4602,126.4407], '강원':[37.8813,127.7300],
+    '양양':[38.0613,128.6690], '원주':[37.4416,127.9606], '송탄':[37.0807,127.0353],
+    '청주':[36.7166,127.4990], '예천':[36.6320,128.3549], '군산':[35.9038,126.6158],
+    '대구':[35.8941,128.6586], '포항':[35.9879,129.4204], '울산':[35.5935,129.3517],
+    '부안':[35.7316,126.7330], '광주':[35.1264,126.8089], '무안':[34.9914,126.3828],
+    '여수':[34.8423,127.6168], '사천':[35.0886,128.0703], '김해':[35.1795,128.9382],
+    '부산':[35.1796,129.0756], '제주':[33.5113,126.4930]
+  };
+  function buildStudentMap(){
+    var el=document.getElementById('studentMapKakao'); if(!el || !(window.kakao&&kakao.maps&&kakao.maps.Map)) return;
+    var map=new kakao.maps.Map(el, { center:new kakao.maps.LatLng(36.4,127.9), level:13 });
+    try{ map.addControl(new kakao.maps.ZoomControl(), kakao.maps.ControlPosition.RIGHT); }catch(e){}
+    var bounds=new kakao.maps.LatLngBounds(), any=false;
+    Object.keys(counts).forEach(function(name){
+      var ll=ui._regionLL[name]; if(!ll) return; var c=counts[name]; any=true;
+      var pos=new kakao.maps.LatLng(ll[0],ll[1]); bounds.extend(pos);
+      var sz=30+Math.min(c,12)*2;
+      var content='<div style="transform:translateY(-50%);display:flex;flex-direction:column;align-items:center;">'
+        +'<div style="width:'+sz+'px;height:'+sz+'px;border-radius:50%;background:linear-gradient(135deg,#3b82f6,#2563eb);color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:900;border:2.5px solid #fff;box-shadow:0 4px 12px rgba(37,99,235,.45);">'+c+'</div>'
+        +'<div style="margin-top:3px;background:rgba(255,255,255,.95);color:#0f172a;font-size:11px;font-weight:800;padding:1px 7px;border-radius:7px;box-shadow:0 1px 4px rgba(0,0,0,.18);white-space:nowrap;">'+name+'</div>'
+        +'</div>';
+      new kakao.maps.CustomOverlay({ map:map, position:pos, content:content, yAnchor:0.5, zIndex:5 });
+    });
+    if(any){ try{ map.setBounds(bounds, 70,70,70,70); }catch(e){} }
+    setTimeout(function(){ try{ map.relayout(); if(any) map.setBounds(bounds,70,70,70,70); }catch(e){} }, 250);
+  }
+  if(window.kakao && kakao.maps && kakao.maps.Map){ buildStudentMap(); }
+  else if(window.kakao && kakao.maps && kakao.maps.load){ kakao.maps.load(buildStudentMap); }
+  else { var _t=0, _iv=setInterval(function(){ _t++; if(window.kakao&&kakao.maps){ clearInterval(_iv); (kakao.maps.load?kakao.maps.load(buildStudentMap):buildStudentMap()); } else if(_t>20){ clearInterval(_iv); } }, 300); }
 };
 
 /* 출석완료 숫자 클릭 → 관리 액션 팝업 */
@@ -10513,24 +10544,32 @@ ui.openLeaderRoulette = async function(){
   if(pool.length<2){ ui.showAlert('QR로 입교한 교육생이 2명 이상이어야 추첨할 수 있습니다.'); return; }
   ui._roulette={ pool:pool, rot:0, spinning:false, winner:null };
   var N=pool.length, seg=360/N, cx=150, cy=150, R=140, rmid=92;
-  var COL=['#f59e0b','#ffffff'];
+  var COL=['#2563eb','#f59e0b','#10b981','#ef4444','#8b5cf6','#06b6d4','#ec4899','#f97316'];
   function pt(r,deg){ var a=deg*Math.PI/180; return [ (cx+r*Math.sin(a)).toFixed(2), (cy-r*Math.cos(a)).toFixed(2) ]; }
   var sectors='';
   for(var i=0;i<N;i++){
     var a0=i*seg, a1=(i+1)*seg, p0=pt(R,a0), p1=pt(R,a1), large=seg>180?1:0;
-    sectors+='<path d="M'+cx+' '+cy+' L'+p0[0]+' '+p0[1]+' A'+R+' '+R+' 0 '+large+' 1 '+p1[0]+' '+p1[1]+' Z" fill="'+COL[i%2]+'" stroke="#0f766e" stroke-width="1.5"/>';
-    var am=i*seg+seg/2, tp=pt(rmid,am), tcol=(i%2===0)?'#3a1d1d':'#0f766e';
+    sectors+='<path d="M'+cx+' '+cy+' L'+p0[0]+' '+p0[1]+' A'+R+' '+R+' 0 '+large+' 1 '+p1[0]+' '+p1[1]+' Z" fill="'+COL[i%COL.length]+'" stroke="#ffffff" stroke-width="2"/>';
+    var am=i*seg+seg/2, tp=pt(rmid,am);
     var nm=String(pool[i].name); if(nm.length>6) nm=nm.slice(0,6);
-    sectors+='<text x="'+tp[0]+'" y="'+tp[1]+'" fill="'+tcol+'" font-size="'+(N>10?12:15)+'" font-weight="800" text-anchor="middle" dominant-baseline="middle" transform="rotate('+am.toFixed(2)+' '+tp[0]+' '+tp[1]+')">'+nm+'</text>';
+    sectors+='<text x="'+tp[0]+'" y="'+tp[1]+'" fill="#ffffff" font-size="'+(N>10?12:15)+'" font-weight="800" text-anchor="middle" dominant-baseline="middle" transform="rotate('+am.toFixed(2)+' '+tp[0]+' '+tp[1]+')">'+nm+'</text>';
   }
-  var svg='<svg viewBox="0 0 300 300" style="width:100%;max-width:330px;display:block;margin:0 auto;">'
+  var svg='<svg viewBox="0 0 300 300" style="width:100%;max-width:330px;display:block;margin:0 auto;overflow:visible;">'
+    +'<defs>'
+    +'<radialGradient id="goGrad" cx="50%" cy="34%" r="72%"><stop offset="0%" stop-color="#3b82f6"/><stop offset="100%" stop-color="#1e3a8a"/></radialGradient>'
+    +'<filter id="wheelShadow" x="-25%" y="-25%" width="150%" height="150%"><feDropShadow dx="0" dy="7" stdDeviation="9" flood-color="#1e293b" flood-opacity="0.22"/></filter>'
+    +'</defs>'
+    +'<circle cx="150" cy="150" r="148" fill="#ffffff" filter="url(#wheelShadow)"/>'
+    +'<circle cx="150" cy="150" r="146" fill="none" stroke="#e2e8f0" stroke-width="3"/>'
     +'<g id="wheelG" style="transform-origin:150px 150px; transition:transform 4.6s cubic-bezier(.17,.67,.2,1);">'
-    +'<circle cx="150" cy="150" r="143" fill="#0f766e"/>'
+    +'<circle cx="150" cy="150" r="143" fill="#f8fafc"/>'
     + sectors
     +'</g>'
-    +'<circle cx="150" cy="150" r="36" fill="#0f766e" stroke="#fff" stroke-width="3"/>'
-    +'<text id="wheelGo" x="150" y="150" fill="#fff" font-size="20" font-weight="900" text-anchor="middle" dominant-baseline="middle" style="cursor:pointer;" onclick="ui.wheelSpin()">GO</text>'
-    +'<polygon points="150,22 139,2 161,2" fill="#ef4444" stroke="#fff" stroke-width="1.5"/>'
+    +'<g style="cursor:pointer;" onclick="ui.wheelSpin()">'
+    +'<circle cx="150" cy="150" r="42" fill="url(#goGrad)" stroke="#fff" stroke-width="4"/>'
+    +'<text id="wheelGo" x="150" y="150" fill="#fff" font-size="19" font-weight="900" text-anchor="middle" dominant-baseline="middle" style="letter-spacing:.5px;">GO</text>'
+    +'</g>'
+    +'<polygon points="150,28 136,-2 164,-2" fill="#ef4444" stroke="#fff" stroke-width="2.5" stroke-linejoin="round"/>'
     +'</svg>';
   var html='<div id="leaderRouletteModal" style="position:fixed;inset:0;z-index:99998;background:rgba(15,23,42,.6);display:flex;align-items:center;justify-content:center;padding:18px;" onclick="if(event.target===this)ui.closeLeaderRoulette()">'
     +'<div style="background:#fff;border-radius:22px;max-width:400px;width:100%;padding:22px 20px;text-align:center;position:relative;box-shadow:0 24px 60px rgba(15,23,42,.35);">'
