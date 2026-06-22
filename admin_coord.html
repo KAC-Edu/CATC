@@ -3035,6 +3035,8 @@ function updateGlobalStatus() {
         updateText('g-shuttle-count', totalShuttle);
         // 히어로 배지: 전체 입교생 (동일 집계 재사용)
         setMetric('hero-total-students', uniqueSet.size);
+        // [실시간] 열려있는 요약 팝업(퇴교차량/외출 등) 자동 갱신
+        try { if(window._coordPopupRefresh && document.getElementById('coordPopup') && document.getElementById('coordPopup').classList.contains('open')) window._coordPopupRefresh(); } catch(e){}
     });
 
     // 5. 버튼 클릭 이벤트 (전체 교육생 명단 보기)
@@ -7100,7 +7102,7 @@ function _coordOpWeekStart(){ const n=new Date(); const dow=n.getDay(); const mo
 function _coordToday(){ return (typeof getTodayString==='function') ? getTodayString() : new Date().toISOString().split('T')[0]; }
 function _esc(t){ return (''+(t==null?'':t)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 function _cpop(title, html){ document.getElementById('cpopTitle').innerHTML=title; document.getElementById('cpopBody').innerHTML=html; document.getElementById('coordPopup').classList.add('open'); }
-function cpopClose(){ document.getElementById('coordPopup').classList.remove('open'); }
+function cpopClose(){ document.getElementById('coordPopup').classList.remove('open'); window._coordPopupRefresh=null; }
 
 function _coordActiveRooms(){
   const today=_coordToday(); const out=[];
@@ -7193,6 +7195,7 @@ function openOutingSummary(){
   }).join('');
   if(!blocks.trim()) blocks='<div class="cpop-empty">현재 외출·외박 신청자가 없습니다.</div>';
   _cpop('<i class="fa-solid fa-file-signature"></i> 외출·외박 신청 현황 (과정별)', blocks);
+  window._coordPopupRefresh=openOutingSummary;
 }
 function _renderOutingTable(sel){
   const wrap=document.getElementById('outTableWrap'); if(!wrap) return;
@@ -7233,27 +7236,47 @@ function delArchiveRow(id){
 }
 
 /* 4) 퇴교차량 신청 총괄 */
+function coordToggleShuttle(idx){
+  var target=document.getElementById('coordShtBody'+idx);
+  var willOpen = target && (target.style.display==='none' || !target.style.display);
+  document.querySelectorAll('[id^="coordShtBody"]').forEach(function(b){ b.style.display='none'; });
+  document.querySelectorAll('[id^="coordShtChev"]').forEach(function(c){ c.style.transform=''; });
+  if(target && willOpen){ target.style.display='block'; var ch=document.getElementById('coordShtChev'+idx); if(ch) ch.style.transform='rotate(180deg)'; window._coordShtOpenIdx=idx; }
+  else { window._coordShtOpenIdx=null; }
+}
 function openShuttleSummary(){
   const rooms=_coordActiveRooms();
-  let blocks=rooms.map(r=>{ const reqs=r.room.shuttle&&r.room.shuttle.requests; const arr=reqs?Object.values(reqs):[]; const tot=arr.length;
-    const c={osong:0,terminal:0,airport:0,car:0}; arr.forEach(x=>{ if(c[x.type]!==undefined) c[x.type]++; });
-    return `<div class="csec-card" style="display:flex;align-items:center;gap:18px;padding:18px 22px;margin-bottom:12px;">
-      <div style="flex:1;min-width:0;">
-        <span class="crow-room">ROOM ${_esc(r.rid)}</span>
-        <div style="font-size:18px;font-weight:900;color:#0f172a;word-break:keep-all;margin-top:8px;">${_esc(r.s.courseName||'-')}</div>
-      </div>
-      <div style="display:flex;align-items:center;gap:22px;flex-shrink:0;">
-        <div style="text-align:center;min-width:44px;"><div style="font-size:12.5px;font-weight:800;color:#64748b;">자차</div><div style="font-size:27px;font-weight:900;color:#64748b;line-height:1.15;">${c.car}</div></div>
-        <div style="text-align:center;min-width:44px;"><div style="font-size:12.5px;font-weight:800;color:#ef4444;">오송역</div><div style="font-size:27px;font-weight:900;color:#ef4444;line-height:1.15;">${c.osong}</div></div>
-        <div style="text-align:center;min-width:44px;"><div style="font-size:12.5px;font-weight:800;color:#3b82f6;">터미널</div><div style="font-size:27px;font-weight:900;color:#3b82f6;line-height:1.15;">${c.terminal}</div></div>
-        <div style="text-align:center;min-width:44px;"><div style="font-size:12.5px;font-weight:800;color:#10b981;">공항</div><div style="font-size:27px;font-weight:900;color:#10b981;line-height:1.15;">${c.airport}</div></div>
-        <div style="width:1px;height:46px;background:#e2e8f0;"></div>
-        <div style="text-align:center;min-width:58px;"><div style="font-size:12.5px;font-weight:800;color:#0f172a;">총 신청</div><div style="font-size:37px;font-weight:900;color:#1e3a8a;line-height:1.1;">${tot}</div></div>
-      </div>
-    </div>`;
+  var _labelMap={osong:'오송역',terminal:'터미널',airport:'공항',car:'자차'};
+  var _colorMap={osong:'#ef4444',terminal:'#3b82f6',airport:'#10b981',car:'#64748b'};
+  let blocks=rooms.map(function(r,idx){ var reqs=r.room.shuttle&&r.room.shuttle.requests; var arr=reqs?Object.values(reqs):[]; var tot=arr.length;
+    var c={osong:0,terminal:0,airport:0,car:0}; arr.forEach(function(x){ if(c[x.type]!==undefined) c[x.type]++; });
+    arr.sort(function(a,b){ return (a.timestamp||0)-(b.timestamp||0); });
+    var rows = tot ? arr.map(function(a,i){
+        var dt=a.timestamp?new Date(a.timestamp).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}):'-';
+        var dest=a.typeText||_labelMap[a.type]||a.typeName||'-';
+        var col=_colorMap[a.type]||'#475569';
+        return '<tr><td style="color:#94a3b8;">'+(i+1)+'</td><td style="font-weight:800;">'+_esc(a.name||'-')+'</td><td><span style="color:'+col+';font-weight:800;">'+_esc(dest)+'</span></td><td style="color:#64748b;white-space:nowrap;">'+dt+'</td></tr>';
+    }).join('') : '<tr><td colspan="4" style="text-align:center;color:#94a3b8;padding:18px;">신청 내역이 없습니다.</td></tr>';
+    return '<div class="csec-card">'
+      +'<div class="csec-card-head" onclick="coordToggleShuttle('+idx+')" style="cursor:pointer;display:flex;align-items:center;gap:18px;padding:18px 22px;">'
+        +'<div style="flex:1;min-width:0;"><span class="crow-room">ROOM '+_esc(r.rid)+'</span><div style="font-size:18px;font-weight:900;color:#0f172a;word-break:keep-all;margin-top:8px;">'+_esc(r.s.courseName||'-')+'</div></div>'
+        +'<div style="display:flex;align-items:center;gap:22px;flex-shrink:0;">'
+          +'<div style="text-align:center;min-width:44px;"><div style="font-size:12.5px;font-weight:800;color:#64748b;">자차</div><div style="font-size:27px;font-weight:900;color:#64748b;line-height:1.15;">'+c.car+'</div></div>'
+          +'<div style="text-align:center;min-width:44px;"><div style="font-size:12.5px;font-weight:800;color:#ef4444;">오송역</div><div style="font-size:27px;font-weight:900;color:#ef4444;line-height:1.15;">'+c.osong+'</div></div>'
+          +'<div style="text-align:center;min-width:44px;"><div style="font-size:12.5px;font-weight:800;color:#3b82f6;">터미널</div><div style="font-size:27px;font-weight:900;color:#3b82f6;line-height:1.15;">'+c.terminal+'</div></div>'
+          +'<div style="text-align:center;min-width:44px;"><div style="font-size:12.5px;font-weight:800;color:#10b981;">공항</div><div style="font-size:27px;font-weight:900;color:#10b981;line-height:1.15;">'+c.airport+'</div></div>'
+          +'<div style="width:1px;height:46px;background:#e2e8f0;"></div>'
+          +'<div style="text-align:center;min-width:58px;"><div style="font-size:12.5px;font-weight:800;color:#0f172a;">총 신청</div><div style="font-size:37px;font-weight:900;color:#1e3a8a;line-height:1.1;">'+tot+'</div></div>'
+          +'<i class="fa-solid fa-chevron-down crow-chev" id="coordShtChev'+idx+'" style="margin-left:6px;"></i>'
+        +'</div>'
+      +'</div>'
+      +'<div id="coordShtBody'+idx+'" style="display:none;border-top:1px solid #eef2f7;overflow-x:auto;"><table class="cpop-table" style="width:100%;table-layout:fixed;"><colgroup><col style="width:12%"><col style="width:30%"><col style="width:33%"><col style="width:25%"></colgroup><thead><tr><th>연번</th><th>성명</th><th>목적지</th><th>신청시간</th></tr></thead><tbody>'+rows+'</tbody></table></div>'
+    +'</div>';
   }).join('');
   if(!blocks.trim()) blocks='<div class="cpop-empty">신청된 퇴교차량이 없습니다.</div>';
   _cpop('<i class="fa-solid fa-bus"></i> 퇴교차량 신청 현황 (과정별)', blocks);
+  window._coordPopupRefresh=openShuttleSummary;
+  if(window._coordShtOpenIdx!=null){ var _ob=document.getElementById('coordShtBody'+window._coordShtOpenIdx); var _oc=document.getElementById('coordShtChev'+window._coordShtOpenIdx); if(_ob){ _ob.style.display='block'; if(_oc) _oc.style.transform='rotate(180deg)'; } }
 }
 function toggleAcc(el){ const card=el.closest('.acc'); if(card) card.classList.toggle('collapsed'); }
 </script>
