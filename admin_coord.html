@@ -1297,7 +1297,7 @@ body.pc-mode #individualStatusView {
     position:fixed !important; left:50%; top:50%; transform:translate(-50%,-50%) !important;
     flex-direction:column !important; align-items:stretch !important;
     width:min(720px, 94vw) !important; max-height:94vh !important; overflow-y:auto !important;
-    -webkit-overflow-scrolling:touch; gap:14px !important;
+    -webkit-overflow-scrolling:touch; gap:10px !important;
     padding:22px !important; background:#f1f5f9 !important; border-radius:20px !important;
     box-shadow:0 0 0 100vmax rgba(15,23,42,.55), 0 30px 80px rgba(0,0,0,.45) !important;
     z-index:9600 !important;
@@ -1845,7 +1845,7 @@ body.pc-mode .coord-right{ justify-self:end !important; }
 
     <!-- ✅ [복구 완료] 현재 운영 중인 과정 리스트 섹션 (= 섹션 2) -->
     <div id="csec-2" class="section-card" style="background:white; padding:18px 16px; border:1px solid #eef2f7; box-shadow:0 4px 14px rgba(15,23,42,0.05);">
-        <div class="coord-sec-head"><h2><i class="fa-solid fa-list-ul"></i> 현재 운영 중인 과정</h2><select id="coordWeekSel" onchange="coordRenderActiveCourses()" style="margin-left:auto;padding:8px 14px;border:1.5px solid #cbd5e1;border-radius:10px;font-weight:800;font-size:13px;cursor:pointer;background:#fff;color:#1e3a8a;"></select></div>
+        <div class="coord-sec-head"><h2><i class="fa-solid fa-list-ul"></i> 운영중인 과정</h2><select id="coordWeekSel" onchange="coordRenderActiveCourses()" style="margin-left:auto;padding:8px 14px;border:1.5px solid #cbd5e1;border-radius:10px;font-weight:800;font-size:13px;cursor:pointer;background:#fff;color:#1e3a8a;"></select></div>
         <div id="activeCourseList" style="display:flex; flex-direction:column; gap:8px;">
             <!-- 자바스크립트가 여기에 ROOM A, ROOM C 등의 카드를 채워넣습니다 -->
         </div>
@@ -2044,8 +2044,8 @@ body.pc-mode .coord-right{ justify-self:end !important; }
 
 
 <div id="ind-notice-card" class="section-card acc" style="background:white; padding:16px; border:1px solid #e2e8f0;">
-    <div class="section-title acc-h" onclick="toggleAcc(this)" style="color:#1e293b; margin-bottom:12px; padding-bottom:10px; border-bottom:2px solid #e2e8f0; cursor:pointer; justify-content:space-between;">
-        <span><i class="fa-solid fa-comment-dots"></i> 담당 과정 공지 (해당 과정 교육생 공지)</span><i class="fa-solid fa-circle-chevron-down acc-ic"></i>
+    <div class="section-title acc-h" style="color:#1e293b; margin-bottom:12px; padding-bottom:10px; border-bottom:2px solid #e2e8f0; justify-content:space-between;">
+        <span><i class="fa-solid fa-comment-dots"></i> 담당 과정 공지 (해당 과정 교육생 공지)</span>
     </div>
     <div class="acc-body">
     <textarea id="courseNotice" class="notice-area"
@@ -2061,8 +2061,8 @@ body.pc-mode .coord-right{ justify-self:end !important; }
 
 
           <div id="ind-outing-card" class="section-card acc" style="margin-bottom: 14px; background:white; padding:16px; border:1px solid #e2e8f0;">
-              <div class="section-title" onclick="toggleAcc(this)" style="color:#1e293b; margin-bottom:12px; padding-bottom:10px; border-bottom:2px solid #e2e8f0; justify-content:space-between; flex-wrap:nowrap; align-items:center; gap:8px; cursor:pointer;">
-                  <span style="white-space:nowrap; font-size:13px; font-weight:800; flex-shrink:0;"><i class="fa-solid fa-user-clock"></i> 외출/외박 신청자 명단 <i class="fa-solid fa-circle-chevron-down acc-ic"></i></span>
+              <div class="section-title" style="color:#1e293b; margin-bottom:12px; padding-bottom:10px; border-bottom:2px solid #e2e8f0; justify-content:space-between; flex-wrap:nowrap; align-items:center; gap:8px;">
+                  <span style="white-space:nowrap; font-size:13px; font-weight:800; flex-shrink:0;"><i class="fa-solid fa-user-clock"></i> 외출/외박 신청자 명단</span>
                   <div style="display:flex; gap:5px; flex-shrink:0;">
                       <button class="navy-btn" style="width:auto; padding:0 8px; height:30px; font-size:11px; background:#eff6ff; border:1px solid #bfdbfe; color:#1e40af; white-space:nowrap;" onclick="event.stopPropagation(); openAttendanceSheet()"><i class="fa-solid fa-clipboard-user"></i> 출석부</button>
                       <button class="navy-btn" style="width:auto; padding:0 8px; height:30px; font-size:11px; background:#1e293b; color:#ffffff; border:1px solid #334155; white-space:nowrap;" onclick="event.stopPropagation(); openOutingLedger()"><i class="fa-solid fa-book"></i> 외출대장</button>
@@ -2084,9 +2084,9 @@ body.pc-mode .coord-right{ justify-self:end !important; }
           </div>
 
 <!-- 퇴교 차량 출발 시간 공지 (맨 아래로 이동) -->
-<div id="ind-departure-card" class="section-card acc" style="background:linear-gradient(135deg,#1e3a8a,#1d4ed8); color:white; padding:16px; margin-bottom:50px;">
-    <div class="section-title acc-h" onclick="toggleAcc(this)" style="color:white; margin-bottom:12px; cursor:pointer; justify-content:space-between;">
-        <span><i class="fa-solid fa-bus"></i> 퇴교차량 출발 시간 공지</span><i class="fa-solid fa-chevron-down acc-ic" style="color:rgba(255,255,255,0.85);"></i>
+<div id="ind-departure-card" class="section-card acc" style="background:linear-gradient(135deg,#1e3a8a,#1d4ed8); color:white; padding:16px; margin-bottom:8px;">
+    <div class="section-title acc-h" style="color:white; margin-bottom:12px; justify-content:space-between;">
+        <span><i class="fa-solid fa-bus"></i> 퇴교차량 출발 시간 공지</span>
     </div>
     <div class="acc-body">
     <div id="coord-departure-status" style="font-size:12px; font-weight:700; color:rgba(255,255,255,0.7); margin-bottom:12px;">
