@@ -3238,7 +3238,7 @@ function updateIndividualView() {
 // 신규 외출/외박 신청 자동 서명 처리
 // - confirmed 필드가 없는(미처리) 건을 감지해 담당자 서명 자동 입력
 async function autoSignNewActions(allData) {
-    const today = getTodayString();
+    const today = (typeof _coordOpDate==='function'?_coordOpDate():getTodayString()); // 외출 운영일(KST 09시) 기준
     for (const rid of Object.keys(allData)) {
         const room = allData[rid];
         const todayActions = room.admin_actions?.[today] || {};

@@ -47,6 +47,25 @@ function getYesterdayString() {
     return `${yesterday.getFullYear()}-${String(yesterday.getMonth()+1).padStart(2,'0')}-${String(yesterday.getDate()).padStart(2,'0')}`;
 }
 
+// [외출/외박 운영일 윈도우] 한국시간(KST) 09:00 ~ 익일 09:00.
+//  외출/외박은 자정이 아니라 '익일 오전 09:00'에 초기화되어야 하므로,
+//  교육운영부 플랫폼과 동일하게 timestamp가 이 윈도우에 드는 신청만 '금일'로 본다.
+function getOutingWindowKST() {
+    const KST_OFFSET = 9 * 60 * 60 * 1000;
+    const nowKst = new Date(Date.now() + KST_OFFSET);
+    const y = nowKst.getUTCFullYear(), m = nowKst.getUTCMonth(), d = nowKst.getUTCDate(), h = nowKst.getUTCHours();
+    let start = Date.UTC(y, m, d, 9, 0, 0) - KST_OFFSET;      // 오늘 09:00(KST)의 UTC ms
+    if (h < 9) start -= 24 * 60 * 60 * 1000;                  // 09:00 이전이면 어제 09:00부터
+    return { start: start, end: start + 24 * 60 * 60 * 1000 };// [start, start+24h) = 익일 09:00
+}
+// 외출/외박 한 건이 현재 운영일 윈도우(09:00~익일09:00)에 속하는지
+function isOutingInTodayWindow(item) {
+    if (!item) return false;
+    const w = getOutingWindowKST();
+    const ts = item.timestamp || 0;
+    return ts >= w.start && ts < w.end;
+}
+
 const state = {
     sessionId: (function() {
         let id = sessionStorage.getItem('kac_admin_sid');
@@ -2353,6 +2372,7 @@ loadDashboardStats: function() {
     if (!state.room) return;
     const room = state.room;
     const today = getTodayString();
+    const yesterday = getYesterdayString();   // 외출/외박 09:00 윈도우용(어제 노드도 함께 읽음)
 
     // [핵심] 이전 방 리스너 전부 끊기 (방 전환 시 데이터 혼재 방지)
     if (window.dashRefs) {
@@ -2369,6 +2389,7 @@ loadDashboardStats: function() {
         expected: firebase.database().ref(`courses/${room}/expectedStudents`),
         actual: firebase.database().ref(`courses/${room}/students`),
         action: firebase.database().ref(`courses/${room}/admin_actions/${today}`),
+        actionY: firebase.database().ref(`courses/${room}/admin_actions/${yesterday}`),
         dinner: firebase.database().ref(`courses/${room}/dinner_skips/${today}`),
         tablet: firebase.database().ref(`courses/${room}/tablet_loans`),
         attend: firebase.database().ref(`courses/${room}/internal_attendance/${today}`),
@@ -2497,12 +2518,24 @@ loadDashboardStats: function() {
     refs.dormRosters = firebase.database().ref('system/dorm/rosters');
     refs.dormRosters.on('value', () => { if (state.room === room) _refreshDashRoster(true); });
 
-    // 7. 행정 신청(외출/석식) 실시간 카운트
-    refs.action.on('value', s => {
+    // 7. 행정 신청(외출/외박) 실시간 카운트
+    //  자정이 아닌 '익일 09:00'에 초기화되도록, 오늘+어제 노드를 읽어 09:00 윈도우(timestamp)로 집계
+    refs._outToday = {}; refs._outYest = {};
+    function _recountOutings() {
         if (state.room !== room) return;
-        const count = Object.keys(s.val() || {}).length;
-        if (document.getElementById('dashActionCount')) document.getElementById('dashActionCount').innerText = count;
-    });
+        const w = getOutingWindowKST();
+        let count = 0;
+        [refs._outToday, refs._outYest].forEach(obj => {
+            Object.keys(obj || {}).forEach(k => {
+                const it = obj[k]; const ts = (it && it.timestamp) || 0;
+                if (ts >= w.start && ts < w.end) count++;
+            });
+        });
+        const el = document.getElementById('dashActionCount');
+        if (el) el.innerText = count;
+    }
+    refs.action.on('value', s => { if (state.room !== room) return; refs._outToday = s.val() || {}; _recountOutings(); });
+    refs.actionY.on('value', s => { if (state.room !== room) return; refs._outYest = s.val() || {}; _recountOutings(); });
     refs.dinner.on('value', s => {
         if (state.room !== room) return;
         const count = Object.keys(s.val() || {}).length;
@@ -4079,9 +4112,7 @@ renderQaList: function(f) {
         if(!state.room) return;
         const today = getTodayString();
         const yesterday = getYesterdayString();
-        const now = new Date();
-        const showYesterday = now.getHours() < 9; 
-        
+
         const tbody = document.getElementById('adminActionTableBody');
         if(!tbody) return;
 
@@ -4090,18 +4121,13 @@ renderQaList: function(f) {
         }
 
         state.adminActionRef = firebase.database().ref(`courses/${state.room}/admin_actions/${today}`);
-        
+
         state.adminActionRef.on('value', snap => {
             const todayData = snap.val() || {};
-            
-            if (showYesterday) {
-                firebase.database().ref(`courses/${state.room}/admin_actions/${yesterday}`).once('value', ySnap => {
-                    const yesterdayData = ySnap.val() || {};
-                    renderAdminList(todayData, yesterdayData);
-                });
-            } else {
-                renderAdminList(todayData, {});
-            }
+            // 외출/외박은 자정이 아니라 익일 09:00에 초기화 → 어제 노드도 항상 함께 읽어 09:00 윈도우로 필터
+            firebase.database().ref(`courses/${state.room}/admin_actions/${yesterday}`).once('value', ySnap => {
+                renderAdminList(todayData, ySnap.val() || {});
+            });
         });
    
 
@@ -4118,16 +4144,20 @@ function renderAdminList(todayData, yesterdayData) {
                 combinedList.push({ ...todayData[token], token, isYesterday: false });
             });
 
-            // 2. 가나다순(이름순) 정렬 실행
-            combinedList.sort((a, b) => a.name.localeCompare(b.name));
+            // 1-2. [09:00 운영일 윈도우] 자정이 아닌 익일 09:00 기준으로만 '금일' 신청 표시
+            const _w = getOutingWindowKST();
+            const windowed = combinedList.filter(it => { const ts = it.timestamp || 0; return ts >= _w.start && ts < _w.end; });
 
-            if (combinedList.length === 0) {
+            // 2. 가나다순(이름순) 정렬 실행
+            windowed.sort((a, b) => a.name.localeCompare(b.name));
+
+            if (windowed.length === 0) {
                 tbody.innerHTML = "<tr><td colspan='6' style='padding:50px; color:#94a3b8;'>신청 내역이 없습니다.</td></tr>";
                 return;
             }
 
             // 3. 정렬된 리스트를 화면에 출력
-            combinedList.forEach(item => {
+            windowed.forEach(item => {
                 appendRow(item, item.isYesterday, item.token);
             });
 
@@ -5455,8 +5485,11 @@ resetShuttleRequests: function() {
             title.textContent='🚶 과정별 외출/외박 신청 현황 (금일)';
             const rows=weekRooms.map(([room,r])=>{
                 const course=(r.settings||{}).courseName||'-';
-                const acts=(r.admin_actions||{})[today]||{};
-                const outs=Object.values(acts).filter(a=>a&&(a.type==='outing'||a.type==='overnight'||a.type==='group_outing'));
+                // [09:00 운영일 윈도우] 자정이 아닌 익일 09:00 기준으로 금일 외출/외박 집계
+                const _ow=getOutingWindowKST();
+                const _allActs=r.admin_actions||{};
+                const outs=[];
+                Object.keys(_allActs).forEach(_dt=>{ const _day=_allActs[_dt]||{}; Object.keys(_day).forEach(_tk=>{ const a=_day[_tk]; if(a&&(a.type==='outing'||a.type==='overnight'||a.type==='group_outing')){ const _ts=a.timestamp||0; if(_ts>=_ow.start&&_ts<_ow.end) outs.push(a); } }); });
                 if(!outs.length) return '';
                 const tbl='<table style="width:100%;border-collapse:collapse;font-size:13px;margin-top:10px;">'
                   +'<thead><tr style="color:#92400e;background:#fffbeb;">'
