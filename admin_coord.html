@@ -1327,6 +1327,8 @@ body.pc-mode .dashboard-split .col-2-4 { width:auto !important; flex:2.5 !import
 body.pc-mode #ind-departure-card { grid-column:2 !important; border-radius:14px !important; height:fit-content !important; }
 body.pc-mode #ind-notice-card { grid-column:3 !important; border-radius:14px !important; height:fit-content !important; }
 body.pc-mode #ind-outing-card { grid-column:2 / 4 !important; margin-bottom:16px !important; border-radius:14px !important; }
+body.pc-mode #ind-outing-card { display:none !important; }
+body.pc-mode #individualStatusView > div { flex-shrink:0 !important; }
 body.pc-mode #pickupStatusView, body.pc-mode #studentShuttleView, body.pc-mode #allStudentListView { padding:24px 28px !important; }
 body.pc-mode #floatingHomeBtn { display:none !important; }
 body.pc-mode main { padding-bottom:24px !important; }
@@ -1599,6 +1601,9 @@ body.pc-mode .entry-box:hover, body.pc-mode .entry-box-tablet:hover {
 .apm-row b{ color:#1e293b; font-weight:800; text-align:right; }
 </style>
     <link rel="icon" type="image/svg+xml" href="favicon.svg?v=b260620c">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/ko.js"></script>
     <link rel="stylesheet" href="kac-tokens.css?v=20260622">
 </head>
 <body>
@@ -2056,6 +2061,10 @@ body.pc-mode .coord-right{ justify-self:end !important; }
     <button class="navy-btn" style="background:#10b981; border:none; box-shadow:0 4px 10px rgba(16,185,129,0.4); margin-top:8px; width:100%;" onclick="saveCourseNotice()">
         <i class="fa-solid fa-paper-plane"></i> 과정 공지 업데이트
     </button>
+    <div style="margin-top:14px; padding-top:12px; border-top:1px dashed #e2e8f0;">
+        <div style="font-size:11.5px; font-weight:800; color:#64748b; margin-bottom:7px;"><i class="fa-solid fa-clock-rotate-left" style="color:#94a3b8; margin-right:4px;"></i>이전 공지 이력</div>
+        <div id="noticeHistoryList"></div>
+    </div>
     </div>
 </div>
 
@@ -4518,33 +4527,24 @@ function renderNoticeHistory() {
     if(!currentRID) return;
     const listEl = document.getElementById('noticeHistoryList');
     if(!listEl) return;
-
     firebase.database().ref(`courses/${currentRID}/coordNoticeHistory`)
         .orderByKey().limitToLast(20)
         .once('value', snap => {
             const data = snap.val();
-            if(!data) {
-                listEl.innerHTML = '<span style="color:#94a3b8; font-size:12px;">발송 이력 없음</span>';
-                return;
-            }
+            if(!data) { listEl.innerHTML = '<div style="color:#94a3b8; font-size:12px; padding:6px 2px;">발송 이력 없음</div>'; return; }
             const items = Object.entries(data).sort((a,b) => b[0]-a[0]);
-            const [key, item] = items[0];
-            // textarea에 마지막 공지 파란 이탤릭으로 표시
             const ta = document.getElementById('courseNotice');
             if (ta && ta.dataset.placeholder !== 'false') {
-                ta.value = item.text;
-                ta.dataset.placeholder = 'true';
-                ta.style.color = '#1e40af';
-                ta.style.fontStyle = 'italic';
-                ta.style.background = '#eff6ff';
-                ta.style.borderColor = '#bfdbfe';
+                ta.value = items[0][1].text; ta.dataset.placeholder = 'true';
+                ta.style.color = '#1e40af'; ta.style.fontStyle = 'italic'; ta.style.background = '#eff6ff'; ta.style.borderColor = '#bfdbfe';
             }
-            // 최신 1건 이력 표시
-            listEl.innerHTML = `
-                <div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
-                    <span style="color:#334155; font-size:13px; font-weight:600; flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${item.text}</span>
-                    <span style="color:#94a3b8; font-size:11px; white-space:nowrap; flex-shrink:0;">${item.timeStr || ''}</span>
-                </div>`;
+            listEl.innerHTML = items.slice(0,6).map(([key,item],i) => `
+                <div style="display:flex; align-items:center; gap:10px; padding:8px 10px; border-radius:9px; background:${i===0?'#eff6ff':'#f8fafc'}; border:1px solid ${i===0?'#bfdbfe':'#eef2f7'}; margin-bottom:6px;">
+                    <span style="flex-shrink:0; font-size:10px; font-weight:800; color:${i===0?'#2563eb':'#cbd5e1'}; width:24px;">${i===0?'최신':''}</span>
+                    <span style="flex:1; min-width:0; font-size:12.5px; color:#334155; font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${(item.text||'').replace(/&/g,'&amp;').replace(/</g,'&lt;')}</span>
+                    <span style="flex-shrink:0; font-size:11px; color:#94a3b8;">${item.timeStr || ''}</span>
+                    <button onclick="reapplyNotice('${key}')" title="이 공지 다시 발송" style="flex-shrink:0; border:none; background:none; color:#2563eb; cursor:pointer; font-size:13px;"><i class="fa-solid fa-rotate-right"></i></button>
+                </div>`).join('');
         });
 }
 
@@ -5557,14 +5557,14 @@ async function saveGlobalNotice() {
         <div id="annualPlanEditorAreaCoord" style="flex:1; overflow:auto; -webkit-overflow-scrolling:touch;"></div>
 
         <!-- 하단 버튼바 -->
-        <div style="display:flex;gap:8px;align-items:center;padding:10px 14px;border-top:1.5px solid #e2e8f0;background:#f8fafc;flex-shrink:0;flex-wrap:wrap;">
-            <button class="navy-btn" style="min-width:150px;padding:0 14px;height:42px;background:#16a34a;font-size:12px;" onclick="window.open('plan_converter.html','_blank')">
-                <i class="fa-solid fa-file-excel"></i> 변환기 바로가기
+        <div style="display:flex;gap:8px;align-items:center;padding:10px 14px;border-top:1.5px solid #e2e8f0;background:#f8fafc;flex-shrink:0;">
+            <button class="navy-btn" style="width:auto;flex:0 0 auto;padding:0 16px;height:42px;background:#16a34a;font-size:12px;" onclick="window.open('plan_converter.html','_blank')">
+                <i class="fa-solid fa-file-excel"></i> 변환기
             </button>
-            <button class="navy-btn" style="min-width:180px;padding:0 14px;height:42px;background:var(--green-save);font-size:12px;" onclick="annualPlanMgrCoord.saveAndSync()">
+            <button class="navy-btn" style="width:auto;flex:0 0 auto;padding:0 18px;height:42px;background:var(--green-save);font-size:12px;" onclick="annualPlanMgrCoord.saveAndSync()">
                 <i class="fa-solid fa-sync"></i> 저장 및 즉시 적용
             </button>
-            <button class="navy-btn" style="margin-left:auto;min-width:120px;padding:0 18px;height:42px;background:#64748b;font-size:12px;" onclick="document.getElementById('annualPlanModalCoord').style.display='none'">
+            <button class="navy-btn" style="width:auto;flex:0 0 auto;margin-left:auto;padding:0 22px;height:42px;background:#64748b;font-size:12px;" onclick="document.getElementById('annualPlanModalCoord').style.display='none'">
                 닫기
             </button>
         </div>
@@ -5744,6 +5744,7 @@ const annualPlanMgrCoord = {
     renderEditor: function() {
         const area = document.getElementById('annualPlanEditorAreaCoord');
         if (!area) return;
+        this._unlocked = this._unlocked || {};
         const esc = this._escapeHtml;
         if (!this.currentEditingData.length) {
             area.innerHTML = "<p style='padding:24px; color:#64748b; text-align:center;'>등록된 과정이 없습니다. 상단 [과정 행 추가] 버튼으로 추가하세요.</p>";
@@ -5776,8 +5777,7 @@ const annualPlanMgrCoord = {
             <thead style="position:sticky; top:30px; background:#1e3a8a; z-index:10; box-shadow:0 2px 6px rgba(15,23,42,.12);"><tr>
                 <th style="${th} width:36px;">No</th>
                 <th style="${th} min-width:150px;">과정명</th>
-                <th style="${th} width:100px;">시작일</th>
-                <th style="${th} width:100px;">종료일</th>
+                <th style="${th} width:180px;">기간</th>
                 <th style="${th} width:80px;">담임교수</th>
                 <th style="${th} width:80px;">운영담당</th>
                 <th style="${th} min-width:130px;">강의실 위치</th>
@@ -5800,15 +5800,18 @@ const annualPlanMgrCoord = {
         }
         this.currentEditingData.forEach((c, idx) => {
             const isCur = c.startDate && c.endDate && c.startDate <= _td2 && c.endDate >= _td2;
+            const ended = c.endDate && c.endDate < _td2;
+            const locked = ended && !this._unlocked[idx];
+            const dis = locked ? 'disabled' : '';
+            const op = locked ? 'opacity:.55;' : '';
             html += `<tr data-cur="${isCur ? '1' : '0'}" data-target="${idx === _tIdx ? '1' : '0'}" style="${rowBg(c)}">
                 <td style="${td} text-align:center; color:#64748b;">${idx + 1}</td>
-                <td style="${td}"><input type="text" value="${esc(c.name)}" onchange="annualPlanMgrCoord.updateLocalData(${idx},'name',this.value)" style="${inp} font-weight:700;"></td>
-                <td style="${td}"><input type="date" value="${esc(c.startDate)}" onchange="annualPlanMgrCoord.updateLocalData(${idx},'startDate',this.value)" style="${inp}"></td>
-                <td style="${td}"><input type="date" value="${esc(c.endDate)}" onchange="annualPlanMgrCoord.updateLocalData(${idx},'endDate',this.value)" style="${inp}"></td>
-                <td style="${td}"><select onchange="annualPlanMgrCoord.updateLocalData(${idx},'prof',this.value)" style="${inp} cursor:pointer;">${annualPlanMgrCoord._profOptions(c.prof)}</select></td>
-                <td style="${td}"><select onchange="annualPlanMgrCoord.updateLocalData(${idx},'coord',this.value)" style="${inp} cursor:pointer;">${annualPlanMgrCoord._coordOptions(c.coord)}</select></td>
-                <td style="${td}">${classroomDetailSelectHtmlCoord(c.roomDetail || '', "annualPlanMgrCoord.onRoomPick(" + idx + ",this)", inp, annualPlanMgrCoord._roomsInUse(idx))}</td>
-                <td style="${td} text-align:center;"><button onclick="annualPlanMgrCoord.deleteRow(${idx})" title="삭제" style="color:#ef4444; border:none; background:none; cursor:pointer; font-size:16px; font-weight:800;">✕</button></td>
+                <td style="${td}"><input type="text" value="${esc(c.name)}" ${dis} onchange="annualPlanMgrCoord.updateLocalData(${idx},'name',this.value)" style="${inp} font-weight:700; ${op}"></td>
+                <td style="${td}"><input type="text" readonly value="${(c.startDate&&c.endDate)?esc(c.startDate+' ~ '+c.endDate):''}" placeholder="기간 선택" ${locked?'':`onclick="annualPlanMgrCoord._openPeriodPicker(${idx}, this)"`} style="${inp} ${locked?'background:#f1f5f9;cursor:default;':'background:#fff;cursor:pointer;'} text-align:center; ${op}"></td>
+                <td style="${td}"><select ${dis} onchange="annualPlanMgrCoord.updateLocalData(${idx},'prof',this.value)" style="${inp} cursor:pointer; ${op}">${annualPlanMgrCoord._profOptions(c.prof)}</select></td>
+                <td style="${td}"><select ${dis} onchange="annualPlanMgrCoord.updateLocalData(${idx},'coord',this.value)" style="${inp} cursor:pointer; ${op}">${annualPlanMgrCoord._coordOptions(c.coord)}</select></td>
+                <td style="${td}">${locked ? `<div style="${inp} ${op} background:#f1f5f9; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${esc(c.roomDetail||'-')}</div>` : classroomDetailSelectHtmlCoord(c.roomDetail || '', "annualPlanMgrCoord.onRoomPick(" + idx + ",this)", inp, annualPlanMgrCoord._roomsInUse(idx))}</td>
+                <td style="${td} text-align:center;">${locked ? `<button onclick="annualPlanMgrCoord.toggleEndedLock(${idx})" title="수정 잠금 해제" style="border:none;background:none;cursor:pointer;font-size:16px;color:#2563eb;">🔓</button>` : `<button onclick="annualPlanMgrCoord.deleteRow(${idx})" title="삭제" style="color:#ef4444; border:none; background:none; cursor:pointer; font-size:16px; font-weight:800;">✕</button>`}</td>
             </tr>`;
         });
         html += `</tbody></table>`;
@@ -5828,6 +5831,19 @@ const annualPlanMgrCoord = {
             c.period  = (c.startDate && c.endDate) ? `${c.startDate} ~ ${c.endDate}` : '';
             c.weekKey = c.startDate ? this._getMondayOf(c.startDate) : '';
         }
+    },
+    toggleEndedLock: function(idx){ this._unlocked[idx] = !this._unlocked[idx]; this.renderEditor(); },
+    _openPeriodPicker: function(idx, el){
+        this._lastIdx = idx;
+        var c = this.currentEditingData[idx]; if(!c) return; var self=this;
+        var fmt = function(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); };
+        if(el._fp){ el._fp.open(); return; }
+        if(typeof flatpickr==='undefined'){ return; }
+        el._fp = flatpickr(el, { mode:'range', locale:'ko', dateFormat:'Y-m-d', disableMobile:true,
+            defaultDate: (c.startDate && c.endDate) ? [c.startDate, c.endDate] : null,
+            onClose: function(dates){ if(dates && dates.length === 2){ c.startDate = fmt(dates[0]); c.endDate = fmt(dates[1]); c.period = c.startDate+' ~ '+c.endDate; c.weekKey = self._getMondayOf(c.startDate); self.renderEditor(); } }
+        });
+        el._fp.open();
     },
     onRoomPick: function(idx, sel){
         this._lastIdx = idx;
@@ -7673,9 +7689,25 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
     b.style.display=open?'block':'none'; if(c) c.style.transform=open?'rotate(180deg)':'';
   };
   window.coordShowEnrollInfo = function(arr, tot){
-    var r = tot>0?Math.round(arr/tot*100):0;
-    var msg = '입교 '+arr+'명\n예정 '+tot+'명\n입교율 '+r+'%';
-    if(typeof showKacAlert==='function') showKacAlert(msg); else alert(msg);
+    var rate = tot>0?Math.round(arr/tot*100):0;
+    var pop=document.getElementById('coordEnrollPop');
+    if(!pop){ pop=document.createElement('div'); pop.id='coordEnrollPop'; document.body.appendChild(pop); }
+    pop.setAttribute('style','position:fixed;inset:0;z-index:30050;display:flex;align-items:center;justify-content:center;background:rgba(15,23,42,0.5);backdrop-filter:blur(4px);');
+    pop.onclick=function(e){ if(e.target===pop) pop.remove(); };
+    pop.innerHTML='<div style="background:#fff;border-radius:22px;padding:26px 28px;width:min(360px,90vw);box-shadow:0 25px 60px rgba(0,0,0,.32);text-align:center;">'
+      +'<div style="font-size:14px;font-weight:800;color:#475569;margin-bottom:18px;"><i class="fa-solid fa-user-check" style="color:#2563eb;margin-right:5px;"></i>입교 현황</div>'
+      +'<div style="width:144px;height:144px;border-radius:50%;margin:0 auto 22px;background:conic-gradient(#16a34a '+(rate*3.6)+'deg,#e8edf5 0);display:flex;align-items:center;justify-content:center;">'
+        +'<div style="width:108px;height:108px;border-radius:50%;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;box-shadow:inset 0 1px 4px rgba(0,0,0,.06);">'
+          +'<div style="font-size:32px;font-weight:900;color:#16a34a;line-height:1;letter-spacing:-1px;">'+rate+'%</div>'
+          +'<div style="font-size:11px;font-weight:800;color:#94a3b8;margin-top:4px;">입교율</div>'
+        +'</div>'
+      +'</div>'
+      +'<div style="display:flex;gap:12px;margin-bottom:22px;">'
+        +'<div style="flex:1;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:14px;padding:13px 8px;"><div style="font-size:12px;font-weight:800;color:#16a34a;">입교</div><div style="font-size:26px;font-weight:900;color:#15803d;line-height:1.1;">'+arr+'<span style="font-size:13px;font-weight:800;">명</span></div></div>'
+        +'<div style="flex:1;background:#eff6ff;border:1px solid #bfdbfe;border-radius:14px;padding:13px 8px;"><div style="font-size:12px;font-weight:800;color:#2563eb;">전체</div><div style="font-size:26px;font-weight:900;color:#1d4ed8;line-height:1.1;">'+tot+'<span style="font-size:13px;font-weight:800;">명</span></div></div>'
+      +'</div>'
+      +'<button onclick="var e=document.getElementById(\'coordEnrollPop\');if(e)e.remove();" style="width:100%;padding:13px;background:#2563eb;color:#fff;border:none;border-radius:13px;font-weight:800;font-size:14px;cursor:pointer;">확인</button>'
+    +'</div>';
   };
   window.coordRenderEnroll = function(){
     var box=document.getElementById('csecEnrollList'); if(!box) return;
