@@ -4154,13 +4154,7 @@ body.night-mode .side-rail-btn{ background:#1e293b; border-color:#334155; }
 body.night-mode .side-rail-lbl{ color:#cbd5e1; }
 
 /* ── 7. 입교안내 PDF 전체화면: 와이드 모니터에서 한 페이지만 중앙 레터박스 ── */
-/* ── 7. 입교안내 PDF 전체화면 보강: 가상 페이지 폭 고정 + 전용 내비게이션 ── */
-#pdfWrapper:fullscreen > #guideProfile,
-#pdfWrapper:-webkit-full-screen > #guideProfile{
-  width:min(94vw, 1120px) !important; max-width:none !important; min-width:0 !important;
-  max-height:92vh !important; overflow:auto !important;
-  flex:0 0 auto !important;
-}
+/* ── 7. 입교안내 PDF 전체화면 전용 내비게이션(좌/우 화살표 + 페이지 표시) ── */
 /* 전체화면 전용 내비게이션 (좌/우 화살표 + 페이지 표시) — 평소엔 숨김 */
 .fs-nav, .fs-pageinfo{ display:none; }
 #pdfWrapper:fullscreen .fs-nav,
@@ -4168,11 +4162,11 @@ body.night-mode .side-rail-lbl{ color:#cbd5e1; }
   display:flex; align-items:center; justify-content:center;
   position:fixed; top:50%; transform:translateY(-50%); z-index:30;
   width:64px; height:96px; border:none; border-radius:14px; cursor:pointer;
-  background:rgba(255,255,255,.12); color:#fff; font-size:34px; font-weight:300;
+  background:rgba(15,23,42,.5); color:#fff; font-size:30px; font-weight:300;
   backdrop-filter:blur(4px); -webkit-backdrop-filter:blur(4px); transition:background .15s ease;
 }
 #pdfWrapper:fullscreen .fs-nav:hover,
-#pdfWrapper:-webkit-full-screen .fs-nav:hover{ background:rgba(255,255,255,.26); }
+#pdfWrapper:-webkit-full-screen .fs-nav:hover{ background:rgba(15,23,42,.72); }
 #pdfWrapper:fullscreen .fs-prev,
 #pdfWrapper:-webkit-full-screen .fs-prev{ left:24px; }
 #pdfWrapper:fullscreen .fs-next,
