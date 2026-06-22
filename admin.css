@@ -4166,9 +4166,31 @@ body.night-mode .side-rail-lbl{ color:#cbd5e1; }
 #pdfWrapper:fullscreen > #guideCanvas,
 #pdfWrapper:-webkit-full-screen > #guideCanvas{
   max-width:100vw !important; max-height:100vh !important;
-  border-radius:0 !important; box-shadow:none !important; display:block !important;
+  border-radius:0 !important; box-shadow:none !important;
 }
 #pdfWrapper:fullscreen > #guideProfile,
 #pdfWrapper:-webkit-full-screen > #guideProfile{
   width:92vw !important; max-width:1180px !important; max-height:94vh !important; overflow:auto !important;
+}
+/* 전체화면 전용 내비게이션 (좌/우 화살표 + 페이지 표시) — 평소엔 숨김 */
+.fs-nav, .fs-pageinfo{ display:none; }
+#pdfWrapper:fullscreen .fs-nav,
+#pdfWrapper:-webkit-full-screen .fs-nav{
+  display:flex; align-items:center; justify-content:center;
+  position:fixed; top:50%; transform:translateY(-50%); z-index:30;
+  width:64px; height:96px; border:none; border-radius:14px; cursor:pointer;
+  background:rgba(255,255,255,.12); color:#fff; font-size:34px; font-weight:300;
+  backdrop-filter:blur(4px); -webkit-backdrop-filter:blur(4px); transition:background .15s ease;
+}
+#pdfWrapper:fullscreen .fs-nav:hover,
+#pdfWrapper:-webkit-full-screen .fs-nav:hover{ background:rgba(255,255,255,.26); }
+#pdfWrapper:fullscreen .fs-prev,
+#pdfWrapper:-webkit-full-screen .fs-prev{ left:24px; }
+#pdfWrapper:fullscreen .fs-next,
+#pdfWrapper:-webkit-full-screen .fs-next{ right:24px; }
+#pdfWrapper:fullscreen .fs-pageinfo,
+#pdfWrapper:-webkit-full-screen .fs-pageinfo{
+  display:block; position:fixed; bottom:26px; left:50%; transform:translateX(-50%); z-index:30;
+  background:rgba(0,0,0,.55); color:#fff; font-size:15px; font-weight:800; letter-spacing:.5px;
+  padding:8px 20px; border-radius:50px; backdrop-filter:blur(4px); -webkit-backdrop-filter:blur(4px);
 }

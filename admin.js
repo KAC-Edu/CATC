@@ -7290,6 +7290,8 @@ init: function() {
         const _total = guideMgr._vtotal();
         if (num < 1) num = 1;
         if (num > _total) num = _total;
+        const _fsInd = document.getElementById('guidePageInfoFs');
+        if (_fsInd) _fsInd.innerText = `${num} / ${_total}`;
 
         const _canvasEl = document.getElementById('guideCanvas');
         const _profEl = document.getElementById('guideProfile');

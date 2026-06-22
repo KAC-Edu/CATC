@@ -553,6 +553,9 @@ body.in-course #moreToggleTab{ display:flex !important; }
         <div id="pdfWrapper" onclick="guideMgr.changePage(1)" oncontextmenu="event.preventDefault(); guideMgr.changePage(-1);" style="cursor:pointer; width:100%; max-width:1050px;">
             <canvas id="guideCanvas" style="width:100%; height:auto; display:block; border-radius:12px; box-shadow:0 4px 20px rgba(0,51,102,0.12);"></canvas>
             <div id="guideProfile" style="display:none; width:100%; border-radius:12px; box-shadow:0 4px 20px rgba(0,51,102,0.12); overflow:hidden;"></div>
+            <button type="button" class="fs-nav fs-prev" onclick="event.stopPropagation(); guideMgr.changePage(-1);" title="이전"><i class="fa-solid fa-chevron-left"></i></button>
+            <button type="button" class="fs-nav fs-next" onclick="event.stopPropagation(); guideMgr.changePage(1);" title="다음"><i class="fa-solid fa-chevron-right"></i></button>
+            <div class="fs-pageinfo" id="guidePageInfoFs">- / -</div>
         </div>
         <!-- 툴바 영역 -->
         <div style="display:flex; align-items:center; gap:8px; padding:8px 16px; background:#f8fafc; border-radius:12px; border:1px solid #e2e8f0; width:100%; max-width:1050px; box-sizing:border-box;">
