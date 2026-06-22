@@ -1242,6 +1242,13 @@ body.pc-mode .coord-sec-panel { background:#fff; border:1px solid #eef2f7; borde
 .cmeta { display:flex; flex-direction:column; align-items:flex-end; line-height:1.15; white-space:nowrap; }
 .cmeta .ml { font-size:10.5px; color:#94a3b8; font-weight:800; }
 .cmeta .mv { font-size:14px; color:#0f172a; font-weight:800; margin-top:3px; }
+/* 학생장 가운데 블록 (과정 간 정렬) */
+.crow-leader{ flex-shrink:0; width:200px; text-align:center; background:#fffbeb; border:1px solid #fde68a; border-radius:12px; padding:6px 12px; }
+.crow-leader .ll{ font-size:11px; font-weight:800; color:#b45309; }
+.crow-leader .ll i{ color:#f59e0b; margin-right:3px; }
+.crow-leader .ln{ font-size:18px; font-weight:900; color:#92400e; line-height:1.2; margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.crow-leader .ln small{ font-size:12px; font-weight:700; color:#a16207; margin-left:3px; }
+.crow-leader .ln.none{ font-size:13px; font-weight:700; color:#cbd5e1; }
 .cmeta-div { width:1px; height:30px; background:#e8edf5; flex-shrink:0; }
 /* 섹션3·4 우측 요약 */
 .cstat-line { font-size:14px; color:#475569; font-weight:700; white-space:nowrap; width:172px; text-align:right; flex-shrink:0; }
@@ -1721,9 +1728,14 @@ body.pc-mode .coord-right{ justify-self:end !important; }
       <div class="hdr-stat" onclick="openOutingSummary()" title="외출·외박 현황"><i class="fa-solid fa-file-signature"></i><div class="hdr-stat-txt"><div class="hb-label">외출·외박</div><div class="hb-value"><span id="g-today-actions">0</span><small>건</small></div></div></div>
       <div class="hdr-stat" onclick="openShuttleSummary()" title="퇴교차량 신청자"><i class="fa-solid fa-bus"></i><div class="hdr-stat-txt"><div class="hb-label">퇴교차량</div><div class="hb-value"><span id="g-shuttle-count">0</span><small>명</small></div></div></div>
     </div>
-    <button class="header-btn" onclick="toggleMenu(true)" title="메뉴" style="width:38px;height:38px;background:rgba(255,255,255,0.18);border:1px solid rgba(255,255,255,0.28);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:15px;padding:0;color:#fff;flex-shrink:0;"><i class="fa-solid fa-bars"></i></button>
   </div>
 </header>
+
+<!-- 우측 사이드 클립 (행정 지원 메뉴 열기) -->
+<div id="coordSideClip" onclick="toggleMenu(true)" title="행정 지원 메뉴" style="position:fixed; right:0; top:50%; transform:translateY(-50%); width:26px; height:88px; background:linear-gradient(135deg,#1a3a8a,#2563eb); border-radius:16px 0 0 16px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:7px; cursor:pointer; z-index:6002; border:1px solid rgba(255,255,255,0.18); border-right:none; box-shadow:-4px 0 14px rgba(15,23,42,0.28); transition:background .15s, width .15s;">
+  <i class="fa-solid fa-bars" style="color:#fff; font-size:15px;"></i>
+  <span style="writing-mode:vertical-rl; color:#dbeafe; font-size:11px; font-weight:800; letter-spacing:1px;">메뉴</span>
+</div>
 
 <!-- 과정 추가 팝업 (운영부) -->
 <div id="coordCourseAddPop" style="display:none; position:fixed; inset:0; background:rgba(15,23,42,0.55); z-index:21000; align-items:center; justify-content:center; padding:20px;">
@@ -4362,12 +4374,22 @@ function openSchedulePhotoCoord() {
     if (typeof toggleMenu === 'function') toggleMenu(false);
 }
 
+function _coordArmMenuTimer(){ clearTimeout(window._coordMenuTimer); window._coordMenuTimer=setTimeout(function(){ try{ toggleMenu(false); }catch(e){} }, 10000); }
 function toggleMenu(open) { 
     const sideMenu = document.getElementById('sideMenu');
     const menuOverlay = document.getElementById('menuOverlay');
     
     sideMenu.classList.toggle('open', open); 
     menuOverlay.style.display = open ? "block" : "none"; 
+
+    // [자동 닫힘] 10초간 메뉴 미조작 시 자동으로 닫힘 (조작하면 타이머 재시작)
+    if (open) {
+        if(!sideMenu._coordAutoBound){
+            sideMenu._coordAutoBound=true;
+            ['mousemove','mousedown','keydown','touchstart','wheel'].forEach(function(ev){ sideMenu.addEventListener(ev, function(){ if(sideMenu.classList.contains('open')) _coordArmMenuTimer(); }, {passive:true}); });
+        }
+        _coordArmMenuTimer();
+    } else { clearTimeout(window._coordMenuTimer); }
 
     // [추가] 메뉴가 열릴 때 body 스크롤 방지 클래스 토글
     if (open) {
@@ -7380,10 +7402,11 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
       // [학생장] 강사플랫폼에서 지정(students.isLeader)된 학생장 이름+사번 표기
       var _ldr=((typeof _studentsOf==='function'?_studentsOf(r.room):[])||[]).filter(function(s){return s&&s.isLeader===true;})[0];
       var _ldrNo=_ldr?(_ldr.empNo||_ldr.sabun||_ldr.id||_ldr.studentId||''):'';
-      var _ldrSub=_ldr?('<div class="crow-sub" style="color:#b45309;margin-top:4px;"><i class="fa-solid fa-crown" style="color:#f59e0b;margin-right:4px;"></i>학생장 : <b style="color:#92400e;">'+esc(_ldr.name||'-')+'</b>'+(_ldrNo?' <span style="color:#a16207;font-weight:700;">('+esc(_ldrNo)+')</span>':'')+'</div>'):'';
+      var _ldrBlock='<div class="crow-leader"><div class="ll"><i class="fa-solid fa-crown"></i> 학생장</div>'+(_ldr?('<div class="ln">'+esc(_ldr.name||'-')+(_ldrNo?' <small>('+esc(_ldrNo)+')</small>':'')+'</div>'):'<div class="ln none">미지정</div>')+'</div>';
       return '<div class="crow clickable" onclick="coordOpenCourse(\''+esc(r.rid)+'\')">'
         +'<span class="crow-room">ROOM '+esc(r.rid)+'</span>'
-        +'<div class="crow-main"><div class="crow-name">'+esc(r.s.courseName||'-')+'</div>'+_ldrSub+'</div>'
+        +'<div class="crow-main"><div class="crow-name">'+esc(r.s.courseName||'-')+'</div></div>'
+        +_ldrBlock
         +'<div class="crow-chips">'
           +'<div class="cmeta"><span class="ml">담임교수</span><span class="mv">'+esc(_coordStripRank(prof)||'-')+'</span></div>'
           +'<div class="cmeta-div"></div>'
@@ -7470,6 +7493,18 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
       var actions=(r.room.admin_actions && r.room.admin_actions[today])||{};
       var arr=Object.keys(actions).map(function(t){return actions[t];}).filter(function(a){return a && a.name;}).sort(function(a,b){return (a.timestamp||0)-(b.timestamp||0);});
       var cnt=arr.length;
+      // [외출률] QR 입교 교육생 대비 외출 신청 비율 → 색상/식수통보 처리
+      var _arrCnt=((typeof _studentsOf==='function'?_studentsOf(r.room):[])||[]).length;
+      var _outRate=_arrCnt>0?Math.round(cnt/_arrCnt*100):0;
+      var _outPill, _outNote='';
+      if(cnt===0){
+        _outPill='<span class="cstat-pill" style="background:#f1f5f9;color:#94a3b8;border:1px solid #e2e8f0;">금일 0건</span>';
+      } else if(_arrCnt>0 && _outRate>=80){
+        _outPill='<span class="cstat-pill" style="background:#fee2e2;color:#dc2626;">금일 '+cnt+'건 · 외출 '+_outRate+'%</span>';
+        _outNote='<span style="background:#dc2626;color:#fff;font-weight:900;font-size:12px;padding:7px 12px;border-radius:9px;white-space:nowrap;"><i class="fa-solid fa-utensils"></i> 식수인원 통보 필!</span>';
+      } else {
+        _outPill='<span class="cstat-pill amber">금일 '+cnt+'건'+(_arrCnt>0?' · 외출 '+_outRate+'%':'')+'</span>';
+      }
       var rows = cnt ? arr.map(function(a,i){
         var t=a.timestamp?new Date(a.timestamp).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}):'-';
         var kind=(a.type==='outing')?'<span style="color:#ea580c;font-weight:800;">외출</span>':'<span style="color:#dc2626;font-weight:800;">외박</span>';
@@ -7480,7 +7515,7 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
         +'<div class="csec-card-head" onclick="coordToggleOuting('+idx+')" style="cursor:pointer;display:flex;align-items:center;gap:14px;padding:14px 16px;">'
           +'<span class="crow-room">ROOM '+esc(r.rid)+'</span>'
           +'<span style="flex:1;min-width:0;"><span class="crow-name" style="display:block;">'+esc(r.s.courseName||'-')+'</span></span>'
-          +'<span class="cstat-pill amber">금일 '+cnt+'건</span>'
+          +_outPill+_outNote
           +'<button onclick="event.stopPropagation();window.open(\'outing_ledger.html?room='+r.rid+'&auto=1\',\'_blank\');" style="background:#1e293b;color:#fff;border:none;border-radius:9px;padding:8px 14px;font-size:12px;font-weight:800;cursor:pointer;white-space:nowrap;"><i class="fa-solid fa-print"></i> 출력</button>'
           +'<i class="fa-solid fa-chevron-down crow-chev" id="coordOutChev'+idx+'"></i>'
         +'</div>'
