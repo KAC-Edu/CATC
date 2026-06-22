@@ -1845,7 +1845,7 @@ body.pc-mode .coord-right{ justify-self:end !important; }
 
     <!-- ✅ [복구 완료] 현재 운영 중인 과정 리스트 섹션 (= 섹션 2) -->
     <div id="csec-2" class="section-card" style="background:white; padding:18px 16px; border:1px solid #eef2f7; box-shadow:0 4px 14px rgba(15,23,42,0.05);">
-        <div class="coord-sec-head"><h2><i class="fa-solid fa-list-ul"></i> 현재 운영 중인 과정</h2></div>
+        <div class="coord-sec-head"><h2><i class="fa-solid fa-list-ul"></i> 현재 운영 중인 과정</h2><select id="coordWeekSel" onchange="coordRenderActiveCourses()" style="margin-left:auto;padding:8px 14px;border:1.5px solid #cbd5e1;border-radius:10px;font-weight:800;font-size:13px;cursor:pointer;background:#fff;color:#1e3a8a;"></select></div>
         <div id="activeCourseList" style="display:flex; flex-direction:column; gap:8px;">
             <!-- 자바스크립트가 여기에 ROOM A, ROOM C 등의 카드를 채워넣습니다 -->
         </div>
@@ -7440,8 +7440,44 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
     try { currentRID=rid; if(typeof handleRoomSelection==='function') handleRoomSelection(); if(typeof updateEntryCnt==='function') updateEntryCnt(rid); }
     catch(e){ console.warn('[coordOpenCourse]', e); }
   };
+  function _coordMondayD(d){ var x=new Date(d); var dow=(x.getDay()+6)%7; x.setDate(x.getDate()-dow); x.setHours(0,0,0,0); return x; }
+  function _coordYmd(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+  function _coordMd(d){ return (d.getMonth()+1)+'/'+d.getDate(); }
+  function _coordEnsureWeekSel(){
+    var sel=document.getElementById('coordWeekSel'); if(!sel) return;
+    var cur=sel.value||'0'; var mon=_coordMondayD(new Date());
+    var labels=['이번주','다음주','다다음주']; var html='';
+    for(var i=0;i<3;i++){ var ms=new Date(mon); ms.setDate(ms.getDate()+i*7); var fe=new Date(ms); fe.setDate(fe.getDate()+4); html+='<option value="'+i+'">'+labels[i]+' ('+_coordMd(ms)+'~'+_coordMd(fe)+')</option>'; }
+    sel.innerHTML=html; sel.value=cur;
+  }
+  function _coordRenderPlannedWeek(box, off){
+    box.innerHTML='<div style="padding:24px;text-align:center;color:#94a3b8;font-weight:700;">불러오는 중…</div>';
+    firebase.database().ref('system/annualPlan').once('value').then(function(snap){
+      var v=snap.val(); var list=Array.isArray(v)?v.filter(Boolean):(v&&typeof v==='object'?Object.values(v).filter(Boolean):[]);
+      var mon=_coordMondayD(new Date()); mon.setDate(mon.getDate()+off*7);
+      var sun=new Date(mon); sun.setDate(sun.getDate()+6);
+      var ms=_coordYmd(mon), ss=_coordYmd(sun);
+      var wk=list.filter(function(c){ var sd=c.startDate||'', ed=c.endDate||''; return sd&&ed&&sd<=ss&&ed>=ms; }).sort(function(a,b){return (a.startDate||'').localeCompare(b.startDate||'');});
+      if(!wk.length){ box.innerHTML='<div style="padding:30px;text-align:center;color:#94a3b8;font-weight:700;">해당 주차에 예정된 과정이 없습니다.</div>'; return; }
+      box.innerHTML=wk.map(function(c){
+        var room=c.roomDetail||c.room||'-';
+        return '<div class="crow">'
+          +'<span class="crow-room" style="background:#16a34a;">예정</span>'
+          +'<div class="crow-main"><div class="crow-name">'+esc(c.name||'-')+' <span style="font-size:11px;font-weight:800;color:#16a34a;background:#dcfce7;padding:2px 7px;border-radius:6px;margin-left:4px;vertical-align:2px;">예정</span></div><div class="crow-sub">'+esc(room)+' · '+esc((c.startDate||'')+' ~ '+(c.endDate||''))+'</div></div>'
+          +'<div class="crow-chips">'
+            +'<div class="cmeta"><span class="ml">담임교수</span><span class="mv">'+esc(_coordStripRank(c.prof||c.professorName)||'-')+'</span></div>'
+            +'<div class="cmeta-div"></div>'
+            +'<div class="cmeta"><span class="ml">과정담당</span><span class="mv">'+esc(_coordStripRank(c.coord||c.coordinatorName)||'-')+'</span></div>'
+          +'</div>'
+        +'</div>';
+      }).join('');
+    }).catch(function(){ box.innerHTML='<div style="padding:24px;text-align:center;color:#ef4444;">불러오기 오류</div>'; });
+  }
   window.coordRenderActiveCourses = function(){
     var box=document.getElementById('activeCourseList'); if(!box) return;
+    _coordEnsureWeekSel();
+    var _off=parseInt((document.getElementById('coordWeekSel')||{}).value||'0',10)||0;
+    if(_off>0){ _coordRenderPlannedWeek(box, _off); return; }
     if(typeof _coordActiveRooms!=='function'){ return; }
     var rooms=_coordActiveRooms();
     if(!rooms.length){ box.innerHTML='<div style="text-align:center;padding:30px;color:#94a3b8;font-weight:700;">현재 운영 중인 과정이 없습니다.</div>'; return; }
