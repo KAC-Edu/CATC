@@ -1213,9 +1213,33 @@ body.pc-mode .coord-pc-tabs {
 .coord-psec-only { display:none; }
 body.pc-mode .coord-psec-only { display:block; }
 body.pc-mode .coord-sec-panel { background:#fff; border:1px solid #eef2f7; border-radius:18px; padding:26px 28px; box-shadow:0 4px 14px rgba(15,23,42,.05); margin-top:4px; }
-.coord-sec-head { display:flex; align-items:center; justify-content:space-between; gap:14px; margin-bottom:18px; padding:14px 18px; background:#e0f2fe; border-left:5px solid #38bdf8; border-radius:12px; flex-wrap:wrap; }
-.coord-sec-head h2 { margin:0; font-size:19px; font-weight:900; color:#0c4a6e; display:flex; align-items:center; gap:10px; }
-.coord-sec-head h2 i { color:#0284c7; }
+.coord-sec-head { display:flex; align-items:center; justify-content:space-between; gap:14px; margin-bottom:18px; padding:14px 18px; background:linear-gradient(90deg,#eef3ff 0%,#f2f0fe 100%); border:1px solid #e0e7fb; border-left:5px solid #4f6ef2; border-radius:12px; flex-wrap:wrap; }
+.coord-sec-head h2 { margin:0; font-size:19px; font-weight:900; color:#1e3a8a; display:flex; align-items:center; gap:10px; }
+.coord-sec-head h2 i { color:#4f6ef2; }
+/* ── 표준 과정 행(.crow): 섹션 2·3·4 공통 ── */
+.crow { display:flex; align-items:center; gap:14px; padding:14px 16px; background:#fff; border:1.5px solid #e8edf5; border-radius:14px; transition:box-shadow .15s, border-color .15s, transform .12s; }
+.crow:hover { border-color:#bfd4fe; box-shadow:0 6px 18px rgba(15,23,42,.08); }
+.crow.clickable { cursor:pointer; }
+.crow.clickable:active { transform:scale(.995); }
+.crow-room { flex-shrink:0; background:#2563eb; color:#fff; font-weight:800; font-size:12px; letter-spacing:.3px; padding:6px 12px; border-radius:8px; white-space:nowrap; }
+.crow-main { flex:1; min-width:0; }
+.crow-name { font-size:16px; font-weight:900; color:#0f172a; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; word-break:keep-all; }
+.crow-sub { font-size:12px; color:#94a3b8; font-weight:700; margin-top:3px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.crow-chips { display:flex; align-items:center; gap:20px; flex-shrink:0; }
+.cchip { text-align:center; min-width:42px; }
+.cchip .cl { font-size:10.5px; color:#94a3b8; font-weight:800; }
+.cchip .cv { font-size:18px; font-weight:900; color:#0f172a; line-height:1.05; margin-top:3px; }
+.crow-chev { color:#cbd5e1; flex-shrink:0; transition:transform .15s; font-size:14px; }
+.crow-body { border:1px solid #eef2f7; border-top:none; border-radius:0 0 14px 14px; margin-top:-6px; overflow-x:auto; }
+/* 섹션2 우측 메타(담임교수/과정담당) */
+.cmeta { display:flex; flex-direction:column; align-items:flex-end; line-height:1.15; white-space:nowrap; }
+.cmeta .ml { font-size:10.5px; color:#94a3b8; font-weight:800; }
+.cmeta .mv { font-size:14px; color:#0f172a; font-weight:800; margin-top:3px; }
+.cmeta-div { width:1px; height:30px; background:#e8edf5; flex-shrink:0; }
+/* 섹션3·4 우측 요약 */
+.cstat-line { font-size:12px; color:#64748b; font-weight:700; white-space:nowrap; }
+.cstat-pill { background:#eef4ff; color:#1e3a8a; font-weight:900; font-size:14px; padding:6px 13px; border-radius:9px; white-space:nowrap; }
+.cstat-pill.amber { background:#fff5ec; color:#c2410c; }
 #csecAnnualPreview table.cpop-table thead th { background:#1e3a8a !important; color:#fff !important; border-bottom:none !important; }
 .coord-sec-actions { display:flex; gap:9px; flex-wrap:wrap; }
 .csec-btn { display:inline-flex; align-items:center; gap:7px; padding:11px 17px; border-radius:11px; font-size:13.5px; font-weight:800; cursor:pointer; border:1px solid transparent; transition:all .15s; }
@@ -1801,7 +1825,7 @@ body.pc-mode .coord-right{ justify-self:end !important; }
 
     <!-- ✅ [복구 완료] 현재 운영 중인 과정 리스트 섹션 (= 섹션 2) -->
     <div id="csec-2" class="section-card" style="background:white; padding:18px 16px; border:1px solid #eef2f7; box-shadow:0 4px 14px rgba(15,23,42,0.05);">
-        <div class="section-title" style="color:#0c4a6e; font-size:19px; font-weight:900; margin-bottom:18px; padding:14px 18px; background:#e0f2fe; border-left:5px solid #38bdf8; border-radius:12px; display:flex; align-items:center; gap:10px;"><i class="fa-solid fa-list-ul" style="color:#0284c7;"></i> 현재 운영 중인 과정</div>
+        <div class="section-title" style="color:#1e3a8a; font-size:19px; font-weight:900; margin-bottom:18px; padding:14px 18px; background:linear-gradient(90deg,#eef3ff 0%,#f2f0fe 100%); border:1px solid #e0e7fb; border-left:5px solid #4f6ef2; border-radius:12px; display:flex; align-items:center; gap:10px;"><i class="fa-solid fa-list-ul" style="color:#4f6ef2;"></i> 현재 운영 중인 과정</div>
         <div id="activeCourseList" style="display:flex; flex-direction:column; gap:0;">
             <!-- 자바스크립트가 여기에 ROOM A, ROOM C 등의 카드를 채워넣습니다 -->
         </div>
@@ -5691,9 +5715,9 @@ const annualPlanMgrCoord = {
             area.innerHTML = "<p style='padding:24px; color:#64748b; text-align:center;'>등록된 과정이 없습니다. 상단 [과정 행 추가] 버튼으로 추가하세요.</p>";
             return;
         }
-        const th = "padding:10px; border:1px solid var(--border-blue); font-size:12px;";
-        const td = "padding:4px; border:1px solid var(--border-blue);";
-        const inp = "width:100%; border:1px solid transparent; background:transparent; padding:6px; font-size:13px; box-sizing:border-box; color:var(--navy-dark);";
+        const th = "padding:12px 10px; border:none; font-size:12.5px; font-weight:800; color:#fff; white-space:nowrap;";
+        const td = "padding:7px 7px; border-bottom:1px solid #eef2f7;";
+        const inp = "width:100%; border:1px solid #e2e8f0; background:#fff; padding:8px 9px; font-size:13px; border-radius:8px; box-sizing:border-box; color:var(--navy-dark); font-weight:600;";
         // 행 배경색 분류
         const _t = getTodayString();
         const _mondayOf = (ds) => { const d=new Date(ds+'T00:00:00Z'); const dow=(d.getUTCDay()+6)%7; d.setUTCDate(d.getUTCDate()-dow); return d.toISOString().slice(0,10); };
@@ -5715,7 +5739,7 @@ const annualPlanMgrCoord = {
             <span><span style="display:inline-block; width:10px; height:10px; border-radius:2px; background:#f1f5f9; vertical-align:middle; margin-right:3px;"></span>종료</span>
         </div>
         <table style="width:100%; border-collapse:collapse; min-width:600px;">
-            <thead style="position:sticky; top:30px; background:#f8fafc; z-index:10;"><tr>
+            <thead style="position:sticky; top:30px; background:#1e3a8a; z-index:10; box-shadow:0 2px 6px rgba(15,23,42,.12);"><tr>
                 <th style="${th} width:36px;">No</th>
                 <th style="${th} min-width:150px;">과정명</th>
                 <th style="${th} width:100px;">시작일</th>
@@ -6980,14 +7004,21 @@ function _coordActiveRooms(){
 function _studentsOf(room){ return room.students ? Object.values(room.students).filter(x=>x && x.name && (''+x.name).trim() && x.name!=='undefined') : []; }
 
 /* 1) 운영 과정: 강의실/과정명/담당자/담임교수/기간/인원 */
-function openCourseOverview(){
+function _courseOverviewHTML(){
   const rooms=_coordActiveRooms();
-  const html = rooms.length
+  const full = (nm)=> (typeof _coordFullName==='function') ? (_coordFullName(nm)|| (nm||'-')) : (nm||'-');
+  return rooms.length
     ? `<table class="cpop-table"><thead><tr><th>강의실</th><th>과정명</th><th>담당자</th><th>담임교수</th><th>기간</th><th>인원</th></tr></thead><tbody>`
-      + rooms.map(r=>`<tr><td style="font-weight:900;">ROOM ${r.rid}</td><td style="text-align:left;font-size:16px;font-weight:800;">${_esc(r.s.courseName||'-')}</td><td>${_esc(r.s.coordinatorName||'-')}</td><td>${_esc(r.st.professorName||'-')}</td><td style="font-size:12px;">${_esc(r.s.period||'-')}</td><td><b style="font-size:20px;color:#2563eb;">${_studentsOf(r.room).length}</b>명</td></tr>`).join('')
+      + rooms.map(r=>`<tr><td style="font-weight:900;">ROOM ${r.rid}</td><td style="text-align:left;font-size:16px;font-weight:800;">${_esc(r.s.courseName||'-')}</td><td style="font-weight:700;">${_esc(full(r.s.coordinatorName)||'-')}</td><td>${_esc((r.st.professorName||'').trim()? (r.st.professorName.trim()+' 교수') :'-')}</td><td style="font-size:12px;">${_esc(r.s.period||'-')}</td><td><b style="font-size:20px;color:#2563eb;">${_studentsOf(r.room).length}</b>명</td></tr>`).join('')
       + `</tbody></table>`
     : '<div class="cpop-empty">운영 중인 과정이 없습니다.</div>';
-  _cpop('<i class="fa-solid fa-graduation-cap"></i> 운영 과정 현황', html);
+}
+function openCourseOverview(){
+  _cpop('<i class="fa-solid fa-graduation-cap"></i> 운영 과정 현황', _courseOverviewHTML());
+  // 직책(과장·주임 등)을 모든 담당자에 일관 표기 — 직책 맵 로드 후 다시 그림
+  if(typeof _coordLoadTitleMap==='function'){
+    _coordLoadTitleMap().then(function(){ var b=document.getElementById('cpopBody'); if(b && document.getElementById('coordPopup').classList.contains('open')) b.innerHTML=_courseOverviewHTML(); }).catch(function(){});
+  }
 }
 
 /* 2) 전체 교육생: 과정별 명단 (검색 가능) */
@@ -7169,6 +7200,7 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
     window._coordPcSec=n;
     try {
       if(n==='1') coordRenderAnnualPreview();
+      else if(n==='2') coordRenderActiveCourses();
       else if(n==='3') coordRenderEnroll();
       else if(n==='4') coordRenderOutingSection();
     } catch(e){ console.warn('[coordPcSection]', e); }
@@ -7235,6 +7267,36 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
     if(firstActiveIdx>0){ var sc=wrap.querySelector('div'); var tr=wrap.querySelector('tr[data-row="'+firstActiveIdx+'"]'); if(sc&&tr){ sc.scrollTop=Math.max(0, tr.offsetTop-90); } }
   };
 
+  // ── 섹션2: 현재 운영중인 과정현황 — 표준 행(.crow), 클릭→상세 팝업 ──
+  window.coordOpenCourse = function(rid){
+    try { currentRID=rid; if(typeof handleRoomSelection==='function') handleRoomSelection(); if(typeof updateEntryCnt==='function') updateEntryCnt(rid); }
+    catch(e){ console.warn('[coordOpenCourse]', e); }
+  };
+  window.coordRenderActiveCourses = function(){
+    var box=document.getElementById('activeCourseList'); if(!box) return;
+    if(typeof _coordActiveRooms!=='function'){ return; }
+    var rooms=_coordActiveRooms();
+    if(!rooms.length){ box.innerHTML='<div style="text-align:center;padding:30px;color:#94a3b8;font-weight:700;">현재 운영 중인 과정이 없습니다.</div>'; return; }
+    var full=function(nm){ return (typeof _coordFullName==='function')?(_coordFullName(nm)||(nm||'-')):(nm||'-'); };
+    box.innerHTML=rooms.map(function(r){
+      var prof=(r.st.professorName||'').trim();
+      return '<div class="crow clickable" onclick="coordOpenCourse(\''+esc(r.rid)+'\')">'
+        +'<span class="crow-room">ROOM '+esc(r.rid)+'</span>'
+        +'<div class="crow-main"><div class="crow-name">'+esc(r.s.courseName||'-')+'</div></div>'
+        +'<div class="crow-chips">'
+          +'<div class="cmeta"><span class="ml">담임교수</span><span class="mv">'+esc(prof||'-')+'</span></div>'
+          +'<div class="cmeta-div"></div>'
+          +'<div class="cmeta"><span class="ml">과정담당</span><span class="mv">'+esc(full(r.s.coordinatorName))+'</span></div>'
+        +'</div>'
+        +'<i class="fa-solid fa-chevron-right crow-chev"></i>'
+      +'</div>';
+    }).join('');
+    // 직책 맵 로드 후 한 번 더(직책 일관 표기)
+    if(typeof _coordLoadTitleMap==='function' && typeof _coordTitleMap!=='undefined' && !_coordTitleMap){
+      _coordLoadTitleMap().then(function(){ if(window._coordPcSec==='2') coordRenderActiveCourses(); }).catch(function(){});
+    }
+  };
+
   // ── 섹션3: 과정별 입교/예정 — 정형 리스트(연번·소속·사번·성명) ──
   window._coordEnrollExt = window._coordEnrollExt || {};
   window.coordToggleEnroll = function(ei){
@@ -7264,14 +7326,13 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
           var ar=arrivedSet[norm(s.name)];
           return '<tr><td style="text-align:center;color:#94a3b8;">'+(i+1)+'</td><td style="color:#475569;">'+esc(s.dept||s.affil||s.org||'-')+'</td><td style="color:#64748b;white-space:nowrap;">'+esc(s.empNo||s.sabun||s.id||'-')+'</td><td style="font-weight:800;">'+esc(s.name||'-')+'</td><td style="text-align:center;">'+(ar?'<span style="color:#16a34a;font-weight:800;">입교</span>':'<span style="color:#2563eb;font-weight:700;">예정</span>')+'</td></tr>';
         }).join('') : '<tr><td colspan="5" style="text-align:center;color:#94a3b8;padding:18px;">등록된 명단이 없습니다.</td></tr>';
-        return '<div style="border:1px solid #eef2f7;border-radius:14px;overflow:hidden;margin-bottom:12px;">'
+        return '<div style="border:1.5px solid #e8edf5;border-radius:14px;overflow:hidden;margin-bottom:10px;">'
           +'<div onclick="coordToggleEnroll('+ei+')" style="cursor:pointer;display:flex;align-items:center;gap:14px;background:#fff;padding:14px 16px;">'
-            +'<span style="background:#2563eb;color:#fff;font-weight:800;font-size:12px;letter-spacing:.3px;padding:6px 12px;border-radius:8px;flex-shrink:0;">ROOM '+esc(r.rid)+'</span>'
-            +'<div style="flex:1;min-width:0;"><div style="font-size:16px;font-weight:900;color:#0f172a;word-break:keep-all;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+esc(r.s.courseName||'-')+'</div></div>'
-            +'<div style="text-align:center;"><div style="font-size:10.5px;color:#64748b;font-weight:800;">입교</div><div style="font-size:18px;font-weight:900;color:#16a34a;">'+arrived+'</div></div>'
-            +'<div style="text-align:center;"><div style="font-size:10.5px;color:#64748b;font-weight:800;">예정</div><div style="font-size:18px;font-weight:900;color:#2563eb;">'+expected+'</div></div>'
-            +'<div style="text-align:center;"><div style="font-size:10.5px;color:#64748b;font-weight:800;">계</div><div style="font-size:18px;font-weight:900;color:#0f172a;">'+total+'</div></div>'
-            +'<i class="fa-solid fa-chevron-down" id="coordEnrChev'+ei+'" style="color:#cbd5e1;transition:transform .15s;"></i>'
+            +'<span class="crow-room">ROOM '+esc(r.rid)+'</span>'
+            +'<div style="flex:1;min-width:0;"><div class="crow-name">'+esc(r.s.courseName||'-')+'</div></div>'
+            +'<span class="cstat-line">입교 <b style="color:#16a34a;">'+arrived+'</b> &nbsp;·&nbsp; 예정 <b style="color:#2563eb;">'+expected+'</b></span>'
+            +'<span class="cstat-pill">계 '+total+'명</span>'
+            +'<i class="fa-solid fa-chevron-down crow-chev" id="coordEnrChev'+ei+'"></i>'
           +'</div>'
           +'<div id="coordEnrollBody'+ei+'" style="display:none;border-top:1px solid #eef2f7;overflow-x:auto;"><table class="cpop-table" style="width:100%;table-layout:fixed;"><colgroup><col style="width:11%"><col style="width:40%"><col style="width:18%"><col style="width:17%"><col style="width:14%"></colgroup><thead><tr><th>연번</th><th style="text-align:left;">소속</th><th>사번</th><th>성명</th><th>상태</th></tr></thead><tbody>'+body+'</tbody></table></div>'
           +'</div>';
@@ -7306,13 +7367,13 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
         var stat=a.returned?'<span style="color:#16a34a;font-weight:800;">복귀</span>':(a.confirmed?'<span style="color:#2563eb;font-weight:700;">서명완료</span>':'<span style="color:#94a3b8;">대기</span>');
         return '<tr><td style="text-align:center;color:#94a3b8;">'+(i+1)+'</td><td style="font-weight:800;">'+esc(a.name||'-')+'</td><td style="text-align:center;">'+kind+'</td><td style="text-align:center;color:#64748b;white-space:nowrap;">'+t+'</td><td style="text-align:center;">'+stat+'</td></tr>';
       }).join('') : '<tr><td colspan="5" style="text-align:center;color:#94a3b8;padding:18px;">금일 외출·외박 신청이 없습니다.</td></tr>';
-      return '<div style="border:1.5px solid #e2e8f0;border-radius:14px;overflow:hidden;">'
+      return '<div style="border:1.5px solid #e8edf5;border-radius:14px;overflow:hidden;">'
         +'<div onclick="coordToggleOuting('+idx+')" style="cursor:pointer;display:flex;align-items:center;gap:14px;padding:14px 16px;background:#fff;">'
-          +'<span style="background:#2563eb;color:#fff;font-weight:800;font-size:12px;letter-spacing:.3px;padding:6px 12px;border-radius:8px;flex-shrink:0;">ROOM '+esc(r.rid)+'</span>'
-          +'<span style="flex:1;min-width:0;"><span style="display:block;font-size:16px;font-weight:900;color:#0f172a;word-break:keep-all;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+esc(r.s.courseName||'-')+'</span></span>'
-          +'<span style="font-size:13px;font-weight:800;color:#64748b;white-space:nowrap;">금일 <b style="font-size:19px;color:#ea580c;">'+cnt+'</b>건</span>'
+          +'<span class="crow-room">ROOM '+esc(r.rid)+'</span>'
+          +'<span style="flex:1;min-width:0;"><span class="crow-name" style="display:block;">'+esc(r.s.courseName||'-')+'</span></span>'
+          +'<span class="cstat-pill amber">금일 '+cnt+'건</span>'
           +'<button onclick="event.stopPropagation();window.open(\'outing_ledger.html?room='+r.rid+'&auto=1\',\'_blank\');" style="background:#1e293b;color:#fff;border:none;border-radius:9px;padding:8px 14px;font-size:12px;font-weight:800;cursor:pointer;white-space:nowrap;"><i class="fa-solid fa-print"></i> 출력</button>'
-          +'<i class="fa-solid fa-chevron-down" id="coordOutChev'+idx+'" style="color:#cbd5e1;transition:transform .15s;"></i>'
+          +'<i class="fa-solid fa-chevron-down crow-chev" id="coordOutChev'+idx+'"></i>'
         +'</div>'
         +'<div id="coordOutBody'+idx+'" style="display:none;border-top:1px solid #eef2f7;overflow-x:auto;"><table class="cpop-table" style="width:100%;table-layout:fixed;"><colgroup><col style="width:12%"><col style="width:32%"><col style="width:16%"><col style="width:22%"><col style="width:18%"></colgroup><thead><tr><th>연번</th><th>성명</th><th>구분</th><th>신청시간</th><th>상태</th></tr></thead><tbody>'+rows+'</tbody></table></div>'
         +'</div>';
@@ -7350,7 +7411,7 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
   // Firebase 데이터가 늦게 와도 현재 보고 있는 섹션을 다시 채움
   [1500, 3500].forEach(function(ms){ setTimeout(function(){
     if(!document.body.classList.contains('pc-mode')) return;
-    var n=window._coordPcSec; if(n==='1') coordRenderAnnualPreview(); else if(n==='3') coordRenderEnroll(); else if(n==='4') coordRenderOutingSection();
+    var n=window._coordPcSec; if(n==='1') coordRenderAnnualPreview(); else if(n==='2') coordRenderActiveCourses(); else if(n==='3') coordRenderEnroll(); else if(n==='4') coordRenderOutingSection();
   }, ms); });
 })();
 </script>
