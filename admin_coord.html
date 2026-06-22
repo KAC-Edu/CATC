@@ -86,20 +86,21 @@
 /* [변경] 리스트 카드 - 부드러운 화이트 카드 스타일 */
 .course-item-card {
     background: #ffffff; 
-    border-radius: 14px; 
+    border-radius: 16px; 
     display: flex; 
     align-items: stretch; 
     cursor: pointer; 
-    margin-bottom: 10px; 
-    border: 1px solid #eef2f7;
-    box-shadow: 0 3px 10px rgba(15, 23, 42, 0.05);
+    margin-bottom: 11px; 
+    border: 1.5px solid #e8edf5;
+    box-shadow: 0 3px 12px rgba(15, 23, 42, 0.06);
     overflow: hidden;
-    transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+    transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease, background 0.18s ease;
 }
 .course-item-card:hover {
-    border-color: #dbeafe;
-    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.10);
-    transform: translateX(3px);
+    border-color: #c7d8fb;
+    box-shadow: 0 10px 24px rgba(37, 99, 235, 0.13);
+    transform: translateY(-2px);
+    background: linear-gradient(180deg,#ffffff,#f7faff);
 }
 .course-item-card:active { transform: scale(0.99); }
 .course-color-bar { width: 8px; flex-shrink: 0; border-radius: 4px; margin: 8px 0 8px 8px; }
@@ -3663,15 +3664,12 @@ function renderCourseSelectors() {
             };
 
             card.innerHTML = `
-                <div class="course-info-content" style="display:flex; align-items:center; gap:14px; flex-wrap:wrap; padding:2px 2px;">
-                    <span style="background:#2563eb; color:#fff; font-weight:800; font-size:12px; letter-spacing:.3px; padding:6px 12px; border-radius:8px; flex-shrink:0;">ROOM ${rid}</span>
-                    <div style="flex:1; min-width:150px;">
-                        <div style="font-weight:900; font-size:18px; color:var(--navy-dark); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${cName}</div>
-                    </div>
-                    <div style="display:flex; align-items:center; flex-shrink:0;">
-                        <div style="padding:2px 26px; white-space:nowrap;"><span style="color:#94a3b8; font-weight:800; font-size:13px;">담임교수</span><span style="color:#cbd5e1; margin:0 8px;">:</span><span style="color:#0f172a; font-weight:800; font-size:16px;">${_profNm||'-'}</span></div>
-                        <div style="width:1px; height:34px; background:#e2e8f0;"></div>
-                        <div style="padding:2px 26px; white-space:nowrap;"><span style="color:#94a3b8; font-weight:800; font-size:13px;">과정담당</span><span style="color:#cbd5e1; margin:0 8px;">:</span><span style="color:#0f172a; font-weight:800; font-size:16px;">${_coordTxt||'-'}</span></div>
+                <div class="course-info-content" style="display:flex; align-items:center; gap:13px; padding:4px 6px;">
+                    <span style="align-self:stretch; width:5px; border-radius:4px; background:${color}; flex-shrink:0;"></span>
+                    <span style="background:linear-gradient(135deg,#2563eb,#1d4ed8); color:#fff; font-weight:800; font-size:12px; letter-spacing:.3px; padding:7px 12px; border-radius:9px; flex-shrink:0; box-shadow:0 3px 8px rgba(37,99,235,.28);">ROOM ${rid}</span>
+                    <div style="flex:1; min-width:0;">
+                        <div style="font-weight:900; font-size:17px; color:var(--navy-dark); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${cName}</div>
+                        <div style="font-size:12px; color:#94a3b8; font-weight:700; margin-top:3px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">담임 <b style="color:#475569;">${_profNm||'-'}</b>${_profNm?' 교수':''} &nbsp;·&nbsp; 담당 <b style="color:#475569;">${_coordTxt||'-'}</b></div>
                     </div>
                     <span class="course-chevron" style="margin-left:4px;"><i class="fa-solid fa-chevron-right"></i></span>
                 </div>
