@@ -3553,7 +3553,7 @@ const allModals = [
     let isSubViewOpen = false;
     views.forEach(v => {
         const el = document.getElementById(v);
-        if(el && el.style.display === 'flex') {
+        if(el && el.style.display && el.style.display !== 'none') {
             isSubViewOpen = true;
         }
     });
@@ -7838,7 +7838,7 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
     var legacy=v.querySelector('.pc-indiv-close'); if(legacy) legacy.remove();
     if(!v.querySelector('.pc-indiv-bottomclose')){
       var bb=document.createElement('button'); bb.className='pc-indiv-bottomclose'; bb.innerHTML='×'; bb.title='닫기';
-      bb.onclick=function(){ try{ if(typeof handleBackNav==='function') handleBackNav(); }catch(e){} };
+      bb.onclick=function(){ try{ currentRID=""; if(typeof handleRoomSelection==='function') handleRoomSelection(); }catch(e){} };
       v.appendChild(bb);
     }
   }
@@ -7847,7 +7847,8 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
     if(!document.body.classList.contains('pc-mode')) return;
     _coordInjectClose();
     // [안전장치] 로드 시 과정 미선택이면 상세 팝업 닫고 전체 현황 표시 (새로고침 시 팝업 자동노출 방지)
-    if(!currentRID){ try{ var _iv=document.getElementById('individualStatusView'); if(_iv) _iv.style.display='none'; var _tv=document.getElementById('totalStatusView'); if(_tv) _tv.style.display=''; }catch(e){} }
+    // [안전장치] PC 로드 시 상세 팝업을 항상 닫고 과정리스트(섹션2)로 시작 (이전 선택 복원으로 인한 자동노출 방지)
+    try{ currentRID=""; if(typeof handleRoomSelection==='function'){ handleRoomSelection(); } var _iv=document.getElementById('individualStatusView'); if(_iv) _iv.style.display='none'; var _tv=document.getElementById('totalStatusView'); if(_tv) _tv.style.display=''; }catch(e){}
     if(!window._coordPcSec) coordPcSection('2');
   }
   document.addEventListener('DOMContentLoaded', function(){ setTimeout(_coordPcBoot, 800); });
