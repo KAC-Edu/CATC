@@ -2,16 +2,6 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8" />
-  <script>
-  /* [모바일 분리] 모바일/태블릿 접속은 과거 원본 모바일 화면(admin_coord_m.html)으로 이동. PC는 현재 화면 유지. */
-  (function(){ try{
-    var wide = window.innerWidth >= 1024;
-    var fine = window.matchMedia && window.matchMedia('(pointer:fine)').matches;
-    var noTouch = !('ontouchstart' in window) || navigator.maxTouchPoints === 0;
-    var isPc = wide && (fine || noTouch);
-    if(!isPc && location.search.indexOf('forcepc')<0){ location.replace('admin_coord_m.html'+location.search+location.hash); }
-  }catch(e){} })();
-  </script>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <title>과정운영 플랫폼</title>
   <link rel="manifest" href="coord.manifest.json">
@@ -719,7 +709,6 @@
     z-index: 5000; 
     transition: 0.3s; 
     box-shadow: -5px 0 15px rgba(0,0,0,0.1); 
-    border-radius: 20px 0 0 20px; 
     padding: 20px; 
     display: flex; 
     flex-direction: column; 
@@ -1200,7 +1189,7 @@ body.pc-mode { background:#eef2f7; }
 #pcSidebar { display:none !important; }
 body.pc-mode .app-container { max-width:1240px; min-width:0; margin:0 auto; box-shadow:0 0 50px rgba(15,23,42,0.10); background:#f1f5f9; min-height:100dvh; }
 body.pc-mode .app-header { padding-left:28px; padding-right:28px; }
-body.pc-mode #totalStatusView { padding:14px 28px 24px !important; background:#f1f5f9; }
+body.pc-mode #totalStatusView { padding:24px 28px !important; background:#f1f5f9; }
 
 /* ══ PC 전용 대제목 탭 (지원부 step-tab 컨셉) ══ */
 .coord-pc-tabs { display:none; }
@@ -1225,18 +1214,12 @@ body.pc-mode .coord-pc-tabs {
 .coord-psec-only { display:none; }
 body.pc-mode .coord-psec-only { display:block; }
 body.pc-mode .coord-sec-panel { background:#fff; border:1px solid #eef2f7; border-radius:18px; padding:26px 28px; box-shadow:0 4px 14px rgba(15,23,42,.05); margin-top:4px; }
-/* ── 섹션 헤더: 청렴관 1층(방마스터) 스타일 ── */
-.coord-sec-head { display:flex; align-items:center; justify-content:space-between; gap:14px; margin-bottom:18px; padding:14px 16px; min-height:64px; box-sizing:border-box; background:#eef4ff; border:1px solid #cdddff; border-radius:11px; flex-wrap:wrap; transition:background .15s ease, border-color .15s ease; }
-.coord-sec-head:hover { background:#e2ecff; border-color:#2563eb; }
-.coord-sec-head h2 { margin:0; font-size:19px; font-weight:900; color:#2563eb; display:flex; align-items:center; gap:9px; line-height:1; letter-spacing:-.3px; }
-.coord-sec-head h2 i { color:#2563eb; font-size:17px; line-height:1; }
+.coord-sec-head { display:flex; align-items:center; justify-content:space-between; gap:14px; margin-bottom:18px; padding:14px 18px; background:linear-gradient(90deg,#eef3ff 0%,#f2f0fe 100%); border:1px solid #e0e7fb; border-left:5px solid #4f6ef2; border-radius:12px; flex-wrap:wrap; }
+.coord-sec-head h2 { margin:0; font-size:19px; font-weight:900; color:#1e3a8a; display:flex; align-items:center; gap:10px; }
+.coord-sec-head h2 i { color:#4f6ef2; }
 /* ── 표준 과정 행(.crow): 섹션 2·3·4 공통 ── */
-.crow { display:flex; align-items:center; gap:14px; width:100%; box-sizing:border-box; min-height:66px; padding:14px 16px; background:#fff; border:1.5px solid #e8edf5; border-radius:14px; transition:background .15s, box-shadow .15s, border-color .15s, transform .12s; }
-.crow:hover { border-color:#2563eb; background:linear-gradient(135deg,#eff6ff 0%,#dbeafe 100%); box-shadow:0 8px 22px rgba(37,99,235,.18); }
-.csec-card { border:1.5px solid #e8edf5; border-radius:14px; overflow:hidden; transition:border-color .15s, box-shadow .15s; }
-.csec-card:hover { border-color:#2563eb; box-shadow:0 8px 22px rgba(37,99,235,.18); }
-.csec-card-head { background:#fff; transition:background .15s; }
-.csec-card:hover > .csec-card-head { background:linear-gradient(135deg,#eff6ff 0%,#dbeafe 100%); }
+.crow { display:flex; align-items:center; gap:14px; padding:14px 16px; background:#fff; border:1.5px solid #e8edf5; border-radius:14px; transition:box-shadow .15s, border-color .15s, transform .12s; }
+.crow:hover { border-color:#bfd4fe; box-shadow:0 6px 18px rgba(15,23,42,.08); }
 .crow.clickable { cursor:pointer; }
 .crow.clickable:active { transform:scale(.995); }
 .crow-room { flex-shrink:0; background:#2563eb; color:#fff; font-weight:800; font-size:12px; letter-spacing:.3px; padding:6px 12px; border-radius:8px; white-space:nowrap; }
@@ -1253,22 +1236,14 @@ body.pc-mode .coord-sec-panel { background:#fff; border:1px solid #eef2f7; borde
 .cmeta { display:flex; flex-direction:column; align-items:flex-end; line-height:1.15; white-space:nowrap; }
 .cmeta .ml { font-size:10.5px; color:#94a3b8; font-weight:800; }
 .cmeta .mv { font-size:14px; color:#0f172a; font-weight:800; margin-top:3px; }
-/* 학생장 가운데 블록 (과정 간 정렬) */
-.crow-leader{ flex-shrink:0; width:200px; text-align:center; background:#fffbeb; border:1px solid #fde68a; border-radius:12px; padding:6px 12px; }
-.crow-leader .ll{ font-size:11px; font-weight:800; color:#b45309; }
-.crow-leader .ll i{ color:#f59e0b; margin-right:3px; }
-.crow-leader .ln{ font-size:18px; font-weight:900; color:#92400e; line-height:1.2; margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.crow-leader .ln small{ font-size:12px; font-weight:700; color:#a16207; margin-left:3px; }
-.crow-leader .ln.none{ font-size:13px; font-weight:700; color:#cbd5e1; }
 .cmeta-div { width:1px; height:30px; background:#e8edf5; flex-shrink:0; }
 /* 섹션3·4 우측 요약 */
-.cstat-line { font-size:14px; color:#475569; font-weight:700; white-space:nowrap; width:172px; text-align:right; flex-shrink:0; }
-.cstat-line b { display:inline-block; min-width:26px; text-align:right; }
-.cstat-pill { background:#eef4ff; color:#1e3a8a; font-weight:900; font-size:15px; padding:7px 14px; border-radius:9px; white-space:nowrap; min-width:92px; text-align:center; flex-shrink:0; }
+.cstat-line { font-size:12px; color:#64748b; font-weight:700; white-space:nowrap; }
+.cstat-pill { background:#eef4ff; color:#1e3a8a; font-weight:900; font-size:14px; padding:6px 13px; border-radius:9px; white-space:nowrap; }
 .cstat-pill.amber { background:#fff5ec; color:#c2410c; }
 #csecAnnualPreview table.cpop-table thead th { background:#1e3a8a !important; color:#fff !important; border-bottom:none !important; }
 .coord-sec-actions { display:flex; gap:9px; flex-wrap:wrap; }
-.csec-btn { display:inline-flex; align-items:center; gap:7px; height:36px; padding:0 16px; box-sizing:border-box; border-radius:11px; font-size:13.5px; font-weight:800; cursor:pointer; border:1px solid transparent; transition:all .15s; }
+.csec-btn { display:inline-flex; align-items:center; gap:7px; padding:11px 17px; border-radius:11px; font-size:13.5px; font-weight:800; cursor:pointer; border:1px solid transparent; transition:all .15s; }
 .csec-btn.primary { background:#003366; color:#fff; }
 .csec-btn.primary:hover { background:#0055aa; box-shadow:0 5px 14px rgba(0,51,102,.28); }
 .csec-btn.ghost { background:#fff; color:#1e40af; border-color:#dbe7fb; }
@@ -1295,7 +1270,7 @@ body.pc-mode .app-header { border-radius:0 !important; }
 /* PC: 교육운영현황 히어로 블록 전체 숨김(요청) → 탭이 상단으로 */
 body.pc-mode .coord-hero { display:none !important; }
 /* PC 개별뷰 팝업 닫기 버튼 */
-.pc-indiv-close { display:none !important; }
+.pc-indiv-close { display:none; }
 body.pc-mode .pc-indiv-close {
     display:flex; position:sticky; top:0; margin-left:auto; align-self:flex-end;
     width:38px; height:38px; align-items:center; justify-content:center;
@@ -1305,8 +1280,8 @@ body.pc-mode .pc-indiv-close {
 body.pc-mode .pc-indiv-close:hover { background:#f1f5f9; color:#0f172a; }
 body.pc-mode #sideMenu .pc-hide { display:none !important; }
 .pc-indiv-bottomclose { display:none; }
-body.pc-mode .pc-indiv-bottomclose { display:flex; align-items:center; justify-content:center; width:50px; height:50px; margin:10px auto 2px; padding:0; border:1px solid #e2e8f0; border-radius:50%; background:#fff; color:#64748b; font-weight:800; font-size:26px; line-height:1; cursor:pointer; transition:all .2s ease; }
-body.pc-mode .pc-indiv-bottomclose:hover { background:#ef4444; color:#fff; border-color:#ef4444; transform:rotate(90deg); }
+body.pc-mode .pc-indiv-bottomclose { display:flex; align-items:center; justify-content:center; gap:8px; width:100%; margin-top:8px; padding:14px; border:none; border-radius:12px; background:#64748b; color:#fff; font-weight:800; font-size:14px; cursor:pointer; }
+body.pc-mode .pc-indiv-bottomclose:hover { background:#475569; }
 body.pc-mode #indCourseHeader { grid-column:1 / -1 !important; border-radius:16px !important; }
 body.pc-mode .dashboard-split { display:flex !important; flex-direction:row !important; gap:8px !important; align-items:stretch !important; }
 body.pc-mode .dashboard-split .col-1-4 { width:auto !important; flex:1 !important; }
@@ -1563,20 +1538,14 @@ body.pc-mode .entry-box:hover, body.pc-mode .entry-box-tablet:hover {
 .cpop-datebar{ font-weight:800; color:#475569; margin-bottom:10px; }
 .acc .acc-body{ display:block; }
 .acc.collapsed .acc-body{ display:none; }
-.acc .acc-ic{ transition:transform .2s; margin-left:8px; color:#2563eb; font-size:16px; }
-/* 닫힘=아래(펼치기 유도) · 열림=위. '>' 회전 제거, 명확한 원형 화살표 사용 */
-.acc .acc-ic{ transform:rotate(180deg); }
-.acc.collapsed .acc-ic{ transform:rotate(0deg); }
-/* [청렴관 1층 스타일] 과정 상세 팝업 — 공지/외출명단 헤더를 카드 전체 폭 하늘색 바로 */
-#ind-notice-card, #ind-outing-card { background:#fff !important; padding:0 !important; border:1px solid #cdddff !important; border-radius:12px !important; overflow:hidden !important; margin-bottom:10px !important; }
-#ind-notice-card .acc-h, #ind-outing-card .section-title {
-    background:#eef4ff !important; border:none !important; border-radius:0 !important;
-    padding:14px 16px !important; margin-bottom:0 !important; border-bottom:none !important;
-    cursor:pointer; transition:background .15s ease;
-}
-#ind-notice-card .acc-h:hover, #ind-outing-card .section-title:hover { background:#e2ecff !important; }
-#ind-notice-card .acc-h > span:first-child, #ind-outing-card .section-title > span:first-child { color:#2563eb !important; }
-#ind-notice-card .acc-body, #ind-outing-card .acc-body { padding:14px 16px !important; }
+.acc .acc-ic{ transition:transform .2s; margin-left:6px; color:#94a3b8; font-size:12px; }
+.acc.collapsed .acc-ic{ transform:rotate(-90deg); }
+/* [접힘 affordance] 닫힌 상태를 명확히 — 구분선 제거 + 연한 배경 + '눌러서 펼치기' 안내 */
+#ind-notice-card.collapsed, #ind-outing-card.collapsed { background:#f5f9ff !important; }
+#ind-notice-card.collapsed .acc-h, #ind-outing-card.collapsed .section-title { border-bottom:none !important; margin-bottom:0 !important; padding-bottom:0 !important; }
+#ind-notice-card.collapsed .acc-ic, #ind-outing-card.collapsed .acc-ic { color:#2563eb !important; }
+#ind-notice-card.collapsed .acc-h > span:first-child::after { content:'  ·  눌러서 펼치기'; font-size:11px; font-weight:800; color:#2563eb; }
+#ind-outing-card.collapsed .section-title > span:first-child::after { content:'  ·  펼치기'; font-size:11px; font-weight:800; color:#2563eb; }
 #ind-outing-card .section-title { flex-wrap:wrap !important; row-gap:8px; }
 #ind-outing-card .section-title > span:first-child { min-width:0; }
 .apm-card{ background:#fff; border:1px solid #e2e8f0; border-radius:12px; padding:13px 15px; margin-bottom:10px; }
@@ -1608,13 +1577,16 @@ body.pc-mode .entry-box:hover, body.pc-mode .entry-box-tablet:hover {
         <button class="menu-tile pc-hide" style="background:#3b82f6;" onclick="openSetupModal()">
             <i class="fa-solid fa-plus-circle"></i> 과정 추가·설정
         </button>
-        <button class="menu-tile" style="background:#f97316;" onclick="openGlobalNoticeModal(); toggleMenu(false);">
+        <button class="menu-tile pc-hide" style="background:#f97316;" onclick="openGlobalNoticeModal(); toggleMenu(false);">
             <i class="fa-solid fa-bullhorn"></i> 전체 공지
         </button>
         <button class="menu-tile pc-hide" style="background:#1e293b;" onclick="openCenterQrModal(); toggleMenu(false);">
             <i class="fa-solid fa-qrcode"></i> 행정 접속 QR
         </button>
-        <button class="menu-tile" style="background:#0d9488;" onclick="openAttendanceManager(); toggleMenu(false);">
+        <button class="menu-tile pc-hide" style="background:#003366;" onclick="annualPlanMgrCoord.openEditorModal()">
+            <i class="fa-solid fa-calendar-days"></i> 연간계획
+        </button>
+        <button class="menu-tile pc-hide" style="background:#0d9488;" onclick="openAttendanceManager(); toggleMenu(false);">
             <i class="fa-solid fa-clipboard-user"></i> 출석부 관리
         </button>
         <button class="menu-tile" style="background:#7c3aed;" onclick="coordMgr.openManage(); toggleMenu(false);">
@@ -1679,34 +1651,21 @@ body.pc-mode .entry-box:hover, body.pc-mode .entry-box-tablet:hover {
 .t-full{ display:none; }
 .coord-brand-mark i{ color:#dbeafe; font-size:16px; }
 .coord-brand-title{ margin:0; font-size:15px; font-weight:900; color:#fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.coord-clock{ color:#fff; display:flex; align-items:center; gap:8px; white-space:nowrap; flex-shrink:0; align-self:center; line-height:1; }
+.coord-clock{ color:#fff; display:flex; align-items:center; gap:7px; white-space:nowrap; flex-shrink:0; }
 .coord-right{ display:flex; align-items:center; gap:8px; flex:1; justify-content:flex-end; }
 .coord-pc-only{ display:none; }
 body.pc-mode .coord-pc-only{ display:flex !important; }
-.coord-hdr-stats{ display:flex; align-items:center; gap:8px; min-width:0; overflow-x:auto; }
-.coord-hdr-stats::-webkit-scrollbar{ height:0; }
-.hdr-stat{ display:flex; align-items:center; gap:9px; background:rgba(255,255,255,0.12); border:1px solid rgba(255,255,255,0.2); border-radius:12px; padding:7px 13px; cursor:pointer; white-space:nowrap; flex-shrink:0; transition:background .15s, transform .12s; }
-.hdr-stat:hover{ background:rgba(255,255,255,0.24); transform:translateY(-1px); }
-.hdr-stat > i{ color:#93c5fd; font-size:16px; flex-shrink:0; }
-.hdr-stat .hb-label{ font-size:11px; font-weight:700; color:#cbd5e1; line-height:1.15; }
-.hdr-stat .hb-value{ font-size:20px; font-weight:900; color:#fff; line-height:1.05; letter-spacing:-.5px; }
-.hdr-stat .hb-value small{ font-size:11px; font-weight:700; color:#93c5fd; margin-left:2px; }
-body.pc-mode .coord-hdr-stats{ gap:10px; }
-body.pc-mode .hdr-stat{ padding:8px 18px; }
-body.pc-mode .hdr-stat > i{ font-size:18px; }
-body.pc-mode .hdr-stat .hb-label{ font-size:12.5px; }
-body.pc-mode .hdr-stat .hb-value{ font-size:26px; }
-#coordHeaderClock .hc-date{ font-size:13px; font-weight:500; opacity:.8; }
-#coordHeaderClock .hc-day{ font-size:12px; font-weight:600; opacity:.7; }
-#coordHeaderClock .hc-div{ width:1px; height:18px; background:rgba(255,255,255,.25); }
-#coordHeaderClock .hc-time{ font-size:21px; font-weight:800; font-family:'Consolas','Roboto Mono',monospace; line-height:1; }
-#coordHeaderClock .hc-ampm{ font-size:12px; font-weight:700; margin-left:3px; color:#93c5fd; }
+#coordHeaderClock .hc-date{ font-size:11px; font-weight:400; opacity:.75; }
+#coordHeaderClock .hc-day{ font-size:10px; font-weight:600; opacity:.6; }
+#coordHeaderClock .hc-div{ width:1px; height:16px; background:rgba(255,255,255,.2); }
+#coordHeaderClock .hc-time{ font-size:16px; font-weight:800; font-family:'Consolas','Roboto Mono',monospace; }
+#coordHeaderClock .hc-ampm{ font-size:10px; font-weight:700; margin-left:3px; color:#93c5fd; }
 @keyframes blink-kst{ to{ visibility:hidden; } }
 #coordHeaderClock .hc-blink{ animation:blink-kst 1s steps(2,start) infinite; }
-@media (max-width:360px){ .coord-clock{ display:none; } }
+@media (max-width:430px){ .coord-clock{ display:none; } }
 @media (max-width:560px){ .coord-brand-title{ font-size:14px; } }
 /* PC 모드 — 지원부와 동일한 형태(브랜드 + 중앙 시계 pill) */
-body.pc-mode .app-header{ display:grid !important; grid-template-columns:minmax(0,1fr) auto minmax(0,1fr) !important; gap:16px !important; align-items:center !important; min-height:74px !important; padding:12px 28px !important; background:linear-gradient(135deg,#111827 0%,#172554 46%,#2563eb 100%) !important; width:100vw !important; margin-left:calc(50% - 50vw) !important; }
+body.pc-mode .app-header{ display:grid !important; grid-template-columns:minmax(220px,1fr) auto minmax(180px,1fr) !important; gap:18px !important; align-items:center !important; min-height:76px !important; padding:14px 32px !important; background:linear-gradient(135deg,#111827 0%,#172554 46%,#2563eb 100%) !important; width:100vw !important; margin-left:calc(50% - 50vw) !important; }
 body.pc-mode .coord-brand-mark{ display:flex !important; }
 body.pc-mode .t-full{ display:inline !important; }
 body.pc-mode .coord-right{ flex:none !important; }
@@ -1733,20 +1692,12 @@ body.pc-mode .coord-right{ justify-self:end !important; }
   </div>
   <div id="coordHeaderClock" class="coord-clock"></div>
   <div class="coord-right">
-    <div class="coord-hdr-stats" id="coordHdrStats">
-      <div class="hdr-stat" onclick="openCourseOverview()" title="운영 과정 현황"><i class="fa-solid fa-graduation-cap"></i><div class="hdr-stat-txt"><div class="hb-label">운영 과정</div><div class="hb-value"><span id="hero-active-courses">0</span><small>개</small></div></div></div>
-      <div class="hdr-stat" onclick="openStudentRosterPopup()" title="전체 교육생 명단"><i class="fa-solid fa-users"></i><div class="hdr-stat-txt"><div class="hb-label">전체 교육생</div><div class="hb-value"><span id="g-total-students">0</span><small>명</small></div></div></div>
-      <div class="hdr-stat" onclick="openOutingSummary()" title="외출·외박 현황"><i class="fa-solid fa-file-signature"></i><div class="hdr-stat-txt"><div class="hb-label">외출·외박</div><div class="hb-value"><span id="g-today-actions">0</span><small>건</small></div></div></div>
-      <div class="hdr-stat" onclick="openShuttleSummary()" title="퇴교차량 신청자"><i class="fa-solid fa-bus"></i><div class="hdr-stat-txt"><div class="hb-label">퇴교차량</div><div class="hb-value"><span id="g-shuttle-count">0</span><small>명</small></div></div></div>
-    </div>
+    <button class="header-btn coord-pc-only" onclick="openGlobalNoticeModal()" title="전체 공지" style="width:36px;height:36px;background:rgba(255,255,255,0.18);border:1px solid rgba(255,255,255,0.28);border-radius:10px;color:#fff;align-items:center;justify-content:center;font-size:14px;cursor:pointer;"><i class="fa-solid fa-bullhorn"></i></button>
+    <button class="header-btn coord-pc-only" onclick="openAttendanceManager()" title="출석부 관리" style="width:36px;height:36px;background:rgba(255,255,255,0.18);border:1px solid rgba(255,255,255,0.28);border-radius:10px;color:#fff;align-items:center;justify-content:center;font-size:14px;cursor:pointer;"><i class="fa-solid fa-clipboard-user"></i></button>
+    <button id="pcModeBtn" class="header-btn" onclick="togglePcMode()" title="PC / 모바일 화면 전환" style="height:33px;background:rgba(255,255,255,0.18);border:1px solid rgba(255,255,255,0.28);border-radius:10px;display:flex;align-items:center;gap:6px;justify-content:center;font-size:12px;font-weight:800;padding:0 12px;color:#fff;"><i class="fa-solid fa-display"></i><span class="pcmode-label">PC</span></button>
+    <button class="header-btn" onclick="toggleMenu(true)" style="width:33px;height:33px;background:rgba(255,255,255,0.18);border:1px solid rgba(255,255,255,0.28);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:14px;padding:0;color:#fff;"><i class="fa-solid fa-bars"></i></button>
   </div>
 </header>
-
-<!-- 우측 사이드 클립 (행정 지원 메뉴 열기) -->
-<div id="coordSideClip" onclick="coordClipToggle()" title="행정 지원 메뉴" style="position:fixed; right:0; top:50%; transform:translateY(-50%); width:26px; height:88px; background:linear-gradient(135deg,#1a3a8a,#2563eb); border-radius:16px 0 0 16px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:7px; cursor:pointer; z-index:6002; border:1px solid rgba(255,255,255,0.18); border-right:none; box-shadow:-4px 0 14px rgba(15,23,42,0.28); transition:right .3s ease, background .15s;">
-  <i class="fa-solid fa-bars" style="color:#fff; font-size:15px;"></i>
-  <span style="writing-mode:vertical-rl; color:#dbeafe; font-size:11px; font-weight:800; letter-spacing:1px;">메뉴</span>
-</div>
 
 <!-- 과정 추가 팝업 (운영부) -->
 <div id="coordCourseAddPop" style="display:none; position:fixed; inset:0; background:rgba(15,23,42,0.55); z-index:21000; align-items:center; justify-content:center; padding:20px;">
@@ -1783,23 +1734,53 @@ body.pc-mode .coord-right{ justify-self:end !important; }
 <!-- [뷰 1] 전체 과정 현황 (메인) -->
 <div id="totalStatusView" style="display:flex; flex-direction:column; gap:12px;">
 
+    <!-- 히어로 배너 (훈련원 전경 + 실시간 요약 배지) -->
+    <div class="coord-hero">
+        <img class="coord-hero__img" id="coordHeroImg" src="catc.webp" alt="항공기술훈련원 전경"
+             onerror="if(!this.dataset.fb){this.dataset.fb=1; this.src=window.__CATC_HERO__||'';}">
+        <div class="coord-hero__overlay"></div>
+        <div class="coord-hero__content">
+            <div class="coord-hero__title">
+                <i class="fa-solid fa-building-columns"></i> 항공기술훈련원 교육 운영 현황
+            </div>
+            <div class="coord-hero__badges coord-nav4">
+                <div class="hero-badge nav-btn" onclick="openCourseOverview()">
+                    <i class="fa-solid fa-graduation-cap"></i>
+                    <div><div class="hb-label">운영 과정</div><div class="hb-value"><span id="hero-active-courses">0</span><small>개</small></div></div>
+                </div>
+                <div class="hero-badge nav-btn" onclick="openStudentRosterPopup()">
+                    <i class="fa-solid fa-users"></i>
+                    <div><div class="hb-label">전체 교육생</div><div class="hb-value"><span id="g-total-students">0</span><small>명</small></div></div>
+                </div>
+                <div class="hero-badge nav-btn" onclick="openOutingSummary()">
+                    <i class="fa-solid fa-file-signature"></i>
+                    <div><div class="hb-label">외출·외박</div><div class="hb-value"><span id="g-today-actions">0</span><small>건</small></div></div>
+                </div>
+                <div class="hero-badge nav-btn" onclick="openShuttleSummary()">
+                    <i class="fa-solid fa-bus"></i>
+                    <div><div class="hb-label">퇴교차량 신청자</div><div class="hb-value"><span id="g-shuttle-count">0</span><small>명</small></div></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- ══ PC 전용: 4개 대제목 탭 ══ -->
     <div class="coord-pc-tabs" id="coordPcTabs">
         <div class="coord-ptab" data-sec="1" onclick="coordPcSection(1)">
             <div class="cn"><i class="fa-solid fa-calendar-days"></i></div>
-            <div><div class="ct">연간계획</div></div>
+            <div><div class="ct">연간과정<br>운영계획</div></div>
         </div>
         <div class="coord-ptab active" data-sec="2" onclick="coordPcSection(2)">
             <div class="cn"><i class="fa-solid fa-list-ul"></i></div>
-            <div><div class="ct">운영 과정</div></div>
+            <div><div class="ct">현재 운영중인<br>과정현황</div></div>
         </div>
         <div class="coord-ptab" data-sec="3" onclick="coordPcSection(3)">
             <div class="cn"><i class="fa-solid fa-user-check"></i></div>
-            <div><div class="ct">입교 현황</div></div>
+            <div><div class="ct">현재 입교/예정<br>교육생</div></div>
         </div>
         <div class="coord-ptab" data-sec="4" onclick="coordPcSection(4)">
             <div class="cn"><i class="fa-solid fa-file-signature"></i></div>
-            <div><div class="ct">외출·외박</div></div>
+            <div><div class="ct">외출·외박 대장<br>금일 외출자 현황</div></div>
         </div>
     </div>
 
@@ -1845,8 +1826,8 @@ body.pc-mode .coord-right{ justify-self:end !important; }
 
     <!-- ✅ [복구 완료] 현재 운영 중인 과정 리스트 섹션 (= 섹션 2) -->
     <div id="csec-2" class="section-card" style="background:white; padding:18px 16px; border:1px solid #eef2f7; box-shadow:0 4px 14px rgba(15,23,42,0.05);">
-        <div class="coord-sec-head"><h2><i class="fa-solid fa-list-ul"></i> 현재 운영 중인 과정</h2></div>
-        <div id="activeCourseList" style="display:flex; flex-direction:column; gap:8px;">
+        <div class="section-title" style="color:#1e3a8a; font-size:19px; font-weight:900; margin-bottom:18px; padding:14px 18px; background:linear-gradient(90deg,#eef3ff 0%,#f2f0fe 100%); border:1px solid #e0e7fb; border-left:5px solid #4f6ef2; border-radius:12px; display:flex; align-items:center; gap:10px;"><i class="fa-solid fa-list-ul" style="color:#4f6ef2;"></i> 현재 운영 중인 과정</div>
+        <div id="activeCourseList" style="display:flex; flex-direction:column; gap:0;">
             <!-- 자바스크립트가 여기에 ROOM A, ROOM C 등의 카드를 채워넣습니다 -->
         </div>
     </div>
@@ -1977,9 +1958,9 @@ body.pc-mode .coord-right{ justify-self:end !important; }
 
 
       <!-- [뷰 2] 개별 과정 상세 -->
-      <div id="individualStatusView" style="display:none; flex-direction:column; gap:8px;">
-          <div id="indCourseHeader" style="background: linear-gradient(135deg, #003366 0%, #0055aa 100%); border-radius: 12px; padding: 15px 18px; margin-bottom: 4px; color: #ffffff; box-shadow: 0 4px 12px rgba(0, 51, 102, 0.2); display: flex; flex-direction: column; gap: 9px;">
-              <div style="display: flex; align-items: baseline; gap: 8px; border-bottom: 1px solid rgba(255,255,255,0.15); padding-bottom: 10px; flex-wrap: wrap;">
+      <div id="individualStatusView" style="display:none; flex-direction:column; gap:12px;">
+          <div id="indCourseHeader" style="background: linear-gradient(135deg, #003366 0%, #0055aa 100%); border-radius: 12px; padding: 22px 25px; margin-bottom: 10px; color: #ffffff; box-shadow: 0 4px 12px rgba(0, 51, 102, 0.2); display: flex; flex-direction: column; gap: 12px;">
+              <div style="display: flex; align-items: baseline; gap: 8px; border-bottom: 1px solid rgba(255,255,255,0.15); padding-bottom: 12px; flex-wrap: wrap;">
                   <span style="font-weight: 900; font-size: 13px; color: #60a5fa; white-space: nowrap; flex-shrink: 0;">ROOM <span id="ind-room-id">-</span></span>
                   <span id="ind-course-name" style="font-weight: 800; font-size: 17px; line-height: 1.3; word-break: keep-all; overflow-wrap: break-word;">과정명 로딩 중...</span>
               </div>
@@ -2045,7 +2026,7 @@ body.pc-mode .coord-right{ justify-self:end !important; }
 
 <div id="ind-notice-card" class="section-card acc collapsed" style="background:white; padding:16px; border:1px solid #e2e8f0;">
     <div class="section-title acc-h" onclick="toggleAcc(this)" style="color:#1e293b; margin-bottom:12px; padding-bottom:10px; border-bottom:2px solid #e2e8f0; cursor:pointer; justify-content:space-between;">
-        <span><i class="fa-solid fa-comment-dots"></i> 담당 과정 공지 (해당 과정 교육생 공지)</span><i class="fa-solid fa-circle-chevron-down acc-ic"></i>
+        <span><i class="fa-solid fa-comment-dots"></i> 담당 과정 공지 (해당 과정 교육생 공지)</span><i class="fa-solid fa-chevron-down acc-ic"></i>
     </div>
     <div class="acc-body">
     <textarea id="courseNotice" class="notice-area"
@@ -2061,11 +2042,11 @@ body.pc-mode .coord-right{ justify-self:end !important; }
 
 
           <div id="ind-outing-card" class="section-card acc collapsed" style="margin-bottom: 14px; background:white; padding:16px; border:1px solid #e2e8f0;">
-              <div class="section-title" onclick="toggleAcc(this)" style="color:#1e293b; margin-bottom:12px; padding-bottom:10px; border-bottom:2px solid #e2e8f0; justify-content:space-between; flex-wrap:nowrap; align-items:center; gap:8px; cursor:pointer;">
-                  <span style="white-space:nowrap; font-size:13px; font-weight:800; flex-shrink:0;"><i class="fa-solid fa-user-clock"></i> 외출/외박 신청자 명단 <i class="fa-solid fa-circle-chevron-down acc-ic"></i></span>
+              <div class="section-title" style="color:#1e293b; margin-bottom:12px; padding-bottom:10px; border-bottom:2px solid #e2e8f0; justify-content:space-between; flex-wrap:nowrap; align-items:center; gap:8px;">
+                  <span onclick="toggleAcc(this)" style="white-space:nowrap; font-size:13px; font-weight:800; flex-shrink:0; cursor:pointer;"><i class="fa-solid fa-user-clock"></i> 외출/외박 신청자 명단 <i class="fa-solid fa-chevron-down acc-ic"></i></span>
                   <div style="display:flex; gap:5px; flex-shrink:0;">
-                      <button class="navy-btn" style="width:auto; padding:0 8px; height:30px; font-size:11px; background:#eff6ff; border:1px solid #bfdbfe; color:#1e40af; white-space:nowrap;" onclick="event.stopPropagation(); openAttendanceSheet()"><i class="fa-solid fa-clipboard-user"></i> 출석부</button>
-                      <button class="navy-btn" style="width:auto; padding:0 8px; height:30px; font-size:11px; background:#1e293b; color:#ffffff; border:1px solid #334155; white-space:nowrap;" onclick="event.stopPropagation(); openOutingLedger()"><i class="fa-solid fa-book"></i> 외출대장</button>
+                      <button class="navy-btn" style="width:auto; padding:0 8px; height:30px; font-size:11px; background:#eff6ff; border:1px solid #bfdbfe; color:#1e40af; white-space:nowrap;" onclick="openAttendanceSheet()"><i class="fa-solid fa-clipboard-user"></i> 출석부</button>
+                      <button class="navy-btn" style="width:auto; padding:0 8px; height:30px; font-size:11px; background:#1e293b; color:#ffffff; border:1px solid #334155; white-space:nowrap;" onclick="openOutingLedger()"><i class="fa-solid fa-book"></i> 외출대장</button>
                   </div>
               </div>
               <div class="acc-body"><div style="overflow-x: auto; background:rgba(255,255,255,0.1); border-radius:10px; overflow:hidden; border:1px solid rgba(255,255,255,0.2);">
@@ -3045,8 +3026,6 @@ function updateGlobalStatus() {
         updateText('g-shuttle-count', totalShuttle);
         // 히어로 배지: 전체 입교생 (동일 집계 재사용)
         setMetric('hero-total-students', uniqueSet.size);
-        // [실시간] 열려있는 요약 팝업(퇴교차량/외출 등) 자동 갱신
-        try { if(window._coordPopupRefresh && document.getElementById('coordPopup') && document.getElementById('coordPopup').classList.contains('open')) window._coordPopupRefresh(); } catch(e){}
     });
 
     // 5. 버튼 클릭 이벤트 (전체 교육생 명단 보기)
@@ -3630,7 +3609,6 @@ function renderCourseSelectors() {
     if (!list || !setupRoom) return;
 
     list.innerHTML = "";
-    const _isPcView = document.body.classList.contains('pc-mode');
     setupRoom.innerHTML = '<option value="">강의실 선택 (A~Z)</option>';
 
     // 오늘 날짜 구하기 (YYYY-MM-DD 형식)
@@ -3691,21 +3669,19 @@ function renderCourseSelectors() {
                     <span style="background:linear-gradient(135deg,#2563eb,#1d4ed8); color:#fff; font-weight:800; font-size:12px; letter-spacing:.3px; padding:7px 12px; border-radius:9px; flex-shrink:0; box-shadow:0 3px 8px rgba(37,99,235,.28);">ROOM ${rid}</span>
                     <div style="flex:1; min-width:0;">
                         <div style="font-weight:900; font-size:17px; color:var(--navy-dark); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${cName}</div>
-                        <div style="font-size:12px; color:#94a3b8; font-weight:700; margin-top:3px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">담임 <b style="color:#475569;">${_coordStripRank(_profNm)||'-'}</b> &nbsp;·&nbsp; 담당 <b style="color:#475569;">${_coordStripRank(settings.coordinatorName)||'-'}</b></div>
+                        <div style="font-size:12px; color:#94a3b8; font-weight:700; margin-top:3px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">담임 <b style="color:#475569;">${_profNm||'-'}</b>${_profNm?' 교수':''} &nbsp;·&nbsp; 담당 <b style="color:#475569;">${_coordTxt||'-'}</b></div>
                     </div>
                     <span class="course-chevron" style="margin-left:4px;"><i class="fa-solid fa-chevron-right"></i></span>
                 </div>
             `;
-            if(!_isPcView) list.appendChild(card);
+            list.appendChild(card);
         }
     }
 
     // 만약 필터링 후 활성화된 과정이 하나도 없다면 안내 메시지 표시 (선택사항)
-    if (!_isPcView && list.innerHTML === "") {
+    if (list.innerHTML === "") {
         list.innerHTML = `<div style="text-align:center; padding:30px; color:#94a3b8; font-size:13px; font-weight:600;">현재 진행 중인 과정이 없습니다.</div>`;
     }
-    // [PC 충돌 방지] PC 모드에서는 모바일 카드 대신 항상 PC 렌더러가 그린다 (과거 데이터 깜빡임 방지)
-    if (_isPcView) { try { if (typeof coordRenderActiveCourses === 'function') coordRenderActiveCourses(); } catch(e){} }
 }
 
 
@@ -4387,24 +4363,12 @@ function openSchedulePhotoCoord() {
     if (typeof toggleMenu === 'function') toggleMenu(false);
 }
 
-function coordClipToggle(){ var sm=document.getElementById("sideMenu"); toggleMenu(!(sm&&sm.classList.contains("open"))); }
-function _coordArmMenuTimer(){ clearTimeout(window._coordMenuTimer); window._coordMenuTimer=setTimeout(function(){ try{ toggleMenu(false); }catch(e){} }, 10000); }
 function toggleMenu(open) { 
     const sideMenu = document.getElementById('sideMenu');
     const menuOverlay = document.getElementById('menuOverlay');
     
     sideMenu.classList.toggle('open', open); 
     menuOverlay.style.display = open ? "block" : "none"; 
-
-    var _clip=document.getElementById('coordSideClip'); if(_clip){ _clip.style.right = open ? (sideMenu.offsetWidth + 'px') : '0'; }
-    // [자동 닫힘] 10초간 메뉴 미조작 시 자동으로 닫힘 (조작하면 타이머 재시작)
-    if (open) {
-        if(!sideMenu._coordAutoBound){
-            sideMenu._coordAutoBound=true;
-            ['mousemove','mousedown','keydown','touchstart','wheel'].forEach(function(ev){ sideMenu.addEventListener(ev, function(){ if(sideMenu.classList.contains('open')) _coordArmMenuTimer(); }, {passive:true}); });
-        }
-        _coordArmMenuTimer();
-    } else { clearTimeout(window._coordMenuTimer); }
 
     // [추가] 메뉴가 열릴 때 body 스크롤 방지 클래스 토글
     if (open) {
@@ -5805,8 +5769,8 @@ const annualPlanMgrCoord = {
                 <td style="${td}"><input type="text" value="${esc(c.name)}" onchange="annualPlanMgrCoord.updateLocalData(${idx},'name',this.value)" style="${inp} font-weight:700;"></td>
                 <td style="${td}"><input type="date" value="${esc(c.startDate)}" onchange="annualPlanMgrCoord.updateLocalData(${idx},'startDate',this.value)" style="${inp}"></td>
                 <td style="${td}"><input type="date" value="${esc(c.endDate)}" onchange="annualPlanMgrCoord.updateLocalData(${idx},'endDate',this.value)" style="${inp}"></td>
-                <td style="${td}"><select onchange="annualPlanMgrCoord.updateLocalData(${idx},'prof',this.value)" style="${inp} cursor:pointer;">${annualPlanMgrCoord._profOptions(c.prof)}</select></td>
-                <td style="${td}"><select onchange="annualPlanMgrCoord.updateLocalData(${idx},'coord',this.value)" style="${inp} cursor:pointer;">${annualPlanMgrCoord._coordOptions(c.coord)}</select></td>
+                <td style="${td}"><input type="text" value="${esc(c.prof)}" onchange="annualPlanMgrCoord.updateLocalData(${idx},'prof',this.value)" style="${inp}"></td>
+                <td style="${td}"><input type="text" value="${esc(c.coord)}" onchange="annualPlanMgrCoord.updateLocalData(${idx},'coord',this.value)" style="${inp}"></td>
                 <td style="${td}">${classroomDetailSelectHtmlCoord(c.roomDetail || '', "annualPlanMgrCoord.onRoomPick(" + idx + ",this)", inp, annualPlanMgrCoord._roomsInUse(idx))}</td>
                 <td style="${td} text-align:center;"><button onclick="annualPlanMgrCoord.deleteRow(${idx})" title="삭제" style="color:#ef4444; border:none; background:none; cursor:pointer; font-size:16px; font-weight:800;">✕</button></td>
             </tr>`;
@@ -5859,34 +5823,8 @@ const annualPlanMgrCoord = {
         });
         return set;
     },
-    _profList: [],
-    _profOptions: function(cur){
-        cur = cur || '';
-        const esc = this._escapeHtml;
-        const names = (this._profList || []).filter(Boolean);
-        let opts = '<option value="">(선택)</option>'; let seen=false;
-        names.forEach(function(n){ if(n===cur) seen=true; opts += '<option value="'+esc(n)+'"'+(n===cur?' selected':'')+'>'+esc(n)+'</option>'; });
-        if(cur && !seen) opts += '<option value="'+esc(cur)+'" selected>'+esc(cur)+'</option>';
-        return opts;
-    },
-    _coordOptions: function(cur){
-        cur = cur || '';
-        const esc = this._escapeHtml;
-        const names = (typeof coordMgr !== 'undefined' && coordMgr.list) ? coordMgr.list.map(function(c){return c.name;}).filter(Boolean) : [];
-        let opts = '<option value="">(선택)</option>'; let seen=false;
-        names.forEach(function(n){ if(n===cur) seen=true; opts += '<option value="'+esc(n)+'"'+(n===cur?' selected':'')+'>'+esc(n)+'</option>'; });
-        if(cur && !seen) opts += '<option value="'+esc(cur)+'" selected>'+esc(cur)+'</option>';
-        return opts;
-    },
     _startLive: function(){
         const self = this;
-        if (!this._profRef) {
-            this._profRef = firebase.database().ref('system/professors');
-            this._profRef.on('value', function(snap){
-                self._profList = Object.values(snap.val() || {}).filter(Boolean);
-                self._reRenderIfOpen();
-            });
-        }
         if (!this._customRef) {
             this._customRef = firebase.database().ref('system/classrooms');
             this._customRef.on('value', function(snap){
@@ -6033,24 +5971,6 @@ const annualPlanMgrCoord = {
         const keptNames = new Set();
         const freeRooms = [];
 
-        // [명단 정리] 과정 종료/교체로 방을 비울 때 이전 명단·예정명단·시간표·공지까지 함께 제거
-        //  (이전 과정의 '쓰레기' 명단이 다음 과정에 남아 보이는 문제 방지)
-        const wipeRoom = (r) => {
-            updates[`courses/${r}/settings/courseName`] = '';
-            updates[`courses/${r}/settings/period`]     = '';
-            updates[`courses/${r}/settings/roomDetailName`] = '';
-            updates[`courses/${r}/settings/coordinatorName`] = null;
-            updates[`courses/${r}/settings/kakaoLink`] = null;
-            updates[`courses/${r}/status/professorName`] = '';
-            updates[`courses/${r}/status/roomStatus`]   = 'idle';
-            updates[`courses/${r}/status/ownerSessionId`] = null;
-            updates[`courses/${r}/coordRoster`]      = null;
-            updates[`courses/${r}/expectedStudents`] = null;
-            updates[`courses/${r}/coordNotice`]      = null;
-            updates[`courses/${r}/schedule`]         = null;
-            updates[`courses/${r}/settings/schedule`] = null;
-        };
-
         // 1) 방별 판정
         this.ROOMS.forEach(r => {
             const rd = roomsData[r] || {};
@@ -6074,7 +5994,14 @@ const annualPlanMgrCoord = {
 
             // 2) 계획에서 삭제된 과정 + 미사용 방 → 완전 리셋 (재배치도 안 함)
             if (nm && !inPlan && !touched) {
-                wipeRoom(r);
+                updates[`courses/${r}/settings/courseName`] = '';
+                updates[`courses/${r}/settings/period`]     = '';
+                updates[`courses/${r}/settings/roomDetailName`] = '';
+                updates[`courses/${r}/settings/coordinatorName`] = null;
+                updates[`courses/${r}/settings/kakaoLink`] = null;
+                updates[`courses/${r}/status/professorName`] = '';
+                updates[`courses/${r}/status/roomStatus`]   = 'idle';
+                updates[`courses/${r}/status/ownerSessionId`] = null;
                 return;
             }
 
@@ -6120,7 +6047,13 @@ const annualPlanMgrCoord = {
             }
 
             // 5) 그 외 열린 방 → 비우고 재배치 대상
-            wipeRoom(r);
+            updates[`courses/${r}/settings/courseName`] = '';
+            updates[`courses/${r}/settings/period`]     = '';
+                updates[`courses/${r}/settings/roomDetailName`] = '';
+                updates[`courses/${r}/settings/coordinatorName`] = null;
+            updates[`courses/${r}/status/professorName`] = '';
+            updates[`courses/${r}/status/roomStatus`]   = 'idle';
+            updates[`courses/${r}/status/ownerSessionId`] = null;
             freeRooms.push(r);
         });
 
@@ -6157,7 +6090,15 @@ const annualPlanMgrCoord = {
                 var rooms=byName[n]; if(rooms.length<2) return;
                 var score=function(r){ var c=roomsData[r]||{}, s=c.settings||{}, st=c.status||{}; var stu=c.students?Object.keys(c.students).length:0; return stu*1000+(st.ownerSessionId?100:0)+((s.roomDetailName||'').trim()?10:0)+(s.autoAssignLocked?500:0); };
                 rooms.sort(function(a,b){ return score(b)-score(a); });
-                rooms.slice(1).forEach(function(r){ wipeRoom(r); });
+                rooms.slice(1).forEach(function(r){
+                    updates['courses/'+r+'/settings/courseName']='';
+                    updates['courses/'+r+'/settings/period']='';
+                    updates['courses/'+r+'/settings/roomDetailName']='';
+                    updates['courses/'+r+'/settings/coordinatorName']=null;
+                    updates['courses/'+r+'/status/professorName']='';
+                    updates['courses/'+r+'/status/roomStatus']='idle';
+                    updates['courses/'+r+'/status/ownerSessionId']=null;
+                });
             });
         }).call(this);
         if (Object.keys(updates).length) {
@@ -6299,25 +6240,15 @@ function _coordDetectPc() {
 
 // DOM 준비 후 자동 전환(저장된 선택 우선) — 버튼은 항상 노출
 function _coordInitViewMode() {
-    // [토글 제거] 접속 기기로만 자동 판별 (PC=PC화면 · 모바일=모바일화면)
-    let usePc = _coordDetectPc();
+    const saved = localStorage.getItem('coord_pc_mode');   // '1' | '0' | null
+    let usePc;
+    if (saved === '1') usePc = window.innerWidth >= 768;
+    else if (saved === '0') usePc = false;
+    else usePc = _coordDetectPc();
     if (usePc) document.body.classList.add('pc-mode');
     _coordSetPcBtn(usePc);
     if (usePc) setTimeout(function(){ try { pcsSyncCourseList(); pcUpdateNav(); } catch(e){} }, 700);
-    setTimeout(_coordFitHeader, 300); setTimeout(_coordFitHeader, 1000);
 }
-// [헤더 겹침 방지] 시계/날짜 우선 — 통계가 시계와 겹치면 통계를 숨김(좁은 화면)
-function _coordFitHeader(){
-    var clock=document.getElementById('coordHeaderClock');
-    var stats=document.getElementById('coordHdrStats');
-    if(!clock||!stats) return;
-    if(!document.body.classList.contains('pc-mode')){ stats.style.display=''; return; }
-    stats.style.display='';                       // 우선 표시 후 실제 위치 측정
-    var cr=clock.getBoundingClientRect();
-    var sr=stats.getBoundingClientRect();
-    if(sr.width && cr.width && sr.left < cr.right + 12){ stats.style.display='none'; }   // 겹치면 통계 숨김
-}
-window.addEventListener('resize', function(){ try{ _coordFitHeader(); }catch(e){} });
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', _coordInitViewMode);
 } else {
@@ -6412,27 +6343,11 @@ if (_origHRS) {
 }
 
 // ══ 명단 업로드 모달 ══════════════════════════════════════
-async function openRosterUpload() {
+function openRosterUpload() {
     const m = document.getElementById('rosterUploadModal');
     if (m) m.style.display = 'flex';
-    // [상태 초기화] 다른 과정(다른 강의실) 명단이 남아 보이지 않도록 모달 열 때마다 초기화
-    _coordRosterData = [];
-    _coordSharedRosterData = null;
-    _coordScheduleData = null;
-    var _tbReset = document.getElementById('coordRosterBody');
-    if (_tbReset) _tbReset.innerHTML = '<tr><td colspan="5" style="padding:24px; text-align:center; color:#94a3b8;">\ud30c\uc77c\uc744 \uc5c5\ub85c\ub4dc\ud558\uba74 \uba85\ub2e8\uc774 \ud45c\uc2dc\ub429\ub2c8\ub2e4</td></tr>';
-    var _cntReset = document.getElementById('coordRosterCount'); if (_cntReset) _cntReset.textContent = '';
-    var _stReset = document.getElementById('coordRosterStatus'); if (_stReset) _stReset.textContent = '';
-    var _shReset = document.getElementById('coordRosterSharedBox'); if (_shReset) _shReset.textContent = '\uc9c0\uc6d0\ubd80 \uacf5\uc720 \uba85\ub2e8 \ud655\uc778 \uc911...';
     coordLoadSharedRoster();
     coordReloadSavedRoster();   // 이전에 저장한 교육운영부 명단이 있으면 표에 복원
-    // [잠금 연동] 지원부가 이 주차를 잠갔으면 안내 표시 (업로드/저장은 별도 가드로 차단됨)
-    try {
-        if (await _coordCheckWeekLock(_coordRosterContext())) {
-            const st = document.getElementById('coordRosterStatus');
-            if (st) st.textContent = '🔒 지원부가 이 주차 배정을 잠갔습니다 — 업로드·저장 차단';
-        }
-    } catch (e) {}
 }
 
 // 새로고침 후 모달 재진입 시: 저장돼 있던 교육운영부 명단을 다시 표에 채워 표시
@@ -6444,17 +6359,6 @@ async function coordReloadSavedRoster() {
         const snap = await firebase.database().ref(`courses/${currentRID}/coordRoster`).once('value');
         const v = snap.val();
         if (!v || !Array.isArray(v.list) || !v.list.length) return;  // 저장된 것 없음 → 그대로 둠
-        // [명단 정리] 저장된 명단이 '현재 과정'의 것인지 검증 — 다르면 이전 과정의 잔여(쓰레기) 명단이므로 즉시 정리하고 표시하지 않음
-        const _ctxNow = _coordRosterContext();
-        if (_ctxNow) {
-            const _sameCourse = (!v.courseName || v.courseName === _ctxNow.courseName) && (!v.period || v.period === _ctxNow.period);
-            if (!_sameCourse) {
-                try { await firebase.database().ref(`courses/${currentRID}/coordRoster`).remove(); } catch (e) {}
-                try { await firebase.database().ref(`courses/${currentRID}/expectedStudents`).remove(); } catch (e) {}
-                if (statusEl) statusEl.textContent = '';
-                return;
-            }
-        }
         _coordRosterData = v.list.map(s => ({
             seq: s.seq, name: s.name || '', empNo: s.empNo || '',
             dept: s.dept || '', gender: s.gender || ''
@@ -6519,12 +6423,6 @@ async function coordHandleRosterFile(ev) {
     const file = ev.target.files[0]; if (!file) return;
     ev.target.value = '';
     const statusEl = document.getElementById('coordRosterStatus');
-    // [잠금 연동] 지원부가 이 주차 배정을 잠갔으면 업로드/수정 차단
-    if (await _coordCheckWeekLock(_coordRosterContext())) {
-        if (statusEl) statusEl.textContent = '🔒 지원부 잠금 주차 — 업로드/수정 불가';
-        alert('🔒 지원부가 이 주차의 배정을 잠갔습니다.\n잠금 해제 전에는 명단을 업로드·수정할 수 없습니다.');
-        return;
-    }
     statusEl.textContent = '판독 중...';
     _coordScheduleData = null;
     _coordScheduleRawLines = [];
@@ -6583,24 +6481,6 @@ async function coordHandleRosterFile(ev) {
     }
 }
 
-// [JDS] 지원부(생활관) 주차 배정 잠금 확인 — 잠긴 주차면 교육운영부도 명단 수정/저장 불가
-//  지원부는 system/dorm/locks/{월요일주차키} 에 {locked:true} 로 저장한다. (로컬·UTC 두 키 모두 확인)
-async function _coordCheckWeekLock(ctx) {
-    if (!ctx) return false;
-    const cands = [];
-    if (ctx.weekKey) cands.push(ctx.weekKey);
-    const dormWk = _coordDormWeekKey(ctx.startDate);
-    if (dormWk && cands.indexOf(dormWk) < 0) cands.push(dormWk);
-    for (let i = 0; i < cands.length; i++) {
-        try {
-            const s = await firebase.database().ref(`system/dorm/locks/${cands[i]}`).once('value');
-            const v = s.val();
-            if (v && v.locked) return true;
-        } catch (e) {}
-    }
-    return false;
-}
-
 async function coordSaveRoster() {
     if (!_coordRosterData.length) { alert('저장할 명단이 없습니다'); return; }
     if (!currentRID || !globalAllData[currentRID]) {
@@ -6611,11 +6491,6 @@ async function coordSaveRoster() {
     const ctx = _coordRosterContext();
     if (!ctx) {
         alert('저장할 과정 정보를 찾지 못했습니다.');
-        return;
-    }
-    // [잠금 연동] 지원부가 이 주차 배정을 잠갔으면 운영부도 저장 차단
-    if (await _coordCheckWeekLock(ctx)) {
-        alert('🔒 지원부가 이 주차의 배정을 잠갔습니다.\n잠금이 해제되기 전에는 교육운영부에서 명단을 저장·수정할 수 없습니다.');
         return;
     }
     const { courseName, period, weekKey, rosterKey, settings } = ctx;
@@ -6742,7 +6617,6 @@ function _coordFullName(nm){
     try{ _coordLoadTitleMap(); }catch(e){}
     return nm;
 }
-window._coordStripRank = function(n){ return String(n==null?'':n).replace(/\s*(차장|부장|팀장|실장|원장|과장|대리|주임|사원|교수)\s*$/,'').trim(); };
 // [JDS260613] 메인 헤더 '과정담당'에 직책을 무조건 포함해 표시 (저장값이 "장영근"이어도 "장영근 과장"으로 표기)
 function _coordRefreshCoordTitle(roomObj) {
     const el = document.getElementById('ind-coord');
@@ -7112,7 +6986,7 @@ function _coordOpWeekStart(){ const n=new Date(); const dow=n.getDay(); const mo
 function _coordToday(){ return (typeof getTodayString==='function') ? getTodayString() : new Date().toISOString().split('T')[0]; }
 function _esc(t){ return (''+(t==null?'':t)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 function _cpop(title, html){ document.getElementById('cpopTitle').innerHTML=title; document.getElementById('cpopBody').innerHTML=html; document.getElementById('coordPopup').classList.add('open'); }
-function cpopClose(){ document.getElementById('coordPopup').classList.remove('open'); window._coordPopupRefresh=null; }
+function cpopClose(){ document.getElementById('coordPopup').classList.remove('open'); }
 
 function _coordActiveRooms(){
   const today=_coordToday(); const out=[];
@@ -7153,22 +7027,8 @@ function openStudentRosterPopup(){
   function paint(ext){
     let blocks=rooms.map(r=>{
       let roster=[];
-      const curPeriod=(''+(r.s.period||'')).trim();
-      // 1) 방에 저장된 coordRoster — '현재 과정(기간)'의 것일 때만 사용(지난주 잔여 명단 방지)
-      const cr=r.room.coordRoster;
-      if(cr && Array.isArray(cr.list) && cr.list.length){
-        const crPeriod=(''+(cr.period||'')).trim();
-        if(!crPeriod || !curPeriod || crPeriod===curPeriod) roster=cr.list;
-      }
-      // 2) 공유 명단(ext) — 같은 과정명 후보 중 '이 방의 현재 기간/방'과 일치하는 것을 우선 선택
-      if(!roster.length){
-        const k=norm(r.s.courseName);
-        const cands=(ext[k]||[]);
-        const pick = cands.find(c=>curPeriod && (''+(c.period||'')).trim()===curPeriod)
-                  || cands.find(c=>(''+(c.room||''))===(''+r.rid))
-                  || cands.slice().sort((a,b)=>(b.list?b.list.length:0)-(a.list?a.list.length:0))[0];
-        if(pick && Array.isArray(pick.list) && pick.list.length) roster=pick.list;
-      }
+      if(r.room.coordRoster && Array.isArray(r.room.coordRoster.list) && r.room.coordRoster.list.length) roster=r.room.coordRoster.list;
+      else { const k=norm(r.s.courseName); if(ext[k]&&ext[k].length) roster=ext[k]; }
       if(!roster.length) roster=_studentsOf(r.room);
       roster=roster.slice().filter(st=>st&&(''+(st.name||'')).trim());
       if(!roster.length) return '';
@@ -7180,11 +7040,11 @@ function openStudentRosterPopup(){
     const w=document.getElementById('cpopRosterWrap'); if(w) w.innerHTML=blocks;
   }
   _cpop('<i class="fa-solid fa-users"></i> 과정별 교육생 명단', search+'<div id="cpopRosterWrap"></div>');
-  paint(window._coordRosterExt||{});
+  paint(window._coordEnrollExt||{});
   Promise.all([
     firebase.database().ref('system/dorm/rosters').once('value').catch(()=>null),
     firebase.database().ref('system/coord/rosters').once('value').catch(()=>null)
-  ]).then(res=>{ const ext={}; res.forEach(snap=>{ if(!snap) return; const v=snap.val()||{}; Object.keys(v).forEach(kk=>{ const it=v[kk]; if(!it||!Array.isArray(it.list)) return; const nm=norm(it.courseName); if(!nm) return; (ext[nm]=ext[nm]||[]).push({ list:it.list, period:(it.period||''), room:(it.room||''), weekKey:(it.weekKey||'') }); }); }); window._coordRosterExt=ext; paint(ext); }).catch(()=>{});
+  ]).then(res=>{ const ext={}; res.forEach(snap=>{ if(!snap) return; const v=snap.val()||{}; Object.keys(v).forEach(kk=>{ const it=v[kk]; if(!it||!Array.isArray(it.list)) return; const nm=norm(it.courseName); if(!nm) return; if(!ext[nm]||it.list.length>ext[nm].length) ext[nm]=it.list; }); }); window._coordEnrollExt=ext; paint(ext); }).catch(()=>{});
 }
 function _filterRoster(q){ q=(q||'').toLowerCase().trim();
   document.querySelectorAll('#cpopBody .rosterRow').forEach(el=>{ const k=el.getAttribute('data-n')||''; el.style.display=(!q||k.includes(q))?'':'none'; });
@@ -7205,7 +7065,6 @@ function openOutingSummary(){
   }).join('');
   if(!blocks.trim()) blocks='<div class="cpop-empty">현재 외출·외박 신청자가 없습니다.</div>';
   _cpop('<i class="fa-solid fa-file-signature"></i> 외출·외박 신청 현황 (과정별)', blocks);
-  window._coordPopupRefresh=openOutingSummary;
 }
 function _renderOutingTable(sel){
   const wrap=document.getElementById('outTableWrap'); if(!wrap) return;
@@ -7246,47 +7105,18 @@ function delArchiveRow(id){
 }
 
 /* 4) 퇴교차량 신청 총괄 */
-function coordToggleShuttle(idx){
-  var target=document.getElementById('coordShtBody'+idx);
-  var willOpen = target && (target.style.display==='none' || !target.style.display);
-  document.querySelectorAll('[id^="coordShtBody"]').forEach(function(b){ b.style.display='none'; });
-  document.querySelectorAll('[id^="coordShtChev"]').forEach(function(c){ c.style.transform=''; });
-  if(target && willOpen){ target.style.display='block'; var ch=document.getElementById('coordShtChev'+idx); if(ch) ch.style.transform='rotate(180deg)'; window._coordShtOpenIdx=idx; }
-  else { window._coordShtOpenIdx=null; }
-}
 function openShuttleSummary(){
   const rooms=_coordActiveRooms();
-  var _labelMap={osong:'오송역',terminal:'터미널',airport:'공항',car:'자차'};
-  var _colorMap={osong:'#ef4444',terminal:'#3b82f6',airport:'#10b981',car:'#64748b'};
-  let blocks=rooms.map(function(r,idx){ var reqs=r.room.shuttle&&r.room.shuttle.requests; var arr=reqs?Object.values(reqs):[]; var tot=arr.length;
-    var c={osong:0,terminal:0,airport:0,car:0}; arr.forEach(function(x){ if(c[x.type]!==undefined) c[x.type]++; });
-    arr.sort(function(a,b){ return (a.timestamp||0)-(b.timestamp||0); });
-    var rows = tot ? arr.map(function(a,i){
-        var dt=a.timestamp?new Date(a.timestamp).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}):'-';
-        var dest=a.typeText||_labelMap[a.type]||a.typeName||'-';
-        var col=_colorMap[a.type]||'#475569';
-        return '<tr><td style="color:#94a3b8;">'+(i+1)+'</td><td style="font-weight:800;">'+_esc(a.name||'-')+'</td><td><span style="color:'+col+';font-weight:800;">'+_esc(dest)+'</span></td><td style="color:#64748b;white-space:nowrap;">'+dt+'</td></tr>';
-    }).join('') : '<tr><td colspan="4" style="text-align:center;color:#94a3b8;padding:18px;">신청 내역이 없습니다.</td></tr>';
-    return '<div class="csec-card">'
-      +'<div class="csec-card-head" onclick="coordToggleShuttle('+idx+')" style="cursor:pointer;display:flex;align-items:center;gap:18px;padding:12px 22px;">'
-        +'<div style="flex:1;min-width:0;"><span class="crow-room">ROOM '+_esc(r.rid)+'</span><div style="font-size:17px;font-weight:900;color:#0f172a;word-break:keep-all;margin-top:5px;">'+_esc(r.s.courseName||'-')+'</div></div>'
-        +'<div style="display:flex;align-items:center;gap:22px;flex-shrink:0;">'
-          +'<div style="text-align:center;min-width:44px;"><div style="font-size:12.5px;font-weight:800;color:#64748b;">자차</div><div style="font-size:24px;font-weight:900;color:#64748b;line-height:1.15;">'+c.car+'</div></div>'
-          +'<div style="text-align:center;min-width:44px;"><div style="font-size:12.5px;font-weight:800;color:#ef4444;">오송역</div><div style="font-size:24px;font-weight:900;color:#ef4444;line-height:1.15;">'+c.osong+'</div></div>'
-          +'<div style="text-align:center;min-width:44px;"><div style="font-size:12.5px;font-weight:800;color:#3b82f6;">터미널</div><div style="font-size:24px;font-weight:900;color:#3b82f6;line-height:1.15;">'+c.terminal+'</div></div>'
-          +'<div style="text-align:center;min-width:44px;"><div style="font-size:12.5px;font-weight:800;color:#10b981;">공항</div><div style="font-size:24px;font-weight:900;color:#10b981;line-height:1.15;">'+c.airport+'</div></div>'
-          +'<div style="width:1px;height:38px;background:#e2e8f0;"></div>'
-          +'<div style="text-align:center;min-width:58px;"><div style="font-size:12.5px;font-weight:800;color:#0f172a;">총 신청</div><div style="font-size:30px;font-weight:900;color:#1e3a8a;line-height:1.1;">'+tot+'</div></div>'
-          +'<i class="fa-solid fa-chevron-down crow-chev" id="coordShtChev'+idx+'" style="margin-left:6px;"></i>'
-        +'</div>'
-      +'</div>'
-      +'<div id="coordShtBody'+idx+'" style="display:none;border-top:1px solid #eef2f7;overflow-x:auto;"><table class="cpop-table" style="width:100%;table-layout:fixed;"><colgroup><col style="width:12%"><col style="width:30%"><col style="width:33%"><col style="width:25%"></colgroup><thead><tr><th>연번</th><th>성명</th><th>목적지</th><th>신청시간</th></tr></thead><tbody>'+rows+'</tbody></table></div>'
-    +'</div>';
+  let blocks=rooms.map(r=>{ const reqs=r.room.shuttle&&r.room.shuttle.requests; const arr=reqs?Object.values(reqs):[]; const tot=arr.length;
+    const c={osong:0,terminal:0,airport:0,car:0}; arr.forEach(x=>{ if(c[x.type]!==undefined) c[x.type]++; });
+    return `<div style="display:flex;align-items:center;gap:18px;border:1px solid #eef2f7;border-radius:14px;padding:16px 22px;margin-bottom:10px;">
+      <div style="flex:1;min-width:0;"><div style="font-size:11px;color:#2563eb;font-weight:800;">ROOM ${_esc(r.rid)}</div><div style="font-size:17px;font-weight:900;color:#0f172a;word-break:keep-all;">${_esc(r.s.courseName||'-')}</div>
+        <div style="font-size:12px;color:#94a3b8;font-weight:700;margin-top:4px;">오송 ${c.osong} · 터미널 ${c.terminal} · 공항 ${c.airport} · 자차 ${c.car}</div></div>
+      <div style="text-align:center;flex-shrink:0;"><div style="font-size:12px;color:#64748b;font-weight:800;">신청</div><div style="font-size:36px;font-weight:900;color:#2563eb;line-height:1;">${tot}</div><div style="font-size:11px;color:#94a3b8;font-weight:700;">명</div></div>
+    </div>`;
   }).join('');
   if(!blocks.trim()) blocks='<div class="cpop-empty">신청된 퇴교차량이 없습니다.</div>';
-  _cpop('<i class="fa-solid fa-bus"></i> 퇴교차량 신청 현황 (과정별)', '<div style="display:flex;flex-direction:column;gap:16px;">'+blocks+'</div>');
-  window._coordPopupRefresh=openShuttleSummary;
-  if(window._coordShtOpenIdx!=null){ var _ob=document.getElementById('coordShtBody'+window._coordShtOpenIdx); var _oc=document.getElementById('coordShtChev'+window._coordShtOpenIdx); if(_ob){ _ob.style.display='block'; if(_oc) _oc.style.transform='rotate(180deg)'; } }
+  _cpop('<i class="fa-solid fa-bus"></i> 퇴교차량 신청 현황 (과정별)', blocks);
 }
 function toggleAcc(el){ const card=el.closest('.acc'); if(card) card.classList.toggle('collapsed'); }
 </script>
@@ -7429,9 +7259,9 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
       if(active && firstActiveIdx<0) firstActiveIdx=i;
       var bg = ended?'background:#fbfcfe;color:#aab4c0;' : (active?'background:#dbeafe;':'');
       var tag = ended?'<span style="font-size:10px;font-weight:800;color:#94a3b8;">종료</span>' : (active?'<span style="font-size:10px;font-weight:800;color:#1d4ed8;">● 진행중</span>':'<span style="font-size:10px;font-weight:800;color:#16a34a;">예정</span>');
-      return '<tr data-row="'+i+'" style="'+bg+'"><td style="text-align:left;font-weight:800;">'+esc(name)+' '+tag+'</td><td style="text-align:left;font-size:12px;white-space:nowrap;">'+esc(period)+'</td><td style="text-align:left;">'+esc(room)+'</td><td style="text-align:left;white-space:nowrap;">'+esc(coord)+'</td><td style="text-align:left;white-space:nowrap;">'+esc(prof)+'</td></tr>';
+      return '<tr data-row="'+i+'" style="'+bg+'"><td style="text-align:center;font-weight:800;">'+esc(name)+' '+tag+'</td><td style="font-size:12px;white-space:nowrap;">'+esc(period)+'</td><td>'+esc(room)+'</td><td>'+esc(coord)+'</td><td>'+esc(prof)+'</td></tr>';
     }).join('');
-    wrap.innerHTML='<div style="max-height:56vh;overflow:auto;border:1px solid #eef2f7;border-radius:12px;"><table class="cpop-table" style="width:100%;"><thead style="position:sticky;top:0;z-index:2;"><tr><th style="text-align:left;">과정명</th><th style="text-align:left;white-space:nowrap;">교육기간</th><th style="text-align:left;white-space:nowrap;">강의실</th><th style="text-align:left;white-space:nowrap;">과정담당</th><th style="text-align:left;white-space:nowrap;">담임교수</th></tr></thead><tbody>'+rows+'</tbody></table></div>';
+    wrap.innerHTML='<div style="max-height:56vh;overflow-y:auto;border:1px solid #eef2f7;border-radius:12px;"><table class="cpop-table" style="width:100%;"><thead style="position:sticky;top:0;z-index:2;"><tr><th style="text-align:center;">과정명</th><th>교육기간</th><th>강의실</th><th>과정담당</th><th>담임교수</th></tr></thead><tbody>'+rows+'</tbody></table></div>';
     if(firstActiveIdx>0){ var sc=wrap.querySelector('div'); var tr=wrap.querySelector('tr[data-row="'+firstActiveIdx+'"]'); if(sc&&tr){ sc.scrollTop=Math.max(0, tr.offsetTop-90); } }
   };
 
@@ -7448,18 +7278,13 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
     var full=function(nm){ return (typeof _coordFullName==='function')?(_coordFullName(nm)||(nm||'-')):(nm||'-'); };
     box.innerHTML=rooms.map(function(r){
       var prof=(r.st.professorName||'').trim();
-      // [학생장] 강사플랫폼에서 지정(students.isLeader)된 학생장 이름+사번 표기
-      var _ldr=((typeof _studentsOf==='function'?_studentsOf(r.room):[])||[]).filter(function(s){return s&&s.isLeader===true;})[0];
-      var _ldrNo=_ldr?(_ldr.empNo||_ldr.sabun||_ldr.id||_ldr.studentId||_ldr.phone||''):'';
-      var _ldrBlock='<div class="crow-leader"><div class="ll"><i class="fa-solid fa-crown"></i> 학생장</div>'+(_ldr?('<div class="ln">'+esc(_ldr.name||'-')+(_ldrNo?' <small>('+esc(_ldrNo)+')</small>':'')+'</div>'):'<div class="ln none">미지정</div>')+'</div>';
       return '<div class="crow clickable" onclick="coordOpenCourse(\''+esc(r.rid)+'\')">'
         +'<span class="crow-room">ROOM '+esc(r.rid)+'</span>'
         +'<div class="crow-main"><div class="crow-name">'+esc(r.s.courseName||'-')+'</div></div>'
-        +_ldrBlock
         +'<div class="crow-chips">'
-          +'<div class="cmeta"><span class="ml">담임교수</span><span class="mv">'+esc(_coordStripRank(prof)||'-')+'</span></div>'
+          +'<div class="cmeta"><span class="ml">담임교수</span><span class="mv">'+esc(prof||'-')+'</span></div>'
           +'<div class="cmeta-div"></div>'
-          +'<div class="cmeta"><span class="ml">과정담당</span><span class="mv">'+esc(_coordStripRank(r.s.coordinatorName)||'-')+'</span></div>'
+          +'<div class="cmeta"><span class="ml">과정담당</span><span class="mv">'+esc(full(r.s.coordinatorName))+'</span></div>'
         +'</div>'
         +'<i class="fa-solid fa-chevron-right crow-chev"></i>'
       +'</div>';
@@ -7472,11 +7297,6 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
 
   // ── 섹션3: 과정별 입교/예정 — 정형 리스트(연번·소속·사번·성명) ──
   window._coordEnrollExt = window._coordEnrollExt || {};
-  // [과정별 명단 업로드] 해당 과정(방)을 현재 대상으로 잡고 명단 업로드 모달 열기 (모바일/PC 공용)
-  window.coordOpenRosterFor = function(rid){
-    try { currentRID = rid; } catch(e){}
-    if (typeof openRosterUpload==='function') openRosterUpload();
-  };
   window.coordToggleEnroll = function(ei){
     var b=document.getElementById('coordEnrollBody'+ei), c=document.getElementById('coordEnrChev'+ei);
     if(!b) return; var open=(b.style.display==='none'||!b.style.display);
@@ -7493,10 +7313,8 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
         var students=(typeof _studentsOf==='function')?_studentsOf(r.room):[];
         var arrivedSet={}; students.forEach(function(s){ arrivedSet[norm(s.name)]=true; });
         var roster=[];
-        var curPeriod=(''+(r.s.period||'')).trim();
-        var cr=r.room.coordRoster;
-        if(cr && Array.isArray(cr.list) && cr.list.length){ var crP=(''+(cr.period||'')).trim(); if(!crP||!curPeriod||crP===curPeriod) roster=cr.list; }
-        if(!roster.length){ var k=norm(r.s.courseName); var cands=(ext[k]||[]); var pick=cands.find(function(c){return curPeriod&&(''+(c.period||'')).trim()===curPeriod;})||cands.find(function(c){return (''+(c.room||''))===(''+r.rid);})||cands.slice().sort(function(a,b){return (b.list?b.list.length:0)-(a.list?a.list.length:0);})[0]; if(pick&&Array.isArray(pick.list)&&pick.list.length) roster=pick.list; }
+        if(r.room.coordRoster && Array.isArray(r.room.coordRoster.list) && r.room.coordRoster.list.length) roster=r.room.coordRoster.list;
+        else { var k=norm(r.s.courseName); if(ext[k] && ext[k].length) roster=ext[k]; }
         if(!roster.length) roster=students;
         roster=roster.slice().filter(function(s){ return s && (''+(s.name||'')).trim() && s.name!=='undefined'; });
         var total=roster.length;
@@ -7506,13 +7324,12 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
           var ar=arrivedSet[norm(s.name)];
           return '<tr><td style="text-align:center;color:#94a3b8;">'+(i+1)+'</td><td style="color:#475569;">'+esc(s.dept||s.affil||s.org||'-')+'</td><td style="color:#64748b;white-space:nowrap;">'+esc(s.empNo||s.sabun||s.id||'-')+'</td><td style="font-weight:800;">'+esc(s.name||'-')+'</td><td style="text-align:center;">'+(ar?'<span style="color:#16a34a;font-weight:800;">입교</span>':'<span style="color:#2563eb;font-weight:700;">예정</span>')+'</td></tr>';
         }).join('') : '<tr><td colspan="5" style="text-align:center;color:#94a3b8;padding:18px;">등록된 명단이 없습니다.</td></tr>';
-        return '<div class="csec-card" style="margin-bottom:10px;">'
-          +'<div class="csec-card-head" onclick="coordToggleEnroll('+ei+')" style="cursor:pointer;display:flex;align-items:center;gap:14px;padding:14px 16px;">'
+        return '<div style="border:1.5px solid #e8edf5;border-radius:14px;overflow:hidden;margin-bottom:10px;">'
+          +'<div onclick="coordToggleEnroll('+ei+')" style="cursor:pointer;display:flex;align-items:center;gap:14px;background:#fff;padding:14px 16px;">'
             +'<span class="crow-room">ROOM '+esc(r.rid)+'</span>'
             +'<div style="flex:1;min-width:0;"><div class="crow-name">'+esc(r.s.courseName||'-')+'</div></div>'
-            +'<span class="cstat-line">입교 <b style="color:#16a34a;">'+arrived+'</b> &nbsp;·&nbsp; 예정 <b style="color:#2563eb;">'+total+'</b></span>'
-            +'<span class="cstat-pill" style="'+((total>0&&Math.round(arrived/total*100)>0)?'background:#dcfce7;color:#16a34a;':'background:#f1f5f9;color:#94a3b8;border:1px solid #e2e8f0;')+'">입교율 '+(total>0?Math.round(arrived/total*100):0)+'%</span>'
-            +'<button onclick="event.stopPropagation(); coordOpenRosterFor(\''+esc(r.rid)+'\')" title="이 과정 명단 업로드/확인" style="flex-shrink:0;padding:7px 12px;background:#2563eb;color:#fff;border:none;border-radius:9px;font-weight:800;font-size:12px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;"><i class="fa-solid fa-file-arrow-up"></i> 명단 업로드</button>'
+            +'<span class="cstat-line">입교 <b style="color:#16a34a;">'+arrived+'</b> &nbsp;·&nbsp; 예정 <b style="color:#2563eb;">'+expected+'</b></span>'
+            +'<span class="cstat-pill">계 '+total+'명</span>'
             +'<i class="fa-solid fa-chevron-down crow-chev" id="coordEnrChev'+ei+'"></i>'
           +'</div>'
           +'<div id="coordEnrollBody'+ei+'" style="display:none;border-top:1px solid #eef2f7;overflow-x:auto;"><table class="cpop-table" style="width:100%;table-layout:fixed;"><colgroup><col style="width:11%"><col style="width:40%"><col style="width:18%"><col style="width:17%"><col style="width:14%"></colgroup><thead><tr><th>연번</th><th style="text-align:left;">소속</th><th>사번</th><th>성명</th><th>상태</th></tr></thead><tbody>'+body+'</tbody></table></div>'
@@ -7525,7 +7342,7 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
       firebase.database().ref('system/coord/rosters').once('value').catch(function(){return null;})
     ]).then(function(res){
       var ext={};
-      res.forEach(function(snap){ if(!snap) return; var v=snap.val()||{}; Object.keys(v).forEach(function(kk){ var it=v[kk]; if(!it||!Array.isArray(it.list)) return; var nm=norm(it.courseName); if(!nm) return; (ext[nm]=ext[nm]||[]).push({list:it.list,period:(it.period||''),room:(it.room||''),weekKey:(it.weekKey||'')}); }); });
+      res.forEach(function(snap){ if(!snap) return; var v=snap.val()||{}; Object.keys(v).forEach(function(kk){ var it=v[kk]; if(!it||!Array.isArray(it.list)) return; var nm=norm(it.courseName); if(!nm) return; if(!ext[nm]||it.list.length>ext[nm].length) ext[nm]=it.list; }); });
       window._coordEnrollExt=ext; paint(ext);
     }).catch(function(){});
   };
@@ -7536,35 +7353,23 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
     if(typeof _coordActiveRooms!=='function'){ box.innerHTML='<p style="padding:24px;text-align:center;color:#94a3b8;">연결 대기 중…</p>'; return; }
     var rooms=_coordActiveRooms().filter(function(r){ return !/온라인|zoom/i.test(String((r.s&&r.s.roomDetailName)||'')); });
     var today=_coordToday();
-    var head='';
+    var head='<div style="font-size:12.5px;color:#64748b;font-weight:700;margin-bottom:14px;">과정을 누르면 <b>금일 외출·외박자 현황</b>이 펼쳐집니다. <b>[출력]</b>은 해당 과정의 <b>외출·외박 대장</b>을 PDF(새 탭)로 엽니다.</div>';
     if(!rooms.length){ box.innerHTML=head+'<p style="padding:24px;text-align:center;color:#94a3b8;font-weight:700;">운영 중인 과정이 없습니다.</p>'; return; }
     box.innerHTML=head+'<div style="display:flex;flex-direction:column;gap:10px;">'+rooms.map(function(r,idx){
       var actions=(r.room.admin_actions && r.room.admin_actions[today])||{};
       var arr=Object.keys(actions).map(function(t){return actions[t];}).filter(function(a){return a && a.name;}).sort(function(a,b){return (a.timestamp||0)-(b.timestamp||0);});
       var cnt=arr.length;
-      // [외출률] QR 입교 교육생 대비 외출 신청 비율 → 색상/식수통보 처리
-      var _arrCnt=((typeof _studentsOf==='function'?_studentsOf(r.room):[])||[]).length;
-      var _outRate=_arrCnt>0?Math.round(cnt/_arrCnt*100):0;
-      var _outPill, _outNote='';
-      if(cnt===0){
-        _outPill='<span class="cstat-pill" style="background:#f1f5f9;color:#94a3b8;border:1px solid #e2e8f0;">금일 0건</span>';
-      } else if(_arrCnt>0 && _outRate>=80){
-        _outPill='<span class="cstat-pill" style="background:#fee2e2;color:#dc2626;">금일 '+cnt+'건 · 외출 '+_outRate+'%</span>';
-        _outNote='<span style="background:#dc2626;color:#fff;font-weight:900;font-size:12px;padding:7px 12px;border-radius:9px;white-space:nowrap;"><i class="fa-solid fa-utensils"></i> 식수인원 통보 필!</span>';
-      } else {
-        _outPill='<span class="cstat-pill amber">금일 '+cnt+'건'+(_arrCnt>0?' · 외출 '+_outRate+'%':'')+'</span>';
-      }
       var rows = cnt ? arr.map(function(a,i){
         var t=a.timestamp?new Date(a.timestamp).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}):'-';
         var kind=(a.type==='outing')?'<span style="color:#ea580c;font-weight:800;">외출</span>':'<span style="color:#dc2626;font-weight:800;">외박</span>';
         var stat=a.returned?'<span style="color:#16a34a;font-weight:800;">복귀</span>':(a.confirmed?'<span style="color:#2563eb;font-weight:700;">서명완료</span>':'<span style="color:#94a3b8;">대기</span>');
         return '<tr><td style="color:#94a3b8;">'+(i+1)+'</td><td style="font-weight:800;">'+esc(a.name||'-')+'</td><td>'+kind+'</td><td style="color:#64748b;white-space:nowrap;">'+t+'</td><td>'+stat+'</td></tr>';
       }).join('') : '<tr><td colspan="5" style="text-align:center;color:#94a3b8;padding:18px;">금일 외출·외박 신청이 없습니다.</td></tr>';
-      return '<div class="csec-card">'
-        +'<div class="csec-card-head" onclick="coordToggleOuting('+idx+')" style="cursor:pointer;display:flex;align-items:center;gap:14px;padding:14px 16px;">'
+      return '<div style="border:1.5px solid #e8edf5;border-radius:14px;overflow:hidden;">'
+        +'<div onclick="coordToggleOuting('+idx+')" style="cursor:pointer;display:flex;align-items:center;gap:14px;padding:14px 16px;background:#fff;">'
           +'<span class="crow-room">ROOM '+esc(r.rid)+'</span>'
           +'<span style="flex:1;min-width:0;"><span class="crow-name" style="display:block;">'+esc(r.s.courseName||'-')+'</span></span>'
-          +_outPill+_outNote
+          +'<span class="cstat-pill amber">금일 '+cnt+'건</span>'
           +'<button onclick="event.stopPropagation();window.open(\'outing_ledger.html?room='+r.rid+'&auto=1\',\'_blank\');" style="background:#1e293b;color:#fff;border:none;border-radius:9px;padding:8px 14px;font-size:12px;font-weight:800;cursor:pointer;white-space:nowrap;"><i class="fa-solid fa-print"></i> 출력</button>'
           +'<i class="fa-solid fa-chevron-down crow-chev" id="coordOutChev'+idx+'"></i>'
         +'</div>'
@@ -7579,10 +7384,13 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
   };
   function _coordInjectClose(){
     var v=document.getElementById('individualStatusView'); if(!v) return;
-    // 상단 X 제거: 더 이상 주입하지 않음 (하단 X 버튼만 사용)
-    var legacy=v.querySelector('.pc-indiv-close'); if(legacy) legacy.remove();
+    if(!v.querySelector('.pc-indiv-close')){
+      var b=document.createElement('button'); b.className='pc-indiv-close'; b.innerHTML='×'; b.title='닫기';
+      b.onclick=function(){ try{ if(typeof handleBackNav==='function') handleBackNav(); }catch(e){} };
+      v.insertBefore(b, v.firstChild);
+    }
     if(!v.querySelector('.pc-indiv-bottomclose')){
-      var bb=document.createElement('button'); bb.className='pc-indiv-bottomclose'; bb.innerHTML='×'; bb.title='닫기';
+      var bb=document.createElement('button'); bb.className='pc-indiv-bottomclose'; bb.innerHTML='<i class="fa-solid fa-xmark"></i> 닫기';
       bb.onclick=function(){ try{ if(typeof handleBackNav==='function') handleBackNav(); }catch(e){} };
       v.appendChild(bb);
     }
