@@ -2075,9 +2075,14 @@ body.in-course #moreToggleTab{ display:flex !important; }
                                     <option value="관제교육동 1층">관제교육동 1층</option>
                                     <option value="관제교육동 2층">관제교육동 2층</option>
                                 </optgroup>
+                                <optgroup label="서울">
+                                    <option value="항공보안교육센터">항공보안교육센터</option>
+                                    <option value="항공훈련센터">항공훈련센터</option>
+                                </optgroup>
                                 <option value="direct">--- 직접 입력 ---</option>
                             </select>
                             <input type="text" id="setup-room-direct" class="setup-input" style="display:none; flex:1;" placeholder="위치 직접 작성">
+                            <button type="button" onclick="setupMgr.openAddRoom()" title="건물을 골라 새 강의실을 공용 목록에 추가" style="white-space:nowrap; padding:0 12px; border:1px solid #2563eb; background:#eff6ff; color:#2563eb; border-radius:8px; font-weight:800; cursor:pointer;">➕ 강의실 추가</button>
                         </div>
                     </div>           
 
@@ -2628,6 +2633,23 @@ function setupAcc(btn){
 </div>
 <style>@media print{#__catcVer{display:none!important}}</style>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vVY</div>
+<!-- ══ 강의실 추가 모달 (공용·영구: system/classrooms) ══ -->
+<div id="addRoomModal" class="modal-overlay" style="display:none; z-index:6000;">
+  <div class="modal-content" style="max-width:420px; width:92%;">
+    <div class="modal-header"><h3 style="margin:0;"><i class="fa-solid fa-door-open"></i> 강의실 추가</h3></div>
+    <div style="padding:18px;">
+      <p style="font-size:12.5px; color:#64748b; margin:0 0 14px; line-height:1.6;">건물을 선택하고 새 강의실명을 입력하세요. 추가된 강의실은 <b>모든 플랫폼(강사·운영부·지원부)</b>의 장소 목록에 즉시·영구 반영됩니다.</p>
+      <label style="display:block; font-size:12px; font-weight:800; color:#64748b; margin-bottom:6px;">건물</label>
+      <select id="addRoomBuilding" class="setup-input" style="width:100%; margin-bottom:14px;"></select>
+      <label style="display:block; font-size:12px; font-weight:800; color:#64748b; margin-bottom:6px;">강의실명</label>
+      <input type="text" id="addRoomName" class="setup-input" style="width:100%;" placeholder="예) 하늘관 4층 X강의실">
+      <div style="display:flex; gap:8px; margin-top:18px;">
+        <button onclick="setupMgr.closeAddRoom()" style="flex:1; padding:12px; border:1px solid #e2e8f0; background:#fff; color:#475569; border-radius:10px; font-weight:800; cursor:pointer;">취소</button>
+        <button onclick="setupMgr.saveAddRoom()" style="flex:1; padding:12px; border:none; background:#2563eb; color:#fff; border-radius:10px; font-weight:800; cursor:pointer;">추가</button>
+      </div>
+    </div>
+  </div>
+</div>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vVZ</div>
 </body>
 </html>

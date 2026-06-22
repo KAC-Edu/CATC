@@ -5563,21 +5563,39 @@
             { label: '비대면', items: ['온라인(Zoom)'] },
             { label: '하늘관', items: ['하늘관 1층 대강당','하늘관 1층 소회의실','하늘관 2층 A강의실','하늘관 2층 B강의실','하늘관 2층 C강의실','하늘관 2층 D강의실','하늘관 2층 E강의실','하늘관 2층 F강의실','하늘관 2층 G강의실','하늘관 3층 회의실'] },
             { label: '국제동', items: ['국제동 1층 세미나홀','국제동 1층 A강의실','국제동 1층 B강의실','국제동 2층 ILS 실습실','국제동 2층 VCCS/RADIO/ATIS 실습실','국제동 2층 VOR/DME/TACAN 실습실','국제동 2층 항공정보통신시설 실습실'] },
-            { label: '관제교육동', items: ['관제교육동 1층'] }
+            { label: '관제교육동', items: ['관제교육동 1층','관제교육동 2층'] },
+            { label: '서울', items: ['항공보안교육센터','항공훈련센터'] }
         ];
+        window.__customRooms = window.__customRooms || {};
+        function _effectiveGroupsDorm(){
+            const out = CLASSROOM_DETAIL_GROUPS.map(g => ({label:g.label, items:g.items.slice()}));
+            const by = window.__customRooms || {};
+            Object.keys(by).forEach(b => {
+                let grp = out.find(g => g.label === b);
+                if (!grp) { grp = {label:b, items:[]}; out.push(grp); }
+                (by[b]||[]).forEach(n => { if (n && grp.items.indexOf(n) < 0) grp.items.push(n); });
+            });
+            return out;
+        }
         function escapeAttr(v) {
             return String(v || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
         }
-        function classroomSelectHtml(value, changeExpr, styleText) {
+        function classroomSelectHtml(value, changeExpr, styleText, inUse) {
             const current = String(value || '').trim();
-            const flat = CLASSROOM_DETAIL_GROUPS.flatMap(g => g.items);
+            const groups = _effectiveGroupsDorm();
+            const flat = groups.flatMap(g => g.items);
             const custom = current && !flat.includes(current)
                 ? `<option value="${escapeAttr(current)}" selected>${escapeAttr(current)}</option>`
                 : '';
+            const optHtml = item => {
+                const used = inUse && inUse.has && inUse.has(item) && item !== current;
+                return `<option value="${escapeAttr(item)}" ${item === current ? 'selected' : ''} ${used ? 'disabled' : ''}>${escapeAttr(item)}${used ? ' (사용중)' : ''}</option>`;
+            };
             return `<select onchange="${changeExpr}" style="${styleText}">
                 <option value="">-- 장소 선택 --</option>
                 ${custom}
-                ${CLASSROOM_DETAIL_GROUPS.map(g => `<optgroup label="${escapeAttr(g.label)}">${g.items.map(item => `<option value="${escapeAttr(item)}" ${item === current ? 'selected' : ''}>${escapeAttr(item)}</option>`).join('')}</optgroup>`).join('')}
+                ${groups.map(g => `<optgroup label="${escapeAttr(g.label)}">${g.items.map(optHtml).join('')}</optgroup>`).join('')}
+                <option value="__direct__">✏️ 직접 입력…</option>
             </select>`;
         }
 
@@ -5834,6 +5852,7 @@
             },
 
             load() {
+                this._startLive();
                 document.getElementById('annualBody').innerHTML = `<tr><td colspan="7" style="padding:18px; text-align:center; color:var(--muted);">불러오는 중...</td></tr>`;
                 db.ref(this.KEY).once('value', snap => {
                     const v = snap.val() || [];
@@ -5873,7 +5892,7 @@
                         <td style="width:210px;"><input class="ap-input ap-cell-input" readonly value="${(c.startDate&&c.endDate)?(c.startDate+' ~ '+c.endDate):''}" placeholder="기간 선택" onclick="annualPlan._openPeriodPicker(${i}, this)" style="cursor:pointer;background:#fff;text-align:center;"></td>
                         <td style="width:118px;"><select class="ap-input" onchange="annualPlan.edit(${i},'prof',this.value)">${annualPlan._profOptions(c.prof)}</select></td>
                         <td style="width:130px;"><select class="ap-input" onchange="annualPlan.edit(${i},'coord',this.value)">${annualPlan._coordOptions(c.coord)}</select></td>
-                        <td style="min-width:230px;">${classroomSelectHtml(c.roomDetail || '', "annualPlan.edit(" + i + ",'roomDetail',this.value)", cellSel)}</td>
+                        <td style="min-width:230px;">${classroomSelectHtml(c.roomDetail || '', "annualPlan.onRoomPick(" + i + ",this)", cellSel, annualPlan._roomsInUse(i))}</td>
                         <td style="width:46px;"><button class="ap-del" onclick="annualPlan.del(${i})" title="삭제"><i class="fa-solid fa-xmark"></i></button></td>
                     </tr>`;
                 }).join('');
@@ -5902,7 +5921,62 @@
                 }, 50);
             },
 
-            edit(i, key, val) { if (this.data[i]) this.data[i][key] = val.trim(); },
+            edit(i, key, val) { this._lastIdx = i; if (this.data[i]) this.data[i][key] = val.trim(); },
+            onRoomPick(i, sel){
+                this._lastIdx = i;
+                if (sel.value === '__direct__') {
+                    const v = prompt('강의실/장소를 직접 입력하세요');
+                    if (v && v.trim() && this.data[i]) this.data[i].roomDetail = v.trim();
+                    this.render(i);
+                    return;
+                }
+                if (this.data[i]) this.data[i].roomDetail = sel.value;
+            },
+            _overlap(s1,e1,s2,e2){ return !!(s1 && e1 && s2 && e2) && s1 <= e2 && e1 >= s2; },
+            _roomsInUse(idx){
+                const set = new Set();
+                const me = this.data[idx];
+                if (!me || !me.startDate || !me.endDate) return set;
+                const self = this;
+                const isOnline = v => /온라인|zoom/i.test(String(v||''));
+                const localNames = new Set();
+                this.data.forEach(c => { if (c && c.name) localNames.add(String(c.name).trim()); });
+                this.data.forEach((c, j) => {
+                    if (j === idx || !c || !c.roomDetail || isOnline(c.roomDetail)) return;
+                    if (self._overlap(me.startDate, me.endDate, c.startDate, c.endDate)) set.add(String(c.roomDetail).trim());
+                });
+                (this._remoteList || []).forEach(c => {
+                    if (!c.roomDetail || isOnline(c.roomDetail)) return;
+                    if (localNames.has(String(c.name||'').trim())) return;
+                    if (self._overlap(me.startDate, me.endDate, c.startDate, c.endDate)) set.add(String(c.roomDetail).trim());
+                });
+                return set;
+            },
+            _startLive(){
+                const self = this;
+                if (!this._customRef) {
+                    this._customRef = db.ref('system/classrooms');
+                    this._customRef.on('value', function(snap){
+                        const v = snap.val() || {}; const by = {};
+                        Object.keys(v).forEach(function(k){ const it=v[k]; if(!it||!it.name) return; const b=String(it.building||'기타').trim(); (by[b]=by[b]||[]).push(String(it.name).trim()); });
+                        window.__customRooms = by; self._reRenderIfOpen();
+                    });
+                }
+                if (!this._liveRef) {
+                    this._liveRef = db.ref(this.KEY);
+                    this._liveRef.on('value', function(snap){
+                        const v = snap.val() || []; const arr = Array.isArray(v) ? v : Object.values(v);
+                        self._remoteList = arr.filter(c => c && c.name && c.startDate && c.endDate)
+                            .map(c => ({ name:c.name, startDate:c.startDate, endDate:c.endDate, roomDetail:c.roomDetail||c.classroom||c.roomName||'' }));
+                        self._reRenderIfOpen();
+                    });
+                }
+            },
+            _reRenderIfOpen(){
+                const body = document.getElementById('annualBody');
+                if (!body || !this.data || !this.data.length) return;
+                this.render(this._lastIdx != null ? this._lastIdx : -1);
+            },
             addRow() {
                 document.getElementById('caName').value = '';
                 document.getElementById('caErr').innerText = '';
@@ -6028,7 +6102,7 @@
 </script>
 <style>@media print{#__catcVer{display:none!important}}</style>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vK8</div>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vK9</div>
 <script>
 /* ===== [공용] 종료된 과정 자동 정리 (모든 플랫폼 공통) — 종료일 지난 방을 다음날 미개설로 비움. 브라우저별 하루 1회 ===== */
 window.kacExpireEndedCourses = async function(){

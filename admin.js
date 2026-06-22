@@ -7797,6 +7797,7 @@ loadCurrentSettings: function() {
         }
 
         // 2. 강의실 선택 및 중복 체크 로직
+        this._injectCustomRooms();
         const roomSelect = document.getElementById('setup-room-select');
         Array.from(roomSelect.options).forEach(opt => {
             if (!opt.dataset.originalText) opt.dataset.originalText = opt.text;
@@ -7894,6 +7895,55 @@ loadCurrentSettings: function() {
         } else {
             directInput.style.display = "none";
         }
+    },
+
+    // [공용 강의실] system/classrooms 의 사용자 추가 강의실을 setup-room-select 에 주입
+    _injectCustomRooms: function() {
+        const sel = document.getElementById('setup-room-select');
+        if (!sel) return;
+        let grp = document.getElementById('custom-rooms-grp');
+        if (!grp) {
+            grp = document.createElement('optgroup');
+            grp.id = 'custom-rooms-grp';
+            grp.label = '추가된 강의실';
+            const direct = Array.from(sel.options).find(o => o.value === 'direct');
+            sel.insertBefore(grp, direct ? direct : null);
+        }
+        grp.innerHTML = '';
+        const by = window.__customRooms || {};
+        Object.keys(by).forEach(b => {
+            (by[b] || []).forEach(n => {
+                if (Array.from(sel.options).some(o => o.value === n)) return; // 정적 목록 중복 방지
+                const o = document.createElement('option');
+                o.value = n; o.text = (b && b !== '기타' ? ('[' + b + '] ') : '') + n;
+                grp.appendChild(o);
+            });
+        });
+        grp.style.display = grp.children.length ? '' : 'none';
+    },
+    openAddRoom: function() {
+        const bsel = document.getElementById('addRoomBuilding');
+        if (bsel) {
+            let opts = '';
+            (window.CLASSROOM_DETAIL_GROUPS_SHARED || []).forEach(g => { if (g.label === '비대면') return; opts += '<option value="' + g.label + '">' + g.label + '</option>'; });
+            Object.keys(window.__customRooms || {}).forEach(b => { if (!(window.CLASSROOM_DETAIL_GROUPS_SHARED || []).some(g => g.label === b)) opts += '<option value="' + b + '">' + b + '</option>'; });
+            bsel.innerHTML = opts;
+        }
+        const nm = document.getElementById('addRoomName'); if (nm) nm.value = '';
+        const m = document.getElementById('addRoomModal'); if (m) m.style.display = 'flex';
+    },
+    saveAddRoom: async function() {
+        const b = (document.getElementById('addRoomBuilding').value || '').trim();
+        const n = (document.getElementById('addRoomName').value || '').trim();
+        if (!b || !n) { ui.showAlert('건물과 강의실명을 모두 입력하세요.'); return; }
+        try {
+            await firebase.database().ref('system/classrooms').push({ building: b, name: n, ts: Date.now() });
+            const m = document.getElementById('addRoomModal'); if (m) m.style.display = 'none';
+            ui.showAlert('✅ 강의실이 추가되었습니다.\n모든 플랫폼 장소 목록에 반영됩니다.');
+        } catch (e) { ui.showAlert('저장 실패: ' + e.message); }
+    },
+    closeAddRoom: function() {
+        const m = document.getElementById('addRoomModal'); if (m) m.style.display = 'none';
     },
 
     closeSetupModal: function() {
@@ -8844,17 +8894,37 @@ const CLASSROOM_DETAIL_GROUPS_SHARED = window.CLASSROOM_DETAIL_GROUPS_SHARED || 
     { label: '비대면', items: ['온라인(Zoom)'] },
     { label: '하늘관', items: ['하늘관 1층 대강당','하늘관 1층 소회의실','하늘관 2층 A강의실','하늘관 2층 B강의실 (전산실)','하늘관 2층 C강의실','하늘관 2층 D강의실','하늘관 2층 E강의실','하늘관 2층 F강의실','하늘관 2층 G강의실','하늘관 3층 회의실'] },
     { label: '국제동', items: ['국제동 1층 세미나홀','국제동 1층 A강의실','국제동 1층 B강의실','국제동 2층 ILS 실습실','국제동 2층 VCCS/RADIO/ATIS 실습실','국제동 2층 VOR/DME/TACAN 실습실','국제동 2층 종합실습실'] },
-    { label: '관제교육동', items: ['관제교육동 1층','관제교육동 2층'] }
+    { label: '관제교육동', items: ['관제교육동 1층','관제교육동 2층'] },
+    { label: '서울', items: ['항공보안교육센터','항공훈련센터'] }
 ];
 window.CLASSROOM_DETAIL_GROUPS_SHARED = CLASSROOM_DETAIL_GROUPS_SHARED;
-function classroomDetailSelectHtmlInstructor(value, changeExpr, styleText) {
+// [공용 강의실] 강사 플랫폼 '강의실 추가'로 system/classrooms 에 저장된 사용자 정의 강의실을 그룹에 병합
+window.__customRooms = window.__customRooms || {};
+function _effectiveGroupsShared(){
+    const out = CLASSROOM_DETAIL_GROUPS_SHARED.map(g => ({label:g.label, items:g.items.slice()}));
+    const by = window.__customRooms || {};
+    Object.keys(by).forEach(b => {
+        let grp = out.find(g => g.label === b);
+        if (!grp) { grp = {label:b, items:[]}; out.push(grp); }
+        (by[b]||[]).forEach(n => { if (n && grp.items.indexOf(n) < 0) grp.items.push(n); });
+    });
+    return out;
+}
+// inUse: Set(동일기간 사용중 강의실명) — 비활성+'(사용중)' 표기 / '__direct__' = 직접입력
+function classroomDetailSelectHtmlInstructor(value, changeExpr, styleText, inUse) {
     const current = String(value || '').trim();
     const esc = v => String(v || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-    const flat = CLASSROOM_DETAIL_GROUPS_SHARED.flatMap(g => g.items);
+    const groups = _effectiveGroupsShared();
+    const flat = groups.flatMap(g => g.items);
     const custom = current && !flat.includes(current) ? '<option value="' + esc(current) + '" selected>' + esc(current) + '</option>' : '';
+    const optHtml = item => {
+        const used = inUse && inUse.has && inUse.has(item) && item !== current;
+        return '<option value="' + esc(item) + '"' + (item === current ? ' selected' : '') + (used ? ' disabled' : '') + '>' + esc(item) + (used ? ' (사용중)' : '') + '</option>';
+    };
     return '<select onchange="' + esc(changeExpr) + '" style="' + esc(styleText) + '">' +
         '<option value="">-- 장소 선택 --</option>' + custom +
-        CLASSROOM_DETAIL_GROUPS_SHARED.map(g => '<optgroup label="' + esc(g.label) + '">' + g.items.map(item => '<option value="' + esc(item) + '" ' + (item === current ? 'selected' : '') + '>' + esc(item) + '</option>').join('') + '</optgroup>').join('') +
+        groups.map(g => '<optgroup label="' + esc(g.label) + '">' + g.items.map(optHtml).join('') + '</optgroup>').join('') +
+        '<option value="__direct__">✏️ 직접 입력…</option>' +
         '</select>';
 }
 
@@ -9305,6 +9375,7 @@ annualPlanMgr._coordOptions = function(cur){
     return opts;
 };
 annualPlanMgr._openPeriodPicker = function(idx, el){
+    this._lastIdx = idx;
     var c = this.currentEditingData[idx]; if(!c) return; var self=this;
     var fmt = function(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); };
     if(el._fp){ el._fp.open(); return; }
@@ -9333,6 +9404,7 @@ annualPlanMgr.openEditorModal = async function() {
         const snap = await firebase.database().ref(this.PLAN_KEY).once('value');
         const data = snap.val() || [];
         const arr  = Array.isArray(data) ? data : Object.values(data);
+        this._startLive();
         this.currentEditingData = arr
             .filter(c => c && (c.name || c.startDate))
             .map(c => ({
@@ -9426,7 +9498,7 @@ annualPlanMgr.renderEditor = function(keepIdx) {
                 <td style="${cellStyle}"><input type="text" readonly data-idx="${idx}" value="${(c.startDate&&c.endDate)?esc(c.startDate+' ~ '+c.endDate):''}" placeholder="기간 선택" onclick="annualPlanMgr._openPeriodPicker(${idx}, this)" style="${inpStyle} cursor:pointer; background:#fff; text-align:center;"></td>
                 <td style="${cellStyle}"><select onchange="annualPlanMgr.updateLocalData(${idx},'prof',this.value)" style="${inpStyle} cursor:pointer; background:#fff;">${annualPlanMgr._profOptions(c.prof)}</select></td>
                 <td style="${cellStyle}"><select onchange="annualPlanMgr.updateLocalData(${idx},'coord',this.value)" style="${inpStyle} cursor:pointer; background:#fff;">${annualPlanMgr._coordOptions(c.coord)}</select></td>
-                <td style="${cellStyle}">${classroomDetailSelectHtmlInstructor(c.roomDetail || '', "annualPlanMgr.updateLocalData(" + idx + ",'roomDetail',this.value)", inpStyle)}</td>
+                <td style="${cellStyle}">${classroomDetailSelectHtmlInstructor(c.roomDetail || '', "annualPlanMgr.onRoomPick(" + idx + ",this)", inpStyle, annualPlanMgr._roomsInUse(idx))}</td>
                 <td style="${cellStyle} text-align:center;"><input type="checkbox" ${c.preAssign ? 'checked' : ''} onchange="annualPlanMgr.updateLocalData(${idx},'preAssign',this.checked)" title="체크하면 기간과 무관하게 저장 즉시 방에 배정됩니다" style="width:18px; height:18px; cursor:pointer; accent-color:#2563eb;"></td>
                 <td style="${cellStyle} text-align:center;"><button onclick="annualPlanMgr.deleteRow(${idx})" title="삭제" style="color:#ef4444; border:none; background:none; cursor:pointer; font-size:16px; font-weight:800;">✕</button></td>
             </tr>`;
@@ -9450,12 +9522,73 @@ annualPlanMgr.renderEditor = function(keepIdx) {
 annualPlanMgr.updateLocalData = function(idx, field, value) {
     const c = this.currentEditingData[idx];
     if (!c) return;
+    this._lastIdx = idx;
     c[field] = value;
     if (field === 'startDate' || field === 'endDate') {
         c.period  = (c.startDate && c.endDate) ? `${c.startDate} ~ ${c.endDate}` : '';
         c.weekKey = c.startDate ? this._getMondayOf(c.startDate) : '';
         // 날짜가 바뀌면 상태 색상도 갱신되도록 다시 그린다 (입력 포커스 유지를 위해 약간 지연)
         setTimeout(() => this.renderEditor(idx), 0);
+    }
+};
+
+// [연간계획 강의실] 직접입력 디스패처 + 사용중 계산 + 실시간 리스너
+annualPlanMgr.onRoomPick = function(idx, sel){
+    this._lastIdx = idx;
+    if (sel.value === '__direct__') {
+        const v = prompt('강의실/장소를 직접 입력하세요');
+        if (v && v.trim()) this.updateLocalData(idx, 'roomDetail', v.trim());
+        this.renderEditor(idx);
+        return;
+    }
+    this.updateLocalData(idx, 'roomDetail', sel.value);
+};
+annualPlanMgr._overlap = function(s1,e1,s2,e2){ return !!(s1 && e1 && s2 && e2) && s1 <= e2 && e1 >= s2; };
+annualPlanMgr._roomsInUse = function(idx){
+    const set = new Set();
+    const me = this.currentEditingData[idx];
+    if (!me || !me.startDate || !me.endDate) return set;
+    const isOnline = v => /온라인|zoom/i.test(String(v||''));
+    const localNames = new Set();
+    this.currentEditingData.forEach(c => { if (c && c.name) localNames.add(String(c.name).trim()); });
+    this.currentEditingData.forEach((c, j) => {
+        if (j === idx || !c || !c.roomDetail || isOnline(c.roomDetail)) return;
+        if (this._overlap(me.startDate, me.endDate, c.startDate, c.endDate)) set.add(String(c.roomDetail).trim());
+    });
+    (this._remoteList || []).forEach(c => {
+        if (!c.roomDetail || isOnline(c.roomDetail)) return;
+        if (localNames.has(String(c.name||'').trim())) return;   // 로컬 편집본 우선
+        if (this._overlap(me.startDate, me.endDate, c.startDate, c.endDate)) set.add(String(c.roomDetail).trim());
+    });
+    return set;
+};
+annualPlanMgr._startLive = function(){
+    const self = this;
+    // 공용 강의실(system/classrooms) 실시간
+    if (!this._customRef) {
+        this._customRef = firebase.database().ref('system/classrooms');
+        this._customRef.on('value', function(snap){
+            const v = snap.val() || {}; const by = {};
+            Object.keys(v).forEach(function(k){ const it=v[k]; if(!it||!it.name) return; const b=String(it.building||'기타').trim(); (by[b]=by[b]||[]).push(String(it.name).trim()); });
+            window.__customRooms = by;
+            self._reRenderIfOpen();
+        });
+    }
+    // 연간계획(system/annualPlan) 실시간 — 타 플랫폼 배정 즉시 '사용중' 반영
+    if (!this._liveRef) {
+        this._liveRef = firebase.database().ref(this.PLAN_KEY);
+        this._liveRef.on('value', function(snap){
+            const v = snap.val() || []; const arr = Array.isArray(v) ? v : Object.values(v);
+            self._remoteList = arr.filter(c => c && c.name && c.startDate && c.endDate)
+                .map(c => ({ name:c.name, startDate:c.startDate, endDate:c.endDate, roomDetail:c.roomDetail||c.classroom||c.roomName||'' }));
+            self._reRenderIfOpen();
+        });
+    }
+};
+annualPlanMgr._reRenderIfOpen = function(){
+    const m = document.getElementById('annualPlanModal');
+    if (m && m.style.display !== 'none' && this.currentEditingData && this.currentEditingData.length) {
+        this.renderEditor(this._lastIdx != null ? this._lastIdx : -1);
     }
 };
 
@@ -10467,7 +10600,20 @@ ui.foodNewsRouteById=function(id){
 };
 
 /* __JSVER_STAMP__ */
-(function stampJsVer(){try{var b=document.getElementById('__catcVer');if(b){if(b.textContent.indexOf('Ju')<0)b.textContent=b.textContent+'\u00b7Ju';}else{setTimeout(stampJsVer,200);}}catch(e){}})();
+// [공용 강의실] system/classrooms 실시간 — 과정설정 드롭다운 즉시 반영
+(function initCustomRooms(){
+  try {
+    if (!firebase || !firebase.database) { setTimeout(initCustomRooms, 300); return; }
+    firebase.database().ref('system/classrooms').on('value', function(snap){
+      var v = snap.val() || {}; var by = {};
+      Object.keys(v).forEach(function(k){ var it=v[k]; if(!it||!it.name) return; var b=String(it.building||'기타').trim(); (by[b]=by[b]||[]).push(String(it.name).trim()); });
+      window.__customRooms = by;
+      var sm = document.getElementById('courseSetupModal');
+      if (sm && sm.style.display === 'flex' && typeof setupMgr !== 'undefined') { try { setupMgr._injectCustomRooms(); } catch(e){} }
+    });
+  } catch(e){ setTimeout(initCustomRooms, 500); }
+})();
+(function stampJsVer(){try{var b=document.getElementById('__catcVer');if(b){if(b.textContent.indexOf('Jv')<0)b.textContent=b.textContent+'\u00b7Ju';}else{setTimeout(stampJsVer,200);}}catch(e){}})();
 
 /* ===== [공항별 입교 현황 지도] 수강생현황 → 지도로 보기 ===== */
 ui._mapRegions = {
