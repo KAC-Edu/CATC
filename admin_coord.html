@@ -6126,6 +6126,7 @@ const annualPlanMgrCoord = {
 
         // 2) 빈 방에 배치 — 같은 과정명이 이미 다른 방에 있으면 중복 배치 금지
         const usedNames = new Set(keptNames);
+        const placed = [];
         let _ri = 0;
         for (const course of pool) {
             const cnm = norm(course.name);
@@ -6141,6 +6142,7 @@ const annualPlanMgrCoord = {
             if (course.roomDetail) updates[`courses/${room}/settings/roomDetailName`] = course.roomDetail;
             updates[`courses/${room}/status/roomStatus`]   = 'active';
             updates[`courses/${room}/status/ownerSessionId`] = null;
+            placed.push({ room: room, course: course });
             usedNames.add(cnm);
         }
         // [중복 과정 정리] 같은 과정명이 두 방 이상이면, 학생·명단·장소 있는 방만 남기고 비움
@@ -6164,6 +6166,8 @@ const annualPlanMgrCoord = {
             await firebase.database().ref().update(updates);
             console.log('[annualPlanMgrCoord] 동기화 완료. 대상주:', targetMon, '~', targetSun);
         }
+        // [명단 이관] 새로 배정된 방으로 예정(AP_) 명단을 자동 복사 후 임시키 정리
+        try { placed.forEach(function(pc){ if(typeof _coordMigratePlannedRoster==='function') _coordMigratePlannedRoster(pc.room, pc.course); }); } catch(e){}
     }
 };
 </script>
@@ -6257,6 +6261,42 @@ const annualPlanMgrCoord = {
       <button onclick="coordSaveRoster()" style="padding:10px 20px; background:#16a34a; color:#fff; border:none; border-radius:10px; font-weight:900; font-size:13px; cursor:pointer;"><i class="fa-solid fa-floppy-disk"></i> 저장</button>
       <button onclick="coordExportRoster()" style="padding:10px 14px; background:#f8fafc; color:#0f172a; border:1.5px solid #e2e8f0; border-radius:10px; font-weight:800; font-size:13px; cursor:pointer;"><i class="fa-solid fa-table"></i> 표 복사</button>
       <button onclick="closeRosterUpload()" style="padding:10px 14px; background:#f1f5f9; color:#64748b; border:none; border-radius:10px; font-weight:800; font-size:13px; cursor:pointer;">닫기</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── 예정 주차 명단 관리 모달 (부서 공유·실시간·잠금연동) ── -->
+<div id="coordPlannedModal" style="display:none; position:fixed; inset:0; z-index:22000; background:rgba(15,23,42,0.55); align-items:center; justify-content:center; padding:20px;">
+  <div style="background:#fff; width:100%; max-width:720px; border-radius:20px; overflow:hidden; display:flex; flex-direction:column; max-height:92vh;">
+    <div style="padding:18px 22px 14px; border-bottom:1.5px solid #e2e8f0; display:flex; align-items:center; gap:12px;">
+      <div style="font-size:20px;">📋</div>
+      <div style="flex:1;"><div style="font-size:16px; font-weight:900; color:#0f172a;">교육생 명단 관리 <span style="font-size:11px;color:#16a34a;font-weight:800;">· 부서 공유</span></div><div id="coordPlannedTitle" style="font-size:12px; color:#64748b; margin-top:2px;"></div></div>
+      <button onclick="coordClosePlannedRoster()" style="background:none; border:none; font-size:20px; color:#94a3b8; cursor:pointer;">✕</button>
+    </div>
+    <div id="coordPlannedLockNote" style="display:none; padding:10px 22px; background:#fef2f2; color:#b91c1c; font-size:12.5px; font-weight:800;">🔒 교육지원부가 이 주차 배정을 잠갔습니다 — 수정·업로드 불가 (잠금 해제 시 가능)</div>
+    <div style="padding:12px 22px; border-bottom:1px solid #f1f5f9; display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+      <input type="file" id="coordPlannedInput" accept="application/pdf,.hwp,.hwpx" style="display:none;" onchange="coordPlannedHandleFile(event)">
+      <button id="coordPlannedUpBtn" onclick="document.getElementById('coordPlannedInput').click()" style="padding:9px 15px; background:#2563eb; color:#fff; border:none; border-radius:10px; font-weight:800; font-size:13px; cursor:pointer;"><i class="fa-solid fa-file-arrow-up"></i> PDF/HWP 업로드</button>
+      <button id="coordPlannedAddBtn" onclick="coordPlannedAdd()" style="padding:9px 15px; background:#0ea5e9; color:#fff; border:none; border-radius:10px; font-weight:800; font-size:13px; cursor:pointer;"><i class="fa-solid fa-plus"></i> 행 추가</button>
+      <div id="coordPlannedStatus" style="font-size:13px; color:#64748b;"></div>
+    </div>
+    <div style="overflow:auto; flex:1; min-height:200px; -webkit-overflow-scrolling:touch;">
+      <table style="width:100%; border-collapse:collapse; font-size:13px;">
+        <thead><tr style="background:#f8fafc;">
+          <th style="padding:7px 8px;font-weight:800;color:#475569;border-bottom:1.5px solid #e2e8f0;width:44px;">No</th>
+          <th style="padding:7px 8px;font-weight:800;color:#475569;border-bottom:1.5px solid #e2e8f0;">성명</th>
+          <th style="padding:7px 8px;font-weight:800;color:#475569;border-bottom:1.5px solid #e2e8f0;">사번</th>
+          <th style="padding:7px 8px;font-weight:800;color:#475569;border-bottom:1.5px solid #e2e8f0;">소속</th>
+          <th style="padding:7px 8px;font-weight:800;color:#475569;border-bottom:1.5px solid #e2e8f0;width:64px;">성별</th>
+          <th style="padding:7px 8px;font-weight:800;color:#475569;border-bottom:1.5px solid #e2e8f0;width:44px;">삭제</th>
+        </tr></thead>
+        <tbody id="coordPlannedBody"></tbody>
+      </table>
+    </div>
+    <div style="padding:12px 22px; border-top:1.5px solid #e2e8f0; display:flex; gap:10px; align-items:center;">
+      <div id="coordPlannedCount" style="flex:1; font-size:12px; color:#64748b;"></div>
+      <span style="font-size:11px;color:#16a34a;font-weight:700;white-space:nowrap;">변경 즉시 양 부서 공유</span>
+      <button onclick="coordClosePlannedRoster()" style="padding:9px 16px; background:#f1f5f9; color:#64748b; border:none; border-radius:10px; font-weight:800; font-size:13px; cursor:pointer;">닫기</button>
     </div>
   </div>
 </div>
@@ -6601,6 +6641,118 @@ async function _coordCheckWeekLock(ctx) {
     return false;
 }
 
+// ===== [예정 주차 명단 관리] 교육지원부와 공유(system/dorm/rosters) · 실시간 · 잠금연동 =====
+var _coordPlannedCtx=null, _coordPlannedData=[], _coordPlannedRef=null, _coordPlannedLocked=false;
+function _pesc(v){ return String(v==null?'':v).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;'); }
+function _coordPlannedKeyOf(name, start){
+  var nm=String(name||'').replace(/[^가-힣A-Za-z0-9]/g,'').slice(0,20);
+  var d=new Date(String(start)+'T00:00:00'); var dow=(d.getDay()+6)%7; d.setDate(d.getDate()-dow);
+  var wk=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+  var room='AP_'+nm+'_'+start;
+  return { weekKey:wk, room:room, key:wk+'__'+room };
+}
+window.coordOpenPlannedRoster=function(idx){
+  var c=(window._coordPlannedList||[])[idx]; if(!c){ return; }
+  var start=c.startDate||'', end=c.endDate||start;
+  var k=_coordPlannedKeyOf(c.name, start);
+  _coordPlannedCtx={ courseName:c.name||'', start:start, end:end, period:c.period||(start+' ~ '+end), weekKey:k.weekKey, room:k.room, key:k.key, roomDetail:c.roomDetail||c.room||'' };
+  var ttl=document.getElementById('coordPlannedTitle'); if(ttl) ttl.textContent=(c.name||'')+' ('+_coordPlannedCtx.period+')';
+  var st=document.getElementById('coordPlannedStatus'); if(st) st.textContent='';
+  document.getElementById('coordPlannedModal').style.display='flex';
+  _coordPlannedCheckLock();
+  if(_coordPlannedRef){ try{_coordPlannedRef.off();}catch(e){} }
+  _coordPlannedRef=firebase.database().ref('system/dorm/rosters/'+k.key);
+  _coordPlannedRef.on('value', function(s){
+    var v=s.val();
+    _coordPlannedData=(v&&Array.isArray(v.list))?v.list.map(function(x){return {name:x.name||'',empNo:x.empNo||'',dept:x.dept||'',gender:x.gender||''};}):[];
+    _coordRenderPlannedRoster();
+  });
+};
+window.coordClosePlannedRoster=function(){ if(_coordPlannedRef){try{_coordPlannedRef.off();}catch(e){}_coordPlannedRef=null;} var m=document.getElementById('coordPlannedModal'); if(m) m.style.display='none'; };
+function _coordPlannedCheckLock(){
+  var ctx=_coordPlannedCtx; if(!ctx) return;
+  firebase.database().ref('system/dorm/locks/'+ctx.weekKey).once('value').then(function(s){
+    _coordPlannedLocked=!!(s.val()&&s.val().locked);
+    var note=document.getElementById('coordPlannedLockNote'); if(note) note.style.display=_coordPlannedLocked?'block':'none';
+    _coordRenderPlannedRoster();
+  }).catch(function(){});
+}
+function _coordRenderPlannedRoster(){
+  var tb=document.getElementById('coordPlannedBody'); if(!tb) return;
+  var lock=_coordPlannedLocked;
+  if(!_coordPlannedData.length){ tb.innerHTML='<tr><td colspan="6" style="text-align:center;color:#94a3b8;padding:22px;">명단이 없습니다. [PDF/HWP 업로드] 또는 [행 추가]로 입력하세요.</td></tr>'; }
+  else tb.innerHTML=_coordPlannedData.map(function(s,i){
+    var dis=lock?'disabled':'';
+    return '<tr>'
+      +'<td style="text-align:center;color:#94a3b8;padding:4px 6px;border-bottom:1px solid #f1f5f9;">'+(i+1)+'</td>'
+      +'<td style="padding:4px 6px;border-bottom:1px solid #f1f5f9;"><input value="'+_pesc(s.name)+'" '+dis+' onchange="coordPlannedEdit('+i+',\'name\',this.value)" style="width:100%;border:1px solid #e2e8f0;border-radius:6px;padding:5px 7px;font-weight:700;"></td>'
+      +'<td style="padding:4px 6px;border-bottom:1px solid #f1f5f9;"><input value="'+_pesc(s.empNo)+'" '+dis+' onchange="coordPlannedEdit('+i+',\'empNo\',this.value)" style="width:100%;border:1px solid #e2e8f0;border-radius:6px;padding:5px 7px;"></td>'
+      +'<td style="padding:4px 6px;border-bottom:1px solid #f1f5f9;"><input value="'+_pesc(s.dept)+'" '+dis+' onchange="coordPlannedEdit('+i+',\'dept\',this.value)" style="width:100%;border:1px solid #e2e8f0;border-radius:6px;padding:5px 7px;"></td>'
+      +'<td style="padding:4px 6px;border-bottom:1px solid #f1f5f9;"><select '+dis+' onchange="coordPlannedEdit('+i+',\'gender\',this.value)" style="width:100%;border:1px solid #e2e8f0;border-radius:6px;padding:5px;"><option value="M"'+(s.gender!=='F'?' selected':'')+'>남</option><option value="F"'+(s.gender==='F'?' selected':'')+'>여</option></select></td>'
+      +'<td style="text-align:center;padding:4px 6px;border-bottom:1px solid #f1f5f9;">'+(lock?'<span style="color:#cbd5e1;">-</span>':'<button onclick="coordPlannedDel('+i+')" style="color:#ef4444;border:none;background:none;cursor:pointer;font-size:15px;font-weight:800;">✕</button>')+'</td>'
+    +'</tr>';
+  }).join('');
+  var add=document.getElementById('coordPlannedAddBtn'), up=document.getElementById('coordPlannedUpBtn');
+  if(add) add.disabled=lock; if(up) up.disabled=lock;
+  if(add) add.style.opacity=lock?'.5':'1'; if(up) up.style.opacity=lock?'.5':'1';
+  var cnt=document.getElementById('coordPlannedCount'); if(cnt) cnt.textContent='총 '+_coordPlannedData.length+'명'+(lock?' · 🔒 잠금(수정 불가)':'');
+}
+function _coordPlannedSave(){
+  var ctx=_coordPlannedCtx; if(!ctx) return;
+  var clean=_coordPlannedData.filter(function(s){return s&&(s.name||'').trim();}).map(function(s,i){return {seq:i+1,name:(s.name||'').trim(),empNo:(s.empNo||'').trim(),dept:(s.dept||'').trim(),gender:s.gender||''};});
+  var payload={ courseName:ctx.courseName, period:ctx.period, roomDetail:ctx.roomDetail||'', weekKey:ctx.weekKey, room:ctx.room, list:clean, source:'coord', updatedAt:Date.now() };
+  firebase.database().ref('system/dorm/rosters/'+ctx.key).set(payload).catch(function(e){console.warn('[예정명단 저장]',e);});
+  firebase.database().ref('system/coord/rosters/'+ctx.key).set(payload).catch(function(){});
+}
+window.coordPlannedEdit=function(i,f,v){ if(_coordPlannedLocked) return; if(_coordPlannedData[i]){ _coordPlannedData[i][f]=v; _coordPlannedSave(); } };
+window.coordPlannedDel=function(i){ if(_coordPlannedLocked) return; _coordPlannedData.splice(i,1); _coordPlannedSave(); _coordRenderPlannedRoster(); };
+window.coordPlannedAdd=function(){ if(_coordPlannedLocked){ alert('🔒 교육지원부가 잠근 주차입니다. 수정할 수 없습니다.'); return; } _coordPlannedData.push({name:'',empNo:'',dept:'',gender:'M'}); _coordRenderPlannedRoster(); };
+async function coordPlannedHandleFile(ev){
+  if(_coordPlannedLocked){ alert('🔒 잠금 주차 — 업로드 불가'); ev.target.value=''; return; }
+  var file=ev.target.files[0]; if(!file) return; ev.target.value='';
+  var st=document.getElementById('coordPlannedStatus'); if(st) st.textContent='판독 중...';
+  try{
+    var students=[]; var ln=file.name.toLowerCase();
+    if(ln.endsWith('.hwpx')){ var tx=await _coordHwpxExtract(file); students=_coordParseRoster(tx); }
+    else if(ln.endsWith('.hwp')){ var buf=await file.arrayBuffer(); var tx2=await _coordHwpExtract(buf); students=_coordParseRoster(tx2); }
+    else { var buf2=await file.arrayBuffer(); var pdf=await pdfjsLib.getDocument(new Uint8Array(buf2)).promise; var rawLines=[];
+      for(var pp=1;pp<=pdf.numPages;pp++){ var page=await pdf.getPage(pp); var content=await page.getTextContent(); var rowsMap={};
+        content.items.forEach(function(it){ var s=(it.str||'').trim(); if(!s)return; var y=Math.round(it.transform[5]); var key=Object.keys(rowsMap).find(function(k){return Math.abs(k-y)<=3;}); if(key==null)key=y; (rowsMap[key]=rowsMap[key]||[]).push(s); });
+        Object.keys(rowsMap).sort(function(a,b){return b-a;}).forEach(function(k){ rawLines.push(rowsMap[k].join(' ')); }); }
+      students=_coordParseRoster(rawLines.join('\n')); }
+    _coordPlannedData=students.map(function(s){return {name:s.name||'',empNo:s.empNo||'',dept:s.dept||'',gender:s.gender||''};});
+    if(st) st.textContent='✅ '+students.length+'명 판독됨';
+    _coordPlannedSave(); _coordRenderPlannedRoster();
+  }catch(e){ if(st) st.textContent='❌ 오류: '+(e&&e.message?e.message:e); }
+}
+window._coordMigratePlannedRoster=function(room, course){
+  try{
+    if(!course || !course.startDate || !room) return;
+    var start=course.startDate;
+    var nm=String(course.name||'').replace(/[^가-힣A-Za-z0-9]/g,'').slice(0,20);
+    var d=new Date(start+'T00:00:00'); var dow=(d.getDay()+6)%7; d.setDate(d.getDate()-dow);
+    var wk=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+    var apKey=wk+'__AP_'+nm+'_'+start, roomKey=wk+'__'+room, db=firebase.database();
+    db.ref('system/dorm/rosters/'+apKey).once('value').then(function(s){
+      var v=s.val(); if(!v || !Array.isArray(v.list) || !v.list.length) return;
+      var payload={ courseName:course.name||'', period:course.period||(start+' ~ '+(course.endDate||start)), roomDetail:course.roomDetail||'', weekKey:wk, room:room, list:v.list, source:'coord', updatedAt:Date.now() };
+      db.ref('system/dorm/rosters/'+roomKey).once('value').then(function(rs){
+        var rv=rs.val();
+        if(!(rv && Array.isArray(rv.list) && rv.list.length)){ db.ref('system/dorm/rosters/'+roomKey).set(payload); db.ref('system/coord/rosters/'+roomKey).set(payload); }
+        db.ref('courses/'+room+'/coordRoster').once('value').then(function(cs){
+          var cv=cs.val();
+          if(!(cv && Array.isArray(cv.list) && cv.list.length)){
+            db.ref('courses/'+room+'/coordRoster').set(payload);
+            var names=Array.from(new Set(v.list.map(function(x){return (x.name||'').trim();}).filter(Boolean)));
+            db.ref('courses/'+room+'/expectedStudents').set(names);
+          }
+          db.ref('system/dorm/rosters/'+apKey).remove(); db.ref('system/coord/rosters/'+apKey).remove();
+        });
+      });
+    }).catch(function(){});
+  }catch(e){}
+};
+// ===== [예정 주차 명단 관리] 끝 =====
 async function coordSaveRoster() {
     if (!_coordRosterData.length) { alert('저장할 명단이 없습니다'); return; }
     if (!currentRID || !globalAllData[currentRID]) {
@@ -7459,7 +7611,8 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
       var ms=_coordYmd(mon), ss=_coordYmd(sun);
       var wk=list.filter(function(c){ var sd=c.startDate||'', ed=c.endDate||''; return sd&&ed&&sd<=ss&&ed>=ms; }).sort(function(a,b){return (a.startDate||'').localeCompare(b.startDate||'');});
       if(!wk.length){ box.innerHTML='<div style="padding:30px;text-align:center;color:#94a3b8;font-weight:700;">해당 주차에 예정된 과정이 없습니다.</div>'; return; }
-      box.innerHTML=wk.map(function(c){
+      window._coordPlannedList=wk;
+      box.innerHTML=wk.map(function(c,idx){
         var room=c.roomDetail||c.room||'-';
         return '<div class="crow">'
           +'<span class="crow-room" style="background:#16a34a;">예정</span>'
@@ -7469,6 +7622,7 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
             +'<div class="cmeta-div"></div>'
             +'<div class="cmeta"><span class="ml">과정담당</span><span class="mv">'+esc(_coordStripRank(c.coord||c.coordinatorName)||'-')+'</span></div>'
           +'</div>'
+          +'<button onclick="coordOpenPlannedRoster('+idx+')" title="이 과정 교육생 명단 관리(부서 공유)" style="flex-shrink:0;margin-left:14px;padding:8px 13px;background:#2563eb;color:#fff;border:none;border-radius:9px;font-weight:800;font-size:12px;cursor:pointer;white-space:nowrap;"><i class="fa-solid fa-users-gear"></i> 명단 관리</button>'
         +'</div>';
       }).join('');
     }).catch(function(){ box.innerHTML='<div style="padding:24px;text-align:center;color:#ef4444;">불러오기 오류</div>'; });
