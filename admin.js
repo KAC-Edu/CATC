@@ -371,7 +371,8 @@ switchRoomAttempt: async function(newRoom, silent = false) {
     // ownerSessionId가 있으면 실제 강사권이 남아있는 것으로 보고 권한 선택을 먼저 띄운다.
     // 오래된 기록이어도 자동으로 뺏지 않고, 사용자가 "강사 권한 가져오기"로 명시 처리한다.
     // [비번 옵션화] 비밀번호가 설정된 방만 인증을 요구. 비번 없는 방은 자유 입장/퇴장.
-    const blocked = roomHasPassword && isActive && hasOwnerRecord && !isOwner && !state.isObserver;
+    // [수정] 비번 유무와 무관하게 — 다른 기기가 이미 강사로 운영 중이면 항상 '옵저버/강사권' 선택을 묻는다
+    const blocked = isActive && hasOwnerRecord && !isOwner && !state.isObserver;
     const needsPasswordOnly = roomHasPassword && isActive && !hasOwnerRecord && !isOwner && !state.isObserver;
 
     // 3. [보안 핵심] 인증 전 버튼 및 기능 물리적 잠금
@@ -10456,7 +10457,7 @@ ui.foodNewsRouteById=function(id){
 };
 
 /* __JSVER_STAMP__ */
-(function stampJsVer(){try{var b=document.getElementById('__catcVer');if(b){if(b.textContent.indexOf('Jp')<0)b.textContent=b.textContent+'\u00b7Jp';}else{setTimeout(stampJsVer,200);}}catch(e){}})();
+(function stampJsVer(){try{var b=document.getElementById('__catcVer');if(b){if(b.textContent.indexOf('Jq')<0)b.textContent=b.textContent+'\u00b7Jq';}else{setTimeout(stampJsVer,200);}}catch(e){}})();
 
 /* ===== [공항별 입교 현황 지도] 수강생현황 → 지도로 보기 ===== */
 ui._mapRegions = {
