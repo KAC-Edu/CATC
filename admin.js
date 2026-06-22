@@ -4450,9 +4450,9 @@ cancelIndividualShuttle: function(waveId, locId, token, name) {
                     const cell = (label, val, color, bg, bd) => '<div style="flex:1;background:'+bg+';border:1.5px solid '+bd+';border-radius:14px;padding:14px 10px;text-align:center;box-shadow:0 2px 8px rgba(15,23,42,.06);">'
                         +'<div style="font-size:12px;font-weight:800;color:#475569;margin-bottom:4px;">'+label+'</div>'
                         +'<div style="font-size:30px;font-weight:900;color:'+color+';line-height:1;">'+val+'</div></div>';
-                    sb.innerHTML = cell('예정 인원', _plan, '#1e3a8a', '#eef4ff', '#bfd4fe')
-                        + cell('입교 완료', arrivedCount, '#047857', '#eafaf1', '#a7e3c5')
-                        + cell('입교율', percent + '<span style=\'font-size:15px;\'>%</span>', '#0284c7', '#e9f6fe', '#a8dcf5');
+                    sb.innerHTML = cell('예정 인원', _plan, '#334155', '#f8fafc', '#e8edf3')
+                        + cell('입교 완료', arrivedCount, '#2563eb', '#f8fafc', '#e8edf3')
+                        + cell('입교율', percent + '<span style=\'font-size:15px;\'>%</span>', '#2563eb', '#f8fafc', '#e8edf3');
                 }
         }
 
