@@ -777,9 +777,12 @@ forceEnterRoom: async function(room) {
         lectureMonitor.stopMic(false);
     }
 
-    state.room = cleanRoom; 
-    state.qaData = {};      
-    state.activeQaKey = null; 
+    state.room = cleanRoom;
+    state.qaData = {};
+    state.activeQaKey = null;
+
+    // [복귀확인 팝업] 과정 입장 즉시 점검 (07:00~08:59 + 어제 미복귀 대기자 있을 때만 노출)
+    setTimeout(() => { try { outingReturnCheck.maybeShow(); } catch (e) {} }, 1200);
     state._ownedSessionRoom = null; // [핸드오버] 방 전환 시 소유 추적 초기화
     localStorage.setItem('kac_last_room', cleanRoom); 
     state.isObserver = (sessionStorage.getItem('kac_observer_room') === cleanRoom);
