@@ -7535,6 +7535,43 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
   };
 
   // ── 섹션4: 외출·외박 (과정별 1줄 1블록, 클릭→신청명단 팝업) ──
+  window.coordToggleHold = function(rid,date,key){
+    if(typeof firebase==='undefined') return;
+    var ref=firebase.database().ref('courses/'+rid+'/admin_actions/'+date+'/'+key);
+    ref.once('value').then(function(s){
+      var a=s.val()||{};
+      if(a.held){
+        if(!confirm('['+(a.name||'')+'] 미복귀 표시를 해제할까요?')) return;
+        ref.update({held:null});
+      } else {
+        if(!confirm('['+(a.name||'')+'] 미복귀로 표시할까요?\n\n사고·문제 등으로 복귀 미완료 시 사용합니다.\n표시하면 자동 복귀완료가 적용되지 않습니다.')) return;
+        ref.update({held:true, returned:null, autoReturn:null});
+      }
+    }).then(function(){ try{ if(window._coordPcSec==='4') coordRenderOutingSection(); }catch(e){} }).catch(function(){});
+  };
+  // [자동 복귀완료] 외출자가 복귀완료를 깜빡한 경우: 다음날 08:50까지 미복귀 표시가 없으면 22:00 복귀완료(자동) 처리
+  window._coordAutoReturnSweep = function(){
+    if(typeof firebase==='undefined' || typeof globalAllData==='undefined' || !globalAllData) return;
+    var now=new Date();
+    Object.keys(globalAllData).forEach(function(rid){
+      var room=globalAllData[rid]; if(!room || !room.admin_actions) return;
+      Object.keys(room.admin_actions).forEach(function(date){
+        if(!/^\d{4}-\d{2}-\d{2}$/.test(date)) return;
+        var day=room.admin_actions[date]; if(!day) return;
+        Object.keys(day).forEach(function(key){
+          var a=day[key]; if(!a || !a.name) return;
+          if(a.returned || a.held) return;        // 이미 복귀 / 미복귀(문제)면 제외 (외출·외박 모두 적용)
+          var cutoff=new Date(date+'T08:50:00'); cutoff.setDate(cutoff.getDate()+1);
+          if(now < cutoff) return;                // 다음날 08:50 이전이면 대기
+          var _isOut=(a.type==='outing');
+          var _rtd=new Date(date+'T'+(_isOut?'22:00:00':'08:00:00')); if(!_isOut) _rtd.setDate(_rtd.getDate()+1); // 외출:당일22시 · 외박:익일08시
+          firebase.database().ref('courses/'+rid+'/admin_actions/'+date+'/'+key).update({ returned:true, autoReturn:true, returnedAt:_rtd.getTime() });
+        });
+      });
+    });
+  };
+  setTimeout(function(){ try{ _coordAutoReturnSweep(); }catch(e){} }, 6000);
+  setInterval(function(){ try{ _coordAutoReturnSweep(); }catch(e){} }, 300000);
   window.coordRenderOutingSection = function(){
     var box=document.getElementById('csecOutingWrap'); if(!box) return;
     if(typeof _coordActiveRooms!=='function'){ box.innerHTML='<p style="padding:24px;text-align:center;color:#94a3b8;">연결 대기 중…</p>'; return; }
@@ -7544,7 +7581,7 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
     if(!rooms.length){ box.innerHTML=head+'<p style="padding:24px;text-align:center;color:#94a3b8;font-weight:700;">운영 중인 과정이 없습니다.</p>'; return; }
     box.innerHTML=head+'<div style="display:flex;flex-direction:column;gap:10px;">'+rooms.map(function(r,idx){
       var actions=(r.room.admin_actions && r.room.admin_actions[today])||{};
-      var arr=Object.keys(actions).map(function(t){return actions[t];}).filter(function(a){return a && a.name;}).sort(function(a,b){return (a.timestamp||0)-(b.timestamp||0);});
+      var arr=Object.keys(actions).map(function(t){var o=actions[t]||{}; o.__key=t; return o;}).filter(function(a){return a && a.name;}).sort(function(a,b){return (a.timestamp||0)-(b.timestamp||0);});
       var cnt=arr.length;
       // [외출률] QR 입교 교육생 대비 외출 신청 비율 → 색상/식수통보 처리
       var _arrCnt=((typeof _studentsOf==='function'?_studentsOf(r.room):[])||[]).length;
@@ -7561,8 +7598,12 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
       var rows = cnt ? arr.map(function(a,i){
         var t=a.timestamp?new Date(a.timestamp).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}):'-';
         var kind=(a.type==='outing')?'<span style="color:#ea580c;font-weight:800;">외출</span>':'<span style="color:#dc2626;font-weight:800;">외박</span>';
-        var stat=a.returned?'<span style="color:#16a34a;font-weight:800;">복귀</span>':(a.confirmed?'<span style="color:#2563eb;font-weight:700;">서명완료</span>':'<span style="color:#94a3b8;">대기</span>');
-        return '<tr><td style="color:#94a3b8;">'+(i+1)+'</td><td style="font-weight:800;">'+esc(a.name||'-')+'</td><td>'+kind+'</td><td style="color:#64748b;white-space:nowrap;">'+t+'</td><td>'+stat+'</td></tr>';
+        var stat = a.held ? '<span style="color:#dc2626;font-weight:800;">미복귀</span>'
+                 : (a.returned && a.autoReturn) ? '<span style="color:#0891b2;font-weight:800;">복귀완료(자동)</span>'
+                 : a.returned ? '<span style="color:#16a34a;font-weight:800;">복귀완료</span>'
+                 : a.confirmed ? '<span style="color:#2563eb;font-weight:700;">서명완료</span>'
+                 : '<span style="color:#94a3b8;">대기</span>';
+        return '<tr><td style="color:#94a3b8;">'+(i+1)+'</td><td style="font-weight:800;">'+esc(a.name||'-')+'</td><td>'+kind+'</td><td style="color:#64748b;white-space:nowrap;">'+t+'</td><td onclick="coordToggleHold(\''+esc(r.rid)+'\',\''+today+'\',\''+esc(a.__key)+'\')" style="cursor:pointer;" title="클릭: 미복귀 표시/해제">'+stat+'</td></tr>';
       }).join('') : '<tr><td colspan="5" style="text-align:center;color:#94a3b8;padding:18px;">금일 외출·외박 신청이 없습니다.</td></tr>';
       return '<div class="csec-card">'
         +'<div class="csec-card-head" onclick="coordToggleOuting('+idx+')" style="cursor:pointer;display:flex;align-items:center;gap:14px;padding:14px 16px;">'

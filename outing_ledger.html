@@ -24,7 +24,7 @@
 
         /* 펀치 구멍 가이드 */
         .punch-hole { position:absolute; left:9mm; width:5mm; height:5mm; background:#cbd5e1; border-radius:50%; }
-        .hole-1 { top:60mm; } .hole-2 { bottom:60mm; }
+        .hole-1 { top:calc(50% - 40mm); } .hole-2 { top:calc(50% + 40mm); }
 
         .title { text-align:center; font-size:26px; font-weight:900; letter-spacing:8px; margin:0 0 6px 0; }
         .course-title { text-align:right; font-size:15px; font-weight:bold; border-bottom:2px solid #000; padding-bottom:4px; margin-bottom:8px; }
@@ -70,7 +70,7 @@
             /* @page 여백 0 → 브라우저가 자동 삽입하는 머리글/꼬리글(주소·날짜·페이지번호) 제거 */
             @page { size: A4 landscape; margin: 0; }
             /* 화면 카드 1장 = 인쇄 1페이지 */
-            .page { width: 100%; margin: 0; padding: 6mm 8mm 6mm 20mm; box-shadow: none; page-break-after: always; }
+            .page { width: 100%; margin: 0; padding: 6mm 8mm 6mm 20mm; box-shadow: none; page-break-after: always; box-sizing: border-box; min-height: 209mm; display: flex; flex-direction: column; justify-content: center; }
             .page:last-child { page-break-after: auto; }
             table.ledger thead .doc-head td { padding-top: 4mm !important; }
             * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
