@@ -4329,7 +4329,7 @@ cancelIndividualAdminAction: function(date, token) {
     },
 
     // [신규] 외출/외박 미복귀 처리 — 교육운영부와 동일한 held 플래그 사용
-    //  held:true → 자동 복귀완료(다음날 08:50) 제외 + 외출외박일지에 [미복귀] 이력
+    //  held:true → 자동 복귀완료(다음날 08:59) 제외 + 외출외박일지에 [미복귀] 이력
     setOutingHold: function(date, token, checked, boxEl) {
         if(!state.room) { if(boxEl) boxEl.checked = !checked; return; }
         if(state.isObserver) { if(boxEl) boxEl.checked = !checked; return ui.showAlert("👁️ 옵저버는 미복귀 처리를 할 수 없습니다."); }
@@ -8476,7 +8476,7 @@ const outingReturnCheck = {
     _inWindow: function() {
         const n = new Date();
         const mins = n.getHours() * 60 + n.getMinutes();
-        return mins >= (8 * 60 + 50) && mins < (9 * 60); // 08:50 ~ 08:59
+        return mins >= (7 * 60) && mins < (9 * 60); // 07:00 ~ 08:59
     },
     maybeShow: async function() {
         if (typeof firebase === 'undefined') return;
@@ -8550,6 +8550,51 @@ const outingReturnCheck = {
 };
 window.outingReturnCheck = outingReturnCheck;
 
+// ──────────────────────────────────────────────────────────────
+// [외출·외박 자동 복귀완료 sweep] (교육운영부와 동일 로직)
+//  교육운영부 화면이 닫혀 있어도 강사 플랫폼(통합 현황판)이 열려 있으면 자동복귀가 찍히도록 이중화.
+//  다음날 08:59까지 복귀완료/미복귀(held) 표시가 없는 외출/외박 건을 22:00(외출)·익일08:00(외박) 복귀완료(자동) 처리.
+//  통합 현황판이 구독 중인 전체 방 데이터(window._homeStatsData)를 사용하므로 모든 방을 커버한다.
+//  같은 Firebase 데이터를 갱신하므로 교육운영부 sweep과 충돌 없이 멱등하게 동작.
+// ──────────────────────────────────────────────────────────────
+const outingAutoReturn = {
+    _timer: null,
+    init: function() {
+        if (this._timer) clearInterval(this._timer);
+        this._timer = setInterval(() => { try { this.sweep(); } catch (e) {} }, 300000); // 5분마다
+        setTimeout(() => { try { this.sweep(); } catch (e) {} }, 8000);                   // 로딩 8초 후 1회
+    },
+    sweep: function() {
+        if (typeof firebase === 'undefined') return;
+        const data = window._homeStatsData;       // 통합 현황판이 구독 중인 전체 courses 데이터
+        if (!data) return;
+        const now = new Date();
+        const updates = {};
+        Object.keys(data).forEach(rid => {
+            const room = data[rid];
+            if (!room || !room.admin_actions) return;
+            Object.keys(room.admin_actions).forEach(date => {
+                if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return;
+                const day = room.admin_actions[date]; if (!day) return;
+                Object.keys(day).forEach(key => {
+                    const a = day[key]; if (!a || !a.name) return;
+                    if (a.returned || a.held) return;                 // 이미 복귀 / 미복귀(held) 제외
+                    const cutoff = new Date(date + 'T08:59:00'); cutoff.setDate(cutoff.getDate() + 1);
+                    if (now < cutoff) return;                          // 다음날 08:59 이전이면 대기
+                    const isOut = (a.type === 'outing');
+                    const rtd = new Date(date + 'T' + (isOut ? '22:00:00' : '08:00:00'));
+                    if (!isOut) rtd.setDate(rtd.getDate() + 1);        // 외출:당일22시 · 외박:익일08시
+                    updates[`courses/${rid}/admin_actions/${date}/${key}/returned`]   = true;
+                    updates[`courses/${rid}/admin_actions/${date}/${key}/autoReturn`]  = true;
+                    updates[`courses/${rid}/admin_actions/${date}/${key}/returnedAt`]  = rtd.getTime();
+                });
+            });
+        });
+        if (Object.keys(updates).length) firebase.database().ref().update(updates).catch(() => {});
+    }
+};
+window.outingAutoReturn = outingAutoReturn;
+
 window.onload = function() {
     dataMgr.checkMobile();
     profMgr.init();
@@ -8557,7 +8602,8 @@ window.onload = function() {
     guideMgr.init();
     ui.startHeaderClock(); // 헤더 날짜/시간 시계 시작
     dataMgr.initSystem();
-    outingReturnCheck.init(); // 외출·외박 복귀 확인 팝업(08:50~08:59) 점검 시작
+    outingReturnCheck.init();  // 외출·외박 복귀 확인 팝업(07:00~08:59) 점검 시작
+    outingAutoReturn.init();   // 외출·외박 자동 복귀완료 sweep(다음날 08:59) — 교육운영부 닫혀 있어도 동작
     // [강의 모니터링] 마이크는 강의실에 입장(강의 시작)할 때 동의받아 켭니다. (lectureMonitor.syncStatus)
 };
 

@@ -7785,7 +7785,7 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
     else ref.update({held:null});
     setTimeout(function(){ try{ if(window._coordPcSec==='4') coordRenderOutingSection(); }catch(e){} }, 300);
   };
-  // [자동 복귀완료] 외출자가 복귀완료를 깜빡한 경우: 다음날 08:50까지 미복귀 표시가 없으면 22:00 복귀완료(자동) 처리
+  // [자동 복귀완료] 외출자가 복귀완료를 깜빡한 경우: 다음날 08:59까지 미복귀 표시가 없으면 22:00 복귀완료(자동) 처리
   window._coordAutoReturnSweep = function(){
     if(typeof firebase==='undefined' || typeof globalAllData==='undefined' || !globalAllData) return;
     var now=new Date();
@@ -7797,8 +7797,8 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
         Object.keys(day).forEach(function(key){
           var a=day[key]; if(!a || !a.name) return;
           if(a.returned || a.held) return;        // 이미 복귀 / 미복귀(문제)면 제외 (외출·외박 모두 적용)
-          var cutoff=new Date(date+'T08:50:00'); cutoff.setDate(cutoff.getDate()+1);
-          if(now < cutoff) return;                // 다음날 08:50 이전이면 대기
+          var cutoff=new Date(date+'T08:59:00'); cutoff.setDate(cutoff.getDate()+1);
+          if(now < cutoff) return;                // 다음날 08:59 이전이면 대기
           var _isOut=(a.type==='outing');
           var _rtd=new Date(date+'T'+(_isOut?'22:00:00':'08:00:00')); if(!_isOut) _rtd.setDate(_rtd.getDate()+1); // 외출:당일22시 · 외박:익일08시
           firebase.database().ref('courses/'+rid+'/admin_actions/'+date+'/'+key).update({ returned:true, autoReturn:true, returnedAt:_rtd.getTime() });
