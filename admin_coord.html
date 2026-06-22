@@ -7417,7 +7417,7 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
       var prof=(r.st.professorName||'').trim();
       // [학생장] 강사플랫폼에서 지정(students.isLeader)된 학생장 이름+사번 표기
       var _ldr=((typeof _studentsOf==='function'?_studentsOf(r.room):[])||[]).filter(function(s){return s&&s.isLeader===true;})[0];
-      var _ldrNo=_ldr?(_ldr.empNo||_ldr.sabun||_ldr.id||_ldr.studentId||''):'';
+      var _ldrNo=_ldr?(_ldr.empNo||_ldr.sabun||_ldr.id||_ldr.studentId||_ldr.phone||''):'';
       var _ldrBlock='<div class="crow-leader"><div class="ll"><i class="fa-solid fa-crown"></i> 학생장</div>'+(_ldr?('<div class="ln">'+esc(_ldr.name||'-')+(_ldrNo?' <small>('+esc(_ldrNo)+')</small>':'')+'</div>'):'<div class="ln none">미지정</div>')+'</div>';
       return '<div class="crow clickable" onclick="coordOpenCourse(\''+esc(r.rid)+'\')">'
         +'<span class="crow-room">ROOM '+esc(r.rid)+'</span>'
