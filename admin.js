@@ -10986,3 +10986,8 @@ ui.closeMorePanel = function(){
     if(tab){ tab.style.right='0'; }
     if(ic){ ic.style.transform='rotate(0deg)'; }
 };
+ui.toggleMorePanel = function(){
+    var p=document.getElementById('moreMenuPanel');
+    if(p && p.classList.contains('open')){ ui.closeMorePanel(); }
+    else { ui.openMorePanel(); }
+};
