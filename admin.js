@@ -3455,6 +3455,8 @@ openQrModal: function() {
 setMode: function(mode) {
         // [U턴 버튼] 과정(방)에 들어가 있고 현황판/홈이 아닐 때만 표시
         try { document.body.classList.toggle('in-course', !!state.room && mode !== 'waiting' && mode !== 'home' && mode !== 'prof-presentation'); } catch(e){}
+        // 마이크 모니터링 버튼도 in-course 상태에 맞춰 표시/숨김 갱신 (현황판에선 숨김)
+        try { lectureMonitor._updateToggleButton(); } catch(e){}
         // [QR] 현황판(waiting)에선 입장 QR 숨김, 과정현황(dashboard)에선 표시(사용자가 X로 닫지 않은 경우)
         try {
             var _qr = document.getElementById('floatingQR');
@@ -8299,7 +8301,9 @@ const lectureMonitor = {
     _updateToggleButton: function() {
         const btn = document.getElementById('micMonitorToggleBtn');
         if (!btn) return;
-        const shouldShow = !!(this.currentRoom && !state.isObserver);
+        // 개별 강의실에 입장했을 때(body.in-course)만 노출 — 통합 현황판/홈에선 숨김
+        const inCourse = document.body.classList.contains('in-course');
+        const shouldShow = !!(this.currentRoom && !state.isObserver && inCourse);
         btn.style.display = shouldShow ? 'flex' : 'none';
         btn.classList.toggle('is-off', !this.micReady);
         btn.title = this.micReady ? '강의 음성 모니터링 끄기' : '강의 음성 모니터링 켜기';
