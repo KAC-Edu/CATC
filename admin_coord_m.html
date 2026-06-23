@@ -29,12 +29,7 @@
     .wrap{ max-width:600px; margin:0 auto; min-height:100dvh; background:var(--bg); }
 
     /* 헤더 */
-    .mhead{ background:linear-gradient(140deg,#0f2057 0%,#1a3a8a 60%,#2563eb 100%); color:#fff; padding:16px 18px 18px; display:flex; flex-direction:column; gap:15px; position:sticky; top:0; z-index:50; box-shadow:0 4px 14px rgba(15,23,42,.18); }
-    .mhead-top{ display:flex; align-items:center; justify-content:space-between; }
-    .kpi{ display:flex; gap:8px; }
-    .kpi-cell{ flex:1; background:rgba(255,255,255,.12); border:1px solid rgba(255,255,255,.16); border-radius:13px; padding:10px 6px; text-align:center; }
-    .kpi-cell .kv{ font-size:22px; font-weight:900; line-height:1; }
-    .kpi-cell .kl{ font-size:10.5px; font-weight:700; opacity:.82; margin-top:4px; }
+    .mhead{ background:linear-gradient(135deg,#0f2057 0%,#1a3a8a 55%,#2563eb 100%); color:#fff; padding:16px 18px; display:flex; align-items:center; justify-content:space-between; position:sticky; top:0; z-index:50; box-shadow:0 4px 14px rgba(15,23,42,.18); }
     .mhead .ttl{ display:flex; align-items:center; gap:10px; font-size:17px; font-weight:900; }
     .mhead .ttl .mk{ width:34px; height:34px; border-radius:10px; background:rgba(255,255,255,.16); border:1px solid rgba(255,255,255,.26); display:flex; align-items:center; justify-content:center; font-size:16px; }
     .mhead .clk{ text-align:right; font-size:12px; font-weight:700; opacity:.92; line-height:1.35; }
@@ -54,27 +49,23 @@
     .edu-card.set{ background:#ecfdf5; border-color:#34d399; }
     .edu-card.set .ec-top{ color:#047857; }
     .edu-card.set .ec-place{ color:#15803d; }
-    .edu-card.unset{ background:#fffbeb; border-color:#fcd34d; }
-    .edu-card.unset .ec-top{ color:#b45309; }
-    .edu-card.unset .ec-place{ color:#a16207; }
+    .edu-card.unset{ background:#fef2f2; border-color:#f87171; }
+    .edu-card.unset .ec-top{ color:#b91c1c; }
+    .edu-card.unset .ec-place{ color:#dc2626; }
 
     /* 과정 카드 */
-    .crd{ background:#fff; border:1.5px solid #e7edf5; border-left:4px solid #e7edf5; border-radius:16px; padding:14px 15px; margin-bottom:11px; cursor:pointer; transition:transform .1s, box-shadow .15s; box-shadow:0 2px 8px rgba(15,23,42,.05); }
-    .crd.no-ld{ border-left-color:#fbbf24; }
-    .crd.has-ld{ border-left-color:#22c55e; }
+    .crd{ background:#fff; border:1.5px solid #e7edf5; border-radius:16px; padding:14px 15px; margin-bottom:11px; cursor:pointer; transition:transform .1s, box-shadow .15s; box-shadow:0 2px 8px rgba(15,23,42,.05); }
     .crd:active{ transform:scale(.985); box-shadow:0 4px 16px rgba(37,99,235,.16); }
-    .crd .c1{ display:flex; align-items:center; gap:10px; margin-bottom:9px; }
-    .room-badge{ flex-shrink:0; background:linear-gradient(135deg,#2563eb,#1d4ed8); color:#fff; font-weight:800; font-size:12px; padding:5px 11px; border-radius:8px; white-space:nowrap; box-shadow:0 2px 6px rgba(37,99,235,.3); }
-    .room-badge b{ font-size:16px; font-weight:900; margin-left:2px; }
+    .crd .c1{ display:flex; align-items:center; gap:10px; margin-bottom:8px; }
+    .room-badge{ flex-shrink:0; background:var(--blue); color:#fff; font-weight:800; font-size:12px; padding:5px 11px; border-radius:8px; white-space:nowrap; }
+    .room-badge b{ font-size:16px; font-weight:900; margin-left:1px; }
     .crd .cname{ font-size:18px; font-weight:900; color:#0f172a; flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; word-break:keep-all; }
     .crd .cchev{ color:#cbd5e1; font-size:15px; }
-    .crd .c2{ display:flex; align-items:center; gap:7px; font-size:12.5px; color:#64748b; font-weight:700; }
-    .crd .c2 .m{ display:inline-flex; align-items:center; gap:4px; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-    .crd .c2 .m i{ color:#94a3b8; font-size:11px; }
-    .crd .c2 .dot{ color:#cbd5e1; flex-shrink:0; }
-    .crd .c2 .ld{ margin-left:auto; flex-shrink:0; padding:3px 9px; border-radius:7px; font-size:11px; font-weight:800; border:1px solid; }
-    .crd .c2 .ld.on{ color:#15803d; background:#f0fdf4; border-color:#bbf7d0; }
-    .crd .c2 .ld.off{ color:#b45309; background:#fffbeb; border-color:#fde68a; }
+    .crd .c2{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; font-size:12.5px; color:#64748b; font-weight:700; }
+    .crd .c2 .pill{ background:#f1f5f9; border-radius:7px; padding:3px 9px; }
+    .crd .c2 .ld{ margin-left:auto; font-weight:900; }
+    .crd .c2 .ld.on{ color:#15803d; }
+    .crd .c2 .ld.off{ color:#cbd5e1; }
     .empty{ text-align:center; color:#94a3b8; font-weight:700; padding:40px 0; }
 
     /* 상세 오버레이 */
@@ -87,13 +78,6 @@
     .card{ background:#fff; border:1px solid #e7edf5; border-radius:16px; padding:15px 16px; margin-bottom:13px; box-shadow:0 2px 8px rgba(15,23,42,.04); }
     .card h3{ margin:0 0 12px; font-size:14px; font-weight:900; color:#1e293b; display:flex; align-items:center; gap:8px; }
     .card h3 i{ color:var(--blue); }
-    .card h3 .ic{ width:26px; height:26px; border-radius:8px; display:inline-flex; align-items:center; justify-content:center; font-size:12px; flex-shrink:0; }
-    .card h3 .ic i{ color:inherit; }
-    .card h3 .sub{ font-weight:700; color:#94a3b8; font-size:12px; }
-    .card.room-line{ display:flex; align-items:center; gap:10px; padding:13px 16px; }
-    .card.room-line .ic{ width:30px; height:30px; border-radius:9px; display:inline-flex; align-items:center; justify-content:center; font-size:13px; background:#eff4ff; color:#2563eb; flex-shrink:0; }
-    .card.room-line .rl-k{ font-size:12px; color:#94a3b8; font-weight:800; }
-    .card.room-line .rl-v{ font-size:15px; font-weight:800; color:#1e293b; margin-left:auto; text-align:right; word-break:keep-all; }
 
     .info-grid{ display:grid; grid-template-columns:1fr 1fr; gap:11px 12px; }
     .info-grid.one{ grid-template-columns:1fr; }
@@ -109,27 +93,10 @@
     .leader-box.on .lv{ color:#15803d; }
     .leader-box .lv small{ font-size:13px; font-weight:700; color:#94a3b8; margin-left:3px; }
     .leader-box.off .lv{ font-size:15px; color:#94a3b8; }
-    /* 학생장 상태 배너 (상세 최상단 강조) */
-    .ld-banner{ display:flex; align-items:center; gap:11px; border-radius:14px; padding:13px 15px; margin-bottom:13px; border:1.5px solid; }
-    .ld-banner .lic{ width:38px; height:38px; border-radius:11px; display:flex; align-items:center; justify-content:center; font-size:16px; flex-shrink:0; }
-    .ld-banner .lk{ font-size:11.5px; font-weight:800; }
-    .ld-banner .lv{ font-size:16px; font-weight:900; }
-    .ld-banner .lv small{ font-size:12px; font-weight:700; opacity:.7; margin-left:3px; }
-    .ld-banner .ltag{ margin-left:auto; font-size:11px; font-weight:800; padding:5px 10px; border-radius:8px; white-space:nowrap; }
-    .ld-banner.off{ background:#fffbeb; border-color:#fde68a; }
-    .ld-banner.off .lic{ background:#fef3c7; color:#d97706; }
-    .ld-banner.off .lk{ color:#b45309; }
-    .ld-banner.off .lv{ color:#a16207; }
-    .ld-banner.off .ltag{ background:#fef3c7; color:#d97706; }
-    .ld-banner.on{ background:#f0fdf4; border-color:#bbf7d0; }
-    .ld-banner.on .lic{ background:#dcfce7; color:#16a34a; }
-    .ld-banner.on .lk{ color:#15803d; }
-    .ld-banner.on .lv{ color:#15803d; }
-    .ld-banner.on .ltag{ background:#dcfce7; color:#15803d; }
 
     .shut-grid{ display:flex; gap:7px; align-items:stretch; }
-    .shut-cell{ flex:1; text-align:center; background:transparent; border-radius:11px; padding:11px 4px; }
-    .shut-cell.tot{ flex:1.3; background:#f0f7ff; }
+    .shut-cell{ flex:1; text-align:center; background:#f8fafc; border-radius:11px; padding:11px 4px; }
+    .shut-cell.tot{ flex:1.3; background:#eff6ff; }
     .shut-cell .sk{ font-size:11px; font-weight:800; margin-bottom:4px; }
     .shut-cell .sv{ font-size:20px; font-weight:900; color:#1e293b; }
     .shut-cell.tot .sv{ color:var(--blue); font-size:23px; }
@@ -143,7 +110,7 @@
     .out-row .otime{ margin-left:auto; color:#94a3b8; font-size:12px; font-weight:700; }
     .out-row .ost{ font-size:11px; font-weight:800; }
 
-    textarea.notice{ width:100%; min-height:96px; border:1.5px solid #e8edf4; border-radius:12px; padding:12px; font-size:15px; background:#f8fafc; color:#1e293b; resize:vertical; font-family:inherit; }
+    textarea.notice{ width:100%; min-height:96px; border:1.5px solid #bfdbfe; border-radius:11px; padding:12px; font-size:15px; background:#eff6ff; color:#1e40af; resize:vertical; font-family:inherit; }
     .btn{ width:100%; border:none; border-radius:12px; padding:14px; font-size:15px; font-weight:900; cursor:pointer; }
     .btn-send{ background:#10b981; color:#fff; box-shadow:0 4px 12px rgba(16,185,129,.35); margin-top:9px; }
     .btn-send:active{ transform:scale(.99); }
@@ -165,22 +132,6 @@
     .rbtn.clear{ background:#fef2f2; border-color:#fecaca; color:#dc2626; width:100%; text-align:center; }
 
     /* 토스트 */
-    .modal-ov{ position:fixed; inset:0; z-index:500; background:rgba(15,23,42,.55); display:none; align-items:center; justify-content:center; padding:18px; }
-    .modal-ov.open{ display:flex; }
-    .modal-card{ background:#fff; width:100%; max-width:560px; max-height:84vh; border-radius:20px; overflow:hidden; display:flex; flex-direction:column; box-shadow:0 24px 60px rgba(0,0,0,.4); }
-    .modal-head{ background:linear-gradient(135deg,#0f2747,#1e426f); color:#fff; padding:15px 18px; display:flex; align-items:center; justify-content:space-between; font-size:16px; font-weight:900; }
-    .modal-head .mclose{ width:32px; height:32px; border-radius:50%; background:rgba(255,255,255,.16); display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:15px; }
-    .modal-sum{ display:flex; gap:7px; padding:12px 16px; border-bottom:1px solid #eef2f7; flex-wrap:wrap; }
-    .modal-sum .ms{ font-size:11.5px; font-weight:800; padding:5px 11px; border-radius:8px; background:#f1f5f9; color:#475569; }
-    .modal-sum .ms b{ font-size:13px; }
-    .modal-body{ overflow-y:auto; -webkit-overflow-scrolling:touch; }
-    .stbl{ width:100%; border-collapse:collapse; }
-    .stbl th{ position:sticky; top:0; background:#f8fafc; font-size:12px; font-weight:800; color:#64748b; padding:11px 8px; border-bottom:1px solid #e8edf4; white-space:nowrap; }
-    .stbl td{ font-size:13.5px; padding:12px 8px; border-bottom:1px solid #f3f5f9; text-align:center; color:#1e293b; }
-    .stbl td.nm{ font-weight:800; }
-    .stbl .dest{ font-size:11px; font-weight:800; padding:3px 9px; border-radius:7px; white-space:nowrap; }
-    .stbl tr:last-child td{ border-bottom:none; }
-    .modal-empty{ padding:40px 0; text-align:center; color:#94a3b8; font-weight:700; }
     #toast{ position:fixed; left:50%; bottom:36px; transform:translateX(-50%) translateY(20px); background:#0f172a; color:#fff; padding:13px 20px; border-radius:12px; font-size:14px; font-weight:800; z-index:900; opacity:0; transition:all .25s; pointer-events:none; box-shadow:0 10px 30px rgba(0,0,0,.3); max-width:90vw; text-align:center; }
     #toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
   </style>
@@ -188,15 +139,8 @@
 <body>
 <div class="wrap">
   <div class="mhead">
-    <div class="mhead-top">
-      <div class="ttl"><div class="mk"><i class="fa-solid fa-graduation-cap"></i></div>교육운영 플랫폼</div>
-      <div class="clk" id="clk"></div>
-    </div>
-    <div class="kpi">
-      <div class="kpi-cell"><div class="kv" id="kpiCourses">0</div><div class="kl">운영 과정</div></div>
-      <div class="kpi-cell"><div class="kv" id="kpiOuting" style="color:#fdba74;">0</div><div class="kl">금일 외출·외박</div></div>
-      <div class="kpi-cell"><div class="kv" id="kpiNoLeader" style="color:#fca5a5;">0</div><div class="kl">학생장 미지정</div></div>
-    </div>
+    <div class="ttl"><div class="mk"><i class="fa-solid fa-graduation-cap"></i></div>교육운영 플랫폼</div>
+    <div class="clk" id="clk"></div>
   </div>
 
   <div class="sec">
@@ -233,17 +177,16 @@
       <div class="info-grid" id="dInfo"></div>
       <div style="margin-top:13px;" id="dLeaderWrap"></div>
     </div>
-    <div class="card" onclick="openShuttleModal()" style="cursor:pointer;">
-      <h3><span class="ic" style="background:#ecfdf5;color:#059669;"><i class="fa-solid fa-bus"></i></span> 퇴교차량 현황 <span class="sub">· 실시간</span><i class="fa-solid fa-chevron-right" style="margin-left:auto;color:#cbd5e1;font-size:13px;"></i></h3>
+    <div class="card">
+      <h3><i class="fa-solid fa-bus"></i> 퇴교차량 현황 <span style="font-weight:700;color:#94a3b8;font-size:12px;">· 실시간</span></h3>
       <div class="shut-grid" id="dShuttle"></div>
-      <div style="text-align:center;margin-top:10px;font-size:11.5px;color:#94a3b8;font-weight:700;">명단 보기 <i class="fa-solid fa-chevron-right" style="font-size:9px;"></i></div>
     </div>
     <div class="card">
-      <h3><span class="ic" style="background:#fff7ed;color:#ea580c;"><i class="fa-solid fa-user-clock"></i></span> 외출·외박 신청자 <span class="sub" id="dOutSub">· 금일</span></h3>
+      <h3><i class="fa-solid fa-user-clock"></i> 외출·외박 신청자 <span style="font-weight:700;color:#94a3b8;font-size:12px;">· 금일</span></h3>
       <div id="dOuting"></div>
     </div>
     <div class="card">
-      <h3><span class="ic" style="background:#eff4ff;color:#2563eb;"><i class="fa-solid fa-paper-plane"></i></span> 강사플랫폼 공지 발송</h3>
+      <h3><i class="fa-solid fa-paper-plane"></i> 강사플랫폼 공지 발송</h3>
       <textarea class="notice" id="dNotice" placeholder="교육생·강사 플랫폼에 전달할 공지를 입력하세요"></textarea>
       <button class="btn btn-send" onclick="sendNotice()"><i class="fa-solid fa-paper-plane"></i> 공지 발송</button>
       <div class="hist" id="dHist"></div>
@@ -258,15 +201,6 @@
     <div class="note">사용 중인 강의실도 선택 가능합니다(해당 수업 강의실에서 진행). 모든 과정 담당자에게 실시간 공유됩니다.</div>
     <button class="rbtn clear" onclick="setEdu('')"><i class="fa-solid fa-eraser"></i> 미정으로 초기화</button>
     <div id="sheetRooms"></div>
-  </div>
-</div>
-
-<!-- 퇴교차량 명단 모달 -->
-<div class="modal-ov" id="shuttleModal" onclick="if(event.target===this)closeShuttleModal()">
-  <div class="modal-card">
-    <div class="modal-head"><span><i class="fa-solid fa-bus"></i> 퇴교차량 신청 명단</span><span class="mclose" onclick="closeShuttleModal()"><i class="fa-solid fa-xmark"></i></span></div>
-    <div class="modal-sum" id="shuttleSum"></div>
-    <div class="modal-body" id="shuttleTable"></div>
   </div>
 </div>
 
@@ -352,24 +286,14 @@ function renderList(){
   if(!rooms.length){ el.innerHTML='<div class="empty">운영 중인 과정이 없습니다.</div>'; return; }
   el.innerHTML=rooms.map(function(r){
     var L=leaderOf(r.room);
-    var prof=((r.st.professorName||'').trim())?(r.st.professorName.trim()):'담임 미지정';
+    var prof=((r.st.professorName||'').trim())?(r.st.professorName.trim()+' 교수'):'담임 미지정';
     var coord=(r.s.coordinatorName||'').trim()||'담당 미지정';
     var ldHtml=L?('<span class="ld on"><i class="fa-solid fa-crown"></i> '+esc(L.name)+'</span>'):'<span class="ld off"><i class="fa-solid fa-crown"></i> 학생장 미지정</span>';
-    return '<div class="crd '+(L?'has-ld':'no-ld')+'" onclick="openDetail(\''+r.rid+'\')">'
-      +'<div class="c1"><span class="room-badge">ROOM <b>'+r.rid+'</b></span><span class="cname">'+esc(r.s.courseName||'-')+'</span><i class="fa-solid fa-chevron-right cchev"></i></div>'
-      +'<div class="c2"><span class="m"><i class="fa-solid fa-chalkboard-user"></i>'+esc(prof)+'</span><span class="dot">·</span><span class="m">'+esc(coord)+'</span>'+ldHtml+'</div>'
+    return '<div class="crd" onclick="openDetail(\''+r.rid+'\')">'
+      +'<div class="c1"><span class="room-badge">ROOM <b>#'+r.rid+'</b></span><span class="cname">'+esc(r.s.courseName||'-')+'</span><i class="fa-solid fa-chevron-right cchev"></i></div>'
+      +'<div class="c2"><span class="pill">'+esc(prof)+'</span><span class="pill">'+esc(coord)+'</span>'+ldHtml+'</div>'
       +'</div>';
   }).join('');
-  setKPI(rooms);
-}
-
-/* 헤더 한눈에 요약 KPI */
-function setKPI(rooms){
-  var nC=rooms.length, nO=0, nNL=0;
-  rooms.forEach(function(r){ nO+=outingsToday(r.room).length; if(!leaderOf(r.room)) nNL++; });
-  var a=document.getElementById('kpiCourses'); if(a) a.textContent=nC;
-  var b=document.getElementById('kpiOuting'); if(b) b.textContent=nO;
-  var c=document.getElementById('kpiNoLeader'); if(c) c.textContent=nNL;
 }
 
 /* 청렴/노조 카드 렌더 */
@@ -403,19 +327,16 @@ function updateDetail(){
   var room=DATA[curRID]; if(!room) return;
   var s=room.settings||{}, st=room.status||{};
   document.getElementById('dTtl').textContent='ROOM #'+curRID+' · '+(s.courseName||'-');
-  // 정보
   var prof=((st.professorName||'').trim())?(st.professorName.trim()+' 교수'):'-';
   document.getElementById('dInfo').innerHTML=
      '<div class="info-item"><div class="k">교육기간</div><div class="v" style="font-size:14px;">'+esc(s.period||'-')+'</div></div>'
     +'<div class="info-item"><div class="k">강의실</div><div class="v" style="font-size:14px;">'+esc(s.roomDetailName||s.roomDetail||'-')+'</div></div>'
     +'<div class="info-item"><div class="k">담임교수</div><div class="v">'+esc(prof)+'</div></div>'
     +'<div class="info-item"><div class="k">과정담당</div><div class="v">'+esc(s.coordinatorName||'-')+'</div></div>';
-  // 학생장
   var L=leaderOf(room);
   document.getElementById('dLeaderWrap').innerHTML= L
     ? '<div class="leader-box on"><div class="lk"><i class="fa-solid fa-crown"></i> 학생장</div><div class="lv">'+esc(L.name)+(L.no?(' <small>('+esc(L.no)+')</small>'):'')+'</div></div>'
     : '<div class="leader-box off"><div class="lk"><i class="fa-solid fa-crown"></i> 학생장</div><div class="lv">지정된 학생장 없음</div></div>';
-  // 퇴교차량
   var sh=shuttleCount(room);
   document.getElementById('dShuttle').innerHTML=
      '<div class="shut-cell tot"><div class="sk" style="color:#64748b;">총 신청</div><div class="sv">'+sh.total+'</div></div>'
@@ -423,9 +344,7 @@ function updateDetail(){
     +'<div class="shut-cell"><div class="sk" style="color:#2563eb;">터미널</div><div class="sv">'+sh.terminal+'</div></div>'
     +'<div class="shut-cell"><div class="sk" style="color:#10b981;">공항</div><div class="sv">'+sh.airport+'</div></div>'
     +'<div class="shut-cell"><div class="sk" style="color:#64748b;">자차</div><div class="sv">'+sh.car+'</div></div>';
-  // 외출·외박
   var outs=outingsToday(room);
-  var _osub=document.getElementById('dOutSub'); if(_osub) _osub.textContent='· 금일 '+outs.length+'건';
   if(!outs.length){ document.getElementById('dOuting').innerHTML='<div class="empty" style="padding:22px 0;">금일 외출·외박 신청이 없습니다.</div>'; }
   else{
     document.getElementById('dOuting').innerHTML=outs.map(function(a){
@@ -440,10 +359,7 @@ function updateDetail(){
       return '<div class="out-row"><span class="on">'+esc(a.name||'-')+'</span><span class="ot '+kind+'">'+klabel+'</span>'+stat+'<span class="otime">'+tm+'</span></div>';
     }).join('');
   }
-  // 공지 이력
   renderHist(room);
-  // 퇴교차량 모달이 열려 있으면 실시간 갱신
-  var _sm=document.getElementById('shuttleModal'); if(_sm && _sm.classList.contains('open')) renderShuttleModal();
 }
 function renderHist(room){
   var h=room.coordNoticeHistory||{};
@@ -483,7 +399,6 @@ function openEduPicker(type){
       +g.rooms.map(function(rm){return '<button class="rbtn" onclick="setEdu(this.getAttribute(\'data-v\'))" data-v="'+esc(rm)+'">'+esc(rm.split(' ').pop())+'</button>';}).join('')
       +'</div>';
   });
-  // 추가 강의실(system/classrooms)
   var bks=Object.keys(CUSTOM_ROOMS);
   if(bks.length){
     html+='<div class="grp">추가된 강의실</div><div class="rooms">';
@@ -500,44 +415,6 @@ function setEdu(val){
   db.ref('system/eduLocations/'+eduType).set(val||null);
   closeEduPicker();
   toast(val?('✅ '+shortRoom(val)+'(으)로 공지'):'미정으로 변경');
-}
-
-/* 퇴교차량 신청 명단 모달 */
-var SHUTTLE_LABEL={osong:'오송역',terminal:'터미널',airport:'공항',car:'자차'};
-var SHUTTLE_CLR={osong:['#fee2e2','#dc2626'],terminal:['#dbeafe','#2563eb'],airport:['#dcfce7','#16a34a'],car:['#f1f5f9','#64748b']};
-function openShuttleModal(){
-  if(!curRID) return;
-  renderShuttleModal();
-  document.getElementById('shuttleModal').classList.add('open');
-}
-function closeShuttleModal(){ document.getElementById('shuttleModal').classList.remove('open'); }
-function renderShuttleModal(){
-  var room=DATA[curRID]||{};
-  var rq=(room.shuttle&&room.shuttle.requests)||{};
-  var students=room.students||{};
-  var order={osong:0,terminal:1,airport:2,car:3};
-  var list=Object.keys(rq).map(function(k){
-    var r=rq[k]||{}; if(!r.type) return null;
-    var stu=students[k]||{};
-    return { name:r.name||stu.name||'-', no:r.empNo||r.sabun||r.studentId||stu.empNo||stu.sabun||stu.id||'-', dept:r.dept||stu.dept||'', type:r.type };
-  }).filter(Boolean);
-  list.sort(function(a,b){ return ((order[a.type]==null?9:order[a.type])-(order[b.type]==null?9:order[b.type])) || (''+a.name).localeCompare(''+b.name); });
-  var sum=shuttleCount(room);
-  var sm=document.getElementById('shuttleSum');
-  if(sm) sm.innerHTML=
-     '<span class="ms">총 <b>'+sum.total+'</b></span>'
-    +'<span class="ms" style="background:#fee2e2;color:#dc2626;">오송 <b>'+sum.osong+'</b></span>'
-    +'<span class="ms" style="background:#dbeafe;color:#2563eb;">터미널 <b>'+sum.terminal+'</b></span>'
-    +'<span class="ms" style="background:#dcfce7;color:#16a34a;">공항 <b>'+sum.airport+'</b></span>'
-    +'<span class="ms">자차 <b>'+sum.car+'</b></span>';
-  var box=document.getElementById('shuttleTable');
-  if(!box) return;
-  if(!list.length){ box.innerHTML='<div class="modal-empty">신청자가 없습니다.</div>'; return; }
-  var hasDept=list.some(function(x){ return (''+x.dept).trim(); });
-  box.innerHTML='<table class="stbl"><thead><tr><th style="width:44px;">연번</th><th>사번</th>'+(hasDept?'<th>소속</th>':'')+'<th>성명</th><th>목적지</th></tr></thead><tbody>'
-    +list.map(function(x,i){ var c=SHUTTLE_CLR[x.type]||['#f1f5f9','#64748b'];
-      return '<tr><td style="color:#94a3b8;">'+(i+1)+'</td><td>'+esc(x.no)+'</td>'+(hasDept?('<td>'+esc(x.dept||'-')+'</td>'):'')+'<td class="nm">'+esc(x.name)+'</td><td><span class="dest" style="background:'+c[0]+';color:'+c[1]+';">'+esc(SHUTTLE_LABEL[x.type]||x.type)+'</span></td></tr>';
-    }).join('')+'</tbody></table>';
 }
 
 /* 토스트 */
