@@ -2124,6 +2124,22 @@ function closePanelSmooth(modalId){
 }
 window.closePanelSmooth=closePanelSmooth;
 
+// [공통] 모든 X(닫기) 아이콘 버튼을 누르면 90도 회전 + 빨간색 효과
+(function(){
+  document.addEventListener('click', function(e){
+    var t=e.target; if(!t||!t.closest) return;
+    var btn=t.closest('.kac-px, .kac-modal-x, .menu-close-x, button[aria-label="닫기"]');
+    if(!btn) return;
+    // X 아이콘 버튼만 (텍스트 '닫기' 버튼은 제외)
+    var isX = btn.classList.contains('kac-px') || btn.classList.contains('kac-modal-x') || btn.classList.contains('menu-close-x')
+              || (btn.querySelector && (btn.querySelector('.fa-xmark') || btn.querySelector('.fa-times')))
+              || /^[×✕✖xX]$/.test((btn.textContent||'').replace(/\s/g,''));
+    if(!isX) return;
+    btn.classList.add('x-rot');
+    setTimeout(function(){ try{ btn.classList.remove('x-rot'); }catch(_){} }, 500);
+  }, true);
+})();
+
 
 
 
@@ -5911,6 +5927,9 @@ html, body {
 .kac-pbar .kac-px{ width:32px; height:32px; flex-shrink:0; border:none; border-radius:50%; background:#f1f5f9; color:#64748b; font-size:15px; cursor:pointer; display:flex; align-items:center; justify-content:center; padding:0; }
 .kac-pbar .kac-px:active{ background:#e2e8f0; transform:scale(.94); }
 .kac-pbar .kac-px:hover{ background:#ef4444; color:#fff; }
+/* [공통] 모든 X(닫기) 아이콘 버튼: 누르면 90도 회전 + 빨간색 */
+.kac-px, .kac-modal-x, button[aria-label="닫기"]{ transition: transform .3s ease, background .25s ease, color .25s ease; }
+.x-rot{ transform: rotate(90deg) !important; background:#fee2e2 !important; color:#dc2626 !important; }
 
 /* 3) 패널 열린 동안 뒤 화면은 정지 — 레이아웃 흔들림(repaint flicker) 차단 */
 body.kac-panel-on #mainApp,
