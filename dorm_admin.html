@@ -1979,7 +1979,7 @@
                     : '';
                 html += `
                     <div class="course-row ${sel ? 'sel' : ''} ${enrolled ? 'enrolled' : ''} ${coordPending ? 'coord-pending' : ''}" data-room="${it.room}" data-week="${it.weekKey}" ${locked ? 'data-locked="1" style="filter:grayscale(.55); opacity:.62;"' : ''} onclick='selectCourse(${JSON.stringify(it).replace(/'/g, "&#39;")})'>
-                        <span class="course-room-badge" ${it.fromPlan ? 'style="background:#94a3b8;"' : ''}>${it.fromPlan ? '<i class="fa-solid fa-clock"></i> 예정' : '강의실 ' + it.room}</span>
+                        <span class="course-room-badge" ${it.fromPlan ? 'style="background:#94a3b8;"' : ''}>${it.fromPlan ? '<i class="fa-solid fa-clock"></i> 예정' : 'Room <span style="font-size:1.4em;font-weight:900;letter-spacing:.3px;">#' + it.room + '</span>'}</span>
                         <div class="course-main">
                             <div class="cname">${it.courseName} ${it.notInPlan && !it.fromPlan ? '<span style="display:inline-block; background:#fef3c7; color:#92400e; font-size:11px; font-weight:800; padding:2px 8px; border-radius:10px; margin-left:6px; vertical-align:middle;">계획 외 운영</span>' : ''}</div>
                             <div class="cmeta">${it.period || '-'}</div>
