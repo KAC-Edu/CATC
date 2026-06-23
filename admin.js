@@ -2566,7 +2566,7 @@ refs.departure.on('value', snap => {
     bar.style.display = "none";
     const inlineEl = document.getElementById('dashShuttleTimeInline');
     if (dep && dep.time) {
-        if (inlineEl) inlineEl.innerText = `(${dep.time} 출발)`;
+        if (inlineEl) inlineEl.innerText = `(${dep.time2?('1차 '+dep.time+' / 2차 '+dep.time2):dep.time} 출발)`;
     } else {
         if (inlineEl) inlineEl.innerText = '';
     }
@@ -4695,7 +4695,7 @@ loadShuttleData: function() {
         if (dep && dep.time) {
             el.innerHTML = `
                 <div style="font-size:20px; opacity:0.8; margin-bottom:2px;">${dep.date}</div>
-                <div style="font-size:42px; font-weight:900; line-height:1.1;">${dep.time}</div>
+                <div style="font-size:${dep.time2?'30px':'42px'}; font-weight:900; line-height:1.15;">${dep.time2?('1차 '+dep.time+' / 2차 '+dep.time2):dep.time}</div>
                 <div style="font-size:16px; margin-top:10px; font-weight:800; background:rgba(255,255,255,0.15); padding:4px 12px; border-radius:50px; display:inline-block;">
                     퇴교차량 출발
                 </div>
@@ -4708,11 +4708,13 @@ loadShuttleData: function() {
             if (timeEl && dep.time) timeEl.value = dep.time;
             // ETA 카드 업데이트 (현재 신청 인원 수 함께 전달)
             window._shuttleAdminDepTime = dep.time;
+            window._shuttleAdminDepTime2 = dep.time2 || '';
             ui.updateShuttleETA(dep.time, window._shuttleAdminCounts || { osong:0, terminal:0, airport:0 });
         } else {
             el.innerHTML = `<div style="font-size:18px; opacity:0.7;">퇴교 공지 대기 중</div>`;
             el.style.color = "white";
             window._shuttleAdminDepTime = null;
+            window._shuttleAdminDepTime2 = '';
             ui.updateShuttleETA(null);
         }
     });
@@ -4823,59 +4825,31 @@ updateShuttleETA: function(departureTime, counts) {
         etaDetail.innerHTML = `<div style="color:#94a3b8; font-size:13px; padding:4px 0;">출발 시간이 공지되면 표시됩니다.</div>`;
         return;
     }
-
-    // counts: { osong, terminal, airport } — 각 목적지 신청 인원수
     const c = counts || { osong: 0, terminal: 0, airport: 0 };
-    const [hh, mm] = departureTime.split(':').map(Number);
-    const base = hh * 60 + mm;
-
-    const fmt = (total) => {
-        const h = String(Math.floor(total / 60) % 24).padStart(2, '0');
-        const m = String(total % 60).padStart(2, '0');
-        return `${h}:${m}`;
-    };
-
-    // [스킵 방식] 신청자 있는 정류장만 순서대로 정차, 각 구간 30분
-    //  - 신청자 없는 정류장은 건너뜀(정차 안 함) → 다음 정류장이 그만큼 앞당겨짐
-    //  - 예) 출발 00:00, 셋 다 신청: 오송 00:30 / 터미널 01:00 / 공항 01:30
-    //        오송 미신청: 터미널 00:30 / 공항 01:00
-    let acc = base;
-    const osongStop = c.osong > 0;
-    const termStop  = c.terminal > 0;
-    const airStop   = c.airport > 0;
-
-    let osongMin = null, termMin = null, airMin = null;
-    if (osongStop) { acc += 30; osongMin = acc; }
-    if (termStop)  { acc += 30; termMin  = acc; }
-    if (airStop)   { acc += 30; airMin   = acc; }
-
-    const stops = [
-        { label: '오송역',      time: osongMin !== null ? fmt(osongMin) : null, color: '#ef4444', cnt: c.osong },
-        { label: '청주터미널',  time: termMin  !== null ? fmt(termMin)  : null, color: '#3b82f6', cnt: c.terminal },
-        { label: '청주국제공항',time: airMin   !== null ? fmt(airMin)   : null, color: '#10b981', cnt: c.airport },
-    ];
-
-    // 한 줄 인라인 표시 (정차하지 않는 정류장은 흐리게 skip 표기)
-    etaDetail.innerHTML = `
-        <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
-            ${stops.map(s => s.time !== null ? `
-                <div style="display:flex; align-items:center; gap:8px; background:#f8fafc; border:1.5px solid #e2e8f0; border-radius:10px; padding:8px 16px;">
-                    <span style="font-size:16px; font-weight:900; color:${s.color};">${s.label}</span>
-                    <span style="font-size:18px; font-weight:900; color:#1e293b;">${s.time}</span>
-                    <span style="font-size:12px; color:#94a3b8; font-weight:700;">도착</span>
-                </div>
-            ` : `
-                <div style="display:flex; align-items:center; gap:6px; background:#f1f5f9; border:1.5px dashed #cbd5e1; border-radius:10px; padding:8px 14px; opacity:0.6;">
-                    <span style="font-size:14px; font-weight:800; color:#94a3b8; text-decoration:line-through;">${s.label}</span>
-                    <span style="font-size:11px; color:#94a3b8; font-weight:700;">신청자 없음 · skip</span>
-                </div>
-            `).join('')}
-        </div>
-        <div style="font-size:11px; color:#94a3b8; margin-top:8px;">※ 신청자 있는 정류장만 정차 · 각 구간 30분 (미신청 정류장은 건너뜀)</div>
-    `;
+    const t2 = window._shuttleAdminDepTime2 || '';
+    function roundHtml(depT, tag){
+        const parts = String(depT).split(':');
+        const hh = Number(parts[0]), mm = Number(parts[1]);
+        if (isNaN(hh) || isNaN(mm)) return '';
+        const base = hh*60+mm;
+        const fmt = (total)=>{ const h=String(Math.floor(total/60)%24).padStart(2,'0'); const m=String(total%60).padStart(2,'0'); return `${h}:${m}`; };
+        let acc = base; let oM=null,tM=null,aM=null;
+        if (c.osong>0){ acc+=30; oM=acc; }
+        if (c.terminal>0){ acc+=30; tM=acc; }
+        if (c.airport>0){ acc+=30; aM=acc; }
+        const stops=[{label:'오송역',time:oM!==null?fmt(oM):null,color:'#ef4444'},{label:'청주터미널',time:tM!==null?fmt(tM):null,color:'#3b82f6'},{label:'청주국제공항',time:aM!==null?fmt(aM):null,color:'#10b981'}];
+        const tagHtml = tag ? `<span style="display:inline-flex;align-items:center;background:#1e3a8a;color:#fff;font-size:12px;font-weight:900;padding:5px 11px;border-radius:8px;">${tag} ${depT} 출발</span>` : '';
+        return `<div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:8px;">${tagHtml}${stops.map(s => s.time !== null ? `<div style="display:flex; align-items:center; gap:8px; background:#f8fafc; border:1.5px solid #e2e8f0; border-radius:10px; padding:8px 16px;"><span style="font-size:15px; font-weight:900; color:${s.color};">${s.label}</span><span style="font-size:17px; font-weight:900; color:#1e293b;">${s.time}</span><span style="font-size:12px; color:#94a3b8; font-weight:700;">도착</span></div>` : `<div style="display:flex; align-items:center; gap:6px; background:#f1f5f9; border:1.5px dashed #cbd5e1; border-radius:10px; padding:8px 14px; opacity:0.6;"><span style="font-size:13px; font-weight:800; color:#94a3b8; text-decoration:line-through;">${s.label}</span><span style="font-size:11px; color:#94a3b8; font-weight:700;">신청자 없음 · skip</span></div>`).join('')}</div>`;
+    }
+    const t2IsTime = /^\d{1,2}:\d{2}$/.test(t2);
+    let html = roundHtml(departureTime, t2 ? '1차' : '');
+    if (t2IsTime) html += roundHtml(t2, '2차');
+    else if (t2) html += `<div style="font-size:13px;font-weight:800;color:#94a3b8;margin-bottom:8px;">🚌 2차 ${t2}</div>`;
+    html += `<div style="font-size:11px; color:#94a3b8; margin-top:4px;">※ 신청자 있는 정류장만 정차 · 각 구간 30분 (미신청 정류장은 건너뜀)</div>`;
+    etaDetail.innerHTML = html;
 },
 
-toggleMenuDropdown: function() {
+    toggleMenuDropdown: function() {
         const dropdown = document.getElementById('menuDropdown');
         if(dropdown) dropdown.style.display = (dropdown.style.display === 'block') ? 'none' : 'block';
     },

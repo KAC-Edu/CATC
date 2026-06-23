@@ -977,13 +977,6 @@
             <div id="adminStatusText" style="font-size: 14px; color: #1e293b; margin: 0; line-height: 1.5;"></div>
             
             <div id="returnBtnArea" style="margin-top:15px; display:flex; flex-direction:column; gap:8px;">
-                <div style="display:flex; align-items:flex-start; gap:10px; background:#fff7ed; border:1px solid #fed7aa; border-radius:10px; padding:11px 12px; text-align:left;">
-                    <i class="fa-solid fa-circle-info" style="color:#ea580c; font-size:15px; margin-top:2px;"></i>
-                    <div style="flex:1; font-size:12.5px; color:#9a3412; font-weight:700; line-height:1.5;">
-                        외출 복귀가 <b>22:00 이후</b>로 늦어질 경우, 도착 전 미리 <b>정문(수위실)</b>로 연락해 주세요.
-                        <a href="tel:043-290-2321" style="display:inline-flex; align-items:center; gap:6px; margin-top:8px; padding:8px 13px; background:#ea580c; color:#fff; border-radius:9px; text-decoration:none; font-weight:800; font-size:13px;"><i class="fa-solid fa-phone"></i> 정문(수위실) 전화하기 · 043-290-2321</a>
-                    </div>
-                </div>
                 <div id="beforeReturnGroup" style="display:flex; gap:8px;">
                     <button onclick="confirmReturnAction()" style="flex:2; padding: 12px; background: #10b981; color: white; border: none; border-radius: 8px; font-weight: bold;">복귀 완료 보고</button>
                     <button onclick="cancelAdminAction()" style="flex:1; padding: 12px; background: #ef4444; color: white; border: none; border-radius: 8px; font-weight: bold;">취소</button>
@@ -991,13 +984,21 @@
                 <div id="afterReturnGroup" style="display:none;">
                     <button onclick="undoReturnAction()" style="width:100%; padding: 12px; background: #64748b; color: white; border: none; border-radius: 8px; font-weight: bold;">복귀 보고 취소 (재수정)</button>
                 </div>
-                <button onclick="closePanelSmooth('adminActionModal')" style="width:100%; margin-top:4px; padding:11px; border:none; border-radius:10px; background:#f1f5f9; color:#475569; font-weight:800; cursor:pointer;">닫기</button>
 <!-- [찾을 위치] afterReturnGroup 가 끝나는 </div> 바로 아래에 붙여넣으세요 -->
 <div id="dinnerOnlyGroup" style="display:none;">
     <button onclick="cancelDinnerOnly()" style="width:100%; padding: 12px; background: #64748b; color: white; border: none; border-radius: 8px; font-weight: bold;">
         🍴 석식 제외신청 취소
     </button>
 </div>
+                <!-- 참고 안내: 늦은 복귀 시 정문 연락 (하단 배치) -->
+                <div style="display:flex; align-items:flex-start; gap:10px; background:#fff7ed; border:1px solid #fed7aa; border-radius:10px; padding:11px 13px; text-align:left; margin-top:2px;">
+                    <i class="fa-solid fa-circle-info" style="color:#ea580c; font-size:15px; margin-top:2px; flex-shrink:0;"></i>
+                    <div style="flex:1; font-size:12.5px; color:#9a3412; font-weight:700; line-height:1.6; word-break:keep-all;">
+                        외출 복귀가 <b>22:00 이후</b>로 늦어질 경우,<br>도착 전 미리 <b>정문(수위실)</b>로 연락해 주세요.
+                        <a href="tel:043-290-2321" style="display:flex; align-items:center; justify-content:center; gap:7px; margin-top:9px; padding:9px 13px; background:#ea580c; color:#fff; border-radius:9px; text-decoration:none; font-weight:800; font-size:13px;"><i class="fa-solid fa-phone"></i> 정문(수위실) 043-290-2321</a>
+                    </div>
+                </div>
+                <button onclick="closeAdminAction()" style="width:100%; margin-top:6px; padding:14px; border:none; border-radius:12px; background:#f1f5f9; color:#475569; font-size:15px; font-weight:800; cursor:pointer;">닫기</button>
 
             </div>
         </div>
@@ -3219,19 +3220,32 @@ async function openShuttleApply() {
         const m = String(totalMin % 60).padStart(2, '0');
         return `${h}:${m}`;
     }
+    // [권장 차수] 현재 시각 기준 가장 근접(이후)한 차수 — 1차/2차 중 수료 후 탈 버스 안내
+    function _recommendRound(t1, t2){
+        const now=new Date(); const nowMin=now.getHours()*60+now.getMinutes();
+        const toMin=(t)=>{ if(!t||t==='미정') return null; const p=String(t).split(':'); const v=Number(p[0])*60+Number(p[1]); return isNaN(v)?null:v; };
+        const cand=[]; const m1=toMin(t1), m2=toMin(t2);
+        if(m1!==null) cand.push({r:'1차',t:t1,m:m1});
+        if(m2!==null) cand.push({r:'2차',t:t2,m:m2});
+        if(!cand.length) return null;
+        const up=cand.filter(c=>c.m>=nowMin-10).sort((a,b)=>a.m-b.m);
+        return up.length?up[0]:cand.sort((a,b)=>a.m-b.m)[cand.length-1];
+    }
 
     function updateArrivalUI(depTime, counts) {
         const arrivals = calcArrival(depTime, counts);
+        const arrivals2 = currentDepTime2 ? calcArrival(currentDepTime2, counts) : null;
         const osongEl    = document.getElementById('arrival-osong');
         const termEl     = document.getElementById('arrival-terminal');
         const airportEl  = document.getElementById('arrival-airport');
-        const setTxt = (el, min) => {
+        const setTxt = (el, min, min2) => {
             if (!el) return;
-            el.textContent = (min !== null) ? `${fmtMin(min)} (도착 예정)` : '미정차 (신청자 없음)';
+            if (min === null) { el.textContent = '미정차 (신청자 없음)'; return; }
+            el.textContent = (arrivals2 && min2 !== null) ? `1차 ${fmtMin(min)} / 2차 ${fmtMin(min2)} 도착` : `${fmtMin(min)} (도착 예정)`;
         };
-        setTxt(osongEl, arrivals.osong);
-        setTxt(termEl, arrivals.terminal);
-        setTxt(airportEl, arrivals.airport);
+        setTxt(osongEl, arrivals.osong, arrivals2?arrivals2.osong:null);
+        setTxt(termEl, arrivals.terminal, arrivals2?arrivals2.terminal:null);
+        setTxt(airportEl, arrivals.airport, arrivals2?arrivals2.airport:null);
     }
 
     function clearArrivalUI() {
@@ -3243,6 +3257,7 @@ async function openShuttleApply() {
 
     // 출발 시간 + 신청자 수를 동시에 감시해서 도착 시간 갱신
     let currentDepTime = null;
+    let currentDepTime2 = null;
     let currentCounts  = { osong: 0, terminal: 0, airport: 0 };
 
     function refresh() {
@@ -3262,14 +3277,26 @@ async function openShuttleApply() {
             if (_bar) _bar.style.display = '';
             const dateFmt = dep.date.replace(/-/g, '.');
             const h = dep.time.split(':')[0].replace(/^0/, '');
-            timeEl.textContent = `${dateFmt}  ${h}시 출발 예정`;
+            const _t2IsTime = /^\d{1,2}:\d{2}$/.test(dep.time2||'');
+            const _h2 = _t2IsTime ? dep.time2.split(':')[0].replace(/^0/, '') : '';
+            const _t2None = (dep.time2 === '운행안함');
+            timeEl.textContent = _h2 ? `${dateFmt}  1차 ${h}시 / 2차 ${_h2}시 출발 예정` : (_t2None ? `${dateFmt}  ${h}시 출발 예정 · 2차 운행안함` : `${dateFmt}  ${h}시 출발 예정`);
             timeEl.style.color = '#1d4ed8';
             timeEl.style.fontSize = '22px';   // 시간: 크게
             currentDepTime = dep.time;
+            currentDepTime2 = _t2IsTime ? dep.time2 : null;
+            (function(){
+                var recEl=document.getElementById('shuttleRecommend');
+                if(!recEl){ recEl=document.createElement('div'); recEl.id='shuttleRecommend'; recEl.style.cssText='margin-top:8px;font-size:14px;font-weight:900;color:#b91c1c;background:#fff1f2;border:1px solid #fecaca;border-radius:10px;padding:8px 12px;line-height:1.45;'; if(timeEl.parentNode) timeEl.parentNode.appendChild(recEl); }
+                if(currentDepTime2){ var rec=_recommendRound(currentDepTime,currentDepTime2); if(rec){ recEl.style.display=''; recEl.innerHTML='\uD83D\uDE8C 수료 후 가장 가까운 <b>'+rec.r+' '+rec.t+'</b> 버스에 탑승하세요'; } else { recEl.style.display='none'; } }
+                else { recEl.style.display='none'; }
+            })();
         } else {
             // 운영부가 정확한 출발시간 미설정 → 시간 블록 자체를 숨김 + 신청 불가
             if (_bar) _bar.style.display = 'none';
             currentDepTime = null;
+            currentDepTime2 = null;
+            var _rec0=document.getElementById('shuttleRecommend'); if(_rec0) _rec0.style.display='none';
             const _sa = document.getElementById('shuttleSelectionArea'); if (_sa) _sa.style.display = 'none';
             const _ca = document.getElementById('shuttleCancelArea'); if (_ca) _ca.style.display = 'none';
         }
@@ -5784,6 +5811,7 @@ html, body {
 .kac-pbar .kac-pt{ font-size:16px; font-weight:800; color:#1e293b; letter-spacing:-.3px; }
 .kac-pbar .kac-px{ width:32px; height:32px; flex-shrink:0; border:none; border-radius:50%; background:#f1f5f9; color:#64748b; font-size:15px; cursor:pointer; display:flex; align-items:center; justify-content:center; padding:0; }
 .kac-pbar .kac-px:active{ background:#e2e8f0; transform:scale(.94); }
+.kac-pbar .kac-px:hover{ background:#ef4444; color:#fff; }
 
 /* 3) 패널 열린 동안 뒤 화면은 정지 — 레이아웃 흔들림(repaint flicker) 차단 */
 body.kac-panel-on #mainApp,

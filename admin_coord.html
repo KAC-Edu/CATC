@@ -7490,12 +7490,12 @@ function openOutingSummary(){
   let _wStart=Date.UTC(_nk.getUTCFullYear(),_nk.getUTCMonth(),_nk.getUTCDate(),9,0,0)-_KST;
   if(_nk.getUTCHours()<9) _wStart-=24*60*60*1000;
   const _wEnd=_wStart+24*60*60*1000;
-  let blocks=rooms.map(r=>{ const aa=r.room.admin_actions||{}; function _norm(x){return String(x==null?'':x).replace(/\s+/g,'').toLowerCase();} var _byName={}; ((typeof _studentsOf==='function'?_studentsOf(r.room):[])||[]).forEach(function(s){ if(s&&s.name) _byName[_norm(s.name)]=s; });
+  let blocks=rooms.map(r=>{ const aa=r.room.admin_actions||{}; function _norm(x){return String(x==null?'':x).replace(/\s+/g,'').toLowerCase();} var _byName={}; ((r.room.coordRoster&&Array.isArray(r.room.coordRoster.list))?r.room.coordRoster.list:[]).forEach(function(s){ if(s&&s.name) _byName[_norm(s.name)]=s; }); ((typeof _studentsOf==='function'?_studentsOf(r.room):[])||[]).forEach(function(s){ if(s&&s.name && !_byName[_norm(s.name)]) _byName[_norm(s.name)]=s; });
     let list=[];
     Object.keys(aa).forEach(dt=>{ if(!/^\d{4}-\d{2}-\d{2}$/.test(dt)) return; Object.values(aa[dt]||{}).forEach(a=>{ if(a&&a.name&&(a.timestamp||0)>=_wStart&&(a.timestamp||0)<_wEnd) list.push(Object.assign({date:dt},a)); }); });
     if(!list.length) return '';
     list.sort((a,b)=>(''+(a.date||'')).localeCompare(''+(b.date||''))||((a.timestamp||0)-(b.timestamp||0)));
-    const rows=list.map((a,i)=>{ var _st=_byName[_norm(a.name)]||{}; var _sabun=a.empNo||a.sabun||_st.empNo||_st.sabun||_st.id||_st.studentId||'-'; var _dept=a.dept||_st.dept||_st.affil||_st.org||_st.position||'-'; var _phone=a.phone||a.contact||a.tel||_st.phone||_st.contact||_st.tel||_st.mobile||'-'; return `<tr><td style="color:#94a3b8;">${i+1}</td><td style="color:#64748b;white-space:nowrap;">${_esc(_sabun)}</td><td style="text-align:left;color:#475569;">${_esc(_dept)}</td><td style="color:#64748b;white-space:nowrap;">${_esc(_phone)}</td><td style="font-weight:800;">${_esc(a.name||'-')}</td></tr>`; }).join('');
+    const rows=list.map((a,i)=>{ var _st=_byName[_norm(a.name)]||{}; var _sabun=a.empNo||a.sabun||a.empno||_st.empNo||_st.sabun||_st.empno||_st.id||_st.studentId||'-'; var _dept=a.dept||_st.dept||_st.affil||_st.org||_st.position||'-'; var _phone=a.phone||a.contact||a.tel||_st.phone||_st.contact||_st.tel||_st.mobile||'-'; return `<tr><td style="color:#94a3b8;">${i+1}</td><td style="color:#64748b;white-space:nowrap;">${_esc(_sabun)}</td><td style="text-align:left;color:#475569;">${_esc(_dept)}</td><td style="color:#64748b;white-space:nowrap;">${_esc(_phone)}</td><td style="font-weight:800;">${_esc(a.name||'-')}</td></tr>`; }).join('');
     return `<div class="cpop-course"><div class="cpop-course-h">ROOM #${_esc(r.rid)} · ${_esc(r.s.courseName||'-')} <span style="color:#ea580c;font-size:14px;">${list.length}건</span></div>
       <table class="cpop-table" style="table-layout:fixed;"><colgroup><col style="width:9%"><col style="width:18%"><col style="width:33%"><col style="width:22%"><col style="width:18%"></colgroup><thead><tr><th>연번</th><th>사번</th><th style="text-align:left;">소속</th><th>연락처</th><th>성명</th></tr></thead><tbody>${rows}</tbody></table></div>`;
   }).join('');
@@ -7688,13 +7688,6 @@ function openShuttleSummary(){
           +'<div style="text-align:center;min-width:44px;"><div style="font-size:12.5px;font-weight:800;color:#10b981;">공항</div><div style="font-size:24px;font-weight:900;color:#10b981;line-height:1.15;">'+c.airport+'</div></div>'
           +'<div style="width:1px;height:38px;background:#e2e8f0;"></div>'
           +'<div style="text-align:center;min-width:58px;"><div style="font-size:12.5px;font-weight:800;color:#0f172a;">총 신청</div><div style="font-size:30px;font-weight:900;color:#1e3a8a;line-height:1.1;">'+tot+'</div></div>'
-          +'<div style="width:1px;height:40px;background:#e2e8f0;"></div>'
-          +'<div onclick="event.stopPropagation();" style="display:flex;align-items:center;gap:7px;flex-shrink:0;">'
-            +'<div style="display:flex;flex-direction:column;gap:2px;text-align:right;"><span style="font-size:11px;font-weight:800;color:#1e3a8a;white-space:nowrap;"><i class="fa-solid fa-bus"></i> 출발시간</span><span style="font-size:10.5px;font-weight:700;color:'+(_depAnn?'#16a34a':'#94a3b8')+';white-space:nowrap;">'+_depTxt+'</span></div>'
-            +'<select id="coordShtDepSel'+idx+'" style="padding:8px 10px;border:1.5px solid #cbd5e1;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;">'+_dopts+'</select>'
-            +'<button onclick="coordSetDepartureFor(\''+_esc(r.rid)+'\', document.getElementById(\'coordShtDepSel'+idx+'\').value)" style="padding:8px 14px;background:#22c55e;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:800;cursor:pointer;white-space:nowrap;"><i class="fa-solid fa-bullhorn"></i> 공지</button>'
-            +(_depAnn?'<button onclick="coordCancelDepartureFor(\''+_esc(r.rid)+'\')" style="padding:8px 10px;background:#f1f5f9;color:#64748b;border:1px solid #e2e8f0;border-radius:8px;font-size:12px;cursor:pointer;">취소</button>':'')
-          +'</div>'
           +'<i class="fa-solid fa-chevron-down crow-chev" id="coordShtChev'+idx+'" style="margin-left:6px;"></i>'
         +'</div>'
       +'</div>'
@@ -7702,10 +7695,59 @@ function openShuttleSummary(){
     +'</div>';
   }).join('');
   if(!blocks.trim()) blocks='<div class="cpop-empty">신청된 퇴교차량이 없습니다.</div>';
-  _cpop('<i class="fa-solid fa-bus"></i> 퇴교차량 신청 현황 (과정별)', '<div style="display:flex;flex-direction:column;gap:16px;">'+blocks+'</div>');
+  _cpop('<i class="fa-solid fa-bus"></i> 퇴교차량 신청 현황 (과정별)', _coordShuttleRoundsHtml()+'<div style="display:flex;flex-direction:column;gap:16px;">'+blocks+'</div>');
   window._coordPopupRefresh=openShuttleSummary;
   if(window._coordShtOpenIdx!=null){ var _ob=document.getElementById('coordShtBody'+window._coordShtOpenIdx); var _oc=document.getElementById('coordShtChev'+window._coordShtOpenIdx); if(_ob){ _ob.style.display='block'; if(_oc) _oc.style.transform='rotate(180deg)'; } }
 }
+function _coordShuttleRoundsHtml(){
+  var sd=window._shuttleDep||{}; var r1=sd.round1||'', r2=sd.round2||''; var on=!!(r1||r2);
+  var isTime=function(v){ return /^\d{1,2}:\d{2}$/.test(v); };
+  var r2time=isTime(r2)?r2:''; var mode=r2time?'yes':((r2==='운행안함')?'no':'');
+  window._coordSht2Mode=mode;
+  var times=['13:00','13:30','14:00','14:30','15:00','15:30','16:00','16:30','17:00'];
+  function opts(cur,mij){ var h='<option value="">시간 선택</option>'; if(mij) h+='<option value="미정"'+(cur==='미정'?' selected':'')+'>미정(추후 공지)</option>'; h+=times.map(function(t){return '<option value="'+t+'"'+(t===cur?' selected':'')+'>'+t+'</option>';}).join(''); return h; }
+  var bg= on?'background:linear-gradient(135deg,#f0fdf4,#dcfce7);border:2px solid #22c55e;':'background:#f8fafc;border:2px solid #e2e8f0;';
+  var yA=(mode==='yes'), nA=(mode==='no');
+  function qbtn(id,fn,label,active,col){ return '<button type="button" id="'+id+'" onclick="'+fn+'" style="padding:8px 16px;border-radius:9px;font-size:13px;font-weight:800;cursor:pointer;border:1.5px solid '+(active?col:'#cbd5e1')+';background:'+(active?col:'#fff')+';color:'+(active?'#fff':'#475569')+';">'+label+'</button>'; }
+  return '<div id="coordShuttleRoundBox" style="'+bg+'border-radius:14px;padding:16px 18px;margin-bottom:16px;">'
+    +'<div style="font-size:15px;font-weight:900;color:'+(on?'#15803d':'#1e3a8a')+';display:flex;align-items:center;gap:8px;margin-bottom:13px;"><i class="fa-solid fa-bus"></i> 퇴교차량 출발시간 <span style="font-size:12px;font-weight:700;color:#94a3b8;">· 전 과정 공통</span></div>'
+    +'<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;"><span style="width:34px;font-size:14px;font-weight:900;color:#1e3a8a;">1차</span><select id="coordShtR1" style="flex:1;padding:11px 12px;border:1.5px solid #cbd5e1;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;">'+opts(r1,true)+'</select></div>'
+    +'<div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-bottom:12px;"><span style="font-size:13.5px;font-weight:800;color:#475569;">추가 퇴교차량(2차) 예정인가요?</span>'+qbtn('coordSht2YesBtn',"coordSht2Set('yes')",'예',yA,'#2563eb')+qbtn('coordSht2NoBtn',"coordSht2Set('no')",'아니오 (운행안함)',nA,'#dc2626')+'</div>'
+    +'<div id="coordSht2Row" style="display:'+(yA?'flex':'none')+';align-items:center;gap:10px;margin-bottom:14px;"><span style="width:34px;font-size:14px;font-weight:900;color:#1e3a8a;">2차</span><select id="coordShtR2" style="flex:1;padding:11px 12px;border:1.5px solid #cbd5e1;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;">'+opts(r2time,false)+'</select></div>'
+    +'<div style="display:flex;gap:8px;align-items:center;">'
+      +'<button onclick="coordSetShuttleRounds()" style="flex:1;padding:12px 18px;background:#22c55e;color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:900;cursor:pointer;"><i class="fa-solid fa-bullhorn"></i> 공지</button>'
+      +(on?'<button onclick="coordClearShuttleRounds()" style="padding:12px 16px;background:#fff;color:#64748b;border:1px solid #e2e8f0;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;">초기화</button>':'')
+    +'</div>'
+    +(on?('<div style="margin-top:11px;font-size:13px;font-weight:800;color:#15803d;">✅ 공지됨 · 1차 '+_esc(r1||'-')+(r2time?(' / 2차 '+r2time):' / 2차 운행안함')+'</div>'):'')
+    +'</div>';
+}
+window.coordSht2Set=function(m){
+  window._coordSht2Mode=m;
+  var row=document.getElementById('coordSht2Row');
+  var yb=document.getElementById('coordSht2YesBtn'), nb=document.getElementById('coordSht2NoBtn');
+  if(row) row.style.display=(m==='yes')?'flex':'none';
+  if(yb){ var y=(m==='yes'); yb.style.background=y?'#2563eb':'#fff'; yb.style.color=y?'#fff':'#475569'; yb.style.borderColor=y?'#2563eb':'#cbd5e1'; }
+  if(nb){ var n=(m==='no'); nb.style.background=n?'#dc2626':'#fff'; nb.style.color=n?'#fff':'#475569'; nb.style.borderColor=n?'#dc2626':'#cbd5e1'; }
+};
+window.coordSetShuttleRounds=function(){
+  var r1=(document.getElementById('coordShtR1')||{}).value||'';
+  if(!r1){ if(typeof showKacAlert==='function') showKacAlert('1차 출발시간을 먼저 선택하세요.'); else alert('1차 출발시간을 먼저 선택하세요.'); return; }
+  var mode=window._coordSht2Mode||'';
+  var r2='운행안함';
+  if(mode==='yes'){ var v=(document.getElementById('coordShtR2')||{}).value||''; if(!v){ if(typeof showKacAlert==='function') showKacAlert('2차 출발시간을 선택하거나 \'아니오\'를 눌러주세요.'); else alert('2차 출발시간을 선택하거나 아니오를 눌러주세요.'); return; } r2=v; }
+  var today=(typeof _coordToday==='function'?_coordToday():new Date().toISOString().slice(0,10));
+  var label='1차 '+r1+(r2==='운행안함'?' / 2차 운행안함':(' / 2차 '+r2));
+  firebase.database().ref('system/shuttle_departure').set({round1:r1, round2:r2, announced:true, date:today, ts:Date.now()});
+  firebase.database().ref('system/shuttle_notice').set(today+' '+label+' 퇴교차량');
+  try{ _coordActiveRooms().forEach(function(rm){ firebase.database().ref('courses/'+rm.rid+'/shuttle/departure').set({time:r1, time2:r2, date:today, announced:true, ts:Date.now()}); }); }catch(e){}
+  if(typeof showKacAlert==='function') showKacAlert('✅ 퇴교차량 출발시간이 공지되었습니다.\n'+label);
+};
+window.coordClearShuttleRounds=function(){
+  firebase.database().ref('system/shuttle_departure').remove();
+  firebase.database().ref('system/shuttle_notice').remove();
+  try{ _coordActiveRooms().forEach(function(rm){ firebase.database().ref('courses/'+rm.rid+'/shuttle/departure').remove(); }); }catch(e){}
+};
+(function initShuttleDep(){ try{ if(!window.firebase||!firebase.database){ setTimeout(initShuttleDep,400); return; } firebase.database().ref('system/shuttle_departure').on('value', function(s){ window._shuttleDep=s.val()||{}; try{ if(window._coordPopupRefresh===openShuttleSummary && document.getElementById('coordPopup') && document.getElementById('coordPopup').classList.contains('open')) openShuttleSummary(); }catch(e){} }); }catch(e){ setTimeout(initShuttleDep,800); } })();
 function toggleAcc(el){ const card=el.closest('.acc'); if(card) card.classList.toggle('collapsed'); }
 </script>
 <script>
