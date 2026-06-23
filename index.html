@@ -681,7 +681,7 @@
             <div class="menu-item" onclick="openHrdAttendanceApp()"><i class="fa-solid fa-id-card-clip"></i> 고용노동부 출결 앱 (설치/실행)</div>
             <div class="menu-item" onclick="openInstallGuide()"><i class="fa-solid fa-mobile-screen-button"></i> 앱 설치 (홈 화면에 추가)</div>
             </div>
-            <button type="button" class="menu-close-x" onclick="this.classList.add('spin'); closeMainMenu();" aria-label="닫기"><i class="fa-solid fa-xmark"></i></button>
+            <button type="button" class="menu-close-x" onclick="closeMainMenu();" aria-label="닫기"><i class="fa-solid fa-xmark"></i></button>
         </div>
     </div>
 
@@ -5933,7 +5933,7 @@ html, body {
 .kac-pbar .kac-px:hover{ background:#ef4444; color:#fff; }
 /* [공통] 모든 X(닫기) 아이콘 버튼: 누르면 90도 회전 + 빨간색 */
 .kac-px, .kac-modal-x, button[aria-label="닫기"]{ transition: transform .3s ease, background .25s ease, color .25s ease; }
-.x-rot{ transform: rotate(90deg) !important; background:#fee2e2 !important; color:#dc2626 !important; }
+.x-rot{ transform: rotate(90deg) !important; background:#fee2e2 !important; background-image:none !important; color:#dc2626 !important; box-shadow:none !important; }
 
 /* 3) 패널 열린 동안 뒤 화면은 정지 — 레이아웃 흔들림(repaint flicker) 차단 */
 body.kac-panel-on #mainApp,
