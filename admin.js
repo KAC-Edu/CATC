@@ -5383,7 +5383,7 @@ resetShuttleRequests: function() {
         const d=window._homeStatsData||{}, today=window._homeStatsToday||getTodayString();
         modal.style.display='flex';
         // 교육생 현황(students)은 우측 지도까지 들어가므로 모달을 넓힘. 그 외 타입은 기본 폭.
-        try{ const _box=modal.querySelector('div'); if(_box) _box.style.maxWidth=(type==='students')?'1140px':'720px'; }catch(e){}
+        try{ const _box=modal.querySelector('div'); if(_box){ _box.style.maxWidth=(type==='students')?'1140px':'720px'; _box.style.maxHeight=(type==='students')?'94vh':'82vh'; } }catch(e){}
         const esc=function(s){return (s==null?'':String(s)).replace(/[&<>"]/g,function(c){return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]);});};
         // 카드 집계와 동일 기준: 현재 과정이 배정된 active 방 OR 이번 주와 겹치는 과정
         const weekRooms=Object.entries(d).filter(([,r])=>{
@@ -5469,7 +5469,7 @@ resetShuttleRequests: function() {
             const _mapPanel = `<div style="display:flex;flex-direction:column;gap:8px;">`
                 + `<div style="font-size:16px;font-weight:900;color:#0f172a;">🗺️ 이번 주 전체 교육생 출신지 분포</div>`
                 + `<div style="font-size:12px;color:#94a3b8;font-weight:700;">예정 명단 소속 기준 · 총 ${_aggTotal+_aggUnknown}명</div>`
-                + `<div id="homeStatMapKakao" style="width:100%;height:42vh;min-height:280px;border-radius:14px;overflow:hidden;border:1px solid #e2e8f0;background:#eaf2fb;"></div>`
+                + `<div id="homeStatMapKakao" style="width:100%;height:36vh;min-height:250px;border-radius:14px;overflow:hidden;border:1px solid #e2e8f0;background:#eaf2fb;"></div>`
                 + `<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:6px;">${_distGrid}</div>`
                 + `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:9px;"><span style="font-weight:900;color:#166534;">합계</span><span style="font-weight:900;color:#16a34a;">${_aggTotal+_aggUnknown}명</span></div>`
                 + _unknownNote
