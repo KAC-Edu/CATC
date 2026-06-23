@@ -6155,7 +6155,7 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
 #dormKioskModal tbody td{ padding:16px 14px; border-bottom:1px solid rgba(255,255,255,.07); text-align:center; }
 #dormKioskModal tbody tr:nth-child(even){ background:rgba(255,255,255,.025); }
 </style>
-<div id="dormKioskModal" style="display:none; position:fixed; inset:0; z-index:100000; background:linear-gradient(160deg,#0b1220,#0f172a); color:#e2e8f0; flex-direction:column; font-family:'Pretendard','Noto Sans KR',sans-serif;">
+<div id="dormKioskModal" style="display:none; position:fixed; inset:0; z-index:100000; overflow-x:hidden; overflow-y:auto; background:linear-gradient(160deg,#0b1220,#0f172a);"><div id="dormKioskScale" style="width:1360px; transform-origin:top left; color:#e2e8f0; font-family:'Pretendard','Noto Sans KR',sans-serif;">
   <div style="display:flex; align-items:flex-start; justify-content:space-between; padding:26px 40px 16px;">
     <div style="display:flex; align-items:center; gap:16px;">
       <i class="fa-solid fa-plane-departure" style="font-size:34px; color:#3b82f6;"></i>
@@ -6188,6 +6188,7 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
     </table>
   </div>
 </div>
+</div>
 <script>
 (function(){
   const dormKiosk = {
@@ -6195,6 +6196,15 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
     init:function(){
       var clock=document.getElementById('dormKioskClock');
       if(clock) this._bindLongPress(clock, 5000, function(){ dormKiosk.close(); }, 'dormKioskExitHint');
+    },
+    _fit:function(){
+      var w=document.getElementById('dormKioskScale'); if(!w) return;
+      var DESIGN=1360, vw=window.innerWidth||DESIGN;
+      var sc=Math.min(1, vw/DESIGN);
+      w.style.transform='scale('+sc+')';
+      var visW=DESIGN*sc;
+      w.style.marginLeft=Math.max(0,(vw-visW)/2)+'px';
+      w.style.marginBottom=(-(w.offsetHeight*(1-sc)))+'px';
     },
     _bindLongPress:function(el,dur,cb,hintId){
       var t=null,raf=null,start=0;
@@ -6210,9 +6220,9 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
     },
     open:function(){
       var self=this;
-      if(!this._rosterSub){ this._rosterSub=true; try{ db.ref('system/dorm/rosters').on('value', function(s){ self._rosters=s.val()||{}; var m=document.getElementById('dormKioskModal'); if(m&&m.style.display==='flex') self.render(); }); }catch(e){} }
+      if(!this._rosterSub){ this._rosterSub=true; try{ db.ref('system/dorm/rosters').on('value', function(s){ self._rosters=s.val()||{}; var m=document.getElementById('dormKioskModal'); if(m&&m.style.display!=='none'){ self.render(); self._fit(); } }); }catch(e){} }
       this.render();
-      var m=document.getElementById('dormKioskModal'); if(m) m.style.display='flex';
+      var m=document.getElementById('dormKioskModal'); if(m){ m.style.display='block'; this._fit(); }
       try{ var de=document.documentElement; var fn=de.requestFullscreen||de.webkitRequestFullscreen||de.msRequestFullscreen; if(fn) fn.call(de); }catch(e){}
       this._tick(); this._clock=setInterval(function(){ self._tick(); },1000);
       this._refresh=setInterval(function(){ self.render(); },30000);
@@ -6281,9 +6291,10 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
   };
   window.dormKiosk=dormKiosk;
   dormKiosk.init();
+  window.addEventListener('resize', function(){ var m=document.getElementById('dormKioskModal'); if(m&&m.style.display!=='none') dormKiosk._fit(); });
 
   // 시계 외 종료 보조: Esc
-  document.addEventListener('keydown', function(e){ if(e.key==='Escape'){ var m=document.getElementById('dormKioskModal'); if(m&&m.style.display==='flex') dormKiosk.close(); } });
+  document.addEventListener('keydown', function(e){ if(e.key==='Escape'){ var m=document.getElementById('dormKioskModal'); if(m&&m.style.display!=='none') dormKiosk.close(); } });
 
   // 침대(브랜드) 롱프레스: 짧게=새로고침(기존 onclick 유지) / 5초=키오스크 진입(+진행바)
   (function(){
