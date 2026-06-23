@@ -61,6 +61,7 @@
     .edu-card.unset{ background:linear-gradient(160deg,#fff5f5 0%,#fee2e2 100%); border-color:#fca5a5; }
     .edu-card.unset .ec-top{ color:#b91c1c; } .edu-card.unset .ec-ic{ background:#fecaca; color:#dc2626; }
     .edu-card.unset .ec-place{ color:#dc2626; }
+    .edu-select{ position:absolute; inset:0; width:100%; height:100%; opacity:0; border:none; background:transparent; -webkit-appearance:none; appearance:none; cursor:pointer; font-size:16px; }
 
     /* 과정 카드 */
     .crd{ background:#fff; border:1.5px solid var(--line); border-radius:18px; padding:15px 16px; margin-bottom:12px; cursor:pointer; transition:transform .12s ease, box-shadow .15s, border-color .15s, background .15s; box-shadow:var(--shadow); }
@@ -79,7 +80,7 @@
     .empty{ text-align:center; color:var(--mute); font-weight:700; padding:42px 0; }
 
     /* 상세 오버레이 */
-    .ov{ position:fixed; inset:0; z-index:200; background:var(--bg); transform:translateX(100%); transition:transform .28s cubic-bezier(.4,0,.2,1); overflow-y:auto; -webkit-overflow-scrolling:touch; overscroll-behavior:contain; }
+    .ov{ position:fixed; inset:0; z-index:200; background:var(--bg); transform:translateX(100%); transition:transform .28s cubic-bezier(.4,0,.2,1); overflow-y:auto; -webkit-overflow-scrolling:touch; overscroll-behavior:none; }
     .ov.open{ transform:translateX(0); }
     .ov-head{ position:sticky; top:0; z-index:10; background:linear-gradient(135deg,#0b1f4d,#1e426f); color:#fff; padding:15px 16px; display:flex; align-items:center; gap:12px; box-shadow:0 6px 18px rgba(11,31,77,.28); border-radius:0 0 20px 20px; }
     .ov-head .bk{ width:40px; height:40px; flex-shrink:0; border-radius:12px; background:rgba(255,255,255,.18); border:1px solid rgba(255,255,255,.28); color:#fff; font-size:17px; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:transform .1s; }
@@ -161,15 +162,17 @@
   <div class="sec">
     <div class="sec-ttl"><i class="fa-solid fa-bullhorn"></i> 금주 공통 교육 장소 <span style="font-weight:700;color:#94a3b8;">· 전 과정 공통</span></div>
     <div class="edu-row">
-      <div class="edu-card unset" id="eduIntegrity" onclick="openEduPicker('integrity')">
-        <i class="fa-solid fa-pen ec-edit"></i>
+      <div class="edu-card unset" id="eduIntegrity">
+        <i class="fa-solid fa-chevron-down ec-edit"></i>
         <div class="ec-top"><span class="ec-ic"><i class="fa-solid fa-scale-balanced"></i></span> 청렴교육</div>
         <div class="ec-place" id="eduIntegrityVal">미정</div>
+        <select class="edu-select" id="eduIntegritySel" onchange="setEduSel('integrity',this.value)" aria-label="청렴교육 장소 선택"></select>
       </div>
-      <div class="edu-card unset" id="eduUnion" onclick="openEduPicker('union')">
-        <i class="fa-solid fa-pen ec-edit"></i>
+      <div class="edu-card unset" id="eduUnion">
+        <i class="fa-solid fa-chevron-down ec-edit"></i>
         <div class="ec-top"><span class="ec-ic"><i class="fa-solid fa-handshake"></i></span> 노조교육</div>
         <div class="ec-place" id="eduUnionVal">미정</div>
+        <select class="edu-select" id="eduUnionSel" onchange="setEduSel('union',this.value)" aria-label="노조교육 장소 선택"></select>
       </div>
     </div>
   </div>
@@ -206,16 +209,6 @@
       <button class="btn btn-send" onclick="sendNotice()"><i class="fa-solid fa-paper-plane"></i> 공지 발송</button>
       <div class="hist" id="dHist"></div>
     </div>
-  </div>
-</div>
-
-<!-- 강의실 선택 시트 -->
-<div class="sheet-ov" id="roomSheet" onclick="if(event.target===this)closeEduPicker()">
-  <div class="sheet">
-    <h3 id="sheetTtl"><i class="fa-solid fa-door-open"></i> 장소 선택</h3>
-    <div class="note">사용 중인 강의실도 선택 가능합니다(해당 수업 강의실에서 진행). 모든 과정 담당자에게 실시간 공유됩니다.</div>
-    <button class="rbtn clear" onclick="setEdu('')"><i class="fa-solid fa-eraser"></i> 미정으로 초기화</button>
-    <div id="sheetRooms"></div>
   </div>
 </div>
 
@@ -313,14 +306,15 @@ function renderList(){
 
 /* 청렴/노조 카드 렌더 */
 function renderEdu(){
-  applyEduCard('eduIntegrity','eduIntegrityVal', EDU.integrity);
-  applyEduCard('eduUnion','eduUnionVal', EDU.union);
+  applyEduCard('eduIntegrity','eduIntegrityVal','eduIntegritySel', EDU.integrity);
+  applyEduCard('eduUnion','eduUnionVal','eduUnionSel', EDU.union);
 }
-function applyEduCard(cardId, valId, val){
-  var card=document.getElementById(cardId), v=document.getElementById(valId);
+function applyEduCard(cardId, valId, selId, val){
+  var card=document.getElementById(cardId), v=document.getElementById(valId), sel=document.getElementById(selId);
   var set=!!(val&&(''+val).trim());
   if(v) v.textContent=set?shortRoom(val):'미정';
   if(card){ card.classList.toggle('set',set); card.classList.toggle('unset',!set); }
+  if(sel && sel.value!==(val||'')) sel.value=(val||'');
 }
 
 /* 상세 열기/닫기 */
@@ -396,39 +390,35 @@ function sendNotice(){
   toast('✅ 강사플랫폼에 전송되었습니다');
 }
 
-/* 청렴/노조 장소 선택 시트 */
+/* 청렴/노조 장소 선택 — 드롭다운 */
 var ROOM_GROUPS=[
   {label:'하늘관', rooms:['하늘관 1층 대강당','하늘관 2층 A강의실','하늘관 2층 B강의실','하늘관 2층 C강의실','하늘관 2층 D강의실','하늘관 2층 E강의실','하늘관 2층 F강의실','하늘관 2층 G강의실']},
-  {label:'국제동', rooms:['국제동 1층 세미나홀','국제동 1층 A강의실','국제동 1층 B강의실','국제동 2층 항공정보통신시설 실습실','국제동 2층 VOR/DME/TACAN 실습실']},
+  {label:'국제동', rooms:['국제동 1층 세미나홀','국제동 1층 A강의실','국제동 1층 B강의실']},
   {label:'서울', rooms:['항공보안교육센터','항공훈련센터']},
   {label:'비대면', rooms:['온라인(Zoom)']}
 ];
-function openEduPicker(type){
-  eduType=type;
-  document.getElementById('sheetTtl').innerHTML=(type==='integrity')
-    ? '<i class="fa-solid fa-scale-balanced"></i> 청렴교육 장소 선택'
-    : '<i class="fa-solid fa-handshake"></i> 노조교육 장소 선택';
-  var html='';
+function eduOptionsHtml(){
+  var h='<option value="">미정 (선택 안 함)</option>';
   ROOM_GROUPS.forEach(function(g){
-    html+='<div class="grp">'+esc(g.label)+'</div><div class="rooms">'
-      +g.rooms.map(function(rm){return '<button class="rbtn" onclick="setEdu(this.getAttribute(\'data-v\'))" data-v="'+esc(rm)+'">'+esc(rm.split(' ').pop())+'</button>';}).join('')
-      +'</div>';
+    h+='<optgroup label="'+esc(g.label)+'">';
+    g.rooms.forEach(function(rm){ h+='<option value="'+esc(rm)+'">'+esc(rm)+'</option>'; });
+    h+='</optgroup>';
   });
   var bks=Object.keys(CUSTOM_ROOMS);
   if(bks.length){
-    html+='<div class="grp">추가된 강의실</div><div class="rooms">';
-    bks.forEach(function(b){ CUSTOM_ROOMS[b].forEach(function(nm){ html+='<button class="rbtn" onclick="setEdu(this.getAttribute(\'data-v\'))" data-v="'+esc(nm)+'">'+esc(nm)+'</button>'; }); });
-    html+='</div>';
+    h+='<optgroup label="추가된 강의실">';
+    bks.forEach(function(b){ CUSTOM_ROOMS[b].forEach(function(nm){ h+='<option value="'+esc(nm)+'">'+esc(nm)+'</option>'; }); });
+    h+='</optgroup>';
   }
-  document.getElementById('sheetRooms').innerHTML=html;
-  document.getElementById('roomSheet').classList.add('open');
-  document.body.style.overflow='hidden';
+  return h;
 }
-function closeEduPicker(){ document.getElementById('roomSheet').classList.remove('open'); document.body.style.overflow=(document.getElementById('detailOv').classList.contains('open')?'hidden':''); }
-function setEdu(val){
-  if(!eduType) return;
-  db.ref('system/eduLocations/'+eduType).set(val||null);
-  closeEduPicker();
+function buildEduSelects(){
+  var a=document.getElementById('eduIntegritySel'), b=document.getElementById('eduUnionSel');
+  if(a){ a.innerHTML=eduOptionsHtml(); a.value=(EDU.integrity||''); }
+  if(b){ b.innerHTML=eduOptionsHtml(); b.value=(EDU.union||''); }
+}
+function setEduSel(type, val){
+  db.ref('system/eduLocations/'+type).set(val||null);
   toast(val?('✅ '+shortRoom(val)+'(으)로 공지'):'미정으로 변경');
 }
 
@@ -455,7 +445,9 @@ db.ref('system/classrooms').on('value', function(snap){
   var v=snap.val()||{}, by={};
   Object.keys(v).forEach(function(k){ var it=v[k]; if(!it||!it.name) return; var b=(''+(it.building||'기타')).trim(); (by[b]=by[b]||[]).push((''+it.name).trim()); });
   CUSTOM_ROOMS=by;
+  buildEduSelects();
 });
+buildEduSelects();
 </script>
 </body>
 </html>

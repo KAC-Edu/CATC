@@ -7424,6 +7424,7 @@ function openEduPlacePicker(type){
     Array.prototype.slice.call(sel.options).forEach(function(o){
       if(!o.value || o.value==='direct' || o.value==='') return;
       var g=''; var og=o.parentNode; if(og && og.tagName==='OPTGROUP') g=og.label||'기타'; else g='기타';
+      if(g==='국제동' && /2\s*층/.test(o.text)) return; // [제외] 국제동 2층은 청렴/노조 장소 선택에서 표시 안 함
       if(!groups[g]){ groups[g]=[]; order.push(g); }
       groups[g].push({val:o.value, txt:o.text});
     });
