@@ -5350,7 +5350,7 @@ resetShuttleRequests: function() {
                     Object.values(_allActs[_dt]||{}).forEach(a=>{
                         if(a&&(a.type==='outing'||a.type==='overnight'||a.type==='group_outing')){
                             const _ts=a.timestamp||0;
-                            if(_ts>=_ow.start && _ts<_ow.end) outingTotal++;
+                            if(_ts>=_ow.start && _ts<_ow.end && !(a.returned===true||a.returnReportTime)) outingTotal++;
                         }
                     });
                 });
@@ -5532,7 +5532,7 @@ resetShuttleRequests: function() {
                 const _ow=getOutingWindowKST();
                 const _allActs=r.admin_actions||{};
                 const outs=[];
-                Object.keys(_allActs).forEach(_dt=>{ const _day=_allActs[_dt]||{}; Object.keys(_day).forEach(_tk=>{ const a=_day[_tk]; if(a&&(a.type==='outing'||a.type==='overnight'||a.type==='group_outing')){ const _ts=a.timestamp||0; if(_ts>=_ow.start&&_ts<_ow.end) outs.push(a); } }); });
+                Object.keys(_allActs).forEach(_dt=>{ const _day=_allActs[_dt]||{}; Object.keys(_day).forEach(_tk=>{ const a=_day[_tk]; if(a&&(a.type==='outing'||a.type==='overnight'||a.type==='group_outing')){ const _ts=a.timestamp||0; if(_ts>=_ow.start&&_ts<_ow.end && !(a.returned===true||a.returnReportTime)) outs.push(a); } }); });
                 if(!outs.length) return '';
                 const tbl='<table style="width:100%;table-layout:fixed;border-collapse:collapse;font-size:13px;margin-top:10px;">'
                   +'<colgroup><col style="width:9%"><col style="width:24%"><col style="width:13%"><col style="width:29%"><col style="width:25%"></colgroup>'
@@ -11029,202 +11029,38 @@ ui.openStudentMap = async function(){
   }catch(e){}
   var counts={}, unknown=0, total=0;
   list.forEach(function(pp){ var reg=ui._deptToRegion(pp&&pp.dept||''); if(reg){ counts[reg]=(counts[reg]||0)+1; total++; } else { unknown++; } });
-  // 지도 핀
-  var pins='';
-  Object.keys(ui._mapRegions).forEach(function(name){
-    var r=ui._mapRegions[name]; var c=counts[name]||0;
-    if(c>0){
-      pins += '<g>'
-        + '<text x="'+r.x+'" y="'+(r.y-19)+'" text-anchor="middle" font-size="12" font-weight="800" fill="#0f172a">'+name+'</text>'
-        + '<circle cx="'+r.x+'" cy="'+r.y+'" r="15" fill="#10b981" stroke="#fff" stroke-width="2.5"/>'
-        + '<text x="'+r.x+'" y="'+(r.y+5)+'" text-anchor="middle" font-size="14" font-weight="900" fill="#fff">'+c+'</text>'
-        + '</g>';
-    } else if(r.air){
-      pins += '<g>'
-        + '<circle cx="'+r.x+'" cy="'+r.y+'" r="3.5" fill="#cbd5e1"/>'
-        + '<text x="'+r.x+'" y="'+(r.y-7)+'" text-anchor="middle" font-size="9.5" font-weight="700" fill="#b6c2d2">'+name+'</text>'
-        + '</g>';
-    }
-  });
-  var outline='<path d="M278.1,39.2C295.8,60.2 349.8,156.9 369.3,197.9C388.9,238.9 390.9,244.7 395.4,285C399.9,325.3 402.7,401.8 396.2,439.9C389.7,478 379,497.2 356.4,513.8C333.8,530.4 290.8,526.1 260.8,539.7C230.8,553.3 206.2,584.2 176.3,595.4C146.4,606.6 99,617.2 81.2,606.9C63.4,596.6 68,562.7 69.3,533.7C70.6,504.7 93.4,473 88.9,432.9C84.4,392.8 36.9,320 42.2,292.9C47.5,265.8 119.7,293.2 120.7,270.3C121.7,247.4 59.3,176.4 48.3,155.2C37.3,134 45.9,144.2 54.9,143C63.9,141.8 87.4,157.1 102.1,147.8C116.8,138.5 123.9,98.3 143.2,87.1C162.5,75.9 198,83.1 217.9,80.6C237.8,78 252.9,78.7 262.9,71.8C272.9,64.9 260.4,18.2 278.1,39.2Z" fill="#eef6ff" stroke="#9ec5fe" stroke-width="1.5" stroke-linejoin="round"/>'
-    + '<path d="M132.3,740C132.3,736.7 130.7,733.1 127.9,730.1C125.1,727.1 120.6,724.2 115.6,722.2C110.6,720.2 104,718.5 97.8,717.8C91.5,717.1 84.3,717.1 78.1,717.8C71.8,718.5 65.3,720.2 60.3,722.2C55.3,724.2 50.8,727.1 48,730.1C45.2,733.1 43.6,736.7 43.6,740C43.6,743.3 45.2,747 48,750C50.8,753 55.3,755.9 60.3,757.9C65.3,759.9 71.8,761.6 78.1,762.3C84.3,763 91.5,763 97.8,762.3C104,761.6 110.6,759.9 115.6,757.9C120.6,755.9 125.1,753 127.9,750C130.7,747 132.3,743.3 132.3,740Z" fill="#eef6ff" stroke="#9ec5fe" stroke-width="1.5" stroke-linejoin="round"/>';
-  // 요약 리스트(인원 많은 순)
-  var sorted=Object.keys(counts).sort(function(a,b){return counts[b]-counts[a];});
-  var rows = sorted.length ? sorted.map(function(n){ return '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;border-bottom:1px solid #f1f5f9;"><span style="font-weight:700;color:#334155;">'+n+'</span><span style="font-weight:900;color:#10b981;">'+counts[n]+'명</span></div>'; }).join('') : '<div style="padding:18px;color:#94a3b8;text-align:center;">명단이 없습니다.</div>';
-  var unknownNote = unknown ? '<div style="margin-top:8px;font-size:12px;color:#94a3b8;">· 소속 구분 불가 '+unknown+'명은 지도에서 제외</div>' : '';
-  var totalRow = '<div style="display:flex;justify-content:space-between;align-items:center;padding:11px 12px;background:#f0f7ff;border-top:2px solid #dbeafe;"><span style="font-weight:900;color:#1e3a8a;">합계</span><span style="font-weight:900;color:#2563eb;">'+(total+unknown)+'명</span></div>';
-  var html = '<div id="studentMapModal" style="position:fixed;inset:0;background:rgba(15,23,42,.6);z-index:99998;display:flex;align-items:center;justify-content:center;padding:20px;" onclick="if(event.target===this)ui.closeStudentMap()">'
-    + '<div style="background:#fff;border-radius:22px;max-width:880px;width:100%;max-height:92vh;overflow:auto;padding:26px 30px;position:relative;box-shadow:0 24px 60px rgba(15,23,42,.35);">'
-    + '<button onclick="ui.closeStudentMap()" style="position:absolute;top:16px;right:16px;width:38px;height:38px;border-radius:50%;border:none;background:#eef2f7;color:#475569;font-size:18px;cursor:pointer;">✕</button>'
-    + '<h2 style="margin:0 0 4px;font-size:22px;font-weight:900;color:#0f172a;">🗺️ 공항별 입교 현황</h2>'
-    + '<div style="font-size:13px;color:#64748b;font-weight:700;margin-bottom:14px;">Room #'+room+' · '+ (course||'-') +' · 예정 명단 소속 기준 (총 '+total+'명)</div>'
-    + '<div style="display:flex;gap:22px;flex-wrap:wrap;align-items:flex-start;">'
-    +   '<div style="flex:1;min-width:330px;"><div id="studentMapKakao" style="width:100%;height:72vh;min-height:420px;border-radius:14px;overflow:hidden;border:1px solid #e2e8f0;background:#eaf2fb;"></div></div>'
-    +   '<div style="width:240px;min-width:220px;"><div style="font-size:13px;font-weight:800;color:#475569;margin-bottom:6px;">공항별 인원</div><div style="border:1px solid #e2e8f0;border-radius:12px;overflow:hidden;">'+rows+totalRow+'</div>'+unknownNote+'</div>'
+  // ── 지역별 위경도(홈 통계 지도와 동일) + 카카오 분포지도 ──
+  ui._regionLL = ui._regionLL || { '서울':[37.5586,126.7906],'인천':[37.4602,126.4407],'강원':[37.8813,127.7300],'양양':[38.0613,128.6690],'원주':[37.4416,127.9606],'송탄':[37.0807,127.0353],'청주':[36.7166,127.4990],'예천':[36.6320,128.3549],'군산':[35.9038,126.6158],'대구':[35.8941,128.6586],'포항':[35.9879,129.4204],'울산':[35.5935,129.3517],'부안':[35.7316,126.7330],'광주':[35.1264,126.8089],'무안':[34.9914,126.3828],'여수':[34.8423,127.6168],'사천':[35.0886,128.0703],'김해':[35.1795,128.9382],'부산':[35.1796,129.0756],'제주':[33.5113,126.4930] };
+  var _sorted=Object.keys(counts).sort(function(a,b){ return counts[b]-counts[a]; });
+  var _distGrid = _sorted.length ? _sorted.map(function(n){ return '<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 12px;background:#f8fafc;border:1px solid #eef2f7;border-radius:8px;"><span style="font-weight:700;color:#334155;font-size:14px;">'+esc(n)+'</span><span style="font-weight:900;color:#10b981;font-size:14px;">'+counts[n]+'명</span></div>'; }).join('') : '<div style="grid-column:1/-1;padding:14px;color:#94a3b8;text-align:center;font-size:13px;">소속 정보가 없습니다.</div>';
+  var _unknownNote = unknown ? '<div style="font-size:12px;color:#94a3b8;margin-top:2px;">· 소속 구분 불가 '+unknown+'명은 지도에서 제외</div>' : '';
+  var _old=document.getElementById('studentMapModal'); if(_old) _old.remove();
+  var modal=document.createElement('div'); modal.id='studentMapModal';
+  modal.setAttribute('style','position:fixed;inset:0;z-index:9700;display:flex;align-items:center;justify-content:center;background:rgba(15,23,42,.55);backdrop-filter:blur(4px);padding:20px;');
+  modal.onclick=function(e){ if(e.target===modal) ui.closeStudentMap(); };
+  modal.innerHTML = '<div style="background:#fff;border-radius:22px;width:min(720px,96vw);max-height:92vh;overflow:auto;box-shadow:0 30px 70px rgba(0,0,0,.35);">'
+    + '<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:18px 22px;background:linear-gradient(135deg,#1e3a8a,#2563eb);color:#fff;position:sticky;top:0;z-index:2;">'
+      + '<div style="font-size:18px;font-weight:900;"><i class="fa-solid fa-map-location-dot" style="margin-right:8px;"></i>공항별 입교 현황 지도</div>'
+      + '<button onclick="ui.closeStudentMap()" style="background:rgba(255,255,255,.18);border:none;color:#fff;width:34px;height:34px;border-radius:50%;font-size:18px;cursor:pointer;">&times;</button>'
     + '</div>'
+    + '<div style="padding:18px 22px;">'
+      + '<div style="font-size:13.5px;color:#64748b;font-weight:800;margin-bottom:12px;">'+esc(course||'현재 과정')+' · 전체 '+total+'명</div>'
+      + '<div id="studentMapKakao" style="width:100%;height:46vh;min-height:300px;border-radius:14px;overflow:hidden;border:1px solid #e2e8f0;background:#eaf2fb;"></div>'
+      + '<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:6px;margin-top:12px;">'+_distGrid+'</div>'
+      + '<div style="display:flex;justify-content:space-between;align-items:center;padding:9px 13px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:9px;margin-top:8px;"><span style="font-weight:900;color:#166534;">합계</span><span style="font-weight:900;color:#16a34a;">'+(total+unknown)+'명</span></div>'
+      + _unknownNote
     + '</div></div>';
-  var wrap=document.createElement('div'); wrap.innerHTML=html; document.body.appendChild(wrap.firstChild);
-  try{ _unifyXClose(document.getElementById('studentMapModal')); }catch(e){}
-  // ===== 실제 카카오맵 + 지역별 인원 마커 =====
-  ui._regionLL = ui._regionLL || {
-    '서울':[37.5586,126.7906], '인천':[37.4602,126.4407], '강원':[37.8813,127.7300],
-    '양양':[38.0613,128.6690], '원주':[37.4416,127.9606], '송탄':[37.0807,127.0353],
-    '청주':[36.7166,127.4990], '예천':[36.6320,128.3549], '군산':[35.9038,126.6158],
-    '대구':[35.8941,128.6586], '포항':[35.9879,129.4204], '울산':[35.5935,129.3517],
-    '부안':[35.7316,126.7330], '광주':[35.1264,126.8089], '무안':[34.9914,126.3828],
-    '여수':[34.8423,127.6168], '사천':[35.0886,128.0703], '김해':[35.1795,128.9382],
-    '부산':[35.1796,129.0756], '제주':[33.5113,126.4930]
-  };
-  function buildStudentMap(){
-    var el=document.getElementById('studentMapKakao'); if(!el || !(window.kakao&&kakao.maps&&kakao.maps.Map)) return;
-    var map=new kakao.maps.Map(el, { center:new kakao.maps.LatLng(36.4,127.9), level:13 });
+  document.body.appendChild(modal);
+  var _buildMap=function(){
+    var el=document.getElementById('studentMapKakao'); if(!el||!(window.kakao&&kakao.maps&&kakao.maps.Map)) return;
+    var map=new kakao.maps.Map(el,{ center:new kakao.maps.LatLng(36.4,127.9), level:13 });
     try{ map.addControl(new kakao.maps.ZoomControl(), kakao.maps.ControlPosition.RIGHT); }catch(e){}
-    var bounds=new kakao.maps.LatLngBounds(), any=false;
-    Object.keys(counts).forEach(function(name){
-      var ll=ui._regionLL[name]; if(!ll) return; var c=counts[name]; any=true;
-      var pos=new kakao.maps.LatLng(ll[0],ll[1]); bounds.extend(pos);
-      var sz=30+Math.min(c,12)*2;
-      var content='<div style="transform:translateY(-50%);display:flex;flex-direction:column;align-items:center;">'
-        +'<div style="width:'+sz+'px;height:'+sz+'px;border-radius:50%;background:linear-gradient(135deg,#3b82f6,#2563eb);color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:900;border:2.5px solid #fff;box-shadow:0 4px 12px rgba(37,99,235,.45);">'+c+'</div>'
-        +'<div style="margin-top:3px;background:rgba(255,255,255,.95);color:#0f172a;font-size:11px;font-weight:800;padding:1px 7px;border-radius:7px;box-shadow:0 1px 4px rgba(0,0,0,.18);white-space:nowrap;">'+name+'</div>'
-        +'</div>';
-      new kakao.maps.CustomOverlay({ map:map, position:pos, content:content, yAnchor:0.5, zIndex:5 });
-    });
-    if(any){ try{ map.setBounds(bounds, 70,70,70,70); }catch(e){} }
+    var bounds=new kakao.maps.LatLngBounds(); var any=false;
+    Object.keys(counts).forEach(function(name){ var ll=ui._regionLL[name]; if(!ll) return; var c=counts[name]; any=true; var pos=new kakao.maps.LatLng(ll[0],ll[1]); bounds.extend(pos); var sz=30+Math.min(c,14)*2; var content='<div style="transform:translateY(-50%);display:flex;flex-direction:column;align-items:center;"><div style="width:'+sz+'px;height:'+sz+'px;border-radius:50%;background:linear-gradient(135deg,#10b981,#059669);color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:900;border:2.5px solid #fff;box-shadow:0 4px 12px rgba(5,150,105,.45);">'+c+'</div><div style="margin-top:3px;background:rgba(255,255,255,.95);color:#0f172a;font-size:11px;font-weight:800;padding:1px 7px;border-radius:7px;box-shadow:0 1px 4px rgba(0,0,0,.18);white-space:nowrap;">'+name+'</div></div>'; new kakao.maps.CustomOverlay({ map:map, position:pos, content:content, yAnchor:0.5, zIndex:5 }); });
+    if(any){ try{ map.setBounds(bounds,70,70,70,70); }catch(e){} }
     setTimeout(function(){ try{ map.relayout(); if(any) map.setBounds(bounds,70,70,70,70); }catch(e){} }, 250);
-  }
-  if(window.kakao && kakao.maps && kakao.maps.Map){ buildStudentMap(); }
-  else if(window.kakao && kakao.maps && kakao.maps.load){ kakao.maps.load(buildStudentMap); }
-  else { var _t=0, _iv=setInterval(function(){ _t++; if(window.kakao&&kakao.maps){ clearInterval(_iv); (kakao.maps.load?kakao.maps.load(buildStudentMap):buildStudentMap()); } else if(_t>20){ clearInterval(_iv); } }, 300); }
-};
-
-/* 출석완료 숫자 클릭 → 관리 액션 팝업 */
-ui.openAttendanceActions = function(){ var m=document.getElementById('attendanceActionsModal'); if(m) m.style.display='flex'; };
-/* ===== [학생장 룰렛] 실제 회전 휠 ===== */
-ui._roulette = { pool:[], rot:0, spinning:false, winner:null };
-ui.openLeaderRoulette = async function(){
-  if(!state.room){ ui.showAlert('강의실을 먼저 선택하세요.'); return; }
-  var pool=[];
-  try{ var snap=await firebase.database().ref('courses/'+state.room+'/students').once('value'); var all=snap.val()||{};
-    pool=Object.keys(all).map(function(t){return {token:t,name:(all[t]&&all[t].name)||''};}).filter(function(x){return x.name&&x.name!=='undefined';}); }catch(e){}
-  if(pool.length<2){ ui.showAlert('QR로 입교한 교육생이 2명 이상이어야 추첨할 수 있습니다.'); return; }
-  ui._roulette={ pool:pool, rot:0, spinning:false, winner:null };
-  var N=pool.length, seg=360/N, cx=150, cy=150, R=140, rmid=92;
-  var COL=['#2563eb','#f59e0b','#10b981','#ef4444','#8b5cf6','#06b6d4','#ec4899','#f97316'];
-  function pt(r,deg){ var a=deg*Math.PI/180; return [ (cx+r*Math.sin(a)).toFixed(2), (cy-r*Math.cos(a)).toFixed(2) ]; }
-  var sectors='';
-  for(var i=0;i<N;i++){
-    var a0=i*seg, a1=(i+1)*seg, p0=pt(R,a0), p1=pt(R,a1), large=seg>180?1:0;
-    sectors+='<path d="M'+cx+' '+cy+' L'+p0[0]+' '+p0[1]+' A'+R+' '+R+' 0 '+large+' 1 '+p1[0]+' '+p1[1]+' Z" fill="'+COL[i%COL.length]+'" stroke="#ffffff" stroke-width="2"/>';
-    var am=i*seg+seg/2, tp=pt(rmid,am);
-    var nm=String(pool[i].name); if(nm.length>6) nm=nm.slice(0,6);
-    // 글자를 방사(세로)방향으로: 스포크를 따라 안→밖으로 읽히게. 왼쪽 절반은 뒤집어 안 뒤집히게.
-    var flip=(am>180); var trot=(am-90)+(flip?180:0);
-    sectors+='<text x="'+tp[0]+'" y="'+tp[1]+'" fill="#ffffff" font-size="'+(N>14?13:(N>10?15:17))+'" font-weight="800" text-anchor="middle" dominant-baseline="middle" transform="rotate('+trot.toFixed(2)+' '+tp[0]+' '+tp[1]+')">'+nm+'</text>';
-  }
-  var svg='<svg viewBox="0 0 300 300" style="width:100%;max-width:min(88vw,82vh);display:block;margin:0 auto;overflow:visible;">'
-    +'<defs>'
-    +'<radialGradient id="goGrad" cx="50%" cy="34%" r="72%"><stop offset="0%" stop-color="#3b82f6"/><stop offset="100%" stop-color="#1e3a8a"/></radialGradient>'
-    +'<filter id="wheelShadow" x="-25%" y="-25%" width="150%" height="150%"><feDropShadow dx="0" dy="7" stdDeviation="9" flood-color="#1e293b" flood-opacity="0.22"/></filter>'
-    +'</defs>'
-    +'<circle cx="150" cy="150" r="148" fill="#ffffff" filter="url(#wheelShadow)"/>'
-    +'<circle cx="150" cy="150" r="146" fill="none" stroke="#e2e8f0" stroke-width="3"/>'
-    +'<g id="wheelG" style="transform-origin:150px 150px; transition:transform 4.6s cubic-bezier(.17,.67,.2,1);">'
-    +'<circle cx="150" cy="150" r="143" fill="#f8fafc"/>'
-    + sectors
-    +'</g>'
-    +'<g style="cursor:pointer;" onclick="ui.wheelSpin()">'
-    +'<circle cx="150" cy="150" r="47" fill="url(#goGrad)" stroke="#fff" stroke-width="5"/>'
-    +'<text id="wheelGo" x="150" y="150" fill="#fff" font-size="30" font-weight="900" text-anchor="middle" dominant-baseline="middle" transform="rotate(-12 150 150)" style="letter-spacing:2px;font-style:italic;">GO</text>'
-    +'</g>'
-    +'<polygon points="272,150 303,134 303,166" fill="#ef4444" stroke="#fff" stroke-width="2.5" stroke-linejoin="round"/>'
-    +'</svg>';
-  var html='<div id="leaderRouletteModal" style="position:fixed;inset:0;z-index:99998;background:rgba(15,23,42,.6);display:flex;align-items:center;justify-content:center;padding:18px;" onclick="if(event.target===this)ui.closeLeaderRoulette()">'
-    +'<div style="background:#fff;border-radius:22px;max-width:760px;width:96vw;max-height:96vh;overflow:auto;padding:18px 16px;text-align:center;position:relative;box-shadow:0 24px 60px rgba(15,23,42,.35);">'
-    +'<button onclick="ui.closeLeaderRoulette()" style="position:absolute;top:14px;right:14px;width:34px;height:34px;border:none;border-radius:50%;background:#eef2f7;color:#475569;font-size:18px;cursor:pointer;z-index:2;">✕</button>'
-    +'<h2 style="margin:0 0 2px;font-size:21px;font-weight:900;color:#0f172a;">🎰 학생장 룰렛</h2>'
-    +'<div style="font-size:13px;color:#64748b;font-weight:700;margin-bottom:14px;">QR 입교 '+N+'명 · 가운데 GO를 눌러 돌리세요</div>'
-    + svg
-    +'<div id="rouletteResult" style="margin-top:14px;"></div>'
-    +'</div></div>';
-  var w=document.createElement('div'); w.innerHTML=html; document.body.appendChild(w.firstChild);
-  try{ _unifyXClose(document.getElementById('leaderRouletteModal')); }catch(e){}
-};
-ui.wheelSpin = function(){
-  var r=ui._roulette; if(!r||r.spinning) return; r.spinning=true;
-  var res=document.getElementById('rouletteResult'); if(res){ res.style.cssText='margin-top:14px;text-align:center;'; res.innerHTML='<div style="color:#94a3b8;font-size:14px;font-weight:700;">돌리는 중…</div>'; }
-  var N=r.pool.length, seg=360/N;
-  var wi=Math.floor(Math.random()*N); r.winner=r.pool[wi];
-  var Aw=wi*seg+seg/2;
-  var jitter=(Math.random()-0.5)*seg*0.5;
-  var base=r.rot;
-  var need=((90-Aw) - (base%360) + 720)%360;   // 마커가 3시(90°)에 오도록 정렬
-  var newRot=base + 360*6 + need + jitter;
-  r.rot=newRot;
-  var g=document.getElementById('wheelG'); if(g) g.style.transform='rotate('+newRot+'deg)';
-  setTimeout(function(){ ui._wheelDone(); }, 4750);
-};
-ui._wheelDone = function(){
-  var r=ui._roulette; if(!r) return; r.spinning=false; var w=r.winner; if(!w) return;
-  var res=document.getElementById('rouletteResult');
-  if(res){
-    res.style.cssText='position:fixed;left:50%;bottom:7vh;transform:translateX(-50%);z-index:100000;width:min(640px,94vw);';
-    res.innerHTML='<div style="background:rgba(255,255,255,0.97);border-radius:22px;padding:22px 26px;box-shadow:0 20px 60px rgba(0,0,0,.35);border:2px solid #dbeafe;text-align:center;">'
-    +'<div style="font-size:clamp(38px,7vw,62px);font-weight:900;color:#0f172a;line-height:1.1;letter-spacing:-1px;margin-bottom:16px;">🎉 '+w.name+' 님 당첨!</div>'
-    +'<button onclick="ui.rouletteAssign()" style="width:100%;height:56px;border:none;border-radius:14px;background:linear-gradient(135deg,#3b82f6,#2563eb);color:#fff;font-weight:900;font-size:18px;cursor:pointer;">👑 학생장으로 지정</button>'
-    +'<button onclick="ui.wheelSpin()" style="width:100%;margin-top:9px;height:46px;border:1px solid #e2e8f0;border-radius:14px;background:#fff;color:#64748b;font-weight:800;font-size:15px;cursor:pointer;">다시 돌리기</button>'
-    +'</div>'; }
-};
-ui.rouletteAssign = async function(){
-  var w=ui._roulette && ui._roulette.winner; if(!w) return;
-  try{
-    var snap=await firebase.database().ref('courses/'+state.room+'/students').once('value');
-    var all=snap.val()||{}; var ups={};
-    Object.keys(all).forEach(function(t){ if(all[t]&&all[t].isLeader) ups['courses/'+state.room+'/students/'+t+'/isLeader']=false; });
-    ups['courses/'+state.room+'/students/'+w.token+'/isLeader']=true;
-    await firebase.database().ref().update(ups);
-    ui.showAlert('👑 '+w.name+' 교육생이 학생장으로 지정되었습니다.');
-    ui.closeLeaderRoulette();
-  }catch(e){ ui.showAlert('지정 중 오류가 발생했습니다.'); }
-};
-ui.closeLeaderRoulette = function(){ var m=document.getElementById('leaderRouletteModal'); if(m) m.remove(); if(ui._roulette) ui._roulette.spinning=false; };
-
-
-// ===== 상단 '더보기' 우측 슬라이드 패널 (10초 미사용 시 자동 접힘) =====
-ui._moreArmAutoClose = function(){
-    if(ui._moreTimer){ clearTimeout(ui._moreTimer); }
-    ui._moreTimer = setTimeout(function(){ ui.closeMorePanel(); }, 10000);
-    var p=document.getElementById('moreMenuPanel');
-    if(p && !p._autoBound){ p._autoBound=true;
-        ['mousemove','touchstart','wheel','scroll','click','keydown'].forEach(function(ev){
-            p.addEventListener(ev, function(){ if(p.classList.contains('open')){ if(ui._moreTimer) clearTimeout(ui._moreTimer); ui._moreTimer=setTimeout(function(){ ui.closeMorePanel(); }, 10000); } }, {passive:true});
-        });
-    }
-};
-ui.openMorePanel = function(){
-    var p=document.getElementById('moreMenuPanel'), b=document.getElementById('moreMenuBackdrop');
-    if(!p) return;
-    if(b) b.style.display='block';
-    p.classList.add('open');
-    requestAnimationFrame(function(){ p.style.transform='translateX(0)'; });
-    var tab=document.getElementById('moreToggleTab'), ic=document.getElementById('moreToggleIcon');
-    if(tab){ tab.style.right = (p.getBoundingClientRect().width||300)+'px'; }
-    if(ic){ ic.style.transform='rotate(180deg)'; }
-    ui._moreArmAutoClose();
-};
-ui.closeMorePanel = function(){
-    var p=document.getElementById('moreMenuPanel'), b=document.getElementById('moreMenuBackdrop');
-    if(!p) return;
-    if(ui._moreTimer){ clearTimeout(ui._moreTimer); ui._moreTimer=null; }
-    p.style.transform='translateX(100%)';
-    p.classList.remove('open');
-    if(b) b.style.display='none';
-    var tab=document.getElementById('moreToggleTab'), ic=document.getElementById('moreToggleIcon');
-    if(tab){ tab.style.right='0'; }
-    if(ic){ ic.style.transform='rotate(0deg)'; }
-};
-ui.toggleMorePanel = function(){
-    var p=document.getElementById('moreMenuPanel');
-    if(p && p.classList.contains('open')){ ui.closeMorePanel(); }
-    else { ui.openMorePanel(); }
+  };
+  if(window.kakao && kakao.maps && kakao.maps.Map){ _buildMap(); }
+  else if(window.kakao && kakao.maps && kakao.maps.load){ kakao.maps.load(_buildMap); }
+  else { var _t=0; var _iv=setInterval(function(){ _t++; if(window.kakao&&kakao.maps){ clearInterval(_iv); (kakao.maps.load?kakao.maps.load(_buildMap):_buildMap()); } else if(_t>20){ clearInterval(_iv); } }, 300); }
 };

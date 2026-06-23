@@ -1282,11 +1282,18 @@ body.pc-mode .coord-sec-panel { background:#fff; border:1px solid #eef2f7; borde
 .cfp-imgbox.noimg .cfp-img{ display:none; }
 .cfp-noimg-msg{ display:none; }
 .cfp-imgbox.noimg .cfp-noimg-msg{ display:flex; position:absolute; inset:0; align-items:center; justify-content:center; text-align:center; padding:18px; color:#94a3b8; font-weight:700; font-size:13.5px; line-height:1.6; }
-.cfp-room{ position:absolute; transform:translate(-50%,-50%); display:flex; align-items:center; gap:6px; padding:7px 13px; border-radius:999px; font-weight:900; font-size:14px; white-space:nowrap; background:#e5e7eb; color:#94a3b8; border:1.5px solid #cbd5e1; box-shadow:0 2px 6px rgba(15,23,42,.10); z-index:2; }
+.cfp-slot{ position:absolute; transform:translate(-50%,-50%); display:flex; flex-direction:column; align-items:center; gap:5px; z-index:2; }
+.cfp-room{ display:flex; align-items:center; gap:6px; padding:7px 13px; border-radius:999px; font-weight:900; font-size:14px; white-space:nowrap; background:#e5e7eb; color:#94a3b8; border:1.5px solid #cbd5e1; box-shadow:0 2px 6px rgba(15,23,42,.10); transition:transform .12s; }
 .cfp-room.on{ background:linear-gradient(135deg,#16a34a,#15803d); color:#fff; border-color:#15803d; box-shadow:0 4px 14px rgba(22,163,74,.40); cursor:pointer; }
-.cfp-room.on:hover{ transform:translate(-50%,-50%) scale(1.06); }
+.cfp-room.on:hover{ transform:scale(1.06); }
 .cfp-room .cfp-dot{ width:8px; height:8px; border-radius:50%; background:#bbf7d0; box-shadow:0 0 0 0 rgba(187,247,208,.8); animation:cfpPulse 1.8s infinite; }
 @keyframes cfpPulse{ 0%{box-shadow:0 0 0 0 rgba(187,247,208,.7);} 70%{box-shadow:0 0 0 7px rgba(187,247,208,0);} 100%{box-shadow:0 0 0 0 rgba(187,247,208,0);} }
+.cfp-course{ font-size:11.5px; font-weight:800; color:#15803d; background:rgba(255,255,255,.92); padding:2px 9px; border-radius:8px; max-width:160px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; box-shadow:0 1px 5px rgba(0,0,0,.14); }
+.cfp-room.blink{ animation:cfpBlink .42s ease-in-out 5; }
+@keyframes cfpBlink{ 0%,100%{ transform:scale(1); } 50%{ transform:scale(1.22); box-shadow:0 0 0 9px rgba(34,197,94,.30),0 8px 22px rgba(22,163,74,.55); } }
+.cfp-bubble{ position:absolute; transform:translate(-50%,-130%); background:#1e3a8a; color:#fff; padding:9px 14px; border-radius:12px; font-weight:800; font-size:13px; white-space:nowrap; box-shadow:0 10px 24px rgba(30,58,138,.45); z-index:7; opacity:0; pointer-events:none; animation:cfpBubble 1.7s ease forwards; }
+.cfp-bubble::after{ content:''; position:absolute; left:50%; bottom:-7px; transform:translateX(-50%); border:7px solid transparent; border-top-color:#1e3a8a; border-bottom:0; }
+@keyframes cfpBubble{ 0%{opacity:0; transform:translate(-50%,-95%) scale(.6);} 14%{opacity:1; transform:translate(-50%,-130%) scale(1);} 82%{opacity:1; transform:translate(-50%,-130%) scale(1);} 100%{opacity:0; transform:translate(-50%,-145%) scale(.95);} }
 .cfp-legend{ display:flex; align-items:center; gap:18px; margin-top:10px; padding:0 4px; font-size:12.5px; font-weight:800; color:#475569; }
 .cfp-legend i.cfp-lg{ display:inline-block; width:13px; height:13px; border-radius:4px; background:#e5e7eb; border:1.5px solid #cbd5e1; vertical-align:-2px; margin-right:5px; }
 .cfp-legend i.cfp-lg.on{ background:linear-gradient(135deg,#16a34a,#15803d); border-color:#15803d; }
@@ -3123,7 +3130,8 @@ function updateGlobalStatus() {
         
         // 오늘 날짜 외출/외박 신청 건수
         if (room.admin_actions?.[tStr]) {
-            todayA += Object.keys(room.admin_actions[tStr]).length;
+            const _acts = room.admin_actions[tStr];
+            Object.keys(_acts).forEach(_k => { const _a = _acts[_k] || {}; if (!(_a.returned === true || _a.returnReportTime)) todayA++; }); // 복귀완료 차감
         }
 
         // 교육생 퇴교 셔틀 신청 인원 (자차 제외 여부는 기획에 맞게 조정 가능, 여기선 전체 신청자 카운트)
@@ -7678,7 +7686,7 @@ function openOutingSummary(){
   const _wEnd=_wStart+24*60*60*1000;
   let blocks=rooms.map(r=>{ const aa=r.room.admin_actions||{}; function _norm(x){return String(x==null?'':x).replace(/\s+/g,'').toLowerCase();} var _byName={}; ((r.room.coordRoster&&Array.isArray(r.room.coordRoster.list))?r.room.coordRoster.list:[]).forEach(function(s){ if(s&&s.name) _byName[_norm(s.name)]=s; }); ((typeof _studentsOf==='function'?_studentsOf(r.room):[])||[]).forEach(function(s){ if(s&&s.name && !_byName[_norm(s.name)]) _byName[_norm(s.name)]=s; });
     let list=[];
-    Object.keys(aa).forEach(dt=>{ if(!/^\d{4}-\d{2}-\d{2}$/.test(dt)) return; Object.values(aa[dt]||{}).forEach(a=>{ if(a&&a.name&&(a.timestamp||0)>=_wStart&&(a.timestamp||0)<_wEnd) list.push(Object.assign({date:dt},a)); }); });
+    Object.keys(aa).forEach(dt=>{ if(!/^\d{4}-\d{2}-\d{2}$/.test(dt)) return; Object.values(aa[dt]||{}).forEach(a=>{ if(a&&a.name&&(a.timestamp||0)>=_wStart&&(a.timestamp||0)<_wEnd && !(a.returned===true||a.returnReportTime)) list.push(Object.assign({date:dt},a)); }); });
     if(!list.length) return '';
     list.sort((a,b)=>(''+(a.date||'')).localeCompare(''+(b.date||''))||((a.timestamp||0)-(b.timestamp||0)));
     const rows=list.map((a,i)=>{ var _st=_byName[_norm(a.name)]||{}; var _ix=(window._coordSabunIdx||{})[_norm(a.name)]||{}; var _sabun=a.empNo||a.sabun||a.empno||_st.empNo||_st.sabun||_st.empno||_st.id||_st.studentId||_ix.sabun||'-'; var _dept=a.dept||_st.dept||_st.affil||_st.org||_st.position||_ix.dept||'-'; var _phone=a.phone||a.contact||a.tel||_st.phone||_st.contact||_st.tel||_st.mobile||'-'; return `<tr><td style="color:#94a3b8;">${i+1}</td><td style="color:#64748b;white-space:nowrap;">${_esc(_sabun)}</td><td style="text-align:left;color:#475569;">${_esc(_dept)}</td><td style="color:#64748b;white-space:nowrap;">${_esc(_phone)}</td><td style="font-weight:800;">${_esc(a.name||'-')}</td></tr>`; }).join('');
@@ -8271,7 +8279,7 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
   function _coordShortDate(d){ var p=String(d==null?'':d).trim().split('-'); if(p.length<3) return (d||'-'); return "'"+p[0].slice(2)+'.'+(+p[1])+'.'+(+p[2]); }
   function _coordShortPeriod(per){ var a=String(per==null?'':per).split('~'); if(a.length<2) return (per||'-'); return _coordShortDate(a[0].trim())+' ~ '+_coordShortDate(a[1].trim()); }
   // ── 강의실 위치(하늘관 2층 도면 위 라벨 좌표, %) — 필요시 수치만 조정 ──
-  var COORD_CLASS_POS = { E:{l:15,t:42}, D:{l:31,t:42}, B:{l:62,t:42}, A:{l:81,t:42}, G:{l:15,t:72}, F:{l:31,t:72}, C:{l:81,t:72} };
+  var COORD_CLASS_POS = { E:{l:15,t:35}, D:{l:31,t:35}, B:{l:62,t:35}, A:{l:81,t:35}, G:{l:15,t:65}, F:{l:31,t:65}, C:{l:81,t:65} };
   var COORD_FLOORPLAN_IMG = 'classroom_sky2f.png'; // GitHub 루트에 업로드할 빈 도면 파일명
   // roomDetailName(예: '하늘관 2층 A강의실')에서 강의실 글자(A~G) 추출
   function _coordClassroomLetter(s){ var v=((s&&(s.roomDetailName||s.roomDetail))||'')+''; var m=v.match(/([A-Ga-g])\s*강의실/); return m?m[1].toUpperCase():''; }
@@ -8281,9 +8289,11 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
     rooms.forEach(function(r){ var L=_coordClassroomLetter(r.s); if(L && !used[L]) used[L]={rid:r.rid, course:(r.s.courseName||'')}; });
     var labels=Object.keys(COORD_CLASS_POS).map(function(L){
       var p=COORD_CLASS_POS[L]; var on=used[L];
-      return '<div class="cfp-room'+(on?' on':'')+'" style="left:'+p.l+'%;top:'+p.t+'%;"'
-        +(on?(' onclick="coordKiosk.notice(\''+esc(on.rid)+'\')" title="'+esc(on.course)+'"'):'')+'>'
-        +'<span>'+L+'강의실</span>'+(on?'<span class="cfp-dot"></span>':'')+'</div>';
+      return '<div class="cfp-slot" data-room="'+L+'" style="left:'+p.l+'%;top:'+p.t+'%;">'
+        +'<div class="cfp-room'+(on?' on':'')+'"'+(on?(' onclick="coordRoomAnnounce(\''+esc(on.rid)+'\')" title="'+esc(on.course)+'"'):'')+'>'
+        +'<span>'+L+'강의실</span>'+(on?'<span class="cfp-dot"></span>':'')+'</div>'
+        +(on?'<div class="cfp-course">'+esc(on.course)+'</div>':'')
+        +'</div>';
     }).join('');
     var usedN=Object.keys(used).length;
     return '<div class="cfp-wrap"><div class="cfp-imgbox">'
@@ -8292,6 +8302,29 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
       +labels+'</div>'
       +'<div class="cfp-legend"><span><i class="cfp-lg on"></i> 사용중 '+usedN+'실</span><span><i class="cfp-lg"></i> 미사용</span><span style="margin-left:auto;color:#94a3b8;font-weight:700;"><i class="fa-solid fa-location-dot" style="color:#2563eb;margin-right:4px;"></i>하늘관 2층</span></div></div>';
   }
+  // 과정 블록/강의실 클릭 → 배치도 강의실 깜빡임 + 말풍선 → 공지 팝업
+  window.coordRoomAnnounce = function(rid){
+    try{
+      var gd=(typeof globalAllData!=='undefined'&&globalAllData)?globalAllData:{};
+      var room=gd[rid]||{}; var L=_coordClassroomLetter(room.settings||{});
+      var slot = L ? document.querySelector('#coordFloorPlan .cfp-slot[data-room="'+L+'"]') : null;
+      if(slot){
+        var pill=slot.querySelector('.cfp-room'); var box=slot.parentNode;
+        var fp=document.getElementById('coordFloorPlan'); if(fp&&fp.scrollIntoView){ try{ fp.scrollIntoView({behavior:'smooth',block:'nearest'}); }catch(e){} }
+        if(pill){ pill.classList.remove('blink'); void pill.offsetWidth; pill.classList.add('blink'); }
+        if(box){ var prev=box.querySelector('.cfp-bubble'); if(prev) prev.remove();
+          var b=document.createElement('div'); b.className='cfp-bubble';
+          b.style.left=slot.style.left; b.style.top=slot.style.top;
+          b.innerHTML='\uD83D\uDCE2 '+esc((room.settings&&room.settings.courseName)||(L+'강의실'))+' 공지 전달';
+          box.appendChild(b);
+          setTimeout(function(){ try{ b.remove(); if(pill) pill.classList.remove('blink'); }catch(e){} }, 1700);
+        }
+        setTimeout(function(){ try{ coordKiosk.notice(rid); }catch(e){} }, 720);
+        return;
+      }
+    }catch(e){}
+    try{ coordKiosk.notice(rid); }catch(e){}
+  };
   window.coordRenderActiveCourses = function(){
     var box=document.getElementById('activeCourseList'); if(!box) return;
     _coordEnsureWeekSel();
@@ -8309,7 +8342,7 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
       var _ldrBlock='<div class="crow-leader'+(_ldr?' assigned':'')+'"><div class="ll"><i class="fa-solid fa-crown"></i> 학생장</div>'+(_ldr?('<div class="ln">'+esc(_ldr.name||'-')+(_ldrNo?' <small>('+esc(_ldrNo)+')</small>':'')+'</div>'):'<div class="ln none">미지정</div>')+'</div>';
       var _cls=_coordClassroomLabel(r.s);
       var _clsChip='<span class="crow-class'+(_cls?' on':'')+'">'+(_cls?('<i class="fa-solid fa-chalkboard-user"></i> '+esc(_cls)):'강의실 미지정')+'</span>';
-      return '<div class="crow clickable" onclick="coordKiosk.notice(\''+esc(r.rid)+'\')">'
+      return '<div class="crow clickable" onclick="coordRoomAnnounce(\''+esc(r.rid)+'\')">'
         +'<div class="crow-main"><div class="crow-name">'+esc(r.s.courseName||'-')+'</div></div>'
         +_clsChip
         +_ldrBlock
