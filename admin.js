@@ -5382,6 +5382,8 @@ resetShuttleRequests: function() {
         if(!modal) return;
         const d=window._homeStatsData||{}, today=window._homeStatsToday||getTodayString();
         modal.style.display='flex';
+        // 교육생 현황(students)은 우측 지도까지 들어가므로 모달을 넓힘. 그 외 타입은 기본 폭.
+        try{ const _box=modal.querySelector('div'); if(_box) _box.style.maxWidth=(type==='students')?'1140px':'720px'; }catch(e){}
         const esc=function(s){return (s==null?'':String(s)).replace(/[&<>"]/g,function(c){return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]);});};
         // 카드 집계와 동일 기준: 현재 과정이 배정된 active 방 OR 이번 주와 겹치는 과정
         const weekRooms=Object.entries(d).filter(([,r])=>{
@@ -5407,12 +5409,16 @@ resetShuttleRequests: function() {
             const _legend='';
             let dormAll={};
             try{ dormAll=(await firebase.database().ref('system/dorm/rosters').once('value')).val()||{}; }catch(e){}
+            // [이번 주 전체 출신지 분포] 모든 과정 예정 명단의 소속(dept)→지역 집계 (우측 지도용)
+            const _agg={}; let _aggUnknown=0, _aggTotal=0;
             const rows=weekRooms.map(([room,r])=>{
                 const course=(r.settings||{}).courseName||'-';
                 const _period=(r.settings||{}).period||'';
                 const _start=_period.indexOf('~')>=0?_period.split('~')[0].trim():'';
                 let list=[];
                 try{ const _cn=String(course).trim(); let _best=null; for(const _k in dormAll){ const _dv=dormAll[_k]; if(_dv && Array.isArray(_dv.list) && _dv.list.length && String(_dv.courseName||'').trim()===_cn){ if(!_best||(_dv.updatedAt||0)>(_best.updatedAt||0)) _best=_dv; } } if(_best) list=_best.list; }catch(e){}
+                // 출신지 분포 집계 (예정 명단 소속 기준)
+                list.forEach(function(pp){ var reg=ui._deptToRegion((pp&&pp.dept)||''); if(reg){ _agg[reg]=(_agg[reg]||0)+1; _aggTotal++; } else { _aggUnknown++; } });
                 const _arrivedSet=new Set(Object.values(r.students||{}).filter(s=>s&&s.name&&s.name!=='undefined').map(s=>String(s.name).trim())); const stuCnt=_arrivedSet.size;
                 const cnt=list.length;
                 const uid='hsR_'+room;
@@ -5456,7 +5462,35 @@ resetShuttleRequests: function() {
                   +'<div id="'+uid+'" style="display:none;padding:0 22px 18px;">'+detail+'</div>'
                 +'</div>';
             }).join('');
-            body.innerHTML=(rows?(_legend+rows):'<p style="color:#94a3b8;text-align:center;padding:30px;font-size:16px;">이번 주 교육생 정보가 없습니다.</p>');
+            const _listHtml = rows ? (_legend+rows) : '<p style="color:#94a3b8;text-align:center;padding:30px;font-size:16px;">이번 주 교육생 정보가 없습니다.</p>';
+            const _sorted=Object.keys(_agg).sort((a,b)=>_agg[b]-_agg[a]);
+            const _distRows = _sorted.length ? _sorted.map(n=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 12px;border-bottom:1px solid #f1f5f9;"><span style="font-weight:700;color:#334155;">${esc(n)}</span><span style="font-weight:900;color:#10b981;">${_agg[n]}명</span></div>`).join('') : '<div style="padding:16px;color:#94a3b8;text-align:center;font-size:13px;">예정 명단 소속 정보가 없습니다.</div>';
+            const _distTotal = `<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;background:#f0fdf4;border-top:2px solid #bbf7d0;"><span style="font-weight:900;color:#166534;">합계</span><span style="font-weight:900;color:#16a34a;">${_aggTotal+_aggUnknown}명</span></div>`;
+            const _unknownNote = _aggUnknown ? `<div style="margin-top:8px;font-size:12px;color:#94a3b8;">· 소속 구분 불가 ${_aggUnknown}명은 지도에서 제외</div>` : '';
+            const _mapPanel = `<div style="display:flex;flex-direction:column;gap:8px;">`
+                + `<div style="font-size:16px;font-weight:900;color:#0f172a;">🗺️ 이번 주 전체 교육생 출신지 분포</div>`
+                + `<div style="font-size:12px;color:#94a3b8;font-weight:700;">예정 명단 소속 기준 · 총 ${_aggTotal}명</div>`
+                + `<div id="homeStatMapKakao" style="width:100%;height:50vh;min-height:330px;border-radius:14px;overflow:hidden;border:1px solid #e2e8f0;background:#eaf2fb;"></div>`
+                + `<div style="border:1px solid #e2e8f0;border-radius:12px;overflow:hidden;max-height:200px;overflow-y:auto;">${_distRows}${_distTotal}</div>${_unknownNote}`
+                + `</div>`;
+            body.innerHTML = `<div style="display:flex;gap:24px;align-items:flex-start;flex-wrap:wrap;">`
+                + `<div style="flex:1.05;min-width:300px;">${_listHtml}</div>`
+                + `<div style="flex:1;min-width:330px;">${_mapPanel}</div>`
+                + `</div>`;
+            // 우측 카카오맵(집계된 전체 분포) — 외부 카카오 API라 Firebase 트래픽 증가 없음
+            ui._regionLL = ui._regionLL || { '서울':[37.5586,126.7906],'인천':[37.4602,126.4407],'강원':[37.8813,127.7300],'양양':[38.0613,128.6690],'원주':[37.4416,127.9606],'송탄':[37.0807,127.0353],'청주':[36.7166,127.4990],'예천':[36.6320,128.3549],'군산':[35.9038,126.6158],'대구':[35.8941,128.6586],'포항':[35.9879,129.4204],'울산':[35.5935,129.3517],'부안':[35.7316,126.7330],'광주':[35.1264,126.8089],'무안':[34.9914,126.3828],'여수':[34.8423,127.6168],'사천':[35.0886,128.0703],'김해':[35.1795,128.9382],'부산':[35.1796,129.0756],'제주':[33.5113,126.4930] };
+            const _buildHomeMap=function(){
+                const el=document.getElementById('homeStatMapKakao'); if(!el||!(window.kakao&&kakao.maps&&kakao.maps.Map)) return;
+                const map=new kakao.maps.Map(el,{ center:new kakao.maps.LatLng(36.4,127.9), level:13 });
+                try{ map.addControl(new kakao.maps.ZoomControl(), kakao.maps.ControlPosition.RIGHT); }catch(e){}
+                const bounds=new kakao.maps.LatLngBounds(); let any=false;
+                Object.keys(_agg).forEach(function(name){ const ll=ui._regionLL[name]; if(!ll) return; const c=_agg[name]; any=true; const pos=new kakao.maps.LatLng(ll[0],ll[1]); bounds.extend(pos); const sz=30+Math.min(c,14)*2; const content='<div style="transform:translateY(-50%);display:flex;flex-direction:column;align-items:center;"><div style="width:'+sz+'px;height:'+sz+'px;border-radius:50%;background:linear-gradient(135deg,#10b981,#059669);color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:900;border:2.5px solid #fff;box-shadow:0 4px 12px rgba(5,150,105,.45);">'+c+'</div><div style="margin-top:3px;background:rgba(255,255,255,.95);color:#0f172a;font-size:11px;font-weight:800;padding:1px 7px;border-radius:7px;box-shadow:0 1px 4px rgba(0,0,0,.18);white-space:nowrap;">'+name+'</div></div>'; new kakao.maps.CustomOverlay({ map:map, position:pos, content:content, yAnchor:0.5, zIndex:5 }); });
+                if(any){ try{ map.setBounds(bounds,70,70,70,70); }catch(e){} }
+                setTimeout(function(){ try{ map.relayout(); if(any) map.setBounds(bounds,70,70,70,70); }catch(e){} }, 250);
+            };
+            if(window.kakao && kakao.maps && kakao.maps.Map){ _buildHomeMap(); }
+            else if(window.kakao && kakao.maps && kakao.maps.load){ kakao.maps.load(_buildHomeMap); }
+            else { let _t=0; const _iv=setInterval(function(){ _t++; if(window.kakao&&kakao.maps){ clearInterval(_iv); (kakao.maps.load?kakao.maps.load(_buildHomeMap):_buildHomeMap()); } else if(_t>20){ clearInterval(_iv); } }, 300); }
         } else if(type==='outing'){
             title.innerHTML='🚶 과정별 외출/외박 신청 현황<br><span style="font-size:14px; font-weight:600; color:#94a3b8;">AM 09:00 ~ 익일 AM 09:00</span>';
             const rows=weekRooms.map(([room,r])=>{

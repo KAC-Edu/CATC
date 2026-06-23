@@ -22,6 +22,7 @@
   <meta name="apple-mobile-web-app-title" content="교육운영부">
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+  <script src="//dapi.kakao.com/v2/maps/sdk.js?appkey=742b0e2c307454d10b66d28b9c62482f&libraries=services&autoload=false"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
@@ -2943,6 +2944,7 @@ function init() {
     // 3. 기존 데이터 로드 로직 (안정성 강화)
     firebase.database().ref('courses').on('value', snap => {
         globalAllData = snap.val() || {};
+        try{ if(typeof _coordSyncShuttleFromCourses==="function") _coordSyncShuttleFromCourses(); }catch(e){}
         updateGlobalStatus(); 
         renderCourseSelectors(); 
         renderTotalHistory();
@@ -7360,11 +7362,50 @@ function openCourseOverview(){
 }
 
 /* 2) 전체 교육생: 과정별 명단 (검색 가능) */
+/* ===== [전체 교육생 분포 지도] 강사플랫폼 동일 알고리즘(소속→지역) ===== */
+function _coordDeptToRegion(dept){
+  var d=String(dept||''); if(!d.trim()) return '';
+  if(d.indexOf('본사')>=0) return '서울';
+  if(d.indexOf('김포')>=0) return '서울';
+  if(d.indexOf('인천')>=0) return '인천';
+  if(d.indexOf('항로시설본부')>=0) return '대구';
+  if(d.indexOf('한라레이더')>=0) return '제주';
+  if(d.indexOf('항공교육훈련센터')>=0||d.indexOf('항공훈련센터')>=0||d.indexOf('강서')>=0) return '서울';
+  if(d.indexOf('훈련원')>=0||d.indexOf('항공기술')>=0||d.indexOf('오송')>=0) return '청주';
+  var keys=['양양','원주','청주','예천','군산','포항','울산','부안','광주','무안','여수','사천','김해','부산','제주','대구','강원','송탄'];
+  for(var i=0;i<keys.length;i++){ if(d.indexOf(keys[i])>=0) return keys[i]; }
+  return '';
+}
+var _coordRegionLL={'서울':[37.5586,126.7906],'인천':[37.4602,126.4407],'강원':[37.8813,127.7300],'양양':[38.0613,128.6690],'원주':[37.4416,127.9606],'송탄':[37.0807,127.0353],'청주':[36.7166,127.4990],'예천':[36.6320,128.3549],'군산':[35.9038,126.6158],'대구':[35.8941,128.6586],'포항':[35.9879,129.4204],'울산':[35.5935,129.3517],'부안':[35.7316,126.7330],'광주':[35.1264,126.8089],'무안':[34.9914,126.3828],'여수':[34.8423,127.6168],'사천':[35.0886,128.0703],'김해':[35.1795,128.9382],'부산':[35.1796,129.0756],'제주':[33.5113,126.4930]};
+function _coordRenderStudentMap(counts,total,unknown){
+  var tl=document.getElementById('coordMapTotal'); if(tl) tl.textContent='· 총 '+total+'명'+(unknown?(' (소속 미상 '+unknown+'명 제외)'):'');
+  var el=document.getElementById('coordStudentMapKakao'); if(!el) return;
+  function build(){
+    if(!(window.kakao&&kakao.maps&&kakao.maps.Map)){ el.innerHTML='<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#94a3b8;font-weight:700;">지도를 불러올 수 없습니다</div>'; return; }
+    el.innerHTML='';
+    var map=new kakao.maps.Map(el,{center:new kakao.maps.LatLng(36.4,127.9),level:13});
+    try{ map.addControl(new kakao.maps.ZoomControl(), kakao.maps.ControlPosition.RIGHT); }catch(e){}
+    var bounds=new kakao.maps.LatLngBounds(), any=false;
+    Object.keys(counts).forEach(function(name){
+      var ll=_coordRegionLL[name]; if(!ll) return; var c=counts[name]; any=true;
+      var pos=new kakao.maps.LatLng(ll[0],ll[1]); bounds.extend(pos);
+      var sz=30+Math.min(c,12)*2;
+      var content='<div style="transform:translateY(-50%);display:flex;flex-direction:column;align-items:center;"><div style="width:'+sz+'px;height:'+sz+'px;border-radius:50%;background:linear-gradient(135deg,#3b82f6,#2563eb);color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:900;border:2.5px solid #fff;box-shadow:0 4px 12px rgba(37,99,235,.45);">'+c+'</div><div style="margin-top:3px;background:rgba(255,255,255,.95);color:#0f172a;font-size:11px;font-weight:800;padding:1px 7px;border-radius:7px;box-shadow:0 1px 4px rgba(0,0,0,.18);white-space:nowrap;">'+name+'</div></div>';
+      new kakao.maps.CustomOverlay({map:map,position:pos,content:content,yAnchor:0.5,zIndex:5});
+    });
+    if(any){ try{ map.setBounds(bounds,60,60,60,60); }catch(e){} }
+    setTimeout(function(){ try{ map.relayout(); if(any) map.setBounds(bounds,60,60,60,60); }catch(e){} },280);
+  }
+  if(window.kakao&&kakao.maps&&kakao.maps.Map) build();
+  else if(window.kakao&&kakao.maps&&kakao.maps.load) kakao.maps.load(build);
+  else { var t=0,iv=setInterval(function(){t++; if(window.kakao&&kakao.maps){clearInterval(iv);(kakao.maps.load?kakao.maps.load(build):build());} else if(t>25){clearInterval(iv); build();}},300); }
+}
 function openStudentRosterPopup(){
   const rooms=_coordActiveRooms();
   const search=`<input id="cpopSearch" class="cpop-search" placeholder="🔍 이름·소속 검색" oninput="_filterRoster(this.value)">`;
   const norm=x=>String(x==null?'':x).replace(/\s+/g,'').toLowerCase();
   function paint(ext){
+    var _mc={}, _mtot=0, _munk=0;
     let blocks=rooms.map(r=>{
       let roster=[];
       const curPeriod=(''+(r.s.period||'')).trim();
@@ -7386,14 +7427,16 @@ function openStudentRosterPopup(){
       if(!roster.length) roster=_studentsOf(r.room);
       roster=roster.slice().filter(st=>st&&(''+(st.name||'')).trim());
       if(!roster.length) return '';
+      roster.forEach(function(st){ var reg=_coordDeptToRegion(st.dept||st.position||st.affil||st.org||''); if(reg){ _mc[reg]=(_mc[reg]||0)+1; _mtot++; } else { _munk++; } });
       const rows=roster.map((st,i)=>`<tr class="rosterRow" data-n="${_esc(((st.name||'')+(st.dept||st.position||st.affil||'')).toLowerCase())}"><td style="color:#94a3b8;">${i+1}</td><td style="text-align:left;color:#475569;">${_esc(st.dept||st.position||st.affil||st.org||'-')}</td><td style="color:#64748b;">${_esc(st.empNo||st.sabun||st.id||'-')}</td><td style="font-weight:800;">${_esc(st.name||'-')}</td></tr>`).join('');
       return `<div class="cpop-course"><div class="cpop-course-h" onclick="_rosterAccToggle(this)"><span style="color:#0c4a6e;font-size:18px;"><i class="fa-solid fa-chevron-right cpop-acc-chev"></i>ROOM #${_esc(r.rid)} · ${_esc(r.s.courseName||'-')}</span> <span style="color:#0ea5e9;font-size:14px;">${roster.length}명</span></div>
         <div class="cpop-acc-body" style="display:none;"><table class="cpop-table" style="table-layout:fixed;"><colgroup><col style="width:12%"><col style="width:46%"><col style="width:21%"><col style="width:21%"></colgroup><thead><tr><th>연번</th><th style="text-align:left;">소속</th><th>사번</th><th>성명</th></tr></thead><tbody>${rows}</tbody></table></div></div>`;
     }).join('');
     if(!blocks.trim()) blocks='<div class="cpop-empty">등록된 명단이 없습니다.</div>';
     const w=document.getElementById('cpopRosterWrap'); if(w) w.innerHTML=blocks;
+    try{ _coordRenderStudentMap(_mc,_mtot,_munk); }catch(e){}
   }
-  _cpop('<i class="fa-solid fa-users"></i> 과정별 교육생 명단', search+'<div id="cpopRosterWrap"></div>');
+  _cpop('<i class="fa-solid fa-users"></i> 과정별 교육생 명단', '<div id="coordStudentMapBox" style="margin-bottom:14px;"><div style="font-size:13px;font-weight:800;color:#475569;margin:2px 2px 8px;"><i class="fa-solid fa-map-location-dot" style="color:#2563eb;"></i> 금주 교육생 전국 분포 <span id="coordMapTotal" style="color:#94a3b8;font-weight:700;"></span></div><div id="coordStudentMapKakao" style="width:100%;height:340px;border-radius:14px;overflow:hidden;border:1px solid #e2e8f0;background:#eaf2fb;"></div></div>'+search+'<div id="cpopRosterWrap"></div>');
   paint(window._coordRosterExt||{});
   Promise.all([
     firebase.database().ref('system/dorm/rosters').once('value').catch(()=>null),
@@ -7772,7 +7815,22 @@ function _coordUpdateShuttleBtn(){
     if(blk) blk.classList.toggle('shuttle-on', on);
   }catch(e){}
 }
-(function initShuttleDep(){ try{ if(!window.firebase||!firebase.database){ setTimeout(initShuttleDep,400); return; } firebase.database().ref('system/shuttle_departure').on('value', function(s){ window._shuttleDep=s.val()||{}; try{ if(window._coordPopupRefresh===openShuttleSummary && document.getElementById('coordPopup') && document.getElementById('coordPopup').classList.contains('open')) openShuttleSummary(); }catch(e){} try{ _coordUpdateShuttleBtn(); }catch(e){} }); }catch(e){ setTimeout(initShuttleDep,800); } })();
+// [복원] 규칙 미게시 대비: 과정별 shuttle/departure(이미 저장됨)에서 1차/2차 상태 복원
+function _coordSyncShuttleFromCourses(){
+  try{
+    var today=(typeof _coordOpDate==='function'?_coordOpDate():(typeof _coordToday==='function'?_coordToday():new Date().toISOString().slice(0,10)));
+    var rooms=(typeof _coordActiveRooms==='function')?_coordActiveRooms():[];
+    var found=null;
+    for(var i=0;i<rooms.length;i++){
+      var d=rooms[i].room && rooms[i].room.shuttle && rooms[i].room.shuttle.departure;
+      if(d && d.announced && d.time && (!d.date || d.date>=today)){ found={round1:d.time, round2:(d.time2||''), date:(d.date||today), announced:true}; break; }
+    }
+    if(found) window._shuttleDep=found; else window._shuttleDep={};
+    _coordUpdateShuttleBtn();
+    if(document.getElementById('coordPopup') && document.getElementById('coordPopup').classList.contains('open') && window._coordPopupRefresh===openShuttleSummary) openShuttleSummary();
+  }catch(e){}
+}
+(function initShuttleDep(){ try{ if(!window.firebase||!firebase.database){ setTimeout(initShuttleDep,400); return; } firebase.database().ref('system/shuttle_departure').on('value', function(s){ var v=s.val(); if(v && v.round1){ window._shuttleDep=v; try{ if(window._coordPopupRefresh===openShuttleSummary && document.getElementById('coordPopup') && document.getElementById('coordPopup').classList.contains('open')) openShuttleSummary(); }catch(e){} try{ _coordUpdateShuttleBtn(); }catch(e){} } }); }catch(e){ setTimeout(initShuttleDep,800); } })();
 function toggleAcc(el){ const card=el.closest('.acc'); if(card) card.classList.toggle('collapsed'); }
 </script>
 <script>
