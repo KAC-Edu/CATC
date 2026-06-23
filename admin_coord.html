@@ -4241,14 +4241,20 @@ function openAttendanceManager() {
                 ? Object.keys(room.internal_attendance[today]).length : 0;
 
             const btn = document.createElement('button');
-            btn.className = "navy-btn";
-            btn.style = "background:#fff; color:var(--navy-dark); border:1.5px solid #e2e8f0; justify-content:space-between; padding:12px 15px; margin-bottom:2px; display:flex; align-items:center; height:auto;";
+            btn.className = "attend-card";
+            btn.style.cssText = "display:flex; align-items:center; gap:13px; width:100%; background:#fff; border:1px solid #eef2f7; border-radius:14px; padding:13px 15px; cursor:pointer; transition:all .15s ease; box-shadow:0 1px 2px rgba(15,23,42,.04);";
+            btn.onmouseenter = () => { btn.style.borderColor = '#a7d8c9'; btn.style.boxShadow = '0 6px 16px rgba(13,148,136,.12)'; btn.style.transform = 'translateY(-1px)'; };
+            btn.onmouseleave = () => { btn.style.borderColor = '#eef2f7'; btn.style.boxShadow = '0 1px 2px rgba(15,23,42,.04)'; btn.style.transform = 'none'; };
             btn.innerHTML = `
-                <span style="display:flex; flex-direction:column; align-items:flex-start; gap:3px; text-align:left;">
-                    <span style="font-weight:800;"><i class="fa-solid fa-clipboard-user" style="color:var(--blue-main); margin-right:8px;"></i>${cName}</span>
-                    <span style="font-size:11px; color:#64748b; font-weight:600;">금일 출석 ${todayAtt}명 / 등록 ${enrolled}명</span>
+                <span style="width:42px; height:42px; flex-shrink:0; border-radius:11px; background:#ecfdf5; color:#0d9488; display:flex; align-items:center; justify-content:center; font-size:18px;"><i class="fa-solid fa-clipboard-user"></i></span>
+                <span style="flex:1; min-width:0; display:flex; flex-direction:column; align-items:flex-start; gap:6px; text-align:left;">
+                    <span style="font-weight:800; font-size:15px; color:#1e293b; line-height:1.2; word-break:keep-all;">${cName}</span>
+                    <span style="display:flex; gap:6px; flex-wrap:wrap;">
+                        <span style="font-size:11px; font-weight:700; color:#0d9488; background:#f0fdfa; border:1px solid #99f6e4; padding:2px 9px; border-radius:999px;">금일 출석 ${todayAtt}</span>
+                        <span style="font-size:11px; font-weight:700; color:#475569; background:#f1f5f9; border:1px solid #e2e8f0; padding:2px 9px; border-radius:999px;">등록 ${enrolled}</span>
+                    </span>
                 </span>
-                <span style="font-size:12px; color:var(--blue-main); font-weight:800; white-space:nowrap;">출석부 <i class="fa-solid fa-arrow-right"></i></span>
+                <span style="font-size:13px; color:#2563eb; font-weight:800; white-space:nowrap; display:flex; align-items:center; gap:5px;">출석부 <i class="fa-solid fa-arrow-right"></i></span>
             `;
             btn.onclick = () => {
                 window.open(`attendance_sheet.html?room=${rid}`, '_blank');
