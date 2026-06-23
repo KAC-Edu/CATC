@@ -2695,7 +2695,7 @@ function setupAcc(btn){
 <!-- ══ 키오스크 전체화면 (현재 진행 과정 표) — 비행기 아이콘 3초 롱프레스로 진입 ══ -->
 <style>
 #kioskTable th { font-size:clamp(12px,1.7vw,25px); color:#93c5fd; font-weight:800; text-align:center; padding:clamp(8px,1vw,14px) clamp(5px,0.9vw,16px); border-bottom:2px solid rgba(255,255,255,.18); white-space:nowrap; }
-#kioskTable td { padding:clamp(10px,1.6vw,26px) clamp(5px,0.9vw,16px); background:rgba(255,255,255,.06); vertical-align:middle; text-align:center; }
+#kioskTable td { padding:clamp(10px,1.6vw,26px) clamp(5px,0.9vw,16px); background:rgba(255,255,255,.06); vertical-align:middle; text-align:center; word-break:keep-all; }
 #kioskTable tbody tr td:first-child { border-radius:14px 0 0 14px; }
 #kioskTable tbody tr td:last-child { border-radius:0 14px 14px 0; }
 #kioskExitBtn:hover { transform:rotate(180deg); background:rgba(239,68,68,.85) !important; }
@@ -2715,7 +2715,8 @@ function setupAcc(btn){
     </div>
   </div>
   <div style="flex:1; overflow:auto; padding:26px 44px 44px;">
-    <table id="kioskTable" style="width:100%; border-collapse:separate; border-spacing:0 clamp(6px,0.9vw,12px); font-size:clamp(13px,2.05vw,30px);">
+    <table id="kioskTable" style="width:100%; table-layout:fixed; border-collapse:separate; border-spacing:0 clamp(6px,0.9vw,12px); font-size:clamp(13px,1.75vw,28px);">
+      <colgroup><col style="width:8%"><col style="width:21%"><col style="width:17%"><col style="width:12%"><col style="width:11%"><col style="width:11%"><col style="width:12%"><col style="width:8%"></colgroup>
       <thead><tr>
         <th>구분</th><th>과정명</th><th>교육기간</th><th>강의실</th><th>교육생수(예정)</th><th>담임교수</th><th>과정담당</th><th>비고</th>
       </tr></thead>

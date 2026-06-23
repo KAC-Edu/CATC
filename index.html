@@ -694,6 +694,7 @@
 <!-- 설문조사 안내 모달 -->
 <div id="surveyModal" class="menu-overlay" style="display:none; z-index:9500;" onclick="if(event.target==this)closePanelSmooth('surveyModal')">
     <div class="menu-box" style="text-align:center;">
+        <button type="button" onclick="closePanelSmooth('surveyModal')" aria-label="닫기" style="position:absolute; top:14px; right:14px; width:34px; height:34px; border:none; border-radius:50%; background:#f1f5f9; color:#64748b; font-size:16px; cursor:pointer; display:flex; align-items:center; justify-content:center; z-index:3;"><i class="fa-solid fa-xmark"></i></button>
         <div style="width:60px; height:60px; margin:6px auto 14px; border-radius:18px; background:linear-gradient(135deg,#3b82f6,#2563eb); display:flex; align-items:center; justify-content:center; font-size:27px; color:#fff; box-shadow:0 8px 20px rgba(37,99,235,.3);"><i class="fa-solid fa-square-poll-vertical"></i></div>
         <h3 style="margin:0 0 6px; font-size:20px; font-weight:900; color:#0f172a;">설문조사 참여</h3>
         <p style="margin:0 0 20px; font-size:13.5px; color:#64748b; font-weight:600; line-height:1.55;">스카이캠퍼스에서 교육과정<br>설문에 참여해 주세요</p>
@@ -1197,7 +1198,8 @@
 
     <!-- [신규] 출결 QR 확인 팝업 -->
     <div id="qrModal" class="menu-overlay" style="display:none; z-index: 9001;" onclick="if(event.target==this)closePanelSmooth('qrModal')">
-        <div class="menu-box">
+        <div class="menu-box" style="position:relative;">
+            <button type="button" onclick="closePanelSmooth('qrModal')" aria-label="닫기" style="position:absolute; top:14px; right:14px; width:34px; height:34px; border:none; border-radius:50%; background:#f1f5f9; color:#64748b; font-size:16px; cursor:pointer; display:flex; align-items:center; justify-content:center; z-index:3;"><i class="fa-solid fa-xmark"></i></button>
             <h3 style="margin-bottom:15px;">출
 결 QR (고용노동부)</h3>
             <img id="qrImage" src="" class="qr-img-full" style="display:none;">
@@ -1470,18 +1472,20 @@ async function resolveRoomFromCode(code) {
         installPanelSwipeClose('foodModal', function(){ var m=document.getElementById('foodModal'); if(m) m.style.display='none'; });
     }catch(e){}
     try{
-        window._panelRawClose = {
-            shuttleModal: closeShuttleModal,
-            adminActionModal: closeAdminAction,
-            facilityModal: closeFacilityModal,
-            tabletLoanModal: closeTabletLoan,
-            mealMenuModal: (typeof closeMealMenu==='function'?closeMealMenu:function(){var m=document.getElementById('mealMenuModal');if(m)m.style.display='none';}),
-            noticeModal: function(){var m=document.getElementById('noticeModal');if(m)m.style.display='none';},
-            surveyModal: function(){var m=document.getElementById('surveyModal');if(m)m.style.display='none';},
-            qrModal: function(){var m=document.getElementById('qrModal');if(m)m.style.display='none';},
-            foodModal: function(){var m=document.getElementById('foodModal');if(m)m.style.display='none';}
-        };
+        // [중요] _panelRawClose는 '원본' 닫기 함수만 담아야 함. 최초 1회만 설정(재진입 시 감싸진 함수가 들어가
+        //         자기 자신을 다시 호출 → 슬라이드 2번 재생되는 '중복 잔상' 버그 방지)
         if(!window._closeWrapped){ window._closeWrapped=true;
+            window._panelRawClose = {
+                shuttleModal: closeShuttleModal,
+                adminActionModal: closeAdminAction,
+                facilityModal: closeFacilityModal,
+                tabletLoanModal: closeTabletLoan,
+                mealMenuModal: (typeof closeMealMenu==='function'?closeMealMenu:function(){var m=document.getElementById('mealMenuModal');if(m)m.style.display='none';}),
+                noticeModal: function(){var m=document.getElementById('noticeModal');if(m)m.style.display='none';},
+                surveyModal: function(){var m=document.getElementById('surveyModal');if(m)m.style.display='none';},
+                qrModal: function(){var m=document.getElementById('qrModal');if(m)m.style.display='none';},
+                foodModal: function(){var m=document.getElementById('foodModal');if(m)m.style.display='none';}
+            };
             window.closeShuttleModal=function(){ closePanelSmooth('shuttleModal'); };
             window.closeAdminAction=function(){ closePanelSmooth('adminActionModal'); };
             window.closeFacilityModal=function(){ closePanelSmooth('facilityModal'); };
