@@ -6221,7 +6221,6 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
       if(!this._rosterSub){ this._rosterSub=true; try{ db.ref('system/dorm/rosters').on('value', function(s){ self._rosters=s.val()||{}; var m=document.getElementById('dormKioskModal'); if(m&&m.style.display!=='none'){ self.render(); self._fit(); } }); }catch(e){} }
       this.render();
       var m=document.getElementById('dormKioskModal'); if(m){ m.style.display='flex'; this._fit(); }
-      try{ var de=document.documentElement; var fn=de.requestFullscreen||de.webkitRequestFullscreen||de.msRequestFullscreen; if(fn) fn.call(de); }catch(e){}
       this._tick(); this._clock=setInterval(function(){ self._tick(); },1000);
       this._refresh=setInterval(function(){ self.render(); },30000);
     },
@@ -6304,9 +6303,13 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
       raf=setInterval(function(){ setHint(Math.min((Date.now()-start)/5000,1)); }, 50);
     }
     function stop(){ if(t){clearTimeout(t);t=null;} if(raf){clearInterval(raf);raf=null;} setHint(0); }
+    function endPress(){ var was=fired; stop(); if(was){ try{ var de=document.documentElement; var fn=de.requestFullscreen||de.webkitRequestFullscreen||de.msRequestFullscreen; if(fn) fn.call(de); }catch(_){} setTimeout(function(){ if(window.dormKiosk) dormKiosk._fit(); }, 250); } }
     brand.addEventListener('mousedown', begin);
     brand.addEventListener('touchstart', begin, {passive:true});
-    ['mouseup','mouseleave','touchend','touchcancel'].forEach(function(ev){ brand.addEventListener(ev, stop); });
+    brand.addEventListener('mouseup', endPress);
+    brand.addEventListener('touchend', endPress);
+    brand.addEventListener('mouseleave', stop);
+    brand.addEventListener('touchcancel', stop);
     // 길게 눌러 진입한 경우 뒤따르는 click(새로고침) 차단 (capture 단계)
     brand.addEventListener('click', function(e){ if(fired){ e.stopImmediatePropagation(); e.preventDefault(); fired=false; } }, true);
   })();
