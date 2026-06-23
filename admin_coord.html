@@ -1602,6 +1602,13 @@ body.cpop-locked{ overflow:hidden !important; }
 .eduplace-pick.clear{ background:#fef2f2; border-color:#fecaca; color:#dc2626; }
 .eduplace-pick.clear:hover{ background:#fee2e2; border-color:#ef4444; color:#b91c1c; }
 .eduplace-grp{ font-size:13px; font-weight:900; color:#64748b; margin:14px 0 8px; }
+.eduplace-cols{ display:flex; gap:14px; align-items:flex-start; flex-wrap:wrap; }
+.eduplace-col{ background:#f8fafc; border:1px solid #e9eef4; border-radius:14px; padding:12px 12px 14px; min-width:165px; flex:1 1 165px; max-width:230px; }
+.eduplace-col-head{ font-size:14px; font-weight:900; color:#0f2057; padding:0 2px 9px; border-bottom:2px solid #e2e8f0; margin-bottom:8px; }
+.eduplace-floor{ font-size:11px; font-weight:800; color:#94a3b8; letter-spacing:.3px; margin:11px 2px 5px; }
+.eduplace-col .eduplace-floor:first-of-type{ margin-top:2px; }
+.eduplace-col .eduplace-pick{ display:block; width:100%; text-align:left; white-space:normal; margin-bottom:6px; padding:10px 12px; font-size:13.5px; }
+
 .cpop-name{ background:#f1f5f9; border-radius:8px; padding:6px 11px; font-size:13px; font-weight:700; }
 .cpop-name small{ color:#94a3b8; font-weight:600; margin-left:4px; }
 .cpop-datebar{ font-weight:800; color:#475569; margin-bottom:10px; }
@@ -7421,14 +7428,35 @@ function openEduPlacePicker(type){
       groups[g].push({val:o.value, txt:o.text});
     });
   }
-  var html='<div style="font-size:13px;color:#64748b;font-weight:700;margin-bottom:6px;">사용 중인 강의실도 선택 가능합니다(수업 중인 강의실에서 진행).</div>';
-  html+='<div><button class="eduplace-pick clear" onclick="setEduPlace(\''+type+'\',\'\')"><i class="fa-solid fa-eraser"></i> 미정으로 초기화</button></div>';
-  order.forEach(function(g){
-    html+='<div class="eduplace-grp">'+_esc(g)+'</div><div style="display:flex;flex-wrap:wrap;gap:9px;">';
-    groups[g].forEach(function(r){ html+='<button class="eduplace-pick" onclick="setEduPlace(\''+type+'\',this.getAttribute(\'data-v\'))" data-v="'+_esc(r.val)+'">'+_esc(r.txt)+'</button>'; });
+  // 컬럼 순서: 하늘관 | 국제동 | 서울 | 온라인(비대면) | 미정
+  var colOrder=['하늘관','국제동','서울','비대면'];
+  var headName={ '비대면':'온라인' };
+  var sorted=colOrder.filter(function(g){return groups[g];}).concat(order.filter(function(g){return colOrder.indexOf(g)<0;}));
+  function _eduFloorOf(txt){ var m=(''+txt).match(/(\d+)\s*층/); return m?(m[1]+'층'):''; }
+  function _eduShortRoom(g,txt){ var t=(''+txt).trim(); if(g && t.indexOf(g)===0) t=t.slice(g.length).trim(); t=t.replace(/^\d+\s*층\s*/,'').trim(); return t||txt; }
+  var html='<div style="font-size:13px;color:#64748b;font-weight:700;margin-bottom:12px;">사용 중인 강의실도 선택 가능합니다(수업 중인 강의실에서 진행).</div>';
+  html+='<div class="eduplace-cols">';
+  sorted.forEach(function(g){
+    var rooms=groups[g]||[];
+    html+='<div class="eduplace-col"><div class="eduplace-col-head">'+_esc(headName[g]||g)+'</div>';
+    var hasFloor=rooms.some(function(r){ return _eduFloorOf(r.txt); });
+    if(hasFloor){
+      var byFloor={}, fOrder=[];
+      rooms.forEach(function(r){ var fl=_eduFloorOf(r.txt)||'기타'; if(!byFloor[fl]){byFloor[fl]=[];fOrder.push(fl);} byFloor[fl].push(r); });
+      fOrder.sort(function(a,b){ return (parseInt(a)||99)-(parseInt(b)||99); });
+      fOrder.forEach(function(fl){
+        html+='<div class="eduplace-floor">'+_esc(fl)+'</div>';
+        byFloor[fl].forEach(function(r){ html+='<button class="eduplace-pick" onclick="setEduPlace(\''+type+'\',this.getAttribute(\'data-v\'))" data-v="'+_esc(r.val)+'">'+_esc(_eduShortRoom(g,r.txt))+'</button>'; });
+      });
+    } else {
+      rooms.forEach(function(r){ html+='<button class="eduplace-pick" onclick="setEduPlace(\''+type+'\',this.getAttribute(\'data-v\'))" data-v="'+_esc(r.val)+'">'+_esc(_eduShortRoom(g,r.txt))+'</button>'; });
+    }
     html+='</div>';
   });
+  html+='<div class="eduplace-col"><div class="eduplace-col-head">미정</div><button class="eduplace-pick clear" onclick="setEduPlace(\''+type+'\',\'\')"><i class="fa-solid fa-eraser"></i> 미정으로 초기화</button></div>';
+  html+='</div>';
   _cpop(title, html);
+
 }
 function setEduPlace(type,val){
   try{ firebase.database().ref('system/eduLocations/'+type).set(val||null); }catch(e){}
