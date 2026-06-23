@@ -2555,7 +2555,8 @@ loadDashboardStats: function() {
         [refs._outToday, refs._outYest].forEach(obj => {
             Object.keys(obj || {}).forEach(k => {
                 const it = obj[k]; const ts = (it && it.timestamp) || 0;
-                if (ts >= w.start && ts < w.end) count++;
+                // 복귀완료(자동 포함) 인원은 차감 → 미복귀 인원만 카운팅
+                if (ts >= w.start && ts < w.end && !(it && (it.returned === true || it.returnReportTime))) count++;
             });
         });
         const el = document.getElementById('dashActionCount');
@@ -5414,7 +5415,7 @@ resetShuttleRequests: function() {
         const d=window._homeStatsData||{}, today=window._homeStatsToday||getTodayString();
         modal.style.display='flex';
         // 교육생 현황(students)은 우측 지도까지 들어가므로 모달을 넓힘. 그 외 타입은 기본 폭.
-        try{ const _box=modal.querySelector('div'); if(_box){ _box.style.maxWidth=(type==='students')?'1140px':(type==='active'?'880px':'720px'); _box.style.maxHeight=(type==='students')?'94vh':'82vh'; } }catch(e){}
+        try{ const _box=modal.querySelector('div'); if(_box){ _box.style.maxWidth=(type==='students')?'1140px':(type==='active'?'880px':'720px'); _box.style.maxHeight=(type==='students')?'94vh':'90vh'; _box.style.padding='clamp(16px,3vh,40px) clamp(18px,3vw,44px)'; } if(title){ title.style.fontSize='clamp(17px,2.3vw,26px)'; title.style.marginBottom='clamp(12px,2vh,28px)'; } }catch(e){}
         const esc=function(s){return (s==null?'':String(s)).replace(/[&<>"]/g,function(c){return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]);});};
         // 카드 집계와 동일 기준: 현재 과정이 배정된 active 방 OR 이번 주와 겹치는 과정
         const weekRooms=Object.entries(d).filter(([,r])=>{
@@ -5427,12 +5428,12 @@ resetShuttleRequests: function() {
             title.textContent='🏫 현재 강의 중인 과정 (이번 주)';
             const rows=weekRooms.filter(([,r])=>(r.status||{}).roomStatus==='active').map(([room,r])=>{
                 const prof=(r.status||{}).professorName||'-', course=(r.settings||{}).courseName||'-';
-                return `<div onclick="document.getElementById('homeStatModal').style.display='none'; dataMgr.switchRoomAttempt('${room}');" title="클릭하면 이 과정으로 입장합니다" style="display:flex;justify-content:space-between;align-items:center;gap:14px;padding:28px 32px;background:#eff6ff;border:1px solid #dbeafe;border-radius:18px;margin-bottom:16px;cursor:pointer;transition:background .15s, transform .15s, box-shadow .15s;" onmouseover="this.style.background='#dbeafe';this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 20px rgba(37,99,235,.18)';" onmouseout="this.style.background='#eff6ff';this.style.transform='none';this.style.boxShadow='none';">
-                    <div style="display:flex;align-items:center;gap:20px;min-width:0;">
-                        <span style="font-weight:900;color:#fff;background:#3b82f6;padding:9px 18px;border-radius:12px;font-size:21px;white-space:nowrap;">Room #${room}</span>
-                        <span style="font-size:26px;color:#0f172a;font-weight:800;word-break:keep-all;">${course}</span>
+                return `<div onclick="document.getElementById('homeStatModal').style.display='none'; dataMgr.switchRoomAttempt('${room}');" title="클릭하면 이 과정으로 입장합니다" style="display:flex;justify-content:space-between;align-items:center;gap:14px;padding:clamp(12px,2.3vh,28px) clamp(16px,2.6vw,32px);background:#eff6ff;border:1px solid #dbeafe;border-radius:16px;margin-bottom:clamp(7px,1.3vh,16px);cursor:pointer;transition:background .15s, transform .15s, box-shadow .15s;" onmouseover="this.style.background='#dbeafe';this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 20px rgba(37,99,235,.18)';" onmouseout="this.style.background='#eff6ff';this.style.transform='none';this.style.boxShadow='none';">
+                    <div style="display:flex;align-items:center;gap:clamp(10px,1.5vw,20px);min-width:0;">
+                        <span style="font-weight:900;color:#fff;background:#3b82f6;padding:clamp(6px,0.9vh,9px) clamp(11px,1.4vw,18px);border-radius:12px;font-size:clamp(14px,1.7vw,21px);white-space:nowrap;">Room #${room}</span>
+                        <span style="font-size:clamp(16px,2.3vw,26px);color:#0f172a;font-weight:800;word-break:keep-all;">${course}</span>
                     </div>
-                    <span style="font-size:20px;color:#475569;font-weight:800;white-space:nowrap;">${prof} 교수 <i class="fa-solid fa-arrow-right-to-bracket" style="margin-left:8px;color:#3b82f6;"></i></span></div>`;
+                    <span style="font-size:clamp(13px,1.7vw,20px);color:#475569;font-weight:800;white-space:nowrap;">${prof} 교수 <i class="fa-solid fa-arrow-right-to-bracket" style="margin-left:8px;color:#3b82f6;"></i></span></div>`;
             }).join('');
             body.innerHTML=rows||'<p style="color:#94a3b8;text-align:center;padding:36px;font-size:20px;">이번 주 강의 중인 과정이 없습니다.</p>';
         } else if(type==='students'){
@@ -5532,7 +5533,7 @@ resetShuttleRequests: function() {
                 const _ow=getOutingWindowKST();
                 const _allActs=r.admin_actions||{};
                 const outs=[];
-                Object.keys(_allActs).forEach(_dt=>{ const _day=_allActs[_dt]||{}; Object.keys(_day).forEach(_tk=>{ const a=_day[_tk]; if(a&&(a.type==='outing'||a.type==='overnight'||a.type==='group_outing')){ const _ts=a.timestamp||0; if(_ts>=_ow.start&&_ts<_ow.end && !(a.returned===true||a.returnReportTime)) outs.push(a); } }); });
+                Object.keys(_allActs).forEach(_dt=>{ const _day=_allActs[_dt]||{}; Object.keys(_day).forEach(_tk=>{ const a=_day[_tk]; if(a&&(a.type==='outing'||a.type==='overnight'||a.type==='group_outing')){ const _ts=a.timestamp||0; if(_ts>=_ow.start&&_ts<_ow.end) outs.push(a); } }); });
                 if(!outs.length) return '';
                 const tbl='<table style="width:100%;table-layout:fixed;border-collapse:collapse;font-size:13px;margin-top:10px;">'
                   +'<colgroup><col style="width:9%"><col style="width:24%"><col style="width:13%"><col style="width:29%"><col style="width:25%"></colgroup>'
@@ -5545,7 +5546,7 @@ resetShuttleRequests: function() {
                   +'</tr></thead><tbody>'
                   +outs.map((a,i)=>'<tr>'
                       +'<td style="padding:7px 8px;text-align:center;border-bottom:1px solid #fef3c7;color:#a8a29e;">'+(i+1)+'</td>'
-                      +'<td style="padding:7px 8px;border-bottom:1px solid #fef3c7;font-weight:800;color:#0f172a;">'+esc(a.name||'-')+'</td>'
+                      +'<td style="padding:7px 8px;border-bottom:1px solid #fef3c7;font-weight:800;color:#0f172a;">'+esc(a.name||'-')+(((a.returned===true)||a.returnReportTime)?(' <span style="display:inline-block;margin-left:5px;font-size:10px;font-weight:800;padding:1px 6px;border-radius:6px;'+(a.autoReturn?'background:#cffafe;color:#0891b2;':'background:#dcfce7;color:#16a34a;')+'">복귀완료</span>'):(a.held?' <span style="display:inline-block;margin-left:5px;font-size:10px;font-weight:800;padding:1px 6px;border-radius:6px;background:#fee2e2;color:#dc2626;">미복귀</span>':''))+'</td>'
                       +'<td style="padding:7px 8px;text-align:center;border-bottom:1px solid #fef3c7;"><span style="background:'+(a.type==='overnight'?'#fee2e2;color:#b91c1c':'#fef3c7;color:#92400e')+';padding:2px 9px;border-radius:8px;font-weight:800;font-size:12px;">'+(a.type==='overnight'?'외박':'외출')+'</span></td>'
                       +'<td style="padding:7px 8px;border-bottom:1px solid #fef3c7;color:#475569;word-break:keep-all;">'+esc(a.destination||'-')+'</td>'
                       +'<td style="padding:7px 8px;text-align:center;border-bottom:1px solid #fef3c7;color:#64748b;white-space:nowrap;">'+esc((a.startTime||'')+(a.endTime?(' ~ '+a.endTime):''))+'</td>'
