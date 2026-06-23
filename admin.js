@@ -1771,23 +1771,36 @@ const coordMgr = {
     tempSign: "",
     editingKey: null,
     
-    // 1. 직급별 우선순위 (수정 불필요 - 완벽함)
+    // 1. 직급별 우선순위
     rankPriority: {
-        "차장": 1,
-        "과장": 2,
-        "대리": 3,
-        "주임": 4,
-        "사원": 5
+        "부장": 1,
+        "차장": 2,
+        "과장": 3,
+        "대리": 4,
+        "주임": 5,
+        "사원": 6
     },
 
-    // 이름 문자열에서 직급 가중치를 반환
-    getPriority: function(name) {
-        if (!name) return 99;
-        // 직급 키워드 매칭
+    // 합본 문자열에서 성함/직책 분리 (레거시 마이그레이션용)
+    splitNameTitle: function(raw) {
+        raw = String(raw == null ? '' : raw).trim();
+        const RANK = /\s*(부장|차장|과장|대리|주임|사원|팀장|실장|원장)\s*$/;
+        const m = raw.match(RANK);
+        if (m) return { name: raw.replace(RANK, '').trim(), title: m[1] };
+        return { name: raw, title: "" };
+    },
+
+    // 성함 + 직책 합본 (드롭다운 값 / coordinatorName 호환 유지)
+    fullName: function(c) { return ((c.name || '') + ' ' + (c.title || '')).trim(); },
+
+    // 직책 기준 우선순위 (객체/문자열 모두 허용)
+    getPriority: function(c) {
+        const t = (typeof c === 'string') ? c : (c && (c.title || c.name) || '');
+        if (!t) return 99;
         for (const rank in coordMgr.rankPriority) {
-            if (name.includes(rank)) return coordMgr.rankPriority[rank];
+            if (t.includes(rank)) return coordMgr.rankPriority[rank];
         }
-        return 99; 
+        return 99;
     },
 
     // [신규] 입력 문자열(엑셀 연간계획값 / Firebase 저장값)을 등록된 담당자 명단의 '정식 이름'과 매칭.
@@ -1810,19 +1823,19 @@ const coordMgr = {
 
         // 1) 공백 무시 완전 일치 (가장 안전)
         let m = list.find(c => squash(c.name) === rawSquash);
-        if (m) return m.name;
+        if (m) return coordMgr.fullName(m);
 
         // 2) 한쪽이 다른 쪽을 포함 (직급 표기 유무 차이 등)
         m = list.find(c => {
             const cs = squash(c.name);
             return cs.includes(rawSquash) || rawSquash.includes(cs);
         });
-        if (m) return m.name;
+        if (m) return coordMgr.fullName(m);
 
         // 3) 직급을 떼어낸 순수 이름이 '유일하게' 일치하는 경우만 채택 (예: 엑셀 "장영근 차장" vs 명단 "장영근 과장")
         if (rawName) {
             const cands = list.filter(c => stripRank(c.name) === rawName);
-            if (cands.length === 1) return cands[0].name;
+            if (cands.length === 1) return coordMgr.fullName(cands[0]);
         }
 
         return null;
@@ -1835,28 +1848,38 @@ const coordMgr = {
         
         ref.on('value', s => {
             const data = s.val() || {};
-            
-            // 데이터를 배열로 변환 및 유효성 검사
-            let items = Object.keys(data).map(k => ({ 
-                key: k, 
-                name: data[k].name || "이름 없음", 
-                sign: data[k].sign || "" 
+
+            // [마이그레이션] title 없는 레거시 항목은 name에서 직책 분리 후 저장 (교육운영부 양식과 동일 구조)
+            const mig = {};
+            Object.keys(data).forEach(k => {
+                const c = data[k] || {};
+                if (c.title === undefined || c.title === null) {
+                    const p = coordMgr.splitNameTitle(c.name || '');
+                    data[k] = Object.assign({}, c, { name: p.name, title: p.title });
+                    mig[k] = { name: p.name, title: p.title };
+                }
+            });
+            if (Object.keys(mig).length) { Object.entries(mig).forEach(([k, v]) => ref.child(k).update(v)); }
+
+            // 데이터를 배열로 변환 (성함/직책 분리 구조)
+            let items = Object.keys(data).map(k => ({
+                key: k,
+                name: data[k].name || "이름 없음",
+                title: data[k].title || "",
+                sign: data[k].sign || ""
             }));
 
-            // 직급순 정렬 (1순위: 직급 점수, 2순위: 이름 가나다)
+            // 직급순 정렬 (1순위: 직책 점수, 2순위: 이름 가나다)
             items.sort((a, b) => {
-                const pA = coordMgr.getPriority(a.name);
-                const pB = coordMgr.getPriority(b.name);
-
-                if (pA !== pB) return pA - pB; 
-                return a.name.localeCompare(b.name, 'ko'); 
+                const pA = coordMgr.getPriority(a);
+                const pB = coordMgr.getPriority(b);
+                if (pA !== pB) return pA - pB;
+                return (a.name || '').localeCompare(b.name || '', 'ko');
             });
 
             coordMgr.list = items;
-            
-            // UI 업데이트 실행
-            coordMgr.renderSelects();    
-            coordMgr.renderManageList(); 
+            coordMgr.renderSelects();
+            coordMgr.renderManageList();
         });
     },
 
@@ -1869,9 +1892,10 @@ const coordMgr = {
         sel.innerHTML = '<option value="">--- 담당자 선택 ---</option>';
         
         coordMgr.list.forEach(c => {
+            const fn = coordMgr.fullName(c);
             const opt = document.createElement('option');
-            opt.value = c.name;
-            opt.textContent = c.name;
+            opt.value = fn;
+            opt.textContent = fn;
             sel.appendChild(opt);
         });
 
@@ -1892,7 +1916,8 @@ const coordMgr = {
         div.innerHTML = coordMgr.list.map(c => `
             <div style="display:flex; justify-content:space-between; padding:12px; border-bottom:1px solid #f1f5f9; align-items:center; background:#fff; margin-bottom:5px; border-radius:10px; cursor:pointer; transition:0.2s; border:${coordMgr.editingKey === c.key ? '2px solid #3b82f6' : '1px solid #eee'}" 
                  onclick="coordMgr.startEdit('${c.key}')">
-                <div style="display:flex; align-items:center; gap:12px; flex:1;">
+                <div style="display:flex; align-items:center; gap:10px; flex:1;">
+                    ${c.title ? `<span style="font-size:11px; font-weight:800; color:#2563eb; background:#eff6ff; border:1px solid #bfdbfe; padding:2px 9px; border-radius:999px; flex-shrink:0;">${c.title}</span>` : ''}
                     <span style="font-weight:800; color:#1e293b;">${c.name}</span>
                     ${c.sign ? `<img src="${c.sign}" style="height:35px; mix-blend-mode:multiply; border:1px solid #f8fafc; border-radius:4px;">` : `<span style="font-size:11px; color:#cbd5e1;">(서명 미등록)</span>`}
                 </div>
@@ -1908,7 +1933,8 @@ const coordMgr = {
 
         coordMgr.editingKey = key;
         document.getElementById('newCoordInput').value = item.name;
-        
+        const _ts = document.getElementById('newCoordTitle'); if (_ts) _ts.value = item.title || '';
+
         const regBtn = document.getElementById('coordRegBtn');
         if (regBtn) {
             regBtn.innerHTML = '<i class="fa-solid fa-check"></i> 수정 완료';
@@ -1935,10 +1961,12 @@ const coordMgr = {
         coordMgr.tempSign = "";
         const input = document.getElementById('newCoordInput');
         if(input) input.value = "";
-        
+        const _ts = document.getElementById('newCoordTitle');
+        if(_ts) _ts.value = "";
+
         const regBtn = document.getElementById('coordRegBtn');
-        if (regBtn) { 
-            regBtn.innerHTML = '등록'; 
+        if (regBtn) {
+            regBtn.innerHTML = '등록';
             regBtn.style.background = "#3b82f6"; 
         }
         
@@ -1968,10 +1996,13 @@ const coordMgr = {
 
     add: async function() {
         const name = document.getElementById('newCoordInput').value.trim();
-        if (!name) return alert("성함과 직급을 입력하세요.");
-        
+        const _ts = document.getElementById('newCoordTitle');
+        const title = _ts ? _ts.value : "";
+        if (!name) return ui.showAlert("성함을 입력하세요.");
+        if (!title) return ui.showAlert("직책을 선택하세요.");
+
         try {
-            const data = { name: name, sign: coordMgr.tempSign };
+            const data = { name: name, title: title, sign: coordMgr.tempSign };
             const db = firebase.database();
             if (coordMgr.editingKey) {
                 await db.ref(`system/coordinators/${coordMgr.editingKey}`).update(data);
@@ -5383,7 +5414,7 @@ resetShuttleRequests: function() {
         const d=window._homeStatsData||{}, today=window._homeStatsToday||getTodayString();
         modal.style.display='flex';
         // 교육생 현황(students)은 우측 지도까지 들어가므로 모달을 넓힘. 그 외 타입은 기본 폭.
-        try{ const _box=modal.querySelector('div'); if(_box){ _box.style.maxWidth=(type==='students')?'1140px':'720px'; _box.style.maxHeight=(type==='students')?'94vh':'82vh'; } }catch(e){}
+        try{ const _box=modal.querySelector('div'); if(_box){ _box.style.maxWidth=(type==='students')?'1140px':(type==='active'?'880px':'720px'); _box.style.maxHeight=(type==='students')?'94vh':'82vh'; } }catch(e){}
         const esc=function(s){return (s==null?'':String(s)).replace(/[&<>"]/g,function(c){return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]);});};
         // 카드 집계와 동일 기준: 현재 과정이 배정된 active 방 OR 이번 주와 겹치는 과정
         const weekRooms=Object.entries(d).filter(([,r])=>{
@@ -5396,20 +5427,23 @@ resetShuttleRequests: function() {
             title.textContent='🏫 현재 강의 중인 과정 (이번 주)';
             const rows=weekRooms.filter(([,r])=>(r.status||{}).roomStatus==='active').map(([room,r])=>{
                 const prof=(r.status||{}).professorName||'-', course=(r.settings||{}).courseName||'-';
-                return `<div onclick="document.getElementById('homeStatModal').style.display='none'; dataMgr.switchRoomAttempt('${room}');" title="클릭하면 이 과정으로 입장합니다" style="display:flex;justify-content:space-between;align-items:center;padding:20px 24px;background:#eff6ff;border:1px solid #dbeafe;border-radius:14px;margin-bottom:12px;cursor:pointer;transition:background .15s, transform .15s, box-shadow .15s;" onmouseover="this.style.background='#dbeafe';this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 20px rgba(37,99,235,.18)';" onmouseout="this.style.background='#eff6ff';this.style.transform='none';this.style.boxShadow='none';">
-                    <div style="display:flex;align-items:center;gap:16px;">
-                        <span style="font-weight:900;color:#fff;background:#3b82f6;padding:6px 14px;border-radius:10px;font-size:16px;">Room #${room}</span>
-                        <span style="font-size:18px;color:#0f172a;font-weight:700;">${course}</span>
+                return `<div onclick="document.getElementById('homeStatModal').style.display='none'; dataMgr.switchRoomAttempt('${room}');" title="클릭하면 이 과정으로 입장합니다" style="display:flex;justify-content:space-between;align-items:center;gap:14px;padding:28px 32px;background:#eff6ff;border:1px solid #dbeafe;border-radius:18px;margin-bottom:16px;cursor:pointer;transition:background .15s, transform .15s, box-shadow .15s;" onmouseover="this.style.background='#dbeafe';this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 20px rgba(37,99,235,.18)';" onmouseout="this.style.background='#eff6ff';this.style.transform='none';this.style.boxShadow='none';">
+                    <div style="display:flex;align-items:center;gap:20px;min-width:0;">
+                        <span style="font-weight:900;color:#fff;background:#3b82f6;padding:9px 18px;border-radius:12px;font-size:21px;white-space:nowrap;">Room #${room}</span>
+                        <span style="font-size:26px;color:#0f172a;font-weight:800;word-break:keep-all;">${course}</span>
                     </div>
-                    <span style="font-size:15px;color:#475569;font-weight:800;">${prof} 교수 <i class="fa-solid fa-arrow-right-to-bracket" style="margin-left:8px;color:#3b82f6;"></i></span></div>`;
+                    <span style="font-size:20px;color:#475569;font-weight:800;white-space:nowrap;">${prof} 교수 <i class="fa-solid fa-arrow-right-to-bracket" style="margin-left:8px;color:#3b82f6;"></i></span></div>`;
             }).join('');
-            body.innerHTML=rows||'<p style="color:#94a3b8;text-align:center;padding:30px;font-size:16px;">이번 주 강의 중인 과정이 없습니다.</p>';
+            body.innerHTML=rows||'<p style="color:#94a3b8;text-align:center;padding:36px;font-size:20px;">이번 주 강의 중인 과정이 없습니다.</p>';
         } else if(type==='students'){
-            title.textContent='👩‍🎓 과정별 교육생 현황 (이번 주)';
+            title.innerHTML='<div style="display:flex;gap:24px;align-items:baseline;flex-wrap:wrap;">'
+                +'<div style="flex:1.05;min-width:300px;">👩‍🎓 과정별 교육생 현황 (이번 주)</div>'
+                +'<div style="flex:1;min-width:330px;">📊 이번 주 전체 교육생 소속 분포 <span style="font-size:14px;color:#94a3b8;font-weight:700;">(예정명단 기준)</span></div>'
+                +'</div>';
             const _legend='';
             let dormAll={};
             try{ dormAll=(await firebase.database().ref('system/dorm/rosters').once('value')).val()||{}; }catch(e){}
-            // [이번 주 전체 출신지 분포] 모든 과정 예정 명단의 소속(dept)→지역 집계 (우측 지도용)
+            // [이번 주 전체 소속 분포] 모든 과정 예정 명단의 소속(dept)→지역 집계 (우측 지도용)
             const _agg={}; let _aggUnknown=0, _aggTotal=0;
             const rows=weekRooms.map(([room,r])=>{
                 const course=(r.settings||{}).courseName||'-';
@@ -5417,7 +5451,7 @@ resetShuttleRequests: function() {
                 const _start=_period.indexOf('~')>=0?_period.split('~')[0].trim():'';
                 let list=[];
                 try{ const _cn=String(course).trim(); let _best=null; for(const _k in dormAll){ const _dv=dormAll[_k]; if(_dv && Array.isArray(_dv.list) && _dv.list.length && String(_dv.courseName||'').trim()===_cn){ if(!_best||(_dv.updatedAt||0)>(_best.updatedAt||0)) _best=_dv; } } if(_best) list=_best.list; }catch(e){}
-                // 출신지 분포 집계 (예정 명단 소속 기준)
+                // 소속 분포 집계 (예정 명단 소속 기준)
                 list.forEach(function(pp){ var reg=ui._deptToRegion((pp&&pp.dept)||''); if(reg){ _agg[reg]=(_agg[reg]||0)+1; _aggTotal++; } else { _aggUnknown++; } });
                 const _arrivedSet=new Set(Object.values(r.students||{}).filter(s=>s&&s.name&&s.name!=='undefined').map(s=>String(s.name).trim())); const stuCnt=_arrivedSet.size;
                 const cnt=list.length;
@@ -5467,9 +5501,7 @@ resetShuttleRequests: function() {
             const _distGrid = _sorted.length ? _sorted.map(n=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 11px;background:#f8fafc;border:1px solid #eef2f7;border-radius:8px;"><span style="font-weight:700;color:#334155;font-size:13.5px;">${esc(n)}</span><span style="font-weight:900;color:#10b981;font-size:14px;">${_agg[n]}명</span></div>`).join('') : '<div style="grid-column:1/-1;padding:14px;color:#94a3b8;text-align:center;font-size:13px;">예정 명단 소속 정보가 없습니다.</div>';
             const _unknownNote = _aggUnknown ? `<div style="font-size:12px;color:#94a3b8;">· 소속 구분 불가 ${_aggUnknown}명은 지도에서 제외</div>` : '';
             const _mapPanel = `<div style="display:flex;flex-direction:column;gap:8px;">`
-                + `<div style="font-size:16px;font-weight:900;color:#0f172a;">🗺️ 이번 주 전체 교육생 출신지 분포</div>`
-                + `<div style="font-size:12px;color:#94a3b8;font-weight:700;">예정 명단 소속 기준 · 총 ${_aggTotal+_aggUnknown}명</div>`
-                + `<div id="homeStatMapKakao" style="width:100%;height:36vh;min-height:250px;border-radius:14px;overflow:hidden;border:1px solid #e2e8f0;background:#eaf2fb;"></div>`
+                + `<div id="homeStatMapKakao" style="width:100%;height:40vh;min-height:280px;border-radius:14px;overflow:hidden;border:1px solid #e2e8f0;background:#eaf2fb;"></div>`
                 + `<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:6px;">${_distGrid}</div>`
                 + `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:9px;"><span style="font-weight:900;color:#166534;">합계</span><span style="font-weight:900;color:#16a34a;">${_aggTotal+_aggUnknown}명</span></div>`
                 + _unknownNote
@@ -5502,11 +5534,12 @@ resetShuttleRequests: function() {
                 const outs=[];
                 Object.keys(_allActs).forEach(_dt=>{ const _day=_allActs[_dt]||{}; Object.keys(_day).forEach(_tk=>{ const a=_day[_tk]; if(a&&(a.type==='outing'||a.type==='overnight'||a.type==='group_outing')){ const _ts=a.timestamp||0; if(_ts>=_ow.start&&_ts<_ow.end) outs.push(a); } }); });
                 if(!outs.length) return '';
-                const tbl='<table style="width:100%;border-collapse:collapse;font-size:13px;margin-top:10px;">'
+                const tbl='<table style="width:100%;table-layout:fixed;border-collapse:collapse;font-size:13px;margin-top:10px;">'
+                  +'<colgroup><col style="width:9%"><col style="width:24%"><col style="width:13%"><col style="width:29%"><col style="width:25%"></colgroup>'
                   +'<thead><tr style="color:#92400e;background:#fffbeb;">'
-                  +'<th style="padding:8px;text-align:center;border-bottom:1px solid #fde68a;width:54px;">연번</th>'
+                  +'<th style="padding:8px;text-align:center;border-bottom:1px solid #fde68a;">연번</th>'
                   +'<th style="padding:8px;text-align:left;border-bottom:1px solid #fde68a;">이름</th>'
-                  +'<th style="padding:8px;text-align:center;border-bottom:1px solid #fde68a;width:70px;">구분</th>'
+                  +'<th style="padding:8px;text-align:center;border-bottom:1px solid #fde68a;">구분</th>'
                   +'<th style="padding:8px;text-align:left;border-bottom:1px solid #fde68a;">행선지</th>'
                   +'<th style="padding:8px;text-align:center;border-bottom:1px solid #fde68a;">시간</th>'
                   +'</tr></thead><tbody>'
@@ -8609,6 +8642,74 @@ const outingAutoReturn = {
 };
 window.outingAutoReturn = outingAutoReturn;
 
+// ──────────────────────────────────────────────────────────────
+// [키오스크 모드] 비행기 아이콘 3초 롱프레스 → 현재 진행 과정 표를 모니터 전체화면으로.
+//  X 버튼(마우스 호버 시 회전)을 3초 롱프레스 → 현황판으로 복귀.
+//  데이터는 통합 현황판이 이미 구독 중인 window._homeStatsData 재사용 → Firebase 트래픽 증가 없음.
+// ──────────────────────────────────────────────────────────────
+const kiosk = {
+    _timer:null, _raf:null, _clock:null, _refresh:null,
+    init: function() {
+        const plane=document.getElementById('kioskPlaneBtn');
+        if(plane) this._bindLongPress(plane, ()=>this.open());
+        const exit=document.getElementById('kioskExitBtn');
+        if(exit) this._bindLongPress(exit, ()=>this.close());
+    },
+    _bindLongPress: function(el, cb) {
+        const self=this; let start=0;
+        const begin=function(e){ if(e.cancelable) e.preventDefault(); start=Date.now(); self._hint(0);
+            self._timer=setTimeout(function(){ self._cancel(); cb(); }, 3000);
+            self._raf=setInterval(function(){ self._hint(Math.min((Date.now()-start)/3000,1)*100); }, 60);
+        };
+        el.addEventListener('mousedown', begin);
+        el.addEventListener('touchstart', begin, {passive:false});
+        ['mouseup','mouseleave','touchend','touchcancel'].forEach(ev=>el.addEventListener(ev, ()=>self._cancel()));
+    },
+    _cancel: function(){ if(this._timer){clearTimeout(this._timer);this._timer=null;} if(this._raf){clearInterval(this._raf);this._raf=null;} this._hint(0); },
+    _hint: function(pct){ const h=document.getElementById('kioskPressHint'); if(h) h.style.width=pct+'%'; },
+    open: function() {
+        this.render();
+        const m=document.getElementById('kioskModal'); if(m) m.style.display='flex';
+        try{ const de=document.documentElement; const fn=de.requestFullscreen||de.webkitRequestFullscreen||de.msRequestFullscreen; if(fn) fn.call(de); }catch(e){}
+        this._tick(); this._clock=setInterval(()=>this._tick(), 1000);
+        this._refresh=setInterval(()=>this.render(), 30000);
+    },
+    close: function() {
+        const m=document.getElementById('kioskModal'); if(m) m.style.display='none';
+        try{ if(document.fullscreenElement){ const fn=document.exitFullscreen||document.webkitExitFullscreen||document.msExitFullscreen; if(fn) fn.call(document); } }catch(e){}
+        if(this._clock){clearInterval(this._clock);this._clock=null;}
+        if(this._refresh){clearInterval(this._refresh);this._refresh=null;}
+    },
+    _tick: function() {
+        const n=new Date(), p=x=>String(x).padStart(2,'0');
+        const c=document.getElementById('kioskClock'); if(c) c.textContent=p(n.getHours())+':'+p(n.getMinutes())+':'+p(n.getSeconds());
+        const d=document.getElementById('kioskDate'); if(d){ const w=['일','월','화','수','목','금','토'][n.getDay()]; d.textContent=n.getFullYear()+'.'+p(n.getMonth()+1)+'.'+p(n.getDate())+' ('+w+')'; }
+    },
+    render: function() {
+        const tb=document.getElementById('kioskTableBody'); if(!tb) return;
+        const d=window._homeStatsData||{};
+        const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+        const rooms=Object.entries(d).filter(([,r])=>{ const s=(r&&r.settings)||{}, st=(r&&r.status)||{}; if(s.hideFromBoard) return false; const hasCourse=!!(s.courseName&&String(s.courseName).trim()); return (st.roomStatus==='active'&&hasCourse)||ui._isThisWeek(s.period||''); }).sort((a,b)=>a[0].localeCompare(b[0]));
+        if(!rooms.length){ tb.innerHTML='<tr><td colspan="8" style="text-align:center;padding:60px;color:#94a3b8;font-size:26px;background:transparent;">현재 진행 중인 과정이 없습니다.</td></tr>'; return; }
+        tb.innerHTML=rooms.map(([room,r])=>{
+            const s=r.settings||{}, st=r.status||{};
+            const stuCnt=new Set(Object.values(r.students||{}).filter(x=>x&&x.name&&x.name!=='undefined').map(x=>String(x.name).trim())).size;
+            const prof=(st.professorName||'').trim(), coord=(s.coordinatorName||'').trim();
+            return '<tr>'
+                +'<td style="font-weight:900;color:#60a5fa;white-space:nowrap;">Room #'+esc(room)+'</td>'
+                +'<td style="font-weight:800;">'+esc(s.courseName||'-')+'</td>'
+                +'<td style="white-space:nowrap;color:#cbd5e1;">'+esc(s.period||'-')+'</td>'
+                +'<td style="white-space:nowrap;color:#cbd5e1;">'+esc(s.roomDetailName||'-')+'</td>'
+                +'<td style="text-align:center;font-weight:900;color:#34d399;">'+stuCnt+'명</td>'
+                +'<td style="white-space:nowrap;">'+(prof?esc(prof)+' 교수':'-')+'</td>'
+                +'<td style="white-space:nowrap;color:#cbd5e1;">'+esc(coord||'-')+'</td>'
+                +'<td style="color:#94a3b8;">'+esc(s.kioskNote||'')+'</td>'
+            +'</tr>';
+        }).join('');
+    }
+};
+window.kiosk = kiosk;
+
 window.onload = function() {
     dataMgr.checkMobile();
     profMgr.init();
@@ -8618,6 +8719,7 @@ window.onload = function() {
     dataMgr.initSystem();
     outingReturnCheck.init();  // 외출·외박 복귀 확인 팝업(07:00~08:59) 점검 시작
     outingAutoReturn.init();   // 외출·외박 자동 복귀완료 sweep(다음날 08:59) — 교육운영부 닫혀 있어도 동작
+    kiosk.init();              // 키오스크 모드(비행기 아이콘 3초 롱프레스) 활성화
     // [강의 모니터링] 마이크는 강의실에 입장(강의 시작)할 때 동의받아 켭니다. (lectureMonitor.syncStatus)
 };
 
@@ -10996,8 +11098,8 @@ ui.openLeaderRoulette = async function(){
     + sectors
     +'</g>'
     +'<g style="cursor:pointer;" onclick="ui.wheelSpin()">'
-    +'<circle cx="150" cy="150" r="42" fill="url(#goGrad)" stroke="#fff" stroke-width="4"/>'
-    +'<text id="wheelGo" x="150" y="150" fill="#fff" font-size="19" font-weight="900" text-anchor="middle" dominant-baseline="middle" style="letter-spacing:.5px;">GO</text>'
+    +'<circle cx="150" cy="150" r="47" fill="url(#goGrad)" stroke="#fff" stroke-width="5"/>'
+    +'<text id="wheelGo" x="150" y="150" fill="#fff" font-size="30" font-weight="900" text-anchor="middle" dominant-baseline="middle" transform="rotate(-12 150 150)" style="letter-spacing:2px;font-style:italic;">GO</text>'
     +'</g>'
     +'<polygon points="272,150 303,134 303,166" fill="#ef4444" stroke="#fff" stroke-width="2.5" stroke-linejoin="round"/>'
     +'</svg>';
@@ -11013,7 +11115,7 @@ ui.openLeaderRoulette = async function(){
 };
 ui.wheelSpin = function(){
   var r=ui._roulette; if(!r||r.spinning) return; r.spinning=true;
-  var res=document.getElementById('rouletteResult'); if(res) res.innerHTML='<div style="color:#94a3b8;font-size:13px;font-weight:700;">돌리는 중…</div>';
+  var res=document.getElementById('rouletteResult'); if(res){ res.style.cssText='margin-top:14px;text-align:center;'; res.innerHTML='<div style="color:#94a3b8;font-size:14px;font-weight:700;">돌리는 중…</div>'; }
   var N=r.pool.length, seg=360/N;
   var wi=Math.floor(Math.random()*N); r.winner=r.pool[wi];
   var Aw=wi*seg+seg/2;
@@ -11028,9 +11130,13 @@ ui.wheelSpin = function(){
 ui._wheelDone = function(){
   var r=ui._roulette; if(!r) return; r.spinning=false; var w=r.winner; if(!w) return;
   var res=document.getElementById('rouletteResult');
-  if(res){ res.innerHTML='<div style="font-size:18px;font-weight:900;color:#0f172a;margin-bottom:10px;">🎉 '+w.name+' 님 당첨!</div>'
-    +'<button onclick="ui.rouletteAssign()" style="width:100%;height:50px;border:none;border-radius:12px;background:linear-gradient(135deg,#3b82f6,#2563eb);color:#fff;font-weight:900;font-size:15px;cursor:pointer;">👑 학생장으로 지정</button>'
-    +'<button onclick="ui.wheelSpin()" style="width:100%;margin-top:8px;height:42px;border:1px solid #e2e8f0;border-radius:12px;background:#fff;color:#64748b;font-weight:800;cursor:pointer;">다시 돌리기</button>'; }
+  if(res){
+    res.style.cssText='position:fixed;left:50%;bottom:7vh;transform:translateX(-50%);z-index:100000;width:min(640px,94vw);';
+    res.innerHTML='<div style="background:rgba(255,255,255,0.97);border-radius:22px;padding:22px 26px;box-shadow:0 20px 60px rgba(0,0,0,.35);border:2px solid #dbeafe;text-align:center;">'
+    +'<div style="font-size:clamp(38px,7vw,62px);font-weight:900;color:#0f172a;line-height:1.1;letter-spacing:-1px;margin-bottom:16px;">🎉 '+w.name+' 님 당첨!</div>'
+    +'<button onclick="ui.rouletteAssign()" style="width:100%;height:56px;border:none;border-radius:14px;background:linear-gradient(135deg,#3b82f6,#2563eb);color:#fff;font-weight:900;font-size:18px;cursor:pointer;">👑 학생장으로 지정</button>'
+    +'<button onclick="ui.wheelSpin()" style="width:100%;margin-top:9px;height:46px;border:1px solid #e2e8f0;border-radius:14px;background:#fff;color:#64748b;font-weight:800;font-size:15px;cursor:pointer;">다시 돌리기</button>'
+    +'</div>'; }
 };
 ui.rouletteAssign = async function(){
   var w=ui._roulette && ui._roulette.winner; if(!w) return;
