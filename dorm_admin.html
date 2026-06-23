@@ -6155,7 +6155,7 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
 #dormKioskModal tbody td{ padding:16px 14px; border-bottom:1px solid rgba(255,255,255,.07); text-align:center; }
 #dormKioskModal tbody tr:nth-child(even){ background:rgba(255,255,255,.025); }
 </style>
-<div id="dormKioskModal" style="display:none; position:fixed; inset:0; z-index:100000; justify-content:center; align-items:flex-start; overflow:auto; background:linear-gradient(160deg,#0b1220,#0f172a);"><div id="dormKioskScale" style="width:1360px; flex-shrink:0; color:#e2e8f0; font-family:'Pretendard','Noto Sans KR',sans-serif;">
+<div id="dormKioskModal" style="display:none; position:fixed; inset:0; z-index:100000; flex-direction:column; overflow:auto; background:linear-gradient(160deg,#0b1220,#0f172a); color:#e2e8f0; font-family:'Pretendard','Noto Sans KR',sans-serif;">
   <div style="display:flex; align-items:flex-start; justify-content:space-between; padding:26px 40px 16px;">
     <div style="display:flex; align-items:center; gap:16px;">
       <i class="fa-solid fa-plane-departure" style="font-size:34px; color:#3b82f6;"></i>
@@ -6188,7 +6188,6 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
     </table>
   </div>
 </div>
-</div>
 <script>
 (function(){
   const dormKiosk = {
@@ -6196,13 +6195,6 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
     init:function(){
       var clock=document.getElementById('dormKioskClock');
       if(clock) this._bindLongPress(clock, 5000, function(){ dormKiosk.close(); }, 'dormKioskExitHint');
-    },
-    _fit:function(){
-      var w=document.getElementById('dormKioskScale'); if(!w) return;
-      var DESIGN=1360, MAXZ=2.6, vw=window.innerWidth||DESIGN;
-      var sc=vw/DESIGN; if(sc>MAXZ) sc=MAXZ;
-      w.style.transform='none'; w.style.marginLeft=''; w.style.marginBottom='';
-      try{ w.style.zoom=sc; }catch(e){ w.style.zoom=''; w.style.transformOrigin='top center'; w.style.transform='scale('+sc+')'; }
     },
     _bindLongPress:function(el,dur,cb,hintId){
       var t=null,raf=null,start=0;
@@ -6218,9 +6210,9 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
     },
     open:function(){
       var self=this;
-      if(!this._rosterSub){ this._rosterSub=true; try{ db.ref('system/dorm/rosters').on('value', function(s){ self._rosters=s.val()||{}; var m=document.getElementById('dormKioskModal'); if(m&&m.style.display!=='none'){ self.render(); self._fit(); } }); }catch(e){} }
+      if(!this._rosterSub){ this._rosterSub=true; try{ db.ref('system/dorm/rosters').on('value', function(s){ self._rosters=s.val()||{}; var m=document.getElementById('dormKioskModal'); if(m&&m.style.display!=='none'){ self.render(); } }); }catch(e){} }
       this.render();
-      var m=document.getElementById('dormKioskModal'); if(m){ m.style.display='flex'; this._fit(); }
+      var m=document.getElementById('dormKioskModal'); if(m){ m.style.display='flex'; }
       this._tick(); this._clock=setInterval(function(){ self._tick(); },1000);
       this._refresh=setInterval(function(){ self.render(); },30000);
     },
@@ -6288,7 +6280,6 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
   };
   window.dormKiosk=dormKiosk;
   dormKiosk.init();
-  window.addEventListener('resize', function(){ var m=document.getElementById('dormKioskModal'); if(m&&m.style.display!=='none') dormKiosk._fit(); });
 
   // 시계 외 종료 보조: Esc
   document.addEventListener('keydown', function(e){ if(e.key==='Escape'){ var m=document.getElementById('dormKioskModal'); if(m&&m.style.display!=='none') dormKiosk.close(); } });
@@ -6303,7 +6294,7 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
       raf=setInterval(function(){ setHint(Math.min((Date.now()-start)/5000,1)); }, 50);
     }
     function stop(){ if(t){clearTimeout(t);t=null;} if(raf){clearInterval(raf);raf=null;} setHint(0); }
-    function endPress(){ var was=fired; stop(); if(was){ try{ var de=document.documentElement; var fn=de.requestFullscreen||de.webkitRequestFullscreen||de.msRequestFullscreen; if(fn) fn.call(de); }catch(_){} setTimeout(function(){ if(window.dormKiosk) dormKiosk._fit(); }, 250); } }
+    function endPress(){ var was=fired; stop(); if(was){ try{ var de=document.documentElement; var fn=de.requestFullscreen||de.webkitRequestFullscreen||de.msRequestFullscreen; if(fn) fn.call(de); }catch(_){} } }
     brand.addEventListener('mousedown', begin);
     brand.addEventListener('touchstart', begin, {passive:true});
     brand.addEventListener('mouseup', endPress);
