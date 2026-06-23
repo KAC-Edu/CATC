@@ -7054,9 +7054,14 @@ function _filterRoster(q){ q=(q||'').toLowerCase().trim();
 /* 3) 외출·외박 현황 (선택 날짜 기준) */
 function openOutingSummary(){
   const rooms=_coordActiveRooms();
+  // ── KST 당일 09:00 ~ 익일 09:00 윈도우 (개별 화면과 동일 기준: 익일 09시 초기화) ──
+  const _KST=9*60*60*1000, _nk=new Date(Date.now()+_KST);
+  let _wStart=Date.UTC(_nk.getUTCFullYear(),_nk.getUTCMonth(),_nk.getUTCDate(),9,0,0)-_KST;
+  if(_nk.getUTCHours()<9) _wStart-=24*60*60*1000;
+  const _wEnd=_wStart+24*60*60*1000;
   let blocks=rooms.map(r=>{ const aa=r.room.admin_actions||{};
     let list=[];
-    Object.keys(aa).forEach(dt=>{ if(!/^\d{4}-\d{2}-\d{2}$/.test(dt)) return; Object.values(aa[dt]||{}).forEach(a=>{ if(a&&a.name) list.push(Object.assign({date:dt},a)); }); });
+    Object.keys(aa).forEach(dt=>{ if(!/^\d{4}-\d{2}-\d{2}$/.test(dt)) return; Object.values(aa[dt]||{}).forEach(a=>{ if(a&&a.name&&(a.timestamp||0)>=_wStart&&(a.timestamp||0)<_wEnd) list.push(Object.assign({date:dt},a)); }); });
     if(!list.length) return '';
     list.sort((a,b)=>(''+(a.date||'')).localeCompare(''+(b.date||''))||((a.timestamp||0)-(b.timestamp||0)));
     const rows=list.map((a,i)=>{ const kind=(a.type==='outing')?'<span style="color:#ea580c;font-weight:800;">외출</span>':'<span style="color:#dc2626;font-weight:800;">외박</span>'; return `<tr><td style="color:#94a3b8;">${i+1}</td><td style="font-weight:800;">${_esc(a.name||'-')}</td><td>${kind}</td><td style="text-align:left;color:#475569;">${_esc(a.dept||'-')}</td><td>${_esc(a.date?a.date.substring(5):'-')}</td><td style="text-align:left;">${_esc(a.destination||'-')}</td></tr>`; }).join('');

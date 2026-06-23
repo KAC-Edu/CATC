@@ -1590,6 +1590,18 @@ body.cpop-locked{ overflow:hidden !important; }
 .cpop-course-h{ background:#e0f2fe; color:#0c4a6e; border-left:4px solid #38bdf8; padding:13px 16px; font-weight:900; font-size:18px; display:flex; justify-content:space-between; align-items:center; }
 .cpop-course-h span{ color:#0ea5e9; font-size:12px; }
 .cpop-roster{ padding:10px 13px; display:flex; flex-wrap:wrap; gap:7px; }
+/* 명단 팝업 아코디언: 헤더 바만 보이고 클릭 시 펼침 */
+.cpop-course-h{ cursor:pointer; transition:background .15s; }
+.cpop-course-h:hover{ background:#cfeafe; }
+.cpop-course-h .cpop-acc-chev{ color:#0ea5e9; font-size:15px; margin-right:8px; transition:transform .2s ease; }
+.cpop-course-h.acc-open .cpop-acc-chev{ transform:rotate(90deg); }
+.cpop-acc-body{ overflow-x:auto; }
+/* 청렴/노조교육 장소 선택 버튼 */
+.eduplace-pick{ background:#f1f5f9; border:1.5px solid #e2e8f0; border-radius:11px; padding:13px 16px; font-size:15px; font-weight:800; color:#1e293b; cursor:pointer; transition:all .15s; white-space:nowrap; }
+.eduplace-pick:hover{ background:#dbeafe; border-color:#2563eb; color:#1e40af; transform:translateY(-1px); }
+.eduplace-pick.clear{ background:#fef2f2; border-color:#fecaca; color:#dc2626; }
+.eduplace-pick.clear:hover{ background:#fee2e2; border-color:#ef4444; color:#b91c1c; }
+.eduplace-grp{ font-size:13px; font-weight:900; color:#64748b; margin:14px 0 8px; }
 .cpop-name{ background:#f1f5f9; border-radius:8px; padding:6px 11px; font-size:13px; font-weight:700; }
 .cpop-name small{ color:#94a3b8; font-weight:600; margin-left:4px; }
 .cpop-datebar{ font-weight:800; color:#475569; margin-bottom:10px; }
@@ -1761,6 +1773,8 @@ body.pc-mode .coord-right{ grid-column:2 !important; grid-row:1 !important; just
       <div class="hdr-stat" onclick="openStudentRosterPopup()" title="전체 교육생 명단"><i class="fa-solid fa-users"></i><div class="hdr-stat-txt"><div class="hb-label">전체 교육생</div><div class="hb-value"><span id="g-total-students">0</span><small>명</small></div></div></div>
       <div class="hdr-stat" onclick="openOutingSummary()" title="외출·외박 현황"><i class="fa-solid fa-file-signature"></i><div class="hdr-stat-txt"><div class="hb-label">외출·외박</div><div class="hb-value"><span id="g-today-actions">0</span><small>건</small></div></div></div>
       <div class="hdr-stat" onclick="openShuttleSummary()" title="퇴교차량 신청자"><i class="fa-solid fa-bus"></i><div class="hdr-stat-txt"><div class="hb-label">퇴교차량</div><div class="hb-value"><span id="g-shuttle-count">0</span><small>명</small></div></div></div>
+      <div class="hdr-stat hdr-edu" onclick="openEduPlacePicker('integrity')" title="금주 청렴교육 장소 설정"><i class="fa-solid fa-scale-balanced"></i><div class="hdr-stat-txt"><div class="hb-label">청렴교육</div><div class="hb-value" style="font-size:17px;"><span id="g-edu-integrity">미정</span></div></div></div>
+      <div class="hdr-stat hdr-edu" onclick="openEduPlacePicker('union')" title="금주 노조와의 대화 장소 설정"><i class="fa-solid fa-handshake"></i><div class="hdr-stat-txt"><div class="hb-label">노조교육</div><div class="hb-value" style="font-size:17px;"><span id="g-edu-union">미정</span></div></div></div>
     </div>
   </div>
 </header>
@@ -7344,8 +7358,8 @@ function openStudentRosterPopup(){
       roster=roster.slice().filter(st=>st&&(''+(st.name||'')).trim());
       if(!roster.length) return '';
       const rows=roster.map((st,i)=>`<tr class="rosterRow" data-n="${_esc(((st.name||'')+(st.dept||st.position||st.affil||'')).toLowerCase())}"><td style="color:#94a3b8;">${i+1}</td><td style="text-align:left;color:#475569;">${_esc(st.dept||st.position||st.affil||st.org||'-')}</td><td style="color:#64748b;">${_esc(st.empNo||st.sabun||st.id||'-')}</td><td style="font-weight:800;">${_esc(st.name||'-')}</td></tr>`).join('');
-      return `<div class="cpop-course"><div class="cpop-course-h">ROOM #${_esc(r.rid)} · ${_esc(r.s.courseName||'-')} <span style="color:#0ea5e9;font-size:14px;">${roster.length}명</span></div>
-        <table class="cpop-table" style="table-layout:fixed;"><colgroup><col style="width:12%"><col style="width:46%"><col style="width:21%"><col style="width:21%"></colgroup><thead><tr><th>연번</th><th style="text-align:left;">소속</th><th>사번</th><th>성명</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+      return `<div class="cpop-course"><div class="cpop-course-h" onclick="_rosterAccToggle(this)"><span style="color:#0c4a6e;font-size:18px;"><i class="fa-solid fa-chevron-right cpop-acc-chev"></i>ROOM #${_esc(r.rid)} · ${_esc(r.s.courseName||'-')}</span> <span style="color:#0ea5e9;font-size:14px;">${roster.length}명</span></div>
+        <div class="cpop-acc-body" style="display:none;"><table class="cpop-table" style="table-layout:fixed;"><colgroup><col style="width:12%"><col style="width:46%"><col style="width:21%"><col style="width:21%"></colgroup><thead><tr><th>연번</th><th style="text-align:left;">소속</th><th>사번</th><th>성명</th></tr></thead><tbody>${rows}</tbody></table></div></div>`;
     }).join('');
     if(!blocks.trim()) blocks='<div class="cpop-empty">등록된 명단이 없습니다.</div>';
     const w=document.getElementById('cpopRosterWrap'); if(w) w.innerHTML=blocks;
@@ -7357,17 +7371,77 @@ function openStudentRosterPopup(){
     firebase.database().ref('system/coord/rosters').once('value').catch(()=>null)
   ]).then(res=>{ const ext={}; res.forEach(snap=>{ if(!snap) return; const v=snap.val()||{}; Object.keys(v).forEach(kk=>{ const it=v[kk]; if(!it||!Array.isArray(it.list)) return; const nm=norm(it.courseName); if(!nm) return; (ext[nm]=ext[nm]||[]).push({ list:it.list, period:(it.period||''), room:(it.room||''), weekKey:(it.weekKey||'') }); }); }); window._coordRosterExt=ext; paint(ext); }).catch(()=>{});
 }
+function _rosterAccToggle(h){
+  const block=h.parentElement; if(!block) return;
+  const body=block.querySelector('.cpop-acc-body'); if(!body) return;
+  const willOpen=(body.style.display==='none');
+  // 아코디언: 다른 과정은 모두 접기
+  document.querySelectorAll('#cpopBody .cpop-acc-body').forEach(b=>{ b.style.display='none'; });
+  document.querySelectorAll('#cpopBody .cpop-course-h').forEach(x=>x.classList.remove('acc-open'));
+  if(willOpen){ body.style.display=''; h.classList.add('acc-open'); }
+}
 function _filterRoster(q){ q=(q||'').toLowerCase().trim();
   document.querySelectorAll('#cpopBody .rosterRow').forEach(el=>{ const k=el.getAttribute('data-n')||''; el.style.display=(!q||k.includes(q))?'':'none'; });
-  document.querySelectorAll('#cpopBody .cpop-course').forEach(c=>{ const any=[...c.querySelectorAll('.rosterRow')].some(e=>e.style.display!=='none'); c.style.display=any?'':'none'; });
+  document.querySelectorAll('#cpopBody .cpop-course').forEach(c=>{
+    const any=[...c.querySelectorAll('.rosterRow')].some(e=>e.style.display!=='none');
+    c.style.display=any?'':'none';
+    const body=c.querySelector('.cpop-acc-body'); const h=c.querySelector('.cpop-course-h');
+    if(body){
+      if(q){ body.style.display=any?'':'none'; if(h) h.classList.toggle('acc-open', any); }   // 검색 시 일치 과정 자동 펼침
+      else { body.style.display='none'; if(h) h.classList.remove('acc-open'); }               // 검색어 없으면 모두 접기
+    }
+  });
 }
+
+/* ── 청렴/노조교육 장소 공지 (강사플랫폼 실시간 연동) ── */
+function _eduShort(v){ v=(''+(v||'')).trim(); if(!v) return '미정'; var p=v.split(' '); return p.length>1?p[p.length-1]:v; }
+function openEduPlacePicker(type){
+  var title=(type==='integrity')?'<i class="fa-solid fa-scale-balanced"></i> 청렴교육 장소 선택':'<i class="fa-solid fa-handshake"></i> 노조와의 대화 장소 선택';
+  var sel=document.getElementById('setup-room-dropdown');
+  var groups={}, order=[];
+  if(sel){
+    Array.prototype.slice.call(sel.options).forEach(function(o){
+      if(!o.value || o.value==='direct' || o.value==='') return;
+      var g=''; var og=o.parentNode; if(og && og.tagName==='OPTGROUP') g=og.label||'기타'; else g='기타';
+      if(!groups[g]){ groups[g]=[]; order.push(g); }
+      groups[g].push({val:o.value, txt:o.text});
+    });
+  }
+  var html='<div style="font-size:13px;color:#64748b;font-weight:700;margin-bottom:6px;">사용 중인 강의실도 선택 가능합니다(수업 중인 강의실에서 진행).</div>';
+  html+='<div><button class="eduplace-pick clear" onclick="setEduPlace(\''+type+'\',\'\')"><i class="fa-solid fa-eraser"></i> 미정으로 초기화</button></div>';
+  order.forEach(function(g){
+    html+='<div class="eduplace-grp">'+_esc(g)+'</div><div style="display:flex;flex-wrap:wrap;gap:9px;">';
+    groups[g].forEach(function(r){ html+='<button class="eduplace-pick" onclick="setEduPlace(\''+type+'\',this.getAttribute(\'data-v\'))" data-v="'+_esc(r.val)+'">'+_esc(r.txt)+'</button>'; });
+    html+='</div>';
+  });
+  _cpop(title, html);
+}
+function setEduPlace(type,val){
+  try{ firebase.database().ref('system/eduLocations/'+type).set(val||null); }catch(e){}
+  if(typeof cpopClose==='function') cpopClose();
+}
+(function initEduLocationsCoord(){
+  try{
+    if(!window.firebase || !firebase.database){ setTimeout(initEduLocationsCoord,400); return; }
+    firebase.database().ref('system/eduLocations').on('value', function(s){
+      var v=s.val()||{};
+      var a=document.getElementById('g-edu-integrity'); if(a) a.textContent=_eduShort(v.integrity);
+      var b=document.getElementById('g-edu-union'); if(b) b.textContent=_eduShort(v.union);
+    });
+  }catch(e){ setTimeout(initEduLocationsCoord,800); }
+})();
 
 /* 3) 외출·외박 현황 (선택 날짜 기준) */
 function openOutingSummary(){
   const rooms=_coordActiveRooms();
+  // ── KST 당일 09:00 ~ 익일 09:00 윈도우 (개별 화면과 동일 기준: 익일 09시 초기화) ──
+  const _KST=9*60*60*1000, _nk=new Date(Date.now()+_KST);
+  let _wStart=Date.UTC(_nk.getUTCFullYear(),_nk.getUTCMonth(),_nk.getUTCDate(),9,0,0)-_KST;
+  if(_nk.getUTCHours()<9) _wStart-=24*60*60*1000;
+  const _wEnd=_wStart+24*60*60*1000;
   let blocks=rooms.map(r=>{ const aa=r.room.admin_actions||{};
     let list=[];
-    Object.keys(aa).forEach(dt=>{ if(!/^\d{4}-\d{2}-\d{2}$/.test(dt)) return; Object.values(aa[dt]||{}).forEach(a=>{ if(a&&a.name) list.push(Object.assign({date:dt},a)); }); });
+    Object.keys(aa).forEach(dt=>{ if(!/^\d{4}-\d{2}-\d{2}$/.test(dt)) return; Object.values(aa[dt]||{}).forEach(a=>{ if(a&&a.name&&(a.timestamp||0)>=_wStart&&(a.timestamp||0)<_wEnd) list.push(Object.assign({date:dt},a)); }); });
     if(!list.length) return '';
     list.sort((a,b)=>(''+(a.date||'')).localeCompare(''+(b.date||''))||((a.timestamp||0)-(b.timestamp||0)));
     const rows=list.map((a,i)=>{ const kind=(a.type==='outing')?'<span style="color:#ea580c;font-weight:800;">외출</span>':'<span style="color:#dc2626;font-weight:800;">외박</span>'; return `<tr><td style="color:#94a3b8;">${i+1}</td><td style="font-weight:800;">${_esc(a.name||'-')}</td><td>${kind}</td><td style="text-align:left;color:#475569;">${_esc(a.dept||'-')}</td><td>${_esc(a.date?a.date.substring(5):'-')}</td><td style="text-align:left;">${_esc(a.destination||'-')}</td></tr>`; }).join('');
