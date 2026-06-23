@@ -1585,9 +1585,9 @@ body.cpop-locked{ overflow:hidden !important; }
 .cpop-table{ width:100%; border-collapse:collapse; }
 .cpop-table th{ background:#f1f5f9; color:#475569; font-size:13.5px; font-weight:800; padding:11px 8px; border-bottom:2px solid #e2e8f0; }
 .cpop-table td{ text-align:center; font-size:15px; padding:11px 8px; border-bottom:1px solid #f1f5f9; }
-.cov-table th{ font-size:14.5px !important; padding:12px 8px !important; }
-.cov-table td{ font-size:16px !important; padding:14px 9px !important; }
-.cov-table td:nth-child(2){ font-size:17px; }
+.cov-table th{ font-size:15.5px !important; padding:13px 8px !important; }
+.cov-table td{ font-size:17px !important; padding:16px 10px !important; }
+.cov-table td:nth-child(2){ font-size:18.5px; }
 .cpop-empty{ text-align:center; color:#94a3b8; font-weight:700; padding:40px; }
 .cpop-search{ width:100%; padding:11px; border:1.5px solid #e2e8f0; border-radius:10px; font-size:14px; margin-bottom:12px; box-sizing:border-box; }
 .cpop-course{ border:1px solid #e2e8f0; border-radius:12px; margin-bottom:12px; overflow:hidden; }
@@ -7368,7 +7368,7 @@ function _courseOverviewHTML(){
   if(!rooms.length) return '<div class="cpop-empty">운영 중인 과정이 없습니다.</div>';
   var today=(typeof _coordToday==='function'?_coordToday():new Date().toISOString().slice(0,10));
   var head='<table class="cpop-table cov-table"><thead>'
-    +'<tr><th rowspan="2">구분</th><th rowspan="2" style="text-align:left;">과정명</th><th rowspan="2">강의실</th><th rowspan="2">교육기간</th><th colspan="2" style="background:#e8f0fe;">수강인원</th><th rowspan="2">담임교수</th><th rowspan="2">과정운영담당자</th><th rowspan="2">비고</th></tr>'
+    +'<tr><th rowspan="2">구분</th><th rowspan="2">과정명</th><th rowspan="2">강의실</th><th rowspan="2">교육기간</th><th colspan="2" style="background:#e8f0fe;">수강인원</th><th rowspan="2">담임교수</th><th rowspan="2">과정운영담당자</th><th rowspan="2">비고</th></tr>'
     +'<tr><th style="background:#eef4ff;">예정</th><th style="background:#eafaf0;">입교</th></tr>'
     +'</thead><tbody>';
   var body=rooms.map(function(r){
@@ -7378,11 +7378,11 @@ function _courseOverviewHTML(){
     var prof=(r.st.professorName||'').trim()?(_esc(r.st.professorName.trim())+' 교수'):'-';
     return '<tr>'
       +'<td style="font-weight:900;">ROOM #'+_esc(r.rid)+'</td>'
-      +'<td style="text-align:left;font-weight:800;color:#0f172a;">'+_esc(r.s.courseName||'-')+'</td>'
+      +'<td style="text-align:center;font-weight:800;color:#0f172a;">'+_esc(r.s.courseName||'-')+'</td>'
       +'<td>'+_esc(r.s.roomDetailName||r.s.roomDetail||'-')+'</td>'
       +'<td style="white-space:nowrap;font-size:13.5px;">'+_esc(r.s.period||'-')+'</td>'
-      +'<td><b style="font-size:18px;color:#1e3a8a;">'+c.expected+'</b><span style="font-size:12px;color:#94a3b8;">명</span></td>'
-      +'<td><b style="font-size:18px;color:#16a34a;">'+c.arrived+'</b><span style="font-size:12px;color:#94a3b8;">명</span></td>'
+      +'<td><b style="font-size:20px;color:#1e3a8a;">'+c.expected+'</b><span style="font-size:12px;color:#94a3b8;">명</span></td>'
+      +'<td><b style="font-size:20px;color:#16a34a;">'+c.arrived+'</b><span style="font-size:12px;color:#94a3b8;">명</span></td>'
       +'<td>'+prof+'</td>'
       +'<td style="font-weight:700;">'+_esc(full(r.s.coordinatorName)||'-')+'</td>'
       +'<td>'+bigo+'</td>'

@@ -2694,8 +2694,8 @@ function setupAcc(btn){
 </div>
 <!-- ══ 키오스크 전체화면 (현재 진행 과정 표) — 비행기 아이콘 3초 롱프레스로 진입 ══ -->
 <style>
-#kioskTable th { font-size:19px; color:#93c5fd; font-weight:800; text-align:left; padding:10px 20px; border-bottom:2px solid rgba(255,255,255,.18); white-space:nowrap; }
-#kioskTable td { padding:20px; background:rgba(255,255,255,.06); vertical-align:middle; }
+#kioskTable th { font-size:25px; color:#93c5fd; font-weight:800; text-align:center; padding:14px 16px; border-bottom:2px solid rgba(255,255,255,.18); white-space:nowrap; }
+#kioskTable td { padding:26px 16px; background:rgba(255,255,255,.06); vertical-align:middle; text-align:center; }
 #kioskTable tbody tr td:first-child { border-radius:14px 0 0 14px; }
 #kioskTable tbody tr td:last-child { border-radius:0 14px 14px 0; }
 #kioskExitBtn:hover { transform:rotate(180deg); background:rgba(239,68,68,.85) !important; }
@@ -2710,23 +2710,21 @@ function setupAcc(btn){
       </div>
     </div>
     <div style="text-align:right;">
-      <div id="kioskClock" style="font-size:34px; font-weight:900; letter-spacing:1px;"></div>
+      <div id="kioskClock" title="5초간 꾹 누르면 현황판으로 복귀" style="font-size:36px; font-weight:900; letter-spacing:1px; cursor:pointer; user-select:none;"></div>
       <div id="kioskDate" style="font-size:16px; color:#94a3b8; font-weight:700;"></div>
     </div>
   </div>
   <div style="flex:1; overflow:auto; padding:26px 44px 44px;">
-    <table id="kioskTable" style="width:100%; border-collapse:separate; border-spacing:0 12px; font-size:23px;">
+    <table id="kioskTable" style="width:100%; border-collapse:separate; border-spacing:0 12px; font-size:30px;">
       <thead><tr>
-        <th>구분</th><th>과정명</th><th>교육기간</th><th>강의실</th><th style="text-align:center;">교육생수</th><th>담임교수</th><th>과정담당</th><th>비고</th>
+        <th>구분</th><th>과정명</th><th>교육기간</th><th>강의실</th><th>교육생수(예정)</th><th>담임교수</th><th>과정담당</th><th>비고</th>
       </tr></thead>
       <tbody id="kioskTableBody"></tbody>
     </table>
   </div>
-  <div id="kioskExitBtn" title="3초간 꾹 누르면 현황판으로 복귀" style="position:fixed; top:24px; right:28px; width:62px; height:62px; border-radius:50%; background:rgba(255,255,255,.12); border:2px solid rgba(255,255,255,.25); display:flex; align-items:center; justify-content:center; cursor:pointer; transition:transform .45s cubic-bezier(.22,1,.36,1), background .2s; z-index:2;">
-    <i class="fa-solid fa-xmark" style="font-size:32px; color:#fff;"></i>
-  </div>
-  <div id="kioskPressHint" style="position:fixed; bottom:0; left:0; height:7px; width:0%; background:linear-gradient(90deg,#3b82f6,#60a5fa); transition:width .08s linear; z-index:3;"></div>
 </div>
+<!-- 롱프레스 진행바: 키오스크 모달 밖(최상위)에 둬서 비행기·시계 어디서 눌러도 보이게 -->
+<div id="kioskPressHint" style="position:fixed; bottom:0; left:0; height:9px; width:0%; background:linear-gradient(90deg,#3b82f6,#60a5fa); transition:width .08s linear; z-index:2147483640; box-shadow:0 -1px 14px rgba(96,165,250,.9);"></div>
 <div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vP</div>
 <script>
 /* 청렴/노조교육 장소 — 강사플랫폼 실시간 표출 (system/eduLocations) */

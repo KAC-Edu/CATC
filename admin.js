@@ -8651,15 +8651,15 @@ const kiosk = {
     _timer:null, _raf:null, _clock:null, _refresh:null,
     init: function() {
         const plane=document.getElementById('kioskPlaneBtn');
-        if(plane) this._bindLongPress(plane, ()=>this.open());
-        const exit=document.getElementById('kioskExitBtn');
-        if(exit) this._bindLongPress(exit, ()=>this.close());
+        if(plane) this._bindLongPress(plane, 3000, ()=>this.open());     // 비행기 3초 → 키오스크 진입
+        const clock=document.getElementById('kioskClock');
+        if(clock) this._bindLongPress(clock, 5000, ()=>this.close());    // 시계 5초 → 현황판 복귀
     },
-    _bindLongPress: function(el, cb) {
+    _bindLongPress: function(el, dur, cb) {
         const self=this; let start=0;
         const begin=function(e){ if(e.cancelable) e.preventDefault(); start=Date.now(); self._hint(0);
-            self._timer=setTimeout(function(){ self._cancel(); cb(); }, 3000);
-            self._raf=setInterval(function(){ self._hint(Math.min((Date.now()-start)/3000,1)*100); }, 60);
+            self._timer=setTimeout(function(){ self._cancel(); cb(); }, dur);
+            self._raf=setInterval(function(){ self._hint(Math.min((Date.now()-start)/dur,1)*100); }, 50);
         };
         el.addEventListener('mousedown', begin);
         el.addEventListener('touchstart', begin, {passive:false});
@@ -8691,19 +8691,37 @@ const kiosk = {
         const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
         const rooms=Object.entries(d).filter(([,r])=>{ const s=(r&&r.settings)||{}, st=(r&&r.status)||{}; if(s.hideFromBoard) return false; const hasCourse=!!(s.courseName&&String(s.courseName).trim()); return (st.roomStatus==='active'&&hasCourse)||ui._isThisWeek(s.period||''); }).sort((a,b)=>a[0].localeCompare(b[0]));
         if(!rooms.length){ tb.innerHTML='<tr><td colspan="8" style="text-align:center;padding:60px;color:#94a3b8;font-size:26px;background:transparent;">현재 진행 중인 과정이 없습니다.</td></tr>'; return; }
+        const dormAll=window._dormRosters||{};
+        const _status=function(period){
+            const parts=String(period||'').split('~');
+            const parse=x=>{ const dt=new Date(String(x).trim()); return isNaN(dt.getTime())?null:(dt.setHours(0,0,0,0),dt); };
+            const today=new Date(); today.setHours(0,0,0,0);
+            const sd=parse(parts[0]), ed=parse(parts[1]||parts[0]);
+            if(!sd) return {t:'-',c:'#94a3b8'};
+            if(today<sd) return {t:'예정',c:'#fbbf24'};
+            if(ed && today>ed) return {t:'종료',c:'#94a3b8'};
+            return {t:'진행중',c:'#34d399'};
+        };
         tb.innerHTML=rooms.map(([room,r])=>{
             const s=r.settings||{}, st=r.status||{};
-            const stuCnt=new Set(Object.values(r.students||{}).filter(x=>x&&x.name&&x.name!=='undefined').map(x=>String(x.name).trim())).size;
-            const prof=(st.professorName||'').trim(), coord=(s.coordinatorName||'').trim();
+            // 교육생수 = 예정 인원 (지원부 명단/dorm rosters에서 과정명 매칭)
+            let planned=0; const _cn=String(s.courseName||'').trim(); let _best=null;
+            for(const _k in dormAll){ const _dv=dormAll[_k]; if(_dv&&Array.isArray(_dv.list)&&_dv.list.length&&String(_dv.courseName||'').trim()===_cn){ if(!_best||(_dv.updatedAt||0)>(_best.updatedAt||0)) _best=_dv; } }
+            if(_best) planned=_best.list.length;
+            const prof=(st.professorName||'').trim();
+            const coordRaw=(s.coordinatorName||'').trim();
+            // 과정담당: 직책까지 합본 표시 (등록 명단과 매칭)
+            const coord=(typeof coordMgr!=='undefined'&&coordMgr.matchName)?(coordMgr.matchName(coordRaw)||coordRaw):coordRaw;
+            const stt=_status(s.period);
             return '<tr>'
                 +'<td style="font-weight:900;color:#60a5fa;white-space:nowrap;">Room #'+esc(room)+'</td>'
                 +'<td style="font-weight:800;">'+esc(s.courseName||'-')+'</td>'
                 +'<td style="white-space:nowrap;color:#cbd5e1;">'+esc(s.period||'-')+'</td>'
-                +'<td style="white-space:nowrap;color:#cbd5e1;">'+esc(s.roomDetailName||'-')+'</td>'
-                +'<td style="text-align:center;font-weight:900;color:#34d399;">'+stuCnt+'명</td>'
+                +'<td style="color:#cbd5e1;">'+esc(s.roomDetailName||'-')+'</td>'
+                +'<td style="font-weight:900;color:#34d399;">'+planned+'명</td>'
                 +'<td style="white-space:nowrap;">'+(prof?esc(prof)+' 교수':'-')+'</td>'
                 +'<td style="white-space:nowrap;color:#cbd5e1;">'+esc(coord||'-')+'</td>'
-                +'<td style="color:#94a3b8;">'+esc(s.kioskNote||'')+'</td>'
+                +'<td><span style="display:inline-block;padding:5px 16px;border-radius:999px;font-weight:800;font-size:0.78em;color:'+stt.c+';background:'+stt.c+'22;border:1px solid '+stt.c+'66;">'+stt.t+'</span></td>'
             +'</tr>';
         }).join('');
     }
