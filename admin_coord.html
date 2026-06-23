@@ -1725,6 +1725,16 @@ body.pc-mode .coord-pc-only{ display:flex !important; }
 .hdr-stat .hb-label{ font-size:11px; font-weight:700; color:#cbd5e1; line-height:1.15; }
 .hdr-stat .hb-value{ font-size:20px; font-weight:900; color:#fff; line-height:1.05; letter-spacing:-.5px; }
 .hdr-stat .hb-value small{ font-size:11px; font-weight:700; color:#93c5fd; margin-left:2px; }
+/* 청렴/노조교육 블록: 내용이 미정이어도 옆 블록과 높이 동일 */
+.hdr-edu{ align-self:stretch !important; }
+.hdr-edu .hdr-stat-txt{ display:flex; flex-direction:column; justify-content:center; }
+/* 청렴/노조교육 상태색: 설정=녹색 활성 / 미설정=빨강 활성 */
+.hdr-edu.edu-set{ background:rgba(22,163,74,0.60) !important; border-color:#22c55e !important; box-shadow:0 0 0 1px rgba(34,197,94,.45), 0 4px 12px rgba(22,163,74,.30) !important; }
+.hdr-edu.edu-unset{ background:rgba(220,38,38,0.60) !important; border-color:#ef4444 !important; box-shadow:0 0 0 1px rgba(239,68,68,.45), 0 4px 12px rgba(220,38,38,.30) !important; }
+.hdr-edu.edu-set .hb-value, .hdr-edu.edu-unset .hb-value{ color:#fff !important; }
+.hdr-edu.edu-set .hb-label, .hdr-edu.edu-unset .hb-label{ color:rgba(255,255,255,0.95) !important; }
+.hdr-edu.edu-set > i{ color:#dcfce7 !important; }
+.hdr-edu.edu-unset > i{ color:#fee2e2 !important; }
 body.pc-mode .coord-hdr-stats{ gap:10px; overflow:visible !important; min-width:auto !important; flex-wrap:nowrap !important; }
 body.pc-mode .coord-left{ grid-column:1 !important; grid-row:1 !important; justify-self:start !important; align-self:center !important; }
 body.pc-mode .hdr-stat{ padding:8px 18px; }
@@ -1773,8 +1783,8 @@ body.pc-mode .coord-right{ grid-column:2 !important; grid-row:1 !important; just
       <div class="hdr-stat" onclick="openStudentRosterPopup()" title="전체 교육생 명단"><i class="fa-solid fa-users"></i><div class="hdr-stat-txt"><div class="hb-label">전체 교육생</div><div class="hb-value"><span id="g-total-students">0</span><small>명</small></div></div></div>
       <div class="hdr-stat" onclick="openOutingSummary()" title="외출·외박 현황"><i class="fa-solid fa-file-signature"></i><div class="hdr-stat-txt"><div class="hb-label">외출·외박</div><div class="hb-value"><span id="g-today-actions">0</span><small>건</small></div></div></div>
       <div class="hdr-stat" onclick="openShuttleSummary()" title="퇴교차량 신청자"><i class="fa-solid fa-bus"></i><div class="hdr-stat-txt"><div class="hb-label">퇴교차량</div><div class="hb-value"><span id="g-shuttle-count">0</span><small>명</small></div></div></div>
-      <div class="hdr-stat hdr-edu" onclick="openEduPlacePicker('integrity')" title="금주 청렴교육 장소 설정"><i class="fa-solid fa-scale-balanced"></i><div class="hdr-stat-txt"><div class="hb-label">청렴교육</div><div class="hb-value" style="font-size:17px;"><span id="g-edu-integrity">미정</span></div></div></div>
-      <div class="hdr-stat hdr-edu" onclick="openEduPlacePicker('union')" title="금주 노조와의 대화 장소 설정"><i class="fa-solid fa-handshake"></i><div class="hdr-stat-txt"><div class="hb-label">노조교육</div><div class="hb-value" style="font-size:17px;"><span id="g-edu-union">미정</span></div></div></div>
+      <div class="hdr-stat hdr-edu edu-unset" onclick="openEduPlacePicker('integrity')" title="금주 청렴교육 장소 설정"><i class="fa-solid fa-scale-balanced"></i><div class="hdr-stat-txt"><div class="hb-label">청렴교육</div><div class="hb-value" style="font-size:17px;"><span id="g-edu-integrity">미정</span></div></div></div>
+      <div class="hdr-stat hdr-edu edu-unset" onclick="openEduPlacePicker('union')" title="금주 노조와의 대화 장소 설정"><i class="fa-solid fa-handshake"></i><div class="hdr-stat-txt"><div class="hb-label">노조교육</div><div class="hb-value" style="font-size:17px;"><span id="g-edu-union">미정</span></div></div></div>
     </div>
   </div>
 </header>
@@ -1836,7 +1846,7 @@ body.pc-mode .coord-right{ grid-column:2 !important; grid-row:1 !important; just
         </div>
         <div class="coord-ptab" data-sec="4" onclick="coordPcSection(4)">
             <div class="cn"><i class="fa-solid fa-file-signature"></i></div>
-            <div><div class="ct">외출·외박</div></div>
+            <div><div class="ct">외출·외박 대장</div></div>
         </div>
     </div>
 
@@ -7420,13 +7430,21 @@ function setEduPlace(type,val){
   try{ firebase.database().ref('system/eduLocations/'+type).set(val||null); }catch(e){}
   if(typeof cpopClose==='function') cpopClose();
 }
+function _eduApplyState(spanId, val){
+  var sp=document.getElementById(spanId); if(!sp) return;
+  sp.textContent=_eduShort(val);
+  var blk=sp.closest('.hdr-edu'); if(!blk) return;
+  var set=!!(val && (''+val).trim());
+  blk.classList.toggle('edu-set', set);
+  blk.classList.toggle('edu-unset', !set);
+}
 (function initEduLocationsCoord(){
   try{
     if(!window.firebase || !firebase.database){ setTimeout(initEduLocationsCoord,400); return; }
     firebase.database().ref('system/eduLocations').on('value', function(s){
       var v=s.val()||{};
-      var a=document.getElementById('g-edu-integrity'); if(a) a.textContent=_eduShort(v.integrity);
-      var b=document.getElementById('g-edu-union'); if(b) b.textContent=_eduShort(v.union);
+      _eduApplyState('g-edu-integrity', v.integrity);
+      _eduApplyState('g-edu-union', v.union);
     });
   }catch(e){ setTimeout(initEduLocationsCoord,800); }
 })();
