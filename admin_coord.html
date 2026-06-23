@@ -1274,6 +1274,26 @@ body.pc-mode .coord-sec-panel { background:#fff; border:1px solid #eef2f7; borde
 .crow-leader.assigned .ll i{ color:#16a34a; }
 .crow-leader.assigned .ln{ color:#15803d; }
 .crow-leader.assigned .ln small{ color:#16a34a; }
+/* ── 강의실 배치도(하늘관 2층) ── */
+.cfp-wrap{ margin:0 0 16px; }
+.cfp-imgbox{ position:relative; width:100%; border:1px solid #e2e8f0; border-radius:14px; overflow:hidden; background:#f8fafc; }
+.cfp-img{ display:block; width:100%; height:auto; }
+.cfp-imgbox.noimg{ aspect-ratio:1700/960; }
+.cfp-imgbox.noimg .cfp-img{ display:none; }
+.cfp-noimg-msg{ display:none; }
+.cfp-imgbox.noimg .cfp-noimg-msg{ display:flex; position:absolute; inset:0; align-items:center; justify-content:center; text-align:center; padding:18px; color:#94a3b8; font-weight:700; font-size:13.5px; line-height:1.6; }
+.cfp-room{ position:absolute; transform:translate(-50%,-50%); display:flex; align-items:center; gap:6px; padding:7px 13px; border-radius:999px; font-weight:900; font-size:14px; white-space:nowrap; background:#e5e7eb; color:#94a3b8; border:1.5px solid #cbd5e1; box-shadow:0 2px 6px rgba(15,23,42,.10); z-index:2; }
+.cfp-room.on{ background:linear-gradient(135deg,#16a34a,#15803d); color:#fff; border-color:#15803d; box-shadow:0 4px 14px rgba(22,163,74,.40); cursor:pointer; }
+.cfp-room.on:hover{ transform:translate(-50%,-50%) scale(1.06); }
+.cfp-room .cfp-dot{ width:8px; height:8px; border-radius:50%; background:#bbf7d0; box-shadow:0 0 0 0 rgba(187,247,208,.8); animation:cfpPulse 1.8s infinite; }
+@keyframes cfpPulse{ 0%{box-shadow:0 0 0 0 rgba(187,247,208,.7);} 70%{box-shadow:0 0 0 7px rgba(187,247,208,0);} 100%{box-shadow:0 0 0 0 rgba(187,247,208,0);} }
+.cfp-legend{ display:flex; align-items:center; gap:18px; margin-top:10px; padding:0 4px; font-size:12.5px; font-weight:800; color:#475569; }
+.cfp-legend i.cfp-lg{ display:inline-block; width:13px; height:13px; border-radius:4px; background:#e5e7eb; border:1.5px solid #cbd5e1; vertical-align:-2px; margin-right:5px; }
+.cfp-legend i.cfp-lg.on{ background:linear-gradient(135deg,#16a34a,#15803d); border-color:#15803d; }
+/* 과정 카드: 강의실 칩 */
+.crow-class{ flex-shrink:0; display:inline-flex; align-items:center; gap:6px; padding:7px 13px; border-radius:10px; font-weight:900; font-size:14px; white-space:nowrap; background:#f1f5f9; color:#94a3b8; border:1.5px solid #e2e8f0; }
+.crow-class.on{ background:#dcfce7; color:#15803d; border-color:#86efac; }
+.crow-class i{ font-size:12px; }
 .cmeta-div { width:1px; height:30px; background:#e8edf5; flex-shrink:0; }
 /* 섹션3·4 우측 요약 */
 .cstat-line { font-size:14px; color:#475569; font-weight:700; white-space:nowrap; width:172px; text-align:right; flex-shrink:0; }
@@ -1974,6 +1994,7 @@ body.pc-mode .coord-right{ grid-column:2 !important; grid-row:1 !important; just
     <!-- ✅ [복구 완료] 현재 운영 중인 과정 리스트 섹션 (= 섹션 2) -->
     <div id="csec-2" class="section-card" style="background:white; padding:18px 16px; border:1px solid #eef2f7; box-shadow:0 4px 14px rgba(15,23,42,0.05);">
         <div class="coord-sec-head"><h2><i class="fa-solid fa-list-ul"></i> 운영중인 과정</h2><select id="coordWeekSel" onchange="coordRenderActiveCourses()" style="margin-left:auto;padding:8px 14px;border:1.5px solid #cbd5e1;border-radius:10px;font-weight:800;font-size:13px;cursor:pointer;background:#fff;color:#1e3a8a;"></select></div>
+        <div id="coordFloorPlan"></div>
         <div id="activeCourseList" style="display:flex; flex-direction:column; gap:8px;">
             <!-- 자바스크립트가 여기에 ROOM A, ROOM C 등의 카드를 채워넣습니다 -->
         </div>
@@ -8249,22 +8270,48 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
   }
   function _coordShortDate(d){ var p=String(d==null?'':d).trim().split('-'); if(p.length<3) return (d||'-'); return "'"+p[0].slice(2)+'.'+(+p[1])+'.'+(+p[2]); }
   function _coordShortPeriod(per){ var a=String(per==null?'':per).split('~'); if(a.length<2) return (per||'-'); return _coordShortDate(a[0].trim())+' ~ '+_coordShortDate(a[1].trim()); }
+  // ── 강의실 위치(하늘관 2층 도면 위 라벨 좌표, %) — 필요시 수치만 조정 ──
+  var COORD_CLASS_POS = { E:{l:15,t:42}, D:{l:31,t:42}, B:{l:62,t:42}, A:{l:81,t:42}, G:{l:15,t:72}, F:{l:31,t:72}, C:{l:81,t:72} };
+  var COORD_FLOORPLAN_IMG = 'classroom_sky2f.png'; // GitHub 루트에 업로드할 빈 도면 파일명
+  // roomDetailName(예: '하늘관 2층 A강의실')에서 강의실 글자(A~G) 추출
+  function _coordClassroomLetter(s){ var v=((s&&(s.roomDetailName||s.roomDetail))||'')+''; var m=v.match(/([A-Ga-g])\s*강의실/); return m?m[1].toUpperCase():''; }
+  function _coordClassroomLabel(s){ var L=_coordClassroomLetter(s); return L?(L+'강의실'):''; }
+  function _coordFloorPlanHTML(rooms){
+    var used={};
+    rooms.forEach(function(r){ var L=_coordClassroomLetter(r.s); if(L && !used[L]) used[L]={rid:r.rid, course:(r.s.courseName||'')}; });
+    var labels=Object.keys(COORD_CLASS_POS).map(function(L){
+      var p=COORD_CLASS_POS[L]; var on=used[L];
+      return '<div class="cfp-room'+(on?' on':'')+'" style="left:'+p.l+'%;top:'+p.t+'%;"'
+        +(on?(' onclick="coordKiosk.notice(\''+esc(on.rid)+'\')" title="'+esc(on.course)+'"'):'')+'>'
+        +'<span>'+L+'강의실</span>'+(on?'<span class="cfp-dot"></span>':'')+'</div>';
+    }).join('');
+    var usedN=Object.keys(used).length;
+    return '<div class="cfp-wrap"><div class="cfp-imgbox">'
+      +'<img class="cfp-img" src="'+COORD_FLOORPLAN_IMG+'" alt="하늘관 2층 배치도" onerror="this.closest(\'.cfp-imgbox\').classList.add(\'noimg\')">'
+      +'<div class="cfp-noimg-msg">강의실 배치도 이미지(<b>'+esc(COORD_FLOORPLAN_IMG)+'</b>)를<br>GitHub 저장소 루트에 업로드하면 도면이 표시됩니다.</div>'
+      +labels+'</div>'
+      +'<div class="cfp-legend"><span><i class="cfp-lg on"></i> 사용중 '+usedN+'실</span><span><i class="cfp-lg"></i> 미사용</span><span style="margin-left:auto;color:#94a3b8;font-weight:700;"><i class="fa-solid fa-location-dot" style="color:#2563eb;margin-right:4px;"></i>하늘관 2층</span></div></div>';
+  }
   window.coordRenderActiveCourses = function(){
     var box=document.getElementById('activeCourseList'); if(!box) return;
     _coordEnsureWeekSel();
     var _off=parseInt((document.getElementById('coordWeekSel')||{}).value||'0',10)||0;
-    if(_off>0){ _coordRenderPlannedWeek(box, _off); return; }
+    var _fp=document.getElementById('coordFloorPlan');
+    if(_off>0){ if(_fp) _fp.innerHTML=''; _coordRenderPlannedWeek(box, _off); return; }
     if(typeof _coordActiveRooms!=='function'){ return; }
     var rooms=_coordActiveRooms();
+    if(_fp) _fp.innerHTML = rooms.length ? _coordFloorPlanHTML(rooms) : '';
     if(!rooms.length){ box.innerHTML='<div style="text-align:center;padding:30px;color:#94a3b8;font-weight:700;">현재 운영 중인 과정이 없습니다.</div>'; return; }
     box.innerHTML=rooms.map(function(r){
       var prof=(r.st.professorName||'').trim();
       var _ldr=((typeof _studentsOf==='function'?_studentsOf(r.room):[])||[]).filter(function(s){return s&&s.isLeader===true;})[0];
       var _ldrNo=_ldr?(_ldr.empNo||_ldr.sabun||_ldr.id||_ldr.studentId||_ldr.phone||''):'';
       var _ldrBlock='<div class="crow-leader'+(_ldr?' assigned':'')+'"><div class="ll"><i class="fa-solid fa-crown"></i> 학생장</div>'+(_ldr?('<div class="ln">'+esc(_ldr.name||'-')+(_ldrNo?' <small>('+esc(_ldrNo)+')</small>':'')+'</div>'):'<div class="ln none">미지정</div>')+'</div>';
+      var _cls=_coordClassroomLabel(r.s);
+      var _clsChip='<span class="crow-class'+(_cls?' on':'')+'">'+(_cls?('<i class="fa-solid fa-chalkboard-user"></i> '+esc(_cls)):'강의실 미지정')+'</span>';
       return '<div class="crow clickable" onclick="coordKiosk.notice(\''+esc(r.rid)+'\')">'
-        +'<span class="crow-room">ROOM <span class="rid-big">#'+esc(r.rid)+'</span></span>'
         +'<div class="crow-main"><div class="crow-name">'+esc(r.s.courseName||'-')+'</div></div>'
+        +_clsChip
         +_ldrBlock
         +'<div class="crow-chips">'
           +'<div class="cmeta"><span class="ml">담임교수</span><span class="mv">'+esc(_coordStripRank(prof)||'-')+'</span></div>'
