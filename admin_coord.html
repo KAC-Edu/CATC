@@ -1859,7 +1859,8 @@ body.pc-mode .coord-right{ grid-column:2 !important; grid-row:1 !important; just
 </header>
 
 <!-- 진입/종료 진행바 + 키오스크 전체화면 -->
-<div id="coordKioskEnterBar" style="display:none; position:fixed; top:0; left:0; height:6px; width:0%; background:linear-gradient(90deg,#22c55e,#16a34a); z-index:100000; box-shadow:0 0 10px rgba(34,197,94,.6);"></div>
+<div id="coordKioskEnterBar" style="display:none; position:fixed; bottom:0; left:0; height:6px; width:0%; background:linear-gradient(90deg,#22c55e,#16a34a); z-index:100000; box-shadow:0 0 10px rgba(34,197,94,.6);"></div>
+<div id="coordKioskExitBar" style="display:none; position:fixed; top:0; left:0; height:6px; width:0%; background:linear-gradient(90deg,#f87171,#ef4444); z-index:100001; box-shadow:0 0 10px rgba(239,68,68,.6);"></div>
 <div id="coordKioskModal" style="display:none; position:fixed; inset:0; z-index:99990; background:linear-gradient(135deg,#0b1530 0%,#0f2747 60%,#13315c 100%); color:#e2e8f0; flex-direction:column; padding:28px 34px; box-sizing:border-box;">
   <div style="display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:22px; gap:20px;">
     <div style="display:flex; align-items:center; gap:16px;">
@@ -1871,7 +1872,7 @@ body.pc-mode .coord-right{ grid-column:2 !important; grid-row:1 !important; just
     <div id="coordKioskClockWrap" style="text-align:right; cursor:pointer; user-select:none; flex-shrink:0;" title="시계를 길게 누르면 종료">
       <div id="coordKioskClock" style="font-size:46px;font-weight:900;color:#fff;font-family:Consolas,'Roboto Mono',monospace;line-height:1;letter-spacing:1px;">00:00:00</div>
       <div id="coordKioskDate" style="font-size:17px;color:#93c5fd;font-weight:700;margin-top:6px;">-</div>
-      <div style="height:6px;width:100%;background:rgba(255,255,255,.14);border-radius:4px;margin-top:9px;overflow:hidden;"><div id="coordKioskExitHint" style="height:100%;width:0%;background:#ef4444;transition:width .04s linear;"></div></div>
+      
       <div style="font-size:11.5px;color:#64748b;margin-top:4px;">⏻ 시계 길게 눌러 종료</div>
     </div>
   </div>
@@ -8014,7 +8015,7 @@ function _coordSyncShuttleFromCourses(){
 (function initShuttleDep(){ try{ if(!window.firebase||!firebase.database){ setTimeout(initShuttleDep,400); return; } firebase.database().ref('system/shuttle_departure').on('value', function(s){ var v=s.val(); if(v && v.round1){ window._shuttleDep=v; try{ if(window._coordPopupRefresh===openShuttleSummary && document.getElementById('coordPopup') && document.getElementById('coordPopup').classList.contains('open')) openShuttleSummary(); }catch(e){} try{ _coordUpdateShuttleBtn(); }catch(e){} } }); }catch(e){ setTimeout(initShuttleDep,800); } })();
 var coordKiosk={
   _t:null,_iv:null,_clk:null,_rf:null,_exitBound:false,
-  init:function(){ var bm=document.querySelector('.coord-brand-mark'); if(bm) this.bind(bm,1500,'enter',this.open.bind(this));
+  init:function(){ var bm=document.querySelector('.coord-brand-mark'); if(bm) this.bind(bm,5000,'enter',this.open.bind(this));
     var brand=document.querySelector('.coord-brand'); if(brand) brand.addEventListener('click', function(e){ if(window._ckOpenedAt && (Date.now()-window._ckOpenedAt)<1300){ e.stopImmediatePropagation(); e.preventDefault(); } }, true);
   },
   bind:function(el,dur,mode,cb){ if(!el) return; var self=this; var start=0;
@@ -8026,12 +8027,12 @@ var coordKiosk={
     el.addEventListener('mousedown',begin); el.addEventListener('touchstart',begin,{passive:false});
     ['mouseup','mouseleave','touchend','touchcancel'].forEach(function(ev){ el.addEventListener(ev,end); });
   },
-  _show:function(mode,pct){ if(mode==='enter'){ var b=document.getElementById('coordKioskEnterBar'); if(b){ b.style.display=pct>0?'block':'none'; b.style.width=pct+'%'; } } else { var e=document.getElementById('coordKioskExitHint'); if(e) e.style.width=pct+'%'; } },
-  _cancel:function(mode){ clearTimeout(this._t); clearInterval(this._iv); this._t=null; this._iv=null; this._show(mode,0); if(mode==='enter'){ var b=document.getElementById('coordKioskEnterBar'); if(b) b.style.display='none'; } },
+  _show:function(mode,pct){ var id=(mode==='enter')?'coordKioskEnterBar':'coordKioskExitBar'; var b=document.getElementById(id); if(b){ b.style.display=pct>0?'block':'none'; b.style.width=pct+'%'; } },
+  _cancel:function(mode){ clearTimeout(this._t); clearInterval(this._iv); this._t=null; this._iv=null; this._show(mode,0); var id=(mode==='enter')?'coordKioskEnterBar':'coordKioskExitBar'; var b=document.getElementById(id); if(b) b.style.display='none'; },
   open:function(){ var m=document.getElementById('coordKioskModal'); if(!m) return; window._ckOpenedAt=Date.now(); this.render(); m.style.display='flex'; var _eh=document.getElementById('coordKioskEscHint'); if(_eh){ _eh.style.display=''; _eh.style.opacity='1'; clearTimeout(this._ehT); this._ehT=setTimeout(function(){ if(_eh){ _eh.style.opacity='0'; setTimeout(function(){ if(_eh) _eh.style.display='none'; },650); } }, 5000); }
     try{ var de=document.documentElement; var fn=de.requestFullscreen||de.webkitRequestFullscreen||de.msRequestFullscreen; if(fn) fn.call(de); }catch(e){}
     this._tick(); this._clk=setInterval(this._tick.bind(this),1000); this._rf=setInterval(this.render.bind(this),30000);
-    if(!this._exitBound){ this._exitBound=true; this.bind(document.getElementById('coordKioskClockWrap'),1500,'exit',this.close.bind(this)); }
+    if(!this._exitBound){ this._exitBound=true; this.bind(document.getElementById('coordKioskClockWrap'),5000,'exit',this.close.bind(this)); }
     try{ Promise.all([firebase.database().ref('system/dorm/rosters').once('value').catch(function(){return null;}),firebase.database().ref('system/coord/rosters').once('value').catch(function(){return null;})]).then(function(res){ var ext={},nm=function(x){return String(x==null?'':x).replace(/\s+/g,'').toLowerCase();}; res.forEach(function(sn){ if(!sn)return; var v=sn.val()||{}; Object.keys(v).forEach(function(kk){ var it=v[kk]; if(it&&Array.isArray(it.list)){ var k=nm(it.courseName); if(k)(ext[k]=ext[k]||[]).push({list:it.list,period:it.period||'',room:it.room||''}); } }); }); window._coordRosterExt=ext; coordKiosk.render(); }); }catch(e){}
   },
   close:function(){ var m=document.getElementById('coordKioskModal'); if(m) m.style.display='none'; try{ if(document.fullscreenElement){ var fn=document.exitFullscreen||document.webkitExitFullscreen||document.msExitFullscreen; if(fn) fn.call(document); } }catch(e){} if(this._clk){clearInterval(this._clk);this._clk=null;} if(this._rf){clearInterval(this._rf);this._rf=null;} this._show('exit',0); },
@@ -8274,7 +8275,7 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
   function _coordShortDate(d){ var p=String(d==null?'':d).trim().split('-'); if(p.length<3) return (d||'-'); return "'"+p[0].slice(2)+'.'+(+p[1])+'.'+(+p[2]); }
   function _coordShortPeriod(per){ var a=String(per==null?'':per).split('~'); if(a.length<2) return (per||'-'); return _coordShortDate(a[0].trim())+' ~ '+_coordShortDate(a[1].trim()); }
   // ── 강의실 위치(하늘관 2층 도면 위 라벨 좌표, %) — 필요시 수치만 조정 ──
-  var COORD_CLASS_POS = { E:{l:15,t:42}, D:{l:31,t:42}, B:{l:62,t:42}, A:{l:81,t:42}, G:{l:15,t:72}, F:{l:31,t:72}, C:{l:81,t:72} };
+  var COORD_CLASS_POS = { E:{l:15,t:42}, D:{l:31,t:42}, B:{l:71,t:42}, A:{l:84,t:42}, G:{l:15,t:72}, F:{l:31,t:72}, C:{l:81,t:72} };
   var COORD_FLOORPLAN_IMG = 'classroom_sky2f.png'; // GitHub 루트에 업로드할 빈 도면 파일명
   // roomDetailName(예: '하늘관 2층 A강의실')에서 강의실 글자(A~G) 추출
   function _coordClassroomLetter(s){ var v=((s&&(s.roomDetailName||s.roomDetail))||'')+''; var m=v.match(/([A-Ga-g])\s*강의실/); return m?m[1].toUpperCase():''; }

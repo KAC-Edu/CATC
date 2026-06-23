@@ -512,7 +512,7 @@
                 <h1>항공기술훈련원 생활관 배정관리 플랫폼</h1>
                 <div class="sub">항공기술훈련원 교육지원부</div>
             </div>
-            <div id="dkEnterBar" style="position:absolute; left:0; right:0; bottom:-7px; height:4px; background:rgba(37,99,235,.18); border-radius:3px; overflow:hidden; opacity:0; transition:opacity .15s;"><div id="dkEnterHint" style="height:100%; width:0; background:#2563eb;"></div></div>
+            <div id="dkEnterBar" style="position:fixed; left:0; bottom:0; width:100%; height:6px; background:rgba(34,197,94,.15); overflow:hidden; opacity:0; transition:opacity .15s; z-index:100001;"><div id="dkEnterHint" style="height:100%; width:0; background:linear-gradient(90deg,#22c55e,#16a34a); box-shadow:0 0 10px rgba(34,197,94,.6);"></div></div>
         </div>
         <!-- 중앙 시계 -->
         <div id="dormHeaderClock" class="header-clock"></div>
@@ -6167,7 +6167,7 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
     <div style="text-align:right; position:relative; padding-bottom:12px;">
       <div id="dormKioskClock" title="5초간 꾹 누르면 종료" style="font-size:40px; font-weight:800; font-family:'Consolas','Roboto Mono',monospace; line-height:1; cursor:pointer; user-select:none; -webkit-user-select:none; color:#fff;">--:--:--</div>
       <div id="dormKioskDate" style="font-size:15px; color:#94a3b8; margin-top:7px;">-</div>
-      <div style="position:absolute; left:0; right:0; bottom:0; height:3px; background:rgba(255,255,255,.1); border-radius:2px; overflow:hidden;"><div id="dormKioskExitHint" style="height:100%; width:0; background:#f87171;"></div></div>
+      <div style="position:fixed; left:0; top:0; width:100%; height:6px; background:rgba(248,113,113,.15); overflow:hidden; z-index:100002;"><div id="dormKioskExitHint" style="height:100%; width:0; background:linear-gradient(90deg,#f87171,#ef4444); box-shadow:0 0 10px rgba(239,68,68,.6);"></div></div>
     </div>
   </div>
   <div style="flex:1; overflow:auto; padding:6px 40px 30px;">

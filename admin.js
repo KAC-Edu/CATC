@@ -8652,31 +8652,34 @@ const kiosk = {
     _timer:null, _raf:null, _clock:null, _refresh:null,
     init: function() {
         const plane=document.getElementById('kioskPlaneBtn');
-        if(plane) this._bindLongPress(plane, 3000, ()=>this.open());     // 비행기 3초 → 키오스크 진입
+        if(plane) this._bindLongPress(plane, 5000, ()=>this.open(), 'kioskEnterBar');   // 비행기 5초 → 키오스크 진입(하단 진행바)
         const clock=document.getElementById('kioskClock');
-        if(clock) this._bindLongPress(clock, 5000, ()=>this.close());    // 시계 5초 → 현황판 복귀
+        if(clock) this._bindLongPress(clock, 5000, ()=>this.close(), 'kioskExitBar');   // 시계 5초 → 종료(상단 진행바)
+        document.addEventListener('keydown', (e)=>{ if(e.key==='Escape'){ const m=document.getElementById('kioskModal'); if(m && m.style.display!=='none') this.close(); } });
     },
-    _bindLongPress: function(el, dur, cb) {
+    _bindLongPress: function(el, dur, cb, barId) {
         const self=this; let start=0;
-        const begin=function(e){ if(e.cancelable) e.preventDefault(); start=Date.now(); self._hint(0);
-            self._timer=setTimeout(function(){ self._cancel(); cb(); }, dur);
-            self._raf=setInterval(function(){ self._hint(Math.min((Date.now()-start)/dur,1)*100); }, 50);
+        const begin=function(e){ if(e.cancelable) e.preventDefault(); start=Date.now(); self._bar(barId,0.001);
+            self._timer=setTimeout(function(){ self._cancel(barId); cb(); }, dur);
+            self._raf=setInterval(function(){ self._bar(barId, Math.min((Date.now()-start)/dur,1)); }, 50);
         };
         el.addEventListener('mousedown', begin);
         el.addEventListener('touchstart', begin, {passive:false});
-        ['mouseup','mouseleave','touchend','touchcancel'].forEach(ev=>el.addEventListener(ev, ()=>self._cancel()));
+        ['mouseup','mouseleave','touchend','touchcancel'].forEach(ev=>el.addEventListener(ev, ()=>self._cancel(barId)));
     },
-    _cancel: function(){ if(this._timer){clearTimeout(this._timer);this._timer=null;} if(this._raf){clearInterval(this._raf);this._raf=null;} this._hint(0); },
-    _hint: function(pct){ const h=document.getElementById('kioskPressHint'); if(h) h.style.width=pct+'%'; },
+    _cancel: function(barId){ if(this._timer){clearTimeout(this._timer);this._timer=null;} if(this._raf){clearInterval(this._raf);this._raf=null;} this._bar(barId,0); },
+    _bar: function(barId,p){ const b=document.getElementById(barId); if(b){ b.style.display=p>0?'block':'none'; b.style.width=(p*100)+'%'; } },
     open: function() {
         this.render();
         const m=document.getElementById('kioskModal'); if(m) m.style.display='flex';
+        this._bar('kioskEnterBar',0);
         try{ const de=document.documentElement; const fn=de.requestFullscreen||de.webkitRequestFullscreen||de.msRequestFullscreen; if(fn) fn.call(de); }catch(e){}
         this._tick(); this._clock=setInterval(()=>this._tick(), 1000);
         this._refresh=setInterval(()=>this.render(), 30000);
     },
     close: function() {
         const m=document.getElementById('kioskModal'); if(m) m.style.display='none';
+        this._bar('kioskExitBar',0);
         try{ if(document.fullscreenElement){ const fn=document.exitFullscreen||document.webkitExitFullscreen||document.msExitFullscreen; if(fn) fn.call(document); } }catch(e){}
         if(this._clock){clearInterval(this._clock);this._clock=null;}
         if(this._refresh){clearInterval(this._refresh);this._refresh=null;}
