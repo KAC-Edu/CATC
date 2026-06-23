@@ -1790,7 +1790,7 @@ body.pc-mode .coord-right{ grid-column:2 !important; grid-row:1 !important; just
     <div class="coord-hdr-stats" id="coordHdrStats">
       <div class="hdr-stat" onclick="openCourseOverview()" title="운영 과정 현황"><i class="fa-solid fa-graduation-cap"></i><div class="hdr-stat-txt"><div class="hb-label">운영 과정</div><div class="hb-value"><span id="hero-active-courses">0</span><small>개</small></div></div></div>
       <div class="hdr-stat" onclick="openStudentRosterPopup()" title="전체 교육생 명단"><i class="fa-solid fa-users"></i><div class="hdr-stat-txt"><div class="hb-label">전체 교육생</div><div class="hb-value"><span id="g-total-students">0</span><small>명</small></div></div></div>
-      <div class="hdr-stat" onclick="openOutingRegister()" title="외출·외박 대장"><i class="fa-solid fa-file-signature"></i><div class="hdr-stat-txt"><div class="hb-label">외출·외박</div><div class="hb-value"><span id="g-today-actions">0</span><small>건</small></div></div></div>
+      <div class="hdr-stat" onclick="openOutingSummary()" title="금일 외출·외박 신청자 명단"><i class="fa-solid fa-file-signature"></i><div class="hdr-stat-txt"><div class="hb-label">외출·외박</div><div class="hb-value"><span id="g-today-actions">0</span><small>건</small></div></div></div>
       <div class="hdr-stat" onclick="openShuttleSummary()" title="퇴교차량 신청자"><i class="fa-solid fa-bus"></i><div class="hdr-stat-txt"><div class="hb-label">퇴교차량</div><div class="hb-value"><span id="g-shuttle-count">0</span><small>명</small></div></div></div>
       <div class="hdr-stat hdr-edu edu-unset" onclick="openEduPlacePicker('integrity')" title="금주 청렴교육 장소 설정"><i class="fa-solid fa-scale-balanced"></i><div class="hdr-stat-txt"><div class="hb-label">청렴교육</div><div class="hb-value" style="font-size:17px;"><span id="g-edu-integrity">미정</span></div></div></div>
       <div class="hdr-stat hdr-edu edu-unset" onclick="openEduPlacePicker('union')" title="금주 노조와의 대화 장소 설정"><i class="fa-solid fa-handshake"></i><div class="hdr-stat-txt"><div class="hb-label">노조교육</div><div class="hb-value" style="font-size:17px;"><span id="g-edu-union">미정</span></div></div></div>
@@ -1890,7 +1890,7 @@ body.pc-mode .coord-right{ grid-column:2 !important; grid-row:1 !important; just
     <!-- 섹션 4: 외출·외박 대장 (PC 전용) -->
     <div id="csec-4" class="coord-psec-only coord-sec-panel">
         <div class="coord-sec-head">
-            <h2><i class="fa-solid fa-file-signature"></i> 외출·외박 대장 · 금일 외출자 현황</h2>
+            <h2><i class="fa-solid fa-file-signature"></i> 외출·외박 대장</h2>
             <div class="coord-sec-actions">
             </div>
         </div>
@@ -7490,14 +7490,14 @@ function openOutingSummary(){
   let _wStart=Date.UTC(_nk.getUTCFullYear(),_nk.getUTCMonth(),_nk.getUTCDate(),9,0,0)-_KST;
   if(_nk.getUTCHours()<9) _wStart-=24*60*60*1000;
   const _wEnd=_wStart+24*60*60*1000;
-  let blocks=rooms.map(r=>{ const aa=r.room.admin_actions||{};
+  let blocks=rooms.map(r=>{ const aa=r.room.admin_actions||{}; function _norm(x){return String(x==null?'':x).replace(/\s+/g,'').toLowerCase();} var _byName={}; ((typeof _studentsOf==='function'?_studentsOf(r.room):[])||[]).forEach(function(s){ if(s&&s.name) _byName[_norm(s.name)]=s; });
     let list=[];
     Object.keys(aa).forEach(dt=>{ if(!/^\d{4}-\d{2}-\d{2}$/.test(dt)) return; Object.values(aa[dt]||{}).forEach(a=>{ if(a&&a.name&&(a.timestamp||0)>=_wStart&&(a.timestamp||0)<_wEnd) list.push(Object.assign({date:dt},a)); }); });
     if(!list.length) return '';
     list.sort((a,b)=>(''+(a.date||'')).localeCompare(''+(b.date||''))||((a.timestamp||0)-(b.timestamp||0)));
-    const rows=list.map((a,i)=>{ const kind=(a.type==='outing')?'<span style="color:#ea580c;font-weight:800;">외출</span>':'<span style="color:#dc2626;font-weight:800;">외박</span>'; return `<tr><td style="color:#94a3b8;">${i+1}</td><td style="font-weight:800;">${_esc(a.name||'-')}</td><td>${kind}</td><td style="text-align:left;color:#475569;">${_esc(a.dept||'-')}</td><td>${_esc(a.date?a.date.substring(5):'-')}</td><td style="text-align:left;">${_esc(a.destination||'-')}</td></tr>`; }).join('');
+    const rows=list.map((a,i)=>{ var _st=_byName[_norm(a.name)]||{}; var _sabun=a.empNo||a.sabun||_st.empNo||_st.sabun||_st.id||_st.studentId||'-'; var _dept=a.dept||_st.dept||_st.affil||_st.org||_st.position||'-'; var _phone=a.phone||a.contact||a.tel||_st.phone||_st.contact||_st.tel||_st.mobile||'-'; return `<tr><td style="color:#94a3b8;">${i+1}</td><td style="color:#64748b;white-space:nowrap;">${_esc(_sabun)}</td><td style="text-align:left;color:#475569;">${_esc(_dept)}</td><td style="color:#64748b;white-space:nowrap;">${_esc(_phone)}</td><td style="font-weight:800;">${_esc(a.name||'-')}</td></tr>`; }).join('');
     return `<div class="cpop-course"><div class="cpop-course-h">ROOM #${_esc(r.rid)} · ${_esc(r.s.courseName||'-')} <span style="color:#ea580c;font-size:14px;">${list.length}건</span></div>
-      <table class="cpop-table" style="table-layout:fixed;"><colgroup><col style="width:8%"><col style="width:17%"><col style="width:12%"><col style="width:25%"><col style="width:13%"><col style="width:25%"></colgroup><thead><tr><th>연번</th><th>성명</th><th>구분</th><th style="text-align:left;">소속</th><th>일자</th><th style="text-align:left;">행선지</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+      <table class="cpop-table" style="table-layout:fixed;"><colgroup><col style="width:9%"><col style="width:18%"><col style="width:33%"><col style="width:22%"><col style="width:18%"></colgroup><thead><tr><th>연번</th><th>사번</th><th style="text-align:left;">소속</th><th>연락처</th><th>성명</th></tr></thead><tbody>${rows}</tbody></table></div>`;
   }).join('');
   if(!blocks.trim()) blocks='<div class="cpop-empty">현재 외출·외박 신청자가 없습니다.</div>';
   _cpop('<i class="fa-solid fa-file-signature"></i> 외출·외박 신청 현황 (과정별)', blocks);
@@ -7974,9 +7974,12 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
         var total=roster.length;
         var arrived=roster.filter(function(s){ return arrivedSet[norm(s.name)]; }).length;
         var expected=Math.max(0,total-arrived);
+        var _today=(typeof _coordToday==='function'?_coordToday():new Date().toISOString().slice(0,10));
+        var _startDate=(curPeriod.indexOf(' ~ ')>=0?(curPeriod.split(' ~ ')[0]||'').trim():'');
+        var _started=_startDate?(_today>=_startDate):true;   // 교육시작일부터 true
         var body = total ? roster.map(function(s,i){
           var ar=arrivedSet[norm(s.name)];
-          return '<tr><td style="text-align:center;color:#94a3b8;">'+(i+1)+'</td><td style="color:#475569;">'+esc(s.dept||s.affil||s.org||'-')+'</td><td style="color:#64748b;white-space:nowrap;">'+esc(s.empNo||s.sabun||s.id||'-')+'</td><td style="font-weight:800;">'+esc(s.name||'-')+'</td><td style="text-align:center;">'+(ar?'<span style="color:#16a34a;font-weight:800;">입교</span>':'<span style="color:#2563eb;font-weight:700;">예정</span>')+'</td></tr>';
+          return '<tr><td style="text-align:center;color:#94a3b8;">'+(i+1)+'</td><td style="color:#475569;">'+esc(s.dept||s.affil||s.org||'-')+'</td><td style="color:#64748b;white-space:nowrap;">'+esc(s.empNo||s.sabun||s.id||'-')+'</td><td style="font-weight:800;">'+esc(s.name||'-')+'</td><td style="text-align:center;">'+(!_started?'<span style="color:#2563eb;font-weight:700;">예정</span>':(ar?'<span style="color:#16a34a;font-weight:800;">입교완료</span>':'<span style="color:#dc2626;font-weight:800;">미입교</span>'))+'</td></tr>';
         }).join('') : '<tr><td colspan="5" style="text-align:center;color:#94a3b8;padding:18px;">등록된 명단이 없습니다.</td></tr>';
         return '<div class="csec-card">'
           +'<div class="csec-card-head" onclick="coordToggleEnroll('+ei+')" style="cursor:pointer;display:flex;align-items:center;gap:14px;padding:14px 16px;">'
@@ -8072,15 +8075,19 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
           +'<button onclick="event.stopPropagation();window.open(\'outing_ledger.html?room='+r.rid+'&auto=1\',\'_blank\');" style="background:#1e293b;color:#fff;border:none;border-radius:9px;padding:8px 14px;font-size:12px;font-weight:800;cursor:pointer;white-space:nowrap;"><i class="fa-solid fa-print"></i> 출력</button>'
           +'<i class="fa-solid fa-chevron-down crow-chev" id="coordOutChev'+idx+'"></i>'
         +'</div>'
-        +'<div id="coordOutBody'+idx+'" style="display:none;border-top:1px solid #eef2f7;overflow-x:auto;"><table class="cpop-table" style="width:100%;table-layout:fixed;"><colgroup><col style="width:10%"><col style="width:27%"><col style="width:14%"><col style="width:20%"><col style="width:17%"><col style="width:12%"></colgroup><thead><tr><th>연번</th><th>성명</th><th>구분</th><th>신청시간</th><th>상태</th><th>미복귀</th></tr></thead><tbody>'+rows+'</tbody></table></div>'
+        +'<div id="coordOutBody'+idx+'" class="coord-out-body" style="display:none;border-top:1px solid #eef2f7;padding:10px 8px;background:#f8fafc;"><iframe id="coordLedgerFrame'+idx+'" data-room="'+esc(r.rid)+'" src="about:blank" scrolling="no" style="width:100%;border:none;background:transparent;min-height:220px;display:block;"></iframe></div>'
         +'</div>';
     }).join('')+'</div>';
   };
   window.coordToggleOuting = function(idx){
     var b=document.getElementById('coordOutBody'+idx), c=document.getElementById('coordOutChev'+idx);
     if(!b) return; var open=(b.style.display==='none'||!b.style.display);
+    document.querySelectorAll('.coord-out-body').forEach(function(x){ if(x!==b) x.style.display='none'; });
+    document.querySelectorAll('[id^="coordOutChev"]').forEach(function(x){ if(x!==c) x.style.transform=''; });
     b.style.display=open?'block':'none'; if(c) c.style.transform=open?'rotate(180deg)':'';
+    if(open){ var fr=document.getElementById('coordLedgerFrame'+idx); if(fr && fr.getAttribute('src')==='about:blank'){ fr.src='outing_ledger.html?room='+encodeURIComponent(fr.getAttribute('data-room'))+'&embed=1'; } }
   };
+  if(!window._coordLedgerMsgBound){ window._coordLedgerMsgBound=true; window.addEventListener('message', function(ev){ var d=ev&&ev.data; if(!d||!d._ledgerH) return; document.querySelectorAll('iframe[id^="coordLedgerFrame"]').forEach(function(fr){ if(fr.getAttribute('data-room')===String(d.room)) fr.style.height=((d.h||220)+6)+'px'; }); }); }
   function _coordInjectClose(){
     var v=document.getElementById('individualStatusView'); if(!v) return;
     // 상단 X 제거: 더 이상 주입하지 않음 (하단 X 버튼만 사용)

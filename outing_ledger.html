@@ -77,6 +77,14 @@
             * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
             tr { page-break-inside: avoid; }
         }
+
+        /* ── 임베드 모드(운영부 인라인 펼침 ?embed=1): A4폭 대신 컨테이너 폭에 맞춤 ── */
+        body.embed{ background:transparent !important; }
+        body.embed .print-btn, body.embed #__ver, body.embed #__catcVer{ display:none !important; }
+        body.embed .punch-hole{ display:none; }
+        body.embed #ledgerPages{ padding:0; margin:0; }
+        body.embed .page{ width:100%; margin:0 0 12px; padding:12px 14px; box-shadow:none; border:1px solid #e2e8f0; border-radius:10px; }
+        body.embed .page:last-child{ margin-bottom:0; }
     </style>
 </head>
 <body>
@@ -119,6 +127,11 @@
         const room   = params.get('room');
         const autoSave = params.get('auto') === '1';   // 교육운영부 버튼에서 'PDF 저장' 확인 후 진입 시 자동 인쇄
         let _autoDone = false;
+        const embed = params.get('embed') === '1';     // 운영부 인라인 펼침(대장 미리보기)
+        if (embed) document.body.classList.add('embed');
+        function postEmbedHeight(){ try{ if(parent && parent!==window){ parent.postMessage({ _ledgerH:true, room:room, h:document.body.scrollHeight }, '*'); } }catch(e){} }
+        window.addEventListener('load', function(){ if(embed) postEmbedHeight(); });
+        window.addEventListener('resize', function(){ if(embed) postEmbedHeight(); });
 
         if (!room) {
             document.getElementById('ledgerPages').innerHTML =
@@ -300,6 +313,7 @@
                     _autoDone = true;
                     setTimeout(() => { try { printLedger(); } catch (e) {} }, 800);
                 }
+                if (embed) { setTimeout(postEmbedHeight, 60); setTimeout(postEmbedHeight, 450); }
             });
         }
 
