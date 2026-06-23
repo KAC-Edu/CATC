@@ -795,6 +795,18 @@ body.in-course #moreToggleTab{ display:flex !important; }
                     <div class="notice-item admin"><span class="n-tag">운영</span><p id="dashNoticeAdmin">등록된 운영부 공지가 없습니다.</p></div>
                     <div class="notice-item global"><span class="n-tag">센터</span><p id="dashNoticeGlobal">내용 로딩 중...</p></div>
                 </div>
+                <div class="edu-place-feed" onclick="event.stopPropagation();" style="margin-top:14px; display:flex; flex-direction:column; gap:10px;">
+                    <div style="display:flex; align-items:center; gap:11px; background:#eff6ff; border:1px solid #bfdbfe; border-radius:13px; padding:15px 17px;">
+                        <span style="background:#f59e0b; color:#fff; font-weight:900; font-size:14px; padding:6px 13px; border-radius:9px; white-space:nowrap;"><i class="fa-solid fa-scale-balanced"></i> 청렴교육</span>
+                        <span style="font-size:14px; color:#64748b; font-weight:700;">장소</span>
+                        <b id="feedEduIntegrity" style="margin-left:auto; font-size:22px; font-weight:900; color:#1e40af;">미정</b>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:11px; background:#f0fdf4; border:1px solid #bbf7d0; border-radius:13px; padding:15px 17px;">
+                        <span style="background:#16a34a; color:#fff; font-weight:900; font-size:14px; padding:6px 13px; border-radius:9px; white-space:nowrap;"><i class="fa-solid fa-handshake"></i> 노조교육</span>
+                        <span style="font-size:14px; color:#64748b; font-weight:700;">장소</span>
+                        <b id="feedEduUnion" style="margin-left:auto; font-size:22px; font-weight:900; color:#15803d;">미정</b>
+                    </div>
+                </div>
             </div>
 
 <!-- (3) 실시간 Q&A 및 셔틀 통합 수송 수요 (클릭 시 이동) -->
@@ -2659,18 +2671,31 @@ function setupAcc(btn){
   <div class="modal-content" style="max-width:420px; width:92%;">
     <div class="modal-header"><h3 style="margin:0;"><i class="fa-solid fa-door-open"></i> 강의실 추가</h3></div>
     <div style="padding:18px;">
-      <p style="font-size:12.5px; color:#64748b; margin:0 0 14px; line-height:1.6;">건물을 선택하고 새 강의실명을 입력하세요. 추가된 강의실은 <b>모든 플랫폼(강사·운영부·지원부)</b>의 장소 목록에 즉시·영구 반영됩니다.</p>
-      <label style="display:block; font-size:12px; font-weight:800; color:#64748b; margin-bottom:6px;">건물</label>
-      <select id="addRoomBuilding" class="setup-input" style="width:100%; margin-bottom:14px;"></select>
-      <label style="display:block; font-size:12px; font-weight:800; color:#64748b; margin-bottom:6px;">강의실명</label>
-      <input type="text" id="addRoomName" class="setup-input" style="width:100%;" placeholder="예) 하늘관 4층 X강의실">
-      <div style="display:flex; gap:8px; margin-top:18px;">
-        <button onclick="setupMgr.closeAddRoom()" style="flex:1; padding:12px; border:1px solid #e2e8f0; background:#fff; color:#475569; border-radius:10px; font-weight:800; cursor:pointer;">취소</button>
-        <button onclick="setupMgr.saveAddRoom()" style="flex:1; padding:12px; border:none; background:#2563eb; color:#fff; border-radius:10px; font-weight:800; cursor:pointer;">추가</button>
+      <p style="font-size:12.5px; color:#64748b; margin:0 0 14px; line-height:1.6;">건물을 선택하고 새 강의실명을 입력하세요. 추가된 강의실은 <b>모든 플랫폼</b>의 장소 목록에 즉시 반영됩니다.</p>
+      <label style="display:block; font-size:13px; font-weight:800; color:#334155; margin-bottom:6px;">건물</label>
+      <select id="addRoomBuilding" style="width:100%; padding:11px 13px; border:1.5px solid #e2e8f0; border-radius:10px; font-size:14px; margin-bottom:14px; box-sizing:border-box; background:#fff;"></select>
+      <label style="display:block; font-size:13px; font-weight:800; color:#334155; margin-bottom:6px;">강의실명</label>
+      <input type="text" id="addRoomName" placeholder="예: H강의실" style="width:100%; padding:11px 13px; border:1.5px solid #e2e8f0; border-radius:10px; font-size:14px; margin-bottom:18px; box-sizing:border-box;">
+      <div style="display:flex; gap:8px;">
+        <button onclick="ui.closeAddRoom()" style="flex:1; padding:12px; border:none; border-radius:10px; background:#f1f5f9; color:#64748b; font-weight:800; cursor:pointer;">취소</button>
+        <button onclick="ui.saveAddRoom()" style="flex:2; padding:12px; border:none; border-radius:10px; background:#2563eb; color:#fff; font-weight:800; cursor:pointer;">추가</button>
       </div>
     </div>
   </div>
 </div>
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vWA</div>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vP</div>
+<script>
+/* 청렴/노조교육 장소 — 강사플랫폼 실시간 표출 (system/eduLocations) */
+(function initEduFeed(){
+  try{
+    if(!window.firebase || !firebase.database){ setTimeout(initEduFeed, 400); return; }
+    firebase.database().ref('system/eduLocations').on('value', function(s){
+      var v=s.val()||{};
+      var a=document.getElementById('feedEduIntegrity'); if(a){ a.textContent=(v.integrity?String(v.integrity):'미정'); a.style.color=(v.integrity?'#1e40af':'#94a3b8'); }
+      var b=document.getElementById('feedEduUnion'); if(b){ b.textContent=(v.union?String(v.union):'미정'); b.style.color=(v.union?'#15803d':'#94a3b8'); }
+    });
+  }catch(e){ setTimeout(initEduFeed, 800); }
+})();
+</script>
 </body>
 </html>
