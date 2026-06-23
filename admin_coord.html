@@ -1701,6 +1701,7 @@ body.cpop-locked{ overflow:hidden !important; }
         <a class="cml-item" onclick="openAttendanceManager(); toggleMenu(false);"><i class="fa-solid fa-clipboard-user" style="color:#0d9488;"></i> 출석부 관리</a>
         <a class="cml-item" onclick="openOutingRegister(); toggleMenu(false);"><i class="fa-solid fa-file-signature" style="color:#2563eb;"></i> 외출·외박 대장 관리</a>
         <a class="cml-item" onclick="coordMgr.openManage(); toggleMenu(false);"><i class="fa-solid fa-user-gear" style="color:#7c3aed;"></i> 과정운영 담당자 관리</a>
+        <a class="cml-item" onclick="coordPurgeImages(); toggleMenu(false);"><i class="fa-solid fa-broom" style="color:#dc2626;"></i> Firebase 대용량 이미지 정리</a>
     </div>
 </div>
 
@@ -7912,11 +7913,40 @@ function openDormStatusPopup(){
   function _md(wk){ var p=String(wk).split('-'); return (+p[1])+'/'+(+p[2]); }
   function _mdRange(wk){ var p=String(wk).split('-'); var d=new Date(+p[0],+p[1]-1,+p[2]); var e=new Date(d); e.setDate(e.getDate()+4); return (d.getMonth()+1)+'/'+d.getDate()+'~'+(e.getMonth()+1)+'/'+e.getDate(); }
   var weeks=[['이번주',base],['다음주',_aw(base,1)],['다다음주',_aw(base,2)]];
-  var sel='<div style="margin:2px 0 14px;"><select id="coordDormWeekSel" onchange="renderDormWeek(this.value)" style="padding:11px 16px;border:1.5px solid #cbd5e1;border-radius:11px;font-size:15px;font-weight:800;color:#1e3a8a;background:#fff;cursor:pointer;">'+weeks.map(function(w){ return '<option value="'+w[1]+'">'+w[0]+' · '+_mdRange(w[1])+'</option>'; }).join('')+'</select></div>';
+  var sel='<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:2px 0 14px;"><select id="coordDormWeekSel" onchange="renderDormWeek(this.value)" style="padding:11px 16px;border:1.5px solid #cbd5e1;border-radius:11px;font-size:15px;font-weight:800;color:#1e3a8a;background:#fff;cursor:pointer;">'+weeks.map(function(w){ return '<option value="'+w[1]+'">'+w[0]+' · '+_mdRange(w[1])+'</option>'; }).join('')+'</select><button onclick="coordDormPrint()" style="margin-left:auto;display:inline-flex;align-items:center;gap:7px;padding:11px 18px;border:none;border-radius:11px;background:#dc2626;color:#fff;font-weight:800;font-size:14px;cursor:pointer;box-shadow:0 3px 8px rgba(220,38,38,.3);"><i class="fa-solid fa-file-pdf"></i> PDF 출력</button></div>';
   _cpop('<i class="fa-solid fa-bed"></i> 생활관 방배정 현황', sel+'<div id="coordDormWrap"></div>');
   window._coordPopupRefresh=null;
   renderDormWeek(base);
 }
+async function coordPurgeImages(){
+  if(typeof firebase==='undefined'||!firebase.database){ return; }
+  var btnAlert=(typeof showKacAlert==='function')?showKacAlert:function(m){alert(m);};
+  try{
+    var snap=await firebase.database().ref('courses').once('value');
+    var all=snap.val()||{};
+    var schedPaths=[], qrPaths=[], bytes=0, nSched=0, nQr=0;
+    Object.keys(all).forEach(function(rid){
+      var c=all[rid]||{};
+      if(c.scheduleImage){ schedPaths.push('courses/'+rid+'/scheduleImage'); bytes+=JSON.stringify(c.scheduleImage).length; nSched++; }
+      if(c.attendanceQR){ qrPaths.push('courses/'+rid+'/attendanceQR'); bytes+=(typeof c.attendanceQR==='string'?c.attendanceQR.length:JSON.stringify(c.attendanceQR).length); nQr++; }
+    });
+    var total=nSched+nQr;
+    if(!total){ btnAlert('삭제할 대용량 이미지(시간표 사진·출석 QR)가 없습니다.'); return; }
+    var mb=(bytes/1048576).toFixed(2);
+    if(!confirm('DB에 저장된 대용량 base64 이미지를 삭제합니다.\n\n· 시간표 사진 '+nSched+'건\n· 출석 QR '+nQr+'건\n· 합계 약 '+mb+'MB\n\n삭제하면 해당 사진/QR 이미지가 DB에서 제거되어 Firebase 다운로드 사용량이 줄어듭니다. 계속할까요?')) return;
+    var okSched=0, okQr=0, errMsg='';
+    if(schedPaths.length){ var u1={}; schedPaths.forEach(function(p){ u1[p]=null; }); try{ await firebase.database().ref().update(u1); okSched=schedPaths.length; }catch(e){ errMsg+='시간표 사진 삭제 실패('+(e&&e.message||e)+') '; } }
+    if(qrPaths.length){ var u2={}; qrPaths.forEach(function(p){ u2[p]=null; }); try{ await firebase.database().ref().update(u2); okQr=qrPaths.length; }catch(e){ errMsg+='QR 삭제 실패(권한?): '+(e&&e.message||e); } }
+    btnAlert('정리 완료 — 시간표 사진 '+okSched+'건, 출석 QR '+okQr+'건 삭제 (약 '+mb+'MB).'+(errMsg?('\n\n[일부 실패] '+errMsg):'\n\n새로고침 후 사용량이 줄어듭니다.'));
+  }catch(e){ btnAlert('정리 중 오류: '+(e&&e.message||e)); }
+}
+window.coordPurgeImages=coordPurgeImages;
+function coordDormPrint(){
+  var fr=document.getElementById('coordDormFrame');
+  if(!fr||!fr.contentWindow){ if(typeof showKacAlert==='function') showKacAlert('배치도를 먼저 불러온 뒤 출력해 주세요.'); else alert('배치도를 먼저 불러온 뒤 출력해 주세요.'); return; }
+  try{ fr.contentWindow.focus(); setTimeout(function(){ try{ fr.contentWindow.print(); }catch(e){ window.print(); } }, 200); }catch(e){ try{ window.print(); }catch(_){} }
+}
+window.coordDormPrint=coordDormPrint;
 function renderDormWeek(wk){
   var wrap0=document.getElementById('coordDormWrap'); if(wrap0) wrap0.innerHTML='<div class="cpop-empty">불러오는 중...</div>';
   firebase.database().ref('system/dorm/assignments/'+wk+'/students').once('value').then(function(snap){
