@@ -6029,6 +6029,8 @@ html, body { overscroll-behavior-x: none !important; }
 #surveyModal > .menu-box > img,
 #surveyModal > .menu-box > button{ width:100% !important; flex-shrink:0 !important; }
 #surveyModal > .menu-box > div{ flex-shrink:0 !important; }
+/* [수정] 설문 닫기 X는 전체폭에서 제외 — 오른쪽 위 작은 원으로 고정 */
+#surveyModal > .menu-box > button[aria-label="닫기"]{ position:absolute !important; top:14px !important; right:14px !important; width:34px !important; height:34px !important; min-width:0 !important; border-radius:50% !important; }
 /* ── [좌측 메뉴] 프로필 상단 고정 + 항목만 스크롤 + 흔들림(바운스) 제거 ── */
 #menuModal > .menu-box{ overflow-y:auto !important; overscroll-behavior:contain !important; -webkit-overflow-scrolling:touch !important; padding-top:0 !important; }
 #menuModal .user-profile-card{ position:sticky !important; top:0 !important; z-index:6 !important; margin:0 0 14px !important; padding:16px 16px 14px !important; background:#fff !important; box-shadow:0 6px 14px rgba(15,23,42,.07) !important; border-radius:0 0 16px 16px !important; }
