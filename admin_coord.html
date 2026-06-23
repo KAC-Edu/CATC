@@ -1758,6 +1758,16 @@ body.pc-mode .coord-pc-only{ display:flex !important; }
 .hdr-stat.shuttle-off .hb-label{ color:rgba(255,255,255,0.95) !important; }
 .hdr-stat.shuttle-off .hb-value{ color:#fff !important; }
 .hdr-stat.shuttle-off > i{ color:#fee2e2 !important; }
+/* ── 키오스크 반응형: 화면 크기에 따라 글자·여백 축소 ── */
+#coordKioskModal{ padding:clamp(12px,1.8vw,28px) clamp(14px,2vw,34px) !important; }
+#coordKioskModal table{ font-size:clamp(11px,1.5vw,26px) !important; }
+#coordKioskModal th, #coordKioskModal td{ padding:clamp(6px,0.95vw,20px) clamp(4px,0.8vw,14px) !important; }
+#coordKioskTitle{ font-size:clamp(17px,2.5vw,36px) !important; }
+#coordKioskSub{ font-size:clamp(9px,1.05vw,16px) !important; }
+#coordKioskClock{ font-size:clamp(22px,3.1vw,48px) !important; }
+#coordKioskDate{ font-size:clamp(10px,1.15vw,18px) !important; }
+#coordKioskEscHint{ font-size:clamp(10px,1vw,15px) !important; padding:clamp(7px,0.9vw,12px) clamp(10px,1.2vw,20px) !important; white-space:normal !important; }
+#coordKioskModal .ck-headicon{ width:clamp(38px,3.4vw,60px) !important; height:clamp(38px,3.4vw,60px) !important; font-size:clamp(18px,2vw,30px) !important; }
 body.pc-mode .coord-hdr-stats{ gap:10px; overflow:visible !important; min-width:auto !important; flex-wrap:nowrap !important; }
 body.pc-mode .coord-left{ grid-column:1 !important; grid-row:1 !important; justify-self:start !important; align-self:center !important; }
 body.pc-mode .hdr-stat{ padding:8px 18px; }
@@ -1819,11 +1829,11 @@ body.pc-mode .coord-right{ grid-column:2 !important; grid-row:1 !important; just
 <div id="coordKioskModal" style="display:none; position:fixed; inset:0; z-index:99990; background:linear-gradient(135deg,#0b1530 0%,#0f2747 60%,#13315c 100%); color:#e2e8f0; flex-direction:column; padding:28px 34px; box-sizing:border-box;">
   <div style="display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:22px; gap:20px;">
     <div style="display:flex; align-items:center; gap:16px;">
-      <div style="width:60px;height:60px;border-radius:16px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.22);display:flex;align-items:center;justify-content:center;font-size:30px;color:#93c5fd;"><i class="fa-solid fa-plane-departure"></i></div>
-      <div><div style="font-size:34px;font-weight:950;color:#fff;letter-spacing:-.5px;">현재 진행 교육 현황</div>
-      <div style="font-size:15px;color:#93c5fd;font-weight:700;margin-top:3px;">항공기술훈련원 · CATC Integrated Education Management System</div></div>
+      <div class="ck-headicon" style="width:60px;height:60px;border-radius:16px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.22);display:flex;align-items:center;justify-content:center;font-size:30px;color:#93c5fd;flex-shrink:0;"><i class="fa-solid fa-plane-departure"></i></div>
+      <div><div id="coordKioskTitle" style="font-size:34px;font-weight:950;color:#fff;letter-spacing:-.5px;">현재 진행 교육 현황</div>
+      <div id="coordKioskSub" style="font-size:15px;color:#93c5fd;font-weight:700;margin-top:3px;">항공기술훈련원 · CATC Integrated Education Management System</div></div>
     </div>
-    <div style="align-self:center;background:#eef2f7;color:#334155;font-size:14px;font-weight:700;padding:11px 18px;border-radius:10px;border:1px solid #cbd5e1;white-space:nowrap;">kac-edu.github.io · 전체 화면을 종료하려면 <kbd style="background:#fff;border:1px solid #94a3b8;border-radius:6px;padding:2px 9px;font-weight:800;">Esc</kbd> 키를 누르세요.</div>
+    <div id="coordKioskEscHint" style="align-self:center;background:#eef2f7;color:#334155;font-size:15px;font-weight:700;padding:12px 20px;border-radius:10px;border:1px solid #cbd5e1;white-space:nowrap;transition:opacity .6s;">kac-edu.github.io · 전체 화면을 종료하려면 <kbd style="background:#fff;border:1px solid #94a3b8;border-radius:6px;padding:2px 9px;font-weight:800;">Esc</kbd> 키를 누르세요.</div>
     <div id="coordKioskClockWrap" style="text-align:right; cursor:pointer; user-select:none; flex-shrink:0;" title="시계를 길게 누르면 종료">
       <div id="coordKioskClock" style="font-size:46px;font-weight:900;color:#fff;font-family:Consolas,'Roboto Mono',monospace;line-height:1;letter-spacing:1px;">00:00:00</div>
       <div id="coordKioskDate" style="font-size:17px;color:#93c5fd;font-weight:700;margin-top:6px;">-</div>
@@ -1832,16 +1842,16 @@ body.pc-mode .coord-right{ grid-column:2 !important; grid-row:1 !important; just
     </div>
   </div>
   <div style="flex:1; overflow:auto; border-radius:18px; background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.10);">
-    <table style="width:100%; border-collapse:collapse; font-size:21px;">
+    <table style="width:100%; border-collapse:collapse; font-size:25px;">
       <thead><tr style="background:rgba(255,255,255,.09); position:sticky; top:0;">
-        <th style="padding:16px 12px;color:#cbd5e1;font-weight:800;">구분</th>
-        <th style="padding:16px 12px;color:#cbd5e1;font-weight:800;text-align:left;">과정명</th>
-        <th style="padding:16px 12px;color:#cbd5e1;font-weight:800;">교육기간</th>
-        <th style="padding:16px 12px;color:#cbd5e1;font-weight:800;">강의실</th>
-        <th style="padding:16px 12px;color:#cbd5e1;font-weight:800;">교육생수(예정)</th>
-        <th style="padding:16px 12px;color:#cbd5e1;font-weight:800;">담임교수</th>
-        <th style="padding:16px 12px;color:#cbd5e1;font-weight:800;">과정담당</th>
-        <th style="padding:16px 12px;color:#cbd5e1;font-weight:800;">비고</th>
+        <th style="padding:20px 14px;color:#cbd5e1;font-weight:800;">구분</th>
+        <th style="padding:20px 14px;color:#cbd5e1;font-weight:800;text-align:left;">과정명</th>
+        <th style="padding:20px 14px;color:#cbd5e1;font-weight:800;">교육기간</th>
+        <th style="padding:20px 14px;color:#cbd5e1;font-weight:800;">강의실</th>
+        <th style="padding:20px 14px;color:#cbd5e1;font-weight:800;">교육생수(예정)</th>
+        <th style="padding:20px 14px;color:#cbd5e1;font-weight:800;">담임교수</th>
+        <th style="padding:20px 14px;color:#cbd5e1;font-weight:800;">과정담당</th>
+        <th style="padding:20px 14px;color:#cbd5e1;font-weight:800;">비고</th>
       </tr></thead>
       <tbody id="coordKioskTableBody"></tbody>
     </table>
@@ -7956,7 +7966,7 @@ var coordKiosk={
   },
   _show:function(mode,pct){ if(mode==='enter'){ var b=document.getElementById('coordKioskEnterBar'); if(b){ b.style.display=pct>0?'block':'none'; b.style.width=pct+'%'; } } else { var e=document.getElementById('coordKioskExitHint'); if(e) e.style.width=pct+'%'; } },
   _cancel:function(mode){ clearTimeout(this._t); clearInterval(this._iv); this._t=null; this._iv=null; this._show(mode,0); if(mode==='enter'){ var b=document.getElementById('coordKioskEnterBar'); if(b) b.style.display='none'; } },
-  open:function(){ var m=document.getElementById('coordKioskModal'); if(!m) return; window._ckOpenedAt=Date.now(); this.render(); m.style.display='flex';
+  open:function(){ var m=document.getElementById('coordKioskModal'); if(!m) return; window._ckOpenedAt=Date.now(); this.render(); m.style.display='flex'; var _eh=document.getElementById('coordKioskEscHint'); if(_eh){ _eh.style.display=''; _eh.style.opacity='1'; clearTimeout(this._ehT); this._ehT=setTimeout(function(){ if(_eh){ _eh.style.opacity='0'; setTimeout(function(){ if(_eh) _eh.style.display='none'; },650); } }, 5000); }
     try{ var de=document.documentElement; var fn=de.requestFullscreen||de.webkitRequestFullscreen||de.msRequestFullscreen; if(fn) fn.call(de); }catch(e){}
     this._tick(); this._clk=setInterval(this._tick.bind(this),1000); this._rf=setInterval(this.render.bind(this),30000);
     if(!this._exitBound){ this._exitBound=true; this.bind(document.getElementById('coordKioskClockWrap'),1500,'exit',this.close.bind(this)); }
@@ -7973,14 +7983,14 @@ var coordKiosk={
       var start=(''+(sset.period||'')).split(' ~ ')[0]||''; var stat=(start&&today>=start)?{t:'진행중',c:'#34d399'}:{t:'예정',c:'#fbbf24'};
       var prof=(st.professorName||'').trim()?(_esc(st.professorName.trim())+' 교수'):'-';
       return '<tr style="border-bottom:1px solid rgba(255,255,255,.08);">'
-        +'<td style="padding:16px 12px;text-align:center;font-weight:900;color:#60a5fa;white-space:nowrap;">Room #'+_esc(r.rid)+'</td>'
-        +'<td style="padding:16px 12px;text-align:left;font-weight:800;color:#fff;">'+_esc(sset.courseName||'-')+'</td>'
-        +'<td style="padding:16px 12px;text-align:center;color:#cbd5e1;white-space:nowrap;font-size:0.85em;">'+_esc(sset.period||'-')+'</td>'
-        +'<td style="padding:16px 12px;text-align:center;color:#cbd5e1;">'+_esc(sset.roomDetailName||sset.roomDetail||'-')+'</td>'
-        +'<td style="padding:16px 12px;text-align:center;font-weight:900;color:#34d399;font-size:1.05em;">'+c.expected+'명</td>'
-        +'<td style="padding:16px 12px;text-align:center;color:#e2e8f0;white-space:nowrap;">'+prof+'</td>'
-        +'<td style="padding:16px 12px;text-align:center;color:#cbd5e1;white-space:nowrap;">'+_esc(full(sset.coordinatorName)||'-')+'</td>'
-        +'<td style="padding:16px 12px;text-align:center;"><span style="padding:6px 18px;border-radius:999px;font-weight:800;font-size:.8em;color:'+stat.c+';background:'+stat.c+'22;border:1px solid '+stat.c+'66;">'+stat.t+'</span></td>'
+        +'<td style="padding:20px 14px;text-align:center;font-weight:900;color:#60a5fa;white-space:nowrap;">Room #'+_esc(r.rid)+'</td>'
+        +'<td style="padding:20px 14px;text-align:left;font-weight:800;color:#fff;">'+_esc(sset.courseName||'-')+'</td>'
+        +'<td style="padding:20px 14px;text-align:center;color:#cbd5e1;white-space:nowrap;font-size:0.85em;">'+_esc(sset.period||'-')+'</td>'
+        +'<td style="padding:20px 14px;text-align:center;color:#cbd5e1;">'+_esc(sset.roomDetailName||sset.roomDetail||'-')+'</td>'
+        +'<td style="padding:20px 14px;text-align:center;font-weight:900;color:#34d399;font-size:1.05em;">'+c.expected+'명</td>'
+        +'<td style="padding:20px 14px;text-align:center;color:#e2e8f0;white-space:nowrap;">'+prof+'</td>'
+        +'<td style="padding:20px 14px;text-align:center;color:#cbd5e1;white-space:nowrap;">'+_esc(full(sset.coordinatorName)||'-')+'</td>'
+        +'<td style="padding:20px 14px;text-align:center;"><span style="padding:6px 18px;border-radius:999px;font-weight:800;font-size:.8em;color:'+stat.c+';background:'+stat.c+'22;border:1px solid '+stat.c+'66;">'+stat.t+'</span></td>'
       +'</tr>';
     }).join('');
   }
