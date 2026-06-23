@@ -444,8 +444,8 @@
 
 /* 차량 신청 버튼 선택 시 활성화 스타일 (연한 녹색) */
 .quiz-opt-btn.shuttle-active {
-    background-color: #f0fdf4 !important;
-    border-color: #22c55e !important;
+    background-color: #eff4ff !important;
+    border-color: #2563eb !important;
     color: #166534 !important;
     font-weight: 900 !important;
     transform: scale(1.02);
@@ -822,9 +822,9 @@
 <!-- [개편] 차량 신청 팝업 -->
 <!-- 맛집 상세 팝업 (교육생) -->
 <div id="foodDetailModal" style="display:none; position:fixed; inset:0; z-index:16500; background:rgba(15,23,42,.55); align-items:center; justify-content:center; padding:16px;" onclick="if(event.target===this) closeFoodDetail()">
-    <div style="background:#fff; border-radius:18px; width:100%; max-width:440px; max-height:90vh; overflow:hidden; box-shadow:0 24px 60px rgba(15,23,42,.35); position:relative; display:flex; flex-direction:column;">
-        <button type="button" onclick="closeFoodDetail()" aria-label="닫기" style="position:absolute; top:12px; right:14px; width:34px; height:34px; border:none; border-radius:50%; background:#f1f5f9; color:#475569; font-size:20px; font-weight:800; cursor:pointer; z-index:2;">&times;</button>
-        <div id="foodDetailBody" style="overflow-y:auto; padding:22px;"></div>
+    <div style="background:#fff; border-radius:24px; width:100%; max-width:440px; max-height:90vh; overflow:hidden; box-shadow:0 24px 60px rgba(15,23,42,.35); position:relative; display:flex; flex-direction:column;">
+        <button type="button" onclick="closeFoodDetail()" aria-label="닫기" style="position:absolute; top:13px; right:14px; width:32px; height:32px; border:none; border-radius:50%; background:rgba(255,255,255,.16); color:#fff; font-size:18px; font-weight:800; cursor:pointer; z-index:2;">&times;</button>
+        <div id="foodDetailBody" style="overflow-y:auto; padding:0;"></div>
     </div>
 </div>
 <style>
@@ -857,7 +857,7 @@
     <div class="menu-box food-box" style="position:relative; display:flex; flex-direction:column; padding:0;">
         <div id="foodAddForm" class="food-add-pop" style="display:none;" onclick="if(event.target===this) closeFoodAddForm();">
           <div class="food-add-card">
-            <div class="food-add-head"><span>🍜 맛집 추가하기</span><button type="button" class="kac-px" onclick="closeFoodAddForm()" aria-label="닫기"><i class="fa-solid fa-xmark"></i></button></div>
+            <div class="food-add-head"><span>맛집 추가하기</span><button type="button" class="kac-px" onclick="closeFoodAddForm()" aria-label="닫기"><i class="fa-solid fa-xmark"></i></button></div>
             <div id="foodAddMap" style="width:100%; height:180px; border-radius:12px; margin-bottom:10px; background:#e8eef5; border:1px solid #dbe6f3;"></div>
             <div style="display:flex; gap:8px; margin-bottom:8px;">
                 <input id="foodSearch" type="text" placeholder="가게명 검색 (예: 화당털보식당, 강민주의 들밥)" onkeydown="if(event.key==='Enter'){event.preventDefault();foodSearchPlaces();}" style="flex:1; padding:13px; border:1px solid #cfe0ff; border-radius:10px; font-size:15px; box-sizing:border-box;">
@@ -869,16 +869,22 @@
                 <div id="foodSelName" style="font-size:15px; font-weight:900; color:#0f172a;"></div>
                 <div id="foodSelAddr" style="font-size:12px; color:#64748b;"></div>
             </div>
-            <select id="foodCat" style="width:100%; padding:13px; border:1px solid #cfe0ff; border-radius:10px; margin-bottom:8px; font-size:15px; box-sizing:border-box; background:#fff;">
-                <option value="식당">🍚 식당</option><option value="카페">☕ 카페</option><option value="분식">🍜 분식</option><option value="술집">🍻 술집</option><option value="기타">🧁 기타</option>
-            </select>
+            <div style="font-size:12px; font-weight:800; color:#64748b; margin:4px 2px 8px;">카테고리</div>
+            <div id="foodCatChips" style="display:flex; gap:7px; flex-wrap:wrap; margin-bottom:10px;">
+                <button type="button" class="fcat-chip" data-cat="식당" onclick="pickFoodCat(this)" style="padding:8px 14px; border-radius:50px; border:1px solid #2563eb; background:#2563eb; color:#fff; font-size:13px; font-weight:800; cursor:pointer;">🍚 식당</button>
+                <button type="button" class="fcat-chip" data-cat="카페" onclick="pickFoodCat(this)" style="padding:8px 14px; border-radius:50px; border:1px solid #e2e8f0; background:#fff; color:#475569; font-size:13px; font-weight:700; cursor:pointer;">☕ 카페</button>
+                <button type="button" class="fcat-chip" data-cat="분식" onclick="pickFoodCat(this)" style="padding:8px 14px; border-radius:50px; border:1px solid #e2e8f0; background:#fff; color:#475569; font-size:13px; font-weight:700; cursor:pointer;">🍜 분식</button>
+                <button type="button" class="fcat-chip" data-cat="술집" onclick="pickFoodCat(this)" style="padding:8px 14px; border-radius:50px; border:1px solid #e2e8f0; background:#fff; color:#475569; font-size:13px; font-weight:700; cursor:pointer;">🍻 술집</button>
+                <button type="button" class="fcat-chip" data-cat="기타" onclick="pickFoodCat(this)" style="padding:8px 14px; border-radius:50px; border:1px solid #e2e8f0; background:#fff; color:#475569; font-size:13px; font-weight:700; cursor:pointer;">🧁 기타</button>
+            </div>
+            <input type="hidden" id="foodCat" value="식당">
             <textarea id="foodComment" rows="2" maxlength="100" placeholder="한줄평을 직접 입력해 주세요 (선택)" style="width:100%; padding:12px; border:1px solid #cfe0ff; border-radius:10px; margin-bottom:8px; font-size:14px; box-sizing:border-box; resize:none;"></textarea>
             <div style="font-size:11.5px; color:#94a3b8; font-weight:700; margin:0 2px 7px;">👇 아래에서 골라 빠르게 채울 수도 있어요</div>
             <div style="display:flex; flex-wrap:wrap; gap:6px; margin-bottom:8px;"><button type="button" onclick="fillTextPreset('foodComment','가게가 깔끔해요')" style="padding:5px 10px; border-radius:50px; border:1px solid #fed7aa; background:#fff7ed; color:#c2410c; font-size:11.5px; font-weight:700; cursor:pointer;">가게가 깔끔해요</button><button type="button" onclick="fillTextPreset('foodComment','음식이 맛있어요')" style="padding:5px 10px; border-radius:50px; border:1px solid #fed7aa; background:#fff7ed; color:#c2410c; font-size:11.5px; font-weight:700; cursor:pointer;">음식이 맛있어요</button><button type="button" onclick="fillTextPreset('foodComment','가격이 착해요')" style="padding:5px 10px; border-radius:50px; border:1px solid #fed7aa; background:#fff7ed; color:#c2410c; font-size:11.5px; font-weight:700; cursor:pointer;">가격이 착해요</button><button type="button" onclick="fillTextPreset('foodComment','양이 푸짐해요')" style="padding:5px 10px; border-radius:50px; border:1px solid #fed7aa; background:#fff7ed; color:#c2410c; font-size:11.5px; font-weight:700; cursor:pointer;">양이 푸짐해요</button><button type="button" onclick="fillTextPreset('foodComment','혼밥하기 좋아요')" style="padding:5px 10px; border-radius:50px; border:1px solid #fed7aa; background:#fff7ed; color:#c2410c; font-size:11.5px; font-weight:700; cursor:pointer;">혼밥하기 좋아요</button><button type="button" onclick="fillTextPreset('foodComment','단체모임 추천')" style="padding:5px 10px; border-radius:50px; border:1px solid #fed7aa; background:#fff7ed; color:#c2410c; font-size:11.5px; font-weight:700; cursor:pointer;">단체모임 추천</button><button type="button" onclick="fillTextPreset('foodComment','주차 편해요')" style="padding:5px 10px; border-radius:50px; border:1px solid #fed7aa; background:#fff7ed; color:#c2410c; font-size:11.5px; font-weight:700; cursor:pointer;">주차 편해요</button><button type="button" onclick="fillTextPreset('foodComment','재방문 의사 100%')" style="padding:5px 10px; border-radius:50px; border:1px solid #fed7aa; background:#fff7ed; color:#c2410c; font-size:11.5px; font-weight:700; cursor:pointer;">재방문 의사 100%</button></div>
             <div style="font-size:12px; color:#94a3b8; font-weight:600; margin-bottom:10px; line-height:1.5;">💡 가게명을 검색해서 선택하면 위치·거리·길찾기가 자동으로 들어가요.</div>
             <div style="display:flex; gap:8px;">
-                <button type="button" onclick="closeFoodAddForm()" style="flex:1; padding:13px; border:1px solid #e2e8f0; border-radius:10px; background:#fff; color:#475569; font-weight:800; cursor:pointer;">취소</button>
-                <button type="button" onclick="submitFoodSpot()" style="flex:1; padding:13px; border:none; border-radius:10px; background:#2563eb; color:#fff; font-weight:800; cursor:pointer;">등록</button>
+                <button type="button" onclick="closeFoodAddForm()" style="flex:none; width:88px; padding:14px 0; border:1px solid #e2e8f0; border-radius:12px; background:#fff; color:#475569; font-weight:800; cursor:pointer;">취소</button>
+                <button type="button" onclick="submitFoodSpot()" style="flex:1; padding:14px 0; border:none; border-radius:12px; background:#2563eb; color:#fff; font-weight:800; font-size:15px; cursor:pointer; box-shadow:0 4px 12px rgba(37,99,235,.25);">맛집 등록하기</button>
             </div>
           </div>
         </div>
@@ -901,47 +907,42 @@
     <div class="menu-box" style="width:90%; padding:25px 20px; border-radius:24px; max-width:400px;">
         <div class="kac-pbar"><span class="kac-pt">퇴교 차량 신청</span><button type="button" class="kac-px" onclick="closeShuttleModal()" aria-label="닫기"><i class="fa-solid fa-xmark"></i></button></div>
 
-        <!-- 출발 예정 시간 -->
-        <div id="driverNoticeBar" style="background:#eff6ff; border:1.5px solid #bfdbfe; padding:14px 18px; border-radius:14px; margin-bottom:18px; text-align:center;">
-            <div id="departureTimeText" style="font-size:22px; font-weight:900; color:#1d4ed8; letter-spacing:-0.3px; word-break:keep-all; line-height:1.4;">시간 정보 없음</div>
+        <!-- 출발 예정 시간 (히어로) -->
+        <div id="driverNoticeBar" style="background:linear-gradient(135deg,#1d4ed8,#2563eb); padding:16px 18px; border-radius:16px; margin-bottom:18px; box-shadow:0 8px 20px rgba(37,99,235,.28);">
+            <div style="font-size:12px; font-weight:700; color:#bfdbfe; margin-bottom:3px;"><i class="fa-regular fa-clock" style="margin-right:5px;"></i>오늘 퇴교 차량 출발</div>
+            <div id="departureTimeText" style="font-size:26px; font-weight:900; color:#fff; letter-spacing:-0.3px; word-break:keep-all; line-height:1.3;">시간 정보 없음</div>
         </div>
 
         <!-- 신청 전: 버튼 선택 -->
         <div id="shuttleSelectionArea">
-            <p style="font-size:12px; color:#94a3b8; margin-bottom:12px; text-align:center;">이동 수단을 선택해 주세요.</p>
-            <div style="display:flex; flex-direction:column; gap:10px;">
+            <p style="font-size:12.5px; color:#64748b; font-weight:800; margin:0 2px 11px;">이동 수단 선택</p>
+            <div style="display:flex; flex-direction:column; gap:9px;">
 
                 <button class="quiz-opt-btn shuttle-btn" onclick="selectShuttle('car','자차(개별이동)')"
-                    style="display:flex; align-items:center; justify-content:flex-start; gap:16px; height:68px; padding:0 20px; background:#f8fafc; border-color:#e2e8f0; color:#475569; border-radius:14px;">
-                    <span style="width:44px; height:44px; flex-shrink:0; border-radius:12px; background:#eff4ff; color:#2563eb; display:flex; align-items:center; justify-content:center; font-size:20px;"><i class="fa-solid fa-car-side"></i></span>
-                    <span style="font-size:18px; font-weight:800;">자차 &nbsp;<small style="font-size:13px; font-weight:600; opacity:0.55;">개별이동</small></span>
+                    style="display:flex; align-items:center; gap:14px; min-height:64px; padding:12px 16px; background:#fff; border-color:#e8eef8; color:#0f172a; border-radius:14px;">
+                    <span style="width:42px; height:42px; flex-shrink:0; border-radius:12px; background:#f1f5f9; color:#475569; display:flex; align-items:center; justify-content:center; font-size:19px;"><i class="fa-solid fa-car-side"></i></span>
+                    <div style="flex:1; text-align:left;"><div style="font-size:16px; font-weight:800;">자차</div><div style="font-size:12px; color:#94a3b8; font-weight:600;">개별 이동</div></div>
                 </button>
 
                 <button class="quiz-opt-btn shuttle-btn" onclick="selectShuttle('osong','오송역')"
-                    style="display:flex; align-items:center; justify-content:flex-start; gap:16px; height:68px; padding:0 20px; border-color:#fca5a5; color:#b91c1c; border-radius:14px;">
-                    <span style="width:44px; height:44px; flex-shrink:0; border-radius:12px; background:#fef2f2; color:#ef4444; display:flex; align-items:center; justify-content:center; font-size:20px;"><i class="fa-solid fa-train"></i></span>
-                    <div style="display:flex; flex-direction:column; align-items:flex-start; line-height:1.3;">
-                        <span style="font-size:18px; font-weight:800;">오송역</span>
-                        <span id="arrival-osong" style="font-size:13px; font-weight:700; color:#ef4444; opacity:0.85;"></span>
-                    </div>
+                    style="display:flex; align-items:center; gap:14px; min-height:64px; padding:12px 16px; background:#fff; border-color:#e8eef8; color:#0f172a; border-radius:14px;">
+                    <span style="width:42px; height:42px; flex-shrink:0; border-radius:12px; background:#f1f5f9; color:#475569; display:flex; align-items:center; justify-content:center; font-size:19px;"><i class="fa-solid fa-train"></i></span>
+                    <div style="flex:1; text-align:left;"><div style="font-size:16px; font-weight:800;">오송역</div><div style="font-size:12px; color:#94a3b8; font-weight:600;">약 25분 소요</div></div>
+                    <span id="arrival-osong" style="font-size:12.5px; font-weight:800; color:#64748b; white-space:nowrap;"></span>
                 </button>
 
                 <button class="quiz-opt-btn shuttle-btn" onclick="selectShuttle('terminal','청주터미널')"
-                    style="display:flex; align-items:center; justify-content:flex-start; gap:16px; height:68px; padding:0 20px; border-color:#93c5fd; color:#1e40af; border-radius:14px;">
-                    <span style="width:44px; height:44px; flex-shrink:0; border-radius:12px; background:#eff6ff; color:#2563eb; display:flex; align-items:center; justify-content:center; font-size:20px;"><i class="fa-solid fa-bus"></i></span>
-                    <div style="display:flex; flex-direction:column; align-items:flex-start; line-height:1.3;">
-                        <span style="font-size:18px; font-weight:800;">청주 터미널</span>
-                        <span id="arrival-terminal" style="font-size:13px; font-weight:700; color:#1d4ed8; opacity:0.85;"></span>
-                    </div>
+                    style="display:flex; align-items:center; gap:14px; min-height:64px; padding:12px 16px; background:#fff; border-color:#e8eef8; color:#0f172a; border-radius:14px;">
+                    <span style="width:42px; height:42px; flex-shrink:0; border-radius:12px; background:#f1f5f9; color:#475569; display:flex; align-items:center; justify-content:center; font-size:19px;"><i class="fa-solid fa-bus"></i></span>
+                    <div style="flex:1; text-align:left;"><div style="font-size:16px; font-weight:800;">청주 터미널</div><div style="font-size:12px; color:#94a3b8; font-weight:600;">약 40분 소요</div></div>
+                    <span id="arrival-terminal" style="font-size:12.5px; font-weight:800; color:#64748b; white-space:nowrap;"></span>
                 </button>
 
                 <button class="quiz-opt-btn shuttle-btn" onclick="selectShuttle('airport','청주공항')"
-                    style="display:flex; align-items:center; justify-content:flex-start; gap:16px; height:68px; padding:0 20px; border-color:#86efac; color:#166534; border-radius:14px;">
-                    <span style="width:44px; height:44px; flex-shrink:0; border-radius:12px; background:#ecfdf5; color:#16a34a; display:flex; align-items:center; justify-content:center; font-size:20px;"><i class="fa-solid fa-plane-departure"></i></span>
-                    <div style="display:flex; flex-direction:column; align-items:flex-start; line-height:1.3;">
-                        <span style="font-size:18px; font-weight:800;">청주국제공항</span>
-                        <span id="arrival-airport" style="font-size:13px; font-weight:700; color:#16a34a; opacity:0.85;"></span>
-                    </div>
+                    style="display:flex; align-items:center; gap:14px; min-height:64px; padding:12px 16px; background:#fff; border-color:#e8eef8; color:#0f172a; border-radius:14px;">
+                    <span style="width:42px; height:42px; flex-shrink:0; border-radius:12px; background:#f1f5f9; color:#475569; display:flex; align-items:center; justify-content:center; font-size:19px;"><i class="fa-solid fa-plane-departure"></i></span>
+                    <div style="flex:1; text-align:left;"><div style="font-size:16px; font-weight:800;">청주국제공항</div><div style="font-size:12px; color:#94a3b8; font-weight:600;">약 50분 소요</div></div>
+                    <span id="arrival-airport" style="font-size:12.5px; font-weight:800; color:#64748b; white-space:nowrap;"></span>
                 </button>
 
             </div>
@@ -1190,7 +1191,7 @@
         <div class="menu-box">
             <div class="kac-pbar"><span class="kac-pt">📢 공지사항</span><button type="button" class="kac-px" onclick="closePanelSmooth('noticeModal')" aria-label="닫기"><i class="fa-solid fa-xmark"></i></button></div>
             <div id="noticeContainer"></div>
-            <button onclick="closePanelSmooth('noticeModal')" style="margin-top:15px; width:100%; padding:12px; border:none; border-radius:8px; background:#e2e8f0; font-weight:bold;">닫기</button>
+            <button onclick="closePanelSmooth('noticeModal')" style="margin-top:15px; width:100%; padding:14px; border:none; border-radius:13px; background:#0f172a; color:#fff; font-size:15px; font-weight:800;">닫기</button>
         </div>
     </div>
 
@@ -1902,7 +1903,7 @@ function foodPickPlace(i){
     document.getElementById('foodSelAddr').textContent=_foodSelected.address;
     document.getElementById('foodSelectedBox').style.display='block';
     document.getElementById('foodSearchResults').innerHTML='';
-    try{ document.getElementById('foodCat').value=_foodAutoCat(d.category_name); }catch(e){}
+    try{ var _ac=_foodAutoCat(d.category_name); document.getElementById('foodCat').value=_ac; if(typeof syncFoodCatChips==='function') syncFoodCatChips(_ac); }catch(e){}
     try{
         if(_kakaoReady && _foodSelected.lat && _foodSelected.lng){
             if(!_foodMap){ _initFoodAddMap(); }
@@ -1971,6 +1972,23 @@ function _foodComments(o){
     arr.sort(function(a,b){ return (a.ts||0)-(b.ts||0); });
     return arr;
 }
+// 맛집 추가 폼: 카테고리 칩 선택 (히든 #foodCat 값을 갱신 — submitFoodSpot이 그대로 읽음)
+function syncFoodCatChips(v){
+    var chips=document.querySelectorAll('#foodCatChips .fcat-chip');
+    chips.forEach(function(c){
+        var on=(c.getAttribute('data-cat')===v);
+        c.style.background = on ? '#2563eb' : '#fff';
+        c.style.color = on ? '#fff' : '#475569';
+        c.style.borderColor = on ? '#2563eb' : '#e2e8f0';
+        c.style.fontWeight = on ? '800' : '700';
+    });
+}
+function pickFoodCat(el){
+    var v=el.getAttribute('data-cat');
+    var inp=document.getElementById('foodCat'); if(inp) inp.value=v;
+    syncFoodCatChips(v);
+}
+window.pickFoodCat=pickFoodCat;
 function renderFoodList(){
     var el=document.getElementById('foodList'); if(!el) return;
     var list=_foodCache.filter(function(o){ return _foodFilter==='전체' || o.category===_foodFilter; });
@@ -1980,15 +1998,25 @@ function renderFoodList(){
         return (b.likes||0)-(a.likes||0) || (b.ts||0)-(a.ts||0);
     });
     if(!list.length){ el.innerHTML='<div style="padding:30px 0; text-align:center; color:#94a3b8; font-weight:700; line-height:1.6;">아직 등록된 맛집이 없어요.<br>첫 맛집을 추가해보세요!</div>'; return; }
-    el.innerHTML=list.map(function(o){
+    el.innerHTML=list.map(function(o,idx){
         var cat=o.category||'기타'; var col=_foodCatColor(cat);
         var esc=function(t){return String(t||'').replace(/</g,'&lt;');};
         var dist=(o.distanceKm!=null)?('📍 '+o.distanceKm+'km'):'';
-        return '<div onclick="openFoodDetail(\''+o.id+'\')" style="display:flex; align-items:center; gap:10px; background:#fff; border:1px solid #e8eef8; border-radius:12px; padding:12px 14px; box-shadow:0 1px 4px rgba(15,23,42,.04); cursor:pointer; text-align:left;">'
-          +'<span style="background:'+col+'; color:#fff; font-size:10px; font-weight:800; padding:2px 7px; border-radius:5px; flex-shrink:0;">'+cat+'</span>'
-          +'<b style="flex:1; min-width:0; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; font-size:15px; color:#0f172a;">'+esc(o.name)+'</b>'
-          +(dist?'<span style="flex-shrink:0; font-size:12.5px; color:#2563eb; font-weight:800; white-space:nowrap;">'+dist+'</span>':'')
-          +'<span style="flex-shrink:0; font-size:13px; font-weight:900; color:#e11d48; white-space:nowrap;">👍 '+(o.likes||0)+'</span>'
+        var cm=(typeof _foodComments==='function')?_foodComments(o):[];
+        var preview=cm.length?cm[cm.length-1].text:'';
+        var medal=(idx<3)?('<span style="width:24px; height:24px; border-radius:8px; background:'+(idx===0?'#fef3c7':'#f1f5f9')+'; color:'+(idx===0?'#b45309':'#64748b')+'; font-size:12px; font-weight:900; display:flex; align-items:center; justify-content:center; flex-shrink:0;">'+(idx+1)+'</span>'):'';
+        return '<div onclick="openFoodDetail(\''+o.id+'\')" style="background:#fff; border:1px solid #e8eef8; border-radius:15px; padding:13px 14px; box-shadow:0 2px 8px rgba(15,23,42,.05); cursor:pointer; text-align:left;">'
+          +'<div style="display:flex; align-items:center; gap:9px; margin-bottom:'+(preview?'7px':'9px')+';">'
+          +medal
+          +'<b style="flex:1; min-width:0; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; font-size:16px; color:#0f172a;">'+esc(o.name)+'</b>'
+          +'<span style="background:'+col+'; color:#fff; font-size:10px; font-weight:800; padding:3px 8px; border-radius:6px; flex-shrink:0;">'+cat+'</span>'
+          +'</div>'
+          +(preview?'<div style="font-size:13px; color:#64748b; font-weight:500; line-height:1.5; margin-bottom:9px; word-break:keep-all; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">\u201c'+esc(preview)+'\u201d</div>':'')
+          +'<div style="display:flex; align-items:center; gap:13px;">'
+          +'<span style="font-size:12.5px; font-weight:800; color:#e11d48; white-space:nowrap;">\ud83d\udc4d '+(o.likes||0)+'</span>'
+          +(dist?'<span style="font-size:12.5px; color:#2563eb; font-weight:700; white-space:nowrap;">'+dist+'</span>':'')
+          +'<span style="margin-left:auto; font-size:12px; font-weight:800; color:#94a3b8; white-space:nowrap;">\uc790\uc138\ud788 \u203a</span>'
+          +'</div>'
           +'</div>';
     }).join('');
 }
@@ -2014,27 +2042,34 @@ function _renderFoodDetail(o){
     var dist=(o.distanceKm!=null)?(o.distanceKm+'km (직선)'):'-';
     var likes=JSON.parse(localStorage.getItem('kac_food_likes')||'{}'); var liked=!!likes[o.id];
     var cmts=_foodComments(o);
-    var cmtsHtml=cmts.length?cmts.map(function(c){return '<div style="font-size:13.5px; color:#334155; line-height:1.6; padding:9px 11px; background:#f8fafc; border-radius:10px; margin-bottom:6px;">💬 '+esc(c.text)+'</div>';}).join(''):'<div style="color:#94a3b8; font-size:13px; margin-bottom:6px;">아직 한줄평이 없어요. 첫 한줄평을 남겨보세요!</div>';
+    var cmtsHtml=cmts.length?cmts.map(function(c){return '<div style="display:flex; gap:8px; margin-bottom:7px;"><span style="flex-shrink:0; font-size:14px;">💬</span><div style="flex:1; font-size:13.5px; color:#334155; line-height:1.55; padding:9px 12px; background:#f8fafc; border-radius:12px; word-break:keep-all;">'+esc(c.text)+'</div></div>';}).join(''):'<div style="color:#94a3b8; font-size:13px; margin-bottom:6px;">아직 한줄평이 없어요. 첫 한줄평을 남겨보세요!</div>';
     var phoneHtml=o.phone?'<a href="tel:'+o.phone+'" style="color:#2563eb; font-weight:700; text-decoration:none;">'+o.phone+'</a>':'<span style="color:#94a3b8;">등록된 번호 없음</span>';
     var bizHtml=o.placeUrl?'<a href="'+o.placeUrl+'" target="_blank" rel="noopener" style="color:#047857; font-weight:700;">카카오에서 영업시간 보기 →</a>':'<span style="color:#94a3b8;">정보 없음</span>';
     var chips=FOOD_PRESETS.map(function(t){ return '<button type="button" onclick="fillFoodCmt(\''+o.id+'\',\''+t+'\')" style="padding:4px 9px; border-radius:50px; border:1px solid #fed7aa; background:#fff7ed; color:#c2410c; font-size:11px; font-weight:700; cursor:pointer;">'+t+'</button>'; }).join('');
     el.innerHTML=
-      '<div style="display:flex; align-items:center; gap:9px; margin-bottom:6px; padding-right:30px;"><span style="background:'+col+'; color:#fff; font-size:12px; font-weight:800; padding:3px 10px; border-radius:7px;">'+cat+'</span><h2 style="margin:0; font-size:20px; font-weight:900; color:#0f172a;">'+esc(o.name)+'</h2></div>'
-      +'<table style="width:100%; margin:12px 0; font-size:13.5px;">'
-      +'<tr><td style="padding:5px 0; color:#94a3b8; width:78px; font-weight:700; vertical-align:top;">주소</td><td style="color:#334155;">'+(esc(o.address)||'-')+'</td></tr>'
-      +'<tr><td style="padding:5px 0; color:#94a3b8; font-weight:700;">연락처</td><td>'+phoneHtml+'</td></tr>'
-      +'<tr><td style="padding:5px 0; color:#94a3b8; font-weight:700;">영업정보</td><td>'+bizHtml+'</td></tr>'
-      +'<tr><td style="padding:5px 0; color:#94a3b8; font-weight:700;">항기원 거리</td><td style="color:#2563eb; font-weight:800;">'+dist+'</td></tr>'
-      +'</table>'
-      +'<div id="foodDetailMap" style="width:100%; height:190px; border-radius:12px; border:1px solid #e2e8f0; margin-bottom:12px;"></div>'
-      +'<div style="display:flex; gap:7px; margin-bottom:16px;">'
-      +'<button type="button" onclick="toggleFoodLike(\''+o.id+'\')" style="flex:1; padding:10px 0; border-radius:10px; border:1px solid '+(liked?'#fecaca':'#e2e8f0')+'; background:'+(liked?'#fff1f2':'#f8fafc')+'; color:'+(liked?'#e11d48':'#475569')+'; font-weight:800; font-size:13px; cursor:pointer;">👍 추천 '+(o.likes||0)+'</button>'
-      +'<button type="button" onclick="foodMapById(\''+o.id+'\')" style="flex:1; padding:10px 0; border:none; border-radius:10px; background:#eef4ff; color:#1e3a8a; font-weight:800; font-size:13px; cursor:pointer;">🗺️ 지도</button>'
-      +'<button type="button" onclick="foodRouteById(\''+o.id+'\')" style="flex:1; padding:10px 0; border:none; border-radius:10px; background:#eafff4; color:#047857; font-weight:800; font-size:13px; cursor:pointer;">🚗 길찾기</button>'
+      '<div style="background:linear-gradient(135deg,#0f172a,#1e3a8a); color:#fff; padding:18px 18px 17px;">'
+        +'<span style="font-size:11px; font-weight:800; color:#fff; background:rgba(255,255,255,.2); padding:3px 9px; border-radius:6px;">'+cat+'</span>'
+        +'<div style="font-size:21px; font-weight:900; margin-top:9px; padding-right:34px;">'+esc(o.name)+'</div>'
+        +'<div style="display:flex; align-items:center; gap:13px; margin-top:9px; font-size:12.5px; font-weight:700;">'
+          +'<span style="color:#fca5a5;"><i class="fa-solid fa-thumbs-up"></i> <b style="font-weight:800;">'+(o.likes||0)+'</b> 추천</span>'
+          +(o.distanceKm!=null?'<span style="color:#bfdbfe;"><i class="fa-solid fa-location-dot"></i> '+o.distanceKm+'km</span>':'')
+        +'</div>'
       +'</div>'
-      +'<h3 style="margin:0 0 8px; font-size:15px; font-weight:900; color:#0f172a;">📝 한줄평 ('+cmts.length+')</h3>'
-      +cmtsHtml
-      +'<div style="margin-top:10px;"><div style="display:flex; flex-wrap:wrap; gap:5px; margin-bottom:6px;">'+chips+'</div><div style="display:flex; gap:6px;"><input id="foodCmtInput_'+o.id+'" maxlength="100" placeholder="한줄평 추가" style="flex:1; padding:10px; border:1px solid #cfe0ff; border-radius:9px; font-size:13px; box-sizing:border-box;" onkeydown="if(event.key===\'Enter\'){event.preventDefault();addFoodComment(\''+o.id+'\');}"><button type="button" onclick="addFoodComment(\''+o.id+'\')" style="padding:0 14px; border:none; border-radius:9px; background:#2563eb; color:#fff; font-weight:800; cursor:pointer;">등록</button></div></div>';
+      +'<div style="padding:16px 18px;">'
+        +'<div id="foodDetailMap" style="width:100%; height:170px; border-radius:14px; border:1px solid #e2e8f0; margin-bottom:14px; background:#e8eef5;"></div>'
+        +'<div style="display:flex; align-items:flex-start; gap:11px; padding:10px 0; border-top:1px solid #f1f5f9;"><span style="width:24px; color:#cbd5e1; text-align:center; flex-shrink:0;"><i class="fa-solid fa-location-dot"></i></span><span style="font-size:12.5px; color:#94a3b8; font-weight:700; flex-shrink:0; width:48px;">주소</span><span style="flex:1; font-size:13.5px; font-weight:600; color:#1e293b; word-break:keep-all;">'+(esc(o.address)||'-')+'</span></div>'
+        +'<div style="display:flex; align-items:center; gap:11px; padding:10px 0; border-top:1px solid #f1f5f9;"><span style="width:24px; color:#cbd5e1; text-align:center; flex-shrink:0;"><i class="fa-solid fa-phone"></i></span><span style="font-size:12.5px; color:#94a3b8; font-weight:700; flex-shrink:0; width:48px;">연락처</span><span style="flex:1; font-size:14px; font-weight:800;">'+phoneHtml+'</span></div>'
+        +'<div style="display:flex; align-items:center; gap:11px; padding:10px 0; border-top:1px solid #f1f5f9;"><span style="width:24px; color:#cbd5e1; text-align:center; flex-shrink:0;"><i class="fa-regular fa-clock"></i></span><span style="font-size:12.5px; color:#94a3b8; font-weight:700; flex-shrink:0; width:48px;">영업</span><span style="flex:1; font-size:13.5px; font-weight:800;">'+bizHtml+'</span></div>'
+        +'<div style="display:flex; align-items:center; gap:11px; padding:10px 0; border-top:1px solid #f1f5f9; margin-bottom:14px;"><span style="width:24px; color:#cbd5e1; text-align:center; flex-shrink:0;"><i class="fa-solid fa-route"></i></span><span style="font-size:12.5px; color:#94a3b8; font-weight:700; flex-shrink:0; width:48px;">거리</span><span style="flex:1; font-size:14px; font-weight:800; color:#2563eb;">'+dist+'</span></div>'
+        +'<div style="display:flex; gap:8px; margin-bottom:18px;">'
+        +'<button type="button" onclick="toggleFoodLike(\''+o.id+'\')" style="flex:1; padding:13px 0; border-radius:12px; border:1.5px solid '+(liked?'#fecaca':'#e2e8f0')+'; background:'+(liked?'#fff1f2':'#f8fafc')+'; color:'+(liked?'#e11d48':'#475569')+'; font-weight:800; font-size:13.5px; cursor:pointer;"><i class="fa-solid fa-thumbs-up"></i> 추천 '+(o.likes||0)+'</button>'
+        +'<button type="button" onclick="foodMapById(\''+o.id+'\')" style="flex:1; padding:13px 0; border:none; border-radius:12px; background:#eef4ff; color:#1e3a8a; font-weight:800; font-size:13.5px; cursor:pointer;"><i class="fa-solid fa-map"></i> 지도</button>'
+        +'<button type="button" onclick="foodRouteById(\''+o.id+'\')" style="flex:1.2; padding:13px 0; border:none; border-radius:12px; background:#2563eb; color:#fff; font-weight:800; font-size:13.5px; cursor:pointer; box-shadow:0 4px 12px rgba(37,99,235,.28);"><i class="fa-solid fa-route"></i> 길찾기</button>'
+        +'</div>'
+        +'<div style="display:flex; align-items:center; gap:7px; margin-bottom:10px;"><span style="font-size:15px; font-weight:900; color:#0f172a;">한줄평</span><span style="font-size:12px; font-weight:800; color:#ea580c; background:#fff7ed; padding:2px 9px; border-radius:20px;">'+cmts.length+'</span></div>'
+        +cmtsHtml
+        +'<div style="margin-top:10px;"><div style="display:flex; flex-wrap:wrap; gap:5px; margin-bottom:7px;">'+chips+'</div><div style="display:flex; gap:6px;"><input id="foodCmtInput_'+o.id+'" maxlength="100" placeholder="한줄평 추가" style="flex:1; padding:11px 12px; border:1px solid #e2e8f0; border-radius:11px; font-size:13px; box-sizing:border-box; background:#f8fafc;" onkeydown="if(event.key===\'Enter\'){event.preventDefault();addFoodComment(\''+o.id+'\');}"><button type="button" onclick="addFoodComment(\''+o.id+'\')" style="padding:0 16px; border:none; border-radius:11px; background:#2563eb; color:#fff; font-weight:800; cursor:pointer;">등록</button></div></div>'
+      +'</div>';
     if(o.lat&&o.lng && _kakaoReady){ try{ var mc=document.getElementById('foodDetailMap'); var pos=new kakao.maps.LatLng(o.lat,o.lng); var m=new kakao.maps.Map(mc,{center:pos,level:3}); var mk=new kakao.maps.Marker({position:pos}); mk.setMap(m); setTimeout(function(){ try{ m.relayout(); m.setCenter(pos);}catch(e){} },90); }catch(e){} }
 }
 window.openFoodDetail=openFoodDetail; window.closeFoodDetail=closeFoodDetail;
@@ -4443,6 +4478,18 @@ async function viewMealMenu() {
 
 
 
+// 공지 카드 빌더 (출처별 컬러 좌측 액센트 + 아이콘 헤더)
+function _noticeCard(label, content, accent, tint, icon, badge, bodyClass){
+    const badgeHtml = badge ? `<span style="margin-left:auto; font-size:11px; font-weight:800; color:#fff; background:#ef4444; padding:2px 8px; border-radius:20px;">${badge}</span>` : '';
+    const isBoard = (bodyClass === 'lecture-board-notice-body');
+    const bodyStyle = `padding:0 15px 14px; font-size:14.5px; line-height:1.7; color:#1e293b; font-weight:500; word-break:keep-all;${isBoard ? '' : ' white-space:pre-wrap;'}`;
+    return `<div style="background:#fff; border:1px solid #e8edf4; border-radius:16px; overflow:hidden; margin-bottom:11px; box-shadow:0 2px 8px rgba(15,23,42,.05); border-left:4px solid ${accent};">`
+      + `<div style="display:flex; align-items:center; gap:9px; padding:12px 15px 9px;">`
+      + `<span style="width:30px; height:30px; border-radius:9px; background:${tint}; color:${accent}; display:flex; align-items:center; justify-content:center; font-size:14px; flex-shrink:0;"><i class="fa-solid ${icon}"></i></span>`
+      + `<span style="font-size:13.5px; font-weight:800; color:${accent};">${label}</span>${badgeHtml}</div>`
+      + `<div class="${bodyClass}" style="${bodyStyle}">${content}</div></div>`;
+}
+
 // 공지사항 불러오기: 센터 공지 + 운영부 공지
 async function openNotice() {
     const container = document.getElementById('noticeContainer');
@@ -4463,26 +4510,29 @@ async function openNotice() {
         const boardRaw = boardSnap.val();
         const boardHtml = boardRaw && typeof boardRaw === 'object' ? (boardRaw.html || '') : (boardRaw || '');
 
-        let html = "";
+        let cards = [];
 
         if (_lectureBoardHasText(boardHtml)) {
             const cleanedBoard = (typeof normalizeLectureBoardHtml === 'function')
                 ? normalizeLectureBoardHtml(boardHtml)
                 : boardHtml;
-            html += `<div class="notice-card"><span class="notice-tag tag-course">담임 공지사항</span><div class="notice-body lecture-board-notice-body">${cleanedBoard}</div></div>`;
-        }
-        
-        // (1) 센터 전체 공지 표시
-        if (globalVal) {
-            html += `<div class="notice-card"><span class="notice-tag tag-global">센터 전체 공지</span><div class="notice-body">${globalVal}</div></div>`;
-        }
-        
-        // (2) 코디네이터 과정 공지 표시
-        if (coordVal) {
-            html += `<div class="notice-card"><span class="notice-tag tag-coord">교육 운영부 공지</span><div class="notice-body">${coordVal}</div></div>`;
+            cards.push(_noticeCard('담임 공지', cleanedBoard, '#2563eb', '#eff4ff', 'fa-chalkboard-user', '필독', 'lecture-board-notice-body'));
         }
 
-        container.innerHTML = html || "<div style='text-align:center; padding:30px; color:#94a3b8;'>현재 등록된 공지사항이 없습니다.</div>";
+        // (1) 센터 전체 공지 표시
+        if (globalVal) {
+            cards.push(_noticeCard('센터 전체 공지', globalVal, '#059669', '#ecfdf5', 'fa-building-columns', '', ''));
+        }
+
+        // (2) 코디네이터 과정 공지 표시
+        if (coordVal) {
+            cards.push(_noticeCard('교육 운영부 공지', coordVal, '#6366f1', '#eef2ff', 'fa-clipboard-list', '', ''));
+        }
+
+        const countBar = cards.length ? `<div style="font-size:12px; font-weight:800; color:#64748b; margin:0 2px 13px;">새 소식 ${cards.length}건</div>` : '';
+        container.innerHTML = cards.length
+            ? (countBar + cards.join(''))
+            : "<div style='text-align:center; padding:42px 20px; color:#94a3b8; font-weight:700;'><i class='fa-regular fa-bell-slash' style='font-size:30px; display:block; margin-bottom:12px; color:#cbd5e1;'></i>현재 등록된 공지사항이 없습니다.</div>";
         
     } catch (e) {
         console.error(e);
