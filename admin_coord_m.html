@@ -226,6 +226,9 @@ var eduType = '';
 
 function esc(t){ return (''+(t==null?'':t)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 function shortRoom(v){ v=(''+(v||'')).trim(); if(!v) return '미정'; var p=v.split(' '); return p.length>1?p[p.length-1]:v; }
+var COORD_MAP={};
+var RANK_RE=/\s*(차장|부장|팀장|실장|원장|과장|대리|주임|사원|교수)\s*$/;
+function coordFull(nm){ nm=(''+(nm==null?'':nm)).trim(); if(!nm) return ''; if(RANK_RE.test(nm)) return nm; return COORD_MAP[nm]||nm; }
 
 /* 시계 */
 function tickClock(){
@@ -295,7 +298,7 @@ function renderList(){
   el.innerHTML=rooms.map(function(r){
     var L=leaderOf(r.room);
     var prof=((r.st.professorName||'').trim())?(r.st.professorName.trim()+' 교수'):'담임 미지정';
-    var coord=(r.s.coordinatorName||'').trim()||'담당 미지정';
+    var coord=coordFull(r.s.coordinatorName)||'담당 미지정';
     var ldHtml=L?('<span class="ld on"><i class="fa-solid fa-crown"></i> '+esc(L.name)+'</span>'):'<span class="ld off"><i class="fa-solid fa-crown"></i> 학생장 미지정</span>';
     return '<div class="crd" onclick="openDetail(\''+r.rid+'\')">'
       +'<div class="c1"><span class="room-badge">ROOM <b>#'+r.rid+'</b></span><span class="cname">'+esc(r.s.courseName||'-')+'</span><i class="fa-solid fa-chevron-right cchev"></i></div>'
@@ -341,7 +344,7 @@ function updateDetail(){
      '<div class="info-item"><div class="k">교육기간</div><div class="v" style="font-size:14px;">'+esc(s.period||'-')+'</div></div>'
     +'<div class="info-item"><div class="k">강의실</div><div class="v" style="font-size:14px;">'+esc(s.roomDetailName||s.roomDetail||'-')+'</div></div>'
     +'<div class="info-item"><div class="k">담임교수</div><div class="v">'+esc(prof)+'</div></div>'
-    +'<div class="info-item"><div class="k">과정담당</div><div class="v">'+esc(s.coordinatorName||'-')+'</div></div>';
+    +'<div class="info-item"><div class="k">과정담당</div><div class="v">'+esc(coordFull(s.coordinatorName)||'-')+'</div></div>';
   var L=leaderOf(room);
   document.getElementById('dLeaderWrap').innerHTML= L
     ? '<div class="leader-box on"><div class="lk"><i class="fa-solid fa-crown"></i> 학생장</div><div class="lv">'+esc(L.name)+(L.no?(' <small>('+esc(L.no)+')</small>'):'')+'</div></div>'
@@ -441,6 +444,18 @@ db.ref('courses').on('value', function(snap){
   }
 });
 db.ref('system/eduLocations').on('value', function(snap){ EDU=snap.val()||{}; renderEdu(); });
+db.ref('system/coordinators').on('value', function(snap){
+  var data=snap.val()||{}, map={};
+  Object.keys(data).forEach(function(k){
+    var c=data[k]; if(!c||!c.name) return;
+    var bare=(''+c.name).replace(RANK_RE,'').trim();
+    var full=c.title?((bare+' '+c.title).trim()):(''+c.name).trim();
+    if(bare) map[bare]=full; map[full]=full; map[(''+c.name).trim()]=full;
+  });
+  COORD_MAP=map;
+  renderList();
+  if(curRID && document.getElementById('detailOv').classList.contains('open')) updateDetail();
+});
 db.ref('system/classrooms').on('value', function(snap){
   var v=snap.val()||{}, by={};
   Object.keys(v).forEach(function(k){ var it=v[k]; if(!it||!it.name) return; var b=(''+(it.building||'기타')).trim(); (by[b]=by[b]||[]).push((''+it.name).trim()); });
