@@ -1713,7 +1713,8 @@ body.pc-mode .coord-pc-only{ display:flex !important; }
 .hdr-stat .hb-label{ font-size:11px; font-weight:700; color:#cbd5e1; line-height:1.15; }
 .hdr-stat .hb-value{ font-size:20px; font-weight:900; color:#fff; line-height:1.05; letter-spacing:-.5px; }
 .hdr-stat .hb-value small{ font-size:11px; font-weight:700; color:#93c5fd; margin-left:2px; }
-body.pc-mode .coord-hdr-stats{ gap:10px; }
+body.pc-mode .coord-hdr-stats{ gap:10px; overflow:visible !important; min-width:auto !important; flex-wrap:nowrap !important; }
+body.pc-mode .coord-left{ justify-self:start !important; }
 body.pc-mode .hdr-stat{ padding:8px 18px; }
 body.pc-mode .hdr-stat > i{ font-size:18px; }
 body.pc-mode .hdr-stat .hb-label{ font-size:12.5px; }
