@@ -6363,16 +6363,10 @@ function _coordInitViewMode() {
     if (usePc) setTimeout(function(){ try { pcsSyncCourseList(); pcUpdateNav(); } catch(e){} }, 700);
     setTimeout(_coordFitHeader, 300); setTimeout(_coordFitHeader, 1000);
 }
-// [헤더 겹침 방지] 시계/날짜 우선 — 통계가 시계와 겹치면 통계를 숨김(좁은 화면)
+// [헤더] 통계 메뉴는 중앙 칸, 시계는 우측 칸으로 그리드 분리되어 겹치지 않음 → 항상 표시
 function _coordFitHeader(){
-    var clock=document.getElementById('coordHeaderClock');
     var stats=document.getElementById('coordHdrStats');
-    if(!clock||!stats) return;
-    if(!document.body.classList.contains('pc-mode')){ stats.style.display=''; return; }
-    stats.style.display='';                       // 우선 표시 후 실제 위치 측정
-    var cr=clock.getBoundingClientRect();
-    var sr=stats.getBoundingClientRect();
-    if(sr.width && cr.width && sr.left < cr.right + 12){ stats.style.display='none'; }   // 겹치면 통계 숨김
+    if(stats) stats.style.display='';
 }
 window.addEventListener('resize', function(){ try{ _coordFitHeader(); }catch(e){} });
 if (document.readyState === 'loading') {
