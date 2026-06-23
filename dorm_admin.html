@@ -6307,6 +6307,46 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
 })();
 </script>
 <!-- ════════ 키오스크 끝 ════════ -->
+<script>
+/* [임베드 배치도] 운영부 등 외부에서 ?embedboard=1&week=YYYY-MM-DD 로 배치도만 읽기전용 표시 */
+(function(){
+  try{
+    var pr=new URLSearchParams(location.search);
+    if(pr.get('embedboard')!=='1') return;
+    var wk=pr.get('week')||'';
+    var st=document.createElement('style');
+    st.textContent='body.embedboard > *:not(.container){display:none!important;}'
+      +'body.embedboard .step-tabs{display:none!important;}'
+      +'body.embedboard #step-1,body.embedboard #step-2,body.embedboard #step-3{display:none!important;}'
+      +'body.embedboard #step-4{display:block!important;}'
+      +'body.embedboard #step-4 .panel > *{display:none!important;}'
+      +'body.embedboard #step-4 .panel > #boardMapArea{display:block!important;}'
+      +'body.embedboard .container{padding:6px!important;margin:0!important;max-width:none!important;}'
+      +'body.embedboard .panel{border:none!important;box-shadow:none!important;padding:0!important;margin:0!important;background:#fff!important;}'
+      +'body.embedboard{background:#fff!important;}'
+      +'body.embedboard .dm-toolbar,body.embedboard .dm-wait-col,body.embedboard .dm-del,body.embedboard #boardMapArea .legend{display:none!important;}'
+      +'body.embedboard .dm-chip{pointer-events:none!important;cursor:default!important;}'
+      +'body.embedboard #__catcVer,body.embedboard #__ver,body.embedboard #dkEnterBar{display:none!important;}';
+    document.head.appendChild(st);
+    function mark(){ if(document.body) document.body.classList.add('embedboard'); }
+    function postH(){ try{ if(parent!==window) parent.postMessage({_dormBoardH:Math.max(document.body.scrollHeight,document.documentElement.scrollHeight)}, '*'); }catch(e){} }
+    function boot(){
+      mark();
+      try{ if(typeof goStep==='function') goStep(4,{week:wk}); }catch(e){}
+      setTimeout(function(){
+        try{ var sel=document.getElementById('viewWeekSelect'); if(sel){ if(wk){ var has=Array.prototype.some.call(sel.options,function(o){return o.value===wk;}); if(!has){ var op=document.createElement('option'); op.value=wk; op.textContent=wk; sel.appendChild(op); } sel.value=wk; } } }catch(e){}
+        try{ if(typeof switchBoardTab==='function') switchBoardTab('map'); }catch(e){}
+        try{ if(typeof renderBoard==='function') renderBoard(); }catch(e){}
+        setTimeout(function(){ try{ if(typeof renderBoardMap==='function') renderBoardMap(); }catch(e){} mark(); postH(); setTimeout(postH,1200); }, 800);
+      }, 800);
+    }
+    if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', function(){ mark(); setTimeout(boot,900); });
+    else setTimeout(boot,900);
+    window.addEventListener('load', function(){ mark(); setTimeout(postH,500); });
+    window.addEventListener('resize', postH);
+  }catch(e){}
+})();
+</script>
 
 </body>
 </html>
