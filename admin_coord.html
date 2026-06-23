@@ -7379,6 +7379,23 @@ function _coordDeptToRegion(dept){
 var _coordRegionLL={'서울':[37.5586,126.7906],'인천':[37.4602,126.4407],'강원':[37.8813,127.7300],'양양':[38.0613,128.6690],'원주':[37.4416,127.9606],'송탄':[37.0807,127.0353],'청주':[36.7166,127.4990],'예천':[36.6320,128.3549],'군산':[35.9038,126.6158],'대구':[35.8941,128.6586],'포항':[35.9879,129.4204],'울산':[35.5935,129.3517],'부안':[35.7316,126.7330],'광주':[35.1264,126.8089],'무안':[34.9914,126.3828],'여수':[34.8423,127.6168],'사천':[35.0886,128.0703],'김해':[35.1795,128.9382],'부산':[35.1796,129.0756],'제주':[33.5113,126.4930]};
 function _coordRenderStudentMap(counts,total,unknown){
   var tl=document.getElementById('coordMapTotal'); if(tl) tl.textContent='· 총 '+total+'명'+(unknown?(' (소속 미상 '+unknown+'명 제외)'):'');
+  (function(){
+    var listEl=document.getElementById('coordMapList'); if(!listEl) return;
+    var sorted=Object.keys(counts).sort(function(a,b){return counts[b]-counts[a];});
+    var max=sorted.length?counts[sorted[0]]:1;
+    var head='<div style="font-size:12.5px;font-weight:800;color:#475569;margin:0 2px 8px;display:flex;align-items:center;gap:6px;"><i class="fa-solid fa-ranking-star" style="color:#2563eb;"></i> 지역별 인원</div>';
+    var body = sorted.length ? sorted.map(function(nm,i){
+      var c=counts[nm]; var pct=Math.max(8,Math.round(c/max*100));
+      var rc = i===0?'#1d4ed8':i===1?'#2563eb':i===2?'#3b82f6':'#94a3b8';
+      return '<div style="display:flex;align-items:center;gap:8px;padding:9px 4px;border-bottom:1px solid #f3f6fb;">'
+        +'<span style="width:21px;height:21px;flex-shrink:0;border-radius:50%;background:'+rc+';color:#fff;font-size:11px;font-weight:900;display:flex;align-items:center;justify-content:center;">'+(i+1)+'</span>'
+        +'<span style="width:40px;flex-shrink:0;font-size:13.5px;font-weight:800;color:#1e293b;">'+nm+'</span>'
+        +'<span style="flex:1;height:8px;background:#eef2f7;border-radius:6px;overflow:hidden;"><span style="display:block;height:100%;width:'+pct+'%;background:linear-gradient(90deg,#60a5fa,#2563eb);border-radius:6px;"></span></span>'
+        +'<span style="width:32px;text-align:right;font-size:15px;font-weight:900;color:#2563eb;">'+c+'</span>'
+        +'</div>';
+    }).join('') : '<div style="padding:24px 10px;text-align:center;color:#94a3b8;font-weight:700;font-size:13px;">표시할 명단이 없습니다</div>';
+    listEl.innerHTML = head + '<div style="border:1px solid #e8edf5;border-radius:13px;padding:2px 12px;background:#fff;box-shadow:0 2px 8px rgba(15,23,42,.04);">'+body+'</div>';
+  })();
   var el=document.getElementById('coordStudentMapKakao'); if(!el) return;
   function build(){
     if(!(window.kakao&&kakao.maps&&kakao.maps.Map)){ el.innerHTML='<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#94a3b8;font-weight:700;">지도를 불러올 수 없습니다</div>'; return; }
@@ -7436,7 +7453,7 @@ function openStudentRosterPopup(){
     const w=document.getElementById('cpopRosterWrap'); if(w) w.innerHTML=blocks;
     try{ _coordRenderStudentMap(_mc,_mtot,_munk); }catch(e){}
   }
-  _cpop('<i class="fa-solid fa-users"></i> 과정별 교육생 명단', '<div id="coordStudentMapBox" style="margin-bottom:14px;"><div style="font-size:13px;font-weight:800;color:#475569;margin:2px 2px 8px;"><i class="fa-solid fa-map-location-dot" style="color:#2563eb;"></i> 금주 교육생 전국 분포 <span id="coordMapTotal" style="color:#94a3b8;font-weight:700;"></span></div><div id="coordStudentMapKakao" style="width:100%;height:340px;border-radius:14px;overflow:hidden;border:1px solid #e2e8f0;background:#eaf2fb;"></div></div>'+search+'<div id="cpopRosterWrap"></div>');
+  _cpop('<i class="fa-solid fa-users"></i> 과정별 교육생 명단', '<div id="coordStudentMapBox" style="margin-bottom:14px;"><div style="font-size:13px;font-weight:800;color:#475569;margin:2px 2px 8px;"><i class="fa-solid fa-map-location-dot" style="color:#2563eb;"></i> 금주 교육생 전국 분포 <span id="coordMapTotal" style="color:#94a3b8;font-weight:700;"></span></div><div style="display:flex;gap:14px;align-items:stretch;flex-wrap:wrap;"><div id="coordStudentMapKakao" style="flex:2;min-width:300px;height:360px;border-radius:14px;overflow:hidden;border:1px solid #e2e8f0;background:#eaf2fb;"></div><div id="coordMapList" style="flex:1;min-width:210px;max-height:360px;overflow-y:auto;"></div></div></div>'+search+'<div id="cpopRosterWrap"></div>');
   paint(window._coordRosterExt||{});
   Promise.all([
     firebase.database().ref('system/dorm/rosters').once('value').catch(()=>null),

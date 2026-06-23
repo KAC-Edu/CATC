@@ -927,21 +927,21 @@
                 <button class="quiz-opt-btn shuttle-btn" onclick="selectShuttle('osong','오송역')"
                     style="display:flex; align-items:center; gap:14px; min-height:64px; padding:12px 16px; background:#fff; border-color:#e8eef8; color:#0f172a; border-radius:14px;">
                     <span style="width:42px; height:42px; flex-shrink:0; border-radius:12px; background:#f1f5f9; color:#475569; display:flex; align-items:center; justify-content:center; font-size:19px;"><i class="fa-solid fa-train"></i></span>
-                    <div style="flex:1; text-align:left;"><div style="font-size:16px; font-weight:800;">오송역</div><div style="font-size:12px; color:#94a3b8; font-weight:600;">약 25분 소요</div></div>
+                    <div style="flex:1; text-align:left;"><div style="font-size:16px; font-weight:800;">오송역</div></div>
                     <span id="arrival-osong" style="font-size:12.5px; font-weight:800; color:#64748b; white-space:nowrap;"></span>
                 </button>
 
                 <button class="quiz-opt-btn shuttle-btn" onclick="selectShuttle('terminal','청주터미널')"
                     style="display:flex; align-items:center; gap:14px; min-height:64px; padding:12px 16px; background:#fff; border-color:#e8eef8; color:#0f172a; border-radius:14px;">
                     <span style="width:42px; height:42px; flex-shrink:0; border-radius:12px; background:#f1f5f9; color:#475569; display:flex; align-items:center; justify-content:center; font-size:19px;"><i class="fa-solid fa-bus"></i></span>
-                    <div style="flex:1; text-align:left;"><div style="font-size:16px; font-weight:800;">청주 터미널</div><div style="font-size:12px; color:#94a3b8; font-weight:600;">약 40분 소요</div></div>
+                    <div style="flex:1; text-align:left;"><div style="font-size:16px; font-weight:800;">청주 터미널</div></div>
                     <span id="arrival-terminal" style="font-size:12.5px; font-weight:800; color:#64748b; white-space:nowrap;"></span>
                 </button>
 
                 <button class="quiz-opt-btn shuttle-btn" onclick="selectShuttle('airport','청주공항')"
                     style="display:flex; align-items:center; gap:14px; min-height:64px; padding:12px 16px; background:#fff; border-color:#e8eef8; color:#0f172a; border-radius:14px;">
                     <span style="width:42px; height:42px; flex-shrink:0; border-radius:12px; background:#f1f5f9; color:#475569; display:flex; align-items:center; justify-content:center; font-size:19px;"><i class="fa-solid fa-plane-departure"></i></span>
-                    <div style="flex:1; text-align:left;"><div style="font-size:16px; font-weight:800;">청주국제공항</div><div style="font-size:12px; color:#94a3b8; font-weight:600;">약 50분 소요</div></div>
+                    <div style="flex:1; text-align:left;"><div style="font-size:16px; font-weight:800;">청주국제공항</div></div>
                     <span id="arrival-airport" style="font-size:12.5px; font-weight:800; color:#64748b; white-space:nowrap;"></span>
                 </button>
 
@@ -3344,9 +3344,10 @@ async function openShuttleApply() {
         } else {
             // [요청] 출발 시간 미설정/미정이어도 신청은 먼저 받는다(운영부 수요 파악용) — 시간만 추후 공지
             if (_bar) _bar.style.display = '';
-            timeEl.textContent = (dep && dep.time === '미정') ? '출발 시간 추후 공지 · 신청 먼저 받습니다' : '출발 시간 공지 전 · 신청 먼저 받습니다';
+            timeEl.textContent = '퇴교차량 이용 시, 목적지를 선택해주세요';
             timeEl.style.color = '#fff';
-            timeEl.style.fontSize = '17px';
+            timeEl.style.fontSize = '16px';
+            timeEl.style.whiteSpace = 'nowrap';
             currentDepTime = null;
             currentDepTime2 = null;
             var _rec0=document.getElementById('shuttleRecommend'); if(_rec0) _rec0.style.display='none';

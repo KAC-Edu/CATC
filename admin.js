@@ -5464,14 +5464,15 @@ resetShuttleRequests: function() {
             }).join('');
             const _listHtml = rows ? (_legend+rows) : '<p style="color:#94a3b8;text-align:center;padding:30px;font-size:16px;">이번 주 교육생 정보가 없습니다.</p>';
             const _sorted=Object.keys(_agg).sort((a,b)=>_agg[b]-_agg[a]);
-            const _distRows = _sorted.length ? _sorted.map(n=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 12px;border-bottom:1px solid #f1f5f9;"><span style="font-weight:700;color:#334155;">${esc(n)}</span><span style="font-weight:900;color:#10b981;">${_agg[n]}명</span></div>`).join('') : '<div style="padding:16px;color:#94a3b8;text-align:center;font-size:13px;">예정 명단 소속 정보가 없습니다.</div>';
-            const _distTotal = `<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;background:#f0fdf4;border-top:2px solid #bbf7d0;"><span style="font-weight:900;color:#166534;">합계</span><span style="font-weight:900;color:#16a34a;">${_aggTotal+_aggUnknown}명</span></div>`;
-            const _unknownNote = _aggUnknown ? `<div style="margin-top:8px;font-size:12px;color:#94a3b8;">· 소속 구분 불가 ${_aggUnknown}명은 지도에서 제외</div>` : '';
+            const _distGrid = _sorted.length ? _sorted.map(n=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 11px;background:#f8fafc;border:1px solid #eef2f7;border-radius:8px;"><span style="font-weight:700;color:#334155;font-size:13.5px;">${esc(n)}</span><span style="font-weight:900;color:#10b981;font-size:14px;">${_agg[n]}명</span></div>`).join('') : '<div style="grid-column:1/-1;padding:14px;color:#94a3b8;text-align:center;font-size:13px;">예정 명단 소속 정보가 없습니다.</div>';
+            const _unknownNote = _aggUnknown ? `<div style="font-size:12px;color:#94a3b8;">· 소속 구분 불가 ${_aggUnknown}명은 지도에서 제외</div>` : '';
             const _mapPanel = `<div style="display:flex;flex-direction:column;gap:8px;">`
                 + `<div style="font-size:16px;font-weight:900;color:#0f172a;">🗺️ 이번 주 전체 교육생 출신지 분포</div>`
-                + `<div style="font-size:12px;color:#94a3b8;font-weight:700;">예정 명단 소속 기준 · 총 ${_aggTotal}명</div>`
-                + `<div id="homeStatMapKakao" style="width:100%;height:50vh;min-height:330px;border-radius:14px;overflow:hidden;border:1px solid #e2e8f0;background:#eaf2fb;"></div>`
-                + `<div style="border:1px solid #e2e8f0;border-radius:12px;overflow:hidden;max-height:200px;overflow-y:auto;">${_distRows}${_distTotal}</div>${_unknownNote}`
+                + `<div style="font-size:12px;color:#94a3b8;font-weight:700;">예정 명단 소속 기준 · 총 ${_aggTotal+_aggUnknown}명</div>`
+                + `<div id="homeStatMapKakao" style="width:100%;height:42vh;min-height:280px;border-radius:14px;overflow:hidden;border:1px solid #e2e8f0;background:#eaf2fb;"></div>`
+                + `<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:6px;">${_distGrid}</div>`
+                + `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:9px;"><span style="font-weight:900;color:#166534;">합계</span><span style="font-weight:900;color:#16a34a;">${_aggTotal+_aggUnknown}명</span></div>`
+                + _unknownNote
                 + `</div>`;
             body.innerHTML = `<div style="display:flex;gap:24px;align-items:flex-start;flex-wrap:wrap;">`
                 + `<div style="flex:1.05;min-width:300px;">${_listHtml}</div>`
