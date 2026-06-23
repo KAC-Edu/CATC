@@ -10945,9 +10945,11 @@ ui.openLeaderRoulette = async function(){
     sectors+='<path d="M'+cx+' '+cy+' L'+p0[0]+' '+p0[1]+' A'+R+' '+R+' 0 '+large+' 1 '+p1[0]+' '+p1[1]+' Z" fill="'+COL[i%COL.length]+'" stroke="#ffffff" stroke-width="2"/>';
     var am=i*seg+seg/2, tp=pt(rmid,am);
     var nm=String(pool[i].name); if(nm.length>6) nm=nm.slice(0,6);
-    sectors+='<text x="'+tp[0]+'" y="'+tp[1]+'" fill="#ffffff" font-size="'+(N>10?12:15)+'" font-weight="800" text-anchor="middle" dominant-baseline="middle" transform="rotate('+am.toFixed(2)+' '+tp[0]+' '+tp[1]+')">'+nm+'</text>';
+    // 글자를 방사(세로)방향으로: 스포크를 따라 안→밖으로 읽히게. 왼쪽 절반은 뒤집어 안 뒤집히게.
+    var flip=(am>180); var trot=(am-90)+(flip?180:0);
+    sectors+='<text x="'+tp[0]+'" y="'+tp[1]+'" fill="#ffffff" font-size="'+(N>14?13:(N>10?15:17))+'" font-weight="800" text-anchor="middle" dominant-baseline="middle" transform="rotate('+trot.toFixed(2)+' '+tp[0]+' '+tp[1]+')">'+nm+'</text>';
   }
-  var svg='<svg viewBox="0 0 300 300" style="width:100%;max-width:330px;display:block;margin:0 auto;overflow:visible;">'
+  var svg='<svg viewBox="0 0 300 300" style="width:100%;max-width:min(88vw,82vh);display:block;margin:0 auto;overflow:visible;">'
     +'<defs>'
     +'<radialGradient id="goGrad" cx="50%" cy="34%" r="72%"><stop offset="0%" stop-color="#3b82f6"/><stop offset="100%" stop-color="#1e3a8a"/></radialGradient>'
     +'<filter id="wheelShadow" x="-25%" y="-25%" width="150%" height="150%"><feDropShadow dx="0" dy="7" stdDeviation="9" flood-color="#1e293b" flood-opacity="0.22"/></filter>'
@@ -10962,10 +10964,10 @@ ui.openLeaderRoulette = async function(){
     +'<circle cx="150" cy="150" r="42" fill="url(#goGrad)" stroke="#fff" stroke-width="4"/>'
     +'<text id="wheelGo" x="150" y="150" fill="#fff" font-size="19" font-weight="900" text-anchor="middle" dominant-baseline="middle" style="letter-spacing:.5px;">GO</text>'
     +'</g>'
-    +'<polygon points="150,28 136,-2 164,-2" fill="#ef4444" stroke="#fff" stroke-width="2.5" stroke-linejoin="round"/>'
+    +'<polygon points="272,150 303,134 303,166" fill="#ef4444" stroke="#fff" stroke-width="2.5" stroke-linejoin="round"/>'
     +'</svg>';
   var html='<div id="leaderRouletteModal" style="position:fixed;inset:0;z-index:99998;background:rgba(15,23,42,.6);display:flex;align-items:center;justify-content:center;padding:18px;" onclick="if(event.target===this)ui.closeLeaderRoulette()">'
-    +'<div style="background:#fff;border-radius:22px;max-width:400px;width:100%;padding:22px 20px;text-align:center;position:relative;box-shadow:0 24px 60px rgba(15,23,42,.35);">'
+    +'<div style="background:#fff;border-radius:22px;max-width:760px;width:96vw;max-height:96vh;overflow:auto;padding:18px 16px;text-align:center;position:relative;box-shadow:0 24px 60px rgba(15,23,42,.35);">'
     +'<button onclick="ui.closeLeaderRoulette()" style="position:absolute;top:14px;right:14px;width:34px;height:34px;border:none;border-radius:50%;background:#eef2f7;color:#475569;font-size:18px;cursor:pointer;z-index:2;">✕</button>'
     +'<h2 style="margin:0 0 2px;font-size:21px;font-weight:900;color:#0f172a;">🎰 학생장 룰렛</h2>'
     +'<div style="font-size:13px;color:#64748b;font-weight:700;margin-bottom:14px;">QR 입교 '+N+'명 · 가운데 GO를 눌러 돌리세요</div>'
@@ -10982,7 +10984,7 @@ ui.wheelSpin = function(){
   var Aw=wi*seg+seg/2;
   var jitter=(Math.random()-0.5)*seg*0.5;
   var base=r.rot;
-  var need=((360-Aw) - (base%360) + 360)%360;
+  var need=((90-Aw) - (base%360) + 720)%360;   // 마커가 3시(90°)에 오도록 정렬
   var newRot=base + 360*6 + need + jitter;
   r.rot=newRot;
   var g=document.getElementById('wheelG'); if(g) g.style.transform='rotate('+newRot+'deg)';
