@@ -1814,6 +1814,40 @@ body.pc-mode .coord-right{ grid-column:2 !important; grid-row:1 !important; just
   </div>
 </header>
 
+<!-- 진입/종료 진행바 + 키오스크 전체화면 -->
+<div id="coordKioskEnterBar" style="display:none; position:fixed; top:0; left:0; height:6px; width:0%; background:linear-gradient(90deg,#22c55e,#16a34a); z-index:100000; box-shadow:0 0 10px rgba(34,197,94,.6);"></div>
+<div id="coordKioskModal" style="display:none; position:fixed; inset:0; z-index:99990; background:linear-gradient(135deg,#0b1530 0%,#0f2747 60%,#13315c 100%); color:#e2e8f0; flex-direction:column; padding:28px 34px; box-sizing:border-box;">
+  <div style="display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:22px; gap:20px;">
+    <div style="display:flex; align-items:center; gap:16px;">
+      <div style="width:60px;height:60px;border-radius:16px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.22);display:flex;align-items:center;justify-content:center;font-size:30px;color:#93c5fd;"><i class="fa-solid fa-plane-departure"></i></div>
+      <div><div style="font-size:34px;font-weight:950;color:#fff;letter-spacing:-.5px;">현재 진행 교육 현황</div>
+      <div style="font-size:15px;color:#93c5fd;font-weight:700;margin-top:3px;">항공기술훈련원 · CATC Integrated Education Management System</div></div>
+    </div>
+    <div style="align-self:center;background:#eef2f7;color:#334155;font-size:14px;font-weight:700;padding:11px 18px;border-radius:10px;border:1px solid #cbd5e1;white-space:nowrap;">kac-edu.github.io · 전체 화면을 종료하려면 <kbd style="background:#fff;border:1px solid #94a3b8;border-radius:6px;padding:2px 9px;font-weight:800;">Esc</kbd> 키를 누르세요.</div>
+    <div id="coordKioskClockWrap" style="text-align:right; cursor:pointer; user-select:none; flex-shrink:0;" title="시계를 길게 누르면 종료">
+      <div id="coordKioskClock" style="font-size:46px;font-weight:900;color:#fff;font-family:Consolas,'Roboto Mono',monospace;line-height:1;letter-spacing:1px;">00:00:00</div>
+      <div id="coordKioskDate" style="font-size:17px;color:#93c5fd;font-weight:700;margin-top:6px;">-</div>
+      <div style="height:6px;width:100%;background:rgba(255,255,255,.14);border-radius:4px;margin-top:9px;overflow:hidden;"><div id="coordKioskExitHint" style="height:100%;width:0%;background:#ef4444;transition:width .04s linear;"></div></div>
+      <div style="font-size:11.5px;color:#64748b;margin-top:4px;">⏻ 시계 길게 눌러 종료</div>
+    </div>
+  </div>
+  <div style="flex:1; overflow:auto; border-radius:18px; background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.10);">
+    <table style="width:100%; border-collapse:collapse; font-size:21px;">
+      <thead><tr style="background:rgba(255,255,255,.09); position:sticky; top:0;">
+        <th style="padding:16px 12px;color:#cbd5e1;font-weight:800;">구분</th>
+        <th style="padding:16px 12px;color:#cbd5e1;font-weight:800;text-align:left;">과정명</th>
+        <th style="padding:16px 12px;color:#cbd5e1;font-weight:800;">교육기간</th>
+        <th style="padding:16px 12px;color:#cbd5e1;font-weight:800;">강의실</th>
+        <th style="padding:16px 12px;color:#cbd5e1;font-weight:800;">교육생수(예정)</th>
+        <th style="padding:16px 12px;color:#cbd5e1;font-weight:800;">담임교수</th>
+        <th style="padding:16px 12px;color:#cbd5e1;font-weight:800;">과정담당</th>
+        <th style="padding:16px 12px;color:#cbd5e1;font-weight:800;">비고</th>
+      </tr></thead>
+      <tbody id="coordKioskTableBody"></tbody>
+    </table>
+  </div>
+</div>
+
 <!-- 우측 사이드 클립 (행정 지원 메뉴 열기) -->
 <div id="coordSideClip" onclick="coordClipToggle()" title="행정 지원 메뉴" style="position:fixed; right:0; top:50%; transform:translateY(-50%); width:26px; height:88px; background:linear-gradient(135deg,#1a3a8a,#2563eb); border-radius:16px 0 0 16px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:7px; cursor:pointer; z-index:6002; border:1px solid rgba(255,255,255,0.18); border-right:none; box-shadow:-4px 0 14px rgba(15,23,42,0.28); transition:right .3s ease, background .15s;">
   <i class="fa-solid fa-bars" style="color:#fff; font-size:15px;"></i>
@@ -7359,7 +7393,6 @@ function _courseOverviewCount(r){
   if(!roster.length){ var ext=window._coordRosterExt||{}; var k=String(r.s.courseName||'').replace(/\s+/g,'').toLowerCase(); var cands=ext[k]||[]; var pick=cands.find(function(c){return curPeriod&&(''+(c.period||'')).trim()===curPeriod;})||cands.find(function(c){return (''+(c.room||''))===(''+r.rid);})||cands.slice().sort(function(a,b){return (b.list?b.list.length:0)-(a.list?a.list.length:0);})[0]; if(pick&&Array.isArray(pick.list)) roster=pick.list; }
   var expected=roster.length;
   if(!expected){ var es=r.room.expectedStudents; if(typeof es==='number') expected=es; else if(es&&typeof es==='object') expected=Object.keys(es).length; }
-  if(!expected) expected=arrived;
   return {expected:expected, arrived:arrived};
 }
 function _courseOverviewHTML(){
@@ -7377,7 +7410,7 @@ function _courseOverviewHTML(){
     var bigo=(start&&today>=start)?'<span style="color:#16a34a;font-weight:800;">진행중</span>':'<span style="color:#2563eb;font-weight:700;">예정</span>';
     var prof=(r.st.professorName||'').trim()?(_esc(r.st.professorName.trim())+' 교수'):'-';
     return '<tr>'
-      +'<td style="font-weight:900;">ROOM #'+_esc(r.rid)+'</td>'
+      +'<td style="font-weight:900;font-size:18px;">#'+_esc(r.rid)+'</td>'
       +'<td style="text-align:center;font-weight:800;color:#0f172a;">'+_esc(r.s.courseName||'-')+'</td>'
       +'<td>'+_esc(r.s.roomDetailName||r.s.roomDetail||'-')+'</td>'
       +'<td style="white-space:nowrap;font-size:13.5px;">'+_esc(r.s.period||'-')+'</td>'
@@ -7392,10 +7425,15 @@ function _courseOverviewHTML(){
 }
 function openCourseOverview(){
   _cpop('<i class="fa-solid fa-graduation-cap"></i> 운영 과정 현황', _courseOverviewHTML());
-  // 직책(과장·주임 등)을 모든 담당자에 일관 표기 — 직책 맵 로드 후 다시 그림
-  if(typeof _coordLoadTitleMap==='function'){
-    _coordLoadTitleMap().then(function(){ var b=document.getElementById('cpopBody'); if(b && document.getElementById('coordPopup').classList.contains('open')) b.innerHTML=_courseOverviewHTML(); }).catch(function(){});
-  }
+  window._coordPopupRefresh=openCourseOverview;
+  function _covRerender(){ var b=document.getElementById('cpopBody'); if(b && document.getElementById('coordPopup').classList.contains('open') && window._coordPopupRefresh===openCourseOverview) b.innerHTML=_courseOverviewHTML(); }
+  if(typeof _coordLoadTitleMap==='function'){ _coordLoadTitleMap().then(_covRerender).catch(function(){}); }
+  // [예정 인원 정확 계산] 공유 명단(system/dorm/rosters · system/coord/rosters) 로드 후 재렌더
+  var _nm=function(x){ return String(x==null?'':x).replace(/\s+/g,'').toLowerCase(); };
+  Promise.all([
+    firebase.database().ref('system/dorm/rosters').once('value').catch(function(){return null;}),
+    firebase.database().ref('system/coord/rosters').once('value').catch(function(){return null;})
+  ]).then(function(res){ var ext={}; res.forEach(function(snap){ if(!snap) return; var v=snap.val()||{}; Object.keys(v).forEach(function(kk){ var it=v[kk]; if(!it||!Array.isArray(it.list)) return; var nm=_nm(it.courseName); if(!nm) return; (ext[nm]=ext[nm]||[]).push({ list:it.list, period:(it.period||''), room:(it.room||''), weekKey:(it.weekKey||'') }); }); }); window._coordRosterExt=ext; _covRerender(); }).catch(function(){});
 }
 
 /* 2) 전체 교육생: 과정별 명단 (검색 가능) */
@@ -7420,7 +7458,7 @@ function _coordRenderStudentMap(counts,total,unknown){
     var listEl=document.getElementById('coordMapList'); if(!listEl) return;
     var sorted=Object.keys(counts).sort(function(a,b){return counts[b]-counts[a];});
     var max=sorted.length?counts[sorted[0]]:1;
-    var head='<div style="font-size:12.5px;font-weight:800;color:#475569;margin:0 2px 8px;display:flex;align-items:center;gap:6px;"><i class="fa-solid fa-ranking-star" style="color:#2563eb;"></i> 지역별 인원</div>';
+    var head='<div style="font-size:12.5px;font-weight:800;color:#475569;margin:0 2px 8px;display:flex;align-items:center;gap:6px;"><i class="fa-solid fa-ranking-star" style="color:#2563eb;"></i> 지역별 인원 <span style="color:#94a3b8;font-weight:700;font-size:11.5px;">(예정)</span></div>';
     var body = sorted.length ? sorted.map(function(nm,i){
       var c=counts[nm]; var pct=Math.max(8,Math.round(c/max*100));
       var rc = i===0?'#1d4ed8':i===1?'#2563eb':i===2?'#3b82f6':'#94a3b8';
@@ -7428,7 +7466,7 @@ function _coordRenderStudentMap(counts,total,unknown){
         +'<span style="width:21px;height:21px;flex-shrink:0;border-radius:50%;background:'+rc+';color:#fff;font-size:11px;font-weight:900;display:flex;align-items:center;justify-content:center;">'+(i+1)+'</span>'
         +'<span style="width:40px;flex-shrink:0;font-size:13.5px;font-weight:800;color:#1e293b;">'+nm+'</span>'
         +'<span style="flex:1;height:8px;background:#eef2f7;border-radius:6px;overflow:hidden;"><span style="display:block;height:100%;width:'+pct+'%;background:linear-gradient(90deg,#60a5fa,#2563eb);border-radius:6px;"></span></span>'
-        +'<span style="width:32px;text-align:right;font-size:15px;font-weight:900;color:#2563eb;">'+c+'</span>'
+        +'<span style="width:40px;text-align:right;font-size:20px;font-weight:900;color:#2563eb;">'+c+'</span>'
         +'</div>';
     }).join('') : '<div style="padding:24px 10px;text-align:center;color:#94a3b8;font-weight:700;font-size:13px;">표시할 명단이 없습니다</div>';
     listEl.innerHTML = head + '<div style="border:1px solid #e8edf5;border-radius:13px;padding:2px 12px;background:#fff;box-shadow:0 2px 8px rgba(15,23,42,.04);">'+body+'</div>';
@@ -7902,6 +7940,55 @@ function _coordSyncShuttleFromCourses(){
   }catch(e){}
 }
 (function initShuttleDep(){ try{ if(!window.firebase||!firebase.database){ setTimeout(initShuttleDep,400); return; } firebase.database().ref('system/shuttle_departure').on('value', function(s){ var v=s.val(); if(v && v.round1){ window._shuttleDep=v; try{ if(window._coordPopupRefresh===openShuttleSummary && document.getElementById('coordPopup') && document.getElementById('coordPopup').classList.contains('open')) openShuttleSummary(); }catch(e){} try{ _coordUpdateShuttleBtn(); }catch(e){} } }); }catch(e){ setTimeout(initShuttleDep,800); } })();
+var coordKiosk={
+  _t:null,_iv:null,_clk:null,_rf:null,_exitBound:false,
+  init:function(){ var bm=document.querySelector('.coord-brand-mark'); if(bm) this.bind(bm,1500,'enter',this.open.bind(this));
+    var brand=document.querySelector('.coord-brand'); if(brand) brand.addEventListener('click', function(e){ if(window._ckOpenedAt && (Date.now()-window._ckOpenedAt)<1300){ e.stopImmediatePropagation(); e.preventDefault(); } }, true);
+  },
+  bind:function(el,dur,mode,cb){ if(!el) return; var self=this; var start=0;
+    function begin(e){ if(e&&e.type==='touchstart'&&e.cancelable) e.preventDefault(); start=Date.now(); self._show(mode,0); clearTimeout(self._t); clearInterval(self._iv);
+      self._t=setTimeout(function(){ self._cancel(mode); cb(); }, dur);
+      self._iv=setInterval(function(){ self._show(mode, Math.min((Date.now()-start)/dur,1)*100); }, 40);
+    }
+    function end(){ self._cancel(mode); }
+    el.addEventListener('mousedown',begin); el.addEventListener('touchstart',begin,{passive:false});
+    ['mouseup','mouseleave','touchend','touchcancel'].forEach(function(ev){ el.addEventListener(ev,end); });
+  },
+  _show:function(mode,pct){ if(mode==='enter'){ var b=document.getElementById('coordKioskEnterBar'); if(b){ b.style.display=pct>0?'block':'none'; b.style.width=pct+'%'; } } else { var e=document.getElementById('coordKioskExitHint'); if(e) e.style.width=pct+'%'; } },
+  _cancel:function(mode){ clearTimeout(this._t); clearInterval(this._iv); this._t=null; this._iv=null; this._show(mode,0); if(mode==='enter'){ var b=document.getElementById('coordKioskEnterBar'); if(b) b.style.display='none'; } },
+  open:function(){ var m=document.getElementById('coordKioskModal'); if(!m) return; window._ckOpenedAt=Date.now(); this.render(); m.style.display='flex';
+    try{ var de=document.documentElement; var fn=de.requestFullscreen||de.webkitRequestFullscreen||de.msRequestFullscreen; if(fn) fn.call(de); }catch(e){}
+    this._tick(); this._clk=setInterval(this._tick.bind(this),1000); this._rf=setInterval(this.render.bind(this),30000);
+    if(!this._exitBound){ this._exitBound=true; this.bind(document.getElementById('coordKioskClockWrap'),1500,'exit',this.close.bind(this)); }
+    try{ Promise.all([firebase.database().ref('system/dorm/rosters').once('value').catch(function(){return null;}),firebase.database().ref('system/coord/rosters').once('value').catch(function(){return null;})]).then(function(res){ var ext={},nm=function(x){return String(x==null?'':x).replace(/\s+/g,'').toLowerCase();}; res.forEach(function(sn){ if(!sn)return; var v=sn.val()||{}; Object.keys(v).forEach(function(kk){ var it=v[kk]; if(it&&Array.isArray(it.list)){ var k=nm(it.courseName); if(k)(ext[k]=ext[k]||[]).push({list:it.list,period:it.period||'',room:it.room||''}); } }); }); window._coordRosterExt=ext; coordKiosk.render(); }); }catch(e){}
+  },
+  close:function(){ var m=document.getElementById('coordKioskModal'); if(m) m.style.display='none'; try{ if(document.fullscreenElement){ var fn=document.exitFullscreen||document.webkitExitFullscreen||document.msExitFullscreen; if(fn) fn.call(document); } }catch(e){} if(this._clk){clearInterval(this._clk);this._clk=null;} if(this._rf){clearInterval(this._rf);this._rf=null;} this._show('exit',0); },
+  _tick:function(){ var n=new Date(),p=function(x){return String(x).padStart(2,'0');}; var c=document.getElementById('coordKioskClock'); if(c) c.textContent=p(n.getHours())+':'+p(n.getMinutes())+':'+p(n.getSeconds()); var d=document.getElementById('coordKioskDate'); if(d){ var w=['일','월','화','수','목','금','토'][n.getDay()]; d.textContent=n.getFullYear()+'.'+p(n.getMonth()+1)+'.'+p(n.getDate())+' ('+w+')'; } },
+  render:function(){ var tb=document.getElementById('coordKioskTableBody'); if(!tb) return;
+    var rooms=(typeof _coordActiveRooms==='function')?_coordActiveRooms():[];
+    var today=(typeof _coordToday==='function'?_coordToday():new Date().toISOString().slice(0,10));
+    var full=function(nm){ return (typeof _coordFullName==='function')?(_coordFullName(nm)||(nm||'-')):(nm||'-'); };
+    if(!rooms.length){ tb.innerHTML='<tr><td colspan="8" style="text-align:center;padding:70px;color:#94a3b8;font-size:26px;">현재 진행 중인 과정이 없습니다.</td></tr>'; return; }
+    tb.innerHTML=rooms.map(function(r){ var c=(typeof _courseOverviewCount==='function')?_courseOverviewCount(r):{expected:0,arrived:(typeof _studentsOf==='function'?_studentsOf(r.room).length:0)}; var sset=r.s, st=r.st;
+      var start=(''+(sset.period||'')).split(' ~ ')[0]||''; var stat=(start&&today>=start)?{t:'진행중',c:'#34d399'}:{t:'예정',c:'#fbbf24'};
+      var prof=(st.professorName||'').trim()?(_esc(st.professorName.trim())+' 교수'):'-';
+      return '<tr style="border-bottom:1px solid rgba(255,255,255,.08);">'
+        +'<td style="padding:16px 12px;text-align:center;font-weight:900;color:#60a5fa;white-space:nowrap;">Room #'+_esc(r.rid)+'</td>'
+        +'<td style="padding:16px 12px;text-align:left;font-weight:800;color:#fff;">'+_esc(sset.courseName||'-')+'</td>'
+        +'<td style="padding:16px 12px;text-align:center;color:#cbd5e1;white-space:nowrap;font-size:0.85em;">'+_esc(sset.period||'-')+'</td>'
+        +'<td style="padding:16px 12px;text-align:center;color:#cbd5e1;">'+_esc(sset.roomDetailName||sset.roomDetail||'-')+'</td>'
+        +'<td style="padding:16px 12px;text-align:center;font-weight:900;color:#34d399;font-size:1.05em;">'+c.expected+'명</td>'
+        +'<td style="padding:16px 12px;text-align:center;color:#e2e8f0;white-space:nowrap;">'+prof+'</td>'
+        +'<td style="padding:16px 12px;text-align:center;color:#cbd5e1;white-space:nowrap;">'+_esc(full(sset.coordinatorName)||'-')+'</td>'
+        +'<td style="padding:16px 12px;text-align:center;"><span style="padding:6px 18px;border-radius:999px;font-weight:800;font-size:.8em;color:'+stat.c+';background:'+stat.c+'22;border:1px solid '+stat.c+'66;">'+stat.t+'</span></td>'
+      +'</tr>';
+    }).join('');
+  }
+};
+window.coordKiosk=coordKiosk;
+document.addEventListener('keydown', function(e){ if(e.key==='Escape'){ var m=document.getElementById('coordKioskModal'); if(m && m.style.display!=='none'){ coordKiosk.close(); } } });
+document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){ try{ coordKiosk.init(); }catch(e){} }, 800); });
+if(document.readyState!=='loading'){ setTimeout(function(){ try{ coordKiosk.init(); }catch(e){} }, 800); }
 function toggleAcc(el){ const card=el.closest('.acc'); if(card) card.classList.toggle('collapsed'); }
 </script>
 <script>

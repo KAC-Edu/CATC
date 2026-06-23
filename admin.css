@@ -82,6 +82,10 @@ body {
 .btn-print { background: #e2e8f0; color: #334155; }
 .btn-small { padding: 0 10px; font-size: 11px; height: 36px; white-space: nowrap; }
 .btn-dark { background: #1e293b; color: white; border: 1px solid #475569; }
+/* [공통] 모달 닫기(X) 버튼 — hover 시 90도 회전 + 빨간색으로 통일 */
+.x-close { transition: transform .3s cubic-bezier(.22,1,.36,1), background-color .2s, color .2s !important; }
+.x-close:hover { transform: rotate(90deg) !important; background:#ef4444 !important; color:#fff !important; }
+.x-close:hover i { color:#fff !important; }
 .action-buttons { display: flex; flex-direction: column; gap: 8px; }
 .dev-info { text-align: center; font-size: 10px; color: #475569; margin-top: 10px; }
 
@@ -1562,6 +1566,8 @@ body.night-mode .badge-idle {
 #pdfWrapper:-webkit-full-screen #guideProfile > div {
     width: 1120px !important;
     max-width: 92vw !important;
+    transform: scale(1.32);
+    transform-origin: center center;
     box-shadow: 0 18px 50px rgba(15,23,42,.18) !important;
 }
 
@@ -4152,28 +4158,3 @@ button[onclick*="allIdle"]{
 }
 body.night-mode .side-rail-btn{ background:#1e293b; border-color:#334155; }
 body.night-mode .side-rail-lbl{ color:#cbd5e1; }
-
-/* ── 7. 입교안내 PDF 전체화면: 와이드 모니터에서 한 페이지만 중앙 레터박스 ── */
-/* ── 7. 입교안내 PDF 전체화면 전용 내비게이션(좌/우 화살표 + 페이지 표시) ── */
-/* 전체화면 전용 내비게이션 (좌/우 화살표 + 페이지 표시) — 평소엔 숨김 */
-.fs-nav, .fs-pageinfo{ display:none; }
-#pdfWrapper:fullscreen .fs-nav,
-#pdfWrapper:-webkit-full-screen .fs-nav{
-  display:flex; align-items:center; justify-content:center;
-  position:fixed; top:50%; transform:translateY(-50%); z-index:30;
-  width:64px; height:96px; border:none; border-radius:14px; cursor:pointer;
-  background:rgba(15,23,42,.5); color:#fff; font-size:30px; font-weight:300;
-  backdrop-filter:blur(4px); -webkit-backdrop-filter:blur(4px); transition:background .15s ease;
-}
-#pdfWrapper:fullscreen .fs-nav:hover,
-#pdfWrapper:-webkit-full-screen .fs-nav:hover{ background:rgba(15,23,42,.72); }
-#pdfWrapper:fullscreen .fs-prev,
-#pdfWrapper:-webkit-full-screen .fs-prev{ left:24px; }
-#pdfWrapper:fullscreen .fs-next,
-#pdfWrapper:-webkit-full-screen .fs-next{ right:24px; }
-#pdfWrapper:fullscreen .fs-pageinfo,
-#pdfWrapper:-webkit-full-screen .fs-pageinfo{
-  display:block; position:fixed; bottom:26px; left:50%; transform:translateX(-50%); z-index:30;
-  background:rgba(0,0,0,.55); color:#fff; font-size:15px; font-weight:800; letter-spacing:.5px;
-  padding:8px 20px; border-radius:50px; backdrop-filter:blur(4px); -webkit-backdrop-filter:blur(4px);
-}

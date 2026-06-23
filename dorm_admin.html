@@ -506,12 +506,13 @@
 
     <div class="header">
         <!-- 좌측: 타이틀 -->
-        <div class="header-brand" onclick="if(typeof rosterDirty!=='undefined' &amp;&amp; rosterDirty){ if(confirm('저장하지 않은 명단이 있습니다.\n저장 없이 메인으로 이동하면 변경사항이 사라집니다. 그래도 이동할까요?')) location.reload(); } else { location.reload(); }" style="cursor:pointer;" title="메인으로 (새로고침)">
+        <div class="header-brand" id="dormBrand" onclick="if(typeof rosterDirty!=='undefined' &amp;&amp; rosterDirty){ if(confirm('저장하지 않은 명단이 있습니다.\n저장 없이 메인으로 이동하면 변경사항이 사라집니다. 그래도 이동할까요?')) location.reload(); } else { location.reload(); }" style="cursor:pointer; user-select:none; -webkit-user-select:none; position:relative;" title="짧게=새로고침 · 5초 길게=현황판 키오스크">
             <div class="header-mark"><i class="fa-solid fa-bed"></i></div>
             <div style="min-width:0;">
                 <h1>항공기술훈련원 생활관 배정관리 플랫폼</h1>
                 <div class="sub">항공기술훈련원 교육지원부</div>
             </div>
+            <div id="dkEnterBar" style="position:absolute; left:0; right:0; bottom:-7px; height:4px; background:rgba(37,99,235,.18); border-radius:3px; overflow:hidden; opacity:0; transition:opacity .15s;"><div id="dkEnterHint" style="height:100%; width:0; background:#2563eb;"></div></div>
         </div>
         <!-- 중앙 시계 -->
         <div id="dormHeaderClock" class="header-clock"></div>
@@ -6146,5 +6147,163 @@ window.kacExpireEndedCourses = async function(){
 };
 document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){ if(typeof kacExpireEndedCourses==='function') kacExpireEndedCourses(); }, 3000); });
 </script>
+
+<!-- ════════ [신규] 침대아이콘 롱프레스 → 강사플랫폼식 키오스크 현황판 ════════ -->
+<style>
+#dormKioskModal table{ width:100%; border-collapse:collapse; font-size:21px; }
+#dormKioskModal thead th{ border-bottom:2px solid rgba(255,255,255,.14); }
+#dormKioskModal tbody td{ padding:16px 14px; border-bottom:1px solid rgba(255,255,255,.07); text-align:center; }
+#dormKioskModal tbody tr:nth-child(even){ background:rgba(255,255,255,.025); }
+</style>
+<div id="dormKioskModal" style="display:none; position:fixed; inset:0; z-index:100000; background:linear-gradient(160deg,#0b1220,#0f172a); color:#e2e8f0; flex-direction:column; font-family:'Pretendard','Noto Sans KR',sans-serif;">
+  <div style="display:flex; align-items:flex-start; justify-content:space-between; padding:26px 40px 16px;">
+    <div style="display:flex; align-items:center; gap:16px;">
+      <i class="fa-solid fa-plane-departure" style="font-size:34px; color:#3b82f6;"></i>
+      <div>
+        <div style="font-size:32px; font-weight:900; letter-spacing:-.5px; color:#fff;">현재 진행 교육 현황</div>
+        <div style="font-size:13px; color:#94a3b8; margin-top:3px; letter-spacing:.3px;">항공기술훈련원 · CATC Integrated Education Management System</div>
+      </div>
+    </div>
+    <div style="text-align:right; position:relative; padding-bottom:12px;">
+      <div id="dormKioskClock" title="5초간 꾹 누르면 종료" style="font-size:40px; font-weight:800; font-family:'Consolas','Roboto Mono',monospace; line-height:1; cursor:pointer; user-select:none; -webkit-user-select:none; color:#fff;">--:--:--</div>
+      <div id="dormKioskDate" style="font-size:15px; color:#94a3b8; margin-top:7px;">-</div>
+      <div style="position:absolute; left:0; right:0; bottom:0; height:3px; background:rgba(255,255,255,.1); border-radius:2px; overflow:hidden;"><div id="dormKioskExitHint" style="height:100%; width:0; background:#f87171;"></div></div>
+    </div>
+  </div>
+  <div style="flex:1; overflow:auto; padding:6px 40px 30px;">
+    <table>
+      <thead>
+        <tr style="color:#94a3b8; font-size:16px; font-weight:800;">
+          <th style="padding:14px;">구분</th>
+          <th style="padding:14px;">과정명</th>
+          <th style="padding:14px;">교육기간</th>
+          <th style="padding:14px;">강의실</th>
+          <th style="padding:14px;">교육생수(예정)</th>
+          <th style="padding:14px;">담임교수</th>
+          <th style="padding:14px;">과정담당</th>
+          <th style="padding:14px;">비고</th>
+        </tr>
+      </thead>
+      <tbody id="dormKioskTableBody"></tbody>
+    </table>
+  </div>
+</div>
+<script>
+(function(){
+  const dormKiosk = {
+    _clock:null, _refresh:null, _rosters:{}, _rosterSub:false,
+    init:function(){
+      var clock=document.getElementById('dormKioskClock');
+      if(clock) this._bindLongPress(clock, 5000, function(){ dormKiosk.close(); }, 'dormKioskExitHint');
+    },
+    _bindLongPress:function(el,dur,cb,hintId){
+      var t=null,raf=null,start=0;
+      function hint(p){ var h=document.getElementById(hintId); if(h) h.style.width=(p*100)+'%'; }
+      function begin(e){ if(e.cancelable) e.preventDefault(); start=Date.now(); hint(0.001);
+        t=setTimeout(function(){ cancel(); cb(); },dur);
+        raf=setInterval(function(){ hint(Math.min((Date.now()-start)/dur,1)); },50);
+      }
+      function cancel(){ if(t){clearTimeout(t);t=null;} if(raf){clearInterval(raf);raf=null;} hint(0); }
+      el.addEventListener('mousedown',begin);
+      el.addEventListener('touchstart',begin,{passive:false});
+      ['mouseup','mouseleave','touchend','touchcancel'].forEach(function(ev){ el.addEventListener(ev,cancel); });
+    },
+    open:function(){
+      var self=this;
+      if(!this._rosterSub){ this._rosterSub=true; try{ db.ref('system/dorm/rosters').on('value', function(s){ self._rosters=s.val()||{}; var m=document.getElementById('dormKioskModal'); if(m&&m.style.display==='flex') self.render(); }); }catch(e){} }
+      this.render();
+      var m=document.getElementById('dormKioskModal'); if(m) m.style.display='flex';
+      try{ var de=document.documentElement; var fn=de.requestFullscreen||de.webkitRequestFullscreen||de.msRequestFullscreen; if(fn) fn.call(de); }catch(e){}
+      this._tick(); this._clock=setInterval(function(){ self._tick(); },1000);
+      this._refresh=setInterval(function(){ self.render(); },30000);
+    },
+    close:function(){
+      var m=document.getElementById('dormKioskModal'); if(m) m.style.display='none';
+      try{ if(document.fullscreenElement){ var fn=document.exitFullscreen||document.webkitExitFullscreen||document.msExitFullscreen; if(fn) fn.call(document); } }catch(e){}
+      if(this._clock){clearInterval(this._clock);this._clock=null;}
+      if(this._refresh){clearInterval(this._refresh);this._refresh=null;}
+    },
+    _tick:function(){ var n=new Date(),p=function(x){return String(x).padStart(2,'0');};
+      var c=document.getElementById('dormKioskClock'); if(c) c.textContent=p(n.getHours())+':'+p(n.getMinutes())+':'+p(n.getSeconds());
+      var d=document.getElementById('dormKioskDate'); if(d){ var w=['일','월','화','수','목','금','토'][n.getDay()]; d.textContent=n.getFullYear()+'.'+p(n.getMonth()+1)+'.'+p(n.getDate())+' ('+w+')'; }
+    },
+    _isThisWeek:function(period){
+      var parts=String(period||'').split('~');
+      function parse(x){ var dt=new Date(String(x).trim()); return isNaN(dt.getTime())?null:(dt.setHours(0,0,0,0),dt); }
+      var sd=parse(parts[0]), ed=parse(parts[1]||parts[0]); if(!sd) return false; if(!ed) ed=sd;
+      var now=new Date(); now.setHours(0,0,0,0); var dow=(now.getDay()+6)%7; var mon=new Date(now); mon.setDate(now.getDate()-dow); var sun=new Date(mon); sun.setDate(mon.getDate()+6);
+      return sd<=sun && ed>=mon;
+    },
+    _status:function(period){
+      var parts=String(period||'').split('~');
+      function parse(x){ var dt=new Date(String(x).trim()); return isNaN(dt.getTime())?null:(dt.setHours(0,0,0,0),dt); }
+      var today=new Date(); today.setHours(0,0,0,0);
+      var sd=parse(parts[0]), ed=parse(parts[1]||parts[0]);
+      if(!sd) return {t:'-',c:'#94a3b8'};
+      if(today<sd) return {t:'예정',c:'#fbbf24'};
+      if(ed && today>ed) return {t:'종료',c:'#94a3b8'};
+      return {t:'진행중',c:'#34d399'};
+    },
+    _planned:function(courseName, room){
+      var cn=String(courseName||'').trim(), best=null;
+      for(var k in this._rosters){ var dv=this._rosters[k]; if(dv&&Array.isArray(dv.list)&&dv.list.length&&String(dv.courseName||'').trim()===cn){ if(!best||(dv.updatedAt||0)>(best.updatedAt||0)) best=dv; } }
+      if(best) return best.list.length;
+      var r=(typeof coursesCache!=='undefined'&&coursesCache)?coursesCache[room]:null;
+      if(r&&r.students){ return Object.values(r.students).filter(function(x){return x&&x.name&&String(x.name).trim()&&x.name!=='undefined';}).length; }
+      if(r&&Array.isArray(r.expectedStudents)) return r.expectedStudents.length;
+      return 0;
+    },
+    render:function(){
+      var tb=document.getElementById('dormKioskTableBody'); if(!tb) return;
+      var d=(typeof coursesCache!=='undefined'&&coursesCache)?coursesCache:{};
+      function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
+      var self=this;
+      var rooms=Object.keys(d).map(function(k){return [k,d[k]];}).filter(function(e){ var r=e[1]||{}; var s=r.settings||{}, st=r.status||{}; if(s.hideFromBoard) return false; var hasCourse=!!(s.courseName&&String(s.courseName).trim()); return (st.roomStatus==='active'&&hasCourse)||self._isThisWeek(s.period||''); }).sort(function(a,b){return a[0].localeCompare(b[0]);});
+      if(!rooms.length){ tb.innerHTML='<tr><td colspan="8" style="text-align:center;padding:70px;color:#94a3b8;font-size:24px;">현재 진행 중인 과정이 없습니다.</td></tr>'; return; }
+      tb.innerHTML=rooms.map(function(e){ var room=e[0], r=e[1]; var s=r.settings||{}, st=r.status||{};
+        var planned=self._planned(s.courseName, room);
+        var prof=(st.professorName||'').trim();
+        var coord=(s.coordinatorName||'').trim();
+        var roomNm=(s.roomDetailName||s.roomDetail||s.classroom||s.roomName||'').trim();
+        var stt=self._status(s.period);
+        return '<tr>'
+          +'<td style="font-weight:900;color:#60a5fa;white-space:nowrap;">Room #'+esc(room)+'</td>'
+          +'<td style="font-weight:800;color:#f1f5f9;">'+esc(s.courseName||'-')+'</td>'
+          +'<td style="white-space:nowrap;color:#cbd5e1;">'+esc(s.period||'-')+'</td>'
+          +'<td style="color:#cbd5e1;">'+esc(roomNm||'-')+'</td>'
+          +'<td style="font-weight:900;color:#34d399;">'+planned+'명</td>'
+          +'<td style="white-space:nowrap;color:#e2e8f0;">'+(prof?esc(prof)+' 교수':'-')+'</td>'
+          +'<td style="white-space:nowrap;color:#cbd5e1;">'+esc(coord||'-')+'</td>'
+          +'<td><span style="display:inline-block;padding:5px 16px;border-radius:999px;font-weight:800;font-size:0.78em;color:'+stt.c+';background:'+stt.c+'22;border:1px solid '+stt.c+'66;">'+stt.t+'</span></td>'
+        +'</tr>';
+      }).join('');
+    }
+  };
+  window.dormKiosk=dormKiosk;
+  dormKiosk.init();
+
+  // 시계 외 종료 보조: Esc
+  document.addEventListener('keydown', function(e){ if(e.key==='Escape'){ var m=document.getElementById('dormKioskModal'); if(m&&m.style.display==='flex') dormKiosk.close(); } });
+
+  // 침대(브랜드) 롱프레스: 짧게=새로고침(기존 onclick 유지) / 5초=키오스크 진입(+진행바)
+  (function(){
+    var brand=document.getElementById('dormBrand'); if(!brand) return;
+    var t=null, raf=null, fired=false, start=0;
+    function setHint(p){ var bar=document.getElementById('dkEnterBar'), h=document.getElementById('dkEnterHint'); if(h) h.style.width=(p*100)+'%'; if(bar) bar.style.opacity=p>0?'1':'0'; }
+    function begin(e){ start=Date.now(); fired=false; setHint(0.001);
+      t=setTimeout(function(){ fired=true; stop(); dormKiosk.open(); }, 5000);
+      raf=setInterval(function(){ setHint(Math.min((Date.now()-start)/5000,1)); }, 50);
+    }
+    function stop(){ if(t){clearTimeout(t);t=null;} if(raf){clearInterval(raf);raf=null;} setHint(0); }
+    brand.addEventListener('mousedown', begin);
+    brand.addEventListener('touchstart', begin, {passive:true});
+    ['mouseup','mouseleave','touchend','touchcancel'].forEach(function(ev){ brand.addEventListener(ev, stop); });
+    // 길게 눌러 진입한 경우 뒤따르는 click(새로고침) 차단 (capture 단계)
+    brand.addEventListener('click', function(e){ if(fired){ e.stopImmediatePropagation(); e.preventDefault(); fired=false; } }, true);
+  })();
+})();
+</script>
+<!-- ════════ 키오스크 끝 ════════ -->
+
 </body>
 </html>

@@ -8728,6 +8728,22 @@ const kiosk = {
 };
 window.kiosk = kiosk;
 
+// [공통] 모달 닫기(X) 버튼에 통일 hover 효과(.x-close: 90도 회전 + 빨강) 자동 적용
+function _unifyXClose(root) {
+    try {
+        (root || document).querySelectorAll('button, i, span').forEach(el => {
+            const cls = (typeof el.className === 'string') ? el.className : '';
+            const isFaX = cls.indexOf('fa-xmark') >= 0 || cls.indexOf('fa-times') >= 0;
+            const t = (el.childElementCount === 0 ? (el.textContent || '') : '').trim();
+            const isTxtX = (t === '✕' || t === '×' || t === '✖' || t === '╳');
+            if (!isFaX && !isTxtX) return;
+            const target = (el.tagName === 'I' || el.tagName === 'SPAN') ? (el.closest('button') || el) : el;
+            target.classList.add('x-close');
+        });
+    } catch (e) {}
+}
+window._unifyXClose = _unifyXClose;
+
 window.onload = function() {
     dataMgr.checkMobile();
     profMgr.init();
@@ -8738,6 +8754,7 @@ window.onload = function() {
     outingReturnCheck.init();  // 외출·외박 복귀 확인 팝업(07:00~08:59) 점검 시작
     outingAutoReturn.init();   // 외출·외박 자동 복귀완료 sweep(다음날 08:59) — 교육운영부 닫혀 있어도 동작
     kiosk.init();              // 키오스크 모드(비행기 아이콘 3초 롱프레스) 활성화
+    setTimeout(_unifyXClose, 500); // 모달 X 닫기 버튼 hover 효과 통일
     // [강의 모니터링] 마이크는 강의실에 입장(강의 시작)할 때 동의받아 켭니다. (lectureMonitor.syncStatus)
 };
 
@@ -11047,6 +11064,7 @@ ui.openStudentMap = async function(){
     + '</div>'
     + '</div></div>';
   var wrap=document.createElement('div'); wrap.innerHTML=html; document.body.appendChild(wrap.firstChild);
+  try{ _unifyXClose(document.getElementById('studentMapModal')); }catch(e){}
   // ===== 실제 카카오맵 + 지역별 인원 마커 =====
   ui._regionLL = ui._regionLL || {
     '서울':[37.5586,126.7906], '인천':[37.4602,126.4407], '강원':[37.8813,127.7300],
@@ -11130,6 +11148,7 @@ ui.openLeaderRoulette = async function(){
     +'<div id="rouletteResult" style="margin-top:14px;"></div>'
     +'</div></div>';
   var w=document.createElement('div'); w.innerHTML=html; document.body.appendChild(w.firstChild);
+  try{ _unifyXClose(document.getElementById('leaderRouletteModal')); }catch(e){}
 };
 ui.wheelSpin = function(){
   var r=ui._roulette; if(!r||r.spinning) return; r.spinning=true;
