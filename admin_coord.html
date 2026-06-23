@@ -8275,7 +8275,7 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
   function _coordShortDate(d){ var p=String(d==null?'':d).trim().split('-'); if(p.length<3) return (d||'-'); return "'"+p[0].slice(2)+'.'+(+p[1])+'.'+(+p[2]); }
   function _coordShortPeriod(per){ var a=String(per==null?'':per).split('~'); if(a.length<2) return (per||'-'); return _coordShortDate(a[0].trim())+' ~ '+_coordShortDate(a[1].trim()); }
   // ── 강의실 위치(하늘관 2층 도면 위 라벨 좌표, %) — 필요시 수치만 조정 ──
-  var COORD_CLASS_POS = { E:{l:15,t:42}, D:{l:31,t:42}, B:{l:71,t:42}, A:{l:84,t:42}, G:{l:15,t:72}, F:{l:31,t:72}, C:{l:81,t:72} };
+  var COORD_CLASS_POS = { E:{l:15,t:42}, D:{l:31,t:42}, B:{l:58,t:42}, A:{l:80,t:42}, G:{l:15,t:72}, F:{l:31,t:72}, C:{l:81,t:72} };
   var COORD_FLOORPLAN_IMG = 'classroom_sky2f.png'; // GitHub 루트에 업로드할 빈 도면 파일명
   // roomDetailName(예: '하늘관 2층 A강의실')에서 강의실 글자(A~G) 추출
   function _coordClassroomLetter(s){ var v=((s&&(s.roomDetailName||s.roomDetail))||'')+''; var m=v.match(/([A-Ga-g])\s*강의실/); return m?m[1].toUpperCase():''; }
@@ -8368,6 +8368,7 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
     var rooms=_coordActiveRooms();
     if(!rooms.length){ box.innerHTML='<p style="padding:30px;text-align:center;color:#94a3b8;font-weight:700;">운영 중인 과정이 없습니다.</p>'; return; }
     function norm(x){ return String(x==null?'':x).replace(/\s+/g,'').toLowerCase(); }
+    function _enrRoom(s){ var m=window._coordDormAssign||{}; var nm=norm(s.name); var id=(''+(s.empNo||s.sabun||s.id||'')).replace(/[^0-9]/g,''); var a=m[nm+'|'+id]||m['n:'+nm]; if(!a) return ''; var ho=(''+(a.no||a.room||'')).trim(); if(!ho) return (a.building||''); return ((a.building||'')+' '+ho+(ho.indexOf('호')<0?'호':'')).trim(); }
     function paint(ext){
       box.innerHTML=rooms.map(function(r,ei){
         var students=(typeof _studentsOf==='function')?_studentsOf(r.room):[];
@@ -8387,8 +8388,8 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
         var _started=_startDate?(_today>=_startDate):true;   // 교육시작일부터 true
         var body = total ? roster.map(function(s,i){
           var ar=arrivedSet[norm(s.name)];
-          return '<tr><td style="text-align:center;color:#94a3b8;">'+(i+1)+'</td><td style="color:#475569;">'+esc(s.dept||s.affil||s.org||'-')+'</td><td style="color:#64748b;white-space:nowrap;">'+esc(s.empNo||s.sabun||s.id||'-')+'</td><td style="font-weight:800;">'+esc(s.name||'-')+'</td><td style="text-align:center;">'+(!_started?'<span style="color:#2563eb;font-weight:700;">예정</span>':(ar?'<span style="color:#16a34a;font-weight:800;">입교완료</span>':'<span style="color:#dc2626;font-weight:800;">미입교</span>'))+'</td></tr>';
-        }).join('') : '<tr><td colspan="5" style="text-align:center;color:#94a3b8;padding:18px;">등록된 명단이 없습니다.</td></tr>';
+          return '<tr><td style="text-align:center;color:#94a3b8;">'+(i+1)+'</td><td style="color:#475569;">'+esc(s.dept||s.affil||s.org||'-')+'</td><td style="color:#64748b;white-space:nowrap;">'+esc(s.empNo||s.sabun||s.id||'-')+'</td><td style="font-weight:800;">'+esc(s.name||'-')+'</td><td style="text-align:center;">'+(_enrRoom(s)?('<span style="background:#eef2ff;color:#1e40af;padding:2px 8px;border-radius:7px;font-size:12px;font-weight:800;white-space:nowrap;">'+esc(_enrRoom(s))+'</span>'):'<span style="color:#cbd5e1;">미배정</span>')+'</td><td style="text-align:center;">'+(!_started?'<span style="color:#2563eb;font-weight:700;">예정</span>':(ar?'<span style="color:#16a34a;font-weight:800;">입교완료</span>':'<span style="color:#dc2626;font-weight:800;">미입교</span>'))+'</td></tr>';
+        }).join('') : '<tr><td colspan="6" style="text-align:center;color:#94a3b8;padding:18px;">등록된 명단이 없습니다.</td></tr>';
         return '<div class="csec-card">'
           +'<div class="csec-card-head" onclick="coordToggleEnroll('+ei+')" style="cursor:pointer;display:flex;align-items:center;gap:14px;padding:14px 16px;">'
             +'<span class="crow-room">ROOM <span class="rid-big">#'+esc(r.rid)+'</span></span>'
@@ -8396,17 +8397,19 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
             +'<span class="cstat-pill" onclick="event.stopPropagation(); coordShowEnrollInfo('+arrived+','+total+')" title="입교/예정 인원 보기" style="cursor:pointer;'+((total>0&&Math.round(arrived/total*100)>0)?'background:#dcfce7;color:#16a34a;':'background:#f1f5f9;color:#94a3b8;border:1px solid #e2e8f0;')+'">입교율 '+(total>0?Math.round(arrived/total*100):0)+'%</span>'
             +'<i class="fa-solid fa-chevron-down crow-chev" id="coordEnrChev'+ei+'"></i>'
           +'</div>'
-          +'<div id="coordEnrollBody'+ei+'" style="display:none;border-top:1px solid #eef2f7;overflow-x:auto;"><table class="cpop-table" style="width:100%;table-layout:fixed;"><colgroup><col style="width:11%"><col style="width:40%"><col style="width:18%"><col style="width:17%"><col style="width:14%"></colgroup><thead><tr><th>연번</th><th style="text-align:left;">소속</th><th>사번</th><th>성명</th><th>상태</th></tr></thead><tbody>'+body+'</tbody></table></div>'
+          +'<div id="coordEnrollBody'+ei+'" style="display:none;border-top:1px solid #eef2f7;overflow-x:auto;"><table class="cpop-table" style="width:100%;table-layout:fixed;"><colgroup><col style="width:9%"><col style="width:29%"><col style="width:15%"><col style="width:15%"><col style="width:18%"><col style="width:14%"></colgroup><thead><tr><th>연번</th><th style="text-align:left;">소속</th><th>사번</th><th>성명</th><th>생활관</th><th>상태</th></tr></thead><tbody>'+body+'</tbody></table></div>'
           +'</div>';
       }).join('');
     }
     paint(window._coordEnrollExt||{});
     Promise.all([
       firebase.database().ref('system/dorm/rosters').once('value').catch(function(){return null;}),
-      firebase.database().ref('system/coord/rosters').once('value').catch(function(){return null;})
+      firebase.database().ref('system/coord/rosters').once('value').catch(function(){return null;}),
+      firebase.database().ref('system/dorm/assignments/'+(typeof _coordDormMondayKey==='function'?_coordDormMondayKey():'')+'/students').once('value').catch(function(){return null;})
     ]).then(function(res){
       var ext={};
-      res.forEach(function(snap){ if(!snap) return; var v=snap.val()||{}; Object.keys(v).forEach(function(kk){ var it=v[kk]; if(!it||!Array.isArray(it.list)) return; var nm=norm(it.courseName); if(!nm) return; (ext[nm]=ext[nm]||[]).push({list:it.list,period:(it.period||''),room:(it.room||''),weekKey:(it.weekKey||'')}); }); });
+      [res[0],res[1]].forEach(function(snap){ if(!snap) return; var v=snap.val()||{}; Object.keys(v).forEach(function(kk){ var it=v[kk]; if(!it||!Array.isArray(it.list)) return; var nm=norm(it.courseName); if(!nm) return; (ext[nm]=ext[nm]||[]).push({list:it.list,period:(it.period||''),room:(it.room||''),weekKey:(it.weekKey||'')}); }); });
+      var dmap={}; var av=(res[2]&&res[2].val())||{}; Object.keys(av).forEach(function(k){ var a=av[k]; if(!a||!a.name) return; var nm=norm(a.name); var id=(''+(a.empNo||'')).replace(/[^0-9]/g,''); dmap[nm+'|'+id]=a; if(!dmap['n:'+nm]) dmap['n:'+nm]=a; }); window._coordDormAssign=dmap;
       window._coordEnrollExt=ext; paint(ext);
     }).catch(function(){});
   };
