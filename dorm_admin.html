@@ -6329,7 +6329,7 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
       +'body.embedboard #__catcVer,body.embedboard #__ver,body.embedboard #dkEnterBar{display:none!important;}';
     document.head.appendChild(st);
     function mark(){ if(document.body) document.body.classList.add('embedboard'); }
-    function postH(){ try{ if(parent!==window) parent.postMessage({_dormBoardH:Math.max(document.body.scrollHeight,document.documentElement.scrollHeight)}, '*'); }catch(e){} }
+    function postH(){ try{ if(parent===window) return; var el=document.getElementById('boardMapArea'); var h; if(el && el.offsetParent!==null){ var r=el.getBoundingClientRect(); h=Math.ceil(r.top+(window.scrollY||0)+el.scrollHeight); } else { h=document.body.scrollHeight; } if(h>0) parent.postMessage({_dormBoardH:h}, '*'); }catch(e){} }
     function boot(){
       mark();
       try{ if(typeof goStep==='function') goStep(4,{week:wk}); }catch(e){}
@@ -6343,7 +6343,7 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
     if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', function(){ mark(); setTimeout(boot,900); });
     else setTimeout(boot,900);
     window.addEventListener('load', function(){ mark(); setTimeout(postH,500); });
-    window.addEventListener('resize', postH);
+    // resize 시 재측정은 피드백 루프 방지를 위해 제거
   }catch(e){}
 })();
 </script>
