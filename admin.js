@@ -415,7 +415,7 @@ switchRoomAttempt: async function(newRoom, silent = false) {
     
     // (A) 방이 사용 중이고 '실제 소유자'가 있는데 내가 주인이 아니고 옵저버도 아님 -> 차단
     if (blocked || needsPasswordOnly) {
-        console.log(`[권한 차단] Room ${newRoom}에 대한 소유권이 없습니다.`);
+        console.log(`[권한 차단] Room #${newRoom}에 대한 소유권이 없습니다.`);
 
         // 새로고침 복구 시(silent)에는 비밀번호창 없이 현황판으로 복귀
         if (silent) {
@@ -449,7 +449,7 @@ switchRoomAttempt: async function(newRoom, silent = false) {
         localStorage.removeItem('kac_last_room');
         return;
     }
-    console.log(`[인증 성공] Room ${newRoom} 데이터 로드를 시작합니다.`);
+    console.log(`[인증 성공] Room #${newRoom} 데이터 로드를 시작합니다.`);
     this.forceEnterRoom(newRoom);
     
     // [참고] forceEnterRoom 내부 리스너에서 소유권이 최종 확인되면 
@@ -686,7 +686,7 @@ enterAsObserver: async function() {
         
         document.getElementById('takeoverModal').style.display = 'none';
         this.forceEnterRoom(newRoom);
-        ui.showAlert(`👁️ Room ${newRoom} 옵저버 모드로 입장했습니다.`);
+        ui.showAlert(`👁️ Room #${newRoom} 옵저버 모드로 입장했습니다.`);
     },
 
 
@@ -1150,7 +1150,7 @@ deactivateAllRooms: async function() {
         const settings = settingSnap.val() || {};
         // [비번 옵션화] 비번이 설정된 방만 확인. 없으면 바로 토글.
         if (settings.password) {
-            const input = await showPasswordPrompt(`🔐 Room ${room}의 잠금 상태를 변경하려면\n강의실 비밀번호를 입력하세요.`);
+            const input = await showPasswordPrompt(`🔐 Room #${room}의 잠금 상태를 변경하려면\n강의실 비밀번호를 입력하세요.`);
             if (input === null) return;                       // 취소 시 아무 동작 안 함
             if (btoa(input.trim()) !== settings.password) {
                 return ui.showAlert("❌ 비밀번호가 일치하지 않습니다.");
@@ -1160,8 +1160,8 @@ deactivateAllRooms: async function() {
         const nextLocked = !currentLocked;
         await firebase.database().ref(`courses/${room}/settings/autoAssignLocked`).set(nextLocked || null);
         ui.showAlert(nextLocked
-            ? `🔒 Room ${room} 잠금 설정\n연간계획 자동배치 시 이 방은 건드리지 않습니다.`
-            : `🔓 Room ${room} 잠금 해제\n연간계획 자동배치 시 이 방도 배치 대상이 됩니다.`
+            ? `🔒 Room #${room} 잠금 설정\n연간계획 자동배치 시 이 방은 건드리지 않습니다.`
+            : `🔓 Room #${room} 잠금 해제\n연간계획 자동배치 시 이 방도 배치 대상이 됩니다.`
         );
     },
 
@@ -1320,7 +1320,7 @@ _executeReset: function() {
     firebase.database().ref(rPath).once('value').then(function(_cs){ var _c=_cs.val()||{}; var _aa=_c.admin_actions||{}, _ia=_c.internal_attendance||{}, _stu=_c.students||{}; if(!Object.keys(_aa).length && !Object.keys(_ia).length && !Object.keys(_stu).length) return null; var _st=_c.settings||{}, _stt=_c.status||{}; return firebase.database().ref('system/course_archive/'+state.room+'_'+Date.now()).set({ room: state.room, courseName:_st.courseName||'', period:_st.period||'', prof:_stt.professorName||'', coord:_st.coordinatorName||'', admin_actions:_aa, internal_attendance:_ia, students:_stu, expectedStudents:(_c.expectedStudents||null), archivedAt: firebase.database.ServerValue.TIMESTAMP }); }).catch(function(){}).then(() => firebase.database().ref().update(resetUpdates)).then(() => {
         return _dismissPromise;
     }).then(() => {
-        ui.showAlert(`✅ Room ${state.room}이 성공적으로 초기화되었습니다.`);
+        ui.showAlert(`✅ Room #${state.room}이 성공적으로 초기화되었습니다.`);
         setTimeout(() => location.reload(), 800);
     }).catch(err => {
         ui.showAlert("초기화 실패: " + err.message);
@@ -3040,16 +3040,16 @@ showAlert: function(msg, onConfirm) {
                 // 파란 LED: 현재 선택한 방이면서 내가 비번 치고 들어간 방(verifyTakeover 성공)만
                 const isVerifiedMyRoom = (c === state.room) && dataMgr.isMyOwnedRoom(c);
                 if(isVerifiedMyRoom) {
-                    opt.innerText = `Room ${c} (🔵 내 강의실 - ${profName})`;
+                    opt.innerText = `Room #${c} (🔵 내 강의실 - ${profName})`;
                     opt.selected = true;
                 } else if(c === state.room) {
                     // 선택한 방이지만 비번 미인증 (미개설 진입 등)
-                    opt.innerText = `Room ${c} (⚪ 설정 중)`;
+                    opt.innerText = `Room #${c} (⚪ 설정 중)`;
                     opt.selected = true;
                 } else if(isRoomActive) {
-                    opt.innerText = `Room ${c} (🟠 사용중 - ${profName})`;
+                    opt.innerText = `Room #${c} (🟠 사용중 - ${profName})`;
                 } else {
-                    opt.innerText = `Room ${c}  (미개설)`;
+                    opt.innerText = `Room #${c}  (미개설)`;
                     opt.style.color = '#94a3b8';
                 }
                 sel.appendChild(opt);
@@ -3102,7 +3102,7 @@ showAlert: function(msg, onConfirm) {
                         </div>
                     </td>
                     <td style="font-weight:900; color:#3b82f6;">
-                        Room ${c}
+                        Room #${c}
                     </td>
                     <td><div class="td-course-name" title="${courseName}">${courseName}</div></td>
                     <td style="font-weight:600;">${profName}</td>
@@ -5424,7 +5424,7 @@ resetShuttleRequests: function() {
                 const prof=(r.status||{}).professorName||'-', course=(r.settings||{}).courseName||'-';
                 return `<div onclick="document.getElementById('homeStatModal').style.display='none'; dataMgr.switchRoomAttempt('${room}');" title="클릭하면 이 과정으로 입장합니다" style="display:flex;justify-content:space-between;align-items:center;padding:20px 24px;background:#eff6ff;border:1px solid #dbeafe;border-radius:14px;margin-bottom:12px;cursor:pointer;transition:background .15s, transform .15s, box-shadow .15s;" onmouseover="this.style.background='#dbeafe';this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 20px rgba(37,99,235,.18)';" onmouseout="this.style.background='#eff6ff';this.style.transform='none';this.style.boxShadow='none';">
                     <div style="display:flex;align-items:center;gap:16px;">
-                        <span style="font-weight:900;color:#fff;background:#3b82f6;padding:6px 14px;border-radius:10px;font-size:16px;">Room ${room}</span>
+                        <span style="font-weight:900;color:#fff;background:#3b82f6;padding:6px 14px;border-radius:10px;font-size:16px;">Room #${room}</span>
                         <span style="font-size:18px;color:#0f172a;font-weight:700;">${course}</span>
                     </div>
                     <span style="font-size:15px;color:#475569;font-weight:800;">${prof} 교수 <i class="fa-solid fa-arrow-right-to-bracket" style="margin-left:8px;color:#3b82f6;"></i></span></div>`;
@@ -5470,7 +5470,7 @@ resetShuttleRequests: function() {
                 return '<div style="background:#f0fdf4;border:1px solid #dcfce7;border-radius:14px;margin-bottom:12px;overflow:hidden;">'
                   +'<div onclick="ui.toggleHomeDetail(\''+uid+'\')" title="클릭하면 명단을 봅니다" style="display:flex;justify-content:space-between;align-items:center;padding:18px 22px;cursor:pointer;">'
                     +'<div style="display:flex;align-items:center;gap:14px;">'
-                      +'<span style="font-weight:900;color:#fff;background:#10b981;padding:6px 14px;border-radius:10px;font-size:16px;">Room '+room+'</span>'
+                      +'<span style="font-weight:900;color:#fff;background:#10b981;padding:6px 14px;border-radius:10px;font-size:16px;">Room #'+room+'</span>'
                       +'<span style="font-size:18px;color:#0f172a;font-weight:700;">'+esc(course)+'</span>'
                       +'<i class="fa-solid fa-chevron-right hs-chev" style="color:#10b981;font-size:13px;transition:transform .2s;"></i>'
                     +'</div>'
@@ -5514,7 +5514,7 @@ resetShuttleRequests: function() {
                 return '<div style="background:#fffbeb;border:1px solid #fef3c7;border-radius:14px;margin-bottom:12px;padding:18px 22px;">'
                   +'<div style="display:flex;justify-content:space-between;align-items:center;">'
                     +'<div style="display:flex;align-items:center;gap:14px;">'
-                      +'<span style="font-weight:900;color:#fff;background:#f59e0b;padding:6px 14px;border-radius:10px;font-size:16px;">Room '+room+'</span>'
+                      +'<span style="font-weight:900;color:#fff;background:#f59e0b;padding:6px 14px;border-radius:10px;font-size:16px;">Room #'+room+'</span>'
                       +'<span style="font-size:18px;color:#0f172a;font-weight:700;">'+esc(course)+'</span>'
                     +'</div>'
                     +'<span style="font-size:28px;font-weight:900;color:#0f172a;">'+outs.length+'<span style="font-size:14px;color:#64748b;font-weight:800;"> 명</span></span>'
@@ -5543,7 +5543,7 @@ resetShuttleRequests: function() {
         try {
             const _ps = await firebase.database().ref(`courses/${state.room}/settings/password`).get();
             if (!_ps.val()) {
-                if (confirm(`Room ${state.room} 과정을 초기화하시겠습니까?\n(이 강의실은 비밀번호가 설정돼 있지 않습니다.)`)) {
+                if (confirm(`Room #${state.room} 과정을 초기화하시겠습니까?\n(이 강의실은 비밀번호가 설정돼 있지 않습니다.)`)) {
                     dataMgr._executeReset();
                 }
                 return;
@@ -5551,7 +5551,7 @@ resetShuttleRequests: function() {
         } catch(e) {}
         const label = document.getElementById('resetAuthRoomLabel');
         const input = document.getElementById('resetAuthInput');
-        if (label) label.innerText = `Room ${state.room}`;
+        if (label) label.innerText = `Room #${state.room}`;
         if (input) input.value = '';
         const modal = document.getElementById('resetAuthModal');
         if (modal) modal.style.display = 'flex';
@@ -10913,7 +10913,7 @@ ui.openStudentMap = async function(){
     + '<div style="background:#fff;border-radius:22px;max-width:880px;width:100%;max-height:92vh;overflow:auto;padding:26px 30px;position:relative;box-shadow:0 24px 60px rgba(15,23,42,.35);">'
     + '<button onclick="ui.closeStudentMap()" style="position:absolute;top:16px;right:16px;width:38px;height:38px;border-radius:50%;border:none;background:#eef2f7;color:#475569;font-size:18px;cursor:pointer;">✕</button>'
     + '<h2 style="margin:0 0 4px;font-size:22px;font-weight:900;color:#0f172a;">🗺️ 공항별 입교 현황</h2>'
-    + '<div style="font-size:13px;color:#64748b;font-weight:700;margin-bottom:14px;">Room '+room+' · '+ (course||'-') +' · 예정 명단 소속 기준 (총 '+total+'명)</div>'
+    + '<div style="font-size:13px;color:#64748b;font-weight:700;margin-bottom:14px;">Room #'+room+' · '+ (course||'-') +' · 예정 명단 소속 기준 (총 '+total+'명)</div>'
     + '<div style="display:flex;gap:22px;flex-wrap:wrap;align-items:flex-start;">'
     +   '<div style="flex:1;min-width:330px;"><div id="studentMapKakao" style="width:100%;height:72vh;min-height:420px;border-radius:14px;overflow:hidden;border:1px solid #e2e8f0;background:#eaf2fb;"></div></div>'
     +   '<div style="width:240px;min-width:220px;"><div style="font-size:13px;font-weight:800;color:#475569;margin-bottom:6px;">공항별 인원</div><div style="border:1px solid #e2e8f0;border-radius:12px;overflow:hidden;">'+rows+totalRow+'</div>'+unknownNote+'</div>'
