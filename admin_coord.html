@@ -1655,7 +1655,7 @@ body.cpop-locked{ overflow:hidden !important; }
         <div class="cml-sec">교육운영부 관련</div>
         <a class="cml-item" onclick="openGlobalNoticeModal(); toggleMenu(false);"><i class="fa-solid fa-bullhorn" style="color:#f97316;"></i> 항기원 전체공지</a>
         <a class="cml-item" onclick="openAttendanceManager(); toggleMenu(false);"><i class="fa-solid fa-clipboard-user" style="color:#0d9488;"></i> 출석부 관리</a>
-        <a class="cml-item" onclick="openOutingSummary(); toggleMenu(false);"><i class="fa-solid fa-file-signature" style="color:#2563eb;"></i> 외출·외박 대장 관리</a>
+        <a class="cml-item" onclick="openOutingRegister(); toggleMenu(false);"><i class="fa-solid fa-file-signature" style="color:#2563eb;"></i> 외출·외박 대장 관리</a>
         <a class="cml-item" onclick="coordMgr.openManage(); toggleMenu(false);"><i class="fa-solid fa-user-gear" style="color:#7c3aed;"></i> 과정운영 담당자 관리</a>
     </div>
 </div>
@@ -1760,6 +1760,8 @@ body.pc-mode .coord-brand{ gap:13px !important; }
 body.pc-mode .coord-brand-mark{ width:42px !important; height:42px !important; border-radius:13px !important; }
 body.pc-mode .coord-brand-mark i{ font-size:20px !important; }
 body.pc-mode .coord-brand-title{ font-size:21px !important; font-weight:950 !important; }
+/* [반응형] 화면이 좁아지면 중앙 통계카드(coord-right) 숨김 — 좌측 타이틀 + 우측 시계만 유지 */
+@media (max-width:1300px){ body.pc-mode .coord-right{ display:none !important; } }
 body.pc-mode .coord-clock{ grid-column:3 !important; grid-row:1 !important; justify-self:end !important; gap:10px !important; background:rgba(15,23,42,0.34) !important; padding:8px 20px !important; border-radius:999px !important; border:1px solid rgba(255,255,255,0.17) !important; box-shadow:inset 0 1px 0 rgba(255,255,255,0.12),0 8px 24px rgba(15,23,42,0.16) !important; }
 body.pc-mode #coordHeaderClock .hc-date{ font-size:13px !important; }
 body.pc-mode #coordHeaderClock .hc-day{ font-size:12px !important; }
@@ -1781,7 +1783,7 @@ body.pc-mode .coord-right{ grid-column:2 !important; grid-row:1 !important; just
     <div class="coord-hdr-stats" id="coordHdrStats">
       <div class="hdr-stat" onclick="openCourseOverview()" title="운영 과정 현황"><i class="fa-solid fa-graduation-cap"></i><div class="hdr-stat-txt"><div class="hb-label">운영 과정</div><div class="hb-value"><span id="hero-active-courses">0</span><small>개</small></div></div></div>
       <div class="hdr-stat" onclick="openStudentRosterPopup()" title="전체 교육생 명단"><i class="fa-solid fa-users"></i><div class="hdr-stat-txt"><div class="hb-label">전체 교육생</div><div class="hb-value"><span id="g-total-students">0</span><small>명</small></div></div></div>
-      <div class="hdr-stat" onclick="openOutingSummary()" title="외출·외박 현황"><i class="fa-solid fa-file-signature"></i><div class="hdr-stat-txt"><div class="hb-label">외출·외박</div><div class="hb-value"><span id="g-today-actions">0</span><small>건</small></div></div></div>
+      <div class="hdr-stat" onclick="openOutingRegister()" title="외출·외박 대장"><i class="fa-solid fa-file-signature"></i><div class="hdr-stat-txt"><div class="hb-label">외출·외박</div><div class="hb-value"><span id="g-today-actions">0</span><small>건</small></div></div></div>
       <div class="hdr-stat" onclick="openShuttleSummary()" title="퇴교차량 신청자"><i class="fa-solid fa-bus"></i><div class="hdr-stat-txt"><div class="hb-label">퇴교차량</div><div class="hb-value"><span id="g-shuttle-count">0</span><small>명</small></div></div></div>
       <div class="hdr-stat hdr-edu edu-unset" onclick="openEduPlacePicker('integrity')" title="금주 청렴교육 장소 설정"><i class="fa-solid fa-scale-balanced"></i><div class="hdr-stat-txt"><div class="hb-label">청렴교육</div><div class="hb-value" style="font-size:17px;"><span id="g-edu-integrity">미정</span></div></div></div>
       <div class="hdr-stat hdr-edu edu-unset" onclick="openEduPlacePicker('union')" title="금주 노조와의 대화 장소 설정"><i class="fa-solid fa-handshake"></i><div class="hdr-stat-txt"><div class="hb-label">노조교육</div><div class="hb-value" style="font-size:17px;"><span id="g-edu-union">미정</span></div></div></div>
@@ -2198,7 +2200,17 @@ body.pc-mode .coord-right{ grid-column:2 !important; grid-row:1 !important; just
           <div id="coordListContainer" style="max-height: 250px; overflow-y: auto; margin-bottom: 15px; border:1px solid #eee; border-radius:8px; padding:10px; background:#f8fafc;"></div>
           <div style="padding:15px; background:#fff; border:1px solid #eee; border-radius:12px;">
               <label class="setup-label">새 담당자 등록 및 서명 업로드</label>
-              <input type="text" id="newCoordInput" class="navy-input" placeholder="성함 직책" style="margin-bottom:8px;">
+              <div style="display:flex; gap:6px; margin-bottom:8px;">
+                  <input type="text" id="newCoordInput" class="navy-input" placeholder="성함 (예: 홍길동)" style="flex:2; margin:0;">
+                  <select id="newCoordTitle" class="navy-input" style="flex:1; margin:0;">
+                      <option value="">직책</option>
+                      <option value="부장">부장</option>
+                      <option value="차장">차장</option>
+                      <option value="과장">과장</option>
+                      <option value="주임">주임</option>
+                      <option value="사원">사원</option>
+                  </select>
+              </div>
               <div style="display:flex; gap:5px;">
                   <input type="file" id="coordSignFile" accept="image/*" style="display:none;" onchange="coordMgr.handleFile(this)">
                   <button class="navy-btn" style="background:#64748b; flex:1;" onclick="document.getElementById('coordSignFile').click()"><i class="fa-solid fa-stamp"></i> 서명 선택</button>
@@ -2408,6 +2420,21 @@ body.pc-mode .coord-right{ grid-column:2 !important; grid-row:1 !important; just
           <button class="navy-btn" style="margin-top:20px; background:#64748b;" onclick="document.getElementById('attendSelectModal').style.display='none'">닫기</button>
       </div>
   </div>
+
+<!-- --- [신규] 외출·외박 대장 (주차별 PDF 출력) --- -->
+  <div id="outingLedgerModal" class="setup-modal" style="z-index: 9500;">
+      <div class="setup-box" style="max-width: 460px;">
+          <div style="text-align:center; margin-bottom:16px;">
+              <h3 style="margin:0; font-size:18px; color:var(--navy-dark);"><i class="fa-solid fa-file-signature" style="margin-right:6px;"></i>외출·외박 대장</h3>
+              <p style="font-size:12px; color:#64748b; margin-top:5px;">주차를 선택하면 그 주 과정별 외출·외박 대장을 PDF로 출력할 수 있습니다. (기록 90일 보관)</p>
+          </div>
+          <select id="olWeekSelect" class="navy-input" style="margin-bottom:14px;" onchange="_olRenderWeek(this.value)"></select>
+          <div id="olCourseList" style="display:flex; flex-direction:column; gap:8px; max-height:360px; overflow-y:auto;"></div>
+          <button class="navy-btn" style="margin-top:18px; background:#64748b;" onclick="document.getElementById('outingLedgerModal').style.display='none'">닫기</button>
+      </div>
+  </div>
+<!-- --- 여기까지 (외출·외박 대장) --- -->
+
 <!-- --- 여기까지 --- -->
 
 
@@ -2664,99 +2691,93 @@ const coordMgr = {
     tempSign: "",
     editingKey: null,
 
-    // 직급별 우선순위 (낮을수록 상단)
-    rankPriority: {
-        "차장": 1,
-        "과장": 2,
-        "대리": 3,
-        "주임": 4,
-        "사원": 5
+    // 직책별 우선순위 (낮을수록 상단)
+    rankPriority: { "부장": 1, "차장": 2, "과장": 3, "주임": 4, "사원": 5 },
+
+    // 합본 문자열에서 성함/직책 분리 (레거시 마이그레이션용)
+    splitNameTitle: function(raw) {
+        raw = String(raw == null ? '' : raw).trim();
+        const RANK = /\s*(부장|차장|과장|대리|주임|사원|팀장|실장|원장)\s*$/;
+        const m = raw.match(RANK);
+        if (m) return { name: raw.replace(RANK, '').trim(), title: m[1] };
+        return { name: raw, title: "" };
     },
 
-    // 이름에서 직급을 찾아 우선순위 숫자를 반환
-    getPriority: function(name) {
-        if (!name) return 99;
-        for (const [rank, priority] of Object.entries(this.rankPriority)) {
-            if (name.includes(rank)) return priority;
-        }
-        return 99; // 직급 미포함 시 하단 배치
+    // 성함 + 직책 합본 (드롭다운 값 / coordinatorName 호환 유지)
+    fullName: function(c) { return ((c.name || '') + ' ' + (c.title || '')).trim(); },
+
+    // 우선순위 (직책 기준)
+    getPriority: function(c) {
+        const t = (typeof c === 'string') ? c : (c && (c.title || c.name) || '');
+        for (const [rank, p] of Object.entries(this.rankPriority)) { if (t.includes(rank)) return p; }
+        return 99;
     },
 
     // 1. 초기화 및 실시간 데이터 바인딩
     init: async function() {
         const ref = firebase.database().ref('system/coordinators');
-        
-        // 데이터가 아예 없을 경우 초기값 세팅 (최초 1회)
         const snap = await ref.once('value');
         if (!snap.exists()) {
             const initial = ["백유민 과장", "주영미 과장", "장영근 과장", "채유란 주임", "김지은 주임", "박찬미 주임"];
-            for (const name of initial) {
-                await ref.push({ name: name, sign: "" });
-            }
+            for (const full of initial) { const p = coordMgr.splitNameTitle(full); await ref.push({ name: p.name, title: p.title, sign: "" }); }
         }
 
-// 실시간 리스너 연결
         ref.on('value', s => {
             const data = s.val() || {};
-            console.log("운영담당자 데이터 수신됨:", data); // 브라우저 콘솔(F12)에서 확인 가능
 
-            // 1. 데이터를 배열로 변환하고 직급/이름순으로 정렬
-            // (this 대신 coordMgr를 직접 호출하는 것이 가장 안전합니다)
+            // [마이그레이션] title 필드가 없는 레거시 항목은 name에서 직책을 분리해 저장
+            const mig = {};
+            Object.keys(data).forEach(k => {
+                const c = data[k] || {};
+                if (c.title === undefined || c.title === null) {
+                    const p = coordMgr.splitNameTitle(c.name || '');
+                    data[k] = Object.assign({}, c, { name: p.name, title: p.title });
+                    mig[k] = { name: p.name, title: p.title };
+                }
+            });
+            if (Object.keys(mig).length) { Object.entries(mig).forEach(([k, v]) => ref.child(k).update(v)); }
+
             coordMgr.list = Object.keys(data).map(k => ({ key: k, ...data[k] }))
                 .sort((a, b) => {
-                    const prioA = coordMgr.getPriority(a.name);
-                    const prioB = coordMgr.getPriority(b.name);
-                    if (prioA !== prioB) return prioA - prioB;
-                    return a.name.localeCompare(b.name);
+                    const pa = coordMgr.getPriority(a), pb = coordMgr.getPriority(b);
+                    if (pa !== pb) return pa - pb;
+                    return (a.name || '').localeCompare(b.name || '');
                 });
 
-            // 2. 중요: 데이터가 수신되자마자 선택창과 관리 리스트를 즉시 다시 그립니다.
-            // 이 함수들이 실행되어야 비로소 눈에 보입니다.
             coordMgr.renderSelects();
             coordMgr.renderManageList();
-            // [JDS260613] 담당자 목록이 (늦게) 로드/변경되면 직책 캐시 초기화 후 메인 헤더 과정담당 직책 갱신
             if (typeof _coordTitleMap !== 'undefined') _coordTitleMap = null;
             if (typeof _coordRefreshCoordTitle === 'function') _coordRefreshCoordTitle();
-
-            console.log("운영담당자 리스트 렌더링 완료. 인원:", coordMgr.list.length);
         });
     },
 
-    // 2. 설정창 내 담당자 선택 드롭다운 갱신
+    // 2. 설정창 내 담당자 선택 드롭다운 갱신 (값=성함+직책 합본)
     renderSelects: function() {
         const sel = document.getElementById('setup-coord-select');
         if (!sel) return;
-
-        const currentVal = sel.value; // 현재 선택된 값 보존
+        const currentVal = sel.value;
         sel.innerHTML = '<option value="">--- 담당자 선택 ---</option>';
-
-        this.list.forEach(c => {
-            const opt = new Option(c.name, c.name);
-            sel.add(opt);
-        });
-
-        // 리스트 갱신 후에도 이전 선택값 유지
+        this.list.forEach(c => { const fn = coordMgr.fullName(c); sel.add(new Option(fn, fn)); });
         if (currentVal) sel.value = currentVal;
     },
 
-    // 3. 관리 모달 내 담당자 리스트 렌더링
+    // 3. 관리 모달 내 담당자 리스트 (직책 칩 + 성함 분리 표시)
     renderManageList: function() {
         const div = document.getElementById('coordListContainer');
         if (!div) return;
-
         if (this.list.length === 0) {
             div.innerHTML = `<div style="text-align:center; padding:20px; color:#94a3b8;">등록된 담당자가 없습니다.</div>`;
             return;
         }
-
         div.innerHTML = this.list.map(c => `
-            <div style="display:flex; justify-content:space-between; padding:12px; border-bottom:1px solid #eee; align-items:center; background:#fff; margin-bottom:5px; border-radius:8px; cursor:pointer; transition: 0.2s; border:${this.editingKey === c.key ? '2px solid #3b82f6' : '1px solid #eee'}" 
+            <div style="display:flex; justify-content:space-between; padding:12px; align-items:center; background:#fff; margin-bottom:5px; border-radius:8px; cursor:pointer; transition:0.2s; border:${this.editingKey === c.key ? '2px solid #3b82f6' : '1px solid #eee'}"
                  onclick="coordMgr.startEdit('${c.key}')">
-                <div style="display:flex; align-items:center; gap:12px; flex:1;">
-                    <span style="font-weight:800; color:#1e293b;">${c.name}</span>
+                <div style="display:flex; align-items:center; gap:10px; flex:1;">
+                    ${c.title ? `<span style="font-size:11px; font-weight:800; color:#2563eb; background:#eff6ff; border:1px solid #bfdbfe; padding:2px 9px; border-radius:999px; flex-shrink:0;">${c.title}</span>` : ''}
+                    <span style="font-weight:800; color:#1e293b;">${c.name || ''}</span>
                     ${c.sign ? `<img src="${c.sign}" style="height:35px; mix-blend-mode:multiply; border:1px solid #eee; border-radius:4px;">` : `<span style="font-size:10px; color:#94a3b8;">(서명 미등록)</span>`}
                 </div>
-                <i class="fa-solid fa-circle-xmark" style="color:#ef4444; cursor:pointer; font-size:20px; padding:5px;" 
+                <i class="fa-solid fa-circle-xmark" style="color:#ef4444; cursor:pointer; font-size:20px; padding:5px;"
                    onclick="event.stopPropagation(); coordMgr.delete('${c.key}')"></i>
             </div>`).join('');
     },
@@ -2765,29 +2786,17 @@ const coordMgr = {
     startEdit: function(key) {
         const item = this.list.find(c => c.key === key);
         if (!item) return;
-
         this.editingKey = key;
         const nameInput = document.getElementById('newCoordInput');
+        const titleSel = document.getElementById('newCoordTitle');
         const regBtn = document.getElementById('coordRegBtn');
-        
-        if (nameInput) nameInput.value = item.name;
-        if (regBtn) {
-            regBtn.innerHTML = '<i class="fa-solid fa-check"></i> 수정완료';
-            regBtn.style.background = "#10b981"; // 성공 색상
-        }
-
+        if (nameInput) nameInput.value = item.name || '';
+        if (titleSel) titleSel.value = item.title || '';
+        if (regBtn) { regBtn.innerHTML = '<i class="fa-solid fa-check"></i> 수정완료'; regBtn.style.background = "#10b981"; }
         const previewImg = document.getElementById('tempSignPreview');
         const previewArea = document.getElementById('signPreviewArea');
-
-        if (item.sign) {
-            this.tempSign = item.sign;
-            if (previewImg) previewImg.src = item.sign;
-            if (previewArea) previewArea.style.display = 'block';
-        } else {
-            this.tempSign = "";
-            if (previewArea) previewArea.style.display = 'none';
-        }
-
+        if (item.sign) { this.tempSign = item.sign; if (previewImg) previewImg.src = item.sign; if (previewArea) previewArea.style.display = 'block'; }
+        else { this.tempSign = ""; if (previewArea) previewArea.style.display = 'none'; }
         this.renderManageList();
         if (nameInput) nameInput.focus();
     },
@@ -2797,15 +2806,13 @@ const coordMgr = {
         this.editingKey = null;
         this.tempSign = "";
         const nameInput = document.getElementById('newCoordInput');
+        const titleSel = document.getElementById('newCoordTitle');
         const regBtn = document.getElementById('coordRegBtn');
         const previewArea = document.getElementById('signPreviewArea');
         const fileInput = document.getElementById('coordSignFile');
-
         if (nameInput) nameInput.value = "";
-        if (regBtn) {
-            regBtn.innerHTML = '등록하기';
-            regBtn.style.background = "#3b82f6";
-        }
+        if (titleSel) titleSel.value = "";
+        if (regBtn) { regBtn.innerHTML = '등록하기'; regBtn.style.background = "#3b82f6"; }
         if (previewArea) previewArea.style.display = 'none';
         if (fileInput) fileInput.value = "";
         this.renderManageList();
@@ -2815,7 +2822,6 @@ const coordMgr = {
     handleFile: function(input) {
         const file = input.files[0];
         if (!file) return;
-        
         const reader = new FileReader();
         reader.onload = (e) => {
             this.tempSign = e.target.result;
@@ -2827,28 +2833,21 @@ const coordMgr = {
         reader.readAsDataURL(file);
     },
 
-    // 7. 저장 (추가/수정 통합)
+    // 7. 저장 (추가/수정 통합) — 성함/직책 분리 저장
     add: async function() {
         const nameInput = document.getElementById('newCoordInput');
+        const titleSel = document.getElementById('newCoordTitle');
         const name = nameInput ? nameInput.value.trim() : "";
-        if (!name) return showKacAlert("성함과 직급을 입력해 주세요. (예: 홍길동 과장)");
-
+        const title = titleSel ? titleSel.value : "";
+        if (!name) return showKacAlert("성함을 입력해 주세요.");
+        if (!title) return showKacAlert("직책을 선택해 주세요.");
         try {
-            const data = { name: name, sign: this.tempSign };
+            const data = { name: name, title: title, sign: this.tempSign };
             const ref = firebase.database().ref('system/coordinators');
-
-            if (this.editingKey) {
-                await ref.child(this.editingKey).update(data);
-                showKacAlert("정보가 수정되었습니다.");
-            } else {
-                await ref.push(data);
-                showKacAlert("신규 담당자가 등록되었습니다.");
-            }
+            if (this.editingKey) { await ref.child(this.editingKey).update(data); showKacAlert("정보가 수정되었습니다."); }
+            else { await ref.push(data); showKacAlert("신규 담당자가 등록되었습니다."); }
             this.resetFields();
-        } catch (e) {
-            console.error(e);
-            showKacAlert("저장 중 오류가 발생했습니다.");
-        }
+        } catch (e) { console.error(e); showKacAlert("저장 중 오류가 발생했습니다."); }
     },
 
     // 8. 삭제
@@ -2857,9 +2856,7 @@ const coordMgr = {
         try {
             await firebase.database().ref(`system/coordinators/${k}`).remove();
             if (this.editingKey === k) this.resetFields();
-        } catch (e) {
-            showKacAlert("삭제 실패");
-        }
+        } catch (e) { showKacAlert("삭제 실패"); }
     },
 
     // 9. 관리 모달 열기
@@ -6914,10 +6911,11 @@ function _coordLoadTitleMap() {
         const map = {};
         Object.values(data).forEach(c => {
             if (c && c.name) {
-                const full = String(c.name).trim();
-                const bare = full.replace(RANK, '').trim();
+                const bare = String(c.name).replace(RANK, '').trim();
+                const full = c.title ? (bare + ' ' + c.title).trim() : String(c.name).trim();
                 if (bare) map[bare] = full;
                 map[full] = full;
+                map[String(c.name).trim()] = full;
             }
         });
         _coordTitleMap = map;
@@ -6931,7 +6929,7 @@ function _coordFullName(nm){
     var RANK=/\s*(차장|부장|팀장|실장|원장|과장|대리|주임|사원|교수)\s*$/;
     if(RANK.test(nm)) return nm;
     if(_coordTitleMap && _coordTitleMap[nm]) return _coordTitleMap[nm];
-    if(typeof coordMgr!=='undefined' && coordMgr.list){ var bare=nm.replace(RANK,'').trim(); for(var i=0;i<coordMgr.list.length;i++){ var cn=String(coordMgr.list[i].name||''); if(cn.replace(RANK,'').trim()===bare) return cn; } }
+    if(typeof coordMgr!=='undefined' && coordMgr.list){ var bare=nm.replace(RANK,'').trim(); for(var i=0;i<coordMgr.list.length;i++){ var ci=coordMgr.list[i]; var cbare=String(ci.name||'').replace(RANK,'').trim(); if(cbare===bare){ return ((cbare+' '+(ci.title||'')).trim())||cbare; } } }
     try{ _coordLoadTitleMap(); }catch(e){}
     return nm;
 }
@@ -7476,6 +7474,90 @@ function openOutingSummary(){
   _cpop('<i class="fa-solid fa-file-signature"></i> 외출·외박 신청 현황 (과정별)', blocks);
   window._coordPopupRefresh=openOutingSummary;
 }
+// ====== [신규] 외출·외박 대장 — 주차별 과정 PDF 출력 런처 ======
+let _olData = null;
+function _olMonday(dateStr){
+    const d = new Date(String(dateStr||'').slice(0,10) + 'T00:00:00');
+    if(isNaN(d)) return '';
+    const dow = (d.getDay()+6)%7;
+    d.setDate(d.getDate()-dow);
+    const y=d.getFullYear(), m=String(d.getMonth()+1).padStart(2,'0'), dd=String(d.getDate()).padStart(2,'0');
+    return y+'-'+m+'-'+dd;
+}
+function _olWeekLabel(weekKey){
+    const d=new Date(weekKey+'T00:00:00'); if(isNaN(d)) return weekKey;
+    const e=new Date(d); e.setDate(e.getDate()+4);
+    const f=(x)=>String(x.getMonth()+1).padStart(2,'0')+'.'+String(x.getDate()).padStart(2,'0');
+    return weekKey.slice(0,4)+'. '+f(d)+' ~ '+f(e);
+}
+function _olCountActions(aa){
+    let n=0; if(!aa) return 0;
+    Object.keys(aa).forEach(dt=>{ if(!/^\d{4}-\d{2}-\d{2}$/.test(dt)) return; Object.values(aa[dt]||{}).forEach(a=>{ if(a&&a.name) n++; }); });
+    return n;
+}
+async function openOutingRegister(){
+    const modal=document.getElementById('outingLedgerModal');
+    const sel=document.getElementById('olWeekSelect');
+    const list=document.getElementById('olCourseList');
+    if(!modal||!sel||!list) return;
+    modal.style.display='flex';
+    list.innerHTML='<div style="text-align:center; padding:24px; color:#94a3b8; font-size:13px;">불러오는 중...</div>';
+    sel.innerHTML='';
+    const weeks={};
+    const _push=(wk,obj)=>{ if(!wk) return; (weeks[wk]=weeks[wk]||[]).push(obj); };
+    try {
+        (_coordActiveRooms()||[]).forEach(r=>{
+            const period=(''+(r.s.period||'')).trim();
+            const start=period.includes('~')?period.split('~')[0].trim():'';
+            const wk=_olMonday(start)||_olMonday(getTodayString());
+            _push(wk, { courseName:r.s.courseName||('Room '+r.rid), count:_olCountActions(r.room.admin_actions), room:r.rid, archiveId:null, key:r.rid+'|'+(r.s.courseName||'') });
+        });
+    } catch(e){ console.warn('[외출대장] active 수집 오류', e); }
+    try {
+        const arSnap=await firebase.database().ref('system/course_archive').once('value');
+        const ar=arSnap.val()||{};
+        Object.keys(ar).forEach(id=>{
+            const c=ar[id]||{};
+            const period=(''+(c.period||'')).trim();
+            const start=period.includes('~')?period.split('~')[0].trim():'';
+            const wk=_olMonday(start);
+            if(!wk) return;
+            const dupKey=(c.room||'')+'|'+(c.courseName||'');
+            if((weeks[wk]||[]).some(x=>x.key===dupKey)) return;
+            _push(wk, { courseName:c.courseName||('Room '+(c.room||'')), count:_olCountActions(c.admin_actions), room:c.room||'', archiveId:id, key:dupKey });
+        });
+    } catch(e){ console.warn('[외출대장] archive 수집 오류', e); }
+    _olData=weeks;
+    const order=Object.keys(weeks).sort((a,b)=>b.localeCompare(a));
+    if(!order.length){ list.innerHTML='<div style="text-align:center; padding:24px; color:#94a3b8; font-size:13px;">표시할 과정이 없습니다.</div>'; return; }
+    const curWk=_olMonday(getTodayString());
+    sel.innerHTML=order.map(wk=>'<option value="'+wk+'">'+_olWeekLabel(wk)+(wk===curWk?' · 이번주':'')+'</option>').join('');
+    sel.value=weeks[curWk]?curWk:order[0];
+    _olRenderWeek(sel.value);
+}
+function _olRenderWeek(weekKey){
+    const list=document.getElementById('olCourseList');
+    if(!list||!_olData) return;
+    const arr=(_olData[weekKey]||[]).slice().sort((a,b)=>(b.count-a.count)||String(a.courseName).localeCompare(b.courseName));
+    if(!arr.length){ list.innerHTML='<div style="text-align:center; padding:24px; color:#94a3b8; font-size:13px;">해당 주차 과정이 없습니다.</div>'; return; }
+    list.innerHTML=arr.map(c=>{
+        const url=c.archiveId?('outing_ledger.html?archive='+encodeURIComponent(c.archiveId)):('outing_ledger.html?room='+encodeURIComponent(c.room));
+        if(c.count<=0){
+            return '<div style="display:flex; align-items:center; justify-content:space-between; gap:10px; background:#f8fafc; border:1px solid #eef2f7; border-radius:13px; padding:13px 15px;">'
+                +'<span style="font-weight:700; color:#94a3b8; font-size:14px; word-break:keep-all;">'+c.courseName+'</span>'
+                +'<span style="font-size:12px; color:#94a3b8; font-weight:700; flex-shrink:0;">0건</span></div>';
+        }
+        return '<button onclick="window.open(\''+url+'\',\'_blank\')" style="display:flex; align-items:center; justify-content:space-between; gap:12px; width:100%; background:#fff; border:1px solid #eef2f7; border-radius:13px; padding:13px 15px; cursor:pointer; transition:all .15s;" onmouseenter="this.style.borderColor=\'#bfdbfe\'; this.style.boxShadow=\'0 6px 16px rgba(37,99,235,.10)\'; this.style.transform=\'translateY(-1px)\';" onmouseleave="this.style.borderColor=\'#eef2f7\'; this.style.boxShadow=\'none\'; this.style.transform=\'none\';">'
+            +'<span style="display:flex; align-items:center; gap:11px; min-width:0;">'
+            +'<span style="width:40px; height:40px; flex-shrink:0; border-radius:11px; background:#eff6ff; color:#2563eb; display:flex; align-items:center; justify-content:center; font-size:16px;"><i class="fa-solid fa-file-signature"></i></span>'
+            +'<span style="display:flex; flex-direction:column; align-items:flex-start; gap:4px; min-width:0;">'
+            +'<span style="font-weight:800; font-size:15px; color:#1e293b; line-height:1.2; word-break:keep-all; text-align:left;">'+c.courseName+'</span>'
+            +'<span style="font-size:11px; font-weight:700; color:#2563eb; background:#eff6ff; border:1px solid #bfdbfe; padding:2px 9px; border-radius:999px;">'+c.count+'건</span>'
+            +'</span></span>'
+            +'<span style="font-size:13px; color:#2563eb; font-weight:800; white-space:nowrap; flex-shrink:0;">대장 출력 <i class="fa-solid fa-arrow-right"></i></span></button>';
+    }).join('');
+}
+
 function _renderOutingTable(sel){
   const wrap=document.getElementById('outTableWrap'); if(!wrap) return;
   let rows=window._outingRows||[];
