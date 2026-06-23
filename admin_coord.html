@@ -1585,6 +1585,9 @@ body.cpop-locked{ overflow:hidden !important; }
 .cpop-table{ width:100%; border-collapse:collapse; }
 .cpop-table th{ background:#f1f5f9; color:#475569; font-size:13.5px; font-weight:800; padding:11px 8px; border-bottom:2px solid #e2e8f0; }
 .cpop-table td{ text-align:center; font-size:15px; padding:11px 8px; border-bottom:1px solid #f1f5f9; }
+.cov-table th{ font-size:14.5px !important; padding:12px 8px !important; }
+.cov-table td{ font-size:16px !important; padding:14px 9px !important; }
+.cov-table td:nth-child(2){ font-size:17px; }
 .cpop-empty{ text-align:center; color:#94a3b8; font-weight:700; padding:40px; }
 .cpop-search{ width:100%; padding:11px; border:1.5px solid #e2e8f0; border-radius:10px; font-size:14px; margin-bottom:12px; box-sizing:border-box; }
 .cpop-course{ border:1px solid #e2e8f0; border-radius:12px; margin-bottom:12px; overflow:hidden; }
@@ -7348,14 +7351,44 @@ function _coordActiveRooms(){
 function _studentsOf(room){ return room.students ? Object.values(room.students).filter(x=>x && x.name && (''+x.name).trim() && x.name!=='undefined') : []; }
 
 /* 1) 운영 과정: 강의실/과정명/담당자/담임교수/기간/인원 */
+function _courseOverviewCount(r){
+  var arrived=(typeof _studentsOf==='function'?_studentsOf(r.room):[]).length;
+  var roster=[]; var curPeriod=(''+(r.s.period||'')).trim();
+  var cr=r.room.coordRoster;
+  if(cr&&Array.isArray(cr.list)&&cr.list.length){ var crP=(''+(cr.period||'')).trim(); if(!crP||!curPeriod||crP===curPeriod) roster=cr.list; }
+  if(!roster.length){ var ext=window._coordRosterExt||{}; var k=String(r.s.courseName||'').replace(/\s+/g,'').toLowerCase(); var cands=ext[k]||[]; var pick=cands.find(function(c){return curPeriod&&(''+(c.period||'')).trim()===curPeriod;})||cands.find(function(c){return (''+(c.room||''))===(''+r.rid);})||cands.slice().sort(function(a,b){return (b.list?b.list.length:0)-(a.list?a.list.length:0);})[0]; if(pick&&Array.isArray(pick.list)) roster=pick.list; }
+  var expected=roster.length;
+  if(!expected){ var es=r.room.expectedStudents; if(typeof es==='number') expected=es; else if(es&&typeof es==='object') expected=Object.keys(es).length; }
+  if(!expected) expected=arrived;
+  return {expected:expected, arrived:arrived};
+}
 function _courseOverviewHTML(){
   const rooms=_coordActiveRooms();
   const full = (nm)=> (typeof _coordFullName==='function') ? (_coordFullName(nm)|| (nm||'-')) : (nm||'-');
-  return rooms.length
-    ? `<table class="cpop-table"><thead><tr><th>강의실</th><th>과정명</th><th>담당자</th><th>담임교수</th><th>기간</th><th>인원</th></tr></thead><tbody>`
-      + rooms.map(r=>`<tr><td style="font-weight:900;">ROOM #${r.rid}</td><td style="text-align:left;font-size:18px;font-weight:800;">${_esc(r.s.courseName||'-')}</td><td style="font-weight:700;">${_esc(full(r.s.coordinatorName)||'-')}</td><td>${_esc((r.st.professorName||'').trim()? (r.st.professorName.trim()+' 교수') :'-')}</td><td style="font-size:12px;">${_esc(r.s.period||'-')}</td><td><b style="font-size:20px;color:#2563eb;">${_studentsOf(r.room).length}</b>명</td></tr>`).join('')
-      + `</tbody></table>`
-    : '<div class="cpop-empty">운영 중인 과정이 없습니다.</div>';
+  if(!rooms.length) return '<div class="cpop-empty">운영 중인 과정이 없습니다.</div>';
+  var today=(typeof _coordToday==='function'?_coordToday():new Date().toISOString().slice(0,10));
+  var head='<table class="cpop-table cov-table"><thead>'
+    +'<tr><th rowspan="2">구분</th><th rowspan="2" style="text-align:left;">과정명</th><th rowspan="2">강의실</th><th rowspan="2">교육기간</th><th colspan="2" style="background:#e8f0fe;">수강인원</th><th rowspan="2">담임교수</th><th rowspan="2">과정운영담당자</th><th rowspan="2">비고</th></tr>'
+    +'<tr><th style="background:#eef4ff;">예정</th><th style="background:#eafaf0;">입교</th></tr>'
+    +'</thead><tbody>';
+  var body=rooms.map(function(r){
+    var c=_courseOverviewCount(r);
+    var start=(''+(r.s.period||'')).split(' ~ ')[0]||'';
+    var bigo=(start&&today>=start)?'<span style="color:#16a34a;font-weight:800;">진행중</span>':'<span style="color:#2563eb;font-weight:700;">예정</span>';
+    var prof=(r.st.professorName||'').trim()?(_esc(r.st.professorName.trim())+' 교수'):'-';
+    return '<tr>'
+      +'<td style="font-weight:900;">ROOM #'+_esc(r.rid)+'</td>'
+      +'<td style="text-align:left;font-weight:800;color:#0f172a;">'+_esc(r.s.courseName||'-')+'</td>'
+      +'<td>'+_esc(r.s.roomDetailName||r.s.roomDetail||'-')+'</td>'
+      +'<td style="white-space:nowrap;font-size:13.5px;">'+_esc(r.s.period||'-')+'</td>'
+      +'<td><b style="font-size:18px;color:#1e3a8a;">'+c.expected+'</b><span style="font-size:12px;color:#94a3b8;">명</span></td>'
+      +'<td><b style="font-size:18px;color:#16a34a;">'+c.arrived+'</b><span style="font-size:12px;color:#94a3b8;">명</span></td>'
+      +'<td>'+prof+'</td>'
+      +'<td style="font-weight:700;">'+_esc(full(r.s.coordinatorName)||'-')+'</td>'
+      +'<td>'+bigo+'</td>'
+      +'</tr>';
+  }).join('');
+  return head+body+'</tbody></table>';
 }
 function openCourseOverview(){
   _cpop('<i class="fa-solid fa-graduation-cap"></i> 운영 과정 현황', _courseOverviewHTML());
@@ -7567,13 +7600,26 @@ function openOutingSummary(){
     Object.keys(aa).forEach(dt=>{ if(!/^\d{4}-\d{2}-\d{2}$/.test(dt)) return; Object.values(aa[dt]||{}).forEach(a=>{ if(a&&a.name&&(a.timestamp||0)>=_wStart&&(a.timestamp||0)<_wEnd) list.push(Object.assign({date:dt},a)); }); });
     if(!list.length) return '';
     list.sort((a,b)=>(''+(a.date||'')).localeCompare(''+(b.date||''))||((a.timestamp||0)-(b.timestamp||0)));
-    const rows=list.map((a,i)=>{ var _st=_byName[_norm(a.name)]||{}; var _sabun=a.empNo||a.sabun||a.empno||_st.empNo||_st.sabun||_st.empno||_st.id||_st.studentId||'-'; var _dept=a.dept||_st.dept||_st.affil||_st.org||_st.position||'-'; var _phone=a.phone||a.contact||a.tel||_st.phone||_st.contact||_st.tel||_st.mobile||'-'; return `<tr><td style="color:#94a3b8;">${i+1}</td><td style="color:#64748b;white-space:nowrap;">${_esc(_sabun)}</td><td style="text-align:left;color:#475569;">${_esc(_dept)}</td><td style="color:#64748b;white-space:nowrap;">${_esc(_phone)}</td><td style="font-weight:800;">${_esc(a.name||'-')}</td></tr>`; }).join('');
+    const rows=list.map((a,i)=>{ var _st=_byName[_norm(a.name)]||{}; var _ix=(window._coordSabunIdx||{})[_norm(a.name)]||{}; var _sabun=a.empNo||a.sabun||a.empno||_st.empNo||_st.sabun||_st.empno||_st.id||_st.studentId||_ix.sabun||'-'; var _dept=a.dept||_st.dept||_st.affil||_st.org||_st.position||_ix.dept||'-'; var _phone=a.phone||a.contact||a.tel||_st.phone||_st.contact||_st.tel||_st.mobile||'-'; return `<tr><td style="color:#94a3b8;">${i+1}</td><td style="color:#64748b;white-space:nowrap;">${_esc(_sabun)}</td><td style="text-align:left;color:#475569;">${_esc(_dept)}</td><td style="color:#64748b;white-space:nowrap;">${_esc(_phone)}</td><td style="font-weight:800;">${_esc(a.name||'-')}</td></tr>`; }).join('');
     return `<div class="cpop-course"><div class="cpop-course-h">ROOM #${_esc(r.rid)} · ${_esc(r.s.courseName||'-')} <span style="color:#ea580c;font-size:14px;">${list.length}건</span></div>
       <table class="cpop-table" style="table-layout:fixed;"><colgroup><col style="width:9%"><col style="width:18%"><col style="width:33%"><col style="width:22%"><col style="width:18%"></colgroup><thead><tr><th>연번</th><th>사번</th><th style="text-align:left;">소속</th><th>연락처</th><th>성명</th></tr></thead><tbody>${rows}</tbody></table></div>`;
   }).join('');
   if(!blocks.trim()) blocks='<div class="cpop-empty">현재 외출·외박 신청자가 없습니다.</div>';
   _cpop('<i class="fa-solid fa-file-signature"></i> 외출·외박 신청 현황 (과정별)', blocks);
   window._coordPopupRefresh=openOutingSummary;
+  if(!window._coordSabunIdxReady){
+    Promise.all([
+      firebase.database().ref('system/dorm/rosters').once('value').catch(function(){return null;}),
+      firebase.database().ref('system/coord/rosters').once('value').catch(function(){return null;})
+    ]).then(function(res){
+      var idx={}; function _nm(x){ return String(x==null?'':x).replace(/\s+/g,'').toLowerCase(); }
+      function add(list){ if(!Array.isArray(list)) return; list.forEach(function(p){ if(p&&p.name){ var k=_nm(p.name); if(!idx[k]) idx[k]={ sabun:(p.empNo||p.sabun||p.empno||p.id||p.studentId||''), dept:(p.dept||p.affil||p.org||p.position||'') }; } }); }
+      res.forEach(function(snap){ if(!snap) return; var v=snap.val()||{}; Object.keys(v).forEach(function(kk){ var it=v[kk]; if(it&&Array.isArray(it.list)) add(it.list); }); });
+      try{ _coordActiveRooms().forEach(function(r){ if(r.room.coordRoster&&Array.isArray(r.room.coordRoster.list)) add(r.room.coordRoster.list); add((typeof _studentsOf==='function'?_studentsOf(r.room):[])); }); }catch(e){}
+      window._coordSabunIdx=idx; window._coordSabunIdxReady=true;
+      if(document.getElementById('coordPopup') && document.getElementById('coordPopup').classList.contains('open') && window._coordPopupRefresh===openOutingSummary) openOutingSummary();
+    }).catch(function(){});
+  }
 }
 // ====== [신규] 외출·외박 대장 — 주차별 과정 PDF 출력 런처 ======
 let _olData = null;
