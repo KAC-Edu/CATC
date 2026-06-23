@@ -1751,6 +1751,10 @@ body.pc-mode .coord-pc-only{ display:flex !important; }
 .hdr-stat.shuttle-on .hb-label{ color:rgba(255,255,255,0.95) !important; }
 .hdr-stat.shuttle-on .hb-value{ color:#fff !important; }
 .hdr-stat.shuttle-on > i{ color:#dcfce7 !important; }
+.hdr-stat.shuttle-off{ background:rgba(220,38,38,0.60) !important; border-color:#ef4444 !important; box-shadow:0 0 0 1px rgba(239,68,68,.45),0 4px 12px rgba(220,38,38,.30) !important; }
+.hdr-stat.shuttle-off .hb-label{ color:rgba(255,255,255,0.95) !important; }
+.hdr-stat.shuttle-off .hb-value{ color:#fff !important; }
+.hdr-stat.shuttle-off > i{ color:#fee2e2 !important; }
 body.pc-mode .coord-hdr-stats{ gap:10px; overflow:visible !important; min-width:auto !important; flex-wrap:nowrap !important; }
 body.pc-mode .coord-left{ grid-column:1 !important; grid-row:1 !important; justify-self:start !important; align-self:center !important; }
 body.pc-mode .hdr-stat{ padding:8px 18px; }
@@ -7827,9 +7831,13 @@ function _coordUpdateShuttleBtn(){
   try{
     var sd=window._shuttleDep||{};
     var today=(typeof _coordToday==='function'?_coordToday():new Date().toISOString().slice(0,10));
-    var on=!!(sd && sd.round1 && sd.date && sd.date>=today);
+    var isT=function(v){ return /^\d{1,2}:\d{2}$/.test(v||''); };
+    var dateOk=!!(sd && sd.date && sd.date>=today);
+    var r1=sd&&sd.round1||'', r2=sd&&sd.round2||'';
+    // 1차 실제시간 + (2차 실제시간 또는 운행안함) 이어야 확정(녹색). 하나라도 미정/미선택이면 빨강
+    var green = dateOk && isT(r1) && (isT(r2) || r2==='운행안함');
     var sc=document.getElementById('g-shuttle-count'); var blk=sc?sc.closest('.hdr-stat'):null;
-    if(blk) blk.classList.toggle('shuttle-on', on);
+    if(blk){ blk.classList.toggle('shuttle-on', green); blk.classList.toggle('shuttle-off', !green); }
   }catch(e){}
 }
 // [복원] 규칙 미게시 대비: 과정별 shuttle/departure(이미 저장됨)에서 1차/2차 상태 복원
