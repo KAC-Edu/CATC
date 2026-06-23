@@ -968,7 +968,7 @@
 <!-- [최종 수정] 외출/외박 신청 및 복귀 시스템 팝업 -->
 <div id="adminActionModal" class="menu-overlay" style="display:none; z-index: 7000;">
     <div class="menu-box" style="width:95%; padding: 20px; border-radius: 20px; max-width: 450px; position:relative;">
-        <div class="kac-pbar"><span class="kac-pt">외출 · 외박 신청</span><button type="button" id="adminCloseX" class="kac-px" onclick="closeAdminAction()" aria-label="닫기"><i class="fa-solid fa-xmark"></i></button></div>
+        <div class="kac-pbar"><span class="kac-pt">외출 · 외박 신청</span><button type="button" id="adminCloseX" class="kac-px" onclick="closePanelSmooth('adminActionModal')" aria-label="닫기"><i class="fa-solid fa-xmark"></i></button></div>
         <p id="adminActionDate" style="display:none;">오늘 날짜: 2026-01-20</p>
 
         <!-- [현황 영역] 이미 신청했을 때만 보임 -->
@@ -998,7 +998,7 @@
                         <a href="tel:043-290-2321" style="display:flex; align-items:center; justify-content:center; gap:7px; margin-top:9px; padding:9px 13px; background:#ea580c; color:#fff; border-radius:9px; text-decoration:none; font-weight:800; font-size:13px;"><i class="fa-solid fa-phone"></i> 정문(수위실) 043-290-2321</a>
                     </div>
                 </div>
-                <button onclick="closeAdminAction()" style="width:100%; margin-top:6px; padding:14px; border:none; border-radius:12px; background:#f1f5f9; color:#475569; font-size:15px; font-weight:800; cursor:pointer;">닫기</button>
+                <button onclick="closePanelSmooth('adminActionModal')" style="width:100%; margin-top:6px; padding:14px; border:none; border-radius:12px; background:#f1f5f9; color:#475569; font-size:15px; font-weight:800; cursor:pointer;">닫기</button>
 
             </div>
         </div>
@@ -1158,10 +1158,10 @@
                     <i class="fa-solid fa-circle-info" style="margin-right:5px;"></i> 16시 이후 신청은 <b>석식을 드시는 것</b>으로 간주됩니다. 제외가 필요하시면 식당(<a href="tel:043-290-2325" style="color:#1d4ed8; font-weight:800;">☎ 043-290-2325</a>)으로 문의해 주세요.
                 </div>
 
-                <button type="button" onclick="closeAdminAction()" style="width:100%; margin-top:16px; padding:13px; border:none; border-radius:12px; background:#0f172a; color:#fff; font-size:15px; font-weight:900; cursor:pointer;">완료</button>
+                <button type="button" onclick="closePanelSmooth('adminActionModal')" style="width:100%; margin-top:16px; padding:13px; border:none; border-radius:12px; background:#0f172a; color:#fff; font-size:15px; font-weight:900; cursor:pointer;">완료</button>
             </div>
             <!-- 각 단계 하단 공통 닫기(엄지 닿는 위치) -->
-            <button type="button" onclick="closeAdminAction()" style="width:100%; margin-top:12px; padding:15px; border:none; border-radius:13px; background:#0f172a; color:#fff; font-size:15px; font-weight:800; cursor:pointer;">닫기</button>
+            <button type="button" onclick="closePanelSmooth('adminActionModal')" style="width:100%; margin-top:12px; padding:15px; border:none; border-radius:13px; background:#0f172a; color:#fff; font-size:15px; font-weight:800; cursor:pointer;">닫기</button>
         </div>
     </div>
 </div>
@@ -3173,10 +3173,8 @@ function setupShuttleTimeGate(){
     try{ if(window._shuttleGateRef) window._shuttleGateRef.off(); }catch(e){}
     try{ if(window._shuttleOnlineRef) window._shuttleOnlineRef.off(); }catch(e){}
     function _applyShuttleGate(){
-        var dep = window._shuttleDep;
-        var today = getTodayString();
-        var ok = !!(dep && dep.time && dep.time !== '미정' && dep.date && dep.date >= today);
-        // [온라인] 비대면(온라인 Zoom) 과정은 교육생 퇴교차량이 필요 없어 메뉴 자체를 숨김
+        // [요청] 차량신청 메뉴는 항상 노출 (1차 미정/미설정이어도 표시) — 온라인 과정만 제외
+        var ok = true;
         if(window._isOnlineCourse) ok = false;
         var el = document.getElementById('menu-shuttle');
         if(el) el.style.display = ok ? '' : 'none';
@@ -3292,13 +3290,15 @@ async function openShuttleApply() {
                 else { recEl.style.display='none'; }
             })();
         } else {
-            // 운영부가 정확한 출발시간 미설정 → 시간 블록 자체를 숨김 + 신청 불가
-            if (_bar) _bar.style.display = 'none';
+            // [요청] 출발 시간 미설정/미정이어도 신청은 먼저 받는다(운영부 수요 파악용) — 시간만 추후 공지
+            if (_bar) _bar.style.display = '';
+            timeEl.textContent = (dep && dep.time === '미정') ? '출발 시간 추후 공지 · 신청 먼저 받습니다' : '출발 시간 공지 전 · 신청 먼저 받습니다';
+            timeEl.style.color = '#fff';
+            timeEl.style.fontSize = '17px';
             currentDepTime = null;
             currentDepTime2 = null;
             var _rec0=document.getElementById('shuttleRecommend'); if(_rec0) _rec0.style.display='none';
-            const _sa = document.getElementById('shuttleSelectionArea'); if (_sa) _sa.style.display = 'none';
-            const _ca = document.getElementById('shuttleCancelArea'); if (_ca) _ca.style.display = 'none';
+            // 신청/취소 영역은 기존 신청 여부 로직이 결정 (여기서 숨기지 않음)
         }
         refresh();
     });
