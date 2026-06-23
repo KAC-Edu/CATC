@@ -4695,7 +4695,7 @@ loadShuttleData: function() {
         if (dep && dep.time) {
             el.innerHTML = `
                 <div style="font-size:20px; opacity:0.8; margin-bottom:2px;">${dep.date}</div>
-                <div style="font-size:${dep.time2?'30px':'42px'}; font-weight:900; line-height:1.15;">${dep.time2?('1차 '+dep.time+' / 2차 '+dep.time2):dep.time}</div>
+                ${(()=>{ const t2=dep.time2||''; const t2t=/^\d{1,2}:\d{2}$/.test(t2); if(!t2) return `<div style="font-size:42px; font-weight:900; line-height:1.1;">${dep.time}</div>`; return `<div style="display:flex; flex-direction:column; gap:3px; align-items:center; line-height:1.12;"><div style="font-size:30px; font-weight:900;"><span style="font-size:15px; opacity:.8; font-weight:800; margin-right:5px;">1차</span>${dep.time}</div><div style="font-size:${t2t?'30px':'21px'}; font-weight:900; ${t2t?'':'opacity:.85;'}"><span style="font-size:15px; opacity:.8; font-weight:800; margin-right:5px;">2차</span>${t2}</div></div>`; })()}
                 <div style="font-size:16px; margin-top:10px; font-weight:800; background:rgba(255,255,255,0.15); padding:4px 12px; border-radius:50px; display:inline-block;">
                     퇴교차량 출발
                 </div>
