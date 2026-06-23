@@ -4694,11 +4694,9 @@ loadShuttleData: function() {
 
         if (dep && dep.time) {
             el.innerHTML = `
-                <div style="font-size:20px; opacity:0.8; margin-bottom:2px;">${dep.date}</div>
-                ${(()=>{ const t2=dep.time2||''; const t2t=/^\d{1,2}:\d{2}$/.test(t2); if(!t2) return `<div style="font-size:42px; font-weight:900; line-height:1.1;">${dep.time}</div>`; return `<div style="display:flex; flex-direction:column; gap:3px; align-items:center; line-height:1.12;"><div style="font-size:30px; font-weight:900;"><span style="font-size:15px; opacity:.8; font-weight:800; margin-right:5px;">1차</span>${dep.time}</div><div style="font-size:${t2t?'30px':'21px'}; font-weight:900; ${t2t?'':'opacity:.85;'}"><span style="font-size:15px; opacity:.8; font-weight:800; margin-right:5px;">2차</span>${t2}</div></div>`; })()}
-                <div style="font-size:16px; margin-top:10px; font-weight:800; background:rgba(255,255,255,0.15); padding:4px 12px; border-radius:50px; display:inline-block;">
-                    퇴교차량 출발
-                </div>
+                <div style="font-size:30px; font-weight:900; opacity:0.96; margin-bottom:16px; letter-spacing:.5px;">${dep.date}</div>
+                ${(()=>{ const t2=dep.time2||''; const t2t=/^\d{1,2}:\d{2}$/.test(t2); const t1t=/^\d{1,2}:\d{2}$/.test(dep.time||''); if(!t2) return `<div style="font-size:46px; font-weight:900; line-height:1.05;">${dep.time}</div>`; return `<div style="display:inline-grid; grid-template-columns:auto auto auto; column-gap:10px; row-gap:11px; align-items:baseline; text-align:left;"><span style="font-size:20px; font-weight:800; opacity:.85;">1차</span><span style="font-size:20px; font-weight:800; opacity:.55;">:</span><span style="font-size:${t1t?'30px':'23px'}; font-weight:900; ${t1t?'':'opacity:.92;'}">${dep.time}</span><span style="font-size:20px; font-weight:800; opacity:.85;">2차</span><span style="font-size:20px; font-weight:800; opacity:.55;">:</span><span style="font-size:${t2t?'30px':'23px'}; font-weight:900; ${t2t?'':'opacity:.92;'}">${t2}</span></div>`; })()}
+                <div style="font-size:19px; margin-top:18px; font-weight:900; background:rgba(255,255,255,0.18); padding:9px 22px; border-radius:50px; display:inline-block;"><i class="fa-solid fa-bus" style="margin-right:7px;"></i> 퇴교차량 출발</div>
             `;
             el.style.color = "white";
             // 입력창에도 현재 설정값 반영
