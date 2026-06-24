@@ -3,8 +3,8 @@
 <head>
 <!-- ============================================================
   CATC · 교육지원부 · 생활관 배정  (dorm_admin.html)
-  @version  F1
-  @build    20260624-073000
+  @version  G1
+  @build    20260624-074500
   ────────────────────────────────────────────────────────
   [코드 수정 규칙 · AI/개발자 공통]
   이 파일을 한 글자라도 고치면:
@@ -86,6 +86,9 @@
   vF1: [전체] 화면 자동맞춤(auto-fit) 기본 배율을 BASE_ZOOM=0.75로 설정 — 75% 줌으로 디자인했던 화면이
       100%에서도 같은 크기로 보이도록 일괄 축소(관리자 화면+키오스크 동시 적용). 가로 넘침 시 추가 축소는 유지.
       추후 BASE_ZOOM 값만 바꾸면 dorm_admin 전체 크기를 한 번에 조정 가능.
+  vG1: [키오스크] 검색 결과 표시 개선 — 부분 입력으로 여러 명이 뜨면 큰 카드가 화면을 덮던 문제 수정.
+      1명일 때만 큰 노란 카드, 2명 이상이면 깔끔한 목록(이름·생활관)으로 표시 + '이름을 더 입력하세요' 안내.
+      결과 영역 스크롤 허용으로 키보드와 겹침 방지.
   vZ: [키오스크] 전체화면이 실제로 안 걸리던 버그 수정 — 기존엔 5초 시점에 모달을 먼저 열어
       모달이 헤더를 덮는 바람에 release(손 뗌)가 헤더가 아닌 모달에서 잡혀 requestFullscreen이
       호출되지 않았음. 5초엔 '진입 준비'만 표시하고, 손을 뗄 때(같은 사용자 제스처) 전체화면 요청+모달
@@ -6132,7 +6135,7 @@
 </script>
 <style>@media print{#__catcVer{display:none!important}}</style>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">VI</div>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">VJ</div>
 <script>
 /* ===== [공용] 종료된 과정 자동 정리 (모든 플랫폼 공통) — 종료일 지난 방을 다음날 미개설로 비움. 브라우저별 하루 1회 ===== */
 window.kacExpireEndedCourses = async function(){
@@ -6213,7 +6216,7 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
 #dormKioskCourseWrap{ transition:flex-basis .35s ease, opacity .3s ease, transform .35s ease, margin .3s ease; }
 #dormKioskModal.search-on #dormKioskCourseWrap{ flex:0 0 0 !important; opacity:0; transform:translateY(-40px); overflow:hidden; margin:0; pointer-events:none; }
 #dormKioskResultArea{ flex:0 0 0; opacity:0; overflow:hidden; transition:flex-basis .35s ease, opacity .35s ease; }
-#dormKioskModal.search-on #dormKioskResultArea{ flex:1 1 auto; opacity:1; }
+#dormKioskModal.search-on #dormKioskResultArea{ flex:1 1 auto; opacity:1; overflow:auto; }
 #dormKioskKbd{ flex-shrink:0; max-height:0; opacity:0; transform:translateY(50px); overflow:hidden; transition:max-height .38s ease, opacity .3s ease, transform .38s ease; }
 #dormKioskModal.search-on #dormKioskKbd{ max-height:48vh; opacity:1; transform:none; }
 #dormKioskModal.search-on #dormKioskSearch{ border-color:#3b82f6 !important; box-shadow:0 0 0 4px rgba(59,130,246,.25); }
@@ -6235,6 +6238,13 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
 #dormKioskResult .kbhit-room{ font-size:78px; font-weight:900; color:#7dd3fc; line-height:1.05; }
 #dormKioskResult .kbhit-more{ margin-top:14px; color:#94a3b8; font-size:24px; }
 #dormKioskResult .kbhit-empty{ color:#64748b; font-size:30px; font-weight:700; }
+/* 여러 명: 깔끔한 목록 */
+#dormKioskResult .kbmulti{ max-width:780px; margin:0 auto; }
+#dormKioskResult .kbmulti-h{ font-size:22px; color:#94a3b8; font-weight:800; margin-bottom:14px; }
+#dormKioskResult .kbmulti-row{ display:flex; align-items:center; justify-content:space-between; gap:24px; padding:14px 26px; margin:9px 0; border:2px solid rgba(250,204,21,.45); border-radius:16px; background:rgba(250,204,21,.06); }
+#dormKioskResult .kbmulti-row .nm{ font-size:30px; font-weight:900; color:#fde047; white-space:nowrap; }
+#dormKioskResult .kbmulti-row .rm{ font-size:32px; font-weight:900; color:#7dd3fc; white-space:nowrap; }
+#dormKioskResult .kbmulti-more{ color:#94a3b8; font-size:18px; margin-top:8px; }
 </style>
 <div id="dormKioskModal" style="display:none; position:fixed; inset:0; z-index:100000; flex-direction:column; overflow:auto; background:linear-gradient(160deg,#0b1220,#0f172a); color:#e2e8f0; font-family:'Pretendard','Noto Sans KR',sans-serif;">
   <div style="display:flex; align-items:flex-start; justify-content:space-between; padding:26px 40px 16px;">
@@ -6433,9 +6443,16 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
       var students=this._currentStudents(), ql=q.toLowerCase(), matches=[];
       Object.keys(students).forEach(function(tk){ var s=students[tk]; var nm=String(s.name||''); if(nm && nm.toLowerCase().indexOf(ql)>=0) matches.push(s); });
       if(!matches.length){ rEl.innerHTML='<span class="kbhit-empty">‘'+_esc(q)+'’ 검색 결과가 없습니다.</span>'; return; }
-      rEl.innerHTML='<div class="kbhit-wrap">'+matches.slice(0,6).map(function(s){
-        return '<div class="kbhit"><div class="kbhit-name">'+_esc(s.name)+' <span class="nim">님</span></div><div class="kbhit-room">'+_esc(s.building)+' '+(s.floor?_esc(String(s.floor))+'층 ':'')+_esc(String(s.no))+'호</div></div>';
-      }).join('')+'</div>' + (matches.length>6?'<div class="kbhit-more">외 '+(matches.length-6)+'명…</div>':'');
+      function roomOf(s){ return _esc(s.building)+' '+(s.floor?_esc(String(s.floor))+'층 ':'')+_esc(String(s.no))+'호'; }
+      if(matches.length===1){
+        var s0=matches[0];
+        rEl.innerHTML='<div class="kbhit"><div class="kbhit-name">'+_esc(s0.name)+' <span class="nim">님</span></div><div class="kbhit-room">'+roomOf(s0)+'</div></div>';
+      } else {
+        rEl.innerHTML='<div class="kbmulti"><div class="kbmulti-h">검색 결과 '+matches.length+'명 · 이름을 더 입력하세요</div>'
+          + matches.slice(0,6).map(function(s){ return '<div class="kbmulti-row"><span class="nm">'+_esc(s.name)+'</span><span class="rm">'+roomOf(s)+'</span></div>'; }).join('')
+          + (matches.length>6?'<div class="kbmulti-more">… 외 '+(matches.length-6)+'명</div>':'')
+          + '</div>';
+      }
     },
     _buildKbd:function(){
       var host=document.getElementById('dormKioskKbd'); if(!host||this._kbBuilt) return; this._kbBuilt=true;

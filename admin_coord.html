@@ -29,8 +29,9 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" rel="stylesheet">
   <style>
-
-
+/* [전역 배율] 일반 관리 화면을 100% 줌에서 적정 크기로 — 전체 75% 축소.
+   키오스크가 열리면 JS가 body.style.zoom='1'로 복귀시켜 대형 디스플레이용 크기를 유지함. */
+body{ zoom:0.75; }
 
 /* 수송 요청 시간 그리드 */
 .trans-time-grid {
@@ -8330,13 +8331,15 @@ var coordKiosk={
   _show:function(mode,pct){ var id=(mode==='enter')?'coordKioskEnterBar':'coordKioskExitBar'; var b=document.getElementById(id); if(b){ b.style.display=pct>0?'block':'none'; b.style.width=pct+'%'; } },
   _cancel:function(mode){ clearTimeout(this._t); clearInterval(this._iv); this._t=null; this._iv=null; this._show(mode,0); var id=(mode==='enter')?'coordKioskEnterBar':'coordKioskExitBar'; var b=document.getElementById(id); if(b) b.style.display='none'; },
   open:function(){ var m=document.getElementById('coordKioskModal'); if(!m) return; window._ckOpenedAt=Date.now(); this.render(); m.style.display='flex';
+    try{ document.body.style.zoom='1'; }catch(e){}   // 키오스크는 전역 75% 축소 해제 → 원래(큰) 크기 유지
     try{ var de=document.documentElement; var fn=de.requestFullscreen||de.webkitRequestFullscreen||de.msRequestFullscreen; if(fn && !document.fullscreenElement) fn.call(de); }catch(e){}   // 클릭 즉시 모니터 전체화면
     var _eh=document.getElementById('coordKioskEscHint'); if(_eh){ _eh.style.display=''; _eh.style.opacity='1'; clearTimeout(this._ehT); this._ehT=setTimeout(function(){ if(_eh){ _eh.style.opacity='0'; setTimeout(function(){ if(_eh) _eh.style.display='none'; },650); } }, 5000); }
     this._tick(); this._clk=setInterval(this._tick.bind(this),1000); this._rf=setInterval(this.render.bind(this),30000);
     if(!this._exitBound){ this._exitBound=true; this.bind(document.getElementById('coordKioskClockWrap'),5000,'exit',this.close.bind(this)); }
     try{ Promise.all([firebase.database().ref('system/dorm/rosters').once('value').catch(function(){return null;}),firebase.database().ref('system/coord/rosters').once('value').catch(function(){return null;})]).then(function(res){ var ext={},nm=function(x){return String(x==null?'':x).replace(/\s+/g,'').toLowerCase();}; res.forEach(function(sn){ if(!sn)return; var v=sn.val()||{}; Object.keys(v).forEach(function(kk){ var it=v[kk]; if(it&&Array.isArray(it.list)){ var k=nm(it.courseName); if(k)(ext[k]=ext[k]||[]).push({list:it.list,period:it.period||'',room:it.room||''}); } }); }); window._coordRosterExt=ext; coordKiosk.render(); }); }catch(e){}
   },
-  close:function(){ var m=document.getElementById('coordKioskModal'); if(m) m.style.display='none'; try{ if(document.fullscreenElement){ var fn=document.exitFullscreen||document.webkitExitFullscreen||document.msExitFullscreen; if(fn) fn.call(document); } }catch(e){} if(this._clk){clearInterval(this._clk);this._clk=null;} if(this._rf){clearInterval(this._rf);this._rf=null;} this._show('exit',0); this.showTable(); },
+  close:function(){ var m=document.getElementById('coordKioskModal'); if(m) m.style.display='none'; try{ document.body.style.zoom=''; }catch(e){}   // 일반 화면 복귀 → 전역 75% 축소 재적용
+    try{ if(document.fullscreenElement){ var fn=document.exitFullscreen||document.webkitExitFullscreen||document.msExitFullscreen; if(fn) fn.call(document); } }catch(e){} if(this._clk){clearInterval(this._clk);this._clk=null;} if(this._rf){clearInterval(this._rf);this._rf=null;} this._show('exit',0); this.showTable(); },
   showFloor:function(){ var t=document.getElementById('coordKioskTableView'), f=document.getElementById('coordKioskFloorView'); if(t)t.style.display='none'; if(f)f.style.display='block'; this.render(); },
   showTable:function(){ var t=document.getElementById('coordKioskTableView'), f=document.getElementById('coordKioskFloorView'); if(f)f.style.display='none'; if(t)t.style.display='flex'; },
   _tick:function(){ var n=new Date(),p=function(x){return String(x).padStart(2,'0');}; var c=document.getElementById('coordKioskClock'); if(c) c.textContent=p(n.getHours())+':'+p(n.getMinutes())+':'+p(n.getSeconds()); var d=document.getElementById('coordKioskDate'); if(d){ var w=['일','월','화','수','목','금','토'][n.getDay()]; d.textContent=n.getFullYear()+'.'+p(n.getMonth()+1)+'.'+p(n.getDate())+' ('+w+')'; } },
@@ -8424,7 +8427,7 @@ window.addEventListener('load', function(){
 });
 </script>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:6px;bottom:5px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;font-weight:800;line-height:1;letter-spacing:.6px;color:#fff;background:rgba(15,23,42,.85);padding:4px 8px;border-radius:6px;pointer-events:none;user-select:none;box-shadow:0 2px 6px rgba(0,0,0,.3);">VL</div>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:6px;bottom:5px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;font-weight:800;line-height:1;letter-spacing:.6px;color:#fff;background:rgba(15,23,42,.85);padding:4px 8px;border-radius:6px;pointer-events:none;user-select:none;box-shadow:0 2px 6px rgba(0,0,0,.3);">VM</div>
 <script>
 /* ===== [공용] 종료된 과정 자동 정리 (모든 플랫폼 공통) — 종료일 지난 방을 다음날 미개설로 비움. 브라우저별 하루 1회 ===== */
 window.kacExpireEndedCourses = async function(){
