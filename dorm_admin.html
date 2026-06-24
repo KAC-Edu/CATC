@@ -3,8 +3,8 @@
 <head>
 <!-- ============================================================
   CATC · 교육지원부 · 생활관 배정  (dorm_admin.html)
-  @version  X
-  @build    20260624-054603
+  @version  Y
+  @build    20260624-055500
   ────────────────────────────────────────────────────────
   [코드 수정 규칙 · AI/개발자 공통]
   이 파일을 한 글자라도 고치면:
@@ -66,6 +66,9 @@
   vX: [키오스크] 모니터 전체화면 고정 — ① Esc 키로 종료되지 않도록 종료 보조 핸들러 제거(Esc 차단).
       ② 브라우저가 Esc로 전체화면을 풀어도 키오스크가 떠 있으면 즉시 전체화면 재진입.
       ③ 키오스크 종료는 오직 시계·달력 5초 길게 누르기만 가능(시계 롱프레스 → close + exitFullscreen).
+  vY: [키오스크] 진짜 모니터 전체화면 + Esc 무력화 — 전체화면 진입 직후 Keyboard Lock API
+      (navigator.keyboard.lock(['Escape']))로 Esc를 잠가, 전체화면에서 Esc를 눌러도 풀리지 않음.
+      종료(시계 5초) 시 keyboard.unlock + exitFullscreen. (HTTPS·Chrome/Edge에서 동작)
       · 내국인: (남)/(여), 외국인: (M/남)/(F/여)
       · 라벨 색상은 과정색상 상속(관리자는 색으로 배치, 사용자는 텍스트로 남녀 즉시 확인)
       · PDF pill의 성별 배경 틴트(파랑/분홍) 제거 → 과정색 중심으로 정리.
@@ -6107,7 +6110,7 @@
 </script>
 <style>@media print{#__catcVer{display:none!important}}</style>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">VA</div>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">VB</div>
 <script>
 /* ===== [공용] 종료된 과정 자동 정리 (모든 플랫폼 공통) — 종료일 지난 방을 다음날 미개설로 비움. 브라우저별 하루 1회 ===== */
 window.kacExpireEndedCourses = async function(){
@@ -6199,6 +6202,15 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
       var clock=document.getElementById('dormKioskClock');
       if(clock) this._bindLongPress(clock, 5000, function(){ dormKiosk.close(); }, 'dormKioskExitHint');
     },
+    enterFullscreen:function(){
+      try{
+        var de=document.documentElement;
+        var fn=de.requestFullscreen||de.webkitRequestFullscreen||de.msRequestFullscreen;
+        var lock=function(){ try{ if(navigator.keyboard&&navigator.keyboard.lock) navigator.keyboard.lock(['Escape']); }catch(_){} };
+        var p=fn?fn.call(de):null;
+        if(p&&p.then) p.then(lock).catch(lock); else lock();
+      }catch(_){}
+    },
     _bindLongPress:function(el,dur,cb,hintId){
       var t=null,raf=null,start=0;
       function hint(p){ var h=document.getElementById(hintId); if(h) h.style.width=(p*100)+'%'; }
@@ -6221,7 +6233,8 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
     },
     close:function(){
       var m=document.getElementById('dormKioskModal'); if(m) m.style.display='none';
-      try{ if(document.fullscreenElement){ var fn=document.exitFullscreen||document.webkitExitFullscreen||document.msExitFullscreen; if(fn) fn.call(document); } }catch(e){}
+      try{ if(navigator.keyboard&&navigator.keyboard.unlock) navigator.keyboard.unlock(); }catch(e){}
+      try{ if(document.fullscreenElement||document.webkitFullscreenElement){ var fn=document.exitFullscreen||document.webkitExitFullscreen||document.msExitFullscreen; if(fn) fn.call(document); } }catch(e){}
       if(this._clock){clearInterval(this._clock);this._clock=null;}
       if(this._refresh){clearInterval(this._refresh);this._refresh=null;}
     },
@@ -6293,7 +6306,7 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
   function _dormReFull(){
     var m=document.getElementById('dormKioskModal');
     if(m && m.style.display!=='none' && !(document.fullscreenElement||document.webkitFullscreenElement)){
-      try{ var de=document.documentElement; var fn=de.requestFullscreen||de.webkitRequestFullscreen||de.msRequestFullscreen; if(fn) fn.call(de); }catch(_){}
+      try{ dormKiosk.enterFullscreen(); }catch(_){}
     }
   }
   document.addEventListener('fullscreenchange', _dormReFull);
@@ -6309,7 +6322,7 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
       raf=setInterval(function(){ setHint(Math.min((Date.now()-start)/5000,1)); }, 50);
     }
     function stop(){ if(t){clearTimeout(t);t=null;} if(raf){clearInterval(raf);raf=null;} setHint(0); }
-    function endPress(){ var was=fired; stop(); if(was){ try{ var de=document.documentElement; var fn=de.requestFullscreen||de.webkitRequestFullscreen||de.msRequestFullscreen; if(fn) fn.call(de); }catch(_){} } }
+    function endPress(){ var was=fired; stop(); if(was){ try{ dormKiosk.enterFullscreen(); }catch(_){} } }
     brand.addEventListener('mousedown', begin);
     brand.addEventListener('touchstart', begin, {passive:true});
     brand.addEventListener('mouseup', endPress);
