@@ -8250,7 +8250,9 @@ var coordKiosk={
   },
   _show:function(mode,pct){ var id=(mode==='enter')?'coordKioskEnterBar':'coordKioskExitBar'; var b=document.getElementById(id); if(b){ b.style.display=pct>0?'block':'none'; b.style.width=pct+'%'; } },
   _cancel:function(mode){ clearTimeout(this._t); clearInterval(this._iv); this._t=null; this._iv=null; this._show(mode,0); var id=(mode==='enter')?'coordKioskEnterBar':'coordKioskExitBar'; var b=document.getElementById(id); if(b) b.style.display='none'; },
-  open:function(){ var m=document.getElementById('coordKioskModal'); if(!m) return; window._ckOpenedAt=Date.now(); this.render(); m.style.display='flex'; var _eh=document.getElementById('coordKioskEscHint'); if(_eh){ _eh.style.display=''; _eh.style.opacity='1'; clearTimeout(this._ehT); this._ehT=setTimeout(function(){ if(_eh){ _eh.style.opacity='0'; setTimeout(function(){ if(_eh) _eh.style.display='none'; },650); } }, 5000); }
+  open:function(){ var m=document.getElementById('coordKioskModal'); if(!m) return; window._ckOpenedAt=Date.now(); this.render(); m.style.display='flex';
+    try{ var de=document.documentElement; var fn=de.requestFullscreen||de.webkitRequestFullscreen||de.msRequestFullscreen; if(fn && !document.fullscreenElement) fn.call(de); }catch(e){}
+    var _eh=document.getElementById('coordKioskEscHint'); if(_eh){ _eh.style.display=''; _eh.style.opacity='1'; clearTimeout(this._ehT); this._ehT=setTimeout(function(){ if(_eh){ _eh.style.opacity='0'; setTimeout(function(){ if(_eh) _eh.style.display='none'; },650); } }, 5000); }
     this._tick(); this._clk=setInterval(this._tick.bind(this),1000); this._rf=setInterval(this.render.bind(this),30000);
     if(!this._exitBound){ this._exitBound=true; this.bind(document.getElementById('coordKioskClockWrap'),5000,'exit',this.close.bind(this)); }
     try{ Promise.all([firebase.database().ref('system/dorm/rosters').once('value').catch(function(){return null;}),firebase.database().ref('system/coord/rosters').once('value').catch(function(){return null;})]).then(function(res){ var ext={},nm=function(x){return String(x==null?'':x).replace(/\s+/g,'').toLowerCase();}; res.forEach(function(sn){ if(!sn)return; var v=sn.val()||{}; Object.keys(v).forEach(function(kk){ var it=v[kk]; if(it&&Array.isArray(it.list)){ var k=nm(it.courseName); if(k)(ext[k]=ext[k]||[]).push({list:it.list,period:it.period||'',room:it.room||''}); } }); }); window._coordRosterExt=ext; coordKiosk.render(); }); }catch(e){}
@@ -8262,11 +8264,11 @@ var coordKiosk={
     var today=(typeof _coordToday==='function'?_coordToday():new Date().toISOString().slice(0,10));
     var full=function(nm){ return (typeof _coordFullName==='function')?(_coordFullName(nm)||(nm||'-')):(nm||'-'); };
     if(!rooms.length){ tb.innerHTML='<tr><td colspan="8" style="text-align:center;padding:70px;color:#94a3b8;font-size:26px;">현재 진행 중인 과정이 없습니다.</td></tr>'; return; }
-    tb.innerHTML=rooms.map(function(r){ var c=(typeof _courseOverviewCount==='function')?_courseOverviewCount(r):{expected:0,arrived:(typeof _studentsOf==='function'?_studentsOf(r.room).length:0)}; var sset=r.s, st=r.st;
+    tb.innerHTML=rooms.map(function(r,_i){ var c=(typeof _courseOverviewCount==='function')?_courseOverviewCount(r):{expected:0,arrived:(typeof _studentsOf==='function'?_studentsOf(r.room).length:0)}; var sset=r.s, st=r.st;
       var start=(''+(sset.period||'')).split(' ~ ')[0]||''; var stat=(start&&today>=start)?{t:'진행중',c:'#34d399'}:{t:'예정',c:'#fbbf24'};
       var prof=(st.professorName||'').trim()?(_esc(st.professorName.trim())+' 교수'):'-';
       return '<tr class="ckrow" onclick="coordKiosk.notice(\''+_esc(r.rid)+'\')" style="border-bottom:1px solid rgba(255,255,255,.08);">'
-        +'<td style="padding:20px 14px;text-align:center;font-weight:900;color:#60a5fa;white-space:nowrap;">Room #'+_esc(r.rid)+'</td>'
+        +'<td style="padding:20px 14px;text-align:center;font-weight:900;color:#60a5fa;white-space:nowrap;font-size:1.1em;">'+(_i+1)+'</td>'
         +'<td style="padding:20px 14px;text-align:left;font-weight:800;color:#fff;">'+_esc(sset.courseName||'-')+'</td>'
         +'<td style="padding:20px 14px;text-align:center;color:#cbd5e1;white-space:nowrap;font-size:0.85em;">'+_esc(sset.period||'-')+'</td>'
         +'<td style="padding:20px 14px;text-align:center;color:#cbd5e1;">'+_esc(sset.roomDetailName||sset.roomDetail||'-')+'</td>'
@@ -8340,7 +8342,7 @@ window.addEventListener('load', function(){
 });
 </script>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:6px;bottom:5px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;font-weight:800;line-height:1;letter-spacing:.6px;color:#fff;background:rgba(15,23,42,.85);padding:4px 8px;border-radius:6px;pointer-events:none;user-select:none;box-shadow:0 2px 6px rgba(0,0,0,.3);">C2</div>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:6px;bottom:5px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;font-weight:800;line-height:1;letter-spacing:.6px;color:#fff;background:rgba(15,23,42,.85);padding:4px 8px;border-radius:6px;pointer-events:none;user-select:none;box-shadow:0 2px 6px rgba(0,0,0,.3);">C4</div>
 <script>
 /* ===== [공용] 종료된 과정 자동 정리 (모든 플랫폼 공통) — 종료일 지난 방을 다음날 미개설로 비움. 브라우저별 하루 1회 ===== */
 window.kacExpireEndedCourses = async function(){
@@ -8839,15 +8841,35 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
           +'<button onclick="event.stopPropagation();window.open(\'outing_ledger.html?room='+r.rid+'&auto=1\',\'_blank\');" style="background:#1e293b;color:#fff;border:none;border-radius:9px;padding:8px 14px;font-size:12px;font-weight:800;cursor:pointer;white-space:nowrap;"><i class="fa-solid fa-print"></i> 출력</button>'
           +'<i class="fa-solid fa-chevron-down crow-chev" id="coordOutChev'+idx+'"></i>'
         +'</div>'
-        +'<div id="coordOutBody'+idx+'" style="display:none;border-top:1px solid #eef2f7;overflow-x:auto;"><table class="cpop-table" style="width:100%;table-layout:fixed;"><colgroup><col style="width:10%"><col style="width:27%"><col style="width:14%"><col style="width:20%"><col style="width:17%"><col style="width:12%"></colgroup><thead><tr><th>연번</th><th>성명</th><th>구분</th><th>신청시간</th><th>상태</th><th>미복귀</th></tr></thead><tbody>'+rows+'</tbody></table></div>'
+        +'<div id="coordOutBody'+idx+'" class="coord-out-body" data-rid="'+esc(r.rid)+'" style="display:none;border-top:1px solid #eef2f7;background:#f8fafc;padding:14px;"></div>'
         +'</div>';
     }).join('')+'</div>';
   };
   window.coordToggleOuting = function(idx){
     var b=document.getElementById('coordOutBody'+idx), c=document.getElementById('coordOutChev'+idx);
-    if(!b) return; var open=(b.style.display==='none'||!b.style.display);
-    b.style.display=open?'block':'none'; if(c) c.style.transform=open?'rotate(180deg)':'';
+    if(!b) return;
+    var willOpen=(b.style.display==='none'||!b.style.display);
+    // 단일 펼침: 다른 과정 대장은 모두 닫고 셰브론 원위치
+    Array.prototype.forEach.call(document.querySelectorAll('[id^="coordOutBody"]'), function(o){ o.style.display='none'; o.innerHTML=''; });
+    Array.prototype.forEach.call(document.querySelectorAll('[id^="coordOutChev"]'), function(ch){ ch.style.transform=''; });
+    if(willOpen){
+      var rid=b.getAttribute('data-rid')||'';
+      // 외출·외박 신청대장(A4 가로) 인라인 임베드 — 좌측 천공여백 숨김, 페이지 많으면 아래로 이어짐
+      b.innerHTML='<iframe class="coord-out-frame" data-rid="'+rid+'" src="outing_ledger.html?room='+encodeURIComponent(rid)+'&embed=1" style="width:100%;min-height:320px;border:0;display:block;background:transparent;" scrolling="no"></iframe>';
+      b.style.display='block';
+      if(c) c.style.transform='rotate(180deg)';
+    }
   };
+  // 임베드된 대장이 보내는 높이로 iframe 자동 리사이즈(내부 스크롤 없이 전부 표시)
+  if(!window._coordOutMsgBound){
+    window._coordOutMsgBound=true;
+    window.addEventListener('message', function(ev){
+      var d=ev&&ev.data; if(!d||!d._ledgerH) return;
+      Array.prototype.forEach.call(document.querySelectorAll('iframe.coord-out-frame'), function(f){
+        if(String(f.getAttribute('data-rid'))===String(d.room)){ f.style.height=((parseInt(d.h,10)||320)+6)+'px'; }
+      });
+    });
+  }
   function _coordInjectClose(){
     var v=document.getElementById('individualStatusView'); if(!v) return;
     // 상단 X 제거: 더 이상 주입하지 않음 (하단 X 버튼만 사용)
