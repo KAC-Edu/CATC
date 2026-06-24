@@ -1838,8 +1838,11 @@ body.pc-mode .coord-pc-only{ display:flex !important; }
 #coordKioskTableBody tr.ckrow:hover td:first-child{ border-top-left-radius:12px; border-bottom-left-radius:12px; box-shadow:inset 4px 0 0 #93c5fd; }
 #coordKioskTableBody tr.ckrow:hover td:last-child{ border-top-right-radius:12px; border-bottom-right-radius:12px; }
 body.pc-mode .coord-hdr-stats{ gap:10px; overflow:visible !important; min-width:auto !important; flex-wrap:nowrap !important; }
-/* 화면이 좁아 제목과 겹칠 때: 상단바 통계(운영과정~노조교육) 숨김 (제목+통계+시계가 안 들어가는 폭부터) */
-@media (max-width: 1500px){ body.pc-mode #coordHdrStats, body.pc-mode .coord-hdr-stats, #coordHdrStats, .coord-hdr-stats{ display:none !important; } }
+/* 화면이 좁을 때(1500px 미만): 버튼블록(통계)은 남기고 좌측 제목 글자·시계(날짜시간)만 숨김 */
+@media (max-width: 1500px){
+  #coordHeaderClock, body.pc-mode #coordHeaderClock{ display:none !important; }
+  .coord-brand-title, body.pc-mode .coord-brand-title{ display:none !important; }
+}
 body.pc-mode .coord-left{ grid-column:1 !important; grid-row:1 !important; justify-self:start !important; align-self:center !important; }
 body.pc-mode .hdr-stat{ padding:8px 18px; }
 body.pc-mode .hdr-stat > i{ font-size:18px; }
@@ -6535,11 +6538,15 @@ function _coordInitViewMode() {
     if (usePc) setTimeout(function(){ try { pcsSyncCourseList(); pcUpdateNav(); } catch(e){} }, 700);
     setTimeout(_coordFitHeader, 300); setTimeout(_coordFitHeader, 1000);
 }
-// [헤더] 통계 메뉴는 중앙 칸, 시계는 우측 칸으로 그리드 분리되어 겹치지 않음 → 항상 표시
+// [헤더] 화면이 좁으면(1500px 미만) 버튼블록(통계)은 유지하고 좌측 제목·시계(날짜시간)만 숨김
 function _coordFitHeader(){
+    var narrow = window.innerWidth < 1500;
     var stats=document.getElementById('coordHdrStats');
-    // 화면이 좁아 제목과 겹칠 폭(1500px 미만)이면 통계(운영과정~노조교육) 숨김
-    if(stats) stats.style.setProperty('display', (window.innerWidth < 1500) ? 'none' : 'flex', 'important');
+    var clock=document.getElementById('coordHeaderClock');
+    var brand=document.querySelector('.coord-brand-title');
+    if(stats) stats.style.setProperty('display','flex','important');                 // 버튼블록 항상 표시
+    if(clock) clock.style.setProperty('display', narrow ? 'none' : '', 'important');  // 날짜시간 숨김
+    if(brand) brand.style.setProperty('display', narrow ? 'none' : '', 'important');  // 좌측 제목 글자 숨김
 }
 window.addEventListener('resize', function(){ try{ _coordFitHeader(); }catch(e){} });
 if (document.readyState === 'loading') {
@@ -7701,11 +7708,15 @@ function _eduApplyState(spanId, val){
   blk.classList.toggle('edu-set', set);
   blk.classList.toggle('edu-unset', !set);
 }
-window._coordUpdateShuttleLED=function(){
+window._coordUpdateShuttleLED=function(data){
   var _sh=document.getElementById('hdr-shuttle'); if(!_sh) return;
-  var e=(window.coordOpsSetup&&coordOpsSetup._data)||{}; var sd=window._shuttleDep||{};
+  // data 인자(최신 eduLocations)를 우선 사용 → _data 갱신 타이밍에 의존하지 않음
+  var e=data||(window.coordOpsSetup&&coordOpsSetup._data)||{}; var sd=window._shuttleDep||{};
+  // 팝업에서 1·2차 시간이 설정됐거나(eduLocations) 셔틀이 공지(announce)됐으면 녹색
   var set = !!((e.shuttle1&&(''+e.shuttle1).trim())&&(e.shuttle2&&(''+e.shuttle2).trim())) || !!((''+(sd.round1||'')).trim());
-  _sh.classList.toggle('edu-set',set); _sh.classList.toggle('edu-unset',!set);
+  // 두 색상 시스템(edu-set/unset · shuttle-on/off)을 통일해서 토글 → CSS 충돌로 적색이 덮어쓰는 문제 방지
+  _sh.classList.toggle('edu-set',set);     _sh.classList.toggle('edu-unset',!set);
+  _sh.classList.toggle('shuttle-on',set);  _sh.classList.toggle('shuttle-off',!set);
 };
 (function initEduLocationsCoord(){
   try{
@@ -7714,7 +7725,7 @@ window._coordUpdateShuttleLED=function(){
       var v=s.val()||{};
       _eduApplyState('g-edu-integrity', v.integrity);
       _eduApplyState('g-edu-union', v.union);
-      try{ if(window._coordUpdateShuttleLED) _coordUpdateShuttleLED(); }catch(e){}
+      try{ if(window._coordUpdateShuttleLED) _coordUpdateShuttleLED(v); }catch(e){}
     });
   }catch(e){ setTimeout(initEduLocationsCoord,800); }
 })();
@@ -7782,9 +7793,10 @@ var coordOpsSetup = {
     ov.innerHTML='<div style="background:#fff;border-radius:24px;width:min(640px,95vw);max-height:92vh;overflow:auto;box-shadow:0 30px 80px rgba(0,0,0,.5);">'
       +'<div style="background:linear-gradient(135deg,#0f2a4a,#1e3a8a);color:#fff;padding:24px 28px;"><div style="font-size:24px;font-weight:900;"><i class="fa-solid fa-circle-info"></i> 금주 교육 운영 설정 확인</div><div style="font-size:15px;color:#bfdbfe;font-weight:700;margin-top:5px;">차량 시간 · 노조교육 · 청렴교육 장소를 확인/설정하세요</div></div>'
       +'<div style="padding:26px;">'
-      +'<div style="background:#f0f7ff;border:1px solid #dbeafe;border-radius:14px;padding:18px 22px;margin-bottom:22px;word-break:keep-all;">'
-        +'<div style="font-size:20px;line-height:1.55;color:#1e3a8a;font-weight:800;"><i class="fa-solid fa-bus" style="color:#2563eb;margin-right:6px;"></i>퇴교차량 &nbsp;1차 <b style="color:#0f172a;">'+e(t1)+'</b> &nbsp;·&nbsp; 2차 <b style="color:#0f172a;">'+e(t2)+'</b></div>'
-        +'<div style="font-size:20px;line-height:1.55;color:#1e3a8a;font-weight:800;margin-top:9px;"><i class="fa-solid fa-location-dot" style="color:#16a34a;margin-right:6px;"></i>노조교육 <b style="color:#0f172a;">'+e(union)+'</b> &nbsp;·&nbsp; 청렴교육 <b style="color:'+(integSet?'#16a34a':'#dc2626')+';">'+e(integ)+'</b></div>'
+      +'<div style="background:#eef4ff;border:2px solid #93c5fd;border-radius:14px;padding:20px 24px;margin-bottom:22px;word-break:keep-all;">'
+        +'<div style="font-size:22px;line-height:1.6;color:#0f172a;font-weight:900;"><i class="fa-solid fa-bus" style="color:#2563eb;margin-right:7px;"></i>퇴교차량 &nbsp;1차 <b style="color:#1d4ed8;">'+e(t1)+'</b> &nbsp;·&nbsp; 2차 <b style="color:#1d4ed8;">'+e(t2)+'</b></div>'
+        +'<div style="font-size:22px;line-height:1.6;color:#0f172a;font-weight:900;margin-top:11px;border-top:1px dashed #bfdbfe;padding-top:11px;"><i class="fa-solid fa-location-dot" style="color:#16a34a;margin-right:7px;"></i>노조교육 <b style="color:#15803d;">'+e(union)+'</b></div>'
+        +'<div style="font-size:22px;line-height:1.6;color:#0f172a;font-weight:900;margin-top:7px;"><i class="fa-solid fa-scale-balanced" style="color:'+(integSet?'#16a34a':'#dc2626')+';margin-right:7px;"></i>청렴교육 <b style="color:'+(integSet?'#15803d':'#dc2626')+';">'+e(integ)+'</b></div>'
       +'</div>'
       +'<div style="margin-bottom:18px;"><div style="font-size:16px;font-weight:900;color:#334155;margin-bottom:10px;"><i class="fa-solid fa-bus" style="color:#2563eb;"></i> 퇴교차량 출발시간 <span style="font-size:12.5px;color:#94a3b8;font-weight:700;">· 30분 단위 · 2차는 1차+2시간 이후</span></div><div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;"><label style="font-size:15px;font-weight:800;color:#64748b;">1차 <select id="opsT1" onchange="coordOpsSetup.onT1Change()" style="margin-left:6px;padding:12px 14px;border:1.5px solid #cbd5e1;border-radius:11px;font-size:20px;font-weight:900;color:#0f172a;cursor:pointer;">'+this._timeOptions(t1,this._RANGE.start)+'</select></label><label style="font-size:15px;font-weight:800;color:#64748b;">2차 <select id="opsT2" style="margin-left:6px;padding:12px 14px;border:1.5px solid #cbd5e1;border-radius:11px;font-size:20px;font-weight:900;color:#0f172a;cursor:pointer;">'+this._timeOptions(t2,this._toMin(t1)+120)+'</select></label><button onclick="coordOpsSetup.saveShuttle()" style="padding:12px 22px;border:none;border-radius:11px;background:#2563eb;color:#fff;font-weight:900;font-size:16px;cursor:pointer;">저장</button></div></div>'
       +'<div style="margin-bottom:18px;"><div style="font-size:16px;font-weight:900;color:#334155;margin-bottom:9px;"><i class="fa-solid fa-handshake" style="color:#16a34a;"></i> 노조교육 장소</div><select id="opsUnion" onchange="coordOpsSetup.savePlace(\'union\',this.value)" style="width:100%;padding:14px 15px;border:1.5px solid #bbf7d0;border-radius:12px;font-size:18px;font-weight:800;color:#15803d;background:#f0fdf4;">'+this._placeOptions(v.union)+'</select></div>'
@@ -7807,8 +7819,9 @@ var coordOpsSetup = {
     var t2=this._toMin((document.getElementById('opsT2')||{}).value||this._DEF.t2);
     if(t2<t1+120) t2=t1+120;   // 2차는 1차 +2시간 이후
     var v1=this._toHHMM(t1), v2=this._toHHMM(t2);
+    try{ this._data.shuttle1=v1; this._data.shuttle2=v2; }catch(e){}
     try{ firebase.database().ref('system/eduLocations').update({shuttle1:v1, shuttle2:v2}); }catch(e){}
-    try{ if(window._coordUpdateShuttleLED) _coordUpdateShuttleLED(); }catch(e){}
+    try{ if(window._coordUpdateShuttleLED) _coordUpdateShuttleLED({shuttle1:v1, shuttle2:v2}); }catch(e){}
     if(typeof showKacAlert==='function') showKacAlert('✅ 퇴교차량 시간 저장 완료 · 1차 '+v1+' · 2차 '+v2);
   },
   savePlace:function(type,val){ try{ firebase.database().ref('system/eduLocations/'+type).set(val||null); }catch(e){} },
@@ -8165,15 +8178,8 @@ window.coordClearShuttleRounds=function(){
 };
 function _coordUpdateShuttleBtn(){
   try{
-    var sd=window._shuttleDep||{};
-    var today=(typeof _coordToday==='function'?_coordToday():new Date().toISOString().slice(0,10));
-    var isT=function(v){ return /^\d{1,2}:\d{2}$/.test(v||''); };
-    var dateOk=!!(sd && sd.date && sd.date>=today);
-    var r1=sd&&sd.round1||'', r2=sd&&sd.round2||'';
-    // 1차 실제시간 + (2차 실제시간 또는 운행안함) 이어야 확정(녹색). 하나라도 미정/미선택이면 빨강
-    var green = dateOk && isT(r1) && (isT(r2) || r2==='운행안함');
-    var sc=document.getElementById('g-shuttle-count'); var blk=sc?sc.closest('.hdr-stat'):null;
-    if(blk){ blk.classList.toggle('shuttle-on', green); blk.classList.toggle('shuttle-off', !green); }
+    // 색상 판단은 통일된 단일 함수(_coordUpdateShuttleLED)에 위임 → 두 시스템 충돌 제거
+    if(window._coordUpdateShuttleLED) _coordUpdateShuttleLED();
   }catch(e){}
 }
 // [복원] 규칙 미게시 대비: 과정별 shuttle/departure(이미 저장됨)에서 1차/2차 상태 복원
@@ -8809,15 +8815,35 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
           +'<button onclick="event.stopPropagation();window.open(\'outing_ledger.html?room='+r.rid+'&auto=1\',\'_blank\');" style="background:#1e293b;color:#fff;border:none;border-radius:9px;padding:8px 14px;font-size:12px;font-weight:800;cursor:pointer;white-space:nowrap;"><i class="fa-solid fa-print"></i> 출력</button>'
           +'<i class="fa-solid fa-chevron-down crow-chev" id="coordOutChev'+idx+'"></i>'
         +'</div>'
-        +'<div id="coordOutBody'+idx+'" style="display:none;border-top:1px solid #eef2f7;overflow-x:auto;"><table class="cpop-table" style="width:100%;table-layout:fixed;"><colgroup><col style="width:10%"><col style="width:27%"><col style="width:14%"><col style="width:20%"><col style="width:17%"><col style="width:12%"></colgroup><thead><tr><th>연번</th><th>성명</th><th>구분</th><th>신청시간</th><th>상태</th><th>미복귀</th></tr></thead><tbody>'+rows+'</tbody></table></div>'
+        +'<div id="coordOutBody'+idx+'" class="coord-out-body" data-rid="'+esc(r.rid)+'" style="display:none;border-top:1px solid #eef2f7;background:#f8fafc;padding:14px;"></div>'
         +'</div>';
     }).join('')+'</div>';
   };
   window.coordToggleOuting = function(idx){
     var b=document.getElementById('coordOutBody'+idx), c=document.getElementById('coordOutChev'+idx);
-    if(!b) return; var open=(b.style.display==='none'||!b.style.display);
-    b.style.display=open?'block':'none'; if(c) c.style.transform=open?'rotate(180deg)':'';
+    if(!b) return;
+    var willOpen=(b.style.display==='none'||!b.style.display);
+    // 단일 펼침: 다른 과정 대장은 모두 닫고 셰브론 원위치
+    Array.prototype.forEach.call(document.querySelectorAll('[id^="coordOutBody"]'), function(o){ o.style.display='none'; o.innerHTML=''; });
+    Array.prototype.forEach.call(document.querySelectorAll('[id^="coordOutChev"]'), function(ch){ ch.style.transform=''; });
+    if(willOpen){
+      var rid=b.getAttribute('data-rid')||'';
+      // 외출·외박 신청대장(A4 가로) 인라인 임베드 — 좌측 천공여백 숨김, 페이지 많으면 아래로 이어짐
+      b.innerHTML='<iframe class="coord-out-frame" data-rid="'+rid+'" src="outing_ledger.html?room='+encodeURIComponent(rid)+'&embed=1" style="width:100%;min-height:320px;border:0;display:block;background:transparent;" scrolling="no"></iframe>';
+      b.style.display='block';
+      if(c) c.style.transform='rotate(180deg)';
+    }
   };
+  // 임베드된 대장이 보내는 높이로 iframe 자동 리사이즈(내부 스크롤 없이 전부 표시)
+  if(!window._coordOutMsgBound){
+    window._coordOutMsgBound=true;
+    window.addEventListener('message', function(ev){
+      var d=ev&&ev.data; if(!d||!d._ledgerH) return;
+      Array.prototype.forEach.call(document.querySelectorAll('iframe.coord-out-frame'), function(f){
+        if(String(f.getAttribute('data-rid'))===String(d.room)){ f.style.height=((parseInt(d.h,10)||320)+6)+'px'; }
+      });
+    });
+  }
   function _coordInjectClose(){
     var v=document.getElementById('individualStatusView'); if(!v) return;
     // 상단 X 제거: 더 이상 주입하지 않음 (하단 X 버튼만 사용)
@@ -9009,6 +9035,9 @@ function coordSaveFloorPDF(){
 }
 window.coordSaveFloorPDF=coordSaveFloorPDF;
 </script>
+
+<!-- [버전표기] 파일 연동/배포 확인용 — 제거 요청 전까지 유지. 갱신 규칙: VA→VZ → VA1→VZ1 → VA2… -->
+<div id="__fileVer" style="position:fixed;left:8px;bottom:8px;z-index:2147483647;background:rgba(15,23,42,.82);color:#fff;font:700 12px/1 system-ui,sans-serif;padding:5px 9px;border-radius:7px;letter-spacing:.5px;pointer-events:none;box-shadow:0 2px 6px rgba(0,0,0,.3);">VA</div>
 
 </body>
 </html>

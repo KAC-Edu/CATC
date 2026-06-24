@@ -11081,3 +11081,156 @@ ui.openStudentMap = async function(){
   else { var _t=0; var _iv=setInterval(function(){ _t++; if(window.kakao&&kakao.maps){ clearInterval(_iv); (kakao.maps.load?kakao.maps.load(_buildMap):_buildMap()); } else if(_t>20){ clearInterval(_iv); } }, 300); }
 };
 
+
+// ===== [학생장 룰렛] 원형 휠 — 입교 학생 중 3시 마커에 걸린 사람이 당첨 → 학생장 지정(전 플랫폼 연동) =====
+ui.closeLeaderRoulette = function(){
+  var m=document.getElementById('leaderRouletteModal'); if(m) m.remove();
+  ui._wheelSpinning=false;
+};
+ui.openLeaderRoulette = async function(){
+  if(state.isObserver){ ui.showAlert('👁️ 옵저버는 사용할 수 없습니다.'); return; }
+  if(!state.room){ ui.showAlert('강의실을 먼저 선택하세요.'); return; }
+  var esc = s => String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  var room = state.room;
+  // 입교(체크인)한 학생만 대상
+  var students=[];
+  try{
+    var snap=await firebase.database().ref('courses/'+room+'/students').once('value');
+    var data=snap.val()||{};
+    Object.keys(data).forEach(function(token){ var st=data[token]; if(st && st.name && st.name!=='undefined'){ students.push({ token:token, name:String(st.name).trim() }); } });
+  }catch(e){}
+  students.sort(function(a,b){ return a.name.localeCompare(b.name); });
+  if(!students.length){ ui.showAlert('입교한 학생이 없습니다.\n학생이 입장한 뒤 룰렛을 돌려주세요.'); return; }
+
+  ui._rouletteStudents = students;
+  ui._rouletteWinner = null;
+  ui._wheelRot = 0;
+  ui._wheelSpinning = false;
+
+  // ── 원형 휠 SVG 생성 ──
+  var N=students.length, seg=360/N, cx=300, cy=300, r=292;
+  var colors=['#f59e0b','#10b981','#3b82f6','#ef4444','#8b5cf6','#ec4899','#0ea5e9','#f97316','#22c55e','#a855f7'];
+  function polar(R,deg){ var a=deg*Math.PI/180; return [cx+R*Math.cos(a), cy+R*Math.sin(a)]; }
+  function arcPath(R,a0,a1){ var p0=polar(R,a0), p1=polar(R,a1); var large=((a1-a0)%360)>180?1:0; return 'M'+cx+' '+cy+' L'+p0[0].toFixed(2)+' '+p0[1].toFixed(2)+' A'+R+' '+R+' 0 '+large+' 1 '+p1[0].toFixed(2)+' '+p1[1].toFixed(2)+' Z'; }
+  var fs=Math.max(11, Math.min(30, Math.round(360/N)));
+  var segHtml='', txtHtml='';
+  for(var i=0;i<N;i++){
+    var a0=i*seg, a1=(i+1)*seg, mid=a0+seg/2;
+    var col=colors[i%colors.length];
+    segHtml+='<path d="'+arcPath(r,a0,a1)+'" fill="'+col+'" stroke="#ffffff" stroke-width="2"/>';
+    var tp=polar(r*0.60,mid);
+    var nm=students[i].name; if(nm.length>8) nm=nm.slice(0,8)+'…';
+    txtHtml+='<text x="'+tp[0].toFixed(1)+'" y="'+tp[1].toFixed(1)+'" fill="#ffffff" font-size="'+fs+'" font-weight="800" text-anchor="middle" dominant-baseline="central" transform="rotate('+mid.toFixed(2)+' '+tp[0].toFixed(1)+' '+tp[1].toFixed(1)+')" style="paint-order:stroke;stroke:rgba(0,0,0,.18);stroke-width:3px;">'+esc(nm)+'</text>';
+  }
+  var svg='<svg id="rlWheel" viewBox="0 0 600 600" style="width:100%;height:100%;display:block;transition:transform 5.4s cubic-bezier(.12,.62,.07,1);transform:rotate(0deg);filter:drop-shadow(0 10px 26px rgba(15,23,42,.28));">'
+    + segHtml + txtHtml
+    + '<circle cx="300" cy="300" r="292" fill="none" stroke="#ffffff" stroke-width="6"/>'
+    + '</svg>';
+
+  var _old=document.getElementById('leaderRouletteModal'); if(_old) _old.remove();
+  var modal=document.createElement('div'); modal.id='leaderRouletteModal';
+  modal.setAttribute('style','position:fixed;inset:0;z-index:9700;display:flex;align-items:center;justify-content:center;background:rgba(15,23,42,.62);backdrop-filter:blur(4px);padding:18px;overflow:auto;');
+  modal.onclick=function(e){ if(e.target===modal && !ui._wheelSpinning) ui.closeLeaderRoulette(); };
+  var wheelPx='min(560px,86vw)';
+  modal.innerHTML =
+    '<div style="background:#fff;border-radius:26px;width:min(640px,96vw);max-height:94vh;overflow:auto;box-shadow:0 30px 80px rgba(0,0,0,.45);">'
+      + '<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:18px 24px;background:linear-gradient(135deg,#b45309,#f59e0b);color:#fff;">'
+        + '<div style="font-size:19px;font-weight:900;"><i class="fa-solid fa-trophy" style="margin-right:8px;"></i>학생장 룰렛</div>'
+        + '<button onclick="ui.closeLeaderRoulette()" style="background:rgba(255,255,255,.2);border:none;color:#fff;width:36px;height:36px;border-radius:50%;font-size:19px;cursor:pointer;">&times;</button>'
+      + '</div>'
+      + '<div style="padding:22px 22px 26px;text-align:center;">'
+        + '<div style="font-size:13.5px;color:#64748b;font-weight:800;margin-bottom:18px;">입교한 학생 '+N+'명 · 가운데 <b style="color:#b45309;">시작</b>을 누르면 3시 방향 마커에 걸린 학생이 당첨됩니다</div>'
+        + '<div style="position:relative;width:'+wheelPx+';height:'+wheelPx+';margin:0 auto 20px;">'
+          + svg
+          // 3시 방향 마커
+          + '<div style="position:absolute;top:50%;right:-14px;transform:translateY(-50%);width:0;height:0;border-top:18px solid transparent;border-bottom:18px solid transparent;border-right:30px solid #dc2626;filter:drop-shadow(-2px 2px 3px rgba(0,0,0,.3));z-index:3;"></div>'
+          // 가운데 시작 버튼
+          + '<button id="rlStart" onclick="ui._spinWheel()" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:23%;height:23%;border-radius:50%;background:radial-gradient(circle at 35% 30%,#ffffff,#fde68a 70%,#f59e0b);border:5px solid #fff;box-shadow:0 8px 20px rgba(180,83,9,.4);color:#92400e;font-weight:900;font-size:clamp(15px,4.2vw,24px);cursor:pointer;z-index:4;letter-spacing:-1px;">시작</button>'
+        + '</div>'
+        + '<div id="rlResult" style="min-height:30px;"></div>'
+      + '</div>'
+    + '</div>';
+  document.body.appendChild(modal);
+};
+ui._spinWheel = function(){
+  if(ui._wheelSpinning) return;
+  var students=ui._rouletteStudents||[]; var N=students.length; if(!N) return;
+  var wheel=document.getElementById('rlWheel'); var startBtn=document.getElementById('rlStart'); var result=document.getElementById('rlResult');
+  if(!wheel) return;
+  ui._wheelSpinning=true; ui._rouletteWinner=null;
+  if(startBtn){ startBtn.disabled=true; startBtn.style.opacity='.55'; startBtn.style.cursor='default'; startBtn.textContent='…'; }
+  if(result) result.innerHTML='<div style="color:#94a3b8;font-weight:800;font-size:14px;">🎯 돌리는 중...</div>';
+
+  var seg=360/N;
+  var w=Math.floor(Math.random()*N);
+  var mid=w*seg+seg/2;                 // 당첨 조각의 중심각(3시=0도 기준, 시계방향)
+  var targetMod=(((-mid)%360)+360)%360; // 이 조각을 3시(0도)에 맞추기 위한 회전량
+  var cur=ui._wheelRot||0; var curMod=((cur%360)+360)%360;
+  var jitter=(Math.random()-0.5)*seg*0.6; // 조각 안에서 살짝 흔들림
+  var delta=((targetMod-curMod)+360)%360 + 360*6 + jitter; // 6바퀴 + 보정
+  var R=cur+delta; ui._wheelRot=R;
+  // 강제 reflow 후 transform 적용(전환 보장)
+  void wheel.getBoundingClientRect();
+  wheel.style.transform='rotate('+R.toFixed(2)+'deg)';
+
+  var done=function(){
+    wheel.removeEventListener('transitionend', done);
+    ui._wheelSpinning=false;
+    var win=students[w]; ui._rouletteWinner=win;
+    if(startBtn){ startBtn.disabled=false; startBtn.style.opacity='1'; startBtn.style.cursor='pointer'; startBtn.textContent='다시'; }
+    if(result){
+      result.innerHTML=
+        '<div style="animation:none;margin-top:6px;">'
+        + '<div style="font-size:13px;color:#92400e;font-weight:800;margin-bottom:6px;">🎉 당첨</div>'
+        + '<div style="font-size:34px;font-weight:900;color:#b45309;letter-spacing:-1px;margin-bottom:16px;">👑 '+String(win.name).replace(/</g,"&lt;")+'</div>'
+        + '<div style="display:flex;flex-direction:column;gap:10px;align-items:center;">'
+          + '<button onclick="ui.confirmRouletteLeader()" style="width:100%;max-width:360px;background:linear-gradient(135deg,#b45309,#f59e0b);color:#fff;border:none;padding:14px 20px;border-radius:14px;font-weight:900;font-size:16px;cursor:pointer;box-shadow:0 8px 20px rgba(217,119,6,.35);">👑 이 학생을 학생장으로 지정</button>'
+          + '<div style="display:flex;gap:10px;width:100%;max-width:360px;">'
+            + '<button onclick="ui._spinWheel()" style="flex:1;background:#f1f5f9;color:#475569;border:1px solid #e2e8f0;padding:11px 14px;border-radius:12px;font-weight:800;font-size:14px;cursor:pointer;"><i class="fa-solid fa-rotate-right"></i> 다시 돌리기</button>'
+            + '<button onclick="ui.closeLeaderRoulette()" style="flex:1;background:#fff;color:#94a3b8;border:1px solid #e2e8f0;padding:11px 14px;border-radius:12px;font-weight:800;font-size:14px;cursor:pointer;">닫기</button>'
+          + '</div>'
+        + '</div></div>';
+    }
+  };
+  wheel.addEventListener('transitionend', done);
+  // 안전장치: 전환 이벤트 누락 시 강제 종료
+  setTimeout(function(){ if(ui._wheelSpinning) done(); }, 6200);
+};
+ui.confirmRouletteLeader = function(){
+  var win=ui._rouletteWinner;
+  if(!win){ ui.showAlert('먼저 추첨을 완료하세요.'); return; }
+  if(state.isObserver){ ui.showAlert('👁️ 옵저버는 권한을 수정할 수 없습니다.'); return; }
+  if(!state.room) return;
+  var room=state.room;
+  firebase.database().ref('courses/'+room+'/students').once('value', function(snap){
+    var data=snap.val()||{}; var updates={};
+    // 단일 학생장: 기존 학생장 해제 후 당첨자 지정
+    Object.keys(data).forEach(function(tk){ if(data[tk] && data[tk].isLeader===true && tk!==win.token){ updates[tk+'/isLeader']=false; updates[tk+'/leaderPhone']=null; } });
+    updates[win.token+'/isLeader']=true;
+    firebase.database().ref('courses/'+room+'/students').update(updates).then(function(){
+      ui.showAlert('👑 ['+win.name+'] 교육생이 학생장으로 지정되었습니다.\n모든 플랫폼에 연동됩니다.');
+      ui.closeLeaderRoulette();
+    }).catch(function(){ ui.showAlert('지정 중 오류가 발생했습니다.'); });
+  });
+};
+
+/* ── 청렴/노조교육 장소 — 코디플랫폼(admin_coord) 실시간 연동 ──
+   admin_coord 상단바에서 setEduPlace()가 system/eduLocations/{integrity,union} 에 저장하면
+   강사플랫폼 과정운영현황(대시보드) 피드(feedEduIntegrity/feedEduUnion)에 즉시 반영. */
+(function initEduLocationsFeed(){
+  if (!window.firebase || !firebase.database) { setTimeout(initEduLocationsFeed, 400); return; }
+  function applyEdu(id, val){
+    var el = document.getElementById(id);
+    if (!el) return;
+    var v = ('' + (val || '')).trim();
+    el.textContent = v || '미정';
+    el.style.color = v ? (id === 'feedEduUnion' ? '#15803d' : '#1e40af') : '#94a3b8';
+  }
+  try {
+    firebase.database().ref('system/eduLocations').on('value', function(s){
+      var v = s.val() || {};
+      applyEdu('feedEduIntegrity', v.integrity);
+      applyEdu('feedEduUnion', v.union);
+    });
+  } catch(e) { setTimeout(initEduLocationsFeed, 800); }
+})();
