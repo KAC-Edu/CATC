@@ -6376,8 +6376,8 @@ const annualPlanMgrCoord = {
 <div id="customAlertModal" class="setup-modal" style="z-index:2147480001;">
     <div class="setup-box" style="max-width:380px; text-align:center;">
         <div id="kacAlertIcon" style="font-size:38px; margin-bottom:10px;">ℹ️</div>
-        <div id="kacAlertMsg" style="font-size:15px; font-weight:700; color:var(--navy-dark); line-height:1.6; white-space:pre-line; margin-bottom:22px;">알림</div>
-        <button class="navy-btn" style="width:100%; height:46px; background:var(--blue-main);" onclick="closeKacAlert()">확인</button>
+        <div id="kacAlertMsg" style="font-size:19px; font-weight:700; color:var(--navy-dark); line-height:1.6; white-space:pre-line; margin-bottom:22px;">알림</div>
+        <button class="navy-btn" style="width:100%; height:50px; font-size:18px; background:var(--blue-main);" onclick="closeKacAlert()">확인</button>
     </div>
 </div>
 
@@ -8934,7 +8934,18 @@ document.addEventListener("click",function(e){ var b=e.target&&e.target.closest&
         byBF[key][room]={l:Math.round(l*10)/10, t:Math.round(t*10)/10};
       });
     });
-    try{ Object.keys(byBF).forEach(function(k){ firebase.database().ref('system/coordFloorPos/'+k).update(byBF[k]); }); if(typeof showKacAlert==='function') showKacAlert('✅ 강의실 위치가 저장되었습니다. (모든 화면에 반영)'); }catch(e){}
+    // 즉시 메모리 반영 → firebase 왕복 전에도 위치가 원위치로 되돌아가지 않게 고정
+    window._coordFloorPos = window._coordFloorPos || {};
+    Object.keys(byBF).forEach(function(k){ window._coordFloorPos[k] = byBF[k]; });
+    try{
+      var ps = Object.keys(byBF).map(function(k){ return firebase.database().ref('system/coordFloorPos/'+k).update(byBF[k]); });
+      Promise.all(ps).then(function(){
+        if(typeof showKacAlert==='function') showKacAlert('✅ 강의실 위치가 저장되었습니다. (모든 화면에 반영)');
+      }).catch(function(err){
+        console.error('[coordFloorPos 저장 실패]', err);
+        if(typeof showKacAlert==='function') showKacAlert('⚠️ 위치 저장 중 오류가 발생했습니다.\n(firebase 권한/네트워크 확인)\n'+(err&&err.message||''));
+      });
+    }catch(e){ console.error(e); }
   }
   // 배치도 배경 5초 롱프레스 → 편집 토글 / 저장
   function lpBegin(e){

@@ -1,0 +1,19 @@
+{
+  "database": {
+    "rules": "firebase_rules.json"
+  },
+  "hosting": {
+    "public": ".",
+    "ignore": [
+      "firebase.json",
+      ".firebaserc",
+      "**/.*",
+      "**/node_modules/**",
+      "_backup_*/**",
+      "_backup_index_versions/**",
+      "_rollback_*/**",
+      "_capacitor_app/**"
+    ],
+    "rewrites": []
+  }
+}
