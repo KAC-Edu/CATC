@@ -5586,6 +5586,16 @@ input:not([type=checkbox]):not([type=radio]):not([type=file]), textarea, select 
 .input-dock { background:transparent !important; box-shadow:none !important; border-top-left-radius:0 !important; border-top-right-radius:0 !important; padding:4px 4px calc(4px + var(--safe-area-bottom)) 4px !important; }
 .input-dock .input-box { background:#fff !important; border:1px solid #e6ebf2 !important; border-radius:26px !important; box-shadow:0 8px 26px rgba(15,23,42,.13) !important; padding:12px 14px !important; }
 
+/* ===== [차량패널 정리 20260624] ===== */
+/* ① 정류장 신청자수/정차 상태 숨김(요청: 신청자수 불필요) */
+#shuttleModal #arrival-osong, #shuttleModal #arrival-terminal, #shuttleModal #arrival-airport { display:none !important; }
+/* ② 상단 중복 추천 팝업 숨김 */
+#shuttleRecommend { display:none !important; }
+/* ③ 출발 일정 텍스트 가독성 — 파랑→흰색(파란 배경에 묻히던 잔상 제거) */
+#shuttleModal #departureTimeText { color:#fff !important; }
+/* ④ 패널을 좌측에서 살짝 띄움 */
+#shuttleModal > .menu-box { width:88% !important; max-width:400px !important; }
+
 </style>
 <script>
 (function(){
