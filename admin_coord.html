@@ -1300,13 +1300,13 @@ body.pc-mode .coord-sec-panel { background:#fff; border:1px solid #eef2f7; borde
 .cfp-legend i.cfp-lg{ display:inline-block; width:13px; height:13px; border-radius:4px; background:#e5e7eb; border:1.5px solid #cbd5e1; vertical-align:-2px; margin-right:5px; }
 .cfp-legend i.cfp-lg.on{ background:linear-gradient(135deg,#16a34a,#15803d); border-color:#15803d; }
 .cfp-slot-card{ z-index:3; }
-.cfp-card{ background:#fff; border:2.5px solid #16a34a; border-radius:13px; padding:7px 11px 9px; min-width:132px; max-width:182px; box-shadow:0 7px 20px rgba(22,163,74,.30); cursor:pointer; text-align:left; transition:transform .12s; animation:cfpLed 1.25s ease-in-out infinite; }
+.cfp-card{ background:#fff; border:2.5px solid #16a34a; border-radius:13px; padding:9px 13px 11px; min-width:158px; max-width:220px; box-shadow:0 7px 20px rgba(22,163,74,.30); cursor:pointer; text-align:left; transition:transform .12s; animation:cfpLed 1.25s ease-in-out infinite; }
 .cfp-card:hover{ transform:scale(1.05); box-shadow:0 10px 26px rgba(22,163,74,.45); }
 .cfp-card-h{ display:flex; align-items:center; gap:6px; margin-bottom:2px; }
-.cfp-card-h b{ font-size:14px; font-weight:900; color:#15803d; }
-.cfp-card-course{ font-size:12.5px; font-weight:900; color:#0f172a; margin:1px 0 6px; line-height:1.25; word-break:keep-all; }
-.cfp-card-row{ font-size:11px; color:#475569; font-weight:700; line-height:1.55; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.cfp-card-row span{ display:inline-block; min-width:38px; color:#94a3b8; font-weight:800; margin-right:3px; }
+.cfp-card-h b{ font-size:17px; font-weight:900; color:#15803d; }
+.cfp-card-course{ font-size:15px; font-weight:900; color:#0f172a; margin:2px 0 7px; line-height:1.25; word-break:keep-all; }
+.cfp-card-row{ font-size:13.5px; color:#475569; font-weight:700; line-height:1.6; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.cfp-card-row span{ display:inline-block; min-width:46px; color:#94a3b8; font-weight:800; margin-right:4px; }
 .cfp-unassigned{ margin-top:14px; background:#fff7ed; border:1.5px solid #fed7aa; border-radius:12px; padding:11px 14px; }
 .cfp-una-h{ font-size:13px; font-weight:900; color:#c2410c; margin-bottom:9px; }
 .cfp-una-h i{ margin-right:5px; }
@@ -8408,10 +8408,10 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
       var active=(sd&&ed&&sd<=today&&ed>=today);
       if(active && firstActiveIdx<0) firstActiveIdx=i;
       var bg = ended?'background:#fbfcfe;color:#aab4c0;' : (active?'background:#dbeafe;':'');
-      var tag = ended?'<span style="font-size:10px;font-weight:800;color:#94a3b8;">종료</span>' : (active?'<span style="font-size:10px;font-weight:800;color:#1d4ed8;">● 진행중</span>':'<span style="font-size:10px;font-weight:800;color:#16a34a;">예정</span>');
-      return '<tr data-row="'+i+'" style="'+bg+'"><td style="text-align:left;font-weight:800;">'+esc(name)+' '+tag+'</td><td style="text-align:left;font-size:12px;white-space:nowrap;">'+esc(period)+'</td><td style="text-align:left;">'+esc(room)+'</td><td style="text-align:left;white-space:nowrap;">'+esc(coord)+'</td><td style="text-align:left;white-space:nowrap;">'+esc(prof)+'</td></tr>';
+      var tag = ended?'<span style="font-size:13px;font-weight:800;color:#94a3b8;">종료</span>' : (active?'<span style="font-size:13px;font-weight:800;color:#1d4ed8;">● 진행중</span>':'<span style="font-size:13px;font-weight:800;color:#16a34a;">예정</span>');
+      return '<tr data-row="'+i+'" style="'+bg+'"><td style="text-align:left;font-weight:800;font-size:17px;">'+esc(name)+' '+tag+'</td><td style="text-align:left;font-size:15px;white-space:nowrap;">'+esc(period)+'</td><td style="text-align:left;font-size:16px;">'+esc(room)+'</td><td style="text-align:left;font-size:16px;white-space:nowrap;">'+esc(coord)+'</td><td style="text-align:left;font-size:16px;white-space:nowrap;">'+esc(prof)+'</td></tr>';
     }).join('');
-    wrap.innerHTML='<div style="max-height:56vh;overflow:auto;border:1px solid #eef2f7;border-radius:12px;"><table class="cpop-table" style="width:100%;"><thead style="position:sticky;top:0;z-index:2;"><tr><th style="text-align:left;">과정명</th><th style="text-align:left;white-space:nowrap;">교육기간</th><th style="text-align:left;white-space:nowrap;">강의실</th><th style="text-align:left;white-space:nowrap;">과정담당</th><th style="text-align:left;white-space:nowrap;">담임교수</th></tr></thead><tbody>'+rows+'</tbody></table></div>';
+    wrap.innerHTML='<div style="max-height:56vh;overflow:auto;border:1px solid #eef2f7;border-radius:12px;"><table class="cpop-table" style="width:100%;font-size:16px;"><thead style="position:sticky;top:0;z-index:2;"><tr><th style="text-align:left;font-size:15px;">과정명</th><th style="text-align:left;white-space:nowrap;font-size:15px;">교육기간</th><th style="text-align:left;white-space:nowrap;font-size:15px;">강의실</th><th style="text-align:left;white-space:nowrap;font-size:15px;">과정담당</th><th style="text-align:left;white-space:nowrap;font-size:15px;">담임교수</th></tr></thead><tbody>'+rows+'</tbody></table></div>';
     if(firstActiveIdx>0){ var sc=wrap.querySelector('div'); var tr=wrap.querySelector('tr[data-row="'+firstActiveIdx+'"]'); if(sc&&tr){ sc.scrollTop=Math.max(0, tr.offsetTop-90); } }
   };
 
@@ -8430,59 +8430,73 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
     for(var i=0;i<3;i++){ var ms=new Date(mon); ms.setDate(ms.getDate()+i*7); var fe=new Date(ms); fe.setDate(fe.getDate()+4); html+='<option value="'+i+'">'+labels[i]+' ('+_coordMd(ms)+'~'+_coordMd(fe)+')</option>'; }
     sel.innerHTML=html; sel.value=cur;
   }
-    // ====== [신규] 강의실 배치 및 수정 (주차별 · 연간계획 연동) ======
-  function _coordRoomOptsHtml(selected){
+    // ====== [신규] 강의실 배치 및 수정 (주차별 · 연간계획 연동 · 중복방지 · 적용/취소) ======
+  var _craState=null;
+  function _coordRoomOptsHtml(selected, items, selfIdx){
     var E=(typeof esc==='function'?esc:(typeof _esc==='function'?_esc:function(x){return ''+(x==null?'':x);}));
     var sel=document.getElementById('setup-room-dropdown'); var sval=''+(selected||'');
+    var taken={};
+    if(items){ items.forEach(function(it,i){ if(i!==selfIdx){ var rm=''+(it.room||''); if(rm && rm.indexOf('온라인')<0 && rm.toLowerCase().indexOf('zoom')<0) taken[rm]=true; } }); }
     var html='<option value="">미배정</option>';
-    function opt(o){ if(!o.value||o.value==='direct'||o.value==='') return ''; return '<option value="'+E(o.value)+'"'+(((''+o.value)===sval)?' selected':'')+'>'+E(o.text)+'</option>'; }
+    function opt(o){ if(!o.value||o.value==='direct'||o.value==='') return ''; var v=''+o.value; var dis=(taken[v]&&v!==sval); return '<option value="'+E(v)+'"'+(v===sval?' selected':'')+(dis?' disabled':'')+'>'+E(o.text)+(dis?' (사용중)':'')+'</option>'; }
     if(sel){ Array.prototype.slice.call(sel.children).forEach(function(node){
       if(node.tagName==='OPTGROUP'){ html+='<optgroup label="'+E(node.label||'')+'">'; Array.prototype.slice.call(node.children).forEach(function(o){ html+=opt(o); }); html+='</optgroup>'; }
       else if(node.tagName==='OPTION'){ html+=opt(node); }
     }); }
     return html;
   }
-  function coordSaveRoomAssign(kind,key,selEl){
-    var val=selEl.value||'';
+  function _craSet(idx,val){ if(!_craState) return; _craState.items[idx].room=val; _craRender(); }
+  window._craSet=_craSet;
+  function _craCancel(){ _craState=null; if(typeof cpopClose==='function') cpopClose(); }
+  window._craCancel=_craCancel;
+  function _craApply(){
+    if(!_craState) return;
     try{
-      if(kind==='cur'){ firebase.database().ref('courses/'+key+'/settings/roomDetailName').set(val||null); }
-      else { firebase.database().ref('system/annualPlan/'+key+'/roomDetail').set(val||null); }
-      var ind=selEl.parentNode && selEl.parentNode.querySelector('.cra-ok');
-      if(ind){ ind.style.opacity='1'; setTimeout(function(){ ind.style.opacity='0'; },1400); }
+      _craState.items.forEach(function(it){
+        var val=it.room||'';
+        if(it.kind==='cur'){ firebase.database().ref('courses/'+it.key+'/settings/roomDetailName').set(val||null); }
+        else { firebase.database().ref('system/annualPlan/'+it.key+'/roomDetail').set(val||null); }
+      });
+      if(typeof showKacAlert==='function') showKacAlert('강의실 배치가 저장되었습니다. (강사·생활관·운영부 공유)');
     }catch(e){ if(typeof showKacAlert==='function') showKacAlert('저장 중 오류가 발생했습니다.'); }
+    _craState=null; if(typeof cpopClose==='function') cpopClose();
   }
-  window.coordSaveRoomAssign=coordSaveRoomAssign;
-  function coordOpenRoomAssign(){
+  window._craApply=_craApply;
+  function _craRender(){
     var E=(typeof esc==='function'?esc:(typeof _esc==='function'?_esc:function(x){return ''+(x==null?'':x);}));
+    var st=_craState; if(!st) return; var off=st.off; var labels=['이번주','다음주','다다음주'];
+    var head='<div style="font-size:13.5px;color:#475569;font-weight:700;margin-bottom:14px;line-height:1.5;"><b style="color:#2563eb;">'+labels[off]+'</b> 과정의 강의실을 배정/수정합니다. <b>적용</b>을 누르면 저장되며 <b>강사·교육지원부(생활관)·교육운영부</b>에 공유됩니다.'+(off>0?'<br><span style="color:#94a3b8;">· 미래 주차는 연간교육운영계획에 저장됩니다.</span>':'')+' <span style="color:#94a3b8;">· 사용중인 강의실은 중복 배정되지 않습니다.</span></div>';
+    var rows;
+    if(!st.items.length){ rows='<div class="cpop-empty">'+(off===0?'이번주 운영 중인 과정이 없습니다.':'해당 주차에 예정된 과정이 없습니다. (연간계획에 등록하면 표시됩니다)')+'</div>'; }
+    else { rows=st.items.map(function(it,idx){
+      return '<div style="display:flex;align-items:center;gap:12px;padding:13px 15px;border:1px solid #eef2f7;border-radius:13px;margin-bottom:8px;background:#fff;">'
+        +'<div style="flex:1;min-width:0;"><div style="font-weight:800;font-size:16px;color:#0f172a;word-break:keep-all;">'+E(it.name)+'</div>'+(it.period?('<div style="font-size:12px;color:#94a3b8;font-weight:700;margin-top:3px;">'+E(it.period)+'</div>'):'')+'</div>'
+        +'<select onchange="_craSet('+idx+',this.value)" style="flex-shrink:0;min-width:250px;padding:11px 13px;border:1.5px solid #cbd5e1;border-radius:10px;font-size:15px;font-weight:700;color:#0f172a;cursor:pointer;background:#fff;">'+_coordRoomOptsHtml(it.room, st.items, idx)+'</select>'
+        +'</div>';
+    }).join(''); }
+    var foot=st.items.length?('<div style="display:flex;gap:10px;margin-top:18px;position:sticky;bottom:-2px;background:#fff;padding:12px 0 2px;"><button onclick="_craCancel()" style="flex:1;padding:14px;border:1.5px solid #e2e8f0;border-radius:12px;background:#f8fafc;color:#64748b;font-weight:800;font-size:16px;cursor:pointer;">취소</button><button onclick="_craApply()" style="flex:2;padding:14px;border:none;border-radius:12px;background:linear-gradient(135deg,#16a34a,#15803d);color:#fff;font-weight:900;font-size:16px;cursor:pointer;"><i class="fa-solid fa-check"></i> 적용</button></div>'):'';
+    var html=head+rows+foot;
+    var b=document.getElementById('cpopBody');
+    if(b && document.getElementById('coordPopup') && document.getElementById('coordPopup').classList.contains('open')){ b.innerHTML=html; }
+    else { _cpop('<i class="fa-solid fa-chalkboard-user"></i> 강의실 배치 및 수정 · '+labels[off], html); window._coordPopupRefresh=null; }
+  }
+  function coordOpenRoomAssign(){
     var off=parseInt((document.getElementById('coordWeekSel')||{}).value||'0',10)||0;
     var labels=['이번주','다음주','다다음주'];
-    function row(kind,key,name,cur,period){
-      return '<div style="display:flex;align-items:center;gap:12px;padding:13px 15px;border:1px solid #eef2f7;border-radius:13px;margin-bottom:8px;background:#fff;">'
-        +'<div style="flex:1;min-width:0;"><div style="font-weight:800;font-size:16px;color:#0f172a;word-break:keep-all;">'+E(name)+'</div>'+(period?('<div style="font-size:12px;color:#94a3b8;font-weight:700;margin-top:3px;">'+E(period)+'</div>'):'')+'</div>'
-        +'<select onchange="coordSaveRoomAssign(\''+kind+'\',\''+E(key)+'\',this)" style="flex-shrink:0;min-width:250px;padding:11px 13px;border:1.5px solid #cbd5e1;border-radius:10px;font-size:15px;font-weight:700;color:#0f172a;cursor:pointer;background:#fff;">'+_coordRoomOptsHtml(cur)+'</select>'
-        +'<i class="fa-solid fa-circle-check cra-ok" style="color:#16a34a;font-size:20px;opacity:0;transition:opacity .25s;"></i>'
-        +'</div>';
-    }
-    var head='<div style="font-size:13.5px;color:#475569;font-weight:700;margin-bottom:14px;line-height:1.5;"><b style="color:#2563eb;">'+labels[off]+'</b> 과정의 강의실을 배정/수정합니다. 변경 즉시 저장되며 <b>강사·교육지원부(생활관)·교육운영부</b>에 공유됩니다.'+(off>0?'<br><span style="color:#94a3b8;">· 미래 주차는 연간교육운영계획에 저장됩니다.</span>':'')+'</div>';
-    var title='<i class="fa-solid fa-chalkboard-user"></i> 강의실 배치 및 수정 · '+labels[off];
     if(off===0){
       var rooms=(typeof _coordActiveRooms==='function'?_coordActiveRooms():[]);
-      if(!rooms.length){ _cpop(title, head+'<div class="cpop-empty">이번주 운영 중인 과정이 없습니다.</div>'); window._coordPopupRefresh=null; return; }
-      var rows=rooms.map(function(r){ return row('cur', r.rid, r.s.courseName||('Room '+r.rid), r.s.roomDetailName||r.s.roomDetail||'', r.s.period||''); }).join('');
-      _cpop(title, head+rows); window._coordPopupRefresh=null;
+      var items=rooms.map(function(r){ return {kind:'cur',key:r.rid,name:r.s.courseName||('Room '+r.rid),period:r.s.period||'',room:r.s.roomDetailName||r.s.roomDetail||''}; });
+      _craState={off:off,items:items}; _craRender();
     } else {
-      _cpop(title, head+'<div class="cpop-empty">불러오는 중…</div>'); window._coordPopupRefresh=null;
+      _cpop('<i class="fa-solid fa-chalkboard-user"></i> 강의실 배치 및 수정 · '+labels[off], '<div class="cpop-empty">불러오는 중…</div>'); window._coordPopupRefresh=null;
       firebase.database().ref('system/annualPlan').once('value').then(function(snap){
-        var v=snap.val();
-        var entries=Array.isArray(v)?v.map(function(c,i){return [String(i),c];}):(v&&typeof v==='object'?Object.keys(v).map(function(k){return [k,v[k]];}):[]);
+        var v=snap.val(); var entries=Array.isArray(v)?v.map(function(c,i){return [String(i),c];}):(v&&typeof v==='object'?Object.keys(v).map(function(k){return [k,v[k]];}):[]);
         var mon=_coordMondayD(new Date()); mon.setDate(mon.getDate()+off*7); var sun=new Date(mon); sun.setDate(sun.getDate()+6);
         var ms=_coordYmd(mon), ss=_coordYmd(sun);
         var wk=entries.filter(function(e){ var c=e[1]||{}; var sd=c.startDate||'',ed=c.endDate||''; return sd&&ed&&sd<=ss&&ed>=ms; });
-        var b=document.getElementById('cpopBody'); if(!b) return;
-        if(!wk.length){ b.innerHTML=head+'<div class="cpop-empty">해당 주차에 예정된 과정이 없습니다. (연간계획에 등록하면 표시됩니다)</div>'; return; }
-        var rows=wk.map(function(e){ var k=e[0], c=e[1]||{}; return row('plan', k, c.name||'-', c.roomDetail||c.room||'', (c.startDate||'')+' ~ '+(c.endDate||'')); }).join('');
-        b.innerHTML=head+rows;
-      }).catch(function(){ var b=document.getElementById('cpopBody'); if(b) b.innerHTML=head+'<div class="cpop-empty">연간계획을 불러오지 못했습니다.</div>'; });
+        var items=wk.map(function(e){ var k=e[0],c=e[1]||{}; return {kind:'plan',key:k,name:c.name||'-',period:(c.startDate||'')+' ~ '+(c.endDate||''),room:c.roomDetail||c.room||''}; });
+        _craState={off:off,items:items}; _craRender();
+      }).catch(function(){ var b=document.getElementById('cpopBody'); if(b) b.innerHTML='<div class="cpop-empty">연간계획을 불러오지 못했습니다.</div>'; });
     }
   }
   window.coordOpenRoomAssign=coordOpenRoomAssign;
