@@ -8700,8 +8700,7 @@ const kiosk = {
         this._enterFs();
         this._tick(); this._clock=setInterval(()=>this._tick(), 1000);
         this._refresh=setInterval(()=>this.render(), 30000);
-        var _si=document.getElementById('kioskSearchInput'); if(_si) _si.value='';
-        var _sr=document.getElementById('kioskSearchResult'); if(_sr) _sr.textContent='';
+        if(typeof kiosk.closeSearch==='function') kiosk.closeSearch();
     },
     close: function() {
         this._active=false;
@@ -8741,9 +8740,11 @@ const kiosk = {
             let planned=0; const _cn=String(s.courseName||'').trim(); let _best=null;
             for(const _k in dormAll){ const _dv=dormAll[_k]; if(_dv&&Array.isArray(_dv.list)&&_dv.list.length&&String(_dv.courseName||'').trim()===_cn){ if(!_best||(_dv.updatedAt||0)>(_best.updatedAt||0)) _best=_dv; } }
             if(_best) planned=_best.list.length;
-            try{ var _nm=[]; if(_best&&_best.list) _best.list.forEach(function(pp){ if(pp&&pp.name) _nm.push(String(pp.name).trim()); });
+            try{ var _place=String(s.roomDetailName||'').trim();
+                var _nm=[]; if(_best&&_best.list) _best.list.forEach(function(pp){ if(pp&&pp.name) _nm.push(String(pp.name).trim()); });
                 var _stu=r.students||{}; for(var _tk in _stu){ if(_stu[_tk]&&_stu[_tk].name) _nm.push(String(_stu[_tk].name).trim()); }
-                _nm.forEach(function(nn){ var _kk=nn.replace(/\s+/g,''); if(_kk && !kiosk._idx[_kk]) kiosk._idx[_kk]={room:room, course:(s.courseName||'-'), num:(_i+1)}; });
+                _nm.forEach(function(nn){ var _kk=nn.replace(/\s+/g,''); if(_kk && !kiosk._idx[_kk]) kiosk._idx[_kk]={room:room, course:(s.courseName||'-'), place:_place, num:(_i+1), type:'student', name:nn}; });
+                var _pf=String(st.professorName||'').trim(); if(_pf){ var _pk=_pf.replace(/\s+/g,''); if(_pk && !kiosk._idx[_pk]) kiosk._idx[_pk]={room:room, course:(s.courseName||'-'), place:_place, num:(_i+1), type:'prof', name:_pf}; }
             }catch(e){}
             const prof=(st.professorName||'').trim();
             const coordRaw=(s.coordinatorName||'').trim();
@@ -8764,25 +8765,98 @@ const kiosk = {
     }
 };
 window.kiosk = kiosk;
-// [키오스크] 교육생 이름 검색 → 해당 과정 행 강조, 10초 뒤 자동 초기화(다음 사람 대비)
+// ===== [키오스크] 이름 검색(교육생·강사) + 한글 화면 자판 =====
 kiosk._idx = kiosk._idx || {};
-kiosk.search = function(q){
+kiosk._makeHangul = function(){
+  var CHO=['ㄱ','ㄲ','ㄴ','ㄷ','ㄸ','ㄹ','ㅁ','ㅂ','ㅃ','ㅅ','ㅆ','ㅇ','ㅈ','ㅉ','ㅊ','ㅋ','ㅌ','ㅍ','ㅎ'];
+  var JUNG=['ㅏ','ㅐ','ㅑ','ㅒ','ㅓ','ㅔ','ㅕ','ㅖ','ㅗ','ㅘ','ㅙ','ㅚ','ㅛ','ㅜ','ㅝ','ㅞ','ㅟ','ㅠ','ㅡ','ㅢ','ㅣ'];
+  var JONG=['','ㄱ','ㄲ','ㄳ','ㄴ','ㄵ','ㄶ','ㄷ','ㄹ','ㄺ','ㄻ','ㄼ','ㄽ','ㄾ','ㄿ','ㅀ','ㅁ','ㅂ','ㅄ','ㅅ','ㅆ','ㅇ','ㅈ','ㅊ','ㅋ','ㅌ','ㅍ','ㅎ'];
+  var JC={'ㅗㅏ':'ㅘ','ㅗㅐ':'ㅙ','ㅗㅣ':'ㅚ','ㅜㅓ':'ㅝ','ㅜㅔ':'ㅞ','ㅜㅣ':'ㅟ','ㅡㅣ':'ㅢ'};
+  var TC={'ㄱㅅ':'ㄳ','ㄴㅈ':'ㄵ','ㄴㅎ':'ㄶ','ㄹㄱ':'ㄺ','ㄹㅁ':'ㄻ','ㄹㅂ':'ㄼ','ㄹㅅ':'ㄽ','ㄹㅌ':'ㄾ','ㄹㅍ':'ㄿ','ㄹㅎ':'ㅀ','ㅂㅅ':'ㅄ'};
+  var TS={'ㄳ':['ㄱ','ㅅ'],'ㄵ':['ㄴ','ㅈ'],'ㄶ':['ㄴ','ㅎ'],'ㄺ':['ㄹ','ㄱ'],'ㄻ':['ㄹ','ㅁ'],'ㄼ':['ㄹ','ㅂ'],'ㄽ':['ㄹ','ㅅ'],'ㄾ':['ㄹ','ㅌ'],'ㄿ':['ㄹ','ㅍ'],'ㅀ':['ㄹ','ㅎ'],'ㅄ':['ㅂ','ㅅ']};
+  var out='',c=-1,v=-1,t=-1;
+  function comp(){ if(c>=0&&v>=0) return String.fromCharCode(0xAC00+(c*21+v)*28+(t<0?0:t)); if(c>=0) return CHO[c]; if(v>=0) return JUNG[v]; return ''; }
+  function input(j){
+    var isC=CHO.indexOf(j)>=0, isV=JUNG.indexOf(j)>=0;
+    if(isC){
+      if(c>=0&&v<0&&t<0){ out+=CHO[c]; c=CHO.indexOf(j); return; }
+      if(c>=0&&v>=0&&t<0){ var ti=JONG.indexOf(j); if(ti>0){ t=ti; return; } out+=comp(); c=CHO.indexOf(j); v=-1; t=-1; return; }
+      if(c>=0&&v>=0&&t>=0){ var cb=TC[JONG[t]+j]; if(cb){ t=JONG.indexOf(cb); return; } out+=comp(); c=CHO.indexOf(j); v=-1; t=-1; return; }
+      c=CHO.indexOf(j); return;
+    }
+    if(isV){
+      if(c>=0&&v<0){ v=JUNG.indexOf(j); return; }
+      if(c>=0&&v>=0&&t<0){ var cb2=JC[JUNG[v]+j]; if(cb2){ v=JUNG.indexOf(cb2); return; } out+=comp(); c=-1; v=JUNG.indexOf(j); t=-1; return; }
+      if(c>=0&&v>=0&&t>=0){ var tj=JONG[t], sp=TS[tj]; if(sp){ t=JONG.indexOf(sp[0]); out+=comp(); c=CHO.indexOf(sp[1]); v=JUNG.indexOf(j); t=-1; return; } t=0; out+=comp(); c=CHO.indexOf(tj); v=JUNG.indexOf(j); t=-1; return; }
+      if(c<0&&v>=0){ out+=JUNG[v]; v=JUNG.indexOf(j); return; }
+      v=JUNG.indexOf(j); return;
+    }
+    out+=comp(); c=-1; v=-1; t=-1; out+=j;
+  }
+  function backspace(){ if(t>0){ var sp=TS[JONG[t]]; t=sp?JONG.indexOf(sp[0]):0; return; } if(v>=0){ v=-1; return; } if(c>=0){ c=-1; return; } if(out.length) out=out.slice(0,-1); }
+  return { input:input, backspace:backspace, text:function(){ return out+comp(); }, reset:function(){ out='';c=-1;v=-1;t=-1; } };
+};
+kiosk._kbShift=false;
+kiosk._renderKb = function(){
+  var kb=document.getElementById('kioskKb'); if(!kb) return;
+  var sh=kiosk._kbShift;
+  var r1=sh?['ㅃ','ㅉ','ㄸ','ㄲ','ㅆ','ㅛ','ㅕ','ㅑ','ㅒ','ㅖ']:['ㅂ','ㅈ','ㄷ','ㄱ','ㅅ','ㅛ','ㅕ','ㅑ','ㅐ','ㅔ'];
+  var r2=['ㅁ','ㄴ','ㅇ','ㄹ','ㅎ','ㅗ','ㅓ','ㅏ','ㅣ'];
+  var r3=['ㅋ','ㅌ','ㅊ','ㅍ','ㅠ','ㅜ','ㅡ'];
+  function keys(arr){ return arr.map(function(k){ return '<button class="kbk" onclick="kiosk._kbTap(\''+k+'\')">'+k+'</button>'; }).join(''); }
+  var html='';
+  html+='<div class="kbrow">'+keys(r1)+'</div>';
+  html+='<div class="kbrow">'+keys(r2)+'</div>';
+  html+='<div class="kbrow"><button class="kbk fn'+(sh?' on':'')+'" onclick="kiosk._kbShiftToggle()">⇧ 쌍자음</button>'+keys(r3)+'<button class="kbk fn" onclick="kiosk._kbBack()">⌫ 지우기</button></div>';
+  html+='<div class="kbrow"><button class="kbk fn" onclick="kiosk._kbSpace()" style="flex:3 1 0;">띄어쓰기</button><button class="kbk fn" onclick="kiosk._kbClear()">전체삭제</button></div>';
+  kb.innerHTML=html;
+};
+kiosk._kbTap = function(j){ if(!this._hg) this._hg=this._makeHangul(); this._hg.input(j); if(this._kbShift){ this._kbShift=false; this._renderKb(); } this._afterType(); };
+kiosk._kbShiftToggle = function(){ this._kbShift=!this._kbShift; this._renderKb(); };
+kiosk._kbBack = function(){ if(!this._hg) this._hg=this._makeHangul(); this._hg.backspace(); this._afterType(); };
+kiosk._kbSpace = function(){ if(!this._hg) this._hg=this._makeHangul(); this._hg.input(' '); this._afterType(); };
+kiosk._kbClear = function(){ if(this._hg) this._hg.reset(); this._afterType(); };
+kiosk._afterType = function(){
+  var txt=this._hg?this._hg.text():'';
+  var disp=document.getElementById('kioskKbDisplay'); if(disp) disp.innerHTML=txt?String(txt).replace(/</g,'&lt;'):'&#8203;';
+  this._match(txt);
+  this._scheduleReset();
+};
+kiosk.openSearch = function(){
+  var ov=document.getElementById('kioskSearchOverlay'), ct=document.getElementById('kioskContent');
+  if(ct) ct.style.display='none';
+  if(ov) ov.style.display='flex';
+  this._hg=this._makeHangul(); this._kbShift=false; this._renderKb();
+  var disp=document.getElementById('kioskKbDisplay'); if(disp) disp.innerHTML='&#8203;';
+  this._match(''); this._scheduleReset();
+};
+kiosk.closeSearch = function(){
   if(this._searchTimer){ clearTimeout(this._searchTimer); this._searchTimer=null; }
-  var res=document.getElementById('kioskSearchResult');
-  var clearHl=function(){ var hs=document.querySelectorAll('#kioskTableBody tr.kiosk-hl'); for(var i=0;i<hs.length;i++) hs[i].classList.remove('kiosk-hl'); };
-  q=String(q||'').trim(); clearHl();
-  if(!q){ if(res) res.textContent=''; return; }
+  var ov=document.getElementById('kioskSearchOverlay'), ct=document.getElementById('kioskContent');
+  if(ov) ov.style.display='none';
+  if(ct) ct.style.display='';
+  if(this._hg) this._hg.reset();
+};
+kiosk._scheduleReset = function(){
+  if(this._searchTimer){ clearTimeout(this._searchTimer); this._searchTimer=null; }
+  var self=this; this._searchTimer=setTimeout(function(){ self.closeSearch(); }, 5000);
+};
+kiosk._match = function(q){
+  var box=document.getElementById('kioskResultBox'); if(!box) return;
+  q=String(q||'').trim();
+  var esc=function(x){ return String(x==null?'':x).replace(/</g,'&lt;'); };
+  if(!q){ box.innerHTML='<div style="font-size:clamp(20px,3vh,34px); font-weight:800; color:#93c5fd;">이름을 입력하세요</div>'; return; }
   var key=q.replace(/\s+/g,''); var idx=this._idx||{}; var hit=idx[key];
   if(!hit){ for(var k in idx){ if(k.indexOf(key)>=0){ hit=idx[k]; break; } } }
   if(hit){
-    var row=document.querySelector('#kioskTableBody tr[data-room="'+hit.room+'"]');
-    if(row){ row.classList.add('kiosk-hl'); try{ row.scrollIntoView({behavior:'smooth',block:'center'}); }catch(e){} }
-    if(res) res.innerHTML='✅ <b style="color:#fff;">'+q.replace(/</g,'&lt;')+'</b> 님은 <b style="color:#facc15;">'+String(hit.course).replace(/</g,'&lt;')+'</b> (구분 '+hit.num+'번) 과정입니다';
+    var honor=(hit.type==='prof'?' 강사님':' 님');
+    var nameBig='<div style="font-size:clamp(42px,9vh,110px); font-weight:900; color:#fde047; letter-spacing:-1px; line-height:1.05;">'+esc(hit.name||q)+honor+'</div>';
+    var course='<div style="font-size:clamp(26px,5vh,60px); font-weight:900; color:#fff; margin-top:14px;">'+esc(hit.course)+'</div>';
+    var place='<div style="font-size:clamp(22px,4vh,48px); font-weight:800; color:#7dd3fc; margin-top:10px;">'+(hit.place?('('+esc(hit.place)+')'):'')+(hit.type==='prof'&&hit.place?' 로 가시면 됩니다':'')+'</div>';
+    box.innerHTML=nameBig+course+place;
   } else {
-    if(res) res.innerHTML='<span style="color:#fca5a5;">명단에서 이름을 찾을 수 없습니다.</span>';
+    box.innerHTML='<div style="font-size:clamp(26px,4.5vh,54px); font-weight:900; color:#fca5a5;">'+esc(q)+'</div><div style="font-size:clamp(18px,2.6vh,30px); font-weight:800; color:#cbd5e1; margin-top:12px;">명단에서 찾을 수 없습니다</div>';
   }
-  var self=this;
-  this._searchTimer=setTimeout(function(){ var inp=document.getElementById('kioskSearchInput'); if(inp) inp.value=''; clearHl(); if(res) res.textContent=''; self._searchTimer=null; }, 10000);
 };
 // [공통] 모달 닫기(X) 버튼에 통일 hover 효과(.x-close: 90도 회전 + 빨강) 자동 적용
 function _unifyXClose(root) {

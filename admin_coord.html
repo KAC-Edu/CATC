@@ -1838,13 +1838,16 @@ body.pc-mode .coord-pc-only{ display:flex !important; }
 #coordKioskEscHint{ font-size:clamp(10px,1vw,15px) !important; padding:clamp(7px,0.9vw,12px) clamp(10px,1.2vw,20px) !important; white-space:normal !important; }
 #coordKioskModal .ck-headicon{ width:clamp(38px,3.4vw,60px) !important; height:clamp(38px,3.4vw,60px) !important; font-size:clamp(18px,2vw,30px) !important; }
 #coordKioskTableBody tr.ckrow{ cursor:pointer; transition:background .12s; }
-#coordKioskTableBody tr.ckrow:hover td{ background:linear-gradient(90deg, rgba(59,130,246,.30), rgba(37,99,235,.20)) !important; }
-#coordKioskTableBody tr.ckrow:hover td:first-child{ border-top-left-radius:12px; border-bottom-left-radius:12px; box-shadow:inset 4px 0 0 #93c5fd; }
-#coordKioskTableBody tr.ckrow:hover td:last-child{ border-top-right-radius:12px; border-bottom-right-radius:12px; }
+@media (hover:hover) and (pointer:fine){
+  #coordKioskTableBody tr.ckrow:hover td{ background:linear-gradient(90deg, rgba(59,130,246,.30), rgba(37,99,235,.20)) !important; }
+  #coordKioskTableBody tr.ckrow:hover td:first-child{ border-top-left-radius:12px; border-bottom-left-radius:12px; box-shadow:inset 4px 0 0 #93c5fd; }
+  #coordKioskTableBody tr.ckrow:hover td:last-child{ border-top-right-radius:12px; border-bottom-right-radius:12px; }
+}
 /* [키오스크 배치도 페이지] 흰 배경 3등분 · 경계박스 없음 · 강의실명+예정인원 */
 .ckfp-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:34px; align-items:start; }
 .ckfp-col{ min-width:0; }
 .ckfp-title{ text-align:center; font-size:25px; font-weight:900; color:#0f2a4a; margin-bottom:14px; letter-spacing:-.3px; }
+.ckfp-clip{ overflow:hidden; border-radius:12px; background:#fff; }
 .ckfp-imgbox{ position:relative; width:100%; }
 .ckfp-img{ display:block; width:100%; height:auto; }
 .ckfp-slot{ position:absolute; transform:translate(-50%,-50%); z-index:2; }
@@ -1855,6 +1858,13 @@ body.pc-mode .coord-pc-only{ display:flex !important; }
 .ckfp-chip.on .ckfp-room b{ color:#dcfce7; font-size:16px; }
 .ckfp-chip.on .ckfp-course{ font-size:13.5px; font-weight:800; opacity:.95; margin-top:2px; max-width:190px; overflow:hidden; text-overflow:ellipsis; }
 .ckfp-prep{ background:#f8fafc; border:2px dashed #cbd5e1; border-radius:14px; padding:48px 16px; text-align:center; color:#94a3b8; font-weight:800; font-size:16px; }
+/* 배치도 페이지(3등분)에선 교육운영부 카드를 약간 축소해 한 도면 안에 들어오게 */
+#coordKioskFloorView .cfp-card{ min-width:118px; max-width:172px; padding:7px 10px 9px; border-width:2px; }
+#coordKioskFloorView .cfp-card-h b{ font-size:14px; }
+#coordKioskFloorView .cfp-card-course{ font-size:12.5px; margin:1px 0 5px; }
+#coordKioskFloorView .cfp-card-row{ font-size:11.5px; line-height:1.5; }
+#coordKioskFloorView .cfp-card-row span{ min-width:36px; margin-right:4px; }
+#coordKioskFloorView .cfp-room{ font-size:14px; padding:6px 11px; }
 /* [구버전] 진행 중 과정 배치도 그리드 — 여러 층을 나란히, 공간 부족하면 줄바꿈+스크롤 */
 .ck-fp-grid{ display:flex; flex-wrap:wrap; gap:16px; align-items:flex-start; }
 .ck-fp-3{ display:grid; grid-template-columns:repeat(3,1fr); gap:16px; align-items:start; }
@@ -7754,9 +7764,12 @@ window._coordUpdateShuttleLED=function(data){
   var _sh=document.getElementById('hdr-shuttle'); if(!_sh) return;
   // data 인자(최신 eduLocations)를 우선 사용 → _data 갱신 타이밍에 의존하지 않음
   var e=data||(window.coordOpsSetup&&coordOpsSetup._data)||{}; var sd=window._shuttleDep||{};
-  // 1차가 실제 시간(미정/운행안함 제외)으로 설정·공지됐을 때만 녹색
   var isT=function(s){ return /^\d{1,2}:\d{2}$/.test((''+(s||'')).trim()); };
-  var set = isT(e.shuttle1) || isT(sd.round1);
+  // 공지값(shuttle_departure) 우선, 없으면 설정값(eduLocations)
+  var pick=function(a,b){ return (a!=null&&(''+a).trim()!=='')?(''+a).trim():(''+(b==null?'':b)).trim(); };
+  var r1=pick(sd.round1, e.shuttle1), r2=pick(sd.round2, e.shuttle2);
+  // 1차 실제시간 + 2차(실제시간 또는 운행안함)일 때만 녹색. 1·2차 중 하나라도 미정/미설정이면 빨강.
+  var set = isT(r1) && (isT(r2) || r2==='운행안함');
   // 두 색상 시스템(edu-set/unset · shuttle-on/off)을 통일해서 토글 → CSS 충돌로 적색이 덮어쓰는 문제 방지
   _sh.classList.toggle('edu-set',set);     _sh.classList.toggle('edu-unset',!set);
   _sh.classList.toggle('shuttle-on',set);  _sh.classList.toggle('shuttle-off',!set);
@@ -8274,7 +8287,11 @@ window.coordClearShuttleRounds=function(){
   firebase.database().ref('system/shuttle_notice').remove();
   try{ _coordActiveRooms().forEach(function(rm){ firebase.database().ref('courses/'+rm.rid+'/shuttle/departure').remove(); }); }catch(e){}
   window._shuttleDep={};
+  // [초기화] 1차=미설정(시간 선택), 2차=미정 → 상단바 빨강. 모든 입력 경로 공통 반영.
+  try{ firebase.database().ref('system/eduLocations').update({shuttle1:'', shuttle2:'미정'}); }catch(e){}
+  try{ if(window.coordOpsSetup){ coordOpsSetup._data.shuttle1=''; coordOpsSetup._data.shuttle2='미정'; } }catch(e){}
   try{ if(document.getElementById('coordPopup') && document.getElementById('coordPopup').classList.contains('open') && window._coordPopupRefresh===openShuttleSummary) openShuttleSummary(); }catch(e){}
+  try{ if(window._coordUpdateShuttleLED) _coordUpdateShuttleLED({shuttle1:'', shuttle2:'미정'}); }catch(e){}
   try{ _coordUpdateShuttleBtn(); }catch(e){}
 };
 function _coordUpdateShuttleBtn(){
@@ -8313,7 +8330,7 @@ var coordKiosk={
     el.addEventListener('mousedown',begin); el.addEventListener('touchstart',begin,{passive:false});
     ['mouseup','mouseleave','touchend','touchcancel'].forEach(function(ev){ el.addEventListener(ev,end); });
   },
-  _show:function(mode,pct){ var id=(mode==='enter')?'coordKioskEnterBar':'coordKioskExitBar'; var b=document.getElementById(id); if(b){ b.style.display=pct>0?'block':'none'; b.style.width=pct+'%'; } try{ window._coordLP&&window._coordLP(pct); }catch(e){} },
+  _show:function(mode,pct){ var id=(mode==='enter')?'coordKioskEnterBar':'coordKioskExitBar'; var b=document.getElementById(id); if(b){ b.style.display=pct>0?'block':'none'; b.style.width=pct+'%'; } },
   _cancel:function(mode){ clearTimeout(this._t); clearInterval(this._iv); this._t=null; this._iv=null; this._show(mode,0); var id=(mode==='enter')?'coordKioskEnterBar':'coordKioskExitBar'; var b=document.getElementById(id); if(b) b.style.display='none'; },
   open:function(){ var m=document.getElementById('coordKioskModal'); if(!m) return; window._ckOpenedAt=Date.now(); this.render(); m.style.display='flex';
     try{ var de=document.documentElement; var fn=de.requestFullscreen||de.webkitRequestFullscreen||de.msRequestFullscreen; if(fn && !document.fullscreenElement) fn.call(de); }catch(e){}   // 클릭 즉시 모니터 전체화면
@@ -8410,7 +8427,7 @@ window.addEventListener('load', function(){
 });
 </script>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:6px;bottom:5px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;font-weight:800;line-height:1;letter-spacing:.6px;color:#fff;background:rgba(15,23,42,.85);padding:4px 8px;border-radius:6px;pointer-events:none;user-select:none;box-shadow:0 2px 6px rgba(0,0,0,.3);">VH</div>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:6px;bottom:5px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;font-weight:800;line-height:1;letter-spacing:.6px;color:#fff;background:rgba(15,23,42,.85);padding:4px 8px;border-radius:6px;pointer-events:none;user-select:none;box-shadow:0 2px 6px rgba(0,0,0,.3);">VK</div>
 <script>
 /* ===== [공용] 종료된 과정 자동 정리 (모든 플랫폼 공통) — 종료일 지난 방을 다음날 미개설로 비움. 브라우저별 하루 1회 ===== */
 window.kacExpireEndedCourses = async function(){
@@ -8747,22 +8764,31 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
     rooms.forEach(function(r){
       var pr=_coordRoomParse(r.s); if(!pr.L) return;
       var b=pr.b||'하늘관', f=pr.f||(b==='하늘관'?'2':'1'), key=b+'|'+f;
+      var prof=((r.st&&r.st.professorName)||'').trim(); prof=(typeof _coordStripRank==='function'?(_coordStripRank(prof)||prof):prof);
+      var coord=(typeof _coordStripRank==='function'?(_coordStripRank(r.s.coordinatorName)||''):((r.s.coordinatorName)||''));
+      var ldr=((typeof _studentsOf==='function'?_studentsOf(r.room):[])||[]).filter(function(s){return s&&s.isLeader===true;})[0];
       var exp=(typeof _courseOverviewCount==='function')?(_courseOverviewCount(r).expected||0):0;
-      var info={rid:r.rid, course:(r.s.courseName||'-'), expected:exp};
+      var info={rid:r.rid, course:(r.s.courseName||'-'), prof:prof, coord:coord, leader:(ldr?(ldr.name||''):''), expected:exp};
       if(!used[key]) used[key]={};
       if(!used[key][pr.L]) used[key][pr.L]=info;
     });
+    // 교육운영부 기존 카드 양식 + 강의실명 옆 인원수만('예정' 문구 제외)
+    function mkCard(L,on){ return '<div class="cfp-card-h"><b>'+_cfpRoomName(L)+' ('+on.expected+'명)</b><span class="cfp-dot"></span></div>'
+        +'<div class="cfp-card-course">'+esc(on.course)+'</div>'
+        +'<div class="cfp-card-row"><span>담임</span>'+esc(on.prof||'-')+'</div>'
+        +'<div class="cfp-card-row"><span>담당</span>'+esc(on.coord||'-')+'</div>'
+        +'<div class="cfp-card-row"><span>학생장</span>'+esc(on.leader||'미지정')+'</div>'; }
     var FIXED=[ {key:'하늘관|1', name:'하늘관 1층'}, {key:'하늘관|2', name:'하늘관 2층'}, {key:'국제동|1', name:'국제교육동 1층'} ];
     var cols=FIXED.map(function(F){
       var parts=F.key.split('|'), b=parts[0], fl=parts[1];
       var cfg=COORD_FP_MAP[F.key]||{img:'',pos:{}}; var IMG=cfg.img||'', POS=cfg.pos||{}, CROP=cfg.crop||{t:0,b:0};
       var fused=used[F.key]||{}, saved=(window._coordFloorPos||{})[b+'_'+fl]||{};
       var labels=Object.keys(POS).map(function(L){ var on=fused[L]; var p=saved[L]||POS[L]; var nm=_cfpRoomName(L);
-        if(on){ return '<div class="ckfp-slot" style="left:'+p.l+'%;top:'+p.t+'%;"><div class="ckfp-chip on" onclick="coordKiosk.notice(\''+esc(on.rid)+'\')"><div class="ckfp-room">'+esc(nm)+' <b>(예정 '+on.expected+'명)</b></div><div class="ckfp-course">'+esc(on.course)+'</div></div></div>'; }
-        return '<div class="ckfp-slot" style="left:'+p.l+'%;top:'+p.t+'%;"><div class="ckfp-chip off">'+esc(nm)+'</div></div>'; }).join('');
+        if(on){ return '<div class="cfp-slot cfp-slot-card" style="left:'+p.l+'%;top:'+p.t+'%;"><div class="cfp-card" onclick="coordKiosk.notice(\''+esc(on.rid)+'\')">'+mkCard(L,on)+'</div></div>'; }
+        return '<div class="cfp-slot" style="left:'+p.l+'%;top:'+p.t+'%;"><div class="cfp-room">'+esc(nm)+'</div></div>'; }).join('');
       var title='<div class="ckfp-title">'+esc(F.name)+'</div>';
       var inner = IMG
-        ? '<div class="ckfp-imgbox" style="margin:'+CROP.t+'% 0 '+CROP.b+'%;"><img class="ckfp-img" src="'+IMG+'" alt="배치도">'+labels+'</div>'
+        ? '<div class="ckfp-clip"><div class="ckfp-imgbox" style="margin:'+CROP.t+'% 0 '+CROP.b+'%;"><img class="ckfp-img" src="'+IMG+'" alt="배치도">'+labels+'</div></div>'
         : '<div class="ckfp-prep">🗺️ '+esc(F.name)+' 배치도 준비중</div>';
       return '<div class="ckfp-col">'+title+inner+'</div>';
     }).join('');
