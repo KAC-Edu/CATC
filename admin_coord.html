@@ -1212,16 +1212,16 @@ body.pc-mode .coord-pc-tabs {
     display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin:4px 0 8px;
 }
 .coord-ptab {
-    background:#fff; border:1.5px solid #e2e8f0; border-radius:16px; padding:18px 20px;
+    background:#fff; border:1.5px solid #e2e8f0; border-radius:13px; padding:12px 15px;
     cursor:pointer; transition:all .16s; position:relative; overflow:hidden;
-    display:flex; align-items:center; gap:14px;
+    display:flex; align-items:center; gap:11px;
 }
 .coord-ptab:hover { border-color:#bfdbfe; box-shadow:0 6px 16px rgba(15,23,42,.08); transform:translateY(-1px); }
 .coord-ptab.active { border-color:#2563eb; border-width:2px; background:#dbeafe; box-shadow:0 8px 22px rgba(37,99,235,.22); }
 .coord-ptab.active::before { content:''; position:absolute; left:0; top:0; bottom:0; width:5px; background:#2563eb; }
-.coord-ptab .cn { width:46px; height:46px; flex-shrink:0; border-radius:13px; background:#eff4ff; color:#2563eb; display:flex; align-items:center; justify-content:center; font-size:20px; }
+.coord-ptab .cn { width:38px; height:38px; flex-shrink:0; border-radius:11px; background:#eff4ff; color:#2563eb; display:flex; align-items:center; justify-content:center; font-size:17px; }
 .coord-ptab.active .cn { background:#003366; color:#fff; }
-.coord-ptab .ct { font-size:21px; font-weight:900; color:#1e293b; line-height:1.25; letter-spacing:-.3px; word-break:keep-all; }
+.coord-ptab .ct { font-size:17px; font-weight:900; color:#1e293b; line-height:1.25; letter-spacing:-.3px; word-break:keep-all; }
 .coord-ptab .cs { font-size:11.5px; font-weight:700; color:#94a3b8; margin-top:3px; }
 .coord-ptab.active .ct { color:#003366; }
 
@@ -1879,10 +1879,10 @@ body.pc-mode .coord-hdr-stats{ gap:10px; overflow:visible !important; min-width:
   .coord-brand-title, body.pc-mode .coord-brand-title{ display:none !important; }
 }
 body.pc-mode .coord-left{ grid-column:1 !important; grid-row:1 !important; justify-self:start !important; align-self:center !important; }
-body.pc-mode .hdr-stat{ padding:8px 18px; }
-body.pc-mode .hdr-stat > i{ font-size:18px; }
-body.pc-mode .hdr-stat .hb-label{ font-size:12.5px; }
-body.pc-mode .hdr-stat .hb-value{ font-size:26px; }
+body.pc-mode .hdr-stat{ padding:6px 12px; }
+body.pc-mode .hdr-stat > i{ font-size:15px; }
+body.pc-mode .hdr-stat .hb-label{ font-size:11px; }
+body.pc-mode .hdr-stat .hb-value{ font-size:18px; }
 #coordHeaderClock .hc-date{ font-size:13px; font-weight:500; opacity:.8; }
 #coordHeaderClock .hc-day{ font-size:12px; font-weight:600; opacity:.7; }
 #coordHeaderClock .hc-div{ width:1px; height:18px; background:rgba(255,255,255,.25); }
@@ -1893,25 +1893,25 @@ body.pc-mode .hdr-stat .hb-value{ font-size:26px; }
 @media (max-width:360px){ .coord-clock{ display:none; } }
 @media (max-width:560px){ .coord-brand-title{ font-size:14px; } }
 /* PC 모드 — 지원부와 동일한 형태(브랜드 + 중앙 시계 pill) */
-body.pc-mode .app-header{ display:grid !important; grid-template-columns:minmax(0,1fr) auto minmax(0,1fr) !important; gap:16px !important; align-items:center !important; min-height:74px !important; padding:12px 28px !important; background:linear-gradient(135deg,#111827 0%,#172554 46%,#2563eb 100%) !important; width:100vw !important; margin-left:calc(50% - 50vw) !important; }
+body.pc-mode .app-header{ display:grid !important; grid-template-columns:minmax(0,1fr) auto minmax(0,1fr) !important; gap:16px !important; align-items:center !important; min-height:56px !important; padding:8px 28px !important; background:linear-gradient(135deg,#111827 0%,#172554 46%,#2563eb 100%) !important; width:100vw !important; margin-left:calc(50% - 50vw) !important; }
 body.pc-mode .coord-brand-mark{ display:flex !important; }
 body.pc-mode .t-full{ display:inline !important; }
 body.pc-mode .coord-right{ flex:none !important; }
 body.pc-mode .coord-left{ flex:none !important; }
 body.pc-mode .coord-brand{ gap:13px !important; }
-body.pc-mode .coord-brand-mark{ width:48px !important; height:48px !important; border-radius:14px !important; }
-body.pc-mode .coord-brand-mark i{ font-size:26px !important; }
-body.pc-mode .coord-brand-title{ font-size:26px !important; font-weight:950 !important; }
+body.pc-mode .coord-brand-mark{ width:38px !important; height:38px !important; border-radius:11px !important; }
+body.pc-mode .coord-brand-mark i{ font-size:20px !important; }
+body.pc-mode .coord-brand-title{ font-size:19px !important; font-weight:950 !important; }
 /* [반응형] 화면이 좁아지면 중앙 통계카드(coord-right) 숨김 — 좌측 타이틀 + 우측 시계만 유지 */
 @media (max-width:1300px){ body.pc-mode .coord-right{ display:none !important; } }
 .coord-right.coord-hdr-hide, #coordHdrStats.coord-hdr-hide{ display:none !important; }
 .hdr-stat.hdr-active{ box-shadow:0 0 0 2px rgba(255,255,255,.65), 0 6px 16px rgba(0,0,0,.22) !important; transform:translateY(-1px); }
-body.pc-mode .coord-clock{ grid-column:3 !important; grid-row:1 !important; justify-self:end !important; gap:10px !important; background:rgba(15,23,42,0.34) !important; padding:8px 20px !important; border-radius:999px !important; border:1px solid rgba(255,255,255,0.17) !important; box-shadow:inset 0 1px 0 rgba(255,255,255,0.12),0 8px 24px rgba(15,23,42,0.16) !important; }
-body.pc-mode #coordHeaderClock .hc-date{ font-size:17px !important; }
-body.pc-mode #coordHeaderClock .hc-day{ font-size:16px !important; }
-body.pc-mode #coordHeaderClock .hc-div{ height:28px !important; }
-body.pc-mode #coordHeaderClock .hc-time{ font-size:33px !important; }
-body.pc-mode #coordHeaderClock .hc-ampm{ font-size:16px !important; color:#60a5fa !important; align-self:center; }
+body.pc-mode .coord-clock{ grid-column:3 !important; grid-row:1 !important; justify-self:end !important; gap:8px !important; background:rgba(15,23,42,0.34) !important; padding:6px 14px !important; border-radius:999px !important; border:1px solid rgba(255,255,255,0.17) !important; box-shadow:inset 0 1px 0 rgba(255,255,255,0.12),0 8px 24px rgba(15,23,42,0.16) !important; }
+body.pc-mode #coordHeaderClock .hc-date{ font-size:13px !important; }
+body.pc-mode #coordHeaderClock .hc-day{ font-size:12px !important; }
+body.pc-mode #coordHeaderClock .hc-div{ height:22px !important; }
+body.pc-mode #coordHeaderClock .hc-time{ font-size:24px !important; }
+body.pc-mode #coordHeaderClock .hc-ampm{ font-size:13px !important; color:#60a5fa !important; align-self:center; }
 body.pc-mode .coord-right{ grid-column:2 !important; grid-row:1 !important; justify-self:center !important; align-self:center !important; min-width:max-content !important; }
 </style>
 <header class="app-header">
@@ -8423,7 +8423,7 @@ window.addEventListener('load', function(){
 });
 </script>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:6px;bottom:5px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;font-weight:800;line-height:1;letter-spacing:.6px;color:#fff;background:rgba(15,23,42,.85);padding:4px 8px;border-radius:6px;pointer-events:none;user-select:none;box-shadow:0 2px 6px rgba(0,0,0,.3);">VN</div>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:6px;bottom:5px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;font-weight:800;line-height:1;letter-spacing:.6px;color:#fff;background:rgba(15,23,42,.85);padding:4px 8px;border-radius:6px;pointer-events:none;user-select:none;box-shadow:0 2px 6px rgba(0,0,0,.3);">VO</div>
 <script>
 /* ===== [공용] 종료된 과정 자동 정리 (모든 플랫폼 공통) — 종료일 지난 방을 다음날 미개설로 비움. 브라우저별 하루 1회 ===== */
 window.kacExpireEndedCourses = async function(){

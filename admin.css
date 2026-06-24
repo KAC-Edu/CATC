@@ -4176,3 +4176,18 @@ body.night-mode .side-rail-lbl{ color:#cbd5e1; }
   display: block !important;
   border-radius: 18px !important;
 }
+
+
+/* ===== [VR] 100% 기준 밀도 재조정 — 글자·여백만(높이/vh 불변) · 화면별 단계 적용 ===== */
+/* 공통 뷰 헤더 */
+.view-header{ margin-top:20px !important; margin-bottom:16px !important; }
+.view-header i{ font-size:26px !important; margin-bottom:8px !important; }
+.view-header h1{ font-size:24px !important; }
+.view-header p{ font-size:13px !important; margin-top:7px !important; }
+/* 홈 통계 카드 */
+.home-stat-card{ padding:13px 18px !important; border-radius:14px !important; min-width:150px !important; }
+.stat-card-inner{ gap:8px !important; margin-bottom:6px !important; }
+.stat-icon-box{ width:28px !important; height:28px !important; font-size:14px !important; border-radius:8px !important; }
+.stat-label{ font-size:12.5px !important; }
+.stat-number{ font-size:27px !important; }
+.stat-unit{ font-size:12.5px !important; }
