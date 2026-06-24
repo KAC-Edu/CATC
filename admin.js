@@ -11244,6 +11244,7 @@ ui.openStudentMap = async function(){
 ui.closeLeaderRoulette = function(){
   var m=document.getElementById('leaderRouletteModal'); if(m) m.remove();
   ui._wheelSpinning=false;
+  try{ if(ui._spinAudio){ ui._spinAudio.pause(); } }catch(e){}
   var _fh=document.getElementById('floatingHomeBtn'); if(_fh) _fh.style.display='';
 };
 ui.openLeaderRoulette = async function(){
@@ -11336,6 +11337,8 @@ ui._spinWheel = function(){
   ui._wheelSpinning=true; ui._rouletteWinner=null;
   if(startBtn){ startBtn.disabled=true; startBtn.style.opacity='.55'; startBtn.style.cursor='default'; startBtn.textContent='…'; }
   var pop=document.getElementById('rlWinPop'); if(pop) pop.style.display='none';
+  // 효과음: 시작 → spin.mp3
+  try{ if(ui._spinAudio){ try{ui._spinAudio.pause();}catch(_){} } ui._spinAudio=new Audio('spin.mp3'); ui._spinAudio.currentTime=0; ui._spinAudio.play().catch(function(){}); }catch(e){}
 
   var seg=360/N;
   var w=Math.floor(Math.random()*N);
@@ -11357,6 +11360,9 @@ ui._spinWheel = function(){
     var nm=document.getElementById('rlWinName'); if(nm) nm.textContent=win.name;
     var pop=document.getElementById('rlWinPop');
     if(pop){ pop.style.display='flex'; var card=pop.firstChild; if(card){ card.style.animation='none'; void card.offsetWidth; card.style.animation='rlPop .45s cubic-bezier(.17,.89,.32,1.28)'; } }
+    // 효과음: 당첨 → spin 정지 후 you.mp3
+    try{ if(ui._spinAudio){ ui._spinAudio.pause(); } }catch(e){}
+    try{ var _wa=new Audio('you.mp3'); _wa.currentTime=0; _wa.play().catch(function(){}); }catch(e){}
   };
   wheel.addEventListener('transitionend', done);
   // 안전장치: 전환 이벤트 누락 시 강제 종료
