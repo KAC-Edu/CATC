@@ -5431,7 +5431,7 @@ resetShuttleRequests: function() {
         const d=window._homeStatsData||{}, today=window._homeStatsToday||getTodayString();
         modal.style.display='flex';
         // 교육생 현황(students)은 우측 지도까지 들어가므로 모달을 넓힘. 그 외 타입은 기본 폭.
-        try{ const _box=modal.querySelector('div'); if(_box){ _box.style.maxWidth=(type==='students')?'1320px':(type==='active'?'920px':'720px'); _box.style.maxHeight=(type==='students')?'94vh':'90vh'; _box.style.padding='clamp(16px,3vh,40px) clamp(18px,3vw,44px)'; } if(title){ title.style.fontSize='clamp(17px,2.3vw,26px)'; title.style.marginBottom='clamp(12px,2vh,28px)'; } }catch(e){}
+        try{ const _box=modal.querySelector('div'); if(_box){ _box.style.maxWidth=(type==='students')?'1320px':(type==='active'?'760px':'720px'); _box.style.maxHeight=(type==='students')?'94vh':'90vh'; _box.style.padding='clamp(16px,3vh,40px) clamp(18px,3vw,44px)'; } if(title){ title.style.fontSize='clamp(17px,2.3vw,26px)'; title.style.marginBottom='clamp(12px,2vh,28px)'; } }catch(e){}
         const esc=function(s){return (s==null?'':String(s)).replace(/[&<>"]/g,function(c){return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]);});};
         // 이번 주 월~금 정확한 기간(토·일은 차주 월요일 기준)
         const _wkRange=(function(){ var now=new Date(); var dow=now.getDay(); var off=(dow===0)?1:(dow===6)?2:(1-dow); var mon=new Date(now); mon.setDate(now.getDate()+off); mon.setHours(0,0,0,0); var fri=new Date(mon); fri.setDate(mon.getDate()+4); var W=['일','월','화','수','목','금','토']; var f=function(dt){ return (dt.getMonth()+1)+'.'+dt.getDate()+'('+W[dt.getDay()]+')'; }; return f(mon)+' ~ '+f(fri); })();
@@ -5446,12 +5446,12 @@ resetShuttleRequests: function() {
             title.textContent='🏫 현재 강의 중인 과정  ·  '+_wkRange;
             const rows=weekRooms.filter(([,r])=>(r.status||{}).roomStatus==='active').map(([room,r])=>{
                 const prof=(r.status||{}).professorName||'-', course=(r.settings||{}).courseName||'-';
-                return `<div onclick="document.getElementById('homeStatModal').style.display='none'; dataMgr.switchRoomAttempt('${room}');" title="클릭하면 이 과정으로 입장합니다" style="display:flex;justify-content:space-between;align-items:center;gap:14px;padding:clamp(12px,2.3vh,28px) clamp(16px,2.6vw,32px);background:#eff6ff;border:1px solid #dbeafe;border-radius:16px;margin-bottom:clamp(7px,1.3vh,16px);cursor:pointer;transition:background .15s, transform .15s, box-shadow .15s;" onmouseover="this.style.background='#dbeafe';this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 20px rgba(37,99,235,.18)';" onmouseout="this.style.background='#eff6ff';this.style.transform='none';this.style.boxShadow='none';">
+                return `<div onclick="document.getElementById('homeStatModal').style.display='none'; dataMgr.switchRoomAttempt('${room}');" title="클릭하면 이 과정으로 입장합니다" style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:clamp(10px,1.6vh,18px) clamp(14px,2vw,24px);background:#eff6ff;border:1px solid #dbeafe;border-radius:14px;margin-bottom:clamp(5px,1vh,11px);cursor:pointer;transition:background .15s, transform .15s, box-shadow .15s;" onmouseover="this.style.background='#dbeafe';this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 20px rgba(37,99,235,.18)';" onmouseout="this.style.background='#eff6ff';this.style.transform='none';this.style.boxShadow='none';">
                     <div style="display:flex;align-items:center;gap:clamp(10px,1.5vw,20px);min-width:0;">
-                        <span style="font-weight:900;color:#fff;background:#3b82f6;padding:clamp(7px,1vh,11px) clamp(13px,1.5vw,20px);border-radius:12px;font-size:clamp(16px,1.9vw,24px);white-space:nowrap;">Room #${room}</span>
-                        <span style="font-size:clamp(19px,2.7vw,32px);color:#0f172a;font-weight:800;word-break:keep-all;">${course}</span>
+                        <span style="font-weight:900;color:#fff;background:#3b82f6;padding:clamp(5px,0.8vh,8px) clamp(10px,1.2vw,15px);border-radius:10px;font-size:clamp(13px,1.4vw,18px);white-space:nowrap;">Room #${room}</span>
+                        <span style="font-size:clamp(15px,1.9vw,23px);color:#0f172a;font-weight:800;word-break:keep-all;">${course}</span>
                     </div>
-                    <span style="font-size:clamp(13px,1.7vw,20px);color:#475569;font-weight:800;white-space:nowrap;">${prof} 교수 <i class="fa-solid fa-arrow-right-to-bracket" style="margin-left:8px;color:#3b82f6;"></i></span></div>`;
+                    <span style="font-size:clamp(12px,1.4vw,16px);color:#475569;font-weight:800;white-space:nowrap;">${prof} 교수 <i class="fa-solid fa-arrow-right-to-bracket" style="margin-left:8px;color:#3b82f6;"></i></span></div>`;
             }).join('');
             body.innerHTML=rows||'<p style="color:#94a3b8;text-align:center;padding:36px;font-size:20px;">이번 주 강의 중인 과정이 없습니다.</p>';
         } else if(type==='students'){
@@ -5498,15 +5498,15 @@ resetShuttleRequests: function() {
                 }
                 return '<div style="background:#f0fdf4;border:1px solid #dcfce7;border-radius:14px;margin-bottom:12px;overflow:hidden;">'
                   +'<div onclick="ui.toggleHomeDetail(\''+uid+'\')" title="클릭하면 명단을 봅니다" style="display:flex;justify-content:space-between;align-items:center;padding:18px 22px;cursor:pointer;">'
-                    +'<div style="display:flex;align-items:center;gap:14px;">'
-                      +'<span style="font-weight:900;color:#fff;background:#10b981;padding:8px 16px;border-radius:11px;font-size:clamp(16px,2vw,23px);white-space:nowrap;">Room #'+room+'</span>'
-                      +'<span style="font-size:clamp(19px,2.5vw,30px);color:#0f172a;font-weight:800;word-break:keep-all;">'+esc(course)+'</span>'
+                    +'<div style="display:flex;align-items:center;gap:12px;min-width:0;flex:1;">'
+                      +'<span style="flex-shrink:0;font-weight:900;color:#fff;background:#10b981;padding:7px 14px;border-radius:10px;font-size:clamp(14px,1.5vw,19px);white-space:nowrap;">Room #'+room+'</span>'
+                      +'<span style="flex:1;min-width:0;font-size:clamp(15px,1.6vw,21px);color:#0f172a;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+esc(course)+'</span>'
                       +'<i class="fa-solid fa-chevron-right hs-chev" style="color:#10b981;font-size:13px;transition:transform .2s;"></i>'
                     +'</div>'
                     +'<div style="display:flex;align-items:flex-end;gap:8px;white-space:nowrap;">'
-                      +'<div style="text-align:center;"><div style="font-size:11px;color:#64748b;font-weight:800;margin-bottom:2px;">입교</div><div style="font-size:clamp(26px,3vw,38px);font-weight:900;color:#10b981;line-height:1;">'+stuCnt+'</div></div>'
+                      +'<div style="text-align:center;"><div style="font-size:11px;color:#64748b;font-weight:800;margin-bottom:2px;">입교</div><div style="font-size:clamp(22px,2.4vw,30px);font-weight:900;color:#10b981;line-height:1;">'+stuCnt+'</div></div>'
                       +'<div style="font-size:18px;color:#94a3b8;font-weight:700;padding-bottom:2px;">/</div>'
-                      +'<div style="text-align:center;"><div style="font-size:11px;color:#64748b;font-weight:800;margin-bottom:2px;">예정</div><div style="font-size:clamp(26px,3vw,38px);font-weight:900;color:#0f172a;line-height:1;">'+cnt+'</div></div>'
+                      +'<div style="text-align:center;"><div style="font-size:11px;color:#64748b;font-weight:800;margin-bottom:2px;">예정</div><div style="font-size:clamp(22px,2.4vw,30px);font-weight:900;color:#0f172a;line-height:1;">'+cnt+'</div></div>'
                       +'<div style="font-size:13px;color:#64748b;font-weight:800;padding-bottom:2px;">명</div>'
                     +'</div>'
                   +'</div>'
@@ -11244,6 +11244,7 @@ ui.openStudentMap = async function(){
 ui.closeLeaderRoulette = function(){
   var m=document.getElementById('leaderRouletteModal'); if(m) m.remove();
   ui._wheelSpinning=false;
+  var _fh=document.getElementById('floatingHomeBtn'); if(_fh) _fh.style.display='';
 };
 ui.openLeaderRoulette = async function(){
   if(state.isObserver){ ui.showAlert('👁️ 옵저버는 사용할 수 없습니다.'); return; }
@@ -11325,6 +11326,7 @@ ui.openLeaderRoulette = async function(){
       + '</div>'
     + '</div>';
   document.body.appendChild(modal);
+  var _fh=document.getElementById('floatingHomeBtn'); if(_fh) _fh.style.display='none';
 };
 ui._spinWheel = function(){
   if(ui._wheelSpinning) return;
