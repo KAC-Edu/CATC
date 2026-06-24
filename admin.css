@@ -1,6 +1,6 @@
 /* ============================================================
    CATC · 강사 플랫폼 스타일  (admin.css)
-   @version  D   @build  20260622-000000
+   @version  E   @build  20260624-130000
    ------------------------------------------------------------
    [코드 수정 규칙] 수정 시 @version 을
    A -> B -> ... -> Z -> A1 -> B1 -> ... 순으로 1단계 올리고
@@ -4131,10 +4131,11 @@ button[onclick*="allIdle"]{
 }
 
 /* ── 6. 메인 블록 바깥쪽 사이드 액션 레일 (해당 뷰 전용) ── */
-.card-rail-wrap{ position:relative; width:100%; margin:0 auto; }
+.card-rail-wrap{ position:relative; width:100%; max-width:1090px; margin:0 auto; display:flex; align-items:flex-start; justify-content:center; gap:16px; flex-wrap:wrap; }
+.card-rail-wrap > .modern-white-card{ margin:0 0 50px 0; flex:0 1 1000px; min-width:0; }
 .side-rail{
-  position:absolute; left:calc(100% + 16px); top:6px;
-  display:flex; flex-direction:column; gap:11px; z-index:30;
+  position:static; left:auto; top:auto;
+  display:flex; flex-direction:column; gap:11px; z-index:30; flex-shrink:0;
 }
 .side-rail-btn{
   display:flex; flex-direction:column; align-items:center; justify-content:center; gap:7px;
@@ -4151,8 +4152,8 @@ button[onclick*="allIdle"]{
 .side-rail-btn.amber .side-rail-ic{ background:#fff7ed; color:#d97706; }
 .side-rail-lbl{ font-size:11.5px; font-weight:900; color:#475569; letter-spacing:-.3px; line-height:1.15; text-align:center; }
 /* 화면 폭이 좁아 레일이 잘릴 때는 카드 내부 우상단으로 자동 회피 */
-@media (max-width:1480px){
-  .side-rail{ position:static; flex-direction:row; gap:8px; margin:0 auto 14px; justify-content:flex-end; width:100%; max-width:1000px; }
+@media (max-width:1120px){
+  .side-rail{ flex-direction:row; gap:8px; margin:0 auto 14px; justify-content:center; width:100%; max-width:1000px; }
   .side-rail-btn{ flex-direction:row; width:auto; padding:8px 14px; border-radius:50px; gap:8px; box-shadow:0 4px 12px rgba(15,23,42,.08); }
   .side-rail-ic{ width:26px; height:26px; border-radius:9px; font-size:13px; }
 }
