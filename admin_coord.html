@@ -1833,8 +1833,8 @@ body.pc-mode .coord-pc-only{ display:flex !important; }
 #coordKioskTableBody tr.ckrow:hover td:first-child{ border-top-left-radius:12px; border-bottom-left-radius:12px; box-shadow:inset 4px 0 0 #93c5fd; }
 #coordKioskTableBody tr.ckrow:hover td:last-child{ border-top-right-radius:12px; border-bottom-right-radius:12px; }
 body.pc-mode .coord-hdr-stats{ gap:10px; overflow:visible !important; min-width:auto !important; flex-wrap:nowrap !important; }
-/* 화면이 좁아 제목과 겹칠 때: 상단바 통계(운영과정~노조교육) 숨김 */
-@media (max-width: 1300px){ #coordHdrStats, .coord-hdr-stats{ display:none !important; } }
+/* 화면이 좁아 제목과 겹칠 때: 상단바 통계(운영과정~노조교육) 숨김 (제목+통계+시계가 안 들어가는 폭부터) */
+@media (max-width: 1500px){ body.pc-mode #coordHdrStats, body.pc-mode .coord-hdr-stats, #coordHdrStats, .coord-hdr-stats{ display:none !important; } }
 body.pc-mode .coord-left{ grid-column:1 !important; grid-row:1 !important; justify-self:start !important; align-self:center !important; }
 body.pc-mode .hdr-stat{ padding:8px 18px; }
 body.pc-mode .hdr-stat > i{ font-size:18px; }
