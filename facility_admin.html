@@ -12,7 +12,7 @@
     <style>
         :root{ --navy:#0f1e3d; --blue:#2563eb; --border:#e2e8f0; --muted:#64748b; }
         *{ margin:0; padding:0; box-sizing:border-box; }
-        body{ background:#eef2f7; font-family:'Pretendard','Malgun Gothic',sans-serif; color:#1e293b; min-height:100vh; }
+        body{ background:#eef2f7; font-family:'Pretendard','Malgun Gothic',sans-serif; color:#1e293b; min-height:var(--app-h,100vh); }
 
         /* ── 상단바 (교육지원부/영양사 동일 계열, 세련된 그라데이션) ── */
         .top{ background:linear-gradient(120deg,#0b1733 0%,#152a5e 45%,#2563eb 120%);
@@ -44,7 +44,7 @@
         .gear:hover{ background:rgba(255,255,255,.16); }
 
         /* ── 생활관별 세로 블록 (전체 높이, 블록별 독립 스크롤) ── */
-        .wrap{ padding:18px 22px; height:calc(100vh - 68px); }
+        .wrap{ padding:18px 22px; height:calc(var(--app-h,100vh) - 68px); }
         .blocks{ display:flex; gap:16px; align-items:stretch; height:100%; }
         .bblock{ flex:1 1 0; min-width:0; background:#fff; border:1.5px solid var(--border); border-radius:18px;
             box-shadow:0 4px 16px rgba(15,30,80,.06); overflow:hidden; display:flex; flex-direction:column; height:100%; }
@@ -457,7 +457,34 @@
     }
 </script>
 <!-- @build JDS260614 미화·비품: 전체높이 블록·블록별 독립스크롤, 3개월 보관 자동정리, 월간 리포트(반복호수·품목소진·건물비교·처리시간·요일/시간 패턴) + 인쇄/PDF, 새요청 알림음, 설정 -->
+<!-- ── 화면 자동 맞춤(auto-fit): 가로폭 기준 일정 배율 · dorm_admin 정석 통일 · JDS260624 ──
+     75% 줌으로 디자인한 화면을 100% PC에서도 같은 크기로 일괄 축소. 가로 넘치면 추가 축소.
+     BASE_ZOOM 값만 바꾸면 이 플랫폼 전체 크기를 한 번에 조정. -->
+<script>
+(function(){
+  var MIN_ZOOM = 0.5;
+  var BASE_ZOOM = 0.75;   // [JDS260624] 기본 배율 — 75%로 디자인한 화면을 100%에서도 같은 크기로. 값만 바꾸면 전체 일괄 조정.
+  var t;
+  function fit(){
+    var el = document.documentElement, b = document.body;
+    el.style.zoom = '';
+    el.style.removeProperty('--app-h');
+    var needW = Math.max(1, el.scrollWidth, b ? b.scrollWidth : 0);
+    var z = Math.max(MIN_ZOOM, Math.min(window.innerWidth / needW, BASE_ZOOM));
+    if (z < 0.995){
+      el.style.setProperty('--app-h', (window.innerHeight / z) + 'px');
+      el.style.zoom = z.toFixed(4);
+    }
+  }
+  function soon(){ clearTimeout(t); t = setTimeout(fit, 80); }
+  window.addEventListener('resize', soon);
+  window.addEventListener('load', fit);
+  document.addEventListener('DOMContentLoaded', fit);
+  [300,900,2000].forEach(function(ms){ setTimeout(fit, ms); });
+})();
+</script>
+<style>@media print{#__catcVer{display:none!important}}</style>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vC</div>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vD</div>
 </body>
 </html>

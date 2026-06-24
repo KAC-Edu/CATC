@@ -3,8 +3,8 @@
 <head>
 <!-- ============================================================
   CATC · 강사 플랫폼  (admin.html)
-  @version  P
-  @build    20260612-123725
+  @version  Q
+  @build    20260624-120000
   ────────────────────────────────────────────────────────
   [코드 수정 규칙 · AI/개발자 공통]
   이 파일을 한 글자라도 고치면:
@@ -2506,6 +2506,7 @@ function setupAcc(btn){
 <script>
 (function(){
   var MIN_ZOOM = 0.5;     // 글씨가 안 보일 만큼 작아지지 않도록 하한
+  var BASE_ZOOM = 0.75;   // [JDS260624] 기본 배율 — 75% 줌으로 디자인했던 화면을 100%에서도 같은 크기로. 값만 바꾸면 전체 크기 일괄 조정. (전 플랫폼 dorm_admin 정석 통일)
   var DESIGN_W = 1400;    // 설계 가로폭(body min-width와 동일) — 모든 화면(뷰) 공통 기준
   var t;
 
@@ -2518,7 +2519,8 @@ function setupAcc(btn){
     el.style.zoom = '';
     el.style.removeProperty('--app-h');
 
-    var z = Math.max(MIN_ZOOM, Math.min(window.innerWidth / DESIGN_W, 1));   // 가로폭 기준, 축소만(확대 안 함)
+    var needW = Math.max(DESIGN_W, el.scrollWidth, document.body ? document.body.scrollWidth : 0);
+    var z = Math.max(MIN_ZOOM, Math.min(window.innerWidth / needW, BASE_ZOOM));   // 가로폭 기준, 기본 BASE_ZOOM(축소만, 확대 안 함)
     if (z < 0.995){
       // zoom 시 height:100vh 컨테이너(사이드바·메인)가 화면보다 작게 렌더 → 높이를 배율만큼 키워 꽉 차게 보정(하단 여백/잘림 방지)
       el.style.setProperty('--app-h', (window.innerHeight / z) + 'px');
@@ -2772,8 +2774,8 @@ function setupAcc(btn){
 </style>
 
 <!-- 버전 표기(요청 시까지 유지) -->
-<div id="buildVersionBadge" style="position:fixed; right:8px; bottom:8px; z-index:99999; background:rgba(15,23,42,.78); color:#fff; font-size:12px; font-weight:800; letter-spacing:.5px; padding:4px 10px; border-radius:8px; font-family:monospace; box-shadow:0 2px 8px rgba(0,0,0,.3); pointer-events:none; user-select:none;">VT</div>
+<div id="buildVersionBadge" style="position:fixed; right:8px; bottom:8px; z-index:99999; background:rgba(15,23,42,.78); color:#fff; font-size:12px; font-weight:800; letter-spacing:.5px; padding:4px 10px; border-radius:8px; font-family:monospace; box-shadow:0 2px 8px rgba(0,0,0,.3); pointer-events:none; user-select:none;">VU</div>
 
 </body>
 </html>
-<!-- @build 20260623 (강사 vJ-kiosk) -->
+<!-- @build 20260624-120000 (강사 vQ — 전역 자동맞춤 BASE_ZOOM 0.75 정석 통일) -->

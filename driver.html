@@ -3,8 +3,8 @@
 <head>
 <!-- ============================================================
   CATC · 차량·기사  (driver.html)  — 전면 리뉴얼본
-  @version  R1
-  @build    20260616-renewal
+  @version  S1
+  @build    20260624-120000
   ────────────────────────────────────────────────────────
   PC용 기사 운행관리 대시보드
    - 신청 인박스(강사 픽업): 확인 / 불가(사유)
@@ -1008,8 +1008,35 @@ function renderPlanList(){
 
 window.addEventListener('DOMContentLoaded', init);
 </script>
+<!-- ── 화면 자동 맞춤(auto-fit): 가로폭 기준 일정 배율 · dorm_admin 정석 통일 · JDS260624 ──
+     75% 줌으로 디자인한 화면을 100% PC에서도 같은 크기로 일괄 축소. 가로 넘치면 추가 축소.
+     BASE_ZOOM 값만 바꾸면 이 플랫폼 전체 크기를 한 번에 조정. -->
+<script>
+(function(){
+  var MIN_ZOOM = 0.5;
+  var BASE_ZOOM = 0.75;   // [JDS260624] 기본 배율 — 75%로 디자인한 화면을 100%에서도 같은 크기로. 값만 바꾸면 전체 일괄 조정.
+  var t;
+  function fit(){
+    var el = document.documentElement, b = document.body;
+    el.style.zoom = '';
+    el.style.removeProperty('--app-h');
+    var needW = Math.max(1, el.scrollWidth, b ? b.scrollWidth : 0);
+    var z = Math.max(MIN_ZOOM, Math.min(window.innerWidth / needW, BASE_ZOOM));
+    if (z < 0.995){
+      el.style.setProperty('--app-h', (window.innerHeight / z) + 'px');
+      el.style.zoom = z.toFixed(4);
+    }
+  }
+  function soon(){ clearTimeout(t); t = setTimeout(fit, 80); }
+  window.addEventListener('resize', soon);
+  window.addEventListener('load', fit);
+  document.addEventListener('DOMContentLoaded', fit);
+  [300,900,2000].forEach(function(ms){ setTimeout(fit, ms); });
+})();
+</script>
+<style>@media print{#__catcVer{display:none!important}}</style>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vD</div>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vE</div>
 <script>
 /* ===== [공용] 종료된 과정 자동 정리 (기사 포함 전 플랫폼) — 종료일 지난 방을 다음날 미개설로 비움. 브라우저별 하루 1회 ===== */
 window.kacExpireEndedCourses = async function(){
