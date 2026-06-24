@@ -1833,6 +1833,8 @@ body.pc-mode .coord-pc-only{ display:flex !important; }
 #coordKioskTableBody tr.ckrow:hover td:first-child{ border-top-left-radius:12px; border-bottom-left-radius:12px; box-shadow:inset 4px 0 0 #93c5fd; }
 #coordKioskTableBody tr.ckrow:hover td:last-child{ border-top-right-radius:12px; border-bottom-right-radius:12px; }
 body.pc-mode .coord-hdr-stats{ gap:10px; overflow:visible !important; min-width:auto !important; flex-wrap:nowrap !important; }
+/* 화면이 좁아 제목과 겹칠 때: 상단바 통계(운영과정~노조교육) 숨김 */
+@media (max-width: 1300px){ #coordHdrStats, .coord-hdr-stats{ display:none !important; } }
 body.pc-mode .coord-left{ grid-column:1 !important; grid-row:1 !important; justify-self:start !important; align-self:center !important; }
 body.pc-mode .hdr-stat{ padding:8px 18px; }
 body.pc-mode .hdr-stat > i{ font-size:18px; }
@@ -7747,22 +7749,39 @@ var coordOpsSetup = {
     var union=this._short(v.union), integ=this._short(v.integrity), t1=v.shuttle1||this._DEF.t1, t2=v.shuttle2||this._DEF.t2;
     var ov=document.getElementById('coordOpsOv'); if(!ov){ ov=document.createElement('div'); ov.id='coordOpsOv'; document.body.appendChild(ov); }
     ov.setAttribute('style','position:fixed;inset:0;z-index:100090;background:rgba(15,23,42,.55);backdrop-filter:blur(7px);-webkit-backdrop-filter:blur(7px);display:flex;align-items:center;justify-content:center;padding:20px;');
-    ov.innerHTML='<div style="background:#fff;border-radius:22px;width:min(560px,94vw);max-height:90vh;overflow:auto;box-shadow:0 30px 80px rgba(0,0,0,.5);">'
-      +'<div style="background:linear-gradient(135deg,#0f2a4a,#1e3a8a);color:#fff;padding:18px 22px;"><div style="font-size:18px;font-weight:900;"><i class="fa-solid fa-circle-info"></i> 금주 교육 운영 설정 확인</div><div style="font-size:12.5px;color:#bfdbfe;font-weight:700;margin-top:3px;">차량 시간 · 노조교육 · 청렴교육 장소를 확인/설정하세요</div></div>'
-      +'<div style="padding:20px;">'
-      +'<div style="background:#f0f7ff;border:1px solid #dbeafe;border-radius:12px;padding:13px 15px;font-size:14px;line-height:1.75;color:#1e3a8a;font-weight:700;margin-bottom:16px;">금주 <b>퇴교차량</b>은 1차 <b>'+e(t1)+'</b> · 2차 <b>'+e(t2)+'</b>, <b>노조교육</b>은 <b>'+e(union)+'</b>, <b>청렴교육</b>은 <b style="color:'+(integSet?'#16a34a':'#dc2626')+';">'+e(integ)+'</b> 입니다.</div>'
-      +'<div style="margin-bottom:14px;"><div style="font-size:13px;font-weight:900;color:#334155;margin-bottom:7px;"><i class="fa-solid fa-bus" style="color:#2563eb;"></i> 퇴교차량 출발시간</div><div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;"><label style="font-size:13px;font-weight:800;color:#64748b;">1차 <input type="time" id="opsT1" value="'+e(t1)+'" style="margin-left:5px;padding:8px 10px;border:1.5px solid #cbd5e1;border-radius:9px;font-size:15px;font-weight:800;"></label><label style="font-size:13px;font-weight:800;color:#64748b;">2차 <input type="time" id="opsT2" value="'+e(t2)+'" style="margin-left:5px;padding:8px 10px;border:1.5px solid #cbd5e1;border-radius:9px;font-size:15px;font-weight:800;"></label><button onclick="coordOpsSetup.saveShuttle()" style="padding:8px 14px;border:none;border-radius:9px;background:#2563eb;color:#fff;font-weight:800;cursor:pointer;">저장</button></div></div>'
-      +'<div style="margin-bottom:14px;"><div style="font-size:13px;font-weight:900;color:#334155;margin-bottom:7px;"><i class="fa-solid fa-handshake" style="color:#16a34a;"></i> 노조교육 장소</div><select id="opsUnion" onchange="coordOpsSetup.savePlace(\'union\',this.value)" style="width:100%;padding:11px 13px;border:1.5px solid #bbf7d0;border-radius:11px;font-size:15px;font-weight:800;color:#15803d;background:#f0fdf4;">'+this._placeOptions(v.union)+'</select></div>'
-      +'<div style="margin-bottom:16px;"><div style="font-size:13px;font-weight:900;color:#334155;margin-bottom:7px;"><i class="fa-solid fa-scale-balanced" style="color:#dc2626;"></i> 청렴교육 장소'+(integSet?'':' <span style="color:#dc2626;font-size:11px;">· 미설정(필수)</span>')+'</div><select id="opsInteg" onchange="coordOpsSetup.savePlace(\'integrity\',this.value)" style="width:100%;padding:11px 13px;border:1.5px solid '+(integSet?'#fecaca':'#dc2626')+';border-radius:11px;font-size:15px;font-weight:800;color:'+(integSet?'#b91c1c':'#dc2626')+';background:#fef2f2;">'+this._placeOptions(v.integrity)+'</select></div>'
-      +'<label style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:800;color:#64748b;margin-bottom:14px;cursor:pointer;"><input type="checkbox" id="opsSkipToday" style="width:17px;height:17px;accent-color:#2563eb;"> 오늘은 그만 보기</label>'
-      +'<button onclick="coordOpsSetup.close()" style="width:100%;padding:14px;background:#1e293b;color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:900;cursor:pointer;"><i class="fa-solid fa-check"></i> 확인</button>'
+    ov.innerHTML='<div style="background:#fff;border-radius:24px;width:min(640px,95vw);max-height:92vh;overflow:auto;box-shadow:0 30px 80px rgba(0,0,0,.5);">'
+      +'<div style="background:linear-gradient(135deg,#0f2a4a,#1e3a8a);color:#fff;padding:24px 28px;"><div style="font-size:24px;font-weight:900;"><i class="fa-solid fa-circle-info"></i> 금주 교육 운영 설정 확인</div><div style="font-size:15px;color:#bfdbfe;font-weight:700;margin-top:5px;">차량 시간 · 노조교육 · 청렴교육 장소를 확인/설정하세요</div></div>'
+      +'<div style="padding:26px;">'
+      +'<div style="background:#f0f7ff;border:1px solid #dbeafe;border-radius:14px;padding:18px 20px;font-size:17px;line-height:1.85;color:#1e3a8a;font-weight:700;margin-bottom:22px;">금주 <b>퇴교차량</b>은 1차 <b>'+e(t1)+'</b> · 2차 <b>'+e(t2)+'</b>, <b>노조교육</b>은 <b>'+e(union)+'</b>, <b>청렴교육</b>은 <b style="color:'+(integSet?'#16a34a':'#dc2626')+';">'+e(integ)+'</b> 입니다.</div>'
+      +'<div style="margin-bottom:18px;"><div style="font-size:16px;font-weight:900;color:#334155;margin-bottom:10px;"><i class="fa-solid fa-bus" style="color:#2563eb;"></i> 퇴교차량 출발시간 <span style="font-size:12.5px;color:#94a3b8;font-weight:700;">· 30분 단위 · 2차는 1차+2시간 이후</span></div><div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;"><label style="font-size:15px;font-weight:800;color:#64748b;">1차 <input type="time" id="opsT1" value="'+e(t1)+'" step="1800" onchange="coordOpsSetup.onT1Change()" style="margin-left:6px;padding:11px 13px;border:1.5px solid #cbd5e1;border-radius:11px;font-size:19px;font-weight:800;"></label><label style="font-size:15px;font-weight:800;color:#64748b;">2차 <input type="time" id="opsT2" value="'+e(t2)+'" step="1800" min="'+e(this._toHHMM(this._toMin(t1)+120))+'" onchange="coordOpsSetup.onT2Change()" style="margin-left:6px;padding:11px 13px;border:1.5px solid #cbd5e1;border-radius:11px;font-size:19px;font-weight:800;"></label><button onclick="coordOpsSetup.saveShuttle()" style="padding:11px 20px;border:none;border-radius:11px;background:#2563eb;color:#fff;font-weight:900;font-size:15px;cursor:pointer;">저장</button></div></div>'
+      +'<div style="margin-bottom:18px;"><div style="font-size:16px;font-weight:900;color:#334155;margin-bottom:9px;"><i class="fa-solid fa-handshake" style="color:#16a34a;"></i> 노조교육 장소</div><select id="opsUnion" onchange="coordOpsSetup.savePlace(\'union\',this.value)" style="width:100%;padding:14px 15px;border:1.5px solid #bbf7d0;border-radius:12px;font-size:18px;font-weight:800;color:#15803d;background:#f0fdf4;">'+this._placeOptions(v.union)+'</select></div>'
+      +'<div style="margin-bottom:20px;"><div style="font-size:16px;font-weight:900;color:#334155;margin-bottom:9px;"><i class="fa-solid fa-scale-balanced" style="color:#dc2626;"></i> 청렴교육 장소'+(integSet?'':' <span style="color:#dc2626;font-size:12.5px;">· 미설정(필수)</span>')+'</div><select id="opsInteg" onchange="coordOpsSetup.savePlace(\'integrity\',this.value)" style="width:100%;padding:14px 15px;border:1.5px solid '+(integSet?'#fecaca':'#dc2626')+';border-radius:12px;font-size:18px;font-weight:800;color:'+(integSet?'#b91c1c':'#dc2626')+';background:#fef2f2;">'+this._placeOptions(v.integrity)+'</select></div>'
+      +'<label style="display:flex;align-items:center;gap:9px;font-size:16px;font-weight:800;color:#64748b;margin-bottom:18px;cursor:pointer;"><input type="checkbox" id="opsSkipToday" style="width:20px;height:20px;accent-color:#2563eb;"> 오늘은 그만 보기</label>'
+      +'<button onclick="coordOpsSetup.close()" style="width:100%;padding:17px;background:#1e293b;color:#fff;border:none;border-radius:13px;font-size:18px;font-weight:900;cursor:pointer;"><i class="fa-solid fa-check"></i> 확인</button>'
       +'</div></div>';
   },
+  _toMin:function(hhmm){ var p=(''+(hhmm||'')).split(':'); return (parseInt(p[0],10)||0)*60+(parseInt(p[1],10)||0); },
+  _toHHMM:function(min){ min=Math.max(0,Math.min(min,1439)); var h=Math.floor(min/60), m=min%60; return String(h).padStart(2,'0')+':'+String(m).padStart(2,'0'); },
+  _round30:function(min){ return Math.round(min/30)*30; },
+  onT1Change:function(){
+    var i1=document.getElementById('opsT1'), i2=document.getElementById('opsT2'); if(!i1||!i2) return;
+    var t1=this._round30(this._toMin(i1.value)); i1.value=this._toHHMM(t1);
+    var minT2=t1+120; i2.min=this._toHHMM(minT2);
+    if(this._toMin(i2.value)<minT2) i2.value=this._toHHMM(minT2);   // 2차가 1차+2시간보다 빠르면 보정
+  },
+  onT2Change:function(){
+    var i1=document.getElementById('opsT1'), i2=document.getElementById('opsT2'); if(!i1||!i2) return;
+    var t1=this._round30(this._toMin(i1.value)), t2=this._round30(this._toMin(i2.value));
+    var minT2=t1+120; if(t2<minT2) t2=minT2; i2.value=this._toHHMM(t2);
+  },
   saveShuttle:function(){
-    var t1=(document.getElementById('opsT1')||{}).value||this._DEF.t1;
-    var t2=(document.getElementById('opsT2')||{}).value||this._DEF.t2;
-    try{ firebase.database().ref('system/eduLocations').update({shuttle1:t1, shuttle2:t2}); }catch(e){}
-    if(typeof showKacAlert==='function') showKacAlert('퇴교차량 시간이 저장되었습니다.');
+    var t1=this._round30(this._toMin((document.getElementById('opsT1')||{}).value||this._DEF.t1));
+    var t2=this._round30(this._toMin((document.getElementById('opsT2')||{}).value||this._DEF.t2));
+    if(t2<t1+120) t2=t1+120;   // 2차는 1차 +2시간 이후
+    var v1=this._toHHMM(t1), v2=this._toHHMM(t2);
+    var i1=document.getElementById('opsT1'), i2=document.getElementById('opsT2'); if(i1)i1.value=v1; if(i2)i2.value=v2;
+    try{ firebase.database().ref('system/eduLocations').update({shuttle1:v1, shuttle2:v2}); }catch(e){}
+    if(typeof showKacAlert==='function') showKacAlert('퇴교차량 시간이 저장되었습니다. (1차 '+v1+' · 2차 '+v2+')');
   },
   savePlace:function(type,val){ try{ firebase.database().ref('system/eduLocations/'+type).set(val||null); }catch(e){} },
   close:function(){
