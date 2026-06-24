@@ -8342,7 +8342,7 @@ window.addEventListener('load', function(){
 });
 </script>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:6px;bottom:5px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;font-weight:800;line-height:1;letter-spacing:.6px;color:#fff;background:rgba(15,23,42,.85);padding:4px 8px;border-radius:6px;pointer-events:none;user-select:none;box-shadow:0 2px 6px rgba(0,0,0,.3);">C4</div>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:6px;bottom:5px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;font-weight:800;line-height:1;letter-spacing:.6px;color:#fff;background:rgba(15,23,42,.85);padding:4px 8px;border-radius:6px;pointer-events:none;user-select:none;box-shadow:0 2px 6px rgba(0,0,0,.3);">C5</div>
 <script>
 /* ===== [공용] 종료된 과정 자동 정리 (모든 플랫폼 공통) — 종료일 지난 방을 다음날 미개설로 비움. 브라우저별 하루 1회 ===== */
 window.kacExpireEndedCourses = async function(){
@@ -8959,7 +8959,15 @@ document.addEventListener("click",function(e){ var b=e.target&&e.target.closest&
 <script>
 /* [신규] 배치도 라벨 드래그 위치저장: 배치도 5초 길게→편집 / 드래그 / 다시 5초 길게→저장 */
 (function(){
-  var EDIT=false, dragEl=null, dragBox=null, lpT=null;
+  var EDIT=false, dragEl=null, dragBox=null, lpT=null, lpIv=null, lpStart=0;
+  // 누르고 있는 동안 하단에 차오르는 파란 진행바
+  function lpBar(pct){
+    var wrap=document.getElementById('fpLpBarWrap');
+    if(!wrap){ wrap=document.createElement('div'); wrap.id='fpLpBarWrap'; wrap.style.cssText='position:fixed;left:0;right:0;bottom:0;height:8px;background:rgba(15,23,42,.18);z-index:2147483600;display:none;'; var ib=document.createElement('div'); ib.id='fpLpBar'; ib.style.cssText='height:100%;width:0;background:linear-gradient(90deg,#60a5fa,#2563eb);box-shadow:0 0 10px rgba(37,99,235,.6);'; wrap.appendChild(ib); document.body.appendChild(wrap); }
+    var bar=document.getElementById('fpLpBar');
+    if(pct>0){ wrap.style.display='block'; if(bar) bar.style.width=Math.min(100,pct)+'%'; }
+    else { wrap.style.display='none'; if(bar) bar.style.width='0'; }
+  }
   function banner(on){
     var b=document.getElementById('fpEditBanner');
     if(on){ if(!b){ b=document.createElement('div'); b.id='fpEditBanner'; document.body.appendChild(b); } b.innerHTML='✋ 강의실 위치 편집 중 — 카드를 드래그해 옮기고, 배치도를 다시 5초 길게 눌러 저장하세요'; b.style.display='block'; }
@@ -8995,10 +9003,11 @@ document.addEventListener("click",function(e){ var b=e.target&&e.target.closest&
   function lpBegin(e){
     if(e.target.closest && e.target.closest('.cfp-slot')) return;      // 카드 위는 드래그용
     if(!(e.target.closest && e.target.closest('.cfp-imgbox'))) return; // 도면 영역만
-    clearTimeout(lpT);
-    lpT=setTimeout(function(){ if(!EDIT){ setEdit(true); } else { savePositions(); setEdit(false); } }, 5000);
+    clearTimeout(lpT); clearInterval(lpIv); lpStart=Date.now();
+    lpT=setTimeout(function(){ clearInterval(lpIv); lpBar(0); if(!EDIT){ setEdit(true); } else { savePositions(); setEdit(false); } }, 5000);
+    lpIv=setInterval(function(){ lpBar(Math.min((Date.now()-lpStart)/5000,1)*100); }, 40);   // 누르는 동안 진행바 차오름
   }
-  function lpEnd(){ clearTimeout(lpT); lpT=null; }
+  function lpEnd(){ clearTimeout(lpT); clearInterval(lpIv); lpT=null; lpIv=null; lpBar(0); }
   document.addEventListener('mousedown', lpBegin);
   document.addEventListener('touchstart', lpBegin, {passive:true});
   ['mouseup','mouseleave','touchend','touchcancel'].forEach(function(ev){ document.addEventListener(ev, lpEnd); });
