@@ -160,16 +160,16 @@
     .app-header::after{ content:''; position:absolute; left:0; right:0; top:100%; height:14px; background:linear-gradient(to bottom, rgba(15,23,42,.12), rgba(15,23,42,0)); pointer-events:none; }
 
     .header-btn {
-        font-size: 19px;
+        font-size: 24px;
         color: rgba(255,255,255,0.85);
         cursor: pointer; border: none; background: none;
         transition: opacity 0.2s; padding: 4px;
     }
     .header-btn:active { opacity: 0.6; }
     .coord-back-btn {
-        width: 34px;
-        height: 34px;
-        border-radius: 12px;
+        width: 48px;
+        height: 48px;
+        border-radius: 14px;
         background: rgba(255,255,255,0.16) !important;
         border: 1px solid rgba(255,255,255,0.28) !important;
         display: flex;
@@ -1665,7 +1665,7 @@ body.cpop-locked{ overflow:hidden !important; }
 .cpop-course-h.acc-open .cpop-acc-chev{ transform:rotate(90deg); }
 .cpop-acc-body{ overflow-x:auto; }
 /* 청렴/노조교육 장소 선택 버튼 */
-.eduplace-pick{ background:#f1f5f9; border:1.5px solid #e2e8f0; border-radius:11px; padding:13px 16px; font-size:15px; font-weight:800; color:#1e293b; cursor:pointer; transition:all .15s; white-space:nowrap; }
+.eduplace-pick{ background:#eff6ff; border:1.5px solid #bfdbfe; border-radius:11px; padding:14px 17px; font-size:17px; font-weight:800; color:#1e3a8a; cursor:pointer; transition:all .15s; white-space:nowrap; }
 .eduplace-pick:hover{ background:#dbeafe; border-color:#2563eb; color:#1e40af; transform:translateY(-1px); }
 .eduplace-pick.clear{ background:#fef2f2; border-color:#fecaca; color:#dc2626; }
 .eduplace-pick.clear:hover{ background:#fee2e2; border-color:#ef4444; color:#b91c1c; }
@@ -1676,10 +1676,10 @@ body.cpop-locked{ overflow:hidden !important; }
 #coordShtR1 option, #coordShtR2 option{ font-size:18px; font-weight:700; padding:10px 8px; color:#0f172a; }
 .eduplace-cols{ display:flex; gap:14px; align-items:flex-start; flex-wrap:wrap; }
 .eduplace-col{ background:#f8fafc; border:1px solid #e9eef4; border-radius:14px; padding:12px 12px 14px; min-width:165px; flex:1 1 165px; max-width:230px; }
-.eduplace-col-head{ font-size:14px; font-weight:900; color:#0f2057; padding:0 2px 9px; border-bottom:2px solid #e2e8f0; margin-bottom:8px; }
-.eduplace-floor{ font-size:11px; font-weight:800; color:#94a3b8; letter-spacing:.3px; margin:11px 2px 5px; }
+.eduplace-col-head{ font-size:18px; font-weight:900; color:#fff; background:linear-gradient(135deg,#2563eb,#1d4ed8); padding:9px 12px; border-radius:10px; margin-bottom:10px; box-shadow:0 3px 8px rgba(37,99,235,.25); }
+.eduplace-floor{ font-size:13px; font-weight:900; color:#2563eb; letter-spacing:.3px; margin:12px 2px 6px; }
 .eduplace-col .eduplace-floor:first-of-type{ margin-top:2px; }
-.eduplace-col .eduplace-pick{ display:block; width:100%; text-align:left; white-space:normal; margin-bottom:6px; padding:10px 12px; font-size:13.5px; }
+.eduplace-col .eduplace-pick{ display:block; width:100%; text-align:left; white-space:normal; margin-bottom:7px; padding:12px 14px; font-size:16px; }
 
 .cpop-name{ background:#f1f5f9; border-radius:8px; padding:6px 11px; font-size:13px; font-weight:700; }
 .cpop-name small{ color:#94a3b8; font-weight:600; margin-left:4px; }
@@ -1861,18 +1861,18 @@ body.pc-mode .t-full{ display:inline !important; }
 body.pc-mode .coord-right{ flex:none !important; }
 body.pc-mode .coord-left{ flex:none !important; }
 body.pc-mode .coord-brand{ gap:13px !important; }
-body.pc-mode .coord-brand-mark{ width:42px !important; height:42px !important; border-radius:13px !important; }
-body.pc-mode .coord-brand-mark i{ font-size:20px !important; }
-body.pc-mode .coord-brand-title{ font-size:21px !important; font-weight:950 !important; }
+body.pc-mode .coord-brand-mark{ width:48px !important; height:48px !important; border-radius:14px !important; }
+body.pc-mode .coord-brand-mark i{ font-size:26px !important; }
+body.pc-mode .coord-brand-title{ font-size:26px !important; font-weight:950 !important; }
 /* [반응형] 화면이 좁아지면 중앙 통계카드(coord-right) 숨김 — 좌측 타이틀 + 우측 시계만 유지 */
 @media (max-width:1300px){ body.pc-mode .coord-right{ display:none !important; } }
 .coord-right.coord-hdr-hide, #coordHdrStats.coord-hdr-hide{ display:none !important; }
 body.pc-mode .coord-clock{ grid-column:3 !important; grid-row:1 !important; justify-self:end !important; gap:10px !important; background:rgba(15,23,42,0.34) !important; padding:8px 20px !important; border-radius:999px !important; border:1px solid rgba(255,255,255,0.17) !important; box-shadow:inset 0 1px 0 rgba(255,255,255,0.12),0 8px 24px rgba(15,23,42,0.16) !important; }
-body.pc-mode #coordHeaderClock .hc-date{ font-size:13px !important; }
-body.pc-mode #coordHeaderClock .hc-day{ font-size:12px !important; }
-body.pc-mode #coordHeaderClock .hc-div{ height:20px !important; }
-body.pc-mode #coordHeaderClock .hc-time{ font-size:24px !important; }
-body.pc-mode #coordHeaderClock .hc-ampm{ font-size:12px !important; color:#60a5fa !important; }
+body.pc-mode #coordHeaderClock .hc-date{ font-size:17px !important; }
+body.pc-mode #coordHeaderClock .hc-day{ font-size:16px !important; }
+body.pc-mode #coordHeaderClock .hc-div{ height:28px !important; }
+body.pc-mode #coordHeaderClock .hc-time{ font-size:33px !important; }
+body.pc-mode #coordHeaderClock .hc-ampm{ font-size:16px !important; color:#60a5fa !important; align-self:center; }
 body.pc-mode .coord-right{ grid-column:2 !important; grid-row:1 !important; justify-self:center !important; align-self:center !important; min-width:max-content !important; }
 </style>
 <header class="app-header">
@@ -7800,7 +7800,7 @@ var coordOpsSetup = {
     if(t2<t1+120) t2=t1+120;   // 2차는 1차 +2시간 이후
     var v1=this._toHHMM(t1), v2=this._toHHMM(t2);
     try{ firebase.database().ref('system/eduLocations').update({shuttle1:v1, shuttle2:v2}); }catch(e){}
-    /* 저장값은 팝업 요약/LED에 즉시 반영되므로 별도 알림 없음(뒤겹침 방지) */
+    if(typeof showKacAlert==='function') showKacAlert('✅ 퇴교차량 시간 저장 완료 · 1차 '+v1+' · 2차 '+v2);
   },
   savePlace:function(type,val){ try{ firebase.database().ref('system/eduLocations/'+type).set(val||null); }catch(e){} },
   close:function(){
@@ -8232,7 +8232,7 @@ coordKiosk.notice=function(rid){
   var room=((typeof globalAllData!=='undefined'&&globalAllData)?globalAllData:{})[rid]||{}; var st=room.settings||{}; var cur=room.coordNotice||'';
   var _stt=room.status||{};
   var _prof=((_stt.professorName||'').trim())?((typeof _coordStripRank==='function'?(_coordStripRank(_stt.professorName.trim())||_stt.professorName.trim()):_stt.professorName.trim())+' 교수'):'-';
-  var _coord=((typeof _coordStripRank==='function'?(_coordStripRank(st.coordinatorName)||''):(st.coordinatorName||'')))||'-';
+  var _coord=((typeof _coordFullName==='function'?(_coordFullName(st.coordinatorName)||''):(st.coordinatorName||'')))||'-';
   var _ld=((typeof _studentsOf==='function'?_studentsOf(room):[])||[]).filter(function(s){return s&&s.isLeader===true;})[0];
   var _ldName=_ld?(_ld.name||''):''; var _ldNo=_ld?(_ld.empNo||_ld.sabun||_ld.id||_ld.studentId||''):'';
   var _period=st.period||'-'; var _rdn=st.roomDetailName||st.roomDetail||'-';
