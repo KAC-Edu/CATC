@@ -5427,6 +5427,8 @@ resetShuttleRequests: function() {
         // 교육생 현황(students)은 우측 지도까지 들어가므로 모달을 넓힘. 그 외 타입은 기본 폭.
         try{ const _box=modal.querySelector('div'); if(_box){ _box.style.maxWidth=(type==='students')?'1140px':(type==='active'?'880px':'720px'); _box.style.maxHeight=(type==='students')?'94vh':'90vh'; _box.style.padding='clamp(16px,3vh,40px) clamp(18px,3vw,44px)'; } if(title){ title.style.fontSize='clamp(17px,2.3vw,26px)'; title.style.marginBottom='clamp(12px,2vh,28px)'; } }catch(e){}
         const esc=function(s){return (s==null?'':String(s)).replace(/[&<>"]/g,function(c){return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]);});};
+        // 이번 주 월~금 정확한 기간(토·일은 차주 월요일 기준)
+        const _wkRange=(function(){ var now=new Date(); var dow=now.getDay(); var off=(dow===0)?1:(dow===6)?2:(1-dow); var mon=new Date(now); mon.setDate(now.getDate()+off); mon.setHours(0,0,0,0); var fri=new Date(mon); fri.setDate(mon.getDate()+4); var W=['일','월','화','수','목','금','토']; var f=function(dt){ return dt.getFullYear()+'.'+String(dt.getMonth()+1).padStart(2,'0')+'.'+String(dt.getDate()).padStart(2,'0')+'('+W[dt.getDay()]+')'; }; return f(mon)+' ~ '+f(fri); })();
         // 카드 집계와 동일 기준: 현재 과정이 배정된 active 방 OR 이번 주와 겹치는 과정
         const weekRooms=Object.entries(d).filter(([,r])=>{
             const s=(r&&r.settings)||{}, st=(r&&r.status)||{};
@@ -5435,22 +5437,20 @@ resetShuttleRequests: function() {
             return (st.roomStatus==='active' && hasCourse) || ui._isThisWeek(s.period||'');
         });
         if(type==='active'){
-            title.textContent='🏫 현재 강의 중인 과정 (이번 주)';
+            title.textContent='🏫 현재 강의 중인 과정  ·  '+_wkRange;
             const rows=weekRooms.filter(([,r])=>(r.status||{}).roomStatus==='active').map(([room,r])=>{
                 const prof=(r.status||{}).professorName||'-', course=(r.settings||{}).courseName||'-';
                 return `<div onclick="document.getElementById('homeStatModal').style.display='none'; dataMgr.switchRoomAttempt('${room}');" title="클릭하면 이 과정으로 입장합니다" style="display:flex;justify-content:space-between;align-items:center;gap:14px;padding:clamp(12px,2.3vh,28px) clamp(16px,2.6vw,32px);background:#eff6ff;border:1px solid #dbeafe;border-radius:16px;margin-bottom:clamp(7px,1.3vh,16px);cursor:pointer;transition:background .15s, transform .15s, box-shadow .15s;" onmouseover="this.style.background='#dbeafe';this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 20px rgba(37,99,235,.18)';" onmouseout="this.style.background='#eff6ff';this.style.transform='none';this.style.boxShadow='none';">
                     <div style="display:flex;align-items:center;gap:clamp(10px,1.5vw,20px);min-width:0;">
-                        <span style="font-weight:900;color:#fff;background:#3b82f6;padding:clamp(6px,0.9vh,9px) clamp(11px,1.4vw,18px);border-radius:12px;font-size:clamp(14px,1.7vw,21px);white-space:nowrap;">Room #${room}</span>
-                        <span style="font-size:clamp(16px,2.3vw,26px);color:#0f172a;font-weight:800;word-break:keep-all;">${course}</span>
+                        <span style="font-weight:900;color:#fff;background:#3b82f6;padding:clamp(7px,1vh,11px) clamp(13px,1.5vw,20px);border-radius:12px;font-size:clamp(16px,1.9vw,24px);white-space:nowrap;">Room #${room}</span>
+                        <span style="font-size:clamp(19px,2.7vw,32px);color:#0f172a;font-weight:800;word-break:keep-all;">${course}</span>
                     </div>
                     <span style="font-size:clamp(13px,1.7vw,20px);color:#475569;font-weight:800;white-space:nowrap;">${prof} 교수 <i class="fa-solid fa-arrow-right-to-bracket" style="margin-left:8px;color:#3b82f6;"></i></span></div>`;
             }).join('');
             body.innerHTML=rows||'<p style="color:#94a3b8;text-align:center;padding:36px;font-size:20px;">이번 주 강의 중인 과정이 없습니다.</p>';
         } else if(type==='students'){
-            title.innerHTML='<div style="display:flex;gap:24px;align-items:baseline;flex-wrap:wrap;">'
-                +'<div style="flex:1.05;min-width:300px;">👩‍🎓 과정별 교육생 현황 (이번 주)</div>'
-                +'<div style="flex:1;min-width:330px;">📊 이번 주 전체 교육생 소속 분포 <span style="font-size:14px;color:#94a3b8;font-weight:700;">(예정명단 기준)</span></div>'
-                +'</div>';
+            title.innerHTML='<div style="text-align:center;font-weight:900;">👩‍🎓 교육생 현황 · 소속 분포</div>'
+                +'<div style="text-align:center;font-size:clamp(15px,1.7vw,21px);color:#2563eb;font-weight:800;margin-top:6px;">'+_wkRange+' <span style="color:#94a3b8;font-weight:700;">· 예정명단 기준</span></div>';
             const _legend='';
             let dormAll={};
             try{ dormAll=(await firebase.database().ref('system/dorm/rosters').once('value')).val()||{}; }catch(e){}
@@ -5493,14 +5493,14 @@ resetShuttleRequests: function() {
                 return '<div style="background:#f0fdf4;border:1px solid #dcfce7;border-radius:14px;margin-bottom:12px;overflow:hidden;">'
                   +'<div onclick="ui.toggleHomeDetail(\''+uid+'\')" title="클릭하면 명단을 봅니다" style="display:flex;justify-content:space-between;align-items:center;padding:18px 22px;cursor:pointer;">'
                     +'<div style="display:flex;align-items:center;gap:14px;">'
-                      +'<span style="font-weight:900;color:#fff;background:#10b981;padding:6px 14px;border-radius:10px;font-size:16px;">Room #'+room+'</span>'
-                      +'<span style="font-size:18px;color:#0f172a;font-weight:700;">'+esc(course)+'</span>'
+                      +'<span style="font-weight:900;color:#fff;background:#10b981;padding:8px 16px;border-radius:11px;font-size:clamp(16px,2vw,23px);white-space:nowrap;">Room #'+room+'</span>'
+                      +'<span style="font-size:clamp(19px,2.5vw,30px);color:#0f172a;font-weight:800;word-break:keep-all;">'+esc(course)+'</span>'
                       +'<i class="fa-solid fa-chevron-right hs-chev" style="color:#10b981;font-size:13px;transition:transform .2s;"></i>'
                     +'</div>'
                     +'<div style="display:flex;align-items:flex-end;gap:8px;white-space:nowrap;">'
-                      +'<div style="text-align:center;"><div style="font-size:11px;color:#64748b;font-weight:800;margin-bottom:2px;">입교</div><div style="font-size:24px;font-weight:900;color:#10b981;line-height:1;">'+stuCnt+'</div></div>'
+                      +'<div style="text-align:center;"><div style="font-size:11px;color:#64748b;font-weight:800;margin-bottom:2px;">입교</div><div style="font-size:clamp(26px,3vw,38px);font-weight:900;color:#10b981;line-height:1;">'+stuCnt+'</div></div>'
                       +'<div style="font-size:18px;color:#94a3b8;font-weight:700;padding-bottom:2px;">/</div>'
-                      +'<div style="text-align:center;"><div style="font-size:11px;color:#64748b;font-weight:800;margin-bottom:2px;">예정</div><div style="font-size:24px;font-weight:900;color:#0f172a;line-height:1;">'+cnt+'</div></div>'
+                      +'<div style="text-align:center;"><div style="font-size:11px;color:#64748b;font-weight:800;margin-bottom:2px;">예정</div><div style="font-size:clamp(26px,3vw,38px);font-weight:900;color:#0f172a;line-height:1;">'+cnt+'</div></div>'
                       +'<div style="font-size:13px;color:#64748b;font-weight:800;padding-bottom:2px;">명</div>'
                     +'</div>'
                   +'</div>'
@@ -5511,15 +5511,14 @@ resetShuttleRequests: function() {
             const _sorted=Object.keys(_agg).sort((a,b)=>_agg[b]-_agg[a]);
             const _distGrid = _sorted.length ? _sorted.map(n=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 11px;background:#f8fafc;border:1px solid #eef2f7;border-radius:8px;"><span style="font-weight:700;color:#334155;font-size:13.5px;">${esc(n)}</span><span style="font-weight:900;color:#10b981;font-size:14px;">${_agg[n]}명</span></div>`).join('') : '<div style="grid-column:1/-1;padding:14px;color:#94a3b8;text-align:center;font-size:13px;">예정 명단 소속 정보가 없습니다.</div>';
             const _unknownNote = _aggUnknown ? `<div style="font-size:12px;color:#94a3b8;">· 소속 구분 불가 ${_aggUnknown}명은 지도에서 제외</div>` : '';
-            const _mapPanel = `<div style="display:flex;flex-direction:column;gap:8px;">`
-                + `<div id="homeStatMapKakao" style="width:100%;height:40vh;min-height:280px;border-radius:14px;overflow:hidden;border:1px solid #e2e8f0;background:#eaf2fb;"></div>`
-                + `<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:6px;">${_distGrid}</div>`
-                + `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:9px;"><span style="font-weight:900;color:#166534;">합계</span><span style="font-weight:900;color:#16a34a;">${_aggTotal+_aggUnknown}명</span></div>`
+            const _mapPanel = `<div style="display:flex;flex-direction:column;gap:10px;">`
+                + `<div id="homeStatMapKakao" style="width:100%;height:64vh;min-height:480px;border-radius:14px;overflow:hidden;border:1px solid #e2e8f0;background:#eaf2fb;"></div>`
+                + `<div style="display:flex;justify-content:space-between;align-items:center;padding:11px 16px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;"><span style="font-weight:900;color:#166534;font-size:clamp(16px,1.8vw,22px);">합계</span><span style="font-weight:900;color:#16a34a;font-size:clamp(16px,1.8vw,22px);">${_aggTotal+_aggUnknown}명</span></div>`
                 + _unknownNote
                 + `</div>`;
             body.innerHTML = `<div style="display:flex;gap:24px;align-items:flex-start;flex-wrap:wrap;">`
-                + `<div style="flex:1.05;min-width:300px;">${_listHtml}</div>`
-                + `<div style="flex:1;min-width:330px;">${_mapPanel}</div>`
+                + `<div style="flex:1.05;min-width:300px;"><div style="font-size:clamp(17px,1.9vw,23px);font-weight:900;color:#0f172a;margin-bottom:12px;">👩‍🎓 과정별 교육생 현황</div>${_listHtml}</div>`
+                + `<div style="flex:1.2;min-width:420px;"><div style="font-size:clamp(17px,1.9vw,23px);font-weight:900;color:#0f172a;margin-bottom:12px;">📊 전체 교육생 소속 분포</div>${_mapPanel}</div>`
                 + `</div>`;
             // 우측 카카오맵(집계된 전체 분포) — 외부 카카오 API라 Firebase 트래픽 증가 없음
             ui._regionLL = ui._regionLL || { '서울':[37.5586,126.7906],'인천':[37.4602,126.4407],'강원':[37.8813,127.7300],'양양':[38.0613,128.6690],'원주':[37.4416,127.9606],'송탄':[37.0807,127.0353],'청주':[36.7166,127.4990],'예천':[36.6320,128.3549],'군산':[35.9038,126.6158],'대구':[35.8941,128.6586],'포항':[35.9879,129.4204],'울산':[35.5935,129.3517],'부안':[35.7316,126.7330],'광주':[35.1264,126.8089],'무안':[34.9914,126.3828],'여수':[34.8423,127.6168],'사천':[35.0886,128.0703],'김해':[35.1795,128.9382],'부산':[35.1796,129.0756],'제주':[33.5113,126.4930] };
