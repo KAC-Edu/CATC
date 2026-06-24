@@ -11244,6 +11244,7 @@ ui.openStudentMap = async function(){
 ui.closeLeaderRoulette = function(){
   var m=document.getElementById('leaderRouletteModal'); if(m) m.remove();
   ui._wheelSpinning=false;
+  var _fh=document.getElementById('floatingHomeBtn'); if(_fh) _fh.style.display='';
 };
 ui.openLeaderRoulette = async function(){
   if(state.isObserver){ ui.showAlert('👁️ 옵저버는 사용할 수 없습니다.'); return; }
@@ -11325,6 +11326,7 @@ ui.openLeaderRoulette = async function(){
       + '</div>'
     + '</div>';
   document.body.appendChild(modal);
+  var _fh=document.getElementById('floatingHomeBtn'); if(_fh) _fh.style.display='none';
 };
 ui._spinWheel = function(){
   if(ui._wheelSpinning) return;
