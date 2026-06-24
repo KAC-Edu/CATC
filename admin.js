@@ -1010,6 +1010,16 @@ forceEnterRoom: async function(room) {
         }
     });
 
+    // [연동] 교육운영부(admin_coord)가 설정한 청렴교육/노조교육 강의장 → 대시보드 피드에 한 줄로 표시
+    firebase.database().ref('system/eduLocations').off();
+    firebase.database().ref('system/eduLocations').on('value', snap => {
+        const ed = snap.val() || {};
+        const txt = v => { v = String(v == null ? '' : v).trim(); return v || '미정'; };
+        const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = txt(val); };
+        set('feedEduIntegrity', ed.integrity);
+        set('feedEduUnion', ed.union);
+    });
+
     ui.autoResetShuttleIfNeeded(cleanRoom);
 
     if (window.adminQaRefreshInterval) clearInterval(window.adminQaRefreshInterval);

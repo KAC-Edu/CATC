@@ -3350,7 +3350,12 @@ async function openShuttleApply() {
             const _t2IsTime = /^\d{1,2}:\d{2}$/.test(dep.time2||'');
             const _h2 = _t2IsTime ? dep.time2.split(':')[0].replace(/^0/, '') : '';
             const _t2None = (dep.time2 === '운행안함');
-            timeEl.textContent = _h2 ? `${dateFmt}  1차 ${h}시 / 2차 ${_h2}시 출발 예정` : (_t2None ? `${dateFmt}  ${h}시 출발 예정 · 2차 운행안함` : `${dateFmt}  ${h}시 출발 예정`);
+            // [포맷 20260624] 날짜 한 줄, 아래 줄에 1차(HH:MM), 2차(HH:MM) 출발예정
+            const _t1 = dep.time;
+            timeEl.innerHTML = _h2
+                ? `${dateFmt}<br>1차(${_t1}), 2차(${dep.time2}) 출발예정`
+                : (_t2None ? `${dateFmt}<br>1차(${_t1}) 출발예정 · 2차 운행안함`
+                           : `${dateFmt}<br>1차(${_t1}) 출발예정`);
             timeEl.style.color = '#1d4ed8';
             timeEl.style.fontSize = '22px';   // 시간: 크게
             currentDepTime = dep.time;
