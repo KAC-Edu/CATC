@@ -3,8 +3,8 @@
 <head>
 <!-- ============================================================
   CATC · 교육지원부 · 생활관 배정  (dorm_admin.html)
-  @version  W
-  @build    20260611-212424
+  @version  X
+  @build    20260624-054603
   ────────────────────────────────────────────────────────
   [코드 수정 규칙 · AI/개발자 공통]
   이 파일을 한 글자라도 고치면:
@@ -63,6 +63,9 @@
   vV: ① 아코디언 제목 정렬 진짜 원인 수정 — PC 모드 'body.pc-mode .panel{padding:28px}'가 '.panel.acc{padding:0}'보다 우선해 패널+헤더 이중 들여쓰기(약 56px)가 발생. 'body.pc-mode .panel.acc{padding:0}'로 덮어써 헤더 제목을 방마스터와 동일 좌측(약 29px)으로 정렬.
       ② 위 두 아코디언 헤더 두께 축소 — 세로 padding 24→17px(PC)/20→15px(기본).
   vW: [STEP4 현황·출력] PDF 성별 표기 방식 변경 — HTML 화면 보드는 기존 남/여 사람 아이콘 그대로 유지하고, PDF만 성별을 텍스트로 표기.
+  vX: [키오스크] 모니터 전체화면 고정 — ① Esc 키로 종료되지 않도록 종료 보조 핸들러 제거(Esc 차단).
+      ② 브라우저가 Esc로 전체화면을 풀어도 키오스크가 떠 있으면 즉시 전체화면 재진입.
+      ③ 키오스크 종료는 오직 시계·달력 5초 길게 누르기만 가능(시계 롱프레스 → close + exitFullscreen).
       · 내국인: (남)/(여), 외국인: (M/남)/(F/여)
       · 라벨 색상은 과정색상 상속(관리자는 색으로 배치, 사용자는 텍스트로 남녀 즉시 확인)
       · PDF pill의 성별 배경 틴트(파랑/분홍) 제거 → 과정색 중심으로 정리.
@@ -470,9 +473,9 @@
         .toast { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0.9); background: var(--navy); color: #fff; padding: 22px 38px; border-radius: 16px; font-weight: 800; font-size: 18px; z-index: 2000; opacity: 0; transition: opacity 0.2s ease, transform 0.2s ease; pointer-events: none; box-shadow: 0 24px 70px rgba(0,0,0,0.45); text-align: center; max-width: 80vw; }
         .toast.show { opacity: 1; transform: translate(-50%, -50%) scale(1); }
 
-        /* ── 모바일 접속 차단 ── */
+        /* ── 모바일 접속 차단 (화면 전용 — 인쇄/PDF 시에는 발동 안 함) ── */
         #mobileBlockScreen { display:none; }
-        @media (max-width: 820px) {
+        @media screen and (max-width: 820px) {
             #mobileBlockScreen {
                 display:flex !important;
                 position:fixed; inset:0; z-index:2147483647;
@@ -6104,7 +6107,7 @@
 </script>
 <style>@media print{#__catcVer{display:none!important}}</style>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vK11</div>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vK12</div>
 <script>
 /* ===== [공용] 종료된 과정 자동 정리 (모든 플랫폼 공통) — 종료일 지난 방을 다음날 미개설로 비움. 브라우저별 하루 1회 ===== */
 window.kacExpireEndedCourses = async function(){
@@ -6281,8 +6284,20 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
   window.dormKiosk=dormKiosk;
   dormKiosk.init();
 
-  // 시계 외 종료 보조: Esc
-  document.addEventListener('keydown', function(e){ if(e.key==='Escape'){ var m=document.getElementById('dormKioskModal'); if(m&&m.style.display!=='none') dormKiosk.close(); } });
+  // 키오스크 종료는 오직 시계 5초 길게 누르기만 — Esc 등 키보드로는 종료 불가
+  document.addEventListener('keydown', function(e){
+    var m=document.getElementById('dormKioskModal');
+    if(m && m.style.display!=='none' && (e.key==='Escape'||e.key==='Esc')){ e.preventDefault(); e.stopPropagation(); }
+  }, true);
+  // 브라우저가 Esc로 전체화면을 강제 종료해도, 키오스크가 떠 있으면 즉시 다시 전체화면 재진입 시도
+  function _dormReFull(){
+    var m=document.getElementById('dormKioskModal');
+    if(m && m.style.display!=='none' && !(document.fullscreenElement||document.webkitFullscreenElement)){
+      try{ var de=document.documentElement; var fn=de.requestFullscreen||de.webkitRequestFullscreen||de.msRequestFullscreen; if(fn) fn.call(de); }catch(_){}
+    }
+  }
+  document.addEventListener('fullscreenchange', _dormReFull);
+  document.addEventListener('webkitfullscreenchange', _dormReFull);
 
   // 침대(브랜드) 롱프레스: 짧게=새로고침(기존 onclick 유지) / 5초=키오스크 진입(+진행바)
   (function(){
@@ -6326,7 +6341,10 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
       +'body.embedboard{background:#fff!important;}'
       +'body.embedboard .dm-toolbar,body.embedboard .dm-wait-col,body.embedboard .dm-del,body.embedboard #boardMapArea .legend{display:none!important;}'
       +'body.embedboard .dm-chip{pointer-events:none!important;cursor:default!important;}'
-      +'body.embedboard #__catcVer,body.embedboard #__ver,body.embedboard #dkEnterBar{display:none!important;}';
+      +'body.embedboard #__catcVer,body.embedboard #__ver,body.embedboard #dkEnterBar{display:none!important;}'
+      +'body.embedboard #mobileBlockScreen{display:none!important;} body.embedboard .container{display:block!important;}'
+      +'@media (max-width:820px){ body.embedboard #mobileBlockScreen{display:none!important;} body.embedboard .container,body.embedboard #step-4{display:block!important;} }'
+      +'@media print{@page{size:A4 landscape;margin:8mm;} html,body{background:#fff!important;} body.embedboard #mobileBlockScreen{display:none!important;} body.embedboard .container,body.embedboard #step-4,body.embedboard #boardMapArea{display:block!important;} body.embedboard #boardMapArea{overflow:visible!important;} body.embedboard *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;}}';
     document.head.appendChild(st);
     function mark(){ if(document.body) document.body.classList.add('embedboard'); }
     function postH(){ try{ if(parent===window) return; var el=document.getElementById('boardMapArea'); var h; if(el && el.offsetParent!==null){ var r=el.getBoundingClientRect(); h=Math.ceil(r.top+(window.scrollY||0)+el.scrollHeight); } else { h=document.body.scrollHeight; } if(h>0) parent.postMessage({_dormBoardH:h}, '*'); }catch(e){} }
