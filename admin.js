@@ -8731,7 +8731,7 @@ const kiosk = {
             if(ed && today>ed) return {t:'종료',c:'#94a3b8'};
             return {t:'진행중',c:'#34d399'};
         };
-        tb.innerHTML=rooms.map(([room,r])=>{
+        tb.innerHTML=rooms.map(([room,r],_i)=>{
             const s=r.settings||{}, st=r.status||{};
             // 교육생수 = 예정 인원 (지원부 명단/dorm rosters에서 과정명 매칭)
             let planned=0; const _cn=String(s.courseName||'').trim(); let _best=null;
@@ -8743,7 +8743,7 @@ const kiosk = {
             const coord=(typeof coordMgr!=='undefined'&&coordMgr.matchName)?(coordMgr.matchName(coordRaw)||coordRaw):coordRaw;
             const stt=_status(s.period);
             return '<tr>'
-                +'<td style="font-weight:900;color:#60a5fa;white-space:nowrap;">Room #'+esc(room)+'</td>'
+                +'<td style="font-weight:900;color:#60a5fa;white-space:nowrap;">'+(_i+1)+'</td>'
                 +'<td style="font-weight:800;">'+esc(s.courseName||'-')+'</td>'
                 +'<td style="white-space:nowrap;color:#cbd5e1;">'+esc(s.period||'-')+'</td>'
                 +'<td style="color:#cbd5e1;">'+esc(s.roomDetailName||'-')+'</td>'
@@ -8753,9 +8753,70 @@ const kiosk = {
                 +'<td><span style="display:inline-block;padding:5px 16px;border-radius:999px;font-weight:800;font-size:0.78em;color:'+stt.c+';background:'+stt.c+'22;border:1px solid '+stt.c+'66;">'+stt.t+'</span></td>'
             +'</tr>';
         }).join('');
+        var _fp=document.getElementById('kioskFloorPlan');
+        if(_fp) _fp.innerHTML='<div style="font-size:clamp(15px,1.6vw,22px);font-weight:900;color:#93c5fd;margin:0 2px 12px;"><i class="fa-solid fa-map-location-dot"></i> 진행 중 과정 배치도</div>'+kiosk._floorPlanHTML();
     }
 };
 window.kiosk = kiosk;
+// 예정인원(지원부 명단을 과정명으로 매칭)
+kiosk._planForCourse = function(courseName){
+  var dormAll=window._dormRosters||{}; var cn=String(courseName||'').trim(); var best=null;
+  for(var k in dormAll){ var dv=dormAll[k]; if(dv&&Array.isArray(dv.list)&&dv.list.length&&String(dv.courseName||'').trim()===cn){ if(!best||(dv.updatedAt||0)>(best.updatedAt||0)) best=dv; } }
+  return best?best.list.length:0;
+};
+// [키오스크] 강의실 배치도 — 운영부 coordKiosk 배치도를 강사 키오스크로 포팅(강의실명 옆 (예정인원) 표기)
+kiosk._floorPlanHTML = function(){
+  var esc=function(x){ return String(x==null?'':x).replace(/[&<>"]/g,function(c){return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]);}); };
+  var d=window._homeStatsData||{};
+  var POSMAP={
+    '하늘관|2': { img:'classroom_sky2f.png', pos:{ E:{l:15,t:42}, D:{l:31,t:42}, B:{l:67,t:42}, A:{l:84,t:42}, G:{l:15,t:72}, F:{l:31,t:72}, C:{l:81,t:72} }, crop:{t:-13,b:-3} },
+    '하늘관|1': { img:'classroom_sky1f.png', pos:{ '대강당':{l:46,t:62} }, crop:{t:0,b:0} },
+    '국제동|1': { img:'classroom_inter1f.png', pos:{ A:{l:31,t:30}, B:{l:74,t:29}, '세미나홀':{l:34,t:69} }, crop:{t:0,b:0} }
+  };
+  var FIXED=[ {key:'하늘관|1', name:'하늘관 1층'}, {key:'하늘관|2', name:'하늘관 2층'}, {key:'국제동|1', name:'국제교육동 1층'} ];
+  var roomName=function(L){ return /^[A-Z]$/.test(L)?(L+'강의실'):L; };
+  var parse=function(v){ v=String(v||''); var b=''; if(v.indexOf('하늘')>=0)b='하늘관'; else if(v.indexOf('국제')>=0)b='국제동'; else if(v.indexOf('관제')>=0)b='관제교육동'; var fm=v.match(/([0-9])\s*층/); var f=fm?fm[1]:''; var lm=v.match(/([A-Za-z])\s*강의실/); var L=lm?lm[1].toUpperCase():''; if(!L){ if(v.indexOf('대강당')>=0)L='대강당'; else if(v.indexOf('세미나홀')>=0)L='세미나홀'; } return {b:b,f:f,L:L}; };
+  var used={};
+  Object.keys(d).forEach(function(room){
+    var r=d[room]||{}; var s=r.settings||{}, st=r.status||{};
+    if(s.hideFromBoard) return;
+    var hasCourse=!!(s.courseName&&String(s.courseName).trim());
+    var active=(st.roomStatus==='active'&&hasCourse)||ui._isThisWeek(s.period||'');
+    if(!active) return;
+    var pr=parse(s.roomDetailName||''); if(!pr.L) return;
+    var b=pr.b||'하늘관', f=pr.f||(b==='하늘관'?'2':'1'), key=b+'|'+f;
+    var prof=(st.professorName||'').trim();
+    var coordRaw=(s.coordinatorName||'').trim();
+    var coord=(typeof coordMgr!=='undefined'&&coordMgr.matchName)?(coordMgr.matchName(coordRaw)||coordRaw):coordRaw;
+    var leader=''; var studs=r.students||{}; for(var tk in studs){ if(studs[tk]&&studs[tk].isLeader===true){ leader=studs[tk].name||''; break; } }
+    var planned=kiosk._planForCourse(s.courseName);
+    if(!used[key]) used[key]={};
+    if(!used[key][pr.L]) used[key][pr.L]={course:s.courseName||'-', prof:prof, coord:coord, leader:leader, planned:planned};
+  });
+  var cards=FIXED.map(function(F){
+    var cfg=POSMAP[F.key]||{img:'',pos:{}}; var IMG=cfg.img||'', POS=cfg.pos||{}, CROP=cfg.crop||{t:0,b:0};
+    var fused=used[F.key]||{};
+    var usedN=Object.keys(POS).filter(function(L){return fused[L];}).length;
+    var labels=Object.keys(POS).map(function(L){ var on=fused[L]; var p=POS[L];
+      if(on){
+        return '<div class="cfp-slot cfp-slot-card" style="left:'+p.l+'%;top:'+p.t+'%;"><div class="cfp-card">'
+          +'<div class="cfp-card-h"><b>'+esc(roomName(L))+' ('+on.planned+'명)</b><span class="cfp-dot"></span></div>'
+          +'<div class="cfp-card-course">'+esc(on.course)+'</div>'
+          +'<div class="cfp-card-row"><span>담임</span>'+(on.prof?esc(on.prof)+' 교수':'-')+'</div>'
+          +'<div class="cfp-card-row"><span>담당</span>'+esc(on.coord||'-')+'</div>'
+          +'<div class="cfp-card-row"><span>학생장</span>'+esc(on.leader||'미지정')+'</div>'
+          +'</div></div>';
+      }
+      return '<div class="cfp-slot" style="left:'+p.l+'%;top:'+p.t+'%;"><div class="cfp-room">'+esc(roomName(L))+'</div></div>';
+    }).join('');
+    var head='<div class="cfp-floor-head"><span class="cfp-floor-badge">'+esc(F.name)+'</span><span class="cfp-floor-loc" style="color:#93c5fd;"><i class="fa-solid fa-circle" style="font-size:8px;color:#22c55e;"></i> 사용중 '+usedN+'실</span></div>';
+    var inner = IMG
+      ? '<div class="cfp-clip"><div class="cfp-imgbox" style="margin:'+CROP.t+'% 0 '+CROP.b+'%;"><img class="cfp-img" src="'+IMG+'" alt="배치도">'+labels+'</div></div>'
+      : '<div style="padding:30px 16px;text-align:center;color:#94a3b8;">배치도 준비중</div>';
+    return '<div class="ck-floor">'+head+inner+'</div>';
+  }).join('');
+  return '<div class="ck-fp-3">'+cards+'</div>';
+};
 
 // [공통] 모달 닫기(X) 버튼에 통일 hover 효과(.x-close: 90도 회전 + 빨강) 자동 적용
 function _unifyXClose(root) {

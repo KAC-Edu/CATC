@@ -2496,7 +2496,7 @@ function setupAcc(btn){
 
 
 
-    <script src="admin.js?v=260624VD"></script>
+    <script src="admin.js?v=260624VE"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
 <!-- ── 화면 자동 맞춤(auto-fit): 가로+세로 모두 화면에 맞게 자동 축소 · JDS260613 ──
      원인: Windows 디스플레이 배율(125%/150%)·저해상도 화면에서 유효 뷰포트가 작아져
@@ -2713,7 +2713,7 @@ function setupAcc(btn){
   <div style="flex:1; overflow:auto;">
     <table style="width:100%; border-collapse:collapse; font-size:clamp(13px,1.5vw,24px);">
       <thead><tr style="color:#93c5fd; border-bottom:2px solid rgba(255,255,255,.18);">
-        <th style="padding:14px 10px; text-align:left;">Room</th>
+        <th style="padding:14px 10px; text-align:left;">구분</th>
         <th style="padding:14px 10px; text-align:left;">과정명</th>
         <th style="padding:14px 10px;">교육기간</th>
         <th style="padding:14px 10px;">강의실</th>
@@ -2725,12 +2725,34 @@ function setupAcc(btn){
       <tbody id="kioskTableBody"></tbody>
     </table>
   </div>
+  <div id="kioskFloorPlan" style="margin-top:26px;"></div>
 </div>
 <style>#kioskTableBody td{ padding:clamp(8px,1vw,16px) 10px; border-bottom:1px solid rgba(255,255,255,.08); text-align:center; }
-#kioskTableBody td:nth-child(1),#kioskTableBody td:nth-child(2){ text-align:left; }</style>
+#kioskTableBody td:nth-child(1),#kioskTableBody td:nth-child(2){ text-align:left; }
+/* [키오스크] 강의실 배치도 (운영부 cfp 포팅) */
+#kioskFloorPlan .ck-fp-3{ display:grid; grid-template-columns:repeat(3,1fr); gap:16px; align-items:start; }
+#kioskFloorPlan .ck-floor{ background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.12); border-radius:14px; padding:12px 12px 14px; box-sizing:border-box; }
+#kioskFloorPlan .cfp-floor-head{ display:flex; align-items:center; gap:10px; margin:0 0 8px; }
+#kioskFloorPlan .cfp-floor-badge{ font-size:14px; font-weight:900; color:#fff; background:#2563eb; padding:4px 15px; border-radius:999px; }
+#kioskFloorPlan .cfp-floor-loc{ font-size:12px; font-weight:700; }
+#kioskFloorPlan .cfp-clip{ overflow:hidden; border-radius:14px; border:1px solid rgba(255,255,255,.12); background:#f8fafc; }
+#kioskFloorPlan .cfp-imgbox{ position:relative; width:100%; }
+#kioskFloorPlan .cfp-img{ display:block; width:100%; height:auto; }
+#kioskFloorPlan .cfp-slot{ position:absolute; transform:translate(-50%,-50%); z-index:2; }
+#kioskFloorPlan .cfp-slot-card{ z-index:3; }
+#kioskFloorPlan .cfp-room{ display:flex; align-items:center; gap:6px; padding:6px 11px; border-radius:999px; font-weight:900; font-size:13px; white-space:nowrap; background:#e5e7eb; color:#64748b; border:1.5px solid #cbd5e1; box-shadow:0 2px 6px rgba(15,23,42,.2); }
+#kioskFloorPlan .cfp-card{ background:#fff; border:2px solid #16a34a; border-radius:12px; padding:6px 9px 8px; min-width:120px; max-width:180px; box-shadow:0 6px 16px rgba(22,163,74,.4); text-align:left; }
+#kioskFloorPlan .cfp-card-h{ display:flex; align-items:center; gap:6px; margin-bottom:2px; }
+#kioskFloorPlan .cfp-card-h b{ font-size:14px; font-weight:900; color:#15803d; }
+#kioskFloorPlan .cfp-card-course{ font-size:12px; font-weight:900; color:#0f172a; margin:1px 0 5px; line-height:1.25; word-break:keep-all; }
+#kioskFloorPlan .cfp-card-row{ font-size:11px; color:#475569; font-weight:700; line-height:1.5; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+#kioskFloorPlan .cfp-card-row span{ display:inline-block; min-width:34px; color:#94a3b8; font-weight:800; margin-right:3px; }
+#kioskFloorPlan .cfp-dot{ width:10px; height:10px; border-radius:50%; background:#22c55e; box-shadow:0 0 8px 1px rgba(34,197,94,.95); }
+@media (max-width:1100px){ #kioskFloorPlan .ck-fp-3{ grid-template-columns:1fr; } }
+</style></style>
 
 <!-- 버전 표기(요청 시까지 유지) -->
-<div id="buildVersionBadge" style="position:fixed; right:8px; bottom:8px; z-index:99999; background:rgba(15,23,42,.78); color:#fff; font-size:12px; font-weight:800; letter-spacing:.5px; padding:4px 10px; border-radius:8px; font-family:monospace; box-shadow:0 2px 8px rgba(0,0,0,.3); pointer-events:none; user-select:none;">VD</div>
+<div id="buildVersionBadge" style="position:fixed; right:8px; bottom:8px; z-index:99999; background:rgba(15,23,42,.78); color:#fff; font-size:12px; font-weight:800; letter-spacing:.5px; padding:4px 10px; border-radius:8px; font-family:monospace; box-shadow:0 2px 8px rgba(0,0,0,.3); pointer-events:none; user-select:none;">VE</div>
 
 </body>
 </html>

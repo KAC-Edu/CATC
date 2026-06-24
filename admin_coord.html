@@ -1642,6 +1642,9 @@ body.cpop-locked{ overflow:hidden !important; }
 .cpop-table{ width:100%; border-collapse:collapse; }
 .cpop-table th{ background:#f1f5f9; color:#475569; font-size:13.5px; font-weight:800; padding:11px 8px; border-bottom:2px solid #e2e8f0; }
 .cpop-table td{ text-align:center; font-size:15px; padding:11px 8px; border-bottom:1px solid #f1f5f9; }
+/* [노안 가독성] 과정별 교육생 명단 팝업: 명단 표·지역목록 글자 크게 */
+#cpopRosterWrap .cpop-table td{ font-size:19px !important; padding:13px 9px !important; }
+#cpopRosterWrap .cpop-table th{ font-size:17px !important; padding:13px 9px !important; }
 .cov-table th{ font-size:15.5px !important; padding:13px 8px !important; }
 .cov-table td{ font-size:17px !important; padding:16px 10px !important; }
 .cov-table td:nth-child(2){ font-size:18.5px; }
@@ -1653,7 +1656,7 @@ body.cpop-locked{ overflow:hidden !important; }
 .coursetbl-row:hover{ background:linear-gradient(135deg,#eff6ff 0%,#dbeafe 100%); }
 .coursetbl-row:active{ transform:scale(.997); }
 .cpop-empty{ text-align:center; color:#94a3b8; font-weight:700; padding:40px; }
-.cpop-search{ width:100%; padding:11px; border:1.5px solid #e2e8f0; border-radius:10px; font-size:14px; margin-bottom:12px; box-sizing:border-box; }
+.cpop-search{ width:100%; padding:14px 14px; border:1.5px solid #e2e8f0; border-radius:10px; font-size:18px; margin-bottom:12px; box-sizing:border-box; }
 .cpop-course{ border:1px solid #e2e8f0; border-radius:12px; margin-bottom:12px; overflow:hidden; }
 .cpop-course-h{ background:#e0f2fe; color:#0c4a6e; border-left:4px solid #38bdf8; padding:13px 16px; font-weight:900; font-size:18px; display:flex; justify-content:space-between; align-items:center; }
 .cpop-course-h span{ color:#0ea5e9; font-size:12px; }
@@ -7574,10 +7577,10 @@ function _coordRenderStudentMap(counts,total,unknown,ids){
       var c=counts[nm]; var pct=Math.max(8,Math.round(c/max*100));
       var rc = i===0?'#1d4ed8':i===1?'#2563eb':i===2?'#3b82f6':'#94a3b8';
       return '<div style="display:flex;align-items:center;gap:8px;padding:9px 4px;border-bottom:1px solid #f3f6fb;">'
-        +'<span style="width:21px;height:21px;flex-shrink:0;border-radius:50%;background:'+rc+';color:#fff;font-size:11px;font-weight:900;display:flex;align-items:center;justify-content:center;">'+(i+1)+'</span>'
-        +'<span style="width:40px;flex-shrink:0;font-size:13.5px;font-weight:800;color:#1e293b;">'+nm+'</span>'
-        +'<span style="flex:1;height:8px;background:#eef2f7;border-radius:6px;overflow:hidden;"><span style="display:block;height:100%;width:'+pct+'%;background:linear-gradient(90deg,#60a5fa,#2563eb);border-radius:6px;"></span></span>'
-        +'<span style="width:40px;text-align:right;font-size:20px;font-weight:900;color:#2563eb;">'+c+'</span>'
+        +'<span style="width:25px;height:25px;flex-shrink:0;border-radius:50%;background:'+rc+';color:#fff;font-size:13px;font-weight:900;display:flex;align-items:center;justify-content:center;">'+(i+1)+'</span>'
+        +'<span style="width:52px;flex-shrink:0;font-size:17px;font-weight:800;color:#1e293b;">'+nm+'</span>'
+        +'<span style="flex:1;height:9px;background:#eef2f7;border-radius:6px;overflow:hidden;"><span style="display:block;height:100%;width:'+pct+'%;background:linear-gradient(90deg,#60a5fa,#2563eb);border-radius:6px;"></span></span>'
+        +'<span style="width:46px;text-align:right;font-size:24px;font-weight:900;color:#2563eb;">'+c+'</span>'
         +'</div>';
     }).join('') : '<div style="padding:24px 10px;text-align:center;color:#94a3b8;font-weight:700;font-size:13px;">표시할 명단이 없습니다</div>';
     listEl.innerHTML = head + '<div style="border:1px solid #e8edf5;border-radius:13px;padding:2px 12px;background:#fff;box-shadow:0 2px 8px rgba(15,23,42,.04);">'+body+'</div>';
@@ -7632,7 +7635,7 @@ function openStudentRosterPopup(){
       if(!roster.length) return '';
       roster.forEach(function(st){ var reg=_coordDeptToRegion(st.dept||st.position||st.affil||st.org||''); if(reg){ _mc[reg]=(_mc[reg]||0)+1; _mtot++; } else { _munk++; } });
       const rows=roster.map((st,i)=>`<tr class="rosterRow" data-n="${_esc(((st.name||'')+(st.dept||st.position||st.affil||'')).toLowerCase())}"><td style="color:#94a3b8;">${i+1}</td><td style="text-align:left;color:#475569;">${_esc(st.dept||st.position||st.affil||st.org||'-')}</td><td style="color:#64748b;">${_esc(st.empNo||st.sabun||st.id||'-')}</td><td style="font-weight:800;">${_esc(st.name||'-')}</td></tr>`).join('');
-      return `<div class="cpop-course"><div class="cpop-course-h" onclick="_rosterAccToggle(this)"><span style="color:#0c4a6e;font-size:18px;"><i class="fa-solid fa-chevron-right cpop-acc-chev"></i>ROOM #${_esc(r.rid)} · ${_esc(r.s.courseName||'-')}</span> <span style="font-size:20px;font-weight:900;white-space:nowrap;flex-shrink:0;"><span style="color:#2563eb;">예정 ${roster.length}</span> <span style="color:#cbd5e1;margin:0 4px;">·</span> <span style="color:#16a34a;">입교 ${(typeof _studentsOf==='function'?_studentsOf(r.room).length:0)}</span></span></div>
+      return `<div class="cpop-course"><div class="cpop-course-h" onclick="_rosterAccToggle(this)"><span style="color:#0c4a6e;font-size:23px;font-weight:900;"><i class="fa-solid fa-chevron-right cpop-acc-chev"></i>ROOM #${_esc(r.rid)} · ${_esc(r.s.courseName||'-')}</span> <span style="font-size:28px;font-weight:900;white-space:nowrap;flex-shrink:0;"><span style="color:#2563eb;">예정 ${roster.length}</span> <span style="color:#cbd5e1;margin:0 4px;">·</span> <span style="color:#16a34a;">입교 ${(typeof _studentsOf==='function'?_studentsOf(r.room).length:0)}</span></span></div>
         <div class="cpop-acc-body" style="display:none;"><table class="cpop-table" style="table-layout:fixed;"><colgroup><col style="width:12%"><col style="width:46%"><col style="width:21%"><col style="width:21%"></colgroup><thead><tr><th>연번</th><th style="text-align:left;">소속</th><th>사번</th><th>성명</th></tr></thead><tbody>${rows}</tbody></table></div></div>`;
     }).join('');
     if(!blocks.trim()) blocks='<div class="cpop-empty">등록된 명단이 없습니다.</div>';
@@ -8382,7 +8385,7 @@ window.addEventListener('load', function(){
 });
 </script>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:6px;bottom:5px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;font-weight:800;line-height:1;letter-spacing:.6px;color:#fff;background:rgba(15,23,42,.85);padding:4px 8px;border-radius:6px;pointer-events:none;user-select:none;box-shadow:0 2px 6px rgba(0,0,0,.3);">VD</div>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:6px;bottom:5px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;font-weight:800;line-height:1;letter-spacing:.6px;color:#fff;background:rgba(15,23,42,.85);padding:4px 8px;border-radius:6px;pointer-events:none;user-select:none;box-shadow:0 2px 6px rgba(0,0,0,.3);">VE</div>
 <script>
 /* ===== [공용] 종료된 과정 자동 정리 (모든 플랫폼 공통) — 종료일 지난 방을 다음날 미개설로 비움. 브라우저별 하루 1회 ===== */
 window.kacExpireEndedCourses = async function(){

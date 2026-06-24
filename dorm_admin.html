@@ -3,8 +3,8 @@
 <head>
 <!-- ============================================================
   CATC · 교육지원부 · 생활관 배정  (dorm_admin.html)
-  @version  Z
-  @build    20260624-060000
+  @version  A1
+  @build    20260624-061500
   ────────────────────────────────────────────────────────
   [코드 수정 규칙 · AI/개발자 공통]
   이 파일을 한 글자라도 고치면:
@@ -69,6 +69,9 @@
   vY: [키오스크] 진짜 모니터 전체화면 + Esc 무력화 — 전체화면 진입 직후 Keyboard Lock API
       (navigator.keyboard.lock(['Escape']))로 Esc를 잠가, 전체화면에서 Esc를 눌러도 풀리지 않음.
       종료(시계 5초) 시 keyboard.unlock + exitFullscreen. (HTTPS·Chrome/Edge에서 동작)
+  vA1: [키오스크] 화면을 상·하 절반으로 분할 — 상단=현재 진행 교육 현황(기존 표), 하단=생활관 방배정
+      배치도를 3컬럼(청렴관·상생관·국제교육동 3층)으로 읽기전용 표시. system/dorm/assignments·rooms를
+      실시간 구독해 배치 변경 시 즉시 반영. 이번 주(canonical 월요일 기준) 배정 자동 선택, 비노출 과정 제외.
   vZ: [키오스크] 전체화면이 실제로 안 걸리던 버그 수정 — 기존엔 5초 시점에 모달을 먼저 열어
       모달이 헤더를 덮는 바람에 release(손 뗌)가 헤더가 아닌 모달에서 잡혀 requestFullscreen이
       호출되지 않았음. 5초엔 '진입 준비'만 표시하고, 손을 뗄 때(같은 사용자 제스처) 전체화면 요청+모달
@@ -6114,7 +6117,7 @@
 </script>
 <style>@media print{#__catcVer{display:none!important}}</style>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">VC</div>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">VD</div>
 <script>
 /* ===== [공용] 종료된 과정 자동 정리 (모든 플랫폼 공통) — 종료일 지난 방을 다음날 미개설로 비움. 브라우저별 하루 1회 ===== */
 window.kacExpireEndedCourses = async function(){
@@ -6164,6 +6167,28 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
 #dormKioskModal thead th{ border-bottom:2px solid rgba(255,255,255,.14); }
 #dormKioskModal tbody td{ padding:16px 14px; border-bottom:1px solid rgba(255,255,255,.07); text-align:center; }
 #dormKioskModal tbody tr:nth-child(even){ background:rgba(255,255,255,.025); }
+/* ── 하단 배치도(읽기전용·실시간) ── */
+#dormKioskBoardLegend .kbl-item{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:800;}
+#dormKioskBoardLegend .kbl-sw{width:12px;height:12px;border-radius:3px;display:inline-block;}
+#dormKioskBoard table{font-size:inherit;}
+#dormKioskBoard .kbd-bldg{display:flex;flex-direction:column;min-width:0;}
+#dormKioskBoard .kbd-bhead{color:#fff;font-weight:900;font-size:15px;padding:7px 13px;border-radius:9px 9px 0 0;display:flex;align-items:center;gap:8px;}
+#dormKioskBoard .kbd-bwrap{background:rgba(255,255,255,.03);border:2px solid #1e3a8a;border-top:none;border-radius:0 0 9px 9px;padding:9px;}
+#dormKioskBoard .kbd-flabel{font-size:11px;font-weight:900;color:#93c5fd;margin:8px 0 5px;padding:2px 8px;background:rgba(59,130,246,.12);border-left:3px solid #3b82f6;border-radius:0 5px 5px 0;display:inline-block;}
+#dormKioskBoard .kbd-flabel:first-child{margin-top:0;}
+#dormKioskBoard .kbd-grid{display:grid;gap:3px;grid-auto-rows:minmax(34px,auto);}
+#dormKioskBoard .kbd-room{border:1px solid rgba(148,163,184,.45);border-radius:5px;background:rgba(255,255,255,.02);display:flex;flex-direction:column;overflow:hidden;min-height:34px;}
+#dormKioskBoard .kbd-room.occ{background:rgba(255,255,255,.06);}
+#dormKioskBoard .kbd-head{font-size:10px;font-weight:900;color:#cbd5e1;background:rgba(255,255,255,.07);text-align:center;padding:1px;line-height:1.5;white-space:nowrap;}
+#dormKioskBoard .kbd-body{flex:1;display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:2px;padding:3px 2px;}
+#dormKioskBoard .kbd-chip{display:inline-flex;align-items:center;gap:1px;border:1px solid;border-radius:6px;padding:1px 6px;font-size:11px;font-weight:800;line-height:1.3;white-space:nowrap;max-width:100%;}
+#dormKioskBoard .kbd-foreign{white-space:normal;overflow-wrap:anywhere;word-break:break-word;text-align:center;font-size:10px;}
+#dormKioskBoard .kbd-fac{border:1px dashed rgba(148,163,184,.35);border-radius:5px;background:repeating-linear-gradient(45deg,rgba(255,255,255,.03),rgba(255,255,255,.03) 4px,rgba(255,255,255,.06) 4px,rgba(255,255,255,.06) 9px);color:#94a3b8;font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center;text-align:center;}
+#dormKioskBoard .kbd-cor{min-height:0;letter-spacing:4px;}
+#dormKioskBoard .kbd-fdiv{height:0;margin:9px 1px 2px;opacity:.6;}
+#dormKioskBoard .kbd-ex{background:repeating-linear-gradient(45deg,rgba(255,255,255,.03),rgba(255,255,255,.03) 4px,rgba(255,255,255,.06) 4px,rgba(255,255,255,.06) 9px);border-style:dashed;}
+#dormKioskBoard .kbd-exb{font-size:9px;font-weight:900;color:#fca5a5;}
+#dormKioskBoard .kbd-empty{grid-column:1/-1;text-align:center;color:#94a3b8;padding:40px;font-size:18px;}
 </style>
 <div id="dormKioskModal" style="display:none; position:fixed; inset:0; z-index:100000; flex-direction:column; overflow:auto; background:linear-gradient(160deg,#0b1220,#0f172a); color:#e2e8f0; font-family:'Pretendard','Noto Sans KR',sans-serif;">
   <div style="display:flex; align-items:flex-start; justify-content:space-between; padding:26px 40px 16px;">
@@ -6180,7 +6205,8 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
       <div style="position:fixed; left:0; top:0; width:100%; height:6px; background:rgba(248,113,113,.15); overflow:hidden; z-index:100002;"><div id="dormKioskExitHint" style="height:100%; width:0; background:linear-gradient(90deg,#f87171,#ef4444); box-shadow:0 0 10px rgba(239,68,68,.6);"></div></div>
     </div>
   </div>
-  <div style="flex:1; overflow:auto; padding:6px 40px 30px;">
+  <div style="flex:1; display:flex; flex-direction:column; min-height:0; padding:0 40px 22px;">
+    <div style="flex:0 0 46%; overflow:auto; padding-top:6px;">
     <table>
       <thead>
         <tr style="color:#94a3b8; font-size:16px; font-weight:800;">
@@ -6196,12 +6222,23 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
       </thead>
       <tbody id="dormKioskTableBody"></tbody>
     </table>
+    </div>
+    <div style="flex:1; min-height:0; display:flex; flex-direction:column; margin-top:12px; border-top:1px solid rgba(255,255,255,.10); padding-top:10px;">
+      <div style="display:flex; align-items:center; gap:12px; margin-bottom:8px; flex-shrink:0;">
+        <i class="fa-solid fa-bed" style="font-size:22px; color:#34d399;"></i>
+        <div style="font-size:22px; font-weight:900; color:#fff;">생활관 방배정 현황</div>
+        <div id="dormKioskBoardWk" style="font-size:14px; color:#93c5fd; font-weight:700;"></div>
+        <div style="flex:1;"></div>
+        <div id="dormKioskBoardLegend" style="display:flex; flex-wrap:wrap; gap:5px 14px; justify-content:flex-end; max-width:55%;"></div>
+      </div>
+      <div id="dormKioskBoard" style="flex:1; min-height:0; overflow:auto; display:grid; grid-template-columns:1fr 1fr 1fr; gap:14px; align-items:start;"></div>
+    </div>
   </div>
 </div>
 <script>
 (function(){
   const dormKiosk = {
-    _clock:null, _refresh:null, _rosters:{}, _rosterSub:false,
+    _clock:null, _refresh:null, _rosters:{}, _rosterSub:false, _asn:{}, _rooms2:{}, _boardSub:false,
     init:function(){
       var clock=document.getElementById('dormKioskClock');
       if(clock) this._bindLongPress(clock, 5000, function(){ dormKiosk.close(); }, 'dormKioskExitHint');
@@ -6230,10 +6267,81 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
     open:function(){
       var self=this;
       if(!this._rosterSub){ this._rosterSub=true; try{ db.ref('system/dorm/rosters').on('value', function(s){ self._rosters=s.val()||{}; var m=document.getElementById('dormKioskModal'); if(m&&m.style.display!=='none'){ self.render(); } }); }catch(e){} }
-      this.render();
+      this._subBoard();
+      this.render(); this.renderBoard();
       var m=document.getElementById('dormKioskModal'); if(m){ m.style.display='flex'; }
       this._tick(); this._clock=setInterval(function(){ self._tick(); },1000);
-      this._refresh=setInterval(function(){ self.render(); },30000);
+      this._refresh=setInterval(function(){ self.render(); self.renderBoard(); },30000);
+    },
+    _subBoard:function(){
+      var self=this;
+      if(this._boardSub) return; this._boardSub=true;
+      try{
+        db.ref('system/dorm/assignments').on('value', function(s){ self._asn=s.val()||{}; self._renderBoardIfOpen(); });
+        db.ref('system/dorm/rooms').on('value', function(s){ self._rooms2=s.val()||{}; self._renderBoardIfOpen(); });
+      }catch(e){}
+    },
+    _renderBoardIfOpen:function(){ var m=document.getElementById('dormKioskModal'); if(m&&m.style.display!=='none') this.renderBoard(); },
+    renderBoard:function(){
+      var host=document.getElementById('dormKioskBoard'); if(!host) return;
+      var rooms=this._rooms2||{};
+      var ckey=function(x){ return (typeof canonicalWeekKey==='function')?canonicalWeekKey(x):x; };
+      var ymd=function(d){ return (typeof _ymdLocal==='function')?_ymdLocal(d):(d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')); };
+      var todayKey=ckey(ymd(new Date()));
+      // 이번 주(canonical) 키에 해당하는 모든 배정을 병합 (Sun/Mon 중복 키 안전 처리)
+      var asn=this._asn||{}, has=false, students={}, mergedCourses=[];
+      Object.keys(asn).forEach(function(k){ if(ckey(k)===todayKey){ var a=asn[k]; if(a){ has=true; if(a.students) Object.assign(students, a.students); if(Array.isArray(a.courses)) mergedCourses=mergedCourses.concat(a.courses); } } });
+      // 이번 주 라벨(월~일)
+      var wkEl=document.getElementById('dormKioskBoardWk');
+      (function(){ var n=new Date(); n.setHours(0,0,0,0); var dow=(n.getDay()+6)%7; var mon=new Date(n); mon.setDate(n.getDate()-dow); var sun=new Date(mon); sun.setDate(mon.getDate()+6); var f=function(d){return (d.getMonth()+1)+'/'+d.getDate();}; if(wkEl) wkEl.textContent='('+f(mon)+'~'+f(sun)+')'; })();
+      var legEl=document.getElementById('dormKioskBoardLegend');
+      function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
+      if(!has || !Object.keys(students).length){ host.innerHTML='<div class="kbd-empty">이번 주 배정 결과가 없습니다.</div>'; if(legEl) legEl.innerHTML=''; return; }
+      // 총괄표 비노출(hideFromBoard) 과정 제외
+      var hidden={}; var cc=(typeof coursesCache!=='undefined'&&coursesCache)?coursesCache:{};
+      Object.keys(cc).forEach(function(k){ var s=(cc[k]&&cc[k].settings)||{}; if(s.hideFromBoard&&s.courseName) hidden[String(s.courseName).trim()]=1; });
+      var shown={};
+      Object.keys(students).forEach(function(tk){ var s=students[tk]; if(hidden[String((s&&s.course)||'').trim()]) return; shown[tk]=s; });
+      // 과정 색상 (중복 제거)
+      var palette=['#60a5fa','#34d399','#fb923c','#a78bfa','#f472b6','#22d3ee','#f87171'];
+      var seen={}, courseColors={}, ci=0;
+      mergedCourses.forEach(function(c){ var n=c&&c.courseName; if(n&&!seen[n]){ seen[n]=1; courseColors[n]=palette[ci%palette.length]; ci++; } });
+      courseColors['강사']='#94a3b8';
+      var colorOf=function(c){ return courseColors[c]||'#94a3b8'; };
+      var byNo={};
+      Object.keys(shown).forEach(function(tk){ var s=shown[tk]; var k=s.building+'|'+String(s.no); (byNo[k]=byNo[k]||[]).push(s); });
+      function chip(p){
+        var col=colorOf(p.course);
+        var foreign=p.foreign||(typeof isForeignNameValue==='function'&&isForeignNameValue(p.name||''));
+        var gbg=p.gender==='M'?'rgba(59,130,246,.20)':(p.gender==='F'?'rgba(236,72,153,.20)':'rgba(255,255,255,.06)');
+        var gico=(typeof _genderIcon==='function')?_genderIcon(p.gender):'';
+        return '<span class="kbd-chip'+(foreign?' kbd-foreign':'')+'" style="color:'+col+';border-color:'+col+';background:'+gbg+';">'+esc(p.name)+gico+'</span>';
+      }
+      function roomCell(building,cell,flNum){
+        var people=byNo[building+'|'+cell.no]||[]; var occ=people.length>0;
+        var noAssign=(typeof _roomExcluded==='function')&&_roomExcluded(rooms,building,flNum,cell.no);
+        var head='<div class="kbd-head">'+esc(cell.no)+'</div>';
+        if(noAssign&&!occ){ return '<div class="kbd-room kbd-ex" style="grid-column:'+cell.c+';grid-row:'+cell.r+';">'+head+'<div class="kbd-body"><span class="kbd-exb">배정제외</span></div></div>'; }
+        return '<div class="kbd-room'+(occ?' occ':'')+'" style="grid-column:'+cell.c+';grid-row:'+cell.r+';">'+head+'<div class="kbd-body">'+people.map(chip).join('')+'</div></div>';
+      }
+      function facCell(cell){ return '<div class="kbd-fac'+(cell.corridor?' kbd-cor':'')+'" style="grid-column:'+cell.c+';grid-row:'+cell.r+';">'+esc(cell.fac)+'</div>'; }
+      function floorHtml(building,fl){
+        var F=_withCorridor(building,fl); var flNum=parseInt(F.floor,10);
+        var inner=F.cells.map(function(c){ return (c.fac!==undefined)?facCell(c):roomCell(building,c,flNum); }).join('');
+        var rowStyle=F._rows?('grid-template-rows:'+F._rows+';'):'';
+        return '<div class="kbd-flabel">'+F.floor+'</div><div class="kbd-grid" style="grid-template-columns:repeat('+F.cols+',minmax(34px,1fr));'+rowStyle+'">'+inner+'</div>';
+      }
+      function bldg(building){
+        var bar=(typeof DORM_BLDG_BAR!=='undefined'&&DORM_BLDG_BAR[building])||'#0f2057';
+        var fls=((typeof DORM_FORM!=='undefined'&&DORM_FORM[building])||[]).map(function(fl){return floorHtml(building,fl);}).join('<div class="kbd-fdiv" style="border-top:2px solid '+bar+';"></div>');
+        return '<div class="kbd-bldg"><div class="kbd-bhead" style="background:'+bar+';">🏢 '+building+'</div><div class="kbd-bwrap" style="border-color:'+bar+';">'+fls+'</div></div>';
+      }
+      host.innerHTML=['청렴관','상생관','국제교육동'].map(bldg).join('');
+      if(legEl){
+        var hasInst=Object.keys(shown).some(function(tk){return (shown[tk].course||'')==='강사';});
+        legEl.innerHTML=Object.keys(courseColors).filter(function(c){return c!=='강사'||hasInst;})
+          .map(function(c){ return '<span class="kbl-item"><span class="kbl-sw" style="background:'+courseColors[c]+'"></span><span style="color:'+courseColors[c]+'">'+esc(c)+'</span></span>'; }).join('');
+      }
     },
     close:function(){
       var m=document.getElementById('dormKioskModal'); if(m) m.style.display='none';
