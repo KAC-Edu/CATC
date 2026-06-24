@@ -4158,3 +4158,21 @@ button[onclick*="allIdle"]{
 }
 body.night-mode .side-rail-btn{ background:#1e293b; border-color:#334155; }
 body.night-mode .side-rail-lbl{ color:#cbd5e1; }
+
+/* ===== [VP] 홈 배너 사진 틀고정 완전 해제 — 원본 전체 비율, 잘림 없음 (이미지+버튼 한 블록 폭 일치) ===== */
+#view-home .dashboard-campus-banner{
+  overflow: visible !important;
+  aspect-ratio: auto !important;
+  height: auto !important;
+  line-height: 0 !important;
+  border: none !important;
+}
+#view-home .dashboard-campus-banner img{
+  width: 100% !important;
+  height: auto !important;
+  max-height: none !important;
+  aspect-ratio: auto !important;   /* 강제 비율 제거 → 원본 그대로 */
+  object-fit: contain !important;
+  display: block !important;
+  border-radius: 18px !important;
+}

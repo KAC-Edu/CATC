@@ -3,8 +3,8 @@
 <head>
 <!-- ============================================================
   CATC · 교육지원부 · 생활관 배정  (dorm_admin.html)
-  @version  G1
-  @build    20260624-074500
+  @version  H1
+  @build    20260624-080000
   ────────────────────────────────────────────────────────
   [코드 수정 규칙 · AI/개발자 공통]
   이 파일을 한 글자라도 고치면:
@@ -89,6 +89,8 @@
   vG1: [키오스크] 검색 결과 표시 개선 — 부분 입력으로 여러 명이 뜨면 큰 카드가 화면을 덮던 문제 수정.
       1명일 때만 큰 노란 카드, 2명 이상이면 깔끔한 목록(이름·생활관)으로 표시 + '이름을 더 입력하세요' 안내.
       결과 영역 스크롤 허용으로 키보드와 겹침 방지.
+  vH1: [키오스크] 검색 결과를 '딱 1명으로 좁혀졌을 때만' 큰 카드로 표시 — 그 전(여러 명/입력 중)에는
+      다른 사람을 노출하지 않고 '이름을 끝까지 입력하세요' 안내만. 부분입력 중 결과없음 깜빡임도 제거.
   vZ: [키오스크] 전체화면이 실제로 안 걸리던 버그 수정 — 기존엔 5초 시점에 모달을 먼저 열어
       모달이 헤더를 덮는 바람에 release(손 뗌)가 헤더가 아닌 모달에서 잡혀 requestFullscreen이
       호출되지 않았음. 5초엔 '진입 준비'만 표시하고, 손을 뗄 때(같은 사용자 제스처) 전체화면 요청+모달
@@ -6135,7 +6137,7 @@
 </script>
 <style>@media print{#__catcVer{display:none!important}}</style>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">VJ</div>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">VK</div>
 <script>
 /* ===== [공용] 종료된 과정 자동 정리 (모든 플랫폼 공통) — 종료일 지난 방을 다음날 미개설로 비움. 브라우저별 하루 1회 ===== */
 window.kacExpireEndedCourses = async function(){
@@ -6442,16 +6444,13 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
       if(!q){ rEl.innerHTML='<span class="kbhit-empty">이름을 입력하세요.</span>'; return; }
       var students=this._currentStudents(), ql=q.toLowerCase(), matches=[];
       Object.keys(students).forEach(function(tk){ var s=students[tk]; var nm=String(s.name||''); if(nm && nm.toLowerCase().indexOf(ql)>=0) matches.push(s); });
-      if(!matches.length){ rEl.innerHTML='<span class="kbhit-empty">‘'+_esc(q)+'’ 검색 결과가 없습니다.</span>'; return; }
       function roomOf(s){ return _esc(s.building)+' '+(s.floor?_esc(String(s.floor))+'층 ':'')+_esc(String(s.no))+'호'; }
+      // 딱 1명으로 좁혀졌을 때만 결과(큰 카드) 표시 — 그 전엔 다른 사람을 보여주지 않고 입력 안내만
       if(matches.length===1){
         var s0=matches[0];
         rEl.innerHTML='<div class="kbhit"><div class="kbhit-name">'+_esc(s0.name)+' <span class="nim">님</span></div><div class="kbhit-room">'+roomOf(s0)+'</div></div>';
       } else {
-        rEl.innerHTML='<div class="kbmulti"><div class="kbmulti-h">검색 결과 '+matches.length+'명 · 이름을 더 입력하세요</div>'
-          + matches.slice(0,6).map(function(s){ return '<div class="kbmulti-row"><span class="nm">'+_esc(s.name)+'</span><span class="rm">'+roomOf(s)+'</span></div>'; }).join('')
-          + (matches.length>6?'<div class="kbmulti-more">… 외 '+(matches.length-6)+'명</div>':'')
-          + '</div>';
+        rEl.innerHTML='<span class="kbhit-empty">이름을 끝까지 입력하세요</span>';
       }
     },
     _buildKbd:function(){
