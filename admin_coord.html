@@ -30,8 +30,6 @@
   <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" rel="stylesheet">
   <style>
 
-
-
 /* 수송 요청 시간 그리드 */
 .trans-time-grid {
     display: grid;
@@ -1642,6 +1640,9 @@ body.cpop-locked{ overflow:hidden !important; }
 .cpop-table{ width:100%; border-collapse:collapse; }
 .cpop-table th{ background:#f1f5f9; color:#475569; font-size:13.5px; font-weight:800; padding:11px 8px; border-bottom:2px solid #e2e8f0; }
 .cpop-table td{ text-align:center; font-size:15px; padding:11px 8px; border-bottom:1px solid #f1f5f9; }
+/* [노안 가독성] 과정별 교육생 명단 팝업: 명단 표·지역목록 글자 크게 */
+#cpopRosterWrap .cpop-table td{ font-size:19px !important; padding:13px 9px !important; }
+#cpopRosterWrap .cpop-table th{ font-size:17px !important; padding:13px 9px !important; }
 .cov-table th{ font-size:15.5px !important; padding:13px 8px !important; }
 .cov-table td{ font-size:17px !important; padding:16px 10px !important; }
 .cov-table td:nth-child(2){ font-size:18.5px; }
@@ -1653,7 +1654,7 @@ body.cpop-locked{ overflow:hidden !important; }
 .coursetbl-row:hover{ background:linear-gradient(135deg,#eff6ff 0%,#dbeafe 100%); }
 .coursetbl-row:active{ transform:scale(.997); }
 .cpop-empty{ text-align:center; color:#94a3b8; font-weight:700; padding:40px; }
-.cpop-search{ width:100%; padding:11px; border:1.5px solid #e2e8f0; border-radius:10px; font-size:14px; margin-bottom:12px; box-sizing:border-box; }
+.cpop-search{ width:100%; padding:14px 14px; border:1.5px solid #e2e8f0; border-radius:10px; font-size:18px; margin-bottom:12px; box-sizing:border-box; }
 .cpop-course{ border:1px solid #e2e8f0; border-radius:12px; margin-bottom:12px; overflow:hidden; }
 .cpop-course-h{ background:#e0f2fe; color:#0c4a6e; border-left:4px solid #38bdf8; padding:13px 16px; font-weight:900; font-size:18px; display:flex; justify-content:space-between; align-items:center; }
 .cpop-course-h span{ color:#0ea5e9; font-size:12px; }
@@ -1809,17 +1810,18 @@ body.pc-mode .coord-pc-only{ display:flex !important; }
 .hdr-edu{ align-self:stretch !important; }
 .hdr-edu .hdr-stat-txt{ display:flex; flex-direction:column; justify-content:center; }
 /* 청렴/노조교육 상태색: 설정=녹색 활성 / 미설정=빨강 활성 */
-.hdr-edu.edu-set{ background:rgba(22,163,74,0.60) !important; border-color:#22c55e !important; box-shadow:0 0 0 1px rgba(34,197,94,.45), 0 4px 12px rgba(22,163,74,.30) !important; }
-.hdr-edu.edu-unset{ background:rgba(220,38,38,0.60) !important; border-color:#ef4444 !important; box-shadow:0 0 0 1px rgba(239,68,68,.45), 0 4px 12px rgba(220,38,38,.30) !important; }
+.hdr-edu.edu-set{ background:#16a34a !important; border-color:#22c55e !important; box-shadow:0 0 0 1px rgba(34,197,94,.45), 0 4px 12px rgba(22,163,74,.30) !important; }
+.hdr-edu.edu-unset{ background:#dc2626 !important; border-color:#ef4444 !important; box-shadow:0 0 0 1px rgba(239,68,68,.45), 0 4px 12px rgba(220,38,38,.30) !important; }
 .hdr-edu.edu-set .hb-value, .hdr-edu.edu-unset .hb-value{ color:#fff !important; }
 .hdr-edu.edu-set .hb-label, .hdr-edu.edu-unset .hb-label{ color:rgba(255,255,255,0.95) !important; }
 .hdr-edu.edu-set > i{ color:#dcfce7 !important; }
 .hdr-edu.edu-unset > i{ color:#fee2e2 !important; }
-.hdr-stat.shuttle-on{ background:rgba(22,163,74,0.60) !important; border-color:#22c55e !important; box-shadow:0 0 0 1px rgba(34,197,94,.45),0 4px 12px rgba(22,163,74,.30) !important; }
+.hdr-stat.shuttle-on{ background:#16a34a !important; border-color:#22c55e !important; box-shadow:0 0 0 1px rgba(34,197,94,.45),0 4px 12px rgba(22,163,74,.30) !important; }
 .hdr-stat.shuttle-on .hb-label{ color:rgba(255,255,255,0.95) !important; }
 .hdr-stat.shuttle-on .hb-value{ color:#fff !important; }
+.hdr-stat.shuttle-on .hb-value small, .hdr-stat.shuttle-off .hb-value small{ color:#dcfce7 !important; }
 .hdr-stat.shuttle-on > i{ color:#dcfce7 !important; }
-.hdr-stat.shuttle-off{ background:rgba(220,38,38,0.60) !important; border-color:#ef4444 !important; box-shadow:0 0 0 1px rgba(239,68,68,.45),0 4px 12px rgba(220,38,38,.30) !important; }
+.hdr-stat.shuttle-off{ background:#dc2626 !important; border-color:#ef4444 !important; box-shadow:0 0 0 1px rgba(239,68,68,.45),0 4px 12px rgba(220,38,38,.30) !important; }
 .hdr-stat.shuttle-off .hb-label{ color:rgba(255,255,255,0.95) !important; }
 .hdr-stat.shuttle-off .hb-value{ color:#fff !important; }
 .hdr-stat.shuttle-off > i{ color:#fee2e2 !important; }
@@ -1834,12 +1836,51 @@ body.pc-mode .coord-pc-only{ display:flex !important; }
 #coordKioskEscHint{ font-size:clamp(10px,1vw,15px) !important; padding:clamp(7px,0.9vw,12px) clamp(10px,1.2vw,20px) !important; white-space:normal !important; }
 #coordKioskModal .ck-headicon{ width:clamp(38px,3.4vw,60px) !important; height:clamp(38px,3.4vw,60px) !important; font-size:clamp(18px,2vw,30px) !important; }
 #coordKioskTableBody tr.ckrow{ cursor:pointer; transition:background .12s; }
-#coordKioskTableBody tr.ckrow:hover td{ background:linear-gradient(90deg, rgba(59,130,246,.30), rgba(37,99,235,.20)) !important; }
-#coordKioskTableBody tr.ckrow:hover td:first-child{ border-top-left-radius:12px; border-bottom-left-radius:12px; box-shadow:inset 4px 0 0 #93c5fd; }
-#coordKioskTableBody tr.ckrow:hover td:last-child{ border-top-right-radius:12px; border-bottom-right-radius:12px; }
+@media (hover:hover) and (pointer:fine){
+  #coordKioskTableBody tr.ckrow:hover td{ background:linear-gradient(90deg, rgba(59,130,246,.30), rgba(37,99,235,.20)) !important; }
+  #coordKioskTableBody tr.ckrow:hover td:first-child{ border-top-left-radius:12px; border-bottom-left-radius:12px; box-shadow:inset 4px 0 0 #93c5fd; }
+  #coordKioskTableBody tr.ckrow:hover td:last-child{ border-top-right-radius:12px; border-bottom-right-radius:12px; }
+}
+/* [키오스크 배치도 페이지] 흰 배경 3등분 · 경계박스 없음 · 강의실명+예정인원 */
+.ckfp-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:34px; align-items:start; }
+.ckfp-col{ min-width:0; }
+.ckfp-title{ text-align:center; font-size:25px; font-weight:900; color:#0f2a4a; margin-bottom:14px; letter-spacing:-.3px; }
+.ckfp-clip{ overflow:hidden; border-radius:12px; background:#fff; }
+.ckfp-imgbox{ position:relative; width:100%; }
+.ckfp-img{ display:block; width:100%; height:auto; }
+.ckfp-slot{ position:absolute; transform:translate(-50%,-50%); z-index:2; }
+.ckfp-chip{ border-radius:11px; padding:7px 13px; font-weight:900; white-space:nowrap; text-align:center; box-shadow:0 4px 12px rgba(0,0,0,.14); }
+.ckfp-chip.off{ background:#eef2f7; color:#94a3b8; border:1.5px solid #cbd5e1; font-size:16px; }
+.ckfp-chip.on{ background:linear-gradient(135deg,#16a34a,#15803d); color:#fff; border:2px solid #22c55e; cursor:pointer; box-shadow:0 0 0 3px rgba(34,197,94,.25), 0 6px 16px rgba(22,163,74,.4); }
+.ckfp-chip.on .ckfp-room{ font-size:17px; }
+.ckfp-chip.on .ckfp-room b{ color:#dcfce7; font-size:16px; }
+.ckfp-chip.on .ckfp-course{ font-size:13.5px; font-weight:800; opacity:.95; margin-top:2px; max-width:190px; overflow:hidden; text-overflow:ellipsis; }
+.ckfp-prep{ background:#f8fafc; border:2px dashed #cbd5e1; border-radius:14px; padding:48px 16px; text-align:center; color:#94a3b8; font-weight:800; font-size:16px; }
+/* 배치도 페이지(3등분): 카드가 서로 겹치지 않도록 충분히 축소 */
+#coordKioskFloorView .cfp-card{ min-width:118px; max-width:172px; padding:7px 10px 9px; border-width:2px; }
+#coordKioskFloorView .cfp-card-h b{ font-size:14px; }
+#coordKioskFloorView .cfp-card-course{ font-size:12.5px; margin:1px 0 5px; }
+#coordKioskFloorView .cfp-card-row{ font-size:11.5px; line-height:1.5; }
+#coordKioskFloorView .cfp-card-row span{ min-width:36px; margin-right:4px; }
+#coordKioskFloorView .cfp-room{ font-size:14px; padding:6px 11px; }
+/* [구버전] 진행 중 과정 배치도 그리드 — 여러 층을 나란히, 공간 부족하면 줄바꿈+스크롤 */
+.ck-fp-grid{ display:flex; flex-wrap:wrap; gap:16px; align-items:flex-start; }
+.ck-fp-3{ display:grid; grid-template-columns:repeat(3,1fr); gap:16px; align-items:start; }
+.ck-fp-3 .ck-floor{ flex:none; min-width:0; max-width:none; }
+.ck-floor{ flex:1 1 360px; min-width:280px; max-width:560px; background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.12); border-radius:14px; padding:12px 12px 14px; box-sizing:border-box; }
+.ck-floor .cfp-clip{ background:#f8fafc; }
+.ck-floor .cfp-card{ min-width:108px; max-width:160px; padding:6px 9px 8px; border-width:2px; }
+.ck-floor .cfp-card-h b{ font-size:13px; }
+.ck-floor .cfp-card-course{ font-size:11.5px; margin:1px 0 4px; }
+.ck-floor .cfp-card-row{ font-size:10.5px; line-height:1.45; }
+.ck-floor .cfp-card-row span{ min-width:32px; margin-right:3px; }
+.ck-floor .cfp-floor-badge{ font-size:13px; padding:3px 12px; }
 body.pc-mode .coord-hdr-stats{ gap:10px; overflow:visible !important; min-width:auto !important; flex-wrap:nowrap !important; }
-/* 화면이 좁아 제목과 겹칠 때: 상단바 통계(운영과정~노조교육) 숨김 (제목+통계+시계가 안 들어가는 폭부터) */
-@media (max-width: 1500px){ body.pc-mode #coordHdrStats, body.pc-mode .coord-hdr-stats, #coordHdrStats, .coord-hdr-stats{ display:none !important; } }
+/* 화면이 좁을 때(1500px 미만): 버튼블록(통계)은 남기고 좌측 제목 글자·시계(날짜시간)만 숨김 */
+@media (max-width: 1500px){
+  #coordHeaderClock, body.pc-mode #coordHeaderClock{ display:none !important; }
+  .coord-brand-title, body.pc-mode .coord-brand-title{ display:none !important; }
+}
 body.pc-mode .coord-left{ grid-column:1 !important; grid-row:1 !important; justify-self:start !important; align-self:center !important; }
 body.pc-mode .hdr-stat{ padding:8px 18px; }
 body.pc-mode .hdr-stat > i{ font-size:18px; }
@@ -1916,20 +1957,32 @@ body.pc-mode .coord-right{ grid-column:2 !important; grid-row:1 !important; just
       <div style="font-size:11.5px;color:#64748b;margin-top:4px;">⏻ 시계 길게 눌러 종료</div>
     </div>
   </div>
-  <div style="flex:1; overflow:auto; border-radius:18px; background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.10);">
-    <table style="width:100%; border-collapse:collapse; font-size:25px;">
-      <thead><tr style="background:rgba(255,255,255,.09); position:sticky; top:0;">
-        <th style="padding:20px 14px;color:#cbd5e1;font-weight:800;">구분</th>
-        <th style="padding:20px 14px;color:#cbd5e1;font-weight:800;text-align:left;">과정명</th>
-        <th style="padding:20px 14px;color:#cbd5e1;font-weight:800;">교육기간</th>
-        <th style="padding:20px 14px;color:#cbd5e1;font-weight:800;">강의실</th>
-        <th style="padding:20px 14px;color:#cbd5e1;font-weight:800;">교육생수(예정)</th>
-        <th style="padding:20px 14px;color:#cbd5e1;font-weight:800;">담임교수</th>
-        <th style="padding:20px 14px;color:#cbd5e1;font-weight:800;">과정담당</th>
-        <th style="padding:20px 14px;color:#cbd5e1;font-weight:800;">비고</th>
-      </tr></thead>
-      <tbody id="coordKioskTableBody"></tbody>
-    </table>
+  <!-- [뷰1] 교육 현황 표 -->
+  <div id="coordKioskTableView" style="flex:1 1 auto; min-height:0; display:flex; flex-direction:column; gap:18px;">
+    <div style="flex:1 1 auto; min-height:0; overflow:auto; border-radius:18px; background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.10);">
+      <table style="width:100%; border-collapse:collapse; font-size:25px;">
+        <thead><tr style="background:rgba(255,255,255,.09); position:sticky; top:0;">
+          <th style="padding:20px 14px;color:#cbd5e1;font-weight:800;">구분</th>
+          <th style="padding:20px 14px;color:#cbd5e1;font-weight:800;text-align:left;">과정명</th>
+          <th style="padding:20px 14px;color:#cbd5e1;font-weight:800;">교육기간</th>
+          <th style="padding:20px 14px;color:#cbd5e1;font-weight:800;">강의실</th>
+          <th style="padding:20px 14px;color:#cbd5e1;font-weight:800;">교육생수(예정)</th>
+          <th style="padding:20px 14px;color:#cbd5e1;font-weight:800;">담임교수</th>
+          <th style="padding:20px 14px;color:#cbd5e1;font-weight:800;">과정담당</th>
+          <th style="padding:20px 14px;color:#cbd5e1;font-weight:800;">비고</th>
+        </tr></thead>
+        <tbody id="coordKioskTableBody"></tbody>
+      </table>
+    </div>
+    <button onclick="coordKiosk.showFloor()" style="flex:0 0 auto;width:100%;padding:24px;border:none;border-radius:16px;background:linear-gradient(135deg,#2563eb,#1d4ed8);color:#fff;font-size:30px;font-weight:900;cursor:pointer;box-shadow:0 8px 24px rgba(37,99,235,.45);letter-spacing:.5px;"><i class="fa-solid fa-map-location-dot"></i>&nbsp; 강의실 배치도 보기</button>
+  </div>
+  <!-- [뷰2] 강의실 배치도 (흰 배경 · 3등분) -->
+  <div id="coordKioskFloorView" style="display:none; flex:1 1 auto; min-height:0; background:#fff; border-radius:18px; padding:20px 26px 26px; overflow:auto;">
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:14px;">
+      <div style="font-size:26px;font-weight:900;color:#0f2a4a;"><i class="fa-solid fa-map-location-dot" style="color:#2563eb;"></i> 강의실 배치도</div>
+      <button onclick="coordKiosk.showTable()" style="padding:14px 26px;border:none;border-radius:13px;background:#0f2a4a;color:#fff;font-size:22px;font-weight:900;cursor:pointer;"><i class="fa-solid fa-arrow-left"></i> 교육 현황으로</button>
+    </div>
+    <div id="coordKioskFloor"></div>
   </div>
 </div>
 
@@ -6376,8 +6429,8 @@ const annualPlanMgrCoord = {
 <div id="customAlertModal" class="setup-modal" style="z-index:2147480001;">
     <div class="setup-box" style="max-width:380px; text-align:center;">
         <div id="kacAlertIcon" style="font-size:38px; margin-bottom:10px;">ℹ️</div>
-        <div id="kacAlertMsg" style="font-size:15px; font-weight:700; color:var(--navy-dark); line-height:1.6; white-space:pre-line; margin-bottom:22px;">알림</div>
-        <button class="navy-btn" style="width:100%; height:46px; background:var(--blue-main);" onclick="closeKacAlert()">확인</button>
+        <div id="kacAlertMsg" style="font-size:19px; font-weight:700; color:var(--navy-dark); line-height:1.6; white-space:pre-line; margin-bottom:22px;">알림</div>
+        <button class="navy-btn" style="width:100%; height:50px; font-size:18px; background:var(--blue-main);" onclick="closeKacAlert()">확인</button>
     </div>
 </div>
 
@@ -6535,11 +6588,15 @@ function _coordInitViewMode() {
     if (usePc) setTimeout(function(){ try { pcsSyncCourseList(); pcUpdateNav(); } catch(e){} }, 700);
     setTimeout(_coordFitHeader, 300); setTimeout(_coordFitHeader, 1000);
 }
-// [헤더] 통계 메뉴는 중앙 칸, 시계는 우측 칸으로 그리드 분리되어 겹치지 않음 → 항상 표시
+// [헤더] 화면이 좁으면(1500px 미만) 버튼블록(통계)은 유지하고 좌측 제목·시계(날짜시간)만 숨김
 function _coordFitHeader(){
+    var narrow = window.innerWidth < 1500;
     var stats=document.getElementById('coordHdrStats');
-    // 화면이 좁아 제목과 겹칠 폭(1500px 미만)이면 통계(운영과정~노조교육) 숨김
-    if(stats) stats.style.setProperty('display', (window.innerWidth < 1500) ? 'none' : 'flex', 'important');
+    var clock=document.getElementById('coordHeaderClock');
+    var brand=document.querySelector('.coord-brand-title');
+    if(stats) stats.style.setProperty('display','flex','important');                 // 버튼블록 항상 표시
+    if(clock) clock.style.setProperty('display', narrow ? 'none' : '', 'important');  // 날짜시간 숨김
+    if(brand) brand.style.setProperty('display', narrow ? 'none' : '', 'important');  // 좌측 제목 글자 숨김
 }
 window.addEventListener('resize', function(){ try{ _coordFitHeader(); }catch(e){} });
 if (document.readyState === 'loading') {
@@ -7410,32 +7467,6 @@ function _coordParseRoster(text) {
 }
 </script>
 
-<!-- ── 화면 자동 맞춤(auto-fit): 가로폭 기준 일정 배율 · JDS260613 ──
-     배율은 '창 가로폭' 하나로만 결정 → 어느 화면(뷰)에 들어가도 항상 같은 크기 유지.
-     세로로 긴 내용(식단표·명단·표 등)은 줄으로 줄이지 않고 해당 영역에서 스크롤됨.
-     (이전: 화면마다 내용 높이를 재서 줄이 달라져 긴 화면만 작아지는 문제) -->
-<script>
-(function(){
-  var MIN_ZOOM = 0.5;
-  var t;
-  function fit(){
-    var el = document.documentElement, b = document.body;
-    el.style.zoom = '';
-    el.style.removeProperty('--app-h');
-    var needW = Math.max(1, el.scrollWidth, b ? b.scrollWidth : 0);
-    var z = Math.max(MIN_ZOOM, Math.min(window.innerWidth / needW, 1));   // 가로폭 기준, 축소만(확대 안 함)
-    if (z < 0.995){
-      el.style.setProperty('--app-h', (window.innerHeight / z) + 'px');   // zoom 시 100vh 여백/잘림 방지(해당 CSS가 var(--app-h) 사용 시)
-      el.style.zoom = z.toFixed(4);
-    }
-  }
-  function soon(){ clearTimeout(t); t = setTimeout(fit, 80); }
-  window.addEventListener('resize', soon);
-  window.addEventListener('load', fit);
-  document.addEventListener('DOMContentLoaded', fit);
-  [300,900,2000].forEach(function(ms){ setTimeout(fit, ms); });
-})();
-</script>
 <style>@media print{#__catcVer{display:none!important}}</style>
 <div id="coordPopup" class="cpop-ov" onclick="if(event.target===this)cpopClose()">
   <div class="cpop">
@@ -7550,10 +7581,10 @@ function _coordRenderStudentMap(counts,total,unknown,ids){
       var c=counts[nm]; var pct=Math.max(8,Math.round(c/max*100));
       var rc = i===0?'#1d4ed8':i===1?'#2563eb':i===2?'#3b82f6':'#94a3b8';
       return '<div style="display:flex;align-items:center;gap:8px;padding:9px 4px;border-bottom:1px solid #f3f6fb;">'
-        +'<span style="width:21px;height:21px;flex-shrink:0;border-radius:50%;background:'+rc+';color:#fff;font-size:11px;font-weight:900;display:flex;align-items:center;justify-content:center;">'+(i+1)+'</span>'
-        +'<span style="width:40px;flex-shrink:0;font-size:13.5px;font-weight:800;color:#1e293b;">'+nm+'</span>'
-        +'<span style="flex:1;height:8px;background:#eef2f7;border-radius:6px;overflow:hidden;"><span style="display:block;height:100%;width:'+pct+'%;background:linear-gradient(90deg,#60a5fa,#2563eb);border-radius:6px;"></span></span>'
-        +'<span style="width:40px;text-align:right;font-size:20px;font-weight:900;color:#2563eb;">'+c+'</span>'
+        +'<span style="width:25px;height:25px;flex-shrink:0;border-radius:50%;background:'+rc+';color:#fff;font-size:13px;font-weight:900;display:flex;align-items:center;justify-content:center;">'+(i+1)+'</span>'
+        +'<span style="width:52px;flex-shrink:0;font-size:17px;font-weight:800;color:#1e293b;">'+nm+'</span>'
+        +'<span style="flex:1;height:9px;background:#eef2f7;border-radius:6px;overflow:hidden;"><span style="display:block;height:100%;width:'+pct+'%;background:linear-gradient(90deg,#60a5fa,#2563eb);border-radius:6px;"></span></span>'
+        +'<span style="width:46px;text-align:right;font-size:24px;font-weight:900;color:#2563eb;">'+c+'</span>'
         +'</div>';
     }).join('') : '<div style="padding:24px 10px;text-align:center;color:#94a3b8;font-weight:700;font-size:13px;">표시할 명단이 없습니다</div>';
     listEl.innerHTML = head + '<div style="border:1px solid #e8edf5;border-radius:13px;padding:2px 12px;background:#fff;box-shadow:0 2px 8px rgba(15,23,42,.04);">'+body+'</div>';
@@ -7608,7 +7639,7 @@ function openStudentRosterPopup(){
       if(!roster.length) return '';
       roster.forEach(function(st){ var reg=_coordDeptToRegion(st.dept||st.position||st.affil||st.org||''); if(reg){ _mc[reg]=(_mc[reg]||0)+1; _mtot++; } else { _munk++; } });
       const rows=roster.map((st,i)=>`<tr class="rosterRow" data-n="${_esc(((st.name||'')+(st.dept||st.position||st.affil||'')).toLowerCase())}"><td style="color:#94a3b8;">${i+1}</td><td style="text-align:left;color:#475569;">${_esc(st.dept||st.position||st.affil||st.org||'-')}</td><td style="color:#64748b;">${_esc(st.empNo||st.sabun||st.id||'-')}</td><td style="font-weight:800;">${_esc(st.name||'-')}</td></tr>`).join('');
-      return `<div class="cpop-course"><div class="cpop-course-h" onclick="_rosterAccToggle(this)"><span style="color:#0c4a6e;font-size:18px;"><i class="fa-solid fa-chevron-right cpop-acc-chev"></i>ROOM #${_esc(r.rid)} · ${_esc(r.s.courseName||'-')}</span> <span style="font-size:20px;font-weight:900;white-space:nowrap;flex-shrink:0;"><span style="color:#2563eb;">예정 ${roster.length}</span> <span style="color:#cbd5e1;margin:0 4px;">·</span> <span style="color:#16a34a;">입교 ${(typeof _studentsOf==='function'?_studentsOf(r.room).length:0)}</span></span></div>
+      return `<div class="cpop-course"><div class="cpop-course-h" onclick="_rosterAccToggle(this)"><span style="color:#0c4a6e;font-size:23px;font-weight:900;"><i class="fa-solid fa-chevron-right cpop-acc-chev"></i>ROOM #${_esc(r.rid)} · ${_esc(r.s.courseName||'-')}</span> <span style="display:inline-flex;align-items:center;gap:8px;white-space:nowrap;flex-shrink:0;"><span style="font-size:24px;font-weight:900;color:#1d4ed8;background:#dbeafe;border:2px solid #93c5fd;border-radius:12px;padding:7px 16px;">예정 ${roster.length}</span><span style="font-size:24px;font-weight:900;color:#15803d;background:#dcfce7;border:2px solid #86efac;border-radius:12px;padding:7px 16px;">입교 ${(typeof _studentsOf==='function'?_studentsOf(r.room).length:0)}</span></span></div>
         <div class="cpop-acc-body" style="display:none;"><table class="cpop-table" style="table-layout:fixed;"><colgroup><col style="width:12%"><col style="width:46%"><col style="width:21%"><col style="width:21%"></colgroup><thead><tr><th>연번</th><th style="text-align:left;">소속</th><th>사번</th><th>성명</th></tr></thead><tbody>${rows}</tbody></table></div></div>`;
     }).join('');
     if(!blocks.trim()) blocks='<div class="cpop-empty">등록된 명단이 없습니다.</div>';
@@ -7701,11 +7732,19 @@ function _eduApplyState(spanId, val){
   blk.classList.toggle('edu-set', set);
   blk.classList.toggle('edu-unset', !set);
 }
-window._coordUpdateShuttleLED=function(){
+window._coordUpdateShuttleLED=function(data){
   var _sh=document.getElementById('hdr-shuttle'); if(!_sh) return;
-  var e=(window.coordOpsSetup&&coordOpsSetup._data)||{}; var sd=window._shuttleDep||{};
-  var set = !!((e.shuttle1&&(''+e.shuttle1).trim())&&(e.shuttle2&&(''+e.shuttle2).trim())) || !!((''+(sd.round1||'')).trim());
-  _sh.classList.toggle('edu-set',set); _sh.classList.toggle('edu-unset',!set);
+  // data 인자(최신 eduLocations)를 우선 사용 → _data 갱신 타이밍에 의존하지 않음
+  var e=data||(window.coordOpsSetup&&coordOpsSetup._data)||{}; var sd=window._shuttleDep||{};
+  var isT=function(s){ return /^\d{1,2}:\d{2}$/.test((''+(s||'')).trim()); };
+  // 공지값(shuttle_departure) 우선, 없으면 설정값(eduLocations)
+  var pick=function(a,b){ return (a!=null&&(''+a).trim()!=='')?(''+a).trim():(''+(b==null?'':b)).trim(); };
+  var r1=pick(sd.round1, e.shuttle1), r2=pick(sd.round2, e.shuttle2);
+  // 1차 실제시간 + 2차(실제시간 또는 운행안함)일 때만 녹색. 1·2차 중 하나라도 미정/미설정이면 빨강.
+  var set = isT(r1) && (isT(r2) || r2==='운행안함');
+  // 두 색상 시스템(edu-set/unset · shuttle-on/off)을 통일해서 토글 → CSS 충돌로 적색이 덮어쓰는 문제 방지
+  _sh.classList.toggle('edu-set',set);     _sh.classList.toggle('edu-unset',!set);
+  _sh.classList.toggle('shuttle-on',set);  _sh.classList.toggle('shuttle-off',!set);
 };
 (function initEduLocationsCoord(){
   try{
@@ -7714,7 +7753,7 @@ window._coordUpdateShuttleLED=function(){
       var v=s.val()||{};
       _eduApplyState('g-edu-integrity', v.integrity);
       _eduApplyState('g-edu-union', v.union);
-      try{ if(window._coordUpdateShuttleLED) _coordUpdateShuttleLED(); }catch(e){}
+      try{ if(window._coordUpdateShuttleLED) _coordUpdateShuttleLED(v); }catch(e){}
     });
   }catch(e){ setTimeout(initEduLocationsCoord,800); }
 })();
@@ -7724,7 +7763,8 @@ window._coordUpdateShuttleLED=function(){
 var coordOpsSetup = {
   _data:{}, _timer:null,
   _DEF:{ union:'하늘관 1층 대강당', t1:'13:00', t2:'15:00' },
-  _RANGE:{ start:11*60, end:21*60 },   // 11:00 ~ 21:00, 30분 단위 드롭다운
+  _RANGE:{ start:13*60, end:18*60 },   // 13:00 ~ 18:00, 30분 단위 드롭다운
+  _isTime:function(s){ return /^\d{1,2}:\d{2}$/.test((''+(s||'')).trim()); },
   _timeOptions:function(selVal, minMin){
     var sv=this._toMin(selVal), html='';
     for(var m=this._RANGE.start; m<=this._RANGE.end; m+=30){
@@ -7732,7 +7772,15 @@ var coordOpsSetup = {
       var hh=this._toHHMM(m);
       html+='<option value="'+hh+'"'+(m===sv?' selected':'')+'>'+hh+'</option>';
     }
-    if(sv && (minMin==null||sv>=minMin) && (sv<this._RANGE.start||sv>this._RANGE.end||sv%30!==0)){ html='<option value="'+this._toHHMM(sv)+'" selected>'+this._toHHMM(sv)+'</option>'+html; }
+    if(this._isTime(selVal) && sv && (minMin==null||sv>=minMin) && (sv<this._RANGE.start||sv>this._RANGE.end||sv%30!==0)){ html='<option value="'+this._toHHMM(sv)+'" selected>'+this._toHHMM(sv)+'</option>'+html; }
+    return html;
+  },
+  // 1·2차 공통 옵션: 미정 + 운행안함 + 시간(13~18시) — 특수값(미정/운행안함)도 선택 유지
+  _shuttleOptions:function(selVal, minMin){
+    var sv=(''+(selVal||'')).trim();
+    var html='<option value="미정"'+(sv==='미정'?' selected':'')+'>미정</option>'
+            +'<option value="운행안함"'+(sv==='운행안함'?' selected':'')+'>운행안함</option>';
+    html+=this._timeOptions(this._isTime(sv)?sv:'', minMin);
     return html;
   },
   _esc:function(s){ return (''+(s==null?'':s)).replace(/[&<>"]/g,function(c){return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]);}); },
@@ -7776,19 +7824,16 @@ var coordOpsSetup = {
   _render:function(){
     var self=this, v=this._data, e=this._esc;
     var integSet=this._integritySet();
+    var unionSet=!!(v.union && (''+v.union).trim() && (''+v.union).trim()!=='미정');
     var union=this._short(v.union), integ=this._short(v.integrity), t1=v.shuttle1||this._DEF.t1, t2=v.shuttle2||this._DEF.t2;
     var ov=document.getElementById('coordOpsOv'); if(!ov){ ov=document.createElement('div'); ov.id='coordOpsOv'; document.body.appendChild(ov); }
     ov.setAttribute('style','position:fixed;inset:0;z-index:100090;background:rgba(15,23,42,.55);backdrop-filter:blur(7px);-webkit-backdrop-filter:blur(7px);display:flex;align-items:center;justify-content:center;padding:20px;');
     ov.innerHTML='<div style="background:#fff;border-radius:24px;width:min(640px,95vw);max-height:92vh;overflow:auto;box-shadow:0 30px 80px rgba(0,0,0,.5);">'
       +'<div style="background:linear-gradient(135deg,#0f2a4a,#1e3a8a);color:#fff;padding:24px 28px;"><div style="font-size:24px;font-weight:900;"><i class="fa-solid fa-circle-info"></i> 금주 교육 운영 설정 확인</div><div style="font-size:15px;color:#bfdbfe;font-weight:700;margin-top:5px;">차량 시간 · 노조교육 · 청렴교육 장소를 확인/설정하세요</div></div>'
       +'<div style="padding:26px;">'
-      +'<div style="background:#f0f7ff;border:1px solid #dbeafe;border-radius:14px;padding:18px 22px;margin-bottom:22px;word-break:keep-all;">'
-        +'<div style="font-size:20px;line-height:1.55;color:#1e3a8a;font-weight:800;"><i class="fa-solid fa-bus" style="color:#2563eb;margin-right:6px;"></i>퇴교차량 &nbsp;1차 <b style="color:#0f172a;">'+e(t1)+'</b> &nbsp;·&nbsp; 2차 <b style="color:#0f172a;">'+e(t2)+'</b></div>'
-        +'<div style="font-size:20px;line-height:1.55;color:#1e3a8a;font-weight:800;margin-top:9px;"><i class="fa-solid fa-location-dot" style="color:#16a34a;margin-right:6px;"></i>노조교육 <b style="color:#0f172a;">'+e(union)+'</b> &nbsp;·&nbsp; 청렴교육 <b style="color:'+(integSet?'#16a34a':'#dc2626')+';">'+e(integ)+'</b></div>'
-      +'</div>'
-      +'<div style="margin-bottom:18px;"><div style="font-size:16px;font-weight:900;color:#334155;margin-bottom:10px;"><i class="fa-solid fa-bus" style="color:#2563eb;"></i> 퇴교차량 출발시간 <span style="font-size:12.5px;color:#94a3b8;font-weight:700;">· 30분 단위 · 2차는 1차+2시간 이후</span></div><div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;"><label style="font-size:15px;font-weight:800;color:#64748b;">1차 <select id="opsT1" onchange="coordOpsSetup.onT1Change()" style="margin-left:6px;padding:12px 14px;border:1.5px solid #cbd5e1;border-radius:11px;font-size:20px;font-weight:900;color:#0f172a;cursor:pointer;">'+this._timeOptions(t1,this._RANGE.start)+'</select></label><label style="font-size:15px;font-weight:800;color:#64748b;">2차 <select id="opsT2" style="margin-left:6px;padding:12px 14px;border:1.5px solid #cbd5e1;border-radius:11px;font-size:20px;font-weight:900;color:#0f172a;cursor:pointer;">'+this._timeOptions(t2,this._toMin(t1)+120)+'</select></label><button onclick="coordOpsSetup.saveShuttle()" style="padding:12px 22px;border:none;border-radius:11px;background:#2563eb;color:#fff;font-weight:900;font-size:16px;cursor:pointer;">저장</button></div></div>'
-      +'<div style="margin-bottom:18px;"><div style="font-size:16px;font-weight:900;color:#334155;margin-bottom:9px;"><i class="fa-solid fa-handshake" style="color:#16a34a;"></i> 노조교육 장소</div><select id="opsUnion" onchange="coordOpsSetup.savePlace(\'union\',this.value)" style="width:100%;padding:14px 15px;border:1.5px solid #bbf7d0;border-radius:12px;font-size:18px;font-weight:800;color:#15803d;background:#f0fdf4;">'+this._placeOptions(v.union)+'</select></div>'
-      +'<div style="margin-bottom:20px;"><div style="font-size:16px;font-weight:900;color:#334155;margin-bottom:9px;"><i class="fa-solid fa-scale-balanced" style="color:#dc2626;"></i> 청렴교육 장소'+(integSet?'':' <span style="color:#dc2626;font-size:12.5px;">· 미설정(필수)</span>')+'</div><select id="opsInteg" onchange="coordOpsSetup.savePlace(\'integrity\',this.value)" style="width:100%;padding:14px 15px;border:1.5px solid '+(integSet?'#fecaca':'#dc2626')+';border-radius:12px;font-size:18px;font-weight:800;color:'+(integSet?'#b91c1c':'#dc2626')+';background:#fef2f2;">'+this._placeOptions(v.integrity)+'</select></div>'
+      +'<div style="margin-bottom:18px;"><div style="font-size:16px;font-weight:900;color:#334155;margin-bottom:10px;"><i class="fa-solid fa-bus" style="color:#2563eb;"></i> 퇴교차량 출발시간 <span style="font-size:12.5px;color:#94a3b8;font-weight:700;">· 30분 단위 · 2차는 1차+2시간 이후</span></div><div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;"><label style="font-size:15px;font-weight:800;color:#64748b;">1차 <select id="opsT1" onchange="coordOpsSetup.onT1Change()" style="margin-left:6px;padding:12px 14px;border:1.5px solid #cbd5e1;border-radius:11px;font-size:20px;font-weight:900;color:#0f172a;cursor:pointer;">'+this._shuttleOptions(t1,this._RANGE.start)+'</select></label><label style="font-size:15px;font-weight:800;color:#64748b;">2차 <select id="opsT2" style="margin-left:6px;padding:12px 14px;border:1.5px solid #cbd5e1;border-radius:11px;font-size:20px;font-weight:900;color:#0f172a;cursor:pointer;">'+this._shuttleOptions(t2,(this._isTime(t1)?this._toMin(t1)+120:this._RANGE.start))+'</select></label><button onclick="coordOpsSetup.announceShuttle()" style="padding:12px 22px;border:none;border-radius:11px;background:#16a34a;color:#fff;font-weight:900;font-size:16px;cursor:pointer;box-shadow:0 3px 8px rgba(22,163,74,.3);"><i class="fa-solid fa-bullhorn"></i> 공지</button></div></div>'
+      +'<div style="margin-bottom:18px;"><div style="font-size:17px;font-weight:900;color:#334155;margin-bottom:10px;"><i class="fa-solid fa-handshake" style="color:'+(unionSet?'#16a34a':'#dc2626')+';"></i> 노조교육 장소'+(unionSet?'':' <span style="color:#dc2626;font-size:13px;">· 미설정</span>')+'</div><button type="button" onclick="coordOpsSetup.pickPlace(\'union\')" style="width:100%;padding:16px 18px;border:2px solid '+(unionSet?'#16a34a':'#dc2626')+';border-radius:12px;font-size:22px;font-weight:900;color:'+(unionSet?'#15803d':'#dc2626')+';background:'+(unionSet?'#f0fdf4':'#fef2f2')+';text-align:left;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:10px;"><span>'+e(this._short(v.union))+'</span><i class="fa-solid fa-chevron-down" style="font-size:15px;opacity:.6;"></i></button></div>'
+      +'<div style="margin-bottom:20px;"><div style="font-size:17px;font-weight:900;color:#334155;margin-bottom:10px;"><i class="fa-solid fa-scale-balanced" style="color:'+(integSet?'#16a34a':'#dc2626')+';"></i> 청렴교육 장소'+(integSet?'':' <span style="color:#dc2626;font-size:13px;">· 미설정(필수)</span>')+'</div><button type="button" onclick="coordOpsSetup.pickPlace(\'integrity\')" style="width:100%;padding:16px 18px;border:2px solid '+(integSet?'#16a34a':'#dc2626')+';border-radius:12px;font-size:22px;font-weight:900;color:'+(integSet?'#15803d':'#dc2626')+';background:'+(integSet?'#f0fdf4':'#fef2f2')+';text-align:left;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:10px;"><span>'+e(this._short(v.integrity))+'</span><i class="fa-solid fa-chevron-down" style="font-size:15px;opacity:.6;"></i></button></div>'
       +'<label style="display:flex;align-items:center;gap:9px;font-size:16px;font-weight:800;color:#64748b;margin-bottom:18px;cursor:pointer;"><input type="checkbox" id="opsSkipToday" style="width:20px;height:20px;accent-color:#2563eb;"> 오늘은 그만 보기</label>'
       +'<div style="display:flex;gap:10px;"><button onclick="coordOpsSetup.cancel()" style="flex:1;padding:17px;background:#fff;color:#64748b;border:1.5px solid #cbd5e1;border-radius:13px;font-size:18px;font-weight:900;cursor:pointer;">취소</button><button onclick="coordOpsSetup.close()" style="flex:2;padding:17px;background:#1e293b;color:#fff;border:none;border-radius:13px;font-size:18px;font-weight:900;cursor:pointer;"><i class="fa-solid fa-check"></i> 확인</button></div>'
       +'</div></div>';
@@ -7798,20 +7843,74 @@ var coordOpsSetup = {
   _round30:function(min){ return Math.round(min/30)*30; },
   onT1Change:function(){
     var i1=document.getElementById('opsT1'), i2=document.getElementById('opsT2'); if(!i1||!i2) return;
-    var t1=this._toMin(i1.value), minT2=t1+120, cur=this._toMin(i2.value);
-    var sel=(cur<minT2)?minT2:cur;
-    i2.innerHTML=this._timeOptions(this._toHHMM(sel), minT2);   // 2차 옵션을 1차+2시간 이후로 재구성
+    var v1=(''+i1.value).trim();
+    var minT2=this._isTime(v1)?(this._toMin(v1)+120):this._RANGE.start;   // 1차가 시간이면 +2시간부터
+    var cv2=(''+i2.value).trim(), sel;
+    if(cv2==='미정'||cv2==='운행안함'){ sel=cv2; }
+    else { var cur=this._toMin(cv2); sel=this._toHHMM((cur<minT2)?minT2:cur); }
+    i2.innerHTML=this._shuttleOptions(sel, minT2);   // 2차 옵션 재구성(미정·운행안함·시간)
   },
   saveShuttle:function(){
     var t1=this._toMin((document.getElementById('opsT1')||{}).value||this._DEF.t1);
     var t2=this._toMin((document.getElementById('opsT2')||{}).value||this._DEF.t2);
     if(t2<t1+120) t2=t1+120;   // 2차는 1차 +2시간 이후
     var v1=this._toHHMM(t1), v2=this._toHHMM(t2);
+    try{ this._data.shuttle1=v1; this._data.shuttle2=v2; }catch(e){}
     try{ firebase.database().ref('system/eduLocations').update({shuttle1:v1, shuttle2:v2}); }catch(e){}
-    try{ if(window._coordUpdateShuttleLED) _coordUpdateShuttleLED(); }catch(e){}
+    try{ if(window._coordUpdateShuttleLED) _coordUpdateShuttleLED({shuttle1:v1, shuttle2:v2}); }catch(e){}
     if(typeof showKacAlert==='function') showKacAlert('✅ 퇴교차량 시간 저장 완료 · 1차 '+v1+' · 2차 '+v2);
   },
+  announceShuttle:function(){
+    var raw1=(''+((document.getElementById('opsT1')||{}).value||this._DEF.t1)).trim();
+    var raw2=(''+((document.getElementById('opsT2')||{}).value||this._DEF.t2)).trim();
+    var v1, v2;
+    if(this._isTime(raw1) && this._isTime(raw2)){
+      var t1=this._toMin(raw1), t2=this._toMin(raw2);
+      if(t2<t1+120) t2=t1+120;   // 둘 다 시간이면 2차는 1차 +2시간 이후
+      v1=this._toHHMM(t1); v2=this._toHHMM(t2);
+    } else { v1=raw1; v2=raw2; }   // 미정/운행안함은 그대로
+    var today=(typeof _coordToday==='function'?_coordToday():new Date().toISOString().slice(0,10));
+    var label='1차 '+v1+' / 2차 '+v2;
+    try{ this._data.shuttle1=v1; this._data.shuttle2=v2; }catch(e){}
+    try{
+      // 1) 시간값 저장(팝업/요약/LED용)
+      firebase.database().ref('system/eduLocations').update({shuttle1:v1, shuttle2:v2});
+      // 2) 전 플랫폼 공지 — system 공통(강사·교육생·기사 플랫폼 fallback)
+      firebase.database().ref('system/shuttle_departure').set({round1:v1, round2:v2, announced:true, date:today, ts:Date.now()});
+      firebase.database().ref('system/shuttle_notice').set(today+' '+label+' 퇴교차량');
+      // 3) 운영 중인 각 과정(강의실)에도 개별 전달 → 강사/교육생 플랫폼 즉시 연동
+      try{ if(typeof _coordActiveRooms==='function') _coordActiveRooms().forEach(function(rm){ firebase.database().ref('courses/'+rm.rid+'/shuttle/departure').set({time:v1, time2:v2, date:today, announced:true, ts:Date.now()}); }); }catch(e){}
+      window._shuttleDep={round1:v1, round2:v2, announced:true, date:today, ts:Date.now()};
+    }catch(e){ if(typeof showKacAlert==='function') showKacAlert('⚠️ 공지 중 오류: '+(e&&e.message||'')); return; }
+    try{ if(window._coordUpdateShuttleLED) _coordUpdateShuttleLED({shuttle1:v1, shuttle2:v2}); }catch(e){}
+    try{ if(window._coordUpdateShuttleBtn) _coordUpdateShuttleBtn(); }catch(e){}
+    if(typeof showKacAlert==='function') showKacAlert('📢 퇴교차량 공지 완료!\n'+label+'\n\n강사·교육생 플랫폼에 즉시 전달되었습니다.');
+  },
   savePlace:function(type,val){ try{ firebase.database().ref('system/eduLocations/'+type).set(val||null); }catch(e){} },
+  // 장소 선택 피커 — 네이티브 드롭다운 대신 화면 안에 들어오는 스크롤 목록(ops 팝업 위에 표시)
+  pickPlace:function(type){
+    var sel=document.getElementById('setup-room-dropdown'); var E=this._esc;
+    var cur=''+((this._data&&this._data[type])||'');
+    var title=(type==='union')?'<i class="fa-solid fa-handshake" style="color:#16a34a;"></i> 노조교육 장소 선택':'<i class="fa-solid fa-scale-balanced" style="color:#dc2626;"></i> 청렴교육 장소 선택';
+    function btn(val,label,extra){ var on=(val===cur); var safe=(''+val).split("'").join("\\'"); var chk=on?'<i class=\'fa-solid fa-check\' style=\'color:#2563eb;margin-right:8px;\'></i>':''; return '<button type="button" onclick="coordOpsSetup._applyPlace(\''+type+'\',\''+safe+'\')" style="display:block;width:100%;text-align:left;padding:14px 16px;margin:6px 0;border:1.5px solid '+(on?'#2563eb':'#e2e8f0')+';border-radius:11px;background:'+(on?'#eff6ff':'#fff')+';font-size:19px;font-weight:800;color:#0f172a;cursor:pointer;'+(extra||'')+'">'+chk+E(label)+'</button>'; }
+    var body=btn('','미정으로 설정','color:#64748b;');
+    if(sel){ Array.prototype.slice.call(sel.children).forEach(function(node){
+      if(node.tagName==='OPTGROUP'){ body+='<div style="font-size:14px;font-weight:900;color:#94a3b8;margin:14px 2px 2px;">'+E(node.label||'')+'</div>'; Array.prototype.slice.call(node.children).forEach(function(o){ if(!o.value||o.value==='direct') return; body+=btn(o.value,o.text); }); }
+      else if(node.tagName==='OPTION'){ if(!node.value||node.value==='direct') return; body+=btn(node.value,node.text); }
+    }); }
+    var ov=document.getElementById('opsPlaceOv'); if(!ov){ ov=document.createElement('div'); ov.id='opsPlaceOv'; document.body.appendChild(ov); }
+    ov.setAttribute('style','position:fixed;inset:0;z-index:100096;background:rgba(15,23,42,.55);display:flex;align-items:center;justify-content:center;padding:18px;');
+    ov.onclick=function(ev){ if(ev.target===ov) ov.remove(); };
+    ov.innerHTML='<div style="background:#fff;border-radius:18px;width:min(460px,94vw);max-height:82vh;display:flex;flex-direction:column;box-shadow:0 24px 60px rgba(0,0,0,.5);overflow:hidden;">'
+      +'<div style="background:#0f2a4a;color:#fff;padding:16px 18px;font-size:19px;font-weight:900;display:flex;align-items:center;justify-content:space-between;gap:10px;"><span>'+title+'</span><span onclick="var o=document.getElementById(\'opsPlaceOv\');if(o)o.remove();" style="cursor:pointer;font-size:24px;line-height:1;">&times;</span></div>'
+      +'<div style="padding:14px 16px 18px;overflow:auto;">'+body+'</div></div>';
+  },
+  _applyPlace:function(type,val){
+    try{ this._data[type]=val||''; }catch(e){}
+    this.savePlace(type, val);
+    var o=document.getElementById('opsPlaceOv'); if(o) o.remove();
+    if(document.getElementById('coordOpsOv')) this._render();
+  },
   close:function(){
     var cb=document.getElementById('opsSkipToday');
     if(cb && cb.checked){ try{ localStorage.setItem(this._skipKey(),'1'); }catch(e){} }
@@ -8108,7 +8207,7 @@ function renderDormWeek(wk){
 if(!window._coordDormMsgBound){ window._coordDormMsgBound=true; window.addEventListener('message', function(ev){ var d=ev&&ev.data; if(!d||!d._dormBoardH) return; var fr=document.getElementById('coordDormFrame'); if(fr){ var h=parseInt(d._dormBoardH,10)||520; fr.style.height=Math.min(Math.max(h+8,420),1700)+'px'; } }); }
 (function initDormCount(){ try{ if(!window.firebase||!firebase.database){ setTimeout(initDormCount,400); return; } var wk=_coordDormMondayKey(); firebase.database().ref('system/dorm/assignments/'+wk+'/students').on('value', function(s){ var st=s.val()||{}; var hidden=_coordDormHidden(); var n=Object.keys(st).map(function(t){return st[t];}).filter(function(x){ return x && (''+(x.name||'')).trim() && !hidden[(''+(x.course||'')).trim()]; }).length; var el=document.getElementById('g-dorm-count'); if(el) el.textContent=n; }); }catch(e){ setTimeout(initDormCount,800); } })();
 function _coordShuttleRoundsHtml(){
-  var sd=window._shuttleDep||{}; var _eduSht=(typeof coordOpsSetup!=='undefined'&&coordOpsSetup._data)?coordOpsSetup._data:{}; var r1=sd.round1||_eduSht.shuttle1||'', r2=sd.round2||_eduSht.shuttle2||''; var on=!!(r1||r2);
+  var sd=window._shuttleDep||{}; var _eduSht=(typeof coordOpsSetup!=='undefined'&&coordOpsSetup._data)?coordOpsSetup._data:{}; var r1=sd.round1||_eduSht.shuttle1||'', r2=sd.round2||_eduSht.shuttle2||''; var on=!!(sd.round1||sd.round2);   // [수정] 공지 여부는 실제 공지(shuttle_departure)만으로 판정 → 초기화가 바로 반영
   var isTime=function(v){ return /^\d{1,2}:\d{2}$/.test(v); };
   var r2time=isTime(r2)?r2:''; var mode=r2time?'yes':((r2==='운행안함')?'no':((r2==='미정')?'tbd':''));
   window._coordSht2Mode=mode;
@@ -8160,20 +8259,17 @@ window.coordClearShuttleRounds=function(){
   firebase.database().ref('system/shuttle_notice').remove();
   try{ _coordActiveRooms().forEach(function(rm){ firebase.database().ref('courses/'+rm.rid+'/shuttle/departure').remove(); }); }catch(e){}
   window._shuttleDep={};
+  // [초기화] 1차=미설정(시간 선택), 2차=미정 → 상단바 빨강. 모든 입력 경로 공통 반영.
+  try{ firebase.database().ref('system/eduLocations').update({shuttle1:'', shuttle2:'미정'}); }catch(e){}
+  try{ if(window.coordOpsSetup){ coordOpsSetup._data.shuttle1=''; coordOpsSetup._data.shuttle2='미정'; } }catch(e){}
   try{ if(document.getElementById('coordPopup') && document.getElementById('coordPopup').classList.contains('open') && window._coordPopupRefresh===openShuttleSummary) openShuttleSummary(); }catch(e){}
+  try{ if(window._coordUpdateShuttleLED) _coordUpdateShuttleLED({shuttle1:'', shuttle2:'미정'}); }catch(e){}
   try{ _coordUpdateShuttleBtn(); }catch(e){}
 };
 function _coordUpdateShuttleBtn(){
   try{
-    var sd=window._shuttleDep||{};
-    var today=(typeof _coordToday==='function'?_coordToday():new Date().toISOString().slice(0,10));
-    var isT=function(v){ return /^\d{1,2}:\d{2}$/.test(v||''); };
-    var dateOk=!!(sd && sd.date && sd.date>=today);
-    var r1=sd&&sd.round1||'', r2=sd&&sd.round2||'';
-    // 1차 실제시간 + (2차 실제시간 또는 운행안함) 이어야 확정(녹색). 하나라도 미정/미선택이면 빨강
-    var green = dateOk && isT(r1) && (isT(r2) || r2==='운행안함');
-    var sc=document.getElementById('g-shuttle-count'); var blk=sc?sc.closest('.hdr-stat'):null;
-    if(blk){ blk.classList.toggle('shuttle-on', green); blk.classList.toggle('shuttle-off', !green); }
+    // 색상 판단은 통일된 단일 함수(_coordUpdateShuttleLED)에 위임 → 두 시스템 충돌 제거
+    if(window._coordUpdateShuttleLED) _coordUpdateShuttleLED();
   }catch(e){}
 }
 // [복원] 규칙 미게시 대비: 과정별 shuttle/departure(이미 저장됨)에서 1차/2차 상태 복원
@@ -8208,23 +8304,29 @@ var coordKiosk={
   },
   _show:function(mode,pct){ var id=(mode==='enter')?'coordKioskEnterBar':'coordKioskExitBar'; var b=document.getElementById(id); if(b){ b.style.display=pct>0?'block':'none'; b.style.width=pct+'%'; } },
   _cancel:function(mode){ clearTimeout(this._t); clearInterval(this._iv); this._t=null; this._iv=null; this._show(mode,0); var id=(mode==='enter')?'coordKioskEnterBar':'coordKioskExitBar'; var b=document.getElementById(id); if(b) b.style.display='none'; },
-  open:function(){ var m=document.getElementById('coordKioskModal'); if(!m) return; window._ckOpenedAt=Date.now(); this.render(); m.style.display='flex'; var _eh=document.getElementById('coordKioskEscHint'); if(_eh){ _eh.style.display=''; _eh.style.opacity='1'; clearTimeout(this._ehT); this._ehT=setTimeout(function(){ if(_eh){ _eh.style.opacity='0'; setTimeout(function(){ if(_eh) _eh.style.display='none'; },650); } }, 5000); }
+  open:function(){ var m=document.getElementById('coordKioskModal'); if(!m) return; window._ckOpenedAt=Date.now(); this.render(); m.style.display='flex';
+    try{ var de=document.documentElement; var fn=de.requestFullscreen||de.webkitRequestFullscreen||de.msRequestFullscreen; if(fn && !document.fullscreenElement) fn.call(de); }catch(e){}   // 클릭 즉시 모니터 전체화면
+    var _eh=document.getElementById('coordKioskEscHint'); if(_eh){ _eh.style.display=''; _eh.style.opacity='1'; clearTimeout(this._ehT); this._ehT=setTimeout(function(){ if(_eh){ _eh.style.opacity='0'; setTimeout(function(){ if(_eh) _eh.style.display='none'; },650); } }, 5000); }
     this._tick(); this._clk=setInterval(this._tick.bind(this),1000); this._rf=setInterval(this.render.bind(this),30000);
     if(!this._exitBound){ this._exitBound=true; this.bind(document.getElementById('coordKioskClockWrap'),5000,'exit',this.close.bind(this)); }
     try{ Promise.all([firebase.database().ref('system/dorm/rosters').once('value').catch(function(){return null;}),firebase.database().ref('system/coord/rosters').once('value').catch(function(){return null;})]).then(function(res){ var ext={},nm=function(x){return String(x==null?'':x).replace(/\s+/g,'').toLowerCase();}; res.forEach(function(sn){ if(!sn)return; var v=sn.val()||{}; Object.keys(v).forEach(function(kk){ var it=v[kk]; if(it&&Array.isArray(it.list)){ var k=nm(it.courseName); if(k)(ext[k]=ext[k]||[]).push({list:it.list,period:it.period||'',room:it.room||''}); } }); }); window._coordRosterExt=ext; coordKiosk.render(); }); }catch(e){}
   },
-  close:function(){ var m=document.getElementById('coordKioskModal'); if(m) m.style.display='none'; try{ if(document.fullscreenElement){ var fn=document.exitFullscreen||document.webkitExitFullscreen||document.msExitFullscreen; if(fn) fn.call(document); } }catch(e){} if(this._clk){clearInterval(this._clk);this._clk=null;} if(this._rf){clearInterval(this._rf);this._rf=null;} this._show('exit',0); },
+  close:function(){ var m=document.getElementById('coordKioskModal'); if(m) m.style.display='none';
+    try{ if(document.fullscreenElement){ var fn=document.exitFullscreen||document.webkitExitFullscreen||document.msExitFullscreen; if(fn) fn.call(document); } }catch(e){} if(this._clk){clearInterval(this._clk);this._clk=null;} if(this._rf){clearInterval(this._rf);this._rf=null;} this._show('exit',0); this.showTable(); },
+  showFloor:function(){ var t=document.getElementById('coordKioskTableView'), f=document.getElementById('coordKioskFloorView'); if(t)t.style.display='none'; if(f)f.style.display='block'; this.render(); },
+  showTable:function(){ var t=document.getElementById('coordKioskTableView'), f=document.getElementById('coordKioskFloorView'); if(f)f.style.display='none'; if(t)t.style.display='flex'; },
   _tick:function(){ var n=new Date(),p=function(x){return String(x).padStart(2,'0');}; var c=document.getElementById('coordKioskClock'); if(c) c.textContent=p(n.getHours())+':'+p(n.getMinutes())+':'+p(n.getSeconds()); var d=document.getElementById('coordKioskDate'); if(d){ var w=['일','월','화','수','목','금','토'][n.getDay()]; d.textContent=n.getFullYear()+'.'+p(n.getMonth()+1)+'.'+p(n.getDate())+' ('+w+')'; } },
   render:function(){ var tb=document.getElementById('coordKioskTableBody'); if(!tb) return;
     var rooms=(typeof _coordActiveRooms==='function')?_coordActiveRooms():[];
     var today=(typeof _coordToday==='function'?_coordToday():new Date().toISOString().slice(0,10));
     var full=function(nm){ return (typeof _coordFullName==='function')?(_coordFullName(nm)||(nm||'-')):(nm||'-'); };
+    var _ckf=document.getElementById('coordKioskFloor'); if(_ckf && window._coordKioskFloorHTML){ try{ _ckf.innerHTML=window._coordKioskFloorHTML(rooms); }catch(e){ _ckf.innerHTML=''; } }
     if(!rooms.length){ tb.innerHTML='<tr><td colspan="8" style="text-align:center;padding:70px;color:#94a3b8;font-size:26px;">현재 진행 중인 과정이 없습니다.</td></tr>'; return; }
-    tb.innerHTML=rooms.map(function(r){ var c=(typeof _courseOverviewCount==='function')?_courseOverviewCount(r):{expected:0,arrived:(typeof _studentsOf==='function'?_studentsOf(r.room).length:0)}; var sset=r.s, st=r.st;
+    tb.innerHTML=rooms.map(function(r,_i){ var c=(typeof _courseOverviewCount==='function')?_courseOverviewCount(r):{expected:0,arrived:(typeof _studentsOf==='function'?_studentsOf(r.room).length:0)}; var sset=r.s, st=r.st;
       var start=(''+(sset.period||'')).split(' ~ ')[0]||''; var stat=(start&&today>=start)?{t:'진행중',c:'#34d399'}:{t:'예정',c:'#fbbf24'};
       var prof=(st.professorName||'').trim()?(_esc(st.professorName.trim())+' 교수'):'-';
       return '<tr class="ckrow" onclick="coordKiosk.notice(\''+_esc(r.rid)+'\')" style="border-bottom:1px solid rgba(255,255,255,.08);">'
-        +'<td style="padding:20px 14px;text-align:center;font-weight:900;color:#60a5fa;white-space:nowrap;">Room #'+_esc(r.rid)+'</td>'
+        +'<td style="padding:20px 14px;text-align:center;font-weight:900;color:#60a5fa;white-space:nowrap;font-size:1.1em;">'+(_i+1)+'</td>'
         +'<td style="padding:20px 14px;text-align:left;font-weight:800;color:#fff;">'+_esc(sset.courseName||'-')+'</td>'
         +'<td style="padding:20px 14px;text-align:center;color:#cbd5e1;white-space:nowrap;font-size:0.85em;">'+_esc(sset.period||'-')+'</td>'
         +'<td style="padding:20px 14px;text-align:center;color:#cbd5e1;">'+_esc(sset.roomDetailName||sset.roomDetail||'-')+'</td>'
@@ -8298,7 +8400,7 @@ window.addEventListener('load', function(){
 });
 </script>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vH26</div>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:6px;bottom:5px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;font-weight:800;line-height:1;letter-spacing:.6px;color:#fff;background:rgba(15,23,42,.85);padding:4px 8px;border-radius:6px;pointer-events:none;user-select:none;box-shadow:0 2px 6px rgba(0,0,0,.3);">VK</div>
 <script>
 /* ===== [공용] 종료된 과정 자동 정리 (모든 플랫폼 공통) — 종료일 지난 방을 다음날 미개설로 비움. 브라우저별 하루 1회 ===== */
 window.kacExpireEndedCourses = async function(){
@@ -8628,6 +8730,44 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
     }
   };
 
+  // ── [키오스크 배치도 페이지] 하늘관1·하늘관2·국제교육동1 항상 3등분(흰 배경, 경계박스 없음, 강의실명+예정인원) ──
+  window._coordKioskFloorHTML = function(rooms){
+    rooms = rooms || ((typeof _coordActiveRooms==='function')?_coordActiveRooms():[]);
+    var used={};
+    rooms.forEach(function(r){
+      var pr=_coordRoomParse(r.s); if(!pr.L) return;
+      var b=pr.b||'하늘관', f=pr.f||(b==='하늘관'?'2':'1'), key=b+'|'+f;
+      var prof=((r.st&&r.st.professorName)||'').trim(); prof=(typeof _coordStripRank==='function'?(_coordStripRank(prof)||prof):prof);
+      var coord=(typeof _coordStripRank==='function'?(_coordStripRank(r.s.coordinatorName)||''):((r.s.coordinatorName)||''));
+      var ldr=((typeof _studentsOf==='function'?_studentsOf(r.room):[])||[]).filter(function(s){return s&&s.isLeader===true;})[0];
+      var exp=(typeof _courseOverviewCount==='function')?(_courseOverviewCount(r).expected||0):0;
+      var info={rid:r.rid, course:(r.s.courseName||'-'), prof:prof, coord:coord, leader:(ldr?(ldr.name||''):''), expected:exp};
+      if(!used[key]) used[key]={};
+      if(!used[key][pr.L]) used[key][pr.L]=info;
+    });
+    // 교육운영부 기존 카드 양식 + 강의실명 옆 인원수만('예정' 문구 제외)
+    function mkCard(L,on){ return '<div class="cfp-card-h"><b>'+_cfpRoomName(L)+' ('+on.expected+'명)</b><span class="cfp-dot"></span></div>'
+        +'<div class="cfp-card-course">'+esc(on.course)+'</div>'
+        +'<div class="cfp-card-row"><span>담임</span>'+esc(on.prof||'-')+'</div>'
+        +'<div class="cfp-card-row"><span>담당</span>'+esc(on.coord||'-')+'</div>'
+        +'<div class="cfp-card-row"><span>학생장</span>'+esc(on.leader||'미지정')+'</div>'; }
+    var FIXED=[ {key:'하늘관|1', name:'하늘관 1층'}, {key:'하늘관|2', name:'하늘관 2층'}, {key:'국제동|1', name:'국제교육동 1층'} ];
+    var cols=FIXED.map(function(F){
+      var parts=F.key.split('|'), b=parts[0], fl=parts[1];
+      var cfg=COORD_FP_MAP[F.key]||{img:'',pos:{}}; var IMG=cfg.img||'', POS=cfg.pos||{}, CROP=cfg.crop||{t:0,b:0};
+      var fused=used[F.key]||{}, saved=(window._coordFloorPos||{})[b+'_'+fl]||{};
+      var labels=Object.keys(POS).map(function(L){ var on=fused[L]; var p=saved[L]||POS[L]; var nm=_cfpRoomName(L);
+        if(on){ return '<div class="cfp-slot cfp-slot-card" style="left:'+p.l+'%;top:'+p.t+'%;"><div class="cfp-card" onclick="coordKiosk.notice(\''+esc(on.rid)+'\')">'+mkCard(L,on)+'</div></div>'; }
+        return '<div class="cfp-slot" style="left:'+p.l+'%;top:'+p.t+'%;"><div class="cfp-room">'+esc(nm)+'</div></div>'; }).join('');
+      var title='<div class="ckfp-title">'+esc(F.name)+'</div>';
+      var inner = IMG
+        ? '<div class="ckfp-clip"><div class="ckfp-imgbox" style="margin:'+CROP.t+'% 0 '+CROP.b+'%;"><img class="ckfp-img" src="'+IMG+'" alt="배치도">'+labels+'</div></div>'
+        : '<div class="ckfp-prep">🗺️ '+esc(F.name)+' 배치도 준비중</div>';
+      return '<div class="ckfp-col">'+title+inner+'</div>';
+    }).join('');
+    return '<div class="ckfp-grid">'+cols+'</div>';
+  };
+
   // ── 섹션3: 과정별 입교/예정 — 정형 리스트(연번·소속·사번·성명) ──
   window._coordEnrollExt = window._coordEnrollExt || {};
   // [과정별 명단 업로드] 해당 과정(방)을 현재 대상으로 잡고 명단 업로드 모달 열기 (모바일/PC 공용)
@@ -8661,15 +8801,27 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
     var list=document.getElementById('csecEnrollList'); if(!list||typeof _coordActiveRooms!=='function') return;
     var wrap=document.getElementById('csecEnrollMapWrap');
     if(!wrap){ wrap=document.createElement('div'); wrap.id='csecEnrollMapWrap'; wrap.style.marginBottom='14px'; if(list.parentNode) list.parentNode.insertBefore(wrap, list); }
-    var counts={}, total=0, unknown=0;
-    (_coordActiveRooms()||[]).forEach(function(r){
-      var roster=[]; var cr=r.room&&r.room.coordRoster; var cp=(''+((r.s&&r.s.period)||'')).trim();
-      if(cr&&Array.isArray(cr.list)&&cr.list.length){ var crp=(''+(cr.period||'')).trim(); if(!crp||!cp||crp===cp) roster=cr.list; }
-      if(!roster.length) roster=(typeof _studentsOf==='function'?_studentsOf(r.room):[])||[];
-      roster.forEach(function(st){ if(!st||!(''+(st.name||'')).trim()) return; var reg=(typeof _coordDeptToRegion==='function')?_coordDeptToRegion(st.dept||st.position||st.affil||st.org||''):''; if(reg){ counts[reg]=(counts[reg]||0)+1; total++; } else unknown++; });
-    });
-    wrap.innerHTML='<div style="font-size:15px;font-weight:800;color:#475569;margin:2px 2px 9px;"><i class="fa-solid fa-map-location-dot" style="color:#2563eb;"></i> 교육생 전국 분포 <span id="coordMapTotalE" style="color:#94a3b8;font-weight:700;"></span></div><div style="display:flex;gap:14px;align-items:stretch;flex-wrap:wrap;"><div id="coordStudentMapKakaoE" style="flex:2;min-width:300px;height:340px;border-radius:14px;overflow:hidden;border:1px solid #e2e8f0;background:#eaf2fb;"></div><div id="coordMapListE" style="flex:1;min-width:230px;max-height:340px;overflow-y:auto;"></div></div>';
-    try{ _coordRenderStudentMap(counts,total,unknown,{total:'coordMapTotalE',list:'coordMapListE',map:'coordStudentMapKakaoE'}); }catch(e){}
+    if(!wrap.innerHTML){ wrap.innerHTML='<div style="font-size:15px;font-weight:800;color:#475569;margin:2px 2px 9px;"><i class="fa-solid fa-map-location-dot" style="color:#2563eb;"></i> 교육생 전국 분포 <span id="coordMapTotalE" style="color:#94a3b8;font-weight:700;"></span></div><div style="display:flex;gap:14px;align-items:stretch;flex-wrap:wrap;"><div id="coordStudentMapKakaoE" style="flex:2;min-width:300px;height:340px;border-radius:14px;overflow:hidden;border:1px solid #e2e8f0;background:#eaf2fb;"></div><div id="coordMapListE" style="flex:1;min-width:230px;max-height:340px;overflow-y:auto;"></div></div>'; }
+    function _norm(x){ return String(x==null?'':x).replace(/\s+/g,'').toLowerCase(); }
+    function _compute(){
+      var ext=window._coordRosterExt||{}; var counts={}, total=0, unknown=0;
+      (_coordActiveRooms()||[]).forEach(function(r){
+        var roster=[]; var cp=(''+((r.s&&r.s.period)||'')).trim();
+        var cr=r.room&&r.room.coordRoster;
+        if(cr&&Array.isArray(cr.list)&&cr.list.length){ var crp=(''+(cr.period||'')).trim(); if(!crp||!cp||crp===cp) roster=cr.list; }
+        if(!roster.length){ var k=_norm(r.s&&r.s.courseName); var cands=ext[k]||[]; var pick=cands.filter(function(c){return cp&&(''+(c.period||'')).trim()===cp;})[0]||cands.filter(function(c){return (''+(c.room||''))===(''+r.rid);})[0]||cands.slice().sort(function(a,b){return (b.list?b.list.length:0)-(a.list?a.list.length:0);})[0]; if(pick&&Array.isArray(pick.list)&&pick.list.length) roster=pick.list; }
+        if(!roster.length) roster=(typeof _studentsOf==='function'?_studentsOf(r.room):[])||[];
+        roster.forEach(function(st){ if(!st||!(''+(st.name||'')).trim()) return; var reg=(typeof _coordDeptToRegion==='function')?_coordDeptToRegion(st.dept||st.position||st.affil||st.org||st.company||''):''; if(reg){ counts[reg]=(counts[reg]||0)+1; total++; } else unknown++; });
+      });
+      try{ _coordRenderStudentMap(counts,total,unknown,{total:'coordMapTotalE',list:'coordMapListE',map:'coordStudentMapKakaoE'}); }catch(e){}
+    }
+    if(window._coordRosterExt && Object.keys(window._coordRosterExt).length){ _compute(); }
+    else if(window.firebase&&firebase.database){
+      Promise.all([
+        firebase.database().ref('system/dorm/rosters').once('value').catch(function(){return null;}),
+        firebase.database().ref('system/coord/rosters').once('value').catch(function(){return null;})
+      ]).then(function(res){ var ext={}; res.forEach(function(snap){ if(!snap) return; var v=snap.val()||{}; Object.keys(v).forEach(function(kk){ var it=v[kk]; if(!it||!Array.isArray(it.list)) return; var nm=_norm(it.courseName); if(!nm) return; (ext[nm]=ext[nm]||[]).push({list:it.list,period:(it.period||''),room:(it.room||''),weekKey:(it.weekKey||'')}); }); }); window._coordRosterExt=ext; _compute(); }).catch(function(){ _compute(); });
+    } else { _compute(); }
   };
   window.coordRenderEnrollMap=coordRenderEnrollMap;
   coordRenderEnroll = function(){
@@ -8774,211 +8926,4 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
       if(cnt===0){
         _outPill='<span class="cstat-pill" style="background:#f1f5f9;color:#94a3b8;border:1px solid #e2e8f0;">금일 0건</span>';
       } else if(_arrCnt>0 && _outRate>=80){
-        _outPill='<span class="cstat-pill" style="background:#fee2e2;color:#dc2626;">금일 '+cnt+'건 · 외출 '+_outRate+'%</span>';
-        _outNote='<span style="background:#dc2626;color:#fff;font-weight:900;font-size:12px;padding:7px 12px;border-radius:9px;white-space:nowrap;"><i class="fa-solid fa-utensils"></i> 식수인원 통보 필!</span>';
-      } else {
-        _outPill='<span class="cstat-pill amber">금일 '+cnt+'건'+(_arrCnt>0?' · 외출 '+_outRate+'%':'')+'</span>';
-      }
-      var rows = cnt ? arr.map(function(a,i){
-        var t=a.timestamp?new Date(a.timestamp).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}):'-';
-        var kind=(a.type==='outing')?'<span style="color:#ea580c;font-weight:800;">외출</span>':'<span style="color:#dc2626;font-weight:800;">외박</span>';
-        var stat = a.held ? '<span style="color:#dc2626;font-weight:800;">미복귀</span>'
-                 : (a.returned && a.autoReturn) ? '<span style="color:#0891b2;font-weight:800;">복귀완료(자동)</span>'
-                 : a.returned ? '<span style="color:#16a34a;font-weight:800;">복귀완료</span>'
-                 : a.confirmed ? '<span style="color:#2563eb;font-weight:700;">서명완료</span>'
-                 : '<span style="color:#94a3b8;">대기</span>';
-        return '<tr><td style="color:#94a3b8;">'+(i+1)+'</td><td style="font-weight:800;">'+esc(a.name||'-')+'</td><td>'+kind+'</td><td style="color:#64748b;white-space:nowrap;">'+t+'</td><td>'+stat+'</td><td style="text-align:center;white-space:nowrap;">'+(a.returned ? '<span style="color:#cbd5e1;">-</span>' : '<input type="checkbox" '+(a.held?'checked':'')+' onclick="coordSetHold(\''+esc(r.rid)+'\',\''+today+'\',\''+esc(a.__key)+'\',this.checked)" title="미복귀(자동 복귀완료 제외)" style="cursor:pointer;accent-color:#dc2626;width:16px;height:16px;">')+'</td></tr>';
-      }).join('') : '<tr><td colspan="6" style="text-align:center;color:#94a3b8;padding:18px;">금일 외출·외박 신청이 없습니다.</td></tr>';
-      return '<div class="csec-card">'
-        +'<div class="csec-card-head" onclick="coordToggleOuting('+idx+')" style="cursor:pointer;display:flex;align-items:center;gap:14px;padding:14px 16px;">'
-          +'<span class="crow-room">ROOM <span class="rid-big">#'+esc(r.rid)+'</span></span>'
-          +'<span style="flex:1;min-width:0;"><span class="crow-name" style="display:block;">'+esc(r.s.courseName||'-')+'</span></span>'
-          +_outPill+_outNote
-          +'<button onclick="event.stopPropagation();window.open(\'outing_ledger.html?room='+r.rid+'&auto=1\',\'_blank\');" style="background:#1e293b;color:#fff;border:none;border-radius:9px;padding:8px 14px;font-size:12px;font-weight:800;cursor:pointer;white-space:nowrap;"><i class="fa-solid fa-print"></i> 출력</button>'
-          +'<i class="fa-solid fa-chevron-down crow-chev" id="coordOutChev'+idx+'"></i>'
-        +'</div>'
-        +'<div id="coordOutBody'+idx+'" style="display:none;border-top:1px solid #eef2f7;overflow-x:auto;"><table class="cpop-table" style="width:100%;table-layout:fixed;"><colgroup><col style="width:10%"><col style="width:27%"><col style="width:14%"><col style="width:20%"><col style="width:17%"><col style="width:12%"></colgroup><thead><tr><th>연번</th><th>성명</th><th>구분</th><th>신청시간</th><th>상태</th><th>미복귀</th></tr></thead><tbody>'+rows+'</tbody></table></div>'
-        +'</div>';
-    }).join('')+'</div>';
-  };
-  window.coordToggleOuting = function(idx){
-    var b=document.getElementById('coordOutBody'+idx), c=document.getElementById('coordOutChev'+idx);
-    if(!b) return; var open=(b.style.display==='none'||!b.style.display);
-    b.style.display=open?'block':'none'; if(c) c.style.transform=open?'rotate(180deg)':'';
-  };
-  function _coordInjectClose(){
-    var v=document.getElementById('individualStatusView'); if(!v) return;
-    // 상단 X 제거: 더 이상 주입하지 않음 (하단 X 버튼만 사용)
-    var legacy=v.querySelector('.pc-indiv-close'); if(legacy) legacy.remove();
-    if(!v.querySelector('.pc-indiv-bottomclose')){
-      var bb=document.createElement('button'); bb.className='pc-indiv-bottomclose'; bb.innerHTML='×'; bb.title='닫기';
-      bb.onclick=function(){ try{ currentRID=""; if(typeof handleRoomSelection==='function') handleRoomSelection(); }catch(e){} };
-      v.appendChild(bb);
-    }
-  }
-  document.addEventListener('DOMContentLoaded', function(){ setTimeout(_coordInjectClose, 900); });
-  function _coordPcBoot(){
-    if(!document.body.classList.contains('pc-mode')) return;
-    _coordInjectClose();
-    // [안전장치] 로드 시 과정 미선택이면 상세 팝업 닫고 전체 현황 표시 (새로고침 시 팝업 자동노출 방지)
-    // [안전장치] PC 로드 시 상세 팝업을 항상 닫고 과정리스트(섹션2)로 시작 (이전 선택 복원으로 인한 자동노출 방지)
-    try{ currentRID=""; if(typeof handleRoomSelection==='function'){ handleRoomSelection(); } var _iv=document.getElementById('individualStatusView'); if(_iv) _iv.style.display='none'; var _tv=document.getElementById('totalStatusView'); if(_tv) _tv.style.display=''; }catch(e){}
-    if(!window._coordPcSec) coordPcSection('2');
-  }
-  document.addEventListener('DOMContentLoaded', function(){ setTimeout(_coordPcBoot, 800); });
-  [1500, 3500].forEach(function(ms){ setTimeout(function(){
-    if(!document.body.classList.contains('pc-mode')) return;
-    var n=window._coordPcSec;
-    if(n==='1') coordRenderAnnualPreview();
-    else if(n==='2'){ var _ws=document.getElementById('coordWeekSel'); if(_ws) _ws.value='0'; if(typeof coordRenderActiveCourses==='function') coordRenderActiveCourses(); }
-    else if(n==='3') coordRenderEnroll();
-    else if(n==='4') coordRenderOutingSection();
-  }, ms); });
-})();
-</script>
-<script>
-// [공용 강의실] system/classrooms 실시간 — 운영부 과정설정(setup-room-dropdown) 즉시 반영
-(function initCustomRoomsCoord(){
-  try{
-    if(!window.firebase || !firebase.database){ setTimeout(initCustomRoomsCoord,300); return; }
-    firebase.database().ref('system/classrooms').on('value', function(snap){
-      var v=snap.val()||{}; var by={};
-      Object.keys(v).forEach(function(k){var it=v[k]; if(!it||!it.name) return; var b=String(it.building||'기타').trim(); (by[b]=by[b]||[]).push(String(it.name).trim());});
-      window.__customRooms=by;
-      var sel=document.getElementById('setup-room-dropdown');
-      if(sel){
-        var grp=document.getElementById('custom-rooms-grp-coord');
-        if(!grp){ grp=document.createElement('optgroup'); grp.id='custom-rooms-grp-coord'; grp.label='추가된 강의실'; var direct=Array.prototype.slice.call(sel.options).filter(function(o){return o.value==='direct';})[0]; sel.insertBefore(grp, direct||null); }
-        grp.innerHTML='';
-        Object.keys(by).forEach(function(b){ by[b].forEach(function(n){ if(Array.prototype.slice.call(sel.options).some(function(o){return o.value===n;})) return; var o=document.createElement('option'); o.value=n; o.text=(b&&b!=='기타'?('['+b+'] '):'')+n; grp.appendChild(o); }); });
-        grp.style.display=grp.children.length?'':'none';
-      }
-    });
-  }catch(e){ setTimeout(initCustomRoomsCoord,500); }
-})();
-</script>
-<script>
-/* [상단바 반응형] 통계블록이 좌측 타이틀 또는 우측 시계와 겹치면 통째로 숨김 (폭 무관, 실측 기반) */
-(function(){
-  function hdrFit(){
-    var stats=document.getElementById('coordHdrStats'); if(!stats) return;
-    var wrap=stats.closest('.coord-right')||stats;
-    wrap.classList.remove('coord-hdr-hide');
-    var sr=stats.getBoundingClientRect();
-    if(sr.width===0) return; // 이미 숨김(미디어쿼리)
-    var L=document.querySelector('.coord-left'), K=document.getElementById('coordHeaderClock');
-    var bad=false;
-    if(L){ var lr=L.getBoundingClientRect(); if(sr.left < lr.right+12) bad=true; }
-    if(K){ var kr=K.getBoundingClientRect(); if(kr.width>0 && sr.right > kr.left-12) bad=true; }
-    if(bad) wrap.classList.add('coord-hdr-hide');
-  }
-  ['resize','load','orientationchange'].forEach(function(ev){ window.addEventListener(ev, hdrFit); });
-  document.addEventListener('DOMContentLoaded', hdrFit);
-  setTimeout(hdrFit,200); setTimeout(hdrFit,800); setTimeout(hdrFit,1600);
-  window._coordHdrFit=hdrFit;
-})();
-</script>
-<script>
-/* [상단바] 메뉴 블록 클릭 시 활성(hover) 표시 유지 */
-document.addEventListener("click",function(e){ var b=e.target&&e.target.closest&&e.target.closest(".hdr-stat"); if(b){ document.querySelectorAll(".hdr-stat.hdr-active").forEach(function(x){x.classList.remove("hdr-active");}); b.classList.add("hdr-active"); } });
-</script>
-<style>
-#coordFloorPlan.fp-editing .cfp-clip{ outline:3px dashed #16a34a; outline-offset:-3px; }
-#coordFloorPlan.fp-editing .cfp-slot{ cursor:move; }
-#coordFloorPlan.fp-editing .cfp-card,#coordFloorPlan.fp-editing .cfp-room{ cursor:move; box-shadow:0 0 0 2px #16a34a, 0 6px 16px rgba(22,163,74,.35) !important; }
-.cfp-card-empty{ border-color:#cbd5e1 !important; box-shadow:0 4px 12px rgba(15,23,42,.16) !important; opacity:.95; }
-.cfp-card-empty .cfp-card-h b{ color:#64748b !important; }
-.cfp-card-empty .cfp-card-course{ color:#94a3b8 !important; }
-.cfp-card-empty .cfp-card-h .cfp-dot{ display:none; }
-#fpEditBanner{ position:fixed; top:0; left:0; right:0; z-index:2147480010; background:linear-gradient(135deg,#16a34a,#15803d); color:#fff; font-weight:900; font-size:17px; text-align:center; padding:13px; box-shadow:0 4px 14px rgba(0,0,0,.25); }
-</style>
-<script>
-/* [신규] 배치도 라벨 드래그 위치저장: 배치도 5초 길게→편집 / 드래그 / 다시 5초 길게→저장 */
-(function(){
-  var EDIT=false, dragEl=null, dragBox=null, lpT=null;
-  function banner(on){
-    var b=document.getElementById('fpEditBanner');
-    if(on){ if(!b){ b=document.createElement('div'); b.id='fpEditBanner'; document.body.appendChild(b); } b.innerHTML='✋ 강의실 위치 편집 중 — 카드를 드래그해 옮기고, 배치도를 다시 5초 길게 눌러 저장하세요'; b.style.display='block'; }
-    else if(b){ b.style.display='none'; }
-  }
-  function setEdit(on){ EDIT=on; window._fpEditCards=on; banner(on); var fp=document.getElementById('coordFloorPlan'); if(fp) fp.classList.toggle('fp-editing',on); try{ if(typeof coordRenderActiveCourses==='function') coordRenderActiveCourses(); }catch(e){} }
-  function savePositions(){
-    var fp=document.getElementById('coordFloorPlan'); if(!fp) return;
-    var byBF={};
-    Array.prototype.forEach.call(fp.querySelectorAll('.cfp-floor'), function(fl){
-      var b=fl.getAttribute('data-b'), f=fl.getAttribute('data-f'); if(!b||!f) return;
-      var key=b+'_'+f;
-      Array.prototype.forEach.call(fl.querySelectorAll('.cfp-slot'), function(sl){
-        var room=sl.getAttribute('data-room'); if(!room) return;
-        var l=parseFloat(sl.style.left)||0, t=parseFloat(sl.style.top)||0;
-        if(!byBF[key]) byBF[key]={};
-        byBF[key][room]={l:Math.round(l*10)/10, t:Math.round(t*10)/10};
-      });
-    });
-    try{ Object.keys(byBF).forEach(function(k){ firebase.database().ref('system/coordFloorPos/'+k).update(byBF[k]); }); if(typeof showKacAlert==='function') showKacAlert('✅ 강의실 위치가 저장되었습니다. (모든 화면에 반영)'); }catch(e){}
-  }
-  // 배치도 배경 5초 롱프레스 → 편집 토글 / 저장
-  function lpBegin(e){
-    if(e.target.closest && e.target.closest('.cfp-slot')) return;      // 카드 위는 드래그용
-    if(!(e.target.closest && e.target.closest('.cfp-imgbox'))) return; // 도면 영역만
-    clearTimeout(lpT);
-    lpT=setTimeout(function(){ if(!EDIT){ setEdit(true); } else { savePositions(); setEdit(false); } }, 5000);
-  }
-  function lpEnd(){ clearTimeout(lpT); lpT=null; }
-  document.addEventListener('mousedown', lpBegin);
-  document.addEventListener('touchstart', lpBegin, {passive:true});
-  ['mouseup','mouseleave','touchend','touchcancel'].forEach(function(ev){ document.addEventListener(ev, lpEnd); });
-  // 편집 모드 카드 드래그
-  function dragStart(e){ if(!EDIT) return; var slot=e.target.closest && e.target.closest('.cfp-slot'); if(!slot) return; e.preventDefault(); e.stopPropagation(); dragEl=slot; dragBox=slot.closest('.cfp-imgbox'); }
-  function dragMove(e){ if(!dragEl||!dragBox) return; var pt=e.touches?e.touches[0]:e; var r=dragBox.getBoundingClientRect(); var l=Math.max(0,Math.min(100,(pt.clientX-r.left)/r.width*100)); var t=Math.max(0,Math.min(100,(pt.clientY-r.top)/r.height*100)); dragEl.style.left=l+'%'; dragEl.style.top=t+'%'; }
-  function dragEnd(){ dragEl=null; dragBox=null; }
-  document.addEventListener('mousedown', dragStart, true);
-  document.addEventListener('mousemove', dragMove);
-  document.addEventListener('mouseup', dragEnd);
-  document.addEventListener('touchstart', dragStart, {passive:false, capture:true});
-  document.addEventListener('touchmove', function(e){ if(dragEl){ e.preventDefault(); dragMove(e); } }, {passive:false});
-  document.addEventListener('touchend', dragEnd);
-  // 편집 모드에선 카드 클릭(공지) 차단
-  document.addEventListener('click', function(e){ if(EDIT){ var sl=e.target.closest && e.target.closest('.cfp-slot'); if(sl){ e.stopImmediatePropagation(); e.preventDefault(); } } }, true);
-  // 저장된 위치 구독
-  function initPos(){ if(!window.firebase||!firebase.database){ setTimeout(initPos,500); return; } firebase.database().ref('system/coordFloorPos').on('value', function(s){ window._coordFloorPos=s.val()||{}; try{ if(window._coordPcSec==='2' && typeof coordRenderActiveCourses==='function') coordRenderActiveCourses(); }catch(e){} }); }
-  initPos();
-})();
-</script>
-
-<style>
-#coordPdfArea{ display:none; }
-@media print{
-  body > *:not(#coordPdfArea){ display:none !important; }
-  #coordPdfArea{ display:block !important; }
-  #coordPdfArea .pdf-page{ page-break-after:always; padding:10mm; }
-  #coordPdfArea .pdf-page:last-child{ page-break-after:auto; }
-  #coordPdfArea .pdf-title{ font-size:20px; font-weight:900; color:#0f2057; margin-bottom:8px; }
-  #coordPdfArea .cfp-clip{ overflow:visible !important; border:1px solid #cbd5e1; }
-  #coordPdfArea .cfp-imgbox{ margin:0 !important; }
-  @page{ size:A4 landscape; margin:8mm; }
-}
-</style>
-<div id="coordPdfArea"></div>
-<script>
-/* [신규] 배치도 PDF 저장: 현재 건물 층별로 1페이지, 미사용(사용중 0) 배치도 제외 */
-function coordSaveFloorPDF(){
-  var fp=document.getElementById('coordFloorPlan'); var area=document.getElementById('coordPdfArea');
-  if(!fp||!area){ return; }
-  var floors=fp.querySelectorAll('.cfp-floor'); var pages=''; var n=0;
-  Array.prototype.forEach.call(floors, function(fl){
-    if(!fl.querySelector('.cfp-slot-card')) return;   // 사용중 카드 없으면 제외
-    n++;
-    var clip=fl.querySelector('.cfp-clip'); var head=fl.querySelector('.cfp-floor-head');
-    pages+='<div class="pdf-page">'+(head?('<div class="pdf-title">'+head.textContent.trim()+'</div>'):'')+(clip?clip.outerHTML:'')+'</div>';
-  });
-  if(!n){ if(typeof showKacAlert==='function') showKacAlert('배치된(사용중) 강의실이 없어 출력할 배치도가 없습니다.'); return; }
-  area.innerHTML=pages;
-  setTimeout(function(){ window.print(); setTimeout(function(){ area.innerHTML=''; }, 800); }, 250);
-}
-window.coordSaveFloorPDF=coordSaveFloorPDF;
-</script>
-
-</body>
-</html>
-<!-- @build 20260622 (교육운영부 vH26) -->
+        _outPill='<span class=
