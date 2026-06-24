@@ -2035,7 +2035,7 @@ body.pc-mode .coord-right{ grid-column:2 !important; grid-row:1 !important; just
 
     <!-- ✅ [복구 완료] 현재 운영 중인 과정 리스트 섹션 (= 섹션 2) -->
     <div id="csec-2" class="section-card" style="background:white; padding:18px 16px; border:1px solid #eef2f7; box-shadow:0 4px 14px rgba(15,23,42,0.05);">
-        <div class="coord-sec-head"><h2><i class="fa-solid fa-list-ul"></i> 운영중인 과정</h2><select id="coordWeekSel" onchange="coordRenderActiveCourses()" style="margin-left:auto;padding:8px 14px;border:1.5px solid #cbd5e1;border-radius:10px;font-weight:800;font-size:13px;cursor:pointer;background:#fff;color:#1e3a8a;"></select></div>
+        <div class="coord-sec-head"><h2><i class="fa-solid fa-list-ul"></i> 운영 과정 <span style="color:#2563eb;">(강의실)</span></h2><button onclick="coordOpenRoomAssign()" style="margin-left:auto;padding:9px 16px;border:none;border-radius:10px;background:linear-gradient(135deg,#2563eb,#1d4ed8);color:#fff;font-weight:800;font-size:13px;cursor:pointer;white-space:nowrap;"><i class="fa-solid fa-chalkboard-user"></i> 강의실 배치 및 수정</button><select id="coordWeekSel" onchange="coordRenderActiveCourses()" style="margin-left:10px;padding:8px 14px;border:1.5px solid #cbd5e1;border-radius:10px;font-weight:800;font-size:13px;cursor:pointer;background:#fff;color:#1e3a8a;"></select></div>
         <div id="coordFloorPlan"></div>
         <div id="activeCourseList" style="display:flex; flex-direction:column; gap:8px;">
             <!-- 자바스크립트가 여기에 ROOM A, ROOM C 등의 카드를 채워넣습니다 -->
@@ -6361,7 +6361,7 @@ const annualPlanMgrCoord = {
 </script>
 
 <!-- ══ 커스텀 알림/확인 모달 (네이티브 alert/confirm 대체) ══ -->
-<div id="kacConfirm" class="setup-modal" style="z-index:30000;">
+<div id="kacConfirm" class="setup-modal" style="z-index:2147480000;">
     <div class="setup-box" style="max-width:380px; text-align:center;">
         <div id="kacConfirmIcon" style="font-size:38px; margin-bottom:10px;">❓</div>
         <div id="kacConfirmMsg" style="font-size:15px; font-weight:700; color:var(--navy-dark); line-height:1.6; white-space:pre-line; margin-bottom:22px;">메시지</div>
@@ -6372,7 +6372,7 @@ const annualPlanMgrCoord = {
     </div>
 </div>
 
-<div id="customAlertModal" class="setup-modal" style="z-index:30001;">
+<div id="customAlertModal" class="setup-modal" style="z-index:2147480001;">
     <div class="setup-box" style="max-width:380px; text-align:center;">
         <div id="kacAlertIcon" style="font-size:38px; margin-bottom:10px;">ℹ️</div>
         <div id="kacAlertMsg" style="font-size:15px; font-weight:700; color:var(--navy-dark); line-height:1.6; white-space:pre-line; margin-bottom:22px;">알림</div>
@@ -6380,7 +6380,7 @@ const annualPlanMgrCoord = {
     </div>
 </div>
 
-<div id="kacPromptModal" class="setup-modal" style="z-index:30002;">
+<div id="kacPromptModal" class="setup-modal" style="z-index:2147480002;">
     <div class="setup-box" style="max-width:400px;">
         <div id="kacPromptMsg" style="font-size:14px; font-weight:700; color:var(--navy-dark); line-height:1.6; white-space:pre-line; margin-bottom:14px;">입력</div>
         <input type="text" id="kacPromptInput" class="navy-input" style="width:100%; height:44px; margin-bottom:18px;"
@@ -8430,6 +8430,63 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
     for(var i=0;i<3;i++){ var ms=new Date(mon); ms.setDate(ms.getDate()+i*7); var fe=new Date(ms); fe.setDate(fe.getDate()+4); html+='<option value="'+i+'">'+labels[i]+' ('+_coordMd(ms)+'~'+_coordMd(fe)+')</option>'; }
     sel.innerHTML=html; sel.value=cur;
   }
+    // ====== [신규] 강의실 배치 및 수정 (주차별 · 연간계획 연동) ======
+  function _coordRoomOptsHtml(selected){
+    var E=(typeof esc==='function'?esc:(typeof _esc==='function'?_esc:function(x){return ''+(x==null?'':x);}));
+    var sel=document.getElementById('setup-room-dropdown'); var sval=''+(selected||'');
+    var html='<option value="">미배정</option>';
+    function opt(o){ if(!o.value||o.value==='direct'||o.value==='') return ''; return '<option value="'+E(o.value)+'"'+(((''+o.value)===sval)?' selected':'')+'>'+E(o.text)+'</option>'; }
+    if(sel){ Array.prototype.slice.call(sel.children).forEach(function(node){
+      if(node.tagName==='OPTGROUP'){ html+='<optgroup label="'+E(node.label||'')+'">'; Array.prototype.slice.call(node.children).forEach(function(o){ html+=opt(o); }); html+='</optgroup>'; }
+      else if(node.tagName==='OPTION'){ html+=opt(node); }
+    }); }
+    return html;
+  }
+  function coordSaveRoomAssign(kind,key,selEl){
+    var val=selEl.value||'';
+    try{
+      if(kind==='cur'){ firebase.database().ref('courses/'+key+'/settings/roomDetailName').set(val||null); }
+      else { firebase.database().ref('system/annualPlan/'+key+'/roomDetail').set(val||null); }
+      var ind=selEl.parentNode && selEl.parentNode.querySelector('.cra-ok');
+      if(ind){ ind.style.opacity='1'; setTimeout(function(){ ind.style.opacity='0'; },1400); }
+    }catch(e){ if(typeof showKacAlert==='function') showKacAlert('저장 중 오류가 발생했습니다.'); }
+  }
+  window.coordSaveRoomAssign=coordSaveRoomAssign;
+  function coordOpenRoomAssign(){
+    var E=(typeof esc==='function'?esc:(typeof _esc==='function'?_esc:function(x){return ''+(x==null?'':x);}));
+    var off=parseInt((document.getElementById('coordWeekSel')||{}).value||'0',10)||0;
+    var labels=['이번주','다음주','다다음주'];
+    function row(kind,key,name,cur,period){
+      return '<div style="display:flex;align-items:center;gap:12px;padding:13px 15px;border:1px solid #eef2f7;border-radius:13px;margin-bottom:8px;background:#fff;">'
+        +'<div style="flex:1;min-width:0;"><div style="font-weight:800;font-size:16px;color:#0f172a;word-break:keep-all;">'+E(name)+'</div>'+(period?('<div style="font-size:12px;color:#94a3b8;font-weight:700;margin-top:3px;">'+E(period)+'</div>'):'')+'</div>'
+        +'<select onchange="coordSaveRoomAssign(\''+kind+'\',\''+E(key)+'\',this)" style="flex-shrink:0;min-width:250px;padding:11px 13px;border:1.5px solid #cbd5e1;border-radius:10px;font-size:15px;font-weight:700;color:#0f172a;cursor:pointer;background:#fff;">'+_coordRoomOptsHtml(cur)+'</select>'
+        +'<i class="fa-solid fa-circle-check cra-ok" style="color:#16a34a;font-size:20px;opacity:0;transition:opacity .25s;"></i>'
+        +'</div>';
+    }
+    var head='<div style="font-size:13.5px;color:#475569;font-weight:700;margin-bottom:14px;line-height:1.5;"><b style="color:#2563eb;">'+labels[off]+'</b> 과정의 강의실을 배정/수정합니다. 변경 즉시 저장되며 <b>강사·교육지원부(생활관)·교육운영부</b>에 공유됩니다.'+(off>0?'<br><span style="color:#94a3b8;">· 미래 주차는 연간교육운영계획에 저장됩니다.</span>':'')+'</div>';
+    var title='<i class="fa-solid fa-chalkboard-user"></i> 강의실 배치 및 수정 · '+labels[off];
+    if(off===0){
+      var rooms=(typeof _coordActiveRooms==='function'?_coordActiveRooms():[]);
+      if(!rooms.length){ _cpop(title, head+'<div class="cpop-empty">이번주 운영 중인 과정이 없습니다.</div>'); window._coordPopupRefresh=null; return; }
+      var rows=rooms.map(function(r){ return row('cur', r.rid, r.s.courseName||('Room '+r.rid), r.s.roomDetailName||r.s.roomDetail||'', r.s.period||''); }).join('');
+      _cpop(title, head+rows); window._coordPopupRefresh=null;
+    } else {
+      _cpop(title, head+'<div class="cpop-empty">불러오는 중…</div>'); window._coordPopupRefresh=null;
+      firebase.database().ref('system/annualPlan').once('value').then(function(snap){
+        var v=snap.val();
+        var entries=Array.isArray(v)?v.map(function(c,i){return [String(i),c];}):(v&&typeof v==='object'?Object.keys(v).map(function(k){return [k,v[k]];}):[]);
+        var mon=_coordMondayD(new Date()); mon.setDate(mon.getDate()+off*7); var sun=new Date(mon); sun.setDate(sun.getDate()+6);
+        var ms=_coordYmd(mon), ss=_coordYmd(sun);
+        var wk=entries.filter(function(e){ var c=e[1]||{}; var sd=c.startDate||'',ed=c.endDate||''; return sd&&ed&&sd<=ss&&ed>=ms; });
+        var b=document.getElementById('cpopBody'); if(!b) return;
+        if(!wk.length){ b.innerHTML=head+'<div class="cpop-empty">해당 주차에 예정된 과정이 없습니다. (연간계획에 등록하면 표시됩니다)</div>'; return; }
+        var rows=wk.map(function(e){ var k=e[0], c=e[1]||{}; return row('plan', k, c.name||'-', c.roomDetail||c.room||'', (c.startDate||'')+' ~ '+(c.endDate||'')); }).join('');
+        b.innerHTML=head+rows;
+      }).catch(function(){ var b=document.getElementById('cpopBody'); if(b) b.innerHTML=head+'<div class="cpop-empty">연간계획을 불러오지 못했습니다.</div>'; });
+    }
+  }
+  window.coordOpenRoomAssign=coordOpenRoomAssign;
+
   function _coordRenderPlannedWeek(box, off){
     box.innerHTML='<div style="padding:24px;text-align:center;color:#94a3b8;font-weight:700;">불러오는 중…</div>';
     firebase.database().ref('system/annualPlan').once('value').then(function(snap){
