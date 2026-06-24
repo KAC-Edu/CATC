@@ -8667,14 +8667,18 @@ const kiosk = {
     _isFs: function(){ return !!(document.fullscreenElement||document.webkitFullscreenElement||document.msFullscreenElement); },
     _enterFs: function(){ try{ const de=document.documentElement; const fn=de.requestFullscreen||de.webkitRequestFullscreen||de.msRequestFullscreen; if(fn) fn.call(de); }catch(e){} },
     _bindLongPress: function(el, dur, cb, barId) {
-        const self=this; let start=0;
-        const begin=function(e){ if(e.cancelable) e.preventDefault(); start=Date.now(); self._bar(barId,0.001);
-            self._timer=setTimeout(function(){ self._cancel(barId); cb(); }, dur);
+        const self=this; let start=0; let reached=false;
+        const begin=function(e){ if(e.cancelable) e.preventDefault(); start=Date.now(); reached=false; self._bar(barId,0.001);
+            // dur 만큼 누르면 '완료' 표시(자동 실행 X). 손을 떼는 순간(사용자 제스처) 실행 → 전체화면 진입 허용
+            self._timer=setTimeout(function(){ reached=true; self._bar(barId,1); }, dur);
             self._raf=setInterval(function(){ self._bar(barId, Math.min((Date.now()-start)/dur,1)); }, 50);
         };
+        const finish=function(){ const was=reached; reached=false; self._cancel(barId); if(was){ cb(); } };
         el.addEventListener('mousedown', begin);
         el.addEventListener('touchstart', begin, {passive:false});
-        ['mouseup','mouseleave','touchend','touchcancel'].forEach(ev=>el.addEventListener(ev, ()=>self._cancel(barId)));
+        el.addEventListener('mouseup', finish);
+        el.addEventListener('touchend', finish);
+        ['mouseleave','touchcancel'].forEach(ev=>el.addEventListener(ev, ()=>self._cancel(barId)));
     },
     _cancel: function(barId){ if(this._timer){clearTimeout(this._timer);this._timer=null;} if(this._raf){clearInterval(this._raf);this._raf=null;} this._bar(barId,0); },
     _bar: function(barId,p){ const b=document.getElementById(barId); if(b){ b.style.display=p>0?'block':'none'; b.style.width=(p*100)+'%'; } },
@@ -11112,7 +11116,7 @@ ui.openLeaderRoulette = async function(){
   var colors=['#f59e0b','#10b981','#3b82f6','#ef4444','#8b5cf6','#ec4899','#0ea5e9','#f97316','#22c55e','#a855f7'];
   function polar(R,deg){ var a=deg*Math.PI/180; return [cx+R*Math.cos(a), cy+R*Math.sin(a)]; }
   function arcPath(R,a0,a1){ var p0=polar(R,a0), p1=polar(R,a1); var large=((a1-a0)%360)>180?1:0; return 'M'+cx+' '+cy+' L'+p0[0].toFixed(2)+' '+p0[1].toFixed(2)+' A'+R+' '+R+' 0 '+large+' 1 '+p1[0].toFixed(2)+' '+p1[1].toFixed(2)+' Z'; }
-  var fs=Math.max(11, Math.min(30, Math.round(360/N)));
+  var fs=Math.max(14, Math.min(46, Math.round(520/N)));
   var segHtml='', txtHtml='';
   for(var i=0;i<N;i++){
     var a0=i*seg, a1=(i+1)*seg, mid=a0+seg/2;
@@ -11131,9 +11135,9 @@ ui.openLeaderRoulette = async function(){
   var modal=document.createElement('div'); modal.id='leaderRouletteModal';
   modal.setAttribute('style','position:fixed;inset:0;z-index:9700;display:flex;align-items:center;justify-content:center;background:rgba(15,23,42,.62);backdrop-filter:blur(4px);padding:18px;overflow:auto;');
   modal.onclick=function(e){ if(e.target===modal && !ui._wheelSpinning) ui.closeLeaderRoulette(); };
-  var wheelPx='min(560px,86vw)';
+  var wheelPx='min(84vh, 92vw)';
   modal.innerHTML =
-    '<div style="background:#fff;border-radius:26px;width:min(640px,96vw);max-height:94vh;overflow:auto;box-shadow:0 30px 80px rgba(0,0,0,.45);">'
+    '<div style="background:#fff;border-radius:26px;width:auto;max-width:97vw;max-height:98vh;overflow:auto;box-shadow:0 30px 80px rgba(0,0,0,.45);">'
       + '<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:18px 24px;background:linear-gradient(135deg,#b45309,#f59e0b);color:#fff;">'
         + '<div style="font-size:19px;font-weight:900;"><i class="fa-solid fa-trophy" style="margin-right:8px;"></i>학생장 룰렛</div>'
         + '<button onclick="ui.closeLeaderRoulette()" style="background:rgba(255,255,255,.2);border:none;color:#fff;width:36px;height:36px;border-radius:50%;font-size:19px;cursor:pointer;">&times;</button>'
@@ -11182,7 +11186,7 @@ ui._spinWheel = function(){
       result.innerHTML=
         '<div style="animation:none;margin-top:6px;">'
         + '<div style="font-size:13px;color:#92400e;font-weight:800;margin-bottom:6px;">🎉 당첨</div>'
-        + '<div style="font-size:34px;font-weight:900;color:#b45309;letter-spacing:-1px;margin-bottom:16px;">👑 '+String(win.name).replace(/</g,"&lt;")+'</div>'
+        + '<div style="font-size:clamp(30px,6.2vh,60px);font-weight:900;color:#b45309;letter-spacing:-1px;margin-bottom:16px;">👑 '+String(win.name).replace(/</g,"&lt;")+'</div>'
         + '<div style="display:flex;flex-direction:column;gap:10px;align-items:center;">'
           + '<button onclick="ui.confirmRouletteLeader()" style="width:100%;max-width:360px;background:linear-gradient(135deg,#b45309,#f59e0b);color:#fff;border:none;padding:14px 20px;border-radius:14px;font-weight:900;font-size:16px;cursor:pointer;box-shadow:0 8px 20px rgba(217,119,6,.35);">👑 이 학생을 학생장으로 지정</button>'
           + '<div style="display:flex;gap:10px;width:100%;max-width:360px;">'
@@ -11214,23 +11218,25 @@ ui.confirmRouletteLeader = function(){
   });
 };
 
-/* ── 청렴/노조교육 장소 — 코디플랫폼(admin_coord) 실시간 연동 ──
-   admin_coord 상단바에서 setEduPlace()가 system/eduLocations/{integrity,union} 에 저장하면
-   강사플랫폼 과정운영현황(대시보드) 피드(feedEduIntegrity/feedEduUnion)에 즉시 반영. */
-(function initEduLocationsFeed(){
-  if (!window.firebase || !firebase.database) { setTimeout(initEduLocationsFeed, 400); return; }
-  function applyEdu(id, val){
-    var el = document.getElementById(id);
-    if (!el) return;
-    var v = ('' + (val || '')).trim();
-    el.textContent = v || '미정';
-    el.style.color = v ? (id === 'feedEduUnion' ? '#15803d' : '#1e40af') : '#94a3b8';
-  }
-  try {
-    firebase.database().ref('system/eduLocations').on('value', function(s){
-      var v = s.val() || {};
-      applyEdu('feedEduIntegrity', v.integrity);
-      applyEdu('feedEduUnion', v.union);
-    });
-  } catch(e) { setTimeout(initEduLocationsFeed, 800); }
-})();
+
+// ===== [우측 더보기 사이드바] 슬라이드 패널 토글 (HTML 버튼에서 호출하나 정의가 없었음) =====
+ui.openMorePanel = function(){
+  var p=document.getElementById('moreMenuPanel'), t=document.getElementById('moreToggleTab'), b=document.getElementById('moreMenuBackdrop'), ic=document.getElementById('moreToggleIcon');
+  if(!p) return;
+  p.classList.add('more-open'); p.style.transform='translateX(0)';
+  if(b) b.style.display='block';
+  if(t) t.style.right=(p.offsetWidth||300)+'px';
+  if(ic) ic.className='fa-solid fa-chevron-right';
+};
+ui.closeMorePanel = function(){
+  var p=document.getElementById('moreMenuPanel'), t=document.getElementById('moreToggleTab'), b=document.getElementById('moreMenuBackdrop'), ic=document.getElementById('moreToggleIcon');
+  if(p){ p.classList.remove('more-open'); p.style.transform='translateX(100%)'; }
+  if(b) b.style.display='none';
+  if(t) t.style.right='0';
+  if(ic) ic.className='fa-solid fa-chevron-left';
+};
+ui.toggleMorePanel = function(){
+  var p=document.getElementById('moreMenuPanel');
+  if(!p) return;
+  if(p.classList.contains('more-open')) ui.closeMorePanel(); else ui.openMorePanel();
+};
