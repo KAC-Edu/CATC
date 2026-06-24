@@ -1202,12 +1202,14 @@ body.modal-open .app-content {
 /* ══ PC 모드 레이아웃 (교육지원부·영양사 컨셉: 헤더 유지 + 컨테이너 중앙 확장) ══ */
 body.pc-mode { background:#eef2f7; }
 #pcSidebar { display:none !important; }
-body.pc-mode .app-container { max-width:1240px; min-width:0; margin:0 auto; box-shadow:0 0 50px rgba(15,23,42,0.10); background:#f1f5f9; min-height:100dvh; }
-body.pc-mode .app-header { padding-left:28px; padding-right:28px; }
-/* [전역 배율] 일반 관리 화면(PC) 전체 배율 — 100% 줌에서 적절한 크기로.
-   이 플랫폼은 내용이 max-width:1240px 중앙 컬럼이라 0.75는 상단바·전체가 작아 보여 0.85로 상향. 값만 바꾸면 전체 크기 일괄 조정.
-   키오스크가 열리면 JS가 body.style.zoom='1'로 복귀시켜 큰 크기를 유지함. */
-body.pc-mode{ zoom:0.85; }
+body.pc-mode .app-container { max-width:none; min-width:0; margin:0; box-shadow:none; background:#f1f5f9; min-height:100dvh; }
+/* 지원부와 동일: 헤더는 전체 폭(배경 꽉 차는 바), 안쪽 내용과 본문은 1280px 중앙 정렬 — 좌우 잘림 제거 */
+body.pc-mode .app-header { padding-left:max(28px, calc((100% - 1280px) / 2)); padding-right:max(28px, calc((100% - 1280px) / 2)); }
+body.pc-mode .app-content { max-width:1280px; width:100%; margin:0 auto; }
+/* [전역 배율] 지원부(dorm 계열)와 동일하게 — 플랫 body zoom 제거.
+   전체 배율은 화면 하단 documentElement 자동맞춤이 담당(좀으면 자동 축소, 넓은 화면은 100% 풀사이즈 = 지원부 상단바와 동일 크기).
+   키오스크는 fullscreen으로 별도 동작. */
+body.pc-mode{ }
 body.pc-mode #totalStatusView { padding:14px 28px 24px !important; background:#f1f5f9; }
 
 /* ══ PC 전용 대제목 탭 (지원부 step-tab 컨셉) ══ */
@@ -8429,7 +8431,7 @@ window.addEventListener('load', function(){
 });
 </script>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:6px;bottom:5px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;font-weight:800;line-height:1;letter-spacing:.6px;color:#fff;background:rgba(15,23,42,.85);padding:4px 8px;border-radius:6px;pointer-events:none;user-select:none;box-shadow:0 2px 6px rgba(0,0,0,.3);">VQ</div>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:6px;bottom:5px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;font-weight:800;line-height:1;letter-spacing:.6px;color:#fff;background:rgba(15,23,42,.85);padding:4px 8px;border-radius:6px;pointer-events:none;user-select:none;box-shadow:0 2px 6px rgba(0,0,0,.3);">VR</div>
 <script>
 /* ===== [공용] 종료된 과정 자동 정리 (모든 플랫폼 공통) — 종료일 지난 방을 다음날 미개설로 비움. 브라우저별 하루 1회 ===== */
 window.kacExpireEndedCourses = async function(){

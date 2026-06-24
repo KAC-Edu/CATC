@@ -3,8 +3,8 @@
 <head>
 <!-- ============================================================
   CATC · 강사 플랫폼  (admin.html)
-  @version  R
-  @build    20260624-130000
+  @version  S
+  @build    20260624-140000
   ────────────────────────────────────────────────────────
   [코드 수정 규칙 · AI/개발자 공통]
   이 파일을 한 글자라도 고치면:
@@ -2506,7 +2506,7 @@ function setupAcc(btn){
 <script>
 (function(){
   var MIN_ZOOM = 0.5;     // 글씨가 안 보일 만큼 작아지지 않도록 하한
-  var BASE_ZOOM = 0.75;   // [JDS260624] 기본 배율 — 75% 줌으로 디자인했던 화면을 100%에서도 같은 크기로. 값만 바꾸면 전체 크기 일괄 조정. (전 플랫폼 dorm_admin 정석 통일)
+  var BASE_ZOOM = 0.9;    // [JDS260624] 기본 배율 — 값만 바꾸면 전체 크기 일괄 조정. (강사 화면은 중앙정렬·여백이 많아 0.75는 너무 작아 0.9로 상향)
   var DESIGN_W = 1400;    // 설계 가로폭(body min-width와 동일) — 모든 화면(뷰) 공통 기준
   var t;
 
@@ -2774,8 +2774,8 @@ function setupAcc(btn){
 </style>
 
 <!-- 버전 표기(요청 시까지 유지) -->
-<div id="buildVersionBadge" style="position:fixed; right:8px; bottom:8px; z-index:99999; background:rgba(15,23,42,.78); color:#fff; font-size:12px; font-weight:800; letter-spacing:.5px; padding:4px 10px; border-radius:8px; font-family:monospace; box-shadow:0 2px 8px rgba(0,0,0,.3); pointer-events:none; user-select:none;">VV</div>
+<div id="buildVersionBadge" style="position:fixed; right:8px; bottom:8px; z-index:99999; background:rgba(15,23,42,.78); color:#fff; font-size:12px; font-weight:800; letter-spacing:.5px; padding:4px 10px; border-radius:8px; font-family:monospace; box-shadow:0 2px 8px rgba(0,0,0,.3); pointer-events:none; user-select:none;">VW</div>
 
 </body>
 </html>
-<!-- @build 20260624-130000 (강사 vR — 통계 팝업 글자 축소·과정명 1줄, 룰렛 하단 잘림 수정, 명단 우측 액션레일 고정) -->
+<!-- @build 20260624-140000 (강사 vS — 전역 배율 0.75→0.9로 상향: 중앙정렬 화면이 너무 작아 보이던 문제 개선) -->
