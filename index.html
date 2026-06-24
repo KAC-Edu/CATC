@@ -5989,10 +5989,9 @@ body.kac-panel-on #menuModal > .menu-box { transition: none !important; }
 
   function install(){
     watch();
-    wrapClose('closeShuttleModal','shuttleModal');
-    wrapClose('closeAdminAction','adminActionModal');
-    wrapClose('closeFacilityModal','facilityModal');
-    wrapClose('closeTabletLoan','tabletLoanModal');
+    // [잔상 수정 20260624] shuttle/adminAction/facility/tabletLoan 은 init에서 이미
+    //  closePanelSmooth로 슬라이드 애니메이션 처리됨. 여기서 다시 wrapClose하면
+    //  애니메이션이 2번 재생되어 '휙휙' 잔상이 생기므로 제거. (survey만 유지)
     wrapClose('closeSurvey','surveyModal');
     wrapClose('closeSurveyModal','surveyModal');
   }

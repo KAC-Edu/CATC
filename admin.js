@@ -8649,14 +8649,23 @@ window.outingAutoReturn = outingAutoReturn;
 //  데이터는 통합 현황판이 이미 구독 중인 window._homeStatsData 재사용 → Firebase 트래픽 증가 없음.
 // ──────────────────────────────────────────────────────────────
 const kiosk = {
-    _timer:null, _raf:null, _clock:null, _refresh:null,
+    _timer:null, _raf:null, _clock:null, _refresh:null, _active:false,
     init: function() {
         const plane=document.getElementById('kioskPlaneBtn');
         if(plane) this._bindLongPress(plane, 5000, ()=>this.open(), 'kioskEnterBar');   // 비행기 5초 → 키오스크 진입(하단 진행바)
         const clock=document.getElementById('kioskClock');
         if(clock) this._bindLongPress(clock, 5000, ()=>this.close(), 'kioskExitBar');   // 시계 5초 → 종료(상단 진행바)
-        document.addEventListener('keydown', (e)=>{ if(e.key==='Escape'){ const m=document.getElementById('kioskModal'); if(m && m.style.display!=='none') this.close(); } });
+        // 키오스크 활성 중에는 ESC(및 F11) 무력화 → 시계 5초로만 종료
+        document.addEventListener('keydown', (e)=>{
+            if(!this._active) return;
+            if(e.key==='Escape' || e.key==='F11'){ e.preventDefault(); e.stopPropagation(); }
+        }, true);
+        // ESC 등으로 전체화면이 풀려도 키오스크가 켜져 있으면 즉시 전체화면 재진입
+        const onFsChange=()=>{ if(this._active && !this._isFs()) this._enterFs(); };
+        ['fullscreenchange','webkitfullscreenchange','msfullscreenchange'].forEach(ev=>document.addEventListener(ev,onFsChange));
     },
+    _isFs: function(){ return !!(document.fullscreenElement||document.webkitFullscreenElement||document.msFullscreenElement); },
+    _enterFs: function(){ try{ const de=document.documentElement; const fn=de.requestFullscreen||de.webkitRequestFullscreen||de.msRequestFullscreen; if(fn) fn.call(de); }catch(e){} },
     _bindLongPress: function(el, dur, cb, barId) {
         const self=this; let start=0;
         const begin=function(e){ if(e.cancelable) e.preventDefault(); start=Date.now(); self._bar(barId,0.001);
@@ -8673,14 +8682,16 @@ const kiosk = {
         this.render();
         const m=document.getElementById('kioskModal'); if(m) m.style.display='flex';
         this._bar('kioskEnterBar',0);
-        try{ const de=document.documentElement; const fn=de.requestFullscreen||de.webkitRequestFullscreen||de.msRequestFullscreen; if(fn) fn.call(de); }catch(e){}
+        this._active=true;
+        this._enterFs();
         this._tick(); this._clock=setInterval(()=>this._tick(), 1000);
         this._refresh=setInterval(()=>this.render(), 30000);
     },
     close: function() {
+        this._active=false;
         const m=document.getElementById('kioskModal'); if(m) m.style.display='none';
         this._bar('kioskExitBar',0);
-        try{ if(document.fullscreenElement){ const fn=document.exitFullscreen||document.webkitExitFullscreen||document.msExitFullscreen; if(fn) fn.call(document); } }catch(e){}
+        try{ if(this._isFs()){ const fn=document.exitFullscreen||document.webkitExitFullscreen||document.msExitFullscreen; if(fn) fn.call(document); } }catch(e){}
         if(this._clock){clearInterval(this._clock);this._clock=null;}
         if(this._refresh){clearInterval(this._refresh);this._refresh=null;}
     },
