@@ -11138,6 +11138,7 @@ ui.openLeaderRoulette = async function(){
   var wheelPx='min(84vh, 92vw)';
   modal.innerHTML =
     '<div style="background:#fff;border-radius:26px;width:auto;max-width:97vw;max-height:98vh;overflow:auto;box-shadow:0 30px 80px rgba(0,0,0,.45);">'
+      + '<style>@keyframes rlPop{0%{transform:scale(.55);opacity:0}60%{transform:scale(1.06)}100%{transform:scale(1);opacity:1}}</style>'
       + '<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:18px 24px;background:linear-gradient(135deg,#b45309,#f59e0b);color:#fff;">'
         + '<div style="font-size:19px;font-weight:900;"><i class="fa-solid fa-trophy" style="margin-right:8px;"></i>학생장 룰렛</div>'
         + '<button onclick="ui.closeLeaderRoulette()" style="background:rgba(255,255,255,.2);border:none;color:#fff;width:36px;height:36px;border-radius:50%;font-size:19px;cursor:pointer;">&times;</button>'
@@ -11149,7 +11150,22 @@ ui.openLeaderRoulette = async function(){
           // 3시 방향 마커
           + '<div style="position:absolute;top:50%;right:-14px;transform:translateY(-50%);width:0;height:0;border-top:18px solid transparent;border-bottom:18px solid transparent;border-right:30px solid #dc2626;filter:drop-shadow(-2px 2px 3px rgba(0,0,0,.3));z-index:3;"></div>'
           // 가운데 시작 버튼
-          + '<button id="rlStart" onclick="ui._spinWheel()" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:23%;height:23%;border-radius:50%;background:radial-gradient(circle at 35% 30%,#ffffff,#fde68a 70%,#f59e0b);border:5px solid #fff;box-shadow:0 8px 20px rgba(180,83,9,.4);color:#92400e;font-weight:900;font-size:clamp(15px,4.2vw,24px);cursor:pointer;z-index:4;letter-spacing:-1px;">시작</button>'
+          + '<button id="rlStart" onclick="ui._spinWheel()" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:23%;height:23%;border-radius:50%;background:radial-gradient(circle at 35% 30%,#ffffff,#fde68a 70%,#f59e0b);border:5px solid #fff;box-shadow:0 8px 20px rgba(180,83,9,.4);color:#92400e;font-weight:900;font-size:clamp(24px,6.5vh,58px);cursor:pointer;z-index:4;letter-spacing:-1px;">시작</button>'
+        + '<div id="rlWinPop" style="position:absolute;inset:0;display:none;align-items:center;justify-content:center;z-index:20;padding:14px;">'
+          + '<div style="background:rgba(255,255,255,.97);border:3px solid #f59e0b;border-radius:28px;padding:clamp(18px,4vh,46px) clamp(22px,5vw,66px);box-shadow:0 24px 70px rgba(0,0,0,.45);text-align:center;max-width:94%;animation:rlPop .45s cubic-bezier(.17,.89,.32,1.28);">'
+            + '<div style="font-size:clamp(15px,2.3vh,26px);font-weight:900;color:#d97706;letter-spacing:1px;margin-bottom:6px;">🎉 축하합니다 🎉</div>'
+            + '<div style="line-height:1.0;"><span id="rlWinName" style="font-size:clamp(48px,14vh,170px);font-weight:900;color:#b45309;letter-spacing:-2px;"></span></div>'
+            + '<div style="font-size:clamp(22px,3.8vh,46px);font-weight:900;color:#92400e;margin-top:2px;">님 당첨!! 👑</div>'
+            + '<div style="font-size:clamp(15px,2.2vh,26px);font-weight:800;color:#334155;margin:clamp(14px,3vh,30px) 0 14px;">이 학생을 학생장으로 지정할까요?</div>'
+            + '<div style="display:flex;flex-direction:column;gap:10px;align-items:center;">'
+              + '<button onclick="ui.confirmRouletteLeader()" style="width:100%;max-width:400px;background:linear-gradient(135deg,#b45309,#f59e0b);color:#fff;border:none;padding:16px 22px;border-radius:15px;font-weight:900;font-size:clamp(16px,2.4vh,24px);cursor:pointer;box-shadow:0 8px 22px rgba(217,119,6,.4);">👑 학생장으로 지정</button>'
+              + '<div style="display:flex;gap:10px;width:100%;max-width:400px;">'
+                + '<button onclick="ui._spinWheel()" style="flex:1;background:#f1f5f9;color:#475569;border:1px solid #e2e8f0;padding:12px;border-radius:12px;font-weight:800;font-size:clamp(13px,1.8vh,18px);cursor:pointer;"><i class="fa-solid fa-rotate-right"></i> 다시 돌리기</button>'
+                + '<button onclick="ui.closeLeaderRoulette()" style="flex:1;background:#fff;color:#94a3b8;border:1px solid #e2e8f0;padding:12px;border-radius:12px;font-weight:800;font-size:clamp(13px,1.8vh,18px);cursor:pointer;">닫기</button>'
+              + '</div>'
+            + '</div>'
+          + '</div>'
+        + '</div>'
         + '</div>'
         + '<div id="rlResult" style="min-height:30px;"></div>'
       + '</div>'
@@ -11163,7 +11179,7 @@ ui._spinWheel = function(){
   if(!wheel) return;
   ui._wheelSpinning=true; ui._rouletteWinner=null;
   if(startBtn){ startBtn.disabled=true; startBtn.style.opacity='.55'; startBtn.style.cursor='default'; startBtn.textContent='…'; }
-  if(result) result.innerHTML='<div style="color:#94a3b8;font-weight:800;font-size:14px;">🎯 돌리는 중...</div>';
+  var pop=document.getElementById('rlWinPop'); if(pop) pop.style.display='none';
 
   var seg=360/N;
   var w=Math.floor(Math.random()*N);
@@ -11182,19 +11198,9 @@ ui._spinWheel = function(){
     ui._wheelSpinning=false;
     var win=students[w]; ui._rouletteWinner=win;
     if(startBtn){ startBtn.disabled=false; startBtn.style.opacity='1'; startBtn.style.cursor='pointer'; startBtn.textContent='다시'; }
-    if(result){
-      result.innerHTML=
-        '<div style="animation:none;margin-top:6px;">'
-        + '<div style="font-size:13px;color:#92400e;font-weight:800;margin-bottom:6px;">🎉 당첨</div>'
-        + '<div style="font-size:clamp(30px,6.2vh,60px);font-weight:900;color:#b45309;letter-spacing:-1px;margin-bottom:16px;">👑 '+String(win.name).replace(/</g,"&lt;")+'</div>'
-        + '<div style="display:flex;flex-direction:column;gap:10px;align-items:center;">'
-          + '<button onclick="ui.confirmRouletteLeader()" style="width:100%;max-width:360px;background:linear-gradient(135deg,#b45309,#f59e0b);color:#fff;border:none;padding:14px 20px;border-radius:14px;font-weight:900;font-size:16px;cursor:pointer;box-shadow:0 8px 20px rgba(217,119,6,.35);">👑 이 학생을 학생장으로 지정</button>'
-          + '<div style="display:flex;gap:10px;width:100%;max-width:360px;">'
-            + '<button onclick="ui._spinWheel()" style="flex:1;background:#f1f5f9;color:#475569;border:1px solid #e2e8f0;padding:11px 14px;border-radius:12px;font-weight:800;font-size:14px;cursor:pointer;"><i class="fa-solid fa-rotate-right"></i> 다시 돌리기</button>'
-            + '<button onclick="ui.closeLeaderRoulette()" style="flex:1;background:#fff;color:#94a3b8;border:1px solid #e2e8f0;padding:11px 14px;border-radius:12px;font-weight:800;font-size:14px;cursor:pointer;">닫기</button>'
-          + '</div>'
-        + '</div></div>';
-    }
+    var nm=document.getElementById('rlWinName'); if(nm) nm.textContent=win.name;
+    var pop=document.getElementById('rlWinPop');
+    if(pop){ pop.style.display='flex'; var card=pop.firstChild; if(card){ card.style.animation='none'; void card.offsetWidth; card.style.animation='rlPop .45s cubic-bezier(.17,.89,.32,1.28)'; } }
   };
   wheel.addEventListener('transitionend', done);
   // 안전장치: 전환 이벤트 누락 시 강제 종료

@@ -1837,6 +1837,16 @@ body.pc-mode .coord-pc-only{ display:flex !important; }
 #coordKioskTableBody tr.ckrow:hover td{ background:linear-gradient(90deg, rgba(59,130,246,.30), rgba(37,99,235,.20)) !important; }
 #coordKioskTableBody tr.ckrow:hover td:first-child{ border-top-left-radius:12px; border-bottom-left-radius:12px; box-shadow:inset 4px 0 0 #93c5fd; }
 #coordKioskTableBody tr.ckrow:hover td:last-child{ border-top-right-radius:12px; border-bottom-right-radius:12px; }
+/* [키오스크] 진행 중 과정 배치도 그리드 — 여러 층을 나란히, 공간 부족하면 줄바꿈+스크롤 */
+.ck-fp-grid{ display:flex; flex-wrap:wrap; gap:16px; align-items:flex-start; }
+.ck-floor{ flex:1 1 360px; min-width:280px; max-width:560px; background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.12); border-radius:14px; padding:12px 12px 14px; box-sizing:border-box; }
+.ck-floor .cfp-clip{ background:#f8fafc; }
+.ck-floor .cfp-card{ min-width:108px; max-width:160px; padding:6px 9px 8px; border-width:2px; }
+.ck-floor .cfp-card-h b{ font-size:13px; }
+.ck-floor .cfp-card-course{ font-size:11.5px; margin:1px 0 4px; }
+.ck-floor .cfp-card-row{ font-size:10.5px; line-height:1.45; }
+.ck-floor .cfp-card-row span{ min-width:32px; margin-right:3px; }
+.ck-floor .cfp-floor-badge{ font-size:13px; padding:3px 12px; }
 body.pc-mode .coord-hdr-stats{ gap:10px; overflow:visible !important; min-width:auto !important; flex-wrap:nowrap !important; }
 /* 화면이 좁을 때(1500px 미만): 버튼블록(통계)은 남기고 좌측 제목 글자·시계(날짜시간)만 숨김 */
 @media (max-width: 1500px){
@@ -1919,7 +1929,7 @@ body.pc-mode .coord-right{ grid-column:2 !important; grid-row:1 !important; just
       <div style="font-size:11.5px;color:#64748b;margin-top:4px;">⏻ 시계 길게 눌러 종료</div>
     </div>
   </div>
-  <div style="flex:1; overflow:auto; border-radius:18px; background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.10);">
+  <div style="flex:1 1 auto; min-height:0; overflow:auto; border-radius:18px; background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.10);">
     <table style="width:100%; border-collapse:collapse; font-size:25px;">
       <thead><tr style="background:rgba(255,255,255,.09); position:sticky; top:0;">
         <th style="padding:20px 14px;color:#cbd5e1;font-weight:800;">구분</th>
@@ -1933,6 +1943,10 @@ body.pc-mode .coord-right{ grid-column:2 !important; grid-row:1 !important; just
       </tr></thead>
       <tbody id="coordKioskTableBody"></tbody>
     </table>
+  </div>
+  <div id="coordKioskFloorWrap" style="flex:0 0 auto; max-height:46vh; overflow:auto; margin-top:16px;">
+    <div style="font-size:18px;font-weight:900;color:#93c5fd;margin:0 2px 10px;"><i class="fa-solid fa-map-location-dot"></i> 진행 중 과정 배치도</div>
+    <div id="coordKioskFloor"></div>
   </div>
 </div>
 
@@ -7712,8 +7726,9 @@ window._coordUpdateShuttleLED=function(data){
   var _sh=document.getElementById('hdr-shuttle'); if(!_sh) return;
   // data 인자(최신 eduLocations)를 우선 사용 → _data 갱신 타이밍에 의존하지 않음
   var e=data||(window.coordOpsSetup&&coordOpsSetup._data)||{}; var sd=window._shuttleDep||{};
-  // 팝업에서 1·2차 시간이 설정됐거나(eduLocations) 셔틀이 공지(announce)됐으면 녹색
-  var set = !!((e.shuttle1&&(''+e.shuttle1).trim())&&(e.shuttle2&&(''+e.shuttle2).trim())) || !!((''+(sd.round1||'')).trim());
+  // 1차가 실제 시간(미정/운행안함 제외)으로 설정·공지됐을 때만 녹색
+  var isT=function(s){ return /^\d{1,2}:\d{2}$/.test((''+(s||'')).trim()); };
+  var set = isT(e.shuttle1) || isT(sd.round1);
   // 두 색상 시스템(edu-set/unset · shuttle-on/off)을 통일해서 토글 → CSS 충돌로 적색이 덮어쓰는 문제 방지
   _sh.classList.toggle('edu-set',set);     _sh.classList.toggle('edu-unset',!set);
   _sh.classList.toggle('shuttle-on',set);  _sh.classList.toggle('shuttle-off',!set);
@@ -7735,7 +7750,8 @@ window._coordUpdateShuttleLED=function(data){
 var coordOpsSetup = {
   _data:{}, _timer:null,
   _DEF:{ union:'하늘관 1층 대강당', t1:'13:00', t2:'15:00' },
-  _RANGE:{ start:11*60, end:21*60 },   // 11:00 ~ 21:00, 30분 단위 드롭다운
+  _RANGE:{ start:13*60, end:18*60 },   // 13:00 ~ 18:00, 30분 단위 드롭다운
+  _isTime:function(s){ return /^\d{1,2}:\d{2}$/.test((''+(s||'')).trim()); },
   _timeOptions:function(selVal, minMin){
     var sv=this._toMin(selVal), html='';
     for(var m=this._RANGE.start; m<=this._RANGE.end; m+=30){
@@ -7743,7 +7759,15 @@ var coordOpsSetup = {
       var hh=this._toHHMM(m);
       html+='<option value="'+hh+'"'+(m===sv?' selected':'')+'>'+hh+'</option>';
     }
-    if(sv && (minMin==null||sv>=minMin) && (sv<this._RANGE.start||sv>this._RANGE.end||sv%30!==0)){ html='<option value="'+this._toHHMM(sv)+'" selected>'+this._toHHMM(sv)+'</option>'+html; }
+    if(this._isTime(selVal) && sv && (minMin==null||sv>=minMin) && (sv<this._RANGE.start||sv>this._RANGE.end||sv%30!==0)){ html='<option value="'+this._toHHMM(sv)+'" selected>'+this._toHHMM(sv)+'</option>'+html; }
+    return html;
+  },
+  // 1·2차 공통 옵션: 미정 + 운행안함 + 시간(13~18시) — 특수값(미정/운행안함)도 선택 유지
+  _shuttleOptions:function(selVal, minMin){
+    var sv=(''+(selVal||'')).trim();
+    var html='<option value="미정"'+(sv==='미정'?' selected':'')+'>미정</option>'
+            +'<option value="운행안함"'+(sv==='운행안함'?' selected':'')+'>운행안함</option>';
+    html+=this._timeOptions(this._isTime(sv)?sv:'', minMin);
     return html;
   },
   _esc:function(s){ return (''+(s==null?'':s)).replace(/[&<>"]/g,function(c){return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]);}); },
@@ -7793,9 +7817,9 @@ var coordOpsSetup = {
     ov.innerHTML='<div style="background:#fff;border-radius:24px;width:min(640px,95vw);max-height:92vh;overflow:auto;box-shadow:0 30px 80px rgba(0,0,0,.5);">'
       +'<div style="background:linear-gradient(135deg,#0f2a4a,#1e3a8a);color:#fff;padding:24px 28px;"><div style="font-size:24px;font-weight:900;"><i class="fa-solid fa-circle-info"></i> 금주 교육 운영 설정 확인</div><div style="font-size:15px;color:#bfdbfe;font-weight:700;margin-top:5px;">차량 시간 · 노조교육 · 청렴교육 장소를 확인/설정하세요</div></div>'
       +'<div style="padding:26px;">'
-      +'<div style="margin-bottom:18px;"><div style="font-size:16px;font-weight:900;color:#334155;margin-bottom:10px;"><i class="fa-solid fa-bus" style="color:#2563eb;"></i> 퇴교차량 출발시간 <span style="font-size:12.5px;color:#94a3b8;font-weight:700;">· 30분 단위 · 2차는 1차+2시간 이후</span></div><div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;"><label style="font-size:15px;font-weight:800;color:#64748b;">1차 <select id="opsT1" onchange="coordOpsSetup.onT1Change()" style="margin-left:6px;padding:12px 14px;border:1.5px solid #cbd5e1;border-radius:11px;font-size:20px;font-weight:900;color:#0f172a;cursor:pointer;">'+this._timeOptions(t1,this._RANGE.start)+'</select></label><label style="font-size:15px;font-weight:800;color:#64748b;">2차 <select id="opsT2" style="margin-left:6px;padding:12px 14px;border:1.5px solid #cbd5e1;border-radius:11px;font-size:20px;font-weight:900;color:#0f172a;cursor:pointer;">'+this._timeOptions(t2,this._toMin(t1)+120)+'</select></label><button onclick="coordOpsSetup.announceShuttle()" style="padding:12px 22px;border:none;border-radius:11px;background:#16a34a;color:#fff;font-weight:900;font-size:16px;cursor:pointer;box-shadow:0 3px 8px rgba(22,163,74,.3);"><i class="fa-solid fa-bullhorn"></i> 공지</button></div></div>'
-      +'<div style="margin-bottom:18px;"><div style="font-size:16px;font-weight:900;color:#334155;margin-bottom:9px;"><i class="fa-solid fa-handshake" style="color:#16a34a;"></i> 노조교육 장소</div><select id="opsUnion" onchange="coordOpsSetup.savePlace(\'union\',this.value)" style="width:100%;padding:14px 15px;border:1.5px solid #bbf7d0;border-radius:12px;font-size:18px;font-weight:800;color:#15803d;background:#f0fdf4;">'+this._placeOptions(v.union)+'</select></div>'
-      +'<div style="margin-bottom:20px;"><div style="font-size:16px;font-weight:900;color:#334155;margin-bottom:9px;"><i class="fa-solid fa-scale-balanced" style="color:#dc2626;"></i> 청렴교육 장소'+(integSet?'':' <span style="color:#dc2626;font-size:12.5px;">· 미설정(필수)</span>')+'</div><select id="opsInteg" onchange="coordOpsSetup.savePlace(\'integrity\',this.value)" style="width:100%;padding:14px 15px;border:1.5px solid '+(integSet?'#fecaca':'#dc2626')+';border-radius:12px;font-size:18px;font-weight:800;color:'+(integSet?'#b91c1c':'#dc2626')+';background:#fef2f2;">'+this._placeOptions(v.integrity)+'</select></div>'
+      +'<div style="margin-bottom:18px;"><div style="font-size:16px;font-weight:900;color:#334155;margin-bottom:10px;"><i class="fa-solid fa-bus" style="color:#2563eb;"></i> 퇴교차량 출발시간 <span style="font-size:12.5px;color:#94a3b8;font-weight:700;">· 30분 단위 · 2차는 1차+2시간 이후</span></div><div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;"><label style="font-size:15px;font-weight:800;color:#64748b;">1차 <select id="opsT1" onchange="coordOpsSetup.onT1Change()" style="margin-left:6px;padding:12px 14px;border:1.5px solid #cbd5e1;border-radius:11px;font-size:20px;font-weight:900;color:#0f172a;cursor:pointer;">'+this._shuttleOptions(t1,this._RANGE.start)+'</select></label><label style="font-size:15px;font-weight:800;color:#64748b;">2차 <select id="opsT2" style="margin-left:6px;padding:12px 14px;border:1.5px solid #cbd5e1;border-radius:11px;font-size:20px;font-weight:900;color:#0f172a;cursor:pointer;">'+this._shuttleOptions(t2,(this._isTime(t1)?this._toMin(t1)+120:this._RANGE.start))+'</select></label><button onclick="coordOpsSetup.announceShuttle()" style="padding:12px 22px;border:none;border-radius:11px;background:#16a34a;color:#fff;font-weight:900;font-size:16px;cursor:pointer;box-shadow:0 3px 8px rgba(22,163,74,.3);"><i class="fa-solid fa-bullhorn"></i> 공지</button></div></div>'
+      +'<div style="margin-bottom:18px;"><div style="font-size:17px;font-weight:900;color:#334155;margin-bottom:10px;"><i class="fa-solid fa-handshake" style="color:#16a34a;"></i> 노조교육 장소</div><button type="button" onclick="coordOpsSetup.pickPlace(\'union\')" style="width:100%;padding:16px 18px;border:2px solid #bbf7d0;border-radius:12px;font-size:22px;font-weight:900;color:#15803d;background:#f0fdf4;text-align:left;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:10px;"><span>'+e(this._short(v.union))+'</span><i class="fa-solid fa-chevron-down" style="font-size:15px;opacity:.6;"></i></button></div>'
+      +'<div style="margin-bottom:20px;"><div style="font-size:17px;font-weight:900;color:#334155;margin-bottom:10px;"><i class="fa-solid fa-scale-balanced" style="color:#dc2626;"></i> 청렴교육 장소'+(integSet?'':' <span style="color:#dc2626;font-size:13px;">· 미설정(필수)</span>')+'</div><button type="button" onclick="coordOpsSetup.pickPlace(\'integrity\')" style="width:100%;padding:16px 18px;border:2px solid '+(integSet?'#fecaca':'#dc2626')+';border-radius:12px;font-size:22px;font-weight:900;color:'+(integSet?'#b91c1c':'#dc2626')+';background:#fef2f2;text-align:left;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:10px;"><span>'+e(this._short(v.integrity))+'</span><i class="fa-solid fa-chevron-down" style="font-size:15px;opacity:.6;"></i></button></div>'
       +'<label style="display:flex;align-items:center;gap:9px;font-size:16px;font-weight:800;color:#64748b;margin-bottom:18px;cursor:pointer;"><input type="checkbox" id="opsSkipToday" style="width:20px;height:20px;accent-color:#2563eb;"> 오늘은 그만 보기</label>'
       +'<div style="display:flex;gap:10px;"><button onclick="coordOpsSetup.cancel()" style="flex:1;padding:17px;background:#fff;color:#64748b;border:1.5px solid #cbd5e1;border-radius:13px;font-size:18px;font-weight:900;cursor:pointer;">취소</button><button onclick="coordOpsSetup.close()" style="flex:2;padding:17px;background:#1e293b;color:#fff;border:none;border-radius:13px;font-size:18px;font-weight:900;cursor:pointer;"><i class="fa-solid fa-check"></i> 확인</button></div>'
       +'</div></div>';
@@ -7805,9 +7829,12 @@ var coordOpsSetup = {
   _round30:function(min){ return Math.round(min/30)*30; },
   onT1Change:function(){
     var i1=document.getElementById('opsT1'), i2=document.getElementById('opsT2'); if(!i1||!i2) return;
-    var t1=this._toMin(i1.value), minT2=t1+120, cur=this._toMin(i2.value);
-    var sel=(cur<minT2)?minT2:cur;
-    i2.innerHTML=this._timeOptions(this._toHHMM(sel), minT2);   // 2차 옵션을 1차+2시간 이후로 재구성
+    var v1=(''+i1.value).trim();
+    var minT2=this._isTime(v1)?(this._toMin(v1)+120):this._RANGE.start;   // 1차가 시간이면 +2시간부터
+    var cv2=(''+i2.value).trim(), sel;
+    if(cv2==='미정'||cv2==='운행안함'){ sel=cv2; }
+    else { var cur=this._toMin(cv2); sel=this._toHHMM((cur<minT2)?minT2:cur); }
+    i2.innerHTML=this._shuttleOptions(sel, minT2);   // 2차 옵션 재구성(미정·운행안함·시간)
   },
   saveShuttle:function(){
     var t1=this._toMin((document.getElementById('opsT1')||{}).value||this._DEF.t1);
@@ -7820,10 +7847,14 @@ var coordOpsSetup = {
     if(typeof showKacAlert==='function') showKacAlert('✅ 퇴교차량 시간 저장 완료 · 1차 '+v1+' · 2차 '+v2);
   },
   announceShuttle:function(){
-    var t1=this._toMin((document.getElementById('opsT1')||{}).value||this._DEF.t1);
-    var t2=this._toMin((document.getElementById('opsT2')||{}).value||this._DEF.t2);
-    if(t2<t1+120) t2=t1+120;   // 2차는 1차 +2시간 이후
-    var v1=this._toHHMM(t1), v2=this._toHHMM(t2);
+    var raw1=(''+((document.getElementById('opsT1')||{}).value||this._DEF.t1)).trim();
+    var raw2=(''+((document.getElementById('opsT2')||{}).value||this._DEF.t2)).trim();
+    var v1, v2;
+    if(this._isTime(raw1) && this._isTime(raw2)){
+      var t1=this._toMin(raw1), t2=this._toMin(raw2);
+      if(t2<t1+120) t2=t1+120;   // 둘 다 시간이면 2차는 1차 +2시간 이후
+      v1=this._toHHMM(t1); v2=this._toHHMM(t2);
+    } else { v1=raw1; v2=raw2; }   // 미정/운행안함은 그대로
     var today=(typeof _coordToday==='function'?_coordToday():new Date().toISOString().slice(0,10));
     var label='1차 '+v1+' / 2차 '+v2;
     try{ this._data.shuttle1=v1; this._data.shuttle2=v2; }catch(e){}
@@ -7842,6 +7873,30 @@ var coordOpsSetup = {
     if(typeof showKacAlert==='function') showKacAlert('📢 퇴교차량 공지 완료!\n'+label+'\n\n강사·교육생 플랫폼에 즉시 전달되었습니다.');
   },
   savePlace:function(type,val){ try{ firebase.database().ref('system/eduLocations/'+type).set(val||null); }catch(e){} },
+  // 장소 선택 피커 — 네이티브 드롭다운 대신 화면 안에 들어오는 스크롤 목록(ops 팝업 위에 표시)
+  pickPlace:function(type){
+    var sel=document.getElementById('setup-room-dropdown'); var E=this._esc;
+    var cur=''+((this._data&&this._data[type])||'');
+    var title=(type==='union')?'<i class="fa-solid fa-handshake" style="color:#16a34a;"></i> 노조교육 장소 선택':'<i class="fa-solid fa-scale-balanced" style="color:#dc2626;"></i> 청렴교육 장소 선택';
+    function btn(val,label,extra){ var on=(val===cur); var safe=(''+val).split("'").join("\\'"); var chk=on?'<i class=\'fa-solid fa-check\' style=\'color:#2563eb;margin-right:8px;\'></i>':''; return '<button type="button" onclick="coordOpsSetup._applyPlace(\''+type+'\',\''+safe+'\')" style="display:block;width:100%;text-align:left;padding:14px 16px;margin:6px 0;border:1.5px solid '+(on?'#2563eb':'#e2e8f0')+';border-radius:11px;background:'+(on?'#eff6ff':'#fff')+';font-size:19px;font-weight:800;color:#0f172a;cursor:pointer;'+(extra||'')+'">'+chk+E(label)+'</button>'; }
+    var body=btn('','미정으로 설정','color:#64748b;');
+    if(sel){ Array.prototype.slice.call(sel.children).forEach(function(node){
+      if(node.tagName==='OPTGROUP'){ body+='<div style="font-size:14px;font-weight:900;color:#94a3b8;margin:14px 2px 2px;">'+E(node.label||'')+'</div>'; Array.prototype.slice.call(node.children).forEach(function(o){ if(!o.value||o.value==='direct') return; body+=btn(o.value,o.text); }); }
+      else if(node.tagName==='OPTION'){ if(!node.value||node.value==='direct') return; body+=btn(node.value,node.text); }
+    }); }
+    var ov=document.getElementById('opsPlaceOv'); if(!ov){ ov=document.createElement('div'); ov.id='opsPlaceOv'; document.body.appendChild(ov); }
+    ov.setAttribute('style','position:fixed;inset:0;z-index:100096;background:rgba(15,23,42,.55);display:flex;align-items:center;justify-content:center;padding:18px;');
+    ov.onclick=function(ev){ if(ev.target===ov) ov.remove(); };
+    ov.innerHTML='<div style="background:#fff;border-radius:18px;width:min(460px,94vw);max-height:82vh;display:flex;flex-direction:column;box-shadow:0 24px 60px rgba(0,0,0,.5);overflow:hidden;">'
+      +'<div style="background:#0f2a4a;color:#fff;padding:16px 18px;font-size:19px;font-weight:900;display:flex;align-items:center;justify-content:space-between;gap:10px;"><span>'+title+'</span><span onclick="var o=document.getElementById(\'opsPlaceOv\');if(o)o.remove();" style="cursor:pointer;font-size:24px;line-height:1;">&times;</span></div>'
+      +'<div style="padding:14px 16px 18px;overflow:auto;">'+body+'</div></div>';
+  },
+  _applyPlace:function(type,val){
+    try{ this._data[type]=val||''; }catch(e){}
+    this.savePlace(type, val);
+    var o=document.getElementById('opsPlaceOv'); if(o) o.remove();
+    if(document.getElementById('coordOpsOv')) this._render();
+  },
   close:function(){
     var cb=document.getElementById('opsSkipToday');
     if(cb && cb.checked){ try{ localStorage.setItem(this._skipKey(),'1'); }catch(e){} }
@@ -8231,7 +8286,9 @@ var coordKiosk={
   },
   _show:function(mode,pct){ var id=(mode==='enter')?'coordKioskEnterBar':'coordKioskExitBar'; var b=document.getElementById(id); if(b){ b.style.display=pct>0?'block':'none'; b.style.width=pct+'%'; } try{ window._coordLP&&window._coordLP(pct); }catch(e){} },
   _cancel:function(mode){ clearTimeout(this._t); clearInterval(this._iv); this._t=null; this._iv=null; this._show(mode,0); var id=(mode==='enter')?'coordKioskEnterBar':'coordKioskExitBar'; var b=document.getElementById(id); if(b) b.style.display='none'; },
-  open:function(){ var m=document.getElementById('coordKioskModal'); if(!m) return; window._ckOpenedAt=Date.now(); this.render(); m.style.display='flex'; var _eh=document.getElementById('coordKioskEscHint'); if(_eh){ _eh.style.display=''; _eh.style.opacity='1'; clearTimeout(this._ehT); this._ehT=setTimeout(function(){ if(_eh){ _eh.style.opacity='0'; setTimeout(function(){ if(_eh) _eh.style.display='none'; },650); } }, 5000); }
+  open:function(){ var m=document.getElementById('coordKioskModal'); if(!m) return; window._ckOpenedAt=Date.now(); this.render(); m.style.display='flex';
+    try{ var de=document.documentElement; var fn=de.requestFullscreen||de.webkitRequestFullscreen||de.msRequestFullscreen; if(fn && !document.fullscreenElement) fn.call(de); }catch(e){}   // 클릭 즉시 모니터 전체화면
+    var _eh=document.getElementById('coordKioskEscHint'); if(_eh){ _eh.style.display=''; _eh.style.opacity='1'; clearTimeout(this._ehT); this._ehT=setTimeout(function(){ if(_eh){ _eh.style.opacity='0'; setTimeout(function(){ if(_eh) _eh.style.display='none'; },650); } }, 5000); }
     this._tick(); this._clk=setInterval(this._tick.bind(this),1000); this._rf=setInterval(this.render.bind(this),30000);
     if(!this._exitBound){ this._exitBound=true; this.bind(document.getElementById('coordKioskClockWrap'),5000,'exit',this.close.bind(this)); }
     try{ Promise.all([firebase.database().ref('system/dorm/rosters').once('value').catch(function(){return null;}),firebase.database().ref('system/coord/rosters').once('value').catch(function(){return null;})]).then(function(res){ var ext={},nm=function(x){return String(x==null?'':x).replace(/\s+/g,'').toLowerCase();}; res.forEach(function(sn){ if(!sn)return; var v=sn.val()||{}; Object.keys(v).forEach(function(kk){ var it=v[kk]; if(it&&Array.isArray(it.list)){ var k=nm(it.courseName); if(k)(ext[k]=ext[k]||[]).push({list:it.list,period:it.period||'',room:it.room||''}); } }); }); window._coordRosterExt=ext; coordKiosk.render(); }); }catch(e){}
@@ -8242,6 +8299,7 @@ var coordKiosk={
     var rooms=(typeof _coordActiveRooms==='function')?_coordActiveRooms():[];
     var today=(typeof _coordToday==='function'?_coordToday():new Date().toISOString().slice(0,10));
     var full=function(nm){ return (typeof _coordFullName==='function')?(_coordFullName(nm)||(nm||'-')):(nm||'-'); };
+    var _ckf=document.getElementById('coordKioskFloor'); if(_ckf && window._coordKioskFloorHTML){ try{ _ckf.innerHTML=window._coordKioskFloorHTML(rooms); }catch(e){ _ckf.innerHTML=''; } }
     if(!rooms.length){ tb.innerHTML='<tr><td colspan="8" style="text-align:center;padding:70px;color:#94a3b8;font-size:26px;">현재 진행 중인 과정이 없습니다.</td></tr>'; return; }
     tb.innerHTML=rooms.map(function(r){ var c=(typeof _courseOverviewCount==='function')?_courseOverviewCount(r):{expected:0,arrived:(typeof _studentsOf==='function'?_studentsOf(r.room).length:0)}; var sset=r.s, st=r.st;
       var start=(''+(sset.period||'')).split(' ~ ')[0]||''; var stat=(start&&today>=start)?{t:'진행중',c:'#34d399'}:{t:'예정',c:'#fbbf24'};
@@ -8321,7 +8379,7 @@ window.addEventListener('load', function(){
 });
 </script>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:6px;bottom:5px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;font-weight:800;line-height:1;letter-spacing:.6px;color:#fff;background:rgba(15,23,42,.85);padding:4px 8px;border-radius:6px;pointer-events:none;user-select:none;box-shadow:0 2px 6px rgba(0,0,0,.3);">VA</div>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:6px;bottom:5px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;font-weight:800;line-height:1;letter-spacing:.6px;color:#fff;background:rgba(15,23,42,.85);padding:4px 8px;border-radius:6px;pointer-events:none;user-select:none;box-shadow:0 2px 6px rgba(0,0,0,.3);">VB</div>
 <script>
 /* ===== [공용] 종료된 과정 자동 정리 (모든 플랫폼 공통) — 종료일 지난 방을 다음날 미개설로 비움. 브라우저별 하루 1회 ===== */
 window.kacExpireEndedCourses = async function(){
@@ -8649,6 +8707,34 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
     if(typeof _coordLoadTitleMap==='function' && typeof _coordTitleMap!=='undefined' && !_coordTitleMap){
       _coordLoadTitleMap().then(function(){ if(window._coordPcSec==='2') coordRenderActiveCourses(); }).catch(function(){});
     }
+  };
+
+  // ── [키오스크] 진행 중 과정 배치도만 렌더(도면 이미지 있는 건물·층, 사용중 강의실 카드만) ──
+  window._coordKioskFloorHTML = function(rooms){
+    rooms = rooms || ((typeof _coordActiveRooms==='function')?_coordActiveRooms():[]);
+    var groups={}, order=[];
+    rooms.forEach(function(r){
+      var pr=_coordRoomParse(r.s); if(!pr.L) return;
+      var b=pr.b||'하늘관', f=pr.f||(b==='하늘관'?'2':'1'), key=b+'|'+f;
+      var cfg=COORD_FP_MAP[key]; if(!cfg||!cfg.img) return;   // 도면 이미지 있는 곳만
+      var prof=((r.st&&r.st.professorName)||'').trim(); prof=(typeof _coordStripRank==='function'?(_coordStripRank(prof)||prof):prof);
+      var coord=(typeof _coordStripRank==='function'?(_coordStripRank(r.s.coordinatorName)||''):((r.s.coordinatorName)||''));
+      var ldr=((typeof _studentsOf==='function'?_studentsOf(r.room):[])||[]).filter(function(s){return s&&s.isLeader===true;})[0];
+      var info={rid:r.rid, course:(r.s.courseName||'-'), prof:prof, coord:coord, leader:(ldr?(ldr.name||''):'')};
+      if(!groups[key]){ groups[key]={used:{}}; order.push(key); }
+      if(!groups[key].used[pr.L]) groups[key].used[pr.L]=info;
+    });
+    if(!order.length) return '<div style="text-align:center;color:#64748b;padding:24px;font-size:18px;">진행 중 과정의 배치도가 없습니다.</div>';
+    var cards=order.map(function(key){
+      var parts=key.split('|'), b=parts[0], fl=parts[1];
+      var cfg=COORD_FP_MAP[key], IMG=cfg.img, POS=cfg.pos||{}, CROP=cfg.crop||{t:0,b:0};
+      var fused=groups[key].used, saved=(window._coordFloorPos||{})[b+'_'+fl]||{};
+      var labels=Object.keys(POS).map(function(L){ var on=fused[L]; if(!on) return ''; var p=saved[L]||POS[L];
+        return '<div class="cfp-slot cfp-slot-card" style="left:'+p.l+'%;top:'+p.t+'%;"><div class="cfp-card" onclick="coordKiosk.notice(\''+esc(on.rid)+'\')">'+_cfpCard(L,on)+'</div></div>'; }).join('');
+      var head='<div class="cfp-floor-head"><span class="cfp-floor-badge">'+esc(fl)+'층</span><span class="cfp-floor-loc" style="color:#93c5fd;"><i class="fa-solid fa-location-dot"></i> '+esc(b)+' '+esc(fl)+'층</span></div>';
+      return '<div class="cfp-floor ck-floor">'+head+'<div class="cfp-clip"><div class="cfp-imgbox" style="margin:'+CROP.t+'% 0 '+CROP.b+'%;"><img class="cfp-img" src="'+IMG+'" alt="배치도">'+labels+'</div></div></div>';
+    }).join('');
+    return '<div class="ck-fp-grid">'+cards+'</div>';
   };
 
   // ── 섹션3: 과정별 입교/예정 — 정형 리스트(연번·소속·사번·성명) ──

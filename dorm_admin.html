@@ -3,8 +3,8 @@
 <head>
 <!-- ============================================================
   CATC · 교육지원부 · 생활관 배정  (dorm_admin.html)
-  @version  Y
-  @build    20260624-055500
+  @version  Z
+  @build    20260624-060000
   ────────────────────────────────────────────────────────
   [코드 수정 규칙 · AI/개발자 공통]
   이 파일을 한 글자라도 고치면:
@@ -69,6 +69,10 @@
   vY: [키오스크] 진짜 모니터 전체화면 + Esc 무력화 — 전체화면 진입 직후 Keyboard Lock API
       (navigator.keyboard.lock(['Escape']))로 Esc를 잠가, 전체화면에서 Esc를 눌러도 풀리지 않음.
       종료(시계 5초) 시 keyboard.unlock + exitFullscreen. (HTTPS·Chrome/Edge에서 동작)
+  vZ: [키오스크] 전체화면이 실제로 안 걸리던 버그 수정 — 기존엔 5초 시점에 모달을 먼저 열어
+      모달이 헤더를 덮는 바람에 release(손 뗌)가 헤더가 아닌 모달에서 잡혀 requestFullscreen이
+      호출되지 않았음. 5초엔 '진입 준비'만 표시하고, 손을 뗄 때(같은 사용자 제스처) 전체화면 요청+모달
+      오픈을 함께 실행. release/cancel 리스너를 document로 옮겨 무엇이 덮어도 확실히 잡히게 함.
       · 내국인: (남)/(여), 외국인: (M/남)/(F/여)
       · 라벨 색상은 과정색상 상속(관리자는 색으로 배치, 사용자는 텍스트로 남녀 즉시 확인)
       · PDF pill의 성별 배경 틴트(파랑/분홍) 제거 → 과정색 중심으로 정리.
@@ -6110,7 +6114,7 @@
 </script>
 <style>@media print{#__catcVer{display:none!important}}</style>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">VB</div>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">VC</div>
 <script>
 /* ===== [공용] 종료된 과정 자동 정리 (모든 플랫폼 공통) — 종료일 지난 방을 다음날 미개설로 비움. 브라우저별 하루 1회 ===== */
 window.kacExpireEndedCourses = async function(){
@@ -6318,17 +6322,23 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
     var t=null, raf=null, fired=false, start=0;
     function setHint(p){ var bar=document.getElementById('dkEnterBar'), h=document.getElementById('dkEnterHint'); if(h) h.style.width=(p*100)+'%'; if(bar) bar.style.opacity=p>0?'1':'0'; }
     function begin(e){ start=Date.now(); fired=false; setHint(0.001);
-      t=setTimeout(function(){ fired=true; stop(); dormKiosk.open(); }, 5000);
+      // 5초 충족 시점엔 '진입 준비'만 표시 — 모달은 손을 뗄 때(사용자 동작) 열어
+      // 전체화면 요청이 같은 제스처 안에서 실행되도록 한다(모달이 헤더를 덮어 release를 가로채는 문제 해결).
+      t=setTimeout(function(){ fired=true; setHint(1); }, 5000);
       raf=setInterval(function(){ setHint(Math.min((Date.now()-start)/5000,1)); }, 50);
     }
-    function stop(){ if(t){clearTimeout(t);t=null;} if(raf){clearInterval(raf);raf=null;} setHint(0); }
-    function endPress(){ var was=fired; stop(); if(was){ try{ dormKiosk.enterFullscreen(); }catch(_){} } }
+    function stopTimers(){ if(t){clearTimeout(t);t=null;} if(raf){clearInterval(raf);raf=null;} }
+    function stop(){ stopTimers(); setHint(0); }
+    // 손을 뗄 때(release)에 진입 — 같은 제스처에서 전체화면 + 모달 오픈 → 진짜 모니터 전체화면 보장
+    function endPress(){ if(fired){ stopTimers(); setHint(0); dormKiosk.enterFullscreen(); dormKiosk.open(); }
+                         else { stop(); } }
     brand.addEventListener('mousedown', begin);
     brand.addEventListener('touchstart', begin, {passive:true});
-    brand.addEventListener('mouseup', endPress);
-    brand.addEventListener('touchend', endPress);
-    brand.addEventListener('mouseleave', stop);
-    brand.addEventListener('touchcancel', stop);
+    // release/cancel은 document에 — 모달·다른 요소가 헤더를 덮어도 확실히 잡히도록
+    document.addEventListener('mouseup', endPress);
+    document.addEventListener('touchend', endPress);
+    brand.addEventListener('mouseleave', function(){ if(!fired) stop(); });
+    document.addEventListener('touchcancel', function(){ if(!fired) stop(); });
     // 길게 눌러 진입한 경우 뒤따르는 click(새로고침) 차단 (capture 단계)
     brand.addEventListener('click', function(e){ if(fired){ e.stopImmediatePropagation(); e.preventDefault(); fired=false; } }, true);
   })();
