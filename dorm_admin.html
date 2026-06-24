@@ -3,8 +3,8 @@
 <head>
 <!-- ============================================================
   CATC · 교육지원부 · 생활관 배정  (dorm_admin.html)
-  @version  E1
-  @build    20260624-071500
+  @version  F1
+  @build    20260624-073000
   ────────────────────────────────────────────────────────
   [코드 수정 규칙 · AI/개발자 공통]
   이 파일을 한 글자라도 고치면:
@@ -83,6 +83,9 @@
       ④ 검색 결과를 노란 굵은 라운드 박스 카드로 — 이름·생활관 글씨 대폭 확대.
   vE1: [키오스크] 검색 후 마지막 입력 5초 뒤 자동 초기화 — 검색모드를 끄고 과정표+검색창이 보이는 초기
       화면으로 복귀(다음 사람 대기). 입력할 때마다 타이머 리셋.
+  vF1: [전체] 화면 자동맞춤(auto-fit) 기본 배율을 BASE_ZOOM=0.75로 설정 — 75% 줌으로 디자인했던 화면이
+      100%에서도 같은 크기로 보이도록 일괄 축소(관리자 화면+키오스크 동시 적용). 가로 넘침 시 추가 축소는 유지.
+      추후 BASE_ZOOM 값만 바꾸면 dorm_admin 전체 크기를 한 번에 조정 가능.
   vZ: [키오스크] 전체화면이 실제로 안 걸리던 버그 수정 — 기존엔 5초 시점에 모달을 먼저 열어
       모달이 헤더를 덮는 바람에 release(손 뗌)가 헤더가 아닌 모달에서 잡혀 requestFullscreen이
       호출되지 않았음. 5초엔 '진입 준비'만 표시하고, 손을 뗄 때(같은 사용자 제스처) 전체화면 요청+모달
@@ -6107,13 +6110,14 @@
 <script>
 (function(){
   var MIN_ZOOM = 0.5;
+  var BASE_ZOOM = 0.75;   // [JDS260624] 기본 배율 — 75% 줌으로 디자인했던 화면을 100%에서도 같은 크기로. 값만 바꾸면 전체 크기 일괄 조정.
   var t;
   function fit(){
     var el = document.documentElement, b = document.body;
     el.style.zoom = '';
     el.style.removeProperty('--app-h');
     var needW = Math.max(1, el.scrollWidth, b ? b.scrollWidth : 0);
-    var z = Math.max(MIN_ZOOM, Math.min(window.innerWidth / needW, 1));   // 가로폭 기준, 축소만(확대 안 함)
+    var z = Math.max(MIN_ZOOM, Math.min(window.innerWidth / needW, BASE_ZOOM));   // 가로폭 기준, 기본 BASE_ZOOM(축소만, 확대 안 함)
     if (z < 0.995){
       el.style.setProperty('--app-h', (window.innerHeight / z) + 'px');   // zoom 시 100vh 여백/잘림 방지(해당 CSS가 var(--app-h) 사용 시)
       el.style.zoom = z.toFixed(4);
@@ -6128,7 +6132,7 @@
 </script>
 <style>@media print{#__catcVer{display:none!important}}</style>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">VH</div>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">VI</div>
 <script>
 /* ===== [공용] 종료된 과정 자동 정리 (모든 플랫폼 공통) — 종료일 지난 방을 다음날 미개설로 비움. 브라우저별 하루 1회 ===== */
 window.kacExpireEndedCourses = async function(){

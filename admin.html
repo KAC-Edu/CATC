@@ -2496,7 +2496,7 @@ function setupAcc(btn){
 
 
 
-    <script src="admin.js?v=260624VK"></script>
+    <script src="admin.js?v=260624VM"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
 <!-- ── 화면 자동 맞춤(auto-fit): 가로+세로 모두 화면에 맞게 자동 축소 · JDS260613 ──
      원인: Windows 디스플레이 배율(125%/150%)·저해상도 화면에서 유효 뷰포트가 작아져
@@ -2715,7 +2715,7 @@ function setupAcc(btn){
     <div style="position:relative; display:flex; align-items:center; max-width:860px; margin:0 auto;">
       <i class="fa-solid fa-magnifying-glass" style="position:absolute; left:24px; color:#64748b; font-size:clamp(18px,1.4vw,24px); pointer-events:none;"></i>
       <input id="kioskSearch" type="text" inputmode="none" autocomplete="off" placeholder="이름을 입력해 내 과정·강의실을 찾으세요 (교육생·강사)"
-        style="width:100%; padding:clamp(14px,1.4vw,20px) 24px clamp(14px,1.4vw,20px) 62px; border-radius:999px; border:2px solid #334155; background:rgba(255,255,255,.07); color:#fff; font-size:clamp(16px,1.5vw,26px); font-weight:800; outline:none; cursor:text; box-sizing:border-box;">
+        style="width:100%; padding:clamp(14px,1.4vw,20px) 24px clamp(14px,1.4vw,20px) 62px; border-radius:999px; border:2px solid #334155; background:rgba(255,255,255,.07); color:#fff; font-size:clamp(15px,1.1vw,20px); font-weight:800; outline:none; cursor:text; box-sizing:border-box;">
     </div>
   </div>
   <!-- 과정표 (검색 모드 시 위로 슬라이드 아웃) -->
@@ -2755,7 +2755,7 @@ function setupAcc(btn){
 #kioskKbd .kbrow{ display:flex; gap:10px; justify-content:center; margin:10px 0; }
 #kioskKbd .kbrow:first-child{ margin-top:0; }
 #kioskKbd .kbrow:last-child{ margin-bottom:0; }
-#kioskKbd .kbk{ flex:1 1 0; max-width:104px; min-width:0; height:clamp(50px,7vh,72px); font-size:clamp(20px,2.5vh,28px); font-weight:800; color:#e2e8f0; background:rgba(255,255,255,.09); border:1px solid rgba(255,255,255,.16); border-radius:14px; cursor:pointer; -webkit-user-select:none; user-select:none; }
+#kioskKbd .kbk{ flex:1 1 0; max-width:104px; min-width:0; height:clamp(42px,5.5vh,58px); font-size:clamp(17px,2vh,23px); font-weight:800; color:#e2e8f0; background:rgba(255,255,255,.09); border:1px solid rgba(255,255,255,.16); border-radius:14px; cursor:pointer; -webkit-user-select:none; user-select:none; }
 #kioskKbd .kbk:active{ background:rgba(59,130,246,.55); transform:translateY(1px); }
 #kioskKbd .kbk-fn{ color:#cbd5e1; background:rgba(255,255,255,.05); }
 #kioskKbd .kbk-bs{ color:#fca5a5; }
@@ -2763,16 +2763,16 @@ function setupAcc(btn){
 #kioskKbd .kbk-shift.on{ background:rgba(59,130,246,.55); color:#fff; }
 #kioskResult .kbhit-wrap{ display:flex; flex-wrap:wrap; gap:24px; justify-content:center; align-items:center; }
 #kioskResult .kbhit{ display:inline-flex; flex-direction:column; align-items:center; gap:12px; padding:30px 56px; border:4px solid #facc15; border-radius:30px; background:rgba(250,204,21,.08); box-shadow:0 0 0 6px rgba(250,204,21,.12),0 16px 55px rgba(0,0,0,.5); }
-#kioskResult .kbhit-name{ font-size:clamp(36px,7vh,64px); font-weight:900; color:#fde047; line-height:1; }
-#kioskResult .kbhit-name .nim{ font-size:clamp(20px,3vh,30px); font-weight:700; color:#cbd5e1; }
-#kioskResult .kbhit-course{ font-size:clamp(24px,4.2vh,44px); font-weight:900; color:#fff; }
-#kioskResult .kbhit-room{ font-size:clamp(30px,5.5vh,66px); font-weight:900; color:#7dd3fc; line-height:1.05; }
-#kioskResult .kbhit-more{ margin-top:12px; color:#94a3b8; font-size:clamp(18px,2.6vh,26px); }
-#kioskResult .kbhit-empty{ color:#64748b; font-size:clamp(22px,3.3vh,32px); font-weight:700; }
+#kioskResult .kbhit-name{ font-size:clamp(28px,4.6vh,48px); font-weight:900; color:#fde047; line-height:1; }
+#kioskResult .kbhit-name .nim{ font-size:clamp(15px,2vh,22px); font-weight:700; color:#cbd5e1; }
+#kioskResult .kbhit-course{ font-size:clamp(19px,3vh,31px); font-weight:900; color:#fff; }
+#kioskResult .kbhit-room{ font-size:clamp(24px,4vh,46px); font-weight:900; color:#7dd3fc; line-height:1.05; }
+#kioskResult .kbhit-more{ margin-top:12px; color:#94a3b8; font-size:clamp(15px,2vh,20px); }
+#kioskResult .kbhit-empty{ color:#64748b; font-size:clamp(18px,2.6vh,25px); font-weight:700; }
 </style>
 
 <!-- 버전 표기(요청 시까지 유지) -->
-<div id="buildVersionBadge" style="position:fixed; right:8px; bottom:8px; z-index:99999; background:rgba(15,23,42,.78); color:#fff; font-size:12px; font-weight:800; letter-spacing:.5px; padding:4px 10px; border-radius:8px; font-family:monospace; box-shadow:0 2px 8px rgba(0,0,0,.3); pointer-events:none; user-select:none;">VK</div>
+<div id="buildVersionBadge" style="position:fixed; right:8px; bottom:8px; z-index:99999; background:rgba(15,23,42,.78); color:#fff; font-size:12px; font-weight:800; letter-spacing:.5px; padding:4px 10px; border-radius:8px; font-family:monospace; box-shadow:0 2px 8px rgba(0,0,0,.3); pointer-events:none; user-select:none;">VM</div>
 
 </body>
 </html>
