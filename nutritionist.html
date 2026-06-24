@@ -513,13 +513,13 @@
         .rl-group + .rl-group { border-top:2px solid var(--border); }
         /* [JDS260613] 부서별 아코디언 바 */
         .rl-group { margin-bottom:12px; border-top:none !important; }
-        .rl-gbar { width:100%; display:flex; align-items:center; justify-content:space-between; gap:10px; cursor:pointer; padding:13px 16px; border-radius:12px; background:#eef2f7; color:#1e293b; font-family:inherit; border:1px solid #e2e8f0; box-shadow:none; transition:background .15s, border-radius .2s; }
-        .rl-gbar:hover { background:#e3e9f0; }
+        .rl-gbar { width:100%; display:flex; align-items:center; justify-content:space-between; gap:10px; cursor:pointer; padding:13px 16px; border-radius:12px; background:#bfdbfe; color:#13315c; font-family:inherit; border:1px solid #60a5fa; box-shadow:0 1px 2px rgba(37,99,235,.12); transition:background .15s, border-radius .2s; }
+        .rl-gbar:hover { background:#93c5fd; }
         .rl-gbar-l { display:flex; align-items:center; gap:10px; font-size:16px; font-weight:900; }
         .rl-gchev { transition:transform .2s; font-size:13px; color:#64748b; }
         .rl-group.open .rl-gchev { transform:rotate(90deg); }
-        .rl-group.open .rl-gbar { border-radius:12px 12px 0 0; background:#e3e9f0; }
-        .rl-gbar .rl-gcount { background:#dbeafe; color:#1d4ed8; padding:3px 12px; border-radius:999px; font-size:13px; font-weight:800; }
+        .rl-group.open .rl-gbar { border-radius:12px 12px 0 0; background:#93c5fd; }
+        .rl-gbar .rl-gcount { background:#1d4ed8; color:#fff; padding:3px 12px; border-radius:999px; font-size:13px; font-weight:800; }
         .rl-gbody { display:none; border:1.5px solid #cbd5e1; border-top:none; border-radius:0 0 13px 13px; overflow:hidden; }
         .rl-group.open .rl-gbody { display:block; }
         .rl-ghead { display:flex; align-items:center; gap:9px; padding:13px 16px; background:#eff6ff; border-bottom:1px solid #dbeafe; }
@@ -886,6 +886,7 @@
                 <button class="mini-btn" onclick="exportMealExcel()" style="background:#16a34a;"><i class="fa-solid fa-file-excel"></i> 엑셀</button>
                 <button class="mini-btn" onclick="exportMealPDF()" style="background:#dc2626;"><i class="fa-solid fa-file-pdf"></i> PDF</button>
                 <button class="mini-btn" id="lockBtn" onclick="toggleMonthLock()" style="background:#64748b;"><i class="fa-solid fa-lock-open"></i> 미확정</button>
+                <button class="mini-btn" onclick="resetMealMonth()" style="background:#b91c1c;" title="선택한 달의 식수 카운팅(터치패널 집계)을 초기화합니다. 직원 명단은 유지됩니다."><i class="fa-solid fa-rotate-left"></i> 초기화</button>
             </div>
 
 
@@ -2949,6 +2950,29 @@ function loadStaffMeal(){
         updateLockBtn();
     }).catch(()=>{ const box=document.getElementById('staffCountList'); if(box) box.innerHTML='<div class="empty-msg">조회 실패</div>'; });
 }
+/* ── 식수 카운팅 초기화 (선택한 달) ── 터치패널 집계만 삭제, 직원 명단은 유지 ── */
+async function resetMealMonth(){
+    const month = _mealMonth || _curMonth || getToday().slice(0,7);
+    if(_monthLocked){ showToast('🔒 확정(잠금)된 달은 초기화할 수 없습니다. 먼저 잠금을 해제하세요.'); return; }
+    const ok = confirm(`⚠️ ${month} 식수 카운팅을 초기화합니다.\n\n· 삭제: 터치패널 식사 집계, 조식·석식 신청, 비고, 월 조정값\n· 유지: 직원 명단(ROSTER)\n· 되돌릴 수 없습니다.\n\n계속하시겠습니까?`);
+    if(!ok) return;
+    const typed = prompt(`정말 초기화하려면 아래에 "${month}" 를 그대로 입력하세요.`);
+    if((typed||'').trim() !== month){ showToast('입력이 일치하지 않아 취소되었습니다.'); return; }
+    try{
+        showToast('초기화 중…');
+        const updates = {};
+        for(const node of ['checks','breakfast','dinner','dinner_resv','notes']){
+            const snap = await db.ref('system/staffMeal/'+node).orderByKey().startAt(month+'-01').endAt(month+'-31').once('value');
+            snap.forEach(ch => { if(String(ch.key).slice(0,7)===month) updates['system/staffMeal/'+node+'/'+ch.key]=null; });
+        }
+        updates['system/staffMeal/adjust/'+month] = null;
+        const cnt = Object.keys(updates).length;
+        await db.ref().update(updates);
+        showToast(`✅ ${month} 식수 카운팅을 초기화했습니다. (${cnt}건 삭제)`);
+        loadStaffMeal();
+        renderMealStats(getToday());
+    }catch(e){ showToast('초기화 실패: '+((e&&e.message)||e)); }
+}
 /* 월 이동 */
 function setMonth(ym){ _curMonth=ym; const [y,m]=ym.split('-'); const lbl=document.getElementById('staffMonthLabel'); if(lbl) lbl.textContent=`${y}년 ${m}월`; loadStaffMeal(); }
 function shiftMonth(delta){ let [y,m]=(_curMonth||getToday().slice(0,7)).split('-').map(Number); m+=delta; while(m<1){m+=12;y--;} while(m>12){m-=12;y++;} setMonth(`${y}-${String(m).padStart(2,'0')}`); }
@@ -3476,3 +3500,4 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
 </body>
 </html>
 <!-- @build 20260614-004000 (영양사 vBBB: 화면 자동 맞춤(auto-fit) 추가 — 입장 시 가로폭이 뷰어보다 넓으면 자동 축소(수동 Ctrl-− 불필요). 강사·교육운영부·지원부·포털에도 동일 적용. 직전 vAAA: 주말 미운영 표기) -->
+<!-- 영양사 VB/VB/VB/VB/VB -->
