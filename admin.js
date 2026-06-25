@@ -5358,6 +5358,18 @@ resetShuttleRequests: function() {
         const wFri = new Date(wMon); wFri.setDate(wMon.getDate()+4); wFri.setHours(23,59,59,999);
         return cStart <= wFri && cEnd >= wMon;
     },
+    // [종료 판정] 과정 종료일이 '오늘'보다 이전이면 종료된 과정 (리셋 전이라 방이 active여도 카운트 제외)
+    _isEnded: function(periodStr) {
+        if(!periodStr) return false;
+        var parts = String(periodStr).replace(/[\u3010\u3011]/g,'').split('~');
+        if(parts.length < 2) return false;
+        var e = parts[1].trim().match(/(\d{4})-(\d{1,2})-(\d{1,2})/);
+        if(!e) return false;
+        var end = new Date(+e[1], +e[2]-1, +e[3], 23,59,59,999);
+        if(isNaN(end)) return false;
+        var t = new Date(); t.setHours(0,0,0,0);
+        return end < t;
+    },
 
     // ── 홈 통계 로드 ── [수정] 실시간 on() 리스너 + '현재 방에 배정된 과정' 기준 집계
     //   기존엔 _isThisWeek(이번 주 월~금)로만 필터해서, 토요일에 SELECT ROOM이 차주 과정을
@@ -5379,7 +5391,8 @@ resetShuttleRequests: function() {
                 // 테스트·내부 운용(총괄표 비노출) 과정은 통합 현황판 집계에서 제외
                 if (settings.hideFromBoard) return;
                 // 집계 대상: (1) 현재 방에 과정이 배정/운영 중이거나 (2) 기간이 이번 주와 겹치는 과정
-                const include = (isActive && hasCourse) || ui._isThisWeek(period);
+                const ended = ui._isEnded(period);
+                const include = !ended && ((isActive && hasCourse) || ui._isThisWeek(period));
                 if (!include) return;
                 if (isActive) activeCount++;
                 // 입교(QR 입실) 인원
@@ -5468,6 +5481,7 @@ resetShuttleRequests: function() {
             const s=(r&&r.settings)||{}, st=(r&&r.status)||{};
             if (s.hideFromBoard) return false;
             const hasCourse=!!(s.courseName && String(s.courseName).trim());
+            if (ui._isEnded(s.period||'')) return false;
             return (st.roomStatus==='active' && hasCourse) || ui._isThisWeek(s.period||'');
         });
         if(type==='active'){
