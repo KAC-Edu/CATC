@@ -85,7 +85,6 @@
     .sec{ padding:15px 14px 0; }
     .sec-ttl{ font-size:12px; font-weight:900; color:var(--sub); margin:4px 3px 10px; display:flex; align-items:center; gap:7px; } .sec-ttl i{ color:var(--blue); }
 
-    /* 건물별 요약 카드 */
     .bsum{ display:flex; flex-direction:column; gap:10px; }
     .bcard{ background:#fff; border:1.5px solid var(--line); border-radius:15px; padding:13px 15px; box-shadow:var(--shadow); }
     .bcard .bc-top{ display:flex; align-items:center; gap:9px; margin-bottom:10px; }
@@ -101,12 +100,10 @@
     .tot-card{ display:flex; align-items:center; gap:9px; background:linear-gradient(160deg,#eff6ff,#dbeafe); border:1.5px solid #bfdbfe; border-radius:14px; padding:13px 15px; margin-bottom:11px; font-weight:900; color:#1d4ed8; }
     .tot-card .big{ margin-left:auto; font-size:22px; }
 
-    /* 과정별 */
     .crs{ background:#fff; border:1.5px solid var(--line); border-radius:13px; padding:11px 14px; margin-bottom:8px; box-shadow:var(--shadow); display:flex; align-items:center; gap:10px; }
     .crs .cn{ font-size:14px; font-weight:800; flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
     .crs .pc{ font-size:14px; font-weight:900; color:var(--blue-d); white-space:nowrap; }
 
-    /* 방 목록 (아코디언) */
     .fgrp{ margin-bottom:8px; }
     .fgrp-hd{ display:flex; align-items:center; gap:8px; font-size:12.5px; font-weight:900; color:#fff; border-radius:11px; padding:8px 13px; margin-bottom:8px; cursor:pointer; }
     .fgrp-hd .wn{ margin-left:auto; font-size:11px; background:rgba(255,255,255,.22); border-radius:20px; padding:3px 10px; }
@@ -160,7 +157,7 @@
   </div>
 </div>
 
-<div id="__catcVer" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">지원M vA</div>
+<div id="__catcVer" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">지원M vB</div>
 
 <script src="config.js?v=b260620c"></script>
 <script>
@@ -169,6 +166,15 @@ var db=firebase.database();
 var DORM_COLORS={ '청렴관':'#3b82f6', '상생관':'#10b981', '국제교육동':'#8b5cf6' };
 var ROOMS={}, STUDENTS={}, _openFloor=new Set();
 function h(s){ return (s==null?'':String(s)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+/* 배정제외 판정: DB noAssign + PC와 동일한 특수실 폴백(청렴관 218·219 살림형, 상생관 208 창고) */
+function isNoAssign(r){
+  if(!r) return true;
+  if(r.noAssign) return true;
+  var b=(''+(r.building||'')), no=(''+(r.no||''));
+  if(b.indexOf('청렴')>=0 && (no==='218'||no==='219')) return true;
+  if(b.indexOf('상생')>=0 && no==='208') return true;
+  return false;
+}
 function pad(n){ return String(n).padStart(2,'0'); }
 function ymd(d){ return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()); }
 function mondayOf(d){ var x=new Date(d); var dow=(x.getDay()+6)%7; x.setDate(x.getDate()-dow); x.setHours(0,0,0,0); return x; }
@@ -208,7 +214,7 @@ function renderAll(){
   /* 건물별 요약 */
   var bldg={};
   Object.keys(ROOMS).forEach(function(id){
-    var r=ROOMS[id]||{}; if(r.noAssign) return;
+    var r=ROOMS[id]||{}; if(isNoAssign(r)) return;
     var b=r.building||'기타';
     if(!bldg[b]) bldg[b]={total:0,occ:0,ppl:0};
     bldg[b].total++;
@@ -244,21 +250,20 @@ function renderAll(){
   var html='';
   bkeys.forEach(function(b){
     var color=DORM_COLORS[b]||'#94a3b8';
-    var roomsB=Object.keys(ROOMS).filter(function(id){ var r=ROOMS[id]||{}; return !r.noAssign && (r.building||'기타')===b; });
-    // 층별 그룹
+    var roomsB=Object.keys(ROOMS).filter(function(id){ var r=ROOMS[id]||{}; return !isNoAssign(r) && (r.building||'기타')===b; });
     var byF={};
     roomsB.forEach(function(id){ var r=ROOMS[id]||{}; var f=(r.floor!=null&&r.floor!=='')?(r.floor+'층'):'기타'; (byF[f]=byF[f]||[]).push(id); });
     var fkeys=Object.keys(byF).sort(function(a,c){ return a.localeCompare(c,'ko',{numeric:true}); });
     fkeys.forEach(function(f){
       var key=b+'__'+f; var open=_openFloor.has(key);
-      var ids=byF[f].sort(function(a,c){ var ra=ROOMS[a]||{},rc=ROOMS[c]||{}; return String(ra.name||'').localeCompare(String(rc.name||''),'ko',{numeric:true}); });
+      var ids=byF[f].sort(function(a,c){ var ra=ROOMS[a]||{},rc=ROOMS[c]||{}; return String(ra.no||'').localeCompare(String(rc.no||''),'ko',{numeric:true}); });
       var pplF=ids.reduce(function(s,id){ return s+(occ[id]||[]).length; },0);
       var rowsH=ids.map(function(id){
         var r=ROOMS[id]||{}; var oc=(occ[id]||[]); var cap=r.capacity||0;
         var cls = oc.length===0 ? 'none' : (cap && oc.length>=cap ? 'full' : 'has');
         var gnd = r.gender==='F'||r.gender==='여' ? '<span class="gnd f">여</span>' : (r.gender==='M'||r.gender==='남' ? '<span class="gnd m">남</span>' : '');
         var names = oc.length ? ('<span class="rf">'+oc.slice(0,4).map(function(x){return h(x.name);}).join(', ')+(oc.length>4?(' 외 '+(oc.length-4)):'')+'</span>') : '<span class="rf">비어있음</span>';
-        return '<div class="room"><span class="rn">'+h(r.name||'-')+'</span>'+gnd+names+'<span class="occ '+cls+'">'+oc.length+(cap?('/'+cap):'')+'</span></div>';
+        return '<div class="room"><span class="rn">'+h(r.no||'-')+'</span>'+gnd+names+'<span class="occ '+cls+'">'+oc.length+(cap?('/'+cap):'')+'</span></div>';
       }).join('');
       html+='<div class="fgrp"><div class="fgrp-hd" style="background:linear-gradient(135deg,'+color+',rgba(0,0,0,.08))" onclick="toggleFloor(\''+key.replace(/'/g,'')+'\')">'
         +'<i class="fa-solid fa-chevron-'+(open?'up':'down')+'"></i> '+h(b)+' '+h(f)+' <span class="wn">'+pplF+'명 / '+ids.length+'실</span></div>'
@@ -271,4 +276,4 @@ function toggleFloor(key){ if(_openFloor.has(key))_openFloor.delete(key); else _
 </script>
 </body>
 </html>
-<!-- 지원부모바일 VA/VA/VA/VA/VA -->
+<!-- 지원부모바일 VB/VB/VB/VB/VB -->
