@@ -1,10 +1,12 @@
 ﻿<!DOCTYPE html>
 <html lang="ko">
+<!-- ===== EDIT-STATUS: 수정안하는중 ===== (값: 수정중 / 수정안하는중) · 플랫폼 간 협의용 플래그.
+     다른 플랫폼/작업자는 이 파일을 열면 이 줄을 먼저 확인. 수정 시작 시 → 수정중 , 수정 완료 시 → 수정안하는중 -->
 <head>
 <!-- ============================================================
   CATC · 교육지원부 · 생활관 배정  (dorm_admin.html)
-  @version  H1
-  @build    20260624-080000
+  @version  I1
+  @build    20260624-081500
   ────────────────────────────────────────────────────────
   [코드 수정 규칙 · AI/개발자 공통]
   이 파일을 한 글자라도 고치면:
@@ -91,6 +93,8 @@
       결과 영역 스크롤 허용으로 키보드와 겹침 방지.
   vH1: [키오스크] 검색 결과를 '딱 1명으로 좁혀졌을 때만' 큰 카드로 표시 — 그 전(여러 명/입력 중)에는
       다른 사람을 노출하지 않고 '이름을 끝까지 입력하세요' 안내만. 부분입력 중 결과없음 깜빡임도 제거.
+  vI1: [협업] 소스 말머리에 EDIT-STATUS 플래그 추가(수정중/수정안하는중) — 플랫폼 간 동시수정 협의용.
+      수정 시작 시 '수정중', 완료 시 '수정안하는중'으로 토글. 다른 플랫폼/작업자가 즉시 사용가능 여부 확인.
   vZ: [키오스크] 전체화면이 실제로 안 걸리던 버그 수정 — 기존엔 5초 시점에 모달을 먼저 열어
       모달이 헤더를 덮는 바람에 release(손 뗌)가 헤더가 아닌 모달에서 잡혀 requestFullscreen이
       호출되지 않았음. 5초엔 '진입 준비'만 표시하고, 손을 뗄 때(같은 사용자 제스처) 전체화면 요청+모달
@@ -6137,7 +6141,7 @@
 </script>
 <style>@media print{#__catcVer{display:none!important}}</style>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">VK</div>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">VL</div>
 <script>
 /* ===== [공용] 종료된 과정 자동 정리 (모든 플랫폼 공통) — 종료일 지난 방을 다음날 미개설로 비움. 브라우저별 하루 1회 ===== */
 window.kacExpireEndedCourses = async function(){

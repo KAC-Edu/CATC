@@ -5500,8 +5500,8 @@ resetShuttleRequests: function() {
                   +'<div onclick="ui.toggleHomeDetail(\''+uid+'\')" title="클릭하면 명단을 봅니다" style="display:flex;justify-content:space-between;align-items:center;padding:18px 22px;cursor:pointer;">'
                     +'<div style="display:flex;align-items:center;gap:12px;min-width:0;flex:1;">'
                       +'<span style="flex-shrink:0;font-weight:900;color:#fff;background:#10b981;padding:7px 14px;border-radius:10px;font-size:clamp(14px,1.5vw,19px);white-space:nowrap;">Room #'+room+'</span>'
-                      +'<span style="flex:1;min-width:0;font-size:clamp(15px,1.6vw,21px);color:#0f172a;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+esc(course)+'</span>'
-                      +'<i class="fa-solid fa-chevron-right hs-chev" style="color:#10b981;font-size:13px;transition:transform .2s;"></i>'
+                      +'<span style="flex:0 1 auto;min-width:0;font-size:clamp(15px,1.6vw,21px);color:#0f172a;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+esc(course)+'</span>'
+                      +'<i class="fa-solid fa-chevron-right hs-chev" style="color:#cbd5e1;font-size:13px;transition:transform .2s;margin-left:2px;flex-shrink:0;"></i>'
                     +'</div>'
                     +'<div style="display:flex;align-items:flex-end;gap:8px;white-space:nowrap;">'
                       +'<div style="text-align:center;"><div style="font-size:11px;color:#64748b;font-weight:800;margin-bottom:2px;">입교</div><div style="font-size:clamp(22px,2.4vw,30px);font-weight:900;color:#10b981;line-height:1;">'+stuCnt+'</div></div>'
@@ -11337,7 +11337,6 @@ ui._spinWheel = function(){
   ui._wheelSpinning=true; ui._rouletteWinner=null;
   if(startBtn){ startBtn.disabled=true; startBtn.style.opacity='.55'; startBtn.style.cursor='default'; startBtn.textContent='…'; }
   var pop=document.getElementById('rlWinPop'); if(pop) pop.style.display='none';
-  // 효과음: 시작 → spin.mp3
   try{ if(ui._spinAudio){ try{ui._spinAudio.pause();}catch(_){} } ui._spinAudio=new Audio('spin.mp3'); ui._spinAudio.currentTime=0; ui._spinAudio.play().catch(function(){}); }catch(e){}
 
   var seg=360/N;
@@ -11360,7 +11359,6 @@ ui._spinWheel = function(){
     var nm=document.getElementById('rlWinName'); if(nm) nm.textContent=win.name;
     var pop=document.getElementById('rlWinPop');
     if(pop){ pop.style.display='flex'; var card=pop.firstChild; if(card){ card.style.animation='none'; void card.offsetWidth; card.style.animation='rlPop .45s cubic-bezier(.17,.89,.32,1.28)'; } }
-    // 효과음: 당첨 → spin 정지 후 you.mp3
     try{ if(ui._spinAudio){ ui._spinAudio.pause(); } }catch(e){}
     try{ var _wa=new Audio('you.mp3'); _wa.currentTime=0; _wa.play().catch(function(){}); }catch(e){}
   };
