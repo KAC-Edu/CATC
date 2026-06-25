@@ -5,8 +5,8 @@
 <head>
 <!-- ============================================================
   CATC · 교육지원부 · 생활관 배정  (dorm_admin.html)
-  @version  I1
-  @build    20260624-081500
+  @version  J1
+  @build    20260625-123500
   ────────────────────────────────────────────────────────
   [코드 수정 규칙 · AI/개발자 공통]
   이 파일을 한 글자라도 고치면:
@@ -95,6 +95,9 @@
       다른 사람을 노출하지 않고 '이름을 끝까지 입력하세요' 안내만. 부분입력 중 결과없음 깜빡임도 제거.
   vI1: [협업] 소스 말머리에 EDIT-STATUS 플래그 추가(수정중/수정안하는중) — 플랫폼 간 동시수정 협의용.
       수정 시작 시 '수정중', 완료 시 '수정안하는중'으로 토글. 다른 플랫폼/작업자가 즉시 사용가능 여부 확인.
+  vJ1: [키오스크] 초기화면 정비 — ① 검색창을 크게(font 36, 폭 1040) + 파란 그라데이션·은은한 글로우로 '검색란'
+      강조. ② 과정표를 아래로 내림(검색창 하단 여백 확대). ③ 과정표를 강사플랫폼(admin) 키오스크 표로 클론
+      (반응형 clamp 글자, 헤더 파란색·구분/과정명 좌측정렬, '상태' 열). 구분은 1·2·3·4 순번 유지.
   vZ: [키오스크] 전체화면이 실제로 안 걸리던 버그 수정 — 기존엔 5초 시점에 모달을 먼저 열어
       모달이 헤더를 덮는 바람에 release(손 뗌)가 헤더가 아닌 모달에서 잡혀 requestFullscreen이
       호출되지 않았음. 5초엔 '진입 준비'만 표시하고, 손을 뗄 때(같은 사용자 제스처) 전체화면 요청+모달
@@ -6141,7 +6144,7 @@
 </script>
 <style>@media print{#__catcVer{display:none!important}}</style>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">VL</div>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">VM</div>
 <script>
 /* ===== [공용] 종료된 과정 자동 정리 (모든 플랫폼 공통) — 종료일 지난 방을 다음날 미개설로 비움. 브라우저별 하루 1회 ===== */
 window.kacExpireEndedCourses = async function(){
@@ -6187,10 +6190,11 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
 
 <!-- ════════ [신규] 침대아이콘 롱프레스 → 강사플랫폼식 키오스크 현황판 ════════ -->
 <style>
-#dormKioskModal table{ width:100%; border-collapse:collapse; font-size:27px; }
-#dormKioskModal thead th{ border-bottom:2px solid rgba(255,255,255,.14); font-size:18px; }
-#dormKioskModal tbody td{ padding:20px 14px; border-bottom:1px solid rgba(255,255,255,.07); text-align:center; }
-#dormKioskModal tbody tr:nth-child(even){ background:rgba(255,255,255,.025); }
+/* 과정표: 강사플랫폼(admin) 키오스크 표 클론 */
+#dormKioskModal table{ width:100%; border-collapse:collapse; font-size:clamp(13px,1.5vw,24px); }
+#dormKioskModal thead th{ border-bottom:2px solid rgba(255,255,255,.18); padding:14px 10px; }
+#dormKioskTableBody td{ padding:clamp(8px,1vw,16px) 10px; border-bottom:1px solid rgba(255,255,255,.08); text-align:center; }
+#dormKioskTableBody td:nth-child(1), #dormKioskTableBody td:nth-child(2){ text-align:left; }
 /* ── 하단 배치도(읽기전용·실시간) ── */
 #dormKioskBoardLegend .kbl-item{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:800;}
 #dormKioskBoardLegend .kbl-sw{width:12px;height:12px;border-radius:3px;display:inline-block;}
@@ -6225,7 +6229,10 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
 #dormKioskModal.search-on #dormKioskResultArea{ flex:1 1 auto; opacity:1; overflow:auto; }
 #dormKioskKbd{ flex-shrink:0; max-height:0; opacity:0; transform:translateY(50px); overflow:hidden; transition:max-height .38s ease, opacity .3s ease, transform .38s ease; }
 #dormKioskModal.search-on #dormKioskKbd{ max-height:48vh; opacity:1; transform:none; }
-#dormKioskModal.search-on #dormKioskSearch{ border-color:#3b82f6 !important; box-shadow:0 0 0 4px rgba(59,130,246,.25); }
+#dormKioskSearch::placeholder{ color:#cbd5e1; opacity:.9; }
+#dormKioskSearch{ animation:dormSearchGlow 2.4s ease-in-out infinite; }
+@keyframes dormSearchGlow{ 0%,100%{ box-shadow:0 0 0 5px rgba(59,130,246,.14), 0 10px 40px rgba(37,99,235,.30); } 50%{ box-shadow:0 0 0 8px rgba(59,130,246,.24), 0 14px 52px rgba(37,99,235,.50); } }
+#dormKioskModal.search-on #dormKioskSearch{ animation:none; border-color:#3b82f6 !important; box-shadow:0 0 0 4px rgba(59,130,246,.30); }
 #dormKioskKbd .kbpanel{ max-width:1080px; margin:0 auto 7vh; background:linear-gradient(180deg,rgba(255,255,255,.07),rgba(255,255,255,.03)); border:1px solid rgba(255,255,255,.12); border-radius:26px; padding:20px 22px; box-shadow:0 18px 60px rgba(0,0,0,.5); }
 #dormKioskKbd .kbrow{ display:flex; gap:10px; justify-content:center; margin:10px 0; }
 #dormKioskKbd .kbrow:first-child{ margin-top:0; }
@@ -6268,27 +6275,27 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
     </div>
   </div>
   <div id="dormKioskBody" style="flex:1; display:flex; flex-direction:column; min-height:0; padding:0 40px 18px; position:relative; overflow:hidden;">
-    <!-- 검색 바: 탭하면 검색 모드 진입 (복도 키오스크용) -->
-    <div style="flex-shrink:0; margin:4px 0 14px;">
-      <div style="position:relative; display:flex; align-items:center; max-width:820px; margin:0 auto;">
-        <i class="fa-solid fa-magnifying-glass" style="position:absolute; left:24px; color:#64748b; font-size:24px; pointer-events:none;"></i>
+    <!-- 검색 바: 크게·파란 그라데이션으로 '검색란' 강조 (복도 키오스크용) -->
+    <div style="flex-shrink:0; margin:10px 0 34px;">
+      <div style="position:relative; display:flex; align-items:center; max-width:1040px; margin:0 auto;">
+        <i class="fa-solid fa-magnifying-glass" style="position:absolute; left:32px; color:#93c5fd; font-size:32px; pointer-events:none;"></i>
         <input id="dormKioskSearch" type="text" inputmode="none" autocomplete="off" placeholder="이름을 입력해 내 생활관을 찾으세요"
-          style="width:100%; padding:20px 24px 20px 62px; border-radius:999px; border:2px solid #334155; background:rgba(255,255,255,.07); color:#fff; font-size:28px; font-weight:800; outline:none; cursor:text;">
+          style="width:100%; padding:28px 30px 28px 82px; border-radius:999px; border:2px solid #3b82f6; background:linear-gradient(135deg, rgba(37,99,235,.30) 0%, rgba(59,130,246,.12) 55%, rgba(14,165,233,.20) 100%); color:#fff; font-size:36px; font-weight:800; outline:none; cursor:text; box-sizing:border-box;">
       </div>
     </div>
     <!-- 과정 리스트 (검색 모드 시 위로 슬라이드 아웃) -->
     <div id="dormKioskCourseWrap" style="flex:1 1 auto; min-height:0; overflow:auto;">
       <table>
         <thead>
-          <tr style="color:#94a3b8; font-weight:800;">
-            <th style="padding:16px;">구분</th>
-            <th style="padding:16px;">과정명</th>
-            <th style="padding:16px;">교육기간</th>
-            <th style="padding:16px;">강의실</th>
-            <th style="padding:16px;">교육생수(예정)</th>
-            <th style="padding:16px;">담임교수</th>
-            <th style="padding:16px;">과정담당</th>
-            <th style="padding:16px;">비고</th>
+          <tr style="color:#93c5fd; border-bottom:2px solid rgba(255,255,255,.18);">
+            <th style="padding:14px 10px; text-align:left;">구분</th>
+            <th style="padding:14px 10px; text-align:left;">과정명</th>
+            <th style="padding:14px 10px;">교육기간</th>
+            <th style="padding:14px 10px;">강의실</th>
+            <th style="padding:14px 10px;">교육생(예정)</th>
+            <th style="padding:14px 10px;">담임교수</th>
+            <th style="padding:14px 10px;">과정담당</th>
+            <th style="padding:14px 10px;">상태</th>
           </tr>
         </thead>
         <tbody id="dormKioskTableBody"></tbody>
@@ -6620,7 +6627,7 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
         var roomNm=(s.roomDetailName||s.roomDetail||s.classroom||s.roomName||'').trim();
         var stt=self._status(s.period);
         return '<tr>'
-          +'<td style="font-weight:900;color:#60a5fa;white-space:nowrap;font-size:1.15em;">'+seq+'</td>'
+          +'<td style="font-weight:900;color:#60a5fa;white-space:nowrap;">'+seq+'</td>'
           +'<td style="font-weight:800;color:#f1f5f9;">'+esc(s.courseName||'-')+'</td>'
           +'<td style="white-space:nowrap;color:#cbd5e1;">'+esc(s.period||'-')+'</td>'
           +'<td style="color:#cbd5e1;">'+esc(roomNm||'-')+'</td>'
