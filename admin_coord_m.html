@@ -125,8 +125,9 @@
     .ov{ position:fixed; inset:0; z-index:200; background:var(--bg); transform:translateX(100%); transition:transform .28s cubic-bezier(.4,0,.2,1); overflow-y:auto; -webkit-overflow-scrolling:touch; overscroll-behavior:none; }
     .ov.open{ transform:translateX(0); }
     .ov-head{ position:sticky; top:0; z-index:10; background:linear-gradient(155deg,#101A2E,#1C2942); color:#fff; padding:15px 16px; display:flex; align-items:center; gap:12px; box-shadow:0 6px 18px rgba(15,23,42,.28); border-radius:0 0 20px 20px; }
-    .ov-head .bk{ width:40px; height:40px; flex-shrink:0; border-radius:12px; background:rgba(255,255,255,.18); border:1px solid rgba(255,255,255,.28); color:#fff; font-size:17px; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:transform .1s; }
-    .ov-head .bk:active{ transform:scale(.92); }
+    .ov-head .bk{ flex-shrink:0; height:42px; padding:0 16px 0 14px; border-radius:12px; background:linear-gradient(135deg,#ef4444,#dc2626); border:1px solid #b91c1c; color:#fff; font-size:15px; font-weight:900; display:flex; align-items:center; gap:7px; cursor:pointer; transition:transform .1s; box-shadow:0 5px 14px rgba(220,38,38,.5); white-space:nowrap; }
+    .ov-head .bk i{ font-size:17px; }
+    .ov-head .bk:active{ transform:scale(.94); }
     .ov-head .ttl{ font-size:16px; font-weight:900; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; letter-spacing:-.3px; }
     .ov-body{ padding:15px; max-width:600px; margin:0 auto; }
     .card{ background:#fff; border:1px solid #F0F3F8; border-radius:20px; padding:16px 17px; margin-bottom:13px; box-shadow:0 1px 2px rgba(16,24,40,.04),0 10px 26px -16px rgba(16,24,40,.22); }
@@ -228,7 +229,7 @@
 <!-- 과정 상세 -->
 <div class="ov" id="detailOv">
   <div class="ov-head">
-    <div class="bk" onclick="closeDetail()"><i class="fa-solid fa-chevron-left"></i></div>
+    <div class="bk" onclick="closeDetail()"><i class="fa-solid fa-arrow-rotate-left"></i> 뒤로</div>
     <div class="ttl" id="dTtl">과정</div>
   </div>
   <div class="ov-body">

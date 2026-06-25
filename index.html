@@ -2,7 +2,7 @@
 <!-- ══════════════════ [편집상태 / EDIT-STATUS] ══════════════════
      STATUS : 수정안하는중
      FILE   : index.html (교육생)
-     UPDATED: 2026-06-25 13:42  (카카오 진입 키오스크 락: 단일화면 고정+보드커버)
+     UPDATED: 2026-06-25 13:47  (카카오 패널 완전고정 + 뒷배경 다크커버)
      ─ 규칙: 수정 시작 시 STATUS를 '수정중'으로, 완료 시 '수정안하는중'으로 변경.
             '수정중'이면 다른 플랫폼은 연동 변경을 보류/협의 후 진행.
 ═══════════════════════════════════════════════════════════════ -->
@@ -6173,12 +6173,12 @@ html, body { overscroll-behavior-x: none !important; }
      '입장+프로필' 완료(mainApp 표시) 후에만 해당 화면을 연다. -->
 <style id="kac-kiosk-style">
 /* [카카오 키오스크 락 20260625] 카카오 진입은 그 화면 하나로 고정 (메뉴 이동·닫기 차단, 보드 가림으로 2번 스침 제거) */
-#kakaoCover{ position:fixed; inset:0; z-index:6500; display:none; background:linear-gradient(180deg,#eef5ff 0%,#dbe9ff 100%); }
+#kakaoCover{ position:fixed; inset:0; z-index:6500; display:none; background:#0f172a; }
 body.kac-cover #kakaoCover{ display:block; }
 body.kac-locked .header > .header-btn:first-child{ display:none !important; pointer-events:none !important; }
 body.kac-locked .kac-cornerx{ display:none !important; }
 body.kac-locked #noticeModal, body.kac-locked #surveyModal, body.kac-locked #shuttleModal, body.kac-locked #adminActionModal, body.kac-locked #facilityModal, body.kac-locked #tabletLoanModal, body.kac-locked #mealMenuModal, body.kac-locked #qrModal, body.kac-locked #foodModal { animation:none !important; }
-body.kac-locked #noticeModal > .menu-box, body.kac-locked #surveyModal > .menu-box, body.kac-locked #shuttleModal > .menu-box, body.kac-locked #adminActionModal > .menu-box, body.kac-locked #facilityModal > .menu-box, body.kac-locked #tabletLoanModal > .menu-box, body.kac-locked #qrModal > .menu-box, body.kac-locked #foodModal > .menu-box, body.kac-locked #mealMenuModal > div { animation:none !important; }
+body.kac-locked #noticeModal > .menu-box, body.kac-locked #surveyModal > .menu-box, body.kac-locked #shuttleModal > .menu-box, body.kac-locked #adminActionModal > .menu-box, body.kac-locked #facilityModal > .menu-box, body.kac-locked #tabletLoanModal > .menu-box, body.kac-locked #qrModal > .menu-box, body.kac-locked #foodModal > .menu-box, body.kac-locked #mealMenuModal > div { animation:none !important; transition:none !important; transform:none !important; }
 </style>
 <script>
 (function(){
