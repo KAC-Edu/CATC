@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <script>
+  /* [기기 분리] PC 접속은 PC 전용 화면으로 (모바일은 이 화면 유지). ?forcem 으로 강제 모바일. */
+  (function(){ try{
+    var wide = window.innerWidth >= 1024;
+    var fine = window.matchMedia && window.matchMedia('(pointer:fine)').matches;
+    var noTouch = !('ontouchstart' in window) || navigator.maxTouchPoints === 0;
+    var isPc = wide && (fine || noTouch);
+    if(isPc && location.search.indexOf('forcem')<0){ location.replace('dorm_admin.html'+location.search+location.hash); }
+  }catch(e){} })();
+  </script>
+<!-- ════════ [카카오채널 연동] catc1234 접속 게이트 (수정상태: 수정안하는중) ════════
+     · dorm_admin.html(교육지원·생활관)의 모바일 라이트판(조회 중심). 직접 진입 시 접속코드 요구.
+     · 통과 시 localStorage['catc_gate_ok'] 저장. catcLock()으로 잠금 해제. 기능 로직과 분리. -->
+<script>
+(function(){
+  window.catcLock=function(){ try{localStorage.removeItem('catc_gate_ok');}catch(e){} location.reload(); };
+  var ok=false; try{ ok=(function(){var t=parseInt(localStorage.getItem('catc_gate_ok'),10);return !!t&&(Date.now()-t)<86400000;})(); }catch(e){ ok=true; }
+  if(ok){ window.__catcUnlocked=true; return; }
+  window.__catcUnlocked=false;
+  document.documentElement.classList.add('catc-locked');
+  function build(){
+    if(document.getElementById('catcGate')) return;
+    var o=document.createElement('div'); o.id='catcGate';
+    o.innerHTML='<div class="catc-box"><div class="catc-ic">🔒</div>'
+      +'<div class="catc-t">접속 코드 입력</div>'
+      +'<div class="catc-s">CATC 교육 플랫폼 · 보안 접속</div>'
+      +'<input id="catcInp" type="password" autocomplete="off" placeholder="접속 코드">'
+      +'<button id="catcBtn">입장</button><div id="catcMsg"></div></div>';
+    (document.body||document.documentElement).appendChild(o);
+    var inp=o.querySelector('#catcInp'),btn=o.querySelector('#catcBtn'),msg=o.querySelector('#catcMsg');
+    function go(){ if(inp.value==='catc1234'){ try{localStorage.setItem('catc_gate_ok',String(Date.now()));}catch(e){} location.reload(); } else { msg.textContent='접속 코드가 올바르지 않습니다.'; inp.value=''; inp.focus(); } }
+    btn.addEventListener('click',go);
+    inp.addEventListener('keyup',function(e){ if(e.key==='Enter') go(); });
+    setTimeout(function(){ try{inp.focus();}catch(e){} },120);
+  }
+  if(document.body) build(); else document.addEventListener('DOMContentLoaded',build);
+})();
+</script>
+<style>
+  html.catc-locked > body{ visibility:hidden !important; }
+  #catcGate{ position:fixed; inset:0; z-index:2147483647; background:linear-gradient(135deg,#0f172a,#1e293b); display:flex; align-items:center; justify-content:center; font-family:'Pretendard','Malgun Gothic',system-ui,sans-serif; visibility:visible !important; }
+  #catcGate *{ visibility:visible !important; box-sizing:border-box; }
+  #catcGate .catc-box{ width:300px; max-width:86vw; background:#fff; border-radius:18px; padding:30px 26px; text-align:center; box-shadow:0 20px 60px rgba(0,0,0,.45); }
+  #catcGate .catc-ic{ font-size:30px; margin-bottom:8px; }
+  #catcGate .catc-t{ font-size:19px; font-weight:800; color:#0f172a; }
+  #catcGate .catc-s{ margin:4px 0 18px; font-size:12.5px; color:#64748b; }
+  #catcGate input{ width:100%; padding:13px 14px; font-size:16px; text-align:center; letter-spacing:2px; border:1.5px solid #e2e8f0; border-radius:11px; outline:none; color:#0f172a; background:#fff; }
+  #catcGate input:focus{ border-color:#2563eb; box-shadow:0 0 0 3px rgba(37,99,235,.15); }
+  #catcGate button{ width:100%; margin-top:12px; padding:13px; font-size:15px; font-weight:800; color:#fff; background:#2563eb; border:0; border-radius:11px; cursor:pointer; }
+  #catcGate button:active{ transform:scale(.98); }
+  #catcGate #catcMsg{ margin-top:11px; min-height:16px; font-size:12.5px; font-weight:700; color:#dc2626; }
+</style>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <title>생활관 배정 현황 (모바일)</title>
+  <meta name="theme-color" content="#0f172a">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" rel="stylesheet">
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+  <style>
+    *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+    :root{
+      --blue:#2563eb; --blue-d:#1d4ed8; --ink:#0f172a; --sub:#64748b; --mute:#94a3b8;
+      --line:#e8eef7; --bg:#f4f7fc; --shadow:0 2px 10px rgba(15,23,42,.06);
+    }
+    html,body{ margin:0; padding:0; height:100%; overscroll-behavior:none; }
+    body{ font-family:'Pretendard','Apple SD Gothic Neo','Malgun Gothic',sans-serif; background:var(--bg); color:var(--ink); -webkit-font-smoothing:antialiased; padding-bottom:30px; letter-spacing:-.2px; }
+    .wrap{ max-width:600px; margin:0 auto; min-height:100dvh; }
+
+    .mhead{ background:linear-gradient(135deg,#0b1f4d 0%,#1a3a8a 52%,#2563eb 100%); color:#fff; padding:16px 18px; position:sticky; top:0; z-index:50; border-radius:0 0 22px 22px; box-shadow:0 8px 24px rgba(13,31,73,.28); overflow:hidden; }
+    .mhead::after{ content:''; position:absolute; right:-40px; top:-50px; width:160px; height:160px; border-radius:50%; background:radial-gradient(circle,rgba(255,255,255,.14),transparent 70%); pointer-events:none; }
+    .mhead .row1{ display:flex; align-items:center; justify-content:space-between; }
+    .mhead .ttl{ display:flex; align-items:center; gap:11px; font-size:17px; font-weight:900; z-index:1; }
+    .mhead .ttl .mk{ width:36px; height:36px; border-radius:11px; background:rgba(255,255,255,.18); border:1px solid rgba(255,255,255,.28); display:flex; align-items:center; justify-content:center; font-size:17px; }
+    .mhead .clk{ text-align:right; font-size:12px; font-weight:700; opacity:.95; line-height:1.4; z-index:1; }
+    .mhead .clk b{ font-size:15px; font-weight:900; }
+    .wk-label{ margin-top:11px; font-size:12.5px; font-weight:800; background:rgba(255,255,255,.14); border:1px solid rgba(255,255,255,.2); border-radius:10px; padding:7px 12px; display:inline-flex; align-items:center; gap:7px; position:relative; z-index:1; }
+
+    .sec{ padding:15px 14px 0; }
+    .sec-ttl{ font-size:12px; font-weight:900; color:var(--sub); margin:4px 3px 10px; display:flex; align-items:center; gap:7px; } .sec-ttl i{ color:var(--blue); }
+
+    /* 건물별 요약 카드 */
+    .bsum{ display:flex; flex-direction:column; gap:10px; }
+    .bcard{ background:#fff; border:1.5px solid var(--line); border-radius:15px; padding:13px 15px; box-shadow:var(--shadow); }
+    .bcard .bc-top{ display:flex; align-items:center; gap:9px; margin-bottom:10px; }
+    .bcard .dot{ width:11px; height:11px; border-radius:50%; flex:none; }
+    .bcard .bn{ font-size:15px; font-weight:900; }
+    .bcard .ppl{ margin-left:auto; font-size:13px; font-weight:900; color:var(--blue-d); }
+    .bcard .bc-stat{ display:flex; gap:9px; }
+    .bcard .st{ flex:1; text-align:center; background:#f6f8fc; border:1px solid #eef2f9; border-radius:11px; padding:9px 4px; }
+    .bcard .st .v{ font-size:18px; font-weight:900; }
+    .bcard .st .k{ font-size:11px; font-weight:800; color:var(--mute); margin-top:3px; }
+    .bcard .st.empty .v{ color:#16a34a; } .bcard .st.occ .v{ color:#2563eb; } .bcard .st.full .v{ color:#dc2626; }
+
+    .tot-card{ display:flex; align-items:center; gap:9px; background:linear-gradient(160deg,#eff6ff,#dbeafe); border:1.5px solid #bfdbfe; border-radius:14px; padding:13px 15px; margin-bottom:11px; font-weight:900; color:#1d4ed8; }
+    .tot-card .big{ margin-left:auto; font-size:22px; }
+
+    /* 과정별 */
+    .crs{ background:#fff; border:1.5px solid var(--line); border-radius:13px; padding:11px 14px; margin-bottom:8px; box-shadow:var(--shadow); display:flex; align-items:center; gap:10px; }
+    .crs .cn{ font-size:14px; font-weight:800; flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .crs .pc{ font-size:14px; font-weight:900; color:var(--blue-d); white-space:nowrap; }
+
+    /* 방 목록 (아코디언) */
+    .fgrp{ margin-bottom:8px; }
+    .fgrp-hd{ display:flex; align-items:center; gap:8px; font-size:12.5px; font-weight:900; color:#fff; border-radius:11px; padding:8px 13px; margin-bottom:8px; cursor:pointer; }
+    .fgrp-hd .wn{ margin-left:auto; font-size:11px; background:rgba(255,255,255,.22); border-radius:20px; padding:3px 10px; }
+    .room{ display:flex; align-items:center; gap:9px; background:#fff; border:1.5px solid var(--line); border-radius:11px; padding:10px 13px; margin-bottom:7px; box-shadow:var(--shadow); }
+    .room .rn{ font-size:14px; font-weight:900; }
+    .room .rf{ font-size:11.5px; color:var(--mute); font-weight:700; }
+    .room .occ{ margin-left:auto; font-size:13px; font-weight:900; }
+    .room .occ.has{ color:#2563eb; } .room .occ.full{ color:#dc2626; } .room .occ.none{ color:#cbd5e1; }
+    .room .gnd{ font-size:10.5px; font-weight:800; padding:2px 7px; border-radius:6px; }
+    .gnd.m{ background:#eff6ff; color:#1d4ed8; } .gnd.f{ background:#fdf2f8; color:#be185d; }
+
+    .empty{ text-align:center; color:var(--mute); font-weight:700; padding:26px 0; }
+
+    .pc-bar{ margin:18px 14px 6px; }
+    .pc-btn{ display:flex; align-items:center; justify-content:center; gap:9px; width:100%; padding:14px; border-radius:14px; background:#fff; border:1.5px solid var(--line); color:#334155; font-size:14px; font-weight:800; text-decoration:none; box-shadow:var(--shadow); }
+    .pc-btn i{ color:var(--blue); }
+    .pc-note{ text-align:center; font-size:11.5px; color:var(--mute); font-weight:700; margin-top:8px; line-height:1.5; }
+  </style>
+  <link rel="icon" type="image/svg+xml" href="favicon.svg?v=b260620c">
+  <link rel="stylesheet" href="kac-tokens.css?v=20260622">
+</head>
+<body>
+<div class="wrap">
+  <div class="mhead">
+    <div class="row1">
+      <div class="ttl"><div class="mk"><i class="fa-solid fa-bed"></i></div>생활관 배정 현황</div>
+      <div class="clk" id="clk"></div>
+    </div>
+    <div class="wk-label"><i class="fa-regular fa-calendar"></i> <span id="wkLabel">이번주</span></div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-ttl"><i class="fa-solid fa-building"></i> 건물별 현황 <span style="font-weight:700;color:#94a3b8;">· 실시간</span></div>
+    <div id="totCard"></div>
+    <div class="bsum" id="bsum"><div class="empty">불러오는 중...</div></div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-ttl"><i class="fa-solid fa-graduation-cap"></i> 과정별 배정 인원</div>
+    <div id="crsList"><div class="empty">집계 중...</div></div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-ttl"><i class="fa-solid fa-door-open"></i> 방별 배정 (건물 · 층)</div>
+    <div id="roomList"><div class="empty">불러오는 중...</div></div>
+  </div>
+
+  <div class="pc-bar">
+    <a class="pc-btn" href="dorm_admin.html?forcepc=1"><i class="fa-solid fa-display"></i> PC 전체 기능 (배정 편집 · 배치도)</a>
+    <div class="pc-note">방 배정·이동·스왑, 배치도, 명단 업로드는 PC 화면에서 이용하세요.</div>
+  </div>
+</div>
+
+<div id="__catcVer" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">지원M vA</div>
+
+<script src="config.js?v=b260620c"></script>
+<script>
+/* ========== 교육지원·생활관 모바일 라이트뷰 (조회 중심) ========== */
+var db=firebase.database();
+var DORM_COLORS={ '청렴관':'#3b82f6', '상생관':'#10b981', '국제교육동':'#8b5cf6' };
+var ROOMS={}, STUDENTS={}, _openFloor=new Set();
+function h(s){ return (s==null?'':String(s)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function pad(n){ return String(n).padStart(2,'0'); }
+function ymd(d){ return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()); }
+function mondayOf(d){ var x=new Date(d); var dow=(x.getDay()+6)%7; x.setDate(x.getDate()-dow); x.setHours(0,0,0,0); return x; }
+function getTargetMondayKey(){ var t=new Date(); var b=mondayOf(t); if(t.getDay()===6||t.getDay()===0) b.setDate(b.getDate()+7); return ymd(b); }
+var WK=getTargetMondayKey();
+
+function tickClock(){
+  var d=new Date(), days=['일','월','화','수','목','금','토'];
+  var hh=d.getHours(), ap=hh<12?'AM':'PM', h12=((hh%12)||12);
+  var el=document.getElementById('clk');
+  if(el) el.innerHTML=(d.getMonth()+1)+'.'+d.getDate()+'('+days[d.getDay()]+') <b>'+h12+':'+pad(d.getMinutes())+'</b> '+ap;
+}
+setInterval(tickClock,1000); tickClock();
+
+function setWkLabel(){
+  var mon=new Date(WK+'T00:00:00'); var fri=new Date(mon); fri.setDate(mon.getDate()+4);
+  var fmt=function(d){ return (d.getMonth()+1)+'/'+d.getDate(); };
+  var today=new Date(); var thisMon=mondayOf(today);
+  var rel = (ymd(mon)===ymd(thisMon)) ? '이번주' : '다음주';
+  document.getElementById('wkLabel').textContent=rel+' 배정 ('+fmt(mon)+'~'+fmt(fri)+')';
+}
+setWkLabel();
+
+db.ref('system/dorm/rooms').on('value', function(s){ ROOMS=s.val()||{}; renderAll(); });
+db.ref('system/dorm/assignments/'+WK+'/students').on('value', function(s){ STUDENTS=s.val()||{}; renderAll(); });
+
+function occByRoom(){
+  var m={};
+  Object.keys(STUDENTS).forEach(function(k){ var st=STUDENTS[k]; if(st && st.roomId){ (m[st.roomId]=m[st.roomId]||[]).push(st); } });
+  return m;
+}
+
+function renderAll(){
+  var occ=occByRoom();
+  var totalPpl=Object.keys(STUDENTS).filter(function(k){ var s=STUDENTS[k]; return s && s.name; }).length;
+
+  /* 건물별 요약 */
+  var bldg={};
+  Object.keys(ROOMS).forEach(function(id){
+    var r=ROOMS[id]||{}; if(r.noAssign) return;
+    var b=r.building||'기타';
+    if(!bldg[b]) bldg[b]={total:0,occ:0,ppl:0};
+    bldg[b].total++;
+    var n=(occ[id]||[]).length;
+    if(n>0) bldg[b].occ++;
+    bldg[b].ppl+=n;
+  });
+  var bkeys=Object.keys(bldg);
+  document.getElementById('totCard').innerHTML='<div class="tot-card"><i class="fa-solid fa-users"></i> 전체 배정 인원 <span class="big">'+totalPpl+'명</span></div>';
+  var bel=document.getElementById('bsum');
+  if(!bkeys.length){ bel.innerHTML='<div class="empty">방 마스터가 설정되지 않았습니다.</div>'; }
+  else{
+    bel.innerHTML=bkeys.map(function(b){
+      var g=bldg[b]; var emptyN=g.total-g.occ; var color=DORM_COLORS[b]||'#94a3b8';
+      return '<div class="bcard"><div class="bc-top"><span class="dot" style="background:'+color+'"></span><span class="bn">'+h(b)+'</span><span class="ppl">'+g.ppl+'명 배정</span></div>'
+        +'<div class="bc-stat"><div class="st occ"><div class="v">'+g.occ+'</div><div class="k">사용 방</div></div>'
+        +'<div class="st empty"><div class="v">'+emptyN+'</div><div class="k">빈 방</div></div>'
+        +'<div class="st full"><div class="v">'+g.total+'</div><div class="k">전체 방</div></div></div></div>';
+    }).join('');
+  }
+
+  /* 과정별 인원 */
+  var byC={};
+  Object.keys(STUDENTS).forEach(function(k){ var s=STUDENTS[k]; if(!s||!s.name) return; var c=(s.courseName||s.course||'미지정').trim()||'미지정'; byC[c]=(byC[c]||0)+1; });
+  var carr=Object.keys(byC).map(function(c){ return [c,byC[c]]; }).sort(function(a,b){ return b[1]-a[1]; });
+  var cel=document.getElementById('crsList');
+  cel.innerHTML = carr.length ? carr.map(function(x){ return '<div class="crs"><span class="cn">'+h(x[0])+'</span><span class="pc">'+x[1]+'명</span></div>'; }).join('')
+    : '<div class="empty">배정된 인원이 없습니다.</div>';
+
+  /* 방별 (건물 → 층) */
+  var rel=document.getElementById('roomList');
+  if(!bkeys.length){ rel.innerHTML='<div class="empty">방 정보가 없습니다.</div>'; return; }
+  var html='';
+  bkeys.forEach(function(b){
+    var color=DORM_COLORS[b]||'#94a3b8';
+    var roomsB=Object.keys(ROOMS).filter(function(id){ var r=ROOMS[id]||{}; return !r.noAssign && (r.building||'기타')===b; });
+    // 층별 그룹
+    var byF={};
+    roomsB.forEach(function(id){ var r=ROOMS[id]||{}; var f=(r.floor!=null&&r.floor!=='')?(r.floor+'층'):'기타'; (byF[f]=byF[f]||[]).push(id); });
+    var fkeys=Object.keys(byF).sort(function(a,c){ return a.localeCompare(c,'ko',{numeric:true}); });
+    fkeys.forEach(function(f){
+      var key=b+'__'+f; var open=_openFloor.has(key);
+      var ids=byF[f].sort(function(a,c){ var ra=ROOMS[a]||{},rc=ROOMS[c]||{}; return String(ra.name||'').localeCompare(String(rc.name||''),'ko',{numeric:true}); });
+      var pplF=ids.reduce(function(s,id){ return s+(occ[id]||[]).length; },0);
+      var rowsH=ids.map(function(id){
+        var r=ROOMS[id]||{}; var oc=(occ[id]||[]); var cap=r.capacity||0;
+        var cls = oc.length===0 ? 'none' : (cap && oc.length>=cap ? 'full' : 'has');
+        var gnd = r.gender==='F'||r.gender==='여' ? '<span class="gnd f">여</span>' : (r.gender==='M'||r.gender==='남' ? '<span class="gnd m">남</span>' : '');
+        var names = oc.length ? ('<span class="rf">'+oc.slice(0,4).map(function(x){return h(x.name);}).join(', ')+(oc.length>4?(' 외 '+(oc.length-4)):'')+'</span>') : '<span class="rf">비어있음</span>';
+        return '<div class="room"><span class="rn">'+h(r.name||'-')+'</span>'+gnd+names+'<span class="occ '+cls+'">'+oc.length+(cap?('/'+cap):'')+'</span></div>';
+      }).join('');
+      html+='<div class="fgrp"><div class="fgrp-hd" style="background:linear-gradient(135deg,'+color+',rgba(0,0,0,.08))" onclick="toggleFloor(\''+key.replace(/'/g,'')+'\')">'
+        +'<i class="fa-solid fa-chevron-'+(open?'up':'down')+'"></i> '+h(b)+' '+h(f)+' <span class="wn">'+pplF+'명 / '+ids.length+'실</span></div>'
+        +(open?rowsH:'')+'</div>';
+    });
+  });
+  rel.innerHTML=html||'<div class="empty">방 정보가 없습니다.</div>';
+}
+function toggleFloor(key){ if(_openFloor.has(key))_openFloor.delete(key); else _openFloor.add(key); renderAll(); }
+</script>
+</body>
+</html>
+<!-- 지원부모바일 VA/VA/VA/VA/VA -->

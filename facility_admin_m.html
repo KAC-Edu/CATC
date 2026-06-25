@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <script>
+  /* [기기 분리] PC 접속은 PC 전용 화면으로 (모바일은 이 화면 유지). ?forcem 으로 강제 모바일. */
+  (function(){ try{
+    var wide = window.innerWidth >= 1024;
+    var fine = window.matchMedia && window.matchMedia('(pointer:fine)').matches;
+    var noTouch = !('ontouchstart' in window) || navigator.maxTouchPoints === 0;
+    var isPc = wide && (fine || noTouch);
+    if(isPc && location.search.indexOf('forcem')<0){ location.replace('facility_admin.html'+location.search+location.hash); }
+  }catch(e){} })();
+  </script>
+<!-- ════════ [카카오채널 연동] catc1234 접속 게이트 (수정상태: 수정안하는중) ════════
+     · facility_admin.html(미화·비품)의 모바일 라이트판. 직접 진입 시 접속코드 요구.
+     · 통과 시 localStorage['catc_gate_ok'] 저장. catcLock()으로 잠금 해제. 기능 로직과 분리. -->
+<script>
+(function(){
+  window.catcLock=function(){ try{localStorage.removeItem('catc_gate_ok');}catch(e){} location.reload(); };
+  var ok=false; try{ ok=(function(){var t=parseInt(localStorage.getItem('catc_gate_ok'),10);return !!t&&(Date.now()-t)<86400000;})(); }catch(e){ ok=true; }
+  if(ok){ window.__catcUnlocked=true; return; }
+  window.__catcUnlocked=false;
+  document.documentElement.classList.add('catc-locked');
+  function build(){
+    if(document.getElementById('catcGate')) return;
+    var o=document.createElement('div'); o.id='catcGate';
+    o.innerHTML='<div class="catc-box"><div class="catc-ic">🔒</div>'
+      +'<div class="catc-t">접속 코드 입력</div>'
+      +'<div class="catc-s">CATC 교육 플랫폼 · 보안 접속</div>'
+      +'<input id="catcInp" type="password" autocomplete="off" placeholder="접속 코드">'
+      +'<button id="catcBtn">입장</button><div id="catcMsg"></div></div>';
+    (document.body||document.documentElement).appendChild(o);
+    var inp=o.querySelector('#catcInp'),btn=o.querySelector('#catcBtn'),msg=o.querySelector('#catcMsg');
+    function go(){ if(inp.value==='catc1234'){ try{localStorage.setItem('catc_gate_ok',String(Date.now()));}catch(e){} location.reload(); } else { msg.textContent='접속 코드가 올바르지 않습니다.'; inp.value=''; inp.focus(); } }
+    btn.addEventListener('click',go);
+    inp.addEventListener('keyup',function(e){ if(e.key==='Enter') go(); });
+    setTimeout(function(){ try{inp.focus();}catch(e){} },120);
+  }
+  if(document.body) build(); else document.addEventListener('DOMContentLoaded',build);
+})();
+</script>
+<style>
+  html.catc-locked > body{ visibility:hidden !important; }
+  #catcGate{ position:fixed; inset:0; z-index:2147483647; background:linear-gradient(135deg,#0f172a,#1e293b); display:flex; align-items:center; justify-content:center; font-family:'Pretendard','Malgun Gothic',system-ui,sans-serif; visibility:visible !important; }
+  #catcGate *{ visibility:visible !important; box-sizing:border-box; }
+  #catcGate .catc-box{ width:300px; max-width:86vw; background:#fff; border-radius:18px; padding:30px 26px; text-align:center; box-shadow:0 20px 60px rgba(0,0,0,.45); }
+  #catcGate .catc-ic{ font-size:30px; margin-bottom:8px; }
+  #catcGate .catc-t{ font-size:19px; font-weight:800; color:#0f172a; }
+  #catcGate .catc-s{ margin:4px 0 18px; font-size:12.5px; color:#64748b; }
+  #catcGate input{ width:100%; padding:13px 14px; font-size:16px; text-align:center; letter-spacing:2px; border:1.5px solid #e2e8f0; border-radius:11px; outline:none; color:#0f172a; background:#fff; }
+  #catcGate input:focus{ border-color:#2563eb; box-shadow:0 0 0 3px rgba(37,99,235,.15); }
+  #catcGate button{ width:100%; margin-top:12px; padding:13px; font-size:15px; font-weight:800; color:#fff; background:#2563eb; border:0; border-radius:11px; cursor:pointer; }
+  #catcGate button:active{ transform:scale(.98); }
+  #catcGate #catcMsg{ margin-top:11px; min-height:16px; font-size:12.5px; font-weight:700; color:#dc2626; }
+</style>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <title>미화 · 비품관리 (모바일)</title>
+  <meta name="theme-color" content="#0f172a">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" rel="stylesheet">
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+  <style>
+    *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+    :root{
+      --blue:#2563eb; --ink:#0f172a; --sub:#64748b; --mute:#94a3b8;
+      --line:#e8eef7; --bg:#f4f7fc; --shadow:0 2px 10px rgba(15,23,42,.06);
+    }
+    html,body{ margin:0; padding:0; height:100%; overscroll-behavior:none; }
+    body{ font-family:'Pretendard','Apple SD Gothic Neo','Malgun Gothic',sans-serif; background:var(--bg); color:var(--ink); -webkit-font-smoothing:antialiased; padding-bottom:30px; letter-spacing:-.2px; }
+    .wrap{ max-width:600px; margin:0 auto; min-height:100dvh; }
+
+    .mhead{ background:linear-gradient(135deg,#0b1f4d 0%,#1a3a8a 52%,#2563eb 100%); color:#fff; padding:16px 18px; position:sticky; top:0; z-index:50; border-radius:0 0 22px 22px; box-shadow:0 8px 24px rgba(13,31,73,.28); overflow:hidden; }
+    .mhead::after{ content:''; position:absolute; right:-40px; top:-50px; width:160px; height:160px; border-radius:50%; background:radial-gradient(circle,rgba(255,255,255,.14),transparent 70%); pointer-events:none; }
+    .mhead .row1{ display:flex; align-items:center; justify-content:space-between; }
+    .mhead .ttl{ display:flex; align-items:center; gap:11px; font-size:17px; font-weight:900; z-index:1; }
+    .mhead .ttl .mk{ width:36px; height:36px; border-radius:11px; background:rgba(255,255,255,.18); border:1px solid rgba(255,255,255,.28); display:flex; align-items:center; justify-content:center; font-size:17px; }
+    .mhead .clk{ text-align:right; font-size:12px; font-weight:700; opacity:.95; line-height:1.4; z-index:1; }
+    .mhead .clk b{ font-size:15px; font-weight:900; }
+    .stat-row{ display:flex; gap:10px; margin-top:13px; position:relative; z-index:1; }
+    .stat{ flex:1; background:rgba(255,255,255,.12); border:1px solid rgba(255,255,255,.2); border-radius:13px; padding:10px 12px; text-align:center; }
+    .stat .n{ font-size:24px; font-weight:900; line-height:1; }
+    .stat .l{ font-size:11px; font-weight:800; opacity:.9; margin-top:5px; }
+    .stat.wait .n{ color:#fecaca; } .stat.done .n{ color:#bbf7d0; }
+
+    .sec{ padding:15px 14px 0; }
+    .sec-ttl{ font-size:12px; font-weight:900; color:var(--sub); margin:4px 3px 10px; display:flex; align-items:center; gap:7px; }
+    .sec-ttl i{ color:var(--blue); }
+
+    .bgrp{ margin-bottom:8px; }
+    .bgrp-hd{ font-size:12.5px; font-weight:900; color:#fff; border-radius:11px; padding:8px 13px; margin-bottom:9px; display:flex; align-items:center; justify-content:space-between; }
+    .bgrp-hd.청렴관{ background:linear-gradient(135deg,#1d4ed8,#3b82f6); }
+    .bgrp-hd.상생관{ background:linear-gradient(135deg,#047857,#10b981); }
+    .bgrp-hd.국제동{ background:linear-gradient(135deg,#6d28d9,#8b5cf6); }
+    .bgrp-hd .wn{ font-size:11.5px; background:rgba(255,255,255,.22); border-radius:20px; padding:3px 11px; }
+
+    .req{ background:#fff; border:1.5px solid var(--line); border-radius:15px; padding:13px 14px; margin-bottom:10px; box-shadow:var(--shadow); transition:opacity .25s, transform .12s; }
+    .req.resolving{ opacity:.4; filter:grayscale(.6); pointer-events:none; }
+    .req-top{ display:flex; align-items:center; gap:9px; margin-bottom:9px; }
+    .req-no{ font-size:16px; font-weight:900; color:#0f172a; }
+    .req-fl{ font-size:12px; color:var(--mute); font-weight:700; }
+    .req-time{ margin-left:auto; font-size:11.5px; color:var(--mute); font-weight:700; }
+    .items{ display:flex; flex-wrap:wrap; gap:6px; margin-bottom:9px; }
+    .ichip{ display:inline-flex; align-items:center; gap:5px; padding:6px 11px; border-radius:9px; font-size:13px; font-weight:800; border:1.5px solid; background:#eff6ff; border-color:#bfdbfe; color:#1d4ed8; }
+    .extra-box{ background:#f8fafc; border:1px solid var(--line); border-radius:9px; padding:8px 11px; font-size:13px; color:#475569; font-weight:600; line-height:1.5; margin-bottom:9px; }
+    .req-who{ font-size:12px; color:var(--sub); font-weight:700; margin-bottom:10px; }
+    .acts{ display:flex; gap:8px; }
+    .btn{ padding:12px 0; border:none; border-radius:11px; font-size:14px; font-weight:900; cursor:pointer; flex:1; }
+    .btn-ok{ background:linear-gradient(135deg,#10b981,#059669); color:#fff; box-shadow:0 4px 12px rgba(16,185,129,.3); }
+    .btn-ok:active{ transform:scale(.98); }
+    .btn-no{ background:#fff; border:1.5px solid #fecaca; color:#dc2626; }
+
+    .empty{ text-align:center; color:var(--mute); font-weight:700; padding:30px 0; }
+    .bgrp.allclear .empty{ padding:14px 0; }
+
+    /* 완료 보기 */
+    .done-foot{ margin:2px 3px 4px; }
+    .done-toggle{ font-size:12.5px; font-weight:800; color:#64748b; cursor:pointer; display:inline-flex; align-items:center; gap:7px; padding:6px 2px; }
+    .done-list{ display:none; margin-top:4px; }
+    .done-list.show{ display:block; }
+    .done-row{ display:flex; align-items:center; gap:8px; font-size:12.5px; color:#64748b; padding:8px 11px; background:#fff; border:1px solid var(--line); border-radius:10px; margin-bottom:6px; }
+    .done-row .dr-no{ font-weight:900; color:#0f172a; }
+    .done-row .undo{ margin-left:auto; font-size:11.5px; font-weight:800; color:#2563eb; background:#eff6ff; border:1px solid #bfdbfe; border-radius:7px; padding:5px 10px; cursor:pointer; }
+
+    /* PC 전환 버튼 */
+    .pc-bar{ margin:18px 14px 6px; }
+    .pc-btn{ display:flex; align-items:center; justify-content:center; gap:9px; width:100%; padding:14px; border-radius:14px; background:#fff; border:1.5px solid var(--line); color:#334155; font-size:14px; font-weight:800; text-decoration:none; box-shadow:var(--shadow); }
+    .pc-btn i{ color:var(--blue); }
+    .pc-note{ text-align:center; font-size:11.5px; color:var(--mute); font-weight:700; margin-top:8px; line-height:1.5; }
+
+    /* 처리불가 사유 시트 */
+    .sheet-ov{ position:fixed; inset:0; z-index:400; background:rgba(15,23,42,.5); display:none; align-items:flex-end; }
+    .sheet-ov.open{ display:flex; animation:fadeIn .2s ease; }
+    @keyframes fadeIn{ from{opacity:0} to{opacity:1} }
+    .sheet{ background:#fff; width:100%; max-width:600px; margin:0 auto; border-radius:24px 24px 0 0; padding:12px 18px calc(22px + env(safe-area-inset-bottom)); animation:slideUp .26s cubic-bezier(.4,0,.2,1); }
+    @keyframes slideUp{ from{transform:translateY(100%)} to{transform:translateY(0)} }
+    .sheet::before{ content:''; display:block; width:42px; height:5px; border-radius:999px; background:#dfe6ef; margin:0 auto 14px; }
+    .sheet h3{ margin:0 0 13px; font-size:16px; font-weight:900; display:flex; align-items:center; gap:8px; color:#dc2626; }
+    .rej-chips{ display:flex; flex-wrap:wrap; gap:8px; margin-bottom:12px; }
+    .rej-chip{ padding:10px 14px; border:1.5px solid #fecaca; background:#fef2f2; color:#b91c1c; border-radius:11px; font-size:13.5px; font-weight:800; cursor:pointer; }
+    .rej-chip:active{ background:#fee2e2; }
+    .rej-text{ width:100%; height:64px; border:1.5px solid #e2e8f0; border-radius:12px; padding:11px; font-size:15px; outline:none; resize:none; font-family:inherit; }
+    .sheet-acts{ display:flex; gap:8px; margin-top:14px; }
+    .sheet-acts .btn-rej{ flex:1; padding:14px; border:none; border-radius:12px; background:#dc2626; color:#fff; font-weight:900; font-size:14px; cursor:pointer; }
+    .sheet-acts .btn-cancel{ flex:1; padding:14px; border:none; border-radius:12px; background:#e2e8f0; color:#475569; font-weight:900; font-size:14px; cursor:pointer; }
+
+    #toast{ position:fixed; left:50%; bottom:40px; transform:translateX(-50%) translateY(20px); background:rgba(15,23,42,.95); color:#fff; padding:13px 22px; border-radius:14px; font-size:14px; font-weight:800; z-index:900; opacity:0; transition:all .26s; pointer-events:none; box-shadow:0 12px 34px rgba(0,0,0,.34); max-width:90vw; text-align:center; }
+    #toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
+  </style>
+  <link rel="icon" type="image/svg+xml" href="favicon.svg?v=b260620c">
+  <link rel="stylesheet" href="kac-tokens.css?v=20260622">
+</head>
+<body>
+<div class="wrap">
+  <div class="mhead">
+    <div class="row1">
+      <div class="ttl"><div class="mk"><i class="fa-solid fa-broom"></i></div>미화 · 비품관리</div>
+      <div class="clk" id="clk"></div>
+    </div>
+    <div class="stat-row">
+      <div class="stat wait"><div class="n" id="s-wait">0</div><div class="l">처리 대기</div></div>
+      <div class="stat done"><div class="n" id="s-done">0</div><div class="l">오늘 완료</div></div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-ttl"><i class="fa-solid fa-clipboard-list"></i> 처리 대기 요청 <span style="font-weight:700;color:#94a3b8;">· 실시간</span></div>
+    <div id="reqList"><div class="empty">불러오는 중...</div></div>
+  </div>
+
+  <div class="pc-bar">
+    <a class="pc-btn" href="facility_admin.html?forcepc=1"><i class="fa-solid fa-display"></i> PC 전체 기능 열기 (월간 리포트 · 설정)</a>
+    <div class="pc-note">품목 관리 · 월간 리포트 · 알림음 설정은 PC 화면에서 이용하세요.</div>
+  </div>
+</div>
+
+<!-- 처리불가 사유 시트 -->
+<div class="sheet-ov" id="rejSheet">
+  <div class="sheet">
+    <h3><i class="fa-solid fa-circle-xmark"></i> 처리 불가 사유</h3>
+    <div class="rej-chips">
+      <button class="rej-chip" onclick="rejPick('주별 허용 수량 초과')">수량 초과</button>
+      <button class="rej-chip" onclick="rejPick('재고 소진')">재고 소진</button>
+      <button class="rej-chip" onclick="rejPick('신청 대상 품목 아님')">대상 품목 아님</button>
+      <button class="rej-chip" onclick="rejPick('중복 신청')">중복 신청</button>
+      <button class="rej-chip" onclick="rejPick('이미 직접 배부 완료')">직접 배부 완료</button>
+    </div>
+    <textarea class="rej-text" id="rejText" placeholder="사유 직접 입력 (생략 가능)"></textarea>
+    <div class="sheet-acts">
+      <button class="btn-rej" onclick="confirmRej()">처리 불가 확정</button>
+      <button class="btn-cancel" onclick="closeRej()">취소</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<!-- 개발자 확인용 버전 배지 -->
+<div id="__catcVer" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">미화M vA</div>
+
+<script src="config.js?v=b260620c"></script>
+<script>
+/* ========== 미화·비품 모바일 라이트뷰 (조회 + 빠른 처리) ========== */
+var db = firebase.database().ref('system/facility_requests');
+var BLDGS = ['청렴관','상생관','국제동'];
+var BL_ICON = {'청렴관':'fa-building','상생관':'fa-building-circle-check','국제동':'fa-earth-asia'};
+var ICONS = { '수건':'fa-bath','샴푸':'fa-pump-soap','바디샤워':'fa-soap','치약':'fa-tooth' };
+var cache=null, activeCourseNames=null;
+var _openDone=new Set();
+
+function h(s){ return (s==null?'':String(s)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function bldgOf(d){ d=d||''; if(d.indexOf('청렴')>=0)return'청렴관'; if(d.indexOf('상생')>=0)return'상생관'; if(d.indexOf('국제')>=0)return'국제동'; return'기타'; }
+function floorOf(d){ var m=(d||'').match(/(\d+)\s*층/); return m?m[1]+'층':''; }
+function roomNoOf(d){ var m=(d||'').match(/(\d+\s*호)/); if(m)return m[1].replace(/\s/g,''); var f=floorOf(d); return f||(d||'-'); }
+function parseReq(req){ var c=Array.isArray(req.items)?req.items.slice():[]; var e=req.text||''; if(c.length)e=e.replace(c.join(', '),'').replace(/^\s*\/\s*/,'').trim(); return {chips:c,extra:e}; }
+function chip(name){ var fa=ICONS[name]; return '<span class="ichip"><i class="fa-solid '+(fa||'fa-box')+'"></i> '+h(name)+'</span>'; }
+function isWait(r){ return r.status==='대기'||r.status==='확인'; }
+function isDone(r){ return r.status==='처리완료'||r.status==='처리불가'; }
+function whenStr(ts){ var d=new Date(ts), p=function(x){return String(x).padStart(2,'0');}; return (d.getMonth()+1)+'/'+d.getDate()+' '+p(d.getHours())+':'+p(d.getMinutes()); }
+
+/* 시계 */
+function tickClock(){
+  var d=new Date(), days=['일','월','화','수','목','금','토'];
+  var h2=d.getHours(), ap=h2<12?'AM':'PM', hh=((h2%12)||12);
+  var el=document.getElementById('clk');
+  if(el) el.innerHTML=(d.getMonth()+1)+'.'+d.getDate()+'('+days[d.getDay()]+') <b>'+hh+':'+String(d.getMinutes()).padStart(2,'0')+'</b> '+ap;
+}
+setInterval(tickClock,1000); tickClock();
+
+/* 진행중 과정만 표시 (강사플랫폼 hideFromBoard·기간 반영) */
+firebase.database().ref('courses').on('value', function(snap){
+  var data=snap.val()||{}, set=new Set();
+  var today=new Date(); today.setHours(0,0,0,0);
+  var tStr=today.getFullYear()+'-'+String(today.getMonth()+1).padStart(2,'0')+'-'+String(today.getDate()).padStart(2,'0');
+  Object.keys(data).forEach(function(k){
+    var c=data[k]||{}, s=c.settings||{}, st=c.status||{};
+    if(!s.courseName) return;
+    if(s.hideFromBoard) return;
+    if(st.roomStatus!=='active') return;
+    if(s.period && s.period.indexOf('~')>=0){ var ed=(s.period.split('~')[1]||'').trim(); if(ed && ed<tStr) return; }
+    set.add((s.courseName||'').trim());
+  });
+  activeCourseNames=set; render();
+});
+db.on('value', function(snap){ cache=snap.val(); render(); });
+
+function render(){
+  var data=cache||{};
+  var items=Object.keys(data).map(function(k){ var o=data[k]||{}; o.id=k; return o; });
+  if(activeCourseNames){ items=items.filter(function(it){ return activeCourseNames.has((it.courseName||'').trim()); }); }
+  var waits=items.filter(isWait), dones=items.filter(isDone);
+  document.getElementById('s-wait').textContent=waits.length;
+  document.getElementById('s-done').textContent=dones.length;
+
+  var byB={}; BLDGS.forEach(function(b){ byB[b]={reqs:[],done:[]}; });
+  items.forEach(function(it){
+    var b=bldgOf(it.dorm); if(!byB[b]) return;
+    if(isWait(it)) byB[b].reqs.push(it);
+    else if(isDone(it)) byB[b].done.push(it);
+  });
+
+  var html = BLDGS.map(function(b){
+    var g=byB[b];
+    g.reqs.sort(function(x,y){ return (y.timestamp||0)-(x.timestamp||0); });
+    var reqHtml = g.reqs.length ? g.reqs.map(function(req){
+      var pr=parseReq(req);
+      var chipsHtml=pr.chips.length?pr.chips.map(chip).join(''):chip('비품 요청');
+      var extraHtml=pr.extra?'<div class="extra-box"><i class="fa-solid fa-pen-to-square" style="color:#94a3b8"></i> '+h(pr.extra)+'</div>':'';
+      var who=req.name?('<div class="req-who"><i class="fa-solid fa-user" style="color:#cbd5e1"></i> '+h(req.name)+(req.courseName?(' · '+h(req.courseName)):'')+'</div>'):'';
+      return '<div class="req" id="req-'+req.id+'">'
+        +'<div class="req-top"><span class="req-no">'+h(roomNoOf(req.dorm))+'</span><span class="req-fl">'+h(floorOf(req.dorm)||'')+'</span><span class="req-time">'+whenStr(req.timestamp||Date.now())+'</span></div>'
+        +'<div class="items">'+chipsHtml+'</div>'+extraHtml+who
+        +'<div class="acts"><button class="btn btn-ok" onclick="markDone(\''+req.id+'\')"><i class="fa-solid fa-check"></i> 해결 완료</button>'
+        +'<button class="btn btn-no" onclick="markReject(\''+req.id+'\')"><i class="fa-solid fa-xmark"></i> 처리 불가</button></div></div>';
+    }).join('') : '<div class="empty"><i class="fa-regular fa-circle-check" style="font-size:20px;display:block;margin-bottom:6px;color:#cbd5e1;"></i>대기 요청 없음</div>';
+
+    var doneOpen=_openDone.has(b);
+    var doneHtml = g.done.length ? '<div class="done-foot"><div class="done-toggle" onclick="toggleDone(\''+b+'\')"><i class="fa-solid fa-chevron-'+(doneOpen?'up':'down')+'"></i> 오늘 처리완료 '+g.done.length+'건 '+(doneOpen?'접기':'보기')+'</div>'
+      +'<div class="done-list '+(doneOpen?'show':'')+'">'+g.done.sort(function(x,y){return (y.timestamp||0)-(x.timestamp||0);}).map(function(d){
+        return '<div class="done-row"><span class="dr-no">'+h(roomNoOf(d.dorm))+'</span><span>'+(d.status==='처리완료'?'✅':'⛔')+' '+h(d.name||'')+'</span><button class="undo" onclick="undoStatus(\''+d.id+'\')">되돌리기</button></div>';
+      }).join('')+'</div></div>' : '';
+
+    return '<div class="bgrp '+(g.reqs.length?'':'allclear')+'">'
+      +'<div class="bgrp-hd '+b+'"><span><i class="fa-solid '+(BL_ICON[b]||'fa-building')+'"></i> '+b+'</span><span class="wn">대기 '+g.reqs.length+'</span></div>'
+      +reqHtml+doneHtml+'</div>';
+  }).join('');
+  document.getElementById('reqList').innerHTML=html;
+}
+
+function toggleDone(b){ if(_openDone.has(b))_openDone.delete(b); else _openDone.add(b); render(); }
+
+function markDone(id){
+  var el=document.getElementById('req-'+id); if(el) el.classList.add('resolving');
+  setTimeout(function(){ db.child(id).update({status:'처리완료', resolvedAt: firebase.database.ServerValue.TIMESTAMP}); toast('✅ 해결 완료 처리'); }, 300);
+}
+var _rejId=null;
+function markReject(id){ _rejId=id; var t=document.getElementById('rejText'); if(t)t.value=''; document.getElementById('rejSheet').classList.add('open'); }
+function rejPick(s){ var t=document.getElementById('rejText'); if(t)t.value=s; }
+function confirmRej(){
+  var r=(document.getElementById('rejText').value||'').trim();
+  var u={status:'처리불가', resolvedAt: firebase.database.ServerValue.TIMESTAMP}; if(r)u.reason=r;
+  if(_rejId){ var el=document.getElementById('req-'+_rejId); if(el) el.classList.add('resolving'); db.child(_rejId).update(u); }
+  closeRej(); toast('⛔ 처리 불가로 기록');
+}
+function closeRej(){ document.getElementById('rejSheet').classList.remove('open'); _rejId=null; }
+function undoStatus(id){ db.child(id).update({status:'대기', reason:null, resolvedAt:null}); toast('대기로 되돌림'); }
+
+var _toastT;
+function toast(msg){ var el=document.getElementById('toast'); if(!el) return; el.textContent=msg; el.classList.add('show'); clearTimeout(_toastT); _toastT=setTimeout(function(){ el.classList.remove('show'); },2000); }
+
+document.getElementById('rejSheet').addEventListener('click', function(e){ if(e.target===this) closeRej(); });
+</script>
+</body>
+</html>
+<!-- 미화모바일 VA/VA/VA/VA/VA -->

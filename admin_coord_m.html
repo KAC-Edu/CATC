@@ -12,6 +12,48 @@
     if(isPc && location.search.indexOf('forcem')<0){ location.replace('admin_coord.html'+location.search+location.hash); }
   }catch(e){} })();
   </script>
+<!-- ════════ [외부 변경 · 카카오채널 연동 · 2026-06-25] catc1234 접속 게이트 ════════
+     · admin_coord.html(교육운영부)의 모바일판. 포털 경유 폐지 → 직접진입 시 접속코드 요구.
+     · 통과 시 localStorage['catc_gate_ok']='1' 저장. catcLock()으로 잠금 해제. 기능 로직 미변경. -->
+<script>
+(function(){
+  window.catcLock=function(){ try{localStorage.removeItem('catc_gate_ok');}catch(e){} location.reload(); };
+  var ok=false; try{ ok=(function(){var t=parseInt(localStorage.getItem('catc_gate_ok'),10);return !!t&&(Date.now()-t)<86400000;})(); }catch(e){ ok=true; }
+  if(ok){ window.__catcUnlocked=true; return; }
+  window.__catcUnlocked=false;
+  document.documentElement.classList.add('catc-locked');
+  function build(){
+    if(document.getElementById('catcGate')) return;
+    var o=document.createElement('div'); o.id='catcGate';
+    o.innerHTML='<div class="catc-box"><div class="catc-ic">🔒</div>'
+      +'<div class="catc-t">접속 코드 입력</div>'
+      +'<div class="catc-s">CATC 교육 플랫폼 · 보안 접속</div>'
+      +'<input id="catcInp" type="password" autocomplete="off" placeholder="접속 코드">'
+      +'<button id="catcBtn">입장</button><div id="catcMsg"></div></div>';
+    (document.body||document.documentElement).appendChild(o);
+    var inp=o.querySelector('#catcInp'),btn=o.querySelector('#catcBtn'),msg=o.querySelector('#catcMsg');
+    function go(){ if(inp.value==='catc1234'){ try{localStorage.setItem('catc_gate_ok',String(Date.now()));}catch(e){} location.reload(); } else { msg.textContent='접속 코드가 올바르지 않습니다.'; inp.value=''; inp.focus(); } }
+    btn.addEventListener('click',go);
+    inp.addEventListener('keyup',function(e){ if(e.key==='Enter') go(); });
+    setTimeout(function(){ try{inp.focus();}catch(e){} },120);
+  }
+  if(document.body) build(); else document.addEventListener('DOMContentLoaded',build);
+})();
+</script>
+<style>
+  html.catc-locked > body{ visibility:hidden !important; }
+  #catcGate{ position:fixed; inset:0; z-index:2147483647; background:linear-gradient(135deg,#0f172a,#1e293b); display:flex; align-items:center; justify-content:center; font-family:'Pretendard','Malgun Gothic',system-ui,sans-serif; visibility:visible !important; }
+  #catcGate *{ visibility:visible !important; box-sizing:border-box; }
+  #catcGate .catc-box{ width:300px; max-width:86vw; background:#fff; border-radius:18px; padding:30px 26px; text-align:center; box-shadow:0 20px 60px rgba(0,0,0,.45); }
+  #catcGate .catc-ic{ font-size:30px; margin-bottom:8px; }
+  #catcGate .catc-t{ font-size:19px; font-weight:800; color:#0f172a; }
+  #catcGate .catc-s{ margin:4px 0 18px; font-size:12.5px; color:#64748b; }
+  #catcGate input{ width:100%; padding:13px 14px; font-size:16px; text-align:center; letter-spacing:2px; border:1.5px solid #e2e8f0; border-radius:11px; outline:none; color:#0f172a; background:#fff; }
+  #catcGate input:focus{ border-color:#2563eb; box-shadow:0 0 0 3px rgba(37,99,235,.15); }
+  #catcGate button{ width:100%; margin-top:12px; padding:13px; font-size:15px; font-weight:800; color:#fff; background:#2563eb; border:0; border-radius:11px; cursor:pointer; }
+  #catcGate button:active{ transform:scale(.98); }
+  #catcGate #catcMsg{ margin-top:11px; min-height:16px; font-size:12.5px; font-weight:700; color:#dc2626; }
+</style>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <title>교육운영 플랫폼 (모바일)</title>
   <link rel="manifest" href="coord.manifest.json">

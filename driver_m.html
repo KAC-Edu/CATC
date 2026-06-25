@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <script>
+  /* [기기 분리] PC 접속은 PC 전용 화면으로 (모바일은 이 화면 유지). ?forcem 으로 강제 모바일. */
+  (function(){ try{
+    var wide = window.innerWidth >= 1024;
+    var fine = window.matchMedia && window.matchMedia('(pointer:fine)').matches;
+    var noTouch = !('ontouchstart' in window) || navigator.maxTouchPoints === 0;
+    var isPc = wide && (fine || noTouch);
+    if(isPc && location.search.indexOf('forcem')<0){ location.replace('driver.html'+location.search+location.hash); }
+  }catch(e){} })();
+  </script>
+<!-- ════════ [카카오채널 연동] catc1234 접속 게이트 (수정상태: 수정안하는중) ════════
+     · driver.html(차량지원)의 모바일 라이트판. 직접 진입 시 접속코드 요구.
+     · 통과 시 localStorage['catc_gate_ok'] 저장. catcLock()으로 잠금 해제. 기능 로직과 분리. -->
+<script>
+(function(){
+  window.catcLock=function(){ try{localStorage.removeItem('catc_gate_ok');}catch(e){} location.reload(); };
+  var ok=false; try{ ok=(function(){var t=parseInt(localStorage.getItem('catc_gate_ok'),10);return !!t&&(Date.now()-t)<86400000;})(); }catch(e){ ok=true; }
+  if(ok){ window.__catcUnlocked=true; return; }
+  window.__catcUnlocked=false;
+  document.documentElement.classList.add('catc-locked');
+  function build(){
+    if(document.getElementById('catcGate')) return;
+    var o=document.createElement('div'); o.id='catcGate';
+    o.innerHTML='<div class="catc-box"><div class="catc-ic">🔒</div>'
+      +'<div class="catc-t">접속 코드 입력</div>'
+      +'<div class="catc-s">CATC 교육 플랫폼 · 보안 접속</div>'
+      +'<input id="catcInp" type="password" autocomplete="off" placeholder="접속 코드">'
+      +'<button id="catcBtn">입장</button><div id="catcMsg"></div></div>';
+    (document.body||document.documentElement).appendChild(o);
+    var inp=o.querySelector('#catcInp'),btn=o.querySelector('#catcBtn'),msg=o.querySelector('#catcMsg');
+    function go(){ if(inp.value==='catc1234'){ try{localStorage.setItem('catc_gate_ok',String(Date.now()));}catch(e){} location.reload(); } else { msg.textContent='접속 코드가 올바르지 않습니다.'; inp.value=''; inp.focus(); } }
+    btn.addEventListener('click',go);
+    inp.addEventListener('keyup',function(e){ if(e.key==='Enter') go(); });
+    setTimeout(function(){ try{inp.focus();}catch(e){} },120);
+  }
+  if(document.body) build(); else document.addEventListener('DOMContentLoaded',build);
+})();
+</script>
+<style>
+  html.catc-locked > body{ visibility:hidden !important; }
+  #catcGate{ position:fixed; inset:0; z-index:2147483647; background:linear-gradient(135deg,#0f172a,#1e293b); display:flex; align-items:center; justify-content:center; font-family:'Pretendard','Malgun Gothic',system-ui,sans-serif; visibility:visible !important; }
+  #catcGate *{ visibility:visible !important; box-sizing:border-box; }
+  #catcGate .catc-box{ width:300px; max-width:86vw; background:#fff; border-radius:18px; padding:30px 26px; text-align:center; box-shadow:0 20px 60px rgba(0,0,0,.45); }
+  #catcGate .catc-ic{ font-size:30px; margin-bottom:8px; }
+  #catcGate .catc-t{ font-size:19px; font-weight:800; color:#0f172a; }
+  #catcGate .catc-s{ margin:4px 0 18px; font-size:12.5px; color:#64748b; }
+  #catcGate input{ width:100%; padding:13px 14px; font-size:16px; text-align:center; letter-spacing:2px; border:1.5px solid #e2e8f0; border-radius:11px; outline:none; color:#0f172a; background:#fff; }
+  #catcGate input:focus{ border-color:#2563eb; box-shadow:0 0 0 3px rgba(37,99,235,.15); }
+  #catcGate button{ width:100%; margin-top:12px; padding:13px; font-size:15px; font-weight:800; color:#fff; background:#2563eb; border:0; border-radius:11px; cursor:pointer; }
+  #catcGate button:active{ transform:scale(.98); }
+  #catcGate #catcMsg{ margin-top:11px; min-height:16px; font-size:12.5px; font-weight:700; color:#dc2626; }
+</style>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <title>차량지원 (모바일)</title>
+  <meta name="theme-color" content="#0f172a">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" rel="stylesheet">
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+  <style>
+    *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+    :root{
+      --blue:#0ea5e9; --blue-d:#0369a1; --ink:#0f172a; --sub:#64748b; --mute:#94a3b8;
+      --line:#e8eef7; --bg:#f4f7fc; --shadow:0 2px 10px rgba(15,23,42,.06);
+      --teal:#0d9488; --danger:#ef4444; --success:#16a34a; --warn:#f59e0b;
+    }
+    html,body{ margin:0; padding:0; height:100%; overscroll-behavior:none; }
+    body{ font-family:'Pretendard','Apple SD Gothic Neo','Malgun Gothic',sans-serif; background:var(--bg); color:var(--ink); -webkit-font-smoothing:antialiased; padding-bottom:30px; letter-spacing:-.2px; }
+    .wrap{ max-width:600px; margin:0 auto; min-height:100dvh; }
+
+    .mhead{ background:linear-gradient(135deg,#0b1220 0%,#0f172a 45%,#0369a1 120%); color:#fff; padding:16px 18px; position:sticky; top:0; z-index:50; border-radius:0 0 22px 22px; box-shadow:0 8px 24px rgba(2,8,23,.32); overflow:hidden; }
+    .mhead::after{ content:''; position:absolute; right:-40px; top:-50px; width:160px; height:160px; border-radius:50%; background:radial-gradient(circle,rgba(255,255,255,.12),transparent 70%); pointer-events:none; }
+    .mhead .row1{ display:flex; align-items:center; justify-content:space-between; }
+    .mhead .ttl{ display:flex; align-items:center; gap:11px; font-size:17px; font-weight:900; z-index:1; }
+    .mhead .ttl .mk{ width:36px; height:36px; border-radius:11px; background:rgba(255,255,255,.16); border:1px solid rgba(255,255,255,.26); display:flex; align-items:center; justify-content:center; font-size:17px; color:#7dd3fc; }
+    .mhead .clk{ text-align:right; font-size:12px; font-weight:700; opacity:.95; line-height:1.4; z-index:1; }
+    .mhead .clk b{ font-size:15px; font-weight:900; }
+
+    /* 탭 */
+    .tabs{ display:flex; gap:7px; padding:13px 14px 2px; }
+    .tab{ flex:1; text-align:center; padding:11px 6px; border-radius:12px; background:#fff; border:1.5px solid var(--line); font-size:13px; font-weight:800; color:var(--sub); cursor:pointer; position:relative; box-shadow:var(--shadow); }
+    .tab.active{ background:#0f172a; color:#fff; border-color:#0f172a; }
+    .tab .cnt{ display:inline-block; min-width:17px; height:17px; line-height:17px; background:var(--danger); color:#fff; border-radius:9px; font-size:11px; font-weight:900; margin-left:5px; padding:0 4px; }
+    .tab.active .cnt{ background:var(--warn); }
+
+    .view{ display:none; padding:8px 14px 0; } .view.active{ display:block; }
+    .sec-ttl{ font-size:12px; font-weight:900; color:var(--sub); margin:12px 3px 9px; display:flex; align-items:center; gap:7px; } .sec-ttl i{ color:var(--blue-d); }
+
+    /* 픽업 신청 카드 */
+    .req{ background:#fff; border:1.5px solid var(--line); border-radius:15px; padding:13px 14px; margin-bottom:10px; box-shadow:var(--shadow); transition:opacity .25s; }
+    .req.pending{ border-color:#fcd34d; box-shadow:0 0 0 3px rgba(245,158,11,.08); }
+    .req.resolving{ opacity:.4; pointer-events:none; }
+    .req-top{ display:flex; align-items:center; gap:8px; margin-bottom:8px; }
+    .req-prof{ font-size:16px; font-weight:900; }
+    .req-phone{ font-size:12px; color:var(--sub); font-weight:700; }
+    .tag{ font-size:10px; font-weight:900; padding:3px 8px; border-radius:7px; margin-left:auto; }
+    .tag-pending{ background:#fff7ed; color:#c2410c; border:1px solid #fdba74; }
+    .tag-confirmed{ background:#f0fdf4; color:#15803d; border:1px solid #86efac; }
+    .tag-rejected{ background:#fef2f2; color:#dc2626; border:1px solid #fca5a5; }
+    .req-line{ font-size:13.5px; font-weight:700; margin:4px 0; display:flex; gap:8px; align-items:center; }
+    .req-line i{ width:16px; color:var(--mute); text-align:center; }
+    .req-line .dir{ font-weight:900; color:var(--blue-d); }
+    .req-memo{ background:#f8fafc; border-radius:9px; padding:8px 11px; font-size:12.5px; color:#475569; font-weight:600; margin-top:7px; white-space:pre-wrap; }
+    .req-rej{ font-size:12px; color:#b91c1c; font-weight:800; margin-top:7px; }
+    .req-btns{ display:flex; gap:8px; margin-top:11px; }
+    .btn{ flex:1; padding:12px; border-radius:11px; border:none; font-size:14px; font-weight:900; cursor:pointer; }
+    .btn-ok{ background:linear-gradient(135deg,#16a34a,#15803d); color:#fff; box-shadow:0 4px 12px rgba(22,163,74,.3); }
+    .btn-ok:active{ transform:scale(.98); }
+    .btn-no{ background:#fff; color:var(--danger); border:1.5px solid #fca5a5; }
+    .btn-undo{ background:#f1f5f9; color:var(--sub); }
+
+    /* 퇴교차량 그룹 */
+    .lv-run{ border:1.5px solid var(--line); border-radius:15px; padding:14px 15px; margin-bottom:11px; background:#fff; box-shadow:var(--shadow); }
+    .lv-run.pending{ background:#fffbeb; border-color:#fde68a; }
+    .lv-run-h{ display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; gap:8px; }
+    .lv-time{ font-weight:900; font-size:14px; color:var(--teal); }
+    .lv-time.wait{ color:#b45309; }
+    .lv-tot{ font-weight:900; font-size:18px; color:var(--blue-d); white-space:nowrap; }
+    .lv-bd{ display:flex; gap:7px; flex-wrap:wrap; margin-bottom:10px; }
+    .bd2{ font-size:12px; font-weight:800; padding:5px 11px; border-radius:9px; background:#f1f5f9; color:#475569; }
+    .bd2.osong{ background:#fee2e2; color:#b91c1c; } .bd2.term{ background:#e0f2fe; color:#075985; } .bd2.air{ background:#ecfdf5; color:#065f46; } .bd2.car{ background:#f1f5f9; color:#64748b; }
+    .lv-courses{ border-top:1px dashed #e2e8f0; padding-top:9px; display:flex; flex-direction:column; gap:7px; }
+    .lv-c{ display:flex; align-items:center; gap:8px; font-size:13px; }
+    .lv-c span{ font-weight:800; } .lv-c b{ color:var(--blue-d); } .lv-c small{ color:#94a3b8; font-weight:700; margin-left:auto; white-space:nowrap; font-size:11px; }
+
+    .empty{ text-align:center; color:var(--mute); font-weight:700; padding:34px 0; }
+
+    .pc-bar{ margin:18px 0 6px; }
+    .pc-btn{ display:flex; align-items:center; justify-content:center; gap:9px; width:100%; padding:14px; border-radius:14px; background:#fff; border:1.5px solid var(--line); color:#334155; font-size:14px; font-weight:800; text-decoration:none; box-shadow:var(--shadow); }
+    .pc-btn i{ color:var(--blue-d); }
+    .pc-note{ text-align:center; font-size:11.5px; color:var(--mute); font-weight:700; margin-top:8px; line-height:1.5; }
+
+    /* 불가 사유 시트 */
+    .sheet-ov{ position:fixed; inset:0; z-index:400; background:rgba(15,23,42,.5); display:none; align-items:flex-end; }
+    .sheet-ov.open{ display:flex; animation:fadeIn .2s ease; }
+    @keyframes fadeIn{ from{opacity:0} to{opacity:1} }
+    .sheet{ background:#fff; width:100%; max-width:600px; margin:0 auto; border-radius:24px 24px 0 0; padding:12px 18px calc(22px + env(safe-area-inset-bottom)); animation:slideUp .26s cubic-bezier(.4,0,.2,1); }
+    @keyframes slideUp{ from{transform:translateY(100%)} to{transform:translateY(0)} }
+    .sheet::before{ content:''; display:block; width:42px; height:5px; border-radius:999px; background:#dfe6ef; margin:0 auto 14px; }
+    .sheet h3{ margin:0 0 13px; font-size:16px; font-weight:900; display:flex; align-items:center; gap:8px; color:#dc2626; }
+    .rej-chips{ display:flex; flex-wrap:wrap; gap:8px; margin-bottom:12px; }
+    .rej-chip{ padding:10px 14px; border:1.5px solid #fecaca; background:#fef2f2; color:#b91c1c; border-radius:11px; font-size:13.5px; font-weight:800; cursor:pointer; }
+    .rej-chip:active{ background:#fee2e2; }
+    .rej-text{ width:100%; height:64px; border:1.5px solid #e2e8f0; border-radius:12px; padding:11px; font-size:15px; outline:none; resize:none; font-family:inherit; }
+    .sheet-acts{ display:flex; gap:8px; margin-top:14px; }
+    .sheet-acts .btn-rej{ flex:1; padding:14px; border:none; border-radius:12px; background:#dc2626; color:#fff; font-weight:900; font-size:14px; cursor:pointer; }
+    .sheet-acts .btn-cancel{ flex:1; padding:14px; border:none; border-radius:12px; background:#e2e8f0; color:#475569; font-weight:900; font-size:14px; cursor:pointer; }
+
+    #toast{ position:fixed; left:50%; bottom:40px; transform:translateX(-50%) translateY(20px); background:rgba(15,23,42,.95); color:#fff; padding:13px 22px; border-radius:14px; font-size:14px; font-weight:800; z-index:900; opacity:0; transition:all .26s; pointer-events:none; box-shadow:0 12px 34px rgba(0,0,0,.34); max-width:90vw; text-align:center; }
+    #toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
+  </style>
+  <link rel="icon" type="image/svg+xml" href="favicon.svg?v=b260620c">
+  <link rel="stylesheet" href="kac-tokens.css?v=20260622">
+</head>
+<body>
+<audio id="alarm-sound" src="car_sound.mp3" preload="auto"></audio>
+<div class="wrap">
+  <div class="mhead">
+    <div class="row1">
+      <div class="ttl"><div class="mk"><i class="fa-solid fa-van-shuttle"></i></div>차량지원 운행</div>
+      <div class="clk" id="clk"></div>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <div class="tab active" data-v="pickup" onclick="switchTab('pickup')"><i class="fa-solid fa-bell"></i> 픽업 신청 <span class="cnt" id="tabCnt" style="display:none;">0</span></div>
+    <div class="tab" data-v="leave" onclick="switchTab('leave')"><i class="fa-solid fa-bus"></i> 퇴교차량</div>
+  </div>
+
+  <!-- 픽업 신청 -->
+  <div class="view active" id="v-pickup">
+    <div class="sec-ttl"><i class="fa-solid fa-bell" style="color:#f59e0b;"></i> 신규 픽업 신청 <span id="pendN" style="font-weight:700;color:#94a3b8;"></span></div>
+    <div id="pendList"><div class="empty">불러오는 중...</div></div>
+    <div class="sec-ttl"><i class="fa-solid fa-list-check"></i> 처리 완료 (최근)</div>
+    <div id="doneList"><div class="empty" style="padding:18px 0;">-</div></div>
+    <div class="pc-bar">
+      <a class="pc-btn" href="driver.html?forcepc=1"><i class="fa-solid fa-display"></i> PC 전체 기능 (주간 스케줄 · 고정/휴가)</a>
+      <div class="pc-note">주간 운행보드 · 고정버스/휴가 등록 · 출발시간 공지는 PC 화면에서 이용하세요.</div>
+    </div>
+  </div>
+
+  <!-- 퇴교차량 -->
+  <div class="view" id="v-leave">
+    <div class="sec-ttl"><i class="fa-solid fa-bus" style="color:#0d9488;"></i> 퇴교차량 인원 집계 <span style="font-weight:700;color:#94a3b8;">· 실시간</span></div>
+    <div id="leaveList"><div class="empty">불러오는 중...</div></div>
+  </div>
+</div>
+
+<!-- 불가 사유 시트 -->
+<div class="sheet-ov" id="rejSheet">
+  <div class="sheet">
+    <h3><i class="fa-solid fa-circle-xmark"></i> 운행 불가 사유</h3>
+    <div class="rej-chips">
+      <button class="rej-chip" onclick="rejPick('다른 운행과 시간 겹침')">시간 겹침</button>
+      <button class="rej-chip" onclick="rejPick('휴가/운행불가 일정')">휴가/운행불가</button>
+      <button class="rej-chip" onclick="rejPick('입교/퇴교 버스 운행')">고정버스 운행</button>
+    </div>
+    <textarea class="rej-text" id="rejText" placeholder="사유 입력 (운영부에 전달됩니다)"></textarea>
+    <div class="sheet-acts">
+      <button class="btn-rej" onclick="confirmRej()">불가 처리</button>
+      <button class="btn-cancel" onclick="closeRej()">취소</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+<div id="__catcVer" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">기사M vA</div>
+
+<script src="config.js?v=b260620c"></script>
+<script>
+/* ========== 차량지원 모바일 라이트뷰 (픽업 처리 + 퇴교차량 조회) ========== */
+var allCourses={}, pickups=[], knownIds=[], firstLoad=true, curTab='pickup';
+function h(s){ return (s==null?'':String(s)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function pad(n){ return String(n).padStart(2,'0'); }
+function fmtPhone(p){ if(!p) return ''; var d=(''+p).replace(/[^0-9]/g,''); if(d.length===11) return d.replace(/(\d{3})(\d{4})(\d{4})/,'$1-$2-$3'); if(d.length===10) return d.replace(/(\d{3})(\d{3})(\d{4})/,'$1-$2-$3'); return p; }
+function normDate(s){ return s ? String(s).replace(/\./g,'-').replace(/\s/g,'') : ''; }
+function fmtFull(s){ if(!s) return ''; return String(s).replace(/-/g,'.'); }
+function dirText(place,dir){ place=place||'역'; return dir==='dep' ? ('항기원 → '+place) : (place+' → 항기원'); }
+function dirLabel(dir){ return dir==='dep' ? '모셔다드리기' : '모셔오기'; }
+
+function tickClock(){
+  var d=new Date(), days=['일','월','화','수','목','금','토'];
+  var hh=d.getHours(), ap=hh<12?'AM':'PM', h12=((hh%12)||12);
+  var el=document.getElementById('clk');
+  if(el) el.innerHTML=(d.getMonth()+1)+'.'+d.getDate()+'('+days[d.getDay()]+') <b>'+h12+':'+pad(d.getMinutes())+'</b> '+ap;
+}
+setInterval(tickClock,1000); tickClock();
+
+function switchTab(v){
+  curTab=v;
+  document.querySelectorAll('.view').forEach(function(e){ e.classList.remove('active'); });
+  document.querySelectorAll('.tab').forEach(function(e){ e.classList.remove('active'); });
+  document.getElementById('v-'+v).classList.add('active');
+  document.querySelector('.tab[data-v="'+v+'"]').classList.add('active');
+}
+
+/* ===== Firebase ===== */
+firebase.database().ref('courses').on('value', function(s){ allCourses=s.val()||{}; renderLeave(); });
+firebase.database().ref('system/pickup').on('value', function(s){
+  var raw=s.val()||{}, ids=Object.keys(raw), hasNew=false;
+  ids.forEach(function(id){ if(knownIds.indexOf(id)<0 && raw[id].status==='pending') hasNew=true; });
+  pickups=ids.map(function(id){ var o=raw[id]||{}; o.id=id; return o; }).sort(function(a,b){ return (a.createdAt||0)-(b.createdAt||0); });
+  if(!firstLoad && hasNew){ var a=document.getElementById('alarm-sound'); if(a){ a.currentTime=0; a.play().catch(function(){}); } }
+  knownIds=ids; firstLoad=false;
+  renderPickup();
+});
+
+function reqCard(p){
+  var statusTag = p.status==='confirmed' ? '<span class="tag tag-confirmed">확인완료</span>'
+    : p.status==='rejected' ? '<span class="tag tag-rejected">운행불가</span>'
+    : '<span class="tag tag-pending">미확인</span>';
+  var memo = p.memo ? '<div class="req-memo"><i class="fa-solid fa-note-sticky" style="color:#cbd5e1"></i> '+h(p.memo)+'</div>' : '';
+  var rej = (p.status==='rejected'&&p.rejectReason) ? '<div class="req-rej"><i class="fa-solid fa-circle-info"></i> '+h(p.rejectReason)+'</div>' : '';
+  var btns = p.status==='pending'
+    ? '<div class="req-btns"><button class="btn btn-ok" onclick="confirmPickup(\''+p.id+'\')"><i class="fa-solid fa-check"></i> 확인</button><button class="btn btn-no" onclick="markReject(\''+p.id+'\')"><i class="fa-solid fa-xmark"></i> 불가</button></div>'
+    : '<div class="req-btns"><button class="btn btn-undo" onclick="undoPickup(\''+p.id+'\')"><i class="fa-solid fa-rotate-left"></i> 미확인으로 되돌리기</button></div>';
+  return '<div class="req '+(p.status==='pending'?'pending':'')+'" id="req-'+p.id+'">'
+    +'<div class="req-top"><span class="req-prof">'+h(p.prof||'-')+'</span><span class="req-phone">'+h(fmtPhone(p.phone))+'</span>'+statusTag+'</div>'
+    +'<div class="req-line"><i class="fa-solid fa-route"></i> <span class="dir">'+h(dirText(p.place,p.dir))+'</span> <span style="color:#94a3b8;font-size:11px;font-weight:700;">'+dirLabel(p.dir)+'</span></div>'
+    +'<div class="req-line"><i class="fa-regular fa-calendar"></i> '+h(fmtFull(normDate(p.date))||'-')+'  <i class="fa-regular fa-clock" style="margin-left:6px;"></i> '+h(p.time||'-')+'</div>'
+    +memo+rej+btns+'</div>';
+}
+
+function renderPickup(){
+  var pend=pickups.filter(function(p){ return p.status==='pending'; });
+  var done=pickups.filter(function(p){ return p.status==='confirmed'||p.status==='rejected'; })
+                  .sort(function(a,b){ return (b.respondedAt||0)-(a.respondedAt||0); });
+  var tc=document.getElementById('tabCnt');
+  if(pend.length){ tc.style.display='inline-block'; tc.textContent=pend.length; } else { tc.style.display='none'; }
+  document.getElementById('pendN').textContent=pend.length?(pend.length+'건 대기'):'';
+  document.getElementById('pendList').innerHTML = pend.length ? pend.map(reqCard).join('')
+    : '<div class="empty"><i class="fa-regular fa-circle-check" style="font-size:20px;display:block;margin-bottom:6px;color:#cbd5e1;"></i>대기 중인 신청이 없습니다.</div>';
+  document.getElementById('doneList').innerHTML = done.length ? done.slice(0,12).map(reqCard).join('')
+    : '<div class="empty" style="padding:18px 0;">처리 내역 없음</div>';
+}
+
+function confirmPickup(id){
+  var el=document.getElementById('req-'+id); if(el) el.classList.add('resolving');
+  firebase.database().ref('system/pickup/'+id).update({ status:'confirmed', rejectReason:null, respondedAt:firebase.database.ServerValue.TIMESTAMP })
+    .then(function(){ toast('✅ 확인 처리'); });
+}
+var _rejId=null;
+function markReject(id){ _rejId=id; var t=document.getElementById('rejText'); if(t)t.value=''; document.getElementById('rejSheet').classList.add('open'); }
+function rejPick(s){ var t=document.getElementById('rejText'); if(t)t.value=s; }
+function confirmRej(){
+  var reason=(document.getElementById('rejText').value||'').trim();
+  if(_rejId){ var el=document.getElementById('req-'+_rejId); if(el) el.classList.add('resolving');
+    firebase.database().ref('system/pickup/'+_rejId).update({ status:'rejected', rejectReason:reason||'운행 불가', respondedAt:firebase.database.ServerValue.TIMESTAMP }); }
+  closeRej(); toast('⛔ 운행 불가로 처리');
+}
+function closeRej(){ document.getElementById('rejSheet').classList.remove('open'); _rejId=null; }
+function undoPickup(id){ firebase.database().ref('system/pickup/'+id).update({ status:'pending', rejectReason:null, respondedAt:null }); toast('미확인으로 되돌림'); }
+
+/* ===== 퇴교차량 집계 ===== */
+function sumLine(c){ return '오송'+c.osong+'·터미널'+c.terminal+'·공항'+c.airport+(c.car?('·자차'+c.car):''); }
+function renderLeave(){
+  var box=document.getElementById('leaveList'); var groups={}, pending=[];
+  for(var rid in allCourses){
+    var room=allCourses[rid]; var reqs=room.shuttle&&room.shuttle.requests; if(!reqs) continue;
+    var arr=Object.keys(reqs).map(function(k){return reqs[k];}); if(!arr.length) continue;
+    var counts={osong:0,terminal:0,airport:0,car:0};
+    arr.forEach(function(r){ if(counts[r.type]!==undefined) counts[r.type]++; });
+    var busTot=counts.osong+counts.terminal+counts.airport;
+    var cn=(room.settings&&room.settings.courseName)||rid;
+    var dep=room.shuttle&&room.shuttle.departure;
+    if(dep && dep.announced && dep.time){
+      var key=(dep.date||'')+'__'+dep.time;
+      if(!groups[key]) groups[key]={date:dep.date||'',time:dep.time,counts:{osong:0,terminal:0,airport:0,car:0},busTot:0,courses:[]};
+      var g=groups[key]; ['osong','terminal','airport','car'].forEach(function(k){ g.counts[k]+=counts[k]; }); g.busTot+=busTot; g.courses.push({cn:cn,counts:counts,busTot:busTot});
+    } else { pending.push({cn:cn,counts:counts,busTot:busTot}); }
+  }
+  var gkeys=Object.keys(groups).sort(function(a,b){return a.localeCompare(b);});
+  if(!gkeys.length && !pending.length){ box.innerHTML='<div class="empty">신청된 퇴교차량이 없습니다.</div>'; return; }
+  var html='';
+  gkeys.forEach(function(k){ var g=groups[k];
+    html+='<div class="lv-run"><div class="lv-run-h"><span class="lv-time"><i class="fa-solid fa-bus"></i> '+fmtFull(g.date)+' '+(g.time==='미정'?'출발시간 미정':(g.time+' 출발'))+'</span><span class="lv-tot">'+g.busTot+'명</span></div>'
+      +'<div class="lv-bd"><span class="bd2 osong">오송 '+g.counts.osong+'</span><span class="bd2 term">터미널 '+g.counts.terminal+'</span><span class="bd2 air">공항 '+g.counts.airport+'</span><span class="bd2 car">자차 '+g.counts.car+'</span></div>'
+      +'<div class="lv-courses">'+g.courses.map(function(c){ return '<div class="lv-c"><span>'+h(c.cn)+'</span><b>'+c.busTot+'명</b><small>'+sumLine(c.counts)+'</small></div>'; }).join('')+'</div></div>';
+  });
+  if(pending.length){
+    html+='<div class="lv-run pending"><div class="lv-run-h"><span class="lv-time wait"><i class="fa-solid fa-clock"></i> 출발시간 미공지 (운영부 대기)</span></div>'
+      +'<div class="lv-courses">'+pending.map(function(c){ return '<div class="lv-c"><span>'+h(c.cn)+'</span><b>'+c.busTot+'명</b><small>'+sumLine(c.counts)+'</small></div>'; }).join('')+'</div></div>';
+  }
+  box.innerHTML=html;
+}
+
+var _toastT;
+function toast(msg){ var el=document.getElementById('toast'); if(!el) return; el.textContent=msg; el.classList.add('show'); clearTimeout(_toastT); _toastT=setTimeout(function(){ el.classList.remove('show'); },2000); }
+document.getElementById('rejSheet').addEventListener('click', function(e){ if(e.target===this) closeRej(); });
+</script>
+</body>
+</html>
+<!-- 기사모바일 VA/VA/VA/VA/VA -->

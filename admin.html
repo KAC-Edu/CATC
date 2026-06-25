@@ -1,6 +1,16 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
+<script>
+/* [모바일 분리 · 외부 변경 2026-06-25] 모바일/태블릿은 모바일 라이트 화면(admin_m.html)으로 이동. PC는 현재 화면 유지(?forcepc 로 PC 강제). 기존 로직과 분리. */
+(function(){ try{
+  var wide = window.innerWidth >= 1024;
+  var fine = window.matchMedia && window.matchMedia('(pointer:fine)').matches;
+  var noTouch = !('ontouchstart' in window) || navigator.maxTouchPoints === 0;
+  var isPc = wide && (fine || noTouch);
+  if(!isPc && location.search.indexOf('forcepc')<0){ location.replace('admin_m.html'+location.search+location.hash); }
+}catch(e){} })();
+</script>
 <!-- ============================================================
   CATC · 강사 플랫폼  (admin.html)
   @version  P

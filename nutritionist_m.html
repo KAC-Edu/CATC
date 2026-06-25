@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <script>
+  /* [기기 분리] PC 접속은 PC 전용 화면으로 (모바일은 이 화면 유지). ?forcem 으로 강제 모바일. */
+  (function(){ try{
+    var wide = window.innerWidth >= 1024;
+    var fine = window.matchMedia && window.matchMedia('(pointer:fine)').matches;
+    var noTouch = !('ontouchstart' in window) || navigator.maxTouchPoints === 0;
+    var isPc = wide && (fine || noTouch);
+    if(isPc && location.search.indexOf('forcem')<0){ location.replace('nutritionist.html'+location.search+location.hash); }
+  }catch(e){} })();
+  </script>
+<!-- ════════ [카카오채널 연동] catc1234 접속 게이트 (수정상태: 수정안하는중) ════════
+     · nutritionist.html(영양사)의 모바일 라이트판(조회 중심). 직접 진입 시 접속코드 요구.
+     · 통과 시 localStorage['catc_gate_ok'] 저장. catcLock()으로 잠금 해제. 기능 로직과 분리. -->
+<script>
+(function(){
+  window.catcLock=function(){ try{localStorage.removeItem('catc_gate_ok');}catch(e){} location.reload(); };
+  var ok=false; try{ ok=(function(){var t=parseInt(localStorage.getItem('catc_gate_ok'),10);return !!t&&(Date.now()-t)<86400000;})(); }catch(e){ ok=true; }
+  if(ok){ window.__catcUnlocked=true; return; }
+  window.__catcUnlocked=false;
+  document.documentElement.classList.add('catc-locked');
+  function build(){
+    if(document.getElementById('catcGate')) return;
+    var o=document.createElement('div'); o.id='catcGate';
+    o.innerHTML='<div class="catc-box"><div class="catc-ic">🔒</div>'
+      +'<div class="catc-t">접속 코드 입력</div>'
+      +'<div class="catc-s">CATC 교육 플랫폼 · 보안 접속</div>'
+      +'<input id="catcInp" type="password" autocomplete="off" placeholder="접속 코드">'
+      +'<button id="catcBtn">입장</button><div id="catcMsg"></div></div>';
+    (document.body||document.documentElement).appendChild(o);
+    var inp=o.querySelector('#catcInp'),btn=o.querySelector('#catcBtn'),msg=o.querySelector('#catcMsg');
+    function go(){ if(inp.value==='catc1234'){ try{localStorage.setItem('catc_gate_ok',String(Date.now()));}catch(e){} location.reload(); } else { msg.textContent='접속 코드가 올바르지 않습니다.'; inp.value=''; inp.focus(); } }
+    btn.addEventListener('click',go);
+    inp.addEventListener('keyup',function(e){ if(e.key==='Enter') go(); });
+    setTimeout(function(){ try{inp.focus();}catch(e){} },120);
+  }
+  if(document.body) build(); else document.addEventListener('DOMContentLoaded',build);
+})();
+</script>
+<style>
+  html.catc-locked > body{ visibility:hidden !important; }
+  #catcGate{ position:fixed; inset:0; z-index:2147483647; background:linear-gradient(135deg,#0f172a,#1e293b); display:flex; align-items:center; justify-content:center; font-family:'Pretendard','Malgun Gothic',system-ui,sans-serif; visibility:visible !important; }
+  #catcGate *{ visibility:visible !important; box-sizing:border-box; }
+  #catcGate .catc-box{ width:300px; max-width:86vw; background:#fff; border-radius:18px; padding:30px 26px; text-align:center; box-shadow:0 20px 60px rgba(0,0,0,.45); }
+  #catcGate .catc-ic{ font-size:30px; margin-bottom:8px; }
+  #catcGate .catc-t{ font-size:19px; font-weight:800; color:#0f172a; }
+  #catcGate .catc-s{ margin:4px 0 18px; font-size:12.5px; color:#64748b; }
+  #catcGate input{ width:100%; padding:13px 14px; font-size:16px; text-align:center; letter-spacing:2px; border:1.5px solid #e2e8f0; border-radius:11px; outline:none; color:#0f172a; background:#fff; }
+  #catcGate input:focus{ border-color:#2563eb; box-shadow:0 0 0 3px rgba(37,99,235,.15); }
+  #catcGate button{ width:100%; margin-top:12px; padding:13px; font-size:15px; font-weight:800; color:#fff; background:#2563eb; border:0; border-radius:11px; cursor:pointer; }
+  #catcGate button:active{ transform:scale(.98); }
+  #catcGate #catcMsg{ margin-top:11px; min-height:16px; font-size:12.5px; font-weight:700; color:#dc2626; }
+</style>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <title>식당 운영 (모바일)</title>
+  <meta name="theme-color" content="#0f172a">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" rel="stylesheet">
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+  <style>
+    *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+    :root{
+      --blue:#2563eb; --blue-d:#1d4ed8; --ink:#0f172a; --sub:#64748b; --mute:#94a3b8;
+      --line:#e8eef7; --bg:#f4f7fc; --shadow:0 2px 10px rgba(15,23,42,.06);
+      --green:#10b981; --orange:#f59e0b; --indigo:#6366f1;
+    }
+    html,body{ margin:0; padding:0; height:100%; overscroll-behavior:none; }
+    body{ font-family:'Pretendard','Apple SD Gothic Neo','Malgun Gothic',sans-serif; background:var(--bg); color:var(--ink); -webkit-font-smoothing:antialiased; padding-bottom:30px; letter-spacing:-.2px; }
+    .wrap{ max-width:600px; margin:0 auto; min-height:100dvh; }
+
+    .mhead{ background:linear-gradient(135deg,#0b1f4d 0%,#1a3a8a 52%,#2563eb 100%); color:#fff; padding:16px 18px; position:sticky; top:0; z-index:50; border-radius:0 0 22px 22px; box-shadow:0 8px 24px rgba(13,31,73,.28); overflow:hidden; }
+    .mhead::after{ content:''; position:absolute; right:-40px; top:-50px; width:160px; height:160px; border-radius:50%; background:radial-gradient(circle,rgba(255,255,255,.14),transparent 70%); pointer-events:none; }
+    .mhead .row1{ display:flex; align-items:center; justify-content:space-between; }
+    .mhead .ttl{ display:flex; align-items:center; gap:11px; font-size:17px; font-weight:900; z-index:1; }
+    .mhead .ttl .mk{ width:36px; height:36px; border-radius:11px; background:rgba(255,255,255,.18); border:1px solid rgba(255,255,255,.28); display:flex; align-items:center; justify-content:center; font-size:17px; }
+    .mhead .clk{ text-align:right; font-size:12px; font-weight:700; opacity:.95; line-height:1.4; z-index:1; }
+    .mhead .clk b{ font-size:15px; font-weight:900; }
+
+    .sec{ padding:15px 14px 0; }
+    .sec-ttl{ font-size:12px; font-weight:900; color:var(--sub); margin:4px 3px 10px; display:flex; align-items:center; gap:7px; } .sec-ttl i{ color:var(--blue); }
+
+    /* 식수 카드 */
+    .meal-grid{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; }
+    .meal{ border-radius:16px; padding:15px 10px; text-align:center; border:1.5px solid; box-shadow:var(--shadow); }
+    .meal .ic{ font-size:17px; margin-bottom:6px; }
+    .meal .n{ font-size:30px; font-weight:900; line-height:1; }
+    .meal .u{ font-size:12px; font-weight:800; margin-top:2px; }
+    .meal .l{ font-size:12px; font-weight:800; margin-top:6px; }
+    .meal.b{ background:linear-gradient(160deg,#fffbeb,#fef3c7); border-color:#fde68a; color:#b45309; }
+    .meal.l2{ background:linear-gradient(160deg,#eff6ff,#dbeafe); border-color:#bfdbfe; color:#1d4ed8; }
+    .meal.d{ background:linear-gradient(160deg,#f5f3ff,#ede9fe); border-color:#ddd6fe; color:#6d28d9; }
+    .resv{ margin-top:10px; background:#fff; border:1.5px solid var(--line); border-radius:13px; padding:11px 14px; display:flex; align-items:center; gap:9px; font-size:13px; font-weight:800; color:#475569; box-shadow:var(--shadow); }
+    .resv b{ color:#6d28d9; font-size:16px; margin-left:auto; }
+
+    /* 부서별 */
+    .dept-card{ background:#fff; border:1.5px solid var(--line); border-radius:15px; padding:13px 15px; box-shadow:var(--shadow); }
+    .dept-row{ display:flex; align-items:center; gap:10px; padding:7px 0; }
+    .dept-row .dn{ font-size:13px; font-weight:800; color:#334155; width:120px; flex:none; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .dept-row .bar{ flex:1; background:#f1f5f9; border-radius:6px; height:16px; overflow:hidden; }
+    .dept-row .bar i{ display:block; height:100%; background:#3b82f6; border-radius:6px; }
+    .dept-row .dv{ width:40px; text-align:right; font-size:13px; font-weight:900; color:#0f172a; flex:none; }
+
+    /* 식단 */
+    .menu-card{ background:#fff; border:1.5px solid var(--line); border-radius:15px; padding:13px 15px; box-shadow:var(--shadow); }
+    .menu-banner{ display:flex; align-items:center; gap:10px; font-size:13px; font-weight:800; padding:10px 12px; border-radius:11px; margin-bottom:10px; }
+    .menu-banner.ok{ background:#f0fdf4; border:1px solid #bbf7d0; color:#15803d; }
+    .menu-banner.no{ background:#fffbeb; border:1px solid #fde68a; color:#b45309; }
+    .menu-img{ width:100%; border-radius:11px; border:1px solid var(--line); display:block; }
+    .menu-period{ font-size:12px; color:var(--sub); font-weight:700; margin-bottom:8px; }
+
+    /* 과정 */
+    .crs{ background:#fff; border:1.5px solid var(--line); border-radius:14px; padding:12px 14px; margin-bottom:9px; box-shadow:var(--shadow); display:flex; align-items:center; gap:10px; }
+    .crs .rb{ background:linear-gradient(135deg,#2563eb,#1d4ed8); color:#fff; font-weight:900; font-size:11px; padding:4px 9px; border-radius:8px; white-space:nowrap; }
+    .crs .cn{ font-size:14px; font-weight:800; flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .crs .pc{ font-size:14px; font-weight:900; color:var(--blue-d); white-space:nowrap; }
+    .crs-tot{ display:flex; align-items:center; gap:9px; background:linear-gradient(160deg,#eff6ff,#dbeafe); border:1.5px solid #bfdbfe; border-radius:14px; padding:13px 15px; margin-bottom:11px; font-weight:900; color:#1d4ed8; }
+    .crs-tot .big{ margin-left:auto; font-size:22px; }
+
+    .empty{ text-align:center; color:var(--mute); font-weight:700; padding:24px 0; }
+
+    .pc-bar{ margin:18px 14px 6px; }
+    .pc-btn{ display:flex; align-items:center; justify-content:center; gap:9px; width:100%; padding:14px; border-radius:14px; background:#fff; border:1.5px solid var(--line); color:#334155; font-size:14px; font-weight:800; text-decoration:none; box-shadow:var(--shadow); }
+    .pc-btn i{ color:var(--blue); }
+    .pc-note{ text-align:center; font-size:11.5px; color:var(--mute); font-weight:700; margin-top:8px; line-height:1.5; }
+    .ov-img{ position:fixed; inset:0; background:rgba(15,23,42,.9); display:none; align-items:center; justify-content:center; z-index:500; padding:14px; }
+    .ov-img.open{ display:flex; } .ov-img img{ max-width:100%; max-height:100%; border-radius:10px; }
+  </style>
+  <link rel="icon" type="image/svg+xml" href="favicon.svg?v=b260620c">
+  <link rel="stylesheet" href="kac-tokens.css?v=20260622">
+</head>
+<body>
+<div class="wrap">
+  <div class="mhead">
+    <div class="row1">
+      <div class="ttl"><div class="mk"><i class="fa-solid fa-utensils"></i></div>식당 운영 현황</div>
+      <div class="clk" id="clk"></div>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-ttl"><i class="fa-solid fa-bowl-food"></i> 오늘 식수 현황 <span id="todayLbl" style="font-weight:700;color:#94a3b8;"></span></div>
+    <div class="meal-grid">
+      <div class="meal b"><div class="ic"><i class="fa-solid fa-mug-saucer"></i></div><div class="n" id="cnt-b">0</div><div class="u">명</div><div class="l">조식</div></div>
+      <div class="meal l2"><div class="ic"><i class="fa-solid fa-bowl-rice"></i></div><div class="n" id="cnt-l">0</div><div class="u">명</div><div class="l">중식</div></div>
+      <div class="meal d"><div class="ic"><i class="fa-solid fa-moon"></i></div><div class="n" id="cnt-d">0</div><div class="u">명</div><div class="l">석식</div></div>
+    </div>
+    <div class="resv"><i class="fa-solid fa-calendar-check" style="color:#a78bfa;"></i> 석식 예약 <b id="cnt-r">0명</b></div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-ttl"><i class="fa-solid fa-building-user"></i> 부서별 중식 (상위)</div>
+    <div class="dept-card" id="deptCard"><div class="empty">집계 중...</div></div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-ttl"><i class="fa-solid fa-calendar-week"></i> 금주 식단표</div>
+    <div class="menu-card" id="menuCard"><div class="empty">불러오는 중...</div></div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-ttl"><i class="fa-solid fa-graduation-cap"></i> 운영중 과정 인원</div>
+    <div id="crsTot"></div>
+    <div id="crsList"><div class="empty">불러오는 중...</div></div>
+  </div>
+
+  <div class="pc-bar">
+    <a class="pc-btn" href="nutritionist.html?forcepc=1"><i class="fa-solid fa-display"></i> PC 전체 기능 (집계 · 명단 · 엑셀/PDF)</a>
+    <div class="pc-note">월별 식수 집계 · 직원 명단 관리 · 식단표 업로드 · 내보내기는 PC 화면에서 이용하세요.</div>
+  </div>
+</div>
+
+<div class="ov-img" id="imgOv" onclick="this.classList.remove('open')"><img id="imgOvImg" src="" alt="식단표"></div>
+<div id="__catcVer" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">영양M vA</div>
+
+<script src="config.js?v=b260620c"></script>
+<script>
+/* ========== 영양사 모바일 라이트뷰 (조회 중심) ========== */
+var db = firebase.database();
+var MENU_KEY='system/weeklyMenu';
+var allRoomData={}, LUNCH={};
+function h(s){ return (s==null?'':String(s)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function pad(n){ return String(n).padStart(2,'0'); }
+function toLocalStr(d){ return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()); }
+function getToday(){ return toLocalStr(new Date()); }
+function getMondayOf(ds){ var d=new Date(ds+'T00:00:00'); var dow=(d.getDay()+6)%7; d.setDate(d.getDate()-dow); return toLocalStr(d); }
+var today=getToday();
+
+function tickClock(){
+  var d=new Date(), days=['일','월','화','수','목','금','토'];
+  var hh=d.getHours(), ap=hh<12?'AM':'PM', h12=((hh%12)||12);
+  var el=document.getElementById('clk');
+  if(el) el.innerHTML=(d.getMonth()+1)+'.'+d.getDate()+'('+days[d.getDay()]+') <b>'+h12+':'+pad(d.getMinutes())+'</b> '+ap;
+  var tl=document.getElementById('todayLbl'); if(tl) tl.textContent='· '+today;
+}
+setInterval(tickClock,1000); tickClock();
+
+function countObj(o){ return o ? Object.keys(o).filter(function(k){ return !!o[k]; }).length : 0; }
+
+/* 식수: breakfast / checks(중식) / dinner / dinner_resv */
+db.ref('system/staffMeal/breakfast/'+today).on('value', function(s){ document.getElementById('cnt-b').textContent=countObj(s.val()); });
+db.ref('system/staffMeal/dinner/'+today).on('value', function(s){ document.getElementById('cnt-d').textContent=countObj(s.val()); });
+db.ref('system/staffMeal/dinner_resv/'+today).on('value', function(s){ document.getElementById('cnt-r').textContent=countObj(s.val())+'명'; });
+db.ref('system/staffMeal/checks/'+today).on('value', function(s){
+  LUNCH=s.val()||{};
+  document.getElementById('cnt-l').textContent=countObj(LUNCH);
+  renderDept();
+});
+
+function renderDept(){
+  var byD={};
+  Object.keys(LUNCH).forEach(function(k){ var v=LUNCH[k]; if(!v) return; var d=(v.dept||'기타').trim()||'기타'; byD[d]=(byD[d]||0)+1; });
+  var arr=Object.keys(byD).map(function(d){ return [d,byD[d]]; }).sort(function(a,b){ return b[1]-a[1]; });
+  var el=document.getElementById('deptCard');
+  if(!arr.length){ el.innerHTML='<div class="empty">오늘 중식 체크 내역이 없습니다.</div>'; return; }
+  var max=arr[0][1];
+  el.innerHTML=arr.slice(0,8).map(function(x){
+    var pct=max?Math.round(x[1]/max*100):0;
+    return '<div class="dept-row"><span class="dn">'+h(x[0])+'</span><span class="bar"><i style="width:'+pct+'%"></i></span><span class="dv">'+x[1]+'</span></div>';
+  }).join('');
+}
+
+/* 금주 식단표 */
+db.ref(MENU_KEY).on('value', function(snap){
+  var data=snap.val(); var el=document.getElementById('menuCard');
+  var thisWeek=getMondayOf(getToday());
+  if(data && (data.url || data.menu)){
+    var current = data.weekKey===thisWeek;
+    var upcoming = data.weekKey>thisWeek;
+    var tag = current ? '<span class="menu-banner ok"><i class="fa-solid fa-circle-check"></i> 이번주 식단표 등록됨</span>'
+      : upcoming ? '<span class="menu-banner ok"><i class="fa-solid fa-clock"></i> 차주 식단표 등록됨 (해당 주 자동 표시)</span>'
+      : '<span class="menu-banner no"><i class="fa-solid fa-triangle-exclamation"></i> 지난주 식단표입니다. 금주분 미갱신</span>';
+    var period = data.period ? '<div class="menu-period">기간: '+h(data.period)+'</div>' : '';
+    var body='';
+    if(data.url && String(data.url).indexOf('data:image')===0){
+      body='<img class="menu-img" src="'+data.url+'" alt="식단표" onclick="openImg(this.src)">';
+    } else if(data.menu && data.menu.days){
+      body='<div style="font-size:13px;color:#475569;font-weight:700;padding:8px 2px;"><i class="fa-solid fa-file-lines" style="color:#94a3b8"></i> 텍스트 식단표가 등록되어 있습니다. 전체 표는 PC 화면에서 확인하세요.</div>';
+    }
+    el.innerHTML=tag+period+body;
+  } else {
+    el.innerHTML='<span class="menu-banner no"><i class="fa-solid fa-triangle-exclamation"></i> 아직 금주 식단표가 등록되지 않았습니다.</span>';
+  }
+});
+function openImg(src){ var o=document.getElementById('imgOv'); document.getElementById('imgOvImg').src=src; o.classList.add('open'); }
+
+/* 운영중 과정 인원 */
+db.ref('courses').on('value', function(s){ allRoomData=s.val()||{}; renderCourses(); });
+function studentsCount(room){
+  var st=room && room.students; if(!st) return 0;
+  return Object.keys(st).filter(function(k){ var x=st[k]; return x && x.name && (''+x.name).trim() && x.name!=='undefined'; }).length;
+}
+function renderCourses(){
+  var rows=[], total=0, td=getToday();
+  for(var i=65;i<=90;i++){
+    var rid=String.fromCharCode(i), room=allRoomData[rid]; if(!room) continue;
+    var s=room.settings||{}, st=room.status||{};
+    if(!s.courseName) continue;
+    if(st.roomStatus!=='active') continue;
+    if(s.hideFromBoard) continue;
+    if(s.period && s.period.indexOf('~')>=0){ var ed=(s.period.split('~')[1]||'').trim(); if(ed && ed<td) continue; }
+    var c=studentsCount(room); total+=c;
+    rows.push({rid:rid, cn:s.courseName, c:c});
+  }
+  var tot=document.getElementById('crsTot');
+  var list=document.getElementById('crsList');
+  if(!rows.length){ tot.innerHTML=''; list.innerHTML='<div class="empty">운영 중인 과정이 없습니다.</div>'; return; }
+  tot.innerHTML='<div class="crs-tot"><i class="fa-solid fa-users"></i> 입교 인원 합계 <span class="big">'+total+'명</span></div>';
+  list.innerHTML=rows.map(function(r){
+    return '<div class="crs"><span class="rb">#'+r.rid+'</span><span class="cn">'+h(r.cn)+'</span><span class="pc">'+r.c+'명</span></div>';
+  }).join('');
+}
+</script>
+</body>
+</html>
+<!-- 영양사모바일 VA/VA/VA/VA/VA -->
