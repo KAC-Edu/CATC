@@ -763,7 +763,7 @@
             </div>
             <div id="tabletLoanBtns" style="display:flex; flex-direction:column; gap:9px;">
                 <button id="btn-tablet-apply" onclick="applyTabletLoan()" style="padding:15px; background:#6366f1; color:#fff; border:none; border-radius:13px; font-size:16px; font-weight:800; cursor:pointer; box-shadow:0 6px 16px rgba(99,102,241,.26);"><i class="fa-solid fa-tablet-screen-button" style="margin-right:6px;"></i>태블릿 대여 신청하기</button>
-                <button id="btn-tablet-cancel" onclick="cancelTabletLoan()" style="display:none; padding:14px; background:#fff; color:#dc2626; border:1.5px solid #fecaca; border-radius:13px; font-size:15px; font-weight:800; cursor:pointer;"><i class="fa-solid fa-xmark" style="margin-right:6px;"></i>신청 취소</button>
+                <button id="btn-tablet-cancel" onclick="cancelTabletLoan()" style="display:none; padding:14px; background:#fef2f2; color:#dc2626; border:none; border-radius:13px; font-size:15px; font-weight:800; cursor:pointer;"><i class="fa-solid fa-xmark" style="margin-right:6px;"></i>신청 취소</button>
                 <button onclick="closeTabletLoan()" style="padding:13px; background:#f1f5f9; color:#475569; border:none; border-radius:13px; font-size:14px; font-weight:800; cursor:pointer;">닫기</button>
             </div>
         </div>
@@ -808,7 +808,7 @@
 
         <!-- 4. 하단 버튼 -->
         <button id="facilitySubmitBtn" onclick="submitFacilityRequest()" style="width:100%; padding:15px; background:#059669; color:#fff; border:none; border-radius:13px; font-size:16px; font-weight:800; cursor:pointer; box-shadow: 0 6px 16px rgba(5,150,105,.26);">요청 제출하기</button>
-        <button id="facilityCancelBtn" onclick="cancelMyFacilityRequest()" style="display:none; width:100%; padding:14px; background:#fff; color:#dc2626; border:1.5px solid #fecaca; border-radius:13px; font-size:15px; font-weight:800; cursor:pointer;"><i class="fa-solid fa-xmark" style="margin-right:6px;"></i>신청 취소 후 다시 신청</button>
+        <button id="facilityCancelBtn" onclick="cancelMyFacilityRequest()" style="display:none; width:100%; padding:14px; background:#fef2f2; color:#dc2626; border:none; border-radius:13px; font-size:15px; font-weight:800; cursor:pointer;"><i class="fa-solid fa-trash-can" style="margin-right:7px;"></i>신청 취소 후 다시 신청</button>
         <button onclick="closeFacilityModal()" style="margin-top:9px; width:100%; padding:13px; border:none; border-radius:13px; background:#f1f5f9; color:#475569; font-weight:800; cursor:pointer;">닫기</button>
         </div>
     </div>
@@ -992,7 +992,7 @@
             <div id="returnBtnArea" style="margin-top:15px; display:flex; flex-direction:column; gap:8px;">
                 <div id="beforeReturnGroup" style="display:flex; flex-direction:column; gap:9px;">
                     <button onclick="confirmReturnAction()" style="width:100%; padding:15px; background:#059669; color:#fff; border:none; border-radius:13px; font-size:16px; font-weight:800; cursor:pointer; box-shadow:0 6px 16px rgba(5,150,105,.28);"><i class="fa-solid fa-circle-check" style="margin-right:7px;"></i>복귀 완료 보고</button>
-                    <button onclick="cancelAdminAction()" style="width:100%; padding:13px; background:#fff; color:#dc2626; border:1.5px solid #fecaca; border-radius:13px; font-size:14px; font-weight:800; cursor:pointer;">신청 취소</button>
+                    <button onclick="cancelAdminAction()" style="width:100%; padding:13px; background:#fef2f2; color:#dc2626; border:none; border-radius:13px; font-size:14px; font-weight:800; cursor:pointer;">신청 취소</button>
                 </div>
                 <div id="afterReturnGroup" style="display:none;">
                     <button onclick="undoReturnAction()" style="width:100%; padding:14px; background:#fff; color:#475569; border:1.5px solid #e2e8f0; border-radius:13px; font-size:14px; font-weight:800; cursor:pointer;">복귀 보고 취소 (재수정)</button>
