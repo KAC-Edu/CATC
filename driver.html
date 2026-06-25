@@ -2,10 +2,12 @@
 <html lang="ko">
 <head>
 <!-- ════════ [PC버전 수정 · 차량(기사) · 디에스장 · 2026-06-25] ════════
-     · 작업: 모바일 분리(driver_m.html) 대응 PC측 @version 업데이트.
-     · @version  S1 → T1 (한 단계 업).
+     · 변경이력
+        - @version S1 → T1 : 모바일 분리(driver_m.html) 대응.
+        - @version T1 → U1 : 미확인 픽업 신청이 요청일 지나면 인박스에서 자동 숨김('나가리'). isActivePending() 참고.
+     · @version  U1
      · 수정상태: 수정완료   (작업 중에는 '수정중', 완료 시 '수정완료'로 표기)
-     · 연동 데이터(system/pickup, courses/{room}/shuttle) 로직 미변경 — 타 담당자 영향 없음. -->
+     · 연동 데이터(system/pickup, courses/{room}/shuttle) 쓰기 로직 미변경 — 화면 필터만 적용, 타 담당자 영향 없음. -->
 <script>
 /* [모바일 분리 · 외부 변경 2026-06-25] 모바일/태블릿은 모바일 라이트 화면(driver_m.html)으로 이동. PC는 현재 화면 유지(?forcepc 로 PC 강제). 기존 로직과 분리. */
 (function(){ try{
@@ -61,7 +63,7 @@
 </style>
 <!-- ============================================================
   CATC · 차량·기사  (driver.html)  — 전면 리뉴얼본
-  @version  T1
+  @version  U1
   @build    20260625-052259
   ────────────────────────────────────────────────────────
   PC용 기사 운행관리 대시보드
@@ -557,6 +559,12 @@ function ymd(d){ return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDa
 function todayStr(){ return ymd(new Date()); }
 /* 운영 주(週) 시작(월요일). 금요일까지는 이번주, 토·일이면 다음주로 자동 전환 */
 function opWeekStart(){ const n=new Date(); const dow=n.getDay(); const mon=new Date(n); mon.setDate(n.getDate()-((dow+6)%7)); if(dow===6||dow===0) mon.setDate(mon.getDate()+7); return ymd(mon); }
+/* [PC수정 2026-06-25] 미확인(pending) 픽업: 강사 요청일이 지나면 인박스에서 자동 숨김('나가리').
+   · system/pickup 데이터는 그대로 두고 화면에서만 제외 → 타 플랫폼/담당자 영향 없음.
+   · PICKUP_GRACE_DAYS=0 → 요청 당일까지만 표시, 다음 날부터 숨김. (며칠 더 보이려면 숫자만 늘리면 됨) */
+const PICKUP_GRACE_DAYS = 0;
+function pickupMinShow(){ const t=new Date(); t.setDate(t.getDate()-PICKUP_GRACE_DAYS); const today=ymd(t); const cutoff=opWeekStart(); return cutoff>today?cutoff:today; }
+function isActivePending(p){ return p && p.status==='pending' && (p.date||'') >= pickupMinShow(); }
 function fillTimeOptions(sel, selected){ if(!sel) return; let html=''; for(let h=6; h<=21; h++){ for(const mm of ['00','30']){ const t=`${pad(h)}:${mm}`; html+=`<option value="${t}" ${t===selected?'selected':''}>${t}</option>`; } } sel.innerHTML=html; }
 function normDate(s){ return s ? String(s).replace(/\./g,'-').replace(/\s/g,'') : ''; }
 function toMin(t){ if(!t) return null; const [h,m]=t.split(':'); return parseInt(h)*60+parseInt(m||0); }
@@ -609,8 +617,7 @@ function moveWeek(d){ weekOffset = d===0 ? ((()=>{const dw=new Date().getDay();r
 function renderAll(){ renderInbox(); renderDone(); renderSchedule(); renderLeave(); renderFixedList(); renderOffList(); updateTabCount(); renderWeekCourses(); renderPlanList(); }
 
 function updateTabCount(){
-  const cutoff=opWeekStart();
-  const n=pickups.filter(p=>p.status==='pending' && (p.date||'')>=cutoff).length;
+  const n=pickups.filter(isActivePending).length; // 지난 요청일 건은 제외
   const t=document.getElementById('tabCnt'); const sub=document.getElementById('pendingSub');
   if(n>0){ t.style.display='inline-block'; t.textContent=n; } else t.style.display='none';
   sub.textContent=`${n}건`;
@@ -636,8 +643,8 @@ function getConflicts(date, time, excludeId){
 /* ---- 인박스 ---- */
 function renderInbox(){
   const box=document.getElementById('inboxBody');
-  const cutoff=opWeekStart(); // 토요일이면 차주부터 표시
-  const list=pickups.filter(p=>p.status==='pending' && (p.date||'')>=cutoff).sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));
+  // 미확인 + 요청일이 오늘 이후(지난 날짜 자동 숨김). 토요일이면 차주부터 표시.
+  const list=pickups.filter(isActivePending).sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));
   if(!list.length){ box.innerHTML='<div class="inbox-empty">대기 중인 신청이 없습니다.</div>'; return; }
   box.innerHTML=list.map(p=>{
     const dir=p.dir||'arr'; const route=dirText(p.place)[dir];
