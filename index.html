@@ -2,7 +2,7 @@
 <!-- ══════════════════ [편집상태 / EDIT-STATUS] ══════════════════
      STATUS : 수정안하는중
      FILE   : index.html (교육생)
-     UPDATED: 2026-06-25 14:34  (닫기→종료안내 커버 + 카카오 catc 로더 숨김)
+     UPDATED: 2026-06-26 12:50  (종료커버: 상단 다운화살표+활주로+이륙기 / 창닫기버튼·안내문구 제거 / 외출외박 제출 시 카카오모드는 즉시 종료커버)
      ─ 규칙: 수정 시작 시 STATUS를 '수정중'으로, 완료 시 '수정안하는중'으로 변경.
             '수정중'이면 다른 플랫폼은 연동 변경을 보류/협의 후 진행.
 ═══════════════════════════════════════════════════════════════ -->
@@ -3959,8 +3959,15 @@ async function submitAdminAction() {
         // [결과요약용] 신청 내용 보관
         window._lastOutingResult = { type:selectedAdminType, group:(groupApplyMode==='group' && selectedGroupMembers.length)?selectedGroupMembers.length+1:0, name:name, dept:dept, dest:dest, reason:reason, startTime:startTime, endTime:endTime, returnDate:returnDate, phone:fullPhone, dinnerSkip:null };
 
-        // 7. 완료 단계로 이동 (석식 제외 여부 선택)
-        showAdminStep(5);
+        // 7. 완료 처리
+        if (document.body.classList.contains('kac-cover')) {
+            // [카카오 진입] 제출 즉시 종료(활주로) 안내 화면으로 — 패널을 닫으면 뒤의 #kakaoCover가 드러남
+            try { closePanelSmooth('adminActionModal'); }
+            catch(e){ var _m=document.getElementById('adminActionModal'); if(_m){ _m.style.display='none'; } }
+        } else {
+            // [일반 접속] 기존 완료 단계 유지 (석식 제외 여부 선택)
+            showAdminStep(5);
+        }
 
     } catch (e) {
         console.error(e);
@@ -6177,13 +6184,22 @@ html, body { overscroll-behavior-x: none !important; }
      '입장+프로필' 완료(mainApp 표시) 후에만 해당 화면을 연다. -->
 <style id="kac-kiosk-style">
 /* [카카오 키오스크 락 20260625] 카카오 진입은 그 화면 하나로 고정 (메뉴 이동·닫기 차단, 보드 가림으로 2번 스침 제거) */
-#kakaoCover{ position:fixed; inset:0; z-index:6500; display:none; background:#0f172a; align-items:center; justify-content:center; padding:28px 22px; text-align:center; }
+#kakaoCover{ position:fixed; inset:0; z-index:6500; display:none; background:#0f172a; flex-direction:column; align-items:center; justify-content:flex-start; padding:14px 22px calc(22px + env(safe-area-inset-bottom)); text-align:center; overflow:hidden; }
 body.kac-cover #kakaoCover{ display:flex; }
-#kakaoCover .kc-box{ width:100%; max-width:300px; }
-#kakaoCover .kc-ic{ font-size:46px; color:#34d399; margin-bottom:14px; }
-#kakaoCover .kc-msg{ color:#e2e8f0; font-size:17px; font-weight:800; line-height:1.5; margin-bottom:22px; }
-#kakaoCover .kc-btn{ width:100%; max-width:240px; padding:15px; border:none; border-radius:13px; background:#3b82f6; color:#fff; font-size:16px; font-weight:900; cursor:pointer; }
-#kakaoCover .kc-guide{ margin-top:16px; font-size:12px; color:#94a3b8; line-height:1.6; }
+#kakaoCover .kc-box{ width:100%; max-width:320px; height:100%; display:flex; flex-direction:column; align-items:center; }
+#kakaoCover .kc-swipe-label{ flex-shrink:0; display:inline-flex; align-items:center; gap:7px; font-size:13px; font-weight:800; color:#bcd2f5; background:rgba(59,130,246,.14); border:1px solid rgba(96,165,250,.35); border-radius:20px; padding:7px 16px; }
+#kakaoCover .kc-swipe-label i{ font-size:11px; color:#60a5fa; }
+#kakaoCover .kc-runway{ position:relative; width:150px; height:200px; margin:8px auto 0; flex-shrink:0; }
+#kakaoCover .kc-runway svg{ position:absolute; inset:0; }
+#kakaoCover .kc-plane{ position:absolute; left:50%; top:0; font-size:24px; color:#fff; filter:drop-shadow(0 4px 10px rgba(37,99,235,.75)); animation:kcPlane 2.6s ease-in infinite; }
+@keyframes kcPlane{ 0%{ transform:translate(-50%,2px) rotate(90deg) scale(.45); opacity:0 } 16%{ opacity:1 } 70%{ transform:translate(-50%,128px) rotate(90deg) scale(1.1); opacity:1 } 100%{ transform:translate(-50%,168px) rotate(90deg) scale(1.5); opacity:0 } }
+#kakaoCover .kc-arrow{ flex-shrink:0; margin-bottom:6px; filter:drop-shadow(0 6px 16px rgba(37,99,235,.55)); animation:arBob 1.5s ease-in-out infinite; }
+@keyframes arBob{ 0%,100%{ transform:translateY(0); opacity:.85 } 50%{ transform:translateY(8px); opacity:1 } }
+#kakaoCover .kc-center{ flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; }
+#kakaoCover .kc-ic{ width:70px; height:70px; border-radius:50%; border:4px solid #22c55e; display:flex; align-items:center; justify-content:center; font-size:30px; color:#22c55e; margin-bottom:14px; box-shadow:0 0 24px rgba(34,197,94,.28); }
+#kakaoCover .kc-msg{ color:#f1f5f9; font-size:19px; font-weight:800; line-height:1.45; margin-bottom:20px; }
+#kakaoCover .kc-btn{ width:100%; max-width:260px; padding:16px; border:none; border-radius:14px; background:linear-gradient(135deg,#3b82f6,#2563eb); color:#fff; font-size:16px; font-weight:800; box-shadow:0 12px 28px rgba(37,99,235,.4); cursor:pointer; }
+#kakaoCover .kc-guide{ margin-top:14px; font-size:12px; color:#7c8aa3; line-height:1.6; }
 body.kac-locked .header > .header-btn:first-child{ display:none !important; pointer-events:none !important; }
 body.kac-locked #noticeModal, body.kac-locked #surveyModal, body.kac-locked #shuttleModal, body.kac-locked #adminActionModal, body.kac-locked #facilityModal, body.kac-locked #tabletLoanModal, body.kac-locked #mealMenuModal, body.kac-locked #qrModal, body.kac-locked #foodModal { animation:none !important; }
 body.kac-locked #noticeModal > .menu-box, body.kac-locked #surveyModal > .menu-box, body.kac-locked #shuttleModal > .menu-box, body.kac-locked #adminActionModal > .menu-box, body.kac-locked #facilityModal > .menu-box, body.kac-locked #tabletLoanModal > .menu-box, body.kac-locked #qrModal > .menu-box, body.kac-locked #foodModal > .menu-box, body.kac-locked #mealMenuModal > div { animation:none !important; transition:none !important; transform:none !important; }
@@ -6230,13 +6246,39 @@ body.kac-locked #noticeModal > .menu-box, body.kac-locked #surveyModal > .menu-b
       var cov=document.getElementById('kakaoCover');
       if(!cov){
         cov=document.createElement('div'); cov.id='kakaoCover';
-        cov.innerHTML='<div class="kc-box"><div class="kc-ic"><i class="fa-regular fa-circle-check"></i></div>'+
-          '<div class="kc-msg">이용을 마치셨으면<br>이 창을 닫아주세요.</div>'+
-          '<button class="kc-btn" id="kakaoCoverClose">창 닫기</button>'+
-          '<div class="kc-guide">닫기가 안 되면 카카오톡 화면을<br>아래로 쓸어내려 닫아주세요.</div></div>';
+        cov.innerHTML='<div class="kc-box">'+
+          '<svg class="kc-arrow" width="112" height="82" viewBox="0 0 116 88" fill="none" xmlns="http://www.w3.org/2000/svg">'+
+            '<defs><linearGradient id="arDown" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7cb0ff"/><stop offset="1" stop-color="#2563eb"/></linearGradient></defs>'+
+            '<path d="M14 14 L58 54 L102 14" fill="none" stroke="url(#arDown)" stroke-width="13" stroke-linecap="round" stroke-linejoin="round"/>'+
+            '<path d="M14 40 L58 80 L102 40" fill="none" stroke="url(#arDown)" stroke-width="13" stroke-linecap="round" stroke-linejoin="round" opacity="0.5"/>'+
+          '</svg>'+
+          '<div class="kc-swipe-label"><i class="fa-solid fa-plane-departure"></i>위에서 아래로 쓸어내려 닫기</div>'+
+          '<div class="kc-runway">'+
+            '<svg width="150" height="200" viewBox="0 0 150 200" fill="none" xmlns="http://www.w3.org/2000/svg">'+
+              '<line x1="65" y1="4" x2="18" y2="192" stroke="#fff" stroke-width="2.5" stroke-linecap="round" opacity="0.4"/>'+
+              '<line x1="85" y1="4" x2="132" y2="192" stroke="#fff" stroke-width="2.5" stroke-linecap="round" opacity="0.4"/>'+
+              '<rect x="73.5" y="10" width="3" height="9" rx="1.5" fill="#fff" opacity=".8"/>'+
+              '<rect x="73.2" y="30" width="3.6" height="13" rx="1.8" fill="#fff" opacity=".84"/>'+
+              '<rect x="72.7" y="55" width="4.6" height="18" rx="2.3" fill="#fff" opacity=".88"/>'+
+              '<rect x="72" y="86" width="6" height="24" rx="3" fill="#fff" opacity=".92"/>'+
+              '<rect x="71" y="124" width="8" height="26" rx="4" fill="#fff"/>'+
+              '<g fill="#fff" opacity=".8">'+
+                '<rect x="46" y="162" width="4" height="20" rx="2"/>'+
+                '<rect x="56" y="162" width="4" height="24" rx="2"/>'+
+                '<rect x="66" y="162" width="4" height="26" rx="2"/>'+
+                '<rect x="76" y="162" width="4" height="26" rx="2"/>'+
+                '<rect x="86" y="162" width="4" height="24" rx="2"/>'+
+                '<rect x="96" y="162" width="4" height="20" rx="2"/>'+
+              '</g>'+
+            '</svg>'+
+            '<i class="fa-solid fa-plane kc-plane"></i>'+
+          '</div>'+
+          '<div class="kc-center">'+
+            '<div class="kc-ic"><i class="fa-solid fa-check"></i></div>'+
+            '<div class="kc-msg">이용을 마치셨습니다</div>'+
+          '</div>'+
+        '</div>';
         document.body.appendChild(cov);
-        var cb=document.getElementById('kakaoCoverClose');
-        if(cb) cb.onclick=function(){ try{ window.open('','_self'); window.close(); }catch(e){} };
       }
       document.body.classList.add('kac-cover');
     }
