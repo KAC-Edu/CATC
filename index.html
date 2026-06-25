@@ -2,7 +2,7 @@
 <!-- ══════════════════ [편집상태 / EDIT-STATUS] ══════════════════
      STATUS : 수정안하는중
      FILE   : index.html (교육생)
-     UPDATED: 2026-06-25 02:48
+     UPDATED: 2026-06-25 12:02  (카카오 입교 게이트/과정선택 + ?menu 딥링크 + 명단대조 제거)
      ─ 규칙: 수정 시작 시 STATUS를 '수정중'으로, 완료 시 '수정안하는중'으로 변경.
             '수정중'이면 다른 플랫폼은 연동 변경을 보류/협의 후 진행.
 ═══════════════════════════════════════════════════════════════ -->
@@ -1458,6 +1458,8 @@ async function resolveRoomFromCode(code) {
 
     if (!currentRoom) {
         hideLoader();
+        // [카카오 입교 게이트 20260625] menu 파라미터로 들어온 무방(無房) 진입은 입교 게이트가 처리하므로 안내창 생략
+        if (new URLSearchParams(location.search).get('menu')) { return; }
         showKacAlert("강의실 정보가 없습니다. QR 코드를 다시 스캔해주세요.");
         return;
     }
@@ -4261,28 +4263,9 @@ async function saveProfileWithCheck() {
         }
     } catch (e) { /* 조회 실패 시 그냥 진행 */ }
 
-    // [수정] 명단에 없어도 입장을 전면 차단하지 않습니다.
-    //  - 명단이 있을 때만 대조하고, 미일치 시에는 '확인 후 입장' 안내(confirm)로 전환하여 QR 신규 입교를 허용합니다.
-    const expectedSnap = await firebase.database().ref(`courses/${currentRoom}/expectedStudents`).once('value');
-    const expectedList = expectedSnap.val();
-    if (expectedList && typeof expectedList === 'object') {
-        const found = Object.values(expectedList).some(e => {
-            const eName  = (e.name  || '').trim();
-            const eRaw   = (e.phone || '').toString().replace(/\D/g, '');
-            // 명단 전화번호와 입력값(사번 또는 전화 뒤 4자리)을 유연하게 대조
-            //  - 명단에 번호가 없으면 이름만으로 통과
-            //  - 전체 일치 / 뒤4자리 일치 / 뒤5자리 일치 중 하나면 통과
-            const phoneMatch = !eRaw
-                || eRaw === phone
-                || eRaw.slice(-4) === phone
-                || eRaw.slice(-5) === phone;
-            return eName === name && phoneMatch;
-        });
-        if (!found) {
-            const proceed = await showKacConfirm(`ℹ️ 등록된 명단에서 일치하는 정보를 찾지 못했습니다.\n이름: ${name} / 번호: ${phone}\n\n현장에서 본인 확인 후 그대로 입장하시겠습니까?\n(취소를 누르면 입력 정보를 다시 확인할 수 있습니다.)`);
-            if (!proceed) return;
-        }
-    }
+    // [명단대조 제거 20260625] 운영부 명단이 수시로 바뀌어 오탐이 잦으므로,
+    //  expectedStudents 대조 및 '명단 미일치' 확인창을 제거함. 입력값을 그대로 신뢰하여 진행.
+    //  (동명이인 식별번호 합치기 confirm은 위에 그대로 유지)
     const settingsSnap2 = await firebase.database().ref(`courses/${currentRoom}/settings`).once('value');
     const period2 = (settingsSnap2.val() || {}).period || '';
     if (period2.includes(' ~ ')) {
@@ -6182,6 +6165,205 @@ html, body { overscroll-behavior-x: none !important; }
   function run(){ PANELS.forEach(unify); }
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', function(){ setTimeout(run,750); });
   else setTimeout(run,750);
+})();
+</script>
+
+<!-- ════════ [카카오 딥링크 20260625] index.html?menu=... 로 특정 화면 직접 열기 ════════
+     room/code(교수님별 주소)는 기존 init이 처리. 이 핸들러는 menu만 담당하며,
+     '입장+프로필' 완료(mainApp 표시) 후에만 해당 화면을 연다. -->
+<script>
+(function(){
+  var menu;
+  try { menu = new URLSearchParams(location.search).get('menu'); } catch(e){ menu=null; }
+  if(!menu) return;
+  menu = String(menu).trim().toLowerCase();
+
+  // 파라미터 → 열기 동작 (기존 화면전환 함수 그대로 호출)
+  var ACT = {
+    car:    function(){ if(typeof openShuttleApply==='function')    openShuttleApply(); },      // 퇴교/차량 신청
+    outing: function(){ if(typeof openAdminAction==='function')     openAdminAction(); },       // 외출·외박 신청
+    food:   function(){ if(typeof openFoodModal==='function')       openFoodModal(); },         // 항기원 맛집
+    supply: function(){ if(typeof openFacilityRequest==='function') openFacilityRequest(); },   // 생활관 비품
+    home:   function(){ if(typeof window.showKakaoHome==='function') window.showKakaoHome(); }, // 입교/홈
+    qna:    function(){ /* Q&A = 메인 화면 자체 → 별도 동작 없음 */ },
+    quiz:   function(){                                                                          // LIVE 퀴즈
+      var ov=document.getElementById('quizOverlay');
+      var shown = ov && getComputedStyle(ov).display!=='none';
+      if(!shown && typeof showKacAlert==='function'){
+        showKacAlert('현재 진행 중인 LIVE 퀴즈가 없습니다.<br>강사님이 퀴즈를 시작하면 자동으로 표시됩니다.', null, {html:true});
+      }
+    }
+  };
+  if(!ACT[menu]) return;            // 모르는 값이면 무시(기본 화면 유지)
+  var DELAY = (menu==='quiz') ? 2600 : 450;   // 퀴즈는 activeQuiz 수신 시간 고려해 더 대기
+
+  var fired=false;
+  function entered(){ var ma=document.getElementById('mainApp'); if(!ma) return false; try{ return getComputedStyle(ma).display!=='none'; }catch(e){ return false; } }
+  function tryFire(){
+    if(fired || !entered()) return;
+    fired=true;
+    setTimeout(function(){ try{ ACT[menu](); }catch(e){} }, DELAY);
+  }
+  function start(){
+    var ma=document.getElementById('mainApp');
+    if(ma){ try{ new MutationObserver(tryFire).observe(ma,{attributes:true,attributeFilter:['style']}); }catch(e){} }
+    tryFire();
+    var n=0, iv=setInterval(function(){ tryFire(); if(fired || ++n>50) clearInterval(iv); }, 300); // 안전망 최대 15초
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', start);
+  else start();
+})();
+</script>
+
+<!-- ════════ [카카오 입교 게이트 20260625] 방 정보 없이 들어온 카카오 진입: 과정선택+사번/이름 입교 ════════ -->
+<style id="kedu-enroll-style">
+#keduEnroll{ position:fixed; inset:0; z-index:10050; display:none; flex-direction:column; align-items:center; justify-content:center; padding:26px 20px; background:linear-gradient(180deg,#eef5ff,#dbe9ff); color:#0f172a; text-align:center; }
+#keduEnroll .ke-card{ width:100%; max-width:400px; background:#fff; border-radius:20px; padding:24px 20px; box-shadow:0 18px 44px rgba(37,99,235,.18); }
+#keduEnroll h2{ margin:0 0 6px; font-size:21px; font-weight:900; color:#1e3a8a; }
+#keduEnroll p.ke-sub{ margin:0 0 18px; font-size:13px; color:#64748b; font-weight:600; line-height:1.5; }
+#keduEnroll label{ display:block; text-align:left; font-size:12px; font-weight:800; color:#475569; margin:12px 2px 6px; }
+#keduEnroll select, #keduEnroll input{ width:100%; padding:14px; border:1.5px solid #cfe0ff; border-radius:12px; font-size:16px; font-weight:700; outline:none; background:#f8fbff; color:#0f172a; box-sizing:border-box; }
+#keduEnroll input{ text-align:center; }
+#keduEnroll select:focus, #keduEnroll input:focus{ border-color:#2563eb; }
+#keduEnroll .ke-btn{ width:100%; margin-top:20px; padding:16px; border:none; border-radius:13px; background:linear-gradient(135deg,#3b82f6,#2563eb); color:#fff; font-size:17px; font-weight:900; cursor:pointer; box-shadow:0 8px 20px rgba(37,99,235,.3); }
+#keduEnroll .ke-note{ margin-top:14px; font-size:11px; color:#94a3b8; line-height:1.5; }
+#keduHome{ position:fixed; inset:0; z-index:10040; display:none; align-items:center; justify-content:center; padding:24px; background:rgba(15,23,42,.45); }
+#keduHome .kh-card{ width:100%; max-width:360px; background:#fff; border-radius:20px; padding:24px 20px; text-align:center; box-shadow:0 18px 44px rgba(15,23,42,.3); }
+#keduHome h3{ margin:0 0 4px; font-size:19px; font-weight:900; color:#0f172a; }
+#keduHome .kh-course{ font-size:14px; color:#2563eb; font-weight:800; margin-bottom:18px; }
+#keduHome button{ width:100%; margin-top:9px; padding:14px; border:none; border-radius:12px; font-size:15px; font-weight:800; cursor:pointer; }
+#keduHome .kh-sub{ background:#10b981; color:#fff; }
+#keduHome .kh-qna{ background:#0f172a; color:#fff; }
+#keduHome .kh-close{ background:#f1f5f9; color:#475569; }
+</style>
+<script>
+(function(){
+  function qp(k){ try{ return new URLSearchParams(location.search).get(k); }catch(e){ return null; } }
+  function todayStr(){ var d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+  function inPeriod(period){
+    if(!period) return true;
+    var t=todayStr();
+    if(period.indexOf('~')<0) return true;
+    var parts=period.split('~'); var s=(parts[0]||'').trim(); var e=(parts[1]||'').trim();
+    if(s && t<s) return false;
+    if(e && t>e) return false;
+    return true;
+  }
+  function loadCourses(sel){
+    firebase.database().ref('courses').once('value').then(function(snap){
+      var rooms=snap.val()||{}; var list=[];
+      for(var i=65;i<=90;i++){
+        var r=String.fromCharCode(i); var rd=rooms[r]; if(!rd) continue;
+        var s=rd.settings||{}, st=rd.status||{};
+        var nm=(s.courseName||'').trim();
+        if(!nm || s.hideFromBoard) continue;
+        if(st.roomStatus!=='active') continue;
+        if(!inPeriod(s.period||'')) continue;
+        list.push({room:r, name:nm, period:(s.period||'').trim(), detail:(s.roomDetailName||'').trim(), prof:(st.professorName||'').trim()});
+      }
+      sel.innerHTML='';
+      if(!list.length){ var o=document.createElement('option'); o.value=''; o.textContent='진행 중인 과정이 없습니다'; sel.appendChild(o); return; }
+      list.forEach(function(c){
+        var o=document.createElement('option'); o.value=c.room;
+        var bits=[c.name]; if(c.period)bits.push(c.period); if(c.detail)bits.push(c.detail); if(c.prof)bits.push(c.prof+' 교수');
+        o.textContent=bits.join(' · ');
+        sel.appendChild(o);
+      });
+    }).catch(function(){});
+  }
+  function showEnroll(menu){
+    var ov=document.getElementById('keduEnroll'); if(!ov) return;
+    var nm=(localStorage.getItem('kac_user_name')||'').trim();
+    var sb=(localStorage.getItem('kac_user_phone')||'').trim();
+    document.getElementById('keduName').value = (nm && nm!=='미등록')?nm:'';
+    document.getElementById('keduSabun').value = /^\d{4,5}$/.test(sb)?sb:'';
+    loadCourses(document.getElementById('keduCourse'));
+    ov.style.display='flex';
+    document.getElementById('keduEnrollBtn').onclick=function(){ submitEnroll(menu); };
+  }
+  async function submitEnroll(menu){
+    var room=document.getElementById('keduCourse').value;
+    var name=document.getElementById('keduName').value.trim();
+    var sabun=document.getElementById('keduSabun').value.trim();
+    if(!room){ showKacAlert('과정을 선택해 주세요.'); return; }
+    var nameOk = name.length>=2 && name.toLowerCase()!=='undefined' && /[가-힣A-Za-z]/.test(name) && /^[가-힣A-Za-z\s]+$/.test(name);
+    if(!nameOk){ showKacAlert('성함을 정확히 입력해 주세요.\n(한글/영문 2자 이상)'); return; }
+    if(!/^\d{4,5}$/.test(sabun)){ showKacAlert('본인 사번(5자리) 또는 전화번호 뒤 4자리를 숫자로 입력해 주세요.'); return; }
+    var label=''; try{ label=(document.getElementById('keduCourse').selectedOptions[0]||{}).textContent||room; }catch(e){ label=room; }
+    var ok=await showKacConfirm('"'+label.split(' · ')[0]+'" 과정으로 입교합니다.\n맞습니까?');
+    if(!ok) return;
+    var token=name+'_'+sabun;
+    try{
+      localStorage.setItem('kac_user_name', name);
+      localStorage.setItem('kac_user_phone', sabun);
+      localStorage.setItem('uToken', token);
+      localStorage.setItem('kac_last_visited_room', room);
+      localStorage.setItem('kac_last_visited_name', name);
+    }catch(e){}
+    try{
+      await firebase.database().ref('courses/'+room+'/students/'+token).update({ name:name, phone:sabun, joinedAt: firebase.database.ServerValue.TIMESTAMP, isOnline:true });
+    }catch(e){}
+    showKacAlert('✅ 등록되었습니다.', function(){
+      location.replace('index.html?room='+encodeURIComponent(room)+'&menu='+encodeURIComponent(menu||'home'));
+    });
+  }
+  function recoverRoom(token, cb){
+    firebase.database().ref('courses').once('value').then(function(snap){
+      var rooms=snap.val()||{}; var found=null;
+      for(var i=65;i<=90;i++){ var r=String.fromCharCode(i); var rd=rooms[r]; if(rd&&rd.students&&rd.students[token]){ found=r; break; } }
+      cb(found);
+    }).catch(function(){ cb(null); });
+  }
+  window.showKakaoHome=function(){
+    var ov=document.getElementById('keduHome'); if(!ov) return;
+    var cn=document.getElementById('keduHomeCourse');
+    if(cn && typeof currentRoom!=='undefined' && currentRoom){
+      try{ firebase.database().ref('courses/'+currentRoom+'/settings/courseName').once('value').then(function(s){ cn.textContent=(s.val()||('Room '+currentRoom)); }); }catch(e){ cn.textContent='Room '+currentRoom; }
+    }
+    ov.style.display='flex';
+  };
+  function routeKakao(){
+    var menu=qp('menu'), room=qp('room'), code=qp('code');
+    if(room||code) return;                 // 일반 QR/직접 진입 → 기존 흐름
+    if(!menu) return;                       // 카카오 딥링크 아님
+    if(localStorage.getItem('kac_last_visited_room')) return;  // 방 캐시 있음 → 기존 init이 처리
+    var token=localStorage.getItem('uToken');
+    if(token){
+      recoverRoom(token, function(r){
+        if(r){ try{ localStorage.setItem('kac_last_visited_room', r); }catch(e){} location.replace('index.html?room='+encodeURIComponent(r)+'&menu='+encodeURIComponent(menu)); }
+        else { showEnroll(menu); }
+      });
+    } else { showEnroll(menu); }
+  }
+  function build(){
+    if(!document.getElementById('keduEnroll')){
+      var d=document.createElement('div'); d.id='keduEnroll';
+      d.innerHTML='<div class="ke-card"><h2>교육원 입교</h2>'+
+        '<p class="ke-sub">본인 과정을 선택하고 사번·이름을 입력하세요.</p>'+
+        '<label>과정 선택</label><select id="keduCourse"><option value="">불러오는 중...</option></select>'+
+        '<label>사번 (없으면 전화 뒤 4자리)</label><input id="keduSabun" inputmode="numeric" maxlength="5" placeholder="사번 또는 전화 뒤 4자리">'+
+        '<label>이름</label><input id="keduName" placeholder="홍길동">'+
+        '<button class="ke-btn" id="keduEnrollBtn">입교하기</button>'+
+        '<div class="ke-note">입교 정보는 교육 운영 목적에 한해 사용되며, 교육 종료 시 파기됩니다.</div></div>';
+      document.body.appendChild(d);
+    }
+    if(!document.getElementById('keduHome')){
+      var h=document.createElement('div'); h.id='keduHome';
+      h.innerHTML='<div class="kh-card"><h3>✅ 입교 완료</h3>'+
+        '<div class="kh-course" id="keduHomeCourse">-</div>'+
+        '<button class="kh-sub" id="keduHomeSupply">생활관 비품 신청</button>'+
+        '<button class="kh-qna" id="keduHomeQna">Q&amp;A 들어가기</button>'+
+        '<button class="kh-close" id="keduHomeClose">닫기</button></div>';
+      document.body.appendChild(h);
+      var hide=function(){ h.style.display='none'; };
+      document.getElementById('keduHomeSupply').addEventListener('click', function(){ hide(); if(typeof openFacilityRequest==='function') openFacilityRequest(); });
+      document.getElementById('keduHomeQna').addEventListener('click', hide);
+      document.getElementById('keduHomeClose').addEventListener('click', hide);
+    }
+    routeKakao();
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', build);
+  else build();
 })();
 </script>
 </body>
