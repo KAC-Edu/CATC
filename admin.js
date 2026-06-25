@@ -1634,6 +1634,7 @@ const profMgr = {
             } else if (kakaoEl) {
                 kakaoEl.value = "";
             }
+            profMgr._fillFixedRoomOptions(name, (p && p.fixedRoom) || '');
         });
         document.getElementById('profProfileModal').style.display = 'flex';
     },
@@ -1681,7 +1682,8 @@ const profMgr = {
                 bioList: profMgr.collectBioRows(),
                 engMsg: (document.getElementById('pp-eng-msg') ? document.getElementById('pp-eng-msg').value : ""),
                 engBio: profMgr.collectBioRowsEn().map(r => (r.year ? r.year + " " : "") + r.text).join("\n"),
-                engBioList: profMgr.collectBioRowsEn()
+                engBioList: profMgr.collectBioRowsEn(),
+                fixedRoom: (document.getElementById('pp-fixedRoom') && document.getElementById('pp-fixedRoom').value) || null
             };
             firebase.database().ref(`system/professorProfiles/${name}`).set(profileData).then(() => {
                 ui.showAlert("✅ 담임 교수 프로필이 성공적으로 저장되었습니다.", () => ui.closeProfProfileModal());
@@ -1695,6 +1697,32 @@ const profMgr = {
         }
     } // <--- 함수의 끝
 }; // <--- 중요!! profMgr라는 큰 바구니를 여기서 완전히 닫습니다. (콤마 없음)
+
+// [교수 고정방] 프로필의 강의실 선택 옵션 — 다른 교수가 쓰는 방은 '사용중'으로 비활성화
+profMgr._fillFixedRoomOptions = function(myName, currentRoom){
+    var sel = document.getElementById('pp-fixedRoom'); if(!sel) return;
+    Promise.all([
+        firebase.database().ref('system/professorProfiles').once('value'),
+        firebase.database().ref('courses').once('value')
+    ]).then(function(res){
+        var profs = res[0].val()||{}, courses = res[1].val()||{};
+        var rooms = Object.keys(courses).filter(function(r){ return /^[A-Z]$/.test(r); }).sort();
+        if(!rooms.length) rooms = ['A','B','C','D','E','F'];
+        var takenBy = {};
+        Object.keys(profs).forEach(function(pn){ var fr = profs[pn] && profs[pn].fixedRoom; if(fr) takenBy[fr] = pn; });
+        var html = '<option value="">미지정 (자동배치)</option>';
+        rooms.forEach(function(r){
+            var owner = takenBy[r];
+            if(owner && owner !== myName){
+                html += '<option value="'+r+'" disabled>Room #'+r+' — '+owner+' 교수 사용중</option>';
+            } else {
+                html += '<option value="'+r+'"'+((currentRoom===r)?' selected':'')+'>Room #'+r+'</option>';
+            }
+        });
+        sel.innerHTML = html;
+        sel.value = currentRoom || '';
+    }).catch(function(){ sel.innerHTML = '<option value="">미지정 (자동배치)</option>'; });
+};
 
 // [약력 입력] 연도/경력사항 분리 행 관리
 profMgr.addBioRow = function(year, text){
@@ -8890,15 +8918,27 @@ kiosk._updateSearch=function(){
   var q=(inp.value||'').trim();
   if(q){ this._searchTimer=setTimeout(function(){ self._searchTimer=null; self.closeSearch(); }, 5000); }
   if(!q){ rEl.innerHTML='<span class="kbhit-empty">이름을 입력하세요.</span>'; return; }
-  var ql=q.replace(/\s+/g,''); var matches=[];
-  (this._people||[]).forEach(function(p){ if(String(p.name||'').replace(/\s+/g,'').indexOf(ql)>=0) matches.push(p); });
-  if(!matches.length){ rEl.innerHTML='<span class="kbhit-empty">'+kiosk._escK(q)+' 검색 결과가 없습니다.</span>'; return; }
-  rEl.innerHTML='<div class="kbhit-wrap">'+matches.slice(0,6).map(function(p){
-    var honor=(p.type==='prof')?'강사님':'님';
-    return '<div class="kbhit"><div class="kbhit-name">'+kiosk._escK(p.name)+' <span class="nim">'+honor+'</span></div>'
+  var ql=q.replace(/\s+/g,'');
+  var people=this._people||[]; var contains=[], exact=[];
+  people.forEach(function(p){ var nm=String(p.name||'').replace(/\s+/g,''); if(nm===ql) exact.push(p); else if(nm.indexOf(ql)>=0) contains.push(p); });
+  var show;
+  if(exact.length){ show=exact; }
+  else if(contains.length>1){ rEl.innerHTML='<span class="kbhit-empty">'+kiosk._escK(q)+' … 이름을 끝까지 입력해 주세요 <small style="opacity:.7;">('+contains.length+'명 검색됨)</small></span>'; return; }
+  else if(contains.length===1){ show=contains; }
+  else { rEl.innerHTML='<span class="kbhit-empty">'+kiosk._escK(q)+' 검색 결과가 없습니다.</span>'; return; }
+  rEl.innerHTML='<div class="kbhit-wrap">'+show.slice(0,4).map(function(p){
+    if(p.type==='prof'){
+      return '<div class="kbhit prof">'
+        +'<div class="kbhit-name">'+kiosk._escK(p.name)+' <span class="nim">강사님</span></div>'
+        +(p.course?('<div class="kbhit-course">'+kiosk._escK(p.course)+'</div>'):'')
+        +(p.place?('<div class="kbhit-room">'+kiosk._escK(p.place)+'</div>'):'')
+        +'<div class="kbhit-guide">'+(p.place?'위 강의실로 ':'')+'방문해 주시면 감사드리겠습니다 🙇</div>'
+        +'</div>';
+    }
+    return '<div class="kbhit"><div class="kbhit-name">'+kiosk._escK(p.name)+' <span class="nim">님</span></div>'
       +'<div class="kbhit-course">'+kiosk._escK(p.course)+'</div>'
       +(p.place?('<div class="kbhit-room">'+kiosk._escK(p.place)+'</div>'):'')+'</div>';
-  }).join('')+'</div>'+(matches.length>6?'<div class="kbhit-more">외 '+(matches.length-6)+'명…</div>':'');
+  }).join('')+'</div>';
 };
 
 // [공통] 모달 닫기(X) 버튼에 통일 hover 효과(.x-close: 90도 회전 + 빨강) 자동 적용
@@ -9722,10 +9762,19 @@ const annualPlanMgr = {
         const _profSnap = await firebase.database().ref('system/professorProfiles').once('value');
         const _profAll = _profSnap.val() || {};
         const _kakaoOf = (pn) => { const p = _profAll[(pn||'').trim()]; return (p && p.kakaoLink) ? p.kakaoLink : ''; };
+        // [교수 고정방] 교수 프로필 fixedRoom 우선 배정 → 나머지는 남은 방에 순번 배정
+        const _roomCourse = {}; const _usedFixed = {}; const _restCourses = [];
+        pool.forEach(function(c){
+            var fr = (_profAll[((c.prof)||'').trim()]||{}).fixedRoom;
+            if(fr && openRooms.indexOf(fr)>=0 && !_usedFixed[fr]){ _roomCourse[fr]=c; _usedFixed[fr]=1; }
+            else _restCourses.push(c);
+        });
+        const _freeRooms = openRooms.filter(function(r){ return !_usedFixed[r]; });
+        _restCourses.forEach(function(c, _ri){ if(_ri < _freeRooms.length) _roomCourse[_freeRooms[_ri]] = c; });
 
         for (let i = 0; i < openRooms.length; i++) {
             const room = openRooms[i];
-            const course = pool[i];
+            const course = _roomCourse[room];
             const prevName = ((curRooms[room] || {}).settings || {}).courseName || '';
 
             if (course) {

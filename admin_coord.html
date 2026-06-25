@@ -1,7 +1,7 @@
 <!-- ===== PLATFORM_EDIT_STATUS: 수정안하는중 ===== -->
 <!-- 이 플랫폼(admin_coord.html / 교육운영부) 수정상태 플래그. 값은 [수정중] 또는 [수정안하는중] 두 가지. -->
 <!-- 작업 시작 시 → 수정중 / 작업 완료 시 → 수정안하는중. 다른 플랫폼은 이 말머리를 보고 연동·수정 가능 여부 판단. -->
-<!-- last-updated: 2026-06-25 / version: C11 -->
+<!-- last-updated: 2026-06-25 / version: C13 -->
 <!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -1737,8 +1737,7 @@ body.cpop-locked{ overflow:hidden !important; }
     <div class="coord-menu-list">
         <div class="cml-sec">교육운영부 관련</div>
         <a class="cml-item" onclick="openGlobalNoticeModal(); toggleMenu(false);"><i class="fa-solid fa-bullhorn" style="color:#f97316;"></i> 항기원 전체공지</a>
-        <a class="cml-item" onclick="openLedgerCenter(); toggleMenu(false);"><i class="fa-solid fa-clipboard-user" style="color:#0d9488;"></i> 출석부 관리</a>
-        <a class="cml-item" onclick="openLedgerCenter(); toggleMenu(false);"><i class="fa-solid fa-file-signature" style="color:#2563eb;"></i> 외출·외박 대장 관리</a>
+        <a class="cml-item" onclick="openLedgerCenter(); toggleMenu(false);"><i class="fa-solid fa-folder-open" style="color:#0d9488;"></i> 외출외박/출석부 대장 출력</a>
         <a class="cml-item" onclick="coordMgr.openManage(); toggleMenu(false);"><i class="fa-solid fa-user-gear" style="color:#7c3aed;"></i> 과정운영 담당자 관리</a>
         <a class="cml-item" onclick="coordPurgeImages(); toggleMenu(false);"><i class="fa-solid fa-broom" style="color:#dc2626;"></i> Firebase 대용량 이미지 정리</a>
     </div>
@@ -6324,15 +6323,12 @@ const annualPlanMgrCoord = {
             freeRooms.push(r);
         });
 
-        // 2) 빈 방에 배치 — 같은 과정명이 이미 다른 방에 있으면 중복 배치 금지
+        // 2) 빈 방에 배치 — (교수 고정방 우선 → 나머지 순번) · 같은 과정명 중복 배치 금지
+        //    [협의:교수고정방] 공유계약 system/professorProfiles/{교수}/fixedRoom = 방키("A"…)·미지정시 없음/null.
+        //    강사플랫폼(_applyCurrentWeek)과 동일 알고리즘. 고정방은 '빈 방 채우기' 단계에서만 적용(진행중/보존 과정은 안 옮김).
         const usedNames = new Set(keptNames);
         const placed = [];
-        let _ri = 0;
-        for (const course of pool) {
-            const cnm = norm(course.name);
-            if (usedNames.has(cnm)) continue;           // 이미 배정/보존된 과정 → 중복 생성 방지
-            if (_ri >= freeRooms.length) break;
-            const room = freeRooms[_ri++];
+        const writeCourse = (room, course) => {
             const coordFull = (typeof coordMgr !== 'undefined' && coordMgr.matchName ? coordMgr.matchName(course.coord) : '') || (course.coord || '');
             updates[`courses/${room}/settings/courseName`] = course.name;
             updates[`courses/${room}/settings/period`]     = course.period;
@@ -6343,7 +6339,30 @@ const annualPlanMgrCoord = {
             updates[`courses/${room}/status/roomStatus`]   = 'active';
             updates[`courses/${room}/status/ownerSessionId`] = null;
             placed.push({ room: room, course: course });
-            usedNames.add(cnm);
+            usedNames.add(norm(course.name));
+        };
+        // (1) 교수 고정방(fixedRoom) 우선 배치 — 빈 방이고 아직 안 쓰인 고정방만, 아니면 순번 폴백
+        const usedFixed = {};
+        const restPool = [];
+        for (const course of pool) {
+            const cnm = norm(course.name);
+            if (usedNames.has(cnm)) continue;                 // 이미 보존/배정된 과정 제외
+            const fr = (profAll[norm(course.prof)] || {}).fixedRoom;
+            if (fr && freeRooms.indexOf(fr) >= 0 && !usedFixed[fr]) {
+                usedFixed[fr] = 1;
+                writeCourse(fr, course);
+            } else {
+                restPool.push(course);
+            }
+        }
+        // (2) 나머지는 고정방을 제외한 빈 방에 순번 배치 (기존 동작 유지)
+        const freeLeft = freeRooms.filter(r => !usedFixed[r]);
+        let _ri = 0;
+        for (const course of restPool) {
+            const cnm = norm(course.name);
+            if (usedNames.has(cnm)) continue;
+            if (_ri >= freeLeft.length) break;
+            writeCourse(freeLeft[_ri++], course);
         }
         // [중복 과정 정리] 같은 과정명이 두 방 이상이면, 학생·명단·장소 있는 방만 남기고 비움
         (function(){
@@ -8004,7 +8023,8 @@ function _olRenderWeek(weekKey){
    · 90일 경과분은 course_archive 자동삭제로 검색에서 제외됨
    ============================================================ */
 var _lcData={}, _lcWeeks=[], _lcSel='';
-function _lcStudents(obj){ try{ var s=obj&&obj.students; if(!s) return 0; return Object.values(s).filter(function(x){return x&&x.name&&(''+x.name).trim()&&x.name!=='undefined';}).length; }catch(e){ return 0; } }
+/* 출석부 건수 = 자체출결(QR) 기록 수. internal_attendance[날짜][학생]=기록 → 전체 합산. 입교(학생수)가 아님 */
+function _lcAttCount(ia){ var n=0; if(!ia||typeof ia!=='object') return 0; Object.keys(ia).forEach(function(dt){ if(!/^\d{4}-\d{2}-\d{2}$/.test(dt)) return; var day=ia[dt]; if(day&&typeof day==='object') n+=Object.keys(day).length; }); return n; }
 function _lcMondayStr(d){ return _olMonday(d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')); }
 async function openLedgerCenter(){
   _cpop('<i class="fa-solid fa-folder-open"></i> 출석부 · 외출외박 대장', '<div id="lcBody"><div class="cpop-empty">불러오는 중...</div></div>');
@@ -8017,7 +8037,7 @@ async function openLedgerCenter(){
       var period=(''+(r.s.period||'')).trim(); var start=period.includes('~')?period.split('~')[0].trim():'';
       var wk=_olMonday(start)||todayWk;
       push(wk,{ courseName:r.s.courseName||('Room '+r.rid), period:period, room:r.rid, archiveId:null,
-                outCount:_olCountActions(r.room.admin_actions), attCount:_lcStudents(r.room), key:r.rid+'|'+(r.s.courseName||'') });
+                outCount:_olCountActions(r.room.admin_actions), attCount:_lcAttCount(r.room.internal_attendance), key:r.rid+'|'+(r.s.courseName||'') });
     });
   }catch(e){ console.warn('[대장센터] active', e); }
   try{
@@ -8027,7 +8047,7 @@ async function openLedgerCenter(){
       var wk=_olMonday(start); if(!wk) return;
       var dupKey=(c.room||'')+'|'+(c.courseName||''); if((weeks[wk]||[]).some(function(x){return x.key===dupKey;})) return;
       push(wk,{ courseName:c.courseName||('Room '+(c.room||'')), period:period, room:c.room||'', archiveId:id,
-                outCount:_olCountActions(c.admin_actions), attCount:_lcStudents(c), key:dupKey });
+                outCount:_olCountActions(c.admin_actions), attCount:_lcAttCount(c.internal_attendance), key:dupKey });
     });
   }catch(e){ console.warn('[대장센터] archive', e); }
   _lcData=weeks;
@@ -8062,8 +8082,10 @@ function _lcCard(c){
   var outUrl=c.archiveId?('outing_ledger.html?archive='+encodeURIComponent(c.archiveId)):('outing_ledger.html?room='+encodeURIComponent(c.room));
   var attUrl=c.archiveId?('attendance_sheet.html?archive='+encodeURIComponent(c.archiveId)):('attendance_sheet.html?room='+encodeURIComponent(c.room));
   function btn(label,icon,count,url,color,bgc){
-    if(count<=0){ return '<span style="flex:1;display:flex;align-items:center;justify-content:center;gap:8px;background:#f1f5f9;border:1.5px solid #eef2f7;border-radius:11px;padding:13px 10px;color:#94a3b8;font-weight:800;font-size:14px;cursor:not-allowed;"><i class="fa-solid '+icon+'"></i> '+label+' <span style="font-size:12px;">0건</span></span>'; }
-    return '<button onclick="window.open(\''+url+'\',\'_blank\')" title="미리보기 후 저장" style="flex:1;display:flex;align-items:center;justify-content:center;gap:8px;background:'+bgc+';border:1.5px solid '+color+'44;border-radius:11px;padding:13px 10px;color:'+color+';font-weight:800;font-size:14px;cursor:pointer;transition:all .12s;" onmouseenter="this.style.boxShadow=\'0 6px 16px '+color+'2b\';this.style.transform=\'translateY(-1px)\';" onmouseleave="this.style.boxShadow=\'none\';this.style.transform=\'none\';"><i class="fa-solid '+icon+'"></i> '+label+' <span style="background:#fff;border:1px solid '+color+'55;border-radius:999px;padding:2px 9px;font-size:12px;">'+count+'건</span></button>';
+    var zero=count<=0;
+    var c=zero?'#94a3b8':color, bg=zero?'#f8fafc':bgc, bdc=zero?'#e6eaf2':(color+'44'), badgeBd=zero?'#e2e8f0':(color+'55');
+    var tip=zero?'기록 0건 — 클릭하면 미리보기로 과정·내역을 확인할 수 있습니다':'미리보기 후 저장';
+    return '<button onclick="window.open(\''+url+'\',\'_blank\')" title="'+tip+'" style="flex:1;display:flex;align-items:center;justify-content:center;gap:8px;background:'+bg+';border:1.5px solid '+bdc+';border-radius:11px;padding:13px 10px;color:'+c+';font-weight:800;font-size:14px;cursor:pointer;transition:all .12s;" onmouseenter="this.style.boxShadow=\'0 6px 16px '+c+'2b\';this.style.transform=\'translateY(-1px)\';" onmouseleave="this.style.boxShadow=\'none\';this.style.transform=\'none\';"><i class="fa-solid '+icon+'"></i> '+label+' <span style="background:#fff;border:1px solid '+badgeBd+';border-radius:999px;padding:2px 9px;font-size:12px;">'+count+'건</span></button>';
   }
   return '<div style="background:#fff;border:1.5px solid #e8edf5;border-radius:16px;padding:16px 18px;margin-bottom:13px;box-shadow:0 2px 8px rgba(15,23,42,.04);">'
     +'<div style="display:flex;align-items:center;gap:11px;margin-bottom:13px;min-width:0;">'
@@ -8453,7 +8475,7 @@ window.addEventListener('load', function(){
 });
 </script>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:6px;bottom:5px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;font-weight:800;line-height:1;letter-spacing:.6px;color:#fff;background:rgba(15,23,42,.85);padding:4px 8px;border-radius:6px;pointer-events:none;user-select:none;box-shadow:0 2px 6px rgba(0,0,0,.3);">C11</div>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:6px;bottom:5px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;font-weight:800;line-height:1;letter-spacing:.6px;color:#fff;background:rgba(15,23,42,.85);padding:4px 8px;border-radius:6px;pointer-events:none;user-select:none;box-shadow:0 2px 6px rgba(0,0,0,.3);">C13</div>
 <script>
 /* ===== [공용] 종료된 과정 자동 정리 (모든 플랫폼 공통) — 종료일 지난 방을 다음날 미개설로 비움. 브라우저별 하루 1회 ===== */
 window.kacExpireEndedCourses = async function(){
