@@ -96,7 +96,7 @@
 
 // 실제 PDF 파일 생성·다운로드 (모바일/인앱 브라우저에서도 동작). 미지원 시 인쇄로 폴백.
 function printSheet() {
-    const base = '(출석부)' + (HEADER.courseName || '');
+    const base = (HEADER.courseName || '') + ' 출석부 대장';
     const el = document.getElementById('sheets-root') || document.getElementById('print-area') || document.body;
     if (typeof html2pdf === 'undefined' || !el) { document.title = base; window.print(); return; }
     const btn = document.querySelector('button[onclick="printSheet()"]');

@@ -147,7 +147,7 @@
         // 브라우저 인쇄 미리보기 → 'PDF로 저장' 선택 (미리보기 확인 후 저장, 빈 페이지 없음)
         function printLedger() {
             const cn = (window._courseNameStr || '').trim();
-            const base = (cn && cn !== '-') ? `(외출외박대장)${cn}` : '외출외박대장';
+            const base = (cn && cn !== '-') ? `${cn} 외출외박대장` : '외출외박대장';
             document.title = base;     // 저장 시 기본 파일명
             window.print();
         }
