@@ -2,7 +2,7 @@
 <!-- ══════════════════ [편집상태 / EDIT-STATUS] ══════════════════
      STATUS : 수정안하는중
      FILE   : index.html (교육생)
-     UPDATED: 2026-06-26 13:30  (종료커버: 좌상단 카카오 ✕ 가리키는 스우시(붓터치) 화살표 + "이용을 마치셨습니다" 안내 / 카카오모드 모든 메뉴 전체화면(바텀시트) 통일 / 종료커버는 패널 닫은 뒤에만 노출(신청 전 미리보임 버그 수정) / 무용 '창닫기'·활주로·쓸어내림 제거)
+     UPDATED: 2026-06-26 13:30  (종료커버: 좌상단 카카오 ✕ 가리키는 스우시(붓터치) 화살표 + "이용을 마치셨습니다" 안내 / 카카오모드 모든 메뉴 전체화면(바텀시트) 통일 / 종료커버는 패널 닫은 뒤에만 노출(신청 전 미리보임 버그 수정) / 무용 '창닫기'·활주로·쓸어내림 제거)  ▷ 2026-06-26 Cowork: 외출/외박 카카오진입 시 소속·연락처 단계 스킵(패스트패스) 추가 — 연락처 기기저장+자동채움, 소속·연락처 있으면 바로 행선지(Step4)
      ─ 규칙: 수정 시작 시 STATUS를 '수정중'으로, 완료 시 '수정안하는중'으로 변경.
             '수정중'이면 다른 플랫폼은 연동 변경을 보류/협의 후 진행.
 ═══════════════════════════════════════════════════════════════ -->
@@ -3645,6 +3645,8 @@ async function openAdminAction() {
     (function(){ var _dept=(window._myDept||'').trim(); var _ud=document.getElementById('userDept'); if(!_ud) return;
       if(_dept){ _ud.value=_dept; _ud.readOnly=true; _ud.style.background='#f1f6ff'; _ud.style.borderColor='#dbeafe'; _ud.style.color='#1e40af'; _ud.style.fontWeight='800'; }
       else { _ud.readOnly=false; _ud.style.background='#fff'; _ud.style.borderColor='#e2e8f0'; _ud.style.color='#1e293b'; _ud.style.fontWeight=''; } })();
+    // [패스트패스] 저장된 연락처가 있으면 미리 채움(다음 신청부터 연락처 단계 생략 가능)
+    (function(){ var _ph=document.getElementById('fullPhone'); if(_ph && !_ph.value.trim()){ var _sv=(localStorage.getItem('kac_user_fullphone')||'').trim(); if(_sv) _ph.value=_sv; } })();
     // 16시 이후: 석식 제외 선택 숨김 + '석식 포함 간주' 안내 표시
     const _dsg = document.getElementById('dinnerSkipGroup');
     const _dam = document.getElementById('dinnerAssumedMsg');
@@ -3724,6 +3726,17 @@ function selectAdminType(type) {
         document.getElementById('endTime').value   = '20:00';
     }
     showAdminStep(2);
+    fastPassAdmin();
+}
+
+// [패스트패스] 카카오 단일화면 진입 시, 소속·연락처가 이미 있으면 Step2(소속)·Step3(연락처) 생략 → 바로 Step4(행선지)
+function fastPassAdmin(){
+  try{
+    if(!document.body.classList.contains('kac-locked')) return;   // 카카오 진입에서만 적용
+    var dept = ((window._myDept||'').trim()) || (((document.getElementById('userDept')||{}).value)||'').trim();
+    var ph   = (((document.getElementById('fullPhone')||{}).value)||'').replace(/\D/g,'');
+    if(dept && ph.length>=9){ showAdminStep(4); }
+  }catch(e){}
 }
 
 // ===== 외출/외박 단계별 마법사 컨트롤러 =====
@@ -3902,6 +3915,9 @@ async function submitAdminAction() {
             }
         }
     }
+
+    // [패스트패스] 다음 신청부터 소속·연락처 단계 생략을 위해 연락처를 기기에 저장
+    try{ if(fullPhone) localStorage.setItem('kac_user_fullphone', fullPhone); }catch(e){}
 
     try {
         // 5. 외출/외박 데이터 저장 (선택했을 때만)
