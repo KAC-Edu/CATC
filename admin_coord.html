@@ -2,7 +2,7 @@
 <!-- 이 플랫폼(admin_coord.html / 교육운영부) 수정상태 플래그. 값은 [수정중] 또는 [수정안하는중] 두 가지. -->
 <!-- 작업 시작 시 → 수정중 / 작업 완료 시 → 수정안하는중. 다른 플랫폼은 이 말머리를 보고 연동·수정 가능 여부 판단. -->
 <!-- [외부변경 · 카카오채널연동 2026-06-25] 포털(portal.html/7777) 경유 폐지 → 페이지 직접진입 시 접속코드(catc1234) 게이트 추가, 포털 리다이렉트/종료이동 제거. version C13→D13. 기능 로직은 미변경. -->
-<!-- last-updated: 2026-06-25 / version: D14 (상단바 확대시 메뉴유지·좌측브랜드 숨김) -->
+<!-- last-updated: 2026-06-25 / version: D15 (상단바 확대시 메뉴유지: JS _coordFitHeader 항상표시 + CSS<1500 브랜드숨김·가로스크롤) -->
 <!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -1912,8 +1912,8 @@ body.pc-mode .coord-brand{ gap:13px !important; }
 body.pc-mode .coord-brand-mark{ width:48px !important; height:48px !important; border-radius:14px !important; }
 body.pc-mode .coord-brand-mark i{ font-size:26px !important; }
 body.pc-mode .coord-brand-title{ font-size:26px !important; font-weight:950 !important; }
-/* [반응형] 확대/좁은 화면(<1300px): 좌측 브랜드·우측 시계를 숨기고 가운데 메뉴(통계 stats)는 계속 보이게 — 안 들어가면 가로 스크롤. (사용자요청: 확대돼도 메뉴 유지) */
-@media (max-width:1300px){
+/* [반응형] 확대/좁은 화면(<1500px): 좌측 브랜드·우측 시계를 숨기고 가운데 메뉴(통계 stats)는 계속 보이게 — 안 들어가면 가로 스크롤. (사용자요청: 확대돼도 메뉴 유지) */
+@media (max-width:1500px){
   html body.pc-mode .coord-brand{ display:none !important; }
   html body.pc-mode #coordHeaderClock, html body.pc-mode .coord-clock{ display:none !important; }
   html body.pc-mode .app-header{ grid-template-columns:auto minmax(0,1fr) !important; }
@@ -6618,8 +6618,8 @@ function _coordInitViewMode() {
 // [헤더] 통계 메뉴는 중앙 칸, 시계는 우측 칸으로 그리드 분리되어 겹치지 않음 → 항상 표시
 function _coordFitHeader(){
     var stats=document.getElementById('coordHdrStats');
-    // 화면이 좁아 제목과 겹칠 폭(1500px 미만)이면 통계(운영과정~노조교육) 숨김
-    if(stats) stats.style.setProperty('display', (window.innerWidth < 1500) ? 'none' : 'flex', 'important');
+    // [변경] 통계(가운데 메뉴)는 폭이 좁아도 항상 표시 — 좁아지면 CSS가 좌측 브랜드·시계를 숨기고 메뉴를 가로스크롤
+    if(stats) stats.style.setProperty('display','flex','important');
 }
 window.addEventListener('resize', function(){ try{ _coordFitHeader(); }catch(e){} });
 if (document.readyState === 'loading') {
@@ -8525,7 +8525,7 @@ window.addEventListener('load', function(){
 });
 </script>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:6px;bottom:5px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;font-weight:800;line-height:1;letter-spacing:.6px;color:#fff;background:rgba(15,23,42,.85);padding:4px 8px;border-radius:6px;pointer-events:none;user-select:none;box-shadow:0 2px 6px rgba(0,0,0,.3);">D14</div>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:6px;bottom:5px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;font-weight:800;line-height:1;letter-spacing:.6px;color:#fff;background:rgba(15,23,42,.85);padding:4px 8px;border-radius:6px;pointer-events:none;user-select:none;box-shadow:0 2px 6px rgba(0,0,0,.3);">D15</div>
 <script>
 /* ===== [공용] 종료된 과정 자동 정리 (모든 플랫폼 공통) — 종료일 지난 방을 다음날 미개설로 비움. 브라우저별 하루 1회 ===== */
 window.kacExpireEndedCourses = async function(){
