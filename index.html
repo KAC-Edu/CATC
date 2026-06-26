@@ -2,7 +2,7 @@
 <!-- ══════════════════ [편집상태 / EDIT-STATUS] ══════════════════
      STATUS : 수정안하는중
      FILE   : index.html (교육생)
-     UPDATED: 2026-06-26 19:35  (vH62: OTP 조회 경로 보강)
+     UPDATED: 2026-06-27 00:20  (vH63: OTP 출결 완료 버튼/인증화면)
      ─ 규칙: 수정 시작 시 STATUS를 '수정중'으로, 완료 시 '수정안하는중'으로 변경.
             '수정중'이면 다른 플랫폼은 연동 변경을 보류/협의 후 진행.
 ═══════════════════════════════════════════════════════════════ -->
@@ -5224,11 +5224,24 @@ function executeAttendanceRecord(room, name, phone, dateStr, storageKey) {
         return firebase.database().ref().update(updates);
     }).then(() => {
         localStorage.setItem(storageKey, "true");
+        try{
+            window.setKakaoAttendanceProof(room, {
+                room: room,
+                name: name,
+                phone: phone,
+                date: dateStr,
+                time: currentTime,
+                authId: authId,
+                course: (document.getElementById('khCourse') && document.getElementById('khCourse').textContent) || ''
+            });
+            window.updateKakaoAttendanceButton(room);
+        }catch(_e){}
         // [수정] 출결 QR로 들어온 경우: 입장 랜딩으로 보내지 않고 '완료 화면'만 표시
         if (new URLSearchParams(window.location.search).get('checkin') === 'true') {
             showCheckinDone(room, name, currentTime);
         } else {
-            showKacAlert(`✅ [Room ${room}] 출석 완료!\n${name}님, 정상 처리되었습니다.`, function(){ cleanUrlAndGo(room); });
+            closeKakaoOtpAttendance();
+            showKakaoAttendanceProof(room);
         }
     }).catch(e => { showKacAlert("출석 처리 중 오류가 발생했습니다."); });
 }
@@ -5863,7 +5876,7 @@ input:not([type=checkbox]):not([type=radio]):not([type=file]), textarea, select 
 })();
 </script>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vH58</div>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vH63</div>
 <script>
 /* ===== [공용] 종료된 과정 자동 정리 (교육생 포함 전 플랫폼) — 종료일 지난 방을 다음날 미개설로 비움. 브라우저별 하루 1회 ===== */
 window.kacExpireEndedCourses = async function(){
@@ -6782,6 +6795,7 @@ body.kac-quiz-active #returnAlertOverlay{ display:none !important; }
 #keduHome .kh-close{ background:#f1f5f9; color:#475569; }
 #keduHome .kh-edit{ background:#eff6ff; color:#1d4ed8; border:1px solid #bfdbfe; }
 #keduHome .kh-att{ background:linear-gradient(135deg,#2563eb,#1d4ed8); color:#fff; box-shadow:0 8px 18px rgba(37,99,235,.24); }
+#keduHome .kh-att.done{ background:linear-gradient(135deg,#16a34a,#059669); color:#fff; box-shadow:0 10px 22px rgba(22,163,74,.25); }
 #keduHome .kh-rows{ text-align:left; margin:0 0 16px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:16px; padding:4px 12px; }
 #keduHome .kh-rows > div{ display:flex; align-items:center; gap:10px; padding:12px 0; border-bottom:1px solid #e8eef7; }
 #keduHome .kh-rows > div:last-child{ border-bottom:none; }
@@ -6810,6 +6824,17 @@ body.kac-quiz-active #returnAlertOverlay{ display:none !important; }
 #keduOtp .ko-cancel,#keduOtp .ko-submit{ height:48px; border:none; border-radius:15px; font-weight:950; cursor:pointer; }
 #keduOtp .ko-cancel{ background:#f1f5f9; color:#475569; }
 #keduOtp .ko-submit{ background:#2563eb; color:#fff; box-shadow:0 12px 24px rgba(37,99,235,.20); }
+#keduAttProof{ position:fixed; inset:0; z-index:10080; display:none; align-items:center; justify-content:center; padding:24px; background:linear-gradient(180deg,rgba(15,23,42,.76),rgba(15,23,42,.90)); }
+#keduAttProof .kap-card{ width:min(410px,100%); overflow:hidden; border-radius:26px; background:#fff; box-shadow:0 28px 70px rgba(2,6,23,.38); }
+#keduAttProof .kap-head{ padding:26px 22px 20px; text-align:center; color:#fff; background:linear-gradient(135deg,#064e3b,#16a34a); }
+#keduAttProof .kap-icon{ width:64px; height:64px; margin:0 auto 14px; border-radius:20px; display:flex; align-items:center; justify-content:center; background:rgba(255,255,255,.16); font-size:30px; }
+#keduAttProof .kap-title{ font-size:24px; font-weight:950; letter-spacing:0; }
+#keduAttProof .kap-sub{ margin-top:6px; font-size:13px; color:#dcfce7; font-weight:800; }
+#keduAttProof .kap-body{ padding:20px 22px 22px; }
+#keduAttProof .kap-row{ display:flex; justify-content:space-between; gap:12px; padding:12px 0; border-bottom:1px solid #e8eef7; font-size:14px; }
+#keduAttProof .kap-row span{ color:#64748b; font-weight:900; }
+#keduAttProof .kap-row b{ color:#0f172a; font-weight:900; text-align:right; word-break:keep-all; }
+#keduAttProof .kap-close{ width:100%; margin-top:16px; height:50px; border:0; border-radius:15px; background:#0f172a; color:#fff; font-size:16px; font-weight:950; cursor:pointer; }
 /* [카카오 자동오픈 무애니메이션 20260625] 카카오 진입 시 우측 패널 슬라이드/페이드 제거 (플랫폼 메뉴 조작은 유지) */
 body.kac-noanim #noticeModal, body.kac-noanim #surveyModal, body.kac-noanim #shuttleModal, body.kac-noanim #adminActionModal, body.kac-noanim #facilityModal, body.kac-noanim #tabletLoanModal, body.kac-noanim #mealMenuModal, body.kac-noanim #qrModal, body.kac-noanim #foodModal { animation:none !important; }
 body.kac-noanim #noticeModal > .menu-box, body.kac-noanim #surveyModal > .menu-box, body.kac-noanim #shuttleModal > .menu-box, body.kac-noanim #adminActionModal > .menu-box, body.kac-noanim #facilityModal > .menu-box, body.kac-noanim #tabletLoanModal > .menu-box, body.kac-noanim #qrModal > .menu-box, body.kac-noanim #foodModal > .menu-box, body.kac-noanim #mealMenuModal > div { animation:none !important; }
@@ -6922,7 +6947,77 @@ body.kac-noanim #noticeModal > .menu-box, body.kac-noanim #surveyModal > .menu-b
       try{ if(eR) eR.textContent='Room '+homeRoom; firebase.database().ref('courses/'+homeRoom+'/settings').once('value').then(function(s){ var v=s.val()||{}; var cn=(v.courseName||('Room '+homeRoom)); if(eT) eT.textContent=cn; if(eC) eC.textContent=cn; if(eP) eP.textContent=(v.period||'-'); }); }catch(e){}
     }
     loadKakaoHomeDorm(nm, sb, eD);
+    updateKakaoAttendanceButton(homeRoom);
     ov.style.display='flex';
+  };
+  function kakaoAttendanceDate(){
+    var d=new Date();
+    return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+  }
+  function kakaoAttendanceStorageKey(room){
+    var token=(localStorage.getItem('uToken')||'').trim();
+    room=normalizeKakaoRoom(room || getKakaoAttendanceRoom());
+    return room && token ? 'kac_attended_'+room+'_'+kakaoAttendanceDate()+'_'+token : '';
+  }
+  function kakaoAttendanceProofKey(room){
+    var token=(localStorage.getItem('uToken')||'').trim();
+    room=normalizeKakaoRoom(room || getKakaoAttendanceRoom());
+    return room && token ? 'kac_attendance_proof_'+room+'_'+kakaoAttendanceDate()+'_'+token : '';
+  }
+  function setKakaoAttendanceProof(room, data){
+    var key=kakaoAttendanceProofKey(room);
+    if(!key) return;
+    try{ localStorage.setItem(key, JSON.stringify(data||{})); }catch(e){}
+  }
+  function getKakaoAttendanceProof(room){
+    var key=kakaoAttendanceProofKey(room);
+    if(!key) return null;
+    try{ return JSON.parse(localStorage.getItem(key)||'null'); }catch(e){ return null; }
+  }
+  function isKakaoAttendedToday(room){
+    var key=kakaoAttendanceStorageKey(room);
+    if(!key) return false;
+    try{ return localStorage.getItem(key)==='true' || !!getKakaoAttendanceProof(room); }catch(e){ return false; }
+  }
+  function updateKakaoAttendanceButton(room){
+    var btn=document.getElementById('keduAttendBtn');
+    if(!btn) return;
+    room=normalizeKakaoRoom(room || getKakaoAttendanceRoom());
+    if(isKakaoAttendedToday(room)){
+      btn.classList.add('done');
+      btn.innerHTML='<i class="fa-solid fa-circle-check"></i> 출결완료';
+      btn.onclick=function(){ showKakaoAttendanceProof(room); };
+    }else{
+      btn.classList.remove('done');
+      btn.innerHTML='<i class="fa-solid fa-keyboard"></i> 출결하기';
+      btn.onclick=function(){ startKakaoOtpAttendance(); };
+    }
+  }
+  window.setKakaoAttendanceProof=setKakaoAttendanceProof;
+  window.updateKakaoAttendanceButton=updateKakaoAttendanceButton;
+  window.getKakaoAttendanceProof=getKakaoAttendanceProof;
+  window.showKakaoAttendanceProof=function(room){
+    room=normalizeKakaoRoom(room || getKakaoAttendanceRoom());
+    var proof=getKakaoAttendanceProof(room)||{};
+    var name=proof.name || (localStorage.getItem('kac_user_name')||'-').trim();
+    var course=proof.course || (document.getElementById('khCourse')&&document.getElementById('khCourse').textContent) || '-';
+    var date=proof.date || kakaoAttendanceDate();
+    var time=proof.time || '처리 완료';
+    var authId=proof.authId || '-';
+    var ov=document.getElementById('keduAttProof');
+    if(!ov){ showKacAlert('출석 인증 완료\\n'+name+'님, '+date+' '+time); return; }
+    var set=function(id,txt){ var el=document.getElementById(id); if(el) el.textContent=txt; };
+    set('kapCourse', course);
+    set('kapName', name);
+    set('kapRoom', room ? 'Room '+room : '-');
+    set('kapDate', date);
+    set('kapTime', time);
+    set('kapAuth', authId);
+    ov.style.display='flex';
+  };
+  window.closeKakaoAttendanceProof=function(){
+    var ov=document.getElementById('keduAttProof');
+    if(ov) ov.style.display='none';
   };
   function loadKakaoHomeDorm(name, sabun, el){
     if(!el) return;
@@ -7103,7 +7198,7 @@ body.kac-noanim #noticeModal > .menu-box, body.kac-noanim #surveyModal > .menu-b
           '<div><span>생활관</span><b id="khDorm">확인 중...</b></div>'+
         '</div>'+
         '<button class="kh-edit" onclick="keduEditInfo()"><i class="fa-solid fa-pen-to-square"></i> 정보 수정하기</button>'+
-        '<button class="kh-att" onclick="startKakaoOtpAttendance()"><i class="fa-solid fa-keyboard"></i> 출결하기</button>'+
+        '<button class="kh-att" id="keduAttendBtn" onclick="startKakaoOtpAttendance()"><i class="fa-solid fa-keyboard"></i> 출결하기</button>'+
         '<button class="kh-close" id="keduHomeClose">닫기</button></div></div>';
       document.body.appendChild(h);
       document.getElementById('keduHomeClose').addEventListener('click', function(){
@@ -7151,6 +7246,23 @@ body.kac-noanim #noticeModal > .menu-box, body.kac-noanim #surveyModal > .menu-b
           if(/\d/.test(text)){ e.preventDefault(); fillKakaoOtpInputs(text); }
         });
       });
+    }
+    if(!document.getElementById('keduAttProof')){
+      var ap=document.createElement('div'); ap.id='keduAttProof';
+      ap.innerHTML='<div class="kap-card"><div class="kap-head">'+
+        '<div class="kap-icon"><i class="fa-solid fa-circle-check"></i></div>'+
+        '<div class="kap-title">출석 인증 완료</div>'+
+        '<div class="kap-sub">오늘 출결이 정상 처리되었습니다.</div></div>'+
+        '<div class="kap-body">'+
+          '<div class="kap-row"><span>과정</span><b id="kapCourse">-</b></div>'+
+          '<div class="kap-row"><span>이름</span><b id="kapName">-</b></div>'+
+          '<div class="kap-row"><span>강의실</span><b id="kapRoom">-</b></div>'+
+          '<div class="kap-row"><span>일자</span><b id="kapDate">-</b></div>'+
+          '<div class="kap-row"><span>시각</span><b id="kapTime">-</b></div>'+
+          '<div class="kap-row"><span>인증번호</span><b id="kapAuth">-</b></div>'+
+          '<button class="kap-close" onclick="closeKakaoAttendanceProof()">확인</button>'+
+        '</div></div>';
+      document.body.appendChild(ap);
     }
     routeKakao();
   }

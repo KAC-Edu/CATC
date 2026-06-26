@@ -2,7 +2,7 @@
 <!-- 이 플랫폼(admin_coord.html / 교육운영부) 수정상태 플래그. 값은 [수정중] 또는 [수정안하는중] 두 가지. -->
 <!-- 작업 시작 시 → 수정중 / 작업 완료 시 → 수정안하는중. 다른 플랫폼은 이 말머리를 보고 연동·수정 가능 여부 판단. -->
 <!-- [외부변경 · 카카오채널연동 2026-06-25] 포털(portal.html/7777) 경유 폐지 → 페이지 직접진입 시 접속코드(catc1234) 게이트 추가, 포털 리다이렉트/종료이동 제거. version C13→D13. 기능 로직은 미변경. -->
-<!-- last-updated: 2026-06-26 / version: D34 (상단바 전체폭 복구) -->
+<!-- last-updated: 2026-06-27 / version: D35 (PC 100% 밀도 유지 + 상단바 전체폭 보정) -->
 <!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -74,7 +74,6 @@
      실제 100% 줌에서도 같은 업무 밀도로 보이도록 PC에서만 자동 축소한다. */
   (function(){
     window.__catcDensityFitActive = true;
-    return;
     var MIN_ZOOM = 0.62;
     var BASE_ZOOM = 0.75;
     var timer;
@@ -88,11 +87,13 @@
       if(!el || !body) return;
       el.style.zoom='';
       el.style.removeProperty('--app-h');
+      el.style.removeProperty('--coord-fit-z');
       if(!isPcLike()) return;
       var needW=Math.max(1, el.scrollWidth||0, body.scrollWidth||0, 1280);
       var z=Math.max(MIN_ZOOM, Math.min(window.innerWidth / needW, BASE_ZOOM));
       if(z < 0.995){
         el.style.setProperty('--app-h', (window.innerHeight / z) + 'px');
+        el.style.setProperty('--coord-fit-z', z.toFixed(4));
         el.style.zoom = z.toFixed(4);
       }
     }
@@ -1947,7 +1948,7 @@ body.pc-mode .hdr-stat .hb-value{ font-size:26px; }
 @media (max-width:360px){ .coord-clock{ display:none; } }
 @media (max-width:560px){ .coord-brand-title{ font-size:14px; } }
 /* PC 모드 — 지원부와 동일한 형태(브랜드 + 중앙 시계 pill) */
-body.pc-mode .app-header{ display:grid !important; grid-template-columns:minmax(0,1fr) auto minmax(0,1fr) !important; gap:16px !important; align-items:center !important; min-height:74px !important; padding:12px 28px !important; background:linear-gradient(135deg,#111827 0%,#172554 46%,#2563eb 100%) !important; width:100vw !important; margin-left:calc(50% - 50vw) !important; }
+body.pc-mode .app-header{ display:grid !important; grid-template-columns:minmax(0,1fr) auto minmax(0,1fr) !important; gap:16px !important; align-items:center !important; min-height:74px !important; padding:12px 28px !important; background:linear-gradient(135deg,#111827 0%,#172554 46%,#2563eb 100%) !important; width:calc(100vw / var(--coord-fit-z, 1)) !important; margin-left:calc(50% - (50vw / var(--coord-fit-z, 1))) !important; }
 body.pc-mode .coord-brand-mark{ display:flex !important; }
 body.pc-mode .t-full{ display:inline !important; }
 body.pc-mode .coord-right{ flex:none !important; }
@@ -8834,7 +8835,7 @@ window.addEventListener('load', function(){
 });
 </script>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:6px;bottom:5px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;font-weight:800;line-height:1;letter-spacing:.6px;color:#fff;background:rgba(15,23,42,.85);padding:4px 8px;border-radius:6px;pointer-events:none;user-select:none;box-shadow:0 2px 6px rgba(0,0,0,.3);">D30</div>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:6px;bottom:5px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;font-weight:800;line-height:1;letter-spacing:.6px;color:#fff;background:rgba(15,23,42,.85);padding:4px 8px;border-radius:6px;pointer-events:none;user-select:none;box-shadow:0 2px 6px rgba(0,0,0,.3);">D35</div>
 <script>
 /* ===== [공용] 종료된 과정 자동 정리 (모든 플랫폼 공통) — 종료일 지난 방을 다음날 미개설로 비움. 브라우저별 하루 1회 ===== */
 window.kacExpireEndedCourses = async function(){
