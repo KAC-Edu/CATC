@@ -2,7 +2,7 @@
 <!-- ══════════════════ [편집상태 / EDIT-STATUS] ══════════════════
      STATUS : 수정안하는중
      FILE   : index.html (교육생)
-     UPDATED: 2026-06-26 15:03  (vH53: 카카오 종료커버 내부 X 제거, 외출외박 직행 커버 타이밍 보정, 맛집 화면 정돈)
+     UPDATED: 2026-06-26 15:24  (vH54: 교육생 메뉴 내부 닫기 제거, 카카오 종료커버 폐지, 직행 화면 전환 보강)
      ─ 규칙: 수정 시작 시 STATUS를 '수정중'으로, 완료 시 '수정안하는중'으로 변경.
             '수정중'이면 다른 플랫폼은 연동 변경을 보류/협의 후 진행.
 ═══════════════════════════════════════════════════════════════ -->
@@ -2150,11 +2150,7 @@ function closePanelSmooth(modalId){
     // [수정] 먼저 패널을 숨긴 뒤 스타일을 정리해야 가운데로 튕겨 돌아오는 '잔상(휙휙)'이 안 보인다
     setTimeout(function(){
         raw(); box.style.transform=''; box.style.transition=''; box.style.animation=''; box.style.overflow=''; box.style.willChange='';
-        try{
-          if(window.__kakaoCloseCoverArmed && window.__kakaoCloseCoverPanels && window.__kakaoCloseCoverPanels[modalId]){
-            document.body.classList.add('kac-cover');
-          }
-        }catch(e){}
+        try{ window.__kakaoCloseCoverArmed=false; }catch(e){}
     }, 360);
 }
 window.closePanelSmooth=closePanelSmooth;
@@ -5809,7 +5805,7 @@ input:not([type=checkbox]):not([type=radio]):not([type=file]), textarea, select 
 })();
 </script>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vH53</div>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vH54</div>
 <script>
 /* ===== [공용] 종료된 과정 자동 정리 (교육생 포함 전 플랫폼) — 종료일 지난 방을 다음날 미개설로 비움. 브라우저별 하루 1회 ===== */
 window.kacExpireEndedCourses = async function(){
@@ -6193,9 +6189,9 @@ html, body { overscroll-behavior-x: none !important; }
 })();
 </script>
 
-<!-- ===== [우측 패널 닫기버튼 통일 20260624] 모든 우측 슬라이드 패널 우측 상단에 동일한 X ===== -->
+<!-- ===== [우측 패널 닫기버튼 통일 20260624] vH54부터 교육생 혼선 방지를 위해 내부 X는 생성하지 않음 ===== -->
 <style id="kac-unify-cornerx">
-.kac-cornerx{ position:fixed; top:13px; right:13px; z-index:60; width:32px; height:32px; border:none; border-radius:50%; background:#f1f5f9; color:#64748b; font-size:15px; cursor:pointer; display:flex; align-items:center; justify-content:center; padding:0; box-shadow:0 2px 8px rgba(15,23,42,.12); transition:transform .3s ease, background .25s ease, color .25s ease; -webkit-tap-highlight-color:transparent; }
+.kac-cornerx{ position:fixed; top:13px; right:13px; z-index:60; width:32px; height:32px; border:none; border-radius:50%; background:#f1f5f9; color:#64748b; font-size:15px; cursor:pointer; display:none !important; align-items:center; justify-content:center; padding:0; box-shadow:0 2px 8px rgba(15,23,42,.12); transition:transform .3s ease, background .25s ease, color .25s ease; -webkit-tap-highlight-color:transparent; }
 .kac-cornerx:hover{ background:#ef4444; color:#fff; }
 .kac-cornerx:active{ background:#e2e8f0; transform:scale(.94); }
 </style>
@@ -6208,17 +6204,9 @@ html, body { overscroll-behavior-x: none !important; }
     var m=document.getElementById(id); if(!m) return;
     var b=boxOf(m); if(!b) return;
     if(b.querySelector(':scope > .kac-cornerx')) return; // 이미 적용됨
-    // 1) 기존 '상단' 닫기 컨트롤 숨김
-    //    - 하단 전체폭 '닫기' 버튼은 aria-label이 없어 그대로 유지됨
-    //    - 맛집 '추가하기' 서브폼의 X(.food-add-head)는 유지
-    b.querySelectorAll('button[aria-label="\uB2EB\uAE30"]').forEach(function(x){ if(x.closest('.food-add-head')) return; x.style.display='none'; });
+    // vH54: 교육생 화면은 카카오 상단 X만 쓰도록 내부 닫기/X 컨트롤 전체 제거
+    b.querySelectorAll('button[aria-label="\uB2EB\uAE30"], .food-close-btn').forEach(function(x){ x.style.display='none'; });
     b.querySelectorAll('i.fa-circle-xmark[onclick]').forEach(function(x){ x.style.display='none'; });
-    // 2) 표준 X 주입 (닫기는 통일 애니메이션 closePanelSmooth 사용)
-    var btn=document.createElement('button');
-    btn.type='button'; btn.className='kac-cornerx'; btn.setAttribute('aria-label','\uB2EB\uAE30');
-    btn.innerHTML='<i class="fa-solid fa-xmark"></i>';
-    btn.addEventListener('click', function(e){ e.stopPropagation(); if(typeof window.closePanelSmooth==='function') window.closePanelSmooth(id); else m.style.display='none'; });
-    b.appendChild(btn);
   }
   function run(){ PANELS.forEach(unify); }
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', function(){ setTimeout(run,750); });
@@ -6232,7 +6220,7 @@ html, body { overscroll-behavior-x: none !important; }
 <style id="kac-kiosk-style">
 /* [카카오 키오스크 락 20260625] 카카오 진입은 그 화면 하나로 고정 (메뉴 이동·닫기 차단, 보드 가림으로 2번 스침 제거) */
 #kakaoCover{ position:fixed; inset:0; z-index:6500; display:none; background:linear-gradient(180deg,#0f172a 0%,#172554 58%,#1d4ed8 100%); flex-direction:column; align-items:center; justify-content:center; padding:0 30px calc(20px + env(safe-area-inset-bottom)); text-align:center; overflow:hidden; }
-body.kac-cover #kakaoCover{ display:flex; }
+body.kac-cover #kakaoCover{ display:none !important; }
 #kakaoCover .kc-box{ width:100%; max-width:340px; display:flex; flex-direction:column; align-items:center; }
 #kakaoCover .kc-touchhint{ position:absolute; left:16px; top:14px; width:210px; height:118px; pointer-events:none; }
 #kakaoCover .kc-toprail{ position:absolute; left:0; top:0; display:flex; align-items:center; gap:10px; padding:9px 12px 9px 10px; border-radius:999px; background:rgba(15,23,42,.62); border:1px solid rgba(255,255,255,.18); color:#f8fafc; box-shadow:0 14px 28px rgba(15,23,42,.25); }
@@ -6254,6 +6242,61 @@ body.kac-locked #noticeModal > .menu-box, body.kac-locked #surveyModal > .menu-b
   width:100% !important; max-width:100% !important; height:100dvh !important; max-height:100dvh !important; margin:0 !important; border-radius:0 !important; box-shadow:none !important; justify-content:flex-start !important;
 }
 body.kac-target-pending #mainApp{ visibility:hidden !important; }
+/* vH54: 카카오 채널 메뉴에서는 내부 닫기류 버튼을 전부 숨겨 상단 카카오 X와 혼동되지 않게 함 */
+body.kac-locked .kac-cornerx,
+body.kac-locked .kac-px,
+body.kac-locked .kac-modal-x,
+body.kac-locked .menu-close-x,
+body.kac-locked button[aria-label="\B2EB\AE30"],
+body.kac-locked #foodModal .food-close-btn,
+body.kac-locked #surveyModal button[onclick*="closePanelSmooth"],
+body.kac-locked #noticeModal button[onclick*="closePanelSmooth"],
+body.kac-locked #qrModal button[onclick*="closePanelSmooth"],
+body.kac-locked #mealMenuModal button[onclick*="closePanelSmooth"],
+body.kac-locked #facilityModal button[onclick*="closeFacilityModal"],
+body.kac-locked #tabletLoanModal button[onclick*="closeTabletLoan"],
+body.kac-locked #shuttleModal button[onclick*="closeShuttleModal"],
+body.kac-locked #adminActionModal button[onclick*="closePanelSmooth"],
+body.kac-locked #adminActionModal button[onclick*="document.getElementById('adminActionModal').style.display='none'"],
+body.kac-locked #keduHome .kh-close,
+body.kac-locked #keduDone .kd-close{
+  display:none !important;
+  pointer-events:none !important;
+}
+body.kac-locked #foodModal .food-bottombar{ grid-template-columns:1fr !important; }
+body.kac-locked #foodModal .food-add-btn{ width:100% !important; }
+/* vH54: 퇴교차량/외출외박 신청면 정돈 */
+#shuttleModal > .menu-box, #adminActionModal > .menu-box{
+  background:linear-gradient(180deg,#f8fbff 0%,#eef4ff 100%) !important;
+}
+#shuttleModal .kac-pbar, #adminActionModal .kac-pbar{
+  margin:0 -20px 18px !important;
+  padding:18px 20px 15px !important;
+  border-bottom:1px solid #dbe6f3 !important;
+  background:rgba(255,255,255,.94) !important;
+  backdrop-filter:blur(14px);
+  justify-content:center !important;
+}
+#shuttleModal .kac-pt, #adminActionModal .kac-pt{
+  font-size:19px !important;
+  font-weight:900 !important;
+  color:#0f172a !important;
+  letter-spacing:0 !important;
+}
+#shuttleModal .shuttle-btn,
+#adminActionModal .admin-step button,
+#adminActionModal #prevOutingBanner,
+#adminActionModal #adminStatusText > div{
+  border-radius:16px !important;
+  box-shadow:0 10px 24px rgba(15,23,42,.07) !important;
+}
+#adminActionModal input,
+#adminActionModal select,
+#adminActionModal textarea{
+  border:1.5px solid #dbe6f3 !important;
+  border-radius:14px !important;
+  background:#fff !important;
+}
 </style>
 <script>
 (function(){
@@ -6264,11 +6307,11 @@ body.kac-target-pending #mainApp{ visibility:hidden !important; }
 
   // 파라미터 → 열기 동작 (기존 화면전환 함수 그대로 호출)
   var ACT = {
-    car:    function(){ if(typeof openShuttleApply==='function')    openShuttleApply(); },      // 퇴교/차량 신청
-    outing: function(){ if(typeof openAdminAction==='function')     openAdminAction(); },       // 외출·외박 신청
-    food:   function(){ if(typeof openFoodModal==='function')       openFoodModal(); },         // 항기원 맛집
-    supply: function(){ if(typeof openFacilityRequest==='function') openFacilityRequest(); },   // 생활관 비품
-    home:   function(){ if(typeof window.showKakaoHome==='function') window.showKakaoHome(); }, // 입교/홈
+    car:    function(){ if(typeof openShuttleApply==='function')    return openShuttleApply(); },      // 퇴교/차량 신청
+    outing: function(){ if(typeof openAdminAction==='function')     return openAdminAction(); },       // 외출·외박 신청
+    food:   function(){ if(typeof openFoodModal==='function')       return openFoodModal(); },         // 항기원 맛집
+    supply: function(){ if(typeof openFacilityRequest==='function') return openFacilityRequest(); },   // 생활관 비품
+    home:   function(){ if(typeof window.showKakaoHome==='function') return window.showKakaoHome(); }, // 입교/홈
     qna:    function(){ /* Q&A = 메인 화면 자체 → 별도 동작 없음 */ },
     quiz:   function(){                                                                          // LIVE 퀴즈
       var ov=document.getElementById('quizOverlay');
@@ -6282,43 +6325,36 @@ body.kac-target-pending #mainApp{ visibility:hidden !important; }
   var DELAY = (menu==='quiz') ? 2600 : 450;   // 퀴즈는 activeQuiz 수신 시간 고려해 더 대기
 
   var fired=false;
-  var COVER_PANEL={car:'shuttleModal', outing:'adminActionModal', food:'foodModal', supply:'facilityModal'};
+  var TARGET_PANEL={car:'shuttleModal', outing:'adminActionModal', food:'foodModal', supply:'facilityModal'};
   function entered(){ var ma=document.getElementById('mainApp'); if(!ma) return false; try{ return getComputedStyle(ma).display!=='none'; }catch(e){ return false; } }
+  function panelOpen(id){ var el=document.getElementById(id); if(!el) return false; try{ return getComputedStyle(el).display!=='none'; }catch(e){ return false; } }
+  function releaseTargetPending(){
+    var pid=TARGET_PANEL[menu];
+    if(!pid){ try{ document.body.classList.remove('kac-target-pending'); }catch(e){} return; }
+    var tries=0;
+    var iv=setInterval(function(){
+      if(panelOpen(pid) || ++tries>50){
+        clearInterval(iv);
+        try{ document.body.classList.remove('kac-target-pending'); }catch(e){}
+      }
+    }, 50);
+  }
   async function tryFire(){
     if(fired || !entered()) return;
     fired=true;
     setTimeout(async function(){
       try{ await Promise.resolve(ACT[menu]()); }catch(e){}
-      try{ document.body.classList.remove('kac-target-pending'); }catch(e){}
-      try{
-        var pid=COVER_PANEL[menu];
-        if(pid) window.__kakaoCloseCoverArmed=true;
-        if(menu==='home') window.__kakaoCloseCoverArmed=true;
-      }catch(e){}
+      releaseTargetPending();
+      try{ window.__kakaoCloseCoverArmed=false; }catch(e){}
     }, DELAY);
   }
   function applyKiosk(){
     // 카카오 진입 = 단일 화면 고정. 패널/홈 메뉴는 보드 가림 커버(닫으면 '창 닫기' 종료 안내) 적용.
     var LOCKED={car:1,outing:1,food:1,supply:1,home:1,qna:1,quiz:1};
-    var COVER={car:1,outing:1,food:1,supply:1,home:1};
     try{ document.body.classList.remove('kac-cover'); window.__kakaoCloseCoverArmed=false; }catch(e){}
     if(LOCKED[menu]) document.body.classList.add('kac-locked');
     if(menu!=='qna') document.body.classList.add('kac-target-pending');
-    if(COVER[menu]){
-      var cov=document.getElementById('kakaoCover');
-      if(!cov){
-        cov=document.createElement('div'); cov.id='kakaoCover';
-        cov.innerHTML='<div class="kc-box">'+
-          '<div class="kc-touchhint"><div class="kc-toprail"><div class="kc-upmark"><i class="fa-solid fa-arrow-up"></i></div><div class="kc-cuelabel">맨 위 카카오 X를<br>길게 눌러 닫기</div></div></div>'+
-          '<div class="kc-ic"><i class="fa-solid fa-check"></i></div>'+
-          '<div class="kc-msg">이용을 마치셨습니다</div>'+
-          '<div class="kc-sub">카카오톡으로 돌아가려면<br><b style="color:#fef08a;">화면 맨 위 카카오 X 버튼을 길게 눌러</b> 주세요.</div>'+
-          '<div class="kc-note">닫히지 않으면 휴대폰의 뒤로가기 또는<br>카카오톡 화면 닫기를 사용해 주세요.</div>'+
-        '</div>';
-        document.body.appendChild(cov);
-      }
-      window.__kakaoCloseCoverPanels = window.__kakaoCloseCoverPanels || { shuttleModal:1, adminActionModal:1, foodModal:1, facilityModal:1 };
-    }
+    window.__kakaoCloseCoverPanels = {};
   }
   function start(){
     applyKiosk();
@@ -6517,7 +6553,7 @@ body.kac-noanim #noticeModal > .menu-box, body.kac-noanim #surveyModal > .menu-b
       document.body.appendChild(h);
       document.getElementById('keduHomeClose').addEventListener('click', function(){
         h.style.display='none';
-        try{ if(window.__kakaoCloseCoverArmed) document.body.classList.add('kac-cover'); }catch(e){}
+        try{ window.__kakaoCloseCoverArmed=false; }catch(e){}
       });
     }
     if(!document.getElementById('keduDone')){
