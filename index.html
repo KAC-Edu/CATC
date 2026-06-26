@@ -2,7 +2,7 @@
 <!-- ══════════════════ [편집상태 / EDIT-STATUS] ══════════════════
      STATUS : 수정안하는중
      FILE   : index.html (교육생)
-     UPDATED: 2026-06-26 13:30  (종료커버: 좌상단 카카오 ✕ 가리키는 스우시(붓터치) 화살표 + "이용을 마치셨습니다" 안내 / 카카오모드 모든 메뉴 전체화면(바텀시트) 통일 / 종료커버는 패널 닫은 뒤에만 노출(신청 전 미리보임 버그 수정) / 무용 '창닫기'·활주로·쓸어내림 제거)  ▷ 2026-06-26 Cowork: 외출/외박 카카오진입 시 소속·연락처 단계 스킵(패스트패스) 추가 — 연락처 기기저장+자동채움, 소속·연락처 있으면 바로 행선지(Step4)
+     UPDATED: 2026-06-26 14:20  (vH50: 카카오 채널 버튼 재진입 흐름 보정 — 차량/외출외박 기존 신청은 결과 화면 우선 표시, 외출외박 제출 후 결과요약 확인 단계 유지, 입교완료/홈 팝업 디자인 개선)
      ─ 규칙: 수정 시작 시 STATUS를 '수정중'으로, 완료 시 '수정안하는중'으로 변경.
             '수정중'이면 다른 플랫폼은 연동 변경을 보류/협의 후 진행.
 ═══════════════════════════════════════════════════════════════ -->
@@ -3276,6 +3276,10 @@ async function openShuttleApply() {
     document.getElementById('shuttleModal').style.display = 'flex';
 
     const uToken = localStorage.getItem('uToken');
+    const shuttleSelectionArea = document.getElementById('shuttleSelectionArea');
+    const shuttleCancelArea = document.getElementById('shuttleCancelArea');
+    if (shuttleSelectionArea) shuttleSelectionArea.style.display = 'none';
+    if (shuttleCancelArea) shuttleCancelArea.style.display = 'none';
 
     // 출발 시간 실시간 감시
     if (window._shuttleDepartureRef) window._shuttleDepartureRef.off();
@@ -3411,12 +3415,12 @@ async function openShuttleApply() {
     const snap = await firebase.database().ref(`courses/${currentRoom}/shuttle/requests/${uToken}`).once('value');
     currentShuttleData = snap.val();
     if (currentShuttleData) {
-        document.getElementById('shuttleSelectionArea').style.display = 'none';
-        document.getElementById('shuttleCancelArea').style.display = 'block';
+        if (shuttleSelectionArea) shuttleSelectionArea.style.display = 'none';
+        if (shuttleCancelArea) shuttleCancelArea.style.display = 'block';
         document.getElementById('myCurrentShuttleText').innerText = currentShuttleData.typeText;
     } else {
-        document.getElementById('shuttleSelectionArea').style.display = 'block';
-        document.getElementById('shuttleCancelArea').style.display = 'none';
+        if (shuttleSelectionArea) shuttleSelectionArea.style.display = 'block';
+        if (shuttleCancelArea) shuttleCancelArea.style.display = 'none';
     }
 }
 
@@ -3441,8 +3445,18 @@ function selectShuttle(typeId, typeName) {
         try {
             // 신규 통합 경로: shuttle/requests 밑에 내 토큰으로 저장
             await firebase.database().ref(`courses/${currentRoom}/shuttle/requests/${uToken}`).set(requestData);
-            showKacAlert("✅ 신청이 완료되었습니다.");
-            closeShuttleModal();
+            if (document.body.classList.contains('kac-locked')) {
+                currentShuttleData = requestData;
+                const sel = document.getElementById('shuttleSelectionArea');
+                const can = document.getElementById('shuttleCancelArea');
+                const txt = document.getElementById('myCurrentShuttleText');
+                if (sel) sel.style.display = 'none';
+                if (can) can.style.display = 'block';
+                if (txt) txt.innerText = requestData.typeText;
+            } else {
+                showKacAlert("✅ 신청이 완료되었습니다.");
+                closeShuttleModal();
+            }
         } catch (e) { 
             showKacAlert("저장 실패. 인터넷 연결을 확인하세요."); 
         }
@@ -3976,10 +3990,9 @@ async function submitAdminAction() {
         window._lastOutingResult = { type:selectedAdminType, group:(groupApplyMode==='group' && selectedGroupMembers.length)?selectedGroupMembers.length+1:0, name:name, dept:dept, dest:dest, reason:reason, startTime:startTime, endTime:endTime, returnDate:returnDate, phone:fullPhone, dinnerSkip:null };
 
         // 7. 완료 처리
-        if (document.body.classList.contains('kac-cover')) {
-            // [카카오 진입] 제출 즉시 종료(활주로) 안내 화면으로 — 패널을 닫으면 뒤의 #kakaoCover가 드러남
-            try { closePanelSmooth('adminActionModal'); }
-            catch(e){ var _m=document.getElementById('adminActionModal'); if(_m){ _m.style.display='none'; } }
+        if (document.body.classList.contains('kac-locked')) {
+            // [카카오 진입] 제출 직후 종료커버로 넘기지 않고 신청 결과를 먼저 확인시킨다.
+            showOutingResult();
         } else {
             // [일반 접속] 기존 완료 단계 유지 (석식 제외 여부 선택)
             showAdminStep(5);
@@ -5778,7 +5791,7 @@ input:not([type=checkbox]):not([type=radio]):not([type=file]), textarea, select 
 })();
 </script>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vH49</div>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vH50</div>
 <script>
 /* ===== [공용] 종료된 과정 자동 정리 (교육생 포함 전 플랫폼) — 종료일 지난 방을 다음날 미개설로 비움. 브라우저별 하루 1회 ===== */
 window.kacExpireEndedCourses = async function(){
@@ -6298,18 +6311,21 @@ body.kac-locked #noticeModal > .menu-box, body.kac-locked #surveyModal > .menu-b
 #keduEnroll select:focus, #keduEnroll input:focus{ border-color:#2563eb; }
 #keduEnroll .ke-btn{ width:100%; margin-top:20px; padding:16px; border:none; border-radius:13px; background:linear-gradient(135deg,#3b82f6,#2563eb); color:#fff; font-size:17px; font-weight:900; cursor:pointer; box-shadow:0 8px 20px rgba(37,99,235,.3); }
 #keduEnroll .ke-note{ margin-top:14px; font-size:11px; color:#94a3b8; line-height:1.5; }
-#keduHome{ position:fixed; inset:0; z-index:10040; display:none; align-items:center; justify-content:center; padding:24px; background:rgba(15,23,42,.45); }
-#keduHome .kh-card{ width:100%; max-width:360px; background:#fff; border-radius:20px; padding:24px 20px; text-align:center; box-shadow:0 18px 44px rgba(15,23,42,.3); }
-#keduHome h3{ margin:0 0 4px; font-size:19px; font-weight:900; color:#0f172a; }
-#keduHome .kh-course{ font-size:14px; color:#2563eb; font-weight:800; margin-bottom:18px; }
+#keduHome{ position:fixed; inset:0; z-index:10040; display:none; align-items:center; justify-content:center; padding:24px; background:linear-gradient(180deg,rgba(15,23,42,.68),rgba(15,23,42,.42)); }
+#keduHome .kh-card{ width:100%; max-width:380px; background:#fff; border-radius:24px; padding:0; text-align:left; box-shadow:0 22px 54px rgba(15,23,42,.34); overflow:hidden; border:1px solid rgba(219,234,254,.9); }
+#keduHome .kh-head{ background:linear-gradient(135deg,#0f172a,#1d4ed8); padding:22px 20px 20px; color:#fff; text-align:left; }
+#keduHome .kh-badge{ display:inline-flex; align-items:center; gap:6px; padding:5px 10px; border-radius:999px; background:rgba(255,255,255,.16); color:#bfdbfe; font-size:11px; font-weight:900; margin-bottom:12px; }
+#keduHome h3{ margin:0; font-size:22px; font-weight:900; color:#fff; line-height:1.25; word-break:keep-all; }
+#keduHome .kh-course{ margin-top:8px; font-size:14px; color:#dbeafe; font-weight:700; line-height:1.45; word-break:keep-all; }
+#keduHome .kh-body{ padding:18px 20px 20px; }
 #keduHome button{ width:100%; margin-top:9px; padding:14px; border:none; border-radius:12px; font-size:15px; font-weight:800; cursor:pointer; }
 #keduHome .kh-sub{ background:#10b981; color:#fff; }
 #keduHome .kh-qna{ background:#0f172a; color:#fff; }
 #keduHome .kh-close{ background:#f1f5f9; color:#475569; }
-#keduHome .kh-rows{ text-align:left; margin:6px 0 16px; }
-#keduHome .kh-rows > div{ display:flex; align-items:center; gap:10px; padding:11px 4px; border-bottom:1px solid #f1f5f9; }
+#keduHome .kh-rows{ text-align:left; margin:0 0 16px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:16px; padding:4px 12px; }
+#keduHome .kh-rows > div{ display:flex; align-items:center; gap:10px; padding:12px 0; border-bottom:1px solid #e8eef7; }
 #keduHome .kh-rows > div:last-child{ border-bottom:none; }
-#keduHome .kh-rows span{ flex:0 0 56px; font-size:12px; font-weight:800; color:#94a3b8; }
+#keduHome .kh-rows span{ flex:0 0 62px; font-size:12px; font-weight:900; color:#64748b; }
 #keduHome .kh-rows b{ flex:1; font-size:15px; font-weight:800; color:#1e293b; word-break:keep-all; }
 #keduDone{ position:fixed; inset:0; z-index:10060; display:none; flex-direction:column; align-items:center; justify-content:center; padding:26px 20px; background:linear-gradient(180deg,#eef5ff,#dbe9ff); text-align:center; }
 #keduDone .kd-card{ width:100%; max-width:380px; background:#fff; border-radius:20px; padding:30px 22px; box-shadow:0 18px 44px rgba(37,99,235,.18); }
@@ -6420,9 +6436,9 @@ body.kac-noanim #noticeModal > .menu-box, body.kac-noanim #surveyModal > .menu-b
     var sb=(localStorage.getItem('kac_user_phone')||'-').trim();
     var eN=document.getElementById('khName'), eS=document.getElementById('khSabun');
     if(eN) eN.textContent=nm; if(eS) eS.textContent=sb;
-    var eC=document.getElementById('khCourse'), eP=document.getElementById('khPeriod');
+    var eT=document.getElementById('khTitle'), eC=document.getElementById('khCourse'), eP=document.getElementById('khPeriod'), eR=document.getElementById('khRoom');
     if(typeof currentRoom!=='undefined' && currentRoom){
-      try{ firebase.database().ref('courses/'+currentRoom+'/settings').once('value').then(function(s){ var v=s.val()||{}; if(eC) eC.textContent=(v.courseName||('Room '+currentRoom)); if(eP) eP.textContent=(v.period||'-'); }); }catch(e){}
+      try{ if(eR) eR.textContent='Room '+currentRoom; firebase.database().ref('courses/'+currentRoom+'/settings').once('value').then(function(s){ var v=s.val()||{}; var cn=(v.courseName||('Room '+currentRoom)); if(eT) eT.textContent=cn; if(eC) eC.textContent=cn; if(eP) eP.textContent=(v.period||'-'); }); }catch(e){}
     }
     ov.style.display='flex';
   };
@@ -6453,14 +6469,18 @@ body.kac-noanim #noticeModal > .menu-box, body.kac-noanim #surveyModal > .menu-b
     }
     if(!document.getElementById('keduHome')){
       var h=document.createElement('div'); h.id='keduHome';
-      h.innerHTML='<div class="kh-card"><h3>📋 내 입교 정보</h3>'+
-        '<div class="kh-rows">'+
+      h.innerHTML='<div class="kh-card"><div class="kh-head">'+
+        '<div class="kh-badge"><i class="fa-solid fa-circle-check"></i> 입교 완료</div>'+
+        '<h3 id="khTitle">내 교육 과정</h3>'+
+        '<div class="kh-course">카카오 채널 메뉴에서 바로 이용할 수 있습니다.</div></div>'+
+        '<div class="kh-body"><div class="kh-rows">'+
+          '<div><span>강의실</span><b id="khRoom">-</b></div>'+
           '<div><span>과정</span><b id="khCourse">-</b></div>'+
           '<div><span>기간</span><b id="khPeriod">-</b></div>'+
           '<div><span>이름</span><b id="khName">-</b></div>'+
           '<div><span>사번</span><b id="khSabun">-</b></div>'+
         '</div>'+
-        '<button class="kh-close" id="keduHomeClose">닫기</button></div>';
+        '<button class="kh-close" id="keduHomeClose">닫기</button></div></div>';
       document.body.appendChild(h);
       document.getElementById('keduHomeClose').addEventListener('click', function(){ h.style.display='none'; });
     }
