@@ -2,7 +2,7 @@
 <!-- 이 플랫폼(admin_coord.html / 교육운영부) 수정상태 플래그. 값은 [수정중] 또는 [수정안하는중] 두 가지. -->
 <!-- 작업 시작 시 → 수정중 / 작업 완료 시 → 수정안하는중. 다른 플랫폼은 이 말머리를 보고 연동·수정 가능 여부 판단. -->
 <!-- [외부변경 · 카카오채널연동 2026-06-25] 포털(portal.html/7777) 경유 폐지 → 페이지 직접진입 시 접속코드(catc1234) 게이트 추가, 포털 리다이렉트/종료이동 제거. version C13→D13. 기능 로직은 미변경. -->
-<!-- last-updated: 2026-06-26 / version: D30 (상단/탭/섹션 운영과정 문구 구분) -->
+<!-- last-updated: 2026-06-26 / version: D32 (PC 100퍼센트 화면 밀도 보정) -->
 <!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -68,6 +68,40 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="교육운영부">
+  <script>
+  /* [PC 화면 밀도 보정 2026-06-26]
+     교육운영부 PC 화면은 과거 브라우저 75% 줌 기준으로 맞춰진 영역이 있어,
+     실제 100% 줌에서도 같은 업무 밀도로 보이도록 PC에서만 자동 축소한다. */
+  (function(){
+    window.__catcDensityFitActive = true;
+    var MIN_ZOOM = 0.62;
+    var BASE_ZOOM = 0.75;
+    var timer;
+    function isPcLike(){
+      try{
+        return window.innerWidth >= 1024 && (!window.matchMedia || window.matchMedia('(pointer:fine)').matches);
+      }catch(e){ return window.innerWidth >= 1024; }
+    }
+    function fit(){
+      var el=document.documentElement, body=document.body;
+      if(!el || !body) return;
+      el.style.zoom='';
+      el.style.removeProperty('--app-h');
+      if(!isPcLike()) return;
+      var needW=Math.max(1, el.scrollWidth||0, body.scrollWidth||0, 1280);
+      var z=Math.max(MIN_ZOOM, Math.min(window.innerWidth / needW, BASE_ZOOM));
+      if(z < 0.995){
+        el.style.setProperty('--app-h', (window.innerHeight / z) + 'px');
+        el.style.zoom = z.toFixed(4);
+      }
+    }
+    function soon(){ clearTimeout(timer); timer=setTimeout(fit, 80); }
+    window.addEventListener('resize', soon);
+    window.addEventListener('load', fit);
+    document.addEventListener('DOMContentLoaded', fit);
+    [250,900,1800,3200].forEach(function(ms){ setTimeout(fit, ms); });
+  })();
+  </script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
@@ -2066,6 +2100,21 @@ body.coord-header-compact.pc-mode #coordHdrStats.coord-hdr-hide{ display:flex !i
 <!-- [뷰 1] 전체 과정 현황 (메인) -->
 <div id="totalStatusView" style="display:flex; flex-direction:column; gap:12px;">
 
+    <div id="coordSearchFirstBox" style="background:linear-gradient(135deg,#0f2a4a,#1d4ed8);border-radius:22px;padding:22px 24px;box-shadow:0 16px 36px rgba(15,42,74,.22);color:#fff;">
+        <div style="font-size:13px;font-weight:900;letter-spacing:.08em;color:#bfdbfe;margin-bottom:10px;">SEARCH-FIRST CONTROL</div>
+        <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
+            <div style="position:relative;flex:1;min-width:320px;">
+                <i class="fa-solid fa-magnifying-glass" style="position:absolute;left:18px;top:50%;transform:translateY(-50%);color:#93c5fd;font-size:18px;"></i>
+                <input id="coordSmartSearch" oninput="coordSmartSearch(this.value)" placeholder="필요한 정보를 입력하세요. 연간계획, 차량, Room A, 생활관, 교육생 성함 등" style="width:100%;height:58px;border:none;border-radius:17px;padding:0 18px 0 50px;font-size:18px;font-weight:850;color:#0f172a;box-shadow:inset 0 0 0 1px rgba(255,255,255,.7);outline:none;">
+            </div>
+            <button onclick="coordSmartQuick('연간')" style="height:50px;padding:0 18px;border:none;border-radius:14px;background:#fff;color:#1d4ed8;font-weight:900;cursor:pointer;"><i class="fa-solid fa-calendar-days"></i> 연간계획</button>
+            <button onclick="coordSmartQuick('강의실')" style="height:50px;padding:0 18px;border:none;border-radius:14px;background:#fff;color:#1d4ed8;font-weight:900;cursor:pointer;"><i class="fa-solid fa-chalkboard-user"></i> 강의실</button>
+            <button onclick="coordSmartQuick('차량')" style="height:50px;padding:0 18px;border:none;border-radius:14px;background:#fff;color:#1d4ed8;font-weight:900;cursor:pointer;"><i class="fa-solid fa-bus"></i> 차량</button>
+            <button onclick="coordSmartQuick('생활관')" style="height:50px;padding:0 18px;border:none;border-radius:14px;background:#fff;color:#1d4ed8;font-weight:900;cursor:pointer;"><i class="fa-solid fa-bed"></i> 생활관</button>
+        </div>
+        <div id="coordSmartResult" style="display:none;margin-top:16px;background:#fff;color:#0f172a;border-radius:18px;padding:16px;border:1px solid rgba(255,255,255,.45);"></div>
+    </div>
+
     <!-- ══ PC 전용: 4개 대제목 탭 ══ -->
     <div class="coord-pc-tabs" id="coordPcTabs">
         <div class="coord-ptab" data-sec="1" onclick="coordPcSection(1)">
@@ -2129,6 +2178,12 @@ body.coord-header-compact.pc-mode #coordHdrStats.coord-hdr-hide{ display:flex !i
     <!-- ✅ [복구 완료] 현재 운영 중인 과정 리스트 섹션 (= 섹션 2) -->
     <div id="csec-2" class="section-card" style="background:white; padding:18px 16px; border:1px solid #eef2f7; box-shadow:0 4px 14px rgba(15,23,42,0.05);">
         <div class="coord-sec-head"><h2><i class="fa-solid fa-list-ul"></i> 강의실 배정 현황</h2><button onclick="coordOpenRoomAssign()" style="margin-left:auto;padding:12px 20px;border:none;border-radius:11px;background:linear-gradient(135deg,#2563eb,#1d4ed8);color:#fff;font-weight:800;font-size:16px;cursor:pointer;white-space:nowrap;"><i class="fa-solid fa-chalkboard-user"></i> 강의실 배치 및 수정</button><button onclick="coordSaveFloorPDF()" style="margin-left:8px;padding:12px 16px;border:none;border-radius:11px;background:#0f2a4a;color:#fff;font-weight:800;font-size:15px;cursor:pointer;white-space:nowrap;"><i class="fa-solid fa-file-pdf"></i> PDF 저장</button><select id="coordWeekSel" onchange="coordRenderActiveCourses()" style="margin-left:10px;padding:11px 16px;border:1.5px solid #cbd5e1;border-radius:10px;font-weight:800;font-size:16px;cursor:pointer;background:#fff;color:#1e3a8a;"></select></div>
+        <div style="display:flex;gap:8px;margin:12px 0 14px;align-items:center;flex-wrap:wrap;">
+            <button id="coordRoomModeTable" onclick="coordRoomAssignMode('table')" style="padding:11px 16px;border:none;border-radius:11px;background:#2563eb;color:#fff;font-weight:900;cursor:pointer;"><i class="fa-solid fa-table-list"></i> 표로 편집</button>
+            <button id="coordRoomModePlan" onclick="coordRoomAssignMode('plan')" style="padding:11px 16px;border:none;border-radius:11px;background:#f1f5f9;color:#475569;font-weight:900;cursor:pointer;"><i class="fa-solid fa-map"></i> 배치도로 보기</button>
+            <span style="font-size:12.5px;color:#64748b;font-weight:800;">강의실 배정 표는 이 화면에서 바로 수정됩니다.</span>
+        </div>
+        <div id="coordInlineRoomAssign"></div>
         <div id="coordFloorPlan"></div>
         <div id="activeCourseList" style="display:flex; flex-direction:column; gap:8px;">
             <!-- 자바스크립트가 여기에 ROOM A, ROOM C 등의 카드를 채워넣습니다 -->
@@ -7595,6 +7650,7 @@ function _coordParseRoster(text) {
      (이전: 화면마다 내용 높이를 재서 줄이 달라져 긴 화면만 작아지는 문제) -->
 <script>
 (function(){
+  if (window.__catcDensityFitActive) return;
   var MIN_ZOOM = 0.5;
   var t;
   function fit(){
@@ -8745,6 +8801,39 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
 <script>
 (function(){
   function esc(t){ return (''+(t==null?'':t)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  function _smartBox(){ return document.getElementById('coordSmartResult'); }
+  function _smartShow(html){ var b=_smartBox(); if(!b) return; b.style.display='block'; b.innerHTML=html; }
+  function _smartHide(){ var b=_smartBox(); if(b){ b.style.display='none'; b.innerHTML=''; } }
+  window.coordSmartQuick=function(q){ var i=document.getElementById('coordSmartSearch'); if(i){ i.value=q; i.focus(); } coordSmartSearch(q); };
+  window.coordSmartSearch=function(q){
+    q=String(q||'').trim();
+    if(!q){ _smartHide(); return; }
+    var low=q.toLowerCase();
+    if(low.indexOf('연간')>=0){ coordPcSection(1); _smartShow('<b>연간교육계획</b>을 열었습니다. 아래 표에서 바로 확인하거나 편집기를 여세요.'); return; }
+    if(low.indexOf('차량')>=0 || low.indexOf('수송')>=0){ coordPcSection(4); _smartShow('<b>퇴교차량/외출외박 업무</b> 위치로 이동했습니다. 과정별 신청 현황을 확인하세요.'); return; }
+    if(low.indexOf('생활관')>=0){ _smartShow('<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;"><b>생활관 배정현황</b><button onclick="openDormStatusPopup()" style="border:none;border-radius:10px;background:#2563eb;color:#fff;padding:10px 14px;font-weight:900;cursor:pointer;">현황 열기</button></div>'); return; }
+    if(low.indexOf('강의실')>=0 || low.indexOf('room')>=0){ coordPcSection(2); coordRoomAssignMode('plan'); _smartShow('<b>강의실 배정/배치도</b>를 열었습니다. 표 편집 또는 배치도 보기로 전환할 수 있습니다.'); return; }
+    coordSmartFindStudent(q);
+  };
+  window.coordSmartFindStudent=function(q){
+    var data=(typeof globalAllData!=='undefined' && globalAllData) ? globalAllData : {};
+    var target=String(q||'').trim().toLowerCase();
+    var hits=[];
+    Object.keys(data).forEach(function(rid){
+      var room=data[rid]||{}, st=room.settings||{}, students=room.students||{};
+      Object.keys(students).forEach(function(k){
+        var s=students[k]||{}, name=String(s.name||'').trim();
+        if(!name || name.toLowerCase().indexOf(target)<0) return;
+        var shuttle='-';
+        var sh=room.shuttle||{};
+        Object.keys(sh).forEach(function(sk){ var v=sh[sk]||{}; if(String(v.name||'').trim()===name) shuttle=v.dest||v.destination||v.type||'신청'; });
+        hits.push({rid:rid, name:name, course:st.courseName||'-', room:st.roomDetailName||st.roomDetail||'-', shuttle:shuttle});
+      });
+    });
+    if(!hits.length){ _smartShow('<div style="color:#64748b;font-weight:800;">검색 결과가 없습니다. 이름, 과정명, Room 번호를 다시 확인해 주세요.</div>'); return; }
+    var cards=hits.slice(0,12).map(function(h){ return '<div style="border:1px solid #e2e8f0;border-radius:14px;padding:14px;margin-top:10px;background:#f8fafc;"><div style="font-size:18px;font-weight:950;color:#0f172a;">'+esc(h.name)+'</div><div style="margin-top:8px;color:#475569;font-weight:800;line-height:1.8;">소속 과정: '+esc(h.course)+'<br>강의실: '+esc(typeof _coordRoomDisplay==='function'?_coordRoomDisplay(h.room):h.room)+'<br>차량 신청: '+esc(h.shuttle)+'</div></div>'; }).join('');
+    _smartShow('<b>교육생 종합 검색 결과</b>'+cards);
+  };
 
   // ── 섹션 전환 ──
   window.coordPcSection = function(n){
@@ -8837,7 +8926,7 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
       }
       var bg = ended?'background:#fbfcfe;color:#aab4c0;' : (active?'background:#dbeafe;':'');
       var tag = ended?'<span style="font-size:13px;font-weight:800;color:#94a3b8;">종료</span>' : (active?'<span style="font-size:13px;font-weight:800;color:#1d4ed8;">● 진행중</span>':'<span style="font-size:13px;font-weight:800;color:#16a34a;">예정</span>');
-      return sep+'<tr data-row="'+i+'" style="'+bg+'"><td style="text-align:left;font-weight:800;font-size:17px;">'+esc(name)+' '+tag+'</td><td style="text-align:left;font-size:15px;white-space:nowrap;">'+esc(period)+'</td><td style="text-align:left;font-size:16px;">'+esc(room)+'</td><td style="text-align:left;font-size:16px;white-space:nowrap;">'+esc(coord)+'</td><td style="text-align:left;font-size:16px;white-space:nowrap;">'+esc(prof)+'</td></tr>';
+      return sep+'<tr data-row="'+i+'" style="'+bg+'"><td style="text-align:left;font-weight:800;font-size:17px;">'+esc(name)+' '+tag+'</td><td style="text-align:left;font-size:15px;white-space:nowrap;">'+esc(period)+'</td><td style="text-align:left;font-size:16px;">'+esc(typeof _coordRoomDisplay==='function'?_coordRoomDisplay(room):room)+'</td><td style="text-align:left;font-size:16px;white-space:nowrap;">'+esc(coord)+'</td><td style="text-align:left;font-size:16px;white-space:nowrap;">'+esc(prof)+'</td></tr>';
     }).join('');
     wrap.innerHTML='<div style="max-height:56vh;overflow:auto;border:1px solid #eef2f7;border-radius:12px;"><table class="cpop-table" style="width:100%;font-size:16px;"><thead style="position:sticky;top:0;z-index:2;"><tr><th style="text-align:left;font-size:15px;">과정명</th><th style="text-align:left;white-space:nowrap;font-size:15px;">교육기간</th><th style="text-align:left;white-space:nowrap;font-size:15px;">강의실</th><th style="text-align:left;white-space:nowrap;font-size:15px;">과정담당</th><th style="text-align:left;white-space:nowrap;font-size:15px;">담임교수</th></tr></thead><tbody>'+rows+'</tbody></table></div>';
     if(firstActiveIdx>0){ var sc=wrap.querySelector('div'); var tr=wrap.querySelector('tr[data-row="'+firstActiveIdx+'"]'); if(sc&&tr){ sc.scrollTop=Math.max(0, tr.offsetTop-90); } }
@@ -8890,6 +8979,42 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
     _craState=null; if(typeof cpopClose==='function') cpopClose();
   }
   window._craApply=_craApply;
+  function _coordRoomDisplay(v){
+    v=String(v||'');
+    var b=v.indexOf('하늘')>=0?'하늘관':(v.indexOf('국제')>=0?'국제동':(v.indexOf('관제')>=0?'관제교육동':''));
+    var m=v.match(/([A-Za-z])\s*강의실/);
+    var room=m?m[1].toUpperCase()+'강의실':v.replace(/^(하늘관|국제동|국제교육동|관제교육동)\s*/,'');
+    return b ? '['+b+'] '+room : (v||'-');
+  }
+  window._coordRoomDisplay=_coordRoomDisplay;
+  function coordRoomAssignMode(mode){
+    var table=document.getElementById('coordInlineRoomAssign'), plan=document.getElementById('coordFloorPlan');
+    var bt=document.getElementById('coordRoomModeTable'), bp=document.getElementById('coordRoomModePlan');
+    if(bt){ bt.style.background=(mode==='table')?'#2563eb':'#f1f5f9'; bt.style.color=(mode==='table')?'#fff':'#475569'; }
+    if(bp){ bp.style.background=(mode==='plan')?'#2563eb':'#f1f5f9'; bp.style.color=(mode==='plan')?'#fff':'#475569'; }
+    if(table) table.style.display=(mode==='table')?'block':'none';
+    if(plan) plan.style.display=(mode==='plan')?'block':'none';
+    if(mode==='table') coordRenderRoomAssignInline();
+  }
+  window.coordRoomAssignMode=coordRoomAssignMode;
+  function coordRenderRoomAssignInline(){
+    var box=document.getElementById('coordInlineRoomAssign'); if(!box) return;
+    var off=parseInt((document.getElementById('coordWeekSel')||{}).value||'0',10)||0;
+    if(off!==0){ box.innerHTML='<div style="padding:18px;border:1px dashed #cbd5e1;border-radius:14px;color:#64748b;font-weight:800;">미래 주차 강의실 배정은 기존 편집기에서 관리됩니다. 이번 주 과정은 이 표에서 바로 수정할 수 있습니다.</div>'; return; }
+    var rooms=(typeof _coordActiveRooms==='function'?_coordActiveRooms():[]);
+    if(!rooms.length){ box.innerHTML='<div style="padding:18px;border:1px dashed #cbd5e1;border-radius:14px;color:#94a3b8;font-weight:800;text-align:center;">운영 중인 과정이 없습니다.</div>'; return; }
+    var rows=rooms.map(function(r,idx){
+      var cur=(r.s&&((r.s.roomDetailName||r.s.roomDetail)||''))||'';
+      return '<tr><td style="font-weight:900;color:#0f172a;">ROOM #'+esc(r.rid)+'</td><td style="font-weight:900;text-align:left;">'+esc((r.s&&r.s.courseName)||'-')+'</td><td style="text-align:left;color:#475569;font-weight:800;">'+esc(_coordRoomDisplay(cur))+'</td><td><select onchange="coordInlineRoomSave(\''+esc(r.rid)+'\',this.value)" style="width:100%;min-width:260px;padding:10px 12px;border:1.5px solid #cbd5e1;border-radius:10px;font-weight:800;color:#0f172a;background:#fff;">'+_coordRoomOptsHtml(cur, rooms.map(function(x){return {room:(x.s&&x.s.roomDetailName)||''};}), idx)+'</select></td></tr>';
+    }).join('');
+    box.innerHTML='<div style="border:1px solid #e2e8f0;border-radius:14px;overflow:auto;margin-bottom:14px;"><table class="cpop-table" style="width:100%;min-width:760px;"><thead><tr><th>ROOM</th><th style="text-align:left;">과정명</th><th style="text-align:left;">현재 강의실</th><th>배정 수정</th></tr></thead><tbody>'+rows+'</tbody></table></div>';
+  }
+  window.coordRenderRoomAssignInline=coordRenderRoomAssignInline;
+  window.coordInlineRoomSave=function(rid,val){
+    firebase.database().ref('courses/'+rid+'/settings/roomDetailName').set(val||null).then(function(){
+      try{ coordRenderActiveCourses(); coordRenderRoomAssignInline(); }catch(e){}
+    });
+  };
   function _craRender(){
     var E=(typeof esc==='function'?esc:(typeof _esc==='function'?_esc:function(x){return ''+(x==null?'':x);}));
     var st=_craState; if(!st) return; var off=st.off; var labels=['이번주','다음주','다다음주'];
@@ -9040,6 +9165,7 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
     if(typeof _coordActiveRooms!=='function'){ return; }
     var rooms=_coordActiveRooms();
     if(_fp) _fp.innerHTML = _coordFloorPlanHTML(rooms);
+    try{ coordRenderRoomAssignInline(); }catch(e){}
     if(!rooms.length){ box.innerHTML='<div style="text-align:center;padding:30px;color:#94a3b8;font-weight:700;">현재 운영 중인 과정이 없습니다.</div>'; return; }
     box.innerHTML='';  // 과정블록 목록 제거 → 정보는 위 배치도 카드로 통합
     // 직책 맵 로드 후 한 번 더(직책 일관 표기)
@@ -9078,6 +9204,9 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
     +'</div>';
   };
   window.coordRenderEnrollMap = function(ext){
+    var box=document.getElementById('coordStudentMapBox');
+    if(box) box.style.display='none';
+    return;
     var list=document.getElementById('csecEnrollList'); if(!list||typeof _coordActiveRooms!=='function') return;
     var wrap=document.getElementById('csecEnrollMapWrap');
     if(!wrap){ wrap=document.createElement('div'); wrap.id='csecEnrollMapWrap'; wrap.style.marginBottom='14px'; if(list.parentNode) list.parentNode.insertBefore(wrap, list); }
@@ -9094,7 +9223,7 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
     wrap.innerHTML='<div style="font-size:15px;font-weight:800;color:#475569;margin:2px 2px 9px;"><i class="fa-solid fa-map-location-dot" style="color:#2563eb;"></i> 예정 교육생 전국 분포 <span id="coordMapTotalE" style="color:#94a3b8;font-weight:700;"></span></div><div style="display:flex;gap:14px;align-items:stretch;flex-wrap:wrap;"><div id="coordStudentMapKakaoE" style="flex:2;min-width:300px;height:340px;border-radius:14px;overflow:hidden;border:1px solid #e2e8f0;background:#eaf2fb;"></div><div id="coordMapListE" style="flex:1;min-width:230px;max-height:340px;overflow-y:auto;"></div></div>';
     try{ _coordRenderStudentMap(counts,total,unknown,{total:'coordMapTotalE',list:'coordMapListE',map:'coordStudentMapKakaoE'}); }catch(e){}
   };
-  window.coordRenderEnrollMap=coordRenderEnrollMap;
+  window.coordRenderEnrollMap=window.coordRenderEnrollMap;
   coordRenderEnroll = function(){
     var box=document.getElementById('csecEnrollList'); if(!box) return;
     try{ coordRenderEnrollMap(); }catch(e){}

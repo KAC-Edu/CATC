@@ -1,7 +1,7 @@
 /* ============================================================
    CATC · 강사 플랫폼 로직  (admin.js)
-   @version  U
-   @build    20260626-183500  (vU: 자체출결 OTP 6자리 전환)
+   @version  V
+   @build    20260626-185500  (vV: PDF 고정 인덱스 및 OTP 카운트 동기화 보강)
    ------------------------------------------------------------
    [코드 수정 규칙 · AI/개발자 공통]
    이 파일을 고치면 @version 을 A -> B -> ... -> Z -> A1 -> B1 ...
@@ -3004,6 +3004,7 @@ loadInternalAttendance: function() {
         });
         const sortedList = Array.from(uniqueStudentsMap.values()).sort((a,b) => a.name.localeCompare(b.name));
 
+        attendanceRef.off();
         attendanceRef.on('value', attendSnap => {
             if (state.room !== roomAtInvoke) return;
             const attendees = attendSnap.val() || {};
@@ -3030,7 +3031,7 @@ loadInternalAttendance: function() {
             const totalEl = document.getElementById('totalMemberCount');
             const checkInEl = document.getElementById('checkInCount');
             if(totalEl) totalEl.innerText = sortedList.length;
-            if(checkInEl) checkInEl.innerText = attendCount;
+            if(checkInEl) checkInEl.innerText = Object.keys(attendees).length;
         });
     });
 },
@@ -7360,26 +7361,23 @@ init: function() {
             if (hasContent) { pr._name = name; slot.profile = pr; } else { slot.profile = null; }
         } catch (e) { slot.profile = null; }
     },
-    _hasProfile: function() { return !!(guideMgr._slot().profile); },
-    _hasQR: function() { return !!guideMgr._room(); },
+    _hasProfile: function() { return true; },
+    _hasQR: function() { return true; },
     _hasManual: function() { return true; },
-    _extras: function() { return (guideMgr._hasProfile() ? 1 : 0) + (guideMgr._hasQR() ? 1 : 0) + (guideMgr._hasManual() ? 1 : 0); },
-    _qrPageNum: function() { return guideMgr._hasQR() ? (2 + (guideMgr._hasProfile() ? 1 : 0)) : -1; },
-    _manualPageNum: function() { return 2 + (guideMgr._hasProfile() ? 1 : 0) + (guideMgr._hasQR() ? 1 : 0); },
+    _extras: function() { return 3; },
+    _qrPageNum: function() { return 3; },
+    _manualPageNum: function() { return 4; },
     _vtotal: function() { const s = guideMgr._slot(); if (!s.pdfDoc) return 0; return s.pdfDoc.numPages + guideMgr._extras(); },
-    _isProfilePage: function(v) { return guideMgr._hasProfile() && v === 2; },
-    _isQRPage: function(v) { return guideMgr._hasQR() && v === guideMgr._qrPageNum(); },
-    _isManualPage: function(v) { return guideMgr._hasManual() && v === guideMgr._manualPageNum(); },
+    _isProfilePage: function(v) { return v === 2; },
+    _isQRPage: function(v) { return v === 3; },
+    _isManualPage: function(v) { return v === 4; },
     _toPdfPage: function(v) {
-        const extras = guideMgr._extras();
-        if (extras === 0) return v;
-        if (v <= 1) return 1;                       // 표지(1페이지)
-        if (guideMgr._isProfilePage(v)) return null; // 교수 프로필(가상)
-        if (guideMgr._isQRPage(v)) return null;      // QR 안내(가상)
-        if (guideMgr._isManualPage(v)) return null;  // 앱 사용법(가상)
-        return v - extras;                          // 원본 PDF 2페이지 이후
+        if (v <= 1) return 1;                       // 1페이지: PDF 원본 표지
+        if (v >= 2 && v <= 4) return null;          // 2~4페이지: 가상 페이지 고정
+        return v - 3;                               // 5페이지부터 PDF 원본 2P
     },
     _profileHTML: function(p) {
+        p = p || {};
         const esc = s => (s == null ? '' : String(s)).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
         const name = esc(p._name || '');
         const eng = p.engName ? `<span style="font-size:18px;color:#94a3b8;font-weight:600;margin-left:8px;">(${esc(p.engName)})</span>` : '';

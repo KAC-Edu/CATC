@@ -2,7 +2,7 @@
 <!-- ══════════════════ [편집상태 / EDIT-STATUS] ══════════════════
      STATUS : 수정안하는중
      FILE   : index.html (교육생)
-     UPDATED: 2026-06-26 18:35  (vH60: OTP 6자리 출결 적용 및 카메라 QR 출결 제거)
+     UPDATED: 2026-06-26 18:55  (vH61: OTP 자동 제출 피드백 보강)
      ─ 규칙: 수정 시작 시 STATUS를 '수정중'으로, 완료 시 '수정안하는중'으로 변경.
             '수정중'이면 다른 플랫폼은 연동 변경을 보류/협의 후 진행.
 ═══════════════════════════════════════════════════════════════ -->
@@ -6965,7 +6965,12 @@ body.kac-noanim #noticeModal > .menu-box, body.kac-noanim #surveyModal > .menu-b
     var idx=Math.min(digits.length,5);
     if(inputs[idx]) inputs[idx].focus();
   }
+  var keduOtpSubmitting=false;
+  function keduOtpVibrate(pattern){
+    try{ if(navigator.vibrate) navigator.vibrate(pattern); }catch(e){}
+  }
   async function submitKakaoOtpAttendance(){
+    if(keduOtpSubmitting) return;
     var name=(localStorage.getItem('kac_user_name')||'').trim();
     var phone=(localStorage.getItem('kac_user_phone')||'').trim();
     var token=(localStorage.getItem('uToken')||'').trim();
@@ -6976,22 +6981,28 @@ body.kac-noanim #noticeModal > .menu-box, body.kac-noanim #surveyModal > .menu-b
     var code='';
     document.querySelectorAll('#keduOtp .ko-digit').forEach(function(input){ code += String(input.value||'').replace(/\D/g,'').slice(0,1); });
     if(!/^\d{6}$/.test(code)){ if(msg) msg.textContent='6자리 OTP를 모두 입력해 주세요.'; return; }
+    keduOtpSubmitting=true;
     if(msg) msg.textContent='OTP 확인 중입니다...';
     try{
       var snap=await firebase.database().ref('courses/'+room+'/attendanceOtp').once('value');
       var otp=snap.val()||{};
       var validUntil=Number(otp.validUntil||0);
       var saved=String(otp.code||'');
-      if(!saved){ if(msg) msg.textContent='강사 화면에서 OTP 출결을 먼저 열어 주세요.'; return; }
-      if(Date.now() > validUntil + 5000){ if(msg) msg.textContent='OTP가 만료되었습니다. 새 번호를 입력해 주세요.'; return; }
-      if(code !== saved){ if(msg) msg.textContent='OTP가 일치하지 않습니다. 숫자를 다시 확인해 주세요.'; return; }
+      if(!saved){ keduOtpVibrate([80,40,80]); if(msg) msg.textContent='강사 화면에서 OTP 출결을 먼저 열어 주세요.'; return; }
+      if(Date.now() > validUntil + 5000){ keduOtpVibrate([80,40,80]); if(msg) msg.textContent='OTP가 만료되었습니다. 새 번호를 입력해 주세요.'; return; }
+      if(code !== saved){ keduOtpVibrate([80,40,80]); if(msg) msg.textContent='OTP가 일치하지 않습니다. 숫자를 다시 확인해 주세요.'; return; }
       var d=new Date();
       var today=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
       var storageKey='kac_attended_'+room+'_'+today+'_'+token;
+      keduOtpVibrate(120);
+      if(msg) msg.textContent='출결이 확인되었습니다.';
       closeKakaoOtpAttendance();
       executeAttendanceRecord(room, name, phone, today, storageKey);
     }catch(e){
+      keduOtpVibrate([80,40,80]);
       if(msg) msg.textContent='OTP 확인 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.';
+    }finally{
+      keduOtpSubmitting=false;
     }
   }
   window.submitKakaoOtpAttendance=submitKakaoOtpAttendance;
