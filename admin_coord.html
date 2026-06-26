@@ -2,7 +2,7 @@
 <!-- 이 플랫폼(admin_coord.html / 교육운영부) 수정상태 플래그. 값은 [수정중] 또는 [수정안하는중] 두 가지. -->
 <!-- 작업 시작 시 → 수정중 / 작업 완료 시 → 수정안하는중. 다른 플랫폼은 이 말머리를 보고 연동·수정 가능 여부 판단. -->
 <!-- [외부변경 · 카카오채널연동 2026-06-25] 포털(portal.html/7777) 경유 폐지 → 페이지 직접진입 시 접속코드(catc1234) 게이트 추가, 포털 리다이렉트/종료이동 제거. version C13→D13. 기능 로직은 미변경. -->
-<!-- last-updated: 2026-06-26 / version: D24 (생활관 배정현황 이름 확대 및 연간계획 주차 구분선) -->
+<!-- last-updated: 2026-06-26 / version: D27 (입교현황 지도/카드 지표를 예정 명단 기준으로 통일) -->
 <!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -1781,10 +1781,10 @@ body.cpop-locked{ overflow:hidden !important; }
 <div id="side-global-menu" style="display:none; flex-direction:column; gap:10px;">
     <div class="coord-menu-list">
         <div class="cml-sec">교육운영부 관련</div>
+        <a class="cml-item" onclick="annualPlanMgrCoord.openEditorModal(); toggleMenu(false);"><i class="fa-solid fa-calendar-days" style="color:#2563eb;"></i> 연간교육계획 편집</a>
         <a class="cml-item" onclick="openGlobalNoticeModal(); toggleMenu(false);"><i class="fa-solid fa-bullhorn" style="color:#f97316;"></i> 항기원 전체공지</a>
         <a class="cml-item" onclick="openLedgerCenter(); toggleMenu(false);"><i class="fa-solid fa-folder-open" style="color:#0d9488;"></i> 외출외박/출석부 대장 출력</a>
         <a class="cml-item" onclick="coordMgr.openManage(); toggleMenu(false);"><i class="fa-solid fa-user-gear" style="color:#7c3aed;"></i> 과정운영 담당자 관리</a>
-        <a class="cml-item" onclick="coordPurgeImages(); toggleMenu(false);"><i class="fa-solid fa-broom" style="color:#dc2626;"></i> Firebase 대용량 이미지 정리</a>
     </div>
 </div>
 
@@ -1871,10 +1871,11 @@ body.pc-mode .coord-pc-only{ display:flex !important; }
 .hdr-stat.shuttle-off .hb-label{ color:rgba(255,255,255,0.95) !important; }
 .hdr-stat.shuttle-off .hb-value{ color:#fff !important; }
 .hdr-stat.shuttle-off > i{ color:#fee2e2 !important; }
-#hdr-shuttle{ height:44px !important; min-width:112px !important; align-self:center !important; box-sizing:border-box !important; }
+#hdr-shuttle{ height:44px !important; width:112px !important; min-width:112px !important; max-width:112px !important; padding:7px 13px !important; align-self:center !important; box-sizing:border-box !important; overflow:hidden !important; }
 #hdr-shuttle .hdr-stat-txt{ min-height:30px !important; justify-content:center !important; }
-#hdr-shuttle .hb-value{ min-width:34px !important; display:flex !important; align-items:baseline !important; gap:2px !important; line-height:1 !important; }
-.hdr-stat.shuttle-cleared{ background:rgba(100,116,139,0.46) !important; border-color:rgba(203,213,225,.72) !important; box-shadow:0 0 0 1px rgba(148,163,184,.35),0 4px 12px rgba(15,23,42,.18) !important; }
+#hdr-shuttle .hb-label{ width:100% !important; overflow:hidden !important; text-overflow:ellipsis !important; text-align:center !important; }
+#hdr-shuttle .hb-value{ width:100% !important; min-width:0 !important; justify-content:center !important; display:flex !important; align-items:baseline !important; gap:2px !important; line-height:1 !important; }
+.hdr-stat.shuttle-cleared{ background:rgba(100,116,139,0.58) !important; border-color:rgba(203,213,225,.82) !important; box-shadow:0 0 0 1px rgba(148,163,184,.42),0 4px 12px rgba(15,23,42,.18) !important; }
 .hdr-stat.shuttle-cleared .hb-label{ color:rgba(248,250,252,.92) !important; }
 .hdr-stat.shuttle-cleared .hb-value{ color:#fff !important; }
 .hdr-stat.shuttle-cleared > i{ color:#e2e8f0 !important; }
@@ -3263,11 +3264,19 @@ function updateGlobalStatus() {
 
         // --- 여기서부터는 필터를 통과한 '진행 중인 과정'만 처리됨 ---
 
-        // 수강생 집계 (이름이 있는 유효한 학생만)
-        if (room.students) { 
-            Object.values(room.students).forEach(s => {
+        // 수강생 집계: 운영부 예정 명단이 있으면 우선 사용하고, 없을 때 현재 입장 명단으로 보정
+        let rosterSource = [];
+        const coordRoster = room.coordRoster || {};
+        if (Array.isArray(coordRoster.list) && coordRoster.list.length) {
+            const curPeriod = String(settings.period || '').trim();
+            const rosterPeriod = String(coordRoster.period || '').trim();
+            if (!rosterPeriod || !curPeriod || rosterPeriod === curPeriod) rosterSource = coordRoster.list;
+        }
+        if (!rosterSource.length && room.students) rosterSource = Object.values(room.students);
+        if (rosterSource.length) { 
+            rosterSource.forEach(s => {
                 if (s && s.name && s.name !== "undefined" && s.name.trim() !== "") {
-                    const cleanPhone = (s.phone || "0000").replace(/[^0-9]/g, "");
+                    const cleanPhone = (s.empNo || s.sabun || s.id || s.phone || "0000").replace(/[^0-9]/g, "");
                     const last4 = cleanPhone; // 식별번호 전체(사번/전화) 그대로 사용
                     // 중복 제거를 위해 리스트에 수집
                     globalList.push({ name: s.name.trim(), phone: last4 });
@@ -8442,6 +8451,7 @@ function _coordShuttleRoundsHtml(){
   var times=['13:00','13:30','14:00','14:30','15:00','15:30','16:00','16:30','17:00'];
   function opts(cur,mij){ var h='<option value="">시간 선택</option>'; if(mij) h+='<option value="미정"'+(cur==='미정'?' selected':'')+'>미정(추후 공지)</option>'; h+=times.map(function(t){return '<option value="'+t+'"'+(t===cur?' selected':'')+'>'+t+'</option>';}).join(''); return h; }
   var bg= on?'background:linear-gradient(135deg,#f0fdf4,#dcfce7);border:2px solid #22c55e;':'background:linear-gradient(135deg,#f8fafc,#eef2f7);border:2px solid #cbd5e1;';
+  var noticeBtnBg=on?'#22c55e':'#64748b';
   var yA=(mode==='yes'), nA=(mode==='no'), tA=(mode==='tbd');
   function qbtn(id,fn,label,active,col){ return '<button type="button" id="'+id+'" onclick="'+fn+'" style="padding:8px 16px;border-radius:9px;font-size:13px;font-weight:800;cursor:pointer;border:1.5px solid '+(active?col:'#cbd5e1')+';background:'+(active?col:'#fff')+';color:'+(active?'#fff':'#475569')+';">'+label+'</button>'; }
   return '<div id="coordShuttleRoundBox" style="'+bg+'border-radius:14px;padding:16px 18px;margin-bottom:16px;">'
@@ -8450,7 +8460,7 @@ function _coordShuttleRoundsHtml(){
     +'<div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-bottom:12px;"><span style="font-size:16px;font-weight:800;color:#475569;">추가 퇴교차량(2차) 예정인가요?</span>'+qbtn('coordSht2YesBtn',"coordSht2Set('yes')",'예',yA,'#2563eb')+qbtn('coordSht2NoBtn',"coordSht2Set('no')",'아니오 (운행안함)',nA,'#dc2626')+qbtn('coordSht2TbdBtn',"coordSht2Set('tbd')",'미정',tA,'#f59e0b')+'</div>'
     +'<div id="coordSht2Row" style="display:'+(yA?'flex':'none')+';align-items:center;gap:10px;margin-bottom:14px;"><span style="width:42px;font-size:18px;font-weight:900;color:#1e3a8a;">2차</span><select id="coordShtR2" style="flex:1;padding:14px 16px;border:1.5px solid #cbd5e1;border-radius:10px;font-size:19px;font-weight:800;color:#0f172a;cursor:pointer;">'+opts(r2time,false)+'</select></div>'
     +'<div style="display:flex;gap:8px;align-items:center;">'
-      +'<button onclick="coordSetShuttleRounds()" style="flex:1;padding:12px 18px;background:#22c55e;color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:900;cursor:pointer;"><i class="fa-solid fa-bullhorn"></i> 공지</button>'
+      +'<button onclick="coordSetShuttleRounds()" style="flex:1;padding:12px 18px;background:'+noticeBtnBg+';color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:900;cursor:pointer;"><i class="fa-solid fa-bullhorn"></i> 공지</button>'
       +(on?'<button onclick="coordClearShuttleRounds()" style="padding:12px 16px;background:#fff;color:#64748b;border:1px solid #e2e8f0;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;">초기화</button>':'')
     +'</div>'
     +(on?('<div style="margin-top:11px;font-size:13px;font-weight:800;color:#15803d;">✅ 공지됨 · 1차 '+_esc(r1||'-')+(r2time?(' / 2차 '+r2time):(r2==='미정'?' / 2차 미정':' / 2차 운행안함'))+'</div>'):'')
@@ -8653,7 +8663,7 @@ window.addEventListener('load', function(){
 });
 </script>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:6px;bottom:5px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;font-weight:800;line-height:1;letter-spacing:.6px;color:#fff;background:rgba(15,23,42,.85);padding:4px 8px;border-radius:6px;pointer-events:none;user-select:none;box-shadow:0 2px 6px rgba(0,0,0,.3);">D24</div>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:6px;bottom:5px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;font-weight:800;line-height:1;letter-spacing:.6px;color:#fff;background:rgba(15,23,42,.85);padding:4px 8px;border-radius:6px;pointer-events:none;user-select:none;box-shadow:0 2px 6px rgba(0,0,0,.3);">D27</div>
 <script>
 /* ===== [공용] 종료된 과정 자동 정리 (모든 플랫폼 공통) — 종료일 지난 방을 다음날 미개설로 비움. 브라우저별 하루 1회 ===== */
 window.kacExpireEndedCourses = async function(){
@@ -8785,7 +8795,11 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
       var wk=weekKeyOf(sd||ed), sep='';
       if(wk!==prevWeek){
         prevWeek=wk;
-        sep='<tr class="coord-annual-week-sep"><td colspan="5" style="padding:10px 12px 8px;border-top:2px dashed #93c5fd;border-bottom:1px solid #dbeafe;background:#f8fbff;color:#1d4ed8;font-size:13px;font-weight:900;letter-spacing:0;">'+esc(weekLabelOf(wk))+' 주차</td></tr>';
+        var future=(wk!=='week-unknown' && wk>=today);
+        var sepStyle=future
+          ? 'padding:10px 12px 8px;border-top:2px dashed #22c55e;border-bottom:1px solid #bbf7d0;background:#f0fdf4;color:#15803d;font-size:13px;font-weight:900;letter-spacing:0;'
+          : 'padding:10px 12px 8px;border-top:2px dashed #93c5fd;border-bottom:1px solid #dbeafe;background:#f8fbff;color:#1d4ed8;font-size:13px;font-weight:900;letter-spacing:0;';
+        sep='<tr class="coord-annual-week-sep '+(future?'future':'past')+'"><td colspan="5" style="'+sepStyle+'">'+esc(weekLabelOf(wk))+' 주차</td></tr>';
       }
       var bg = ended?'background:#fbfcfe;color:#aab4c0;' : (active?'background:#dbeafe;':'');
       var tag = ended?'<span style="font-size:13px;font-weight:800;color:#94a3b8;">종료</span>' : (active?'<span style="font-size:13px;font-weight:800;color:#1d4ed8;">● 진행중</span>':'<span style="font-size:13px;font-weight:800;color:#16a34a;">예정</span>');
@@ -9029,18 +9043,21 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
       +'<button onclick="var e=document.getElementById(\'coordEnrollPop\');if(e)e.remove();" style="width:100%;padding:13px;background:#2563eb;color:#fff;border:none;border-radius:13px;font-weight:800;font-size:14px;cursor:pointer;">확인</button>'
     +'</div>';
   };
-  window.coordRenderEnrollMap = function(){
+  window.coordRenderEnrollMap = function(ext){
     var list=document.getElementById('csecEnrollList'); if(!list||typeof _coordActiveRooms!=='function') return;
     var wrap=document.getElementById('csecEnrollMapWrap');
     if(!wrap){ wrap=document.createElement('div'); wrap.id='csecEnrollMapWrap'; wrap.style.marginBottom='14px'; if(list.parentNode) list.parentNode.insertBefore(wrap, list); }
+    ext=ext||window._coordEnrollExt||window._coordRosterExt||{};
+    function norm(x){ return String(x==null?'':x).replace(/\s+/g,'').toLowerCase(); }
     var counts={}, total=0, unknown=0;
     (_coordActiveRooms()||[]).forEach(function(r){
       var roster=[]; var cr=r.room&&r.room.coordRoster; var cp=(''+((r.s&&r.s.period)||'')).trim();
       if(cr&&Array.isArray(cr.list)&&cr.list.length){ var crp=(''+(cr.period||'')).trim(); if(!crp||!cp||crp===cp) roster=cr.list; }
+      if(!roster.length){ var k=norm(r.s&&r.s.courseName); var cands=(ext[k]||[]); var pick=cands.find(function(c){return cp&&(''+(c.period||'')).trim()===cp;})||cands.find(function(c){return (''+(c.room||''))===(''+r.rid);})||cands.slice().sort(function(a,b){return (b.list?b.list.length:0)-(a.list?a.list.length:0);})[0]; if(pick&&Array.isArray(pick.list)&&pick.list.length) roster=pick.list; }
       if(!roster.length) roster=(typeof _studentsOf==='function'?_studentsOf(r.room):[])||[];
       roster.forEach(function(st){ if(!st||!(''+(st.name||'')).trim()) return; var reg=(typeof _coordDeptToRegion==='function')?_coordDeptToRegion(st.dept||st.position||st.affil||st.org||''):''; if(reg){ counts[reg]=(counts[reg]||0)+1; total++; } else unknown++; });
     });
-    wrap.innerHTML='<div style="font-size:15px;font-weight:800;color:#475569;margin:2px 2px 9px;"><i class="fa-solid fa-map-location-dot" style="color:#2563eb;"></i> 교육생 전국 분포 <span id="coordMapTotalE" style="color:#94a3b8;font-weight:700;"></span></div><div style="display:flex;gap:14px;align-items:stretch;flex-wrap:wrap;"><div id="coordStudentMapKakaoE" style="flex:2;min-width:300px;height:340px;border-radius:14px;overflow:hidden;border:1px solid #e2e8f0;background:#eaf2fb;"></div><div id="coordMapListE" style="flex:1;min-width:230px;max-height:340px;overflow-y:auto;"></div></div>';
+    wrap.innerHTML='<div style="font-size:15px;font-weight:800;color:#475569;margin:2px 2px 9px;"><i class="fa-solid fa-map-location-dot" style="color:#2563eb;"></i> 예정 교육생 전국 분포 <span id="coordMapTotalE" style="color:#94a3b8;font-weight:700;"></span></div><div style="display:flex;gap:14px;align-items:stretch;flex-wrap:wrap;"><div id="coordStudentMapKakaoE" style="flex:2;min-width:300px;height:340px;border-radius:14px;overflow:hidden;border:1px solid #e2e8f0;background:#eaf2fb;"></div><div id="coordMapListE" style="flex:1;min-width:230px;max-height:340px;overflow-y:auto;"></div></div>';
     try{ _coordRenderStudentMap(counts,total,unknown,{total:'coordMapTotalE',list:'coordMapListE',map:'coordStudentMapKakaoE'}); }catch(e){}
   };
   window.coordRenderEnrollMap=coordRenderEnrollMap;
@@ -9052,7 +9069,24 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
     if(!rooms.length){ box.innerHTML='<p style="padding:30px;text-align:center;color:#94a3b8;font-weight:700;">운영 중인 과정이 없습니다.</p>'; return; }
     function norm(x){ return String(x==null?'':x).replace(/\s+/g,'').toLowerCase(); }
     function _enrRoom(s){ var m=window._coordDormAssign||{}; var nm=norm(s.name); var id=(''+(s.empNo||s.sabun||s.id||'')).replace(/[^0-9]/g,''); var a=m[nm+'|'+id]||m['n:'+nm]; if(!a) return ''; var ho=(''+(a.no||a.room||'')).trim(); if(!ho) return (a.building||''); return ((a.building||'')+' '+ho+(ho.indexOf('호')<0?'호':'')).trim(); }
+    function _enrBuilding(s){
+      var m=window._coordDormAssign||{}; var nm=norm(s.name); var id=(''+(s.empNo||s.sabun||s.id||'')).replace(/[^0-9]/g,'');
+      var a=m[nm+'|'+id]||m['n:'+nm]||{}; var raw=(''+(a.building||a.dorm||a.dormName||_enrRoom(s)||'')).trim();
+      if(raw.indexOf('청렴')>=0) return '청렴관';
+      if(raw.indexOf('상생')>=0) return '상생관';
+      if(raw.indexOf('국제')>=0) return '국제동';
+      return raw ? raw.replace(/\s+\d+.*$/,'') : '미배정';
+    }
+    function _dormDistHtml(roster){
+      var counts={'청렴관':0,'상생관':0,'국제동':0,'미배정':0}; var total=(roster||[]).length;
+      (roster||[]).forEach(function(s){ var b=_enrBuilding(s); counts[b]=(counts[b]||0)+1; });
+      return ['청렴관','상생관','국제동','미배정'].filter(function(k){ return counts[k]>0 || (k==='미배정'&&total===0); }).map(function(k){
+        var pct=total?Math.round(counts[k]/total*100):0; var tone=k==='미배정'?'background:#f8fafc;color:#94a3b8;border:1px solid #e2e8f0;':'background:#eef6ff;color:#1e40af;border:1px solid #bfdbfe;';
+        return '<span style="'+tone+'font-size:11px;font-weight:900;border-radius:999px;padding:3px 7px;white-space:nowrap;">'+esc(k)+' '+pct+'%</span>';
+      }).join('');
+    }
     function paint(ext){
+      try{ coordRenderEnrollMap(ext); }catch(e){}
       box.innerHTML=rooms.map(function(r,ei){
         var students=(typeof _studentsOf==='function')?_studentsOf(r.room):[];
         var arrivedSet={}; students.forEach(function(s){ arrivedSet[norm(s.name)]=true; });
@@ -9065,7 +9099,8 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
         roster=roster.slice().filter(function(s){ return s && (''+(s.name||'')).trim() && s.name!=='undefined'; });
         var total=roster.length;
         var arrived=roster.filter(function(s){ return arrivedSet[norm(s.name)]; }).length;
-        var expected=Math.max(0,total-arrived);
+        var rate=total?Math.round(arrived/total*100):0;
+        var dormHtml=_dormDistHtml(roster);
         var _today=(typeof _coordToday==='function'?_coordToday():new Date().toISOString().slice(0,10));
         var _startDate=(curPeriod.indexOf(' ~ ')>=0?(curPeriod.split(' ~ ')[0]||'').trim():'');
         var _started=_startDate?(_today>=_startDate):true;   // 교육시작일부터 true
@@ -9076,8 +9111,8 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
         return '<div class="csec-card">'
           +'<div class="csec-card-head" onclick="coordToggleEnroll('+ei+')" style="cursor:pointer;display:flex;align-items:center;gap:14px;padding:14px 16px;">'
             +'<span class="crow-room">ROOM <span class="rid-big">#'+esc(r.rid)+'</span></span>'
-            +'<div style="flex:1;min-width:0;"><div class="crow-name">'+esc(r.s.courseName||'-')+'</div></div>'
-            +'<span class="cstat-pill" onclick="event.stopPropagation(); coordShowEnrollInfo('+arrived+','+total+')" title="입교/예정 인원 보기" style="cursor:pointer;'+((total>0&&Math.round(arrived/total*100)>0)?'background:#dcfce7;color:#16a34a;':'background:#f1f5f9;color:#94a3b8;border:1px solid #e2e8f0;')+'">입교율 '+(total>0?Math.round(arrived/total*100):0)+'%</span>'
+            +'<div style="flex:1;min-width:0;"><div class="crow-name">'+esc(r.s.courseName||'-')+'</div><div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:6px;">'+dormHtml+'</div></div>'
+            +'<span class="cstat-pill" onclick="event.stopPropagation(); coordShowEnrollInfo('+arrived+','+total+')" title="예정/입교율 보기" style="cursor:pointer;'+((total>0&&rate>0)?'background:#dcfce7;color:#16a34a;':'background:#f1f5f9;color:#94a3b8;border:1px solid #e2e8f0;')+'">예정 : '+total+'명 · 입교율('+rate+'%)</span>'
             +'<i class="fa-solid fa-chevron-down crow-chev" id="coordEnrChev'+ei+'"></i>'
           +'</div>'
           +'<div id="coordEnrollBody'+ei+'" style="display:none;border-top:1px solid #eef2f7;overflow-x:auto;"><table class="cpop-table" style="width:100%;table-layout:fixed;"><colgroup><col style="width:9%"><col style="width:29%"><col style="width:15%"><col style="width:15%"><col style="width:18%"><col style="width:14%"></colgroup><thead><tr><th>연번</th><th style="text-align:left;">소속</th><th>사번</th><th>성명</th><th>생활관</th><th>상태</th></tr></thead><tbody>'+body+'</tbody></table></div>'

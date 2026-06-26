@@ -1,6 +1,6 @@
 /* ============================================================
    CATC · 강사 플랫폼 스타일  (admin.css)
-   @version  E   @build  20260626-121500
+   @version  F   @build  20260626-174500
    ------------------------------------------------------------
    [코드 수정 규칙] 수정 시 @version 을
    A -> B -> ... -> Z -> A1 -> B1 -> ... 순으로 1단계 올리고
@@ -4178,3 +4178,41 @@ button[onclick*="allIdle"]{
 }
 body.night-mode .side-rail-btn{ background:#1e293b; border-color:#334155; }
 body.night-mode .side-rail-lbl{ color:#cbd5e1; }
+
+/* vF: 수강생 현황 우측 도구 위치 고정 + 플로팅 입장 QR 비활성 */
+#floatingQR.floating-qr-box{
+    display:none !important;
+    visibility:hidden !important;
+    pointer-events:none !important;
+}
+#view-students .card-rail-wrap{
+    position:relative !important;
+    overflow:visible !important;
+}
+#view-students .card-rail-wrap .side-rail{
+    position:absolute !important;
+    left:calc(100% + 16px) !important;
+    top:6px !important;
+    display:flex !important;
+    flex-direction:column !important;
+    gap:11px !important;
+    margin:0 !important;
+    width:auto !important;
+    max-width:none !important;
+    justify-content:flex-start !important;
+}
+#view-students .card-rail-wrap .side-rail-btn{
+    flex-direction:column !important;
+    width:72px !important;
+    min-width:72px !important;
+    padding:14px 6px !important;
+    border-radius:18px !important;
+    gap:7px !important;
+    box-shadow:0 8px 22px rgba(15,23,42,.10) !important;
+}
+#view-students .card-rail-wrap .side-rail-ic{
+    width:42px !important;
+    height:42px !important;
+    border-radius:13px !important;
+    font-size:18px !important;
+}

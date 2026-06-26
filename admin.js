@@ -1,14 +1,14 @@
 /* ============================================================
    CATC · 강사 플랫폼 로직  (admin.js)
-   @version  S
-   @build    20260626-121500  (vS: 입교안내 전체화면에서 현재 페이지만 보이도록 레이어 고정)
+   @version  T
+   @build    20260626-174500  (vT: 플로팅 QR 비활성화 및 학생 도구 위치 고정)
    ------------------------------------------------------------
    [코드 수정 규칙 · AI/개발자 공통]
    이 파일을 고치면 @version 을 A -> B -> ... -> Z -> A1 -> B1 ...
    순으로 1단계 올리고, @build 를 수정 시각으로 갱신할 것.
    적용 여부는 브라우저 콘솔 로그(vA)로 확인한다.
 ============================================================ */
-try{console.log('%cCATC%c 강사 플랫폼 로직 (admin.js) %cvS%c build 20260626-121500','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}
+try{console.log('%cCATC%c 강사 플랫폼 로직 (admin.js) %cvT%c build 20260626-174500','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}
 /* --- admin.js (Final Integrated Version - Fixed Syntax & Logic) --- */
 
 // --- [기본 데이터] 20문항 ---
@@ -3220,6 +3220,9 @@ showAlert: function(msg, onConfirm) {
 
 toggleMiniQR: function() {
     const qrBox = document.getElementById('floatingQR');
+    if (qrBox) qrBox.style.display = 'none';
+    ui._qrUserClosed = true;
+    return;
     // [보안] 강의실 선택 확인
     if (!state.room || state.room === 'null') {
         ui.showAlert("⚠️ 좌측 상단에서 강의실(Room)을 먼저 선택해 주세요.");
@@ -3232,6 +3235,9 @@ toggleMiniQR: function() {
 // 플로팅 QR 표시 + 렌더 (자동 표시 / 상단바 버튼 공용)
 showMiniQR: function() {
     const qrBox = document.getElementById('floatingQR');
+    if (qrBox) qrBox.style.display = 'none';
+    ui._qrUserClosed = true;
+    return;
     if (!qrBox || !state.room || state.room === 'null') return;
     qrBox.style.display = 'flex';
     ui._qrUserClosed = false;
@@ -3533,7 +3539,7 @@ setMode: function(mode) {
             if (_qr) {
                 // 현황판(waiting)·출결화면(attendance)에선 교육생용 입장 QR 숨김(QR 2개 혼동 방지)
                 if (mode === 'waiting' || mode === 'attendance') { _qr.style.display = 'none'; }
-                else if (mode === 'dashboard' && !ui._qrUserClosed) { ui.showMiniQR(); }
+                else if (mode === 'dashboard') { _qr.style.display = 'none'; ui._qrUserClosed = true; }
             }
         } catch(e) {}
         // [추가] 강의실에 입장한 상태라면 숨겨졌던 메뉴 탭(mode-tabs)을 다시 보여줍니다.

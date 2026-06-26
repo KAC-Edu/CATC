@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-  <!-- last-updated: 2026-06-26 / version: M1 (모바일 퇴교차량 신청자 팝업, 카드 디자인 정돈) -->
+  <!-- last-updated: 2026-06-26 / version: M2 (과정 상세 상단 제목에서 ROOM 표기 제거) -->
   <meta charset="UTF-8" />
   <script>
   /* [기기 분리] PC 접속은 PC 전용 화면으로 (모바일은 이 화면 유지) */
@@ -406,7 +406,7 @@ function updateDetail(){
   if(!curRID) return;
   var room=DATA[curRID]; if(!room) return;
   var s=room.settings||{}, st=room.status||{};
-  document.getElementById('dTtl').textContent='ROOM #'+curRID+' · '+(s.courseName||'-');
+  document.getElementById('dTtl').textContent=s.courseName||'-';
   var prof=((st.professorName||'').trim())?(st.professorName.trim()+' 교수'):'-';
   document.getElementById('dInfo').innerHTML=
      '<div class="info-item"><div class="k">교육기간</div><div class="v" style="font-size:14px;">'+esc(s.period||'-')+'</div></div>'
