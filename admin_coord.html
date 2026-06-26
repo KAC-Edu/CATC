@@ -2,7 +2,7 @@
 <!-- 이 플랫폼(admin_coord.html / 교육운영부) 수정상태 플래그. 값은 [수정중] 또는 [수정안하는중] 두 가지. -->
 <!-- 작업 시작 시 → 수정중 / 작업 완료 시 → 수정안하는중. 다른 플랫폼은 이 말머리를 보고 연동·수정 가능 여부 판단. -->
 <!-- [외부변경 · 카카오채널연동 2026-06-25] 포털(portal.html/7777) 경유 폐지 → 페이지 직접진입 시 접속코드(catc1234) 게이트 추가, 포털 리다이렉트/종료이동 제거. version C13→D13. 기능 로직은 미변경. -->
-<!-- last-updated: 2026-06-26 / version: D27 (입교현황 지도/카드 지표를 예정 명단 기준으로 통일) -->
+<!-- last-updated: 2026-06-26 / version: D28 (퇴교차량 상단버튼 크기 통일 및 입교현황 과정카드 한줄 정렬) -->
 <!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -1853,8 +1853,8 @@ body.pc-mode .coord-pc-only{ display:flex !important; }
 .hdr-stat .hb-label{ font-size:11px; font-weight:700; color:#cbd5e1; line-height:1.15; }
 .hdr-stat .hb-value{ font-size:20px; font-weight:900; color:#fff; line-height:1.05; letter-spacing:-.5px; }
 .hdr-stat .hb-value small{ font-size:11px; font-weight:700; color:#93c5fd; margin-left:2px; }
-/* 청렴/노조교육 블록: 내용이 미정이어도 옆 블록과 높이 동일 */
-.hdr-edu{ align-self:stretch !important; }
+/* 청렴/노조교육/퇴교차량 블록: 같은 비율의 고정 버튼 */
+.hdr-edu{ width:128px !important; min-width:128px !important; max-width:128px !important; height:58px !important; align-self:center !important; justify-content:center !important; box-sizing:border-box !important; padding:8px 16px !important; }
 .hdr-edu .hdr-stat-txt{ display:flex; flex-direction:column; justify-content:center; }
 /* 청렴/노조교육 상태색: 설정=녹색 활성 / 미설정=빨강 활성 */
 .hdr-edu.edu-set{ background:rgba(22,163,74,0.60) !important; border-color:#22c55e !important; box-shadow:0 0 0 1px rgba(34,197,94,.45), 0 4px 12px rgba(22,163,74,.30) !important; }
@@ -1871,7 +1871,7 @@ body.pc-mode .coord-pc-only{ display:flex !important; }
 .hdr-stat.shuttle-off .hb-label{ color:rgba(255,255,255,0.95) !important; }
 .hdr-stat.shuttle-off .hb-value{ color:#fff !important; }
 .hdr-stat.shuttle-off > i{ color:#fee2e2 !important; }
-#hdr-shuttle{ height:44px !important; width:112px !important; min-width:112px !important; max-width:112px !important; padding:7px 13px !important; align-self:center !important; box-sizing:border-box !important; overflow:hidden !important; }
+#hdr-shuttle{ height:58px !important; width:128px !important; min-width:128px !important; max-width:128px !important; padding:8px 16px !important; align-self:center !important; box-sizing:border-box !important; overflow:hidden !important; justify-content:center !important; }
 #hdr-shuttle .hdr-stat-txt{ min-height:30px !important; justify-content:center !important; }
 #hdr-shuttle .hb-label{ width:100% !important; overflow:hidden !important; text-overflow:ellipsis !important; text-align:center !important; }
 #hdr-shuttle .hb-value{ width:100% !important; min-width:0 !important; justify-content:center !important; display:flex !important; align-items:baseline !important; gap:2px !important; line-height:1 !important; }
@@ -8663,7 +8663,7 @@ window.addEventListener('load', function(){
 });
 </script>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:6px;bottom:5px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;font-weight:800;line-height:1;letter-spacing:.6px;color:#fff;background:rgba(15,23,42,.85);padding:4px 8px;border-radius:6px;pointer-events:none;user-select:none;box-shadow:0 2px 6px rgba(0,0,0,.3);">D27</div>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:6px;bottom:5px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;font-weight:800;line-height:1;letter-spacing:.6px;color:#fff;background:rgba(15,23,42,.85);padding:4px 8px;border-radius:6px;pointer-events:none;user-select:none;box-shadow:0 2px 6px rgba(0,0,0,.3);">D28</div>
 <script>
 /* ===== [공용] 종료된 과정 자동 정리 (모든 플랫폼 공통) — 종료일 지난 방을 다음날 미개설로 비움. 브라우저별 하루 1회 ===== */
 window.kacExpireEndedCourses = async function(){
@@ -9111,7 +9111,7 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
         return '<div class="csec-card">'
           +'<div class="csec-card-head" onclick="coordToggleEnroll('+ei+')" style="cursor:pointer;display:flex;align-items:center;gap:14px;padding:14px 16px;">'
             +'<span class="crow-room">ROOM <span class="rid-big">#'+esc(r.rid)+'</span></span>'
-            +'<div style="flex:1;min-width:0;"><div class="crow-name">'+esc(r.s.courseName||'-')+'</div><div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:6px;">'+dormHtml+'</div></div>'
+            +'<div style="flex:1;min-width:0;display:flex;align-items:center;gap:9px;overflow:hidden;"><div class="crow-name" style="flex:0 1 auto;min-width:120px;max-width:46%;display:block;">'+esc(r.s.courseName||'-')+'</div><div style="display:flex;gap:5px;flex-wrap:nowrap;align-items:center;overflow:hidden;min-width:0;">'+dormHtml+'</div></div>'
             +'<span class="cstat-pill" onclick="event.stopPropagation(); coordShowEnrollInfo('+arrived+','+total+')" title="예정/입교율 보기" style="cursor:pointer;'+((total>0&&rate>0)?'background:#dcfce7;color:#16a34a;':'background:#f1f5f9;color:#94a3b8;border:1px solid #e2e8f0;')+'">예정 : '+total+'명 · 입교율('+rate+'%)</span>'
             +'<i class="fa-solid fa-chevron-down crow-chev" id="coordEnrChev'+ei+'"></i>'
           +'</div>'
