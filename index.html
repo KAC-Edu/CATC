@@ -2,7 +2,7 @@
 <!-- ══════════════════ [편집상태 / EDIT-STATUS] ══════════════════
      STATUS : 수정안하는중
      FILE   : index.html (교육생)
-     UPDATED: 2026-06-26 15:24  (vH54: 교육생 메뉴 내부 닫기 제거, 카카오 종료커버 폐지, 직행 화면 전환 보강)
+     UPDATED: 2026-06-26 16:05  (vH55: 입교완료 배경 가림, 차량/외출외박 신청면 정돈, Q&A/퀴즈 표시 보강)
      ─ 규칙: 수정 시작 시 STATUS를 '수정중'으로, 완료 시 '수정안하는중'으로 변경.
             '수정중'이면 다른 플랫폼은 연동 변경을 보류/협의 후 진행.
 ═══════════════════════════════════════════════════════════════ -->
@@ -2480,6 +2480,7 @@ function setupListeners() {
 
         if (st.mode === 'quiz') {
             if (st.quizStep !== 'summary') {
+                document.body.classList.add('kac-quiz-active');
                 document.getElementById('quizOverlay').style.display = 'flex';
                 document.getElementById('quizActiveBox').style.display = 'block';
                 document.getElementById('quizResultBox').style.display = 'none';
@@ -3207,6 +3208,7 @@ function resetInput() {
 
         function showFinalRanking() {
             const myToken = localStorage.getItem('uToken'); if(!myToken) return; if(rankingListener) return;
+            document.body.classList.add('kac-quiz-active');
             document.getElementById('quizOverlay').style.display = 'flex'; document.getElementById('quizActiveBox').style.display = 'block'; document.getElementById('quizResultBox').style.display = 'none';
             document.getElementById('quizStatusMsg').innerText = "📊 점수를 집계 중입니다. 잠시만 기다려주세요..."; document.getElementById('btnGroupMultiple').style.display = 'none'; document.getElementById('btnGroupOX').style.display = 'none'; document.getElementById('quizFeedback').innerText = "";
             const resultRef = firebase.database().ref(`courses/${currentRoom}/quizFinalResults/${myToken}`);
@@ -3222,6 +3224,7 @@ function resetInput() {
 
 
 function forceCloseQuiz() {
+    try{ document.body.classList.remove('kac-quiz-active'); }catch(e){}
     hasClosedSummary = false; 
     canAnswer = false;
     if (rankingListener) { 
@@ -3240,7 +3243,7 @@ function forceCloseQuiz() {
 
 
 
-        function closeResultOverlay() { hasClosedSummary = true; document.getElementById('quizOverlay').style.display = 'none'; }
+        function closeResultOverlay() { hasClosedSummary = true; document.body.classList.remove('kac-quiz-active'); document.getElementById('quizOverlay').style.display = 'none'; }
         function openMenu() {
             const box = document.getElementById('roomList'); box.innerHTML = "";
             for(let i=65; i<=90; i++) { let c = String.fromCharCode(i); box.innerHTML += `<div class="menu-item" onclick="changeRoom('${c}')">Room ${c}</div>`; }
@@ -3384,13 +3387,14 @@ async function openShuttleApply() {
             // [포맷 20260624] 날짜 한 줄, 아래 줄에 1차(HH:MM), 2차(HH:MM) 출발예정
             const _t1 = dep.time;
             timeEl.innerHTML = _h2
-                ? `${dateFmt}<br>1차(${_t1}), 2차(${dep.time2}) 출발예정`
-                : (_t2None ? `${dateFmt}<br>1차(${_t1}) 출발예정 · 2차 운행안함`
-                           : `${dateFmt}<br>1차(${_t1}) 출발예정`);
+                ? `${dateFmt}<br><span style="font-size:18px;">1차 ${_t1} · 2차 ${dep.time2}</span>`
+                : (_t2None ? `${dateFmt}<br><span style="font-size:18px;">1차 ${_t1} · 2차 운행안함</span>`
+                           : `${dateFmt}<br><span style="font-size:18px;">1차 ${_t1}</span>`);
             timeEl.style.color = '#1d4ed8';
             timeEl.style.fontSize = '22px';   // 시간: 크게
             currentDepTime = dep.time;
             currentDepTime2 = _t2IsTime ? dep.time2 : null;
+            window._shuttleDep = dep || {};
             (function(){
                 var recEl=document.getElementById('shuttleRecommend');
                 if(!recEl){ recEl=document.createElement('div'); recEl.id='shuttleRecommend'; recEl.style.cssText='margin-top:8px;font-size:14px;font-weight:900;color:#b91c1c;background:#fff1f2;border:1px solid #fecaca;border-radius:10px;padding:8px 12px;line-height:1.45;'; if(timeEl.parentNode) timeEl.parentNode.appendChild(recEl); }
@@ -3399,13 +3403,14 @@ async function openShuttleApply() {
             })();
         } else {
             // [요청] 출발 시간 미설정/미정이어도 신청은 먼저 받는다(운영부 수요 파악용) — 시간만 추후 공지
-            if (_bar) _bar.style.display = '';
-            timeEl.textContent = '퇴교차량 이용 시, 목적지를 선택해주세요';
+            if (_bar) _bar.style.display = 'none';
+            timeEl.textContent = '';
             timeEl.style.color = '#fff';
             timeEl.style.fontSize = '16px';
             timeEl.style.whiteSpace = 'nowrap';
             currentDepTime = null;
             currentDepTime2 = null;
+            window._shuttleDep = dep || {};
             var _rec0=document.getElementById('shuttleRecommend'); if(_rec0) _rec0.style.display='none';
             // 신청/취소 영역은 기존 신청 여부 로직이 결정 (여기서 숨기지 않음)
         }
@@ -3431,11 +3436,40 @@ async function openShuttleApply() {
     if (currentShuttleData) {
         if (shuttleSelectionArea) shuttleSelectionArea.style.display = 'none';
         if (shuttleCancelArea) shuttleCancelArea.style.display = 'block';
-        document.getElementById('myCurrentShuttleText').innerText = currentShuttleData.typeText;
+        renderMyShuttleStatus(currentShuttleData);
     } else {
         if (shuttleSelectionArea) shuttleSelectionArea.style.display = 'block';
         if (shuttleCancelArea) shuttleCancelArea.style.display = 'none';
     }
+}
+
+function renderMyShuttleStatus(data){
+    var el=document.getElementById('myCurrentShuttleText');
+    if(!el) return;
+    var name=(localStorage.getItem('kac_user_name')||'-').trim();
+    var sabun=(localStorage.getItem('kac_user_phone')||'-').trim();
+    var course=(document.getElementById('roomTitle')||{}).innerText||'현재 과정';
+    var dep=window._shuttleDep||{};
+    var r1=(dep.time||dep.round1||'').trim();
+    var r2=(dep.time2||dep.round2||'').trim();
+    function esc(t){ return (''+(t==null?'':t)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+    var timeHtml='';
+    if(r1 || r2){
+        timeHtml='<div class="kac-shuttle-time-grid">'
+          +'<div class="kac-shuttle-time"><small>1차 출발</small><strong>'+esc(r1||'미정')+'</strong></div>'
+          +'<div class="kac-shuttle-time"><small>2차 출발</small><strong>'+esc(r2||'미정')+'</strong></div>'
+          +'</div>';
+    } else {
+        timeHtml='<div style="margin-top:12px;padding:13px;border-radius:14px;background:#f8fafc;border:1px solid #e2e8f0;color:#64748b;font-size:13px;font-weight:800;text-align:center;">퇴교차량 시간은 교육운영부 공지 후 표시됩니다.</div>';
+    }
+    el.innerHTML='<div class="kac-shuttle-status-head">'
+      +'<div class="ks-eyebrow"><i class="fa-solid fa-bus"></i> 나의 신청현황</div>'
+      +'<div class="ks-title">'+esc(data.typeText||'-')+'</div>'
+      +'</div><div class="kac-shuttle-status-body">'
+      +'<div class="kac-shuttle-status-row"><span>과정</span><b>'+esc(course)+'</b></div>'
+      +'<div class="kac-shuttle-status-row"><span>신청자</span><b>'+esc(name)+' <span style="color:#94a3b8;font-size:13px;">('+esc(sabun)+')</span></b></div>'
+      +'<div class="kac-shuttle-status-row"><span>목적지</span><b>'+esc(data.typeText||'-')+'</b></div>'
+      +timeHtml+'</div>';
 }
 
 // 2. 차량 선택 시 호출 (오송, 터미널, 공항, 자차 공통)
@@ -3466,7 +3500,7 @@ function selectShuttle(typeId, typeName) {
                 const txt = document.getElementById('myCurrentShuttleText');
                 if (sel) sel.style.display = 'none';
                 if (can) can.style.display = 'block';
-                if (txt) txt.innerText = requestData.typeText;
+                renderMyShuttleStatus(requestData);
             } else {
                 showKacAlert("✅ 신청이 완료되었습니다.");
                 closeShuttleModal();
@@ -3794,6 +3828,10 @@ function showAdminStep(n){
             } else { gb.style.display='none'; }
         }
     }
+    if(n===1){
+        ensureAdminApplicantSummary();
+        try{ setGroupMode('solo'); }catch(e){}
+    }
     if(n===4){
         var oa=document.getElementById('outingTimeArea'), on=document.getElementById('overnightArea');
         if(selectedAdminType==='overnight'){ if(oa)oa.style.display='none'; if(on)on.style.display='flex'; }
@@ -3804,6 +3842,27 @@ function showAdminStep(n){
         if(new Date().getHours()>=16){ if(ch)ch.style.display='none'; if(as)as.style.display='block'; }
         else { if(ch)ch.style.display='block'; if(as)as.style.display='none'; }
     }
+}
+
+function ensureAdminApplicantSummary(){
+    var step=document.querySelector('#adminActionForm .admin-step[data-astep="1"]');
+    if(!step) return;
+    var box=document.getElementById('adminApplicantSummary');
+    if(!box){
+        box=document.createElement('div');
+        box.id='adminApplicantSummary';
+        box.style.cssText='margin-bottom:16px;padding:16px 17px;border-radius:18px;background:linear-gradient(135deg,#0f172a,#1d4ed8);color:#fff;box-shadow:0 14px 30px rgba(37,99,235,.18);';
+        step.insertBefore(box, step.firstChild);
+    }
+    var course=((document.getElementById('roomTitle')||{}).innerText||'현재 과정').trim();
+    var name=(localStorage.getItem('kac_user_name')||'-').trim();
+    var sabun=(localStorage.getItem('kac_user_phone')||'-').trim();
+    box.innerHTML='<div style="font-size:12px;font-weight:900;color:#bfdbfe;margin-bottom:7px;"><i class="fa-solid fa-id-card"></i> 신청자 확인</div>'
+      +'<div style="font-size:18px;font-weight:950;line-height:1.35;word-break:keep-all;">'+course+'</div>'
+      +'<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:11px;">'
+      +'<span style="padding:7px 10px;border-radius:999px;background:rgba(255,255,255,.14);font-size:13px;font-weight:850;">'+name+'</span>'
+      +'<span style="padding:7px 10px;border-radius:999px;background:rgba(255,255,255,.14);font-size:13px;font-weight:850;">사번 '+sabun+'</span>'
+      +'</div>';
 }
 
 function adminStep2Next(){
@@ -3956,21 +4015,10 @@ async function submitAdminAction() {
                 destination: dest, reason: reason, phone: fullPhone, type: selectedAdminType,
                 timestamp: firebase.database.ServerValue.TIMESTAMP, returned: false
             };
-            if (groupApplyMode === 'group' && selectedGroupMembers.length) {
-                const groupId = 'grp_' + Date.now() + '_' + Math.random().toString(36).slice(2,6);
-                const memberNames = [name, ...selectedGroupMembers];
-                const sani = s => String(s).replace(/[.#$\/\[\]]/g, '_');
-                const ups = {};
-                ups[`courses/${currentRoom}/admin_actions/${today}/${uToken}`] = Object.assign({}, baseData, { name: name, groupId, isRep: true, repName: name, repToken: uToken, members: memberNames });
-                selectedGroupMembers.forEach(mn => {
-                    const key = 'g_' + groupId + '__' + sani(mn);
-                    ups[`courses/${currentRoom}/admin_actions/${today}/${key}`] = Object.assign({}, baseData, { name: mn, groupId, isRep: false, repName: name, repToken: uToken, members: memberNames });
-                });
-                await firebase.database().ref().update(ups);
-            } else {
-                const actionData = Object.assign({}, baseData, { name: name });
-                await firebase.database().ref(`courses/${currentRoom}/admin_actions/${today}/${uToken}`).set(actionData);
-            }
+            groupApplyMode = 'solo';
+            selectedGroupMembers = [];
+            const actionData = Object.assign({}, baseData, { name: name });
+            await firebase.database().ref(`courses/${currentRoom}/admin_actions/${today}/${uToken}`).set(actionData);
 
             // [기능 추가] 자동완성을 위해 로컬 스토리지에 입력 내용 저장
             const saveAutoHistory = (id, val) => {
@@ -4001,7 +4049,7 @@ async function submitAdminAction() {
         }
 
         // [결과요약용] 신청 내용 보관
-        window._lastOutingResult = { type:selectedAdminType, group:(groupApplyMode==='group' && selectedGroupMembers.length)?selectedGroupMembers.length+1:0, name:name, dept:dept, dest:dest, reason:reason, startTime:startTime, endTime:endTime, returnDate:returnDate, phone:fullPhone, dinnerSkip:null };
+        window._lastOutingResult = { type:selectedAdminType, group:0, name:name, dept:dept, dest:dest, reason:reason, startTime:startTime, endTime:endTime, returnDate:returnDate, phone:fullPhone, dinnerSkip:null };
 
         // 7. 완료 처리
         if (document.body.classList.contains('kac-locked')) {
@@ -4060,7 +4108,7 @@ async function cancelAdminAction() {
 
 // ===== [2인 이상 그룹 외출/외박] =====
 function setGroupMode(mode){
-    groupApplyMode = (mode==='group') ? 'group' : 'solo';
+    groupApplyMode = 'solo';
     const solo=document.getElementById('grpBtnSolo'), grp=document.getElementById('grpBtnGroup'), area=document.getElementById('groupMemberArea');
     const on='2px solid #2563eb', off='2px solid #e2e8f0';
     if(solo){ solo.style.border=groupApplyMode==='solo'?on:off; solo.style.background=groupApplyMode==='solo'?'#eef4ff':'#fff'; solo.style.color=groupApplyMode==='solo'?'#1e40af':'#475569'; }
@@ -4068,7 +4116,6 @@ function setGroupMode(mode){
     selectedGroupMembers=[];
     if(area) area.style.display = groupApplyMode==='group' ? 'block' : 'none';
     const cnt=document.getElementById('groupPickCount'); if(cnt) cnt.textContent='';
-    if(groupApplyMode==='group') loadGroupCandidates();
 }
 async function loadGroupCandidates(){
     const box=document.getElementById('groupMemberList'); if(!box) return;
@@ -5805,7 +5852,7 @@ input:not([type=checkbox]):not([type=radio]):not([type=file]), textarea, select 
 })();
 </script>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vH54</div>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vH55</div>
 <script>
 /* ===== [공용] 종료된 과정 자동 정리 (교육생 포함 전 플랫폼) — 종료일 지난 방을 다음날 미개설로 비움. 브라우저별 하루 1회 ===== */
 window.kacExpireEndedCourses = async function(){
@@ -6297,6 +6344,79 @@ body.kac-locked #foodModal .food-add-btn{ width:100% !important; }
   border-radius:14px !important;
   background:#fff !important;
 }
+/* vH55: 입교/홈 팝업은 뒤 Q&A 화면이 비치지 않도록 완전 불투명 배경 */
+#keduHome{
+  background:linear-gradient(180deg,#eef5ff 0%,#dbe9ff 62%,#c7ddff 100%) !important;
+}
+#keduHome .kh-card{ box-shadow:0 24px 58px rgba(37,99,235,.20) !important; }
+/* vH55: 차량 신청 후 현황 카드 */
+#shuttleModal #driverNoticeBar{ border:1px solid rgba(191,219,254,.75); }
+#shuttleModal #shuttleCancelArea{
+  background:#fff !important;
+  border:1px solid #dbe6f3 !important;
+  border-radius:20px !important;
+  padding:0 !important;
+  overflow:hidden;
+  text-align:left !important;
+  box-shadow:0 12px 32px rgba(15,23,42,.08) !important;
+}
+.kac-shuttle-status-head{
+  background:linear-gradient(135deg,#0f172a,#1d4ed8);
+  color:#fff;
+  padding:18px 18px 16px;
+}
+.kac-shuttle-status-head .ks-eyebrow{ font-size:12px; font-weight:900; color:#bfdbfe; margin-bottom:6px; }
+.kac-shuttle-status-head .ks-title{ font-size:22px; font-weight:950; line-height:1.22; word-break:keep-all; }
+.kac-shuttle-status-body{ padding:16px 18px 18px; }
+.kac-shuttle-status-row{ display:flex; gap:12px; padding:10px 0; border-bottom:1px solid #eef2f7; align-items:flex-start; }
+.kac-shuttle-status-row:last-child{ border-bottom:none; }
+.kac-shuttle-status-row span{ flex:0 0 74px; color:#94a3b8; font-size:12.5px; font-weight:900; }
+.kac-shuttle-status-row b{ flex:1; color:#0f172a; font-size:15px; font-weight:850; line-height:1.45; word-break:keep-all; }
+.kac-shuttle-time-grid{ display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:12px; }
+.kac-shuttle-time{ border:1px solid #dbeafe; background:#f8fbff; border-radius:14px; padding:12px; text-align:center; }
+.kac-shuttle-time small{ display:block; color:#64748b; font-size:11px; font-weight:900; margin-bottom:5px; }
+.kac-shuttle-time strong{ color:#1d4ed8; font-size:18px; font-weight:950; }
+/* vH55: 외출외박 개인 신청만 노출 + 전체 폰트/간격 정돈 */
+#adminActionModal #grpBtnSolo,
+#adminActionModal #grpBtnGroup,
+#adminActionModal #groupMemberArea{ display:none !important; }
+#adminActionModal .admin-step{ font-size:15px; }
+#adminActionModal .admin-step > div[style*="font-size:16px"]{ font-size:18px !important; letter-spacing:0 !important; }
+#adminActionModal .admin-type-btn{
+  height:108px !important;
+  border-radius:18px !important;
+  font-size:18px !important;
+  box-shadow:0 10px 26px rgba(15,23,42,.06) !important;
+}
+#adminActionModal #prevOutingBanner{
+  background:linear-gradient(180deg,#f8fbff,#eef4ff);
+  border:1px solid #dbeafe;
+  border-radius:22px;
+  padding:24px 16px !important;
+}
+#adminActionModal #prevOutingPreview{
+  border-radius:16px !important;
+  background:#fff !important;
+  box-shadow:0 10px 24px rgba(15,23,42,.06);
+}
+#adminActionModal #adminStepBar div{ height:6px !important; border-radius:999px !important; }
+#adminActionModal label{ letter-spacing:0 !important; }
+/* vH55: Q&A 상단/하단 정렬 */
+.header-center{ min-width:0; display:flex; flex-direction:column; align-items:center; text-align:center; }
+.header-title{ max-width:100%; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; line-height:1.2; }
+.header-sub{ display:inline-flex; align-items:center; justify-content:center; gap:5px; max-width:100%; padding-top:3px; white-space:nowrap; }
+.input-info-row{ justify-content:center !important; text-align:center !important; gap:10px !important; }
+#qInput::placeholder{ text-align:center; color:#94a3b8 !important; }
+#subjectDropBtn{ justify-content:center !important; }
+/* vH55: LIVE 퀴즈 선택지를 가리지 않게 알림/피드백 영역 축소 */
+.quiz-overlay{ z-index:21000 !important; padding:14px !important; }
+.quiz-box{ max-width:430px; max-height:calc(100dvh - 28px); overflow:auto; padding:22px 18px !important; }
+#quizStatusMsg{ margin-bottom:12px !important; font-size:15px !important; }
+#quizFeedback{ margin-top:8px !important; min-height:0 !important; font-size:13px !important; }
+#btnGroupOX .quiz-opt-btn{ height:112px !important; }
+body.kac-quiz-active #customAlertModal,
+body.kac-quiz-active #kacConfirm,
+body.kac-quiz-active #returnAlertOverlay{ display:none !important; }
 </style>
 <script>
 (function(){
