@@ -13,8 +13,8 @@
 </script>
 <!-- ============================================================
   CATC · 강사 플랫폼  (admin.html)
-  @version  S
-  @build    20260626-174500
+  @version  T
+  @build    20260626-183500
   ────────────────────────────────────────────────────────
   [코드 수정 규칙 · AI/개발자 공통]
   이 파일을 한 글자라도 고치면:
@@ -513,7 +513,7 @@ body.in-course #moreToggleTab{ display:flex !important; }
     <div class="more-sec" style="color:#2563eb;">교육 운영 관련</div>
     <a class="more-item" onclick="ui.setMode('admin-action'); ui.closeMorePanel();"><i class="fa-solid fa-person-walking-arrow-right" style="color:#2563eb;"></i> 외출/외박</a>
     <a class="more-item" onclick="ui.setMode('tablet-loan'); ui.closeMorePanel();"><i class="fa-solid fa-tablet-screen-button" style="color:#2563eb;"></i> 태블릿 대여 관리</a>
-    <a class="more-item" onclick="ui.setMode('attendance'); ui.closeMorePanel();"><i class="fa-solid fa-qrcode" style="color:#2563eb;"></i> 출결 QR</a>
+    <a class="more-item" onclick="ui.setMode('attendance'); ui.closeMorePanel();"><i class="fa-solid fa-keyboard" style="color:#2563eb;"></i> OTP 출결</a>
     <hr class="more-div">
     <div class="more-sec" style="color:#10b981;">교육 지원 관련</div>
     <a class="more-item" onclick="ui.setMode('shuttle'); ui.closeMorePanel();" style="position:relative;"><i class="fa-solid fa-bus" style="color:#10b981;"></i> 차량 수요조사 <span id="shuttleNewBadge" style="display:none; background:#ef4444; color:white; width:16px; height:16px; border-radius:50%; font-size:10px; font-weight:bold; align-items:center; justify-content:center; margin-left:5px;">N</span></a>
@@ -774,7 +774,7 @@ body.in-course #moreToggleTab{ display:flex !important; }
 
                     <!-- 항기원 자체 출결 체크 (버튼) -->
                     <div class="stat-row" onclick="ui.setMode('attendance'); ui.toggleAttendanceMode('internal');" style="cursor:pointer; padding:8px 0;">
-                        <span class="card-label"><i class="fa-solid fa-qrcode" style="color:#0ea5e9; margin-right:5px;"></i>항공기술훈련원 자체 출결 체크</span>
+                        <span class="card-label"><i class="fa-solid fa-keyboard" style="color:#0ea5e9; margin-right:5px;"></i>항공기술훈련원 OTP 출결</span>
                         <div class="card-value" style="color:#0ea5e9;"><i class="fa-solid fa-arrow-right-to-bracket"></i><span id="dashAttendCount" style="display:none;">0</span><span id="dashAttendTotal" style="display:none;">0</span></div>
                     </div>
 
@@ -1132,7 +1132,7 @@ body.in-course #moreToggleTab{ display:flex !important; }
 
 
 
-<!-- 출결 QR 코드 게시판 (E-HRD 및 자체 출석 통합) -->
+<!-- 출결 관리 게시판 (E-HRD QR 및 OTP 자체 출석 통합) -->
 <div id="view-attendance" style="display:none; width:100%; flex-direction:column; align-items:center;">
     <div class="view-header" style="margin-bottom:6px;">
         <h1><i class="fa-solid fa-qrcode"></i> 출결 관리 시스템 <span class="header-room-badge room-badge-global"></span></h1>
@@ -1142,7 +1142,7 @@ body.in-course #moreToggleTab{ display:flex !important; }
     <!-- 모드 전환 버튼 -->
     <div style="margin-top:6px; margin-bottom: 12px; display: flex; gap: 10px;">
         <button id="btn-mode-official" class="btn-action" style="width:auto; padding:10px 20px; background:#003366; color:white; border-radius:50px; font-weight:800;" onclick="ui.toggleAttendanceMode('official')">공식 E-HRD QR</button>
-        <button id="btn-mode-internal" class="btn-action" style="width:auto; padding:10px 20px; background:#f1f5f9; color:#64748b; border-radius:50px; font-weight:800;" onclick="ui.toggleAttendanceMode('internal')">항기원 자체 출석체크</button>
+        <button id="btn-mode-internal" class="btn-action" style="width:auto; padding:10px 20px; background:#f1f5f9; color:#64748b; border-radius:50px; font-weight:800;" onclick="ui.toggleAttendanceMode('internal')">OTP 자체출결</button>
     </div>
 
     <!-- [1] 공식 E-HRD QR 영역 -->
@@ -1157,21 +1157,20 @@ body.in-course #moreToggleTab{ display:flex !important; }
 
 
 
-<!-- [2] 항기원 자체 출석체크 영역 (슬림 버전) -->
+<!-- [2] 항기원 OTP 자체출결 영역 -->
     <div id="area-internal-qr" class="modern-white-card" style="display:none; text-align: center; max-width: 600px; padding:30px 26px;">
         <div style="display: flex; flex-direction: column; align-items: center; gap: 24px;">
-            <!-- QR 코드 -->
-            <div style="background:#fff; padding:18px; border-radius:16px; border:2px solid #003366;">
-                <div id="internalQrTarget"></div>
-                <div style="margin-top:12px; font-weight:900; color:#003366;">스마트폰 스캔 (자체 출석)</div>
+            <div style="width:100%; background:linear-gradient(135deg,#eff6ff,#ffffff); padding:26px 22px; border-radius:24px; border:1.5px solid #bfdbfe;">
+                <div style="font-size:14px; font-weight:900; color:#1d4ed8; margin-bottom:10px;"><i class="fa-solid fa-keyboard"></i> 교육생 플랫폼 OTP 출결</div>
+                <div id="internalOtpCode" style="letter-spacing:10px; font-size:64px; line-height:1; font-weight:950; color:#0f172a; font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;">------</div>
+                <div style="margin-top:12px; color:#475569; font-size:14px; font-weight:850;">다음 갱신까지 <b id="internalOtpCountdown" style="color:#2563eb;">60</b>초</div>
             </div>
 
-            <!-- [안내] 휴대폰 카메라로 스캔 -->
-            <div style="display:flex; align-items:center; justify-content:center; gap:14px; background:#eff6ff; border:1.5px solid #bfdbfe; border-radius:14px; padding:14px 18px; max-width:460px;">
-                <i class="fa-solid fa-camera" style="font-size:30px; color:#2563eb; flex-shrink:0;"></i>
+            <div style="display:flex; align-items:center; justify-content:center; gap:14px; background:#f8fafc; border:1.5px solid #e2e8f0; border-radius:14px; padding:14px 18px; max-width:460px;">
+                <i class="fa-solid fa-circle-info" style="font-size:30px; color:#2563eb; flex-shrink:0;"></i>
                 <div style="text-align:left; line-height:1.5;">
-                    <div style="font-size:16px; font-weight:900; color:#1d4ed8;">휴대폰 <u>카메라</u>로 이 QR을 비춰 주세요</div>
-                    <div style="font-size:12.5px; color:#64748b; font-weight:700; margin-top:2px;">교육생 앱이 아니라, <b>폰 기본 카메라</b>로 비추면 출석 처리됩니다.</div>
+                    <div style="font-size:16px; font-weight:900; color:#1d4ed8;">교육생은 입교/홈의 <u>출결하기</u>에서 OTP를 입력합니다.</div>
+                    <div style="font-size:12.5px; color:#64748b; font-weight:700; margin-top:2px;">OTP는 1분마다 자동 갱신되며, 입력이 일치하면 즉시 출석 처리됩니다.</div>
                 </div>
             </div>
 
@@ -2215,7 +2214,7 @@ body.in-course #moreToggleTab{ display:flex !important; }
                         </label>
                         <label style="display:flex; align-items:center; gap:6px; font-size:12px; font-weight:700; color:#334155; cursor:pointer;">
                             <input type="checkbox" id="feat-attendanceQr" checked style="width:15px; height:15px; accent-color:#6366f1;">
-                            <i class="fa-solid fa-qrcode" style="color:#6366f1;"></i> 출결 QR
+                            <i class="fa-solid fa-keyboard" style="color:#6366f1;"></i> OTP 출결
                         </label>
                         <label style="display:flex; align-items:center; gap:6px; font-size:12px; font-weight:700; color:#334155; cursor:pointer;">
                             <input type="checkbox" id="feat-cns" checked style="width:15px; height:15px; accent-color:#0ea5e9;">
@@ -2507,7 +2506,7 @@ function setupAcc(btn){
 
 
 
-    <script src="admin.js?v=260626QRTOOLS"></script>
+    <script src="admin.js?v=260626OTPATTEND"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
 <!-- ── 화면 자동 맞춤(auto-fit): 가로+세로 모두 화면에 맞게 자동 축소 · JDS260613 ──
      원인: Windows 디스플레이 배율(125%/150%)·저해상도 화면에서 유효 뷰포트가 작아져

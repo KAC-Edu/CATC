@@ -1,7 +1,7 @@
 /* ============================================================
    CATC · 강사 플랫폼 로직  (admin.js)
-   @version  T
-   @build    20260626-174500  (vT: 플로팅 QR 비활성화 및 학생 도구 위치 고정)
+   @version  U
+   @build    20260626-183500  (vU: 자체출결 OTP 6자리 전환)
    ------------------------------------------------------------
    [코드 수정 규칙 · AI/개발자 공통]
    이 파일을 고치면 @version 을 A -> B -> ... -> Z -> A1 -> B1 ...
@@ -2881,12 +2881,54 @@ loadAttendanceView: function() {
             btnOfficial.style.background = "#f1f5f9"; btnOfficial.style.color = "#64748b";
             btnInternal.style.background = "#003366"; btnInternal.style.color = "white";
             // 자체 QR 생성
-            this.generateInternalQR();
+            this.startInternalOtp();
         }
     },
 
 // [최종 수정] 자체 출석용 QR 코드 생성 (강의실 꼬임 방지 강화)
+    startInternalOtp: function() {
+        const codeEl = document.getElementById('internalOtpCode');
+        const countEl = document.getElementById('internalOtpCountdown');
+        if(!codeEl) return;
+        const activeRoom = state.room;
+        if (!activeRoom) {
+            codeEl.textContent = '------';
+            if(countEl) countEl.textContent = '-';
+            return;
+        }
+        if (this._internalOtpTimer) clearInterval(this._internalOtpTimer);
+        const publishOtp = () => {
+            const code = String(Math.floor(100000 + Math.random() * 900000));
+            const now = Date.now();
+            const validUntil = now + 60000;
+            codeEl.textContent = code;
+            codeEl.dataset.validUntil = String(validUntil);
+            if(countEl) countEl.textContent = '60';
+            firebase.database().ref(`courses/${activeRoom}/attendanceOtp`).set({
+                code,
+                issuedAt: now,
+                validUntil,
+                room: activeRoom,
+                updatedBy: 'instructor',
+                serverUpdatedAt: firebase.database.ServerValue.TIMESTAMP
+            }).catch(err => console.error('OTP 저장 실패:', err));
+        };
+        publishOtp();
+        this._internalOtpTimer = setInterval(() => {
+            if(state.room !== activeRoom) {
+                clearInterval(this._internalOtpTimer);
+                this._internalOtpTimer = null;
+                return;
+            }
+            const remain = Math.max(0, Math.ceil((Number(codeEl.dataset.validUntil || 0) - Date.now()) / 1000));
+            if(countEl) countEl.textContent = String(remain || 60);
+            if(remain <= 0) publishOtp();
+        }, 1000);
+    },
+
     generateInternalQR: function() {
+        this.startInternalOtp();
+        return;
         const target = document.getElementById('internalQrTarget');
         if(!target) return;
 
