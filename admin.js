@@ -1,14 +1,14 @@
 /* ============================================================
    CATC · 강사 플랫폼 로직  (admin.js)
-   @version  Q
-   @build    20260626-095818  (vQ: 연간교육계획 폐강 체크 추가 — 폐강 과정은 강의실 자동 배정 후보에서 제외)
+   @version  S
+   @build    20260626-121500  (vS: 입교안내 전체화면에서 현재 페이지만 보이도록 레이어 고정)
    ------------------------------------------------------------
    [코드 수정 규칙 · AI/개발자 공통]
    이 파일을 고치면 @version 을 A -> B -> ... -> Z -> A1 -> B1 ...
    순으로 1단계 올리고, @build 를 수정 시각으로 갱신할 것.
    적용 여부는 브라우저 콘솔 로그(vA)로 확인한다.
 ============================================================ */
-try{console.log('%cCATC%c 강사 플랫폼 로직 (admin.js) %cvP%c build 20260613-V10-dormgen','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}
+try{console.log('%cCATC%c 강사 플랫폼 로직 (admin.js) %cvS%c build 20260626-121500','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}
 /* --- admin.js (Final Integrated Version - Fixed Syntax & Logic) --- */
 
 // --- [기본 데이터] 20문항 ---
@@ -7479,6 +7479,15 @@ init: function() {
 
         const _canvasEl = document.getElementById('guideCanvas');
         const _profEl = document.getElementById('guideProfile');
+        const _wrapEl = document.getElementById('pdfWrapper');
+        const _showGuideLayer = function(kind) {
+            if (_wrapEl) {
+                _wrapEl.classList.remove('guide-page-pdf', 'guide-page-virtual');
+                _wrapEl.classList.add(kind === 'pdf' ? 'guide-page-pdf' : 'guide-page-virtual');
+            }
+            if (_canvasEl) _canvasEl.style.setProperty('display', kind === 'pdf' ? 'block' : 'none', 'important');
+            if (_profEl) _profEl.style.setProperty('display', kind === 'virtual' ? 'block' : 'none', 'important');
+        };
 
         // 이전 QR 실시간 명단 리스너 해제 (페이지 이동 시)
         if (guideMgr._qrStuRef) { try { guideMgr._qrStuRef.off(); } catch(e){} guideMgr._qrStuRef = null; }
@@ -7486,8 +7495,8 @@ init: function() {
         // 담임 교수 프로필 (가상 2페이지)
         if (guideMgr._isProfilePage(num)) {
             guideMgr.isRendering = false;
-            if (_canvasEl) _canvasEl.style.display = 'none';
-            if (_profEl) { _profEl.innerHTML = guideMgr._profileHTML(slot.profile); _profEl.style.display = 'block'; }
+            _showGuideLayer('virtual');
+            if (_profEl) { _profEl.innerHTML = guideMgr._profileHTML(slot.profile); }
             slot.pageNum = num;
             const _ind = document.getElementById('guidePageInfo');
             if (_ind) _ind.innerText = `${num} / ${_total}`;
@@ -7497,9 +7506,8 @@ init: function() {
         // QR 안내 (가상 페이지)
         if (guideMgr._isQRPage(num)) {
             guideMgr.isRendering = false;
-            if (_canvasEl) _canvasEl.style.display = 'none';
+            _showGuideLayer('virtual');
             if (_profEl) {
-                _profEl.style.display = 'block';
                 const room = guideMgr._room();
                 const path = window.location.pathname;
                 const directory = path.substring(0, path.lastIndexOf('/'));
@@ -7538,16 +7546,15 @@ init: function() {
         // 앱 사용법 (가상 페이지)
         if (guideMgr._isManualPage(num)) {
             guideMgr.isRendering = false;
-            if (_canvasEl) _canvasEl.style.display = 'none';
-            if (_profEl) { _profEl.innerHTML = guideMgr._manualHTML(); _profEl.style.display = 'block'; }
+            _showGuideLayer('virtual');
+            if (_profEl) { _profEl.innerHTML = guideMgr._manualHTML(); }
             slot.pageNum = num;
             const _indM = document.getElementById('guidePageInfo');
             if (_indM) _indM.innerText = `${num} / ${_total}`;
             return;
         }
 
-        if (_profEl) _profEl.style.display = 'none';
-        if (_canvasEl) _canvasEl.style.display = 'block';
+        _showGuideLayer('pdf');
         if (guideMgr.isRendering) return;
         guideMgr.isRendering = true;
 
@@ -10049,6 +10056,13 @@ annualPlanMgr.renderEditor = function(keepIdx) {
     };
     const cellStyle = "padding:4px; border:1px solid #e2e8f0;";
     const inpStyle  = "width:100%; border:1px solid transparent; background:transparent; padding:6px; font-size:13px; box-sizing:border-box;";
+    const weekLabelOf = (key) => {
+        if (!key) return '주차 미정';
+        const d = new Date(key + 'T00:00:00');
+        if (isNaN(d.getTime())) return '주차 미정';
+        const e = new Date(d); e.setDate(e.getDate() + 4);
+        return `${d.getMonth()+1}/${d.getDate()} ~ ${e.getMonth()+1}/${e.getDate()}`;
+    };
     let html = `
         <div style="position:sticky; top:0; z-index:11; display:flex; gap:14px; flex-wrap:wrap; padding:0 12px; height:37px; box-sizing:border-box; font-size:12px; color:#475569; align-items:center; background:#fff; border-bottom:1px solid #e2e8f0;">
             <span style="font-weight:800;">상태 색상:</span>
@@ -10092,12 +10106,21 @@ annualPlanMgr.renderEditor = function(keepIdx) {
         if (best !== null) _targetIdx = best;
     }
 
+    let _prevWeekKey = '';
     this.currentEditingData.forEach((c, idx) => {
         const isCur = c.startDate && c.endDate && c.startDate <= _today && c.endDate >= _today;
         const cancelled = !!c.cancelled;
         const cancelStyle = cancelled ? 'opacity:.58; text-decoration:line-through;' : '';
+        const wk = c.startDate ? this._getMondayOf(c.startDate) : (c.endDate ? this._getMondayOf(c.endDate) : '');
+        if (wk !== _prevWeekKey) {
+            _prevWeekKey = wk;
+            html += `
+            <tr class="annual-week-sep">
+                <td colspan="9" style="padding:10px 12px 8px; border-top:2px dashed #93c5fd; border-bottom:1px solid #dbeafe; background:#f8fbff; color:#1d4ed8; font-size:13px; font-weight:900;">${weekLabelOf(wk)} 주차</td>
+            </tr>`;
+        }
         html += `
-            <tr data-cur="${isCur ? '1' : '0'}" data-target="${idx === _targetIdx ? '1' : '0'}" style="${rowBg(c)} ${cancelled ? 'background:#fff1f2;' : ''}">
+            <tr data-plan-row="${idx}" data-cur="${isCur ? '1' : '0'}" data-target="${idx === _targetIdx ? '1' : '0'}" style="${rowBg(c)} ${cancelled ? 'background:#fff1f2;' : ''}">
                 <td style="${cellStyle} text-align:center; color:#64748b;">${idx + 1}</td>
                 <td style="${cellStyle}"><input type="text" value="${esc(c.name)}" onchange="annualPlanMgr.updateLocalData(${idx},'name',this.value)" style="${inpStyle} font-weight:700; ${cancelStyle}"></td>
                 <td style="${cellStyle}"><input type="text" readonly data-idx="${idx}" value="${(c.startDate&&c.endDate)?esc(c.startDate+' ~ '+c.endDate):''}" placeholder="기간 선택" onclick="annualPlanMgr._openPeriodPicker(${idx}, this)" style="${inpStyle} cursor:pointer; background:#fff; text-align:center; ${cancelStyle}"></td>
@@ -10115,8 +10138,7 @@ annualPlanMgr.renderEditor = function(keepIdx) {
     // 진행 중(없으면 차주/다가오는) 과정 행을 화면 중앙으로 스크롤
     setTimeout(() => {
         if (keepIdx != null) {
-            const rows = area.querySelectorAll('tbody tr');
-            const r = rows[keepIdx];
+            const r = area.querySelector(`tbody tr[data-plan-row="${keepIdx}"]`);
             if (r && r.scrollIntoView) r.scrollIntoView({ block: 'nearest' });
             return; // 편집 중인 행 유지 — 자동 스크롤 안 함
         }
@@ -10235,7 +10257,7 @@ annualPlanMgr.confirmAdd = function() {
         const area = document.getElementById('annualPlanEditorArea');
         if (!area) return;
         const idx = this.currentEditingData.findIndex(c => c.name === name && c.startDate === start && c.endDate === end);
-        const row = area.querySelectorAll('tbody tr')[idx];
+        const row = area.querySelector(`tbody tr[data-plan-row="${idx}"]`);
         if (row && row.scrollIntoView) {
             row.scrollIntoView({ block: 'center' });
             row.style.transition = 'background 0.3s';

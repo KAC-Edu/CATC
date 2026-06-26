@@ -2,7 +2,7 @@
 <!-- ══════════════════ [편집상태 / EDIT-STATUS] ══════════════════
      STATUS : 수정안하는중
      FILE   : index.html (교육생)
-     UPDATED: 2026-06-26 16:32  (vH56: 차량/외출외박 신청완료 화면을 입교완료 카드형으로 통일)
+     UPDATED: 2026-06-26 17:05  (vH57: 외출외박 이전 작성 이력 불러오기 화면 디자인 개선)
      ─ 규칙: 수정 시작 시 STATUS를 '수정중'으로, 완료 시 '수정안하는중'으로 변경.
             '수정중'이면 다른 플랫폼은 연동 변경을 보류/협의 후 진행.
 ═══════════════════════════════════════════════════════════════ -->
@@ -1029,14 +1029,15 @@
         <div id="adminActionForm" style="display: none; text-align: left; flex-direction: column; gap: 14px;">
 
             <!-- 이전 신청 정보 화면(별도 페이지, 가운데 정렬) -->
-            <div id="prevOutingBanner" style="display:none; flex-direction:column; align-items:center; justify-content:center; text-align:center; gap:14px; padding:18px 14px;">
-                <div style="font-size:42px; line-height:1;">📋</div>
-                <div style="font-size:19px; font-weight:900; color:#1e40af;">이전에 신청한 정보가 있어요</div>
-                <div style="font-size:13px; color:#94a3b8; font-weight:600;">아래 내용을 그대로 불러올 수 있어요</div>
-                <div id="prevOutingPreview" style="width:100%; max-width:320px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:16px; font-size:13.5px; color:#334155; line-height:1.8; white-space:pre-line; text-align:left;"></div>
-                <div style="display:flex; gap:10px; width:100%; max-width:320px; margin-top:4px;">
-                    <button type="button" onclick="dismissPrevOuting()" style="flex:1; padding:13px; border:1px solid #e2e8f0; border-radius:12px; background:#fff; color:#475569; font-weight:800; cursor:pointer;">새로 작성</button>
-                    <button type="button" onclick="applyPrevOuting()" style="flex:1; padding:13px; border:none; border-radius:12px; background:#2563eb; color:#fff; font-weight:800; cursor:pointer;">그대로 불러오기</button>
+            <div id="prevOutingBanner" class="prev-outing-card" style="display:none;">
+                <div class="prev-outing-icon"><i class="fa-solid fa-clock-rotate-left"></i></div>
+                <div class="prev-outing-kicker">이전 작성 이력</div>
+                <div class="prev-outing-title">최근 입력한 정보를 불러올까요?</div>
+                <div class="prev-outing-desc">소속, 행선지, 사유, 비상연락처를 한 번에 채울 수 있습니다.</div>
+                <div id="prevOutingPreview" class="prev-outing-preview"></div>
+                <div class="prev-outing-actions">
+                    <button type="button" class="prev-outing-secondary" onclick="dismissPrevOuting()">새로 작성</button>
+                    <button type="button" class="prev-outing-primary" onclick="applyPrevOuting()">불러오기</button>
                 </div>
             </div>
 
@@ -3599,13 +3600,14 @@ async function openAdminAction() {
         let lastOuting = null;
         try { lastOuting = JSON.parse(localStorage.getItem('kac_last_outing') || 'null'); } catch(e) {}
         if (lastOuting && (lastOuting.dept || lastOuting.destination || lastOuting.reason || lastOuting.phone)) {
+            const _pe = (v) => String(v || '-').replace(/[&<>"']/g, function(ch){ return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]); });
             const preview =
-                `소속: ${lastOuting.dept || '-'}\n` +
-                `행선지: ${lastOuting.destination || '-'}\n` +
-                `사유: ${lastOuting.reason || '-'}\n` +
-                `비상연락처: ${lastOuting.phone || '-'}`;
+                '<div class="prev-outing-row"><span><i class="fa-solid fa-building"></i>소속</span><b>'+_pe(lastOuting.dept)+'</b></div>' +
+                '<div class="prev-outing-row"><span><i class="fa-solid fa-location-dot"></i>행선지</span><b>'+_pe(lastOuting.destination)+'</b></div>' +
+                '<div class="prev-outing-row"><span><i class="fa-solid fa-pen-line"></i>사유</span><b>'+_pe(lastOuting.reason)+'</b></div>' +
+                '<div class="prev-outing-row"><span><i class="fa-solid fa-phone"></i>연락처</span><b>'+_pe(lastOuting.phone)+'</b></div>';
             window._lastOutingCache = lastOuting;
-            const _pv = document.getElementById('prevOutingPreview'); if (_pv) _pv.textContent = preview;
+            const _pv = document.getElementById('prevOutingPreview'); if (_pv) _pv.innerHTML = preview;
             const _pob = document.getElementById('prevOutingBanner'); if (_pob) _pob.style.display = 'flex';
             // 이전정보 화면만 보이도록 위자드(단계바+스텝) 숨김
             var _sb0 = document.getElementById('adminStepBar'); if (_sb0) _sb0.style.display = 'none';
@@ -5846,7 +5848,7 @@ input:not([type=checkbox]):not([type=radio]):not([type=file]), textarea, select 
 })();
 </script>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vH56</div>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vH57</div>
 <script>
 /* ===== [공용] 종료된 과정 자동 정리 (교육생 포함 전 플랫폼) — 종료일 지난 방을 다음날 미개설로 비움. 브라우저별 하루 1회 ===== */
 window.kacExpireEndedCourses = async function(){
@@ -6437,6 +6439,132 @@ body.kac-locked #foodModal .food-add-btn{ width:100% !important; }
   border-radius:16px !important;
   background:#fff !important;
   box-shadow:0 10px 24px rgba(15,23,42,.06);
+}
+/* vH57: 외출외박 이전 작성 이력 화면 */
+#adminActionModal .prev-outing-card{
+  width:100%;
+  min-height:calc(100dvh - 112px);
+  display:none;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  text-align:center;
+  gap:10px;
+  padding:22px 16px 18px !important;
+  background:linear-gradient(180deg,#ffffff 0%,#f4f8ff 100%) !important;
+  border:1px solid #dbeafe !important;
+  border-radius:24px !important;
+  box-shadow:0 18px 42px rgba(15,23,42,.10) !important;
+}
+#adminActionModal .prev-outing-icon{
+  width:66px;
+  height:66px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  border-radius:22px;
+  color:#2563eb;
+  background:linear-gradient(135deg,#eff6ff,#dbeafe);
+  box-shadow:inset 0 0 0 1px rgba(37,99,235,.12),0 12px 26px rgba(37,99,235,.16);
+  font-size:27px;
+  margin-bottom:4px;
+}
+#adminActionModal .prev-outing-kicker{
+  font-size:12px;
+  font-weight:900;
+  color:#2563eb;
+  letter-spacing:0;
+  padding:5px 10px;
+  border-radius:999px;
+  background:#eff6ff;
+}
+#adminActionModal .prev-outing-title{
+  color:#0f172a;
+  font-size:22px;
+  font-weight:900;
+  line-height:1.25;
+  word-break:keep-all;
+}
+#adminActionModal .prev-outing-desc{
+  max-width:310px;
+  color:#64748b;
+  font-size:13.5px;
+  font-weight:750;
+  line-height:1.55;
+  word-break:keep-all;
+}
+#adminActionModal .prev-outing-preview{
+  width:100%;
+  max-width:340px;
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  margin:10px 0 4px;
+  padding:12px !important;
+  border:1px solid #dbe7ff !important;
+  border-radius:18px !important;
+  background:#fff !important;
+  box-shadow:0 12px 28px rgba(15,23,42,.07) !important;
+  text-align:left;
+}
+#adminActionModal .prev-outing-row{
+  display:flex;
+  align-items:flex-start;
+  gap:10px;
+  padding:10px 11px;
+  border-radius:14px;
+  background:#f8fbff;
+  border:1px solid #eef4ff;
+}
+#adminActionModal .prev-outing-row span{
+  flex:0 0 72px;
+  display:flex;
+  align-items:center;
+  gap:6px;
+  color:#64748b;
+  font-size:12px;
+  font-weight:900;
+  white-space:nowrap;
+}
+#adminActionModal .prev-outing-row span i{
+  width:14px;
+  color:#2563eb;
+  text-align:center;
+}
+#adminActionModal .prev-outing-row b{
+  flex:1;
+  min-width:0;
+  color:#0f172a;
+  font-size:14.5px;
+  font-weight:850;
+  line-height:1.35;
+  word-break:break-word;
+}
+#adminActionModal .prev-outing-actions{
+  width:100%;
+  max-width:340px;
+  display:grid;
+  grid-template-columns:1fr 1.35fr;
+  gap:9px;
+  margin-top:6px;
+}
+#adminActionModal .prev-outing-actions button{
+  min-height:50px;
+  border-radius:15px;
+  font-size:15px;
+  font-weight:900;
+  cursor:pointer;
+}
+#adminActionModal .prev-outing-secondary{
+  border:1.5px solid #dbe3ef;
+  background:#fff;
+  color:#475569;
+}
+#adminActionModal .prev-outing-primary{
+  border:none;
+  color:#fff;
+  background:linear-gradient(135deg,#2563eb,#1d4ed8);
+  box-shadow:0 12px 26px rgba(37,99,235,.26);
 }
 #adminActionModal #adminStepBar div{ height:6px !important; border-radius:999px !important; }
 #adminActionModal label{ letter-spacing:0 !important; }

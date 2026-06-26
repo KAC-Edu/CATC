@@ -59,8 +59,8 @@
 </style>
 <!-- ============================================================
   CATC · 교육지원부 · 생활관 배정  (dorm_admin.html)
-  @version  L1
-  @build    20260626-095818
+  @version  M1
+  @build    20260626-120000
   ────────────────────────────────────────────────────────
   [코드 수정 규칙 · AI/개발자 공통]
   이 파일을 한 글자라도 고치면:
@@ -150,6 +150,7 @@
   vI1: [협업] 소스 말머리에 EDIT-STATUS 플래그 추가(수정중/수정안하는중) — 플랫폼 간 동시수정 협의용.
   vL1: 연간교육계획 폐강 체크 추가 — 폐강 과정은 STEP2 목록/자동 방배정 후보에서 제외.
       수정 시작 시 '수정중', 완료 시 '수정안하는중'으로 토글. 다른 플랫폼/작업자가 즉시 사용가능 여부 확인.
+  vM1: 연간교육계획 표에 주차별 점선 구분선과 주차 라벨 추가.
   vJ1: [키오스크] 초기화면 정비 — ① 검색창을 크게(font 36, 폭 1040) + 파란 그라데이션·은은한 글로우로 '검색란'
       강조. ② 과정표를 아래로 내림(검색창 하단 여백 확대). ③ 과정표를 강사플랫폼(admin) 키오스크 표로 클론
       (반응형 clamp 글자, 헤더 파란색·구분/과정명 좌측정렬, '상태' 열). 구분은 1·2·3·4 순번 유지.
@@ -5985,6 +5986,22 @@
                     return;
                 }
                 const today = _ymdLocal(new Date());
+                const weekKeyOf = (dstr) => {
+                    if (!dstr) return '';
+                    const d = new Date(dstr + 'T00:00:00');
+                    if (isNaN(d.getTime())) return '';
+                    const dow = (d.getDay() + 6) % 7;
+                    d.setDate(d.getDate() - dow);
+                    return _ymdLocal(d);
+                };
+                const weekLabelOf = (key) => {
+                    if (!key) return '주차 미정';
+                    const d = new Date(key + 'T00:00:00');
+                    if (isNaN(d.getTime())) return '주차 미정';
+                    const e = new Date(d); e.setDate(e.getDate() + 4);
+                    return `${d.getMonth()+1}/${d.getDate()} ~ ${e.getMonth()+1}/${e.getDate()}`;
+                };
+                let prevWeekKey = '';
                 body.innerHTML = this.data.map((c, i) => {
                     let cls = '';
                     if (c.startDate && c.endDate) {
@@ -5996,7 +6013,13 @@
                     const cellSel = 'width:100%;border:1px solid #e2e8f0;border-radius:8px;padding:6px 7px;font-size:13px;background:#fff;outline:none;';
                     const cancelled = !!c.cancelled;
                     const cancelStyle = cancelled ? 'opacity:.58;text-decoration:line-through;' : '';
-                    return `<tr class="${cls}" style="${cancelled ? 'background:#fff1f2;' : ''}">
+                    const wk = weekKeyOf(c.startDate || c.endDate);
+                    let sep = '';
+                    if (wk !== prevWeekKey) {
+                        prevWeekKey = wk;
+                        sep = `<tr class="ap-week-sep"><td colspan="8" style="padding:10px 12px 8px;border-top:2px dashed #93c5fd;border-bottom:1px solid #dbeafe;background:#f8fbff;color:#1d4ed8;font-size:13px;font-weight:900;text-align:left;">${weekLabelOf(wk)} 주차</td></tr>`;
+                    }
+                    return `${sep}<tr class="${cls}" data-plan-row="${i}" style="${cancelled ? 'background:#fff1f2;' : ''}">
                         <td style="width:42px;font-weight:800;color:#64748b;">${i + 1}</td>
                         <td style="min-width:260px;"><input class="ap-input name" value="${esc(c.name)}" oninput="annualPlan.edit(${i},'name',this.value)" style="${cancelStyle}"></td>
                         <td style="width:210px;"><input class="ap-input ap-cell-input" readonly value="${(c.startDate&&c.endDate)?(c.startDate+' ~ '+c.endDate):''}" placeholder="기간 선택" onclick="annualPlan._openPeriodPicker(${i}, this)" style="cursor:pointer;background:#fff;text-align:center;${cancelStyle}"></td>
@@ -6011,7 +6034,7 @@
                 // 진행 중(없으면 다가오는) 과정 행을 중앙으로 스크롤
                 setTimeout(() => {
                     const rows = body.querySelectorAll('tr');
-                    if (keepIdx != null) { const r = rows[keepIdx]; if (r && r.scrollIntoView) r.scrollIntoView({ block: 'nearest' }); return; }
+                    if (keepIdx != null) { const r = body.querySelector(`tr[data-plan-row="${keepIdx}"]`); if (r && r.scrollIntoView) r.scrollIntoView({ block: 'nearest' }); return; }
                     const td = _ymdLocal(new Date());
                     let targetIdx = -1;
                     // ① 진행 중
@@ -6026,8 +6049,9 @@
                             if (c.startDate && c.startDate > td) { targetIdx = k; break; }
                         }
                     }
-                    if (targetIdx >= 0 && rows[targetIdx] && rows[targetIdx].scrollIntoView) {
-                        rows[targetIdx].scrollIntoView({ block: 'center' });
+                    if (targetIdx >= 0) {
+                        const row = body.querySelector(`tr[data-plan-row="${targetIdx}"]`);
+                        if (row && row.scrollIntoView) row.scrollIntoView({ block: 'center' });
                     }
                 }, 50);
             },
@@ -6218,7 +6242,7 @@
 </script>
 <style>@media print{#__catcVer{display:none!important}}</style>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">L1</div>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">M1</div>
 <script>
 /* ===== [공용] 종료된 과정 자동 정리 (모든 플랫폼 공통) — 종료일 지난 방을 다음날 미개설로 비움. 브라우저별 하루 1회 ===== */
 window.kacExpireEndedCourses = async function(){

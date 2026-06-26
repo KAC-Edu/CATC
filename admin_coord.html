@@ -2,7 +2,7 @@
 <!-- 이 플랫폼(admin_coord.html / 교육운영부) 수정상태 플래그. 값은 [수정중] 또는 [수정안하는중] 두 가지. -->
 <!-- 작업 시작 시 → 수정중 / 작업 완료 시 → 수정안하는중. 다른 플랫폼은 이 말머리를 보고 연동·수정 가능 여부 판단. -->
 <!-- [외부변경 · 카카오채널연동 2026-06-25] 포털(portal.html/7777) 경유 폐지 → 페이지 직접진입 시 접속코드(catc1234) 게이트 추가, 포털 리다이렉트/종료이동 제거. version C13→D13. 기능 로직은 미변경. -->
-<!-- last-updated: 2026-06-26 / version: D23 (외출·외박 공유 데이터 실시간 갱신 보강) -->
+<!-- last-updated: 2026-06-26 / version: D24 (생활관 배정현황 이름 확대 및 연간계획 주차 구분선) -->
 <!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -8408,6 +8408,20 @@ function _coordFitDormFrame(reschedule){
   try{
     var idoc=fr.contentDocument||(fr.contentWindow&&fr.contentWindow.document);
     if(idoc){
+      if(!idoc.getElementById('coordDormNameBoost')){
+        var st=idoc.createElement('style');
+        st.id='coordDormNameBoost';
+        st.textContent=[
+          'body.embedboard #boardMapArea .dm-chip{font-size:15px!important;font-weight:900!important;line-height:1.18!important;padding:3px 9px!important;border-width:2px!important;border-radius:10px!important;}',
+          'body.embedboard #boardMapArea .fm-intl .dm-chip{font-size:13px!important;}',
+          'body.embedboard #boardMapArea .dm-chip.dm-foreign .dm-fname{font-size:14px!important;line-height:1.12!important;}',
+          'body.embedboard #boardMapArea .dm-chip.dm-foreign .dm-fgender{font-size:11px!important;}',
+          'body.embedboard #boardMapArea .fm-body{gap:4px!important;padding:5px 4px!important;}',
+          'body.embedboard #boardMapArea .fm-room{min-height:70px!important;}',
+          'body.embedboard #boardMapArea .fm-room.fm-intl{min-height:86px!important;}'
+        ].join('');
+        (idoc.head||idoc.documentElement).appendChild(st);
+      }
       var area=idoc.getElementById('boardMapArea')||idoc.body;
       var top=area.getBoundingClientRect().top, maxB=0, els=area.querySelectorAll('*');
       for(var i=0;i<els.length;i++){ var el=els[i]; if(el.offsetParent===null) continue; var r=el.getBoundingClientRect(); if(r.height>0&&r.bottom>maxB) maxB=r.bottom; }
@@ -8639,7 +8653,7 @@ window.addEventListener('load', function(){
 });
 </script>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:6px;bottom:5px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;font-weight:800;line-height:1;letter-spacing:.6px;color:#fff;background:rgba(15,23,42,.85);padding:4px 8px;border-radius:6px;pointer-events:none;user-select:none;box-shadow:0 2px 6px rgba(0,0,0,.3);">D23</div>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:6px;bottom:5px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;font-weight:800;line-height:1;letter-spacing:.6px;color:#fff;background:rgba(15,23,42,.85);padding:4px 8px;border-radius:6px;pointer-events:none;user-select:none;box-shadow:0 2px 6px rgba(0,0,0,.3);">D24</div>
 <script>
 /* ===== [공용] 종료된 과정 자동 정리 (모든 플랫폼 공통) — 종료일 지난 방을 다음날 미개설로 비움. 브라우저별 하루 1회 ===== */
 window.kacExpireEndedCourses = async function(){
@@ -8745,7 +8759,19 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
     var list=(window._annualPreviewList||[]).filter(function(c){ var p=(c.prof||c.professorName||'').trim(); var cd=(c.coord||c.coordinatorName||'').trim(); if(fp&&p!==fp) return false; if(fc&&cd!==fc) return false; return true; });
     var cntEl=document.getElementById('annualFiltCount'); if(cntEl) cntEl.textContent=(fp||fc)?('검색 '+list.length+'개 과정'):'';
     if(!list.length){ wrap.innerHTML='<div style="padding:30px;text-align:center;color:#94a3b8;font-weight:700;">해당 조건의 과정이 없습니다.</div>'; return; }
-    var firstActiveIdx=-1;
+    function weekKeyOf(dstr){
+      if(!dstr) return 'week-unknown';
+      var d=new Date(dstr+'T00:00:00');
+      if(isNaN(d.getTime())) return 'week-unknown';
+      var dow=(d.getDay()+6)%7; d.setDate(d.getDate()-dow); d.setHours(0,0,0,0);
+      return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+    }
+    function weekLabelOf(key){
+      if(key==='week-unknown') return '주차 미정';
+      var d=new Date(key+'T00:00:00'), e=new Date(d); e.setDate(e.getDate()+4);
+      return (d.getMonth()+1)+'/'+d.getDate()+' ~ '+(e.getMonth()+1)+'/'+e.getDate();
+    }
+    var firstActiveIdx=-1, prevWeek='';
     var rows=list.map(function(c,i){
       var name=c.name||c.courseName||'-';
       var sd=c.startDate||'', ed=c.endDate||'';
@@ -8756,9 +8782,14 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
       var ended=(ed && ed<today);
       var active=(sd&&ed&&sd<=today&&ed>=today);
       if(active && firstActiveIdx<0) firstActiveIdx=i;
+      var wk=weekKeyOf(sd||ed), sep='';
+      if(wk!==prevWeek){
+        prevWeek=wk;
+        sep='<tr class="coord-annual-week-sep"><td colspan="5" style="padding:10px 12px 8px;border-top:2px dashed #93c5fd;border-bottom:1px solid #dbeafe;background:#f8fbff;color:#1d4ed8;font-size:13px;font-weight:900;letter-spacing:0;">'+esc(weekLabelOf(wk))+' 주차</td></tr>';
+      }
       var bg = ended?'background:#fbfcfe;color:#aab4c0;' : (active?'background:#dbeafe;':'');
       var tag = ended?'<span style="font-size:13px;font-weight:800;color:#94a3b8;">종료</span>' : (active?'<span style="font-size:13px;font-weight:800;color:#1d4ed8;">● 진행중</span>':'<span style="font-size:13px;font-weight:800;color:#16a34a;">예정</span>');
-      return '<tr data-row="'+i+'" style="'+bg+'"><td style="text-align:left;font-weight:800;font-size:17px;">'+esc(name)+' '+tag+'</td><td style="text-align:left;font-size:15px;white-space:nowrap;">'+esc(period)+'</td><td style="text-align:left;font-size:16px;">'+esc(room)+'</td><td style="text-align:left;font-size:16px;white-space:nowrap;">'+esc(coord)+'</td><td style="text-align:left;font-size:16px;white-space:nowrap;">'+esc(prof)+'</td></tr>';
+      return sep+'<tr data-row="'+i+'" style="'+bg+'"><td style="text-align:left;font-weight:800;font-size:17px;">'+esc(name)+' '+tag+'</td><td style="text-align:left;font-size:15px;white-space:nowrap;">'+esc(period)+'</td><td style="text-align:left;font-size:16px;">'+esc(room)+'</td><td style="text-align:left;font-size:16px;white-space:nowrap;">'+esc(coord)+'</td><td style="text-align:left;font-size:16px;white-space:nowrap;">'+esc(prof)+'</td></tr>';
     }).join('');
     wrap.innerHTML='<div style="max-height:56vh;overflow:auto;border:1px solid #eef2f7;border-radius:12px;"><table class="cpop-table" style="width:100%;font-size:16px;"><thead style="position:sticky;top:0;z-index:2;"><tr><th style="text-align:left;font-size:15px;">과정명</th><th style="text-align:left;white-space:nowrap;font-size:15px;">교육기간</th><th style="text-align:left;white-space:nowrap;font-size:15px;">강의실</th><th style="text-align:left;white-space:nowrap;font-size:15px;">과정담당</th><th style="text-align:left;white-space:nowrap;font-size:15px;">담임교수</th></tr></thead><tbody>'+rows+'</tbody></table></div>';
     if(firstActiveIdx>0){ var sc=wrap.querySelector('div'); var tr=wrap.querySelector('tr[data-row="'+firstActiveIdx+'"]'); if(sc&&tr){ sc.scrollTop=Math.max(0, tr.offsetTop-90); } }

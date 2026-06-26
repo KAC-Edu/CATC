@@ -1,6 +1,6 @@
 /* ============================================================
    CATC · 강사 플랫폼 스타일  (admin.css)
-   @version  D   @build  20260622-000000
+   @version  E   @build  20260626-121500
    ------------------------------------------------------------
    [코드 수정 규칙] 수정 시 @version 을
    A -> B -> ... -> Z -> A1 -> B1 -> ... 순으로 1단계 올리고
@@ -1545,6 +1545,16 @@ body.night-mode .badge-idle {
     height: auto !important;
     border-radius: 0 !important;
 }
+#pdfWrapper.guide-page-virtual #guideCanvas,
+#pdfWrapper.guide-page-virtual:fullscreen #guideCanvas,
+#pdfWrapper.guide-page-virtual:-webkit-full-screen #guideCanvas {
+    display: none !important;
+}
+#pdfWrapper.guide-page-pdf #guideProfile,
+#pdfWrapper.guide-page-pdf:fullscreen #guideProfile,
+#pdfWrapper.guide-page-pdf:-webkit-full-screen #guideProfile {
+    display: none !important;
+}
 /* 전체화면에서 담임교수 프로필 페이지 — 모니터 가득 채우기 */
 #pdfWrapper:fullscreen #guideProfile,
 #pdfWrapper:-webkit-full-screen #guideProfile {
@@ -1569,6 +1579,16 @@ body.night-mode .badge-idle {
     transform: scale(1.32);
     transform-origin: center center;
     box-shadow: 0 18px 50px rgba(15,23,42,.18) !important;
+}
+#pdfWrapper.guide-page-virtual #guideCanvas,
+#pdfWrapper.guide-page-virtual:fullscreen #guideCanvas,
+#pdfWrapper.guide-page-virtual:-webkit-full-screen #guideCanvas {
+    display: none !important;
+}
+#pdfWrapper.guide-page-pdf #guideProfile,
+#pdfWrapper.guide-page-pdf:fullscreen #guideProfile,
+#pdfWrapper.guide-page-pdf:-webkit-full-screen #guideProfile {
+    display: none !important;
 }
 
 
