@@ -2,7 +2,7 @@
 <!-- ══════════════════ [편집상태 / EDIT-STATUS] ══════════════════
      STATUS : 수정안하는중
      FILE   : index.html (교육생)
-     UPDATED: 2026-06-26 17:05  (vH57: 외출외박 이전 작성 이력 불러오기 화면 디자인 개선)
+     UPDATED: 2026-06-26 17:35  (vH58: Q&A 상단 정렬 및 과정명 표시 기준 보정)
      ─ 규칙: 수정 시작 시 STATUS를 '수정중'으로, 완료 시 '수정안하는중'으로 변경.
             '수정중'이면 다른 플랫폼은 연동 변경을 보류/협의 후 진행.
 ═══════════════════════════════════════════════════════════════ -->
@@ -1620,7 +1620,7 @@ function applyKakaoLink(link) {
     const headerBtn = document.getElementById('headerKakaoBtn');
     if (url && enabled) {
         if (menuBtn) menuBtn.style.display = 'block';
-        if (headerBtn) { headerBtn.style.display = 'flex'; headerBtn.style.visibility = 'visible'; }
+        if (headerBtn) { headerBtn.style.display = 'flex'; headerBtn.style.visibility = 'hidden'; headerBtn.style.opacity = '0'; headerBtn.style.pointerEvents = 'none'; }
     } else {
         if (menuBtn) menuBtn.style.display = 'none';
         // 헤더 버튼은 자리를 유지(visibility)하여 제목 가운데 정렬이 틀어지지 않게 함
@@ -1632,6 +1632,19 @@ function openKakaoChat() {
     const url = (window._kakaoLink || '').trim();
     if (!url) { showKacAlert("등록된 오픈톡방 링크가 없습니다."); return; }
     window.open(url, '_blank', 'noopener');
+}
+
+function getCurrentCourseTitle() {
+    var title = '';
+    try { title = (window._kacCourseTitle || '').trim(); } catch(e) {}
+    if (!title) {
+        var el = document.getElementById('roomTitle');
+        title = ((el && el.innerText) || '').trim();
+    }
+    if (!title || title === '과정 불러오는 중…' || /^Course\s+/i.test(title)) {
+        try { title = (localStorage.getItem('kac_current_course') || '').trim(); } catch(e) {}
+    }
+    return title || '과정명 확인 중';
 }
 
 async function enterApp() {
@@ -2406,7 +2419,9 @@ function setupListeners() {
     dbRef.settings.on('value', s => { 
         if(!currentRoom) return;
         const val = s.val() || {}; 
-        const title = val.courseName || `Course ${currentRoom}`; 
+        const title = val.courseName || `Course ${currentRoom}`;
+        window._kacCourseTitle = title;
+        try { localStorage.setItem('kac_current_course', title); } catch(e) {}
         
         document.getElementById('roomTitle').innerText = title; 
         const lt = document.getElementById('landingTitle');
@@ -3444,7 +3459,7 @@ function renderMyShuttleStatus(data){
     if(!el) return;
     var name=(localStorage.getItem('kac_user_name')||'-').trim();
     var sabun=(localStorage.getItem('kac_user_phone')||'-').trim();
-    var course=(document.getElementById('roomTitle')||{}).innerText||'현재 과정';
+    var course=(typeof getCurrentCourseTitle==='function' ? getCurrentCourseTitle() : ((document.getElementById('roomTitle')||{}).innerText||'과정명 확인 중'));
     function esc(t){ return (''+(t==null?'':t)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
     el.innerHTML='<div class="kac-shuttle-status-head">'
       +'<div class="ks-eyebrow"><i class="fa-solid fa-circle-check"></i> 신청 완료</div>'
@@ -3840,7 +3855,7 @@ function ensureAdminApplicantSummary(){
         box.style.cssText='margin-bottom:16px;padding:16px 17px;border-radius:18px;background:linear-gradient(135deg,#0f172a,#1d4ed8);color:#fff;box-shadow:0 14px 30px rgba(37,99,235,.18);';
         step.insertBefore(box, step.firstChild);
     }
-    var course=((document.getElementById('roomTitle')||{}).innerText||'현재 과정').trim();
+    var course=(typeof getCurrentCourseTitle==='function' ? getCurrentCourseTitle() : ((document.getElementById('roomTitle')||{}).innerText||'과정명 확인 중')).trim();
     var name=(localStorage.getItem('kac_user_name')||'-').trim();
     var sabun=(localStorage.getItem('kac_user_phone')||'-').trim();
     box.innerHTML='<div style="font-size:12px;font-weight:900;color:#bfdbfe;margin-bottom:7px;"><i class="fa-solid fa-id-card"></i> 신청자 확인</div>'
@@ -4836,7 +4851,7 @@ async function submitFacilityRequest() {
         text: reqText,
         status: "대기",
         timestamp: firebase.database.ServerValue.TIMESTAMP,
-        courseName: document.getElementById('roomTitle').innerText
+        courseName: (typeof getCurrentCourseTitle==='function' ? getCurrentCourseTitle() : document.getElementById('roomTitle').innerText)
     };
 
     try {
@@ -5848,7 +5863,7 @@ input:not([type=checkbox]):not([type=radio]):not([type=file]), textarea, select 
 })();
 </script>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vH57</div>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vH58</div>
 <script>
 /* ===== [공용] 종료된 과정 자동 정리 (교육생 포함 전 플랫폼) — 종료일 지난 방을 다음날 미개설로 비움. 브라우저별 하루 1회 ===== */
 window.kacExpireEndedCourses = async function(){
@@ -6575,6 +6590,93 @@ body.kac-locked #foodModal .food-add-btn{ width:100% !important; }
 .input-info-row{ justify-content:center !important; text-align:center !important; gap:10px !important; }
 #qInput::placeholder{ text-align:center; color:#94a3b8 !important; }
 #subjectDropBtn{ justify-content:center !important; }
+/* vH58: Q&A header balance + input counter placement */
+.header{
+  display:grid !important;
+  grid-template-columns:44px minmax(0,1fr) 44px;
+  align-items:center;
+  gap:0;
+  padding:0 12px !important;
+}
+.header .header-btn{ width:40px !important; height:40px !important; align-self:center; justify-self:center; }
+#headerKakaoBtn{ visibility:hidden !important; opacity:0 !important; pointer-events:none !important; }
+.header-center{
+  width:100%;
+  min-width:0;
+  align-items:center !important;
+  justify-content:center !important;
+  text-align:center !important;
+  padding:0 6px;
+}
+.header .header-center .header-title{
+  width:100%;
+  max-width:100%;
+  font-size:16px !important;
+  line-height:1.2 !important;
+  color:#0f172a !important;
+}
+.header-sub{
+  width:100%;
+  justify-content:center !important;
+  gap:6px !important;
+  color:#64748b !important;
+  font-size:12px !important;
+  font-weight:800 !important;
+}
+.input-dock > div[style*="position:relative"]{ padding:0 8px !important; }
+.input-dock .input-box{
+  position:relative;
+  padding:15px 16px 14px !important;
+  gap:11px !important;
+}
+#qInput.real-input{
+  width:100%;
+  min-height:30px;
+  padding-right:68px !important;
+  line-height:1.45 !important;
+}
+.input-dock .input-box > div{
+  display:grid !important;
+  grid-template-columns:42px minmax(0,1fr) 52px;
+  align-items:center !important;
+  gap:9px !important;
+}
+.input-dock .input-box > div > div[style*="flex:1"]{ display:none !important; }
+#subjectDropBtn{
+  width:100% !important;
+  max-width:none !important;
+  min-width:0;
+  padding:8px 10px !important;
+}
+#submitBtn{ margin:0 !important; justify-self:end; }
+.input-info-row{
+  position:absolute;
+  top:14px;
+  right:24px;
+  z-index:2;
+  padding:0 !important;
+  justify-content:flex-end !important;
+  gap:0 !important;
+  pointer-events:none;
+}
+#charCount{
+  display:inline-flex;
+  align-items:center;
+  min-height:22px;
+  padding:2px 7px;
+  border-radius:999px;
+  background:#eef4ff;
+  color:#64748b !important;
+  font-size:11px;
+  font-weight:900;
+}
+#coolTimer{
+  position:absolute;
+  right:0;
+  top:24px;
+  white-space:nowrap;
+  font-size:10px;
+}
 /* vH55: LIVE 퀴즈 선택지를 가리지 않게 알림/피드백 영역 축소 */
 .quiz-overlay{ z-index:21000 !important; padding:14px !important; }
 .quiz-box{ max-width:430px; max-height:calc(100dvh - 28px); overflow:auto; padding:22px 18px !important; }
