@@ -2,7 +2,7 @@
 <!-- 이 플랫폼(admin_coord.html / 교육운영부) 수정상태 플래그. 값은 [수정중] 또는 [수정안하는중] 두 가지. -->
 <!-- 작업 시작 시 → 수정중 / 작업 완료 시 → 수정안하는중. 다른 플랫폼은 이 말머리를 보고 연동·수정 가능 여부 판단. -->
 <!-- [외부변경 · 카카오채널연동 2026-06-25] 포털(portal.html/7777) 경유 폐지 → 페이지 직접진입 시 접속코드(catc1234) 게이트 추가, 포털 리다이렉트/종료이동 제거. version C13→D13. 기능 로직은 미변경. -->
-<!-- last-updated: 2026-06-26 / version: D29 (상단 전체교육생/명단 팝업을 입교현황 예정명단 기준으로 통일) -->
+<!-- last-updated: 2026-06-26 / version: D30 (상단/탭/섹션 운영과정 문구 구분) -->
 <!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -1960,7 +1960,7 @@ body.coord-header-compact.pc-mode #coordHdrStats.coord-hdr-hide{ display:flex !i
   <div id="coordHeaderClock" class="coord-clock"></div>
   <div class="coord-right">
     <div class="coord-hdr-stats" id="coordHdrStats">
-      <div class="hdr-stat" onclick="openCourseOverview()" title="운영 과정 현황"><i class="fa-solid fa-graduation-cap"></i><div class="hdr-stat-txt"><div class="hb-label">운영 과정</div><div class="hb-value"><span id="hero-active-courses">0</span><small>개</small></div></div></div>
+      <div class="hdr-stat" onclick="openCourseOverview()" title="진행 과정 현황"><i class="fa-solid fa-graduation-cap"></i><div class="hdr-stat-txt"><div class="hb-label">진행 과정</div><div class="hb-value"><span id="hero-active-courses">0</span><small>개</small></div></div></div>
       <div class="hdr-stat" onclick="openStudentRosterPopup()" title="전체 교육생 명단"><i class="fa-solid fa-users"></i><div class="hdr-stat-txt"><div class="hb-label">전체 교육생</div><div class="hb-value"><span id="g-total-students">0</span><small>명</small></div></div></div>
       <div class="hdr-stat" onclick="openOutingSummary()" title="금일 외출·외박 신청자 명단"><i class="fa-solid fa-file-signature"></i><div class="hdr-stat-txt"><div class="hb-label">외출·외박</div><div class="hb-value"><span id="g-today-actions">0</span><small>건</small></div></div></div>
       <div class="hdr-stat" onclick="openDormStatusPopup()" title="생활관 방배정 현황(교육지원부)"><i class="fa-solid fa-bed"></i><div class="hdr-stat-txt"><div class="hb-label">생활관</div><div class="hb-value"><span id="g-dorm-count">0</span><small>명</small></div></div></div>
@@ -2074,7 +2074,7 @@ body.coord-header-compact.pc-mode #coordHdrStats.coord-hdr-hide{ display:flex !i
         </div>
         <div class="coord-ptab active" data-sec="2" onclick="coordPcSection(2)">
             <div class="cn"><i class="fa-solid fa-list-ul"></i></div>
-            <div><div class="ct">운영 과정</div></div>
+            <div><div class="ct">강의실 배정</div></div>
         </div>
         <div class="coord-ptab" data-sec="3" onclick="coordPcSection(3)">
             <div class="cn"><i class="fa-solid fa-user-check"></i></div>
@@ -2128,7 +2128,7 @@ body.coord-header-compact.pc-mode #coordHdrStats.coord-hdr-hide{ display:flex !i
 
     <!-- ✅ [복구 완료] 현재 운영 중인 과정 리스트 섹션 (= 섹션 2) -->
     <div id="csec-2" class="section-card" style="background:white; padding:18px 16px; border:1px solid #eef2f7; box-shadow:0 4px 14px rgba(15,23,42,0.05);">
-        <div class="coord-sec-head"><h2><i class="fa-solid fa-list-ul"></i> 운영 과정 <span style="color:#2563eb;">(강의실)</span></h2><button onclick="coordOpenRoomAssign()" style="margin-left:auto;padding:12px 20px;border:none;border-radius:11px;background:linear-gradient(135deg,#2563eb,#1d4ed8);color:#fff;font-weight:800;font-size:16px;cursor:pointer;white-space:nowrap;"><i class="fa-solid fa-chalkboard-user"></i> 강의실 배치 및 수정</button><button onclick="coordSaveFloorPDF()" style="margin-left:8px;padding:12px 16px;border:none;border-radius:11px;background:#0f2a4a;color:#fff;font-weight:800;font-size:15px;cursor:pointer;white-space:nowrap;"><i class="fa-solid fa-file-pdf"></i> PDF 저장</button><select id="coordWeekSel" onchange="coordRenderActiveCourses()" style="margin-left:10px;padding:11px 16px;border:1.5px solid #cbd5e1;border-radius:10px;font-weight:800;font-size:16px;cursor:pointer;background:#fff;color:#1e3a8a;"></select></div>
+        <div class="coord-sec-head"><h2><i class="fa-solid fa-list-ul"></i> 강의실 배정 현황</h2><button onclick="coordOpenRoomAssign()" style="margin-left:auto;padding:12px 20px;border:none;border-radius:11px;background:linear-gradient(135deg,#2563eb,#1d4ed8);color:#fff;font-weight:800;font-size:16px;cursor:pointer;white-space:nowrap;"><i class="fa-solid fa-chalkboard-user"></i> 강의실 배치 및 수정</button><button onclick="coordSaveFloorPDF()" style="margin-left:8px;padding:12px 16px;border:none;border-radius:11px;background:#0f2a4a;color:#fff;font-weight:800;font-size:15px;cursor:pointer;white-space:nowrap;"><i class="fa-solid fa-file-pdf"></i> PDF 저장</button><select id="coordWeekSel" onchange="coordRenderActiveCourses()" style="margin-left:10px;padding:11px 16px;border:1.5px solid #cbd5e1;border-radius:10px;font-weight:800;font-size:16px;cursor:pointer;background:#fff;color:#1e3a8a;"></select></div>
         <div id="coordFloorPlan"></div>
         <div id="activeCourseList" style="display:flex; flex-direction:column; gap:8px;">
             <!-- 자바스크립트가 여기에 ROOM A, ROOM C 등의 카드를 채워넣습니다 -->
@@ -8697,7 +8697,7 @@ window.addEventListener('load', function(){
 });
 </script>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:6px;bottom:5px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;font-weight:800;line-height:1;letter-spacing:.6px;color:#fff;background:rgba(15,23,42,.85);padding:4px 8px;border-radius:6px;pointer-events:none;user-select:none;box-shadow:0 2px 6px rgba(0,0,0,.3);">D29</div>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:6px;bottom:5px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;font-weight:800;line-height:1;letter-spacing:.6px;color:#fff;background:rgba(15,23,42,.85);padding:4px 8px;border-radius:6px;pointer-events:none;user-select:none;box-shadow:0 2px 6px rgba(0,0,0,.3);">D30</div>
 <script>
 /* ===== [공용] 종료된 과정 자동 정리 (모든 플랫폼 공통) — 종료일 지난 방을 다음날 미개설로 비움. 브라우저별 하루 1회 ===== */
 window.kacExpireEndedCourses = async function(){
