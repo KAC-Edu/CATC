@@ -2,7 +2,7 @@
 <!-- 이 플랫폼(admin_coord.html / 교육운영부) 수정상태 플래그. 값은 [수정중] 또는 [수정안하는중] 두 가지. -->
 <!-- 작업 시작 시 → 수정중 / 작업 완료 시 → 수정안하는중. 다른 플랫폼은 이 말머리를 보고 연동·수정 가능 여부 판단. -->
 <!-- [외부변경 · 카카오채널연동 2026-06-25] 포털(portal.html/7777) 경유 폐지 → 페이지 직접진입 시 접속코드(catc1234) 게이트 추가, 포털 리다이렉트/종료이동 제거. version C13→D13. 기능 로직은 미변경. -->
-<!-- last-updated: 2026-06-27 / version: D35 (PC 100% 밀도 유지 + 상단바 전체폭 보정) -->
+<!-- last-updated: 2026-06-27 / version: D36 (강의실 배정 표/배치도 모드 분리) -->
 <!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -2192,7 +2192,7 @@ body.coord-header-compact.pc-mode #coordHdrStats.coord-hdr-hide{ display:flex !i
             <span style="font-size:12.5px;color:#64748b;font-weight:800;">강의실 배정 표는 이 화면에서 바로 수정됩니다.</span>
         </div>
         <div id="coordInlineRoomAssign"></div>
-        <div id="coordFloorPlan"></div>
+        <div id="coordFloorPlan" style="display:none;"></div>
         <div id="activeCourseList" style="display:flex; flex-direction:column; gap:8px;">
             <!-- 자바스크립트가 여기에 ROOM A, ROOM C 등의 카드를 채워넣습니다 -->
         </div>
@@ -8835,7 +8835,7 @@ window.addEventListener('load', function(){
 });
 </script>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:6px;bottom:5px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;font-weight:800;line-height:1;letter-spacing:.6px;color:#fff;background:rgba(15,23,42,.85);padding:4px 8px;border-radius:6px;pointer-events:none;user-select:none;box-shadow:0 2px 6px rgba(0,0,0,.3);">D35</div>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:6px;bottom:5px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;font-weight:800;line-height:1;letter-spacing:.6px;color:#fff;background:rgba(15,23,42,.85);padding:4px 8px;border-radius:6px;pointer-events:none;user-select:none;box-shadow:0 2px 6px rgba(0,0,0,.3);">D36</div>
 <script>
 /* ===== [공용] 종료된 과정 자동 정리 (모든 플랫폼 공통) — 종료일 지난 방을 다음날 미개설로 비움. 브라우저별 하루 1회 ===== */
 window.kacExpireEndedCourses = async function(){
@@ -9069,7 +9069,10 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
     return b ? '['+b+'] '+room : (v||'-');
   }
   window._coordRoomDisplay=_coordRoomDisplay;
+  window._coordRoomAssignMode = window._coordRoomAssignMode || 'table';
   function coordRoomAssignMode(mode){
+    mode = (mode === 'plan') ? 'plan' : 'table';
+    window._coordRoomAssignMode = mode;
     var table=document.getElementById('coordInlineRoomAssign'), plan=document.getElementById('coordFloorPlan');
     var bt=document.getElementById('coordRoomModeTable'), bp=document.getElementById('coordRoomModePlan');
     if(bt){ bt.style.background=(mode==='table')?'#2563eb':'#f1f5f9'; bt.style.color=(mode==='table')?'#fff':'#475569'; }
@@ -9243,11 +9246,12 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
     _coordEnsureWeekSel();
     var _off=parseInt((document.getElementById('coordWeekSel')||{}).value||'0',10)||0;
     var _fp=document.getElementById('coordFloorPlan');
-    if(_off>0){ if(_fp) _fp.innerHTML=_coordFloorPlanHTML([]); _coordRenderPlannedWeek(box, _off); return; }
+    if(_off>0){ if(_fp) _fp.innerHTML=_coordFloorPlanHTML([]); coordRoomAssignMode(window._coordRoomAssignMode||'table'); _coordRenderPlannedWeek(box, _off); return; }
     if(typeof _coordActiveRooms!=='function'){ return; }
     var rooms=_coordActiveRooms();
     if(_fp) _fp.innerHTML = _coordFloorPlanHTML(rooms);
     try{ coordRenderRoomAssignInline(); }catch(e){}
+    try{ coordRoomAssignMode(window._coordRoomAssignMode||'table'); }catch(e){}
     if(!rooms.length){ box.innerHTML='<div style="text-align:center;padding:30px;color:#94a3b8;font-weight:700;">현재 운영 중인 과정이 없습니다.</div>'; return; }
     box.innerHTML='';  // 과정블록 목록 제거 → 정보는 위 배치도 카드로 통합
     // 직책 맵 로드 후 한 번 더(직책 일관 표기)

@@ -1,6 +1,6 @@
 /* ============================================================
    CATC · 강사 플랫폼 스타일  (admin.css)
-   @version  G   @build  20260626-193500
+   @version  H   @build  20260627-002236
    ------------------------------------------------------------
    [코드 수정 규칙] 수정 시 @version 을
    A -> B -> ... -> Z -> A1 -> B1 -> ... 순으로 1단계 올리고
@@ -1539,10 +1539,11 @@ body.night-mode .badge-idle {
 }
 #pdfWrapper:fullscreen #guideCanvas,
 #pdfWrapper:-webkit-full-screen #guideCanvas {
-    max-width: 100vw !important;
-    max-height: 100vh !important;
-    width: auto !important;
-    height: auto !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    max-width: none !important;
+    max-height: none !important;
+    object-fit: cover !important;
     border-radius: 0 !important;
 }
 #pdfWrapper.guide-page-virtual #guideCanvas,
@@ -1627,11 +1628,11 @@ body.night-mode .badge-idle {
 
 #pdfWrapper.guide-page-virtual:fullscreen #guideProfile,
 #pdfWrapper.guide-page-virtual:-webkit-full-screen #guideProfile {
-    width: min(100vw, calc(100vh * 16 / 9)) !important;
-    height: min(100vh, calc(100vw * 9 / 16)) !important;
+    width: 100vw !important;
+    height: 100vh !important;
     max-width: none !important;
     max-height: none !important;
-    aspect-ratio: 16 / 9 !important;
+    aspect-ratio: auto !important;
     overflow: hidden !important;
     transform: none !important;
 }
@@ -1644,6 +1645,10 @@ body.night-mode .badge-idle {
     transform: none !important;
     transform-origin: center center !important;
     box-shadow: none !important;
+}
+
+#view-guide .card-rail-wrap .side-rail{
+    top:clamp(96px,18vh,190px);
 }
 
 

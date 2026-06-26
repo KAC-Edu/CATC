@@ -1,14 +1,14 @@
-/* ============================================================
+﻿/* ============================================================
    CATC · 강사 플랫폼 로직  (admin.js)
-   @version  Y
-   @build    20260627-001819  (vY: 운영 과정 선택 카드 간격 확대)
+   @version  A1
+   @build    20260627-004620  (vA1: 현재 과정 선택 팝업 확대)
    ------------------------------------------------------------
    [코드 수정 규칙 · AI/개발자 공통]
    이 파일을 고치면 @version 을 A -> B -> ... -> Z -> A1 -> B1 ...
    순으로 1단계 올리고, @build 를 수정 시각으로 갱신할 것.
    적용 여부는 브라우저 콘솔 로그(vA)로 확인한다.
 ============================================================ */
-try{console.log('%cCATC%c 강사 플랫폼 로직 (admin.js) %cvX%c build 20260626-200500','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}
+try{console.log('%cCATC%c 강사 플랫폼 로직 (admin.js) %cvZ%c build 20260627-002236','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}
 /* --- admin.js (Final Integrated Version - Fixed Syntax & Logic) --- */
 
 // --- [기본 데이터] 20문항 ---
@@ -5525,7 +5525,7 @@ resetShuttleRequests: function() {
         const d=window._homeStatsData||{}, today=window._homeStatsToday||getTodayString();
         modal.style.display='flex';
         // 교육생 현황(students)은 우측 지도까지 들어가므로 모달을 넓힘. 그 외 타입은 기본 폭.
-        try{ const _box=modal.querySelector('div'); if(_box){ _box.style.maxWidth=(type==='students')?'1320px':(type==='active'?'760px':'720px'); _box.style.maxHeight=(type==='students')?'94vh':'90vh'; _box.style.padding='clamp(16px,3vh,40px) clamp(18px,3vw,44px)'; } if(title){ title.style.fontSize='clamp(17px,2.3vw,26px)'; title.style.marginBottom='clamp(12px,2vh,28px)'; } }catch(e){}
+        try{ const _box=modal.querySelector('div'); if(_box){ _box.style.maxWidth=(type==='students')?'1320px':(type==='active'?'1040px':'720px'); _box.style.maxHeight=(type==='students')?'94vh':'90vh'; _box.style.padding=(type==='active')?'clamp(26px,4vh,54px) clamp(30px,4vw,60px)':'clamp(16px,3vh,40px) clamp(18px,3vw,44px)'; } if(title){ title.style.fontSize=(type==='active')?'clamp(24px,2.8vw,36px)':'clamp(17px,2.3vw,26px)'; title.style.marginBottom=(type==='active')?'clamp(18px,2.8vh,34px)':'clamp(12px,2vh,28px)'; } }catch(e){}
         const esc=function(s){return (s==null?'':String(s)).replace(/[&<>"]/g,function(c){return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]);});};
         // 이번 주 월~금 정확한 기간(토·일은 차주 월요일 기준)
         const _wkRange=(function(){ var now=new Date(); var dow=now.getDay(); var off=(dow===0)?1:(dow===6)?2:(1-dow); var mon=new Date(now); mon.setDate(now.getDate()+off); mon.setHours(0,0,0,0); var fri=new Date(mon); fri.setDate(mon.getDate()+4); var W=['일','월','화','수','목','금','토']; var f=function(dt){ return (dt.getMonth()+1)+'.'+dt.getDate()+'('+W[dt.getDay()]+')'; }; return f(mon)+' ~ '+f(fri); })();
@@ -5541,14 +5541,14 @@ resetShuttleRequests: function() {
             title.textContent='🏫 현재 강의 중인 과정  ·  '+_wkRange;
             const rows=weekRooms.filter(([,r])=>(r.status||{}).roomStatus==='active').map(([room,r])=>{
                 const prof=(r.status||{}).professorName||'-', course=(r.settings||{}).courseName||'-';
-                return `<div onclick="document.getElementById('homeStatModal').style.display='none'; dataMgr.switchRoomAttempt('${room}');" title="클릭하면 이 과정으로 입장합니다" style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:clamp(10px,1.6vh,18px) clamp(14px,2vw,24px);background:#eff6ff;border:1px solid #dbeafe;border-radius:14px;margin-bottom:clamp(16px,2.4vh,26px);cursor:pointer;transition:background .15s, transform .15s, box-shadow .15s;" onmouseover="this.style.background='#dbeafe';this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 20px rgba(37,99,235,.18)';" onmouseout="this.style.background='#eff6ff';this.style.transform='none';this.style.boxShadow='none';">
-                    <div style="display:flex;align-items:center;gap:clamp(10px,1.5vw,20px);min-width:0;">
-                        <span style="font-weight:900;color:#fff;background:#3b82f6;padding:clamp(5px,0.8vh,8px) clamp(10px,1.2vw,15px);border-radius:10px;font-size:clamp(13px,1.4vw,18px);white-space:nowrap;">Room #${room}</span>
-                        <span style="font-size:clamp(15px,1.9vw,23px);color:#0f172a;font-weight:800;word-break:keep-all;">${course}</span>
+                return `<div onclick="document.getElementById('homeStatModal').style.display='none'; dataMgr.switchRoomAttempt('${room}');" title="클릭하면 이 과정으로 입장합니다" style="display:flex;justify-content:space-between;align-items:center;gap:clamp(18px,2vw,30px);min-height:92px;padding:clamp(20px,2.8vh,32px) clamp(24px,3vw,38px);background:#eff6ff;border:1px solid #dbeafe;border-radius:20px;margin-bottom:clamp(18px,2.6vh,28px);cursor:pointer;transition:background .15s, transform .15s, box-shadow .15s;" onmouseover="this.style.background='#dbeafe';this.style.transform='translateY(-2px)';this.style.boxShadow='0 10px 26px rgba(37,99,235,.20)';" onmouseout="this.style.background='#eff6ff';this.style.transform='none';this.style.boxShadow='none';">
+                    <div style="display:flex;align-items:center;gap:clamp(16px,2vw,28px);min-width:0;">
+                        <span style="font-weight:900;color:#fff;background:#3b82f6;padding:clamp(9px,1.2vh,13px) clamp(18px,2vw,26px);border-radius:13px;font-size:clamp(17px,1.7vw,23px);white-space:nowrap;">Room #${room}</span>
+                        <span style="font-size:clamp(22px,2.4vw,32px);color:#0f172a;font-weight:900;word-break:keep-all;">${course}</span>
                     </div>
-                    <span style="font-size:clamp(12px,1.4vw,16px);color:#475569;font-weight:800;white-space:nowrap;">${prof} 교수 <i class="fa-solid fa-arrow-right-to-bracket" style="margin-left:8px;color:#3b82f6;"></i></span></div>`;
+                    <span style="font-size:clamp(16px,1.7vw,21px);color:#475569;font-weight:900;white-space:nowrap;">${prof} 교수 <i class="fa-solid fa-arrow-right-to-bracket" style="margin-left:14px;color:#3b82f6;"></i></span></div>`;
             }).join('');
-            body.innerHTML=rows?'<div style="display:flex;flex-direction:column;gap:clamp(2px,0.5vh,8px);">'+rows+'</div>':'<p style="color:#94a3b8;text-align:center;padding:36px;font-size:20px;">이번 주 강의 중인 과정이 없습니다.</p>';
+            body.innerHTML=rows?'<div style="display:flex;flex-direction:column;gap:clamp(10px,1.3vh,18px);">'+rows+'</div>':'<p style="color:#94a3b8;text-align:center;padding:36px;font-size:20px;">이번 주 강의 중인 과정이 없습니다.</p>';
         } else if(type==='students'){
             title.innerHTML='<div style="text-align:center;font-weight:900;">👩‍🎓 교육생 현황 · 소속 분포</div>'
                 +'<div style="text-align:center;font-size:clamp(15px,1.7vw,21px);color:#2563eb;font-weight:800;margin-top:6px;">'+_wkRange+' <span style="color:#94a3b8;font-weight:700;">· 예정명단 기준</span></div>';
@@ -7366,19 +7366,19 @@ init: function() {
         } catch (e) { slot.profile = null; }
     },
     _hasProfile: function() { return true; },
-    _hasQR: function() { return true; },
-    _hasManual: function() { return true; },
-    _extras: function() { return 3; },
-    _qrPageNum: function() { return 3; },
-    _manualPageNum: function() { return 4; },
+    _hasQR: function() { return false; },
+    _hasManual: function() { return false; },
+    _extras: function() { return 1; },
+    _qrPageNum: function() { return -1; },
+    _manualPageNum: function() { return -1; },
     _vtotal: function() { const s = guideMgr._slot(); if (!s.pdfDoc) return 0; return s.pdfDoc.numPages + guideMgr._extras(); },
     _isProfilePage: function(v) { return v === 2; },
-    _isQRPage: function(v) { return v === 3; },
-    _isManualPage: function(v) { return v === 4; },
+    _isQRPage: function(v) { return false; },
+    _isManualPage: function(v) { return false; },
     _toPdfPage: function(v) {
         if (v <= 1) return 1;                       // 1페이지: PDF 원본 표지
-        if (v >= 2 && v <= 4) return null;          // 2~4페이지: 가상 페이지 고정
-        return v - 3;                               // 5페이지부터 PDF 원본 2P
+        if (v === 2) return null;                   // 2페이지: 담임교수 프로필
+        return v - 1;                               // 3페이지부터 PDF 원본 2P
     },
     _profileHTML: function(p) {
         p = p || {};
@@ -7623,7 +7623,7 @@ init: function() {
             if (document.fullscreenElement) {
                 const hScale = window.innerHeight / unscaledViewport.height;
                 const wScale = window.innerWidth  / unscaledViewport.width;
-                cssScale = Math.min(hScale, wScale);
+                cssScale = Math.max(hScale, wScale);
             }
             const renderScale = cssScale * dpr;
             const viewport = page.getViewport({scale: renderScale});
