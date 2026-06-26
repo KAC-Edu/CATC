@@ -2,7 +2,7 @@
 <!-- ══════════════════ [편집상태 / EDIT-STATUS] ══════════════════
      STATUS : 수정안하는중
      FILE   : index.html (교육생)
-     UPDATED: 2026-06-26 17:35  (vH58: Q&A 상단 정렬 및 과정명 표시 기준 보정)
+     UPDATED: 2026-06-26 18:20  (vH59: 입교홈 정보수정/생활관 표시 및 카메라 QR 출결 1차 적용)
      ─ 규칙: 수정 시작 시 STATUS를 '수정중'으로, 완료 시 '수정안하는중'으로 변경.
             '수정중'이면 다른 플랫폼은 연동 변경을 보류/협의 후 진행.
 ═══════════════════════════════════════════════════════════════ -->
@@ -6780,6 +6780,8 @@ body.kac-quiz-active #returnAlertOverlay{ display:none !important; }
 #keduHome .kh-sub{ background:#10b981; color:#fff; }
 #keduHome .kh-qna{ background:#0f172a; color:#fff; }
 #keduHome .kh-close{ background:#f1f5f9; color:#475569; }
+#keduHome .kh-edit{ background:#eff6ff; color:#1d4ed8; border:1px solid #bfdbfe; }
+#keduHome .kh-att{ background:linear-gradient(135deg,#2563eb,#1d4ed8); color:#fff; box-shadow:0 8px 18px rgba(37,99,235,.24); }
 #keduHome .kh-rows{ text-align:left; margin:0 0 16px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:16px; padding:4px 12px; }
 #keduHome .kh-rows > div{ display:flex; align-items:center; gap:10px; padding:12px 0; border-bottom:1px solid #e8eef7; }
 #keduHome .kh-rows > div:last-child{ border-bottom:none; }
@@ -6792,6 +6794,14 @@ body.kac-quiz-active #returnAlertOverlay{ display:none !important; }
 #keduDone p b{ color:#1e3a8a; }
 #keduDone .kd-close{ width:100%; padding:15px; border:none; border-radius:13px; background:#0f172a; color:#fff; font-size:16px; font-weight:900; cursor:pointer; }
 #keduDone .kd-note{ margin-top:12px; font-size:12px; color:#94a3b8; }
+#keduScan{ position:fixed; inset:0; z-index:10070; display:none; flex-direction:column; background:#020617; color:#fff; padding:22px; }
+#keduScan .ks-head{ display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:16px; }
+#keduScan .ks-title{ font-size:18px; font-weight:900; }
+#keduScan .ks-close{ width:38px; height:38px; border:none; border-radius:50%; background:rgba(255,255,255,.12); color:#fff; font-size:18px; }
+#keduScan .ks-stage{ position:relative; flex:1; min-height:320px; border-radius:24px; overflow:hidden; background:#0f172a; border:1px solid rgba(148,163,184,.35); display:flex; align-items:center; justify-content:center; }
+#keduScan video{ width:100%; height:100%; object-fit:cover; display:block; }
+#keduScan .ks-frame{ position:absolute; width:min(72vw,300px); aspect-ratio:1/1; border:3px solid #60a5fa; border-radius:24px; box-shadow:0 0 0 999px rgba(2,6,23,.42),0 0 28px rgba(96,165,250,.50); pointer-events:none; }
+#keduScan .ks-msg{ margin-top:14px; min-height:42px; color:#dbeafe; font-size:13.5px; font-weight:800; line-height:1.45; text-align:center; }
 /* [카카오 자동오픈 무애니메이션 20260625] 카카오 진입 시 우측 패널 슬라이드/페이드 제거 (플랫폼 메뉴 조작은 유지) */
 body.kac-noanim #noticeModal, body.kac-noanim #surveyModal, body.kac-noanim #shuttleModal, body.kac-noanim #adminActionModal, body.kac-noanim #facilityModal, body.kac-noanim #tabletLoanModal, body.kac-noanim #mealMenuModal, body.kac-noanim #qrModal, body.kac-noanim #foodModal { animation:none !important; }
 body.kac-noanim #noticeModal > .menu-box, body.kac-noanim #surveyModal > .menu-box, body.kac-noanim #shuttleModal > .menu-box, body.kac-noanim #adminActionModal > .menu-box, body.kac-noanim #facilityModal > .menu-box, body.kac-noanim #tabletLoanModal > .menu-box, body.kac-noanim #qrModal > .menu-box, body.kac-noanim #foodModal > .menu-box, body.kac-noanim #mealMenuModal > div { animation:none !important; }
@@ -6840,6 +6850,10 @@ body.kac-noanim #noticeModal > .menu-box, body.kac-noanim #surveyModal > .menu-b
     ov.style.display='flex';
     document.getElementById('keduEnrollBtn').onclick=function(){ submitEnroll(menu); };
   }
+  window.keduEditInfo=function(){
+    var h=document.getElementById('keduHome'); if(h) h.style.display='none';
+    showEnroll('home');
+  };
   async function submitEnroll(menu){
     var room=document.getElementById('keduCourse').value;
     var name=document.getElementById('keduName').value.trim();
@@ -6894,11 +6908,91 @@ body.kac-noanim #noticeModal > .menu-box, body.kac-noanim #surveyModal > .menu-b
     var sb=(localStorage.getItem('kac_user_phone')||'-').trim();
     var eN=document.getElementById('khName'), eS=document.getElementById('khSabun');
     if(eN) eN.textContent=nm; if(eS) eS.textContent=sb;
-    var eT=document.getElementById('khTitle'), eC=document.getElementById('khCourse'), eP=document.getElementById('khPeriod'), eR=document.getElementById('khRoom');
-    if(typeof currentRoom!=='undefined' && currentRoom){
-      try{ if(eR) eR.textContent='Room '+currentRoom; firebase.database().ref('courses/'+currentRoom+'/settings').once('value').then(function(s){ var v=s.val()||{}; var cn=(v.courseName||('Room '+currentRoom)); if(eT) eT.textContent=cn; if(eC) eC.textContent=cn; if(eP) eP.textContent=(v.period||'-'); }); }catch(e){}
+    var eT=document.getElementById('khTitle'), eC=document.getElementById('khCourse'), eP=document.getElementById('khPeriod'), eR=document.getElementById('khRoom'), eD=document.getElementById('khDorm');
+    var homeRoom=(typeof currentRoom!=='undefined' && currentRoom) ? currentRoom : (localStorage.getItem('kac_last_visited_room')||'');
+    if(homeRoom){
+      try{ if(eR) eR.textContent='Room '+homeRoom; firebase.database().ref('courses/'+homeRoom+'/settings').once('value').then(function(s){ var v=s.val()||{}; var cn=(v.courseName||('Room '+homeRoom)); if(eT) eT.textContent=cn; if(eC) eC.textContent=cn; if(eP) eP.textContent=(v.period||'-'); }); }catch(e){}
     }
+    loadKakaoHomeDorm(nm, sb, eD);
     ov.style.display='flex';
+  };
+  function loadKakaoHomeDorm(name, sabun, el){
+    if(!el) return;
+    el.textContent='생활관 배정 확인 중...';
+    firebase.database().ref('system/dorm/assignments').once('value').then(function(snap){
+      var all=snap.val()||{}, found=null;
+      Object.keys(all).forEach(function(wk){
+        var students=(all[wk]&&all[wk].students)||{};
+        Object.keys(students).forEach(function(k){
+          var s=students[k]||{}; if(found) return;
+          var sameName=(String(s.name||'').trim()===name);
+          var emp=String(s.empNo||s.sabun||s.id||'').replace(/[^0-9]/g,'');
+          var sameId=!sabun || !emp || emp.slice(-String(sabun).length)===String(sabun);
+          if(sameName && sameId) found=s;
+        });
+      });
+      if(found){
+        var floor=found.floor?(' '+found.floor+'층'):'';
+        var no=found.no||found.room||'';
+        el.textContent=(found.building||'생활관')+floor+(no?(' '+no+(String(no).indexOf('호')<0?'호':'')):'');
+      } else el.textContent='미배정';
+    }).catch(function(){ el.textContent='확인 실패'; });
+  }
+  var keduScanStream=null, keduScanTimer=null, keduScanBusy=false;
+  function parseAttendanceRoomFromQR(text){
+    var raw=String(text||'').trim(); if(!raw) return '';
+    try{
+      var u=new URL(raw, location.href);
+      var r=(u.searchParams.get('room')||'').trim();
+      var chk=(u.searchParams.get('checkin')||'').toLowerCase()==='true';
+      if(r && chk) return r.toUpperCase();
+      if(r) return r.toUpperCase();
+    }catch(e){}
+    var m=raw.match(/[?&]room=([A-Z])/i) || raw.match(/room\s*#?\s*([A-Z])/i);
+    return m ? m[1].toUpperCase() : '';
+  }
+  function stopKakaoAttendanceScan(){
+    if(keduScanTimer){ clearInterval(keduScanTimer); keduScanTimer=null; }
+    if(keduScanStream){ try{ keduScanStream.getTracks().forEach(function(t){t.stop();}); }catch(e){} keduScanStream=null; }
+    var ov=document.getElementById('keduScan'); if(ov) ov.style.display='none';
+    keduScanBusy=false;
+  }
+  window.stopKakaoAttendanceScan=stopKakaoAttendanceScan;
+  window.startKakaoAttendanceScan=async function(){
+    var name=(localStorage.getItem('kac_user_name')||'').trim();
+    var phone=(localStorage.getItem('kac_user_phone')||'').trim();
+    var token=(localStorage.getItem('uToken')||'').trim();
+    if(!name || !/^\d{4,5}$/.test(phone) || !token){ showKacAlert('출결 전 입교 정보를 먼저 등록해 주세요.'); return; }
+    if(!('BarcodeDetector' in window)){ showKacAlert('이 브라우저는 카카오 안에서 QR 인식을 지원하지 않습니다. 휴대폰 기본 카메라 또는 QR 출결 링크를 이용해 주세요.'); return; }
+    var ov=document.getElementById('keduScan'), video=document.getElementById('keduScanVideo'), msg=document.getElementById('keduScanMsg');
+    if(!ov||!video) return;
+    ov.style.display='flex'; if(msg) msg.textContent='카메라 권한을 허용한 뒤 강사 화면의 출결 QR을 사각형 안에 맞춰 주세요.';
+    try{
+      stopKakaoAttendanceScan(); ov.style.display='flex';
+      var detector=new BarcodeDetector({formats:['qr_code']});
+      keduScanStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'}},audio:false});
+      video.srcObject=keduScanStream; await video.play();
+      keduScanTimer=setInterval(async function(){
+        if(keduScanBusy) return;
+        keduScanBusy=true;
+        try{
+          var codes=await detector.detect(video);
+          if(codes&&codes.length){
+            var raw=codes[0].rawValue||''; var room=parseAttendanceRoomFromQR(raw);
+            if(!room){ if(msg) msg.textContent='출결 QR이 아닌 것 같습니다. 강사 화면의 자체 출결 QR을 비춰 주세요.'; keduScanBusy=false; return; }
+            stopKakaoAttendanceScan();
+            var d=new Date(); var today=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+            var storageKey='kac_attended_'+room+'_'+today+'_'+token;
+            executeAttendanceRecord(room, name, phone, today, storageKey);
+            return;
+          }
+        }catch(e){}
+        keduScanBusy=false;
+      }, 650);
+    }catch(e){
+      stopKakaoAttendanceScan();
+      showKacAlert('카메라를 열 수 없습니다. 브라우저 카메라 권한을 확인해 주세요.');
+    }
   };
   function routeKakao(){
     var menu=qp('menu'), room=qp('room'), code=qp('code');
@@ -6936,8 +7030,11 @@ body.kac-noanim #noticeModal > .menu-box, body.kac-noanim #surveyModal > .menu-b
           '<div><span>과정</span><b id="khCourse">-</b></div>'+
           '<div><span>기간</span><b id="khPeriod">-</b></div>'+
           '<div><span>이름</span><b id="khName">-</b></div>'+
-          '<div><span>사번</span><b id="khSabun">-</b></div>'+
+          '<div><span>사번<br><small style="font-size:10px;color:#94a3b8;">(전화 뒷4)</small></span><b id="khSabun">-</b></div>'+
+          '<div><span>생활관</span><b id="khDorm">확인 중...</b></div>'+
         '</div>'+
+        '<button class="kh-edit" onclick="keduEditInfo()"><i class="fa-solid fa-pen-to-square"></i> 정보 수정하기</button>'+
+        '<button class="kh-att" onclick="startKakaoAttendanceScan()"><i class="fa-solid fa-camera"></i> 출결하기</button>'+
         '<button class="kh-close" id="keduHomeClose">닫기</button></div></div>';
       document.body.appendChild(h);
       document.getElementById('keduHomeClose').addEventListener('click', function(){
@@ -6952,6 +7049,13 @@ body.kac-noanim #noticeModal > .menu-box, body.kac-noanim #surveyModal > .menu-b
         '<button class="kd-close" id="kdClose">닫기</button>'+
         '<div class="kd-note">잠시 후 자동으로 닫힙니다.</div></div>';
       document.body.appendChild(dn);
+    }
+    if(!document.getElementById('keduScan')){
+      var sc=document.createElement('div'); sc.id='keduScan';
+      sc.innerHTML='<div class="ks-head"><div><div class="ks-title">출결 QR 스캔</div><div style="font-size:12px;color:#93c5fd;font-weight:800;margin-top:3px;">강사 화면의 자체 출결 QR을 비춰 주세요</div></div><button class="ks-close" onclick="stopKakaoAttendanceScan()" aria-label="닫기"><i class="fa-solid fa-xmark"></i></button></div>'+
+        '<div class="ks-stage"><video id="keduScanVideo" playsinline muted></video><div class="ks-frame"></div></div>'+
+        '<div class="ks-msg" id="keduScanMsg">카메라 준비 중...</div>';
+      document.body.appendChild(sc);
     }
     routeKakao();
   }
