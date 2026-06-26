@@ -2,7 +2,7 @@
 <!-- 이 플랫폼(admin_coord.html / 교육운영부) 수정상태 플래그. 값은 [수정중] 또는 [수정안하는중] 두 가지. -->
 <!-- 작업 시작 시 → 수정중 / 작업 완료 시 → 수정안하는중. 다른 플랫폼은 이 말머리를 보고 연동·수정 가능 여부 판단. -->
 <!-- [외부변경 · 카카오채널연동 2026-06-25] 포털(portal.html/7777) 경유 폐지 → 페이지 직접진입 시 접속코드(catc1234) 게이트 추가, 포털 리다이렉트/종료이동 제거. version C13→D13. 기능 로직은 미변경. -->
-<!-- last-updated: 2026-06-26 / version: D21 (상단바 compact 우선순위 보강, 통계 버튼 숨김 방지) -->
+<!-- last-updated: 2026-06-26 / version: D22 (퇴교차량 시간 표시 동기화, 초기화 회색 상태, 상단 버튼 크기 고정) -->
 <!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -1871,6 +1871,13 @@ body.pc-mode .coord-pc-only{ display:flex !important; }
 .hdr-stat.shuttle-off .hb-label{ color:rgba(255,255,255,0.95) !important; }
 .hdr-stat.shuttle-off .hb-value{ color:#fff !important; }
 .hdr-stat.shuttle-off > i{ color:#fee2e2 !important; }
+#hdr-shuttle{ height:44px !important; min-width:112px !important; align-self:center !important; box-sizing:border-box !important; }
+#hdr-shuttle .hdr-stat-txt{ min-height:30px !important; justify-content:center !important; }
+#hdr-shuttle .hb-value{ min-width:34px !important; display:flex !important; align-items:baseline !important; gap:2px !important; line-height:1 !important; }
+.hdr-stat.shuttle-cleared{ background:rgba(100,116,139,0.46) !important; border-color:rgba(203,213,225,.72) !important; box-shadow:0 0 0 1px rgba(148,163,184,.35),0 4px 12px rgba(15,23,42,.18) !important; }
+.hdr-stat.shuttle-cleared .hb-label{ color:rgba(248,250,252,.92) !important; }
+.hdr-stat.shuttle-cleared .hb-value{ color:#fff !important; }
+.hdr-stat.shuttle-cleared > i{ color:#e2e8f0 !important; }
 /* ── 키오스크 반응형: 화면 크기에 따라 글자·여백 축소 ── */
 #coordKioskModal{ padding:clamp(12px,1.8vw,28px) clamp(14px,2vw,34px) !important; }
 #coordKioskModal table{ font-size:clamp(11px,1.5vw,26px) !important; }
@@ -1956,7 +1963,7 @@ body.coord-header-compact.pc-mode #coordHdrStats.coord-hdr-hide{ display:flex !i
       <div class="hdr-stat" onclick="openStudentRosterPopup()" title="전체 교육생 명단"><i class="fa-solid fa-users"></i><div class="hdr-stat-txt"><div class="hb-label">전체 교육생</div><div class="hb-value"><span id="g-total-students">0</span><small>명</small></div></div></div>
       <div class="hdr-stat" onclick="openOutingSummary()" title="금일 외출·외박 신청자 명단"><i class="fa-solid fa-file-signature"></i><div class="hdr-stat-txt"><div class="hb-label">외출·외박</div><div class="hb-value"><span id="g-today-actions">0</span><small>건</small></div></div></div>
       <div class="hdr-stat" onclick="openDormStatusPopup()" title="생활관 방배정 현황(교육지원부)"><i class="fa-solid fa-bed"></i><div class="hdr-stat-txt"><div class="hb-label">생활관</div><div class="hb-value"><span id="g-dorm-count">0</span><small>명</small></div></div></div>
-      <div class="hdr-stat hdr-edu edu-unset" id="hdr-shuttle" onclick="openShuttleSummary()" title="퇴교차량 신청자 · 출발시간 설정 상태(빨강=미설정/녹색=설정)"><i class="fa-solid fa-bus"></i><div class="hdr-stat-txt"><div class="hb-label">퇴교차량</div><div class="hb-value"><span id="g-shuttle-count">0</span><small>명</small></div></div></div>
+      <div class="hdr-stat hdr-edu shuttle-cleared" id="hdr-shuttle" onclick="openShuttleSummary()" title="퇴교차량 신청자 · 출발시간 공지 상태(회색=초기화/미공지, 녹색=공지완료)"><i class="fa-solid fa-bus"></i><div class="hdr-stat-txt"><div class="hb-label">퇴교차량</div><div class="hb-value"><span id="g-shuttle-count">0</span><small>명</small></div></div></div>
       <div class="hdr-stat hdr-edu edu-unset" onclick="openEduPlacePicker('integrity')" title="금주 청렴교육 장소 설정"><i class="fa-solid fa-scale-balanced"></i><div class="hdr-stat-txt"><div class="hb-label">청렴교육</div><div class="hb-value" style="font-size:17px;"><span id="g-edu-integrity">미정</span></div></div></div>
       <div class="hdr-stat hdr-edu edu-unset" onclick="openEduPlacePicker('union')" title="금주 노조와의 대화 장소 설정"><i class="fa-solid fa-handshake"></i><div class="hdr-stat-txt"><div class="hb-label">노조교육</div><div class="hb-value" style="font-size:17px;"><span id="g-edu-union">미정</span></div></div></div>
     </div>
@@ -7841,9 +7848,8 @@ function _eduApplyState(spanId, val){
 }
 window._coordUpdateShuttleLED=function(){
   var _sh=document.getElementById('hdr-shuttle'); if(!_sh) return;
-  var e=(window.coordOpsSetup&&coordOpsSetup._data)||{}; var sd=window._shuttleDep||{};
-  var set = !!((e.shuttle1&&(''+e.shuttle1).trim())&&(e.shuttle2&&(''+e.shuttle2).trim())) || !!((''+(sd.round1||'')).trim());
-  _sh.classList.toggle('edu-set',set); _sh.classList.toggle('edu-unset',!set);
+  _sh.classList.remove('edu-set','edu-unset');
+  if(typeof _coordUpdateShuttleBtn==='function') _coordUpdateShuttleBtn();
 };
 (function initEduLocationsCoord(){
   try{
@@ -8390,7 +8396,7 @@ window._coordFitDormFrame=_coordFitDormFrame;
 if(!window._coordDormMsgBound){ window._coordDormMsgBound=true; window.addEventListener('message', function(ev){ var d=ev&&ev.data; if(!d||!d._dormBoardH) return; var fr=document.getElementById('coordDormFrame'); if(!fr) return; var idoc=null; try{ idoc=fr.contentDocument; }catch(_){} if(idoc){ _coordFitDormFrame(false); } else { var h=parseInt(d._dormBoardH,10)||520; fr.style.height=Math.min(Math.max(h+8,260),2200)+'px'; } }); }
 (function initDormCount(){ try{ if(!window.firebase||!firebase.database){ setTimeout(initDormCount,400); return; } var wk=_coordDormMondayKey(); firebase.database().ref('system/dorm/assignments/'+wk+'/students').on('value', function(s){ var st=s.val()||{}; var hidden=_coordDormHidden(); var n=Object.keys(st).map(function(t){return st[t];}).filter(function(x){ return x && (''+(x.name||'')).trim() && !hidden[(''+(x.course||'')).trim()]; }).length; var el=document.getElementById('g-dorm-count'); if(el) el.textContent=n; }); }catch(e){ setTimeout(initDormCount,800); } })();
 function _coordShuttleRoundsHtml(){
-  var sd=window._shuttleDep||{}; var _eduSht=(typeof coordOpsSetup!=='undefined'&&coordOpsSetup._data&&!window._shuttleDepCleared)?coordOpsSetup._data:{}; var r1=sd.round1||_eduSht.shuttle1||'', r2=sd.round2||_eduSht.shuttle2||''; var on=!!(r1||r2) && !window._shuttleDepCleared;
+  var sd=window._shuttleDep||{}; var r1=(!window._shuttleDepCleared && sd.announced)?(sd.round1||''):'', r2=(!window._shuttleDepCleared && sd.announced)?(sd.round2||''):''; var on=!!(r1||r2) && !window._shuttleDepCleared;
   var isTime=function(v){ return /^\d{1,2}:\d{2}$/.test(v); };
   var r2time=isTime(r2)?r2:''; var mode=r2time?'yes':((r2==='운행안함')?'no':((r2==='미정')?'tbd':''));
   window._coordSht2Mode=mode;
@@ -8431,6 +8437,7 @@ window.coordSetShuttleRounds=function(){
   var label='1차 '+r1+(r2==='운행안함'?' / 2차 운행안함':(' / 2차 '+r2));
   firebase.database().ref('system/shuttle_departure').set({round1:r1, round2:r2, announced:true, date:today, ts:Date.now()});
   firebase.database().ref('system/shuttle_notice').set(today+' '+label+' 퇴교차량');
+  firebase.database().ref('system/eduLocations').update({shuttle1:r1, shuttle2:r2});
   try{ _coordActiveRooms().forEach(function(rm){ firebase.database().ref('courses/'+rm.rid+'/shuttle/departure').set({time:r1, time2:r2, date:today, announced:true, ts:Date.now()}); }); }catch(e){}
   window._shuttleDepCleared=false;
   window._shuttleDep={round1:r1, round2:r2, announced:true, date:today, ts:Date.now()};
@@ -8441,6 +8448,7 @@ window.coordSetShuttleRounds=function(){
 window.coordClearShuttleRounds=function(){
   firebase.database().ref('system/shuttle_departure').remove();
   firebase.database().ref('system/shuttle_notice').remove();
+  firebase.database().ref('system/eduLocations').update({shuttle1:'', shuttle2:''});
   try{ _coordActiveRooms().forEach(function(rm){ firebase.database().ref('courses/'+rm.rid+'/shuttle/departure').remove(); }); }catch(e){}
   try{ if(typeof coordOpsSetup!=='undefined' && coordOpsSetup._data){ coordOpsSetup._data.shuttle1=''; coordOpsSetup._data.shuttle2=''; } }catch(e){}
   window._shuttleDepCleared=true;
@@ -8455,10 +8463,16 @@ function _coordUpdateShuttleBtn(){
     var isT=function(v){ return /^\d{1,2}:\d{2}$/.test(v||''); };
     var dateOk=!!(sd && sd.date && sd.date>=today);
     var r1=sd&&sd.round1||'', r2=sd&&sd.round2||'';
+    var cleared = !!window._shuttleDepCleared || !r1;
     // 1차 실제시간 + (2차 실제시간 또는 운행안함) 이어야 확정(녹색). 하나라도 미정/미선택이면 빨강
-    var green = dateOk && isT(r1) && (isT(r2) || r2==='운행안함');
+    var green = !cleared && dateOk && isT(r1) && (isT(r2) || r2==='운행안함');
     var sc=document.getElementById('g-shuttle-count'); var blk=sc?sc.closest('.hdr-stat'):null;
-    if(blk){ blk.classList.toggle('shuttle-on', green); blk.classList.toggle('shuttle-off', !green); }
+    if(blk){
+      blk.classList.remove('edu-set','edu-unset');
+      blk.classList.toggle('shuttle-cleared', cleared);
+      blk.classList.toggle('shuttle-on', green);
+      blk.classList.toggle('shuttle-off', !cleared && !green);
+    }
   }catch(e){}
 }
 // [복원] 규칙 미게시 대비: 과정별 shuttle/departure(이미 저장됨)에서 1차/2차 상태 복원
@@ -8600,7 +8614,7 @@ window.addEventListener('load', function(){
 });
 </script>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:6px;bottom:5px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;font-weight:800;line-height:1;letter-spacing:.6px;color:#fff;background:rgba(15,23,42,.85);padding:4px 8px;border-radius:6px;pointer-events:none;user-select:none;box-shadow:0 2px 6px rgba(0,0,0,.3);">D21</div>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:6px;bottom:5px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;font-weight:800;line-height:1;letter-spacing:.6px;color:#fff;background:rgba(15,23,42,.85);padding:4px 8px;border-radius:6px;pointer-events:none;user-select:none;box-shadow:0 2px 6px rgba(0,0,0,.3);">D22</div>
 <script>
 /* ===== [공용] 종료된 과정 자동 정리 (모든 플랫폼 공통) — 종료일 지난 방을 다음날 미개설로 비움. 브라우저별 하루 1회 ===== */
 window.kacExpireEndedCourses = async function(){
