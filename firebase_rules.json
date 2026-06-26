@@ -13,22 +13,31 @@
         "coordNotice":  { ".write": true },
         "coordRoster":  { ".read": true, ".write": true },
         "schedule":     { ".read": true, ".write": true },
+        "scheduleImage": {".read": true, ".write": true },
         "coordNoticeHistory": { ".write": true },
         "admin_actions":{ ".write": true },
+        "returnCheckAck": { ".write": true },
         "internal_attendance": { ".write": true },
+        "attendanceOtp": { ".read": true, ".write": true },
         "students": { ".write": true },
         "status": {
           ".write": "auth != null",
           "professorName":  { ".write": true },
           "roomStatus":     { ".write": true },
-          "ownerSessionId": { ".write": true }
+          "ownerSessionId": { ".write": true },
+          "coSyncOn":  { ".write": true },
+          "coViewMode":{ ".write": true },
+          "coViewTs":  { ".write": true },
+          "coFsReq":   { ".write": true },
+          "coAttn":    { ".write": true }
         },
         "settings": {
           ".write": "auth != null",
           "courseName":      { ".write": true },
           "period":          { ".write": true },
           "coordinatorName": { ".write": true },
-          "kakaoLink":       { ".write": true }
+          "kakaoLink":       { ".write": true },
+          "roomDetailName":  { ".write": true }
         },
         "notice":           { ".write": "auth != null" },
         "boardNotice": { ".write": "auth != null" },
@@ -50,11 +59,24 @@
       "adminSecret":    { ".read": "auth != null", ".write": "auth != null" },
       "instructorPins": { ".read": "auth != null", ".write": "auth != null" },
       "nutrition_menu":     { ".read": true, ".write": true },
+      "weeklyMenu":         { ".read": true, ".write": true },
       "transport_requests": { ".read": true, ".write": true },
+      "pickup":             { ".read": true, ".write": true },
+      "driver_fixed":       { ".read": true, ".write": true },
+      "driver_dayoff":      { ".read": true, ".write": true },
+      "driver_schedule":    { ".read": true, ".write": true },
+      "course_archive":     { ".read": true, ".write": true },
       "globalNotice":       { ".read": true, ".write": true },
       "shuttle_notice":     { ".read": true, ".write": true },
+      "shuttle_departure":  { ".read": true, ".write": true },
+      "foodspots":          { ".read": true, ".write": true },
+      "classrooms":         { ".read": true, ".write": true },
+      "eduLocations":       { ".read": true, ".write": true },
+      "coordFloorPos":      { ".read": true, ".write": true },
       "facility_requests":  { ".read": true, ".write": true },
+      "facility_items":     { ".read": true, ".write": true },
       "staff_meal_log":      { ".read": "auth != null", ".write": true },
+      "staffMeal":          { ".read": true, ".write": true },
       "dormitory_metadata": { ".read": true, ".write": true },
       "professors":        { ".read": true, ".write": "auth != null" },
       "professorProfiles": { ".read": true, ".write": "auth != null" },
@@ -77,9 +99,14 @@
       "dorm": {
         ".read": true,
         ".write": true,
+        "locks": { ".read": true, ".write": true },
         "rooms":       { ".read": true, ".write": true },
         "rosters":     { ".read": true, ".write": true },
-        "assignments": { ".read": true, ".write": true }
+        "criteria":    { ".read": true, ".write": true },
+        "floorPriority": { ".read": true, ".write": true },
+        "assignments": { ".read": true, ".write": true },
+        "instructors": { ".read": true, ".write": true },
+        "deleted":     { ".read": true, ".write": true }
       }
     }
   }

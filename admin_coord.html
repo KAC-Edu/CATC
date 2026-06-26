@@ -2,7 +2,7 @@
 <!-- 이 플랫폼(admin_coord.html / 교육운영부) 수정상태 플래그. 값은 [수정중] 또는 [수정안하는중] 두 가지. -->
 <!-- 작업 시작 시 → 수정중 / 작업 완료 시 → 수정안하는중. 다른 플랫폼은 이 말머리를 보고 연동·수정 가능 여부 판단. -->
 <!-- [외부변경 · 카카오채널연동 2026-06-25] 포털(portal.html/7777) 경유 폐지 → 페이지 직접진입 시 접속코드(catc1234) 게이트 추가, 포털 리다이렉트/종료이동 제거. version C13→D13. 기능 로직은 미변경. -->
-<!-- last-updated: 2026-06-26 / version: D33 (키오스크 검색 재배치 및 분류 보강) -->
+<!-- last-updated: 2026-06-26 / version: D34 (상단바 전체폭 복구) -->
 <!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -74,6 +74,7 @@
      실제 100% 줌에서도 같은 업무 밀도로 보이도록 PC에서만 자동 축소한다. */
   (function(){
     window.__catcDensityFitActive = true;
+    return;
     var MIN_ZOOM = 0.62;
     var BASE_ZOOM = 0.75;
     var timer;

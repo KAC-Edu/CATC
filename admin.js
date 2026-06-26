@@ -1,14 +1,14 @@
 /* ============================================================
    CATC · 강사 플랫폼 로직  (admin.js)
-   @version  W
-   @build    20260626-193500  (vW: 가상 안내페이지 정렬 및 OTP 조회 경로 보강)
+   @version  X
+   @build    20260626-200500  (vX: OTP room 정규화 저장 보강)
    ------------------------------------------------------------
    [코드 수정 규칙 · AI/개발자 공통]
    이 파일을 고치면 @version 을 A -> B -> ... -> Z -> A1 -> B1 ...
    순으로 1단계 올리고, @build 를 수정 시각으로 갱신할 것.
    적용 여부는 브라우저 콘솔 로그(vA)로 확인한다.
 ============================================================ */
-try{console.log('%cCATC%c 강사 플랫폼 로직 (admin.js) %cvW%c build 20260626-193500','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}
+try{console.log('%cCATC%c 강사 플랫폼 로직 (admin.js) %cvX%c build 20260626-200500','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}
 /* --- admin.js (Final Integrated Version - Fixed Syntax & Logic) --- */
 
 // --- [기본 데이터] 20문항 ---
@@ -2890,7 +2890,7 @@ loadAttendanceView: function() {
         const codeEl = document.getElementById('internalOtpCode');
         const countEl = document.getElementById('internalOtpCountdown');
         if(!codeEl) return;
-        const activeRoom = state.room;
+        const activeRoom = String(state.room || '').trim().replace(/^ROOM\s*/i, '').replace(/^#/, '').trim().toUpperCase();
         if (!activeRoom) {
             codeEl.textContent = '------';
             if(countEl) countEl.textContent = '-';
@@ -2911,11 +2911,15 @@ loadAttendanceView: function() {
                 room: activeRoom,
                 updatedBy: 'instructor',
                 serverUpdatedAt: firebase.database.ServerValue.TIMESTAMP
-            }).catch(err => console.error('OTP 저장 실패:', err));
+            }).catch(err => {
+                console.error('OTP 저장 실패:', err);
+                if(countEl) countEl.textContent = '저장오류';
+            });
         };
         publishOtp();
         this._internalOtpTimer = setInterval(() => {
-            if(state.room !== activeRoom) {
+            const liveRoom = String(state.room || '').trim().replace(/^ROOM\s*/i, '').replace(/^#/, '').trim().toUpperCase();
+            if(liveRoom !== activeRoom) {
                 clearInterval(this._internalOtpTimer);
                 this._internalOtpTimer = null;
                 return;

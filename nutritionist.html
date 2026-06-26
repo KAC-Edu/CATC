@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- @수정상태: 수정안하는중 | 담당: 영양사 플랫폼(nutritionist.html) | 갱신: 2026-06-25 -->
+<!-- @수정상태: 수정안하는중 | 담당: 영양사 플랫폼(nutritionist.html) | 갱신: 2026-06-26 | version vH -->
 <!-- [외부변경 · 카카오채널연동 2026-06-25] 포털(portal.html/7777) 경유 폐지 → catc1234 직접진입 게이트 추가, '포털' 버튼→'잠금'. 기능 로직 미변경. -->
 <html lang="ko">
 <head>
@@ -3498,8 +3498,9 @@ function renderMealCalendar(a, month){
   function fit(){
     var el=document.documentElement;
     el.style.zoom='';
-    var need=el.scrollWidth, have=window.innerWidth;
-    if(need>have+2) el.style.zoom=Math.max(0.4, have/need).toFixed(4);
+    var need=Math.max(1180, el.scrollWidth||0), have=window.innerWidth;
+    var z=Math.max(0.62, Math.min(have/need, 0.75));
+    if(have>=1024 && z<0.995) el.style.zoom=z.toFixed(4);
   }
   var t; function soon(){ clearTimeout(t); t=setTimeout(fit,80); }
   window.addEventListener('resize', soon);
@@ -3509,7 +3510,7 @@ function renderMealCalendar(a, month){
 })();
 </script>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vG</div>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vH</div>
 <script>
 /* ===== [공용] 종료된 과정 자동 정리 (모든 플랫폼 공통) — 종료일 지난 방을 다음날 미개설로 비움. 브라우저별 하루 1회 ===== */
 window.kacExpireEndedCourses = async function(){

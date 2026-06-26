@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
 <!-- ════════ [PC버전 수정 · 미화·비품 · 디에스장 · 2026-06-25] ════════
      · 작업: 모바일 분리(facility_admin_m.html) 대응 PC측 @version 신규 부여.
-     · @version  VA  (이 파일 첫 버전. 이후 VB→…→VZ→VA1→…→VZ1 순환 표기)
+     · @version  VB  (VA→VB: PC 100% 화면용 75% 기준 밀도 보정)
      · 수정상태: 수정완료   (작업 중에는 '수정중', 완료 시 '수정완료'로 표기)
      · 연동 데이터(system/facility_requests, 상태값 대기/확인/처리완료/처리불가) 로직 미변경 — 타 담당자 영향 없음. -->
 <script>
@@ -514,8 +514,29 @@
         w.document.close(); w.focus(); setTimeout(()=>{ try{w.print();}catch(e){} }, 400);
     }
 </script>
+<script>
+/* [PC 100% 화면 밀도 보정 2026-06-26] 미화/청소 업무 블록을 과거 75% 작업 기준에 맞춘다. */
+(function(){
+  var t;
+  function isPc(){ try{return window.innerWidth>=1024&&(!window.matchMedia||window.matchMedia('(pointer:fine)').matches);}catch(e){return window.innerWidth>=1024;} }
+  function fit(){
+    var el=document.querySelector('.wrap');
+    if(!el) return;
+    el.style.zoom='';
+    if(!isPc()) return;
+    var need=Math.max(1440, el.scrollWidth||0), have=window.innerWidth;
+    var z=Math.max(0.62, Math.min(have/need, 0.75));
+    if(z<0.995) el.style.zoom=z.toFixed(4);
+  }
+  function soon(){ clearTimeout(t); t=setTimeout(fit,80); }
+  window.addEventListener('resize',soon);
+  window.addEventListener('load',fit);
+  document.addEventListener('DOMContentLoaded',fit);
+  [250,900,1800].forEach(function(ms){ setTimeout(fit,ms); });
+})();
+</script>
 <!-- @build JDS260614 미화·비품: 전체높이 블록·블록별 독립스크롤, 3개월 보관 자동정리, 월간 리포트(반복호수·품목소진·건물비교·처리시간·요일/시간 패턴) + 인쇄/PDF, 새요청 알림음, 설정 -->
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vC</div>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vD</div>
 </body>
 </html>

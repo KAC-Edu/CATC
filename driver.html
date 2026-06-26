@@ -5,7 +5,8 @@
      · 변경이력
         - @version S1 → T1 : 모바일 분리(driver_m.html) 대응.
         - @version T1 → U1 : 미확인 픽업 신청이 요청일 지나면 인박스에서 자동 숨김('나가리'). isActivePending() 참고.
-     · @version  U1
+        - @version U1 → V1 : PC 100% 화면용 75% 기준 밀도 보정.
+     · @version  V1
      · 수정상태: 수정완료   (작업 중에는 '수정중', 완료 시 '수정완료'로 표기)
      · 연동 데이터(system/pickup, courses/{room}/shuttle) 쓰기 로직 미변경 — 화면 필터만 적용, 타 담당자 영향 없음. -->
 <script>
@@ -63,8 +64,8 @@
 </style>
 <!-- ============================================================
   CATC · 차량·기사  (driver.html)  — 전면 리뉴얼본
-  @version  U1
-  @build    20260625-052259
+  @version  V1
+  @build    20260626-200500
   ────────────────────────────────────────────────────────
   PC용 기사 운행관리 대시보드
    - 신청 인박스(강사 픽업): 확인 / 불가(사유)
@@ -1073,8 +1074,30 @@ function renderPlanList(){
 
 window.addEventListener('DOMContentLoaded', init);
 </script>
+<script>
+/* [PC 100% 화면 밀도 보정 2026-06-26] 기사 플랫폼 업무 화면을 과거 75% 작업 기준에 맞춘다. */
+(function(){
+  var t;
+  function isPc(){ try{return window.innerWidth>=1024&&(!window.matchMedia||window.matchMedia('(pointer:fine)').matches);}catch(e){return window.innerWidth>=1024;} }
+  function fit(){
+    var targets=[document.querySelector('.wrap')].filter(Boolean);
+    targets.forEach(function(el){ el.style.zoom=''; });
+    if(!isPc()) return;
+    targets.forEach(function(el){
+      var need=Math.max(1480, el.scrollWidth||0), have=window.innerWidth;
+      var z=Math.max(0.62, Math.min(have/need, 0.75));
+      if(z<0.995) el.style.zoom=z.toFixed(4);
+    });
+  }
+  function soon(){ clearTimeout(t); t=setTimeout(fit,80); }
+  window.addEventListener('resize',soon);
+  window.addEventListener('load',fit);
+  document.addEventListener('DOMContentLoaded',fit);
+  [250,900,1800].forEach(function(ms){ setTimeout(fit,ms); });
+})();
+</script>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vD</div>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vE</div>
 <script>
 /* ===== [공용] 종료된 과정 자동 정리 (기사 포함 전 플랫폼) — 종료일 지난 방을 다음날 미개설로 비움. 브라우저별 하루 1회 ===== */
 window.kacExpireEndedCourses = async function(){
