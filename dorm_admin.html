@@ -59,8 +59,8 @@
 </style>
 <!-- ============================================================
   CATC · 교육지원부 · 생활관 배정  (dorm_admin.html)
-  @version  K1
-  @build    20260625-052259
+  @version  L1
+  @build    20260626-095818
   ────────────────────────────────────────────────────────
   [코드 수정 규칙 · AI/개발자 공통]
   이 파일을 한 글자라도 고치면:
@@ -148,6 +148,7 @@
   vH1: [키오스크] 검색 결과를 '딱 1명으로 좁혀졌을 때만' 큰 카드로 표시 — 그 전(여러 명/입력 중)에는
       다른 사람을 노출하지 않고 '이름을 끝까지 입력하세요' 안내만. 부분입력 중 결과없음 깜빡임도 제거.
   vI1: [협업] 소스 말머리에 EDIT-STATUS 플래그 추가(수정중/수정안하는중) — 플랫폼 간 동시수정 협의용.
+  vL1: 연간교육계획 폐강 체크 추가 — 폐강 과정은 STEP2 목록/자동 방배정 후보에서 제외.
       수정 시작 시 '수정중', 완료 시 '수정안하는중'으로 토글. 다른 플랫폼/작업자가 즉시 사용가능 여부 확인.
   vJ1: [키오스크] 초기화면 정비 — ① 검색창을 크게(font 36, 폭 1040) + 파란 그라데이션·은은한 글로우로 '검색란'
       강조. ② 과정표를 아래로 내림(검색창 하단 여백 확대). ③ 과정표를 강사플랫폼(admin) 키오스크 표로 클론
@@ -944,6 +945,7 @@
                 <span><span class="sw" style="background:#dbeafe;"></span>진행 중</span>
                 <span><span class="sw" style="background:#dcfce7;"></span>예정</span>
                 <span><span class="sw" style="background:#e2e8f0;"></span>종료</span>
+                <span><span class="sw" style="background:#fff1f2;border:1px solid #fecdd3;"></span>폐강</span>
             </div>
 
             <div class="ap-scroll">
@@ -956,6 +958,7 @@
                             <th style="width:118px;">교수</th>
                             <th style="width:130px;">담당</th>
                             <th style="min-width:230px;">강의실</th>
+                            <th style="width:58px;">폐강</th>
                             <th style="width:46px;"></th>
                         </tr>
                     </thead>
@@ -1971,7 +1974,11 @@
             // 연간계획에 존재하는 과정명 집합 (실제 운영 중이지만 계획에 없는 과정 구분용)
             const planNames = new Set(
                 (Array.isArray(annualCache) ? annualCache : Object.values(annualCache || {}))
-                    .filter(c => c && c.name).map(c => (c.name || '').trim())
+                    .filter(c => c && c.name && !c.cancelled).map(c => (c.name || '').trim())
+            );
+            const cancelledPlanNames = new Set(
+                (Array.isArray(annualCache) ? annualCache : Object.values(annualCache || {}))
+                    .filter(c => c && c.name && c.cancelled).map(c => (c.name || '').trim())
             );
 
             let items = [];
@@ -1980,6 +1987,7 @@
                 if (!s.courseName && !s.period) return;
                 // 테스트·내부 운용(총괄표 비노출) 과정은 생활관 배정에서도 제외
                 if (s.hideFromBoard) return;
+                if (cancelledPlanNames.has((s.courseName || '').trim())) return;
                 const { start, end } = parsePeriod(s.period);
                 if (!start) return;
                 const startDt = new Date(start + 'T00:00:00');
@@ -2014,6 +2022,7 @@
             const existingKeys = new Set(items.map(it => `${it.courseName}|${it.start}`));
             (Array.isArray(annualCache) ? annualCache : Object.values(annualCache || {})).forEach(c => {
                 if (!c || !c.name) return;
+                if (c.cancelled) return;
                 const start = c.startDate || (c.period && c.period.includes(' ~ ') ? c.period.split(' ~ ')[0].trim() : '');
                 const end = c.endDate || (c.period && c.period.includes(' ~ ') ? c.period.split(' ~ ')[1].trim() : start);
                 if (!start) return;
@@ -5768,10 +5777,11 @@
                 const kakaoOf = (p) => { const x = profAll[norm(p)]; return (x && x.kakaoLink) ? x.kakaoLink : ''; };
 
                 const planByName = {};
-                courses.forEach(c => { if (c.name) planByName[norm(c.name)] = c; });
+                courses.forEach(c => { if (c.name && !c.cancelled) planByName[norm(c.name)] = c; });
 
                 let pool = courses
                     .filter(c => c.startDate && c.endDate)
+                    .filter(c => !c.cancelled)
                     .filter(c => c.startDate <= targetSun && c.endDate >= targetMon)
                     .sort((a, b) => a.startDate.localeCompare(b.startDate));
                 const dismissed = await this._dismissedSet(targetMon);
@@ -5922,6 +5932,7 @@
                         prof: (c.prof || '').trim(),
                         coord: (c.coord || '').trim(),
                         roomDetail: (c.roomDetail || c.classroom || c.roomName || '').trim(),
+                        cancelled: !!c.cancelled,
                         weekKey: c.startDate ? this.mondayOf(c.startDate) : ''
                     }));
                 await db.ref(this.KEY).set(clean);
@@ -5941,6 +5952,7 @@
                     if (!v) return;
                     const arr = (Array.isArray(v) ? v : Object.values(v))
                         .filter(c => c && c.name && c.startDate && c.endDate)
+                        .filter(c => !c.cancelled)
                         .sort((a, b) => a.startDate.localeCompare(b.startDate));
                     if (arr.length) await this._syncRoomsLockAware(arr);
                 } catch (e) { console.warn('[dorm annualPlan] autoSync 오류:', e); }
@@ -5948,7 +5960,7 @@
 
             load() {
                 this._startLive();
-                document.getElementById('annualBody').innerHTML = `<tr><td colspan="7" style="padding:18px; text-align:center; color:var(--muted);">불러오는 중...</td></tr>`;
+                document.getElementById('annualBody').innerHTML = `<tr><td colspan="8" style="padding:18px; text-align:center; color:var(--muted);">불러오는 중...</td></tr>`;
                 db.ref(this.KEY).once('value', snap => {
                     const v = snap.val() || [];
                     const arr = Array.isArray(v) ? v : Object.values(v);
@@ -5958,7 +5970,8 @@
                         endDate: c.endDate || '',
                         prof: c.prof || '',
                         coord: c.coord || '',
-                        roomDetail: c.roomDetail || c.classroom || c.roomName || ''
+                        roomDetail: c.roomDetail || c.classroom || c.roomName || '',
+                        cancelled: !!c.cancelled
                     })).sort((a, b) => (a.startDate || '').localeCompare(b.startDate || ''));
                     this.render();
                 });
@@ -5968,7 +5981,7 @@
                 const body = document.getElementById('annualBody');
                 document.getElementById('annualCount').innerText = `${this.data.length}개 과정`;
                 if (!this.data.length) {
-                    body.innerHTML = `<tr><td colspan="7" style="padding:20px; text-align:center; color:var(--muted);">등록된 과정이 없습니다. "과정 추가"로 입력하세요.</td></tr>`;
+                    body.innerHTML = `<tr><td colspan="8" style="padding:20px; text-align:center; color:var(--muted);">등록된 과정이 없습니다. "과정 추가"로 입력하세요.</td></tr>`;
                     return;
                 }
                 const today = _ymdLocal(new Date());
@@ -5981,13 +5994,16 @@
                     }
                     const esc = v => (v || '').replace(/"/g, '&quot;');
                     const cellSel = 'width:100%;border:1px solid #e2e8f0;border-radius:8px;padding:6px 7px;font-size:13px;background:#fff;outline:none;';
-                    return `<tr class="${cls}">
+                    const cancelled = !!c.cancelled;
+                    const cancelStyle = cancelled ? 'opacity:.58;text-decoration:line-through;' : '';
+                    return `<tr class="${cls}" style="${cancelled ? 'background:#fff1f2;' : ''}">
                         <td style="width:42px;font-weight:800;color:#64748b;">${i + 1}</td>
-                        <td style="min-width:260px;"><input class="ap-input name" value="${esc(c.name)}" oninput="annualPlan.edit(${i},'name',this.value)"></td>
-                        <td style="width:210px;"><input class="ap-input ap-cell-input" readonly value="${(c.startDate&&c.endDate)?(c.startDate+' ~ '+c.endDate):''}" placeholder="기간 선택" onclick="annualPlan._openPeriodPicker(${i}, this)" style="cursor:pointer;background:#fff;text-align:center;"></td>
-                        <td style="width:118px;"><select class="ap-input" onchange="annualPlan.edit(${i},'prof',this.value)">${annualPlan._profOptions(c.prof)}</select></td>
-                        <td style="width:130px;"><select class="ap-input" onchange="annualPlan.edit(${i},'coord',this.value)">${annualPlan._coordOptions(c.coord)}</select></td>
-                        <td style="min-width:230px;">${classroomSelectHtml(c.roomDetail || '', "annualPlan.onRoomPick(" + i + ",this)", cellSel, annualPlan._roomsInUse(i))}</td>
+                        <td style="min-width:260px;"><input class="ap-input name" value="${esc(c.name)}" oninput="annualPlan.edit(${i},'name',this.value)" style="${cancelStyle}"></td>
+                        <td style="width:210px;"><input class="ap-input ap-cell-input" readonly value="${(c.startDate&&c.endDate)?(c.startDate+' ~ '+c.endDate):''}" placeholder="기간 선택" onclick="annualPlan._openPeriodPicker(${i}, this)" style="cursor:pointer;background:#fff;text-align:center;${cancelStyle}"></td>
+                        <td style="width:118px;"><select class="ap-input" onchange="annualPlan.edit(${i},'prof',this.value)" style="${cancelStyle}">${annualPlan._profOptions(c.prof)}</select></td>
+                        <td style="width:130px;"><select class="ap-input" onchange="annualPlan.edit(${i},'coord',this.value)" style="${cancelStyle}">${annualPlan._coordOptions(c.coord)}</select></td>
+                        <td style="min-width:230px;">${classroomSelectHtml(c.roomDetail || '', "annualPlan.onRoomPick(" + i + ",this)", cellSel + cancelStyle, annualPlan._roomsInUse(i))}</td>
+                        <td style="width:58px;text-align:center;"><input type="checkbox" ${cancelled ? 'checked' : ''} onchange="annualPlan.edit(${i},'cancelled',this.checked); annualPlan.render(${i});" title="폐강 처리: STEP2 목록과 자동 배정에서 제외" style="width:18px;height:18px;cursor:pointer;accent-color:#ef4444;"></td>
                         <td style="width:46px;"><button class="ap-del" onclick="annualPlan.del(${i})" title="삭제"><i class="fa-solid fa-xmark"></i></button></td>
                     </tr>`;
                 }).join('');
@@ -6016,7 +6032,11 @@
                 }, 50);
             },
 
-            edit(i, key, val) { this._lastIdx = i; if (this.data[i]) this.data[i][key] = val.trim(); },
+            edit(i, key, val) {
+                this._lastIdx = i;
+                if (!this.data[i]) return;
+                this.data[i][key] = (typeof val === 'string') ? val.trim() : val;
+            },
             onRoomPick(i, sel){
                 this._lastIdx = i;
                 if (sel.value === '__direct__') {
@@ -6061,7 +6081,7 @@
                     this._liveRef = db.ref(this.KEY);
                     this._liveRef.on('value', function(snap){
                         const v = snap.val() || []; const arr = Array.isArray(v) ? v : Object.values(v);
-                        self._remoteList = arr.filter(c => c && c.name && c.startDate && c.endDate)
+                        self._remoteList = arr.filter(c => c && c.name && c.startDate && c.endDate && !c.cancelled)
                             .map(c => ({ name:c.name, startDate:c.startDate, endDate:c.endDate, roomDetail:c.roomDetail||c.classroom||c.roomName||'' }));
                         self._reRenderIfOpen();
                     });
@@ -6091,7 +6111,7 @@
                 const start = _f(ds[0]); const end = _f(ds[1]);
                 if (end < start) { err.innerText = '종료일이 시작일보다 빠를 수 없습니다.'; return; }
                 // 날짜 순으로 정렬되어 알맞은 위치에 들어감
-                this.data.push({ name, startDate: start, endDate: end, prof: '', coord: '', roomDetail: '' });
+                this.data.push({ name, startDate: start, endDate: end, prof: '', coord: '', roomDetail: '', cancelled: false });
                 this.data.sort((a, b) => (a.startDate || '').localeCompare(b.startDate || ''));
                 document.getElementById('courseAddPop').style.display = 'none';
                 this.render();
@@ -6198,7 +6218,7 @@
 </script>
 <style>@media print{#__catcVer{display:none!important}}</style>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">VM</div>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">L1</div>
 <script>
 /* ===== [공용] 종료된 과정 자동 정리 (모든 플랫폼 공통) — 종료일 지난 방을 다음날 미개설로 비움. 브라우저별 하루 1회 ===== */
 window.kacExpireEndedCourses = async function(){

@@ -1,7 +1,7 @@
 /* ============================================================
    CATC · 강사 플랫폼 로직  (admin.js)
-   @version  P
-   @build    20260613-104500  (vP: 과정 리셋/재배치 시 강사 비번 7777 미리셋 버그 — 방 비우기(clear) 분기에도 비번 7777 리셋 추가. _cleanStartUpdates에 이미 있던 리셋과 합쳐 모든 배치경로에서 7777 보장)
+   @version  Q
+   @build    20260626-095818  (vQ: 연간교육계획 폐강 체크 추가 — 폐강 과정은 강의실 자동 배정 후보에서 제외)
    ------------------------------------------------------------
    [코드 수정 규칙 · AI/개발자 공통]
    이 파일을 고치면 @version 을 A -> B -> ... -> Z -> A1 -> B1 ...
@@ -9741,6 +9741,7 @@ const annualPlanMgr = {
         // 대상 주에 '걸치는' 과정만 (과정 기간이 그 주와 겹치면 포함). 미래/지난 주 과정은 제외.
         const weekCourses = courses
             .filter(c => c.startDate && c.endDate)
+            .filter(c => !c.cancelled)
             .filter(c => c.startDate <= targetSun && c.endDate >= targetMon)
             .filter(c => c.endDate >= today)
             .sort((a, b) => a.startDate.localeCompare(b.startDate));
@@ -9883,7 +9884,7 @@ const annualPlanMgr = {
             const targetSun = targetSunObj.toISOString().split('T')[0];
             const norm = s => (s || '').trim();
             const planByName = {};
-            courses.forEach(c => { if (c.name) planByName[norm(c.name)] = c; });
+            courses.forEach(c => { if (c.name && !c.cancelled) planByName[norm(c.name)] = c; });
 
             // 수동 리셋되어 이번 주 배치 제외할 과정
             const dismissed = await this._getDismissedSet(targetMon);
@@ -9892,6 +9893,7 @@ const annualPlanMgr = {
             const expected = new Set(
                 courses
                     .filter(c => c.startDate && c.endDate && c.startDate <= targetSun && c.endDate >= targetMon)
+                    .filter(c => !c.cancelled)
                     .filter(c => c.endDate >= today)
                     .filter(c => !dismissed.has(`${norm(c.name)}|${norm(c.period)}`))
                     .map(c => norm(c.name))
@@ -10015,6 +10017,7 @@ annualPlanMgr.openEditorModal = async function() {
                 coord:     c.coord || '',
                 roomDetail: c.roomDetail || c.classroom || c.roomName || '',
                 preAssign: !!c.preAssign,
+                cancelled: !!c.cancelled,
                 weekKey:   c.weekKey || (c.startDate ? this._getMondayOf(c.startDate) : '')
             }))
             .sort((a, b) => (a.startDate || '').localeCompare(b.startDate || ''));
@@ -10053,6 +10056,7 @@ annualPlanMgr.renderEditor = function(keepIdx) {
             <span><span style="display:inline-block; width:12px; height:12px; border-radius:3px; background:#fce7f3; vertical-align:middle; margin-right:4px;"></span>차주 진행 예정</span>
             <span><span style="display:inline-block; width:12px; height:12px; border-radius:3px; background:#dcfce7; vertical-align:middle; margin-right:4px;"></span>예정</span>
             <span><span style="display:inline-block; width:12px; height:12px; border-radius:3px; background:#f1f5f9; vertical-align:middle; margin-right:4px;"></span>종료</span>
+            <span><span style="display:inline-block; width:12px; height:12px; border-radius:3px; background:#fff1f2; vertical-align:middle; margin-right:4px; border:1px solid #fecdd3;"></span>폐강</span>
         </div>
         <table style="width:100%; border-collapse:collapse; font-size:13px;">
             <thead style="position:sticky; top:37px; background:#f8fafc; z-index:10;">
@@ -10063,6 +10067,7 @@ annualPlanMgr.renderEditor = function(keepIdx) {
                     <th style="width:110px; padding:10px; border:1px solid #e2e8f0;">담임교수</th>
                     <th style="width:120px; padding:10px; border:1px solid #e2e8f0;">운영담당</th>
                     <th style="min-width:170px; padding:10px; border:1px solid #e2e8f0;">강의실</th>
+                    <th style="width:72px; padding:10px; border:1px solid #e2e8f0;" title="체크하면 자동 배정과 운영 노출에서 제외됩니다.">폐강</th>
                     <th style="width:92px; padding:10px; border:1px solid #e2e8f0;" title="체크하면 기간과 무관하게 저장 즉시 방에 배정됩니다">사전배정</th>
                     <th style="width:50px; padding:10px; border:1px solid #e2e8f0;">삭제</th>
                 </tr>
@@ -10089,14 +10094,17 @@ annualPlanMgr.renderEditor = function(keepIdx) {
 
     this.currentEditingData.forEach((c, idx) => {
         const isCur = c.startDate && c.endDate && c.startDate <= _today && c.endDate >= _today;
+        const cancelled = !!c.cancelled;
+        const cancelStyle = cancelled ? 'opacity:.58; text-decoration:line-through;' : '';
         html += `
-            <tr data-cur="${isCur ? '1' : '0'}" data-target="${idx === _targetIdx ? '1' : '0'}" style="${rowBg(c)}">
+            <tr data-cur="${isCur ? '1' : '0'}" data-target="${idx === _targetIdx ? '1' : '0'}" style="${rowBg(c)} ${cancelled ? 'background:#fff1f2;' : ''}">
                 <td style="${cellStyle} text-align:center; color:#64748b;">${idx + 1}</td>
-                <td style="${cellStyle}"><input type="text" value="${esc(c.name)}" onchange="annualPlanMgr.updateLocalData(${idx},'name',this.value)" style="${inpStyle} font-weight:700;"></td>
-                <td style="${cellStyle}"><input type="text" readonly data-idx="${idx}" value="${(c.startDate&&c.endDate)?esc(c.startDate+' ~ '+c.endDate):''}" placeholder="기간 선택" onclick="annualPlanMgr._openPeriodPicker(${idx}, this)" style="${inpStyle} cursor:pointer; background:#fff; text-align:center;"></td>
-                <td style="${cellStyle}"><select onchange="annualPlanMgr.updateLocalData(${idx},'prof',this.value)" style="${inpStyle} cursor:pointer; background:#fff;">${annualPlanMgr._profOptions(c.prof)}</select></td>
-                <td style="${cellStyle}"><select onchange="annualPlanMgr.updateLocalData(${idx},'coord',this.value)" style="${inpStyle} cursor:pointer; background:#fff;">${annualPlanMgr._coordOptions(c.coord)}</select></td>
-                <td style="${cellStyle}">${classroomDetailSelectHtmlInstructor(c.roomDetail || '', "annualPlanMgr.onRoomPick(" + idx + ",this)", inpStyle, annualPlanMgr._roomsInUse(idx))}</td>
+                <td style="${cellStyle}"><input type="text" value="${esc(c.name)}" onchange="annualPlanMgr.updateLocalData(${idx},'name',this.value)" style="${inpStyle} font-weight:700; ${cancelStyle}"></td>
+                <td style="${cellStyle}"><input type="text" readonly data-idx="${idx}" value="${(c.startDate&&c.endDate)?esc(c.startDate+' ~ '+c.endDate):''}" placeholder="기간 선택" onclick="annualPlanMgr._openPeriodPicker(${idx}, this)" style="${inpStyle} cursor:pointer; background:#fff; text-align:center; ${cancelStyle}"></td>
+                <td style="${cellStyle}"><select onchange="annualPlanMgr.updateLocalData(${idx},'prof',this.value)" style="${inpStyle} cursor:pointer; background:#fff; ${cancelStyle}">${annualPlanMgr._profOptions(c.prof)}</select></td>
+                <td style="${cellStyle}"><select onchange="annualPlanMgr.updateLocalData(${idx},'coord',this.value)" style="${inpStyle} cursor:pointer; background:#fff; ${cancelStyle}">${annualPlanMgr._coordOptions(c.coord)}</select></td>
+                <td style="${cellStyle}">${classroomDetailSelectHtmlInstructor(c.roomDetail || '', "annualPlanMgr.onRoomPick(" + idx + ",this)", inpStyle + cancelStyle, annualPlanMgr._roomsInUse(idx))}</td>
+                <td style="${cellStyle} text-align:center;"><input type="checkbox" ${cancelled ? 'checked' : ''} onchange="annualPlanMgr.updateLocalData(${idx},'cancelled',this.checked); annualPlanMgr.renderEditor(${idx});" title="폐강 처리: 자동 배정과 운영 노출에서 제외" style="width:18px; height:18px; cursor:pointer; accent-color:#ef4444;"></td>
                 <td style="${cellStyle} text-align:center;"><input type="checkbox" ${c.preAssign ? 'checked' : ''} onchange="annualPlanMgr.updateLocalData(${idx},'preAssign',this.checked)" title="체크하면 기간과 무관하게 저장 즉시 방에 배정됩니다" style="width:18px; height:18px; cursor:pointer; accent-color:#2563eb;"></td>
                 <td style="${cellStyle} text-align:center;"><button onclick="annualPlanMgr.deleteRow(${idx})" title="삭제" style="color:#ef4444; border:none; background:none; cursor:pointer; font-size:16px; font-weight:800;">✕</button></td>
             </tr>`;
@@ -10177,7 +10185,7 @@ annualPlanMgr._startLive = function(){
         this._liveRef = firebase.database().ref(this.PLAN_KEY);
         this._liveRef.on('value', function(snap){
             const v = snap.val() || []; const arr = Array.isArray(v) ? v : Object.values(v);
-            self._remoteList = arr.filter(c => c && c.name && c.startDate && c.endDate)
+            self._remoteList = arr.filter(c => c && c.name && c.startDate && c.endDate && !c.cancelled)
                 .map(c => ({ name:c.name, startDate:c.startDate, endDate:c.endDate, roomDetail:c.roomDetail||c.classroom||c.roomName||'' }));
             self._reRenderIfOpen();
         });
@@ -10216,7 +10224,7 @@ annualPlanMgr.confirmAdd = function() {
     // 새 과정 추가 후 시작일 순으로 정렬 (날짜에 맞는 위치에 들어가도록)
     this.currentEditingData.push({
         no: 0, name, startDate: start, endDate: end,
-        period: `${start} ~ ${end}`, prof: '', coord: '', roomDetail: '',
+        period: `${start} ~ ${end}`, prof: '', coord: '', roomDetail: '', cancelled: false,
         weekKey: this._getMondayOf(start)
     });
     this.currentEditingData.sort((a, b) => (a.startDate || '').localeCompare(b.startDate || ''));
@@ -10268,6 +10276,7 @@ annualPlanMgr.saveAndSync = async function() {
                 coord:     (c.coord || '').trim(),
                 roomDetail: (c.roomDetail || c.classroom || c.roomName || '').trim(),
                 preAssign: !!c.preAssign,
+                cancelled: !!c.cancelled,
                 weekKey:   this._getMondayOf(c.startDate)
             }));
 
@@ -10314,11 +10323,12 @@ annualPlanMgr._syncRoomsLockAware = async function(courses) {
     };
     // 과정명 기준으로 연간계획에서 최신 정보 찾기 (교수/담당/기간 갱신용)
     const planByName = {};
-    courses.forEach(c => { if (c.name) planByName[norm(c.name)] = c; });
+    courses.forEach(c => { if (c.name && !c.cancelled) planByName[norm(c.name)] = c; });
 
     // 대상 주에 걸치는 과정 풀 (시작일 순). 단, '사전배정(preAssign)' 과정은 (아직 종료 전이면) 기간과 무관하게 즉시 포함.
     let pool = courses
         .filter(c => c.startDate && c.endDate)
+        .filter(c => !c.cancelled)
         .filter(c => (c.preAssign && c.endDate >= today) || (c.startDate <= targetSun && c.endDate >= targetMon))
         .sort((a, b) => {
             // 사전배정 과정을 먼저 배치 → 빈 방을 우선 차지
