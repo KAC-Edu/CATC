@@ -2,7 +2,7 @@
 <!-- ══════════════════ [편집상태 / EDIT-STATUS] ══════════════════
      STATUS : 수정안하는중
      FILE   : index.html (교육생)
-     UPDATED: 2026-06-27 01:08  (vH65: 퀴즈/Q&A/외출외박 UI 정돈)
+     UPDATED: 2026-06-27 07:37  (vH66: 종료 과정 입교정보 자동 만료 및 재등록)
      ─ 규칙: 수정 시작 시 STATUS를 '수정중'으로, 완료 시 '수정안하는중'으로 변경.
             '수정중'이면 다른 플랫폼은 연동 변경을 보류/협의 후 진행.
 ═══════════════════════════════════════════════════════════════ -->
@@ -1532,10 +1532,13 @@ async function resolveRoomFromCode(code) {
         boardNotice: db.ref(`${rPath}/boardNotice`)
     };
 
+    let enrollmentReady = isValidProfile();
+
     // 강의실 기본 설정 로드 후 스피너 해제
     try {
         const settingsSnap = await db.ref(`${rPath}/settings`).once('value');
         const s = settingsSnap.val() || {};
+        if (enrollmentReady) enrollmentReady = await validateKacStoredEnrollment(currentRoom, s);
         // 전면현황판 비노출(비공식 운영) 과정 여부 — 미화 비품신청 제한에 사용
         window._hideFromBoard = (s.hideFromBoard === true); if(typeof _applyServiceGate==='function') _applyServiceGate();
         if (s.courseName) {
@@ -1590,19 +1593,22 @@ async function resolveRoomFromCode(code) {
     // [Kakao 인앱 등 localStorage 분리 대응] go.html이 URL로 넘긴 uid로 프로필 복원 → 재입력 방지
     try {
         const _uid = new URLSearchParams(location.search).get('uid');
-        if (_uid && currentRoom) {
+        if (!window.__kacEnrollmentExpired && _uid && currentRoom) {
             const _us = await firebase.database().ref(`courses/${currentRoom}/students/${_uid}`).once('value');
             const _u = _us.val();
             if (_u && _u.name) {
                 localStorage.setItem('uToken', _uid);
                 localStorage.setItem('kac_user_name', _u.name);
                 localStorage.setItem('kac_user_phone', String(_u.phone || '').trim());
+                enrollmentReady = await validateKacStoredEnrollment(currentRoom);
             }
         }
     } catch(e) {}
     try {
-        if (isValidProfile()) {
+        if (enrollmentReady && isValidProfile()) {
             enterApp();
+        } else if (params.get('menu') && window.__kacEnrollmentExpired && typeof window.keduShowEnroll === 'function') {
+            window.keduShowEnroll(params.get('menu'));
         }
     } catch(e) { /* 실패 시 일반 랜딩 유지 */ }
 })();
@@ -1693,6 +1699,121 @@ function isValidProfile() {
     if (!/^\d{4,5}$/.test(phone)) return false;
     return true;
 }
+
+const KAC_ENROLLMENT_META_KEY = 'kac_enrollment_meta_v1';
+
+function getKacTodayKST() {
+    return new Date(Date.now() + (9 * 60 * 60 * 1000)).toISOString().slice(0, 10);
+}
+
+function getKacEnrollmentMeta() {
+    try { return JSON.parse(localStorage.getItem(KAC_ENROLLMENT_META_KEY) || 'null'); }
+    catch (e) { return null; }
+}
+
+function getKacCourseIdentity(room, settings) {
+    settings = settings || {};
+    return [
+        String(room || '').trim().toUpperCase(),
+        String(settings.courseName || '').trim(),
+        String(settings.period || '').trim()
+    ].join('|');
+}
+
+function saveKacEnrollmentMeta(room, settings) {
+    settings = settings || {};
+    const period = String(settings.period || '').trim();
+    const parts = period.split('~');
+    const meta = {
+        room: String(room || '').trim().toUpperCase(),
+        courseName: String(settings.courseName || '').trim(),
+        period: period,
+        endDate: parts.length > 1 ? String(parts[parts.length - 1]).trim() : '',
+        courseKey: getKacCourseIdentity(room, settings),
+        savedAt: Date.now()
+    };
+    try { localStorage.setItem(KAC_ENROLLMENT_META_KEY, JSON.stringify(meta)); } catch (e) {}
+    window.__kacEnrollmentExpired = false;
+    return meta;
+}
+
+function clearKacEnrollmentLocal(room, reason) {
+    const oldToken = (localStorage.getItem('uToken') || '').trim();
+    const keys = [
+        'uToken', 'kac_user_name', 'kac_user_phone', 'kac_old_uToken',
+        'kac_last_visited_room', 'kac_last_visited_name', 'kac_current_course',
+        'kac_home_room', KAC_ENROLLMENT_META_KEY
+    ];
+    keys.forEach(key => {
+        try { localStorage.removeItem(key); } catch (e) {}
+    });
+    if (room) {
+        try { localStorage.removeItem(`kac_resetKey_${String(room).trim().toUpperCase()}`); } catch (e) {}
+    }
+    if (oldToken) {
+        const remove = [];
+        for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (key && (
+                (key.startsWith('kac_attended_') && key.endsWith('_' + oldToken)) ||
+                (key.startsWith('kac_attendance_proof_') && key.endsWith('_' + oldToken))
+            )) remove.push(key);
+        }
+        remove.forEach(key => localStorage.removeItem(key));
+    }
+    window.__kacEnrollmentExpired = true;
+    console.info('[KAC] 입교 로컬정보 초기화:', reason || '과정 변경');
+}
+
+async function validateKacStoredEnrollment(room, settingsOverride) {
+    if (!isValidProfile()) return false;
+    room = String(room || localStorage.getItem('kac_last_visited_room') || '').trim().toUpperCase();
+    if (!room) {
+        clearKacEnrollmentLocal('', '강의실 정보 없음');
+        return false;
+    }
+
+    try {
+        let settings = settingsOverride || null;
+        if (!settings) {
+            const settingsSnap = await firebase.database().ref(`courses/${room}/settings`).once('value');
+            settings = settingsSnap.val() || {};
+        }
+        const courseName = String(settings.courseName || '').trim();
+        const period = String(settings.period || '').trim();
+        const endDate = period.includes('~') ? period.split('~').pop().trim() : '';
+        const today = getKacTodayKST();
+
+        if (!courseName || (endDate && today > endDate)) {
+            clearKacEnrollmentLocal(room, endDate && today > endDate ? '교육기간 종료' : '운영 과정 없음');
+            return false;
+        }
+
+        const meta = getKacEnrollmentMeta();
+        const currentKey = getKacCourseIdentity(room, settings);
+        const savedCourse = (localStorage.getItem('kac_current_course') || '').trim();
+        if ((meta && meta.courseKey && meta.courseKey !== currentKey) ||
+            (!meta && savedCourse && savedCourse !== courseName)) {
+            clearKacEnrollmentLocal(room, '새 과정으로 교체');
+            return false;
+        }
+
+        const token = (localStorage.getItem('uToken') || '').trim();
+        const studentSnap = await firebase.database().ref(`courses/${room}/students/${token}`).once('value');
+        if (!studentSnap.exists()) {
+            clearKacEnrollmentLocal(room, 'Room 초기화 또는 기존 명단 삭제');
+            return false;
+        }
+
+        saveKacEnrollmentMeta(room, settings);
+        return true;
+    } catch (e) {
+        // 일시적인 네트워크 오류만으로 정상 입교정보를 지우지는 않는다.
+        console.warn('[KAC] 입교정보 유효성 확인 보류:', e);
+        return true;
+    }
+}
+window.validateKacStoredEnrollment = validateKacStoredEnrollment;
 
 // 신청 직전 호출: 유효하면 {name, phone, token} 반환, 아니면 안내 후 재등록 창 띄우고 null
 function requireProfile() {
@@ -4446,6 +4567,13 @@ async function saveProfile() {
         localStorage.setItem('uToken', newUToken);
         try { localStorage.setItem('kac_last_visited_name', name); if (currentRoom) localStorage.setItem('kac_last_visited_room', currentRoom); } catch(e){}
 
+        try {
+            const enrollmentSettingsSnap = await firebase.database().ref(`courses/${currentRoom}/settings`).once('value');
+            const enrollmentSettings = enrollmentSettingsSnap.val() || {};
+            saveKacEnrollmentMeta(currentRoom, enrollmentSettings);
+            if (enrollmentSettings.courseName) localStorage.setItem('kac_current_course', enrollmentSettings.courseName);
+        } catch (e) {}
+
         await firebase.database().ref(`courses/${currentRoom}/students/${newUToken}`).update({
             name: name,
             phone: phone,
@@ -5877,7 +6005,7 @@ input:not([type=checkbox]):not([type=radio]):not([type=file]), textarea, select 
 })();
 </script>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vH65</div>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vH66</div>
 <script>
 /* ===== [공용] 종료된 과정 자동 정리 (교육생 포함 전 플랫폼) — 종료일 지난 방을 다음날 미개설로 비움. 브라우저별 하루 1회 ===== */
 window.kacExpireEndedCourses = async function(){
@@ -7134,6 +7262,7 @@ body.kac-noanim #noticeModal > .menu-box, body.kac-noanim #surveyModal > .menu-b
     ov.style.display='flex';
     document.getElementById('keduEnrollBtn').onclick=function(){ submitEnroll(menu); };
   }
+  window.keduShowEnroll=showEnroll;
   window.keduEditInfo=function(){
     var h=document.getElementById('keduHome'); if(h) h.style.display='none';
     showEnroll('home');
@@ -7156,6 +7285,12 @@ body.kac-noanim #noticeModal > .menu-box, body.kac-noanim #surveyModal > .menu-b
       localStorage.setItem('uToken', token);
       localStorage.setItem('kac_last_visited_room', room);
       localStorage.setItem('kac_last_visited_name', name);
+    }catch(e){}
+    try{
+      var enrollmentSettingsSnap=await firebase.database().ref('courses/'+room+'/settings').once('value');
+      var enrollmentSettings=enrollmentSettingsSnap.val()||{};
+      saveKacEnrollmentMeta(room, enrollmentSettings);
+      if(enrollmentSettings.courseName) localStorage.setItem('kac_current_course', enrollmentSettings.courseName);
     }catch(e){}
     try{
       await firebase.database().ref('courses/'+room+'/students/'+token).update({ name:name, phone:sabun, joinedAt: firebase.database.ServerValue.TIMESTAMP, isOnline:true });
@@ -7186,14 +7321,19 @@ body.kac-noanim #noticeModal > .menu-box, body.kac-noanim #surveyModal > .menu-b
     setTimeout(tryClose, 3000);
   }
   // 재진입(이미 입교) → 현재 정보만 간결히 표시
-  window.showKakaoHome=function(){
+  window.showKakaoHome=async function(){
     var ov=document.getElementById('keduHome'); if(!ov) return;
+    var homeRoom=(typeof currentRoom!=='undefined' && currentRoom) ? currentRoom : (localStorage.getItem('kac_last_visited_room')||'');
+    if(!(await validateKacStoredEnrollment(homeRoom))){
+      ov.style.display='none';
+      showEnroll('home');
+      return;
+    }
     var nm=(localStorage.getItem('kac_user_name')||'-').trim();
     var sb=(localStorage.getItem('kac_user_phone')||'-').trim();
     var eN=document.getElementById('khName'), eS=document.getElementById('khSabun');
     if(eN) eN.textContent=nm; if(eS) eS.textContent=sb;
     var eT=document.getElementById('khTitle'), eC=document.getElementById('khCourse'), eP=document.getElementById('khPeriod'), eR=document.getElementById('khRoom'), eD=document.getElementById('khDorm');
-    var homeRoom=(typeof currentRoom!=='undefined' && currentRoom) ? currentRoom : (localStorage.getItem('kac_last_visited_room')||'');
     if(homeRoom){
       try{ if(eR) eR.textContent='Room '+homeRoom; firebase.database().ref('courses/'+homeRoom+'/settings').once('value').then(function(s){ var v=s.val()||{}; var cn=(v.courseName||('Room '+homeRoom)); if(eT) eT.textContent=cn; if(eC) eC.textContent=cn; if(eP) eP.textContent=(v.period||'-'); if(eR) eR.textContent=(v.roomDetailName||v.roomDetail||('Room '+homeRoom)); }); }catch(e){}
     }
@@ -7410,11 +7550,16 @@ body.kac-noanim #noticeModal > .menu-box, body.kac-noanim #surveyModal > .menu-b
     inputs.forEach(function(input){ input.value=''; });
     if(inputs[0]) inputs[0].focus();
   };
-  function routeKakao(){
+  async function routeKakao(){
     var menu=qp('menu'), room=qp('room'), code=qp('code');
     if(room||code) return;                 // 일반 QR/직접 진입 → 기존 흐름
     if(!menu) return;                       // 카카오 딥링크 아님
-    if(localStorage.getItem('kac_last_visited_room')) return;  // 방 캐시 있음 → 기존 init이 처리
+    var cachedRoom=localStorage.getItem('kac_last_visited_room')||'';
+    if(cachedRoom){
+      if(await validateKacStoredEnrollment(cachedRoom)) return; // 유효한 현재 과정만 기존 init이 처리
+      showEnroll(menu);
+      return;
+    }
     var token=localStorage.getItem('uToken');
     if(token){
       recoverRoom(token, function(r){
