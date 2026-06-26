@@ -1,6 +1,7 @@
 /* ============================================================
    CATC · 강사 플랫폼 스타일  (admin.css)
-   @version  H   @build  20260627-002236
+   STATUS    수정안하는중
+   @version  J   @build  20260627-083609
    ------------------------------------------------------------
    [코드 수정 규칙] 수정 시 @version 을
    A -> B -> ... -> Z -> A1 -> B1 -> ... 순으로 1단계 올리고
@@ -4275,4 +4276,377 @@ body.night-mode .side-rail-lbl{ color:#cbd5e1; }
     height:42px !important;
     border-radius:13px !important;
     font-size:18px !important;
+}
+
+/* ============================================================
+   vI · 입교안내 프레젠테이션 전체화면
+   PDF는 cover 렌더링으로 모니터를 채우고, 프로필도 동일한 슬라이드 무대를 사용한다.
+   ============================================================ */
+#pdfWrapper:fullscreen,
+#pdfWrapper:-webkit-full-screen {
+    position: fixed !important;
+    inset: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    min-width: 100% !important;
+    min-height: 100% !important;
+    max-width: none !important;
+    max-height: none !important;
+    background: #000 !important;
+    overflow: hidden !important;
+}
+
+#pdfWrapper.guide-page-pdf:fullscreen #guideCanvas,
+#pdfWrapper.guide-page-pdf:-webkit-full-screen #guideCanvas {
+    position: absolute !important;
+    left: 50% !important;
+    top: 50% !important;
+    width: var(--guide-render-width) !important;
+    height: var(--guide-render-height) !important;
+    min-width: 100% !important;
+    min-height: 100% !important;
+    max-width: none !important;
+    max-height: none !important;
+    transform: translate(-50%, -50%) !important;
+    object-fit: initial !important;
+    border-radius: 0 !important;
+}
+
+#pdfWrapper.guide-page-virtual {
+    width: 100% !important;
+    aspect-ratio: 16 / 9 !important;
+    background: #fff !important;
+}
+
+#pdfWrapper.guide-page-virtual #guideProfile {
+    width: 100% !important;
+    height: 100% !important;
+    aspect-ratio: 16 / 9 !important;
+    background: #fff !important;
+    overflow: hidden !important;
+}
+
+#pdfWrapper.guide-page-virtual:fullscreen #guideProfile,
+#pdfWrapper.guide-page-virtual:-webkit-full-screen #guideProfile {
+    position: absolute !important;
+    inset: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    max-width: none !important;
+    max-height: none !important;
+    aspect-ratio: auto !important;
+}
+
+.guide-profile-slide {
+    display: grid !important;
+    grid-template-columns: minmax(0, 40%) minmax(0, 60%) !important;
+    width: 100% !important;
+    height: 100% !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    overflow: hidden !important;
+    background: #fff !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    transform: none !important;
+    transform-origin: center center !important;
+}
+
+.guide-profile-photo {
+    width: 100% !important;
+    height: 100% !important;
+    min-width: 0 !important;
+    background-position: center center !important;
+    background-size: cover !important;
+}
+
+.guide-profile-panel {
+    min-width: 0 !important;
+    height: 100% !important;
+    display: flex !important;
+    align-items: center !important;
+    padding: 5% 7% !important;
+    background: #fff !important;
+}
+
+.guide-profile-copy {
+    width: 100%;
+    max-width: 980px;
+}
+
+.guide-profile-role {
+    display: inline-flex;
+    align-items: center;
+    min-height: 28px;
+    padding: 7px 16px;
+    border-radius: 7px;
+    background: #0f172a;
+    color: #fff;
+    font-size: 13px;
+    font-weight: 800;
+    line-height: 1;
+}
+
+.guide-profile-name {
+    margin-top: 20px;
+    color: #64748b;
+    font-size: 17px;
+    font-weight: 800;
+    line-height: 1.25;
+}
+
+.guide-profile-name strong {
+    margin: 0 6px;
+    color: #1e3a8a;
+    font-size: 34px;
+    font-weight: 950;
+}
+
+.guide-profile-name > span {
+    color: #94a3b8 !important;
+    font-size: 18px !important;
+}
+
+.guide-profile-rule {
+    height: 1px;
+    margin-top: 18px;
+    background: #dbe4ef;
+}
+
+.guide-profile-quote {
+    margin-top: 20px;
+    padding-left: 14px;
+    border-left: 4px solid #2563eb;
+    color: #2563eb;
+    font-size: 16px;
+    font-weight: 850;
+    line-height: 1.5;
+}
+
+.guide-profile-contacts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px 28px;
+    margin-top: 18px;
+    color: #334155;
+    font-size: 15px;
+    font-weight: 750;
+}
+
+.guide-profile-bio { margin-top: 24px; }
+.guide-profile-bio-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 14px;
+    color: #1e3a8a;
+    font-size: 15px;
+    font-weight: 900;
+}
+.guide-profile-bio-title i { color: #2563eb; }
+.guide-profile-bio-list { display: flex; flex-direction: column; gap: 10px; }
+.guide-profile-bio-row { display: grid; grid-template-columns: 72px minmax(0,1fr); align-items: center; gap: 14px; }
+.guide-profile-year {
+    padding: 5px 9px;
+    border: 1px solid #dbeafe;
+    border-radius: 8px;
+    background: #eff6ff;
+    color: #1e40af;
+    font-size: 13px;
+    font-weight: 850;
+    line-height: 1.15;
+    text-align: center;
+    white-space: nowrap;
+}
+.guide-profile-bio-text {
+    color: #334155;
+    font-size: 15px;
+    line-height: 1.45;
+    word-break: keep-all;
+}
+
+#pdfWrapper.guide-page-virtual:fullscreen .guide-profile-panel,
+#pdfWrapper.guide-page-virtual:-webkit-full-screen .guide-profile-panel {
+    padding: clamp(44px, 6vh, 90px) clamp(60px, 7vw, 140px) !important;
+}
+#pdfWrapper.guide-page-virtual:fullscreen .guide-profile-role,
+#pdfWrapper.guide-page-virtual:-webkit-full-screen .guide-profile-role {
+    min-height: 38px;
+    padding: 10px 22px;
+    font-size: clamp(15px, 1vw, 20px);
+}
+#pdfWrapper.guide-page-virtual:fullscreen .guide-profile-name,
+#pdfWrapper.guide-page-virtual:-webkit-full-screen .guide-profile-name {
+    margin-top: clamp(24px, 3vh, 42px);
+    font-size: clamp(20px, 1.4vw, 28px);
+}
+#pdfWrapper.guide-page-virtual:fullscreen .guide-profile-name strong,
+#pdfWrapper.guide-page-virtual:-webkit-full-screen .guide-profile-name strong {
+    font-size: clamp(42px, 3.2vw, 66px);
+}
+#pdfWrapper.guide-page-virtual:fullscreen .guide-profile-name > span,
+#pdfWrapper.guide-page-virtual:-webkit-full-screen .guide-profile-name > span {
+    font-size: clamp(21px, 1.45vw, 30px) !important;
+}
+#pdfWrapper.guide-page-virtual:fullscreen .guide-profile-quote,
+#pdfWrapper.guide-page-virtual:-webkit-full-screen .guide-profile-quote {
+    font-size: clamp(18px, 1.3vw, 27px);
+}
+#pdfWrapper.guide-page-virtual:fullscreen .guide-profile-contacts,
+#pdfWrapper.guide-page-virtual:-webkit-full-screen .guide-profile-contacts {
+    gap: 16px 36px;
+    font-size: clamp(17px, 1.15vw, 24px);
+}
+#pdfWrapper.guide-page-virtual:fullscreen .guide-profile-bio-title,
+#pdfWrapper.guide-page-virtual:-webkit-full-screen .guide-profile-bio-title {
+    font-size: clamp(18px, 1.2vw, 25px);
+}
+#pdfWrapper.guide-page-virtual:fullscreen .guide-profile-bio-row,
+#pdfWrapper.guide-page-virtual:-webkit-full-screen .guide-profile-bio-row {
+    grid-template-columns: clamp(76px, 5vw, 104px) minmax(0,1fr);
+    gap: clamp(15px, 1.2vw, 24px);
+}
+#pdfWrapper.guide-page-virtual:fullscreen .guide-profile-year,
+#pdfWrapper.guide-page-virtual:-webkit-full-screen .guide-profile-year {
+    padding: 7px 12px;
+    font-size: clamp(15px, 1vw, 20px);
+}
+#pdfWrapper.guide-page-virtual:fullscreen .guide-profile-bio-text,
+#pdfWrapper.guide-page-virtual:-webkit-full-screen .guide-profile-bio-text {
+    font-size: clamp(17px, 1.15vw, 24px);
+}
+
+/* vJ: 강사용 퀴즈 화면 가독성 및 결과 집계 정렬 */
+#view-quiz{
+    width:min(100%,1320px) !important;
+    max-width:1320px !important;
+    height:calc(var(--app-h,100vh) - 96px) !important;
+    padding:18px 22px 22px !important;
+}
+#view-quiz .quiz-card{
+    border-radius:20px !important;
+    border:1px solid #dbe5f2 !important;
+    background:#fff !important;
+    box-shadow:0 20px 55px rgba(15,23,42,.12) !important;
+}
+#view-quiz .quiz-top-bar{
+    min-height:72px !important;
+    height:auto !important;
+    padding:12px 24px !important;
+    background:#f7faff !important;
+    border-bottom:1px solid #dbe5f2 !important;
+}
+#view-quiz .quiz-top-info{
+    display:flex;
+    align-items:center;
+    flex-wrap:wrap;
+    gap:14px 24px !important;
+    font-size:20px !important;
+}
+#view-quiz #quizNumberLabel{
+    min-width:58px;
+    font-size:26px !important;
+}
+#view-quiz .quiz-timer-box{
+    border-radius:10px !important;
+    padding:5px 16px !important;
+    font-size:30px !important;
+}
+#view-quiz #quizContent{
+    overflow-y:auto !important;
+    padding:24px 34px !important;
+    background:#fff;
+}
+#view-quiz .quiz-question-area{
+    min-height:118px !important;
+    margin:0 0 22px !important;
+    padding:24px 28px !important;
+    border-radius:16px !important;
+    background:#eef5ff !important;
+    border:1px solid #cfe0ff !important;
+}
+#view-quiz .quiz-question{
+    max-width:1100px;
+    font-size:clamp(27px,2.25vw,38px) !important;
+    line-height:1.38 !important;
+    color:#173b78 !important;
+    text-align:center !important;
+    letter-spacing:0 !important;
+}
+#view-quiz .quiz-options{
+    width:100% !important;
+    max-width:1080px !important;
+    margin:0 auto;
+    gap:14px !important;
+    justify-content:center !important;
+}
+#view-quiz .quiz-options.is-ox{
+    display:grid !important;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    align-items:stretch;
+}
+#view-quiz .quiz-options.is-multiple{
+    display:flex !important;
+    flex-direction:column;
+}
+#view-quiz .quiz-opt{
+    min-height:88px !important;
+    margin:0 !important;
+    padding:14px 24px !important;
+    border:2px solid #dbe5f2 !important;
+    border-radius:16px !important;
+    background:#fff !important;
+    box-shadow:0 7px 18px rgba(15,23,42,.04);
+}
+#view-quiz .quiz-options.is-multiple .quiz-opt{
+    text-align:left !important;
+}
+#view-quiz .quiz-options.is-multiple .opt-text{
+    white-space:normal !important;
+    text-align:left !important;
+    font-size:clamp(23px,1.8vw,31px) !important;
+    line-height:1.35;
+}
+#view-quiz .quiz-opt.ox-mode{
+    min-height:250px !important;
+    justify-content:center !important;
+    text-align:center !important;
+}
+#view-quiz .quiz-opt.ox-mode .opt-text-wrapper{
+    justify-content:center !important;
+}
+#view-quiz .quiz-opt.ox-mode .opt-text{
+    justify-content:center !important;
+    text-align:center !important;
+}
+#view-quiz .quiz-opt.ox-mode:first-child .ox-mark{ color:#2563eb; }
+#view-quiz .quiz-opt.ox-mode:last-child .ox-mark{ color:#e11d48; }
+#view-quiz .quiz-opt.is-correct{
+    border:3px solid #059669 !important;
+    background:#ecfdf5 !important;
+    box-shadow:0 0 0 4px #d1fae5,0 12px 28px rgba(5,150,105,.15) !important;
+}
+#view-quiz .opt-result-bar{
+    background:rgba(37,99,235,.09) !important;
+}
+#view-quiz .opt-count-label{
+    min-width:132px !important;
+    margin-left:18px !important;
+    color:#1d4ed8 !important;
+    font-size:28px !important;
+    text-align:right !important;
+}
+#view-quiz .quiz-options.is-ox .opt-count-label{
+    position:absolute;
+    right:22px;
+    bottom:20px;
+}
+#view-quiz .quiz-status-bar{
+    padding:16px 22px !important;
+    background:#f7faff !important;
+    border-top:1px solid #dbe5f2 !important;
+}
+@media(max-width:900px){
+    #view-quiz .quiz-options.is-ox{ grid-template-columns:1fr; }
+    #view-quiz .quiz-opt.ox-mode{ min-height:150px !important; }
 }

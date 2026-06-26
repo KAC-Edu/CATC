@@ -2,7 +2,7 @@
 <!-- ══════════════════ [편집상태 / EDIT-STATUS] ══════════════════
      STATUS : 수정안하는중
      FILE   : index.html (교육생)
-     UPDATED: 2026-06-27 07:37  (vH66: 종료 과정 입교정보 자동 만료 및 재등록)
+     UPDATED: 2026-06-27 08:36  (vH67: 카카오 고정화면·입교/OTP·Q&A/맛집·퀴즈 UI 개선)
      ─ 규칙: 수정 시작 시 STATUS를 '수정중'으로, 완료 시 '수정안하는중'으로 변경.
             '수정중'이면 다른 플랫폼은 연동 변경을 보류/협의 후 진행.
 ═══════════════════════════════════════════════════════════════ -->
@@ -13,7 +13,7 @@
     <title>KAC Student Platform</title>
     <!-- PWA -->
     <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#0f172a">
+    <meta name="theme-color" content="#f3f7fc">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -496,20 +496,246 @@
     .amenity-chip { display:flex; align-items:center; gap:8px; padding:12px 14px; border:2px solid #e2e8f0; border-radius:12px; font-size:15px; font-weight:700; color:#334155; cursor:pointer; background:#fff; transition:all .15s; }
     .amenity-chip input { width:18px; height:18px; accent-color:#10b981; cursor:pointer; }
     .amenity-chip:has(input:checked) { border-color:#10b981; background:#f0fdf4; color:#047857; }
-    /* [카카오 부트 20260625] 카카오(?menu=) 진입 시 catc 로딩 스피너 숨김 + 다크 배경 */
-    html.kac-kiosk-boot, html.kac-kiosk-boot body{ background:#0f172a !important; }
-    html.kac-kiosk-boot #global-loader{ display:none !important; }
+    /* 카카오 딥링크도 데이터가 준비될 때까지 같은 밝은 로딩 화면을 사용한다. */
+    html.kac-kiosk-boot, html.kac-kiosk-boot body{ background:#f3f7fc !important; }
+    html.kac-kiosk-boot #global-loader{ display:flex; }
     </style>
     <link rel="icon" type="image/svg+xml" href="favicon.svg?v=b260620c">
+<style id="student-ui-vh67">
+/* vH67: 카카오 단일 화면 안정화, 입교/OTP 및 퀴즈 가독성 개선 */
+html, body{
+  background:#f3f7fc !important;
+  overscroll-behavior-x:none;
+}
+#mainApp,.app-container,.scroll-container{ background:#f3f7fc !important; }
+body.kac-locked #mainApp{
+  transform:none !important;
+  transition:none !important;
+  touch-action:pan-y;
+}
+
+#global-loader{
+  background:rgba(243,247,252,.98) !important;
+  gap:16px;
+  transition:opacity .6s ease, visibility .6s ease !important;
+}
+#global-loader .loader-banner{
+  width:150px !important;
+  height:68px !important;
+  object-fit:cover;
+  opacity:.2;
+  filter:saturate(.55);
+  border-radius:14px !important;
+  box-shadow:none !important;
+}
+#global-loader .loader-spinner{
+  width:48px;
+  height:48px;
+  border:4px solid #dbeafe;
+  border-top-color:#2563eb;
+}
+#global-loader .loader-text{
+  color:#334155 !important;
+  font-size:14px !important;
+  letter-spacing:0 !important;
+}
+#global-loader .loader-text::after{
+  content:"";
+  display:inline-block;
+  width:1.4em;
+  text-align:left;
+  animation:kac-loading-dots 1.2s steps(4,end) infinite;
+}
+@keyframes kac-loading-dots{
+  0%{content:"";}
+  25%{content:".";}
+  50%{content:"..";}
+  75%,100%{content:"...";}
+}
+
+.header{
+  display:grid !important;
+  grid-template-columns:44px minmax(0,1fr) 44px !important;
+  min-height:100px !important;
+  padding:12px 14px !important;
+}
+.header .header-center{
+  display:flex !important;
+  flex-direction:column;
+  align-items:center !important;
+  justify-content:center;
+}
+.header .header-title{
+  max-height:46px;
+  overflow:hidden;
+  overflow-wrap:anywhere;
+  word-break:keep-all;
+}
+.header .header-sub{
+  display:flex !important;
+  justify-content:center !important;
+  align-items:center !important;
+  flex-wrap:wrap;
+  gap:7px !important;
+}
+#realUserCount,#roomBadge{
+  flex:0 1 auto;
+  max-width:48%;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+#headerKakaoBtn{ visibility:hidden !important; pointer-events:none !important; }
+
+#foodModal,#foodDetailModal{
+  touch-action:pan-y !important;
+  overscroll-behavior:contain;
+  background:#f7faff !important;
+}
+#foodModal .menu-box,#foodDetailModal .menu-box{
+  transform:none !important;
+  transition:none !important;
+  background:#fff !important;
+}
+
+body.kac-quiz-active{
+  overflow:hidden !important;
+  background:#f3f7fc !important;
+}
+body.kac-quiz-active #mainApp{ visibility:hidden !important; }
+body.kac-quiz-active .quiz-overlay,
+.quiz-overlay{
+  position:fixed !important;
+  inset:0 !important;
+  display:none;
+  align-items:flex-start !important;
+  justify-content:center !important;
+  overflow-y:auto !important;
+  overscroll-behavior:contain;
+  touch-action:pan-y;
+  background:#f3f7fc !important;
+  padding:calc(22px + env(safe-area-inset-top)) 16px calc(24px + env(safe-area-inset-bottom)) !important;
+}
+body.kac-quiz-active .quiz-overlay{ display:flex !important; }
+.quiz-overlay::before{ display:none !important; }
+.quiz-box{
+  width:min(100%,520px) !important;
+  max-width:520px !important;
+  max-height:none !important;
+  overflow:visible !important;
+  margin:auto 0;
+  border-radius:24px !important;
+  padding:24px 18px !important;
+  background:#fff !important;
+  border:1px solid #dbe5f2 !important;
+  box-shadow:0 18px 48px rgba(30,64,175,.12) !important;
+}
+#quizStatusMsg{
+  text-align:left !important;
+  padding:18px !important;
+  background:#eef5ff !important;
+  border:1px solid #cfe0ff;
+}
+#quizStatusMsg .quiz-question-text{
+  display:-webkit-box;
+  -webkit-box-orient:vertical;
+  -webkit-line-clamp:2;
+  overflow:hidden;
+  color:#0f2a4a;
+  font-size:18px;
+  font-weight:950;
+  line-height:1.45;
+  word-break:keep-all;
+}
+#quizStatusMsg small{
+  display:block;
+  margin-top:8px;
+  color:#64748b;
+  font-size:12px;
+  font-weight:750;
+}
+#btnGroupMultiple .quiz-opt-btn,
+#btnGroupOX .quiz-opt-btn{
+  transition:border-color .15s, box-shadow .15s, background-color .15s, transform .15s !important;
+}
+#btnGroupMultiple .quiz-opt-btn{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  text-align:left !important;
+}
+#btnGroupMultiple .quiz-opt-btn b,
+#btnGroupOX .quiz-opt-btn b{
+  flex:0 0 auto;
+  color:#1d4ed8;
+  font-size:14px;
+}
+#btnGroupOX{ justify-content:center !important; }
+#btnGroupOX .quiz-opt-btn{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  text-align:center !important;
+}
+#btnGroupOX .quiz-opt-btn.selected,
+#btnGroupMultiple .quiz-opt-btn.selected{
+  border:3px solid #1d4ed8 !important;
+  background:#2563eb !important;
+  color:#fff !important;
+  box-shadow:0 0 0 4px #bfdbfe,0 14px 28px rgba(37,99,235,.24) !important;
+  transform:translateY(-2px) !important;
+}
+#btnGroupOX .quiz-opt-btn.selected b,
+#btnGroupMultiple .quiz-opt-btn.selected b{ color:#fff !important; }
+#btnGroupOX .quiz-opt-btn.result-correct,
+#btnGroupMultiple .quiz-opt-btn.result-correct{
+  border:3px solid #059669 !important;
+  background:#ecfdf5 !important;
+  color:#047857 !important;
+  box-shadow:0 0 0 4px #d1fae5 !important;
+}
+.quiz-opt-btn.locked{ opacity:1 !important; filter:none !important; }
+
+#keduEnroll .ke-id-label{
+  display:flex !important;
+  align-items:center;
+  gap:7px;
+}
+#keduEnroll .ke-id-primary{ color:#1d4ed8; }
+#keduEnroll .ke-or{
+  padding:2px 7px;
+  border-radius:999px;
+  background:#e2e8f0;
+  color:#475569;
+  font-size:10px;
+  font-weight:950;
+}
+#keduEnroll .ke-id-secondary{ color:#0f766e; }
+#keduEnroll select,#keduEnroll input{
+  border:2px solid #cfe0ff !important;
+  border-radius:14px !important;
+  transition:border-color .15s, box-shadow .15s, background .15s;
+}
+#keduEnroll select:focus,#keduEnroll input:focus{
+  border-color:#2563eb !important;
+  background:#fff !important;
+  box-shadow:0 0 0 4px rgba(37,99,235,.14) !important;
+}
+.ko-digit:focus{
+  border-color:#2563eb !important;
+  box-shadow:0 0 0 4px rgba(37,99,235,.14) !important;
+}
+</style>
 </head>
 <body>
 <script>try{ if(new URLSearchParams(location.search).get('menu')) document.documentElement.classList.add('kac-kiosk-boot'); }catch(e){}</script>
 
 <!-- 전역 로딩 스피너: 페이지 로드 즉시 표시, Firebase 데이터 준비 완료 시 fadeOut -->
 <div id="global-loader">
-    <img src="catc.webp" alt="항공기술훈련원" class="loader-banner">
+    <img src="catc.webp" alt="" class="loader-banner" aria-hidden="true">
     <div class="loader-spinner"></div>
-    <div class="loader-text">강의실 정보를 불러오는 중입니다...</div>
+    <div class="loader-text">과정을 연결하고 있습니다</div>
 </div>
 
 <!-- [수정] 개인정보 동의 절차가 추가된 프로필 등록 팝업 -->
@@ -585,7 +811,7 @@
         <div class="header-title" id="roomTitle">과정 불러오는 중…</div>
         <div class="header-sub">
             <span class="live-dot"></span>
-            <span id="realUserCount">0명 접속</span> · <span id="roomBadge">Room A</span>
+            <span id="realUserCount">0명 접속</span><span id="roomBadge">Room A</span>
         </div>
     </div>
     <div class="header-btn" id="headerKakaoBtn" onclick="openKakaoChat()" style="color:#FAE100; visibility:hidden;" title="카카오톡 오픈톡방">
@@ -1489,7 +1715,7 @@ async function resolveRoomFromCode(code) {
         installPanelSwipeClose('surveyModal', function(){ var m=document.getElementById('surveyModal'); if(m) m.style.display='none'; });
         installPanelSwipeClose('mealMenuModal', (typeof closeMealMenu==='function')?closeMealMenu:function(){ var m=document.getElementById('mealMenuModal'); if(m) m.style.display='none'; });
         installPanelSwipeClose('qrModal', function(){ var m=document.getElementById('qrModal'); if(m) m.style.display='none'; });
-        installPanelSwipeClose('foodModal', function(){ var m=document.getElementById('foodModal'); if(m) m.style.display='none'; });
+        /* 음식점 목록은 세로 스크롤 전용이다. 가벼운 가로 손짓으로 Q&A가 드러나지 않게 한다. */
     }catch(e){}
     try{
         // [중요] _panelRawClose는 '원본' 닫기 함수만 담아야 함. 최초 1회만 설정(재진입 시 감싸진 함수가 들어가
@@ -2649,16 +2875,33 @@ function setupListeners() {
         const oxArea = document.getElementById('btnGroupOX');
         const multArea = document.getElementById('btnGroupMultiple');
 
+        function setQuizPrompt(text, helper) {
+            msgBox.innerHTML = '';
+            const title = document.createElement('span');
+            title.className = 'quiz-question-text';
+            title.textContent = text || '퀴즈가 곧 시작됩니다.';
+            msgBox.appendChild(title);
+            if(helper) {
+                const note = document.createElement('small');
+                note.textContent = helper;
+                msgBox.appendChild(note);
+            }
+        }
+        function resultCount(idx) {
+            const counts = q.answerCounts || {};
+            return Number(counts[idx] || counts[String(idx)] || 0);
+        }
+
         if(q.status === 'ready') {
             canAnswer = false;
-            msgBox.innerText = "강사님이 퀴즈를 시작하기를 기다리고 있습니다...";
+            setQuizPrompt(q.text, "강사가 문제를 열면 바로 답을 선택할 수 있습니다.");
             oxArea.style.display = 'none';
             multArea.style.display = 'none';
             feedBox.innerText = "";
         } 
         else if(q.status === 'open') {
             canAnswer = true;
-            msgBox.innerText = "정답을 선택하세요!";
+            setQuizPrompt(q.text, "정답이라고 생각하는 항목을 선택해 주세요.");
             if(q.endTime && sTimerBox) {
                 sTimerBox.style.display = 'flex';
                 studentTimerInterval = setInterval(() => {
@@ -2674,7 +2917,8 @@ function setupListeners() {
                 multArea.style.display = 'none';
                 oxArea.style.display = 'flex';
                 document.querySelectorAll('#btnGroupOX .quiz-opt-btn').forEach((btn, i) => {
-                    btn.classList.remove('locked');
+                    btn.textContent = i === 0 ? 'O' : 'X';
+                    btn.classList.remove('locked', 'result-correct');
                     if((i + 1) === myLastChoiceIdx) btn.classList.add('selected');
                 });
             } else {
@@ -2692,28 +2936,50 @@ function setupListeners() {
         }
         else if(q.status === 'pause') {
             canAnswer = false; 
-            msgBox.innerText = "설명을 위해 잠시 멈췄습니다.";
+            setQuizPrompt(q.text, "설명을 위해 잠시 멈췄습니다.");
             // 퀴즈 버튼만 잠금
             document.querySelectorAll('#quizActiveBox .quiz-opt-btn').forEach(b => b.classList.add('locked'));
         }
         else if(q.status === 'close') {
             canAnswer = false;
-            msgBox.innerText = myLastChoice ? "제출 완료" : "시간 초과 (미제출)";
+            setQuizPrompt(q.text, myLastChoice ? "답안이 제출되었습니다." : "응답 시간이 종료되었습니다.");
             // 퀴즈 버튼만 잠금
             document.querySelectorAll('#quizActiveBox .quiz-opt-btn').forEach(b => b.classList.add('locked'));
         }
         else if(q.status === 'result') {
             canAnswer = false;
-            oxArea.style.display = 'none';
-            multArea.style.display = 'none';
+            setQuizPrompt(q.text, q.isSurvey ? "응답 결과" : "정답 및 응답 결과");
             if (q.isSurvey) {
-                msgBox.innerText = "📋 설문 결과 요약";
-                feedBox.innerHTML = `<span style="color:#3b82f6; font-size:18px;">${q.surveyResult || "집계 완료"}</span>`;
+                feedBox.textContent = q.surveyResult || "집계가 완료되었습니다.";
             } else {
                 const isCorrect = (myLastChoiceIdx === q.correct);
-                msgBox.innerText = isCorrect ? "🎉 정답입니다!" : "앗, 틀렸습니다...";
                 const ansText = q.isOX ? (q.correct === 1 ? 'O' : 'X') : `${q.correct}번`;
-                feedBox.innerHTML = `정답은 [ ${ansText} ] 입니다.`;
+                feedBox.textContent = (isCorrect ? "정답입니다. " : "아쉽지만 정답은 ") + ansText + "입니다.";
+            }
+            if(q.isOX) {
+                multArea.style.display = 'none';
+                oxArea.style.display = 'flex';
+                oxArea.querySelectorAll('.quiz-opt-btn').forEach((btn, i) => {
+                    const n=i+1;
+                    btn.classList.add('locked');
+                    btn.classList.toggle('result-correct', !q.isSurvey && n===q.correct);
+                    btn.innerHTML=`<span>${n===1?'O':'X'}</span><b>${resultCount(n)}명</b>`;
+                });
+            } else {
+                oxArea.style.display = 'none';
+                multArea.style.display = 'flex';
+                multArea.innerHTML='';
+                (q.options || []).forEach((opt, i) => {
+                    const n=i+1;
+                    const btn=document.createElement('button');
+                    btn.className='quiz-opt-btn locked'+((!q.isSurvey && n===q.correct)?' result-correct':'');
+                    const label=document.createElement('span');
+                    label.textContent=`${n}. ${opt}`;
+                    const count=document.createElement('b');
+                    count.textContent=`${resultCount(n)}명`;
+                    btn.append(label,count);
+                    multArea.appendChild(btn);
+                });
             }
         }
     });
@@ -5870,7 +6136,10 @@ input:not([type=checkbox]):not([type=radio]):not([type=file]), textarea, select 
     function _anyPanel(){ if(document.body.classList.contains('menu-open')) return true; for(var i=0;i<PANELS2.length;i++){ var m=document.getElementById(PANELS2[i]); if(m){ var d=''; try{ d=getComputedStyle(m).display; }catch(e){} if(d && d!=='none') return true; } } return false; }
     document.addEventListener('touchstart', function(e){
         var t=e.touches[0]; sx=t.clientX; sy=t.clientY;
-        edge=(sx<=28)&&!document.body.classList.contains('menu-open');
+        var fixedView=document.body.classList.contains('kac-locked') ||
+          document.body.classList.contains('kac-quiz-active') ||
+          (document.getElementById('foodModal') && getComputedStyle(document.getElementById('foodModal')).display!=='none');
+        edge=!fixedView && (sx<=28) && !document.body.classList.contains('menu-open');
         opening=false; mp=_mp(); lastX=sx; lastT=Date.now(); vx=0;
         kDx=0; kDy=0;
         // 우→좌 스와이프(카카오) 후보: 메뉴/패널이 닫힌 메인화면 안에서 시작 + 입력요소 제외
@@ -6844,7 +7113,7 @@ body.kac-quiz-active #returnAlertOverlay{ display:none !important; }
   flex:1 1 auto !important;
   min-width:0 !important;
   max-width:none !important;
-  align-items:stretch !important;
+  align-items:center !important;
   gap:7px !important;
   text-align:left !important;
 }
@@ -6864,8 +7133,10 @@ body.kac-quiz-active #returnAlertOverlay{ display:none !important; }
 }
 .header .header-sub{
   width:100% !important;
-  display:grid !important;
-  grid-template-columns:1fr 1fr !important;
+  display:flex !important;
+  justify-content:center !important;
+  align-items:center !important;
+  flex-wrap:wrap !important;
   gap:7px !important;
   margin:0 !important;
   opacity:1 !important;
@@ -6896,10 +7167,7 @@ body.kac-quiz-active #returnAlertOverlay{ display:none !important; }
 
 body.kac-quiz-active .quiz-overlay,
 .quiz-overlay{
-  background:
-    radial-gradient(circle at 16% 8%,rgba(96,165,250,.22),transparent 28%),
-    radial-gradient(circle at 84% 18%,rgba(20,184,166,.18),transparent 30%),
-    linear-gradient(180deg,#071225 0%,#102a4a 52%,#123b67 100%) !important;
+  background:#f3f7fc !important;
   -webkit-backdrop-filter:none !important;
   backdrop-filter:none !important;
   z-index:22000 !important;
@@ -7232,7 +7500,7 @@ body.kac-noanim #noticeModal > .menu-box, body.kac-noanim #surveyModal > .menu-b
     return true;
   }
   function loadCourses(sel){
-    firebase.database().ref('courses').once('value').then(function(snap){
+    return firebase.database().ref('courses').once('value').then(function(snap){
       var rooms=snap.val()||{}; var list=[];
       for(var i=65;i<=90;i++){
         var r=String.fromCharCode(i); var rd=rooms[r]; if(!rd) continue;
@@ -7250,16 +7518,19 @@ body.kac-noanim #noticeModal > .menu-box, body.kac-noanim #surveyModal > .menu-b
         o.textContent=c.name;   // [요청 20260625] 우선 과정명만 표시 (기간·강의실·교수 생략)
         sel.appendChild(o);
       });
-    }).catch(function(){});
+    }).catch(function(){
+      sel.innerHTML='<option value="">과정을 불러오지 못했습니다</option>';
+    });
   }
   function showEnroll(menu){
     var ov=document.getElementById('keduEnroll'); if(!ov) return;
+    showLoader('입교 가능한 과정을 확인하고 있습니다');
     var nm=(localStorage.getItem('kac_user_name')||'').trim();
     var sb=(localStorage.getItem('kac_user_phone')||'').trim();
     document.getElementById('keduName').value = (nm && nm!=='미등록')?nm:'';
     document.getElementById('keduSabun').value = /^\d{4,5}$/.test(sb)?sb:'';
-    loadCourses(document.getElementById('keduCourse'));
     ov.style.display='flex';
+    loadCourses(document.getElementById('keduCourse')).finally(function(){ hideLoader(); });
     document.getElementById('keduEnrollBtn').onclick=function(){ submitEnroll(menu); };
   }
   window.keduShowEnroll=showEnroll;
@@ -7554,6 +7825,7 @@ body.kac-noanim #noticeModal > .menu-box, body.kac-noanim #surveyModal > .menu-b
     var menu=qp('menu'), room=qp('room'), code=qp('code');
     if(room||code) return;                 // 일반 QR/직접 진입 → 기존 흐름
     if(!menu) return;                       // 카카오 딥링크 아님
+    showLoader('과정을 연결하고 있습니다');
     var cachedRoom=localStorage.getItem('kac_last_visited_room')||'';
     if(cachedRoom){
       if(await validateKacStoredEnrollment(cachedRoom)) return; // 유효한 현재 과정만 기존 init이 처리
@@ -7574,7 +7846,7 @@ body.kac-noanim #noticeModal > .menu-box, body.kac-noanim #surveyModal > .menu-b
       d.innerHTML='<div class="ke-card"><h2>교육원 입교</h2>'+
         '<p class="ke-sub">본인 과정을 선택하고 사번·이름을 입력하세요.</p>'+
         '<label>과정 선택</label><select id="keduCourse"><option value="">불러오는 중...</option></select>'+
-        '<label>사번 (없으면 전화 뒤 4자리)</label><input id="keduSabun" inputmode="numeric" maxlength="5" placeholder="사번 또는 전화 뒤 4자리">'+
+        '<label class="ke-id-label"><span class="ke-id-primary">사번</span><span class="ke-or">OR</span><span class="ke-id-secondary">전화번호 뒷 4자리</span></label><input id="keduSabun" inputmode="numeric" maxlength="5" placeholder="사번 또는 전화번호 뒷 4자리">'+
         '<label>이름</label><input id="keduName" placeholder="홍길동">'+
         '<button class="ke-btn" id="keduEnrollBtn">입교하기</button>'+
         '<div class="ke-note">입교 정보는 교육 운영 목적에 한해 사용되며, 교육 종료 시 파기됩니다.</div></div>';
@@ -7629,6 +7901,15 @@ body.kac-noanim #noticeModal > .menu-box, body.kac-noanim #surveyModal > .menu-b
         '<div class="ko-actions"><button class="ko-cancel" onclick="closeKakaoOtpAttendance()">취소</button><button class="ko-submit" onclick="submitKakaoOtpAttendance()">출결 완료</button></div></div></div>';
       document.body.appendChild(sc);
       sc.querySelectorAll('.ko-digit').forEach(function(input,idx,arr){
+        function caretToEnd(){
+          requestAnimationFrame(function(){
+            var end=String(input.value||'').length;
+            try{ input.setSelectionRange(end,end); }catch(e){}
+          });
+        }
+        input.addEventListener('focus', caretToEnd);
+        input.addEventListener('click', caretToEnd);
+        input.addEventListener('touchend', caretToEnd, {passive:true});
         input.addEventListener('input', function(){
           this.value=String(this.value||'').replace(/\D/g,'').slice(0,1);
           if(this.value && arr[idx+1]) arr[idx+1].focus();
@@ -7636,7 +7917,13 @@ body.kac-noanim #noticeModal > .menu-box, body.kac-noanim #surveyModal > .menu-b
           if(code.length===6) submitKakaoOtpAttendance();
         });
         input.addEventListener('keydown', function(e){
-          if(e.key==='Backspace' && !this.value && arr[idx-1]) arr[idx-1].focus();
+          if(e.key==='Backspace' && !this.value && arr[idx-1]){
+            arr[idx-1].focus();
+            requestAnimationFrame(function(){
+              var end=String(arr[idx-1].value||'').length;
+              try{ arr[idx-1].setSelectionRange(end,end); }catch(err){}
+            });
+          }
         });
         input.addEventListener('paste', function(e){
           var text=(e.clipboardData||window.clipboardData).getData('text');
@@ -7667,5 +7954,39 @@ body.kac-noanim #noticeModal > .menu-box, body.kac-noanim #surveyModal > .menu-b
   else build();
 })();
 </script>
+<style id="student-ui-vh67-final">
+/* 최종 우선순위: 뒤늦게 선언된 기존 모바일 규칙보다 단일 화면 규칙을 우선한다. */
+html,body,#mainApp,.app-container,.scroll-container{ background:#f3f7fc !important; }
+#foodModal,#foodDetailModal{ touch-action:pan-y !important; overscroll-behavior:contain !important; }
+#foodModal .menu-box,#foodDetailModal .menu-box{ transform:none !important; transition:none !important; }
+body.kac-quiz-active{ overflow:hidden !important; background:#f3f7fc !important; }
+body.kac-quiz-active #mainApp{ visibility:hidden !important; }
+body.kac-quiz-active .quiz-overlay{
+  display:flex !important;
+  align-items:flex-start !important;
+  overflow-y:auto !important;
+  background:#f3f7fc !important;
+}
+.quiz-overlay::before{ display:none !important; }
+.quiz-box{ max-height:none !important; overflow:visible !important; margin:auto 0 !important; }
+#quizStatusMsg{ text-align:left !important; }
+#btnGroupMultiple .quiz-opt-btn{ display:flex !important; align-items:center; justify-content:space-between; text-align:left !important; }
+#btnGroupOX{ justify-content:center !important; }
+#btnGroupOX .quiz-opt-btn{ display:flex !important; flex-direction:column; align-items:center; justify-content:center; text-align:center !important; }
+#btnGroupOX .quiz-opt-btn.selected,
+#btnGroupMultiple .quiz-opt-btn.selected{
+  border:3px solid #1d4ed8 !important;
+  background:#2563eb !important;
+  color:#fff !important;
+  box-shadow:0 0 0 4px #bfdbfe,0 14px 28px rgba(37,99,235,.24) !important;
+}
+#btnGroupOX .quiz-opt-btn.result-correct,
+#btnGroupMultiple .quiz-opt-btn.result-correct{
+  border:3px solid #059669 !important;
+  background:#ecfdf5 !important;
+  color:#047857 !important;
+  box-shadow:0 0 0 4px #d1fae5 !important;
+}
+</style>
 </body>
 </html>

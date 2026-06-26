@@ -1,14 +1,15 @@
 ﻿/* ============================================================
    CATC · 강사 플랫폼 로직  (admin.js)
-   @version  A1
-   @build    20260627-004620  (vA1: 현재 과정 선택 팝업 확대)
+   STATUS    수정안하는중
+   @version  C1
+   @build    20260627-083609  (vC1: 강사 퀴즈 UI 및 선택지별 실시간 결과 개선)
    ------------------------------------------------------------
    [코드 수정 규칙 · AI/개발자 공통]
    이 파일을 고치면 @version 을 A -> B -> ... -> Z -> A1 -> B1 ...
    순으로 1단계 올리고, @build 를 수정 시각으로 갱신할 것.
    적용 여부는 브라우저 콘솔 로그(vA)로 확인한다.
 ============================================================ */
-try{console.log('%cCATC%c 강사 플랫폼 로직 (admin.js) %cvZ%c build 20260627-002236','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}
+try{console.log('%cCATC%c 강사 플랫폼 로직 (admin.js) %cvC1%c build 20260627-083609','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}
 /* --- admin.js (Final Integrated Version - Fixed Syntax & Logic) --- */
 
 // --- [기본 데이터] 20문항 ---
@@ -6085,6 +6086,8 @@ renderScreen: function(q) {
         const oDiv = document.getElementById('d-options'); 
         if(oDiv) {
             oDiv.style.display = 'flex';
+            oDiv.classList.toggle('is-ox', !!q.isOX);
+            oDiv.classList.toggle('is-multiple', !q.isOX);
             oDiv.innerHTML = "";
             q.options.forEach((o, i) => {
                 // O/X 모드: 맨 앞 O/X 기호는 크게, 괄호 설명은 작게 분리 표시
@@ -6461,6 +6464,13 @@ closeSummaryAndExit: function() {
             // 1. 제출된 답안 집계
             Object.values(d).forEach(v => { 
                 if(v.choice >= 1 && v.choice <= q.options.length) cnt[v.choice-1]++; 
+            });
+
+            const answerCounts = {};
+            cnt.forEach((count, i) => { answerCounts[i + 1] = count; });
+            firebase.database().ref(`courses/${state.room}/activeQuiz`).update({
+                answerCounts: answerCounts,
+                answerTotal: total
             });
 
             // 2. 각 문항(Option)별로 결과 데이터 주입
@@ -7392,8 +7402,8 @@ init: function() {
         const contacts = [];
         if (p.phone) contacts.push(`<span style="display:inline-flex;align-items:center;gap:7px;"><i class="fa-solid fa-phone" style="color:#1e3a8a;"></i> ${esc(p.phone)}</span>`);
         if (p.email) contacts.push(`<span style="display:inline-flex;align-items:center;gap:7px;"><i class="fa-solid fa-envelope" style="color:#1e3a8a;"></i> ${esc(p.email)}</span>`);
-        const contactHtml = contacts.length ? `<div style="display:flex;flex-wrap:wrap;gap:26px;margin-top:18px;font-size:15px;font-weight:700;color:#334155;">${contacts.join('')}</div>` : '';
-        const quote = p.msg ? `<div style="border-left:4px solid #2563eb;padding-left:13px;margin-top:20px;font-size:16px;font-weight:800;color:#2563eb;line-height:1.5;">"${esc(p.msg)}"</div>` : '';
+        const contactHtml = contacts.length ? `<div class="guide-profile-contacts">${contacts.join('')}</div>` : '';
+        const quote = p.msg ? `<div class="guide-profile-quote">"${esc(p.msg)}"</div>` : '';
         let bio = (Array.isArray(p.bioList) ? p.bioList : []).filter(r => r && (r.year || r.text));
         if (!bio.length && p.bio) {
             bio = String(p.bio).split(/\r?\n/).map(line => {
@@ -7402,23 +7412,25 @@ init: function() {
                 return m ? { year: m[1], text: m[2] } : { year: '', text: line };
             }).filter(Boolean);
         }
-        const bioRows = bio.map(r => `<div style="display:flex;align-items:center;gap:14px;">
-            <span style="flex:0 0 auto;min-width:56px;text-align:center;background:#eff6ff;border:1px solid #dbeafe;color:#1e40af;font-weight:800;font-size:13px;padding:5px 12px;border-radius:9px;white-space:nowrap;">${esc(r.year || '·')}</span>
-            <span style="color:#334155;font-size:15px;line-height:1.5;word-break:keep-all;">${esc(r.text || '')}</span>
+        const bioRows = bio.map(r => `<div class="guide-profile-bio-row">
+            <span class="guide-profile-year">${esc(r.year || '·')}</span>
+            <span class="guide-profile-bio-text">${esc(r.text || '')}</span>
         </div>`).join('');
-        const bioHtml = bio.length ? `<div style="margin-top:24px;">
-            <div style="font-size:15px;font-weight:900;color:#1e3a8a;margin-bottom:14px;display:flex;align-items:center;gap:8px;"><i class="fa-solid fa-user-graduate" style="color:#2563eb;"></i> 주요 약력 및 경력사항</div>
-            <div style="display:flex;flex-direction:column;gap:11px;">${bioRows}</div>
+        const bioHtml = bio.length ? `<div class="guide-profile-bio">
+            <div class="guide-profile-bio-title"><i class="fa-solid fa-user-graduate"></i> 주요 약력 및 경력사항</div>
+            <div class="guide-profile-bio-list">${bioRows}</div>
         </div>` : '';
-        return `<div style="display:flex;background:#fff;border-radius:20px;overflow:hidden;box-shadow:0 18px 44px rgba(15,23,42,.12);min-height:430px;">
-            <div style="flex:0 0 38%;${photoCss}">${photoInner}</div>
-            <div style="flex:1;min-width:0;padding:40px 44px;display:flex;flex-direction:column;">
-                <div><span style="display:inline-block;background:#1f2937;color:#fff;font-size:13px;font-weight:700;padding:8px 18px;border-radius:9px;letter-spacing:.04em;white-space:nowrap;line-height:1;">과정 담임</span></div>
-                <div style="margin-top:24px;line-height:1.3;font-size:17px;color:#64748b;font-weight:700;">교수 <span style="font-size:32px;font-weight:900;color:#1e3a8a;margin:0 4px;">${name}</span>${eng}</div>
-                <div style="height:1px;background:#e2e8f0;margin:20px 0 0;"></div>
+        return `<div class="guide-profile-slide">
+            <div class="guide-profile-photo" style="${photoCss}">${photoInner}</div>
+            <div class="guide-profile-panel">
+              <div class="guide-profile-copy">
+                <div><span class="guide-profile-role">과정 담임</span></div>
+                <div class="guide-profile-name">교수 <strong>${name}</strong>${eng}</div>
+                <div class="guide-profile-rule"></div>
                 ${quote}
                 ${contactHtml}
                 ${bioHtml}
+              </div>
             </div>
         </div>`;
     },
@@ -7616,15 +7628,24 @@ init: function() {
             // 스케일 계산
             const unscaledViewport = page.getViewport({scale: 1.0});
             const wrapper = document.getElementById('pdfWrapper');
-            const containerW = (wrapper ? wrapper.clientWidth : window.innerWidth) - 2;
-            const dpr = window.devicePixelRatio || 1;
+            const fullscreenTarget = document.fullscreenElement || document.webkitFullscreenElement;
+            const isGuideFullscreen = fullscreenTarget === wrapper;
+            const rect = wrapper ? wrapper.getBoundingClientRect() : null;
+            const availableW = Math.max(1, isGuideFullscreen ? (rect.width || window.innerWidth) : ((rect && rect.width) || window.innerWidth) - 2);
+            const availableH = Math.max(1, isGuideFullscreen ? (rect.height || window.innerHeight) : window.innerHeight);
+            const dpr = Math.min(window.devicePixelRatio || 1, 2);
 
-            let cssScale = containerW / unscaledViewport.width;
-            if (document.fullscreenElement) {
-                const hScale = window.innerHeight / unscaledViewport.height;
-                const wScale = window.innerWidth  / unscaledViewport.width;
-                cssScale = Math.max(hScale, wScale);
+            // 일반 화면은 가로 맞춤, 전체화면은 화면을 빈틈없이 덮는 cover 방식이다.
+            // PDF 비율과 모니터 비율이 다르면 가장자리만 최소한으로 잘리고 검은 여백은 생기지 않는다.
+            let cssScale = availableW / unscaledViewport.width;
+            if (isGuideFullscreen) {
+                cssScale = Math.max(
+                    availableW / unscaledViewport.width,
+                    availableH / unscaledViewport.height
+                );
             }
+            const cssWidth = Math.ceil(unscaledViewport.width * cssScale);
+            const cssHeight = Math.ceil(unscaledViewport.height * cssScale);
             const renderScale = cssScale * dpr;
             const viewport = page.getViewport({scale: renderScale});
 
@@ -7641,8 +7662,10 @@ init: function() {
             // 렌더링 완료 후 한 번에 교체 (깜빡임 없음)
             canvas.width  = viewport.width;
             canvas.height = viewport.height;
-            canvas.style.width  = Math.floor(viewport.width  / dpr) + 'px';
-            canvas.style.height = Math.floor(viewport.height / dpr) + 'px';
+            canvas.style.setProperty('--guide-render-width', cssWidth + 'px');
+            canvas.style.setProperty('--guide-render-height', cssHeight + 'px');
+            canvas.style.width  = cssWidth + 'px';
+            canvas.style.height = cssHeight + 'px';
             const ctx = canvas.getContext('2d');
             ctx.setTransform(1, 0, 0, 1, 0, 0);
             ctx.drawImage(offscreen, 0, 0);
