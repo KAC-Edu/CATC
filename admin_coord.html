@@ -2,7 +2,7 @@
 <!-- 이 플랫폼(admin_coord.html / 교육운영부) 수정상태 플래그. 값은 [수정중] 또는 [수정안하는중] 두 가지. -->
 <!-- 작업 시작 시 → 수정중 / 작업 완료 시 → 수정안하는중. 다른 플랫폼은 이 말머리를 보고 연동·수정 가능 여부 판단. -->
 <!-- [외부변경 · 카카오채널연동 2026-06-25] 포털(portal.html/7777) 경유 폐지 → 페이지 직접진입 시 접속코드(catc1234) 게이트 추가, 포털 리다이렉트/종료이동 제거. version C13→D13. 기능 로직은 미변경. -->
-<!-- last-updated: 2026-06-26 / version: D32 (PC 100퍼센트 화면 밀도 보정) -->
+<!-- last-updated: 2026-06-26 / version: D33 (키오스크 검색 재배치 및 분류 보강) -->
 <!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -2042,7 +2042,13 @@ body.coord-header-compact.pc-mode #coordHdrStats.coord-hdr-hide{ display:flex !i
       <div style="font-size:11.5px;color:#64748b;margin-top:4px;">⏻ 시계 길게 눌러 종료</div>
     </div>
   </div>
-  <div style="flex:1; overflow:auto; border-radius:18px; background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.10);">
+  <div id="coordKioskSearchBox" style="display:flex;align-items:center;gap:12px;margin-bottom:14px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);border-radius:16px;padding:12px 14px;">
+    <i class="fa-solid fa-magnifying-glass" style="font-size:22px;color:#93c5fd;"></i>
+    <input id="coordKioskSearch" oninput="coordKiosk.search(this.value)" placeholder="키오스크 검색: 차량, 외출, 생활관, 과정명, 교육생 이름" style="flex:1;height:54px;border:none;border-radius:12px;background:rgba(255,255,255,.96);color:#0f172a;padding:0 18px;font-size:21px;font-weight:850;outline:none;">
+    <button onclick="coordKiosk.clearSearch()" style="height:54px;padding:0 18px;border:1px solid rgba(255,255,255,.22);border-radius:12px;background:rgba(15,23,42,.52);color:#dbeafe;font-weight:900;font-size:16px;cursor:pointer;">초기화</button>
+  </div>
+  <div id="coordKioskSearchResult" style="display:none;flex:1;overflow:auto;border-radius:18px;background:rgba(255,255,255,.96);color:#0f172a;border:1px solid rgba(255,255,255,.16);padding:18px;"></div>
+  <div id="coordKioskTableWrap" style="flex:1; overflow:auto; border-radius:18px; background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.10);">
     <table style="width:100%; border-collapse:collapse; font-size:25px;">
       <thead><tr style="background:rgba(255,255,255,.09); position:sticky; top:0;">
         <th style="padding:20px 14px;color:#cbd5e1;font-weight:800;">구분</th>
@@ -2100,7 +2106,7 @@ body.coord-header-compact.pc-mode #coordHdrStats.coord-hdr-hide{ display:flex !i
 <!-- [뷰 1] 전체 과정 현황 (메인) -->
 <div id="totalStatusView" style="display:flex; flex-direction:column; gap:12px;">
 
-    <div id="coordSearchFirstBox" style="background:linear-gradient(135deg,#0f2a4a,#1d4ed8);border-radius:22px;padding:22px 24px;box-shadow:0 16px 36px rgba(15,42,74,.22);color:#fff;">
+    <div id="coordSearchFirstBox" style="display:none;background:linear-gradient(135deg,#0f2a4a,#1d4ed8);border-radius:22px;padding:22px 24px;box-shadow:0 16px 36px rgba(15,42,74,.22);color:#fff;">
         <div style="font-size:13px;font-weight:900;letter-spacing:.08em;color:#bfdbfe;margin-bottom:10px;">SEARCH-FIRST CONTROL</div>
         <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
             <div style="position:relative;flex:1;min-width:320px;">
@@ -8689,6 +8695,80 @@ var coordKiosk={
         +'<td style="padding:20px 14px;text-align:center;"><span style="padding:6px 18px;border-radius:999px;font-weight:800;font-size:.8em;color:'+stat.c+';background:'+stat.c+'22;border:1px solid '+stat.c+'66;">'+stat.t+'</span></td>'
       +'</tr>';
     }).join('');
+    var _q=document.getElementById('coordKioskSearch'); if(_q && String(_q.value||'').trim()) this.search(_q.value, true);
+  },
+  _rooms:function(){
+    var rooms=[], today=(typeof _coordToday==='function'?_coordToday():new Date().toISOString().slice(0,10));
+    if(typeof globalAllData==='undefined' || !globalAllData) return rooms;
+    for(var i=65;i<=90;i++){ var rid=String.fromCharCode(i), room=globalAllData[rid]; if(!room) continue;
+      var ss=room.settings||{}, st0=room.status||{};
+      if(st0.roomStatus!=='active' || ss.hideFromBoard || !(''+(ss.courseName||'')).trim()) continue;
+      var pr=(''+(ss.period||'')).split(' ~ '), start=(pr[0]||'').trim(), end=(pr[1]||'').trim();
+      var order=(end&&today>end)?2:((start&&today>=start)?0:1);
+      rooms.push({rid:rid,s:ss,st:st0,room:room,start:start,end:end,order:order});
+    }
+    return rooms.sort(function(a,b){ return (a.order-b.order) || String(a.start).localeCompare(String(b.start)); });
+  },
+  clearSearch:function(){
+    var i=document.getElementById('coordKioskSearch'); if(i) i.value='';
+    var r=document.getElementById('coordKioskSearchResult'); if(r){ r.style.display='none'; r.innerHTML=''; }
+    var t=document.getElementById('coordKioskTableWrap'); if(t) t.style.display='';
+  },
+  search:function(q, silent){
+    q=String(q||'').trim();
+    var result=document.getElementById('coordKioskSearchResult'), table=document.getElementById('coordKioskTableWrap');
+    if(!result || !table) return;
+    if(!q){ this.clearSearch(); return; }
+    var low=q.toLowerCase(), esc=(typeof _esc==='function'?_esc:function(t){return String(t==null?'':t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');});
+    var rooms=this._rooms();
+    function card(title, meta, body, icon, color){
+      return '<div style="border:1px solid #e2e8f0;border-left:6px solid '+color+';border-radius:16px;background:#fff;padding:16px 18px;margin-bottom:12px;box-shadow:0 8px 20px rgba(15,23,42,.06);">'
+        +'<div style="display:flex;align-items:center;gap:10px;font-size:20px;font-weight:950;color:#0f172a;"><i class="fa-solid '+icon+'" style="color:'+color+';"></i>'+title+'</div>'
+        +(meta?'<div style="margin-top:6px;font-size:13px;font-weight:850;color:#64748b;">'+meta+'</div>':'')
+        +(body?'<div style="margin-top:11px;font-size:16px;font-weight:750;color:#334155;line-height:1.65;">'+body+'</div>':'')
+        +'</div>';
+    }
+    var html='', title='검색 결과';
+    if(/차량|퇴교|버스|수송/.test(low)){
+      title='퇴교차량 검색 결과';
+      rooms.forEach(function(r){
+        var req=(r.room.shuttle&&r.room.shuttle.requests)||{}, arr=[];
+        Object.keys(req).forEach(function(k){ var v=req[k]||{}; if(v&&v.name) arr.push(v); });
+        if(arr.length) html+=card('ROOM #'+esc(r.rid)+' · '+esc(r.s.courseName||'-'), '퇴교차량 신청 '+arr.length+'명', arr.slice(0,8).map(function(v){return esc(v.name||'-')+' · '+esc(v.dest||v.destination||v.terminal||v.type||'신청');}).join('<br>'), 'fa-bus', '#16a34a');
+      });
+    } else if(/외출|외박|외출외박|대장/.test(low)){
+      title='외출·외박 검색 결과';
+      var today=(typeof _coordOpDate==='function'?_coordOpDate():(typeof _coordToday==='function'?_coordToday():new Date().toISOString().slice(0,10)));
+      rooms.forEach(function(r){
+        var acts=(r.room.admin_actions&&r.room.admin_actions[today])||{}, arr=[];
+        Object.keys(acts).forEach(function(k){ var v=acts[k]||{}; if(v&&v.name) arr.push(v); });
+        if(arr.length) html+=card('ROOM #'+esc(r.rid)+' · '+esc(r.s.courseName||'-'), '금일 외출·외박 '+arr.length+'건', arr.slice(0,8).map(function(v){return esc(v.name||'-')+' · '+esc(v.type==='outing'?'외출':'외박');}).join('<br>'), 'fa-file-signature', '#f97316');
+      });
+    } else if(/생활관|기숙사|청렴|상생|국제/.test(low)){
+      title='생활관 배정 검색 결과';
+      rooms.forEach(function(r){
+        var list=(typeof _studentsOf==='function'?_studentsOf(r.room):[])||[], counts={};
+        list.forEach(function(s){ var d=(s.dorm||s.dormName||s.roomName||s.room||'미배정'); d=String(d).split(/[\\s-]/)[0]||'미배정'; counts[d]=(counts[d]||0)+1; });
+        var body=Object.keys(counts).length?Object.keys(counts).map(function(k){return esc(k)+' '+counts[k]+'명';}).join(' · '):'배정 정보 없음';
+        html+=card('ROOM #'+esc(r.rid)+' · '+esc(r.s.courseName||'-'), esc(r.s.roomDetailName||r.s.roomDetail||'-'), body, 'fa-bed', '#2563eb');
+      });
+    } else {
+      title='과정·교육생 검색 결과';
+      rooms.forEach(function(r){
+        var hit=(r.s.courseName||'').toLowerCase().indexOf(low)>=0 || ('room '+r.rid).toLowerCase().indexOf(low)>=0 || ('#'+r.rid).toLowerCase().indexOf(low)>=0;
+        var students=(typeof _studentsOf==='function'?_studentsOf(r.room):[])||[];
+        var sh=(r.room.shuttle&&r.room.shuttle.requests)||{};
+        var matched=students.filter(function(s){ return String(s.name||'').toLowerCase().indexOf(low)>=0 || String(s.empNo||s.sabun||s.id||'').indexOf(q)>=0; });
+        if(hit) html+=card('ROOM #'+esc(r.rid)+' · '+esc(r.s.courseName||'-'), esc(r.s.period||'-')+' · '+esc(r.s.roomDetailName||r.s.roomDetail||'-'), '담임 '+esc((r.st&&r.st.professorName)||'-')+' · 담당 '+esc(r.s.coordinatorName||'-'), 'fa-chalkboard-user', '#0ea5e9');
+        matched.forEach(function(s){
+          var shuttle='미신청'; Object.keys(sh).forEach(function(k){ var v=sh[k]||{}; if(String(v.name||'')===String(s.name||'')) shuttle=v.dest||v.destination||v.type||'신청'; });
+          html+=card(esc(s.name||'-'), 'ROOM #'+esc(r.rid)+' · '+esc(r.s.courseName||'-'), '사번 '+esc(s.empNo||s.sabun||s.id||'-')+' · 생활관 '+esc(s.dorm||s.dormName||s.roomName||s.room||'미배정')+' · 차량 '+esc(shuttle), 'fa-user-check', '#7c3aed');
+        });
+      });
+    }
+    table.style.display='none';
+    result.style.display='block';
+    result.innerHTML='<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px;"><div style="font-size:24px;font-weight:950;color:#0f172a;">'+title+'</div><div style="font-size:15px;font-weight:850;color:#64748b;">검색어: '+esc(q)+'</div></div>'+(html||'<div style="padding:44px;text-align:center;color:#94a3b8;font-size:20px;font-weight:900;">해당 분류의 검색 결과가 없습니다.</div>');
   }
 };
 coordKiosk.notice=function(rid){

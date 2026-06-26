@@ -1,6 +1,6 @@
 /* ============================================================
    CATC · 강사 플랫폼 스타일  (admin.css)
-   @version  F   @build  20260626-174500
+   @version  G   @build  20260626-193500
    ------------------------------------------------------------
    [코드 수정 규칙] 수정 시 @version 을
    A -> B -> ... -> Z -> A1 -> B1 -> ... 순으로 1단계 올리고
@@ -1589,6 +1589,61 @@ body.night-mode .badge-idle {
 #pdfWrapper.guide-page-pdf:fullscreen #guideProfile,
 #pdfWrapper.guide-page-pdf:-webkit-full-screen #guideProfile {
     display: none !important;
+}
+
+/* [2026-06-26] 입교안내 가상 페이지(2~4P) 정렬 보정
+   PDF 캔버스처럼 한 페이지 단위로 중앙 배치해 전체화면에서 좌우가 잘리지 않게 한다. */
+#pdfWrapper.guide-page-virtual {
+    background: #000 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    overflow: hidden !important;
+}
+
+#pdfWrapper.guide-page-virtual #guideProfile {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: min(100%, 1050px) !important;
+    aspect-ratio: 16 / 9;
+    min-height: 0 !important;
+    padding: 0 !important;
+    background: #fff !important;
+    border-radius: 0 !important;
+    box-shadow: 0 4px 20px rgba(0,51,102,0.12) !important;
+    overflow: hidden !important;
+    line-height: normal !important;
+}
+
+#pdfWrapper.guide-page-virtual #guideProfile > div {
+    width: 100% !important;
+    height: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+}
+
+#pdfWrapper.guide-page-virtual:fullscreen #guideProfile,
+#pdfWrapper.guide-page-virtual:-webkit-full-screen #guideProfile {
+    width: min(100vw, calc(100vh * 16 / 9)) !important;
+    height: min(100vh, calc(100vw * 9 / 16)) !important;
+    max-width: none !important;
+    max-height: none !important;
+    aspect-ratio: 16 / 9 !important;
+    overflow: hidden !important;
+    transform: none !important;
+}
+
+#pdfWrapper.guide-page-virtual:fullscreen #guideProfile > div,
+#pdfWrapper.guide-page-virtual:-webkit-full-screen #guideProfile > div {
+    width: 100% !important;
+    height: 100% !important;
+    max-width: none !important;
+    transform: none !important;
+    transform-origin: center center !important;
+    box-shadow: none !important;
 }
 
 

@@ -13,8 +13,8 @@
 </script>
 <!-- ============================================================
   CATC · 강사 플랫폼  (admin.html)
-  @version  V
-  @build    20260626-191000
+  @version  W
+  @build    20260626-193500
   ────────────────────────────────────────────────────────
   [코드 수정 규칙 · AI/개발자 공통]
   이 파일을 한 글자라도 고치면:
@@ -40,7 +40,7 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/ko.js"></script>
-    <link rel="stylesheet" href="admin.css?v=260626QRTOOLS">
+    <link rel="stylesheet" href="admin.css?v=260626GUIDEALIGN">
     <link rel="stylesheet" href="kac-tokens.css?v=20260622">
     <link rel="icon" type="image/svg+xml" href="favicon.svg?v=b260620c">
     <script>
@@ -547,7 +547,7 @@ body.in-course #moreToggleTab{ display:flex !important; }
     <div class="more-sec" style="color:#2563eb;">교육 운영 관련</div>
     <a class="more-item" onclick="ui.setMode('admin-action'); ui.closeMorePanel();"><i class="fa-solid fa-person-walking-arrow-right" style="color:#2563eb;"></i> 외출/외박</a>
     <a class="more-item" onclick="ui.setMode('tablet-loan'); ui.closeMorePanel();"><i class="fa-solid fa-tablet-screen-button" style="color:#2563eb;"></i> 태블릿 대여 관리</a>
-    <a class="more-item" onclick="ui.setMode('attendance'); ui.closeMorePanel();"><i class="fa-solid fa-keyboard" style="color:#2563eb;"></i> OTP 출결</a>
+    <a class="more-item" onclick="ui.setMode('attendance'); setTimeout(function(){try{ui.toggleAttendanceMode('internal');}catch(e){}},80); ui.closeMorePanel();"><i class="fa-solid fa-keyboard" style="color:#2563eb;"></i> OTP 출결</a>
     <hr class="more-div">
     <div class="more-sec" style="color:#10b981;">교육 지원 관련</div>
     <a class="more-item" onclick="ui.setMode('shuttle'); ui.closeMorePanel();" style="position:relative;"><i class="fa-solid fa-bus" style="color:#10b981;"></i> 차량 수요조사 <span id="shuttleNewBadge" style="display:none; background:#ef4444; color:white; width:16px; height:16px; border-radius:50%; font-size:10px; font-weight:bold; align-items:center; justify-content:center; margin-left:5px;">N</span></a>
@@ -2540,7 +2540,7 @@ function setupAcc(btn){
 
 
 
-    <script src="admin.js?v=260626GUIDEOTP"></script>
+    <script src="admin.js?v=260626GUIDEALIGNOTP"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
 <!-- ── 화면 자동 맞춤(auto-fit): 가로+세로 모두 화면에 맞게 자동 축소 · JDS260613 ──
      원인: Windows 디스플레이 배율(125%/150%)·저해상도 화면에서 유효 뷰포트가 작아져

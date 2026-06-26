@@ -2,7 +2,7 @@
 <!-- ══════════════════ [편집상태 / EDIT-STATUS] ══════════════════
      STATUS : 수정안하는중
      FILE   : index.html (교육생)
-     UPDATED: 2026-06-26 18:55  (vH61: OTP 자동 제출 피드백 보강)
+     UPDATED: 2026-06-26 19:35  (vH62: OTP 조회 경로 보강)
      ─ 규칙: 수정 시작 시 STATUS를 '수정중'으로, 완료 시 '수정안하는중'으로 변경.
             '수정중'이면 다른 플랫폼은 연동 변경을 보류/협의 후 진행.
 ═══════════════════════════════════════════════════════════════ -->
@@ -6953,10 +6953,49 @@ body.kac-noanim #noticeModal > .menu-box, body.kac-noanim #surveyModal > .menu-b
     if(msg) msg.textContent='강사 화면에 표시된 6자리 OTP를 입력해 주세요.';
   }
   window.closeKakaoOtpAttendance=closeKakaoOtpAttendance;
+  function normalizeKakaoRoom(room){
+    return String(room||'').trim().replace(/^ROOM\s*/i,'').replace(/^#/,'').trim().toUpperCase();
+  }
   function getKakaoAttendanceRoom(){
     var room=(typeof currentRoom!=='undefined' && currentRoom) ? currentRoom : '';
     room = room || localStorage.getItem('kac_last_visited_room') || '';
-    return String(room||'').trim().toUpperCase();
+    return normalizeKakaoRoom(room);
+  }
+  function getKakaoAttendanceRoomCandidates(){
+    var list=[];
+    function add(v){ v=normalizeKakaoRoom(v); if(v && list.indexOf(v)<0) list.push(v); }
+    try{ add(qp('room')); }catch(e){}
+    try{ add(typeof currentRoom!=='undefined' ? currentRoom : ''); }catch(e){}
+    try{ add(localStorage.getItem('kac_last_visited_room')); }catch(e){}
+    try{ add(localStorage.getItem('kac_home_room')); }catch(e){}
+    return list;
+  }
+  async function findKakaoOtpRoom(code){
+    var candidates=getKakaoAttendanceRoomCandidates();
+    for(var i=0;i<candidates.length;i++){
+      var room=candidates[i];
+      var snap=await firebase.database().ref('courses/'+room+'/attendanceOtp').once('value');
+      var otp=snap.val()||{};
+      if(String(otp.code||'')){
+        otp.__room=room;
+        return otp;
+      }
+    }
+    var all=await firebase.database().ref('courses').once('value');
+    var rooms=all.val()||{};
+    var now=Date.now();
+    var best=null;
+    Object.keys(rooms).forEach(function(rid){
+      var r=normalizeKakaoRoom(rid);
+      if(!r || candidates.indexOf(r)>=0) return;
+      var otp=(rooms[rid]&&rooms[rid].attendanceOtp)||{};
+      var saved=String(otp.code||'');
+      var validUntil=Number(otp.validUntil||0);
+      if(saved && saved===code && (!validUntil || now<=validUntil+5000)){
+        best=Object.assign({}, otp, {__room:r});
+      }
+    });
+    return best || {__room:(candidates[0]||'')};
   }
   function fillKakaoOtpInputs(code){
     var digits=String(code||'').replace(/\D/g,'').slice(0,6).split('');
@@ -6977,15 +7016,15 @@ body.kac-noanim #noticeModal > .menu-box, body.kac-noanim #surveyModal > .menu-b
     var room=getKakaoAttendanceRoom();
     var msg=document.getElementById('keduOtpMsg');
     if(!name || !/^\d{4,5}$/.test(phone) || !token){ showKacAlert('출결 전 입교 정보를 먼저 등록해 주세요.'); return; }
-    if(!room){ showKacAlert('과정 정보를 찾지 못했습니다. 입교/홈에서 과정을 다시 확인해 주세요.'); return; }
+    if(!room && !getKakaoAttendanceRoomCandidates().length){ if(msg) msg.textContent='과정 정보가 없어 OTP 전체 확인으로 진행합니다.'; }
     var code='';
     document.querySelectorAll('#keduOtp .ko-digit').forEach(function(input){ code += String(input.value||'').replace(/\D/g,'').slice(0,1); });
     if(!/^\d{6}$/.test(code)){ if(msg) msg.textContent='6자리 OTP를 모두 입력해 주세요.'; return; }
     keduOtpSubmitting=true;
     if(msg) msg.textContent='OTP 확인 중입니다...';
     try{
-      var snap=await firebase.database().ref('courses/'+room+'/attendanceOtp').once('value');
-      var otp=snap.val()||{};
+      var otp=await findKakaoOtpRoom(code);
+      room=normalizeKakaoRoom(otp.__room||room);
       var validUntil=Number(otp.validUntil||0);
       var saved=String(otp.code||'');
       if(!saved){ keduOtpVibrate([80,40,80]); if(msg) msg.textContent='강사 화면에서 OTP 출결을 먼저 열어 주세요.'; return; }
@@ -6994,6 +7033,7 @@ body.kac-noanim #noticeModal > .menu-box, body.kac-noanim #surveyModal > .menu-b
       var d=new Date();
       var today=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
       var storageKey='kac_attended_'+room+'_'+today+'_'+token;
+      try{ if(room) localStorage.setItem('kac_last_visited_room', room); }catch(e){}
       keduOtpVibrate(120);
       if(msg) msg.textContent='출결이 확인되었습니다.';
       closeKakaoOtpAttendance();
