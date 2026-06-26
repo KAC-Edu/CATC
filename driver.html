@@ -6,7 +6,8 @@
         - @version S1 → T1 : 모바일 분리(driver_m.html) 대응.
         - @version T1 → U1 : 미확인 픽업 신청이 요청일 지나면 인박스에서 자동 숨김('나가리'). isActivePending() 참고.
         - @version U1 → V1 : PC 100% 화면용 75% 기준 밀도 보정.
-     · @version  V1
+        - @version V1 → W1 : 기사 관제판 추가(입력 단순화·금주 퇴교수송 한눈보기·운행 충돌 안내).
+     · @version  W1
      · 수정상태: 수정완료   (작업 중에는 '수정중', 완료 시 '수정완료'로 표기)
      · 연동 데이터(system/pickup, courses/{room}/shuttle) 쓰기 로직 미변경 — 화면 필터만 적용, 타 담당자 영향 없음. -->
 <script>
@@ -64,8 +65,8 @@
 </style>
 <!-- ============================================================
   CATC · 차량·기사  (driver.html)  — 전면 리뉴얼본
-  @version  V1
-  @build    20260626-200500
+  @version  W1
+  @build    20260626-203500
   ────────────────────────────────────────────────────────
   PC용 기사 운행관리 대시보드
    - 신청 인박스(강사 픽업): 확인 / 불가(사유)
@@ -128,6 +129,46 @@
   /* 운행관리 레이아웃 */
   .grid2{display:grid; grid-template-columns:minmax(0,1fr) 380px; gap:16px; align-items:start;}
   @media(max-width:1100px){ .grid2{grid-template-columns:1fr;} }
+  .ops-hero{display:grid; grid-template-columns:1.15fr .85fr; gap:16px; margin-bottom:16px;}
+  .ops-hero-main{background:linear-gradient(135deg,#0f172a,#0f3b5f); color:#fff; border-radius:18px; padding:20px; box-shadow:0 14px 34px rgba(15,23,42,.18);}
+  .ops-title{display:flex; align-items:center; gap:10px; font-size:22px; font-weight:900; letter-spacing:0;}
+  .ops-sub{margin-top:6px; color:#cbd5e1; font-size:13px; font-weight:700;}
+  .ops-kpis{display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-top:18px;}
+  .ops-kpi{background:rgba(255,255,255,.1); border:1px solid rgba(255,255,255,.16); border-radius:14px; padding:13px 14px;}
+  .ops-kpi .k{font-size:11px; color:#cbd5e1; font-weight:800;}
+  .ops-kpi .v{font-size:24px; font-weight:900; margin-top:3px;}
+  .ops-kpi .v small{font-size:12px; color:#cbd5e1;}
+  .ops-guide{background:#fff; border:1px solid var(--border); border-radius:18px; padding:18px; box-shadow:0 8px 22px rgba(15,23,42,.06);}
+  .ops-guide h3{margin:0 0 10px; font-size:15px; font-weight:900; display:flex; gap:8px; align-items:center;}
+  .route-rule{display:grid; grid-template-columns:74px 1fr; gap:8px; padding:9px 0; border-top:1px solid #f1f5f9; font-size:12px; font-weight:800;}
+  .route-rule:first-of-type{border-top:0;}
+  .route-rule b{color:var(--blue-deep);}
+  .ops-grid{display:grid; grid-template-columns:minmax(0,1.08fr) minmax(360px,.92fr); gap:16px; align-items:start; margin-bottom:16px;}
+  .ops-row{display:flex; align-items:center; gap:10px; padding:12px 4px; border-bottom:1px solid #f1f5f9;}
+  .ops-row:last-child{border-bottom:0;}
+  .ops-main{min-width:0; flex:1;}
+  .ops-name{font-size:14px; font-weight:900; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .ops-meta{margin-top:3px; font-size:12px; color:var(--muted); font-weight:700;}
+  .ops-chip{font-size:12px; font-weight:900; padding:5px 10px; border-radius:999px; background:#eef2ff; color:#3730a3; white-space:nowrap;}
+  .ops-chip.green{background:#dcfce7; color:#166534;}
+  .ops-chip.yellow{background:#fef3c7; color:#92400e;}
+  .ops-chip.red{background:#fee2e2; color:#991b1b;}
+  .route-split{display:flex; gap:6px; flex-wrap:wrap; margin-top:8px;}
+  .mini-route{font-size:11px; font-weight:900; padding:4px 8px; border-radius:999px; background:#f8fafc; color:#475569; border:1px solid #e2e8f0;}
+  .mini-route.osong{background:#fee2e2; color:#991b1b; border-color:#fecaca;}
+  .mini-route.term{background:#e0f2fe; color:#075985; border-color:#bae6fd;}
+  .mini-route.air{background:#dcfce7; color:#166534; border-color:#bbf7d0;}
+  .ops-actions{display:flex; gap:8px; flex-wrap:wrap; margin-top:10px;}
+  .quick-btn{border:0; border-radius:10px; padding:9px 12px; font-size:12px; font-weight:900; color:#fff; cursor:pointer;}
+  .quick-btn.ok{background:var(--success);}
+  .quick-btn.no{background:var(--danger);}
+  .quick-btn.gray{background:#475569;}
+  .driver-workgrid{display:grid; grid-template-columns:1fr; gap:16px;}
+  .driver-sidegrid{display:grid; grid-template-columns:1fr 1fr; gap:16px;}
+  @media(max-width:1100px){
+    .ops-hero,.ops-grid,.driver-sidegrid{grid-template-columns:1fr;}
+    .ops-kpis{grid-template-columns:repeat(2,1fr);}
+  }
 
   .panel{background:var(--card); border:1px solid var(--border); border-radius:16px; box-shadow:0 4px 14px rgba(15,23,42,.05); overflow:hidden;}
   .panel-head{padding:13px 16px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:9px; font-weight:900; font-size:15px;}
@@ -311,14 +352,44 @@
 
 <div class="wrap">
   <div class="tabs">
-    <div class="tab active" data-view="manage" onclick="switchView('manage')"><i class="fa-solid fa-calendar-week"></i> 운행관리 <span class="cnt" id="tabCnt" style="display:none;">0</span></div>
+    <div class="tab active" data-view="manage" onclick="switchView('manage')"><i class="fa-solid fa-gauge-high"></i> 관제판 <span class="cnt" id="tabCnt" style="display:none;">0</span></div>
     <div class="tab" data-view="leave" onclick="switchView('leave')"><i class="fa-solid fa-bus"></i> 퇴교차량</div>
     <div class="tab" data-view="fixed" onclick="switchView('fixed')"><i class="fa-solid fa-gear"></i> 고정일정·휴가</div>
   </div>
 
   <!-- ============ 운행관리 ============ -->
   <div class="view active" id="view-manage">
-    <div class="grid2">
+    <div class="ops-hero">
+      <div class="ops-hero-main">
+        <div class="ops-title"><i class="fa-solid fa-gauge-high"></i> 오늘 운행 관제판</div>
+        <div class="ops-sub">입력은 필요한 순간만, 모니터링은 이 화면에서 한눈에 확인합니다.</div>
+        <div class="ops-kpis">
+          <div class="ops-kpi"><div class="k">미확인 픽업</div><div class="v" id="opsPending">0<small>건</small></div></div>
+          <div class="ops-kpi"><div class="k">오늘 확정 운행</div><div class="v" id="opsToday">0<small>건</small></div></div>
+          <div class="ops-kpi"><div class="k">금주 퇴교수송</div><div class="v" id="opsLeave">0<small>명</small></div></div>
+          <div class="ops-kpi"><div class="k">주의 필요</div><div class="v" id="opsWarn">0<small>건</small></div></div>
+        </div>
+      </div>
+      <div class="ops-guide">
+        <h3><i class="fa-solid fa-route" style="color:var(--blue-deep);"></i> 기본 운행 판단 기준</h3>
+        <div class="route-rule"><b>오송역</b><span>편도 약 30분, 왕복 기준 60분은 다른 픽업을 잡지 않는 것이 안전합니다.</span></div>
+        <div class="route-rule"><b>터미널</b><span>편도 약 25분, 왕복 기준 50분 여유를 둡니다.</span></div>
+        <div class="route-rule"><b>공항</b><span>편도 약 20분, 왕복 기준 40분 여유를 둡니다.</span></div>
+      </div>
+    </div>
+
+    <div class="ops-grid">
+      <div class="panel">
+        <div class="panel-head"><i class="fa-solid fa-bus" style="color:var(--teal);"></i> 금주 과정별 퇴교수송 현황 <span class="sub" id="opsLeaveSub"></span></div>
+        <div class="panel-body" id="opsLeaveBoard"><div class="inbox-empty">이번 주 퇴교수송 신청이 없습니다.</div></div>
+      </div>
+      <div class="panel">
+        <div class="panel-head"><i class="fa-solid fa-triangle-exclamation" style="color:var(--warn);"></i> 오늘·다가오는 운행 판단 <span class="sub">겹침은 자동 표시</span></div>
+        <div class="panel-body" id="opsFocusBoard"><div class="inbox-empty">확인할 운행이 없습니다.</div></div>
+      </div>
+    </div>
+
+    <div class="driver-workgrid">
       <!-- 주간 보드 -->
       <div class="panel" id="schedPanel">
         <div class="panel-head">
@@ -347,7 +418,7 @@
       </div>
 
       <!-- 인박스 -->
-      <div style="display:flex; flex-direction:column; gap:16px;">
+      <div class="driver-sidegrid">
         <div class="panel">
           <div class="panel-head"><i class="fa-solid fa-bell" style="color:var(--warn);"></i> 신규 픽업 신청 <span class="sub" id="pendingSub">0건</span></div>
           <div class="panel-body" id="inboxBody"><div class="inbox-empty">대기 중인 신청이 없습니다.</div></div>
@@ -615,13 +686,160 @@ function switchView(v){
 function moveWeek(d){ weekOffset = d===0 ? ((()=>{const dw=new Date().getDay();return (dw===5||dw===6||dw===0)?1:0;})()) : weekOffset+d; renderSchedule(); }
 
 /* ===================== 렌더 ===================== */
-function renderAll(){ renderInbox(); renderDone(); renderSchedule(); renderLeave(); renderFixedList(); renderOffList(); updateTabCount(); renderWeekCourses(); renderPlanList(); }
+function renderAll(){ renderInbox(); renderDone(); renderSchedule(); renderLeave(); renderOpsDashboard(); renderFixedList(); renderOffList(); updateTabCount(); renderWeekCourses(); renderPlanList(); }
 
 function updateTabCount(){
   const n=pickups.filter(isActivePending).length; // 지난 요청일 건은 제외
   const t=document.getElementById('tabCnt'); const sub=document.getElementById('pendingSub');
   if(n>0){ t.style.display='inline-block'; t.textContent=n; } else t.style.display='none';
   sub.textContent=`${n}건`;
+}
+
+function placeBlockMin(place){
+  const p=String(place||'');
+  if(p.includes('오송')) return 60;
+  if(p.includes('터미널')) return 50;
+  if(p.includes('공항')) return 40;
+  return 60;
+}
+function opWindow(date,time,place){
+  const m=toMin(time); if(m===null) return null;
+  const block=placeBlockMin(place);
+  return {date:normDate(date), start:m, end:m+block, block};
+}
+function routeBadges(counts){
+  counts=counts||{};
+  return `<div class="route-split">
+    <span class="mini-route osong">오송 ${counts.osong||0}</span>
+    <span class="mini-route term">터미널 ${counts.terminal||0}</span>
+    <span class="mini-route air">공항 ${counts.airport||0}</span>
+    <span class="mini-route">자차 ${counts.car||0}</span>
+  </div>`;
+}
+function getWeekBounds(){
+  const dates=getWeekDates(weekOffset);
+  const sun=new Date(dates[0]); sun.setDate(sun.getDate()+6);
+  return {dates, start:dates[0], end:ymd(sun)};
+}
+function getLeaveRowsForWeek(){
+  const wk=getWeekBounds(); const rows=[];
+  for(const rid in allCourses){
+    const room=allCourses[rid]||{}; const reqs=room.shuttle&&room.shuttle.requests;
+    if(!reqs) continue;
+    const arr=Object.values(reqs).filter(Boolean);
+    if(!arr.length) continue;
+    const counts={osong:0,terminal:0,airport:0,car:0};
+    arr.forEach(r=>{ if(counts[r.type]!==undefined) counts[r.type]++; });
+    const busTot=counts.osong+counts.terminal+counts.airport;
+    if(!busTot && !counts.car) continue;
+    const dep=room.shuttle&&room.shuttle.departure;
+    const date=normDate((dep&&dep.date)||calcLeaveDate(room));
+    if(date && (date<wk.start || date>wk.end)) continue;
+    rows.push({
+      rid,
+      cn:(room.settings&&room.settings.courseName)||('Room '+rid),
+      date,
+      time:(dep&&dep.time)||'미정',
+      announced:!!(dep&&dep.announced),
+      counts,
+      busTot,
+      car:counts.car
+    });
+  }
+  return rows.sort((a,b)=>(a.date+a.time+a.cn).localeCompare(b.date+b.time+b.cn));
+}
+function getOpEventsForWeek(){
+  const wk=getWeekBounds(); const evs=[];
+  pickups.filter(p=>p.status==='confirmed').forEach(p=>{
+    const d=normDate(p.date); if(d<wk.start||d>wk.end) return;
+    const dir=p.dir||'arr'; const w=opWindow(d,p.time,p.place); if(!w) return;
+    evs.push({kind:'pickup', id:p.id, date:d, time:p.time, start:w.start, end:w.end, title:`${p.prof||'강사'} · ${dirText(p.place)[dir]}`, place:p.place, block:w.block});
+  });
+  schedules.forEach(x=>{
+    const d=normDate(x.date); if(d<wk.start||d>wk.end||toMin(x.time)===null) return;
+    evs.push({kind:'memo', id:x.id, date:d, time:x.time, start:toMin(x.time), end:x.endTime?toMin(x.endTime):toMin(x.time)+60, title:x.title||'일정'});
+  });
+  getLeaveRowsForWeek().forEach(r=>{
+    if(toMin(r.time)===null) return;
+    evs.push({kind:'leave', id:r.rid, date:r.date, time:r.time, start:toMin(r.time), end:toMin(r.time)+60, title:`${r.cn} 퇴교수송 ${r.busTot}명`, place:'오송역', block:60});
+  });
+  fixeds.forEach(f=>{
+    const i=Number(f.dow)-1; if(i<0||i>4||toMin(f.time)===null) return;
+    const d=wk.dates[i];
+    evs.push({kind:'fixed', id:f.id, date:d, time:f.time, start:toMin(f.time), end:f.endTime?toMin(f.endTime):toMin(f.time)+60, title:`${f.kind}버스 ${f.note||''}`.trim()});
+  });
+  return evs.sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));
+}
+function findOpWarnings(){
+  const evs=getOpEventsForWeek(); const warnings=[];
+  for(let i=0;i<evs.length;i++){
+    for(let j=i+1;j<evs.length;j++){
+      if(evs[i].date!==evs[j].date) continue;
+      if(evs[i].start<evs[j].end && evs[j].start<evs[i].end){
+        warnings.push({date:evs[i].date, a:evs[i], b:evs[j]});
+      }
+    }
+  }
+  return warnings;
+}
+function renderOpsDashboard(){
+  const pending=pickups.filter(isActivePending).sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));
+  const today=todayStr();
+  const leaveRows=getLeaveRowsForWeek();
+  const evs=getOpEventsForWeek();
+  const todayOps=evs.filter(e=>e.date===today).length;
+  const warn=findOpWarnings();
+  const setText=(id,html)=>{ const el=document.getElementById(id); if(el) el.innerHTML=html; };
+  setText('opsPending', `${pending.length}<small>건</small>`);
+  setText('opsToday', `${todayOps}<small>건</small>`);
+  setText('opsLeave', `${leaveRows.reduce((a,r)=>a+r.busTot,0)}<small>명</small>`);
+  setText('opsWarn', `${warn.length}<small>건</small>`);
+
+  const leaveSub=document.getElementById('opsLeaveSub');
+  if(leaveSub) leaveSub.textContent=leaveRows.length?`${leaveRows.length}개 과정`: '';
+  const lb=document.getElementById('opsLeaveBoard');
+  if(lb){
+    lb.innerHTML=leaveRows.length ? leaveRows.map(r=>`<div class="ops-row">
+      <div class="ops-main">
+        <div class="ops-name">${escapeHtml(r.cn)}</div>
+        <div class="ops-meta">${fmtFull(r.date)||'일자 미정'} · ${r.time==='미정'?'출발시간 미정':r.time+' 출발'} ${r.announced?'· 공지됨':'· 공지 대기'}</div>
+        ${routeBadges(r.counts)}
+      </div>
+      <span class="ops-chip ${r.announced?'green':'yellow'}">${r.busTot}명</span>
+    </div>`).join('') : '<div class="inbox-empty">이번 주 퇴교수송 신청이 없습니다.</div>';
+  }
+
+  const fb=document.getElementById('opsFocusBoard');
+  if(fb){
+    const focus=[];
+    pending.slice(0,4).forEach(p=>{
+      const dir=p.dir||'arr'; const conf=getConflicts(p.date,p.time,p.id);
+      focus.push(`<div class="ops-row">
+        <div class="ops-main">
+          <div class="ops-name">${escapeHtml(p.prof||'강사')} <span class="ops-chip yellow">미확인</span></div>
+          <div class="ops-meta">${fmtD(p.date)} ${p.time||''} · ${dirText(p.place)[dir]} · 운행점유 약 ${placeBlockMin(p.place)}분</div>
+          ${conf.length?`<div class="req-conflict" style="margin-top:8px;">겹침 주의<br>${conf.map(c=>'· '+escapeHtml(c)).join('<br>')}</div>`:''}
+          <div class="ops-actions"><button class="quick-btn ok" onclick="confirmPickup('${p.id}')">확인</button><button class="quick-btn no" onclick="openReject('${p.id}')">불가</button></div>
+        </div>
+      </div>`);
+    });
+    warn.slice(0,3).forEach(w=>{
+      focus.push(`<div class="ops-row">
+        <div class="ops-main">
+          <div class="ops-name">시간 겹침 확인 필요</div>
+          <div class="ops-meta">${fmtD(w.date)} · ${escapeHtml(w.a.time+' '+w.a.title)} / ${escapeHtml(w.b.time+' '+w.b.title)}</div>
+        </div>
+        <span class="ops-chip red">주의</span>
+      </div>`);
+    });
+    if(!focus.length){
+      evs.filter(e=>e.date>=today).slice(0,5).forEach(e=>focus.push(`<div class="ops-row">
+        <div class="ops-main"><div class="ops-name">${escapeHtml(e.title)}</div><div class="ops-meta">${fmtD(e.date)} ${e.time||''}${e.block?' · 약 '+e.block+'분 점유':''}</div></div>
+        <span class="ops-chip green">확정</span>
+      </div>`));
+    }
+    fb.innerHTML=focus.length?focus.join(''):'<div class="inbox-empty">확인할 운행이 없습니다.</div>';
+  }
 }
 
 /* ---- 겹침(중복) 감지 ---- */
@@ -1097,7 +1315,7 @@ window.addEventListener('DOMContentLoaded', init);
 })();
 </script>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vE</div>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vF</div>
 <script>
 /* ===== [공용] 종료된 과정 자동 정리 (기사 포함 전 플랫폼) — 종료일 지난 방을 다음날 미개설로 비움. 브라우저별 하루 1회 ===== */
 window.kacExpireEndedCourses = async function(){
