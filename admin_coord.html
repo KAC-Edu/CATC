@@ -2,7 +2,7 @@
 <!-- 이 플랫폼(admin_coord.html / 교육운영부) 수정상태 플래그. 값은 [수정중] 또는 [수정안하는중] 두 가지. -->
 <!-- 작업 시작 시 → 수정중 / 작업 완료 시 → 수정안하는중. 다른 플랫폼은 이 말머리를 보고 연동·수정 가능 여부 판단. -->
 <!-- [외부변경 · 카카오채널연동 2026-06-25] 포털(portal.html/7777) 경유 폐지 → 페이지 직접진입 시 접속코드(catc1234) 게이트 추가, 포털 리다이렉트/종료이동 제거. version C13→D13. 기능 로직은 미변경. -->
-<!-- last-updated: 2026-06-26 / version: D28 (퇴교차량 상단버튼 크기 통일 및 입교현황 과정카드 한줄 정렬) -->
+<!-- last-updated: 2026-06-26 / version: D29 (상단 전체교육생/명단 팝업을 입교현황 예정명단 기준으로 통일) -->
 <!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -3338,6 +3338,7 @@ function updateGlobalStatus() {
         updateText('g-shuttle-count', totalShuttle);
         // 히어로 배지: 전체 입교생 (동일 집계 재사용)
         setMetric('hero-total-students', uniqueSet.size);
+        try { if(typeof _coordRefreshRosterExtAndTotals === 'function') _coordRefreshRosterExtAndTotals(); } catch(e){}
         // [실시간] 열려있는 요약 팝업(퇴교차량/외출 등) 자동 갱신
         try { if(window._coordPopupRefresh && document.getElementById('coordPopup') && document.getElementById('coordPopup').classList.contains('open')) window._coordPopupRefresh(); } catch(e){}
     });
@@ -7661,6 +7662,39 @@ function _courseOverviewCount(r){
   if(!expected){ var es=r.room.expectedStudents; if(typeof es==='number') expected=es; else if(es&&typeof es==='object') expected=Object.keys(es).length; }
   return {expected:expected, arrived:arrived};
 }
+function _coordSyncTotalStudentsFromOverview(){
+  try{
+    var total=0;
+    (typeof _coordActiveRooms==='function'?_coordActiveRooms():[]).forEach(function(r){
+      var c=(typeof _courseOverviewCount==='function')?_courseOverviewCount(r):{expected:0,arrived:0};
+      total += Math.max(c.expected||0, c.arrived||0);
+    });
+    if(typeof setMetric==='function'){ setMetric('g-total-students', total); setMetric('hero-total-students', total); }
+    else {
+      var g=document.getElementById('g-total-students'); if(g) g.textContent=total;
+      var h=document.getElementById('hero-total-students'); if(h) h.textContent=total;
+    }
+    return total;
+  }catch(e){ return 0; }
+}
+var _coordRosterExtSyncBusy=false;
+function _coordRefreshRosterExtAndTotals(){
+  try{
+    if(window._coordRosterExt) _coordSyncTotalStudentsFromOverview();
+    if(_coordRosterExtSyncBusy || !(window.firebase&&firebase.database)) return;
+    _coordRosterExtSyncBusy=true;
+    var norm=function(x){ return String(x==null?'':x).replace(/\s+/g,'').toLowerCase(); };
+    Promise.all([
+      firebase.database().ref('system/dorm/rosters').once('value').catch(function(){return null;}),
+      firebase.database().ref('system/coord/rosters').once('value').catch(function(){return null;})
+    ]).then(function(res){
+      var ext={};
+      res.forEach(function(snap){ if(!snap) return; var v=snap.val()||{}; Object.keys(v).forEach(function(kk){ var it=v[kk]; if(!it||!Array.isArray(it.list)) return; var nm=norm(it.courseName); if(!nm) return; (ext[nm]=ext[nm]||[]).push({list:it.list,period:(it.period||''),room:(it.room||''),weekKey:(it.weekKey||'')}); }); });
+      window._coordRosterExt=ext;
+      _coordSyncTotalStudentsFromOverview();
+    }).catch(function(){}).finally(function(){ _coordRosterExtSyncBusy=false; });
+  }catch(e){ _coordRosterExtSyncBusy=false; }
+}
 function _courseOverviewHTML(){
   const rooms=_coordActiveRooms();
   const full = (nm)=> (typeof _coordFullName==='function') ? (_coordFullName(nm)|| (nm||'-')) : (nm||'-');
@@ -7784,15 +7818,15 @@ function openStudentRosterPopup(){
       }
       if(!roster.length) roster=_studentsOf(r.room);
       roster=roster.slice().filter(st=>st&&(''+(st.name||'')).trim());
-      if(!roster.length) return '';
       roster.forEach(function(st){ var reg=_coordDeptToRegion(st.dept||st.position||st.affil||st.org||''); if(reg){ _mc[reg]=(_mc[reg]||0)+1; _mtot++; } else { _munk++; } });
-      const rows=roster.map((st,i)=>`<tr class="rosterRow" data-n="${_esc(((st.name||'')+(st.dept||st.position||st.affil||'')).toLowerCase())}"><td style="color:#94a3b8;">${i+1}</td><td style="text-align:left;color:#475569;">${_esc(st.dept||st.position||st.affil||st.org||'-')}</td><td style="color:#64748b;">${_esc(st.empNo||st.sabun||st.id||'-')}</td><td style="font-weight:800;">${_esc(st.name||'-')}</td></tr>`).join('');
+      const rows=roster.length ? roster.map((st,i)=>`<tr class="rosterRow" data-n="${_esc(((st.name||'')+(st.dept||st.position||st.affil||'')).toLowerCase())}"><td style="color:#94a3b8;">${i+1}</td><td style="text-align:left;color:#475569;">${_esc(st.dept||st.position||st.affil||st.org||'-')}</td><td style="color:#64748b;">${_esc(st.empNo||st.sabun||st.id||'-')}</td><td style="font-weight:800;">${_esc(st.name||'-')}</td></tr>`).join('') : '<tr><td colspan="4" style="padding:18px;text-align:center;color:#94a3b8;font-weight:800;">등록된 예정 명단이 없습니다.</td></tr>';
       return `<div class="cpop-course"><div class="cpop-course-h" onclick="_rosterAccToggle(this)"><span style="color:#0c4a6e;font-size:18px;"><i class="fa-solid fa-chevron-right cpop-acc-chev"></i>ROOM #${_esc(r.rid)} · ${_esc(r.s.courseName||'-')}</span> <span style="font-size:20px;font-weight:900;white-space:nowrap;flex-shrink:0;"><span style="color:#2563eb;">예정 ${roster.length}</span> <span style="color:#cbd5e1;margin:0 4px;">·</span> <span style="color:#16a34a;">입교 ${(typeof _studentsOf==='function'?_studentsOf(r.room).length:0)}</span></span></div>
         <div class="cpop-acc-body" style="display:none;"><table class="cpop-table" style="table-layout:fixed;"><colgroup><col style="width:12%"><col style="width:46%"><col style="width:21%"><col style="width:21%"></colgroup><thead><tr><th>연번</th><th style="text-align:left;">소속</th><th>사번</th><th>성명</th></tr></thead><tbody>${rows}</tbody></table></div></div>`;
     }).join('');
     if(!blocks.trim()) blocks='<div class="cpop-empty">등록된 명단이 없습니다.</div>';
     const w=document.getElementById('cpopRosterWrap'); if(w) w.innerHTML=blocks;
     try{ _coordRenderStudentMap(_mc,_mtot,_munk); }catch(e){}
+    try{ if(typeof _coordSyncTotalStudentsFromOverview==='function') _coordSyncTotalStudentsFromOverview(); }catch(e){}
   }
   _cpop('<i class="fa-solid fa-users"></i> 과정별 교육생 명단', '<div id="coordStudentMapBox" style="margin-bottom:14px;"><div style="font-size:13px;font-weight:800;color:#475569;margin:2px 2px 8px;"><i class="fa-solid fa-map-location-dot" style="color:#2563eb;"></i> 금주 교육생 전국 분포 <span id="coordMapTotal" style="color:#94a3b8;font-weight:700;"></span></div><div style="display:flex;gap:14px;align-items:stretch;flex-wrap:wrap;"><div id="coordStudentMapKakao" style="flex:2;min-width:300px;height:360px;border-radius:14px;overflow:hidden;border:1px solid #e2e8f0;background:#eaf2fb;"></div><div id="coordMapList" style="flex:1;min-width:210px;max-height:360px;overflow-y:auto;"></div></div></div>'+search+'<div id="cpopRosterWrap"></div>');
   paint(window._coordRosterExt||{});
@@ -8663,7 +8697,7 @@ window.addEventListener('load', function(){
 });
 </script>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:6px;bottom:5px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;font-weight:800;line-height:1;letter-spacing:.6px;color:#fff;background:rgba(15,23,42,.85);padding:4px 8px;border-radius:6px;pointer-events:none;user-select:none;box-shadow:0 2px 6px rgba(0,0,0,.3);">D28</div>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:6px;bottom:5px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;font-weight:800;line-height:1;letter-spacing:.6px;color:#fff;background:rgba(15,23,42,.85);padding:4px 8px;border-radius:6px;pointer-events:none;user-select:none;box-shadow:0 2px 6px rgba(0,0,0,.3);">D29</div>
 <script>
 /* ===== [공용] 종료된 과정 자동 정리 (모든 플랫폼 공통) — 종료일 지난 방을 다음날 미개설로 비움. 브라우저별 하루 1회 ===== */
 window.kacExpireEndedCourses = async function(){
@@ -9128,7 +9162,7 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
       var ext={};
       [res[0],res[1]].forEach(function(snap){ if(!snap) return; var v=snap.val()||{}; Object.keys(v).forEach(function(kk){ var it=v[kk]; if(!it||!Array.isArray(it.list)) return; var nm=norm(it.courseName); if(!nm) return; (ext[nm]=ext[nm]||[]).push({list:it.list,period:(it.period||''),room:(it.room||''),weekKey:(it.weekKey||'')}); }); });
       var dmap={}; var av=(res[2]&&res[2].val())||{}; Object.keys(av).forEach(function(k){ var a=av[k]; if(!a||!a.name) return; var nm=norm(a.name); var id=(''+(a.empNo||'')).replace(/[^0-9]/g,''); dmap[nm+'|'+id]=a; if(!dmap['n:'+nm]) dmap['n:'+nm]=a; }); window._coordDormAssign=dmap;
-      window._coordEnrollExt=ext; paint(ext);
+    window._coordEnrollExt=ext; window._coordRosterExt=ext; try{ if(typeof _coordSyncTotalStudentsFromOverview==='function') _coordSyncTotalStudentsFromOverview(); }catch(e){} paint(ext);
     }).catch(function(){});
   };
 
