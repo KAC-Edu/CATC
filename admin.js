@@ -1,7 +1,7 @@
 /* ============================================================
    CATC · 강사 플랫폼 로직  (admin.js)
-   @version  X
-   @build    20260626-200500  (vX: OTP room 정규화 저장 보강)
+   @version  Y
+   @build    20260627-001819  (vY: 운영 과정 선택 카드 간격 확대)
    ------------------------------------------------------------
    [코드 수정 규칙 · AI/개발자 공통]
    이 파일을 고치면 @version 을 A -> B -> ... -> Z -> A1 -> B1 ...
@@ -5541,14 +5541,14 @@ resetShuttleRequests: function() {
             title.textContent='🏫 현재 강의 중인 과정  ·  '+_wkRange;
             const rows=weekRooms.filter(([,r])=>(r.status||{}).roomStatus==='active').map(([room,r])=>{
                 const prof=(r.status||{}).professorName||'-', course=(r.settings||{}).courseName||'-';
-                return `<div onclick="document.getElementById('homeStatModal').style.display='none'; dataMgr.switchRoomAttempt('${room}');" title="클릭하면 이 과정으로 입장합니다" style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:clamp(10px,1.6vh,18px) clamp(14px,2vw,24px);background:#eff6ff;border:1px solid #dbeafe;border-radius:14px;margin-bottom:clamp(5px,1vh,11px);cursor:pointer;transition:background .15s, transform .15s, box-shadow .15s;" onmouseover="this.style.background='#dbeafe';this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 20px rgba(37,99,235,.18)';" onmouseout="this.style.background='#eff6ff';this.style.transform='none';this.style.boxShadow='none';">
+                return `<div onclick="document.getElementById('homeStatModal').style.display='none'; dataMgr.switchRoomAttempt('${room}');" title="클릭하면 이 과정으로 입장합니다" style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:clamp(10px,1.6vh,18px) clamp(14px,2vw,24px);background:#eff6ff;border:1px solid #dbeafe;border-radius:14px;margin-bottom:clamp(16px,2.4vh,26px);cursor:pointer;transition:background .15s, transform .15s, box-shadow .15s;" onmouseover="this.style.background='#dbeafe';this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 20px rgba(37,99,235,.18)';" onmouseout="this.style.background='#eff6ff';this.style.transform='none';this.style.boxShadow='none';">
                     <div style="display:flex;align-items:center;gap:clamp(10px,1.5vw,20px);min-width:0;">
                         <span style="font-weight:900;color:#fff;background:#3b82f6;padding:clamp(5px,0.8vh,8px) clamp(10px,1.2vw,15px);border-radius:10px;font-size:clamp(13px,1.4vw,18px);white-space:nowrap;">Room #${room}</span>
                         <span style="font-size:clamp(15px,1.9vw,23px);color:#0f172a;font-weight:800;word-break:keep-all;">${course}</span>
                     </div>
                     <span style="font-size:clamp(12px,1.4vw,16px);color:#475569;font-weight:800;white-space:nowrap;">${prof} 교수 <i class="fa-solid fa-arrow-right-to-bracket" style="margin-left:8px;color:#3b82f6;"></i></span></div>`;
             }).join('');
-            body.innerHTML=rows||'<p style="color:#94a3b8;text-align:center;padding:36px;font-size:20px;">이번 주 강의 중인 과정이 없습니다.</p>';
+            body.innerHTML=rows?'<div style="display:flex;flex-direction:column;gap:clamp(2px,0.5vh,8px);">'+rows+'</div>':'<p style="color:#94a3b8;text-align:center;padding:36px;font-size:20px;">이번 주 강의 중인 과정이 없습니다.</p>';
         } else if(type==='students'){
             title.innerHTML='<div style="text-align:center;font-weight:900;">👩‍🎓 교육생 현황 · 소속 분포</div>'
                 +'<div style="text-align:center;font-size:clamp(15px,1.7vw,21px);color:#2563eb;font-weight:800;margin-top:6px;">'+_wkRange+' <span style="color:#94a3b8;font-weight:700;">· 예정명단 기준</span></div>';
