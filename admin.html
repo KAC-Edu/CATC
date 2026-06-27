@@ -14,8 +14,8 @@
 <!-- ============================================================
   CATC · 강사 플랫폼  (admin.html)
   STATUS    수정안하는중
-  @version  E1
-  @build    20260627-164931  (PDF 로더 복구·OTP 및 화면 간격 정리)
+  @version  F1
+  @build    20260628-075317  (스마트 리모컨·우측 메뉴 플래그 개선)
   ────────────────────────────────────────────────────────
   [코드 수정 규칙 · AI/개발자 공통]
   이 파일을 한 글자라도 고치면:
@@ -41,7 +41,7 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/ko.js"></script>
-    <link rel="stylesheet" href="admin.css?v=260627F1">
+    <link rel="stylesheet" href="admin.css?v=260628M">
     <link rel="stylesheet" href="kac-tokens.css?v=20260622">
     <link rel="icon" type="image/svg+xml" href="favicon.svg?v=b260620c">
     <script>
@@ -524,6 +524,15 @@
     <button class="mode-btn" id="tab-students" onclick="ui.setMode('students')"><i class="fa-solid fa-users-viewfinder" style="color:#3b82f6;"></i> <span class="i18n" data-en="Students">수강생 현황</span></button>
 </div>
 
+<!-- 강의 중 빠른 화면 전환용 스마트 리모컨 -->
+<nav id="courseSmartRemote" aria-label="강의 화면 빠른 이동">
+    <button class="remote-key remote-north" onclick="ui.setMode('guide')" title="입교안내"><i class="fa-solid fa-file-pdf"></i><span>입교</span></button>
+    <button class="remote-key remote-west" onclick="ui.setMode('dashboard')" title="과정 현황"><i class="fa-solid fa-gauge-high"></i><span>과정</span></button>
+    <button class="remote-home" onclick="ui.setMode('dashboard')" title="홈"><i class="fa-solid fa-house"></i><span>홈</span></button>
+    <button class="remote-key remote-east" onclick="ui.setMode('students')" title="수강생 현황"><i class="fa-solid fa-users-viewfinder"></i><span>수강생</span></button>
+    <button class="remote-key remote-south" onclick="ui.setMode('notice')" title="공지 관리"><i class="fa-solid fa-bullhorn"></i><span>공지</span></button>
+</nav>
+
 <!-- 더보기 우측 슬라이드 패널 -->
 <style>
 #moreMenuPanel .more-item{ display:flex; align-items:center; gap:12px; padding:13px 12px; border-radius:12px; font-size:15px; font-weight:700; color:#334155; cursor:pointer; text-decoration:none; transition:background .15s; }
@@ -536,8 +545,9 @@ body.in-course #moreToggleTab{ display:flex !important; }
 #moreMenuPanel .more-div{ height:1px; background:#eef2f7; margin:6px 10px; border:0; }
 </style>
 <!-- 더보기 우측 클립 손잡이 (좌측 사이드바와 동일 스타일) -->
-<div id="moreToggleTab" onclick="ui.toggleMorePanel()" title="더보기 메뉴" style="position:fixed; right:0; top:50%; transform:translateY(-50%); width:22px; height:56px; background:#1e293b; border-radius:8px 0 0 8px; display:flex; align-items:center; justify-content:center; cursor:pointer; z-index:6002; border:1px solid rgba(255,255,255,0.12); border-right:none; transition:right 0.34s cubic-bezier(.22,1,.36,1); box-shadow:-3px 0 8px rgba(0,0,0,0.3);">
-    <i id="moreToggleIcon" class="fa-solid fa-chevron-left" style="color:#94a3b8; font-size:11px; transition:transform 0.3s;"></i>
+<div id="moreToggleTab" onclick="ui.toggleMorePanel()" title="더보기 메뉴">
+    <i id="moreToggleIcon" class="fa-solid fa-chevron-left"></i>
+    <span>메뉴</span>
 </div>
 <div id="moreMenuBackdrop" onclick="ui.closeMorePanel()" style="display:none; position:fixed; inset:0; background:rgba(15,23,42,.28); z-index:6000;"></div>
 <div id="moreMenuPanel" style="position:fixed; top:12px; right:12px; height:calc(100vh - 24px); width:300px; max-width:86vw; background:#fff; border-radius:20px; box-shadow:-14px 0 44px rgba(15,23,42,.22); z-index:6001; transform:translateX(calc(100% + 24px)); transition:transform .34s cubic-bezier(.22,1,.36,1); display:flex; flex-direction:column; padding:16px 12px calc(16px + env(safe-area-inset-bottom)); overflow-y:auto;">
@@ -2541,7 +2551,7 @@ function setupAcc(btn){
 
 
 
-    <script src="admin.js?v=260627F1"></script>
+    <script src="admin.js?v=260628G1"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
 <!-- ── 화면 자동 맞춤(auto-fit): 가로+세로 모두 화면에 맞게 자동 축소 · JDS260613 ──
      원인: Windows 디스플레이 배율(125%/150%)·저해상도 화면에서 유효 뷰포트가 작아져

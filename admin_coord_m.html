@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-  <!-- last-updated: 2026-06-26 / version: M2 (과정 상세 상단 제목에서 ROOM 표기 제거) -->
+  <!-- last-updated: 2026-06-28 / version: M3 (관리자 인증 30일 유지) -->
   <meta charset="UTF-8" />
   <script>
   /* [기기 분리] PC 접속은 PC 전용 화면으로 (모바일은 이 화면 유지) */
@@ -13,13 +13,13 @@
     if(isPc && location.search.indexOf('forcem')<0){ location.replace('admin_coord.html'+location.search+location.hash); }
   }catch(e){} })();
   </script>
-<!-- ════════ [외부 변경 · 카카오채널 연동 · 2026-06-25] catc1234 접속 게이트 ════════
+<!-- ════════ [외부 변경 · 카카오채널 연동 · 2026-06-25] catc1234 접속 게이트 · 수정상태: 수정안하는중 ════════
      · admin_coord.html(교육운영부)의 모바일판. 포털 경유 폐지 → 직접진입 시 접속코드 요구.
      · 통과 시 localStorage['catc_gate_ok']='1' 저장. catcLock()으로 잠금 해제. 기능 로직 미변경. -->
 <script>
 (function(){
   window.catcLock=function(){ try{localStorage.removeItem('catc_gate_ok');}catch(e){} location.reload(); };
-  var ok=false; try{ ok=(function(){var t=parseInt(localStorage.getItem('catc_gate_ok'),10);return !!t&&(Date.now()-t)<86400000;})(); }catch(e){ ok=true; }
+  var ok=false; try{ ok=(function(){var t=parseInt(localStorage.getItem('catc_gate_ok'),10);return !!t&&(Date.now()-t)<2592000000;})(); }catch(e){ ok=true; }
   if(ok){ window.__catcUnlocked=true; return; }
   window.__catcUnlocked=false;
   document.documentElement.classList.add('catc-locked');

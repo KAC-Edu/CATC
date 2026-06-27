@@ -1,15 +1,15 @@
 ﻿/* ============================================================
    CATC · 강사 플랫폼 로직  (admin.js)
    STATUS    수정안하는중
-   @version  F1
-   @build    20260627-164931  (vF1: 입교안내 동일출처 PDF 우선 로드·사이드바 보정)
+   @version  G1
+   @build    20260628-075317  (vG1: 스마트 리모컨·우측 메뉴 플래그 연동)
    ------------------------------------------------------------
    [코드 수정 규칙 · AI/개발자 공통]
    이 파일을 고치면 @version 을 A -> B -> ... -> Z -> A1 -> B1 ...
    순으로 1단계 올리고, @build 를 수정 시각으로 갱신할 것.
    적용 여부는 브라우저 콘솔 로그(vA)로 확인한다.
 ============================================================ */
-try{console.log('%cCATC%c 강사 플랫폼 로직 (admin.js) %cvF1%c build 20260627-164931','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}
+try{console.log('%cCATC%c 강사 플랫폼 로직 (admin.js) %cvG1%c build 20260628-075317','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}
 /* --- admin.js (Final Integrated Version - Fixed Syntax & Logic) --- */
 
 // --- [기본 데이터] 20문항 ---

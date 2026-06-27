@@ -21,7 +21,7 @@
 <script>
 (function(){
   window.catcLock=function(){ try{localStorage.removeItem('catc_gate_ok');}catch(e){} location.reload(); };
-  var ok=false; try{ ok=(function(){var t=parseInt(localStorage.getItem('catc_gate_ok'),10);return !!t&&(Date.now()-t)<86400000;})(); }catch(e){ ok=true; }
+  var ok=false; try{ ok=(function(){var t=parseInt(localStorage.getItem('catc_gate_ok'),10);return !!t&&(Date.now()-t)<2592000000;})(); }catch(e){ ok=true; }
   if(ok){ window.__catcUnlocked=true; return; }
   window.__catcUnlocked=false;
   document.documentElement.classList.add('catc-locked');
@@ -59,7 +59,7 @@
 </style>
 <!-- ============================================================
   CATC · 교육지원부 · 생활관 배정  (dorm_admin.html)
-  @version  M1
+  @version  N1
   @build    20260626-120000
   ────────────────────────────────────────────────────────
   [코드 수정 규칙 · AI/개발자 공통]

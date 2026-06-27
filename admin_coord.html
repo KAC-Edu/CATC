@@ -2,7 +2,7 @@
 <!-- 이 플랫폼(admin_coord.html / 교육운영부) 수정상태 플래그. 값은 [수정중] 또는 [수정안하는중] 두 가지. -->
 <!-- 작업 시작 시 → 수정중 / 작업 완료 시 → 수정안하는중. 다른 플랫폼은 이 말머리를 보고 연동·수정 가능 여부 판단. -->
 <!-- [외부변경 · 카카오채널연동 2026-06-25] 포털(portal.html/7777) 경유 폐지 → 페이지 직접진입 시 접속코드(catc1234) 게이트 추가, 포털 리다이렉트/종료이동 제거. version C13→D13. 기능 로직은 미변경. -->
-<!-- last-updated: 2026-06-27 / version: D36 (강의실 배정 표/배치도 모드 분리) -->
+<!-- last-updated: 2026-06-28 / version: D37 (운영설정 완료처리·강의실 도구 축소·연간계획 현재주 포커스) -->
 <!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -24,7 +24,7 @@
 <script>
 (function(){
   window.catcLock=function(){ try{localStorage.removeItem('catc_gate_ok');}catch(e){} location.reload(); };
-  var ok=false; try{ ok=(function(){var t=parseInt(localStorage.getItem('catc_gate_ok'),10);return !!t&&(Date.now()-t)<86400000;})(); }catch(e){ ok=true; }
+  var ok=false; try{ ok=(function(){var t=parseInt(localStorage.getItem('catc_gate_ok'),10);return !!t&&(Date.now()-t)<2592000000;})(); }catch(e){ ok=true; }
   if(ok){ window.__catcUnlocked=true; return; }
   window.__catcUnlocked=false;
   document.documentElement.classList.add('catc-locked');
@@ -2184,8 +2184,26 @@ body.coord-header-compact.pc-mode #coordHdrStats.coord-hdr-hide{ display:flex !i
     </div>
 
     <!-- ✅ [복구 완료] 현재 운영 중인 과정 리스트 섹션 (= 섹션 2) -->
+    <style>
+      .coord-room-tools{position:relative;margin-left:auto;}
+      .coord-room-tools summary{list-style:none;display:flex;align-items:center;gap:7px;padding:11px 16px;border:1.5px solid #cbd5e1;border-radius:11px;background:#fff;color:#334155;font-size:14px;font-weight:900;cursor:pointer;}
+      .coord-room-tools summary::-webkit-details-marker{display:none;}
+      .coord-room-tools[open] summary{border-color:#2563eb;color:#1d4ed8;background:#eff6ff;}
+      .coord-room-tools-menu{position:absolute;right:0;top:calc(100% + 8px);z-index:20;width:270px;padding:12px;background:#fff;border:1px solid #dbe3ef;border-radius:13px;box-shadow:0 16px 35px rgba(15,23,42,.16);display:grid;gap:9px;}
+      .coord-room-tools-menu button,.coord-room-tools-menu select{width:100%;min-height:42px;border:1px solid #dbe3ef;border-radius:9px;background:#fff;color:#334155;font-weight:800;padding:0 12px;cursor:pointer;}
+      .coord-room-tools-menu button{background:#0f2a4a;color:#fff;border:0;}
+    </style>
     <div id="csec-2" class="section-card" style="background:white; padding:18px 16px; border:1px solid #eef2f7; box-shadow:0 4px 14px rgba(15,23,42,0.05);">
-        <div class="coord-sec-head"><h2><i class="fa-solid fa-list-ul"></i> 강의실 배정 현황</h2><button onclick="coordOpenRoomAssign()" style="margin-left:auto;padding:12px 20px;border:none;border-radius:11px;background:linear-gradient(135deg,#2563eb,#1d4ed8);color:#fff;font-weight:800;font-size:16px;cursor:pointer;white-space:nowrap;"><i class="fa-solid fa-chalkboard-user"></i> 강의실 배치 및 수정</button><button onclick="coordSaveFloorPDF()" style="margin-left:8px;padding:12px 16px;border:none;border-radius:11px;background:#0f2a4a;color:#fff;font-weight:800;font-size:15px;cursor:pointer;white-space:nowrap;"><i class="fa-solid fa-file-pdf"></i> PDF 저장</button><select id="coordWeekSel" onchange="coordRenderActiveCourses()" style="margin-left:10px;padding:11px 16px;border:1.5px solid #cbd5e1;border-radius:10px;font-weight:800;font-size:16px;cursor:pointer;background:#fff;color:#1e3a8a;"></select></div>
+        <div class="coord-sec-head">
+            <h2><i class="fa-solid fa-list-ul"></i> 강의실 배정 현황</h2>
+            <details class="coord-room-tools">
+                <summary><i class="fa-solid fa-sliders"></i> 설정 <i class="fa-solid fa-chevron-down" style="font-size:10px;"></i></summary>
+                <div class="coord-room-tools-menu">
+                    <select id="coordWeekSel" onchange="coordRenderActiveCourses()" aria-label="조회 주차"></select>
+                    <button onclick="coordSaveFloorPDF(); this.closest('details').removeAttribute('open');"><i class="fa-solid fa-file-pdf"></i> 배치도 PDF 저장</button>
+                </div>
+            </details>
+        </div>
         <div style="display:flex;gap:8px;margin:12px 0 14px;align-items:center;flex-wrap:wrap;">
             <button id="coordRoomModeTable" onclick="coordRoomAssignMode('table')" style="padding:11px 16px;border:none;border-radius:11px;background:#2563eb;color:#fff;font-weight:900;cursor:pointer;"><i class="fa-solid fa-table-list"></i> 표로 편집</button>
             <button id="coordRoomModePlan" onclick="coordRoomAssignMode('plan')" style="padding:11px 16px;border:none;border-radius:11px;background:#f1f5f9;color:#475569;font-weight:900;cursor:pointer;"><i class="fa-solid fa-map"></i> 배치도로 보기</button>
@@ -8025,6 +8043,12 @@ var coordOpsSetup = {
   _skipKey:function(){ var n=new Date(); return 'coordOpsSkip_'+n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0')+'-'+String(n.getDate()).padStart(2,'0'); },
   _skippedToday:function(){ try{ return localStorage.getItem(this._skipKey())==='1'; }catch(e){ return false; } },
   _integritySet:function(){ return !!(this._data.integrity && (''+this._data.integrity).trim()); },
+  _allSet:function(){
+    var v=this._data||{}, dep=window._shuttleDep||{};
+    var shuttle=!!dep.announced&&!window._shuttleDepCleared&&!!((''+(dep.round1||'')).trim());
+    var union=!!((''+(v.union||'')).trim())&&(''+v.union).trim()!=='미정';
+    return shuttle&&union&&this._integritySet();
+  },
   ensureDefaults:function(v){
     try{ var up={};
       // 한 번도 설정 안 된 경우(undefined)만 기본값. 사용자가 미정으로 비우면('') 그대로 유지.
@@ -8038,6 +8062,10 @@ var coordOpsSetup = {
     var self=this;
     firebase.database().ref('system/eduLocations').on('value', function(s){
       var v=s.val()||{}; self._data=v; self.ensureDefaults(v);
+      if(self._allSet()){
+        var doneOv=document.getElementById('coordOpsOv'); if(doneOv) doneOv.remove();
+        return;
+      }
       if(document.getElementById('coordOpsOv')) self._render();
     });
     setTimeout(function(){ self.maybeShow(false); }, 1600);           // 접속 시 최초 1회
@@ -8045,6 +8073,7 @@ var coordOpsSetup = {
   },
   maybeShow:function(isInterval){
     if(this._skippedToday()) return;
+    if(this._allSet()) return;
     if(isInterval && this._integritySet()) return;   // 1시간 재노출은 청렴 미설정일 때만
     if(document.getElementById('coordOpsOv')) return;
     this._render();
@@ -8105,6 +8134,7 @@ var coordOpsSetup = {
       window._shuttleDep={round1:v1, round2:v2, announced:true, date:today, ts:Date.now()};
     }catch(e){ if(typeof showKacAlert==='function') showKacAlert('⚠️ 공지 중 오류: '+(e&&e.message||'')); return; }
     try{ if(window._coordUpdateShuttleLED) _coordUpdateShuttleLED({shuttle1:v1, shuttle2:v2}); }catch(e){}
+    if(this._allSet()){ var doneOv=document.getElementById('coordOpsOv'); if(doneOv) doneOv.remove(); }
     if(typeof showKacAlert==='function') showKacAlert('📢 퇴교차량 공지 완료!\n'+label+'\n\n강사·교육생 플랫폼에 전달되었습니다.');
   },
   savePlace:function(type,val){ try{ firebase.database().ref('system/eduLocations/'+type).set(val||''); }catch(e){} },   // 미정은 빈문자열 저장
@@ -8835,7 +8865,7 @@ window.addEventListener('load', function(){
 });
 </script>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:6px;bottom:5px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;font-weight:800;line-height:1;letter-spacing:.6px;color:#fff;background:rgba(15,23,42,.85);padding:4px 8px;border-radius:6px;pointer-events:none;user-select:none;box-shadow:0 2px 6px rgba(0,0,0,.3);">D36</div>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:6px;bottom:5px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;font-weight:800;line-height:1;letter-spacing:.6px;color:#fff;background:rgba(15,23,42,.85);padding:4px 8px;border-radius:6px;pointer-events:none;user-select:none;box-shadow:0 2px 6px rgba(0,0,0,.3);">D37</div>
 <script>
 /* ===== [공용] 종료된 과정 자동 정리 (모든 플랫폼 공통) — 종료일 지난 방을 다음날 미개설로 비움. 브라우저별 하루 1회 ===== */
 window.kacExpireEndedCourses = async function(){
@@ -8986,7 +9016,7 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
       var d=new Date(key+'T00:00:00'), e=new Date(d); e.setDate(e.getDate()+4);
       return (d.getMonth()+1)+'/'+d.getDate()+' ~ '+(e.getMonth()+1)+'/'+e.getDate();
     }
-    var firstActiveIdx=-1, prevWeek='';
+    var firstFocusIdx=-1, prevWeek='';
     var rows=list.map(function(c,i){
       var name=c.name||c.courseName||'-';
       var sd=c.startDate||'', ed=c.endDate||'';
@@ -8996,7 +9026,7 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
       var prof=c.prof||c.professorName||'-';
       var ended=(ed && ed<today);
       var active=(sd&&ed&&sd<=today&&ed>=today);
-      if(active && firstActiveIdx<0) firstActiveIdx=i;
+      if(!ended && firstFocusIdx<0) firstFocusIdx=i;
       var wk=weekKeyOf(sd||ed), sep='';
       if(wk!==prevWeek){
         prevWeek=wk;
@@ -9011,7 +9041,7 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
       return sep+'<tr data-row="'+i+'" style="'+bg+'"><td style="text-align:left;font-weight:800;font-size:17px;">'+esc(name)+' '+tag+'</td><td style="text-align:left;font-size:15px;white-space:nowrap;">'+esc(period)+'</td><td style="text-align:left;font-size:16px;">'+esc(typeof _coordRoomDisplay==='function'?_coordRoomDisplay(room):room)+'</td><td style="text-align:left;font-size:16px;white-space:nowrap;">'+esc(coord)+'</td><td style="text-align:left;font-size:16px;white-space:nowrap;">'+esc(prof)+'</td></tr>';
     }).join('');
     wrap.innerHTML='<div style="max-height:56vh;overflow:auto;border:1px solid #eef2f7;border-radius:12px;"><table class="cpop-table" style="width:100%;font-size:16px;"><thead style="position:sticky;top:0;z-index:2;"><tr><th style="text-align:left;font-size:15px;">과정명</th><th style="text-align:left;white-space:nowrap;font-size:15px;">교육기간</th><th style="text-align:left;white-space:nowrap;font-size:15px;">강의실</th><th style="text-align:left;white-space:nowrap;font-size:15px;">과정담당</th><th style="text-align:left;white-space:nowrap;font-size:15px;">담임교수</th></tr></thead><tbody>'+rows+'</tbody></table></div>';
-    if(firstActiveIdx>0){ var sc=wrap.querySelector('div'); var tr=wrap.querySelector('tr[data-row="'+firstActiveIdx+'"]'); if(sc&&tr){ sc.scrollTop=Math.max(0, tr.offsetTop-90); } }
+    if(firstFocusIdx>=0){ var sc=wrap.querySelector('div'); var tr=wrap.querySelector('tr[data-row="'+firstFocusIdx+'"]'); if(sc&&tr){ requestAnimationFrame(function(){ sc.scrollTop=Math.max(0, tr.offsetTop-90); }); } }
   };
 
   // ── 섹션2: 현재 운영중인 과정현황 — 표준 행(.crow), 클릭→상세 팝업 ──

@@ -7,7 +7,7 @@
         - @version T1 → U1 : 미확인 픽업 신청이 요청일 지나면 인박스에서 자동 숨김('나가리'). isActivePending() 참고.
         - @version U1 → V1 : PC 100% 화면용 75% 기준 밀도 보정.
         - @version V1 → W1 : 기사 관제판 추가(입력 단순화·금주 퇴교수송 한눈보기·운행 충돌 안내).
-     · @version  W1
+     · @version  X1
      · 수정상태: 수정완료   (작업 중에는 '수정중', 완료 시 '수정완료'로 표기)
      · 연동 데이터(system/pickup, courses/{room}/shuttle) 쓰기 로직 미변경 — 화면 필터만 적용, 타 담당자 영향 없음. -->
 <script>
@@ -27,7 +27,7 @@
 <script>
 (function(){
   window.catcLock=function(){ try{localStorage.removeItem('catc_gate_ok');}catch(e){} location.reload(); };
-  var ok=false; try{ ok=(function(){var t=parseInt(localStorage.getItem('catc_gate_ok'),10);return !!t&&(Date.now()-t)<86400000;})(); }catch(e){ ok=true; }
+  var ok=false; try{ ok=(function(){var t=parseInt(localStorage.getItem('catc_gate_ok'),10);return !!t&&(Date.now()-t)<2592000000;})(); }catch(e){ ok=true; }
   if(ok){ window.__catcUnlocked=true; return; }
   window.__catcUnlocked=false;
   document.documentElement.classList.add('catc-locked');
@@ -65,7 +65,7 @@
 </style>
 <!-- ============================================================
   CATC · 차량·기사  (driver.html)  — 전면 리뉴얼본
-  @version  W1
+  @version  X1
   @build    20260626-203500
   ────────────────────────────────────────────────────────
   PC용 기사 운행관리 대시보드
@@ -332,6 +332,26 @@
     .grid2{grid-template-columns:1fr !important;}
     .panel:has(#inboxBody),.panel:has(#doneBody){display:none !important;}
   }
+
+  /* vX1: 기사 관제판은 운행표 중심으로 단순화 */
+  #view-manage.active{display:flex;flex-direction:column;gap:14px;}
+  #view-manage .ops-hero{order:1;grid-template-columns:1fr;margin-bottom:0;}
+  #view-manage .ops-hero-main{padding:20px 22px;}
+  #view-manage .ops-guide{display:none;}
+  #view-manage .driver-workgrid{order:2;grid-template-columns:minmax(0,1fr) 300px;gap:14px;margin:0;}
+  #view-manage .ops-grid{order:3;gap:14px;margin:0;}
+  #view-manage .driver-sidegrid{grid-template-columns:1fr;}
+  #view-manage .driver-sidegrid .panel:nth-child(n+2){display:none;}
+  #view-manage #schedPanel{min-width:0;}
+  #view-manage .ops-kpis{gap:10px;margin-top:14px;}
+  #view-manage .ops-kpi{min-height:68px;padding:12px 14px;}
+  #view-manage .panel{border:1px solid #e2e8f0;box-shadow:0 5px 16px rgba(15,23,42,.055);}
+  #view-manage .panel-head{min-height:48px;padding:13px 16px;}
+  #view-manage .bgrid{min-height:560px;}
+  @media(max-width:1200px){
+    #view-manage .driver-workgrid{grid-template-columns:1fr;}
+    #view-manage .driver-sidegrid{display:grid;}
+  }
 </style>
     <link rel="icon" type="image/svg+xml" href="favicon.svg?v=b260620c">
     <link rel="stylesheet" href="kac-tokens.css?v=20260622">
@@ -352,17 +372,17 @@
 
 <div class="wrap">
   <div class="tabs">
-    <div class="tab active" data-view="manage" onclick="switchView('manage')"><i class="fa-solid fa-gauge-high"></i> 관제판 <span class="cnt" id="tabCnt" style="display:none;">0</span></div>
-    <div class="tab" data-view="leave" onclick="switchView('leave')"><i class="fa-solid fa-bus"></i> 퇴교차량</div>
-    <div class="tab" data-view="fixed" onclick="switchView('fixed')"><i class="fa-solid fa-gear"></i> 고정일정·휴가</div>
+    <div class="tab active" data-view="manage" onclick="switchView('manage')"><i class="fa-solid fa-gauge-high"></i> 오늘 운행 <span class="cnt" id="tabCnt" style="display:none;">0</span></div>
+    <div class="tab" data-view="leave" onclick="switchView('leave')"><i class="fa-solid fa-bus"></i> 퇴교 현황</div>
+    <div class="tab" data-view="fixed" onclick="switchView('fixed')"><i class="fa-solid fa-gear"></i> 일정 설정</div>
   </div>
 
   <!-- ============ 운행관리 ============ -->
   <div class="view active" id="view-manage">
     <div class="ops-hero">
       <div class="ops-hero-main">
-        <div class="ops-title"><i class="fa-solid fa-gauge-high"></i> 오늘 운행 관제판</div>
-        <div class="ops-sub">입력은 필요한 순간만, 모니터링은 이 화면에서 한눈에 확인합니다.</div>
+        <div class="ops-title"><i class="fa-solid fa-route"></i> 오늘 운행 한눈보기</div>
+        <div class="ops-sub">주간 운행표를 중심으로 신규 요청과 퇴교수송만 확인하면 됩니다.</div>
         <div class="ops-kpis">
           <div class="ops-kpi"><div class="k">미확인 픽업</div><div class="v" id="opsPending">0<small>건</small></div></div>
           <div class="ops-kpi"><div class="k">오늘 확정 운행</div><div class="v" id="opsToday">0<small>건</small></div></div>
@@ -604,7 +624,7 @@
 </div>
 
 <div id="spinner"><i class="fa-solid fa-spinner fa-spin"></i></div>
-<div class="vbadge">vR1 · 20260616</div>
+<div class="vbadge">vX1 · 20260628</div>
 
 <script src="config.js?v=b260620c"></script>
 <script>

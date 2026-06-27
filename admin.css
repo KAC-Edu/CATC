@@ -1,7 +1,7 @@
 /* ============================================================
    CATC · 강사 플랫폼 스타일  (admin.css)
    STATUS    수정안하는중
-   @version  L   @build  20260627-164931
+   @version  M   @build  20260628-075317
    ------------------------------------------------------------
    [코드 수정 규칙] 수정 시 @version 을
    A -> B -> ... -> Z -> A1 -> B1 -> ... 순으로 1단계 올리고
@@ -3722,6 +3722,104 @@ body:-webkit-full-screen .main-stage {
     color: #94a3b8;
     pointer-events: none;
     white-space: pre-line;
+}
+
+/* vM: 강의 화면 스마트 리모컨 */
+#courseSmartRemote {
+    display: none;
+    position: fixed;
+    left: 30px;
+    top: 50%;
+    width: 154px;
+    height: 154px;
+    transform: translateY(-50%);
+    border-radius: 50%;
+    background: #f8fafc;
+    border: 1px solid #cbd5e1;
+    box-shadow: 0 14px 34px rgba(15, 23, 42, .18);
+    z-index: 1250;
+}
+body.in-course #courseSmartRemote { display: block; }
+#courseSmartRemote::before {
+    content: "";
+    position: absolute;
+    inset: 12px;
+    border: 1px solid #e2e8f0;
+    border-radius: 50%;
+    pointer-events: none;
+}
+.remote-key,
+.remote-home {
+    position: absolute;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    border: 0;
+    cursor: pointer;
+    color: #475569;
+    background: transparent;
+    font-family: inherit;
+    font-weight: 800;
+}
+.remote-key { width: 48px; height: 42px; font-size: 14px; }
+.remote-key span { font-size: 9px; letter-spacing: 0; }
+.remote-key:hover { color: #2563eb; }
+.remote-north { left: 53px; top: 9px; }
+.remote-south { left: 53px; bottom: 9px; }
+.remote-west { left: 5px; top: 56px; }
+.remote-east { right: 5px; top: 56px; }
+.remote-home {
+    left: 50%;
+    top: 50%;
+    width: 58px;
+    height: 58px;
+    transform: translate(-50%, -50%);
+    border-radius: 50%;
+    color: #fff;
+    background: #0f4c81;
+    box-shadow: 0 6px 14px rgba(15, 76, 129, .28);
+}
+.remote-home span { font-size: 10px; letter-spacing: 0; }
+.remote-home:hover { background: #2563eb; }
+
+/* vM: 우측 패널에 붙는 명확한 메뉴 플래그 */
+#moreToggleTab {
+    position: fixed;
+    right: 0;
+    top: 50%;
+    width: 38px;
+    height: 92px;
+    transform: translateY(-50%);
+    border: 1px solid rgba(255,255,255,.14);
+    border-right: 0;
+    border-radius: 14px 0 0 14px;
+    background: #0f2a4a;
+    color: #fff;
+    box-shadow: -5px 0 16px rgba(15,23,42,.24);
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    cursor: pointer;
+    z-index: 6002;
+    transition: right .34s cubic-bezier(.22,1,.36,1), background .2s;
+}
+#moreToggleTab:hover { background: #2563eb; }
+#moreToggleTab i { color: #bfdbfe; font-size: 11px; transition: transform .3s; }
+#moreToggleTab span {
+    font-size: 11px;
+    font-weight: 900;
+    letter-spacing: 0;
+    writing-mode: vertical-rl;
+}
+@media (max-width: 1500px) {
+    #courseSmartRemote { left: 16px; width: 132px; height: 132px; }
+    .remote-north { left: 42px; top: 4px; }
+    .remote-south { left: 42px; bottom: 4px; }
+    .remote-west { left: 1px; top: 45px; }
+    .remote-east { right: 1px; top: 45px; }
 }
 #boardEditor:focus { outline: none; }
 

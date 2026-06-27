@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- @수정상태: 수정안하는중 | 담당: 영양사 플랫폼(nutritionist.html) | 갱신: 2026-06-26 | version vH -->
+<!-- @수정상태: 수정안하는중 | 담당: 영양사 플랫폼(nutritionist.html) | 갱신: 2026-06-28 | version vI -->
 <!-- [외부변경 · 카카오채널연동 2026-06-25] 포털(portal.html/7777) 경유 폐지 → catc1234 직접진입 게이트 추가, '포털' 버튼→'잠금'. 기능 로직 미변경. -->
 <html lang="ko">
 <head>
@@ -21,7 +21,7 @@
 <script>
 (function(){
   window.catcLock=function(){ try{localStorage.removeItem('catc_gate_ok');}catch(e){} location.reload(); };
-  var ok=false; try{ ok=(function(){var t=parseInt(localStorage.getItem('catc_gate_ok'),10);return !!t&&(Date.now()-t)<86400000;})(); }catch(e){ ok=true; }
+  var ok=false; try{ ok=(function(){var t=parseInt(localStorage.getItem('catc_gate_ok'),10);return !!t&&(Date.now()-t)<2592000000;})(); }catch(e){ ok=true; }
   if(ok){ window.__catcUnlocked=true; return; }
   window.__catcUnlocked=false;
   document.documentElement.classList.add('catc-locked');
