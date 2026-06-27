@@ -1,15 +1,15 @@
 ﻿/* ============================================================
    CATC · 강사 플랫폼 로직  (admin.js)
    STATUS    수정안하는중
-   @version  C1
-   @build    20260627-083609  (vC1: 강사 퀴즈 UI 및 선택지별 실시간 결과 개선)
+   @version  D1
+   @build    20260627-105823  (vD1: 실시간 신청 동기화, 프로필 가독성, 룰렛 및 우측 메뉴 개선)
    ------------------------------------------------------------
    [코드 수정 규칙 · AI/개발자 공통]
    이 파일을 고치면 @version 을 A -> B -> ... -> Z -> A1 -> B1 ...
    순으로 1단계 올리고, @build 를 수정 시각으로 갱신할 것.
    적용 여부는 브라우저 콘솔 로그(vA)로 확인한다.
 ============================================================ */
-try{console.log('%cCATC%c 강사 플랫폼 로직 (admin.js) %cvC1%c build 20260627-083609','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}
+try{console.log('%cCATC%c 강사 플랫폼 로직 (admin.js) %cvD1%c build 20260627-105823','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}
 /* --- admin.js (Final Integrated Version - Fixed Syntax & Logic) --- */
 
 // --- [기본 데이터] 20문항 ---
@@ -4240,22 +4240,29 @@ renderQaList: function(f) {
         if(!state.room) return;
         const today = getTodayString();
         const yesterday = getYesterdayString();
+        const activeRoom = state.room;
 
         const tbody = document.getElementById('adminActionTableBody');
         if(!tbody) return;
 
-        if (state.adminActionRef) {
-            state.adminActionRef.off();
-        }
+        if (state.adminActionRef) state.adminActionRef.off();
+        if (state.adminActionYesterdayRef) state.adminActionYesterdayRef.off();
 
-        state.adminActionRef = firebase.database().ref(`courses/${state.room}/admin_actions/${today}`);
+        state.adminActionRef = firebase.database().ref(`courses/${activeRoom}/admin_actions/${today}`);
+        state.adminActionYesterdayRef = firebase.database().ref(`courses/${activeRoom}/admin_actions/${yesterday}`);
+        let todayData = {};
+        let yesterdayData = {};
 
         state.adminActionRef.on('value', snap => {
-            const todayData = snap.val() || {};
-            // 외출/외박은 자정이 아니라 익일 09:00에 초기화 → 어제 노드도 항상 함께 읽어 09:00 윈도우로 필터
-            firebase.database().ref(`courses/${state.room}/admin_actions/${yesterday}`).once('value', ySnap => {
-                renderAdminList(todayData, ySnap.val() || {});
-            });
+            if (state.room !== activeRoom) return;
+            todayData = snap.val() || {};
+            renderAdminList(todayData, yesterdayData);
+        });
+        // 외출/외박 운영일은 익일 09:00까지이므로 전일 노드도 별도 실시간 감시한다.
+        state.adminActionYesterdayRef.on('value', snap => {
+            if (state.room !== activeRoom) return;
+            yesterdayData = snap.val() || {};
+            renderAdminList(todayData, yesterdayData);
         });
    
 
@@ -4357,7 +4364,11 @@ function renderAdminList(todayData, yesterdayData) {
 loadDinnerSkipData: function() {
         if(!state.room) return;
         const today = getTodayString();
-        firebase.database().ref(`courses/${state.room}/dinner_skips/${today}`).on('value', snap => {
+        const activeRoom = state.room;
+        if (state.dinnerSkipRef) state.dinnerSkipRef.off();
+        state.dinnerSkipRef = firebase.database().ref(`courses/${activeRoom}/dinner_skips/${today}`);
+        state.dinnerSkipRef.on('value', snap => {
+            if (state.room !== activeRoom) return;
             const data = snap.val() || {};
             const tbody = document.getElementById('dinnerSkipTableBody');
             if(!tbody) return;
@@ -4815,9 +4826,15 @@ loadDormitoryData: function() {
 // [최종 완결본] 실시간 로드 + 상하단 색상 동기화 + 강제 취소(삭제) 버튼 포함
 loadShuttleData: function() {
     if(!state.room) return;
+    const activeRoom = state.room;
+    if (state.shuttleDepartureRef) state.shuttleDepartureRef.off();
+    if (state.shuttleRequestsRef) state.shuttleRequestsRef.off();
+    state.shuttleDepartureRef = firebase.database().ref(`courses/${activeRoom}/shuttle/departure`);
+    state.shuttleRequestsRef = firebase.database().ref(`courses/${activeRoom}/shuttle/requests`);
 
     // 1. 좌측 파란색 박스: 날짜, 시간, 문구 레이아웃
-    firebase.database().ref(`courses/${state.room}/shuttle/departure`).on('value', snap => {
+    state.shuttleDepartureRef.on('value', snap => {
+        if (state.room !== activeRoom) return;
         const dep = snap.val();
         const el = document.getElementById('shuttleDepartureTime');
         if(!el) return;
@@ -4852,7 +4869,8 @@ loadShuttleData: function() {
 
 
     // 2. 신청 명단 실시간 연동 및 삭제 버튼 생성
-    firebase.database().ref(`courses/${state.room}/shuttle/requests`).on('value', snap => {
+    state.shuttleRequestsRef.on('value', snap => {
+        if (state.room !== activeRoom) return;
         const requests = snap.val() || {};
         const tbody = document.getElementById('shuttleListTableBody');
         if(!tbody) return;
@@ -11415,6 +11433,9 @@ ui.closeLeaderRoulette = function(){
   try{ if(ui._spinAudio){ ui._spinAudio.pause(); } }catch(e){}
   var _fh=document.getElementById('floatingHomeBtn'); if(_fh) _fh.style.display='';
 };
+ui._spacedKoreanName = function(name){
+  return Array.from(String(name || '').replace(/\s+/g, '')).join(' ');
+};
 ui.openLeaderRoulette = async function(){
   if(state.isObserver){ ui.showAlert('👁️ 옵저버는 사용할 수 없습니다.'); return; }
   if(!state.room){ ui.showAlert('강의실을 먼저 선택하세요.'); return; }
@@ -11435,9 +11456,34 @@ ui.openLeaderRoulette = async function(){
   ui._wheelRot = 0;
   ui._wheelSpinning = false;
 
+  // 1명뿐이면 추첨의 의미가 없으므로 룰렛 대신 바로 지정 화면을 제공한다.
+  if(students.length === 1){
+    ui._rouletteWinner = students[0];
+    var oneOld=document.getElementById('leaderRouletteModal'); if(oneOld) oneOld.remove();
+    var oneModal=document.createElement('div'); oneModal.id='leaderRouletteModal';
+    oneModal.setAttribute('style','position:fixed;inset:0;z-index:9700;display:flex;align-items:center;justify-content:center;background:rgba(15,23,42,.68);backdrop-filter:blur(6px);padding:18px;');
+    oneModal.onclick=function(e){ if(e.target===oneModal) ui.closeLeaderRoulette(); };
+    oneModal.innerHTML =
+      '<div style="width:min(560px,94vw);background:#fff;border-radius:24px;overflow:hidden;box-shadow:0 30px 80px rgba(0,0,0,.42);">'
+        + '<div style="display:flex;align-items:center;justify-content:space-between;padding:20px 24px;background:linear-gradient(135deg,#0f4c81,#2563eb);color:#fff;">'
+          + '<strong style="font-size:20px;"><i class="fa-solid fa-user-check" style="margin-right:9px;"></i>학생장 지정</strong>'
+          + '<button onclick="ui.closeLeaderRoulette()" style="width:38px;height:38px;border:0;border-radius:50%;background:rgba(255,255,255,.18);color:#fff;font-size:20px;cursor:pointer;">&times;</button>'
+        + '</div>'
+        + '<div style="padding:38px 34px;text-align:center;">'
+          + '<div style="font-size:15px;color:#64748b;font-weight:800;">현재 입교한 교육생이 1명입니다</div>'
+          + '<div style="margin:24px 0 8px;font-size:clamp(38px,8vw,62px);font-weight:950;color:#0f3d68;white-space:nowrap;">'+esc(ui._spacedKoreanName(students[0].name))+'</div>'
+          + '<div style="font-size:18px;color:#475569;font-weight:800;margin-bottom:30px;">룰렛 없이 학생장으로 지정할 수 있습니다.</div>'
+          + '<button onclick="ui.confirmRouletteLeader()" style="width:100%;min-height:58px;border:0;border-radius:14px;background:#0f6cbd;color:#fff;font-size:19px;font-weight:900;cursor:pointer;box-shadow:0 10px 24px rgba(15,108,189,.26);"><i class="fa-solid fa-crown" style="margin-right:8px;"></i>학생장으로 지정</button>'
+        + '</div>'
+      + '</div>';
+    document.body.appendChild(oneModal);
+    var oneHome=document.getElementById('floatingHomeBtn'); if(oneHome) oneHome.style.display='none';
+    return;
+  }
+
   // ── 원형 휠 SVG 생성 ──
   var N=students.length, seg=360/N, cx=300, cy=300, r=292;
-  var colors=['#f59e0b','#10b981','#3b82f6','#ef4444','#8b5cf6','#ec4899','#0ea5e9','#f97316','#22c55e','#a855f7'];
+  var colors=['#174c7e','#2563eb','#0f766e','#16a34a','#d97706','#ea580c','#db2777','#7c3aed','#0891b2','#475569'];
   function polar(R,deg){ var a=deg*Math.PI/180; return [cx+R*Math.cos(a), cy+R*Math.sin(a)]; }
   function arcPath(R,a0,a1){ var p0=polar(R,a0), p1=polar(R,a1); var large=((a1-a0)%360)>180?1:0; return 'M'+cx+' '+cy+' L'+p0[0].toFixed(2)+' '+p0[1].toFixed(2)+' A'+R+' '+R+' 0 '+large+' 1 '+p1[0].toFixed(2)+' '+p1[1].toFixed(2)+' Z'; }
   var fs=Math.max(14, Math.min(46, Math.round(520/N)));
@@ -11463,26 +11509,25 @@ ui.openLeaderRoulette = async function(){
   modal.innerHTML =
     '<div style="background:#fff;border-radius:26px;width:auto;max-width:97vw;max-height:98vh;overflow:auto;box-shadow:0 30px 80px rgba(0,0,0,.45);">'
       + '<style>@keyframes rlPop{0%{transform:scale(.55);opacity:0}60%{transform:scale(1.06)}100%{transform:scale(1);opacity:1}}</style>'
-      + '<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:18px 24px;background:linear-gradient(135deg,#b45309,#f59e0b);color:#fff;">'
+      + '<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:18px 24px;background:linear-gradient(135deg,#0f3d68,#2563eb);color:#fff;">'
         + '<div style="font-size:19px;font-weight:900;"><i class="fa-solid fa-trophy" style="margin-right:8px;"></i>학생장 룰렛</div>'
         + '<button onclick="ui.closeLeaderRoulette()" style="background:rgba(255,255,255,.2);border:none;color:#fff;width:36px;height:36px;border-radius:50%;font-size:19px;cursor:pointer;">&times;</button>'
       + '</div>'
       + '<div style="padding:22px 22px 26px;text-align:center;">'
-        + '<div style="font-size:13.5px;color:#64748b;font-weight:800;margin-bottom:18px;">입교한 학생 '+N+'명 · 가운데 <b style="color:#b45309;">시작</b>을 누르면 3시 방향 마커에 걸린 학생이 당첨됩니다</div>'
+        + '<div style="font-size:13.5px;color:#64748b;font-weight:800;margin-bottom:18px;">입교한 학생 '+N+'명 · 가운데 <b style="color:#0f6cbd;">시작</b>을 누르면 3시 방향 마커에 걸린 학생이 당첨됩니다</div>'
         + '<div style="position:relative;width:'+wheelPx+';height:'+wheelPx+';margin:0 auto 20px;">'
           + svg
           // 3시 방향 마커
           + '<div style="position:absolute;top:50%;right:-14px;transform:translateY(-50%);width:0;height:0;border-top:18px solid transparent;border-bottom:18px solid transparent;border-right:30px solid #dc2626;filter:drop-shadow(-2px 2px 3px rgba(0,0,0,.3));z-index:3;"></div>'
           // 가운데 시작 버튼
-          + '<button id="rlStart" onclick="ui._spinWheel()" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:23%;height:23%;border-radius:50%;background:radial-gradient(circle at 35% 30%,#ffffff,#fde68a 70%,#f59e0b);border:5px solid #fff;box-shadow:0 8px 20px rgba(180,83,9,.4);color:#92400e;font-weight:900;font-size:clamp(24px,6.5vh,58px);cursor:pointer;z-index:4;letter-spacing:-1px;">시작</button>'
+          + '<button id="rlStart" onclick="ui._spinWheel()" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:23%;height:23%;border-radius:50%;background:radial-gradient(circle at 35% 30%,#ffffff,#dbeafe 70%,#60a5fa);border:5px solid #fff;box-shadow:0 8px 22px rgba(15,76,129,.38);color:#0f3d68;font-weight:900;font-size:clamp(24px,6.5vh,58px);cursor:pointer;z-index:4;letter-spacing:0;">시작</button>'
         + '<div id="rlWinPop" style="position:absolute;inset:0;display:none;align-items:center;justify-content:center;z-index:20;padding:14px;">'
-          + '<div style="background:rgba(255,255,255,.97);border:3px solid #f59e0b;border-radius:28px;padding:clamp(18px,4vh,46px) clamp(22px,5vw,66px);box-shadow:0 24px 70px rgba(0,0,0,.45);text-align:center;max-width:94%;animation:rlPop .45s cubic-bezier(.17,.89,.32,1.28);">'
-            + '<div style="font-size:clamp(15px,2.3vh,26px);font-weight:900;color:#d97706;letter-spacing:1px;margin-bottom:6px;">🎉 축하합니다 🎉</div>'
-            + '<div style="line-height:1.0;"><span id="rlWinName" style="font-size:clamp(48px,14vh,170px);font-weight:900;color:#b45309;letter-spacing:-2px;"></span></div>'
-            + '<div style="font-size:clamp(22px,3.8vh,46px);font-weight:900;color:#92400e;margin-top:2px;">님 당첨!! 👑</div>'
+          + '<div style="background:rgba(255,255,255,.98);border:3px solid #3b82f6;border-radius:28px;padding:clamp(18px,4vh,46px) clamp(22px,5vw,66px);box-shadow:0 24px 70px rgba(15,23,42,.42);text-align:center;max-width:96%;animation:rlPop .45s cubic-bezier(.17,.89,.32,1.28);">'
+            + '<div style="font-size:clamp(15px,2.3vh,26px);font-weight:900;color:#0f6cbd;letter-spacing:0;margin-bottom:12px;">축하합니다</div>'
+            + '<div id="rlWinLine" style="font-size:clamp(28px,7.2vh,104px);line-height:1.15;font-weight:950;color:#0f3d68;letter-spacing:0;white-space:nowrap;"></div>'
             + '<div style="font-size:clamp(15px,2.2vh,26px);font-weight:800;color:#334155;margin:clamp(14px,3vh,30px) 0 14px;">이 학생을 학생장으로 지정할까요?</div>'
             + '<div style="display:flex;flex-direction:column;gap:10px;align-items:center;">'
-              + '<button onclick="ui.confirmRouletteLeader()" style="width:100%;max-width:400px;background:linear-gradient(135deg,#b45309,#f59e0b);color:#fff;border:none;padding:16px 22px;border-radius:15px;font-weight:900;font-size:clamp(16px,2.4vh,24px);cursor:pointer;box-shadow:0 8px 22px rgba(217,119,6,.4);">👑 학생장으로 지정</button>'
+              + '<button onclick="ui.confirmRouletteLeader()" style="width:100%;max-width:400px;background:linear-gradient(135deg,#0f4c81,#2563eb);color:#fff;border:none;padding:16px 22px;border-radius:15px;font-weight:900;font-size:clamp(16px,2.4vh,24px);cursor:pointer;box-shadow:0 8px 22px rgba(37,99,235,.3);"><i class="fa-solid fa-crown" style="margin-right:8px;"></i>학생장으로 지정</button>'
               + '<div style="display:flex;gap:10px;width:100%;max-width:400px;">'
                 + '<button onclick="ui._spinWheel()" style="flex:1;background:#f1f5f9;color:#475569;border:1px solid #e2e8f0;padding:12px;border-radius:12px;font-weight:800;font-size:clamp(13px,1.8vh,18px);cursor:pointer;"><i class="fa-solid fa-rotate-right"></i> 다시 돌리기</button>'
                 + '<button onclick="ui.closeLeaderRoulette()" style="flex:1;background:#fff;color:#94a3b8;border:1px solid #e2e8f0;padding:12px;border-radius:12px;font-weight:800;font-size:clamp(13px,1.8vh,18px);cursor:pointer;">닫기</button>'
@@ -11524,7 +11569,8 @@ ui._spinWheel = function(){
     ui._wheelSpinning=false;
     var win=students[w]; ui._rouletteWinner=win;
     if(startBtn){ startBtn.disabled=false; startBtn.style.opacity='1'; startBtn.style.cursor='pointer'; startBtn.textContent='다시'; }
-    var nm=document.getElementById('rlWinName'); if(nm) nm.textContent=win.name;
+    var winnerLine=document.getElementById('rlWinLine');
+    if(winnerLine) winnerLine.textContent=ui._spacedKoreanName(win.name)+' 님 당첨!';
     var pop=document.getElementById('rlWinPop');
     if(pop){ pop.style.display='flex'; var card=pop.firstChild; if(card){ card.style.animation='none'; void card.offsetWidth; card.style.animation='rlPop .45s cubic-bezier(.17,.89,.32,1.28)'; } }
     try{ if(ui._spinAudio){ ui._spinAudio.pause(); } }catch(e){}
@@ -11554,9 +11600,18 @@ ui.confirmRouletteLeader = function(){
 
 
 // ===== [우측 더보기 사이드바] 슬라이드 패널 토글 (HTML 버튼에서 호출하나 정의가 없었음) =====
+ui._fitMorePanelToViewport = function(){
+  var p=document.getElementById('moreMenuPanel');
+  if(!p) return;
+  var zoom=parseFloat(getComputedStyle(document.documentElement).zoom)||1;
+  p.style.setProperty('width',(320/zoom)+'px','important');
+  p.style.setProperty('height',(window.innerHeight/zoom)+'px','important');
+  p.style.setProperty('min-height',(window.innerHeight/zoom)+'px','important');
+};
 ui.openMorePanel = function(){
   var p=document.getElementById('moreMenuPanel'), t=document.getElementById('moreToggleTab'), b=document.getElementById('moreMenuBackdrop'), ic=document.getElementById('moreToggleIcon');
   if(!p) return;
+  ui._fitMorePanelToViewport();
   p.classList.add('more-open'); p.style.transform='translateX(0)';
   if(b) b.style.display='block';
   if(t) t.style.right=(p.offsetWidth||300)+'px';
@@ -11574,3 +11629,7 @@ ui.toggleMorePanel = function(){
   if(!p) return;
   if(p.classList.contains('more-open')) ui.closeMorePanel(); else ui.openMorePanel();
 };
+window.addEventListener('resize', function(){
+  var p=document.getElementById('moreMenuPanel');
+  if(p && p.classList.contains('more-open')) ui._fitMorePanelToViewport();
+});

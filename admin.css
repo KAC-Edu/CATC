@@ -1,7 +1,7 @@
 /* ============================================================
    CATC · 강사 플랫폼 스타일  (admin.css)
    STATUS    수정안하는중
-   @version  J   @build  20260627-083609
+   @version  K   @build  20260627-105823
    ------------------------------------------------------------
    [코드 수정 규칙] 수정 시 @version 을
    A -> B -> ... -> Z -> A1 -> B1 -> ... 순으로 1단계 올리고
@@ -4467,7 +4467,7 @@ body.night-mode .side-rail-lbl{ color:#cbd5e1; }
 
 #pdfWrapper.guide-page-virtual:fullscreen .guide-profile-panel,
 #pdfWrapper.guide-page-virtual:-webkit-full-screen .guide-profile-panel {
-    padding: clamp(44px, 6vh, 90px) clamp(60px, 7vw, 140px) !important;
+    padding: clamp(42px, 5vh, 78px) clamp(54px, 5.5vw, 110px) !important;
 }
 #pdfWrapper.guide-page-virtual:fullscreen .guide-profile-role,
 #pdfWrapper.guide-page-virtual:-webkit-full-screen .guide-profile-role {
@@ -4477,43 +4477,66 @@ body.night-mode .side-rail-lbl{ color:#cbd5e1; }
 }
 #pdfWrapper.guide-page-virtual:fullscreen .guide-profile-name,
 #pdfWrapper.guide-page-virtual:-webkit-full-screen .guide-profile-name {
-    margin-top: clamp(24px, 3vh, 42px);
-    font-size: clamp(20px, 1.4vw, 28px);
+    margin-top: clamp(26px, 3vh, 44px);
+    font-size: clamp(23px, 1.55vw, 31px);
+    line-height: 1.35;
 }
 #pdfWrapper.guide-page-virtual:fullscreen .guide-profile-name strong,
 #pdfWrapper.guide-page-virtual:-webkit-full-screen .guide-profile-name strong {
-    font-size: clamp(42px, 3.2vw, 66px);
+    font-size: clamp(50px, 3.7vw, 74px);
 }
 #pdfWrapper.guide-page-virtual:fullscreen .guide-profile-name > span,
 #pdfWrapper.guide-page-virtual:-webkit-full-screen .guide-profile-name > span {
-    font-size: clamp(21px, 1.45vw, 30px) !important;
+    font-size: clamp(23px, 1.55vw, 32px) !important;
+}
+#pdfWrapper.guide-page-virtual:fullscreen .guide-profile-rule,
+#pdfWrapper.guide-page-virtual:-webkit-full-screen .guide-profile-rule {
+    margin-top: clamp(22px, 2.5vh, 34px);
 }
 #pdfWrapper.guide-page-virtual:fullscreen .guide-profile-quote,
 #pdfWrapper.guide-page-virtual:-webkit-full-screen .guide-profile-quote {
-    font-size: clamp(18px, 1.3vw, 27px);
+    margin-top: clamp(22px, 2.6vh, 36px);
+    padding-left: 20px;
+    border-left-width: 6px;
+    font-size: clamp(22px, 1.55vw, 31px);
+    line-height: 1.6;
 }
 #pdfWrapper.guide-page-virtual:fullscreen .guide-profile-contacts,
 #pdfWrapper.guide-page-virtual:-webkit-full-screen .guide-profile-contacts {
-    gap: 16px 36px;
-    font-size: clamp(17px, 1.15vw, 24px);
+    gap: 20px 44px;
+    margin-top: clamp(22px, 2.6vh, 36px);
+    font-size: clamp(20px, 1.35vw, 27px);
+    line-height: 1.5;
+}
+#pdfWrapper.guide-page-virtual:fullscreen .guide-profile-bio,
+#pdfWrapper.guide-page-virtual:-webkit-full-screen .guide-profile-bio {
+    margin-top: clamp(30px, 3.6vh, 52px);
 }
 #pdfWrapper.guide-page-virtual:fullscreen .guide-profile-bio-title,
 #pdfWrapper.guide-page-virtual:-webkit-full-screen .guide-profile-bio-title {
-    font-size: clamp(18px, 1.2vw, 25px);
+    gap: 12px;
+    margin-bottom: clamp(20px, 2.4vh, 34px);
+    font-size: clamp(22px, 1.45vw, 30px);
+}
+#pdfWrapper.guide-page-virtual:fullscreen .guide-profile-bio-list,
+#pdfWrapper.guide-page-virtual:-webkit-full-screen .guide-profile-bio-list {
+    gap: clamp(16px, 1.9vh, 26px);
 }
 #pdfWrapper.guide-page-virtual:fullscreen .guide-profile-bio-row,
 #pdfWrapper.guide-page-virtual:-webkit-full-screen .guide-profile-bio-row {
-    grid-template-columns: clamp(76px, 5vw, 104px) minmax(0,1fr);
-    gap: clamp(15px, 1.2vw, 24px);
+    grid-template-columns: clamp(88px, 5.5vw, 116px) minmax(0,1fr);
+    gap: clamp(20px, 1.6vw, 32px);
 }
 #pdfWrapper.guide-page-virtual:fullscreen .guide-profile-year,
 #pdfWrapper.guide-page-virtual:-webkit-full-screen .guide-profile-year {
-    padding: 7px 12px;
-    font-size: clamp(15px, 1vw, 20px);
+    padding: 9px 14px;
+    font-size: clamp(18px, 1.15vw, 23px);
+    line-height: 1.25;
 }
 #pdfWrapper.guide-page-virtual:fullscreen .guide-profile-bio-text,
 #pdfWrapper.guide-page-virtual:-webkit-full-screen .guide-profile-bio-text {
-    font-size: clamp(17px, 1.15vw, 24px);
+    font-size: clamp(20px, 1.35vw, 27px);
+    line-height: 1.58;
 }
 
 /* vJ: 강사용 퀴즈 화면 가독성 및 결과 집계 정렬 */
@@ -4649,4 +4672,40 @@ body.night-mode .side-rail-lbl{ color:#cbd5e1; }
 @media(max-width:900px){
     #view-quiz .quiz-options.is-ox{ grid-template-columns:1fr; }
     #view-quiz .quiz-opt.ox-mode{ min-height:150px !important; }
+}
+
+/* vK: 우측 업무 메뉴를 좌측 레일과 같은 전체 높이 패널로 고정 */
+#moreMenuPanel {
+    top: 0 !important;
+    bottom: 0 !important;
+    width: 320px !important;
+    height: var(--app-h, 100dvh) !important;
+    min-height: var(--app-h, 100dvh) !important;
+    padding: max(18px, env(safe-area-inset-top)) 16px max(22px, env(safe-area-inset-bottom)) !important;
+    border-radius: 0 !important;
+    box-sizing: border-box !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    overscroll-behavior: contain;
+}
+#moreMenuPanel > div:first-child {
+    position: sticky;
+    top: -18px;
+    z-index: 2;
+    padding: 14px 8px 16px !important;
+    margin: -2px 0 10px !important;
+    background: rgba(255,255,255,.98);
+    backdrop-filter: blur(8px);
+}
+#moreMenuPanel .more-sec {
+    padding: 20px 12px 8px !important;
+}
+#moreMenuPanel .more-item {
+    min-height: 48px;
+    margin: 2px 0;
+    padding: 11px 13px !important;
+    box-sizing: border-box;
+}
+#moreMenuPanel .more-div {
+    margin: 12px 10px 2px !important;
 }
