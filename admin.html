@@ -14,8 +14,8 @@
 <!-- ============================================================
   CATC · 강사 플랫폼  (admin.html)
   STATUS    수정안하는중
-  @version  D1
-  @build    20260627-105823
+  @version  E1
+  @build    20260627-164931  (PDF 로더 복구·OTP 및 화면 간격 정리)
   ────────────────────────────────────────────────────────
   [코드 수정 규칙 · AI/개발자 공통]
   이 파일을 한 글자라도 고치면:
@@ -41,7 +41,7 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/ko.js"></script>
-    <link rel="stylesheet" href="admin.css?v=260627D1">
+    <link rel="stylesheet" href="admin.css?v=260627F1">
     <link rel="stylesheet" href="kac-tokens.css?v=20260622">
     <link rel="icon" type="image/svg+xml" href="favicon.svg?v=b260620c">
     <script>
@@ -540,7 +540,7 @@ body.in-course #moreToggleTab{ display:flex !important; }
     <i id="moreToggleIcon" class="fa-solid fa-chevron-left" style="color:#94a3b8; font-size:11px; transition:transform 0.3s;"></i>
 </div>
 <div id="moreMenuBackdrop" onclick="ui.closeMorePanel()" style="display:none; position:fixed; inset:0; background:rgba(15,23,42,.28); z-index:6000;"></div>
-<div id="moreMenuPanel" style="position:fixed; top:0; right:0; height:100vh; width:300px; max-width:86vw; background:#fff; border-radius:20px 0 0 20px; box-shadow:-14px 0 44px rgba(15,23,42,.22); z-index:6001; transform:translateX(100%); transition:transform .34s cubic-bezier(.22,1,.36,1); display:flex; flex-direction:column; padding:16px 12px calc(16px + env(safe-area-inset-bottom)); overflow-y:auto;">
+<div id="moreMenuPanel" style="position:fixed; top:12px; right:12px; height:calc(100vh - 24px); width:300px; max-width:86vw; background:#fff; border-radius:20px; box-shadow:-14px 0 44px rgba(15,23,42,.22); z-index:6001; transform:translateX(calc(100% + 24px)); transition:transform .34s cubic-bezier(.22,1,.36,1); display:flex; flex-direction:column; padding:16px 12px calc(16px + env(safe-area-inset-bottom)); overflow-y:auto;">
     <div style="display:flex; align-items:center; justify-content:space-between; padding:6px 8px 12px; border-bottom:1px solid #eef2f7; margin-bottom:8px;">
         <span style="font-size:16px; font-weight:900; color:#0f172a;"><i class="fa-solid fa-ellipsis" style="color:#6366f1; margin-right:6px;"></i> 더보기</span>
         <button onclick="ui.closeMorePanel()" aria-label="닫기" style="width:34px; height:34px; border:none; border-radius:50%; background:#f1f5f9; color:#475569; font-size:18px; cursor:pointer;">&times;</button>
@@ -1169,13 +1169,13 @@ body.in-course #moreToggleTab{ display:flex !important; }
 
 <!-- 출결 관리 게시판 (E-HRD QR 및 OTP 자체 출석 통합) -->
 <div id="view-attendance" style="display:none; width:100%; flex-direction:column; align-items:center;">
-    <div class="view-header" style="margin-bottom:6px;">
+    <div class="view-header attendance-view-header">
         <h1><i class="fa-solid fa-qrcode"></i> 출결 관리 시스템 <span class="header-room-badge room-badge-global"></span></h1>
         <p id="attendanceSubTitle" style="display:none;"></p>
     </div>
 
     <!-- 모드 전환 버튼 -->
-    <div style="margin-top:6px; margin-bottom: 12px; display: flex; gap: 10px;">
+    <div class="attendance-mode-switch">
         <button id="btn-mode-official" class="btn-action" style="width:auto; padding:10px 20px; background:#003366; color:white; border-radius:50px; font-weight:800;" onclick="ui.toggleAttendanceMode('official')">공식 E-HRD QR</button>
         <button id="btn-mode-internal" class="btn-action" style="width:auto; padding:10px 20px; background:#f1f5f9; color:#64748b; border-radius:50px; font-weight:800;" onclick="ui.toggleAttendanceMode('internal')">OTP 자체출결</button>
     </div>
@@ -1193,10 +1193,10 @@ body.in-course #moreToggleTab{ display:flex !important; }
 
 
 <!-- [2] 항기원 OTP 자체출결 영역 -->
-    <div id="area-internal-qr" class="modern-white-card" style="display:none; text-align: center; max-width: 600px; padding:30px 26px;">
+    <div id="area-internal-qr" class="modern-white-card attendance-otp-card" style="display:none; text-align: center; max-width: 600px; padding:30px 26px;">
         <div style="display: flex; flex-direction: column; align-items: center; gap: 24px;">
             <div style="width:100%; background:linear-gradient(135deg,#eff6ff,#ffffff); padding:26px 22px; border-radius:24px; border:1.5px solid #bfdbfe;">
-                <div style="font-size:14px; font-weight:900; color:#1d4ed8; margin-bottom:10px;"><i class="fa-solid fa-keyboard"></i> 교육생 플랫폼 OTP 출결</div>
+                <div class="attendance-otp-label"><i class="fa-solid fa-keyboard"></i> 교육생 플랫폼 OTP 출결</div>
                 <div id="internalOtpCode" style="letter-spacing:10px; font-size:64px; line-height:1; font-weight:950; color:#0f172a; font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;">------</div>
                 <div style="margin-top:12px; color:#475569; font-size:14px; font-weight:850;">다음 갱신까지 <b id="internalOtpCountdown" style="color:#2563eb;">60</b>초</div>
             </div>
@@ -2541,7 +2541,7 @@ function setupAcc(btn){
 
 
 
-    <script src="admin.js?v=260627D1"></script>
+    <script src="admin.js?v=260627F1"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
 <!-- ── 화면 자동 맞춤(auto-fit): 가로+세로 모두 화면에 맞게 자동 축소 · JDS260613 ──
      원인: Windows 디스플레이 배율(125%/150%)·저해상도 화면에서 유효 뷰포트가 작아져

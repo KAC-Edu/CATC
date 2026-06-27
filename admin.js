@@ -1,15 +1,15 @@
 ﻿/* ============================================================
    CATC · 강사 플랫폼 로직  (admin.js)
    STATUS    수정안하는중
-   @version  D1
-   @build    20260627-105823  (vD1: 실시간 신청 동기화, 프로필 가독성, 룰렛 및 우측 메뉴 개선)
+   @version  F1
+   @build    20260627-164931  (vF1: 입교안내 동일출처 PDF 우선 로드·사이드바 보정)
    ------------------------------------------------------------
    [코드 수정 규칙 · AI/개발자 공통]
    이 파일을 고치면 @version 을 A -> B -> ... -> Z -> A1 -> B1 ...
    순으로 1단계 올리고, @build 를 수정 시각으로 갱신할 것.
    적용 여부는 브라우저 콘솔 로그(vA)로 확인한다.
 ============================================================ */
-try{console.log('%cCATC%c 강사 플랫폼 로직 (admin.js) %cvD1%c build 20260627-105823','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}
+try{console.log('%cCATC%c 강사 플랫폼 로직 (admin.js) %cvF1%c build 20260627-164931','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}
 /* --- admin.js (Final Integrated Version - Fixed Syntax & Logic) --- */
 
 // --- [기본 데이터] 20문항 ---
@@ -6335,10 +6335,10 @@ showFinalSummary: async function() {
         
         state.quizList.forEach((q, idx) => {
             if(!q.checked || q.isSurvey) return; 
+            totalQuestions++;
             const id = `Q${idx}`; 
             const answers = allAns[id] || {}; 
             const keys = Object.keys(answers);
-            if(keys.length > 0) totalQuestions++;
             keys.forEach(k => {
                 totalParticipants.add(k); 
                 totalAnswerCount++;
@@ -6360,8 +6360,7 @@ showFinalSummary: async function() {
         
         const sortedUsers = Object.keys(userScoreMap)
             .map(t => ({ token: t, ...userScoreMap[t] }))
-            .filter(u => u.pCount === totalQuestions)
-            .sort((a, b) => b.score - a.score);
+            .sort((a, b) => (b.score - a.score) || (b.pCount - a.pCount) || a.token.localeCompare(b.token));
         
         const finalRankingData = {}; 
         let rank = 1;
@@ -6370,7 +6369,11 @@ showFinalSummary: async function() {
             finalRankingData[u.token] = { 
                 score: u.score, 
                 rank: rank, 
-                total: sortedUsers.length 
+                total: sortedUsers.length,
+                totalQuestions: totalQuestions,
+                answered: u.pCount,
+                accuracy: totalQuestions > 0 ? Math.round((u.score / totalQuestions) * 100) : 0,
+                isWinner: rank === 1
             }; 
         });
         
@@ -7249,8 +7252,9 @@ const guideMgr = {
         return guideMgr._roomCache[r];
     },
 
-    // GitHub에 올린 입교안내 PDF의 raw URL (파일 교체 시 이 URL만 수정)
-    GUIDE_PDF_URL: 'https://raw.githubusercontent.com/kac-edu/CATC/main/%EC%9E%85%EA%B5%90%EC%95%88%EB%82%B4.pdf',
+    // 배포 폴더의 PDF를 우선 사용한다. 외부 raw 주소는 구형 배포본을 위한 예비 경로다.
+    GUIDE_PDF_URL: '입교안내.pdf',
+    GUIDE_PDF_FALLBACK_URL: 'https://raw.githubusercontent.com/kac-edu/CATC/main/%EC%9E%85%EA%B5%90%EC%95%88%EB%82%B4.pdf',
 
     // 1. 초기화 — Firebase DB 리스너 없음, 리사이즈 감시만 설정
     //    실제 PDF 로드는 사용자가 '입교안내' 탭을 클릭할 때 refresh()에서 수행
@@ -7528,8 +7532,21 @@ init: function() {
         if (badge) { badge.innerText = "⏳ 불러오는 중..."; badge.style.color = "#f59e0b"; }
         guideMgr.isRendering = false;
         try {
-            const loadingTask = pdfjsLib.getDocument(url);
-            const pdfDoc = await loadingTask.promise;
+            const candidates = [url, guideMgr.GUIDE_PDF_FALLBACK_URL]
+                .filter((candidate, index, list) => candidate && list.indexOf(candidate) === index);
+            let pdfDoc = null;
+            let lastError = null;
+            for (const candidate of candidates) {
+                try {
+                    const loadingTask = pdfjsLib.getDocument({ url: candidate, withCredentials: false });
+                    pdfDoc = await loadingTask.promise;
+                    break;
+                } catch (candidateError) {
+                    lastError = candidateError;
+                    console.warn('입교안내 PDF 경로 재시도:', candidate, candidateError);
+                }
+            }
+            if (!pdfDoc) throw lastError || new Error('입교안내 PDF를 불러오지 못했습니다.');
             // 로드 완료 후 해당 방 슬롯에만 저장
             if (!guideMgr._roomCache[targetRoom]) {
                 guideMgr._roomCache[targetRoom] = { pdfDoc: null, pageNum: 1 };
@@ -11604,9 +11621,13 @@ ui._fitMorePanelToViewport = function(){
   var p=document.getElementById('moreMenuPanel');
   if(!p) return;
   var zoom=parseFloat(getComputedStyle(document.documentElement).zoom)||1;
+  var inset=12/zoom;
   p.style.setProperty('width',(320/zoom)+'px','important');
-  p.style.setProperty('height',(window.innerHeight/zoom)+'px','important');
-  p.style.setProperty('min-height',(window.innerHeight/zoom)+'px','important');
+  p.style.setProperty('top',inset+'px','important');
+  p.style.setProperty('right',inset+'px','important');
+  p.style.setProperty('height',Math.max(320,(window.innerHeight-24)/zoom)+'px','important');
+  p.style.setProperty('min-height','0','important');
+  p.style.setProperty('border-radius',(20/zoom)+'px','important');
 };
 ui.openMorePanel = function(){
   var p=document.getElementById('moreMenuPanel'), t=document.getElementById('moreToggleTab'), b=document.getElementById('moreMenuBackdrop'), ic=document.getElementById('moreToggleIcon');
@@ -11614,12 +11635,12 @@ ui.openMorePanel = function(){
   ui._fitMorePanelToViewport();
   p.classList.add('more-open'); p.style.transform='translateX(0)';
   if(b) b.style.display='block';
-  if(t) t.style.right=(p.offsetWidth||300)+'px';
+  if(t) t.style.right=((p.offsetWidth||300)+12)+'px';
   if(ic) ic.className='fa-solid fa-chevron-right';
 };
 ui.closeMorePanel = function(){
   var p=document.getElementById('moreMenuPanel'), t=document.getElementById('moreToggleTab'), b=document.getElementById('moreMenuBackdrop'), ic=document.getElementById('moreToggleIcon');
-  if(p){ p.classList.remove('more-open'); p.style.transform='translateX(100%)'; }
+  if(p){ p.classList.remove('more-open'); p.style.transform='translateX(calc(100% + 24px))'; }
   if(b) b.style.display='none';
   if(t) t.style.right='0';
   if(ic) ic.className='fa-solid fa-chevron-left';
