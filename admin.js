@@ -2905,7 +2905,9 @@ loadAttendanceView: function() {
             const validUntil = now + 60000;
             codeEl.textContent = code;
             codeEl.dataset.validUntil = String(validUntil);
-            if(countEl) countEl.textContent = '60';
+            if(countEl) { countEl.textContent = '60'; countEl.classList.remove('otp-countdown-urgent'); }
+            const ringEl0 = document.getElementById('otpCountRing');
+            if(ringEl0) { ringEl0.style.transition = 'none'; ringEl0.style.strokeDashoffset = '0'; void ringEl0.getBoundingClientRect(); ringEl0.style.transition = 'stroke-dashoffset 1s linear, stroke .3s'; }
             firebase.database().ref(`courses/${activeRoom}/attendanceOtp`).set({
                 code,
                 issuedAt: now,
@@ -2928,6 +2930,16 @@ loadAttendanceView: function() {
             }
             const remain = Math.max(0, Math.ceil((Number(codeEl.dataset.validUntil || 0) - Date.now()) / 1000));
             if(countEl) countEl.textContent = String(remain || 60);
+            const ringEl = document.getElementById('otpCountRing');
+            if(ringEl) {
+                const C = 157.08;   // 2π·25 (링 둘레)
+                const rr = Math.max(0, Math.min(60, remain));
+                ringEl.style.strokeDashoffset = String((C * (1 - rr / 60)).toFixed(2));
+            }
+            if(countEl) {
+                if (remain <= 10 && remain > 0) countEl.classList.add('otp-countdown-urgent');
+                else countEl.classList.remove('otp-countdown-urgent');
+            }
             if(remain <= 0) publishOtp();
         }, 1000);
     },

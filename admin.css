@@ -3071,6 +3071,10 @@ body.night-mode .header-room-badge { background-color: #003366 !important; borde
     transform: translateY(-1px) scale(0.97);
 }
 
+/* OTP 카운트다운: 마지막 10초 긴급 펄스 */
+@keyframes otpCountPulse { 0%,100%{ transform:scale(1); } 50%{ transform:scale(1.22); } }
+.otp-countdown-urgent { animation: otpCountPulse .6s ease-in-out infinite; }
+
 
 
 
