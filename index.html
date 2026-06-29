@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<!-- PLATFORM_EDIT_STATUS: 수정아닙니다 | VERSION: J75 J75 J75 J75 J75 | 2026-06-30 -->
+<!-- PLATFORM_EDIT_STATUS: 수정아닙니다 | VERSION: J76 J76 J76 J76 J76 | 2026-06-30 -->
 <!-- ══════════════════ [편집상태 / EDIT-STATUS] ══════════════════
      STATUS : 수정아닙니다
      FILE   : index.html (교육생)
-     VERSION: J75 J75 J75 J75 J75
-     UPDATED: 2026-06-30  (vJ75: 입교문구 '항공기술훈련원 입교', 정보수정 시 개인정보동의 숨김, 외출외박 새로작성 빈양식, 소속 항공기술훈련원 표기, 외출외박 완료→수위실 현황화면 통일. | vJ74: 창닫기 기능(closeStudentWindow) 제거 — 카카오 채널 채팅창 닫기로 대체. 디버그 console.log 2종 정리. | vJ73: 미사용 함수 6종 제거 — exitApp·cleanUrlAndGo·checkDinnerTime·loadGroupCandidates·openRoomMove·wrapClose. 카카오 채널 바로가기 도입으로 불필요해진 진입/종료 관련 죽은 코드 정리. 맛집 기능 코드는 유지.)
+     VERSION: J76 J76 J76 J76 J76
+     UPDATED: 2026-06-30  (vJ76: 외출외박 현황화면 상단바 위 내용넘침 방지(flex-start), 복귀완료보고·신청취소 한 줄 배치. | vJ75: 입교문구 '항공기술훈련원 입교', 정보수정 시 개인정보동의 숨김, 외출외박 새로작성 빈양식, 소속 항공기술훈련원 표기, 외출외박 완료→수위실 현황화면 통일. | vJ74: 창닫기 기능(closeStudentWindow) 제거 — 카카오 채널 채팅창 닫기로 대체. 디버그 console.log 2종 정리. | vJ73: 미사용 함수 6종 제거 — exitApp·cleanUrlAndGo·checkDinnerTime·loadGroupCandidates·openRoomMove·wrapClose. 카카오 채널 바로가기 도입으로 불필요해진 진입/종료 관련 죽은 코드 정리. 맛집 기능 코드는 유지.)
      ─ 규칙: 수정 시작 시 STATUS를 '수정중'으로, 완료 시 '수정아닙니다'로 변경하고 버전을 5회 반복 표기.
             '수정중'이면 다른 플랫폼은 연동 변경을 보류/협의 후 진행.
 ═══════════════════════════════════════════════════════════════ -->
@@ -1252,9 +1252,9 @@ try{
             <div id="adminStatusText" style="font-size: 14px; color: #1e293b; margin: 0; line-height: 1.5;"></div>
             
             <div id="returnBtnArea" style="margin-top:15px; display:flex; flex-direction:column; gap:8px;">
-                <div id="beforeReturnGroup" style="display:flex; flex-direction:column; gap:9px;">
-                    <button onclick="confirmReturnAction()" style="width:100%; padding:15px; background:#059669; color:#fff; border:none; border-radius:13px; font-size:16px; font-weight:800; cursor:pointer; box-shadow:0 6px 16px rgba(5,150,105,.28);"><i class="fa-solid fa-circle-check" style="margin-right:7px;"></i>복귀 완료 보고</button>
-                    <button onclick="cancelAdminAction()" style="width:100%; padding:13px; background:#fef2f2; color:#dc2626; border:none; border-radius:13px; font-size:14px; font-weight:800; cursor:pointer;">신청 취소</button>
+                <div id="beforeReturnGroup" style="display:flex; flex-direction:row; gap:9px;">
+                    <button onclick="confirmReturnAction()" style="flex:1.7; padding:15px 10px; background:#059669; color:#fff; border:none; border-radius:13px; font-size:15px; font-weight:800; cursor:pointer; box-shadow:0 6px 16px rgba(5,150,105,.28);"><i class="fa-solid fa-circle-check" style="margin-right:6px;"></i>복귀 완료 보고</button>
+                    <button onclick="cancelAdminAction()" style="flex:1; padding:15px 8px; background:#fef2f2; color:#dc2626; border:none; border-radius:13px; font-size:14px; font-weight:800; cursor:pointer; white-space:nowrap;">신청 취소</button>
                 </div>
                 <div id="afterReturnGroup" style="display:none;">
                     <button onclick="undoReturnAction()" style="width:100%; padding:14px; background:#fff; color:#475569; border:1.5px solid #e2e8f0; border-radius:13px; font-size:14px; font-weight:800; cursor:pointer;">복귀 보고 취소 (재수정)</button>
@@ -7163,6 +7163,7 @@ body.kac-quiz-active .quiz-overlay,
 #adminActionModal .menu-box{
   background:linear-gradient(180deg,#ffffff 0%,#f8fbff 100%) !important;
   border:1px solid #dbeafe !important;
+  justify-content:flex-start !important; /* 세로중앙 정렬 해제 → 상단바 위로 내용 넘침 방지 */
 }
 #adminActionModal #adminStepBar{
   gap:7px !important;
