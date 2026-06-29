@@ -7534,9 +7534,17 @@ body.kac-noanim #noticeModal > .menu-box, body.kac-noanim #surveyModal > .menu-b
     var sb=(localStorage.getItem('kac_user_phone')||'').trim();
     document.getElementById('keduName').value = (nm && nm!=='미등록')?nm:'';
     document.getElementById('keduSabun').value = /^\d{4,5}$/.test(sb)?sb:'';
+    var agree=document.getElementById('keduPrivacyAgree'); if(agree) agree.checked=!!(nm && /^\d{4,5}$/.test(sb));
     ov.style.display='flex';
     loadCourses(document.getElementById('keduCourse')).finally(function(){ hideLoader(); });
     document.getElementById('keduEnrollBtn').onclick=function(){ submitEnroll(menu); };
+    var back=document.getElementById('keduBackBtn');
+    if(back) back.onclick=function(){
+      ov.style.display='none';
+      var home=document.getElementById('keduHome');
+      if(home && localStorage.getItem('uToken')) home.style.display='flex';
+      else if(history.length>1) history.back();
+    };
   }
   window.keduShowEnroll=showEnroll;
   window.keduEditInfo=function(){
@@ -7547,6 +7555,8 @@ body.kac-noanim #noticeModal > .menu-box, body.kac-noanim #surveyModal > .menu-b
     var room=document.getElementById('keduCourse').value;
     var name=document.getElementById('keduName').value.trim();
     var sabun=document.getElementById('keduSabun').value.trim();
+    var agree=document.getElementById('keduPrivacyAgree');
+    if(!agree || !agree.checked){ showKacAlert('개인정보 수집 및 이용 동의가 필요합니다.'); return; }
     if(!room){ showKacAlert('과정을 선택해 주세요.'); return; }
     var nameOk = name.length>=2 && name.toLowerCase()!=='undefined' && /[가-힣A-Za-z]/.test(name) && /^[가-힣A-Za-z\s]+$/.test(name);
     if(!nameOk){ showKacAlert('성함을 정확히 입력해 주세요.\n(한글/영문 2자 이상)'); return; }
@@ -7569,7 +7579,9 @@ body.kac-noanim #noticeModal > .menu-box, body.kac-noanim #surveyModal > .menu-b
       if(enrollmentSettings.courseName) localStorage.setItem('kac_current_course', enrollmentSettings.courseName);
     }catch(e){}
     try{
-      await firebase.database().ref('courses/'+room+'/students/'+token).update({ name:name, phone:sabun, joinedAt: firebase.database.ServerValue.TIMESTAMP, isOnline:true });
+      var profileUpdate={ name:name, empNo:sabun, phone:sabun, joinedAt: firebase.database.ServerValue.TIMESTAMP, isOnline:true };
+      if(window._myDept) profileUpdate.dept=String(window._myDept).trim();
+      await firebase.database().ref('courses/'+room+'/students/'+token).update(profileUpdate);
     }catch(e){}
     if(!menu || menu==='home'){
       showEnrollDone(label, name, sabun);   // 입교/홈: 등록완료 안내 → 닫기(3초 자동)
@@ -7853,7 +7865,8 @@ body.kac-noanim #noticeModal > .menu-box, body.kac-noanim #surveyModal > .menu-b
         '<label>과정 선택</label><select id="keduCourse"><option value="">불러오는 중...</option></select>'+
         '<label class="ke-id-label"><span class="ke-id-primary">사번</span><span class="ke-or">OR</span><span class="ke-id-secondary">전화번호 뒷 4자리</span></label><input id="keduSabun" inputmode="numeric" maxlength="5" placeholder="사번 또는 전화번호 뒷 4자리">'+
         '<label>이름</label><input id="keduName" placeholder="홍길동">'+
-        '<button class="ke-btn" id="keduEnrollBtn">입교하기</button>'+
+        '<label class="ke-consent"><input type="checkbox" id="keduPrivacyAgree"><span><b>(필수) 개인정보 수집 및 이용</b>에 동의합니다.<small>교육운영·출결·수송·생활관 배정을 위해 성명과 사번을 교육 종료 시까지 이용합니다.</small></span></label>'+
+        '<div class="ke-actions"><button class="ke-back" id="keduBackBtn" type="button"><i class="fa-solid fa-arrow-left"></i> 뒤로가기</button><button class="ke-btn" id="keduEnrollBtn">정보 수정하기</button></div>'+
         '<div class="ke-note">입교 정보는 교육 운영 목적에 한해 사용되며, 교육 종료 시 파기됩니다.</div></div>';
       document.body.appendChild(d);
     }
@@ -9045,5 +9058,96 @@ html.kac-core-screen #realUserCount::before{
 }
 .kac-shuttle-status-head .ks-sub{ opacity:.78; }
 </style>
+<style id="traineeUxUpgrade20260629">
+/* 입교 카드와 공통 확인창을 동일한 청색 상단바 규격으로 통일 */
+#keduEnroll .ke-consent{display:flex!important;align-items:flex-start;gap:10px;margin:14px 0;padding:13px;border:1px solid #dbeafe;border-radius:14px;background:#f8fbff;color:#475569;font-size:12px;line-height:1.45;cursor:pointer}
+#keduEnroll .ke-consent input{width:20px!important;height:20px!important;flex:none;accent-color:#2563eb;box-shadow:none!important}
+#keduEnroll .ke-consent b,#keduEnroll .ke-consent small{display:block}
+#keduEnroll .ke-consent small{margin-top:4px;color:#64748b;font-weight:700}
+#keduEnroll .ke-actions{display:grid;grid-template-columns:.82fr 1.35fr;gap:10px;margin-top:12px}
+#keduEnroll .ke-actions .ke-btn{margin:0!important}
+#keduEnroll .ke-back{border:1px solid #cbd5e1;border-radius:14px;background:#f1f5f9;color:#475569;font-weight:900;cursor:pointer}
+.kac-confirm-box{width:min(390px,calc(100vw - 34px))!important;max-width:390px!important;overflow:hidden!important;border-radius:22px!important}
+.kac-confirm-box::before{content:'항공기술훈련원';display:block;padding:14px 18px;background:linear-gradient(135deg,#0f4c81,#2563eb);color:#fff;font-size:14px;font-weight:900;text-align:left}
+.landing-room{flex-direction:column!important;gap:7px!important;padding:10px 18px 12px!important}
+.landing-room .room-course{display:block!important;max-width:300px;text-align:center;white-space:normal!important;line-height:1.3}
+</style>
+<script>
+/* 구형 이름/사번 팝업을 신규 입교 카드로 단일화하고 소속 바인딩을 보강 */
+(function(){
+  function norm(value){return String(value==null?'':value).replace(/\s+/g,'').toLowerCase();}
+
+  async function bindDepartment(){
+    if(typeof firebase==='undefined'||!firebase.database) return;
+    var room=(typeof currentRoom!=='undefined'&&currentRoom)||localStorage.getItem('kac_last_visited_room')||'';
+    var name=(localStorage.getItem('kac_user_name')||'').trim();
+    var emp=(localStorage.getItem('kac_user_phone')||'').replace(/\D/g,'');
+    var token=localStorage.getItem('uToken')||'';
+    if(!room||!name) return;
+    var dept='';
+    try{
+      var direct=await firebase.database().ref('courses/'+room+'/students/'+token).once('value');
+      var profile=direct.val()||{};
+      dept=String(profile.dept||profile.department||profile.affiliation||profile.org||'').trim();
+    }catch(e){}
+    if(!dept){
+      try{
+        var snaps=await Promise.all([
+          firebase.database().ref('courses/'+room+'/coordRoster/list').once('value'),
+          firebase.database().ref('system/dorm/rosters').once('value')
+        ]);
+        var lists=[];
+        var roster=snaps[0].val();
+        if(Array.isArray(roster)) lists.push(roster);
+        var all=snaps[1].val()||{};
+        Object.keys(all).forEach(function(key){
+          var item=all[key];
+          if(item&&Array.isArray(item.list)) lists.push(item.list);
+        });
+        outer: for(var i=0;i<lists.length;i++){
+          for(var j=0;j<lists[i].length;j++){
+            var student=lists[i][j]||{};
+            var studentId=String(student.empNo||student.sabun||student.id||'').replace(/\D/g,'');
+            if(norm(student.name)===norm(name) && (!emp||!studentId||emp===studentId)){
+              dept=String(student.dept||student.department||student.affiliation||student.org||'').trim();
+              if(dept) break outer;
+            }
+          }
+        }
+      }catch(e){}
+    }
+    if(dept){
+      window._myDept=dept;
+      var input=document.getElementById('userDept');
+      if(input) input.value=dept;
+      try{ await firebase.database().ref('courses/'+room+'/students/'+token+'/dept').set(dept); }catch(e){}
+      if(typeof refreshOutingIdentity==='function') refreshOutingIdentity(name);
+    }
+  }
+
+  function replaceLegacyProfile(){
+    var old=document.getElementById('profileOverlay');
+    if(!old) return;
+    var guard=false;
+    new MutationObserver(function(){
+      if(guard||old.style.display!=='flex') return;
+      var checkin=false;
+      try{checkin=new URLSearchParams(location.search).get('checkin')==='true';}catch(e){}
+      if(checkin||typeof window.keduShowEnroll!=='function') return;
+      guard=true;
+      old.style.display='none';
+      window.keduShowEnroll('home');
+      setTimeout(function(){guard=false;},100);
+    }).observe(old,{attributes:true,attributeFilter:['style']});
+  }
+
+  function boot(){
+    replaceLegacyProfile();
+    bindDepartment();
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',function(){setTimeout(boot,250);});
+  else setTimeout(boot,250);
+})();
+</script>
 </body>
 </html>

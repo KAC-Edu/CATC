@@ -267,6 +267,82 @@ function renderAll(){
 }
 function toggleFloor(key){ if(_openFloor.has(key))_openFloor.delete(key); else _openFloor.add(key); renderAll(); }
 </script>
+<style id="dormMobileTableUx20260629">
+.bsum{gap:12px}
+.dorm-table-card{background:#fff;border:1px solid #e2e8f0;border-radius:16px;overflow:hidden;box-shadow:0 8px 24px rgba(15,23,42,.07)}
+.dorm-acc-bar{width:100%;border:0;padding:14px 15px;display:flex;align-items:center;gap:10px;background:#0f2a4a;color:#fff;font-family:inherit;cursor:pointer}
+.dorm-acc-bar .dot{width:10px;height:10px;border-radius:50%}
+.dorm-acc-bar b{font-size:15px}
+.dorm-acc-bar .total{margin-left:auto;font-size:13px}
+.dorm-acc-bar i{transition:transform .2s}
+.dorm-table-card.open .dorm-acc-bar i{transform:rotate(180deg)}
+.dorm-status-table,.dorm-detail-table{width:100%;border-collapse:collapse}
+.dorm-status-table th,.dorm-status-table td,.dorm-detail-table th,.dorm-detail-table td{padding:10px 8px;border-bottom:1px solid #eef2f7;text-align:center;font-size:12px}
+.dorm-status-table th,.dorm-detail-table th{background:#f8fafc;color:#64748b;font-weight:900}
+.dorm-status-table td{font-weight:900;color:#0f172a}
+.dorm-detail-wrap{display:none;padding:0 10px 10px}
+.dorm-table-card.open .dorm-detail-wrap{display:block}
+.dorm-detail-table td.names{text-align:left;font-weight:800;line-height:1.55;color:#334155}
+.dorm-detail-table tr:last-child td{border-bottom:0}
+.tot-card{background:#fff!important;border-color:#dbeafe!important;color:#0f4c81!important}
+</style>
+<script>
+(function(){
+  function esc(value){return h(value);}
+
+  function renderMobileTables(){
+    var occupied=occByRoom(), grouped={};
+    Object.keys(ROOMS).forEach(function(id){
+      var room=ROOMS[id]||{};
+      if(isNoAssign(room)) return;
+      var building=room.building||'기타';
+      (grouped[building]=grouped[building]||[]).push({id:id,room:room,people:occupied[id]||[]});
+    });
+
+    var totalPeople=Object.keys(STUDENTS).filter(function(key){return STUDENTS[key]&&STUDENTS[key].name;}).length;
+    document.getElementById('totCard').innerHTML='<div class="tot-card"><i class="fa-solid fa-users"></i> 전체 배정 인원 <span class="big">'+totalPeople+'명</span></div>';
+    var host=document.getElementById('bsum');
+    var buildings=Object.keys(grouped);
+    if(!buildings.length){
+      host.innerHTML='<div class="empty">생활관 정보가 없습니다.</div>';
+      return;
+    }
+
+    host.innerHTML=buildings.map(function(building,index){
+      var rooms=grouped[building].sort(function(a,b){
+        return String(a.room.no||'').localeCompare(String(b.room.no||''),undefined,{numeric:true});
+      });
+      var used=rooms.filter(function(item){return item.people.length;}).length;
+      var empty=rooms.length-used;
+      var people=rooms.reduce(function(total,item){return total+item.people.length;},0);
+      var color=DORM_COLORS[building]||'#64748b';
+      var detail=rooms.map(function(item){
+        var names=item.people.length
+          ? item.people.map(function(person){
+              return esc(person.name||'-')+(person.gender?(' '+(person.gender==='F'?'(여)':'(남)')):'');
+            }).join(', ')
+          : '<span style="color:#cbd5e1">비어 있음</span>';
+        return '<tr><td>'+esc(item.room.no||item.id)+'호</td><td>'+(item.room.floor||'-')+'층</td><td class="names">'+names+'</td><td>'+item.people.length+'/'+(item.room.capacity||1)+'</td></tr>';
+      }).join('');
+      return '<section class="dorm-table-card '+(index===0?'open':'')+'" id="dormAcc'+index+'">'+
+        '<button class="dorm-acc-bar" onclick="toggleDormMobileAcc('+index+')"><span class="dot" style="background:'+color+'"></span><b>'+esc(building)+'</b><span class="total">'+people+'명</span><i class="fa-solid fa-chevron-down"></i></button>'+
+        '<table class="dorm-status-table"><thead><tr><th>사용 방</th><th>빈 방</th><th>전체 방</th><th>배정 인원</th></tr></thead><tbody><tr><td>'+used+'</td><td style="color:#16a34a">'+empty+'</td><td>'+rooms.length+'</td><td style="color:#2563eb">'+people+'명</td></tr></tbody></table>'+
+        '<div class="dorm-detail-wrap"><table class="dorm-detail-table"><thead><tr><th>호실</th><th>층</th><th>상세 명단</th><th>현황</th></tr></thead><tbody>'+detail+'</tbody></table></div></section>';
+    }).join('');
+  }
+
+  window.toggleDormMobileAcc=function(index){
+    var element=document.getElementById('dormAcc'+index);
+    if(element) element.classList.toggle('open');
+  };
+  var originalRender=renderAll;
+  renderAll=function(){
+    originalRender();
+    renderMobileTables();
+  };
+  if(document.readyState!=='loading') setTimeout(renderMobileTables,300);
+})();
+</script>
 </body>
 </html>
 <!-- 지원부모바일 VC/VC/VC/VC/VC -->

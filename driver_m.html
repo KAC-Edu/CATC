@@ -67,7 +67,7 @@
   #catcGate #catcMsg{ margin-top:11px; min-height:16px; font-size:12.5px; font-weight:700; color:#dc2626; }
 </style>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-  <title>차량지원 (모바일)</title>
+  <title>차량지원 플랫폼</title>
   <meta name="theme-color" content="#0f172a">
   <link rel="apple-touch-icon" href="icon-192.png">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -247,7 +247,13 @@ function switchTab(v){
 /* ===== Firebase ===== */
 firebase.database().ref('courses').on('value', function(s){ allCourses=s.val()||{}; renderLeave(); });
 firebase.database().ref('system/pickup').on('value', function(s){
-  var raw=s.val()||{}, ids=Object.keys(raw), hasNew=false;
+  var raw=s.val()||{}, expired={}, today=ymd(new Date());
+  Object.keys(raw).forEach(function(id){
+    var date=normDate(raw[id]&&raw[id].date);
+    if(date&&date<today) expired['system/pickup/'+id]=null;
+  });
+  if(Object.keys(expired).length) firebase.database().ref().update(expired).catch(function(){});
+  var ids=Object.keys(raw).filter(function(id){return !Object.prototype.hasOwnProperty.call(expired,'system/pickup/'+id);}), hasNew=false;
   ids.forEach(function(id){ if(knownIds.indexOf(id)<0 && raw[id].status==='pending') hasNew=true; });
   pickups=ids.map(function(id){ var o=raw[id]||{}; o.id=id; return o; }).sort(function(a,b){ return (a.createdAt||0)-(b.createdAt||0); });
   if(!firstLoad && hasNew){ var a=document.getElementById('alarm-sound'); if(a){ a.currentTime=0; a.play().catch(function(){}); } }

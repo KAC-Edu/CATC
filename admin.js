@@ -11470,6 +11470,12 @@ ui.openLeaderRoulette = async function(){
     var data=snap.val()||{};
     Object.keys(data).forEach(function(token){ var st=data[token]; if(st && st.name && st.name!=='undefined'){ students.push({ token:token, name:String(st.name).trim() }); } });
   }catch(e){}
+  students = students.filter(function(st, idx, arr){
+    var key = String(st.name || '').replace(/\s+/g, '').toLowerCase();
+    return key && arr.findIndex(function(x){
+      return String(x.name || '').replace(/\s+/g, '').toLowerCase() === key;
+    }) === idx;
+  });
   students.sort(function(a,b){ return a.name.localeCompare(b.name); });
   if(!students.length){ ui.showAlert('입교한 학생이 없습니다.\n학생이 입장한 뒤 룰렛을 돌려주세요.'); return; }
 
@@ -11527,7 +11533,7 @@ ui.openLeaderRoulette = async function(){
   var modal=document.createElement('div'); modal.id='leaderRouletteModal';
   modal.setAttribute('style','position:fixed;inset:0;z-index:9700;display:flex;align-items:center;justify-content:center;background:rgba(15,23,42,.62);backdrop-filter:blur(4px);padding:18px;overflow:auto;');
   modal.onclick=function(e){ if(e.target===modal && !ui._wheelSpinning) ui.closeLeaderRoulette(); };
-  var wheelPx='min(84vh, 92vw)';
+  var wheelPx='min(70vh, 80vw)';
   modal.innerHTML =
     '<div style="background:#fff;border-radius:26px;width:auto;max-width:97vw;max-height:98vh;overflow:auto;box-shadow:0 30px 80px rgba(0,0,0,.45);">'
       + '<style>@keyframes rlPop{0%{transform:scale(.55);opacity:0}60%{transform:scale(1.06)}100%{transform:scale(1);opacity:1}}</style>'
@@ -11535,7 +11541,7 @@ ui.openLeaderRoulette = async function(){
         + '<div style="font-size:19px;font-weight:900;"><i class="fa-solid fa-trophy" style="margin-right:8px;"></i>학생장 룰렛</div>'
         + '<button onclick="ui.closeLeaderRoulette()" style="background:rgba(255,255,255,.2);border:none;color:#fff;width:36px;height:36px;border-radius:50%;font-size:19px;cursor:pointer;">&times;</button>'
       + '</div>'
-      + '<div style="padding:22px 22px 26px;text-align:center;">'
+      + '<div style="padding:22px 28px 38px;text-align:center;">'
         + '<div style="font-size:13.5px;color:#64748b;font-weight:800;margin-bottom:18px;">입교한 학생 '+N+'명 · 가운데 <b style="color:#0f6cbd;">시작</b>을 누르면 3시 방향 마커에 걸린 학생이 당첨됩니다</div>'
         + '<div style="position:relative;width:'+wheelPx+';height:'+wheelPx+';margin:0 auto 20px;">'
           + svg
@@ -11619,6 +11625,204 @@ ui.confirmRouletteLeader = function(){
     }).catch(function(){ ui.showAlert('지정 중 오류가 발생했습니다.'); });
   });
 };
+
+// ===== 강사 리모컨 고도화: 6개 커스텀 육각 메뉴 + 롱프레스 이동 =====
+(function(){
+  var REMOTE_KEY = 'kac_instructor_remote_v2';
+  var POS_KEY = 'kac_instructor_remote_pos_v2';
+  var choices = [
+    {mode:'dashboard', label:'과정현황', icon:'fa-gauge-high'},
+    {mode:'guide', label:'입교안내', icon:'fa-file-pdf'},
+    {mode:'notice', label:'공지관리', icon:'fa-bullhorn'},
+    {mode:'students', label:'수강생현황', icon:'fa-users-viewfinder'},
+    {mode:'admin-action', label:'외출외박', icon:'fa-person-walking-arrow-right'},
+    {mode:'attendance', label:'OTP출결', icon:'fa-keyboard'},
+    {mode:'shuttle', label:'차량수요조사', icon:'fa-bus'},
+    {mode:'dormitory', label:'생활관배치', icon:'fa-bed'},
+    {mode:'dinner-skip', label:'석식제외', icon:'fa-utensils'},
+    {mode:'qa', label:'Q&A', icon:'fa-comments'},
+    {mode:'quiz', label:'퀴즈모드', icon:'fa-clipboard-question'}
+  ];
+  var defaults = ['dashboard','guide','notice','students','admin-action','attendance'];
+
+  function selected(){
+    try {
+      var saved = JSON.parse(localStorage.getItem(REMOTE_KEY) || 'null');
+      if(Array.isArray(saved)){
+        var valid = saved.filter(function(key){
+          return choices.some(function(item){ return item.mode === key; });
+        });
+        if(valid.length === 6) return valid.slice(0, 6);
+      }
+    } catch(e){}
+    return defaults.slice();
+  }
+
+  function esc(value){
+    return String(value || '').replace(/[&<>"]/g, function(char){
+      return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[char];
+    });
+  }
+
+  function render(){
+    var host = document.getElementById('courseSmartRemote');
+    if(!host) return;
+    var picked = selected();
+    host.classList.add('hex-remote-v2');
+    host.innerHTML =
+      '<div class="hex-drag-handle" title="길게 눌러 위치 이동"><i class="fa-solid fa-grip-lines"></i><span>길게 눌러 이동</span></div>'+
+      '<div class="hex-ring">'+picked.map(function(mode, index){
+        var item = choices.find(function(choice){ return choice.mode === mode; }) || choices[0];
+        return '<button class="hex-key hex-pos-'+index+'" type="button" data-mode="'+esc(item.mode)+'" title="'+esc(item.label)+'"><i class="fa-solid '+esc(item.icon)+'"></i><span>'+esc(item.label)+'</span></button>';
+      }).join('')+
+      '<button class="hex-center" type="button" title="리모컨 메뉴 설정"><i class="fa-solid fa-sliders"></i><span>설정</span></button></div>';
+
+    host.querySelectorAll('.hex-key').forEach(function(button){
+      button.addEventListener('click', function(){ ui.setMode(button.dataset.mode); });
+    });
+    host.querySelector('.hex-center').addEventListener('click', openSettings);
+    bindDrag(host);
+    restorePos(host);
+  }
+
+  function openSettings(){
+    var old = document.getElementById('hexRemoteSettings');
+    if(old) old.remove();
+    var picked = selected();
+    var overlay = document.createElement('div');
+    overlay.id = 'hexRemoteSettings';
+    overlay.className = 'hex-settings-overlay';
+    overlay.innerHTML =
+      '<div class="hex-settings-card"><div class="hex-settings-head"><div><b>육각 리모컨 메뉴 설정</b><small>자주 쓰는 메뉴를 정확히 6개 선택하세요.</small></div><button type="button" data-close>&times;</button></div>'+
+      '<div class="hex-settings-list">'+choices.map(function(item){
+        return '<label><input type="checkbox" value="'+esc(item.mode)+'" '+(picked.indexOf(item.mode)>=0?'checked':'')+'><i class="fa-solid '+esc(item.icon)+'"></i><span>'+esc(item.label)+'</span></label>';
+      }).join('')+'</div><div class="hex-settings-foot"><span id="hexSelectedCount">6 / 6</span><button type="button" data-save>적용</button></div></div>';
+    document.body.appendChild(overlay);
+
+    function sync(){
+      var checks = Array.from(overlay.querySelectorAll('input:checked'));
+      overlay.querySelector('#hexSelectedCount').textContent = checks.length+' / 6';
+      overlay.querySelector('[data-save]').disabled = checks.length !== 6;
+    }
+    overlay.querySelectorAll('input').forEach(function(input){
+      input.addEventListener('change', function(){
+        if(overlay.querySelectorAll('input:checked').length > 6){
+          input.checked = false;
+          if(ui.showAlert) ui.showAlert('리모컨 메뉴는 6개까지 선택할 수 있습니다.');
+        }
+        sync();
+      });
+    });
+    overlay.querySelector('[data-close]').onclick = function(){ overlay.remove(); };
+    overlay.onclick = function(event){ if(event.target === overlay) overlay.remove(); };
+    overlay.querySelector('[data-save]').onclick = function(){
+      var values = Array.from(overlay.querySelectorAll('input:checked')).map(function(input){ return input.value; });
+      if(values.length !== 6) return;
+      localStorage.setItem(REMOTE_KEY, JSON.stringify(values));
+      overlay.remove();
+      render();
+    };
+    sync();
+  }
+
+  function restorePos(host){
+    try{
+      var position = JSON.parse(localStorage.getItem(POS_KEY) || 'null');
+      if(!position) return;
+      host.style.left = Math.max(8, Math.min(window.innerWidth-host.offsetWidth-8, position.x))+'px';
+      host.style.top = Math.max(8, Math.min(window.innerHeight-host.offsetHeight-8, position.y))+'px';
+      host.style.right = 'auto';
+      host.style.transform = 'none';
+    }catch(e){}
+  }
+
+  function bindDrag(host){
+    var handle = host.querySelector('.hex-drag-handle');
+    var timer = null;
+    var dragging = false;
+    var startX = 0, startY = 0, originX = 0, originY = 0;
+
+    function down(event){
+      var rect = host.getBoundingClientRect();
+      startX = event.clientX;
+      startY = event.clientY;
+      originX = rect.left;
+      originY = rect.top;
+      timer = setTimeout(function(){
+        dragging = true;
+        host.classList.add('is-dragging');
+        if(navigator.vibrate) navigator.vibrate(35);
+      }, 520);
+    }
+    function move(event){
+      if(!timer && !dragging) return;
+      if(!dragging && Math.hypot(event.clientX-startX, event.clientY-startY) > 9){
+        clearTimeout(timer);
+        timer = null;
+        return;
+      }
+      if(!dragging) return;
+      event.preventDefault();
+      var x = Math.max(8, Math.min(window.innerWidth-host.offsetWidth-8, originX+event.clientX-startX));
+      var y = Math.max(8, Math.min(window.innerHeight-host.offsetHeight-8, originY+event.clientY-startY));
+      host.style.left = x+'px';
+      host.style.top = y+'px';
+      host.style.right = 'auto';
+      host.style.transform = 'none';
+    }
+    function up(){
+      if(timer){
+        clearTimeout(timer);
+        timer = null;
+      }
+      if(dragging){
+        var rect = host.getBoundingClientRect();
+        localStorage.setItem(POS_KEY, JSON.stringify({x:rect.left, y:rect.top}));
+      }
+      dragging = false;
+      host.classList.remove('is-dragging');
+    }
+    handle.addEventListener('pointerdown', down);
+    window.addEventListener('pointermove', move, {passive:false});
+    window.addEventListener('pointerup', up);
+    window.addEventListener('pointercancel', up);
+  }
+
+  function cleanQrAndGroupSettings(){
+    var qr = document.getElementById('qrcode');
+    if(qr){
+      var settingGroup = qr.closest('.setting-group');
+      if(settingGroup) settingGroup.remove();
+    }
+    ['floatingQR','qrModal','studentManualModal'].forEach(function(id){
+      var node = document.getElementById(id);
+      if(node) node.remove();
+    });
+    document.querySelectorAll('[onclick*="toggleMiniQR"]').forEach(function(node){ node.remove(); });
+
+    var box = document.querySelector('.sidebar-bottom .action-buttons');
+    if(box && !document.getElementById('sidebarSettingsFold')){
+      var observer = document.getElementById('observerToggleButton');
+      var fold = document.createElement('details');
+      fold.id = 'sidebarSettingsFold';
+      fold.className = 'sidebar-settings-fold';
+      fold.innerHTML = '<summary><i class="fa-solid fa-gear"></i><span>Settings</span><i class="fa-solid fa-chevron-down"></i></summary><div class="sidebar-settings-actions"></div>';
+      var inner = fold.querySelector('.sidebar-settings-actions');
+      Array.from(box.children).forEach(function(button){
+        if(button !== observer) inner.appendChild(button);
+      });
+      if(observer) box.insertBefore(observer, box.firstChild);
+      box.appendChild(fold);
+    }
+  }
+
+  function boot(){
+    cleanQrAndGroupSettings();
+    render();
+  }
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
+  else setTimeout(boot, 0);
+})();
 
 
 // ===== [우측 더보기 사이드바] 슬라이드 패널 토글 (HTML 버튼에서 호출하나 정의가 없었음) =====

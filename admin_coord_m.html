@@ -517,7 +517,9 @@ function buildEduSelects(){
   if(b){ b.innerHTML=eduOptionsHtml(); b.value=(EDU.union||''); }
 }
 function setEduSel(type, val){
-  db.ref('system/eduLocations/'+type).set(val||null);
+  EDU[type]=val||'';
+  renderEdu();
+  db.ref('system/eduLocations/'+type).set(val||'');
   toast(val?('✅ '+shortRoom(val)+'(으)로 공지'):'미정으로 변경');
 }
 

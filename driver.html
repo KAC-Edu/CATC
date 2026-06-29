@@ -85,7 +85,7 @@
 ============================================================ -->
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <title>항공기술훈련원 차량지원시스템</title>
+  <title>차량지원 플랫폼</title>
   <link rel="manifest" href="driver.manifest.json">
   <meta name="theme-color" content="#0f172a">
   <link rel="apple-touch-icon" href="icon-192.png">
@@ -414,7 +414,7 @@
 
 <div class="topbar">
   <div class="topbar-in">
-    <div class="brand" onclick="location.reload()" style="cursor:pointer;" title="메인으로 (새로고침)"><i class="fa-solid fa-van-shuttle"></i> 차량지원 운행관리 <span class="today-chip" id="todayChip"></span></div>
+    <div class="brand" onclick="location.reload()" style="cursor:pointer;" title="메인으로 (새로고침)"><i class="fa-solid fa-van-shuttle"></i> 차량지원 플랫폼 <span class="today-chip" id="todayChip"></span></div>
     <div class="top-spacer"></div>
     <button class="top-btn" id="installBtn" onclick="pwaInstall()" style="background:#0ea5e9; border-color:#0ea5e9;"><i class="fa-solid fa-circle-down"></i> 앱 설치</button>
     <button class="top-btn" onclick="openPlanList()"><i class="fa-solid fa-calendar-days"></i> 연간계획</button>
@@ -425,9 +425,9 @@
 
 <div class="wrap">
   <div class="driver-statusbar" aria-label="운행 현황">
-    <button type="button" onclick="switchView('leave')"><i class="fa-solid fa-bus"></i><span>퇴교수송</span><b id="driverLeaveCount">0명</b></button>
-    <button type="button" onclick="switchView('pickups')"><i class="fa-solid fa-user-tie"></i><span>강사픽업</span><b id="driverPickupCount">0건 / 금주</b></button>
-    <button type="button" onclick="switchView('reservations')"><i class="fa-solid fa-bell"></i><span>픽업 예약</span><b id="driverReservationCount">0건</b></button>
+    <button type="button" onclick="switchView('leave')"><i class="fa-solid fa-bus"></i><span>퇴교수송(금주)</span><b id="driverLeaveCount">0명</b></button>
+    <button type="button" onclick="switchView('pickups')"><i class="fa-solid fa-user-tie"></i><span>강사픽업(금주)</span><b id="driverPickupCount">0건 / 금주</b></button>
+    <button type="button" id="driverReservationStatus" onclick="switchView('reservations')"><i class="fa-solid fa-bell"></i><span>픽업예약요청</span><b id="driverReservationCount">0건</b></button>
   </div>
   <div class="tabs">
     <div class="tab active" data-view="leave" onclick="switchView('leave')"><i class="fa-solid fa-bus"></i> 퇴교수송 현황</div>
@@ -762,7 +762,13 @@ function init(){
   firebase.database().ref('courses').on('value', s=>{ allCourses=s.val()||{}; renderAll(); document.getElementById('spinner').style.display='none'; });
 
   firebase.database().ref('system/pickup').on('value', s=>{
-    const raw=s.val()||{}; const ids=Object.keys(raw);
+    const raw=s.val()||{}; const expired={}; const today=todayStr();
+    Object.keys(raw).forEach(id=>{
+      const date=normDate(raw[id]&&raw[id].date);
+      if(date && date<today) expired['system/pickup/'+id]=null;
+    });
+    if(Object.keys(expired).length) firebase.database().ref().update(expired).catch(()=>{});
+    const ids=Object.keys(raw).filter(id=>!Object.prototype.hasOwnProperty.call(expired,'system/pickup/'+id));
     let hasNew=false;
     ids.forEach(id=>{ if(!knownPickupIds.includes(id) && raw[id].status==='pending') hasNew=true; });
     pickups = ids.map(id=>({id, ...raw[id]})).sort((a,b)=>(a.createdAt||0)-(b.createdAt||0));
@@ -808,6 +814,11 @@ function renderDriverTables(){
   set('driverLeaveCount', leaveTotal+'명');
   set('driverPickupCount', weekConfirmed.length+'건 / 금주');
   set('driverReservationCount', pending.length+'건');
+  const reservationStatus=document.getElementById('driverReservationStatus');
+  if(reservationStatus){
+    reservationStatus.classList.toggle('has-pending',pending.length>0);
+    reservationStatus.classList.toggle('all-checked',pending.length===0);
+  }
 
   const pickupBody=document.getElementById('driverPickupTable');
   if(pickupBody){
@@ -1503,6 +1514,42 @@ window.kacExpireEndedCourses = async function(){
   }catch(e){ /* 권한 등으로 막히면 무시 */ }
 };
 document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){ if(typeof kacExpireEndedCourses==='function') kacExpireEndedCourses(); }, 3000); });
+</script>
+<style id="driverUxUpgrade20260629">
+.driver-statusbar{position:relative;z-index:120!important}
+.driver-statusbar button{min-height:78px!important;padding:13px 18px!important;border-radius:14px!important}
+.driver-statusbar span{font-size:14px!important}
+.driver-statusbar b{font-size:21px!important}
+.driver-statusbar #driverReservationStatus.has-pending{background:#fff1f2!important;border:2px solid #ef4444!important;box-shadow:0 8px 24px rgba(239,68,68,.18)!important}
+.driver-statusbar #driverReservationStatus.has-pending i,.driver-statusbar #driverReservationStatus.has-pending b{color:#dc2626!important}
+.driver-statusbar #driverReservationStatus.all-checked{background:#ecfdf5!important;border:2px solid #10b981!important}
+.driver-statusbar #driverReservationStatus.all-checked i,.driver-statusbar #driverReservationStatus.all-checked b{color:#047857!important}
+.panel-head{font-size:18px!important}
+.tab{font-size:15px!important;font-weight:900!important}
+.driver-data-table td{font-size:14px!important}
+.driver-data-table th{font-size:13px!important}
+.topbar{z-index:500!important}
+.brand{display:flex;align-items:center;gap:9px}
+.today-chip{margin-left:12px!important;font-family:ui-monospace,Consolas,monospace!important;min-width:200px;text-align:center}
+@media(max-width:800px){
+  .today-chip{min-width:0;font-size:10px}
+  .driver-statusbar button{min-height:62px!important}
+  .driver-statusbar span{font-size:13px!important}
+}
+</style>
+<script>
+(function(){
+  function tickDriverClock(){
+    var element=document.getElementById('todayChip');
+    if(!element) return;
+    var date=new Date();
+    var pad=function(value){return String(value).padStart(2,'0');};
+    var days=['일','월','화','수','목','금','토'];
+    element.textContent=date.getFullYear()+'.'+pad(date.getMonth()+1)+'.'+pad(date.getDate())+' ('+days[date.getDay()]+') '+pad(date.getHours())+':'+pad(date.getMinutes())+':'+pad(date.getSeconds());
+  }
+  tickDriverClock();
+  setInterval(tickDriverClock,1000);
+})();
 </script>
 </body>
 </html>

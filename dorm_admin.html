@@ -618,7 +618,6 @@
                 <div class="dorm-chip-inline"><span class="dc-loader">⏳</span></div>
             </div>
             <div class="header-actions">
-                <button class="h-btn" onclick="catcLock()"><i class="fa-solid fa-lock"></i> 잠금</button>
             </div>
         </div>
     </div>
@@ -3478,6 +3477,13 @@
             try { const s = await db.ref(`system/dorm/assignments/${wk}`).once('value'); existing = s.val(); } catch(e) {}
             const hadExisting = existing && existing.students && Object.keys(existing.students).length;
             if (hadExisting) {
+                // 현황에서 직접 추가한 인원은 자동배정 재실행/주차 전환에도 영구 보존한다.
+                Object.keys(existing.students).forEach(function(token){
+                    const oldStudent = existing.students[token] || {};
+                    if(token.indexOf('manual_') === 0 || oldStudent.source === 'manual'){
+                        if(!payload.students[token]) payload.students[token] = oldStudent;
+                    }
+                });
                 const oldSig = _assignSignature(existing.students);
                 const newSig = _assignSignature(payload.students);
                 if (oldSig === newSig) {
@@ -3929,6 +3935,13 @@
             const existSnap = await db.ref(`system/dorm/assignments/${wk}`).once('value');
             const existing = existSnap.val();
             if (existing && existing.students && Object.keys(existing.students).length) {
+                // 현황에서 직접 추가한 행은 새 자동배정 결과로 덮어쓰지 않는다.
+                Object.keys(existing.students).forEach(function(token){
+                    const oldStudent = existing.students[token] || {};
+                    if(token.indexOf('manual_') === 0 || oldStudent.source === 'manual'){
+                        if(!payload.students[token]) payload.students[token] = oldStudent;
+                    }
+                });
                 const oldSig = _assignSignature(existing.students);
                 const newSig = _assignSignature(assigned);
                 if (oldSig === newSig) {
@@ -4365,7 +4378,7 @@
             const WAIT_CSS = `<style>
                 #boardMapArea .dm-layout{display:flex;gap:14px;align-items:flex-start;}
                 #boardMapArea .dm-buildings{flex:1;min-width:0;}
-                #boardMapArea .dm-wait-col{flex-shrink:0;width:152px;position:sticky;top:8px;background:#fff7ed;border:2px dashed #fdba74;border-radius:12px;padding:10px 9px;max-height:84vh;overflow-y:auto;}
+                #boardMapArea .dm-wait-col{flex-shrink:0;width:168px;position:sticky;top:calc(var(--header-h, 80px) + 76px);align-self:flex-start;background:#fff7ed;border:2px dashed #fdba74;border-radius:12px;padding:10px 9px;max-height:calc(100vh - var(--header-h, 80px) - 96px);overflow-y:auto;z-index:25;box-shadow:0 10px 28px rgba(194,65,12,.14);}
                 #boardMapArea .dm-wait-col.dm-over{background:#ffedd5;border-color:#f97316;box-shadow:0 0 0 3px rgba(249,115,22,.18);}
                 #boardMapArea .dm-wait-head{font-size:13px;font-weight:900;color:#c2410c;margin-bottom:9px;text-align:center;}
                 #boardMapArea .dm-wait-body{display:flex;flex-direction:column;gap:6px;min-height:130px;}
@@ -4631,7 +4644,7 @@
             const destGender = gs && gs.size === 1 ? [...gs][0] : '';
             if (destGender && destGender !== gender) { msg.innerHTML = `<span style="color:var(--danger);font-weight:700;">⛔ 성별 불일치 — ${destGender === 'M' ? '남' : '여'}성 방</span>`; return; }
             const token = 'manual_' + Date.now();
-            const rec = { name, empNo: empNo || '-', dept: '', gender, course, room: `${dest.building} ${dest.no}`, roomId: destRoomId, building: dest.building, floor: dest.floor, no: dest.no };
+            const rec = { name, empNo: empNo || '-', dept: '', gender, course, room: `${dest.building} ${dest.no}`, roomId: destRoomId, building: dest.building, floor: dest.floor, no: dest.no, source:'manual', manuallyAddedAt:firebase.database.ServerValue.TIMESTAMP };
             try {
                 await db.ref(`system/dorm/assignments/${wk}/students/${token}`).update(rec);
                 await _clearDeletedMark(wk, name, empNo);
@@ -6291,7 +6304,8 @@ window.kacExpireEndedCourses = async function(){
         try{ var s=pd.indexOf(' ~ ')>=0?pd.split(' ~ ')[0].trim():(pd.split('~')[0]||'').trim();
           if(s){ var d=new Date(s+'T00:00:00'); if(!isNaN(d)){ var dw=(d.getDay()+6)%7; var mo=new Date(d); mo.setDate(d.getDate()-dw);
             var u=mo.toISOString().slice(0,10); var l=mo.getFullYear()+'-'+String(mo.getMonth()+1).padStart(2,'0')+'-'+String(mo.getDate()).padStart(2,'0');
-            updates['system/dorm/rosters/'+u+'__'+room]=null; updates['system/dorm/rosters/'+l+'__'+room]=null; }}
+            /* 생활관 명단은 운영자가 직접 삭제할 때까지 보존한다.
+               종료 과정 자동정리는 과정방만 비우고 생활관 명단은 삭제하지 않는다. */ }}
         }catch(e){}
       }
     }
