@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<!-- PLATFORM_EDIT_STATUS: 수정아닙니다 | VERSION: J74 J74 J74 J74 J74 | 2026-06-30 -->
+<!-- PLATFORM_EDIT_STATUS: 수정아닙니다 | VERSION: J75 J75 J75 J75 J75 | 2026-06-30 -->
 <!-- ══════════════════ [편집상태 / EDIT-STATUS] ══════════════════
      STATUS : 수정아닙니다
      FILE   : index.html (교육생)
-     VERSION: J74 J74 J74 J74 J74
-     UPDATED: 2026-06-30  (vJ74: 창닫기 기능(closeStudentWindow) 제거 — 카카오 채널 채팅창 닫기로 대체. 디버그 console.log 2종 정리. | vJ73: 미사용 함수 6종 제거 — exitApp·cleanUrlAndGo·checkDinnerTime·loadGroupCandidates·openRoomMove·wrapClose. 카카오 채널 바로가기 도입으로 불필요해진 진입/종료 관련 죽은 코드 정리. 맛집 기능 코드는 유지.)
+     VERSION: J75 J75 J75 J75 J75
+     UPDATED: 2026-06-30  (vJ75: 입교문구 '항공기술훈련원 입교', 정보수정 시 개인정보동의 숨김, 외출외박 새로작성 빈양식, 소속 항공기술훈련원 표기, 외출외박 완료→수위실 현황화면 통일. | vJ74: 창닫기 기능(closeStudentWindow) 제거 — 카카오 채널 채팅창 닫기로 대체. 디버그 console.log 2종 정리. | vJ73: 미사용 함수 6종 제거 — exitApp·cleanUrlAndGo·checkDinnerTime·loadGroupCandidates·openRoomMove·wrapClose. 카카오 채널 바로가기 도입으로 불필요해진 진입/종료 관련 죽은 코드 정리. 맛집 기능 코드는 유지.)
      ─ 규칙: 수정 시작 시 STATUS를 '수정중'으로, 완료 시 '수정아닙니다'로 변경하고 버전을 5회 반복 표기.
             '수정중'이면 다른 플랫폼은 연동 변경을 보류/협의 후 진행.
 ═══════════════════════════════════════════════════════════════ -->
@@ -756,7 +756,7 @@ try{
         <input type="text" inputmode="numeric" id="userPhone" placeholder="본인 사번 (없으면 전화번호 뒤 4자리)" maxlength="5" style="width:100%; padding:15px; border:2px solid #e2e8f0; border-radius:12px; font-size:18px; margin-bottom:15px; text-align:center; outline:none;">
         
         <!-- 개인정보 동의 영역 -->
-        <div style="background:#f8fafc; padding:12px; border-radius:10px; text-align:left; margin-bottom:20px; border:1px solid #e2e8f0;">
+        <div id="privacyConsentBox" style="background:#f8fafc; padding:12px; border-radius:10px; text-align:left; margin-bottom:20px; border:1px solid #e2e8f0;">
             <label style="display:flex; align-items:flex-start; gap:8px; cursor:pointer;">
                 <input type="checkbox" id="privacyAgree" style="width:18px; height:18px; margin-top:2px;">
                 <span style="font-size:12px; color:#475569; line-height:1.4;">
@@ -2136,18 +2136,25 @@ function installMenuDragClose(){}
 window.installMenuDragClose=installMenuDragClose;
 
 // ===== 우측 슬라이드 패널(퇴교차량/외출외박 등) 좌→우 스와이프로 닫기 =====
+function _outingGotoForm(){
+    var b=document.getElementById('prevOutingBanner'); if(b) b.style.setProperty('display','none','important');
+    var bar=document.getElementById('adminStepBar'); if(bar) bar.style.display='flex';
+    if(typeof showAdminStep==='function') showAdminStep(1);
+}
 function applyPrevOuting(){
     var lo = window._lastOutingCache || {};
     var setVal = function(id, v){ var el=document.getElementById(id); if(el && v) el.value = v; };
     setVal('userDept', lo.dept); setVal('destination', lo.destination); setVal('outingReason', lo.reason); setVal('fullPhone', lo.phone);
-    dismissPrevOuting();
+    _outingGotoForm();
 }
 function dismissPrevOuting(){
-    var b=document.getElementById('prevOutingBanner'); if(b) b.style.display='none';
-    var bar=document.getElementById('adminStepBar'); if(bar) bar.style.display='flex';
-    if(typeof showAdminStep==='function') showAdminStep(1);
+    // [새로 작성] 이전 입력값을 비우고 1단계부터 새로 작성
+    ['destination','outingReason','fullPhone'].forEach(function(id){ var el=document.getElementById(id); if(el) el.value=''; });
+    var ud=document.getElementById('userDept'); if(ud && !ud.readOnly) ud.value='';
+    window._lastOutingCache=null;
+    _outingGotoForm();
 }
-window.applyPrevOuting=applyPrevOuting; window.dismissPrevOuting=dismissPrevOuting;
+window.applyPrevOuting=applyPrevOuting; window.dismissPrevOuting=dismissPrevOuting; window._outingGotoForm=_outingGotoForm;
 
 function installPanelSwipeClose(modalId, closeFn){
     return;
@@ -2476,6 +2483,8 @@ function editProfile() {
     if (closeBtn) closeBtn.style.display = 'block';
     const agree = document.getElementById('privacyAgree');
     if (agree) agree.checked = true;
+    const consentBox = document.getElementById('privacyConsentBox');
+    if (consentBox) consentBox.style.display = 'none';
 
     document.getElementById('menuModal').style.display = 'none'; document.body.classList.remove('menu-open');
     document.getElementById('profileOverlay').style.display = 'flex';
@@ -2493,6 +2502,8 @@ function resetProfileOverlayButtons() {
     if (saveBtn) saveBtn.innerText = '동의하고 입장하기';
     const closeBtn = document.getElementById('profileCloseBtn');
     if (closeBtn) closeBtn.style.display = 'none';
+    const consentBox = document.getElementById('privacyConsentBox');
+    if (consentBox) consentBox.style.display = 'block';
 }
 
 
@@ -3871,6 +3882,17 @@ async function resolveOutingApplicantName(uToken) {
     return '';
 }
 
+// [소속 표기] 항공기술훈련원 내부 부서는 '항공기술훈련원 OOO' 전체 표기 (외부 소속은 그대로)
+var HANGIWON_DEPTS = ['교육운영부','교육지원부'];
+function formatDept(dept){
+    var d = String(dept==null?'':dept).trim();
+    if(!d) return d;
+    if(d.indexOf('항공기술훈련원') !== -1) return d;
+    if(HANGIWON_DEPTS.indexOf(d) !== -1) return '항공기술훈련원 ' + d;
+    return d;
+}
+window.formatDept = formatDept;
+
 function refreshOutingIdentity(nameOverride) {
     const name = String(nameOverride || localStorage.getItem('kac_user_name') || '').trim();
     const nameEl = document.getElementById('wzName');
@@ -3882,7 +3904,7 @@ function refreshOutingIdentity(nameOverride) {
     if (dept) {
         deptInput.value = dept;
         deptInput.style.display = 'none';
-        if (deptEl) { deptEl.style.display = ''; deptEl.textContent = dept; }
+        if (deptEl) { deptEl.style.display = ''; deptEl.textContent = formatDept(dept); }
     } else {
         deptInput.style.display = 'block';
         if (deptEl) { deptEl.style.display = ''; deptEl.textContent = '직접 입력 필요'; }
@@ -4026,7 +4048,7 @@ async function openAdminAction() {
             const row = (ic, label, val) => `<div style="display:flex; align-items:center; gap:11px; padding:11px 0; border-top:1px solid #f1f5f9;"><span style="width:30px; color:#94a3b8; text-align:center;">${ic}</span><span style="font-size:12.5px; color:#94a3b8; font-weight:700;">${label}</span><span style="margin-left:auto; font-size:15px; font-weight:800; color:#1e293b; text-align:right; word-break:keep-all;">${val}</span></div>`;
             const applicantSabun = (localStorage.getItem('kac_user_phone') || '').trim();
             let rows = row('<i class="fa-solid fa-user"></i>', '신청자', `${existingData.name||applicantName||'-'}${applicantSabun ? ' · '+applicantSabun : ''}`);
-            if (existingData.dept) rows += row('<i class="fa-solid fa-building"></i>', '소속', existingData.dept);
+            if (existingData.dept) rows += row('<i class="fa-solid fa-building"></i>', '소속', formatDept(existingData.dept));
             rows += row('<i class="fa-regular fa-clock"></i>', '시간', `${existingData.startTime||'-'} ~ ${existingData.endTime||'-'}`);
 
             let groupHtml = '';
@@ -4266,13 +4288,15 @@ async function wizDinnerChoice(skip){
     showOutingResult();
 }
 function showOutingResult(){
+    // [통일] 완료 후 별도 결과카드 대신, 정문 수위실 연락처가 있는 '신청 현황' 화면으로 이동
+    if(typeof openAdminAction==='function'){ openAdminAction(); return; }
     var r = window._lastOutingResult || {};
     function _e(t){ return (''+(t==null?'':t)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
     var typeLabel = r.type==='overnight'?'외박':'외출';
     if(r.group>0) typeLabel += ' (단체 '+r.group+'명)';
     var timeLabel = (r.type==='overnight') ? ('수업 종료 후 출발 · 익일 08:00 복귀') : (_e(r.startTime||'18:00')+' ~ '+_e(r.endTime||'20:00'));
     var dinnerLabel = (r.dinnerSkip===true) ? '<b style="color:#dc2626;">석식 제외 신청됨</b>' : '석식 정상(식사)';
-    var rows = [['구분', typeLabel], ['성명', _e(r.name)], ['소속', _e(r.dept)], ['행선지', _e(r.dest)], ['사유', _e(r.reason)]];
+    var rows = [['구분', typeLabel], ['성명', _e(r.name)], ['소속', _e(formatDept(r.dept))], ['행선지', _e(r.dest)], ['사유', _e(r.reason)]];
     if(r.type==='overnight') rows.push(['복귀일', _e(r.returnDate)]);
     rows.push(['시간', timeLabel]); rows.push(['비상연락처', _e(r.phone)]); rows.push(['석식', dinnerLabel]);
     var card=document.getElementById('outingResultCard');
@@ -4426,8 +4450,10 @@ async function submitAdminAction() {
         // [결과요약용] 신청 내용 보관
         window._lastOutingResult = { type:selectedAdminType, group:0, name:name, dept:dept, dest:dest, reason:reason, startTime:startTime, endTime:endTime, returnDate:returnDate, phone:fullPhone, dinnerSkip:null };
 
-        // 7. 완료 처리: 카카오 직접 진입도 석식 여부 확인 단계를 반드시 거친다.
-        showAdminStep(5);
+        // 7. 완료: 석식 선택이 필요한 16시 이전이면 석식 단계, 이후엔 바로 신청현황(수위실)
+        if(new Date().getHours() < 16){ showAdminStep(5); }
+        else if(typeof openAdminAction==='function'){ openAdminAction(); }
+        else { showAdminStep(5); }
 
     } catch (e) {
         console.error(e);
@@ -7399,6 +7425,9 @@ body.kac-noanim #noticeModal > .menu-box, body.kac-noanim #surveyModal > .menu-b
     document.getElementById('keduName').value = (nm && nm!=='미등록')?nm:'';
     document.getElementById('keduSabun').value = /^\d{4,5}$/.test(sb)?sb:'';
     var agree=document.getElementById('keduPrivacyAgree'); if(agree) agree.checked=!!(nm && /^\d{4,5}$/.test(sb));
+    var _consentBox=document.getElementById('keduConsentBox');
+    if(window._keduEditMode){ if(_consentBox) _consentBox.style.setProperty('display','none','important'); if(agree) agree.checked=true; }
+    else { if(_consentBox) _consentBox.style.setProperty('display','flex','important'); }
     ov.style.display='flex';
     loadCourses(document.getElementById('keduCourse')).then(function(){
       var courseSel=document.getElementById('keduCourse');
@@ -7742,12 +7771,12 @@ body.kac-noanim #noticeModal > .menu-box, body.kac-noanim #surveyModal > .menu-b
   function build(){
     if(!document.getElementById('keduEnroll')){
       var d=document.createElement('div'); d.id='keduEnroll';
-      d.innerHTML='<div class="ke-card"><h2>교육원 입교</h2>'+
+      d.innerHTML='<div class="ke-card"><h2>항공기술훈련원 입교</h2>'+
         '<p class="ke-sub">본인 과정을 선택하고 사번·이름을 입력하세요.</p>'+
         '<label>과정 선택</label><select id="keduCourse"><option value="">불러오는 중...</option></select>'+
         '<label class="ke-id-label"><span class="ke-id-primary">사번</span><span class="ke-or">OR</span><span class="ke-id-secondary">전화번호 뒷 4자리</span></label><input id="keduSabun" inputmode="numeric" maxlength="5" placeholder="사번 또는 전화번호 뒷 4자리">'+
         '<label>이름</label><input id="keduName" placeholder="홍길동">'+
-        '<label class="ke-consent"><input type="checkbox" id="keduPrivacyAgree"><span><b>(필수) 개인정보 수집 및 이용</b>에 동의합니다.<small>교육운영·출결·수송·생활관 배정을 위해 성명과 사번을 교육 종료 시까지 이용합니다.</small></span></label>'+
+        '<label class="ke-consent" id="keduConsentBox"><input type="checkbox" id="keduPrivacyAgree"><span><b>(필수) 개인정보 수집 및 이용</b>에 동의합니다.<small>교육운영·출결·수송·생활관 배정을 위해 성명과 사번을 교육 종료 시까지 이용합니다.</small></span></label>'+
         '<div class="ke-actions"><button class="ke-back" id="keduBackBtn" type="button"><i class="fa-solid fa-arrow-left"></i> 뒤로가기</button><button class="ke-btn" id="keduEnrollBtn">정보 수정하기</button></div>'+
         '<div class="ke-note">입교 정보는 교육 운영 목적에 한해 사용되며, 교육 종료 시 파기됩니다.</div></div>';
       document.body.appendChild(d);

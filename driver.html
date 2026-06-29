@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- PLATFORM_EDIT_STATUS: 수정완료 | VERSION: Y1 | 2026-06-29 -->
+<!-- PLATFORM_EDIT_STATUS: 수정완료 | VERSION: Z1 | 2026-06-30 -->
 <html lang="ko">
 <head>
 <!-- ════════ [PC버전 수정 · 차량(기사) · 디에스장 · 2026-06-25] ════════
@@ -8,7 +8,8 @@
         - @version T1 → U1 : 미확인 픽업 신청이 요청일 지나면 인박스에서 자동 숨김('나가리'). isActivePending() 참고.
         - @version U1 → V1 : PC 100% 화면용 75% 기준 밀도 보정.
         - @version V1 → W1 : 기사 관제판 추가(입력 단순화·금주 퇴교수송 한눈보기·운행 충돌 안내).
-     · @version  Y1
+        - @version Y1 → Z1 : 상단바·현황블록·메인 대제목/버튼 디자인을 교육운영부(admin_coord) 토큰에 정합(CSS 오버라이드 + 대제목 배너 추가, 데이터·onclick·id 불변).
+     · @version  Z1
      · 수정상태: 수정완료   (작업 중에는 '수정중', 완료 시 '수정완료'로 표기)
      · 연동 데이터(system/pickup, courses/{room}/shuttle) 쓰기 로직 미변경 — 화면 필터만 적용, 타 담당자 영향 없음. -->
 <script>
@@ -424,6 +425,11 @@
 </div>
 
 <div class="wrap">
+  <!-- [디자인 정합 2026-06-30] 메인 대제목 배너 (운영부 .coord-hero 톤) -->
+  <div class="dv-hero">
+    <div class="dv-hero-title"><i class="fa-solid fa-van-shuttle"></i> 차량지원 운행 현황 <small>CATC</small></div>
+    <div class="dv-hero-sub">금주 퇴교수송과 강사 픽업 신청을 한눈에 확인하세요.</div>
+  </div>
   <div class="driver-statusbar" aria-label="운행 현황">
     <button type="button" onclick="switchView('leave')"><i class="fa-solid fa-bus"></i><span>퇴교수송(금주)</span><b id="driverLeaveCount">0명</b></button>
     <button type="button" onclick="switchView('pickups')"><i class="fa-solid fa-user-tie"></i><span>강사픽업(금주)</span><b id="driverPickupCount">0건 / 금주</b></button>
@@ -1551,5 +1557,69 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
   setInterval(tickDriverClock,1000);
 })();
 </script>
+<style id="driverCoordMatch20260630">
+/* ════ [PC디자인 정합 · 차량→교육운영부(admin_coord) · 디에스장 · 2026-06-30] ════
+   · 운영부 디자인 토큰(app-header 그라데이션 / coord-hero 색감 / stat-chip·card 카드형)에 맞춤.
+   · CSS 전용 + 대제목 배너(.dv-hero)만 추가 — 기존 HTML 구조·onclick·id·데이터 로직 변경 없음.
+   · 캐스케이드 마지막 블록이라 기존 3겹 오버라이드 위에 안전하게 적용됨. */
+
+/* 1) 상단바: 단색 네이비 → 파란 그라데이션 + 하단 라운딩 + 부드러운 그림자 (운영부 .app-header) */
+.topbar{
+  background:linear-gradient(135deg,#0f2057 0%,#1a3a8a 50%,#2563eb 100%)!important;
+  box-shadow:0 6px 18px rgba(15,23,42,.18)!important;
+  border-bottom-left-radius:20px!important;
+  border-bottom-right-radius:20px!important;
+}
+.brand{font-size:18px!important;font-weight:900!important;letter-spacing:-.5px!important;color:#fff!important}
+.brand i{color:#93c5fd!important}
+
+/* 2) 메인 대제목 배너 (운영부 .coord-hero) */
+.dv-hero{
+  background:linear-gradient(160deg,#0f2057 0%,#1a3a8a 55%,#2563eb 100%);
+  border-radius:0 0 24px 24px; padding:16px 20px 22px; margin:0 0 16px;
+  color:#fff; position:relative; overflow:hidden; box-shadow:0 10px 24px rgba(15,23,42,.16);
+}
+.dv-hero::before{content:'';position:absolute;top:-40px;right:-40px;width:160px;height:160px;border-radius:50%;background:rgba(255,255,255,.07);pointer-events:none}
+.dv-hero::after{content:'';position:absolute;bottom:-22px;left:24px;width:104px;height:104px;border-radius:50%;background:rgba(255,255,255,.05);pointer-events:none}
+.dv-hero-title{position:relative;z-index:1;display:flex;align-items:center;gap:9px;font-size:18px;font-weight:900;letter-spacing:-.3px}
+.dv-hero-title i{color:#93c5fd;font-size:16px}
+.dv-hero-title small{font-size:11px;font-weight:800;background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.25);padding:3px 10px;border-radius:999px}
+.dv-hero-sub{position:relative;z-index:1;margin-top:7px;font-size:12.5px;font-weight:700;color:#cbd5e1}
+
+/* 3) 현황블록: 흰 카드 + 원형 컬러 아이콘배지 + 큰 숫자 (운영부 .stat-chip/.dashboard-card-btn) */
+.driver-statusbar{gap:12px!important}
+.driver-statusbar button{
+  grid-template-columns:44px 1fr auto!important; gap:10px!important;
+  background:#fff!important; border:1px solid #e8edf3!important; border-radius:16px!important;
+  box-shadow:0 4px 14px rgba(15,23,42,.06)!important; transition:transform .18s ease, box-shadow .18s ease;
+}
+.driver-statusbar button:hover{transform:translateY(-3px)!important;box-shadow:0 10px 22px rgba(15,23,42,.12)!important}
+.driver-statusbar i{
+  width:40px!important;height:40px!important;
+  display:flex!important;align-items:center!important;justify-content:center!important;
+  border-radius:12px!important;font-size:17px!important;
+  background:#ede9fe;color:#7c3aed!important;
+}
+.driver-statusbar span{font-size:12px!important;font-weight:700!important;color:#64748b!important}
+.driver-statusbar b{font-size:24px!important;font-weight:900!important;color:#1e293b!important;letter-spacing:-.5px}
+/* 항목별 포인트 컬러 (운영부 칩 컬러맵). 단, 예약요청의 has-pending/all-checked 경보색은 id 우선이라 그대로 유지됨 */
+.driver-statusbar button:nth-child(1) i{background:#fff7ed;color:#ea580c!important} /* 퇴교수송 → 오렌지 */
+.driver-statusbar button:nth-child(2) i{background:#ede9fe;color:#7c3aed!important} /* 강사픽업 → 퍼플 */
+.driver-statusbar button:nth-child(3) i{background:#fef3c7;color:#d97706!important} /* 픽업예약 → 앰버 */
+
+/* 4) 탭(메인 진입 버튼): 운영부 카드 버튼 톤 + 라운딩 통일, 활성탭 파란 그라데이션 */
+.tabs{gap:12px!important}
+.tab{border-radius:16px!important;border:1px solid #e8edf3!important;box-shadow:0 4px 14px rgba(15,23,42,.05)!important}
+.tab.active{
+  background:linear-gradient(135deg,#0f2057 0%,#1a3a8a 60%,#2563eb 120%)!important;
+  color:#fff!important;border-color:transparent!important;box-shadow:0 8px 18px rgba(37,99,235,.28)!important
+}
+.tab.active .cnt{background:#fbbf24!important;color:#0f172a!important}
+
+/* 패널 라운딩도 운영부(18px)에 맞춤 */
+.panel{border-radius:18px!important}
+
+@media print{ .dv-hero{display:none!important} }
+</style>
 </body>
 </html>
