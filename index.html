@@ -4005,6 +4005,8 @@ async function openAdminAction() {
 
     const existingData = actionSnap.val();
     const hasDinnerSkip = dinnerSnap.exists();
+    const panelTitle = document.querySelector('#adminActionModal .kac-pt');
+    if (panelTitle) panelTitle.textContent = (existingData || hasDinnerSkip) ? '외출 · 외박 신청 현황' : '외출 · 외박 신청';
 
     // [그룹] 내가 '일행'으로 포함된 신청이 이미 있으면 → 현황 팝업(재신청 차단)
     if (!existingData) {
@@ -4084,7 +4086,10 @@ async function openAdminAction() {
                 : `<div style="display:inline-flex; align-items:center; gap:5px; margin-top:4px; font-size:12px; font-weight:800; color:#c2410c; background:#ffedd5; padding:3px 10px; border-radius:20px;"><span style="width:6px; height:6px; border-radius:50%; background:#ea580c;"></span>미복귀 · ${typeNm} 중</div>`;
 
             const row = (ic, label, val) => `<div style="display:flex; align-items:center; gap:11px; padding:11px 0; border-top:1px solid #f1f5f9;"><span style="width:30px; color:#94a3b8; text-align:center;">${ic}</span><span style="font-size:12.5px; color:#94a3b8; font-weight:700;">${label}</span><span style="margin-left:auto; font-size:15px; font-weight:800; color:#1e293b; text-align:right; word-break:keep-all;">${val}</span></div>`;
-            let rows = row('<i class="fa-regular fa-clock"></i>', '시간', `${existingData.startTime||'-'} ~ ${existingData.endTime||'-'}`);
+            const applicantSabun = (localStorage.getItem('kac_user_phone') || '').trim();
+            let rows = row('<i class="fa-solid fa-user"></i>', '신청자', `${existingData.name||applicantName||'-'}${applicantSabun ? ' · '+applicantSabun : ''}`);
+            if (existingData.dept) rows += row('<i class="fa-solid fa-building"></i>', '소속', existingData.dept);
+            rows += row('<i class="fa-regular fa-clock"></i>', '시간', `${existingData.startTime||'-'} ~ ${existingData.endTime||'-'}`);
 
             let groupHtml = '';
             if (existingData.groupId) {
@@ -4097,7 +4102,7 @@ async function openAdminAction() {
                 if (existingData.reason) rows += row('<i class="fa-regular fa-pen-to-square"></i>', '사유', existingData.reason);
             }
 
-            statusTxt += `<div style="background:#fff; border:1px solid #e8edf4; border-radius:18px; overflow:hidden; box-shadow:0 4px 16px rgba(15,23,42,.06);"><div style="display:flex; align-items:center; gap:13px; padding:16px 17px; background:${heroBg};"><span style="width:48px; height:48px; border-radius:14px; background:${iconBg}; color:${iconCol}; display:flex; align-items:center; justify-content:center; font-size:22px; flex-shrink:0;">${icon}</span><div style="flex:1; min-width:0;"><div style="font-size:18px; font-weight:900; color:#0f172a;">${typeNm} <span style="font-size:13px; font-weight:700; color:#94a3b8;">· ${subNm}</span></div>${chip}</div></div><div style="padding:4px 17px 14px;">${rows}${groupHtml}</div></div>`;
+            statusTxt += `<div class="outing-status-card" style="background:#fff; border:1px solid #e8edf4; border-radius:18px; overflow:hidden; box-shadow:0 4px 16px rgba(15,23,42,.06);"><div style="display:flex; align-items:center; gap:13px; padding:16px 17px; background:${heroBg};"><span style="width:48px; height:48px; border-radius:14px; background:${iconBg}; color:${iconCol}; display:flex; align-items:center; justify-content:center; font-size:22px; flex-shrink:0;">${icon}</span><div style="flex:1; min-width:0;"><div style="font-size:18px; font-weight:900; color:#0f172a;">${typeNm} <span style="font-size:13px; font-weight:700; color:#94a3b8;">· ${subNm}</span></div>${chip}</div></div><div style="padding:4px 17px 14px;">${rows}${groupHtml}</div></div>`;
         }
         document.getElementById('adminStatusText').innerHTML = statusTxt;
 
@@ -4342,7 +4347,10 @@ function showOutingResult(){
         '</div>'+
         '<div class="kac-done-body"><div class="kac-done-rows">'+
           rows.map(function(x){ return '<div><span>'+x[0]+'</span><b>'+x[1]+'</b></div>'; }).join('')+
-        '</div></div>'+
+        '</div>'+
+        '<div class="outing-return-guide"><i class="fa-solid fa-circle-info"></i><div><b>복귀하실 때 꼭 눌러주세요</b><span>강의실 또는 생활관에 실제로 도착한 뒤 아래 버튼을 눌러 복귀를 알려주세요.</span></div></div>'+
+        '<button type="button" class="outing-return-now" onclick="confirmReturnAction()"><i class="fa-solid fa-house-circle-check"></i> 복귀 시 복귀완료</button>'+
+        '</div>'+
       '</div>';
     showAdminStep(6);
 }
@@ -7527,8 +7535,11 @@ body.kac-noanim #noticeModal > .menu-box, body.kac-noanim #surveyModal > .menu-b
       sel.innerHTML='<option value="">과정을 불러오지 못했습니다</option>';
     });
   }
-  function showEnroll(menu){
+  function showEnroll(menu, editMode){
     var ov=document.getElementById('keduEnroll'); if(!ov) return;
+    window._keduEditMode = editMode === true;
+    window._keduOriginalToken = (localStorage.getItem('uToken')||'').trim();
+    window._keduOriginalRoom = (localStorage.getItem('kac_last_visited_room')||'').trim();
     showLoader('입교 가능한 과정을 확인하고 있습니다');
     var nm=(localStorage.getItem('kac_user_name')||'').trim();
     var sb=(localStorage.getItem('kac_user_phone')||'').trim();
@@ -7536,7 +7547,13 @@ body.kac-noanim #noticeModal > .menu-box, body.kac-noanim #surveyModal > .menu-b
     document.getElementById('keduSabun').value = /^\d{4,5}$/.test(sb)?sb:'';
     var agree=document.getElementById('keduPrivacyAgree'); if(agree) agree.checked=!!(nm && /^\d{4,5}$/.test(sb));
     ov.style.display='flex';
-    loadCourses(document.getElementById('keduCourse')).finally(function(){ hideLoader(); });
+    loadCourses(document.getElementById('keduCourse')).then(function(){
+      var courseSel=document.getElementById('keduCourse');
+      if(window._keduEditMode && courseSel && window._keduOriginalRoom){
+        var exists=Array.prototype.some.call(courseSel.options,function(o){ return o.value===window._keduOriginalRoom; });
+        if(exists) courseSel.value=window._keduOriginalRoom;
+      }
+    }).finally(function(){ hideLoader(); });
     document.getElementById('keduEnrollBtn').onclick=function(){ submitEnroll(menu); };
     var back=document.getElementById('keduBackBtn');
     if(back) back.onclick=function(){
@@ -7549,7 +7566,7 @@ body.kac-noanim #noticeModal > .menu-box, body.kac-noanim #surveyModal > .menu-b
   window.keduShowEnroll=showEnroll;
   window.keduEditInfo=function(){
     var h=document.getElementById('keduHome'); if(h) h.style.display='none';
-    showEnroll('home');
+    showEnroll('home', true);
   };
   async function submitEnroll(menu){
     var room=document.getElementById('keduCourse').value;
@@ -7562,7 +7579,9 @@ body.kac-noanim #noticeModal > .menu-box, body.kac-noanim #surveyModal > .menu-b
     if(!nameOk){ showKacAlert('성함을 정확히 입력해 주세요.\n(한글/영문 2자 이상)'); return; }
     if(!/^\d{4,5}$/.test(sabun)){ showKacAlert('본인 사번(5자리) 또는 전화번호 뒤 4자리를 숫자로 입력해 주세요.'); return; }
     var label=''; try{ label=(document.getElementById('keduCourse').selectedOptions[0]||{}).textContent||room; }catch(e){ label=room; }
-    var ok=await showKacConfirm('"'+label.split(' · ')[0]+'" 과정으로 입교합니다.\n맞습니까?');
+    var ok=await showKacConfirm(window._keduEditMode
+      ? '입력한 정보로 수정하시겠습니까?'
+      : '"'+label.split(' · ')[0]+'" 과정으로 입교합니다.\n맞습니까?');
     if(!ok) return;
     var token=name+'_'+sabun;
     try{
@@ -7582,9 +7601,15 @@ body.kac-noanim #noticeModal > .menu-box, body.kac-noanim #surveyModal > .menu-b
       var profileUpdate={ name:name, empNo:sabun, phone:sabun, joinedAt: firebase.database.ServerValue.TIMESTAMP, isOnline:true };
       if(window._myDept) profileUpdate.dept=String(window._myDept).trim();
       await firebase.database().ref('courses/'+room+'/students/'+token).update(profileUpdate);
+      if(window._keduEditMode && window._keduOriginalToken && window._keduOriginalRoom &&
+         (window._keduOriginalToken!==token || window._keduOriginalRoom!==room)){
+        await firebase.database().ref('courses/'+window._keduOriginalRoom+'/students/'+window._keduOriginalToken).remove();
+      }
     }catch(e){}
     if(!menu || menu==='home'){
-      showEnrollDone(label, name, sabun);   // 입교/홈: 등록완료 안내 → 닫기(3초 자동)
+      var wasEditing=window._keduEditMode===true;
+      window._keduEditMode=false;
+      showEnrollDone(label, name, sabun, wasEditing);   // 신규 입교와 정보수정 완료를 구분
     } else {
       location.replace('index.html?room='+encodeURIComponent(room)+'&menu='+encodeURIComponent(menu));  // 기능버튼: 해당 화면으로
     }
@@ -7600,10 +7625,14 @@ body.kac-noanim #noticeModal > .menu-box, body.kac-noanim #surveyModal > .menu-b
     // 인앱 브라우저에서 닫기가 막히면 화면(안내문구)은 그대로 유지됨
     try{ window.open('','_self'); window.close(); }catch(e){}
   }
-  function showEnrollDone(course, name, sabun){
+  function showEnrollDone(course, name, sabun, wasEditing){
     var ov=document.getElementById('keduDone'); if(!ov){ tryClose(); return; }
+    var title=document.getElementById('kdTitle');
     var msg=document.getElementById('kdMsg');
-    if(msg) msg.innerHTML='<b>'+(course||'')+'</b> 과정에<br>'+(name||'')+' ('+(sabun||'')+') 님 등록되었습니다.<br>감사합니다.';
+    if(title) title.innerHTML=wasEditing?'✅ 정보 수정 완료':'✅ 입교 완료';
+    if(msg) msg.innerHTML=wasEditing
+      ? '<b>'+(name||'')+'</b>님의 정보가<br>정상적으로 수정되었습니다.'
+      : '<b>'+(course||'')+'</b> 과정에<br>'+(name||'')+' ('+(sabun||'')+') 님 등록되었습니다.<br>감사합니다.';
     ov.style.display='flex';
     var btn=document.getElementById('kdClose'); if(btn) btn.onclick=tryClose;
     setTimeout(tryClose, 3000);
@@ -7895,7 +7924,7 @@ body.kac-noanim #noticeModal > .menu-box, body.kac-noanim #surveyModal > .menu-b
     }
     if(!document.getElementById('keduDone')){
       var dn=document.createElement('div'); dn.id='keduDone';
-      dn.innerHTML='<div class="kd-card"><h2>✅ 입교 완료</h2>'+
+      dn.innerHTML='<div class="kd-card"><h2 id="kdTitle">✅ 입교 완료</h2>'+
         '<p id="kdMsg">등록되었습니다. 감사합니다.</p>'+
         '<button class="kd-close" id="kdClose">닫기</button>'+
         '<div class="kd-note">잠시 후 자동으로 닫힙니다.</div></div>';
@@ -9149,5 +9178,36 @@ html.kac-core-screen #realUserCount::before{
   else setTimeout(boot,250);
 })();
 </script>
+<style id="outingUxFix20260629">
+/* 외출·외박 신청/현황 상단바를 교육생 핵심 화면의 청색 규격으로 통일 */
+#adminActionModal .kac-pbar{
+  min-height:58px!important;
+  margin:0 -20px 18px!important;
+  padding:10px 14px 10px 20px!important;
+  border:0!important;
+  border-radius:18px 18px 0 0!important;
+  background:linear-gradient(135deg,#0f4c81,#2563eb)!important;
+  box-shadow:0 8px 22px rgba(37,99,235,.18)!important;
+  justify-content:space-between!important;
+}
+#adminActionModal .kac-pbar .kac-pt{color:#fff!important;font-size:18px!important;font-weight:950!important}
+#adminActionModal .kac-pbar .kac-px{background:rgba(255,255,255,.16)!important;color:#fff!important}
+#adminActionModal .kac-pbar .kac-px:hover{background:#ef4444!important}
+#adminStatusArea>p:first-child{color:#1d4ed8!important;font-size:13px!important}
+.outing-return-guide{
+  display:flex;align-items:flex-start;gap:10px;margin-top:16px;padding:14px;
+  border:1px solid #bfdbfe;border-radius:14px;background:#eff6ff;color:#1e40af;
+}
+.outing-return-guide>i{margin-top:2px;font-size:17px;flex:none}
+.outing-return-guide b,.outing-return-guide span{display:block}
+.outing-return-guide b{font-size:14px;font-weight:950}
+.outing-return-guide span{margin-top:4px;font-size:12.5px;font-weight:750;line-height:1.55;word-break:keep-all}
+.outing-return-now{
+  width:100%;min-height:52px;margin-top:12px;border:0;border-radius:14px;
+  background:linear-gradient(135deg,#047857,#10b981);color:#fff;
+  font-size:16px;font-weight:950;cursor:pointer;box-shadow:0 10px 22px rgba(5,150,105,.22);
+}
+.outing-return-now i{margin-right:7px}
+</style>
 </body>
 </html>

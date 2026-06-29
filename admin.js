@@ -5534,6 +5534,20 @@ resetShuttleRequests: function() {
     },
 
     // ── 홈 통계 팝업 ──
+    enterHomeCourse: async function(room) {
+        const modal = document.getElementById('homeStatModal');
+        if (modal) modal.style.display = 'none';
+        try {
+            await dataMgr.switchRoomAttempt(String(room || '').toUpperCase());
+        } catch (e) {
+            console.error('[과정 입장]', e);
+            const overlay = document.getElementById('statusOverlay');
+            if (overlay) overlay.style.display = 'none';
+            if (modal) modal.style.display = 'flex';
+            if (typeof showKacAlert === 'function') showKacAlert('과정 입장 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.');
+        }
+    },
+
     openHomeStatModal: async function(type) {
         // 특정 과정(강의실)에 진입한 상태에서는 전 과정 통합 현황 팝업을 띄우지 않음.
         // (이 팝업은 메인/포털 현황판 전용)
@@ -5561,7 +5575,7 @@ resetShuttleRequests: function() {
             title.textContent='🏫 현재 강의 중인 과정  ·  '+_wkRange;
             const rows=weekRooms.filter(([,r])=>(r.status||{}).roomStatus==='active').map(([room,r])=>{
                 const prof=(r.status||{}).professorName||'-', course=(r.settings||{}).courseName||'-';
-                return `<div onclick="document.getElementById('homeStatModal').style.display='none'; dataMgr.switchRoomAttempt('${room}');" title="클릭하면 이 과정으로 입장합니다" style="display:flex;justify-content:space-between;align-items:center;gap:18px;min-height:70px;padding:15px 20px;background:#eff6ff;border:1px solid #dbeafe;border-radius:14px;margin-bottom:12px;cursor:pointer;transition:background .15s, transform .15s, box-shadow .15s;" onmouseover="this.style.background='#dbeafe';this.style.transform='translateY(-2px)';this.style.boxShadow='0 10px 26px rgba(37,99,235,.20)';" onmouseout="this.style.background='#eff6ff';this.style.transform='none';this.style.boxShadow='none';">
+                return `<div role="button" tabindex="0" onclick="ui.enterHomeCourse('${room}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();ui.enterHomeCourse('${room}');}" title="클릭하면 이 과정으로 입장합니다" style="display:flex;justify-content:space-between;align-items:center;gap:18px;min-height:70px;padding:15px 20px;background:#eff6ff;border:1px solid #dbeafe;border-radius:14px;margin-bottom:12px;cursor:pointer;transition:background .15s, transform .15s, box-shadow .15s;" onmouseover="this.style.background='#dbeafe';this.style.transform='translateY(-2px)';this.style.boxShadow='0 10px 26px rgba(37,99,235,.20)';" onmouseout="this.style.background='#eff6ff';this.style.transform='none';this.style.boxShadow='none';">
                     <div style="display:flex;align-items:center;gap:clamp(16px,2vw,28px);min-width:0;">
                         <span style="font-weight:900;color:#fff;background:#3b82f6;padding:8px 15px;border-radius:10px;font-size:clamp(14px,1.4vw,18px);white-space:nowrap;">Room #${room}</span>
                         <span style="font-size:clamp(18px,1.9vw,24px);color:#0f172a;font-weight:900;word-break:keep-all;">${course}</span>
