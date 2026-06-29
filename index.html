@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<!-- PLATFORM_EDIT_STATUS: 수정아닙니다 | VERSION: J73 J73 J73 J73 J73 | 2026-06-30 -->
+<!-- PLATFORM_EDIT_STATUS: 수정아닙니다 | VERSION: J74 J74 J74 J74 J74 | 2026-06-30 -->
 <!-- ══════════════════ [편집상태 / EDIT-STATUS] ══════════════════
      STATUS : 수정아닙니다
      FILE   : index.html (교육생)
-     VERSION: J73 J73 J73 J73 J73
-     UPDATED: 2026-06-30  (vJ73: 미사용 함수 6종 제거 — exitApp·cleanUrlAndGo·checkDinnerTime·loadGroupCandidates·openRoomMove·wrapClose. 카카오 채널 바로가기 도입으로 불필요해진 진입/종료 관련 죽은 코드 정리. 맛집 기능 코드는 유지.)
+     VERSION: J74 J74 J74 J74 J74
+     UPDATED: 2026-06-30  (vJ74: 창닫기 기능(closeStudentWindow) 제거 — 카카오 채널 채팅창 닫기로 대체. 디버그 console.log 2종 정리. | vJ73: 미사용 함수 6종 제거 — exitApp·cleanUrlAndGo·checkDinnerTime·loadGroupCandidates·openRoomMove·wrapClose. 카카오 채널 바로가기 도입으로 불필요해진 진입/종료 관련 죽은 코드 정리. 맛집 기능 코드는 유지.)
      ─ 규칙: 수정 시작 시 STATUS를 '수정중'으로, 완료 시 '수정아닙니다'로 변경하고 버전을 5회 반복 표기.
             '수정중'이면 다른 플랫폼은 연동 변경을 보류/협의 후 진행.
 ═══════════════════════════════════════════════════════════════ -->
@@ -1706,7 +1706,6 @@ async function resolveRoomFromCode(code) {
         const remembered = localStorage.getItem('kac_last_visited_room');
         if (remembered) {
             currentRoom = remembered;
-            console.log('[PWA] 파라미터 없음 → 마지막 강의실로 복귀:', remembered);
         }
     }
 
@@ -5827,20 +5826,6 @@ function closeTabletLoan() {
         });
     }
 
-    // 좌측 상단 홈 버튼: 현재 창(탭) 닫기. 모바일에서 close()가 막히면 안내 표시.
-    window.closeStudentWindow = function(){
-        try { window.open('', '_self'); window.close(); } catch(e){}
-        // close()가 무시되는 환경(직접 연 탭이 아닐 때) 대비 폴백 안내
-        setTimeout(function(){
-            try {
-                if (typeof showKacAlert === 'function') {
-                    showKacAlert('창을 닫아주세요.\n(브라우저의 닫기 버튼을 이용해 종료할 수 있습니다.)');
-                } else {
-                    alert('창을 닫아주세요.');
-                }
-            } catch(e){}
-        }, 200);
-    };
 
     // [PWA 제거] 설치 권유/홈아이콘 노출 제어 함수는 더 이상 동작하지 않도록 비활성화(no-op)
     window.pwaShowPrompt = function(){};
@@ -6226,7 +6211,7 @@ window.kacExpireEndedCourses = async function(){
       }
     }
     if(archives.length){ try{ await Promise.all(archives); }catch(e){} }
-    if(Object.keys(updates).length){ await firebase.database().ref().update(updates); console.log('[KAC] 종료 과정 자동 정리 완료'); }
+    if(Object.keys(updates).length){ await firebase.database().ref().update(updates); }
     try{ localStorage.setItem('kac_expire_done', today); }catch(e){}
   }catch(e){ /* 권한 등으로 막히면 무시(다음 접속 재시도) */ }
 };
