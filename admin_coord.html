@@ -2,7 +2,7 @@
 <!-- 이 플랫폼(admin_coord.html / 교육운영부) 수정상태 플래그. 값은 [수정중] 또는 [수정안하는중] 두 가지. -->
 <!-- 작업 시작 시 → 수정중 / 작업 완료 시 → 수정안하는중. 다른 플랫폼은 이 말머리를 보고 연동·수정 가능 여부 판단. -->
 <!-- [외부변경 · 카카오채널연동 2026-06-25] 포털(portal.html/7777) 경유 폐지 → 페이지 직접진입 시 접속코드(catc1234) 게이트 추가, 포털 리다이렉트/종료이동 제거. version C13→D13. 기능 로직은 미변경. -->
-<!-- last-updated: 2026-06-30 / version: D38 (키오스크 담당자검색 재설계: 연간과정+진행과정 펼침카드→명단·외출외박·출결완료/미완료·차량·생활관) -->
+<!-- last-updated: 2026-06-30 / version: D39 (상단바 청렴/노조 장소: A·B강의실은 하늘/국제 건물 구분 표기) -->
 <!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -7948,7 +7948,12 @@ function _filterRoster(q){ q=(q||'').toLowerCase().trim();
 }
 
 /* ── 청렴/노조교육 장소 공지 (강사플랫폼 실시간 연동) ── */
-function _eduShort(v){ v=(''+(v||'')).trim(); if(!v) return '미정'; var p=v.split(' '); return p.length>1?p[p.length-1]:v; }
+function _eduShort(v){ v=(''+(v||'')).trim(); if(!v) return '미정';
+  // A·B강의실은 하늘관·국제동 양쪽에 있어 구분 필요 → '하늘 A' / '국제 B' 로 표기. 그 외는 끝 토큰(예: C강의실·대강당)
+  var b=(v.indexOf('하늘관')>=0)?'하늘':(v.indexOf('국제동')>=0)?'국제':(v.indexOf('관제교육동')>=0)?'관제':'';
+  var m=v.match(/([A-Z])\s*강의실/);
+  if(b && m && (m[1]==='A'||m[1]==='B')) return b+' '+m[1];
+  var p=v.split(' '); return p.length>1?p[p.length-1]:v; }
 function openEduPlacePicker(type){
   var title=(type==='integrity')?'<i class="fa-solid fa-scale-balanced"></i> 청렴교육 장소 선택':'<i class="fa-solid fa-handshake"></i> 노조와의 대화 장소 선택';
   var sel=document.getElementById('setup-room-dropdown');
@@ -8882,7 +8887,7 @@ window.addEventListener('load', function(){
 });
 </script>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:6px;bottom:5px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;font-weight:800;line-height:1;letter-spacing:.6px;color:#fff;background:rgba(15,23,42,.85);padding:4px 8px;border-radius:6px;pointer-events:none;user-select:none;box-shadow:0 2px 6px rgba(0,0,0,.3);">D38</div>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:6px;bottom:5px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;font-weight:800;line-height:1;letter-spacing:.6px;color:#fff;background:rgba(15,23,42,.85);padding:4px 8px;border-radius:6px;pointer-events:none;user-select:none;box-shadow:0 2px 6px rgba(0,0,0,.3);">D39</div>
 <script>
 /* ===== [공용] 종료된 과정 자동 정리 (모든 플랫폼 공통) — 종료일 지난 방을 다음날 미개설로 비움. 브라우저별 하루 1회 ===== */
 window.kacExpireEndedCourses = async function(){

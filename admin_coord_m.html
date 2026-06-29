@@ -1,7 +1,8 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-  <!-- last-updated: 2026-06-28 / version: M3 (관리자 인증 30일 유지) -->
+  <!-- last-updated: 2026-06-30 / version: M4 (청렴/노조 장소선택: 네이티브 select → 커스텀 바텀시트 picker, 건물별 그룹·선택강조) -->
+  <!-- ※ 모바일 개발자 파일이나 운영부 요청으로 디에스장(admin_coord 담당)이 장소선택 모달만 개선. 기능로직(setEduSel/EDU 동기화)은 동일 유지 -->
   <meta charset="UTF-8" />
   <script>
   /* [기기 분리] PC 접속은 PC 전용 화면으로 (모바일은 이 화면 유지) */
@@ -192,6 +193,8 @@
     .rbtn{ background:#f4f7fc; border:1.5px solid var(--line); border-radius:12px; padding:12px 16px; font-size:15px; font-weight:800; color:#1e293b; cursor:pointer; transition:all .12s; }
     .rbtn:active{ background:var(--grad-act); border-color:var(--blue); transform:scale(.96); }
     .rbtn.clear{ background:#fff5f5; border-color:#fecaca; color:#dc2626; width:100%; text-align:center; }
+    .rbtn.sel{ background:linear-gradient(160deg,#eff6ff,#dbeafe); border-color:var(--blue,#2563eb); color:#1d4ed8; box-shadow:0 0 0 2px rgba(37,99,235,.16); }
+    .sheet .grp:first-of-type{ margin-top:6px; }
 
     /* 토스트 */
     #toast{ position:fixed; left:50%; bottom:40px; transform:translateX(-50%) translateY(20px); background:rgba(15,23,42,.95); color:#fff; padding:14px 22px; border-radius:14px; font-size:14px; font-weight:800; z-index:900; opacity:0; transition:all .26s; pointer-events:none; box-shadow:0 12px 34px rgba(0,0,0,.34); max-width:90vw; text-align:center; backdrop-filter:blur(6px); }
@@ -221,17 +224,15 @@
   <div class="sec">
     <div class="sec-ttl"><i class="fa-solid fa-bullhorn"></i> 금주 공통 교육 장소 <span style="font-weight:700;color:#94a3b8;">· 전 과정 공통</span></div>
     <div class="edu-row">
-      <div class="edu-card unset" id="eduIntegrity">
+      <div class="edu-card unset" id="eduIntegrity" onclick="openEduSheet('integrity')">
         <i class="fa-solid fa-chevron-down ec-edit"></i>
         <div class="ec-top"><span class="ec-ic"><i class="fa-solid fa-scale-balanced"></i></span> 청렴교육</div>
         <div class="ec-place" id="eduIntegrityVal">미정</div>
-        <select class="edu-select" id="eduIntegritySel" onchange="setEduSel('integrity',this.value)" aria-label="청렴교육 장소 선택"></select>
       </div>
-      <div class="edu-card unset" id="eduUnion">
+      <div class="edu-card unset" id="eduUnion" onclick="openEduSheet('union')">
         <i class="fa-solid fa-chevron-down ec-edit"></i>
         <div class="ec-top"><span class="ec-ic"><i class="fa-solid fa-handshake"></i></span> 노조교육</div>
         <div class="ec-place" id="eduUnionVal">미정</div>
-        <select class="edu-select" id="eduUnionSel" onchange="setEduSel('union',this.value)" aria-label="노조교육 장소 선택"></select>
       </div>
     </div>
   </div>
@@ -240,6 +241,11 @@
     <div class="sec-ttl"><i class="fa-solid fa-list-ul"></i> 운영중인 과정</div>
     <div id="courseList"><div class="empty">불러오는 중...</div></div>
   </div>
+</div>
+
+<!-- 청렴/노조 장소 선택 바텀시트 (커스텀) -->
+<div class="sheet-ov" id="eduSheetOv" onclick="if(event.target===this)closeEduSheet()">
+  <div class="sheet" id="eduSheetBody"></div>
 </div>
 
 <!-- 과정 상세 -->
@@ -522,6 +528,25 @@ function setEduSel(type, val){
   db.ref('system/eduLocations/'+type).set(val||'');
   toast(val?('✅ '+shortRoom(val)+'(으)로 공지'):'미정으로 변경');
 }
+/* 청렴/노조 장소 — 커스텀 바텀시트 picker (네이티브 select 대체) */
+function _eduShortLbl(g,rm){ var t=(''+rm).trim(); if(g && t.indexOf(g)===0) t=t.slice(g.length).trim(); t=t.replace(/^\d+\s*층\s*/,'').trim(); return t||rm; }
+function openEduSheet(type){
+  var ov=document.getElementById('eduSheetOv'), body=document.getElementById('eduSheetBody'); if(!ov||!body) return;
+  var cur=(EDU[type]||'');
+  var title=(type==='integrity')?'<i class="fa-solid fa-scale-balanced" style="color:#059669;"></i> 청렴교육 장소 선택':'<i class="fa-solid fa-handshake" style="color:#2563eb;"></i> 노조와의 대화 장소 선택';
+  var h='<h3>'+title+'</h3><div class="note">건물별로 골라주세요. 수업 중인 강의실도 선택 가능합니다.</div>';
+  ROOM_GROUPS.forEach(function(g){
+    h+='<div class="grp">'+esc(g.label)+'</div><div class="rooms">';
+    g.rooms.forEach(function(rm){ var on=(rm===cur); h+='<button class="rbtn'+(on?' sel':'')+'" data-v="'+esc(rm)+'" onclick="pickEduPlace(\''+type+'\',this.getAttribute(\'data-v\'))">'+esc(_eduShortLbl(g.label,rm))+(on?' ✓':'')+'</button>'; });
+    h+='</div>';
+  });
+  var bks=Object.keys(CUSTOM_ROOMS||{});
+  if(bks.length){ h+='<div class="grp">추가된 강의실</div><div class="rooms">'; bks.forEach(function(b){ (CUSTOM_ROOMS[b]||[]).forEach(function(nm){ var on=(nm===cur); h+='<button class="rbtn'+(on?' sel':'')+'" data-v="'+esc(nm)+'" onclick="pickEduPlace(\''+type+'\',this.getAttribute(\'data-v\'))">'+esc(nm)+(on?' ✓':'')+'</button>'; }); }); h+='</div>'; }
+  h+='<div class="grp">기타</div><div class="rooms"><button class="rbtn clear" onclick="pickEduPlace(\''+type+'\',\'\')"><i class="fa-solid fa-eraser"></i> 미정으로 초기화</button></div>';
+  body.innerHTML=h; body.scrollTop=0; ov.classList.add('open');
+}
+function pickEduPlace(type,val){ setEduSel(type, val||''); closeEduSheet(); }
+function closeEduSheet(){ var ov=document.getElementById('eduSheetOv'); if(ov) ov.classList.remove('open'); }
 
 /* 토스트 */
 var _toastT;
