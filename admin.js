@@ -11884,7 +11884,7 @@ ui._fitMorePanelToViewport = function(){
   var p=document.getElementById('moreMenuPanel');
   if(!p) return;
   var zoom=parseFloat(getComputedStyle(document.documentElement).zoom)||1;
-  p.style.setProperty('width',(300/zoom)+'px','important');          // 좌측 사이드바와 동일 폭
+  p.style.setProperty('width',(240/zoom)+'px','important');          // 콘텐츠에 맞춘 폭 (글자가 짧아 슬림하게)
   p.style.setProperty('top','0','important');                         // 전체 높이 (좌측과 통일)
   p.style.setProperty('right','0','important');                       // 우측 끝 밀착
   p.style.setProperty('height',(window.innerHeight/zoom)+'px','important');
