@@ -2,7 +2,7 @@
 <!-- 이 플랫폼(admin_coord.html / 교육운영부) 수정상태 플래그. 값은 [수정중] 또는 [수정안하는중] 두 가지. -->
 <!-- 작업 시작 시 → 수정중 / 작업 완료 시 → 수정안하는중. 다른 플랫폼은 이 말머리를 보고 연동·수정 가능 여부 판단. -->
 <!-- [외부변경 · 카카오채널연동 2026-06-25] 포털(portal.html/7777) 경유 폐지 → 페이지 직접진입 시 접속코드(catc1234) 게이트 추가, 포털 리다이렉트/종료이동 제거. version C13→D13. 기능 로직은 미변경. -->
-<!-- last-updated: 2026-06-28 / version: D37 (운영설정 완료처리·강의실 도구 축소·연간계획 현재주 포커스) -->
+<!-- last-updated: 2026-06-30 / version: D38 (키오스크 담당자검색 재설계: 연간과정+진행과정 펼침카드→명단·외출외박·출결완료/미완료·차량·생활관) -->
 <!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -8754,64 +8754,70 @@ var coordKiosk={
     var r=document.getElementById('coordKioskSearchResult'); if(r){ r.style.display='none'; r.innerHTML=''; }
     var t=document.getElementById('coordKioskTableWrap'); if(t) t.style.display='';
   },
+  ownerToggle:function(id,btn){ var el=document.getElementById(id); if(!el) return; var open=el.style.display!=='none'; el.style.display=open?'none':'block'; if(btn) btn.innerHTML=open?'상세 펼치기 ▾':'접기 ▴'; },
   search:function(q, silent){
     q=String(q||'').trim();
     var result=document.getElementById('coordKioskSearchResult'), table=document.getElementById('coordKioskTableWrap');
     if(!result||!table) return;
     if(!q){this.clearSearch();return;}
     var esc=(typeof _esc==='function'?_esc:function(t){return String(t==null?'':t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');});
-    var key=q.replace(/\s+/g,'').toLowerCase(), rooms=this._rooms(), matches=[];
-    rooms.forEach(function(room){
-      var coordinator=String(room.s.coordinatorName||'').trim();
-      var fullName=(typeof _coordFullName==='function'?(_coordFullName(coordinator)||coordinator):coordinator);
-      if((coordinator+' '+fullName).replace(/\s+/g,'').toLowerCase().indexOf(key)>=0) matches.push(room);
-    });
-    table.style.display='none';
-    result.style.display='block';
-
-    function countNested(obj){
-      var count=0;
-      Object.keys(obj||{}).forEach(function(itemKey){
-        var value=obj[itemKey];
-        if(value&&typeof value==='object'&&!value.name) count+=countNested(value);
-        else if(value) count++;
-      });
-      return count;
+    var full=function(nm){ return (typeof _coordFullName==='function')?(_coordFullName(nm)||nm):nm; };
+    var key=q.replace(/\s+/g,'').toLowerCase();
+    var rooms=this._rooms().filter(function(room){ var c=String(room.s.coordinatorName||'').trim(); return (c+' '+full(c)).replace(/\s+/g,'').toLowerCase().indexOf(key)>=0; });
+    table.style.display='none'; result.style.display='block';
+    // 헬퍼: 날짜별 객체 → 이름집합/행
+    var _attSet=function(ia){ var s={}; Object.keys(ia||{}).forEach(function(d){ if(!/^\d{4}-\d{2}-\d{2}$/.test(d))return; var day=ia[d]||{}; Object.keys(day).forEach(function(k){ var v=day[k]||{}; var nm=String((v&&v.name)||(k.split('_')[0])||'').trim(); if(nm)s[nm]=1; }); }); return s; };
+    var _outRows=function(aa){ var rows=[]; Object.keys(aa||{}).forEach(function(d){ if(!/^\d{4}-\d{2}-\d{2}$/.test(d))return; var day=aa[d]||{}; Object.keys(day).forEach(function(k){ var v=day[k]||{}; if(v&&v.name) rows.push({d:d,name:v.name,type:v.type}); }); }); rows.sort(function(a,b){return String(b.d).localeCompare(a.d);}); return rows; };
+    var _shRows=function(room){ var rq=(room.shuttle&&room.shuttle.requests)||{}, rows=[]; Object.keys(rq).forEach(function(k){ var v=rq[k]||{}; if(v&&v.name) rows.push({name:v.name,dest:v.dest||v.destination||v.type||'신청'}); }); return rows; };
+    var _uniqStu=function(room){ var arr=(typeof _studentsOf==='function')?_studentsOf(room):[]; var seen={},out=[]; arr.forEach(function(s){ var nm=String(s.name||'').trim(); if(!nm||seen[nm])return; seen[nm]=1; out.push(s); }); return out; };
+    var _list=function(arr,fn){ return arr.length? arr.map(fn).join('') : '<span class="cor-empty">없음</span>'; };
+    var active=rooms.filter(function(r){return r.order===0;}), upcoming=rooms.filter(function(r){return r.order===1;});
+    function card(room,label,idx){
+      var students=_uniqStu(room.room), att=_attSet(room.room.internal_attendance||{});
+      var done=students.filter(function(s){return att[String(s.name||'').trim()];});
+      var notdone=students.filter(function(s){return !att[String(s.name||'').trim()];});
+      var outs=_outRows(room.room.admin_actions||{}), shs=_shRows(room.room), bid='cor-b-'+idx;
+      return '<article class="coord-owner-result">'
+        +'<div class="cor-head"><span>'+esc(label)+'</span><b>ROOM #'+esc(room.rid)+'</b></div>'
+        +'<h3>'+esc(room.s.courseName||'-')+'</h3>'
+        +'<div class="cor-meta">'+esc(room.s.period||'-')+' · '+esc(room.s.roomDetailName||room.s.roomDetail||'-')+' · 담임 '+esc((room.st.professorName||'').trim()||'-')+'</div>'
+        +'<div class="cor-sum">👥 교육생 '+students.length+'명 · ✅ 출결 '+done.length+'/'+students.length+' · 🚶 외출외박 '+outs.length+'건 · 🚌 차량 '+shs.length+'건</div>'
+        +'<button class="cor-toggle" onclick="coordKiosk.ownerToggle(\''+bid+'\',this)">상세 펼치기 ▾</button>'
+        +'<div id="'+bid+'" class="cor-detail" style="display:none;">'
+          +'<div class="cor-sec"><div class="cor-sec-t">👥 교육생 명단 ('+students.length+')</div><div class="cor-chips">'+_list(students,function(s){var dp=(s.dept||s.department||'');return '<span class="cor-chip">'+esc(s.name)+(dp?(' · '+esc(dp)):'')+'</span>';})+'</div></div>'
+          +'<div class="cor-sec"><div class="cor-sec-t">✅ 출결 완료 ('+done.length+')</div><div class="cor-chips">'+_list(done,function(s){return '<span class="cor-chip ok">'+esc(s.name)+'</span>';})+'</div></div>'
+          +'<div class="cor-sec"><div class="cor-sec-t">⛔ 출결 미완료 ('+notdone.length+')</div><div class="cor-chips">'+_list(notdone,function(s){return '<span class="cor-chip no">'+esc(s.name)+'</span>';})+'</div></div>'
+          +'<div class="cor-sec"><div class="cor-sec-t">🚶 외출·외박 ('+outs.length+')</div><div class="cor-chips">'+_list(outs,function(o){return '<span class="cor-chip">'+esc(o.name)+' · '+esc((o.type==='overnight'||o.type==='외박')?'외박':'외출')+' · '+esc(o.d)+'</span>';})+'</div></div>'
+          +'<div class="cor-sec"><div class="cor-sec-t">🚌 차량신청 ('+shs.length+')</div><div class="cor-chips">'+_list(shs,function(h){return '<span class="cor-chip">'+esc(h.name)+' · '+esc(h.dest)+'</span>';})+'</div></div>'
+          +'<div class="cor-sec"><div class="cor-sec-t">🛏 생활관 배정</div><div class="cor-chips cor-dorm" data-course="'+esc(room.s.courseName||'')+'"><span class="cor-empty">불러오는 중…</span></div></div>'
+          +'<div class="cor-actions"><button onclick="coordKiosk.notice(\''+esc(room.rid)+'\')"><i class="fa-solid fa-pen"></i> 공지/수정</button><button onclick="openLedgerCenter()"><i class="fa-solid fa-print"></i> 대장 출력</button></div>'
+        +'</div></article>';
     }
-
-    var cards=matches.map(function(room){
-      var shuttle=Object.keys((room.room.shuttle&&room.room.shuttle.requests)||{}).length;
-      var outings=countNested(room.room.admin_actions||{});
-      var attendance=countNested(room.room.internal_attendance||{});
+    var cards=active.map(function(r,i){return card(r,'현재 진행','a'+i);}).join('')+upcoming.map(function(r,i){return card(r,'예정','u'+i);}).join('');
+    result.innerHTML='<div class="coord-owner-title"><div><small>과정운영 담당자 검색</small><h2>'+esc(full(q)||q)+' 담당 종합현황</h2></div><span>진행 '+active.length+' · 예정 '+upcoming.length+'</span></div>'
+      +'<div id="coordOwnerAnnual" class="coord-owner-history"><i class="fa-solid fa-calendar"></i> 연간 운용 과정을 불러오는 중…</div>'
+      +(cards||'<div class="coord-owner-empty">해당 담당자의 진행중·예정 과정이 없습니다.</div>');
+    // 연간 운용 과정(annualPlan, 담당자별)
+    try{ firebase.database().ref('system/annualPlan').once('value').then(function(snap){
+      var v=snap.val(); var list=Array.isArray(v)?v.filter(Boolean):(v?Object.keys(v).map(function(k){return v[k];}):[]);
       var today=new Date().toISOString().slice(0,10);
-      var period=String(room.s.period||'').split('~');
-      var start=(period[0]||'').trim();
-      var courseState=(start&&start>today)?'예정 과정':'현재 과정';
-      return '<article class="coord-owner-result"><div class="cor-head"><span>'+courseState+'</span><b>ROOM #'+esc(room.rid)+'</b></div>'+
-        '<h3>'+esc(room.s.courseName||'-')+'</h3><div class="cor-meta">'+esc(room.s.period||'-')+' · '+esc(room.s.roomDetailName||room.s.roomDetail||'-')+'</div>'+
-        '<div class="cor-grid"><div><i class="fa-solid fa-bus"></i><b>'+shuttle+'</b><span>차량 현황</span></div><div><i class="fa-solid fa-person-walking-arrow-right"></i><b>'+outings+'</b><span>외출·외박 이력</span></div><div><i class="fa-solid fa-clipboard-check"></i><b>'+attendance+'</b><span>출석 이력</span></div></div>'+
-        '<div class="cor-actions"><button onclick="coordKiosk.notice(\''+esc(room.rid)+'\')"><i class="fa-solid fa-pen"></i> 수정</button><button onclick="openLedgerCenter()"><i class="fa-solid fa-print"></i> 출력</button></div></article>';
-    }).join('');
-
-    result.innerHTML='<div class="coord-owner-title"><div><small>과정운영 담당자 검색</small><h2>'+esc(q)+' 담당 과정</h2></div><span>'+matches.length+'개 과정</span></div>'+
-      (cards||'<div class="coord-owner-empty">해당 담당자의 현재·예정 과정이 없습니다.</div>')+
-      '<div id="coordOwnerHistory" class="coord-owner-history"><i class="fa-solid fa-clock-rotate-left"></i> 보관 이력을 확인하고 있습니다…</div>';
-    try{
-      firebase.database().ref('system/course_archive').once('value').then(function(snapshot){
-        var data=snapshot.val()||{}, rows=[];
-        Object.keys(data).forEach(function(archiveKey){
-          var archive=data[archiveKey]||{};
-          var coordinator=String(archive.coord||archive.coordinatorName||'');
-          if(coordinator.replace(/\s+/g,'').toLowerCase().indexOf(key)>=0) rows.push(archive);
-        });
-        var history=document.getElementById('coordOwnerHistory');
-        if(!history) return;
-        history.innerHTML='<b><i class="fa-solid fa-clock-rotate-left"></i> 완료 과정 이력 '+rows.length+'건</b>'+
-          (rows.length?'<ul>'+rows.slice(0,12).map(function(archive){
-            return '<li>'+esc(archive.courseName||'-')+' · '+esc(archive.period||'-')+' · 외출/외박 '+countNested(archive.admin_actions||{})+'건 · 출석 '+countNested(archive.internal_attendance||{})+'건</li>';
-          }).join('')+'</ul>':'<span>보관된 완료 과정이 없습니다.</span>');
+      var mine=list.filter(function(c){ if(!c)return false; var cd=String(c.coord||c.coordinatorName||'').replace(/\s+/g,'').toLowerCase(); return cd && cd.indexOf(key)>=0; });
+      mine.sort(function(a,b){ return String(a.startDate||a.period||'').localeCompare(String(b.startDate||b.period||'')); });
+      var el=document.getElementById('coordOwnerAnnual'); if(!el)return;
+      el.innerHTML='<b><i class="fa-solid fa-calendar"></i> 연간 운용 과정 '+mine.length+'개</b>'
+        +(mine.length?'<ul>'+mine.map(function(c){ var period=c.period||((c.startDate||'')+' ~ '+(c.endDate||'')); var start=(c.startDate||String(period).split('~')[0]||'').trim(), end=(c.endDate||String(period).split('~')[1]||'').trim(); var stt=(end&&today>end)?'종료':((start&&today>=start)?'진행중':'예정'); return '<li><b style="color:'+(stt==='진행중'?'#16a34a':stt==='예정'?'#d97706':'#94a3b8')+';">['+stt+']</b> '+esc(c.name||c.courseName||'-')+' · '+esc(period)+'</li>'; }).join('')+'</ul>':'<span>등록된 연간 과정이 없습니다.</span>');
+    }); }catch(e){}
+    // 생활관 배정(현재주 dorm assignments → 과정 학생 매칭)
+    try{ var wk=(typeof _coordDormMondayKey==='function')?_coordDormMondayKey():''; firebase.database().ref('system/dorm/assignments/'+wk+'/students').once('value').then(function(snap){
+      var av=snap.val()||{}, byName={}; Object.keys(av).forEach(function(k){ var a=av[k]; if(!a||!a.name)return; byName[String(a.name).trim()]=a; });
+      document.querySelectorAll('#coordKioskSearchResult .cor-dorm').forEach(function(box){
+        var course=box.getAttribute('data-course'), room=null; rooms.forEach(function(r){ if(String(r.s.courseName||'')===course) room=r; });
+        if(!room){ box.innerHTML='<span class="cor-empty">해당 없음</span>'; return; }
+        var stu=_uniqStu(room.room), html='';
+        stu.forEach(function(s){ var nm=String(s.name||'').trim(); var a=byName[nm]; if(a){ var ho=(''+(a.no||a.room||'')).trim(); var loc=((a.building||'')+(ho?(' '+ho+(ho.indexOf('호')<0?'호':'')):'')).trim(); html+='<span class="cor-chip">'+esc(nm)+' · '+esc(loc||'배정')+'</span>'; } });
+        box.innerHTML=html||'<span class="cor-empty">배정된 학생 없음(통학/미배정)</span>';
       });
-    }catch(e){}
+    }); }catch(e){}
   }
 };
 coordKiosk.notice=function(rid){
@@ -8876,7 +8882,7 @@ window.addEventListener('load', function(){
 });
 </script>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:6px;bottom:5px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;font-weight:800;line-height:1;letter-spacing:.6px;color:#fff;background:rgba(15,23,42,.85);padding:4px 8px;border-radius:6px;pointer-events:none;user-select:none;box-shadow:0 2px 6px rgba(0,0,0,.3);">D37</div>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:6px;bottom:5px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;font-weight:800;line-height:1;letter-spacing:.6px;color:#fff;background:rgba(15,23,42,.85);padding:4px 8px;border-radius:6px;pointer-events:none;user-select:none;box-shadow:0 2px 6px rgba(0,0,0,.3);">D38</div>
 <script>
 /* ===== [공용] 종료된 과정 자동 정리 (모든 플랫폼 공통) — 종료일 지난 방을 다음날 미개설로 비움. 브라우저별 하루 1회 ===== */
 window.kacExpireEndedCourses = async function(){
@@ -9839,6 +9845,17 @@ body.coord-header-compact.pc-mode .coord-clock{
 .coord-owner-history b,.coord-owner-history span{display:block}
 .coord-owner-history ul{margin:10px 0 0;padding-left:20px;line-height:1.8}
 .coord-owner-empty{padding:50px;text-align:center;color:#94a3b8;font-size:20px;font-weight:900}
+.coord-owner-result .cor-sum{margin-top:10px;color:#334155;font-weight:800;font-size:14px}
+.cor-toggle{margin-top:12px;width:100%;padding:11px;border:1px solid #cbd5e1;border-radius:11px;background:#f1f5f9;color:#1e3a8a;font-weight:900;cursor:pointer}
+.cor-toggle:hover{background:#e2e8f0}
+.cor-detail{margin-top:12px;border-top:1px dashed #e2e8f0;padding-top:12px}
+.cor-sec{margin-bottom:13px}
+.cor-sec-t{font-size:14px;font-weight:900;color:#1e293b;margin-bottom:7px}
+.cor-chips{display:flex;flex-wrap:wrap;gap:6px}
+.cor-chip{background:#eff6ff;border:1px solid #dbeafe;color:#1e3a8a;border-radius:999px;padding:5px 11px;font-size:13px;font-weight:800}
+.cor-chip.ok{background:#ecfdf5;border-color:#a7f3d0;color:#047857}
+.cor-chip.no{background:#fef2f2;border-color:#fecaca;color:#b91c1c}
+.cor-empty{color:#94a3b8;font-weight:700;font-size:13px}
 @media(max-width:900px){.cor-grid{grid-template-columns:1fr}}
 </style>
 </body>
