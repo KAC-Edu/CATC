@@ -1,6 +1,17 @@
 <!DOCTYPE html>
+<!-- PLATFORM_EDIT_STATUS: 수정완료 | VERSION: DN2 | 2026-06-29 -->
 <html lang="ko">
 <head>
+  <script>
+  /* vDN2: 모바일·태블릿도 네 가지 업무 메뉴가 있는 반응형 통합 화면을 사용 */
+  (function(){
+    try{
+      var params=new URLSearchParams(location.search);
+      params.set('forcepc','1');
+      location.replace('driver.html?'+params.toString()+location.hash);
+    }catch(e){ location.replace('driver.html?forcepc=1'); }
+  })();
+  </script>
   <meta charset="UTF-8" />
   <script>
   /* [기기 분리] PC 접속은 PC 전용 화면으로 (모바일은 이 화면 유지). ?forcem 으로 강제 모바일. */

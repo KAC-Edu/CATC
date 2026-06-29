@@ -1,7 +1,8 @@
+/* PLATFORM_EDIT_STATUS: 수정완료 | VERSION: N | 2026-06-29 */
 /* ============================================================
    CATC · 강사 플랫폼 스타일  (admin.css)
    STATUS    수정안하는중
-   @version  M   @build  20260628-075317
+   @version  N   @build  20260629-완료
    ------------------------------------------------------------
    [코드 수정 규칙] 수정 시 @version 을
    A -> B -> ... -> Z -> A1 -> B1 -> ... 순으로 1단계 올리고
@@ -3783,14 +3784,30 @@ body.in-course #courseSmartRemote { display: block; }
 }
 .remote-home span { font-size: 10px; letter-spacing: 0; }
 .remote-home:hover { background: #2563eb; }
+#courseSmartRemote .remote-key,
+#courseSmartRemote .remote-home {
+    border: 1px solid rgba(148,163,184,.38);
+    box-shadow: 0 5px 14px rgba(15,23,42,.13);
+}
+#courseSmartRemote .remote-key {
+    border-radius: 11px;
+    background: rgba(255,255,255,.86);
+}
+#courseSmartRemote .remote-key:hover {
+    background: #eff6ff;
+    color: #1d4ed8;
+    border-color: #93c5fd;
+}
+#courseSmartRemote .remote-key:active { transform: scale(.94); }
+#courseSmartRemote .remote-home:active { transform: translate(-50%,-50%) scale(.94); }
 
 /* vM: 우측 패널에 붙는 명확한 메뉴 플래그 */
 #moreToggleTab {
     position: fixed;
     right: 0;
     top: 50%;
-    width: 38px;
-    height: 92px;
+    width: 30px;
+    height: 78px;
     transform: translateY(-50%);
     border: 1px solid rgba(255,255,255,.14);
     border-right: 0;
@@ -3809,11 +3826,26 @@ body.in-course #courseSmartRemote { display: block; }
 #moreToggleTab:hover { background: #2563eb; }
 #moreToggleTab i { color: #bfdbfe; font-size: 11px; transition: transform .3s; }
 #moreToggleTab span {
-    font-size: 11px;
+    font-size: 10px;
     font-weight: 900;
     letter-spacing: 0;
     writing-mode: vertical-rl;
 }
+
+#view-home .dashboard-campus-image {
+    background: transparent !important;
+    border: 0 !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    border-radius: 0 !important;
+    overflow: visible !important;
+}
+#view-home .dashboard-campus-image img {
+    border-radius: 0 !important;
+    box-shadow: none !important;
+}
+#dashShuttleTimeInline,
+#dashShuttleNotice { display: none !important; }
 @media (max-width: 1500px) {
     #courseSmartRemote { left: 16px; width: 132px; height: 132px; }
     .remote-north { left: 42px; top: 4px; }

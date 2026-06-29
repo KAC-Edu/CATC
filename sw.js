@@ -1,9 +1,10 @@
-/* KAC 교육생 플랫폼 서비스 워커 (v5 · 2026-06-27)
+/* KAC 교육생 플랫폼 서비스 워커 (v9 · 2026-06-29)
    - 설치/홈화면 추가(PWA)를 위한 최소 SW
    - 실시간 데이터(Firebase) 정확성이 중요하므로 'network-first' 전략 사용
      (네트워크 우선, 실패 시에만 캐시 폴백 → 오래된 데이터 표시 방지)
    - Firebase/gstatic 등 동적 요청은 캐시하지 않고 그대로 통과 */
-const CACHE = 'kac-student-v5';
+/* PLATFORM_EDIT_STATUS: 수정완료 | VERSION: SW-J72 | 2026-06-29 */
+const CACHE = 'kac-student-v9';
 const APP_SHELL = [
   './index.html',
   './manifest.json',

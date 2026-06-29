@@ -1,15 +1,16 @@
 ﻿/* ============================================================
+   PLATFORM_EDIT_STATUS: 수정완료 | VERSION: H1 | 2026-06-29
    CATC · 강사 플랫폼 로직  (admin.js)
    STATUS    수정안하는중
-   @version  G1
-   @build    20260628-075317  (vG1: 스마트 리모컨·우측 메뉴 플래그 연동)
+   @version  H1
+   @build    20260629-완료  (vH1: 현황 팝업·리모컨·사이드바·캠퍼스 이미지 정돈)
    ------------------------------------------------------------
    [코드 수정 규칙 · AI/개발자 공통]
    이 파일을 고치면 @version 을 A -> B -> ... -> Z -> A1 -> B1 ...
    순으로 1단계 올리고, @build 를 수정 시각으로 갱신할 것.
    적용 여부는 브라우저 콘솔 로그(vA)로 확인한다.
 ============================================================ */
-try{console.log('%cCATC%c 강사 플랫폼 로직 (admin.js) %cvG1%c build 20260628-075317','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}
+try{console.log('%cCATC%c 강사 플랫폼 로직 (admin.js) %cvH1%c build 20260629','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}
 /* --- admin.js (Final Integrated Version - Fixed Syntax & Logic) --- */
 
 // --- [기본 데이터] 20문항 ---
@@ -5543,8 +5544,8 @@ resetShuttleRequests: function() {
         if(!modal) return;
         const d=window._homeStatsData||{}, today=window._homeStatsToday||getTodayString();
         modal.style.display='flex';
-        // 교육생 현황(students)은 우측 지도까지 들어가므로 모달을 넓힘. 그 외 타입은 기본 폭.
-        try{ const _box=modal.querySelector('div'); if(_box){ _box.style.maxWidth=(type==='students')?'1320px':(type==='active'?'1040px':'720px'); _box.style.maxHeight=(type==='students')?'94vh':'90vh'; _box.style.padding=(type==='active')?'clamp(26px,4vh,54px) clamp(30px,4vw,60px)':'clamp(16px,3vh,40px) clamp(18px,3vw,44px)'; } if(title){ title.style.fontSize=(type==='active')?'clamp(24px,2.8vw,36px)':'clamp(17px,2.3vw,26px)'; title.style.marginBottom=(type==='active')?'clamp(18px,2.8vh,34px)':'clamp(12px,2vh,28px)'; } }catch(e){}
+        // 세 통계 팝업은 교육인원 팝업을 기준으로 같은 크기와 여백을 사용한다.
+        try{ const _box=modal.querySelector('div'); if(_box){ _box.style.width='92%'; _box.style.maxWidth='1180px'; _box.style.maxHeight='92vh'; _box.style.padding='clamp(20px,3vh,34px) clamp(22px,3vw,40px)'; } if(title){ title.style.fontSize='clamp(20px,2.3vw,28px)'; title.style.marginBottom='clamp(14px,2vh,24px)'; } }catch(e){}
         const esc=function(s){return (s==null?'':String(s)).replace(/[&<>"]/g,function(c){return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]);});};
         // 이번 주 월~금 정확한 기간(토·일은 차주 월요일 기준)
         const _wkRange=(function(){ var now=new Date(); var dow=now.getDay(); var off=(dow===0)?1:(dow===6)?2:(1-dow); var mon=new Date(now); mon.setDate(now.getDate()+off); mon.setHours(0,0,0,0); var fri=new Date(mon); fri.setDate(mon.getDate()+4); var W=['일','월','화','수','목','금','토']; var f=function(dt){ return (dt.getMonth()+1)+'.'+dt.getDate()+'('+W[dt.getDay()]+')'; }; return f(mon)+' ~ '+f(fri); })();
@@ -5560,12 +5561,12 @@ resetShuttleRequests: function() {
             title.textContent='🏫 현재 강의 중인 과정  ·  '+_wkRange;
             const rows=weekRooms.filter(([,r])=>(r.status||{}).roomStatus==='active').map(([room,r])=>{
                 const prof=(r.status||{}).professorName||'-', course=(r.settings||{}).courseName||'-';
-                return `<div onclick="document.getElementById('homeStatModal').style.display='none'; dataMgr.switchRoomAttempt('${room}');" title="클릭하면 이 과정으로 입장합니다" style="display:flex;justify-content:space-between;align-items:center;gap:clamp(18px,2vw,30px);min-height:92px;padding:clamp(20px,2.8vh,32px) clamp(24px,3vw,38px);background:#eff6ff;border:1px solid #dbeafe;border-radius:20px;margin-bottom:clamp(18px,2.6vh,28px);cursor:pointer;transition:background .15s, transform .15s, box-shadow .15s;" onmouseover="this.style.background='#dbeafe';this.style.transform='translateY(-2px)';this.style.boxShadow='0 10px 26px rgba(37,99,235,.20)';" onmouseout="this.style.background='#eff6ff';this.style.transform='none';this.style.boxShadow='none';">
+                return `<div onclick="document.getElementById('homeStatModal').style.display='none'; dataMgr.switchRoomAttempt('${room}');" title="클릭하면 이 과정으로 입장합니다" style="display:flex;justify-content:space-between;align-items:center;gap:18px;min-height:70px;padding:15px 20px;background:#eff6ff;border:1px solid #dbeafe;border-radius:14px;margin-bottom:12px;cursor:pointer;transition:background .15s, transform .15s, box-shadow .15s;" onmouseover="this.style.background='#dbeafe';this.style.transform='translateY(-2px)';this.style.boxShadow='0 10px 26px rgba(37,99,235,.20)';" onmouseout="this.style.background='#eff6ff';this.style.transform='none';this.style.boxShadow='none';">
                     <div style="display:flex;align-items:center;gap:clamp(16px,2vw,28px);min-width:0;">
-                        <span style="font-weight:900;color:#fff;background:#3b82f6;padding:clamp(9px,1.2vh,13px) clamp(18px,2vw,26px);border-radius:13px;font-size:clamp(17px,1.7vw,23px);white-space:nowrap;">Room #${room}</span>
-                        <span style="font-size:clamp(22px,2.4vw,32px);color:#0f172a;font-weight:900;word-break:keep-all;">${course}</span>
+                        <span style="font-weight:900;color:#fff;background:#3b82f6;padding:8px 15px;border-radius:10px;font-size:clamp(14px,1.4vw,18px);white-space:nowrap;">Room #${room}</span>
+                        <span style="font-size:clamp(18px,1.9vw,24px);color:#0f172a;font-weight:900;word-break:keep-all;">${course}</span>
                     </div>
-                    <span style="font-size:clamp(16px,1.7vw,21px);color:#475569;font-weight:900;white-space:nowrap;">${prof} 교수 <i class="fa-solid fa-arrow-right-to-bracket" style="margin-left:14px;color:#3b82f6;"></i></span></div>`;
+                    <span style="font-size:clamp(14px,1.5vw,18px);color:#475569;font-weight:900;white-space:nowrap;">${prof} 교수 <i class="fa-solid fa-arrow-right-to-bracket" style="margin-left:12px;color:#3b82f6;"></i></span></div>`;
             }).join('');
             body.innerHTML=rows?'<div style="display:flex;flex-direction:column;gap:clamp(10px,1.3vh,18px);">'+rows+'</div>':'<p style="color:#94a3b8;text-align:center;padding:36px;font-size:20px;">이번 주 강의 중인 과정이 없습니다.</p>';
         } else if(type==='students'){
@@ -8299,6 +8300,8 @@ saveAll: function() {
 
         const updates = {};
         updates[`courses/${state.room}/settings/courseName`] = name;
+        // 새 과정은 같은 주차의 과거 생활관 잠금보다 우선해 '열림'으로 시작한다.
+        updates[`courses/${state.room}/settings/courseCreatedAt`] = firebase.database.ServerValue.TIMESTAMP;
         updates[`courses/${state.room}/settings/password`] = rawPw ? btoa(rawPw) : null;
         // 카카오톡 오픈톡방 링크 (선택) — 입력값 정리 후 저장
         const kakaoLinkVal = (document.getElementById('setup-kakao-link')?.value || '').trim();
@@ -9914,6 +9917,7 @@ const annualPlanMgr = {
                     // [명단 보존] 자동배치는 지원부·운영부 명단을 지우지 않음 (삭제는 과정 종료 expire에서만)
                     wiped.push(`${room}(${prevName || '비어있음'}→${course.name})`);
                     updates[`courses/${room}/settings/courseName`] = course.name;
+                    updates[`courses/${room}/settings/courseCreatedAt`] = firebase.database.ServerValue.TIMESTAMP;
                     updates[`courses/${room}/settings/period`]     = course.period;
                     const coordFull = coordMgr.matchName(course.coord) || (course.coord || '');
                     updates[`courses/${room}/settings/coordinatorName`] = coordFull;
@@ -10546,6 +10550,7 @@ annualPlanMgr._syncRoomsLockAware = async function(courses) {
 
         const coordFull = (typeof coordMgr !== 'undefined' && coordMgr.matchName ? coordMgr.matchName(course.coord) : '') || (course.coord || '');
         updates[`courses/${room}/settings/courseName`] = course.name;
+        updates[`courses/${room}/settings/courseCreatedAt`] = firebase.database.ServerValue.TIMESTAMP;
         updates[`courses/${room}/settings/period`]     = course.period;
         updates[`courses/${room}/settings/coordinatorName`] = coordFull;
         updates[`courses/${room}/status/professorName`] = course.prof;
@@ -11621,13 +11626,13 @@ ui._fitMorePanelToViewport = function(){
   var p=document.getElementById('moreMenuPanel');
   if(!p) return;
   var zoom=parseFloat(getComputedStyle(document.documentElement).zoom)||1;
-  var inset=12/zoom;
-  p.style.setProperty('width',(320/zoom)+'px','important');
+  var inset=8/zoom;
+  p.style.setProperty('width',(244/zoom)+'px','important');
   p.style.setProperty('top',inset+'px','important');
   p.style.setProperty('right',inset+'px','important');
   p.style.setProperty('height',Math.max(320,(window.innerHeight-24)/zoom)+'px','important');
   p.style.setProperty('min-height','0','important');
-  p.style.setProperty('border-radius',(20/zoom)+'px','important');
+  p.style.setProperty('border-radius',(18/zoom)+'px','important');
 };
 ui.openMorePanel = function(){
   var p=document.getElementById('moreMenuPanel'), t=document.getElementById('moreToggleTab'), b=document.getElementById('moreMenuBackdrop'), ic=document.getElementById('moreToggleIcon');
@@ -11635,7 +11640,7 @@ ui.openMorePanel = function(){
   ui._fitMorePanelToViewport();
   p.classList.add('more-open'); p.style.transform='translateX(0)';
   if(b) b.style.display='block';
-  if(t) t.style.right=((p.offsetWidth||300)+12)+'px';
+  if(t) t.style.right=((p.offsetWidth||244)+8)+'px';
   if(ic) ic.className='fa-solid fa-chevron-right';
 };
 ui.closeMorePanel = function(){

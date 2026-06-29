@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<!-- PLATFORM_EDIT_STATUS: 수정완료 | VERSION: Y1 | 2026-06-29 -->
 <html lang="ko">
 <head>
 <!-- ════════ [PC버전 수정 · 차량(기사) · 디에스장 · 2026-06-25] ════════
@@ -7,7 +8,7 @@
         - @version T1 → U1 : 미확인 픽업 신청이 요청일 지나면 인박스에서 자동 숨김('나가리'). isActivePending() 참고.
         - @version U1 → V1 : PC 100% 화면용 75% 기준 밀도 보정.
         - @version V1 → W1 : 기사 관제판 추가(입력 단순화·금주 퇴교수송 한눈보기·운행 충돌 안내).
-     · @version  X1
+     · @version  Y1
      · 수정상태: 수정완료   (작업 중에는 '수정중', 완료 시 '수정완료'로 표기)
      · 연동 데이터(system/pickup, courses/{room}/shuttle) 쓰기 로직 미변경 — 화면 필터만 적용, 타 담당자 영향 없음. -->
 <script>
@@ -65,7 +66,7 @@
 </style>
 <!-- ============================================================
   CATC · 차량·기사  (driver.html)  — 전면 리뉴얼본
-  @version  X1
+  @version  Y1
   @build    20260626-203500
   ────────────────────────────────────────────────────────
   PC용 기사 운행관리 대시보드
@@ -353,6 +354,58 @@
     #view-manage .driver-sidegrid{display:grid;}
   }
 </style>
+  <style id="driver-structured-ui-y2">
+    .topbar-in > .top-spacer,
+    .topbar-in > .top-btn{display:none!important}
+    .topbar-in{justify-content:space-between}
+    .brand{font-size:17px}
+    .driver-statusbar{
+      display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-bottom:12px
+    }
+    .driver-statusbar button{
+      min-height:64px;padding:10px 16px;border:1px solid #dbe4ef;border-radius:8px;
+      background:#fff;color:#334155;display:grid;grid-template-columns:30px 1fr auto;
+      align-items:center;text-align:left;cursor:pointer;box-shadow:0 4px 12px rgba(15,23,42,.045)
+    }
+    .driver-statusbar i{font-size:19px;color:#0f6cbd}
+    .driver-statusbar span{font-size:12px;font-weight:800;color:#64748b}
+    .driver-statusbar b{font-size:18px;color:#0f2a4a;white-space:nowrap}
+    .tabs{display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:14px}
+    .tab{
+      min-height:58px!important;margin:0!important;border:1px solid #dbe4ef!important;border-radius:8px!important;
+      background:#fff!important;color:#334155!important;justify-content:center!important;font-size:14px!important
+    }
+    .tab.active{background:#eaf3ff!important;border-color:#2563eb!important;color:#0b4f88!important;box-shadow:inset 4px 0 #2563eb}
+    .panel{border-radius:8px!important}
+    .panel-head{min-height:54px;padding:14px 18px!important}
+    .driver-table-wrap{overflow:auto;padding:0 16px 18px}
+    .driver-data-table{width:100%;border-collapse:separate;border-spacing:0;border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;background:#fff}
+    .driver-data-table th{padding:12px 10px;background:#f1f5f9;color:#475569;font-size:12px;font-weight:900;white-space:nowrap}
+    .driver-data-table td{padding:13px 10px;border-top:1px solid #edf2f7;color:#334155;font-size:12.5px;text-align:center;vertical-align:middle}
+    .driver-data-table tbody tr:hover{background:#f8fbff}
+    .driver-route{display:block;margin-top:4px;color:#64748b;font-weight:700}
+    .driver-empty{padding:38px!important;color:#94a3b8!important;font-weight:800}
+    .driver-conflict,.driver-clear{display:inline-block;padding:5px 8px;border-radius:6px;font-size:11px;font-weight:900;white-space:nowrap}
+    .driver-conflict{background:#fff1f2;color:#be123c}.driver-clear{background:#ecfdf5;color:#047857}
+    .driver-row-actions{display:flex;justify-content:center;gap:5px}
+    .driver-row-actions button{padding:7px 9px;border-radius:6px;font-size:11px;font-weight:900;cursor:pointer}
+    .driver-row-actions .ok{border:0;background:#0f9f6e;color:#fff}.driver-row-actions .no{border:1px solid #fecaca;background:#fff;color:#dc2626}
+    #view-manage.active{display:block!important}
+    #view-manage .ops-hero,#view-manage .ops-grid,#view-manage .driver-sidegrid{display:none!important}
+    #view-manage .driver-workgrid{display:block!important;margin:0!important}
+    #view-manage .bgrid{min-height:calc(100vh - 330px)!important}
+    #view-leave .lv-run{border-radius:8px!important}
+    @media(max-width:800px){
+      .wrap{padding:10px}
+      .driver-statusbar{grid-template-columns:1fr}
+      .driver-statusbar button{min-height:52px}
+      .tabs{grid-template-columns:repeat(2,minmax(0,1fr))}
+      .tab{min-height:50px!important;font-size:12px!important}
+      .driver-data-table{min-width:780px}
+      .topbar-in{padding:0 12px}
+      .brand{font-size:15px}
+    }
+  </style>
     <link rel="icon" type="image/svg+xml" href="favicon.svg?v=b260620c">
     <link rel="stylesheet" href="kac-tokens.css?v=20260622">
 </head>
@@ -371,14 +424,20 @@
 </div>
 
 <div class="wrap">
+  <div class="driver-statusbar" aria-label="운행 현황">
+    <button type="button" onclick="switchView('leave')"><i class="fa-solid fa-bus"></i><span>퇴교수송</span><b id="driverLeaveCount">0명</b></button>
+    <button type="button" onclick="switchView('pickups')"><i class="fa-solid fa-user-tie"></i><span>강사픽업</span><b id="driverPickupCount">0건 / 금주</b></button>
+    <button type="button" onclick="switchView('reservations')"><i class="fa-solid fa-bell"></i><span>픽업 예약</span><b id="driverReservationCount">0건</b></button>
+  </div>
   <div class="tabs">
-    <div class="tab active" data-view="manage" onclick="switchView('manage')"><i class="fa-solid fa-gauge-high"></i> 오늘 운행 <span class="cnt" id="tabCnt" style="display:none;">0</span></div>
-    <div class="tab" data-view="leave" onclick="switchView('leave')"><i class="fa-solid fa-bus"></i> 퇴교 현황</div>
-    <div class="tab" data-view="fixed" onclick="switchView('fixed')"><i class="fa-solid fa-gear"></i> 일정 설정</div>
+    <div class="tab active" data-view="leave" onclick="switchView('leave')"><i class="fa-solid fa-bus"></i> 퇴교수송 현황</div>
+    <div class="tab" data-view="pickups" onclick="switchView('pickups')"><i class="fa-solid fa-user-tie"></i> 강사픽업 일정</div>
+    <div class="tab" data-view="manage" onclick="switchView('manage')"><i class="fa-solid fa-calendar-week"></i> 전체 스케줄표</div>
+    <div class="tab" data-view="reservations" onclick="switchView('reservations')"><i class="fa-solid fa-clipboard-check"></i> 강사픽업 예약 <span class="cnt" id="tabCnt" style="display:none;">0</span></div>
   </div>
 
   <!-- ============ 운행관리 ============ -->
-  <div class="view active" id="view-manage">
+  <div class="view" id="view-manage">
     <div class="ops-hero">
       <div class="ops-hero-main">
         <div class="ops-title"><i class="fa-solid fa-route"></i> 오늘 운행 한눈보기</div>
@@ -456,12 +515,36 @@
   </div>
 
   <!-- ============ 퇴교차량 ============ -->
-  <div class="view" id="view-leave">
+  <div class="view active" id="view-leave">
     <div class="panel">
       <div class="panel-head"><i class="fa-solid fa-bus" style="color:var(--teal);"></i> 퇴교차량 — 차수별 인원 집계
         <span class="sub">출발시간은 운영부에서 과정별로 공지합니다</span>
       </div>
       <div class="panel-body" id="leaveBody"><div class="inbox-empty">이번 주 퇴교 예정 과정이 없습니다.</div></div>
+    </div>
+  </div>
+
+  <div class="view" id="view-pickups">
+    <div class="panel">
+      <div class="panel-head"><i class="fa-solid fa-user-tie" style="color:var(--blue-deep);"></i> 금주·차주 강사픽업 확정 일정
+        <span class="sub">확정된 운행만 표시</span>
+      </div>
+      <div class="driver-table-wrap"><table class="driver-data-table">
+        <thead><tr><th>연번</th><th>강사명</th><th>연락처</th><th>픽업장소</th><th>모시는 시간</th><th>모셔다드리는 시간</th><th>신청자</th></tr></thead>
+        <tbody id="driverPickupTable"><tr><td colspan="7" class="driver-empty">확정된 픽업 일정이 없습니다.</td></tr></tbody>
+      </table></div>
+    </div>
+  </div>
+
+  <div class="view" id="view-reservations">
+    <div class="panel">
+      <div class="panel-head"><i class="fa-solid fa-clipboard-check" style="color:var(--warn);"></i> 신규 강사픽업 예약
+        <span class="sub">시간이 겹치면 자동으로 경고합니다</span>
+      </div>
+      <div class="driver-table-wrap"><table class="driver-data-table">
+        <thead><tr><th>연번</th><th>강사명</th><th>연락처</th><th>픽업요청 일자</th><th>신청자</th><th>중복여부</th><th>처리</th></tr></thead>
+        <tbody id="driverReservationTable"><tr><td colspan="7" class="driver-empty">신규 픽업 예약이 없습니다.</td></tr></tbody>
+      </table></div>
     </div>
   </div>
 
@@ -624,7 +707,7 @@
 </div>
 
 <div id="spinner"><i class="fa-solid fa-spinner fa-spin"></i></div>
-<div class="vbadge">vX1 · 20260628</div>
+<div class="vbadge">vY1 · 20260629</div>
 
 <script src="config.js?v=b260620c"></script>
 <script>
@@ -636,7 +719,7 @@ let fixeds = [];                // system/driver_fixed 배열
 let schedules = [];             // system/driver_schedule 배열(일회성)
 let annualPlan = [];            // system/annualPlan (연간 교육계획)
 let weekOffset = 0;
-let currentView = 'manage';
+let currentView = 'leave';
 let knownPickupIds = [];
 let isFirstLoad = true;
 let pendingFixedKind = '입교';
@@ -706,7 +789,50 @@ function switchView(v){
 function moveWeek(d){ weekOffset = d===0 ? ((()=>{const dw=new Date().getDay();return (dw===5||dw===6||dw===0)?1:0;})()) : weekOffset+d; renderSchedule(); }
 
 /* ===================== 렌더 ===================== */
-function renderAll(){ renderInbox(); renderDone(); renderSchedule(); renderLeave(); renderOpsDashboard(); renderFixedList(); renderOffList(); updateTabCount(); renderWeekCourses(); renderPlanList(); }
+function renderAll(){ renderInbox(); renderDone(); renderSchedule(); renderLeave(); renderOpsDashboard(); renderFixedList(); renderOffList(); updateTabCount(); renderWeekCourses(); renderPlanList(); renderDriverTables(); }
+
+function pickupRequester(p){
+  return p.requester || p.requesterName || p.coordinator || p.coordinatorName || p.applicant || '-';
+}
+function renderDriverTables(){
+  const bounds=getWeekBounds();
+  const nextEnd=new Date(bounds.end); nextEnd.setDate(nextEnd.getDate()+7);
+  const rangeEnd=ymd(nextEnd);
+  const confirmed=pickups.filter(p=>p.status==='confirmed' && normDate(p.date)>=bounds.start && normDate(p.date)<=rangeEnd)
+    .sort((a,b)=>String(a.date||'').localeCompare(String(b.date||'')) || String(a.time||'').localeCompare(String(b.time||'')));
+  const pending=pickups.filter(isActivePending)
+    .sort((a,b)=>String(a.date||'').localeCompare(String(b.date||'')) || String(a.time||'').localeCompare(String(b.time||'')));
+  const weekConfirmed=confirmed.filter(p=>normDate(p.date)<=bounds.end);
+  const leaveTotal=getLeaveRowsForWeek().reduce((sum,row)=>sum+(row.busTot||0),0);
+  const set=(id,text)=>{ const el=document.getElementById(id); if(el) el.textContent=text; };
+  set('driverLeaveCount', leaveTotal+'명');
+  set('driverPickupCount', weekConfirmed.length+'건 / 금주');
+  set('driverReservationCount', pending.length+'건');
+
+  const pickupBody=document.getElementById('driverPickupTable');
+  if(pickupBody){
+    pickupBody.innerHTML=confirmed.length ? confirmed.map((p,i)=>{
+      const dir=p.dir||'arr';
+      const arrive=dir==='arr' ? `${fmtFull(p.date)} ${p.time||'-'}` : '-';
+      const depart=dir==='dep' ? `${fmtFull(p.date)} ${p.time||'-'}` : '-';
+      return `<tr><td>${i+1}</td><td><b>${escapeHtml(p.prof||'강사')}</b></td><td>${escapeHtml(fmtPhone(p.phone)||'-')}</td><td>${escapeHtml(p.place||'-')}</td><td>${arrive}</td><td>${depart}</td><td>${escapeHtml(pickupRequester(p))}</td></tr>`;
+    }).join('') : '<tr><td colspan="7" class="driver-empty">확정된 픽업 일정이 없습니다.</td></tr>';
+  }
+
+  const reservationBody=document.getElementById('driverReservationTable');
+  if(reservationBody){
+    reservationBody.innerHTML=pending.length ? pending.map((p,i)=>{
+      const conflicts=getConflicts(p.date,p.time,p.id);
+      return `<tr>
+        <td>${i+1}</td><td><b>${escapeHtml(p.prof||'강사')}</b></td><td>${escapeHtml(fmtPhone(p.phone)||'-')}</td>
+        <td>${fmtFull(p.date)} ${escapeHtml(p.time||'-')}<small class="driver-route">${escapeHtml(dirText(p.place||'픽업지')[p.dir||'arr'])}</small></td>
+        <td>${escapeHtml(pickupRequester(p))}</td>
+        <td>${conflicts.length?`<span class="driver-conflict">주의 ${conflicts.length}건</span>`:'<span class="driver-clear">가능</span>'}</td>
+        <td><div class="driver-row-actions"><button class="ok" onclick="confirmPickup('${p.id}')">확정</button><button class="no" onclick="openReject('${p.id}')">불가</button></div></td>
+      </tr>`;
+    }).join('') : '<tr><td colspan="7" class="driver-empty">신규 픽업 예약이 없습니다.</td></tr>';
+  }
+}
 
 function updateTabCount(){
   const n=pickups.filter(isActivePending).length; // 지난 요청일 건은 제외

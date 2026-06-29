@@ -1,8 +1,9 @@
 <!DOCTYPE html>
+<!-- PLATFORM_EDIT_STATUS: 수정완료 | VERSION: J72 | 2026-06-29 -->
 <!-- ══════════════════ [편집상태 / EDIT-STATUS] ══════════════════
      STATUS : 수정안하는중
      FILE   : index.html (교육생)
-     UPDATED: 2026-06-28 00:20  (vI71: Q&A 정보헤더·차량 현황·맛집 목록 압축 개편)
+     UPDATED: 2026-06-29  (vJ72: 청색 단일행 헤더·맛집 카테고리·차량 완료화면 통일)
      ─ 규칙: 수정 시작 시 STATUS를 '수정중'으로, 완료 시 '수정안하는중'으로 변경.
             '수정중'이면 다른 플랫폼은 연동 변경을 보류/협의 후 진행.
 ═══════════════════════════════════════════════════════════════ -->
@@ -1137,8 +1138,6 @@ try{
             <div id="foodCatChips" style="display:flex; gap:7px; flex-wrap:wrap; margin-bottom:10px;">
                 <button type="button" class="fcat-chip" data-cat="식당" onclick="pickFoodCat(this)" style="padding:8px 14px; border-radius:50px; border:1px solid #2563eb; background:#2563eb; color:#fff; font-size:13px; font-weight:800; cursor:pointer;">🍚 식당</button>
                 <button type="button" class="fcat-chip" data-cat="카페" onclick="pickFoodCat(this)" style="padding:8px 14px; border-radius:50px; border:1px solid #e2e8f0; background:#fff; color:#475569; font-size:13px; font-weight:700; cursor:pointer;">☕ 카페</button>
-                <button type="button" class="fcat-chip" data-cat="분식" onclick="pickFoodCat(this)" style="padding:8px 14px; border-radius:50px; border:1px solid #e2e8f0; background:#fff; color:#475569; font-size:13px; font-weight:700; cursor:pointer;">🍜 분식</button>
-                <button type="button" class="fcat-chip" data-cat="술집" onclick="pickFoodCat(this)" style="padding:8px 14px; border-radius:50px; border:1px solid #e2e8f0; background:#fff; color:#475569; font-size:13px; font-weight:700; cursor:pointer;">🍻 술집</button>
                 <button type="button" class="fcat-chip" data-cat="기타" onclick="pickFoodCat(this)" style="padding:8px 14px; border-radius:50px; border:1px solid #e2e8f0; background:#fff; color:#475569; font-size:13px; font-weight:700; cursor:pointer;">🧁 기타</button>
             </div>
             <input type="hidden" id="foodCat" value="식당">
@@ -2157,7 +2156,7 @@ window.installPanelSwipeClose=installPanelSwipeClose;
 
 // ===== 우측 패널 닫기를 항상 부드럽게(슬라이드 아웃) 통일 =====
 // ===== 항기원 맛집 추천 (카카오 지도 검색) =====
-var FOOD_CATS=['식당','카페','분식','술집','기타'];
+var FOOD_CATS=['식당','카페','기타'];
 var HANGIWON_ADDR='충청북도 청주시 상당구 문의면 남계길 22-55';
 var _foodFilter='전체';
 var _foodSort='likes';
@@ -2176,8 +2175,8 @@ function initKakao(){
 }
 try{ window.addEventListener('load', function(){ setTimeout(initKakao, 300); }); }catch(e){}
 function _haversineKm(aLat,aLng,bLat,bLng){ var R=6371, t=Math.PI/180; var dLat=(bLat-aLat)*t, dLng=(bLng-aLng)*t; var x=Math.sin(dLat/2)*Math.sin(dLat/2)+Math.cos(aLat*t)*Math.cos(bLat*t)*Math.sin(dLng/2)*Math.sin(dLng/2); return R*2*Math.atan2(Math.sqrt(x),Math.sqrt(1-x)); }
-function _foodCatColor(c){ return ({'식당':'#f59e0b','카페':'#10b981','분식':'#ef4444','술집':'#8b5cf6','기타':'#64748b'})[c]||'#64748b'; }
-function _foodAutoCat(cn){ cn=cn||''; if(cn.indexOf('카페')>=0||cn.indexOf('디저트')>=0||cn.indexOf('베이커리')>=0) return '카페'; if(cn.indexOf('주점')>=0||cn.indexOf('호프')>=0||cn.indexOf('술집')>=0||cn.indexOf('바')>=0) return '술집'; if(cn.indexOf('분식')>=0) return '분식'; return '식당'; }
+function _foodCatColor(c){ return ({'식당':'#f59e0b','카페':'#10b981','기타':'#64748b'})[c]||'#64748b'; }
+function _foodAutoCat(cn){ cn=cn||''; if(cn.indexOf('카페')>=0||cn.indexOf('디저트')>=0||cn.indexOf('베이커리')>=0) return '카페'; if(cn.indexOf('주점')>=0||cn.indexOf('호프')>=0||cn.indexOf('술집')>=0||cn.indexOf('바')>=0) return '기타'; return '식당'; }
 function openFoodModal(){
     var m=document.getElementById('foodModal'); if(!m) return;
     m.style.display='flex'; closeFoodAddForm(); renderFoodFilters(); renderFoodSort(); initKakao();
@@ -6287,7 +6286,7 @@ input:not([type=checkbox]):not([type=radio]):not([type=file]), textarea, select 
 })();
 </script>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vI69</div>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vJ72</div>
 <script>
 /* ===== [공용] 종료된 과정 자동 정리 (교육생 포함 전 플랫폼) — 종료일 지난 방을 다음날 미개설로 비움. 브라우저별 하루 1회 ===== */
 window.kacExpireEndedCourses = async function(){
@@ -8966,6 +8965,85 @@ html.kac-core-screen #roomBadge{
   border-radius:11px !important;
   font-size:13.5px !important;
 }
+
+/* vJ72: 핵심 메뉴 상단을 입교완료 화면과 같은 청색 체계로 통일 */
+html.kac-core-screen #mainApp > .header{
+  min-height:64px !important;
+  height:64px !important;
+  padding:0 16px !important;
+  flex-direction:row !important;
+  align-items:center !important;
+  justify-content:center !important;
+  background:#0b4f88 !important;
+  border-bottom:0 !important;
+  box-shadow:0 8px 22px rgba(7,50,91,.2) !important;
+}
+html.kac-core-screen #mainApp > .header .header-center{
+  width:auto !important;
+  flex:1 1 auto !important;
+  min-width:0 !important;
+  flex-direction:row !important;
+  align-items:center !important;
+  justify-content:center !important;
+  gap:10px !important;
+}
+html.kac-core-screen #mainApp > .header .header-title{
+  width:auto !important;
+  flex:0 1 auto !important;
+  max-width:52% !important;
+  color:#fff !important;
+  font-size:16px !important;
+  line-height:1.15 !important;
+  text-align:left !important;
+  white-space:nowrap !important;
+  text-overflow:ellipsis !important;
+}
+html.kac-core-screen #mainApp > .header .header-sub{
+  width:auto !important;
+  flex:0 0 auto !important;
+  gap:6px !important;
+}
+html.kac-core-screen #realUserCount,
+html.kac-core-screen #roomBadge{
+  min-width:0 !important;
+  height:27px !important;
+  padding:0 9px !important;
+  border:1px solid rgba(255,255,255,.28) !important;
+  border-radius:999px !important;
+  background:rgba(255,255,255,.13) !important;
+  color:#fff !important;
+  font-size:11px !important;
+}
+html.kac-core-screen #realUserCount::before{
+  width:6px !important;
+  height:6px !important;
+  margin-right:5px !important;
+  background:#4ade80 !important;
+}
+
+.food-hero{
+  min-height:58px !important;
+  padding:9px 14px !important;
+  background:#0b4f88 !important;
+  box-shadow:0 8px 22px rgba(7,50,91,.18) !important;
+}
+.food-hero-icon{
+  background:rgba(255,255,255,.14) !important;
+  color:#fff !important;
+}
+.food-hero h2{ color:#fff !important; }
+
+.kac-shuttle-status-head{
+  background:#0b4f88 !important;
+  color:#fff !important;
+  border-bottom:0 !important;
+}
+.kac-shuttle-status-head .ks-eyebrow,
+.kac-shuttle-status-head .ks-title,
+.kac-shuttle-status-head .ks-sub{
+  color:#fff !important;
+}
+.kac-shuttle-status-head .ks-sub{ opacity:.78; }
 </style>
 </body>
 </html>

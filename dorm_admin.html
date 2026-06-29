@@ -1,5 +1,6 @@
 ﻿<!DOCTYPE html>
 <html lang="ko">
+<!-- PLATFORM_EDIT_STATUS: 수정완료 | VERSION: O1 | 2026-06-29 -->
 <!-- ===== EDIT-STATUS: 수정안하는중 ===== (값: 수정중 / 수정안하는중) · 플랫폼 간 협의용 플래그.
      다른 플랫폼/작업자는 이 파일을 열면 이 줄을 먼저 확인. 수정 시작 시 → 수정중 , 수정 완료 시 → 수정안하는중 -->
 <!-- [외부변경 · 카카오채널연동 2026-06-25] 포털(portal.html/7777) 경유 폐지 → catc1234 직접진입 게이트 추가, '포털' 버튼→'잠금'. @version J1→K1. 기능 로직 미변경. -->
@@ -60,7 +61,7 @@
 <!-- ============================================================
   CATC · 교육지원부 · 생활관 배정  (dorm_admin.html)
   @version  O1
-  @build    20260628-222341
+  @build    20260626-120000
   ────────────────────────────────────────────────────────
   [코드 수정 규칙 · AI/개발자 공통]
   이 파일을 한 글자라도 고치면:
@@ -161,7 +162,6 @@
       · 내국인: (남)/(여), 외국인: (M/남)/(F/여)
       · 라벨 색상은 과정색상 상속(관리자는 색으로 배치, 사용자는 텍스트로 남녀 즉시 확인)
       · PDF pill의 성별 배경 틴트(파랑/분홍) 제거 → 과정색 중심으로 정리.
-  vO1: [STEP2 과정·명단] 일요일 입교/시작 과정이 전주 weekKey로 잡혀 잠금 배지를 잘못 물고 명단 업로드가 막히던 문제 수정 — 선택 주차와 겹치는 과정은 선택 주차 키를 우선 사용.
 ============================================================ -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
@@ -1799,7 +1799,20 @@
 
         // ── [JDS260613] 주차 배정 잠금(락) ── 잠그면 그 주차의 자동배정·명단 업로드/수정/삭제·배정 이동/삭제 차단
         let _lockedWeeks = {};                                  // { canonicalWeekKey: {locked, at} }
-        function isWeekLocked(wk) { return !!_lockedWeeks[canonicalWeekKey(wk || '')]; }
+        function isWeekLocked(wk, course) {
+            const canon = canonicalWeekKey(wk || '');
+            const lock = _lockedWeeks[canon];
+            if (!lock) return false;
+            const target = course || (
+                selectedCourse && canonicalWeekKey(selectedCourse.weekKey || '') === canon
+                    ? selectedCourse : null
+            );
+            const createdAt = Number(target && target.courseCreatedAt || 0);
+            const lockedAt = Number(lock.at || 0);
+            // 잠금 이후 새로 생성·배치된 과정은 기본 '열림'. 기존 확정 과정만 잠금을 유지한다.
+            if (createdAt && lockedAt && createdAt > lockedAt) return false;
+            return true;
+        }
         function _lockGuard(wk, action) {
             if (isWeekLocked(wk)) {
                 showToast(`🔒 잠금된 주차입니다 — ${action || '변경'} 불가. STEP4에서 잠금을 먼저 해제하세요.`);
@@ -1956,7 +1969,7 @@
                     const cr = c && c.coordRoster;
                     if (!cr || !cr.applyToDorm || !Array.isArray(cr.list) || !cr.list.length) return;
                     const start = parsePeriod(cr.period || '').start;
-                    const wk = start ? canonicalWeekKey(start) : canonicalWeekKey(cr.weekKey || '');
+                    const wk = start ? weekKeyOf(start) : (cr.weekKey || '');
                     if (!wk) return;
                     coordRosters[`${wk}__${room}`] = cr;
                 });
@@ -1968,23 +1981,6 @@
         }
 
         // 선택된 주차의 과정만 렌더 (네트워크 호출 없음 → 빠름)
-        // [vO1] 생활관 배정 주차키 보정
-        //  - CATC 과정은 일요일 입교/시작일(예: 6/28) + 월~금 교육(6/29~7/3) 형태가 많음.
-        //  - 기존 weekKeyOf(start)는 일요일을 전주 월요일로 계산해, 전주 잠금이 새 과정에 잘못 적용될 수 있었음.
-        //  - STEP2에서 선택한 주차와 과정 기간이 겹치면 selectedWeekKey를 명단/잠금 기준 주차키로 사용한다.
-        function courseWeekKeyForRoster(start, end) {
-            const fallback = canonicalWeekKey(start || end || '');
-            if (!selectedWeekKey || !start) return fallback;
-            try {
-                const st = new Date(start + 'T00:00:00');
-                const en = new Date((end || start) + 'T23:59:59');
-                const ws = new Date(selectedWeekKey + 'T00:00:00');
-                const we = new Date(ws); we.setDate(ws.getDate() + 6); we.setHours(23,59,59);
-                if (!isNaN(st) && !isNaN(en) && st <= we && en >= ws) return selectedWeekKey;
-            } catch(e) {}
-            return fallback;
-        }
-
         function renderCourseList() {
             const listEl = document.getElementById('courseList');
             const courses = coursesCache || {};
@@ -2023,6 +2019,8 @@
                     if (!(startDt <= wkEnd && endDt >= wkStart)) return;
                 }
                 const profName = (c.status && c.status.professorName) || '';
+                const resetKeyMatch = String((c.status && c.status.resetKey) || '').match(/(?:reset_|rk_)(\d{13})/);
+                const inferredCreatedAt = resetKeyMatch ? Number(resetKeyMatch[1]) : 0;
                 const notInPlan = !planNames.has((s.courseName || '').trim());
                 items.push({
                     room,
@@ -2031,9 +2029,10 @@
                     roomDetail: courseRoomDetail({ room, courseName: s.courseName || room, period: s.period || '' }, s),
                     start,
                     end: end || start,
-                    weekKey: courseWeekKeyForRoster(start, end || start),
+                    weekKey: weekKeyOf(start),
                     profName,
-                    notInPlan
+                    notInPlan,
+                    courseCreatedAt: Number(s.courseCreatedAt || inferredCreatedAt || 0)
                 });
             });
 
@@ -2060,7 +2059,7 @@
                     courseName: c.name,
                     period: c.period || `${start} ~ ${end}`,
                     roomDetail: courseRoomDetail(c),
-                    start, end: end || start, weekKey: courseWeekKeyForRoster(start, end || start),
+                    start, end: end || start, weekKey: weekKeyOf(start),
                     profName: c.prof || '',
                     fromPlan: true
                 });
@@ -2084,7 +2083,7 @@
                 const rk = `${it.weekKey}__${it.room}`;
                 const cnt = rosterCounts[rk] || 0;
                 const enrolled = cnt > 0;
-                const locked = (typeof isWeekLocked === 'function') && isWeekLocked(it.weekKey);
+                const locked = (typeof isWeekLocked === 'function') && isWeekLocked(it.weekKey, it);
                 const lockBadge = locked ? `<span class="course-lockbadge" style="flex-shrink:0; background:#fef9c3; color:#a16207; font-size:11px; font-weight:800; padding:3px 9px; border-radius:10px; border:1px solid #fde047; white-space:nowrap;"><i class="fa-solid fa-lock"></i> 잠금설정중</span>` : '';
                 // ── 교육운영부 공유 명단 표시 ──
                 const coord = coordRosters[rk];
@@ -3151,7 +3150,7 @@
                         const cr = c && c.coordRoster;
                         if (!cr || !cr.applyToDorm || !Array.isArray(cr.list) || !cr.list.length) return;
                         const start = parsePeriod(cr.period || '').start;
-                        const wk = start ? canonicalWeekKey(start) : canonicalWeekKey(cr.weekKey || '');
+                        const wk = start ? weekKeyOf(start) : (cr.weekKey || '');
                         if (!wk || wk < targetMon) return;
                         const rk = `${wk}__${room}`;
                         if (all[rk]) return;  // 이미 지원부 명단 있음 → 위에서 집계됨
@@ -3280,7 +3279,7 @@
                     const cr = c && c.coordRoster;
                     if (!cr || !cr.applyToDorm || !Array.isArray(cr.list) || !cr.list.length) return;
                     const start = parsePeriod(cr.period || '').start;
-                    const crWk = start ? canonicalWeekKey(start) : canonicalWeekKey(cr.weekKey || '');
+                    const crWk = start ? weekKeyOf(start) : (cr.weekKey || '');
                     // [JDS260613] 정확히 이 주 OR 다주차 과정 기간이 이 주에 겹치면 대상
                     const overlaps = _rosterOverlapsWeek({ period: cr.period }, room, courses, wk);
                     if (crWk !== wk && !overlaps) return;
