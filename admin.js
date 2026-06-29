@@ -3529,8 +3529,9 @@ openQrModal: function() {
 
 
     
-    closeQrModal: function() { 
-        document.getElementById('qrModal').style.display = 'none'; 
+    closeQrModal: function() {
+        const m = document.getElementById('qrModal');
+        if (m) m.style.display = 'none';
     },
 
     openStudentManual: function() {

@@ -1,10 +1,11 @@
 <!DOCTYPE html>
-<!-- PLATFORM_EDIT_STATUS: 수정완료 | VERSION: J72 | 2026-06-29 -->
+<!-- PLATFORM_EDIT_STATUS: 수정아닙니다 | VERSION: J73 J73 J73 J73 J73 | 2026-06-30 -->
 <!-- ══════════════════ [편집상태 / EDIT-STATUS] ══════════════════
-     STATUS : 수정안하는중
+     STATUS : 수정아닙니다
      FILE   : index.html (교육생)
-     UPDATED: 2026-06-29  (vJ72: 청색 단일행 헤더·맛집 카테고리·차량 완료화면 통일)
-     ─ 규칙: 수정 시작 시 STATUS를 '수정중'으로, 완료 시 '수정안하는중'으로 변경.
+     VERSION: J73 J73 J73 J73 J73
+     UPDATED: 2026-06-30  (vJ73: 미사용 함수 6종 제거 — exitApp·cleanUrlAndGo·checkDinnerTime·loadGroupCandidates·openRoomMove·wrapClose. 카카오 채널 바로가기 도입으로 불필요해진 진입/종료 관련 죽은 코드 정리. 맛집 기능 코드는 유지.)
+     ─ 규칙: 수정 시작 시 STATUS를 '수정중'으로, 완료 시 '수정아닙니다'로 변경하고 버전을 5회 반복 표기.
             '수정중'이면 다른 플랫폼은 연동 변경을 보류/협의 후 진행.
 ═══════════════════════════════════════════════════════════════ -->
 <html lang="ko">
@@ -2500,68 +2501,6 @@ function resetProfileOverlayButtons() {
 
 
 
-        // [수정] 완전히 나가기 (주소 초기화)
-async function exitApp() {
-
-    { // 종료 확인
-        if (!(await showKacConfirm("정말 종료하시겠습니까?"))) return;
-
-    const uToken = localStorage.getItem('uToken');
-    if (uToken && currentRoom) {
-        firebase.database().ref(`courses/${currentRoom}/students/${uToken}/isOnline`).set(false);
-    }
-
-        const ua = navigator.userAgent.toLowerCase();
-        
-        // 1. 카카오톡 인앱 브라우저 강제 종료 (성공 시 여기서 끝남)
-        if (ua.indexOf('kakaotalk') !== -1) {
-            location.href = 'kakaotalk://inappbrowser/close';
-            return;
-        }
-
-        // 2. 네이버 앱 인앱 브라우저 강제 종료 (성공 시 여기서 끝남)
-        if (ua.indexOf('naver') !== -1) {
-            location.href = 'naversearchapp://inappbrowser/close';
-            return;
-        }
-
-        // 3. 그 외 (아이폰 카메라, 크롬, 사파리 등)
-        // [중요] 절대 window.location.href 로직을 넣지 마세요! (입장창으로 가는 원인)
-        
-        // 브라우저가 창을 닫는 것을 거부할 때를 대비해 화면을 '퇴장 안내'로 덮어버립니다.
-        document.documentElement.innerHTML = `
-            <head>
-                <meta charset="UTF-8">
-                <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                <title>퇴장 완료</title>
-                <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-                <style>
-                    body { background: linear-gradient(180deg,#eef5ff 0%,#dbe9ff 55%,#c7ddff 100%); color: #0f172a; margin: 0; padding: 0; font-family: sans-serif; overflow: hidden; }
-                    .exit-box { height: 100dvh; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 20px; }
-                    .icon { font-size: 80px; color: #2563eb; margin-bottom: 20px; }
-                    h2 { font-size: 24px; margin: 0; color:#1e3a8a; }
-                    p { font-size: 16px; color:#64748b; margin-top: 15px; line-height: 1.5; }
-                    .btn-close { margin-top: 30px; padding: 12px 40px; background: linear-gradient(135deg,#3b82f6,#2563eb); color: white; border: none; border-radius: 30px; font-weight: bold; }
-                </style>
-            </head>
-            <body>
-                <div class="exit-box">
-                    <div class="icon"><i class="fa-solid fa-right-from-bracket"></i></div>
-                    <h2>퇴장 완료</h2>
-                    <p>정상적으로 퇴장되었습니다.<br>이 브라우저 창(탭)을 닫아주세요.</p>
-                    <button class="btn-close" onclick="window.close()">창 닫기 시도</button>
-                </div>
-
-            </body>
-        `;
-
-        // 같은 종료 화면을 history에 중복 적재하지 않는다.
-        try { window.history.replaceState({ kacExit: true }, '', window.location.href); } catch(e) {}
-
-        // 마지막으로 창 닫기 시도
-        setTimeout(() => { window.close(); }, 300);
-    }
-}
 
 
 
@@ -4548,18 +4487,6 @@ function setGroupMode(mode){
     if(area) area.style.display = groupApplyMode==='group' ? 'block' : 'none';
     const cnt=document.getElementById('groupPickCount'); if(cnt) cnt.textContent='';
 }
-async function loadGroupCandidates(){
-    const box=document.getElementById('groupMemberList'); if(!box) return;
-    box.innerHTML='<div style="color:#94a3b8; font-size:13px; padding:10px; text-align:center;">불러오는 중…</div>';
-    const myName=(localStorage.getItem('kac_user_name')||'').trim();
-    try{
-        const snap=await firebase.database().ref(`courses/${currentRoom}/students`).once('value');
-        const all=snap.val()||{};
-        const names=Array.from(new Set(Object.values(all).map(s=>s&&s.name).filter(n=>n&&n!=='undefined'&&String(n).trim()!==myName).map(n=>String(n).trim())));
-        if(!names.length){ box.innerHTML='<div style="color:#94a3b8; font-size:13px; padding:14px; text-align:center;">QR로 입교한 다른 교육생이 없습니다.</div>'; return; }
-        box.innerHTML=names.map(n=>'<label style="display:flex; align-items:center; gap:10px; padding:9px 11px; border:1.5px solid #e2e8f0; border-radius:10px; cursor:pointer; font-size:15px; font-weight:700; color:#334155;"><input type="checkbox" onchange="toggleGroupMember(\''+n.replace(/'/g,"&#39;")+'\', this)" style="width:18px; height:18px; accent-color:#2563eb;"> '+n+'</label>').join('');
-    }catch(e){ box.innerHTML='<div style="color:#ef4444; font-size:13px; padding:10px;">명단을 불러오지 못했습니다.</div>'; }
-}
 function toggleGroupMember(name, el){
     const lab=el.closest('label');
     if(el.checked){ if(!selectedGroupMembers.includes(name)) selectedGroupMembers.push(name); if(lab){ lab.style.background='#eef4ff'; lab.style.borderColor='#2563eb'; } }
@@ -4605,19 +4532,6 @@ function formatPhoneInput(el) {
     else el.value = v.slice(0,3) + '-' + v.slice(3,7) + '-' + v.slice(7,11);
 }
 
-// ── 석식 16시 이후 비활성화 ──
-function checkDinnerTime(cb) {
-    const now = new Date();
-    const closed = now.getHours() >= 16;
-    const msgEl = document.getElementById('dinnerClosedMsg');
-    if (closed) {
-        cb.checked = false;
-        cb.disabled = true;
-        if (msgEl) msgEl.style.display = 'block';
-    } else {
-        if (msgEl) msgEl.style.display = 'none';
-    }
-}
 // 페이지 로드 시 석식 시간 체크
 (function initDinnerCheck() {
     const now = new Date();
@@ -4724,11 +4638,6 @@ async function confirmReturnAction() {
 
 
 
-// 4. 강의실 이동 메뉴 클릭 시
-function openRoomMove() {
-    document.getElementById('menuModal').style.display = 'none'; document.body.classList.remove('menu-open');
-    if(typeof openMenu === 'function') openMenu(); 
-}
 
 
 
@@ -5709,20 +5618,6 @@ function closeCheckinDone() {
 
 
 
-// 주소창 정리 함수
-function cleanUrlAndGo(r) {
-    // 출결 완료 후 checkin 파라미터만 제거, room은 유지하되 히스토리 교체
-    // → 다음 QR 스캔 시 새 URL로 init() 재실행되도록 room 파라미터 제거
-    if (window.location.search.includes('checkin=true')) {
-        // checkin URL → 깨끗한 URL로 실제 이동 (init() 재실행 보장)
-        location.replace(window.location.pathname + `?room=${r}`);
-    } else {
-        window.history.replaceState({}, '', window.location.pathname + `?room=${r}`);
-        if(document.getElementById('landingPage')) document.getElementById('landingPage').style.display = 'none';
-        if(document.getElementById('mainApp')) document.getElementById('mainApp').style.display = 'flex';
-        startPresence();
-    }
-}
 
 
 
@@ -6507,33 +6402,6 @@ body.kac-panel-on #menuModal > .menu-box { transition: none !important; }
     syncFlag();
   }
 
-  // 닫기 함수 래핑: 슬라이드 아웃 → 원래 닫기 실행
-  function wrapClose(name, modalId){
-    var orig = window[name]; if(typeof orig!=='function') return;
-    if(orig._kacWrapped) return;
-    var wrapped = function(){
-      var self=this, args=arguments;
-      var m=document.getElementById(modalId);
-      var box = m && (m.querySelector('.menu-box') || m.querySelector(':scope > div'));
-      if(!m || m.style.display==='none' || !box){ return orig.apply(self,args); }
-      if(box._kacClosing){ return; }
-      box._kacClosing = true;
-      box.style.animation='none'; box.style.willChange='transform'; box.style.overflow='hidden';
-      void box.offsetWidth;
-      requestAnimationFrame(function(){
-        box.style.transition = EASE;
-        box.style.transform = 'translateX(110%)';
-      });
-      setTimeout(function(){
-        box.style.transform=''; box.style.transition=''; box.style.animation=''; box.style.overflow=''; box.style.willChange='';
-        box._kacClosing=false;
-        try{ orig.apply(self,args); }catch(e){ if(m) m.style.display='none'; }
-        syncFlag();
-      }, 330);
-    };
-    wrapped._kacWrapped = true;
-    window[name] = wrapped;
-  }
 
   function install(){
     watch();
