@@ -11889,7 +11889,7 @@ ui._fitMorePanelToViewport = function(){
   p.style.setProperty('right','0','important');                       // 우측 끝 밀착
   p.style.setProperty('height',(window.innerHeight/zoom)+'px','important');
   p.style.setProperty('min-height','0','important');
-  p.style.setProperty('border-radius','0','important');               // 각진 모서리 (좌측과 통일)
+  p.style.setProperty('border-radius','20px 0 0 20px','important');    // 안쪽(좌측) 모서리만 20px 라운드 — 좌측 사이드바(0 20px 20px 0)의 거울 대칭
 };
 ui.openMorePanel = function(){
   var p=document.getElementById('moreMenuPanel'), t=document.getElementById('moreToggleTab'), b=document.getElementById('moreMenuBackdrop'), ic=document.getElementById('moreToggleIcon');
