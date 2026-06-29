@@ -1649,8 +1649,37 @@ body.night-mode .badge-idle {
     box-shadow: none !important;
 }
 
+/* [추가] 입교안내(가이드) 우측 레일도 수강생 현황처럼 항상 우측 세로 고정 (1480px 이하에서 하단으로 내려가지 않게) */
+#view-guide .card-rail-wrap{
+    position:relative !important;
+    overflow:visible !important;
+}
 #view-guide .card-rail-wrap .side-rail{
-    top:clamp(96px,18vh,190px);
+    position:absolute !important;
+    left:calc(100% + 16px) !important;
+    top:clamp(96px,18vh,190px) !important;
+    display:flex !important;
+    flex-direction:column !important;
+    gap:11px !important;
+    margin:0 !important;
+    width:auto !important;
+    max-width:none !important;
+    justify-content:flex-start !important;
+}
+#view-guide .card-rail-wrap .side-rail-btn{
+    flex-direction:column !important;
+    width:72px !important;
+    min-width:72px !important;
+    padding:14px 6px !important;
+    border-radius:18px !important;
+    gap:7px !important;
+    box-shadow:0 8px 22px rgba(15,23,42,.10) !important;
+}
+#view-guide .card-rail-wrap .side-rail-ic{
+    width:42px !important;
+    height:42px !important;
+    border-radius:13px !important;
+    font-size:18px !important;
 }
 
 
@@ -3004,12 +3033,15 @@ body.night-mode .header-room-badge { background-color: #003366 !important; borde
     white-space: nowrap;
 }
 
-.floating-home-btn i {
+.floating-home-btn i,
+.floating-home-btn svg {
     flex: 0 0 60px;
     width: 60px;
+    height: 60px;
+    display: block;
     text-align: center;
     font-size: 24px;
-    line-height: 1;
+    line-height: 60px;
 }
 
 .floating-home-btn span {

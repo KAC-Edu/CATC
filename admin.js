@@ -3534,6 +3534,25 @@ openQrModal: function() {
         if (m) m.style.display = 'none';
     },
 
+    // [추가] 수강생 현황 '명단 관리' 설정 드롭다운 토글 (바깥 클릭 시 자동 닫힘)
+    toggleStuSettings: function(e) {
+        if (e) e.stopPropagation();
+        const m = document.getElementById('stuSettingsMenu');
+        if (!m) return;
+        const show = (m.style.display === 'none' || !m.style.display);
+        m.style.display = show ? 'block' : 'none';
+        if (show) {
+            const close = function(ev) {
+                const btn = document.getElementById('stuSettingsBtn');
+                if (!m.contains(ev.target) && !(btn && btn.contains(ev.target))) {
+                    m.style.display = 'none';
+                    document.removeEventListener('click', close);
+                }
+            };
+            setTimeout(function(){ document.addEventListener('click', close); }, 0);
+        }
+    },
+
     openStudentManual: function() {
         const modal = document.getElementById('studentManualModal');
         if (modal) modal.style.display = 'flex';
@@ -7413,17 +7432,18 @@ init: function() {
             if (hasContent) { pr._name = name; slot.profile = pr; } else { slot.profile = null; }
         } catch (e) { slot.profile = null; }
     },
-    _hasProfile: function() { return true; },
+    _hasProfile: function() { const s = guideMgr._slot(); return !!(s && s.profile); },
     _hasQR: function() { return false; },
     _hasManual: function() { return false; },
-    _extras: function() { return 1; },
+    _extras: function() { return guideMgr._hasProfile() ? 1 : 0; },   // 프로필 등록 시에만 +1페이지
     _qrPageNum: function() { return -1; },
     _manualPageNum: function() { return -1; },
     _vtotal: function() { const s = guideMgr._slot(); if (!s.pdfDoc) return 0; return s.pdfDoc.numPages + guideMgr._extras(); },
-    _isProfilePage: function(v) { return v === 2; },
+    _isProfilePage: function(v) { return guideMgr._hasProfile() && v === 2; },   // 프로필 미등록이면 프로필 페이지 없음
     _isQRPage: function(v) { return false; },
     _isManualPage: function(v) { return false; },
     _toPdfPage: function(v) {
+        if (!guideMgr._hasProfile()) return Math.max(1, v);   // 프로필 미등록: 가상 페이지 = 실제 PDF 페이지 (1:1)
         if (v <= 1) return 1;                       // 1페이지: PDF 원본 표지
         if (v === 2) return null;                   // 2페이지: 담임교수 프로필
         return v - 1;                               // 3페이지부터 PDF 원본 2P
@@ -11693,7 +11713,14 @@ ui.confirmRouletteLeader = function(){
       '<button class="hex-center" type="button" title="리모컨 메뉴 설정"><i class="fa-solid fa-sliders"></i><span>설정</span></button></div>';
 
     host.querySelectorAll('.hex-key').forEach(function(button){
-      button.addEventListener('click', function(){ ui.setMode(button.dataset.mode); });
+      button.addEventListener('click', function(){
+        var m = button.dataset.mode;
+        ui.setMode(m);
+        // OTP출결은 출결관리(공식 E-HRD QR)가 아닌 'OTP 자체출결' 탭으로 바로 전환
+        if (m === 'attendance') {
+          setTimeout(function(){ try { ui.toggleAttendanceMode('internal'); } catch(e){} }, 80);
+        }
+      });
     });
     host.querySelector('.hex-center').addEventListener('click', openSettings);
     bindDrag(host);
@@ -11845,13 +11872,12 @@ ui._fitMorePanelToViewport = function(){
   var p=document.getElementById('moreMenuPanel');
   if(!p) return;
   var zoom=parseFloat(getComputedStyle(document.documentElement).zoom)||1;
-  var inset=8/zoom;
-  p.style.setProperty('width',(244/zoom)+'px','important');
-  p.style.setProperty('top',inset+'px','important');
-  p.style.setProperty('right',inset+'px','important');
-  p.style.setProperty('height',Math.max(320,(window.innerHeight-24)/zoom)+'px','important');
+  p.style.setProperty('width',(300/zoom)+'px','important');          // 좌측 사이드바와 동일 폭
+  p.style.setProperty('top','0','important');                         // 전체 높이 (좌측과 통일)
+  p.style.setProperty('right','0','important');                       // 우측 끝 밀착
+  p.style.setProperty('height',(window.innerHeight/zoom)+'px','important');
   p.style.setProperty('min-height','0','important');
-  p.style.setProperty('border-radius',(18/zoom)+'px','important');
+  p.style.setProperty('border-radius','0','important');               // 각진 모서리 (좌측과 통일)
 };
 ui.openMorePanel = function(){
   var p=document.getElementById('moreMenuPanel'), t=document.getElementById('moreToggleTab'), b=document.getElementById('moreMenuBackdrop'), ic=document.getElementById('moreToggleIcon');
@@ -11859,7 +11885,7 @@ ui.openMorePanel = function(){
   ui._fitMorePanelToViewport();
   p.classList.add('more-open'); p.style.transform='translateX(0)';
   if(b) b.style.display='block';
-  if(t) t.style.right=((p.offsetWidth||244)+8)+'px';
+  if(t) t.style.right=((p.offsetWidth||300))+'px';
   if(ic) ic.className='fa-solid fa-chevron-right';
 };
 ui.closeMorePanel = function(){

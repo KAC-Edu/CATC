@@ -551,7 +551,7 @@ body.in-course #moreToggleTab{ display:flex !important; }
     <span>메뉴</span>
 </div>
 <div id="moreMenuBackdrop" onclick="ui.closeMorePanel()" style="display:none; position:fixed; inset:0; background:rgba(15,23,42,.28); z-index:6000;"></div>
-<div id="moreMenuPanel" style="position:fixed; top:12px; right:8px; height:calc(100vh - 24px); width:244px; max-width:76vw; background:#fff; border-radius:18px; box-shadow:-14px 0 44px rgba(15,23,42,.22); z-index:6001; transform:translateX(calc(100% + 24px)); transition:transform .34s cubic-bezier(.22,1,.36,1); display:flex; flex-direction:column; padding:14px 10px calc(14px + env(safe-area-inset-bottom)); overflow-y:auto;">
+<div id="moreMenuPanel" style="position:fixed; top:0; right:0; height:var(--app-h,100vh); width:var(--sidebar-width,300px); max-width:86vw; background:#fff; border-radius:0; border-left:1px solid #e7ecf3; box-shadow:-14px 0 44px rgba(15,23,42,.16); z-index:6001; transform:translateX(100%); transition:transform .34s cubic-bezier(.22,1,.36,1); display:flex; flex-direction:column; padding:20px 16px calc(20px + env(safe-area-inset-bottom)); overflow-y:auto;">
     <div style="display:flex; align-items:center; justify-content:space-between; padding:6px 8px 12px; border-bottom:1px solid #eef2f7; margin-bottom:8px;">
         <span style="font-size:16px; font-weight:900; color:#0f172a;"><i class="fa-solid fa-ellipsis" style="color:#6366f1; margin-right:6px;"></i> 더보기</span>
         <button onclick="ui.closeMorePanel()" aria-label="닫기" style="width:34px; height:34px; border:none; border-radius:50%; background:#f1f5f9; color:#475569; font-size:18px; cursor:pointer;">&times;</button>
@@ -1670,6 +1670,25 @@ body.in-course #moreToggleTab{ display:flex !important; }
                 <span style="color: #cbd5e1; font-weight: 400;">|</span>
                 <span>실시간 업데이트 중</span>
             </div>
+            <!-- [추가] 명단 관리 설정 (기어) — 클릭 시 하단 버튼들을 드롭다운으로 노출 -->
+            <div style="position:relative;">
+                <button id="stuSettingsBtn" onclick="ui.toggleStuSettings(event)" title="명단 관리" style="width:32px; height:32px; border-radius:50%; border:1px solid #e2e8f0; background:#fff; color:#475569; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:13px; box-shadow:0 2px 6px rgba(15,23,42,.06); transition:background .15s, color .15s;">
+                    <i class="fa-solid fa-gear"></i>
+                </button>
+                <div id="stuSettingsMenu" style="display:none; position:absolute; top:42px; right:0; width:300px; background:#fff; border:1px solid #e9eef5; border-radius:14px; box-shadow:0 16px 44px rgba(15,23,42,.20); padding:12px; z-index:60; text-align:left;">
+                    <div style="font-size:11px; font-weight:900; color:#94a3b8; letter-spacing:.3px; padding:2px 4px 10px;">명단 관리</div>
+                    <input type="file" id="studentFile" accept=".txt" style="display:none;" onchange="dataMgr.uploadStudentNames(this)">
+                    <label for="studentFile" style="display:flex; align-items:center; justify-content:center; gap:8px; background:#003366; color:#fff; padding:11px; border-radius:10px; font-weight:800; cursor:pointer; font-size:14px; margin-bottom:8px;">
+                        <i class="fa-solid fa-file-import"></i> 예정 명단(.txt) 업로드
+                    </label>
+                    <button onclick="dataMgr.downloadStudentSample()" style="width:100%; display:flex; align-items:center; justify-content:center; gap:8px; background:#f1f5f9; color:#475569; border:1px solid #cbd5e1; padding:10px; border-radius:10px; font-weight:700; cursor:pointer; font-size:13px; margin-bottom:8px;">
+                        <i class="fa-solid fa-download"></i> 양식 샘플 다운
+                    </button>
+                    <button onclick="dataMgr.clearExpectedList()" style="width:100%; display:flex; align-items:center; justify-content:center; gap:8px; background:#fff; color:#ef4444; border:1px solid #fee2e2; padding:10px; border-radius:10px; font-weight:700; cursor:pointer; font-size:13px;">
+                        <i class="fa-solid fa-trash-can"></i> 명단 전체 비우기 (운영부·지원부 포함)
+                    </button>
+                </div>
+            </div>
         </div>
 
         <table>
@@ -1688,18 +1707,7 @@ body.in-course #moreToggleTab{ display:flex !important; }
             </tbody>
         </table>
         
-        <div class="list-upload-footer" style="display: flex; justify-content: center; gap: 12px; margin-top: 30px; padding-top: 20px; border-top: 1px dashed #e2e8f0;">
-            <input type="file" id="studentFile" accept=".txt" style="display:none;" onchange="dataMgr.uploadStudentNames(this)">
-<button class="btn-list-clear" onclick="dataMgr.downloadStudentSample()" style="background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; padding: 10px 20px; border-radius: 12px; font-weight: 700; cursor: pointer; font-size: 13px;">
-    <i class="fa-solid fa-download"></i> 양식 샘플 다운
-</button>
-            <label for="studentFile" class="btn-list-upload" style="background: #003366; color: white; padding: 10px 25px; border-radius: 12px; font-weight: 800; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; font-size: 14px;">
-                <i class="fa-solid fa-file-import"></i> 예정 명단(.txt) 업로드
-            </label>
-            <button class="btn-list-clear" onclick="dataMgr.clearExpectedList()" style="background: #ffffff; color: #ef4444; border: 1px solid #fee2e2; padding: 10px 20px; border-radius: 12px; font-weight: 700; cursor: pointer; font-size: 13px;">
-                <i class="fa-solid fa-trash-can"></i> 명단 전체 비우기 (운영부·지원부 포함)
-            </button>
-        </div>
+        <!-- [이동] 하단 명단 관리 버튼들은 상단 우측 설정(기어) 메뉴(#stuSettingsMenu)로 이동됨 -->
     </div>
         <div class="side-rail">
             <div class="side-rail-btn" onclick="ui.openStudentMap()" title="공항별 입교 현황 지도">
@@ -2332,7 +2340,10 @@ function setupAcc(btn){
 
 <!-- [추가] 우측 하단 플로팅 홈 버튼 -->
     <div id="floatingHomeBtn" class="floating-home-btn" onclick="ui.goHomeSmart()" title="홈으로 (이전 화면)" aria-label="홈으로">
-        <i class="fa-solid fa-arrow-turn-up fa-rotate-180"></i>
+        <svg viewBox="0 0 60 60" fill="none" stroke="currentColor" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M22 44 V26 a8 8 0 0 1 16 0 V44"/>
+            <path d="M30 37 L38 44 L46 37"/>
+        </svg>
         <span>홈으로</span>
     </div>
 
