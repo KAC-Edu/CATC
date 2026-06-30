@@ -2,7 +2,7 @@
 <!-- 이 플랫폼(admin_coord.html / 교육운영부) 수정상태 플래그. 값은 [수정중] 또는 [수정안하는중] 두 가지. -->
 <!-- 작업 시작 시 → 수정중 / 작업 완료 시 → 수정안하는중. 다른 플랫폼은 이 말머리를 보고 연동·수정 가능 여부 판단. -->
 <!-- [외부변경 · 카카오채널연동 2026-06-25] 포털(portal.html/7777) 경유 폐지 → 페이지 직접진입 시 접속코드(catc1234) 게이트 추가, 포털 리다이렉트/종료이동 제거. version C13→D13. 기능 로직은 미변경. -->
-<!-- last-updated: 2026-06-30 / version: D44 (와이드 모니터: 본문 max-width 1240→1560px, 가운데 정렬 유지하며 넓게 활용) -->
+<!-- last-updated: 2026-06-30 / version: D45 (상단바 통계 센터정렬을 모든 폭에 적용→와이드에서도 가운데. 본문 max-width 1560) -->
 <!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -1957,8 +1957,8 @@ body.pc-mode .coord-brand{ gap:13px !important; }
 body.pc-mode .coord-brand-mark{ width:48px !important; height:48px !important; border-radius:14px !important; }
 body.pc-mode .coord-brand-mark i{ font-size:26px !important; }
 body.pc-mode .coord-brand-title{ font-size:26px !important; font-weight:950 !important; }
-/* [반응형] 좁은 화면(<1500px): 좌측 브랜드·우측 시계 숨기고, 가운데 메뉴(통계)는 3열 그리드(1fr auto 1fr)의 중앙칸에 두어 항상 화면 중앙 정렬. 안 들어가면 가로 스크롤. (사용자요청: 항상 센터정렬) */
-@media (max-width:1500px){
+/* [센터정렬] 가운데 메뉴(통계)는 3열 그리드(1fr auto 1fr)의 중앙칸 → 모든 폭(와이드 포함)에서 항상 화면 중앙. 안 들어가면 가로 스크롤. (사용자요청: 와이드에서도 센터) */
+@media (min-width:0px){
   html body.pc-mode .coord-brand{ display:flex !important; }
   html body.pc-mode #coordHeaderClock, html body.pc-mode .coord-clock{ display:flex !important; }
   html body.pc-mode .app-header{ grid-template-columns:minmax(0,1fr) auto minmax(0,1fr) !important; }
@@ -8906,7 +8906,7 @@ window.addEventListener('load', function(){
 });
 </script>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:6px;bottom:5px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;font-weight:800;line-height:1;letter-spacing:.6px;color:#fff;background:rgba(15,23,42,.85);padding:4px 8px;border-radius:6px;pointer-events:none;user-select:none;box-shadow:0 2px 6px rgba(0,0,0,.3);">D44</div>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:6px;bottom:5px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;font-weight:800;line-height:1;letter-spacing:.6px;color:#fff;background:rgba(15,23,42,.85);padding:4px 8px;border-radius:6px;pointer-events:none;user-select:none;box-shadow:0 2px 6px rgba(0,0,0,.3);">D45</div>
 <script>
 /* ===== [공용] 종료된 과정 자동 정리 (모든 플랫폼 공통) — 종료일 지난 방을 다음날 미개설로 비움. 브라우저별 하루 1회 ===== */
 window.kacExpireEndedCourses = async function(){
