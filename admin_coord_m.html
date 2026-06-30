@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-  <!-- last-updated: 2026-06-30 / version: M6 (과정상세 공지발송 카드 접이식: 평시 접힘·가로바 탭하면 펼침 → 화면에 딱 맞게) -->
+  <!-- last-updated: 2026-06-30 / version: M7 (퇴교차량 신청자·외출외박을 정렬표로: 퇴교차량=연번·성명·소속·신청현황 / 외출외박=연번·성함·연락처·외출외박·상태) -->
   <!-- ※ 모바일 개발자 파일이나 운영부 요청으로 디에스장(admin_coord 담당)이 장소선택 모달만 개선. 기능로직(setEduSel/EDU 동기화)은 동일 유지 -->
   <meta charset="UTF-8" />
   <script>
@@ -212,6 +212,11 @@
     .m-shuttle-person .mp-name{ font-size:16px; font-weight:950; color:#0f172a; }
     .m-shuttle-person .mp-dest{ padding:5px 10px; border-radius:999px; background:#eff6ff; color:#2563eb; font-size:12px; font-weight:900; white-space:nowrap; }
     .m-shuttle-person .mp-meta{ margin-top:7px; color:#64748b; font-size:12.5px; font-weight:700; display:flex; gap:8px; flex-wrap:wrap; }
+    .m-tbl{ width:100%; border-collapse:collapse; font-size:13px; }
+    .m-tbl th{ background:#f1f5f9; color:#475569; font-weight:800; text-align:left; padding:9px 9px; border-bottom:2px solid #e2e8f0; white-space:nowrap; font-size:12px; }
+    .m-tbl td{ padding:9px 9px; border-bottom:1px solid #f1f5f9; color:#1e293b; font-weight:700; white-space:nowrap; }
+    .m-tbl tr:last-child td{ border-bottom:none; }
+    .m-tbl .num{ text-align:center; color:#94a3b8; width:42px; }
   </style>
 </head>
 <body>
@@ -448,17 +453,20 @@ function updateDetail(){
   var outs=outingsToday(room);
   if(!outs.length){ document.getElementById('dOuting').innerHTML='<div class="empty" style="padding:22px 0;">금일 외출·외박 신청이 없습니다.</div>'; }
   else{
-    document.getElementById('dOuting').innerHTML=outs.map(function(a){
-      var kind=(a.type==='overnight')?'overnight':'outing';
-      var klabel=(a.type==='group_outing')?'단체외출':(a.type==='outing')?'외출':'외박';
-      var stat = a.held?'<span class="ost" style="color:#dc2626;">미복귀</span>'
-        : (a.returned&&a.autoReturn)?'<span class="ost" style="color:#0891b2;">복귀완료(자동)</span>'
-        : a.returned?'<span class="ost" style="color:#16a34a;">복귀완료</span>'
-        : a.confirmed?'<span class="ost" style="color:#2563eb;">서명완료</span>'
-        : '<span class="ost" style="color:#94a3b8;">대기</span>';
-      var tm=a.timestamp?new Date(a.timestamp).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}):'-';
-      return '<div class="out-row"><span class="on">'+esc(a.name||'-')+'</span><span class="ot '+kind+'">'+klabel+'</span>'+stat+'<span class="otime">'+tm+'</span></div>';
-    }).join('');
+    var ostu=(room.students)||{}; var phoneByName={}; Object.keys(ostu).forEach(function(k){ var ss=ostu[k]||{}; var nm=String(ss.name||'').trim(); if(nm) phoneByName[nm]=ss.phone||''; });
+    document.getElementById('dOuting').innerHTML='<div style="overflow-x:auto;"><table class="m-tbl"><thead><tr><th class="num">연번</th><th>성함</th><th>연락처</th><th>외출/외박</th><th>상태</th></tr></thead><tbody>'
+      +outs.map(function(a,i){
+        var klabel=(a.type==='group_outing')?'단체외출':(a.type==='outing')?'외출':'외박';
+        var kcol=(a.type==='overnight')?'#dc2626':'#ea580c';
+        var stat = a.held?'<span style="color:#dc2626;font-weight:900;">미복귀</span>'
+          : (a.returned&&a.autoReturn)?'<span style="color:#0891b2;">복귀(자동)</span>'
+          : a.returned?'<span style="color:#16a34a;">복귀완료</span>'
+          : a.confirmed?'<span style="color:#2563eb;">서명완료</span>'
+          : '<span style="color:#94a3b8;">대기</span>';
+        var ph=a.phone||phoneByName[String(a.name||'').trim()]||'-';
+        return '<tr><td class="num">'+(i+1)+'</td><td>'+esc(a.name||'-')+'</td><td>'+esc(ph)+'</td><td style="color:'+kcol+';font-weight:900;">'+klabel+'</td><td>'+stat+'</td></tr>';
+      }).join('')
+      +'</tbody></table></div>';
   }
   renderHist(room);
 }
@@ -474,14 +482,11 @@ function showMobileShuttleList(){
   if(!list.length){
     box.innerHTML='<div class="empty" style="padding:34px 0;">신청자가 없습니다.</div>';
   } else {
-    box.innerHTML='<div style="font-size:13px;font-weight:800;color:#64748b;margin:0 2px 8px;">'+esc(s.courseName||('ROOM #'+curRID))+' · 총 '+list.length+'명</div>'
-      +list.map(function(r,i){
-        var tm=r.timestamp?new Date(r.timestamp).toLocaleString('ko-KR',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'}):'-';
-        return '<div class="m-shuttle-person">'
-          +'<div class="mp-top"><div class="mp-name">'+(i+1)+'. '+esc(r.name||'-')+'</div><div class="mp-dest">'+esc(r.typeText||r.type||'-')+'</div></div>'
-          +'<div class="mp-meta"><span><i class="fa-solid fa-phone"></i> '+esc(r.phone||'-')+'</span><span><i class="fa-regular fa-clock"></i> '+esc(tm)+'</span></div>'
-          +'</div>';
-      }).join('');
+    var stu=(room.students)||{}; var deptByName={}; Object.keys(stu).forEach(function(k){ var ss=stu[k]||{}; var nm=String(ss.name||'').trim(); if(nm) deptByName[nm]=ss.dept||ss.department||''; });
+    box.innerHTML='<div style="font-size:13px;font-weight:800;color:#64748b;margin:0 2px 9px;">'+esc(s.courseName||('ROOM #'+curRID))+' · 총 '+list.length+'명</div>'
+      +'<div style="overflow-x:auto;"><table class="m-tbl"><thead><tr><th class="num">연번</th><th>성명</th><th>소속</th><th>신청현황</th></tr></thead><tbody>'
+      +list.map(function(r,i){ return '<tr><td class="num">'+(i+1)+'</td><td>'+esc(r.name||'-')+'</td><td>'+esc(deptByName[String(r.name||'').trim()]||'-')+'</td><td style="color:#2563eb;font-weight:900;">'+esc(r.typeText||r.type||'-')+'</td></tr>'; }).join('')
+      +'</tbody></table></div>';
   }
   document.getElementById('mShuttleOv').classList.add('open');
 }

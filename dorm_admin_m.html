@@ -146,7 +146,7 @@
 
 </div>
 
-<div id="__catcVer" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">지원M vD</div>
+<div id="__catcVer" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">지원M vE</div>
 
 <script src="config.js?v=b260620c"></script>
 <script>
@@ -259,6 +259,7 @@ function toggleFloor(key){ if(_openFloor.has(key))_openFloor.delete(key); else _
 .dorm-detail-table th:nth-child(2),.dorm-detail-table td:nth-child(2){width:13%}
 .dorm-detail-table th:nth-child(3),.dorm-detail-table td:nth-child(3){width:47%;text-align:left}
 .dorm-detail-table th:nth-child(4),.dorm-detail-table td:nth-child(4){width:20%}
+.dorm-detail-table tr.na-row td{background:#fafafb}
 .tot-card{background:#fff!important;border-color:#dbeafe!important;color:#0f4c81!important}
 </style>
 <script>
@@ -269,9 +270,8 @@ function toggleFloor(key){ if(_openFloor.has(key))_openFloor.delete(key); else _
     var occupied=occByRoom(), grouped={};
     Object.keys(ROOMS).forEach(function(id){
       var room=ROOMS[id]||{};
-      if(isNoAssign(room)) return;
       var building=room.building||'기타';
-      (grouped[building]=grouped[building]||[]).push({id:id,room:room,people:occupied[id]||[]});
+      (grouped[building]=grouped[building]||[]).push({id:id,room:room,people:occupied[id]||[],na:isNoAssign(room)});
     });
 
     var totalPeople=Object.keys(STUDENTS).filter(function(key){return STUDENTS[key]&&STUDENTS[key].name;}).length;
@@ -287,11 +287,15 @@ function toggleFloor(key){ if(_openFloor.has(key))_openFloor.delete(key); else _
       var rooms=grouped[building].sort(function(a,b){
         return String(a.room.no||'').localeCompare(String(b.room.no||''),undefined,{numeric:true});
       });
-      var used=rooms.filter(function(item){return item.people.length;}).length;
-      var empty=rooms.length-used;
+      var assignable=rooms.filter(function(item){return !item.na;});
+      var used=assignable.filter(function(item){return item.people.length;}).length;
+      var empty=assignable.length-used;
       var people=rooms.reduce(function(total,item){return total+item.people.length;},0);
       var color=DORM_COLORS[building]||'#64748b';
       var detail=rooms.map(function(item){
+        if(item.na){
+          return '<tr class="na-row"><td>'+esc(item.room.no||item.id)+'호</td><td>'+(item.room.floor||'-')+'층</td><td class="names"><span style="color:#94a3b8;font-weight:700">배정제외</span></td><td><span style="color:#cbd5e1">–</span></td></tr>';
+        }
         var names=item.people.length
           ? item.people.map(function(person){
               return esc(person.name||'-')+(person.gender?(' '+(person.gender==='F'?'(여)':'(남)')):'');
@@ -301,7 +305,7 @@ function toggleFloor(key){ if(_openFloor.has(key))_openFloor.delete(key); else _
       }).join('');
       return '<section class="dorm-table-card" id="dormAcc'+index+'">'+
         '<button class="dorm-acc-bar" onclick="toggleDormMobileAcc('+index+')"><span class="dot" style="background:'+color+'"></span><b>'+esc(building)+'</b><span class="total">'+people+'명</span><i class="fa-solid fa-chevron-down"></i></button>'+
-        '<table class="dorm-status-table"><thead><tr><th>사용 방</th><th>빈 방</th><th>전체 방</th><th>배정 인원</th></tr></thead><tbody><tr><td>'+used+'</td><td style="color:#16a34a">'+empty+'</td><td>'+rooms.length+'</td><td style="color:#2563eb">'+people+'명</td></tr></tbody></table>'+
+        '<table class="dorm-status-table"><thead><tr><th>사용 방</th><th>빈 방</th><th>전체 방</th><th>배정 인원</th></tr></thead><tbody><tr><td>'+used+'</td><td style="color:#16a34a">'+empty+'</td><td>'+assignable.length+'</td><td style="color:#2563eb">'+people+'명</td></tr></tbody></table>'+
         '<div class="dorm-detail-wrap"><table class="dorm-detail-table"><thead><tr><th>호실</th><th>층</th><th>상세 명단</th><th>현황</th></tr></thead><tbody>'+detail+'</tbody></table></div></section>';
     }).join('');
   }

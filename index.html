@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<!-- PLATFORM_EDIT_STATUS: 수정아닙니다 | VERSION: J77 J77 J77 J77 J77 | 2026-06-30 -->
+<!-- PLATFORM_EDIT_STATUS: 수정아닙니다 | VERSION: J79 J79 J79 J79 J79 | 2026-06-30 -->
 <!-- ══════════════════ [편집상태 / EDIT-STATUS] ══════════════════
      STATUS : 수정아닙니다
      FILE   : index.html (교육생)
-     VERSION: J77 J77 J77 J77 J77
-     UPDATED: 2026-06-30  (vJ77: 입교카드·출결완료 페이지에 과정담임 표시 + 전화아이콘→통화확인 팝업→통화 기능(professorProfiles 연락처 사용). | vJ76: 외출외박 현황화면 상단바 위 내용넘침 방지(flex-start), 복귀완료보고·신청취소 한 줄 배치. | vJ75: 입교문구 '항공기술훈련원 입교', 정보수정 시 개인정보동의 숨김, 외출외박 새로작성 빈양식, 소속 항공기술훈련원 표기, 외출외박 완료→수위실 현황화면 통일. | vJ74: 창닫기 기능(closeStudentWindow) 제거 — 카카오 채널 채팅창 닫기로 대체. 디버그 console.log 2종 정리. | vJ73: 미사용 함수 6종 제거 — exitApp·cleanUrlAndGo·checkDinnerTime·loadGroupCandidates·openRoomMove·wrapClose. 카카오 채널 바로가기 도입으로 불필요해진 진입/종료 관련 죽은 코드 정리. 맛집 기능 코드는 유지.)
+     VERSION: J79 J79 J79 J79 J79
+     UPDATED: 2026-06-30  (vJ79: 담임 글자크기 다른행과 완전통일(display:flex 제거), 신청취소 후 재초기화(이전정보 안내 복원), 패스트패스 연락처(STEP3)까지 항상 표시. | vJ78: 담임 글자크기 다른행과 통일(span 제거), 담당교수 실시간 반영(.on 리스너). | vJ77: 입교카드·출결완료 페이지에 과정담임 표시 + 전화아이콘→통화확인 팝업→통화 기능(professorProfiles 연락처 사용). | vJ76: 외출외박 현황화면 상단바 위 내용넘침 방지(flex-start), 복귀완료보고·신청취소 한 줄 배치. | vJ75: 입교문구 '항공기술훈련원 입교', 정보수정 시 개인정보동의 숨김, 외출외박 새로작성 빈양식, 소속 항공기술훈련원 표기, 외출외박 완료→수위실 현황화면 통일. | vJ74: 창닫기 기능(closeStudentWindow) 제거 — 카카오 채널 채팅창 닫기로 대체. 디버그 console.log 2종 정리. | vJ73: 미사용 함수 6종 제거 — exitApp·cleanUrlAndGo·checkDinnerTime·loadGroupCandidates·openRoomMove·wrapClose. 카카오 채널 바로가기 도입으로 불필요해진 진입/종료 관련 죽은 코드 정리. 맛집 기능 코드는 유지.)
      ─ 규칙: 수정 시작 시 STATUS를 '수정중'으로, 완료 시 '수정아닙니다'로 변경하고 버전을 5회 반복 표기.
             '수정중'이면 다른 플랫폼은 연동 변경을 보류/협의 후 진행.
 ═══════════════════════════════════════════════════════════════ -->
@@ -4175,13 +4175,13 @@ function selectAdminType(type) {
     fastPassAdmin();
 }
 
-// [패스트패스] 카카오 단일화면 진입 시, 소속·연락처가 이미 있으면 Step2(소속)·Step3(연락처) 생략 → 바로 Step4(행선지)
+// [패스트패스] 카카오 진입 시 소속이 이미 있으면 Step2(소속)만 생략 → Step3(연락처)로. 연락처는 항상 확인.
 function fastPassAdmin(){
   try{
     if(!document.body.classList.contains('kac-locked')) return;   // 카카오 진입에서만 적용
     var dept = ((window._myDept||'').trim()) || (((document.getElementById('userDept')||{}).value)||'').trim();
     var ph   = (((document.getElementById('fullPhone')||{}).value)||'').replace(/\D/g,'');
-    if(dept && ph.length>=9){ showAdminStep(4); }
+    if(dept && ph.length>=9){ showAdminStep(3); }
   }catch(e){}
 }
 
@@ -4493,9 +4493,8 @@ async function cancelAdminAction() {
 
         showKacAlert("신청이 취소되었습니다. 다시 작성하실 수 있습니다.");
         
-        // 3. UI를 다시 신청 양식으로 전환
-        document.getElementById('adminStatusArea').style.display = 'none';
-        document.getElementById('adminActionForm').style.display = 'flex';
+        // 3. UI 재초기화: 신선한 신청 화면(이전정보 불러오기 안내 포함)으로 복귀
+        openAdminAction();
     } catch (e) {
         showKacAlert("취소 처리 중 오류가 발생했습니다.");
     }
@@ -7526,24 +7525,33 @@ body.kac-noanim #noticeModal > .menu-box, body.kac-noanim #surveyModal > .menu-b
   function renderHomeroom(el, prof, phone){
     if(!el) return;
     var name=_hrEsc(prof);
-    var html='<span style="font-weight:900;color:#0f172a;">'+name+'</span>';
+    var html=name;   // 이름은 부모 <b> 스타일(다른 행과 동일)을 그대로 따른다
     var p=String(phone||'').replace(/[^0-9+]/g,'');
     if(p){
-      html+='<button type="button" class="kh-callbtn" data-phone="'+p+'" data-name="'+name+'" onclick="callHomeroom(this)" aria-label="담임에게 전화" style="margin-left:8px;width:34px;height:34px;border:none;border-radius:50%;background:#2563eb;color:#fff;font-size:14px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 4px 10px rgba(37,99,235,.32);flex-shrink:0;"><i class="fa-solid fa-phone"></i></button>';
+      html+='<button type="button" class="kh-callbtn" data-phone="'+p+'" data-name="'+name+'" onclick="callHomeroom(this)" aria-label="담임에게 전화" style="margin-left:8px;width:28px;height:28px;border:none;border-radius:50%;background:#2563eb;color:#fff;font-size:12px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;vertical-align:middle;box-shadow:0 3px 8px rgba(37,99,235,.30);"><i class="fa-solid fa-phone"></i></button>';
     }
     el.innerHTML=html;
   }
-  function loadHomeroom(room, el){
+  var _hrRef=null, _hrCb=null;
+  function loadHomeroom(room, el, live){
     if(!el) return;
     if(!room){ el.textContent='-'; return; }
     el.textContent='확인 중...';
-    firebase.database().ref('courses/'+room+'/status/professorName').once('value').then(function(s){
+    var handler=function(s){
       var prof=String((s&&s.val())||'').trim();
       if(!prof){ el.textContent='미지정'; return; }
       firebase.database().ref('system/professorProfiles/'+prof+'/phone').once('value').then(function(ps){
         renderHomeroom(el, prof, String((ps&&ps.val())||'').trim());
       }).catch(function(){ renderHomeroom(el, prof, ''); });
-    }).catch(function(){ el.textContent='-'; });
+    };
+    var ref=firebase.database().ref('courses/'+room+'/status/professorName');
+    if(live){
+      if(_hrRef && _hrCb){ try{ _hrRef.off('value', _hrCb); }catch(e){} }
+      _hrRef=ref; _hrCb=handler;
+      ref.on('value', handler, function(){ if(el) el.textContent='-'; });
+    } else {
+      ref.once('value').then(handler).catch(function(){ el.textContent='-'; });
+    }
   }
   window.callHomeroom=function(btn){
     try{
@@ -7572,7 +7580,7 @@ body.kac-noanim #noticeModal > .menu-box, body.kac-noanim #surveyModal > .menu-b
     }
     loadKakaoHomeDorm(nm, sb, eD);
     updateKakaoAttendanceButton(homeRoom);
-    loadHomeroom(homeRoom, document.getElementById('khProf'));
+    loadHomeroom(homeRoom, document.getElementById('khProf'), true);
     ov.style.display='flex';
   };
   function kakaoAttendanceDate(){
@@ -7830,7 +7838,7 @@ body.kac-noanim #noticeModal > .menu-box, body.kac-noanim #surveyModal > .menu-b
           '<div><span>이름</span><b id="khName">-</b></div>'+
           '<div><span>사번<br><small style="font-size:10px;color:#94a3b8;">(전화 뒷4)</small></span><b id="khSabun">-</b></div>'+
           '<div><span>생활관</span><b id="khDorm">확인 중...</b></div>'+
-          '<div><span>담임</span><b id="khProf" style="display:flex;align-items:center;">-</b></div>'+
+          '<div><span>담임</span><b id="khProf">-</b></div>'+
         '</div>'+
         '<button class="kh-edit" onclick="keduEditInfo()"><i class="fa-solid fa-pen-to-square"></i> 정보 수정하기</button>'+
         '<button class="kh-att" id="keduAttendBtn" onclick="startKakaoOtpAttendance()"><i class="fa-solid fa-keyboard"></i> 출결하기</button>'+
@@ -7910,7 +7918,7 @@ body.kac-noanim #noticeModal > .menu-box, body.kac-noanim #surveyModal > .menu-b
           '<div class="kap-row"><span>출결일자</span><b id="kapDate">-</b></div>'+
           '<div class="kap-row"><span>시각</span><b id="kapTime">-</b></div>'+
           '<div class="kap-row"><span>인증번호</span><b id="kapAuth">-</b></div>'+
-          '<div class="kap-row"><span>담임</span><b id="kapProf" style="display:flex;align-items:center;justify-content:flex-end;">-</b></div>'+
+          '<div class="kap-row"><span>담임</span><b id="kapProf">-</b></div>'+
           '<button class="kap-close" onclick="closeKakaoAttendanceProof()">확인</button>'+
         '</div></div>';
       document.body.appendChild(ap);
