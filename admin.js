@@ -7096,6 +7096,18 @@ const scheduleMgr = {
             const ts = snap.val();
             // 사진 없음(미업로드/삭제/과정 종료) → 이 PC 캐시도 정리 후 '내용 없음'
             if (!ts) { await this._idbDelete(room); if (state.room === room) this._renderPhoto(null); return; }
+            // [30분 자동 만료] 업로드 30분 경과 시 Firebase에서 자동 삭제 (저장 부담 경감)
+            if (Date.now() - Number(ts) > 1800000) {
+                firebase.database().ref(`courses/${room}/scheduleImage`).remove().catch(function () {});
+                await this._idbDelete(room);
+                if (state.room === room) this._renderPhoto(null);
+                return;
+            }
+            // 페이지가 열려 있는 동안 30분 시점에 삭제되도록 예약
+            if (scheduleMgr._expireTimer) clearTimeout(scheduleMgr._expireTimer);
+            scheduleMgr._expireTimer = setTimeout(function () {
+                firebase.database().ref(`courses/${room}/scheduleImage`).remove().catch(function () {});
+            }, (1800000 - (Date.now() - Number(ts))) + 2000);
             // 1) 이 PC 캐시가 최신이면 → Firebase에서 이미지 다시 받지 않고 캐시로 표시
             const cached = await this._idbGet(room);
             if (cached && cached.updatedAt === ts && cached.dataUrl) {
@@ -7531,7 +7543,23 @@ init: function() {
             if (gi.category) ci.category = gi.category;       // 기본값: 직무 일반
             if (gi.evaluation) ci.evaluation = gi.evaluation; // 기본값: 없음(근태10%)
         } catch (e) {}
-        try { const names = await ui._gatherRosterNames(room); ci.count = (names && names.length) || 0; } catch (e) {}
+        // 교육 인원 = 실제 입교완료(QR 입장) 인원 수 (수강생 현황의 '입교 완료'와 동일)
+        try {
+            const sSnap = await firebase.database().ref(`courses/${room}/students`).once('value');
+            const stu = sSnap.val() || {};
+            ci.count = new Set(Object.values(stu).filter(x => x && x.name && x.name !== 'undefined').map(x => String(x.name).trim())).size;
+        } catch (e) {}
+        // 교육 시간표 사진 존재 여부 (+ 업로드 30분 경과 시 자동 삭제로 Firebase 부담 경감)
+        slot.scheduleTs = 0;
+        try {
+            const tsSnap = await firebase.database().ref(`courses/${room}/scheduleImage/updatedAt`).once('value');
+            const ts = Number(tsSnap.val() || 0);
+            if (ts && (Date.now() - ts > 1800000)) {        // 30분 경과 → 삭제
+                firebase.database().ref(`courses/${room}/scheduleImage`).remove().catch(function () {});
+            } else {
+                slot.scheduleTs = ts;
+            }
+        } catch (e) {}
         slot.courseInfo = ci;
     },
 
@@ -7861,6 +7889,8 @@ init: function() {
             if (_profEl) _profEl.style.setProperty('display', kind === 'virtual' ? 'block' : 'none', 'important');
             var _rBtn = document.getElementById('guideRouletteBtn');   // 학생장 룰렛 버튼은 PDF 23p에서만 (아래 분기에서 다시 노출)
             if (_rBtn) _rBtn.style.display = 'none';
+            var _sBtn = document.getElementById('guideScheduleBtn');   // 교육시간표 버튼은 PDF 13p에서만
+            if (_sBtn) _sBtn.style.display = 'none';
         };
 
         // 이전 QR 실시간 명단 리스너 해제 (페이지 이동 시)
@@ -7975,6 +8005,9 @@ init: function() {
         // [학생장 룰렛] PDF 23페이지(학생장 선출)에서만 룰렛 버튼 노출
         var _rBtn = document.getElementById('guideRouletteBtn');
         if (_rBtn) _rBtn.style.display = (guideMgr._toPdfPage(num) === 23) ? 'inline-flex' : 'none';
+        // [교육 시간표] PDF 13페이지 + 시간표 사진 업로드된 과정에서만 버튼 노출
+        var _sBtn = document.getElementById('guideScheduleBtn');
+        if (_sBtn) _sBtn.style.display = (guideMgr._toPdfPage(num) === 13 && guideMgr._slot().scheduleTs) ? 'inline-flex' : 'none';
         if (guideMgr.isRendering) return;
         guideMgr.isRendering = true;
 
@@ -11790,6 +11823,24 @@ ui.openLeaderRouletteStage = async function(){
   try { await ui.openLeaderRoulette(); } catch(e){}
   var m = document.getElementById('leaderRouletteModal');
   if (m) m.classList.add('roulette-stage-bg');
+};
+// 입교안내 13p '교육시간표 보기' → 시간표 사진을 PDF 위에 화면맞춤으로 표출 (전체화면 대응 · 페이지 넘김 차단)
+ui.openScheduleView = async function(){
+  var room = state.room; if(!room) return;
+  var dataUrl = '';
+  try { var ds = await firebase.database().ref('courses/'+room+'/scheduleImage/dataUrl').once('value'); dataUrl = ds.val() || ''; } catch(e){}
+  if(!dataUrl){ if(ui.showAlert) ui.showAlert('등록된 교육 시간표 사진이 없습니다.'); return; }
+  var old = document.getElementById('guideScheduleModal'); if(old) old.remove();
+  var modal = document.createElement('div'); modal.id = 'guideScheduleModal';
+  modal.setAttribute('style','position:fixed;inset:0;z-index:9700;display:flex;align-items:center;justify-content:center;background:rgba(15,23,42,.82);padding:2.5vh 2.5vw;');
+  modal.innerHTML = '<img src="'+dataUrl+'" alt="교육 시간표" style="max-width:100%;max-height:100%;object-fit:contain;border-radius:10px;box-shadow:0 20px 60px rgba(0,0,0,.5);">'
+    + '<button id="guideScheduleClose" title="닫기" style="position:absolute;top:18px;right:22px;width:48px;height:48px;border:none;border-radius:50%;background:#fff;color:#334155;font-size:24px;cursor:pointer;box-shadow:0 6px 18px rgba(0,0,0,.3);">&times;</button>';
+  // PDF 페이지가 뒤에서 넘어가지 않도록 전파 차단
+  modal.addEventListener('click', function(e){ e.stopPropagation(); if(e.target === modal) modal.remove(); });
+  modal.addEventListener('contextmenu', function(e){ e.stopPropagation(); });
+  modal.addEventListener('pointerdown', function(e){ e.stopPropagation(); });
+  (document.fullscreenElement || document.webkitFullscreenElement || document.body).appendChild(modal);
+  var cb = document.getElementById('guideScheduleClose'); if(cb) cb.addEventListener('click', function(){ modal.remove(); });
 };
 ui._spacedKoreanName = function(name){
   return Array.from(String(name || '').replace(/\s+/g, '')).join(' ');

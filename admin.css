@@ -4417,6 +4417,17 @@ body.in-course #courseSmartRemote.hex-remote-v2{display:block;}
 #guideRouletteBtn:hover{ filter:brightness(1.08); transform:translateY(-2px); }
 @keyframes rouletteBtnPulse{ 0%,100%{box-shadow:0 8px 22px rgba(217,119,6,.45);} 50%{box-shadow:0 10px 32px rgba(245,158,11,.78);} }
 
+/* [교육 시간표] 입교안내 13p 로고 아래 시간표 보기 버튼 */
+#guideScheduleBtn{
+    position:absolute; top:13%; right:5%; z-index:8;
+    display:none; align-items:center; gap:8px;
+    padding:11px 20px; border:none; border-radius:50px; cursor:pointer;
+    background:linear-gradient(135deg,#2563eb,#1e40af); color:#fff;
+    font-size:clamp(13px,1.35vw,17px); font-weight:900; white-space:nowrap;
+    box-shadow:0 8px 22px rgba(37,99,235,.45);
+}
+#guideScheduleBtn:hover{ filter:brightness(1.08); transform:translateY(-2px); }
+
 /* 오디션 무대 배경 (학생장 룰렛을 입교안내에서 실행할 때) */
 .roulette-stage-bg{ background:radial-gradient(ellipse at 50% 116%, #3b0764 0%, #1e1b4b 44%, #0a0a18 100%) !important; }
 .roulette-stage-bg > div{ position:relative; z-index:2; }

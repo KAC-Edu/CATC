@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<!-- PLATFORM_EDIT_STATUS: 수정아닙니다 | VERSION: J79 J79 J79 J79 J79 | 2026-06-30 -->
+<!-- PLATFORM_EDIT_STATUS: 수정아닙니다 | VERSION: J80 J80 J80 J80 J80 | 2026-06-30 -->
 <!-- ══════════════════ [편집상태 / EDIT-STATUS] ══════════════════
      STATUS : 수정아닙니다
      FILE   : index.html (교육생)
-     VERSION: J79 J79 J79 J79 J79
-     UPDATED: 2026-06-30  (vJ79: 담임 글자크기 다른행과 완전통일(display:flex 제거), 신청취소 후 재초기화(이전정보 안내 복원), 패스트패스 연락처(STEP3)까지 항상 표시. | vJ78: 담임 글자크기 다른행과 통일(span 제거), 담당교수 실시간 반영(.on 리스너). | vJ77: 입교카드·출결완료 페이지에 과정담임 표시 + 전화아이콘→통화확인 팝업→통화 기능(professorProfiles 연락처 사용). | vJ76: 외출외박 현황화면 상단바 위 내용넘침 방지(flex-start), 복귀완료보고·신청취소 한 줄 배치. | vJ75: 입교문구 '항공기술훈련원 입교', 정보수정 시 개인정보동의 숨김, 외출외박 새로작성 빈양식, 소속 항공기술훈련원 표기, 외출외박 완료→수위실 현황화면 통일. | vJ74: 창닫기 기능(closeStudentWindow) 제거 — 카카오 채널 채팅창 닫기로 대체. 디버그 console.log 2종 정리. | vJ73: 미사용 함수 6종 제거 — exitApp·cleanUrlAndGo·checkDinnerTime·loadGroupCandidates·openRoomMove·wrapClose. 카카오 채널 바로가기 도입으로 불필요해진 진입/종료 관련 죽은 코드 정리. 맛집 기능 코드는 유지.)
+     VERSION: J80 J80 J80 J80 J80
+     UPDATED: 2026-06-30  (vJ80: 학생장 전용 패널(입교카드 아래) — 금일 외출외박·석식제외 실시간 현황 + 식당 전화하기(043-290-2325). | vJ79: 담임 글자크기 다른행과 완전통일(display:flex 제거), 신청취소 후 재초기화(이전정보 안내 복원), 패스트패스 연락처(STEP3)까지 항상 표시. | vJ78: 담임 글자크기 다른행과 통일(span 제거), 담당교수 실시간 반영(.on 리스너). | vJ77: 입교카드·출결완료 페이지에 과정담임 표시 + 전화아이콘→통화확인 팝업→통화 기능(professorProfiles 연락처 사용). | vJ76: 외출외박 현황화면 상단바 위 내용넘침 방지(flex-start), 복귀완료보고·신청취소 한 줄 배치. | vJ75: 입교문구 '항공기술훈련원 입교', 정보수정 시 개인정보동의 숨김, 외출외박 새로작성 빈양식, 소속 항공기술훈련원 표기, 외출외박 완료→수위실 현황화면 통일. | vJ74: 창닫기 기능(closeStudentWindow) 제거 — 카카오 채널 채팅창 닫기로 대체. 디버그 console.log 2종 정리. | vJ73: 미사용 함수 6종 제거 — exitApp·cleanUrlAndGo·checkDinnerTime·loadGroupCandidates·openRoomMove·wrapClose. 카카오 채널 바로가기 도입으로 불필요해진 진입/종료 관련 죽은 코드 정리. 맛집 기능 코드는 유지.)
      ─ 규칙: 수정 시작 시 STATUS를 '수정중'으로, 완료 시 '수정아닙니다'로 변경하고 버전을 5회 반복 표기.
             '수정중'이면 다른 플랫폼은 연동 변경을 보류/협의 후 진행.
 ═══════════════════════════════════════════════════════════════ -->
@@ -7321,7 +7321,7 @@ body.kac-quiz-active .quiz-overlay,
 #keduEnroll select:focus, #keduEnroll input:focus{ border-color:#2563eb; }
 #keduEnroll .ke-btn{ width:100%; margin-top:20px; padding:16px; border:none; border-radius:13px; background:linear-gradient(135deg,#3b82f6,#2563eb); color:#fff; font-size:17px; font-weight:900; cursor:pointer; box-shadow:0 8px 20px rgba(37,99,235,.3); }
 #keduEnroll .ke-note{ margin-top:14px; font-size:11px; color:#94a3b8; line-height:1.5; }
-#keduHome{ position:fixed; inset:0; z-index:10040; display:none; align-items:center; justify-content:center; padding:24px; background:linear-gradient(180deg,rgba(15,23,42,.68),rgba(15,23,42,.42)); }
+#keduHome{ position:fixed; inset:0; z-index:10040; display:none; flex-direction:column; align-items:center; justify-content:flex-start; gap:14px; overflow-y:auto; padding:24px; background:linear-gradient(180deg,rgba(15,23,42,.68),rgba(15,23,42,.42)); }
 #keduHome .kh-card{ width:100%; max-width:380px; background:#fff; border-radius:24px; padding:0; text-align:left; box-shadow:0 22px 54px rgba(15,23,42,.34); overflow:hidden; border:1px solid rgba(219,234,254,.9); }
 #keduHome .kh-head{ background:linear-gradient(135deg,#0f172a,#1d4ed8); padding:22px 20px 20px; color:#fff; text-align:left; }
 #keduHome .kh-badge{ display:inline-flex; align-items:center; gap:6px; padding:5px 10px; border-radius:999px; background:rgba(255,255,255,.16); color:#bfdbfe; font-size:11px; font-weight:900; margin-bottom:12px; }
@@ -7340,6 +7340,18 @@ body.kac-quiz-active .quiz-overlay,
 #keduHome .kh-rows > div:last-child{ border-bottom:none; }
 #keduHome .kh-rows span{ flex:0 0 62px; font-size:12px; font-weight:900; color:#64748b; }
 #keduHome .kh-rows b{ flex:1; font-size:15px; font-weight:800; color:#1e293b; word-break:keep-all; }
+#keduHome .kh-leader{ width:100%; max-width:380px; background:#fff; border-radius:20px; padding:16px 18px; box-shadow:0 18px 44px rgba(15,23,42,.28); border:1px solid #fde68a; }
+#keduHome .khl-head{ font-size:14px; font-weight:900; color:#b45309; margin-bottom:12px; display:flex; align-items:center; gap:7px; }
+#keduHome .khl-sec{ background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:11px 13px; margin-bottom:10px; }
+#keduHome .khl-row{ display:flex; align-items:center; justify-content:space-between; gap:10px; }
+#keduHome .khl-row > span{ font-size:13px; font-weight:800; color:#475569; }
+#keduHome .khl-row b{ font-size:16px; font-weight:900; color:#0f172a; white-space:nowrap; }
+#keduHome .khl-row small{ font-size:12px; font-weight:700; color:#94a3b8; }
+#keduHome .khl-names{ margin-top:8px; font-size:13px; font-weight:700; color:#1e293b; line-height:1.65; word-break:keep-all; }
+#keduHome .khl-empty{ margin-top:6px; font-size:12.5px; color:#94a3b8; font-weight:700; }
+#keduHome .khl-call{ display:flex; align-items:center; justify-content:center; gap:8px; width:100%; margin-top:4px; padding:14px; border-radius:13px; background:linear-gradient(135deg,#f97316,#ea580c); color:#fff; font-size:15px; font-weight:900; text-decoration:none; box-shadow:0 8px 18px rgba(234,88,12,.28); }
+#keduHome .khl-call:active{ transform:scale(.98); }
+#keduHome .khl-note{ margin-top:10px; font-size:11.5px; color:#94a3b8; text-align:center; font-weight:700; line-height:1.5; }
 #keduDone{ position:fixed; inset:0; z-index:10060; display:none; flex-direction:column; align-items:center; justify-content:center; padding:26px 20px; background:linear-gradient(180deg,#eef5ff,#dbe9ff); text-align:center; }
 #keduDone .kd-card{ width:100%; max-width:380px; background:#fff; border-radius:20px; padding:30px 22px; box-shadow:0 18px 44px rgba(37,99,235,.18); }
 #keduDone h2{ margin:0 0 12px; font-size:23px; font-weight:900; color:#16a34a; }
@@ -7562,6 +7574,48 @@ body.kac-noanim #noticeModal > .menu-box, body.kac-noanim #surveyModal > .menu-b
     }catch(e){}
   };
 
+  // ===== [학생장 전용] 금일 외출외박·석식제외 현황 + 식당 전화 =====
+  var _leaderRefs=[];
+  function detachLeaderRefs(){ try{ _leaderRefs.forEach(function(r){ r.ref.off('value', r.cb); }); }catch(e){} _leaderRefs=[]; }
+  function renderLeaderPanel(st){
+    var panel=document.getElementById('khLeaderPanel'); if(!panel) return;
+    var a=st.a||{}, d=st.d||{};
+    var dKeys=Object.keys(d);
+    var dNames=dKeys.map(function(k){ var v=String(d[k]==null?'':d[k]); var i=v.indexOf('('); var nm=(i>0?v.slice(0,i):v).trim(); return _hrEsc(nm||'-'); });
+    var aArr=Object.keys(a).map(function(k){ return a[k]||{}; });
+    var nOver=aArr.filter(function(x){ return x.type==='overnight'; }).length;
+    var nOut=aArr.length-nOver;
+    var aNames=aArr.map(function(x){ var t=(x.type==='overnight')?'외박':'외출'; var ret=x.returned?' ·복귀':''; return _hrEsc(x.name||'-')+' <span style=\"color:#94a3b8;font-weight:700;\">('+t+ret+')</span>'; });
+    panel.innerHTML=
+      '<div class=\"khl-head\"><i class=\"fa-solid fa-crown\"></i> 학생장 · 금일 현황 (식당 보고용)</div>'+
+      '<div class=\"khl-sec\"><div class=\"khl-row\"><span>🍽️ 석식 제외</span><b>'+dKeys.length+'명</b></div>'+
+        (dKeys.length? '<div class=\"khl-names\">'+dNames.join(', ')+'</div>' : '<div class=\"khl-empty\">신청 없음</div>')+'</div>'+
+      '<div class=\"khl-sec\"><div class=\"khl-row\"><span>🚶 외출·외박</span><b>'+aArr.length+'명 <small>(외출 '+nOut+' · 외박 '+nOver+')</small></b></div>'+
+        (aArr.length? '<div class=\"khl-names\">'+aNames.join(', ')+'</div>' : '<div class=\"khl-empty\">신청 없음</div>')+'</div>'+
+      '<a href=\"tel:043-290-2325\" class=\"khl-call\"><i class=\"fa-solid fa-phone\"></i> 식당 전화하기 (043-290-2325)</a>'+
+      '<div class=\"khl-note\">석식 제외 인원을 식당에 보고해 주세요. 실시간으로 갱신됩니다.</div>';
+  }
+  function loadLeaderPanel(room){
+    var panel=document.getElementById('khLeaderPanel'); if(!panel) return;
+    detachLeaderRefs();
+    var token=(localStorage.getItem('uToken')||'').trim();
+    if(!room || !token){ panel.style.display='none'; return; }
+    firebase.database().ref('courses/'+room+'/students/'+token+'/isLeader').once('value').then(function(s){
+      if(!(s && s.val()===true)){ panel.style.display='none'; return; }
+      panel.style.display='block';
+      panel.innerHTML='<div class=\"khl-head\"><i class=\"fa-solid fa-crown\"></i> 학생장 · 금일 현황</div><div class=\"khl-empty\">불러오는 중…</div>';
+      var today=getTodayString();
+      var st={a:{},d:{}};
+      var aRef=firebase.database().ref('courses/'+room+'/admin_actions/'+today);
+      var dRef=firebase.database().ref('courses/'+room+'/dinner_skips/'+today);
+      var aCb=function(snap){ st.a=snap.val()||{}; renderLeaderPanel(st); };
+      var dCb=function(snap){ st.d=snap.val()||{}; renderLeaderPanel(st); };
+      aRef.on('value', aCb); dRef.on('value', dCb);
+      _leaderRefs.push({ref:aRef,cb:aCb},{ref:dRef,cb:dCb});
+    }).catch(function(){ panel.style.display='none'; });
+  }
+  window.loadLeaderPanel=loadLeaderPanel; window.detachLeaderRefs=detachLeaderRefs;
+
   window.showKakaoHome=async function(){
     var ov=document.getElementById('keduHome'); if(!ov) return;
     var homeRoom=(typeof currentRoom!=='undefined' && currentRoom) ? currentRoom : (localStorage.getItem('kac_last_visited_room')||'');
@@ -7581,6 +7635,7 @@ body.kac-noanim #noticeModal > .menu-box, body.kac-noanim #surveyModal > .menu-b
     loadKakaoHomeDorm(nm, sb, eD);
     updateKakaoAttendanceButton(homeRoom);
     loadHomeroom(homeRoom, document.getElementById('khProf'), true);
+    loadLeaderPanel(homeRoom);
     ov.style.display='flex';
   };
   function kakaoAttendanceDate(){
@@ -7842,10 +7897,12 @@ body.kac-noanim #noticeModal > .menu-box, body.kac-noanim #surveyModal > .menu-b
         '</div>'+
         '<button class="kh-edit" onclick="keduEditInfo()"><i class="fa-solid fa-pen-to-square"></i> 정보 수정하기</button>'+
         '<button class="kh-att" id="keduAttendBtn" onclick="startKakaoOtpAttendance()"><i class="fa-solid fa-keyboard"></i> 출결하기</button>'+
-        '<button class="kh-close" id="keduHomeClose">닫기</button></div></div>';
+        '<button class="kh-close" id="keduHomeClose">닫기</button></div></div>'+
+        '<div id="khLeaderPanel" class="kh-leader" style="display:none;"></div>';
       document.body.appendChild(h);
       document.getElementById('keduHomeClose').addEventListener('click', function(){
         h.style.display='none';
+        try{ detachLeaderRefs(); }catch(e){}
         try{ window.__kakaoCloseCoverArmed=false; }catch(e){}
       });
     }

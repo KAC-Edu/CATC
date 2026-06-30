@@ -608,6 +608,8 @@ body.in-course #moreToggleTab{ display:flex !important; }
             <div id="guideProfile" style="display:none; width:100%; border-radius:12px; box-shadow:0 4px 20px rgba(0,51,102,0.12); overflow:hidden;"></div>
             <!-- [학생장 룰렛] PDF 23p(학생장 선출)에서만 노출 -->
             <button id="guideRouletteBtn" onclick="event.stopPropagation(); ui.openLeaderRoulette();" oncontextmenu="event.stopPropagation(); return false;" title="학생장 룰렛 추첨"><i class="fa-solid fa-trophy"></i> 학생장 룰렛</button>
+            <!-- [교육 시간표] PDF 13p + 시간표 사진 업로드된 과정에서만 노출 -->
+            <button id="guideScheduleBtn" onclick="event.stopPropagation(); ui.openScheduleView();" oncontextmenu="event.stopPropagation(); return false;" title="교육 시간표 보기"><i class="fa-solid fa-calendar-days"></i> 교육 시간표</button>
         </div>
         <!-- 툴바 영역 -->
         <div style="display:flex; align-items:center; gap:8px; padding:8px 16px; background:#f8fafc; border-radius:12px; border:1px solid #e2e8f0; width:100%; max-width:1050px; box-sizing:border-box;">
