@@ -7439,12 +7439,13 @@ init: function() {
             const room = guideMgr._room();
             const nameSnap = await firebase.database().ref(`courses/${room}/status/professorName`).once('value');
             const name = (nameSnap.val() || '').trim();
-            if (!name) { slot.profile = null; return; }
+            if (!name) { slot.profile = null; slot.kakaoLink = ''; return; }
             const pSnap = await firebase.database().ref(`system/professorProfiles/${name}`).once('value');
             const pr = pSnap.val();
+            slot.kakaoLink = (pr && pr.kakaoLink) ? String(pr.kakaoLink).trim() : '';   // 교수 오픈톡방 주소 (있을 때만 QR 페이지 노출)
             const hasContent = pr && (pr.photo || pr.msg || pr.bio || (Array.isArray(pr.bioList) && pr.bioList.length) || pr.phone || pr.email);
             if (hasContent) { pr._name = name; slot.profile = pr; } else { slot.profile = null; }
-        } catch (e) { slot.profile = null; }
+        } catch (e) { slot.profile = null; slot.kakaoLink = ''; }
     },
 
     // [교육과정 안내 가상 페이지] 현재 과정 정보 + 과정별 저장된 교육구분/평가 로드
@@ -7501,11 +7502,12 @@ init: function() {
         const count = (ci.count != null ? ci.count : 0);
         const cat = ci.category || 'duty-general';
         const ev = ci.evaluation || 'none';
-        const catSel = `<select class="ci-select" onchange="guideMgr._saveCourseInfo('category', this.value)">
+        const stop = `onclick="event.stopPropagation()" onmousedown="event.stopPropagation()" oncontextmenu="event.stopPropagation();return false;"`;
+        const catSel = `<select class="ci-select" ${stop} onchange="guideMgr._saveCourseInfo('category', this.value)">
               <option value="duty-general" ${cat === 'duty-general' ? 'selected' : ''}>직무 일반</option>
               <option value="duty-legal" ${cat === 'duty-legal' ? 'selected' : ''}>직무 법정</option>
             </select>`;
-        const evSel = `<select class="ci-select" onchange="guideMgr._saveCourseInfo('evaluation', this.value)">
+        const evSel = `<select class="ci-select" ${stop} onchange="guideMgr._saveCourseInfo('evaluation', this.value)">
               <option value="none" ${ev === 'none' ? 'selected' : ''}>없음 (근태평가 10%)</option>
               <option value="written" ${ev === 'written' ? 'selected' : ''}>필기평가 (90%) + 근태 (10%)</option>
             </select>`;
@@ -7529,6 +7531,22 @@ init: function() {
         </div>`;
     },
 
+    _kakaoQrHTML: function() {
+        return `<div class="guide-kakaoqr-slide">
+          <div class="ci-header">
+            <span class="ci-header-title"><i class="fa-solid fa-plane-departure"></i> 입교 안내</span>
+            <img src="logo.png" class="ci-logo" alt="KAC" onerror="this.style.display='none'">
+          </div>
+          <div class="kq-body">
+            <div class="kq-qr"><div id="guideKakaoQrBig" class="kq-qr-box"></div></div>
+            <div class="kq-right">
+              <div class="kt-logo"><span class="kt-bubble">TALK</span></div>
+              <div class="kq-guide"><i class="fa-solid fa-camera"></i> 휴대폰 <b>카메라</b>를 열어 왼쪽 <b>QR 코드</b>를 비추면<br>담임 교수님 <b>오픈채팅방</b>으로 바로 입장합니다.</div>
+            </div>
+          </div>
+        </div>`;
+    },
+
     _hasProfile: function() { const s = guideMgr._slot(); return !!(s && s.profile); },
     _hasQR: function() { return false; },
     _hasManual: function() { return false; },
@@ -7541,9 +7559,11 @@ init: function() {
         const n = (s && s.pdfDoc) ? s.pdfDoc.numPages : 0;
         const list = [];
         const hasProf = guideMgr._hasProfile();
+        const hasKakao = guideMgr._hasKakaoQR();
         for (let p = 1; p <= n; p++) {
             list.push({ t: 'pdf', pdf: p });
             if (p === 1 && hasProf) list.push({ t: 'profile' });           // 1페이지(표지) 다음 = 담임교수 프로필
+            if (p === 1 && hasKakao) list.push({ t: 'kakaoqr' });          // 프로필 다음 = 오픈톡방 QR (프로필에 톡방주소 저장 시)
             if (p === guideMgr._COURSEINFO_AFTER_PDF) list.push({ t: 'courseinfo' });  // 12페이지 다음 = 교육과정 안내
         }
         if (n > 0 && n < guideMgr._COURSEINFO_AFTER_PDF) list.push({ t: 'courseinfo' }); // PDF가 12P 미만이면 맨 끝에
@@ -7551,8 +7571,10 @@ init: function() {
     },
     _extras: function() { const s = guideMgr._slot(); const n = (s && s.pdfDoc) ? s.pdfDoc.numPages : 0; return Math.max(0, guideMgr._pageList().length - n); },
     _vtotal: function() { const s = guideMgr._slot(); if (!s.pdfDoc) return 0; return guideMgr._pageList().length; },
+    _hasKakaoQR: function() { const s = guideMgr._slot(); return !!(s && s.kakaoLink); },
     _isProfilePage: function(v) { return (guideMgr._pageList()[v - 1] || {}).t === 'profile'; },
     _isCourseInfoPage: function(v) { return (guideMgr._pageList()[v - 1] || {}).t === 'courseinfo'; },
+    _isKakaoQRPage: function(v) { return (guideMgr._pageList()[v - 1] || {}).t === 'kakaoqr'; },
     _isQRPage: function(v) { return false; },
     _isManualPage: function(v) { return false; },
     _toPdfPage: function(v) {
@@ -7755,6 +7777,27 @@ init: function() {
             slot.pageNum = num;
             const _indci = document.getElementById('guidePageInfo');
             if (_indci) _indci.innerText = `${num} / ${_total}`;
+            return;
+        }
+
+        // 담임 교수 오픈톡방 QR (가상 페이지 · 프로필 다음)
+        if (guideMgr._isKakaoQRPage(num)) {
+            guideMgr.isRendering = false;
+            _showGuideLayer('virtual');
+            if (_profEl) {
+                _profEl.innerHTML = guideMgr._kakaoQrHTML();
+                try {
+                    const tgt = document.getElementById('guideKakaoQrBig');
+                    const url = (guideMgr._slot().kakaoLink) || '';
+                    if (tgt && url && typeof QRCode !== 'undefined') {
+                        tgt.innerHTML = '';
+                        new QRCode(tgt, { text: url, width: 420, height: 420, correctLevel: QRCode.CorrectLevel.H });
+                    }
+                } catch (e) { console.warn('오픈톡방 QR 생성 실패:', e); }
+            }
+            slot.pageNum = num;
+            const _indk = document.getElementById('guidePageInfo');
+            if (_indk) _indk.innerText = `${num} / ${_total}`;
             return;
         }
 

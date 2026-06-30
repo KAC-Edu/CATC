@@ -4629,7 +4629,7 @@ body.night-mode .side-rail-lbl{ color:#cbd5e1; }
     font-size: 18px !important;
 }
 
-/* [추가] 입교안내 가상 페이지 — 교육과정 안내 (PDF 12·13 사이). cqw로 슬라이드 크기에 맞춰 글자 스케일 */
+/* [추가] 입교안내 가상 페이지 — 교육과정 안내 (PDF 12·13 사이). cqw로 슬라이드 크기에 맞춰 글자 스케일 (16:9 높이에 맞춰 잘리지 않게) */
 .guide-courseinfo-slide{
     width:100% !important; height:100% !important; min-height:0 !important;
     background:#fff !important; display:flex !important; flex-direction:column !important;
@@ -4637,24 +4637,51 @@ body.night-mode .side-rail-lbl{ color:#cbd5e1; }
 }
 .guide-courseinfo-slide .ci-header{
     flex:0 0 auto; display:flex; align-items:center; justify-content:space-between;
-    background:linear-gradient(90deg,#1b3f73,#2a5a9e); color:#fff; padding:0 4cqw; height:11cqw;
+    background:linear-gradient(90deg,#1b3f73,#2a5a9e); color:#fff; padding:0 4cqw; height:9cqw;
 }
-.guide-courseinfo-slide .ci-header-title{ font-size:4.4cqw; font-weight:900; letter-spacing:.5px; display:inline-flex; align-items:center; gap:1.4cqw; }
-.guide-courseinfo-slide .ci-logo{ height:5cqw; width:auto; object-fit:contain; }
-.guide-courseinfo-slide .ci-body{ flex:1 1 auto; padding:5cqw 6cqw; display:flex; flex-direction:column; }
-.guide-courseinfo-slide .ci-section{ font-size:3cqw; font-weight:900; color:#1b2a4a; display:flex; align-items:center; gap:1.2cqw; padding-bottom:2.4cqw; border-bottom:2px solid #1b2a4a; margin-bottom:4.5cqw; }
-.guide-courseinfo-slide .ci-section-bar{ width:1.1cqw; height:3.4cqw; background:#1b2a4a; display:inline-block; }
-.guide-courseinfo-slide .ci-fields{ display:flex; flex-direction:column; gap:3.2cqw; }
-.guide-courseinfo-slide .ci-row{ display:flex; align-items:center; gap:1.8cqw; }
-.guide-courseinfo-slide .ci-bar{ width:1.1cqw; height:4.2cqw; background:#27a4e0; display:inline-block; flex:0 0 auto; border-radius:1px; }
-.guide-courseinfo-slide .ci-label{ font-size:3.4cqw; font-weight:800; color:#2b2b2b; flex:0 0 auto; min-width:18cqw; white-space:nowrap; }
-.guide-courseinfo-slide .ci-val{ font-size:3.6cqw; font-weight:900; color:#1d4ed8; min-width:0; }
+.guide-courseinfo-slide .ci-header-title{ font-size:3.6cqw; font-weight:900; letter-spacing:.5px; display:inline-flex; align-items:center; gap:1.2cqw; }
+.guide-courseinfo-slide .ci-logo{ height:4.2cqw; width:auto; object-fit:contain; }
+.guide-courseinfo-slide .ci-body{ flex:1 1 auto; min-height:0; padding:3.2cqw 6cqw; display:flex; flex-direction:column; justify-content:center; }
+.guide-courseinfo-slide .ci-section{ font-size:2.6cqw; font-weight:900; color:#1b2a4a; display:flex; align-items:center; gap:1.1cqw; padding-bottom:1.8cqw; border-bottom:0.25cqw solid #1b2a4a; margin-bottom:3.2cqw; }
+.guide-courseinfo-slide .ci-section-bar{ width:1cqw; height:3cqw; background:#1b2a4a; display:inline-block; }
+.guide-courseinfo-slide .ci-fields{ display:flex; flex-direction:column; gap:2.4cqw; }
+.guide-courseinfo-slide .ci-row{ display:flex; align-items:center; gap:1.6cqw; }
+.guide-courseinfo-slide .ci-bar{ width:1cqw; height:3.6cqw; background:#27a4e0; display:inline-block; flex:0 0 auto; border-radius:1px; }
+.guide-courseinfo-slide .ci-label{ font-size:2.9cqw; font-weight:800; color:#2b2b2b; flex:0 0 auto; min-width:16cqw; white-space:nowrap; }
+.guide-courseinfo-slide .ci-val{ font-size:3.1cqw; font-weight:900; color:#1d4ed8; min-width:0; }
 .guide-courseinfo-slide .ci-strong{ color:#1d4ed8; font-weight:900; }
 .guide-courseinfo-slide .ci-select{
-    font-size:3.4cqw; font-weight:900; color:#1d4ed8; background:#eef4ff; border:0.18cqw solid #bfdbfe;
-    border-radius:1.4cqw; padding:0.5cqw 2cqw; cursor:pointer; font-family:inherit; outline:none;
+    font-size:2.9cqw; font-weight:900; color:#1d4ed8; background:#eef4ff; border:0.2cqw solid #93c5fd;
+    border-radius:1.4cqw; padding:0.5cqw 5cqw 0.5cqw 2cqw; cursor:pointer; font-family:inherit; outline:none;
+    appearance:none; -webkit-appearance:none; -moz-appearance:none;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%231d4ed8' stroke-width='3.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat:no-repeat; background-position:right 1.6cqw center; background-size:2.6cqw;
 }
-.guide-courseinfo-slide .ci-select:hover{ background:#dbeafe; }
+.guide-courseinfo-slide .ci-select:hover{ background-color:#dbeafe; }
+
+/* [추가] 입교안내 가상 페이지 — 담임교수 오픈톡방 QR (프로필 다음) */
+.guide-kakaoqr-slide{
+    width:100% !important; height:100% !important; min-height:0 !important;
+    background:#fff !important; display:flex !important; flex-direction:column !important;
+    container-type:inline-size; font-family:inherit; overflow:hidden;
+}
+.guide-kakaoqr-slide .ci-header{
+    flex:0 0 auto; display:flex; align-items:center; justify-content:space-between;
+    background:linear-gradient(90deg,#1b3f73,#2a5a9e); color:#fff; padding:0 4cqw; height:9cqw;
+}
+.guide-kakaoqr-slide .ci-header-title{ font-size:3.6cqw; font-weight:900; letter-spacing:.5px; display:inline-flex; align-items:center; gap:1.2cqw; }
+.guide-kakaoqr-slide .ci-logo{ height:4.2cqw; width:auto; object-fit:contain; }
+.guide-kakaoqr-slide .kq-body{ flex:1 1 auto; min-height:0; display:flex; align-items:center; justify-content:center; gap:6cqw; padding:3cqw 6cqw; }
+.guide-kakaoqr-slide .kq-qr{ flex:0 0 auto; }
+.guide-kakaoqr-slide .kq-qr-box{ width:36cqw; height:36cqw; display:flex; align-items:center; justify-content:center; }
+.guide-kakaoqr-slide .kq-qr-box img, .guide-kakaoqr-slide .kq-qr-box canvas{ width:100% !important; height:100% !important; }
+.guide-kakaoqr-slide .kq-right{ flex:0 1 auto; display:flex; flex-direction:column; align-items:center; gap:3.5cqw; max-width:44cqw; }
+.guide-kakaoqr-slide .kt-logo{ width:18cqw; height:18cqw; background:#FAE100; border-radius:24%; display:flex; align-items:center; justify-content:center; position:relative; }
+.guide-kakaoqr-slide .kt-bubble{ width:74%; height:54%; background:#3A1D1D; border-radius:46%; color:#FAE100; font-weight:900; font-size:5cqw; letter-spacing:.5px; display:flex; align-items:center; justify-content:center; position:relative; }
+.guide-kakaoqr-slide .kt-bubble::after{ content:''; position:absolute; left:24%; bottom:-11%; width:22%; height:30%; background:#3A1D1D; clip-path:polygon(0 0,100% 0,35% 100%); }
+.guide-kakaoqr-slide .kq-guide{ width:100%; border:0.4cqw solid #e11d48; border-radius:1.6cqw; padding:3cqw 2.5cqw; text-align:center; font-size:2.7cqw; font-weight:800; color:#1f2937; line-height:1.55; }
+.guide-kakaoqr-slide .kq-guide i{ color:#e11d48; margin-right:1cqw; }
+.guide-kakaoqr-slide .kq-guide b{ color:#1d4ed8; }
 
 .guide-profile-rule {
     height: 1px;

@@ -2,7 +2,7 @@
 <!-- 이 플랫폼(admin_coord.html / 교육운영부) 수정상태 플래그. 값은 [수정중] 또는 [수정안하는중] 두 가지. -->
 <!-- 작업 시작 시 → 수정중 / 작업 완료 시 → 수정안하는중. 다른 플랫폼은 이 말머리를 보고 연동·수정 가능 여부 판단. -->
 <!-- [외부변경 · 카카오채널연동 2026-06-25] 포털(portal.html/7777) 경유 폐지 → 페이지 직접진입 시 접속코드(catc1234) 게이트 추가, 포털 리다이렉트/종료이동 제거. version C13→D13. 기능 로직은 미변경. -->
-<!-- last-updated: 2026-06-30 / version: D39 (상단바 청렴/노조 장소: A·B강의실은 하늘/국제 건물 구분 표기) -->
+<!-- last-updated: 2026-06-30 / version: D40 (퇴교차량 팝업 공지버튼→확인, 상단바 색상=실제공지(announced)일때만 녹색·아니면 회색) -->
 <!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -8601,7 +8601,7 @@ function _coordShuttleRoundsHtml(){
     +'<div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-bottom:12px;"><span style="font-size:16px;font-weight:800;color:#475569;">추가 퇴교차량(2차) 예정인가요?</span>'+qbtn('coordSht2YesBtn',"coordSht2Set('yes')",'예',yA,'#2563eb')+qbtn('coordSht2NoBtn',"coordSht2Set('no')",'아니오 (운행안함)',nA,'#dc2626')+qbtn('coordSht2TbdBtn',"coordSht2Set('tbd')",'미정',tA,'#f59e0b')+'</div>'
     +'<div id="coordSht2Row" style="display:'+(yA?'flex':'none')+';align-items:center;gap:10px;margin-bottom:14px;"><span style="width:42px;font-size:18px;font-weight:900;color:#1e3a8a;">2차</span><select id="coordShtR2" style="flex:1;padding:14px 16px;border:1.5px solid #cbd5e1;border-radius:10px;font-size:19px;font-weight:800;color:#0f172a;cursor:pointer;">'+opts(r2time,false)+'</select></div>'
     +'<div style="display:flex;gap:8px;align-items:center;">'
-      +'<button onclick="coordSetShuttleRounds()" style="flex:1;padding:12px 18px;background:'+noticeBtnBg+';color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:900;cursor:pointer;"><i class="fa-solid fa-bullhorn"></i> 공지</button>'
+      +'<button onclick="coordSetShuttleRounds()" style="flex:1;padding:12px 18px;background:'+noticeBtnBg+';color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:900;cursor:pointer;"><i class="fa-solid fa-check"></i> 확인</button>'
       +(on?'<button onclick="coordClearShuttleRounds()" style="padding:12px 16px;background:#fff;color:#64748b;border:1px solid #e2e8f0;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;">초기화</button>':'')
     +'</div>'
     +(on?('<div style="margin-top:11px;font-size:13px;font-weight:800;color:#15803d;">✅ 공지됨 · 1차 '+_esc(r1||'-')+(r2time?(' / 2차 '+r2time):(r2==='미정'?' / 2차 미정':' / 2차 운행안함'))+'</div>'):'')
@@ -8654,14 +8654,16 @@ function _coordUpdateShuttleBtn(){
     var dateOk=!!(sd && sd.date && sd.date>=today);
     var r1=sd&&sd.round1||'', r2=sd&&sd.round2||'';
     var cleared = !!window._shuttleDepCleared || !r1;
-    // 1차 실제시간 + (2차 실제시간 또는 운행안함) 이어야 확정(녹색). 하나라도 미정/미선택이면 빨강
-    var green = !cleared && dateOk && isT(r1) && (isT(r2) || r2==='운행안함');
+    // [공지 기준] 실제 공지(announced=true)+오늘 유효+초기화 아님 일 때만 활성. 공지 안 됨 → 회색(중립 비활성)
+    var announced = !cleared && dateOk && !!(sd && sd.announced);
+    var green = announced && isT(r1) && (isT(r2) || r2==='운행안함');  // 1·2차 모두 확정 → 녹색
+    var red   = announced && !green;                                   // 공지됐지만 미정 포함 → 빨강(주의)
     var sc=document.getElementById('g-shuttle-count'); var blk=sc?sc.closest('.hdr-stat'):null;
     if(blk){
       blk.classList.remove('edu-set','edu-unset');
-      blk.classList.toggle('shuttle-cleared', cleared);
+      blk.classList.toggle('shuttle-cleared', !announced);   // 공지 전 = 회색 비활성
       blk.classList.toggle('shuttle-on', green);
-      blk.classList.toggle('shuttle-off', !cleared && !green);
+      blk.classList.toggle('shuttle-off', red);
     }
   }catch(e){}
 }
@@ -8887,7 +8889,7 @@ window.addEventListener('load', function(){
 });
 </script>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:6px;bottom:5px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;font-weight:800;line-height:1;letter-spacing:.6px;color:#fff;background:rgba(15,23,42,.85);padding:4px 8px;border-radius:6px;pointer-events:none;user-select:none;box-shadow:0 2px 6px rgba(0,0,0,.3);">D39</div>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:6px;bottom:5px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;font-weight:800;line-height:1;letter-spacing:.6px;color:#fff;background:rgba(15,23,42,.85);padding:4px 8px;border-radius:6px;pointer-events:none;user-select:none;box-shadow:0 2px 6px rgba(0,0,0,.3);">D40</div>
 <script>
 /* ===== [공용] 종료된 과정 자동 정리 (모든 플랫폼 공통) — 종료일 지난 방을 다음날 미개설로 비움. 브라우저별 하루 1회 ===== */
 window.kacExpireEndedCourses = async function(){
