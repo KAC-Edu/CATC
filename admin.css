@@ -4751,6 +4751,16 @@ body.night-mode .side-rail-lbl{ color:#cbd5e1; }
 .guide-channel-slide .cg-note{ text-align:center; font-size:2.1cqw; font-weight:800; color:#16a34a; background:#f0fdf4; border:0.2cqw solid #bbf7d0; border-radius:1.4cqw; padding:1.6cqw; }
 .guide-channel-slide .cg-note i{ margin-right:1cqw; }
 
+/* [전체화면 보정] 16:9보다 넓은 모니터 전체화면에서, cqw 기반 가상 페이지가 세로로 잘리지 않도록 16:9로 가운데 맞춤(레터박스). 프로필 사진 페이지는 제외하고 텍스트 슬라이드만 적용 */
+#pdfWrapper.guide-page-virtual:fullscreen #guideProfile > .guide-courseinfo-slide,
+#pdfWrapper.guide-page-virtual:fullscreen #guideProfile > .guide-kakaoqr-slide,
+#pdfWrapper.guide-page-virtual:fullscreen #guideProfile > .guide-channel-slide,
+#pdfWrapper.guide-page-virtual:-webkit-full-screen #guideProfile > .guide-courseinfo-slide,
+#pdfWrapper.guide-page-virtual:-webkit-full-screen #guideProfile > .guide-kakaoqr-slide,
+#pdfWrapper.guide-page-virtual:-webkit-full-screen #guideProfile > .guide-channel-slide{
+    width:auto !important; height:100% !important; aspect-ratio:16/9 !important; max-width:100% !important; margin:auto !important;
+}
+
 /* [추가] 상단 탭 퀵메뉴 설정 기어 버튼 */
 .mode-tabs-gear{
     width:42px; height:42px; border-radius:50%; border:1.5px solid #e2e8f0; background:#fff; color:#64748b;
