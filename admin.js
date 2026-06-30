@@ -1104,6 +1104,7 @@ fetchCodeAndRenderQr: function(room) {
         updates[`courses/${state.room}/settings/password`] = encryptedPw;
         updates[`courses/${state.room}/status/roomStatus`] = statusVal;
         updates[`courses/${state.room}/status/professorName`] = (statusVal === 'active' ? selectedProf : "");
+        updates[`courses/${state.room}/status/professorManual`] = (statusVal === 'active' ? true : null);   // 설정에서 교수 지정 시 보존
         // 사용중으로 저장할 때만 세션ID 등록
         updates[`courses/${state.room}/status/ownerSessionId`] = (statusVal === 'active' ? state.sessionId : null);
         updates[`courses/${state.room}/status/ownerLastSeen`] = (statusVal === 'active' ? firebase.database.ServerValue.TIMESTAMP : null);
@@ -7422,6 +7423,7 @@ init: function() {
     refresh: async function() {
         const slot = guideMgr._slot();
         await guideMgr._loadProfile();
+        await guideMgr._loadCourseInfo();
         if (slot.pdfDoc) {
             guideMgr.isRendering = false;
             guideMgr.renderPage(slot.pageNum || 1);
@@ -7444,21 +7446,118 @@ init: function() {
             if (hasContent) { pr._name = name; slot.profile = pr; } else { slot.profile = null; }
         } catch (e) { slot.profile = null; }
     },
+
+    // [교육과정 안내 가상 페이지] 현재 과정 정보 + 과정별 저장된 교육구분/평가 로드
+    _loadCourseInfo: async function() {
+        const slot = guideMgr._slot();
+        const room = guideMgr._room();
+        const ci = { courseName: '', period: '', count: 0, category: 'duty-general', evaluation: 'none' };
+        try {
+            const cs = await firebase.database().ref(`courses/${room}/settings`).once('value');
+            const set = cs.val() || {};
+            ci.courseName = set.courseName || '';
+            ci.period = set.period || '';
+            const gi = set.guideCourseInfo || {};
+            if (gi.category) ci.category = gi.category;       // 기본값: 직무 일반
+            if (gi.evaluation) ci.evaluation = gi.evaluation; // 기본값: 없음(근태10%)
+        } catch (e) {}
+        try { const names = await ui._gatherRosterNames(room); ci.count = (names && names.length) || 0; } catch (e) {}
+        slot.courseInfo = ci;
+    },
+
+    // 교육구분/평가 선택 시 과정별로 저장 (Firebase courses/{room}/settings/guideCourseInfo)
+    _saveCourseInfo: function(field, value) {
+        const slot = guideMgr._slot();
+        const room = guideMgr._room();
+        if (!room) return;
+        slot.courseInfo = slot.courseInfo || {};
+        slot.courseInfo[field] = value;
+        const upd = {};
+        upd[`courses/${room}/settings/guideCourseInfo/${field}`] = value;
+        firebase.database().ref().update(upd).catch(function () {});
+    },
+
+    // 교육기간 표기 변환: "2026-05-27 ~ 2026-05-29" → "2026. 5. 27 (수) ~ 5. 29 (금)"
+    _fmtPeriod: function(period) {
+        if (!period || String(period).indexOf('~') < 0) return period || '';
+        const W = ['일', '월', '화', '수', '목', '금', '토'];
+        const parse = s => { const m = String(s).match(/(\d{4})\D+(\d{1,2})\D+(\d{1,2})/); return m ? { y: +m[1], mo: +m[2], d: +m[3] } : null; };
+        const dow = o => W[new Date(o.y, o.mo - 1, o.d).getDay()];
+        const parts = String(period).split('~');
+        const pa = parse(parts[0] || ''), pb = parse(parts[1] || '');
+        if (!pa) return period;
+        const sa = pa.y + '. ' + pa.mo + '. ' + pa.d + ' (' + dow(pa) + ')';
+        if (!pb) return sa;
+        const sb = (pb.y === pa.y) ? (pb.mo + '. ' + pb.d + ' (' + dow(pb) + ')')
+                                   : (pb.y + '. ' + pb.mo + '. ' + pb.d + ' (' + dow(pb) + ')');
+        return sa + ' ~ ' + sb;
+    },
+
+    _courseInfoHTML: function() {
+        const ci = guideMgr._slot().courseInfo || { courseName: '', period: '', count: 0, category: 'duty-general', evaluation: 'none' };
+        const esc = s => (s == null ? '' : String(s)).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+        const courseName = esc(ci.courseName) || '과정명 미설정';
+        const period = esc(guideMgr._fmtPeriod(ci.period)) || '기간 미설정';
+        const count = (ci.count != null ? ci.count : 0);
+        const cat = ci.category || 'duty-general';
+        const ev = ci.evaluation || 'none';
+        const catSel = `<select class="ci-select" onchange="guideMgr._saveCourseInfo('category', this.value)">
+              <option value="duty-general" ${cat === 'duty-general' ? 'selected' : ''}>직무 일반</option>
+              <option value="duty-legal" ${cat === 'duty-legal' ? 'selected' : ''}>직무 법정</option>
+            </select>`;
+        const evSel = `<select class="ci-select" onchange="guideMgr._saveCourseInfo('evaluation', this.value)">
+              <option value="none" ${ev === 'none' ? 'selected' : ''}>없음 (근태평가 10%)</option>
+              <option value="written" ${ev === 'written' ? 'selected' : ''}>필기평가 (90%) + 근태 (10%)</option>
+            </select>`;
+        const row = (label, valHtml) =>
+            `<div class="ci-row"><span class="ci-bar"></span><span class="ci-label">${label}</span><span class="ci-val">${valHtml}</span></div>`;
+        return `<div class="guide-courseinfo-slide">
+          <div class="ci-header">
+            <span class="ci-header-title"><i class="fa-solid fa-plane-departure"></i> 입교 안내</span>
+            <img src="logo.png" class="ci-logo" alt="KAC" onerror="this.style.display='none'">
+          </div>
+          <div class="ci-body">
+            <div class="ci-section"><span class="ci-section-bar"></span> 2. 교육과정 안내</div>
+            <div class="ci-fields">
+              ${row('과 정 명 :', `<span class="ci-strong">${courseName}</span>`)}
+              ${row('교육 인원 :', `<span class="ci-strong">${count}명</span>`)}
+              ${row('교육 기간 :', `<span class="ci-strong">${period}</span>`)}
+              ${row('교육 구분 :', catSel)}
+              ${row('교육 평가 :', evSel)}
+            </div>
+          </div>
+        </div>`;
+    },
+
     _hasProfile: function() { const s = guideMgr._slot(); return !!(s && s.profile); },
     _hasQR: function() { return false; },
     _hasManual: function() { return false; },
-    _extras: function() { return guideMgr._hasProfile() ? 1 : 0; },   // 프로필 등록 시에만 +1페이지
     _qrPageNum: function() { return -1; },
     _manualPageNum: function() { return -1; },
-    _vtotal: function() { const s = guideMgr._slot(); if (!s.pdfDoc) return 0; return s.pdfDoc.numPages + guideMgr._extras(); },
-    _isProfilePage: function(v) { return guideMgr._hasProfile() && v === 2; },   // 프로필 미등록이면 프로필 페이지 없음
+    _COURSEINFO_AFTER_PDF: 12,   // PDF 12페이지와 13페이지 사이에 '교육과정 안내' 삽입
+    // [가상 페이지 구성] PDF 원본 + 삽입 페이지(담임교수 프로필 / 교육과정 안내)를 하나의 순서로 구성
+    _pageList: function() {
+        const s = guideMgr._slot();
+        const n = (s && s.pdfDoc) ? s.pdfDoc.numPages : 0;
+        const list = [];
+        const hasProf = guideMgr._hasProfile();
+        for (let p = 1; p <= n; p++) {
+            list.push({ t: 'pdf', pdf: p });
+            if (p === 1 && hasProf) list.push({ t: 'profile' });           // 1페이지(표지) 다음 = 담임교수 프로필
+            if (p === guideMgr._COURSEINFO_AFTER_PDF) list.push({ t: 'courseinfo' });  // 12페이지 다음 = 교육과정 안내
+        }
+        if (n > 0 && n < guideMgr._COURSEINFO_AFTER_PDF) list.push({ t: 'courseinfo' }); // PDF가 12P 미만이면 맨 끝에
+        return list;
+    },
+    _extras: function() { const s = guideMgr._slot(); const n = (s && s.pdfDoc) ? s.pdfDoc.numPages : 0; return Math.max(0, guideMgr._pageList().length - n); },
+    _vtotal: function() { const s = guideMgr._slot(); if (!s.pdfDoc) return 0; return guideMgr._pageList().length; },
+    _isProfilePage: function(v) { return (guideMgr._pageList()[v - 1] || {}).t === 'profile'; },
+    _isCourseInfoPage: function(v) { return (guideMgr._pageList()[v - 1] || {}).t === 'courseinfo'; },
     _isQRPage: function(v) { return false; },
     _isManualPage: function(v) { return false; },
     _toPdfPage: function(v) {
-        if (!guideMgr._hasProfile()) return Math.max(1, v);   // 프로필 미등록: 가상 페이지 = 실제 PDF 페이지 (1:1)
-        if (v <= 1) return 1;                       // 1페이지: PDF 원본 표지
-        if (v === 2) return null;                   // 2페이지: 담임교수 프로필
-        return v - 1;                               // 3페이지부터 PDF 원본 2P
+        const d = guideMgr._pageList()[v - 1];
+        return (d && d.t === 'pdf') ? d.pdf : null;   // 가상→실제 PDF 페이지 (삽입 페이지는 null)
     },
     _profileHTML: function(p) {
         p = p || {};
@@ -7645,6 +7744,17 @@ init: function() {
             slot.pageNum = num;
             const _ind = document.getElementById('guidePageInfo');
             if (_ind) _ind.innerText = `${num} / ${_total}`;
+            return;
+        }
+
+        // 교육과정 안내 (가상 페이지 · PDF 12·13 사이)
+        if (guideMgr._isCourseInfoPage(num)) {
+            guideMgr.isRendering = false;
+            _showGuideLayer('virtual');
+            if (_profEl) { _profEl.innerHTML = guideMgr._courseInfoHTML(); }
+            slot.pageNum = num;
+            const _indci = document.getElementById('guidePageInfo');
+            if (_indci) _indci.innerText = `${num} / ${_total}`;
             return;
         }
 
@@ -10560,8 +10670,10 @@ annualPlanMgr._syncRoomsLockAware = async function(courses) {
                 const coordFull = (typeof coordMgr !== 'undefined' && coordMgr.matchName ? coordMgr.matchName(pc.coord) : '') || (pc.coord || '');
                 updates[`courses/${r}/settings/period`] = pc.period;
                 updates[`courses/${r}/settings/coordinatorName`] = coordFull;
-                updates[`courses/${r}/status/professorName`] = pc.prof;
-                updates[`courses/${r}/settings/kakaoLink`] = kakaoOf(pc.prof);
+                if (!st.professorManual) {                                  // 수동 지정한 교수는 자동동기화에서 보존(덮어쓰지 않음)
+                    updates[`courses/${r}/status/professorName`] = pc.prof;
+                    updates[`courses/${r}/settings/kakaoLink`] = kakaoOf(pc.prof);
+                }
                 if (pc.roomDetail) updates[`courses/${r}/settings/roomDetailName`] = pc.roomDetail;
             }
             return; // 방 자체는 유지
@@ -10574,6 +10686,7 @@ annualPlanMgr._syncRoomsLockAware = async function(courses) {
         updates[`courses/${r}/settings/password`]   = null;  // [비번 옵션화] 방 비울 때 비번 제거(없음 상태)
         updates[`courses/${r}/settings/coordinatorName`] = null;
         updates[`courses/${r}/status/professorName`] = '';
+        updates[`courses/${r}/status/professorManual`] = null;   // 방 비우면 수동 플래그 해제
         updates[`courses/${r}/status/roomStatus`]   = 'idle';
         updates[`courses/${r}/status/ownerSessionId`] = null;
         freeRooms.push(r);
@@ -10601,6 +10714,7 @@ annualPlanMgr._syncRoomsLockAware = async function(courses) {
         updates[`courses/${room}/settings/period`]     = course.period;
         updates[`courses/${room}/settings/coordinatorName`] = coordFull;
         updates[`courses/${room}/status/professorName`] = course.prof;
+        updates[`courses/${room}/status/professorManual`] = null;   // 신규 배치는 계획값 기준(자동동기화 대상)
         updates[`courses/${room}/status/roomStatus`]   = 'active';
         updates[`courses/${room}/settings/kakaoLink`]  = kakaoOf(course.prof);
         updates[`courses/${room}/settings/roomDetailName`] = course.roomDetail || '';
@@ -11128,6 +11242,7 @@ ui.saveFieldEdit = async function(){
   } else if(f==='prof'){
     var pv=(document.getElementById('fe-val')||{}).value||'';
     updates['courses/'+room+'/status/professorName']=pv;
+    updates['courses/'+room+'/status/professorManual']=true;   // 수동 지정 — 연간계획 자동동기화가 덮어쓰지 않도록 보존
     try{ var ks=await firebase.database().ref('system/professorProfiles/'+pv+'/kakaoLink').get(); updates['courses/'+room+'/settings/kakaoLink']=ks.val()||''; }catch(e){}
   } else if(f==='coord'){
     updates['courses/'+room+'/settings/coordinatorName']=(document.getElementById('fe-val')||{}).value||'';

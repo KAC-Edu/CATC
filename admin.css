@@ -4629,6 +4629,33 @@ body.night-mode .side-rail-lbl{ color:#cbd5e1; }
     font-size: 18px !important;
 }
 
+/* [추가] 입교안내 가상 페이지 — 교육과정 안내 (PDF 12·13 사이). cqw로 슬라이드 크기에 맞춰 글자 스케일 */
+.guide-courseinfo-slide{
+    width:100% !important; height:100% !important; min-height:0 !important;
+    background:#fff !important; display:flex !important; flex-direction:column !important;
+    container-type:inline-size; font-family:inherit; overflow:hidden;
+}
+.guide-courseinfo-slide .ci-header{
+    flex:0 0 auto; display:flex; align-items:center; justify-content:space-between;
+    background:linear-gradient(90deg,#1b3f73,#2a5a9e); color:#fff; padding:0 4cqw; height:11cqw;
+}
+.guide-courseinfo-slide .ci-header-title{ font-size:4.4cqw; font-weight:900; letter-spacing:.5px; display:inline-flex; align-items:center; gap:1.4cqw; }
+.guide-courseinfo-slide .ci-logo{ height:5cqw; width:auto; object-fit:contain; }
+.guide-courseinfo-slide .ci-body{ flex:1 1 auto; padding:5cqw 6cqw; display:flex; flex-direction:column; }
+.guide-courseinfo-slide .ci-section{ font-size:3cqw; font-weight:900; color:#1b2a4a; display:flex; align-items:center; gap:1.2cqw; padding-bottom:2.4cqw; border-bottom:2px solid #1b2a4a; margin-bottom:4.5cqw; }
+.guide-courseinfo-slide .ci-section-bar{ width:1.1cqw; height:3.4cqw; background:#1b2a4a; display:inline-block; }
+.guide-courseinfo-slide .ci-fields{ display:flex; flex-direction:column; gap:3.2cqw; }
+.guide-courseinfo-slide .ci-row{ display:flex; align-items:center; gap:1.8cqw; }
+.guide-courseinfo-slide .ci-bar{ width:1.1cqw; height:4.2cqw; background:#27a4e0; display:inline-block; flex:0 0 auto; border-radius:1px; }
+.guide-courseinfo-slide .ci-label{ font-size:3.4cqw; font-weight:800; color:#2b2b2b; flex:0 0 auto; min-width:18cqw; white-space:nowrap; }
+.guide-courseinfo-slide .ci-val{ font-size:3.6cqw; font-weight:900; color:#1d4ed8; min-width:0; }
+.guide-courseinfo-slide .ci-strong{ color:#1d4ed8; font-weight:900; }
+.guide-courseinfo-slide .ci-select{
+    font-size:3.4cqw; font-weight:900; color:#1d4ed8; background:#eef4ff; border:0.18cqw solid #bfdbfe;
+    border-radius:1.4cqw; padding:0.5cqw 2cqw; cursor:pointer; font-family:inherit; outline:none;
+}
+.guide-courseinfo-slide .ci-select:hover{ background:#dbeafe; }
+
 .guide-profile-rule {
     height: 1px;
     margin-top: 18px;
