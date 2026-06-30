@@ -5,13 +5,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>차량지원 플랫폼</title>
 <script>
-/* 모바일/태블릿 → 모바일 라이트 화면으로 이동 (PC는 유지, ?forcepc 로 강제) */
+/* 실제 모바일/태블릿(터치 주입력)에서만 모바일 화면으로 이동 · PC는 항상 유지 */
 (function(){ try{
-  var wide = window.innerWidth >= 1024;
-  var fine = window.matchMedia && window.matchMedia('(pointer:fine)').matches;
-  var noTouch = !('ontouchstart' in window) || navigator.maxTouchPoints === 0;
-  var isPc = wide && (fine || noTouch);
-  if(!isPc && location.search.indexOf('forcepc')<0){ location.replace('driver_m.html'+location.search+location.hash); }
+  var coarse = window.matchMedia && window.matchMedia('(pointer:coarse)').matches;
+  var isMobile = coarse && window.innerWidth < 1024;
+  if(isMobile && location.search.indexOf('forcepc')<0){ location.replace('driver_m.html'+location.search+location.hash); }
 }catch(e){} })();
 </script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
@@ -124,6 +122,10 @@
   .ev .et{font-size:10px;font-weight:800}
   .ev .en{font-size:10.5px;font-weight:700;margin-top:1px;line-height:1.2}
   .ev .es{font-size:9.5px;color:#94a3b8;font-weight:600;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .ev-blk{height:100%;border-radius:0 8px 8px 0;padding:6px 9px;display:flex;flex-direction:column;justify-content:center}
+  .ev-blk .bt{font-size:11px;font-weight:700;line-height:1.3}
+  .ev-blk .bc{font-size:13px;font-weight:800;color:#0f172a;margin-top:2px}
+  .ev-blk .bs{font-size:10px;color:#64748b;font-weight:600;margin-top:1px;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
   .ev-off{background:#fee2e2;border-left:3px solid #ef4444;border-radius:0 7px 7px 0;padding:3px 6px;margin-bottom:3px}
   .ev-off .ot{font-size:10px;font-weight:800;color:#b91c1c}
   .ev-off .os{font-size:9.5px;color:#ef4444;font-weight:600;margin-top:1px}
@@ -138,6 +140,9 @@
   .rooms{display:flex;flex-direction:column;gap:12px}
   .room{background:#fff;border:1.5px solid #eef0f4;border-radius:16px;overflow:hidden}
   .room.open{border-color:#2563eb}
+  .room.sum{background:#f8fafc;border-color:#dbe7ff;border-width:2px}
+  .room.sum .room-name{color:#2563eb}
+  .sum-badge{background:#0f172a !important}
   .room-top{display:flex;align-items:center;gap:18px;padding:18px 22px;cursor:pointer}
   .room-left{display:flex;align-items:center;gap:14px;flex:1;min-width:0}
   .room-badge{flex:none;background:#2563eb;color:#fff;font-size:12px;font-weight:800;letter-spacing:.3px;padding:7px 13px;border-radius:9px}
@@ -233,7 +238,7 @@ var TINT = { arr:'#eff4ff', dep:'#eef9ff', entry:'#eef0ff', leave:'#effbf7', off
 
 /* ---------- DATA (live: Firebase) ---------- */
 var HOURS = [8,9,10,11,12,13,14,15,16,17,18];
-var DAYS=[], EVTS=[], OFF=[], SHUTTLE=[], PICKUPS=[], RESV=[], FIXED=[], DAYOFF=[];
+var DAYS=[], EVTS=[], OFF=[], SHUTTLE=[], PICKUPS=[], RESV=[], FIXED=[], DAYOFF=[], LEAVE_BLOCKS=[];
 
 /* ---------- Firebase 연동 ---------- */
 var allCourses={}, rawPickups=[], dayoffsR=[], fixedsR=[], schedulesR=[];
@@ -299,11 +304,21 @@ function rebuild(){
   });
   schedulesR.forEach(function(x){ var i=dayIndex(x.date), m=toMin(x.time); if(i<0||m===null) return;
     EVTS.push({ day:i, h:Math.floor(m/60), time:x.time, title:(x.title||'일정'), sub:(x.endTime?(x.time+'~'+x.endTime):''), type:'memo' }); });
+  /* 퇴교수송 → 출발 시간대별 큰 블록(1차 13:00~15:00 / 2차 15:00~17:00) */
+  var leaveAgg = {};
   Object.keys(allCourses).forEach(function(rid){ var c=allCourses[rid]; var dep=c&&c.shuttle&&c.shuttle.departure;
     if(dep&&dep.announced&&dep.time){ var i=dayIndex(dep.date), m=toMin(dep.time); if(i<0||m===null) return;
       var cn=(c.settings&&c.settings.courseName)||rid;
       var rq=c.shuttle.requests||{}; var tot=Object.keys(rq).filter(function(k){ return rq[k]&&rq[k].type!=='car'; }).length;
-      EVTS.push({ day:i, h:Math.floor(m/60), time:dep.time, title:cn+' 퇴교', sub:tot+'명 · 퇴교수송', type:'leave' }); } });
+      var h=Math.floor(m/60);
+      leaveAgg[i]=leaveAgg[i]||{}; leaveAgg[i][h]=leaveAgg[i][h]||{count:0,courses:[]};
+      leaveAgg[i][h].count+=tot; leaveAgg[i][h].courses.push(cn); } });
+  LEAVE_BLOCKS=[];
+  Object.keys(leaveAgg).forEach(function(di){
+    var hrs=Object.keys(leaveAgg[di]).map(Number).sort(function(a,b){return a-b;});
+    hrs.forEach(function(h,idx){ var g=leaveAgg[di][h];
+      LEAVE_BLOCKS.push({ day:Number(di), hStart:h, span:2, ord:idx+1, count:g.count, courses:g.courses }); });
+  });
   fixedsR.forEach(function(f){ var i=Number(f.dow)-1, m=toMin(f.time); if(i<0||i>4||m===null) return;
     EVTS.push({ day:i, h:Math.floor(m/60), time:f.time, title:(f.kind||'')+'버스', sub:(f.note||'매주 반복'), type:f.kind==='입교'?'entry':'leave' }); });
 
@@ -372,7 +387,7 @@ var TITLES = {
 };
 
 /* ---------- state & helpers ---------- */
-var state = { view:'manage', expanded:'A' };
+var state = { view:'manage', expanded:null };
 function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
 function pad(n){ return n<10 ? '0'+n : ''+n; }
 
@@ -393,14 +408,29 @@ function viewManage(){
     }).join('') + '</tr>';
   }
 
+  var consumed = {};
   var rows = HOURS.map(function(h){
     if(h===12){
       return '<tr><td class="tcol"><span class="tl">'+pad(h)+':00</span></td><td class="lunch" colspan="5"><i class="fa-solid fa-mug-hot" style="margin-right:6px"></i>휴게시간 12:00 ~ 13:00 · 운행 없음</td></tr>';
     }
     var cells = DAYS.map(function(d,di){
+      if(consumed[di+'-'+h]) return '';
       var off = null;
       for(var i=0;i<OFF.length;i++){ var o=OFF[i]; if(o.day===di && (o.allDay || (h>=o.from && h<o.to))){ off=o; break; } }
       var cls = 'cell' + (off ? ' off' : (d.today ? ' today' : ''));
+
+      var blk = off ? null : LEAVE_BLOCKS.filter(function(b){ return b.day===di && b.hStart===h; })[0];
+      if(blk){
+        for(var s=1;s<blk.span;s++){ consumed[di+'-'+(h+s)]=true; }
+        var he = blk.hStart+blk.span;
+        var courseq = blk.courses.join(' · ');
+        var bInner = '<div class="ev-blk" style="background:'+TINT.leave+';border-left:4px solid '+EVC.leave+'">'
+          + '<div class="bt"><span style="color:'+EVC.leave+';font-weight:800">'+pad(blk.hStart)+':00~'+pad(he)+':00</span> '+blk.ord+'차 퇴교수송</div>'
+          + '<div class="bc">총 '+blk.count+'명</div>'
+          + '<div class="bs">'+esc(courseq)+'</div></div>';
+        return '<td rowspan="'+blk.span+'" class="'+cls+'">'+bInner+'</td>';
+      }
+
       var inner = '';
       if(off && !off.allDay && h===off.from){
         inner += '<div class="ev-off"><div class="ot">'+esc(off.label+' '+pad(off.from)+':00~'+pad(off.to)+':00')+'</div><div class="os">운행 불가</div></div>';
@@ -459,7 +489,18 @@ function viewLeave(){
       + '<i class="fa-solid fa-chevron-down room-chev"></i></div></div>'
       + '<div class="room-body"><div class="room-meta"><span>기간 '+esc(s.period)+'</span><span>·</span><span>출발 '+esc(s.depart)+'</span></div>'+roster+'</div></div>';
   }).join('');
-  return '<div class="rooms">'+rows+'</div>';
+  /* 하단 총괄 합계 */
+  var sumStats = DEST.map(function(dd){
+    var v = SHUTTLE.reduce(function(a,s){ return a + s.people.filter(function(p){ return p.dest===dd.key; }).length; }, 0);
+    return '<div class="rstat"><div class="rl" style="color:'+dd.labelColor+'">'+esc(dd.label)+'</div><div class="rv" style="color:'+dd.valColor+'">'+v+'</div></div>';
+  }).join('');
+  var grand = SHUTTLE.reduce(function(a,s){ return a + s.people.length; }, 0);
+  var sumRow = '<div class="room sum"><div class="room-top" style="cursor:default">'
+    + '<div class="room-left"><span class="room-badge sum-badge"><i class="fa-solid fa-calculator" style="margin-right:6px"></i>총괄</span><span class="room-name">전체 합계</span></div>'
+    + '<div class="room-stats">'+sumStats
+    + '<div class="rtot"><div class="rl">총 합계</div><div class="rv" style="color:#2563eb">'+grand+'</div></div>'
+    + '<i class="fa-solid fa-chevron-down room-chev" style="visibility:hidden"></i></div></div></div>';
+  return '<div class="rooms">'+rows+sumRow+'</div>';
 }
 
 /* ---------- 강사픽업 일정 (확정, 날짜순 표) ---------- */
