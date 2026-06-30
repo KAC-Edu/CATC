@@ -2,7 +2,7 @@
 <!-- 이 플랫폼(admin_coord.html / 교육운영부) 수정상태 플래그. 값은 [수정중] 또는 [수정안하는중] 두 가지. -->
 <!-- 작업 시작 시 → 수정중 / 작업 완료 시 → 수정안하는중. 다른 플랫폼은 이 말머리를 보고 연동·수정 가능 여부 판단. -->
 <!-- [외부변경 · 카카오채널연동 2026-06-25] 포털(portal.html/7777) 경유 폐지 → 페이지 직접진입 시 접속코드(catc1234) 게이트 추가, 포털 리다이렉트/종료이동 제거. version C13→D13. 기능 로직은 미변경. -->
-<!-- last-updated: 2026-06-30 / version: D43 (담당자검색 소메뉴 칩→정렬표: 연번·성명·소속·연락처, 외출외박/차량 연락처·시간, 생활관 동호) -->
+<!-- last-updated: 2026-06-30 / version: D44 (와이드 모니터: 본문 max-width 1240→1560px, 가운데 정렬 유지하며 넓게 활용) -->
 <!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -1289,7 +1289,7 @@ body.modal-open .app-content {
 /* ══ PC 모드 레이아웃 (교육지원부·영양사 컨셉: 헤더 유지 + 컨테이너 중앙 확장) ══ */
 body.pc-mode { background:#eef2f7; }
 #pcSidebar { display:none !important; }
-body.pc-mode .app-container { max-width:1240px; min-width:0; margin:0 auto; box-shadow:0 0 50px rgba(15,23,42,0.10); background:#f1f5f9; min-height:100dvh; }
+body.pc-mode .app-container { max-width:1560px; min-width:0; margin:0 auto; box-shadow:0 0 50px rgba(15,23,42,0.10); background:#f1f5f9; min-height:100dvh; }
 body.pc-mode .app-header { padding-left:28px; padding-right:28px; }
 body.pc-mode #totalStatusView { padding:14px 28px 24px !important; background:#f1f5f9; }
 
@@ -8906,7 +8906,7 @@ window.addEventListener('load', function(){
 });
 </script>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:6px;bottom:5px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;font-weight:800;line-height:1;letter-spacing:.6px;color:#fff;background:rgba(15,23,42,.85);padding:4px 8px;border-radius:6px;pointer-events:none;user-select:none;box-shadow:0 2px 6px rgba(0,0,0,.3);">D43</div>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:6px;bottom:5px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;font-weight:800;line-height:1;letter-spacing:.6px;color:#fff;background:rgba(15,23,42,.85);padding:4px 8px;border-radius:6px;pointer-events:none;user-select:none;box-shadow:0 2px 6px rgba(0,0,0,.3);">D44</div>
 <script>
 /* ===== [공용] 종료된 과정 자동 정리 (모든 플랫폼 공통) — 종료일 지난 방을 다음날 미개설로 비움. 브라우저별 하루 1회 ===== */
 window.kacExpireEndedCourses = async function(){
