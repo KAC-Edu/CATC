@@ -4748,8 +4748,10 @@ body.night-mode .side-rail-lbl{ color:#cbd5e1; }
 .guide-channel-slide .cg-step-desc{ font-size:1.85cqw; font-weight:700; color:#64748b; line-height:1.45; }
 .guide-channel-slide .cg-step-desc b{ color:#1d4ed8; }
 .guide-channel-slide .cg-arrow{ display:flex; align-items:center; color:#cbd5e1; font-size:3.2cqw; flex:0 0 auto; }
-.guide-channel-slide .cg-note{ text-align:center; font-size:2.1cqw; font-weight:800; color:#16a34a; background:#f0fdf4; border:0.2cqw solid #bbf7d0; border-radius:1.4cqw; padding:1.6cqw; }
-.guide-channel-slide .cg-note i{ margin-right:1cqw; }
+.guide-channel-slide .cg-note{ display:flex; align-items:center; justify-content:space-between; gap:2cqw; font-size:2.1cqw; font-weight:800; color:#16a34a; background:#f0fdf4; border:0.2cqw solid #bbf7d0; border-radius:1.4cqw; padding:1.6cqw 2.4cqw; }
+.guide-channel-slide .cg-note > span:first-child i{ margin-right:1cqw; }
+.guide-channel-slide .cg-regcount{ color:#1d4ed8; font-weight:900; white-space:nowrap; }
+.guide-channel-slide .cg-regcount b{ font-size:1.3em; margin:0 .12em; }
 
 /* [전체화면 보정] 16:9보다 넓은 모니터 전체화면에서, cqw 기반 가상 페이지가 세로로 잘리지 않도록 16:9로 가운데 맞춤(레터박스). 프로필 사진 페이지는 제외하고 텍스트 슬라이드만 적용 */
 #pdfWrapper.guide-page-virtual:fullscreen #guideProfile > .guide-courseinfo-slide,

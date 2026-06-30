@@ -7657,14 +7657,14 @@ init: function() {
                 <div class="cg-badge"><i class="fa-solid fa-check"></i></div>
                 <div class="cg-ic cg-ic-kakao"><i class="fa-solid fa-bullhorn"></i></div>
                 <div class="cg-step-title">오픈채팅방 <b>공지 클릭</b></div>
-                <div class="cg-step-desc">방 상단의 <b>▶ 공지</b>를 눌러주세요</div>
+                <div class="cg-step-desc">방 상단의<br><b>▶ 공지</b>를 눌러주세요</div>
               </div>
               <div class="cg-arrow"><i class="fa-solid fa-arrow-right-long"></i></div>
               <div class="cg-step">
                 <div class="cg-badge"><i class="fa-solid fa-check"></i></div>
                 <div class="cg-ic cg-ic-kakao"><i class="fa-solid fa-comment-dots"></i></div>
                 <div class="cg-step-title">카카오 채널 <b>입장</b></div>
-                <div class="cg-step-desc">교육생 플랫폼 채널로 입장됩니다</div>
+                <div class="cg-step-desc">교육생 플랫폼 채널로<br>입장됩니다</div>
               </div>
               <div class="cg-arrow"><i class="fa-solid fa-arrow-right-long"></i></div>
               <div class="cg-step">
@@ -7674,7 +7674,7 @@ init: function() {
                 <div class="cg-step-desc"><b>[입교/출석]</b> → 과정 선택 · 사번/이름 입력 후 <b>입교하기</b></div>
               </div>
             </div>
-            <div class="cg-note"><i class="fa-solid fa-circle-check"></i> 위 3단계까지 마치면 입교등록이 완료됩니다.</div>
+            <div class="cg-note"><span><i class="fa-solid fa-circle-check"></i> 위 3단계까지 마치면 입교등록이 완료됩니다.</span><span class="cg-regcount">현재 입교등록 <b id="cgRegCount">${(guideMgr._slot().courseInfo||{}).count||0}</b>명</span></div>
           </div>
         </div>`;
     },
@@ -7995,6 +7995,15 @@ init: function() {
             guideMgr.isRendering = false;
             _showGuideLayer('virtual');
             if (_profEl) { _profEl.innerHTML = guideMgr._channelGuideHTML(); }
+            // 현재 입교등록(입교완료) 인원 최신값 반영
+            (async function(){
+                try {
+                    const _cs = await firebase.database().ref('courses/' + guideMgr._room() + '/students').once('value');
+                    const _stu = _cs.val() || {};
+                    const _cnt = new Set(Object.values(_stu).filter(x => x && x.name && x.name !== 'undefined').map(x => String(x.name).trim())).size;
+                    const _el = document.getElementById('cgRegCount'); if (_el) _el.textContent = _cnt;
+                } catch (e) {}
+            })();
             slot.pageNum = num;
             const _indcg = document.getElementById('guidePageInfo');
             if (_indcg) _indcg.innerText = `${num} / ${_total}`;
