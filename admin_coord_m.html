@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-  <!-- last-updated: 2026-06-30 / version: M4 (청렴/노조 장소선택: 네이티브 select → 커스텀 바텀시트 picker, 건물별 그룹·선택강조) -->
+  <!-- last-updated: 2026-06-30 / version: M5 (청렴/노조 장소 바텀시트: 아래로 밀어 닫기 제스처 추가) -->
   <!-- ※ 모바일 개발자 파일이나 운영부 요청으로 디에스장(admin_coord 담당)이 장소선택 모달만 개선. 기능로직(setEduSel/EDU 동기화)은 동일 유지 -->
   <meta charset="UTF-8" />
   <script>
@@ -543,10 +543,31 @@ function openEduSheet(type){
   var bks=Object.keys(CUSTOM_ROOMS||{});
   if(bks.length){ h+='<div class="grp">추가된 강의실</div><div class="rooms">'; bks.forEach(function(b){ (CUSTOM_ROOMS[b]||[]).forEach(function(nm){ var on=(nm===cur); h+='<button class="rbtn'+(on?' sel':'')+'" data-v="'+esc(nm)+'" onclick="pickEduPlace(\''+type+'\',this.getAttribute(\'data-v\'))">'+esc(nm)+(on?' ✓':'')+'</button>'; }); }); h+='</div>'; }
   h+='<div class="grp">기타</div><div class="rooms"><button class="rbtn clear" onclick="pickEduPlace(\''+type+'\',\'\')"><i class="fa-solid fa-eraser"></i> 미정으로 초기화</button></div>';
-  body.innerHTML=h; body.scrollTop=0; ov.classList.add('open');
+  body.innerHTML=h; body.scrollTop=0; body.style.transform=''; body.style.transition=''; ov.classList.add('open');
 }
 function pickEduPlace(type,val){ setEduSel(type, val||''); closeEduSheet(); }
 function closeEduSheet(){ var ov=document.getElementById('eduSheetOv'); if(ov) ov.classList.remove('open'); }
+/* 바텀시트 아래로 밀어 닫기 — 시트가 맨 위로 스크롤된 상태에서 아래로 드래그하면 따라 내려가고, 일정 이상이면 닫힘 */
+(function(){
+  var sheet=document.getElementById('eduSheetBody'); if(!sheet) return;
+  var startY=0, curY=0, dragging=false;
+  sheet.addEventListener('touchstart', function(e){
+    if(sheet.scrollTop>0){ dragging=false; return; }
+    startY=curY=e.touches[0].clientY; dragging=true; sheet.style.transition='none';
+  }, {passive:true});
+  sheet.addEventListener('touchmove', function(e){
+    if(!dragging) return;
+    curY=e.touches[0].clientY; var dy=curY-startY;
+    if(dy>0){ if(e.cancelable) e.preventDefault(); sheet.style.transform='translateY('+dy+'px)'; }
+  }, {passive:false});
+  sheet.addEventListener('touchend', function(){
+    if(!dragging) return; dragging=false;
+    var dy=curY-startY;
+    sheet.style.transition='transform .22s cubic-bezier(.4,0,.2,1)';
+    if(dy>90){ sheet.style.transform='translateY(100%)'; setTimeout(function(){ closeEduSheet(); sheet.style.transform=''; sheet.style.transition=''; }, 210); }
+    else { sheet.style.transform=''; }
+  });
+})();
 
 /* 토스트 */
 var _toastT;
