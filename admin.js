@@ -7616,6 +7616,41 @@ init: function() {
         </div>`;
     },
 
+    _channelGuideHTML: function() {
+        return `<div class="guide-channel-slide">
+          <div class="ci-header">
+            <span class="ci-header-title"><i class="fa-solid fa-plane-departure"></i> 입교 안내</span>
+            <img src="logo.png" class="ci-logo" alt="KAC" onerror="this.style.display='none'">
+          </div>
+          <div class="cg-body">
+            <div class="cg-title"><span class="ci-section-bar"></span> 오픈채팅방 입장 후, 카카오 채널 입교등록까지 완료해 주세요</div>
+            <div class="cg-steps">
+              <div class="cg-step">
+                <div class="cg-badge"><i class="fa-solid fa-check"></i></div>
+                <div class="cg-ic cg-ic-kakao"><i class="fa-solid fa-bullhorn"></i></div>
+                <div class="cg-step-title">오픈채팅방 <b>공지 클릭</b></div>
+                <div class="cg-step-desc">방 상단의 <b>▶ 공지</b>를 눌러주세요</div>
+              </div>
+              <div class="cg-arrow"><i class="fa-solid fa-arrow-right-long"></i></div>
+              <div class="cg-step">
+                <div class="cg-badge"><i class="fa-solid fa-check"></i></div>
+                <div class="cg-ic cg-ic-kakao"><i class="fa-solid fa-comment-dots"></i></div>
+                <div class="cg-step-title">카카오 채널 <b>입장</b></div>
+                <div class="cg-step-desc">교육생 플랫폼 채널로 입장됩니다</div>
+              </div>
+              <div class="cg-arrow"><i class="fa-solid fa-arrow-right-long"></i></div>
+              <div class="cg-step">
+                <div class="cg-badge"><i class="fa-solid fa-check"></i></div>
+                <div class="cg-ic cg-ic-blue"><i class="fa-solid fa-clipboard-check"></i></div>
+                <div class="cg-step-title"><b>입교등록</b> 완료</div>
+                <div class="cg-step-desc"><b>[입교/출석]</b> → 과정 선택 · 사번/이름 입력 후 <b>입교하기</b></div>
+              </div>
+            </div>
+            <div class="cg-note"><i class="fa-solid fa-circle-check"></i> 위 3단계까지 마치면 입교등록이 완료됩니다.</div>
+          </div>
+        </div>`;
+    },
+
     _hasProfile: function() { const s = guideMgr._slot(); return !!(s && s.profile); },
     _hasQR: function() { return false; },
     _hasManual: function() { return false; },
@@ -7633,6 +7668,7 @@ init: function() {
             list.push({ t: 'pdf', pdf: p });
             if (p === 1 && hasProf) list.push({ t: 'profile' });           // 1페이지(표지) 다음 = 담임교수 프로필
             if (p === 1 && hasKakao) list.push({ t: 'kakaoqr' });          // 프로필 다음 = 오픈톡방 QR (프로필에 톡방주소 저장 시)
+            if (p === 1 && hasKakao) list.push({ t: 'channelguide' });     // QR 다음 = 카카오 채널 입교등록 안내
             if (p === guideMgr._COURSEINFO_AFTER_PDF) list.push({ t: 'courseinfo' });  // 12페이지 다음 = 교육과정 안내
         }
         if (n > 0 && n < guideMgr._COURSEINFO_AFTER_PDF) list.push({ t: 'courseinfo' }); // PDF가 12P 미만이면 맨 끝에
@@ -7644,6 +7680,7 @@ init: function() {
     _isProfilePage: function(v) { return (guideMgr._pageList()[v - 1] || {}).t === 'profile'; },
     _isCourseInfoPage: function(v) { return (guideMgr._pageList()[v - 1] || {}).t === 'courseinfo'; },
     _isKakaoQRPage: function(v) { return (guideMgr._pageList()[v - 1] || {}).t === 'kakaoqr'; },
+    _isChannelGuidePage: function(v) { return (guideMgr._pageList()[v - 1] || {}).t === 'channelguide'; },
     _isQRPage: function(v) { return false; },
     _isManualPage: function(v) { return false; },
     _toPdfPage: function(v) {
@@ -7822,6 +7859,8 @@ init: function() {
             }
             if (_canvasEl) _canvasEl.style.setProperty('display', kind === 'pdf' ? 'block' : 'none', 'important');
             if (_profEl) _profEl.style.setProperty('display', kind === 'virtual' ? 'block' : 'none', 'important');
+            var _rBtn = document.getElementById('guideRouletteBtn');   // 학생장 룰렛 버튼은 PDF 23p에서만 (아래 분기에서 다시 노출)
+            if (_rBtn) _rBtn.style.display = 'none';
         };
 
         // 이전 QR 실시간 명단 리스너 해제 (페이지 이동 시)
@@ -7921,7 +7960,21 @@ init: function() {
             return;
         }
 
+        // 카카오 채널 입교등록 안내 (가상 페이지 · 오픈톡방 QR 다음)
+        if (guideMgr._isChannelGuidePage(num)) {
+            guideMgr.isRendering = false;
+            _showGuideLayer('virtual');
+            if (_profEl) { _profEl.innerHTML = guideMgr._channelGuideHTML(); }
+            slot.pageNum = num;
+            const _indcg = document.getElementById('guidePageInfo');
+            if (_indcg) _indcg.innerText = `${num} / ${_total}`;
+            return;
+        }
+
         _showGuideLayer('pdf');
+        // [학생장 룰렛] PDF 23페이지(학생장 선출)에서만 룰렛 버튼 노출
+        var _rBtn = document.getElementById('guideRouletteBtn');
+        if (_rBtn) _rBtn.style.display = (guideMgr._toPdfPage(num) === 23) ? 'inline-flex' : 'none';
         if (guideMgr.isRendering) return;
         guideMgr.isRendering = true;
 
@@ -11731,6 +11784,12 @@ ui.closeLeaderRoulette = function(){
   ui._wheelSpinning=false;
   try{ if(ui._spinAudio){ ui._spinAudio.pause(); } }catch(e){}
   var _fh=document.getElementById('floatingHomeBtn'); if(_fh) _fh.style.display='';
+};
+// 입교안내 23p '학생장 선출'에서 실행 → 오디션 무대 배경 위에서 룰렛 진행 (닫으면 23p로 복귀)
+ui.openLeaderRouletteStage = async function(){
+  try { await ui.openLeaderRoulette(); } catch(e){}
+  var m = document.getElementById('leaderRouletteModal');
+  if (m) m.classList.add('roulette-stage-bg');
 };
 ui._spacedKoreanName = function(name){
   return Array.from(String(name || '').replace(/\s+/g, '')).join(' ');
