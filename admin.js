@@ -11813,7 +11813,7 @@ ui.openLeaderRoulette = async function(){
     }) === idx;
   });
   students.sort(function(a,b){ return a.name.localeCompare(b.name); });
-  if(!students.length){ ui.showAlert('입교한 학생이 없습니다.\n학생이 입장한 뒤 룰렛을 돌려주세요.'); return; }
+  if(students.length <= 1){ ui.showAlert('현재 입교 완료 인원이 ' + students.length + '명입니다.\n인원이 부족하여(2명 이상 필요) 학생장 룰렛을 이용할 수 없습니다.'); return; }
 
   ui._rouletteStudents = students;
   ui._rouletteWinner = null;
@@ -11867,11 +11867,11 @@ ui.openLeaderRoulette = async function(){
 
   var _old=document.getElementById('leaderRouletteModal'); if(_old) _old.remove();
   var modal=document.createElement('div'); modal.id='leaderRouletteModal';
-  modal.setAttribute('style','position:fixed;inset:0;z-index:9700;display:flex;align-items:center;justify-content:center;background:rgba(15,23,42,.62);backdrop-filter:blur(4px);padding:18px;overflow:auto;');
+  modal.setAttribute('style','position:fixed;inset:0;z-index:9700;display:flex;align-items:center;justify-content:center;background:rgba(15,23,42,.62);backdrop-filter:blur(4px);padding:18px;overflow:hidden;');
   modal.onclick=function(e){ if(e.target===modal && !ui._wheelSpinning) ui.closeLeaderRoulette(); };
   var wheelPx='min(70vh, 80vw)';
   modal.innerHTML =
-    '<div style="background:#fff;border-radius:26px;width:auto;max-width:97vw;max-height:98vh;overflow:auto;box-shadow:0 30px 80px rgba(0,0,0,.45);">'
+    '<div style="background:#fff;border-radius:26px;width:auto;max-width:97vw;max-height:98vh;overflow:hidden;box-shadow:0 30px 80px rgba(0,0,0,.45);">'
       + '<style>@keyframes rlPop{0%{transform:scale(.55);opacity:0}60%{transform:scale(1.06)}100%{transform:scale(1);opacity:1}}</style>'
       + '<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:18px 24px;background:linear-gradient(135deg,#0f3d68,#2563eb);color:#fff;">'
         + '<div style="font-size:19px;font-weight:900;"><i class="fa-solid fa-trophy" style="margin-right:8px;"></i>학생장 룰렛</div>'

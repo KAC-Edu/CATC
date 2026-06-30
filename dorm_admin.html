@@ -5877,8 +5877,10 @@
                             const pc = planByName[nm];
                             updates[`courses/${r}/settings/period`] = pc.period;
                             updates[`courses/${r}/settings/coordinatorName`] = pc.coord || null;
-                            updates[`courses/${r}/status/professorName`] = pc.prof;
-                            updates[`courses/${r}/settings/kakaoLink`] = kakaoOf(pc.prof);
+                            if (!(roomsData[r] && roomsData[r].status && roomsData[r].status.professorManual)) {   // 수동 지정 교수 보존
+                                updates[`courses/${r}/status/professorName`] = pc.prof;
+                                updates[`courses/${r}/settings/kakaoLink`] = kakaoOf(pc.prof);
+                            }
                             if (pc.roomDetail) updates[`courses/${r}/settings/roomDetailName`] = pc.roomDetail;
                         }
                         return;
@@ -5890,8 +5892,10 @@
                         const pc = planByName[nm];
                         updates[`courses/${r}/settings/period`] = pc.period;
                         updates[`courses/${r}/settings/coordinatorName`] = pc.coord || null;
-                        updates[`courses/${r}/status/professorName`] = pc.prof;
-                        updates[`courses/${r}/settings/kakaoLink`] = kakaoOf(pc.prof);
+                        if (!(roomsData[r] && roomsData[r].status && roomsData[r].status.professorManual)) {   // 수동 지정 교수 보존
+                            updates[`courses/${r}/status/professorName`] = pc.prof;
+                            updates[`courses/${r}/settings/kakaoLink`] = kakaoOf(pc.prof);
+                        }
                         if (pc.roomDetail) updates[`courses/${r}/settings/roomDetailName`] = pc.roomDetail;
                         return;
                     }
@@ -5902,8 +5906,10 @@
                         const pc = planByName[nm];
                         updates[`courses/${r}/settings/period`] = pc.period;
                         updates[`courses/${r}/settings/coordinatorName`] = pc.coord || null;
-                        updates[`courses/${r}/status/professorName`] = pc.prof;
-                        updates[`courses/${r}/settings/kakaoLink`] = kakaoOf(pc.prof);
+                        if (!(roomsData[r] && roomsData[r].status && roomsData[r].status.professorManual)) {   // 수동 지정 교수 보존
+                            updates[`courses/${r}/status/professorName`] = pc.prof;
+                            updates[`courses/${r}/settings/kakaoLink`] = kakaoOf(pc.prof);
+                        }
                         if (pc.roomDetail) updates[`courses/${r}/settings/roomDetailName`] = pc.roomDetail;
                         return;
                     }
@@ -5931,6 +5937,7 @@
                     updates[`courses/${room}/settings/period`]     = course.period;
                     updates[`courses/${room}/settings/coordinatorName`] = course.coord || null;
                     updates[`courses/${room}/status/professorName`] = course.prof;
+                    updates[`courses/${room}/status/professorManual`] = null;   // 신규 배치는 계획값 기준
                     updates[`courses/${room}/settings/kakaoLink`]  = kakaoOf(course.prof);
                     if (course.roomDetail) updates[`courses/${room}/settings/roomDetailName`] = course.roomDetail;
                     updates[`courses/${room}/status/roomStatus`]   = 'active';
