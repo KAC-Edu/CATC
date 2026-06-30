@@ -2472,8 +2472,8 @@ loadDashboardStats: function() {
     refs.settings.on('value', snap => {
         if (state.room !== room) return;
         const s = snap.val() || {};
-        // 더보기 '도움이 되는 소식(맛집)' — 과정설정 체크(menuFeatures.foodspots)일 때만 노출
-        try { var _fsSec=document.getElementById('moreFoodSection'); if(_fsSec) _fsSec.style.display = ((s.menuFeatures||{}).foodspots===true)?'':'none'; } catch(e){}
+        // 더보기 '도움이 되는 소식(맛집)' — 항상 노출 (요청에 따라 기본 ON)
+        try { var _fsSec=document.getElementById('moreFoodSection'); if(_fsSec) _fsSec.style.display = ''; } catch(e){}
         if (document.getElementById('dashCourseTitle')) document.getElementById('dashCourseTitle').innerText = s.courseName || "과정명을 설정해주세요.";
         var _topT = document.getElementById('displayCourseTitle'); if (_topT) _topT.innerText = s.courseName || "";
         if (document.getElementById('dashPeriod')) document.getElementById('dashPeriod').innerText = s.period || "기간 미설정";
@@ -8522,7 +8522,7 @@ loadCurrentSettings: function() {
         featureKeys.forEach(key => {
             const el = document.getElementById(`feat-${key}`);
             if (!el) return;
-            if (key === 'foodspots') { el.checked = (features.foodspots === true); return; } // 맛집: 기본 OFF
+            if (key === 'foodspots') { el.checked = (features.foodspots !== false); return; } // 맛집: 기본 ON (항상 노출)
             if (Object.keys(features).length === 0) {
                 el.checked = defaultOn.includes(key);
             } else {
@@ -11633,6 +11633,21 @@ ui.openFoodNewsAdd=function(){
 };
 ui.fillFnPreset=function(t){ var e=document.getElementById('fnComment'); if(e){ e.value=t; e.focus(); } };
 ui.closeFoodNewsAdd=function(){ var f=document.getElementById('foodNewsAddModal'); if(f) f.style.display='none'; ui._fnEditId=null; ui._fnSelected=null; };
+// 맛집 리스트를 PDF로 저장 (깨끗한 인쇄창 → 브라우저 'PDF로 저장')
+ui.foodNewsSavePdf=function(){
+    var list=document.getElementById('foodNewsList');
+    if(!list || !list.children || !list.children.length){ if(ui.showAlert) ui.showAlert('저장할 맛집 목록이 없습니다.'); return; }
+    var w=window.open('','_blank');
+    if(!w){ if(ui.showAlert) ui.showAlert('팝업이 차단되어 PDF 저장 창을 열 수 없습니다.\n브라우저에서 팝업을 허용한 뒤 다시 시도해 주세요.'); return; }
+    var d=new Date(); var ds=d.getFullYear()+'.'+(d.getMonth()+1)+'.'+d.getDate();
+    var html='<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>항기원 맛집 리스트</title>'
+        +'<style>*{box-sizing:border-box;}body{font-family:"Malgun Gothic","맑은 고딕",AppleSDGothicNeo,sans-serif;margin:0;padding:28px;color:#0f172a;}h1{font-size:22px;margin:0 0 4px;}.sub{color:#64748b;font-size:12px;margin-bottom:18px;}button{display:none!important;}a{color:inherit;text-decoration:none;}img{max-width:100%;}#foodNewsList>*{break-inside:avoid;page-break-inside:avoid;margin-bottom:10px;}</style>'
+        +'</head><body><h1>🍔 항기원 맛집 리스트</h1><div class="sub">출력일: '+ds+'</div>'
+        +'<div id="foodNewsList">'+list.innerHTML+'</div>'
+        +'<scr'+'ipt>window.onload=function(){setTimeout(function(){window.focus();window.print();},400);};window.onafterprint=function(){window.close();};<\/scr'+'ipt>'
+        +'</body></html>';
+    w.document.open(); w.document.write(html); w.document.close();
+};
 ui.foodNewsSearch=function(){
     var q=(document.getElementById('fnSearch').value||'').trim(); if(!q) return;
     ui._fnInitKakao();

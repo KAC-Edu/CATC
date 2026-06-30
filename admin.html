@@ -572,7 +572,7 @@ body.in-course #moreToggleTab{ display:flex !important; }
     <a class="more-item" onclick="ui.setMode('quiz'); ui.closeMorePanel();"><i class="fa-solid fa-clipboard-question" style="color:#6366f1;"></i> 퀴즈 모드</a>
     <a class="more-item" onclick="ui.setMode('waiting'); ui.closeMorePanel();"><i class="fa-solid fa-chart-line" style="color:#6366f1;"></i> 과정 총 현황</a>
     <a class="more-item" onclick="ui.setMode('schedule'); ui.closeMorePanel();"><i class="fa-solid fa-calendar-days" style="color:#6366f1;"></i> 교육 시간표</a>
-    <div id="moreFoodSection" style="display:none;">
+    <div id="moreFoodSection">
     <hr class="more-div">
     <div class="more-sec" style="color:#f59e0b;">정보 · 소식</div>
     <a class="more-item" onclick="ui.setMode('foodnews'); ui.closeMorePanel();"><i class="fa-solid fa-burger" style="color:#f59e0b;"></i> 도움이 되는 소식 (맛집)</a>
@@ -919,7 +919,10 @@ body.in-course #moreToggleTab{ display:flex !important; }
     </div>
     <div class="modern-white-card" style="width:100%; max-width:1080px; padding:26px 30px;">
         <div style="font-size:13px; color:#64748b; font-weight:700; margin-bottom:14px;">교육생·강사가 함께 보는 공용 자료입니다(과정 종료 후에도 보존) · 추천순 정렬 · 거리는 <b>자가용 기준</b> 길찾기에서 확인 · 강사는 추가/수정/삭제 가능</div>
-        <button type="button" onclick="ui.openFoodNewsAdd()" style="padding:10px 18px; border:none; border-radius:10px; background:#2563eb; color:#fff; font-weight:800; font-size:14px; cursor:pointer; margin-bottom:14px;"><i class="fa-solid fa-plus"></i> 맛집 추가</button>
+        <div class="no-print" style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:14px;">
+            <button type="button" onclick="ui.openFoodNewsAdd()" style="padding:10px 18px; border:none; border-radius:10px; background:#2563eb; color:#fff; font-weight:800; font-size:14px; cursor:pointer;"><i class="fa-solid fa-plus"></i> 맛집 추가</button>
+            <button type="button" onclick="ui.foodNewsSavePdf()" style="padding:10px 18px; border:1px solid #cbd5e1; border-radius:10px; background:#fff; color:#334155; font-weight:800; font-size:14px; cursor:pointer;"><i class="fa-solid fa-file-pdf" style="color:#dc2626;"></i> PDF 저장</button>
+        </div>
         <!-- 맛집 추가 팝업 -->
         <div id="foodNewsAddModal" style="display:none; position:fixed; inset:0; z-index:16000; background:rgba(15,23,42,.5); align-items:center; justify-content:center; padding:20px;" onclick="if(event.target===this) ui.closeFoodNewsAdd()">
             <div style="background:#fff; border-radius:18px; padding:24px 26px; width:100%; max-width:860px; max-height:90vh; overflow-y:auto; box-shadow:0 24px 60px rgba(15,23,42,.35); position:relative;">
