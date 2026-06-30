@@ -4,8 +4,47 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>차량지원 플랫폼</title>
+<script>
+/* 모바일/태블릿 → 모바일 라이트 화면으로 이동 (PC는 유지, ?forcepc 로 강제) */
+(function(){ try{
+  var wide = window.innerWidth >= 1024;
+  var fine = window.matchMedia && window.matchMedia('(pointer:fine)').matches;
+  var noTouch = !('ontouchstart' in window) || navigator.maxTouchPoints === 0;
+  var isPc = wide && (fine || noTouch);
+  if(!isPc && location.search.indexOf('forcepc')<0){ location.replace('driver_m.html'+location.search+location.hash); }
+}catch(e){} })();
+</script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<script src="config.js?v=b260620c"></script>
+<script>
+/* 접속 코드 게이트 (catc1234) — 통과 시 30일 기억 */
+(function(){
+  window.catcLock=function(){ try{localStorage.removeItem('catc_gate_ok');}catch(e){} location.reload(); };
+  var ok=false; try{ ok=(function(){var t=parseInt(localStorage.getItem('catc_gate_ok'),10);return !!t&&(Date.now()-t)<2592000000;})(); }catch(e){ ok=true; }
+  if(ok){ window.__catcUnlocked=true; return; }
+  window.__catcUnlocked=false;
+  document.documentElement.classList.add('catc-locked');
+  function build(){
+    if(document.getElementById('catcGate')) return;
+    var o=document.createElement('div'); o.id='catcGate';
+    o.innerHTML='<div class="catc-box"><div class="catc-ic">\uD83D\uDD12</div>'
+      +'<div class="catc-t">접속 코드 입력</div>'
+      +'<div class="catc-s">CATC 차량지원 플랫폼 · 보안 접속</div>'
+      +'<input id="catcInp" type="password" autocomplete="off" placeholder="접속 코드">'
+      +'<button id="catcBtn">입장</button><div id="catcMsg"></div></div>';
+    (document.body||document.documentElement).appendChild(o);
+    var inp=o.querySelector('#catcInp'),btn=o.querySelector('#catcBtn'),msg=o.querySelector('#catcMsg');
+    function go(){ if(inp.value==='catc1234'){ try{localStorage.setItem('catc_gate_ok',String(Date.now()));}catch(e){} location.reload(); } else { msg.textContent='접속 코드가 올바르지 않습니다.'; inp.value=''; inp.focus(); } }
+    btn.addEventListener('click',go);
+    inp.addEventListener('keyup',function(e){ if(e.key==='Enter') go(); });
+    setTimeout(function(){ try{inp.focus();}catch(e){} },120);
+  }
+  if(document.body) build(); else document.addEventListener('DOMContentLoaded',build);
+})();
+</script>
 <style>
   *{box-sizing:border-box}
   html,body{margin:0;height:100%}
@@ -29,11 +68,11 @@
   .clock .d{font-size:11px;color:#94a3b8;font-weight:600}
   .clock .t{font-size:18px;font-weight:800;letter-spacing:-.5px}
   /* main */
-  .main{flex:1;min-width:0;padding:32px 40px;overflow-y:auto}
+  .main{flex:1;min-width:0;padding:20px 30px;overflow-y:auto;position:relative}
   .main::-webkit-scrollbar{width:9px}
   .main::-webkit-scrollbar-thumb{background:#e2e8f0;border-radius:99px}
-  .head{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:26px}
-  .head h1{margin:0;font-size:26px;font-weight:800;letter-spacing:-.6px}
+  .head{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:14px}
+  .head h1{margin:0;font-size:22px;font-weight:800;letter-spacing:-.6px}
   .head p{margin:7px 0 0;font-size:13.5px;color:#64748b;font-weight:500}
   .pills{display:flex;gap:8px}
   .pill{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;padding:7px 13px;border-radius:999px}
@@ -41,8 +80,8 @@
   .pill.red{background:#fef2f2;color:#dc2626}
   .pill.blue{background:#eff4ff;color:#2563eb}
   /* panel */
-  .panel{background:#fff;border:1px solid #eef0f4;border-radius:16px;padding:20px 22px}
-  .panel-h{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+  .panel{background:#fff;border:1px solid #eef0f4;border-radius:16px;padding:14px 18px}
+  .panel-h{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
   .panel-h h3{margin:0;font-size:15px;font-weight:800}
   .panel-h .sub{font-size:12px;color:#94a3b8;font-weight:600}
   /* data table */
@@ -67,30 +106,32 @@
   /* board */
   .board{table-layout:fixed;width:100%}
   .board th,.board td{border:1px solid #eef0f4}
-  .board thead th{padding:9px 4px;text-align:center;white-space:nowrap;background:#f8fafc}
+  .board thead th{padding:6px 4px;text-align:center;white-space:nowrap;background:#f8fafc}
   .board thead th.today{background:#eff4ff}
   .board thead th .dw{font-size:13px;font-weight:800}
   .board thead th .dt{font-size:10.5px;color:#94a3b8;font-weight:600;margin-top:1px}
   .board .tcorner{background:#f8fafc;width:60px}
-  .board .tcol{background:#fafbfc;color:#94a3b8;font-size:11px;font-weight:700;text-align:right;padding:5px 9px 0;vertical-align:top;white-space:nowrap;width:60px}
-  .board td.cell{vertical-align:top;padding:3px;height:40px}
+  .board .tcol{background:#fafbfc;position:relative;vertical-align:top;width:60px}
+  .board .tcol .tl{position:absolute;top:0;right:8px;transform:translateY(-50%);background:#fafbfc;padding:0 4px;font-size:11px;color:#94a3b8;font-weight:700;white-space:nowrap}
+  .board td.cell{vertical-align:top;padding:3px;height:44px}
   .board td.cell.today{background:#f5f9ff}
   .board td.cell.off{background:#fef2f2}
-  .board .allday{vertical-align:top;padding:5px}
+  .board .allday{vertical-align:top;padding:5px;height:44px}
   .board .allday.today{background:#f5f9ff}
-  .board .tcol.allday-lbl{padding:7px 9px;font-size:11px}
-  .ev{border:1px solid #eef0f4;border-radius:0 7px 7px 0;padding:3px 6px;margin-bottom:3px}
+  .board .tcol.allday-lbl{padding:0 9px;font-size:11px;color:#94a3b8;font-weight:700;text-align:right;vertical-align:middle}
+  .ev{border:1px solid #eef0f4;border-radius:0 7px 7px 0;padding:3px 7px;margin-bottom:2px;overflow:hidden}
+  .ev .et2{font-size:10.5px;font-weight:700;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .ev .et{font-size:10px;font-weight:800}
   .ev .en{font-size:10.5px;font-weight:700;margin-top:1px;line-height:1.2}
-  .ev .es{font-size:9.5px;color:#94a3b8;font-weight:600;margin-top:1px}
+  .ev .es{font-size:9.5px;color:#94a3b8;font-weight:600;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .ev-off{background:#fee2e2;border-left:3px solid #ef4444;border-radius:0 7px 7px 0;padding:3px 6px;margin-bottom:3px}
   .ev-off .ot{font-size:10px;font-weight:800;color:#b91c1c}
   .ev-off .os{font-size:9.5px;color:#ef4444;font-weight:600;margin-top:1px}
   .allday-banner{background:#fef2f2;border-left:3px solid #ef4444;border-radius:0 7px 7px 0;padding:5px 8px}
   .allday-banner .at{font-size:11px;font-weight:800;color:#b91c1c}
   .allday-banner .as{font-size:9.5px;color:#ef4444;font-weight:600;margin-top:1px}
-  .lunch{background:repeating-linear-gradient(45deg,#f8fafc,#f8fafc 8px,#f1f5f9 8px,#f1f5f9 16px);text-align:center;color:#94a3b8;font-size:11.5px;font-weight:800;padding:7px}
-  .legend{display:flex;gap:16px;flex-wrap:wrap;margin-top:15px;font-size:11px;font-weight:600;color:#64748b}
+  .lunch{background:repeating-linear-gradient(45deg,#f8fafc,#f8fafc 8px,#f1f5f9 8px,#f1f5f9 16px);text-align:center;color:#94a3b8;font-size:11.5px;font-weight:800;padding:7px;height:44px}
+  .legend{display:flex;gap:16px;flex-wrap:wrap;margin-top:8px;font-size:11px;font-weight:600;color:#64748b}
   .legend span{display:inline-flex;align-items:center;gap:5px}
   .legend i{width:9px;height:9px;border-radius:3px;display:inline-block}
   /* leave room rows */
@@ -139,6 +180,21 @@
   .mitem .mdel{border:0;background:none;color:#cbd5e1;cursor:pointer;font-size:15px}
   .mlist{display:flex;flex-direction:column;gap:8px}
   .col18{display:flex;flex-direction:column;gap:18px}
+  .wknav{display:inline-flex;align-items:center;gap:8px}
+  .wknav button{border:1px solid #e2e8f0;background:#fff;border-radius:8px;width:26px;height:26px;font-size:13px;color:#475569;font-weight:800;cursor:pointer}
+  .wknav button.wkt{width:auto;padding:0 10px;font-size:12px}
+  .btn-no2{border:1px solid #fecaca;border-radius:8px;padding:7px 12px;font-size:12px;font-weight:800;color:#dc2626;background:#fff;cursor:pointer}
+  html.catc-locked > body{ visibility:hidden !important; }
+  #catcGate{ position:fixed; inset:0; z-index:2147483647; background:linear-gradient(135deg,#0f172a,#1e293b); display:flex; align-items:center; justify-content:center; font-family:'Pretendard',system-ui,sans-serif; visibility:visible !important; }
+  #catcGate *{ visibility:visible !important; box-sizing:border-box; }
+  #catcGate .catc-box{ width:300px; max-width:86vw; background:#fff; border-radius:18px; padding:30px 26px; text-align:center; box-shadow:0 20px 60px rgba(0,0,0,.45); }
+  #catcGate .catc-ic{ font-size:30px; margin-bottom:8px; }
+  #catcGate .catc-t{ font-size:19px; font-weight:800; color:#0f172a; }
+  #catcGate .catc-s{ margin:4px 0 18px; font-size:12.5px; color:#64748b; }
+  #catcGate input{ width:100%; padding:13px 14px; font-size:16px; text-align:center; letter-spacing:2px; border:1.5px solid #e2e8f0; border-radius:11px; outline:none; color:#0f172a; background:#fff; }
+  #catcGate input:focus{ border-color:#2563eb; box-shadow:0 0 0 3px rgba(37,99,235,.15); }
+  #catcGate button{ width:100%; margin-top:12px; padding:13px; font-size:15px; font-weight:800; color:#fff; background:#2563eb; border:0; border-radius:11px; cursor:pointer; }
+  #catcGate #catcMsg{ margin-top:11px; min-height:16px; font-size:12.5px; font-weight:700; color:#dc2626; }
 </style>
 </head>
 <body>
@@ -149,7 +205,7 @@
       <div><div class="bt">차량지원</div><div class="bs">CATC 운행관리</div></div>
     </div>
     <nav id="nav"></nav>
-    <div class="clock"><div class="d">2026. 06. 30 (월)</div><div class="t" id="clock">14:20</div></div>
+    <div class="clock"><div class="d" id="clockdate">2026. 06. 30 (월)</div><div class="t" id="clock">14:20</div></div>
   </aside>
   <main class="main" id="main"></main>
 </div>
@@ -172,67 +228,133 @@ var DEST = [
   { key:'터미널', label:'터미널', labelColor:'#2563eb', valColor:'#2563eb', color:'#2563eb' },
   { key:'공항',   label:'공항',   labelColor:'#16a34a', valColor:'#16a34a', color:'#16a34a' }
 ];
-var EVC  = { arr:'#2563eb', dep:'#38bdf8', entry:'#6366f1', leave:'#0d9488', off:'#ef4444' };
-var TINT = { arr:'#eff4ff', dep:'#eef9ff', entry:'#eef0ff', leave:'#effbf7', off:'#fef2f2' };
+var EVC  = { arr:'#2563eb', dep:'#38bdf8', entry:'#6366f1', leave:'#0d9488', off:'#ef4444', memo:'#d97706' };
+var TINT = { arr:'#eff4ff', dep:'#eef9ff', entry:'#eef0ff', leave:'#effbf7', off:'#fef2f2', memo:'#fffbeb' };
 
-/* ---------- DATA ---------- */
-var DAYS = [
-  { dow:'월', date:'06.30', today:true  },
-  { dow:'화', date:'07.01', today:false },
-  { dow:'수', date:'07.02', today:false },
-  { dow:'목', date:'07.03', today:false },
-  { dow:'금', date:'07.04', today:false }
-];
+/* ---------- DATA (live: Firebase) ---------- */
 var HOURS = [8,9,10,11,12,13,14,15,16,17,18];
-var EVTS = [
-  { day:0, h:9,  time:'09:10', title:'김도현 도착', sub:'오송역 → 항기원', type:'arr' },
-  { day:0, h:15, time:'15:30', title:'기본교육 12기 퇴교', sub:'오송·터미널·공항', type:'leave' },
-  { day:1, h:8,  time:'08:40', title:'박서연 도착', sub:'청주터미널 → 항기원', type:'arr' },
-  { day:1, h:17, time:'17:30', title:'김도현 샌딩', sub:'항기원 → 오송역', type:'dep' },
-  { day:2, h:9,  time:'09:00', title:'입교버스 (왕복 약 2시간)', sub:'전문교육 3기 · 09:00~11:00', type:'entry' },
-  { day:2, h:18, time:'18:00', title:'박서연 샌딩', sub:'항기원 → 터미널', type:'dep' },
-  { day:3, h:10, time:'10:20', title:'정우성 도착', sub:'청주공항 → 항기원', type:'arr' },
-  { day:4, h:16, time:'16:00', title:'보수교육 5기 퇴교', sub:'오송·터미널', type:'leave' }
-];
-var OFF = [
-  { day:4, allDay:true,  label:'개인 휴가' },
-  { day:2, allDay:false, from:14, to:16, label:'차량 정비' }
-];
-var SHUTTLE = [
-  { room:'A', name:'기본교육 12기', period:'06/30(월) ~ 07/04(금)', depart:'15:30', people:[
-    {name:'김민수',dest:'오송역'},{name:'이서준',dest:'오송역'},{name:'박지후',dest:'터미널'},{name:'정우진',dest:'공항'} ] },
-  { room:'B', name:'보수교육 5기',  period:'06/23(월) ~ 07/04(금)', depart:'16:00', people:[
-    {name:'한도윤',dest:'오송역'},{name:'최예준',dest:'터미널'},{name:'강하준',dest:'자차'} ] },
-  { room:'C', name:'전문교육 3기',  period:'06/30(월) ~ 07/11(금)', depart:'15:30', people:[
-    {name:'윤서연',dest:'오송역'},{name:'장하은',dest:'오송역'},{name:'임도현',dest:'공항'} ] },
-  { room:'D', name:'신규 입과 과정', period:'07/07(월) ~ 07/18(금)', depart:'미정', people:[] },
-  { room:'E', name:'안전관리 과정',  period:'07/07(월) ~ 07/11(금)', depart:'미정', people:[] }
-];
-var PICKUPS = [
-  { date:'07/01', dow:'화', sort:7010910, name:'김도현', course:'기본교육 12기', place:'오송역',     pin:'09:10', pout:'17:30', by:'이정아 대리', dept:'교육운영부' },
-  { date:'07/02', dow:'수', sort:7020840, name:'박서연', course:'보수교육 5기',  place:'청주터미널', pin:'08:40', pout:'18:00', by:'김민준 주임', dept:'교육운영부' },
-  { date:'07/03', dow:'목', sort:7031020, name:'정우성', course:'전문교육 3기',  place:'청주공항',   pin:'10:20', pout:'16:40', by:'한지민 과장', dept:'교육운영부' },
-  { date:'07/03', dow:'목', sort:7031300, name:'이도경', course:'기본교육 12기', place:'오송역',     pin:'13:00', pout:'19:10', by:'이정아 대리', dept:'교육운영부' },
-  { date:'07/04', dow:'금', sort:7040830, name:'한지우', course:'보수교육 5기',  place:'청주터미널', pin:'08:30', pout:'17:00', by:'한지민 과장', dept:'교육운영부' },
-  { date:'07/08', dow:'화', sort:7080900, name:'오세훈', course:'신규 입과 과정', place:'오송역',     pin:'09:00', pout:'17:30', by:'김민준 주임', dept:'교육운영부' },
-  { date:'07/10', dow:'목', sort:7101040, name:'나경원', course:'안전관리 과정',  place:'청주공항',   pin:'10:40', pout:'16:50', by:'한지민 과장', dept:'교육운영부' }
-];
-var RESV = [
-  { name:'강태오', phone:'010-6789-0123', date:'07/02(수) 09:00', sort:7020900, by:'김민준 주임', dept:'교육운영부', conflict:'박서연 08:40 겹침' },
-  { name:'노태형', phone:'010-8901-2345', date:'07/03(목) 10:20', sort:7031020, by:'한지민 과장', dept:'교육운영부', conflict:'정우성 10:20 겹침' },
-  { name:'최유진', phone:'010-5678-9012', date:'07/04(금) 09:30', sort:7040930, by:'김민준 주임', dept:'교육운영부', conflict:'' },
-  { name:'서지원', phone:'010-7890-1234', date:'07/05(토) 10:00', sort:7051000, by:'이정아 대리', dept:'교육운영부', conflict:'' }
-];
-var FIXED = [
-  { kind:'입교', course:'전문교육 3기',  sub:'07/02(수) 09:00 · 서울역 출발 · 수요일 시작 과정', icon:'fa-right-to-bracket',   color:'#6366f1', tint:'#eef0ff' },
-  { kind:'입교', course:'보수교육 6기',  sub:'07/07(월) 09:00 · 대전역 출발 · 시작 주 첫 월요일', icon:'fa-right-to-bracket',   color:'#6366f1', tint:'#eef0ff' },
-  { kind:'퇴교', course:'기본교육 12기', sub:'07/04(금) 15:30 · 오송역 방면',                    icon:'fa-right-from-bracket', color:'#0d9488', tint:'#effbf7' },
-  { kind:'퇴교', course:'보수교육 5기',  sub:'07/04(금) 16:00 · 터미널 방면',                    icon:'fa-right-from-bracket', color:'#0d9488', tint:'#effbf7' }
-];
-var DAYOFF = [
-  { title:'개인 휴가', sub:'07/04(금) · 종일' },
-  { title:'차량 정비', sub:'07/02(수) · 14:00 ~ 16:00' }
-];
+var DAYS=[], EVTS=[], OFF=[], SHUTTLE=[], PICKUPS=[], RESV=[], FIXED=[], DAYOFF=[];
+
+/* ---------- Firebase 연동 ---------- */
+var allCourses={}, rawPickups=[], dayoffsR=[], fixedsR=[], schedulesR=[];
+var weekOffset = (function(){ var dw=new Date().getDay(); return (dw===5||dw===6||dw===0)?1:0; })();
+var DOWK={0:'일',1:'월',2:'화',3:'수',4:'목',5:'금',6:'토'};
+var DTYPE={osong:'오송역',terminal:'터미널',airport:'공항',car:'자차'};
+function p2(n){ return String(n).padStart(2,'0'); }
+function ymd(d){ return d.getFullYear()+'-'+p2(d.getMonth()+1)+'-'+p2(d.getDate()); }
+function todayStr(){ return ymd(new Date()); }
+function normDate(s){ return s ? String(s).replace(/\./g,'-').replace(/\s/g,'') : ''; }
+function toMin(t){ if(!t) return null; var a=String(t).split(':'); return parseInt(a[0],10)*60+parseInt(a[1]||0,10); }
+function mmdd(s){ if(!s) return ''; var p=s.split('-'); return p[1]+'.'+p[2]; }
+function fmtFull(s){ if(!s) return ''; var p=s.split('-'); return p[1]+'/'+p[2]; }
+function getWeekDates(off){ var now=new Date(); var dow=(now.getDay()+6)%7; var mon=new Date(now); mon.setDate(now.getDate()-dow+off*7); var r=[]; for(var i=0;i<5;i++){ var d=new Date(mon); d.setDate(mon.getDate()+i); r.push(ymd(d)); } return r; }
+function fmtPhone(p){ if(!p) return ''; var d=(''+p).replace(/[^0-9]/g,''); if(d.length===11) return d.replace(/(\d{3})(\d{4})(\d{4})/,'$1-$2-$3'); if(d.length===10) return d.replace(/(\d{3})(\d{3})(\d{4})/,'$1-$2-$3'); return p; }
+function dirText(place,dir){ var p=place||'픽업지'; return dir==='dep' ? ('항기원 → '+p) : (p+' → 항기원'); }
+function requesterOf(p){ return p.requester||p.requesterName||p.coordinator||p.coordinatorName||p.applicant||'-'; }
+function getConflicts(date,time,exId){
+  var d=normDate(date), m=toMin(time), out=[]; if(m===null) return out;
+  rawPickups.forEach(function(p){ if(p.id===exId||p.status!=='confirmed') return; if(normDate(p.date)!==d) return; if(Math.abs(toMin(p.time)-m)<90) out.push((p.time||'')+' '+(p.prof||'강사')); });
+  var ddow=new Date(d+'T00:00:00').getDay();
+  fixedsR.forEach(function(f){ if(Number(f.dow)!==ddow) return; if(Math.abs(toMin(f.time)-m)<90) out.push((f.time||'')+' '+(f.kind||'')+'버스(매주)'); });
+  return out;
+}
+
+/* 원본 Firebase 데이터 → 화면 모델 변환 */
+function rebuild(){
+  var dates=getWeekDates(weekOffset), today=todayStr();
+  DAYS = dates.map(function(dt){ var d=new Date(dt+'T00:00:00'); return { dow:DOWK[d.getDay()], date:mmdd(dt), today:dt===today, ymd:dt }; });
+  function dayIndex(d){ return dates.indexOf(normDate(d)); }
+
+  /* 퇴교수송 — courses/{room}/shuttle */
+  var rids = Object.keys(allCourses).filter(function(rid){ var c=allCourses[rid]; return c && c.settings && c.settings.courseName; });
+  if(!rids.length) rids = Object.keys(allCourses);
+  rids.sort();
+  SHUTTLE = rids.map(function(rid){
+    var room=allCourses[rid]||{}, reqs=(room.shuttle&&room.shuttle.requests)||{}, people=[];
+    Object.keys(reqs).forEach(function(k){ var r=reqs[k]; if(!r) return; people.push({ name:(r.name||r.student||r.studentName||r.prof||'교육생'), dest:(DTYPE[r.type]||'자차') }); });
+    var dep=room.shuttle&&room.shuttle.departure;
+    return { id:rid, room:rid, name:(room.settings&&room.settings.courseName)||('Room '+rid), period:(room.settings&&room.settings.period)||'', depart:(dep&&dep.time)||'미정', people:people };
+  });
+
+  /* 강사픽업 — 확정 */
+  PICKUPS = rawPickups.filter(function(p){ return p.status==='confirmed'; }).map(function(p){
+    var d=normDate(p.date), dd=new Date(d+'T00:00:00'), dir=p.dir||'arr';
+    return { id:p.id, ymd:d, date:mmdd(d), dow:DOWK[dd.getDay()], sort:Number((d||'0').replace(/-/g,''))*10000+(toMin(p.time)||0),
+      name:p.prof||'강사', phone:fmtPhone(p.phone)||'-', place:p.place||'-', dirText:(dir==='dep'?'샌딩(항기원→역)':'도착(역→항기원)'), time:p.time||'-', by:requesterOf(p) };
+  }).sort(function(a,b){ return a.sort-b.sort; });
+
+  /* 강사픽업 — 신규(미확인) */
+  RESV = rawPickups.filter(function(p){ return p.status==='pending'; }).map(function(p){
+    var d=normDate(p.date), dir=p.dir||'arr', cf=getConflicts(d,p.time,p.id);
+    return { id:p.id, sort:Number((d||'0').replace(/-/g,''))*10000+(toMin(p.time)||0),
+      name:p.prof||'강사', phone:fmtPhone(p.phone)||'-', date:fmtFull(d)+' '+(p.time||''),
+      dirText:(dir==='dep'?'샌딩(항기원→역)':'도착(역→항기원)'), by:requesterOf(p), conflict: cf.length? cf.join(' / ') : '' };
+  }).sort(function(a,b){ return a.sort-b.sort; });
+
+  /* 주간 보드 이벤트 */
+  EVTS=[];
+  rawPickups.filter(function(p){ return p.status==='confirmed'; }).forEach(function(p){
+    var i=dayIndex(p.date), m=toMin(p.time); if(i<0||m===null) return; var dir=p.dir||'arr';
+    EVTS.push({ day:i, h:Math.floor(m/60), time:p.time, title:(p.prof||'강사'), sub:dirText(p.place,dir), type:dir==='arr'?'arr':'dep' });
+  });
+  schedulesR.forEach(function(x){ var i=dayIndex(x.date), m=toMin(x.time); if(i<0||m===null) return;
+    EVTS.push({ day:i, h:Math.floor(m/60), time:x.time, title:(x.title||'일정'), sub:(x.endTime?(x.time+'~'+x.endTime):''), type:'memo' }); });
+  Object.keys(allCourses).forEach(function(rid){ var c=allCourses[rid]; var dep=c&&c.shuttle&&c.shuttle.departure;
+    if(dep&&dep.announced&&dep.time){ var i=dayIndex(dep.date), m=toMin(dep.time); if(i<0||m===null) return;
+      var cn=(c.settings&&c.settings.courseName)||rid;
+      var rq=c.shuttle.requests||{}; var tot=Object.keys(rq).filter(function(k){ return rq[k]&&rq[k].type!=='car'; }).length;
+      EVTS.push({ day:i, h:Math.floor(m/60), time:dep.time, title:cn+' 퇴교', sub:tot+'명 · 퇴교수송', type:'leave' }); } });
+  fixedsR.forEach(function(f){ var i=Number(f.dow)-1, m=toMin(f.time); if(i<0||i>4||m===null) return;
+    EVTS.push({ day:i, h:Math.floor(m/60), time:f.time, title:(f.kind||'')+'버스', sub:(f.note||'매주 반복'), type:f.kind==='입교'?'entry':'leave' }); });
+
+  /* 휴가 — 종일(날짜 범위) */
+  OFF=[];
+  dates.forEach(function(dt,i){ var off=dayoffsR.find(function(o){ return dt>=normDate(o.start)&&dt<=normDate(o.end||o.start); }); if(off) OFF.push({ day:i, allDay:true, label:off.reason||'휴가' }); });
+
+  /* 입교·퇴교 고정 일정 목록 */
+  FIXED = fixedsR.map(function(f){ var isin=f.kind==='입교';
+    return { id:f.id, kind:f.kind||'입교', course:(f.note||((f.kind||'')+'버스')),
+      sub:'매주 '+(DOWK[f.dow]||'?')+'요일 '+(f.time||'')+(f.endTime?(' ~ '+f.endTime):'')+(f.weekly!==false?' · 반복':''),
+      icon:isin?'fa-right-to-bracket':'fa-right-from-bracket', color:isin?'#6366f1':'#0d9488', tint:isin?'#eef0ff':'#effbf7' }; });
+
+  /* 휴가/운행불가 목록 */
+  DAYOFF = dayoffsR.map(function(o){ var s=normDate(o.start), e=normDate(o.end||o.start);
+    return { id:o.id, title:o.reason||'휴가', sub:(s===e?s:(s+' ~ '+e))+' · 종일' }; });
+
+  render();
+}
+
+function initFirebase(){
+  if(typeof firebase==='undefined' || !firebase.database){
+    document.getElementById('main').innerHTML='<div style="padding:50px;color:#dc2626;font-weight:700">Firebase 설정(config.js)을 불러오지 못했습니다. config.js가 같은 폴더에 있는지 확인하세요.</div>'; return;
+  }
+  var db=firebase.database();
+  db.ref('courses').on('value', function(s){ allCourses=s.val()||{}; rebuild(); });
+  db.ref('system/pickup').on('value', function(s){ var raw=s.val()||{}; rawPickups=Object.keys(raw).map(function(id){ var o=raw[id]||{}; o.id=id; return o; }); rebuild(); });
+  db.ref('system/driver_dayoff').on('value', function(s){ var raw=s.val()||{}; dayoffsR=Object.keys(raw).map(function(id){ var o=raw[id]||{}; o.id=id; return o; }); rebuild(); });
+  db.ref('system/driver_fixed').on('value', function(s){ var raw=s.val()||{}; fixedsR=Object.keys(raw).map(function(id){ var o=raw[id]||{}; o.id=id; return o; }); rebuild(); });
+  db.ref('system/driver_schedule').on('value', function(s){ var raw=s.val()||{}; schedulesR=Object.keys(raw).map(function(id){ var o=raw[id]||{}; o.id=id; return o; }); rebuild(); });
+}
+
+/* ---------- 액션 (쓰기) ---------- */
+function confirmPickup(id){ var p=rawPickups.find(function(x){ return x.id===id; }); if(!p) return;
+  var cf=getConflicts(p.date,p.time,id);
+  if(cf.length && !confirm('⚠️ 같은 시간대에 겹치는 운행이 있습니다.\n\n'+cf.map(function(c){ return '· '+c; }).join('\n')+'\n\n그래도 확정(배차)하시겠습니까?')) return;
+  firebase.database().ref('system/pickup/'+id).update({ status:'confirmed', rejectReason:null, respondedAt:firebase.database.ServerValue.TIMESTAMP });
+}
+function rejectPickup(id){ var reason=prompt('불가 사유를 입력하세요'); if(!reason) return;
+  firebase.database().ref('system/pickup/'+id).update({ status:'rejected', rejectReason:reason, respondedAt:firebase.database.ServerValue.TIMESTAMP });
+}
+function delFixed(id){ if(!confirm('이 고정 일정을 삭제할까요?')) return; firebase.database().ref('system/driver_fixed/'+id).remove(); }
+function delOff(id){ if(!confirm('이 휴가를 삭제할까요? (운영부 고지도 사라집니다)')) return; firebase.database().ref('system/driver_dayoff/'+id).remove(); }
+function addFixed(kind){ var dow=prompt(kind+'버스 요일 (1=월 ~ 5=금)','1'); if(!dow) return; var time=prompt('출발 시간 (예: 09:00)','09:00'); if(!time) return; var note=prompt('메모(과정명 등)','')||'';
+  firebase.database().ref('system/driver_fixed').push({ kind:kind, dow:Number(dow), time:time, endTime:'', note:note, weekly:true, createdAt:firebase.database.ServerValue.TIMESTAMP });
+}
+function addOff(){ var start=prompt('휴가 시작일 (YYYY-MM-DD)', todayStr()); if(!start) return; var end=prompt('종료일 (YYYY-MM-DD)', start)||start; var reason=prompt('사유','휴가')||'휴가';
+  firebase.database().ref('system/driver_dayoff').push({ start:start, end:end, reason:reason, createdAt:firebase.database.ServerValue.TIMESTAMP });
+}
+function moveWeek(d){ var dw=new Date().getDay(); weekOffset = d===0 ? ((dw===5||dw===6||dw===0)?1:0) : weekOffset+d; rebuild(); }
+function startClock(){ function t(){ var n=new Date(); var c=document.getElementById('clock'); if(c) c.textContent=p2(n.getHours())+':'+p2(n.getMinutes()); var de=document.getElementById('clockdate'); if(de) de.textContent=n.getFullYear()+'. '+p2(n.getMonth()+1)+'. '+p2(n.getDate())+' ('+DOWK[n.getDay()]+')'; } t(); setInterval(t,30000); }
 
 var TABS = [
   { id:'leave',        label:'퇴교수송 현황', icon:'fa-bus',             badge:'' },
@@ -273,7 +395,7 @@ function viewManage(){
 
   var rows = HOURS.map(function(h){
     if(h===12){
-      return '<tr><td class="tcol">'+pad(h)+':00</td><td class="lunch" colspan="5"><i class="fa-solid fa-mug-hot" style="margin-right:6px"></i>휴게시간 12:00 ~ 13:00 · 운행 없음</td></tr>';
+      return '<tr><td class="tcol"><span class="tl">'+pad(h)+':00</span></td><td class="lunch" colspan="5"><i class="fa-solid fa-mug-hot" style="margin-right:6px"></i>휴게시간 12:00 ~ 13:00 · 운행 없음</td></tr>';
     }
     var cells = DAYS.map(function(d,di){
       var off = null;
@@ -286,13 +408,13 @@ function viewManage(){
       if(!off){
         inner += EVTS.filter(function(e){ return e.day===di && e.h===h; }).map(function(e){
           return '<div class="ev" style="background:'+TINT[e.type]+';border-left:3px solid '+EVC[e.type]+'">'
-            + '<div class="et" style="color:'+EVC[e.type]+'">'+esc(e.time)+'</div>'
-            + '<div class="en">'+esc(e.title)+'</div><div class="es">'+esc(e.sub)+'</div></div>';
+            + '<div class="et2"><span style="color:'+EVC[e.type]+';font-weight:800">'+esc(e.time)+'</span> '+esc(e.title)+'</div>'
+            + (e.sub ? '<div class="es">'+esc(e.sub)+'</div>' : '') + '</div>';
         }).join('');
       }
       return '<td class="'+cls+'">'+inner+'</td>';
     }).join('');
-    return '<tr><td class="tcol">'+pad(h)+':00</td>'+cells+'</tr>';
+    return '<tr><td class="tcol"><span class="tl">'+pad(h)+':00</span></td>'+cells+'</tr>';
   }).join('');
 
   var legend = '<div class="legend">'
@@ -302,8 +424,8 @@ function viewManage(){
     + '<span><i style="background:'+EVC.leave+'"></i>퇴교버스</span>'
     + '<span><i style="background:'+EVC.off+'"></i>휴가</span></div>';
 
-  return '<div class="col18"><div class="panel">'
-    + '<div class="panel-h"><h3>주간 운행 스케줄</h3><span class="sub">06.30 ~ 07.04</span></div>'
+  return '<div class="col18" id="boardWrap"><div class="panel">'
+    + '<div class="panel-h"><h3>주간 운행 스케줄</h3><span class="sub wknav"><button onclick="moveWeek(-1)">‹</button><b style="min-width:96px;text-align:center">'+(DAYS.length?(DAYS[0].date+' ~ '+DAYS[4].date):'')+'</b><button onclick="moveWeek(1)">›</button><button class="wkt" onclick="moveWeek(0)">오늘</button></span></div>'
     + '<table class="board"><thead>'+thead+'</thead><tbody>'+allRow+rows+'</tbody></table>'
     + legend + '</div></div>';
 }
@@ -342,38 +464,42 @@ function viewLeave(){
 
 /* ---------- 강사픽업 일정 (확정, 날짜순 표) ---------- */
 function viewPickups(){
-  var rows = PICKUPS.slice().sort(function(a,b){ return a.sort-b.sort; }).map(function(p,i){
+  if(!PICKUPS.length) return '<div class="tbl"><div style="padding:34px;text-align:center;color:#94a3b8;font-weight:600">확정된 픽업 일정이 없습니다.</div></div>';
+  var rows = PICKUPS.map(function(p,i){
     return '<tr><td class="dim b7">'+(i+1)+'</td>'
       + '<td class="l b7">'+esc(p.date)+' ('+esc(p.dow)+')</td>'
       + '<td class="l b8">'+esc(p.name)+'</td>'
-      + '<td class="l"><span class="chip-course">'+esc(p.course)+'</span></td>'
+      + '<td class="l muted">'+esc(p.phone)+'</td>'
       + '<td class="l">'+esc(p.place)+'</td>'
-      + '<td class="b7 blue">'+esc(p.pin)+'</td>'
-      + '<td class="b7 teal">'+esc(p.pout)+'</td>'
-      + '<td class="l"><div class="b7">'+esc(p.by)+'</div><div class="by-dept">'+esc(p.dept)+'</div></td></tr>';
+      + '<td class="l">'+esc(p.dirText)+'</td>'
+      + '<td class="b7 blue">'+esc(p.time)+'</td>'
+      + '<td class="l muted">'+esc(p.by)+'</td></tr>';
   }).join('');
   return '<div class="tbl"><table><thead><tr>'
     + '<th style="width:52px">연번</th><th class="l">일자 <i class="fa-solid fa-arrow-down-short-wide" style="margin-left:3px;color:#2563eb"></i></th>'
-    + '<th class="l">강사명</th><th class="l">교육과정</th><th class="l">픽업장소</th><th>모시는 시간</th><th>복귀 시간</th><th class="l">신청자 (교육운영부)</th>'
+    + '<th class="l">강사명</th><th class="l">연락처</th><th class="l">픽업장소</th><th class="l">방향</th><th>시간</th><th class="l">신청자</th>'
     + '</tr></thead><tbody>'+rows+'</tbody></table></div>';
 }
 
 /* ---------- 강사픽업 예약 (신규, 날짜순 표) ---------- */
 function viewResv(){
-  var rows = RESV.slice().sort(function(a,b){ return a.sort-b.sort; }).map(function(r,i){
+  var note = '<div class="resv-note"><i class="fa-solid fa-circle-info"></i><div><b>예약 제한</b> · 휴게시간(12:00~13:00) 운행 불가 → <b>12:00 픽업</b> 및 <b>13:00 오송역→항기원(도착)</b>은 예약 불가 / 13:00 항기원→오송역(샌딩)은 가능. 입교버스는 왕복 약 2시간 소요로 인접 시간 배차 주의.</div></div>';
+  if(!RESV.length) return note + '<div class="tbl"><div style="padding:34px;text-align:center;color:#94a3b8;font-weight:600">신규 픽업 예약이 없습니다.</div></div>';
+  var rows = RESV.map(function(r,i){
     var badge = r.conflict ? '<span class="badge-no">'+esc(r.conflict)+'</span>' : '<span class="badge-ok">이상 없음</span>';
     return '<tr style="'+(r.conflict?'background:#fffbfb':'')+'">'
       + '<td class="dim b7">'+(i+1)+'</td>'
       + '<td class="l b8">'+esc(r.name)+'</td>'
       + '<td class="l muted">'+esc(r.phone)+'</td>'
       + '<td class="l b7">'+esc(r.date)+'</td>'
-      + '<td class="l"><div class="b7">'+esc(r.by)+'</div><div class="by-dept">'+esc(r.dept)+'</div></td>'
+      + '<td class="l">'+esc(r.dirText)+'</td>'
+      + '<td class="l muted">'+esc(r.by)+'</td>'
       + '<td>'+badge+'</td>'
-      + '<td><button class="btn-go">확정</button></td></tr>';
+      + '<td><div style="display:flex;gap:6px;justify-content:center"><button class="btn-go" onclick="confirmPickup(\''+r.id+'\')">확정</button><button class="btn-no2" onclick="rejectPickup(\''+r.id+'\')">불가</button></div></td></tr>';
   }).join('');
-  return '<div class="resv-note"><i class="fa-solid fa-circle-info"></i><div><b>예약 제한</b> · 휴게시간(12:00~13:00) 운행 불가 → <b>12:00 픽업</b> 및 <b>13:00 오송역→항기원(도착)</b>은 예약 불가 / 13:00 항기원→오송역(샌딩)은 가능. 입교버스는 왕복 약 2시간 소요로 인접 시간 배차 주의.</div></div>'
+  return note
     + '<div class="tbl"><table><thead><tr>'
-    + '<th style="width:52px">연번</th><th class="l">강사명</th><th class="l">연락처</th><th class="l">픽업요청 일자 <i class="fa-solid fa-arrow-down-short-wide" style="margin-left:3px;color:#2563eb"></i></th><th class="l">신청자 (교육운영부)</th><th>중복여부</th><th style="width:92px">처리</th>'
+    + '<th style="width:52px">연번</th><th class="l">강사명</th><th class="l">연락처</th><th class="l">픽업요청 일자 <i class="fa-solid fa-arrow-down-short-wide" style="margin-left:3px;color:#2563eb"></i></th><th class="l">방향</th><th class="l">신청자</th><th>중복여부</th><th style="width:120px">처리</th>'
     + '</tr></thead><tbody>'+rows+'</tbody></table></div>';
 }
 
@@ -384,36 +510,39 @@ function viewFixed(){
     return '<div class="mitem"><div class="mic" style="background:'+f.tint+';color:'+f.color+'"><i class="fa-solid '+f.icon+'"></i></div>'
       + '<div class="mbody"><div class="mhead"><span class="kind" style="'+kindStyle+'">'+esc(f.kind)+'</span><span class="mname">'+esc(f.course)+'</span></div>'
       + '<div class="msub">'+esc(f.sub)+'</div></div>'
-      + '<button class="mdel"><i class="fa-solid fa-xmark"></i></button></div>';
+      + '<button class="mdel" onclick="delFixed(\''+f.id+'\')"><i class="fa-solid fa-xmark"></i></button></div>';
   }).join('');
   var oitems = DAYOFF.map(function(o){
     return '<div class="mitem"><div class="mic" style="background:#fef2f2;color:#ef4444"><i class="fa-solid fa-calendar-xmark"></i></div>'
       + '<div class="mbody"><div class="mname">'+esc(o.title)+'</div><div class="msub">'+esc(o.sub)+'</div></div>'
-      + '<button class="mdel"><i class="fa-solid fa-xmark"></i></button></div>';
+      + '<button class="mdel" onclick="delOff(\''+o.id+'\')"><i class="fa-solid fa-xmark"></i></button></div>';
   }).join('');
   return '<div class="info-bar"><i class="fa-solid fa-circle-info"></i><span>입교/퇴교 버스는 과정 시작 주에 맞춰 고정 배치됩니다. 보통 시작 주 첫 월요일 오전이며, 수요일 시작 과정은 그 주에 맞춰 조정합니다.</span></div>'
-    + '<div class="addbar"><button class="add-in"><i class="fa-solid fa-plus"></i> 입교버스 추가</button>'
-    + '<button class="add-out"><i class="fa-solid fa-plus"></i> 퇴교버스 추가</button>'
-    + '<button class="add-off"><i class="fa-solid fa-calendar-xmark"></i> 휴가·운행불가</button></div>'
-    + '<div class="grid2"><div class="panel"><div class="panel-h"><h3><i class="fa-solid fa-bus-simple" style="color:#6366f1;margin-right:7px"></i>입교 · 퇴교 고정 일정</h3></div><div class="mlist">'+fitems+'</div></div>'
-    + '<div class="panel"><div class="panel-h"><h3><i class="fa-solid fa-umbrella-beach" style="color:#ef4444;margin-right:7px"></i>휴가 / 운행불가</h3><span class="sub">등록 시 운영부 자동 고지</span></div><div class="mlist">'+oitems+'</div></div></div>';
+    + '<div class="addbar"><button class="add-in" onclick="addFixed(\'입교\')"><i class="fa-solid fa-plus"></i> 입교버스 추가</button>'
+    + '<button class="add-out" onclick="addFixed(\'퇴교\')"><i class="fa-solid fa-plus"></i> 퇴교버스 추가</button>'
+    + '<button class="add-off" onclick="addOff()"><i class="fa-solid fa-calendar-xmark"></i> 휴가·운행불가</button></div>'
+    + '<div class="grid2"><div class="panel"><div class="panel-h"><h3><i class="fa-solid fa-bus-simple" style="color:#6366f1;margin-right:7px"></i>입교 · 퇴교 고정 일정</h3></div><div class="mlist">'+(fitems||'<div class="empty" style="padding:6px 2px">등록된 고정 일정이 없습니다.</div>')+'</div></div>'
+    + '<div class="panel"><div class="panel-h"><h3><i class="fa-solid fa-umbrella-beach" style="color:#ef4444;margin-right:7px"></i>휴가 / 운행불가</h3><span class="sub">등록 시 운영부 자동 고지</span></div><div class="mlist">'+(oitems||'<div class="empty" style="padding:6px 2px">등록된 휴가가 없습니다.</div>')+'</div></div></div>';
 }
 
 /* ---------- nav & routing ---------- */
 function renderNav(){
   document.getElementById('nav').innerHTML = TABS.map(function(t){
     var on = t.id===state.view;
+    var bd = t.id==='reservations' ? (RESV.length? String(RESV.length):'') : t.badge;
     return '<button class="nav-btn'+(on?' active':'')+'" onclick="switchView(\''+t.id+'\')">'
       + '<i class="fa-solid '+t.icon+'"></i><span class="lbl">'+esc(t.label)+'</span>'
-      + (t.badge ? '<span class="badge">'+esc(t.badge)+'</span>' : '') + '</button>';
+      + (bd ? '<span class="badge">'+esc(bd)+'</span>' : '') + '</button>';
   }).join('');
 }
 function pageHead(){
   var m = TITLES[state.view];
-  var pills = state.view==='manage'
-    ? '<div class="pills"><span class="pill red"><i class="fa-solid fa-circle"></i>미확인 3건</span>'
-      + '<span class="pill blue"><i class="fa-solid fa-circle"></i>오늘 운행 5건</span></div>'
-    : '';
+  var pills = '';
+  if(state.view==='manage'){
+    var todayOps = EVTS.filter(function(e){ return DAYS[e.day] && DAYS[e.day].today; }).length;
+    pills = '<div class="pills"><span class="pill red"><i class="fa-solid fa-circle"></i>미확인 '+RESV.length+'건</span>'
+      + '<span class="pill blue"><i class="fa-solid fa-circle"></i>오늘 운행 '+todayOps+'건</span></div>';
+  }
   return '<div class="head"><div><h1>'+esc(m.t)+'</h1><p>'+esc(m.s)+'</p></div>'+pills+'</div>';
 }
 function switchView(id){ state.view = id; render(); }
@@ -422,9 +551,19 @@ function toggleRoom(room){ state.expanded = (state.expanded===room ? null : room
 function render(){
   renderNav();
   var body = ({ manage:viewManage, leave:viewLeave, pickups:viewPickups, reservations:viewResv, fixed:viewFixed }[state.view] || function(){return '';})();
-  document.getElementById('main').innerHTML = pageHead() + body;
+  var main=document.getElementById('main');
+  main.innerHTML = pageHead() + body;
+  main.style.overflowY = (state.view==='manage') ? 'hidden' : 'auto';
+  if(state.view==='manage'){ requestAnimationFrame(fitManage); }
 }
-document.addEventListener('DOMContentLoaded', render);
+function fitManage(){
+  var main=document.getElementById('main'), wrap=document.getElementById('boardWrap'); if(!main||!wrap) return;
+  wrap.style.transform=''; wrap.style.width='';
+  var avail = main.clientHeight - wrap.offsetTop - 14, natural = wrap.scrollHeight;
+  if(natural > avail && avail > 0){ var s=avail/natural; wrap.style.transformOrigin='top left'; wrap.style.transform='scale('+s+')'; wrap.style.width=(100/s)+'%'; }
+}
+window.addEventListener('resize', function(){ if(state.view==='manage') fitManage(); });
+document.addEventListener('DOMContentLoaded', function(){ rebuild(); startClock(); initFirebase(); });
 </script>
 </body>
 </html>
