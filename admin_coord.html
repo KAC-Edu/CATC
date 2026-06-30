@@ -2,7 +2,7 @@
 <!-- 이 플랫폼(admin_coord.html / 교육운영부) 수정상태 플래그. 값은 [수정중] 또는 [수정안하는중] 두 가지. -->
 <!-- 작업 시작 시 → 수정중 / 작업 완료 시 → 수정안하는중. 다른 플랫폼은 이 말머리를 보고 연동·수정 가능 여부 판단. -->
 <!-- [외부변경 · 카카오채널연동 2026-06-25] 포털(portal.html/7777) 경유 폐지 → 페이지 직접진입 시 접속코드(catc1234) 게이트 추가, 포털 리다이렉트/종료이동 제거. version C13→D13. 기능 로직은 미변경. -->
-<!-- last-updated: 2026-06-30 / version: D40 (퇴교차량 팝업 공지버튼→확인, 상단바 색상=실제공지(announced)일때만 녹색·아니면 회색) -->
+<!-- last-updated: 2026-06-30 / version: D41 (강의실 배정 매칭: 끝 괄호주석'(전산실)' 무시 정규화 → B강의실 미배정 오표시 해결) -->
 <!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -8889,7 +8889,7 @@ window.addEventListener('load', function(){
 });
 </script>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:6px;bottom:5px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;font-weight:800;line-height:1;letter-spacing:.6px;color:#fff;background:rgba(15,23,42,.85);padding:4px 8px;border-radius:6px;pointer-events:none;user-select:none;box-shadow:0 2px 6px rgba(0,0,0,.3);">D40</div>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:6px;bottom:5px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;font-weight:800;line-height:1;letter-spacing:.6px;color:#fff;background:rgba(15,23,42,.85);padding:4px 8px;border-radius:6px;pointer-events:none;user-select:none;box-shadow:0 2px 6px rgba(0,0,0,.3);">D41</div>
 <script>
 /* ===== [공용] 종료된 과정 자동 정리 (모든 플랫폼 공통) — 종료일 지난 방을 다음날 미개설로 비움. 브라우저별 하루 1회 ===== */
 window.kacExpireEndedCourses = async function(){
@@ -9087,11 +9087,13 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
   var _craState=null;
   function _coordRoomOptsHtml(selected, items, selfIdx){
     var E=(typeof esc==='function'?esc:(typeof _esc==='function'?_esc:function(x){return ''+(x==null?'':x);}));
-    var sel=document.getElementById('setup-room-dropdown'); var sval=''+(selected||'');
+    // [강의실명 정규화] '하늘관 2층 B강의실 (전산실)'처럼 끝의 괄호 주석은 무시하고 같은 강의실로 매칭(미배정 오표시 방지)
+    var _nrm=function(x){ return String(x==null?'':x).replace(/\s*\([^)]*\)\s*$/,'').trim(); };
+    var sel=document.getElementById('setup-room-dropdown'); var sval=''+(selected||''); var nsval=_nrm(sval);
     var taken={};
-    if(items){ items.forEach(function(it,i){ if(i!==selfIdx){ var rm=''+(it.room||''); if(rm && rm.indexOf('온라인')<0 && rm.toLowerCase().indexOf('zoom')<0) taken[rm]=true; } }); }
+    if(items){ items.forEach(function(it,i){ if(i!==selfIdx){ var rm=''+(it.room||''); if(rm && rm.indexOf('온라인')<0 && rm.toLowerCase().indexOf('zoom')<0) taken[_nrm(rm)]=true; } }); }
     var html='<option value="">미배정</option>';
-    function opt(o){ if(!o.value||o.value==='direct'||o.value==='') return ''; var v=''+o.value; var dis=(taken[v]&&v!==sval); return '<option value="'+E(v)+'"'+(v===sval?' selected':'')+(dis?' disabled':'')+'>'+E(o.text)+(dis?' (사용중)':'')+'</option>'; }
+    function opt(o){ if(!o.value||o.value==='direct'||o.value==='') return ''; var v=''+o.value; var nv=_nrm(v); var dis=(taken[nv]&&nv!==nsval); return '<option value="'+E(v)+'"'+(nv===nsval?' selected':'')+(dis?' disabled':'')+'>'+E(o.text)+(dis?' (사용중)':'')+'</option>'; }
     if(sel){ Array.prototype.slice.call(sel.children).forEach(function(node){
       if(node.tagName==='OPTGROUP'){ html+='<optgroup label="'+E(node.label||'')+'">'; Array.prototype.slice.call(node.children).forEach(function(o){ html+=opt(o); }); html+='</optgroup>'; }
       else if(node.tagName==='OPTION'){ html+=opt(node); }

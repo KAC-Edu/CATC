@@ -123,6 +123,7 @@
   <link rel="stylesheet" href="kac-tokens.css?v=20260622">
 </head>
 <body>
+<!-- [외부변경 · 2026-06-29] 모바일 정리: ① 건물별 현황 아코디언 기본 접힘(필요 시 탭하여 펼침) ② 중복되던 '방별 배정(건물·층)' 섹션 삭제 → 상단 '건물별 현황' 상세로 일원화. 조회 로직 동일. -->
 <div class="wrap">
   <div class="mhead">
     <div class="row1">
@@ -143,14 +144,9 @@
     <div id="crsList"><div class="empty">집계 중...</div></div>
   </div>
 
-  <div class="sec">
-    <div class="sec-ttl"><i class="fa-solid fa-door-open"></i> 방별 배정 (건물 · 층)</div>
-    <div id="roomList"><div class="empty">불러오는 중...</div></div>
-  </div>
-
 </div>
 
-<div id="__catcVer" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">지원M vB</div>
+<div id="__catcVer" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">지원M vC</div>
 
 <script src="config.js?v=b260620c"></script>
 <script>
@@ -237,33 +233,6 @@ function renderAll(){
   cel.innerHTML = carr.length ? carr.map(function(x){ return '<div class="crs"><span class="cn">'+h(x[0])+'</span><span class="pc">'+x[1]+'명</span></div>'; }).join('')
     : '<div class="empty">배정된 인원이 없습니다.</div>';
 
-  /* 방별 (건물 → 층) */
-  var rel=document.getElementById('roomList');
-  if(!bkeys.length){ rel.innerHTML='<div class="empty">방 정보가 없습니다.</div>'; return; }
-  var html='';
-  bkeys.forEach(function(b){
-    var color=DORM_COLORS[b]||'#94a3b8';
-    var roomsB=Object.keys(ROOMS).filter(function(id){ var r=ROOMS[id]||{}; return !isNoAssign(r) && (r.building||'기타')===b; });
-    var byF={};
-    roomsB.forEach(function(id){ var r=ROOMS[id]||{}; var f=(r.floor!=null&&r.floor!=='')?(r.floor+'층'):'기타'; (byF[f]=byF[f]||[]).push(id); });
-    var fkeys=Object.keys(byF).sort(function(a,c){ return a.localeCompare(c,'ko',{numeric:true}); });
-    fkeys.forEach(function(f){
-      var key=b+'__'+f; var open=_openFloor.has(key);
-      var ids=byF[f].sort(function(a,c){ var ra=ROOMS[a]||{},rc=ROOMS[c]||{}; return String(ra.no||'').localeCompare(String(rc.no||''),'ko',{numeric:true}); });
-      var pplF=ids.reduce(function(s,id){ return s+(occ[id]||[]).length; },0);
-      var rowsH=ids.map(function(id){
-        var r=ROOMS[id]||{}; var oc=(occ[id]||[]); var cap=r.capacity||0;
-        var cls = oc.length===0 ? 'none' : (cap && oc.length>=cap ? 'full' : 'has');
-        var gnd = r.gender==='F'||r.gender==='여' ? '<span class="gnd f">여</span>' : (r.gender==='M'||r.gender==='남' ? '<span class="gnd m">남</span>' : '');
-        var names = oc.length ? ('<span class="rf">'+oc.slice(0,4).map(function(x){return h(x.name);}).join(', ')+(oc.length>4?(' 외 '+(oc.length-4)):'')+'</span>') : '<span class="rf">비어있음</span>';
-        return '<div class="room"><span class="rn">'+h(r.no||'-')+'</span>'+gnd+names+'<span class="occ '+cls+'">'+oc.length+(cap?('/'+cap):'')+'</span></div>';
-      }).join('');
-      html+='<div class="fgrp"><div class="fgrp-hd" style="background:linear-gradient(135deg,'+color+',rgba(0,0,0,.08))" onclick="toggleFloor(\''+key.replace(/'/g,'')+'\')">'
-        +'<i class="fa-solid fa-chevron-'+(open?'up':'down')+'"></i> '+h(b)+' '+h(f)+' <span class="wn">'+pplF+'명 / '+ids.length+'실</span></div>'
-        +(open?rowsH:'')+'</div>';
-    });
-  });
-  rel.innerHTML=html||'<div class="empty">방 정보가 없습니다.</div>';
 }
 function toggleFloor(key){ if(_openFloor.has(key))_openFloor.delete(key); else _openFloor.add(key); renderAll(); }
 </script>
@@ -324,7 +293,7 @@ function toggleFloor(key){ if(_openFloor.has(key))_openFloor.delete(key); else _
           : '<span style="color:#cbd5e1">비어 있음</span>';
         return '<tr><td>'+esc(item.room.no||item.id)+'호</td><td>'+(item.room.floor||'-')+'층</td><td class="names">'+names+'</td><td>'+item.people.length+'/'+(item.room.capacity||1)+'</td></tr>';
       }).join('');
-      return '<section class="dorm-table-card '+(index===0?'open':'')+'" id="dormAcc'+index+'">'+
+      return '<section class="dorm-table-card" id="dormAcc'+index+'">'+
         '<button class="dorm-acc-bar" onclick="toggleDormMobileAcc('+index+')"><span class="dot" style="background:'+color+'"></span><b>'+esc(building)+'</b><span class="total">'+people+'명</span><i class="fa-solid fa-chevron-down"></i></button>'+
         '<table class="dorm-status-table"><thead><tr><th>사용 방</th><th>빈 방</th><th>전체 방</th><th>배정 인원</th></tr></thead><tbody><tr><td>'+used+'</td><td style="color:#16a34a">'+empty+'</td><td>'+rooms.length+'</td><td style="color:#2563eb">'+people+'명</td></tr></tbody></table>'+
         '<div class="dorm-detail-wrap"><table class="dorm-detail-table"><thead><tr><th>호실</th><th>층</th><th>상세 명단</th><th>현황</th></tr></thead><tbody>'+detail+'</tbody></table></div></section>';
