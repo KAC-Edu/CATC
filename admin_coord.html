@@ -2,7 +2,7 @@
 <!-- 이 플랫폼(admin_coord.html / 교육운영부) 수정상태 플래그. 값은 [수정중] 또는 [수정안하는중] 두 가지. -->
 <!-- 작업 시작 시 → 수정중 / 작업 완료 시 → 수정안하는중. 다른 플랫폼은 이 말머리를 보고 연동·수정 가능 여부 판단. -->
 <!-- [외부변경 · 카카오채널연동 2026-06-25] 포털(portal.html/7777) 경유 폐지 → 페이지 직접진입 시 접속코드(catc1234) 게이트 추가, 포털 리다이렉트/종료이동 제거. version C13→D13. 기능 로직은 미변경. -->
-<!-- last-updated: 2026-06-30 / version: D41 (강의실 배정 매칭: 끝 괄호주석'(전산실)' 무시 정규화 → B강의실 미배정 오표시 해결) -->
+<!-- last-updated: 2026-06-30 / version: D42 (담당자검색 개편: 진행과정 카드 맨위·연간과정 접이식 가로바·각 소메뉴 접이식 가로바) -->
 <!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -8762,6 +8762,7 @@ var coordKiosk={
     var t=document.getElementById('coordKioskTableWrap'); if(t) t.style.display='';
   },
   ownerToggle:function(id,btn){ var el=document.getElementById(id); if(!el) return; var open=el.style.display!=='none'; el.style.display=open?'none':'block'; if(btn) btn.innerHTML=open?'상세 펼치기 ▾':'접기 ▴'; },
+  accToggle:function(bar){ var body=bar.nextElementSibling; if(!body) return; var open=body.style.display!=='none'; body.style.display=open?'none':'block'; var ic=bar.querySelector('i'); if(ic) ic.style.transform=open?'':'rotate(180deg)'; },
   search:function(q, silent){
     q=String(q||'').trim();
     var result=document.getElementById('coordKioskSearchResult'), table=document.getElementById('coordKioskTableWrap');
@@ -8779,31 +8780,34 @@ var coordKiosk={
     var _uniqStu=function(room){ var arr=(typeof _studentsOf==='function')?_studentsOf(room):[]; var seen={},out=[]; arr.forEach(function(s){ var nm=String(s.name||'').trim(); if(!nm||seen[nm])return; seen[nm]=1; out.push(s); }); return out; };
     var _list=function(arr,fn){ return arr.length? arr.map(fn).join('') : '<span class="cor-empty">없음</span>'; };
     var active=rooms.filter(function(r){return r.order===0;}), upcoming=rooms.filter(function(r){return r.order===1;});
+    // 소메뉴 가로바(평시 접힘, 탭하면 펼침)
+    function bar(title, inner){ return '<div class="cor-acc"><div class="cor-acc-bar" onclick="coordKiosk.accToggle(this)"><span>'+title+'</span><i class="fa-solid fa-chevron-down"></i></div><div class="cor-acc-body" style="display:none;">'+inner+'</div></div>'; }
     function card(room,label,idx){
       var students=_uniqStu(room.room), att=_attSet(room.room.internal_attendance||{});
       var done=students.filter(function(s){return att[String(s.name||'').trim()];});
       var notdone=students.filter(function(s){return !att[String(s.name||'').trim()];});
-      var outs=_outRows(room.room.admin_actions||{}), shs=_shRows(room.room), bid='cor-b-'+idx;
+      var outs=_outRows(room.room.admin_actions||{}), shs=_shRows(room.room);
       return '<article class="coord-owner-result">'
         +'<div class="cor-head"><span>'+esc(label)+'</span><b>ROOM #'+esc(room.rid)+'</b></div>'
         +'<h3>'+esc(room.s.courseName||'-')+'</h3>'
         +'<div class="cor-meta">'+esc(room.s.period||'-')+' · '+esc(room.s.roomDetailName||room.s.roomDetail||'-')+' · 담임 '+esc((room.st.professorName||'').trim()||'-')+'</div>'
         +'<div class="cor-sum">👥 교육생 '+students.length+'명 · ✅ 출결 '+done.length+'/'+students.length+' · 🚶 외출외박 '+outs.length+'건 · 🚌 차량 '+shs.length+'건</div>'
-        +'<button class="cor-toggle" onclick="coordKiosk.ownerToggle(\''+bid+'\',this)">상세 펼치기 ▾</button>'
-        +'<div id="'+bid+'" class="cor-detail" style="display:none;">'
-          +'<div class="cor-sec"><div class="cor-sec-t">👥 교육생 명단 ('+students.length+')</div><div class="cor-chips">'+_list(students,function(s){var dp=(s.dept||s.department||'');return '<span class="cor-chip">'+esc(s.name)+(dp?(' · '+esc(dp)):'')+'</span>';})+'</div></div>'
-          +'<div class="cor-sec"><div class="cor-sec-t">✅ 출결 완료 ('+done.length+')</div><div class="cor-chips">'+_list(done,function(s){return '<span class="cor-chip ok">'+esc(s.name)+'</span>';})+'</div></div>'
-          +'<div class="cor-sec"><div class="cor-sec-t">⛔ 출결 미완료 ('+notdone.length+')</div><div class="cor-chips">'+_list(notdone,function(s){return '<span class="cor-chip no">'+esc(s.name)+'</span>';})+'</div></div>'
-          +'<div class="cor-sec"><div class="cor-sec-t">🚶 외출·외박 ('+outs.length+')</div><div class="cor-chips">'+_list(outs,function(o){return '<span class="cor-chip">'+esc(o.name)+' · '+esc((o.type==='overnight'||o.type==='외박')?'외박':'외출')+' · '+esc(o.d)+'</span>';})+'</div></div>'
-          +'<div class="cor-sec"><div class="cor-sec-t">🚌 차량신청 ('+shs.length+')</div><div class="cor-chips">'+_list(shs,function(h){return '<span class="cor-chip">'+esc(h.name)+' · '+esc(h.dest)+'</span>';})+'</div></div>'
-          +'<div class="cor-sec"><div class="cor-sec-t">🛏 생활관 배정</div><div class="cor-chips cor-dorm" data-course="'+esc(room.s.courseName||'')+'"><span class="cor-empty">불러오는 중…</span></div></div>'
-          +'<div class="cor-actions"><button onclick="coordKiosk.notice(\''+esc(room.rid)+'\')"><i class="fa-solid fa-pen"></i> 공지/수정</button><button onclick="openLedgerCenter()"><i class="fa-solid fa-print"></i> 대장 출력</button></div>'
-        +'</div></article>';
+        +'<div style="margin-top:12px;">'
+          +bar('👥 교육생 명단 ('+students.length+')', '<div class="cor-chips">'+_list(students,function(s){var dp=(s.dept||s.department||'');return '<span class="cor-chip">'+esc(s.name)+(dp?(' · '+esc(dp)):'')+'</span>';})+'</div>')
+          +bar('✅ 출결 완료 ('+done.length+')', '<div class="cor-chips">'+_list(done,function(s){return '<span class="cor-chip ok">'+esc(s.name)+'</span>';})+'</div>')
+          +bar('⛔ 출결 미완료 ('+notdone.length+')', '<div class="cor-chips">'+_list(notdone,function(s){return '<span class="cor-chip no">'+esc(s.name)+'</span>';})+'</div>')
+          +bar('🚶 외출·외박 ('+outs.length+')', '<div class="cor-chips">'+_list(outs,function(o){return '<span class="cor-chip">'+esc(o.name)+' · '+esc((o.type==='overnight'||o.type==='외박')?'외박':'외출')+' · '+esc(o.d)+'</span>';})+'</div>')
+          +bar('🚌 차량신청 ('+shs.length+')', '<div class="cor-chips">'+_list(shs,function(h){return '<span class="cor-chip">'+esc(h.name)+' · '+esc(h.dest)+'</span>';})+'</div>')
+          +bar('🛏 생활관 배정', '<div class="cor-chips cor-dorm" data-course="'+esc(room.s.courseName||'')+'"><span class="cor-empty">불러오는 중…</span></div>')
+        +'</div>'
+        +'<div class="cor-actions"><button onclick="coordKiosk.notice(\''+esc(room.rid)+'\')"><i class="fa-solid fa-pen"></i> 공지/수정</button><button onclick="openLedgerCenter()"><i class="fa-solid fa-print"></i> 대장 출력</button></div>'
+      +'</article>';
     }
     var cards=active.map(function(r,i){return card(r,'현재 진행','a'+i);}).join('')+upcoming.map(function(r,i){return card(r,'예정','u'+i);}).join('');
+    // 순서: 진행/예정 카드 먼저 → 연간 운용 과정(접이식 가로바) 맨 아래
     result.innerHTML='<div class="coord-owner-title"><div><small>과정운영 담당자 검색</small><h2>'+esc(full(q)||q)+' 담당 종합현황</h2></div><span>진행 '+active.length+' · 예정 '+upcoming.length+'</span></div>'
-      +'<div id="coordOwnerAnnual" class="coord-owner-history"><i class="fa-solid fa-calendar"></i> 연간 운용 과정을 불러오는 중…</div>'
-      +(cards||'<div class="coord-owner-empty">해당 담당자의 진행중·예정 과정이 없습니다.</div>');
+      +(cards||'<div class="coord-owner-empty">해당 담당자의 진행중·예정 과정이 없습니다.</div>')
+      +'<div class="cor-acc" style="margin-top:14px;"><div class="cor-acc-bar" onclick="coordKiosk.accToggle(this)"><span><i class="fa-solid fa-calendar" style="color:#2563eb;"></i> 연간 운용 과정<span id="coordOwnerAnnualCnt"></span></span><i class="fa-solid fa-chevron-down"></i></div><div class="cor-acc-body" style="display:none;" id="coordOwnerAnnual"><span class="cor-empty">불러오는 중…</span></div></div>';
     // 연간 운용 과정(annualPlan, 담당자별)
     try{ firebase.database().ref('system/annualPlan').once('value').then(function(snap){
       var v=snap.val(); var list=Array.isArray(v)?v.filter(Boolean):(v?Object.keys(v).map(function(k){return v[k];}):[]);
@@ -8811,8 +8815,8 @@ var coordKiosk={
       var mine=list.filter(function(c){ if(!c)return false; var cd=String(c.coord||c.coordinatorName||'').replace(/\s+/g,'').toLowerCase(); return cd && cd.indexOf(key)>=0; });
       mine.sort(function(a,b){ return String(a.startDate||a.period||'').localeCompare(String(b.startDate||b.period||'')); });
       var el=document.getElementById('coordOwnerAnnual'); if(!el)return;
-      el.innerHTML='<b><i class="fa-solid fa-calendar"></i> 연간 운용 과정 '+mine.length+'개</b>'
-        +(mine.length?'<ul>'+mine.map(function(c){ var period=c.period||((c.startDate||'')+' ~ '+(c.endDate||'')); var start=(c.startDate||String(period).split('~')[0]||'').trim(), end=(c.endDate||String(period).split('~')[1]||'').trim(); var stt=(end&&today>end)?'종료':((start&&today>=start)?'진행중':'예정'); return '<li><b style="color:'+(stt==='진행중'?'#16a34a':stt==='예정'?'#d97706':'#94a3b8')+';">['+stt+']</b> '+esc(c.name||c.courseName||'-')+' · '+esc(period)+'</li>'; }).join('')+'</ul>':'<span>등록된 연간 과정이 없습니다.</span>');
+      var cntEl=document.getElementById('coordOwnerAnnualCnt'); if(cntEl) cntEl.textContent=' ('+mine.length+'개)';
+      el.innerHTML=(mine.length?'<ul>'+mine.map(function(c){ var period=c.period||((c.startDate||'')+' ~ '+(c.endDate||'')); var start=(c.startDate||String(period).split('~')[0]||'').trim(), end=(c.endDate||String(period).split('~')[1]||'').trim(); var stt=(end&&today>end)?'종료':((start&&today>=start)?'진행중':'예정'); return '<li><b style="color:'+(stt==='진행중'?'#16a34a':stt==='예정'?'#d97706':'#94a3b8')+';">['+stt+']</b> '+esc(c.name||c.courseName||'-')+' · '+esc(period)+'</li>'; }).join('')+'</ul>':'<span class="cor-empty">등록된 연간 과정이 없습니다.</span>');
     }); }catch(e){}
     // 생활관 배정(현재주 dorm assignments → 과정 학생 매칭)
     try{ var wk=(typeof _coordDormMondayKey==='function')?_coordDormMondayKey():''; firebase.database().ref('system/dorm/assignments/'+wk+'/students').once('value').then(function(snap){
@@ -8889,7 +8893,7 @@ window.addEventListener('load', function(){
 });
 </script>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:6px;bottom:5px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;font-weight:800;line-height:1;letter-spacing:.6px;color:#fff;background:rgba(15,23,42,.85);padding:4px 8px;border-radius:6px;pointer-events:none;user-select:none;box-shadow:0 2px 6px rgba(0,0,0,.3);">D41</div>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:6px;bottom:5px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;font-weight:800;line-height:1;letter-spacing:.6px;color:#fff;background:rgba(15,23,42,.85);padding:4px 8px;border-radius:6px;pointer-events:none;user-select:none;box-shadow:0 2px 6px rgba(0,0,0,.3);">D42</div>
 <script>
 /* ===== [공용] 종료된 과정 자동 정리 (모든 플랫폼 공통) — 종료일 지난 방을 다음날 미개설로 비움. 브라우저별 하루 1회 ===== */
 window.kacExpireEndedCourses = async function(){
@@ -9865,6 +9869,11 @@ body.coord-header-compact.pc-mode .coord-clock{
 .cor-chip.ok{background:#ecfdf5;border-color:#a7f3d0;color:#047857}
 .cor-chip.no{background:#fef2f2;border-color:#fecaca;color:#b91c1c}
 .cor-empty{color:#94a3b8;font-weight:700;font-size:13px}
+.cor-acc{border:1px solid #e8edf5;border-radius:12px;margin-bottom:9px;overflow:hidden;background:#fff}
+.cor-acc-bar{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:13px 15px;cursor:pointer;font-size:15px;font-weight:900;color:#1e293b;background:#f8fafc}
+.cor-acc-bar:hover{background:#eef2f7}
+.cor-acc-bar>i{font-size:13px;color:#94a3b8;transition:transform .2s}
+.cor-acc-body{padding:12px 15px;border-top:1px solid #eef2f7}
 @media(max-width:900px){.cor-grid{grid-template-columns:1fr}}
 </style>
 </body>
