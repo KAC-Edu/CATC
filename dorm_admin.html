@@ -1,6 +1,6 @@
 ﻿<!DOCTYPE html>
 <html lang="ko">
-<!-- PLATFORM_EDIT_STATUS: 수정완료 | VERSION: O1 | 2026-06-29 -->
+<!-- PLATFORM_EDIT_STATUS: 수정완료 | VERSION: P1 | 2026-06-30 -->
 <!-- ===== EDIT-STATUS: 수정안하는중 ===== (값: 수정중 / 수정안하는중) · 플랫폼 간 협의용 플래그.
      다른 플랫폼/작업자는 이 파일을 열면 이 줄을 먼저 확인. 수정 시작 시 → 수정중 , 수정 완료 시 → 수정안하는중 -->
 <!-- [외부변경 · 카카오채널연동 2026-06-25] 포털(portal.html/7777) 경유 폐지 → catc1234 직접진입 게이트 추가, '포털' 버튼→'잠금'. @version J1→K1. 기능 로직 미변경. -->
@@ -60,8 +60,8 @@
 </style>
 <!-- ============================================================
   CATC · 교육지원부 · 생활관 배정  (dorm_admin.html)
-  @version  O1
-  @build    20260626-120000
+  @version  P1
+  @build    20260630-101800
   ────────────────────────────────────────────────────────
   [코드 수정 규칙 · AI/개발자 공통]
   이 파일을 한 글자라도 고치면:
@@ -152,6 +152,9 @@
   vL1: 연간교육계획 폐강 체크 추가 — 폐강 과정은 STEP2 목록/자동 방배정 후보에서 제외.
       수정 시작 시 '수정중', 완료 시 '수정안하는중'으로 토글. 다른 플랫폼/작업자가 즉시 사용가능 여부 확인.
   vM1: 연간교육계획 표에 주차별 점선 구분선과 주차 라벨 추가.
+  vP1: [STEP4 배치도] 우측 '대기열' 블록이 스크롤 시 상단 STEP탭에 가려 윗부분이 잘리던 문제 수정 —
+      대기열 sticky 오프셋을 고정값(헤더+76px)에서 '헤더+STEP탭 실측 높이(--stack-h)' 기준으로 변경.
+      헤더 측정 스크립트가 step-tabs 높이도 함께 측정하도록 보강(리사이즈/ResizeObserver 반영).
   vJ1: [키오스크] 초기화면 정비 — ① 검색창을 크게(font 36, 폭 1040) + 파란 그라데이션·은은한 글로우로 '검색란'
       강조. ② 과정표를 아래로 내림(검색창 하단 여백 확대). ③ 과정표를 강사플랫폼(admin) 키오스크 표로 클론
       (반응형 clamp 글자, 헤더 파란색·구분/과정명 좌측정렬, '상태' 열). 구분은 1·2·3·4 순번 유지.
@@ -4384,7 +4387,7 @@
             const WAIT_CSS = `<style>
                 #boardMapArea .dm-layout{display:flex;gap:14px;align-items:flex-start;overflow:visible;max-width:100%;}
                 #boardMapArea .dm-buildings{flex:1;min-width:0;}
-                #boardMapArea .dm-wait-col{flex:0 0 184px;width:184px;min-width:184px;box-sizing:border-box;position:sticky;top:calc(var(--header-h, 80px) + 76px);align-self:flex-start;background:#fff7ed;border:2px dashed #fdba74;border-radius:12px;padding:10px 9px;max-height:calc(100vh - var(--header-h, 80px) - 96px);overflow-x:hidden;overflow-y:auto;z-index:25;box-shadow:0 10px 28px rgba(194,65,12,.14);}
+                #boardMapArea .dm-wait-col{flex:0 0 184px;width:184px;min-width:184px;box-sizing:border-box;position:sticky;top:calc(var(--stack-h, 176px) + 14px);align-self:flex-start;background:#fff7ed;border:2px dashed #fdba74;border-radius:12px;padding:10px 9px;max-height:calc(100vh - var(--stack-h, 176px) - 30px);overflow-x:hidden;overflow-y:auto;z-index:25;box-shadow:0 10px 28px rgba(194,65,12,.14);}
                 #boardMapArea .dm-wait-col.dm-over{background:#ffedd5;border-color:#f97316;box-shadow:0 0 0 3px rgba(249,115,22,.18);}
                 #boardMapArea .dm-wait-head{font-size:13px;font-weight:900;color:#c2410c;margin-bottom:9px;text-align:center;}
                 #boardMapArea .dm-wait-body{display:flex;flex-direction:column;gap:6px;min-height:130px;}
@@ -6246,10 +6249,16 @@
     function init() {
         var header = document.querySelector('.header');
         if (!header) return;
-        function setH() { document.documentElement.style.setProperty('--header-h', header.offsetHeight + 'px'); }
+        var tabs = document.querySelector('.step-tabs');
+        function setH() {
+            var hh = header.offsetHeight;
+            document.documentElement.style.setProperty('--header-h', hh + 'px');
+            var th = tabs ? tabs.offsetHeight : 0;
+            document.documentElement.style.setProperty('--stack-h', (hh + th) + 'px');   // 헤더+STEP탭 합산 높이(대기열 등 sticky 오프셋용)
+        }
         setH();
         window.addEventListener('resize', setH);
-        if (window.ResizeObserver) { try { new ResizeObserver(setH).observe(header); } catch (e) {} }
+        if (window.ResizeObserver) { try { var ro = new ResizeObserver(setH); ro.observe(header); if (tabs) ro.observe(tabs); } catch (e) {} }
     }
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
     else init();
@@ -6284,7 +6293,7 @@
 </script>
 <style>@media print{#__catcVer{display:none!important}}</style>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">O1</div>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">P1</div>
 <script>
 /* ===== [공용] 종료된 과정 자동 정리 (모든 플랫폼 공통) — 종료일 지난 방을 다음날 미개설로 비움. 브라우저별 하루 1회 ===== */
 window.kacExpireEndedCourses = async function(){

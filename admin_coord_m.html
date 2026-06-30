@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-  <!-- last-updated: 2026-06-30 / version: M5 (청렴/노조 장소 바텀시트: 아래로 밀어 닫기 제스처 추가) -->
+  <!-- last-updated: 2026-06-30 / version: M6 (과정상세 공지발송 카드 접이식: 평시 접힘·가로바 탭하면 펼침 → 화면에 딱 맞게) -->
   <!-- ※ 모바일 개발자 파일이나 운영부 요청으로 디에스장(admin_coord 담당)이 장소선택 모달만 개선. 기능로직(setEduSel/EDU 동기화)은 동일 유지 -->
   <meta charset="UTF-8" />
   <script>
@@ -268,11 +268,13 @@
       <h3><i class="fa-solid fa-user-clock"></i> 외출·외박 신청자 <span style="font-weight:700;color:#94a3b8;font-size:12px;">· 금일</span></h3>
       <div id="dOuting"></div>
     </div>
-    <div class="card">
-      <h3><i class="fa-solid fa-paper-plane"></i> 강사플랫폼 공지 발송</h3>
-      <textarea class="notice" id="dNotice" placeholder="교육생·강사 플랫폼에 전달할 공지를 입력하세요"></textarea>
-      <button class="btn btn-send" onclick="sendNotice()"><i class="fa-solid fa-paper-plane"></i> 공지 발송</button>
-      <div class="hist" id="dHist"></div>
+    <div class="card" id="dNoticeCard">
+      <h3 onclick="toggleNoticeCard()" style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:8px;margin:0;"><span><i class="fa-solid fa-paper-plane"></i> 강사플랫폼 공지 발송</span><i class="fa-solid fa-chevron-down" id="dNoticeChev" style="font-size:14px;color:#94a3b8;transition:transform .22s;"></i></h3>
+      <div id="dNoticeBody" style="display:none;margin-top:13px;">
+        <textarea class="notice" id="dNotice" placeholder="교육생·강사 플랫폼에 전달할 공지를 입력하세요"></textarea>
+        <button class="btn btn-send" onclick="sendNotice()"><i class="fa-solid fa-paper-plane"></i> 공지 발송</button>
+        <div class="hist" id="dHist"></div>
+      </div>
     </div>
   </div>
 </div>
@@ -401,7 +403,19 @@ function openDetail(rid){
   document.body.style.overflow='hidden';
   var room=DATA[rid]||{};
   document.getElementById('dNotice').value=room.coordNotice||'';
+  // 공지발송 카드는 평시 접힘(화면에 딱 맞게) — 가로바 탭하면 펼침
+  var nb=document.getElementById('dNoticeBody'), nc=document.getElementById('dNoticeChev');
+  if(nb) nb.style.display='none'; if(nc) nc.style.transform='';
+  document.querySelector('#detailOv .ov-body') && (document.querySelector('#detailOv .ov-body').scrollTop=0);
   updateDetail();
+}
+function toggleNoticeCard(){
+  var b=document.getElementById('dNoticeBody'), c=document.getElementById('dNoticeChev');
+  if(!b) return;
+  var open=b.style.display!=='none';
+  b.style.display=open?'none':'block';
+  if(c) c.style.transform=open?'':'rotate(180deg)';
+  if(!open){ try{ document.getElementById('dNoticeCard').scrollIntoView({behavior:'smooth',block:'nearest'}); }catch(e){} }
 }
 function closeDetail(){
   document.getElementById('detailOv').classList.remove('open');
