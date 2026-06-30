@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- PLATFORM_EDIT_STATUS: 수정완료 | VERSION: Z1 | 2026-06-30 -->
+<!-- PLATFORM_EDIT_STATUS: 수정완료 | VERSION: A2 | 2026-06-30 -->
 <html lang="ko">
 <head>
 <!-- ════════ [PC버전 수정 · 차량(기사) · 디에스장 · 2026-06-25] ════════
@@ -9,7 +9,8 @@
         - @version U1 → V1 : PC 100% 화면용 75% 기준 밀도 보정.
         - @version V1 → W1 : 기사 관제판 추가(입력 단순화·금주 퇴교수송 한눈보기·운행 충돌 안내).
         - @version Y1 → Z1 : 상단바·현황블록·메인 대제목/버튼 디자인을 교육운영부(admin_coord) 토큰에 정합(CSS 오버라이드 + 대제목 배너 추가, 데이터·onclick·id 불변).
-     · @version  Z1
+        - @version Z1 → A2 : 현황블록을 상단바 안으로 이식(운영부 .hdr-stat), 네비탭을 운영부 '대제목 탭'(.coord-ptab) 룩으로, dv-hero 제거. (Z 다음은 A2로 순환 — 문자 A~Z 후 숫자 증가)
+     · @version  A2
      · 수정상태: 수정완료   (작업 중에는 '수정중', 완료 시 '수정완료'로 표기)
      · 연동 데이터(system/pickup, courses/{room}/shuttle) 쓰기 로직 미변경 — 화면 필터만 적용, 타 담당자 영향 없음. -->
 <script>
@@ -415,7 +416,13 @@
 
 <div class="topbar">
   <div class="topbar-in">
-    <div class="brand" onclick="location.reload()" style="cursor:pointer;" title="메인으로 (새로고침)"><i class="fa-solid fa-van-shuttle"></i> 차량지원 플랫폼 <span class="today-chip" id="todayChip"></span></div>
+    <div class="brand" onclick="location.reload()" style="cursor:pointer;" title="메인으로 (새로고침)"><i class="fa-solid fa-van-shuttle"></i> 차량지원 플랫폼</div>
+    <div class="driver-statusbar" aria-label="운행 현황">
+      <button type="button" onclick="switchView('leave')"><i class="fa-solid fa-bus"></i><span>퇴교수송(금주)</span><b id="driverLeaveCount">0명</b></button>
+      <button type="button" onclick="switchView('pickups')"><i class="fa-solid fa-user-tie"></i><span>강사픽업(금주)</span><b id="driverPickupCount">0건 / 금주</b></button>
+      <button type="button" id="driverReservationStatus" onclick="switchView('reservations')"><i class="fa-solid fa-bell"></i><span>픽업예약요청</span><b id="driverReservationCount">0건</b></button>
+    </div>
+    <span class="today-chip" id="todayChip"></span>
     <div class="top-spacer"></div>
     <button class="top-btn" id="installBtn" onclick="pwaInstall()" style="background:#0ea5e9; border-color:#0ea5e9;"><i class="fa-solid fa-circle-down"></i> 앱 설치</button>
     <button class="top-btn" onclick="openPlanList()"><i class="fa-solid fa-calendar-days"></i> 연간계획</button>
@@ -425,16 +432,6 @@
 </div>
 
 <div class="wrap">
-  <!-- [디자인 정합 2026-06-30] 메인 대제목 배너 (운영부 .coord-hero 톤) -->
-  <div class="dv-hero">
-    <div class="dv-hero-title"><i class="fa-solid fa-van-shuttle"></i> 차량지원 운행 현황 <small>CATC</small></div>
-    <div class="dv-hero-sub">금주 퇴교수송과 강사 픽업 신청을 한눈에 확인하세요.</div>
-  </div>
-  <div class="driver-statusbar" aria-label="운행 현황">
-    <button type="button" onclick="switchView('leave')"><i class="fa-solid fa-bus"></i><span>퇴교수송(금주)</span><b id="driverLeaveCount">0명</b></button>
-    <button type="button" onclick="switchView('pickups')"><i class="fa-solid fa-user-tie"></i><span>강사픽업(금주)</span><b id="driverPickupCount">0건 / 금주</b></button>
-    <button type="button" id="driverReservationStatus" onclick="switchView('reservations')"><i class="fa-solid fa-bell"></i><span>픽업예약요청</span><b id="driverReservationCount">0건</b></button>
-  </div>
   <div class="tabs">
     <div class="tab active" data-view="leave" onclick="switchView('leave')"><i class="fa-solid fa-bus"></i> 퇴교수송 현황</div>
     <div class="tab" data-view="pickups" onclick="switchView('pickups')"><i class="fa-solid fa-user-tie"></i> 강사픽업 일정</div>
@@ -713,7 +710,7 @@
 </div>
 
 <div id="spinner"><i class="fa-solid fa-spinner fa-spin"></i></div>
-<div class="vbadge">vY1 · 20260629</div>
+<div class="vbadge">vA2 · 20260630</div>
 
 <script src="config.js?v=b260620c"></script>
 <script>
@@ -1620,6 +1617,52 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
 .panel{border-radius:18px!important}
 
 @media print{ .dv-hero{display:none!important} }
+</style>
+<style id="driverCoordMatch2_20260630">
+/* ════ [PC디자인 정합 2차 · 차량→교육운영부 · 디에스장 · 2026-06-30] ════
+   · 현황칩을 상단바 안으로(운영부 .hdr-stat 룩), 네비탭을 운영부 '대제목 탭'(.coord-ptab) 룩으로.
+   · HTML은 현황칩 위치만 상단바로 이동(onclick·id 동일) + dv-hero 제거. 데이터 로직 불변. */
+
+/* 1) 상단바 3분할: [로고 | 현황칩 | 시계] */
+.topbar-in{height:auto!important;min-height:70px!important;padding-top:8px!important;padding-bottom:8px!important;gap:14px!important;flex-wrap:nowrap!important;justify-content:flex-start!important}
+.topbar-in .brand{flex:0 0 auto!important;color:#fff!important;font-size:18px!important}
+.topbar-in .today-chip{margin-left:auto!important;flex:0 0 auto!important;color:#e6efff!important;min-width:0!important}
+
+/* 2) 현황칩: 헤더 안에서 운영부 .hdr-stat(반투명 흰 알약) 룩 */
+.topbar .driver-statusbar{display:flex!important;flex:0 1 auto!important;gap:8px!important;margin:0!important;background:transparent!important;align-items:center!important;grid-template-columns:none!important}
+.topbar .driver-statusbar button{
+  min-height:0!important;display:inline-flex!important;align-items:center!important;gap:9px!important;
+  grid-template-columns:none!important;text-align:left!important;
+  background:rgba(255,255,255,.12)!important;border:1px solid rgba(255,255,255,.2)!important;border-radius:12px!important;
+  padding:7px 13px!important;box-shadow:none!important;color:#fff!important;white-space:nowrap!important;transition:background .15s,transform .12s
+}
+.topbar .driver-statusbar button:hover{transform:translateY(-1px)!important;background:rgba(255,255,255,.24)!important;box-shadow:none!important}
+.topbar .driver-statusbar button i{width:auto!important;height:auto!important;background:transparent!important;border-radius:0!important;color:#93c5fd!important;font-size:16px!important}
+.topbar .driver-statusbar button span{font-size:11px!important;font-weight:700!important;color:#cbd5e1!important}
+.topbar .driver-statusbar button b{font-size:20px!important;font-weight:900!important;color:#fff!important;letter-spacing:-.5px!important}
+.topbar .driver-statusbar #driverReservationStatus.has-pending{background:rgba(239,68,68,.85)!important;border-color:#fecaca!important}
+.topbar .driver-statusbar #driverReservationStatus.has-pending i,.topbar .driver-statusbar #driverReservationStatus.has-pending b,.topbar .driver-statusbar #driverReservationStatus.has-pending span{color:#fff!important}
+.topbar .driver-statusbar #driverReservationStatus.all-checked{background:rgba(16,185,129,.72)!important;border-color:#a7f3d0!important}
+.topbar .driver-statusbar #driverReservationStatus.all-checked i,.topbar .driver-statusbar #driverReservationStatus.all-checked b,.topbar .driver-statusbar #driverReservationStatus.all-checked span{color:#fff!important}
+
+/* 3) 네비 탭 → 운영부 '대제목 탭'(.coord-ptab): 46px 아이콘배지 + 20px 굵은 라벨 + 좌측정렬 카드 */
+.tabs{grid-template-columns:repeat(4,1fr)!important;gap:12px!important;margin:16px 0 14px!important}
+.tab{
+  display:flex!important;align-items:center!important;justify-content:flex-start!important;gap:14px!important;
+  padding:18px 20px!important;min-height:0!important;border-radius:16px!important;border:1.5px solid #e2e8f0!important;
+  background:#fff!important;color:#1e293b!important;font-size:20px!important;font-weight:900!important;letter-spacing:-.3px!important;
+  word-break:keep-all!important;box-shadow:0 4px 14px rgba(15,23,42,.05)!important;position:relative!important;overflow:hidden!important
+}
+.tab i{width:46px!important;height:46px!important;flex:0 0 46px!important;border-radius:13px!important;background:#eff4ff!important;color:#2563eb!important;display:flex!important;align-items:center!important;justify-content:center!important;font-size:20px!important}
+.tab:hover{border-color:#bfdbfe!important;box-shadow:0 6px 16px rgba(15,23,42,.08)!important;transform:translateY(-1px)!important}
+.tab.active{background:#dbeafe!important;border:2px solid #2563eb!important;color:#003366!important;box-shadow:0 8px 22px rgba(37,99,235,.22)!important}
+.tab.active i{background:#003366!important;color:#fff!important}
+.tab .cnt{margin-left:auto!important}
+.tab.active .cnt{background:#ef4444!important;color:#fff!important}
+
+/* 좁은 화면 대응 */
+@media(max-width:1100px){ .topbar-in{flex-wrap:wrap!important} .topbar .driver-statusbar{flex-basis:100%!important;order:3;justify-content:flex-start!important} .topbar-in .today-chip{order:2} }
+@media(max-width:800px){ .tabs{grid-template-columns:repeat(2,1fr)!important} .tab{font-size:16px!important;padding:14px 16px!important} .tab i{width:40px!important;height:40px!important;flex-basis:40px!important} }
 </style>
 </body>
 </html>
