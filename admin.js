@@ -11869,6 +11869,10 @@ ui.openLeaderRoulette = async function(){
   var modal=document.createElement('div'); modal.id='leaderRouletteModal';
   modal.setAttribute('style','position:fixed;inset:0;z-index:9700;display:flex;align-items:center;justify-content:center;background:rgba(15,23,42,.62);backdrop-filter:blur(4px);padding:18px;overflow:hidden;');
   modal.onclick=function(e){ if(e.target===modal && !ui._wheelSpinning) ui.closeLeaderRoulette(); };
+  // [전체화면] 모달이 #pdfWrapper 안에 붙어도 클릭이 PDF 페이지 넘김으로 전파되지 않게 차단
+  modal.addEventListener('click', function(e){ e.stopPropagation(); });
+  modal.addEventListener('contextmenu', function(e){ e.stopPropagation(); });
+  modal.addEventListener('pointerdown', function(e){ e.stopPropagation(); });
   var wheelPx='min(70vh, 80vw)';
   modal.innerHTML =
     '<div style="background:#fff;border-radius:26px;width:auto;max-width:97vw;max-height:98vh;overflow:hidden;box-shadow:0 30px 80px rgba(0,0,0,.45);">'
