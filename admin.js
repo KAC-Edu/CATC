@@ -820,8 +820,10 @@ forceEnterRoom: async function(room) {
     });
 
     dbRef.settings.on('value', s => {
-        if (state.room !== cleanRoom) return; 
-        ui.renderSettings(s.val() || {}); 
+        if (state.room !== cleanRoom) return;
+        ui.renderSettings(s.val() || {});
+        ui.applyQuickTabs(s.val() || {});   // [퀵 탭] 과정별 3·4번 버튼 적용
+        if (ui.applyRemoteMenu) ui.applyRemoteMenu(s.val() || {});   // [육각 리모컨] 과정별 메뉴 적용
     });
 
     dbRef.status.on('value', s => {
@@ -3564,6 +3566,73 @@ openQrModal: function() {
             };
             setTimeout(function(){ document.addEventListener('click', close); }, 0);
         }
+    },
+
+    // ── [퀵 탭] 상단 메뉴 3·4번 버튼 과정별 커스터마이즈 ──
+    _quickTabDefs: {
+        'notice':       { icon: 'fa-bullhorn',                   color: '#f59e0b', label: '공지 관리' },
+        'students':     { icon: 'fa-users-viewfinder',           color: '#3b82f6', label: '수강생 현황' },
+        'admin-action': { icon: 'fa-person-walking-arrow-right', color: '#2563eb', label: '외출/외박' },
+        'tablet-loan':  { icon: 'fa-tablet-screen-button',       color: '#6366f1', label: '태블릿 대여' },
+        'shuttle':      { icon: 'fa-bus',                        color: '#10b981', label: '차량 수요조사' },
+        'dormitory':    { icon: 'fa-bed',                        color: '#0ea5e9', label: '생활관 배치' },
+        'qa':           { icon: 'fa-comments',                   color: '#8b5cf6', label: 'Q&A' },
+        'quiz':         { icon: 'fa-clipboard-question',         color: '#ec4899', label: '퀴즈 모드' }
+    },
+    _quickTabPool: ['notice', 'students', 'admin-action', 'tablet-loan', 'shuttle', 'dormitory', 'qa', 'quiz'],
+    renderQuickTabs: function(s3, s4) {
+        const defs = ui._quickTabDefs;
+        s3 = defs[s3] ? s3 : 'notice';
+        s4 = defs[s4] ? s4 : 'students';
+        [['3', s3], ['4', s4]].forEach(function(pair) {
+            const btn = document.querySelector('.quick-slot[data-slot="' + pair[0] + '"]');
+            if (!btn) return;
+            const mode = pair[1], d = defs[mode];
+            btn.id = 'tab-' + mode;
+            btn.setAttribute('onclick', "ui.setMode('" + mode + "')");
+            const badge = (mode === 'notice') ? ' <span id="coordNoticeBadge" style="display:none; background:#ef4444; color:white; font-size:10px; font-weight:800; padding:2px 5px; border-radius:8px; margin-left:4px; vertical-align:middle;">NEW</span>' : '';
+            btn.innerHTML = '<i class="fa-solid ' + d.icon + '" style="color:' + d.color + ';"></i> <span>' + d.label + '</span>' + badge;
+        });
+        try { const cm = state.currentMode; document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active')); const t = document.getElementById('tab-' + cm); if (t) t.classList.add('active'); } catch (e) {}
+    },
+    applyQuickTabs: function(settings) {
+        const q = (settings && settings.quickTabs) || {};
+        ui.renderQuickTabs(q.slot3 || 'notice', q.slot4 || 'students');
+    },
+    openQuickTabsSettings: function() {
+        if (state.isObserver) { ui.showAlert("👁️ 옵저버 모드에서는 변경할 수 없습니다."); return; }
+        if (!state.room) { ui.showAlert("강의실을 먼저 선택하세요."); return; }
+        const defs = ui._quickTabDefs, pool = ui._quickTabPool;
+        const c3 = ((document.querySelector('.quick-slot[data-slot="3"]') || {}).id || 'tab-notice').replace('tab-', '');
+        const c4 = ((document.querySelector('.quick-slot[data-slot="4"]') || {}).id || 'tab-students').replace('tab-', '');
+        const opts = sel => pool.map(m => '<option value="' + m + '" ' + (m === sel ? 'selected' : '') + '>' + defs[m].label + '</option>').join('');
+        const ov = document.createElement('div');
+        ov.id = 'quickTabsModal';
+        ov.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,.5);z-index:21000;display:flex;align-items:center;justify-content:center;';
+        ov.innerHTML = '<div style="background:#fff;border-radius:18px;padding:26px 28px;width:420px;max-width:92vw;box-shadow:0 24px 70px rgba(0,0,0,.3);" onclick="event.stopPropagation()">'
+            + '<h3 style="margin:0 0 6px;font-size:19px;font-weight:900;color:#0f172a;"><i class="fa-solid fa-gear" style="color:#2563eb;"></i> 퀵 메뉴 설정</h3>'
+            + '<p style="margin:0 0 18px;font-size:12.5px;color:#64748b;font-weight:600;line-height:1.5;">과정 현황·입교안내는 고정입니다. 3·4번 버튼을 이 과정에 맞게 선택하세요. <b>이 과정에만</b> 저장됩니다.</p>'
+            + '<label style="font-size:12px;font-weight:800;color:#475569;">3번 버튼</label>'
+            + '<select id="qt-s3" style="width:100%;padding:11px;border:1.5px solid #cbd5e1;border-radius:10px;font-size:15px;font-weight:700;margin:6px 0 14px;outline:none;">' + opts(c3) + '</select>'
+            + '<label style="font-size:12px;font-weight:800;color:#475569;">4번 버튼</label>'
+            + '<select id="qt-s4" style="width:100%;padding:11px;border:1.5px solid #cbd5e1;border-radius:10px;font-size:15px;font-weight:700;margin:6px 0 4px;outline:none;">' + opts(c4) + '</select>'
+            + '<div id="qt-msg" style="font-size:12px;color:#ef4444;font-weight:700;min-height:16px;margin:6px 0;"></div>'
+            + '<div style="display:flex;gap:10px;justify-content:flex-end;margin-top:8px;">'
+            + '<button onclick="document.getElementById(\'quickTabsModal\').remove()" style="padding:10px 18px;border:none;border-radius:10px;background:#64748b;color:#fff;font-weight:800;cursor:pointer;">취소</button>'
+            + '<button onclick="ui.saveQuickTabs()" style="padding:10px 22px;border:none;border-radius:10px;background:#10b981;color:#fff;font-weight:800;cursor:pointer;">적용</button>'
+            + '</div></div>';
+        ov.addEventListener('click', function(e) { if (e.target === ov) ov.remove(); });
+        document.body.appendChild(ov);
+    },
+    saveQuickTabs: function() {
+        const s3 = (document.getElementById('qt-s3') || {}).value;
+        const s4 = (document.getElementById('qt-s4') || {}).value;
+        const msg = document.getElementById('qt-msg');
+        if (s3 === s4) { if (msg) msg.textContent = '3번과 4번 버튼은 서로 다르게 선택하세요.'; return; }
+        if (!state.room) return;
+        firebase.database().ref('courses/' + state.room + '/settings/quickTabs').set({ slot3: s3, slot4: s4 })
+            .then(function() { ui.renderQuickTabs(s3, s4); const m = document.getElementById('quickTabsModal'); if (m) m.remove(); ui.showAlert('✅ 퀵 메뉴가 이 과정에 저장되었습니다.'); })
+            .catch(function() { if (msg) msg.textContent = '저장 중 오류가 발생했습니다.'; });
     },
 
     openStudentManual: function() {
@@ -10182,6 +10251,9 @@ const annualPlanMgr = {
             [`${rPath}/coordNotice`]:         "",
             [`${rPath}/coordNoticeHistory`]:  null,
             [`${rPath}/settings/password`]:   null,  // [비번 옵션화] 차주 새 과정 배치 전 비번 제거(없음 상태)
+            [`${rPath}/settings/quickTabs`]:  null,  // [퀵 탭] 새 과정은 기본(공지관리·수강생현황)으로 복귀
+            [`${rPath}/settings/remoteMenu`]: null,  // [육각 리모컨] 새 과정은 기본 메뉴로 복귀
+            [`${rPath}/settings/guideCourseInfo`]: null,  // [교육과정 안내] 새 과정은 기본(직무일반·없음)으로 복귀
             [`${rPath}/status/ownerSessionId`]: null,
             [`${rPath}/status/resetKey`]:     newResetKey  // 교육생 강제 퇴출 신호
         };
@@ -11833,10 +11905,10 @@ ui.confirmRouletteLeader = function(){
 
 // ===== 강사 리모컨 고도화: 6개 커스텀 육각 메뉴 + 롱프레스 이동 =====
 (function(){
-  var REMOTE_KEY = 'kac_instructor_remote_v2';
   var POS_KEY = 'kac_instructor_remote_pos_v2';
+  var currentRoomMenu = null;   // 과정별 리모컨 메뉴(6개 모드). 방 입장 시 settings/remoteMenu에서 로드
+  // 중앙(과정현황)은 고정이므로 ring 선택지에서 dashboard 제외
   var choices = [
-    {mode:'dashboard', label:'과정현황', icon:'fa-gauge-high'},
     {mode:'guide', label:'입교안내', icon:'fa-file-pdf'},
     {mode:'notice', label:'공지관리', icon:'fa-bullhorn'},
     {mode:'students', label:'수강생현황', icon:'fa-users-viewfinder'},
@@ -11848,13 +11920,12 @@ ui.confirmRouletteLeader = function(){
     {mode:'qa', label:'Q&A', icon:'fa-comments'},
     {mode:'quiz', label:'퀴즈모드', icon:'fa-clipboard-question'}
   ];
-  var defaults = ['dashboard','guide','notice','students','admin-action','attendance'];
+  var defaults = ['qa','guide','notice','students','admin-action','attendance'];   // 중앙=과정현황 고정, 상단 슬롯 기본 Q&A
 
   function selected(){
     try {
-      var saved = JSON.parse(localStorage.getItem(REMOTE_KEY) || 'null');
-      if(Array.isArray(saved)){
-        var valid = saved.filter(function(key){
+      if(Array.isArray(currentRoomMenu)){
+        var valid = currentRoomMenu.filter(function(key){
           return choices.some(function(item){ return item.mode === key; });
         });
         if(valid.length === 6) return valid.slice(0, 6);
@@ -11876,11 +11947,12 @@ ui.confirmRouletteLeader = function(){
     host.classList.add('hex-remote-v2');
     host.innerHTML =
       '<div class="hex-drag-handle" title="길게 눌러 위치 이동"><i class="fa-solid fa-grip-lines"></i><span>길게 눌러 이동</span></div>'+
+      '<button class="hex-gear" type="button" title="리모컨 메뉴 설정"><i class="fa-solid fa-gear"></i></button>'+
       '<div class="hex-ring">'+picked.map(function(mode, index){
         var item = choices.find(function(choice){ return choice.mode === mode; }) || choices[0];
         return '<button class="hex-key hex-pos-'+index+'" type="button" data-mode="'+esc(item.mode)+'" title="'+esc(item.label)+'"><i class="fa-solid '+esc(item.icon)+'"></i><span>'+esc(item.label)+'</span></button>';
       }).join('')+
-      '<button class="hex-center" type="button" title="리모컨 메뉴 설정"><i class="fa-solid fa-sliders"></i><span>설정</span></button></div>';
+      '<button class="hex-center" type="button" title="과정 현황으로 이동"><i class="fa-solid fa-gauge-high"></i><span>과정현황</span></button></div>';
 
     host.querySelectorAll('.hex-key').forEach(function(button){
       button.addEventListener('click', function(){
@@ -11892,7 +11964,14 @@ ui.confirmRouletteLeader = function(){
         }
       });
     });
-    host.querySelector('.hex-center').addEventListener('click', openSettings);
+    // 중앙 = 과정현황 이동
+    host.querySelector('.hex-center').addEventListener('click', function(){ ui.setMode('dashboard'); });
+    // 설정은 '길게 눌러 이동' 옆 기어 아이콘으로
+    var gear = host.querySelector('.hex-gear');
+    if(gear){
+      gear.addEventListener('pointerdown', function(e){ e.stopPropagation(); });
+      gear.addEventListener('click', function(e){ e.stopPropagation(); openSettings(); });
+    }
     bindDrag(host);
     restorePos(host);
   }
@@ -11930,7 +12009,10 @@ ui.confirmRouletteLeader = function(){
     overlay.querySelector('[data-save]').onclick = function(){
       var values = Array.from(overlay.querySelectorAll('input:checked')).map(function(input){ return input.value; });
       if(values.length !== 6) return;
-      localStorage.setItem(REMOTE_KEY, JSON.stringify(values));
+      currentRoomMenu = values;
+      if(typeof state !== 'undefined' && state.room){
+        firebase.database().ref('courses/'+state.room+'/settings/remoteMenu').set(values).catch(function(){});   // 과정별 저장
+      }
       overlay.remove();
       render();
     };
@@ -12027,6 +12109,14 @@ ui.confirmRouletteLeader = function(){
       box.appendChild(fold);
     }
   }
+
+  // [과정별 리모컨] 방 settings 변경 시 호출 → 해당 과정의 메뉴 적용 후 재렌더
+  ui.renderRemote = render;
+  ui.applyRemoteMenu = function(settings){
+    var rm = (settings && Array.isArray(settings.remoteMenu) && settings.remoteMenu.length === 6) ? settings.remoteMenu : null;
+    currentRoomMenu = rm;
+    render();
+  };
 
   function boot(){
     cleanQrAndGroupSettings();

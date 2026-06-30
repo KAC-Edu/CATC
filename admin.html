@@ -521,8 +521,9 @@
 <div class="mode-tabs">
     <button class="mode-btn active" id="tab-dashboard" onclick="ui.setMode('dashboard')"><i class="fa-solid fa-gauge-high" style="color:#6366f1;"></i> <span class="i18n" data-en="Course Status">과정 현황</span></button>
     <button class="mode-btn" id="tab-guide" onclick="ui.setMode('guide')"><i class="fa-solid fa-file-pdf" style="color:#ef4444;"></i> <span class="i18n" data-en="Guide">입교안내</span></button>
-    <button class="mode-btn" id="tab-notice" onclick="ui.setMode('notice')"><i class="fa-solid fa-bullhorn" style="color:#f59e0b;"></i> <span class="i18n" data-en="Notices">공지 관리</span> <span id="coordNoticeBadge" style="display:none; background:#ef4444; color:white; font-size:10px; font-weight:800; padding:2px 5px; border-radius:8px; margin-left:4px; vertical-align:middle;">NEW</span></button>
-    <button class="mode-btn" id="tab-students" onclick="ui.setMode('students')"><i class="fa-solid fa-users-viewfinder" style="color:#3b82f6;"></i> <span class="i18n" data-en="Students">수강생 현황</span></button>
+    <button class="mode-btn quick-slot" data-slot="3" id="tab-notice" onclick="ui.setMode('notice')"><i class="fa-solid fa-bullhorn" style="color:#f59e0b;"></i> <span>공지 관리</span> <span id="coordNoticeBadge" style="display:none; background:#ef4444; color:white; font-size:10px; font-weight:800; padding:2px 5px; border-radius:8px; margin-left:4px; vertical-align:middle;">NEW</span></button>
+    <button class="mode-btn quick-slot" data-slot="4" id="tab-students" onclick="ui.setMode('students')"><i class="fa-solid fa-users-viewfinder" style="color:#3b82f6;"></i> <span>수강생 현황</span></button>
+    <button class="mode-tabs-gear" id="quickTabsGear" onclick="ui.openQuickTabsSettings()" title="퀵 메뉴 설정 (3·4번 버튼 변경)"><i class="fa-solid fa-gear"></i></button>
 </div>
 
 <!-- 강의 중 빠른 화면 전환용 스마트 리모컨 -->
