@@ -7541,7 +7541,7 @@ init: function() {
             <div class="kq-qr"><div id="guideKakaoQrBig" class="kq-qr-box"></div></div>
             <div class="kq-right">
               <div class="kt-logo"><span class="kt-bubble">TALK</span></div>
-              <div class="kq-guide"><i class="fa-solid fa-camera"></i> 휴대폰 <b>카메라</b>를 열어 왼쪽 <b>QR 코드</b>를 비추면<br>담임 교수님 <b>오픈채팅방</b>으로 바로 입장합니다.</div>
+              <div class="kq-guide"><i class="fa-solid fa-camera"></i> 휴대폰 <b>카메라</b>를 열어<br>왼쪽 <b>QR 코드</b>를 비추면<br>담임 교수님 <b>오픈채팅방</b>으로<br>바로 입장합니다.</div>
             </div>
           </div>
         </div>`;
