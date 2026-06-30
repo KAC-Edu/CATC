@@ -11762,7 +11762,7 @@ ui.openStudentMap = async function(){
       + '<div style="display:flex;justify-content:space-between;align-items:center;padding:9px 13px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:9px;margin-top:8px;"><span style="font-weight:900;color:#166534;">합계</span><span style="font-weight:900;color:#16a34a;">'+(total+unknown)+'명</span></div>'
       + _unknownNote
     + '</div></div>';
-  document.body.appendChild(modal);
+  (document.fullscreenElement || document.webkitFullscreenElement || document.body).appendChild(modal);   // 전체화면(top layer) 위에 보이도록 전체화면 요소에 붙임
   var _buildMap=function(){
     var el=document.getElementById('studentMapKakao'); if(!el||!(window.kakao&&kakao.maps&&kakao.maps.Map)) return;
     var map=new kakao.maps.Map(el,{ center:new kakao.maps.LatLng(36.4,127.9), level:13 });
@@ -11903,7 +11903,7 @@ ui.openLeaderRoulette = async function(){
         + '<div id="rlResult" style="min-height:30px;"></div>'
       + '</div>'
     + '</div>';
-  document.body.appendChild(modal);
+  (document.fullscreenElement || document.webkitFullscreenElement || document.body).appendChild(modal);   // 전체화면(top layer) 위에 보이도록 전체화면 요소에 붙임
   var _fh=document.getElementById('floatingHomeBtn'); if(_fh) _fh.style.display='none';
 };
 ui._spinWheel = function(){
@@ -11934,7 +11934,11 @@ ui._spinWheel = function(){
     var win=students[w]; ui._rouletteWinner=win;
     if(startBtn){ startBtn.disabled=false; startBtn.style.opacity='1'; startBtn.style.cursor='pointer'; startBtn.textContent='다시'; }
     var winnerLine=document.getElementById('rlWinLine');
-    if(winnerLine) winnerLine.textContent=ui._spacedKoreanName(win.name)+' 님 당첨!';
+    if(winnerLine){
+      winnerLine.innerHTML='<span class="rl-win-name"></span><span style="font-size:.42em;font-weight:800;color:#475569;letter-spacing:0;margin-left:.15em;">님 당첨!</span>';
+      var _nmEl=winnerLine.querySelector('.rl-win-name');
+      if(_nmEl) _nmEl.textContent=ui._spacedKoreanName(win.name);   // 이름은 크게, '님 당첨!'은 작게
+    }
     var pop=document.getElementById('rlWinPop');
     if(pop){ pop.style.display='flex'; var card=pop.firstChild; if(card){ card.style.animation='none'; void card.offsetWidth; card.style.animation='rlPop .45s cubic-bezier(.17,.89,.32,1.28)'; } }
     try{ if(ui._spinAudio){ ui._spinAudio.pause(); } }catch(e){}
