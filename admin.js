@@ -7542,6 +7542,7 @@ init: function() {
             const gi = set.guideCourseInfo || {};
             if (gi.category) ci.category = gi.category;       // 기본값: 직무 일반
             if (gi.evaluation) ci.evaluation = gi.evaluation; // 기본값: 없음(근태10%)
+            slot.pagePos = set.guidePagePos || {};            // 삽입 페이지 수동 위치
         } catch (e) {}
         // 교육 인원 = 실제 입교완료(QR 입장) 인원 수 (수강생 현황의 '입교 완료'와 동일)
         try {
@@ -7686,20 +7687,35 @@ init: function() {
     _manualPageNum: function() { return -1; },
     _COURSEINFO_AFTER_PDF: 12,   // PDF 12페이지와 13페이지 사이에 '교육과정 안내' 삽입
     // [가상 페이지 구성] PDF 원본 + 삽입 페이지(담임교수 프로필 / 교육과정 안내)를 하나의 순서로 구성
+    // 삽입 페이지 기본 위치(해당 PDF 페이지 '뒤'에 삽입). 강사가 설정에서 변경 가능 (settings/guidePagePos)
+    _defaultPagePos: { profile: 1, kakaoqr: 1, channelguide: 1, courseinfo: 12 },
+    _pagePos: function() {
+        const s = guideMgr._slot();
+        const saved = (s && s.pagePos) || {};
+        const d = guideMgr._defaultPagePos;
+        return {
+            profile: Number(saved.profile) || d.profile,
+            kakaoqr: Number(saved.kakaoqr) || d.kakaoqr,
+            channelguide: Number(saved.channelguide) || d.channelguide,
+            courseinfo: Number(saved.courseinfo) || d.courseinfo
+        };
+    },
     _pageList: function() {
         const s = guideMgr._slot();
         const n = (s && s.pdfDoc) ? s.pdfDoc.numPages : 0;
         const list = [];
-        const hasProf = guideMgr._hasProfile();
-        const hasKakao = guideMgr._hasKakaoQR();
+        if (!n) return list;
+        const want = { profile: guideMgr._hasProfile(), kakaoqr: guideMgr._hasKakaoQR(), channelguide: guideMgr._hasKakaoQR(), courseinfo: true };
+        const pos = guideMgr._pagePos();
+        const clamp = v => Math.max(1, Math.min(n, Number(v) || 1));
+        // 같은 페이지에 여러 개가 들어갈 때의 순서
+        const order = ['profile', 'kakaoqr', 'channelguide', 'courseinfo'];
+        const byPage = {};
+        order.forEach(t => { if (!want[t]) return; const pg = clamp(pos[t]); (byPage[pg] = byPage[pg] || []).push(t); });
         for (let p = 1; p <= n; p++) {
             list.push({ t: 'pdf', pdf: p });
-            if (p === 1 && hasProf) list.push({ t: 'profile' });           // 1페이지(표지) 다음 = 담임교수 프로필
-            if (p === 1 && hasKakao) list.push({ t: 'kakaoqr' });          // 프로필 다음 = 오픈톡방 QR (프로필에 톡방주소 저장 시)
-            if (p === 1 && hasKakao) list.push({ t: 'channelguide' });     // QR 다음 = 카카오 채널 입교등록 안내
-            if (p === guideMgr._COURSEINFO_AFTER_PDF) list.push({ t: 'courseinfo' });  // 12페이지 다음 = 교육과정 안내
+            (byPage[p] || []).forEach(t => list.push({ t: t }));
         }
-        if (n > 0 && n < guideMgr._COURSEINFO_AFTER_PDF) list.push({ t: 'courseinfo' }); // PDF가 12P 미만이면 맨 끝에
         return list;
     },
     _extras: function() { const s = guideMgr._slot(); const n = (s && s.pdfDoc) ? s.pdfDoc.numPages : 0; return Math.max(0, guideMgr._pageList().length - n); },
@@ -10349,6 +10365,7 @@ const annualPlanMgr = {
             [`${rPath}/settings/quickTabs`]:  null,  // [퀵 탭] 새 과정은 기본(공지관리·수강생현황)으로 복귀
             [`${rPath}/settings/remoteMenu`]: null,  // [육각 리모컨] 새 과정은 기본 메뉴로 복귀
             [`${rPath}/settings/guideCourseInfo`]: null,  // [교육과정 안내] 새 과정은 기본(직무일반·없음)으로 복귀
+            [`${rPath}/settings/guidePagePos`]: null,     // [삽입 페이지 위치] 새 과정은 기본 위치로 복귀
             [`${rPath}/status/ownerSessionId`]: null,
             [`${rPath}/status/resetKey`]:     newResetKey  // 교육생 강제 퇴출 신호
         };
@@ -11865,6 +11882,50 @@ ui.openScheduleView = async function(){
   modal.addEventListener('pointerdown', function(e){ e.stopPropagation(); });
   (document.fullscreenElement || document.webkitFullscreenElement || document.body).appendChild(modal);
   var cb = document.getElementById('guideScheduleClose'); if(cb) cb.addEventListener('click', function(){ modal.remove(); });
+};
+// 입교안내 삽입 페이지(프로필·오픈톡방QR·채널안내·교육과정안내) 위치 수동 설정
+ui.openGuidePageSettings = function(){
+  if(state.isObserver){ ui.showAlert('👁️ 옵저버 모드에서는 변경할 수 없습니다.'); return; }
+  if(!state.room){ ui.showAlert('강의실을 먼저 선택하세요.'); return; }
+  var pos = (typeof guideMgr!=='undefined' && guideMgr._pagePos) ? guideMgr._pagePos() : { profile:1, kakaoqr:1, channelguide:1, courseinfo:12 };
+  var total = 0; try{ var sl=guideMgr._slot(); total=(sl&&sl.pdfDoc)?sl.pdfDoc.numPages:0; }catch(e){}
+  var rows=[['profile','담임교수 프로필','fa-user-tie','#1e3a8a'],['kakaoqr','오픈톡방 QR','fa-qrcode','#3a1d1d'],['channelguide','채널 입교등록 안내','fa-comment-dots','#f59e0b'],['courseinfo','교육과정 안내','fa-clipboard-list','#1d4ed8']];
+  var rowHtml=rows.map(function(r){
+    return '<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">'
+      +'<i class="fa-solid '+r[2]+'" style="color:'+r[3]+';width:22px;text-align:center;"></i>'
+      +'<span style="flex:1;font-size:14px;font-weight:800;color:#334155;">'+r[1]+'</span>'
+      +'<span style="font-size:12px;color:#94a3b8;font-weight:700;">PDF</span>'
+      +'<input type="number" min="1" '+(total?('max="'+total+'"'):'')+' id="gpp-'+r[0]+'" value="'+pos[r[0]]+'" style="width:64px;padding:8px;border:1.5px solid #cbd5e1;border-radius:8px;font-size:14px;font-weight:800;text-align:center;">'
+      +'<span style="font-size:12px;color:#64748b;font-weight:700;">페이지 뒤</span></div>';
+  }).join('');
+  var ov=document.createElement('div'); ov.id='guidePageSettingsModal';
+  ov.style.cssText='position:fixed;inset:0;background:rgba(15,23,42,.5);z-index:21000;display:flex;align-items:center;justify-content:center;';
+  ov.innerHTML='<div style="background:#fff;border-radius:18px;padding:26px 28px;width:480px;max-width:92vw;box-shadow:0 24px 70px rgba(0,0,0,.3);" onclick="event.stopPropagation()">'
+    +'<h3 style="margin:0 0 6px;font-size:19px;font-weight:900;color:#0f172a;"><i class="fa-solid fa-gear" style="color:#2563eb;"></i> 삽입 페이지 위치 설정</h3>'
+    +'<p style="margin:0 0 16px;font-size:12.5px;color:#64748b;font-weight:600;line-height:1.5;">각 페이지를 PDF의 몇 페이지 <b>뒤</b>에 넣을지 정하세요.'+(total?(' 현재 PDF 총 <b>'+total+'</b>페이지.'):'')+' <b>이 과정에만</b> 저장됩니다. (각 페이지는 등록 조건이 맞을 때만 표시)</p>'
+    +rowHtml
+    +'<div id="gpp-msg" style="font-size:12px;color:#ef4444;font-weight:700;min-height:16px;margin:4px 0;"></div>'
+    +'<div style="display:flex;gap:10px;justify-content:flex-end;margin-top:8px;">'
+    +'<button onclick="document.getElementById(\'guidePageSettingsModal\').remove()" style="padding:10px 18px;border:none;border-radius:10px;background:#64748b;color:#fff;font-weight:800;cursor:pointer;">취소</button>'
+    +'<button onclick="ui.saveGuidePageSettings()" style="padding:10px 22px;border:none;border-radius:10px;background:#10b981;color:#fff;font-weight:800;cursor:pointer;">적용</button>'
+    +'</div></div>';
+  ov.addEventListener('click', function(e){ if(e.target===ov) ov.remove(); });
+  document.body.appendChild(ov);
+};
+ui.saveGuidePageSettings = function(){
+  if(!state.room) return;
+  var keys=['profile','kakaoqr','channelguide','courseinfo'];
+  var total=0; try{ var sl=guideMgr._slot(); total=(sl&&sl.pdfDoc)?sl.pdfDoc.numPages:0; }catch(e){}
+  var obj={};
+  keys.forEach(function(k){ var el=document.getElementById('gpp-'+k); if(!el) return; var v=parseInt(el.value,10); if(!v||v<1) v=1; if(total&&v>total) v=total; obj[k]=v; });
+  firebase.database().ref('courses/'+state.room+'/settings/guidePagePos').set(obj)
+    .then(function(){
+      try{ guideMgr._slot().pagePos=obj; }catch(e){}
+      var m=document.getElementById('guidePageSettingsModal'); if(m) m.remove();
+      if(typeof guideMgr.refresh==='function') guideMgr.refresh();
+      ui.showAlert('✅ 삽입 페이지 위치가 저장되었습니다. (이 과정)');
+    })
+    .catch(function(){ var msg=document.getElementById('gpp-msg'); if(msg) msg.textContent='저장 중 오류가 발생했습니다.'; });
 };
 ui._spacedKoreanName = function(name){
   return Array.from(String(name || '').replace(/\s+/g, '')).join(' ');
