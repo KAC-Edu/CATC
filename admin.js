@@ -3070,6 +3070,13 @@ loadInternalAttendance: function() {
 showAlert: function(msg, onConfirm) {
         document.getElementById('customAlertText').innerText = msg;
         var m = document.getElementById('customAlertModal');
+        // 알림창 클릭이 뒤 PDF(changePage)로 전파돼 페이지가 넘어가는 것 방지 — 1회만 바인딩
+        if (!m._noBubble) {
+            ['click','dblclick','pointerdown','mousedown','touchstart'].forEach(function(ev){
+                m.addEventListener(ev, function(e){ e.stopPropagation(); });
+            });
+            m._noBubble = true;
+        }
         // [전체화면 top-layer] 전체화면이면 알림창을 전체화면 요소 안으로 옮겨서 위에 보이게 (모니터 전체화면 뒤로 숨는 문제 해결)
         var fs = document.fullscreenElement || document.webkitFullscreenElement;
         try {
