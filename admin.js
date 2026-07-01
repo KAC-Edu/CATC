@@ -3069,12 +3069,22 @@ loadInternalAttendance: function() {
 
 showAlert: function(msg, onConfirm) {
         document.getElementById('customAlertText').innerText = msg;
-        document.getElementById('customAlertModal').style.display = 'flex';
+        var m = document.getElementById('customAlertModal');
+        // [전체화면 top-layer] 전체화면이면 알림창을 전체화면 요소 안으로 옮겨서 위에 보이게 (모니터 전체화면 뒤로 숨는 문제 해결)
+        var fs = document.fullscreenElement || document.webkitFullscreenElement;
+        try {
+            if (fs) { if (m.parentNode !== fs) fs.appendChild(m); }
+            else if (m.parentNode !== document.body) { document.body.appendChild(m); }
+        } catch(e){}
+        m.style.display = 'flex';
         this._alertCallback = (typeof onConfirm === 'function') ? onConfirm : null;
     },
 
     closeAlert: function() {
-        document.getElementById('customAlertModal').style.display = 'none';
+        var m = document.getElementById('customAlertModal');
+        m.style.display = 'none';
+        // 닫으면 다시 body로 복귀 (전체화면 요소가 제거돼도 알림창이 사라지지 않도록)
+        try { if (m.parentNode !== document.body) document.body.appendChild(m); } catch(e){}
         const cb = this._alertCallback;
         this._alertCallback = null;
         if (cb) cb();
@@ -12328,8 +12338,8 @@ ui.confirmRouletteLeader = function(){
     Object.keys(data).forEach(function(tk){ if(data[tk] && data[tk].isLeader===true && tk!==win.token){ updates[tk+'/isLeader']=false; updates[tk+'/leaderPhone']=null; } });
     updates[win.token+'/isLeader']=true;
     firebase.database().ref('courses/'+room+'/students').update(updates).then(function(){
+      ui.closeLeaderRoulette();   // 룰렛 먼저 닫고 → 알림창이 전체화면(top layer) 위에 확실히 남도록
       ui.showAlert('👑 ['+win.name+'] 교육생이 학생장으로 지정되었습니다.\n모든 플랫폼에 연동됩니다.');
-      ui.closeLeaderRoulette();
     }).catch(function(){ ui.showAlert('지정 중 오류가 발생했습니다.'); });
   });
 };
