@@ -7706,8 +7706,7 @@ init: function() {
     _venueCells: [
         { label: '하늘관', filter: '하늘관' },
         { label: '글로벌교육동', filter: '국제동' },
-        { label: '관제교육동', filter: '관제교육동' },
-        { label: '드론 교육동', filter: '드론' }
+        { label: '관제교육동', filter: '관제교육동' }
     ],
     _venuePage: function() { const s = guideMgr._slot(); return (s && s.venuePage) || 14; },
     _venueOptions: function(filter) {
@@ -11933,7 +11932,7 @@ ui.openGuidePageSettings = function(){
   // 교육 장소 강의실 (4 교육동) 선택 행 — 슬라이드 위 pill 없이 여기서 지정
   var _esc=function(x){ return String(x||'').replace(/"/g,'&quot;').replace(/</g,'&lt;'); };
   var venuePick=((guideMgr._slot&&guideMgr._slot().venuePick)||{});
-  var curVenue=''; for(var _vk=0;_vk<4;_vk++){ if(venuePick[_vk]){ curVenue=venuePick[_vk]; break; } }
+  var curVenue=''; var _NC=(guideMgr._venueCells?guideMgr._venueCells.length:3); for(var _vk=0;_vk<_NC;_vk++){ if(venuePick[_vk]){ curVenue=venuePick[_vk]; break; } }
   var venueOpts='<option value="">(선택 안함 / 없음)</option>';
   (guideMgr._venueCells||[]).forEach(function(c){
     var os=guideMgr._venueOptions(c.filter);
@@ -11985,14 +11984,15 @@ ui.saveGuidePageSettings = function(){
 };
 // 교육장소 페이지 오버레이: 교육동 4칸에 선택된 강의실 ✓ 표시 (셀 위치는 % · 화면 보고 미세조정 가능)
 // 칸 위치 = 전체 과정 공통 (system/sharedGuide/venuePos). 3초 꾹 누르면 드래그로 이동
-ui._venueDefaultPos = { lefts:[1.5,26.5,51.5,76.5], tops:[60,60,60,60], w:22, h:15 };
+ui._venueDefaultPos = { lefts:[5,37,68], tops:[52,52,52], w:26, h:16 };   // 3개 교육동(하늘관·글로벌·관제) 흰 칸 위치 (드래그로 미세조정 가능)
 ui._venuePos = null; ui._venuePosLoaded = false;
 ui._loadVenuePos = function(cb){
   firebase.database().ref('system/sharedGuide/venuePos').once('value').then(function(s){
     var v = s.val() || {}; var d = ui._venueDefaultPos;
+    var NC = d.lefts.length;
     ui._venuePos = {
-      lefts: (Array.isArray(v.lefts)&&v.lefts.length===4)? v.lefts.map(Number) : d.lefts.slice(),
-      tops:  (Array.isArray(v.tops) &&v.tops.length===4)?  v.tops.map(Number)  : d.tops.slice(),
+      lefts: (Array.isArray(v.lefts)&&v.lefts.length===NC)? v.lefts.map(Number) : d.lefts.slice(),
+      tops:  (Array.isArray(v.tops) &&v.tops.length===NC)?  v.tops.map(Number)  : d.tops.slice(),
       w: Number(v.w)||d.w, h: Number(v.h)||d.h
     };
     ui._venuePosLoaded = true; if(cb) cb();
@@ -12008,11 +12008,13 @@ ui.renderVenueOverlay = function(){
   var P = ui._venuePos || ui._venueDefaultPos;
   var slot = (typeof guideMgr!=='undefined') ? guideMgr._slot() : {};
   var pick = (slot && slot.venuePick) || {};
-  var hasSel = false; for(var k=0;k<4;k++){ if(pick[k]){ hasSel=true; break; } }   // 한 곳이라도 선택됐는지
+  var NC = (guideMgr._venueCells ? guideMgr._venueCells.length : 3);
+  var selIdx = -1; for(var k=0;k<NC;k++){ if(pick[k]){ selIdx=k; break; } }   // 선택된 칸(첫 번째 하나만)
+  var hasSel = selIdx >= 0;
   var html = '';
-  for(var i=0;i<4;i++){
+  for(var i=0;i<NC;i++){
+    if(hasSel && i!==selIdx) continue;   // 선택되면 그 칸만 표시(나머지 칸은 숨김)
     var val = pick[i] || '';
-    if(hasSel && !val) continue;   // 선택되면 그 칸만 표시(나머지 칸은 숨김)
     if(val){
       var short = (guideMgr._venueShort ? guideMgr._venueShort(val) : val);
       var inner = '<span class="gv-check"><i class="fa-solid fa-check"></i></span><span class="gv-badge">'+String(short).replace(/</g,'&lt;')+'</span>';
