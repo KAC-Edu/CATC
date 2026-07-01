@@ -518,7 +518,7 @@
 </div>
 
 <!-- ── 배경음악: 통합 주황 플레이어 바(상단 #bgmNowBubble)로 일원화됨 ── -->
-<div class="mode-tabs">
+<div class="mode-tabs collapsed" id="modeTabs">
     <button class="mode-btn active" id="tab-dashboard" onclick="ui.setMode('dashboard')"><i class="fa-solid fa-gauge-high" style="color:#6366f1;"></i> <span class="i18n" data-en="Course Status">과정 현황</span></button>
     <button class="mode-btn" id="tab-guide" onclick="ui.setMode('guide')"><i class="fa-solid fa-file-pdf" style="color:#ef4444;"></i> <span class="i18n" data-en="Guide">입교안내</span></button>
     <button class="mode-btn quick-slot" data-slot="3" id="tab-notice" onclick="ui.setMode('notice')"><i class="fa-solid fa-bullhorn" style="color:#f59e0b;"></i> <span>공지 관리</span> <span id="coordNoticeBadge" style="display:none; background:#ef4444; color:white; font-size:10px; font-weight:800; padding:2px 5px; border-radius:8px; margin-left:4px; vertical-align:middle;">NEW</span></button>
@@ -2685,6 +2685,36 @@ function setupAcc(btn){
     document.addEventListener('click', function(){ setTimeout(schedule,200); }, true);
     schedule();
   });
+})();
+</script>
+<!-- [상단 메뉴바 숨김/펼침] 시계를 3초 이상 길게 누르면 mode-tabs 토글 (평상시 숨김) -->
+<script>
+(function(){
+  function init(){
+    var clock=document.getElementById('headerDateTime');
+    var tabs=document.getElementById('modeTabs');
+    if(!clock||!tabs) return;
+    clock.style.cursor='pointer'; clock.style.userSelect='none';
+    clock.title='3초 이상 길게 누르면 상단 메뉴가 펼쳐지거나 접힙니다';
+    var timer=null;
+    function start(e){
+      if(e && e.button && e.button!==0) return;   // 좌클릭/터치만
+      clock.classList.add('clock-pressing');
+      clearTimeout(timer);
+      timer=setTimeout(function(){
+        clock.classList.remove('clock-pressing');
+        tabs.classList.toggle('collapsed');
+      },3000);
+    }
+    function cancel(){ clearTimeout(timer); clock.classList.remove('clock-pressing'); }
+    clock.addEventListener('pointerdown',start);
+    clock.addEventListener('pointerup',cancel);
+    clock.addEventListener('pointerleave',cancel);
+    clock.addEventListener('pointercancel',cancel);
+    clock.addEventListener('contextmenu',function(e){ e.preventDefault(); });
+  }
+  if(document.readyState!=='loading') init();
+  else document.addEventListener('DOMContentLoaded',init);
 })();
 </script>
 <!-- ── [강사 보조] 옵저버→강사 화면 동기화 (페이지 동기화 · 드래그 · 진단) ── -->

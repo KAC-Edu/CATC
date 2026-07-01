@@ -12443,7 +12443,10 @@ ui.confirmRouletteLeader = function(){
       '<button class="hex-gear" type="button" title="리모컨 메뉴 설정"><i class="fa-solid fa-gear"></i></button>'+
       '<div class="hex-ring">'+picked.map(function(mode, index){
         var item = choices.find(function(choice){ return choice.mode === mode; }) || choices[0];
-        var hot = (item.mode === 'guide') ? ' hex-key-hot' : '';   // 입교안내는 가장 많이 쓰는 메뉴 → 빨간색 강조
+        var hot = '';   // 시안성 강조: 입교안내=빨강, 수강생현황=하늘색, 외출외박=연두색
+        if (item.mode === 'guide') hot = ' hex-key-hot';
+        else if (item.mode === 'students') hot = ' hex-key-sky';
+        else if (item.mode === 'admin-action') hot = ' hex-key-mint';
         return '<button class="hex-key hex-pos-'+index+hot+'" type="button" data-mode="'+esc(item.mode)+'" title="'+esc(item.label)+'"><i class="fa-solid '+esc(item.icon)+'"></i><span>'+esc(item.label)+'</span></button>';
       }).join('')+
       '<button class="hex-center" type="button" title="과정 현황으로 이동"><i class="fa-solid fa-gauge-high"></i><span>과정현황</span></button></div>';

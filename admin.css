@@ -4402,6 +4402,14 @@ body.in-course #courseSmartRemote.hex-remote-v2{display:block;}
 .hex-key.hex-key-hot{background:linear-gradient(145deg,#ff5a5f,#e11d48);color:#fff;filter:drop-shadow(0 8px 12px rgba(225,29,72,.5));}
 .hex-key.hex-key-hot i,.hex-key.hex-key-hot span{color:#fff;}
 .hex-key.hex-key-hot:hover{background:linear-gradient(145deg,#ff6b70,#f43f5e);filter:drop-shadow(0 12px 16px rgba(225,29,72,.62));}
+/* 수강생현황: 하늘색 강조 */
+.hex-key.hex-key-sky{background:linear-gradient(145deg,#7dd3fc,#38bdf8);color:#0c4a6e;filter:drop-shadow(0 8px 11px rgba(14,165,233,.4));}
+.hex-key.hex-key-sky i,.hex-key.hex-key-sky span{color:#0c4a6e;}
+.hex-key.hex-key-sky:hover{background:linear-gradient(145deg,#93ddfd,#22b8f0);filter:drop-shadow(0 11px 15px rgba(14,165,233,.52));}
+/* 외출외박: 연두색 강조 */
+.hex-key.hex-key-mint{background:linear-gradient(145deg,#bbf7d0,#86efac);color:#14532d;filter:drop-shadow(0 8px 11px rgba(34,197,94,.38));}
+.hex-key.hex-key-mint i,.hex-key.hex-key-mint span{color:#14532d;}
+.hex-key.hex-key-mint:hover{background:linear-gradient(145deg,#ccf9db,#6ee7a0);filter:drop-shadow(0 11px 15px rgba(34,197,94,.5));}
 /* [대시보드 간소화] 0값 흐리게 + 오늘 한눈에 요약줄 */
 .stat-row.dash-zero{opacity:.4;}
 .dash-today-summary{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 14px;padding:11px 16px;background:#f8fafc;border:1px solid #e8eef5;border-radius:14px;}
@@ -4411,6 +4419,12 @@ body.in-course #courseSmartRemote.hex-remote-v2{display:block;}
 .dash-today-summary .dts-chip .dts-v{font-size:16px;font-weight:900;color:#0f172a;}
 .dash-today-summary .dts-chip.dts-hot{background:#fff1f2;border-color:#fecdd3;}
 .dash-today-summary .dts-chip.dts-hot .dts-v{color:#e11d48;}
+/* [상단 메뉴바 숨김/펼침] 평상시 숨김 → 시계 3초 길게눌러 토글 */
+.mode-tabs.collapsed{display:none !important;}
+/* 시계 길게누를 때 3초 진행 표시(밑줄 바가 차오름) */
+.header-clock-large{position:relative;}
+.header-clock-large.clock-pressing::after{content:'';position:absolute;left:0;bottom:-4px;height:3px;width:0;background:#38bdf8;border-radius:2px;animation:clockPressBar 3s linear forwards;}
+@keyframes clockPressBar{from{width:0;}to{width:100%;}}
 .hex-pos-0{left:90px;top:0}.hex-pos-1{left:0;top:51px}.hex-pos-2{right:0;top:51px}.hex-pos-3{left:0;bottom:0}.hex-pos-4{right:0;bottom:0}.hex-pos-5{left:90px;bottom:-1px}
 .hex-center{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:76px;height:76px;border:5px solid #fff;border-radius:50%;background:linear-gradient(145deg,#0f4c81,#2563eb);color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;cursor:pointer;box-shadow:0 10px 24px rgba(15,76,129,.38);z-index:6503;}
 .hex-center:hover{background:linear-gradient(145deg,#2563eb,#4f46e5)}.hex-center i{font-size:20px}.hex-center span{font-size:10px;font-weight:950}
