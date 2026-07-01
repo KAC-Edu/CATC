@@ -7543,6 +7543,7 @@ init: function() {
             if (gi.category) ci.category = gi.category;       // 기본값: 직무 일반
             if (gi.evaluation) ci.evaluation = gi.evaluation; // 기본값: 없음(근태10%)
             slot.pagePos = set.guidePagePos || {};            // 삽입 페이지 수동 위치
+            slot.pageEnable = set.guidePageEnable || {};      // 오픈톡방 QR·채널안내 표시 여부(체크박스)
             slot.venuePick = set.venuePick || {};             // 교육장소 페이지 강의실 선택 (셀 index → 강의실)
             slot.venuePage = Number(set.guideVenuePage) || 14; // 교육장소 오버레이가 뜰 PDF 페이지 (기본 14)
         } catch (e) {}
@@ -7695,12 +7696,19 @@ init: function() {
         const s = guideMgr._slot();
         const saved = (s && s.pagePos) || {};
         const d = guideMgr._defaultPagePos;
+        const prof = Number(saved.profile) || d.profile;
         return {
-            profile: Number(saved.profile) || d.profile,
-            kakaoqr: Number(saved.kakaoqr) || d.kakaoqr,
-            channelguide: Number(saved.channelguide) || d.channelguide,
+            profile: prof,
+            kakaoqr: prof,          // 오픈톡방 QR·채널안내는 프로필 바로 뒤를 따라감(같은 위치)
+            channelguide: prof,
             courseinfo: Number(saved.courseinfo) || d.courseinfo
         };
+    },
+    // 오픈톡방 QR / 채널 입교등록 안내 표시 여부 (체크 해제 시 숨김). 기본 ON
+    _pageEnable: function() {
+        const s = guideMgr._slot();
+        const e = (s && s.pageEnable) || {};
+        return { kakaoqr: e.kakaoqr !== false, channelguide: e.channelguide !== false };
     },
     // 교육장소(14p 등) 교육동 4칸 정의. filter = setup-room-select에서 그 건물 강의실 걸러낼 키워드
     _venueCells: [
@@ -7736,7 +7744,8 @@ init: function() {
         const n = (s && s.pdfDoc) ? s.pdfDoc.numPages : 0;
         const list = [];
         if (!n) return list;
-        const want = { profile: guideMgr._hasProfile(), kakaoqr: guideMgr._hasKakaoQR(), channelguide: guideMgr._hasKakaoQR(), courseinfo: true };
+        const en = guideMgr._pageEnable();
+        const want = { profile: guideMgr._hasProfile(), kakaoqr: guideMgr._hasKakaoQR() && en.kakaoqr, channelguide: guideMgr._hasKakaoQR() && en.channelguide, courseinfo: true };
         const pos = guideMgr._pagePos();
         const clamp = v => Math.max(1, Math.min(n, Number(v) || 1));
         // 같은 페이지에 여러 개가 들어갈 때의 순서
@@ -10405,6 +10414,7 @@ const annualPlanMgr = {
             [`${rPath}/settings/remoteMenu`]: null,  // [육각 리모컨] 새 과정은 기본 메뉴로 복귀
             [`${rPath}/settings/guideCourseInfo`]: null,  // [교육과정 안내] 새 과정은 기본(직무일반·없음)으로 복귀
             [`${rPath}/settings/guidePagePos`]: null,     // [삽입 페이지 위치] 새 과정은 기본 위치로 복귀
+            [`${rPath}/settings/guidePageEnable`]: null,  // [오픈톡방QR·채널안내 표시] 새 과정은 기본(표시)으로 복귀
             [`${rPath}/settings/venuePick`]: null,        // [교육 장소] 새 과정은 강의실 선택 초기화
             [`${rPath}/settings/guideVenuePage`]: null,   // [교육 장소] 페이지 번호 기본(14)로 복귀
             [`${rPath}/status/ownerSessionId`]: null,
@@ -11930,15 +11940,27 @@ ui.openGuidePageSettings = function(){
   if(!state.room){ ui.showAlert('강의실을 먼저 선택하세요.'); return; }
   var pos = (typeof guideMgr!=='undefined' && guideMgr._pagePos) ? guideMgr._pagePos() : { profile:1, kakaoqr:1, channelguide:1, courseinfo:12 };
   var total = 0; try{ var sl=guideMgr._slot(); total=(sl&&sl.pdfDoc)?sl.pdfDoc.numPages:0; }catch(e){}
-  var rows=[['profile','담임교수 프로필','fa-user-tie','#1e3a8a'],['kakaoqr','오픈톡방 QR','fa-qrcode','#3a1d1d'],['channelguide','채널 입교등록 안내','fa-comment-dots','#f59e0b'],['courseinfo','교육과정 안내','fa-clipboard-list','#1d4ed8']];
-  var rowHtml=rows.map(function(r){
+  var en=(typeof guideMgr!=='undefined'&&guideMgr._pageEnable)?guideMgr._pageEnable():{kakaoqr:true,channelguide:true};
+  // 페이지 위치 입력 행 (프로필 · 교육과정 안내)
+  var rowPage=function(key,label,icon,color){
     return '<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">'
-      +'<i class="fa-solid '+r[2]+'" style="color:'+r[3]+';width:22px;text-align:center;"></i>'
-      +'<span style="flex:1;font-size:14px;font-weight:800;color:#334155;">'+r[1]+'</span>'
+      +'<i class="fa-solid '+icon+'" style="color:'+color+';width:22px;text-align:center;"></i>'
+      +'<span style="flex:1;font-size:14px;font-weight:800;color:#334155;">'+label+'</span>'
       +'<span style="font-size:12px;color:#94a3b8;font-weight:700;">PDF</span>'
-      +'<input type="number" min="1" '+(total?('max="'+total+'"'):'')+' id="gpp-'+r[0]+'" value="'+pos[r[0]]+'" style="width:64px;padding:8px;border:1.5px solid #cbd5e1;border-radius:8px;font-size:14px;font-weight:800;text-align:center;">'
+      +'<input type="number" min="1" '+(total?('max="'+total+'"'):'')+' id="gpp-'+key+'" value="'+pos[key]+'" style="width:64px;padding:8px;border:1.5px solid #cbd5e1;border-radius:8px;font-size:14px;font-weight:800;text-align:center;">'
       +'<span style="font-size:12px;color:#64748b;font-weight:700;">페이지 뒤</span></div>';
-  }).join('');
+  };
+  // 표시/해제 체크박스 행 (오픈톡방 QR · 채널 입교등록 안내 — 프로필 바로 뒤에 따라옴)
+  var rowCheck=function(key,label,icon,color,checked){
+    return '<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;padding-left:16px;border-left:2px solid #e2e8f0;margin-left:8px;">'
+      +'<i class="fa-solid '+icon+'" style="color:'+color+';width:22px;text-align:center;"></i>'
+      +'<span style="flex:1;font-size:13.5px;font-weight:800;color:#475569;">'+label+' <span style="font-weight:600;color:#94a3b8;font-size:11px;">· 프로필 바로 뒤</span></span>'
+      +'<label style="display:inline-flex;align-items:center;gap:6px;cursor:pointer;user-select:none;"><input type="checkbox" id="gpe-'+key+'" '+(checked?'checked':'')+' style="width:17px;height:17px;accent-color:#2563eb;cursor:pointer;"><span style="font-size:12.5px;font-weight:800;color:#334155;">표시</span></label></div>';
+  };
+  var rowHtml=rowPage('profile','담임교수 프로필','fa-user-tie','#1e3a8a')
+    +rowCheck('kakaoqr','오픈톡방 QR','fa-qrcode','#3a1d1d',en.kakaoqr)
+    +rowCheck('channelguide','채널 입교등록 안내','fa-comment-dots','#f59e0b',en.channelguide)
+    +rowPage('courseinfo','교육과정 안내','fa-clipboard-list','#1d4ed8');
   // 교육 장소 강의실 (4 교육동) 선택 행 — 슬라이드 위 pill 없이 여기서 지정
   var _esc=function(x){ return String(x||'').replace(/"/g,'&quot;').replace(/</g,'&lt;'); };
   var venuePick=((guideMgr._slot&&guideMgr._slot().venuePick)||{});
@@ -11962,7 +11984,7 @@ ui.openGuidePageSettings = function(){
   ov.style.cssText='position:fixed;inset:0;background:rgba(15,23,42,.5);z-index:21000;display:flex;align-items:center;justify-content:center;';
   ov.innerHTML='<div style="background:#fff;border-radius:18px;padding:26px 28px;width:480px;max-width:92vw;box-shadow:0 24px 70px rgba(0,0,0,.3);" onclick="event.stopPropagation()">'
     +'<h3 style="margin:0 0 6px;font-size:19px;font-weight:900;color:#0f172a;"><i class="fa-solid fa-gear" style="color:#2563eb;"></i> 삽입 페이지 위치 설정</h3>'
-    +'<p style="margin:0 0 16px;font-size:12.5px;color:#64748b;font-weight:600;line-height:1.5;">각 페이지를 PDF의 몇 페이지 <b>뒤</b>에 넣을지 정하세요.'+(total?(' 현재 PDF 총 <b>'+total+'</b>페이지.'):'')+' <b>이 과정에만</b> 저장됩니다. (각 페이지는 등록 조건이 맞을 때만 표시)</p>'
+    +'<p style="margin:0 0 16px;font-size:12.5px;color:#64748b;font-weight:600;line-height:1.5;">삽입 위치는 <b>프로필</b> 기준 1곳만 정하면 됩니다. 오픈톡방 QR·채널 안내는 <b>프로필 바로 뒤</b>에 이어서 나오며, 체크 해제 시 표시되지 않습니다.'+(total?(' 현재 PDF 총 <b>'+total+'</b>페이지.'):'')+' <b>이 과정에만</b> 저장됩니다. (등록 조건이 맞을 때만 표시)</p>'
     +rowHtml
     +'<hr style="border:none;border-top:1px solid #eef2f7;margin:8px 0 12px;">'
     +'<div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">'
@@ -11983,18 +12005,19 @@ ui.openGuidePageSettings = function(){
 };
 ui.saveGuidePageSettings = function(){
   if(!state.room) return;
-  var keys=['profile','kakaoqr','channelguide','courseinfo'];
+  var keys=['profile','courseinfo'];   // 페이지 위치는 프로필·교육과정 안내 2개만 (QR·채널은 프로필 뒤 따라감)
   var total=0; try{ var sl=guideMgr._slot(); total=(sl&&sl.pdfDoc)?sl.pdfDoc.numPages:0; }catch(e){}
   var obj={};
   keys.forEach(function(k){ var el=document.getElementById('gpp-'+k); if(!el) return; var v=parseInt(el.value,10); if(!v||v<1) v=1; if(total&&v>total) v=total; obj[k]=v; });
+  var en={ kakaoqr: !!(document.getElementById('gpe-kakaoqr')||{}).checked, channelguide: !!(document.getElementById('gpe-channelguide')||{}).checked };
   var vp=parseInt((document.getElementById('gpp-venuepage')||{}).value,10); if(!vp||vp<1) vp=14; if(total&&vp>total) vp=total;
   var vsel=String((document.getElementById('gvv-single')||{}).value||'').trim();
   var vpick={};
   if(vsel){ var _vc=guideMgr._venueCells||[]; for(var _ci=0;_ci<_vc.length;_ci++){ if(vsel.indexOf(_vc[_ci].filter)>=0){ vpick[_ci]=vsel; break; } } }
-  var upd={}; upd['courses/'+state.room+'/settings/guidePagePos']=obj; upd['courses/'+state.room+'/settings/guideVenuePage']=vp; upd['courses/'+state.room+'/settings/venuePick']=vpick;
+  var upd={}; upd['courses/'+state.room+'/settings/guidePagePos']=obj; upd['courses/'+state.room+'/settings/guidePageEnable']=en; upd['courses/'+state.room+'/settings/guideVenuePage']=vp; upd['courses/'+state.room+'/settings/venuePick']=vpick;
   firebase.database().ref().update(upd)
     .then(function(){
-      try{ var sl=guideMgr._slot(); sl.pagePos=obj; sl.venuePage=vp; sl.venuePick=vpick; }catch(e){}
+      try{ var sl=guideMgr._slot(); sl.pagePos=obj; sl.pageEnable=en; sl.venuePage=vp; sl.venuePick=vpick; }catch(e){}
       var m=document.getElementById('guidePageSettingsModal'); if(m) m.remove();
       if(typeof guideMgr.refresh==='function') guideMgr.refresh();
       ui.showAlert('✅ 삽입 페이지 위치가 저장되었습니다. (이 과정)');
