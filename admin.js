@@ -5769,7 +5769,7 @@ resetShuttleRequests: function() {
                 +infoHtml
                 +'<div class="hsr-actions" onclick="event.stopPropagation();">'
                 +'<button class="hsr-btn primary" onclick="ui.enterCourseMode(\''+e(x.room)+'\',\'guide\',true)"><i class="fa-solid fa-file-pdf"></i> 입교안내 전체화면</button>'
-                +'<button class="hsr-btn" onclick="ui.enterCourseMode(\''+e(x.room)+'\',\'students\')"><i class="fa-solid fa-users-viewfinder"></i> 입교완료</button>'
+                +'<button class="hsr-btn" onclick="ui.enterCourseMode(\''+e(x.room)+'\',\'students\')"><i class="fa-solid fa-users-viewfinder"></i> 수강생 현황</button>'
                 +'<button class="hsr-btn" onclick="ui.enterCourseMode(\''+e(x.room)+'\',\'dashboard\')"><i class="fa-solid fa-gauge-high"></i> 과정현황</button>'
                 +'</div></div>';
         }).join('');
