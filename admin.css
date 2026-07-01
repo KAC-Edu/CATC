@@ -4440,6 +4440,18 @@ body.in-course #courseSmartRemote.hex-remote-v2{display:block;}
     box-shadow:0 8px 22px rgba(37,99,235,.45);
 }
 #guideScheduleBtn:hover{ filter:brightness(1.08); transform:translateY(-2px); }
+/* [교육 시간표 QR 업로드] 미업로드 시 노출 — 주황(할 일) 강조 + 은은한 깜빡임 */
+#guideScheduleUploadBtn{
+    position:absolute; top:13%; right:5%; z-index:8;
+    display:none; align-items:center; gap:8px;
+    padding:11px 20px; border:none; border-radius:50px; cursor:pointer;
+    background:linear-gradient(135deg,#f59e0b,#d97706); color:#fff;
+    font-size:clamp(13px,1.35vw,17px); font-weight:900; white-space:nowrap;
+    box-shadow:0 8px 22px rgba(217,119,6,.5);
+    animation:schedUpPulse 1.8s ease-in-out infinite;
+}
+@keyframes schedUpPulse{ 0%,100%{box-shadow:0 8px 22px rgba(217,119,6,.45);} 50%{box-shadow:0 10px 30px rgba(245,158,11,.75);} }
+#guideScheduleUploadBtn:hover{ filter:brightness(1.08); transform:translateY(-2px); }
 
 /* [교육 장소] PDF 위 교육동 4칸 오버레이 (셀 위치는 인라인 %로 지정) */
 #guideVenueOverlay{ position:absolute; inset:0; z-index:7; pointer-events:none; container-type:inline-size; }

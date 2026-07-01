@@ -610,6 +610,8 @@ body.in-course #moreToggleTab{ display:flex !important; }
             <button id="guideRouletteBtn" onclick="event.stopPropagation(); ui.openLeaderRoulette();" oncontextmenu="event.stopPropagation(); return false;" title="학생장 룰렛 추첨"><i class="fa-solid fa-trophy"></i> 학생장 룰렛</button>
             <!-- [교육 시간표] PDF 13p + 시간표 사진 업로드된 과정에서만 노출 -->
             <button id="guideScheduleBtn" onclick="event.stopPropagation(); ui.openScheduleView();" oncontextmenu="event.stopPropagation(); return false;" title="교육 시간표 보기"><i class="fa-solid fa-calendar-days"></i> 교육 시간표</button>
+            <!-- [교육 시간표 QR 업로드] PDF 13p + 아직 시간표 미업로드일 때 노출 (깜빡한 교수용 즉석 업로드) -->
+            <button id="guideScheduleUploadBtn" onclick="event.stopPropagation(); ui.openScheduleQrUpload();" oncontextmenu="event.stopPropagation(); return false;" title="시간표 QR 업로드"><i class="fa-solid fa-camera"></i> 시간표 업로드</button>
             <!-- [교육 장소] 교육장소 PDF 페이지(기본 14p)에서 교육동별 강의실 ✓ 오버레이 -->
             <div id="guideVenueOverlay" style="display:none;"></div>
         </div>

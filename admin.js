@@ -7965,6 +7965,8 @@ init: function() {
             if (_rBtn) _rBtn.style.display = 'none';
             var _sBtn = document.getElementById('guideScheduleBtn');   // 교육시간표 버튼은 PDF 13p에서만
             if (_sBtn) _sBtn.style.display = 'none';
+            var _uBtn = document.getElementById('guideScheduleUploadBtn');   // 시간표 QR 업로드 버튼도 PDF 13p에서만
+            if (_uBtn) _uBtn.style.display = 'none';
             var _vOv = document.getElementById('guideVenueOverlay');   // 교육장소 오버레이는 해당 PDF p에서만
             if (_vOv) _vOv.style.display = 'none';
         };
@@ -8090,9 +8092,13 @@ init: function() {
         // [학생장 룰렛] PDF 23페이지(학생장 선출)에서만 룰렛 버튼 노출
         var _rBtn = document.getElementById('guideRouletteBtn');
         if (_rBtn) _rBtn.style.display = (guideMgr._toPdfPage(num) === 23) ? 'inline-flex' : 'none';
-        // [교육 시간표] PDF 13페이지 + 시간표 사진 업로드된 과정에서만 버튼 노출
+        // [교육 시간표] PDF 13페이지: 업로드됨 → '보기' 버튼, 미업로드 → 'QR 업로드' 버튼(깜빡하고 안 올린 교수용)
+        var _on13 = (guideMgr._toPdfPage(num) === 13);
+        var _hasSched = !!guideMgr._slot().scheduleTs;
         var _sBtn = document.getElementById('guideScheduleBtn');
-        if (_sBtn) _sBtn.style.display = (guideMgr._toPdfPage(num) === 13 && guideMgr._slot().scheduleTs) ? 'inline-flex' : 'none';
+        if (_sBtn) _sBtn.style.display = (_on13 && _hasSched) ? 'inline-flex' : 'none';
+        var _uBtn = document.getElementById('guideScheduleUploadBtn');
+        if (_uBtn) _uBtn.style.display = (_on13 && !_hasSched && !state.isObserver) ? 'inline-flex' : 'none';
         // [교육 장소] 교육장소 페이지(기본 14p)에서 교육동별 강의실 ✓ 오버레이 노출
         var _vOv = document.getElementById('guideVenueOverlay');
         if (_vOv) {
@@ -11951,6 +11957,45 @@ ui.openScheduleView = async function(){
   modal.addEventListener('pointerdown', function(e){ e.stopPropagation(); });
   (document.fullscreenElement || document.webkitFullscreenElement || document.body).appendChild(modal);
   var cb = document.getElementById('guideScheduleClose'); if(cb) cb.addEventListener('click', function(){ modal.remove(); });
+};
+// 입교안내 13p '시간표 업로드' → QR 표출(폰으로 촬영·업로드) → 올라오면 자동으로 화면에 표시 (깜빡한 교수 즉석 업로드)
+ui.openScheduleQrUpload = function(){
+  var room = state.room; if(!room) return;
+  if(state.isObserver){ if(ui.showAlert) ui.showAlert('👁️ 옵저버 모드에서는 업로드할 수 없습니다.'); return; }
+  var old = document.getElementById('guideScheduleUploadModal'); if(old) old.remove();
+  var url = (typeof scheduleMgr!=='undefined' && scheduleMgr._photoUploadUrl) ? scheduleMgr._photoUploadUrl() : ('schedule_photo.html?room='+encodeURIComponent(room));
+  var modal = document.createElement('div'); modal.id = 'guideScheduleUploadModal';
+  modal.setAttribute('style','position:fixed;inset:0;z-index:9700;display:flex;align-items:center;justify-content:center;background:rgba(15,23,42,.82);padding:2.5vh 2.5vw;');
+  modal.innerHTML =
+      '<div style="background:#fff;border-radius:20px;padding:30px 34px;max-width:440px;width:92vw;text-align:center;box-shadow:0 24px 70px rgba(0,0,0,.4);box-sizing:border-box;">'
+    + '<div style="font-size:21px;font-weight:900;color:#0f172a;margin-bottom:6px;"><i class="fa-solid fa-camera" style="color:#d97706;margin-right:8px;"></i>교육 시간표 업로드</div>'
+    + '<div style="font-size:13.5px;color:#64748b;font-weight:700;line-height:1.65;margin-bottom:18px;">담당 교수님 <b>휴대폰 카메라로 아래 QR을 스캔</b>한 뒤<br>시간표를 <b>촬영</b>하거나 <b>앨범에서 선택</b>해 업로드하세요.</div>'
+    + '<div id="guideSchedUploadQr" style="display:inline-block;padding:14px;background:#fff;border:1px solid #e2e8f0;border-radius:16px;"></div>'
+    + '<div id="guideSchedUploadWait" style="margin-top:16px;font-size:13px;font-weight:800;color:#94a3b8;"><i class="fa-solid fa-circle-notch fa-spin"></i> 업로드 대기 중… 사진이 올라오면 자동으로 표시됩니다.</div>'
+    + '<button id="guideSchedUploadClose" style="margin-top:18px;background:#f1f5f9;color:#475569;border:none;border-radius:12px;padding:11px 24px;font-weight:800;font-size:14px;cursor:pointer;">닫기</button>'
+    + '</div>';
+  // PDF 페이지가 뒤에서 넘어가지 않도록 전파 차단
+  modal.addEventListener('click', function(e){ e.stopPropagation(); if(e.target === modal) closeUp(); });
+  modal.addEventListener('contextmenu', function(e){ e.stopPropagation(); });
+  modal.addEventListener('pointerdown', function(e){ e.stopPropagation(); });
+  (document.fullscreenElement || document.webkitFullscreenElement || document.body).appendChild(modal);
+  var qrDiv = document.getElementById('guideSchedUploadQr');
+  if(qrDiv && typeof QRCode !== 'undefined'){ try{ new QRCode(qrDiv, { text:url, width:210, height:210, correctLevel:QRCode.CorrectLevel.H }); }catch(e){ qrDiv.textContent = url; } }
+  else if(qrDiv){ qrDiv.textContent = url; }
+  // 업로드 라이브 감지: updatedAt이 생기면 = 사진 올라옴 → 슬롯 갱신 · 버튼 토글 · 모달 닫고 바로 보기
+  var ref = firebase.database().ref('courses/'+room+'/scheduleImage/updatedAt');
+  function onTs(snap){
+    if(state.room !== room) return;
+    var ts = snap.val(); if(!ts) return;
+    try{ var sl = guideMgr._slot(); if(sl) sl.scheduleTs = Number(ts); }catch(e){}
+    cleanup();
+    try{ guideMgr.renderPage(guideMgr._slot().pageNum); }catch(e){}   // 버튼을 '보기'로 전환
+    if(ui.openScheduleView) ui.openScheduleView();                    // 올라온 시간표 바로 표시
+  }
+  function cleanup(){ try{ ref.off('value', onTs); }catch(e){} }
+  function closeUp(){ cleanup(); var m=document.getElementById('guideScheduleUploadModal'); if(m) m.remove(); }
+  ref.on('value', onTs);
+  var cbtn = document.getElementById('guideSchedUploadClose'); if(cbtn) cbtn.addEventListener('click', closeUp);
 };
 // 입교안내 삽입 페이지(프로필·오픈톡방QR·채널안내·교육과정안내) 위치 수동 설정
 ui.openGuidePageSettings = function(){
