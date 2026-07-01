@@ -1328,6 +1328,17 @@ body.in-course #moreToggleTab{ display:flex !important; }
         <h1 style="font-size:42px;"><i id="kioskPlaneBtn" class="fa-solid fa-plane-departure" title="3초간 꾹 누르면 키오스크 전체화면" style="cursor:pointer;"></i> 항공기술훈련원 통합 교육 현황판</h1>
         <p>CATC Integrated Education Management System</p>
     </div>
+
+    <!-- [홈 통합검색] 담임교수 이름 검색 → 이번주 과정 바로가기 (포커스 시 아래 이미지·통계 숨김) -->
+    <div id="homeSearchWrap">
+        <i class="fa-solid fa-magnifying-glass home-search-ico"></i>
+        <input id="homeSearchInput" type="text" autocomplete="off" spellcheck="false"
+               placeholder="담임교수 이름을 검색하세요 (예: 장두석)"
+               oninput="ui.renderHomeSearch(this.value)" onfocus="ui.homeSearchFocus(true)" onblur="ui.homeSearchFocus(false)">
+        <button id="homeSearchClear" type="button" title="지우기" onclick="ui.clearHomeSearch()"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div id="homeSearchResults"></div>
+
     <!-- catc.png: 원본 전체 비율 노출 -->
     <div class="dashboard-campus-banner dashboard-campus-image" style="max-width:1100px; width:100%; margin-bottom:20px;">
         <img src="catc.png" alt="항공기술훈련원 전경"
@@ -1335,7 +1346,7 @@ body.in-course #moreToggleTab{ display:flex !important; }
     </div>
 
     <!-- 3개 통계 블록 (슬림) -->
-    <div style="display:flex; gap:16px; width:100%; max-width:1100px; flex-wrap:wrap; margin-bottom:40px;">
+    <div class="home-stat-row" style="display:flex; gap:16px; width:100%; max-width:1100px; flex-wrap:wrap; margin-bottom:40px;">
 
         <div onclick="ui.openHomeStatModal('active')" class="home-stat-card">
             <div class="stat-card-inner">

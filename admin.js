@@ -964,7 +964,8 @@ forceEnterRoom: async function(room) {
     //  (연간계획·현황판·홈을 쓴 뒤 방에 들어가면 상단 과정명/뒤로가기가 사라지던 문제 방지)
     let lastMode = localStorage.getItem('kac_last_mode') || 'dashboard';
     if (lastMode === 'waiting' || lastMode === 'home' || lastMode === 'prof-presentation' || !lastMode) lastMode = 'dashboard';
-    ui.setMode(lastMode); 
+    if (ui._pendingEnterMode) { lastMode = ui._pendingEnterMode; ui._pendingEnterMode = null; }  // [홈 검색] 진입 시 지정한 메뉴(입교안내 등)로 바로 이동
+    ui.setMode(lastMode);
     subjectMgr.init();
     guideMgr.init();
 
@@ -3762,6 +3763,8 @@ setMode: function(mode) {
         if (mode === 'home') {
             const tabs = document.querySelector('.mode-tabs');
             if (tabs) tabs.style.display = 'none';
+            // [홈 통합검색] 홈 진입 시 검색 상태 초기화
+            try { var _hsi=document.getElementById('homeSearchInput'); if(_hsi) _hsi.value=''; var _hsr=document.getElementById('homeSearchResults'); if(_hsr) _hsr.innerHTML=''; var _hsw=document.getElementById('homeSearchWrap'); if(_hsw) _hsw.classList.remove('has-text'); var _vh=document.getElementById('view-home'); if(_vh) _vh.classList.remove('home-search-active'); } catch(e){}
             setTimeout(() => { if(typeof ui.loadHomeStats==='function') ui.loadHomeStats(); }, 200);
         } else if (mode === 'waiting') {
             ui.initRoomSelect();
@@ -5665,6 +5668,85 @@ resetShuttleRequests: function() {
             if (modal) modal.style.display = 'flex';
             if (typeof showKacAlert === 'function') showKacAlert('과정 입장 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.');
         }
+    },
+
+    // ── [홈 통합검색] 담임교수 이름 → 이번주 과정 바로가기 ──
+    _esc: function(s){ return String(s==null?'':s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); },
+    // 과정 진입 후 원하는 메뉴로 바로 이동 (guide=입교안내 / students=입교완료 / dashboard=과정현황)
+    enterCourseMode: function(room, mode){
+        ui._pendingEnterMode = mode || 'dashboard';
+        try { dataMgr.switchRoomAttempt(String(room||'').toUpperCase()); }
+        catch(e){ ui._pendingEnterMode = null; }
+    },
+    clearHomeSearch: function(){
+        var inp=document.getElementById('homeSearchInput'); if(inp){ inp.value=''; inp.focus(); }
+        ui.renderHomeSearch('');
+    },
+    homeSearchFocus: function(on){
+        var v=document.getElementById('view-home'); if(!v) return;
+        if(on){ v.classList.add('home-search-active'); }
+        else {
+            setTimeout(function(){
+                var inp=document.getElementById('homeSearchInput');
+                if(inp && document.activeElement===inp) return;
+                if(inp && inp.value.trim()!=='') return;   // 검색어 있으면 계속 숨김 유지
+                v.classList.remove('home-search-active');
+            },200);
+        }
+    },
+    renderHomeSearch: function(q){
+        var box=document.getElementById('homeSearchResults');
+        var v=document.getElementById('view-home');
+        var wrap=document.getElementById('homeSearchWrap');
+        if(!box) return;
+        var raw=String(q==null?'':q).trim();
+        if(wrap) wrap.classList.toggle('has-text', raw!=='');
+        if(!raw){
+            box.innerHTML='';
+            var inp=document.getElementById('homeSearchInput');
+            if(v && !(inp && document.activeElement===inp)) v.classList.remove('home-search-active');
+            return;
+        }
+        if(v) v.classList.add('home-search-active');
+        var ql=raw.toLowerCase();
+        var data=window._homeStatsData||{};
+        var dorm=window._dormRosters||{};
+        var results=[];
+        Object.keys(data).forEach(function(room){
+            var r=data[room]; if(!r) return;
+            var st=r.status||{}, settings=r.settings||{}, students=r.students||{};
+            if(settings.hideFromBoard) return;
+            var course=String(settings.courseName||'').trim();
+            var period=String(settings.period||'');
+            var prof=String(st.professorName||'');
+            var ended=(ui._isEnded?ui._isEnded(period):false);
+            var thisWeek=(ui._isThisWeek?ui._isThisWeek(period):false);
+            var isActive=(st.roomStatus==='active');
+            var include=!ended && ((isActive && course) || thisWeek);
+            if(!include) return;
+            if(prof.toLowerCase().indexOf(ql)<0) return;   // 담임교수 매칭
+            var cnt=0;
+            try{ cnt=new Set(Object.values(students).filter(function(s){return s&&s.name&&s.name!=='undefined';}).map(function(s){return s.name;})).size; }catch(e){}
+            var planned=0;
+            try{ for(var k in dorm){ var dv=dorm[k]; if(dv&&Array.isArray(dv.list)&&dv.list.length&&String(dv.courseName||'').trim()===course){ if(dv.list.length>planned) planned=dv.list.length; } } }catch(e){}
+            results.push({room:room, course:course||'(과정명 미정)', period:period, prof:prof, cnt:cnt, planned:planned});
+        });
+        var e=ui._esc;
+        if(!results.length){
+            box.innerHTML='<div class="hsr-empty">"'+e(raw)+'" 담임교수의 <b>이번주 진행 과정</b>을 찾지 못했습니다.<br><span style="font-weight:600;font-size:13px;">이름 철자 또는 배정 여부를 확인해 주세요.</span></div>';
+            return;
+        }
+        box.innerHTML=results.map(function(x){
+            var studInfo='입교 '+x.cnt+(x.planned?(' / '+x.planned):'')+'명';
+            return '<div class="hsr-card" onclick="ui.enterCourseMode(\''+e(x.room)+'\',\'guide\')">'
+                +'<div class="hsr-top"><span class="hsr-course"><i class="fa-solid fa-file-pdf"></i>'+e(x.course)+' · 입교안내</span><span class="hsr-prof"><i class="fa-solid fa-user-tie"></i> '+e(x.prof||'-')+' 교수</span></div>'
+                +'<div class="hsr-meta">'+(x.period?e(x.period)+' · ':'')+studInfo+' · Room '+e(x.room)+'</div>'
+                +'<div class="hsr-actions" onclick="event.stopPropagation();">'
+                +'<button class="hsr-btn primary" onclick="ui.enterCourseMode(\''+e(x.room)+'\',\'guide\')"><i class="fa-solid fa-file-pdf"></i> 입교안내</button>'
+                +'<button class="hsr-btn" onclick="ui.enterCourseMode(\''+e(x.room)+'\',\'students\')"><i class="fa-solid fa-users-viewfinder"></i> 입교완료</button>'
+                +'<button class="hsr-btn" onclick="ui.enterCourseMode(\''+e(x.room)+'\',\'dashboard\')"><i class="fa-solid fa-gauge-high"></i> 과정현황</button>'
+                +'</div></div>';
+        }).join('');
     },
 
     openHomeStatModal: async function(type) {
