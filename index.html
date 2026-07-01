@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<!-- PLATFORM_EDIT_STATUS: 수정아닙니다 | VERSION: J83 J83 J83 J83 J83 | 2026-06-30 -->
+<!-- PLATFORM_EDIT_STATUS: 수정아닙니다 | VERSION: J84 J84 J84 J84 J84 | 2026-06-30 -->
 <!-- ══════════════════ [편집상태 / EDIT-STATUS] ══════════════════
      STATUS : 수정아닙니다
      FILE   : index.html (교육생)
-     VERSION: J83 J83 J83 J83 J83
-     UPDATED: 2026-06-30  (vJ83: 학생장 외출외박 카운팅을 admin과 동일한 09:00~익일09:00 KST 윈도우+오늘/어제 노드 병합으로 정렬(복귀자 포함 표시). | vJ82: 학생장 펼침 상세를 높이제한+내부스크롤 드롭다운으로(카드 가림 해소), 연락처 블록 줄바꿈 처리, 펼칠 때 부드럽게 노출. | vJ81: 학생장 패널 접이식 가로바로 변경(카드 가림 해소), 외출외박 항목에 비상연락처 표시+클릭 통화확인 팝업. | vJ80: 학생장 전용 패널(입교카드 아래) — 금일 외출외박·석식제외 실시간 현황 + 식당 전화하기(043-290-2325). | vJ79: 담임 글자크기 다른행과 완전통일(display:flex 제거), 신청취소 후 재초기화(이전정보 안내 복원), 패스트패스 연락처(STEP3)까지 항상 표시. | vJ78: 담임 글자크기 다른행과 통일(span 제거), 담당교수 실시간 반영(.on 리스너). | vJ77: 입교카드·출결완료 페이지에 과정담임 표시 + 전화아이콘→통화확인 팝업→통화 기능(professorProfiles 연락처 사용). | vJ76: 외출외박 현황화면 상단바 위 내용넘침 방지(flex-start), 복귀완료보고·신청취소 한 줄 배치. | vJ75: 입교문구 '항공기술훈련원 입교', 정보수정 시 개인정보동의 숨김, 외출외박 새로작성 빈양식, 소속 항공기술훈련원 표기, 외출외박 완료→수위실 현황화면 통일. | vJ74: 창닫기 기능(closeStudentWindow) 제거 — 카카오 채널 채팅창 닫기로 대체. 디버그 console.log 2종 정리. | vJ73: 미사용 함수 6종 제거 — exitApp·cleanUrlAndGo·checkDinnerTime·loadGroupCandidates·openRoomMove·wrapClose. 카카오 채널 바로가기 도입으로 불필요해진 진입/종료 관련 죽은 코드 정리. 맛집 기능 코드는 유지.)
+     VERSION: J84 J84 J84 J84 J84
+     UPDATED: 2026-06-30  (vJ84: 외출외박 소속을 신청 미리보기·입력칸 자동채움·저장값까지 formatDept 적용해 '항공기술훈련원 OOO'로 일관 표기(대장에도 반영). | vJ83: 학생장 외출외박 카운팅을 admin과 동일한 09:00~익일09:00 KST 윈도우+오늘/어제 노드 병합으로 정렬(복귀자 포함 표시). | vJ82: 학생장 펼침 상세를 높이제한+내부스크롤 드롭다운으로(카드 가림 해소), 연락처 블록 줄바꿈 처리, 펼칠 때 부드럽게 노출. | vJ81: 학생장 패널 접이식 가로바로 변경(카드 가림 해소), 외출외박 항목에 비상연락처 표시+클릭 통화확인 팝업. | vJ80: 학생장 전용 패널(입교카드 아래) — 금일 외출외박·석식제외 실시간 현황 + 식당 전화하기(043-290-2325). | vJ79: 담임 글자크기 다른행과 완전통일(display:flex 제거), 신청취소 후 재초기화(이전정보 안내 복원), 패스트패스 연락처(STEP3)까지 항상 표시. | vJ78: 담임 글자크기 다른행과 통일(span 제거), 담당교수 실시간 반영(.on 리스너). | vJ77: 입교카드·출결완료 페이지에 과정담임 표시 + 전화아이콘→통화확인 팝업→통화 기능(professorProfiles 연락처 사용). | vJ76: 외출외박 현황화면 상단바 위 내용넘침 방지(flex-start), 복귀완료보고·신청취소 한 줄 배치. | vJ75: 입교문구 '항공기술훈련원 입교', 정보수정 시 개인정보동의 숨김, 외출외박 새로작성 빈양식, 소속 항공기술훈련원 표기, 외출외박 완료→수위실 현황화면 통일. | vJ74: 창닫기 기능(closeStudentWindow) 제거 — 카카오 채널 채팅창 닫기로 대체. 디버그 console.log 2종 정리. | vJ73: 미사용 함수 6종 제거 — exitApp·cleanUrlAndGo·checkDinnerTime·loadGroupCandidates·openRoomMove·wrapClose. 카카오 채널 바로가기 도입으로 불필요해진 진입/종료 관련 죽은 코드 정리. 맛집 기능 코드는 유지.)
      ─ 규칙: 수정 시작 시 STATUS를 '수정중'으로, 완료 시 '수정아닙니다'로 변경하고 버전을 5회 반복 표기.
             '수정중'이면 다른 플랫폼은 연동 변경을 보류/협의 후 진행.
 ═══════════════════════════════════════════════════════════════ -->
@@ -4004,7 +4004,7 @@ async function openAdminAction() {
         if (lastOuting && (lastOuting.dept || lastOuting.destination || lastOuting.reason || lastOuting.phone)) {
             const _pe = (v) => String(v || '-').replace(/[&<>"']/g, function(ch){ return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]); });
             const preview =
-                '<div class="prev-outing-row"><span><i class="fa-solid fa-building"></i>소속</span><b>'+_pe(lastOuting.dept)+'</b></div>' +
+                '<div class="prev-outing-row"><span><i class="fa-solid fa-building"></i>소속</span><b>'+_pe(formatDept(lastOuting.dept))+'</b></div>' +
                 '<div class="prev-outing-row"><span><i class="fa-solid fa-location-dot"></i>행선지</span><b>'+_pe(lastOuting.destination)+'</b></div>' +
                 '<div class="prev-outing-row"><span><i class="fa-solid fa-pen-line"></i>사유</span><b>'+_pe(lastOuting.reason)+'</b></div>' +
                 '<div class="prev-outing-row"><span><i class="fa-solid fa-phone"></i>연락처</span><b>'+_pe(lastOuting.phone)+'</b></div>';
@@ -4089,7 +4089,7 @@ async function openAdminAction() {
     document.getElementById('adminActionDate').innerText = `오늘 날짜: ${today}`;
     // 소속 자동(지원부 배정 데이터) — 있으면 읽기전용으로 채움
     (function(){ var _dept=(window._myDept||'').trim(); var _ud=document.getElementById('userDept'); if(!_ud) return;
-      if(_dept){ _ud.value=_dept; _ud.readOnly=true; _ud.style.background='#f1f6ff'; _ud.style.borderColor='#dbeafe'; _ud.style.color='#1e40af'; _ud.style.fontWeight='800'; }
+      if(_dept){ _ud.value=formatDept(_dept); _ud.readOnly=true; _ud.style.background='#f1f6ff'; _ud.style.borderColor='#dbeafe'; _ud.style.color='#1e40af'; _ud.style.fontWeight='800'; }
       else { _ud.readOnly=false; _ud.style.background='#fff'; _ud.style.borderColor='#e2e8f0'; _ud.style.color='#1e293b'; _ud.style.fontWeight=''; } })();
     // [패스트패스] 저장된 연락처가 있으면 미리 채움(다음 신청부터 연락처 단계 생략 가능)
     (function(){ var _ph=document.getElementById('fullPhone'); if(_ph && !_ph.value.trim()){ var _sv=(localStorage.getItem('kac_user_fullphone')||'').trim(); if(_sv) _ph.value=_sv; } })();
@@ -4353,7 +4353,7 @@ async function submitAdminAction() {
     if (!isValidProfile()) { requireProfile(); return; }
 
     // 2. 입력된 값들 가져오기
-    const dept = document.getElementById('userDept').value.trim();
+    const dept = formatDept(document.getElementById('userDept').value.trim());
     // 외박은 시간 고정 자동 설정
     let startTime = '18:00';
     let endTime   = '20:00';

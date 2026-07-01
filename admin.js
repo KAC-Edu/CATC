@@ -11930,6 +11930,16 @@ ui.openGuidePageSettings = function(){
       +'<input type="number" min="1" '+(total?('max="'+total+'"'):'')+' id="gpp-'+r[0]+'" value="'+pos[r[0]]+'" style="width:64px;padding:8px;border:1.5px solid #cbd5e1;border-radius:8px;font-size:14px;font-weight:800;text-align:center;">'
       +'<span style="font-size:12px;color:#64748b;font-weight:700;">페이지 뒤</span></div>';
   }).join('');
+  // 교육 장소 강의실 (4 교육동) 선택 행 — 슬라이드 위 pill 없이 여기서 지정
+  var _esc=function(x){ return String(x||'').replace(/"/g,'&quot;').replace(/</g,'&lt;'); };
+  var venuePick=((guideMgr._slot&&guideMgr._slot().venuePick)||{});
+  var venueRows=(guideMgr._venueCells||[]).map(function(c,idx){
+    var opts=guideMgr._venueOptions(c.filter); var cv=venuePick[idx]||'';
+    var field=opts.length
+      ? '<select id="gvv-'+idx+'" style="flex:1;padding:8px;border:1.5px solid #cbd5e1;border-radius:8px;font-size:13px;font-weight:700;"><option value="">(없음)</option>'+opts.map(function(o){return '<option value="'+_esc(o)+'"'+(o===cv?' selected':'')+'>'+_esc(o)+'</option>';}).join('')+'</select>'
+      : '<input id="gvv-'+idx+'" type="text" value="'+_esc(cv)+'" placeholder="직접 입력 (예: F강의실)" style="flex:1;padding:8px;border:1.5px solid #cbd5e1;border-radius:8px;font-size:13px;font-weight:700;box-sizing:border-box;">';
+    return '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;"><span style="width:96px;font-size:13px;font-weight:800;color:#334155;flex:0 0 auto;">'+_esc(c.label)+'</span>'+field+'</div>';
+  }).join('');
   var ov=document.createElement('div'); ov.id='guidePageSettingsModal';
   ov.style.cssText='position:fixed;inset:0;background:rgba(15,23,42,.5);z-index:21000;display:flex;align-items:center;justify-content:center;';
   ov.innerHTML='<div style="background:#fff;border-radius:18px;padding:26px 28px;width:480px;max-width:92vw;box-shadow:0 24px 70px rgba(0,0,0,.3);" onclick="event.stopPropagation()">'
@@ -11943,6 +11953,8 @@ ui.openGuidePageSettings = function(){
       +'<span style="font-size:12px;color:#94a3b8;font-weight:700;">PDF</span>'
       +'<input type="number" min="1" '+(total?('max="'+total+'"'):'')+' id="gpp-venuepage" value="'+((typeof guideMgr!=="undefined"&&guideMgr._venuePage)?guideMgr._venuePage():14)+'" style="width:64px;padding:8px;border:1.5px solid #cbd5e1;border-radius:8px;font-size:14px;font-weight:800;text-align:center;">'
       +'<span style="font-size:12px;color:#64748b;font-weight:700;">페이지</span></div>'
+    +'<div style="font-size:13px;font-weight:900;color:#16a34a;margin:12px 0 8px;"><i class="fa-solid fa-location-dot"></i> 교육 장소 · 교육동별 강의실 <span style="font-weight:600;color:#94a3b8;font-size:11.5px;">(선택 시 해당 칸에 ✓ 표시)</span></div>'
+    +venueRows
     +'<div id="gpp-msg" style="font-size:12px;color:#ef4444;font-weight:700;min-height:16px;margin:4px 0;"></div>'
     +'<div style="display:flex;gap:10px;justify-content:flex-end;margin-top:8px;">'
     +'<button onclick="document.getElementById(\'guidePageSettingsModal\').remove()" style="padding:10px 18px;border:none;border-radius:10px;background:#64748b;color:#fff;font-weight:800;cursor:pointer;">취소</button>'
@@ -11958,10 +11970,11 @@ ui.saveGuidePageSettings = function(){
   var obj={};
   keys.forEach(function(k){ var el=document.getElementById('gpp-'+k); if(!el) return; var v=parseInt(el.value,10); if(!v||v<1) v=1; if(total&&v>total) v=total; obj[k]=v; });
   var vp=parseInt((document.getElementById('gpp-venuepage')||{}).value,10); if(!vp||vp<1) vp=14; if(total&&vp>total) vp=total;
-  var upd={}; upd['courses/'+state.room+'/settings/guidePagePos']=obj; upd['courses/'+state.room+'/settings/guideVenuePage']=vp;
+  var vpick={}; for(var vi=0;vi<4;vi++){ var ve=document.getElementById('gvv-'+vi); if(ve) vpick[vi]=String(ve.value||'').trim(); }
+  var upd={}; upd['courses/'+state.room+'/settings/guidePagePos']=obj; upd['courses/'+state.room+'/settings/guideVenuePage']=vp; upd['courses/'+state.room+'/settings/venuePick']=vpick;
   firebase.database().ref().update(upd)
     .then(function(){
-      try{ var sl=guideMgr._slot(); sl.pagePos=obj; sl.venuePage=vp; }catch(e){}
+      try{ var sl=guideMgr._slot(); sl.pagePos=obj; sl.venuePage=vp; sl.venuePick=vpick; }catch(e){}
       var m=document.getElementById('guidePageSettingsModal'); if(m) m.remove();
       if(typeof guideMgr.refresh==='function') guideMgr.refresh();
       ui.showAlert('✅ 삽입 페이지 위치가 저장되었습니다. (이 과정)');
@@ -11969,22 +11982,74 @@ ui.saveGuidePageSettings = function(){
     .catch(function(){ var msg=document.getElementById('gpp-msg'); if(msg) msg.textContent='저장 중 오류가 발생했습니다.'; });
 };
 // 교육장소 페이지 오버레이: 교육동 4칸에 선택된 강의실 ✓ 표시 (셀 위치는 % · 화면 보고 미세조정 가능)
-ui._venueLefts = [1.5, 26.5, 51.5, 76.5];
-ui._venueTop = 60; ui._venueH = 15; ui._venueW = 22;
+// 칸 위치 = 전체 과정 공통 (system/sharedGuide/venuePos). 3초 꾹 누르면 드래그로 이동
+ui._venueDefaultPos = { lefts:[1.5,26.5,51.5,76.5], tops:[60,60,60,60], w:22, h:15 };
+ui._venuePos = null; ui._venuePosLoaded = false;
+ui._loadVenuePos = function(cb){
+  firebase.database().ref('system/sharedGuide/venuePos').once('value').then(function(s){
+    var v = s.val() || {}; var d = ui._venueDefaultPos;
+    ui._venuePos = {
+      lefts: (Array.isArray(v.lefts)&&v.lefts.length===4)? v.lefts.map(Number) : d.lefts.slice(),
+      tops:  (Array.isArray(v.tops) &&v.tops.length===4)?  v.tops.map(Number)  : d.tops.slice(),
+      w: Number(v.w)||d.w, h: Number(v.h)||d.h
+    };
+    ui._venuePosLoaded = true; if(cb) cb();
+  }).catch(function(){ var d=ui._venueDefaultPos; ui._venuePos={lefts:d.lefts.slice(),tops:d.tops.slice(),w:d.w,h:d.h}; ui._venuePosLoaded=true; if(cb) cb(); });
+};
+ui._saveVenuePos = function(){
+  if(!ui._venuePos) return;
+  firebase.database().ref('system/sharedGuide/venuePos').set({ lefts:ui._venuePos.lefts, tops:ui._venuePos.tops, w:ui._venuePos.w, h:ui._venuePos.h }).catch(function(){});
+};
 ui.renderVenueOverlay = function(){
   var ov = document.getElementById('guideVenueOverlay'); if(!ov) return;
+  if(!ui._venuePosLoaded){ ui._loadVenuePos(function(){ ui.renderVenueOverlay(); }); }
+  var P = ui._venuePos || ui._venueDefaultPos;
   var slot = (typeof guideMgr!=='undefined') ? guideMgr._slot() : {};
   var pick = (slot && slot.venuePick) || {};
   var html = '';
   for(var i=0;i<4;i++){
     var val = pick[i] || '';
     var short = (guideMgr._venueShort ? guideMgr._venueShort(val) : val);
-    var inner = short
-      ? '<span class="gv-check"><i class="fa-solid fa-check"></i></span><span class="gv-badge">'+String(short).replace(/</g,'&lt;')+'</span>'
-      : '<span class="gv-empty"><i class="fa-solid fa-plus"></i> 강의실</span>';
-    html += '<div class="gv-cell" onclick="event.stopPropagation(); ui.pickVenue('+i+');" oncontextmenu="event.stopPropagation();return false;" onmousedown="event.stopPropagation();" style="left:'+ui._venueLefts[i]+'%;top:'+ui._venueTop+'%;width:'+ui._venueW+'%;height:'+ui._venueH+'%;">'+inner+'</div>';
+    var cls = short ? 'gv-cell gv-filled' : 'gv-cell gv-empty-cell';
+    var inner = short ? '<span class="gv-check"><i class="fa-solid fa-check"></i></span><span class="gv-badge">'+String(short).replace(/</g,'&lt;')+'</span>' : '';
+    html += '<div class="'+cls+'" data-cell="'+i+'" style="left:'+P.lefts[i]+'%;top:'+P.tops[i]+'%;width:'+P.w+'%;height:'+P.h+'%;touch-action:none;">'+inner+'</div>';
   }
   ov.innerHTML = html;
+  [].forEach.call(ov.querySelectorAll('.gv-cell'), function(c){ ui._bindVenueCell(c); });
+};
+ui._bindVenueCell = function(cell){
+  var i = parseInt(cell.getAttribute('data-cell'),10);
+  var holdTimer=null, dragMode=false, moved=false, sx=0, sy=0, gx=0, gy=0;
+  var clearHold=function(){ if(holdTimer){ clearTimeout(holdTimer); holdTimer=null; } };
+  cell.addEventListener('pointerdown', function(e){
+    e.stopPropagation();
+    sx=e.clientX; sy=e.clientY; moved=false; dragMode=false;
+    try{ cell.setPointerCapture(e.pointerId); }catch(_){}
+    holdTimer=setTimeout(function(){
+      dragMode=true; cell.classList.add('gv-dragging');
+      var cr=cell.getBoundingClientRect(); gx=sx-cr.left; gy=sy-cr.top;
+      try{ if(navigator.vibrate) navigator.vibrate(45); }catch(_){}
+    }, 3000);
+  });
+  cell.addEventListener('pointermove', function(e){
+    if(dragMode){
+      e.preventDefault();
+      var ov=document.getElementById('guideVenueOverlay'); if(!ov) return; var r=ov.getBoundingClientRect();
+      var P=ui._venuePos||ui._venueDefaultPos;
+      var nl=(e.clientX-gx-r.left)/r.width*100, nt=(e.clientY-gy-r.top)/r.height*100;
+      nl=Math.max(0,Math.min(100-P.w,nl)); nt=Math.max(0,Math.min(100-P.h,nt));
+      cell.style.left=nl.toFixed(2)+'%'; cell.style.top=nt.toFixed(2)+'%';
+      P.lefts[i]=+nl.toFixed(2); P.tops[i]=+nt.toFixed(2);
+    } else if(Math.hypot(e.clientX-sx,e.clientY-sy)>10){ moved=true; clearHold(); }
+  });
+  cell.addEventListener('pointerup', function(e){
+    e.stopPropagation(); clearHold();
+    try{ cell.releasePointerCapture(e.pointerId); }catch(_){}
+    if(dragMode){ dragMode=false; cell.classList.remove('gv-dragging'); ui._saveVenuePos(); if(ui.showAlert) ui.showAlert('📍 강의실 칸 위치를 저장했습니다. (모든 과정 공통)'); }
+    else if(!moved){ ui.pickVenue(i); }
+  });
+  cell.addEventListener('pointercancel', function(){ clearHold(); if(dragMode){ dragMode=false; cell.classList.remove('gv-dragging'); ui._saveVenuePos(); } });
+  cell.addEventListener('contextmenu', function(e){ e.stopPropagation(); e.preventDefault(); });
 };
 ui.pickVenue = function(i){
   if(state.isObserver){ ui.showAlert('👁️ 옵저버 모드에서는 변경할 수 없습니다.'); return; }
