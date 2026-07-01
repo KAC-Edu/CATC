@@ -2694,22 +2694,31 @@ function setupAcc(btn){
     var clock=document.getElementById('headerDateTime');
     var tabs=document.getElementById('modeTabs');
     if(!clock||!tabs) return;
-    clock.style.cursor='pointer'; clock.style.userSelect='none';
+    clock.style.cursor='pointer'; clock.style.userSelect='none'; clock.style.touchAction='none';
     clock.title='3초 이상 길게 누르면 상단 메뉴가 펼쳐지거나 접힙니다';
     var timer=null;
+    function removeBar(){ var b=document.getElementById('clockHoldBar'); if(b) b.remove(); }
+    function showBar(){
+      removeBar();
+      var b=document.createElement('div'); b.id='clockHoldBar';
+      b.style.cssText='position:fixed;left:0;bottom:0;height:5px;width:0;background:linear-gradient(90deg,#38bdf8,#2563eb);box-shadow:0 0 12px rgba(56,189,248,.7);z-index:2147483000;';
+      document.body.appendChild(b);
+      void b.offsetWidth;                         // 리플로우 후 트랜지션 시작
+      b.style.transition='width 3s linear'; b.style.width='100%';
+    }
     function start(e){
-      if(e && e.button && e.button!==0) return;   // 좌클릭/터치만
-      clock.classList.add('clock-pressing');
+      if(e && e.pointerType==='mouse' && e.button!==0) return;   // 좌클릭/터치만
+      try{ clock.setPointerCapture(e.pointerId); }catch(_){}     // 매초 시계 갱신에도 포인터 유지(핵심)
+      showBar();
       clearTimeout(timer);
       timer=setTimeout(function(){
-        clock.classList.remove('clock-pressing');
+        removeBar();
         tabs.classList.toggle('collapsed');
       },3000);
     }
-    function cancel(){ clearTimeout(timer); clock.classList.remove('clock-pressing'); }
+    function cancel(){ clearTimeout(timer); removeBar(); }
     clock.addEventListener('pointerdown',start);
     clock.addEventListener('pointerup',cancel);
-    clock.addEventListener('pointerleave',cancel);
     clock.addEventListener('pointercancel',cancel);
     clock.addEventListener('contextmenu',function(e){ e.preventDefault(); });
   }
