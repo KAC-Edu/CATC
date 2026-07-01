@@ -4429,14 +4429,15 @@ body.in-course #courseSmartRemote.hex-remote-v2{display:block;}
 #guideScheduleBtn:hover{ filter:brightness(1.08); transform:translateY(-2px); }
 
 /* [교육 장소] PDF 위 교육동 4칸 오버레이 (셀 위치는 인라인 %로 지정) */
-#guideVenueOverlay{ position:absolute; inset:0; z-index:7; pointer-events:none; }
-#guideVenueOverlay .gv-cell{ position:absolute; pointer-events:auto; cursor:pointer; display:flex; align-items:center; gap:0.7vw; overflow:visible; }
+#guideVenueOverlay{ position:absolute; inset:0; z-index:7; pointer-events:none; container-type:inline-size; }
+#guideVenueOverlay .gv-cell{ position:absolute; pointer-events:auto; cursor:pointer; display:flex; align-items:center; gap:0.9cqw; overflow:visible; }
 /* 빈 칸: 발표 화면엔 아무것도 안 보이고, 마우스 올렸을 때만 살짝 힌트 (강사가 클릭해 선택 가능) */
 #guideVenueOverlay .gv-empty-cell{ border:1.5px dashed transparent; border-radius:8px; transition:background .15s, border-color .15s; }
 #guideVenueOverlay .gv-empty-cell:hover{ background:rgba(37,99,235,.10); border-color:#93c5fd; }
 /* 선택된 칸: ✓ + 네이비 배지 (납작하지 않게 충분한 높이·여백) */
-#guideVenueOverlay .gv-check{ display:inline-flex; align-items:center; justify-content:center; width:clamp(24px,2.7vw,44px); height:clamp(24px,2.7vw,44px); border:0.32vw solid #2563eb; border-radius:8px; color:#2563eb; font-size:clamp(15px,1.9vw,28px); flex:0 0 auto; background:#fff; }
-#guideVenueOverlay .gv-badge{ display:inline-flex; align-items:center; background:#2563eb; color:#fff; border-radius:10px; padding:0.5vw 1.1vw; font-size:clamp(14px,1.7vw,26px); font-weight:900; line-height:1.35; white-space:nowrap; max-width:calc(100% - 3.4vw); overflow:hidden; text-overflow:ellipsis; box-shadow:0 3px 10px rgba(37,99,235,.30); }
+/* 슬라이드 폭(cqw) 기준 크기 → 창/전체화면 모두 비율대로 커짐 */
+#guideVenueOverlay .gv-check{ display:inline-flex; align-items:center; justify-content:center; width:3.6cqw; height:3.6cqw; min-width:22px; min-height:22px; border:0.4cqw solid #2563eb; border-radius:0.7cqw; color:#2563eb; font-size:2.4cqw; flex:0 0 auto; background:#fff; }
+#guideVenueOverlay .gv-badge{ display:inline-flex; align-items:center; background:#2563eb; color:#fff; border-radius:0.9cqw; padding:0.6cqw 1.4cqw; font-size:2.3cqw; font-weight:900; line-height:1.35; white-space:nowrap; max-width:calc(100% - 5cqw); overflow:hidden; text-overflow:ellipsis; box-shadow:0 0.3cqw 1cqw rgba(37,99,235,.30); }
 /* 누르는 동안(3초 대기) 옅게 표시 → 어느 칸인지 보임 */
 #guideVenueOverlay .gv-cell.gv-pressing{ background:rgba(37,99,235,.12); outline:1.5px dashed #93c5fd; border-radius:8px; }
 /* 3초 꾹 눌러 이동 모드 진입 시 — 빈 칸도 연한 블록으로 또렷이 보이게 (위치 감 잡기) */
