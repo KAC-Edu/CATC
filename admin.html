@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<!-- PLATFORM_EDIT_STATUS: 수정완료 | VERSION: F2 | 2026-06-29 -->
 <html lang="ko">
 <head>
 <script>
@@ -13,8 +14,9 @@
 </script>
 <!-- ============================================================
   CATC · 강사 플랫폼  (admin.html)
-  @version  P
-  @build    20260612-123725
+  STATUS    수정안하는중
+  @version  F2
+  @build    20260628-075317  (스마트 리모컨·우측 메뉴 플래그 개선)
   ────────────────────────────────────────────────────────
   [코드 수정 규칙 · AI/개발자 공통]
   이 파일을 한 글자라도 고치면:
@@ -40,9 +42,43 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/ko.js"></script>
-    <link rel="stylesheet" href="admin.css?v=260625VS">
+    <link rel="stylesheet" href="admin.css?v=260628M">
     <link rel="stylesheet" href="kac-tokens.css?v=20260622">
     <link rel="icon" type="image/svg+xml" href="favicon.svg?v=b260620c">
+    <script>
+    /* [PC 화면 밀도 보정 2026-06-26]
+       강사 플랫폼은 과거 브라우저 75% 줌 기준으로 UI를 맞춘 이력이 있어,
+       PC 100% 줌에서도 같은 작업 밀도로 보이도록 문서 배율을 자동 보정한다. */
+    (function(){
+      window.__catcDensityFitActive = true;
+      var MIN_ZOOM = 0.62;
+      var BASE_ZOOM = 0.75;
+      var timer;
+      function isPcLike(){
+        try{
+          return window.innerWidth >= 1024 && (!window.matchMedia || window.matchMedia('(pointer:fine)').matches);
+        }catch(e){ return window.innerWidth >= 1024; }
+      }
+      function fit(){
+        var el=document.documentElement, body=document.body;
+        if(!el || !body) return;
+        el.style.zoom='';
+        el.style.removeProperty('--app-h');
+        if(!isPcLike()) return;
+        var needW=Math.max(1, el.scrollWidth||0, body.scrollWidth||0, 1400);
+        var z=Math.max(MIN_ZOOM, Math.min(window.innerWidth / needW, BASE_ZOOM));
+        if(z < 0.995){
+          el.style.setProperty('--app-h', (window.innerHeight / z) + 'px');
+          el.style.zoom = z.toFixed(4);
+        }
+      }
+      function soon(){ clearTimeout(timer); timer=setTimeout(fit, 80); }
+      window.addEventListener('resize', soon);
+      window.addEventListener('load', fit);
+      document.addEventListener('DOMContentLoaded', fit);
+      [250,900,1800,3200].forEach(function(ms){ setTimeout(fit, ms); });
+    })();
+    </script>
 </head>
 <body class="day-mode sidebar-hidden">
 <!-- 강의 모니터링 마이크 권한 안내 배너: 중복 팝업 방지를 위해 화면 표시하지 않음 -->
@@ -485,9 +521,19 @@
 <div class="mode-tabs">
     <button class="mode-btn active" id="tab-dashboard" onclick="ui.setMode('dashboard')"><i class="fa-solid fa-gauge-high" style="color:#6366f1;"></i> <span class="i18n" data-en="Course Status">과정 현황</span></button>
     <button class="mode-btn" id="tab-guide" onclick="ui.setMode('guide')"><i class="fa-solid fa-file-pdf" style="color:#ef4444;"></i> <span class="i18n" data-en="Guide">입교안내</span></button>
-    <button class="mode-btn" id="tab-notice" onclick="ui.setMode('notice')"><i class="fa-solid fa-bullhorn" style="color:#f59e0b;"></i> <span class="i18n" data-en="Notices">공지 관리</span> <span id="coordNoticeBadge" style="display:none; background:#ef4444; color:white; font-size:10px; font-weight:800; padding:2px 5px; border-radius:8px; margin-left:4px; vertical-align:middle;">NEW</span></button>
-    <button class="mode-btn" id="tab-students" onclick="ui.setMode('students')"><i class="fa-solid fa-users-viewfinder" style="color:#3b82f6;"></i> <span class="i18n" data-en="Students">수강생 현황</span></button>
+    <button class="mode-btn quick-slot" data-slot="3" id="tab-notice" onclick="ui.setMode('notice')"><i class="fa-solid fa-bullhorn" style="color:#f59e0b;"></i> <span>공지 관리</span> <span id="coordNoticeBadge" style="display:none; background:#ef4444; color:white; font-size:10px; font-weight:800; padding:2px 5px; border-radius:8px; margin-left:4px; vertical-align:middle;">NEW</span></button>
+    <button class="mode-btn quick-slot" data-slot="4" id="tab-students" onclick="ui.setMode('students')"><i class="fa-solid fa-users-viewfinder" style="color:#3b82f6;"></i> <span>수강생 현황</span></button>
+    <button class="mode-tabs-gear" id="quickTabsGear" onclick="ui.openQuickTabsSettings()" title="퀵 메뉴 설정 (3·4번 버튼 변경)"><i class="fa-solid fa-gear"></i></button>
 </div>
+
+<!-- 강의 중 빠른 화면 전환용 스마트 리모컨 -->
+<nav id="courseSmartRemote" aria-label="강의 화면 빠른 이동">
+    <button class="remote-key remote-north" onclick="ui.setMode('guide')" title="입교안내"><i class="fa-solid fa-file-pdf"></i><span>입교</span></button>
+    <button class="remote-key remote-west" onclick="ui.setMode('dashboard')" title="과정 현황"><i class="fa-solid fa-gauge-high"></i><span>현황</span></button>
+    <button class="remote-home" onclick="ui.setMode('dashboard')" title="홈"><i class="fa-solid fa-house"></i><span>홈</span></button>
+    <button class="remote-key remote-east" onclick="ui.setMode('students')" title="수강생 현황"><i class="fa-solid fa-users-viewfinder"></i><span>수강생</span></button>
+    <button class="remote-key remote-south" onclick="ui.setMode('notice')" title="공지 관리"><i class="fa-solid fa-bullhorn"></i><span>공지</span></button>
+</nav>
 
 <!-- 더보기 우측 슬라이드 패널 -->
 <style>
@@ -501,11 +547,12 @@ body.in-course #moreToggleTab{ display:flex !important; }
 #moreMenuPanel .more-div{ height:1px; background:#eef2f7; margin:6px 10px; border:0; }
 </style>
 <!-- 더보기 우측 클립 손잡이 (좌측 사이드바와 동일 스타일) -->
-<div id="moreToggleTab" onclick="ui.toggleMorePanel()" title="더보기 메뉴" style="position:fixed; right:0; top:50%; transform:translateY(-50%); width:22px; height:56px; background:#1e293b; border-radius:8px 0 0 8px; display:flex; align-items:center; justify-content:center; cursor:pointer; z-index:6002; border:1px solid rgba(255,255,255,0.12); border-right:none; transition:right 0.34s cubic-bezier(.22,1,.36,1); box-shadow:-3px 0 8px rgba(0,0,0,0.3);">
-    <i id="moreToggleIcon" class="fa-solid fa-chevron-left" style="color:#94a3b8; font-size:11px; transition:transform 0.3s;"></i>
+<div id="moreToggleTab" onclick="ui.toggleMorePanel()" title="더보기 메뉴">
+    <i id="moreToggleIcon" class="fa-solid fa-chevron-left"></i>
+    <span>메뉴</span>
 </div>
 <div id="moreMenuBackdrop" onclick="ui.closeMorePanel()" style="display:none; position:fixed; inset:0; background:rgba(15,23,42,.28); z-index:6000;"></div>
-<div id="moreMenuPanel" style="position:fixed; top:0; right:0; height:100vh; width:300px; max-width:86vw; background:#fff; border-radius:20px 0 0 20px; box-shadow:-14px 0 44px rgba(15,23,42,.22); z-index:6001; transform:translateX(100%); transition:transform .34s cubic-bezier(.22,1,.36,1); display:flex; flex-direction:column; padding:16px 12px calc(16px + env(safe-area-inset-bottom)); overflow-y:auto;">
+<div id="moreMenuPanel" style="position:fixed; top:0; right:0; height:var(--app-h,100vh); width:240px; max-width:86vw; background:#fff; border-radius:20px 0 0 20px; box-shadow:-2px 0 12px rgba(0,0,0,0.18); z-index:6001; transform:translateX(105%); transition:transform .34s cubic-bezier(.22,1,.36,1); display:flex; flex-direction:column; padding:20px 20px calc(20px + env(safe-area-inset-bottom)) 20px; overflow-y:auto; box-sizing:border-box;">
     <div style="display:flex; align-items:center; justify-content:space-between; padding:6px 8px 12px; border-bottom:1px solid #eef2f7; margin-bottom:8px;">
         <span style="font-size:16px; font-weight:900; color:#0f172a;"><i class="fa-solid fa-ellipsis" style="color:#6366f1; margin-right:6px;"></i> 더보기</span>
         <button onclick="ui.closeMorePanel()" aria-label="닫기" style="width:34px; height:34px; border:none; border-radius:50%; background:#f1f5f9; color:#475569; font-size:18px; cursor:pointer;">&times;</button>
@@ -513,7 +560,7 @@ body.in-course #moreToggleTab{ display:flex !important; }
     <div class="more-sec" style="color:#2563eb;">교육 운영 관련</div>
     <a class="more-item" onclick="ui.setMode('admin-action'); ui.closeMorePanel();"><i class="fa-solid fa-person-walking-arrow-right" style="color:#2563eb;"></i> 외출/외박</a>
     <a class="more-item" onclick="ui.setMode('tablet-loan'); ui.closeMorePanel();"><i class="fa-solid fa-tablet-screen-button" style="color:#2563eb;"></i> 태블릿 대여 관리</a>
-    <a class="more-item" onclick="ui.setMode('attendance'); ui.closeMorePanel();"><i class="fa-solid fa-qrcode" style="color:#2563eb;"></i> 출결 QR</a>
+    <a class="more-item" onclick="ui.setMode('attendance'); setTimeout(function(){try{ui.toggleAttendanceMode('internal');}catch(e){}},80); ui.closeMorePanel();"><i class="fa-solid fa-keyboard" style="color:#2563eb;"></i> OTP 출결</a>
     <hr class="more-div">
     <div class="more-sec" style="color:#10b981;">교육 지원 관련</div>
     <a class="more-item" onclick="ui.setMode('shuttle'); ui.closeMorePanel();" style="position:relative;"><i class="fa-solid fa-bus" style="color:#10b981;"></i> 차량 수요조사 <span id="shuttleNewBadge" style="display:none; background:#ef4444; color:white; width:16px; height:16px; border-radius:50%; font-size:10px; font-weight:bold; align-items:center; justify-content:center; margin-left:5px;">N</span></a>
@@ -525,7 +572,7 @@ body.in-course #moreToggleTab{ display:flex !important; }
     <a class="more-item" onclick="ui.setMode('quiz'); ui.closeMorePanel();"><i class="fa-solid fa-clipboard-question" style="color:#6366f1;"></i> 퀴즈 모드</a>
     <a class="more-item" onclick="ui.setMode('waiting'); ui.closeMorePanel();"><i class="fa-solid fa-chart-line" style="color:#6366f1;"></i> 과정 총 현황</a>
     <a class="more-item" onclick="ui.setMode('schedule'); ui.closeMorePanel();"><i class="fa-solid fa-calendar-days" style="color:#6366f1;"></i> 교육 시간표</a>
-    <div id="moreFoodSection" style="display:none;">
+    <div id="moreFoodSection">
     <hr class="more-div">
     <div class="more-sec" style="color:#f59e0b;">정보 · 소식</div>
     <a class="more-item" onclick="ui.setMode('foodnews'); ui.closeMorePanel();"><i class="fa-solid fa-burger" style="color:#f59e0b;"></i> 도움이 되는 소식 (맛집)</a>
@@ -556,9 +603,15 @@ body.in-course #moreToggleTab{ display:flex !important; }
     </div>
     <div class="card-rail-wrap" style="max-width:1150px;">
     <div class="modern-white-card" style="width:100%; max-width:1150px; display:flex; flex-direction:column; align-items:center; padding:32px 40px; gap:20px;">
-        <div id="pdfWrapper" onclick="guideMgr.changePage(1)" oncontextmenu="event.preventDefault(); guideMgr.changePage(-1);" style="cursor:pointer; width:100%; max-width:1050px;">
+        <div id="pdfWrapper" onclick="guideMgr.changePage(1)" oncontextmenu="event.preventDefault(); guideMgr.changePage(-1);" style="cursor:pointer; width:100%; max-width:1050px; position:relative;">
             <canvas id="guideCanvas" style="width:100%; height:auto; display:block; border-radius:12px; box-shadow:0 4px 20px rgba(0,51,102,0.12);"></canvas>
             <div id="guideProfile" style="display:none; width:100%; border-radius:12px; box-shadow:0 4px 20px rgba(0,51,102,0.12); overflow:hidden;"></div>
+            <!-- [학생장 룰렛] PDF 23p(학생장 선출)에서만 노출 -->
+            <button id="guideRouletteBtn" onclick="event.stopPropagation(); ui.openLeaderRoulette();" oncontextmenu="event.stopPropagation(); return false;" title="학생장 룰렛 추첨"><i class="fa-solid fa-trophy"></i> 학생장 룰렛</button>
+            <!-- [교육 시간표] PDF 13p + 시간표 사진 업로드된 과정에서만 노출 -->
+            <button id="guideScheduleBtn" onclick="event.stopPropagation(); ui.openScheduleView();" oncontextmenu="event.stopPropagation(); return false;" title="교육 시간표 보기"><i class="fa-solid fa-calendar-days"></i> 교육 시간표</button>
+            <!-- [교육 장소] 교육장소 PDF 페이지(기본 14p)에서 교육동별 강의실 ✓ 오버레이 -->
+            <div id="guideVenueOverlay" style="display:none;"></div>
         </div>
         <!-- 툴바 영역 -->
         <div style="display:flex; align-items:center; gap:8px; padding:8px 16px; background:#f8fafc; border-radius:12px; border:1px solid #e2e8f0; width:100%; max-width:1050px; box-sizing:border-box;">
@@ -568,6 +621,7 @@ body.in-course #moreToggleTab{ display:flex !important; }
             <button onclick="guideMgr.changePage(1)" style="padding:7px 14px; background:#fff; border:1px solid #e2e8f0; border-radius:8px; font-size:13px; font-weight:800; cursor:pointer; color:#334155;">다음 <i class="fa-solid fa-chevron-right"></i></button>
             <div style="flex:1;"></div>
             <button onclick="guideMgr.toggleFullScreen()" style="padding:7px 16px; background:#003366; color:#fff; border:none; border-radius:8px; font-size:13px; font-weight:800;"><i class="fa-solid fa-expand"></i> PDF 전체화면</button>
+            <button onclick="ui.openGuidePageSettings()" title="삽입 페이지 위치 설정 (프로필·QR·안내 페이지)" style="width:34px; height:34px; margin-left:6px; background:#fff; color:#475569; border:1px solid #e2e8f0; border-radius:8px; font-size:14px; font-weight:800; cursor:pointer;"><i class="fa-solid fa-gear"></i></button>
             <span id="guideStatusBadge" style="font-size:11px; font-weight:800; color:#94a3b8; margin-left:4px;"></span>
         </div>
     </div>
@@ -774,7 +828,7 @@ body.in-course #moreToggleTab{ display:flex !important; }
 
                     <!-- 항기원 자체 출결 체크 (버튼) -->
                     <div class="stat-row" onclick="ui.setMode('attendance'); ui.toggleAttendanceMode('internal');" style="cursor:pointer; padding:8px 0;">
-                        <span class="card-label"><i class="fa-solid fa-qrcode" style="color:#0ea5e9; margin-right:5px;"></i>항공기술훈련원 자체 출결 체크</span>
+                        <span class="card-label"><i class="fa-solid fa-keyboard" style="color:#0ea5e9; margin-right:5px;"></i>항공기술훈련원 OTP 출결</span>
                         <div class="card-value" style="color:#0ea5e9;"><i class="fa-solid fa-arrow-right-to-bracket"></i><span id="dashAttendCount" style="display:none;">0</span><span id="dashAttendTotal" style="display:none;">0</span></div>
                     </div>
 
@@ -868,7 +922,10 @@ body.in-course #moreToggleTab{ display:flex !important; }
     </div>
     <div class="modern-white-card" style="width:100%; max-width:1080px; padding:26px 30px;">
         <div style="font-size:13px; color:#64748b; font-weight:700; margin-bottom:14px;">교육생·강사가 함께 보는 공용 자료입니다(과정 종료 후에도 보존) · 추천순 정렬 · 거리는 <b>자가용 기준</b> 길찾기에서 확인 · 강사는 추가/수정/삭제 가능</div>
-        <button type="button" onclick="ui.openFoodNewsAdd()" style="padding:10px 18px; border:none; border-radius:10px; background:#2563eb; color:#fff; font-weight:800; font-size:14px; cursor:pointer; margin-bottom:14px;"><i class="fa-solid fa-plus"></i> 맛집 추가</button>
+        <div class="no-print" style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:14px;">
+            <button type="button" onclick="ui.openFoodNewsAdd()" style="padding:10px 18px; border:none; border-radius:10px; background:#2563eb; color:#fff; font-weight:800; font-size:14px; cursor:pointer;"><i class="fa-solid fa-plus"></i> 맛집 추가</button>
+            <button type="button" onclick="ui.foodNewsSavePdf()" style="padding:10px 18px; border:1px solid #cbd5e1; border-radius:10px; background:#fff; color:#334155; font-weight:800; font-size:14px; cursor:pointer;"><i class="fa-solid fa-file-pdf" style="color:#dc2626;"></i> PDF 저장</button>
+        </div>
         <!-- 맛집 추가 팝업 -->
         <div id="foodNewsAddModal" style="display:none; position:fixed; inset:0; z-index:16000; background:rgba(15,23,42,.5); align-items:center; justify-content:center; padding:20px;" onclick="if(event.target===this) ui.closeFoodNewsAdd()">
             <div style="background:#fff; border-radius:18px; padding:24px 26px; width:100%; max-width:860px; max-height:90vh; overflow-y:auto; box-shadow:0 24px 60px rgba(15,23,42,.35); position:relative;">
@@ -1132,17 +1189,17 @@ body.in-course #moreToggleTab{ display:flex !important; }
 
 
 
-<!-- 출결 QR 코드 게시판 (E-HRD 및 자체 출석 통합) -->
+<!-- 출결 관리 게시판 (E-HRD QR 및 OTP 자체 출석 통합) -->
 <div id="view-attendance" style="display:none; width:100%; flex-direction:column; align-items:center;">
-    <div class="view-header" style="margin-bottom:6px;">
+    <div class="view-header attendance-view-header">
         <h1><i class="fa-solid fa-qrcode"></i> 출결 관리 시스템 <span class="header-room-badge room-badge-global"></span></h1>
         <p id="attendanceSubTitle" style="display:none;"></p>
     </div>
 
     <!-- 모드 전환 버튼 -->
-    <div style="margin-top:6px; margin-bottom: 12px; display: flex; gap: 10px;">
+    <div class="attendance-mode-switch">
         <button id="btn-mode-official" class="btn-action" style="width:auto; padding:10px 20px; background:#003366; color:white; border-radius:50px; font-weight:800;" onclick="ui.toggleAttendanceMode('official')">공식 E-HRD QR</button>
-        <button id="btn-mode-internal" class="btn-action" style="width:auto; padding:10px 20px; background:#f1f5f9; color:#64748b; border-radius:50px; font-weight:800;" onclick="ui.toggleAttendanceMode('internal')">항기원 자체 출석체크</button>
+        <button id="btn-mode-internal" class="btn-action" style="width:auto; padding:10px 20px; background:#f1f5f9; color:#64748b; border-radius:50px; font-weight:800;" onclick="ui.toggleAttendanceMode('internal')">OTP 자체출결</button>
     </div>
 
     <!-- [1] 공식 E-HRD QR 영역 -->
@@ -1157,21 +1214,32 @@ body.in-course #moreToggleTab{ display:flex !important; }
 
 
 
-<!-- [2] 항기원 자체 출석체크 영역 (슬림 버전) -->
-    <div id="area-internal-qr" class="modern-white-card" style="display:none; text-align: center; max-width: 600px; padding:30px 26px;">
+<!-- [2] 항기원 OTP 자체출결 영역 -->
+    <div id="area-internal-qr" class="modern-white-card attendance-otp-card" style="display:none; text-align: center; max-width: 600px; padding:30px 26px;">
         <div style="display: flex; flex-direction: column; align-items: center; gap: 24px;">
-            <!-- QR 코드 -->
-            <div style="background:#fff; padding:18px; border-radius:16px; border:2px solid #003366;">
-                <div id="internalQrTarget"></div>
-                <div style="margin-top:12px; font-weight:900; color:#003366;">스마트폰 스캔 (자체 출석)</div>
+            <div style="width:100%; background:linear-gradient(135deg,#eff6ff,#ffffff); padding:26px 22px; border-radius:24px; border:1.5px solid #bfdbfe;">
+                <div class="attendance-otp-label"><i class="fa-solid fa-keyboard"></i> 교육생 플랫폼 OTP 출결</div>
+                <div id="internalOtpCode" style="letter-spacing:10px; font-size:64px; line-height:1; font-weight:950; color:#0f172a; font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;">------</div>
+                <div style="margin-top:14px; display:inline-flex; align-items:center; justify-content:center; gap:12px;">
+                    <div style="position:relative; width:60px; height:60px; flex-shrink:0;">
+                        <svg width="60" height="60" viewBox="0 0 60 60" style="transform:rotate(-90deg); display:block;">
+                            <circle cx="30" cy="30" r="25" fill="none" stroke="#fde2e2" stroke-width="6"/>
+                            <circle id="otpCountRing" cx="30" cy="30" r="25" fill="none" stroke="#ef4444" stroke-width="6" stroke-linecap="round" stroke-dasharray="157.08" stroke-dashoffset="0" style="transition:stroke-dashoffset 1s linear, stroke .3s;"/>
+                        </svg>
+                        <b id="internalOtpCountdown" style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:23px; font-weight:950; color:#ef4444;">60</b>
+                    </div>
+                    <div style="text-align:left;">
+                        <div style="font-size:13px; font-weight:900; color:#475569;">다음 갱신까지</div>
+                        <div style="font-size:11.5px; font-weight:700; color:#94a3b8;">초 후 자동 재발급</div>
+                    </div>
+                </div>
             </div>
 
-            <!-- [안내] 휴대폰 카메라로 스캔 -->
-            <div style="display:flex; align-items:center; justify-content:center; gap:14px; background:#eff6ff; border:1.5px solid #bfdbfe; border-radius:14px; padding:14px 18px; max-width:460px;">
-                <i class="fa-solid fa-camera" style="font-size:30px; color:#2563eb; flex-shrink:0;"></i>
+            <div style="display:flex; align-items:center; justify-content:center; gap:14px; background:#f8fafc; border:1.5px solid #e2e8f0; border-radius:14px; padding:14px 18px; max-width:460px;">
+                <i class="fa-solid fa-circle-info" style="font-size:30px; color:#2563eb; flex-shrink:0;"></i>
                 <div style="text-align:left; line-height:1.5;">
-                    <div style="font-size:16px; font-weight:900; color:#1d4ed8;">휴대폰 <u>카메라</u>로 이 QR을 비춰 주세요</div>
-                    <div style="font-size:12.5px; color:#64748b; font-weight:700; margin-top:2px;">교육생 앱이 아니라, <b>폰 기본 카메라</b>로 비추면 출석 처리됩니다.</div>
+                    <div style="font-size:16px; font-weight:900; color:#1d4ed8;">교육생은 입교/홈의 <u>출결하기</u>에서 OTP를 입력합니다.</div>
+                    <div style="font-size:12.5px; color:#64748b; font-weight:700; margin-top:2px;">OTP는 1분마다 자동 갱신되며, 입력이 일치하면 즉시 출석 처리됩니다.</div>
                 </div>
             </div>
 
@@ -1256,7 +1324,7 @@ body.in-course #moreToggleTab{ display:flex !important; }
         <p>CATC Integrated Education Management System</p>
     </div>
     <!-- catc.png: 원본 전체 비율 노출 -->
-    <div class="dashboard-campus-banner" style="max-width:1100px; width:100%; margin-bottom:20px;">
+    <div class="dashboard-campus-banner dashboard-campus-image" style="max-width:1100px; width:100%; margin-bottom:20px;">
         <img src="catc.png" alt="항공기술훈련원 전경"
              style="max-width:100%; max-height:46vh; width:auto; height:auto; object-fit:contain; display:block; margin:0 auto; border-radius:18px;">
     </div>
@@ -1625,6 +1693,25 @@ body.in-course #moreToggleTab{ display:flex !important; }
                 <span style="color: #cbd5e1; font-weight: 400;">|</span>
                 <span>실시간 업데이트 중</span>
             </div>
+            <!-- [추가] 명단 관리 설정 (기어) — 클릭 시 하단 버튼들을 드롭다운으로 노출 -->
+            <div style="position:relative;">
+                <button id="stuSettingsBtn" onclick="ui.toggleStuSettings(event)" title="명단 관리" style="width:32px; height:32px; border-radius:50%; border:1px solid #e2e8f0; background:#fff; color:#475569; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:13px; box-shadow:0 2px 6px rgba(15,23,42,.06); transition:background .15s, color .15s;">
+                    <i class="fa-solid fa-gear"></i>
+                </button>
+                <div id="stuSettingsMenu" style="display:none; position:absolute; top:42px; right:0; width:300px; background:#fff; border:1px solid #e9eef5; border-radius:14px; box-shadow:0 16px 44px rgba(15,23,42,.20); padding:12px; z-index:60; text-align:left;">
+                    <div style="font-size:11px; font-weight:900; color:#94a3b8; letter-spacing:.3px; padding:2px 4px 10px;">명단 관리</div>
+                    <input type="file" id="studentFile" accept=".txt" style="display:none;" onchange="dataMgr.uploadStudentNames(this)">
+                    <label for="studentFile" style="display:flex; align-items:center; justify-content:center; gap:8px; background:#003366; color:#fff; padding:11px; border-radius:10px; font-weight:800; cursor:pointer; font-size:14px; margin-bottom:8px;">
+                        <i class="fa-solid fa-file-import"></i> 예정 명단(.txt) 업로드
+                    </label>
+                    <button onclick="dataMgr.downloadStudentSample()" style="width:100%; display:flex; align-items:center; justify-content:center; gap:8px; background:#f1f5f9; color:#475569; border:1px solid #cbd5e1; padding:10px; border-radius:10px; font-weight:700; cursor:pointer; font-size:13px; margin-bottom:8px;">
+                        <i class="fa-solid fa-download"></i> 양식 샘플 다운
+                    </button>
+                    <button onclick="dataMgr.clearExpectedList()" style="width:100%; display:flex; align-items:center; justify-content:center; gap:8px; background:#fff; color:#ef4444; border:1px solid #fee2e2; padding:10px; border-radius:10px; font-weight:700; cursor:pointer; font-size:13px;">
+                        <i class="fa-solid fa-trash-can"></i> 명단 전체 비우기 (운영부·지원부 포함)
+                    </button>
+                </div>
+            </div>
         </div>
 
         <table>
@@ -1643,18 +1730,7 @@ body.in-course #moreToggleTab{ display:flex !important; }
             </tbody>
         </table>
         
-        <div class="list-upload-footer" style="display: flex; justify-content: center; gap: 12px; margin-top: 30px; padding-top: 20px; border-top: 1px dashed #e2e8f0;">
-            <input type="file" id="studentFile" accept=".txt" style="display:none;" onchange="dataMgr.uploadStudentNames(this)">
-<button class="btn-list-clear" onclick="dataMgr.downloadStudentSample()" style="background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; padding: 10px 20px; border-radius: 12px; font-weight: 700; cursor: pointer; font-size: 13px;">
-    <i class="fa-solid fa-download"></i> 양식 샘플 다운
-</button>
-            <label for="studentFile" class="btn-list-upload" style="background: #003366; color: white; padding: 10px 25px; border-radius: 12px; font-weight: 800; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; font-size: 14px;">
-                <i class="fa-solid fa-file-import"></i> 예정 명단(.txt) 업로드
-            </label>
-            <button class="btn-list-clear" onclick="dataMgr.clearExpectedList()" style="background: #ffffff; color: #ef4444; border: 1px solid #fee2e2; padding: 10px 20px; border-radius: 12px; font-weight: 700; cursor: pointer; font-size: 13px;">
-                <i class="fa-solid fa-trash-can"></i> 명단 전체 비우기 (운영부·지원부 포함)
-            </button>
-        </div>
+        <!-- [이동] 하단 명단 관리 버튼들은 상단 우측 설정(기어) 메뉴(#stuSettingsMenu)로 이동됨 -->
     </div>
         <div class="side-rail">
             <div class="side-rail-btn" onclick="ui.openStudentMap()" title="공항별 입교 현황 지도">
@@ -2215,7 +2291,7 @@ body.in-course #moreToggleTab{ display:flex !important; }
                         </label>
                         <label style="display:flex; align-items:center; gap:6px; font-size:12px; font-weight:700; color:#334155; cursor:pointer;">
                             <input type="checkbox" id="feat-attendanceQr" checked style="width:15px; height:15px; accent-color:#6366f1;">
-                            <i class="fa-solid fa-qrcode" style="color:#6366f1;"></i> 출결 QR
+                            <i class="fa-solid fa-keyboard" style="color:#6366f1;"></i> OTP 출결
                         </label>
                         <label style="display:flex; align-items:center; gap:6px; font-size:12px; font-weight:700; color:#334155; cursor:pointer;">
                             <input type="checkbox" id="feat-cns" checked style="width:15px; height:15px; accent-color:#0ea5e9;">
@@ -2286,8 +2362,11 @@ function setupAcc(btn){
 
 
 <!-- [추가] 우측 하단 플로팅 홈 버튼 -->
-    <div id="floatingHomeBtn" class="floating-home-btn" onclick="ui.goHomeSmart()">
-        <i class="fa-solid fa-house"></i>
+    <div id="floatingHomeBtn" class="floating-home-btn" onclick="ui.goHomeSmart()" title="홈으로 (이전 화면)" aria-label="홈으로">
+        <svg viewBox="0 0 60 60" fill="none" stroke="currentColor" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M22 44 V26 a8 8 0 0 1 16 0 V44"/>
+            <path d="M30 37 L38 44 L46 37"/>
+        </svg>
         <span>홈으로</span>
     </div>
 
@@ -2507,7 +2586,7 @@ function setupAcc(btn){
 
 
 
-    <script src="admin.js?v=260626VT"></script>
+    <script src="admin.js?v=260628G1"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
 <!-- ── 화면 자동 맞춤(auto-fit): 가로+세로 모두 화면에 맞게 자동 축소 · JDS260613 ──
      원인: Windows 디스플레이 배율(125%/150%)·저해상도 화면에서 유효 뷰포트가 작아져
@@ -2516,6 +2595,7 @@ function setupAcc(btn){
            더 많이 넘치는 쪽 기준으로 zoom 축소 → 어느 PC에서도 한 화면에 전부 표시. -->
 <script>
 (function(){
+  if (window.__catcDensityFitActive) return;
   var MIN_ZOOM = 0.5;     // 글씨가 안 보일 만큼 작아지지 않도록 하한
   var DESIGN_W = 1400;    // 설계 가로폭(body min-width와 동일) — 모든 화면(뷰) 공통 기준
   var t;
@@ -2788,7 +2868,7 @@ function setupAcc(btn){
 </style>
 
 <!-- 버전 표기(요청 시까지 유지) -->
-<div id="buildVersionBadge" style="position:fixed; right:8px; bottom:8px; z-index:99999; background:rgba(15,23,42,.78); color:#fff; font-size:12px; font-weight:800; letter-spacing:.5px; padding:4px 10px; border-radius:8px; font-family:monospace; box-shadow:0 2px 8px rgba(0,0,0,.3); pointer-events:none; user-select:none;">VT</div>
+<div id="buildVersionBadge" style="position:fixed; right:8px; bottom:8px; z-index:99999; background:rgba(15,23,42,.78); color:#fff; font-size:12px; font-weight:800; letter-spacing:.5px; padding:4px 10px; border-radius:8px; font-family:monospace; box-shadow:0 2px 8px rgba(0,0,0,.3); pointer-events:none; user-select:none;">S/T/F</div>
 
 </body>
 </html>
