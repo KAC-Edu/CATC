@@ -4423,7 +4423,7 @@ body.in-course #courseSmartRemote.hex-remote-v2{display:block;}
 .mode-tabs.collapsed{display:none !important;}
 
 /* [홈 통합검색] 검색란 + 결과 */
-#homeSearchWrap{position:relative;width:100%;max-width:680px;margin:26px auto 26px;}
+#homeSearchWrap{position:relative;width:100%;max-width:680px;margin:16px auto 36px;}
 #homeSearchInput{width:100%;box-sizing:border-box;padding:22px 46px 22px 52px;border:2px solid #e2e8f0;border-radius:16px;font-size:16px;font-weight:700;color:#0f172a;background:#fff;outline:none;box-shadow:0 6px 20px rgba(15,23,42,.06);transition:border-color .15s,box-shadow .15s;}
 #homeSearchInput::placeholder{color:#94a3b8;font-weight:600;}
 #homeSearchInput:focus{border-color:#2563eb;box-shadow:0 10px 30px rgba(37,99,235,.16);}
@@ -4464,9 +4464,9 @@ body.in-course #courseSmartRemote.hex-remote-v2{display:block;}
 
 /* [사이트 푸터] 화면 하단 저작권/개발자 표기 (현황판·전체화면 제외) */
 #appFooter{position:fixed;left:0;right:0;bottom:0;z-index:95;text-align:center;padding:9px 16px 10px;background:var(--header-bg);border-top:1px solid rgba(255,255,255,.08);pointer-events:none;user-select:none;}
-#appFooter .af-line{font-size:12.5px;font-weight:700;color:#cbd5e1;line-height:1.45;}
-#appFooter .af-dev{color:#94a3b8;font-weight:600;}
-#appFooter .af-copy{font-size:12.5px;font-weight:800;color:#fff;margin-top:2px;}
+#appFooter .af-line{font-size:12.5px;font-weight:700;color:#e2e8f0;line-height:1.45;}
+#appFooter .af-dev{color:#cbd5e1;font-weight:600;}
+#appFooter .af-copy{font-size:12.5px;font-weight:900;color:#ffffff;margin-top:2px;}
 /* 현황판(홈·실시간현황판) 및 모니터 전체화면에서는 숨김 */
 body[data-mode="home"] #appFooter,
 body[data-mode="waiting"] #appFooter{display:none !important;}
