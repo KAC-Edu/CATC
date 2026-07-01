@@ -71,37 +71,37 @@
       --grad-act:linear-gradient(135deg,#eff6ff 0%,#dbeafe 100%);
     }
     html,body{ margin:0; padding:0; height:100%; overscroll-behavior:none; }
-    body{ font-family:'Pretendard','Apple SD Gothic Neo','Malgun Gothic',sans-serif; background:linear-gradient(180deg,#eaf1fb 0%,#f7f9fd 48%,#eef3fa 100%); color:var(--ink); -webkit-font-smoothing:antialiased; padding-bottom:calc(28px + env(safe-area-inset-bottom)); letter-spacing:0; }
+    body{ font-family:'Pretendard','Apple SD Gothic Neo','Malgun Gothic',sans-serif; background:#f4f7fb; color:var(--ink); -webkit-font-smoothing:antialiased; padding-bottom:calc(28px + env(safe-area-inset-bottom)); letter-spacing:0; }
     .wrap{ max-width:620px; margin:0 auto; min-height:100dvh; }
 
-    .mhead{ background:linear-gradient(145deg,#0b1220 0%,#172554 62%,#1d4ed8 100%); color:#fff; padding:14px 16px 18px; position:sticky; top:0; z-index:50; border-radius:0 0 28px 28px; box-shadow:0 18px 38px rgba(15,23,42,.30); overflow:hidden; }
+    .mhead{ background:linear-gradient(135deg,#2563eb 0%,#1d4ed8 100%); color:#fff; padding:16px 16px 18px; position:sticky; top:0; z-index:50; border-radius:0 0 22px 22px; box-shadow:0 14px 30px rgba(37,99,235,.24); overflow:hidden; }
     .mhead .row1{ display:flex; align-items:center; justify-content:space-between; }
     .mhead .ttl{ display:flex; align-items:center; gap:11px; font-size:18px; font-weight:950; z-index:1; min-width:0; }
-    .mhead .ttl .mk{ width:40px; height:40px; border-radius:14px; background:rgba(255,255,255,.14); border:1px solid rgba(255,255,255,.18); display:flex; align-items:center; justify-content:center; font-size:17px; box-shadow:0 8px 18px rgba(37,99,235,.28); }
+    .mhead .ttl .mk{ width:38px; height:38px; border-radius:12px; background:rgba(255,255,255,.16); border:1px solid rgba(255,255,255,.2); display:flex; align-items:center; justify-content:center; font-size:16px; box-shadow:none; }
     .mhead .clk{ text-align:right; font-size:12px; font-weight:700; opacity:.95; line-height:1.4; z-index:1; }
     .mhead .clk b{ font-size:15px; font-weight:900; }
-    .hero{ margin-top:16px; padding:16px; border-radius:22px; background:rgba(255,255,255,.12); border:1px solid rgba(255,255,255,.18); box-shadow:inset 0 1px 0 rgba(255,255,255,.16); }
+    .hero{ margin-top:14px; padding:0; background:transparent; border:none; box-shadow:none; }
     .hero-room{ display:inline-flex; align-items:center; gap:6px; padding:5px 10px; border-radius:999px; background:rgba(250,204,21,.95); color:#1e293b; font-size:12px; font-weight:950; }
     .hero-course{ margin-top:10px; font-size:22px; font-weight:950; line-height:1.25; word-break:keep-all; }
     .hero-meta{ margin-top:10px; display:flex; flex-wrap:wrap; gap:7px; }
     .hero-pill{ display:inline-flex; align-items:center; gap:5px; padding:6px 9px; border-radius:999px; background:rgba(255,255,255,.13); color:#dbeafe; font-size:12px; font-weight:800; }
 
     .sec{ padding:15px 14px 0; }
-    .sec-ttl{ font-size:12px; font-weight:900; color:#475569; margin:4px 3px 11px; display:flex; align-items:center; gap:7px; } .sec-ttl i{ color:#2563eb; }
+    .sec-ttl{ font-size:11.5px; font-weight:800; color:#7C8BA5; margin:4px 3px 11px; display:flex; align-items:center; gap:7px; letter-spacing:.2px; } .sec-ttl i{ color:#2563eb; }
 
     /* 강의실 선택 칩 */
     .room-pick{ display:flex; gap:9px; overflow-x:auto; padding:1px 2px 6px; scrollbar-width:none; }
     .room-pick::-webkit-scrollbar{ display:none; }
-    .rchip{ flex:0 0 auto; min-width:94px; background:#fff; border:1.5px solid #dbe4f0; border-radius:15px; padding:10px 12px; font-size:14px; font-weight:950; color:#475569; cursor:pointer; box-shadow:0 8px 22px rgba(15,23,42,.06); }
+    .rchip{ flex:0 0 auto; min-width:94px; background:#fff; border:1.5px solid #eef1f6; border-radius:13px; padding:11px 13px; font-size:14px; font-weight:900; color:#475569; cursor:pointer; box-shadow:0 1px 2px rgba(16,24,40,.04),0 12px 26px -18px rgba(16,24,40,.22); }
     .rchip.on{ background:linear-gradient(135deg,#2563eb,#1d4ed8); color:#fff; border-color:#2563eb; box-shadow:0 12px 24px rgba(37,99,235,.26); }
     .rchip .cn{ display:block; max-width:112px; font-size:11px; font-weight:750; opacity:.82; margin:4px 0 0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 
-    .card{ background:var(--card); border:1px solid #eef2f7; border-radius:22px; padding:17px; margin-bottom:13px; box-shadow:var(--shadow); }
+    .card{ background:var(--card); border:1px solid #eef1f6; border-radius:18px; padding:16px; margin-bottom:12px; box-shadow:0 1px 2px rgba(16,24,40,.04),0 12px 26px -18px rgba(16,24,40,.22); }
     .card h3{ margin:0 0 14px; font-size:14px; font-weight:900; color:#0f172a; display:flex; align-items:center; gap:8px; } .card h3 i{ color:#2563eb; }
     .cname-big{ font-size:21px; font-weight:950; color:#0f172a; margin-bottom:10px; word-break:keep-all; line-height:1.3; }
     .room-badge{ display:inline-flex; align-items:center; gap:5px; background:linear-gradient(135deg,#2563eb,#1d4ed8); color:#fff; font-weight:900; font-size:12px; padding:6px 11px; border-radius:999px; margin-bottom:9px; box-shadow:0 6px 14px rgba(37,99,235,.26); }
     .info-grid{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
-    .info-item{ background:#f8fbff; border:1px solid #edf3fb; border-radius:15px; padding:12px; min-height:72px; }
+    .info-item{ background:#f6f9ff; border:1px solid #e4ebf6; border-radius:12px; padding:12px; min-height:72px; }
     .info-item .k{ font-size:11.5px; color:#64748b; font-weight:900; margin-bottom:6px; }
     .info-item .v{ font-size:15px; font-weight:900; color:#172033; word-break:keep-all; line-height:1.35; }
 
@@ -117,7 +117,7 @@
     .notice-empty{ color:#94a3b8; font-weight:700; font-size:13px; }
 
     .shut-grid{ display:grid; grid-template-columns:1.25fr repeat(4,1fr); gap:7px; }
-    .shut-cell{ min-width:0; text-align:center; background:#f8fafc; border-radius:14px; padding:11px 4px; border:1px solid #edf2f8; }
+    .shut-cell{ min-width:0; text-align:center; background:#f8fafc; border-radius:12px; padding:11px 4px; border:1px solid #eef1f6; }
     .shut-cell.tot{ background:linear-gradient(135deg,#eff6ff,#dbeafe); border-color:#bfdbfe; }
     .shut-cell .sk{ font-size:11px; font-weight:800; margin-bottom:5px; }
     .shut-cell .sv{ font-size:20px; font-weight:950; color:#1e293b; } .shut-cell.tot .sv{ color:#2563eb; font-size:23px; }
