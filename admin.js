@@ -7616,8 +7616,8 @@ init: function() {
             `<div class="ci-row"><span class="ci-bar"></span><span class="ci-label">${label}</span><span class="ci-val">${valHtml}</span></div>`;
         return `<div class="guide-courseinfo-slide">
           <div class="ci-header">
-            <span class="ci-header-title"><i class="fa-solid fa-plane-departure"></i> 입교 안내</span>
-            <img src="logo.png" class="ci-logo" alt="KAC" onerror="this.style.display='none'">
+            <div class="ci-head-center"><span class="ci-emblem"><i class="fa-solid fa-plane-up"></i></span><span class="ci-header-title">입교 안내</span></div>
+            <div class="ci-head-right"><img src="logo.png" class="ci-logo" alt="KAC" onerror="this.style.display='none'"></div>
           </div>
           <div class="ci-body">
             <div class="ci-section"><span class="ci-section-bar"></span> 2. 교육과정 안내</div>
@@ -7635,14 +7635,14 @@ init: function() {
     _kakaoQrHTML: function() {
         return `<div class="guide-kakaoqr-slide">
           <div class="ci-header">
-            <span class="ci-header-title"><i class="fa-solid fa-plane-departure"></i> 입교 안내</span>
-            <img src="logo.png" class="ci-logo" alt="KAC" onerror="this.style.display='none'">
+            <div class="ci-head-center"><span class="ci-emblem"><i class="fa-solid fa-plane-up"></i></span><span class="ci-header-title">입교 안내</span></div>
+            <div class="ci-head-right"><img src="logo.png" class="ci-logo" alt="KAC" onerror="this.style.display='none'"></div>
           </div>
           <div class="kq-body">
             <div class="kq-qr"><div id="guideKakaoQrBig" class="kq-qr-box"></div></div>
             <div class="kq-right">
               <div class="kt-logo"><span class="kt-bubble">TALK</span></div>
-              <div class="kq-guide"><i class="fa-solid fa-camera"></i> 휴대폰 <b>카메라</b>를 열어<br>왼쪽 <b>QR 코드</b>를 비추면<br>담임 교수님 <b>오픈채팅방</b>으로<br>바로 입장합니다.</div>
+              <div class="kq-guide"><i class="fa-solid fa-camera"></i> 카메라로 <b>QR 스캔</b><br>담임 교수님 <b>오픈채팅방</b> 입장</div>
             </div>
           </div>
         </div>`;
@@ -7651,34 +7651,32 @@ init: function() {
     _channelGuideHTML: function() {
         return `<div class="guide-channel-slide">
           <div class="ci-header">
-            <span class="ci-header-title"><i class="fa-solid fa-plane-departure"></i> 입교 안내</span>
-            <img src="logo.png" class="ci-logo" alt="KAC" onerror="this.style.display='none'">
+            <div class="ci-head-center"><span class="ci-emblem"><i class="fa-solid fa-plane-up"></i></span><span class="ci-header-title">입교 안내</span></div>
+            <div class="ci-head-right"><img src="logo.png" class="ci-logo" alt="KAC" onerror="this.style.display='none'"></div>
           </div>
-          <div class="cg-body">
-            <div class="cg-title"><span class="ci-section-bar"></span> 오픈채팅방 입장 후, 카카오 채널 입교등록까지 완료해 주세요</div>
-            <div class="cg-steps">
-              <div class="cg-step">
-                <div class="cg-badge"><i class="fa-solid fa-check"></i></div>
-                <div class="cg-ic cg-ic-kakao"><i class="fa-solid fa-bullhorn"></i></div>
-                <div class="cg-step-title">오픈채팅방 <b>공지 클릭</b></div>
-                <div class="cg-step-desc">방 상단의<br><b>▶ 공지</b>를 눌러주세요</div>
+          <div class="qbody">
+            <div class="qflow">
+              <div class="qstep">
+                <div class="qhead"><span class="qno">1</span><span class="qtt">오픈톡방 <b>[공지]</b><br>링크 터치</span></div>
+                <div class="qtile"><div class="q-vis"><div class="q-emblem"><span class="ring"><i class="fa-solid fa-plane-up"></i></span><span class="t">CATC</span></div></div><div class="qcap"><b>교육생용(CATC)</b><br>링크 클릭</div></div>
               </div>
-              <div class="cg-arrow"><i class="fa-solid fa-arrow-right-long"></i></div>
-              <div class="cg-step">
-                <div class="cg-badge"><i class="fa-solid fa-check"></i></div>
-                <div class="cg-ic cg-ic-kakao"><i class="fa-solid fa-comment-dots"></i></div>
-                <div class="cg-step-title">카카오 채널 <b>입장</b></div>
-                <div class="cg-step-desc">교육생 플랫폼 채널로<br>입장됩니다</div>
+              <div class="qarrow"><svg viewBox="0 0 40 40" fill="none"><path d="M9 9 L21 20 L9 31" stroke="#bfdbfe" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/><path d="M21 9 L33 20 L21 31" stroke="#2563eb" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+              <div class="qstep">
+                <div class="qhead"><span class="qno">2</span><span class="qtt">카카오 채널<br><b>[입교/출석]</b> 터치</span></div>
+                <div class="qtile"><div class="q-vis"><div class="q-kbtn"><span class="nb">N</span><svg viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5"/><path d="M5.5 9.5V20h13V9.5"/></svg><span class="t">입교/출석</span></div></div><div class="qcap">채널 하단<br><b>첫 번째 버튼</b> 클릭</div></div>
               </div>
-              <div class="cg-arrow"><i class="fa-solid fa-arrow-right-long"></i></div>
-              <div class="cg-step">
-                <div class="cg-badge"><i class="fa-solid fa-check"></i></div>
-                <div class="cg-ic cg-ic-blue"><i class="fa-solid fa-clipboard-check"></i></div>
-                <div class="cg-step-title"><b>입교등록</b> 완료</div>
-                <div class="cg-step-desc"><b>[입교/출석]</b> → 과정 선택 · 사번/이름 입력 후 <b>입교하기</b></div>
+              <div class="qarrow"><svg viewBox="0 0 40 40" fill="none"><path d="M9 9 L21 20 L9 31" stroke="#bfdbfe" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/><path d="M21 9 L33 20 L21 31" stroke="#2563eb" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+              <div class="qstep">
+                <div class="qhead"><span class="qno">3</span><span class="qtt">정보 입력 후<br><b>[입교하기]</b></span></div>
+                <div class="qtile"><div class="q-vis"><div class="q-bbtn">입교하기</div></div><div class="qcap">과정·사번·이름<br>개인정보 동의 후 <b>확인</b></div></div>
+              </div>
+              <div class="qarrow"><svg viewBox="0 0 40 40" fill="none"><path d="M9 9 L21 20 L9 31" stroke="#bfdbfe" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/><path d="M21 9 L33 20 L21 31" stroke="#2563eb" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+              <div class="qstep">
+                <div class="qhead"><span class="qno">4</span><span class="qtt"><b>입교등록 완료</b></span></div>
+                <div class="qtile"><div class="q-vis"><div class="q-check"><i class="fa-solid fa-check"></i></div></div><div class="qcap">등록 완료 화면 확인</div></div>
               </div>
             </div>
-            <div class="cg-note"><span><i class="fa-solid fa-circle-check"></i> 위 3단계까지 마치면 입교등록이 완료됩니다.</span><span class="cg-regcount">현재 입교등록 <b id="cgRegCount">${(guideMgr._slot().courseInfo||{}).count||0}</b>명</span></div>
+            <div class="cg-note"><span><i class="fa-solid fa-circle-check"></i> 위 절차대로 진행하면 입교등록이 완료됩니다.</span><span class="cg-regcount">현재 입교등록 <b id="cgRegCount">${(guideMgr._slot().courseInfo||{}).count||0}</b>명</span></div>
           </div>
         </div>`;
     },
