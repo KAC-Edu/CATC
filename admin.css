@@ -4438,8 +4438,11 @@ body.in-course #courseSmartRemote.hex-remote-v2{display:block;}
 .hsr-course i{color:#ef4444;margin-right:6px;}
 .hsr-prof{font-size:14px;font-weight:800;color:#2563eb;white-space:nowrap;}
 .hsr-meta{font-size:13px;font-weight:700;color:#64748b;margin-bottom:10px;}
+.hsr-reason{font-size:12.5px;font-weight:800;color:#2563eb;margin:2px 0 8px;}
+.hsr-reason i{margin-right:4px;opacity:.8;}
 .hsr-info{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;}
-.hsr-chip{display:inline-flex;align-items:center;gap:6px;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:9px;padding:5px 11px;font-size:12.5px;font-weight:800;color:#475569;}
+.hsr-chip{display:inline-flex;align-items:center;gap:6px;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:9px;padding:5px 11px;font-size:12.5px;font-weight:800;color:#475569;cursor:pointer;transition:background .12s,border-color .12s;}
+.hsr-chip:hover{background:#eef2ff;border-color:#bfdbfe;color:#1d4ed8;}
 .hsr-chip b{color:#0f172a;font-weight:900;}
 .hsr-actions{display:flex;gap:8px;flex-wrap:wrap;}
 .hsr-btn{display:inline-flex;align-items:center;gap:6px;padding:9px 15px;border:1px solid #e2e8f0;border-radius:10px;background:#f8fafc;color:#334155;font-size:13.5px;font-weight:800;cursor:pointer;}

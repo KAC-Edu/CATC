@@ -5724,8 +5724,8 @@ resetShuttleRequests: function() {
         var assign=window._dormAssignments||{};
         var nn=function(s){ return String(s||'').replace(/\s+/g,'').toLowerCase(); };
         // 기숙사 배정된 이름 집합(건물이 실제 배정된 경우만)
-        var assignedSet={};
-        try{ Object.keys(assign).forEach(function(kk){ var vv=assign[kk]; if(vv&&vv.building&&vv.building!=='-'){ assignedSet[nn(String(kk).split('_')[0])]=1; } }); }catch(e){}
+        var assignedSet={}, assignBuild={};
+        try{ Object.keys(assign).forEach(function(kk){ var vv=assign[kk]; if(vv&&vv.building&&vv.building!=='-'){ var _ak=nn(String(kk).split('_')[0]); assignedSet[_ak]=1; assignBuild[_ak]=vv.building; } }); }catch(e){}
         var results=[];
         Object.keys(data).forEach(function(room){
             var r=data[room]; if(!r) return;
@@ -5734,41 +5734,49 @@ resetShuttleRequests: function() {
             var course=String(settings.courseName||'').trim();
             var period=String(settings.period||'');
             var prof=String(st.professorName||'');
+            var coord=String(settings.coordinatorName||'');
             var ended=(ui._isEnded?ui._isEnded(period):false);
             var thisWeek=(ui._isThisWeek?ui._isThisWeek(period):false);
             var isActive=(st.roomStatus==='active');
             var include=!ended && ((isActive && course) || thisWeek);
             if(!include) return;
-            if(prof.toLowerCase().indexOf(ql)<0) return;   // 담임교수 매칭
-            var cnt=0;
-            try{ cnt=new Set(Object.values(students).filter(function(s){return s&&s.name&&s.name!=='undefined';}).map(function(s){return s.name;})).size; }catch(e){}
-            // 예정 명단 + 이름들 (과정명 매칭)
+            // 학생 명단(입교완료 + 예정) 및 예정인원
+            var stuNames=[]; try{ Object.values(students).forEach(function(s){ if(s&&s.name&&s.name!=='undefined') stuNames.push(String(s.name).trim()); }); }catch(e){}
             var planned=0, rosterNames=[];
             try{ var best=null; for(var k in dorm){ var dv=dorm[k]; if(dv&&Array.isArray(dv.list)&&dv.list.length&&String(dv.courseName||'').trim()===course){ if(!best||(dv.updatedAt||0)>(best.updatedAt||0)) best=dv; } } if(best){ planned=best.list.length; best.list.forEach(function(s){ if(s&&s.name) rosterNames.push(String(s.name).trim()); }); } }catch(e){}
-            // 기숙사 배정 인원 (예정 명단 중 배정된 수)
+            var allNames=rosterNames.concat(stuNames);
+            var buildings=[]; try{ allNames.forEach(function(n){ var b=assignBuild[nn(n)]; if(b && buildings.indexOf(b)<0) buildings.push(b); }); }catch(e){}
+            // ── 매칭 판정: 담임교수 · 운영담당자 · 과정명 · 교육생 · 생활관 ──
+            var reason='';
+            if(prof.toLowerCase().indexOf(ql)>=0) reason='담임교수 '+prof;
+            else if(coord && coord.toLowerCase().indexOf(ql)>=0) reason='운영담당자 '+coord;
+            else if(course && course.toLowerCase().indexOf(ql)>=0) reason='과정명 일치';
+            else { var sm=allNames.filter(function(n){return n.toLowerCase().indexOf(ql)>=0;}); if(sm.length) reason='교육생 '+sm[0]+(sm.length>1?(' 외 '+(sm.length-1)+'명'):''); }
+            if(!reason){ var bm=buildings.filter(function(b){return String(b).toLowerCase().indexOf(ql)>=0;}); if(bm.length) reason='생활관 '+bm[0]; }
+            if(!reason) return;
+            var cnt=new Set(stuNames).size;
             var assigned=0; try{ rosterNames.forEach(function(n){ if(assignedSet[nn(n)]) assigned++; }); }catch(e){}
-            // 외출/외박 건수 (미복귀)
             var outing=0; try{ var acts=r.admin_actions||{}; Object.keys(acts).forEach(function(dt){ var day=acts[dt]||{}; Object.keys(day).forEach(function(id){ var a=day[id]; if(a&&(a.type==='outing'||a.type==='overnight'||a.type==='group_outing')&&!(a.returned===true||a.returnReportTime)) outing++; }); }); }catch(e){}
-            // 퇴교차량 신청 건수
             var depart=0; try{ var req=(r.shuttle&&r.shuttle.requests)||{}; depart=Object.keys(req).length; }catch(e){}
-            results.push({room:room, course:course||'(과정명 미정)', period:period, prof:prof, cnt:cnt, planned:planned, assigned:assigned, outing:outing, depart:depart});
+            results.push({room:room, course:course||'(과정명 미정)', period:period, prof:prof, coord:coord, cnt:cnt, planned:planned, assigned:assigned, outing:outing, depart:depart, reason:reason});
         });
         var e=ui._esc;
         if(!results.length){
-            box.innerHTML='<div class="hsr-empty">"'+e(raw)+'" 담임교수의 <b>이번주 진행 과정</b>을 찾지 못했습니다.<br><span style="font-weight:600;font-size:13px;">이름 철자 또는 배정 여부를 확인해 주세요.</span></div>';
+            box.innerHTML='<div class="hsr-empty">"'+e(raw)+'"(으)로 <b>이번주 진행 과정</b>을 찾지 못했습니다.<br><span style="font-weight:600;font-size:13px;">담임교수·운영담당자·교육생·생활관·과정명으로 검색할 수 있습니다.</span></div>';
             return;
         }
-        var ichip=function(icon,color,label,val){ return '<span class="hsr-chip"><i class="fa-solid '+icon+'" style="color:'+color+'"></i>'+label+' <b>'+val+'</b></span>'; };
+        var ichip=function(icon,color,label,val,room,mode){ return '<span class="hsr-chip" onclick="event.stopPropagation();ui.enterCourseMode(\''+room+'\',\''+mode+'\')" title="'+label+' 화면으로 이동"><i class="fa-solid '+icon+'" style="color:'+color+'"></i>'+label+' <b>'+val+'</b></span>'; };
         box.innerHTML=results.map(function(x){
             var studInfo='입교 '+x.cnt+(x.planned?(' / '+x.planned):'')+'명';
             var chips=[];
-            if(x.planned) chips.push(ichip('fa-clipboard-user','#0ea5e9','예정',x.planned+'명'));
-            if(x.assigned) chips.push(ichip('fa-bed','#9333ea','기숙사',x.assigned+'명 배정'));
-            if(x.outing) chips.push(ichip('fa-person-walking-arrow-right','#f43f5e','외출·외박',x.outing+'건'));
-            if(x.depart) chips.push(ichip('fa-bus','#16a34a','퇴교차량',x.depart+'건'));
+            if(x.planned) chips.push(ichip('fa-clipboard-user','#0ea5e9','예정',x.planned+'명',e(x.room),'students'));
+            if(x.assigned) chips.push(ichip('fa-bed','#9333ea','기숙사',x.assigned+'명',e(x.room),'dormitory'));
+            if(x.outing) chips.push(ichip('fa-person-walking-arrow-right','#f43f5e','외출·외박',x.outing+'건',e(x.room),'admin-action'));
+            if(x.depart) chips.push(ichip('fa-bus','#16a34a','퇴교차량',x.depart+'건',e(x.room),'shuttle'));
             var infoHtml = chips.length ? ('<div class="hsr-info">'+chips.join('')+'</div>') : '';
             return '<div class="hsr-card" onclick="ui.enterCourseMode(\''+e(x.room)+'\',\'guide\',true)">'
                 +'<div class="hsr-top"><span class="hsr-course"><i class="fa-solid fa-file-pdf"></i>'+e(x.course)+' · 입교안내</span><span class="hsr-prof"><i class="fa-solid fa-user-tie"></i> '+e(x.prof||'-')+' 교수</span></div>'
+                +'<div class="hsr-reason"><i class="fa-solid fa-magnifying-glass"></i> '+e(x.reason)+'</div>'
                 +'<div class="hsr-meta">'+(x.period?e(x.period)+' · ':'')+studInfo+' · Room '+e(x.room)+'</div>'
                 +infoHtml
                 +'<div class="hsr-actions" onclick="event.stopPropagation();">'
