@@ -4423,8 +4423,8 @@ body.in-course #courseSmartRemote.hex-remote-v2{display:block;}
 .mode-tabs.collapsed{display:none !important;}
 
 /* [홈 통합검색] 검색란 + 결과 */
-#homeSearchWrap{position:relative;width:100%;max-width:680px;margin:2px auto 18px;}
-#homeSearchInput{width:100%;box-sizing:border-box;padding:16px 46px 16px 52px;border:2px solid #e2e8f0;border-radius:16px;font-size:16px;font-weight:700;color:#0f172a;background:#fff;outline:none;box-shadow:0 6px 20px rgba(15,23,42,.06);transition:border-color .15s,box-shadow .15s;}
+#homeSearchWrap{position:relative;width:100%;max-width:680px;margin:26px auto 26px;}
+#homeSearchInput{width:100%;box-sizing:border-box;padding:22px 46px 22px 52px;border:2px solid #e2e8f0;border-radius:16px;font-size:16px;font-weight:700;color:#0f172a;background:#fff;outline:none;box-shadow:0 6px 20px rgba(15,23,42,.06);transition:border-color .15s,box-shadow .15s;}
 #homeSearchInput::placeholder{color:#94a3b8;font-weight:600;}
 #homeSearchInput:focus{border-color:#2563eb;box-shadow:0 10px 30px rgba(37,99,235,.16);}
 .home-search-ico{position:absolute;left:20px;top:50%;transform:translateY(-50%);color:#94a3b8;font-size:18px;pointer-events:none;}
