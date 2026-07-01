@@ -4791,10 +4791,14 @@ body.night-mode .side-rail-lbl{ color:#cbd5e1; }
 .guide-channel-slide .ci-header-title{ font-size:3.4cqw !important; font-weight:900 !important; letter-spacing:1.2px; color:#fff !important; display:inline !important; }
 .guide-courseinfo-slide .ci-head-right,
 .guide-kakaoqr-slide .ci-head-right,
-.guide-channel-slide .ci-head-right{ position:absolute; top:0; bottom:0; right:0; width:30cqw; background:#365f97; clip-path:polygon(24% 0,100% 0,100% 100%,0% 100%); display:flex; align-items:center; justify-content:flex-end; padding-right:3cqw; }
+.guide-channel-slide .ci-head-right{ position:absolute; top:0; bottom:0; right:0; width:30cqw; display:flex; align-items:center; justify-content:flex-end; padding-right:3cqw; }
+/* 대각선 파란 패널은 '배경 장식'으로만 (::before). 로고 img는 이 위에 얹혀서 절대 잘리지 않음 */
+.guide-courseinfo-slide .ci-head-right::before,
+.guide-kakaoqr-slide .ci-head-right::before,
+.guide-channel-slide .ci-head-right::before{ content:''; position:absolute; inset:0; background:#365f97; clip-path:polygon(24% 0,100% 0,100% 100%,0% 100%); z-index:0; }
 .guide-courseinfo-slide .ci-logo,
 .guide-kakaoqr-slide .ci-logo,
-.guide-channel-slide .ci-logo{ height:3.3cqw !important; width:auto !important; object-fit:contain; }
+.guide-channel-slide .ci-logo{ position:relative; z-index:1; height:3.3cqw !important; width:auto !important; object-fit:contain; }
 
 /* ── [채널 입교등록] 4단계 버튼 각인 ── */
 .guide-channel-slide .qbody{ flex:1 1 auto; min-height:0; padding:2cqw 4cqw 1.6cqw; display:flex; flex-direction:column; }
