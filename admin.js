@@ -7543,6 +7543,8 @@ init: function() {
             if (gi.category) ci.category = gi.category;       // 기본값: 직무 일반
             if (gi.evaluation) ci.evaluation = gi.evaluation; // 기본값: 없음(근태10%)
             slot.pagePos = set.guidePagePos || {};            // 삽입 페이지 수동 위치
+            slot.venuePick = set.venuePick || {};             // 교육장소 페이지 강의실 선택 (셀 index → 강의실)
+            slot.venuePage = Number(set.guideVenuePage) || 14; // 교육장소 오버레이가 뜰 PDF 페이지 (기본 14)
         } catch (e) {}
         // 교육 인원 = 실제 입교완료(QR 입장) 인원 수 (수강생 현황의 '입교 완료'와 동일)
         try {
@@ -7699,6 +7701,26 @@ init: function() {
             channelguide: Number(saved.channelguide) || d.channelguide,
             courseinfo: Number(saved.courseinfo) || d.courseinfo
         };
+    },
+    // 교육장소(14p 등) 교육동 4칸 정의. filter = setup-room-select에서 그 건물 강의실 걸러낼 키워드
+    _venueCells: [
+        { label: '하늘관', filter: '하늘관' },
+        { label: '글로벌교육동', filter: '국제동' },
+        { label: '관제교육동', filter: '관제교육동' },
+        { label: '드론 교육동', filter: '드론' }
+    ],
+    _venuePage: function() { const s = guideMgr._slot(); return (s && s.venuePage) || 14; },
+    _venueOptions: function(filter) {
+        const sel = document.getElementById('setup-room-select'); const out = [];
+        if (!sel || !filter) return out;
+        [].forEach.call(sel.options, function(o) { if (o.value && o.value !== 'direct' && o.value.indexOf(filter) >= 0) out.push(o.value); });
+        return out;
+    },
+    // 배지용 짧은 표기: '하늘관 2층 F강의실' → 'F 강의실', '관제교육동 1층' → '1층'
+    _venueShort: function(v) {
+        v = String(v || '').trim(); if (!v) return '';
+        const m = v.match(/([A-Za-z0-9]+)\s*강의실/); if (m) return m[1] + ' 강의실';
+        const p = v.split(/\s+/); return p[p.length - 1];
     },
     _pageList: function() {
         const s = guideMgr._slot();
@@ -7907,6 +7929,8 @@ init: function() {
             if (_rBtn) _rBtn.style.display = 'none';
             var _sBtn = document.getElementById('guideScheduleBtn');   // 교육시간표 버튼은 PDF 13p에서만
             if (_sBtn) _sBtn.style.display = 'none';
+            var _vOv = document.getElementById('guideVenueOverlay');   // 교육장소 오버레이는 해당 PDF p에서만
+            if (_vOv) _vOv.style.display = 'none';
         };
 
         // 이전 QR 실시간 명단 리스너 해제 (페이지 이동 시)
@@ -8033,6 +8057,12 @@ init: function() {
         // [교육 시간표] PDF 13페이지 + 시간표 사진 업로드된 과정에서만 버튼 노출
         var _sBtn = document.getElementById('guideScheduleBtn');
         if (_sBtn) _sBtn.style.display = (guideMgr._toPdfPage(num) === 13 && guideMgr._slot().scheduleTs) ? 'inline-flex' : 'none';
+        // [교육 장소] 교육장소 페이지(기본 14p)에서 교육동별 강의실 ✓ 오버레이 노출
+        var _vOv = document.getElementById('guideVenueOverlay');
+        if (_vOv) {
+            if (guideMgr._toPdfPage(num) === guideMgr._venuePage()) { _vOv.style.display = 'block'; if (ui.renderVenueOverlay) ui.renderVenueOverlay(); }
+            else _vOv.style.display = 'none';
+        }
         if (guideMgr.isRendering) return;
         guideMgr.isRendering = true;
 
@@ -10366,6 +10396,8 @@ const annualPlanMgr = {
             [`${rPath}/settings/remoteMenu`]: null,  // [육각 리모컨] 새 과정은 기본 메뉴로 복귀
             [`${rPath}/settings/guideCourseInfo`]: null,  // [교육과정 안내] 새 과정은 기본(직무일반·없음)으로 복귀
             [`${rPath}/settings/guidePagePos`]: null,     // [삽입 페이지 위치] 새 과정은 기본 위치로 복귀
+            [`${rPath}/settings/venuePick`]: null,        // [교육 장소] 새 과정은 강의실 선택 초기화
+            [`${rPath}/settings/guideVenuePage`]: null,   // [교육 장소] 페이지 번호 기본(14)로 복귀
             [`${rPath}/status/ownerSessionId`]: null,
             [`${rPath}/status/resetKey`]:     newResetKey  // 교육생 강제 퇴출 신호
         };
@@ -11904,6 +11936,13 @@ ui.openGuidePageSettings = function(){
     +'<h3 style="margin:0 0 6px;font-size:19px;font-weight:900;color:#0f172a;"><i class="fa-solid fa-gear" style="color:#2563eb;"></i> 삽입 페이지 위치 설정</h3>'
     +'<p style="margin:0 0 16px;font-size:12.5px;color:#64748b;font-weight:600;line-height:1.5;">각 페이지를 PDF의 몇 페이지 <b>뒤</b>에 넣을지 정하세요.'+(total?(' 현재 PDF 총 <b>'+total+'</b>페이지.'):'')+' <b>이 과정에만</b> 저장됩니다. (각 페이지는 등록 조건이 맞을 때만 표시)</p>'
     +rowHtml
+    +'<hr style="border:none;border-top:1px solid #eef2f7;margin:8px 0 12px;">'
+    +'<div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">'
+      +'<i class="fa-solid fa-location-dot" style="color:#16a34a;width:22px;text-align:center;"></i>'
+      +'<span style="flex:1;font-size:14px;font-weight:800;color:#334155;">교육 장소 페이지 (강의실 ✓)</span>'
+      +'<span style="font-size:12px;color:#94a3b8;font-weight:700;">PDF</span>'
+      +'<input type="number" min="1" '+(total?('max="'+total+'"'):'')+' id="gpp-venuepage" value="'+((typeof guideMgr!=="undefined"&&guideMgr._venuePage)?guideMgr._venuePage():14)+'" style="width:64px;padding:8px;border:1.5px solid #cbd5e1;border-radius:8px;font-size:14px;font-weight:800;text-align:center;">'
+      +'<span style="font-size:12px;color:#64748b;font-weight:700;">페이지</span></div>'
     +'<div id="gpp-msg" style="font-size:12px;color:#ef4444;font-weight:700;min-height:16px;margin:4px 0;"></div>'
     +'<div style="display:flex;gap:10px;justify-content:flex-end;margin-top:8px;">'
     +'<button onclick="document.getElementById(\'guidePageSettingsModal\').remove()" style="padding:10px 18px;border:none;border-radius:10px;background:#64748b;color:#fff;font-weight:800;cursor:pointer;">취소</button>'
@@ -11918,14 +11957,64 @@ ui.saveGuidePageSettings = function(){
   var total=0; try{ var sl=guideMgr._slot(); total=(sl&&sl.pdfDoc)?sl.pdfDoc.numPages:0; }catch(e){}
   var obj={};
   keys.forEach(function(k){ var el=document.getElementById('gpp-'+k); if(!el) return; var v=parseInt(el.value,10); if(!v||v<1) v=1; if(total&&v>total) v=total; obj[k]=v; });
-  firebase.database().ref('courses/'+state.room+'/settings/guidePagePos').set(obj)
+  var vp=parseInt((document.getElementById('gpp-venuepage')||{}).value,10); if(!vp||vp<1) vp=14; if(total&&vp>total) vp=total;
+  var upd={}; upd['courses/'+state.room+'/settings/guidePagePos']=obj; upd['courses/'+state.room+'/settings/guideVenuePage']=vp;
+  firebase.database().ref().update(upd)
     .then(function(){
-      try{ guideMgr._slot().pagePos=obj; }catch(e){}
+      try{ var sl=guideMgr._slot(); sl.pagePos=obj; sl.venuePage=vp; }catch(e){}
       var m=document.getElementById('guidePageSettingsModal'); if(m) m.remove();
       if(typeof guideMgr.refresh==='function') guideMgr.refresh();
       ui.showAlert('✅ 삽입 페이지 위치가 저장되었습니다. (이 과정)');
     })
     .catch(function(){ var msg=document.getElementById('gpp-msg'); if(msg) msg.textContent='저장 중 오류가 발생했습니다.'; });
+};
+// 교육장소 페이지 오버레이: 교육동 4칸에 선택된 강의실 ✓ 표시 (셀 위치는 % · 화면 보고 미세조정 가능)
+ui._venueLefts = [1.5, 26.5, 51.5, 76.5];
+ui._venueTop = 60; ui._venueH = 15; ui._venueW = 22;
+ui.renderVenueOverlay = function(){
+  var ov = document.getElementById('guideVenueOverlay'); if(!ov) return;
+  var slot = (typeof guideMgr!=='undefined') ? guideMgr._slot() : {};
+  var pick = (slot && slot.venuePick) || {};
+  var html = '';
+  for(var i=0;i<4;i++){
+    var val = pick[i] || '';
+    var short = (guideMgr._venueShort ? guideMgr._venueShort(val) : val);
+    var inner = short
+      ? '<span class="gv-check"><i class="fa-solid fa-check"></i></span><span class="gv-badge">'+String(short).replace(/</g,'&lt;')+'</span>'
+      : '<span class="gv-empty"><i class="fa-solid fa-plus"></i> 강의실</span>';
+    html += '<div class="gv-cell" onclick="event.stopPropagation(); ui.pickVenue('+i+');" oncontextmenu="event.stopPropagation();return false;" onmousedown="event.stopPropagation();" style="left:'+ui._venueLefts[i]+'%;top:'+ui._venueTop+'%;width:'+ui._venueW+'%;height:'+ui._venueH+'%;">'+inner+'</div>';
+  }
+  ov.innerHTML = html;
+};
+ui.pickVenue = function(i){
+  if(state.isObserver){ ui.showAlert('👁️ 옵저버 모드에서는 변경할 수 없습니다.'); return; }
+  if(!state.room) return;
+  var cell = guideMgr._venueCells[i];
+  var opts = guideMgr._venueOptions(cell.filter);
+  var slot = guideMgr._slot(); var cur = (slot.venuePick||{})[i] || '';
+  var esc = function(x){ return String(x||'').replace(/"/g,'&quot;').replace(/</g,'&lt;'); };
+  var optionsHtml = '<option value="">(선택 안함)</option>' + opts.map(function(o){ return '<option value="'+esc(o)+'"'+(o===cur?' selected':'')+'>'+esc(o)+'</option>'; }).join('');
+  var ov = document.createElement('div'); ov.id='venuePickModal';
+  ov.style.cssText='position:fixed;inset:0;background:rgba(15,23,42,.5);z-index:21000;display:flex;align-items:center;justify-content:center;';
+  ov.innerHTML = '<div style="background:#fff;border-radius:16px;padding:24px 26px;width:420px;max-width:92vw;box-shadow:0 24px 70px rgba(0,0,0,.3);" onclick="event.stopPropagation()">'
+    +'<h3 style="margin:0 0 14px;font-size:18px;font-weight:900;color:#0f172a;"><i class="fa-solid fa-location-dot" style="color:#2563eb;"></i> '+esc(cell.label)+' · 강의실 선택</h3>'
+    + (opts.length ? '<select id="venuePickSel" style="width:100%;padding:11px;border:1.5px solid #cbd5e1;border-radius:10px;font-size:15px;font-weight:700;">'+optionsHtml+'</select>'
+                   : '<input id="venuePickSel" type="text" value="'+esc(cur)+'" placeholder="강의실명 입력 (예: F강의실)" style="width:100%;padding:11px;border:1.5px solid #cbd5e1;border-radius:10px;font-size:15px;font-weight:700;box-sizing:border-box;">')
+    +'<p style="margin:10px 0 0;font-size:12px;color:#94a3b8;font-weight:700;">칸에는 짧게(예: "F 강의실") 표시됩니다.</p>'
+    +'<div style="display:flex;gap:10px;justify-content:flex-end;margin-top:16px;">'
+    +'<button onclick="document.getElementById(\'venuePickModal\').remove()" style="padding:9px 16px;border:none;border-radius:9px;background:#64748b;color:#fff;font-weight:800;cursor:pointer;">취소</button>'
+    +'<button onclick="ui.saveVenue('+i+')" style="padding:9px 20px;border:none;border-radius:9px;background:#10b981;color:#fff;font-weight:800;cursor:pointer;">적용</button>'
+    +'</div></div>';
+  ov.addEventListener('click', function(e){ if(e.target===ov) ov.remove(); });
+  document.body.appendChild(ov);
+};
+ui.saveVenue = function(i){
+  if(!state.room) return;
+  var el = document.getElementById('venuePickSel'); var val = el ? String(el.value||'').trim() : '';
+  var slot = guideMgr._slot(); slot.venuePick = slot.venuePick || {}; slot.venuePick[i] = val;
+  firebase.database().ref('courses/'+state.room+'/settings/venuePick/'+i).set(val).catch(function(){});
+  var m = document.getElementById('venuePickModal'); if(m) m.remove();
+  ui.renderVenueOverlay();
 };
 ui._spacedKoreanName = function(name){
   return Array.from(String(name || '').replace(/\s+/g, '')).join(' ');

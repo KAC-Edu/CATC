@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<!-- PLATFORM_EDIT_STATUS: 수정아닙니다 | VERSION: J82 J82 J82 J82 J82 | 2026-06-30 -->
+<!-- PLATFORM_EDIT_STATUS: 수정아닙니다 | VERSION: J83 J83 J83 J83 J83 | 2026-06-30 -->
 <!-- ══════════════════ [편집상태 / EDIT-STATUS] ══════════════════
      STATUS : 수정아닙니다
      FILE   : index.html (교육생)
-     VERSION: J82 J82 J82 J82 J82
-     UPDATED: 2026-06-30  (vJ82: 학생장 펼침 상세를 높이제한+내부스크롤 드롭다운으로(카드 가림 해소), 연락처 블록 줄바꿈 처리, 펼칠 때 부드럽게 노출. | vJ81: 학생장 패널 접이식 가로바로 변경(카드 가림 해소), 외출외박 항목에 비상연락처 표시+클릭 통화확인 팝업. | vJ80: 학생장 전용 패널(입교카드 아래) — 금일 외출외박·석식제외 실시간 현황 + 식당 전화하기(043-290-2325). | vJ79: 담임 글자크기 다른행과 완전통일(display:flex 제거), 신청취소 후 재초기화(이전정보 안내 복원), 패스트패스 연락처(STEP3)까지 항상 표시. | vJ78: 담임 글자크기 다른행과 통일(span 제거), 담당교수 실시간 반영(.on 리스너). | vJ77: 입교카드·출결완료 페이지에 과정담임 표시 + 전화아이콘→통화확인 팝업→통화 기능(professorProfiles 연락처 사용). | vJ76: 외출외박 현황화면 상단바 위 내용넘침 방지(flex-start), 복귀완료보고·신청취소 한 줄 배치. | vJ75: 입교문구 '항공기술훈련원 입교', 정보수정 시 개인정보동의 숨김, 외출외박 새로작성 빈양식, 소속 항공기술훈련원 표기, 외출외박 완료→수위실 현황화면 통일. | vJ74: 창닫기 기능(closeStudentWindow) 제거 — 카카오 채널 채팅창 닫기로 대체. 디버그 console.log 2종 정리. | vJ73: 미사용 함수 6종 제거 — exitApp·cleanUrlAndGo·checkDinnerTime·loadGroupCandidates·openRoomMove·wrapClose. 카카오 채널 바로가기 도입으로 불필요해진 진입/종료 관련 죽은 코드 정리. 맛집 기능 코드는 유지.)
+     VERSION: J83 J83 J83 J83 J83
+     UPDATED: 2026-06-30  (vJ83: 학생장 외출외박 카운팅을 admin과 동일한 09:00~익일09:00 KST 윈도우+오늘/어제 노드 병합으로 정렬(복귀자 포함 표시). | vJ82: 학생장 펼침 상세를 높이제한+내부스크롤 드롭다운으로(카드 가림 해소), 연락처 블록 줄바꿈 처리, 펼칠 때 부드럽게 노출. | vJ81: 학생장 패널 접이식 가로바로 변경(카드 가림 해소), 외출외박 항목에 비상연락처 표시+클릭 통화확인 팝업. | vJ80: 학생장 전용 패널(입교카드 아래) — 금일 외출외박·석식제외 실시간 현황 + 식당 전화하기(043-290-2325). | vJ79: 담임 글자크기 다른행과 완전통일(display:flex 제거), 신청취소 후 재초기화(이전정보 안내 복원), 패스트패스 연락처(STEP3)까지 항상 표시. | vJ78: 담임 글자크기 다른행과 통일(span 제거), 담당교수 실시간 반영(.on 리스너). | vJ77: 입교카드·출결완료 페이지에 과정담임 표시 + 전화아이콘→통화확인 팝업→통화 기능(professorProfiles 연락처 사용). | vJ76: 외출외박 현황화면 상단바 위 내용넘침 방지(flex-start), 복귀완료보고·신청취소 한 줄 배치. | vJ75: 입교문구 '항공기술훈련원 입교', 정보수정 시 개인정보동의 숨김, 외출외박 새로작성 빈양식, 소속 항공기술훈련원 표기, 외출외박 완료→수위실 현황화면 통일. | vJ74: 창닫기 기능(closeStudentWindow) 제거 — 카카오 채널 채팅창 닫기로 대체. 디버그 console.log 2종 정리. | vJ73: 미사용 함수 6종 제거 — exitApp·cleanUrlAndGo·checkDinnerTime·loadGroupCandidates·openRoomMove·wrapClose. 카카오 채널 바로가기 도입으로 불필요해진 진입/종료 관련 죽은 코드 정리. 맛집 기능 코드는 유지.)
      ─ 규칙: 수정 시작 시 STATUS를 '수정중'으로, 완료 시 '수정아닙니다'로 변경하고 버전을 5회 반복 표기.
             '수정중'이면 다른 플랫폼은 연동 변경을 보류/협의 후 진행.
 ═══════════════════════════════════════════════════════════════ -->
@@ -7593,12 +7593,29 @@ body.kac-noanim #noticeModal > .menu-box, body.kac-noanim #surveyModal > .menu-b
   var _leaderRefs=[];
   var _leaderExpanded=false;
   function detachLeaderRefs(){ try{ _leaderRefs.forEach(function(r){ r.ref.off('value', r.cb); }); }catch(e){} _leaderRefs=[]; }
+  // [외출/외박 운영일 윈도우] 한국시간 09:00 ~ 익일 09:00 (admin 플랫폼과 동일 기준)
+  function getOutingWindowKST(){
+    var KST=9*60*60*1000;
+    var n=new Date(Date.now()+KST);
+    var y=n.getUTCFullYear(), m=n.getUTCMonth(), d=n.getUTCDate(), h=n.getUTCHours();
+    var start=Date.UTC(y,m,d,9,0,0)-KST;
+    if(h<9) start-=24*60*60*1000;
+    return { start:start, end:start+24*60*60*1000 };
+  }
   function renderLeaderPanel(st){
     var panel=document.getElementById('khLeaderPanel'); if(!panel) return;
-    var a=st.a||{}, d=st.d||{};
+    var d=st.d||{};
     var dKeys=Object.keys(d);
     var dNames=dKeys.map(function(k){ var v=String(d[k]==null?'':d[k]); var i=v.indexOf('('); var nm=(i>0?v.slice(0,i):v).trim(); return _hrEsc(nm||'-'); });
-    var aArr=Object.keys(a).map(function(k){ return a[k]||{}; });
+    // 외출외박: 09:00~익일09:00 KST 윈도우 + 오늘/어제 노드 병합 (다른 플랫폼과 동일)
+    var win=getOutingWindowKST();
+    var merged=[];
+    [st.aT, st.aY].forEach(function(node){ if(!node) return; Object.keys(node).forEach(function(k){ if(node[k]) merged.push(node[k]); }); });
+    var aArr=merged.filter(function(x){
+      var isOut=(x.type==='outing'||x.type==='overnight'||x.type==='group_outing');
+      var ts=x.timestamp||0;
+      return isOut && ts>=win.start && ts<win.end;   // 복귀자 포함(총원 카운트)
+    });
     var nOver=aArr.filter(function(x){ return x.type==='overnight'; }).length;
     var nOut=aArr.length-nOver;
     var items=aArr.map(function(x){
@@ -7619,7 +7636,7 @@ body.kac-noanim #noticeModal > .menu-box, body.kac-noanim #surveyModal > .menu-b
       '<div id="khlDetail" class="khl-detail" style="display:'+(_leaderExpanded?'block':'none')+';">'+
         '<div class="khl-sectitle">🍽️ 석식 제외 ('+dKeys.length+'명) <span class="khl-hint">식당 보고용</span></div>'+
         (dKeys.length? '<div class="khl-names">'+dNames.join(', ')+'</div>' : '<div class="khl-empty">신청 없음</div>')+
-        '<div class="khl-sectitle" style="margin-top:13px;">🚶 외출·외박 ('+aArr.length+'명 · 외출 '+nOut+'/외박 '+nOver+')</div>'+
+        '<div class="khl-sectitle" style="margin-top:13px;">🚶 외출·외박 ('+aArr.length+'명 · 외출 '+nOut+'/외박 '+nOver+') <span class="khl-hint">09시~익일09시</span></div>'+
         (aArr.length? '<div class="khl-list">'+items.join('')+'</div>' : '<div class="khl-empty">신청 없음</div>')+
         '<a href="tel:043-290-2325" class="khl-call"><i class="fa-solid fa-phone"></i> 식당 전화하기 (043-290-2325)</a>'+
         '<div class="khl-note">비상 시 위 연락처를 눌러 바로 통화할 수 있습니다. 실시간 갱신.</div>'+
@@ -7650,15 +7667,17 @@ body.kac-noanim #noticeModal > .menu-box, body.kac-noanim #surveyModal > .menu-b
       if(!(s && s.val()===true)){ panel.style.display='none'; return; }
       _leaderExpanded=false;
       panel.style.display='block';
-      panel.innerHTML='<div class=\"khl-head\"><i class=\"fa-solid fa-crown\"></i> 학생장 · 금일 현황</div><div class=\"khl-empty\">불러오는 중…</div>';
-      var today=getTodayString();
-      var st={a:{},d:{}};
-      var aRef=firebase.database().ref('courses/'+room+'/admin_actions/'+today);
-      var dRef=firebase.database().ref('courses/'+room+'/dinner_skips/'+today);
-      var aCb=function(snap){ st.a=snap.val()||{}; renderLeaderPanel(st); };
-      var dCb=function(snap){ st.d=snap.val()||{}; renderLeaderPanel(st); };
-      aRef.on('value', aCb); dRef.on('value', dCb);
-      _leaderRefs.push({ref:aRef,cb:aCb},{ref:dRef,cb:dCb});
+      panel.innerHTML='<div class="khl-bar"><span class="khl-bartitle"><i class="fa-solid fa-crown"></i> 학생장 금일 현황</span><span class="khl-sum">불러오는 중…</span></div>';
+      var today=getTodayString(), yest=getYesterdayString();
+      var st={aT:{},aY:{},d:{}};
+      var aT=firebase.database().ref('courses/'+room+'/admin_actions/'+today);
+      var aY=firebase.database().ref('courses/'+room+'/admin_actions/'+yest);
+      var dR=firebase.database().ref('courses/'+room+'/dinner_skips/'+today);
+      var aTcb=function(snap){ st.aT=snap.val()||{}; renderLeaderPanel(st); };
+      var aYcb=function(snap){ st.aY=snap.val()||{}; renderLeaderPanel(st); };
+      var dcb=function(snap){ st.d=snap.val()||{}; renderLeaderPanel(st); };
+      aT.on('value',aTcb); aY.on('value',aYcb); dR.on('value',dcb);
+      _leaderRefs.push({ref:aT,cb:aTcb},{ref:aY,cb:aYcb},{ref:dR,cb:dcb});
     }).catch(function(){ panel.style.display='none'; });
   }
   window.loadLeaderPanel=loadLeaderPanel; window.detachLeaderRefs=detachLeaderRefs;

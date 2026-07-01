@@ -4428,6 +4428,14 @@ body.in-course #courseSmartRemote.hex-remote-v2{display:block;}
 }
 #guideScheduleBtn:hover{ filter:brightness(1.08); transform:translateY(-2px); }
 
+/* [교육 장소] PDF 위 교육동 4칸 오버레이 (셀 위치는 인라인 %로 지정) */
+#guideVenueOverlay{ position:absolute; inset:0; z-index:7; pointer-events:none; }
+#guideVenueOverlay .gv-cell{ position:absolute; pointer-events:auto; cursor:pointer; display:flex; align-items:center; overflow:hidden; }
+#guideVenueOverlay .gv-empty{ display:inline-flex; align-items:center; gap:5px; background:rgba(37,99,235,.14); color:#1d4ed8; border:1.5px dashed #93c5fd; border-radius:8px; padding:3px 10px; font-size:clamp(10px,1.15vw,15px); font-weight:800; white-space:nowrap; }
+#guideVenueOverlay .gv-cell:hover .gv-empty{ background:rgba(37,99,235,.24); }
+#guideVenueOverlay .gv-check{ display:inline-flex; align-items:center; justify-content:center; width:clamp(20px,2.4vw,36px); height:clamp(20px,2.4vw,36px); border:0.28vw solid #0f172a; border-radius:6px; color:#0f172a; font-size:clamp(13px,1.7vw,24px); margin-right:6px; flex:0 0 auto; }
+#guideVenueOverlay .gv-badge{ background:#1e3a8a; color:#fff; border-radius:8px; padding:3px 12px; font-size:clamp(12px,1.5vw,22px); font-weight:900; white-space:nowrap; max-width:calc(100% - 3vw); overflow:hidden; text-overflow:ellipsis; }
+
 /* 오디션 무대 배경 (학생장 룰렛을 입교안내에서 실행할 때) */
 .roulette-stage-bg{ background:radial-gradient(ellipse at 50% 116%, #3b0764 0%, #1e1b4b 44%, #0a0a18 100%) !important; }
 .roulette-stage-bg > div{ position:relative; z-index:2; }
