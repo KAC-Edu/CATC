@@ -971,7 +971,23 @@ forceEnterRoom: async function(room) {
     // [홈 검색] 입교안내 진입 시 PDF 전체화면 직행 (클릭 후 5초 내 = 사용자 제스처 유효)
     if (lastMode === 'guide' && ui._pendingGuideFullscreen) {
         ui._pendingGuideFullscreen = false;
-        setTimeout(function(){ try { if (guideMgr && guideMgr.toggleFullScreen) guideMgr.toggleFullScreen(); } catch(e){} }, 800);
+        setTimeout(function(){
+            try { if (guideMgr && guideMgr.toggleFullScreen) guideMgr.toggleFullScreen(); } catch(e){}
+            // 전체화면이 실제로 켜졌으면, 끄는 순간(ESC 등) 통합 현황판(홈)으로 복귀
+            setTimeout(function(){
+                if (document.fullscreenElement || document.webkitFullscreenElement) {
+                    var backHome = function(){
+                        if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+                            document.removeEventListener('fullscreenchange', backHome);
+                            document.removeEventListener('webkitfullscreenchange', backHome);
+                            setTimeout(function(){ try { ui.goHomePortal(); } catch(e){} }, 120);
+                        }
+                    };
+                    document.addEventListener('fullscreenchange', backHome);
+                    document.addEventListener('webkitfullscreenchange', backHome);
+                }
+            }, 500);
+        }, 800);
     }
 
     // ── 공지 실시간 리스너 ──
