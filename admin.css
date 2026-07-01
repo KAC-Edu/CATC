@@ -4419,13 +4419,9 @@ body.in-course #courseSmartRemote.hex-remote-v2{display:block;}
 .dash-today-summary .dts-chip .dts-v{font-size:16px;font-weight:900;color:#0f172a;}
 .dash-today-summary .dts-chip.dts-hot{background:#fff1f2;border-color:#fecdd3;}
 .dash-today-summary .dts-chip.dts-hot .dts-v{color:#e11d48;}
-/* [상단 메뉴바 숨김/펼침] 평상시 숨김 → 시계 3초 길게눌러 토글 */
+/* [상단 메뉴바 숨김/펼침] 평상시 숨김 → 리모컨 중앙 '과정현황' 3초 롱프레스로 토글 */
 .mode-tabs.collapsed{display:none !important;}
-/* 시계 길게누를 때 3초 진행 표시(밑줄 바가 차오름) — 원본이 이미 position:absolute라 별도 지정 불필요 */
-.header-clock-large.clock-pressing::after{content:'';position:absolute;left:0;bottom:-4px;height:3px;width:0;background:#38bdf8;border-radius:2px;animation:clockPressBar 3s linear forwards;}
-@keyframes clockPressBar{from{width:0;}to{width:100%;}}
-/* 위 3개(0·1·2) · 아래 3개(3·4·5) 2줄 정렬 — 오와열 맞춤, 가운데는 과정현황 원 */
-.hex-pos-0{left:90px;top:0}.hex-pos-1{left:0;top:0}.hex-pos-2{right:0;top:0}.hex-pos-3{left:0;bottom:0}.hex-pos-4{right:0;bottom:0}.hex-pos-5{left:90px;bottom:0}
+.hex-pos-0{left:90px;top:0}.hex-pos-1{left:0;top:51px}.hex-pos-2{right:0;top:51px}.hex-pos-3{left:0;bottom:0}.hex-pos-4{right:0;bottom:0}.hex-pos-5{left:90px;bottom:-1px}
 .hex-center{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:76px;height:76px;border:5px solid #fff;border-radius:50%;background:linear-gradient(145deg,#0f4c81,#2563eb);color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;cursor:pointer;box-shadow:0 10px 24px rgba(15,76,129,.38);z-index:6503;}
 .hex-center:hover{background:linear-gradient(145deg,#2563eb,#4f46e5)}.hex-center i{font-size:20px}.hex-center span{font-size:10px;font-weight:950}
 .hex-gear{position:absolute;top:5px;right:12px;width:26px;height:26px;border-radius:50%;border:1px solid #e2e8f0;background:#fff;color:#64748b;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:12px;z-index:6510;box-shadow:0 2px 5px rgba(15,23,42,.12);transition:background .15s,color .15s,transform .3s,border-color .15s;}

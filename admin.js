@@ -12461,8 +12461,37 @@ ui.confirmRouletteLeader = function(){
         }
       });
     });
-    // 중앙 = 과정현황 이동
-    host.querySelector('.hex-center').addEventListener('click', function(){ ui.setMode('dashboard'); });
+    // 중앙 = 짧게 누르면 과정현황 이동 / 3초 길게 누르면 상단 메뉴바 펼침·접기
+    (function(){
+      var center = host.querySelector('.hex-center'); if(!center) return;
+      var lpTimer=null, longFired=false;
+      function removeBar(){ var b=document.getElementById('remoteHoldBar'); if(b) b.remove(); }
+      function showBar(){
+        removeBar();
+        var b=document.createElement('div'); b.id='remoteHoldBar';
+        b.style.cssText='position:fixed;left:0;bottom:0;height:5px;width:0;background:linear-gradient(90deg,#38bdf8,#2563eb);box-shadow:0 0 12px rgba(56,189,248,.7);z-index:2147483000;';
+        document.body.appendChild(b); void b.offsetWidth;
+        b.style.transition='width 3s linear'; b.style.width='100%';
+      }
+      center.style.touchAction='none';
+      center.addEventListener('pointerdown', function(e){
+        if(e && e.pointerType==='mouse' && e.button!==0) return;
+        longFired=false;
+        try{ center.setPointerCapture(e.pointerId); }catch(_){}
+        showBar(); clearTimeout(lpTimer);
+        lpTimer=setTimeout(function(){
+          longFired=true; removeBar();
+          var tabs=document.getElementById('modeTabs'); if(tabs) tabs.classList.toggle('collapsed');
+        },3000);
+      });
+      function endPress(){ clearTimeout(lpTimer); removeBar(); }
+      center.addEventListener('pointerup', endPress);
+      center.addEventListener('pointercancel', endPress);
+      center.addEventListener('click', function(e){
+        if(longFired){ e.preventDefault(); e.stopPropagation(); longFired=false; return; }  // 롱프레스였으면 이동 취소
+        ui.setMode('dashboard');
+      });
+    })();
     // 설정은 '길게 눌러 이동' 옆 기어 아이콘으로
     var gear = host.querySelector('.hex-gear');
     if(gear){

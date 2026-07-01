@@ -2687,45 +2687,8 @@ function setupAcc(btn){
   });
 })();
 </script>
-<!-- [상단 메뉴바 숨김/펼침] 시계를 3초 이상 길게 누르면 mode-tabs 토글 (평상시 숨김) -->
-<script>
-(function(){
-  function init(){
-    var clock=document.getElementById('headerDateTime');
-    var tabs=document.getElementById('modeTabs');
-    if(!clock||!tabs) return;
-    clock.style.cursor='pointer'; clock.style.userSelect='none'; clock.style.touchAction='none';
-    clock.title='3초 이상 길게 누르면 상단 메뉴가 펼쳐지거나 접힙니다';
-    var timer=null;
-    function removeBar(){ var b=document.getElementById('clockHoldBar'); if(b) b.remove(); }
-    function showBar(){
-      removeBar();
-      var b=document.createElement('div'); b.id='clockHoldBar';
-      b.style.cssText='position:fixed;left:0;bottom:0;height:5px;width:0;background:linear-gradient(90deg,#38bdf8,#2563eb);box-shadow:0 0 12px rgba(56,189,248,.7);z-index:2147483000;';
-      document.body.appendChild(b);
-      void b.offsetWidth;                         // 리플로우 후 트랜지션 시작
-      b.style.transition='width 3s linear'; b.style.width='100%';
-    }
-    function start(e){
-      if(e && e.pointerType==='mouse' && e.button!==0) return;   // 좌클릭/터치만
-      try{ clock.setPointerCapture(e.pointerId); }catch(_){}     // 매초 시계 갱신에도 포인터 유지(핵심)
-      showBar();
-      clearTimeout(timer);
-      timer=setTimeout(function(){
-        removeBar();
-        tabs.classList.toggle('collapsed');
-      },3000);
-    }
-    function cancel(){ clearTimeout(timer); removeBar(); }
-    clock.addEventListener('pointerdown',start);
-    clock.addEventListener('pointerup',cancel);
-    clock.addEventListener('pointercancel',cancel);
-    clock.addEventListener('contextmenu',function(e){ e.preventDefault(); });
-  }
-  if(document.readyState!=='loading') init();
-  else document.addEventListener('DOMContentLoaded',init);
-})();
-</script>
+<!-- [상단 메뉴바 숨김/펼침]은 리모컨 중앙 '과정현황' 버튼 3초 롱프레스로 처리 (admin.js hex remote) -->
+
 <!-- ── [강사 보조] 옵저버→강사 화면 동기화 (페이지 동기화 · 드래그 · 진단) ── -->
 <script>
 (function(){
