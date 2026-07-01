@@ -7712,7 +7712,11 @@ init: function() {
     _venueOptions: function(filter) {
         const sel = document.getElementById('setup-room-select'); const out = [];
         if (!sel || !filter) return out;
-        [].forEach.call(sel.options, function(o) { if (o.value && o.value !== 'direct' && o.value.indexOf(filter) >= 0) out.push(o.value); });
+        // value가 아니라 표시명(text) 기준 — 국제동 2층 ILS/VCCS/VOR 실습실이 value는 겹쳐도 이름으로 구분되게
+        [].forEach.call(sel.options, function(o) {
+            var t = (o.text || o.textContent || '').trim();
+            if (t && o.value !== 'direct' && t.indexOf(filter) >= 0 && out.indexOf(t) < 0) out.push(t);
+        });
         return out;
     },
     // 배지용 짧은 표기: '하늘관 2층 F강의실' → 'F 강의실', '관제교육동 1층' → '1층'
