@@ -12381,7 +12381,8 @@ ui.confirmRouletteLeader = function(){
       '<button class="hex-gear" type="button" title="리모컨 메뉴 설정"><i class="fa-solid fa-gear"></i></button>'+
       '<div class="hex-ring">'+picked.map(function(mode, index){
         var item = choices.find(function(choice){ return choice.mode === mode; }) || choices[0];
-        return '<button class="hex-key hex-pos-'+index+'" type="button" data-mode="'+esc(item.mode)+'" title="'+esc(item.label)+'"><i class="fa-solid '+esc(item.icon)+'"></i><span>'+esc(item.label)+'</span></button>';
+        var hot = (item.mode === 'guide') ? ' hex-key-hot' : '';   // 입교안내는 가장 많이 쓰는 메뉴 → 빨간색 강조
+        return '<button class="hex-key hex-pos-'+index+hot+'" type="button" data-mode="'+esc(item.mode)+'" title="'+esc(item.label)+'"><i class="fa-solid '+esc(item.icon)+'"></i><span>'+esc(item.label)+'</span></button>';
       }).join('')+
       '<button class="hex-center" type="button" title="과정 현황으로 이동"><i class="fa-solid fa-gauge-high"></i><span>과정현황</span></button></div>';
 

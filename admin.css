@@ -4398,6 +4398,10 @@ body.in-course #courseSmartRemote.hex-remote-v2{display:block;}
 .hex-key{position:absolute;width:94px;height:82px;border:0;clip-path:polygon(25% 5%,75% 5%,100% 50%,75% 95%,25% 95%,0 50%);background:linear-gradient(145deg,#fff,#eaf2ff);color:#0f4c81;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;cursor:pointer;filter:drop-shadow(0 7px 7px rgba(15,76,129,.18));transition:transform .16s,filter .16s;z-index:6501;}
 .hex-key:hover{transform:translateY(-3px) scale(1.05);background:linear-gradient(145deg,#eff6ff,#bfdbfe);filter:drop-shadow(0 10px 10px rgba(37,99,235,.25));}
 .hex-key i{font-size:21px}.hex-key span{font-size:11px;font-weight:950;letter-spacing:-.35px;white-space:nowrap;}
+/* 입교안내: 가장 많이 찾는 메뉴 → 빨간색 강조(시안성 up) */
+.hex-key.hex-key-hot{background:linear-gradient(145deg,#ff5a5f,#e11d48);color:#fff;filter:drop-shadow(0 8px 12px rgba(225,29,72,.5));}
+.hex-key.hex-key-hot i,.hex-key.hex-key-hot span{color:#fff;}
+.hex-key.hex-key-hot:hover{background:linear-gradient(145deg,#ff6b70,#f43f5e);filter:drop-shadow(0 12px 16px rgba(225,29,72,.62));}
 .hex-pos-0{left:90px;top:0}.hex-pos-1{left:0;top:51px}.hex-pos-2{right:0;top:51px}.hex-pos-3{left:0;bottom:0}.hex-pos-4{right:0;bottom:0}.hex-pos-5{left:90px;bottom:-1px}
 .hex-center{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:76px;height:76px;border:5px solid #fff;border-radius:50%;background:linear-gradient(145deg,#0f4c81,#2563eb);color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;cursor:pointer;box-shadow:0 10px 24px rgba(15,76,129,.38);z-index:6503;}
 .hex-center:hover{background:linear-gradient(145deg,#2563eb,#4f46e5)}.hex-center i{font-size:20px}.hex-center span{font-size:10px;font-weight:950}
