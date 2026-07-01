@@ -12067,6 +12067,8 @@ ui._bindVenueCell = function(cell){
 ui.pickVenue = function(i){
   if(state.isObserver){ ui.showAlert('👁️ 옵저버 모드에서는 변경할 수 없습니다.'); return; }
   if(!state.room) return;
+  // 중복 팝업 방지: 기존 선택창이 있으면 모두 제거 (전체화면에서 안 보여 여러 번 눌러 쌓이던 문제)
+  [].forEach.call(document.querySelectorAll('#venuePickModal'), function(m){ m.remove(); });
   var cell = guideMgr._venueCells[i];
   var opts = guideMgr._venueOptions(cell.filter);
   var slot = guideMgr._slot(); var cur = (slot.venuePick||{})[i] || '';
@@ -12083,17 +12085,20 @@ ui.pickVenue = function(i){
     +'<button onclick="document.getElementById(\'venuePickModal\').remove()" style="padding:9px 16px;border:none;border-radius:9px;background:#64748b;color:#fff;font-weight:800;cursor:pointer;">취소</button>'
     +'<button onclick="ui.saveVenue('+i+')" style="padding:9px 20px;border:none;border-radius:9px;background:#10b981;color:#fff;font-weight:800;cursor:pointer;">적용</button>'
     +'</div></div>';
-  ov.addEventListener('click', function(e){ if(e.target===ov) ov.remove(); });
-  document.body.appendChild(ov);
+  ov.addEventListener('click', function(e){ e.stopPropagation(); if(e.target===ov) ov.remove(); });
+  ov.addEventListener('pointerdown', function(e){ e.stopPropagation(); });
+  ov.addEventListener('contextmenu', function(e){ e.stopPropagation(); });
+  // 전체화면(top layer) 위에 보이도록 전체화면 요소에 붙임
+  (document.fullscreenElement || document.webkitFullscreenElement || document.body).appendChild(ov);
 };
 ui.saveVenue = function(i){
   if(!state.room) return;
   var el = document.getElementById('venuePickSel'); var val = el ? String(el.value||'').trim() : '';
   var slot = guideMgr._slot();
-  var vp = {}; if(val) vp[i] = val;   // 한 곳만 — 선택 시 나머지 칸 자동 해제
+  var vp = {}; if(val) vp[i] = val;   // 한 곳만 — 선택 시 나머지 칸 자동 해제 (빈 값이면 미정 → 전체 해제)
   slot.venuePick = vp;
   firebase.database().ref('courses/'+state.room+'/settings/venuePick').set(vp).catch(function(){});
-  var m = document.getElementById('venuePickModal'); if(m) m.remove();
+  [].forEach.call(document.querySelectorAll('#venuePickModal'), function(m){ m.remove(); });   // 쌓인 팝업 모두 제거
   ui.renderVenueOverlay();
 };
 ui._spacedKoreanName = function(name){
