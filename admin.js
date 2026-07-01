@@ -11933,13 +11933,13 @@ ui.openGuidePageSettings = function(){
   // 교육 장소 강의실 (4 교육동) 선택 행 — 슬라이드 위 pill 없이 여기서 지정
   var _esc=function(x){ return String(x||'').replace(/"/g,'&quot;').replace(/</g,'&lt;'); };
   var venuePick=((guideMgr._slot&&guideMgr._slot().venuePick)||{});
-  var venueRows=(guideMgr._venueCells||[]).map(function(c,idx){
-    var opts=guideMgr._venueOptions(c.filter); var cv=venuePick[idx]||'';
-    var field=opts.length
-      ? '<select id="gvv-'+idx+'" style="flex:1;padding:8px;border:1.5px solid #cbd5e1;border-radius:8px;font-size:13px;font-weight:700;"><option value="">(없음)</option>'+opts.map(function(o){return '<option value="'+_esc(o)+'"'+(o===cv?' selected':'')+'>'+_esc(o)+'</option>';}).join('')+'</select>'
-      : '<input id="gvv-'+idx+'" type="text" value="'+_esc(cv)+'" placeholder="직접 입력 (예: F강의실)" style="flex:1;padding:8px;border:1.5px solid #cbd5e1;border-radius:8px;font-size:13px;font-weight:700;box-sizing:border-box;">';
-    return '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;"><span style="width:96px;font-size:13px;font-weight:800;color:#334155;flex:0 0 auto;">'+_esc(c.label)+'</span>'+field+'</div>';
-  }).join('');
+  var curVenue=''; for(var _vk=0;_vk<4;_vk++){ if(venuePick[_vk]){ curVenue=venuePick[_vk]; break; } }
+  var venueOpts='<option value="">(선택 안함 / 없음)</option>';
+  (guideMgr._venueCells||[]).forEach(function(c){
+    var os=guideMgr._venueOptions(c.filter);
+    if(os.length){ venueOpts+='<optgroup label="'+_esc(c.label)+'">'+os.map(function(o){return '<option value="'+_esc(o)+'"'+(o===curVenue?' selected':'')+'>'+_esc(o)+'</option>';}).join('')+'</optgroup>'; }
+  });
+  var venueRows='<select id="gvv-single" style="width:100%;padding:9px;border:1.5px solid #cbd5e1;border-radius:8px;font-size:14px;font-weight:700;">'+venueOpts+'</select>';
   var ov=document.createElement('div'); ov.id='guidePageSettingsModal';
   ov.style.cssText='position:fixed;inset:0;background:rgba(15,23,42,.5);z-index:21000;display:flex;align-items:center;justify-content:center;';
   ov.innerHTML='<div style="background:#fff;border-radius:18px;padding:26px 28px;width:480px;max-width:92vw;box-shadow:0 24px 70px rgba(0,0,0,.3);" onclick="event.stopPropagation()">'
@@ -11953,7 +11953,7 @@ ui.openGuidePageSettings = function(){
       +'<span style="font-size:12px;color:#94a3b8;font-weight:700;">PDF</span>'
       +'<input type="number" min="1" '+(total?('max="'+total+'"'):'')+' id="gpp-venuepage" value="'+((typeof guideMgr!=="undefined"&&guideMgr._venuePage)?guideMgr._venuePage():14)+'" style="width:64px;padding:8px;border:1.5px solid #cbd5e1;border-radius:8px;font-size:14px;font-weight:800;text-align:center;">'
       +'<span style="font-size:12px;color:#64748b;font-weight:700;">페이지</span></div>'
-    +'<div style="font-size:13px;font-weight:900;color:#16a34a;margin:12px 0 8px;"><i class="fa-solid fa-location-dot"></i> 교육 장소 · 교육동별 강의실 <span style="font-weight:600;color:#94a3b8;font-size:11.5px;">(선택 시 해당 칸에 ✓ 표시)</span></div>'
+    +'<div style="font-size:13px;font-weight:900;color:#16a34a;margin:12px 0 8px;"><i class="fa-solid fa-location-dot"></i> 교육 장소 · 강의실 <span style="font-weight:600;color:#94a3b8;font-size:11.5px;">(한 곳만 선택 → 해당 교육동에 ✓ 표시)</span></div>'
     +venueRows
     +'<div id="gpp-msg" style="font-size:12px;color:#ef4444;font-weight:700;min-height:16px;margin:4px 0;"></div>'
     +'<div style="display:flex;gap:10px;justify-content:flex-end;margin-top:8px;">'
@@ -11970,7 +11970,9 @@ ui.saveGuidePageSettings = function(){
   var obj={};
   keys.forEach(function(k){ var el=document.getElementById('gpp-'+k); if(!el) return; var v=parseInt(el.value,10); if(!v||v<1) v=1; if(total&&v>total) v=total; obj[k]=v; });
   var vp=parseInt((document.getElementById('gpp-venuepage')||{}).value,10); if(!vp||vp<1) vp=14; if(total&&vp>total) vp=total;
-  var vpick={}; for(var vi=0;vi<4;vi++){ var ve=document.getElementById('gvv-'+vi); if(ve) vpick[vi]=String(ve.value||'').trim(); }
+  var vsel=String((document.getElementById('gvv-single')||{}).value||'').trim();
+  var vpick={};
+  if(vsel){ var _vc=guideMgr._venueCells||[]; for(var _ci=0;_ci<_vc.length;_ci++){ if(vsel.indexOf(_vc[_ci].filter)>=0){ vpick[_ci]=vsel; break; } } }
   var upd={}; upd['courses/'+state.room+'/settings/guidePagePos']=obj; upd['courses/'+state.room+'/settings/guideVenuePage']=vp; upd['courses/'+state.room+'/settings/venuePick']=vpick;
   firebase.database().ref().update(upd)
     .then(function(){
@@ -12006,13 +12008,19 @@ ui.renderVenueOverlay = function(){
   var P = ui._venuePos || ui._venueDefaultPos;
   var slot = (typeof guideMgr!=='undefined') ? guideMgr._slot() : {};
   var pick = (slot && slot.venuePick) || {};
+  var hasSel = false; for(var k=0;k<4;k++){ if(pick[k]){ hasSel=true; break; } }   // 한 곳이라도 선택됐는지
   var html = '';
   for(var i=0;i<4;i++){
     var val = pick[i] || '';
-    var short = (guideMgr._venueShort ? guideMgr._venueShort(val) : val);
-    var cls = short ? 'gv-cell gv-filled' : 'gv-cell gv-empty-cell';
-    var inner = short ? '<span class="gv-check"><i class="fa-solid fa-check"></i></span><span class="gv-badge">'+String(short).replace(/</g,'&lt;')+'</span>' : '';
-    html += '<div class="'+cls+'" data-cell="'+i+'" style="left:'+P.lefts[i]+'%;top:'+P.tops[i]+'%;width:'+P.w+'%;height:'+P.h+'%;touch-action:none;">'+inner+'</div>';
+    if(hasSel && !val) continue;   // 선택되면 그 칸만 표시(나머지 칸은 숨김)
+    if(val){
+      var short = (guideMgr._venueShort ? guideMgr._venueShort(val) : val);
+      var inner = '<span class="gv-check"><i class="fa-solid fa-check"></i></span><span class="gv-badge">'+String(short).replace(/</g,'&lt;')+'</span>';
+      html += '<div class="gv-cell gv-filled" data-cell="'+i+'" style="left:'+P.lefts[i]+'%;top:'+P.tops[i]+'%;width:'+P.w+'%;height:'+P.h+'%;touch-action:none;">'+inner+'</div>';
+    } else {
+      // 아직 선택 전 → 빈 체크박스로 선택 유도 (4칸 모두 표시)
+      html += '<div class="gv-cell gv-empty-cell" data-cell="'+i+'" style="left:'+P.lefts[i]+'%;top:'+P.tops[i]+'%;width:'+P.w+'%;height:'+P.h+'%;touch-action:none;"><span class="gv-check gv-check-empty"></span></div>';
+    }
   }
   ov.innerHTML = html;
   [].forEach.call(ov.querySelectorAll('.gv-cell'), function(c){ ui._bindVenueCell(c); });
@@ -12020,13 +12028,14 @@ ui.renderVenueOverlay = function(){
 ui._bindVenueCell = function(cell){
   var i = parseInt(cell.getAttribute('data-cell'),10);
   var holdTimer=null, dragMode=false, moved=false, sx=0, sy=0, gx=0, gy=0;
-  var clearHold=function(){ if(holdTimer){ clearTimeout(holdTimer); holdTimer=null; } };
+  var clearHold=function(){ if(holdTimer){ clearTimeout(holdTimer); holdTimer=null; } cell.classList.remove('gv-pressing'); };
   cell.addEventListener('pointerdown', function(e){
     e.stopPropagation();
     sx=e.clientX; sy=e.clientY; moved=false; dragMode=false;
     try{ cell.setPointerCapture(e.pointerId); }catch(_){}
+    cell.classList.add('gv-pressing');   // 누르는 동안 옅게 표시(3초 후 이동 모드)
     holdTimer=setTimeout(function(){
-      dragMode=true; cell.classList.add('gv-dragging');
+      dragMode=true; cell.classList.remove('gv-pressing'); cell.classList.add('gv-dragging');
       var cr=cell.getBoundingClientRect(); gx=sx-cr.left; gy=sy-cr.top;
       try{ if(navigator.vibrate) navigator.vibrate(45); }catch(_){}
     }, 3000);
@@ -12050,6 +12059,8 @@ ui._bindVenueCell = function(cell){
   });
   cell.addEventListener('pointercancel', function(){ clearHold(); if(dragMode){ dragMode=false; cell.classList.remove('gv-dragging'); ui._saveVenuePos(); } });
   cell.addEventListener('contextmenu', function(e){ e.stopPropagation(); e.preventDefault(); });
+  // 클릭이 뒤 PDF(pdfWrapper onclick=changePage)로 전파돼 페이지가 넘어가지 않도록 차단
+  cell.addEventListener('click', function(e){ e.stopPropagation(); });
 };
 ui.pickVenue = function(i){
   if(state.isObserver){ ui.showAlert('👁️ 옵저버 모드에서는 변경할 수 없습니다.'); return; }
@@ -12076,8 +12087,10 @@ ui.pickVenue = function(i){
 ui.saveVenue = function(i){
   if(!state.room) return;
   var el = document.getElementById('venuePickSel'); var val = el ? String(el.value||'').trim() : '';
-  var slot = guideMgr._slot(); slot.venuePick = slot.venuePick || {}; slot.venuePick[i] = val;
-  firebase.database().ref('courses/'+state.room+'/settings/venuePick/'+i).set(val).catch(function(){});
+  var slot = guideMgr._slot();
+  var vp = {}; if(val) vp[i] = val;   // 한 곳만 — 선택 시 나머지 칸 자동 해제
+  slot.venuePick = vp;
+  firebase.database().ref('courses/'+state.room+'/settings/venuePick').set(vp).catch(function(){});
   var m = document.getElementById('venuePickModal'); if(m) m.remove();
   ui.renderVenueOverlay();
 };
