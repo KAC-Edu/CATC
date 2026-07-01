@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<!-- PLATFORM_EDIT_STATUS: 수정아닙니다 | VERSION: J87 J87 J87 J87 J87 | 2026-06-30 -->
+<!-- PLATFORM_EDIT_STATUS: 수정아닙니다 | VERSION: J88 J88 J88 J88 J88 | 2026-06-30 -->
 <!-- ══════════════════ [편집상태 / EDIT-STATUS] ══════════════════
      STATUS : 수정아닙니다
      FILE   : index.html (교육생)
-     VERSION: J87 J87 J87 J87 J87
-     UPDATED: 2026-06-30  (vJ87: 16시 이후 외출외박 제출 시 '석식 이용 간주' 안내 팝업 복원(J75에서 STEP5 건너뛰며 사라졌던 것) → 확인 후 신청현황으로. | vJ86: 강사가 과정명/기간을 수정(리네임)해도 교육생이 입교화면으로 초기화되지 않도록 courseKey 불일치 초기화 제거. 강의실 리셋(명단 삭제)·교육기간 종료 시에만 재입교. | vJ85: 질문하기 — 신규 질문 즉시 노출(내 질문 맨위 이동), 질문 몰릴 때 읽던 위치 고정+'새 질문 N개' 칩, 09시 운영일 윈도우 밖 오래된 질문은 학생화면에서 숨김(강사 플랫폼엔 유지). | vJ84: 외출외박 소속을 신청 미리보기·입력칸 자동채움·저장값까지 formatDept 적용해 '항공기술훈련원 OOO'로 일관 표기(대장에도 반영). | vJ83: 학생장 외출외박 카운팅을 admin과 동일한 09:00~익일09:00 KST 윈도우+오늘/어제 노드 병합으로 정렬(복귀자 포함 표시). | vJ82: 학생장 펼침 상세를 높이제한+내부스크롤 드롭다운으로(카드 가림 해소), 연락처 블록 줄바꿈 처리, 펼칠 때 부드럽게 노출. | vJ81: 학생장 패널 접이식 가로바로 변경(카드 가림 해소), 외출외박 항목에 비상연락처 표시+클릭 통화확인 팝업. | vJ80: 학생장 전용 패널(입교카드 아래) — 금일 외출외박·석식제외 실시간 현황 + 식당 전화하기(043-290-2325). | vJ79: 담임 글자크기 다른행과 완전통일(display:flex 제거), 신청취소 후 재초기화(이전정보 안내 복원), 패스트패스 연락처(STEP3)까지 항상 표시. | vJ78: 담임 글자크기 다른행과 통일(span 제거), 담당교수 실시간 반영(.on 리스너). | vJ77: 입교카드·출결완료 페이지에 과정담임 표시 + 전화아이콘→통화확인 팝업→통화 기능(professorProfiles 연락처 사용). | vJ76: 외출외박 현황화면 상단바 위 내용넘침 방지(flex-start), 복귀완료보고·신청취소 한 줄 배치. | vJ75: 입교문구 '항공기술훈련원 입교', 정보수정 시 개인정보동의 숨김, 외출외박 새로작성 빈양식, 소속 항공기술훈련원 표기, 외출외박 완료→수위실 현황화면 통일. | vJ74: 창닫기 기능(closeStudentWindow) 제거 — 카카오 채널 채팅창 닫기로 대체. 디버그 console.log 2종 정리. | vJ73: 미사용 함수 6종 제거 — exitApp·cleanUrlAndGo·checkDinnerTime·loadGroupCandidates·openRoomMove·wrapClose. 카카오 채널 바로가기 도입으로 불필요해진 진입/종료 관련 죽은 코드 정리. 맛집 기능 코드는 유지.)
+     VERSION: J88 J88 J88 J88 J88
+     UPDATED: 2026-06-30  (vJ88: 카카오 입교 흐름(submitEnroll)에 동명 중복 확인 복원 — 같은 이름 다른 식별ID 발견 시 '본인 맞냐' 확인(본인→기존ID 병합, 아니면 신규). 편집모드 제외. | vJ87: 16시 이후 외출외박 제출 시 '석식 이용 간주' 안내 팝업 복원(J75에서 STEP5 건너뛰며 사라졌던 것) → 확인 후 신청현황으로. | vJ86: 강사가 과정명/기간을 수정(리네임)해도 교육생이 입교화면으로 초기화되지 않도록 courseKey 불일치 초기화 제거. 강의실 리셋(명단 삭제)·교육기간 종료 시에만 재입교. | vJ85: 질문하기 — 신규 질문 즉시 노출(내 질문 맨위 이동), 질문 몰릴 때 읽던 위치 고정+'새 질문 N개' 칩, 09시 운영일 윈도우 밖 오래된 질문은 학생화면에서 숨김(강사 플랫폼엔 유지). | vJ84: 외출외박 소속을 신청 미리보기·입력칸 자동채움·저장값까지 formatDept 적용해 '항공기술훈련원 OOO'로 일관 표기(대장에도 반영). | vJ83: 학생장 외출외박 카운팅을 admin과 동일한 09:00~익일09:00 KST 윈도우+오늘/어제 노드 병합으로 정렬(복귀자 포함 표시). | vJ82: 학생장 펼침 상세를 높이제한+내부스크롤 드롭다운으로(카드 가림 해소), 연락처 블록 줄바꿈 처리, 펼칠 때 부드럽게 노출. | vJ81: 학생장 패널 접이식 가로바로 변경(카드 가림 해소), 외출외박 항목에 비상연락처 표시+클릭 통화확인 팝업. | vJ80: 학생장 전용 패널(입교카드 아래) — 금일 외출외박·석식제외 실시간 현황 + 식당 전화하기(043-290-2325). | vJ79: 담임 글자크기 다른행과 완전통일(display:flex 제거), 신청취소 후 재초기화(이전정보 안내 복원), 패스트패스 연락처(STEP3)까지 항상 표시. | vJ78: 담임 글자크기 다른행과 통일(span 제거), 담당교수 실시간 반영(.on 리스너). | vJ77: 입교카드·출결완료 페이지에 과정담임 표시 + 전화아이콘→통화확인 팝업→통화 기능(professorProfiles 연락처 사용). | vJ76: 외출외박 현황화면 상단바 위 내용넘침 방지(flex-start), 복귀완료보고·신청취소 한 줄 배치. | vJ75: 입교문구 '항공기술훈련원 입교', 정보수정 시 개인정보동의 숨김, 외출외박 새로작성 빈양식, 소속 항공기술훈련원 표기, 외출외박 완료→수위실 현황화면 통일. | vJ74: 창닫기 기능(closeStudentWindow) 제거 — 카카오 채널 채팅창 닫기로 대체. 디버그 console.log 2종 정리. | vJ73: 미사용 함수 6종 제거 — exitApp·cleanUrlAndGo·checkDinnerTime·loadGroupCandidates·openRoomMove·wrapClose. 카카오 채널 바로가기 도입으로 불필요해진 진입/종료 관련 죽은 코드 정리. 맛집 기능 코드는 유지.)
      ─ 규칙: 수정 시작 시 STATUS를 '수정중'으로, 완료 시 '수정아닙니다'로 변경하고 버전을 5회 반복 표기.
             '수정중'이면 다른 플랫폼은 연동 변경을 보류/협의 후 진행.
 ═══════════════════════════════════════════════════════════════ -->
@@ -7510,6 +7510,21 @@ body.kac-noanim #noticeModal > .menu-box, body.kac-noanim #surveyModal > .menu-b
     var nameOk = name.length>=2 && name.toLowerCase()!=='undefined' && /[가-힣A-Za-z]/.test(name) && /^[가-힣A-Za-z\s]+$/.test(name);
     if(!nameOk){ showKacAlert('성함을 정확히 입력해 주세요.\n(한글/영문 2자 이상)'); return; }
     if(!/^\d{4,5}$/.test(sabun)){ showKacAlert('본인 사번(5자리) 또는 전화번호 뒤 4자리를 숫자로 입력해 주세요.'); return; }
+    // [중복 방지] 신규 입교 시, 같은 방에 '같은 이름'으로 다른 식별ID 기록이 있으면 본인 여부 확인
+    if(!window._keduEditMode){
+      try{
+        var _dupSnap = await firebase.database().ref('courses/'+room+'/students').once('value');
+        var _dupAll = _dupSnap.val() || {};
+        var _myTok = name+'_'+sabun;
+        var _sameName = Object.keys(_dupAll).filter(function(tk){ var s=_dupAll[tk]||{}; var nm=String((s.name||tk.split('_')[0]||'')).trim(); return nm===name && tk!==_myTok; });
+        if(_sameName.length>0){
+          var _exTok=_sameName[0], _exData=_dupAll[_exTok]||{};
+          var _exPhone = _exData.phone ? String(_exData.phone) : (_exTok.split('_').slice(1).join('_')||'');
+          var _isMe = await showKacConfirm("'"+name+"' 이름으로 이미 등록된 기록이 있습니다.\n(기존 식별ID: "+_exPhone+")\n\n본인이 맞으신가요?\n· [확인] 본인입니다 → 기존 정보로 입장\n· [취소] 다른 사람입니다 → 입력한 정보로 새로 등록");
+          if(_isMe && _exPhone){ sabun=_exPhone; var _sb=document.getElementById('keduSabun'); if(_sb) _sb.value=_exPhone; }
+        }
+      }catch(e){}
+    }
     var label=''; try{ label=(document.getElementById('keduCourse').selectedOptions[0]||{}).textContent||room; }catch(e){ label=room; }
     var ok=await showKacConfirm(window._keduEditMode
       ? '입력한 정보로 수정하시겠습니까?'
