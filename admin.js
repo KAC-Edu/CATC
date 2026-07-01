@@ -7781,7 +7781,7 @@ init: function() {
         const contacts = [];
         if (p.phone) contacts.push(`<span style="display:inline-flex;align-items:center;gap:7px;"><i class="fa-solid fa-phone" style="color:#1e3a8a;"></i> ${esc(p.phone)}</span>`);
         if (p.email) contacts.push(`<span style="display:inline-flex;align-items:center;gap:7px;"><i class="fa-solid fa-envelope" style="color:#1e3a8a;"></i> ${esc(p.email)}</span>`);
-        const contactHtml = contacts.length ? `<div class="guide-profile-contacts">${contacts.join('')}</div>` : '';
+        const contactHtml = contacts.length ? `<div class="guide-profile-contact-lines">${contacts.join('')}</div>` : '';
         const quote = p.msg ? `<div class="guide-profile-quote">"${esc(p.msg)}"</div>` : '';
         let bio = (Array.isArray(p.bioList) ? p.bioList : []).filter(r => r && (r.year || r.text));
         if (!bio.length && p.bio) {
@@ -7804,10 +7804,12 @@ init: function() {
             <div class="guide-profile-panel">
               <div class="guide-profile-copy">
                 <div><span class="guide-profile-role">과정 담임</span></div>
-                <div class="guide-profile-name">교수 <strong>${name}</strong>${eng}</div>
+                <div class="guide-profile-namerow">
+                  <div class="guide-profile-name">교수 <strong>${name}</strong>${eng}</div>
+                  ${contactHtml}
+                </div>
                 <div class="guide-profile-rule"></div>
                 ${quote}
-                ${contactHtml}
                 ${bioHtml}
               </div>
             </div>
