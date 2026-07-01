@@ -812,6 +812,9 @@ body.in-course #moreToggleTab{ display:flex !important; }
             </div>
         </div> 
 
+        <!-- [간소화] 오늘 한눈에 요약줄 (핵심 지표만) — JS가 채움 -->
+        <div id="dashTodaySummary" class="dash-today-summary" style="display:none;"></div>
+
         <!-- 하단 프리미엄 그리드 (통계 + 공지 + 셔틀) -->
         <div class="dash-premium-grid">
             
@@ -2635,6 +2638,51 @@ function setupAcc(btn){
   }
   document.addEventListener('fullscreenchange', syncFS);
   document.addEventListener('webkitfullscreenchange', syncFS);
+})();
+</script>
+<!-- [대시보드 간소화] ①0값 흐리게 ③상단 '오늘 한눈에' 요약줄 -->
+<script>
+(function(){
+  function num(el){ if(!el) return null; var t=(el.textContent||'').replace(/[^0-9\-]/g,''); return t===''?null:parseInt(t,10); }
+  function chip(icon,color,label,val,hot){
+    return '<span class="dts-chip'+(hot?' dts-hot':'')+'"><i class="fa-solid '+icon+'" style="color:'+color+'"></i><span class="dts-t">'+label+'</span><b class="dts-v">'+val+'</b></span>';
+  }
+  function run(){
+    var grid=document.querySelector('.dash-premium-grid'); if(!grid) return;
+    // ① 값이 0인 통계 행은 흐리게 (값 있는 것만 튀게)
+    ['dashTotalCount','dashActionCount','dashDinnerSkipCount','dashTabletLoanCount','dashQaCount'].forEach(function(id){
+      var el=document.getElementById(id); if(!el) return; var row=el.closest('.stat-row');
+      if(row){ var v=num(el); row.classList.toggle('dash-zero', v===0); }
+    });
+    // 교육 배치가 '미정'이면 흐리게
+    ['feedEduIntegrity','feedEduUnion'].forEach(function(id){
+      var el=document.getElementById(id); if(!el) return;
+      var t=(el.textContent||'').trim(); el.style.opacity=(t===''||t==='미정')?'0.4':'';
+    });
+    // ③ 오늘 한눈에 요약줄
+    var sum=document.getElementById('dashTodaySummary'); if(!sum) return;
+    var students=num(document.getElementById('dashTotalCount'));
+    var qa=num(document.getElementById('dashQaCount'));
+    var shuttle=num(document.getElementById('dashShuttleTotal'));
+    var action=num(document.getElementById('dashActionCount'));
+    var html='<span class="dts-label">오늘 한눈에</span>';
+    html+=chip('fa-user-graduate','#2563eb','수강생',(students==null?'-':students)+'명');
+    html+=chip('fa-comment-dots','#3b82f6','Q&A',(qa==null?'-':qa)+'건',qa>0);
+    html+=chip('fa-bus','#0ea5e9','셔틀',(shuttle==null?'-':shuttle)+'명',shuttle>0);
+    if(action>0) html+=chip('fa-person-walking-arrow-right','#f43f5e','외출·외박',action+'명',true);
+    sum.innerHTML=html;
+    // 대시보드(과정현황)가 화면에 보일 때만 노출
+    var visible=grid.offsetParent!==null;
+    sum.style.display=visible?'flex':'none';
+  }
+  var t=null; function schedule(){ clearTimeout(t); t=setTimeout(run,120); }
+  document.addEventListener('DOMContentLoaded', function(){
+    var grid=document.querySelector('.dash-premium-grid'); if(!grid) return;
+    try{ new MutationObserver(schedule).observe(grid,{childList:true,characterData:true,subtree:true}); }catch(e){}
+    // 모드 전환(과정현황 진입) 시에도 갱신
+    document.addEventListener('click', function(){ setTimeout(schedule,200); }, true);
+    schedule();
+  });
 })();
 </script>
 <!-- ── [강사 보조] 옵저버→강사 화면 동기화 (페이지 동기화 · 드래그 · 진단) ── -->
