@@ -7412,8 +7412,9 @@ init: function() {
             // [추가] 전체화면(ESC 포함)에서 빠져나오면 사이드바를 접힌 상태로 강제
             if (!document.fullscreenElement && !document.webkitFullscreenElement) {
                 document.body.classList.add('sidebar-hidden');
+                // [수정] 전체화면에서 나왔으면 '들어가기(fa-expand)' 아이콘이 맞음 (이전엔 반대로 fa-compress로 강제되던 버그)
                 const fsIcon = document.querySelector('.control-icon-btn i.fa-expand, .control-icon-btn i.fa-compress');
-                if (fsIcon) { fsIcon.classList.remove('fa-expand'); fsIcon.classList.add('fa-compress'); }
+                if (fsIcon) { fsIcon.classList.remove('fa-compress'); fsIcon.classList.add('fa-expand'); }
             }
         });
 
