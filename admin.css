@@ -4463,7 +4463,7 @@ body.in-course #courseSmartRemote.hex-remote-v2{display:block;}
 #homeSearchInput:focus{border-color:#38bdf8;animation:homeSearchGlow 1.8s ease-in-out infinite;}
 
 /* [사이트 푸터] 화면 하단 저작권/개발자 표기 (현황판·전체화면 제외) */
-#appFooter{position:fixed;left:0;right:0;bottom:0;z-index:40;text-align:center;padding:9px 16px 10px;background:var(--header-bg);border-top:1px solid rgba(255,255,255,.08);pointer-events:none;user-select:none;}
+#appFooter{position:fixed;left:0;right:0;bottom:0;z-index:95;text-align:center;padding:9px 16px 10px;background:var(--header-bg);border-top:1px solid rgba(255,255,255,.08);pointer-events:none;user-select:none;}
 #appFooter .af-line{font-size:12.5px;font-weight:700;color:#cbd5e1;line-height:1.45;}
 #appFooter .af-dev{color:#94a3b8;font-weight:600;}
 #appFooter .af-copy{font-size:12.5px;font-weight:800;color:#fff;margin-top:2px;}
@@ -4471,6 +4471,9 @@ body.in-course #courseSmartRemote.hex-remote-v2{display:block;}
 body[data-mode="home"] #appFooter,
 body[data-mode="waiting"] #appFooter{display:none !important;}
 :fullscreen #appFooter,:-webkit-full-screen #appFooter{display:none !important;}
+/* 유턴(홈) 버튼: 하단바가 보이는 화면에선 하단바 위로 올려 겹침 방지 (현황판·전체화면은 원위치) */
+body:not([data-mode="home"]):not([data-mode="waiting"]) .floating-home-btn{bottom:66px;}
+:fullscreen .floating-home-btn,:-webkit-full-screen .floating-home-btn{bottom:28px !important;}
 /* 위·아래 대칭 육각 꽃: 0=위중앙, 1·2=위 좌우, 3·4=아래 좌우, 5=아래중앙 (0↔5, 1·2↔3·4 대칭) */
 .hex-pos-0{left:90px;top:0}.hex-pos-1{left:0;top:46px}.hex-pos-2{right:0;top:46px}.hex-pos-3{left:0;bottom:46px}.hex-pos-4{right:0;bottom:46px}.hex-pos-5{left:90px;bottom:0}
 .hex-center{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:76px;height:76px;border:5px solid #fff;border-radius:50%;background:linear-gradient(145deg,#0f4c81,#2563eb);color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;cursor:pointer;box-shadow:0 10px 24px rgba(15,76,129,.38);z-index:6503;}
