@@ -968,6 +968,11 @@ forceEnterRoom: async function(room) {
     ui.setMode(lastMode);
     subjectMgr.init();
     guideMgr.init();
+    // [홈 검색] 입교안내 진입 시 PDF 전체화면 직행 (클릭 후 5초 내 = 사용자 제스처 유효)
+    if (lastMode === 'guide' && ui._pendingGuideFullscreen) {
+        ui._pendingGuideFullscreen = false;
+        setTimeout(function(){ try { if (guideMgr && guideMgr.toggleFullScreen) guideMgr.toggleFullScreen(); } catch(e){} }, 800);
+    }
 
     // ── 공지 실시간 리스너 ──
     // 항상 재등록 (off → on), state.noticeSeen으로 중복 팝업만 방지
@@ -5622,6 +5627,10 @@ resetShuttleRequests: function() {
                 window._dormRosters = s.val() || {};
                 if (window._homeStatsData) computeAndRender(window._homeStatsData);
             }, () => {});
+            // [홈 검색] 기숙사 배정현황 (검색 결과카드에 표시용)
+            firebase.database().ref('system/dorm/assignments').on('value', s => {
+                window._dormAssignments = s.val() || {};
+            }, () => {});
             firebase.database().ref('courses').on('value', snap => {
                 computeAndRender(snap.val() || {});
             }, err => {
@@ -5673,10 +5682,11 @@ resetShuttleRequests: function() {
     // ── [홈 통합검색] 담임교수 이름 → 이번주 과정 바로가기 ──
     _esc: function(s){ return String(s==null?'':s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); },
     // 과정 진입 후 원하는 메뉴로 바로 이동 (guide=입교안내 / students=입교완료 / dashboard=과정현황)
-    enterCourseMode: function(room, mode){
+    enterCourseMode: function(room, mode, fs){
         ui._pendingEnterMode = mode || 'dashboard';
+        ui._pendingGuideFullscreen = (!!fs && (mode === 'guide'));   // 입교안내는 진입 즉시 PDF 전체화면
         try { dataMgr.switchRoomAttempt(String(room||'').toUpperCase()); }
-        catch(e){ ui._pendingEnterMode = null; }
+        catch(e){ ui._pendingEnterMode = null; ui._pendingGuideFullscreen = false; }
     },
     clearHomeSearch: function(){
         var inp=document.getElementById('homeSearchInput'); if(inp){ inp.value=''; inp.focus(); }
@@ -5711,6 +5721,11 @@ resetShuttleRequests: function() {
         var ql=raw.toLowerCase();
         var data=window._homeStatsData||{};
         var dorm=window._dormRosters||{};
+        var assign=window._dormAssignments||{};
+        var nn=function(s){ return String(s||'').replace(/\s+/g,'').toLowerCase(); };
+        // 기숙사 배정된 이름 집합(건물이 실제 배정된 경우만)
+        var assignedSet={};
+        try{ Object.keys(assign).forEach(function(kk){ var vv=assign[kk]; if(vv&&vv.building&&vv.building!=='-'){ assignedSet[nn(String(kk).split('_')[0])]=1; } }); }catch(e){}
         var results=[];
         Object.keys(data).forEach(function(room){
             var r=data[room]; if(!r) return;
@@ -5727,22 +5742,37 @@ resetShuttleRequests: function() {
             if(prof.toLowerCase().indexOf(ql)<0) return;   // 담임교수 매칭
             var cnt=0;
             try{ cnt=new Set(Object.values(students).filter(function(s){return s&&s.name&&s.name!=='undefined';}).map(function(s){return s.name;})).size; }catch(e){}
-            var planned=0;
-            try{ for(var k in dorm){ var dv=dorm[k]; if(dv&&Array.isArray(dv.list)&&dv.list.length&&String(dv.courseName||'').trim()===course){ if(dv.list.length>planned) planned=dv.list.length; } } }catch(e){}
-            results.push({room:room, course:course||'(과정명 미정)', period:period, prof:prof, cnt:cnt, planned:planned});
+            // 예정 명단 + 이름들 (과정명 매칭)
+            var planned=0, rosterNames=[];
+            try{ var best=null; for(var k in dorm){ var dv=dorm[k]; if(dv&&Array.isArray(dv.list)&&dv.list.length&&String(dv.courseName||'').trim()===course){ if(!best||(dv.updatedAt||0)>(best.updatedAt||0)) best=dv; } } if(best){ planned=best.list.length; best.list.forEach(function(s){ if(s&&s.name) rosterNames.push(String(s.name).trim()); }); } }catch(e){}
+            // 기숙사 배정 인원 (예정 명단 중 배정된 수)
+            var assigned=0; try{ rosterNames.forEach(function(n){ if(assignedSet[nn(n)]) assigned++; }); }catch(e){}
+            // 외출/외박 건수 (미복귀)
+            var outing=0; try{ var acts=r.admin_actions||{}; Object.keys(acts).forEach(function(dt){ var day=acts[dt]||{}; Object.keys(day).forEach(function(id){ var a=day[id]; if(a&&(a.type==='outing'||a.type==='overnight'||a.type==='group_outing')&&!(a.returned===true||a.returnReportTime)) outing++; }); }); }catch(e){}
+            // 퇴교차량 신청 건수
+            var depart=0; try{ var req=(r.shuttle&&r.shuttle.requests)||{}; depart=Object.keys(req).length; }catch(e){}
+            results.push({room:room, course:course||'(과정명 미정)', period:period, prof:prof, cnt:cnt, planned:planned, assigned:assigned, outing:outing, depart:depart});
         });
         var e=ui._esc;
         if(!results.length){
             box.innerHTML='<div class="hsr-empty">"'+e(raw)+'" 담임교수의 <b>이번주 진행 과정</b>을 찾지 못했습니다.<br><span style="font-weight:600;font-size:13px;">이름 철자 또는 배정 여부를 확인해 주세요.</span></div>';
             return;
         }
+        var ichip=function(icon,color,label,val){ return '<span class="hsr-chip"><i class="fa-solid '+icon+'" style="color:'+color+'"></i>'+label+' <b>'+val+'</b></span>'; };
         box.innerHTML=results.map(function(x){
             var studInfo='입교 '+x.cnt+(x.planned?(' / '+x.planned):'')+'명';
-            return '<div class="hsr-card" onclick="ui.enterCourseMode(\''+e(x.room)+'\',\'guide\')">'
+            var chips=[];
+            if(x.planned) chips.push(ichip('fa-clipboard-user','#0ea5e9','예정',x.planned+'명'));
+            if(x.assigned) chips.push(ichip('fa-bed','#9333ea','기숙사',x.assigned+'명 배정'));
+            if(x.outing) chips.push(ichip('fa-person-walking-arrow-right','#f43f5e','외출·외박',x.outing+'건'));
+            if(x.depart) chips.push(ichip('fa-bus','#16a34a','퇴교차량',x.depart+'건'));
+            var infoHtml = chips.length ? ('<div class="hsr-info">'+chips.join('')+'</div>') : '';
+            return '<div class="hsr-card" onclick="ui.enterCourseMode(\''+e(x.room)+'\',\'guide\',true)">'
                 +'<div class="hsr-top"><span class="hsr-course"><i class="fa-solid fa-file-pdf"></i>'+e(x.course)+' · 입교안내</span><span class="hsr-prof"><i class="fa-solid fa-user-tie"></i> '+e(x.prof||'-')+' 교수</span></div>'
                 +'<div class="hsr-meta">'+(x.period?e(x.period)+' · ':'')+studInfo+' · Room '+e(x.room)+'</div>'
+                +infoHtml
                 +'<div class="hsr-actions" onclick="event.stopPropagation();">'
-                +'<button class="hsr-btn primary" onclick="ui.enterCourseMode(\''+e(x.room)+'\',\'guide\')"><i class="fa-solid fa-file-pdf"></i> 입교안내</button>'
+                +'<button class="hsr-btn primary" onclick="ui.enterCourseMode(\''+e(x.room)+'\',\'guide\',true)"><i class="fa-solid fa-file-pdf"></i> 입교안내 전체화면</button>'
                 +'<button class="hsr-btn" onclick="ui.enterCourseMode(\''+e(x.room)+'\',\'students\')"><i class="fa-solid fa-users-viewfinder"></i> 입교완료</button>'
                 +'<button class="hsr-btn" onclick="ui.enterCourseMode(\''+e(x.room)+'\',\'dashboard\')"><i class="fa-solid fa-gauge-high"></i> 과정현황</button>'
                 +'</div></div>';
