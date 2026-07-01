@@ -4382,7 +4382,7 @@ body.in-course #courseSmartRemote { display: block; }
 
 /* 2026-06-29 강사 커스텀 육각 리모컨 */
 #courseSmartRemote.hex-remote-v2{
-    display:none; position:fixed; left:auto; right:42px; top:50%; width:310px; height:284px;
+    display:none; position:fixed; left:auto; right:42px; top:50%; width:310px; height:316px;
     transform:translateY(-50%); border:0; border-radius:28px;
     background:rgba(248,250,252,.94); box-shadow:0 22px 60px rgba(15,23,42,.24);
     z-index:6500; padding:32px 18px 18px; backdrop-filter:blur(12px);
@@ -4394,7 +4394,7 @@ body.in-course #courseSmartRemote.hex-remote-v2{display:block;}
 .hex-drag-handle span{font-size:10px;}
 .hex-remote-v2.is-dragging{opacity:.9;box-shadow:0 28px 74px rgba(37,99,235,.34);}
 .hex-remote-v2.is-dragging .hex-drag-handle{cursor:grabbing;background:#dbeafe;color:#1d4ed8;}
-.hex-ring{position:relative;width:274px;height:232px;margin:auto;}
+.hex-ring{position:relative;width:274px;height:266px;margin:auto;}
 .hex-key{position:absolute;width:94px;height:82px;border:0;clip-path:polygon(25% 5%,75% 5%,100% 50%,75% 95%,25% 95%,0 50%);background:linear-gradient(145deg,#fff,#eaf2ff);color:#0f4c81;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;cursor:pointer;filter:drop-shadow(0 7px 7px rgba(15,76,129,.18));transition:transform .16s,filter .16s;z-index:6501;}
 .hex-key:hover{transform:translateY(-3px) scale(1.05);background:linear-gradient(145deg,#eff6ff,#bfdbfe);filter:drop-shadow(0 10px 10px rgba(37,99,235,.25));}
 .hex-key i{font-size:21px}.hex-key span{font-size:11px;font-weight:950;letter-spacing:-.35px;white-space:nowrap;}
@@ -4421,7 +4421,8 @@ body.in-course #courseSmartRemote.hex-remote-v2{display:block;}
 .dash-today-summary .dts-chip.dts-hot .dts-v{color:#e11d48;}
 /* [상단 메뉴바 숨김/펼침] 평상시 숨김 → 리모컨 중앙 '과정현황' 3초 롱프레스로 토글 */
 .mode-tabs.collapsed{display:none !important;}
-.hex-pos-0{left:90px;top:0}.hex-pos-1{left:0;top:51px}.hex-pos-2{right:0;top:51px}.hex-pos-3{left:0;bottom:0}.hex-pos-4{right:0;bottom:0}.hex-pos-5{left:90px;bottom:-1px}
+/* 위·아래 대칭 육각 꽃: 0=위중앙, 1·2=위 좌우, 3·4=아래 좌우, 5=아래중앙 (0↔5, 1·2↔3·4 대칭) */
+.hex-pos-0{left:90px;top:0}.hex-pos-1{left:0;top:46px}.hex-pos-2{right:0;top:46px}.hex-pos-3{left:0;bottom:46px}.hex-pos-4{right:0;bottom:46px}.hex-pos-5{left:90px;bottom:0}
 .hex-center{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:76px;height:76px;border:5px solid #fff;border-radius:50%;background:linear-gradient(145deg,#0f4c81,#2563eb);color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;cursor:pointer;box-shadow:0 10px 24px rgba(15,76,129,.38);z-index:6503;}
 .hex-center:hover{background:linear-gradient(145deg,#2563eb,#4f46e5)}.hex-center i{font-size:20px}.hex-center span{font-size:10px;font-weight:950}
 .hex-gear{position:absolute;top:5px;right:12px;width:26px;height:26px;border-radius:50%;border:1px solid #e2e8f0;background:#fff;color:#64748b;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:12px;z-index:6510;box-shadow:0 2px 5px rgba(15,23,42,.12);transition:background .15s,color .15s,transform .3s,border-color .15s;}
@@ -4500,7 +4501,7 @@ body.in-course #courseSmartRemote.hex-remote-v2{display:block;}
 .hex-settings-foot{display:flex;align-items:center;justify-content:space-between;padding:16px 22px 22px;border-top:1px solid #eef2f7;font-weight:900;color:#475569}.hex-settings-foot button{min-width:140px;padding:14px 20px;border:0;border-radius:13px;background:#2563eb;color:#fff;font-weight:900;cursor:pointer}.hex-settings-foot button:disabled{opacity:.35;cursor:not-allowed}
 .sidebar-settings-fold{width:100%;border:1px solid rgba(255,255,255,.14);border-radius:12px;overflow:hidden}.sidebar-settings-fold summary{list-style:none;display:flex;align-items:center;gap:9px;padding:13px 14px;background:#334155;color:#fff;font-weight:900;cursor:pointer}.sidebar-settings-fold summary::-webkit-details-marker{display:none}.sidebar-settings-fold summary .fa-chevron-down{margin-left:auto;transition:transform .2s}.sidebar-settings-fold[open] summary .fa-chevron-down{transform:rotate(180deg)}.sidebar-settings-actions{display:flex;flex-direction:column;gap:8px;padding:10px;background:#1e293b}
 @media(max-width:1100px){#courseSmartRemote.hex-remote-v2{right:12px;transform:translateY(-50%) scale(.86);transform-origin:right center}}
-@media(max-width:720px){#courseSmartRemote.hex-remote-v2{width:280px;height:266px;right:6px}.hex-ring{transform:scale(.9);transform-origin:center top}.hex-settings-list{grid-template-columns:1fr}}
+@media(max-width:720px){#courseSmartRemote.hex-remote-v2{width:280px;height:300px;right:6px}.hex-ring{transform:scale(.9);transform-origin:center top}.hex-settings-list{grid-template-columns:1fr}}
 
 /* ── 2. 위험 액션 정리: 'Reset' 하나만 명확한 빨강, 'All Idle'은 중립 회색으로 ── */
 button[onclick*="allIdle"]{

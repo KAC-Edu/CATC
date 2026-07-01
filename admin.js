@@ -12482,7 +12482,7 @@ ui.confirmRouletteLeader = function(){
         lpTimer=setTimeout(function(){
           longFired=true; removeBar();
           var tabs=document.getElementById('modeTabs'); if(tabs) tabs.classList.toggle('collapsed');
-        },3000);
+        },2000);
       });
       function endPress(){ clearTimeout(lpTimer); removeBar(); }
       center.addEventListener('pointerup', endPress);
