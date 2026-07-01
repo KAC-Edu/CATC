@@ -4461,6 +4461,16 @@ body.in-course #courseSmartRemote.hex-remote-v2{display:block;}
 /* 검색창 빛나는 테두리(작동중 표시) */
 @keyframes homeSearchGlow{0%,100%{box-shadow:0 0 0 3px rgba(37,99,235,.16),0 10px 34px rgba(37,99,235,.20);}50%{box-shadow:0 0 0 6px rgba(56,189,248,.32),0 14px 48px rgba(37,99,235,.42);}}
 #homeSearchInput:focus{border-color:#38bdf8;animation:homeSearchGlow 1.8s ease-in-out infinite;}
+
+/* [사이트 푸터] 화면 하단 저작권/개발자 표기 (현황판·전체화면 제외) */
+#appFooter{position:fixed;left:0;right:0;bottom:0;z-index:40;text-align:center;padding:8px 16px 9px;background:linear-gradient(0deg,rgba(248,250,252,.97),rgba(248,250,252,.55));border-top:1px solid #e8eef5;pointer-events:none;user-select:none;}
+#appFooter .af-line{font-size:12.5px;font-weight:700;color:#64748b;line-height:1.45;}
+#appFooter .af-dev{color:#94a3b8;font-weight:600;}
+#appFooter .af-copy{font-size:12.5px;font-weight:800;color:#334155;margin-top:2px;}
+/* 현황판(홈·실시간현황판) 및 모니터 전체화면에서는 숨김 */
+body[data-mode="home"] #appFooter,
+body[data-mode="waiting"] #appFooter{display:none !important;}
+:fullscreen #appFooter,:-webkit-full-screen #appFooter{display:none !important;}
 /* 위·아래 대칭 육각 꽃: 0=위중앙, 1·2=위 좌우, 3·4=아래 좌우, 5=아래중앙 (0↔5, 1·2↔3·4 대칭) */
 .hex-pos-0{left:90px;top:0}.hex-pos-1{left:0;top:46px}.hex-pos-2{right:0;top:46px}.hex-pos-3{left:0;bottom:46px}.hex-pos-4{right:0;bottom:46px}.hex-pos-5{left:90px;bottom:0}
 .hex-center{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:76px;height:76px;border:5px solid #fff;border-radius:50%;background:linear-gradient(145deg,#0f4c81,#2563eb);color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;cursor:pointer;box-shadow:0 10px 24px rgba(15,76,129,.38);z-index:6503;}

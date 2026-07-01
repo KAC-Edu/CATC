@@ -3799,6 +3799,7 @@ setMode: function(mode) {
 
         localStorage.setItem('kac_last_mode', mode);
         state.currentMode = mode; // 현재 탭 추적 (공지 팝업 차단용)
+        try { document.body.setAttribute('data-mode', mode); } catch(e){}  // [푸터] 현황판/전체화면 등에서 푸터 숨김 제어용
 
         // 5. 각 모드별 데이터 로드
         if (state.room) {
