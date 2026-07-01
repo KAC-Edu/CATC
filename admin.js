@@ -7716,10 +7716,16 @@ init: function() {
         return out;
     },
     // 배지용 짧은 표기: '하늘관 2층 F강의실' → 'F 강의실', '관제교육동 1층' → '1층'
+    // 배지 표기: { main, sub }. 실습실은 main='실습실', sub=시설명(ILS 등)
     _venueShort: function(v) {
-        v = String(v || '').trim(); if (!v) return '';
-        const m = v.match(/([A-Za-z0-9]+)\s*강의실/); if (m) return m[1] + ' 강의실';
-        const p = v.split(/\s+/); return p[p.length - 1];
+        v = String(v || '').trim(); if (!v) return { main: '', sub: '' };
+        if (/실습실\s*$/.test(v)) {
+            var body = v.replace(/실습실\s*$/, '').trim();                 // '국제동 2층 ILS'
+            var facil = body.replace(/^\S+\s*/, '').replace(/^\d+\s*층\s*/, '').trim(); // 'ILS'
+            return { main: '실습실', sub: facil };
+        }
+        var m = v.match(/([A-Za-z0-9]+)\s*강의실/); if (m) return { main: m[1] + ' 강의실', sub: '' };
+        var p = v.split(/\s+/); return { main: p[p.length - 1], sub: '' };
     },
     _pageList: function() {
         const s = guideMgr._slot();
@@ -11934,9 +11940,18 @@ ui.openGuidePageSettings = function(){
   var venuePick=((guideMgr._slot&&guideMgr._slot().venuePick)||{});
   var curVenue=''; var _NC=(guideMgr._venueCells?guideMgr._venueCells.length:3); for(var _vk=0;_vk<_NC;_vk++){ if(venuePick[_vk]){ curVenue=venuePick[_vk]; break; } }
   var venueOpts='<option value="">(선택 안함 / 없음)</option>';
+  var _optTag=function(o){ return '<option value="'+_esc(o)+'"'+(o===curVenue?' selected':'')+'>'+_esc(o)+'</option>'; };
   (guideMgr._venueCells||[]).forEach(function(c){
     var os=guideMgr._venueOptions(c.filter);
-    if(os.length){ venueOpts+='<optgroup label="'+_esc(c.label)+'">'+os.map(function(o){return '<option value="'+_esc(o)+'"'+(o===curVenue?' selected':'')+'>'+_esc(o)+'</option>';}).join('')+'</optgroup>'; }
+    if(!os.length) return;
+    if(c.filter==='국제동'){   // 글로벌교육동은 1층/2층으로 나눠서 표시
+      var f1=os.filter(function(o){return o.indexOf('1층')>=0;}), f2=os.filter(function(o){return o.indexOf('2층')>=0;}), oth=os.filter(function(o){return o.indexOf('1층')<0&&o.indexOf('2층')<0;});
+      if(f1.length) venueOpts+='<optgroup label="'+_esc(c.label)+' · 1층">'+f1.map(_optTag).join('')+'</optgroup>';
+      if(f2.length) venueOpts+='<optgroup label="'+_esc(c.label)+' · 2층">'+f2.map(_optTag).join('')+'</optgroup>';
+      if(oth.length) venueOpts+='<optgroup label="'+_esc(c.label)+'">'+oth.map(_optTag).join('')+'</optgroup>';
+    } else {
+      venueOpts+='<optgroup label="'+_esc(c.label)+'">'+os.map(_optTag).join('')+'</optgroup>';
+    }
   });
   var venueRows='<select id="gvv-single" style="width:100%;padding:9px;border:1.5px solid #cbd5e1;border-radius:8px;font-size:14px;font-weight:700;">'+venueOpts+'</select>';
   var ov=document.createElement('div'); ov.id='guidePageSettingsModal';
@@ -12016,8 +12031,10 @@ ui.renderVenueOverlay = function(){
     if(hasSel && i!==selIdx) continue;   // 선택되면 그 칸만 표시(나머지 칸은 숨김)
     var val = pick[i] || '';
     if(val){
-      var short = (guideMgr._venueShort ? guideMgr._venueShort(val) : val);
-      var inner = '<span class="gv-check"><i class="fa-solid fa-check"></i></span><span class="gv-badge">'+String(short).replace(/</g,'&lt;')+'</span>';
+      var sh = (guideMgr._venueShort ? guideMgr._venueShort(val) : {main:val,sub:''});
+      var e2 = function(x){ return String(x||'').replace(/</g,'&lt;'); };
+      var badge = '<span class="gv-badge'+(sh.sub?' gv-badge-2':'')+'"><span class="gv-badge-main">'+e2(sh.main)+'</span>'+(sh.sub?'<span class="gv-badge-sub">('+e2(sh.sub)+')</span>':'')+'</span>';
+      var inner = '<span class="gv-check"><i class="fa-solid fa-check"></i></span>'+badge;
       html += '<div class="gv-cell gv-filled" data-cell="'+i+'" style="left:'+P.lefts[i]+'%;top:'+P.tops[i]+'%;width:'+P.w+'%;height:'+P.h+'%;touch-action:none;">'+inner+'</div>';
     } else {
       // 아직 선택 전 → 빈 체크박스로 선택 유도 (4칸 모두 표시)
@@ -12073,7 +12090,16 @@ ui.pickVenue = function(i){
   var opts = guideMgr._venueOptions(cell.filter);
   var slot = guideMgr._slot(); var cur = (slot.venuePick||{})[i] || '';
   var esc = function(x){ return String(x||'').replace(/"/g,'&quot;').replace(/</g,'&lt;'); };
-  var optionsHtml = '<option value="">(선택 안함)</option>' + opts.map(function(o){ return '<option value="'+esc(o)+'"'+(o===cur?' selected':'')+'>'+esc(o)+'</option>'; }).join('');
+  var _tag = function(o){ return '<option value="'+esc(o)+'"'+(o===cur?' selected':'')+'>'+esc(o)+'</option>'; };
+  var optionsHtml = '<option value="">(선택 안함 / 미정)</option>';
+  if(cell.filter==='국제동'){   // 글로벌교육동은 1층/2층 그룹으로 구분
+    var f1=opts.filter(function(o){return o.indexOf('1층')>=0;}), f2=opts.filter(function(o){return o.indexOf('2층')>=0;}), oth=opts.filter(function(o){return o.indexOf('1층')<0&&o.indexOf('2층')<0;});
+    if(f1.length) optionsHtml+='<optgroup label="1층">'+f1.map(_tag).join('')+'</optgroup>';
+    if(f2.length) optionsHtml+='<optgroup label="2층">'+f2.map(_tag).join('')+'</optgroup>';
+    if(oth.length) optionsHtml+=oth.map(_tag).join('');
+  } else {
+    optionsHtml += opts.map(_tag).join('');
+  }
   var ov = document.createElement('div'); ov.id='venuePickModal';
   ov.style.cssText='position:fixed;inset:0;background:rgba(15,23,42,.5);z-index:21000;display:flex;align-items:center;justify-content:center;';
   ov.innerHTML = '<div style="background:#fff;border-radius:16px;padding:24px 26px;width:420px;max-width:92vw;box-shadow:0 24px 70px rgba(0,0,0,.3);" onclick="event.stopPropagation()">'
