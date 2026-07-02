@@ -1026,6 +1026,17 @@ forceEnterRoom: async function(room) {
         // 대시보드 피드 즉시 업데이트 (항상)
         const el = document.getElementById('dashNoticeGlobal');
         if (el) el.innerText = newMsg || '현재 게시된 센터 전체 공지가 없습니다.';
+        // [입교안내 센터공지 페이지] 실시간 반영 — 슬롯 갱신 + 지금 그 페이지를 보고 있으면 즉시 재렌더(내용/노출 갱신)
+        try {
+            var _gslot = (typeof guideMgr !== 'undefined' && guideMgr._slot) ? guideMgr._slot() : null;
+            if (_gslot) {
+                var _wasCN = (state.currentMode === 'guide' && _gslot.pdfDoc && guideMgr._isCenterNoticePage && guideMgr._isCenterNoticePage(_gslot.pageNum));
+                _gslot.centerNotice = String(newMsg || '').trim();
+                if (state.currentMode === 'guide' && _gslot.pdfDoc && (_wasCN || (guideMgr._isCenterNoticePage && guideMgr._isCenterNoticePage(_gslot.pageNum)))) {
+                    guideMgr.renderPage(_gslot.pageNum);
+                }
+            }
+        } catch (e) {}
         // 팝업 처리
         if (!newMsg) return;
         const prev = state.noticeSeen['global'];
