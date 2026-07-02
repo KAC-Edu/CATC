@@ -5815,12 +5815,51 @@ resetShuttleRequests: function() {
                 +list.map(function(s,i){var live=regMap[norm(s.name)]||{}, done=!!regMap[norm(s.name)];return '<tr><td>'+(i+1)+'</td><td><b>'+esc(s.name||live.name||'-')+'</b></td><td>'+esc(s.empNo||s.sabun||live.empNo||live.phone||'-')+'</td><td>'+esc(s.dept||s.department||live.dept||'-')+'</td><td><span class="hsr-state '+(done?'done':'wait')+'">'+(done?'입교완료':'입교예정')+'</span></td></tr>';}).join('')
                 +'</tbody></table></div>'+go('students','수강생 현황');
         }else if(type==='dashboard'){
-            title='<i class="fa-solid fa-gauge-high"></i> 과정 현황';
+            title='<i class="fa-solid fa-gauge-high"></i> 과정 현황 <span style="font-size:12px;font-weight:700;color:#94a3b8;">(모니터링)</span>';
+            var today=(typeof getTodayString==='function')?getTodayString():'';
+            var attn   = (r.internal_attendance && r.internal_attendance[today]) ? Object.keys(r.internal_attendance[today]).length : 0;
+            var dinner = (r.dinner_skips && r.dinner_skips[today]) ? Object.keys(r.dinner_skips[today]).length : 0;
+            var tablet = r.tablet_loans ? Object.keys(r.tablet_loans).length : 0;
+            var qaCnt=0; try{ if(r.questions) qaCnt=Object.values(r.questions).filter(function(q){return q&&q.status!=='delete';}).length; }catch(e){}
+            var shu=(r.shuttle&&r.shuttle.requests)?Object.values(r.shuttle.requests):[];
+            var sOsong=shu.filter(function(i){return i&&i.type==='osong';}).length;
+            var sTerm =shu.filter(function(i){return i&&i.type==='terminal';}).length;
+            var sAir  =shu.filter(function(i){return i&&i.type==='airport';}).length;
+            var sCar  =shu.filter(function(i){return i&&i.type==='car';}).length;
             var activeOut=actions.filter(function(a){return !(a.returned===true||a.returnReportTime);}).length;
-            body='<div class="hsr-course-grid"><div><span>강의실</span><b>'+esc(settings.roomDetailName||settings.roomDetail||('Room '+room))+'</b></div><div><span>교육기간</span><b>'+esc(settings.period||'-')+'</b></div><div><span>담임교수</span><b>'+esc(status.professorName||'-')+'</b></div><div><span>과정담당</span><b>'+esc(settings.coordinatorName||'-')+'</b></div></div>'
-                +'<div class="hsr-kpi-row"><div><b>'+registered.length+'</b><span>입교</span></div><div><b>'+activeOut+'</b><span>외출·외박</span></div><div><b>'+requests.length+'</b><span>차량수요</span></div></div>'
-                +((r.coordNotice||r.notice)?'<div class="hsr-notice"><i class="fa-solid fa-bullhorn"></i>'+esc(r.coordNotice||r.notice)+'</div>':'')
-                +go('dashboard','과정 현황');
+            var adminNotice=r.coordNotice||r.notice||'';
+            var enter='event.stopPropagation();ui.enterCourseMode(\''+esc(room)+'\',\'dashboard\')';
+            body='<div class="hsr-dash-monitor" onclick="'+enter+'" title="클릭하면 실제 과정현황으로 이동">'
+                +'<div class="hsr-dash-hint"><i class="fa-solid fa-hand-pointer"></i> 보기 전용 모니터링 · 클릭하면 실제 과정현황으로 들어갑니다</div>'
+                +'<div class="modern-white-card dash-hero-container" style="pointer-events:none; width:100%; margin:0;">'
+                +'<div class="course-hero-banner">'
+                +'<div class="hero-left"><div class="hero-tag">NOW TRAINING</div><h2>'+esc(settings.courseName||'과정명 미정')+'</h2>'
+                +'<div class="hero-info-row"><span class="info-pill"><i class="fa-solid fa-calendar-check"></i> <b>'+esc(settings.period||'-')+'</b></span><span class="info-pill"><i class="fa-solid fa-map-location-dot"></i> <b>'+esc(settings.roomDetailName||settings.roomDetail||('Room '+room))+'</b></span></div></div>'
+                +'<div class="hero-right"><div class="prof-glass-card" style="position:relative;"><div class="prof-avatar"><i class="fa-solid fa-user-tie"></i></div><div class="prof-details"><span class="prof-label">과정 담임</span><div class="prof-name-row"><strong>'+esc(status.professorName||'-')+'</strong> <span>교수님</span></div></div></div>'
+                +'<div class="date-minimal-box" style="color:rgba(255,255,255,0.9)!important; font-weight:800;"><i class="fa-solid fa-user-tie"></i> 과정담당: <span style="margin-left:5px;">'+esc(settings.coordinatorName||'-')+'</span></div></div>'
+                +'</div>'
+                +'<div class="dash-premium-grid">'
+                +'<div class="stat-premium-card card-blue" style="padding:18px;"><div class="card-content combined-stats">'
+                +'<div class="stat-row" style="padding:6px 0;"><span class="card-label">본 과정 수강생 <span style="font-size:11px;color:#94a3b8;font-weight:700;">(예정)</span></span><div class="card-value"><b>'+registered.length+'</b><small>명</small></div></div>'
+                +'<div class="stat-divider"></div>'
+                +'<div class="stat-row" style="padding:8px 0;"><span class="card-label"><i class="fa-solid fa-keyboard" style="color:#0ea5e9; margin-right:5px;"></i>항공기술훈련원 OTP 출결</span><div class="card-value" style="color:#0ea5e9;"><b>'+attn+'</b><small>명</small></div></div>'
+                +'<div class="stat-divider" style="border-top:1px dashed #e2e8f0; margin:2px 0;"></div>'
+                +'<div class="stat-row" style="padding:6px 0;"><span class="card-label">외출/외박 현황 (금일)</span><div class="card-value color-coral"><b>'+activeOut+'</b><small>명</small></div></div>'
+                +'<div class="stat-divider" style="border-top:1px dashed #e2e8f0; margin:2px 0;"></div>'
+                +'<div class="stat-row" style="padding:6px 0;"><span class="card-label">금일 석식 제외 신청</span><div class="card-value" style="color:#10b981;"><b>'+dinner+'</b><small>명</small></div></div>'
+                +'</div></div>'
+                +'<div class="stat-premium-card card-notice-hub"><div class="notice-hub-header"><i class="fa-solid fa-bullhorn"></i> <span>주요 공지 피드</span></div>'
+                +'<div class="notice-hub-content"><div class="notice-item admin"><span class="n-tag">운영</span><p>'+esc(adminNotice||'등록된 운영부 공지가 없습니다.')+'</p></div></div></div>'
+                +'<div class="stat-premium-card card-mint">'
+                +'<div class="stat-row" style="margin-bottom:12px; padding-bottom:12px; border-bottom:1px dashed #e2e8f0;"><span class="card-label-shuttle" style="margin-bottom:0; color:#003366;"><i class="fa-solid fa-tablet-screen-button" style="color:#6366f1; margin-right:5px;"></i>전자기기 대여 신청</span><div class="card-value" style="color:#6366f1;"><b>'+tablet+'</b><small>명</small></div></div>'
+                +'<div class="stat-row" style="margin-bottom:12px; padding-bottom:12px; border-bottom:1px dashed #e2e8f0;"><span class="card-label-shuttle" style="margin-bottom:0; color:#003366;">실시간 Q&A 현황</span><div class="card-value" style="color:#3b82f6;"><b>'+qaCnt+'</b><small>건</small></div></div>'
+                +'<div class="card-label-shuttle" style="color:#003366; margin-bottom:10px;">셔틀 탑승 수요 현황</div>'
+                +'<div style="background:white; padding:15px; border-radius:12px; border:1px solid #e2e8f0;"><div style="font-size:12px; font-weight:800; color:#3b82f6; margin-bottom:12px; display:flex; align-items:center; gap:5px;"><i class="fa-solid fa-bus"></i> 전체 수송 예정 <span style="margin-left:auto; background:#eff6ff; padding:1px 8px; border-radius:4px;">'+shu.length+'명</span></div>'
+                +'<div class="shuttle-scoreboard" style="border:none; padding:0; background:transparent;"><div class="sb-item"><span class="sb-val" style="font-size:22px;">'+sOsong+'</span><span class="sb-txt">오송</span></div><div class="sb-divider" style="height:20px;"></div><div class="sb-item"><span class="sb-val" style="font-size:22px;">'+sTerm+'</span><span class="sb-txt">터미널</span></div><div class="sb-divider" style="height:20px;"></div><div class="sb-item"><span class="sb-val" style="font-size:22px;">'+sAir+'</span><span class="sb-txt">공항</span></div><div class="sb-divider" style="height:20px;"></div><div class="sb-item"><span class="sb-val" style="font-size:22px;">'+sCar+'</span><span class="sb-txt">자차</span></div></div></div>'
+                +'</div>'
+                +'</div>'
+                +'</div>'
+                +'</div>';
         }else if(type==='outing'){
             title='<i class="fa-solid fa-person-walking-arrow-right"></i> 외출·외박 현황';
             actions.sort(function(a,b){return (b.timestamp||0)-(a.timestamp||0);});

@@ -3625,6 +3625,34 @@ body.night-mode .status-badge.status-arrived {
     color: #94a3b8 !important;
 }
 
+/* 카카오 오픈톡방 링크 입력 — 카카오 옐로우 채움(시인성 강조) */
+#pp-kakao, #setup-kakao-link {
+    background-color: #FEE500 !important;
+    color: #3A1D1D !important;
+    border: 1px solid #E6CE00 !important;
+    font-weight: 700 !important;
+}
+#pp-kakao::placeholder, #setup-kakao-link::placeholder {
+    color: #8a7a3a !important;
+    font-weight: 600 !important;
+}
+
+/* 교수 프로필 상세 등록 모달 — 글자·입력창 확대(시인성 개선) */
+#profProfileModal .modal-header h3 { font-size: 21px; }
+#profProfileModal .setting-label {
+    font-size: 13px;
+    text-transform: none;
+    color: #334155;
+    margin-bottom: 5px;
+    display: block;
+    letter-spacing: 0;
+}
+#profProfileModal .setting-input {
+    font-size: 15px !important;
+    padding: 12px 14px !important;
+}
+#profProfileModal .setting-group { margin-bottom: 15px; }
+
 /* admin.css 내 해당 부분 보정 */
 #dashShuttleNotice {
     display: none;
@@ -4446,6 +4474,11 @@ body.in-course #courseSmartRemote.hex-remote-v2{display:block;}
 .hsr-detail-empty{display:flex;align-items:center;justify-content:center;gap:9px;min-height:110px;color:#94a3b8;font-weight:850}.hsr-detail-go{display:flex;margin:14px 0 0 auto;padding:10px 15px;border:0;border-radius:10px;background:#0f4c81;color:#fff;font-weight:900;cursor:pointer}
 .hsr-course-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.hsr-course-grid>div{padding:12px 14px;border:1px solid #e2e8f0;border-radius:12px;background:#fff}.hsr-course-grid span{display:block;color:#94a3b8;font-size:12px;font-weight:850;margin-bottom:4px}.hsr-course-grid b{color:#0f172a;font-size:15px}
 .hsr-kpi-row{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:10px}.hsr-kpi-row>div{display:flex;align-items:baseline;justify-content:center;gap:7px;padding:12px;border-radius:12px;background:#eff6ff;color:#1d4ed8}.hsr-kpi-row b{font-size:23px}.hsr-kpi-row span{font-size:12px;font-weight:900}
+.hsr-dash-monitor{cursor:pointer;position:relative;border-radius:16px;transition:box-shadow .18s,transform .18s}
+.hsr-dash-monitor:hover{box-shadow:0 10px 30px rgba(37,99,235,.18)}
+.hsr-dash-monitor:hover .hsr-dash-hint{background:#1d4ed8}
+.hsr-dash-hint{display:flex;align-items:center;justify-content:center;gap:8px;background:#2563eb;color:#fff;font-weight:800;font-size:13px;padding:10px 14px;border-radius:12px;margin-bottom:12px}
+.hsr-dash-monitor .dash-hero-container{box-shadow:none;border:1px solid #e2e8f0}
 .hsr-notice{margin-top:10px;padding:12px 14px;border-radius:11px;background:#fff7ed;color:#9a3412;font-weight:800}.hsr-notice i{margin-right:8px}
 @media(max-width:1180px){#homeSearchWrap{width:calc(100vw - 48px)}.hsr-actions{grid-template-columns:repeat(2,minmax(0,1fr))}.hsr-btn.primary{grid-column:1/-1}}
 @media(max-width:720px){#homeSearchWrap{width:calc(100vw - 24px)}#homeSearchInput{min-height:68px;font-size:19px;padding-left:54px}.home-search-ico{left:20px;font-size:21px}.hsr-card{padding:18px 16px}.hsr-top{align-items:flex-start;flex-direction:column}.hsr-actions{grid-template-columns:1fr}.hsr-btn.primary{grid-column:auto}.hsr-course-grid{grid-template-columns:1fr}.hsr-table{min-width:620px}}
