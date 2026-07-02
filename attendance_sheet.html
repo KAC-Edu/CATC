@@ -129,16 +129,24 @@ function printSheet() {
     }).from(el).save().then(done).catch(() => { done(); document.title = base; window.print(); });
 }
 
-// [운영부 수동 출석] 아직 처리 안 된 칸 클릭 → 해당 날짜 출석 처리(OTP 미체크 보완). 라이브 방에서만.
+// [운영부 수동 출석] 아직 처리 안 된 칸 클릭 → 해당 날짜 출석 처리(OTP 미체크 보완). 라이브 방·보관(archive) 모두 지원.
 function markCell(td){
   try{
-    if(!SHEET_ROOM || autoSave) return;
+    if(autoSave) return;
     var d=td.getAttribute('data-d'), nm=td.getAttribute('data-n'), ph=td.getAttribute('data-p')||'';
     if(!d||!nm) return;
-    if(!confirm('['+nm+'] '+d+'\n이 교육생을 출석으로 처리할까요?\n\n※ 운영부 직접 처리(OTP 미체크 보완)로 기록됩니다.')) return;
     var key=(nm+'_'+ph).replace(/[.#$\[\]\/]/g,'_');
-    firebase.database().ref('courses/'+SHEET_ROOM+'/internal_attendance/'+d+'/'+key)
+    var path;
+    if(window._archiveMode && window._archiveId){ path='system/course_archive/'+window._archiveId+'/internal_attendance/'+d+'/'+key; }
+    else if(SHEET_ROOM){ path='courses/'+SHEET_ROOM+'/internal_attendance/'+d+'/'+key; }
+    else return;
+    if(!confirm('['+nm+'] '+d+'\n이 교육생을 출석으로 처리할까요?\n\n※ 운영부 직접 처리(OTP 미체크 보완)로 기록됩니다.')) return;
+    firebase.database().ref(path)
       .set({ name:nm, phone:ph, manual:true, src:'coord', ts:Date.now() })
+      .then(function(){
+        // 클릭한 칸을 즉시 '출석 + 직접처리'로 갱신(보관 모드는 실시간 리스너가 없으므로 필수)
+        try{ td.className=''; td.removeAttribute('onclick'); td.title='운영부 직접 처리'; td.innerHTML='<div class="att-in"><div class="stamp stamp-manual">출석</div><div class="att-auth manual">직접처리</div></div>'; }catch(_){}
+      })
       .catch(function(e){ alert('출석 처리 실패: '+((e&&e.message)||'')); });
   }catch(e){ alert('오류: '+((e&&e.message)||'')); }
 }
@@ -151,7 +159,7 @@ async function init() {
     if (_archiveId) {
         const arSnap = await db.ref('system/course_archive/' + _archiveId).once('value');
         const ar = arSnap.val() || {};
-        SHEET_ROOM = null; window._archiveMode = true; window._archiveExpected = ar.expectedStudents || null;
+        SHEET_ROOM = null; window._archiveMode = true; window._archiveId = _archiveId; window._archiveExpected = ar.expectedStudents || null;
         HEADER.courseName = ar.courseName || '지난 과정'; HEADER.period = ar.period || '-'; HEADER.coordName = ar.coord || '-'; HEADER.profName = ar.prof ? ar.prof + ' 교수' : '-';
         dateArray = generateDates(ar.period || '');
         renderTable(ar.students || {}, ar.internal_attendance || {});
@@ -223,7 +231,7 @@ async function init() {
         if (!root) return;
         root.innerHTML = "";
         // [운영부 수동 출석] 라이브 방(archive/인쇄 아님)에서만 빈 칸 클릭 마킹 허용
-        _canMark = !!SHEET_ROOM && !autoSave;
+        _canMark = !autoSave && (!!SHEET_ROOM || !!window._archiveId);
         _todayStr = (function(){ var t=new Date(); return t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0'); })();
         try { var _mh=document.getElementById('markHint'); if(_mh) _mh.style.display = _canMark ? 'block' : 'none'; } catch(e){}
 
@@ -416,7 +424,7 @@ async function init() {
 
 
 <style>@media print{#__ver{display:none!important}}</style>
-<div id="__ver" style="position:fixed;right:7px;bottom:7px;z-index:2147483000;background:rgba(15,23,42,.72);color:#cbd5e1;font:700 10px/1 monospace;padding:4px 8px;border-radius:7px;pointer-events:none;letter-spacing:.3px;">출석부 vD · 빈칸클릭 수동출석·OTP인증표기</div>
+<div id="__ver" style="position:fixed;right:7px;bottom:7px;z-index:2147483000;background:rgba(15,23,42,.72);color:#cbd5e1;font:700 10px/1 monospace;padding:4px 8px;border-radius:7px;pointer-events:none;letter-spacing:.3px;">출석부 vE · 빈칸클릭 수동출석(라이브·보관 모두)·OTP인증표기</div>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
 <div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vA</div>
 </body>

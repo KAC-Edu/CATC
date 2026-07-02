@@ -4466,13 +4466,11 @@ body.in-course #courseSmartRemote.hex-remote-v2{display:block;}
 /* 검색창 5초 길게눌러 위치 조정 */
 #homeSearchWrap.hs-pressing{outline:2px dashed #93c5fd;outline-offset:5px;border-radius:18px;}
 #homeSearchWrap.hs-dragging{outline:2.5px dashed #2563eb;outline-offset:5px;border-radius:18px;box-shadow:0 16px 42px rgba(37,99,235,.35);cursor:grabbing;opacity:.96;}
-/* [강의 안내 보드] 목록 — 커스텀 마커: li 글자크기 따라 커지고, 세로 가운데 정렬 */
-#boardEditor ul,#boardEditor ol{list-style:none;margin:.35em 0;padding-left:1.7em;}
-#boardEditor ol{counter-reset:boardol;}
-#boardEditor li{position:relative;margin:.15em 0;}
-#boardEditor ul>li::before{content:"•";position:absolute;left:-1.05em;top:0;bottom:0;display:flex;align-items:center;line-height:1;}
-#boardEditor ol>li{counter-increment:boardol;}
-#boardEditor ol>li::before{content:counter(boardol) ".";position:absolute;left:-1.6em;top:0;bottom:0;display:flex;align-items:center;line-height:1;font-weight:inherit;}
+/* [강의 안내 보드] 목록 — 기본 마커(한글/워드처럼): 글자 줄에 붙고 글자 크기 따라 함께 커짐, 테두리 밖으로 안 나감 */
+#boardEditor ul{list-style:disc inside;margin:.4em 0;padding-left:.2em;}
+#boardEditor ol{list-style:decimal inside;margin:.4em 0;padding-left:.2em;}
+#boardEditor li{margin:.2em 0;}
+#boardEditor li::marker{font-size:inherit;}
 
 /* [사이트 푸터] 화면 하단 저작권/개발자 표기 (현황판·전체화면 제외) */
 #appFooter{position:fixed;left:0;right:0;bottom:0;z-index:95;text-align:center;padding:9px 16px 10px;background:var(--header-bg);border-top:1px solid rgba(255,255,255,.08);pointer-events:none;user-select:none;}

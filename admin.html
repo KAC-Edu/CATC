@@ -42,7 +42,7 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/ko.js"></script>
-    <link rel="stylesheet" href="admin.css?v=260702Z11">
+    <link rel="stylesheet" href="admin.css?v=260702Z12">
     <link rel="stylesheet" href="kac-tokens.css?v=20260622">
     <link rel="icon" type="image/svg+xml" href="favicon.svg?v=b260620c">
     <script>
@@ -1109,6 +1109,18 @@ body.in-course #moreToggleTab{ display:flex !important; }
                 if(sizePx){ var a=window.getSelection().anchorNode; var li=(a&&a.nodeType===3?a.parentNode:a); while(li && li!==editor && li.tagName!=='LI') li=li.parentNode; if(li && li.tagName==='LI') li.style.fontSize=sizePx; }
                 editor.focus();
             }
+            // Enter로 새 줄을 만들면 이전 줄의 글자 크기를 이어받게 (커서·글자·마커가 그 크기 유지)
+            (function(){
+                var ed=document.getElementById('boardEditor'); if(!ed) return;
+                function blk(n){ if(n&&n.nodeType===3)n=n.parentNode; while(n&&n!==ed&&!/^(LI|P|DIV|H1|H2|H3|BLOCKQUOTE)$/.test(n.tagName||''))n=n.parentNode; return (n&&n!==ed)?n:null; }
+                ed.addEventListener('keydown', function(e){
+                    if(e.key!=='Enter') return;
+                    var sel=window.getSelection(); if(!sel||!sel.rangeCount) return;
+                    var b=blk(sel.anchorNode); var fs=b?b.style.fontSize:'';
+                    if(!fs) return;
+                    setTimeout(function(){ var s2=window.getSelection(); if(!s2||!s2.rangeCount) return; var nb=blk(s2.anchorNode); if(nb && !nb.style.fontSize) nb.style.fontSize=fs; }, 0);
+                });
+            })();
             </script>
         </div>
         <!-- ══════════════════════════════════════════════════════ -->
