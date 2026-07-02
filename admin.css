@@ -4587,6 +4587,9 @@ body:not([data-mode="home"]):not([data-mode="waiting"]) .floating-home-btn{botto
 }
 @keyframes schedUpPulse{ 0%,100%{box-shadow:0 8px 22px rgba(217,119,6,.45);} 50%{box-shadow:0 10px 30px rgba(245,158,11,.75);} }
 #guideScheduleUploadBtn:hover{ filter:brightness(1.08); transform:translateY(-2px); }
+/* [버튼 위치 조정] 3초 길게 눌러 이동 중 표시 */
+#guideRouletteBtn.guidebtn-pressing,#guideScheduleBtn.guidebtn-pressing,#guideScheduleUploadBtn.guidebtn-pressing{ outline:3px dashed rgba(255,255,255,.95); outline-offset:4px; }
+#guideRouletteBtn.guidebtn-dragging,#guideScheduleBtn.guidebtn-dragging,#guideScheduleUploadBtn.guidebtn-dragging{ cursor:grabbing !important; opacity:.94; animation:none !important; filter:brightness(1.05); }
 
 /* [교육 장소] PDF 위 교육동 4칸 오버레이 (셀 위치는 인라인 %로 지정) */
 #guideVenueOverlay{ position:absolute; inset:0; z-index:7; pointer-events:none; container-type:inline-size; }

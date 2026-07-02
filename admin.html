@@ -42,7 +42,7 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/ko.js"></script>
-    <link rel="stylesheet" href="admin.css?v=260702Z41">
+    <link rel="stylesheet" href="admin.css?v=260702Z42">
     <link rel="stylesheet" href="kac-tokens.css?v=20260622">
     <link rel="icon" type="image/svg+xml" href="favicon.svg?v=b260620c">
     <script>
@@ -636,6 +636,97 @@ body.in-course #moreToggleTab{ display:flex !important; }
         </div>
     </div>
 </div>
+
+<script>
+/* [입교안내 버튼 위치 조정] 시간표·룰렛·시간표업로드 버튼을 3초 길게 눌러 드래그로 이동.
+   위치는 Firebase 전역(system/sharedGuide/guideBtnPos)에 %로 저장 → 모든 과정·모든 모니터 공통.
+   localStorage는 오프라인 즉시적용용 캐시. 세 버튼은 같은 자리라 위치 공유. */
+(function(){
+  var FBPATH='system/sharedGuide/guideBtnPos';
+  var LKEY='kac_guideBtnPos';
+  var IDS=['guideRouletteBtn','guideScheduleBtn','guideScheduleUploadBtn'];
+  var curSaved=null;
+  function wrap(){ return document.getElementById('pdfWrapper'); }
+  function applyAll(p){
+    if(!p) return;
+    IDS.forEach(function(id){ var b=document.getElementById(id); if(b){ b.style.left=p.l+'%'; b.style.top=p.t+'%'; b.style.right='auto'; } });
+  }
+  function localGet(){ try{ return JSON.parse(localStorage.getItem(LKEY)||'null'); }catch(e){ return null; } }
+  function localSet(p){ try{ p?localStorage.setItem(LKEY, JSON.stringify(p)):localStorage.removeItem(LKEY); }catch(e){} }
+  function savePos(p){
+    curSaved=p; localSet(p);
+    try{ if(window.firebase && firebase.database) firebase.database().ref(FBPATH).set({l:p.l,t:p.t}); }catch(e){}
+  }
+  // Firebase 전역값 실시간 구독(모든 과정·모니터 공통) — 준비될 때까지 재시도
+  (function subscribe(tries){
+    if(window.firebase && firebase.database){
+      try{
+        firebase.database().ref(FBPATH).on('value', function(s){
+          var v=s.val();
+          if(v && typeof v.l==='number'){ curSaved={l:v.l,t:v.t}; localSet(curSaved); applyAll(curSaved); }
+          else { curSaved=null; localSet(null); }
+        });
+        return;
+      }catch(e){}
+    }
+    if(tries>0) setTimeout(function(){ subscribe(tries-1); }, 800);
+  })(25);
+  function bind(id){
+    var b=document.getElementById(id); if(!b || b._posBound) return; b._posBound=true;
+    var holdTimer=null, dragging=false, sx=0, sy=0, curPos=null;
+    b.style.touchAction='none';
+    b.addEventListener('pointerdown', function(e){
+      if(e.pointerType==='mouse' && e.button!==0) return;
+      dragging=false; curPos=null; sx=e.clientX; sy=e.clientY;
+      clearTimeout(holdTimer);
+      b.classList.add('guidebtn-pressing');
+      holdTimer=setTimeout(function(){
+        dragging=true; b.classList.remove('guidebtn-pressing'); b.classList.add('guidebtn-dragging');
+        try{ b.setPointerCapture(e.pointerId); }catch(_){}
+        if(navigator.vibrate) navigator.vibrate(40);
+      }, 3000);
+    });
+    b.addEventListener('pointermove', function(e){
+      if(!dragging){
+        if(Math.hypot(e.clientX-sx, e.clientY-sy) > 12){ clearTimeout(holdTimer); b.classList.remove('guidebtn-pressing'); }
+        return;
+      }
+      e.preventDefault();
+      var w=wrap(); if(!w) return;
+      var r=w.getBoundingClientRect(); if(!r.width || !r.height) return;
+      var bw=b.offsetWidth, bh=b.offsetHeight;
+      var l=(e.clientX - r.left - bw/2) / r.width * 100;
+      var t=(e.clientY - r.top  - bh/2) / r.height * 100;
+      l=Math.max(0, Math.min(100 - bw/r.width*100, l));
+      t=Math.max(0, Math.min(100 - bh/r.height*100, t));
+      curPos={l:l, t:t};
+      IDS.forEach(function(id){ var x=document.getElementById(id); if(x){ x.style.left=l+'%'; x.style.top=t+'%'; x.style.right='auto'; } });
+    });
+    function end(){
+      clearTimeout(holdTimer);
+      b.classList.remove('guidebtn-pressing','guidebtn-dragging');
+      if(dragging){
+        if(curPos) savePos(curPos);
+        dragging=false;
+        b._suppressClick=true; setTimeout(function(){ b._suppressClick=false; }, 80);
+      }
+    }
+    b.addEventListener('pointerup', end);
+    b.addEventListener('pointercancel', end);
+    b.addEventListener('click', function(e){ if(b._suppressClick){ e.preventDefault(); e.stopPropagation(); } }, true);
+    // 더블클릭으로 위치 초기화(전역)
+    b.addEventListener('dblclick', function(e){ e.preventDefault(); e.stopPropagation();
+      curSaved=null; localSet(null);
+      try{ if(window.firebase && firebase.database) firebase.database().ref(FBPATH).remove(); }catch(_){}
+      IDS.forEach(function(id){ var x=document.getElementById(id); if(x){ x.style.left=''; x.style.top=''; x.style.right=''; } });
+    });
+  }
+  function init(){ IDS.forEach(bind); var c=localGet(); if(c) applyAll(c); }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', init);
+  else init();
+  window.addEventListener('resize', function(){ if(curSaved) applyAll(curSaved); });
+})();
+</script>
 
 
 
