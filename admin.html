@@ -42,7 +42,7 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/ko.js"></script>
-    <link rel="stylesheet" href="admin.css?v=260702Z9">
+    <link rel="stylesheet" href="admin.css?v=260702Z10">
     <link rel="stylesheet" href="kac-tokens.css?v=20260622">
     <link rel="icon" type="image/svg+xml" href="favicon.svg?v=b260620c">
     <script>
@@ -989,7 +989,7 @@ body.in-course #moreToggleTab{ display:flex !important; }
         <p>교육생 앱에 실시간으로 노출될 공지사항을 관리합니다.</p>
     </div>
 
-    <div style="width:100%; max-width:900px; display:flex; flex-direction:column; gap:16px; padding:0 0 50px 0;">
+    <div style="width:100%; max-width:1200px; display:flex; flex-direction:column; gap:16px; padding:0 0 50px 0;">
         <!-- 강의 안내 보드 (리치 텍스트 에디터) -->
         <!-- ══════════════════════════════════════════════════════ -->
         <div class="notice-board-panel" style="background:#fff; border-radius:16px; border:2px solid #7c3aed; overflow:hidden; box-shadow:0 4px 20px rgba(124,58,237,0.10);">
@@ -1004,16 +1004,21 @@ body.in-course #moreToggleTab{ display:flex !important; }
             <div id="boardToolbar" style="padding:10px 14px; background:#f8f5ff; border-bottom:1px solid #ede9fe; display:flex; flex-wrap:nowrap; gap:5px; align-items:center;">
 
                 <!-- 크기 선택 -->
-                <select onchange="document.execCommand('fontSize', false, this.value); this.value=''; document.getElementById('boardEditor').focus();"
+                <select onchange="boardSetSize(this.value); this.value=''; document.getElementById('boardEditor').focus();"
+                    title="글자 크기(px) — 목록 번호도 함께 커집니다"
                     style="height:32px; border:1.5px solid #ddd; border-radius:7px; padding:0 8px; font-size:13px; cursor:pointer; flex-shrink:0;">
-                    <option value="">크기</option>
-                    <option value="1">아주 작게</option>
-                    <option value="2">작게</option>
-                    <option value="3">보통</option>
-                    <option value="4">크게</option>
-                    <option value="5">더 크게</option>
-                    <option value="6">아주 크게</option>
-                    <option value="7">최대</option>
+                    <option value="">크기(px)</option>
+                    <option value="16">16</option>
+                    <option value="20">20</option>
+                    <option value="24">24</option>
+                    <option value="28">28</option>
+                    <option value="32">32</option>
+                    <option value="40">40</option>
+                    <option value="48">48</option>
+                    <option value="56">56</option>
+                    <option value="64">64</option>
+                    <option value="72">72</option>
+                    <option value="88">88</option>
                 </select>
 
                 <!-- 색상 드롭다운 -->
@@ -1081,6 +1086,21 @@ body.in-course #moreToggleTab{ display:flex !important; }
             <div style="padding:8px 20px 12px; font-size:11px; color:#94a3b8; text-align:right;">
                 마지막 저장: <span id="boardLastSaved">없음</span>
             </div>
+            <script>
+            // [강의 안내 보드] px 크기 적용 — 선택한 줄/목록 항목(블록)에 글자크기를 줘서 목록 번호(1.2.3.)도 함께 커지게
+            function boardSetSize(px){
+                px = parseInt(px, 10); if(!px) return;
+                var editor = document.getElementById('boardEditor'); if(!editor) return; editor.focus();
+                var sel = window.getSelection(); if(!sel || !sel.rangeCount) return;
+                var range = sel.getRangeAt(0);
+                function blockOf(n){ if(n && n.nodeType===3) n=n.parentNode; while(n && n!==editor && !/^(LI|P|DIV|H1|H2|H3|BLOCKQUOTE)$/.test(n.tagName||'')) n=n.parentNode; return (n && n!==editor)?n:null; }
+                var blocks=[]; var pushB=function(b){ if(b && blocks.indexOf(b)<0) blocks.push(b); };
+                pushB(blockOf(range.startContainer)); pushB(blockOf(range.endContainer));
+                if(!range.collapsed){ var all=editor.querySelectorAll('li,p,div,h1,h2,h3,blockquote'); for(var i=0;i<all.length;i++){ try{ if(range.intersectsNode(all[i])) pushB(all[i]); }catch(e){} } }
+                if(blocks.length){ blocks.forEach(function(el){ el.style.fontSize = px+'px'; }); }
+                else { document.execCommand('fontSize', false, '7'); var fs=editor.querySelectorAll('font[size="7"]'); for(var j=0;j<fs.length;j++){ fs[j].removeAttribute('size'); fs[j].style.fontSize = px+'px'; } }
+            }
+            </script>
         </div>
         <!-- ══════════════════════════════════════════════════════ -->
 
@@ -2601,7 +2621,7 @@ function setupAcc(btn){
 
 
 
-    <script src="admin.js?v=260702Z9"></script>
+    <script src="admin.js?v=260702Z10"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
 <!-- ── 화면 자동 맞춤(auto-fit): 가로+세로 모두 화면에 맞게 자동 축소 · JDS260613 ──
      원인: Windows 디스플레이 배율(125%/150%)·저해상도 화면에서 유효 뷰포트가 작아져

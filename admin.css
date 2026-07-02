@@ -4466,6 +4466,9 @@ body.in-course #courseSmartRemote.hex-remote-v2{display:block;}
 /* 검색창 5초 길게눌러 위치 조정 */
 #homeSearchWrap.hs-pressing{outline:2px dashed #93c5fd;outline-offset:5px;border-radius:18px;}
 #homeSearchWrap.hs-dragging{outline:2.5px dashed #2563eb;outline-offset:5px;border-radius:18px;box-shadow:0 16px 42px rgba(37,99,235,.35);cursor:grabbing;opacity:.96;}
+/* [강의 안내 보드] 목록 렌더링 — 번호/글머리표는 li 글자크기를 따라 커짐 */
+#boardEditor ul,#boardEditor ol{padding-left:1.5em;margin:.35em 0;}
+#boardEditor li{margin:.15em 0;}
 
 /* [사이트 푸터] 화면 하단 저작권/개발자 표기 (현황판·전체화면 제외) */
 #appFooter{position:fixed;left:0;right:0;bottom:0;z-index:95;text-align:center;padding:9px 16px 10px;background:var(--header-bg);border-top:1px solid rgba(255,255,255,.08);pointer-events:none;user-select:none;}
