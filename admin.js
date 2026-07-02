@@ -7687,7 +7687,8 @@ init: function() {
             if (gi.evaluation) ci.evaluation = gi.evaluation; // 기본값: 없음(근태10%)
             slot.pagePos = set.guidePagePos || {};            // 삽입 페이지 수동 위치
             slot.pageEnable = set.guidePageEnable || {};      // 오픈톡방 QR·채널안내 표시 여부(체크박스)
-            slot.venuePick = set.venuePick || {};             // 교육장소 페이지 강의실 선택 (셀 index → 강의실)
+            slot.venuePick = set.venuePick || {};             // 교육장소 페이지 강의실 선택 (셀 index → 강의실) — 수동/공유
+            slot.roomDetailName = set.roomDetailName || '';   // 과정 강의실(연간계획/과정현황 설정값) — 자동 표시용 폴백
             slot.venuePage = Number(set.guideVenuePage) || 14; // 교육장소 오버레이가 뜰 PDF 페이지 (기본 14)
         } catch (e) {}
         // 교육 인원 = 실제 입교완료(QR 입장) 인원 수 (수강생 현황의 '입교 완료'와 동일)
@@ -12239,6 +12240,16 @@ ui.renderVenueOverlay = function(){
   var slot = (typeof guideMgr!=='undefined') ? guideMgr._slot() : {};
   var pick = (slot && slot.venuePick) || {};
   var NC = (guideMgr._venueCells ? guideMgr._venueCells.length : 3);
+  // [자동 강의실] 수동 선택(venuePick)이 없으면, 과정 강의실(연간계획/과정현황의 roomDetailName)로 자동 표시
+  var _hasManual=false; for(var _mk in pick){ if(pick[_mk]){ _hasManual=true; break; } }
+  if(!_hasManual){
+    var _rd = (slot && slot.roomDetailName) ? String(slot.roomDetailName).trim() : '';
+    if(_rd && guideMgr._venueCells){
+      for(var _ci=0;_ci<guideMgr._venueCells.length;_ci++){
+        if(_rd.indexOf(guideMgr._venueCells[_ci].filter) >= 0){ pick = {}; pick[_ci] = _rd; break; }
+      }
+    }
+  }
   var selIdx = -1; for(var k=0;k<NC;k++){ if(pick[k]){ selIdx=k; break; } }   // 선택된 칸(첫 번째 하나만)
   var hasSel = selIdx >= 0;
   var html = '';
