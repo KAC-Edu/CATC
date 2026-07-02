@@ -5541,3 +5541,7 @@ body.night-mode .side-rail-lbl{ color:#cbd5e1; }
         letter-spacing: 9px !important;
     }
 }
+
+/* [Z37] 홈 검색 — 카카오 오픈톡방 등록 교수 배지(연한 노랑) */
+.hsr-prof.has-kakao{background:#fef9c3;border-color:#fde047;color:#854d0e;box-shadow:0 2px 6px rgba(202,138,4,.18);}
+.hsr-prof.has-kakao:hover{background:#fef08a;box-shadow:0 4px 12px rgba(202,138,4,.3);}

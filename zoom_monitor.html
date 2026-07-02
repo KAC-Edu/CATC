@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="ko">
-<!-- PLATFORM_EDIT_STATUS: 수정아닙니다 | VERSION: Z6 | 2026-07-02
+<!-- PLATFORM_EDIT_STATUS: 수정아닙니다 | VERSION: Z7 | 2026-07-02 (Z7: 과정별 zoomMeeting 자동 로딩/저장 — 회의번호·암호 한 번 입력하면 계속 자동 입력)
      zoom_monitor.html — ZOOM 출석 모니터링 (강사플랫폼 연동)
      Z6: 수강생 현황과 동일한 밝은 카드/테이블 디자인으로 전면 리디자인.
          타일 배치판·임시보관석·드래그 제거 → 간결한 표 형태.
@@ -474,6 +474,9 @@ async function joinMeeting(){
     await client.join(joinOpt);
     joined=true;setConn(true);
     msg('ok','✅ 봇 입장 완료. 실시간 카운팅 시작.');
+    // [Z7] 입장 성공한 회의 정보를 과정에 저장 → 다음부터 자동 입력 (규칙 미허용 시 조용히 무시)
+    if(ROOM&&fbReady()){try{firebase.database().ref('courses/'+ROOM+'/zoomMeeting')
+      .set({no:mn,pw:pw,updatedAt:Date.now()}).catch(()=>{});}catch(e){}}
     document.getElementById('leaveBtn').style.display='block';btn.style.display='none';
     setTimeout(rescanAll,1500);
     setInterval(()=>{if(joined)rescanAll();},15000);
@@ -800,6 +803,15 @@ function loadRoomRoster(manual){
     if(manual)toast(`입교등록 명단 ${roster.length}명 동기화 완료`);
   }).catch(err=>{console.error(err);if(manual)toast('명단을 불러오지 못했습니다: '+err.message);});
 }
+function loadZoomMeeting(){   // [Z7] 과정에 저장된 회의번호/암호 자동 입력
+  if(!ROOM||!fbReady())return;
+  firebase.database().ref('courses/'+ROOM+'/zoomMeeting').once('value').then(snap=>{
+    const z=snap.val()||{};
+    if(z.no){sv('mtgNo',String(z.no));}
+    if(z.pw!==undefined&&z.pw!==null){sv('mtgPw',String(z.pw));}
+    if(z.no)toast('저장된 회의 정보를 불러왔습니다');
+  }).catch(()=>{});
+}
 function loadCourseInfo(){
   if(!ROOM||!fbReady())return;
   firebase.database().ref('courses/'+ROOM+'/settings').once('value').then(snap=>{
@@ -819,8 +831,9 @@ if(ROOM){
   if(fbReady()){
     loadCourseInfo();
     loadRoomRoster(false);
+    loadZoomMeeting();
   }else{
-    setTimeout(()=>{if(fbReady()){loadCourseInfo();loadRoomRoster(false);}
+    setTimeout(()=>{if(fbReady()){loadCourseInfo();loadRoomRoster(false);loadZoomMeeting();}
       else toast('강사플랫폼 연동 실패 — 파일 업로드로 명단을 넣어주세요');},1200);
   }
   if(!v('sdkKey')||!v('sdkSecret'))openSettings();

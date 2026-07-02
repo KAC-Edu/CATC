@@ -1,8 +1,8 @@
 /* ============================================================
-   PLATFORM_EDIT_STATUS: 수정완료 | VERSION: J4 | 2026-07-02 (J4: ZOOM 모니터링 iframe 높이를 body zoom 배율 보정해 실제 화면에 맞춤 — 설정 패널 잘림 해소, 리사이즈 대응. (J3: ui.openZoomMonitor 추가 — ZOOM 모니터링을 내장 뷰(iframe)로 열고 과정 전환 시 확인 후 재로딩, 온라인 판별 토글에 더보기 메뉴 항목 포함) (J2: ①ZOOM 모니터링 버튼 표시로직 재적용(온라인 과정 판별) ②강의실 초기화 confirm에 삭제범위 안내 추가 ③QR 요소없음 개발자문구 교체 ④toggleNightMode/addSubject 널가드 — 구버전 잔재 안전화)
+   PLATFORM_EDIT_STATUS: 수정완료 | VERSION: J5 | 2026-07-02 (J5: ①ZOOM 버튼 과정현황 장소 옆으로+오프라인 완전숨김(방전환 기본숨김·온라인 가드) ②iframe 사이징 실측기반 재작성 ③온라인 장소 저장 시 회의번호/암호 과정별 저장(askZoomMeetingInfo) ④홈검색 카카오등록 교수 노란배지 ⑤퇴교차량 칩 인라인 펼침. (J4: ZOOM 모니터링 iframe 높이를 body zoom 배율 보정해 실제 화면에 맞춤 — 설정 패널 잘림 해소, 리사이즈 대응. (J3: ui.openZoomMonitor 추가 — ZOOM 모니터링을 내장 뷰(iframe)로 열고 과정 전환 시 확인 후 재로딩, 온라인 판별 토글에 더보기 메뉴 항목 포함) (J2: ①ZOOM 모니터링 버튼 표시로직 재적용(온라인 과정 판별) ②강의실 초기화 confirm에 삭제범위 안내 추가 ③QR 요소없음 개발자문구 교체 ④toggleNightMode/addSubject 널가드 — 구버전 잔재 안전화)
    CATC · 강사 플랫폼 로직  (admin.js)
    STATUS    수정안하는중
-   @version  J4
+   @version  J5
    @build    20260702-검색초기화위치수정
    ------------------------------------------------------------
    [코드 수정 규칙 · AI/개발자 공통]
@@ -2469,6 +2469,10 @@ loadDashboardStats: function() {
     window.dashRefs = refs; // 전역 보관 → 다음 방 전환 시 off() 가능
 
     // 2. 과정 정보 및 장소 실시간 업데이트
+    // [J5] 방 전환 시 ZOOM 관련 UI는 기본 숨김 — 온라인 과정으로 확인된 경우에만 아래 리스너에서 표시
+    window._zoomRoomOnline = false;
+    try { var _zb0=document.getElementById('dashZoomBtn'); if(_zb0) _zb0.style.display='none';
+          var _zm0=document.getElementById('more-zoom-monitor'); if(_zm0) _zm0.style.display='none'; } catch(e){}
     refs.settings.on('value', snap => {
         if (state.room !== room) return;
         const s = snap.val() || {};
@@ -2479,7 +2483,12 @@ loadDashboardStats: function() {
         if (document.getElementById('dashPeriod')) document.getElementById('dashPeriod').innerText = s.period || "기간 미설정";
         if (document.getElementById('dashRoomDetail')) document.getElementById('dashRoomDetail').innerText = s.roomDetailName || "장소 미설정";
         // [ZOOM 모니터링 J2] 과정 장소가 온라인(Zoom)일 때만 출결 관리 화면의 ZOOM 모니터링 버튼 노출
-        try { var _zmOn = (/온라인|zoom/i.test(String(s.roomDetailName || ''))); var _zmBtn = document.getElementById('btn-zoom-monitor'); if (_zmBtn) _zmBtn.style.display = _zmOn ? '' : 'none'; var _zmMore = document.getElementById('more-zoom-monitor'); if (_zmMore) _zmMore.style.display = _zmOn ? '' : 'none'; } catch(e){}
+        try {
+            var _zmOn = (/온라인|zoom/i.test(String(s.roomDetailName || '')));
+            window._zoomRoomOnline = _zmOn;
+            var _zmDash = document.getElementById('dashZoomBtn'); if (_zmDash) _zmDash.style.display = _zmOn ? '' : 'none';
+            var _zmMore = document.getElementById('more-zoom-monitor'); if (_zmMore) _zmMore.style.display = _zmOn ? '' : 'none';
+        } catch(e){}
         if (document.getElementById('dashCoordName')) {
             // Firebase 저장값(표기 차이 가능)을 명단의 정식 이름으로 매칭하여 전체 이름 표시
             const savedCoord = s.coordinatorName || '';
@@ -3704,17 +3713,21 @@ openQrModal: function() {
         try {
             var fr = document.getElementById('zoomMonitorFrame');
             if (!fr || fr.offsetParent === null) return;
-            var z = parseFloat(getComputedStyle(document.body).zoom) || 1;
-            var top = fr.getBoundingClientRect().top;      // zoom 반영된 화면(visual) 좌표
-            var availVisual = window.innerHeight - top - 14;
-            if (availVisual < 420) availVisual = 420;
-            fr.style.height = (availVisual / z) + 'px';    // CSS px로 환산
+            // [J5] zoom/transform 환경에서도 정확하도록 실측: 현재 CSS 높이 대비 화면 렌더 높이 비율(scale)을 직접 측정
+            var rect = fr.getBoundingClientRect();
+            var cssH = parseFloat(fr.style.height) || fr.clientHeight || 1;
+            var scale = (rect.height > 1 && cssH > 1) ? (rect.height / cssH) : 1;
+            var availVisual = window.innerHeight - rect.top - 14;   // 화면(visual) 기준 남은 높이
+            var minVisual = 420 * scale;
+            if (availVisual < minVisual) availVisual = minVisual;
             fr.style.minHeight = '0';
+            fr.style.height = (availVisual / scale) + 'px';         // CSS px로 환산해 지정
         } catch(e) {}
     },
     openZoomMonitor: function() {
         try {
             if (!state.room) { ui.showAlert('강의실을 먼저 선택해 주세요.'); return; }
+            if (window._zoomRoomOnline === false) { ui.showAlert('이 과정은 온라인(Zoom) 과정이 아닙니다.\n과정현황에서 장소를 온라인(Zoom)으로 설정하면 사용할 수 있습니다.'); return; }
             var fr = document.getElementById('zoomMonitorFrame');
             if (fr) {
                 var cur = fr.getAttribute('data-room') || '';
@@ -3729,6 +3742,7 @@ openQrModal: function() {
             ui.setMode('zoom-monitor');
             // [J4] 표시 후 실제 가용 높이로 iframe 크기 보정 (+ 창 크기 변경 대응)
             setTimeout(function(){ ui._sizeZoomFrame(); }, 60);
+            setTimeout(function(){ ui._sizeZoomFrame(); }, 400);
             if (!ui._zoomFrameResizeHooked) {
                 ui._zoomFrameResizeHooked = true;
                 window.addEventListener('resize', function(){ ui._sizeZoomFrame(); });
@@ -5914,8 +5928,9 @@ resetShuttleRequests: function() {
             var assigned=0; try{ rosterNames.forEach(function(n){ if(assignedSet[nn(n)]) assigned++; }); }catch(e){}
             var outing=0; try{ var acts=r.admin_actions||{}; Object.keys(acts).forEach(function(dt){ var day=acts[dt]||{}; Object.keys(day).forEach(function(id){ var a=day[id]; if(a&&(a.type==='outing'||a.type==='overnight'||a.type==='group_outing')&&!(a.returned===true||a.returnReportTime)) outing++; }); }); }catch(e){}
             var depart=0; try{ var req=(r.shuttle&&r.shuttle.requests)||{}; depart=Object.keys(req).length; }catch(e){}
+            var kakaoOn=false; try{ kakaoOn=!!(settings.kakaoLink&&String(settings.kakaoLink).trim()); }catch(e){}   // [J5] 오픈톡방 등록 여부
             window._homeSearchDetailData[room]={roomData:r,roster:rosterList};
-            results.push({room:room, course:course||'(과정명 미정)', period:period, prof:prof, cnt:cnt, planned:planned, assigned:assigned, outing:outing, depart:depart});
+            results.push({room:room, course:course||'(과정명 미정)', period:period, prof:prof, cnt:cnt, planned:planned, assigned:assigned, outing:outing, depart:depart, kakao:kakaoOn});
         });
         var e=ui._esc;
         if(!results.length){
@@ -5929,10 +5944,10 @@ resetShuttleRequests: function() {
             if(x.planned) chips.push(ichip('fa-clipboard-user','#0ea5e9','예정',x.planned+'명',e(x.room),'students'));
             if(x.assigned) chips.push(ichip('fa-bed','#9333ea','기숙사',x.assigned+'명',e(x.room),'dormitory'));
             if(x.outing) chips.push(ichip('fa-person-walking-arrow-right','#f43f5e','외출·외박',x.outing+'건',e(x.room),'admin-action'));
-            if(x.depart) chips.push(ichip('fa-bus','#16a34a','퇴교차량',x.depart+'건',e(x.room),'shuttle'));
+            if(x.depart) chips.push('<span class="hsr-chip" onclick="event.stopPropagation();ui.toggleHomeSearchDetail(\''+e(x.room)+'\',\'shuttle\',event)" title="퇴교차량 신청현황 바로 보기"><i class="fa-solid fa-bus" style="color:#16a34a"></i>퇴교차량 <b>'+x.depart+'건</b></span>');   // [J5] 인라인 펼침
             var infoHtml = chips.length ? ('<div class="hsr-info">'+chips.join('')+'</div>') : '';
             return '<div class="hsr-card" data-room="'+e(x.room)+'">'
-                +'<div class="hsr-top"><span class="hsr-course"><i class="fa-solid fa-file-pdf"></i>'+e(x.course)+' · 입교안내</span><span class="hsr-prof" title="클릭하면 교수 프로필 편집" onclick="event.stopPropagation();ui._openProfFromSearch(\''+e(x.prof||'')+'\')"><i class="fa-solid fa-user-tie"></i> '+e(x.prof||'-')+' 교수<i class="fa-solid fa-pen hsr-prof-edit"></i></span></div>'
+                +'<div class="hsr-top"><span class="hsr-course"><i class="fa-solid fa-file-pdf"></i>'+e(x.course)+' · 입교안내</span><span class="hsr-prof'+(x.kakao?' has-kakao':'')+'" title="'+(x.kakao?'오픈톡방 등록됨 · ':'')+'클릭하면 교수 프로필 편집" onclick="event.stopPropagation();ui._openProfFromSearch(\''+e(x.prof||'')+'\')"><i class="fa-solid fa-user-tie"></i> '+e(x.prof||'-')+' 교수<i class="fa-solid fa-pen hsr-prof-edit"></i></span></div>'
                 +'<div class="hsr-meta">'+(x.period?'<span class="hsr-date"><i class="fa-regular fa-calendar-check"></i> '+e(x.period)+'</span>':'')+'<span class="hsr-metachip">'+studInfo+'</span><span class="hsr-metachip">Room '+e(x.room)+'</span></div>'
                 +infoHtml
                 +'<div class="hsr-actions" onclick="event.stopPropagation();">'
@@ -11876,8 +11891,31 @@ ui.saveFieldEdit = async function(){
     if(!cv){ if(msg)msg.textContent='과정명을 입력하세요.'; return; }
     updates['courses/'+room+'/settings/courseName']=cv;
   } else return;
-  try{ await firebase.database().ref().update(updates); ui.closeFieldEdit(); ui.showAlert('✅ 저장되었습니다. 모든 화면에 반영됩니다.'); }
+  try{
+    await firebase.database().ref().update(updates); ui.closeFieldEdit(); ui.showAlert('✅ 저장되었습니다. 모든 화면에 반영됩니다.');
+    // [J5] 장소를 온라인(Zoom)으로 저장하면 이어서 회의번호/암호를 과정에 저장 (모니터링에서 자동 입력)
+    if(f==='roomDetail'){
+      var _rd=String(updates['courses/'+room+'/settings/roomDetailName']||'');
+      if(/온라인|zoom/i.test(_rd)) setTimeout(function(){ ui.askZoomMeetingInfo(room); }, 450);
+    }
+  }
   catch(err){ if(msg)msg.textContent='저장 중 오류가 발생했습니다.'; }
+};
+
+// [J5] ZOOM 회의번호/암호를 과정별로 저장 — zoom_monitor가 자동으로 불러와 입력함
+ui.askZoomMeetingInfo = async function(room){
+  if(!room) return;
+  var cur={};
+  try{ var s=await firebase.database().ref('courses/'+room+'/zoomMeeting').get(); cur=s.val()||{}; }catch(e){}
+  var no=prompt('이 과정의 ZOOM 회의 번호를 입력하세요.\n(한 번 저장하면 모니터링에서 자동 입력됩니다. 건너뛰려면 취소)', cur.no||'');
+  if(no===null) return;                       // 취소 → 기존값 유지
+  no=String(no).replace(/[^\d]/g,'');
+  var pw=prompt('ZOOM 회의 암호를 입력하세요. (없으면 비워두고 확인)', cur.pw||'');
+  if(pw===null) return;
+  try{
+    await firebase.database().ref('courses/'+room+'/zoomMeeting').set({ no:no, pw:String(pw).trim(), updatedAt:Date.now() });
+    ui.showAlert('✅ ZOOM 회의 정보가 저장되었습니다.\nZOOM 모니터링에서 자동으로 입력됩니다.');
+  }catch(err){ ui.showAlert('⚠️ ZOOM 회의 정보 저장 실패: '+(err&&err.message||err)+'\n(Firebase 규칙에 zoomMeeting 노드 허용이 필요할 수 있습니다)'); }
 };
 
 // ===== 도움이 되는 소식: 항기원 맛집 (강사 뷰) =====
