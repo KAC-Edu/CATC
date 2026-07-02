@@ -3007,44 +3007,44 @@ body.night-mode .header-room-badge { background-color: #003366 !important; borde
 /* [수정] 메인 스테이지 기준 하단 중앙 정렬 */
 /* [개편] 우측 하단 플로팅 홈 버튼 — 평소엔 원형 U턴 아이콘, 마우스 올리면 '홈으로' 라벨이 펼쳐짐 */
 .floating-home-btn {
-    position: fixed;       /* 뷰포트 하단 중앙 고정 */
-    left: 50%;
-    right: auto;
-    bottom: 28px;
-    transform: translateX(-50%);
-    height: auto;
-    width: auto;
-    padding: 12px 28px;
-    background: linear-gradient(135deg, #1e3a8a 0%, #0f172a 100%);
-    color: #fff;
-    border-radius: 50px;
+    /* 콘텐츠(.content-area) 맨 끝에 흐름 배치 → 게시글 바로 아래 중앙 */
     display: none;         /* JS에서 flex로 제어 */
     align-items: center;
     justify-content: center;
+    gap: 9px;
+    margin: 14px 0 96px;   /* 위: 콘텐츠와 간격 / 아래: 하단바 여유 */
+    padding: 12px 30px;
+    background: linear-gradient(135deg, #1e3a8a 0%, #0f172a 100%);
+    color: #fff;
+    border-radius: 50px;
     cursor: pointer;
-    box-shadow: 0 10px 28px rgba(15, 23, 42, 0.42);
-    z-index: 9999;
+    box-shadow: 0 8px 22px rgba(15, 23, 42, 0.30);
     transition: transform 0.18s ease, box-shadow 0.2s ease, background 0.2s ease;
     border: 1px solid rgba(255, 255, 255, 0.18);
     white-space: nowrap;
+    flex: 0 0 auto;        /* .content-area(flex column)에서 세로 늘어남 방지 */
+}
+
+.floating-home-btn .fh-icon {
+    width: 19px;
+    height: 19px;
+    display: block;
 }
 
 .floating-home-btn span {
     font-size: 15px;
     font-weight: 800;
     letter-spacing: .3px;
-    opacity: 1;
-    max-width: none;
 }
 
 .floating-home-btn:hover {
-    transform: translateX(-50%) translateY(-3px);
+    transform: translateY(-3px);
     background: linear-gradient(135deg, #2563eb 0%, #1e293b 100%);
-    box-shadow: 0 16px 38px rgba(15, 23, 42, 0.52);
+    box-shadow: 0 14px 32px rgba(15, 23, 42, 0.42);
 }
 
 .floating-home-btn:active {
-    transform: translateX(-50%) translateY(-1px) scale(0.97);
+    transform: translateY(-1px) scale(0.97);
 }
 
 /* OTP 카운트다운: 마지막 10초 긴급 펄스 */
@@ -4036,7 +4036,9 @@ body.in-course #courseSmartRemote { display: block; }
     left: 0;
     width: 100%;
     height: 100%;
-    background: rgba(0,0,0,0.45);
+    background: rgba(15,23,42,0.42);
+    -webkit-backdrop-filter: blur(7px);
+    backdrop-filter: blur(7px);   /* 팝업 뒤 현황판 블러 처리 */
     z-index: 9000;
     display: none;
     align-items: center;

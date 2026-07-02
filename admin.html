@@ -42,7 +42,7 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/ko.js"></script>
-    <link rel="stylesheet" href="admin.css?v=260702Z14">
+    <link rel="stylesheet" href="admin.css?v=260702Z15">
     <link rel="stylesheet" href="kac-tokens.css?v=20260622">
     <link rel="icon" type="image/svg+xml" href="favicon.svg?v=b260620c">
     <script>
@@ -2417,10 +2417,25 @@ function setupAcc(btn){
 
 
 
-<!-- [추가] 우측 하단 플로팅 홈 버튼 -->
+<!-- [추가] 콘텐츠 하단 홈 버튼 (U턴 화살표 + 과정현황) -->
     <div id="floatingHomeBtn" class="floating-home-btn" onclick="ui.goHomeSmart()" title="과정 현황으로" aria-label="과정 현황">
+        <svg class="fh-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <polyline points="8 5 3 10 8 15"></polyline>
+            <path d="M3 10 h10 a7 7 0 0 1 7 7 v2"></path>
+        </svg>
         <span>과정현황</span>
     </div>
+    <script>
+    /* 홈 버튼을 콘텐츠 영역(.content-area) 맨 끝으로 이동 → 게시글 바로 아래 흐름에 표시 */
+    (function(){
+        function place(){
+            var b=document.getElementById('floatingHomeBtn'), c=document.querySelector('.content-area');
+            if(b&&c&&b.parentElement!==c) c.appendChild(b);
+        }
+        if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', place);
+        else place();
+    })();
+    </script>
 
 
 
@@ -2638,7 +2653,7 @@ function setupAcc(btn){
 
 
 
-    <script src="admin.js?v=260702Z14"></script>
+    <script src="admin.js?v=260702Z15"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
 <!-- ── 화면 자동 맞춤(auto-fit): 가로+세로 모두 화면에 맞게 자동 축소 · JDS260613 ──
      원인: Windows 디스플레이 배율(125%/150%)·저해상도 화면에서 유효 뷰포트가 작아져

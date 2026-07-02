@@ -12142,7 +12142,7 @@ ui.closeLeaderRoulette = function(){
   var m=document.getElementById('leaderRouletteModal'); if(m) m.remove();
   ui._wheelSpinning=false;
   try{ if(ui._spinAudio){ ui._spinAudio.pause(); } }catch(e){}
-  var _fh=document.getElementById('floatingHomeBtn'); if(_fh) _fh.style.display='';
+  var _fh=document.getElementById('floatingHomeBtn'); if(_fh) _fh.style.display='flex';
 };
 // 입교안내 23p '학생장 선출'에서 실행 → 오디션 무대 배경 위에서 룰렛 진행 (닫으면 23p로 복귀)
 ui.openLeaderRouletteStage = async function(){
