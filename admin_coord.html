@@ -2,7 +2,7 @@
 <!-- 이 플랫폼(admin_coord.html / 교육운영부) 수정상태 플래그. 값은 [수정중] 또는 [수정안하는중] 두 가지. -->
 <!-- 작업 시작 시 → 수정중 / 작업 완료 시 → 수정안하는중. 다른 플랫폼은 이 말머리를 보고 연동·수정 가능 여부 판단. -->
 <!-- [외부변경 · 카카오채널연동 2026-06-25] 포털(portal.html/7777) 경유 폐지 → 페이지 직접진입 시 접속코드(catc1234) 게이트 추가, 포털 리다이렉트/종료이동 제거. version C13→D13. 기능 로직은 미변경. -->
-<!-- last-updated: 2026-07-02 / version: D47 (교육생 표기 통일 · 리더 명칭 교육생장으로 변경) -->
+<!-- last-updated: 2026-07-02 / version: D48 (강의실목록 강사플랫폼 동기화[소회의실·B전산실·3층회의실·국제동ILS/VCCS/VOR·관제교육동]·대장센터 주차버그 수정 + 교육생 표기통일·리더→교육생장) -->
 <!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -2560,20 +2560,27 @@ body.coord-header-compact.pc-mode #coordHdrStats.coord-hdr-hide{ display:flex !i
                       </optgroup>
                       <optgroup label="하늘관">
                           <option value="하늘관 1층 대강당">하늘관 1층 대강당</option>
+                          <option value="하늘관 1층 소회의실">하늘관 1층 소회의실</option>
                           <option value="하늘관 2층 A강의실">하늘관 2층 A강의실</option>
-                          <option value="하늘관 2층 B강의실">하늘관 2층 B강의실</option>
+                          <option value="하늘관 2층 B강의실 (전산실)">하늘관 2층 B강의실 (전산실)</option>
                           <option value="하늘관 2층 C강의실">하늘관 2층 C강의실</option>
                           <option value="하늘관 2층 D강의실">하늘관 2층 D강의실</option>
                           <option value="하늘관 2층 E강의실">하늘관 2층 E강의실</option>
                           <option value="하늘관 2층 F강의실">하늘관 2층 F강의실</option>
                           <option value="하늘관 2층 G강의실">하늘관 2층 G강의실</option>
+                          <option value="하늘관 3층 회의실">하늘관 3층 회의실</option>
                       </optgroup>
                       <optgroup label="국제동">
                           <option value="국제동 1층 세미나홀">국제동 1층 세미나홀</option>
                           <option value="국제동 1층 A강의실">국제동 1층 A강의실</option>
                           <option value="국제동 1층 B강의실">국제동 1층 B강의실</option>
-                          <option value="국제동 2층 항공정보통신시설 실습실">국제동 2층 실습실</option>
-                          <option value="국제동 2층 VOR/DME/TACAN 실습실">국제동 2층 VOR/DME/TACAN</option>
+                          <option value="국제동 2층 실습실">국제동 2층 ILS 실습실</option>
+                          <option value="국제동 2층 실습실">국제동 2층 VCCS/RADIO/ATIS 실습실</option>
+                          <option value="국제동 2층 VOR/DME/TACAN">국제동 2층 VOR/DME/TACAN 실습실</option>
+                      </optgroup>
+                      <optgroup label="관제교육동">
+                          <option value="관제교육동 1층">관제교육동 1층</option>
+                          <option value="관제교육동 2층">관제교육동 2층</option>
                       </optgroup>
                       <optgroup label="서울">
                           <option value="항공보안교육센터">항공보안교육센터</option>
@@ -8328,23 +8335,34 @@ async function openLedgerCenter(){
   var todayWk=_olMonday(getTodayString());
   var cutD=new Date(todayWk+'T00:00:00'); cutD.setDate(cutD.getDate()-90); var cutWk=_lcMondayStr(cutD);
   var weeks={};
-  function push(wk,obj){ if(!wk||wk<cutWk) return; (weeks[wk]=weeks[wk]||[]).push(obj); }
+  // [주차 버그 수정] 과정 기간이 '걸치는 모든 주'에 넣음(여러 주 과정이 이번주에도 보이도록). 표시범위: 최근 90일~이번주
+  function _weeksOf(start, end){
+    var out=[]; var s=_olMonday(start); if(!s) return out; var e=(end?_olMonday(end):s)||s;
+    var from=(s<cutWk)?cutWk:s, to=(e>todayWk)?todayWk:e;
+    var cur=new Date(from+'T00:00:00'), g=0;
+    while(_lcMondayStr(cur)<=to && g++<80){ var k=_lcMondayStr(cur); if(k>=cutWk&&k<=todayWk) out.push(k); cur.setDate(cur.getDate()+7); }
+    return out;
+  }
+  function pushCourse(start, end, obj){
+    var wks=_weeksOf(start, end);
+    if(!wks.length){ var w0=_olMonday(start); if(w0&&w0>=cutWk&&w0<=todayWk) wks=[w0]; }
+    wks.forEach(function(wk){ var arr=(weeks[wk]=weeks[wk]||[]); if(arr.some(function(x){return x.key===obj.key;})) return; arr.push(obj); });
+  }
   try{
     (_coordActiveRooms()||[]).forEach(function(r){
-      var period=(''+(r.s.period||'')).trim(); var start=period.includes('~')?period.split('~')[0].trim():'';
-      var wk=_olMonday(start)||todayWk;
-      push(wk,{ courseName:r.s.courseName||('Room '+r.rid), period:period, room:r.rid, archiveId:null,
+      var period=(''+(r.s.period||'')).trim();
+      var start=period.includes('~')?period.split('~')[0].trim():''; var end=period.includes('~')?(period.split('~')[1]||'').trim():'';
+      pushCourse(start, end, { courseName:r.s.courseName||('Room '+r.rid), period:period, room:r.rid, archiveId:null,
                 outCount:_olCountActions(r.room.admin_actions), attCount:_lcAttCount(r.room.internal_attendance), key:r.rid+'|'+(r.s.courseName||'') });
     });
   }catch(e){ console.warn('[대장센터] active', e); }
   try{
     var arSnap=await firebase.database().ref('system/course_archive').once('value'); var ar=arSnap.val()||{};
     Object.keys(ar).forEach(function(id){
-      var c=ar[id]||{}; var period=(''+(c.period||'')).trim(); var start=period.includes('~')?period.split('~')[0].trim():'';
-      var wk=_olMonday(start); if(!wk) return;
-      var dupKey=(c.room||'')+'|'+(c.courseName||''); if((weeks[wk]||[]).some(function(x){return x.key===dupKey;})) return;
-      push(wk,{ courseName:c.courseName||('Room '+(c.room||'')), period:period, room:c.room||'', archiveId:id,
-                outCount:_olCountActions(c.admin_actions), attCount:_lcAttCount(c.internal_attendance), key:dupKey });
+      var c=ar[id]||{}; var period=(''+(c.period||'')).trim();
+      var start=period.includes('~')?period.split('~')[0].trim():''; var end=period.includes('~')?(period.split('~')[1]||'').trim():'';
+      pushCourse(start, end, { courseName:c.courseName||('Room '+(c.room||'')), period:period, room:c.room||'', archiveId:id,
+                outCount:_olCountActions(c.admin_actions), attCount:_lcAttCount(c.internal_attendance), key:(c.room||'')+'|'+(c.courseName||'') });
     });
   }catch(e){ console.warn('[대장센터] archive', e); }
   _lcData=weeks;
@@ -8907,7 +8925,7 @@ window.addEventListener('load', function(){
 });
 </script>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:6px;bottom:5px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;font-weight:800;line-height:1;letter-spacing:.6px;color:#fff;background:rgba(15,23,42,.85);padding:4px 8px;border-radius:6px;pointer-events:none;user-select:none;box-shadow:0 2px 6px rgba(0,0,0,.3);">D46</div>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:6px;bottom:5px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;font-weight:800;line-height:1;letter-spacing:.6px;color:#fff;background:rgba(15,23,42,.85);padding:4px 8px;border-radius:6px;pointer-events:none;user-select:none;box-shadow:0 2px 6px rgba(0,0,0,.3);">D48</div>
 <script>
 /* ===== [공용] 종료된 과정 자동 정리 (모든 플랫폼 공통) — 종료일 지난 방을 다음날 미개설로 비움. 브라우저별 하루 1회 ===== */
 window.kacExpireEndedCourses = async function(){

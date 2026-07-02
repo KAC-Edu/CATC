@@ -97,6 +97,7 @@
     let courseInfo = {};
     let dateArray = [];
     let SHEET_ROOM = '';   // [수정] init 외의 함수(renderTable)에서도 방 번호를 참조할 수 있도록 전역 보관
+    let _canMark = false, _todayStr = '';   // [운영부 수동출석] 모듈 스코프 — buildPage(셀 렌더)에서 참조
     let HEADER = { courseName:'', period:'', coordName:'', profName:'' }; // [신규] 주차 페이지 공통 헤더 정보
 
     // 파이어베이스 데이터베이스 참조 (config.js 로드 후 사용 가능)
@@ -222,9 +223,9 @@ async function init() {
         if (!root) return;
         root.innerHTML = "";
         // [운영부 수동 출석] 라이브 방(archive/인쇄 아님)에서만 빈 칸 클릭 마킹 허용
-        const canMark = !!SHEET_ROOM && !autoSave;
-        const todayStr = (function(){ var t=new Date(); return t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0'); })();
-        try { var _mh=document.getElementById('markHint'); if(_mh) _mh.style.display = canMark ? 'block' : 'none'; } catch(e){}
+        _canMark = !!SHEET_ROOM && !autoSave;
+        _todayStr = (function(){ var t=new Date(); return t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0'); })();
+        try { var _mh=document.getElementById('markHint'); if(_mh) _mh.style.display = _canMark ? 'block' : 'none'; } catch(e){}
 
         const uniqueStudentsMap = new Map();
         Object.values(studentsRaw).forEach(s => {
@@ -314,7 +315,7 @@ async function init() {
                     else if (_tm) _sub = `<div class="att-auth">${_tm.replace(/[오전오후\s]/g, '')}</div>`;
                     const _ttl = (_man ? '운영부 직접 처리' : ('OTP 인증 출석' + (_auth ? ' · ' + _auth : '') + (_tm ? ' · ' + _tm : ''))).replace(/"/g, '&quot;');
                     row += `<td title="${_ttl}"><div class="att-in"><div class="stamp${_man ? ' stamp-manual' : ''}">출석</div>${_sub}</div></td>`;
-                } else if (canMark && d <= todayStr) {
+                } else if (_canMark && d <= _todayStr) {
                     const _n = (s.name || '').replace(/"/g, '&quot;');
                     const _p = ('' + (s.phone || '')).replace(/"/g, '&quot;');
                     row += `<td class="att-mark" data-d="${d}" data-n="${_n}" data-p="${_p}" onclick="markCell(this)"><span class="mk-hint" title="클릭하면 출석 처리"><i class="fa-solid fa-hand-pointer"></i></span></td>`;
