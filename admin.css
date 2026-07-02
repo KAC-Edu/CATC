@@ -4431,12 +4431,14 @@ body.in-course #courseSmartRemote.hex-remote-v2{display:block;}
 /* [홈 통합검색] 검색란 + 결과 */
 /* 홈 타이틀 아래 여백 제거 → 검색창 위/아래 간격을 여백만으로 정확히 대칭 (가운데 정렬) */
 #view-home .view-header{margin-bottom:0 !important;}
-#homeSearchWrap{position:relative;width:min(1120px,calc(100vw - 80px));max-width:1120px;margin:34px auto 40px;}
-#homeSearchInput{width:100%;box-sizing:border-box;min-height:82px;padding:24px 64px 24px 66px;border:2px solid #e2e8f0;border-radius:21px;font-size:23px;font-weight:850;color:#0f172a;background:#fff;outline:none;box-shadow:0 8px 28px rgba(15,23,42,.09);transition:border-color .15s,box-shadow .15s;}
-#homeSearchInput::placeholder{color:#94a3b8;font-size:20px;font-weight:750;}
+#homeSearchWrap{position:relative;width:min(860px,calc(100vw - 80px));max-width:860px;margin:34px auto 40px;}
+#homeSearchInput{width:100%;box-sizing:border-box;min-height:70px;padding:18px 60px 18px 60px;border:2px solid #e2e8f0;border-radius:18px;font-size:21px;font-weight:850;color:#0f172a;background:#fff;outline:none;box-shadow:0 8px 28px rgba(15,23,42,.09);transition:border-color .15s,box-shadow .15s;}
+#homeSearchInput::placeholder{color:#94a3b8;font-size:18px;font-weight:750;}
 #homeSearchInput:focus{border-color:#2563eb;box-shadow:0 10px 30px rgba(37,99,235,.16);}
 .home-search-ico{position:absolute;left:25px;top:50%;transform:translateY(-50%);color:#94a3b8;font-size:25px;pointer-events:none;}
-#homeSearchClear{position:absolute;right:19px;top:50%;transform:translateY(-50%);width:38px;height:38px;border:none;border-radius:50%;background:#eef2f7;color:#64748b;font-size:18px;cursor:pointer;display:none;align-items:center;justify-content:center;z-index:30;touch-action:manipulation;user-select:none;}
+#homeSearchClear{position:absolute;right:18px;top:50%;transform:translateY(-50%);width:36px;height:36px;border:none;border-radius:50%;background:#eef2f7;color:#64748b;font-size:17px;cursor:pointer;display:none;align-items:center;justify-content:center;z-index:30;touch-action:manipulation;user-select:none;transition:background .15s,color .15s;}
+#homeSearchClear:hover{background:#e2e8f0;color:#334155;transform:translateY(-50%);}
+#homeSearchClear:active{background:#cbd5e1;color:#1e293b;transform:translateY(-50%);}
 #homeSearchWrap.has-text #homeSearchClear{display:flex;}
 #homeSearchResults{position:absolute;left:0;right:0;top:100%;margin-top:16px;z-index:20;display:flex;flex-direction:column;gap:16px;max-height:calc(100vh - 285px);overflow-y:auto;padding:2px 8px 30px 2px;scrollbar-width:thin;scrollbar-color:#93c5fd transparent;}
 .hsr-card{background:#fff;border:1px solid #dce5f0;border-left:7px solid #2563eb;border-radius:20px;padding:22px 26px;cursor:default;box-shadow:0 10px 28px rgba(15,23,42,.10);transition:transform .12s,box-shadow .12s;text-align:left;}
@@ -4444,9 +4446,13 @@ body.in-course #courseSmartRemote.hex-remote-v2{display:block;}
 .hsr-top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:6px;}
 .hsr-course{font-size:23px;font-weight:950;color:#0f172a;}
 .hsr-course i{color:#ef4444;margin-right:6px;}
-.hsr-prof{font-size:15px;font-weight:900;color:#1d4ed8;white-space:nowrap;background:#eff6ff;border:1px solid #bfdbfe;padding:8px 16px;border-radius:999px;box-shadow:0 2px 6px rgba(37,99,235,.12);}
+.hsr-prof{font-size:15px;font-weight:900;color:#1d4ed8;white-space:nowrap;background:#eff6ff;border:1px solid #bfdbfe;padding:8px 16px;border-radius:999px;box-shadow:0 2px 6px rgba(37,99,235,.12);cursor:pointer;transition:background .15s,box-shadow .15s,transform .12s;}
+.hsr-prof:hover{background:#dbeafe;box-shadow:0 4px 12px rgba(37,99,235,.24);transform:translateY(-1px);}
 .hsr-prof i{margin-right:3px;}
-.hsr-meta{font-size:16px;font-weight:800;color:#64748b;margin:9px 0 14px;}
+.hsr-prof .hsr-prof-edit{margin-left:7px;margin-right:0;font-size:12px;opacity:.7;}
+.hsr-meta{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:11px 0 15px;}
+.hsr-date{display:inline-flex;align-items:center;gap:6px;background:#eef2ff;color:#1e3a8a;font-weight:900;font-size:15px;padding:7px 14px;border-radius:10px;border:1px solid #c7d2fe;}
+.hsr-metachip{font-size:14px;font-weight:800;color:#475569;background:#f1f5f9;padding:6px 12px;border-radius:10px;}
 .hsr-reason{font-size:12.5px;font-weight:800;color:#2563eb;margin:2px 0 8px;}
 .hsr-reason i{margin-right:4px;opacity:.8;}
 .hsr-info{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;}

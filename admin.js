@@ -5876,6 +5876,13 @@ resetShuttleRequests: function() {
         }
         return '<div class="hsr-detail-head"><strong>'+title+'</strong><button onclick="event.stopPropagation();ui.toggleHomeSearchDetail(\''+esc(room)+'\',\''+type+'\',event)" aria-label="접기"><i class="fa-solid fa-chevron-up"></i> 접기</button></div><div class="hsr-detail-body">'+body+'</div>';
     },
+    // 검색 결과의 교수 배지 클릭 → 해당 교수 프로필 편집 모달(로드+저장 가능)
+    _openProfFromSearch: function(name){
+        name=(name||'').trim();
+        if(!name) return;
+        if(window.state && state.isObserver) return;
+        if(window.profMgr && typeof profMgr.openProfileEditor==='function') profMgr.openProfileEditor(name);
+    },
     renderHomeSearch: function(q){
         var box=document.getElementById('homeSearchResults');
         var v=document.getElementById('view-home');
@@ -5938,8 +5945,8 @@ resetShuttleRequests: function() {
             if(x.depart) chips.push(ichip('fa-bus','#16a34a','퇴교차량',x.depart+'건',e(x.room),'shuttle'));
             var infoHtml = chips.length ? ('<div class="hsr-info">'+chips.join('')+'</div>') : '';
             return '<div class="hsr-card" data-room="'+e(x.room)+'">'
-                +'<div class="hsr-top"><span class="hsr-course"><i class="fa-solid fa-file-pdf"></i>'+e(x.course)+' · 입교안내</span><span class="hsr-prof"><i class="fa-solid fa-user-tie"></i> '+e(x.prof||'-')+' 교수</span></div>'
-                +'<div class="hsr-meta">'+(x.period?e(x.period)+' · ':'')+studInfo+' · Room '+e(x.room)+'</div>'
+                +'<div class="hsr-top"><span class="hsr-course"><i class="fa-solid fa-file-pdf"></i>'+e(x.course)+' · 입교안내</span><span class="hsr-prof" title="클릭하면 교수 프로필 편집" onclick="event.stopPropagation();ui._openProfFromSearch(\''+e(x.prof||'')+'\')"><i class="fa-solid fa-user-tie"></i> '+e(x.prof||'-')+' 교수<i class="fa-solid fa-pen hsr-prof-edit"></i></span></div>'
+                +'<div class="hsr-meta">'+(x.period?'<span class="hsr-date"><i class="fa-regular fa-calendar-check"></i> '+e(x.period)+'</span>':'')+'<span class="hsr-metachip">'+studInfo+'</span><span class="hsr-metachip">Room '+e(x.room)+'</span></div>'
                 +infoHtml
                 +'<div class="hsr-actions" onclick="event.stopPropagation();">'
                 +'<button class="hsr-btn primary" onclick="ui.enterCourseMode(\''+e(x.room)+'\',\'guide\',true)"><i class="fa-solid fa-file-pdf"></i> 입교안내 전체화면</button>'
