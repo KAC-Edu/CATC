@@ -5944,7 +5944,6 @@ resetShuttleRequests: function() {
                 +'<div class="hsr-actions" onclick="event.stopPropagation();">'
                 +'<button class="hsr-btn primary" onclick="ui.enterCourseMode(\''+e(x.room)+'\',\'guide\',true)"><i class="fa-solid fa-file-pdf"></i> 입교안내 전체화면</button>'
                 +'<button class="hsr-btn" data-detail="students" onclick="ui.toggleHomeSearchDetail(\''+e(x.room)+'\',\'students\',event)"><i class="fa-solid fa-users-viewfinder"></i> 수강생 현황</button>'
-                +'<button class="hsr-btn" data-detail="dashboard" onclick="ui.toggleHomeSearchDetail(\''+e(x.room)+'\',\'dashboard\',event)"><i class="fa-solid fa-gauge-high"></i> 과정현황</button>'
                 +'<button class="hsr-btn" data-detail="outing" onclick="ui.toggleHomeSearchDetail(\''+e(x.room)+'\',\'outing\',event)"><i class="fa-solid fa-person-walking-arrow-right"></i> 외출·외박 현황</button>'
                 +'<button class="hsr-btn" data-detail="shuttle" onclick="ui.toggleHomeSearchDetail(\''+e(x.room)+'\',\'shuttle\',event)"><i class="fa-solid fa-bus"></i> 차량수요조사</button>'
                 +'</div><div class="hsr-detail" id="hsrDetail'+e(x.room)+'" style="display:none;"></div></div>';
