@@ -1,8 +1,8 @@
 /* ============================================================
-   PLATFORM_EDIT_STATUS: 수정완료 | VERSION: J2 | 2026-07-02 (J2: ①ZOOM 모니터링 버튼 표시로직 재적용(온라인 과정 판별) ②강의실 초기화 confirm에 삭제범위 안내 추가 ③QR 요소없음 개발자문구 교체 ④toggleNightMode/addSubject 널가드 — 구버전 잔재 안전화)
+   PLATFORM_EDIT_STATUS: 수정완료 | VERSION: J3 | 2026-07-02 (J3: ui.openZoomMonitor 추가 — ZOOM 모니터링을 내장 뷰(iframe)로 열고 과정 전환 시 확인 후 재로딩, 온라인 판별 토글에 더보기 메뉴 항목 포함) (J2: ①ZOOM 모니터링 버튼 표시로직 재적용(온라인 과정 판별) ②강의실 초기화 confirm에 삭제범위 안내 추가 ③QR 요소없음 개발자문구 교체 ④toggleNightMode/addSubject 널가드 — 구버전 잔재 안전화)
    CATC · 강사 플랫폼 로직  (admin.js)
    STATUS    수정안하는중
-   @version  J2
+   @version  J3
    @build    20260702-검색초기화위치수정
    ------------------------------------------------------------
    [코드 수정 규칙 · AI/개발자 공통]
@@ -2479,7 +2479,7 @@ loadDashboardStats: function() {
         if (document.getElementById('dashPeriod')) document.getElementById('dashPeriod').innerText = s.period || "기간 미설정";
         if (document.getElementById('dashRoomDetail')) document.getElementById('dashRoomDetail').innerText = s.roomDetailName || "장소 미설정";
         // [ZOOM 모니터링 J2] 과정 장소가 온라인(Zoom)일 때만 출결 관리 화면의 ZOOM 모니터링 버튼 노출
-        try { var _zmBtn = document.getElementById('btn-zoom-monitor'); if (_zmBtn) _zmBtn.style.display = (/온라인|zoom/i.test(String(s.roomDetailName || ''))) ? '' : 'none'; } catch(e){}
+        try { var _zmOn = (/온라인|zoom/i.test(String(s.roomDetailName || ''))); var _zmBtn = document.getElementById('btn-zoom-monitor'); if (_zmBtn) _zmBtn.style.display = _zmOn ? '' : 'none'; var _zmMore = document.getElementById('more-zoom-monitor'); if (_zmMore) _zmMore.style.display = _zmOn ? '' : 'none'; } catch(e){}
         if (document.getElementById('dashCoordName')) {
             // Firebase 저장값(표기 차이 가능)을 명단의 정식 이름으로 매칭하여 전체 이름 표시
             const savedCoord = s.coordinatorName || '';
@@ -3697,6 +3697,25 @@ openQrModal: function() {
 
 
 
+
+// [ZOOM 모니터링 J3] admin 내장 뷰로 열기 — iframe은 한 번 로드 후 메뉴 이동에도 유지(봇 연결 보존)
+    openZoomMonitor: function() {
+        try {
+            if (!state.room) { ui.showAlert('강의실을 먼저 선택해 주세요.'); return; }
+            var fr = document.getElementById('zoomMonitorFrame');
+            if (fr) {
+                var cur = fr.getAttribute('data-room') || '';
+                var want = 'zoom_monitor.html?room=' + encodeURIComponent(state.room) + '&embed=1';
+                if (!cur) { fr.src = want; fr.setAttribute('data-room', String(state.room)); }
+                else if (cur !== String(state.room)) {
+                    if (confirm('다른 과정(' + cur + ')의 모니터링이 열려 있습니다.\n현재 과정으로 다시 불러올까요?\n(진행 중이던 봇 연결은 끊어집니다)')) {
+                        fr.src = want; fr.setAttribute('data-room', String(state.room));
+                    }
+                }
+            }
+            ui.setMode('zoom-monitor');
+        } catch (e) { console.error('[openZoomMonitor]', e); }
+    },
 
 setMode: function(mode) {
         // [U턴 버튼] 과정(방)에 들어가 있고 현황판/홈이 아닐 때만 표시
