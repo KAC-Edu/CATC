@@ -1,8 +1,8 @@
 /* ============================================================
-   PLATFORM_EDIT_STATUS: 수정완료 | VERSION: J3 | 2026-07-02 (J3: ui.openZoomMonitor 추가 — ZOOM 모니터링을 내장 뷰(iframe)로 열고 과정 전환 시 확인 후 재로딩, 온라인 판별 토글에 더보기 메뉴 항목 포함) (J2: ①ZOOM 모니터링 버튼 표시로직 재적용(온라인 과정 판별) ②강의실 초기화 confirm에 삭제범위 안내 추가 ③QR 요소없음 개발자문구 교체 ④toggleNightMode/addSubject 널가드 — 구버전 잔재 안전화)
+   PLATFORM_EDIT_STATUS: 수정완료 | VERSION: J4 | 2026-07-02 (J4: ZOOM 모니터링 iframe 높이를 body zoom 배율 보정해 실제 화면에 맞춤 — 설정 패널 잘림 해소, 리사이즈 대응. (J3: ui.openZoomMonitor 추가 — ZOOM 모니터링을 내장 뷰(iframe)로 열고 과정 전환 시 확인 후 재로딩, 온라인 판별 토글에 더보기 메뉴 항목 포함) (J2: ①ZOOM 모니터링 버튼 표시로직 재적용(온라인 과정 판별) ②강의실 초기화 confirm에 삭제범위 안내 추가 ③QR 요소없음 개발자문구 교체 ④toggleNightMode/addSubject 널가드 — 구버전 잔재 안전화)
    CATC · 강사 플랫폼 로직  (admin.js)
    STATUS    수정안하는중
-   @version  J3
+   @version  J4
    @build    20260702-검색초기화위치수정
    ------------------------------------------------------------
    [코드 수정 규칙 · AI/개발자 공통]
@@ -3699,6 +3699,19 @@ openQrModal: function() {
 
 
 // [ZOOM 모니터링 J3] admin 내장 뷰로 열기 — iframe은 한 번 로드 후 메뉴 이동에도 유지(봇 연결 보존)
+    // [J4] admin은 body zoom(밀도 보정) 때문에 100vh 기반 iframe이 잘려 보임 → 실제 가용 높이를 계산해 지정
+    _sizeZoomFrame: function() {
+        try {
+            var fr = document.getElementById('zoomMonitorFrame');
+            if (!fr || fr.offsetParent === null) return;
+            var z = parseFloat(getComputedStyle(document.body).zoom) || 1;
+            var top = fr.getBoundingClientRect().top;      // zoom 반영된 화면(visual) 좌표
+            var availVisual = window.innerHeight - top - 14;
+            if (availVisual < 420) availVisual = 420;
+            fr.style.height = (availVisual / z) + 'px';    // CSS px로 환산
+            fr.style.minHeight = '0';
+        } catch(e) {}
+    },
     openZoomMonitor: function() {
         try {
             if (!state.room) { ui.showAlert('강의실을 먼저 선택해 주세요.'); return; }
@@ -3714,6 +3727,12 @@ openQrModal: function() {
                 }
             }
             ui.setMode('zoom-monitor');
+            // [J4] 표시 후 실제 가용 높이로 iframe 크기 보정 (+ 창 크기 변경 대응)
+            setTimeout(function(){ ui._sizeZoomFrame(); }, 60);
+            if (!ui._zoomFrameResizeHooked) {
+                ui._zoomFrameResizeHooked = true;
+                window.addEventListener('resize', function(){ ui._sizeZoomFrame(); });
+            }
         } catch (e) { console.error('[openZoomMonitor]', e); }
     },
 
