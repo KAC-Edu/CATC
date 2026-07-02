@@ -12763,7 +12763,7 @@ ui.confirmRouletteLeader = function(){
       var position = JSON.parse(localStorage.getItem(POS_KEY) || 'null');
       if(!position) return;
       host.style.left = Math.max(8, Math.min(window.innerWidth-host.offsetWidth-8, position.x))+'px';
-      host.style.top = Math.max(8, Math.min(window.innerHeight-host.offsetHeight-8, position.y))+'px';
+      host.style.top = Math.max(8, Math.min(window.innerHeight-90, position.y))+'px';
       host.style.right = 'auto';
       host.style.transform = 'none';
     }catch(e){}
@@ -12797,7 +12797,7 @@ ui.confirmRouletteLeader = function(){
       if(!dragging) return;
       event.preventDefault();
       var x = Math.max(8, Math.min(window.innerWidth-host.offsetWidth-8, originX+event.clientX-startX));
-      var y = Math.max(8, Math.min(window.innerHeight-host.offsetHeight-8, originY+event.clientY-startY));
+      var y = Math.max(8, Math.min(window.innerHeight-90, originY+event.clientY-startY));   // 하단바까지 내려가도록 하한 완화(최소 90px는 잡을 수 있게 유지)
       host.style.left = x+'px';
       host.style.top = y+'px';
       host.style.right = 'auto';

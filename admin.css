@@ -4382,7 +4382,7 @@ body.in-course #courseSmartRemote { display: block; }
 
 /* 2026-06-29 강사 커스텀 육각 리모컨 */
 #courseSmartRemote.hex-remote-v2{
-    display:none; position:fixed; left:auto; right:42px; top:50%; width:310px; height:316px;
+    display:none; position:fixed; left:auto; right:42px; top:50%; width:310px; height:284px;
     transform:translateY(-50%); border:0; border-radius:28px;
     background:rgba(248,250,252,.94); box-shadow:0 22px 60px rgba(15,23,42,.24);
     z-index:6500; padding:32px 18px 18px; backdrop-filter:blur(12px);
@@ -4394,7 +4394,7 @@ body.in-course #courseSmartRemote.hex-remote-v2{display:block;}
 .hex-drag-handle span{font-size:10px;}
 .hex-remote-v2.is-dragging{opacity:.9;box-shadow:0 28px 74px rgba(37,99,235,.34);}
 .hex-remote-v2.is-dragging .hex-drag-handle{cursor:grabbing;background:#dbeafe;color:#1d4ed8;}
-.hex-ring{position:relative;width:274px;height:266px;margin:auto;}
+.hex-ring{position:relative;width:274px;height:232px;margin:auto;}
 .hex-key{position:absolute;width:94px;height:82px;border:0;clip-path:polygon(25% 5%,75% 5%,100% 50%,75% 95%,25% 95%,0 50%);background:linear-gradient(145deg,#fff,#eaf2ff);color:#0f4c81;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;cursor:pointer;filter:drop-shadow(0 7px 7px rgba(15,76,129,.18));transition:transform .16s,filter .16s;z-index:6501;}
 .hex-key:hover{transform:translateY(-3px) scale(1.05);background:linear-gradient(145deg,#eff6ff,#bfdbfe);filter:drop-shadow(0 10px 10px rgba(37,99,235,.25));}
 .hex-key i{font-size:21px}.hex-key span{font-size:11px;font-weight:950;letter-spacing:-.35px;white-space:nowrap;}
@@ -4466,9 +4466,13 @@ body.in-course #courseSmartRemote.hex-remote-v2{display:block;}
 /* 검색창 5초 길게눌러 위치 조정 */
 #homeSearchWrap.hs-pressing{outline:2px dashed #93c5fd;outline-offset:5px;border-radius:18px;}
 #homeSearchWrap.hs-dragging{outline:2.5px dashed #2563eb;outline-offset:5px;border-radius:18px;box-shadow:0 16px 42px rgba(37,99,235,.35);cursor:grabbing;opacity:.96;}
-/* [강의 안내 보드] 목록 렌더링 — 번호/글머리표는 li 글자크기를 따라 커짐 */
-#boardEditor ul,#boardEditor ol{padding-left:1.5em;margin:.35em 0;}
-#boardEditor li{margin:.15em 0;}
+/* [강의 안내 보드] 목록 — 커스텀 마커: li 글자크기 따라 커지고, 세로 가운데 정렬 */
+#boardEditor ul,#boardEditor ol{list-style:none;margin:.35em 0;padding-left:1.7em;}
+#boardEditor ol{counter-reset:boardol;}
+#boardEditor li{position:relative;margin:.15em 0;}
+#boardEditor ul>li::before{content:"•";position:absolute;left:-1.05em;top:0;bottom:0;display:flex;align-items:center;line-height:1;}
+#boardEditor ol>li{counter-increment:boardol;}
+#boardEditor ol>li::before{content:counter(boardol) ".";position:absolute;left:-1.6em;top:0;bottom:0;display:flex;align-items:center;line-height:1;font-weight:inherit;}
 
 /* [사이트 푸터] 화면 하단 저작권/개발자 표기 (현황판·전체화면 제외) */
 #appFooter{position:fixed;left:0;right:0;bottom:0;z-index:95;text-align:center;padding:9px 16px 10px;background:var(--header-bg);border-top:1px solid rgba(255,255,255,.08);pointer-events:none;user-select:none;}
