@@ -1673,9 +1673,7 @@ const profMgr = {
         document.getElementById('pp-phone').value = "";
         document.getElementById('pp-email').value = "";
         document.getElementById('pp-msg').value = "";
-        if(document.getElementById('pp-eng-msg')) document.getElementById('pp-eng-msg').value = "";
         if(document.getElementById('pp-bio-rows')) profMgr.renderBioRows([]);
-        if(document.getElementById('pp-bio-en-rows')) profMgr.renderBioRowsEn([]);
         const previewImg = document.getElementById('pp-photo-preview').querySelector('img');
         if(previewImg) previewImg.style.display = 'none';
 
@@ -1687,7 +1685,6 @@ const profMgr = {
                 document.getElementById('pp-email').value = p.email || "";
                 if (kakaoEl) kakaoEl.value = p.kakaoLink || "";
                 document.getElementById('pp-msg').value = p.msg || "";
-                if(document.getElementById('pp-eng-msg')) document.getElementById('pp-eng-msg').value = p.engMsg || "";
                 profMgr.renderBioRows(Array.isArray(p.bioList) ? p.bioList : profMgr._parseBio(p.bio || ""));
                 if(p.photo && previewImg) {
                     previewImg.src = p.photo;
@@ -1696,7 +1693,6 @@ const profMgr = {
             } else if (kakaoEl) {
                 kakaoEl.value = "";
             }
-            profMgr._fillFixedRoomOptions(name, (p && p.fixedRoom) || '');
         });
         document.getElementById('profProfileModal').style.display = 'flex';
     },
@@ -1756,32 +1752,6 @@ const profMgr = {
     } // <--- 함수의 끝
 }; // <--- 중요!! profMgr라는 큰 바구니를 여기서 완전히 닫습니다. (콤마 없음)
 
-// [교수 고정방] 프로필의 강의실 선택 옵션 — 다른 교수가 쓰는 방은 '사용중'으로 비활성화
-profMgr._fillFixedRoomOptions = function(myName, currentRoom){
-    var sel = document.getElementById('pp-fixedRoom'); if(!sel) return;
-    Promise.all([
-        firebase.database().ref('system/professorProfiles').once('value'),
-        firebase.database().ref('courses').once('value')
-    ]).then(function(res){
-        var profs = res[0].val()||{}, courses = res[1].val()||{};
-        var rooms = Object.keys(courses).filter(function(r){ return /^[A-Z]$/.test(r); }).sort();
-        if(!rooms.length) rooms = ['A','B','C','D','E','F'];
-        var takenBy = {};
-        Object.keys(profs).forEach(function(pn){ var fr = profs[pn] && profs[pn].fixedRoom; if(fr) takenBy[fr] = pn; });
-        var html = '<option value="">미지정 (자동배치)</option>';
-        rooms.forEach(function(r){
-            var owner = takenBy[r];
-            if(owner && owner !== myName){
-                html += '<option value="'+r+'" disabled>Room #'+r+' — '+owner+' 교수 사용중</option>';
-            } else {
-                html += '<option value="'+r+'"'+((currentRoom===r)?' selected':'')+'>Room #'+r+'</option>';
-            }
-        });
-        sel.innerHTML = html;
-        sel.value = currentRoom || '';
-    }).catch(function(){ sel.innerHTML = '<option value="">미지정 (자동배치)</option>'; });
-};
-
 // [약력 입력] 연도/경력사항 분리 행 관리
 profMgr.addBioRow = function(year, text){
     const wrap = document.getElementById('pp-bio-rows'); if(!wrap) return;
@@ -1803,30 +1773,6 @@ profMgr.renderBioRows = function(list){
 };
 profMgr.collectBioRows = function(){
     const wrap = document.getElementById('pp-bio-rows'); if(!wrap) return [];
-    return Array.from(wrap.querySelectorAll('.bio-row')).map(r => ({
-        year: (r.querySelector('.bio-year-in') ? r.querySelector('.bio-year-in').value : '').trim(),
-        text: (r.querySelector('.bio-text-in') ? r.querySelector('.bio-text-in').value : '').trim()
-    })).filter(o => o.year || o.text);
-};
-// [영문 약력 입력] 연도/경력 분리 행
-profMgr.addBioRowEn = function(year, text){
-    var wrap = document.getElementById('pp-bio-en-rows'); if(!wrap) return;
-    var esc = s => String(s==null?'':s).replace(/"/g,'&quot;');
-    var row = document.createElement('div'); row.className='bio-row';
-    row.style.cssText='display:flex; gap:8px; margin-bottom:8px; align-items:center;';
-    row.innerHTML = '<input class="setting-input bio-year-in" style="flex:0 0 120px;" placeholder="Year (e.g. 21~)" value="'+esc(year)+'">'
-        + '<input class="setting-input bio-text-in" style="flex:1;" placeholder="Career (e.g. Professor, CATC)" value="'+esc(text)+'">'
-        + '<button type="button" onclick="this.closest(\'.bio-row\').remove()" style="flex:0 0 auto; width:38px; height:38px; border:1px solid #fecaca; background:#fef2f2; color:#ef4444; border-radius:9px; cursor:pointer; font-weight:900;">✕</button>';
-    wrap.appendChild(row);
-};
-profMgr.renderBioRowsEn = function(list){
-    var wrap = document.getElementById('pp-bio-en-rows'); if(!wrap) return;
-    wrap.innerHTML=''; var arr = Array.isArray(list)?list:[];
-    if(!arr.length){ this.addBioRowEn('',''); return; }
-    arr.forEach(it => this.addBioRowEn((it&&it.year)||'', (it&&it.text)||''));
-};
-profMgr.collectBioRowsEn = function(){
-    var wrap = document.getElementById('pp-bio-en-rows'); if(!wrap) return [];
     return Array.from(wrap.querySelectorAll('.bio-row')).map(r => ({
         year: (r.querySelector('.bio-year-in') ? r.querySelector('.bio-year-in').value : '').trim(),
         text: (r.querySelector('.bio-text-in') ? r.querySelector('.bio-text-in').value : '').trim()
@@ -12784,10 +12730,12 @@ ui.confirmRouletteLeader = function(){
     if(!host) return;
     var picked = selected();
     host.classList.add('hex-remote-v2');
+    // 첫 렌더 시 '접힘'(중앙 과정현황만) 상태로 시작. 이후 렌더는 현재 상태 유지.
+    if(host.dataset.hexInit !== '1'){ host.classList.add('hex-collapsed'); host.dataset.hexInit = '1'; }
     host.innerHTML =
       '<div class="hex-drag-handle" title="길게 눌러 위치 이동"><i class="fa-solid fa-grip-lines"></i><span>길게 눌러 이동</span></div>'+
       '<button class="hex-gear" type="button" title="리모컨 메뉴 설정"><i class="fa-solid fa-gear"></i></button>'+
-      '<div class="hex-ring">'+picked.map(function(mode, index){
+      '<div class="hex-ring">'+picked.slice(0,5).map(function(mode, index){
         var item = choices.find(function(choice){ return choice.mode === mode; }) || choices[0];
         var hot = '';   // 시안성 강조: 입교안내=빨강, 수강생현황=하늘색, 외출외박=연두색
         if (item.mode === 'guide') hot = ' hex-key-hot';
@@ -12795,9 +12743,15 @@ ui.confirmRouletteLeader = function(){
         else if (item.mode === 'admin-action') hot = ' hex-key-mint';
         return '<button class="hex-key hex-pos-'+index+hot+'" type="button" data-mode="'+esc(item.mode)+'" title="'+esc(item.label)+'"><i class="fa-solid '+esc(item.icon)+'"></i><span>'+esc(item.label)+'</span></button>';
       }).join('')+
-      '<button class="hex-center" type="button" title="과정 현황으로 이동"><i class="fa-solid fa-gauge-high"></i><span>과정현황</span></button></div>';
+      '<button class="hex-key hex-collapse hex-pos-5" type="button" title="접기 (과정현황만 보기)"><i class="fa-solid fa-compress"></i><span>접기</span></button>'+
+      '<button class="hex-center" type="button" title="짧게: 과정현황 이동 · 길게: 위치 이동"><i class="fa-solid fa-gauge-high"></i><span>과정현황</span></button></div>';
 
     host.querySelectorAll('.hex-key').forEach(function(button){
+      // 접기 버튼: 눌러서 '중앙 과정현황만' 상태로 축소
+      if(button.classList.contains('hex-collapse')){
+        button.addEventListener('click', function(e){ e.stopPropagation(); host.classList.add('hex-collapsed'); });
+        return;
+      }
       button.addEventListener('click', function(){
         var m = button.dataset.mode;
         ui.setMode(m);
@@ -12807,37 +12761,7 @@ ui.confirmRouletteLeader = function(){
         }
       });
     });
-    // 중앙 = 짧게 누르면 과정현황 이동 / 3초 길게 누르면 상단 메뉴바 펼침·접기
-    (function(){
-      var center = host.querySelector('.hex-center'); if(!center) return;
-      var lpTimer=null, longFired=false;
-      function removeBar(){ var b=document.getElementById('remoteHoldBar'); if(b) b.remove(); }
-      function showBar(){
-        removeBar();
-        var b=document.createElement('div'); b.id='remoteHoldBar';
-        b.style.cssText='position:fixed;left:0;bottom:0;height:5px;width:0;background:linear-gradient(90deg,#38bdf8,#2563eb);box-shadow:0 0 12px rgba(56,189,248,.7);z-index:2147483000;';
-        document.body.appendChild(b); void b.offsetWidth;
-        b.style.transition='width 3s linear'; b.style.width='100%';
-      }
-      center.style.touchAction='none';
-      center.addEventListener('pointerdown', function(e){
-        if(e && e.pointerType==='mouse' && e.button!==0) return;
-        longFired=false;
-        try{ center.setPointerCapture(e.pointerId); }catch(_){}
-        showBar(); clearTimeout(lpTimer);
-        lpTimer=setTimeout(function(){
-          longFired=true; removeBar();
-          var tabs=document.getElementById('modeTabs'); if(tabs) tabs.classList.toggle('collapsed');
-        },2000);
-      });
-      function endPress(){ clearTimeout(lpTimer); removeBar(); }
-      center.addEventListener('pointerup', endPress);
-      center.addEventListener('pointercancel', endPress);
-      center.addEventListener('click', function(e){
-        if(longFired){ e.preventDefault(); e.stopPropagation(); longFired=false; return; }  // 롱프레스였으면 이동 취소
-        ui.setMode('dashboard');
-      });
-    })();
+    // 중앙 과정현황: 짧게=펼침+과정현황 이동 / 길게=위치 이동(드래그) — bindDrag()에서 처리
     // 설정은 '길게 눌러 이동' 옆 기어 아이콘으로
     var gear = host.querySelector('.hex-gear');
     if(gear){
@@ -12902,56 +12826,65 @@ ui.confirmRouletteLeader = function(){
     }catch(e){}
   }
 
+  // 드래그 상태를 IIFE 스코프에 유지 → 재렌더 때 window 리스너 중복 방지
+  var _drag = {host:null, center:null, timer:null, dragging:false, moved:false, pressEl:null, startX:0, startY:0, originX:0, originY:0};
+  var _dragWinBound = false;
+
+  function _dragDown(event){
+    if(event && event.pointerType==='mouse' && event.button!==0) return;
+    var host = _drag.host; if(!host) return;
+    _drag.pressEl = event.currentTarget;
+    var rect = host.getBoundingClientRect();
+    _drag.startX = event.clientX; _drag.startY = event.clientY;
+    _drag.originX = rect.left; _drag.originY = rect.top;
+    _drag.moved = false; _drag.dragging = false;
+    clearTimeout(_drag.timer);
+    _drag.timer = setTimeout(function(){
+      _drag.dragging = true;
+      host.classList.add('is-dragging');
+      if(navigator.vibrate) navigator.vibrate(35);
+    }, 520);
+  }
+  function _dragMove(event){
+    if(!_drag.timer && !_drag.dragging) return;
+    if(!_drag.dragging){
+      if(Math.hypot(event.clientX-_drag.startX, event.clientY-_drag.startY) > 9){ clearTimeout(_drag.timer); _drag.timer = null; }
+      return;
+    }
+    var host = _drag.host; if(!host) return;
+    event.preventDefault();
+    var x = Math.max(8, Math.min(window.innerWidth-host.offsetWidth-8, _drag.originX+event.clientX-_drag.startX));
+    var y = Math.max(8, Math.min(window.innerHeight-90, _drag.originY+event.clientY-_drag.startY));
+    host.style.left = x+'px'; host.style.top = y+'px'; host.style.right = 'auto'; host.style.transform = 'none';
+  }
+  function _dragUp(){
+    var host = _drag.host;
+    var wasDragging = _drag.dragging;
+    if(_drag.timer){ clearTimeout(_drag.timer); _drag.timer = null; }
+    if(host && wasDragging){
+      var rect = host.getBoundingClientRect();
+      localStorage.setItem(POS_KEY, JSON.stringify({x:rect.left, y:rect.top}));
+    } else if(host && _drag.pressEl === _drag.center){
+      // 중앙 과정현황 짧게 누름 = 펼침 + 과정현황 페이지로 이동
+      host.classList.remove('hex-collapsed');
+      try{ ui.setMode('dashboard'); }catch(e){}
+    }
+    _drag.dragging = false; _drag.pressEl = null;
+    if(host) host.classList.remove('is-dragging');
+  }
+
   function bindDrag(host){
     var handle = host.querySelector('.hex-drag-handle');
-    var timer = null;
-    var dragging = false;
-    var startX = 0, startY = 0, originX = 0, originY = 0;
-
-    function down(event){
-      var rect = host.getBoundingClientRect();
-      startX = event.clientX;
-      startY = event.clientY;
-      originX = rect.left;
-      originY = rect.top;
-      timer = setTimeout(function(){
-        dragging = true;
-        host.classList.add('is-dragging');
-        if(navigator.vibrate) navigator.vibrate(35);
-      }, 520);
+    var center = host.querySelector('.hex-center');
+    _drag.host = host; _drag.center = center;
+    if(handle){ handle.style.touchAction='none'; handle.addEventListener('pointerdown', _dragDown); }
+    if(center){ center.style.touchAction='none'; center.addEventListener('pointerdown', _dragDown); }
+    if(!_dragWinBound){
+      window.addEventListener('pointermove', _dragMove, {passive:false});
+      window.addEventListener('pointerup', _dragUp);
+      window.addEventListener('pointercancel', _dragUp);
+      _dragWinBound = true;
     }
-    function move(event){
-      if(!timer && !dragging) return;
-      if(!dragging && Math.hypot(event.clientX-startX, event.clientY-startY) > 9){
-        clearTimeout(timer);
-        timer = null;
-        return;
-      }
-      if(!dragging) return;
-      event.preventDefault();
-      var x = Math.max(8, Math.min(window.innerWidth-host.offsetWidth-8, originX+event.clientX-startX));
-      var y = Math.max(8, Math.min(window.innerHeight-90, originY+event.clientY-startY));   // 하단바까지 내려가도록 하한 완화(최소 90px는 잡을 수 있게 유지)
-      host.style.left = x+'px';
-      host.style.top = y+'px';
-      host.style.right = 'auto';
-      host.style.transform = 'none';
-    }
-    function up(){
-      if(timer){
-        clearTimeout(timer);
-        timer = null;
-      }
-      if(dragging){
-        var rect = host.getBoundingClientRect();
-        localStorage.setItem(POS_KEY, JSON.stringify({x:rect.left, y:rect.top}));
-      }
-      dragging = false;
-      host.classList.remove('is-dragging');
-    }
-    handle.addEventListener('pointerdown', down);
-    window.addEventListener('pointermove', move, {passive:false});
-    window.addEventListener('pointerup', up);
-    window.addEventListener('pointercancel', up);
   }
 
   function cleanQrAndGroupSettings(){

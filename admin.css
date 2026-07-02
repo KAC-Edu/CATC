@@ -4076,6 +4076,9 @@ body.in-course #courseSmartRemote { display: block; }
 .main-stage {
     position: relative !important;
 }
+/* 현황판 팝업(운영과정·교육인원·외출외박) 우측 스크롤바 숨김 — 스크롤은 유지, 바만 안 보이게 */
+#homeStatModal > div{ scrollbar-width:none; -ms-overflow-style:none; }
+#homeStatModal > div::-webkit-scrollbar{ width:0; height:0; display:none; }
 
 /* ══ 상단 시계 — 완벽한 정중앙 고정 ══ */
 /* ── 헤더 시계 위젯 (Pill 디자인) ── */
@@ -4653,6 +4656,23 @@ body:not([data-mode="home"]):not([data-mode="waiting"]) .floating-home-btn{botto
   border-radius:27px;
   box-shadow:inset 0 0 30px rgba(148,163,184,.08);
 }
+/* ── 접기 버튼(하단, 구 OTP 자리) ── */
+.hex-key.hex-collapse{background:linear-gradient(145deg,#e2e8f0,#c7d0dc);color:#334155;}
+.hex-key.hex-collapse i,.hex-key.hex-collapse span{color:#334155;}
+.hex-key.hex-collapse:hover{background:linear-gradient(145deg,#eef2f7,#cbd5e1);}
+/* ── 접힘 상태: 중앙 과정현황 원만 표시 ── */
+#courseSmartRemote.hex-remote-v2.hex-collapsed{
+  width:auto !important; height:auto !important; min-width:0 !important;
+  padding:0 !important; border:none !important; background:none !important;
+  box-shadow:none !important; backdrop-filter:none !important; -webkit-backdrop-filter:none !important;
+}
+#courseSmartRemote.hex-remote-v2.hex-collapsed::before,
+#courseSmartRemote.hex-remote-v2.hex-collapsed::after{display:none !important;}
+#courseSmartRemote.hex-remote-v2.hex-collapsed .hex-key,
+#courseSmartRemote.hex-remote-v2.hex-collapsed .hex-drag-handle,
+#courseSmartRemote.hex-remote-v2.hex-collapsed .hex-gear{display:none !important;}
+#courseSmartRemote.hex-remote-v2.hex-collapsed .hex-ring{width:84px !important;height:84px !important;margin:0 !important;}
+#courseSmartRemote.hex-remote-v2.hex-collapsed .hex-center{cursor:grab;box-shadow:0 12px 28px rgba(15,76,129,.45);}
 .hex-drag-handle{
   left:52px;
   right:52px;
