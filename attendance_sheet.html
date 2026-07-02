@@ -65,6 +65,16 @@
             .sign-area { page-break-inside: avoid; }
             * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
         }
+        /* [운영부 수동 출석 · OTP 인증표기] */
+        .att-in{ display:flex; flex-direction:column; align-items:center; justify-content:center; gap:0.5px; line-height:1; }
+        .att-auth{ font-size:calc(var(--sf, 8px) - 2px); font-family:'Consolas','Roboto Mono',monospace; color:#059669; font-weight:800; letter-spacing:-.3px; white-space:nowrap; transform:rotate(-10deg); margin-top:1px; }
+        .att-auth.manual{ color:#2563eb; }
+        .stamp-manual{ color:#2563eb !important; border-color:#2563eb !important; }
+        .att-mark{ cursor:pointer; }
+        .att-mark:hover{ background:#eff6ff; }
+        .mk-hint{ color:#cbd5e1; opacity:.55; font-size:calc(var(--sf, 8px) + 2px); transition:all .12s; }
+        .att-mark:hover .mk-hint{ color:#2563eb; opacity:1; }
+        @media print{ .att-mark{ cursor:default !important; } .mk-hint{ display:none !important; } }
     </style>
 </head>
 <body>
@@ -72,6 +82,7 @@
     <div class="no-print" style="text-align:center; margin-bottom:20px;">
         <button onclick="printSheet()" style="padding:10px 30px; background:#003366; color:white; border:none; border-radius:5px; cursor:pointer; font-weight:bold;">출석부 PDF 저장 / 인쇄 (A4)</button>
     </div>
+    <div id="markHint" class="no-print" style="display:none; max-width:780px; margin:0 auto 18px; padding:11px 16px; background:#eff6ff; border:1px solid #bfdbfe; border-radius:10px; color:#1e40af; font-size:13.5px; font-weight:800; text-align:center; line-height:1.5;"><i class="fa-solid fa-hand-pointer"></i> 아직 출석 처리되지 않은 칸(<i class="fa-solid fa-hand-pointer" style="color:#94a3b8;"></i> 표시)을 클릭하면 <b>운영부 직접 출석 처리</b>됩니다. OTP 출석에는 인증번호가 표기되고, 직접 처리한 칸에는 <b>‘직접처리’</b>가 함께 남습니다. <span style="color:#64748b;font-weight:700;">(클릭 아이콘은 인쇄·PDF에 표시되지 않음)</span></div>
 
     <!-- 주차별 출석부 페이지가 자동 생성됩니다 -->
     <div id="print-area">
@@ -104,7 +115,7 @@ function printSheet() {
     if (btn) { btn.disabled = true; btn.innerHTML = '⏳ PDF 생성 중…'; }
     const tmp = document.createElement('style');
     // PDF 캡처 영역을 정확히 A4 폭(210mm)으로 고정 → 좌우 여백/축소 방지
-    tmp.innerHTML = '#sheets-root,#print-area{width:210mm !important;margin:0 auto !important;}.sheet-container{box-shadow:none !important;margin:0 auto !important;}';
+    tmp.innerHTML = '#sheets-root,#print-area{width:210mm !important;margin:0 auto !important;}.sheet-container{box-shadow:none !important;margin:0 auto !important;}.mk-hint{display:none !important;}.att-mark{cursor:default !important;}';
     document.head.appendChild(tmp);
     const done = () => { tmp.remove(); if (btn) { btn.disabled = false; btn.innerHTML = oldTxt; } };
     html2pdf().set({
@@ -116,6 +127,21 @@ function printSheet() {
         pagebreak: { mode: ['css', 'legacy'], before: '.sheet-container:not(:first-of-type)' }
     }).from(el).save().then(done).catch(() => { done(); document.title = base; window.print(); });
 }
+
+// [운영부 수동 출석] 아직 처리 안 된 칸 클릭 → 해당 날짜 출석 처리(OTP 미체크 보완). 라이브 방에서만.
+function markCell(td){
+  try{
+    if(!SHEET_ROOM || autoSave) return;
+    var d=td.getAttribute('data-d'), nm=td.getAttribute('data-n'), ph=td.getAttribute('data-p')||'';
+    if(!d||!nm) return;
+    if(!confirm('['+nm+'] '+d+'\n이 교육생을 출석으로 처리할까요?\n\n※ 운영부 직접 처리(OTP 미체크 보완)로 기록됩니다.')) return;
+    var key=(nm+'_'+ph).replace(/[.#$\[\]\/]/g,'_');
+    firebase.database().ref('courses/'+SHEET_ROOM+'/internal_attendance/'+d+'/'+key)
+      .set({ name:nm, phone:ph, manual:true, src:'coord', ts:Date.now() })
+      .catch(function(e){ alert('출석 처리 실패: '+((e&&e.message)||'')); });
+  }catch(e){ alert('오류: '+((e&&e.message)||'')); }
+}
+window.markCell=markCell;
 
 async function init() {
     // 1. 주소창에서 방 번호(room)를 정확히 가져옵니다.
@@ -195,6 +221,10 @@ async function init() {
         const root = document.getElementById('sheets-root');
         if (!root) return;
         root.innerHTML = "";
+        // [운영부 수동 출석] 라이브 방(archive/인쇄 아님)에서만 빈 칸 클릭 마킹 허용
+        const canMark = !!SHEET_ROOM && !autoSave;
+        const todayStr = (function(){ var t=new Date(); return t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0'); })();
+        try { var _mh=document.getElementById('markHint'); if(_mh) _mh.style.display = canMark ? 'block' : 'none'; } catch(e){}
 
         const uniqueStudentsMap = new Map();
         Object.values(studentsRaw).forEach(s => {
@@ -274,7 +304,23 @@ async function init() {
             dates.forEach(d => {
                 if (isHoliday(d)) { row += '<td class="hol"></td>'; return; }
                 const info = findAttendanceRecord(attendanceData[d], s.name, s.phone);
-                row += info ? '<td><div class="stamp">출석</div></td>' : '<td></td>';
+                if (info) {
+                    const _auth = (info.authId || '').toString().trim();
+                    const _tm = (info.time || '').toString().trim();
+                    const _man = !!(info.manual || info.src === 'coord' || (info.by && !_auth));
+                    let _sub = '';
+                    if (_man) _sub = '<div class="att-auth manual">직접처리</div>';
+                    else if (_auth) _sub = `<div class="att-auth">${_auth.replace(/^KAC-?/i, '')}</div>`;
+                    else if (_tm) _sub = `<div class="att-auth">${_tm.replace(/[오전오후\s]/g, '')}</div>`;
+                    const _ttl = (_man ? '운영부 직접 처리' : ('OTP 인증 출석' + (_auth ? ' · ' + _auth : '') + (_tm ? ' · ' + _tm : ''))).replace(/"/g, '&quot;');
+                    row += `<td title="${_ttl}"><div class="att-in"><div class="stamp${_man ? ' stamp-manual' : ''}">출석</div>${_sub}</div></td>`;
+                } else if (canMark && d <= todayStr) {
+                    const _n = (s.name || '').replace(/"/g, '&quot;');
+                    const _p = ('' + (s.phone || '')).replace(/"/g, '&quot;');
+                    row += `<td class="att-mark" data-d="${d}" data-n="${_n}" data-p="${_p}" onclick="markCell(this)"><span class="mk-hint" title="클릭하면 출석 처리"><i class="fa-solid fa-hand-pointer"></i></span></td>`;
+                } else {
+                    row += '<td></td>';
+                }
             });
             tbody += `<tr>${row}</tr>`;
         });
@@ -369,7 +415,7 @@ async function init() {
 
 
 <style>@media print{#__ver{display:none!important}}</style>
-<div id="__ver" style="position:fixed;right:7px;bottom:7px;z-index:2147483000;background:rgba(15,23,42,.72);color:#cbd5e1;font:700 10px/1 monospace;padding:4px 8px;border-radius:7px;pointer-events:none;letter-spacing:.3px;">출석부 vC · A4맞춤·빈페이지fix</div>
+<div id="__ver" style="position:fixed;right:7px;bottom:7px;z-index:2147483000;background:rgba(15,23,42,.72);color:#cbd5e1;font:700 10px/1 monospace;padding:4px 8px;border-radius:7px;pointer-events:none;letter-spacing:.3px;">출석부 vD · 빈칸클릭 수동출석·OTP인증표기</div>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
 <div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vA</div>
 </body>

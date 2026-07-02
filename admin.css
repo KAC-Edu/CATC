@@ -4463,6 +4463,9 @@ body.in-course #courseSmartRemote.hex-remote-v2{display:block;}
 /* 검색창 빛나는 테두리(작동중 표시) */
 @keyframes homeSearchGlow{0%,100%{box-shadow:0 0 0 3px rgba(37,99,235,.16),0 10px 34px rgba(37,99,235,.20);}50%{box-shadow:0 0 0 6px rgba(56,189,248,.32),0 14px 48px rgba(37,99,235,.42);}}
 #homeSearchInput:focus{border-color:#38bdf8;animation:homeSearchGlow 1.8s ease-in-out infinite;}
+/* 검색창 5초 길게눌러 위치 조정 */
+#homeSearchWrap.hs-pressing{outline:2px dashed #93c5fd;outline-offset:5px;border-radius:18px;}
+#homeSearchWrap.hs-dragging{outline:2.5px dashed #2563eb;outline-offset:5px;border-radius:18px;box-shadow:0 16px 42px rgba(37,99,235,.35);cursor:grabbing;opacity:.96;}
 
 /* [사이트 푸터] 화면 하단 저작권/개발자 표기 (현황판·전체화면 제외) */
 #appFooter{position:fixed;left:0;right:0;bottom:0;z-index:95;text-align:center;padding:9px 16px 10px;background:var(--header-bg);border-top:1px solid rgba(255,255,255,.08);pointer-events:none;user-select:none;}
