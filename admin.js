@@ -1,16 +1,16 @@
 /* ============================================================
-   PLATFORM_EDIT_STATUS: 수정완료 | VERSION: H1 | 2026-06-29
+   PLATFORM_EDIT_STATUS: 수정완료 | VERSION: J1 | 2026-07-02
    CATC · 강사 플랫폼 로직  (admin.js)
    STATUS    수정안하는중
-   @version  H1
-   @build    20260629-완료  (vH1: 현황 팝업·리모컨·사이드바·캠퍼스 이미지 정돈)
+   @version  J1
+   @build    20260702-검색초기화위치수정
    ------------------------------------------------------------
    [코드 수정 규칙 · AI/개발자 공통]
    이 파일을 고치면 @version 을 A -> B -> ... -> Z -> A1 -> B1 ...
    순으로 1단계 올리고, @build 를 수정 시각으로 갱신할 것.
    적용 여부는 브라우저 콘솔 로그(vA)로 확인한다.
 ============================================================ */
-try{console.log('%cCATC%c 강사 플랫폼 로직 (admin.js) %cvH1%c build 20260629','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}
+try{console.log('%cCATC%c 강사 플랫폼 로직 (admin.js) %cvJ1%c build 20260702-search-clear','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}
 /* --- admin.js (Final Integrated Version - Fixed Syntax & Logic) --- */
 
 // --- [기본 데이터] 20문항 ---
@@ -5744,9 +5744,16 @@ resetShuttleRequests: function() {
         try { dataMgr.switchRoomAttempt(String(room||'').toUpperCase()); }
         catch(e){ ui._pendingEnterMode = null; ui._pendingGuideFullscreen = false; }
     },
-    clearHomeSearch: function(){
-        var inp=document.getElementById('homeSearchInput'); if(inp){ inp.value=''; inp.focus(); }
-        ui.renderHomeSearch('');
+    clearHomeSearch: function(event){
+        if(event){ event.preventDefault(); event.stopPropagation(); }
+        var inp=document.getElementById('homeSearchInput');
+        var wrap=document.getElementById('homeSearchWrap');
+        var results=document.getElementById('homeSearchResults');
+        var view=document.getElementById('view-home');
+        if(inp){ inp.value=''; inp.blur(); }
+        if(results) results.innerHTML='';
+        if(wrap) wrap.classList.remove('has-text','hs-pressing','hs-dragging');
+        if(view) view.classList.remove('home-search-active');
     },
     homeSearchFocus: function(on){
         var v=document.getElementById('view-home'); if(!v) return;
@@ -5759,6 +5766,76 @@ resetShuttleRequests: function() {
                 v.classList.remove('home-search-active');
             },200);
         }
+    },
+    toggleHomeSearchDetail: function(room, type, event){
+        if(event){ event.preventDefault(); event.stopPropagation(); }
+        room=String(room||'').toUpperCase();
+        var panel=document.getElementById('hsrDetail'+room);
+        if(!panel) return;
+        var card=panel.closest('.hsr-card');
+        var same=panel.dataset.type===type && panel.style.display!=='none';
+        if(card) card.querySelectorAll('.hsr-btn[data-detail]').forEach(function(btn){
+            btn.classList.toggle('is-open', !same && btn.dataset.detail===type);
+        });
+        if(same){
+            panel.style.display='none';
+            panel.dataset.type='';
+            return;
+        }
+        panel.innerHTML=ui.buildHomeSearchDetail(room,type);
+        panel.dataset.type=type;
+        panel.style.display='block';
+        setTimeout(function(){ try{ panel.scrollIntoView({behavior:'smooth',block:'nearest'}); }catch(e){} },30);
+    },
+    buildHomeSearchDetail: function(room, type){
+        var src=(window._homeSearchDetailData||{})[room]||{};
+        var r=src.roomData||{}, settings=r.settings||{}, status=r.status||{};
+        var esc=ui._esc, norm=function(v){return String(v||'').replace(/\s+/g,'').toLowerCase();};
+        var registered=Object.values(r.students||{}).filter(function(s){return s&&s.name&&s.name!=='undefined';});
+        var roster=Array.isArray(src.roster)?src.roster:[];
+        var requests=Object.values((r.shuttle&&r.shuttle.requests)||{}).filter(Boolean);
+        var actions=[];
+        (function walk(obj,date){
+            Object.keys(obj||{}).forEach(function(k){
+                var v=obj[k];
+                if(!v||typeof v!=='object') return;
+                if(v.name&&(v.type||v.destination||v.reason)){ actions.push(Object.assign({__date:date||k},v)); }
+                else walk(v,date||k);
+            });
+        })(r.admin_actions||{},'');
+        function empty(msg){return '<div class="hsr-detail-empty"><i class="fa-regular fa-folder-open"></i>'+esc(msg)+'</div>';}
+        function go(mode,label){return '<button class="hsr-detail-go" onclick="event.stopPropagation();ui.enterCourseMode(\''+esc(room)+'\',\''+mode+'\')"><i class="fa-solid fa-arrow-up-right-from-square"></i> '+label+' 전체 화면 열기</button>';}
+        var title='', body='';
+        if(type==='students'){
+            title='<i class="fa-solid fa-users-viewfinder"></i> 수강생 현황';
+            var regMap={}; registered.forEach(function(s){regMap[norm(s.name)]=s;});
+            var list=roster.length?roster:registered;
+            if(!list.length) body=empty('등록된 예정·입교 수강생이 없습니다.');
+            else body='<div class="hsr-summary-line"><b>입교 '+registered.length+'명</b><span>예정 '+(roster.length||registered.length)+'명</span></div><div class="hsr-table-wrap"><table class="hsr-table"><thead><tr><th>번호</th><th>성명</th><th>사번</th><th>소속</th><th>상태</th></tr></thead><tbody>'
+                +list.map(function(s,i){var live=regMap[norm(s.name)]||{}, done=!!regMap[norm(s.name)];return '<tr><td>'+(i+1)+'</td><td><b>'+esc(s.name||live.name||'-')+'</b></td><td>'+esc(s.empNo||s.sabun||live.empNo||live.phone||'-')+'</td><td>'+esc(s.dept||s.department||live.dept||'-')+'</td><td><span class="hsr-state '+(done?'done':'wait')+'">'+(done?'입교완료':'입교예정')+'</span></td></tr>';}).join('')
+                +'</tbody></table></div>'+go('students','수강생 현황');
+        }else if(type==='dashboard'){
+            title='<i class="fa-solid fa-gauge-high"></i> 과정 현황';
+            var activeOut=actions.filter(function(a){return !(a.returned===true||a.returnReportTime);}).length;
+            body='<div class="hsr-course-grid"><div><span>강의실</span><b>'+esc(settings.roomDetailName||settings.roomDetail||('Room '+room))+'</b></div><div><span>교육기간</span><b>'+esc(settings.period||'-')+'</b></div><div><span>담임교수</span><b>'+esc(status.professorName||'-')+'</b></div><div><span>과정담당</span><b>'+esc(settings.coordinatorName||'-')+'</b></div></div>'
+                +'<div class="hsr-kpi-row"><div><b>'+registered.length+'</b><span>입교</span></div><div><b>'+activeOut+'</b><span>외출·외박</span></div><div><b>'+requests.length+'</b><span>차량수요</span></div></div>'
+                +((r.coordNotice||r.notice)?'<div class="hsr-notice"><i class="fa-solid fa-bullhorn"></i>'+esc(r.coordNotice||r.notice)+'</div>':'')
+                +go('dashboard','과정 현황');
+        }else if(type==='outing'){
+            title='<i class="fa-solid fa-person-walking-arrow-right"></i> 외출·외박 현황';
+            actions.sort(function(a,b){return (b.timestamp||0)-(a.timestamp||0);});
+            if(!actions.length) body=empty('외출·외박 신청 내역이 없습니다.');
+            else body='<div class="hsr-table-wrap"><table class="hsr-table"><thead><tr><th>성명</th><th>구분</th><th>행선지</th><th>시간</th><th>상태</th></tr></thead><tbody>'
+                +actions.slice(0,30).map(function(a){var kind=a.type==='overnight'?'외박':(a.type==='group_outing'?'단체외출':'외출');var done=(a.returned===true||a.returnReportTime);return '<tr><td><b>'+esc(a.name||'-')+'</b></td><td>'+kind+'</td><td>'+esc(a.destination||a.dest||'-')+'</td><td>'+esc(a.startTime||a.time||a.__date||'-')+'</td><td><span class="hsr-state '+(done?'done':'active')+'">'+(done?'복귀완료':'진행중')+'</span></td></tr>';}).join('')
+                +'</tbody></table></div>'+go('admin-action','외출·외박 현황');
+        }else if(type==='shuttle'){
+            title='<i class="fa-solid fa-bus"></i> 차량수요조사 현황';
+            if(!requests.length) body=empty('차량수요조사 신청자가 없습니다.');
+            else body='<div class="hsr-table-wrap"><table class="hsr-table"><thead><tr><th>번호</th><th>성명</th><th>목적지·이동방법</th><th>연락처</th></tr></thead><tbody>'
+                +requests.map(function(s,i){return '<tr><td>'+(i+1)+'</td><td><b>'+esc(s.name||'-')+'</b></td><td>'+esc(s.typeText||s.destination||s.dest||s.type||'-')+'</td><td>'+esc(s.phone||s.contact||'-')+'</td></tr>';}).join('')
+                +'</tbody></table></div>'+go('shuttle','차량수요조사 현황');
+        }
+        return '<div class="hsr-detail-head"><strong>'+title+'</strong><button onclick="event.stopPropagation();ui.toggleHomeSearchDetail(\''+esc(room)+'\',\''+type+'\',event)" aria-label="접기"><i class="fa-solid fa-chevron-up"></i> 접기</button></div><div class="hsr-detail-body">'+body+'</div>';
     },
     renderHomeSearch: function(q){
         var box=document.getElementById('homeSearchResults');
@@ -5783,6 +5860,7 @@ resetShuttleRequests: function() {
         var assignedSet={}, assignBuild={};
         try{ Object.keys(assign).forEach(function(kk){ var vv=assign[kk]; if(vv&&vv.building&&vv.building!=='-'){ var _ak=nn(String(kk).split('_')[0]); assignedSet[_ak]=1; assignBuild[_ak]=vv.building; } }); }catch(e){}
         var results=[];
+        window._homeSearchDetailData={};
         Object.keys(data).forEach(function(room){
             var r=data[room]; if(!r) return;
             var st=r.status||{}, settings=r.settings||{}, students=r.students||{};
@@ -5797,12 +5875,13 @@ resetShuttleRequests: function() {
             if(!include) return;
             if(prof.toLowerCase().indexOf(ql)<0) return;   // 담임교수만 검색
             var stuNames=[]; try{ Object.values(students).forEach(function(s){ if(s&&s.name&&s.name!=='undefined') stuNames.push(String(s.name).trim()); }); }catch(e){}
-            var planned=0, rosterNames=[];
-            try{ var best=null; for(var k in dorm){ var dv=dorm[k]; if(dv&&Array.isArray(dv.list)&&dv.list.length&&String(dv.courseName||'').trim()===course){ if(!best||(dv.updatedAt||0)>(best.updatedAt||0)) best=dv; } } if(best){ planned=best.list.length; best.list.forEach(function(s){ if(s&&s.name) rosterNames.push(String(s.name).trim()); }); } }catch(e){}
+            var planned=0, rosterNames=[], rosterList=[];
+            try{ var best=null; for(var k in dorm){ var dv=dorm[k]; if(dv&&Array.isArray(dv.list)&&dv.list.length&&String(dv.courseName||'').trim()===course){ if(!best||(dv.updatedAt||0)>(best.updatedAt||0)) best=dv; } } if(best){ rosterList=best.list.slice(); planned=best.list.length; best.list.forEach(function(s){ if(s&&s.name) rosterNames.push(String(s.name).trim()); }); } }catch(e){}
             var cnt=new Set(stuNames).size;
             var assigned=0; try{ rosterNames.forEach(function(n){ if(assignedSet[nn(n)]) assigned++; }); }catch(e){}
             var outing=0; try{ var acts=r.admin_actions||{}; Object.keys(acts).forEach(function(dt){ var day=acts[dt]||{}; Object.keys(day).forEach(function(id){ var a=day[id]; if(a&&(a.type==='outing'||a.type==='overnight'||a.type==='group_outing')&&!(a.returned===true||a.returnReportTime)) outing++; }); }); }catch(e){}
             var depart=0; try{ var req=(r.shuttle&&r.shuttle.requests)||{}; depart=Object.keys(req).length; }catch(e){}
+            window._homeSearchDetailData[room]={roomData:r,roster:rosterList};
             results.push({room:room, course:course||'(과정명 미정)', period:period, prof:prof, cnt:cnt, planned:planned, assigned:assigned, outing:outing, depart:depart});
         });
         var e=ui._esc;
@@ -5819,15 +5898,17 @@ resetShuttleRequests: function() {
             if(x.outing) chips.push(ichip('fa-person-walking-arrow-right','#f43f5e','외출·외박',x.outing+'건',e(x.room),'admin-action'));
             if(x.depart) chips.push(ichip('fa-bus','#16a34a','퇴교차량',x.depart+'건',e(x.room),'shuttle'));
             var infoHtml = chips.length ? ('<div class="hsr-info">'+chips.join('')+'</div>') : '';
-            return '<div class="hsr-card" onclick="ui.enterCourseMode(\''+e(x.room)+'\',\'guide\',true)">'
+            return '<div class="hsr-card" data-room="'+e(x.room)+'">'
                 +'<div class="hsr-top"><span class="hsr-course"><i class="fa-solid fa-file-pdf"></i>'+e(x.course)+' · 입교안내</span><span class="hsr-prof"><i class="fa-solid fa-user-tie"></i> '+e(x.prof||'-')+' 교수</span></div>'
                 +'<div class="hsr-meta">'+(x.period?e(x.period)+' · ':'')+studInfo+' · Room '+e(x.room)+'</div>'
                 +infoHtml
                 +'<div class="hsr-actions" onclick="event.stopPropagation();">'
                 +'<button class="hsr-btn primary" onclick="ui.enterCourseMode(\''+e(x.room)+'\',\'guide\',true)"><i class="fa-solid fa-file-pdf"></i> 입교안내 전체화면</button>'
-                +'<button class="hsr-btn" onclick="ui.enterCourseMode(\''+e(x.room)+'\',\'students\')"><i class="fa-solid fa-users-viewfinder"></i> 수강생 현황</button>'
-                +'<button class="hsr-btn" onclick="ui.enterCourseMode(\''+e(x.room)+'\',\'dashboard\')"><i class="fa-solid fa-gauge-high"></i> 과정현황</button>'
-                +'</div></div>';
+                +'<button class="hsr-btn" data-detail="students" onclick="ui.toggleHomeSearchDetail(\''+e(x.room)+'\',\'students\',event)"><i class="fa-solid fa-users-viewfinder"></i> 수강생 현황</button>'
+                +'<button class="hsr-btn" data-detail="dashboard" onclick="ui.toggleHomeSearchDetail(\''+e(x.room)+'\',\'dashboard\',event)"><i class="fa-solid fa-gauge-high"></i> 과정현황</button>'
+                +'<button class="hsr-btn" data-detail="outing" onclick="ui.toggleHomeSearchDetail(\''+e(x.room)+'\',\'outing\',event)"><i class="fa-solid fa-person-walking-arrow-right"></i> 외출·외박 현황</button>'
+                +'<button class="hsr-btn" data-detail="shuttle" onclick="ui.toggleHomeSearchDetail(\''+e(x.room)+'\',\'shuttle\',event)"><i class="fa-solid fa-bus"></i> 차량수요조사</button>'
+                +'</div><div class="hsr-detail" id="hsrDetail'+e(x.room)+'" style="display:none;"></div></div>';
         }).join('');
     },
 
