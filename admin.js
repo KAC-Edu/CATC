@@ -12735,7 +12735,7 @@ ui.confirmRouletteLeader = function(){
     host.innerHTML =
       '<div class="hex-drag-handle" title="길게 눌러 위치 이동"><i class="fa-solid fa-grip-lines"></i><span>길게 눌러 이동</span></div>'+
       '<button class="hex-gear" type="button" title="리모컨 메뉴 설정"><i class="fa-solid fa-gear"></i></button>'+
-      '<div class="hex-ring">'+picked.slice(0,5).map(function(mode, index){
+      '<div class="hex-ring">'+picked.map(function(mode, index){
         var item = choices.find(function(choice){ return choice.mode === mode; }) || choices[0];
         var hot = '';   // 시안성 강조: 입교안내=빨강, 수강생현황=하늘색, 외출외박=연두색
         if (item.mode === 'guide') hot = ' hex-key-hot';
@@ -12743,15 +12743,9 @@ ui.confirmRouletteLeader = function(){
         else if (item.mode === 'admin-action') hot = ' hex-key-mint';
         return '<button class="hex-key hex-pos-'+index+hot+'" type="button" data-mode="'+esc(item.mode)+'" title="'+esc(item.label)+'"><i class="fa-solid '+esc(item.icon)+'"></i><span>'+esc(item.label)+'</span></button>';
       }).join('')+
-      '<button class="hex-key hex-collapse hex-pos-5" type="button" title="접기 (과정현황만 보기)"><i class="fa-solid fa-compress"></i><span>접기</span></button>'+
-      '<button class="hex-center" type="button" title="짧게: 과정현황 이동 · 길게: 위치 이동"><i class="fa-solid fa-gauge-high"></i><span>과정현황</span></button></div>';
+      '<button class="hex-center" type="button" title="탭: 펼침/접힘 · 접힌 뒤 한번 더: 과정현황 · 길게: 위치 이동"><i class="fa-solid fa-gauge-high"></i><span>과정현황</span></button></div>';
 
     host.querySelectorAll('.hex-key').forEach(function(button){
-      // 접기 버튼: 눌러서 '중앙 과정현황만' 상태로 축소
-      if(button.classList.contains('hex-collapse')){
-        button.addEventListener('click', function(e){ e.stopPropagation(); setCollapsed(host, true); });
-        return;
-      }
       button.addEventListener('click', function(){
         var m = button.dataset.mode;
         ui.setMode(m);
@@ -12759,6 +12753,8 @@ ui.confirmRouletteLeader = function(){
         if (m === 'attendance') {
           setTimeout(function(){ try { ui.toggleAttendanceMode('internal'); } catch(e){} }, 80);
         }
+        _remotePendingNav = false;
+        scheduleAutoCollapse(host);   // 메뉴 확인 후 약 4초 뒤 자동 축소
       });
     });
     // 중앙 과정현황: 짧게=펼침+과정현황 이동 / 길게=위치 이동(드래그) — bindDrag()에서 처리
@@ -12865,9 +12861,7 @@ ui.confirmRouletteLeader = function(){
       var rect = host.getBoundingClientRect();
       localStorage.setItem(POS_KEY, JSON.stringify({x:rect.left, y:rect.top}));
     } else if(host && _drag.pressEl === _drag.center){
-      // 중앙 과정현황 짧게 누름 = 펼침 + 과정현황 페이지로 이동 (중앙 원 위치 유지)
-      setCollapsed(host, false);
-      try{ ui.setMode('dashboard'); }catch(e){}
+      handleCenterTap(host);   // 접힘→펼침 / 펼침→축소 / 축소(대기)→과정현황 이동
     }
     _drag.dragging = false; _drag.pressEl = null;
     if(host) host.classList.remove('is-dragging');
@@ -12878,6 +12872,31 @@ ui.confirmRouletteLeader = function(){
     if(!host) return;
     if(collapse) host.classList.add('hex-collapsed');
     else host.classList.remove('hex-collapsed');
+  }
+
+  // 중앙 과정현황 탭 동작:
+  //  · 접힘 상태 → 펼침
+  //  · 펼침 상태 → 축소만(페이지 이동 X) + 다음 탭은 과정현황 페이지로 대기
+  //  · 축소 상태(대기중) → 과정현황 페이지로 이동
+  var _remotePendingNav = false;
+  var _autoCollapseTimer = null;
+  function scheduleAutoCollapse(host){
+    clearTimeout(_autoCollapseTimer);
+    _autoCollapseTimer = setTimeout(function(){ setCollapsed(host, true); _remotePendingNav = false; }, 4000);
+  }
+  function handleCenterTap(host){
+    if(!host) return;
+    clearTimeout(_autoCollapseTimer);
+    var collapsed = host.classList.contains('hex-collapsed');
+    if(!collapsed){
+      setCollapsed(host, true);      // 펼쳐진 상태 → 축소만
+      _remotePendingNav = true;      // 다음 탭은 과정현황 페이지로
+    } else if(_remotePendingNav){
+      _remotePendingNav = false;
+      try{ ui.setMode('dashboard'); }catch(e){}   // 축소 상태에서 한번 더 → 과정현황 페이지
+    } else {
+      setCollapsed(host, false);     // 평상시 축소 → 펼침
+    }
   }
 
   function bindDrag(host){
