@@ -4660,19 +4660,21 @@ body:not([data-mode="home"]):not([data-mode="waiting"]) .floating-home-btn{botto
 .hex-key.hex-collapse{background:linear-gradient(145deg,#e2e8f0,#c7d0dc);color:#334155;}
 .hex-key.hex-collapse i,.hex-key.hex-collapse span{color:#334155;}
 .hex-key.hex-collapse:hover{background:linear-gradient(145deg,#eef2f7,#cbd5e1);}
-/* ── 접힘 상태: 중앙 과정현황 원만 표시 ── */
+/* ── 접힘 상태: 박스 크기·위치는 그대로 두고 배경만 투명 + 빈 영역은 클릭 통과 ──
+   (박스를 줄이지 않으므로 중앙 과정현황 원이 절대 이동하지 않음) */
 #courseSmartRemote.hex-remote-v2.hex-collapsed{
-  width:auto !important; height:auto !important; min-width:0 !important;
-  padding:0 !important; border:none !important; background:none !important;
-  box-shadow:none !important; backdrop-filter:none !important; -webkit-backdrop-filter:none !important;
+  border:none !important; background:none !important; box-shadow:none !important;
+  backdrop-filter:none !important; -webkit-backdrop-filter:none !important;
+  pointer-events:none !important;   /* 빈 영역 클릭이 뒤로 통과되도록 */
 }
 #courseSmartRemote.hex-remote-v2.hex-collapsed::before,
 #courseSmartRemote.hex-remote-v2.hex-collapsed::after{display:none !important;}
 #courseSmartRemote.hex-remote-v2.hex-collapsed .hex-key,
 #courseSmartRemote.hex-remote-v2.hex-collapsed .hex-drag-handle,
 #courseSmartRemote.hex-remote-v2.hex-collapsed .hex-gear{display:none !important;}
-#courseSmartRemote.hex-remote-v2.hex-collapsed .hex-ring{width:84px !important;height:84px !important;margin:0 !important;}
-#courseSmartRemote.hex-remote-v2.hex-collapsed .hex-center{cursor:grab;box-shadow:0 12px 28px rgba(15,76,129,.45);}
+#courseSmartRemote.hex-remote-v2.hex-collapsed .hex-center{
+  pointer-events:auto !important; cursor:grab; box-shadow:0 12px 28px rgba(15,76,129,.45);
+}
 .hex-drag-handle{
   left:52px;
   right:52px;

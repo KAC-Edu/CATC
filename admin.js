@@ -12873,24 +12873,11 @@ ui.confirmRouletteLeader = function(){
     if(host) host.classList.remove('is-dragging');
   }
 
-  // 접힘/펼침 전환 시 중앙 원이 화면에서 '제자리'에 있도록 박스 위치를 보정
+  // 접힘/펼침: 박스 크기는 그대로라 위치 보정이 필요 없음 (중앙 원은 항상 박스 중심에 고정)
   function setCollapsed(host, collapse){
     if(!host) return;
-    var center = host.querySelector('.hex-center');
-    var before = center ? center.getBoundingClientRect() : null;
     if(collapse) host.classList.add('hex-collapsed');
     else host.classList.remove('hex-collapsed');
-    if(before && center){
-      var after = center.getBoundingClientRect();   // 클래스 적용 후 재계산(강제 reflow)
-      var dx = after.left - before.left, dy = after.top - before.top;
-      if(dx || dy){
-        var rect = host.getBoundingClientRect();
-        host.style.left = (rect.left - dx) + 'px';
-        host.style.top  = (rect.top  - dy) + 'px';
-        host.style.right = 'auto';
-        host.style.transform = 'none';
-      }
-    }
   }
 
   function bindDrag(host){
