@@ -5881,13 +5881,12 @@ resetShuttleRequests: function() {
         name=(name||'').trim();
         if(!name || name==='-') return;
         try{
-            if(window.profMgr && typeof profMgr.openProfileEditor==='function'){
-                profMgr.openProfileEditor(name);
-            } else if(typeof openProfileEditor==='function'){
-                openProfileEditor(name);
+            if(typeof profMgr!=='undefined' && typeof profMgr.openProfileEditor==='function'){
+                profMgr.openProfileEditor(name);   // 여기서 firebase 로드 + 모달 표시까지 처리
+            } else {
+                console.error('[프로필 열기 실패] profMgr.openProfileEditor 없음');
+                alert('프로필 편집 기능을 찾지 못했습니다. 새로고침(Ctrl+Shift+R) 후 다시 시도해 주세요.');
             }
-            var m=document.getElementById('profProfileModal');
-            if(m){ m.style.display='flex'; m.style.zIndex='2147480000'; }
         }catch(err){ try{ console.error('[프로필 열기 실패]', err); alert('프로필 편집 창을 여는 중 오류: '+(err&&err.message||err)); }catch(_){} }
     },
     renderHomeSearch: function(q){
