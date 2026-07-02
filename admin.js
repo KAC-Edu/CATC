@@ -1471,7 +1471,34 @@ toggleLeader: function(token, currentName) {
         });
     },
 
-
+    // [오버랩 정리] 같은 이름이 2번 이상 중복 등록(일자 변경 등)된 경우 1개만 남기고 정리
+    resolveOverlap: function(encName) {
+        if (state.isObserver) { ui.showAlert("👁️ 옵저버 모드에서는 정리할 수 없습니다."); return; }
+        if (!state.room) return;
+        const name = decodeURIComponent(encName);
+        const room = state.room;
+        firebase.database().ref(`courses/${room}/students`).once('value').then(snap => {
+            const data = snap.val() || {};
+            const tokens = Object.keys(data).filter(k => data[k] && data[k].name === name);
+            if (tokens.length <= 1) { ui.showAlert(`[${name}] 은(는) 중복이 없습니다. (1명)`); return; }
+            // 가장 먼저 입장한 항목 1개만 유지, 나머지 삭제
+            tokens.sort((a, b) => (Number(data[a].firstSeen || data[a].joinedAt || data[a].arrivedAt || 0)) - (Number(data[b].firstSeen || data[b].joinedAt || data[b].arrivedAt || 0)));
+            const removeTokens = tokens.slice(1);
+            if (!confirm(`⚠️ [${name}] 이(가) ${tokens.length}번 중복 등록되어 있습니다.\n(같은 사람이 일자 변경 등으로 여러 번 저장된 상태)\n\n가장 먼저 입교한 1건만 남기고 나머지 ${removeTokens.length}건을 정리할까요?`)) return;
+            const updates = {};
+            removeTokens.forEach(t => { updates[`courses/${room}/students/${t}`] = null; });
+            // 중복 토큰의 자체 출석부 기록도 함께 정리
+            firebase.database().ref(`courses/${room}/internal_attendance`).once('value').then(aSnap => {
+                const att = aSnap.val() || {};
+                Object.keys(att).forEach(dateKey => {
+                    removeTokens.forEach(t => { if (att[dateKey] && att[dateKey][t] !== undefined) updates[`courses/${room}/internal_attendance/${dateKey}/${t}`] = null; });
+                });
+                firebase.database().ref().update(updates)
+                    .then(() => ui.showAlert(`✅ [${name}] 중복 ${removeTokens.length}건을 정리했습니다. (1명 유지)`))
+                    .catch(e => ui.showAlert("정리 실패: " + (e && e.message || '')));
+            });
+        });
+    },
 
 
     // [7.0차 신규] 수강생 예정 명단 업로드 로직 (텍스트 파일 읽기)
@@ -4803,8 +4830,9 @@ cancelIndividualShuttle: function(waveId, locId, token, name) {
                                                 style="padding:5px 10px; font-size:11px; border-radius:6px; cursor:pointer; ${leaderBtnStyle}">
                                             학생장
                                         </button>
-                                        <button class="btn-table-action" onclick="dataMgr.deleteStudent('${studentData.token}')" 
+                                        <button class="btn-table-action" onclick="dataMgr.deleteStudent('${studentData.token}')"
                                                 style="background:#ef4444; color:white; padding:5px 10px; border-radius:6px; font-size:11px; border:none; cursor:pointer;">삭제</button>
+                                        ${sList.length > 1 ? `<button class="btn-table-action" onclick="dataMgr.resolveOverlap('${encodeURIComponent(name)}')" title="같은 이름이 ${sList.length}번 중복 등록됨(일자 변경 등) — 정리하기" style="background:#f59e0b; color:#fff; padding:5px 10px; border-radius:6px; font-size:11px; border:none; cursor:pointer; font-weight:800;"><i class="fa-solid fa-triangle-exclamation" style="margin-right:3px;"></i>오버랩 ${sList.length}</button>` : ''}
                                     </div>
                                 ` : `<button class="btn-table-action" onclick="dataMgr.deleteExpectedName('${encodeURIComponent(name)}')" style="background:#fff; color:#ef4444; border:1px solid #fecaca; padding:5px 10px; border-radius:6px; font-size:11px; cursor:pointer;">명단삭제</button>`}
                             </td>
@@ -8940,6 +8968,7 @@ saveAll: function() {
         updates[`courses/${state.room}/settings/period`] = periodRange;
         
         updates[`courses/${state.room}/settings/roomDetailName`] = roomName;
+        updates[`courses/${state.room}/status/roomDetailManual`] = (roomName && String(roomName).trim()) ? true : null;   // 강사가 강의실 수동 지정 → 자동동기화가 덮어쓰지 않게 보존
         updates[`courses/${state.room}/settings/coordinatorName`] = coordName;
         updates[`courses/${state.room}/status/professorName`] = profName;
         updates[`courses/${state.room}/status/roomStatus`] = 'active';
@@ -11160,6 +11189,7 @@ annualPlanMgr._syncRoomsLockAware = async function(courses) {
         updates[`courses/${r}/settings/coordinatorName`] = null;
         updates[`courses/${r}/status/professorName`] = '';
         updates[`courses/${r}/status/professorManual`] = null;   // 방 비우면 수동 플래그 해제
+        updates[`courses/${r}/status/roomDetailManual`] = null;  // 방 비우면 강의실 수동 플래그도 해제
         updates[`courses/${r}/status/roomStatus`]   = 'idle';
         updates[`courses/${r}/status/ownerSessionId`] = null;
         freeRooms.push(r);
@@ -11188,6 +11218,7 @@ annualPlanMgr._syncRoomsLockAware = async function(courses) {
         updates[`courses/${room}/settings/coordinatorName`] = coordFull;
         updates[`courses/${room}/status/professorName`] = course.prof;
         updates[`courses/${room}/status/professorManual`] = null;   // 신규 배치는 계획값 기준(자동동기화 대상)
+        updates[`courses/${room}/status/roomDetailManual`] = null;  // 신규 배치는 계획 강의실 기준
         updates[`courses/${room}/status/roomStatus`]   = 'active';
         updates[`courses/${room}/settings/kakaoLink`]  = kakaoOf(course.prof);
         updates[`courses/${room}/settings/roomDetailName`] = course.roomDetail || '';

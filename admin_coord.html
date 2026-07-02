@@ -6520,7 +6520,7 @@ const annualPlanMgrCoord = {
                         updates[`courses/${r}/status/professorName`] = pc.prof;
                         updates[`courses/${r}/settings/kakaoLink`] = kakaoOf(pc.prof);
                     }
-                    if (pc.roomDetail) updates[`courses/${r}/settings/roomDetailName`] = pc.roomDetail;
+                    if (pc.roomDetail && !(rd.status && rd.status.roomDetailManual)) updates[`courses/${r}/settings/roomDetailName`] = pc.roomDetail;   // 강사 수동 지정 강의실은 보존
                 }
                 return;
             }
@@ -6536,7 +6536,7 @@ const annualPlanMgrCoord = {
                     updates[`courses/${r}/status/professorName`] = pc.prof;
                     updates[`courses/${r}/settings/kakaoLink`] = kakaoOf(pc.prof);
                 }
-                    if (pc.roomDetail) updates[`courses/${r}/settings/roomDetailName`] = pc.roomDetail;
+                    if (pc.roomDetail && !(rd.status && rd.status.roomDetailManual)) updates[`courses/${r}/settings/roomDetailName`] = pc.roomDetail;   // 강사 수동 지정 강의실은 보존
                 return;
             }
 
@@ -6551,7 +6551,7 @@ const annualPlanMgrCoord = {
                     updates[`courses/${r}/status/professorName`] = pc.prof;
                     updates[`courses/${r}/settings/kakaoLink`] = kakaoOf(pc.prof);
                 }
-                if (pc.roomDetail) updates[`courses/${r}/settings/roomDetailName`] = pc.roomDetail;
+                if (pc.roomDetail && !(rd.status && rd.status.roomDetailManual)) updates[`courses/${r}/settings/roomDetailName`] = pc.roomDetail;   // 강사 수동 지정 강의실은 보존
                 return;
             }
 
@@ -6572,6 +6572,7 @@ const annualPlanMgrCoord = {
             updates[`courses/${room}/settings/coordinatorName`] = coordFull;
             updates[`courses/${room}/status/professorName`] = course.prof;
             updates[`courses/${room}/status/professorManual`] = null;   // 신규 배치는 계획값 기준
+            updates[`courses/${room}/status/roomDetailManual`] = null;  // 신규 배치는 계획 강의실 기준
             updates[`courses/${room}/settings/kakaoLink`]  = kakaoOf(course.prof);
             if (course.roomDetail) updates[`courses/${room}/settings/roomDetailName`] = course.roomDetail;
             updates[`courses/${room}/status/roomStatus`]   = 'active';
