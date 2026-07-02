@@ -12749,7 +12749,7 @@ ui.confirmRouletteLeader = function(){
     host.querySelectorAll('.hex-key').forEach(function(button){
       // 접기 버튼: 눌러서 '중앙 과정현황만' 상태로 축소
       if(button.classList.contains('hex-collapse')){
-        button.addEventListener('click', function(e){ e.stopPropagation(); host.classList.add('hex-collapsed'); });
+        button.addEventListener('click', function(e){ e.stopPropagation(); setCollapsed(host, true); });
         return;
       }
       button.addEventListener('click', function(){
@@ -12865,12 +12865,32 @@ ui.confirmRouletteLeader = function(){
       var rect = host.getBoundingClientRect();
       localStorage.setItem(POS_KEY, JSON.stringify({x:rect.left, y:rect.top}));
     } else if(host && _drag.pressEl === _drag.center){
-      // 중앙 과정현황 짧게 누름 = 펼침 + 과정현황 페이지로 이동
-      host.classList.remove('hex-collapsed');
+      // 중앙 과정현황 짧게 누름 = 펼침 + 과정현황 페이지로 이동 (중앙 원 위치 유지)
+      setCollapsed(host, false);
       try{ ui.setMode('dashboard'); }catch(e){}
     }
     _drag.dragging = false; _drag.pressEl = null;
     if(host) host.classList.remove('is-dragging');
+  }
+
+  // 접힘/펼침 전환 시 중앙 원이 화면에서 '제자리'에 있도록 박스 위치를 보정
+  function setCollapsed(host, collapse){
+    if(!host) return;
+    var center = host.querySelector('.hex-center');
+    var before = center ? center.getBoundingClientRect() : null;
+    if(collapse) host.classList.add('hex-collapsed');
+    else host.classList.remove('hex-collapsed');
+    if(before && center){
+      var after = center.getBoundingClientRect();   // 클래스 적용 후 재계산(강제 reflow)
+      var dx = after.left - before.left, dy = after.top - before.top;
+      if(dx || dy){
+        var rect = host.getBoundingClientRect();
+        host.style.left = (rect.left - dx) + 'px';
+        host.style.top  = (rect.top  - dy) + 'px';
+        host.style.right = 'auto';
+        host.style.transform = 'none';
+      }
+    }
   }
 
   function bindDrag(host){
