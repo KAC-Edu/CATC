@@ -1,8 +1,8 @@
 /* ============================================================
-   PLATFORM_EDIT_STATUS: 수정완료 | VERSION: J1 | 2026-07-02
+   PLATFORM_EDIT_STATUS: 수정완료 | VERSION: J2 | 2026-07-02 (J2: ①ZOOM 모니터링 버튼 표시로직 재적용(온라인 과정 판별) ②강의실 초기화 confirm에 삭제범위 안내 추가 ③QR 요소없음 개발자문구 교체 ④toggleNightMode/addSubject 널가드 — 구버전 잔재 안전화)
    CATC · 강사 플랫폼 로직  (admin.js)
    STATUS    수정안하는중
-   @version  J1
+   @version  J2
    @build    20260702-검색초기화위치수정
    ------------------------------------------------------------
    [코드 수정 규칙 · AI/개발자 공통]
@@ -2175,6 +2175,7 @@ init: function() {
     
     addSubject: function() {
         const input = document.getElementById('newSubjectInput');
+        if (!input) return; // [J2] 구버전 잔재 — 요소 없는 화면에서 오류 방지
         const name = input.value.trim();
         if(!name) return;
         
@@ -2477,6 +2478,8 @@ loadDashboardStats: function() {
         var _topT = document.getElementById('displayCourseTitle'); if (_topT) _topT.innerText = s.courseName || "";
         if (document.getElementById('dashPeriod')) document.getElementById('dashPeriod').innerText = s.period || "기간 미설정";
         if (document.getElementById('dashRoomDetail')) document.getElementById('dashRoomDetail').innerText = s.roomDetailName || "장소 미설정";
+        // [ZOOM 모니터링 J2] 과정 장소가 온라인(Zoom)일 때만 출결 관리 화면의 ZOOM 모니터링 버튼 노출
+        try { var _zmBtn = document.getElementById('btn-zoom-monitor'); if (_zmBtn) _zmBtn.style.display = (/온라인|zoom/i.test(String(s.roomDetailName || ''))) ? '' : 'none'; } catch(e){}
         if (document.getElementById('dashCoordName')) {
             // Firebase 저장값(표기 차이 가능)을 명단의 정식 이름으로 매칭하여 전체 이름 표시
             const savedCoord = s.coordinatorName || '';
@@ -3550,7 +3553,7 @@ openQrModal: function() {
             }
         }, 100);
     } else {
-        alert("QR 팝업용 HTML 요소가 없습니다.");
+        alert("QR 화면을 불러오지 못했습니다. 새로고침(F5) 후 다시 시도해 주세요.");
     }
 },
 
@@ -4283,8 +4286,9 @@ renderQaList: function(f) {
     toggleNightMode: function() { 
         document.body.classList.toggle('night-mode'); 
         const n = document.body.classList.contains('night-mode');
-        document.getElementById('iconSun').classList.toggle('active', !n);
-        document.getElementById('iconMoon').classList.toggle('active', n);
+        // [J2] 아이콘 요소가 없는 화면에서도 오류 없이 동작하도록 널가드 (구버전 잔재 안전화)
+        var _iS = document.getElementById('iconSun');  if (_iS) _iS.classList.toggle('active', !n);
+        var _iM = document.getElementById('iconMoon'); if (_iM) _iM.classList.toggle('active', n);
     },
     
     toggleRightPanel: function() { 
@@ -6082,7 +6086,7 @@ resetShuttleRequests: function() {
         try {
             const _ps = await firebase.database().ref(`courses/${state.room}/settings/password`).get();
             if (!_ps.val()) {
-                if (confirm(`Room #${state.room} 과정을 초기화하시겠습니까?\n(이 강의실은 비밀번호가 설정돼 있지 않습니다.)`)) {
+                if (confirm(`Room #${state.room} 과정을 초기화하시겠습니까?\n(출석·질문·차량/외출외박 신청 등 이 과정의 기록이 삭제됩니다.)\n(이 강의실은 비밀번호가 설정돼 있지 않습니다.)`)) {
                     dataMgr._executeReset();
                 }
                 return;
