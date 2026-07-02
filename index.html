@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<!-- PLATFORM_EDIT_STATUS: 수정아닙니다 | VERSION: J93 J93 J93 J93 J93 | 2026-07-02 -->
+<!-- PLATFORM_EDIT_STATUS: 수정아닙니다 | VERSION: J94 J94 J94 J94 J94 | 2026-07-02 -->
 <!-- ══════════════════ [편집상태 / EDIT-STATUS] ══════════════════
      STATUS : 수정아닙니다
      FILE   : index.html (교육생)
-     VERSION: J93 J93 J93 J93 J93
-     UPDATED: 2026-07-02  (vJ93: 동명 중복확인에서 '본인' 선택 시 기존ID 강제채택 제거 → 입력한 사번 그대로 유지하고 이전 다른-번호 중복기록은 저장 후 제거. 모달 안내문 수정. | vJ92: 동명 중복 확인을 3버튼 커스텀 모달로(예 본인/아닙니다 다른사람/닫기). 본인 선택 시 기존 식별ID 병합(입력 번호 달라도 중복방지), 닫기는 입교 중단. | vJ91: 차량 결과 카드에서 신청 장소를 상단 제목이 아닌 '과정·신청자 아래 행'으로 이동하고 크게(18px 청색) 강조. 제목은 '나의 퇴교차량'으로 복원. | vJ90: 차량 신청 결과 카드를 입교완료 카드와 동일 규격(청색 그라데이션 헤더·큰 글씨)으로 통일, 목적지를 제목으로 크게 표시. | vJ89: 학생장 지정/해제를 .on 실시간 리스너로 변경 — 강사가 학생장 지정 시 새로고침 없이 즉시 금일현황 패널 노출, 해제 시 즉시 숨김. | vJ88: 카카오 입교 흐름(submitEnroll)에 동명 중복 확인 복원 — 같은 이름 다른 식별ID 발견 시 '본인 맞냐' 확인(본인→기존ID 병합, 아니면 신규). 편집모드 제외. | vJ87: 16시 이후 외출외박 제출 시 '석식 이용 간주' 안내 팝업 복원(J75에서 STEP5 건너뛰며 사라졌던 것) → 확인 후 신청현황으로. | vJ86: 강사가 과정명/기간을 수정(리네임)해도 교육생이 입교화면으로 초기화되지 않도록 courseKey 불일치 초기화 제거. 강의실 리셋(명단 삭제)·교육기간 종료 시에만 재입교. | vJ85: 질문하기 — 신규 질문 즉시 노출(내 질문 맨위 이동), 질문 몰릴 때 읽던 위치 고정+'새 질문 N개' 칩, 09시 운영일 윈도우 밖 오래된 질문은 학생화면에서 숨김(강사 플랫폼엔 유지). | vJ84: 외출외박 소속을 신청 미리보기·입력칸 자동채움·저장값까지 formatDept 적용해 '항공기술훈련원 OOO'로 일관 표기(대장에도 반영). | vJ83: 학생장 외출외박 카운팅을 admin과 동일한 09:00~익일09:00 KST 윈도우+오늘/어제 노드 병합으로 정렬(복귀자 포함 표시). | vJ82: 학생장 펼침 상세를 높이제한+내부스크롤 드롭다운으로(카드 가림 해소), 연락처 블록 줄바꿈 처리, 펼칠 때 부드럽게 노출. | vJ81: 학생장 패널 접이식 가로바로 변경(카드 가림 해소), 외출외박 항목에 비상연락처 표시+클릭 통화확인 팝업. | vJ80: 학생장 전용 패널(입교카드 아래) — 금일 외출외박·석식제외 실시간 현황 + 식당 전화하기(043-290-2325). | vJ79: 담임 글자크기 다른행과 완전통일(display:flex 제거), 신청취소 후 재초기화(이전정보 안내 복원), 패스트패스 연락처(STEP3)까지 항상 표시. | vJ78: 담임 글자크기 다른행과 통일(span 제거), 담당교수 실시간 반영(.on 리스너). | vJ77: 입교카드·출결완료 페이지에 과정담임 표시 + 전화아이콘→통화확인 팝업→통화 기능(professorProfiles 연락처 사용). | vJ76: 외출외박 현황화면 상단바 위 내용넘침 방지(flex-start), 복귀완료보고·신청취소 한 줄 배치. | vJ75: 입교문구 '항공기술훈련원 입교', 정보수정 시 개인정보동의 숨김, 외출외박 새로작성 빈양식, 소속 항공기술훈련원 표기, 외출외박 완료→수위실 현황화면 통일. | vJ74: 창닫기 기능(closeStudentWindow) 제거 — 카카오 채널 채팅창 닫기로 대체. 디버그 console.log 2종 정리. | vJ73: 미사용 함수 6종 제거 — exitApp·cleanUrlAndGo·checkDinnerTime·loadGroupCandidates·openRoomMove·wrapClose. 카카오 채널 바로가기 도입으로 불필요해진 진입/종료 관련 죽은 코드 정리. 맛집 기능 코드는 유지.)
+     VERSION: J94 J94 J94 J94 J94
+     UPDATED: 2026-07-02  (vJ94: 외출외박 STEP2 신원 편집을 인라인+‘수정 완료’ 버튼으로 개선. 이름·사번 수정이 profileOverlay/입교완료로 이탈하지 않고 STEP2에서 바로 수정 후 다음 단계 진행. | vJ93: 동명 중복확인에서 '본인' 선택 시 기존ID 강제채택 제거 → 입력한 사번 그대로 유지하고 이전 다른-번호 중복기록은 저장 후 제거. 모달 안내문 수정. | vJ92: 동명 중복 확인을 3버튼 커스텀 모달로(예 본인/아닙니다 다른사람/닫기). 본인 선택 시 기존 식별ID 병합(입력 번호 달라도 중복방지), 닫기는 입교 중단. | vJ91: 차량 결과 카드에서 신청 장소를 상단 제목이 아닌 '과정·신청자 아래 행'으로 이동하고 크게(18px 청색) 강조. 제목은 '나의 퇴교차량'으로 복원. | vJ90: 차량 신청 결과 카드를 입교완료 카드와 동일 규격(청색 그라데이션 헤더·큰 글씨)으로 통일, 목적지를 제목으로 크게 표시. | vJ89: 학생장 지정/해제를 .on 실시간 리스너로 변경 — 강사가 학생장 지정 시 새로고침 없이 즉시 금일현황 패널 노출, 해제 시 즉시 숨김. | vJ88: 카카오 입교 흐름(submitEnroll)에 동명 중복 확인 복원 — 같은 이름 다른 식별ID 발견 시 '본인 맞냐' 확인(본인→기존ID 병합, 아니면 신규). 편집모드 제외. | vJ87: 16시 이후 외출외박 제출 시 '석식 이용 간주' 안내 팝업 복원(J75에서 STEP5 건너뛰며 사라졌던 것) → 확인 후 신청현황으로. | vJ86: 강사가 과정명/기간을 수정(리네임)해도 교육생이 입교화면으로 초기화되지 않도록 courseKey 불일치 초기화 제거. 강의실 리셋(명단 삭제)·교육기간 종료 시에만 재입교. | vJ85: 질문하기 — 신규 질문 즉시 노출(내 질문 맨위 이동), 질문 몰릴 때 읽던 위치 고정+'새 질문 N개' 칩, 09시 운영일 윈도우 밖 오래된 질문은 학생화면에서 숨김(강사 플랫폼엔 유지). | vJ84: 외출외박 소속을 신청 미리보기·입력칸 자동채움·저장값까지 formatDept 적용해 '항공기술훈련원 OOO'로 일관 표기(대장에도 반영). | vJ83: 학생장 외출외박 카운팅을 admin과 동일한 09:00~익일09:00 KST 윈도우+오늘/어제 노드 병합으로 정렬(복귀자 포함 표시). | vJ82: 학생장 펼침 상세를 높이제한+내부스크롤 드롭다운으로(카드 가림 해소), 연락처 블록 줄바꿈 처리, 펼칠 때 부드럽게 노출. | vJ81: 학생장 패널 접이식 가로바로 변경(카드 가림 해소), 외출외박 항목에 비상연락처 표시+클릭 통화확인 팝업. | vJ80: 학생장 전용 패널(입교카드 아래) — 금일 외출외박·석식제외 실시간 현황 + 식당 전화하기(043-290-2325). | vJ79: 담임 글자크기 다른행과 완전통일(display:flex 제거), 신청취소 후 재초기화(이전정보 안내 복원), 패스트패스 연락처(STEP3)까지 항상 표시. | vJ78: 담임 글자크기 다른행과 통일(span 제거), 담당교수 실시간 반영(.on 리스너). | vJ77: 입교카드·출결완료 페이지에 과정담임 표시 + 전화아이콘→통화확인 팝업→통화 기능(professorProfiles 연락처 사용). | vJ76: 외출외박 현황화면 상단바 위 내용넘침 방지(flex-start), 복귀완료보고·신청취소 한 줄 배치. | vJ75: 입교문구 '항공기술훈련원 입교', 정보수정 시 개인정보동의 숨김, 외출외박 새로작성 빈양식, 소속 항공기술훈련원 표기, 외출외박 완료→수위실 현황화면 통일. | vJ74: 창닫기 기능(closeStudentWindow) 제거 — 카카오 채널 채팅창 닫기로 대체. 디버그 console.log 2종 정리. | vJ73: 미사용 함수 6종 제거 — exitApp·cleanUrlAndGo·checkDinnerTime·loadGroupCandidates·openRoomMove·wrapClose. 카카오 채널 바로가기 도입으로 불필요해진 진입/종료 관련 죽은 코드 정리. 맛집 기능 코드는 유지.)
      ─ 규칙: 수정 시작 시 STATUS를 '수정중'으로, 완료 시 '수정아닙니다'로 변경하고 버전을 5회 반복 표기.
             '수정중'이면 다른 플랫폼은 연동 변경을 보류/협의 후 진행.
 ═══════════════════════════════════════════════════════════════ -->
@@ -1317,16 +1317,19 @@ try{
                         <span style="font-size:13px; font-weight:800; color:#64748b;">성명</span>
                         <span id="wzName" style="font-size:16px; font-weight:900; color:#0f172a;">-</span>
                     </div>
+                    <input type="text" id="wzNameInput" placeholder="이름" style="display:none; width:100%; margin-top:8px; padding:11px 12px; border:1.5px solid #2563eb; border-radius:10px; outline:none; font-size:15px;">
+                    <input type="text" id="wzSabunInput" inputmode="numeric" maxlength="5" placeholder="사번 (없으면 전화 뒤 4자리)" style="display:none; width:100%; margin-top:8px; padding:11px 12px; border:1.5px solid #2563eb; border-radius:10px; outline:none; font-size:15px;">
                     <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 0 4px;">
                         <span style="font-size:13px; font-weight:800; color:#64748b;">소속</span>
                         <span id="wzDeptText" style="font-size:16px; font-weight:900; color:#0f172a;">-</span>
                     </div>
                     <input type="text" id="userDept" list="deptHistory" placeholder="소속 부서를 입력하세요" style="display:none; width:100%; margin-top:8px; padding:11px 12px; border:1.5px solid #e2e8f0; border-radius:10px; outline:none; font-size:15px;">
                     <datalist id="deptHistory"></datalist>
-                    <div class="outing-identity-actions">
+                    <div class="outing-identity-actions" id="wzIdentityBtns">
                         <button type="button" onclick="editOutingDept()"><i class="fa-solid fa-building"></i> 소속 수정</button>
                         <button type="button" onclick="editOutingProfileInfo()"><i class="fa-solid fa-user-pen"></i> 이름·사번 수정</button>
                     </div>
+                    <button type="button" id="wzEditDone" onclick="finishOutingIdentityEdit()" style="display:none; width:100%; margin-top:12px; padding:13px; background:#059669; color:#fff; border:none; border-radius:11px; font-size:15px; font-weight:900; cursor:pointer;"><i class="fa-solid fa-check"></i> 수정 완료</button>
                 </div>
                 <div style="display:flex; gap:8px; margin-top:14px;">
                     <button type="button" onclick="showAdminStep(1)" style="flex:1; padding:13px; border:none; border-radius:12px; background:#f1f5f9; color:#475569; font-size:15px; font-weight:800; cursor:pointer;">이전</button>
@@ -3955,23 +3958,61 @@ function refreshOutingIdentity(nameOverride) {
 }
 
 function editOutingDept() {
-    const input = document.getElementById('userDept');
-    const text = document.getElementById('wzDeptText');
+    var input = document.getElementById('userDept');
+    var text = document.getElementById('wzDeptText');
     if (!input) return;
     input.readOnly = false;
     input.style.display = 'block';
     input.style.background = '#fff';
     input.style.borderColor = '#2563eb';
     if (text) text.style.display = 'none';
-    setTimeout(() => input.focus(), 0);
+    var btns=document.getElementById('wzIdentityBtns'); if(btns) btns.style.display='none';
+    var done=document.getElementById('wzEditDone'); if(done) done.style.display='block';
+    setTimeout(function(){ input.focus(); }, 0);
+}
+
+// [신원 인라인 편집] 이름·사번을 STEP2 안에서 수정 (별도 팝업/입교완료로 이탈하지 않음)
+function finishOutingIdentityEdit(){
+    var deptInput=document.getElementById('userDept');
+    var nameI=document.getElementById('wzNameInput'), sabI=document.getElementById('wzSabunInput');
+    if(nameI && nameI.style.display!=='none'){
+        var nm=(nameI.value||'').trim();
+        var nameOk = nm.length>=2 && nm.toLowerCase()!=='undefined' && /[가-힣A-Za-z]/.test(nm) && /^[가-힣A-Za-z\s]+$/.test(nm);
+        if(!nameOk){ showKacAlert('성함을 정확히 입력해 주세요.\n(한글/영문 2자 이상)'); return; }
+        var sb=(sabI?sabI.value:'').trim();
+        if(!/^\d{4,5}$/.test(sb)){ showKacAlert('사번(5자리) 또는 전화번호 뒤 4자리를 숫자로 입력해 주세요.'); return; }
+        var oldToken=(localStorage.getItem('uToken')||'').trim();
+        var newToken=nm+'_'+sb;
+        try{
+          localStorage.setItem('kac_user_name', nm);
+          localStorage.setItem('kac_user_phone', sb);
+          localStorage.setItem('uToken', newToken);
+          if(oldToken && oldToken!==newToken) localStorage.setItem('kac_old_uToken', oldToken);
+        }catch(e){}
+    }
+    if(nameI) nameI.style.display='none';
+    if(sabI) sabI.style.display='none';
+    if(deptInput){ deptInput.readOnly=true; deptInput.style.display='none'; }
+    var btns=document.getElementById('wzIdentityBtns'); if(btns) btns.style.display='';
+    var done=document.getElementById('wzEditDone'); if(done) done.style.display='none';
+    var nameT=document.getElementById('wzName'); if(nameT){ nameT.style.display=''; nameT.textContent=(localStorage.getItem('kac_user_name')||'-').trim()||'-'; }
+    var deptT=document.getElementById('wzDeptText'); if(deptT){ deptT.style.display=''; deptT.textContent=formatDept((deptInput&&deptInput.value||'').trim()||'-'); }
 }
 
 function editOutingProfileInfo() {
-    if (typeof editProfile === 'function') editProfile();
+    var nameI=document.getElementById('wzNameInput'), nameT=document.getElementById('wzName');
+    var sabI=document.getElementById('wzSabunInput');
+    if(nameI){ nameI.value=(localStorage.getItem('kac_user_name')||'').trim(); nameI.style.display='block'; }
+    if(nameT) nameT.style.display='none';
+    if(sabI){ sabI.value=(localStorage.getItem('kac_user_phone')||'').trim(); sabI.style.display='block'; }
+    var btns=document.getElementById('wzIdentityBtns'); if(btns) btns.style.display='none';
+    var done=document.getElementById('wzEditDone'); if(done) done.style.display='block';
+    setTimeout(function(){ if(nameI) nameI.focus(); }, 0);
 }
 window.refreshOutingIdentity = refreshOutingIdentity;
 window.editOutingDept = editOutingDept;
 window.editOutingProfileInfo = editOutingProfileInfo;
+window.finishOutingIdentityEdit = finishOutingIdentityEdit;
 
 
 

@@ -72,6 +72,9 @@
         .stamp-manual{ color:#2563eb !important; border-color:#2563eb !important; }
         .att-mark{ cursor:pointer; }
         .att-mark:hover{ background:#eff6ff; }
+        .att-manual{ cursor:pointer; }
+        .att-manual:hover{ background:#fef2f2; }
+        @media print{ .att-manual{ cursor:default !important; } }
         .mk-hint{ color:#cbd5e1; opacity:.55; font-size:calc(var(--sf, 8px) + 2px); transition:all .12s; }
         .att-mark:hover .mk-hint{ color:#2563eb; opacity:1; }
         @media print{ .att-mark{ cursor:default !important; } .mk-hint{ display:none !important; } }
@@ -144,13 +147,38 @@ function markCell(td){
     firebase.database().ref(path)
       .set({ name:nm, phone:ph, manual:true, src:'coord', ts:Date.now() })
       .then(function(){
-        // 클릭한 칸을 즉시 '출석 + 직접처리'로 갱신(보관 모드는 실시간 리스너가 없으므로 필수)
-        try{ td.className=''; td.removeAttribute('onclick'); td.title='운영부 직접 처리'; td.innerHTML='<div class="att-in"><div class="stamp stamp-manual">출석</div><div class="att-auth manual">직접처리</div></div>'; }catch(_){}
+        // 클릭한 칸을 즉시 '출석 + 직접처리(다시 클릭 시 취소)'로 갱신(보관 모드는 실시간 리스너가 없으므로 필수)
+        try{ td.className='att-manual'; td.title='클릭하면 직접처리 취소'; td.setAttribute('onclick','unmarkCell(this)'); td.innerHTML='<div class="att-in"><div class="stamp stamp-manual">출석</div><div class="att-auth manual">직접처리</div></div>'; }catch(_){}
       })
       .catch(function(e){ alert('출석 처리 실패: '+((e&&e.message)||'')); });
   }catch(e){ alert('오류: '+((e&&e.message)||'')); }
 }
 window.markCell=markCell;
+
+// [운영부 수동 출석 취소] 직접 처리한 칸을 다시 클릭 → 확인 후 취소(삭제). OTP 인증 출석은 보호(취소 불가).
+function unmarkCell(td){
+  try{
+    if(autoSave) return;
+    var d=td.getAttribute('data-d'), nm=td.getAttribute('data-n'), ph=td.getAttribute('data-p')||'';
+    if(!d||!nm) return;
+    var key=(nm+'_'+ph).replace(/[.#$\[\]\/]/g,'_');
+    var path;
+    if(window._archiveMode && window._archiveId){ path='system/course_archive/'+window._archiveId+'/internal_attendance/'+d+'/'+key; }
+    else if(SHEET_ROOM){ path='courses/'+SHEET_ROOM+'/internal_attendance/'+d+'/'+key; }
+    else return;
+    if(!confirm('['+nm+'] '+d+'\n직접 처리한 출석을 취소하시겠습니까?')) return;
+    var ref=firebase.database().ref(path);
+    ref.once('value').then(function(snap){
+      var rec=snap.val()||{};
+      if(rec.authId && !rec.manual && rec.src!=='coord'){ alert('OTP 인증 출석은 취소할 수 없습니다.'); throw 'otp'; }
+      return ref.remove();
+    }).then(function(){
+      // 클릭한 칸을 즉시 빈 칸(다시 처리 가능)으로 갱신
+      try{ td.className='att-mark'; td.title=''; td.setAttribute('onclick','markCell(this)'); td.innerHTML='<span class="mk-hint" title="클릭하면 출석 처리"><i class="fa-solid fa-hand-pointer"></i></span>'; }catch(_){}
+    }).catch(function(e){ if(e!=='otp') alert('취소 실패: '+((e&&e.message)||'')); });
+  }catch(e){ alert('오류: '+((e&&e.message)||'')); }
+}
+window.unmarkCell=unmarkCell;
 
 async function init() {
     // 1. 주소창에서 방 번호(room)를 정확히 가져옵니다.
@@ -317,12 +345,19 @@ async function init() {
                     const _auth = (info.authId || '').toString().trim();
                     const _tm = (info.time || '').toString().trim();
                     const _man = !!(info.manual || info.src === 'coord' || (info.by && !_auth));
-                    let _sub = '';
-                    if (_man) _sub = '<div class="att-auth manual">직접처리</div>';
-                    else if (_auth) _sub = `<div class="att-auth">${_auth.replace(/^KAC-?/i, '')}</div>`;
-                    else if (_tm) _sub = `<div class="att-auth">${_tm.replace(/[오전오후\s]/g, '')}</div>`;
-                    const _ttl = (_man ? '운영부 직접 처리' : ('OTP 인증 출석' + (_auth ? ' · ' + _auth : '') + (_tm ? ' · ' + _tm : ''))).replace(/"/g, '&quot;');
-                    row += `<td title="${_ttl}"><div class="att-in"><div class="stamp${_man ? ' stamp-manual' : ''}">출석</div>${_sub}</div></td>`;
+                    const _n = (s.name || '').replace(/"/g, '&quot;');
+                    const _p = ('' + (s.phone || '')).replace(/"/g, '&quot;');
+                    if (_man && _canMark) {
+                        // 운영부 직접 처리한 출석 → 다시 클릭하면 취소(확인 후)
+                        row += `<td class="att-manual" data-d="${d}" data-n="${_n}" data-p="${_p}" onclick="unmarkCell(this)" title="클릭하면 직접처리 취소"><div class="att-in"><div class="stamp stamp-manual">출석</div><div class="att-auth manual">직접처리</div></div></td>`;
+                    } else {
+                        let _sub = '';
+                        if (_man) _sub = '<div class="att-auth manual">직접처리</div>';
+                        else if (_auth) _sub = `<div class="att-auth">${_auth.replace(/^KAC-?/i, '')}</div>`;
+                        else if (_tm) _sub = `<div class="att-auth">${_tm.replace(/[오전오후\s]/g, '')}</div>`;
+                        const _ttl = (_man ? '운영부 직접 처리' : ('OTP 인증 출석' + (_auth ? ' · ' + _auth : '') + (_tm ? ' · ' + _tm : ''))).replace(/"/g, '&quot;');
+                        row += `<td title="${_ttl}"><div class="att-in"><div class="stamp${_man ? ' stamp-manual' : ''}">출석</div>${_sub}</div></td>`;
+                    }
                 } else if (_canMark && d <= _todayStr) {
                     const _n = (s.name || '').replace(/"/g, '&quot;');
                     const _p = ('' + (s.phone || '')).replace(/"/g, '&quot;');
@@ -424,7 +459,7 @@ async function init() {
 
 
 <style>@media print{#__ver{display:none!important}}</style>
-<div id="__ver" style="position:fixed;right:7px;bottom:7px;z-index:2147483000;background:rgba(15,23,42,.72);color:#cbd5e1;font:700 10px/1 monospace;padding:4px 8px;border-radius:7px;pointer-events:none;letter-spacing:.3px;">출석부 vE · 빈칸클릭 수동출석(라이브·보관 모두)·OTP인증표기</div>
+<div id="__ver" style="position:fixed;right:7px;bottom:7px;z-index:2147483000;background:rgba(15,23,42,.72);color:#cbd5e1;font:700 10px/1 monospace;padding:4px 8px;border-radius:7px;pointer-events:none;letter-spacing:.3px;">출석부 vF · 직접처리 다시클릭 취소(확인팝업)·OTP보호</div>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
 <div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vA</div>
 </body>

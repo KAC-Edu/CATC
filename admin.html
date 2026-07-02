@@ -42,7 +42,7 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/ko.js"></script>
-    <link rel="stylesheet" href="admin.css?v=260702Z12">
+    <link rel="stylesheet" href="admin.css?v=260702Z14">
     <link rel="stylesheet" href="kac-tokens.css?v=20260622">
     <link rel="icon" type="image/svg+xml" href="favicon.svg?v=b260620c">
     <script>
@@ -2418,12 +2418,8 @@ function setupAcc(btn){
 
 
 <!-- [추가] 우측 하단 플로팅 홈 버튼 -->
-    <div id="floatingHomeBtn" class="floating-home-btn" onclick="ui.goHomeSmart()" title="홈으로 (이전 화면)" aria-label="홈으로">
-        <svg viewBox="0 0 60 60" fill="none" stroke="currentColor" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <path d="M22 44 V26 a8 8 0 0 1 16 0 V44"/>
-            <path d="M30 37 L38 44 L46 37"/>
-        </svg>
-        <span>홈으로</span>
+    <div id="floatingHomeBtn" class="floating-home-btn" onclick="ui.goHomeSmart()" title="과정 현황으로" aria-label="과정 현황">
+        <span>과정현황</span>
     </div>
 
 
@@ -2642,7 +2638,7 @@ function setupAcc(btn){
 
 
 
-    <script src="admin.js?v=260702Z11"></script>
+    <script src="admin.js?v=260702Z13"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
 <!-- ── 화면 자동 맞춤(auto-fit): 가로+세로 모두 화면에 맞게 자동 축소 · JDS260613 ──
      원인: Windows 디스플레이 배율(125%/150%)·저해상도 화면에서 유효 뷰포트가 작아져

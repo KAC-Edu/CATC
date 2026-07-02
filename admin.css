@@ -3007,68 +3007,44 @@ body.night-mode .header-room-badge { background-color: #003366 !important; borde
 /* [수정] 메인 스테이지 기준 하단 중앙 정렬 */
 /* [개편] 우측 하단 플로팅 홈 버튼 — 평소엔 원형 U턴 아이콘, 마우스 올리면 '홈으로' 라벨이 펼쳐짐 */
 .floating-home-btn {
-    position: fixed;       /* 뷰포트 우측 하단 고정 (콘텐츠와 겹치지 않게) */
-    right: 28px;
+    position: fixed;       /* 뷰포트 하단 중앙 고정 */
+    left: 50%;
+    right: auto;
     bottom: 28px;
-    left: auto;
-    transform: none;
-
-    height: 60px;
-    width: 60px;           /* 기본 상태: 원형 (아이콘만) */
-    padding: 0;
+    transform: translateX(-50%);
+    height: auto;
+    width: auto;
+    padding: 12px 28px;
     background: linear-gradient(135deg, #1e3a8a 0%, #0f172a 100%);
     color: #fff;
     border-radius: 50px;
     display: none;         /* JS에서 flex로 제어 */
     align-items: center;
-    justify-content: flex-start;
-    gap: 0;
-    overflow: hidden;
+    justify-content: center;
     cursor: pointer;
-    box-shadow: 0 10px 28px rgba(15, 23, 42, 0.45);
+    box-shadow: 0 10px 28px rgba(15, 23, 42, 0.42);
     z-index: 9999;
-    transition: width 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275),
-                transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+    transition: transform 0.18s ease, box-shadow 0.2s ease, background 0.2s ease;
     border: 1px solid rgba(255, 255, 255, 0.18);
     white-space: nowrap;
 }
 
-.floating-home-btn i,
-.floating-home-btn svg {
-    flex: 0 0 60px;
-    width: 60px;
-    height: 60px;
-    display: block;
-    text-align: center;
-    font-size: 24px;
-    line-height: 60px;
-}
-
 .floating-home-btn span {
-    font-size: 16px;
+    font-size: 15px;
     font-weight: 800;
-    opacity: 0;
-    max-width: 0;
-    overflow: hidden;
-    transition: opacity 0.2s ease;
-}
-
-/* 마우스 오버 시 알약 형태로 펼쳐지며 라벨 노출 (PC). 터치/키오스크에서는 원형 아이콘 그대로 */
-.floating-home-btn:hover {
-    width: 168px;
-    transform: translateY(-4px);
-    background: linear-gradient(135deg, #2563eb 0%, #1e293b 100%);
-    box-shadow: 0 16px 38px rgba(15, 23, 42, 0.55);
-}
-
-.floating-home-btn:hover span {
+    letter-spacing: .3px;
     opacity: 1;
-    max-width: 110px;
-    padding-right: 22px;
+    max-width: none;
+}
+
+.floating-home-btn:hover {
+    transform: translateX(-50%) translateY(-3px);
+    background: linear-gradient(135deg, #2563eb 0%, #1e293b 100%);
+    box-shadow: 0 16px 38px rgba(15, 23, 42, 0.52);
 }
 
 .floating-home-btn:active {
-    transform: translateY(-1px) scale(0.97);
+    transform: translateX(-50%) translateY(-1px) scale(0.97);
 }
 
 /* OTP 카운트다운: 마지막 10초 긴급 펄스 */
