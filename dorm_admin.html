@@ -5934,6 +5934,17 @@
                     freeRooms.push(r);
                 });
 
+                // [이름 수정 대응] 강사가 과정명을 변형(예: "전기 자동차 과정 (테스트)")해 보존된 방이 있으면,
+                //  계획의 원래 과정("전기 자동차 과정")도 '이미 배치됨'으로 간주 → 원래 이름으로 중복 재생성 방지.
+                (function(){
+                    const kept = Array.from(keptNames).filter(Boolean);
+                    pool.forEach(function(c){
+                        const cn = norm(c.name);
+                        if (!cn || keptNames.has(cn)) return;
+                        if (kept.some(function(k){ return k.indexOf(cn) === 0 || cn.indexOf(k) === 0; })) keptNames.add(cn);
+                    });
+                })();
+
                 const usedNames = new Set(keptNames);
                 let _ri = 0;
                 for (const course of pool) {

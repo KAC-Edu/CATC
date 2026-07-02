@@ -11166,6 +11166,14 @@ annualPlanMgr._syncRoomsLockAware = async function(courses) {
         if (locked || (nm && inProgress) || alreadySet) {
             // ── 보존 방 ──
             keptNames.add(nm);
+            // [이름 수정 대응] 강사가 과정명을 변형(예: "전기 자동차 과정 (테스트)")한 경우,
+            //  계획의 원래 과정("전기 자동차 과정")도 '이미 배치됨'으로 간주 → 원래 이름으로 중복 재생성 방지.
+            if (nm) {
+                pool.forEach(function(c){
+                    var cn = norm(c.name);
+                    if (cn && cn !== nm && (nm.indexOf(cn) === 0 || cn.indexOf(nm) === 0)) keptNames.add(cn);
+                });
+            }
             // 잠금 방 제외: 연간계획의 최신 교수·담당·기간으로 갱신 (데이터는 건드리지 않음)
             if (!locked && planByName[nm]) {
                 const pc = planByName[nm];
