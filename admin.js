@@ -1,8 +1,8 @@
 /* ============================================================
-   PLATFORM_EDIT_STATUS: 수정완료 | VERSION: J6 | 2026-07-02 (J6: ①장소 수동지정 보호(roomDetailManual) — 연간계획 동기화가 온라인 설정 되돌리는 문제 차단 ②ZOOM 버튼 표시를 장소 배지 텍스트와 상시 동기(MutationObserver) — 오프라인인데 버튼 남는 문제 해소 ③저장알림 확인 후 회의정보 모달 순차 표시(동시 팝업 제거) ④회의번호 000 0000 0000 자동 포맷 전용 모달. (J5: ①ZOOM 버튼 과정현황 장소 옆으로+오프라인 완전숨김(방전환 기본숨김·온라인 가드) ②iframe 사이징 실측기반 재작성 ③온라인 장소 저장 시 회의번호/암호 과정별 저장(askZoomMeetingInfo) ④홈검색 카카오등록 교수 노란배지 ⑤퇴교차량 칩 인라인 펼침. (J4: ZOOM 모니터링 iframe 높이를 body zoom 배율 보정해 실제 화면에 맞춤 — 설정 패널 잘림 해소, 리사이즈 대응. (J3: ui.openZoomMonitor 추가 — ZOOM 모니터링을 내장 뷰(iframe)로 열고 과정 전환 시 확인 후 재로딩, 온라인 판별 토글에 더보기 메뉴 항목 포함) (J2: ①ZOOM 모니터링 버튼 표시로직 재적용(온라인 과정 판별) ②강의실 초기화 confirm에 삭제범위 안내 추가 ③QR 요소없음 개발자문구 교체 ④toggleNightMode/addSubject 널가드 — 구버전 잔재 안전화)
+   PLATFORM_EDIT_STATUS: 수정완료 | VERSION: J7 | 2026-07-02 (J7: ZOOM 진입 요소 표시를 [onclick*=openZoomMonitor] 전체 선택으로 통일 + 2초 하트비트 — 오프라인에서 pill 잔존 완전 차단. (J6: ①장소 수동지정 보호(roomDetailManual) — 연간계획 동기화가 온라인 설정 되돌리는 문제 차단 ②ZOOM 버튼 표시를 장소 배지 텍스트와 상시 동기(MutationObserver) — 오프라인인데 버튼 남는 문제 해소 ③저장알림 확인 후 회의정보 모달 순차 표시(동시 팝업 제거) ④회의번호 000 0000 0000 자동 포맷 전용 모달. (J5: ①ZOOM 버튼 과정현황 장소 옆으로+오프라인 완전숨김(방전환 기본숨김·온라인 가드) ②iframe 사이징 실측기반 재작성 ③온라인 장소 저장 시 회의번호/암호 과정별 저장(askZoomMeetingInfo) ④홈검색 카카오등록 교수 노란배지 ⑤퇴교차량 칩 인라인 펼침. (J4: ZOOM 모니터링 iframe 높이를 body zoom 배율 보정해 실제 화면에 맞춤 — 설정 패널 잘림 해소, 리사이즈 대응. (J3: ui.openZoomMonitor 추가 — ZOOM 모니터링을 내장 뷰(iframe)로 열고 과정 전환 시 확인 후 재로딩, 온라인 판별 토글에 더보기 메뉴 항목 포함) (J2: ①ZOOM 모니터링 버튼 표시로직 재적용(온라인 과정 판별) ②강의실 초기화 confirm에 삭제범위 안내 추가 ③QR 요소없음 개발자문구 교체 ④toggleNightMode/addSubject 널가드 — 구버전 잔재 안전화)
    CATC · 강사 플랫폼 로직  (admin.js)
    STATUS    수정안하는중
-   @version  J6
+   @version  J7
    @build    20260702-검색초기화위치수정
    ------------------------------------------------------------
    [코드 수정 규칙 · AI/개발자 공통]
@@ -2469,10 +2469,9 @@ loadDashboardStats: function() {
     window.dashRefs = refs; // 전역 보관 → 다음 방 전환 시 off() 가능
 
     // 2. 과정 정보 및 장소 실시간 업데이트
-    // [J5] 방 전환 시 ZOOM 관련 UI는 기본 숨김 — 온라인 과정으로 확인된 경우에만 아래 리스너에서 표시
+    // [J7] 방 전환 시 ZOOM 진입 요소는 전부 기본 숨김 — 온라인 확인 시 하트비트/리스너가 표시
     window._zoomRoomOnline = false;
-    try { var _zb0=document.getElementById('dashZoomBtn'); if(_zb0) _zb0.style.display='none';
-          var _zm0=document.getElementById('more-zoom-monitor'); if(_zm0) _zm0.style.display='none'; } catch(e){}
+    try { document.querySelectorAll('[onclick*="openZoomMonitor"]').forEach(function(t){ t.style.display='none'; }); } catch(e){}
     refs.settings.on('value', snap => {
         if (state.room !== room) return;
         const s = snap.val() || {};
@@ -2486,8 +2485,7 @@ loadDashboardStats: function() {
         try {
             var _zmOn = (/온라인|zoom/i.test(String(s.roomDetailName || '')));
             window._zoomRoomOnline = _zmOn;
-            var _zmDash = document.getElementById('dashZoomBtn'); if (_zmDash) _zmDash.style.display = _zmOn ? '' : 'none';
-            var _zmMore = document.getElementById('more-zoom-monitor'); if (_zmMore) _zmMore.style.display = _zmOn ? '' : 'none';
+            document.querySelectorAll('[onclick*="openZoomMonitor"]').forEach(function(t){ t.style.display = _zmOn ? '' : 'none'; });
         } catch(e){}
         if (document.getElementById('dashCoordName')) {
             // Firebase 저장값(표기 차이 가능)을 명단의 정식 이름으로 매칭하여 전체 이름 표시
@@ -13109,23 +13107,27 @@ window.addEventListener('resize', function(){
 });
 
 
-// [J6] ZOOM 버튼 표시를 과정현황 장소 배지 텍스트와 항상 일치시키는 안전장치.
-//  (연간계획 자동동기화 등 어떤 경로로 장소가 바뀌어도 버튼이 남거나 새는 일이 없도록)
+// [J7] ZOOM 진입 요소(버튼·메뉴 등 openZoomMonitor를 여는 모든 요소) 표시를
+//  과정현황 장소 배지 텍스트와 상시 강제 동기화. 감시자 + 2초 하트비트 이중 안전장치로,
+//  어떤 코드 경로가 배지를 바꾸거나 표시를 되살려도 오프라인이면 반드시 숨긴다.
 (function(){
   function applyZoomVis(){
     try{
       var el=document.getElementById('dashRoomDetail');
       var on=!!(el && /온라인|zoom/i.test(String(el.innerText||'')));
       window._zoomRoomOnline = on;
-      var d=document.getElementById('dashZoomBtn'); if(d) d.style.display = on ? '' : 'none';
-      var mm=document.getElementById('more-zoom-monitor'); if(mm) mm.style.display = on ? '' : 'none';
+      document.querySelectorAll('[onclick*="openZoomMonitor"]').forEach(function(t){
+        t.style.display = on ? '' : 'none';
+      });
     }catch(e){}
   }
   function install(){
     var el=document.getElementById('dashRoomDetail');
-    if(!el || el._zmObs) return;
-    el._zmObs=true;
-    try{ new MutationObserver(applyZoomVis).observe(el,{childList:true,characterData:true,subtree:true}); }catch(e){}
+    if(el && !el._zmObs){
+      el._zmObs=true;
+      try{ new MutationObserver(applyZoomVis).observe(el,{childList:true,characterData:true,subtree:true}); }catch(e){}
+    }
+    if(!window._zmHeartbeat){ window._zmHeartbeat=setInterval(applyZoomVis, 2000); }
     applyZoomVis();
   }
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', install);
