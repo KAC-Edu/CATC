@@ -1670,7 +1670,6 @@ const profMgr = {
 // [리포트 반영] 프로필 편집 창 열 때 영문 성함 포함 기존 데이터 호출
     openProfileEditor: function(name) {
         document.getElementById('pp-name').value = name;
-        document.getElementById('pp-eng-name').value = ""; // 초기화
         document.getElementById('pp-phone').value = "";
         document.getElementById('pp-email').value = "";
         document.getElementById('pp-msg').value = "";
@@ -1684,14 +1683,12 @@ const profMgr = {
             const p = snap.val();
             const kakaoEl = document.getElementById('pp-kakao');
             if(p) {
-                document.getElementById('pp-eng-name').value = p.engName || ""; // 영문 성함 로드
                 document.getElementById('pp-phone').value = p.phone || "";
                 document.getElementById('pp-email').value = p.email || "";
                 if (kakaoEl) kakaoEl.value = p.kakaoLink || "";
                 document.getElementById('pp-msg').value = p.msg || "";
                 if(document.getElementById('pp-eng-msg')) document.getElementById('pp-eng-msg').value = p.engMsg || "";
                 profMgr.renderBioRows(Array.isArray(p.bioList) ? p.bioList : profMgr._parseBio(p.bio || ""));
-                profMgr.renderBioRowsEn(Array.isArray(p.engBioList) ? p.engBioList : profMgr._parseBio(p.engBio || ""));
                 if(p.photo && previewImg) {
                     previewImg.src = p.photo;
                     previewImg.style.display = 'block';
@@ -1738,16 +1735,12 @@ const profMgr = {
         const doSave = (photoData) => {
             const profileData = {
                 photo: photoData || "",
-                engName: document.getElementById('pp-eng-name').value, // 영문 성함 추가
                 phone: document.getElementById('pp-phone').value,
                 email: document.getElementById('pp-email').value,
                 kakaoLink: (document.getElementById('pp-kakao')?.value || '').trim(),
                 msg: document.getElementById('pp-msg').value,
                 bio: profMgr.collectBioRows().map(r => (r.year ? r.year + " " : "") + r.text).join("\n"),
                 bioList: profMgr.collectBioRows(),
-                engMsg: (document.getElementById('pp-eng-msg') ? document.getElementById('pp-eng-msg').value : ""),
-                engBio: profMgr.collectBioRowsEn().map(r => (r.year ? r.year + " " : "") + r.text).join("\n"),
-                engBioList: profMgr.collectBioRowsEn(),
                 fixedRoom: (document.getElementById('pp-fixedRoom') && document.getElementById('pp-fixedRoom').value) || null
             };
             firebase.database().ref(`system/professorProfiles/${name}`).set(profileData).then(() => {
