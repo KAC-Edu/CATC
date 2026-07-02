@@ -12896,6 +12896,7 @@ ui.confirmRouletteLeader = function(){
       try{ ui.setMode('dashboard'); }catch(e){}   // 축소 상태에서 한번 더 → 과정현황 페이지
     } else {
       setCollapsed(host, false);     // 평상시 축소 → 펼침
+      scheduleAutoCollapse(host);    // 펼친 뒤 4초 무동작이면 자동 축소
     }
   }
 
@@ -12903,6 +12904,12 @@ ui.confirmRouletteLeader = function(){
     var handle = host.querySelector('.hex-drag-handle');
     var center = host.querySelector('.hex-center');
     _drag.host = host; _drag.center = center;
+    // 리모컨 위에 마우스가 있으면 자동축소 잠시 멈춤 → 벗어나면 다시 4초 카운트
+    if(!host._hoverBound){
+      host.addEventListener('pointerenter', function(){ clearTimeout(_autoCollapseTimer); });
+      host.addEventListener('pointerleave', function(){ if(!host.classList.contains('hex-collapsed')) scheduleAutoCollapse(host); });
+      host._hoverBound = true;
+    }
     if(handle){ handle.style.touchAction='none'; handle.addEventListener('pointerdown', _dragDown); }
     if(center){ center.style.touchAction='none'; center.addEventListener('pointerdown', _dragDown); }
     if(!_dragWinBound){
