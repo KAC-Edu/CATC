@@ -7708,6 +7708,9 @@ init: function() {
                 slot.scheduleTs = ts;
             }
         } catch (e) {}
+        // 센터 전체 공지(system/globalNotice) — 내용이 있으면 PDF 23p 뒤 안내 페이지로 노출
+        slot.centerNotice = '';
+        try { const _gn = await firebase.database().ref('system/globalNotice').once('value'); slot.centerNotice = String(_gn.val() || '').trim(); } catch (e) {}
         slot.courseInfo = ci;
     },
 
@@ -7772,6 +7775,23 @@ init: function() {
               ${row('교육 구분 :', catSel)}
               ${row('교육 평가 :', evSel)}
             </div>
+          </div>
+        </div>`;
+    },
+
+    // 센터 전체 공지 안내 페이지 (PDF 23p 뒤) — courseinfo 헤더 재사용 + 라운딩 박스 공지
+    _centerNoticeHTML: function() {
+        const esc = s => (s == null ? '' : String(s)).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+        const raw = String(guideMgr._slot().centerNotice || '').trim();
+        const body = raw ? esc(raw).replace(/\r?\n/g, '<br>') : '현재 게시된 센터 공지가 없습니다.';
+        return `<div class="guide-courseinfo-slide guide-centernotice-slide">
+          <div class="ci-header">
+            <div class="ci-head-center"><span class="ci-emblem"><i class="fa-solid fa-plane-up"></i></span><span class="ci-header-title">입교 안내</span></div>
+            <div class="ci-head-right"><img src="logo.png" class="ci-logo" alt="KAC" onerror="this.style.display='none'"></div>
+          </div>
+          <div class="cn-body">
+            <div class="cn-title"><i class="fa-solid fa-bullhorn"></i> 교육운영부 안내 말씀</div>
+            <div class="cn-box">${body}</div>
           </div>
         </div>`;
     },
@@ -7850,7 +7870,7 @@ init: function() {
     _pageEnable: function() {
         const s = guideMgr._slot();
         const e = (s && s.pageEnable) || {};
-        return { kakaoqr: e.kakaoqr !== false, channelguide: e.channelguide !== false };
+        return { kakaoqr: e.kakaoqr !== false, channelguide: e.channelguide !== false, centernotice: e.centernotice !== false };
     },
     // 교육장소(14p 등) 교육동 4칸 정의. filter = setup-room-select에서 그 건물 강의실 걸러낼 키워드
     _venueCells: [
@@ -7887,11 +7907,12 @@ init: function() {
         const list = [];
         if (!n) return list;
         const en = guideMgr._pageEnable();
-        const want = { profile: guideMgr._hasProfile(), kakaoqr: guideMgr._hasKakaoQR() && en.kakaoqr, channelguide: guideMgr._hasKakaoQR() && en.channelguide, courseinfo: true };
+        const want = { profile: guideMgr._hasProfile(), kakaoqr: guideMgr._hasKakaoQR() && en.kakaoqr, channelguide: guideMgr._hasKakaoQR() && en.channelguide, courseinfo: true, centernotice: guideMgr._hasCenterNotice() && en.centernotice };
         const pos = guideMgr._pagePos();
+        pos.centernotice = 23;   // 센터 공지는 PDF 23p(학생장 역할) 뒤 고정
         const clamp = v => Math.max(1, Math.min(n, Number(v) || 1));
         // 같은 페이지에 여러 개가 들어갈 때의 순서
-        const order = ['profile', 'kakaoqr', 'channelguide', 'courseinfo'];
+        const order = ['profile', 'kakaoqr', 'channelguide', 'courseinfo', 'centernotice'];
         const byPage = {};
         order.forEach(t => { if (!want[t]) return; const pg = clamp(pos[t]); (byPage[pg] = byPage[pg] || []).push(t); });
         for (let p = 1; p <= n; p++) {
@@ -7905,6 +7926,8 @@ init: function() {
     _hasKakaoQR: function() { const s = guideMgr._slot(); return !!(s && s.kakaoLink); },
     _isProfilePage: function(v) { return (guideMgr._pageList()[v - 1] || {}).t === 'profile'; },
     _isCourseInfoPage: function(v) { return (guideMgr._pageList()[v - 1] || {}).t === 'courseinfo'; },
+    _hasCenterNotice: function() { const s = guideMgr._slot(); return !!(s && s.centerNotice && String(s.centerNotice).trim()); },
+    _isCenterNoticePage: function(v) { return (guideMgr._pageList()[v - 1] || {}).t === 'centernotice'; },
     _isKakaoQRPage: function(v) { return (guideMgr._pageList()[v - 1] || {}).t === 'kakaoqr'; },
     _isChannelGuidePage: function(v) { return (guideMgr._pageList()[v - 1] || {}).t === 'channelguide'; },
     _isQRPage: function(v) { return false; },
@@ -8119,6 +8142,17 @@ init: function() {
             slot.pageNum = num;
             const _indci = document.getElementById('guidePageInfo');
             if (_indci) _indci.innerText = `${num} / ${_total}`;
+            return;
+        }
+
+        // 센터 공지 안내 (가상 페이지 · PDF 23p 뒤)
+        if (guideMgr._isCenterNoticePage(num)) {
+            guideMgr.isRendering = false;
+            _showGuideLayer('virtual');
+            if (_profEl) { _profEl.innerHTML = guideMgr._centerNoticeHTML(); }
+            slot.pageNum = num;
+            const _indcn = document.getElementById('guidePageInfo');
+            if (_indcn) _indcn.innerText = `${num} / ${_total}`;
             return;
         }
 
@@ -12140,16 +12174,17 @@ ui.openGuidePageSettings = function(){
       +'<span style="font-size:12px;color:#64748b;font-weight:700;">페이지 뒤</span></div>';
   };
   // 표시/해제 체크박스 행 (오픈톡방 QR · 채널 입교등록 안내 — 프로필 바로 뒤에 따라옴)
-  var rowCheck=function(key,label,icon,color,checked){
+  var rowCheck=function(key,label,icon,color,checked,sub){
     return '<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;padding-left:16px;border-left:2px solid #e2e8f0;margin-left:8px;">'
       +'<i class="fa-solid '+icon+'" style="color:'+color+';width:22px;text-align:center;"></i>'
-      +'<span style="flex:1;font-size:13.5px;font-weight:800;color:#475569;">'+label+' <span style="font-weight:600;color:#94a3b8;font-size:11px;">· 프로필 바로 뒤</span></span>'
+      +'<span style="flex:1;font-size:13.5px;font-weight:800;color:#475569;">'+label+' <span style="font-weight:600;color:#94a3b8;font-size:11px;">'+(sub||'· 프로필 바로 뒤')+'</span></span>'
       +'<label style="display:inline-flex;align-items:center;gap:6px;cursor:pointer;user-select:none;"><input type="checkbox" id="gpe-'+key+'" '+(checked?'checked':'')+' style="width:17px;height:17px;accent-color:#2563eb;cursor:pointer;"><span style="font-size:12.5px;font-weight:800;color:#334155;">표시</span></label></div>';
   };
   var rowHtml=rowPage('profile','담임교수 프로필','fa-user-tie','#1e3a8a')
     +rowCheck('kakaoqr','오픈톡방 QR','fa-qrcode','#3a1d1d',en.kakaoqr)
     +rowCheck('channelguide','채널 입교등록 안내','fa-comment-dots','#f59e0b',en.channelguide)
-    +rowPage('courseinfo','교육과정 안내','fa-clipboard-list','#1d4ed8');
+    +rowPage('courseinfo','교육과정 안내','fa-clipboard-list','#1d4ed8')
+    +rowCheck('centernotice','센터 공지','fa-bullhorn','#e11d48',en.centernotice,'· PDF 23p 뒤 · 공지 있을 때만 표시');
   // 교육 장소 강의실 (4 교육동) 선택 행 — 슬라이드 위 pill 없이 여기서 지정
   var _esc=function(x){ return String(x||'').replace(/"/g,'&quot;').replace(/</g,'&lt;'); };
   var venuePick=((guideMgr._slot&&guideMgr._slot().venuePick)||{});
@@ -12198,7 +12233,7 @@ ui.saveGuidePageSettings = function(){
   var total=0; try{ var sl=guideMgr._slot(); total=(sl&&sl.pdfDoc)?sl.pdfDoc.numPages:0; }catch(e){}
   var obj={};
   keys.forEach(function(k){ var el=document.getElementById('gpp-'+k); if(!el) return; var v=parseInt(el.value,10); if(!v||v<1) v=1; if(total&&v>total) v=total; obj[k]=v; });
-  var en={ kakaoqr: !!(document.getElementById('gpe-kakaoqr')||{}).checked, channelguide: !!(document.getElementById('gpe-channelguide')||{}).checked };
+  var en={ kakaoqr: !!(document.getElementById('gpe-kakaoqr')||{}).checked, channelguide: !!(document.getElementById('gpe-channelguide')||{}).checked, centernotice: !!(document.getElementById('gpe-centernotice')||{}).checked };
   var vp=parseInt((document.getElementById('gpp-venuepage')||{}).value,10); if(!vp||vp<1) vp=14; if(total&&vp>total) vp=total;
   var vsel=String((document.getElementById('gvv-single')||{}).value||'').trim();
   var vpick={};

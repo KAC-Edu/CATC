@@ -4469,6 +4469,9 @@ body.in-course #courseSmartRemote.hex-remote-v2{display:block;}
 #appFooter .af-line{font-size:12.5px;font-weight:700;color:#e2e8f0;line-height:1.45;}
 #appFooter .af-dev{color:#cbd5e1;font-weight:600;}
 #appFooter .af-copy{font-size:12.5px;font-weight:900;color:#ffffff;margin-top:2px;}
+/* 우측 끝 개발자 링크 — 클릭 시 개발자 문의/저작권 팝업 (푸터는 pointer-events:none이라 버튼만 auto) */
+#appFooter .af-devbtn{position:absolute;right:16px;top:50%;transform:translateY(-50%);background:none;border:none;color:#7c8ba1;font-size:11px;font-weight:600;letter-spacing:.2px;cursor:pointer;pointer-events:auto;padding:4px 6px;white-space:nowrap;}
+#appFooter .af-devbtn:hover{color:#e2e8f0;text-decoration:underline;}
 /* 현황판(홈·실시간현황판) 및 모니터 전체화면에서는 숨김 */
 body[data-mode="home"] #appFooter,
 body[data-mode="waiting"] #appFooter{display:none !important;}
@@ -4962,6 +4965,11 @@ body.night-mode .side-rail-lbl{ color:#cbd5e1; }
 .guide-courseinfo-slide .ci-header-title{ font-size:3.6cqw; font-weight:900; letter-spacing:.5px; display:inline-flex; align-items:center; gap:1.2cqw; }
 .guide-courseinfo-slide .ci-logo{ height:4.2cqw; width:auto; object-fit:contain; }
 .guide-courseinfo-slide .ci-body{ flex:1 1 auto; min-height:0; padding:3.2cqw 6cqw; display:flex; flex-direction:column; justify-content:center; }
+/* [센터 공지 안내 페이지] 라운딩 박스 안에 좌측정렬·큰 글씨 공지 */
+.guide-centernotice-slide .cn-body{ flex:1 1 auto; min-height:0; padding:3.4cqw 6cqw; display:flex; flex-direction:column; justify-content:center; }
+.guide-centernotice-slide .cn-title{ font-size:2.9cqw; font-weight:900; color:#1b2a4a; display:flex; align-items:center; gap:1.2cqw; margin-bottom:2.6cqw; }
+.guide-centernotice-slide .cn-title i{ color:#e11d48; }
+.guide-centernotice-slide .cn-box{ background:#f8fafc; border:0.28cqw solid #dbe4ef; border-left:0.9cqw solid #2563eb; border-radius:1.6cqw; padding:3.8cqw 4.2cqw; font-size:3.3cqw; font-weight:700; color:#0f172a; line-height:1.65; text-align:left; white-space:pre-wrap; word-break:keep-all; overflow-y:auto; box-shadow:0 0.4cqw 1.4cqw rgba(15,23,42,.06); }
 .guide-courseinfo-slide .ci-section{ font-size:2.6cqw; font-weight:900; color:#1b2a4a; display:flex; align-items:center; gap:1.1cqw; padding-bottom:1.8cqw; border-bottom:0.25cqw solid #1b2a4a; margin-bottom:3.2cqw; }
 .guide-courseinfo-slide .ci-section-bar{ width:1cqw; height:3cqw; background:#1b2a4a; display:inline-block; }
 .guide-courseinfo-slide .ci-fields{ display:flex; flex-direction:column; gap:2.4cqw; }

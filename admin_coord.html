@@ -2,7 +2,7 @@
 <!-- 이 플랫폼(admin_coord.html / 교육운영부) 수정상태 플래그. 값은 [수정중] 또는 [수정안하는중] 두 가지. -->
 <!-- 작업 시작 시 → 수정중 / 작업 완료 시 → 수정안하는중. 다른 플랫폼은 이 말머리를 보고 연동·수정 가능 여부 판단. -->
 <!-- [외부변경 · 카카오채널연동 2026-06-25] 포털(portal.html/7777) 경유 폐지 → 페이지 직접진입 시 접속코드(catc1234) 게이트 추가, 포털 리다이렉트/종료이동 제거. version C13→D13. 기능 로직은 미변경. -->
-<!-- last-updated: 2026-06-30 / version: D45 (상단바 통계 센터정렬을 모든 폭에 적용→와이드에서도 가운데. 본문 max-width 1560) -->
+<!-- last-updated: 2026-07-02 / version: D47 (교육생 표기 통일 · 리더 명칭 교육생장으로 변경) -->
 <!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -1345,15 +1345,15 @@ body.pc-mode .coord-sec-panel { background:#fff; border:1px solid #eef2f7; borde
 .cmeta { display:flex; flex-direction:column; align-items:flex-end; line-height:1.15; white-space:nowrap; }
 .cmeta .ml { font-size:10.5px; color:#94a3b8; font-weight:800; }
 .cmeta .mv { font-size:14px; color:#0f172a; font-weight:800; margin-top:3px; }
-/* 학생장 가운데 블록 (과정 간 정렬) */
-/* 학생장 미지정 — 회색 비활성 톤 */
+/* 교육생장 가운데 블록 (과정 간 정렬) */
+/* 교육생장 미지정 — 회색 비활성 톤 */
 .crow-leader{ flex-shrink:0; width:200px; text-align:center; background:#f1f5f9; border:1px solid #e2e8f0; border-radius:12px; padding:6px 12px; }
 .crow-leader .ll{ font-size:11px; font-weight:800; color:#94a3b8; }
 .crow-leader .ll i{ color:#cbd5e1; margin-right:3px; }
 .crow-leader .ln{ font-size:18px; font-weight:900; color:#475569; line-height:1.2; margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .crow-leader .ln small{ font-size:12px; font-weight:700; color:#94a3b8; margin-left:3px; }
 .crow-leader .ln.none{ font-size:13px; font-weight:700; color:#94a3b8; }
-/* 학생장 지정됨 — 입교율처럼 녹색으로 활성화 */
+/* 교육생장 지정됨 — 입교율처럼 녹색으로 활성화 */
 .crow-leader.assigned{ background:#dcfce7; border-color:#86efac; }
 .crow-leader.assigned .ll{ color:#15803d; }
 .crow-leader.assigned .ll i{ color:#16a34a; }
@@ -1818,7 +1818,7 @@ body.cpop-locked{ overflow:hidden !important; }
     <div class="coord-menu-list">
         <div class="cml-sec">교육운영부 관련</div>
         <a class="cml-item" onclick="annualPlanMgrCoord.openEditorModal(); toggleMenu(false);"><i class="fa-solid fa-calendar-days" style="color:#2563eb;"></i> 연간교육계획 편집</a>
-        <a class="cml-item" onclick="openGlobalNoticeModal(); toggleMenu(false);"><i class="fa-solid fa-bullhorn" style="color:#f97316;"></i> 항기원 전체공지</a>
+        <a class="cml-item" onclick="openGlobalNoticeModal(); toggleMenu(false);"><i class="fa-solid fa-bullhorn" style="color:#f97316;"></i> 입교안내 공지</a>
         <a class="cml-item" onclick="openLedgerCenter(); toggleMenu(false);"><i class="fa-solid fa-folder-open" style="color:#0d9488;"></i> 외출외박/출석부 대장 출력</a>
         <a class="cml-item" onclick="coordMgr.openManage(); toggleMenu(false);"><i class="fa-solid fa-user-gear" style="color:#7c3aed;"></i> 과정운영 담당자 관리</a>
     </div>
@@ -2357,8 +2357,8 @@ body.coord-header-compact.pc-mode #coordHdrStats.coord-hdr-hide{ display:flex !i
               </div>
               <div style="display:flex; align-items:center; gap:8px; margin-top:13px; padding-top:12px; border-top:1px solid rgba(255,255,255,0.12); font-size:13px;">
                   <i class="fa-solid fa-crown" style="color:#fbbf24;"></i>
-                  <span style="color:#7da2c9;">학생장</span>
-                  <b style="font-weight:700; color:#e2e8f0;" id="ind-leader">지정된 학생장 없음</b>
+                  <span style="color:#7da2c9;">교육생장</span>
+                  <b style="font-weight:700; color:#e2e8f0;" id="ind-leader">지정된 교육생장 없음</b>
               </div>
           </div>
 
@@ -3491,7 +3491,7 @@ function deleteActionRow(rid, date, token, name) {
 
 
 
-// [최종 수정본] 학생장 전체번호 반영 및 버튼 크기 균형을 맞춘 상세 뷰 함수
+// [최종 수정본] 교육생장 전체번호 반영 및 버튼 크기 균형을 맞춘 상세 뷰 함수
 function updateIndividualView() {
     const room = globalAllData[currentRID]; 
     if (!room) return;
@@ -3515,10 +3515,10 @@ function updateIndividualView() {
     _coordRefreshCoordTitle(room);
     document.getElementById('ind-room-loc').innerText = room.settings?.roomDetailName || "-";
 
-    // 3. [핵심 추가] 학생장 정보 표시 (성함 + 강사가 입력한 전체 전화번호)
-    let leaderTxt = "지정된 학생장 없음";
+    // 3. [핵심 추가] 교육생장 정보 표시 (성함 + 강사가 입력한 전체 전화번호)
+    let leaderTxt = "지정된 교육생장 없음";
     if (room.students) {
-        // 학생장(isLeader: true)인 사람만 골라내기
+        // 교육생장(isLeader: true)인 사람만 골라내기
         const leaders = Object.values(room.students).filter(s => s.isLeader === true);
         if (leaders.length > 0) {
             leaderTxt = leaders.map(l => {
@@ -5622,7 +5622,7 @@ async function loadAllStudentData() {
                 shuttleType = shuttleReq.type;
             }
 
-            // 마스터 리스트에 유효한 학생 데이터 추가
+            // 마스터 리스트에 유효한 교육생 데이터 추가
             masterStudentList.push({
                 rid,
                 stoken,
@@ -5813,7 +5813,7 @@ async function saveGlobalNotice() {
 <div id="globalNoticeModal" class="setup-modal" style="z-index: 9900;">
     <div class="setup-box" style="max-width: 450px;">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; border-bottom:2px solid #eee; padding-bottom:10px;">
-            <h3 style="margin:0; font-size:17px; color:var(--navy-dark);"><i class="fa-solid fa-bullhorn"></i> 센터 전체 공지사항 송부</h3>
+            <h3 style="margin:0; font-size:17px; color:var(--navy-dark);"><i class="fa-solid fa-bullhorn"></i> 입교안내 공지</h3>
             <i class="fa-solid fa-xmark" style="cursor:pointer; font-size:22px;" onclick="document.getElementById('globalNoticeModal').style.display='none'; document.body.classList.remove('modal-open');"></i>
         </div>
         
@@ -6602,7 +6602,7 @@ const annualPlanMgrCoord = {
             if (_ri >= freeLeft.length) break;
             writeCourse(freeLeft[_ri++], course);
         }
-        // [중복 과정 정리] 같은 과정명이 두 방 이상이면, 학생·명단·장소 있는 방만 남기고 비움
+        // [중복 과정 정리] 같은 과정명이 두 방 이상이면, 교육생·명단·장소 있는 방만 남기고 비움
         (function(){
             var finalName = {};
             this.ROOMS.forEach(function(r){
@@ -8319,7 +8319,7 @@ function _olRenderWeek(weekKey){
    · 90일 경과분은 course_archive 자동삭제로 검색에서 제외됨
    ============================================================ */
 var _lcData={}, _lcWeeks=[], _lcSel='';
-/* 출석부 건수 = 자체출결(QR) 기록 수. internal_attendance[날짜][학생]=기록 → 전체 합산. 입교(학생수)가 아님 */
+/* 출석부 건수 = 자체출결(QR) 기록 수. internal_attendance[날짜][교육생]=기록 → 전체 합산. 입교(교육생수)가 아님 */
 function _lcAttCount(ia){ var n=0; if(!ia||typeof ia!=='object') return 0; Object.keys(ia).forEach(function(dt){ if(!/^\d{4}-\d{2}-\d{2}$/.test(dt)) return; var day=ia[dt]; if(day&&typeof day==='object') n+=Object.keys(day).length; }); return n; }
 function _lcMondayStr(d){ return _olMonday(d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')); }
 async function openLedgerCenter(){
@@ -8831,7 +8831,7 @@ var coordKiosk={
       var cntEl=document.getElementById('coordOwnerAnnualCnt'); if(cntEl) cntEl.textContent=' ('+mine.length+'개)';
       el.innerHTML=(mine.length?'<ul>'+mine.map(function(c){ var period=c.period||((c.startDate||'')+' ~ '+(c.endDate||'')); var start=(c.startDate||String(period).split('~')[0]||'').trim(), end=(c.endDate||String(period).split('~')[1]||'').trim(); var stt=(end&&today>end)?'종료':((start&&today>=start)?'진행중':'예정'); return '<li><b style="color:'+(stt==='진행중'?'#16a34a':stt==='예정'?'#d97706':'#94a3b8')+';">['+stt+']</b> '+esc(c.name||c.courseName||'-')+' · '+esc(period)+'</li>'; }).join('')+'</ul>':'<span class="cor-empty">등록된 연간 과정이 없습니다.</span>');
     }); }catch(e){}
-    // 생활관 배정(현재주 dorm assignments → 과정 학생 매칭)
+    // 생활관 배정(현재주 dorm assignments → 과정 교육생 매칭)
     try{ var wk=(typeof _coordDormMondayKey==='function')?_coordDormMondayKey():''; firebase.database().ref('system/dorm/assignments/'+wk+'/students').once('value').then(function(snap){
       var av=snap.val()||{}, byName={}; Object.keys(av).forEach(function(k){ var a=av[k]; if(!a||!a.name)return; byName[String(a.name).trim()]=a; });
       document.querySelectorAll('#coordKioskSearchResult .cor-dorm').forEach(function(box){
@@ -8839,7 +8839,7 @@ var coordKiosk={
         if(!room){ box.innerHTML='<div class="cor-empty">해당 없음</div>'; return; }
         var stu=_uniqStu(room.room), rws='';
         stu.forEach(function(s){ var nm=String(s.name||'').trim(); var a=byName[nm]; if(a){ var ho=(''+(a.no||a.room||'')).trim(); var loc=((a.building||'')+(ho?(' '+ho+(ho.indexOf('호')<0?'호':'')):'')).trim(); rws+='<tr><td>'+esc(nm)+'</td><td>'+esc(loc||'배정')+'</td><td>'+esc(s.phone||'-')+'</td></tr>'; } });
-        box.innerHTML = rws ? '<div style="overflow-x:auto;"><table class="cor-tbl"><thead><tr><th>성명</th><th>동·호</th><th>연락처</th></tr></thead><tbody>'+rws+'</tbody></table></div>' : '<div class="cor-empty">배정된 학생 없음(통학/미배정)</div>';
+        box.innerHTML = rws ? '<div style="overflow-x:auto;"><table class="cor-tbl"><thead><tr><th>성명</th><th>동·호</th><th>연락처</th></tr></thead><tbody>'+rws+'</tbody></table></div>' : '<div class="cor-empty">배정된 교육생 없음(통학/미배정)</div>';
       });
     }); }catch(e){}
   }
@@ -8856,8 +8856,8 @@ coordKiosk.notice=function(rid){
   var infoBlock='<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">'
     +_cell('교육기간',_period,false)+_cell('강의실',_rdn,false)+_cell('담임교수',_prof,true)+_cell('과정담당',_coord,true)+'</div>'
     +(_ldName
-       ? '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;background:#dcfce7;border:1px solid #86efac;border-radius:11px;padding:10px 14px;margin-bottom:14px;"><span style="font-size:12px;font-weight:900;color:#15803d;"><i class="fa-solid fa-crown" style="color:#f59e0b;"></i> 학생장</span><span style="font-size:15px;font-weight:900;color:#15803d;">'+_esc(_ldName)+(_ldNo?(' <small style="font-size:12px;color:#16a34a;">('+_esc(_ldNo)+')</small>'):'')+'</span></div>'
-       : '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:11px;padding:10px 14px;margin-bottom:14px;"><span style="font-size:12px;font-weight:900;color:#94a3b8;"><i class="fa-solid fa-crown"></i> 학생장</span><span style="font-size:13px;font-weight:800;color:#94a3b8;">미지정</span></div>');
+       ? '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;background:#dcfce7;border:1px solid #86efac;border-radius:11px;padding:10px 14px;margin-bottom:14px;"><span style="font-size:12px;font-weight:900;color:#15803d;"><i class="fa-solid fa-crown" style="color:#f59e0b;"></i> 교육생장</span><span style="font-size:15px;font-weight:900;color:#15803d;">'+_esc(_ldName)+(_ldNo?(' <small style="font-size:12px;color:#16a34a;">('+_esc(_ldNo)+')</small>'):'')+'</span></div>'
+       : '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:11px;padding:10px 14px;margin-bottom:14px;"><span style="font-size:12px;font-weight:900;color:#94a3b8;"><i class="fa-solid fa-crown"></i> 교육생장</span><span style="font-size:13px;font-weight:800;color:#94a3b8;">미지정</span></div>');
   var ov=document.getElementById('coordKioskNoticeOv'); if(!ov){ ov=document.createElement('div'); ov.id='coordKioskNoticeOv'; document.body.appendChild(ov); }
   ov.setAttribute('style','position:fixed;inset:0;z-index:100050;background:rgba(15,23,42,.62);display:flex;align-items:center;justify-content:center;padding:20px;');
   ov.onclick=function(e){ if(e.target===ov) ov.remove(); };
@@ -8906,7 +8906,7 @@ window.addEventListener('load', function(){
 });
 </script>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:6px;bottom:5px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;font-weight:800;line-height:1;letter-spacing:.6px;color:#fff;background:rgba(15,23,42,.85);padding:4px 8px;border-radius:6px;pointer-events:none;user-select:none;box-shadow:0 2px 6px rgba(0,0,0,.3);">D45</div>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:6px;bottom:5px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;font-weight:800;line-height:1;letter-spacing:.6px;color:#fff;background:rgba(15,23,42,.85);padding:4px 8px;border-radius:6px;pointer-events:none;user-select:none;box-shadow:0 2px 6px rgba(0,0,0,.3);">D46</div>
 <script>
 /* ===== [공용] 종료된 과정 자동 정리 (모든 플랫폼 공통) — 종료일 지난 방을 다음날 미개설로 비움. 브라우저별 하루 1회 ===== */
 window.kacExpireEndedCourses = async function(){
@@ -9283,9 +9283,9 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
         +'<div class="cfp-card-course">'+esc(on.course)+'</div>'
         +'<div class="cfp-card-row"><span>담임</span>'+esc(on.prof||'-')+'</div>'
         +'<div class="cfp-card-row"><span>담당</span>'+esc(on.coord||'-')+'</div>'
-        +'<div class="cfp-card-row"><span>학생장</span>'+esc(on.leader||'미지정')+'</div>';
+        +'<div class="cfp-card-row"><span>교육생장</span>'+esc(on.leader||'미지정')+'</div>';
     }
-    function _itemList(arr){ return arr.map(function(u){ return '<div class="cfp-una-item" onclick="coordKiosk.notice(\''+esc(u.rid)+'\')" title="클릭하면 공지 발송"><b>'+esc(u.course)+'</b><span>담임 '+esc(u.prof||'-')+' · 담당 '+esc(u.coord||'-')+' · 학생장 '+esc(u.leader||'미지정')+'</span></div>'; }).join(''); }
+    function _itemList(arr){ return arr.map(function(u){ return '<div class="cfp-una-item" onclick="coordKiosk.notice(\''+esc(u.rid)+'\')" title="클릭하면 공지 발송"><b>'+esc(u.course)+'</b><span>담임 '+esc(u.prof||'-')+' · 담당 '+esc(u.coord||'-')+' · 교육생장 '+esc(u.leader||'미지정')+'</span></div>'; }).join(''); }
     function _floorPlan(fl){
       var fcfg=COORD_FP_MAP[sel.b+'|'+fl]||{img:'',pos:{}};
       var IMG=fcfg.img||'', POS=fcfg.pos||{}, CROP=fcfg.crop||{t:0,b:0};
@@ -9296,7 +9296,7 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
         var labels=Object.keys(POS).map(function(L){ var p=saved[L]||POS[L]; var on=fused[L];
           if(on){ return '<div class="cfp-slot cfp-slot-card" data-room="'+L+'" style="left:'+p.l+'%;top:'+p.t+'%;"><div class="cfp-card" onclick="coordKiosk.notice(\''+esc(on.rid)+'\')" title="클릭하면 공지 발송">'+_cfpCard(L,on)+'</div></div>'; }
           return window._fpEditCards
-            ? '<div class="cfp-slot cfp-slot-card" data-room="'+L+'" style="left:'+p.l+'%;top:'+p.t+'%;"><div class="cfp-card cfp-card-empty"><div class="cfp-card-h"><b>'+_cfpRoomName(L)+'</b></div><div class="cfp-card-course">(미배정)</div><div class="cfp-card-row"><span>담임</span>-</div><div class="cfp-card-row"><span>담당</span>-</div><div class="cfp-card-row"><span>학생장</span>-</div></div></div>'
+            ? '<div class="cfp-slot cfp-slot-card" data-room="'+L+'" style="left:'+p.l+'%;top:'+p.t+'%;"><div class="cfp-card cfp-card-empty"><div class="cfp-card-h"><b>'+_cfpRoomName(L)+'</b></div><div class="cfp-card-course">(미배정)</div><div class="cfp-card-row"><span>담임</span>-</div><div class="cfp-card-row"><span>담당</span>-</div><div class="cfp-card-row"><span>교육생장</span>-</div></div></div>'
             : '<div class="cfp-slot" data-room="'+L+'" style="left:'+p.l+'%;top:'+p.t+'%;"><div class="cfp-room">'+_cfpRoomName(L)+'</div></div>'; }).join('');
         var usedN=Object.keys(POS).filter(function(L){return fused[L];}).length;
         return '<div class="cfp-floor" data-b="'+esc(sel.b)+'" data-f="'+esc(fl)+'">'+head

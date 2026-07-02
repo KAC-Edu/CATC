@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-  <!-- last-updated: 2026-06-30 / version: M7 (퇴교차량 신청자·외출외박을 정렬표로: 퇴교차량=연번·성명·소속·신청현황 / 외출외박=연번·성함·연락처·외출외박·상태) -->
+  <!-- last-updated: 2026-06-30 / version: M8 (교육생 표기 통일(리더 명칭 교육생장) · 퇴교차량 신청자·외출외박을 정렬표로: 퇴교차량=연번·성명·소속·신청현황 / 외출외박=연번·성함·연락처·외출외박·상태) -->
   <!-- ※ 모바일 개발자 파일이나 운영부 요청으로 디에스장(admin_coord 담당)이 장소선택 모달만 개선. 기능로직(setEduSel/EDU 동기화)은 동일 유지 -->
   <meta charset="UTF-8" />
   <script>
@@ -380,7 +380,7 @@ function renderList(){
     var L=leaderOf(r.room);
     var prof=((r.st.professorName||'').trim())?(r.st.professorName.trim()+' 교수'):'담임 미지정';
     var coord=coordFull(r.s.coordinatorName)||'담당 미지정';
-    var ldHtml=L?('<span class="ld on"><i class="fa-solid fa-crown"></i> '+esc(L.name)+'</span>'):'<span class="ld off"><i class="fa-solid fa-crown"></i> 학생장 미지정</span>';
+    var ldHtml=L?('<span class="ld on"><i class="fa-solid fa-crown"></i> '+esc(L.name)+'</span>'):'<span class="ld off"><i class="fa-solid fa-crown"></i> 교육생장 미지정</span>';
     return '<div class="crd" onclick="openDetail(\''+r.rid+'\')">'
       +'<div class="c1"><span class="room-badge">ROOM <b>#'+r.rid+'</b></span><span class="cname">'+esc(r.s.courseName||'-')+'</span><i class="fa-solid fa-chevron-right cchev"></i></div>'
       +'<div class="c2"><span class="pill">'+esc(prof)+'</span><span class="pill">'+esc(coord)+'</span>'+ldHtml+'</div>'
@@ -440,8 +440,8 @@ function updateDetail(){
     +'<div class="info-item"><div class="k">과정담당</div><div class="v">'+esc(coordFull(s.coordinatorName)||'-')+'</div></div>';
   var L=leaderOf(room);
   document.getElementById('dLeaderWrap').innerHTML= L
-    ? '<div class="leader-box on"><div class="lk"><i class="fa-solid fa-crown"></i> 학생장</div><div class="lv">'+esc(L.name)+(L.no?(' <small>('+esc(L.no)+')</small>'):'')+'</div></div>'
-    : '<div class="leader-box off"><div class="lk"><i class="fa-solid fa-crown"></i> 학생장</div><div class="lv">지정된 학생장 없음</div></div>';
+    ? '<div class="leader-box on"><div class="lk"><i class="fa-solid fa-crown"></i> 교육생장</div><div class="lv">'+esc(L.name)+(L.no?(' <small>('+esc(L.no)+')</small>'):'')+'</div></div>'
+    : '<div class="leader-box off"><div class="lk"><i class="fa-solid fa-crown"></i> 교육생장</div><div class="lv">지정된 교육생장 없음</div></div>';
   var sh=shuttleCount(room);
   document.getElementById('dShuttle').setAttribute('onclick','showMobileShuttleList()');
   document.getElementById('dShuttle').innerHTML=
