@@ -1,8 +1,8 @@
 /* ============================================================
-   PLATFORM_EDIT_STATUS: 수정완료 | VERSION: J5 | 2026-07-02 (J5: ①ZOOM 버튼 과정현황 장소 옆으로+오프라인 완전숨김(방전환 기본숨김·온라인 가드) ②iframe 사이징 실측기반 재작성 ③온라인 장소 저장 시 회의번호/암호 과정별 저장(askZoomMeetingInfo) ④홈검색 카카오등록 교수 노란배지 ⑤퇴교차량 칩 인라인 펼침. (J4: ZOOM 모니터링 iframe 높이를 body zoom 배율 보정해 실제 화면에 맞춤 — 설정 패널 잘림 해소, 리사이즈 대응. (J3: ui.openZoomMonitor 추가 — ZOOM 모니터링을 내장 뷰(iframe)로 열고 과정 전환 시 확인 후 재로딩, 온라인 판별 토글에 더보기 메뉴 항목 포함) (J2: ①ZOOM 모니터링 버튼 표시로직 재적용(온라인 과정 판별) ②강의실 초기화 confirm에 삭제범위 안내 추가 ③QR 요소없음 개발자문구 교체 ④toggleNightMode/addSubject 널가드 — 구버전 잔재 안전화)
+   PLATFORM_EDIT_STATUS: 수정완료 | VERSION: J6 | 2026-07-02 (J6: ①장소 수동지정 보호(roomDetailManual) — 연간계획 동기화가 온라인 설정 되돌리는 문제 차단 ②ZOOM 버튼 표시를 장소 배지 텍스트와 상시 동기(MutationObserver) — 오프라인인데 버튼 남는 문제 해소 ③저장알림 확인 후 회의정보 모달 순차 표시(동시 팝업 제거) ④회의번호 000 0000 0000 자동 포맷 전용 모달. (J5: ①ZOOM 버튼 과정현황 장소 옆으로+오프라인 완전숨김(방전환 기본숨김·온라인 가드) ②iframe 사이징 실측기반 재작성 ③온라인 장소 저장 시 회의번호/암호 과정별 저장(askZoomMeetingInfo) ④홈검색 카카오등록 교수 노란배지 ⑤퇴교차량 칩 인라인 펼침. (J4: ZOOM 모니터링 iframe 높이를 body zoom 배율 보정해 실제 화면에 맞춤 — 설정 패널 잘림 해소, 리사이즈 대응. (J3: ui.openZoomMonitor 추가 — ZOOM 모니터링을 내장 뷰(iframe)로 열고 과정 전환 시 확인 후 재로딩, 온라인 판별 토글에 더보기 메뉴 항목 포함) (J2: ①ZOOM 모니터링 버튼 표시로직 재적용(온라인 과정 판별) ②강의실 초기화 confirm에 삭제범위 안내 추가 ③QR 요소없음 개발자문구 교체 ④toggleNightMode/addSubject 널가드 — 구버전 잔재 안전화)
    CATC · 강사 플랫폼 로직  (admin.js)
    STATUS    수정안하는중
-   @version  J5
+   @version  J6
    @build    20260702-검색초기화위치수정
    ------------------------------------------------------------
    [코드 수정 규칙 · AI/개발자 공통]
@@ -11879,6 +11879,8 @@ ui.saveFieldEdit = async function(){
     var sv=(document.getElementById('fe-val')||{}).value||'';
     if(sv==='direct'){ sv=((document.getElementById('fe-direct')||{}).value||'').trim(); if(!sv){ if(msg)msg.textContent='장소를 입력하세요.'; return; } }
     updates['courses/'+room+'/settings/roomDetailName']=sv;
+    // [J6] 수동 지정 보호 — 연간계획 자동동기화가 온라인(Zoom) 설정을 원래 강의실로 되돌리지 않도록
+    updates['courses/'+room+'/status/roomDetailManual']=(sv&&String(sv).trim())?true:null;
   } else if(f==='prof'){
     var pv=(document.getElementById('fe-val')||{}).value||'';
     updates['courses/'+room+'/status/professorName']=pv;
@@ -11892,30 +11894,53 @@ ui.saveFieldEdit = async function(){
     updates['courses/'+room+'/settings/courseName']=cv;
   } else return;
   try{
-    await firebase.database().ref().update(updates); ui.closeFieldEdit(); ui.showAlert('✅ 저장되었습니다. 모든 화면에 반영됩니다.');
-    // [J5] 장소를 온라인(Zoom)으로 저장하면 이어서 회의번호/암호를 과정에 저장 (모니터링에서 자동 입력)
-    if(f==='roomDetail'){
-      var _rd=String(updates['courses/'+room+'/settings/roomDetailName']||'');
-      if(/온라인|zoom/i.test(_rd)) setTimeout(function(){ ui.askZoomMeetingInfo(room); }, 450);
+    await firebase.database().ref().update(updates); ui.closeFieldEdit();
+    // [J6] 온라인(Zoom) 장소 저장 → 알림 확인을 누르면 이어서 회의정보 모달 (동시 팝업 방지)
+    var _rd=(f==='roomDetail')?String(updates['courses/'+room+'/settings/roomDetailName']||''):'';
+    if(f==='roomDetail' && /온라인|zoom/i.test(_rd)){
+      ui.showAlert('✅ 장소가 온라인(Zoom)으로 저장되었습니다.\n확인을 누르면 ZOOM 회의 정보를 입력합니다.', function(){ ui.askZoomMeetingInfo(room); });
+    } else {
+      ui.showAlert('✅ 저장되었습니다. 모든 화면에 반영됩니다.');
     }
   }
   catch(err){ if(msg)msg.textContent='저장 중 오류가 발생했습니다.'; }
 };
 
-// [J5] ZOOM 회의번호/암호를 과정별로 저장 — zoom_monitor가 자동으로 불러와 입력함
+// [J6] ZOOM 회의번호/암호 — 전용 모달로 입력받아 과정별 저장 (zoom_monitor가 자동으로 불러옴)
+ui._fmtZoomNo = function(el){
+  var d=String(el.value||'').replace(/\D/g,'').slice(0,11);
+  var out;
+  if(d.length<=3) out=d;
+  else if(d.length<=6) out=d.slice(0,3)+' '+d.slice(3);
+  else if(d.length<=10) out=d.slice(0,3)+' '+d.slice(3,6)+' '+d.slice(6);
+  else out=d.slice(0,3)+' '+d.slice(3,7)+' '+d.slice(7);
+  el.value=out;
+};
 ui.askZoomMeetingInfo = async function(room){
   if(!room) return;
-  var cur={};
-  try{ var s=await firebase.database().ref('courses/'+room+'/zoomMeeting').get(); cur=s.val()||{}; }catch(e){}
-  var no=prompt('이 과정의 ZOOM 회의 번호를 입력하세요.\n(한 번 저장하면 모니터링에서 자동 입력됩니다. 건너뛰려면 취소)', cur.no||'');
-  if(no===null) return;                       // 취소 → 기존값 유지
-  no=String(no).replace(/[^\d]/g,'');
-  var pw=prompt('ZOOM 회의 암호를 입력하세요. (없으면 비워두고 확인)', cur.pw||'');
-  if(pw===null) return;
+  ui._zmRoom=room;
+  var no=document.getElementById('zmNo'), pw=document.getElementById('zmPw'), msg=document.getElementById('zmMsg');
+  if(no)no.value=''; if(pw)pw.value=''; if(msg)msg.textContent='';
   try{
-    await firebase.database().ref('courses/'+room+'/zoomMeeting').set({ no:no, pw:String(pw).trim(), updatedAt:Date.now() });
+    var s=await firebase.database().ref('courses/'+room+'/zoomMeeting').get();
+    var cur=s.val()||{};
+    if(no&&cur.no){ no.value=String(cur.no); ui._fmtZoomNo(no); }
+    if(pw&&cur.pw){ pw.value=String(cur.pw); }
+  }catch(e){}
+  var m=document.getElementById('zoomMeetingModal');
+  if(m){ m.style.display='flex'; setTimeout(function(){ try{ no.focus(); }catch(e){} }, 80); }
+};
+ui.closeZoomMeetingModal = function(){ var m=document.getElementById('zoomMeetingModal'); if(m) m.style.display='none'; };
+ui.saveZoomMeetingInfo = async function(){
+  var room=ui._zmRoom; if(!room) return ui.closeZoomMeetingModal();
+  var noEl=document.getElementById('zmNo'), pwEl=document.getElementById('zmPw'), msg=document.getElementById('zmMsg');
+  var no=String((noEl&&noEl.value)||'').replace(/\D/g,'');
+  if(no.length<9){ if(msg)msg.textContent='회의 번호를 정확히 입력하세요. (9~11자리 숫자)'; return; }
+  try{
+    await firebase.database().ref('courses/'+room+'/zoomMeeting').set({ no:no, pw:String((pwEl&&pwEl.value)||'').trim(), updatedAt:Date.now() });
+    ui.closeZoomMeetingModal();
     ui.showAlert('✅ ZOOM 회의 정보가 저장되었습니다.\nZOOM 모니터링에서 자동으로 입력됩니다.');
-  }catch(err){ ui.showAlert('⚠️ ZOOM 회의 정보 저장 실패: '+(err&&err.message||err)+'\n(Firebase 규칙에 zoomMeeting 노드 허용이 필요할 수 있습니다)'); }
+  }catch(err){ if(msg)msg.textContent='저장 실패: '+(err&&err.message||err); }
 };
 
 // ===== 도움이 되는 소식: 항기원 맛집 (강사 뷰) =====
@@ -13082,3 +13107,27 @@ window.addEventListener('resize', function(){
   var p=document.getElementById('moreMenuPanel');
   if(p && p.classList.contains('more-open')) ui._fitMorePanelToViewport();
 });
+
+
+// [J6] ZOOM 버튼 표시를 과정현황 장소 배지 텍스트와 항상 일치시키는 안전장치.
+//  (연간계획 자동동기화 등 어떤 경로로 장소가 바뀌어도 버튼이 남거나 새는 일이 없도록)
+(function(){
+  function applyZoomVis(){
+    try{
+      var el=document.getElementById('dashRoomDetail');
+      var on=!!(el && /온라인|zoom/i.test(String(el.innerText||'')));
+      window._zoomRoomOnline = on;
+      var d=document.getElementById('dashZoomBtn'); if(d) d.style.display = on ? '' : 'none';
+      var mm=document.getElementById('more-zoom-monitor'); if(mm) mm.style.display = on ? '' : 'none';
+    }catch(e){}
+  }
+  function install(){
+    var el=document.getElementById('dashRoomDetail');
+    if(!el || el._zmObs) return;
+    el._zmObs=true;
+    try{ new MutationObserver(applyZoomVis).observe(el,{childList:true,characterData:true,subtree:true}); }catch(e){}
+    applyZoomVis();
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', install);
+  else install();
+})();

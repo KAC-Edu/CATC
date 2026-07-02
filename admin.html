@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- PLATFORM_EDIT_STATUS: 수정완료 | VERSION: I5 | 2026-07-02 (I5: ZOOM 모니터링 버튼을 과정현황 장소 배지 옆으로 이동(출결화면 버튼 제거). (I4: ZOOM 모니터링을 admin 내장 뷰(view-zoom-monitor iframe)로 전환 — 더보기 메뉴 항목 추가(온라인 과정만 표시), 출결화면 버튼도 내장 뷰로 열림, 메뉴 이동에도 봇 연결 유지) (I3: 출결관리 모드줄에 ZOOM 모니터링 버튼 추가 — 온라인 과정에서만 표시, zoom_monitor.html?room= 새 탭) -->
+<!-- PLATFORM_EDIT_STATUS: 수정완료 | VERSION: I6 | 2026-07-02 (I6: ZOOM 회의정보 전용 입력 모달 추가(자동 000 0000 0000 포맷). (I5: ZOOM 모니터링 버튼을 과정현황 장소 배지 옆으로 이동(출결화면 버튼 제거). (I4: ZOOM 모니터링을 admin 내장 뷰(view-zoom-monitor iframe)로 전환 — 더보기 메뉴 항목 추가(온라인 과정만 표시), 출결화면 버튼도 내장 뷰로 열림, 메뉴 이동에도 봇 연결 유지) (I3: 출결관리 모드줄에 ZOOM 모니터링 버튼 추가 — 온라인 과정에서만 표시, zoom_monitor.html?room= 새 탭) -->
 <html lang="ko">
 <head>
 <script>
@@ -2652,7 +2652,7 @@ function setupAcc(btn){
 
 
 
-    <script src="admin.js?v=260702Z37"></script>
+    <script src="admin.js?v=260702Z38"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
 <!-- ── 화면 자동 맞춤(auto-fit): 가로+세로 모두 화면에 맞게 자동 축소 · JDS260613 ──
      원인: Windows 디스플레이 배율(125%/150%)·저해상도 화면에서 유효 뷰포트가 작아져
@@ -2866,6 +2866,24 @@ function setupAcc(btn){
 })();
 </script>
 <!-- 과정현황 인라인 필드 수정 모달 (절단 복구) -->
+<!-- [I6] ZOOM 회의 정보 입력 모달 (과정별 회의번호/암호 저장) -->
+<div id="zoomMeetingModal" class="modal-overlay" style="display:none; z-index:12050;" onclick="if(event.target===this) ui.closeZoomMeetingModal()">
+    <div class="modal-box" style="width:430px; max-width:94vw; background:#fff; border-radius:18px; padding:24px 24px 22px; box-shadow:0 24px 60px rgba(15,23,42,.35);">
+        <h3 style="margin:0 0 6px; font-size:19px; font-weight:900; color:#0f172a;"><i class="fa-solid fa-video" style="color:#0ea5e9;"></i> ZOOM 회의 정보</h3>
+        <p style="margin:0 0 16px; font-size:13px; color:#64748b; font-weight:600; line-height:1.55;">한 번 저장하면 ZOOM 모니터링에서 자동으로 입력됩니다.</p>
+        <label style="display:block; font-size:12.5px; font-weight:800; color:#475569; margin-bottom:6px;">회의 번호</label>
+        <input id="zmNo" inputmode="numeric" autocomplete="off" placeholder="000 0000 0000" oninput="ui._fmtZoomNo(this)"
+               style="width:100%; padding:14px 16px; border:1.5px solid #cbd5e1; border-radius:12px; font-size:22px; font-weight:800; letter-spacing:2px; text-align:center; font-variant-numeric:tabular-nums; color:#0f172a; box-sizing:border-box;">
+        <label style="display:block; font-size:12.5px; font-weight:800; color:#475569; margin:14px 0 6px;">회의 암호 <span style="color:#94a3b8; font-weight:600;">(없으면 비워두세요)</span></label>
+        <input id="zmPw" autocomplete="off" placeholder="암호"
+               style="width:100%; padding:12px 14px; border:1.5px solid #cbd5e1; border-radius:12px; font-size:16px; font-weight:700; box-sizing:border-box;">
+        <div id="zmMsg" style="color:#ef4444; font-size:13px; font-weight:700; min-height:18px; margin-top:8px;"></div>
+        <div style="display:flex; gap:10px; margin-top:12px;">
+            <button onclick="ui.closeZoomMeetingModal()" style="flex:1; padding:13px; border:1px solid #e2e8f0; border-radius:12px; background:#f1f5f9; color:#475569; font-weight:800; font-size:15px; cursor:pointer;">나중에</button>
+            <button onclick="ui.saveZoomMeetingInfo()" style="flex:1.4; padding:13px; border:none; border-radius:12px; background:linear-gradient(135deg,#0ea5e9,#2f6fed); color:#fff; font-weight:900; font-size:15px; cursor:pointer;">저장</button>
+        </div>
+    </div>
+</div>
 <div id="fieldEditModal" class="modal-overlay" style="display:none; z-index:12000;" onclick="if(event.target===this) ui.closeFieldEdit()">
     <div class="modal-box" style="width:440px; max-width:94vw; background:#fff; border-radius:18px; padding:24px 24px 22px; box-shadow:0 24px 60px rgba(15,23,42,.35);">
         <h3 id="fieldEditTitle" style="margin:0 0 16px; font-size:19px; font-weight:900; color:#0f172a;">수정</h3>
