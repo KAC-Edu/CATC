@@ -10098,17 +10098,21 @@ body.pc-mode #coordHeaderClock .hc-time,
 body.coord-header-compact.pc-mode #coordHeaderClock .hc-time{font-size:24px !important;}
 body.pc-mode #coordHeaderClock .hc-ampm,
 body.coord-header-compact.pc-mode #coordHeaderClock .hc-ampm{font-size:11px !important;}
+/* ══ [JDS260704-V3] 상단바 완전 1줄 — compact여도 2행 분리 없이 브랜드·메뉴·시계를 같은 행에 배치.
+   공간이 부족하면 ①메뉴 pill을 한 단계 더 축소 ②그래도 넘치면 메뉴 영역만 가로 스크롤. ══ */
 body.coord-header-compact.pc-mode .app-header{
   grid-template-columns:auto minmax(0,1fr) auto !important;
-  grid-template-rows:auto auto !important;
-  min-height:116px !important;
+  grid-template-rows:auto !important;
+  min-height:74px !important;
   padding:8px 14px !important;
-  row-gap:8px !important;
+  row-gap:0 !important;
+  gap:10px !important;
 }
 body.coord-header-compact.pc-mode .coord-left{
   display:flex !important;
   grid-column:1 !important;
   grid-row:1 !important;
+  min-width:0 !important;
 }
 body.coord-header-compact.pc-mode #coordHeaderClock,
 body.coord-header-compact.pc-mode .coord-clock{
@@ -10118,18 +10122,43 @@ body.coord-header-compact.pc-mode .coord-clock{
 }
 body.coord-header-compact.pc-mode .coord-right{
   display:flex !important;
-  grid-column:1 / -1 !important;
-  grid-row:2 !important;
+  grid-column:2 !important;
+  grid-row:1 !important;
   width:100% !important;
   max-width:100% !important;
+  min-width:0 !important;
   justify-content:center !important;
+  overflow-x:auto !important;
 }
 body.coord-header-compact.pc-mode .coord-hdr-stats{
   width:auto !important;
   max-width:100% !important;
+  min-width:0 !important;
+  flex-wrap:nowrap !important;
 }
-@media(max-width:700px){
-  body.coord-header-compact.pc-mode .coord-brand-title{display:none !important;}
+/* compact = 축소 모드: pill 한 단계 더 작게 (한 줄 수용력 ↑) */
+body.coord-header-compact.pc-mode .hdr-stat{
+  height:44px !important; min-height:44px !important;
+  padding:5px 8px !important; gap:5px !important; border-radius:9px !important;
+}
+body.coord-header-compact.pc-mode .hdr-stat > i{ font-size:13px !important; }
+body.coord-header-compact.pc-mode .hdr-stat .hb-label{ font-size:9.5px !important; }
+body.coord-header-compact.pc-mode .hdr-stat .hb-value{ font-size:18px !important; }
+body.coord-header-compact.pc-mode .hdr-stat .hb-value[style]{ font-size:12.5px !important; }
+body.coord-header-compact.pc-mode .hdr-edu,
+body.coord-header-compact.pc-mode #hdr-shuttle{
+  width:94px !important; min-width:94px !important; max-width:94px !important;
+  height:44px !important; padding:5px 7px !important;
+}
+body.coord-header-compact.pc-mode .coord-brand-title{ font-size:18px !important; }
+body.coord-header-compact.pc-mode #coordHeaderClock,
+body.coord-header-compact.pc-mode .coord-clock{ min-width:190px !important; padding:6px 10px !important; }
+@media(max-width:1500px){
+  body.coord-header-compact.pc-mode .coord-brand-title{ display:none !important; }
+}
+@media(max-width:1250px){
+  body.coord-header-compact.pc-mode #coordHeaderClock,
+  body.coord-header-compact.pc-mode .coord-clock{ display:none !important; }
 }
 </style>
 </body>
