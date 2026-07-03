@@ -410,7 +410,16 @@ switchRoomAttempt: async function(newRoom, silent = false) {
             setupBtn.style.setProperty('opacity', '1', '');
             setupBtn.style.pointerEvents = 'auto';
             setupBtn.disabled = false;
-            setupBtn.innerHTML = '<i class="fa-solid fa-gears"></i> 교육과정 환경 설정 (통합)';
+            // 통합 현황판(홈)=교수님 프로필 수정(노란색) / 과정 화면=교육과정 환경 설정(파란색)
+            if (!state.room) {
+                setupBtn.innerHTML = '<i class="fa-solid fa-user-pen"></i> 교수님 프로필 수정';
+                setupBtn.classList.add('btn-prof-mode');
+                setupBtn.title = '교수님별 프로필(사진·연락처·약력 등)을 수정합니다';
+            } else {
+                setupBtn.innerHTML = '<i class="fa-solid fa-gears"></i> 교육과정 환경 설정 (통합)';
+                setupBtn.classList.remove('btn-prof-mode');
+                setupBtn.title = '';
+            }
         }
     }
 
@@ -1709,9 +1718,14 @@ const profMgr = {
         document.getElementById('pp-phone').value = "";
         document.getElementById('pp-email').value = "";
         document.getElementById('pp-msg').value = "";
+        document.getElementById('pp-kakao').value = "";
+        document.getElementById('pp-photo-file').value = "";
         if(document.getElementById('pp-bio-rows')) profMgr.renderBioRows([]);
         const previewImg = document.getElementById('pp-photo-preview').querySelector('img');
-        if(previewImg) previewImg.style.display = 'none';
+        if(previewImg) {
+            previewImg.removeAttribute('src');
+            previewImg.style.display = 'none';
+        }
 
         firebase.database().ref(`system/professorProfiles/${name}`).once('value', snap => {
             const p = snap.val();
@@ -1730,6 +1744,7 @@ const profMgr = {
                 kakaoEl.value = "";
             }
         });
+        profMgr.bindPhotoPreview();
         document.getElementById('profProfileModal').style.display = 'flex';
     },
 
@@ -1772,8 +1787,7 @@ const profMgr = {
                 kakaoLink: (document.getElementById('pp-kakao')?.value || '').trim(),
                 msg: document.getElementById('pp-msg').value,
                 bio: profMgr.collectBioRows().map(r => (r.year ? r.year + " " : "") + r.text).join("\n"),
-                bioList: profMgr.collectBioRows(),
-                fixedRoom: (document.getElementById('pp-fixedRoom') && document.getElementById('pp-fixedRoom').value) || null
+                bioList: profMgr.collectBioRows()
             };
             firebase.database().ref(`system/professorProfiles/${name}`).set(profileData).then(() => {
                 ui.showAlert("✅ 담임 교수 프로필이 성공적으로 저장되었습니다.", () => ui.closeProfProfileModal());
@@ -1794,11 +1808,26 @@ profMgr.addBioRow = function(year, text){
     const esc = s => String(s==null?'':s).replace(/"/g,'&quot;');
     const row = document.createElement('div');
     row.className = 'bio-row';
-    row.style.cssText = 'display:flex; gap:8px; margin-bottom:8px; align-items:center;';
-    row.innerHTML = '<input class="setting-input bio-year-in" style="flex:0 0 120px;" placeholder="연도 (예: 21~)" value="'+esc(year)+'">'
-        + '<input class="setting-input bio-text-in" style="flex:1;" placeholder="경력사항 (예: 항공기술훈련원 교수)" value="'+esc(text)+'">'
-        + '<button type="button" title="이 줄 삭제" onclick="this.closest(\'.bio-row\').remove()" style="flex:0 0 auto; width:38px; height:38px; border:1px solid #fecaca; background:#fef2f2; color:#ef4444; border-radius:9px; cursor:pointer; font-weight:900;">✕</button>';
+    row.innerHTML = '<input class="bio-year-in" placeholder="연도" aria-label="연도" value="'+esc(year)+'">'
+        + '<input class="bio-text-in" placeholder="경력사항을 입력하세요" aria-label="경력사항" value="'+esc(text)+'">'
+        + '<button type="button" title="이 줄 삭제" aria-label="이 줄 삭제" onclick="this.closest(\'.bio-row\').remove()"><i class="fa-solid fa-xmark"></i></button>';
     wrap.appendChild(row);
+};
+profMgr.bindPhotoPreview = function(){
+    const fileInput = document.getElementById('pp-photo-file');
+    const previewImg = document.querySelector('#pp-photo-preview img');
+    if(!fileInput || !previewImg || fileInput.dataset.previewBound === '1') return;
+    fileInput.dataset.previewBound = '1';
+    fileInput.addEventListener('change', function(){
+        const file = this.files && this.files[0];
+        if(!file) return;
+        const reader = new FileReader();
+        reader.onload = function(e){
+            previewImg.src = e.target.result;
+            previewImg.style.display = 'block';
+        };
+        reader.readAsDataURL(file);
+    });
 };
 profMgr.renderBioRows = function(list){
     const wrap = document.getElementById('pp-bio-rows'); if(!wrap) return;
@@ -3817,11 +3846,18 @@ setMode: function(mode) {
             }
         }
 
-        // [사이드바 파란 버튼] 통합 현황판(홈, 과정 미진입)이면 '교수 프로필 수정', 과정 화면이면 '교육과정 환경 설정'
+        // [사이드바 버튼] 통합 현황판(홈, 과정 미진입)=교수 프로필 수정(노란색), 과정 화면=교육과정 환경 설정(파란색)
         const _spb = document.getElementById('btnSetupModal');
         if (_spb) {
-            if (!state.room) { _spb.innerHTML = '<i class="fa-solid fa-user-pen"></i> 교수 프로필 수정'; }
-            else { _spb.innerHTML = '<i class="fa-solid fa-gears"></i> 교육과정 환경 설정 (통합)'; }
+            if (!state.room) {
+                _spb.innerHTML = '<i class="fa-solid fa-user-pen"></i> 교수님 프로필 수정';
+                _spb.classList.add('btn-prof-mode');   // 노란색 — 과정 설정이 아님을 색으로 구분
+                _spb.title = '교수님별 프로필(사진·연락처·약력 등)을 수정합니다';
+            } else {
+                _spb.innerHTML = '<i class="fa-solid fa-gears"></i> 교육과정 환경 설정 (통합)';
+                _spb.classList.remove('btn-prof-mode');
+                _spb.title = '';
+            }
         }
 
         // 1. 모든 view- 로 시작하는 구역을 일단 숨김
@@ -4447,6 +4483,16 @@ renderQaList: function(f) {
         });
         const viewHome = document.getElementById('view-home');
         if(viewHome) viewHome.style.display = 'flex';
+        // [사이드바 버튼] 통합 현황판(홈) 확정: '교수님 프로필 수정'(노란색)
+        const _spbHome = document.getElementById('btnSetupModal');
+        if (_spbHome) {
+            _spbHome.innerHTML = '<i class="fa-solid fa-user-pen"></i> 교수님 프로필 수정';
+            _spbHome.classList.add('btn-prof-mode');
+            _spbHome.disabled = false;
+            _spbHome.style.pointerEvents = 'auto';
+            _spbHome.style.setProperty('opacity', '1', '');
+            _spbHome.title = '교수님별 프로필(사진·연락처·약력 등)을 수정합니다';
+        }
         setTimeout(() => { if(typeof ui.loadHomeStats==='function') ui.loadHomeStats(); }, 200);
 
         // 6. 왼쪽 룸 선택 메뉴 "Select Room"으로 강제 고정

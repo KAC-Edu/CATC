@@ -42,7 +42,7 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/ko.js"></script>
-    <link rel="stylesheet" href="admin.css?v=260702Z47">
+    <link rel="stylesheet" href="admin.css?v=260702Z56">
     <link rel="stylesheet" href="kac-tokens.css?v=20260622">
     <link rel="icon" type="image/svg+xml" href="favicon.svg?v=b260620c">
     <script>
@@ -2244,39 +2244,68 @@ body.in-course #moreToggleTab{ display:flex !important; }
 
 <!-- [우선순위 수정] 교수님 상세 프로필 등록 모달 (z-index를 22000으로 상향) -->
 <div id="profProfileModal" class="modal-overlay" style="z-index: 22000 !important;">
-    <div class="modal-box" style="width: 880px; max-width:95vw; max-height:92vh; display:flex; flex-direction:column;">
-        <div class="modal-header"><h3><i class="fa-solid fa-id-card"></i> 교수 프로필 상세 등록</h3></div>
-        <div class="setting-container" style="display:flex; gap:26px; align-items:flex-start; overflow-y:auto; flex:1 1 auto; min-height:0;">
-            <div style="flex:1; min-width:0;">
-            <div class="setting-group">
-                <label class="setting-label">교수 사진 업로드</label>
-                <div style="display:flex; gap:10px; align-items:center;">
-                    <input type="file" id="pp-photo-file" class="setting-input" accept="image/*" style="padding: 5px;">
-                    <div id="pp-photo-preview" style="width:50px; height:60px; border:1px solid #ddd; border-radius:4px; overflow:hidden; background:#eee;">
-                        <img src="" style="width:100%; height:100%; object-fit:cover; display:none;">
+    <div class="modal-box prof-editor-box">
+        <div class="prof-editor-head">
+            <div>
+                <h3><i class="fa-solid fa-id-card"></i> 교수 프로필 편집</h3>
+                <p>실제 프로필에 표시될 모습 그대로 내용을 입력하세요.</p>
+            </div>
+            <button type="button" class="prof-editor-close" onclick="ui.closeProfProfileModal()" aria-label="닫기"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+
+        <div class="prof-editor-scroll">
+            <div class="prof-editor-canvas">
+                <div class="prof-editor-photo" id="pp-photo-preview">
+                    <img src="" alt="교수 프로필 사진">
+                    <div class="prof-photo-empty"><i class="fa-solid fa-user-tie"></i><span>프로필 사진을 등록하세요</span></div>
+                    <label class="prof-photo-change" for="pp-photo-file"><i class="fa-solid fa-camera"></i> 사진 선택</label>
+                    <input type="file" id="pp-photo-file" accept="image/*">
+                </div>
+
+                <div class="prof-editor-content">
+                    <span class="prof-editor-role">과정 담임</span>
+
+                    <div class="prof-editor-name-row">
+                        <div class="prof-editor-name">
+                            <span>교수</span>
+                            <input type="text" id="pp-name" readonly aria-label="성함">
+                        </div>
+                        <div class="prof-editor-contacts">
+                            <label><i class="fa-solid fa-phone"></i><input type="text" id="pp-phone" placeholder="010-0000-0000" aria-label="연락처"></label>
+                            <label><i class="fa-solid fa-envelope"></i><input type="email" id="pp-email" placeholder="kac@airport.co.kr" aria-label="이메일"></label>
+                        </div>
+                    </div>
+
+                    <div class="prof-editor-rule"></div>
+
+                    <label class="prof-editor-message">
+                        <i class="fa-solid fa-quote-left"></i>
+                        <input type="text" id="pp-msg" placeholder="교육생에게 전하는 한 마디">
+                    </label>
+
+                    <div class="prof-editor-bio">
+                        <div class="prof-editor-section-title">
+                            <span><i class="fa-solid fa-user-graduate"></i> 주요 약력 및 경력사항</span>
+                            <small>연도와 경력 내용을 바로 입력하세요</small>
+                        </div>
+                        <div id="pp-bio-rows"></div>
+                        <button type="button" class="prof-bio-add" onclick="profMgr.addBioRow()"><i class="fa-solid fa-plus"></i> 경력 추가</button>
+                    </div>
+
+                    <div class="prof-editor-kakao">
+                        <label for="pp-kakao"><i class="fa-solid fa-comment"></i> 카카오톡 오픈톡방 링크 <span>선택 입력 · 과정 개설 시 자동 적용</span></label>
+                        <input type="url" id="pp-kakao" placeholder="https://open.kakao.com/o/xxxxxxx">
                     </div>
                 </div>
             </div>
-            <div class="setting-group"><label class="setting-label">성함</label><input type="text" id="pp-name" class="setting-input" readonly></div>
-            <div class="setting-group"><label class="setting-label">연락처</label><input type="text" id="pp-phone" class="setting-input" placeholder="010-0000-0000"></div>
-            <div class="setting-group"><label class="setting-label">이메일</label><input type="text" id="pp-email" class="setting-input" placeholder="kac@airport.co.kr"></div>
-            <div class="setting-group"><label class="setting-label"><i class="fa-solid fa-comment" style="color:#FAE100;"></i> 카카오톡 오픈톡방 링크 <span style="font-weight:600; color:#94a3b8;">(선택 — 과정 개설 시 자동 적용)</span></label><input type="text" id="pp-kakao" class="setting-input" placeholder="https://open.kakao.com/o/xxxxxxx"></div>
-            <div class="setting-group"><label class="setting-label">한 줄 메시지</label><input type="text" id="pp-msg" class="setting-input" placeholder="교육생에게 전하는 한 마디"></div>
-            </div>
-            <div style="flex:1; min-width:0;">
-            <div class="setting-group">
-                <label class="setting-label">주요 약력 <span style="font-weight:600; color:#94a3b8; font-size:12px;">(연도와 경력사항을 칸에 나눠 입력하세요)</span></label>
-                <div id="pp-bio-rows"></div>
-                <button type="button" class="btn-action" onclick="profMgr.addBioRow()" style="margin-top:6px; background:#eff6ff; color:#1d4ed8; border:1px dashed #93c5fd; font-weight:800; width:100%;"><i class="fa-solid fa-plus"></i> 경력 추가</button>
-            </div>
-            </div>
         </div>
-        <div style="margin-top:16px; padding:10px 14px; background:#eff6ff; border:1px solid #bfdbfe; border-radius:10px; font-size:12px; color:#1e40af; line-height:1.5;">
-            <i class="fa-solid fa-circle-info"></i> 이 프로필은 <b>교수님 단위로 즉시 저장</b>됩니다. 과정 개설 시 자동으로 불러와지므로, 아래 "모든 설정 저장"과는 <b>별개</b>입니다.
-        </div>
-        <div class="modal-actions" style="margin-top:14px; justify-content:flex-end; gap:10px;">
-            <button class="m-btn m-btn-later" onclick="ui.closeProfProfileModal()" style="background:#64748b; color:white;">취소</button>
-            <button class="m-btn m-btn-done" onclick="profMgr.saveFullProfile()"><i class="fa-solid fa-floppy-disk"></i> 프로필 저장 (즉시 적용)</button>
+
+        <div class="prof-editor-footer">
+            <div class="prof-editor-note"><i class="fa-solid fa-circle-info"></i> 저장하면 교수님 단위로 즉시 적용됩니다.</div>
+            <div class="prof-editor-actions">
+                <button class="prof-editor-cancel" onclick="ui.closeProfProfileModal()">취소</button>
+                <button class="prof-editor-save" onclick="profMgr.saveFullProfile()"><i class="fa-solid fa-floppy-disk"></i> 프로필 저장</button>
+            </div>
         </div>
     </div>
 </div>
@@ -2787,7 +2816,7 @@ function setupAcc(btn){
 
 
 
-    <script src="admin.js?v=260702Z55"></script>
+    <script src="admin.js?v=260702Z56"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
 <!-- ── 화면 자동 맞춤(auto-fit): 가로+세로 모두 화면에 맞게 자동 축소 · JDS260613 ──
      원인: Windows 디스플레이 배율(125%/150%)·저해상도 화면에서 유효 뷰포트가 작아져
