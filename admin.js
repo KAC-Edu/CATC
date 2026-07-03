@@ -6077,6 +6077,83 @@ resetShuttleRequests: function() {
             }
         }catch(err){ try{ console.error('[프로필 열기 실패]', err); alert('프로필 편집 창을 여는 중 오류: '+(err&&err.message||err)); }catch(_){} }
     },
+    // [담임교수 교체] 교수 배지 클릭 → 교수 리스트 팝업(다른 교수 클릭 시 배정 / 옆 프로필 버튼으로 편집)
+    _openProfSwap: function(room, currentName, ev){
+        try{ if(ev){ ev.stopPropagation(); ev.preventDefault(); } }catch(_){}
+        room = String(room||'').trim(); if(!room) return;
+        var cur = String(currentName||'').trim();
+        var e = ui._esc;
+        var list = (typeof profMgr!=='undefined' && Array.isArray(profMgr.list)) ? profMgr.list.slice() : [];
+        // 기존 팝업 제거
+        var old = document.getElementById('profSwapModal'); if(old) old.remove();
+        var modal = document.createElement('div'); modal.id='profSwapModal'; modal.className='prof-swap-overlay';
+        var rows = '';
+        if(!list.length){
+            rows = '<div class="prof-swap-empty">등록된 교수님이 없습니다. 먼저 [교수님 명단 관리]에서 추가하세요.</div>';
+        } else {
+            list.forEach(function(p){
+                var nm = e(p.name);
+                var isCur = (String(p.name).trim()===cur);
+                rows += '<div class="prof-swap-item'+(isCur?' is-current':'')+'">'
+                      + '<button class="prof-swap-pick" onclick="ui._assignProfToRoom(\''+e(room)+'\',\''+nm+'\')" title="이 교수로 담임 배정">'
+                      + (isCur?'<i class="fa-solid fa-circle-check"></i>':'<i class="fa-regular fa-circle"></i>')
+                      + '<span class="prof-swap-name">'+nm+'</span>'
+                      + (isCur?'<span class="prof-swap-badge">현재</span>':'')
+                      + '</button>'
+                      + '<button class="prof-swap-edit" onclick="ui._openProfFromSearch(\''+nm+'\')" title="프로필 편집">프로필</button>'
+                      + '</div>';
+            });
+        }
+        modal.innerHTML =
+            '<div class="prof-swap-box" onclick="event.stopPropagation();">'
+          + '<div class="prof-swap-head"><h3><i class="fa-solid fa-user-pen"></i> 담임교수 교체</h3>'
+          + '<button class="prof-swap-close" onclick="document.getElementById(\'profSwapModal\').remove();" aria-label="닫기"><i class="fa-solid fa-xmark"></i></button></div>'
+          + '<p class="prof-swap-desc">다른 교수님을 누르면 이 과정의 담임으로 배정됩니다. <b>연간교육계획에도 함께 반영</b>됩니다.</p>'
+          + '<div class="prof-swap-list">'+rows+'</div>'
+          + '</div>';
+        modal.addEventListener('click', function(ev2){ if(ev2.target===modal) modal.remove(); });
+        document.body.appendChild(modal);
+    },
+    // [담임교수 배정] 방 status + 연간계획(system/annualPlan) 함께 갱신
+    _assignProfToRoom: async function(room, name){
+        room=String(room||'').trim(); name=String(name||'').trim();
+        if(!room || !name) return;
+        var updates={};
+        updates['courses/'+room+'/status/professorName']=name;
+        updates['courses/'+room+'/status/professorManual']=true;   // 수동 지정 — 연간계획 자동동기화가 덮어쓰지 않도록 보존
+        // 오픈톡방 링크 동기화
+        try{ var ks=await firebase.database().ref('system/professorProfiles/'+name+'/kakaoLink').get(); updates['courses/'+room+'/settings/kakaoLink']=ks.val()||''; }catch(e){}
+        // 연간교육계획도 함께 수정: 이 방의 과정명·기간과 일치하는 계획 항목의 교수(prof) 갱신
+        try{
+            var cs=await firebase.database().ref('courses/'+room+'/settings').once('value');
+            var s=cs.val()||{};
+            var courseName=String(s.courseName||'').trim();
+            var period=String(s.period||'').replace(/\s+/g,'');
+            if(courseName){
+                var ps=await firebase.database().ref('system/annualPlan').once('value');
+                var pdata=ps.val();
+                if(pdata){
+                    var keys=Array.isArray(pdata)? pdata.map(function(_,i){return i;}) : Object.keys(pdata);
+                    var norm=function(x){ return String(x||'').replace(/\s+/g,'').toLowerCase(); };
+                    keys.forEach(function(k){
+                        var c=pdata[k]; if(!c) return;
+                        if(norm(c.name)!==norm(courseName)) return;
+                        var cPeriod=String(c.period || ((c.startDate&&c.endDate)? (c.startDate+' ~ '+c.endDate):'')).replace(/\s+/g,'');
+                        // 기간 정보가 양쪽에 있으면 기간까지 일치하는 항목만(같은 과정명 다른 주차 오작동 방지)
+                        if(period && cPeriod && cPeriod!==period) return;
+                        updates['system/annualPlan/'+k+'/prof']=name;
+                    });
+                }
+            }
+        }catch(e){ console.warn('[담임교수 교체] 연간계획 반영 실패:', e); }
+        try{
+            await firebase.database().ref().update(updates);
+            var m=document.getElementById('profSwapModal'); if(m) m.remove();
+            if(ui.showAlert) ui.showAlert('✅ 담임교수를 '+name+' 교수로 교체했습니다. (연간계획 반영)');
+            // 검색 결과 즉시 갱신
+            try{ var inp=document.getElementById('homeSearchInput'); if(inp) ui.renderHomeSearch(inp.value); }catch(e){}
+        }catch(err){ try{ alert('배정 중 오류: '+(err&&err.message||err)); }catch(_){} }
+    },
     renderHomeSearch: function(q){
         var box=document.getElementById('homeSearchResults');
         var v=document.getElementById('view-home');
@@ -6159,7 +6236,7 @@ resetShuttleRequests: function() {
                 +'<div class="hsr2-right" onclick="event.stopPropagation();">'
                 +'<div class="hsr2-pill'+(x.kakao?'':' no-kakao')+'">'
                 +'<button class="hp-left" onclick="ui.enterCourseMode(\''+e(x.room)+'\',\'guide\',true)" title="입교안내 전체화면"><i class="fa-solid fa-file-pdf"></i> 입교안내 <i class="fa-solid fa-expand hp-x"></i></button>'
-                +'<button class="hp-right" onclick="ui._openProfFromSearch(\''+e(x.prof||'')+'\')" title="'+(x.kakao?'오픈톡방 등록됨 · ':'')+'클릭하면 교수 프로필 편집"><i class="fa-solid '+(x.kakao?'fa-comment':'fa-user-tie')+'"></i> '+e(x.prof||'-')+' 교수</button>'
+                +'<button class="hp-right" onclick="event.stopPropagation();ui._openProfSwap(\''+e(x.room)+'\',\''+e(x.prof||'')+'\',event)" title="'+(x.kakao?'오픈톡방 등록됨 · ':'')+'클릭하여 담임교수 교체 · 프로필 편집"><i class="fa-solid '+(x.kakao?'fa-comment':'fa-user-tie')+'"></i> '+e(x.prof||'-')+' 교수</button>'
                 +'</div>'
                 +'</div>'
                 +'</div>'
