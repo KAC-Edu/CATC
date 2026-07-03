@@ -12892,7 +12892,7 @@ ui._spawnEnrollFx = function(name){
   var box = document.getElementById('cgCountBox'); if(!box) return;
   var nm = String(name||'').trim(); if(!nm) return;
   var fx = document.createElement('div'); fx.className = 'cg-enroll-fx';
-  fx.textContent = '🎉 ' + nm + ' 입교 완료!';
+  fx.textContent = '🎉 ' + nm + '님 입교를 환영합니다!';
   // 여러 명 동시 등록 시 겹침 완화용 좌우 랜덤 오프셋
   var off = Math.round(Math.random()*36 - 18);
   fx.style.left = 'calc(50% + ' + off + 'px)';
