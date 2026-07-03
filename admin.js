@@ -1,7 +1,7 @@
 /* PLATFORM_EDIT_STATUS: 수정완료 | VERSION: L9 | 2026-07-03 */
 /* [복구 2026-07-03] 파일 말단 184줄이 저장 중 잘림 → J8(260702Z40) 보관본의 동일 블록(리모컨 위젯·더보기 패널·ZOOM 표시 IIFE)으로 접합 복구. J8 이후 해당 말단 블록을 수정한 이력이 있다면 편집기 원본(L9)으로 재저장 권장. */
 /* ============================================================
-   PLATFORM_EDIT_STATUS: 수정완료 | VERSION: J8 | 2026-07-02 (J8: ZOOM 진입 요소를 CSS !important 규칙으로 원천 차단 — 오프라인이면 어떤 코드가 표시해도 절대 안 보임(body.zoom-room-online 클래스 게이트). (J7: ZOOM 진입 요소 표시를 [onclick*=openZoomMonitor] 전체 선택으로 통일 + 2초 하트비트 — 오프라인에서 pill 잔존 완전 차단. (J6: ①장소 수동지정 보호(roomDetailManual) — 연간계획 동기화가 온라인 설정 되돌리는 문제 차단 ②ZOOM 버튼 표시를 장소 배지 텍스트와 상시 동기(MutationObserver) — 오프라인인데 버튼 남는 문제 해소 ③저장알림 확인 후 회의정보 모달 순차 표시(동시 팝업 제거) ④회의번호 000 0000 0000 자동 포맷 전용 모달. (J5: ①ZOOM 버튼 과정현황 장소 옆으로+오프라인 완전숨김(방전환 기본숨김·온라인 가드) ②iframe 사이징 실측기반 재작성 ③온라인 장소 저장 시 회의번호/암호 과정별 저장(askZoomMeetingInfo) ④홈검색 카카오등록 교수 노란배지 ⑤퇴교차량 칩 인라인 펼침. (J4: ZOOM 모니터링 iframe 높이를 body zoom 배율 보정해 실제 화면에 맞춤 — 설정 패널 잘림 해소, 리사이즈 대응. (J3: ui.openZoomMonitor 추가 — ZOOM 모니터링을 내장 뷰(iframe)로 열고 과정 전환 시 확인 후 재로딩, 온라인 판별 토글에 더보기 메뉴 항목 포함) (J2: ①ZOOM 모니터링 버튼 표시로직 재적용(온라인 과정 판별) ②강의실 초기화 confirm에 삭제범위 안내 추가 ③QR 요소없음 개발자문구 교체 ④toggleNightMode/addSubject 널가드 — 구버전 잔재 안전화)
+   PLATFORM_EDIT_STATUS: 수정완료 | VERSION: J10 | 2026-07-04 (J10: ①OTP 재사용 가드 — 강사 화면 새로고침/출결탭 재진입 시 잔여 15초 이상 유효 OTP를 서버에서 재사용, 매번 새 코드로 교체되어 입력 중이던 교육생이 만료 판정받던 문제 해소 ②담임(coordinatorName) 수동수정 보호 — status/coordManual 플래그 도입(professorManual과 동일 패턴), 강사가 담임을 바꿔도 연간계획 자동동기화가 계획값으로 되돌리던 버그 수정. 방 비움/신규 배치 시 플래그 해제 ③퇴교차량 자동판정 표시 — 지원부가 한글 시간표 업로드 시 기록되는 courses/{room}/shuttle/autoDeparture를 실시간 구독, 1차/2차 구분 없이 '이 과정 출발시간' 단일 표시(대시보드 인라인·셔틀 파란박스·도착 ETA 모두), 자동판정 없으면 기존 1차/2차 표기 유지. (J9: 지원부 생활관 명단(system/dorm/rosters) 오삭제 방지 — 리셋·명단비우기·연간계획삭제·종료과정자동정리 4개 경로 전부 '명단의 과정명이 해당 방 과정명과 일치할 때만' 삭제하도록 가드. 다른 과정 명단은 보존하고 console에 보존 사유 기록. (J8: ZOOM 진입 요소를 CSS !important 규칙으로 원천 차단 — 오프라인이면 어떤 코드가 표시해도 절대 안 보임(body.zoom-room-online 클래스 게이트). (J7: ZOOM 진입 요소 표시를 [onclick*=openZoomMonitor] 전체 선택으로 통일 + 2초 하트비트 — 오프라인에서 pill 잔존 완전 차단. (J6: ①장소 수동지정 보호(roomDetailManual) — 연간계획 동기화가 온라인 설정 되돌리는 문제 차단 ②ZOOM 버튼 표시를 장소 배지 텍스트와 상시 동기(MutationObserver) — 오프라인인데 버튼 남는 문제 해소 ③저장알림 확인 후 회의정보 모달 순차 표시(동시 팝업 제거) ④회의번호 000 0000 0000 자동 포맷 전용 모달. (J5: ①ZOOM 버튼 과정현황 장소 옆으로+오프라인 완전숨김(방전환 기본숨김·온라인 가드) ②iframe 사이징 실측기반 재작성 ③온라인 장소 저장 시 회의번호/암호 과정별 저장(askZoomMeetingInfo) ④홈검색 카카오등록 교수 노란배지 ⑤퇴교차량 칩 인라인 펼침. (J4: ZOOM 모니터링 iframe 높이를 body zoom 배율 보정해 실제 화면에 맞춤 — 설정 패널 잘림 해소, 리사이즈 대응. (J3: ui.openZoomMonitor 추가 — ZOOM 모니터링을 내장 뷰(iframe)로 열고 과정 전환 시 확인 후 재로딩, 온라인 판별 토글에 더보기 메뉴 항목 포함) (J2: ①ZOOM 모니터링 버튼 표시로직 재적용(온라인 과정 판별) ②강의실 초기화 confirm에 삭제범위 안내 추가 ③QR 요소없음 개발자문구 교체 ④toggleNightMode/addSubject 널가드 — 구버전 잔재 안전화)
    CATC · 강사 플랫폼 로직  (admin.js)
    STATUS    수정완료
    @version  L9
@@ -1333,7 +1333,9 @@ _executeReset: function() {
             const pd = (st.period || '').trim();
             const upd = {};
             const _weekKeys = [];
-            // [리셋 정합성] 지난 과정의 지원부 생활관 명단(주차__방)도 함께 제거 (새 과정에 옛 명단/배정이 끌려오는 문제 방지)
+            // [리셋 정합성/J9] 지원부 생활관 명단(주차__방)은 '이 방의 과정명과 일치할 때만' 제거
+            //  — 같은 방·주차 슬롯의 "다른 과정" 명단을 리셋이 오삭제하던 사고 방지 (복구버튼 의존 제거)
+            const _rosterKeyCands = [];
             try {
                 const start = pd.includes(' ~ ') ? pd.split(' ~ ')[0].trim() : (pd.split('~')[0] || '').trim();
                 if (start) {
@@ -1343,7 +1345,7 @@ _executeReset: function() {
                         const mon = new Date(d); mon.setDate(d.getDate() - dow);
                         const utc = mon.toISOString().slice(0, 10);
                         const local = mon.getFullYear() + '-' + String(mon.getMonth()+1).padStart(2,'0') + '-' + String(mon.getDate()).padStart(2,'0');
-                        [local, utc].forEach(wk => { _weekKeys.push(wk); upd[`system/dorm/rosters/${wk}__${_rmRoom}`] = null; });
+                        [local, utc].forEach(wk => { _weekKeys.push(wk); _rosterKeyCands.push(`system/dorm/rosters/${wk}__${_rmRoom}`); });
                     }
                 }
             } catch(e) {}
@@ -1369,7 +1371,16 @@ _executeReset: function() {
                   }).catch(function(){});
                 })
               : [];
-            return Promise.all(_assignReads).then(function(){
+            // [J9] 명단 노드를 실제로 읽어 courseName이 이 방 과정명과 일치할 때만 삭제 목록에 추가
+            const _rosterReads = _rosterKeyCands.map(function(p){
+                return firebase.database().ref(p).once('value').then(function(rs){
+                    const rv = rs.val(); if (!rv) return;
+                    const rn = String(rv.courseName || '').replace(/\s+/g, '').trim();
+                    if (rn && _nnm && rn === _nnm) upd[p] = null;
+                    else console.warn('[리셋/J9] 지원부 명단 보존(과정명 불일치):', p, '(명단 과정:', rv.courseName, ')');
+                }).catch(function(){});
+            });
+            return Promise.all(_assignReads.concat(_rosterReads)).then(function(){
                 if (Object.keys(upd).length) return firebase.database().ref().update(upd);
             });
         });
@@ -1591,10 +1602,21 @@ toggleLeader: function(token, currentName) {
             [`courses/${room}/expectedStudents`]: null,
             [`courses/${room}/coordRoster`]: null
         };
-        // 지원부 생활관 명단: 주차 계산에 의존하지 않고, 이 방(__room)으로 끝나는 모든 키를 전부 제거
-        firebase.database().ref('system/dorm/rosters').once('value').then(function(snap){
-            const all = snap.val() || {};
-            Object.keys(all).forEach(function(k){ if (k.endsWith('__' + room)) updates['system/dorm/rosters/' + k] = null; });
+        // [J9] 지원부 생활관 명단: 이 방(__room) 키 중 '현재 과정명과 일치'하는 것만 제거
+        //  (같은 방 슬롯에 올라온 다음 주/다른 과정 명단 오삭제 방지)
+        const _nmField = String((document.getElementById('setup-course-name') || {}).value || '').replace(/\s+/g, '').trim();
+        Promise.all([
+            firebase.database().ref('system/dorm/rosters').once('value'),
+            firebase.database().ref(`courses/${room}/settings/courseName`).once('value')
+        ]).then(function(res){
+            const all = res[0].val() || {};
+            const nm = (String(res[1].val() || '').replace(/\s+/g, '').trim()) || _nmField;
+            Object.keys(all).forEach(function(k){
+                if (!k.endsWith('__' + room)) return;
+                const rn = String((all[k] || {}).courseName || '').replace(/\s+/g, '').trim();
+                if (nm && rn && rn === nm) updates['system/dorm/rosters/' + k] = null;
+                else console.warn('[명단비우기/J9] 지원부 명단 보존(과정명 불일치):', k);
+            });
             return firebase.database().ref().update(updates);
         }).then(function(){
             ui.showAlert("✅ 명단이 모두 비워졌습니다.");
@@ -2562,6 +2584,7 @@ loadDashboardStats: function() {
         tablet: firebase.database().ref(`courses/${room}/tablet_loans`),
         attend: firebase.database().ref(`courses/${room}/internal_attendance/${today}`),
         departure: firebase.database().ref(`courses/${room}/shuttle/departure`),
+        autoDep:   firebase.database().ref(`courses/${room}/shuttle/autoDeparture`),   // [J10] 지원부 시간표 기반 자동판정
         shuttleReq: firebase.database().ref(`courses/${room}/shuttle/requests`)
     };
     window.dashRefs = refs; // 전역 보관 → 다음 방 전환 시 off() 가능
@@ -2737,21 +2760,27 @@ loadDashboardStats: function() {
 
 
 // 8. 셔틀 정보 및 차량 수요 실시간 업데이트
+const _renderDashShuttleInline = () => {
+    const bar = document.getElementById('dashShuttleNotice');
+    if (bar) bar.style.display = "none";   // 노란 박스는 숨기고 제목 옆 시간만
+    const inlineEl = document.getElementById('dashShuttleTimeInline');
+    if (!inlineEl) return;
+    const at = state._autoDep && state._autoDep.departTime;   // [J10] 자동판정 우선: 이 과정 출발시간 단일 표시
+    const dep = state._lastDep;
+    if (at) inlineEl.innerText = `(${at} 출발)`;
+    else if (dep && dep.time) inlineEl.innerText = `(${dep.time2?('1차 '+dep.time+' / 2차 '+dep.time2):dep.time} 출발)`;
+    else inlineEl.innerText = '';
+};
 refs.departure.on('value', snap => {
     if (state.room !== room) return; 
-    const dep = snap.val();
-    const bar = document.getElementById('dashShuttleNotice');
-    const txt = document.getElementById('dashShuttleNoticeTxt');
-    if (!bar || !txt) return;
-
-    // 퇴교차량 노란 박스는 숨기고, 제목 옆에 시간만 표시
-    bar.style.display = "none";
-    const inlineEl = document.getElementById('dashShuttleTimeInline');
-    if (dep && dep.time) {
-        if (inlineEl) inlineEl.innerText = `(${dep.time2?('1차 '+dep.time+' / 2차 '+dep.time2):dep.time} 출발)`;
-    } else {
-        if (inlineEl) inlineEl.innerText = '';
-    }
+    state._lastDep = snap.val();
+    _renderDashShuttleInline();
+});
+refs.autoDep.on('value', snap => {   // [J10] 지원부 명단 업로드 즉시 반영
+    if (state.room !== room) return;
+    state._autoDep = snap.val();
+    _renderDashShuttleInline();
+    if (ui && ui.updateShuttleETA && state._lastShuttleCounts !== undefined) { try { ui.updateShuttleETA(state._lastDepTimeForEta || (state._lastDep && state._lastDep.time) || null, state._lastShuttleCounts); } catch(e){} }
 });
 
 refs.shuttleReq.on('value', s => {
@@ -3009,6 +3038,17 @@ loadAttendanceView: function() {
             return;
         }
         if (this._internalOtpTimer) clearInterval(this._internalOtpTimer);
+        // [J10] 서버에 잔여 15초 이상 남은 유효 OTP가 있으면 재사용 — 강사 화면 새로고침/탭 재진입 때마다
+        //  코드가 즉시 교체되어 입력 중이던 교육생이 '만료' 판정받던 문제 해소
+        const reuseOrPublish = () => {
+            firebase.database().ref(`courses/${activeRoom}/attendanceOtp`).once('value').then(s => {
+                const v = s.val();
+                if (v && v.code && String(v.room || '').toUpperCase() === activeRoom && Number(v.validUntil || 0) - Date.now() > 15000) {
+                    codeEl.textContent = String(v.code);
+                    codeEl.dataset.validUntil = String(v.validUntil);
+                } else publishOtp();
+            }).catch(() => publishOtp());
+        };
         const publishOtp = () => {
             const code = String(Math.floor(100000 + Math.random() * 900000));
             const now = Date.now();
@@ -3030,7 +3070,7 @@ loadAttendanceView: function() {
                 if(countEl) countEl.textContent = '저장오류';
             });
         };
-        publishOtp();
+        reuseOrPublish();
         this._internalOtpTimer = setInterval(() => {
             const liveRoom = String(state.room || '').trim().replace(/^ROOM\s*/i, '').replace(/^#/, '').trim().toUpperCase();
             if(liveRoom !== activeRoom) {
@@ -5131,15 +5171,32 @@ loadShuttleData: function() {
     const activeRoom = state.room;
     if (state.shuttleDepartureRef) state.shuttleDepartureRef.off();
     if (state.shuttleRequestsRef) state.shuttleRequestsRef.off();
+    if (state.shuttleAutoRef) state.shuttleAutoRef.off();   // [J10]
     state.shuttleDepartureRef = firebase.database().ref(`courses/${activeRoom}/shuttle/departure`);
     state.shuttleRequestsRef = firebase.database().ref(`courses/${activeRoom}/shuttle/requests`);
+    // [J10] 지원부 시간표 기반 자동판정 실시간 구독 — 값이 바뀌면 화면 재로딩(초기 이벤트는 키 비교로 무시)
+    state.shuttleAutoRef = firebase.database().ref(`courses/${activeRoom}/shuttle/autoDeparture`);
+    state.shuttleAutoRef.on('value', s => {
+        if (state.room !== activeRoom) return;
+        const v = s.val();
+        const key = v ? (String(v.departTime||'') + '|' + String(v.updatedAt||'')) : '';
+        state._autoDep = v;
+        if (state._autoDepKey === key) return;
+        const isFirst = (state._autoDepKey === undefined);
+        state._autoDepKey = key;
+        if (!isFirst) { try { ui.loadShuttleData(); } catch(e){} }
+    });
 
     // 1. 좌측 파란색 박스: 날짜, 시간, 문구 레이아웃
     state.shuttleDepartureRef.on('value', snap => {
         if (state.room !== activeRoom) return;
-        const dep = snap.val();
+        let dep = snap.val();
+        state._lastDep = dep;
         const el = document.getElementById('shuttleDepartureTime');
         if(!el) return;
+        // [J10] 자동판정(지원부 시간표) 있으면 1차/2차 없이 이 과정 출발시간 단일 표시
+        const _at = state._autoDep && state._autoDep.departTime;
+        if (_at) dep = { date: (dep && dep.date) || (state._autoDep.endDate || ''), time: _at, time2: '' };
 
         if (dep && dep.time) {
             el.innerHTML = `
@@ -5269,6 +5326,9 @@ loadShuttleData: function() {
 updateShuttleETA: function(departureTime, counts) {
     const etaDetail = document.getElementById('shuttleETADetail');
     if (!etaDetail) return;
+    state._lastDepTimeForEta = departureTime; state._lastShuttleCounts = counts;   // [J10] autoDep 변경 시 재렌더용
+    const _atEta = state._autoDep && state._autoDep.departTime;                    // [J10] 자동판정 우선(단일 라운드)
+    if (_atEta) departureTime = _atEta;
     if (!departureTime) {
         etaDetail.innerHTML = `<div style="color:#94a3b8; font-size:13px; padding:4px 0;">출발 시간이 공지되면 표시됩니다.</div>`;
         return;
@@ -5289,10 +5349,10 @@ updateShuttleETA: function(departureTime, counts) {
         const tagHtml = tag ? `<span style="display:inline-flex;align-items:center;background:#1e3a8a;color:#fff;font-size:12px;font-weight:900;padding:5px 11px;border-radius:8px;">${tag} ${depT} 출발</span>` : '';
         return `<div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:8px;">${tagHtml}${stops.map(s => s.time !== null ? `<div style="display:flex; align-items:center; gap:8px; background:#f8fafc; border:1.5px solid #e2e8f0; border-radius:10px; padding:8px 16px;"><span style="font-size:15px; font-weight:900; color:${s.color};">${s.label}</span><span style="font-size:17px; font-weight:900; color:#1e293b;">${s.time}</span><span style="font-size:12px; color:#94a3b8; font-weight:700;">도착</span></div>` : `<div style="display:flex; align-items:center; gap:6px; background:#f1f5f9; border:1.5px dashed #cbd5e1; border-radius:10px; padding:8px 14px; opacity:0.6;"><span style="font-size:13px; font-weight:800; color:#94a3b8; text-decoration:line-through;">${s.label}</span><span style="font-size:11px; color:#94a3b8; font-weight:700;">신청자 없음 · skip</span></div>`).join('')}</div>`;
     }
-    const t2IsTime = /^\d{1,2}:\d{2}$/.test(t2);
-    let html = roundHtml(departureTime, t2 ? '1차' : '');
+    const t2IsTime = !_atEta && /^\d{1,2}:\d{2}$/.test(t2);
+    let html = roundHtml(departureTime, (_atEta ? '' : (t2 ? '1차' : '')) || (_atEta ? '이 과정' : ''));
     if (t2IsTime) html += roundHtml(t2, '2차');
-    else if (t2) html += `<div style="font-size:13px;font-weight:800;color:#94a3b8;margin-bottom:8px;">🚌 2차 ${t2}</div>`;
+    else if (t2 && !_atEta) html += `<div style="font-size:13px;font-weight:800;color:#94a3b8;margin-bottom:8px;">🚌 2차 ${t2}</div>`;
     html += `<div style="font-size:11px; color:#94a3b8; margin-top:4px;">※ 신청자 있는 정류장만 정차 · 각 구간 30분 (미신청 정류장은 건너뜀)</div>`;
     etaDetail.innerHTML = html;
 },
@@ -9433,6 +9493,7 @@ saveAll: function() {
         updates[`courses/${state.room}/settings/roomDetailName`] = roomName;
         updates[`courses/${state.room}/status/roomDetailManual`] = (roomName && String(roomName).trim()) ? true : null;   // 강사가 강의실 수동 지정 → 자동동기화가 덮어쓰지 않게 보존
         updates[`courses/${state.room}/settings/coordinatorName`] = coordName;
+        updates[`courses/${state.room}/status/coordManual`] = (coordName && String(coordName).trim()) ? true : null;   // [J10] 강사가 담임 수동 지정 → 연간계획 자동동기화가 덮어쓰지 않게 보존
         updates[`courses/${state.room}/status/professorName`] = profName;
         updates[`courses/${state.room}/status/roomStatus`] = 'active';
         updates[`courses/${state.room}/status/ownerSessionId`] = state.sessionId;
@@ -11546,7 +11607,7 @@ annualPlanMgr._resetRoomFull = function (room, nm, pd) {
                 const mon = new Date(d); mon.setDate(d.getDate() - dow);
                 const utc = mon.toISOString().slice(0, 10);
                 const local = mon.getFullYear() + '-' + String(mon.getMonth() + 1).padStart(2, '0') + '-' + String(mon.getDate()).padStart(2, '0');
-                [local, utc].forEach(function (wk) { weekKeys.push(wk); upd['system/dorm/rosters/' + wk + '__' + room] = null; });
+                [local, utc].forEach(function (wk) { weekKeys.push(wk); });
             }
         }
     } catch (e) {}
@@ -11563,7 +11624,17 @@ annualPlanMgr._resetRoomFull = function (room, nm, pd) {
             Object.keys(students).forEach(function (k) { const stu = students[k]; if (stu && String(stu.course || '').replace(/\s+/g, '').trim() === nnm) upd['system/dorm/assignments/' + wk + '/students/' + k] = null; });
         }).catch(function () {});
     }) : [];
-    return Promise.all(reads).then(function () { return firebase.database().ref().update(upd); });
+    // [J9] 생활관 명단은 과정명 일치 시에만 삭제 (같은 방·주차의 다른 과정 명단 보존)
+    const rosterReads = (nnm && weekKeys.length) ? weekKeys.map(function (wk) {
+        const p = 'system/dorm/rosters/' + wk + '__' + room;
+        return firebase.database().ref(p).once('value').then(function (rs) {
+            const rv = rs.val(); if (!rv) return;
+            const rn = String(rv.courseName || '').replace(/\s+/g, '').trim();
+            if (rn === nnm) upd[p] = null;
+            else console.warn('[연간계획 리셋/J9] 지원부 명단 보존(과정명 불일치):', p);
+        }).catch(function () {});
+    }) : [];
+    return Promise.all(reads.concat(rosterReads)).then(function () { return firebase.database().ref().update(upd); });
 };
 
 annualPlanMgr.saveAndSync = async function() {
@@ -11701,7 +11772,7 @@ annualPlanMgr._syncRoomsLockAware = async function(courses) {
                 const pc = planByName[nm];
                 const coordFull = (typeof coordMgr !== 'undefined' && coordMgr.matchName ? coordMgr.matchName(pc.coord) : '') || (pc.coord || '');
                 updates[`courses/${r}/settings/period`] = pc.period;
-                updates[`courses/${r}/settings/coordinatorName`] = coordFull;
+                if (!st.coordManual) updates[`courses/${r}/settings/coordinatorName`] = coordFull;   // [J10] 수동 지정한 담임은 자동동기화에서 보존
                 if (!st.professorManual) {                                  // 수동 지정한 교수는 자동동기화에서 보존(덮어쓰지 않음)
                     updates[`courses/${r}/status/professorName`] = pc.prof;
                     updates[`courses/${r}/settings/kakaoLink`] = kakaoOf(pc.prof);
@@ -11719,6 +11790,7 @@ annualPlanMgr._syncRoomsLockAware = async function(courses) {
         updates[`courses/${r}/settings/coordinatorName`] = null;
         updates[`courses/${r}/status/professorName`] = '';
         updates[`courses/${r}/status/professorManual`] = null;   // 방 비우면 수동 플래그 해제
+        updates[`courses/${r}/status/coordManual`] = null;       // [J10] 담임 수동 플래그도 해제
         updates[`courses/${r}/status/roomDetailManual`] = null;  // 방 비우면 강의실 수동 플래그도 해제
         updates[`courses/${r}/status/roomStatus`]   = 'idle';
         updates[`courses/${r}/status/ownerSessionId`] = null;
@@ -11748,6 +11820,7 @@ annualPlanMgr._syncRoomsLockAware = async function(courses) {
         updates[`courses/${room}/settings/coordinatorName`] = coordFull;
         updates[`courses/${room}/status/professorName`] = course.prof;
         updates[`courses/${room}/status/professorManual`] = null;   // 신규 배치는 계획값 기준(자동동기화 대상)
+        updates[`courses/${room}/status/coordManual`] = null;        // [J10] 신규 배치는 계획 담임 기준
         updates[`courses/${room}/status/roomDetailManual`] = null;  // 신규 배치는 계획 강의실 기준
         updates[`courses/${room}/status/roomStatus`]   = 'active';
         updates[`courses/${room}/settings/kakaoLink`]  = kakaoOf(course.prof);
@@ -12148,6 +12221,7 @@ window.kacExpireEndedCourses = async function(){
     if(typeof firebase==='undefined'||!firebase.database) return;
     var snap=await firebase.database().ref('courses').once('value');
     var rooms=snap.val()||{};
+    var dormRosters={}; try{ dormRosters=(await firebase.database().ref('system/dorm/rosters').once('value')).val()||{}; }catch(e){}
     var updates={}; var archives=[];
     for(var i=65;i<=90;i++){
       var room=String.fromCharCode(i); var rd=rooms[room]; if(!rd) continue;
@@ -12170,7 +12244,9 @@ window.kacExpireEndedCourses = async function(){
         try{ var s=pd.indexOf(' ~ ')>=0?pd.split(' ~ ')[0].trim():(pd.split('~')[0]||'').trim();
           if(s){ var d=new Date(s+'T00:00:00'); if(!isNaN(d)){ var dw=(d.getDay()+6)%7; var mo=new Date(d); mo.setDate(d.getDate()-dw);
             var u=mo.toISOString().slice(0,10); var l=mo.getFullYear()+'-'+String(mo.getMonth()+1).padStart(2,'0')+'-'+String(mo.getDate()).padStart(2,'0');
-            updates['system/dorm/rosters/'+u+'__'+room]=null; updates['system/dorm/rosters/'+l+'__'+room]=null; }}
+            var _nrm=nm.replace(/\s+/g,'');
+            [u+'__'+room, l+'__'+room].forEach(function(rk){ var rv=dormRosters[rk];
+              if(rv && String(rv.courseName||'').replace(/\s+/g,'').trim()===_nrm) updates['system/dorm/rosters/'+rk]=null; }); }}
         }catch(e){}
       }
     }
@@ -12282,6 +12358,7 @@ ui.saveFieldEdit = async function(){
     try{ var ks=await firebase.database().ref('system/professorProfiles/'+pv+'/kakaoLink').get(); updates['courses/'+room+'/settings/kakaoLink']=ks.val()||''; }catch(e){}
   } else if(f==='coord'){
     updates['courses/'+room+'/settings/coordinatorName']=(document.getElementById('fe-val')||{}).value||'';
+    updates['courses/'+room+'/status/coordManual']=(((document.getElementById('fe-val')||{}).value||'').trim())?true:null;   // [J10] 수동 지정 보존
   } else if(f==='courseName'){
     var cv=((document.getElementById('fe-val')||{}).value||'').trim();
     if(!cv){ if(msg)msg.textContent='과정명을 입력하세요.'; return; }

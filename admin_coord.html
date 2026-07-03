@@ -1991,6 +1991,19 @@ body.coord-header-compact.pc-mode .coord-hdr-stats{ max-width:100% !important; o
 body.coord-header-compact.pc-mode .hdr-stat{ padding-left:14px !important; padding-right:14px !important; }
 body.coord-header-compact.pc-mode .coord-right.coord-hdr-hide,
 body.coord-header-compact.pc-mode #coordHdrStats.coord-hdr-hide{ display:flex !important; }
+/* ══ [JDS260704] 상단바 메뉴 한 줄 강제 ══
+   어떤 폭에서도 메뉴(통계 pill)가 줄바꿈되지 않도록 nowrap 고정,
+   좁아지면 pill 패딩·글자를 단계적으로 축소(clamp), 그래도 넘치면 가로 스크롤. */
+.coord-hdr-stats, body.pc-mode .coord-hdr-stats, body.coord-header-compact.pc-mode .coord-hdr-stats{
+  flex-wrap:nowrap !important; white-space:nowrap !important;
+}
+.coord-hdr-stats .hdr-stat{ flex-shrink:0 !important; }
+body.pc-mode .coord-hdr-stats{ gap:clamp(4px, .5vw, 10px) !important; }
+body.pc-mode .hdr-stat{ padding:clamp(5px,.45vw,7px) clamp(7px,.75vw,13px) !important; gap:clamp(5px,.5vw,9px) !important; }
+body.pc-mode .hdr-stat > i{ font-size:clamp(12px,.95vw,16px) !important; }
+body.pc-mode .hdr-stat .hb-label{ font-size:clamp(9px,.62vw,11px) !important; }
+body.pc-mode .hdr-stat .hb-value{ font-size:clamp(14px,1.1vw,19px) !important; }
+body.pc-mode .hdr-stat .hb-value small{ font-size:clamp(9px,.62vw,11px) !important; }
 </style>
 <header class="app-header">
   <div class="coord-left">
@@ -8224,6 +8237,64 @@ var coordOpsSetup = {
   cancel:function(){ var ov=document.getElementById('coordOpsOv'); if(ov) ov.remove(); }
 };
 window.coordOpsSetup=coordOpsSetup;
+
+/* ══ [JDS260704] 퇴교차량 자동판정 연동(지원부 명단 업로드 시 실시간) ══
+   지원부가 한글 시간표를 올리면 과정별 종료시각→탑승 라운드가 system/shuttle/courseDepartures에 기록된다.
+   여기서 이번 주 과정들의 라운드 집합을 계산해:
+   · 1차만 → 1차 13:00 / 2차 운행안함    · 2차만 → 1차 15:00 / 2차 운행안함    · 둘 다 → 13:00 / 15:00
+   을 공지 패널 기본값(_DEF·opsT1/opsT2)에 자동 반영하고 상단바 퇴교차량 pill에 표기한다.
+   (실제 '공지'는 운영부가 버튼으로 확정 — 이미 오늘 공지된 값은 덮어쓰지 않음) */
+(function initAutoShuttleRounds(){
+  function weekMonday(){ var d=new Date(); var dow=(d.getDay()+6)%7; d.setDate(d.getDate()-dow); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+  function canonWeek(k){ var d=new Date(String(k||'')+'T00:00:00'); if(isNaN(d)) return String(k||''); var dow=d.getDay(); if(dow===0) d.setDate(d.getDate()+1); else d.setDate(d.getDate()-((dow+6)%7)); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+  function apply(list){
+    var mon=weekMonday(), r1=false, r2=false, perCourse=[];
+    (list||[]).forEach(function(v){
+      if(!v || !v.departTime) return;
+      if(canonWeek(v.weekKey||'')!==mon) return;   // 이번 주 과정만
+      if(v.round===1) r1=true; else if(v.round===2) r2=true;
+      perCourse.push((v.courseName||'?')+' '+v.departTime);
+    });
+    var auto=null;
+    if(r1&&r2) auto={t1:'13:00', t2:'15:00'};
+    else if(r1) auto={t1:'13:00', t2:'운행안함'};
+    else if(r2) auto={t1:'15:00', t2:'운행안함'};
+    window._autoShuttleRounds=auto;
+    try{ if(auto){ coordOpsSetup._DEF.t1=auto.t1; coordOpsSetup._DEF.t2=auto.t2; } }catch(e){}
+    // 공지 패널이 열려 있으면 즉시 값 반영 (오늘 이미 공지 완료된 상태면 손대지 않음)
+    try{
+      var today=(typeof _coordToday==='function'?_coordToday():new Date().toISOString().slice(0,10));
+      var announcedToday=!!(window._shuttleDep && window._shuttleDep.announced && window._shuttleDep.date===today);
+      var i1=document.getElementById('opsT1'), i2=document.getElementById('opsT2');
+      if(auto && i1 && i2 && !announcedToday){
+        i1.value=auto.t1; coordOpsSetup.onT1Change();
+        var opt2=Array.prototype.some.call(i2.options,function(o){return o.value===auto.t2;});
+        if(opt2) i2.value=auto.t2;
+      }
+    }catch(e){}
+    // 상단바 퇴교차량 pill: 자동판정 시간 툴팁 + 라벨 옆 표시
+    try{
+      var pill=document.getElementById('hdr-shuttle');
+      if(pill){
+        var lbl=pill.querySelector('.hb-label');
+        if(auto){
+          var txt=(auto.t2==='운행안함')?auto.t1:(auto.t1+'·'+auto.t2);
+          if(lbl) lbl.textContent='퇴교차량 '+txt;
+          pill.title='퇴교차량 자동판정(지원부 시간표 기반): '+(auto.t2==='운행안함'?('단일 '+auto.t1):('1차 '+auto.t1+' / 2차 '+auto.t2))+(perCourse.length?('\n'+perCourse.join('\n')):'');
+        } else if(lbl) lbl.textContent='퇴교차량';
+      }
+    }catch(e){}
+  }
+  function boot(){
+    try{
+      if(!window.firebase||!firebase.database){ setTimeout(boot,400); return; }
+      firebase.database().ref('system/shuttle/courseDepartures').on('value', function(s){
+        var v=s.val()||{}; apply(Object.values(v));
+      });
+    }catch(e){ setTimeout(boot,800); }
+  }
+  boot();
+})();
 (function initCoordOps(){ if(!window.firebase||!firebase.database){ setTimeout(initCoordOps,500); return; } try{ coordOpsSetup.init(); }catch(e){} })();
 
 /* 3) 외출·외박 현황 (선택 날짜 기준) */

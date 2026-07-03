@@ -2340,6 +2340,39 @@
                 .trim();
         }
 
+        // [JDS260704 신규] 교육시간표에서 '설문조사/설문평가/수료' 세션의 행 시작시간 = 과정 종료시각 →
+        //  종료 ≤ 13:00 → 13:00(1차) / 초과 → 15:00(2차) 퇴교차량 자동 판정.
+        //  HWPX/PDF는 행조인(\u241F) 라인, HWP는 플랫 셀 스트림 모두 지원. 물결표 ~ ∼ ～ 모두 인식.
+        function extractDepartureFromSchedule(lines) {
+            try {
+                var TIME = /(\d{1,2})\s*:\s*(\d{2})\s*[~\u223C\uFF5E]/;
+                var KEY  = /설문\s*(조사|평가)|수료/;
+                var ends = [];
+                (lines || []).forEach(function(ln, i) {
+                    var s = String(ln == null ? '' : ln);
+                    var cells = s.indexOf('\u241F') >= 0 ? s.split('\u241F') : [s];
+                    cells.forEach(function(c) {
+                        if (!KEY.test(c)) return;
+                        if (/교육생\s*명단|연\s*번|수료기준|수료요건/.test(c)) return;
+                        var t = null, m, k, j;
+                        for (k = 0; k < cells.length; k++) { m = TIME.exec(cells[k]); if (m) { t = (+m[1]) * 60 + (+m[2]); break; } }
+                        if (t == null) {  // 플랫 스트림: 같은 행의 시간 셀이 앞쪽 — 최근접 역탐색(최대 20셀)
+                            for (j = i - 1; j >= 0 && i - j <= 20; j--) { m = TIME.exec(String(lines[j] == null ? '' : lines[j])); if (m) { t = (+m[1]) * 60 + (+m[2]); break; } }
+                        }
+                        if (t != null) ends.push(t);
+                    });
+                });
+                if (!ends.length) return null;
+                var end = Math.max.apply(null, ends);   // 마지막 수료/설문 세션 시작 = 과정 종료
+                var dep = (end <= 13 * 60) ? '13:00' : '15:00';
+                return {
+                    endTime: String(Math.floor(end / 60)).padStart(2, '0') + ':' + String(end % 60).padStart(2, '0'),
+                    departTime: dep,
+                    round: dep === '13:00' ? 1 : 2
+                };
+            } catch (e) { return null; }
+        }
+
         function buildScheduleData(lines, fileName) {
             const arr = (lines || [])
                 .map(normalizeRosterCell)
@@ -2470,6 +2503,7 @@
             }
 
             currentScheduleData = buildScheduleData(scheduleLines.length ? scheduleLines : allText.split(/[\n\r]+/), file.name);
+            if (currentScheduleData) currentScheduleData.departure = extractDepartureFromSchedule(scheduleLines.length ? scheduleLines : allText.split(/[\n\r]+/));
             return parsed.length ? parsed : parseRowsFromPlainText(allText);
         }
 
@@ -2636,6 +2670,7 @@
             }
 
             currentScheduleData = buildScheduleData(records.length ? records : text.split(/[\n\r]+/), file.name);
+            if (currentScheduleData) currentScheduleData.departure = extractDepartureFromSchedule(records.length ? records : text.split(/[\n\r]+/));
             const byRecords = parseRosterRecords(records);
             return byRecords.length ? byRecords : parseRowsFromPlainText(text);
         }
@@ -2701,6 +2736,7 @@
                 }
 
                 currentScheduleData = buildScheduleData(scheduleLines, file.name);
+                if (currentScheduleData) currentScheduleData.departure = extractDepartureFromSchedule(scheduleLines);
                 if (!parsed.length) {
                     document.getElementById('rosterPreview').innerText = '⚠️ 자동 판독 결과가 없습니다. 양식이 다를 수 있어요. 표에서 직접 입력하거나 다른 PDF를 시도하세요.';
                 } else {
@@ -2992,7 +3028,29 @@
                             console.warn('[교육시간표] 강사플랫폼 미러 저장 실패, rosters 저장값으로 대체 표시 예정:', scheduleErr);
                         }
                     }
-                    showToast(`✅ ${clean.length}명 명단 저장됨${currentScheduleData ? (scheduleSynced ? ' · 교육시간표도 강사플랫폼에 반영' : ' · 시간표는 명단 저장값으로 보관됨') : ''}`);
+                    // [JDS260704] 퇴교차량 자동판정 실시간 공유 — 운영부(전역)·강사/교육생(방별) 모두 새로고침 없이 반영
+                    let depSynced = false;
+                    try {
+                        const depInfo = currentScheduleData && currentScheduleData.departure;
+                        if (depInfo && depInfo.departTime) {
+                            const _pp = parsePeriod(saveCourse.period || '');
+                            const depPayload = {
+                                courseName: saveCourse.courseName || '', period: saveCourse.period || '',
+                                room: String(saveCourse.room), weekKey: saveCourse.weekKey || '',
+                                endTime: depInfo.endTime, departTime: depInfo.departTime, round: depInfo.round,
+                                endDate: _pp.end || '', updatedAt: Date.now()
+                            };
+                            await db.ref('system/shuttle/courseDepartures/' + rk).set(depPayload);
+                            if (/^[A-Z]$/.test(String(saveCourse.room))) {
+                                await db.ref('courses/' + saveCourse.room + '/shuttle/autoDeparture').set({
+                                    departTime: depInfo.departTime, endTime: depInfo.endTime,
+                                    endDate: _pp.end || '', courseName: saveCourse.courseName || '', updatedAt: Date.now()
+                                });
+                            }
+                            depSynced = true;
+                        }
+                    } catch (depErr) { console.warn('[퇴교차량 자동판정] 기록 생략:', depErr); }
+                    showToast(`✅ ${clean.length}명 명단 저장됨${currentScheduleData ? (scheduleSynced ? ' · 교육시간표도 강사플랫폼에 반영' : ' · 시간표는 명단 저장값으로 보관됨') : ''}${depSynced ? ' · 퇴교차량 ' + currentScheduleData.departure.departTime + ' 자동판정' : ''}`);
                     rosterDirty = false;
                     document.getElementById('rosterPreview').innerText = '';
                     // 해당 과정 행을 녹색+인원수로 즉시 갱신 (전체 재렌더 없이)
@@ -3146,7 +3204,7 @@
                 });
                 if (pastKeys.length) {
                     const delUpdates = {};
-                    pastKeys.forEach(k => { delUpdates[`system/dorm/rosters/${k}`] = null; });
+                    pastKeys.forEach(k => { delUpdates[`system/dorm/rosters/${k}`] = null; delUpdates[`system/shuttle/courseDepartures/${k}`] = null; });
                     await db.ref().update(delUpdates);
                     console.log('[생활관] 지난 주차 명단 자동 삭제:', pastKeys.join(', '));
                 }
@@ -3422,9 +3480,11 @@
             if (!confirm(msg)) return;
             try {
                 await db.ref(`system/dorm/rosters/${key}`).remove();
+                await db.ref(`system/shuttle/courseDepartures/${key}`).remove().catch(() => {});
                 const removed = await removeRosterFromAssignment(key, courseName);
                 const roomForSchedule = (weekRosters[key] && weekRosters[key].room) || (key.split('__')[1] || '');
                 if (roomForSchedule) await db.ref(`courses/${roomForSchedule}/schedule`).remove().catch(() => {});
+                if (roomForSchedule && /^[A-Z]$/.test(String(roomForSchedule))) await db.ref(`courses/${roomForSchedule}/shuttle/autoDeparture`).remove().catch(() => {});
                 delete weekRosters[key];
                 excludedRosterKeys.delete(key);
                 rosterCounts[key] = 0;
@@ -5102,8 +5162,10 @@
             if (!confirm(msg)) return;
             try {
                 await db.ref(`system/dorm/rosters/${key}`).remove();
+                await db.ref(`system/shuttle/courseDepartures/${key}`).remove().catch(() => {});
                 const removed = await removeRosterFromAssignment(key, it.courseName);
                 if (it.room) await db.ref(`courses/${it.room}/schedule`).remove().catch(() => {});
+                if (it.room && /^[A-Z]$/.test(String(it.room))) await db.ref(`courses/${it.room}/shuttle/autoDeparture`).remove().catch(() => {});
                 rosterCounts[key] = 0;
                 if (selectedCourse && rosterKey(selectedCourse) === key) {
                     roster = [];
