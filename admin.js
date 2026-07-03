@@ -1,4 +1,5 @@
 /* PLATFORM_EDIT_STATUS: 수정완료 | VERSION: L9 | 2026-07-03 */
+/* [복구 2026-07-03] 파일 말단 184줄이 저장 중 잘림 → J8(260702Z40) 보관본의 동일 블록(리모컨 위젯·더보기 패널·ZOOM 표시 IIFE)으로 접합 복구. J8 이후 해당 말단 블록을 수정한 이력이 있다면 편집기 원본(L9)으로 재저장 권장. */
 /* ============================================================
    PLATFORM_EDIT_STATUS: 수정완료 | VERSION: J8 | 2026-07-02 (J8: ZOOM 진입 요소를 CSS !important 규칙으로 원천 차단 — 오프라인이면 어떤 코드가 표시해도 절대 안 보임(body.zoom-room-online 클래스 게이트). (J7: ZOOM 진입 요소 표시를 [onclick*=openZoomMonitor] 전체 선택으로 통일 + 2초 하트비트 — 오프라인에서 pill 잔존 완전 차단. (J6: ①장소 수동지정 보호(roomDetailManual) — 연간계획 동기화가 온라인 설정 되돌리는 문제 차단 ②ZOOM 버튼 표시를 장소 배지 텍스트와 상시 동기(MutationObserver) — 오프라인인데 버튼 남는 문제 해소 ③저장알림 확인 후 회의정보 모달 순차 표시(동시 팝업 제거) ④회의번호 000 0000 0000 자동 포맷 전용 모달. (J5: ①ZOOM 버튼 과정현황 장소 옆으로+오프라인 완전숨김(방전환 기본숨김·온라인 가드) ②iframe 사이징 실측기반 재작성 ③온라인 장소 저장 시 회의번호/암호 과정별 저장(askZoomMeetingInfo) ④홈검색 카카오등록 교수 노란배지 ⑤퇴교차량 칩 인라인 펼침. (J4: ZOOM 모니터링 iframe 높이를 body zoom 배율 보정해 실제 화면에 맞춤 — 설정 패널 잘림 해소, 리사이즈 대응. (J3: ui.openZoomMonitor 추가 — ZOOM 모니터링을 내장 뷰(iframe)로 열고 과정 전환 시 확인 후 재로딩, 온라인 판별 토글에 더보기 메뉴 항목 포함) (J2: ①ZOOM 모니터링 버튼 표시로직 재적용(온라인 과정 판별) ②강의실 초기화 confirm에 삭제범위 안내 추가 ③QR 요소없음 개발자문구 교체 ④toggleNightMode/addSubject 널가드 — 구버전 잔재 안전화)
    CATC · 강사 플랫폼 로직  (admin.js)
@@ -13258,4 +13259,186 @@ ui.confirmRouletteLeader = function(){
   function _dragUp(){
     var host = _drag.host;
     var wasDragging = _drag.dragging;
-    if(_drag.timer){ clearTimeout(_drag.
+    if(_drag.timer){ clearTimeout(_drag.timer); _drag.timer = null; }
+    if(host && wasDragging){
+      var rect = host.getBoundingClientRect();
+      localStorage.setItem(POS_KEY, JSON.stringify({x:rect.left, y:rect.top}));
+    } else if(host && _drag.pressEl === _drag.center){
+      handleCenterTap(host);   // 접힘→펼침 / 펼침→축소 / 축소(대기)→과정현황 이동
+    }
+    _drag.dragging = false; _drag.pressEl = null;
+    if(host) host.classList.remove('is-dragging');
+  }
+
+  // 접힘/펼침: 박스 크기는 그대로라 위치 보정이 필요 없음 (중앙 원은 항상 박스 중심에 고정)
+  function setCollapsed(host, collapse){
+    if(!host) return;
+    if(collapse) host.classList.add('hex-collapsed');
+    else host.classList.remove('hex-collapsed');
+  }
+
+  // 중앙 과정현황 탭 동작:
+  //  · 접힘 상태 → 펼침
+  //  · 펼침 상태 → 축소만(페이지 이동 X) + 다음 탭은 과정현황 페이지로 대기
+  //  · 축소 상태(대기중) → 과정현황 페이지로 이동
+  var _remotePendingNav = false;
+  var _autoCollapseTimer = null;
+  function scheduleAutoCollapse(host){
+    clearTimeout(_autoCollapseTimer);
+    _autoCollapseTimer = setTimeout(function(){ setCollapsed(host, true); _remotePendingNav = false; }, 4000);
+  }
+  function handleCenterTap(host){
+    if(!host) return;
+    clearTimeout(_autoCollapseTimer);
+    var collapsed = host.classList.contains('hex-collapsed');
+    if(!collapsed){
+      setCollapsed(host, true);      // 펼쳐진 상태 → 축소만
+      _remotePendingNav = true;      // 다음 탭은 과정현황 페이지로
+    } else if(_remotePendingNav){
+      _remotePendingNav = false;
+      try{ ui.setMode('dashboard'); }catch(e){}   // 축소 상태에서 한번 더 → 과정현황 페이지
+    } else {
+      setCollapsed(host, false);     // 평상시 축소 → 펼침
+      scheduleAutoCollapse(host);    // 펼친 뒤 4초 무동작이면 자동 축소
+    }
+  }
+
+  function bindDrag(host){
+    var handle = host.querySelector('.hex-drag-handle');
+    var center = host.querySelector('.hex-center');
+    _drag.host = host; _drag.center = center;
+    // 리모컨 위에 마우스가 있으면 자동축소 잠시 멈춤 → 벗어나면 다시 4초 카운트
+    if(!host._hoverBound){
+      host.addEventListener('pointerenter', function(){ clearTimeout(_autoCollapseTimer); });
+      host.addEventListener('pointerleave', function(){ if(!host.classList.contains('hex-collapsed')) scheduleAutoCollapse(host); });
+      host._hoverBound = true;
+    }
+    if(handle){ handle.style.touchAction='none'; handle.addEventListener('pointerdown', _dragDown); }
+    if(center){ center.style.touchAction='none'; center.addEventListener('pointerdown', _dragDown); }
+    if(!_dragWinBound){
+      window.addEventListener('pointermove', _dragMove, {passive:false});
+      window.addEventListener('pointerup', _dragUp);
+      window.addEventListener('pointercancel', _dragUp);
+      _dragWinBound = true;
+    }
+  }
+
+  function cleanQrAndGroupSettings(){
+    var qr = document.getElementById('qrcode');
+    if(qr){
+      var settingGroup = qr.closest('.setting-group');
+      if(settingGroup) settingGroup.remove();
+    }
+    ['floatingQR','qrModal','studentManualModal'].forEach(function(id){
+      var node = document.getElementById(id);
+      if(node) node.remove();
+    });
+    document.querySelectorAll('[onclick*="toggleMiniQR"]').forEach(function(node){ node.remove(); });
+
+    var box = document.querySelector('.sidebar-bottom .action-buttons');
+    if(box && !document.getElementById('sidebarSettingsFold')){
+      var observer = document.getElementById('observerToggleButton');
+      var fold = document.createElement('details');
+      fold.id = 'sidebarSettingsFold';
+      fold.className = 'sidebar-settings-fold';
+      fold.innerHTML = '<summary><i class="fa-solid fa-gear"></i><span>Settings</span><i class="fa-solid fa-chevron-down"></i></summary><div class="sidebar-settings-actions"></div>';
+      var inner = fold.querySelector('.sidebar-settings-actions');
+      Array.from(box.children).forEach(function(button){
+        if(button !== observer) inner.appendChild(button);
+      });
+      if(observer) box.insertBefore(observer, box.firstChild);
+      box.appendChild(fold);
+    }
+  }
+
+  // [과정별 리모컨] 방 settings 변경 시 호출 → 해당 과정의 메뉴 적용 후 재렌더
+  ui.renderRemote = render;
+  ui.applyRemoteMenu = function(settings){
+    var rm = (settings && Array.isArray(settings.remoteMenu) && settings.remoteMenu.length === 6) ? settings.remoteMenu : null;
+    currentRoomMenu = rm;
+    render();
+  };
+
+  function boot(){
+    cleanQrAndGroupSettings();
+    render();
+  }
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
+  else setTimeout(boot, 0);
+})();
+
+
+// ===== [우측 더보기 사이드바] 슬라이드 패널 토글 (HTML 버튼에서 호출하나 정의가 없었음) =====
+ui._fitMorePanelToViewport = function(){
+  var p=document.getElementById('moreMenuPanel');
+  if(!p) return;
+  var zoom=parseFloat(getComputedStyle(document.documentElement).zoom)||1;
+  p.style.setProperty('width',(240/zoom)+'px','important');          // 콘텐츠에 맞춘 폭 (글자가 짧아 슬림하게)
+  p.style.setProperty('top','0','important');                         // 전체 높이 (좌측과 통일)
+  p.style.setProperty('right','0','important');                       // 우측 끝 밀착
+  p.style.setProperty('height',(window.innerHeight/zoom)+'px','important');
+  p.style.setProperty('min-height','0','important');
+  p.style.setProperty('border-radius','20px 0 0 20px','important');    // 안쪽(좌측) 모서리만 20px 라운드 — 좌측 사이드바(0 20px 20px 0)의 거울 대칭
+};
+ui.openMorePanel = function(){
+  var p=document.getElementById('moreMenuPanel'), t=document.getElementById('moreToggleTab'), b=document.getElementById('moreMenuBackdrop'), ic=document.getElementById('moreToggleIcon');
+  if(!p) return;
+  ui._fitMorePanelToViewport();
+  p.classList.add('more-open'); p.style.transform='translateX(0)';
+  if(b) b.style.display='block';
+  if(t) t.style.right=((p.offsetWidth||300))+'px';
+  if(ic) ic.className='fa-solid fa-chevron-right';
+};
+ui.closeMorePanel = function(){
+  var p=document.getElementById('moreMenuPanel'), t=document.getElementById('moreToggleTab'), b=document.getElementById('moreMenuBackdrop'), ic=document.getElementById('moreToggleIcon');
+  if(p){ p.classList.remove('more-open'); p.style.transform='translateX(calc(100% + 24px))'; }
+  if(b) b.style.display='none';
+  if(t) t.style.right='0';
+  if(ic) ic.className='fa-solid fa-chevron-left';
+};
+ui.toggleMorePanel = function(){
+  var p=document.getElementById('moreMenuPanel');
+  if(!p) return;
+  if(p.classList.contains('more-open')) ui.closeMorePanel(); else ui.openMorePanel();
+};
+window.addEventListener('resize', function(){
+  var p=document.getElementById('moreMenuPanel');
+  if(p && p.classList.contains('more-open')) ui._fitMorePanelToViewport();
+});
+
+
+// [J8] ZOOM 진입 요소(버튼·메뉴) 표시 제어 — CSS !important 규칙으로 원천 차단.
+//  body에 zoom-room-online 클래스가 없으면(=오프라인) openZoomMonitor를 여는 모든 요소가
+//  어떤 코드가 표시를 시도해도 CSS 차원에서 강제 숨김. 배지 감시 + 리스너 + 2초 하트비트가 클래스를 갱신.
+(function(){
+  function injectCss(){
+    if(document.getElementById('zmVisGuardStyle'))return;
+    var st=document.createElement('style');
+    st.id='zmVisGuardStyle';
+    st.textContent='body:not(.zoom-room-online) [onclick*="openZoomMonitor"]{display:none !important;}';
+    document.head.appendChild(st);
+  }
+  function applyZoomVis(){
+    try{
+      var el=document.getElementById('dashRoomDetail');
+      var on=!!(el && /온라인|zoom/i.test(String(el.innerText||'')));
+      window._zoomRoomOnline = on;
+      document.body.classList.toggle('zoom-room-online', on);
+      if(on){ // 온라인일 때는 초기 inline display:none을 해제해 실제로 보이게
+        document.querySelectorAll('[onclick*="openZoomMonitor"]').forEach(function(t){ t.style.display=''; });
+      }
+    }catch(e){}
+  }
+  function install(){
+    injectCss();
+    var el=document.getElementById('dashRoomDetail');
+    if(el && !el._zmObs){
+      el._zmObs=true;
+      try{ new MutationObserver(applyZoomVis).observe(el,{childList:true,characterData:true,subtree:true}); }catch(e){}
+    }
+    if(!window._zmHeartbeat){ window._zmHeartbeat=setInterval(applyZoomVis, 2000); }
+    applyZoomVis();
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', install);
+  else install();
+})();
