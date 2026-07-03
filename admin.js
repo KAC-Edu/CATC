@@ -1678,12 +1678,16 @@ const profMgr = {
         this.list.forEach(p => {
             const item = document.createElement('div');
             item.className = 'prof-item';
+            const initial = (p.name || '?').trim().charAt(0);
             // 수정된 부분: 이름 옆에 [프로필 등록] 버튼 추가
             item.innerHTML = `
-                <span>${p.name}</span> 
-                <div style="display:flex; gap:5px;">
-                    <button onclick="profMgr.openProfileEditor('${p.name}')" style="background:#3b82f6;">프로필</button>
-                    <button onclick="profMgr.deleteProf('${p.key}')">삭제</button>
+                <div class="prof-name-wrap">
+                    <span class="prof-avatar">${initial}</span>
+                    <span class="prof-name">${p.name}</span>
+                </div>
+                <div class="prof-item-btns">
+                    <button class="prof-btn-edit" onclick="profMgr.openProfileEditor('${p.name}')">프로필</button>
+                    <button class="prof-btn-del" onclick="profMgr.deleteProf('${p.key}')">삭제</button>
                 </div>`;
             div.appendChild(item);
         });
