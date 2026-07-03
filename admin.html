@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- PLATFORM_EDIT_STATUS: 수정완료 | VERSION: I7 | 2026-07-03 (I7: 입교안내 룰렛·교육시간표 버튼 위치를 개별 저장) -->
+<!-- PLATFORM_EDIT_STATUS: 수정완료 | VERSION: I8 | 2026-07-03 (I8: 과정현황 바로가기 및 입교안내 공지 명칭 통일) -->
 <html lang="ko">
 <head>
 <script>
@@ -15,8 +15,8 @@
 <!-- ============================================================
   CATC · 강사 플랫폼  (admin.html)
   STATUS    수정완료
-  @version  I7
-  @build    20260703-guide-button-position
+  @version  I8
+  @build    20260703-104644
   ────────────────────────────────────────────────────────
   [코드 수정 규칙 · AI/개발자 공통]
   이 파일을 한 글자라도 고치면:
@@ -42,7 +42,7 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/ko.js"></script>
-    <link rel="stylesheet" href="admin.css?v=260702Z42">
+    <link rel="stylesheet" href="admin.css?v=260702Z45">
     <link rel="stylesheet" href="kac-tokens.css?v=20260622">
     <link rel="icon" type="image/svg+xml" href="favicon.svg?v=b260620c">
     <script>
@@ -638,56 +638,63 @@ body.in-course #moreToggleTab{ display:flex !important; }
 </div>
 
 <script>
-/* [입교안내 버튼 위치 조정] 룰렛과 시간표 버튼을 각각 3초 길게 눌러 이동.
-   위치는 Firebase 전역(system/sharedGuide/guideBtnPos/{roulette|schedule})에 개별 저장한다.
-   시간표 보기와 시간표 업로드 버튼은 같은 페이지 기능이므로 schedule 좌표를 공유한다. */
+/* [입교안내 버튼 위치 조정] 룰렛/시간표 버튼을 각각 3초 길게 눌러 이동.
+   Firebase 전역(system/sharedGuide/guideBtnPos/{roulette|schedule}/{window|fullscreen})에
+   화면 모드별로 개별 저장한다. 시간표 보기/업로드 버튼은 schedule 좌표를 공유. */
 (function(){
   var FBPATH='system/sharedGuide/guideBtnPos';
   var IDS=['guideRouletteBtn','guideScheduleBtn','guideScheduleUploadBtn'];
-  var GROUP={
-    guideRouletteBtn:'roulette',
-    guideScheduleBtn:'schedule',
-    guideScheduleUploadBtn:'schedule'
-  };
-  var curSaved={roulette:null,schedule:null};
+  var GROUP={ guideRouletteBtn:'roulette', guideScheduleBtn:'schedule', guideScheduleUploadBtn:'schedule' };
+  var GROUPS=['roulette','schedule'], MODES=['window','fullscreen'];
+  var curSaved={roulette:{window:null,fullscreen:null},schedule:{window:null,fullscreen:null}};
+  function mode(){ return (document.fullscreenElement||document.webkitFullscreenElement) ? 'fullscreen' : 'window'; }
   function wrap(){ return document.getElementById('pdfWrapper'); }
   function idsFor(group){ return IDS.filter(function(id){ return GROUP[id]===group; }); }
-  function applyGroup(group,p){
-    if(!p) return;
+  function applyGroup(group){
+    var p=curSaved[group] && curSaved[group][mode()];
     idsFor(group).forEach(function(id){
-      var b=document.getElementById(id);
-      if(b){ b.style.left=p.l+'%'; b.style.top=p.t+'%'; b.style.right='auto'; }
+      var b=document.getElementById(id); if(!b) return;
+      if(p){ b.style.left=p.l+'%'; b.style.top=p.t+'%'; b.style.right='auto'; }
+      else { b.style.left=''; b.style.top=''; b.style.right=''; }   // 저장값 없으면 CSS 기본 위치
     });
   }
-  function localKey(group){ return 'kac_guideBtnPos_'+group; }
-  function localGet(group){ try{ return JSON.parse(localStorage.getItem(localKey(group))||'null'); }catch(e){ return null; } }
-  function localSet(group,p){ try{ p?localStorage.setItem(localKey(group),JSON.stringify(p)):localStorage.removeItem(localKey(group)); }catch(e){} }
+  function applyAll(){ GROUPS.forEach(applyGroup); }
+  function lKey(g,m){ return 'kac_guideBtnPos_'+g+'_'+m; }
+  function lGet(g,m){ try{ return JSON.parse(localStorage.getItem(lKey(g,m))||'null'); }catch(e){ return null; } }
+  function lSet(g,m,p){ try{ p?localStorage.setItem(lKey(g,m),JSON.stringify(p)):localStorage.removeItem(lKey(g,m)); }catch(e){} }
   function savePos(group,p){
-    curSaved[group]=p; localSet(group,p);
-    try{ if(window.firebase && firebase.database) firebase.database().ref(FBPATH+'/'+group).set({l:p.l,t:p.t}); }catch(e){}
+    var m=mode();
+    curSaved[group][m]=p; lSet(group,m,p);
+    try{ if(window.firebase && firebase.database) firebase.database().ref(FBPATH+'/'+group+'/'+m).set({l:p.l,t:p.t}); }catch(e){}
   }
-  // Firebase 전역값 실시간 구독(모든 과정·모니터 공통) — 준비될 때까지 재시도
   (function subscribe(tries){
     if(window.firebase && firebase.database){
       try{
         firebase.database().ref(FBPATH).on('value', function(s){
           var v=s.val() || {};
+          // 아주 옛날 형식 {l,t} 통짜 → 그룹·모드 모두 동일 적용으로 1회 마이그레이션
           if(typeof v.l==='number'){
-            var legacy={l:Number(v.l),t:Number(v.t)};
-            firebase.database().ref(FBPATH).set({roulette:legacy,schedule:legacy}).catch(function(){});
-            return;
+            var legacy={l:Number(v.l),t:Number(v.t)}, mig={};
+            GROUPS.forEach(function(g){ mig[g]={window:legacy,fullscreen:legacy}; });
+            firebase.database().ref(FBPATH).set(mig).catch(function(){}); return;
           }
-          ['roulette','schedule'].forEach(function(group){
-            var p=v[group];
-            if(p && typeof p.l==='number' && typeof p.t==='number'){
-              curSaved[group]={l:Number(p.l),t:Number(p.t)};
-              localSet(group,curSaved[group]);
-              applyGroup(group,curSaved[group]);
-            }else{
-              curSaved[group]=null;
-              localSet(group,null);
+          GROUPS.forEach(function(group){
+            var gv=v[group];
+            if(gv && typeof gv.l==='number'){
+              // 이전 형식(group에 l/t 직접) → window/fullscreen 복제 마이그레이션(현재값=전체화면 기준)
+              var lg={l:Number(gv.l),t:Number(gv.t)};
+              firebase.database().ref(FBPATH+'/'+group).set({window:lg,fullscreen:lg}).catch(function(){});
+              curSaved[group]={window:lg,fullscreen:lg}; lSet(group,'window',lg); lSet(group,'fullscreen',lg);
+            } else {
+              gv=gv||{};
+              MODES.forEach(function(m){
+                var p=gv[m];
+                if(p && typeof p.l==='number' && typeof p.t==='number'){ curSaved[group][m]={l:Number(p.l),t:Number(p.t)}; lSet(group,m,curSaved[group][m]); }
+                else { curSaved[group][m]=null; lSet(group,m,null); }
+              });
             }
           });
+          applyAll();
         });
         return;
       }catch(e){}
@@ -703,7 +710,7 @@ body.in-course #moreToggleTab{ display:flex !important; }
       if(e.pointerType==='mouse' && e.button!==0) return;
       e.stopPropagation();
       dragging=false; curPos=null; sx=e.clientX; sy=e.clientY;
-      try{ b.setPointerCapture(e.pointerId); }catch(_){}   // 즉시 포인터 캡처(교육장소 칸과 동일) → 드래그 확실히 걸림
+      try{ b.setPointerCapture(e.pointerId); }catch(_){}
       clearTimeout(holdTimer);
       b.classList.add('guidebtn-pressing');
       holdTimer=setTimeout(function(){
@@ -725,7 +732,7 @@ body.in-course #moreToggleTab{ display:flex !important; }
       l=Math.max(0, Math.min(100 - bw/r.width*100, l));
       t=Math.max(0, Math.min(100 - bh/r.height*100, t));
       curPos={l:l, t:t};
-      applyGroup(group,curPos);
+      idsFor(group).forEach(function(itemId){ var x=document.getElementById(itemId); if(x){ x.style.left=l+'%'; x.style.top=t+'%'; x.style.right='auto'; } });
     });
     function end(){
       clearTimeout(holdTimer);
@@ -739,28 +746,24 @@ body.in-course #moreToggleTab{ display:flex !important; }
     b.addEventListener('pointerup', end);
     b.addEventListener('pointercancel', end);
     b.addEventListener('click', function(e){ if(b._suppressClick){ e.preventDefault(); e.stopPropagation(); } }, true);
-    // 더블클릭으로 선택한 버튼 그룹 위치만 초기화
+    // 더블클릭 = 현재 화면모드의 이 그룹 위치만 초기화
     b.addEventListener('dblclick', function(e){ e.preventDefault(); e.stopPropagation();
-      curSaved[group]=null; localSet(group,null);
-      try{ if(window.firebase && firebase.database) firebase.database().ref(FBPATH+'/'+group).remove(); }catch(_){}
-      idsFor(group).forEach(function(itemId){
-        var x=document.getElementById(itemId);
-        if(x){ x.style.left=''; x.style.top=''; x.style.right=''; }
-      });
+      var m=mode(); curSaved[group][m]=null; lSet(group,m,null);
+      try{ if(window.firebase && firebase.database) firebase.database().ref(FBPATH+'/'+group+'/'+m).remove(); }catch(_){}
+      applyGroup(group);
     });
   }
   function init(){
     IDS.forEach(bind);
-    ['roulette','schedule'].forEach(function(group){
-      var c=localGet(group);
-      if(c){ curSaved[group]=c; applyGroup(group,c); }
-    });
+    GROUPS.forEach(function(g){ MODES.forEach(function(m){ var c=lGet(g,m); if(c) curSaved[g][m]=c; }); });
+    applyAll();
   }
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', init);
   else init();
-  window.addEventListener('resize', function(){
-    ['roulette','schedule'].forEach(function(group){ if(curSaved[group]) applyGroup(group,curSaved[group]); });
-  });
+  // 화면 모드(윈도우↔전체화면) 전환 시 해당 모드 좌표로 즉시 재적용
+  document.addEventListener('fullscreenchange', function(){ setTimeout(applyAll, 60); });
+  document.addEventListener('webkitfullscreenchange', function(){ setTimeout(applyAll, 60); });
+  window.addEventListener('resize', function(){ setTimeout(applyAll, 60); });
 })();
 </script>
 
@@ -990,7 +993,7 @@ body.in-course #moreToggleTab{ display:flex !important; }
                 </div>
                 <div class="notice-hub-content">
                     <div class="notice-item admin"><span class="n-tag">운영</span><p id="dashNoticeAdmin">등록된 운영부 공지가 없습니다.</p></div>
-                    <div class="notice-item global"><span class="n-tag">센터</span><p id="dashNoticeGlobal">내용 로딩 중...</p></div>
+                    <div class="notice-item global"><span class="n-tag">입교안내</span><p id="dashNoticeGlobal">내용 로딩 중...</p></div>
                 </div>
                 <div class="edu-place-feed" onclick="event.stopPropagation();" style="margin-top:14px; display:flex; flex-direction:column; gap:10px;">
                     <div style="display:flex; align-items:center; gap:10px; min-height:56px; box-sizing:border-box; background:#eff6ff; border:1px solid #bfdbfe; border-radius:13px; padding:12px 15px;">
@@ -1332,9 +1335,9 @@ body.in-course #moreToggleTab{ display:flex !important; }
 
 
         <div class="notice-global-panel" style="background:#fff; border-radius:16px; border:1.5px solid #e2e8f0; overflow:hidden; box-shadow:0 2px 8px rgba(0,0,0,0.04);">
-            <div onclick="var c=document.getElementById('globalNoticeDisplay'),ic=document.getElementById('globalNoticeChevron');var open=(c.style.display!=='none');c.style.display=open?'none':'block';if(ic)ic.style.transform=open?'rotate(0deg)':'rotate(180deg)';" style="background:#10b981; padding:14px 20px; display:flex; align-items:center; gap:10px; cursor:pointer;" title="클릭하면 운영부/전체 공지를 펼치거나 접습니다">
+            <div onclick="var c=document.getElementById('globalNoticeDisplay'),ic=document.getElementById('globalNoticeChevron');var open=(c.style.display!=='none');c.style.display=open?'none':'block';if(ic)ic.style.transform=open?'rotate(0deg)':'rotate(180deg)';" style="background:#10b981; padding:14px 20px; display:flex; align-items:center; gap:10px; cursor:pointer;" title="클릭하면 운영부/입교안내 공지를 펼치거나 접습니다">
                 <i class="fa-solid fa-circle-info" style="color:#fff; font-size:16px;"></i>
-                <span style="color:#fff; font-weight:800; font-size:15px;">운영부 / 항기원 전체 공지</span>
+                <span style="color:#fff; font-weight:800; font-size:15px;">운영부 / 입교안내 공지</span>
                 <span style="color:rgba(255,255,255,0.85); font-size:11px; margin-left:auto; display:flex; align-items:center; gap:10px;">
                     <span><i class="fa-solid fa-sync fa-spin" style="margin-right:4px;"></i>실시간</span>
                     <i id="globalNoticeChevron" class="fa-solid fa-chevron-down" style="transition:transform .2s; font-size:13px;"></i>
@@ -1706,6 +1709,10 @@ body.in-course #moreToggleTab{ display:flex !important; }
             <!-- [추가된 버튼] 명단 초기화 버튼 -->
             <button class="btn-action" onclick="ui.resetShuttleRequests()" style="width: auto; padding: 10px 18px; background: #ef4444; border-radius: 12px; font-size: 14px; font-weight: 800; border: none; color: white; cursor: pointer;">
                 <i class="fa-solid fa-trash-can"></i> 전체 리셋
+            </button>
+            <!-- [추가] 과정현황 바로가기 -->
+            <button class="btn-action" onclick="ui.setMode('dashboard')" title="과정 현황으로 이동" style="width: auto; padding: 10px 18px; margin-left: 8px; background: #1e3a8a; border-radius: 12px; font-size: 14px; font-weight: 800; border: none; color: white; cursor: pointer;">
+                <i class="fa-solid fa-house"></i> 과정현황
             </button>
         </div>
     </div>
@@ -2779,7 +2786,7 @@ function setupAcc(btn){
 
 
 
-    <script src="admin.js?v=260702Z43"></script>
+    <script src="admin.js?v=260702Z45"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
 <!-- ── 화면 자동 맞춤(auto-fit): 가로+세로 모두 화면에 맞게 자동 축소 · JDS260613 ──
      원인: Windows 디스플레이 배율(125%/150%)·저해상도 화면에서 유효 뷰포트가 작아져

@@ -1,8 +1,8 @@
-/* PLATFORM_EDIT_STATUS: 수정완료 | VERSION: R | 2026-07-03 */
+/* PLATFORM_EDIT_STATUS: 수정완료 | VERSION: S | 2026-07-03 */
 /* ============================================================
    CATC · 강사 플랫폼 스타일  (admin.css)
    STATUS    수정완료
-   @version  R   @build  20260703-guide-venue-width
+   @version  S   @build  20260703-schedule-close-flow
    ------------------------------------------------------------
    [코드 수정 규칙] 수정 시 @version 을
    A -> B -> ... -> Z -> A1 -> B1 -> ... 순으로 1단계 올리고
@@ -4587,6 +4587,33 @@ body:not([data-mode="home"]):not([data-mode="waiting"]) .floating-home-btn{botto
 }
 @keyframes schedUpPulse{ 0%,100%{box-shadow:0 8px 22px rgba(217,119,6,.45);} 50%{box-shadow:0 10px 30px rgba(245,158,11,.75);} }
 #guideScheduleUploadBtn:hover{ filter:brightness(1.08); transform:translateY(-2px); }
+/* [시간표 사진 전체화면] 크롬 전체화면 종료 UI와 겹치지 않는 사진 내부 전용 닫기 버튼 */
+.guide-schedule-modal{
+    position:fixed; inset:0; z-index:9700;
+    display:flex; align-items:center; justify-content:center;
+    background:rgba(15,23,42,.9); padding:2.5vh 2.5vw;
+    box-sizing:border-box;
+}
+.guide-schedule-frame{
+    position:relative; display:inline-flex; align-items:center; justify-content:center;
+    max-width:100%; max-height:100%;
+}
+.guide-schedule-frame > img{
+    display:block; max-width:100%; max-height:95vh; object-fit:contain;
+    border-radius:10px; box-shadow:0 20px 60px rgba(0,0,0,.5);
+}
+.guide-schedule-close{
+    position:absolute; top:12px; right:12px; z-index:2;
+    min-width:160px; height:56px; padding:0 22px;
+    display:inline-flex; align-items:center; justify-content:center; gap:10px;
+    border:3px solid #fff; border-radius:14px;
+    background:#ef4444; color:#fff; font-size:18px; font-weight:900;
+    cursor:pointer; box-shadow:0 10px 28px rgba(239,68,68,.6);
+    animation:schedClosePulse 1.7s ease-in-out infinite;
+}
+.guide-schedule-close:hover{ background:#dc2626; transform:translateY(-1px); animation:none; }
+.guide-schedule-close:focus-visible{ outline:4px solid #fca5a5; outline-offset:3px; }
+@keyframes schedClosePulse{ 0%,100%{box-shadow:0 10px 28px rgba(239,68,68,.55);} 50%{box-shadow:0 12px 36px rgba(239,68,68,.9);} }
 /* [버튼 위치 조정] 3초 길게 눌러 이동 중 표시 */
 #guideRouletteBtn.guidebtn-pressing,#guideScheduleBtn.guidebtn-pressing,#guideScheduleUploadBtn.guidebtn-pressing{ outline:3px dashed rgba(255,255,255,.95); outline-offset:4px; }
 #guideRouletteBtn.guidebtn-dragging,#guideScheduleBtn.guidebtn-dragging,#guideScheduleUploadBtn.guidebtn-dragging{ cursor:grabbing !important; opacity:.94; animation:none !important; filter:brightness(1.05); }

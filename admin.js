@@ -1,17 +1,17 @@
-/* PLATFORM_EDIT_STATUS: 수정완료 | VERSION: J9 | 2026-07-03 */
+/* PLATFORM_EDIT_STATUS: 수정완료 | VERSION: L9 | 2026-07-03 */
 /* ============================================================
    PLATFORM_EDIT_STATUS: 수정완료 | VERSION: J8 | 2026-07-02 (J8: ZOOM 진입 요소를 CSS !important 규칙으로 원천 차단 — 오프라인이면 어떤 코드가 표시해도 절대 안 보임(body.zoom-room-online 클래스 게이트). (J7: ZOOM 진입 요소 표시를 [onclick*=openZoomMonitor] 전체 선택으로 통일 + 2초 하트비트 — 오프라인에서 pill 잔존 완전 차단. (J6: ①장소 수동지정 보호(roomDetailManual) — 연간계획 동기화가 온라인 설정 되돌리는 문제 차단 ②ZOOM 버튼 표시를 장소 배지 텍스트와 상시 동기(MutationObserver) — 오프라인인데 버튼 남는 문제 해소 ③저장알림 확인 후 회의정보 모달 순차 표시(동시 팝업 제거) ④회의번호 000 0000 0000 자동 포맷 전용 모달. (J5: ①ZOOM 버튼 과정현황 장소 옆으로+오프라인 완전숨김(방전환 기본숨김·온라인 가드) ②iframe 사이징 실측기반 재작성 ③온라인 장소 저장 시 회의번호/암호 과정별 저장(askZoomMeetingInfo) ④홈검색 카카오등록 교수 노란배지 ⑤퇴교차량 칩 인라인 펼침. (J4: ZOOM 모니터링 iframe 높이를 body zoom 배율 보정해 실제 화면에 맞춤 — 설정 패널 잘림 해소, 리사이즈 대응. (J3: ui.openZoomMonitor 추가 — ZOOM 모니터링을 내장 뷰(iframe)로 열고 과정 전환 시 확인 후 재로딩, 온라인 판별 토글에 더보기 메뉴 항목 포함) (J2: ①ZOOM 모니터링 버튼 표시로직 재적용(온라인 과정 판별) ②강의실 초기화 confirm에 삭제범위 안내 추가 ③QR 요소없음 개발자문구 교체 ④toggleNightMode/addSubject 널가드 — 구버전 잔재 안전화)
    CATC · 강사 플랫폼 로직  (admin.js)
    STATUS    수정완료
-   @version  J9
-   @build    20260703-guide-venue-width
+   @version  L9
+   @build    20260703-104644
    ------------------------------------------------------------
    [코드 수정 규칙 · AI/개발자 공통]
    이 파일을 고치면 @version 을 A -> B -> ... -> Z -> A1 -> B1 ...
    순으로 1단계 올리고, @build 를 수정 시각으로 갱신할 것.
    적용 여부는 브라우저 콘솔 로그(vA)로 확인한다.
 ============================================================ */
-try{console.log('%cCATC%c 강사 플랫폼 로직 (admin.js) %cvJ9%c build 20260703-guide-venue-width','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}
+try{console.log('%cCATC%c 강사 플랫폼 로직 (admin.js) %cvL9%c build 20260703-104644','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}
 /* --- admin.js (Final Integrated Version - Fixed Syntax & Logic) --- */
 
 // --- [기본 데이터] 20문항 ---
@@ -981,6 +981,12 @@ forceEnterRoom: async function(room) {
                         if (!document.fullscreenElement && !document.webkitFullscreenElement) {
                             document.removeEventListener('fullscreenchange', backHome);
                             document.removeEventListener('webkitfullscreenchange', backHome);
+                            // 시간표 사진/QR을 보던 중 크롬 전체화면 종료 UI를 잘못 눌러도
+                            // 현황판으로 이동하지 않고 시간표 레이어만 닫은 뒤 입교안내에 남는다.
+                            if (document.getElementById('guideScheduleModal') || document.getElementById('guideScheduleUploadModal')) {
+                                try { if(ui.closeScheduleGuide) ui.closeScheduleGuide(); } catch(e){}
+                                return;
+                            }
                             setTimeout(function(){ try { ui.goHomePortal(); } catch(e){} }, 120);
                         }
                     };
@@ -1044,7 +1050,7 @@ forceEnterRoom: async function(room) {
         state.noticeSeen['global'] = newMsg;
         if (prev === undefined) return;
         if (newMsg !== prev && state.currentMode !== 'notice') {
-            guideMgr.showCoordNoticeAlert(newMsg, '🏢 항기원 전체 공지');
+            guideMgr.showCoordNoticeAlert(newMsg, '📢 입교안내 공지');
         }
     });
 
@@ -2807,13 +2813,13 @@ updateQaCountBadge: function() {
                         </div>`;
                 }
                 
-                // (2) 항기원 전체 공지
+                // (2) 입교안내 공지
                 if (globalMsg) {
                     html += `
                         <div style="margin-bottom:15px; padding:15px 20px; background:#f8fafc; border-radius:12px; border:1px solid #e2e8f0; border-left:8px solid #64748b;">
                             <div style="display:flex; align-items:center; gap:8px; margin-bottom:10px;">
-                                <span style="background:#64748b; color:white; font-size:10px; font-weight:900; padding:2px 6px; border-radius:4px; line-height:1.2;">CENTER</span>
-                                <span style="color:#64748b; font-size:13px; font-weight:800;">항기원 전체 공지</span>
+                                <span style="background:#64748b; color:white; font-size:10px; font-weight:900; padding:2px 6px; border-radius:4px; line-height:1.2;">입교안내 공지</span>
+                                <span style="color:#64748b; font-size:13px; font-weight:800;">입교안내 공지</span>
                             </div>
                             <div style="font-size:14.5px; color:#475569; font-weight:600; line-height:1.5; white-space: pre-line;">${globalMsg}</div>
                         </div>`;
@@ -5954,6 +5960,7 @@ resetShuttleRequests: function() {
                 +'<button class="hsr-btn" data-detail="students" onclick="ui.toggleHomeSearchDetail(\''+e(x.room)+'\',\'students\',event)"><i class="fa-solid fa-users-viewfinder"></i> 수강생 현황</button>'
                 +'<button class="hsr-btn" data-detail="outing" onclick="ui.toggleHomeSearchDetail(\''+e(x.room)+'\',\'outing\',event)"><i class="fa-solid fa-person-walking-arrow-right"></i> 외출·외박 현황</button>'
                 +'<button class="hsr-btn" data-detail="shuttle" onclick="ui.toggleHomeSearchDetail(\''+e(x.room)+'\',\'shuttle\',event)"><i class="fa-solid fa-bus"></i> 차량수요조사</button>'
+                +'<button class="hsr-btn" onclick="ui.enterCourseMode(\''+e(x.room)+'\',\'dashboard\')"><i class="fa-solid fa-gauge-high"></i> 과정현황 바로가기</button>'
                 +'</div><div class="hsr-detail" id="hsrDetail'+e(x.room)+'" style="display:none;"></div></div>';
         }).join('');
     },
@@ -7731,6 +7738,7 @@ init: function() {
         // - 프레젠터 기기: 다음→ PageDown/ArrowRight, 이전← PageUp/ArrowLeft
         document.addEventListener('keydown', (e) => {
             if (state.currentMode !== 'guide') return;
+            if (document.getElementById('guideScheduleModal') || document.getElementById('guideScheduleUploadModal')) return;
             if (['ArrowRight', 'PageDown'].includes(e.key)) {
                 e.preventDefault();
                 guideMgr.changePage(1);
@@ -7800,7 +7808,7 @@ init: function() {
 
         if(titleEl) {
             titleEl.innerText = type === 'global'
-                ? '🏢 항기원 전체 공지가 업데이트되었습니다'
+                ? '📢 입교안내 공지가 업데이트되었습니다'
                 : '📋 운영부 과정 공지가 업데이트되었습니다';
         }
         content.innerText = msg;
@@ -7949,7 +7957,7 @@ init: function() {
     _centerNoticeHTML: function() {
         const esc = s => (s == null ? '' : String(s)).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
         const raw = String(guideMgr._slot().centerNotice || '').trim();
-        const body = raw ? esc(raw).replace(/\r?\n/g, '<br>') : '현재 게시된 센터 공지가 없습니다.';
+        const body = raw ? esc(raw).replace(/\r?\n/g, '<br>') : '현재 게시된 입교안내 공지가 없습니다.';
         return `<div class="guide-courseinfo-slide guide-centernotice-slide">
           <div class="ci-header">
             <div class="ci-head-center"><span class="ci-emblem"><i class="fa-solid fa-plane-up"></i></span><span class="ci-header-title">입교 안내</span></div>
@@ -11312,7 +11320,7 @@ annualPlanMgr._syncRoomsLockAware = async function(courses) {
                     updates[`courses/${r}/status/professorName`] = pc.prof;
                     updates[`courses/${r}/settings/kakaoLink`] = kakaoOf(pc.prof);
                 }
-                if (pc.roomDetail) updates[`courses/${r}/settings/roomDetailName`] = pc.roomDetail;
+                if (pc.roomDetail && !st.roomDetailManual) updates[`courses/${r}/settings/roomDetailName`] = pc.roomDetail;   // 강사가 강의실 수동 지정 시 계획값으로 덮어쓰지 않음
             }
             return; // 방 자체는 유지
         }
@@ -12326,23 +12334,37 @@ ui.openLeaderRouletteStage = async function(){
   var m = document.getElementById('leaderRouletteModal');
   if (m) m.classList.add('roulette-stage-bg');
 };
+// 시간표 사진과 업로드 안내를 한 번에 정리하고, 현재 PDF 전체화면/페이지는 유지한다.
+ui.closeScheduleGuide = function(){
+  ['guideScheduleModal','guideScheduleUploadModal'].forEach(function(id){
+    var layer=document.getElementById(id);
+    if(!layer) return;
+    try{ if(typeof layer._cleanup==='function') layer._cleanup(); }catch(e){}
+    layer.remove();
+  });
+};
 // 입교안내 13p '교육시간표 보기' → 시간표 사진을 PDF 위에 화면맞춤으로 표출 (전체화면 대응 · 페이지 넘김 차단)
 ui.openScheduleView = async function(){
   var room = state.room; if(!room) return;
   var dataUrl = '';
   try { var ds = await firebase.database().ref('courses/'+room+'/scheduleImage/dataUrl').once('value'); dataUrl = ds.val() || ''; } catch(e){}
   if(!dataUrl){ if(ui.showAlert) ui.showAlert('등록된 교육 시간표 사진이 없습니다.'); return; }
-  var old = document.getElementById('guideScheduleModal'); if(old) old.remove();
+  ui.closeScheduleGuide();
   var modal = document.createElement('div'); modal.id = 'guideScheduleModal';
-  modal.setAttribute('style','position:fixed;inset:0;z-index:9700;display:flex;align-items:center;justify-content:center;background:rgba(15,23,42,.82);padding:2.5vh 2.5vw;');
-  modal.innerHTML = '<img src="'+dataUrl+'" alt="교육 시간표" style="max-width:100%;max-height:100%;object-fit:contain;border-radius:10px;box-shadow:0 20px 60px rgba(0,0,0,.5);">'
-    + '<button id="guideScheduleClose" title="닫기" style="position:absolute;top:18px;right:22px;width:48px;height:48px;border:none;border-radius:50%;background:#fff;color:#334155;font-size:24px;cursor:pointer;box-shadow:0 6px 18px rgba(0,0,0,.3);">&times;</button>';
+  modal.className = 'guide-schedule-modal';
+  modal.innerHTML =
+      '<div class="guide-schedule-frame">'
+    + '<img src="'+dataUrl+'" alt="교육 시간표">'
+    + '<button id="guideScheduleClose" class="guide-schedule-close" type="button" title="시간표 사진 닫기">'
+    + '<i class="fa-solid fa-xmark"></i><span>시간표 닫기</span></button>'
+    + '</div>';
   // PDF 페이지가 뒤에서 넘어가지 않도록 전파 차단
-  modal.addEventListener('click', function(e){ e.stopPropagation(); if(e.target === modal) modal.remove(); });
+  modal.addEventListener('click', function(e){ e.stopPropagation(); });
   modal.addEventListener('contextmenu', function(e){ e.stopPropagation(); });
   modal.addEventListener('pointerdown', function(e){ e.stopPropagation(); });
   (document.fullscreenElement || document.webkitFullscreenElement || document.body).appendChild(modal);
-  var cb = document.getElementById('guideScheduleClose'); if(cb) cb.addEventListener('click', function(){ modal.remove(); });
+  var cb = document.getElementById('guideScheduleClose');
+  if(cb) cb.addEventListener('click', function(e){ e.preventDefault(); e.stopPropagation(); ui.closeScheduleGuide(); });
 };
 // 입교안내 13p '시간표 업로드' → QR 표출(폰으로 촬영·업로드) → 올라오면 자동으로 화면에 표시 (깜빡한 교수 즉석 업로드)
 ui.openScheduleQrUpload = function(){
@@ -12374,12 +12396,13 @@ ui.openScheduleQrUpload = function(){
     if(state.room !== room) return;
     var ts = snap.val(); if(!ts) return;
     try{ var sl = guideMgr._slot(); if(sl) sl.scheduleTs = Number(ts); }catch(e){}
-    cleanup();
+    closeUp();
     try{ guideMgr.renderPage(guideMgr._slot().pageNum); }catch(e){}   // 버튼을 '보기'로 전환
     if(ui.openScheduleView) ui.openScheduleView();                    // 올라온 시간표 바로 표시
   }
   function cleanup(){ try{ ref.off('value', onTs); }catch(e){} }
   function closeUp(){ cleanup(); var m=document.getElementById('guideScheduleUploadModal'); if(m) m.remove(); }
+  modal._cleanup=cleanup;
   ref.on('value', onTs);
   var cbtn = document.getElementById('guideSchedUploadClose'); if(cbtn) cbtn.addEventListener('click', closeUp);
 };
@@ -12410,7 +12433,7 @@ ui.openGuidePageSettings = function(){
     +rowCheck('kakaoqr','오픈톡방 QR','fa-qrcode','#3a1d1d',en.kakaoqr)
     +rowCheck('channelguide','채널 입교등록 안내','fa-comment-dots','#f59e0b',en.channelguide)
     +rowPage('courseinfo','교육과정 안내','fa-clipboard-list','#1d4ed8')
-    +rowCheck('centernotice','센터 공지','fa-bullhorn','#e11d48',en.centernotice,'· PDF 23p 뒤 · 공지 있을 때만 표시');
+    +rowCheck('centernotice','입교안내 공지','fa-bullhorn','#e11d48',en.centernotice,'· PDF 23p 뒤 · 공지 있을 때만 표시');
   // 교육 장소 강의실 (4 교육동) 선택 행 — 슬라이드 위 pill 없이 여기서 지정
   var _esc=function(x){ return String(x||'').replace(/"/g,'&quot;').replace(/</g,'&lt;'); };
   var venuePick=((guideMgr._slot&&guideMgr._slot().venuePick)||{});
@@ -12608,9 +12631,16 @@ ui.saveVenue = function(i){
   if(!state.room) return;
   var el = document.getElementById('venuePickSel'); var val = el ? String(el.value||'').trim() : '';
   var slot = guideMgr._slot();
-  var vp = {}; if(val) vp[i] = val;   // 한 곳만 — 선택 시 나머지 칸 자동 해제 (빈 값이면 미정 → 전체 해제)
+  var vp = {}; if(val) vp[i] = val;   // 한 곳만 — 선택 시 나머지 칸 자동 해제 (빈 값이면 미정 → 전체 해제 → 3칸 체크박스 복귀)
   slot.venuePick = vp;
-  firebase.database().ref('courses/'+state.room+'/settings/venuePick').set(vp).catch(function(){});
+  slot.roomDetailName = val || '';
+  var updates = {};
+  updates['courses/'+state.room+'/settings/venuePick'] = vp;
+  // 강의실 선택을 과정 강의실(roomDetailName)에도 동기화 → 대시보드 장소에도 반영.
+  // 수동 지정 플래그(미정 포함)를 세워 자동배치가 계획값으로 덮어쓰지 않게 함.
+  updates['courses/'+state.room+'/settings/roomDetailName'] = val || '';
+  updates['courses/'+state.room+'/status/roomDetailManual'] = true;
+  firebase.database().ref().update(updates).catch(function(){});
   [].forEach.call(document.querySelectorAll('#venuePickModal'), function(m){ m.remove(); });   // 쌓인 팝업 모두 제거
   ui.renderVenueOverlay();
 };
