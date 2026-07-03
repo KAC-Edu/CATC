@@ -2220,7 +2220,7 @@ init: function() {
         html += `<div class="filter-chip ${this.selectedFilter === '공통질문' ? 'active' : ''}" onclick="subjectMgr.setFilter('공통질문')">공통질문</div>`;
         
         this.list.forEach(item => {
-            html += `<div class="filter-chip ${this.selectedFilter === item.name ? 'active' : ''}" onclick="subjectMgr.setFilter('${item.name}')">${subjectMgr._withTitle(item.name)}</div>`;
+            html += `<div class="filter-chip subject-chip ${this.selectedFilter === item.name ? 'active' : ''}" onclick="subjectMgr.setFilter('${item.name}')"><span>${subjectMgr._withTitle(item.name)}</span><i class="fa-solid fa-xmark chip-del" title="삭제" onclick="event.stopPropagation();subjectMgr.deleteSubject('${item.key}')"></i></div>`;
         });
         bar.innerHTML = html;
     },

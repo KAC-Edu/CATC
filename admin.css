@@ -223,6 +223,21 @@ body {
     box-shadow: 0 4px 8px rgba(59, 130, 246, 0.3);
 }
 
+/* [강사·과목 칩] 오입력 삭제용 X — 이름 옆에 살짝 */
+.subject-chip { display: inline-flex; align-items: center; gap: 7px; }
+.subject-chip .chip-del {
+    font-size: 11px;
+    color: #cbd5e1;
+    width: 16px; height: 16px;
+    display: inline-flex; align-items: center; justify-content: center;
+    border-radius: 50%;
+    transition: all .15s;
+    cursor: pointer;
+}
+.subject-chip .chip-del:hover { background: #ef4444; color: #fff; }
+.subject-chip.active .chip-del { color: rgba(255,255,255,.7); }
+.subject-chip.active .chip-del:hover { background: rgba(255,255,255,.25); color: #fff; }
+
 
 
 
@@ -597,17 +612,18 @@ border: 1px solid #eef2f7;
 box-shadow: 0 1px 3px rgba(15,23,42,0.05);
 transition: transform .12s ease, box-shadow .12s ease;
 }
-/* [Q&A 화면] 출강 강사·과목 즉석 추가 */
-.qa-add-wrap { display: flex; align-items: center; gap: 10px; margin-top: 10px; flex-wrap: wrap; }
+/* [Q&A 화면] 출강 강사·과목 즉석 추가 — 추가 버튼을 필터 칩과 같은 줄 맨 앞에 배치 */
+.qa-filters-line { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.qa-filters-line #subjectFilterBar { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; padding: 0; }
 .qa-add-btn {
-    display: inline-flex; align-items: center; gap: 7px;
-    padding: 8px 15px; border: none; border-radius: 999px; cursor: pointer;
+    display: inline-flex; align-items: center; gap: 7px; flex: 0 0 auto;
+    padding: 7px 15px; border: none; border-radius: 999px; cursor: pointer;
     font-size: 13px; font-weight: 800; color: #fff;
     background: linear-gradient(135deg, #7c3aed 0%, #6366f1 100%);
     box-shadow: 0 3px 10px rgba(124,58,237,.30);
 }
 .qa-add-btn:hover { filter: brightness(1.05); }
-.qa-add-row { display: flex; align-items: center; gap: 8px; }
+.qa-add-row { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
 .qa-add-row input {
     padding: 8px 13px; border: 2px solid #e2e8f0; border-radius: 10px;
     font-size: 14px; font-weight: 600; outline: none; min-width: 220px;
