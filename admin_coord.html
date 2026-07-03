@@ -2,7 +2,7 @@
 <!-- 이 플랫폼(admin_coord.html / 교육운영부) 수정상태 플래그. 값은 [수정중] 또는 [수정안하는중] 두 가지. -->
 <!-- 작업 시작 시 → 수정중 / 작업 완료 시 → 수정안하는중. 다른 플랫폼은 이 말머리를 보고 연동·수정 가능 여부 판단. -->
 <!-- [외부변경 · 카카오채널연동 2026-06-25] 포털(portal.html/7777) 경유 폐지 → 페이지 직접진입 시 접속코드(catc1234) 게이트 추가, 포털 리다이렉트/종료이동 제거. version C13→D13. 기능 로직은 미변경. -->
-<!-- last-updated: 2026-07-03 / version: D50 (상단 현황바 축소·좁은 화면 2단 재배치·교육운영부 명칭 및 날짜/시간 상시 표기) [D49: 운영설정팝업 확인=차량공지함께+하루1회 · 노조옆 입교안내공지 버튼 · 사이드바 전역활동시 유지] -->
+<!-- last-updated: 2026-07-03 / version: D51 (상단바 시계 1줄 배치 — 날짜·요일·시간 한 줄 pill로 통합) [D50: 상단 현황바 축소·교육운영부 명칭 및 날짜/시간 상시 표기] -->
 <!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -1972,13 +1972,13 @@ body.pc-mode .coord-brand-title{ font-size:26px !important; font-weight:950 !imp
 .coord-right.coord-hdr-hide, #coordHdrStats.coord-hdr-hide{ display:flex !important; }
 .hdr-stat.hdr-active{ box-shadow:0 0 0 2px rgba(255,255,255,.65), 0 6px 16px rgba(0,0,0,.22) !important; transform:translateY(-1px); }
 body.pc-mode .coord-clock{ grid-column:3 !important; grid-row:1 !important; justify-self:end !important; gap:10px !important; background:rgba(15,23,42,0.34) !important; padding:8px 20px !important; border-radius:999px !important; border:1px solid rgba(255,255,255,0.17) !important; box-shadow:inset 0 1px 0 rgba(255,255,255,0.12),0 8px 24px rgba(15,23,42,0.16) !important; }
-/* [시계 2줄 pill] 상단: 날짜 요일 / 하단: 시간 AM·PM — 항상 표시, 컴팩트 */
-body.pc-mode .coord-clock{ flex-direction:column !important; align-items:flex-end !important; gap:1px !important; padding:6px 15px !important; line-height:1 !important; }
-body.pc-mode #coordHeaderClock .hc-top{ display:flex; align-items:baseline; gap:5px; line-height:1; }
+/* [시계 1줄 pill] 날짜 · 요일 | 시간 AM·PM — 한 줄 배치, 컴팩트 */
+body.pc-mode .coord-clock{ flex-direction:row !important; align-items:center !important; gap:8px !important; padding:6px 16px !important; line-height:1 !important; }
+body.pc-mode #coordHeaderClock .hc-top,
+body.pc-mode #coordHeaderClock .hc-bot{ display:inline-flex; align-items:baseline; gap:4px; line-height:1; }
 body.pc-mode #coordHeaderClock .hc-date{ font-size:12.5px !important; font-weight:700 !important; color:#cbd5e1 !important; letter-spacing:.2px; }
 body.pc-mode #coordHeaderClock .hc-day{ font-size:12px !important; font-weight:800 !important; color:#93c5fd !important; }
-body.pc-mode #coordHeaderClock .hc-div{ display:none !important; }
-body.pc-mode #coordHeaderClock .hc-bot{ display:flex; align-items:baseline; gap:3px; line-height:1; }
+body.pc-mode #coordHeaderClock .hc-div{ display:inline-block !important; width:1px !important; height:17px !important; background:rgba(255,255,255,.28) !important; margin:0 2px !important; align-self:center; }
 body.pc-mode #coordHeaderClock .hc-time{ font-size:22px !important; font-weight:900 !important; color:#fff !important; font-family:'Consolas','Roboto Mono',monospace; }
 body.pc-mode #coordHeaderClock .hc-ampm{ font-size:11.5px !important; font-weight:800 !important; color:#60a5fa !important; margin-left:1px; }
 body.pc-mode .coord-right{ grid-column:2 !important; grid-row:1 !important; justify-self:center !important; align-self:center !important; min-width:max-content !important; }
@@ -4783,7 +4783,7 @@ function executePrintProcess(mode) {
         const mm = String(now.getMinutes()).padStart(2,'0');
         const ampm = hh >= 12 ? 'PM' : 'AM';
         hh = hh % 12 || 12;
-        el.innerHTML = `<div class="hc-top"><span class="hc-date">${dateStr}</span> <span class="hc-day">${dayStr}</span></div><div class="hc-bot"><span class="hc-time">${String(hh).padStart(2,'0')}<span class="hc-blink">:</span>${mm}</span><span class="hc-ampm">${ampm}</span></div>`;
+        el.innerHTML = `<span class="hc-date">${dateStr}</span><span class="hc-day">${dayStr}</span><span class="hc-div"></span><span class="hc-time">${String(hh).padStart(2,'0')}<span class="hc-blink">:</span>${mm}</span><span class="hc-ampm">${ampm}</span>`;
     }
     tick(); setInterval(tick, 1000);
 })();
@@ -8951,7 +8951,7 @@ window.addEventListener('load', function(){
 });
 </script>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:6px;bottom:5px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;font-weight:800;line-height:1;letter-spacing:.6px;color:#fff;background:rgba(15,23,42,.85);padding:4px 8px;border-radius:6px;pointer-events:none;user-select:none;box-shadow:0 2px 6px rgba(0,0,0,.3);">D50</div>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:6px;bottom:5px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;font-weight:800;line-height:1;letter-spacing:.6px;color:#fff;background:rgba(15,23,42,.85);padding:4px 8px;border-radius:6px;pointer-events:none;user-select:none;box-shadow:0 2px 6px rgba(0,0,0,.3);">D51</div>
 <script>
 /* ===== [공용] 종료된 과정 자동 정리 (모든 플랫폼 공통) — 종료일 지난 방을 다음날 미개설로 비움. 브라우저별 하루 1회 ===== */
 window.kacExpireEndedCourses = async function(){
@@ -10022,7 +10022,7 @@ body.coord-header-compact.pc-mode #coordHeaderClock .hc-day{
   font-size:11px !important;
 }
 body.pc-mode #coordHeaderClock .hc-div,
-body.coord-header-compact.pc-mode #coordHeaderClock .hc-div{height:22px !important;}
+body.coord-header-compact.pc-mode #coordHeaderClock .hc-div{display:inline-block !important;width:1px !important;height:16px !important;background:rgba(255,255,255,.28) !important;margin:0 3px !important;align-self:center !important;}
 body.pc-mode #coordHeaderClock .hc-time,
 body.coord-header-compact.pc-mode #coordHeaderClock .hc-time{font-size:24px !important;}
 body.pc-mode #coordHeaderClock .hc-ampm,

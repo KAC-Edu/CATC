@@ -520,15 +520,10 @@ verifyTakeover: async function() {
         if (!state.room) return ui.showAlert("강의실을 먼저 선택하세요.");
 
         if (state.isObserver) {
-            // 1. 현재 옵저버인데 클릭했다면? -> 강사 모드로 전환 (비밀번호 창 띄우기)
-            state.pendingRoom = state.room;
-            document.getElementById('takeoverPwInput').value = "";
-            const lbl3 = document.getElementById('takeoverRoomLabel');
-            if(lbl3) lbl3.innerText = `Room #${state.room}`;
-            document.getElementById('takeoverModal').style.display = 'flex';
-            document.getElementById('takeoverPwInput').focus();
+            // [비번 폐지] 옵저버 → 강사: 비밀번호 창 없이 바로 강사 모드로 전환(오픈 접근)
+            dataMgr._directTeacherEnter(state.room);
         } else {
-            // 2. 현재 강사인데 클릭했다면? -> 옵저버 모드로 전환
+            // 강사 → 옵저버 전환
             this.switchToObserverMode();
         }
     },
@@ -1398,7 +1393,12 @@ _executeReset: function() {
         [`${rPath}/activeQuiz`]:          null,
         [`${rPath}/quizFinalResults`]:    null,
         [`${rPath}/quizBank`]:            null,
-        [`${rPath}/attendanceQR`]:        null
+        [`${rPath}/attendanceQR`]:        null,
+        [`${rPath}/activeSurvey`]:        null,   // [리셋] 즉석 설문조사 진행중 데이터
+        [`${rPath}/surveyAnswers`]:       null,   // [리셋] 설문 응답
+        [`${rPath}/lastSurveyResult`]:    null,   // [리셋] 직전 설문 결과
+        [`${rPath}/scheduleImage`]:       null,   // [리셋] 교육 시간표 사진
+        [`${rPath}/venuePick`]:           null    // [리셋] (settings 밖 잔여 대비) — 실제 venuePick은 settings 초기화로 함께 정리됨
     };
 
     firebase.database().ref(rPath).once('value').then(function(_cs){ var _c=_cs.val()||{}; var _aa=_c.admin_actions||{}, _ia=_c.internal_attendance||{}, _stu=_c.students||{}; if(!Object.keys(_aa).length && !Object.keys(_ia).length && !Object.keys(_stu).length) return null; var _st=_c.settings||{}, _stt=_c.status||{}; return firebase.database().ref('system/course_archive/'+state.room+'_'+Date.now()).set({ room: state.room, courseName:_st.courseName||'', period:_st.period||'', prof:_stt.professorName||'', coord:_st.coordinatorName||'', admin_actions:_aa, internal_attendance:_ia, students:_stu, expectedStudents:(_c.expectedStudents||null), archivedAt: firebase.database.ServerValue.TIMESTAMP }); }).catch(function(){}).then(() => firebase.database().ref().update(resetUpdates)).then(() => {
@@ -3817,6 +3817,13 @@ setMode: function(mode) {
             }
         }
 
+        // [사이드바 파란 버튼] 통합 현황판(홈, 과정 미진입)이면 '교수 프로필 수정', 과정 화면이면 '교육과정 환경 설정'
+        const _spb = document.getElementById('btnSetupModal');
+        if (_spb) {
+            if (!state.room) { _spb.innerHTML = '<i class="fa-solid fa-user-pen"></i> 교수 프로필 수정'; }
+            else { _spb.innerHTML = '<i class="fa-solid fa-gears"></i> 교육과정 환경 설정 (통합)'; }
+        }
+
         // 1. 모든 view- 로 시작하는 구역을 일단 숨김
         document.querySelectorAll('[id^="view-"]').forEach(v => { 
             v.style.display = 'none'; 
@@ -5593,6 +5600,12 @@ resetShuttleRequests: function() {
     goHomeSmart: function() {
         if (state.room) { ui.setMode('dashboard'); }
         else { ui.goHomePortal(); }
+    },
+
+    // [사이드바 파란 버튼] 통합 현황판(홈)=교수 프로필 관리 / 과정 화면=교육과정 환경 설정
+    sidebarPrimaryAction: function() {
+        if (!state.room) { try { profMgr.openManageModal(); } catch(e){} }
+        else { try { setupMgr.openSetupModal(); } catch(e){} }
     },
 
     // ── 헤더 날짜/시간 실시간 시계 (Pill 위젯, 요일 포함) ──
@@ -8525,15 +8538,16 @@ init: function() {
             guideMgr.isRendering = false;
             _showGuideLayer('virtual');
             if (_profEl) { _profEl.innerHTML = guideMgr._channelGuideHTML(); }
-            // 현재 입교등록(입교완료) 인원 최신값 반영
-            (async function(){
-                try {
-                    const _cs = await firebase.database().ref('courses/' + guideMgr._room() + '/students').once('value');
-                    const _stu = _cs.val() || {};
+            // 현재 입교등록(입교완료) 인원 — 실시간 반영(학생 등록 시 새로고침 없이 즉시 갱신)
+            try { if (ui._cgRegRef) { ui._cgRegRef.off(); ui._cgRegRef = null; } } catch (e) {}
+            try {
+                ui._cgRegRef = firebase.database().ref('courses/' + guideMgr._room() + '/students');
+                ui._cgRegRef.on('value', function (s) {
+                    const _stu = s.val() || {};
                     const _cnt = new Set(Object.values(_stu).filter(x => x && x.name && x.name !== 'undefined').map(x => String(x.name).trim())).size;
                     const _el = document.getElementById('cgRegCount'); if (_el) _el.textContent = _cnt;
-                } catch (e) {}
-            })();
+                });
+            } catch (e) {}
             slot.pageNum = num;
             const _indcg = document.getElementById('guidePageInfo');
             if (_indcg) _indcg.innerText = `${num} / ${_total}`;
@@ -11293,8 +11307,67 @@ annualPlanMgr.confirmAdd = function() {
 };
 
 annualPlanMgr.deleteRow = function(idx) {
-    this.currentEditingData.splice(idx, 1);
-    this.renderEditor();
+    const self = this;
+    const row = this.currentEditingData[idx] || {};
+    const nm = String(row.name || '').trim();
+    const pd = (row.startDate && row.endDate) ? (row.startDate + ' ~ ' + row.endDate) : String(row.period || '');
+    const norm = v => String(v || '').replace(/\s+/g, '').trim();
+    const finishLocal = function () { self.currentEditingData.splice(idx, 1); self.renderEditor(); };
+    if (!nm) { finishLocal(); return; }
+    // 이 과정이 현재 방에서 진행 중이면 → 그 방까지 함께 초기화(명단·출결·설문 등 전부)
+    firebase.database().ref('courses').once('value').then(function (s) {
+        const rooms = s.val() || {};
+        let target = null;
+        Object.keys(rooms).forEach(function (rk) {
+            const c = rooms[rk] || {}, st = c.settings || {};
+            if (norm(st.courseName) && norm(st.courseName) === norm(nm)) target = rk;
+        });
+        if (!target) { finishLocal(); return; }
+        if (!confirm('"' + nm + '" 과정이 현재 Room #' + target + '에서 운영 중입니다.\n삭제하면 이 방의 명단·출결·설문·공지 등 모든 데이터가 함께 초기화됩니다.\n계속하시겠습니까?')) return;
+        annualPlanMgr._resetRoomFull(target, nm, pd).then(function () {
+            finishLocal();
+            if (ui.showAlert) ui.showAlert('🗑️ "' + nm + '" 삭제 · Room #' + target + ' 초기화 완료.');
+        }).catch(function (e) { if (ui.showAlert) ui.showAlert('초기화 실패: ' + (e && e.message || e)); });
+    }).catch(function () { finishLocal(); });
+};
+
+// [연간계획 삭제 연동] 특정 방을 통째로 초기화(수동 리셋과 동일 범위 + 생활관 명단/배정 정리 + 재생성 방지)
+annualPlanMgr._resetRoomFull = function (room, nm, pd) {
+    const rp = 'courses/' + room;
+    const upd = {};
+    upd[rp + '/settings'] = { courseName: '', roomDetailName: '', period: null, coordinatorName: null, subjects: null, password: null };
+    upd[rp + '/status'] = { professorName: '', roomStatus: 'idle', ownerSessionId: null, resetKey: 'reset_' + Date.now(), mode: 'qa', quizStep: 'none', professorManual: null, roomDetailManual: null };
+    ['coordNoticeHistory', 'students', 'internal_attendance', 'questions', 'admin_actions', 'shuttle', 'dinner_skips', 'tablet_loans', 'connections', 'quizAnswers', 'expectedStudents', 'coordRoster', 'activeQuiz', 'quizFinalResults', 'quizBank', 'attendanceQR', 'activeSurvey', 'surveyAnswers', 'lastSurveyResult', 'scheduleImage', 'venuePick'].forEach(function (k) { upd[rp + '/' + k] = null; });
+    ['boardNotice', 'notice', 'coordNotice'].forEach(function (k) { upd[rp + '/' + k] = ''; });
+    // 생활관 명단(rosters)·배정(assignments) + 재생성 방지(dismissedCourses)
+    const weekKeys = [];
+    try {
+        const start = (pd && pd.indexOf('~') >= 0) ? pd.split('~')[0].trim() : '';
+        if (start) {
+            const d = new Date(start + 'T00:00:00');
+            if (!isNaN(d)) {
+                const dow = (d.getDay() + 6) % 7;
+                const mon = new Date(d); mon.setDate(d.getDate() - dow);
+                const utc = mon.toISOString().slice(0, 10);
+                const local = mon.getFullYear() + '-' + String(mon.getMonth() + 1).padStart(2, '0') + '-' + String(mon.getDate()).padStart(2, '0');
+                [local, utc].forEach(function (wk) { weekKeys.push(wk); upd['system/dorm/rosters/' + wk + '__' + room] = null; });
+            }
+        }
+    } catch (e) {}
+    try {
+        let weekKey = '';
+        try { weekKey = annualPlanMgr._getTargetMonday(annualPlanMgr._today()); } catch (e) {}
+        const key = (nm + '|' + pd).replace(/[.#$/\[\]]/g, '_');
+        upd['system/dismissedCourses/' + weekKey + '/' + key] = { name: nm, period: pd, at: Date.now() };
+    } catch (e) {}
+    const nnm = String(nm || '').replace(/\s+/g, '').trim();
+    const reads = (nnm && weekKeys.length) ? weekKeys.map(function (wk) {
+        return firebase.database().ref('system/dorm/assignments/' + wk + '/students').once('value').then(function (as) {
+            const students = as.val() || {};
+            Object.keys(students).forEach(function (k) { const stu = students[k]; if (stu && String(stu.course || '').replace(/\s+/g, '').trim() === nnm) upd['system/dorm/assignments/' + wk + '/students/' + k] = null; });
+        }).catch(function () {});
+    }) : [];
+    return Promise.all(reads).then(function () { return firebase.database().ref().update(upd); });
 };
 
 annualPlanMgr.saveAndSync = async function() {
@@ -12453,6 +12526,11 @@ ui.openLeaderRouletteStage = async function(){
 };
 // 시간표 사진과 업로드 안내를 한 번에 정리하고, 현재 PDF 전체화면/페이지는 유지한다.
 ui.closeScheduleGuide = function(){
+  // 시간표 보려고 우리가 진입한 전체화면이면 해제(원래 전체화면은 유지)
+  if(ui._scheduleEnteredFs){
+    ui._scheduleEnteredFs = false;
+    try{ var _ef = document.exitFullscreen || document.webkitExitFullscreen || document.msExitFullscreen; if(_ef && (document.fullscreenElement || document.webkitFullscreenElement)) _ef.call(document); }catch(e){}
+  }
   ['guideScheduleModal','guideScheduleUploadModal'].forEach(function(id){
     var layer=document.getElementById(id);
     if(!layer) return;
@@ -12480,6 +12558,14 @@ ui.openScheduleView = async function(){
   modal.addEventListener('contextmenu', function(e){ e.stopPropagation(); });
   modal.addEventListener('pointerdown', function(e){ e.stopPropagation(); });
   (document.fullscreenElement || document.webkitFullscreenElement || document.body).appendChild(modal);
+  // [모니터 전체화면] 이미 전체화면이 아니면(창 모드), 시간표 사진을 모니터 전체로 띄우기 위해 전체화면 진입
+  ui._scheduleEnteredFs = false;
+  if(!(document.fullscreenElement || document.webkitFullscreenElement)){
+    try{
+      var _rf = modal.requestFullscreen || modal.webkitRequestFullscreen || modal.msRequestFullscreen;
+      if(_rf){ var _p = _rf.call(modal); ui._scheduleEnteredFs = true; if(_p && _p.catch) _p.catch(function(){ ui._scheduleEnteredFs = false; }); }
+    }catch(e){}
+  }
   var cb = document.getElementById('guideScheduleClose');
   if(cb) cb.addEventListener('click', function(e){ e.preventDefault(); e.stopPropagation(); ui.closeScheduleGuide(); });
 };
