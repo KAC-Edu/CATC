@@ -6100,7 +6100,7 @@ resetShuttleRequests: function() {
                       + '<span class="prof-swap-name">'+nm+'</span>'
                       + (isCur?'<span class="prof-swap-badge">현재</span>':'')
                       + '</button>'
-                      + '<button class="prof-swap-edit" onclick="ui._openProfFromSearch(\''+nm+'\')" title="프로필 편집">프로필</button>'
+                      + '<button class="prof-swap-edit" onclick="var m=document.getElementById(\'profSwapModal\'); if(m) m.remove(); ui._openProfFromSearch(\''+nm+'\');" title="프로필 편집">프로필</button>'
                       + '</div>';
             });
         }
@@ -6150,8 +6150,8 @@ resetShuttleRequests: function() {
             await firebase.database().ref().update(updates);
             var m=document.getElementById('profSwapModal'); if(m) m.remove();
             if(ui.showAlert) ui.showAlert('✅ 담임교수를 '+name+' 교수로 교체했습니다. (연간계획 반영)');
-            // 검색 결과 즉시 갱신
-            try{ var inp=document.getElementById('homeSearchInput'); if(inp) ui.renderHomeSearch(inp.value); }catch(e){}
+            // 검색창을 새 교수명으로 자동 갱신 → 교체 후에도 결과가 사라지지 않고 그대로 보이게
+            try{ var inp=document.getElementById('homeSearchInput'); if(inp){ inp.value=name; ui.renderHomeSearch(name); } }catch(e){}
         }catch(err){ try{ alert('배정 중 오류: '+(err&&err.message||err)); }catch(_){} }
     },
     renderHomeSearch: function(q){
