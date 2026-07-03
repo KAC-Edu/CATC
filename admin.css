@@ -592,7 +592,7 @@ body.night-mode .qr-label { color: #0f172a; }
 /* [추가] 교수님 관리 모달 스타일 (노안 대응: 크게·또렷하게) */
 .prof-manage-box .modal-header h3 { font-size: 22px; }
 .prof-list-container {
-max-height: 46vh;
+max-height: 74vh;
 overflow-y: auto;
 border: 1px solid #dbe2ea;
 border-radius: 14px;
