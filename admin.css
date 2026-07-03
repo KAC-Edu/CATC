@@ -591,12 +591,14 @@ body.night-mode .qr-label { color: #0f172a; }
 
 /* [추가] 교수님 관리 모달 스타일 (노안 대응: 크게·또렷하게) */
 .prof-manage-box .modal-header h3 { font-size: 22px; }
+.prof-manage-box { padding: 18px 22px !important; }
+/* 9명까지는 스크롤 없이 딱 보이고, 10명 이상이면 스크롤(마우스 드래그) */
 .prof-list-container {
-max-height: 74vh;
+max-height: min(84vh, 558px);   /* ≈ 9행(1행 약 60px) + 안쪽 여백 */
 overflow-y: auto;
 border: 1px solid #dbe2ea;
 border-radius: 14px;
-margin: 6px 0 16px;
+margin: 6px 0 12px;
 background: #f8fafc;
 padding: 6px;
 }
@@ -604,8 +606,8 @@ padding: 6px;
 display: flex;
 justify-content: space-between;
 align-items: center;
-padding: 12px 14px;
-margin-bottom: 6px;
+padding: 10px 14px;
+margin-bottom: 4px;
 border-radius: 12px;
 background: #ffffff;
 border: 1px solid #eef2f7;
