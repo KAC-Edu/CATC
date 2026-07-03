@@ -8153,7 +8153,7 @@ init: function() {
             <div class="ci-section"><span class="ci-section-bar"></span> 2. 교육과정 안내</div>
             <div class="ci-fields">
               ${row('과 정 명 :', `<span class="ci-strong">${courseName}</span>`)}
-              ${row('교육 인원 :', `<span class="ci-strong">${count}명</span>`)}
+              ${row('교육 인원 :', `<span class="ci-strong"><b id="ciCount">${count}</b>명</span>`)}
               ${row('교육 기간 :', `<span class="ci-strong">${period}</span>`)}
               ${row('교육 구분 :', catSel)}
               ${row('교육 평가 :', evSel)}
@@ -8490,6 +8490,8 @@ init: function() {
 
         // 채널 안내 영상(start.mp4)이 재생 중이면 페이지 이동 시 정지 (다른 페이지로 소리 이어짐 방지)
         try { var _prevV = document.getElementById('cgVideo'); if (_prevV) { _prevV.pause(); } } catch(e){}
+        // 교육과정 안내 '교육 인원' 실시간 리스너 해제 (페이지 이동 시)
+        try { if (ui._ciRegRef) { ui._ciRegRef.off(); ui._ciRegRef = null; } } catch(e){}
 
         // 담임 교수 프로필 (가상 2페이지)
         if (guideMgr._isProfilePage(num)) {
@@ -8507,6 +8509,18 @@ init: function() {
             guideMgr.isRendering = false;
             _showGuideLayer('virtual');
             if (_profEl) { _profEl.innerHTML = guideMgr._courseInfoHTML(); }
+            // 교육 인원 실시간 반영 (학생 입교 시 새로고침 없이 즉시 갱신)
+            try { if (ui._ciRegRef) { ui._ciRegRef.off(); ui._ciRegRef = null; } } catch (e) {}
+            try {
+                ui._ciRegRef = firebase.database().ref('courses/' + guideMgr._room() + '/students');
+                ui._ciRegRef.on('value', function (s) {
+                    const _stu = s.val() || {};
+                    const _cnt = new Set(Object.values(_stu).filter(x => x && x.name && x.name !== 'undefined').map(x => String(x.name).trim())).size;
+                    const _el = document.getElementById('ciCount'); if (_el) _el.textContent = _cnt;
+                    // 슬롯 캐시도 동기화(다시 그릴 때 정확한 값 사용)
+                    try { if (guideMgr._slot().courseInfo) guideMgr._slot().courseInfo.count = _cnt; } catch (e) {}
+                });
+            } catch (e) {}
             slot.pageNum = num;
             const _indci = document.getElementById('guidePageInfo');
             if (_indci) _indci.innerText = `${num} / ${_total}`;
