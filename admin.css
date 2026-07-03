@@ -5576,3 +5576,41 @@ body.night-mode .side-rail-lbl{ color:#cbd5e1; }
 /* [Z37] 홈 검색 — 카카오 오픈톡방 등록 교수 배지(연한 노랑) */
 .hsr-prof.has-kakao{background:#fef9c3;border-color:#fde047;color:#854d0e;box-shadow:0 2px 6px rgba(202,138,4,.18);}
 .hsr-prof.has-kakao:hover{background:#fef08a;box-shadow:0 4px 12px rgba(202,138,4,.3);}
+
+/* ══ [K1] 홈 검색 결과 카드 v2 — 요약형 (버튼 그리드 제거, 대각선 분할 버튼) ══ */
+.hsr-card.hsr-v2{border-left:1px solid #dce5f0;border-radius:16px;padding:20px 24px;}
+.hsr-v2 .hsr2-head{display:flex;align-items:center;gap:12px;}
+.hsr-v2 .hsr2-info{flex:1;min-width:0;display:flex;flex-direction:column;gap:6px;}
+.hsr-v2 .hsr2-title{font-size:19px;font-weight:900;color:#0f172a;letter-spacing:-.3px;}
+.hsr-v2 .hsr2-meta{display:flex;align-items:center;flex-wrap:wrap;gap:8px;font-size:13.5px;color:#94a3b8;font-weight:700;word-break:keep-all;}
+.hsr-v2 .hsr2-dot{opacity:.6;}
+.hsr-v2 .hsr2-venue{display:inline-flex;align-items:center;gap:5px;padding:3px 8px;border:none;border-radius:7px;background:transparent;color:#475569;font-size:13.5px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;}
+.hsr-v2 .hsr2-venue:hover{background:#eef2ff;color:#1d4ed8;}
+.hsr-v2 .hsr2-venue i:first-child{opacity:.6;}
+.hsr-v2 .hsr2-venue-cv{font-size:9px;opacity:.5;}
+.hsr-v2 .hsr2-seg{display:inline-flex;align-items:center;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:999px;padding:2px;gap:2px;}
+.hsr-v2 .hsr2-seg button{display:inline-flex;align-items:center;border:none;border-radius:999px;padding:4px 12px;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit;background:transparent;color:#94a3b8;transition:all .12s;white-space:nowrap;}
+.hsr-v2 .hsr2-seg button.on{background:#fff;color:#1d4ed8;box-shadow:0 1px 4px rgba(15,23,42,.12);}
+.hsr-v2 .hsr2-right{flex-shrink:0;display:flex;align-items:center;gap:4px;}
+.hsr2-pill{display:flex;height:44px;min-width:250px;border-radius:999px;overflow:hidden;box-shadow:0 4px 14px rgba(37,99,235,.24);background:linear-gradient(103deg,#2563eb 0%,#1e40af 51%,#fff 51%,#fff 53%,#FFD900 53%,#FFEB3B 100%);}
+.hsr2-pill.no-kakao{background:linear-gradient(103deg,#2563eb 0%,#1e40af 51%,#fff 51%,#fff 53%,#dbeafe 53%,#eff6ff 100%);}
+.hsr2-pill button{border:none;background:transparent;cursor:pointer;font-family:inherit;font-weight:900;white-space:nowrap;display:inline-flex;align-items:center;justify-content:center;gap:7px;transition:background .12s;}
+.hsr2-pill .hp-left{flex:1.12;color:#fff;font-size:14px;padding:0 8px 0 18px;}
+.hsr2-pill .hp-right{flex:1;color:#3A1D1D;font-size:13px;padding:0 16px 0 8px;}
+.hsr2-pill.no-kakao .hp-right{color:#1d4ed8;}
+.hsr2-pill .hp-left:hover{background:rgba(255,255,255,.14);}
+.hsr2-pill .hp-right:hover{background:rgba(255,255,255,.28);}
+.hsr2-pill .hp-x{font-size:10px;opacity:.7;}
+.hsr2-fold{flex-shrink:0;width:36px;height:36px;display:inline-flex;align-items:center;justify-content:center;border:none;border-radius:9px;background:transparent;color:#94a3b8;font-size:14px;cursor:pointer;}
+.hsr2-fold:hover{color:#2563eb;}
+.hsr-v2 .hsr-info{margin:12px 0 0;}
+.hsr2-menu{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:16px;padding-top:12px;border-top:1px solid #eef2f7;}
+.hsr-v2.menu-closed .hsr2-menu{display:none;}
+.hsr2-menu .hsr-btn{min-height:0;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:7px;padding:12px 6px;border:none;border-radius:10px;background:transparent;color:#64748b;font-size:12.5px;font-weight:700;}
+.hsr2-menu .hsr-btn:hover{background:#eef2ff;color:#1d4ed8;}
+.hsr2-menu .hsr-btn.is-open{background:#dbeafe;color:#1d4ed8;border:none;box-shadow:inset 0 -3px #2563eb;}
+.hsr2-menu .hsr2-ico{font-size:17px;opacity:.8;}
+.hsr2-menu .hsr2-hint{font-size:9px;opacity:.4;}
+#hsrVenuePop{position:fixed;z-index:22000;background:#fff;border:1px solid #e2e8f0;border-radius:12px;box-shadow:0 12px 32px rgba(15,23,42,.16);padding:6px;display:flex;flex-direction:column;min-width:210px;max-height:320px;overflow-y:auto;}
+#hsrVenuePop button{display:flex;align-items:center;gap:8px;padding:9px 12px;border:none;border-radius:8px;background:transparent;color:#334155;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;text-align:left;white-space:nowrap;}
+#hsrVenuePop button:hover{background:#eef2ff;color:#1d4ed8;}

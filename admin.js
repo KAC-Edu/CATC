@@ -5786,6 +5786,60 @@ resetShuttleRequests: function() {
             },200);
         }
     },
+    // [K1] 검색카드 v2 — 조회 메뉴 접기/펼치기 (기본: 펼침)
+    toggleHsrMenu: function(room, btn){
+        var card=document.querySelector('.hsr-card[data-room="'+room+'"]');
+        if(!card) return;
+        var closed=card.classList.toggle('menu-closed');
+        if(btn){ var ic=btn.querySelector('i'); if(ic) ic.className='fa-solid '+(closed?'fa-chevron-down':'fa-chevron-up'); }
+    },
+    // [K1] 교육구분 세트 저장 — 직무일반→평가 없음(근태 10%), 직무법정→필기(90%)+근태(10%)
+    //      입교안내 PDF '교육과정 안내' 페이지(guideCourseInfo)와 동일 데이터라 양쪽이 자동 동기화됨
+    hsrSetJob: function(room, cat){
+        if(state.isObserver){ ui.showAlert('👁️ 옵저버 모드에서는 변경할 수 없습니다.'); return; }
+        var ev=(cat==='duty-legal')?'written':'none';
+        firebase.database().ref('courses/'+room+'/settings/guideCourseInfo').update({category:cat, evaluation:ev}).catch(function(){});
+        var seg=document.getElementById('hsrSeg'+room);
+        if(seg){ var btns=seg.querySelectorAll('button'); Array.prototype.forEach.call(btns,function(b,i){ b.classList.toggle('on',(cat==='duty-legal')?i===1:i===0); }); }
+    },
+    // [K1] 강의장소 선택 드롭다운 — settings/roomDetailName 저장 (연간계획·과정현황 등 전 화면 공통)
+    hsrVenueMenu: function(room, evt){
+        if(evt){ evt.preventDefault(); evt.stopPropagation(); }
+        var old=document.getElementById('hsrVenuePop');
+        if(old){ var sameBtn=(old.dataset.room===room); old.remove(); if(sameBtn) return; }
+        if(state.isObserver){ ui.showAlert('👁️ 옵저버 모드에서는 변경할 수 없습니다.'); return; }
+        var anchor=evt&&(evt.currentTarget||evt.target); if(!anchor) return;
+        // 옵션: 설정 모달의 장소 목록(공용 추가 강의실 포함) 재사용
+        var opts=[];
+        try{
+            var sel=document.getElementById('setup-room-select');
+            if(sel) Array.prototype.forEach.call(sel.options,function(o){
+                var v=String(o.value||'').trim();
+                if(v && v.indexOf('직접')<0 && opts.indexOf(v)<0) opts.push(v);
+            });
+        }catch(e){}
+        var esc=ui._esc;
+        var pop=document.createElement('div');
+        pop.id='hsrVenuePop'; pop.dataset.room=room;
+        pop.innerHTML='<button data-v=""><i class="fa-regular fa-circle-question" style="opacity:.6;"></i> 미정으로 두기</button>'
+            +opts.map(function(v){ return '<button data-v="'+esc(v)+'"><i class="fa-solid fa-location-dot" style="opacity:.5;"></i> '+esc(v)+'</button>'; }).join('');
+        document.body.appendChild(pop);
+        var r=anchor.getBoundingClientRect();
+        pop.style.left=Math.min(r.left, window.innerWidth-pop.offsetWidth-12)+'px';
+        pop.style.top=Math.min(r.bottom+6, window.innerHeight-pop.offsetHeight-12)+'px';
+        pop.addEventListener('click',function(ev2){
+            ev2.stopPropagation();
+            var b=ev2.target.closest('button'); if(!b) return;
+            var v=b.dataset.v||'';
+            firebase.database().ref('courses/'+room+'/settings/roomDetailName').set(v||null).catch(function(){});
+            var lbl=document.getElementById('hsrVenue'+room); if(lbl) lbl.textContent=v||'장소 미정';
+            pop.remove();
+        });
+        setTimeout(function(){
+            var closer=function(ev3){ if(!pop.contains(ev3.target)){ pop.remove(); document.removeEventListener('mousedown',closer); } };
+            document.addEventListener('mousedown',closer);
+        },0);
+    },
     toggleHomeSearchDetail: function(room, type, event){
         if(event){ event.preventDefault(); event.stopPropagation(); }
         room=String(room||'').toUpperCase();
@@ -5954,7 +6008,9 @@ resetShuttleRequests: function() {
             var depart=0; try{ var req=(r.shuttle&&r.shuttle.requests)||{}; depart=Object.keys(req).length; }catch(e){}
             var kakaoOn=false; try{ kakaoOn=!!(settings.kakaoLink&&String(settings.kakaoLink).trim()); }catch(e){}   // [J5] 오픈톡방 등록 여부
             window._homeSearchDetailData[room]={roomData:r,roster:rosterList};
-            results.push({room:room, course:course||'(과정명 미정)', period:period, prof:prof, cnt:cnt, planned:planned, assigned:assigned, outing:outing, depart:depart, kakao:kakaoOn});
+            results.push({room:room, course:course||'(과정명 미정)', period:period, prof:prof, cnt:cnt, planned:planned, assigned:assigned, outing:outing, depart:depart, kakao:kakaoOn,
+                venue:String(settings.roomDetailName||'').trim(),                                  // [K1] 강의장소 (연간계획·전 화면 공통 roomDetailName)
+                cat:String(((settings.guideCourseInfo||{}).category)||'duty-general')});           // [K1] 교육구분 (입교안내 PDF '교육과정 안내'와 동일 데이터)
         });
         var e=ui._esc;
         if(!results.length){
@@ -5970,16 +6026,35 @@ resetShuttleRequests: function() {
             if(x.outing) chips.push(ichip('fa-person-walking-arrow-right','#f43f5e','외출·외박',x.outing+'건',e(x.room),'admin-action'));
             if(x.depart) chips.push('<span class="hsr-chip" onclick="event.stopPropagation();ui.toggleHomeSearchDetail(\''+e(x.room)+'\',\'shuttle\',event)" title="퇴교차량 신청현황 바로 보기"><i class="fa-solid fa-bus" style="color:#16a34a"></i>퇴교차량 <b>'+x.depart+'건</b></span>');   // [J5] 인라인 펼침
             var infoHtml = chips.length ? ('<div class="hsr-info">'+chips.join('')+'</div>') : '';
-            return '<div class="hsr-card" data-room="'+e(x.room)+'">'
-                +'<div class="hsr-top"><span class="hsr-course"><i class="fa-solid fa-file-pdf"></i>'+e(x.course)+' · 입교안내</span><span class="hsr-prof'+(x.kakao?' has-kakao':'')+'" title="'+(x.kakao?'오픈톡방 등록됨 · ':'')+'클릭하면 교수 프로필 편집" onclick="event.stopPropagation();ui._openProfFromSearch(\''+e(x.prof||'')+'\')"><i class="fa-solid fa-user-tie"></i> '+e(x.prof||'-')+' 교수<i class="fa-solid fa-pen hsr-prof-edit"></i></span></div>'
-                +'<div class="hsr-meta">'+(x.period?'<span class="hsr-date"><i class="fa-regular fa-calendar-check"></i> '+e(x.period)+'</span>':'')+'<span class="hsr-metachip">'+studInfo+'</span><span class="hsr-metachip">Room '+e(x.room)+'</span></div>'
+            // [K1] 검색카드 v2: 요약형 (제목+메타 / 대각선 분할 버튼 / 아이콘 조회 메뉴 즉시 노출)
+            return '<div class="hsr-card hsr-v2" data-room="'+e(x.room)+'">'
+                +'<div class="hsr2-head">'
+                +'<div class="hsr2-info">'
+                +'<div class="hsr2-title">'+e(x.course)+'</div>'
+                +'<div class="hsr2-meta">'
+                +(x.period?'<span>'+e(x.period)+'</span><span class="hsr2-dot">·</span>':'')
+                +'<button class="hsr2-venue" onclick="ui.hsrVenueMenu(\''+e(x.room)+'\',event)" title="클릭하여 강의장소 선택 (연간계획 등 전 화면 공통 적용)"><i class="fa-solid fa-location-dot"></i><span id="hsrVenue'+e(x.room)+'">'+(x.venue?e(x.venue):'장소 미정')+'</span><i class="fa-solid fa-chevron-down hsr2-venue-cv"></i></button>'
+                +'<span class="hsr2-dot">·</span>'
+                +'<span class="hsr2-seg" id="hsrSeg'+e(x.room)+'" onclick="event.stopPropagation();" title="교육구분 — 입교안내 \'교육과정 안내\' 페이지와 연동 (평가 방식도 세트로 설정)">'
+                +'<button class="'+(x.cat==='duty-legal'?'':'on')+'" onclick="ui.hsrSetJob(\''+e(x.room)+'\',\'duty-general\')">직무일반</button>'
+                +'<button class="'+(x.cat==='duty-legal'?'on':'')+'" onclick="ui.hsrSetJob(\''+e(x.room)+'\',\'duty-legal\')">직무법정</button>'
+                +'</span>'
+                +'</div>'
+                +'</div>'
+                +'<div class="hsr2-right" onclick="event.stopPropagation();">'
+                +'<div class="hsr2-pill'+(x.kakao?'':' no-kakao')+'">'
+                +'<button class="hp-left" onclick="ui.enterCourseMode(\''+e(x.room)+'\',\'guide\',true)" title="입교안내 전체화면"><i class="fa-solid fa-file-pdf"></i> 입교안내 <i class="fa-solid fa-expand hp-x"></i></button>'
+                +'<button class="hp-right" onclick="ui._openProfFromSearch(\''+e(x.prof||'')+'\')" title="'+(x.kakao?'오픈톡방 등록됨 · ':'')+'클릭하면 교수 프로필 편집"><i class="fa-solid '+(x.kakao?'fa-comment':'fa-user-tie')+'"></i> '+e(x.prof||'-')+' 교수</button>'
+                +'</div>'
+                +'<button class="hsr2-fold" onclick="ui.toggleHsrMenu(\''+e(x.room)+'\',this)" title="메뉴 접기/펼치기"><i class="fa-solid fa-chevron-up"></i></button>'
+                +'</div>'
+                +'</div>'
                 +infoHtml
-                +'<div class="hsr-actions" onclick="event.stopPropagation();">'
-                +'<button class="hsr-btn primary" onclick="ui.enterCourseMode(\''+e(x.room)+'\',\'guide\',true)"><i class="fa-solid fa-file-pdf"></i> 입교안내 전체화면</button>'
-                +'<button class="hsr-btn" data-detail="students" onclick="ui.toggleHomeSearchDetail(\''+e(x.room)+'\',\'students\',event)"><i class="fa-solid fa-users-viewfinder"></i> 수강생 현황</button>'
-                +'<button class="hsr-btn" data-detail="outing" onclick="ui.toggleHomeSearchDetail(\''+e(x.room)+'\',\'outing\',event)"><i class="fa-solid fa-person-walking-arrow-right"></i> 외출·외박 현황</button>'
-                +'<button class="hsr-btn" data-detail="shuttle" onclick="ui.toggleHomeSearchDetail(\''+e(x.room)+'\',\'shuttle\',event)"><i class="fa-solid fa-bus"></i> 차량수요조사</button>'
-                +'<button class="hsr-btn" onclick="ui.enterCourseMode(\''+e(x.room)+'\',\'dashboard\')"><i class="fa-solid fa-gauge-high"></i> 과정현황 바로가기</button>'
+                +'<div class="hsr2-menu" onclick="event.stopPropagation();">'
+                +'<button class="hsr-btn" data-detail="students" onclick="ui.toggleHomeSearchDetail(\''+e(x.room)+'\',\'students\',event)"><i class="fa-solid fa-users-viewfinder hsr2-ico"></i>수강생 현황<i class="fa-solid fa-chevron-down hsr2-hint"></i></button>'
+                +'<button class="hsr-btn" data-detail="outing" onclick="ui.toggleHomeSearchDetail(\''+e(x.room)+'\',\'outing\',event)"><i class="fa-solid fa-person-walking-arrow-right hsr2-ico"></i>외출·외박<i class="fa-solid fa-chevron-down hsr2-hint"></i></button>'
+                +'<button class="hsr-btn" data-detail="shuttle" onclick="ui.toggleHomeSearchDetail(\''+e(x.room)+'\',\'shuttle\',event)"><i class="fa-solid fa-bus hsr2-ico"></i>차량수요조사<i class="fa-solid fa-chevron-down hsr2-hint"></i></button>'
+                +'<button class="hsr-btn" onclick="ui.enterCourseMode(\''+e(x.room)+'\',\'dashboard\')"><i class="fa-solid fa-gauge-high hsr2-ico"></i>과정현황<i class="fa-solid fa-arrow-up-right-from-square hsr2-hint"></i></button>'
                 +'</div><div class="hsr-detail" id="hsrDetail'+e(x.room)+'" style="display:none;"></div></div>';
         }).join('');
     },
