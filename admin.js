@@ -959,7 +959,17 @@ forceEnterRoom: async function(room) {
                 setupBtn.innerHTML = '<i class="fa-solid fa-lock"></i> 과정 잠김 (인증 필요)';
                 setupBtn.style.pointerEvents = 'none';
                 setupBtn.disabled = true;
+            } else if (!state.room) {
+                // 통합 현황판(홈) → 교수님 프로필 수정(노란색). 인라인 배경 제거 후 CSS(btn-prof-mode)에 위임
+                setupBtn.style.setProperty('background', '', '');
+                setupBtn.style.setProperty('opacity', '1', '');
+                setupBtn.classList.add('btn-prof-mode');
+                setupBtn.innerHTML = '<i class="fa-solid fa-user-pen"></i> 교수님 프로필 수정';
+                setupBtn.title = '교수님별 프로필(사진·연락처·약력 등)을 수정합니다';
+                setupBtn.style.pointerEvents = 'auto';
+                setupBtn.disabled = false;
             } else {
+                setupBtn.classList.remove('btn-prof-mode');
                 setupBtn.style.setProperty('background', 'linear-gradient(135deg, #3b82f6 0%, #1e40af 100%)', 'important');
                 setupBtn.style.setProperty('opacity', '1', 'important');
                 setupBtn.innerHTML = '<i class="fa-solid fa-gears"></i> 교육과정 환경 설정 (통합)';
@@ -1678,11 +1688,9 @@ const profMgr = {
         this.list.forEach(p => {
             const item = document.createElement('div');
             item.className = 'prof-item';
-            const initial = (p.name || '?').trim().charAt(0);
             // 수정된 부분: 이름 옆에 [프로필 등록] 버튼 추가
             item.innerHTML = `
                 <div class="prof-name-wrap">
-                    <span class="prof-avatar">${initial}</span>
                     <span class="prof-name">${p.name}</span>
                 </div>
                 <div class="prof-item-btns">
@@ -2258,6 +2266,26 @@ init: function() {
         if(confirm("이 과목을 삭제하시겠습니까?")) {
             firebase.database().ref(`courses/${state.room}/settings/subjects/${key}`).remove();
         }
+    },
+
+    // [Q&A 화면 즉석 추가] 출강 강사·과목을 이 화면에서도 바로 등록
+    toggleQaAdd: function() {
+        const row = document.getElementById('qaAddRow');
+        if (!row) return;
+        const show = (row.style.display === 'none' || !row.style.display);
+        row.style.display = show ? 'flex' : 'none';
+        if (show) { const i = document.getElementById('qaAddInput'); if (i) { i.value = ''; i.focus(); } }
+    },
+    quickAddSubject: function() {
+        if (!state.room) { alert('먼저 과정을 선택해 주세요.'); return; }
+        const input = document.getElementById('qaAddInput');
+        if (!input) return;
+        const name = input.value.trim();
+        if (!name) return;
+        firebase.database().ref(`courses/${state.room}/settings/subjects`).push(name).then(() => {
+            input.value = "";
+            input.focus();
+        });
     }
 };
 
@@ -8167,34 +8195,15 @@ init: function() {
     },
 
     _channelGuideHTML: function() {
-        return `<div class="guide-channel-slide">
-          <div class="ci-header">
-            <div class="ci-head-center"><span class="ci-emblem"><i class="fa-solid fa-plane-up"></i></span><span class="ci-header-title">입교 안내</span></div>
-            <div class="ci-head-right"><img src="logo.png" class="ci-logo" alt="KAC" onerror="this.style.display='none'"></div>
-          </div>
-          <div class="qbody">
-            <div class="qflow">
-              <div class="qstep">
-                <div class="qhead"><span class="qno">1</span><span class="qtt">오픈톡방 <b>[공지]</b><br>링크 터치</span></div>
-                <div class="qtile"><div class="q-vis"><div class="q-emblem"><span class="ring"><i class="fa-solid fa-plane-up"></i></span><span class="t">CATC</span></div></div><div class="qcap"><b>교육생용(CATC)</b><br>링크 클릭</div></div>
-              </div>
-              <div class="qarrow"><svg viewBox="0 0 40 40" fill="none"><path d="M9 9 L21 20 L9 31" stroke="#bfdbfe" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/><path d="M21 9 L33 20 L21 31" stroke="#2563eb" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
-              <div class="qstep">
-                <div class="qhead"><span class="qno">2</span><span class="qtt">카카오 채널<br><b>[입교/출석]</b> 터치</span></div>
-                <div class="qtile"><div class="q-vis"><div class="q-kbtn"><span class="nb">N</span><svg viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5"/><path d="M5.5 9.5V20h13V9.5"/></svg><span class="t">입교/출석</span></div></div><div class="qcap">채널 하단<br><b>첫 번째 버튼</b> 클릭</div></div>
-              </div>
-              <div class="qarrow"><svg viewBox="0 0 40 40" fill="none"><path d="M9 9 L21 20 L9 31" stroke="#bfdbfe" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/><path d="M21 9 L33 20 L21 31" stroke="#2563eb" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
-              <div class="qstep">
-                <div class="qhead"><span class="qno">3</span><span class="qtt">정보 입력 후<br><b>[입교하기]</b></span></div>
-                <div class="qtile"><div class="q-vis"><div class="q-bbtn">입교하기</div></div><div class="qcap">과정·사번·이름<br>개인정보 동의 후 <b>확인</b></div></div>
-              </div>
-              <div class="qarrow"><svg viewBox="0 0 40 40" fill="none"><path d="M9 9 L21 20 L9 31" stroke="#bfdbfe" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/><path d="M21 9 L33 20 L21 31" stroke="#2563eb" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
-              <div class="qstep">
-                <div class="qhead"><span class="qno">4</span><span class="qtt"><b>입교등록 완료</b></span></div>
-                <div class="qtile"><div class="q-vis"><div class="q-check"><i class="fa-solid fa-check"></i></div></div><div class="qcap">등록 완료 화면 확인</div></div>
-              </div>
-            </div>
-            <div class="cg-note"><span><i class="fa-solid fa-circle-check"></i> 위 절차대로 진행하면 입교등록이 완료됩니다.</span><span class="cg-regcount">현재 입교등록 <b id="cgRegCount">${(guideMgr._slot().courseInfo||{}).count||0}</b>명</span></div>
+        // [영상 대체] 카카오채널 입교/출결 등록방법 안내를 GitHub에 올린 start.mp4 영상으로 상영.
+        // 전체화면/윈도우 어느 쪽이든 화면을 꽉 채워 재생. 영상 파일이 없으면 안내 문구 표시.
+        return `<div class="guide-channel-slide guide-video-slide">
+          <video id="cgVideo" class="cg-video" src="start.mp4?t=${Date.now()}" playsinline controls preload="auto"
+                 onerror="var f=document.getElementById('cgVideoFallback'); if(f) f.style.display='flex'; this.style.display='none';"></video>
+          <div id="cgVideoFallback" class="cg-video-fallback" style="display:none;">
+            <i class="fa-solid fa-video-slash"></i>
+            <p><b>영상(start.mp4)</b>을 불러오지 못했습니다.</p>
+            <span>GitHub 저장소에 <b>start.mp4</b> 파일이 업로드되었는지 확인해 주세요.</span>
           </div>
         </div>`;
     },
@@ -8478,6 +8487,9 @@ init: function() {
         // 이전 QR 실시간 명단 리스너 해제 (페이지 이동 시)
         if (guideMgr._qrStuRef) { try { guideMgr._qrStuRef.off(); } catch(e){} guideMgr._qrStuRef = null; }
 
+        // 채널 안내 영상(start.mp4)이 재생 중이면 페이지 이동 시 정지 (다른 페이지로 소리 이어짐 방지)
+        try { var _prevV = document.getElementById('cgVideo'); if (_prevV) { _prevV.pause(); } } catch(e){}
+
         // 담임 교수 프로필 (가상 2페이지)
         if (guideMgr._isProfilePage(num)) {
             guideMgr.isRendering = false;
@@ -8583,20 +8595,22 @@ init: function() {
             return;
         }
 
-        // 카카오 채널 입교등록 안내 (가상 페이지 · 오픈톡방 QR 다음)
+        // 카카오 채널 입교/출결 등록방법 안내 (가상 페이지 · 오픈톡방 QR 다음) → start.mp4 영상 상영
         if (guideMgr._isChannelGuidePage(num)) {
             guideMgr.isRendering = false;
             _showGuideLayer('virtual');
             if (_profEl) { _profEl.innerHTML = guideMgr._channelGuideHTML(); }
-            // 현재 입교등록(입교완료) 인원 — 실시간 반영(학생 등록 시 새로고침 없이 즉시 갱신)
+            // 이전 reg-count 리스너가 남아있으면 정리
             try { if (ui._cgRegRef) { ui._cgRegRef.off(); ui._cgRegRef = null; } } catch (e) {}
+            // 페이지 진입 시 영상 자동 재생 시도(내비게이션 클릭이 사용자 제스처로 인정되어 대부분 재생됨).
+            // 차단되면 controls로 직접 재생 가능.
             try {
-                ui._cgRegRef = firebase.database().ref('courses/' + guideMgr._room() + '/students');
-                ui._cgRegRef.on('value', function (s) {
-                    const _stu = s.val() || {};
-                    const _cnt = new Set(Object.values(_stu).filter(x => x && x.name && x.name !== 'undefined').map(x => String(x.name).trim())).size;
-                    const _el = document.getElementById('cgRegCount'); if (_el) _el.textContent = _cnt;
-                });
+                const _v = document.getElementById('cgVideo');
+                if (_v) {
+                    _v.currentTime = 0;
+                    const _p = _v.play();
+                    if (_p && _p.catch) { _p.catch(function () { try { _v.muted = true; _v.play(); } catch (e) {} }); }
+                }
             } catch (e) {}
             slot.pageNum = num;
             const _indcg = document.getElementById('guidePageInfo');
@@ -13244,186 +13258,4 @@ ui.confirmRouletteLeader = function(){
   function _dragUp(){
     var host = _drag.host;
     var wasDragging = _drag.dragging;
-    if(_drag.timer){ clearTimeout(_drag.timer); _drag.timer = null; }
-    if(host && wasDragging){
-      var rect = host.getBoundingClientRect();
-      localStorage.setItem(POS_KEY, JSON.stringify({x:rect.left, y:rect.top}));
-    } else if(host && _drag.pressEl === _drag.center){
-      handleCenterTap(host);   // 접힘→펼침 / 펼침→축소 / 축소(대기)→과정현황 이동
-    }
-    _drag.dragging = false; _drag.pressEl = null;
-    if(host) host.classList.remove('is-dragging');
-  }
-
-  // 접힘/펼침: 박스 크기는 그대로라 위치 보정이 필요 없음 (중앙 원은 항상 박스 중심에 고정)
-  function setCollapsed(host, collapse){
-    if(!host) return;
-    if(collapse) host.classList.add('hex-collapsed');
-    else host.classList.remove('hex-collapsed');
-  }
-
-  // 중앙 과정현황 탭 동작:
-  //  · 접힘 상태 → 펼침
-  //  · 펼침 상태 → 축소만(페이지 이동 X) + 다음 탭은 과정현황 페이지로 대기
-  //  · 축소 상태(대기중) → 과정현황 페이지로 이동
-  var _remotePendingNav = false;
-  var _autoCollapseTimer = null;
-  function scheduleAutoCollapse(host){
-    clearTimeout(_autoCollapseTimer);
-    _autoCollapseTimer = setTimeout(function(){ setCollapsed(host, true); _remotePendingNav = false; }, 4000);
-  }
-  function handleCenterTap(host){
-    if(!host) return;
-    clearTimeout(_autoCollapseTimer);
-    var collapsed = host.classList.contains('hex-collapsed');
-    if(!collapsed){
-      setCollapsed(host, true);      // 펼쳐진 상태 → 축소만
-      _remotePendingNav = true;      // 다음 탭은 과정현황 페이지로
-    } else if(_remotePendingNav){
-      _remotePendingNav = false;
-      try{ ui.setMode('dashboard'); }catch(e){}   // 축소 상태에서 한번 더 → 과정현황 페이지
-    } else {
-      setCollapsed(host, false);     // 평상시 축소 → 펼침
-      scheduleAutoCollapse(host);    // 펼친 뒤 4초 무동작이면 자동 축소
-    }
-  }
-
-  function bindDrag(host){
-    var handle = host.querySelector('.hex-drag-handle');
-    var center = host.querySelector('.hex-center');
-    _drag.host = host; _drag.center = center;
-    // 리모컨 위에 마우스가 있으면 자동축소 잠시 멈춤 → 벗어나면 다시 4초 카운트
-    if(!host._hoverBound){
-      host.addEventListener('pointerenter', function(){ clearTimeout(_autoCollapseTimer); });
-      host.addEventListener('pointerleave', function(){ if(!host.classList.contains('hex-collapsed')) scheduleAutoCollapse(host); });
-      host._hoverBound = true;
-    }
-    if(handle){ handle.style.touchAction='none'; handle.addEventListener('pointerdown', _dragDown); }
-    if(center){ center.style.touchAction='none'; center.addEventListener('pointerdown', _dragDown); }
-    if(!_dragWinBound){
-      window.addEventListener('pointermove', _dragMove, {passive:false});
-      window.addEventListener('pointerup', _dragUp);
-      window.addEventListener('pointercancel', _dragUp);
-      _dragWinBound = true;
-    }
-  }
-
-  function cleanQrAndGroupSettings(){
-    var qr = document.getElementById('qrcode');
-    if(qr){
-      var settingGroup = qr.closest('.setting-group');
-      if(settingGroup) settingGroup.remove();
-    }
-    ['floatingQR','qrModal','studentManualModal'].forEach(function(id){
-      var node = document.getElementById(id);
-      if(node) node.remove();
-    });
-    document.querySelectorAll('[onclick*="toggleMiniQR"]').forEach(function(node){ node.remove(); });
-
-    var box = document.querySelector('.sidebar-bottom .action-buttons');
-    if(box && !document.getElementById('sidebarSettingsFold')){
-      var observer = document.getElementById('observerToggleButton');
-      var fold = document.createElement('details');
-      fold.id = 'sidebarSettingsFold';
-      fold.className = 'sidebar-settings-fold';
-      fold.innerHTML = '<summary><i class="fa-solid fa-gear"></i><span>Settings</span><i class="fa-solid fa-chevron-down"></i></summary><div class="sidebar-settings-actions"></div>';
-      var inner = fold.querySelector('.sidebar-settings-actions');
-      Array.from(box.children).forEach(function(button){
-        if(button !== observer) inner.appendChild(button);
-      });
-      if(observer) box.insertBefore(observer, box.firstChild);
-      box.appendChild(fold);
-    }
-  }
-
-  // [과정별 리모컨] 방 settings 변경 시 호출 → 해당 과정의 메뉴 적용 후 재렌더
-  ui.renderRemote = render;
-  ui.applyRemoteMenu = function(settings){
-    var rm = (settings && Array.isArray(settings.remoteMenu) && settings.remoteMenu.length === 6) ? settings.remoteMenu : null;
-    currentRoomMenu = rm;
-    render();
-  };
-
-  function boot(){
-    cleanQrAndGroupSettings();
-    render();
-  }
-  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
-  else setTimeout(boot, 0);
-})();
-
-
-// ===== [우측 더보기 사이드바] 슬라이드 패널 토글 (HTML 버튼에서 호출하나 정의가 없었음) =====
-ui._fitMorePanelToViewport = function(){
-  var p=document.getElementById('moreMenuPanel');
-  if(!p) return;
-  var zoom=parseFloat(getComputedStyle(document.documentElement).zoom)||1;
-  p.style.setProperty('width',(240/zoom)+'px','important');          // 콘텐츠에 맞춘 폭 (글자가 짧아 슬림하게)
-  p.style.setProperty('top','0','important');                         // 전체 높이 (좌측과 통일)
-  p.style.setProperty('right','0','important');                       // 우측 끝 밀착
-  p.style.setProperty('height',(window.innerHeight/zoom)+'px','important');
-  p.style.setProperty('min-height','0','important');
-  p.style.setProperty('border-radius','20px 0 0 20px','important');    // 안쪽(좌측) 모서리만 20px 라운드 — 좌측 사이드바(0 20px 20px 0)의 거울 대칭
-};
-ui.openMorePanel = function(){
-  var p=document.getElementById('moreMenuPanel'), t=document.getElementById('moreToggleTab'), b=document.getElementById('moreMenuBackdrop'), ic=document.getElementById('moreToggleIcon');
-  if(!p) return;
-  ui._fitMorePanelToViewport();
-  p.classList.add('more-open'); p.style.transform='translateX(0)';
-  if(b) b.style.display='block';
-  if(t) t.style.right=((p.offsetWidth||300))+'px';
-  if(ic) ic.className='fa-solid fa-chevron-right';
-};
-ui.closeMorePanel = function(){
-  var p=document.getElementById('moreMenuPanel'), t=document.getElementById('moreToggleTab'), b=document.getElementById('moreMenuBackdrop'), ic=document.getElementById('moreToggleIcon');
-  if(p){ p.classList.remove('more-open'); p.style.transform='translateX(calc(100% + 24px))'; }
-  if(b) b.style.display='none';
-  if(t) t.style.right='0';
-  if(ic) ic.className='fa-solid fa-chevron-left';
-};
-ui.toggleMorePanel = function(){
-  var p=document.getElementById('moreMenuPanel');
-  if(!p) return;
-  if(p.classList.contains('more-open')) ui.closeMorePanel(); else ui.openMorePanel();
-};
-window.addEventListener('resize', function(){
-  var p=document.getElementById('moreMenuPanel');
-  if(p && p.classList.contains('more-open')) ui._fitMorePanelToViewport();
-});
-
-
-// [J8] ZOOM 진입 요소(버튼·메뉴) 표시 제어 — CSS !important 규칙으로 원천 차단.
-//  body에 zoom-room-online 클래스가 없으면(=오프라인) openZoomMonitor를 여는 모든 요소가
-//  어떤 코드가 표시를 시도해도 CSS 차원에서 강제 숨김. 배지 감시 + 리스너 + 2초 하트비트가 클래스를 갱신.
-(function(){
-  function injectCss(){
-    if(document.getElementById('zmVisGuardStyle'))return;
-    var st=document.createElement('style');
-    st.id='zmVisGuardStyle';
-    st.textContent='body:not(.zoom-room-online) [onclick*="openZoomMonitor"]{display:none !important;}';
-    document.head.appendChild(st);
-  }
-  function applyZoomVis(){
-    try{
-      var el=document.getElementById('dashRoomDetail');
-      var on=!!(el && /온라인|zoom/i.test(String(el.innerText||'')));
-      window._zoomRoomOnline = on;
-      document.body.classList.toggle('zoom-room-online', on);
-      if(on){ // 온라인일 때는 초기 inline display:none을 해제해 실제로 보이게
-        document.querySelectorAll('[onclick*="openZoomMonitor"]').forEach(function(t){ t.style.display=''; });
-      }
-    }catch(e){}
-  }
-  function install(){
-    injectCss();
-    var el=document.getElementById('dashRoomDetail');
-    if(el && !el._zmObs){
-      el._zmObs=true;
-      try{ new MutationObserver(applyZoomVis).observe(el,{childList:true,characterData:true,subtree:true}); }catch(e){}
-    }
-    if(!window._zmHeartbeat){ window._zmHeartbeat=setInterval(applyZoomVis, 2000); }
-    applyZoomVis();
-  }
-  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', install);
-  else install();
-})();
+    if(_drag.timer){ clearTimeout(_drag.
