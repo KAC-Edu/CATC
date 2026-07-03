@@ -5516,6 +5516,10 @@ resetShuttleRequests: function() {
                     </button>
                 </div>
 
+                <a href="KAC_바로가기_위젯.zip" download="KAC_바로가기_위젯.zip" style="display:flex; align-items:center; justify-content:center; gap:8px; margin-bottom:16px; padding:13px 0; background:linear-gradient(135deg,#059669,#10b981); color:#fff; border-radius:10px; font-size:14px; font-weight:800; text-decoration:none; box-shadow:0 4px 12px rgba(16,185,129,.3);">
+                    <i class="fa-solid fa-download"></i> 바로가기 위젯 다운로드 (.zip)
+                </a>
+
                 <div style="background:#f0f7ff; border:1px solid #dbeafe; border-radius:12px; padding:14px 16px; margin-bottom:14px;">
                     <div style="font-size:13px; font-weight:900; color:#1d4ed8; margin-bottom:10px;"><i class="fa-solid fa-code-branch"></i> 현재 플랫폼 버전</div>
                     <div id="platVerList" style="display:grid; grid-template-columns:1fr 1fr; gap:6px 14px;">
