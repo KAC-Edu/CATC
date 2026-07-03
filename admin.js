@@ -3811,6 +3811,9 @@ setMode: function(mode) {
                 homeBtn.style.display = 'none';
             } else {
                 homeBtn.style.display = 'flex';
+                // 목적지에 따라 문구 변경: 과정 안이면 '과정현황', 현황판(홈)에서 왔으면 '현황판으로'
+                const _hbSpan = homeBtn.querySelector('span');
+                if (_hbSpan) _hbSpan.textContent = state.room ? '과정현황' : '현황판으로';
             }
         }
 
