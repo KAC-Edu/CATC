@@ -3726,7 +3726,7 @@ body.night-mode .status-badge.status-arrived {
 #profProfileModal .prof-editor-box {
     width: min(1180px, 96vw);
     max-width: none;
-    max-height: 94vh;
+    max-height: 96vh;
     padding: 0;
     overflow: hidden;
     display: flex;
@@ -3740,7 +3740,7 @@ body.night-mode .status-badge.status-arrived {
     align-items: center;
     justify-content: space-between;
     flex: 0 0 auto;
-    padding: 22px 28px 18px;
+    padding: 14px 28px 12px;
     background: #fff;
     border-bottom: 1px solid #e2e8f0;
 }
@@ -3772,11 +3772,11 @@ body.night-mode .status-badge.status-arrived {
 .prof-editor-scroll {
     min-height: 0;
     overflow: auto;
-    padding: 28px;
+    padding: 14px;
 }
 .prof-editor-canvas {
     width: 100%;
-    min-height: 570px;
+    min-height: 420px;
     display: grid;
     grid-template-columns: minmax(300px, 38%) minmax(0, 62%);
     overflow: hidden;
@@ -3794,7 +3794,7 @@ body.night-mode .status-badge.status-arrived {
 
 .prof-editor-photo {
     position: relative;
-    min-height: 570px;
+    min-height: 420px;
     overflow: hidden;
     background: linear-gradient(145deg, #dbe5f1, #eef3f8);
 }
@@ -3844,7 +3844,7 @@ body.night-mode .status-badge.status-arrived {
 #pp-photo-file { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
 .prof-editor-content {
     min-width: 0;
-    padding: 38px 42px 32px;
+    padding: 22px 30px 20px;
     background: #fff;
 }
 .prof-editor-role {
@@ -3861,7 +3861,7 @@ body.night-mode .status-badge.status-arrived {
     align-items: flex-end;
     justify-content: space-between;
     gap: 20px;
-    margin-top: 18px;
+    margin-top: 11px;
 }
 .prof-editor-name {
     min-width: 0;
@@ -3933,13 +3933,13 @@ body.night-mode .status-badge.status-arrived {
 }
 .prof-editor-contacts input:hover,
 .prof-editor-contacts input:focus { border-bottom-color: #93c5fd; }
-.prof-editor-rule { height: 1px; margin-top: 16px; background: #dbe4ef; }
+.prof-editor-rule { height: 1px; margin-top: 11px; background: #dbe4ef; }
 .prof-editor-message {
     display: flex;
     align-items: center;
     gap: 9px;
-    margin-top: 20px;
-    padding: 10px 13px;
+    margin-top: 12px;
+    padding: 8px 12px;
     border-left: 4px solid #2563eb;
     background: #f8fbff;
     color: #2563eb;
@@ -3957,7 +3957,7 @@ body.night-mode .status-badge.status-arrived {
     font-weight: 800;
     line-height: 1.4;
 }
-.prof-editor-bio { margin-top: 25px; }
+.prof-editor-bio { margin-top: 14px; }
 .prof-editor-section-title {
     display: flex;
     align-items: center;
@@ -3975,7 +3975,7 @@ body.night-mode .status-badge.status-arrived {
     grid-template-columns: 90px minmax(0, 1fr) 34px;
     align-items: center;
     gap: 10px;
-    margin-bottom: 8px;
+    margin-bottom: 5px;
 }
 #profProfileModal .bio-row input {
     min-width: 0;
@@ -4027,15 +4027,15 @@ body.night-mode .status-badge.status-arrived {
     cursor: pointer;
 }
 .prof-editor-kakao {
-    margin-top: 24px;
-    padding: 13px 15px;
+    margin-top: 12px;
+    padding: 10px 13px;
     border: 1px solid #f3e7a6;
     border-radius: 12px;
     background: #fffdf0;
 }
 .prof-editor-kakao label {
     display: block;
-    margin-bottom: 7px;
+    margin-bottom: 5px;
     color: #493f1e;
     font-size: 12px;
     font-weight: 850;
@@ -4060,7 +4060,7 @@ body.night-mode .status-badge.status-arrived {
     justify-content: space-between;
     gap: 20px;
     flex: 0 0 auto;
-    padding: 16px 28px;
+    padding: 11px 28px;
     border-top: 1px solid #e2e8f0;
     background: #fff;
 }
