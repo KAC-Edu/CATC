@@ -2627,6 +2627,8 @@ function startPresence() {
 
 
 function applyMenuFeatures(features) {
+    // [외출·외박 불가 과정] 버튼 존재 여부와 무관하게 항상 플래그 반영 (신청 폼이 열리는 것 원천 차단)
+    window._adminActionDisabled = (features.adminAction === false);
     const menuMap = [
         { key: 'facility',     selector: '[onclick="openFacilityRequest()"]' },
         { key: 'shuttle',      selector: '[onclick="openShuttleApply()"]' },

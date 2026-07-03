@@ -8619,23 +8619,28 @@ init: function() {
             return;
         }
 
-        _showGuideLayer('pdf');
-        // [학생장 룰렛] PDF 23페이지(학생장 선출)에서만 룰렛 버튼 노출
-        var _rBtn = document.getElementById('guideRouletteBtn');
-        if (_rBtn) _rBtn.style.display = (guideMgr._toPdfPage(num) === 23) ? 'inline-flex' : 'none';
-        // [교육 시간표] PDF 13페이지: 업로드됨 → '보기' 버튼, 미업로드 → 'QR 업로드' 버튼(깜빡하고 안 올린 교수용)
-        var _on13 = (guideMgr._toPdfPage(num) === 13);
-        var _hasSched = !!guideMgr._slot().scheduleTs;
-        var _sBtn = document.getElementById('guideScheduleBtn');
-        if (_sBtn) _sBtn.style.display = (_on13 && _hasSched) ? 'inline-flex' : 'none';
-        var _uBtn = document.getElementById('guideScheduleUploadBtn');
-        if (_uBtn) _uBtn.style.display = (_on13 && !_hasSched && !state.isObserver) ? 'inline-flex' : 'none';
-        // [교육 장소] 교육장소 페이지(기본 14p)에서 교육동별 강의실 ✓ 오버레이 노출
-        var _vOv = document.getElementById('guideVenueOverlay');
-        if (_vOv) {
-            if (guideMgr._toPdfPage(num) === guideMgr._venuePage()) { _vOv.style.display = 'block'; if (ui.renderVenueOverlay) ui.renderVenueOverlay(); }
-            else _vOv.style.display = 'none';
-        }
+        // [잔상 방지] 이전에는 여기서 곧바로 PDF 레이어로 전환해, 새 페이지 렌더가 끝나기 전까지
+        // 직전 PDF 페이지(또는 영상 다음 순간의 옛 페이지)가 잠깐 보였다.
+        // → 화면 전환·버튼 표시를 새 페이지 렌더 완료 후로 미룬다.
+        const _revealPdfLayer = function() {
+            _showGuideLayer('pdf');
+            // [학생장 룰렛] PDF 23페이지(학생장 선출)에서만 룰렛 버튼 노출
+            var _rBtn = document.getElementById('guideRouletteBtn');
+            if (_rBtn) _rBtn.style.display = (guideMgr._toPdfPage(num) === 23) ? 'inline-flex' : 'none';
+            // [교육 시간표] PDF 13페이지: 업로드됨 → '보기' 버튼, 미업로드 → 'QR 업로드' 버튼(깜빡하고 안 올린 교수용)
+            var _on13 = (guideMgr._toPdfPage(num) === 13);
+            var _hasSched = !!guideMgr._slot().scheduleTs;
+            var _sBtn = document.getElementById('guideScheduleBtn');
+            if (_sBtn) _sBtn.style.display = (_on13 && _hasSched) ? 'inline-flex' : 'none';
+            var _uBtn = document.getElementById('guideScheduleUploadBtn');
+            if (_uBtn) _uBtn.style.display = (_on13 && !_hasSched && !state.isObserver) ? 'inline-flex' : 'none';
+            // [교육 장소] 교육장소 페이지(기본 14p)에서 교육동별 강의실 ✓ 오버레이 노출
+            var _vOv = document.getElementById('guideVenueOverlay');
+            if (_vOv) {
+                if (guideMgr._toPdfPage(num) === guideMgr._venuePage()) { _vOv.style.display = 'block'; if (ui.renderVenueOverlay) ui.renderVenueOverlay(); }
+                else _vOv.style.display = 'none';
+            }
+        };
         if (guideMgr.isRendering) return;
         guideMgr.isRendering = true;
 
@@ -8688,6 +8693,9 @@ init: function() {
             const ctx = canvas.getContext('2d');
             ctx.setTransform(1, 0, 0, 1, 0, 0);
             ctx.drawImage(offscreen, 0, 0);
+
+            // 새 페이지 렌더가 끝난 지금 화면을 PDF로 전환 → 직전 페이지 잔상 없이 곧바로 새 페이지가 보인다.
+            _revealPdfLayer();
 
             guideMgr.isRendering = false;
             // 렌더링 완료 후 현재 방 슬롯에 페이지 번호 저장
