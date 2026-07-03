@@ -6161,7 +6161,6 @@ resetShuttleRequests: function() {
                 +'<button class="hp-left" onclick="ui.enterCourseMode(\''+e(x.room)+'\',\'guide\',true)" title="입교안내 전체화면"><i class="fa-solid fa-file-pdf"></i> 입교안내 <i class="fa-solid fa-expand hp-x"></i></button>'
                 +'<button class="hp-right" onclick="ui._openProfFromSearch(\''+e(x.prof||'')+'\')" title="'+(x.kakao?'오픈톡방 등록됨 · ':'')+'클릭하면 교수 프로필 편집"><i class="fa-solid '+(x.kakao?'fa-comment':'fa-user-tie')+'"></i> '+e(x.prof||'-')+' 교수</button>'
                 +'</div>'
-                +'<button class="hsr2-fold" onclick="ui.toggleHsrMenu(\''+e(x.room)+'\',this)" title="메뉴 접기/펼치기"><i class="fa-solid fa-chevron-up"></i></button>'
                 +'</div>'
                 +'</div>'
                 +infoHtml
