@@ -2334,15 +2334,13 @@ body.in-course #moreToggleTab{ display:flex !important; }
             
             <!-- [왼쪽] 기본 정보 설정 (제공해주신 코드 원본) -->
             <div style="flex: 1.2;">
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; padding-bottom: 20px;">
+                <div style="padding-bottom: 20px;">
                     <div class="setup-group">
                         <label style="display:block; font-size:12px; font-weight:800; color:#64748b; margin-bottom:8px;">교육과정명</label>
                         <input type="text" id="setup-course-name" class="setup-input" placeholder="정확한 과정명 입력">
                     </div>
-                    <div class="setup-group">
-                        <label style="display:block; font-size:12px; font-weight:800; color:#64748b; margin-bottom:8px;">과정 비밀번호 설정 <span style="color:#0ea5e9; font-weight:900;">(옵션사항)</span></label>
-                        <input type="password" id="setup-room-pw" class="setup-input" maxlength="4" placeholder="설정 안 함 (선택 입력 · 숫자 4자리)">
-                    </div>
+                    <!-- 과정 비밀번호는 폐지(오픈 접근). JS 호환용 숨김 필드만 유지 -->
+                    <input type="hidden" id="setup-room-pw" value="">
                 </div>
 
 <div class="setup-group" style="margin-bottom:20px;">
@@ -2354,7 +2352,7 @@ body.in-course #moreToggleTab{ display:flex !important; }
                         </div>
                     </div>
 
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom:20px;">
+                <div style="display: grid; grid-template-columns: 1.7fr 1fr; gap: 20px; margin-bottom:20px;">
                     <div class="setup-group">
                         <label style="display:block; font-size:12px; font-weight:800; color:#64748b; margin-bottom:8px;">강의실 상세 위치</label>
                         <div style="display:flex; gap:5px; align-items: center;">
@@ -2417,10 +2415,8 @@ body.in-course #moreToggleTab{ display:flex !important; }
                     </div>
                 </div>
 
-                <div class="setup-group" style="margin-bottom:20px;">
-                    <label style="display:block; font-size:12px; font-weight:800; color:#64748b; margin-bottom:8px;"><i class="fa-solid fa-comment" style="color:#FAE100;"></i> 카카오톡 오픈톡방 링크 <span style="font-weight:600; color:#94a3b8;">(선택 — 입력 시 교육생 화면에 버튼 표시)</span></label>
-                    <input type="text" id="setup-kakao-link" class="setup-input" placeholder="예: https://open.kakao.com/o/xxxxxxx">
-                </div>
+                <!-- 카카오 오픈톡방 링크는 교수 프로필에 등록되어 자동 적용됨 → 과정 설정에서는 숨김(JS 호환용 hidden 유지) -->
+                <input type="hidden" id="setup-kakao-link" value="">
 
                 <div class="setup-group" style="margin-bottom:20px;">
                     <label for="setup-show-on-board" style="display:flex; align-items:center; gap:10px; cursor:pointer; padding:13px 15px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px;">
@@ -2453,7 +2449,8 @@ body.in-course #moreToggleTab{ display:flex !important; }
                 <!-- 접이식 아코디언: 바 클릭 시 펼침 (공간 절약) -->
                 <div class="setup-acc">
 
-                    <div class="acc-item open">
+                    <!-- 입교안내 가이드(PDF) 업로드 메뉴 숨김 (요청) — JS 호환 위해 요소는 유지 -->
+                    <div class="acc-item" style="display:none;">
                         <button type="button" class="acc-head" onclick="setupAcc(this)">
                             <span><i class="fa-solid fa-file-pdf" style="color:#3b82f6;"></i> 입교안내 가이드 (PDF)</span>
                             <i class="fa-solid fa-chevron-down acc-arrow"></i>
@@ -2490,62 +2487,41 @@ body.in-course #moreToggleTab{ display:flex !important; }
                             <i class="fa-solid fa-chevron-down acc-arrow"></i>
                         </button>
                         <div class="acc-body">
-                            <p style="font-size:10px; color:#64748b; margin:0 0 10px 0; line-height:1.5;">체크 해제 시 교육생 앱에서 해당 메뉴가 숨겨집니다.</p>
-                            <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px;">
-                                <label style="display:flex; align-items:center; gap:6px; font-size:12px; font-weight:700; color:#334155; cursor:pointer;">
-                            <input type="checkbox" id="feat-facility" checked style="width:15px; height:15px; accent-color:#10b981;">
-                            <i class="fa-solid fa-soap" style="color:#10b981;"></i> 생활관 비품
-                        </label>
-                        <label style="display:flex; align-items:center; gap:6px; font-size:12px; font-weight:700; color:#334155; cursor:pointer;">
-                            <input type="checkbox" id="feat-shuttle" checked style="width:15px; height:15px; accent-color:#3b82f6;">
-                            <i class="fa-solid fa-bus" style="color:#3b82f6;"></i> 차량 신청
-                        </label>
-                        <label style="display:flex; align-items:center; gap:6px; font-size:12px; font-weight:700; color:#334155; cursor:pointer;">
-                            <input type="checkbox" id="feat-adminAction" checked style="width:15px; height:15px; accent-color:#f59e0b;">
-                            <i class="fa-solid fa-person-walking-arrow-right" style="color:#f59e0b;"></i> 외출/외박
-                        </label>
-                        <label style="display:flex; align-items:center; gap:6px; font-size:12px; font-weight:700; color:#334155; cursor:pointer;">
-                            <input type="checkbox" id="feat-meal" checked style="width:15px; height:15px; accent-color:#ef4444;">
-                            <i class="fa-solid fa-utensils" style="color:#ef4444;"></i> 식단 보기
-                        </label>
-                        <label style="display:flex; align-items:center; gap:6px; font-size:12px; font-weight:700; color:#334155; cursor:pointer;">
-                            <input type="checkbox" id="feat-attendanceQr" checked style="width:15px; height:15px; accent-color:#6366f1;">
-                            <i class="fa-solid fa-keyboard" style="color:#6366f1;"></i> OTP 출결
-                        </label>
-                        <label style="display:flex; align-items:center; gap:6px; font-size:12px; font-weight:700; color:#334155; cursor:pointer;">
-                            <input type="checkbox" id="feat-cns" checked style="width:15px; height:15px; accent-color:#0ea5e9;">
-                            <i class="fa-solid fa-tower-broadcast" style="color:#0ea5e9;"></i> CNS 플랫폼
-                        </label>
-                        <label style="display:flex; align-items:center; gap:6px; font-size:12px; font-weight:700; color:#334155; cursor:pointer;">
-                            <input type="checkbox" id="feat-tabletLoan" checked style="width:15px; height:15px; accent-color:#6366f1;">
-                            <i class="fa-solid fa-tablet-screen-button" style="color:#6366f1;"></i> 태블릿 대여
-                        </label>
-                        <label style="display:flex; align-items:center; gap:6px; font-size:12px; font-weight:700; color:#334155; cursor:pointer;">
-                            <input type="checkbox" id="feat-kakao" checked style="width:15px; height:15px; accent-color:#FAE100;">
-                            <i class="fa-solid fa-comment" style="color:#3A1D1D;"></i> 오픈톡방
-                        </label>
-                        <label style="display:flex; align-items:center; gap:6px; font-size:12px; font-weight:700; color:#334155; cursor:pointer;">
-                            <input type="checkbox" id="feat-hrd" checked style="width:15px; height:15px; accent-color:#2563eb;">
-                            <i class="fa-solid fa-id-card-clip" style="color:#2563eb;"></i> 고용노동부 출결
-                        </label>
-                        <label style="display:flex; align-items:center; gap:6px; font-size:12px; font-weight:700; color:#334155; cursor:pointer;">
-                            <input type="checkbox" id="feat-foodspots" style="width:15px; height:15px; accent-color:#f59e0b;">
-                            <i class="fa-solid fa-burger" style="color:#f59e0b;"></i> 항기원 맛집
-                        </label>
+                            <p style="font-size:11px; color:#64748b; margin:0 0 10px 0; line-height:1.55;">현재 운영에 쓰는 <b>외출/외박 · 차량 신청</b>만 표시합니다. <b>외출/외박</b> 체크를 해제하면 교육생 앱에 <b style="color:#b91c1c;">"외출·외박 불가 과정"</b>으로 안내됩니다.</p>
+                            <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+                                <label style="display:flex; align-items:center; gap:8px; font-size:13px; font-weight:800; color:#334155; cursor:pointer; padding:9px 11px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px;">
+                                    <input type="checkbox" id="feat-adminAction" checked style="width:16px; height:16px; accent-color:#f59e0b;">
+                                    <i class="fa-solid fa-person-walking-arrow-right" style="color:#f59e0b;"></i> 외출/외박
+                                </label>
+                                <label style="display:flex; align-items:center; gap:8px; font-size:13px; font-weight:800; color:#334155; cursor:pointer; padding:9px 11px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px;">
+                                    <input type="checkbox" id="feat-shuttle" checked style="width:16px; height:16px; accent-color:#3b82f6;">
+                                    <i class="fa-solid fa-bus" style="color:#3b82f6;"></i> 차량 신청
+                                </label>
+                                <!-- 아래 메뉴들은 현재 미사용 → 숨김. JS 호환 위해 요소는 유지(저장값 그대로) -->
+                                <div style="display:none;">
+                                    <input type="checkbox" id="feat-facility" checked>
+                                    <input type="checkbox" id="feat-meal" checked>
+                                    <input type="checkbox" id="feat-attendanceQr" checked>
+                                    <input type="checkbox" id="feat-cns" checked>
+                                    <input type="checkbox" id="feat-tabletLoan" checked>
+                                    <input type="checkbox" id="feat-kakao" checked>
+                                    <input type="checkbox" id="feat-hrd" checked>
+                                    <input type="checkbox" id="feat-foodspots">
+                                </div>
                             </div>
                         </div>
                     </div>
 
-                    <div class="acc-item">
+                    <div class="acc-item open">
                         <button type="button" class="acc-head" onclick="setupAcc(this)">
-                            <span><i class="fa-solid fa-chalkboard-user" style="color:#7c3aed;"></i> 출강 강사 리스트</span>
+                            <span><i class="fa-solid fa-chalkboard-user" style="color:#7c3aed;"></i> 출강 강사 리스트 <span style="font-weight:600; color:#94a3b8; font-size:11px;">(강사명·과목 추가)</span></span>
                             <i class="fa-solid fa-chevron-down acc-arrow"></i>
                         </button>
                         <div class="acc-body">
-                            <div id="setup-subject-list" style="max-height:160px; overflow-y:auto; margin-bottom:10px;"></div>
+                            <div id="setup-subject-list" style="max-height:180px; overflow-y:auto; margin-bottom:10px;"></div>
                             <div style="display:flex; gap:5px;">
-                                <input type="text" id="setup-new-subject" class="setup-input" style="flex:1;" placeholder="강사명 또는 과목명 입력">
-                                <button class="btn-action btn-primary btn-small" onclick="subjectMgr.addSubjectInModal()" style="width:60px;">추가</button>
+                                <input type="text" id="setup-new-subject" class="setup-input" style="flex:1;" placeholder="강사명 또는 과목명 입력 후 추가" onkeydown="if(event.key==='Enter'){event.preventDefault();subjectMgr.addSubjectInModal();}">
+                                <button class="btn-action btn-primary btn-small" onclick="subjectMgr.addSubjectInModal()" style="width:70px;"><i class="fa-solid fa-plus"></i> 추가</button>
                             </div>
                         </div>
                     </div>

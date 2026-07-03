@@ -2640,6 +2640,25 @@ function applyMenuFeatures(features) {
     menuMap.forEach(({ key, selector }) => {
         const el = document.querySelector(selector);
         if (!el) return;
+        // [외출·외박 불가 과정] adminAction 체크 해제 시: 숨기지 않고 '불가 과정' 안내로 표시
+        if (key === 'adminAction') {
+            if (features.adminAction === false) {
+                el.style.display = '';
+                el.style.pointerEvents = 'none';
+                el.style.opacity = '0.6';
+                el.style.background = '#fef2f2';
+                el.style.color = '#b91c1c';
+                el.innerHTML = '<i class="fa-solid fa-ban" style="margin-right:6px;"></i> 본 과정은 외출·외박 불가 과정입니다';
+            } else {
+                el.style.display = '';
+                el.style.pointerEvents = '';
+                el.style.opacity = '';
+                el.style.background = '';
+                el.style.color = '';
+                el.innerHTML = '<i class="fa-solid fa-file-signature"></i> 외출·외박 / 석식제외';
+            }
+            return;
+        }
         el.style.display = features[key] !== false ? '' : 'none';
     });
     // 항기원 맛집: 기본 OFF — 강사가 켰을 때만 노출
