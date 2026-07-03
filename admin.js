@@ -8199,7 +8199,7 @@ init: function() {
         // [영상 대체] 카카오채널 입교/출결 등록방법 안내를 GitHub에 올린 start.mp4 영상으로 상영.
         // 전체화면/윈도우 어느 쪽이든 화면을 꽉 채워 재생. 영상 파일이 없으면 안내 문구 표시.
         return `<div class="guide-channel-slide guide-video-slide">
-          <video id="cgVideo" class="cg-video" src="start.mp4?t=${Date.now()}" playsinline controls preload="auto"
+          <video id="cgVideo" class="cg-video" src="start.mp4?t=${Date.now()}" playsinline controls loop preload="auto"
                  onerror="var f=document.getElementById('cgVideoFallback'); if(f) f.style.display='flex'; this.style.display='none';"></video>
           <div id="cgVideoFallback" class="cg-video-fallback" style="display:none;">
             <i class="fa-solid fa-video-slash"></i>
