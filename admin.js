@@ -8210,6 +8210,10 @@ init: function() {
             <p><b>영상(start.mp4)</b>을 불러오지 못했습니다.</p>
             <span>GitHub 저장소에 <b>start.mp4</b> 파일이 업로드되었는지 확인해 주세요.</span>
           </div>
+          <div id="cgCountBox" class="cg-count-box" title="3초간 꾹 누르면 위치를 옮길 수 있습니다 (모든 과정 공통)">
+            <div class="cg-count-label">현재 입교등록</div>
+            <div class="cg-count-num"><b id="cgCountNum">0</b><span class="cg-count-unit">명</span></div>
+          </div>
         </div>`;
     },
 
@@ -8619,8 +8623,22 @@ init: function() {
             guideMgr.isRendering = false;
             _showGuideLayer('virtual');
             if (_profEl) { _profEl.innerHTML = guideMgr._channelGuideHTML(); }
-            // 이전 reg-count 리스너가 남아있으면 정리
+            // [입교등록 실시간 카운트] 좌측 큰 숫자 — 학생 입교 시 새로고침 없이 즉시 갱신
             try { if (ui._cgRegRef) { ui._cgRegRef.off(); ui._cgRegRef = null; } } catch (e) {}
+            try {
+                ui._cgRegRef = firebase.database().ref('courses/' + guideMgr._room() + '/students');
+                ui._cgRegRef.on('value', function (s) {
+                    const _stu = s.val() || {};
+                    const _cnt = new Set(Object.values(_stu).filter(x => x && x.name && x.name !== 'undefined').map(x => String(x.name).trim())).size;
+                    const _el = document.getElementById('cgCountNum'); if (_el) _el.textContent = _cnt;
+                });
+            } catch (e) {}
+            // 카운트 블록 위치(모든 과정 공통 · 윈도우/전체화면 좌표 개별) 적용 + 3초 롱프레스 드래그 연결
+            try { if (ui._applyVideoCountPos) ui._applyVideoCountPos(); } catch (e) {}
+            try {
+                const _cb = document.getElementById('cgCountBox');
+                if (_cb && ui._bindVideoCountDrag) ui._bindVideoCountDrag(_cb);
+            } catch (e) {}
             // 페이지 진입 시 영상 자동 재생 시도(내비게이션 클릭이 사용자 제스처로 인정되어 대부분 재생됨).
             // 차단되면 controls로 직접 재생 가능.
             try {
@@ -12791,6 +12809,82 @@ ui.saveGuidePageSettings = function(){
     })
     .catch(function(){ var msg=document.getElementById('gpp-msg'); if(msg) msg.textContent='저장 중 오류가 발생했습니다.'; });
 };
+// ── [입교등록 카운트 블록] 영상(start.mp4) 페이지 좌측 큰 숫자 ──
+//    위치 = 전체 과정 공통(system/sharedGuide/videoCountPos), 윈도우/전체화면 좌표 개별 저장.
+//    3초 꾹 누르면 드래그로 이동.
+ui._videoCountDefaultPos = { win:{ x:4, y:34 }, fs:{ x:4, y:34 } };   // %(슬라이드 기준) — 좌측 중앙쯤
+ui._videoCountPos = null; ui._videoCountPosLoaded = false;
+ui._isGuideFs = function(){ return !!(document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement); };
+ui._loadVideoCountPos = function(cb){
+  firebase.database().ref('system/sharedGuide/videoCountPos').once('value').then(function(s){
+    var v = s.val() || {}; var d = ui._videoCountDefaultPos;
+    ui._videoCountPos = {
+      win: { x: (v.win&&isFinite(v.win.x))?Number(v.win.x):d.win.x, y: (v.win&&isFinite(v.win.y))?Number(v.win.y):d.win.y },
+      fs:  { x: (v.fs &&isFinite(v.fs.x)) ?Number(v.fs.x) :d.fs.x,  y: (v.fs &&isFinite(v.fs.y)) ?Number(v.fs.y) :d.fs.y }
+    };
+    ui._videoCountPosLoaded = true; if(cb) cb();
+  }).catch(function(){ var d=ui._videoCountDefaultPos; ui._videoCountPos={win:{x:d.win.x,y:d.win.y},fs:{x:d.fs.x,y:d.fs.y}}; ui._videoCountPosLoaded=true; if(cb) cb(); });
+};
+ui._saveVideoCountPos = function(){
+  if(!ui._videoCountPos) return;
+  firebase.database().ref('system/sharedGuide/videoCountPos').set({ win:ui._videoCountPos.win, fs:ui._videoCountPos.fs }).catch(function(){});
+};
+ui._applyVideoCountPos = function(){
+  var box = document.getElementById('cgCountBox'); if(!box) return;
+  if(!ui._videoCountPosLoaded){ ui._loadVideoCountPos(function(){ ui._applyVideoCountPos(); }); return; }
+  var P = ui._videoCountPos || ui._videoCountDefaultPos;
+  var c = ui._isGuideFs() ? P.fs : P.win;
+  box.style.left = c.x + '%';
+  box.style.top  = c.y + '%';
+};
+ui._bindVideoCountDrag = function(box){
+  if(!box || box._cgBound) return; box._cgBound = true;
+  var holdTimer=null, dragMode=false, moved=false, sx=0, sy=0, gx=0, gy=0;
+  var clearHold=function(){ if(holdTimer){ clearTimeout(holdTimer); holdTimer=null; } box.classList.remove('cg-count-pressing'); };
+  box.addEventListener('pointerdown', function(e){
+    e.stopPropagation();
+    sx=e.clientX; sy=e.clientY; moved=false; dragMode=false;
+    try{ box.setPointerCapture(e.pointerId); }catch(_){}
+    box.classList.add('cg-count-pressing');
+    holdTimer=setTimeout(function(){
+      dragMode=true; box.classList.remove('cg-count-pressing'); box.classList.add('cg-count-dragging');
+      var cr=box.getBoundingClientRect(); gx=sx-cr.left; gy=sy-cr.top;
+      try{ if(navigator.vibrate) navigator.vibrate(45); }catch(_){}
+    }, 3000);
+  });
+  box.addEventListener('pointermove', function(e){
+    if(dragMode){
+      e.preventDefault();
+      var slide = box.parentElement; if(!slide) return; var r=slide.getBoundingClientRect();
+      var bw = box.offsetWidth/r.width*100, bh = box.offsetHeight/r.height*100;
+      var nl=(e.clientX-gx-r.left)/r.width*100, nt=(e.clientY-gy-r.top)/r.height*100;
+      nl=Math.max(0,Math.min(100-bw,nl)); nt=Math.max(0,Math.min(100-bh,nt));
+      box.style.left=nl.toFixed(2)+'%'; box.style.top=nt.toFixed(2)+'%';
+      if(!ui._videoCountPos){ var d=ui._videoCountDefaultPos; ui._videoCountPos={win:{x:d.win.x,y:d.win.y},fs:{x:d.fs.x,y:d.fs.y}}; }
+      var P=ui._videoCountPos;
+      if(!P.fs) P.fs={}; if(!P.win) P.win={};
+      var slot = ui._isGuideFs() ? P.fs : P.win;
+      slot.x=+nl.toFixed(2); slot.y=+nt.toFixed(2);
+    } else if(Math.hypot(e.clientX-sx,e.clientY-sy)>10){ moved=true; clearHold(); }
+  });
+  box.addEventListener('pointerup', function(e){
+    e.stopPropagation(); clearHold();
+    try{ box.releasePointerCapture(e.pointerId); }catch(_){}
+    if(dragMode){ dragMode=false; box.classList.remove('cg-count-dragging'); ui._saveVideoCountPos();
+      if(ui.showAlert) ui.showAlert('📍 입교등록 카운트 위치를 저장했습니다. ('+(ui._isGuideFs()?'전체화면':'창 모드')+' · 모든 과정 공통)'); }
+  });
+  box.addEventListener('pointercancel', function(){ clearHold(); if(dragMode){ dragMode=false; box.classList.remove('cg-count-dragging'); ui._saveVideoCountPos(); } });
+  box.addEventListener('click', function(e){ e.stopPropagation(); });
+  box.addEventListener('contextmenu', function(e){ e.stopPropagation(); e.preventDefault(); });
+};
+// 전체화면 진입/해제 시 카운트 블록 위치를 해당 모드 좌표로 다시 적용 (윈도우/전체화면 좌표 분리)
+if(!ui._videoCountFsHook){
+  ui._videoCountFsHook = true;
+  ['fullscreenchange','webkitfullscreenchange','msfullscreenchange'].forEach(function(ev){
+    document.addEventListener(ev, function(){ try{ if(document.getElementById('cgCountBox') && ui._applyVideoCountPos) ui._applyVideoCountPos(); }catch(e){} });
+  });
+}
+
 // 교육장소 페이지 오버레이: 교육동 4칸에 선택된 강의실 ✓ 표시 (셀 위치는 % · 화면 보고 미세조정 가능)
 // 칸 위치 = 전체 과정 공통 (system/sharedGuide/venuePos). 3초 꾹 누르면 드래그로 이동
 ui._venueDefaultPos = { lefts:[5,36,68], tops:[52,52,52], w:31, h:16 };   // 3개 교육동 흰 칸 너비를 넓혀 강의실명을 온전히 표시
