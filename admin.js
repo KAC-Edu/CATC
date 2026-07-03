@@ -822,9 +822,19 @@ forceEnterRoom: async function(room) {
 
     dbRef.settings.on('value', s => {
         if (state.room !== cleanRoom) return;
-        ui.renderSettings(s.val() || {});
-        ui.applyQuickTabs(s.val() || {});   // [퀵 탭] 과정별 3·4번 버튼 적용
-        if (ui.applyRemoteMenu) ui.applyRemoteMenu(s.val() || {});   // [육각 리모컨] 과정별 메뉴 적용
+        const _sv = s.val() || {};
+        ui.renderSettings(_sv);
+        ui.applyQuickTabs(_sv);   // [퀵 탭] 과정별 3·4번 버튼 적용
+        if (ui.applyRemoteMenu) ui.applyRemoteMenu(_sv);   // [육각 리모컨] 과정별 메뉴 적용
+        // [교육장소 실시간] 검색카드/과정현황에서 강의실을 바꾸면 입교안내 '교육장소' 오버레이도 즉시 반영
+        try {
+            if (typeof guideMgr !== 'undefined' && guideMgr._slot) {
+                const _sl = guideMgr._slot();
+                if (_sl) { _sl.venuePick = _sv.venuePick || {}; _sl.roomDetailName = _sv.roomDetailName || ''; }
+                const _ov = document.getElementById('guideVenueOverlay');
+                if (_ov && _ov.style.display !== 'none' && ui.renderVenueOverlay) ui.renderVenueOverlay();
+            }
+        } catch (e) {}
     });
 
     dbRef.status.on('value', s => {
@@ -5831,9 +5841,11 @@ resetShuttleRequests: function() {
             ev2.stopPropagation();
             var b=ev2.target.closest('button'); if(!b) return;
             var v=b.dataset.v||'';
-            // roomDetailName + 수동 지정 플래그를 함께 저장 → 전 화면 공유 + 자동배치가 덮어쓰지 않고 유지(새로고침 안전)
+            // roomDetailName + 수동 지정 플래그를 함께 저장 → 전 화면 공유 + 자동배치가 덮어쓰지 않고 유지(새로고침 안전).
+            // 입교안내 교육장소 오버레이는 venuePick을 우선하므로, 검색카드 선택이 반영되도록 venuePick을 비운다(→ roomDetailName로 자동 표시).
             var _vu={};
             _vu['courses/'+room+'/settings/roomDetailName']=v||null;
+            _vu['courses/'+room+'/settings/venuePick']=null;
             _vu['courses/'+room+'/status/roomDetailManual']=true;
             firebase.database().ref().update(_vu).catch(function(){});
             var lbl=document.getElementById('hsrVenue'+room); if(lbl) lbl.textContent=v||'장소 미정';
