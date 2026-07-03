@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<!-- PLATFORM_EDIT_STATUS: 수정아닙니다 | VERSION: J99 J99 J99 J99 J99 | 2026-07-03 -->
+<!-- PLATFORM_EDIT_STATUS: 수정아닙니다 | VERSION: J100 J100 J100 J100 J100 | 2026-07-03 -->
 <!-- ══════════════════ [편집상태 / EDIT-STATUS] ══════════════════
      STATUS : 수정아닙니다
      FILE   : index.html (교육생)
-     VERSION: J99 J99 J99 J99 J99
-     UPDATED: 2026-07-03  (vJ99: OTP 입력칸(ko-digit) 반응형 — box-sizing/padding0/line-height1 + 글자크기 clamp(18~24px), 간격·본문패딩 축소로 좁은 폰에서 숫자가 네모 밖으로 넘쳐 안 보이던 문제 해소. | vJ98: J97의 #keduOtp CSS 변경(flex/padding)이 OTP 입력화면을 깨뜨려 숫자 가려짐 → 원래 중앙정렬로 원복. keduEnroll 스크롤 수정과 학생 OTP 검증 개선은 유지. | vJ97: [버그] 입교카드(keduEnroll)·OTP(keduOtp) 화면 짧은 폰에서 하단 잘림→스크롤 되게(flex-start+overflow). 학생 OTP 검증을 '현재 서버코드 일치 시 시계오차 무관 인정'으로 바꿔 오판 만료 방지(5분 초과 방치 세션만 차단). ※OTP 근본원인(강사페이지 새로고침 시 OTP 재생성)은 admin.js 수정 필요. | vJ96: [정합성] 구(旧) 일반입교 동명확인(showKacConfirm 경로)을 카카오 입교 vJ93 정책과 통일 — '본인' 선택 시 기존 번호 강제채택을 제거하고 입력 번호 유지 + 저장 후 기존 다른-번호 중복 기록 제거(_kacDupRemoveTokenB). 모달 안내문도 동작과 일치하게 수정. [문구] ①OTP '과정 정보가 없어 OTP 전체 확인으로 진행' → '출결 확인 중입니다' ②명단 리셋 감지 '사용자 정보가 변경되어 초기화합니다' → '과정 명단이 새로 정리되어 입교 등록이 다시 필요합니다' ③비품 게이트 '비공식적으로 과정이 운영 중' → '정식 개설 확정 전' ④태블릿 대여 '접속 정보를 확인할 수 없습니다'(2곳) → '입교 등록 정보를 찾을 수 없습니다. 입교/홈에서 등록 후 다시 이용해 주세요' ⑤changeRoom prompt 'Room N' → '강의실 N'. | vJ95: 리셋 후 카카오 재입교 시 resetKey를 서버값으로 동기화해 메인앱 진입 시 오판 초기화 방지. 입교카드 버튼문구 신규='입교 등록'/편집='정보 수정하기'로 구분. | vJ94: 외출외박 STEP2 신원 편집을 인라인+‘수정 완료’ 버튼으로 개선. 이름·사번 수정이 profileOverlay/입교완료로 이탈하지 않고 STEP2에서 바로 수정 후 다음 단계 진행. | vJ93: 동명 중복확인에서 '본인' 선택 시 기존ID 강제채택 제거 → 입력한 사번 그대로 유지하고 이전 다른-번호 중복기록은 저장 후 제거. 모달 안내문 수정. | vJ92: 동명 중복 확인을 3버튼 커스텀 모달로(예 본인/아닙니다 다른사람/닫기). 본인 선택 시 기존 식별ID 병합(입력 번호 달라도 중복방지), 닫기는 입교 중단. | vJ91: 차량 결과 카드에서 신청 장소를 상단 제목이 아닌 '과정·신청자 아래 행'으로 이동하고 크게(18px 청색) 강조. 제목은 '나의 퇴교차량'으로 복원. | vJ90: 차량 신청 결과 카드를 입교완료 카드와 동일 규격(청색 그라데이션 헤더·큰 글씨)으로 통일, 목적지를 제목으로 크게 표시. | vJ89: 학생장 지정/해제를 .on 실시간 리스너로 변경 — 강사가 학생장 지정 시 새로고침 없이 즉시 금일현황 패널 노출, 해제 시 즉시 숨김. | vJ88: 카카오 입교 흐름(submitEnroll)에 동명 중복 확인 복원 — 같은 이름 다른 식별ID 발견 시 '본인 맞냐' 확인(본인→기존ID 병합, 아니면 신규). 편집모드 제외. | vJ87: 16시 이후 외출외박 제출 시 '석식 이용 간주' 안내 팝업 복원(J75에서 STEP5 건너뛰며 사라졌던 것) → 확인 후 신청현황으로. | vJ86: 강사가 과정명/기간을 수정(리네임)해도 교육생이 입교화면으로 초기화되지 않도록 courseKey 불일치 초기화 제거. 강의실 리셋(명단 삭제)·교육기간 종료 시에만 재입교. | vJ85: 질문하기 — 신규 질문 즉시 노출(내 질문 맨위 이동), 질문 몰릴 때 읽던 위치 고정+'새 질문 N개' 칩, 09시 운영일 윈도우 밖 오래된 질문은 학생화면에서 숨김(강사 플랫폼엔 유지). | vJ84: 외출외박 소속을 신청 미리보기·입력칸 자동채움·저장값까지 formatDept 적용해 '항공기술훈련원 OOO'로 일관 표기(대장에도 반영). | vJ83: 학생장 외출외박 카운팅을 admin과 동일한 09:00~익일09:00 KST 윈도우+오늘/어제 노드 병합으로 정렬(복귀자 포함 표시). | vJ82: 학생장 펼침 상세를 높이제한+내부스크롤 드롭다운으로(카드 가림 해소), 연락처 블록 줄바꿈 처리, 펼칠 때 부드럽게 노출. | vJ81: 학생장 패널 접이식 가로바로 변경(카드 가림 해소), 외출외박 항목에 비상연락처 표시+클릭 통화확인 팝업. | vJ80: 학생장 전용 패널(입교카드 아래) — 금일 외출외박·석식제외 실시간 현황 + 식당 전화하기(043-290-2325). | vJ79: 담임 글자크기 다른행과 완전통일(display:flex 제거), 신청취소 후 재초기화(이전정보 안내 복원), 패스트패스 연락처(STEP3)까지 항상 표시. | vJ78: 담임 글자크기 다른행과 통일(span 제거), 담당교수 실시간 반영(.on 리스너). | vJ77: 입교카드·출결완료 페이지에 과정담임 표시 + 전화아이콘→통화확인 팝업→통화 기능(professorProfiles 연락처 사용). | vJ76: 외출외박 현황화면 상단바 위 내용넘침 방지(flex-start), 복귀완료보고·신청취소 한 줄 배치. | vJ75: 입교문구 '항공기술훈련원 입교', 정보수정 시 개인정보동의 숨김, 외출외박 새로작성 빈양식, 소속 항공기술훈련원 표기, 외출외박 완료→수위실 현황화면 통일. | vJ74: 창닫기 기능(closeStudentWindow) 제거 — 카카오 채널 채팅창 닫기로 대체. 디버그 console.log 2종 정리. | vJ73: 미사용 함수 6종 제거 — exitApp·cleanUrlAndGo·checkDinnerTime·loadGroupCandidates·openRoomMove·wrapClose. 카카오 채널 바로가기 도입으로 불필요해진 진입/종료 관련 죽은 코드 정리. 맛집 기능 코드는 유지.)
+     VERSION: J100 J100 J100 J100 J100
+     UPDATED: 2026-07-03  (vJ100: 학생장 외출외박 현황 화면 디자인 개선 적용(대시보드형: 통계 타일·외출/외박/석식 세그먼트 탭·칩·복사 버튼 등). ※적용 중 파일 끝 잘림 발생분을 완전본으로 복구. | vJ99: OTP 입력칸(ko-digit) 반응형 — box-sizing/padding0/line-height1 + 글자크기 clamp(18~24px), 간격·본문패딩 축소로 좁은 폰에서 숫자가 네모 밖으로 넘쳐 안 보이던 문제 해소. | vJ98: J97의 #keduOtp CSS 변경(flex/padding)이 OTP 입력화면을 깨뜨려 숫자 가려짐 → 원래 중앙정렬로 원복. keduEnroll 스크롤 수정과 학생 OTP 검증 개선은 유지. | vJ97: [버그] 입교카드(keduEnroll)·OTP(keduOtp) 화면 짧은 폰에서 하단 잘림→스크롤 되게(flex-start+overflow). 학생 OTP 검증을 '현재 서버코드 일치 시 시계오차 무관 인정'으로 바꿔 오판 만료 방지(5분 초과 방치 세션만 차단). ※OTP 근본원인(강사페이지 새로고침 시 OTP 재생성)은 admin.js 수정 필요. | vJ96: [정합성] 구(旧) 일반입교 동명확인(showKacConfirm 경로)을 카카오 입교 vJ93 정책과 통일 — '본인' 선택 시 기존 번호 강제채택을 제거하고 입력 번호 유지 + 저장 후 기존 다른-번호 중복 기록 제거(_kacDupRemoveTokenB). 모달 안내문도 동작과 일치하게 수정. [문구] ①OTP '과정 정보가 없어 OTP 전체 확인으로 진행' → '출결 확인 중입니다' ②명단 리셋 감지 '사용자 정보가 변경되어 초기화합니다' → '과정 명단이 새로 정리되어 입교 등록이 다시 필요합니다' ③비품 게이트 '비공식적으로 과정이 운영 중' → '정식 개설 확정 전' ④태블릿 대여 '접속 정보를 확인할 수 없습니다'(2곳) → '입교 등록 정보를 찾을 수 없습니다. 입교/홈에서 등록 후 다시 이용해 주세요' ⑤changeRoom prompt 'Room N' → '강의실 N'. | vJ95: 리셋 후 카카오 재입교 시 resetKey를 서버값으로 동기화해 메인앱 진입 시 오판 초기화 방지. 입교카드 버튼문구 신규='입교 등록'/편집='정보 수정하기'로 구분. | vJ94: 외출외박 STEP2 신원 편집을 인라인+‘수정 완료’ 버튼으로 개선. 이름·사번 수정이 profileOverlay/입교완료로 이탈하지 않고 STEP2에서 바로 수정 후 다음 단계 진행. | vJ93: 동명 중복확인에서 '본인' 선택 시 기존ID 강제채택 제거 → 입력한 사번 그대로 유지하고 이전 다른-번호 중복기록은 저장 후 제거. 모달 안내문 수정. | vJ92: 동명 중복 확인을 3버튼 커스텀 모달로(예 본인/아닙니다 다른사람/닫기). 본인 선택 시 기존 식별ID 병합(입력 번호 달라도 중복방지), 닫기는 입교 중단. | vJ91: 차량 결과 카드에서 신청 장소를 상단 제목이 아닌 '과정·신청자 아래 행'으로 이동하고 크게(18px 청색) 강조. 제목은 '나의 퇴교차량'으로 복원. | vJ90: 차량 신청 결과 카드를 입교완료 카드와 동일 규격(청색 그라데이션 헤더·큰 글씨)으로 통일, 목적지를 제목으로 크게 표시. | vJ89: 학생장 지정/해제를 .on 실시간 리스너로 변경 — 강사가 학생장 지정 시 새로고침 없이 즉시 금일현황 패널 노출, 해제 시 즉시 숨김. | vJ88: 카카오 입교 흐름(submitEnroll)에 동명 중복 확인 복원 — 같은 이름 다른 식별ID 발견 시 '본인 맞냐' 확인(본인→기존ID 병합, 아니면 신규). 편집모드 제외. | vJ87: 16시 이후 외출외박 제출 시 '석식 이용 간주' 안내 팝업 복원(J75에서 STEP5 건너뛰며 사라졌던 것) → 확인 후 신청현황으로. | vJ86: 강사가 과정명/기간을 수정(리네임)해도 교육생이 입교화면으로 초기화되지 않도록 courseKey 불일치 초기화 제거. 강의실 리셋(명단 삭제)·교육기간 종료 시에만 재입교. | vJ85: 질문하기 — 신규 질문 즉시 노출(내 질문 맨위 이동), 질문 몰릴 때 읽던 위치 고정+'새 질문 N개' 칩, 09시 운영일 윈도우 밖 오래된 질문은 학생화면에서 숨김(강사 플랫폼엔 유지). | vJ84: 외출외박 소속을 신청 미리보기·입력칸 자동채움·저장값까지 formatDept 적용해 '항공기술훈련원 OOO'로 일관 표기(대장에도 반영). | vJ83: 학생장 외출외박 카운팅을 admin과 동일한 09:00~익일09:00 KST 윈도우+오늘/어제 노드 병합으로 정렬(복귀자 포함 표시). | vJ82: 학생장 펼침 상세를 높이제한+내부스크롤 드롭다운으로(카드 가림 해소), 연락처 블록 줄바꿈 처리, 펼칠 때 부드럽게 노출. | vJ81: 학생장 패널 접이식 가로바로 변경(카드 가림 해소), 외출외박 항목에 비상연락처 표시+클릭 통화확인 팝업. | vJ80: 학생장 전용 패널(입교카드 아래) — 금일 외출외박·석식제외 실시간 현황 + 식당 전화하기(043-290-2325). | vJ79: 담임 글자크기 다른행과 완전통일(display:flex 제거), 신청취소 후 재초기화(이전정보 안내 복원), 패스트패스 연락처(STEP3)까지 항상 표시. | vJ78: 담임 글자크기 다른행과 통일(span 제거), 담당교수 실시간 반영(.on 리스너). | vJ77: 입교카드·출결완료 페이지에 과정담임 표시 + 전화아이콘→통화확인 팝업→통화 기능(professorProfiles 연락처 사용). | vJ76: 외출외박 현황화면 상단바 위 내용넘침 방지(flex-start), 복귀완료보고·신청취소 한 줄 배치. | vJ75: 입교문구 '항공기술훈련원 입교', 정보수정 시 개인정보동의 숨김, 외출외박 새로작성 빈양식, 소속 항공기술훈련원 표기, 외출외박 완료→수위실 현황화면 통일. | vJ74: 창닫기 기능(closeStudentWindow) 제거 — 카카오 채널 채팅창 닫기로 대체. 디버그 console.log 2종 정리. | vJ73: 미사용 함수 6종 제거 — exitApp·cleanUrlAndGo·checkDinnerTime·loadGroupCandidates·openRoomMove·wrapClose. 카카오 채널 바로가기 도입으로 불필요해진 진입/종료 관련 죽은 코드 정리. 맛집 기능 코드는 유지.)
      ─ 규칙: 수정 시작 시 STATUS를 '수정중'으로, 완료 시 '수정아닙니다'로 변경하고 버전을 5회 반복 표기.
             '수정중'이면 다른 플랫폼은 연동 변경을 보류/협의 후 진행.
 ═══════════════════════════════════════════════════════════════ -->
@@ -7503,7 +7503,37 @@ body.kac-quiz-active .quiz-overlay,
 #keduHome .khl-callmini{ display:inline-flex; align-items:center; gap:5px; border:none; border-radius:9px; background:#2563eb; color:#fff; font-size:12.5px; font-weight:800; padding:7px 11px; cursor:pointer; white-space:nowrap; flex:0 0 auto; max-width:100%; }
 #keduHome .khl-callmini:active{ transform:scale(.97); }
 #keduHome .khl-nophone{ font-size:11.5px; font-weight:700; color:#cbd5e1; flex-shrink:0; }
-#keduHome .khl-detail .khl-call{ margin-top:14px; }
+#keduHome .khl-detail .khl-call{ margin-top:14px; background:#fff; border:1.5px solid #fdba74; color:#ea580c; box-shadow:none; }
+        #keduHome .khl-dinpill{ background:#fef3c7; color:#b45309; border:1px solid #fde68a; border-radius:999px; padding:4px 10px; font-size:12.5px; font-weight:900; }
+        #keduHome .khl-outmini{ font-size:12.5px; font-weight:800; color:#64748b; white-space:nowrap; }
+        #keduHome .khl-hero{ background:linear-gradient(135deg,#fffbeb,#fef3c7); border:1px solid #fde68a; border-radius:16px; padding:14px 16px; display:flex; align-items:center; justify-content:space-between; gap:12px; }
+        #keduHome .khl-hero-l{ min-width:0; }
+        #keduHome .khl-hero-t{ font-size:12.5px; font-weight:900; color:#b45309; }
+        #keduHome .khl-hero-s{ margin-top:3px; font-size:11.5px; font-weight:700; color:#a16207; }
+        #keduHome .khl-hero-n{ display:flex; align-items:baseline; gap:3px; flex-shrink:0; }
+        #keduHome .khl-hero-n b{ font-size:42px; font-weight:900; color:#b45309; line-height:1; }
+        #keduHome .khl-hero-n > span{ font-size:16px; font-weight:800; color:#b45309; }
+        #keduHome .khl-chips{ margin-top:11px; display:flex; flex-wrap:wrap; gap:6px; }
+        #keduHome .khl-chip{ background:#f1f5f9; border:1px solid #e2e8f0; border-radius:9px; padding:5px 10px; font-size:13px; font-weight:700; color:#334155; }
+        #keduHome .khl-copy{ margin-top:10px; display:inline-flex; align-items:center; gap:6px; background:#fff; border:1px solid #e2e8f0; border-radius:9px; color:#475569; font-size:12px; font-weight:800; padding:7px 11px; cursor:pointer; }
+        #keduHome .khl-div{ height:1px; background:#f1f5f9; margin:14px 0; }
+        #keduHome .khl-outhead{ display:flex; align-items:center; justify-content:space-between; }
+        #keduHome .khl-outhead b{ font-size:14px; font-weight:900; color:#0f172a; }
+        #keduHome .khl-outhead > span{ font-size:12.5px; font-weight:800; color:#64748b; }
+        #keduHome .khl-tiles{ display:flex; gap:10px; }
+        #keduHome .khl-tile{ flex:1; background:#f8fafc; border:1px solid #e2e8f0; border-radius:14px; padding:13px 14px; }
+        #keduHome .khl-tile-din{ flex:1.15; background:linear-gradient(135deg,#fffbeb,#fef3c7); border-color:#fde68a; }
+        #keduHome .khl-tile-t{ font-size:12px; font-weight:800; color:#475569; }
+        #keduHome .khl-tile-din .khl-tile-t{ color:#b45309; }
+        #keduHome .khl-tile-n{ margin-top:5px; display:flex; align-items:baseline; gap:3px; }
+        #keduHome .khl-tile-n b{ font-size:32px; font-weight:900; color:#0f172a; line-height:1; }
+        #keduHome .khl-tile-n > span{ font-size:14px; font-weight:800; color:#334155; }
+        #keduHome .khl-tile-din .khl-tile-n b, #keduHome .khl-tile-din .khl-tile-n > span{ color:#b45309; }
+        #keduHome .khl-tile-s{ margin-top:3px; font-size:11px; font-weight:800; color:#a16207; }
+        #keduHome .khl-tile-s2{ margin-top:3px; font-size:11px; font-weight:700; color:#94a3b8; }
+        #keduHome .khl-seg{ margin-top:12px; display:flex; background:#f1f5f9; border-radius:12px; padding:4px; gap:4px; }
+        #keduHome .khl-segbtn{ flex:1; border:none; border-radius:9px; background:transparent; color:#94a3b8; font-size:13px; font-weight:800; padding:9px 0; cursor:pointer; }
+        #keduHome .khl-segbtn.active{ background:#fff; color:#0f172a; box-shadow:0 1px 4px rgba(15,23,42,.12); }
 #keduDone{ position:fixed; inset:0; z-index:10060; display:none; flex-direction:column; align-items:center; justify-content:center; padding:26px 20px; background:linear-gradient(180deg,#eef5ff,#dbe9ff); text-align:center; }
 #keduDone .kd-card{ width:100%; max-width:380px; background:#fff; border-radius:20px; padding:30px 22px; box-shadow:0 18px 44px rgba(37,99,235,.18); }
 #keduDone h2{ margin:0 0 12px; font-size:23px; font-weight:900; color:#16a34a; }
@@ -7760,6 +7790,8 @@ body.kac-noanim #noticeModal > .menu-box, body.kac-noanim #surveyModal > .menu-b
   // ===== [학생장 전용] 금일 외출외박·석식제외 현황 + 식당 전화 =====
   var _leaderRefs=[];
   var _leaderExpanded=false;
+  var _leaderTab='din';
+  var _leaderLastSt=null;
   var _leaderDataRefs=[];
   function detachLeaderRefs(){ try{ _leaderRefs.forEach(function(r){ r.ref.off('value', r.cb); }); }catch(e){} _leaderRefs=[]; _detachLeaderDataRefs(); }
   function _detachLeaderDataRefs(){ try{ _leaderDataRefs.forEach(function(r){ r.ref.off('value', r.cb); }); }catch(e){} _leaderDataRefs=[]; }
@@ -7786,6 +7818,7 @@ body.kac-noanim #noticeModal > .menu-box, body.kac-noanim #surveyModal > .menu-b
   }
   function renderLeaderPanel(st){
     var panel=document.getElementById('khLeaderPanel'); if(!panel) return;
+    _leaderLastSt=st;
     var d=st.d||{};
     var dKeys=Object.keys(d);
     var dNames=dKeys.map(function(k){ var v=String(d[k]==null?'':d[k]); var i=v.indexOf('('); var nm=(i>0?v.slice(0,i):v).trim(); return _hrEsc(nm||'-'); });
@@ -7810,18 +7843,25 @@ body.kac-noanim #noticeModal > .menu-box, body.kac-noanim #surveyModal > .menu-b
         : '<span class="khl-nophone">연락처 없음</span>';
       return '<div class="khl-item"><span class="khl-itemname">'+nm+' <small>('+t+(x.returned?'·복귀':'')+')</small></span>'+right+'</div>';
     });
+    var dPlain=dKeys.map(function(k){ var v=String(d[k]==null?'':d[k]); var i=v.indexOf('('); var nm=(i>0?v.slice(0,i):v).trim(); return nm||'-'; });
     panel.innerHTML=
       '<div class="khl-bar" onclick="toggleLeaderPanel()">'+
         '<span class="khl-bartitle"><i class="fa-solid fa-crown"></i> 학생장 금일 현황</span>'+
-        '<span class="khl-sum">석식제외 '+dKeys.length+' · 외출외박 '+aArr.length+' <i id="khlChevron" class="fa-solid fa-chevron-'+(_leaderExpanded?'up':'down')+'"></i></span>'+
+        '<span class="khl-sum"><span class="khl-dinpill">석식 '+dKeys.length+'</span><span class="khl-outmini">외출외박 '+aArr.length+'</span> <i id="khlChevron" class="fa-solid fa-chevron-'+(_leaderExpanded?'up':'down')+'"></i></span>'+
       '</div>'+
       '<div id="khlDetail" class="khl-detail" style="display:'+(_leaderExpanded?'block':'none')+';">'+
-        '<div class="khl-sectitle">🍽️ 석식 제외 ('+dKeys.length+'명) <span class="khl-hint">식당 보고용</span></div>'+
-        (dKeys.length? '<div class="khl-names">'+dNames.join(', ')+'</div>' : '<div class="khl-empty">신청 없음</div>')+
-        '<div class="khl-sectitle" style="margin-top:13px;">🚶 외출·외박 ('+aArr.length+'명 · 외출 '+nOut+'/외박 '+nOver+') <span class="khl-hint">09시~익일09시</span></div>'+
-        (aArr.length? '<div class="khl-list">'+items.join('')+'</div>' : '<div class="khl-empty">신청 없음</div>')+
-        '<a href="tel:043-290-2325" class="khl-call"><i class="fa-solid fa-phone"></i> 식당 전화하기 (043-290-2325)</a>'+
-        '<div class="khl-note">비상 시 위 연락처를 눌러 바로 통화할 수 있습니다. 실시간 갱신.</div>'+
+        '<div class="khl-tiles">'+
+          '<div class="khl-tile khl-tile-din"><div class="khl-tile-t">🍽️ 석식 제외</div><div class="khl-tile-n"><b>'+dKeys.length+'</b><span>명</span></div><div class="khl-tile-s">식당 보고용 총원</div></div>'+
+          '<div class="khl-tile"><div class="khl-tile-t">🚶 외출·외박</div><div class="khl-tile-n"><b>'+aArr.length+'</b><span>명</span></div><div class="khl-tile-s2">외출 '+nOut+' · 외박 '+nOver+'</div></div>'+
+        '</div>'+
+        '<div class="khl-seg">'+
+          '<button type="button" class="khl-segbtn'+(_leaderTab==="din"?" active":"")+'" onclick="setLeaderTab(\'din\')">석식 제외</button>'+
+          '<button type="button" class="khl-segbtn'+(_leaderTab==="out"?" active":"")+'" onclick="setLeaderTab(\'out\')">외출·외박</button>'+
+        '</div>'+
+        (_leaderTab==="din"
+          ? (dKeys.length? '<div class="khl-chips" style="margin-top:13px;">'+dNames.map(function(n){return '<span class="khl-chip">'+n+'</span>';}).join('')+'</div><button type="button" class="khl-copy" onclick="copyLeaderDin(this)" data-names="'+_hrEsc(dPlain.join(', '))+'"><i class="fa-regular fa-copy"></i> 명단 복사</button>' : '<div class="khl-empty" style="margin-top:13px;">신청 없음</div>')
+          : (aArr.length? '<div class="khl-list" style="margin-top:13px;">'+items.join('')+'</div>' : '<div class="khl-empty" style="margin-top:13px;">신청 없음</div>'))+
+        '<a href="tel:043-290-2325" class="khl-call"><i class="fa-solid fa-phone"></i> 식당 전화 043-290-2325</a>'+
       '</div>';
   }
   window.toggleLeaderPanel=function(){
@@ -7840,6 +7880,17 @@ body.kac-noanim #noticeModal > .menu-box, body.kac-noanim #surveyModal > .menu-b
       showKacConfirm((name||'해당 교육생')+'님께 전화를 걸까요?', function(){ try{ location.href='tel:'+phone; }catch(e){} });
     }catch(e){}
   };
+  window.copyLeaderDin=function(btn){
+    try{
+      var t=(btn&&btn.getAttribute('data-names'))||'';
+      if(navigator.clipboard && t){
+        navigator.clipboard.writeText('석식 제외: '+t);
+        var o=btn.innerHTML; btn.innerHTML='<i class="fa-solid fa-check"></i> 복사됨';
+        setTimeout(function(){ try{ btn.innerHTML=o; }catch(e){} },1200);
+      }
+    }catch(e){}
+  };
+  window.setLeaderTab=function(t){ _leaderTab=t; if(_leaderLastSt){ renderLeaderPanel(_leaderLastSt); } };
   function loadLeaderPanel(room){
     var panel=document.getElementById('khLeaderPanel'); if(!panel) return;
     detachLeaderRefs();
