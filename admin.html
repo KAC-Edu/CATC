@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- PLATFORM_EDIT_STATUS: 수정완료 | VERSION: I6 | 2026-07-02 (I6: ZOOM 회의정보 전용 입력 모달 추가(자동 000 0000 0000 포맷). (I5: ZOOM 모니터링 버튼을 과정현황 장소 배지 옆으로 이동(출결화면 버튼 제거). (I4: ZOOM 모니터링을 admin 내장 뷰(view-zoom-monitor iframe)로 전환 — 더보기 메뉴 항목 추가(온라인 과정만 표시), 출결화면 버튼도 내장 뷰로 열림, 메뉴 이동에도 봇 연결 유지) (I3: 출결관리 모드줄에 ZOOM 모니터링 버튼 추가 — 온라인 과정에서만 표시, zoom_monitor.html?room= 새 탭) -->
+<!-- PLATFORM_EDIT_STATUS: 수정완료 | VERSION: I7 | 2026-07-03 (I7: 입교안내 룰렛·교육시간표 버튼 위치를 개별 저장) -->
 <html lang="ko">
 <head>
 <script>
@@ -14,9 +14,9 @@
 </script>
 <!-- ============================================================
   CATC · 강사 플랫폼  (admin.html)
-  STATUS    수정안하는중
-  @version  I2
-  @build    20260702-검색초기화위치수정
+  STATUS    수정완료
+  @version  I7
+  @build    20260703-guide-button-position
   ────────────────────────────────────────────────────────
   [코드 수정 규칙 · AI/개발자 공통]
   이 파일을 한 글자라도 고치면:
@@ -638,33 +638,56 @@ body.in-course #moreToggleTab{ display:flex !important; }
 </div>
 
 <script>
-/* [입교안내 버튼 위치 조정] 시간표·룰렛·시간표업로드 버튼을 3초 길게 눌러 드래그로 이동.
-   위치는 Firebase 전역(system/sharedGuide/guideBtnPos)에 %로 저장 → 모든 과정·모든 모니터 공통.
-   localStorage는 오프라인 즉시적용용 캐시. 세 버튼은 같은 자리라 위치 공유. */
+/* [입교안내 버튼 위치 조정] 룰렛과 시간표 버튼을 각각 3초 길게 눌러 이동.
+   위치는 Firebase 전역(system/sharedGuide/guideBtnPos/{roulette|schedule})에 개별 저장한다.
+   시간표 보기와 시간표 업로드 버튼은 같은 페이지 기능이므로 schedule 좌표를 공유한다. */
 (function(){
   var FBPATH='system/sharedGuide/guideBtnPos';
-  var LKEY='kac_guideBtnPos';
   var IDS=['guideRouletteBtn','guideScheduleBtn','guideScheduleUploadBtn'];
-  var curSaved=null;
+  var GROUP={
+    guideRouletteBtn:'roulette',
+    guideScheduleBtn:'schedule',
+    guideScheduleUploadBtn:'schedule'
+  };
+  var curSaved={roulette:null,schedule:null};
   function wrap(){ return document.getElementById('pdfWrapper'); }
-  function applyAll(p){
+  function idsFor(group){ return IDS.filter(function(id){ return GROUP[id]===group; }); }
+  function applyGroup(group,p){
     if(!p) return;
-    IDS.forEach(function(id){ var b=document.getElementById(id); if(b){ b.style.left=p.l+'%'; b.style.top=p.t+'%'; b.style.right='auto'; } });
+    idsFor(group).forEach(function(id){
+      var b=document.getElementById(id);
+      if(b){ b.style.left=p.l+'%'; b.style.top=p.t+'%'; b.style.right='auto'; }
+    });
   }
-  function localGet(){ try{ return JSON.parse(localStorage.getItem(LKEY)||'null'); }catch(e){ return null; } }
-  function localSet(p){ try{ p?localStorage.setItem(LKEY, JSON.stringify(p)):localStorage.removeItem(LKEY); }catch(e){} }
-  function savePos(p){
-    curSaved=p; localSet(p);
-    try{ if(window.firebase && firebase.database) firebase.database().ref(FBPATH).set({l:p.l,t:p.t}); }catch(e){}
+  function localKey(group){ return 'kac_guideBtnPos_'+group; }
+  function localGet(group){ try{ return JSON.parse(localStorage.getItem(localKey(group))||'null'); }catch(e){ return null; } }
+  function localSet(group,p){ try{ p?localStorage.setItem(localKey(group),JSON.stringify(p)):localStorage.removeItem(localKey(group)); }catch(e){} }
+  function savePos(group,p){
+    curSaved[group]=p; localSet(group,p);
+    try{ if(window.firebase && firebase.database) firebase.database().ref(FBPATH+'/'+group).set({l:p.l,t:p.t}); }catch(e){}
   }
   // Firebase 전역값 실시간 구독(모든 과정·모니터 공통) — 준비될 때까지 재시도
   (function subscribe(tries){
     if(window.firebase && firebase.database){
       try{
         firebase.database().ref(FBPATH).on('value', function(s){
-          var v=s.val();
-          if(v && typeof v.l==='number'){ curSaved={l:v.l,t:v.t}; localSet(curSaved); applyAll(curSaved); }
-          else { curSaved=null; localSet(null); }
+          var v=s.val() || {};
+          if(typeof v.l==='number'){
+            var legacy={l:Number(v.l),t:Number(v.t)};
+            firebase.database().ref(FBPATH).set({roulette:legacy,schedule:legacy}).catch(function(){});
+            return;
+          }
+          ['roulette','schedule'].forEach(function(group){
+            var p=v[group];
+            if(p && typeof p.l==='number' && typeof p.t==='number'){
+              curSaved[group]={l:Number(p.l),t:Number(p.t)};
+              localSet(group,curSaved[group]);
+              applyGroup(group,curSaved[group]);
+            }else{
+              curSaved[group]=null;
+              localSet(group,null);
+            }
+          });
         });
         return;
       }catch(e){}
@@ -673,6 +696,7 @@ body.in-course #moreToggleTab{ display:flex !important; }
   })(25);
   function bind(id){
     var b=document.getElementById(id); if(!b || b._posBound) return; b._posBound=true;
+    var group=GROUP[id];
     var holdTimer=null, dragging=false, sx=0, sy=0, curPos=null;
     b.style.touchAction='none';
     b.addEventListener('pointerdown', function(e){
@@ -701,13 +725,13 @@ body.in-course #moreToggleTab{ display:flex !important; }
       l=Math.max(0, Math.min(100 - bw/r.width*100, l));
       t=Math.max(0, Math.min(100 - bh/r.height*100, t));
       curPos={l:l, t:t};
-      IDS.forEach(function(id){ var x=document.getElementById(id); if(x){ x.style.left=l+'%'; x.style.top=t+'%'; x.style.right='auto'; } });
+      applyGroup(group,curPos);
     });
     function end(){
       clearTimeout(holdTimer);
       b.classList.remove('guidebtn-pressing','guidebtn-dragging');
       if(dragging){
-        if(curPos) savePos(curPos);
+        if(curPos) savePos(group,curPos);
         dragging=false;
         b._suppressClick=true; setTimeout(function(){ b._suppressClick=false; }, 80);
       }
@@ -715,17 +739,28 @@ body.in-course #moreToggleTab{ display:flex !important; }
     b.addEventListener('pointerup', end);
     b.addEventListener('pointercancel', end);
     b.addEventListener('click', function(e){ if(b._suppressClick){ e.preventDefault(); e.stopPropagation(); } }, true);
-    // 더블클릭으로 위치 초기화(전역)
+    // 더블클릭으로 선택한 버튼 그룹 위치만 초기화
     b.addEventListener('dblclick', function(e){ e.preventDefault(); e.stopPropagation();
-      curSaved=null; localSet(null);
-      try{ if(window.firebase && firebase.database) firebase.database().ref(FBPATH).remove(); }catch(_){}
-      IDS.forEach(function(id){ var x=document.getElementById(id); if(x){ x.style.left=''; x.style.top=''; x.style.right=''; } });
+      curSaved[group]=null; localSet(group,null);
+      try{ if(window.firebase && firebase.database) firebase.database().ref(FBPATH+'/'+group).remove(); }catch(_){}
+      idsFor(group).forEach(function(itemId){
+        var x=document.getElementById(itemId);
+        if(x){ x.style.left=''; x.style.top=''; x.style.right=''; }
+      });
     });
   }
-  function init(){ IDS.forEach(bind); var c=localGet(); if(c) applyAll(c); }
+  function init(){
+    IDS.forEach(bind);
+    ['roulette','schedule'].forEach(function(group){
+      var c=localGet(group);
+      if(c){ curSaved[group]=c; applyGroup(group,c); }
+    });
+  }
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', init);
   else init();
-  window.addEventListener('resize', function(){ if(curSaved) applyAll(curSaved); });
+  window.addEventListener('resize', function(){
+    ['roulette','schedule'].forEach(function(group){ if(curSaved[group]) applyGroup(group,curSaved[group]); });
+  });
 })();
 </script>
 

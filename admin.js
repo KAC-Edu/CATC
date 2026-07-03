@@ -1,16 +1,17 @@
+/* PLATFORM_EDIT_STATUS: 수정완료 | VERSION: J9 | 2026-07-03 */
 /* ============================================================
    PLATFORM_EDIT_STATUS: 수정완료 | VERSION: J8 | 2026-07-02 (J8: ZOOM 진입 요소를 CSS !important 규칙으로 원천 차단 — 오프라인이면 어떤 코드가 표시해도 절대 안 보임(body.zoom-room-online 클래스 게이트). (J7: ZOOM 진입 요소 표시를 [onclick*=openZoomMonitor] 전체 선택으로 통일 + 2초 하트비트 — 오프라인에서 pill 잔존 완전 차단. (J6: ①장소 수동지정 보호(roomDetailManual) — 연간계획 동기화가 온라인 설정 되돌리는 문제 차단 ②ZOOM 버튼 표시를 장소 배지 텍스트와 상시 동기(MutationObserver) — 오프라인인데 버튼 남는 문제 해소 ③저장알림 확인 후 회의정보 모달 순차 표시(동시 팝업 제거) ④회의번호 000 0000 0000 자동 포맷 전용 모달. (J5: ①ZOOM 버튼 과정현황 장소 옆으로+오프라인 완전숨김(방전환 기본숨김·온라인 가드) ②iframe 사이징 실측기반 재작성 ③온라인 장소 저장 시 회의번호/암호 과정별 저장(askZoomMeetingInfo) ④홈검색 카카오등록 교수 노란배지 ⑤퇴교차량 칩 인라인 펼침. (J4: ZOOM 모니터링 iframe 높이를 body zoom 배율 보정해 실제 화면에 맞춤 — 설정 패널 잘림 해소, 리사이즈 대응. (J3: ui.openZoomMonitor 추가 — ZOOM 모니터링을 내장 뷰(iframe)로 열고 과정 전환 시 확인 후 재로딩, 온라인 판별 토글에 더보기 메뉴 항목 포함) (J2: ①ZOOM 모니터링 버튼 표시로직 재적용(온라인 과정 판별) ②강의실 초기화 confirm에 삭제범위 안내 추가 ③QR 요소없음 개발자문구 교체 ④toggleNightMode/addSubject 널가드 — 구버전 잔재 안전화)
    CATC · 강사 플랫폼 로직  (admin.js)
-   STATUS    수정안하는중
-   @version  J8
-   @build    20260702-검색초기화위치수정
+   STATUS    수정완료
+   @version  J9
+   @build    20260703-guide-venue-width
    ------------------------------------------------------------
    [코드 수정 규칙 · AI/개발자 공통]
    이 파일을 고치면 @version 을 A -> B -> ... -> Z -> A1 -> B1 ...
    순으로 1단계 올리고, @build 를 수정 시각으로 갱신할 것.
    적용 여부는 브라우저 콘솔 로그(vA)로 확인한다.
 ============================================================ */
-try{console.log('%cCATC%c 강사 플랫폼 로직 (admin.js) %cvJ1%c build 20260702-search-clear','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}
+try{console.log('%cCATC%c 강사 플랫폼 로직 (admin.js) %cvJ9%c build 20260703-guide-venue-width','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}
 /* --- admin.js (Final Integrated Version - Fixed Syntax & Logic) --- */
 
 // --- [기본 데이터] 20문항 ---
@@ -12475,7 +12476,7 @@ ui.saveGuidePageSettings = function(){
 };
 // 교육장소 페이지 오버레이: 교육동 4칸에 선택된 강의실 ✓ 표시 (셀 위치는 % · 화면 보고 미세조정 가능)
 // 칸 위치 = 전체 과정 공통 (system/sharedGuide/venuePos). 3초 꾹 누르면 드래그로 이동
-ui._venueDefaultPos = { lefts:[5,37,68], tops:[52,52,52], w:26, h:16 };   // 3개 교육동(하늘관·글로벌·관제) 흰 칸 위치 (드래그로 미세조정 가능)
+ui._venueDefaultPos = { lefts:[5,36,68], tops:[52,52,52], w:31, h:16 };   // 3개 교육동 흰 칸 너비를 넓혀 강의실명을 온전히 표시
 ui._venuePos = null; ui._venuePosLoaded = false;
 ui._loadVenuePos = function(cb){
   firebase.database().ref('system/sharedGuide/venuePos').once('value').then(function(s){
@@ -12484,7 +12485,7 @@ ui._loadVenuePos = function(cb){
     ui._venuePos = {
       lefts: (Array.isArray(v.lefts)&&v.lefts.length===NC)? v.lefts.map(Number) : d.lefts.slice(),
       tops:  (Array.isArray(v.tops) &&v.tops.length===NC)?  v.tops.map(Number)  : d.tops.slice(),
-      w: Number(v.w)||d.w, h: Number(v.h)||d.h
+      w: Math.max(Number(v.w)||d.w,d.w), h: Number(v.h)||d.h
     };
     ui._venuePosLoaded = true; if(cb) cb();
   }).catch(function(){ var d=ui._venueDefaultPos; ui._venuePos={lefts:d.lefts.slice(),tops:d.tops.slice(),w:d.w,h:d.h}; ui._venuePosLoaded=true; if(cb) cb(); });

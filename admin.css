@@ -1,8 +1,8 @@
-/* PLATFORM_EDIT_STATUS: 수정완료 | VERSION: Q | 2026-07-02 */
+/* PLATFORM_EDIT_STATUS: 수정완료 | VERSION: R | 2026-07-03 */
 /* ============================================================
    CATC · 강사 플랫폼 스타일  (admin.css)
-   STATUS    수정안하는중
-   @version  Q   @build  20260702-검색초기화위치수정
+   STATUS    수정완료
+   @version  R   @build  20260703-guide-venue-width
    ------------------------------------------------------------
    [코드 수정 규칙] 수정 시 @version 을
    A -> B -> ... -> Z -> A1 -> B1 -> ... 순으로 1단계 올리고
@@ -4600,7 +4600,7 @@ body:not([data-mode="home"]):not([data-mode="waiting"]) .floating-home-btn{botto
 /* 선택된 칸: ✓ + 네이비 배지 (납작하지 않게 충분한 높이·여백) */
 /* 슬라이드 폭(cqw) 기준 크기 → 창/전체화면 모두 비율대로 커짐 */
 #guideVenueOverlay .gv-check{ display:inline-flex; align-items:center; justify-content:center; width:3.6cqw; height:3.6cqw; min-width:22px; min-height:22px; border:0.4cqw solid #2563eb; border-radius:0.7cqw; color:#2563eb; font-size:2.4cqw; flex:0 0 auto; background:#fff; }
-#guideVenueOverlay .gv-badge{ display:inline-flex; flex-direction:column; align-items:center; justify-content:center; background:linear-gradient(135deg,#2563eb,#1d4ed8); color:#fff !important; border:0.22cqw solid rgba(255,255,255,.85); border-radius:0.9cqw; padding:0.6cqw 1.6cqw; font-weight:900; line-height:1.15; white-space:nowrap; max-width:calc(100% - 5cqw); overflow:hidden; box-shadow:0 0.4cqw 1.4cqw rgba(15,23,42,.45); text-shadow:0 0.18cqw 0.5cqw rgba(0,0,0,.45); }
+#guideVenueOverlay .gv-badge{ display:inline-flex; flex-direction:column; align-items:center; justify-content:center; background:linear-gradient(135deg,#2563eb,#1d4ed8); color:#fff !important; border:0.22cqw solid rgba(255,255,255,.85); border-radius:0.9cqw; padding:0.6cqw 1.3cqw; font-weight:900; line-height:1.15; white-space:nowrap; max-width:calc(100% - 4.5cqw); min-width:0; overflow:hidden; box-shadow:0 0.4cqw 1.4cqw rgba(15,23,42,.45); text-shadow:0 0.18cqw 0.5cqw rgba(0,0,0,.45); }
 #guideVenueOverlay .gv-badge-main{ font-size:2.9cqw; color:#fff !important; line-height:1.2; max-width:100%; overflow:hidden; text-overflow:ellipsis; }
 #guideVenueOverlay .gv-badge.gv-badge-2 .gv-badge-main{ font-size:2.6cqw; }
 #guideVenueOverlay .gv-badge-sub{ font-size:1.7cqw; font-weight:800; color:#fff !important; opacity:.95; line-height:1.1; max-width:100%; overflow:hidden; text-overflow:ellipsis; }
