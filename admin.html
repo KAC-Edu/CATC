@@ -614,8 +614,18 @@ body.in-course #moreToggleTab{ display:flex !important; }
             <button id="guideScheduleBtn" onclick="event.stopPropagation(); ui.openScheduleView();" oncontextmenu="event.stopPropagation(); return false;" title="교육 시간표 보기"><i class="fa-solid fa-calendar-days"></i> 교육 시간표</button>
             <!-- [교육 시간표 QR 업로드] PDF 13p + 아직 시간표 미업로드일 때 노출 (깜빡한 교수용 즉석 업로드) -->
             <button id="guideScheduleUploadBtn" onclick="event.stopPropagation(); ui.openScheduleQrUpload();" oncontextmenu="event.stopPropagation(); return false;" title="시간표 QR 업로드"><i class="fa-solid fa-camera"></i> 시간표 업로드</button>
+            <!-- [J11 교육시간표 보기] 13p + 지원부 판독 시간표(grid) 있을 때만 노출 (녹색) -->
+            <button id="guideParsedScheduleBtn" onclick="event.stopPropagation(); ui.openParsedSchedule();" oncontextmenu="event.stopPropagation(); return false;" title="교육시간표 보기 — 지원부 업로드 파일에서 자동 판독된 시간표"><i class="fa-solid fa-table-cells-large"></i> 교육시간표 보기</button>
             <!-- [교육 장소] 교육장소 PDF 페이지(기본 14p)에서 교육동별 강의실 ✓ 오버레이 -->
             <div id="guideVenueOverlay" style="display:none;"></div>
+            <!-- [J11] 판독 시간표 슬라이드업 시트 (pdfWrapper 내부 → PDF 전체화면에서도 표시) -->
+            <div id="parsedScheduleSheet" onclick="event.stopPropagation();" oncontextmenu="event.stopPropagation(); return false;">
+                <div class="pss-head">
+                    <div class="pss-title" id="pssTitle"><i class="fa-solid fa-calendar-days"></i> 교육 시간표</div>
+                    <button class="pss-close" onclick="ui.closeParsedSchedule()" title="닫기"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+                <div class="pss-body" id="pssBody"></div>
+            </div>
         </div>
         <!-- 툴바 영역 -->
         <div style="display:flex; align-items:center; gap:8px; padding:8px 16px; background:#f8fafc; border-radius:12px; border:1px solid #e2e8f0; width:100%; max-width:1050px; box-sizing:border-box;">
@@ -644,10 +654,10 @@ body.in-course #moreToggleTab{ display:flex !important; }
    화면 모드별로 개별 저장한다. 시간표 보기/업로드 버튼은 schedule 좌표를 공유. */
 (function(){
   var FBPATH='system/sharedGuide/guideBtnPos';
-  var IDS=['guideRouletteBtn','guideScheduleBtn','guideScheduleUploadBtn'];
-  var GROUP={ guideRouletteBtn:'roulette', guideScheduleBtn:'schedule', guideScheduleUploadBtn:'schedule' };
-  var GROUPS=['roulette','schedule'], MODES=['window','fullscreen'];
-  var curSaved={roulette:{window:null,fullscreen:null},schedule:{window:null,fullscreen:null}};
+  var IDS=['guideRouletteBtn','guideScheduleBtn','guideScheduleUploadBtn','guideParsedScheduleBtn'];
+  var GROUP={ guideRouletteBtn:'roulette', guideScheduleBtn:'schedule', guideScheduleUploadBtn:'schedule', guideParsedScheduleBtn:'parsedSchedule' };   // [J11] 판독 시간표 버튼은 좌표를 개별 저장
+  var GROUPS=['roulette','schedule','parsedSchedule'], MODES=['window','fullscreen'];
+  var curSaved={roulette:{window:null,fullscreen:null},schedule:{window:null,fullscreen:null},parsedSchedule:{window:null,fullscreen:null}};
   function mode(){ return (document.fullscreenElement||document.webkitFullscreenElement) ? 'fullscreen' : 'window'; }
   function wrap(){ return document.getElementById('pdfWrapper'); }
   function idsFor(group){ return IDS.filter(function(id){ return GROUP[id]===group; }); }

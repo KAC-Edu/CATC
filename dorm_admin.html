@@ -2340,6 +2340,94 @@
                 .trim();
         }
 
+        // ══ [JDS260704-V2] 교육시간표 '표 구조(셀좌표·병합)' 판독 — 강사플랫폼 입교안내 '교육시간표 보기'용 ══
+        //  HWP: tag77(HWPTAG_TABLE)로 표 구분, tag72(LIST_HEADER) offset8의 col/row/colSpan/rowSpan(u16×4) + 후속 tag67 텍스트
+        //  HWPX: tbl 요소의 tc(cellAddr colAddr/rowAddr + cellSpan colSpan/rowSpan)
+        //  선택: 시간패턴(HH:MM~) 셀이 가장 많은 표 = 교육시간표 (명단 표 제외)
+        function _gridCleanCell(t) {
+            return String(t || '')
+                .replace(/[\u0000-\u001f\ufffe\uffff]/g, ' ')
+                .replace(/[捤獥汤捯氠瑢]+/g, '')
+                .replace(/\s+/g, ' ')
+                .trim();
+        }
+        function extractHwpGridTables(bytes) {
+            const tables = [];
+            try {
+                const recs = [];
+                let off = 0;
+                while (off + 4 <= bytes.length) {
+                    const header = hwpReadU32LE(bytes, off); off += 4;
+                    const tag = header & 0x3ff;
+                    let size = (header >>> 20) & 0xfff;
+                    if (size === 0xfff) { if (off + 4 > bytes.length) break; size = hwpReadU32LE(bytes, off); off += 4; }
+                    if (off + size > bytes.length) break;
+                    recs.push({ tag, data: bytes.subarray(off, off + size) });
+                    off += size;
+                }
+                let cur = null, i = 0;
+                while (i < recs.length) {
+                    const rc = recs[i];
+                    if (rc.tag === 77) { cur = []; tables.push(cur); i++; continue; }        // HWPTAG_TABLE = 새 표
+                    if (rc.tag === 72 && rc.data.length >= 16 && cur) {                       // 셀(LIST_HEADER)
+                        const d = rc.data;
+                        const col = d[8] | (d[9] << 8), row = d[10] | (d[11] << 8);
+                        const cs = d[12] | (d[13] << 8), rs = d[14] | (d[15] << 8);
+                        const texts = [];
+                        let j = i + 1;
+                        while (j < recs.length && recs[j].tag !== 72 && recs[j].tag !== 77) {
+                            if (recs[j].tag === 67) { const t = _gridCleanCell(decodeUtf16Le(recs[j].data)); if (t) texts.push(t); }
+                            j++;
+                        }
+                        if (rs > 0 && cs > 0 && rs < 200 && cs < 60 && row < 300 && col < 60) cur.push({ r: row, c: col, rs, cs, t: texts.join(' ') });
+                        i = j; continue;
+                    }
+                    i++;
+                }
+            } catch (e) { console.warn('[시간표 grid/HWP]', e); }
+            return tables;
+        }
+        function extractHwpxGridTables(doc) {
+            const tables = [];
+            try {
+                Array.from(doc.getElementsByTagName('*')).filter(el => el.localName === 'tbl').forEach(tbl => {
+                    const cells = [];
+                    Array.from(tbl.getElementsByTagName('*')).filter(el => el.localName === 'tc').forEach(tc => {
+                        let addr = null, span = null;
+                        Array.from(tc.children || []).forEach(ch => {
+                            if (ch.localName === 'cellAddr') addr = ch;
+                            else if (ch.localName === 'cellSpan') span = ch;
+                        });
+                        const col = addr ? parseInt(addr.getAttribute('colAddr') || '0', 10) : 0;
+                        const row = addr ? parseInt(addr.getAttribute('rowAddr') || '0', 10) : 0;
+                        const cs = span ? parseInt(span.getAttribute('colSpan') || '1', 10) : 1;
+                        const rs = span ? parseInt(span.getAttribute('rowSpan') || '1', 10) : 1;
+                        cells.push({ r: row, c: col, rs: (rs > 0 ? rs : 1), cs: (cs > 0 ? cs : 1), t: _gridCleanCell(tc.textContent) });
+                    });
+                    if (cells.length) tables.push(cells);
+                });
+            } catch (e) { console.warn('[시간표 grid/HWPX]', e); }
+            return tables;
+        }
+        function pickScheduleGridTable(tables) {
+            try {
+                let best = null, bestScore = 0;
+                (tables || []).forEach(tb => {
+                    if (!tb || !tb.length) return;
+                    const joined = tb.map(c => c.t).join(' ');
+                    if (/연\s*번[\s\S]*성\s*명|성\s*명[\s\S]*사\s*번/.test(joined)) return;   // 명단 표 제외
+                    const m = joined.match(/\d{1,2}\s*:\s*\d{2}\s*[~\u223C\uFF5E]/g);
+                    const score = m ? m.length : 0;
+                    if (score > bestScore) { best = tb; bestScore = score; }
+                });
+                if (!best || bestScore < 3) return null;
+                let rows = 0, cols = 0;
+                best.forEach(c => { rows = Math.max(rows, c.r + c.rs); cols = Math.max(cols, c.c + c.cs); });
+                if (rows < 2 || cols < 2 || rows > 80 || cols > 14) return null;
+                return { rows, cols, cells: best.map(c => ({ r: c.r, c: c.c, rs: c.rs, cs: c.cs, t: c.t })) };
+            } catch (e) { return null; }
+        }
+
         // [JDS260704 신규] 교육시간표에서 '설문조사/설문평가/수료' 세션의 행 시작시간 = 과정 종료시각 →
         //  종료 ≤ 13:00 → 13:00(1차) / 초과 → 15:00(2차) 퇴교차량 자동 판정.
         //  HWPX/PDF는 행조인(\u241F) 라인, HWP는 플랫 셀 스트림 모두 지원. 물결표 ~ ∼ ～ 모두 인식.
@@ -2475,13 +2563,15 @@
             const parsed = [];
             let allText = '';
             const scheduleLines = [];
+            let gridTables = [];   // [JDS260704-V2]
 
             for (const n of xmlNames) {
                 const xml = await zip.files[n].async('string');
-                if (!/(성명|성함|사번|소속|성별|\d{4,6})/.test(xml)) continue;
+                if (!/(성명|성함|사번|소속|성별|시간표|설문|수료|\d{4,6})/.test(xml)) continue;
                 allText += '\n' + xml.replace(/<[^>]+>/g, '\n');
 
                 const doc = new DOMParser().parseFromString(xml, 'application/xml');
+                gridTables = gridTables.concat(extractHwpxGridTables(doc));   // [JDS260704-V2] 표 구조 수집
                 const rows = Array.from(doc.getElementsByTagName('*')).filter(el => el.localName === 'tr');
                 rows.forEach(tr => {
                     const tcs = Array.from(tr.getElementsByTagName('*')).filter(el => el.localName === 'tc');
@@ -2503,7 +2593,10 @@
             }
 
             currentScheduleData = buildScheduleData(scheduleLines.length ? scheduleLines : allText.split(/[\n\r]+/), file.name);
-            if (currentScheduleData) currentScheduleData.departure = extractDepartureFromSchedule(scheduleLines.length ? scheduleLines : allText.split(/[\n\r]+/));
+            if (currentScheduleData) {
+                currentScheduleData.departure = extractDepartureFromSchedule(scheduleLines.length ? scheduleLines : allText.split(/[\n\r]+/));
+                currentScheduleData.grid = pickScheduleGridTable(gridTables);   // [JDS260704-V2] 강사플랫폼 '교육시간표 보기'용
+            }
             return parsed.length ? parsed : parseRowsFromPlainText(allText);
         }
 
@@ -2638,6 +2731,7 @@
             const buf = await file.arrayBuffer();
             let text = '';
             let records = [];
+            let gridTables = [];   // [JDS260704-V2] 표 구조(셀좌표·병합) 수집
             const addSection = data => {
                 let bytes = new Uint8Array(data);
                 try { bytes = pako.inflateRaw(bytes); }
@@ -2646,6 +2740,7 @@
                 }
                 const sectionText = extractHwpSectionText(bytes);
                 records = records.concat(extractHwpSectionRecords(bytes));
+                gridTables = gridTables.concat(extractHwpGridTables(bytes));
                 text += sectionText || decodeUtf16Le(bytes);
                 text += '\n';
             };
@@ -2670,7 +2765,10 @@
             }
 
             currentScheduleData = buildScheduleData(records.length ? records : text.split(/[\n\r]+/), file.name);
-            if (currentScheduleData) currentScheduleData.departure = extractDepartureFromSchedule(records.length ? records : text.split(/[\n\r]+/));
+            if (currentScheduleData) {
+                currentScheduleData.departure = extractDepartureFromSchedule(records.length ? records : text.split(/[\n\r]+/));
+                currentScheduleData.grid = pickScheduleGridTable(gridTables);   // [JDS260704-V2] 강사플랫폼 '교육시간표 보기'용
+            }
             const byRecords = parseRosterRecords(records);
             return byRecords.length ? byRecords : parseRowsFromPlainText(text);
         }
@@ -3015,6 +3113,7 @@
                             weekKey: saveCourse.weekKey || '',
                             source: currentScheduleData.fileName || '',
                             lines: currentScheduleData.lines || [],
+                            grid: currentScheduleData.grid || null,   // [JDS260704-V2] 표 구조 — 강사 입교안내 '교육시간표 보기'
                             rosterKey: rk,
                             updatedAt: firebase.database.ServerValue.TIMESTAMP
                         };

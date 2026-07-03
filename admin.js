@@ -1,7 +1,7 @@
 /* PLATFORM_EDIT_STATUS: 수정완료 | VERSION: L9 | 2026-07-03 */
 /* [복구 2026-07-03] 파일 말단 184줄이 저장 중 잘림 → J8(260702Z40) 보관본의 동일 블록(리모컨 위젯·더보기 패널·ZOOM 표시 IIFE)으로 접합 복구. J8 이후 해당 말단 블록을 수정한 이력이 있다면 편집기 원본(L9)으로 재저장 권장. */
 /* ============================================================
-   PLATFORM_EDIT_STATUS: 수정완료 | VERSION: J10 | 2026-07-04 (J10: ①OTP 재사용 가드 — 강사 화면 새로고침/출결탭 재진입 시 잔여 15초 이상 유효 OTP를 서버에서 재사용, 매번 새 코드로 교체되어 입력 중이던 교육생이 만료 판정받던 문제 해소 ②담임(coordinatorName) 수동수정 보호 — status/coordManual 플래그 도입(professorManual과 동일 패턴), 강사가 담임을 바꿔도 연간계획 자동동기화가 계획값으로 되돌리던 버그 수정. 방 비움/신규 배치 시 플래그 해제 ③퇴교차량 자동판정 표시 — 지원부가 한글 시간표 업로드 시 기록되는 courses/{room}/shuttle/autoDeparture를 실시간 구독, 1차/2차 구분 없이 '이 과정 출발시간' 단일 표시(대시보드 인라인·셔틀 파란박스·도착 ETA 모두), 자동판정 없으면 기존 1차/2차 표기 유지. (J9: 지원부 생활관 명단(system/dorm/rosters) 오삭제 방지 — 리셋·명단비우기·연간계획삭제·종료과정자동정리 4개 경로 전부 '명단의 과정명이 해당 방 과정명과 일치할 때만' 삭제하도록 가드. 다른 과정 명단은 보존하고 console에 보존 사유 기록. (J8: ZOOM 진입 요소를 CSS !important 규칙으로 원천 차단 — 오프라인이면 어떤 코드가 표시해도 절대 안 보임(body.zoom-room-online 클래스 게이트). (J7: ZOOM 진입 요소 표시를 [onclick*=openZoomMonitor] 전체 선택으로 통일 + 2초 하트비트 — 오프라인에서 pill 잔존 완전 차단. (J6: ①장소 수동지정 보호(roomDetailManual) — 연간계획 동기화가 온라인 설정 되돌리는 문제 차단 ②ZOOM 버튼 표시를 장소 배지 텍스트와 상시 동기(MutationObserver) — 오프라인인데 버튼 남는 문제 해소 ③저장알림 확인 후 회의정보 모달 순차 표시(동시 팝업 제거) ④회의번호 000 0000 0000 자동 포맷 전용 모달. (J5: ①ZOOM 버튼 과정현황 장소 옆으로+오프라인 완전숨김(방전환 기본숨김·온라인 가드) ②iframe 사이징 실측기반 재작성 ③온라인 장소 저장 시 회의번호/암호 과정별 저장(askZoomMeetingInfo) ④홈검색 카카오등록 교수 노란배지 ⑤퇴교차량 칩 인라인 펼침. (J4: ZOOM 모니터링 iframe 높이를 body zoom 배율 보정해 실제 화면에 맞춤 — 설정 패널 잘림 해소, 리사이즈 대응. (J3: ui.openZoomMonitor 추가 — ZOOM 모니터링을 내장 뷰(iframe)로 열고 과정 전환 시 확인 후 재로딩, 온라인 판별 토글에 더보기 메뉴 항목 포함) (J2: ①ZOOM 모니터링 버튼 표시로직 재적용(온라인 과정 판별) ②강의실 초기화 confirm에 삭제범위 안내 추가 ③QR 요소없음 개발자문구 교체 ④toggleNightMode/addSubject 널가드 — 구버전 잔재 안전화)
+   PLATFORM_EDIT_STATUS: 수정완료 | VERSION: J11 | 2026-07-04 (J11: 입교안내 13p '교육시간표 보기' 신설 — 지원부가 한글 명단 업로드 시 자동 판독·저장되는 표 그리드(courses/{room}/schedule/grid, 셀좌표·병합정보 포함)를 실시간 구독. grid 있으면 녹색 버튼 노출→클릭 시 아래→위 슬라이드 시트에 원본 표 그대로 렌더(연속 강의 rowspan 줄합침+과정명·강사명 센터정렬, X로 슬라이드 다운). grid 없으면 기존 사진 보기/QR 업로드 흐름 유지. 녹색 버튼도 3초 롱프레스 위치보정(별도 그룹 parsedSchedule, 윈도우/전체화면 좌표 개별 저장). (J10: ①OTP 재사용 가드 — 강사 화면 새로고침/출결탭 재진입 시 잔여 15초 이상 유효 OTP를 서버에서 재사용, 매번 새 코드로 교체되어 입력 중이던 교육생이 만료 판정받던 문제 해소 ②담임(coordinatorName) 수동수정 보호 — status/coordManual 플래그 도입(professorManual과 동일 패턴), 강사가 담임을 바꿔도 연간계획 자동동기화가 계획값으로 되돌리던 버그 수정. 방 비움/신규 배치 시 플래그 해제 ③퇴교차량 자동판정 표시 — 지원부가 한글 시간표 업로드 시 기록되는 courses/{room}/shuttle/autoDeparture를 실시간 구독, 1차/2차 구분 없이 '이 과정 출발시간' 단일 표시(대시보드 인라인·셔틀 파란박스·도착 ETA 모두), 자동판정 없으면 기존 1차/2차 표기 유지. (J9: 지원부 생활관 명단(system/dorm/rosters) 오삭제 방지 — 리셋·명단비우기·연간계획삭제·종료과정자동정리 4개 경로 전부 '명단의 과정명이 해당 방 과정명과 일치할 때만' 삭제하도록 가드. 다른 과정 명단은 보존하고 console에 보존 사유 기록. (J8: ZOOM 진입 요소를 CSS !important 규칙으로 원천 차단 — 오프라인이면 어떤 코드가 표시해도 절대 안 보임(body.zoom-room-online 클래스 게이트). (J7: ZOOM 진입 요소 표시를 [onclick*=openZoomMonitor] 전체 선택으로 통일 + 2초 하트비트 — 오프라인에서 pill 잔존 완전 차단. (J6: ①장소 수동지정 보호(roomDetailManual) — 연간계획 동기화가 온라인 설정 되돌리는 문제 차단 ②ZOOM 버튼 표시를 장소 배지 텍스트와 상시 동기(MutationObserver) — 오프라인인데 버튼 남는 문제 해소 ③저장알림 확인 후 회의정보 모달 순차 표시(동시 팝업 제거) ④회의번호 000 0000 0000 자동 포맷 전용 모달. (J5: ①ZOOM 버튼 과정현황 장소 옆으로+오프라인 완전숨김(방전환 기본숨김·온라인 가드) ②iframe 사이징 실측기반 재작성 ③온라인 장소 저장 시 회의번호/암호 과정별 저장(askZoomMeetingInfo) ④홈검색 카카오등록 교수 노란배지 ⑤퇴교차량 칩 인라인 펼침. (J4: ZOOM 모니터링 iframe 높이를 body zoom 배율 보정해 실제 화면에 맞춤 — 설정 패널 잘림 해소, 리사이즈 대응. (J3: ui.openZoomMonitor 추가 — ZOOM 모니터링을 내장 뷰(iframe)로 열고 과정 전환 시 확인 후 재로딩, 온라인 판별 토글에 더보기 메뉴 항목 포함) (J2: ①ZOOM 모니터링 버튼 표시로직 재적용(온라인 과정 판별) ②강의실 초기화 confirm에 삭제범위 안내 추가 ③QR 요소없음 개발자문구 교체 ④toggleNightMode/addSubject 널가드 — 구버전 잔재 안전화)
    CATC · 강사 플랫폼 로직  (admin.js)
    STATUS    수정완료
    @version  L9
@@ -8167,8 +8167,40 @@ init: function() {
     // 탭 전환 시 PDF 재렌더링 (setMode에서 호출)
     // 현재 방 캐시에 pdfDoc이 있으면 저장된 페이지 그대로 재개,
     // 없으면 GitHub URL에서 on-demand 로드 (첫 진입 시)
+    // [J11] 지원부가 명단 업로드 시 자동 판독되는 시간표 그리드(courses/{room}/schedule/grid) 실시간 구독.
+    //  값이 생기거나 사라지면 13p 버튼 3종(판독보기/사진보기/QR업로드)을 즉시 토글 — 새로고침 불필요.
+    _watchParsedGrid: function() {
+        const room = state.room;
+        if (!room) return;
+        if (guideMgr._gridRefRoom === room && guideMgr._gridRef) return;   // 같은 방이면 유지
+        if (guideMgr._gridRef) { try { guideMgr._gridRef.off(); } catch (e) {} }
+        guideMgr._gridRefRoom = room;
+        guideMgr._gridRef = firebase.database().ref(`courses/${room}/schedule/grid`);
+        guideMgr._gridRef.on('value', function (s) {
+            if (state.room !== room) return;
+            const slot = guideMgr._slot(); if (!slot) return;
+            slot.parsedGrid = s.val() || null;
+            try { guideMgr._refreshScheduleBtns(); } catch (e) {}
+        });
+    },
+    // [J11] 13p 시간표 버튼 3종 토글 — 판독 grid 있으면 녹색 '교육시간표 보기'만, 없으면 기존 사진/QR 흐름
+    _refreshScheduleBtns: function() {
+        const slot = guideMgr._slot(); if (!slot) return;
+        const _on13 = (guideMgr._toPdfPage(slot.pageNum || 1) === 13);
+        const _grid = slot.parsedGrid;
+        const _hasSched = !!slot.scheduleTs;
+        const _pBtn = document.getElementById('guideParsedScheduleBtn');
+        if (_pBtn) _pBtn.style.display = (_on13 && _grid) ? 'inline-flex' : 'none';
+        const _sBtn = document.getElementById('guideScheduleBtn');
+        if (_sBtn) _sBtn.style.display = (_on13 && !_grid && _hasSched) ? 'inline-flex' : 'none';
+        const _uBtn = document.getElementById('guideScheduleUploadBtn');
+        if (_uBtn) _uBtn.style.display = (_on13 && !_grid && !_hasSched && !state.isObserver) ? 'inline-flex' : 'none';
+        if (!_on13 || _grid) { const sh = document.getElementById('parsedScheduleSheet'); if (!_on13 && sh && sh.classList.contains('pss-open')) { try { ui.closeParsedSchedule(); } catch(e){} } }
+    },
+
     refresh: async function() {
         const slot = guideMgr._slot();
+        guideMgr._watchParsedGrid();   // [J11] 지원부 판독 시간표(grid) 실시간 구독
         await guideMgr._loadProfile();
         await guideMgr._loadCourseInfo();
         if (slot.pdfDoc) {
@@ -8625,6 +8657,9 @@ init: function() {
             if (_sBtn) _sBtn.style.display = 'none';
             var _uBtn = document.getElementById('guideScheduleUploadBtn');   // 시간표 QR 업로드 버튼도 PDF 13p에서만
             if (_uBtn) _uBtn.style.display = 'none';
+            var _pBtn = document.getElementById('guideParsedScheduleBtn');   // [J11] 판독 시간표 보기 버튼도 13p에서만
+            if (_pBtn) _pBtn.style.display = 'none';
+            try { var _psh = document.getElementById('parsedScheduleSheet'); if (_psh && _psh.classList.contains('pss-open')) ui.closeParsedSchedule(); } catch (e) {}
             var _vOv = document.getElementById('guideVenueOverlay');   // 교육장소 오버레이는 해당 PDF p에서만
             if (_vOv) _vOv.style.display = 'none';
         };
@@ -8810,13 +8845,9 @@ init: function() {
             // [학생장 룰렛] PDF 23페이지(학생장 선출)에서만 룰렛 버튼 노출
             var _rBtn = document.getElementById('guideRouletteBtn');
             if (_rBtn) _rBtn.style.display = (guideMgr._toPdfPage(num) === 23) ? 'inline-flex' : 'none';
-            // [교육 시간표] PDF 13페이지: 업로드됨 → '보기' 버튼, 미업로드 → 'QR 업로드' 버튼(깜빡하고 안 올린 교수용)
-            var _on13 = (guideMgr._toPdfPage(num) === 13);
-            var _hasSched = !!guideMgr._slot().scheduleTs;
-            var _sBtn = document.getElementById('guideScheduleBtn');
-            if (_sBtn) _sBtn.style.display = (_on13 && _hasSched) ? 'inline-flex' : 'none';
-            var _uBtn = document.getElementById('guideScheduleUploadBtn');
-            if (_uBtn) _uBtn.style.display = (_on13 && !_hasSched && !state.isObserver) ? 'inline-flex' : 'none';
+            // [교육 시간표/J11] PDF 13페이지: 판독 grid → 녹색 '교육시간표 보기', 없으면 사진 보기/QR 업로드 (통합 토글)
+            guideMgr._slot().pageNum = num;
+            try { guideMgr._refreshScheduleBtns(); } catch (e) {}
             // [교육 장소] 교육장소 페이지(기본 14p)에서 교육동별 강의실 ✓ 오버레이 노출
             var _vOv = document.getElementById('guideVenueOverlay');
             if (_vOv) {
@@ -10275,6 +10306,7 @@ window.onload = function() {
     outingReturnCheck.init();  // 외출·외박 복귀 확인 팝업(07:00~08:59) 점검 시작
     outingAutoReturn.init();   // 외출·외박 자동 복귀완료 sweep(다음날 08:59) — 교육운영부 닫혀 있어도 동작
     kiosk.init();              // 키오스크 모드(비행기 아이콘 3초 롱프레스) 활성화
+    /* [J11] 판독 시간표 시트는 ui.openParsedSchedule/closeParsedSchedule로 동작 (아래 전역 정의) */
     setTimeout(_unifyXClose, 500); // 모달 X 닫기 버튼 hover 효과 통일
     // [강의 모니터링] 마이크는 강의실에 입장(강의 시작)할 때 동의받아 켭니다. (lectureMonitor.syncStatus)
 };
@@ -12212,6 +12244,75 @@ window.kacClearDefaultPw = async function(){
     if (Object.keys(updates).length) { await firebase.database().ref().update(updates); console.log('[KAC] 기본비번 7777 잔재 제거:', Object.keys(updates).length); }
     try{ localStorage.setItem('kac_pwclear_v1','1'); }catch(e){}
   }catch(e){ console.warn('[KAC pwclear] 스킵:', e && e.message); }
+};
+
+/* ══ [J11] 지원부 판독 교육시간표 — 아래→위 슬라이드 시트 + 병합셀 그대로 렌더 ══ */
+ui._renderParsedGrid = function (grid) {
+    var R = Number(grid.rows || 0), C = Number(grid.cols || 0), cells = grid.cells || [];
+    if (!R || !C || !cells.length) return '<div style="padding:30px;text-align:center;color:#94a3b8;font-weight:800;">시간표 데이터가 비어 있습니다.</div>';
+    var esc = function (s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); };
+    var cellAt = {}, occ = {};
+    cells.forEach(function (c) { cellAt[c.r + '_' + c.c] = c; });
+    function fmt(t) {
+        t = String(t || '').trim();
+        if (!t) return '';
+        var compact = t.replace(/\s+/g, '');
+        if (/^\d{1,2}:\d{2}[~\u223C\uFF5E](\d{1,2}:\d{2})?$/.test(compact)) return esc(compact);   // 시간칸 한 줄
+        var m = t.match(/^(.*?)[\s]*\(([^()]{1,24})\)$/);   // "과목명 (강사)" → 두 줄 센터
+        if (m && m[1].trim()) return esc(m[1].trim()) + '<span class="pss-teacher">(' + esc(m[2].trim()) + ')</span>';
+        return esc(t);
+    }
+    var html = '<table class="pss-table"><colgroup>';
+    for (var cc = 0; cc < C; cc++) html += '<col' + (cc === 0 ? ' style="width:48px"' : (cc === 1 ? ' style="width:96px"' : '')) + '>';
+    html += '</colgroup>';
+    for (var r = 0; r < R; r++) {
+        html += '<tr>';
+        for (var c2 = 0; c2 < C; c2++) {
+            if (occ[r + '_' + c2]) continue;
+            var cell = cellAt[r + '_' + c2];
+            if (!cell) { occ[r + '_' + c2] = 1; html += '<td class="pss-empty"></td>'; continue; }
+            for (var rr = cell.r; rr < cell.r + cell.rs; rr++) for (var xx = cell.c; xx < cell.c + cell.cs; xx++) occ[rr + '_' + xx] = 1;
+            var t = String(cell.t || '');
+            var cls = [];
+            var isLunch = /점\s*심|중\s*식|식\s*사/.test(t) && cell.cs > 1;
+            if (r < 2 && (/일\s*자|시\s*간|^[월화수목금토일]$/.test(t.trim()) || /\d+\s*월\s*\d+\s*일/.test(t) || /\d+\s*일차/.test(t))) cls.push('pss-hdr');
+            else if (c2 === 0 && /^\d{1,2}$/.test(t.trim())) cls.push('pss-period');
+            else if (/^\d{1,2}\s*:\s*\d{2}/.test(t.trim()) && c2 <= 1) cls.push('pss-time');
+            if (isLunch) cls.push('pss-lunch');
+            else if ((cell.rs > 1 || cell.cs > 1) && cls.indexOf('pss-hdr') < 0) cls.push('pss-merged');   // [핵심] 줄합침 강의: 병합 + 센터정렬(td 기본)
+            if (!t.trim()) cls.push('pss-empty');
+            html += '<td' + (cls.length ? ' class="' + cls.join(' ') + '"' : '') + (cell.rs > 1 ? ' rowspan="' + cell.rs + '"' : '') + (cell.cs > 1 ? ' colspan="' + cell.cs + '"' : '') + '>' + fmt(t) + '</td>';
+        }
+        html += '</tr>';
+    }
+    return html + '</table>';
+};
+ui.openParsedSchedule = function () {
+    var slot = (window.guideMgr && guideMgr._slot) ? guideMgr._slot() : null;
+    var grid = slot && slot.parsedGrid;
+    var sheet = document.getElementById('parsedScheduleSheet');
+    var body = document.getElementById('pssBody');
+    if (!sheet || !body) return;
+    if (!grid) { ui.showAlert('판독된 시간표가 없습니다.\n지원부에서 한글 시간표(명단 파일)를 업로드하면 자동 등록됩니다.'); return; }
+    body.innerHTML = ui._renderParsedGrid(grid);
+    var title = document.getElementById('pssTitle');
+    if (title) {
+        title.innerHTML = '<i class="fa-solid fa-calendar-days"></i> 교육 시간표';
+        try {
+            firebase.database().ref(`courses/${state.room}/settings`).once('value').then(function (s) {
+                var v = s.val() || {};
+                if (v.courseName) title.innerHTML = '<i class="fa-solid fa-calendar-days"></i> ' + String(v.courseName).replace(/</g, '&lt;') + (v.period ? ' <span style="font-size:.68em;font-weight:800;opacity:.75;margin-left:8px;">' + String(v.period).replace(/</g, '&lt;') + '</span>' : '');
+            });
+        } catch (e) {}
+    }
+    sheet.style.display = 'flex';
+    requestAnimationFrame(function () { requestAnimationFrame(function () { sheet.classList.add('pss-open'); }); });
+};
+ui.closeParsedSchedule = function () {
+    var sheet = document.getElementById('parsedScheduleSheet');
+    if (!sheet) return;
+    sheet.classList.remove('pss-open');
+    setTimeout(function () { if (!sheet.classList.contains('pss-open')) sheet.style.display = 'none'; }, 430);
 };
 
 window.kacExpireEndedCourses = async function(){
