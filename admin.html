@@ -677,12 +677,13 @@ body.in-course #moreToggleTab{ display:flex !important; }
     b.style.touchAction='none';
     b.addEventListener('pointerdown', function(e){
       if(e.pointerType==='mouse' && e.button!==0) return;
+      e.stopPropagation();
       dragging=false; curPos=null; sx=e.clientX; sy=e.clientY;
+      try{ b.setPointerCapture(e.pointerId); }catch(_){}   // 즉시 포인터 캡처(교육장소 칸과 동일) → 드래그 확실히 걸림
       clearTimeout(holdTimer);
       b.classList.add('guidebtn-pressing');
       holdTimer=setTimeout(function(){
         dragging=true; b.classList.remove('guidebtn-pressing'); b.classList.add('guidebtn-dragging');
-        try{ b.setPointerCapture(e.pointerId); }catch(_){}
         if(navigator.vibrate) navigator.vibrate(40);
       }, 3000);
     });
@@ -2743,7 +2744,7 @@ function setupAcc(btn){
 
 
 
-    <script src="admin.js?v=260702Z40"></script>
+    <script src="admin.js?v=260702Z43"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
 <!-- ── 화면 자동 맞춤(auto-fit): 가로+세로 모두 화면에 맞게 자동 축소 · JDS260613 ──
      원인: Windows 디스플레이 배율(125%/150%)·저해상도 화면에서 유효 뷰포트가 작아져

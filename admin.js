@@ -8058,13 +8058,14 @@ init: function() {
     // 배지 표기: { main, sub }. 실습실은 main='실습실', sub=시설명(ILS 등)
     _venueShort: function(v) {
         v = String(v || '').trim(); if (!v) return { main: '', sub: '' };
+        var fm = v.match(/(\d+)\s*층/); var floor = fm ? (fm[1] + '층') : '';   // 층 추출 → 표기에 포함
         if (/실습실\s*$/.test(v)) {
             var body = v.replace(/실습실\s*$/, '').trim();                 // '국제동 2층 ILS'
             var facil = body.replace(/^\S+\s*/, '').replace(/^\d+\s*층\s*/, '').trim(); // 'ILS'
-            return { main: '실습실', sub: facil };
+            return { main: (floor ? floor + ' 실습실' : '실습실'), sub: facil };
         }
-        var m = v.match(/([A-Za-z0-9]+)\s*강의실/); if (m) return { main: m[1] + ' 강의실', sub: '' };
-        var p = v.split(/\s+/); return { main: p[p.length - 1], sub: '' };
+        var m = v.match(/([A-Za-z0-9]+)\s*강의실/); if (m) return { main: (floor ? floor + ' ' + m[1] + '강의실' : m[1] + ' 강의실'), sub: '' };
+        var p = v.split(/\s+/); return { main: (floor ? floor + ' ' + p[p.length - 1] : p[p.length - 1]), sub: '' };
     },
     _pageList: function() {
         const s = guideMgr._slot();
