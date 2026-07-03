@@ -5831,7 +5831,11 @@ resetShuttleRequests: function() {
             ev2.stopPropagation();
             var b=ev2.target.closest('button'); if(!b) return;
             var v=b.dataset.v||'';
-            firebase.database().ref('courses/'+room+'/settings/roomDetailName').set(v||null).catch(function(){});
+            // roomDetailName + 수동 지정 플래그를 함께 저장 → 전 화면 공유 + 자동배치가 덮어쓰지 않고 유지(새로고침 안전)
+            var _vu={};
+            _vu['courses/'+room+'/settings/roomDetailName']=v||null;
+            _vu['courses/'+room+'/status/roomDetailManual']=true;
+            firebase.database().ref().update(_vu).catch(function(){});
             var lbl=document.getElementById('hsrVenue'+room); if(lbl) lbl.textContent=v||'장소 미정';
             pop.remove();
         });
@@ -6070,14 +6074,14 @@ resetShuttleRequests: function() {
         const d=window._homeStatsData||{}, today=window._homeStatsToday||getTodayString();
         modal.style.display='flex';
         // 세 통계 팝업은 교육인원 팝업을 기준으로 같은 크기와 여백을 사용한다.
-        try{ const _box=modal.querySelector('div'); if(_box){ _box.style.width='92%'; _box.style.maxWidth='1180px'; _box.style.maxHeight='92vh'; _box.style.padding='clamp(20px,3vh,34px) clamp(22px,3vw,40px)'; } if(title){ title.style.fontSize='clamp(20px,2.3vw,28px)'; title.style.marginBottom='clamp(22px,3.4vh,38px)'; title.style.paddingBottom='clamp(14px,2vh,20px)'; title.style.borderBottom='1px solid #eef2f7'; } }catch(e){}
+        try{ const _box=modal.querySelector('div'); if(_box){ _box.style.width='92%'; _box.style.maxWidth='1180px'; _box.style.maxHeight='92vh'; _box.style.padding='clamp(20px,3vh,34px) clamp(22px,3vw,40px)'; } if(title){ title.style.fontSize='clamp(20px,2.3vw,28px)'; title.style.textAlign='left'; title.style.marginBottom='clamp(22px,3.4vh,38px)'; title.style.paddingBottom='clamp(14px,2vh,20px)'; title.style.borderBottom='1px solid #eef2f7'; } }catch(e){}
         const esc=function(s){return (s==null?'':String(s)).replace(/[&<>"]/g,function(c){return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]);});};
         // 이번 주 월~금 정확한 기간(토·일은 차주 월요일 기준)
         const _wkRange=(function(){ var now=new Date(); var dow=now.getDay(); var off=(dow===0)?1:(dow===6)?2:(1-dow); var mon=new Date(now); mon.setDate(now.getDate()+off); mon.setHours(0,0,0,0); var fri=new Date(mon); fri.setDate(mon.getDate()+4); var W=['일','월','화','수','목','금','토']; var f=function(dt){ return (dt.getMonth()+1)+'.'+dt.getDate()+'('+W[dt.getDay()]+')'; }; return f(mon)+' ~ '+f(fri); })();
-        // [통일된 제목 구조] 메인 제목 + 파란 부제목(가운데 정렬) — 3개 현황판 팝업 공통
+        // [통일된 제목 구조] 좌측정렬 · 메인 제목("항공기술훈련원 ~ 현황") + 파란 부제목(주차·부속정보) — 3개 팝업 공통
         const _statTitle=function(main, sub){
-            return '<div style="text-align:center;font-weight:900;line-height:1.25;">'+main+'</div>'
-                +(sub?'<div style="text-align:center;font-size:clamp(14px,1.55vw,19px);color:#2563eb;font-weight:800;margin-top:9px;">'+sub+'</div>':'');
+            return '<div style="text-align:left;font-weight:900;line-height:1.3;">'+main+'</div>'
+                +(sub?'<div style="text-align:left;font-size:clamp(13px,1.5vw,18px);color:#2563eb;font-weight:800;margin-top:7px;">'+sub+'</div>':'');
         };
         // 카드 집계와 동일 기준: 현재 과정이 배정된 active 방 OR 이번 주와 겹치는 과정
         const weekRooms=Object.entries(d).filter(([,r])=>{
@@ -6088,7 +6092,7 @@ resetShuttleRequests: function() {
             return (st.roomStatus==='active' && hasCourse) || ui._isThisWeek(s.period||'');
         });
         if(type==='active'){
-            title.innerHTML=_statTitle('🏫 현재 강의 중인 과정', _wkRange);
+            title.innerHTML=_statTitle('🏫 항공기술훈련원 운영 과정 현황', _wkRange+' 주차 <span style="color:#94a3b8;font-weight:700;">(현재 강의 중인 과정)</span>');
             const rows=weekRooms.filter(([,r])=>(r.status||{}).roomStatus==='active').map(([room,r])=>{
                 const prof=(r.status||{}).professorName||'-', course=(r.settings||{}).courseName||'-';
                 return `<div role="button" tabindex="0" onclick="ui.enterHomeCourse('${room}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();ui.enterHomeCourse('${room}');}" title="클릭하면 이 과정으로 입장합니다" style="display:flex;justify-content:space-between;align-items:center;gap:18px;min-height:70px;padding:15px 20px;background:#eff6ff;border:1px solid #dbeafe;border-radius:14px;margin-bottom:12px;cursor:pointer;transition:background .15s, transform .15s, box-shadow .15s;" onmouseover="this.style.background='#dbeafe';this.style.transform='translateY(-2px)';this.style.boxShadow='0 10px 26px rgba(37,99,235,.20)';" onmouseout="this.style.background='#eff6ff';this.style.transform='none';this.style.boxShadow='none';">
@@ -6100,7 +6104,7 @@ resetShuttleRequests: function() {
             }).join('');
             body.innerHTML=rows?'<div style="display:flex;flex-direction:column;gap:clamp(10px,1.3vh,18px);">'+rows+'</div>':'<p style="color:#94a3b8;text-align:center;padding:36px;font-size:20px;">이번 주 강의 중인 과정이 없습니다.</p>';
         } else if(type==='students'){
-            title.innerHTML=_statTitle('👩‍🎓 교육생 현황 · 소속 분포', _wkRange+' <span style="color:#94a3b8;font-weight:700;">· 예정명단 기준</span>');
+            title.innerHTML=_statTitle('👩‍🎓 항공기술훈련원 교육생 현황', _wkRange+' 주차 <span style="color:#94a3b8;font-weight:700;">(소속 분포 · 예정명단 기준)</span>');
             const _legend='';
             let dormAll={};
             try{ dormAll=(await firebase.database().ref('system/dorm/rosters').once('value')).val()||{}; }catch(e){}
@@ -6185,7 +6189,7 @@ resetShuttleRequests: function() {
             else if(window.kakao && kakao.maps && kakao.maps.load){ kakao.maps.load(_buildHomeMap); }
             else { let _t=0; const _iv=setInterval(function(){ _t++; if(window.kakao&&kakao.maps){ clearInterval(_iv); (kakao.maps.load?kakao.maps.load(_buildHomeMap):_buildHomeMap()); } else if(_t>20){ clearInterval(_iv); } }, 300); }
         } else if(type==='outing'){
-            title.innerHTML=_statTitle('🚶 과정별 외출·외박 신청 현황', 'AM 09:00 ~ 익일 AM 09:00');
+            title.innerHTML=_statTitle('🚶 항공기술훈련원 외출·외박 신청 현황', '<span style="color:#94a3b8;font-weight:700;">(운영시간 AM 09:00 ~ 익일 AM 09:00)</span>');
             const rows=weekRooms.map(([room,r])=>{
                 const course=(r.settings||{}).courseName||'-';
                 // [09:00 운영일 윈도우] 자정이 아닌 익일 09:00 기준으로 금일 외출/외박 집계
