@@ -2,7 +2,7 @@
 <!-- 이 플랫폼(admin_coord.html / 교육운영부) 수정상태 플래그. 값은 [수정중] 또는 [수정안하는중] 두 가지. -->
 <!-- 작업 시작 시 → 수정중 / 작업 완료 시 → 수정안하는중. 다른 플랫폼은 이 말머리를 보고 연동·수정 가능 여부 판단. -->
 <!-- [외부변경 · 카카오채널연동 2026-06-25] 포털(portal.html/7777) 경유 폐지 → 페이지 직접진입 시 접속코드(catc1234) 게이트 추가, 포털 리다이렉트/종료이동 제거. version C13→D13. 기능 로직은 미변경. -->
-<!-- last-updated: 2026-07-02 / version: D49 (운영설정팝업 확인=차량공지함께+하루1회 · 노조옆 입교안내공지 버튼 · 사이드바 전역활동시 유지) [D48: 강의실목록 강사동기화·대장센터 주차버그·교육생표기통일] -->
+<!-- last-updated: 2026-07-03 / version: D50 (상단 현황바 축소·좁은 화면 2단 재배치·교육운영부 명칭 및 날짜/시간 상시 표기) [D49: 운영설정팝업 확인=차량공지함께+하루1회 · 노조옆 입교안내공지 버튼 · 사이드바 전역활동시 유지] -->
 <!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -1907,8 +1907,8 @@ body.pc-mode .coord-pc-only{ display:flex !important; }
 .hdr-stat.shuttle-off .hb-label{ color:rgba(255,255,255,0.95) !important; }
 .hdr-stat.shuttle-off .hb-value{ color:#fff !important; }
 .hdr-stat.shuttle-off > i{ color:#fee2e2 !important; }
-#hdr-shuttle{ height:58px !important; width:128px !important; min-width:128px !important; max-width:128px !important; padding:8px 16px !important; align-self:center !important; box-sizing:border-box !important; overflow:hidden !important; justify-content:center !important; }
-#hdr-shuttle .hdr-stat-txt{ min-height:30px !important; justify-content:center !important; }
+#hdr-shuttle{ height:46px !important; width:104px !important; min-width:104px !important; max-width:104px !important; padding:5px 10px !important; align-self:center !important; box-sizing:border-box !important; overflow:hidden !important; justify-content:center !important; }
+#hdr-shuttle .hdr-stat-txt{ min-height:26px !important; justify-content:center !important; }
 #hdr-shuttle .hb-label{ width:100% !important; overflow:hidden !important; text-overflow:ellipsis !important; text-align:center !important; }
 #hdr-shuttle .hb-value{ width:100% !important; min-width:0 !important; justify-content:center !important; display:flex !important; align-items:baseline !important; gap:2px !important; line-height:1 !important; }
 .hdr-stat.shuttle-cleared{ background:rgba(100,116,139,0.58) !important; border-color:rgba(203,213,225,.82) !important; box-shadow:0 0 0 1px rgba(148,163,184,.42),0 4px 12px rgba(15,23,42,.18) !important; }
@@ -1932,12 +1932,12 @@ body.pc-mode .coord-pc-only{ display:flex !important; }
 body.pc-mode .coord-hdr-stats{ gap:10px; overflow:visible !important; min-width:auto !important; flex-wrap:nowrap !important; }
 /* 화면이 좁아 제목과 겹칠 때: 상단바 통계(운영과정~노조교육) 숨김 (제목+통계+시계가 안 들어가는 폭부터) */
 /* 상단바가 좁아/내용이 길어 겹치면: 가운데 통계(메뉴)는 유지, 좌측 제목·우측 시계만 숨김 */
-@media (max-width: 1500px){ body.pc-mode .coord-brand-title{font-size:20px!important} body.pc-mode #coordHeaderClock .hc-date,body.pc-mode #coordHeaderClock .hc-day{display:none} }
+@media (max-width: 1500px){ body.pc-mode .coord-brand-title{font-size:18px!important} }
 body.pc-mode .coord-left{ grid-column:1 !important; grid-row:1 !important; justify-self:start !important; align-self:center !important; }
-body.pc-mode .hdr-stat{ padding:8px 18px; }
-body.pc-mode .hdr-stat > i{ font-size:18px; }
-body.pc-mode .hdr-stat .hb-label{ font-size:12.5px; }
-body.pc-mode .hdr-stat .hb-value{ font-size:26px; }
+body.pc-mode .hdr-stat{ padding:5px 11px !important; gap:7px !important; }
+body.pc-mode .hdr-stat > i{ font-size:15px; }
+body.pc-mode .hdr-stat .hb-label{ font-size:11px; }
+body.pc-mode .hdr-stat .hb-value{ font-size:19px; }
 #coordHeaderClock .hc-date{ font-size:13px; font-weight:500; opacity:.8; }
 #coordHeaderClock .hc-day{ font-size:12px; font-weight:600; opacity:.7; }
 #coordHeaderClock .hc-div{ width:1px; height:18px; background:rgba(255,255,255,.25); }
@@ -1948,9 +1948,12 @@ body.pc-mode .hdr-stat .hb-value{ font-size:26px; }
 @media (max-width:360px){ .coord-clock{ display:none; } }
 @media (max-width:560px){ .coord-brand-title{ font-size:14px; } }
 /* PC 모드 — 지원부와 동일한 형태(브랜드 + 중앙 시계 pill) */
-body.pc-mode .app-header{ display:grid !important; grid-template-columns:minmax(0,1fr) auto minmax(0,1fr) !important; gap:16px !important; align-items:center !important; min-height:74px !important; padding:12px 28px !important; background:linear-gradient(135deg,#111827 0%,#172554 46%,#2563eb 100%) !important; width:calc(100vw / var(--coord-fit-z, 1)) !important; margin-left:calc(50% - (50vw / var(--coord-fit-z, 1))) !important; }
+body.pc-mode .app-header{ display:grid !important; grid-template-columns:auto minmax(0,1fr) auto !important; gap:16px !important; align-items:center !important; min-height:74px !important; padding:12px 28px !important; background:linear-gradient(135deg,#111827 0%,#172554 46%,#2563eb 100%) !important; width:calc(100vw / var(--coord-fit-z, 1)) !important; margin-left:calc(50% - (50vw / var(--coord-fit-z, 1))) !important; }
 body.pc-mode .coord-brand-mark{ display:flex !important; }
-body.pc-mode .t-full{ display:inline !important; }
+/* [브랜드 짤림 방지] 통계를 화면중앙에 두면 좌측 브랜드 칸이 좁아 긴 제목이 잘림 →
+   기본은 '교육운영 플랫폼'만, 아주 넓은 화면(≥2100px)에서만 '항공기술훈련원 ' 접두어 표시 */
+body.pc-mode .t-full{ display:none !important; }
+@media (min-width:2100px){ body.pc-mode .t-full{ display:inline !important; } }
 body.pc-mode .coord-right{ flex:none !important; }
 body.pc-mode .coord-left{ flex:none !important; }
 body.pc-mode .coord-brand{ gap:13px !important; }
@@ -1961,7 +1964,7 @@ body.pc-mode .coord-brand-title{ font-size:26px !important; font-weight:950 !imp
 @media (min-width:0px){
   html body.pc-mode .coord-brand{ display:flex !important; }
   html body.pc-mode #coordHeaderClock, html body.pc-mode .coord-clock{ display:flex !important; }
-  html body.pc-mode .app-header{ grid-template-columns:minmax(0,1fr) auto minmax(0,1fr) !important; }
+  html body.pc-mode .app-header{ grid-template-columns:auto minmax(0,1fr) auto !important; }
   html body.pc-mode .coord-left{ grid-column:1 !important; justify-self:start !important; min-width:0 !important; }
   html body.pc-mode .coord-right{ display:flex !important; grid-column:2 !important; justify-self:center !important; justify-content:center !important; min-width:0 !important; max-width:100% !important; overflow-x:auto !important; }
   html body.pc-mode .coord-hdr-stats{ justify-content:center !important; overflow-x:auto !important; min-width:0 !important; flex-wrap:nowrap !important; }
@@ -1969,11 +1972,15 @@ body.pc-mode .coord-brand-title{ font-size:26px !important; font-weight:950 !imp
 .coord-right.coord-hdr-hide, #coordHdrStats.coord-hdr-hide{ display:flex !important; }
 .hdr-stat.hdr-active{ box-shadow:0 0 0 2px rgba(255,255,255,.65), 0 6px 16px rgba(0,0,0,.22) !important; transform:translateY(-1px); }
 body.pc-mode .coord-clock{ grid-column:3 !important; grid-row:1 !important; justify-self:end !important; gap:10px !important; background:rgba(15,23,42,0.34) !important; padding:8px 20px !important; border-radius:999px !important; border:1px solid rgba(255,255,255,0.17) !important; box-shadow:inset 0 1px 0 rgba(255,255,255,0.12),0 8px 24px rgba(15,23,42,0.16) !important; }
-body.pc-mode #coordHeaderClock .hc-date{ font-size:17px !important; }
-body.pc-mode #coordHeaderClock .hc-day{ font-size:16px !important; }
-body.pc-mode #coordHeaderClock .hc-div{ height:28px !important; }
-body.pc-mode #coordHeaderClock .hc-time{ font-size:33px !important; }
-body.pc-mode #coordHeaderClock .hc-ampm{ font-size:16px !important; color:#60a5fa !important; align-self:center; }
+/* [시계 2줄 pill] 상단: 날짜 요일 / 하단: 시간 AM·PM — 항상 표시, 컴팩트 */
+body.pc-mode .coord-clock{ flex-direction:column !important; align-items:flex-end !important; gap:1px !important; padding:6px 15px !important; line-height:1 !important; }
+body.pc-mode #coordHeaderClock .hc-top{ display:flex; align-items:baseline; gap:5px; line-height:1; }
+body.pc-mode #coordHeaderClock .hc-date{ font-size:12.5px !important; font-weight:700 !important; color:#cbd5e1 !important; letter-spacing:.2px; }
+body.pc-mode #coordHeaderClock .hc-day{ font-size:12px !important; font-weight:800 !important; color:#93c5fd !important; }
+body.pc-mode #coordHeaderClock .hc-div{ display:none !important; }
+body.pc-mode #coordHeaderClock .hc-bot{ display:flex; align-items:baseline; gap:3px; line-height:1; }
+body.pc-mode #coordHeaderClock .hc-time{ font-size:22px !important; font-weight:900 !important; color:#fff !important; font-family:'Consolas','Roboto Mono',monospace; }
+body.pc-mode #coordHeaderClock .hc-ampm{ font-size:11.5px !important; font-weight:800 !important; color:#60a5fa !important; margin-left:1px; }
 body.pc-mode .coord-right{ grid-column:2 !important; grid-row:1 !important; justify-self:center !important; align-self:center !important; min-width:max-content !important; }
 body.coord-header-compact.pc-mode .app-header{ grid-template-columns:1fr !important; padding-left:14px !important; padding-right:14px !important; }
 body.coord-header-compact.pc-mode .coord-left,
@@ -1990,7 +1997,7 @@ body.coord-header-compact.pc-mode #coordHdrStats.coord-hdr-hide{ display:flex !i
     <button class="header-btn coord-back-btn" onclick="handleBackNav()" title="뒤로가기"><i class="fa-solid fa-chevron-left"></i></button>
     <div class="coord-brand" onclick="location.reload()" title="메인으로 (새로고침)">
       <div class="coord-brand-mark"><i class="fa-solid fa-graduation-cap"></i></div>
-      <h1 class="coord-brand-title"><span class="t-full">항공기술훈련원 </span>교육운영 플랫폼</h1>
+      <h1 class="coord-brand-title">교육운영부</h1>
     </div>
   </div>
   <div id="coordHeaderClock" class="coord-clock"></div>
@@ -2015,8 +2022,12 @@ body.coord-header-compact.pc-mode #coordHdrStats.coord-hdr-hide{ display:flex !i
       if(!body || !header || !stats) return;
       if(!body.classList.contains('pc-mode')){ body.classList.remove('coord-header-compact'); return; }
       body.classList.remove('coord-header-compact');
-      var need=(stats.scrollWidth||stats.offsetWidth||0)+(left?left.offsetWidth:0)+(clock?clock.offsetWidth:0)+90;
-      var compact=need>header.clientWidth || stats.scrollWidth>Math.max(0, header.clientWidth-40);
+      var sr=stats.getBoundingClientRect();
+      var lr=left ? left.getBoundingClientRect() : null;
+      var kr=clock ? clock.getBoundingClientRect() : null;
+      var compact=(lr && sr.left < lr.right+12)
+        || (kr && kr.width>0 && sr.right > kr.left-12)
+        || stats.scrollWidth > stats.clientWidth+1;
       body.classList.toggle('coord-header-compact', compact);
     }catch(e){}
   }
@@ -4772,7 +4783,7 @@ function executePrintProcess(mode) {
         const mm = String(now.getMinutes()).padStart(2,'0');
         const ampm = hh >= 12 ? 'PM' : 'AM';
         hh = hh % 12 || 12;
-        el.innerHTML = `<span class="hc-date">${dateStr}</span><span class="hc-day">${dayStr}</span><span class="hc-div"></span><span class="hc-time">${String(hh).padStart(2,'0')}<span class="hc-blink">:</span>${mm}<span class="hc-ampm">${ampm}</span></span>`;
+        el.innerHTML = `<div class="hc-top"><span class="hc-date">${dateStr}</span> <span class="hc-day">${dayStr}</span></div><div class="hc-bot"><span class="hc-time">${String(hh).padStart(2,'0')}<span class="hc-blink">:</span>${mm}</span><span class="hc-ampm">${ampm}</span></div>`;
     }
     tick(); setInterval(tick, 1000);
 })();
@@ -8940,7 +8951,7 @@ window.addEventListener('load', function(){
 });
 </script>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:6px;bottom:5px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;font-weight:800;line-height:1;letter-spacing:.6px;color:#fff;background:rgba(15,23,42,.85);padding:4px 8px;border-radius:6px;pointer-events:none;user-select:none;box-shadow:0 2px 6px rgba(0,0,0,.3);">D49</div>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:6px;bottom:5px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;font-weight:800;line-height:1;letter-spacing:.6px;color:#fff;background:rgba(15,23,42,.85);padding:4px 8px;border-radius:6px;pointer-events:none;user-select:none;box-shadow:0 2px 6px rgba(0,0,0,.3);">D50</div>
 <script>
 /* ===== [공용] 종료된 과정 자동 정리 (모든 플랫폼 공통) — 종료일 지난 방을 다음날 미개설로 비움. 브라우저별 하루 1회 ===== */
 window.kacExpireEndedCourses = async function(){
@@ -9927,6 +9938,128 @@ body.coord-header-compact.pc-mode .coord-clock{
 .cor-tbl tr:last-child td{border-bottom:none}
 .cor-tbl .num{text-align:center;color:#94a3b8;width:42px}
 @media(max-width:900px){.cor-grid{grid-template-columns:1fr}}
+</style>
+
+<style id="coordHeaderResponsiveFix20260703">
+/* D50: 화면 폭이 부족해도 브랜드와 날짜·시간을 숨기지 않고 현황 블록을 다음 줄로 배치한다. */
+body.pc-mode .app-header{
+  grid-template-columns:180px minmax(0,1fr) 226px !important;
+  gap:10px !important;
+  min-height:66px !important;
+  padding:8px 18px !important;
+}
+body.pc-mode .coord-brand{gap:9px !important;}
+body.pc-mode .coord-brand-mark{
+  width:42px !important;
+  height:42px !important;
+  border-radius:11px !important;
+}
+body.pc-mode .coord-brand-mark i{font-size:21px !important;}
+body.pc-mode .coord-brand-title,
+body.coord-header-compact.pc-mode .coord-brand-title{
+  display:block !important;
+  max-width:none !important;
+  font-size:20px !important;
+  overflow:visible !important;
+  text-overflow:clip !important;
+}
+body.pc-mode .coord-right,
+body.coord-header-compact.pc-mode .coord-right{
+  overflow:visible !important;
+}
+body.pc-mode .coord-hdr-stats,
+body.coord-header-compact.pc-mode .coord-hdr-stats{
+  gap:7px !important;
+  justify-content:center !important;
+  overflow-x:auto !important;
+  scrollbar-width:none;
+}
+body.pc-mode .coord-hdr-stats::-webkit-scrollbar,
+body.coord-header-compact.pc-mode .coord-hdr-stats::-webkit-scrollbar{display:none;}
+body.pc-mode .hdr-stat,
+body.coord-header-compact.pc-mode .hdr-stat{
+  height:50px !important;
+  min-height:50px !important;
+  padding:6px 10px !important;
+  gap:6px !important;
+  border-radius:10px !important;
+  box-sizing:border-box !important;
+}
+body.pc-mode .hdr-stat > i,
+body.coord-header-compact.pc-mode .hdr-stat > i{font-size:15px !important;}
+body.pc-mode .hdr-stat .hb-label,
+body.coord-header-compact.pc-mode .hdr-stat .hb-label{font-size:10px !important;}
+body.pc-mode .hdr-stat .hb-value,
+body.coord-header-compact.pc-mode .hdr-stat .hb-value{font-size:21px !important;}
+body.pc-mode .hdr-stat .hb-value[style],
+body.coord-header-compact.pc-mode .hdr-stat .hb-value[style]{font-size:14px !important;}
+body.pc-mode .hdr-edu,
+body.coord-header-compact.pc-mode .hdr-edu,
+body.pc-mode #hdr-shuttle,
+body.coord-header-compact.pc-mode #hdr-shuttle{
+  width:106px !important;
+  min-width:106px !important;
+  max-width:106px !important;
+  height:50px !important;
+  padding:6px 8px !important;
+}
+body.pc-mode #coordHeaderClock,
+body.pc-mode .coord-clock,
+body.coord-header-compact.pc-mode #coordHeaderClock,
+body.coord-header-compact.pc-mode .coord-clock{
+  min-width:226px !important;
+  padding:7px 12px !important;
+  gap:7px !important;
+}
+body.pc-mode #coordHeaderClock .hc-date,
+body.coord-header-compact.pc-mode #coordHeaderClock .hc-date{
+  display:inline !important;
+  font-size:13px !important;
+}
+body.pc-mode #coordHeaderClock .hc-day,
+body.coord-header-compact.pc-mode #coordHeaderClock .hc-day{
+  display:inline !important;
+  font-size:11px !important;
+}
+body.pc-mode #coordHeaderClock .hc-div,
+body.coord-header-compact.pc-mode #coordHeaderClock .hc-div{height:22px !important;}
+body.pc-mode #coordHeaderClock .hc-time,
+body.coord-header-compact.pc-mode #coordHeaderClock .hc-time{font-size:24px !important;}
+body.pc-mode #coordHeaderClock .hc-ampm,
+body.coord-header-compact.pc-mode #coordHeaderClock .hc-ampm{font-size:11px !important;}
+body.coord-header-compact.pc-mode .app-header{
+  grid-template-columns:auto minmax(0,1fr) auto !important;
+  grid-template-rows:auto auto !important;
+  min-height:116px !important;
+  padding:8px 14px !important;
+  row-gap:8px !important;
+}
+body.coord-header-compact.pc-mode .coord-left{
+  display:flex !important;
+  grid-column:1 !important;
+  grid-row:1 !important;
+}
+body.coord-header-compact.pc-mode #coordHeaderClock,
+body.coord-header-compact.pc-mode .coord-clock{
+  display:flex !important;
+  grid-column:3 !important;
+  grid-row:1 !important;
+}
+body.coord-header-compact.pc-mode .coord-right{
+  display:flex !important;
+  grid-column:1 / -1 !important;
+  grid-row:2 !important;
+  width:100% !important;
+  max-width:100% !important;
+  justify-content:center !important;
+}
+body.coord-header-compact.pc-mode .coord-hdr-stats{
+  width:auto !important;
+  max-width:100% !important;
+}
+@media(max-width:700px){
+  body.coord-header-compact.pc-mode .coord-brand-title{display:none !important;}
+}
 </style>
 </body>
 </html>

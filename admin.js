@@ -1307,6 +1307,7 @@ _executeReset: function() {
             const nm = (st.courseName || '').trim();
             const pd = (st.period || '').trim();
             const upd = {};
+            const _weekKeys = [];
             // [리셋 정합성] 지난 과정의 지원부 생활관 명단(주차__방)도 함께 제거 (새 과정에 옛 명단/배정이 끌려오는 문제 방지)
             try {
                 const start = pd.includes(' ~ ') ? pd.split(' ~ ')[0].trim() : (pd.split('~')[0] || '').trim();
@@ -1317,7 +1318,7 @@ _executeReset: function() {
                         const mon = new Date(d); mon.setDate(d.getDate() - dow);
                         const utc = mon.toISOString().slice(0, 10);
                         const local = mon.getFullYear() + '-' + String(mon.getMonth()+1).padStart(2,'0') + '-' + String(mon.getDate()).padStart(2,'0');
-                        [local, utc].forEach(wk => { upd[`system/dorm/rosters/${wk}__${_rmRoom}`] = null; });
+                        [local, utc].forEach(wk => { _weekKeys.push(wk); upd[`system/dorm/rosters/${wk}__${_rmRoom}`] = null; });
                     }
                 }
             } catch(e) {}
@@ -1327,7 +1328,25 @@ _executeReset: function() {
                 const key = `${nm}|${pd}`.replace(/[.#$/\[\]]/g, '_');
                 upd[`system/dismissedCourses/${weekKey}/${key}`] = { name: nm, period: pd, at: Date.now() };
             }
-            if (Object.keys(upd).length) return firebase.database().ref().update(upd);
+            // [고스트 방지] 같은 주차의 생활관 '배정(assignments)'에서 이 과정(courseName) 배정도 함께 제거.
+            //  (명단 rosters만 지우고 배정은 남아, 같은 방/주차에 새 과정 개설 시 옛 배정이 끌려오던 문제)
+            const _nnm = String(nm||'').replace(/\s+/g,'').trim();
+            const _assignReads = (_nnm && _weekKeys.length)
+              ? _weekKeys.map(function(wk){
+                  return firebase.database().ref('system/dorm/assignments/'+wk+'/students').once('value').then(function(as){
+                    var students = as.val() || {};
+                    Object.keys(students).forEach(function(k){
+                      var stu = students[k];
+                      if (stu && String(stu.course||'').replace(/\s+/g,'').trim() === _nnm) {
+                        upd['system/dorm/assignments/'+wk+'/students/'+k] = null;   // 이 과정 배정만 제거(다른 과정은 보존)
+                      }
+                    });
+                  }).catch(function(){});
+                })
+              : [];
+            return Promise.all(_assignReads).then(function(){
+                if (Object.keys(upd).length) return firebase.database().ref().update(upd);
+            });
         });
     } catch(e) {}
 
@@ -5976,10 +5995,15 @@ resetShuttleRequests: function() {
         const d=window._homeStatsData||{}, today=window._homeStatsToday||getTodayString();
         modal.style.display='flex';
         // 세 통계 팝업은 교육인원 팝업을 기준으로 같은 크기와 여백을 사용한다.
-        try{ const _box=modal.querySelector('div'); if(_box){ _box.style.width='92%'; _box.style.maxWidth='1180px'; _box.style.maxHeight='92vh'; _box.style.padding='clamp(20px,3vh,34px) clamp(22px,3vw,40px)'; } if(title){ title.style.fontSize='clamp(20px,2.3vw,28px)'; title.style.marginBottom='clamp(14px,2vh,24px)'; } }catch(e){}
+        try{ const _box=modal.querySelector('div'); if(_box){ _box.style.width='92%'; _box.style.maxWidth='1180px'; _box.style.maxHeight='92vh'; _box.style.padding='clamp(20px,3vh,34px) clamp(22px,3vw,40px)'; } if(title){ title.style.fontSize='clamp(20px,2.3vw,28px)'; title.style.marginBottom='clamp(22px,3.4vh,38px)'; title.style.paddingBottom='clamp(14px,2vh,20px)'; title.style.borderBottom='1px solid #eef2f7'; } }catch(e){}
         const esc=function(s){return (s==null?'':String(s)).replace(/[&<>"]/g,function(c){return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]);});};
         // 이번 주 월~금 정확한 기간(토·일은 차주 월요일 기준)
         const _wkRange=(function(){ var now=new Date(); var dow=now.getDay(); var off=(dow===0)?1:(dow===6)?2:(1-dow); var mon=new Date(now); mon.setDate(now.getDate()+off); mon.setHours(0,0,0,0); var fri=new Date(mon); fri.setDate(mon.getDate()+4); var W=['일','월','화','수','목','금','토']; var f=function(dt){ return (dt.getMonth()+1)+'.'+dt.getDate()+'('+W[dt.getDay()]+')'; }; return f(mon)+' ~ '+f(fri); })();
+        // [통일된 제목 구조] 메인 제목 + 파란 부제목(가운데 정렬) — 3개 현황판 팝업 공통
+        const _statTitle=function(main, sub){
+            return '<div style="text-align:center;font-weight:900;line-height:1.25;">'+main+'</div>'
+                +(sub?'<div style="text-align:center;font-size:clamp(14px,1.55vw,19px);color:#2563eb;font-weight:800;margin-top:9px;">'+sub+'</div>':'');
+        };
         // 카드 집계와 동일 기준: 현재 과정이 배정된 active 방 OR 이번 주와 겹치는 과정
         const weekRooms=Object.entries(d).filter(([,r])=>{
             const s=(r&&r.settings)||{}, st=(r&&r.status)||{};
@@ -5989,7 +6013,7 @@ resetShuttleRequests: function() {
             return (st.roomStatus==='active' && hasCourse) || ui._isThisWeek(s.period||'');
         });
         if(type==='active'){
-            title.textContent='🏫 현재 강의 중인 과정  ·  '+_wkRange;
+            title.innerHTML=_statTitle('🏫 현재 강의 중인 과정', _wkRange);
             const rows=weekRooms.filter(([,r])=>(r.status||{}).roomStatus==='active').map(([room,r])=>{
                 const prof=(r.status||{}).professorName||'-', course=(r.settings||{}).courseName||'-';
                 return `<div role="button" tabindex="0" onclick="ui.enterHomeCourse('${room}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();ui.enterHomeCourse('${room}');}" title="클릭하면 이 과정으로 입장합니다" style="display:flex;justify-content:space-between;align-items:center;gap:18px;min-height:70px;padding:15px 20px;background:#eff6ff;border:1px solid #dbeafe;border-radius:14px;margin-bottom:12px;cursor:pointer;transition:background .15s, transform .15s, box-shadow .15s;" onmouseover="this.style.background='#dbeafe';this.style.transform='translateY(-2px)';this.style.boxShadow='0 10px 26px rgba(37,99,235,.20)';" onmouseout="this.style.background='#eff6ff';this.style.transform='none';this.style.boxShadow='none';">
@@ -6001,8 +6025,7 @@ resetShuttleRequests: function() {
             }).join('');
             body.innerHTML=rows?'<div style="display:flex;flex-direction:column;gap:clamp(10px,1.3vh,18px);">'+rows+'</div>':'<p style="color:#94a3b8;text-align:center;padding:36px;font-size:20px;">이번 주 강의 중인 과정이 없습니다.</p>';
         } else if(type==='students'){
-            title.innerHTML='<div style="text-align:center;font-weight:900;">👩‍🎓 교육생 현황 · 소속 분포</div>'
-                +'<div style="text-align:center;font-size:clamp(15px,1.7vw,21px);color:#2563eb;font-weight:800;margin-top:6px;">'+_wkRange+' <span style="color:#94a3b8;font-weight:700;">· 예정명단 기준</span></div>';
+            title.innerHTML=_statTitle('👩‍🎓 교육생 현황 · 소속 분포', _wkRange+' <span style="color:#94a3b8;font-weight:700;">· 예정명단 기준</span>');
             const _legend='';
             let dormAll={};
             try{ dormAll=(await firebase.database().ref('system/dorm/rosters').once('value')).val()||{}; }catch(e){}
@@ -6087,7 +6110,7 @@ resetShuttleRequests: function() {
             else if(window.kakao && kakao.maps && kakao.maps.load){ kakao.maps.load(_buildHomeMap); }
             else { let _t=0; const _iv=setInterval(function(){ _t++; if(window.kakao&&kakao.maps){ clearInterval(_iv); (kakao.maps.load?kakao.maps.load(_buildHomeMap):_buildHomeMap()); } else if(_t>20){ clearInterval(_iv); } }, 300); }
         } else if(type==='outing'){
-            title.innerHTML='🚶 과정별 외출/외박 신청 현황<br><span style="font-size:14px; font-weight:600; color:#94a3b8;">AM 09:00 ~ 익일 AM 09:00</span>';
+            title.innerHTML=_statTitle('🚶 과정별 외출·외박 신청 현황', 'AM 09:00 ~ 익일 AM 09:00');
             const rows=weekRooms.map(([room,r])=>{
                 const course=(r.settings||{}).courseName||'-';
                 // [09:00 운영일 윈도우] 자정이 아닌 익일 09:00 기준으로 금일 외출/외박 집계
