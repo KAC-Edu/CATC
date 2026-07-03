@@ -5623,6 +5623,26 @@ body.night-mode .side-rail-lbl{ color:#cbd5e1; }
 .cg-count-box .cg-count-unit{ font-size:clamp(22px,3vw,52px); font-weight:800; color:#bfdbfe; }
 .cg-count-box.cg-count-pressing{ outline:3px dashed rgba(255,255,255,.7); outline-offset:4px; opacity:.85; }
 .cg-count-box.cg-count-dragging{ cursor:grabbing; outline:3px solid #f59e0b; outline-offset:4px; box-shadow:0 12px 40px rgba(245,158,11,.5); }
+/* [입교 완료 연기 효과] 카운트 블록 위로 피어올라 블러되며 사라짐 */
+.cg-enroll-fx{
+    position:absolute; bottom:100%; left:50%;
+    transform:translateX(-50%);
+    margin-bottom:8px; white-space:nowrap; pointer-events:none;
+    font-size:clamp(15px,1.6vw,28px); font-weight:900; color:#fff;
+    text-shadow:0 2px 10px rgba(0,0,0,.55);
+    background:linear-gradient(135deg, rgba(16,185,129,.92), rgba(5,150,105,.9));
+    padding:.7vh 1.4vw; border-radius:999px;
+    border:2px solid rgba(255,255,255,.42);
+    box-shadow:0 6px 20px rgba(16,185,129,.4);
+    animation:cgEnrollRise 2.4s cubic-bezier(.22,.61,.36,1) forwards;
+    will-change:transform,opacity,filter;
+}
+@keyframes cgEnrollRise{
+    0%   { opacity:0; transform:translateX(-50%) translateY(14px) scale(.82); filter:blur(0); }
+    18%  { opacity:1; transform:translateX(-50%) translateY(-4px)  scale(1);   filter:blur(0); }
+    65%  { opacity:1; transform:translateX(-50%) translateY(-64px) scale(1);   filter:blur(0); }
+    100% { opacity:0; transform:translateX(-50%) translateY(-120px) scale(1.03); filter:blur(6px); }
+}
 /* ── [정석 통일 헤더] 교육과정 안내 · 오픈톡방 QR · 채널 입교등록 공통 ── */
 .guide-courseinfo-slide .ci-header,
 .guide-kakaoqr-slide .ci-header,

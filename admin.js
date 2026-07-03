@@ -8625,12 +8625,23 @@ init: function() {
             if (_profEl) { _profEl.innerHTML = guideMgr._channelGuideHTML(); }
             // [입교등록 실시간 카운트] 좌측 큰 숫자 — 학생 입교 시 새로고침 없이 즉시 갱신
             try { if (ui._cgRegRef) { ui._cgRegRef.off(); ui._cgRegRef = null; } } catch (e) {}
+            ui._cgPrevNames = null;   // 페이지 진입 시점 인원은 애니메이션 대상에서 제외(첫 스냅샷으로 기준만 설정)
             try {
                 ui._cgRegRef = firebase.database().ref('courses/' + guideMgr._room() + '/students');
                 ui._cgRegRef.on('value', function (s) {
                     const _stu = s.val() || {};
-                    const _cnt = new Set(Object.values(_stu).filter(x => x && x.name && x.name !== 'undefined').map(x => String(x.name).trim())).size;
-                    const _el = document.getElementById('cgCountNum'); if (_el) _el.textContent = _cnt;
+                    const _names = Object.values(_stu).filter(x => x && x.name && x.name !== 'undefined').map(x => String(x.name).trim());
+                    const _set = new Set(_names);
+                    const _el = document.getElementById('cgCountNum'); if (_el) _el.textContent = _set.size;
+                    // 신규 입교자 감지 → "○○○ 입교 완료!" 연기 효과
+                    if (ui._cgPrevNames === null) {
+                        ui._cgPrevNames = _set;   // 첫 스냅샷: 기준만 저장(효과 없음)
+                    } else {
+                        _set.forEach(function (nm) {
+                            if (!ui._cgPrevNames.has(nm)) { try { if (ui._spawnEnrollFx) ui._spawnEnrollFx(nm); } catch (e) {} }
+                        });
+                        ui._cgPrevNames = _set;
+                    }
                 });
             } catch (e) {}
             // 카운트 블록 위치(모든 과정 공통 · 윈도우/전체화면 좌표 개별) 적용 + 3초 롱프레스 드래그 연결
@@ -12876,6 +12887,18 @@ ui._bindVideoCountDrag = function(box){
   box.addEventListener('pointercancel', function(){ clearHold(); if(dragMode){ dragMode=false; box.classList.remove('cg-count-dragging'); ui._saveVideoCountPos(); } });
   box.addEventListener('click', function(e){ e.stopPropagation(); });
   box.addEventListener('contextmenu', function(e){ e.stopPropagation(); e.preventDefault(); });
+};
+// [입교 완료 연기 효과] 신규 입교자 이름이 카운트 블록 위로 피어올라 블러되며 사라짐
+ui._spawnEnrollFx = function(name){
+  var box = document.getElementById('cgCountBox'); if(!box) return;
+  var nm = String(name||'').trim(); if(!nm) return;
+  var fx = document.createElement('div'); fx.className = 'cg-enroll-fx';
+  fx.textContent = '🎉 ' + nm + ' 입교 완료!';
+  // 여러 명 동시 등록 시 겹침 완화용 좌우 랜덤 오프셋
+  var off = Math.round(Math.random()*36 - 18);
+  fx.style.left = 'calc(50% + ' + off + 'px)';
+  box.appendChild(fx);
+  setTimeout(function(){ try{ fx.remove(); }catch(e){} }, 2600);
 };
 // 전체화면 진입/해제 시 카운트 블록 위치를 해당 모드 좌표로 다시 적용 (윈도우/전체화면 좌표 분리)
 if(!ui._videoCountFsHook){
