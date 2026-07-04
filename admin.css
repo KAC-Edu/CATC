@@ -5848,6 +5848,16 @@ body.night-mode .side-rail-lbl{ color:#cbd5e1; }
 .cg-count-box .cg-count-unit{ font-size:clamp(22px,3vw,52px); font-weight:800; color:#bfdbfe; }
 .cg-count-box.cg-count-pressing{ outline:3px dashed rgba(255,255,255,.7); outline-offset:4px; opacity:.85; }
 .cg-count-box.cg-count-dragging{ cursor:grabbing; outline:3px solid #f59e0b; outline-offset:4px; box-shadow:0 12px 40px rgba(245,158,11,.5); }
+/* [채널 배경음 음량] 음량 아이콘 + 슬라이더 (start.mp3) */
+.cg-vol-wrap{ position:absolute; right:20px; bottom:20px; z-index:6; display:flex; align-items:center; gap:0; }
+.cg-vol-btn{ width:48px; height:48px; flex:0 0 48px; border:none; border-radius:999px; background:rgba(15,23,42,.55); color:#fff; font-size:19px; cursor:pointer; display:flex; align-items:center; justify-content:center; backdrop-filter:blur(4px); box-shadow:0 4px 14px rgba(0,0,0,.28); transition:background .15s; }
+.cg-vol-btn:hover{ background:rgba(37,99,235,.85); }
+.cg-vol-btn.cg-vol-pressing{ outline:3px dashed rgba(255,255,255,.8); outline-offset:3px; background:#f59e0b; }
+.cg-vol-slider{ width:0; opacity:0; margin-left:0; height:6px; transition:width .2s, opacity .2s, margin-left .2s; -webkit-appearance:none; appearance:none; background:linear-gradient(90deg,#60a5fa,#93c5fd); border-radius:999px; cursor:pointer; pointer-events:none; }
+.cg-vol-wrap.open .cg-vol-slider{ width:130px; opacity:1; margin-left:12px; pointer-events:auto; }
+.cg-vol-slider::-webkit-slider-thumb{ -webkit-appearance:none; appearance:none; width:18px; height:18px; border-radius:50%; background:#fff; border:2px solid #2563eb; box-shadow:0 2px 6px rgba(0,0,0,.3); cursor:pointer; }
+.cg-vol-slider::-moz-range-thumb{ width:18px; height:18px; border-radius:50%; background:#fff; border:2px solid #2563eb; cursor:pointer; }
+
 /* [입교 완료 연기 효과] 카운트 블록 위로 피어올라 블러되며 사라짐 */
 .cg-enroll-fx{
     position:absolute; bottom:100%; left:50%;

@@ -3999,6 +3999,10 @@ setMode: function(mode) {
             v.style.display = 'none'; 
         });
 
+        // [입교안내 영상/배경음] 다른 화면으로 나가면 start.mp4 영상 + start.mp3 노래를 정지 (소리 이어짐 방지)
+        try { var _cgvExit = document.getElementById('cgVideo'); if (_cgvExit) { _cgvExit.pause(); } } catch(e){}
+        try { if (typeof guideMgr !== 'undefined' && guideMgr._stopChannelAudio) guideMgr._stopChannelAudio(); } catch(e){}
+
         // [유지] 강사 모드일 때 버튼 비활성화 해제 로직 (교육생 플랫폼 회색 음영 방지 관련 - 절대 수정 금지)
         if (!state.isObserver) {
             const allAdminBtns = document.querySelectorAll('.btn-action, .m-btn-done, .navy-btn, #btnReset, button.btn-danger');
@@ -8569,6 +8573,38 @@ init: function() {
         </div>`;
     },
 
+    // [배경음] start.mp3 — 채널 안내 영상(start.mp4)과 함께 동작하는 별도 6분 노래(개별 반복)
+    _cgAudio: null,
+    _playChannelAudio: function() {
+        try {
+            if (!this._cgAudio) {
+                this._cgAudio = new Audio('start.mp3?t=' + Date.now());
+                this._cgAudio.loop = true;          // 노래는 별도로 반복
+                this._cgAudio.preload = 'auto';
+                this._cgAudio.addEventListener('error', function(){});  // start.mp3 없으면 조용히 무시
+            }
+            // 초기 음량 = 전체 과정 공통 저장값(system/sharedGuide/channelAudioVolume), 없으면 20%
+            var _vol = (ui && ui._cgVol != null && isFinite(ui._cgVol)) ? ui._cgVol : 0.2;
+            this._cgAudio.volume = Math.max(0, Math.min(1, _vol));
+            this._cgAudio.currentTime = 0;
+            var _p = this._cgAudio.play();
+            if (_p && _p.catch) _p.catch(function(){});
+        } catch(e){}
+    },
+    _stopChannelAudio: function() {
+        try { if (this._cgAudio) { this._cgAudio.pause(); this._cgAudio.currentTime = 0; } } catch(e){}
+    },
+    // [음량] 현재 재생 음량 설정 + 아이콘/슬라이더 갱신 (저장은 3초 롱프레스에서만)
+    _setChannelVolume: function(v) {
+        v = Math.max(0, Math.min(1, Number(v)||0));
+        try { if (this._cgAudio) this._cgAudio.volume = v; } catch(e){}
+        try {
+            var ico = document.getElementById('cgVolIco');
+            if (ico) ico.className = 'fa-solid ' + (v <= 0 ? 'fa-volume-xmark' : (v < 0.5 ? 'fa-volume-low' : 'fa-volume-high'));
+            var sl = document.getElementById('cgVolSlider');
+            if (sl && String(Math.round(v*100)) !== sl.value) sl.value = Math.round(v*100);
+        } catch(e){}
+    },
     _channelGuideHTML: function() {
         // [영상 대체] 카카오채널 입교/출결 등록방법 안내를 GitHub에 올린 start.mp4 영상으로 상영.
         // 전체화면/윈도우 어느 쪽이든 화면을 꽉 채워 재생. 영상 파일이 없으면 안내 문구 표시.
@@ -8583,6 +8619,11 @@ init: function() {
           <div id="cgCountBox" class="cg-count-box" title="3초간 꾹 누르면 위치를 옮길 수 있습니다 (모든 과정 공통)">
             <div class="cg-count-label">현재 입교등록</div>
             <div class="cg-count-num"><b id="cgCountNum">0</b><span class="cg-count-unit">명</span></div>
+          </div>
+          <div id="cgVolWrap" class="cg-vol-wrap" title="클릭: 음량 조절  ·  3초 꾹: 지금 음량을 모든 과정 초기값으로 저장">
+            <button id="cgVolBtn" class="cg-vol-btn" type="button"><i id="cgVolIco" class="fa-solid fa-volume-low"></i></button>
+            <input id="cgVolSlider" class="cg-vol-slider" type="range" min="0" max="100" value="20"
+                   oninput="try{guideMgr._setChannelVolume(this.value/100);}catch(e){}">
           </div>
         </div>`;
     },
@@ -8878,6 +8919,7 @@ init: function() {
 
         // 채널 안내 영상(start.mp4)이 재생 중이면 페이지 이동 시 정지 (다른 페이지로 소리 이어짐 방지)
         try { var _prevV = document.getElementById('cgVideo'); if (_prevV) { _prevV.pause(); } } catch(e){}
+        try { guideMgr._stopChannelAudio(); } catch(e){}
         // 교육과정 안내 '교육 인원' 실시간 리스너 해제 (페이지 이동 시)
         try { if (ui._ciRegRef) { ui._ciRegRef.off(); ui._ciRegRef = null; } } catch(e){}
 
@@ -9030,6 +9072,8 @@ init: function() {
                 const _cb = document.getElementById('cgCountBox');
                 if (_cb && ui._bindVideoCountDrag) ui._bindVideoCountDrag(_cb);
             } catch (e) {}
+            // [음량] 저장된 초기 음량 로드 → 슬라이더/아이콘 반영 + 3초 롱프레스 저장 바인딩
+            try { if (ui._initChannelVolUI) ui._initChannelVolUI(); } catch (e) {}
             // 페이지 진입 시 영상 자동 재생 시도(내비게이션 클릭이 사용자 제스처로 인정되어 대부분 재생됨).
             // 차단되면 controls로 직접 재생 가능.
             try {
@@ -9040,6 +9084,8 @@ init: function() {
                     if (_p && _p.catch) { _p.catch(function () { try { _v.muted = true; _v.play(); } catch (e) {} }); }
                 }
             } catch (e) {}
+            // [배경음] start.mp3(별도 6분 노래)를 영상과 함께 반복 재생
+            try { guideMgr._playChannelAudio(); } catch (e) {}
             slot.pageNum = num;
             const _indcg = document.getElementById('guidePageInfo');
             if (_indcg) _indcg.innerText = `${num} / ${_total}`;
@@ -13842,6 +13888,57 @@ ui._loadVideoCountPos = function(cb){
     };
     ui._videoCountPosLoaded = true; if(cb) cb();
   }).catch(function(){ var d=ui._videoCountDefaultPos; ui._videoCountPos={win:{x:d.win.x,y:d.win.y},fs:{x:d.fs.x,y:d.fs.y}}; ui._videoCountPosLoaded=true; if(cb) cb(); });
+};
+// ── [채널 배경음 초기 음량] 전체 과정 공통(system/sharedGuide/channelAudioVolume) · 기본 20% ──
+//    음량 아이콘 클릭 = 슬라이더 펼침/접기(현재 세션 음량 조절), 3초 꾹 = 지금 음량을 초기값으로 저장.
+ui._cgVolDefault = 0.2;
+ui._cgVol = null; ui._cgVolLoaded = false;
+ui._loadChannelVol = function(cb){
+  firebase.database().ref('system/sharedGuide/channelAudioVolume').once('value').then(function(s){
+    var v = s.val();
+    ui._cgVol = (v!=null && isFinite(v)) ? Math.max(0,Math.min(1,Number(v))) : ui._cgVolDefault;
+    ui._cgVolLoaded = true; if(cb) cb();
+  }).catch(function(){ ui._cgVol = ui._cgVolDefault; ui._cgVolLoaded = true; if(cb) cb(); });
+};
+ui._saveChannelVol = function(v){
+  v = Math.max(0,Math.min(1,Number(v)||0));
+  ui._cgVol = v;
+  firebase.database().ref('system/sharedGuide/channelAudioVolume').set(v).catch(function(){});
+};
+// 채널 페이지 진입 시 호출: 저장된 음량을 슬라이더/오디오에 반영하고 버튼에 롱프레스 저장 바인딩
+ui._initChannelVolUI = function(){
+  var apply = function(){
+    var v = (ui._cgVol!=null && isFinite(ui._cgVol)) ? ui._cgVol : ui._cgVolDefault;
+    try { if (guideMgr && guideMgr._setChannelVolume) guideMgr._setChannelVolume(v); } catch(e){}
+  };
+  if(!ui._cgVolLoaded){ ui._loadChannelVol(apply); } else { apply(); }
+  var btn = document.getElementById('cgVolBtn');
+  var wrap = document.getElementById('cgVolWrap');
+  if(btn && !btn._cgVolBound){
+    btn._cgVolBound = true;
+    var holdTimer=null, saved=false, sx=0, sy=0;
+    var clearHold=function(){ if(holdTimer){ clearTimeout(holdTimer); holdTimer=null; } btn.classList.remove('cg-vol-pressing'); };
+    btn.addEventListener('pointerdown', function(e){
+      e.stopPropagation(); saved=false; sx=e.clientX; sy=e.clientY;
+      try{ btn.setPointerCapture(e.pointerId); }catch(_){}
+      btn.classList.add('cg-vol-pressing');
+      holdTimer=setTimeout(function(){
+        saved=true; btn.classList.remove('cg-vol-pressing');
+        var vol = (guideMgr._cgAudio ? guideMgr._cgAudio.volume : ((ui._cgVol!=null)?ui._cgVol:ui._cgVolDefault));
+        ui._saveChannelVol(vol);
+        try{ if(navigator.vibrate) navigator.vibrate(45); }catch(_){}
+        if(ui.showAlert) ui.showAlert('🔊 현재 음량('+Math.round(vol*100)+'%)을 모든 과정 초기 음량으로 저장했습니다.');
+      }, 3000);
+    });
+    btn.addEventListener('pointermove', function(e){ if(Math.hypot(e.clientX-sx,e.clientY-sy)>10) clearHold(); });
+    btn.addEventListener('pointerup', function(e){
+      e.stopPropagation(); clearHold();
+      try{ btn.releasePointerCapture(e.pointerId); }catch(_){}
+      if(!saved && wrap){ wrap.classList.toggle('open'); }   // 짧게 누르면 슬라이더 펼침/접기
+    });
+    btn.addEventListener('pointercancel', function(){ clearHold(); });
+    btn.addEventListener('click', function(e){ e.stopPropagation(); e.preventDefault(); });
+  }
 };
 ui._saveVideoCountPos = function(){
   if(!ui._videoCountPos) return;
