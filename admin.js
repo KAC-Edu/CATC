@@ -1,18 +1,18 @@
-/* PLATFORM_EDIT_STATUS: 수정완료 | VERSION: N9 | 2026-07-05 */
+/* PLATFORM_EDIT_STATUS: 수정완료 | VERSION: L9 | 2026-07-03 */
 /* [복구 2026-07-03] 파일 말단 184줄이 저장 중 잘림 → J8(260702Z40) 보관본의 동일 블록(리모컨 위젯·더보기 패널·ZOOM 표시 IIFE)으로 접합 복구. J8 이후 해당 말단 블록을 수정한 이력이 있다면 편집기 원본(L9)으로 재저장 권장. */
 /* ============================================================
-   PLATFORM_EDIT_STATUS: 수정완료 | VERSION: J14 | 2026-07-04 (J14: 수료 기념사진 버튼 위치·노출 규칙 변경 — 출결 화면 버튼 제거, 대시보드 히어로의 강의장소 배지 옆에 노란색(앰버 그라데이션·펄스) pill로 이동. 노출 = 과정 수료일 '당일' KST 06:00부터(새벽에 열어둔 화면도 06시에 자동 노출, settings 실시간 리스너 연동, 방 전환 시 초기화). (J13.1: 기념사진 모달 한 화면 수납 — 캔버스 높이를 화면에 맞춰 제한(max-height calc)해 미리보기·안내·버튼 3종이 스크롤 없이 항상 보임(드래그 레이어는 캔버스 표시 박스에 정확히 일치하도록 fit-content). 텍스트는 각 칸 오른쪽 경계(액자 실측 %)를 넘지 않도록 measureText 기반 자동 축소 — 긴 과정명/기간도 칸 안에 정렬. (J13: 수료 기념사진 신설 — 출결 관리 화면 '📸 수료 기념사진' 버튼(수료일 당일 금색 펄스). 강사가 폰으로 촬영 후 QR(grad_photo.html)로 업로드(긴변 1600·JPEG 0.8 압축, courses/{room}/gradPhoto 저장) 또는 PC에서 직접 선택. 액자(grad_frame.png, 가운데 투명)에 사진 cover-fit 합성 + 하단 4칸(과정명/교육기간/교육장소/담임교수) 자동 기입 — 각 글자 3초 드래그 보정(system/sharedGuide/gradPhotoPos, 액자 % 기준 전 과정 공통). 미리보기·PNG 다운로드·사진 교체·삭제 지원, PDF 전체화면 중에도 모달 표시. 유효기간 = 수료일(endDate) 자정까지: 종료 다음날 kacExpire 자동정리 및 수동 리셋·연간계획 삭제에서 gradPhoto 제거, 교육생 다운로드 버튼도 함께 사라짐. (J12.3: 입교안내 과정 전환 잔상 제거 — 다른 과정(또는 같은 방의 대면↔비대면 변형 변경)으로 이동 시 공용 캔버스·가상페이지·오버레이·버튼을 즉시 비우고 로딩 배지를 표시, 이전 과정 PDF가 잠깐 보이던 문제 해소. (J12.2: ①교육개요 오버레이 글자를 PDF 라벨과 동급 크기로(메인 2.6%·서브 2.25%) ②'회의참가 ID/PW' 항목 클릭 → 회의정보 입력 모달(PDF 전체화면 중에도 표시, 저장 시 오버레이 즉시 갱신·courses/{room}/zoomMeeting 단일 저장소라 ZOOM 모니터링 등 연동 화면 전체 적용, 드래그 직후 오클릭 방지) ③홈 검색카드 장소가 온라인(Zoom)이면 Zoom 블루(#0B5CFF) 블록+비디오 아이콘으로 강조(드롭다운 변경 시 즉시 반영). (J12.1: 교육개요 오버레이 수정 — ①값을 slot 캐시가 아닌 Firebase(settings/students/zoomMeeting)에서 직접 조회(진입 경로·타이밍 무관하게 과정명/기간 정확 표기, 늦은 응답 무시 토큰) ②글자 크기를 vw가 아닌 PDF 래퍼 폭 비례(메인 2.15%·서브 1.85%)로 — PDF와 같은 비율로 확대/축소되어 전체화면에서도 또렷 ③기본 좌표를 실측 기준(콜론 라인 중심)으로 보정. (J12: 비대면(온라인 Zoom) 입교안내 지원 — 과정 장소가 온라인(Zoom)이면 '입교안내(비대면).pdf' 자동 로드(장소 변경 시 재로드). 가상페이지(1p 뒤 교수소개→카카오 오픈톡방→입교등록절차→목차) 흐름은 대면과 동일, 대면용 '교육과정 안내' 가상페이지는 비대면에서 숨김. 비대면 PDF 4p 교육개요에 과정명·교육인원(입교등록수)·교육기간·교육구분·교육평가(대면과 동일 직무일반/법정 표기)·ZOOM 회의 ID/PW 오버레이 — 항목별 3초 롱프레스 드래그 이동, 윈도우/전체화면 좌표 개별 저장(system/sharedGuide/overviewPos, 전 과정 공통·실시간 동기). 교육시간표 버튼 페이지를 변형별로(대면 13p·비대면 7p) — 비대면은 지원부 판독본이 없으므로 기존 QR 사진 업로드/보기 버튼 그대로 동작. (J11: 입교안내 13p '교육시간표 보기' 신설 — 지원부가 한글 명단 업로드 시 자동 판독·저장되는 표 그리드(courses/{room}/schedule/grid, 셀좌표·병합정보 포함)를 실시간 구독. grid 있으면 녹색 버튼 노출→클릭 시 아래→위 슬라이드 시트에 원본 표 그대로 렌더(연속 강의 rowspan 줄합침+과정명·강사명 센터정렬, X로 슬라이드 다운). grid 없으면 기존 사진 보기/QR 업로드 흐름 유지. 녹색 버튼도 3초 롱프레스 위치보정(별도 그룹 parsedSchedule, 윈도우/전체화면 좌표 개별 저장). (J10: ①OTP 재사용 가드 — 강사 화면 새로고침/출결탭 재진입 시 잔여 15초 이상 유효 OTP를 서버에서 재사용, 매번 새 코드로 교체되어 입력 중이던 교육생이 만료 판정받던 문제 해소 ②담임(coordinatorName) 수동수정 보호 — status/coordManual 플래그 도입(professorManual과 동일 패턴), 강사가 담임을 바꿔도 연간계획 자동동기화가 계획값으로 되돌리던 버그 수정. 방 비움/신규 배치 시 플래그 해제 ③퇴교차량 자동판정 표시 — 지원부가 한글 시간표 업로드 시 기록되는 courses/{room}/shuttle/autoDeparture를 실시간 구독, 1차/2차 구분 없이 '이 과정 출발시간' 단일 표시(대시보드 인라인·셔틀 파란박스·도착 ETA 모두), 자동판정 없으면 기존 1차/2차 표기 유지. (J9: 지원부 생활관 명단(system/dorm/rosters) 오삭제 방지 — 리셋·명단비우기·연간계획삭제·종료과정자동정리 4개 경로 전부 '명단의 과정명이 해당 방 과정명과 일치할 때만' 삭제하도록 가드. 다른 과정 명단은 보존하고 console에 보존 사유 기록. (J8: ZOOM 진입 요소를 CSS !important 규칙으로 원천 차단 — 오프라인이면 어떤 코드가 표시해도 절대 안 보임(body.zoom-room-online 클래스 게이트). (J7: ZOOM 진입 요소 표시를 [onclick*=openZoomMonitor] 전체 선택으로 통일 + 2초 하트비트 — 오프라인에서 pill 잔존 완전 차단. (J6: ①장소 수동지정 보호(roomDetailManual) — 연간계획 동기화가 온라인 설정 되돌리는 문제 차단 ②ZOOM 버튼 표시를 장소 배지 텍스트와 상시 동기(MutationObserver) — 오프라인인데 버튼 남는 문제 해소 ③저장알림 확인 후 회의정보 모달 순차 표시(동시 팝업 제거) ④회의번호 000 0000 0000 자동 포맷 전용 모달. (J5: ①ZOOM 버튼 과정현황 장소 옆으로+오프라인 완전숨김(방전환 기본숨김·온라인 가드) ②iframe 사이징 실측기반 재작성 ③온라인 장소 저장 시 회의번호/암호 과정별 저장(askZoomMeetingInfo) ④홈검색 카카오등록 교수 노란배지 ⑤퇴교차량 칩 인라인 펼침. (J4: ZOOM 모니터링 iframe 높이를 body zoom 배율 보정해 실제 화면에 맞춤 — 설정 패널 잘림 해소, 리사이즈 대응. (J3: ui.openZoomMonitor 추가 — ZOOM 모니터링을 내장 뷰(iframe)로 열고 과정 전환 시 확인 후 재로딩, 온라인 판별 토글에 더보기 메뉴 항목 포함) (J2: ①ZOOM 모니터링 버튼 표시로직 재적용(온라인 과정 판별) ②강의실 초기화 confirm에 삭제범위 안내 추가 ③QR 요소없음 개발자문구 교체 ④toggleNightMode/addSubject 널가드 — 구버전 잔재 안전화)
+   PLATFORM_EDIT_STATUS: 수정완료 | VERSION: J8 | 2026-07-02 (J8: ZOOM 진입 요소를 CSS !important 규칙으로 원천 차단 — 오프라인이면 어떤 코드가 표시해도 절대 안 보임(body.zoom-room-online 클래스 게이트). (J7: ZOOM 진입 요소 표시를 [onclick*=openZoomMonitor] 전체 선택으로 통일 + 2초 하트비트 — 오프라인에서 pill 잔존 완전 차단. (J6: ①장소 수동지정 보호(roomDetailManual) — 연간계획 동기화가 온라인 설정 되돌리는 문제 차단 ②ZOOM 버튼 표시를 장소 배지 텍스트와 상시 동기(MutationObserver) — 오프라인인데 버튼 남는 문제 해소 ③저장알림 확인 후 회의정보 모달 순차 표시(동시 팝업 제거) ④회의번호 000 0000 0000 자동 포맷 전용 모달. (J5: ①ZOOM 버튼 과정현황 장소 옆으로+오프라인 완전숨김(방전환 기본숨김·온라인 가드) ②iframe 사이징 실측기반 재작성 ③온라인 장소 저장 시 회의번호/암호 과정별 저장(askZoomMeetingInfo) ④홈검색 카카오등록 교수 노란배지 ⑤퇴교차량 칩 인라인 펼침. (J4: ZOOM 모니터링 iframe 높이를 body zoom 배율 보정해 실제 화면에 맞춤 — 설정 패널 잘림 해소, 리사이즈 대응. (J3: ui.openZoomMonitor 추가 — ZOOM 모니터링을 내장 뷰(iframe)로 열고 과정 전환 시 확인 후 재로딩, 온라인 판별 토글에 더보기 메뉴 항목 포함) (J2: ①ZOOM 모니터링 버튼 표시로직 재적용(온라인 과정 판별) ②강의실 초기화 confirm에 삭제범위 안내 추가 ③QR 요소없음 개발자문구 교체 ④toggleNightMode/addSubject 널가드 — 구버전 잔재 안전화)
    CATC · 강사 플랫폼 로직  (admin.js)
    STATUS    수정완료
-   @version  N9
-   @build    20260705-012631
+   @version  L9
+   @build    20260703-104644
    ------------------------------------------------------------
    [코드 수정 규칙 · AI/개발자 공통]
    이 파일을 고치면 @version 을 A -> B -> ... -> Z -> A1 -> B1 ...
    순으로 1단계 올리고, @build 를 수정 시각으로 갱신할 것.
    적용 여부는 브라우저 콘솔 로그(vA)로 확인한다.
 ============================================================ */
-try{console.log('%cCATC%c 강사 플랫폼 로직 (admin.js) %cvN9%c build 20260705-012631','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}
+try{console.log('%cCATC%c 강사 플랫폼 로직 (admin.js) %cvL9%c build 20260703-104644','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}
 /* --- admin.js (Final Integrated Version - Fixed Syntax & Logic) --- */
 
 // --- [기본 데이터] 20문항 ---
@@ -1037,12 +1037,9 @@ forceEnterRoom: async function(room) {
         firebase.database().ref(`courses/${cleanRoom}/coordNotice`).on('value', snap => {
             if (state.room !== cleanRoom) return;
             const newMsg = snap.val() || '';
-            // 대시보드 피드 즉시 업데이트 (항상) — <br>/줄바꿈 실제 렌더
+            // 대시보드 피드 즉시 업데이트 (항상)
             const el = document.getElementById('dashNoticeAdmin');
-            if (el) {
-                if (newMsg) { el.innerHTML = ui._noticeToHtml ? ui._noticeToHtml(newMsg) : String(newMsg); }
-                else { el.innerText = '등록된 운영부 공지가 없습니다.'; }
-            }
+            if (el) el.innerText = newMsg || '등록된 운영부 공지가 없습니다.';
             // 팝업 처리
             if (!newMsg) return;
             const prev = state.noticeSeen[coordKey];
@@ -1054,64 +1051,33 @@ forceEnterRoom: async function(room) {
         });
     });
 
-    // [입교안내 공지] 영구(system/globalNotice) + 이번주(system/weeklyNotice{html,weekKey}) 통합 처리.
-    //  기존엔 globalNotice만 들어서, 운영부가 '이번 주 과정만'으로 올린 공지가 강사에게 안 뜨던 문제 수정.
-    const _noticeMondayStr = function(){ var x=new Date(); var dow=(x.getDay()+6)%7; x.setDate(x.getDate()-dow); var z=function(n){return String(n).padStart(2,'0');}; return x.getFullYear()+'-'+z(x.getMonth()+1)+'-'+z(x.getDate()); };
-    const _weeklyMsgOf = function(v){
-        if (v && typeof v === 'object') { return (!v.weekKey || v.weekKey === _noticeMondayStr()) ? String(v.html || '') : ''; }   // 이번 주 유효분만
-        return (typeof v === 'string') ? v : '';
-    };
-    const _renderEffGlobal = function(){
+    firebase.database().ref('system/globalNotice').off();
+    firebase.database().ref('system/globalNotice').on('value', snap => {
         if (state.room !== cleanRoom) return;
-        // 이번주 공지가 있으면 우선, 없으면 영구 공지
-        const eff = (state._noticeWeeklyVal && String(state._noticeWeeklyVal).trim()) ? state._noticeWeeklyVal : (state._noticeGlobalVal || '');
+        const newMsg = snap.val() || '';
+        // 대시보드 피드 즉시 업데이트 (항상)
         const el = document.getElementById('dashNoticeGlobal');
-        if (el) {
-            if (eff) { el.innerHTML = ui._noticeToHtml ? ui._noticeToHtml(eff) : String(eff); }
-            else { el.innerText = '현재 게시된 센터 전체 공지가 없습니다.'; }
-        }
-        // [입교안내 센터공지 페이지] 슬롯 갱신(+ 그 페이지 보고 있으면 재렌더)
+        if (el) el.innerText = newMsg || '현재 게시된 센터 전체 공지가 없습니다.';
+        // [입교안내 센터공지 페이지] 실시간 반영 — 슬롯 갱신 + 지금 그 페이지를 보고 있으면 즉시 재렌더(내용/노출 갱신)
         try {
             var _gslot = (typeof guideMgr !== 'undefined' && guideMgr._slot) ? guideMgr._slot() : null;
             if (_gslot) {
-                _gslot.centerNotice = String(eff || '').trim();
-                if (state.currentMode === 'guide' && _gslot.pdfDoc && guideMgr._isCenterNoticePage && guideMgr._isCenterNoticePage(_gslot.pageNum)) {
+                var _wasCN = (state.currentMode === 'guide' && _gslot.pdfDoc && guideMgr._isCenterNoticePage && guideMgr._isCenterNoticePage(_gslot.pageNum));
+                _gslot.centerNotice = String(newMsg || '').trim();
+                if (state.currentMode === 'guide' && _gslot.pdfDoc && (_wasCN || (guideMgr._isCenterNoticePage && guideMgr._isCenterNoticePage(_gslot.pageNum)))) {
                     guideMgr.renderPage(_gslot.pageNum);
                 }
             }
         } catch (e) {}
-        // 팝업 (변경분만)
-        const prev = state.noticeSeen['effglobal'];
-        state.noticeSeen['effglobal'] = eff;
+        // 팝업 처리
+        if (!newMsg) return;
+        const prev = state.noticeSeen['global'];
+        state.noticeSeen['global'] = newMsg;
         if (prev === undefined) return;
-        if (eff && eff !== prev && state.currentMode !== 'notice') {
-            guideMgr.showCoordNoticeAlert(eff, '📢 입교안내 공지');
+        if (newMsg !== prev && state.currentMode !== 'notice') {
+            guideMgr.showCoordNoticeAlert(newMsg, '📢 입교안내 공지');
         }
-    };
-    // 진입 시 현재값 먼저 로드해 기준값 저장(이후 변경분만 팝업) → 실시간 리스너 등록
-    Promise.all([
-        firebase.database().ref('system/globalNotice').once('value'),
-        firebase.database().ref('system/weeklyNotice').once('value')
-    ]).then(function(res){
-        if (state.room !== cleanRoom) return;
-        state._noticeGlobalVal = res[0].val() || '';
-        state._noticeWeeklyVal = _weeklyMsgOf(res[1].val());
-        const eff0 = (state._noticeWeeklyVal && String(state._noticeWeeklyVal).trim()) ? state._noticeWeeklyVal : (state._noticeGlobalVal || '');
-        if (!('effglobal' in state.noticeSeen)) state.noticeSeen['effglobal'] = eff0;   // 진입 기준값(팝업 억제)
-        _renderEffGlobal();
-        firebase.database().ref('system/globalNotice').off();
-        firebase.database().ref('system/globalNotice').on('value', function(snap){
-            if (state.room !== cleanRoom) return;
-            state._noticeGlobalVal = snap.val() || '';
-            _renderEffGlobal();
-        });
-        firebase.database().ref('system/weeklyNotice').off();
-        firebase.database().ref('system/weeklyNotice').on('value', function(snap){
-            if (state.room !== cleanRoom) return;
-            state._noticeWeeklyVal = _weeklyMsgOf(snap.val());
-            _renderEffGlobal();
-        });
-    }).catch(function(){});
+    });
 
     // [연동] 교육운영부(admin_coord)가 설정한 청렴교육/노조교육 강의장 → 대시보드 피드에 한 줄로 표시
     firebase.database().ref('system/eduLocations').off();
@@ -1367,9 +1333,7 @@ _executeReset: function() {
             const pd = (st.period || '').trim();
             const upd = {};
             const _weekKeys = [];
-            // [리셋 정합성/J9] 지원부 생활관 명단(주차__방)은 '이 방의 과정명과 일치할 때만' 제거
-            //  — 같은 방·주차 슬롯의 "다른 과정" 명단을 리셋이 오삭제하던 사고 방지 (복구버튼 의존 제거)
-            const _rosterKeyCands = [];
+            // [리셋 정합성] 지난 과정의 지원부 생활관 명단(주차__방)도 함께 제거 (새 과정에 옛 명단/배정이 끌려오는 문제 방지)
             try {
                 const start = pd.includes(' ~ ') ? pd.split(' ~ ')[0].trim() : (pd.split('~')[0] || '').trim();
                 if (start) {
@@ -1379,7 +1343,7 @@ _executeReset: function() {
                         const mon = new Date(d); mon.setDate(d.getDate() - dow);
                         const utc = mon.toISOString().slice(0, 10);
                         const local = mon.getFullYear() + '-' + String(mon.getMonth()+1).padStart(2,'0') + '-' + String(mon.getDate()).padStart(2,'0');
-                        [local, utc].forEach(wk => { _weekKeys.push(wk); _rosterKeyCands.push(`system/dorm/rosters/${wk}__${_rmRoom}`); });
+                        [local, utc].forEach(wk => { _weekKeys.push(wk); upd[`system/dorm/rosters/${wk}__${_rmRoom}`] = null; });
                     }
                 }
             } catch(e) {}
@@ -1405,16 +1369,7 @@ _executeReset: function() {
                   }).catch(function(){});
                 })
               : [];
-            // [J9] 명단 노드를 실제로 읽어 courseName이 이 방 과정명과 일치할 때만 삭제 목록에 추가
-            const _rosterReads = _rosterKeyCands.map(function(p){
-                return firebase.database().ref(p).once('value').then(function(rs){
-                    const rv = rs.val(); if (!rv) return;
-                    const rn = String(rv.courseName || '').replace(/\s+/g, '').trim();
-                    if (rn && _nnm && rn === _nnm) upd[p] = null;
-                    else console.warn('[리셋/J9] 지원부 명단 보존(과정명 불일치):', p, '(명단 과정:', rv.courseName, ')');
-                }).catch(function(){});
-            });
-            return Promise.all(_assignReads.concat(_rosterReads)).then(function(){
+            return Promise.all(_assignReads).then(function(){
                 if (Object.keys(upd).length) return firebase.database().ref().update(upd);
             });
         });
@@ -1463,7 +1418,6 @@ _executeReset: function() {
         [`${rPath}/surveyAnswers`]:       null,   // [리셋] 설문 응답
         [`${rPath}/lastSurveyResult`]:    null,   // [리셋] 직전 설문 결과
         [`${rPath}/scheduleImage`]:       null,   // [리셋] 교육 시간표 사진
-        [`${rPath}/gradPhoto`]:           null,   // [J13 리셋] 수료 기념사진
         [`${rPath}/venuePick`]:           null    // [리셋] (settings 밖 잔여 대비) — 실제 venuePick은 settings 초기화로 함께 정리됨
     };
 
@@ -1637,21 +1591,10 @@ toggleLeader: function(token, currentName) {
             [`courses/${room}/expectedStudents`]: null,
             [`courses/${room}/coordRoster`]: null
         };
-        // [J9] 지원부 생활관 명단: 이 방(__room) 키 중 '현재 과정명과 일치'하는 것만 제거
-        //  (같은 방 슬롯에 올라온 다음 주/다른 과정 명단 오삭제 방지)
-        const _nmField = String((document.getElementById('setup-course-name') || {}).value || '').replace(/\s+/g, '').trim();
-        Promise.all([
-            firebase.database().ref('system/dorm/rosters').once('value'),
-            firebase.database().ref(`courses/${room}/settings/courseName`).once('value')
-        ]).then(function(res){
-            const all = res[0].val() || {};
-            const nm = (String(res[1].val() || '').replace(/\s+/g, '').trim()) || _nmField;
-            Object.keys(all).forEach(function(k){
-                if (!k.endsWith('__' + room)) return;
-                const rn = String((all[k] || {}).courseName || '').replace(/\s+/g, '').trim();
-                if (nm && rn && rn === nm) updates['system/dorm/rosters/' + k] = null;
-                else console.warn('[명단비우기/J9] 지원부 명단 보존(과정명 불일치):', k);
-            });
+        // 지원부 생활관 명단: 주차 계산에 의존하지 않고, 이 방(__room)으로 끝나는 모든 키를 전부 제거
+        firebase.database().ref('system/dorm/rosters').once('value').then(function(snap){
+            const all = snap.val() || {};
+            Object.keys(all).forEach(function(k){ if (k.endsWith('__' + room)) updates['system/dorm/rosters/' + k] = null; });
             return firebase.database().ref().update(updates);
         }).then(function(){
             ui.showAlert("✅ 명단이 모두 비워졌습니다.");
@@ -2332,31 +2275,8 @@ init: function() {
         if (!row) return;
         const show = (row.style.display === 'none' || !row.style.display);
         row.style.display = show ? 'flex' : 'none';
-        if (show) {
-            // 열자마자는 닫지 않는다. 커서를 놓고 입력을 기다린다.
-            const i = document.getElementById('qaAddInput');
-            if (i) { i.value = ''; setTimeout(function(){ try{ i.focus(); }catch(e){} }, 0); }
-            this._qaAddCancelHide();
-        } else {
-            this._qaAddCancelHide();
-        }
+        if (show) { const i = document.getElementById('qaAddInput'); if (i) { i.value = ''; i.focus(); } }
     },
-    // [닫힘 취소] 입력란에 들어오거나 타이핑 중이면 닫지 않는다
-    _qaAddCancelHide: function() {
-        if (this._qaIdleT) { clearTimeout(this._qaIdleT); this._qaIdleT = null; }
-    },
-    // [자동 닫힘] 입력란을 벗어나면(=더 입력 안 함) 3초 뒤 닫는다. 그 사이 다시 들어오면 유지.
-    _qaAddScheduleHide: function() {
-        if (this._qaIdleT) clearTimeout(this._qaIdleT);
-        this._qaIdleT = setTimeout(function() {
-            const row = document.getElementById('qaAddRow');
-            const i = document.getElementById('qaAddInput');
-            if (i && document.activeElement === i) return; // 다시 포커스면 유지
-            if (row) row.style.display = 'none';
-        }, 3000);
-    },
-    // 하위호환: 예전 호출부가 남아있어도 안전하게 동작
-    _qaAddResetIdle: function() { this._qaAddCancelHide(); },
     quickAddSubject: function() {
         if (!state.room) { alert('먼저 과정을 선택해 주세요.'); return; }
         const input = document.getElementById('qaAddInput');
@@ -2366,7 +2286,6 @@ init: function() {
         firebase.database().ref(`courses/${state.room}/settings/subjects`).push(name).then(() => {
             input.value = "";
             input.focus();
-            subjectMgr._qaAddCancelHide();   // 계속 입력 가능하도록 유지, 벗어나면 3초 뒤 닫힘
         });
     }
 };
@@ -2643,7 +2562,6 @@ loadDashboardStats: function() {
         tablet: firebase.database().ref(`courses/${room}/tablet_loans`),
         attend: firebase.database().ref(`courses/${room}/internal_attendance/${today}`),
         departure: firebase.database().ref(`courses/${room}/shuttle/departure`),
-        autoDep:   firebase.database().ref(`courses/${room}/shuttle/autoDeparture`),   // [J10] 지원부 시간표 기반 자동판정
         shuttleReq: firebase.database().ref(`courses/${room}/shuttle/requests`)
     };
     window.dashRefs = refs; // 전역 보관 → 다음 방 전환 시 off() 가능
@@ -2661,7 +2579,6 @@ loadDashboardStats: function() {
         var _topT = document.getElementById('displayCourseTitle'); if (_topT) _topT.innerText = s.courseName || "";
         if (document.getElementById('dashPeriod')) document.getElementById('dashPeriod').innerText = s.period || "기간 미설정";
         if (document.getElementById('dashRoomDetail')) document.getElementById('dashRoomDetail').innerText = s.roomDetailName || "장소 미설정";
-        try { if (window.gradMgr) gradMgr.refreshHeroBtn(s.period); } catch (e) {}   // [J14] 수료일 06시부터 기념사진 버튼
         // [ZOOM 모니터링 J2] 과정 장소가 온라인(Zoom)일 때만 출결 관리 화면의 ZOOM 모니터링 버튼 노출
         try {
             var _zmOn = (/온라인|zoom/i.test(String(s.roomDetailName || '')));
@@ -2820,27 +2737,21 @@ loadDashboardStats: function() {
 
 
 // 8. 셔틀 정보 및 차량 수요 실시간 업데이트
-const _renderDashShuttleInline = () => {
-    const bar = document.getElementById('dashShuttleNotice');
-    if (bar) bar.style.display = "none";   // 노란 박스는 숨기고 제목 옆 시간만
-    const inlineEl = document.getElementById('dashShuttleTimeInline');
-    if (!inlineEl) return;
-    const at = state._autoDep && state._autoDep.departTime;   // [J10] 자동판정 우선: 이 과정 출발시간 단일 표시
-    const dep = state._lastDep;
-    if (at) inlineEl.innerText = `(${at} 출발)`;
-    else if (dep && dep.time) inlineEl.innerText = `(${dep.time2?('1차 '+dep.time+' / 2차 '+dep.time2):dep.time} 출발)`;
-    else inlineEl.innerText = '';
-};
 refs.departure.on('value', snap => {
     if (state.room !== room) return; 
-    state._lastDep = snap.val();
-    _renderDashShuttleInline();
-});
-refs.autoDep.on('value', snap => {   // [J10] 지원부 명단 업로드 즉시 반영
-    if (state.room !== room) return;
-    state._autoDep = snap.val();
-    _renderDashShuttleInline();
-    if (ui && ui.updateShuttleETA && state._lastShuttleCounts !== undefined) { try { ui.updateShuttleETA(state._lastDepTimeForEta || (state._lastDep && state._lastDep.time) || null, state._lastShuttleCounts); } catch(e){} }
+    const dep = snap.val();
+    const bar = document.getElementById('dashShuttleNotice');
+    const txt = document.getElementById('dashShuttleNoticeTxt');
+    if (!bar || !txt) return;
+
+    // 퇴교차량 노란 박스는 숨기고, 제목 옆에 시간만 표시
+    bar.style.display = "none";
+    const inlineEl = document.getElementById('dashShuttleTimeInline');
+    if (dep && dep.time) {
+        if (inlineEl) inlineEl.innerText = `(${dep.time2?('1차 '+dep.time+' / 2차 '+dep.time2):dep.time} 출발)`;
+    } else {
+        if (inlineEl) inlineEl.innerText = '';
+    }
 });
 
 refs.shuttleReq.on('value', s => {
@@ -3098,17 +3009,6 @@ loadAttendanceView: function() {
             return;
         }
         if (this._internalOtpTimer) clearInterval(this._internalOtpTimer);
-        // [J10] 서버에 잔여 15초 이상 남은 유효 OTP가 있으면 재사용 — 강사 화면 새로고침/탭 재진입 때마다
-        //  코드가 즉시 교체되어 입력 중이던 교육생이 '만료' 판정받던 문제 해소
-        const reuseOrPublish = () => {
-            firebase.database().ref(`courses/${activeRoom}/attendanceOtp`).once('value').then(s => {
-                const v = s.val();
-                if (v && v.code && String(v.room || '').toUpperCase() === activeRoom && Number(v.validUntil || 0) - Date.now() > 15000) {
-                    codeEl.textContent = String(v.code);
-                    codeEl.dataset.validUntil = String(v.validUntil);
-                } else publishOtp();
-            }).catch(() => publishOtp());
-        };
         const publishOtp = () => {
             const code = String(Math.floor(100000 + Math.random() * 900000));
             const now = Date.now();
@@ -3130,7 +3030,7 @@ loadAttendanceView: function() {
                 if(countEl) countEl.textContent = '저장오류';
             });
         };
-        reuseOrPublish();
+        publishOtp();
         this._internalOtpTimer = setInterval(() => {
             const liveRoom = String(state.room || '').trim().replace(/^ROOM\s*/i, '').replace(/^#/, '').trim().toUpperCase();
             if(liveRoom !== activeRoom) {
@@ -3640,7 +3540,6 @@ updateObserverButton: function() {
         clear('dashCourseTitle', '과정명을 설정해주세요.');
         clear('dashPeriod', '-');
         clear('dashRoomDetail', '-');
-        try { var _gb = document.getElementById('dashGradBtn'); if (_gb) _gb.classList.remove('is-visible'); } catch (e) {}   // [M9]
         clear('dashCoordName', '-');
         clear('dashProfNameOnly', '-');
         clear('dashArrivedCount', '0');
@@ -3928,7 +3827,7 @@ openQrModal: function() {
             var fr = document.getElementById('zoomMonitorFrame');
             if (fr) {
                 var cur = fr.getAttribute('data-room') || '';
-                var want = 'zoom_monitor.html?room=' + encodeURIComponent(state.room) + '&embed=1&v=260704M14';
+                var want = 'zoom_monitor.html?room=' + encodeURIComponent(state.room) + '&embed=1';
                 if (!cur) { fr.src = want; fr.setAttribute('data-room', String(state.room)); }
                 else if (cur !== String(state.room)) {
                     if (confirm('다른 과정(' + cur + ')의 모니터링이 열려 있습니다.\n현재 과정으로 다시 불러올까요?\n(진행 중이던 봇 연결은 끊어집니다)')) {
@@ -3998,10 +3897,6 @@ setMode: function(mode) {
         document.querySelectorAll('[id^="view-"]').forEach(v => { 
             v.style.display = 'none'; 
         });
-
-        // [입교안내 영상/배경음] 다른 화면으로 나가면 start.mp4 영상 + start.mp3 노래를 정지 (소리 이어짐 방지)
-        try { var _cgvExit = document.getElementById('cgVideo'); if (_cgvExit) { _cgvExit.pause(); } } catch(e){}
-        try { if (typeof guideMgr !== 'undefined' && guideMgr._stopChannelAudio) guideMgr._stopChannelAudio(); } catch(e){}
 
         // [유지] 강사 모드일 때 버튼 비활성화 해제 로직 (교육생 플랫폼 회색 음영 방지 관련 - 절대 수정 금지)
         if (!state.isObserver) {
@@ -5236,32 +5131,15 @@ loadShuttleData: function() {
     const activeRoom = state.room;
     if (state.shuttleDepartureRef) state.shuttleDepartureRef.off();
     if (state.shuttleRequestsRef) state.shuttleRequestsRef.off();
-    if (state.shuttleAutoRef) state.shuttleAutoRef.off();   // [J10]
     state.shuttleDepartureRef = firebase.database().ref(`courses/${activeRoom}/shuttle/departure`);
     state.shuttleRequestsRef = firebase.database().ref(`courses/${activeRoom}/shuttle/requests`);
-    // [J10] 지원부 시간표 기반 자동판정 실시간 구독 — 값이 바뀌면 화면 재로딩(초기 이벤트는 키 비교로 무시)
-    state.shuttleAutoRef = firebase.database().ref(`courses/${activeRoom}/shuttle/autoDeparture`);
-    state.shuttleAutoRef.on('value', s => {
-        if (state.room !== activeRoom) return;
-        const v = s.val();
-        const key = v ? (String(v.departTime||'') + '|' + String(v.updatedAt||'')) : '';
-        state._autoDep = v;
-        if (state._autoDepKey === key) return;
-        const isFirst = (state._autoDepKey === undefined);
-        state._autoDepKey = key;
-        if (!isFirst) { try { ui.loadShuttleData(); } catch(e){} }
-    });
 
     // 1. 좌측 파란색 박스: 날짜, 시간, 문구 레이아웃
     state.shuttleDepartureRef.on('value', snap => {
         if (state.room !== activeRoom) return;
-        let dep = snap.val();
-        state._lastDep = dep;
+        const dep = snap.val();
         const el = document.getElementById('shuttleDepartureTime');
         if(!el) return;
-        // [J10] 자동판정(지원부 시간표) 있으면 1차/2차 없이 이 과정 출발시간 단일 표시
-        const _at = state._autoDep && state._autoDep.departTime;
-        if (_at) dep = { date: (dep && dep.date) || (state._autoDep.endDate || ''), time: _at, time2: '' };
 
         if (dep && dep.time) {
             el.innerHTML = `
@@ -5391,9 +5269,6 @@ loadShuttleData: function() {
 updateShuttleETA: function(departureTime, counts) {
     const etaDetail = document.getElementById('shuttleETADetail');
     if (!etaDetail) return;
-    state._lastDepTimeForEta = departureTime; state._lastShuttleCounts = counts;   // [J10] autoDep 변경 시 재렌더용
-    const _atEta = state._autoDep && state._autoDep.departTime;                    // [J10] 자동판정 우선(단일 라운드)
-    if (_atEta) departureTime = _atEta;
     if (!departureTime) {
         etaDetail.innerHTML = `<div style="color:#94a3b8; font-size:13px; padding:4px 0;">출발 시간이 공지되면 표시됩니다.</div>`;
         return;
@@ -5414,10 +5289,10 @@ updateShuttleETA: function(departureTime, counts) {
         const tagHtml = tag ? `<span style="display:inline-flex;align-items:center;background:#1e3a8a;color:#fff;font-size:12px;font-weight:900;padding:5px 11px;border-radius:8px;">${tag} ${depT} 출발</span>` : '';
         return `<div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:8px;">${tagHtml}${stops.map(s => s.time !== null ? `<div style="display:flex; align-items:center; gap:8px; background:#f8fafc; border:1.5px solid #e2e8f0; border-radius:10px; padding:8px 16px;"><span style="font-size:15px; font-weight:900; color:${s.color};">${s.label}</span><span style="font-size:17px; font-weight:900; color:#1e293b;">${s.time}</span><span style="font-size:12px; color:#94a3b8; font-weight:700;">도착</span></div>` : `<div style="display:flex; align-items:center; gap:6px; background:#f1f5f9; border:1.5px dashed #cbd5e1; border-radius:10px; padding:8px 14px; opacity:0.6;"><span style="font-size:13px; font-weight:800; color:#94a3b8; text-decoration:line-through;">${s.label}</span><span style="font-size:11px; color:#94a3b8; font-weight:700;">신청자 없음 · skip</span></div>`).join('')}</div>`;
     }
-    const t2IsTime = !_atEta && /^\d{1,2}:\d{2}$/.test(t2);
-    let html = roundHtml(departureTime, (_atEta ? '' : (t2 ? '1차' : '')) || (_atEta ? '이 과정' : ''));
+    const t2IsTime = /^\d{1,2}:\d{2}$/.test(t2);
+    let html = roundHtml(departureTime, t2 ? '1차' : '');
     if (t2IsTime) html += roundHtml(t2, '2차');
-    else if (t2 && !_atEta) html += `<div style="font-size:13px;font-weight:800;color:#94a3b8;margin-bottom:8px;">🚌 2차 ${t2}</div>`;
+    else if (t2) html += `<div style="font-size:13px;font-weight:800;color:#94a3b8;margin-bottom:8px;">🚌 2차 ${t2}</div>`;
     html += `<div style="font-size:11px; color:#94a3b8; margin-top:4px;">※ 신청자 있는 정류장만 정차 · 각 구간 30분 (미신청 정류장은 건너뜀)</div>`;
     etaDetail.innerHTML = html;
 },
@@ -5926,15 +5801,6 @@ resetShuttleRequests: function() {
             ui._setStat('stat-student-count', studentTotal + ' / ' + plannedTotal);
             ui._setStat('stat-outing-count', outingTotal);
             window._homeStatsData=d; window._homeStatsToday=today;
-            // [홈 로딩] 실시간 데이터 최초 도착 → 준비완료 표시 + 로딩 배지 숨김 + 대기중 검색 재실행
-            if(!window._homeStatsReady){
-                window._homeStatsReady=true;
-                try{ var _b=document.getElementById('homeSyncBadge'); if(_b) _b.classList.add('done'); }catch(e){}
-            }
-            try{
-                var _inp=document.getElementById('homeSearchInput');
-                if(_inp && String(_inp.value||'').trim()!=='') ui.renderHomeSearch(_inp.value);
-            }catch(e){}
         };
 
         // 실시간 리스너는 1회만 등록 (중복 등록 방지). 등록 시 즉시 최초값으로 렌더된다.
@@ -5999,29 +5865,12 @@ resetShuttleRequests: function() {
 
     // ── [홈 통합검색] 담임교수 이름 → 이번주 과정 바로가기 ──
     _esc: function(s){ return String(s==null?'':s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); },
-    // 공지 문자열을 안전하게 HTML로: 리터럴 <br>·줄바꿈을 실제 줄바꿈(<br>)으로 렌더 (XSS 방지 위해 escape 후 <br>만 복원)
-    _noticeToHtml: function(s){
-        var t = String(s==null?'':s).replace(/<br\s*\/?>/gi, '\n');   // 리터럴 <br> → 줄바꿈
-        t = t.replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; });
-        return t.replace(/\r?\n/g, '<br>');
-    },
     // 과정 진입 후 원하는 메뉴로 바로 이동 (guide=입교안내 / students=입교완료 / dashboard=과정현황)
     enterCourseMode: function(room, mode, fs){
         ui._pendingEnterMode = mode || 'dashboard';
         ui._pendingGuideFullscreen = (!!fs && (mode === 'guide'));   // 입교안내는 진입 즉시 PDF 전체화면
         try { dataMgr.switchRoomAttempt(String(room||'').toUpperCase()); }
         catch(e){ ui._pendingEnterMode = null; ui._pendingGuideFullscreen = false; }
-    },
-    // [대시보드] 교수 블록 옆 버튼 — 이미 방 안이므로 입교안내로 전환 후 즉시 PDF 전체화면 (홈에서 입교안내 누른 것과 동일)
-    openGuideFullscreen: function(){
-        try{
-            if(!state.room){ if(ui.showAlert) ui.showAlert('과정을 먼저 선택해 주세요.'); return; }
-            ui.setMode('guide');
-            try{ guideMgr.init(); }catch(e){}
-            setTimeout(function(){
-                try{ if(guideMgr && guideMgr.toggleFullScreen) guideMgr.toggleFullScreen(); }catch(e){}
-            }, 350);
-        }catch(e){}
     },
     clearHomeSearch: function(event){
         if(event){ event.preventDefault(); event.stopPropagation(); }
@@ -6099,16 +5948,6 @@ resetShuttleRequests: function() {
             _vu['courses/'+room+'/status/roomDetailManual']=true;
             firebase.database().ref().update(_vu).catch(function(){});
             var lbl=document.getElementById('hsrVenue'+room); if(lbl) lbl.textContent=v||'장소 미정';
-            // [J12.2] 온라인(Zoom) 선택 시 Zoom 블루 블록 + 비디오 아이콘 즉시 반영
-            try{
-                var _btn = lbl ? lbl.closest('.hsr2-venue') : null;
-                if(_btn){
-                    var _isZm = /온라인|zoom/i.test(v||'');
-                    _btn.classList.toggle('hsr2-venue-zoom', _isZm);
-                    var _ic = _btn.querySelector('i');
-                    if(_ic) _ic.className = 'fa-solid ' + (_isZm ? 'fa-video' : 'fa-location-dot');
-                }
-            }catch(e){}
             pop.remove();
         });
         setTimeout(function(){
@@ -6238,133 +6077,6 @@ resetShuttleRequests: function() {
             }
         }catch(err){ try{ console.error('[프로필 열기 실패]', err); alert('프로필 편집 창을 여는 중 오류: '+(err&&err.message||err)); }catch(_){} }
     },
-    // [담임교수 교체] 교수 배지 클릭 → 교수 리스트 팝업(다른 교수 클릭 시 배정 / 옆 프로필 버튼으로 편집)
-    _openProfSwap: function(room, currentName, ev){
-        try{ if(ev){ ev.stopPropagation(); ev.preventDefault(); } }catch(_){}
-        room = String(room||'').trim(); if(!room) return;
-        var cur = String(currentName||'').trim();
-        var e = ui._esc;
-        var list = (typeof profMgr!=='undefined' && Array.isArray(profMgr.list)) ? profMgr.list.slice() : [];
-        // 기존 팝업 제거
-        var old = document.getElementById('profSwapModal'); if(old) old.remove();
-        var modal = document.createElement('div'); modal.id='profSwapModal'; modal.className='prof-swap-overlay';
-        var rows = '';
-        if(!list.length){
-            rows = '<div class="prof-swap-empty">등록된 교수님이 없습니다. 먼저 [교수님 명단 관리]에서 추가하세요.</div>';
-        } else {
-            list.forEach(function(p){
-                var nm = e(p.name);
-                var isCur = (String(p.name).trim()===cur);
-                rows += '<div class="prof-swap-item'+(isCur?' is-current':'')+'">'
-                      + '<button class="prof-swap-pick" onclick="ui._assignProfToRoom(\''+e(room)+'\',\''+nm+'\')" title="이 교수로 담임 배정">'
-                      + (isCur?'<i class="fa-solid fa-circle-check"></i>':'<i class="fa-regular fa-circle"></i>')
-                      + '<span class="prof-swap-name">'+nm+'</span>'
-                      + (isCur?'<span class="prof-swap-badge">현재</span>':'')
-                      + '</button>'
-                      + '<button class="prof-swap-edit" onclick="var m=document.getElementById(\'profSwapModal\'); if(m) m.remove(); ui._openProfFromSearch(\''+nm+'\');" title="프로필 편집">프로필</button>'
-                      + '</div>';
-            });
-        }
-        modal.innerHTML =
-            '<div class="prof-swap-box" onclick="event.stopPropagation();">'
-          + '<div class="prof-swap-head"><h3><i class="fa-solid fa-user-pen"></i> 담임교수 교체</h3>'
-          + '<button class="prof-swap-close" onclick="document.getElementById(\'profSwapModal\').remove();" aria-label="닫기"><i class="fa-solid fa-xmark"></i></button></div>'
-          + '<p class="prof-swap-desc">다른 교수님을 누르면 이 과정의 담임으로 배정됩니다. <b>연간교육계획에도 함께 반영</b>됩니다.</p>'
-          + '<div class="prof-swap-list">'+rows+'</div>'
-          + '</div>';
-        modal.addEventListener('click', function(ev2){ if(ev2.target===modal) modal.remove(); });
-        document.body.appendChild(modal);
-    },
-    // [담임교수 배정] 방 status + 연간계획(system/annualPlan) 함께 갱신
-    _assignProfToRoom: async function(room, name){
-        room=String(room||'').trim(); name=String(name||'').trim();
-        if(!room || !name) return;
-        var updates={};
-        updates['courses/'+room+'/status/professorName']=name;
-        updates['courses/'+room+'/status/professorManual']=true;   // 수동 지정 — 연간계획 자동동기화가 덮어쓰지 않도록 보존
-        // 오픈톡방 링크 동기화
-        try{ var ks=await firebase.database().ref('system/professorProfiles/'+name+'/kakaoLink').get(); updates['courses/'+room+'/settings/kakaoLink']=ks.val()||''; }catch(e){}
-        // 연간교육계획도 함께 수정: 이 방의 과정명·기간과 일치하는 계획 항목의 교수(prof) 갱신
-        try{
-            var cs=await firebase.database().ref('courses/'+room+'/settings').once('value');
-            var s=cs.val()||{};
-            var courseName=String(s.courseName||'').trim();
-            var period=String(s.period||'').replace(/\s+/g,'');
-            if(courseName){
-                var ps=await firebase.database().ref('system/annualPlan').once('value');
-                var pdata=ps.val();
-                if(pdata){
-                    var keys=Array.isArray(pdata)? pdata.map(function(_,i){return i;}) : Object.keys(pdata);
-                    var norm=function(x){ return String(x||'').replace(/\s+/g,'').toLowerCase(); };
-                    keys.forEach(function(k){
-                        var c=pdata[k]; if(!c) return;
-                        if(norm(c.name)!==norm(courseName)) return;
-                        var cPeriod=String(c.period || ((c.startDate&&c.endDate)? (c.startDate+' ~ '+c.endDate):'')).replace(/\s+/g,'');
-                        // 기간 정보가 양쪽에 있으면 기간까지 일치하는 항목만(같은 과정명 다른 주차 오작동 방지)
-                        if(period && cPeriod && cPeriod!==period) return;
-                        updates['system/annualPlan/'+k+'/prof']=name;
-                    });
-                }
-            }
-        }catch(e){ console.warn('[담임교수 교체] 연간계획 반영 실패:', e); }
-        try{
-            await firebase.database().ref().update(updates);
-            var m=document.getElementById('profSwapModal'); if(m) m.remove();
-            if(ui.showAlert) ui.showAlert('✅ 담임교수를 '+name+' 교수로 교체했습니다. (연간계획 반영)');
-            // 검색창을 새 교수명으로 자동 갱신 → 교체 후에도 결과가 사라지지 않고 그대로 보이게
-            try{ var inp=document.getElementById('homeSearchInput'); if(inp){ inp.value=name; ui.renderHomeSearch(name); } }catch(e){}
-        }catch(err){ try{ alert('배정 중 오류: '+(err&&err.message||err)); }catch(_){} }
-    },
-    // [과정담당 교체] 담당자 목록 팝업 (교수 교체와 동일 UX · 프로필 버튼 없음)
-    _openCoordSwap: function(room, currentName, ev){
-        try{ if(ev){ ev.stopPropagation(); ev.preventDefault(); } }catch(_){}
-        room = String(room||'').trim(); if(!room) return;
-        var cur = String(currentName||'').replace(/^과정담당[:：]?\s*/,'').trim();
-        var e = ui._esc;
-        var list = (typeof coordMgr!=='undefined' && Array.isArray(coordMgr.list)) ? coordMgr.list.slice() : [];
-        var old = document.getElementById('coordSwapModal'); if(old) old.remove();
-        var modal = document.createElement('div'); modal.id='coordSwapModal'; modal.className='prof-swap-overlay';
-        var rows = '<div class="prof-swap-item'+((!cur||cur==='-'||cur==='미지정')?' is-current':'')+'">'
-                 + '<button class="prof-swap-pick" onclick="ui._assignCoordToRoom(\''+e(room)+'\',\'\')" title="담당자 미지정">'
-                 + ((!cur||cur==='-'||cur==='미지정')?'<i class="fa-solid fa-circle-check"></i>':'<i class="fa-regular fa-circle"></i>')
-                 + '<span class="prof-swap-name" style="color:#94a3b8;">(미지정)</span></button></div>';
-        if(!list.length){
-            rows += '<div class="prof-swap-empty">등록된 과정담당자가 없습니다. 교육운영부에서 담당자를 등록하면 여기에 표시됩니다.</div>';
-        } else {
-            list.forEach(function(c){
-                var nm = e(c.name||'');
-                var isCur = (String(c.name||'').trim()===cur);
-                rows += '<div class="prof-swap-item'+(isCur?' is-current':'')+'">'
-                      + '<button class="prof-swap-pick" onclick="ui._assignCoordToRoom(\''+e(room)+'\',\''+nm+'\')" title="이 담당자로 배정">'
-                      + (isCur?'<i class="fa-solid fa-circle-check"></i>':'<i class="fa-regular fa-circle"></i>')
-                      + '<span class="prof-swap-name">'+nm+'</span>'
-                      + (isCur?'<span class="prof-swap-badge">현재</span>':'')
-                      + '</button></div>';
-            });
-        }
-        modal.innerHTML =
-            '<div class="prof-swap-box" onclick="event.stopPropagation();">'
-          + '<div class="prof-swap-head"><h3><i class="fa-solid fa-user-gear"></i> 과정담당 교체</h3>'
-          + '<button class="prof-swap-close" onclick="document.getElementById(\'coordSwapModal\').remove();" aria-label="닫기"><i class="fa-solid fa-xmark"></i></button></div>'
-          + '<p class="prof-swap-desc">과정 운영 담당자(행정)를 선택하세요.</p>'
-          + '<div class="prof-swap-list">'+rows+'</div>'
-          + '</div>';
-        modal.addEventListener('click', function(ev2){ if(ev2.target===modal) modal.remove(); });
-        document.body.appendChild(modal);
-    },
-    _assignCoordToRoom: async function(room, name){
-        room=String(room||'').trim(); name=String(name||'').trim();
-        if(!room) return;
-        var updates={};
-        updates['courses/'+room+'/settings/coordinatorName']=name;
-        updates['courses/'+room+'/status/coordManual']=name?true:null;   // [J10] 수동 지정 보존
-        try{
-            await firebase.database().ref().update(updates);
-            var m=document.getElementById('coordSwapModal'); if(m) m.remove();
-            var el=document.getElementById('dashCoordName'); if(el) el.textContent=name||'-';
-            if(ui.showAlert) ui.showAlert('✅ 과정담당을 '+(name||'미지정')+'(으)로 변경했습니다.');
-        }catch(err){ try{ alert('배정 중 오류: '+(err&&err.message||err)); }catch(_){} }
-    },
     renderHomeSearch: function(q){
         var box=document.getElementById('homeSearchResults');
         var v=document.getElementById('view-home');
@@ -6379,11 +6091,6 @@ resetShuttleRequests: function() {
             return;
         }
         if(v) v.classList.add('home-search-active');
-        // [홈 로딩] 실시간 데이터가 아직 안 들어왔으면 빈결과 대신 로딩 안내 → 도착 즉시 자동 재검색됨
-        if(!window._homeStatsReady){
-            box.innerHTML='<div class="hsr-loading"><span class="hsb-spin"></span> 실시간 데이터를 불러오는 중입니다…<br><span style="font-weight:600;font-size:13px;color:#94a3b8;">잠시 후 검색 결과가 자동으로 표시됩니다.</span></div>';
-            return;
-        }
         var ql=raw.toLowerCase();
         var data=window._homeStatsData||{};
         var dorm=window._dormRosters||{};
@@ -6441,7 +6148,7 @@ resetShuttleRequests: function() {
                 +'<div class="hsr2-title">'+e(x.course)+'</div>'
                 +'<div class="hsr2-meta">'
                 +(x.period?'<span>'+e(x.period)+'</span><span class="hsr2-dot">·</span>':'')
-                +'<button class="hsr2-venue'+(/온라인|zoom/i.test(x.venue||'')?' hsr2-venue-zoom':'')+'" onclick="ui.hsrVenueMenu(\''+e(x.room)+'\',event)" title="클릭하여 강의장소 선택 (연간계획 등 전 화면 공통 적용)"><i class="fa-solid '+(/온라인|zoom/i.test(x.venue||'')?'fa-video':'fa-location-dot')+'"></i><span id="hsrVenue'+e(x.room)+'">'+(x.venue?e(x.venue):'장소 미정')+'</span><i class="fa-solid fa-chevron-down hsr2-venue-cv"></i></button>'
+                +'<button class="hsr2-venue" onclick="ui.hsrVenueMenu(\''+e(x.room)+'\',event)" title="클릭하여 강의장소 선택 (연간계획 등 전 화면 공통 적용)"><i class="fa-solid fa-location-dot"></i><span id="hsrVenue'+e(x.room)+'">'+(x.venue?e(x.venue):'장소 미정')+'</span><i class="fa-solid fa-chevron-down hsr2-venue-cv"></i></button>'
                 +'<span class="hsr2-dot">·</span>'
                 +'<span class="hsr2-seg" id="hsrSeg'+e(x.room)+'" onclick="event.stopPropagation();" title="교육구분 — 입교안내 \'교육과정 안내\' 페이지와 연동 (평가 방식도 세트로 설정)">'
                 +'<button class="'+(x.cat==='duty-legal'?'':'on')+'" onclick="ui.hsrSetJob(\''+e(x.room)+'\',\'duty-general\')">직무일반</button>'
@@ -6452,8 +6159,9 @@ resetShuttleRequests: function() {
                 +'<div class="hsr2-right" onclick="event.stopPropagation();">'
                 +'<div class="hsr2-pill'+(x.kakao?'':' no-kakao')+'">'
                 +'<button class="hp-left" onclick="ui.enterCourseMode(\''+e(x.room)+'\',\'guide\',true)" title="입교안내 전체화면"><i class="fa-solid fa-file-pdf"></i> 입교안내 <i class="fa-solid fa-expand hp-x"></i></button>'
-                +'<button class="hp-right" onclick="event.stopPropagation();ui._openProfSwap(\''+e(x.room)+'\',\''+e(x.prof||'')+'\',event)" title="'+(x.kakao?'오픈톡방 등록됨 · ':'')+'클릭하여 담임교수 교체 · 프로필 편집"><i class="fa-solid '+(x.kakao?'fa-comment':'fa-user-tie')+'"></i> '+e(x.prof||'-')+' 교수</button>'
+                +'<button class="hp-right" onclick="ui._openProfFromSearch(\''+e(x.prof||'')+'\')" title="'+(x.kakao?'오픈톡방 등록됨 · ':'')+'클릭하면 교수 프로필 편집"><i class="fa-solid '+(x.kakao?'fa-comment':'fa-user-tie')+'"></i> '+e(x.prof||'-')+' 교수</button>'
                 +'</div>'
+                +'<button class="hsr2-fold" onclick="ui.toggleHsrMenu(\''+e(x.room)+'\',this)" title="메뉴 접기/펼치기"><i class="fa-solid fa-chevron-up"></i></button>'
                 +'</div>'
                 +'</div>'
                 +infoHtml
@@ -6498,15 +6206,10 @@ resetShuttleRequests: function() {
             title.innerHTML=_statTitle('🏫 항공기술훈련원 운영 과정 현황', _wkRange+' 주차 <span style="color:#94a3b8;font-weight:700;">(현재 강의 중인 과정)</span>');
             const rows=weekRooms.filter(([,r])=>(r.status||{}).roomStatus==='active').map(([room,r])=>{
                 const prof=(r.status||{}).professorName||'-', course=(r.settings||{}).courseName||'-';
-                const _isOnline=/온라인|zoom/i.test(String((r.settings||{}).roomDetailName||''));   // 대면/비대면 구분(강의실=온라인/Zoom 이면 비대면)
-                const _mode=_isOnline
-                    ? '<span title="비대면(온라인·Zoom) 과정" style="display:inline-flex;align-items:center;gap:5px;flex:0 0 auto;padding:5px 12px;border-radius:999px;background:#e0f2fe;color:#0369a1;font-size:clamp(12px,1.2vw,15px);font-weight:900;white-space:nowrap;"><i class="fa-solid fa-video"></i> 비대면</span>'
-                    : '<span title="대면(집합) 과정" style="display:inline-flex;align-items:center;gap:5px;flex:0 0 auto;padding:5px 12px;border-radius:999px;background:#eef2ff;color:#4338ca;font-size:clamp(12px,1.2vw,15px);font-weight:900;white-space:nowrap;"><i class="fa-solid fa-chalkboard-user"></i> 대면</span>';
                 return `<div role="button" tabindex="0" onclick="ui.enterHomeCourse('${room}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();ui.enterHomeCourse('${room}');}" title="클릭하면 이 과정으로 입장합니다" style="display:flex;justify-content:space-between;align-items:center;gap:18px;min-height:70px;padding:15px 20px;background:#eff6ff;border:1px solid #dbeafe;border-radius:14px;margin-bottom:12px;cursor:pointer;transition:background .15s, transform .15s, box-shadow .15s;" onmouseover="this.style.background='#dbeafe';this.style.transform='translateY(-2px)';this.style.boxShadow='0 10px 26px rgba(37,99,235,.20)';" onmouseout="this.style.background='#eff6ff';this.style.transform='none';this.style.boxShadow='none';">
-                    <div style="display:grid;grid-template-columns:auto clamp(230px,27vw,380px) auto;align-items:center;gap:clamp(12px,1.6vw,20px);min-width:0;">
+                    <div style="display:flex;align-items:center;gap:clamp(16px,2vw,28px);min-width:0;">
                         <span style="font-weight:900;color:#fff;background:#3b82f6;padding:8px 15px;border-radius:10px;font-size:clamp(14px,1.4vw,18px);white-space:nowrap;">Room #${room}</span>
-                        <span style="font-size:clamp(17px,1.8vw,23px);color:#0f172a;font-weight:900;word-break:keep-all;min-width:0;">${course}</span>
-                        ${_mode}
+                        <span style="font-size:clamp(18px,1.9vw,24px);color:#0f172a;font-weight:900;word-break:keep-all;">${course}</span>
                     </div>
                     <span style="font-size:clamp(14px,1.5vw,18px);color:#475569;font-weight:900;white-space:nowrap;">${prof} 교수 <i class="fa-solid fa-arrow-right-to-bracket" style="margin-left:12px;color:#3b82f6;"></i></span></div>`;
             }).join('');
@@ -6574,23 +6277,13 @@ resetShuttleRequests: function() {
             const _distGrid = _sorted.length ? _sorted.map(n=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 11px;background:#f8fafc;border:1px solid #eef2f7;border-radius:8px;"><span style="font-weight:700;color:#334155;font-size:13.5px;">${esc(n)}</span><span style="font-weight:900;color:#10b981;font-size:14px;">${_agg[n]}명</span></div>`).join('') : '<div style="grid-column:1/-1;padding:14px;color:#94a3b8;text-align:center;font-size:13px;">예정 명단 소속 정보가 없습니다.</div>';
             const _unknownNote = _aggUnknown ? `<div style="font-size:12px;color:#94a3b8;">· 소속 구분 불가 ${_aggUnknown}명은 지도에서 제외</div>` : '';
             const _mapPanel = `<div style="display:flex;flex-direction:column;gap:10px;">`
-                + `<div id="homeStatMapKakao" style="width:100%;height:clamp(360px,58vh,700px);border-radius:14px;overflow:hidden;border:1px solid #e2e8f0;background:#eaf2fb;"></div>`
+                + `<div id="homeStatMapKakao" style="width:100%;height:clamp(280px,46vh,560px);border-radius:14px;overflow:hidden;border:1px solid #e2e8f0;background:#eaf2fb;"></div>`
                 + `<div style="display:flex;justify-content:space-between;align-items:center;padding:11px 16px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;"><span style="font-weight:900;color:#166534;font-size:clamp(16px,1.8vw,22px);">합계</span><span style="font-weight:900;color:#16a34a;font-size:clamp(16px,1.8vw,22px);">${_aggTotal+_aggUnknown}명</span></div>`
                 + _unknownNote
                 + `</div>`;
             body.innerHTML = `<div style="display:flex;gap:24px;align-items:flex-start;flex-wrap:wrap;">`
                 + `<div style="flex:1.4 1 330px;min-width:0;"><div style="font-size:clamp(17px,1.9vw,23px);font-weight:900;color:#0f172a;margin-bottom:12px;">👩‍🎓 과정별 교육생 현황</div>${_listHtml}</div>`
                 + `<div style="flex:1 1 340px;min-width:0;"><div style="font-size:clamp(17px,1.9vw,23px);font-weight:900;color:#0f172a;margin-bottom:12px;">📊 전체 교육생 소속 분포</div>${_mapPanel}</div>`
-                + `</div>`
-                + `<div class="screen-hint" style="margin-top:18px;">`
-                +   `<i class="fa-solid fa-circle-info"></i>`
-                +   `<div class="hint-body">`
-                +     `<span class="hint-title">보는 방법</span>`
-                +     `<span class="hint-line">• <b>입교</b> — 이번 주 실제 입교완료(QR 입장) 인원.</span>`
-                +     `<span class="hint-line">• <b>예정</b> — 배정 명단(예정) 인원.</span>`
-                +     `<span class="hint-line">• 왼쪽 <b>과정을 클릭</b>하면 해당 과정 상세로 이동합니다.</span>`
-                +     `<span class="hint-line">• 오른쪽 지도는 <b>교육생 소속(근무지) 지역 분포</b>이며, 소속 구분이 안 되는 인원은 지도에서 제외됩니다.</span>`
-                +   `</div>`
                 + `</div>`;
             // 우측 카카오맵(집계된 전체 분포) — 외부 카카오 API라 Firebase 트래픽 증가 없음
             ui._regionLL = ui._regionLL || { '서울':[37.5586,126.7906],'인천':[37.4602,126.4407],'강원':[37.8813,127.7300],'양양':[38.0613,128.6690],'원주':[37.4416,127.9606],'송탄':[37.0807,127.0353],'청주':[36.7166,127.4990],'예천':[36.6320,128.3549],'군산':[35.9038,126.6158],'대구':[35.8941,128.6586],'포항':[35.9879,129.4204],'울산':[35.5935,129.3517],'부안':[35.7316,126.7330],'광주':[35.1264,126.8089],'무안':[34.9914,126.3828],'여수':[34.8423,127.6168],'사천':[35.0886,128.0703],'김해':[35.1795,128.9382],'부산':[35.1796,129.0756],'제주':[33.5113,126.4930] };
@@ -6600,9 +6293,8 @@ resetShuttleRequests: function() {
                 try{ map.addControl(new kakao.maps.ZoomControl(), kakao.maps.ControlPosition.RIGHT); }catch(e){}
                 const bounds=new kakao.maps.LatLngBounds(); let any=false;
                 Object.keys(_agg).forEach(function(name){ const ll=ui._regionLL[name]; if(!ll) return; const c=_agg[name]; any=true; const pos=new kakao.maps.LatLng(ll[0],ll[1]); bounds.extend(pos); const sz=30+Math.min(c,14)*2; const content='<div style="transform:translateY(-50%);display:flex;flex-direction:column;align-items:center;"><div style="width:'+sz+'px;height:'+sz+'px;border-radius:50%;background:linear-gradient(135deg,#10b981,#059669);color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:900;border:2.5px solid #fff;box-shadow:0 4px 12px rgba(5,150,105,.45);">'+c+'</div><div style="margin-top:3px;background:rgba(255,255,255,.95);color:#0f172a;font-size:11px;font-weight:800;padding:1px 7px;border-radius:7px;box-shadow:0 1px 4px rgba(0,0,0,.18);white-space:nowrap;">'+name+'</div></div>'; new kakao.maps.CustomOverlay({ map:map, position:pos, content:content, yAnchor:0.5, zIndex:5 }); });
-                // 서울~제주가 위아래로 짤리지 않고 시원하게 보이도록 상·하 여백을 넉넉히 (top,right,bottom,left)
-                if(any){ try{ map.setBounds(bounds,80,55,100,55); }catch(e){} }
-                setTimeout(function(){ try{ map.relayout(); if(any) map.setBounds(bounds,80,55,100,55); }catch(e){} }, 250);
+                if(any){ try{ map.setBounds(bounds,70,70,70,70); }catch(e){} }
+                setTimeout(function(){ try{ map.relayout(); if(any) map.setBounds(bounds,70,70,70,70); }catch(e){} }, 250);
             };
             if(window.kakao && kakao.maps && kakao.maps.Map){ _buildHomeMap(); }
             else if(window.kakao && kakao.maps && kakao.maps.load){ kakao.maps.load(_buildHomeMap); }
@@ -8220,15 +7912,6 @@ const guideMgr = {
     // 배포 폴더의 PDF를 우선 사용한다. 외부 raw 주소는 구형 배포본을 위한 예비 경로다.
     GUIDE_PDF_URL: '입교안내.pdf',
     GUIDE_PDF_FALLBACK_URL: 'https://raw.githubusercontent.com/kac-edu/CATC/main/%EC%9E%85%EA%B5%90%EC%95%88%EB%82%B4.pdf',
-    // [J12] 온라인(Zoom) 과정 전용 비대면 입교안내
-    GUIDE_PDF_ONLINE_URL: '입교안내(비대면).pdf',
-    GUIDE_PDF_ONLINE_FALLBACK_URL: 'https://raw.githubusercontent.com/kac-edu/CATC/main/' + encodeURIComponent('입교안내(비대면).pdf'),
-    // [J12] 과정 장소가 온라인(Zoom)인지 — ZOOM 모니터링과 동일 기준 (settings.roomDetailName)
-    _isOnline: function() { const s = guideMgr._slot(); return /온라인|zoom/i.test(String((s && s.roomDetailName) || '')); },
-    // [J12] 교육시간표(사진/QR/판독) 페이지 — 대면 PDF 13p, 비대면 PDF 7p
-    _schedulePage: function() { return guideMgr._isOnline() ? 7 : 13; },
-    // [J12] 비대면 PDF 교육개요(빈칸 채움) 페이지
-    _overviewPage: function() { return 4; },
 
     // 1. 초기화 — Firebase DB 리스너 없음, 리사이즈 감시만 설정
     //    실제 PDF 로드는 사용자가 '입교안내' 탭을 클릭할 때 refresh()에서 수행
@@ -8341,88 +8024,22 @@ init: function() {
                 ? '📢 입교안내 공지가 업데이트되었습니다'
                 : '📋 운영부 과정 공지가 업데이트되었습니다';
         }
-        // <br>(리터럴)·줄바꿈을 실제 줄바꿈으로 렌더
-        if (ui._noticeToHtml) content.innerHTML = ui._noticeToHtml(msg);
-        else content.innerText = msg;
+        content.innerText = msg;
         modal.style.display = 'flex';
     },
 
     // 탭 전환 시 PDF 재렌더링 (setMode에서 호출)
     // 현재 방 캐시에 pdfDoc이 있으면 저장된 페이지 그대로 재개,
     // 없으면 GitHub URL에서 on-demand 로드 (첫 진입 시)
-    // [J11] 지원부가 명단 업로드 시 자동 판독되는 시간표 그리드(courses/{room}/schedule/grid) 실시간 구독.
-    //  값이 생기거나 사라지면 13p 버튼 3종(판독보기/사진보기/QR업로드)을 즉시 토글 — 새로고침 불필요.
-    _watchParsedGrid: function() {
-        const room = state.room;
-        if (!room) return;
-        if (guideMgr._gridRefRoom === room && guideMgr._gridRef) return;   // 같은 방이면 유지
-        if (guideMgr._gridRef) { try { guideMgr._gridRef.off(); } catch (e) {} }
-        guideMgr._gridRefRoom = room;
-        guideMgr._gridRef = firebase.database().ref(`courses/${room}/schedule/grid`);
-        guideMgr._gridRef.on('value', function (s) {
-            if (state.room !== room) return;
-            const slot = guideMgr._slot(); if (!slot) return;
-            slot.parsedGrid = s.val() || null;
-            try { guideMgr._refreshScheduleBtns(); } catch (e) {}
-        });
-    },
-    // [J11] 13p 시간표 버튼 3종 토글 — 판독 grid 있으면 녹색 '교육시간표 보기'만, 없으면 기존 사진/QR 흐름
-    _refreshScheduleBtns: function() {
-        const slot = guideMgr._slot(); if (!slot) return;
-        const _on13 = (guideMgr._toPdfPage(slot.pageNum || 1) === guideMgr._schedulePage());   // [J12] 대면 13p · 비대면 7p
-        const _grid = slot.parsedGrid;
-        const _hasSched = !!slot.scheduleTs;
-        const _pBtn = document.getElementById('guideParsedScheduleBtn');
-        if (_pBtn) _pBtn.style.display = (_on13 && _grid) ? 'inline-flex' : 'none';
-        const _sBtn = document.getElementById('guideScheduleBtn');
-        if (_sBtn) _sBtn.style.display = (_on13 && !_grid && _hasSched) ? 'inline-flex' : 'none';
-        const _uBtn = document.getElementById('guideScheduleUploadBtn');
-        if (_uBtn) _uBtn.style.display = (_on13 && !_grid && !_hasSched && !state.isObserver) ? 'inline-flex' : 'none';
-        if (!_on13 || _grid) { const sh = document.getElementById('parsedScheduleSheet'); if (!_on13 && sh && sh.classList.contains('pss-open')) { try { ui.closeParsedSchedule(); } catch(e){} } }
-    },
-
-    // [J12.3] 과정 전환 시 이전 과정 PDF 잔상 제거 — 공용 캔버스/가상페이지/오버레이를 즉시 비움
-    _lastRenderedRoom: null,
-    _clearStaleView: function() {
-        try {
-            const c = document.getElementById('guideCanvas');
-            if (c) {
-                const ctx = c.getContext('2d');
-                ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0);
-                ctx.fillStyle = '#f8fafc';
-                ctx.fillRect(0, 0, c.width, c.height);
-                ctx.restore();
-            }
-        } catch (e) {}
-        const p = document.getElementById('guideProfile');
-        if (p) p.style.setProperty('display', 'none', 'important');
-        ['guideRouletteBtn', 'guideScheduleBtn', 'guideScheduleUploadBtn', 'guideParsedScheduleBtn'].forEach(function (id) {
-            const e = document.getElementById(id); if (e) e.style.display = 'none';
-        });
-        const v = document.getElementById('guideVenueOverlay'); if (v) v.style.display = 'none';
-        const o = document.getElementById('guideOverviewOverlay'); if (o) o.style.display = 'none';
-        try { const sh = document.getElementById('parsedScheduleSheet'); if (sh && sh.classList.contains('pss-open')) ui.closeParsedSchedule(); } catch (e) {}
-        const badge = document.getElementById('guideStatusBadge');
-        if (badge) { badge.innerText = '⏳ 불러오는 중...'; badge.style.color = '#f59e0b'; }
-    },
-
     refresh: async function() {
         const slot = guideMgr._slot();
-        // [J12.3] 다른 과정에서 넘어온 경우: 이전 과정 PDF가 그려진 캔버스를 먼저 지워 잔상 노출 차단
-        if (guideMgr._lastRenderedRoom && guideMgr._lastRenderedRoom !== guideMgr._room()) guideMgr._clearStaleView();
-        guideMgr._watchParsedGrid();   // [J11] 지원부 판독 시간표(grid) 실시간 구독
         await guideMgr._loadProfile();
         await guideMgr._loadCourseInfo();
-        // [J12] 과정 장소가 온라인(Zoom)이면 비대면 입교안내 PDF 사용 (변형이 바뀌었으면 재로드)
-        const wantUrl = guideMgr._isOnline() ? guideMgr.GUIDE_PDF_ONLINE_URL : guideMgr.GUIDE_PDF_URL;
-        if (slot.pdfDoc && slot.pdfUrl === wantUrl) {
+        if (slot.pdfDoc) {
             guideMgr.isRendering = false;
             guideMgr.renderPage(slot.pageNum || 1);
         } else {
-            guideMgr._clearStaleView();   // [J12.3] 같은 방에서 대면↔비대면 변형이 바뀐 경우도 즉시 비움
-            slot.pdfDoc = null;
-            slot.pageNum = 1;
-            guideMgr.loadPDF(wantUrl);
+            guideMgr.loadPDF(guideMgr.GUIDE_PDF_URL);
         }
     },
 
@@ -8457,7 +8074,6 @@ init: function() {
             if (gi.evaluation) ci.evaluation = gi.evaluation; // 기본값: 없음(근태10%)
             slot.pagePos = set.guidePagePos || {};            // 삽입 페이지 수동 위치
             slot.pageEnable = set.guidePageEnable || {};      // 오픈톡방 QR·채널안내 표시 여부(체크박스)
-            slot.centerNoticeOnline = (set.centerNoticeOnline === true);   // [온라인 운영부공지] 온라인 과정은 기본 숨김, 이 토글이 켜지면 표시
             slot.venuePick = set.venuePick || {};             // 교육장소 페이지 강의실 선택 (셀 index → 강의실) — 수동/공유
             slot.roomDetailName = set.roomDetailName || '';   // 과정 강의실(연간계획/과정현황 설정값) — 자동 표시용 폴백
             slot.venuePage = Number(set.guideVenuePage) || 14; // 교육장소 오버레이가 뜰 PDF 페이지 (기본 14)
@@ -8554,8 +8170,7 @@ init: function() {
     _centerNoticeHTML: function() {
         const esc = s => (s == null ? '' : String(s)).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
         const raw = String(guideMgr._slot().centerNotice || '').trim();
-        // 운영부가 <br>(리터럴)로 저장하는 경우가 있어, 이스케이프 전에 <br>을 줄바꿈으로 정규화 → 다시 <br>로 변환
-        const body = raw ? esc(raw.replace(/<br\s*\/?>/gi, '\n')).replace(/\r?\n/g, '<br>') : '현재 게시된 입교안내 공지가 없습니다.';
+        const body = raw ? esc(raw).replace(/\r?\n/g, '<br>') : '현재 게시된 입교안내 공지가 없습니다.';
         return `<div class="guide-courseinfo-slide guide-centernotice-slide">
           <div class="ci-header">
             <div class="ci-head-center"><span class="ci-emblem"><i class="fa-solid fa-plane-up"></i></span><span class="ci-header-title">입교 안내</span></div>
@@ -8584,38 +8199,6 @@ init: function() {
         </div>`;
     },
 
-    // [배경음] start.mp3 — 채널 안내 영상(start.mp4)과 함께 동작하는 별도 6분 노래(개별 반복)
-    _cgAudio: null,
-    _playChannelAudio: function() {
-        try {
-            if (!this._cgAudio) {
-                this._cgAudio = new Audio('start.mp3?t=' + Date.now());
-                this._cgAudio.loop = true;          // 노래는 별도로 반복
-                this._cgAudio.preload = 'auto';
-                this._cgAudio.addEventListener('error', function(){});  // start.mp3 없으면 조용히 무시
-            }
-            // 초기 음량 = 전체 과정 공통 저장값(system/sharedGuide/channelAudioVolume), 없으면 20%
-            var _vol = (ui && ui._cgVol != null && isFinite(ui._cgVol)) ? ui._cgVol : 0.2;
-            this._cgAudio.volume = Math.max(0, Math.min(1, _vol));
-            this._cgAudio.currentTime = 0;
-            var _p = this._cgAudio.play();
-            if (_p && _p.catch) _p.catch(function(){});
-        } catch(e){}
-    },
-    _stopChannelAudio: function() {
-        try { if (this._cgAudio) { this._cgAudio.pause(); this._cgAudio.currentTime = 0; } } catch(e){}
-    },
-    // [음량] 현재 재생 음량 설정 + 아이콘/슬라이더 갱신 (저장은 3초 롱프레스에서만)
-    _setChannelVolume: function(v) {
-        v = Math.max(0, Math.min(1, Number(v)||0));
-        try { if (this._cgAudio) this._cgAudio.volume = v; } catch(e){}
-        try {
-            var ico = document.getElementById('cgVolIco');
-            if (ico) ico.className = 'fa-solid ' + (v <= 0 ? 'fa-volume-xmark' : (v < 0.5 ? 'fa-volume-low' : 'fa-volume-high'));
-            var sl = document.getElementById('cgVolSlider');
-            if (sl && String(Math.round(v*100)) !== sl.value) sl.value = Math.round(v*100);
-        } catch(e){}
-    },
     _channelGuideHTML: function() {
         // [영상 대체] 카카오채널 입교/출결 등록방법 안내를 GitHub에 올린 start.mp4 영상으로 상영.
         // 전체화면/윈도우 어느 쪽이든 화면을 꽉 채워 재생. 영상 파일이 없으면 안내 문구 표시.
@@ -8626,15 +8209,6 @@ init: function() {
             <i class="fa-solid fa-video-slash"></i>
             <p><b>영상(start.mp4)</b>을 불러오지 못했습니다.</p>
             <span>GitHub 저장소에 <b>start.mp4</b> 파일이 업로드되었는지 확인해 주세요.</span>
-          </div>
-          <div id="cgCountBox" class="cg-count-box" title="3초간 꾹 누르면 위치를 옮길 수 있습니다 (모든 과정 공통)">
-            <div class="cg-count-label">현재 입교등록</div>
-            <div class="cg-count-num"><b id="cgCountNum">0</b><span class="cg-count-unit">명</span></div>
-          </div>
-          <div id="cgVolWrap" class="cg-vol-wrap" title="클릭: 음량 조절  ·  3초 꾹: 지금 음량을 모든 과정 초기값으로 저장">
-            <button id="cgVolBtn" class="cg-vol-btn" type="button"><i id="cgVolIco" class="fa-solid fa-volume-low"></i></button>
-            <input id="cgVolSlider" class="cg-vol-slider" type="range" min="0" max="100" value="20"
-                   oninput="try{guideMgr._setChannelVolume(this.value/100);}catch(e){}">
           </div>
         </div>`;
     },
@@ -8702,9 +8276,7 @@ init: function() {
         const list = [];
         if (!n) return list;
         const en = guideMgr._pageEnable();
-        // [온라인 운영부공지] 온라인 과정은 운영부(입교안내) 공지 페이지를 기본 숨김. 과정별 토글(centerNoticeOnline)이 켜지면 표시.
-        const _showCN = guideMgr._hasCenterNotice() && en.centernotice && (!guideMgr._isOnline() || guideMgr._slot().centerNoticeOnline === true);
-        const want = { profile: guideMgr._hasProfile(), kakaoqr: guideMgr._hasKakaoQR() && en.kakaoqr, channelguide: guideMgr._hasKakaoQR() && en.channelguide, courseinfo: !guideMgr._isOnline(), centernotice: _showCN };   // [J12] 비대면은 PDF 4p 교육개요 오버레이가 대체
+        const want = { profile: guideMgr._hasProfile(), kakaoqr: guideMgr._hasKakaoQR() && en.kakaoqr, channelguide: guideMgr._hasKakaoQR() && en.channelguide, courseinfo: true, centernotice: guideMgr._hasCenterNotice() && en.centernotice };
         const pos = guideMgr._pagePos();
         pos.centernotice = 23;   // 센터 공지는 PDF 23p(학생장 역할) 뒤 고정
         const clamp = v => Math.max(1, Math.min(n, Number(v) || 1));
@@ -8855,8 +8427,7 @@ init: function() {
         if (badge) { badge.innerText = "⏳ 불러오는 중..."; badge.style.color = "#f59e0b"; }
         guideMgr.isRendering = false;
         try {
-            const _fb = /비대면/.test(String(url || '')) ? guideMgr.GUIDE_PDF_ONLINE_FALLBACK_URL : guideMgr.GUIDE_PDF_FALLBACK_URL;   // [J12]
-            const candidates = [url, _fb]
+            const candidates = [url, guideMgr.GUIDE_PDF_FALLBACK_URL]
                 .filter((candidate, index, list) => candidate && list.indexOf(candidate) === index);
             let pdfDoc = null;
             let lastError = null;
@@ -8876,7 +8447,6 @@ init: function() {
                 guideMgr._roomCache[targetRoom] = { pdfDoc: null, pageNum: 1 };
             }
             guideMgr._roomCache[targetRoom].pdfDoc = pdfDoc;
-            guideMgr._roomCache[targetRoom].pdfUrl = url;   // [J12] 어떤 변형(대면/비대면)이 로드됐는지 기록
             guideMgr._roomCache[targetRoom].pageNum = 1;
             if (badge) { badge.innerText = "✅ 가이드 로드 완료"; badge.style.color = "#10b981"; }
             // 로드 완료 시점에도 같은 방이면 렌더링
@@ -8894,7 +8464,6 @@ init: function() {
     renderPage: async function(num) {
         const slot = guideMgr._slot();
         if (!slot.pdfDoc) return;
-        guideMgr._lastRenderedRoom = guideMgr._room();   // [J12.3] 화면에 그려지는 방 기록
 
         const _total = guideMgr._vtotal();
         if (num < 1) num = 1;
@@ -8916,13 +8485,8 @@ init: function() {
             if (_sBtn) _sBtn.style.display = 'none';
             var _uBtn = document.getElementById('guideScheduleUploadBtn');   // 시간표 QR 업로드 버튼도 PDF 13p에서만
             if (_uBtn) _uBtn.style.display = 'none';
-            var _pBtn = document.getElementById('guideParsedScheduleBtn');   // [J11] 판독 시간표 보기 버튼도 13p에서만
-            if (_pBtn) _pBtn.style.display = 'none';
-            try { var _psh = document.getElementById('parsedScheduleSheet'); if (_psh && _psh.classList.contains('pss-open')) ui.closeParsedSchedule(); } catch (e) {}
             var _vOv = document.getElementById('guideVenueOverlay');   // 교육장소 오버레이는 해당 PDF p에서만
             if (_vOv) _vOv.style.display = 'none';
-            var _oOv = document.getElementById('guideOverviewOverlay'); // [J12] 교육개요 오버레이도 해당 p에서만
-            if (_oOv) _oOv.style.display = 'none';
         };
 
         // 이전 QR 실시간 명단 리스너 해제 (페이지 이동 시)
@@ -8930,7 +8494,6 @@ init: function() {
 
         // 채널 안내 영상(start.mp4)이 재생 중이면 페이지 이동 시 정지 (다른 페이지로 소리 이어짐 방지)
         try { var _prevV = document.getElementById('cgVideo'); if (_prevV) { _prevV.pause(); } } catch(e){}
-        try { guideMgr._stopChannelAudio(); } catch(e){}
         // 교육과정 안내 '교육 인원' 실시간 리스너 해제 (페이지 이동 시)
         try { if (ui._ciRegRef) { ui._ciRegRef.off(); ui._ciRegRef = null; } } catch(e){}
 
@@ -9056,35 +8619,8 @@ init: function() {
             guideMgr.isRendering = false;
             _showGuideLayer('virtual');
             if (_profEl) { _profEl.innerHTML = guideMgr._channelGuideHTML(); }
-            // [입교등록 실시간 카운트] 좌측 큰 숫자 — 학생 입교 시 새로고침 없이 즉시 갱신
+            // 이전 reg-count 리스너가 남아있으면 정리
             try { if (ui._cgRegRef) { ui._cgRegRef.off(); ui._cgRegRef = null; } } catch (e) {}
-            ui._cgPrevNames = null;   // 페이지 진입 시점 인원은 애니메이션 대상에서 제외(첫 스냅샷으로 기준만 설정)
-            try {
-                ui._cgRegRef = firebase.database().ref('courses/' + guideMgr._room() + '/students');
-                ui._cgRegRef.on('value', function (s) {
-                    const _stu = s.val() || {};
-                    const _names = Object.values(_stu).filter(x => x && x.name && x.name !== 'undefined').map(x => String(x.name).trim());
-                    const _set = new Set(_names);
-                    const _el = document.getElementById('cgCountNum'); if (_el) _el.textContent = _set.size;
-                    // 신규 입교자 감지 → "○○○ 입교 완료!" 연기 효과
-                    if (ui._cgPrevNames === null) {
-                        ui._cgPrevNames = _set;   // 첫 스냅샷: 기준만 저장(효과 없음)
-                    } else {
-                        _set.forEach(function (nm) {
-                            if (!ui._cgPrevNames.has(nm)) { try { if (ui._spawnEnrollFx) ui._spawnEnrollFx(nm); } catch (e) {} }
-                        });
-                        ui._cgPrevNames = _set;
-                    }
-                });
-            } catch (e) {}
-            // 카운트 블록 위치(모든 과정 공통 · 윈도우/전체화면 좌표 개별) 적용 + 3초 롱프레스 드래그 연결
-            try { if (ui._applyVideoCountPos) ui._applyVideoCountPos(); } catch (e) {}
-            try {
-                const _cb = document.getElementById('cgCountBox');
-                if (_cb && ui._bindVideoCountDrag) ui._bindVideoCountDrag(_cb);
-            } catch (e) {}
-            // [음량] 저장된 초기 음량 로드 → 슬라이더/아이콘 반영 + 3초 롱프레스 저장 바인딩
-            try { if (ui._initChannelVolUI) ui._initChannelVolUI(); } catch (e) {}
             // 페이지 진입 시 영상 자동 재생 시도(내비게이션 클릭이 사용자 제스처로 인정되어 대부분 재생됨).
             // 차단되면 controls로 직접 재생 가능.
             try {
@@ -9095,8 +8631,6 @@ init: function() {
                     if (_p && _p.catch) { _p.catch(function () { try { _v.muted = true; _v.play(); } catch (e) {} }); }
                 }
             } catch (e) {}
-            // [배경음] start.mp3(별도 6분 노래)를 영상과 함께 반복 재생
-            try { guideMgr._playChannelAudio(); } catch (e) {}
             slot.pageNum = num;
             const _indcg = document.getElementById('guidePageInfo');
             if (_indcg) _indcg.innerText = `${num} / ${_total}`;
@@ -9111,20 +8645,18 @@ init: function() {
             // [학생장 룰렛] PDF 23페이지(학생장 선출)에서만 룰렛 버튼 노출
             var _rBtn = document.getElementById('guideRouletteBtn');
             if (_rBtn) _rBtn.style.display = (guideMgr._toPdfPage(num) === 23) ? 'inline-flex' : 'none';
-            // [교육 시간표/J11] PDF 13페이지: 판독 grid → 녹색 '교육시간표 보기', 없으면 사진 보기/QR 업로드 (통합 토글)
-            guideMgr._slot().pageNum = num;
-            try { guideMgr._refreshScheduleBtns(); } catch (e) {}
+            // [교육 시간표] PDF 13페이지: 업로드됨 → '보기' 버튼, 미업로드 → 'QR 업로드' 버튼(깜빡하고 안 올린 교수용)
+            var _on13 = (guideMgr._toPdfPage(num) === 13);
+            var _hasSched = !!guideMgr._slot().scheduleTs;
+            var _sBtn = document.getElementById('guideScheduleBtn');
+            if (_sBtn) _sBtn.style.display = (_on13 && _hasSched) ? 'inline-flex' : 'none';
+            var _uBtn = document.getElementById('guideScheduleUploadBtn');
+            if (_uBtn) _uBtn.style.display = (_on13 && !_hasSched && !state.isObserver) ? 'inline-flex' : 'none';
             // [교육 장소] 교육장소 페이지(기본 14p)에서 교육동별 강의실 ✓ 오버레이 노출
             var _vOv = document.getElementById('guideVenueOverlay');
             if (_vOv) {
                 if (guideMgr._toPdfPage(num) === guideMgr._venuePage()) { _vOv.style.display = 'block'; if (ui.renderVenueOverlay) ui.renderVenueOverlay(); }
                 else _vOv.style.display = 'none';
-            }
-            // [J12 교육개요] 비대면 PDF 4p: 과정명·인원·기간·구분·평가·회의 ID/PW 오버레이 (항목별 3초 드래그 이동)
-            var _oOv = document.getElementById('guideOverviewOverlay');
-            if (_oOv) {
-                if (guideMgr._isOnline() && guideMgr._toPdfPage(num) === guideMgr._overviewPage()) { _oOv.style.display = 'block'; if (ui.renderOverviewOverlay) ui.renderOverviewOverlay(); }
-                else _oOv.style.display = 'none';
             }
         };
         if (guideMgr.isRendering) return;
@@ -9796,7 +9328,6 @@ saveAll: function() {
         updates[`courses/${state.room}/settings/roomDetailName`] = roomName;
         updates[`courses/${state.room}/status/roomDetailManual`] = (roomName && String(roomName).trim()) ? true : null;   // 강사가 강의실 수동 지정 → 자동동기화가 덮어쓰지 않게 보존
         updates[`courses/${state.room}/settings/coordinatorName`] = coordName;
-        updates[`courses/${state.room}/status/coordManual`] = (coordName && String(coordName).trim()) ? true : null;   // [J10] 강사가 담임 수동 지정 → 연간계획 자동동기화가 덮어쓰지 않게 보존
         updates[`courses/${state.room}/status/professorName`] = profName;
         updates[`courses/${state.room}/status/roomStatus`] = 'active';
         updates[`courses/${state.room}/status/ownerSessionId`] = state.sessionId;
@@ -9839,7 +9370,7 @@ saveAll: function() {
                         }).catch(function(){});
                     }
                     // 데이터 노드 비움 (settings/status 는 새 값으로 이미 updates 에 들어있어 제외)
-                    ['students','internal_attendance','admin_actions','dinner_skips','shuttle','tablet_loans','quizAnswers','questions','activeQuiz','quizFinalResults','attendanceQR','scheduleImage','coordNoticeHistory','connections','gradPhoto'].forEach(function(k){ updates[`courses/${_room}/${k}`] = null; });
+                    ['students','internal_attendance','admin_actions','dinner_skips','shuttle','tablet_loans','quizAnswers','questions','activeQuiz','quizFinalResults','attendanceQR','scheduleImage','coordNoticeHistory','connections'].forEach(function(k){ updates[`courses/${_room}/${k}`] = null; });
                     updates[`courses/${_room}/boardNotice`] = "";
                     updates[`courses/${_room}/coordNotice`] = "";
                     // [명단 보존] 신규 개설 시에도 지원부·운영부 미리 올린 명단은 보존 (삭제는 과정 종료 expire/수동 리셋만)
@@ -10461,118 +9992,6 @@ kiosk._people = kiosk._people || [];
     [['ㅋ','ㅋ'],['ㅌ','ㅌ'],['ㅊ','ㅊ'],['ㅍ','ㅍ'],['ㅠ','ㅠ'],['ㅜ','ㅜ'],['ㅡ','ㅡ']]
   ];
 })();
-
-// ══ [N9] 과정현황 2안 — 표시 버튼을 전 과정 공통으로 설정 ══
-ui._dashActionPath = 'system/sharedGuide/dashboardActionVisibility';
-ui._dashActionMeta = [
-  { key:'students',   label:'수강생 현황',       icon:'fa-user-graduate' },
-  { key:'attendance', label:'OTP 출결',           icon:'fa-keyboard' },
-  { key:'outing',     label:'외출·외박',          icon:'fa-person-walking-arrow-right' },
-  { key:'dinner',     label:'석식 제외',           icon:'fa-utensils' },
-  { key:'qa',         label:'실시간 Q&A',          icon:'fa-comments' },
-  { key:'tablet',     label:'전자기기 대여',       icon:'fa-tablet-screen-button' },
-  { key:'shuttle',    label:'셔틀 탑승 수요',      icon:'fa-bus' }
-];
-ui._dashActionConfig = {};
-ui._dashActionMeta.forEach(function(item){ ui._dashActionConfig[item.key] = true; });
-
-ui.applyDashActionConfig = function(raw){
-  raw = (raw && raw.items) ? raw.items : (raw || {});
-  var cfg = {};
-  ui._dashActionMeta.forEach(function(item){
-    cfg[item.key] = raw[item.key] !== false;
-    document.querySelectorAll('[data-dash-action="'+item.key+'"]').forEach(function(el){
-      el.classList.toggle('dash-action-hidden', !cfg[item.key]);
-      el.setAttribute('aria-hidden', cfg[item.key] ? 'false' : 'true');
-    });
-  });
-  ui._dashActionConfig = cfg;
-  var list = document.querySelector('.dash-action-list');
-  if(list){
-    var hasVisibleRow = ui._dashActionMeta.some(function(item){
-      return cfg[item.key] && !!list.querySelector('[data-dash-action="'+item.key+'"]');
-    });
-    list.classList.toggle('is-empty', !hasVisibleRow);
-  }
-};
-
-ui._renderDashActionSettings = function(){
-  var host = document.getElementById('dashActionSettingsList');
-  if(!host) return;
-  host.innerHTML = ui._dashActionMeta.map(function(item){
-    var checked = ui._dashActionConfig[item.key] !== false ? ' checked' : '';
-    return '<label class="dash-action-setting">'
-      +'<span class="dash-setting-icon"><i class="fa-solid '+item.icon+'"></i></span>'
-      +'<span class="dash-setting-label">'+item.label+'</span>'
-      +'<input type="checkbox" data-dash-setting="'+item.key+'"'+checked+'>'
-      +'<span class="dash-setting-switch" aria-hidden="true"></span>'
-      +'</label>';
-  }).join('');
-};
-
-ui.openDashActionSettings = function(){
-  if(typeof state!=='undefined' && state.isObserver){
-    ui.showAlert('👁️ 옵저버 모드에서는 버튼 구성을 변경할 수 없습니다.');
-    return;
-  }
-  ui._renderDashActionSettings();
-  var modal = document.getElementById('dashActionSettingsModal');
-  if(modal) modal.style.display = 'flex';
-};
-
-ui.closeDashActionSettings = function(){
-  var modal = document.getElementById('dashActionSettingsModal');
-  if(modal) modal.style.display = 'none';
-};
-
-ui.resetDashActionSettings = function(){
-  document.querySelectorAll('#dashActionSettingsList input[data-dash-setting]').forEach(function(input){
-    input.checked = true;
-  });
-};
-
-ui.saveDashActionSettings = async function(){
-  var next = {};
-  ui._dashActionMeta.forEach(function(item){
-    var input = document.querySelector('#dashActionSettingsList input[data-dash-setting="'+item.key+'"]');
-    next[item.key] = !input || input.checked;
-  });
-  try{
-    await firebase.database().ref(ui._dashActionPath).set({
-      items: next,
-      updatedAt: firebase.database.ServerValue.TIMESTAMP
-    });
-    ui.applyDashActionConfig(next);
-    ui.closeDashActionSettings();
-    ui.showAlert('✅ 과정현황 버튼 구성을 저장했습니다.\n모든 과정과 강의실에 동일하게 적용됩니다.');
-  }catch(err){
-    ui.showAlert('❌ 버튼 구성 저장에 실패했습니다.\n'+(err&&err.message||err));
-  }
-};
-
-ui.initDashActionSettings = function(){
-  if(ui._dashActionRef) return;
-  if(!(window.firebase && firebase.database)){
-    setTimeout(ui.initDashActionSettings, 700);
-    return;
-  }
-  try{
-    ui._dashActionRef = firebase.database().ref(ui._dashActionPath);
-    ui._dashActionRef.on('value', function(snap){
-      ui.applyDashActionConfig(snap.val() || {});
-    }, function(){
-      ui.applyDashActionConfig({});
-    });
-  }catch(e){
-    ui._dashActionRef = null;
-    ui.applyDashActionConfig({});
-  }
-};
-if(document.readyState==='loading'){
-  document.addEventListener('DOMContentLoaded', ui.initDashActionSettings);
-}else{
-  ui.initDashActionSettings();
-}
 kiosk._escK=function(x){ return String(x==null?'':x).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); };
 kiosk._bindSearch=function(){
   var self=this; if(this._searchBound) return; this._searchBound=true;
@@ -10690,7 +10109,6 @@ window.onload = function() {
     outingReturnCheck.init();  // 외출·외박 복귀 확인 팝업(07:00~08:59) 점검 시작
     outingAutoReturn.init();   // 외출·외박 자동 복귀완료 sweep(다음날 08:59) — 교육운영부 닫혀 있어도 동작
     kiosk.init();              // 키오스크 모드(비행기 아이콘 3초 롱프레스) 활성화
-    /* [J11] 판독 시간표 시트는 ui.openParsedSchedule/closeParsedSchedule로 동작 (아래 전역 정의) */
     setTimeout(_unifyXClose, 500); // 모달 X 닫기 버튼 hover 효과 통일
     // [강의 모니터링] 마이크는 강의실에 입장(강의 시작)할 때 동의받아 켭니다. (lectureMonitor.syncStatus)
 };
@@ -11579,7 +10997,6 @@ const annualPlanMgr = {
             [`${rPath}/settings/guideCourseInfo`]: null,  // [교육과정 안내] 새 과정은 기본(직무일반·없음)으로 복귀
             [`${rPath}/settings/guidePagePos`]: null,     // [삽입 페이지 위치] 새 과정은 기본 위치로 복귀
             [`${rPath}/settings/guidePageEnable`]: null,  // [오픈톡방QR·채널안내 표시] 새 과정은 기본(표시)으로 복귀
-            [`${rPath}/settings/centerNoticeOnline`]: null,  // [온라인 운영부공지 토글] 새 과정은 기본(온라인 숨김)으로 복귀
             [`${rPath}/settings/venuePick`]: null,        // [교육 장소] 새 과정은 강의실 선택 초기화
             [`${rPath}/settings/guideVenuePage`]: null,   // [교육 장소] 페이지 번호 기본(14)로 복귀
             [`${rPath}/status/ownerSessionId`]: null,
@@ -12024,7 +11441,7 @@ annualPlanMgr._resetRoomFull = function (room, nm, pd) {
                 const mon = new Date(d); mon.setDate(d.getDate() - dow);
                 const utc = mon.toISOString().slice(0, 10);
                 const local = mon.getFullYear() + '-' + String(mon.getMonth() + 1).padStart(2, '0') + '-' + String(mon.getDate()).padStart(2, '0');
-                [local, utc].forEach(function (wk) { weekKeys.push(wk); });
+                [local, utc].forEach(function (wk) { weekKeys.push(wk); upd['system/dorm/rosters/' + wk + '__' + room] = null; });
             }
         }
     } catch (e) {}
@@ -12041,17 +11458,7 @@ annualPlanMgr._resetRoomFull = function (room, nm, pd) {
             Object.keys(students).forEach(function (k) { const stu = students[k]; if (stu && String(stu.course || '').replace(/\s+/g, '').trim() === nnm) upd['system/dorm/assignments/' + wk + '/students/' + k] = null; });
         }).catch(function () {});
     }) : [];
-    // [J9] 생활관 명단은 과정명 일치 시에만 삭제 (같은 방·주차의 다른 과정 명단 보존)
-    const rosterReads = (nnm && weekKeys.length) ? weekKeys.map(function (wk) {
-        const p = 'system/dorm/rosters/' + wk + '__' + room;
-        return firebase.database().ref(p).once('value').then(function (rs) {
-            const rv = rs.val(); if (!rv) return;
-            const rn = String(rv.courseName || '').replace(/\s+/g, '').trim();
-            if (rn === nnm) upd[p] = null;
-            else console.warn('[연간계획 리셋/J9] 지원부 명단 보존(과정명 불일치):', p);
-        }).catch(function () {});
-    }) : [];
-    return Promise.all(reads.concat(rosterReads)).then(function () { return firebase.database().ref().update(upd); });
+    return Promise.all(reads).then(function () { return firebase.database().ref().update(upd); });
 };
 
 annualPlanMgr.saveAndSync = async function() {
@@ -12189,7 +11596,7 @@ annualPlanMgr._syncRoomsLockAware = async function(courses) {
                 const pc = planByName[nm];
                 const coordFull = (typeof coordMgr !== 'undefined' && coordMgr.matchName ? coordMgr.matchName(pc.coord) : '') || (pc.coord || '');
                 updates[`courses/${r}/settings/period`] = pc.period;
-                if (!st.coordManual) updates[`courses/${r}/settings/coordinatorName`] = coordFull;   // [J10] 수동 지정한 담임은 자동동기화에서 보존
+                updates[`courses/${r}/settings/coordinatorName`] = coordFull;
                 if (!st.professorManual) {                                  // 수동 지정한 교수는 자동동기화에서 보존(덮어쓰지 않음)
                     updates[`courses/${r}/status/professorName`] = pc.prof;
                     updates[`courses/${r}/settings/kakaoLink`] = kakaoOf(pc.prof);
@@ -12207,7 +11614,6 @@ annualPlanMgr._syncRoomsLockAware = async function(courses) {
         updates[`courses/${r}/settings/coordinatorName`] = null;
         updates[`courses/${r}/status/professorName`] = '';
         updates[`courses/${r}/status/professorManual`] = null;   // 방 비우면 수동 플래그 해제
-        updates[`courses/${r}/status/coordManual`] = null;       // [J10] 담임 수동 플래그도 해제
         updates[`courses/${r}/status/roomDetailManual`] = null;  // 방 비우면 강의실 수동 플래그도 해제
         updates[`courses/${r}/status/roomStatus`]   = 'idle';
         updates[`courses/${r}/status/ownerSessionId`] = null;
@@ -12237,7 +11643,6 @@ annualPlanMgr._syncRoomsLockAware = async function(courses) {
         updates[`courses/${room}/settings/coordinatorName`] = coordFull;
         updates[`courses/${room}/status/professorName`] = course.prof;
         updates[`courses/${room}/status/professorManual`] = null;   // 신규 배치는 계획값 기준(자동동기화 대상)
-        updates[`courses/${room}/status/coordManual`] = null;        // [J10] 신규 배치는 계획 담임 기준
         updates[`courses/${room}/status/roomDetailManual`] = null;  // 신규 배치는 계획 강의실 기준
         updates[`courses/${room}/status/roomStatus`]   = 'active';
         updates[`courses/${room}/settings/kakaoLink`]  = kakaoOf(course.prof);
@@ -12631,532 +12036,6 @@ window.kacClearDefaultPw = async function(){
   }catch(e){ console.warn('[KAC pwclear] 스킵:', e && e.message); }
 };
 
-/* ══ [J13] 수료 기념사진 (gradMgr) ══════════════════════════════════════════
-   흐름: 강사가 수료식 때 폰으로 단체사진 촬영 → QR(grad_photo.html?room=X)로 업로드(긴변 1600·JPEG 0.8 압축)
-        → courses/{room}/gradPhoto = { dataUrl, updatedAt, endDate(과정 종료일) }
-        → 액자(grad_frame.png, 가운데 투명)에 cover-fit 합성 + 하단 4칸(과정명/기간/장소/담임) 텍스트
-        → 강사·교육생 출결 화면에서 다운로드. 유효기간: 수료일(endDate) 자정까지 — 이후 자동 정리(kacExpire)와 리셋에서 삭제.
-   텍스트 좌표: system/sharedGuide/gradPhotoPos/{name|period|venue|prof} = {l,t} (액자 % 기준, 3초 드래그 보정·전 과정 공통) */
-window.gradMgr = {
-    FRAME_URL: 'grad_frame.png',
-    FRAME_FALLBACK: 'https://raw.githubusercontent.com/kac-edu/CATC/main/grad_frame.png',
-    HOLE: { l: 10.01, t: 26.52, r: 89.85, b: 69.80 },              // 액자 투명 구멍(실측 %)
-    DEF_POS: { name: { l: 21.5, t: 76.4 }, period: { l: 64.3, t: 76.4 }, venue: { l: 22.8, t: 85.4 }, prof: { l: 64.0, t: 85.5 } },
-    _pos: null, _frameImg: null, _cur: null, _ref: null, _posRef: null,
-    _room: function () { return state.room; },
-    _todayStr: function () { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); },
-    _endDateOf: function (period) { const p = String(period || ''); const sep = p.indexOf(' ~ ') >= 0 ? ' ~ ' : '~'; const parts = p.split(sep); return (parts[1] || parts[0] || '').trim(); },
-    _loadFrame: function () {
-        if (this._frameImg) return Promise.resolve(this._frameImg);
-        const self = this;
-        return new Promise(function (res, rej) {
-            const im = new Image(); im.crossOrigin = 'anonymous';
-            im.onload = function () { self._frameImg = im; res(im); };
-            im.onerror = function () {
-                const im2 = new Image(); im2.crossOrigin = 'anonymous';
-                im2.onload = function () { self._frameImg = im2; res(im2); };
-                im2.onerror = rej;
-                im2.src = self.FRAME_FALLBACK;
-            };
-            im.src = self.FRAME_URL;
-        });
-    },
-    _loadPos: function () {
-        const self = this;
-        if (this._posRef) return;
-        try {
-            this._posRef = firebase.database().ref('system/sharedGuide/gradPhotoPos');
-            this._posRef.on('value', function (s) { self._pos = s.val() || null; self._applyDragPos(); });
-        } catch (e) {}
-    },
-    _getPos: function (k) { const p = (this._pos || {})[k]; return (p && typeof p.l === 'number') ? p : this.DEF_POS[k]; },
-    // ── 합성: 원본사진 + 액자 + 텍스트 → 캔버스 ──
-    composite: async function (photoUrl, info) {
-        const frame = await this._loadFrame();
-        const W = frame.naturalWidth, H = frame.naturalHeight;
-        const photo = await new Promise(function (res, rej) { const im = new Image(); im.onload = function () { res(im); }; im.onerror = rej; im.src = photoUrl; });
-        const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
-        const ctx = cv.getContext('2d');
-        ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, W, H);
-        const h = this.HOLE, hx = h.l / 100 * W, hy = h.t / 100 * H, hw = (h.r - h.l) / 100 * W, hh = (h.b - h.t) / 100 * H;
-        const sc = Math.max(hw / photo.naturalWidth, hh / photo.naturalHeight);
-        const nw = photo.naturalWidth * sc, nh = photo.naturalHeight * sc;
-        ctx.save(); ctx.beginPath(); ctx.rect(hx, hy, hw, hh); ctx.clip();
-        ctx.drawImage(photo, hx - (nw - hw) / 2, hy - (nh - hh) / 2, nw, nh);
-        ctx.restore();
-        ctx.drawImage(frame, 0, 0, W, H);
-        ctx.fillStyle = '#0f2057'; ctx.textBaseline = 'middle'; ctx.textAlign = 'left';
-        const self = this;
-        // [J13.1] 칸 오른쪽 경계(액자 실측 %) 안에 들어오도록 measureText 기반 자동 축소 — 길이 추정 휴리스틱 제거
-        const BOX_R = { name: 48.3, venue: 48.3, period: 89.3, prof: 89.3 };
-        const FONT = function (px) { return '900 ' + px + "px 'Pretendard','Malgun Gothic','Apple SD Gothic Neo',sans-serif"; };
-        [['name', info.name], ['period', info.period], ['venue', info.venue], ['prof', info.prof]].forEach(function (pair) {
-            const p = self._getPos(pair[0]);
-            const t = String(pair[1] || '-');
-            const maxW = Math.max(60, (BOX_R[pair[0]] - p.l - 0.8) / 100 * W);
-            let fs = Math.round(W * 0.0205);
-            ctx.font = FONT(fs);
-            while (fs > 11 && ctx.measureText(t).width > maxW) { fs -= 1; ctx.font = FONT(fs); }
-            ctx.fillText(t, p.l / 100 * W, p.t / 100 * H);
-        });
-        return cv;
-    },
-    _info: null,
-    _loadInfo: async function () {
-        const room = this._room();
-        const s = await firebase.database().ref('courses/' + room).once('value');
-        const v = s.val() || {}, set = v.settings || {}, stt = v.status || {};
-        const fmt = function (p) { try { return guideMgr._fmtPeriod ? (guideMgr._fmtPeriod(p) || p) : p; } catch (e) { return p; } };
-        this._info = {
-            name: set.courseName || '과정명 미설정',
-            period: fmt(set.period || '') || '-',
-            venue: set.roomDetailName || '-',
-            prof: (stt.professorName ? stt.professorName + ' 교수' : '-'),
-            endDate: this._endDateOf(set.period)
-        };
-        return this._info;
-    },
-    // ── 모달 ──
-    _ensureModal: function () {
-        if (document.getElementById('gradPhotoModal')) return;
-        const m = document.createElement('div');
-        m.id = 'gradPhotoModal';
-        m.innerHTML = ''
-            + '<div class="grad-box" onclick="event.stopPropagation()">'
-            + '  <div class="grad-head"><b>📸 수료 기념사진</b><button class="grad-x" onclick="gradMgr.close()"><i class="fa-solid fa-xmark"></i></button></div>'
-            + '  <div class="grad-body">'
-            + '    <div id="gradEmpty" style="display:none;">'
-            + '      <div class="grad-guide">수료식에서 <b>스마트폰으로 단체사진</b>을 찍고 아래 QR로 업로드하세요.<br>업로드되면 액자에 자동 합성되고, 교육생도 <b>수료일 자정까지</b> 출결 화면에서 내려받을 수 있습니다.</div>'
-            + '      <div id="gradQr" class="grad-qr"></div>'
-            + '      <div class="grad-or">— 또는 —</div>'
-            + '      <button class="grad-btn grad-btn-blue" onclick="document.getElementById(\'gradFile\').click()"><i class="fa-solid fa-file-arrow-up"></i> 이 기기에서 사진 선택</button>'
-            + '      <input type="file" id="gradFile" accept="image/*" style="display:none;" onchange="gradMgr._onFile(this)">'
-            + '    </div>'
-            + '    <div id="gradPrev" style="display:none;">'
-            + '      <div id="gradCanvasWrap" class="grad-canvas-wrap"><canvas id="gradCanvas"></canvas><div id="gradDragLayer"></div></div>'
-            + '      <div class="grad-hint"><i class="fa-solid fa-hand-pointer"></i> 하단 글자를 <b>3초</b> 꾹 누르면 위치를 옮길 수 있습니다 (모든 과정 공통 저장)</div>'
-            + '      <div class="grad-actions">'
-            + '        <button class="grad-btn grad-btn-green" onclick="gradMgr.download()"><i class="fa-solid fa-download"></i> PNG 다운로드</button>'
-            + '        <button class="grad-btn grad-btn-blue" onclick="gradMgr.reshootPhone()"><i class="fa-solid fa-mobile-screen-button"></i> 폰으로 다시 찍기</button>'
-            + '        <button class="grad-btn grad-btn-gray" onclick="document.getElementById(\'gradFile2\').click()"><i class="fa-solid fa-rotate"></i> 사진 교체</button>'
-            + '        <input type="file" id="gradFile2" accept="image/*" style="display:none;" onchange="gradMgr._onFile(this)">'
-            + '        <button class="grad-btn grad-btn-red" onclick="gradMgr.remove()"><i class="fa-solid fa-trash"></i> 삭제</button>'
-            + '      </div>'
-            + '    </div>'
-            + '  </div>'
-            + '</div>';
-        m.addEventListener('click', function () { gradMgr.close(); });
-        document.body.appendChild(m);
-    },
-    open: function () {
-        if (!this._room()) { ui.showAlert('강의실을 먼저 선택하세요.'); return; }
-        this._ensureModal();
-        this._loadPos();
-        const m = document.getElementById('gradPhotoModal');
-        try {
-            const fsEl = document.fullscreenElement || document.webkitFullscreenElement;
-            if (fsEl && fsEl.contains && !fsEl.contains(m)) fsEl.appendChild(m);
-        } catch (e) {}
-        m.style.display = 'flex';
-        // QR
-        try {
-            const qr = document.getElementById('gradQr'); qr.innerHTML = '';
-            const url = new URL('grad_photo.html', location.href).href + '?room=' + encodeURIComponent(this._room());
-            new QRCode(qr, { text: url, width: 190, height: 190, correctLevel: QRCode.CorrectLevel.M });
-        } catch (e) {}
-        // 사진 구독
-        const room = this._room(), self = this;
-        if (this._ref) { try { this._ref.off(); } catch (e) {} }
-        this._ref = firebase.database().ref('courses/' + room + '/gradPhoto/updatedAt');
-        this._ref.on('value', async function (s) {
-            if (self._room() !== room) return;
-            const ts = s.val();
-            if (!ts) { self._cur = null; self._showState(false); return; }
-            try {
-                const ds = await firebase.database().ref('courses/' + room + '/gradPhoto/dataUrl').once('value');
-                self._cur = ds.val() || null;
-                self._showState(!!self._cur);
-                if (self._cur) self._renderPreview();
-            } catch (e) {}
-        });
-    },
-    close: function () {
-        const m = document.getElementById('gradPhotoModal');
-        if (m) m.style.display = 'none';
-        if (this._ref) { try { this._ref.off(); } catch (e) {} this._ref = null; }
-    },
-    _showState: function (has) {
-        const e1 = document.getElementById('gradEmpty'), e2 = document.getElementById('gradPrev');
-        if (e1) e1.style.display = has ? 'none' : 'block';
-        if (e2) e2.style.display = has ? 'block' : 'none';
-    },
-    // [폰으로 다시 찍기] 현재 사진은 두고 QR 화면으로 되돌려, 휴대폰으로 다시 촬영·업로드하면 자동 교체
-    reshootPhone: function () {
-        // QR 화면(gradEmpty) 표시 — 새 사진이 폰에서 올라오면 _ref 리스너가 감지해 자동으로 액자로 전환됨
-        this._showState(false);
-        try {
-            const qr = document.getElementById('gradQr');
-            if (qr && (!qr.firstChild)) {   // QR이 비어있으면 다시 렌더
-                qr.innerHTML = '';
-                const url = new URL('grad_photo.html', location.href).href + '?room=' + encodeURIComponent(this._room());
-                new QRCode(qr, { text: url, width: 190, height: 190, correctLevel: QRCode.CorrectLevel.M });
-            }
-        } catch (e) {}
-        if (ui.showAlert) ui.showAlert('📱 휴대폰으로 QR을 스캔해 다시 촬영·업로드하면 사진이 자동으로 교체됩니다.');
-    },
-    _onFile: function (input) {
-        const f = input.files && input.files[0];
-        input.value = '';
-        if (!f) return;
-        const self = this;
-        const rd = new FileReader();
-        rd.onload = function () {
-            const im = new Image();
-            im.onload = async function () {
-                const MAX = 1600;
-                const sc = Math.min(1, MAX / Math.max(im.width, im.height));
-                const cv = document.createElement('canvas');
-                cv.width = Math.round(im.width * sc); cv.height = Math.round(im.height * sc);
-                cv.getContext('2d').drawImage(im, 0, 0, cv.width, cv.height);
-                const dataUrl = cv.toDataURL('image/jpeg', 0.8);
-                try {
-                    const info = await self._loadInfo();
-                    await firebase.database().ref('courses/' + self._room() + '/gradPhoto').set({ dataUrl: dataUrl, updatedAt: Date.now(), endDate: info.endDate || '' });
-                    ui.showAlert('✅ 기념사진이 업로드되었습니다.\n교육생은 출결 화면에서 수료일 자정까지 내려받을 수 있습니다.');
-                } catch (err) { ui.showAlert('❌ 업로드 실패: ' + (err && err.message || err)); }
-            };
-            im.src = rd.result;
-        };
-        rd.readAsDataURL(f);
-    },
-    _renderPreview: async function () {
-        if (!this._cur) return;
-        try {
-            const info = await this._loadInfo();
-            const cv = await this.composite(this._cur, info);
-            const el = document.getElementById('gradCanvas');
-            if (!el) return;
-            el.width = cv.width; el.height = cv.height;
-            el.getContext('2d').drawImage(cv, 0, 0);
-            this._buildDragLayer(info);
-        } catch (e) { console.warn('[기념사진]', e); }
-    },
-    // 텍스트 4칸 드래그 보정 (미리보기 위 오버레이, 액자 % 좌표로 저장)
-    _buildDragLayer: function (info) {
-        const layer = document.getElementById('gradDragLayer');
-        if (!layer) return;
-        layer.innerHTML = '';
-        const self = this;
-        [['name', info.name], ['period', info.period], ['venue', info.venue], ['prof', info.prof]].forEach(function (pair) {
-            const el = document.createElement('div');
-            el.className = 'grad-drag-item';
-            el.dataset.key = pair[0];
-            el.textContent = pair[1] || '-';
-            el.title = '3초간 꾹 누르면 위치를 옮길 수 있습니다';
-            layer.appendChild(el);
-            self._bindDrag(el);
-        });
-        this._applyDragPos();
-    },
-    _applyDragPos: function () {
-        const layer = document.getElementById('gradDragLayer');
-        if (!layer) return;
-        const self = this;
-        Array.prototype.forEach.call(layer.children, function (el) {
-            const p = self._getPos(el.dataset.key);
-            el.style.left = p.l + '%'; el.style.top = p.t + '%';
-        });
-    },
-    _bindDrag: function (el) {
-        const self = this;
-        el.style.touchAction = 'none';
-        let hold = null, dragging = false;
-        el.addEventListener('pointerdown', function (e) {
-            e.stopPropagation();
-            try { el.setPointerCapture(e.pointerId); } catch (_) {}
-            dragging = false;
-            el.classList.add('grad-pressing');
-            clearTimeout(hold);
-            hold = setTimeout(function () { dragging = true; el.classList.remove('grad-pressing'); el.classList.add('grad-dragging'); if (navigator.vibrate) navigator.vibrate(40); }, 3000);
-        });
-        el.addEventListener('pointermove', function (e) {
-            if (!dragging) return;
-            e.preventDefault(); e.stopPropagation();
-            const r = document.getElementById('gradCanvasWrap').getBoundingClientRect();
-            const l = Math.max(0, Math.min(97, (e.clientX - r.left) / r.width * 100));
-            const t = Math.max(0, Math.min(97, (e.clientY - r.top) / r.height * 100));
-            el.style.left = l + '%'; el.style.top = t + '%';
-            el._cur = { l: Math.round(l * 10) / 10, t: Math.round(t * 10) / 10 };
-        });
-        function fin(e) {
-            clearTimeout(hold);
-            el.classList.remove('grad-pressing');
-            if (!dragging) return;
-            dragging = false;
-            el.classList.remove('grad-dragging');
-            e.stopPropagation();
-            if (!el._cur) return;
-            try { firebase.database().ref('system/sharedGuide/gradPhotoPos/' + el.dataset.key).set(el._cur); } catch (err) {}
-            self._renderPreview();   // 캔버스에 즉시 반영
-        }
-        el.addEventListener('pointerup', fin);
-        el.addEventListener('pointercancel', function () { clearTimeout(hold); el.classList.remove('grad-pressing'); el.classList.remove('grad-dragging'); dragging = false; });
-    },
-    download: async function () {
-        if (!this._cur) return;
-        try {
-            const info = await this._loadInfo();
-            const cv = await this.composite(this._cur, info);
-            const a = document.createElement('a');
-            a.download = '수료기념사진_' + String(info.name || '').replace(/[\\/:*?"<>|]/g, '') + '_' + this._todayStr() + '.png';
-            a.href = cv.toDataURL('image/png');
-            a.click();
-        } catch (e) { ui.showAlert('❌ 다운로드 실패: ' + (e && e.message || e)); }
-    },
-    remove: function () {
-        const self = this;
-        if (!confirm('기념사진을 삭제할까요?\n교육생 다운로드 버튼도 함께 사라집니다.')) return;
-        firebase.database().ref('courses/' + this._room() + '/gradPhoto').remove()
-            .then(function () { ui.showAlert('삭제되었습니다.'); })
-            .catch(function (e) { ui.showAlert('❌ 삭제 실패: ' + (e && e.message || e)); });
-    },
-    // [J14] 대시보드 히어로(강의장소 옆) 노란 버튼 — 수료일 '당일' KST 06:00부터 노출
-    _heroTimer: null,
-    refreshHeroBtn: function (period) {
-        const btn = document.getElementById('dashGradBtn');
-        if (!btn) return;
-        const end = this._endDateOf(period);
-        const now = new Date();
-        const today = this._todayStr();
-        const show = !!end && end === today && now.getHours() >= 6;
-        // .info-pill의 display !important와 충돌하지 않도록 전용 클래스로 노출을 제어한다.
-        btn.classList.toggle('is-visible', show);
-        if (this._heroTimer) { clearTimeout(this._heroTimer); this._heroTimer = null; }
-        // 수료일 새벽에 열어둔 화면: 06:00이 되는 순간 자동 노출
-        if (end === today && now.getHours() < 6) {
-            const t = new Date(); t.setHours(6, 0, 5, 0);
-            this._heroTimer = setTimeout(function () { try { gradMgr.refreshHeroBtn(period); } catch (e) {} }, Math.max(1000, t - now));
-        }
-    }
-};
-
-/* ══ [J12] 비대면 입교안내 교육개요(4p) 오버레이 — 항목별 값 표기 + 3초 롱프레스 이동
-   좌표: system/sharedGuide/overviewPos/{항목}/{window|fullscreen} = {l,t} (%), 전 과정 공통·화면모드별 개별 저장 ══ */
-ui._ovwFB = 'system/sharedGuide/overviewPos';
-ui._ovwDefaults = {
-    name:   { l: 32,   t: 34.6 },
-    count:  { l: 32,   t: 44.9 },
-    period: { l: 32,   t: 55.1 },
-    cat:    { l: 32,   t: 65.3 },
-    ev:     { l: 32,   t: 75.5 },
-    zoom:   { l: 39.5, t: 85.7 }
-};
-ui._ovwPos = {};
-ui._ovwMode = function () { return (document.fullscreenElement || document.webkitFullscreenElement) ? 'fullscreen' : 'window'; };
-ui._ovwSubscribed = false;
-ui._ovwSubscribe = function () {
-    if (ui._ovwSubscribed) return;
-    if (!(window.firebase && firebase.database)) { setTimeout(ui._ovwSubscribe, 800); return; }
-    ui._ovwSubscribed = true;
-    try {
-        firebase.database().ref(ui._ovwFB).on('value', function (s) {
-            ui._ovwPos = s.val() || {};
-            ui._ovwApplyAll();
-        });
-    } catch (e) { ui._ovwSubscribed = false; }
-};
-ui._ovwApply = function (el) {
-    if (!el) return;
-    var key = el.dataset.key;
-    var saved = (ui._ovwPos[key] || {})[ui._ovwMode()];
-    var p = (saved && typeof saved.l === 'number') ? saved : ui._ovwDefaults[key];
-    if (!p) return;
-    el.style.left = p.l + '%';
-    el.style.top = p.t + '%';
-};
-ui._ovwApplyAll = function () {
-    var host = document.getElementById('guideOverviewOverlay');
-    if (!host) return;
-    Array.prototype.forEach.call(host.children, ui._ovwApply);
-};
-ui._ovwBind = function (el) {
-    if (el._ovwBound) return; el._ovwBound = true;
-    el.style.touchAction = 'none';
-    var holdTimer = null, dragging = false;
-    el.addEventListener('pointerdown', function (e) {
-        if (e.pointerType === 'mouse' && e.button !== 0) return;
-        e.stopPropagation();
-        dragging = false;
-        try { el.setPointerCapture(e.pointerId); } catch (_) {}
-        clearTimeout(holdTimer);
-        el.classList.add('ovw-pressing');
-        holdTimer = setTimeout(function () {
-            dragging = true;
-            el.classList.remove('ovw-pressing');
-            el.classList.add('ovw-dragging');
-            if (navigator.vibrate) navigator.vibrate(40);
-        }, 3000);
-    });
-    el.addEventListener('pointermove', function (e) {
-        if (!dragging) return;
-        e.stopPropagation(); e.preventDefault();
-        var wrap = document.getElementById('pdfWrapper'); if (!wrap) return;
-        var r = wrap.getBoundingClientRect();
-        var l = Math.max(0, Math.min(96, (e.clientX - r.left) / r.width * 100));
-        var t = Math.max(0, Math.min(96, (e.clientY - r.top) / r.height * 100));
-        el.style.left = l + '%'; el.style.top = t + '%';
-        el._ovwCur = { l: Math.round(l * 10) / 10, t: Math.round(t * 10) / 10 };
-    });
-    function finish(e) {
-        clearTimeout(holdTimer);
-        el.classList.remove('ovw-pressing');
-        if (!dragging) return;
-        dragging = false;
-        el.classList.remove('ovw-dragging');
-        el._ovwJustDragged = true;                                   // [J12.2] 드래그 직후 클릭 무시
-        setTimeout(function () { el._ovwJustDragged = false; }, 350);
-        e.stopPropagation();
-        var p = el._ovwCur; if (!p) return;
-        var key = el.dataset.key, m = ui._ovwMode();
-        if (!ui._ovwPos[key]) ui._ovwPos[key] = {};
-        ui._ovwPos[key][m] = p;
-        try { firebase.database().ref(ui._ovwFB + '/' + key + '/' + m).set({ l: p.l, t: p.t }); } catch (err) {}
-        if (ui.showAlert) ui.showAlert('📍 위치가 저장되었습니다 (' + (m === 'fullscreen' ? '전체화면' : '윈도우') + ' 기준 · 모든 과정 공통)');
-    }
-    el.addEventListener('pointerup', finish);
-    el.addEventListener('pointercancel', function () { clearTimeout(holdTimer); el.classList.remove('ovw-pressing'); el.classList.remove('ovw-dragging'); dragging = false; });
-};
-ui.renderOverviewOverlay = async function () {
-    var host = document.getElementById('guideOverviewOverlay');
-    if (!host) return;
-    ui._ovwSubscribe();
-    var room = state.room;
-    var renderToken = (ui._ovwRenderToken = (ui._ovwRenderToken || 0) + 1);
-    // [J12.1] slot.courseInfo 의존 제거 — 진입 경로/타이밍과 무관하게 항상 최신 값을 직접 조회
-    var name = '', period = '', cat = 'duty-general', ev = 'none', count = 0, zoomTxt = '미입력';
-    try {
-        var results = await Promise.all([
-            firebase.database().ref('courses/' + room + '/settings').once('value'),
-            firebase.database().ref('courses/' + room + '/students').once('value'),
-            firebase.database().ref('courses/' + room + '/zoomMeeting').once('value')
-        ]);
-        var set = results[0].val() || {};
-        name = String(set.courseName || '').trim();
-        period = String(set.period || '').trim();
-        var gi = set.guideCourseInfo || {};
-        if (gi.category) cat = gi.category;
-        if (gi.evaluation) ev = gi.evaluation;
-        var stu = results[1].val() || {};
-        count = new Set(Object.values(stu).filter(function (x) { return x && x.name && x.name !== 'undefined'; }).map(function (x) { return String(x.name).trim(); })).size;
-        var zv = results[2].val() || {};
-        var no = String(zv.no || '').trim(), pw = String(zv.pw || '').trim();
-        if (no || pw) zoomTxt = (no || '-') + (pw ? '\u00A0\u00A0/\u00A0\u00A0' + pw : '');
-    } catch (e) { console.warn('[교육개요]', e); }
-    if (renderToken !== ui._ovwRenderToken || state.room !== room) return;   // 늦게 도착한 응답 무시
-    var catTxt = (cat === 'duty-legal') ? '직무 법정' : '직무 일반';
-    var evTxt = (ev === 'written') ? '필기평가 (90%) + 근태 (10%)' : '없음 (근태평가 10%)';
-    var items = [
-        { k: 'name',   v: name || '과정명 미설정' },
-        { k: 'count',  v: count + ' 명' },
-        { k: 'period', v: (guideMgr._fmtPeriod ? guideMgr._fmtPeriod(period) : period) || '기간 미설정' },
-        { k: 'cat',    v: catTxt },
-        { k: 'ev',     v: evTxt },
-        { k: 'zoom',   v: zoomTxt }
-    ];
-    // [J12.1] 글자 크기: PDF(래퍼) 폭에 비례 — PDF 라벨과 같은 비율로 커지고 작아짐
-    var wrap = document.getElementById('pdfWrapper');
-    var w = wrap ? wrap.getBoundingClientRect().width : 1050;
-    var fsMain = Math.round(w * 0.030);             // [J12.2] PDF 라벨과 같은 크기감 (더 크게)
-    var fsSub = Math.round(w * 0.026);              // 평가·회의 ID/PW (문장이 길어 반 단계만 작게)
-    host.innerHTML = '';
-    items.forEach(function (it) {
-        var el = document.createElement('div');
-        el.className = 'ovw-item';
-        el.dataset.key = it.k;
-        el.textContent = it.v;
-        el.style.fontSize = ((it.k === 'ev' || it.k === 'zoom') ? fsSub : fsMain) + 'px';
-        el.title = (it.k === 'zoom' ? '클릭: 회의 ID/PW 입력·수정 (ZOOM 연동 화면 전체 적용)\n' : '') + '3초간 꾹 누르면 위치를 옮길 수 있습니다 (윈도우/전체화면 좌표 개별 저장 · 모든 과정 공통)';
-        if (it.k === 'zoom') el.style.cursor = 'pointer';            // [J12.2] 회의정보는 클릭 입력 지원
-        el.addEventListener('click', function (e) {
-            e.stopPropagation();
-            if (it.k === 'zoom' && !el._ovwJustDragged) ui.askZoomMeetingInfo(state.room);
-        });
-        el.addEventListener('contextmenu', function (e) { e.stopPropagation(); e.preventDefault(); });
-        host.appendChild(el);
-        ui._ovwBind(el);
-    });
-    ui._ovwApplyAll();
-};
-
-/* ══ [J11] 지원부 판독 교육시간표 — 아래→위 슬라이드 시트 + 병합셀 그대로 렌더 ══ */
-ui._renderParsedGrid = function (grid) {
-    var R = Number(grid.rows || 0), C = Number(grid.cols || 0), cells = grid.cells || [];
-    if (!R || !C || !cells.length) return '<div style="padding:30px;text-align:center;color:#94a3b8;font-weight:800;">시간표 데이터가 비어 있습니다.</div>';
-    var esc = function (s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); };
-    var cellAt = {}, occ = {};
-    cells.forEach(function (c) { cellAt[c.r + '_' + c.c] = c; });
-    function fmt(t) {
-        t = String(t || '').trim();
-        if (!t) return '';
-        var compact = t.replace(/\s+/g, '');
-        if (/^\d{1,2}:\d{2}[~\u223C\uFF5E](\d{1,2}:\d{2})?$/.test(compact)) return esc(compact);   // 시간칸 한 줄
-        var m = t.match(/^(.*?)[\s]*\(([^()]{1,24})\)$/);   // "과목명 (강사)" → 두 줄 센터
-        if (m && m[1].trim()) return esc(m[1].trim()) + '<span class="pss-teacher">(' + esc(m[2].trim()) + ')</span>';
-        return esc(t);
-    }
-    var html = '<table class="pss-table"><colgroup>';
-    for (var cc = 0; cc < C; cc++) html += '<col' + (cc === 0 ? ' style="width:48px"' : (cc === 1 ? ' style="width:96px"' : '')) + '>';
-    html += '</colgroup>';
-    for (var r = 0; r < R; r++) {
-        html += '<tr>';
-        for (var c2 = 0; c2 < C; c2++) {
-            if (occ[r + '_' + c2]) continue;
-            var cell = cellAt[r + '_' + c2];
-            if (!cell) { occ[r + '_' + c2] = 1; html += '<td class="pss-empty"></td>'; continue; }
-            for (var rr = cell.r; rr < cell.r + cell.rs; rr++) for (var xx = cell.c; xx < cell.c + cell.cs; xx++) occ[rr + '_' + xx] = 1;
-            var t = String(cell.t || '');
-            var cls = [];
-            var isLunch = /점\s*심|중\s*식|식\s*사/.test(t) && cell.cs > 1;
-            if (r < 2 && (/일\s*자|시\s*간|^[월화수목금토일]$/.test(t.trim()) || /\d+\s*월\s*\d+\s*일/.test(t) || /\d+\s*일차/.test(t))) cls.push('pss-hdr');
-            else if (c2 === 0 && /^\d{1,2}$/.test(t.trim())) cls.push('pss-period');
-            else if (/^\d{1,2}\s*:\s*\d{2}/.test(t.trim()) && c2 <= 1) cls.push('pss-time');
-            if (isLunch) cls.push('pss-lunch');
-            else if ((cell.rs > 1 || cell.cs > 1) && cls.indexOf('pss-hdr') < 0) cls.push('pss-merged');   // [핵심] 줄합침 강의: 병합 + 센터정렬(td 기본)
-            if (!t.trim()) cls.push('pss-empty');
-            html += '<td' + (cls.length ? ' class="' + cls.join(' ') + '"' : '') + (cell.rs > 1 ? ' rowspan="' + cell.rs + '"' : '') + (cell.cs > 1 ? ' colspan="' + cell.cs + '"' : '') + '>' + fmt(t) + '</td>';
-        }
-        html += '</tr>';
-    }
-    return html + '</table>';
-};
-ui.openParsedSchedule = function () {
-    var slot = (window.guideMgr && guideMgr._slot) ? guideMgr._slot() : null;
-    var grid = slot && slot.parsedGrid;
-    var sheet = document.getElementById('parsedScheduleSheet');
-    var body = document.getElementById('pssBody');
-    if (!sheet || !body) return;
-    if (!grid) { ui.showAlert('판독된 시간표가 없습니다.\n지원부에서 한글 시간표(명단 파일)를 업로드하면 자동 등록됩니다.'); return; }
-    body.innerHTML = ui._renderParsedGrid(grid);
-    var title = document.getElementById('pssTitle');
-    if (title) {
-        title.innerHTML = '<i class="fa-solid fa-calendar-days"></i> 교육 시간표';
-        try {
-            firebase.database().ref(`courses/${state.room}/settings`).once('value').then(function (s) {
-                var v = s.val() || {};
-                if (v.courseName) title.innerHTML = '<i class="fa-solid fa-calendar-days"></i> ' + String(v.courseName).replace(/</g, '&lt;') + (v.period ? ' <span style="font-size:.68em;font-weight:800;opacity:.75;margin-left:8px;">' + String(v.period).replace(/</g, '&lt;') + '</span>' : '');
-            });
-        } catch (e) {}
-    }
-    sheet.style.display = 'flex';
-    requestAnimationFrame(function () { requestAnimationFrame(function () { sheet.classList.add('pss-open'); }); });
-};
-ui.closeParsedSchedule = function () {
-    var sheet = document.getElementById('parsedScheduleSheet');
-    if (!sheet) return;
-    sheet.classList.remove('pss-open');
-    setTimeout(function () { if (!sheet.classList.contains('pss-open')) sheet.style.display = 'none'; }, 430);
-};
-
 window.kacExpireEndedCourses = async function(){
   try{
     var today=(function(){var d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})();
@@ -13164,7 +12043,6 @@ window.kacExpireEndedCourses = async function(){
     if(typeof firebase==='undefined'||!firebase.database) return;
     var snap=await firebase.database().ref('courses').once('value');
     var rooms=snap.val()||{};
-    var dormRosters={}; try{ dormRosters=(await firebase.database().ref('system/dorm/rosters').once('value')).val()||{}; }catch(e){}
     var updates={}; var archives=[];
     for(var i=65;i<=90;i++){
       var room=String.fromCharCode(i); var rd=rooms[room]; if(!rd) continue;
@@ -13180,16 +12058,14 @@ window.kacExpireEndedCourses = async function(){
           archives.push(firebase.database().ref('system/course_archive/'+room+'_'+Date.now()).set({room:room,courseName:nm,period:pd,prof:stt.professorName||'',coord:st.coordinatorName||'',admin_actions:aa,internal_attendance:ia,students:stu,expectedStudents:(rd.expectedStudents||null),archivedAt:firebase.database.ServerValue.TIMESTAMP}).catch(function(){}));
         }
         var b='courses/'+room+'/';
-        ['students','internal_attendance','questions','admin_actions','shuttle','dinner_skips','tablet_loans','connections','quizAnswers','expectedStudents','coordRoster','activeQuiz','quizFinalResults','attendanceQR','scheduleImage','coordNoticeHistory','gradPhoto'].forEach(function(k){ updates[b+k]=null; });
+        ['students','internal_attendance','questions','admin_actions','shuttle','dinner_skips','tablet_loans','connections','quizAnswers','expectedStudents','coordRoster','activeQuiz','quizFinalResults','attendanceQR','scheduleImage','coordNoticeHistory'].forEach(function(k){ updates[b+k]=null; });
         updates[b+'boardNotice']=''; updates[b+'notice']=''; updates[b+'coordNotice']='';
         updates[b+'settings/courseName']=''; updates[b+'settings/period']=null; updates[b+'settings/coordinatorName']=null; updates[b+'settings/password']=null;
         updates[b+'status/professorName']=''; updates[b+'status/roomStatus']='idle'; updates[b+'status/ownerSessionId']=null; updates[b+'status/resetKey']='rk_'+Date.now()+'_'+Math.random().toString(36).slice(2,7);
         try{ var s=pd.indexOf(' ~ ')>=0?pd.split(' ~ ')[0].trim():(pd.split('~')[0]||'').trim();
           if(s){ var d=new Date(s+'T00:00:00'); if(!isNaN(d)){ var dw=(d.getDay()+6)%7; var mo=new Date(d); mo.setDate(d.getDate()-dw);
             var u=mo.toISOString().slice(0,10); var l=mo.getFullYear()+'-'+String(mo.getMonth()+1).padStart(2,'0')+'-'+String(mo.getDate()).padStart(2,'0');
-            var _nrm=nm.replace(/\s+/g,'');
-            [u+'__'+room, l+'__'+room].forEach(function(rk){ var rv=dormRosters[rk];
-              if(rv && String(rv.courseName||'').replace(/\s+/g,'').trim()===_nrm) updates['system/dorm/rosters/'+rk]=null; }); }}
+            updates['system/dorm/rosters/'+u+'__'+room]=null; updates['system/dorm/rosters/'+l+'__'+room]=null; }}
         }catch(e){}
       }
     }
@@ -13301,7 +12177,6 @@ ui.saveFieldEdit = async function(){
     try{ var ks=await firebase.database().ref('system/professorProfiles/'+pv+'/kakaoLink').get(); updates['courses/'+room+'/settings/kakaoLink']=ks.val()||''; }catch(e){}
   } else if(f==='coord'){
     updates['courses/'+room+'/settings/coordinatorName']=(document.getElementById('fe-val')||{}).value||'';
-    updates['courses/'+room+'/status/coordManual']=(((document.getElementById('fe-val')||{}).value||'').trim())?true:null;   // [J10] 수동 지정 보존
   } else if(f==='courseName'){
     var cv=((document.getElementById('fe-val')||{}).value||'').trim();
     if(!cv){ if(msg)msg.textContent='과정명을 입력하세요.'; return; }
@@ -13342,20 +12217,9 @@ ui.askZoomMeetingInfo = async function(room){
     if(pw&&cur.pw){ pw.value=String(cur.pw); }
   }catch(e){}
   var m=document.getElementById('zoomMeetingModal');
-  if(m){
-    // [J12.2] 입교안내 PDF 전체화면 중이면 모달을 전체화면 요소 안으로 옮겨야 보임 (닫을 때 원위치 복원)
-    try{
-      var fsEl=document.fullscreenElement||document.webkitFullscreenElement;
-      if(fsEl && fsEl.contains && !fsEl.contains(m)){ ui._zmHomeParent=m.parentNode; ui._zmHomeNext=m.nextSibling; fsEl.appendChild(m); }
-    }catch(e){}
-    m.style.display='flex'; setTimeout(function(){ try{ no.focus(); }catch(e){} }, 80);
-  }
+  if(m){ m.style.display='flex'; setTimeout(function(){ try{ no.focus(); }catch(e){} }, 80); }
 };
-ui.closeZoomMeetingModal = function(){
-  var m=document.getElementById('zoomMeetingModal'); if(!m) return;
-  m.style.display='none';
-  if(ui._zmHomeParent){ try{ ui._zmHomeParent.insertBefore(m, ui._zmHomeNext||null); }catch(e){} ui._zmHomeParent=null; ui._zmHomeNext=null; }
-};
+ui.closeZoomMeetingModal = function(){ var m=document.getElementById('zoomMeetingModal'); if(m) m.style.display='none'; };
 ui.saveZoomMeetingInfo = async function(){
   var room=ui._zmRoom; if(!room) return ui.closeZoomMeetingModal();
   var noEl=document.getElementById('zmNo'), pwEl=document.getElementById('zmPw'), msg=document.getElementById('zmMsg');
@@ -13364,8 +12228,7 @@ ui.saveZoomMeetingInfo = async function(){
   try{
     await firebase.database().ref('courses/'+room+'/zoomMeeting').set({ no:no, pw:String((pwEl&&pwEl.value)||'').trim(), updatedAt:Date.now() });
     ui.closeZoomMeetingModal();
-    try{ var _ovw=document.getElementById('guideOverviewOverlay'); if(_ovw && _ovw.style.display!=='none' && ui.renderOverviewOverlay) ui.renderOverviewOverlay(); }catch(e){}
-    ui.showAlert('✅ ZOOM 회의 정보가 저장되었습니다.\n입교안내 교육개요·ZOOM 모니터링 등 ZOOM 연동 화면 전체에 적용됩니다.');
+    ui.showAlert('✅ ZOOM 회의 정보가 저장되었습니다.\nZOOM 모니터링에서 자동으로 입력됩니다.');
   }catch(err){ if(msg)msg.textContent='저장 실패: '+(err&&err.message||err); }
 };
 
@@ -13860,21 +12723,11 @@ ui.openGuidePageSettings = function(){
       +'<span style="flex:1;font-size:13.5px;font-weight:800;color:#475569;">'+label+' <span style="font-weight:600;color:#94a3b8;font-size:11px;">'+(sub||'· 프로필 바로 뒤')+'</span></span>'
       +'<label style="display:inline-flex;align-items:center;gap:6px;cursor:pointer;user-select:none;"><input type="checkbox" id="gpe-'+key+'" '+(checked?'checked':'')+' style="width:17px;height:17px;accent-color:#2563eb;cursor:pointer;"><span style="font-size:12.5px;font-weight:800;color:#334155;">표시</span></label></div>';
   };
-  // [온라인 운영부공지] 온라인 과정일 때만 노출되는 토글 (기본 숨김 → 켜면 표시)
-  var _isOnlineCourse = (typeof guideMgr!=='undefined' && guideMgr._isOnline && guideMgr._isOnline());
-  var _cnOnline = !!(guideMgr._slot && guideMgr._slot() && guideMgr._slot().centerNoticeOnline);
-  var onlineNoticeRow = _isOnlineCourse
-    ? ('<div style="display:flex;align-items:center;gap:10px;margin:2px 0 12px;padding:8px 12px 8px 16px;border-left:2px solid #fcd34d;margin-left:8px;background:#fffbeb;border-radius:0 8px 8px 0;">'
-        +'<i class="fa-solid fa-video" style="color:#0ea5e9;width:22px;text-align:center;"></i>'
-        +'<span style="flex:1;font-size:13px;font-weight:800;color:#92400e;">온라인 과정에도 운영부 공지 표시 <span style="font-weight:600;color:#b45309;font-size:11px;">(온라인은 기본 숨김)</span></span>'
-        +'<label style="display:inline-flex;align-items:center;gap:6px;cursor:pointer;user-select:none;"><input type="checkbox" id="gpe-cnonline" '+(_cnOnline?'checked':'')+' style="width:17px;height:17px;accent-color:#0ea5e9;cursor:pointer;"><span style="font-size:12.5px;font-weight:800;color:#334155;">표시</span></label></div>')
-    : '';
   var rowHtml=rowPage('profile','담임교수 프로필','fa-user-tie','#1e3a8a')
     +rowCheck('kakaoqr','오픈톡방 QR','fa-qrcode','#3a1d1d',en.kakaoqr)
     +rowCheck('channelguide','채널 입교등록 안내','fa-comment-dots','#f59e0b',en.channelguide)
     +rowPage('courseinfo','교육과정 안내','fa-clipboard-list','#1d4ed8')
-    +rowCheck('centernotice','입교안내 공지','fa-bullhorn','#e11d48',en.centernotice,'· PDF 23p 뒤 · 공지 있을 때만 표시')
-    +onlineNoticeRow;
+    +rowCheck('centernotice','입교안내 공지','fa-bullhorn','#e11d48',en.centernotice,'· PDF 23p 뒤 · 공지 있을 때만 표시');
   // 교육 장소 강의실 (4 교육동) 선택 행 — 슬라이드 위 pill 없이 여기서 지정
   var _esc=function(x){ return String(x||'').replace(/"/g,'&quot;').replace(/</g,'&lt;'); };
   var venuePick=((guideMgr._slot&&guideMgr._slot().venuePick)||{});
@@ -13928,271 +12781,16 @@ ui.saveGuidePageSettings = function(){
   var vsel=String((document.getElementById('gvv-single')||{}).value||'').trim();
   var vpick={};
   if(vsel){ var _vc=guideMgr._venueCells||[]; for(var _ci=0;_ci<_vc.length;_ci++){ if(vsel.indexOf(_vc[_ci].filter)>=0){ vpick[_ci]=vsel; break; } } }
-  // [온라인 운영부공지] 토글(온라인 과정에만 표시됨). 요소가 없으면 기존 값 유지.
-  var _cnOnlineEl=document.getElementById('gpe-cnonline');
   var upd={}; upd['courses/'+state.room+'/settings/guidePagePos']=obj; upd['courses/'+state.room+'/settings/guidePageEnable']=en; upd['courses/'+state.room+'/settings/guideVenuePage']=vp; upd['courses/'+state.room+'/settings/venuePick']=vpick;
-  if(_cnOnlineEl){ upd['courses/'+state.room+'/settings/centerNoticeOnline']=!!_cnOnlineEl.checked; }
   firebase.database().ref().update(upd)
     .then(function(){
-      try{ var sl=guideMgr._slot(); sl.pagePos=obj; sl.pageEnable=en; sl.venuePage=vp; sl.venuePick=vpick; if(_cnOnlineEl) sl.centerNoticeOnline=!!_cnOnlineEl.checked; }catch(e){}
+      try{ var sl=guideMgr._slot(); sl.pagePos=obj; sl.pageEnable=en; sl.venuePage=vp; sl.venuePick=vpick; }catch(e){}
       var m=document.getElementById('guidePageSettingsModal'); if(m) m.remove();
       if(typeof guideMgr.refresh==='function') guideMgr.refresh();
       ui.showAlert('✅ 삽입 페이지 위치가 저장되었습니다. (이 과정)');
     })
     .catch(function(){ var msg=document.getElementById('gpp-msg'); if(msg) msg.textContent='저장 중 오류가 발생했습니다.'; });
 };
-// ── [통합 현황판 검색창] 3초 꾹 누르면 드래그로 위치 이동 (전체 공통 저장) ──
-ui._homeSearchPos = null; ui._homeSearchPosLoaded = false;
-ui._loadHomeSearchPos = function(cb){
-  try{
-    firebase.database().ref('system/sharedGuide/homeSearchPos').once('value').then(function(s){
-      var v=s.val()||{}; ui._homeSearchPos={ dx:Number(v.dx)||0, dy:Number(v.dy)||0 }; ui._homeSearchPosLoaded=true; if(cb)cb();
-    }).catch(function(){ ui._homeSearchPos={dx:0,dy:0}; ui._homeSearchPosLoaded=true; if(cb)cb(); });
-  }catch(e){ ui._homeSearchPos={dx:0,dy:0}; ui._homeSearchPosLoaded=true; if(cb)cb(); }
-};
-ui._applyHomeSearchPos = function(){
-  var el=document.getElementById('homeSearchWrap'); if(!el) return;
-  if(!ui._homeSearchPosLoaded){ ui._loadHomeSearchPos(function(){ ui._applyHomeSearchPos(); }); return; }
-  var p=ui._homeSearchPos||{dx:0,dy:0};
-  el.style.transform='translate('+p.dx+'vw,'+p.dy+'vh)';
-};
-ui._saveHomeSearchPos = function(){
-  if(!ui._homeSearchPos) return;
-  try{ firebase.database().ref('system/sharedGuide/homeSearchPos').set({dx:ui._homeSearchPos.dx, dy:ui._homeSearchPos.dy}).catch(function(){}); }catch(e){}
-};
-ui._bindHomeSearchDrag = function(){
-  var el=document.getElementById('homeSearchWrap'); if(!el || el._hsDragBound) return; el._hsDragBound=true;
-  var holdTimer=null, dragMode=false, moved=false, sx=0, sy=0, startDx=0, startDy=0, pid=null;
-  var clearHold=function(){ if(holdTimer){ clearTimeout(holdTimer); holdTimer=null; } el.classList.remove('hs-pressing'); };
-  el.addEventListener('pointerdown', function(e){
-    if(e.target.closest('#homeSearchResults')) return;   // 결과 리스트 조작 중엔 드래그 안 함
-    sx=e.clientX; sy=e.clientY; moved=false; dragMode=false; pid=e.pointerId;
-    var p=ui._homeSearchPos||{dx:0,dy:0}; startDx=p.dx; startDy=p.dy;
-    el.classList.add('hs-pressing');
-    holdTimer=setTimeout(function(){
-      dragMode=true; el.classList.remove('hs-pressing'); el.classList.add('hs-dragging');
-      try{ el.setPointerCapture(pid); }catch(_){}
-      try{ if(navigator.vibrate) navigator.vibrate(45); }catch(_){}
-    }, 3000);
-  });
-  el.addEventListener('pointermove', function(e){
-    if(dragMode){
-      e.preventDefault();
-      var ndx=startDx + (e.clientX-sx)/window.innerWidth*100;
-      var ndy=startDy + (e.clientY-sy)/window.innerHeight*100;
-      ui._homeSearchPos={dx:+ndx.toFixed(2), dy:+ndy.toFixed(2)};
-      el.style.transform='translate('+ui._homeSearchPos.dx+'vw,'+ui._homeSearchPos.dy+'vh)';
-    } else if(Math.hypot(e.clientX-sx,e.clientY-sy)>10){ moved=true; clearHold(); }
-  });
-  var end=function(e){
-    clearHold();
-    if(dragMode){ dragMode=false; el.classList.remove('hs-dragging'); try{ el.releasePointerCapture(pid); }catch(_){} ui._saveHomeSearchPos(); if(ui.showAlert) ui.showAlert('📍 검색창 위치를 저장했습니다. (모든 과정 공통)'); }
-  };
-  el.addEventListener('pointerup', end);
-  el.addEventListener('pointercancel', function(){ clearHold(); if(dragMode){ dragMode=false; el.classList.remove('hs-dragging'); ui._saveHomeSearchPos(); } });
-};
-document.addEventListener('DOMContentLoaded', function(){
-  try{ if(ui && ui._bindHomeSearchDrag) ui._bindHomeSearchDrag(); }catch(e){}
-  setTimeout(function(){ try{ if(ui && ui._applyHomeSearchPos) ui._applyHomeSearchPos(); }catch(e){} }, 900);
-});
-
-// ── [입교등록 카운트 블록] 영상(start.mp4) 페이지 좌측 큰 숫자 ──
-//    위치 = 전체 과정 공통(system/sharedGuide/videoCountPos), 윈도우/전체화면 좌표 개별 저장.
-//    3초 꾹 누르면 드래그로 이동.
-ui._videoCountDefaultPos = { win:{ x:4, y:34 }, fs:{ x:4, y:34 } };   // %(슬라이드 기준) — 좌측 중앙쯤
-ui._videoCountPos = null; ui._videoCountPosLoaded = false;
-ui._isGuideFs = function(){ return !!(document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement); };
-ui._loadVideoCountPos = function(cb){
-  firebase.database().ref('system/sharedGuide/videoCountPos').once('value').then(function(s){
-    var v = s.val() || {}; var d = ui._videoCountDefaultPos;
-    ui._videoCountPos = {
-      win: { x: (v.win&&isFinite(v.win.x))?Number(v.win.x):d.win.x, y: (v.win&&isFinite(v.win.y))?Number(v.win.y):d.win.y },
-      fs:  { x: (v.fs &&isFinite(v.fs.x)) ?Number(v.fs.x) :d.fs.x,  y: (v.fs &&isFinite(v.fs.y)) ?Number(v.fs.y) :d.fs.y }
-    };
-    ui._videoCountPosLoaded = true; if(cb) cb();
-  }).catch(function(){ var d=ui._videoCountDefaultPos; ui._videoCountPos={win:{x:d.win.x,y:d.win.y},fs:{x:d.fs.x,y:d.fs.y}}; ui._videoCountPosLoaded=true; if(cb) cb(); });
-};
-// ── [채널 배경음 초기 음량] 전체 과정 공통(system/sharedGuide/channelAudioVolume) · 기본 20% ──
-//    음량 아이콘 클릭 = 슬라이더 펼침/접기(현재 세션 음량 조절), 3초 꾹 = 지금 음량을 초기값으로 저장.
-ui._cgVolDefault = 0.2;
-ui._cgVol = null; ui._cgVolLoaded = false;
-ui._loadChannelVol = function(cb){
-  firebase.database().ref('system/sharedGuide/channelAudioVolume').once('value').then(function(s){
-    var v = s.val();
-    ui._cgVol = (v!=null && isFinite(v)) ? Math.max(0,Math.min(1,Number(v))) : ui._cgVolDefault;
-    ui._cgVolLoaded = true; if(cb) cb();
-  }).catch(function(){ ui._cgVol = ui._cgVolDefault; ui._cgVolLoaded = true; if(cb) cb(); });
-};
-ui._saveChannelVol = function(v){
-  v = Math.max(0,Math.min(1,Number(v)||0));
-  ui._cgVol = v;
-  firebase.database().ref('system/sharedGuide/channelAudioVolume').set(v).catch(function(){});
-};
-// 채널 페이지 진입 시 호출: 저장된 음량을 슬라이더/오디오에 반영하고 버튼에 롱프레스 저장 바인딩
-// ── [채널 음량 위젯] 위치 = 전체 과정 공통(system/sharedGuide/videoVolPos) · 윈도우/전체화면 개별 · 3초 꾹 드래그 이동 ──
-ui._volPosDefault = { win:{ x:82, y:85 }, fs:{ x:82, y:85 } };
-ui._volPos = null; ui._volPosLoaded = false;
-ui._loadVolPos = function(cb){
-  firebase.database().ref('system/sharedGuide/videoVolPos').once('value').then(function(s){
-    var v=s.val()||{}; var d=ui._volPosDefault;
-    ui._volPos={
-      win:{ x:(v.win&&isFinite(v.win.x))?Number(v.win.x):d.win.x, y:(v.win&&isFinite(v.win.y))?Number(v.win.y):d.win.y },
-      fs: { x:(v.fs&&isFinite(v.fs.x))?Number(v.fs.x):d.fs.x,  y:(v.fs&&isFinite(v.fs.y))?Number(v.fs.y):d.fs.y }
-    };
-    ui._volPosLoaded=true; if(cb)cb();
-  }).catch(function(){ var d=ui._volPosDefault; ui._volPos={win:{x:d.win.x,y:d.win.y},fs:{x:d.fs.x,y:d.fs.y}}; ui._volPosLoaded=true; if(cb)cb(); });
-};
-ui._saveVolPos = function(){
-  if(!ui._volPos) return;
-  firebase.database().ref('system/sharedGuide/videoVolPos').set({ win:ui._volPos.win, fs:ui._volPos.fs }).catch(function(){});
-};
-ui._applyVolPos = function(){
-  var w=document.getElementById('cgVolWrap'); if(!w) return;
-  if(!ui._volPosLoaded){ ui._loadVolPos(function(){ ui._applyVolPos(); }); return; }
-  var P=ui._volPos||ui._volPosDefault; var c=ui._isGuideFs()?P.fs:P.win;
-  w.style.left=c.x+'%'; w.style.top=c.y+'%'; w.style.right='auto'; w.style.bottom='auto';
-};
-ui._initChannelVolUI = function(){
-  var apply = function(){
-    var v = (ui._cgVol!=null && isFinite(ui._cgVol)) ? ui._cgVol : ui._cgVolDefault;
-    try { if (guideMgr && guideMgr._setChannelVolume) guideMgr._setChannelVolume(v); } catch(e){}
-  };
-  if(!ui._cgVolLoaded){ ui._loadChannelVol(apply); } else { apply(); }
-  ui._applyVolPos();
-  var btn = document.getElementById('cgVolBtn');
-  var wrap = document.getElementById('cgVolWrap');
-  var slider = document.getElementById('cgVolSlider');
-  // 슬라이더 조작이 PDF 페이지 넘김으로 이어지지 않도록 전파 차단
-  if(slider && !slider._cgStop){
-    slider._cgStop = true;
-    ['pointerdown','pointerup','click','mousedown','mouseup','touchstart','touchend'].forEach(function(ev){
-      slider.addEventListener(ev, function(e){ e.stopPropagation(); }, {passive:true});
-    });
-  }
-  if(wrap && !wrap._cgStop){
-    wrap._cgStop = true;
-    wrap.addEventListener('click', function(e){ e.stopPropagation(); });
-    wrap.addEventListener('contextmenu', function(e){ e.stopPropagation(); e.preventDefault(); });
-  }
-  if(btn && !btn._cgVolBound){
-    btn._cgVolBound = true;
-    var holdTimer=null, dragMode=false, moved=false, sx=0, sy=0, gx=0, gy=0;
-    var clearHold=function(){ if(holdTimer){ clearTimeout(holdTimer); holdTimer=null; } btn.classList.remove('cg-vol-pressing'); };
-    btn.addEventListener('pointerdown', function(e){
-      e.stopPropagation(); e.preventDefault(); sx=e.clientX; sy=e.clientY; moved=false; dragMode=false;
-      try{ btn.setPointerCapture(e.pointerId); }catch(_){}
-      btn.classList.add('cg-vol-pressing');
-      holdTimer=setTimeout(function(){
-        dragMode=true; btn.classList.remove('cg-vol-pressing'); if(wrap) wrap.classList.add('cg-vol-dragging');
-        var cr=(wrap||btn).getBoundingClientRect(); gx=sx-cr.left; gy=sy-cr.top;
-        try{ if(navigator.vibrate) navigator.vibrate(45); }catch(_){}
-      }, 3000);
-    });
-    btn.addEventListener('pointermove', function(e){
-      if(dragMode){
-        e.preventDefault(); e.stopPropagation();
-        var slide=(wrap||btn).parentElement; if(!slide) return; var r=slide.getBoundingClientRect();
-        var ww=(wrap||btn).offsetWidth/r.width*100, wh=(wrap||btn).offsetHeight/r.height*100;
-        var nl=(e.clientX-gx-r.left)/r.width*100, nt=(e.clientY-gy-r.top)/r.height*100;
-        nl=Math.max(0,Math.min(100-ww,nl)); nt=Math.max(0,Math.min(100-wh,nt));
-        if(wrap){ wrap.style.left=nl.toFixed(2)+'%'; wrap.style.top=nt.toFixed(2)+'%'; wrap.style.right='auto'; wrap.style.bottom='auto'; }
-        if(!ui._volPos){ var d=ui._volPosDefault; ui._volPos={win:{x:d.win.x,y:d.win.y},fs:{x:d.fs.x,y:d.fs.y}}; }
-        if(!ui._volPos.fs) ui._volPos.fs={}; if(!ui._volPos.win) ui._volPos.win={};
-        var slot=ui._isGuideFs()?ui._volPos.fs:ui._volPos.win;
-        slot.x=+nl.toFixed(2); slot.y=+nt.toFixed(2);
-      } else if(Math.hypot(e.clientX-sx,e.clientY-sy)>10){ moved=true; clearHold(); }
-    });
-    btn.addEventListener('pointerup', function(e){
-      e.stopPropagation(); clearHold();
-      try{ btn.releasePointerCapture(e.pointerId); }catch(_){}
-      if(dragMode){
-        dragMode=false; if(wrap) wrap.classList.remove('cg-vol-dragging');
-        ui._saveVolPos();
-        // 위치와 함께 현재 음량도 초기값으로 저장 (같이 저장)
-        var vol=(guideMgr._cgAudio?guideMgr._cgAudio.volume:((ui._cgVol!=null)?ui._cgVol:ui._cgVolDefault));
-        ui._saveChannelVol(vol);
-        if(ui.showAlert) ui.showAlert('📍 스피커 위치와 음량('+Math.round(vol*100)+'%)을 저장했습니다. ('+(ui._isGuideFs()?'전체화면':'창 모드')+' · 모든 과정 공통)');
-      } else if(!moved && wrap){
-        wrap.classList.toggle('open');   // 짧게 누르면 슬라이더 펼침/접기
-      }
-    });
-    btn.addEventListener('pointercancel', function(){ clearHold(); if(dragMode){ dragMode=false; if(wrap) wrap.classList.remove('cg-vol-dragging'); ui._saveVolPos(); } });
-    btn.addEventListener('click', function(e){ e.stopPropagation(); e.preventDefault(); });
-    btn.addEventListener('contextmenu', function(e){ e.stopPropagation(); e.preventDefault(); });
-  }
-};
-ui._saveVideoCountPos = function(){
-  if(!ui._videoCountPos) return;
-  firebase.database().ref('system/sharedGuide/videoCountPos').set({ win:ui._videoCountPos.win, fs:ui._videoCountPos.fs }).catch(function(){});
-};
-ui._applyVideoCountPos = function(){
-  var box = document.getElementById('cgCountBox'); if(!box) return;
-  if(!ui._videoCountPosLoaded){ ui._loadVideoCountPos(function(){ ui._applyVideoCountPos(); }); return; }
-  var P = ui._videoCountPos || ui._videoCountDefaultPos;
-  var c = ui._isGuideFs() ? P.fs : P.win;
-  box.style.left = c.x + '%';
-  box.style.top  = c.y + '%';
-};
-ui._bindVideoCountDrag = function(box){
-  if(!box || box._cgBound) return; box._cgBound = true;
-  var holdTimer=null, dragMode=false, moved=false, sx=0, sy=0, gx=0, gy=0;
-  var clearHold=function(){ if(holdTimer){ clearTimeout(holdTimer); holdTimer=null; } box.classList.remove('cg-count-pressing'); };
-  box.addEventListener('pointerdown', function(e){
-    e.stopPropagation();
-    sx=e.clientX; sy=e.clientY; moved=false; dragMode=false;
-    try{ box.setPointerCapture(e.pointerId); }catch(_){}
-    box.classList.add('cg-count-pressing');
-    holdTimer=setTimeout(function(){
-      dragMode=true; box.classList.remove('cg-count-pressing'); box.classList.add('cg-count-dragging');
-      var cr=box.getBoundingClientRect(); gx=sx-cr.left; gy=sy-cr.top;
-      try{ if(navigator.vibrate) navigator.vibrate(45); }catch(_){}
-    }, 3000);
-  });
-  box.addEventListener('pointermove', function(e){
-    if(dragMode){
-      e.preventDefault();
-      var slide = box.parentElement; if(!slide) return; var r=slide.getBoundingClientRect();
-      var bw = box.offsetWidth/r.width*100, bh = box.offsetHeight/r.height*100;
-      var nl=(e.clientX-gx-r.left)/r.width*100, nt=(e.clientY-gy-r.top)/r.height*100;
-      nl=Math.max(0,Math.min(100-bw,nl)); nt=Math.max(0,Math.min(100-bh,nt));
-      box.style.left=nl.toFixed(2)+'%'; box.style.top=nt.toFixed(2)+'%';
-      if(!ui._videoCountPos){ var d=ui._videoCountDefaultPos; ui._videoCountPos={win:{x:d.win.x,y:d.win.y},fs:{x:d.fs.x,y:d.fs.y}}; }
-      var P=ui._videoCountPos;
-      if(!P.fs) P.fs={}; if(!P.win) P.win={};
-      var slot = ui._isGuideFs() ? P.fs : P.win;
-      slot.x=+nl.toFixed(2); slot.y=+nt.toFixed(2);
-    } else if(Math.hypot(e.clientX-sx,e.clientY-sy)>10){ moved=true; clearHold(); }
-  });
-  box.addEventListener('pointerup', function(e){
-    e.stopPropagation(); clearHold();
-    try{ box.releasePointerCapture(e.pointerId); }catch(_){}
-    if(dragMode){ dragMode=false; box.classList.remove('cg-count-dragging'); ui._saveVideoCountPos();
-      if(ui.showAlert) ui.showAlert('📍 입교등록 카운트 위치를 저장했습니다. ('+(ui._isGuideFs()?'전체화면':'창 모드')+' · 모든 과정 공통)'); }
-  });
-  box.addEventListener('pointercancel', function(){ clearHold(); if(dragMode){ dragMode=false; box.classList.remove('cg-count-dragging'); ui._saveVideoCountPos(); } });
-  box.addEventListener('click', function(e){ e.stopPropagation(); });
-  box.addEventListener('contextmenu', function(e){ e.stopPropagation(); e.preventDefault(); });
-};
-// [입교 완료 연기 효과] 신규 입교자 이름이 카운트 블록 위로 피어올라 블러되며 사라짐
-ui._spawnEnrollFx = function(name){
-  var box = document.getElementById('cgCountBox'); if(!box) return;
-  var nm = String(name||'').trim(); if(!nm) return;
-  var fx = document.createElement('div'); fx.className = 'cg-enroll-fx';
-  fx.textContent = '🎉 ' + nm + '님 입교를 환영합니다!';
-  // 여러 명 동시 등록 시 겹침 완화용 좌우 랜덤 오프셋
-  var off = Math.round(Math.random()*36 - 18);
-  fx.style.left = 'calc(50% + ' + off + 'px)';
-  box.appendChild(fx);
-  setTimeout(function(){ try{ fx.remove(); }catch(e){} }, 2600);
-};
-// 전체화면 진입/해제 시 카운트 블록 위치를 해당 모드 좌표로 다시 적용 (윈도우/전체화면 좌표 분리)
-if(!ui._videoCountFsHook){
-  ui._videoCountFsHook = true;
-  ['fullscreenchange','webkitfullscreenchange','msfullscreenchange'].forEach(function(ev){
-    document.addEventListener(ev, function(){ try{ if(document.getElementById('cgCountBox') && ui._applyVideoCountPos) ui._applyVideoCountPos(); }catch(e){} try{ if(document.getElementById('cgVolWrap') && ui._applyVolPos) ui._applyVolPos(); }catch(e){} });
-  });
-}
-
 // 교육장소 페이지 오버레이: 교육동 4칸에 선택된 강의실 ✓ 표시 (셀 위치는 % · 화면 보고 미세조정 가능)
 // 칸 위치 = 전체 과정 공통 (system/sharedGuide/venuePos). 3초 꾹 누르면 드래그로 이동
 ui._venueDefaultPos = { lefts:[5,36,68], tops:[52,52,52], w:31, h:16 };   // 3개 교육동 흰 칸 너비를 넓혀 강의실명을 온전히 표시
