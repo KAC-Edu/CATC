@@ -2,7 +2,7 @@
 <!-- 이 플랫폼(admin_coord.html / 교육운영부) 수정상태 플래그. 값은 [수정중] 또는 [수정안하는중] 두 가지. -->
 <!-- 작업 시작 시 → 수정중 / 작업 완료 시 → 수정안하는중. 다른 플랫폼은 이 말머리를 보고 연동·수정 가능 여부 판단. -->
 <!-- [외부변경 · 카카오채널연동 2026-06-25] 포털(portal.html/7777) 경유 폐지 → 페이지 직접진입 시 접속코드(catc1234) 게이트 추가, 포털 리다이렉트/종료이동 제거. version C13→D13. 기능 로직은 미변경. -->
-<!-- last-updated: 2026-07-04 / version: D60 (교육생 명단 팝업 지도 높이를 vh기반 clamp(260,42vh,440)로 — 팝업 전체가 한 화면에 들어오게, 지도는 setBounds로 서울~제주 유지) [D59: 장소팝업 nowrap·블록축소] -->
+<!-- last-updated: 2026-07-04 / version: D61 (입교 현황 하단에 표기 안내 주석 추가: 예정=계획명단 예정인원/입교=QR체크인/입교율=입교÷예정/생활관분포) [D60: 명단 팝업 지도 vh화] -->
 <!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -2196,6 +2196,13 @@ body.pc-mode .hdr-stat .hb-value small{ font-size:clamp(9px,.62vw,11px) !importa
         </div>
         <div id="csecEnrollList" style="display:flex; flex-direction:column; gap:10px;">
             <p style="padding:24px; text-align:center; color:#94a3b8; font-weight:700;">불러오는 중…</p>
+        </div>
+        <div style="margin-top:12px; padding:12px 15px; background:#f8fafc; border:1px solid #e5eaf1; border-radius:11px; font-size:12.5px; color:#64748b; line-height:1.85;">
+            <b style="color:#334155; font-size:13px;"><i class="fa-solid fa-circle-info" style="color:#2563eb; margin-right:5px;"></i>표기 안내</b><br>
+            · <b style="color:#2563eb;">예정</b> : 업로드·공유된 <b>계획 명단</b> 기준 <b>입교 예정 인원</b>입니다. (아직 입교 전이라도 명단에 오른 인원)<br>
+            · <b style="color:#16a34a;">입교</b> : 실제 <b>QR 입교(체크인)</b>를 완료한 인원입니다.<br>
+            · <b>입교율</b> = 입교 ÷ 예정 &nbsp;(계획 명단이 없으면 0%로 표시됩니다)<br>
+            · <b>청렴관·상생관 % / 미배정</b> : 생활관(교육지원부) 방배정 분포입니다.
         </div>
     </div>
 
@@ -9127,7 +9134,7 @@ window.addEventListener('load', function(){
 });
 </script>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:6px;bottom:5px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;font-weight:800;line-height:1;letter-spacing:.6px;color:#fff;background:rgba(15,23,42,.85);padding:4px 8px;border-radius:6px;pointer-events:none;user-select:none;box-shadow:0 2px 6px rgba(0,0,0,.3);">D60</div>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:6px;bottom:5px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;font-weight:800;line-height:1;letter-spacing:.6px;color:#fff;background:rgba(15,23,42,.85);padding:4px 8px;border-radius:6px;pointer-events:none;user-select:none;box-shadow:0 2px 6px rgba(0,0,0,.3);">D61</div>
 <script>
 /* ===== [공용] 종료된 과정 자동 정리 (모든 플랫폼 공통) — 종료일 지난 방을 다음날 미개설로 비움. 브라우저별 하루 1회 ===== */
 window.kacExpireEndedCourses = async function(){
