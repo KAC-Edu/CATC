@@ -42,7 +42,7 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/ko.js"></script>
-    <link rel="stylesheet" href="admin.css?v=260704M19">
+    <link rel="stylesheet" href="admin.css?v=260704M21">
     <link rel="stylesheet" href="kac-tokens.css?v=20260622">
     <link rel="icon" type="image/svg+xml" href="favicon.svg?v=b260620c">
     <script>
@@ -1592,6 +1592,14 @@ body.in-course #moreToggleTab{ display:flex !important; }
         </div>
 
     </div>
+
+    <!-- [화면 도움말] 통합 현황판 사용 안내 -->
+    <div class="screen-hint home-help-note" style="max-width:1100px;">
+        <i class="fa-solid fa-circle-info"></i>
+        <span><b>담임교수 이름을 검색</b>하면 그 교수의 이번 주 과정으로 바로 입장합니다. 아래 카드는 클릭하면 상세가 열립니다 —
+        <b>운영 과정</b>(이번 주 강의 중인 과정 목록·클릭 시 입장), <b>교육 인원</b>(과정별 입교/예정 인원·소속 지역 지도),
+        <b>외출·외박</b>(금일 신청 현황). 과정으로 들어가면 수강생·출결·공지·셔틀·Q&amp;A 등 세부 운영을 관리할 수 있습니다.</span>
+    </div>
 </div> <!-- view-home 끝 -->
 
 
@@ -2823,7 +2831,7 @@ function setupAcc(btn){
 
 
 
-    <script src="admin.js?v=260704M19"></script>
+    <script src="admin.js?v=260704M21"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
 <!-- ── 화면 자동 맞춤(auto-fit): 가로+세로 모두 화면에 맞게 자동 축소 · JDS260613 ──
      원인: Windows 디스플레이 배율(125%/150%)·저해상도 화면에서 유효 뷰포트가 작아져
@@ -3222,8 +3230,6 @@ function setupAcc(btn){
 })();
 </script>
 <span id="__catcVer" style="display:none;">vW1</span>
-<div id="buildVersionBadge" style="display:none; position:fixed; right:8px; bottom:8px; z-index:99999; background:rgba(15,23,42,.78); color:#fff; font-size:12px; font-weight:800; letter-spacing:.5px; padding:4px 10px; border-radius:8px; font-family:monospace; box-shadow:0 2px 8px rgba(0,0,0,.3); pointer-events:none; user-select:none;">S/T/F</div>
-
 <!-- [사이트 푸터] 현황판(홈·실시간현황판)·모니터 전체화면 제외한 화면 하단에 표기 -->
 <footer id="appFooter">
     <div class="af-line">본 웹사이트는 한국공항공사 항공기술훈련원 교육 관련 플랫폼입니다.</div>

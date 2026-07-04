@@ -6445,10 +6445,15 @@ resetShuttleRequests: function() {
             title.innerHTML=_statTitle('🏫 항공기술훈련원 운영 과정 현황', _wkRange+' 주차 <span style="color:#94a3b8;font-weight:700;">(현재 강의 중인 과정)</span>');
             const rows=weekRooms.filter(([,r])=>(r.status||{}).roomStatus==='active').map(([room,r])=>{
                 const prof=(r.status||{}).professorName||'-', course=(r.settings||{}).courseName||'-';
+                const _isOnline=/온라인|zoom/i.test(String((r.settings||{}).roomDetailName||''));   // 대면/비대면 구분(강의실=온라인/Zoom 이면 비대면)
+                const _mode=_isOnline
+                    ? '<span title="비대면(온라인·Zoom) 과정" style="display:inline-flex;align-items:center;gap:5px;flex:0 0 auto;padding:5px 12px;border-radius:999px;background:#e0f2fe;color:#0369a1;font-size:clamp(12px,1.2vw,15px);font-weight:900;white-space:nowrap;"><i class="fa-solid fa-video"></i> 비대면</span>'
+                    : '<span title="대면(집합) 과정" style="display:inline-flex;align-items:center;gap:5px;flex:0 0 auto;padding:5px 12px;border-radius:999px;background:#eef2ff;color:#4338ca;font-size:clamp(12px,1.2vw,15px);font-weight:900;white-space:nowrap;"><i class="fa-solid fa-chalkboard-user"></i> 대면</span>';
                 return `<div role="button" tabindex="0" onclick="ui.enterHomeCourse('${room}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();ui.enterHomeCourse('${room}');}" title="클릭하면 이 과정으로 입장합니다" style="display:flex;justify-content:space-between;align-items:center;gap:18px;min-height:70px;padding:15px 20px;background:#eff6ff;border:1px solid #dbeafe;border-radius:14px;margin-bottom:12px;cursor:pointer;transition:background .15s, transform .15s, box-shadow .15s;" onmouseover="this.style.background='#dbeafe';this.style.transform='translateY(-2px)';this.style.boxShadow='0 10px 26px rgba(37,99,235,.20)';" onmouseout="this.style.background='#eff6ff';this.style.transform='none';this.style.boxShadow='none';">
-                    <div style="display:flex;align-items:center;gap:clamp(16px,2vw,28px);min-width:0;">
+                    <div style="display:flex;align-items:center;gap:clamp(12px,1.6vw,22px);min-width:0;">
                         <span style="font-weight:900;color:#fff;background:#3b82f6;padding:8px 15px;border-radius:10px;font-size:clamp(14px,1.4vw,18px);white-space:nowrap;">Room #${room}</span>
                         <span style="font-size:clamp(18px,1.9vw,24px);color:#0f172a;font-weight:900;word-break:keep-all;">${course}</span>
+                        ${_mode}
                     </div>
                     <span style="font-size:clamp(14px,1.5vw,18px);color:#475569;font-weight:900;white-space:nowrap;">${prof} 교수 <i class="fa-solid fa-arrow-right-to-bracket" style="margin-left:12px;color:#3b82f6;"></i></span></div>`;
             }).join('');
@@ -12519,6 +12524,7 @@ window.gradMgr = {
             + '      <div class="grad-hint"><i class="fa-solid fa-hand-pointer"></i> 하단 글자를 <b>3초</b> 꾹 누르면 위치를 옮길 수 있습니다 (모든 과정 공통 저장)</div>'
             + '      <div class="grad-actions">'
             + '        <button class="grad-btn grad-btn-green" onclick="gradMgr.download()"><i class="fa-solid fa-download"></i> PNG 다운로드</button>'
+            + '        <button class="grad-btn grad-btn-blue" onclick="gradMgr.reshootPhone()"><i class="fa-solid fa-mobile-screen-button"></i> 폰으로 다시 찍기</button>'
             + '        <button class="grad-btn grad-btn-gray" onclick="document.getElementById(\'gradFile2\').click()"><i class="fa-solid fa-rotate"></i> 사진 교체</button>'
             + '        <input type="file" id="gradFile2" accept="image/*" style="display:none;" onchange="gradMgr._onFile(this)">'
             + '        <button class="grad-btn grad-btn-red" onclick="gradMgr.remove()"><i class="fa-solid fa-trash"></i> 삭제</button>'
@@ -12570,6 +12576,20 @@ window.gradMgr = {
         const e1 = document.getElementById('gradEmpty'), e2 = document.getElementById('gradPrev');
         if (e1) e1.style.display = has ? 'none' : 'block';
         if (e2) e2.style.display = has ? 'block' : 'none';
+    },
+    // [폰으로 다시 찍기] 현재 사진은 두고 QR 화면으로 되돌려, 휴대폰으로 다시 촬영·업로드하면 자동 교체
+    reshootPhone: function () {
+        // QR 화면(gradEmpty) 표시 — 새 사진이 폰에서 올라오면 _ref 리스너가 감지해 자동으로 액자로 전환됨
+        this._showState(false);
+        try {
+            const qr = document.getElementById('gradQr');
+            if (qr && (!qr.firstChild)) {   // QR이 비어있으면 다시 렌더
+                qr.innerHTML = '';
+                const url = new URL('grad_photo.html', location.href).href + '?room=' + encodeURIComponent(this._room());
+                new QRCode(qr, { text: url, width: 190, height: 190, correctLevel: QRCode.CorrectLevel.M });
+            }
+        } catch (e) {}
+        if (ui.showAlert) ui.showAlert('📱 휴대폰으로 QR을 스캔해 다시 촬영·업로드하면 사진이 자동으로 교체됩니다.');
     },
     _onFile: function (input) {
         const f = input.files && input.files[0];

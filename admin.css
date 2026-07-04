@@ -5025,11 +5025,14 @@ body.in-course #courseSmartRemote.hex-remote-v2{display:block;}
 /* 검색 활성 시: 뒤 콘텐츠(건물·통계)는 부드럽게 숨기고, 고급스러운 연한 하늘색 그라데이션으로 덮음 */
 .dashboard-campus-banner,.home-stat-row{transition:opacity .3s ease,transform .3s ease;}
 #view-home.home-search-active .dashboard-campus-banner,
+#view-home.home-search-active .home-help-note,
 #view-home.home-search-active .home-stat-row{
   opacity:0 !important;
   transform:scale(.98);
   pointer-events:none !important;
 }
+/* 홈 도움말은 카드 아래 중앙 정렬 */
+#view-home .home-help-note{ align-self:center; margin-top:-20px; margin-bottom:30px; }
 #view-home.home-search-active::before{
   content:'';
   position:fixed;
