@@ -2,7 +2,7 @@
 <!-- 이 플랫폼(admin_coord.html / 교육운영부) 수정상태 플래그. 값은 [수정중] 또는 [수정안하는중] 두 가지. -->
 <!-- 작업 시작 시 → 수정중 / 작업 완료 시 → 수정안하는중. 다른 플랫폼은 이 말머리를 보고 연동·수정 가능 여부 판단. -->
 <!-- [외부변경 · 카카오채널연동 2026-06-25] 포털(portal.html/7777) 경유 폐지 → 페이지 직접진입 시 접속코드(catc1234) 게이트 추가, 포털 리다이렉트/종료이동 제거. version C13→D13. 기능 로직은 미변경. -->
-<!-- last-updated: 2026-07-04 / version: D59 (장소선택 팝업 건물열 nowrap로 2줄 방지·가로스크롤 · 상단 현황 블록 축소 height62·값24·헤더 min80 — D57 과대 되돌림) [D58: 명단 지도 확대] -->
+<!-- last-updated: 2026-07-04 / version: D60 (교육생 명단 팝업 지도 높이를 vh기반 clamp(260,42vh,440)로 — 팝업 전체가 한 화면에 들어오게, 지도는 setBounds로 서울~제주 유지) [D59: 장소팝업 nowrap·블록축소] -->
 <!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -9127,7 +9127,7 @@ window.addEventListener('load', function(){
 });
 </script>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:6px;bottom:5px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;font-weight:800;line-height:1;letter-spacing:.6px;color:#fff;background:rgba(15,23,42,.85);padding:4px 8px;border-radius:6px;pointer-events:none;user-select:none;box-shadow:0 2px 6px rgba(0,0,0,.3);">D59</div>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:6px;bottom:5px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;font-weight:800;line-height:1;letter-spacing:.6px;color:#fff;background:rgba(15,23,42,.85);padding:4px 8px;border-radius:6px;pointer-events:none;user-select:none;box-shadow:0 2px 6px rgba(0,0,0,.3);">D60</div>
 <script>
 /* ===== [공용] 종료된 과정 자동 정리 (모든 플랫폼 공통) — 종료일 지난 방을 다음날 미개설로 비움. 브라우저별 하루 1회 ===== */
 window.kacExpireEndedCourses = async function(){
@@ -10060,10 +10060,13 @@ body.coord-header-compact.pc-mode .coord-clock{
 #coordPopup.roster-mode .cpop-body{padding:14px 18px 20px!important}
 #coordPopup.roster-mode #cpopRosterWrap{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 12px}
 #coordPopup.roster-mode .cpop-course{margin-bottom:0}
+/* 지도 높이를 화면 비율로 — 팝업 전체(지도+과정목록)가 한 화면에 들어오도록 */
+#coordPopup.roster-mode #coordStudentMapKakao{height:clamp(260px,42vh,440px)!important}
+#coordPopup.roster-mode #coordMapList{max-height:clamp(260px,42vh,440px)!important}
 @media(max-width:900px){
   #coordPopup.roster-mode #cpopRosterWrap{grid-template-columns:1fr}
-  #coordPopup.roster-mode #coordStudentMapKakao{height:420px!important}
-  #coordPopup.roster-mode #coordMapList{max-height:420px!important}
+  #coordPopup.roster-mode #coordStudentMapKakao{height:clamp(220px,36vh,400px)!important}
+  #coordPopup.roster-mode #coordMapList{max-height:clamp(220px,36vh,400px)!important}
 }
 </style>
 
