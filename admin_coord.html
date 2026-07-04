@@ -2,7 +2,7 @@
 <!-- 이 플랫폼(admin_coord.html / 교육운영부) 수정상태 플래그. 값은 [수정중] 또는 [수정안하는중] 두 가지. -->
 <!-- 작업 시작 시 → 수정중 / 작업 완료 시 → 수정안하는중. 다른 플랫폼은 이 말머리를 보고 연동·수정 가능 여부 판단. -->
 <!-- [외부변경 · 카카오채널연동 2026-06-25] 포털(portal.html/7777) 경유 폐지 → 페이지 직접진입 시 접속코드(catc1234) 게이트 추가, 포털 리다이렉트/종료이동 제거. version C13→D13. 기능 로직은 미변경. -->
-<!-- last-updated: 2026-07-04 / version: D57 (상단 현황 블록 대폭 확대 height88·값38·아이콘27·edu폭168, 헤더 min-height108. compact/일반 동일) [D56: compact 블록 통일] -->
+<!-- last-updated: 2026-07-04 / version: D58 (교육생 명단 팝업 지도 확대 300→500px·좁은화면 230→420px, setBounds로 서울~제주 시원하게) [D57: 상단 블록 대폭 확대] -->
 <!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -8075,7 +8075,7 @@ function openStudentRosterPopup(){
     try{ _coordRenderStudentMap(_mc,_mtot,_munk); }catch(e){}
     try{ if(typeof _coordSyncTotalStudentsFromOverview==='function') _coordSyncTotalStudentsFromOverview(); }catch(e){}
   }
-  _cpop('<i class="fa-solid fa-users"></i> 과정별 교육생 명단', '<div id="coordStudentMapBox" style="margin-bottom:14px;"><div style="font-size:13px;font-weight:800;color:#475569;margin:2px 2px 8px;"><i class="fa-solid fa-map-location-dot" style="color:#2563eb;"></i> 금주 교육생 전국 분포 <span id="coordMapTotal" style="color:#94a3b8;font-weight:700;"></span></div><div style="display:flex;gap:14px;align-items:stretch;flex-wrap:wrap;"><div id="coordStudentMapKakao" style="flex:2;min-width:300px;height:300px;border-radius:14px;overflow:hidden;border:1px solid #e2e8f0;background:#eaf2fb;"></div><div id="coordMapList" style="flex:1;min-width:210px;max-height:300px;overflow-y:auto;"></div></div></div>'+search+'<div id="cpopRosterWrap"></div>');
+  _cpop('<i class="fa-solid fa-users"></i> 과정별 교육생 명단', '<div id="coordStudentMapBox" style="margin-bottom:14px;"><div style="font-size:13px;font-weight:800;color:#475569;margin:2px 2px 8px;"><i class="fa-solid fa-map-location-dot" style="color:#2563eb;"></i> 금주 교육생 전국 분포 <span id="coordMapTotal" style="color:#94a3b8;font-weight:700;"></span></div><div style="display:flex;gap:14px;align-items:stretch;flex-wrap:wrap;"><div id="coordStudentMapKakao" style="flex:2;min-width:340px;height:500px;border-radius:14px;overflow:hidden;border:1px solid #e2e8f0;background:#eaf2fb;"></div><div id="coordMapList" style="flex:1;min-width:210px;max-height:500px;overflow-y:auto;"></div></div></div>'+search+'<div id="cpopRosterWrap"></div>');
   document.getElementById('coordPopup').classList.add('roster-mode');
   paint(window._coordRosterExt||{});
   Promise.all([
@@ -9127,7 +9127,7 @@ window.addEventListener('load', function(){
 });
 </script>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:6px;bottom:5px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;font-weight:800;line-height:1;letter-spacing:.6px;color:#fff;background:rgba(15,23,42,.85);padding:4px 8px;border-radius:6px;pointer-events:none;user-select:none;box-shadow:0 2px 6px rgba(0,0,0,.3);">D57</div>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:6px;bottom:5px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;font-weight:800;line-height:1;letter-spacing:.6px;color:#fff;background:rgba(15,23,42,.85);padding:4px 8px;border-radius:6px;pointer-events:none;user-select:none;box-shadow:0 2px 6px rgba(0,0,0,.3);">D58</div>
 <script>
 /* ===== [공용] 종료된 과정 자동 정리 (모든 플랫폼 공통) — 종료일 지난 방을 다음날 미개설로 비움. 브라우저별 하루 1회 ===== */
 window.kacExpireEndedCourses = async function(){
@@ -10062,8 +10062,8 @@ body.coord-header-compact.pc-mode .coord-clock{
 #coordPopup.roster-mode .cpop-course{margin-bottom:0}
 @media(max-width:900px){
   #coordPopup.roster-mode #cpopRosterWrap{grid-template-columns:1fr}
-  #coordPopup.roster-mode #coordStudentMapKakao{height:230px!important}
-  #coordPopup.roster-mode #coordMapList{max-height:230px!important}
+  #coordPopup.roster-mode #coordStudentMapKakao{height:420px!important}
+  #coordPopup.roster-mode #coordMapList{max-height:420px!important}
 }
 </style>
 

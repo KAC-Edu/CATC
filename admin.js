@@ -6466,7 +6466,7 @@ resetShuttleRequests: function() {
             const _distGrid = _sorted.length ? _sorted.map(n=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 11px;background:#f8fafc;border:1px solid #eef2f7;border-radius:8px;"><span style="font-weight:700;color:#334155;font-size:13.5px;">${esc(n)}</span><span style="font-weight:900;color:#10b981;font-size:14px;">${_agg[n]}명</span></div>`).join('') : '<div style="grid-column:1/-1;padding:14px;color:#94a3b8;text-align:center;font-size:13px;">예정 명단 소속 정보가 없습니다.</div>';
             const _unknownNote = _aggUnknown ? `<div style="font-size:12px;color:#94a3b8;">· 소속 구분 불가 ${_aggUnknown}명은 지도에서 제외</div>` : '';
             const _mapPanel = `<div style="display:flex;flex-direction:column;gap:10px;">`
-                + `<div id="homeStatMapKakao" style="width:100%;height:clamp(280px,46vh,560px);border-radius:14px;overflow:hidden;border:1px solid #e2e8f0;background:#eaf2fb;"></div>`
+                + `<div id="homeStatMapKakao" style="width:100%;height:clamp(360px,58vh,700px);border-radius:14px;overflow:hidden;border:1px solid #e2e8f0;background:#eaf2fb;"></div>`
                 + `<div style="display:flex;justify-content:space-between;align-items:center;padding:11px 16px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;"><span style="font-weight:900;color:#166534;font-size:clamp(16px,1.8vw,22px);">합계</span><span style="font-weight:900;color:#16a34a;font-size:clamp(16px,1.8vw,22px);">${_aggTotal+_aggUnknown}명</span></div>`
                 + _unknownNote
                 + `</div>`;
@@ -6482,8 +6482,9 @@ resetShuttleRequests: function() {
                 try{ map.addControl(new kakao.maps.ZoomControl(), kakao.maps.ControlPosition.RIGHT); }catch(e){}
                 const bounds=new kakao.maps.LatLngBounds(); let any=false;
                 Object.keys(_agg).forEach(function(name){ const ll=ui._regionLL[name]; if(!ll) return; const c=_agg[name]; any=true; const pos=new kakao.maps.LatLng(ll[0],ll[1]); bounds.extend(pos); const sz=30+Math.min(c,14)*2; const content='<div style="transform:translateY(-50%);display:flex;flex-direction:column;align-items:center;"><div style="width:'+sz+'px;height:'+sz+'px;border-radius:50%;background:linear-gradient(135deg,#10b981,#059669);color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:900;border:2.5px solid #fff;box-shadow:0 4px 12px rgba(5,150,105,.45);">'+c+'</div><div style="margin-top:3px;background:rgba(255,255,255,.95);color:#0f172a;font-size:11px;font-weight:800;padding:1px 7px;border-radius:7px;box-shadow:0 1px 4px rgba(0,0,0,.18);white-space:nowrap;">'+name+'</div></div>'; new kakao.maps.CustomOverlay({ map:map, position:pos, content:content, yAnchor:0.5, zIndex:5 }); });
-                if(any){ try{ map.setBounds(bounds,70,70,70,70); }catch(e){} }
-                setTimeout(function(){ try{ map.relayout(); if(any) map.setBounds(bounds,70,70,70,70); }catch(e){} }, 250);
+                // 서울~제주가 위아래로 짤리지 않고 시원하게 보이도록 상·하 여백을 넉넉히 (top,right,bottom,left)
+                if(any){ try{ map.setBounds(bounds,80,55,100,55); }catch(e){} }
+                setTimeout(function(){ try{ map.relayout(); if(any) map.setBounds(bounds,80,55,100,55); }catch(e){} }, 250);
             };
             if(window.kakao && kakao.maps && kakao.maps.Map){ _buildHomeMap(); }
             else if(window.kakao && kakao.maps && kakao.maps.load){ kakao.maps.load(_buildHomeMap); }
