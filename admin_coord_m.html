@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-  <!-- last-updated: 2026-06-30 / version: M8 (교육생 표기 통일(리더 명칭 교육생장) · 퇴교차량 신청자·외출외박을 정렬표로: 퇴교차량=연번·성명·소속·신청현황 / 외출외박=연번·성함·연락처·외출외박·상태) -->
+  <!-- last-updated: 2026-07-04 / version: M9 (교수 오픈톡방 바로가기 추가 — system/professorProfiles/{교수}/kakaoLink 로 이동, 링크 없으면 '미개설' 표기 · 운영부 요청으로 admin_coord 담당 디에스장 편집, 기능로직 무변경) [M8: 교육생장·정렬표] -->
   <!-- ※ 모바일 개발자 파일이나 운영부 요청으로 디에스장(admin_coord 담당)이 장소선택 모달만 개선. 기능로직(setEduSel/EDU 동기화)은 동일 유지 -->
   <meta charset="UTF-8" />
   <script>
@@ -217,6 +217,16 @@
     .m-tbl td{ padding:9px 9px; border-bottom:1px solid #f1f5f9; color:#1e293b; font-weight:700; white-space:nowrap; }
     .m-tbl tr:last-child td{ border-bottom:none; }
     .m-tbl .num{ text-align:center; color:#94a3b8; width:42px; }
+    /* [M9] 교수 오픈톡방 */
+    .otalk-open-btn{ width:100%; padding:15px; border:none; border-radius:16px; background:linear-gradient(135deg,#3a1d1d,#111); color:#fae100; font-size:15px; font-weight:900; display:flex; align-items:center; justify-content:center; gap:9px; cursor:pointer; box-shadow:0 6px 16px rgba(0,0,0,.18); }
+    .otalk-open-btn:active{ transform:scale(.98); }
+    .otalk-item{ display:flex; align-items:center; justify-content:space-between; gap:10px; padding:14px 15px; border:1px solid #eceff4; border-radius:14px; margin-bottom:9px; text-decoration:none; background:#fffdf5; }
+    .otalk-item:active{ transform:scale(.99); }
+    .otalk-item .oi-name{ font-size:15.5px; font-weight:900; color:#0f172a; display:flex; align-items:center; gap:9px; }
+    .otalk-item .oi-go{ font-size:13px; font-weight:900; color:#3a1d1d; background:#fae100; padding:7px 13px; border-radius:999px; white-space:nowrap; }
+    .otalk-item.off{ background:#f8fafc; border-style:dashed; }
+    .otalk-item.off .oi-name{ color:#94a3b8; }
+    .otalk-item .oi-none{ font-size:12.5px; font-weight:900; color:#94a3b8; background:#eef2f7; padding:7px 13px; border-radius:999px; white-space:nowrap; }
   </style>
 </head>
 <body>
@@ -243,6 +253,11 @@
   </div>
 
   <div class="sec">
+    <div class="sec-ttl"><i class="fa-solid fa-comments"></i> 교수 오픈톡방</div>
+    <button class="otalk-open-btn" onclick="openProfTalkSheet()"><i class="fa-solid fa-comment-dots"></i> 교수님 오픈톡방 바로가기</button>
+  </div>
+
+  <div class="sec">
     <div class="sec-ttl"><i class="fa-solid fa-list-ul"></i> 운영중인 과정</div>
     <div id="courseList"><div class="empty">불러오는 중...</div></div>
   </div>
@@ -251,6 +266,11 @@
 <!-- 청렴/노조 장소 선택 바텀시트 (커스텀) -->
 <div class="sheet-ov" id="eduSheetOv" onclick="if(event.target===this)closeEduSheet()">
   <div class="sheet" id="eduSheetBody"></div>
+</div>
+
+<!-- [M9] 교수 오픈톡방 바텀시트 -->
+<div class="sheet-ov" id="profTalkOv" onclick="if(event.target===this)closeProfTalkSheet()">
+  <div class="sheet" id="profTalkBody"></div>
 </div>
 
 <!-- 과정 상세 -->
@@ -566,6 +586,41 @@ function openEduSheet(type){
 }
 function pickEduPlace(type,val){ setEduSel(type, val||''); closeEduSheet(); }
 function closeEduSheet(){ var ov=document.getElementById('eduSheetOv'); if(ov) ov.classList.remove('open'); }
+
+/* [M9] 교수 오픈톡방 — system/professorProfiles/{교수}/kakaoLink */
+function _otalkHref(link){
+  var s=(''+(link||'')).trim(); if(!s) return '';
+  if(!/^https?:\/\//i.test(s)) s='https://'+s;
+  return s.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+function openProfTalkSheet(){
+  var ov=document.getElementById('profTalkOv'), body=document.getElementById('profTalkBody');
+  if(!ov||!body) return;
+  body.innerHTML='<h3><i class="fa-solid fa-comments" style="color:#3a1d1d;"></i> 교수 오픈톡방</h3>'
+    +'<div class="note">교수님을 누르면 오픈톡방으로 이동합니다. 오픈톡방이 등록되지 않은 교수님은 <b>미개설</b>로 표시됩니다.</div>'
+    +'<div id="profTalkList"><div class="empty">불러오는 중...</div></div>';
+  ov.classList.add('open');
+  db.ref('system/professorProfiles').once('value').then(function(s){ renderProfTalk(s.val()||{}); })
+    .catch(function(){ var l=document.getElementById('profTalkList'); if(l) l.innerHTML='<div class="empty">불러오지 못했습니다. 잠시 후 다시 시도해 주세요.</div>'; });
+}
+function renderProfTalk(all){
+  var list=document.getElementById('profTalkList'); if(!list) return;
+  var names=Object.keys(all||{}).filter(function(k){ return k && k!=='undefined' && (''+k).trim(); });
+  names.sort(function(a,b){ return String(a).localeCompare(String(b),'ko'); });
+  if(!names.length){ list.innerHTML='<div class="empty">등록된 교수님이 없습니다.</div>'; return; }
+  list.innerHTML=names.map(function(nm){
+    var p=all[nm]||{}; var link=(''+(p.kakaoLink||'')).trim(); var disp=esc(nm)+' 교수';
+    if(link){
+      return '<a class="otalk-item" href="'+_otalkHref(link)+'" target="_blank" rel="noopener noreferrer">'
+        +'<span class="oi-name"><i class="fa-solid fa-comment" style="color:#3a1d1d;"></i> '+disp+'</span>'
+        +'<span class="oi-go">입장 <i class="fa-solid fa-arrow-right"></i></span></a>';
+    }
+    return '<div class="otalk-item off">'
+      +'<span class="oi-name"><i class="fa-solid fa-comment-slash"></i> '+disp+'</span>'
+      +'<span class="oi-none">미개설</span></div>';
+  }).join('');
+}
+function closeProfTalkSheet(){ var ov=document.getElementById('profTalkOv'); if(ov) ov.classList.remove('open'); }
 /* 바텀시트 아래로 밀어 닫기 — 시트가 맨 위로 스크롤된 상태에서 아래로 드래그하면 따라 내려가고, 일정 이상이면 닫힘 */
 (function(){
   var sheet=document.getElementById('eduSheetBody'); if(!sheet) return;
