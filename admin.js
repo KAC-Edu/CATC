@@ -6012,6 +6012,17 @@ resetShuttleRequests: function() {
         try { dataMgr.switchRoomAttempt(String(room||'').toUpperCase()); }
         catch(e){ ui._pendingEnterMode = null; ui._pendingGuideFullscreen = false; }
     },
+    // [대시보드] 교수 블록 옆 버튼 — 이미 방 안이므로 입교안내로 전환 후 즉시 PDF 전체화면 (홈에서 입교안내 누른 것과 동일)
+    openGuideFullscreen: function(){
+        try{
+            if(!state.room){ if(ui.showAlert) ui.showAlert('과정을 먼저 선택해 주세요.'); return; }
+            ui.setMode('guide');
+            try{ guideMgr.init(); }catch(e){}
+            setTimeout(function(){
+                try{ if(guideMgr && guideMgr.toggleFullScreen) guideMgr.toggleFullScreen(); }catch(e){}
+            }, 350);
+        }catch(e){}
+    },
     clearHomeSearch: function(event){
         if(event){ event.preventDefault(); event.stopPropagation(); }
         var inp=document.getElementById('homeSearchInput');

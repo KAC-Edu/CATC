@@ -2564,6 +2564,22 @@ body.night-mode .header-room-badge { background-color: #003366 !important; borde
     min-width: 240px;
 }
 .prof-glass-card:hover { background: rgba(255,255,255,0.2); transform: translateY(-3px); }
+/* 교수 블록 옆 입교안내 전체화면 버튼 (동일 글래스 톤) */
+.hero-right-row{ display:flex; align-items:stretch; justify-content:flex-end; gap:12px; }
+.guide-fs-glass{
+    background: rgba(255,255,255,0.1);
+    backdrop-filter: blur(10px);
+    border:1px solid rgba(255,255,255,0.2);
+    border-radius:18px;
+    padding:12px 18px;
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px;
+    cursor:pointer; transition:0.3s; color:#fff; font-family:inherit; min-width:104px;
+}
+.guide-fs-glass:hover{ background: rgba(255,255,255,0.2); transform: translateY(-3px); }
+.guide-fs-glass .gfg-main{ font-size:22px; color:#fff; margin-bottom:2px; }
+.guide-fs-glass .gfg-label{ font-size:15px; font-weight:900; letter-spacing:.3px; }
+.guide-fs-glass .gfg-sub{ font-size:11px; font-weight:800; opacity:.9; display:inline-flex; align-items:center; gap:4px; }
+
 
 .prof-avatar {
     width: 45px; height: 45px; background: white; color: #1e293b;

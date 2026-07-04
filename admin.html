@@ -42,7 +42,7 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/ko.js"></script>
-    <link rel="stylesheet" href="admin.css?v=260704M34">
+    <link rel="stylesheet" href="admin.css?v=260704M35">
     <link rel="stylesheet" href="kac-tokens.css?v=20260622">
     <link rel="icon" type="image/svg+xml" href="favicon.svg?v=b260620c">
     <script>
@@ -944,6 +944,9 @@ body.in-course #moreToggleTab{ display:flex !important; }
             </div>
             
             <div class="hero-right">
+                <div class="hero-right-row">
+                <!-- 입교안내 전체화면 버튼 (교수 블록과 동일 글래스 톤) -->
+                <button class="guide-fs-glass" type="button" onclick="ui.openGuideFullscreen()" title="입교안내를 전체화면으로 엽니다 (홈 현황판에서 입교안내 누른 것과 동일)"><i class="fa-solid fa-file-pdf gfg-main"></i><span class="gfg-label">입교안내</span><span class="gfg-sub"><i class="fa-solid fa-expand"></i> 전체화면</span></button>
                 <!-- 교수님 프로필 카드 -->
                 <div class="prof-glass-card" style="position:relative; z-index:5;" onclick="ui.showProfPresentation(document.getElementById('dashProfNameOnly').innerText)" title="클릭하면 담임 교수 프로필을 봅니다">
                     <div onclick="ui._openProfSwap(state.room, document.getElementById('dashProfNameOnly').innerText, event)" title="담임 교수 선택 (교체)" style="position:absolute; top:50%; right:14px; transform:translateY(-50%); width:30px; height:30px; display:flex; align-items:center; justify-content:center; border-radius:50%; background:rgba(255,255,255,0.9); color:#1e40af; cursor:pointer; z-index:30; transition:background .15s;" onmouseover="this.style.background='#fff'" onmouseout="this.style.background='rgba(255,255,255,0.9)'"><i class="fa-solid fa-gear" style="font-size:15px;"></i></div>
@@ -955,6 +958,7 @@ body.in-course #moreToggleTab{ display:flex !important; }
                         </div>
                     </div>
                 </div>
+                </div><!-- hero-right-row 끝 -->
                 <!-- 하단 날짜 표시 -->
                 <div class="date-minimal-box" style="color: rgba(255,255,255,0.9) !important; font-weight: 800;">
                     <i class="fa-solid fa-user-tie"></i> 과정담당: <span id="dashCoordName" onclick="event.stopPropagation(); ui._openCoordSwap(state.room, this.innerText, event)" title="클릭하여 과정담당 선택/교체" style="margin-left:5px; cursor:pointer;">-</span>
@@ -2842,7 +2846,7 @@ function setupAcc(btn){
 
 
 
-    <script src="admin.js?v=260704M34"></script>
+    <script src="admin.js?v=260704M35"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
 <!-- ── 화면 자동 맞춤(auto-fit): 가로+세로 모두 화면에 맞게 자동 축소 · JDS260613 ──
      원인: Windows 디스플레이 배율(125%/150%)·저해상도 화면에서 유효 뷰포트가 작아져
