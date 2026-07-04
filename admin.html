@@ -42,7 +42,7 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/ko.js"></script>
-    <link rel="stylesheet" href="admin.css?v=260704M16">
+    <link rel="stylesheet" href="admin.css?v=260704M17">
     <link rel="stylesheet" href="kac-tokens.css?v=20260622">
     <link rel="icon" type="image/svg+xml" href="favicon.svg?v=b260620c">
     <script>
@@ -1065,6 +1065,14 @@ body.in-course #moreToggleTab{ display:flex !important; }
             </div> <!-- card-mint 끝 -->
 
         </div> <!-- dash-premium-grid 끝 -->
+
+        <!-- [화면 도움말] 과정 운영 현황 사용 안내 -->
+        <div class="screen-hint">
+            <i class="fa-solid fa-circle-info"></i>
+            <span><b>각 카드·숫자를 클릭</b>하면 해당 상세 화면(수강생·출결·외출외박·석식·셔틀·Q&amp;A 등)으로 이동합니다.
+            상단의 <b>과정명·기간·장소·담임교수·과정담당</b>은 눌러서 바로 수정할 수 있고,
+            우측 상단 <b>수료 기념사진</b> 버튼은 수료일에만 나타납니다.</span>
+        </div>
     </div> <!-- modern-white-card dash-hero-container 끝 -->
 </div> <!-- view-dashboard 끝 -->
 
@@ -2815,7 +2823,7 @@ function setupAcc(btn){
 
 
 
-    <script src="admin.js?v=260704M16"></script>
+    <script src="admin.js?v=260704M17"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
 <!-- ── 화면 자동 맞춤(auto-fit): 가로+세로 모두 화면에 맞게 자동 축소 · JDS260613 ──
      원인: Windows 디스플레이 배율(125%/150%)·저해상도 화면에서 유효 뷰포트가 작아져

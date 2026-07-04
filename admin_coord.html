@@ -2,7 +2,7 @@
 <!-- 이 플랫폼(admin_coord.html / 교육운영부) 수정상태 플래그. 값은 [수정중] 또는 [수정안하는중] 두 가지. -->
 <!-- 작업 시작 시 → 수정중 / 작업 완료 시 → 수정안하는중. 다른 플랫폼은 이 말머리를 보고 연동·수정 가능 여부 판단. -->
 <!-- [외부변경 · 카카오채널연동 2026-06-25] 포털(portal.html/7777) 경유 폐지 → 페이지 직접진입 시 접속코드(catc1234) 게이트 추가, 포털 리다이렉트/종료이동 제거. version C13→D13. 기능 로직은 미변경. -->
-<!-- last-updated: 2026-07-04 / version: D63 (연간계획·강의실배정·외출외박 섹션에 표기 안내 주석 추가 · 상단바 8개 버튼 title 툴팁을 설명형으로 개선) [D62: 명단팝업·연간범례 주석] -->
+<!-- last-updated: 2026-07-04 / version: D64 (팝업 폭 확대 .cpop max-width 1180→1400·92vh·화면꽉 · 퇴교차량 과정카드 2~3열 그리드 · 퇴교차량/장소선택/생활관 팝업에 표기 안내 주석 추가) [D63: 섹션·상단바 주석] -->
 <!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -1720,7 +1720,7 @@ body.pc-mode .entry-box:hover, body.pc-mode .entry-box-tablet:hover {
 .cpop-ov{ display:none; position:fixed; inset:0; background:rgba(15,23,42,.55); z-index:9500; align-items:center; justify-content:center; padding:18px; overscroll-behavior:contain; touch-action:none; }
 body.cpop-locked{ overflow:hidden !important; }
 .cpop-ov.open{ display:flex; }
-.cpop{ background:#fff; width:100%; max-width:1180px; max-height:88vh; border-radius:18px; overflow:hidden; display:flex; flex-direction:column; border:3px solid #16a34a; box-shadow:0 0 0 4px rgba(22,163,74,.18), 0 20px 50px rgba(0,0,0,.3); }
+.cpop{ background:#fff; width:calc(100vw - 40px); max-width:1400px; max-height:92vh; border-radius:18px; overflow:hidden; display:flex; flex-direction:column; border:3px solid #16a34a; box-shadow:0 0 0 4px rgba(22,163,74,.18), 0 20px 50px rgba(0,0,0,.3); }
 .cpop-head{ background:linear-gradient(135deg,#15803d,#16a34a); color:#fff; padding:16px 20px; font-weight:900; font-size:18px; display:flex; justify-content:space-between; align-items:center; }
 .cpop-head .x{ cursor:pointer; font-size:20px; }
 .cpop-body{ padding:16px 18px; overflow-y:auto; overscroll-behavior:contain; touch-action:pan-y; -webkit-overflow-scrolling:touch; }
@@ -8179,6 +8179,7 @@ function openEduPlacePicker(type){
   });
   html+='<div class="eduplace-col"><div class="eduplace-col-head">미정</div><button class="eduplace-pick clear" onclick="setEduPlace(\''+type+'\',\'\')"><i class="fa-solid fa-eraser"></i> 미정으로 초기화</button></div>';
   html+='</div>';
+  html+='<div style="margin-top:14px;padding:12px 15px;background:#f8fafc;border:1px solid #e5eaf1;border-radius:11px;font-size:12.5px;color:#64748b;line-height:1.85;"><b style="color:#334155;font-size:13px;"><i class="fa-solid fa-circle-info" style="color:#2563eb;margin-right:5px;"></i>표기 안내</b><br>· 건물(하늘관·국제동·서울·온라인·관제교육동)별로 <b>강의실을 클릭</b>하면 금주 교육 장소로 <b>즉시 설정·공지</b>됩니다.<br>· <b>미정으로 초기화</b> = 장소를 아직 정하지 않은 상태로 되돌립니다.</div>';
   _cpop(title, html);
 
 }
@@ -8750,7 +8751,7 @@ function openShuttleSummary(){
     +'</div>';
   }).join('');
   if(!blocks.trim()) blocks='<div class="cpop-empty">신청된 퇴교차량이 없습니다.</div>';
-  _cpop('<i class="fa-solid fa-bus"></i> 퇴교차량 신청 현황 (과정별)', _coordShuttleRoundsHtml()+'<div style="display:flex;flex-direction:column;gap:16px;">'+blocks+'</div>');
+  _cpop('<i class="fa-solid fa-bus"></i> 퇴교차량 신청 현황 (과정별)', _coordShuttleRoundsHtml()+'<div style="margin:4px 2px 14px;padding:12px 15px;background:#f8fafc;border:1px solid #e5eaf1;border-radius:11px;font-size:12.5px;color:#64748b;line-height:1.85;"><b style="color:#334155;font-size:13px;"><i class="fa-solid fa-circle-info" style="color:#2563eb;margin-right:5px;"></i>표기 안내</b><br>· <b style="color:#64748b;">자차</b>·<b style="color:#dc2626;">오송역</b>·<b style="color:#2563eb;">터미널</b>·<b style="color:#16a34a;">공항</b> = 교육생이 신청한 <b>목적지별 인원</b> / <b style="color:#1e3a8a;">총 신청</b> = 합계<br>· <b>출발시간(1차·2차)</b>은 전 과정 공통 · <b>확인</b>을 누르면 강사·교육생 화면에 공지됩니다 (미정=추후 공지 / 운행안함=차량 미운행)</div>'+'<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(430px,1fr));gap:14px;">'+blocks+'</div>');
   window._coordPopupRefresh=openShuttleSummary;
   if(window._coordShtOpenIdx!=null){ var _ob=document.getElementById('coordShtBody'+window._coordShtOpenIdx); var _oc=document.getElementById('coordShtChev'+window._coordShtOpenIdx); if(_ob){ _ob.style.display='block'; if(_oc) _oc.style.transform='rotate(180deg)'; } }
 }
@@ -8765,7 +8766,7 @@ function openDormStatusPopup(){
   function _mdRange(wk){ var p=String(wk).split('-'); var d=new Date(+p[0],+p[1]-1,+p[2]); var e=new Date(d); e.setDate(e.getDate()+4); return (d.getMonth()+1)+'/'+d.getDate()+'~'+(e.getMonth()+1)+'/'+e.getDate(); }
   var weeks=[['이번주',base],['다음주',_aw(base,1)],['다다음주',_aw(base,2)]];
   var sel='<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:2px 0 14px;"><select id="coordDormWeekSel" onchange="renderDormWeek(this.value)" style="padding:11px 16px;border:1.5px solid #cbd5e1;border-radius:11px;font-size:15px;font-weight:800;color:#1e3a8a;background:#fff;cursor:pointer;">'+weeks.map(function(w){ return '<option value="'+w[1]+'">'+w[0]+' · '+_mdRange(w[1])+'</option>'; }).join('')+'</select><button onclick="coordDormPrint()" style="margin-left:auto;display:inline-flex;align-items:center;gap:7px;padding:11px 18px;border:none;border-radius:11px;background:#dc2626;color:#fff;font-weight:800;font-size:14px;cursor:pointer;box-shadow:0 3px 8px rgba(220,38,38,.3);"><i class="fa-solid fa-file-pdf"></i> PDF 출력</button></div>';
-  _cpop('<i class="fa-solid fa-bed"></i> 생활관 방배정 현황', sel+'<div id="coordDormWrap"></div>');
+  _cpop('<i class="fa-solid fa-bed"></i> 생활관 방배정 현황', sel+'<div id="coordDormWrap"></div>'+'<div style="margin-top:14px;padding:12px 15px;background:#f8fafc;border:1px solid #e5eaf1;border-radius:11px;font-size:12.5px;color:#64748b;line-height:1.85;"><b style="color:#334155;font-size:13px;"><i class="fa-solid fa-circle-info" style="color:#2563eb;margin-right:5px;"></i>표기 안내</b><br>· 이 배치도는 <b>교육지원부(생활관)</b>에서 배정한 현황입니다. 상단에서 <b>주차</b>를 바꿔 조회하고 <b>PDF 출력</b>으로 저장할 수 있습니다.<br>· <b>배정제외</b> = 배정 대상이 아닌(사용하지 않는) 방입니다.</div>');
   window._coordPopupRefresh=null;
   renderDormWeek(base);
 }
@@ -9154,7 +9155,7 @@ window.addEventListener('load', function(){
 });
 </script>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:6px;bottom:5px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;font-weight:800;line-height:1;letter-spacing:.6px;color:#fff;background:rgba(15,23,42,.85);padding:4px 8px;border-radius:6px;pointer-events:none;user-select:none;box-shadow:0 2px 6px rgba(0,0,0,.3);">D63</div>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:6px;bottom:5px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;font-weight:800;line-height:1;letter-spacing:.6px;color:#fff;background:rgba(15,23,42,.85);padding:4px 8px;border-radius:6px;pointer-events:none;user-select:none;box-shadow:0 2px 6px rgba(0,0,0,.3);">D64</div>
 <script>
 /* ===== [공용] 종료된 과정 자동 정리 (모든 플랫폼 공통) — 종료일 지난 방을 다음날 미개설로 비움. 브라우저별 하루 1회 ===== */
 window.kacExpireEndedCourses = async function(){
