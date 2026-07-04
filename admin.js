@@ -2332,17 +2332,31 @@ init: function() {
         if (!row) return;
         const show = (row.style.display === 'none' || !row.style.display);
         row.style.display = show ? 'flex' : 'none';
-        if (show) { const i = document.getElementById('qaAddInput'); if (i) { i.value = ''; i.focus(); } this._qaAddResetIdle(); }
-        else { if (this._qaIdleT) { clearTimeout(this._qaIdleT); this._qaIdleT = null; } }
+        if (show) {
+            // 열자마자는 닫지 않는다. 커서를 놓고 입력을 기다린다.
+            const i = document.getElementById('qaAddInput');
+            if (i) { i.value = ''; setTimeout(function(){ try{ i.focus(); }catch(e){} }, 0); }
+            this._qaAddCancelHide();
+        } else {
+            this._qaAddCancelHide();
+        }
     },
-    // [자동 닫힘] 마지막 입력 후 3초간 아무 입력이 없으면 입력란을 자동으로 닫는다
-    _qaAddResetIdle: function() {
+    // [닫힘 취소] 입력란에 들어오거나 타이핑 중이면 닫지 않는다
+    _qaAddCancelHide: function() {
+        if (this._qaIdleT) { clearTimeout(this._qaIdleT); this._qaIdleT = null; }
+    },
+    // [자동 닫힘] 입력란을 벗어나면(=더 입력 안 함) 3초 뒤 닫는다. 그 사이 다시 들어오면 유지.
+    _qaAddScheduleHide: function() {
         if (this._qaIdleT) clearTimeout(this._qaIdleT);
         this._qaIdleT = setTimeout(function() {
             const row = document.getElementById('qaAddRow');
+            const i = document.getElementById('qaAddInput');
+            if (i && document.activeElement === i) return; // 다시 포커스면 유지
             if (row) row.style.display = 'none';
         }, 3000);
     },
+    // 하위호환: 예전 호출부가 남아있어도 안전하게 동작
+    _qaAddResetIdle: function() { this._qaAddCancelHide(); },
     quickAddSubject: function() {
         if (!state.room) { alert('먼저 과정을 선택해 주세요.'); return; }
         const input = document.getElementById('qaAddInput');
@@ -2352,7 +2366,7 @@ init: function() {
         firebase.database().ref(`courses/${state.room}/settings/subjects`).push(name).then(() => {
             input.value = "";
             input.focus();
-            subjectMgr._qaAddResetIdle();   // 추가 후 3초 무입력이면 자동으로 닫힘
+            subjectMgr._qaAddCancelHide();   // 계속 입력 가능하도록 유지, 벗어나면 3초 뒤 닫힘
         });
     }
 };
@@ -14545,7 +14559,6 @@ window.addEventListener('resize', function(){
       var el=document.getElementById('dashRoomDetail');
       var on=!!(el && /온라인|zoom/i.test(String(el.innerText||'')));
       window._zoomRoomOnline = on;
-      document.body.classList.toggle('zoom-room-online', on);
       if(on){ // 온라인일 때는 초기 inline display:none을 해제해 실제로 보이게
         document.querySelectorAll('[onclick*="openZoomMonitor"]').forEach(function(t){ t.style.display=''; });
       }
