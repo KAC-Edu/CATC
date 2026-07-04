@@ -2,7 +2,7 @@
 <!-- 이 플랫폼(admin_coord.html / 교육운영부) 수정상태 플래그. 값은 [수정중] 또는 [수정안하는중] 두 가지. -->
 <!-- 작업 시작 시 → 수정중 / 작업 완료 시 → 수정안하는중. 다른 플랫폼은 이 말머리를 보고 연동·수정 가능 여부 판단. -->
 <!-- [외부변경 · 카카오채널연동 2026-06-25] 포털(portal.html/7777) 경유 폐지 → 페이지 직접진입 시 접속코드(catc1234) 게이트 추가, 포털 리다이렉트/종료이동 제거. version C13→D13. 기능 로직은 미변경. -->
-<!-- last-updated: 2026-07-04 / version: D62 (표기 안내 주석을 전체 명단 보기 팝업에도 추가, 연간계획 범례 '예정'=시작 전 과정 설명 추가 — 예정 나오는 곳 전반 안내) [D61: 입교현황 주석] -->
+<!-- last-updated: 2026-07-04 / version: D63 (연간계획·강의실배정·외출외박 섹션에 표기 안내 주석 추가 · 상단바 8개 버튼 title 툴팁을 설명형으로 개선) [D62: 명단팝업·연간범례 주석] -->
 <!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -2019,14 +2019,14 @@ body.pc-mode .hdr-stat .hb-value small{ font-size:clamp(9px,.62vw,11px) !importa
   <div id="coordHeaderClock" class="coord-clock"></div>
   <div class="coord-right">
     <div class="coord-hdr-stats" id="coordHdrStats">
-      <div class="hdr-stat" onclick="openCourseOverview()" title="진행 과정 현황"><i class="fa-solid fa-graduation-cap"></i><div class="hdr-stat-txt"><div class="hb-label">진행 과정</div><div class="hb-value"><span id="hero-active-courses">0</span><small>개</small></div></div></div>
-      <div class="hdr-stat" onclick="openStudentRosterPopup()" title="전체 교육생 명단"><i class="fa-solid fa-users"></i><div class="hdr-stat-txt"><div class="hb-label">전체 교육생</div><div class="hb-value"><span id="g-total-students">0</span><small>명</small></div></div></div>
-      <div class="hdr-stat" onclick="openOutingSummary()" title="금일 외출·외박 신청자 명단"><i class="fa-solid fa-file-signature"></i><div class="hdr-stat-txt"><div class="hb-label">외출·외박</div><div class="hb-value"><span id="g-today-actions">0</span><small>건</small></div></div></div>
-      <div class="hdr-stat" onclick="openDormStatusPopup()" title="생활관 방배정 현황(교육지원부)"><i class="fa-solid fa-bed"></i><div class="hdr-stat-txt"><div class="hb-label">생활관</div><div class="hb-value"><span id="g-dorm-count">0</span><small>명</small></div></div></div>
-      <div class="hdr-stat hdr-edu shuttle-cleared" id="hdr-shuttle" onclick="openShuttleSummary()" title="퇴교차량 신청자 · 출발시간 공지 상태(회색=초기화/미공지, 녹색=공지완료)"><i class="fa-solid fa-bus"></i><div class="hdr-stat-txt"><div class="hb-label">퇴교차량</div><div class="hb-value"><span id="g-shuttle-count">0</span><small>명</small></div></div></div>
-      <div class="hdr-stat hdr-edu edu-unset" onclick="openEduPlacePicker('integrity')" title="금주 청렴교육 장소 설정"><i class="fa-solid fa-scale-balanced"></i><div class="hdr-stat-txt"><div class="hb-label">청렴교육</div><div class="hb-value" style="font-size:17px;"><span id="g-edu-integrity">미정</span></div></div></div>
-      <div class="hdr-stat hdr-edu edu-unset" onclick="openEduPlacePicker('union')" title="금주 노조와의 대화 장소 설정"><i class="fa-solid fa-handshake"></i><div class="hdr-stat-txt"><div class="hb-label">노조교육</div><div class="hb-value" style="font-size:17px;"><span id="g-edu-union">미정</span></div></div></div>
-      <div class="hdr-stat" onclick="openGlobalNoticeModal()" title="입교안내 공지 보내기" style="cursor:pointer;"><i class="fa-solid fa-bullhorn"></i><div class="hdr-stat-txt"><div class="hb-label">입교안내</div><div class="hb-value" style="font-size:16px;">공지</div></div></div>
+      <div class="hdr-stat" onclick="openCourseOverview()" title="현재 운영 중인 과정 수 · 클릭하면 과정별 현황을 봅니다"><i class="fa-solid fa-graduation-cap"></i><div class="hdr-stat-txt"><div class="hb-label">진행 과정</div><div class="hb-value"><span id="hero-active-courses">0</span><small>개</small></div></div></div>
+      <div class="hdr-stat" onclick="openStudentRosterPopup()" title="전 과정 교육생(예정+입교) 합계 · 클릭하면 전체 명단·전국 분포 지도"><i class="fa-solid fa-users"></i><div class="hdr-stat-txt"><div class="hb-label">전체 교육생</div><div class="hb-value"><span id="g-total-students">0</span><small>명</small></div></div></div>
+      <div class="hdr-stat" onclick="openOutingSummary()" title="금일 외출·외박 신청 건수 · 클릭하면 신청자 명단"><i class="fa-solid fa-file-signature"></i><div class="hdr-stat-txt"><div class="hb-label">외출·외박</div><div class="hb-value"><span id="g-today-actions">0</span><small>건</small></div></div></div>
+      <div class="hdr-stat" onclick="openDormStatusPopup()" title="생활관(교육지원부) 방배정 인원 · 클릭하면 방배정 배치도"><i class="fa-solid fa-bed"></i><div class="hdr-stat-txt"><div class="hb-label">생활관</div><div class="hb-value"><span id="g-dorm-count">0</span><small>명</small></div></div></div>
+      <div class="hdr-stat hdr-edu shuttle-cleared" id="hdr-shuttle" onclick="openShuttleSummary()" title="퇴교차량 신청 인원 및 출발시간 공지 상태 · 회색=미공지, 녹색=공지완료 · 클릭하면 상세·공지"><i class="fa-solid fa-bus"></i><div class="hdr-stat-txt"><div class="hb-label">퇴교차량</div><div class="hb-value"><span id="g-shuttle-count">0</span><small>명</small></div></div></div>
+      <div class="hdr-stat hdr-edu edu-unset" onclick="openEduPlacePicker('integrity')" title="금주 청렴교육 장소 · 클릭하면 장소 선택(미정으로 초기화 가능)"><i class="fa-solid fa-scale-balanced"></i><div class="hdr-stat-txt"><div class="hb-label">청렴교육</div><div class="hb-value" style="font-size:17px;"><span id="g-edu-integrity">미정</span></div></div></div>
+      <div class="hdr-stat hdr-edu edu-unset" onclick="openEduPlacePicker('union')" title="금주 노조와의 대화 장소 · 클릭하면 장소 선택(미정으로 초기화 가능)"><i class="fa-solid fa-handshake"></i><div class="hdr-stat-txt"><div class="hb-label">노조교육</div><div class="hb-value" style="font-size:17px;"><span id="g-edu-union">미정</span></div></div></div>
+      <div class="hdr-stat" onclick="openGlobalNoticeModal()" title="교육생 입교안내 화면에 뜨는 공지 작성 · 영구/이번주만 선택 가능" style="cursor:pointer;"><i class="fa-solid fa-bullhorn"></i><div class="hdr-stat-txt"><div class="hb-label">입교안내</div><div class="hb-value" style="font-size:16px;">공지</div></div></div>
     </div>
   </div>
 </header>
@@ -2184,6 +2184,12 @@ body.pc-mode .hdr-stat .hb-value small{ font-size:clamp(9px,.62vw,11px) !importa
         <div id="csecAnnualPreview" style="overflow-x:auto;">
             <p style="padding:24px; text-align:center; color:#94a3b8; font-weight:700;">불러오는 중…</p>
         </div>
+        <div style="margin-top:12px; padding:12px 15px; background:#f8fafc; border:1px solid #e5eaf1; border-radius:11px; font-size:12.5px; color:#64748b; line-height:1.85;">
+            <b style="color:#334155; font-size:13px;"><i class="fa-solid fa-circle-info" style="color:#2563eb; margin-right:5px;"></i>표기 안내</b><br>
+            · <b>색상</b> : <b style="color:#1d4ed8;">진행중</b>(이번주 진행) · <b style="color:#db2777;">차주</b>(다음주 시작) · <b style="color:#16a34a;">예정</b>(아직 시작 전) · <b style="color:#94a3b8;">종료</b>(끝난 과정) · <b style="color:#e11d48;">폐강</b>(취소된 과정)<br>
+            · <b>과정담당</b> = 교육운영부 담당자 &nbsp;/&nbsp; <b>담임교수</b> = 해당 과정 담임(강사)<br>
+            · <b>강의실 '-'</b> = 아직 미배정 &nbsp;·&nbsp; 상단 <b>엑셀 업로드 / 행 추가 / 편집기 열기</b>로 계획을 수정합니다.
+        </div>
     </div>
 
     <!-- 섹션 3: 현재 입교/예정 교육생 (PC 전용) -->
@@ -2215,6 +2221,11 @@ body.pc-mode .hdr-stat .hb-value small{ font-size:clamp(9px,.62vw,11px) !importa
         </div>
         <div id="csecOutingWrap">
             <p style="padding:24px; text-align:center; color:#94a3b8; font-weight:700;">불러오는 중…</p>
+        </div>
+        <div style="margin-top:12px; padding:12px 15px; background:#f8fafc; border:1px solid #e5eaf1; border-radius:11px; font-size:12.5px; color:#64748b; line-height:1.85;">
+            <b style="color:#334155; font-size:13px;"><i class="fa-solid fa-circle-info" style="color:#2563eb; margin-right:5px;"></i>표기 안내</b><br>
+            · <b style="color:#2563eb;">외출</b> = 당일 나갔다 복귀 &nbsp;/&nbsp; <b style="color:#7c3aed;">외박</b> = 숙박 후 복귀(복귀예정일 표시).<br>
+            · 교육생이 신청한 외출·외박 내역이 <b>실시간</b>으로 이 대장에 쌓입니다.
         </div>
     </div>
 
@@ -2248,6 +2259,12 @@ body.pc-mode .hdr-stat .hb-value small{ font-size:clamp(9px,.62vw,11px) !importa
         <div id="coordFloorPlan" style="display:none;"></div>
         <div id="activeCourseList" style="display:flex; flex-direction:column; gap:8px;">
             <!-- 자바스크립트가 여기에 ROOM A, ROOM C 등의 카드를 채워넣습니다 -->
+        </div>
+        <div style="margin-top:12px; padding:12px 15px; background:#f8fafc; border:1px solid #e5eaf1; border-radius:11px; font-size:12.5px; color:#64748b; line-height:1.85;">
+            <b style="color:#334155; font-size:13px;"><i class="fa-solid fa-circle-info" style="color:#2563eb; margin-right:5px;"></i>표기 안내</b><br>
+            · <b>현재 강의실</b> = 지금 배정된 강의실. <b>배정 수정</b> 드롭다운에서 바꾸면 <b>즉시 저장</b>되고 강사·교육지원부(생활관)에 공유됩니다.<br>
+            · <b>온라인(Zoom)</b> = 비대면 과정 &nbsp;/&nbsp; <b>(전산실)</b> = 전산 실습 강의실 &nbsp;/&nbsp; 하늘관·국제동·관제교육동 = 건물명.<br>
+            · <b>표로 편집</b> = 목록에서 바로 수정 &nbsp;/&nbsp; <b>배치도로 보기</b> = 도면에서 확인·PDF 저장.
         </div>
     </div>
 
@@ -9137,7 +9154,7 @@ window.addEventListener('load', function(){
 });
 </script>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:6px;bottom:5px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;font-weight:800;line-height:1;letter-spacing:.6px;color:#fff;background:rgba(15,23,42,.85);padding:4px 8px;border-radius:6px;pointer-events:none;user-select:none;box-shadow:0 2px 6px rgba(0,0,0,.3);">D62</div>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:6px;bottom:5px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;font-weight:800;line-height:1;letter-spacing:.6px;color:#fff;background:rgba(15,23,42,.85);padding:4px 8px;border-radius:6px;pointer-events:none;user-select:none;box-shadow:0 2px 6px rgba(0,0,0,.3);">D63</div>
 <script>
 /* ===== [공용] 종료된 과정 자동 정리 (모든 플랫폼 공통) — 종료일 지난 방을 다음날 미개설로 비움. 브라우저별 하루 1회 ===== */
 window.kacExpireEndedCourses = async function(){
