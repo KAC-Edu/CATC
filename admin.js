@@ -6450,9 +6450,9 @@ resetShuttleRequests: function() {
                     ? '<span title="비대면(온라인·Zoom) 과정" style="display:inline-flex;align-items:center;gap:5px;flex:0 0 auto;padding:5px 12px;border-radius:999px;background:#e0f2fe;color:#0369a1;font-size:clamp(12px,1.2vw,15px);font-weight:900;white-space:nowrap;"><i class="fa-solid fa-video"></i> 비대면</span>'
                     : '<span title="대면(집합) 과정" style="display:inline-flex;align-items:center;gap:5px;flex:0 0 auto;padding:5px 12px;border-radius:999px;background:#eef2ff;color:#4338ca;font-size:clamp(12px,1.2vw,15px);font-weight:900;white-space:nowrap;"><i class="fa-solid fa-chalkboard-user"></i> 대면</span>';
                 return `<div role="button" tabindex="0" onclick="ui.enterHomeCourse('${room}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();ui.enterHomeCourse('${room}');}" title="클릭하면 이 과정으로 입장합니다" style="display:flex;justify-content:space-between;align-items:center;gap:18px;min-height:70px;padding:15px 20px;background:#eff6ff;border:1px solid #dbeafe;border-radius:14px;margin-bottom:12px;cursor:pointer;transition:background .15s, transform .15s, box-shadow .15s;" onmouseover="this.style.background='#dbeafe';this.style.transform='translateY(-2px)';this.style.boxShadow='0 10px 26px rgba(37,99,235,.20)';" onmouseout="this.style.background='#eff6ff';this.style.transform='none';this.style.boxShadow='none';">
-                    <div style="display:flex;align-items:center;gap:clamp(12px,1.6vw,22px);min-width:0;">
+                    <div style="display:grid;grid-template-columns:auto clamp(230px,27vw,380px) auto;align-items:center;gap:clamp(12px,1.6vw,20px);min-width:0;">
                         <span style="font-weight:900;color:#fff;background:#3b82f6;padding:8px 15px;border-radius:10px;font-size:clamp(14px,1.4vw,18px);white-space:nowrap;">Room #${room}</span>
-                        <span style="font-size:clamp(18px,1.9vw,24px);color:#0f172a;font-weight:900;word-break:keep-all;">${course}</span>
+                        <span style="font-size:clamp(17px,1.8vw,23px);color:#0f172a;font-weight:900;word-break:keep-all;min-width:0;">${course}</span>
                         ${_mode}
                     </div>
                     <span style="font-size:clamp(14px,1.5vw,18px);color:#475569;font-weight:900;white-space:nowrap;">${prof} 교수 <i class="fa-solid fa-arrow-right-to-bracket" style="margin-left:12px;color:#3b82f6;"></i></span></div>`;
@@ -6529,9 +6529,15 @@ resetShuttleRequests: function() {
                 + `<div style="flex:1.4 1 330px;min-width:0;"><div style="font-size:clamp(17px,1.9vw,23px);font-weight:900;color:#0f172a;margin-bottom:12px;">👩‍🎓 과정별 교육생 현황</div>${_listHtml}</div>`
                 + `<div style="flex:1 1 340px;min-width:0;"><div style="font-size:clamp(17px,1.9vw,23px);font-weight:900;color:#0f172a;margin-bottom:12px;">📊 전체 교육생 소속 분포</div>${_mapPanel}</div>`
                 + `</div>`
-                + `<div style="margin-top:16px;padding:11px 15px;background:#f8fafc;border:1px solid #eef2f7;border-radius:12px;font-size:13px;font-weight:600;color:#64748b;line-height:1.6;">`
-                +   `<i class="fa-solid fa-circle-info" style="color:#3b82f6;margin-right:6px;"></i>`
-                +   `<b>입교</b>는 이번 주 실제 입교완료 인원, <b>예정</b>은 배정 명단 인원입니다. 왼쪽 <b>과정을 클릭</b>하면 해당 과정 상세로 이동합니다. 오른쪽 지도는 <b>교육생 소속(근무지) 지역 분포</b>이며, 소속 구분이 안 되는 인원은 지도에서 제외됩니다.`
+                + `<div class="screen-hint" style="margin-top:18px;">`
+                +   `<i class="fa-solid fa-circle-info"></i>`
+                +   `<div class="hint-body">`
+                +     `<span class="hint-title">보는 방법</span>`
+                +     `<span class="hint-line">• <b>입교</b> — 이번 주 실제 입교완료(QR 입장) 인원.</span>`
+                +     `<span class="hint-line">• <b>예정</b> — 배정 명단(예정) 인원.</span>`
+                +     `<span class="hint-line">• 왼쪽 <b>과정을 클릭</b>하면 해당 과정 상세로 이동합니다.</span>`
+                +     `<span class="hint-line">• 오른쪽 지도는 <b>교육생 소속(근무지) 지역 분포</b>이며, 소속 구분이 안 되는 인원은 지도에서 제외됩니다.</span>`
+                +   `</div>`
                 + `</div>`;
             // 우측 카카오맵(집계된 전체 분포) — 외부 카카오 API라 Firebase 트래픽 증가 없음
             ui._regionLL = ui._regionLL || { '서울':[37.5586,126.7906],'인천':[37.4602,126.4407],'강원':[37.8813,127.7300],'양양':[38.0613,128.6690],'원주':[37.4416,127.9606],'송탄':[37.0807,127.0353],'청주':[36.7166,127.4990],'예천':[36.6320,128.3549],'군산':[35.9038,126.6158],'대구':[35.8941,128.6586],'포항':[35.9879,129.4204],'울산':[35.5935,129.3517],'부안':[35.7316,126.7330],'광주':[35.1264,126.8089],'무안':[34.9914,126.3828],'여수':[34.8423,127.6168],'사천':[35.0886,128.0703],'김해':[35.1795,128.9382],'부산':[35.1796,129.0756],'제주':[33.5113,126.4930] };
