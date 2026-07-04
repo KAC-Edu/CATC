@@ -2,7 +2,7 @@
 <!-- 이 플랫폼(admin_coord.html / 교육운영부) 수정상태 플래그. 값은 [수정중] 또는 [수정안하는중] 두 가지. -->
 <!-- 작업 시작 시 → 수정중 / 작업 완료 시 → 수정안하는중. 다른 플랫폼은 이 말머리를 보고 연동·수정 가능 여부 판단. -->
 <!-- [외부변경 · 카카오채널연동 2026-06-25] 포털(portal.html/7777) 경유 폐지 → 페이지 직접진입 시 접속코드(catc1234) 게이트 추가, 포털 리다이렉트/종료이동 제거. version C13→D13. 기능 로직은 미변경. -->
-<!-- last-updated: 2026-07-03 / version: D51 (상단바 시계 1줄 배치 — 날짜·요일·시간 한 줄 pill로 통합) [D50: 상단 현황바 축소·교육운영부 명칭 및 날짜/시간 상시 표기] -->
+<!-- last-updated: 2026-07-04 / version: D52 (헤더 뒤로가기 삭제·타이틀 '교육운영플랫폼' · 입교안내 공지 모달 미리보기형 개편: 슬라이드 미리보기+글머리표+영구/이번주 체크박스, weeklyNotice 경로 신설 · index.html 소비부 이번주→영구 해석 연동) [D51: 상단바 시계 1줄] -->
 <!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -2007,10 +2007,9 @@ body.pc-mode .hdr-stat .hb-value small{ font-size:clamp(9px,.62vw,11px) !importa
 </style>
 <header class="app-header">
   <div class="coord-left">
-    <button class="header-btn coord-back-btn" onclick="handleBackNav()" title="뒤로가기"><i class="fa-solid fa-chevron-left"></i></button>
     <div class="coord-brand" onclick="location.reload()" title="메인으로 (새로고침)">
       <div class="coord-brand-mark"><i class="fa-solid fa-graduation-cap"></i></div>
-      <h1 class="coord-brand-title">교육운영부</h1>
+      <h1 class="coord-brand-title">교육운영플랫폼</h1>
     </div>
   </div>
   <div id="coordHeaderClock" class="coord-clock"></div>
@@ -5797,26 +5796,93 @@ handleBackNav = function() {
 
 
 
-// [추가] 센터 전체 공지 팝업 열기
-function openGlobalNoticeModal() {
-    toggleMenu(false); 
-    const modal = document.getElementById('globalNoticeModal');
-    modal.style.display = 'flex';
-    document.body.classList.add('modal-open'); 
-    
-    firebase.database().ref('system/globalNotice').once('value', s => {
-        const textarea = document.getElementById('globalNotice');
-        textarea.value = s.val() || "";
-        if(typeof autoGrow === 'function') autoGrow(textarea); 
+// [입교안내 공지] 이번 주 월요일(로컬) 주차키 — index.html·admin.js 리셋과 동일 규칙
+function _coordThisMonday(){
+    const x = new Date(); x.setHours(0,0,0,0);
+    const dow = (x.getDay()+6)%7; x.setDate(x.getDate()-dow);
+    const z = n => String(n).padStart(2,'0');
+    return `${x.getFullYear()}-${z(x.getMonth()+1)}-${z(x.getDate())}`;
+}
+// 텍스트 → 안전 HTML(줄바꿈 <br>). 사용자 입력은 이스케이프 후 <br>만 삽입(XSS 방지)
+function _noticeTextToHtml(t){
+    const e = String(t==null?'':t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    return e.replace(/\r?\n/g,'<br>');
+}
+// 저장된 HTML → 편집용 텍스트(레거시 평문도 그대로 처리)
+function _noticeHtmlToText(h){
+    if(h==null) return '';
+    let s = String(h);
+    if(/<br|<div|<p|&lt;|&amp;|&gt;/i.test(s)){
+        s = s.replace(/<br\s*\/?>/gi,'\n').replace(/<\/(div|p)>/gi,'\n').replace(/<[^>]+>/g,'');
+        const ta = document.createElement('textarea'); ta.innerHTML = s; s = ta.value;
+    }
+    return s.replace(/\n{3,}/g,'\n\n');
+}
+// 글머리표 삽입 — 현재 줄 맨 앞에 기호 추가
+function _coordInsertBullet(mark){
+    const ta = document.getElementById('globalNotice'); if(!ta) return;
+    const s = ta.selectionStart, e = ta.selectionEnd, v = ta.value;
+    const ls = v.lastIndexOf('\n', s-1)+1;
+    ta.value = v.slice(0,ls) + mark + v.slice(ls);
+    const np = e + mark.length; ta.selectionStart = ta.selectionEnd = np; ta.focus();
+    if(typeof autoGrow === 'function') autoGrow(ta);
+}
+// 번호 글머리 — 앞 줄들의 마지막 번호 +1 자동
+function _coordInsertNumber(){
+    const ta = document.getElementById('globalNotice'); if(!ta) return;
+    const s = ta.selectionStart, v = ta.value;
+    const ls = v.lastIndexOf('\n', s-1)+1;
+    const lines = v.slice(0,ls).split('\n');
+    let n = 1;
+    for(let i=lines.length-1;i>=0;i--){ const m=lines[i].match(/^(\d+)\.\s/); if(m){ n=parseInt(m[1],10)+1; break; } }
+    _coordInsertBullet(n + '. ');
+}
+// 공지 범위별 내용 로드
+function _coordLoadNoticeScope(scope){
+    const ta = document.getElementById('globalNotice'); if(!ta) return;
+    const path = scope==='weekly' ? 'system/weeklyNotice' : 'system/globalNotice';
+    firebase.database().ref(path).once('value', s => {
+        const v = s.val();
+        const html = (v && typeof v==='object') ? (v.html||'') : (v||'');
+        if(scope==='weekly' && v && typeof v==='object' && v.weekKey && v.weekKey!==_coordThisMonday()){
+            ta.value = '';                 // 지난 주차 공지는 편집창에 끌어오지 않음
+        } else {
+            ta.value = _noticeHtmlToText(html);
+        }
+        if(typeof autoGrow === 'function') autoGrow(ta);
     });
 }
 
-// [추가] 전체 공지 저장 로직
+// [입교안내 공지] 팝업 열기
+function openGlobalNoticeModal() {
+    toggleMenu(false);
+    const modal = document.getElementById('globalNoticeModal');
+    modal.style.display = 'flex';
+    document.body.classList.add('modal-open');
+    const perm = document.querySelector('input[name="gnScope"][value="permanent"]');
+    if(perm) perm.checked = true;
+    _coordLoadNoticeScope('permanent');
+}
+
+// [입교안내 공지] 저장 — 영구=globalNotice, 이번주만=weeklyNotice{html,weekKey}
 async function saveGlobalNotice() {
-    const content = document.getElementById('globalNotice').value;
+    const ta = document.getElementById('globalNotice');
+    const text = ta ? ta.value : '';
+    const html = _noticeTextToHtml(text);
+    const hasText = text.replace(/[\s ​]/g,'').length > 0;
+    const scope = (document.querySelector('input[name="gnScope"]:checked')||{}).value || 'permanent';
     try {
-        await firebase.database().ref(`system/globalNotice`).set(content);
-        showKacAlert("✅ 모든 과정의 교육생 화면에 공지가 반영되었습니다.");
+        const updates = {};
+        if(scope === 'weekly'){
+            updates['system/weeklyNotice'] = hasText ? { html, weekKey:_coordThisMonday(), updatedAt:Date.now() } : null;
+        } else {
+            updates['system/globalNotice'] = hasText ? html : null;
+            updates['system/weeklyNotice'] = null;   // 영구 공지 시 주간 공지가 가리지 않도록 제거
+        }
+        await firebase.database().ref().update(updates);
+        showKacAlert(scope==='weekly'
+            ? "✅ 이번 주 과정 교육생 화면에 공지가 반영되었습니다."
+            : "✅ 모든 과정 교육생 화면에 공지가 반영되었습니다.");
         document.getElementById('globalNoticeModal').style.display = 'none';
         document.body.classList.remove('modal-open');
     } catch(e) {
@@ -5842,20 +5908,55 @@ async function saveGlobalNotice() {
 
 
 
-<!-- 센터 전체 공지 관리 팝업 -->
+<!-- 입교안내 공지 관리 팝업 -->
+<style>
+.gn-tool{ font-size:12px; font-weight:800; color:#334155; background:#eef2f7; border:1px solid #dbe3ec; border-radius:8px; padding:5px 10px; cursor:pointer; font-family:inherit; }
+.gn-tool:hover{ background:#e0e7ff; color:#1d4ed8; border-color:#c7d2fe; }
+#globalNoticeModal .gn-slide-block{ background:#fff; border-radius:14px; border:1px solid #e5eaf1; padding:14px; box-shadow:inset 0 1px 3px rgba(15,23,42,.04); }
+</style>
 <div id="globalNoticeModal" class="setup-modal" style="z-index: 9900;">
-    <div class="setup-box" style="max-width: 450px;">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; border-bottom:2px solid #eee; padding-bottom:10px;">
+    <div class="setup-box" style="max-width: 600px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; border-bottom:2px solid #eee; padding-bottom:10px;">
             <h3 style="margin:0; font-size:17px; color:var(--navy-dark);"><i class="fa-solid fa-bullhorn"></i> 입교안내 공지</h3>
             <i class="fa-solid fa-xmark" style="cursor:pointer; font-size:22px;" onclick="document.getElementById('globalNoticeModal').style.display='none'; document.body.classList.remove('modal-open');"></i>
         </div>
-        
-        <div style="margin-bottom:15px;">
-            <p style="font-size: 11px; color: #ef4444; font-weight: 800; margin-bottom: 8px;">※ 여기에 입력하면 모든 과정(Room A~Z) 교육생 화면에 즉시 노출됩니다.</p>
-            <textarea id="globalNotice" class="notice-area" style="min-height: 250px; width: 100%;" placeholder="공지 내용을 입력하세요..."></textarea>
+
+        <p style="font-size:12px; color:#64748b; font-weight:700; margin:0 0 12px;">아래는 실제 교육생 <b style="color:#1d4ed8;">입교안내 화면</b>에 표출되는 모습입니다. 블록 안에 공지를 작성하세요.</p>
+
+        <!-- 입교안내 슬라이드 미리보기 -->
+        <div style="border:1px solid #e2e8f0; border-radius:14px; overflow:hidden; background:#f1f5f9; box-shadow:0 4px 14px rgba(15,23,42,.08);">
+            <div style="display:flex; align-items:center; justify-content:space-between; background:linear-gradient(135deg,#0f2057,#1a3a8a); color:#fff; padding:10px 16px;">
+                <span style="font-size:14px; font-weight:800;"><i class="fa-solid fa-plane-departure" style="margin-right:7px;"></i>입교 안내</span>
+                <span style="font-size:11px; font-weight:800; letter-spacing:.5px; opacity:.9;">KAC 한국공항공사</span>
+            </div>
+            <div style="padding:16px;">
+                <div class="gn-slide-block">
+                    <div style="display:flex; gap:6px; margin-bottom:10px; flex-wrap:wrap;">
+                        <button type="button" class="gn-tool" onclick="_coordInsertBullet('• ')">• 글머리</button>
+                        <button type="button" class="gn-tool" onclick="_coordInsertBullet('- ')">- 하이픈</button>
+                        <button type="button" class="gn-tool" onclick="_coordInsertBullet('※ ')">※ 주의</button>
+                        <button type="button" class="gn-tool" onclick="_coordInsertBullet('✓ ')">✓ 체크</button>
+                        <button type="button" class="gn-tool" onclick="_coordInsertNumber()">1. 번호</button>
+                    </div>
+                    <textarea id="globalNotice" class="notice-area" style="min-height:200px; width:100%; border:1px dashed #cbd5e1; border-radius:10px; padding:12px; font-size:15px; line-height:1.7; resize:vertical; box-sizing:border-box;" placeholder="예)&#10;• 08:50까지 대강당 집결&#10;• 신분증 지참 필수&#10;※ 노조·청렴 교육은 필요 시 합반 진행"></textarea>
+                </div>
+            </div>
         </div>
 
-        <div style="display:flex; gap:10px;">
+        <!-- 공지 기간 -->
+        <div style="margin-top:14px; background:#f8fafc; border:1px solid #e5eaf1; border-radius:12px; padding:12px 14px;">
+            <div style="font-size:12.5px; font-weight:800; color:#334155; margin-bottom:8px;">공지 기간</div>
+            <label style="display:flex; align-items:flex-start; gap:8px; cursor:pointer; margin-bottom:8px;">
+                <input type="radio" name="gnScope" value="permanent" checked onchange="_coordLoadNoticeScope('permanent')" style="margin-top:3px;">
+                <span style="font-size:13px; color:#1e293b; font-weight:600;">영구 공지 <span style="color:#64748b; font-weight:500;">— 과정 리셋 후 차주 과정에도 계속 표시</span></span>
+            </label>
+            <label style="display:flex; align-items:flex-start; gap:8px; cursor:pointer;">
+                <input type="radio" name="gnScope" value="weekly" onchange="_coordLoadNoticeScope('weekly')" style="margin-top:3px;">
+                <span style="font-size:13px; color:#1e293b; font-weight:600;">이번 주 과정만 <span style="color:#64748b; font-weight:500;">— 이번 주에만 표시, 리셋되면 사라짐</span></span>
+            </label>
+        </div>
+
+        <div style="display:flex; gap:10px; margin-top:16px;">
             <button class="navy-btn" style="background:#64748b; flex:1;" onclick="document.getElementById('globalNoticeModal').style.display='none'; document.body.classList.remove('modal-open');">닫기</button>
             <button class="navy-btn green" style="flex:2;" onclick="saveGlobalNotice()">공지 업데이트 (전송)</button>
         </div>
@@ -9022,7 +9123,7 @@ window.addEventListener('load', function(){
 });
 </script>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:6px;bottom:5px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;font-weight:800;line-height:1;letter-spacing:.6px;color:#fff;background:rgba(15,23,42,.85);padding:4px 8px;border-radius:6px;pointer-events:none;user-select:none;box-shadow:0 2px 6px rgba(0,0,0,.3);">D51</div>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:6px;bottom:5px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;font-weight:800;line-height:1;letter-spacing:.6px;color:#fff;background:rgba(15,23,42,.85);padding:4px 8px;border-radius:6px;pointer-events:none;user-select:none;box-shadow:0 2px 6px rgba(0,0,0,.3);">D52</div>
 <script>
 /* ===== [공용] 종료된 과정 자동 정리 (모든 플랫폼 공통) — 종료일 지난 방을 다음날 미개설로 비움. 브라우저별 하루 1회 ===== */
 window.kacExpireEndedCourses = async function(){
