@@ -14,7 +14,8 @@
   </script>
 <!-- ════════ [카카오채널 연동] catc1234 접속 게이트 (수정상태: 수정안하는중) ════════
      · admin.html(교수전용 강의 플랫폼)의 모바일 라이트판(조회 중심). 직접 진입 시 접속코드 요구.
-     · 통과 시 localStorage['catc_gate_ok'] 저장. catcLock()으로 잠금 해제. 기능 로직과 분리. -->
+     · 통과 시 localStorage['catc_gate_ok'] 저장. catcLock()으로 잠금 해제. 기능 로직과 분리.
+     · [vC · 2026-07-04 · 운영부 요청으로 admin_coord 담당 디에스장 편집] 상세에 '외출·외박(금일)'·'노조/청렴 공통 교육장소' 조회 카드 추가. 조회 전용(쓰기 없음). 데이터: admin_actions(외출)·system/eduLocations(장소). -->
 <script>
 (function(){
   window.catcLock=function(){ try{localStorage.removeItem('catc_gate_ok');}catch(e){} location.reload(); };
@@ -124,6 +125,21 @@
 
     .empty{ text-align:center; color:var(--mute); font-weight:700; padding:26px 0; }
 
+    /* [vC] 외출·외박 표 */
+    .m-tbl{ width:100%; border-collapse:collapse; font-size:13px; }
+    .m-tbl th{ background:#f1f5f9; color:#475569; font-weight:800; text-align:left; padding:9px 9px; border-bottom:2px solid #e2e8f0; white-space:nowrap; font-size:12px; }
+    .m-tbl td{ padding:9px 9px; border-bottom:1px solid #f1f5f9; color:#1e293b; font-weight:700; white-space:nowrap; }
+    .m-tbl tr:last-child td{ border-bottom:none; }
+    .m-tbl .num{ text-align:center; color:#94a3b8; width:42px; }
+    /* [vC] 노조·청렴 교육장소 */
+    .edu-loc-grid{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+    .edu-loc{ background:#f6f9ff; border:1px solid #e4ebf6; border-radius:14px; padding:14px 12px; text-align:center; }
+    .edu-loc.set{ background:linear-gradient(160deg,#f0fdf6,#dcfce7); border-color:#86efac; }
+    .edu-loc .el-k{ font-size:12px; font-weight:900; color:#64748b; margin-bottom:8px; display:flex; align-items:center; justify-content:center; gap:6px; }
+    .edu-loc.set .el-k{ color:#15803d; }
+    .edu-loc .el-v{ font-size:16px; font-weight:950; color:#94a3b8; word-break:keep-all; line-height:1.3; }
+    .edu-loc.set .el-v{ color:#0f172a; }
+
     @media (max-width:380px){
       .mhead{ padding-left:14px; padding-right:14px; }
       .hero-course{ font-size:20px; }
@@ -173,17 +189,28 @@
       <h3><i class="fa-solid fa-bus"></i> 퇴교차량 신청 현황 <span style="font-weight:700;color:#94a3b8;font-size:12px;">· 실시간</span></h3>
       <div class="shut-grid" id="dShuttle"></div>
     </div>
+    <div class="card">
+      <h3><i class="fa-solid fa-user-clock"></i> 외출·외박 신청자 <span style="font-weight:700;color:#94a3b8;font-size:12px;">· 금일</span></h3>
+      <div id="dOuting"></div>
+    </div>
+    <div class="card">
+      <h3><i class="fa-solid fa-map-location-dot"></i> 금주 공통 교육장소 <span style="font-weight:700;color:#94a3b8;font-size:12px;">· 전 과정 공통</span></h3>
+      <div class="edu-loc-grid">
+        <div class="edu-loc" id="dEduIntegrity"><div class="el-k"><i class="fa-solid fa-scale-balanced"></i> 청렴교육</div><div class="el-v">미정</div></div>
+        <div class="edu-loc" id="dEduUnion"><div class="el-k"><i class="fa-solid fa-handshake"></i> 노조교육</div><div class="el-v">미정</div></div>
+      </div>
+    </div>
   </div>
 
 </div>
 
-<div id="__catcVer" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">강사M vB</div>
+<div id="__catcVer" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">강사M vC</div>
 
 <script src="config.js?v=b260620c"></script>
 <script>
 /* ========== 강사·교수 모바일 라이트뷰 (강의실 조회 중심) ========== */
 var db=firebase.database();
-var DATA={}, curRID='';
+var DATA={}, curRID='', EDU={};
 function h(s){ return (s==null?'':String(s)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 function pad(n){ return String(n).padStart(2,'0'); }
 function todayStr(){ var d=new Date(); return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()); }
@@ -224,6 +251,30 @@ function shuttleCount(room){
     terminal:e.filter(function(r){return r.type==='terminal';}).length,
     airport:e.filter(function(r){return r.type==='airport';}).length,
     car:e.filter(function(r){return r.type==='car';}).length };
+}
+/* [vC] 외출·외박(금일) · 교육장소(공통) 조회용 헬퍼 */
+function opWindow(){ var dayMs=86400000; var start=Math.floor(Date.now()/dayMs)*dayMs; return [start, start+dayMs]; }
+function shortRoom(v){ v=(''+(v||'')).trim(); if(!v) return '미정'; var p=v.split(' '); return p.length>1?p[p.length-1]:v; }
+function outingsToday(room){
+  var w=opWindow(), s=w[0], en=w[1], list=[];
+  var aa=room.admin_actions||{};
+  Object.keys(aa).forEach(function(date){
+    var day=aa[date]||{};
+    Object.keys(day).forEach(function(tok){
+      var it=day[tok];
+      if(it && (it.type==='outing'||it.type==='overnight'||it.type==='group_outing')){
+        var ts=it.timestamp||0; if(ts>=s && ts<en) list.push(it);
+      }
+    });
+  });
+  list.sort(function(a,b){return (a.timestamp||0)-(b.timestamp||0);});
+  return list;
+}
+function applyEduLoc(id, val){
+  var el=document.getElementById(id); if(!el) return;
+  var set=!!(val&&(''+val).trim());
+  el.classList.toggle('set',set);
+  var v=el.querySelector('.el-v'); if(v) v.textContent=set?shortRoom(val):'미정';
 }
 
 function renderPick(){
@@ -274,9 +325,36 @@ function renderDetail(){
     +'<div class="shut-cell"><div class="sk" style="color:#2563eb;">터미널</div><div class="sv">'+sh.terminal+'</div></div>'
     +'<div class="shut-cell"><div class="sk" style="color:#10b981;">공항</div><div class="sv">'+sh.airport+'</div></div>'
     +'<div class="shut-cell"><div class="sk" style="color:#64748b;">자차</div><div class="sv">'+sh.car+'</div></div>';
+
+  // [vC] 외출·외박 (금일) — 조회
+  var outs=outingsToday(room);
+  var dOut=document.getElementById('dOuting');
+  if(dOut){
+    if(!outs.length){ dOut.innerHTML='<div class="empty" style="padding:22px 0;">금일 외출·외박 신청이 없습니다.</div>'; }
+    else{
+      var ostu=(room.students)||{}; var phoneByName={};
+      Object.keys(ostu).forEach(function(k){ var ss=ostu[k]||{}; var nm=String(ss.name||'').trim(); if(nm) phoneByName[nm]=ss.phone||''; });
+      dOut.innerHTML='<div style="overflow-x:auto;"><table class="m-tbl"><thead><tr><th class="num">연번</th><th>성함</th><th>연락처</th><th>외출/외박</th><th>상태</th></tr></thead><tbody>'
+        +outs.map(function(a,i){
+          var klabel=(a.type==='group_outing')?'단체외출':(a.type==='outing')?'외출':'외박';
+          var kcol=(a.type==='overnight')?'#dc2626':'#ea580c';
+          var stat = a.held?'<span style="color:#dc2626;font-weight:900;">미복귀</span>'
+            : (a.returned&&a.autoReturn)?'<span style="color:#0891b2;">복귀(자동)</span>'
+            : a.returned?'<span style="color:#16a34a;">복귀완료</span>'
+            : a.confirmed?'<span style="color:#2563eb;">서명완료</span>'
+            : '<span style="color:#94a3b8;">대기</span>';
+          var ph=a.phone||phoneByName[String(a.name||'').trim()]||'-';
+          return '<tr><td class="num">'+(i+1)+'</td><td>'+h(a.name||'-')+'</td><td>'+h(ph)+'</td><td style="color:'+kcol+';font-weight:900;">'+klabel+'</td><td>'+stat+'</td></tr>';
+        }).join('')+'</tbody></table></div>';
+    }
+  }
+  // [vC] 노조·청렴 교육장소 (공통) — 조회
+  applyEduLoc('dEduIntegrity', EDU.integrity);
+  applyEduLoc('dEduUnion', EDU.union);
 }
 
 db.ref('courses').on('value', function(snap){ DATA=snap.val()||{}; renderPick(); });
+db.ref('system/eduLocations').on('value', function(snap){ EDU=snap.val()||{}; if(curRID && DATA[curRID]) renderDetail(); });
 </script>
 </body>
 </html>

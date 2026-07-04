@@ -7779,7 +7779,7 @@ body.kac-noanim #noticeModal > .menu-box, body.kac-noanim #surveyModal > .menu-b
       : '<b>'+(course||'')+'</b> 과정에<br>'+(name||'')+' ('+(sabun||'')+') 님 등록되었습니다.<br>감사합니다.';
     ov.style.display='flex';
     var btn=document.getElementById('kdClose'); if(btn) btn.onclick=tryClose;
-    setTimeout(tryClose, 3000);
+    // [수정] 카카오 인앱 브라우저는 window.close()가 막혀 자동으로 안 닫힘 → 허위 자동닫힘 타이머 제거, 상단 X로 수동 닫기 안내
   }
   // 재진입(이미 입교) → 현재 정보만 간결히 표시
   // ===== [과정담임 표시 + 통화] =====
@@ -8402,7 +8402,7 @@ body.kac-noanim #noticeModal > .menu-box, body.kac-noanim #surveyModal > .menu-b
       dn.innerHTML='<div class="kd-card"><h2 id="kdTitle">✅ 입교 완료</h2>'+
         '<p id="kdMsg">등록되었습니다. 감사합니다.</p>'+
         '<button class="kd-close" id="kdClose">닫기</button>'+
-        '<div class="kd-note">잠시 후 자동으로 닫힙니다.</div></div>';
+        '<div class="kd-note" style="margin-top:14px;font-size:13.5px;color:#475569;font-weight:700;line-height:1.65;background:#f1f5f9;border-radius:10px;padding:11px 12px;">이 창은 <b style="color:#dc2626;">자동으로 닫히지 않습니다.</b><br>화면 <b>상단(맨 위)의 X 버튼</b>을 눌러 닫아 주세요.</div></div>';
       document.body.appendChild(dn);
     }
     if(!document.getElementById('keduOtp')){
