@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- PLATFORM_EDIT_STATUS: 수정완료 | VERSION: I8 | 2026-07-03 (I8: 과정현황 바로가기 및 입교안내 공지 명칭 통일) -->
+<!-- PLATFORM_EDIT_STATUS: 수정완료 | VERSION: J8 | 2026-07-05 (J8: 오늘 한눈에 현황 칩 상세화면 이동 수정) -->
 <html lang="ko">
 <head>
 <script>
@@ -15,8 +15,8 @@
 <!-- ============================================================
   CATC · 강사 플랫폼  (admin.html)
   STATUS    수정완료
-  @version  I8
-  @build    20260703-104644
+  @version  J8
+  @build    20260705-073128
   ────────────────────────────────────────────────────────
   [코드 수정 규칙 · AI/개발자 공통]
   이 파일을 한 글자라도 고치면:
@@ -2855,7 +2855,7 @@ function setupAcc(btn){
 (function(){
   function num(el){ if(!el) return null; var t=(el.textContent||'').replace(/[^0-9\-]/g,''); return t===''?null:parseInt(t,10); }
   function chip(icon,color,label,val,hot,mode){
-    var click = mode ? ' onclick="event.stopPropagation(); if(window.ui&&ui.setMode) ui.setMode(\''+mode+'\');" role="button" tabindex="0"' : '';
+    var click = mode ? ' onclick="event.stopPropagation(); if(typeof ui!==\'undefined\'&&ui.setMode) ui.setMode(\''+mode+'\');" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();this.click();}" role="button" tabindex="0"' : '';
     return '<span class="dts-chip'+(hot?' dts-hot':'')+(mode?' dts-click':'')+'" style="--dts-c:'+color+'"'+click+'><i class="fa-solid '+icon+'" style="color:'+color+'"></i><span class="dts-t">'+label+'</span><b class="dts-v">'+val+'</b></span>';
   }
   function run(){
