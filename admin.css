@@ -4605,9 +4605,20 @@ body.in-course #courseSmartRemote { display: block; }
 .main-stage {
     position: relative !important;
 }
-/* 현황판 팝업(운영과정·교육인원·외출외박) 우측 스크롤바 숨김 — 스크롤은 유지, 바만 안 보이게 */
-#homeStatModal > div{ scrollbar-width:none; -ms-overflow-style:none; }
-#homeStatModal > div::-webkit-scrollbar{ width:0; height:0; display:none; }
+/* 현황판 팝업: 내용이 길면 아래로 스크롤 + 플랫폼 톤에 맞는 슬림 스크롤바 */
+#homeStatModal > div{
+    max-height:90vh; overflow-y:auto;
+    scrollbar-width:thin; scrollbar-color:#93c5fd transparent;
+}
+#homeStatModal > div::-webkit-scrollbar{ width:10px; }
+#homeStatModal > div::-webkit-scrollbar-track{ background:transparent; margin:16px 0; }
+#homeStatModal > div::-webkit-scrollbar-thumb{ background:linear-gradient(180deg,#93c5fd,#3b82f6); border-radius:999px; border:2px solid #fff; background-clip:padding-box; }
+#homeStatModal > div::-webkit-scrollbar-thumb:hover{ background:linear-gradient(180deg,#60a5fa,#2563eb); border:2px solid #fff; background-clip:padding-box; }
+/* [도움말 2열] 홈 통합 현황판 안내를 2열로 배치해 세로 길이 축소 */
+.screen-hint .hint-body.hint-2col{ display:grid; grid-template-columns:1fr 1fr; gap:5px 28px; }
+.screen-hint .hint-body.hint-2col .hint-title{ grid-column:1 / -1; }
+.screen-hint .hint-body.hint-2col .hint-full{ grid-column:1 / -1; }
+@media(max-width:720px){ .screen-hint .hint-body.hint-2col{ grid-template-columns:1fr; } }
 
 /* ══ 상단 시계 — 완벽한 정중앙 고정 ══ */
 /* ── 헤더 시계 위젯 (Pill 디자인) ── */
