@@ -5098,8 +5098,18 @@ body:not([data-mode="home"]):not([data-mode="waiting"]) .floating-home-btn{botto
 #guideRouletteBtn.guidebtn-dragging,#guideScheduleBtn.guidebtn-dragging,#guideScheduleUploadBtn.guidebtn-dragging,#guideParsedScheduleBtn.guidebtn-dragging{ cursor:grabbing !important; opacity:.94; animation:none !important; filter:brightness(1.05); }
 
 /* ══ [J13] 수료 기념사진 ══ */
-#gradPhotoBtn.grad-today{ background:linear-gradient(135deg,#b45309,#f59e0b) !important; animation:gradTodayPulse 1.8s ease-in-out infinite; }
-@keyframes gradTodayPulse{ 0%,100%{ box-shadow:0 4px 14px rgba(245,158,11,.35);} 50%{ box-shadow:0 6px 26px rgba(245,158,11,.85);} }
+/* [J14] 대시보드 히어로 — 수료 기념사진 노란 pill (수료일 06시부터) */
+#dashGradBtn{
+    background:linear-gradient(135deg,#fbbf24,#f59e0b) !important;
+    border-color:transparent !important;
+    color:#78350f !important;
+    font-weight:900 !important;
+    animation:gradTodayPulse 1.8s ease-in-out infinite;
+}
+#dashGradBtn b{ color:#78350f !important; }
+#dashGradBtn i{ color:#92400e !important; }
+#dashGradBtn:hover{ filter:brightness(1.07); transform:translateY(-1px); }
+@keyframes gradTodayPulse{ 0%,100%{ box-shadow:0 4px 14px rgba(245,158,11,.45);} 50%{ box-shadow:0 6px 28px rgba(251,191,36,.95);} }
 #gradPhotoModal{ display:none; position:fixed; inset:0; z-index:9500; background:rgba(15,23,42,.55); align-items:center; justify-content:center; padding:20px; }
 #gradPhotoModal .grad-box{ width:min(900px,94vw); max-height:94vh; display:flex; flex-direction:column; overflow:hidden; background:#fff; border-radius:20px; box-shadow:0 24px 60px rgba(15,23,42,.4); }
 #gradPhotoModal .grad-head{ display:flex; align-items:center; justify-content:space-between; padding:16px 22px; background:linear-gradient(135deg,#0f2057,#1a3a8a); color:#fff; font-size:18px; }
