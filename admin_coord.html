@@ -2,7 +2,7 @@
 <!-- 이 플랫폼(admin_coord.html / 교육운영부) 수정상태 플래그. 값은 [수정중] 또는 [수정안하는중] 두 가지. -->
 <!-- 작업 시작 시 → 수정중 / 작업 완료 시 → 수정안하는중. 다른 플랫폼은 이 말머리를 보고 연동·수정 가능 여부 판단. -->
 <!-- [외부변경 · 카카오채널연동 2026-06-25] 포털(portal.html/7777) 경유 폐지 → 페이지 직접진입 시 접속코드(catc1234) 게이트 추가, 포털 리다이렉트/종료이동 제거. version C13→D13. 기능 로직은 미변경. -->
-<!-- last-updated: 2026-07-04 / version: D61 (입교 현황 하단에 표기 안내 주석 추가: 예정=계획명단 예정인원/입교=QR체크인/입교율=입교÷예정/생활관분포) [D60: 명단 팝업 지도 vh화] -->
+<!-- last-updated: 2026-07-04 / version: D62 (표기 안내 주석을 전체 명단 보기 팝업에도 추가, 연간계획 범례 '예정'=시작 전 과정 설명 추가 — 예정 나오는 곳 전반 안내) [D61: 입교현황 주석] -->
 <!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -6322,7 +6322,10 @@ const annualPlanMgrCoord = {
             <span style="font-weight:800;">색상:</span>
             <span><span style="display:inline-block; width:10px; height:10px; border-radius:2px; background:#dbeafe; vertical-align:middle; margin-right:3px;"></span>진행중</span>
             <span><span style="display:inline-block; width:10px; height:10px; border-radius:2px; background:#fce7f3; vertical-align:middle; margin-right:3px;"></span>차주</span>
-            <span><span style="display:inline-block; width:10px; height:10px; border-radius:2px; background:#dcfce7; vertical-align:middle; margin-right:3px;"></span>예정</span>
+            <span title="아직 시작하지 않은 예정 과정(다음 회차 등)">
+              <span style="display:inline-block; width:10px; height:10px; border-radius:2px; background:#dcfce7; vertical-align:middle; margin-right:3px;"></span>예정
+              <span style="color:#94a3b8; font-weight:600;">(시작 전 과정)</span>
+            </span>
             <span><span style="display:inline-block; width:10px; height:10px; border-radius:2px; background:#f1f5f9; vertical-align:middle; margin-right:3px;"></span>종료</span>
             <span><span style="display:inline-block; width:10px; height:10px; border-radius:2px; background:#fff1f2; vertical-align:middle; margin-right:3px; border:1px solid #fecdd3;"></span>폐강</span>
         </div>
@@ -8082,7 +8085,7 @@ function openStudentRosterPopup(){
     try{ _coordRenderStudentMap(_mc,_mtot,_munk); }catch(e){}
     try{ if(typeof _coordSyncTotalStudentsFromOverview==='function') _coordSyncTotalStudentsFromOverview(); }catch(e){}
   }
-  _cpop('<i class="fa-solid fa-users"></i> 과정별 교육생 명단', '<div id="coordStudentMapBox" style="margin-bottom:14px;"><div style="font-size:13px;font-weight:800;color:#475569;margin:2px 2px 8px;"><i class="fa-solid fa-map-location-dot" style="color:#2563eb;"></i> 금주 교육생 전국 분포 <span id="coordMapTotal" style="color:#94a3b8;font-weight:700;"></span></div><div style="display:flex;gap:14px;align-items:stretch;flex-wrap:wrap;"><div id="coordStudentMapKakao" style="flex:2;min-width:340px;height:500px;border-radius:14px;overflow:hidden;border:1px solid #e2e8f0;background:#eaf2fb;"></div><div id="coordMapList" style="flex:1;min-width:210px;max-height:500px;overflow-y:auto;"></div></div></div>'+search+'<div id="cpopRosterWrap"></div>');
+  _cpop('<i class="fa-solid fa-users"></i> 과정별 교육생 명단', '<div id="coordStudentMapBox" style="margin-bottom:14px;"><div style="font-size:13px;font-weight:800;color:#475569;margin:2px 2px 8px;"><i class="fa-solid fa-map-location-dot" style="color:#2563eb;"></i> 금주 교육생 전국 분포 <span id="coordMapTotal" style="color:#94a3b8;font-weight:700;"></span></div><div style="display:flex;gap:14px;align-items:stretch;flex-wrap:wrap;"><div id="coordStudentMapKakao" style="flex:2;min-width:340px;height:500px;border-radius:14px;overflow:hidden;border:1px solid #e2e8f0;background:#eaf2fb;"></div><div id="coordMapList" style="flex:1;min-width:210px;max-height:500px;overflow-y:auto;"></div></div></div>'+search+'<div id="cpopRosterWrap"></div>'+'<div style="margin-top:12px;padding:12px 15px;background:#f8fafc;border:1px solid #e5eaf1;border-radius:11px;font-size:12.5px;color:#64748b;line-height:1.85;"><b style="color:#334155;font-size:13px;"><i class="fa-solid fa-circle-info" style="color:#2563eb;margin-right:5px;"></i>표기 안내</b><br>· <b style="color:#2563eb;">예정</b> : 업로드·공유된 <b>계획 명단</b> 기준 <b>입교 예정 인원</b>입니다. (아직 입교 전이라도 명단에 오른 인원)<br>· <b style="color:#16a34a;">입교</b> : 실제 <b>QR 입교(체크인)</b>를 완료한 인원입니다.</div>');
   document.getElementById('coordPopup').classList.add('roster-mode');
   paint(window._coordRosterExt||{});
   Promise.all([
@@ -9134,7 +9137,7 @@ window.addEventListener('load', function(){
 });
 </script>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:6px;bottom:5px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;font-weight:800;line-height:1;letter-spacing:.6px;color:#fff;background:rgba(15,23,42,.85);padding:4px 8px;border-radius:6px;pointer-events:none;user-select:none;box-shadow:0 2px 6px rgba(0,0,0,.3);">D61</div>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:6px;bottom:5px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;font-weight:800;line-height:1;letter-spacing:.6px;color:#fff;background:rgba(15,23,42,.85);padding:4px 8px;border-radius:6px;pointer-events:none;user-select:none;box-shadow:0 2px 6px rgba(0,0,0,.3);">D62</div>
 <script>
 /* ===== [공용] 종료된 과정 자동 정리 (모든 플랫폼 공통) — 종료일 지난 방을 다음날 미개설로 비움. 브라우저별 하루 1회 ===== */
 window.kacExpireEndedCourses = async function(){
