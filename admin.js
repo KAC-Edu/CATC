@@ -1,18 +1,18 @@
-/* PLATFORM_EDIT_STATUS: 수정완료 | VERSION: M9 | 2026-07-04 */
+/* PLATFORM_EDIT_STATUS: 수정완료 | VERSION: N9 | 2026-07-05 */
 /* [복구 2026-07-03] 파일 말단 184줄이 저장 중 잘림 → J8(260702Z40) 보관본의 동일 블록(리모컨 위젯·더보기 패널·ZOOM 표시 IIFE)으로 접합 복구. J8 이후 해당 말단 블록을 수정한 이력이 있다면 편집기 원본(L9)으로 재저장 권장. */
 /* ============================================================
    PLATFORM_EDIT_STATUS: 수정완료 | VERSION: J14 | 2026-07-04 (J14: 수료 기념사진 버튼 위치·노출 규칙 변경 — 출결 화면 버튼 제거, 대시보드 히어로의 강의장소 배지 옆에 노란색(앰버 그라데이션·펄스) pill로 이동. 노출 = 과정 수료일 '당일' KST 06:00부터(새벽에 열어둔 화면도 06시에 자동 노출, settings 실시간 리스너 연동, 방 전환 시 초기화). (J13.1: 기념사진 모달 한 화면 수납 — 캔버스 높이를 화면에 맞춰 제한(max-height calc)해 미리보기·안내·버튼 3종이 스크롤 없이 항상 보임(드래그 레이어는 캔버스 표시 박스에 정확히 일치하도록 fit-content). 텍스트는 각 칸 오른쪽 경계(액자 실측 %)를 넘지 않도록 measureText 기반 자동 축소 — 긴 과정명/기간도 칸 안에 정렬. (J13: 수료 기념사진 신설 — 출결 관리 화면 '📸 수료 기념사진' 버튼(수료일 당일 금색 펄스). 강사가 폰으로 촬영 후 QR(grad_photo.html)로 업로드(긴변 1600·JPEG 0.8 압축, courses/{room}/gradPhoto 저장) 또는 PC에서 직접 선택. 액자(grad_frame.png, 가운데 투명)에 사진 cover-fit 합성 + 하단 4칸(과정명/교육기간/교육장소/담임교수) 자동 기입 — 각 글자 3초 드래그 보정(system/sharedGuide/gradPhotoPos, 액자 % 기준 전 과정 공통). 미리보기·PNG 다운로드·사진 교체·삭제 지원, PDF 전체화면 중에도 모달 표시. 유효기간 = 수료일(endDate) 자정까지: 종료 다음날 kacExpire 자동정리 및 수동 리셋·연간계획 삭제에서 gradPhoto 제거, 교육생 다운로드 버튼도 함께 사라짐. (J12.3: 입교안내 과정 전환 잔상 제거 — 다른 과정(또는 같은 방의 대면↔비대면 변형 변경)으로 이동 시 공용 캔버스·가상페이지·오버레이·버튼을 즉시 비우고 로딩 배지를 표시, 이전 과정 PDF가 잠깐 보이던 문제 해소. (J12.2: ①교육개요 오버레이 글자를 PDF 라벨과 동급 크기로(메인 2.6%·서브 2.25%) ②'회의참가 ID/PW' 항목 클릭 → 회의정보 입력 모달(PDF 전체화면 중에도 표시, 저장 시 오버레이 즉시 갱신·courses/{room}/zoomMeeting 단일 저장소라 ZOOM 모니터링 등 연동 화면 전체 적용, 드래그 직후 오클릭 방지) ③홈 검색카드 장소가 온라인(Zoom)이면 Zoom 블루(#0B5CFF) 블록+비디오 아이콘으로 강조(드롭다운 변경 시 즉시 반영). (J12.1: 교육개요 오버레이 수정 — ①값을 slot 캐시가 아닌 Firebase(settings/students/zoomMeeting)에서 직접 조회(진입 경로·타이밍 무관하게 과정명/기간 정확 표기, 늦은 응답 무시 토큰) ②글자 크기를 vw가 아닌 PDF 래퍼 폭 비례(메인 2.15%·서브 1.85%)로 — PDF와 같은 비율로 확대/축소되어 전체화면에서도 또렷 ③기본 좌표를 실측 기준(콜론 라인 중심)으로 보정. (J12: 비대면(온라인 Zoom) 입교안내 지원 — 과정 장소가 온라인(Zoom)이면 '입교안내(비대면).pdf' 자동 로드(장소 변경 시 재로드). 가상페이지(1p 뒤 교수소개→카카오 오픈톡방→입교등록절차→목차) 흐름은 대면과 동일, 대면용 '교육과정 안내' 가상페이지는 비대면에서 숨김. 비대면 PDF 4p 교육개요에 과정명·교육인원(입교등록수)·교육기간·교육구분·교육평가(대면과 동일 직무일반/법정 표기)·ZOOM 회의 ID/PW 오버레이 — 항목별 3초 롱프레스 드래그 이동, 윈도우/전체화면 좌표 개별 저장(system/sharedGuide/overviewPos, 전 과정 공통·실시간 동기). 교육시간표 버튼 페이지를 변형별로(대면 13p·비대면 7p) — 비대면은 지원부 판독본이 없으므로 기존 QR 사진 업로드/보기 버튼 그대로 동작. (J11: 입교안내 13p '교육시간표 보기' 신설 — 지원부가 한글 명단 업로드 시 자동 판독·저장되는 표 그리드(courses/{room}/schedule/grid, 셀좌표·병합정보 포함)를 실시간 구독. grid 있으면 녹색 버튼 노출→클릭 시 아래→위 슬라이드 시트에 원본 표 그대로 렌더(연속 강의 rowspan 줄합침+과정명·강사명 센터정렬, X로 슬라이드 다운). grid 없으면 기존 사진 보기/QR 업로드 흐름 유지. 녹색 버튼도 3초 롱프레스 위치보정(별도 그룹 parsedSchedule, 윈도우/전체화면 좌표 개별 저장). (J10: ①OTP 재사용 가드 — 강사 화면 새로고침/출결탭 재진입 시 잔여 15초 이상 유효 OTP를 서버에서 재사용, 매번 새 코드로 교체되어 입력 중이던 교육생이 만료 판정받던 문제 해소 ②담임(coordinatorName) 수동수정 보호 — status/coordManual 플래그 도입(professorManual과 동일 패턴), 강사가 담임을 바꿔도 연간계획 자동동기화가 계획값으로 되돌리던 버그 수정. 방 비움/신규 배치 시 플래그 해제 ③퇴교차량 자동판정 표시 — 지원부가 한글 시간표 업로드 시 기록되는 courses/{room}/shuttle/autoDeparture를 실시간 구독, 1차/2차 구분 없이 '이 과정 출발시간' 단일 표시(대시보드 인라인·셔틀 파란박스·도착 ETA 모두), 자동판정 없으면 기존 1차/2차 표기 유지. (J9: 지원부 생활관 명단(system/dorm/rosters) 오삭제 방지 — 리셋·명단비우기·연간계획삭제·종료과정자동정리 4개 경로 전부 '명단의 과정명이 해당 방 과정명과 일치할 때만' 삭제하도록 가드. 다른 과정 명단은 보존하고 console에 보존 사유 기록. (J8: ZOOM 진입 요소를 CSS !important 규칙으로 원천 차단 — 오프라인이면 어떤 코드가 표시해도 절대 안 보임(body.zoom-room-online 클래스 게이트). (J7: ZOOM 진입 요소 표시를 [onclick*=openZoomMonitor] 전체 선택으로 통일 + 2초 하트비트 — 오프라인에서 pill 잔존 완전 차단. (J6: ①장소 수동지정 보호(roomDetailManual) — 연간계획 동기화가 온라인 설정 되돌리는 문제 차단 ②ZOOM 버튼 표시를 장소 배지 텍스트와 상시 동기(MutationObserver) — 오프라인인데 버튼 남는 문제 해소 ③저장알림 확인 후 회의정보 모달 순차 표시(동시 팝업 제거) ④회의번호 000 0000 0000 자동 포맷 전용 모달. (J5: ①ZOOM 버튼 과정현황 장소 옆으로+오프라인 완전숨김(방전환 기본숨김·온라인 가드) ②iframe 사이징 실측기반 재작성 ③온라인 장소 저장 시 회의번호/암호 과정별 저장(askZoomMeetingInfo) ④홈검색 카카오등록 교수 노란배지 ⑤퇴교차량 칩 인라인 펼침. (J4: ZOOM 모니터링 iframe 높이를 body zoom 배율 보정해 실제 화면에 맞춤 — 설정 패널 잘림 해소, 리사이즈 대응. (J3: ui.openZoomMonitor 추가 — ZOOM 모니터링을 내장 뷰(iframe)로 열고 과정 전환 시 확인 후 재로딩, 온라인 판별 토글에 더보기 메뉴 항목 포함) (J2: ①ZOOM 모니터링 버튼 표시로직 재적용(온라인 과정 판별) ②강의실 초기화 confirm에 삭제범위 안내 추가 ③QR 요소없음 개발자문구 교체 ④toggleNightMode/addSubject 널가드 — 구버전 잔재 안전화)
    CATC · 강사 플랫폼 로직  (admin.js)
    STATUS    수정완료
-   @version  M9
-   @build    20260704-142346
+   @version  N9
+   @build    20260705-012631
    ------------------------------------------------------------
    [코드 수정 규칙 · AI/개발자 공통]
    이 파일을 고치면 @version 을 A -> B -> ... -> Z -> A1 -> B1 ...
    순으로 1단계 올리고, @build 를 수정 시각으로 갱신할 것.
    적용 여부는 브라우저 콘솔 로그(vA)로 확인한다.
 ============================================================ */
-try{console.log('%cCATC%c 강사 플랫폼 로직 (admin.js) %cvM9%c build 20260704-142346','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}
+try{console.log('%cCATC%c 강사 플랫폼 로직 (admin.js) %cvN9%c build 20260705-012631','background:#0ea5e9;color:#fff;font-weight:800;padding:1px 5px;border-radius:3px','color:#64748b','color:#f59e0b;font-weight:800','color:#94a3b8');}catch(e){}
 /* --- admin.js (Final Integrated Version - Fixed Syntax & Logic) --- */
 
 // --- [기본 데이터] 20문항 ---
@@ -10461,6 +10461,118 @@ kiosk._people = kiosk._people || [];
     [['ㅋ','ㅋ'],['ㅌ','ㅌ'],['ㅊ','ㅊ'],['ㅍ','ㅍ'],['ㅠ','ㅠ'],['ㅜ','ㅜ'],['ㅡ','ㅡ']]
   ];
 })();
+
+// ══ [N9] 과정현황 2안 — 표시 버튼을 전 과정 공통으로 설정 ══
+ui._dashActionPath = 'system/sharedGuide/dashboardActionVisibility';
+ui._dashActionMeta = [
+  { key:'students',   label:'수강생 현황',       icon:'fa-user-graduate' },
+  { key:'attendance', label:'OTP 출결',           icon:'fa-keyboard' },
+  { key:'outing',     label:'외출·외박',          icon:'fa-person-walking-arrow-right' },
+  { key:'dinner',     label:'석식 제외',           icon:'fa-utensils' },
+  { key:'qa',         label:'실시간 Q&A',          icon:'fa-comments' },
+  { key:'tablet',     label:'전자기기 대여',       icon:'fa-tablet-screen-button' },
+  { key:'shuttle',    label:'셔틀 탑승 수요',      icon:'fa-bus' }
+];
+ui._dashActionConfig = {};
+ui._dashActionMeta.forEach(function(item){ ui._dashActionConfig[item.key] = true; });
+
+ui.applyDashActionConfig = function(raw){
+  raw = (raw && raw.items) ? raw.items : (raw || {});
+  var cfg = {};
+  ui._dashActionMeta.forEach(function(item){
+    cfg[item.key] = raw[item.key] !== false;
+    document.querySelectorAll('[data-dash-action="'+item.key+'"]').forEach(function(el){
+      el.classList.toggle('dash-action-hidden', !cfg[item.key]);
+      el.setAttribute('aria-hidden', cfg[item.key] ? 'false' : 'true');
+    });
+  });
+  ui._dashActionConfig = cfg;
+  var list = document.querySelector('.dash-action-list');
+  if(list){
+    var hasVisibleRow = ui._dashActionMeta.some(function(item){
+      return cfg[item.key] && !!list.querySelector('[data-dash-action="'+item.key+'"]');
+    });
+    list.classList.toggle('is-empty', !hasVisibleRow);
+  }
+};
+
+ui._renderDashActionSettings = function(){
+  var host = document.getElementById('dashActionSettingsList');
+  if(!host) return;
+  host.innerHTML = ui._dashActionMeta.map(function(item){
+    var checked = ui._dashActionConfig[item.key] !== false ? ' checked' : '';
+    return '<label class="dash-action-setting">'
+      +'<span class="dash-setting-icon"><i class="fa-solid '+item.icon+'"></i></span>'
+      +'<span class="dash-setting-label">'+item.label+'</span>'
+      +'<input type="checkbox" data-dash-setting="'+item.key+'"'+checked+'>'
+      +'<span class="dash-setting-switch" aria-hidden="true"></span>'
+      +'</label>';
+  }).join('');
+};
+
+ui.openDashActionSettings = function(){
+  if(typeof state!=='undefined' && state.isObserver){
+    ui.showAlert('👁️ 옵저버 모드에서는 버튼 구성을 변경할 수 없습니다.');
+    return;
+  }
+  ui._renderDashActionSettings();
+  var modal = document.getElementById('dashActionSettingsModal');
+  if(modal) modal.style.display = 'flex';
+};
+
+ui.closeDashActionSettings = function(){
+  var modal = document.getElementById('dashActionSettingsModal');
+  if(modal) modal.style.display = 'none';
+};
+
+ui.resetDashActionSettings = function(){
+  document.querySelectorAll('#dashActionSettingsList input[data-dash-setting]').forEach(function(input){
+    input.checked = true;
+  });
+};
+
+ui.saveDashActionSettings = async function(){
+  var next = {};
+  ui._dashActionMeta.forEach(function(item){
+    var input = document.querySelector('#dashActionSettingsList input[data-dash-setting="'+item.key+'"]');
+    next[item.key] = !input || input.checked;
+  });
+  try{
+    await firebase.database().ref(ui._dashActionPath).set({
+      items: next,
+      updatedAt: firebase.database.ServerValue.TIMESTAMP
+    });
+    ui.applyDashActionConfig(next);
+    ui.closeDashActionSettings();
+    ui.showAlert('✅ 과정현황 버튼 구성을 저장했습니다.\n모든 과정과 강의실에 동일하게 적용됩니다.');
+  }catch(err){
+    ui.showAlert('❌ 버튼 구성 저장에 실패했습니다.\n'+(err&&err.message||err));
+  }
+};
+
+ui.initDashActionSettings = function(){
+  if(ui._dashActionRef) return;
+  if(!(window.firebase && firebase.database)){
+    setTimeout(ui.initDashActionSettings, 700);
+    return;
+  }
+  try{
+    ui._dashActionRef = firebase.database().ref(ui._dashActionPath);
+    ui._dashActionRef.on('value', function(snap){
+      ui.applyDashActionConfig(snap.val() || {});
+    }, function(){
+      ui.applyDashActionConfig({});
+    });
+  }catch(e){
+    ui._dashActionRef = null;
+    ui.applyDashActionConfig({});
+  }
+};
+if(document.readyState==='loading'){
+  document.addEventListener('DOMContentLoaded', ui.initDashActionSettings);
+}else{
+  ui.initDashActionSettings();
+}
 kiosk._escK=function(x){ return String(x==null?'':x).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); };
 kiosk._bindSearch=function(){
   var self=this; if(this._searchBound) return; this._searchBound=true;

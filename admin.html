@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- PLATFORM_EDIT_STATUS: 수정완료 | VERSION: I8 | 2026-07-03 (I8: 과정현황 바로가기 및 입교안내 공지 명칭 통일) -->
+<!-- PLATFORM_EDIT_STATUS: 수정완료 | VERSION: J8 | 2026-07-05 (J8: 과정현황 2안 및 전 과정 공통 버튼 설정) -->
 <html lang="ko">
 <head>
 <script>
@@ -15,8 +15,8 @@
 <!-- ============================================================
   CATC · 강사 플랫폼  (admin.html)
   STATUS    수정완료
-  @version  I8
-  @build    20260703-104644
+  @version  J8
+  @build    20260705-012631
   ────────────────────────────────────────────────────────
   [코드 수정 규칙 · AI/개발자 공통]
   이 파일을 한 글자라도 고치면:
@@ -42,7 +42,7 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/ko.js"></script>
-    <link rel="stylesheet" href="admin.css?v=260704M35">
+    <link rel="stylesheet" href="admin.css?v=260705M36">
     <link rel="stylesheet" href="kac-tokens.css?v=20260622">
     <link rel="icon" type="image/svg+xml" href="favicon.svg?v=b260620c">
     <script>
@@ -969,106 +969,116 @@ body.in-course #moreToggleTab{ display:flex !important; }
         <!-- [간소화] 오늘 한눈에 요약줄 (핵심 지표만) — JS가 채움 -->
         <div id="dashTodaySummary" class="dash-today-summary" style="display:none;"></div>
 
-        <!-- 하단 프리미엄 그리드 (통계 + 공지 + 셔틀) -->
-        <div class="dash-premium-grid">
-            
-<!-- (1) 수강생 현황 및 행정 신청 (클릭 시 각각의 탭으로 이동) -->
-            <div class="stat-premium-card card-blue" style="padding:18px;">
-                <div class="card-content combined-stats">
-<!-- 본 과정 수강생 (명단 인원) -->
-                    <div class="stat-row" onclick="ui.setMode('students')" style="cursor:pointer; padding:6px 0;">
-                        <span class="card-label">본 과정 수강생 <span style="font-size:11px;color:#94a3b8;font-weight:700;">(예정)</span></span>
-                        <div class="card-value"><b id="dashTotalCount">0</b><small>명</small><span id="dashArrivedCount" style="display:none;">0</span></div>
+        <!-- [대시보드 2안] 오늘 해야 할 일 중심 + 전 과정 공통 버튼 표시 설정 -->
+        <div class="dash-ops-grid">
+            <section class="dash-ops-panel dash-ops-main">
+                <div class="dash-ops-header">
+                    <div class="dash-ops-title"><i class="fa-solid fa-calendar-check"></i> 오늘의 운영</div>
+                    <div class="dash-ops-head-metrics">
+                        <button type="button" class="dash-head-metric" data-dash-action="students" onclick="ui.setMode('students')">
+                            수강생 <b id="dashTotalCount">0</b>명<span id="dashArrivedCount" style="display:none;">0</span>
+                        </button>
+                        <button type="button" class="dash-head-metric" data-dash-action="qa" onclick="ui.setMode('qa')">
+                            Q&amp;A <b id="dashQaCount">0</b>건
+                        </button>
+                        <button type="button" class="dash-head-metric" data-dash-action="tablet" onclick="ui.setMode('tablet-loan')">
+                            전자기기 <b id="dashTabletLoanCount">0</b>명
+                        </button>
                     </div>
-                    
-                    <div class="stat-divider"></div>
+                    <button type="button" class="dash-action-gear" onclick="ui.openDashActionSettings()" title="표시할 운영 버튼 설정" aria-label="운영 버튼 설정">
+                        <i class="fa-solid fa-gear"></i>
+                    </button>
+                </div>
 
-                    <!-- 항기원 자체 출결 체크 (버튼) -->
-                    <div class="stat-row" onclick="ui.setMode('attendance'); ui.toggleAttendanceMode('internal');" style="cursor:pointer; padding:8px 0;">
-                        <span class="card-label"><i class="fa-solid fa-keyboard" style="color:#0ea5e9; margin-right:5px;"></i>항공기술훈련원 OTP 출결</span>
-                        <div class="card-value" style="color:#0ea5e9;"><i class="fa-solid fa-arrow-right-to-bracket"></i><span id="dashAttendCount" style="display:none;">0</span><span id="dashAttendTotal" style="display:none;">0</span></div>
+                <div class="dash-action-list">
+                    <button type="button" class="dash-action-row" data-dash-action="attendance" onclick="ui.setMode('attendance'); ui.toggleAttendanceMode('internal');">
+                        <span class="dash-action-icon"><i class="fa-solid fa-keyboard"></i></span>
+                        <span class="dash-action-name">OTP 출결</span>
+                        <span class="dash-action-value dash-action-link">출결 시작</span>
+                        <span id="dashAttendCount" style="display:none;">0</span><span id="dashAttendTotal" style="display:none;">0</span>
+                        <i class="fa-solid fa-arrow-right dash-action-arrow"></i>
+                    </button>
+
+                    <button type="button" class="dash-action-row" data-dash-action="outing" onclick="ui.setMode('admin-action')">
+                        <span class="dash-action-icon"><i class="fa-solid fa-person-walking-arrow-right"></i></span>
+                        <span class="dash-action-name">외출·외박</span>
+                        <span class="dash-action-value color-coral"><b id="dashActionCount">0</b>명</span>
+                        <i class="fa-solid fa-arrow-right dash-action-arrow"></i>
+                    </button>
+
+                    <button type="button" class="dash-action-row" data-dash-action="dinner" onclick="ui.setMode('dinner-skip')">
+                        <span class="dash-action-icon"><i class="fa-solid fa-utensils"></i></span>
+                        <span class="dash-action-name">석식 제외</span>
+                        <span class="dash-action-value dash-action-green"><b id="dashDinnerSkipCount">0</b>명</span>
+                        <i class="fa-solid fa-arrow-right dash-action-arrow"></i>
+                    </button>
+
+                    <div class="dash-action-row dash-shuttle-row" data-dash-action="shuttle" onclick="ui.setMode('shuttle')" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();ui.setMode('shuttle');}">
+                        <span class="dash-action-icon"><i class="fa-solid fa-bus"></i></span>
+                        <span class="dash-action-name">셔틀 <small id="dashShuttleTimeInline"></small></span>
+                        <span class="dash-action-value">전체 <b id="dashShuttleTotal">0명</b></span>
+                        <i class="fa-solid fa-arrow-right dash-action-arrow"></i>
+                        <div class="dash-shuttle-mini">
+                            <span>오송 <b id="total-osong">0</b></span>
+                            <span>터미널 <b id="total-term">0</b></span>
+                            <span>공항 <b id="total-air">0</b></span>
+                            <span>자차 <b id="total-car">0</b></span>
+                        </div>
                     </div>
 
-                    <div class="stat-divider" style="border-top: 1px dashed #e2e8f0; margin: 2px 0;"></div>
-
-                    <!-- 외출/외박 현황 -->
-                    <div class="stat-row" onclick="ui.setMode('admin-action')" style="cursor:pointer; padding:6px 0;">
-                        <span class="card-label"><span class="i18n" data-en="Leave / Overnight (Today)">외출/외박 현황 (금일)</span></span>
-                        <div class="card-value color-coral"><b id="dashActionCount">0</b><small>명</small></div>
+                    <div id="dashShuttleNotice" class="dash-shuttle-notice" style="display:none;" data-dash-action="shuttle">
+                        <i class="fa-solid fa-bullhorn"></i>
+                        <span id="dashShuttleNoticeTxt"></span>
                     </div>
+                </div>
+            </section>
 
-                    <div class="stat-divider" style="border-top: 1px dashed #e2e8f0; margin: 2px 0;"></div>
-
-                    <!-- 석식 제외 현황 -->
-                    <div class="stat-row" onclick="ui.setMode('dinner-skip')" style="cursor:pointer; padding:6px 0;">
-                        <span class="card-label"><span class="i18n" data-en="Dinner Skip (Today)">금일 석식 제외 신청</span></span>
-                        <div class="card-value" style="color: #10b981;"><b id="dashDinnerSkipCount">0</b><small>명</small></div>
+            <aside class="dash-ops-panel dash-ops-side">
+                <div class="dash-ops-title"><i class="fa-solid fa-bullhorn"></i> 공지 및 필수 확인</div>
+                <div class="dash-notice-list">
+                    <button type="button" class="dash-notice-row" onclick="ui.setMode('notice')">
+                        <span class="n-tag admin">운영</span>
+                        <span id="dashNoticeAdmin">등록된 운영부 공지가 없습니다.</span>
+                        <i class="fa-solid fa-chevron-right"></i>
+                    </button>
+                    <button type="button" class="dash-notice-row" onclick="ui.setMode('notice')">
+                        <span class="n-tag global">입교안내</span>
+                        <span id="dashNoticeGlobal">내용 로딩 중...</span>
+                        <i class="fa-solid fa-chevron-right"></i>
+                    </button>
+                </div>
+                <div class="dash-edu-status">
+                    <div class="dash-edu-card integrity">
+                        <span><i class="fa-solid fa-scale-balanced"></i> 청렴교육</span>
+                        <b id="feedEduIntegrity">미정</b>
                     </div>
+                    <div class="dash-edu-card union">
+                        <span><i class="fa-solid fa-handshake"></i> 노조교육</span>
+                        <b id="feedEduUnion">미정</b>
+                    </div>
+                </div>
+                <button type="button" class="dash-overview-btn" onclick="ui.setMode('notice')">
+                    공지 전체 보기 <i class="fa-solid fa-chevron-right"></i>
+                </button>
+            </aside>
+        </div>
+
+        <div id="dashActionSettingsModal" class="dash-action-settings-overlay" style="display:none;" onclick="if(event.target===this) ui.closeDashActionSettings()">
+            <div class="dash-action-settings-box" onclick="event.stopPropagation();">
+                <div class="dash-action-settings-head">
+                    <div>
+                        <h3><i class="fa-solid fa-sliders"></i> 과정현황 버튼 설정</h3>
+                        <p>선택한 버튼 구성은 모든 과정과 강의실에 공통 적용됩니다.</p>
+                    </div>
+                    <button type="button" onclick="ui.closeDashActionSettings()" aria-label="닫기"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+                <div id="dashActionSettingsList" class="dash-action-settings-list"></div>
+                <div class="dash-action-settings-actions">
+                    <button type="button" class="secondary" onclick="ui.resetDashActionSettings()">기본값</button>
+                    <button type="button" class="primary" onclick="ui.saveDashActionSettings()">저장 및 전체 적용</button>
                 </div>
             </div>
-
-            <!-- (3) 공지사항 허브 -->
-            <div class="stat-premium-card card-notice-hub" onclick="ui.setMode('notice')" style="cursor:pointer;">
-                <div class="notice-hub-header">
-                    <i class="fa-solid fa-bullhorn"></i> <span>주요 공지 피드 (상세보기)</span>
-                </div>
-                <div class="notice-hub-content">
-                    <div class="notice-item admin"><span class="n-tag">운영</span><p id="dashNoticeAdmin">등록된 운영부 공지가 없습니다.</p></div>
-                    <div class="notice-item global"><span class="n-tag">입교안내</span><p id="dashNoticeGlobal">내용 로딩 중...</p></div>
-                </div>
-                <div class="edu-place-feed" onclick="event.stopPropagation();" style="margin-top:14px; display:flex; flex-direction:column; gap:10px;">
-                    <div style="display:flex; align-items:center; gap:10px; min-height:56px; box-sizing:border-box; background:#eff6ff; border:1px solid #bfdbfe; border-radius:13px; padding:12px 15px;">
-                        <span style="flex-shrink:0; background:#f59e0b; color:#fff; font-weight:900; font-size:13px; padding:6px 11px; border-radius:9px; white-space:nowrap;"><i class="fa-solid fa-scale-balanced"></i> 청렴교육</span>
-                        <b id="feedEduIntegrity" style="margin-left:auto; min-width:0; text-align:right; font-size:16px; font-weight:900; color:#1e40af; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">미정</b>
-                    </div>
-                    <div style="display:flex; align-items:center; gap:10px; min-height:56px; box-sizing:border-box; background:#f0fdf4; border:1px solid #bbf7d0; border-radius:13px; padding:12px 15px;">
-                        <span style="flex-shrink:0; background:#16a34a; color:#fff; font-weight:900; font-size:13px; padding:6px 11px; border-radius:9px; white-space:nowrap;"><i class="fa-solid fa-handshake"></i> 노조교육</span>
-                        <b id="feedEduUnion" style="margin-left:auto; min-width:0; text-align:right; font-size:16px; font-weight:900; color:#15803d; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">미정</b>
-                    </div>
-                </div>
-            </div>
-
-<!-- (3) 실시간 Q&A 및 셔틀 통합 수송 수요 (클릭 시 이동) -->
-            <div class="stat-premium-card card-mint" onclick="ui.setMode('shuttle')" style="cursor:pointer;">
-                <!-- Q&A 현황 -->
-                <!-- 전자기기 대여 신청 (좌측에서 이동) -->
-                <div class="stat-row" onclick="event.stopPropagation(); ui.setMode('tablet-loan');" style="cursor:pointer; margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px dashed #e2e8f0;">
-                    <span class="card-label-shuttle" style="margin-bottom:0; color:#003366;"><i class="fa-solid fa-tablet-screen-button" style="color:#6366f1; margin-right:5px;"></i><span class="i18n" data-en="Tablet Loans">전자기기 대여 신청</span></span>
-                    <div class="card-value" style="color: #6366f1;"><b id="dashTabletLoanCount">0</b><small>명</small></div>
-                </div>
-                <div class="stat-row" onclick="event.stopPropagation(); ui.setMode('qa');" style="cursor:pointer; margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px dashed #e2e8f0;">
-                    <span class="card-label-shuttle" style="margin-bottom:0; color:#003366;"><span class="i18n" data-en="Live Q&A">실시간 Q&A 현황</span></span>
-                    <div class="card-value" style="color: #3b82f6;"><b id="dashQaCount">0</b><small>건</small></div>
-                </div>
-
-                <div class="card-label-shuttle" style="color:#003366; margin-bottom:10px;">
-                    <span class="i18n" data-en="Shuttle Demand">셔틀 탑승 수요 현황</span><span id="dashShuttleTimeInline" style="font-size:12px; color:#92400e; font-weight:700; margin-left:6px;"></span>
-                </div>
-
-                <!-- 기사님 실시간 공지 영역 -->
-                <div id="dashShuttleNotice" style="display:none; font-size:12px; background:#fffbeb; padding:8px 12px; border-radius:10px; color:#92400e; margin-bottom:12px; border-left:4px solid #facc15; border:1px solid #fef3c7;">
-                    <i class="fa-solid fa-bullhorn" style="color:#eab308; margin-right:5px;"></i> 
-                    <span id="dashShuttleNoticeTxt" style="font-weight:700;"></span>
-                </div>
-                
-                <!-- 통합 요약 박스 (1~2차 합산) -->
-                <div style="background:white; padding:15px; border-radius:12px; border:1px solid #e2e8f0;">
-                    <div style="font-size:12px; font-weight:800; color:#3b82f6; margin-bottom:12px; display:flex; align-items:center; gap:5px;">
-                        <i class="fa-solid fa-bus"></i> 전체 수송 예정 <span id="dashShuttleTotal" style="margin-left:auto; background:#eff6ff; padding:1px 8px; border-radius:4px;">0명</span>
-                    </div>
-                    <div class="shuttle-scoreboard" style="border:none; padding:0; background:transparent;">
-                        <div class="sb-item"><span class="sb-val" id="total-osong" style="font-size:22px;">0</span><span class="sb-txt">오송</span></div>
-                        <div class="sb-divider" style="height:20px;"></div>
-                        <div class="sb-item"><span class="sb-val" id="total-term" style="font-size:22px;">0</span><span class="sb-txt">터미널</span></div>
-                        <div class="sb-divider" style="height:20px;"></div>
-                        <div class="sb-item"><span class="sb-val" id="total-air" style="font-size:22px;">0</span><span class="sb-txt">공항</span></div>
-                        <div class="sb-divider" style="height:20px;"></div>
-                        <div class="sb-item"><span class="sb-val" id="total-car" style="font-size:22px;">0</span><span class="sb-txt">자차</span></div>
-                    </div>
-                </div>
-            </div> <!-- card-mint 끝 -->
-
-        </div> <!-- dash-premium-grid 끝 -->
+        </div>
 
         <!-- [화면 도움말] 과정 운영 현황 사용 안내 -->
         <div class="screen-hint">
@@ -2846,7 +2856,7 @@ function setupAcc(btn){
 
 
 
-    <script src="admin.js?v=260704M35"></script>
+    <script src="admin.js?v=260705M36"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
 <!-- ── 화면 자동 맞춤(auto-fit): 가로+세로 모두 화면에 맞게 자동 축소 · JDS260613 ──
      원인: Windows 디스플레이 배율(125%/150%)·저해상도 화면에서 유효 뷰포트가 작아져
@@ -2905,10 +2915,10 @@ function setupAcc(btn){
     return '<span class="dts-chip'+(hot?' dts-hot':'')+'"><i class="fa-solid '+icon+'" style="color:'+color+'"></i><span class="dts-t">'+label+'</span><b class="dts-v">'+val+'</b></span>';
   }
   function run(){
-    var grid=document.querySelector('.dash-premium-grid'); if(!grid) return;
+    var grid=document.querySelector('.dash-ops-grid'); if(!grid) return;
     // ① 값이 0인 통계 행은 흐리게 (값 있는 것만 튀게)
     ['dashTotalCount','dashActionCount','dashDinnerSkipCount','dashTabletLoanCount','dashQaCount'].forEach(function(id){
-      var el=document.getElementById(id); if(!el) return; var row=el.closest('.stat-row');
+      var el=document.getElementById(id); if(!el) return; var row=el.closest('.dash-action-row,.dash-head-metric');
       if(row){ var v=num(el); row.classList.toggle('dash-zero', v===0); }
     });
     // 교육 배치가 '미정'이면 흐리게
@@ -2934,7 +2944,7 @@ function setupAcc(btn){
   }
   var t=null; function schedule(){ clearTimeout(t); t=setTimeout(run,120); }
   document.addEventListener('DOMContentLoaded', function(){
-    var grid=document.querySelector('.dash-premium-grid'); if(!grid) return;
+    var grid=document.querySelector('.dash-ops-grid'); if(!grid) return;
     try{ new MutationObserver(schedule).observe(grid,{childList:true,characterData:true,subtree:true}); }catch(e){}
     // 모드 전환(과정현황 진입) 시에도 갱신
     document.addEventListener('click', function(){ setTimeout(schedule,200); }, true);
