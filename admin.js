@@ -1037,9 +1037,12 @@ forceEnterRoom: async function(room) {
         firebase.database().ref(`courses/${cleanRoom}/coordNotice`).on('value', snap => {
             if (state.room !== cleanRoom) return;
             const newMsg = snap.val() || '';
-            // 대시보드 피드 즉시 업데이트 (항상)
+            // 대시보드 피드 즉시 업데이트 (항상) — <br>/줄바꿈 실제 렌더
             const el = document.getElementById('dashNoticeAdmin');
-            if (el) el.innerText = newMsg || '등록된 운영부 공지가 없습니다.';
+            if (el) {
+                if (newMsg) { el.innerHTML = ui._noticeToHtml ? ui._noticeToHtml(newMsg) : String(newMsg); }
+                else { el.innerText = '등록된 운영부 공지가 없습니다.'; }
+            }
             // 팝업 처리
             if (!newMsg) return;
             const prev = state.noticeSeen[coordKey];
@@ -1055,9 +1058,12 @@ forceEnterRoom: async function(room) {
     firebase.database().ref('system/globalNotice').on('value', snap => {
         if (state.room !== cleanRoom) return;
         const newMsg = snap.val() || '';
-        // 대시보드 피드 즉시 업데이트 (항상)
+        // 대시보드 피드 즉시 업데이트 (항상) — <br>/줄바꿈을 실제 줄바꿈으로 렌더(리터럴 <br> 방지)
         const el = document.getElementById('dashNoticeGlobal');
-        if (el) el.innerText = newMsg || '현재 게시된 센터 전체 공지가 없습니다.';
+        if (el) {
+            if (newMsg) { el.innerHTML = ui._noticeToHtml ? ui._noticeToHtml(newMsg) : String(newMsg); }
+            else { el.innerText = '현재 게시된 센터 전체 공지가 없습니다.'; }
+        }
         // [입교안내 센터공지 페이지] 실시간 반영 — 슬롯 갱신 + 지금 그 페이지를 보고 있으면 즉시 재렌더(내용/노출 갱신)
         try {
             var _gslot = (typeof guideMgr !== 'undefined' && guideMgr._slot) ? guideMgr._slot() : null;
@@ -5928,6 +5934,12 @@ resetShuttleRequests: function() {
 
     // ── [홈 통합검색] 담임교수 이름 → 이번주 과정 바로가기 ──
     _esc: function(s){ return String(s==null?'':s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); },
+    // 공지 문자열을 안전하게 HTML로: 리터럴 <br>·줄바꿈을 실제 줄바꿈(<br>)으로 렌더 (XSS 방지 위해 escape 후 <br>만 복원)
+    _noticeToHtml: function(s){
+        var t = String(s==null?'':s).replace(/<br\s*\/?>/gi, '\n');   // 리터럴 <br> → 줄바꿈
+        t = t.replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; });
+        return t.replace(/\r?\n/g, '<br>');
+    },
     // 과정 진입 후 원하는 메뉴로 바로 이동 (guide=입교안내 / students=입교완료 / dashboard=과정현황)
     enterCourseMode: function(room, mode, fs){
         ui._pendingEnterMode = mode || 'dashboard';
@@ -8392,7 +8404,8 @@ init: function() {
     _centerNoticeHTML: function() {
         const esc = s => (s == null ? '' : String(s)).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
         const raw = String(guideMgr._slot().centerNotice || '').trim();
-        const body = raw ? esc(raw).replace(/\r?\n/g, '<br>') : '현재 게시된 입교안내 공지가 없습니다.';
+        // 운영부가 <br>(리터럴)로 저장하는 경우가 있어, 이스케이프 전에 <br>을 줄바꿈으로 정규화 → 다시 <br>로 변환
+        const body = raw ? esc(raw.replace(/<br\s*\/?>/gi, '\n')).replace(/\r?\n/g, '<br>') : '현재 게시된 입교안내 공지가 없습니다.';
         return `<div class="guide-courseinfo-slide guide-centernotice-slide">
           <div class="ci-header">
             <div class="ci-head-center"><span class="ci-emblem"><i class="fa-solid fa-plane-up"></i></span><span class="ci-header-title">입교 안내</span></div>
