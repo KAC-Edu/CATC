@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<!-- ═══════════════════════════════════════════════════════════════
+     KAC 항공기술훈련원 — 수료 기념사진 업로드 (모바일)
+     VERSION: JDS260704(V1)
+     · 강사플랫폼 출결 화면의 '수료 기념사진' QR이 이 페이지로 연결 (?room=A)
+     · 스마트폰으로 단체사진 촬영/선택 → 긴 변 1600px · JPEG 0.8 압축 →
+       courses/{room}/gradPhoto = { dataUrl, updatedAt, endDate } 저장
+     · endDate = 과정 종료일(settings.period 뒷날짜) — 수료일 자정까지만 다운로드 유효
+     ═══════════════════════════════════════════════════════════════ -->
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>수료 기념사진 업로드 | KAC 항공기술훈련원</title>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+<script src="config.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Pretendard', 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif;
+         background: linear-gradient(160deg, #0f2057 0%, #1a3a8a 60%, #2563eb 130%);
+         min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 22px; }
+  .card { width: 100%; max-width: 430px; background: #fff; border-radius: 22px;
+          box-shadow: 0 24px 60px rgba(2, 8, 30, .45); overflow: hidden; }
+  .head { padding: 22px 24px 18px; background: linear-gradient(135deg, #0f2057, #1a3a8a); color: #fff; text-align: center; }
+  .head .ic { font-size: 34px; margin-bottom: 8px; }
+  .head h1 { font-size: 19px; font-weight: 900; letter-spacing: -.3px; }
+  .head p { margin-top: 6px; font-size: 12.5px; font-weight: 700; opacity: .85; }
+  .body { padding: 22px 22px 26px; }
+  .course { background: #f1f5f9; border: 1.5px solid #e2e8f0; border-radius: 14px; padding: 13px 16px;
+            font-size: 14.5px; font-weight: 900; color: #0f2057; text-align: center; margin-bottom: 18px; word-break: keep-all; }
+  .course small { display: block; margin-top: 3px; font-size: 11.5px; font-weight: 700; color: #64748b; }
+  .shoot { width: 100%; padding: 18px; border: none; border-radius: 16px; cursor: pointer;
+           background: linear-gradient(135deg, #16a34a, #15803d); color: #fff;
+           font-size: 17px; font-weight: 900; box-shadow: 0 8px 22px rgba(22, 163, 74, .4); }
+  .shoot:active { transform: scale(.98); }
+  .tip { margin-top: 14px; text-align: center; font-size: 12px; font-weight: 700; color: #64748b; line-height: 1.7; }
+  #stateBox { display: none; text-align: center; padding: 8px 0 2px; }
+  #stateBox .big { font-size: 52px; margin-bottom: 10px; }
+  #stateBox h2 { font-size: 17px; font-weight: 900; color: #0f172a; margin-bottom: 8px; }
+  #stateBox p { font-size: 13px; font-weight: 700; color: #475569; line-height: 1.7; }
+  .bar { height: 8px; background: #e2e8f0; border-radius: 99px; overflow: hidden; margin: 16px 0 6px; display: none; }
+  .bar i { display: block; height: 100%; width: 30%; border-radius: 99px;
+           background: linear-gradient(90deg, #2563eb, #16a34a); animation: slide 1.1s ease-in-out infinite; }
+  @keyframes slide { 0% { margin-left: -30%; } 100% { margin-left: 100%; } }
+  .retry { margin-top: 14px; padding: 12px 22px; border: none; border-radius: 12px; background: #2563eb; color: #fff;
+           font-size: 14px; font-weight: 900; cursor: pointer; display: none; }
+</style>
+</head>
+<body>
+  <div class="card">
+    <div class="head">
+      <div class="ic">📸</div>
+      <h1>수료 기념사진 업로드</h1>
+      <p>KAC 항공기술훈련원</p>
+    </div>
+    <div class="body">
+      <div class="course" id="courseBox">과정 확인 중...<small id="roomSub"></small></div>
+
+      <div id="mainBox">
+        <button class="shoot" onclick="document.getElementById('file').click()">
+          <i>📷</i> 사진 촬영 / 선택하기
+        </button>
+        <input type="file" id="file" accept="image/*" capture="environment" style="display:none;">
+        <div class="tip">
+          교탁에서 교육생 전체가 나오도록 <b>가로</b>로 촬영해 주세요.<br>
+          업로드하면 액자에 자동 합성되어<br>강사·교육생 플랫폼에서 <b>수료일 자정까지</b> 내려받을 수 있습니다.
+        </div>
+      </div>
+
+      <div class="bar" id="bar"><i></i></div>
+
+      <div id="stateBox">
+        <div class="big" id="stIcon">✅</div>
+        <h2 id="stTitle">업로드 완료!</h2>
+        <p id="stMsg">기념사진이 등록되었습니다.<br>강사 화면에서 액자 합성본을 확인하세요.</p>
+        <button class="retry" id="retryBtn" onclick="resetUI()">다시 시도</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+(function () {
+  var params = new URLSearchParams(location.search);
+  var room = String(params.get('room') || '').trim().toUpperCase();
+  var endDate = '';
+
+  function todayStr() {
+    var d = new Date();
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  }
+  function endOf(period) {
+    var p = String(period || '');
+    var sep = p.indexOf(' ~ ') >= 0 ? ' ~ ' : '~';
+    var parts = p.split(sep);
+    return (parts[1] || parts[0] || '').trim();
+  }
+
+  function showState(icon, title, msg, retry) {
+    document.getElementById('mainBox').style.display = 'none';
+    document.getElementById('bar').style.display = 'none';
+    var s = document.getElementById('stateBox');
+    s.style.display = 'block';
+    document.getElementById('stIcon').textContent = icon;
+    document.getElementById('stTitle').textContent = title;
+    document.getElementById('stMsg').innerHTML = msg;
+    document.getElementById('retryBtn').style.display = retry ? 'inline-block' : 'none';
+  }
+  window.resetUI = function () {
+    document.getElementById('stateBox').style.display = 'none';
+    document.getElementById('mainBox').style.display = 'block';
+  };
+
+  if (!room || !/^[A-Z]$/.test(room)) {
+    document.getElementById('courseBox').innerHTML = '⚠️ 잘못된 접근입니다';
+    showState('⚠️', '잘못된 접근', '강사플랫폼의 QR 코드를 통해<br>다시 접속해 주세요.', false);
+    return;
+  }
+
+  // 과정 정보 표시 + 종료일 확보
+  try {
+    firebase.database().ref('courses/' + room + '/settings').once('value').then(function (s) {
+      var v = s.val() || {};
+      endDate = endOf(v.period);
+      document.getElementById('courseBox').innerHTML =
+        (v.courseName ? v.courseName : '과정명 미설정') +
+        '<small id="roomSub">' + (v.period || '') + ' · ROOM #' + room + '</small>';
+    });
+  } catch (e) {}
+
+  document.getElementById('file').addEventListener('change', function () {
+    var f = this.files && this.files[0];
+    this.value = '';
+    if (!f) return;
+    document.getElementById('mainBox').style.display = 'none';
+    document.getElementById('bar').style.display = 'block';
+
+    var rd = new FileReader();
+    rd.onload = function () {
+      var im = new Image();
+      im.onload = function () {
+        try {
+          var MAX = 1600;
+          var sc = Math.min(1, MAX / Math.max(im.width, im.height));
+          var cv = document.createElement('canvas');
+          cv.width = Math.round(im.width * sc);
+          cv.height = Math.round(im.height * sc);
+          cv.getContext('2d').drawImage(im, 0, 0, cv.width, cv.height);
+          var dataUrl = cv.toDataURL('image/jpeg', 0.8);
+          firebase.database().ref('courses/' + room + '/gradPhoto').set({
+            dataUrl: dataUrl,
+            updatedAt: Date.now(),
+            endDate: endDate || todayStr()
+          }).then(function () {
+            showState('✅', '업로드 완료!', '기념사진이 등록되었습니다.<br>강사 화면에서 액자 합성본을 확인하고<br>글자 위치를 다듬을 수 있습니다.', false);
+          }).catch(function (err) {
+            showState('❌', '업로드 실패', (err && err.message ? err.message : '네트워크를 확인해 주세요.'), true);
+          });
+        } catch (e) {
+          showState('❌', '처리 실패', '사진을 처리하지 못했습니다.<br>다른 사진으로 시도해 주세요.', true);
+        }
+      };
+      im.onerror = function () { showState('❌', '사진 오류', '사진을 읽지 못했습니다.', true); };
+      im.src = rd.result;
+    };
+    rd.onerror = function () { showState('❌', '읽기 실패', '파일을 읽지 못했습니다.', true); };
+    rd.readAsDataURL(f);
+  });
+})();
+</script>
+</body>
+</html>

@@ -1,7 +1,7 @@
 /* PLATFORM_EDIT_STATUS: 수정완료 | VERSION: L9 | 2026-07-03 */
 /* [복구 2026-07-03] 파일 말단 184줄이 저장 중 잘림 → J8(260702Z40) 보관본의 동일 블록(리모컨 위젯·더보기 패널·ZOOM 표시 IIFE)으로 접합 복구. J8 이후 해당 말단 블록을 수정한 이력이 있다면 편집기 원본(L9)으로 재저장 권장. */
 /* ============================================================
-   PLATFORM_EDIT_STATUS: 수정완료 | VERSION: J12.3 | 2026-07-04 (J12.3: 입교안내 과정 전환 잔상 제거 — 다른 과정(또는 같은 방의 대면↔비대면 변형 변경)으로 이동 시 공용 캔버스·가상페이지·오버레이·버튼을 즉시 비우고 로딩 배지를 표시, 이전 과정 PDF가 잠깐 보이던 문제 해소. (J12.2: ①교육개요 오버레이 글자를 PDF 라벨과 동급 크기로(메인 2.6%·서브 2.25%) ②'회의참가 ID/PW' 항목 클릭 → 회의정보 입력 모달(PDF 전체화면 중에도 표시, 저장 시 오버레이 즉시 갱신·courses/{room}/zoomMeeting 단일 저장소라 ZOOM 모니터링 등 연동 화면 전체 적용, 드래그 직후 오클릭 방지) ③홈 검색카드 장소가 온라인(Zoom)이면 Zoom 블루(#0B5CFF) 블록+비디오 아이콘으로 강조(드롭다운 변경 시 즉시 반영). (J12.1: 교육개요 오버레이 수정 — ①값을 slot 캐시가 아닌 Firebase(settings/students/zoomMeeting)에서 직접 조회(진입 경로·타이밍 무관하게 과정명/기간 정확 표기, 늦은 응답 무시 토큰) ②글자 크기를 vw가 아닌 PDF 래퍼 폭 비례(메인 2.15%·서브 1.85%)로 — PDF와 같은 비율로 확대/축소되어 전체화면에서도 또렷 ③기본 좌표를 실측 기준(콜론 라인 중심)으로 보정. (J12: 비대면(온라인 Zoom) 입교안내 지원 — 과정 장소가 온라인(Zoom)이면 '입교안내(비대면).pdf' 자동 로드(장소 변경 시 재로드). 가상페이지(1p 뒤 교수소개→카카오 오픈톡방→입교등록절차→목차) 흐름은 대면과 동일, 대면용 '교육과정 안내' 가상페이지는 비대면에서 숨김. 비대면 PDF 4p 교육개요에 과정명·교육인원(입교등록수)·교육기간·교육구분·교육평가(대면과 동일 직무일반/법정 표기)·ZOOM 회의 ID/PW 오버레이 — 항목별 3초 롱프레스 드래그 이동, 윈도우/전체화면 좌표 개별 저장(system/sharedGuide/overviewPos, 전 과정 공통·실시간 동기). 교육시간표 버튼 페이지를 변형별로(대면 13p·비대면 7p) — 비대면은 지원부 판독본이 없으므로 기존 QR 사진 업로드/보기 버튼 그대로 동작. (J11: 입교안내 13p '교육시간표 보기' 신설 — 지원부가 한글 명단 업로드 시 자동 판독·저장되는 표 그리드(courses/{room}/schedule/grid, 셀좌표·병합정보 포함)를 실시간 구독. grid 있으면 녹색 버튼 노출→클릭 시 아래→위 슬라이드 시트에 원본 표 그대로 렌더(연속 강의 rowspan 줄합침+과정명·강사명 센터정렬, X로 슬라이드 다운). grid 없으면 기존 사진 보기/QR 업로드 흐름 유지. 녹색 버튼도 3초 롱프레스 위치보정(별도 그룹 parsedSchedule, 윈도우/전체화면 좌표 개별 저장). (J10: ①OTP 재사용 가드 — 강사 화면 새로고침/출결탭 재진입 시 잔여 15초 이상 유효 OTP를 서버에서 재사용, 매번 새 코드로 교체되어 입력 중이던 교육생이 만료 판정받던 문제 해소 ②담임(coordinatorName) 수동수정 보호 — status/coordManual 플래그 도입(professorManual과 동일 패턴), 강사가 담임을 바꿔도 연간계획 자동동기화가 계획값으로 되돌리던 버그 수정. 방 비움/신규 배치 시 플래그 해제 ③퇴교차량 자동판정 표시 — 지원부가 한글 시간표 업로드 시 기록되는 courses/{room}/shuttle/autoDeparture를 실시간 구독, 1차/2차 구분 없이 '이 과정 출발시간' 단일 표시(대시보드 인라인·셔틀 파란박스·도착 ETA 모두), 자동판정 없으면 기존 1차/2차 표기 유지. (J9: 지원부 생활관 명단(system/dorm/rosters) 오삭제 방지 — 리셋·명단비우기·연간계획삭제·종료과정자동정리 4개 경로 전부 '명단의 과정명이 해당 방 과정명과 일치할 때만' 삭제하도록 가드. 다른 과정 명단은 보존하고 console에 보존 사유 기록. (J8: ZOOM 진입 요소를 CSS !important 규칙으로 원천 차단 — 오프라인이면 어떤 코드가 표시해도 절대 안 보임(body.zoom-room-online 클래스 게이트). (J7: ZOOM 진입 요소 표시를 [onclick*=openZoomMonitor] 전체 선택으로 통일 + 2초 하트비트 — 오프라인에서 pill 잔존 완전 차단. (J6: ①장소 수동지정 보호(roomDetailManual) — 연간계획 동기화가 온라인 설정 되돌리는 문제 차단 ②ZOOM 버튼 표시를 장소 배지 텍스트와 상시 동기(MutationObserver) — 오프라인인데 버튼 남는 문제 해소 ③저장알림 확인 후 회의정보 모달 순차 표시(동시 팝업 제거) ④회의번호 000 0000 0000 자동 포맷 전용 모달. (J5: ①ZOOM 버튼 과정현황 장소 옆으로+오프라인 완전숨김(방전환 기본숨김·온라인 가드) ②iframe 사이징 실측기반 재작성 ③온라인 장소 저장 시 회의번호/암호 과정별 저장(askZoomMeetingInfo) ④홈검색 카카오등록 교수 노란배지 ⑤퇴교차량 칩 인라인 펼침. (J4: ZOOM 모니터링 iframe 높이를 body zoom 배율 보정해 실제 화면에 맞춤 — 설정 패널 잘림 해소, 리사이즈 대응. (J3: ui.openZoomMonitor 추가 — ZOOM 모니터링을 내장 뷰(iframe)로 열고 과정 전환 시 확인 후 재로딩, 온라인 판별 토글에 더보기 메뉴 항목 포함) (J2: ①ZOOM 모니터링 버튼 표시로직 재적용(온라인 과정 판별) ②강의실 초기화 confirm에 삭제범위 안내 추가 ③QR 요소없음 개발자문구 교체 ④toggleNightMode/addSubject 널가드 — 구버전 잔재 안전화)
+   PLATFORM_EDIT_STATUS: 수정완료 | VERSION: J13 | 2026-07-04 (J13: 수료 기념사진 신설 — 출결 관리 화면 '📸 수료 기념사진' 버튼(수료일 당일 금색 펄스). 강사가 폰으로 촬영 후 QR(grad_photo.html)로 업로드(긴변 1600·JPEG 0.8 압축, courses/{room}/gradPhoto 저장) 또는 PC에서 직접 선택. 액자(grad_frame.png, 가운데 투명)에 사진 cover-fit 합성 + 하단 4칸(과정명/교육기간/교육장소/담임교수) 자동 기입 — 각 글자 3초 드래그 보정(system/sharedGuide/gradPhotoPos, 액자 % 기준 전 과정 공통). 미리보기·PNG 다운로드·사진 교체·삭제 지원, PDF 전체화면 중에도 모달 표시. 유효기간 = 수료일(endDate) 자정까지: 종료 다음날 kacExpire 자동정리 및 수동 리셋·연간계획 삭제에서 gradPhoto 제거, 교육생 다운로드 버튼도 함께 사라짐. (J12.3: 입교안내 과정 전환 잔상 제거 — 다른 과정(또는 같은 방의 대면↔비대면 변형 변경)으로 이동 시 공용 캔버스·가상페이지·오버레이·버튼을 즉시 비우고 로딩 배지를 표시, 이전 과정 PDF가 잠깐 보이던 문제 해소. (J12.2: ①교육개요 오버레이 글자를 PDF 라벨과 동급 크기로(메인 2.6%·서브 2.25%) ②'회의참가 ID/PW' 항목 클릭 → 회의정보 입력 모달(PDF 전체화면 중에도 표시, 저장 시 오버레이 즉시 갱신·courses/{room}/zoomMeeting 단일 저장소라 ZOOM 모니터링 등 연동 화면 전체 적용, 드래그 직후 오클릭 방지) ③홈 검색카드 장소가 온라인(Zoom)이면 Zoom 블루(#0B5CFF) 블록+비디오 아이콘으로 강조(드롭다운 변경 시 즉시 반영). (J12.1: 교육개요 오버레이 수정 — ①값을 slot 캐시가 아닌 Firebase(settings/students/zoomMeeting)에서 직접 조회(진입 경로·타이밍 무관하게 과정명/기간 정확 표기, 늦은 응답 무시 토큰) ②글자 크기를 vw가 아닌 PDF 래퍼 폭 비례(메인 2.15%·서브 1.85%)로 — PDF와 같은 비율로 확대/축소되어 전체화면에서도 또렷 ③기본 좌표를 실측 기준(콜론 라인 중심)으로 보정. (J12: 비대면(온라인 Zoom) 입교안내 지원 — 과정 장소가 온라인(Zoom)이면 '입교안내(비대면).pdf' 자동 로드(장소 변경 시 재로드). 가상페이지(1p 뒤 교수소개→카카오 오픈톡방→입교등록절차→목차) 흐름은 대면과 동일, 대면용 '교육과정 안내' 가상페이지는 비대면에서 숨김. 비대면 PDF 4p 교육개요에 과정명·교육인원(입교등록수)·교육기간·교육구분·교육평가(대면과 동일 직무일반/법정 표기)·ZOOM 회의 ID/PW 오버레이 — 항목별 3초 롱프레스 드래그 이동, 윈도우/전체화면 좌표 개별 저장(system/sharedGuide/overviewPos, 전 과정 공통·실시간 동기). 교육시간표 버튼 페이지를 변형별로(대면 13p·비대면 7p) — 비대면은 지원부 판독본이 없으므로 기존 QR 사진 업로드/보기 버튼 그대로 동작. (J11: 입교안내 13p '교육시간표 보기' 신설 — 지원부가 한글 명단 업로드 시 자동 판독·저장되는 표 그리드(courses/{room}/schedule/grid, 셀좌표·병합정보 포함)를 실시간 구독. grid 있으면 녹색 버튼 노출→클릭 시 아래→위 슬라이드 시트에 원본 표 그대로 렌더(연속 강의 rowspan 줄합침+과정명·강사명 센터정렬, X로 슬라이드 다운). grid 없으면 기존 사진 보기/QR 업로드 흐름 유지. 녹색 버튼도 3초 롱프레스 위치보정(별도 그룹 parsedSchedule, 윈도우/전체화면 좌표 개별 저장). (J10: ①OTP 재사용 가드 — 강사 화면 새로고침/출결탭 재진입 시 잔여 15초 이상 유효 OTP를 서버에서 재사용, 매번 새 코드로 교체되어 입력 중이던 교육생이 만료 판정받던 문제 해소 ②담임(coordinatorName) 수동수정 보호 — status/coordManual 플래그 도입(professorManual과 동일 패턴), 강사가 담임을 바꿔도 연간계획 자동동기화가 계획값으로 되돌리던 버그 수정. 방 비움/신규 배치 시 플래그 해제 ③퇴교차량 자동판정 표시 — 지원부가 한글 시간표 업로드 시 기록되는 courses/{room}/shuttle/autoDeparture를 실시간 구독, 1차/2차 구분 없이 '이 과정 출발시간' 단일 표시(대시보드 인라인·셔틀 파란박스·도착 ETA 모두), 자동판정 없으면 기존 1차/2차 표기 유지. (J9: 지원부 생활관 명단(system/dorm/rosters) 오삭제 방지 — 리셋·명단비우기·연간계획삭제·종료과정자동정리 4개 경로 전부 '명단의 과정명이 해당 방 과정명과 일치할 때만' 삭제하도록 가드. 다른 과정 명단은 보존하고 console에 보존 사유 기록. (J8: ZOOM 진입 요소를 CSS !important 규칙으로 원천 차단 — 오프라인이면 어떤 코드가 표시해도 절대 안 보임(body.zoom-room-online 클래스 게이트). (J7: ZOOM 진입 요소 표시를 [onclick*=openZoomMonitor] 전체 선택으로 통일 + 2초 하트비트 — 오프라인에서 pill 잔존 완전 차단. (J6: ①장소 수동지정 보호(roomDetailManual) — 연간계획 동기화가 온라인 설정 되돌리는 문제 차단 ②ZOOM 버튼 표시를 장소 배지 텍스트와 상시 동기(MutationObserver) — 오프라인인데 버튼 남는 문제 해소 ③저장알림 확인 후 회의정보 모달 순차 표시(동시 팝업 제거) ④회의번호 000 0000 0000 자동 포맷 전용 모달. (J5: ①ZOOM 버튼 과정현황 장소 옆으로+오프라인 완전숨김(방전환 기본숨김·온라인 가드) ②iframe 사이징 실측기반 재작성 ③온라인 장소 저장 시 회의번호/암호 과정별 저장(askZoomMeetingInfo) ④홈검색 카카오등록 교수 노란배지 ⑤퇴교차량 칩 인라인 펼침. (J4: ZOOM 모니터링 iframe 높이를 body zoom 배율 보정해 실제 화면에 맞춤 — 설정 패널 잘림 해소, 리사이즈 대응. (J3: ui.openZoomMonitor 추가 — ZOOM 모니터링을 내장 뷰(iframe)로 열고 과정 전환 시 확인 후 재로딩, 온라인 판별 토글에 더보기 메뉴 항목 포함) (J2: ①ZOOM 모니터링 버튼 표시로직 재적용(온라인 과정 판별) ②강의실 초기화 confirm에 삭제범위 안내 추가 ③QR 요소없음 개발자문구 교체 ④toggleNightMode/addSubject 널가드 — 구버전 잔재 안전화)
    CATC · 강사 플랫폼 로직  (admin.js)
    STATUS    수정완료
    @version  L9
@@ -1429,6 +1429,7 @@ _executeReset: function() {
         [`${rPath}/surveyAnswers`]:       null,   // [리셋] 설문 응답
         [`${rPath}/lastSurveyResult`]:    null,   // [리셋] 직전 설문 결과
         [`${rPath}/scheduleImage`]:       null,   // [리셋] 교육 시간표 사진
+        [`${rPath}/gradPhoto`]:           null,   // [J13 리셋] 수료 기념사진
         [`${rPath}/venuePick`]:           null    // [리셋] (settings 밖 잔여 대비) — 실제 venuePick은 settings 초기화로 함께 정리됨
     };
 
@@ -3001,6 +3002,7 @@ loadAttendanceView: function() {
 
     // [신규] 출결 모드 전환 (공식 QR <-> 자체 출석체크)
     toggleAttendanceMode: function(mode) {
+        try { if (window.gradMgr) gradMgr.decorateBtn(); } catch (e) {}   // [J13] 수료 기념사진 버튼 — 수료일 당일 금색 펄스
         const areaOfficial = document.getElementById('area-official-qr');
         const areaInternal = document.getElementById('area-internal-qr');
         const subTitle = document.getElementById('attendanceSubTitle');
@@ -9629,7 +9631,7 @@ saveAll: function() {
                         }).catch(function(){});
                     }
                     // 데이터 노드 비움 (settings/status 는 새 값으로 이미 updates 에 들어있어 제외)
-                    ['students','internal_attendance','admin_actions','dinner_skips','shuttle','tablet_loans','quizAnswers','questions','activeQuiz','quizFinalResults','attendanceQR','scheduleImage','coordNoticeHistory','connections'].forEach(function(k){ updates[`courses/${_room}/${k}`] = null; });
+                    ['students','internal_attendance','admin_actions','dinner_skips','shuttle','tablet_loans','quizAnswers','questions','activeQuiz','quizFinalResults','attendanceQR','scheduleImage','coordNoticeHistory','connections','gradPhoto'].forEach(function(k){ updates[`courses/${_room}/${k}`] = null; });
                     updates[`courses/${_room}/boardNotice`] = "";
                     updates[`courses/${_room}/coordNotice`] = "";
                     // [명단 보존] 신규 개설 시에도 지원부·운영부 미리 올린 명단은 보존 (삭제는 과정 종료 expire/수동 리셋만)
@@ -12308,6 +12310,286 @@ window.kacClearDefaultPw = async function(){
   }catch(e){ console.warn('[KAC pwclear] 스킵:', e && e.message); }
 };
 
+/* ══ [J13] 수료 기념사진 (gradMgr) ══════════════════════════════════════════
+   흐름: 강사가 수료식 때 폰으로 단체사진 촬영 → QR(grad_photo.html?room=X)로 업로드(긴변 1600·JPEG 0.8 압축)
+        → courses/{room}/gradPhoto = { dataUrl, updatedAt, endDate(과정 종료일) }
+        → 액자(grad_frame.png, 가운데 투명)에 cover-fit 합성 + 하단 4칸(과정명/기간/장소/담임) 텍스트
+        → 강사·교육생 출결 화면에서 다운로드. 유효기간: 수료일(endDate) 자정까지 — 이후 자동 정리(kacExpire)와 리셋에서 삭제.
+   텍스트 좌표: system/sharedGuide/gradPhotoPos/{name|period|venue|prof} = {l,t} (액자 % 기준, 3초 드래그 보정·전 과정 공통) */
+window.gradMgr = {
+    FRAME_URL: 'grad_frame.png',
+    FRAME_FALLBACK: 'https://raw.githubusercontent.com/kac-edu/CATC/main/grad_frame.png',
+    HOLE: { l: 10.01, t: 26.52, r: 89.85, b: 69.80 },              // 액자 투명 구멍(실측 %)
+    DEF_POS: { name: { l: 21.5, t: 76.4 }, period: { l: 64.3, t: 76.4 }, venue: { l: 22.8, t: 85.4 }, prof: { l: 64.0, t: 85.5 } },
+    _pos: null, _frameImg: null, _cur: null, _ref: null, _posRef: null,
+    _room: function () { return state.room; },
+    _todayStr: function () { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); },
+    _endDateOf: function (period) { const p = String(period || ''); const sep = p.indexOf(' ~ ') >= 0 ? ' ~ ' : '~'; const parts = p.split(sep); return (parts[1] || parts[0] || '').trim(); },
+    _loadFrame: function () {
+        if (this._frameImg) return Promise.resolve(this._frameImg);
+        const self = this;
+        return new Promise(function (res, rej) {
+            const im = new Image(); im.crossOrigin = 'anonymous';
+            im.onload = function () { self._frameImg = im; res(im); };
+            im.onerror = function () {
+                const im2 = new Image(); im2.crossOrigin = 'anonymous';
+                im2.onload = function () { self._frameImg = im2; res(im2); };
+                im2.onerror = rej;
+                im2.src = self.FRAME_FALLBACK;
+            };
+            im.src = self.FRAME_URL;
+        });
+    },
+    _loadPos: function () {
+        const self = this;
+        if (this._posRef) return;
+        try {
+            this._posRef = firebase.database().ref('system/sharedGuide/gradPhotoPos');
+            this._posRef.on('value', function (s) { self._pos = s.val() || null; self._applyDragPos(); });
+        } catch (e) {}
+    },
+    _getPos: function (k) { const p = (this._pos || {})[k]; return (p && typeof p.l === 'number') ? p : this.DEF_POS[k]; },
+    // ── 합성: 원본사진 + 액자 + 텍스트 → 캔버스 ──
+    composite: async function (photoUrl, info) {
+        const frame = await this._loadFrame();
+        const W = frame.naturalWidth, H = frame.naturalHeight;
+        const photo = await new Promise(function (res, rej) { const im = new Image(); im.onload = function () { res(im); }; im.onerror = rej; im.src = photoUrl; });
+        const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+        const ctx = cv.getContext('2d');
+        ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, W, H);
+        const h = this.HOLE, hx = h.l / 100 * W, hy = h.t / 100 * H, hw = (h.r - h.l) / 100 * W, hh = (h.b - h.t) / 100 * H;
+        const sc = Math.max(hw / photo.naturalWidth, hh / photo.naturalHeight);
+        const nw = photo.naturalWidth * sc, nh = photo.naturalHeight * sc;
+        ctx.save(); ctx.beginPath(); ctx.rect(hx, hy, hw, hh); ctx.clip();
+        ctx.drawImage(photo, hx - (nw - hw) / 2, hy - (nh - hh) / 2, nw, nh);
+        ctx.restore();
+        ctx.drawImage(frame, 0, 0, W, H);
+        ctx.fillStyle = '#0f2057'; ctx.textBaseline = 'middle'; ctx.textAlign = 'left';
+        const self = this;
+        [['name', info.name], ['period', info.period], ['venue', info.venue], ['prof', info.prof]].forEach(function (pair) {
+            const p = self._getPos(pair[0]);
+            const t = String(pair[1] || '-');
+            ctx.font = '900 ' + Math.round(W * (t.length > 20 ? 0.017 : 0.0205)) + "px 'Pretendard','Malgun Gothic','Apple SD Gothic Neo',sans-serif";
+            ctx.fillText(t, p.l / 100 * W, p.t / 100 * H);
+        });
+        return cv;
+    },
+    _info: null,
+    _loadInfo: async function () {
+        const room = this._room();
+        const s = await firebase.database().ref('courses/' + room).once('value');
+        const v = s.val() || {}, set = v.settings || {}, stt = v.status || {};
+        const fmt = function (p) { try { return guideMgr._fmtPeriod ? (guideMgr._fmtPeriod(p) || p) : p; } catch (e) { return p; } };
+        this._info = {
+            name: set.courseName || '과정명 미설정',
+            period: fmt(set.period || '') || '-',
+            venue: set.roomDetailName || '-',
+            prof: (stt.professorName ? stt.professorName + ' 교수' : '-'),
+            endDate: this._endDateOf(set.period)
+        };
+        return this._info;
+    },
+    // ── 모달 ──
+    _ensureModal: function () {
+        if (document.getElementById('gradPhotoModal')) return;
+        const m = document.createElement('div');
+        m.id = 'gradPhotoModal';
+        m.innerHTML = ''
+            + '<div class="grad-box" onclick="event.stopPropagation()">'
+            + '  <div class="grad-head"><b>📸 수료 기념사진</b><button class="grad-x" onclick="gradMgr.close()"><i class="fa-solid fa-xmark"></i></button></div>'
+            + '  <div class="grad-body">'
+            + '    <div id="gradEmpty" style="display:none;">'
+            + '      <div class="grad-guide">수료식에서 <b>스마트폰으로 단체사진</b>을 찍고 아래 QR로 업로드하세요.<br>업로드되면 액자에 자동 합성되고, 교육생도 <b>수료일 자정까지</b> 출결 화면에서 내려받을 수 있습니다.</div>'
+            + '      <div id="gradQr" class="grad-qr"></div>'
+            + '      <div class="grad-or">— 또는 —</div>'
+            + '      <button class="grad-btn grad-btn-blue" onclick="document.getElementById(\'gradFile\').click()"><i class="fa-solid fa-file-arrow-up"></i> 이 기기에서 사진 선택</button>'
+            + '      <input type="file" id="gradFile" accept="image/*" style="display:none;" onchange="gradMgr._onFile(this)">'
+            + '    </div>'
+            + '    <div id="gradPrev" style="display:none;">'
+            + '      <div id="gradCanvasWrap" class="grad-canvas-wrap"><canvas id="gradCanvas"></canvas><div id="gradDragLayer"></div></div>'
+            + '      <div class="grad-hint"><i class="fa-solid fa-hand-pointer"></i> 하단 글자를 <b>3초</b> 꾹 누르면 위치를 옮길 수 있습니다 (모든 과정 공통 저장)</div>'
+            + '      <div class="grad-actions">'
+            + '        <button class="grad-btn grad-btn-green" onclick="gradMgr.download()"><i class="fa-solid fa-download"></i> PNG 다운로드</button>'
+            + '        <button class="grad-btn grad-btn-gray" onclick="document.getElementById(\'gradFile2\').click()"><i class="fa-solid fa-rotate"></i> 사진 교체</button>'
+            + '        <input type="file" id="gradFile2" accept="image/*" style="display:none;" onchange="gradMgr._onFile(this)">'
+            + '        <button class="grad-btn grad-btn-red" onclick="gradMgr.remove()"><i class="fa-solid fa-trash"></i> 삭제</button>'
+            + '      </div>'
+            + '    </div>'
+            + '  </div>'
+            + '</div>';
+        m.addEventListener('click', function () { gradMgr.close(); });
+        document.body.appendChild(m);
+    },
+    open: function () {
+        if (!this._room()) { ui.showAlert('강의실을 먼저 선택하세요.'); return; }
+        this._ensureModal();
+        this._loadPos();
+        const m = document.getElementById('gradPhotoModal');
+        try {
+            const fsEl = document.fullscreenElement || document.webkitFullscreenElement;
+            if (fsEl && fsEl.contains && !fsEl.contains(m)) fsEl.appendChild(m);
+        } catch (e) {}
+        m.style.display = 'flex';
+        // QR
+        try {
+            const qr = document.getElementById('gradQr'); qr.innerHTML = '';
+            const url = new URL('grad_photo.html', location.href).href + '?room=' + encodeURIComponent(this._room());
+            new QRCode(qr, { text: url, width: 190, height: 190, correctLevel: QRCode.CorrectLevel.M });
+        } catch (e) {}
+        // 사진 구독
+        const room = this._room(), self = this;
+        if (this._ref) { try { this._ref.off(); } catch (e) {} }
+        this._ref = firebase.database().ref('courses/' + room + '/gradPhoto/updatedAt');
+        this._ref.on('value', async function (s) {
+            if (self._room() !== room) return;
+            const ts = s.val();
+            if (!ts) { self._cur = null; self._showState(false); return; }
+            try {
+                const ds = await firebase.database().ref('courses/' + room + '/gradPhoto/dataUrl').once('value');
+                self._cur = ds.val() || null;
+                self._showState(!!self._cur);
+                if (self._cur) self._renderPreview();
+            } catch (e) {}
+        });
+    },
+    close: function () {
+        const m = document.getElementById('gradPhotoModal');
+        if (m) m.style.display = 'none';
+        if (this._ref) { try { this._ref.off(); } catch (e) {} this._ref = null; }
+    },
+    _showState: function (has) {
+        const e1 = document.getElementById('gradEmpty'), e2 = document.getElementById('gradPrev');
+        if (e1) e1.style.display = has ? 'none' : 'block';
+        if (e2) e2.style.display = has ? 'block' : 'none';
+    },
+    _onFile: function (input) {
+        const f = input.files && input.files[0];
+        input.value = '';
+        if (!f) return;
+        const self = this;
+        const rd = new FileReader();
+        rd.onload = function () {
+            const im = new Image();
+            im.onload = async function () {
+                const MAX = 1600;
+                const sc = Math.min(1, MAX / Math.max(im.width, im.height));
+                const cv = document.createElement('canvas');
+                cv.width = Math.round(im.width * sc); cv.height = Math.round(im.height * sc);
+                cv.getContext('2d').drawImage(im, 0, 0, cv.width, cv.height);
+                const dataUrl = cv.toDataURL('image/jpeg', 0.8);
+                try {
+                    const info = await self._loadInfo();
+                    await firebase.database().ref('courses/' + self._room() + '/gradPhoto').set({ dataUrl: dataUrl, updatedAt: Date.now(), endDate: info.endDate || '' });
+                    ui.showAlert('✅ 기념사진이 업로드되었습니다.\n교육생은 출결 화면에서 수료일 자정까지 내려받을 수 있습니다.');
+                } catch (err) { ui.showAlert('❌ 업로드 실패: ' + (err && err.message || err)); }
+            };
+            im.src = rd.result;
+        };
+        rd.readAsDataURL(f);
+    },
+    _renderPreview: async function () {
+        if (!this._cur) return;
+        try {
+            const info = await this._loadInfo();
+            const cv = await this.composite(this._cur, info);
+            const el = document.getElementById('gradCanvas');
+            if (!el) return;
+            el.width = cv.width; el.height = cv.height;
+            el.getContext('2d').drawImage(cv, 0, 0);
+            this._buildDragLayer(info);
+        } catch (e) { console.warn('[기념사진]', e); }
+    },
+    // 텍스트 4칸 드래그 보정 (미리보기 위 오버레이, 액자 % 좌표로 저장)
+    _buildDragLayer: function (info) {
+        const layer = document.getElementById('gradDragLayer');
+        if (!layer) return;
+        layer.innerHTML = '';
+        const self = this;
+        [['name', info.name], ['period', info.period], ['venue', info.venue], ['prof', info.prof]].forEach(function (pair) {
+            const el = document.createElement('div');
+            el.className = 'grad-drag-item';
+            el.dataset.key = pair[0];
+            el.textContent = pair[1] || '-';
+            el.title = '3초간 꾹 누르면 위치를 옮길 수 있습니다';
+            layer.appendChild(el);
+            self._bindDrag(el);
+        });
+        this._applyDragPos();
+    },
+    _applyDragPos: function () {
+        const layer = document.getElementById('gradDragLayer');
+        if (!layer) return;
+        const self = this;
+        Array.prototype.forEach.call(layer.children, function (el) {
+            const p = self._getPos(el.dataset.key);
+            el.style.left = p.l + '%'; el.style.top = p.t + '%';
+        });
+    },
+    _bindDrag: function (el) {
+        const self = this;
+        el.style.touchAction = 'none';
+        let hold = null, dragging = false;
+        el.addEventListener('pointerdown', function (e) {
+            e.stopPropagation();
+            try { el.setPointerCapture(e.pointerId); } catch (_) {}
+            dragging = false;
+            el.classList.add('grad-pressing');
+            clearTimeout(hold);
+            hold = setTimeout(function () { dragging = true; el.classList.remove('grad-pressing'); el.classList.add('grad-dragging'); if (navigator.vibrate) navigator.vibrate(40); }, 3000);
+        });
+        el.addEventListener('pointermove', function (e) {
+            if (!dragging) return;
+            e.preventDefault(); e.stopPropagation();
+            const r = document.getElementById('gradCanvasWrap').getBoundingClientRect();
+            const l = Math.max(0, Math.min(97, (e.clientX - r.left) / r.width * 100));
+            const t = Math.max(0, Math.min(97, (e.clientY - r.top) / r.height * 100));
+            el.style.left = l + '%'; el.style.top = t + '%';
+            el._cur = { l: Math.round(l * 10) / 10, t: Math.round(t * 10) / 10 };
+        });
+        function fin(e) {
+            clearTimeout(hold);
+            el.classList.remove('grad-pressing');
+            if (!dragging) return;
+            dragging = false;
+            el.classList.remove('grad-dragging');
+            e.stopPropagation();
+            if (!el._cur) return;
+            try { firebase.database().ref('system/sharedGuide/gradPhotoPos/' + el.dataset.key).set(el._cur); } catch (err) {}
+            self._renderPreview();   // 캔버스에 즉시 반영
+        }
+        el.addEventListener('pointerup', fin);
+        el.addEventListener('pointercancel', function () { clearTimeout(hold); el.classList.remove('grad-pressing'); el.classList.remove('grad-dragging'); dragging = false; });
+    },
+    download: async function () {
+        if (!this._cur) return;
+        try {
+            const info = await this._loadInfo();
+            const cv = await this.composite(this._cur, info);
+            const a = document.createElement('a');
+            a.download = '수료기념사진_' + String(info.name || '').replace(/[\\/:*?"<>|]/g, '') + '_' + this._todayStr() + '.png';
+            a.href = cv.toDataURL('image/png');
+            a.click();
+        } catch (e) { ui.showAlert('❌ 다운로드 실패: ' + (e && e.message || e)); }
+    },
+    remove: function () {
+        const self = this;
+        if (!confirm('기념사진을 삭제할까요?\n교육생 다운로드 버튼도 함께 사라집니다.')) return;
+        firebase.database().ref('courses/' + this._room() + '/gradPhoto').remove()
+            .then(function () { ui.showAlert('삭제되었습니다.'); })
+            .catch(function (e) { ui.showAlert('❌ 삭제 실패: ' + (e && e.message || e)); });
+    },
+    // 출결 화면 버튼 장식 — 수료일 당일이면 금색 펄스
+    decorateBtn: async function () {
+        const btn = document.getElementById('gradPhotoBtn');
+        if (!btn || !this._room()) return;
+        try {
+            const s = await firebase.database().ref('courses/' + this._room() + '/settings/period').once('value');
+            const end = this._endDateOf(s.val());
+            btn.classList.toggle('grad-today', !!end && end === this._todayStr());
+        } catch (e) {}
+    }
+};
+
 /* ══ [J12] 비대면 입교안내 교육개요(4p) 오버레이 — 항목별 값 표기 + 3초 롱프레스 이동
    좌표: system/sharedGuide/overviewPos/{항목}/{window|fullscreen} = {l,t} (%), 전 과정 공통·화면모드별 개별 저장 ══ */
 ui._ovwFB = 'system/sharedGuide/overviewPos';
@@ -12548,7 +12830,7 @@ window.kacExpireEndedCourses = async function(){
           archives.push(firebase.database().ref('system/course_archive/'+room+'_'+Date.now()).set({room:room,courseName:nm,period:pd,prof:stt.professorName||'',coord:st.coordinatorName||'',admin_actions:aa,internal_attendance:ia,students:stu,expectedStudents:(rd.expectedStudents||null),archivedAt:firebase.database.ServerValue.TIMESTAMP}).catch(function(){}));
         }
         var b='courses/'+room+'/';
-        ['students','internal_attendance','questions','admin_actions','shuttle','dinner_skips','tablet_loans','connections','quizAnswers','expectedStudents','coordRoster','activeQuiz','quizFinalResults','attendanceQR','scheduleImage','coordNoticeHistory'].forEach(function(k){ updates[b+k]=null; });
+        ['students','internal_attendance','questions','admin_actions','shuttle','dinner_skips','tablet_loans','connections','quizAnswers','expectedStudents','coordRoster','activeQuiz','quizFinalResults','attendanceQR','scheduleImage','coordNoticeHistory','gradPhoto'].forEach(function(k){ updates[b+k]=null; });
         updates[b+'boardNotice']=''; updates[b+'notice']=''; updates[b+'coordNotice']='';
         updates[b+'settings/courseName']=''; updates[b+'settings/period']=null; updates[b+'settings/coordinatorName']=null; updates[b+'settings/password']=null;
         updates[b+'status/professorName']=''; updates[b+'status/roomStatus']='idle'; updates[b+'status/ownerSessionId']=null; updates[b+'status/resetKey']='rk_'+Date.now()+'_'+Math.random().toString(36).slice(2,7);
