@@ -5047,7 +5047,7 @@ body.in-course #courseSmartRemote.hex-remote-v2{display:block;}
   pointer-events:none !important;
 }
 /* 홈 도움말은 카드 아래 중앙 정렬 */
-#view-home .home-help-note{ align-self:center; margin-top:-20px; margin-bottom:30px; }
+#view-home .home-help-note{ align-self:center; margin-top:0; margin-bottom:16px; padding:12px 18px; }
 #view-home.home-search-active::before{
   content:'';
   position:fixed;
