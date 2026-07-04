@@ -8194,7 +8194,9 @@ init: function() {
                 ? '📢 입교안내 공지가 업데이트되었습니다'
                 : '📋 운영부 과정 공지가 업데이트되었습니다';
         }
-        content.innerText = msg;
+        // <br>(리터럴)·줄바꿈을 실제 줄바꿈으로 렌더
+        if (ui._noticeToHtml) content.innerHTML = ui._noticeToHtml(msg);
+        else content.innerText = msg;
         modal.style.display = 'flex';
     },
 
