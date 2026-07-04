@@ -385,6 +385,9 @@ body.night-mode .q-card.status-pin {
     backdrop-filter: blur(10px) !important; 
 }
 .modal-box { background: var(--card-bg); width: 600px; padding: 30px; border-radius: 20px; box-shadow: 0 25px 50px rgba(0,0,0,0.2); animation: popIn 0.3s; }
+/* [공지/자동 팝업] 비활성(백그라운드) 탭에서는 애니메이션 시계가 멈춰 popIn이 opacity:0에 갇혀 팝업이 안 보이는 문제 방지.
+   사용자가 안 눌러도 자동으로 뜨는 공지 팝업은 애니메이션에 의존하지 않고 항상 보이게 한다. */
+#coordNoticeAlertModal .modal-box { animation: none !important; opacity: 1 !important; transform: none !important; }
 .student-manual-overlay { z-index: 18000 !important; background: rgba(15, 23, 42, 0.88) !important; padding: 28px; }
 .student-manual-panel {
     width: min(1180px, 96vw);

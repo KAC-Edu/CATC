@@ -2,7 +2,7 @@
 <!-- 이 플랫폼(admin_coord.html / 교육운영부) 수정상태 플래그. 값은 [수정중] 또는 [수정안하는중] 두 가지. -->
 <!-- 작업 시작 시 → 수정중 / 작업 완료 시 → 수정안하는중. 다른 플랫폼은 이 말머리를 보고 연동·수정 가능 여부 판단. -->
 <!-- [외부변경 · 카카오채널연동 2026-06-25] 포털(portal.html/7777) 경유 폐지 → 페이지 직접진입 시 접속코드(catc1234) 게이트 추가, 포털 리다이렉트/종료이동 제거. version C13→D13. 기능 로직은 미변경. -->
-<!-- last-updated: 2026-07-04 / version: D52 (헤더 뒤로가기 삭제·타이틀 '교육운영플랫폼' · 입교안내 공지 모달 미리보기형 개편: 슬라이드 미리보기+글머리표+영구/이번주 체크박스, weeklyNotice 경로 신설 · index.html 소비부 이번주→영구 해석 연동) [D51: 상단바 시계 1줄] -->
+<!-- last-updated: 2026-07-04 / version: D53 (입교율 정정: 예정 분모=계획 명단만, QR walk-in으로 채우던 100% 버그 수정. 라벨 '예정 N명·입교 M명(%)') [D52: 헤더·입교안내 공지 모달 개편·weeklyNotice] -->
 <!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -9123,7 +9123,7 @@ window.addEventListener('load', function(){
 });
 </script>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:6px;bottom:5px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;font-weight:800;line-height:1;letter-spacing:.6px;color:#fff;background:rgba(15,23,42,.85);padding:4px 8px;border-radius:6px;pointer-events:none;user-select:none;box-shadow:0 2px 6px rgba(0,0,0,.3);">D52</div>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:6px;bottom:5px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;font-weight:800;line-height:1;letter-spacing:.6px;color:#fff;background:rgba(15,23,42,.85);padding:4px 8px;border-radius:6px;pointer-events:none;user-select:none;box-shadow:0 2px 6px rgba(0,0,0,.3);">D53</div>
 <script>
 /* ===== [공용] 종료된 과정 자동 정리 (모든 플랫폼 공통) — 종료일 지난 방을 다음날 미개설로 비움. 브라우저별 하루 1회 ===== */
 window.kacExpireEndedCourses = async function(){
@@ -9634,16 +9634,18 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
         var cr=r.room.coordRoster;
         if(cr && Array.isArray(cr.list) && cr.list.length){ var crP=(''+(cr.period||'')).trim(); if(!crP||!curPeriod||crP===curPeriod) roster=cr.list; }
         if(!roster.length){ var k=norm(r.s.courseName); var cands=(ext[k]||[]); var pick=cands.find(function(c){return curPeriod&&(''+(c.period||'')).trim()===curPeriod;})||cands.find(function(c){return (''+(c.room||''))===(''+r.rid);})||cands.slice().sort(function(a,b){return (b.list?b.list.length:0)-(a.list?a.list.length:0);})[0]; if(pick&&Array.isArray(pick.list)&&pick.list.length) roster=pick.list; }
-        if(!roster.length) roster=students;
+        // [입교율 정정] 예정(분모)=계획 명단만. QR 입교자(walk-in)로 채우지 않음 → 계획명단 없이 자체입교 1명이 100% 되는 버그 방지
         roster=roster.slice().filter(function(s){ return s && (''+(s.name||'')).trim() && s.name!=='undefined'; });
-        var total=roster.length;
-        var arrived=roster.filter(function(s){ return arrivedSet[norm(s.name)]; }).length;
-        var rate=total?Math.round(arrived/total*100):0;
-        var dormHtml=_dormDistHtml(roster);
+        var total=roster.length;                                   // 예정 인원 = 계획 명단 수(업로드/공유 명단)
+        var arrived=roster.filter(function(s){ return arrivedSet[norm(s.name)]; }).length;   // 예정자 중 입교완료(QR)
+        var rate=total?Math.round(arrived/total*100):0;            // 입교율 = 입교완료/예정
+        // 표시용 명단: 계획 명단이 없으면 실제 입교자라도 목록엔 노출(단, 입교율 분모에는 미포함)
+        var displayRoster = total ? roster : students.slice().filter(function(s){ return s && (''+(s.name||'')).trim() && s.name!=='undefined'; });
+        var dormHtml=_dormDistHtml(displayRoster);
         var _today=(typeof _coordToday==='function'?_coordToday():new Date().toISOString().slice(0,10));
         var _startDate=(curPeriod.indexOf(' ~ ')>=0?(curPeriod.split(' ~ ')[0]||'').trim():'');
         var _started=_startDate?(_today>=_startDate):true;   // 교육시작일부터 true
-        var body = total ? roster.map(function(s,i){
+        var body = displayRoster.length ? displayRoster.map(function(s,i){
           var ar=arrivedSet[norm(s.name)];
           return '<tr><td style="text-align:center;color:#94a3b8;">'+(i+1)+'</td><td style="color:#475569;">'+esc(s.dept||s.affil||s.org||'-')+'</td><td style="color:#64748b;white-space:nowrap;">'+esc(s.empNo||s.sabun||s.id||'-')+'</td><td style="font-weight:800;">'+esc(s.name||'-')+'</td><td style="text-align:center;">'+(_enrRoom(s)?('<span style="background:#eef2ff;color:#1e40af;padding:2px 8px;border-radius:7px;font-size:12px;font-weight:800;white-space:nowrap;">'+esc(_enrRoom(s))+'</span>'):'<span style="color:#cbd5e1;">미배정</span>')+'</td><td style="text-align:center;">'+(!_started?'<span style="color:#2563eb;font-weight:700;">예정</span>':(ar?'<span style="color:#16a34a;font-weight:800;">입교완료</span>':'<span style="color:#dc2626;font-weight:800;">미입교</span>'))+'</td></tr>';
         }).join('') : '<tr><td colspan="6" style="text-align:center;color:#94a3b8;padding:18px;">등록된 명단이 없습니다.</td></tr>';
@@ -9651,7 +9653,7 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
           +'<div class="csec-card-head" onclick="coordToggleEnroll('+ei+')" style="cursor:pointer;display:flex;align-items:center;gap:14px;padding:14px 16px;">'
             +'<span class="crow-room">ROOM <span class="rid-big">#'+esc(r.rid)+'</span></span>'
             +'<div style="flex:1;min-width:0;display:flex;align-items:center;gap:9px;overflow:hidden;"><div class="crow-name" style="flex:0 1 auto;min-width:120px;max-width:46%;display:block;">'+esc(r.s.courseName||'-')+'</div><div style="display:flex;gap:5px;flex-wrap:nowrap;align-items:center;overflow:hidden;min-width:0;">'+dormHtml+'</div></div>'
-            +'<span class="cstat-pill" onclick="event.stopPropagation(); coordShowEnrollInfo('+arrived+','+total+')" title="예정/입교율 보기" style="cursor:pointer;'+((total>0&&rate>0)?'background:#dcfce7;color:#16a34a;':'background:#f1f5f9;color:#94a3b8;border:1px solid #e2e8f0;')+'">예정 : '+total+'명 · 입교율('+rate+'%)</span>'
+            +'<span class="cstat-pill" onclick="event.stopPropagation(); coordShowEnrollInfo('+arrived+','+total+')" title="예정/입교율 보기" style="cursor:pointer;'+((total>0&&rate>0)?'background:#dcfce7;color:#16a34a;':'background:#f1f5f9;color:#94a3b8;border:1px solid #e2e8f0;')+'">예정 '+total+'명 · 입교 '+arrived+'명 ('+rate+'%)</span>'
             +'<i class="fa-solid fa-chevron-down crow-chev" id="coordEnrChev'+ei+'"></i>'
           +'</div>'
           +'<div id="coordEnrollBody'+ei+'" style="display:none;border-top:1px solid #eef2f7;overflow-x:auto;"><table class="cpop-table" style="width:100%;table-layout:fixed;"><colgroup><col style="width:9%"><col style="width:29%"><col style="width:15%"><col style="width:15%"><col style="width:18%"><col style="width:14%"></colgroup><thead><tr><th>연번</th><th style="text-align:left;">소속</th><th>사번</th><th>성명</th><th>생활관</th><th>상태</th></tr></thead><tbody>'+body+'</tbody></table></div>'
