@@ -1888,7 +1888,22 @@
         //  배치 실행 이후 rosters 데이터가 지워진 경우 STEP4 데이터로 복원
         // [현재 주차 표시 과정만] 배정 현황 → STEP2 명단 복구. 과정명으로 매칭(주차/방 오프셋 무관).
         async function recoverRostersFromAssignment() {
-            const items = (lastRenderedItems || []).filter(it => it && it.courseName);
+            let items = (lastRenderedItems || []).filter(it => it && it.courseName);
+            // [JDS260705-V4] 같은 canonical 주 + 같은 과정명은 1개 항목만 복구 (실방 A~Z 우선 → 최신)
+            //  — 실방과 예정(AP) 항목이 함께 있을 때 두 키 모두 명단이 생성되어 자동배정에 중복으로 뜨던 원인 차단
+            try {
+                const _norm = s => String(s || '').replace(/\s+/g, '').trim();
+                const _isRealRoom = r => /^[A-Z]$/.test(String(r || ''));
+                const bySig = {};
+                items.forEach(it => {
+                    const sig = canonicalWeekKey(it.weekKey || '') + '|' + _norm(it.courseName);
+                    const prev = bySig[sig];
+                    const score = (_isRealRoom(it.room) ? 1e15 : 0) + Number(it.updatedAt || 0);
+                    const prevScore = prev ? ((_isRealRoom(prev.room) ? 1e15 : 0) + Number(prev.updatedAt || 0)) : -1;
+                    if (score > prevScore) bySig[sig] = it;
+                });
+                items = Object.values(bySig);
+            } catch (e) {}
             if (!items.length) { showToast('⚠️ 이 주차에 표시된 과정이 없습니다'); return; }
             if (!confirm('현재 주차에 표시된 ' + items.length + '개 과정의 명단을 배정 현황(STEP 4)에서 복구합니다.\n\n계속할까요?')) return;
             try {
@@ -3223,6 +3238,44 @@
             });
             weekRosters = {};
             Object.values(picked).forEach(({ key, v }) => { weekRosters[key] = v; });
+            // ══ [JDS260705-V4] 동일 과정 중복 제거 ══
+            //  같은 canonical 주에 같은 과정이 '실방 키(주차__A~Z)'와 '예정 키(주차__AP_…)' 등 두 개 이상으로
+            //  존재하면 자동배정 목록에 두 줄로 뜨고, 명단 복구가 두 키 모두 재생성해 중복이 되살아나던 버그.
+            //  규칙: ①실방(A~Z 한 글자) 항목 우선 ②둘 다 비실방이면 updatedAt 최신 우선
+            //        ③실방↔실방(분반 가능성)은 병합하지 않고 모두 유지
+            //  밀려난 비실방(AP 등) 명단은 DB에서도 정리(단, 잠긴 주차는 데이터 보존·표시만 병합).
+            try {
+                const _norm = s => String(s || '').replace(/\s+/g, '').trim();
+                const _isRealRoom = r => /^[A-Z]$/.test(String(r || ''));
+                const byCourse = {};
+                Object.entries(weekRosters).forEach(([k, v]) => {
+                    const nm = _norm(v && v.courseName);
+                    if (!nm) return;
+                    (byCourse[nm] = byCourse[nm] || []).push([k, v]);
+                });
+                const dropKeys = [];
+                Object.values(byCourse).forEach(group => {
+                    if (group.length < 2) return;
+                    const real = group.filter(([k, v]) => _isRealRoom((v.room != null && v.room !== '') ? v.room : (k.split('__')[1] || '')));
+                    const fake = group.filter(g => !real.includes(g));
+                    if (real.length) {
+                        fake.forEach(([k]) => dropKeys.push(k));                 // 실방 있으면 예정(AP)본 전부 제거
+                    } else if (fake.length > 1) {
+                        fake.sort((a, b) => Number(b[1].updatedAt || 0) - Number(a[1].updatedAt || 0));
+                        fake.slice(1).forEach(([k]) => dropKeys.push(k));        // 예정본끼리 중복이면 최신 하나만
+                    }
+                });
+                if (dropKeys.length) {
+                    const locked = (typeof isWeekLocked === 'function') && isWeekLocked(wk);
+                    const del = {};
+                    dropKeys.forEach(k => {
+                        delete weekRosters[k];
+                        if (!locked) del['system/dorm/rosters/' + k] = null;      // 잉여 사본 정리(원본은 coordRoster에 보존)
+                        console.warn('[중복 명단 병합/V4] 제외:', k);
+                    });
+                    if (!locked && Object.keys(del).length) db.ref().update(del).catch(() => {});
+                }
+            } catch (dupErr) { console.warn('[중복 명단 병합/V4]', dupErr); }
             return weekRosters;
         }
 
@@ -3461,12 +3514,20 @@
                     // [JDS260613] 정확히 이 주 OR 다주차 과정 기간이 이 주에 겹치면 대상
                     const overlaps = _rosterOverlapsWeek({ period: cr.period }, room, courses, wk);
                     if (crWk !== wk && !overlaps) return;
-                    // 이 주 weekRosters에 같은 방 명단이 이미 있는지(겹침 포함) — 있으면 더 최신일 때만 반영(중복 방지)
-                    const existing = Object.values(weekRosters).find(rv => String((rv && rv.room != null ? rv.room : '')) === String(room));
-                    const existingCoordVer = existing ? Number(existing.coordUpdatedAt || 0) : 0;
+                    // 이 주 weekRosters에 같은 방 '또는 같은 과정명' 명단이 이미 있는지 — 있으면 그 키를 더 최신일 때만 갱신(중복 키 생성 방지)
+                    const _normNm = s => String(s || '').replace(/\s+/g, '').trim();
+                    let existingKey = null;
+                    const existing = Object.entries(weekRosters).find(([rk0, rv]) => {
+                        if (!rv) return false;
+                        if (String(rv.room != null ? rv.room : '') === String(room)) return true;
+                        return _normNm(rv.courseName) && _normNm(rv.courseName) === _normNm(cr.courseName);   // [JDS260705-V4]
+                    });
+                    const existingV = existing ? existing[1] : null;
+                    if (existing) existingKey = existing[0];
+                    const existingCoordVer = existingV ? Number(existingV.coordUpdatedAt || 0) : 0;
                     const useWk = (crWk === wk) ? crWk : canonicalWeekKey(wk);
-                    const rk = `${useWk}__${room}`;
-                    if (!existing || Number(cr.updatedAt || 0) > existingCoordVer) {
+                    const rk = existingKey || `${useWk}__${room}`;
+                    if (!existingV || Number(cr.updatedAt || 0) > existingCoordVer) {
                         pending.push({ rk, room, coord: cr });
                     }
                 });
