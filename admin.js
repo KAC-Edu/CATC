@@ -1054,36 +1054,64 @@ forceEnterRoom: async function(room) {
         });
     });
 
-    firebase.database().ref('system/globalNotice').off();
-    firebase.database().ref('system/globalNotice').on('value', snap => {
+    // [입교안내 공지] 영구(system/globalNotice) + 이번주(system/weeklyNotice{html,weekKey}) 통합 처리.
+    //  기존엔 globalNotice만 들어서, 운영부가 '이번 주 과정만'으로 올린 공지가 강사에게 안 뜨던 문제 수정.
+    const _noticeMondayStr = function(){ var x=new Date(); var dow=(x.getDay()+6)%7; x.setDate(x.getDate()-dow); var z=function(n){return String(n).padStart(2,'0');}; return x.getFullYear()+'-'+z(x.getMonth()+1)+'-'+z(x.getDate()); };
+    const _weeklyMsgOf = function(v){
+        if (v && typeof v === 'object') { return (!v.weekKey || v.weekKey === _noticeMondayStr()) ? String(v.html || '') : ''; }   // 이번 주 유효분만
+        return (typeof v === 'string') ? v : '';
+    };
+    const _renderEffGlobal = function(){
         if (state.room !== cleanRoom) return;
-        const newMsg = snap.val() || '';
-        // 대시보드 피드 즉시 업데이트 (항상) — <br>/줄바꿈을 실제 줄바꿈으로 렌더(리터럴 <br> 방지)
+        // 이번주 공지가 있으면 우선, 없으면 영구 공지
+        const eff = (state._noticeWeeklyVal && String(state._noticeWeeklyVal).trim()) ? state._noticeWeeklyVal : (state._noticeGlobalVal || '');
         const el = document.getElementById('dashNoticeGlobal');
         if (el) {
-            if (newMsg) { el.innerHTML = ui._noticeToHtml ? ui._noticeToHtml(newMsg) : String(newMsg); }
+            if (eff) { el.innerHTML = ui._noticeToHtml ? ui._noticeToHtml(eff) : String(eff); }
             else { el.innerText = '현재 게시된 센터 전체 공지가 없습니다.'; }
         }
-        // [입교안내 센터공지 페이지] 실시간 반영 — 슬롯 갱신 + 지금 그 페이지를 보고 있으면 즉시 재렌더(내용/노출 갱신)
+        // [입교안내 센터공지 페이지] 슬롯 갱신(+ 그 페이지 보고 있으면 재렌더)
         try {
             var _gslot = (typeof guideMgr !== 'undefined' && guideMgr._slot) ? guideMgr._slot() : null;
             if (_gslot) {
-                var _wasCN = (state.currentMode === 'guide' && _gslot.pdfDoc && guideMgr._isCenterNoticePage && guideMgr._isCenterNoticePage(_gslot.pageNum));
-                _gslot.centerNotice = String(newMsg || '').trim();
-                if (state.currentMode === 'guide' && _gslot.pdfDoc && (_wasCN || (guideMgr._isCenterNoticePage && guideMgr._isCenterNoticePage(_gslot.pageNum)))) {
+                _gslot.centerNotice = String(eff || '').trim();
+                if (state.currentMode === 'guide' && _gslot.pdfDoc && guideMgr._isCenterNoticePage && guideMgr._isCenterNoticePage(_gslot.pageNum)) {
                     guideMgr.renderPage(_gslot.pageNum);
                 }
             }
         } catch (e) {}
-        // 팝업 처리
-        if (!newMsg) return;
-        const prev = state.noticeSeen['global'];
-        state.noticeSeen['global'] = newMsg;
+        // 팝업 (변경분만)
+        const prev = state.noticeSeen['effglobal'];
+        state.noticeSeen['effglobal'] = eff;
         if (prev === undefined) return;
-        if (newMsg !== prev && state.currentMode !== 'notice') {
-            guideMgr.showCoordNoticeAlert(newMsg, '📢 입교안내 공지');
+        if (eff && eff !== prev && state.currentMode !== 'notice') {
+            guideMgr.showCoordNoticeAlert(eff, '📢 입교안내 공지');
         }
-    });
+    };
+    // 진입 시 현재값 먼저 로드해 기준값 저장(이후 변경분만 팝업) → 실시간 리스너 등록
+    Promise.all([
+        firebase.database().ref('system/globalNotice').once('value'),
+        firebase.database().ref('system/weeklyNotice').once('value')
+    ]).then(function(res){
+        if (state.room !== cleanRoom) return;
+        state._noticeGlobalVal = res[0].val() || '';
+        state._noticeWeeklyVal = _weeklyMsgOf(res[1].val());
+        const eff0 = (state._noticeWeeklyVal && String(state._noticeWeeklyVal).trim()) ? state._noticeWeeklyVal : (state._noticeGlobalVal || '');
+        if (!('effglobal' in state.noticeSeen)) state.noticeSeen['effglobal'] = eff0;   // 진입 기준값(팝업 억제)
+        _renderEffGlobal();
+        firebase.database().ref('system/globalNotice').off();
+        firebase.database().ref('system/globalNotice').on('value', function(snap){
+            if (state.room !== cleanRoom) return;
+            state._noticeGlobalVal = snap.val() || '';
+            _renderEffGlobal();
+        });
+        firebase.database().ref('system/weeklyNotice').off();
+        firebase.database().ref('system/weeklyNotice').on('value', function(snap){
+            if (state.room !== cleanRoom) return;
+            state._noticeWeeklyVal = _weeklyMsgOf(snap.val());
+            _renderEffGlobal();
+        });
+    }).catch(function(){});
 
     // [연동] 교육운영부(admin_coord)가 설정한 청렴교육/노조교육 강의장 → 대시보드 피드에 한 줄로 표시
     firebase.database().ref('system/eduLocations').off();
