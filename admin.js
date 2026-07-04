@@ -12783,8 +12783,8 @@ ui.renderOverviewOverlay = async function () {
     // [J12.1] 글자 크기: PDF(래퍼) 폭에 비례 — PDF 라벨과 같은 비율로 커지고 작아짐
     var wrap = document.getElementById('pdfWrapper');
     var w = wrap ? wrap.getBoundingClientRect().width : 1050;
-    var fsMain = Math.round(w * 0.026);             // [J12.2] PDF 라벨과 같은 크기감
-    var fsSub = Math.round(w * 0.0225);             // 평가·회의 ID/PW (문장이 길어 반 단계만 작게)
+    var fsMain = Math.round(w * 0.030);             // [J12.2] PDF 라벨과 같은 크기감 (더 크게)
+    var fsSub = Math.round(w * 0.026);              // 평가·회의 ID/PW (문장이 길어 반 단계만 작게)
     host.innerHTML = '';
     items.forEach(function (it) {
         var el = document.createElement('div');
