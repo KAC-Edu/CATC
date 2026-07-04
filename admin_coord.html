@@ -2,7 +2,7 @@
 <!-- 이 플랫폼(admin_coord.html / 교육운영부) 수정상태 플래그. 값은 [수정중] 또는 [수정안하는중] 두 가지. -->
 <!-- 작업 시작 시 → 수정중 / 작업 완료 시 → 수정안하는중. 다른 플랫폼은 이 말머리를 보고 연동·수정 가능 여부 판단. -->
 <!-- [외부변경 · 카카오채널연동 2026-06-25] 포털(portal.html/7777) 경유 폐지 → 페이지 직접진입 시 접속코드(catc1234) 게이트 추가, 포털 리다이렉트/종료이동 제거. version C13→D13. 기능 로직은 미변경. -->
-<!-- last-updated: 2026-07-04 / version: D65 (장소선택 팝업 방버튼 층별 2열 그리드+컴팩트화 → 하늘관 등 긴 열이 한 화면에 다 보이게) [D64: 팝업 폭확대·표기안내] -->
+<!-- last-updated: 2026-07-05 / version: D66 (배치도 과정 블록 위 5초 롱프레스 위치 편집 진입 수정) [D65: 장소선택 팝업 방버튼 층별 2열 그리드+컴팩트화] -->
 <!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -9950,7 +9950,6 @@ document.addEventListener("click",function(e){ var b=e.target&&e.target.closest&
   }
   // 배치도 배경 5초 롱프레스 → 편집 토글 / 저장
   function lpBegin(e){
-    if(e.target.closest && e.target.closest('.cfp-slot')) return;      // 카드 위는 드래그용
     if(!(e.target.closest && e.target.closest('.cfp-imgbox'))) return; // 도면 영역만
     clearTimeout(lpT); clearInterval(lpIv); lpStart=Date.now();
     lpT=setTimeout(function(){ clearInterval(lpIv); lpBar(0); if(!EDIT){ setEdit(true); } else { savePositions(); setEdit(false); } }, 5000);
