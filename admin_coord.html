@@ -2627,9 +2627,10 @@ body.pc-mode .hdr-stat .hb-value small{ font-size:clamp(9px,.62vw,11px) !importa
                           <option value="국제동 1층 세미나홀">국제동 1층 세미나홀</option>
                           <option value="국제동 1층 A강의실">국제동 1층 A강의실</option>
                           <option value="국제동 1층 B강의실">국제동 1층 B강의실</option>
-                          <option value="국제동 2층 실습실">국제동 2층 ILS 실습실</option>
-                          <option value="국제동 2층 실습실">국제동 2층 VCCS/RADIO/ATIS 실습실</option>
-                          <option value="국제동 2층 VOR/DME/TACAN">국제동 2층 VOR/DME/TACAN 실습실</option>
+                          <option value="국제동 2층 ILS 실습실">국제동 2층 ILS 실습실</option>
+                          <option value="국제동 2층 VCCS/RADIO/ATIS 실습실">국제동 2층 VCCS/RADIO/ATIS 실습실</option>
+                          <option value="국제동 2층 VOR/DME/TACAN 실습실">국제동 2층 VOR/DME/TACAN 실습실</option>
+                          <option value="국제동 2층 항공정보통신시설 실습실">국제동 2층 항공정보통신시설 실습실</option>
                       </optgroup>
                       <optgroup label="관제교육동">
                           <option value="관제교육동 1층">관제교육동 1층</option>
@@ -9504,12 +9505,17 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
     '하늘관|2': { img:'classroom_sky2f.png', pos: COORD_CLASS_POS, crop:{t:-13,b:-3} },
     '하늘관|1': { img:'classroom_sky1f.png', pos:{ '대강당':{l:46,t:62} }, crop:{t:0,b:0} },
     '국제동|1': { img:'classroom_inter1f.png', pos:{ A:{l:31,t:30}, B:{l:74,t:29}, '세미나홀':{l:34,t:69} }, crop:{t:0,b:0} },
-    '국제동|2': { img:'', pos:{} },
+    '국제동|2': { img:'classroom_inter2f.png', pos:{
+      'ILS':{l:31,t:31},
+      'VCCS/RADIO/ATIS':{l:69,t:31},
+      'VOR/DME/TACAN':{l:30,t:70},
+      '항공정보통신시설':{l:70,t:70}
+    }, crop:{t:0,b:0} },
     '관제교육동|1': { img:'', pos:{} },
     '관제교육동|2': { img:'', pos:{} }
   };
   var COORD_BUILDINGS = [ {name:'하늘관', floors:['2','1']}, {name:'국제동', label:'국제교육동', floors:['1','2']}, {name:'관제교육동', floors:['1','2']} ];
-  function _coordRoomParse(s){ var v=((s&&(s.roomDetailName||s.roomDetail))||'')+''; var b=''; if(v.indexOf('하늘')>=0)b='하늘관'; else if(v.indexOf('국제')>=0)b='국제동'; else if(v.indexOf('관제')>=0)b='관제교육동'; var fm=v.match(/([0-9])\s*층/); var f=fm?fm[1]:''; var lm=v.match(/([A-Za-z])\s*강의실/); var L=lm?lm[1].toUpperCase():''; if(!L){ if(v.indexOf('대강당')>=0) L='대강당'; else if(v.indexOf('세미나홀')>=0) L='세미나홀'; } return {b:b,f:f,L:L,raw:v}; }
+  function _coordRoomParse(s){ var v=((s&&(s.roomDetailName||s.roomDetail))||'')+''; var b=''; if(v.indexOf('하늘')>=0)b='하늘관'; else if(v.indexOf('국제')>=0)b='국제동'; else if(v.indexOf('관제')>=0)b='관제교육동'; var fm=v.match(/([0-9])\s*층/); var f=fm?fm[1]:''; var lm=v.match(/([A-Za-z])\s*강의실/); var L=lm?lm[1].toUpperCase():''; if(!L){ if(v.indexOf('대강당')>=0) L='대강당'; else if(v.indexOf('세미나홀')>=0) L='세미나홀'; else if(v.indexOf('VCCS')>=0) L='VCCS/RADIO/ATIS'; else if(v.indexOf('VOR')>=0) L='VOR/DME/TACAN'; else if(v.indexOf('ILS')>=0) L='ILS'; else if(v.indexOf('항공정보통신시설')>=0) L='항공정보통신시설'; } return {b:b,f:f,L:L,raw:v}; }
   window.coordFPSelect=function(b,f){ window._coordFPSel={b:b,f:f}; try{ if(typeof coordRenderActiveCourses==='function') coordRenderActiveCourses(); }catch(e){} };
   function _coordFloorPlanHTML(rooms){
     var sel=window._coordFPSel||(window._coordFPSel={b:'하늘관',f:'2'});
