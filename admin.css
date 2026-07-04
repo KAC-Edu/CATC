@@ -4439,8 +4439,8 @@ body.in-course #courseSmartRemote { display: block; }
     overflow: visible !important;
 }
 #view-home .dashboard-campus-image img {
-    border-radius: 0 !important;
-    box-shadow: none !important;
+    border-radius: 20px !important;
+    box-shadow: 0 14px 34px rgba(15,23,42,.14) !important;
 }
 #dashShuttleTimeInline,
 #dashShuttleNotice { display: none !important; }
@@ -5033,6 +5033,14 @@ body.in-course #courseSmartRemote.hex-remote-v2{display:block;}
 .hsr-btn.primary{background:linear-gradient(135deg,#2563eb,#1e40af);color:#fff;border:none;}
 .hsr-btn.primary:hover{filter:brightness(1.08);color:#fff;}
 .hsr-empty{text-align:center;color:#94a3b8;font-weight:800;font-size:15px;padding:26px 10px;background:#fff;border:1px dashed #e2e8f0;border-radius:16px;}
+/* [홈 로딩] 검색 결과 로딩 카드 */
+.hsr-loading{text-align:center;color:#2563eb;font-weight:800;font-size:15px;padding:26px 10px;background:#fff;border:1px solid #dbeafe;border-radius:16px;line-height:1.9;}
+/* [홈 로딩] 실시간 데이터 동기화 배지 */
+#homeSyncBadge{display:inline-flex;align-items:center;gap:8px;margin:0 auto 16px;padding:8px 16px;border-radius:999px;background:#eff6ff;border:1px solid #dbeafe;color:#2563eb;font-size:13px;font-weight:800;box-shadow:0 3px 10px rgba(37,99,235,.10);transition:opacity .35s,transform .35s;}
+#homeSyncBadge.done{opacity:0;transform:translateY(-4px);pointer-events:none;height:0;margin:0;padding:0;border:0;overflow:hidden;}
+/* [홈 로딩] 스피너 */
+.hsb-spin{display:inline-block;width:14px;height:14px;border:2px solid rgba(37,99,235,.25);border-top-color:#2563eb;border-radius:50%;animation:hsbSpin .7s linear infinite;}
+@keyframes hsbSpin{to{transform:rotate(360deg)}}
 .hsr-detail{margin-top:16px;border:1px solid #bfdbfe;border-radius:16px;background:linear-gradient(180deg,#f8fbff,#fff);overflow:hidden;animation:hsrDetailOpen .22s ease-out;}
 @keyframes hsrDetailOpen{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:none}}
 .hsr-detail-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:15px 18px;background:linear-gradient(135deg,#eaf3ff,#f8fbff);border-bottom:1px solid #dbeafe;}

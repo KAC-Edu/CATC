@@ -5922,6 +5922,15 @@ resetShuttleRequests: function() {
             ui._setStat('stat-student-count', studentTotal + ' / ' + plannedTotal);
             ui._setStat('stat-outing-count', outingTotal);
             window._homeStatsData=d; window._homeStatsToday=today;
+            // [홈 로딩] 실시간 데이터 최초 도착 → 준비완료 표시 + 로딩 배지 숨김 + 대기중 검색 재실행
+            if(!window._homeStatsReady){
+                window._homeStatsReady=true;
+                try{ var _b=document.getElementById('homeSyncBadge'); if(_b) _b.classList.add('done'); }catch(e){}
+            }
+            try{
+                var _inp=document.getElementById('homeSearchInput');
+                if(_inp && String(_inp.value||'').trim()!=='') ui.renderHomeSearch(_inp.value);
+            }catch(e){}
         };
 
         // 실시간 리스너는 1회만 등록 (중복 등록 방지). 등록 시 즉시 최초값으로 렌더된다.
@@ -6355,6 +6364,11 @@ resetShuttleRequests: function() {
             return;
         }
         if(v) v.classList.add('home-search-active');
+        // [홈 로딩] 실시간 데이터가 아직 안 들어왔으면 빈결과 대신 로딩 안내 → 도착 즉시 자동 재검색됨
+        if(!window._homeStatsReady){
+            box.innerHTML='<div class="hsr-loading"><span class="hsb-spin"></span> 실시간 데이터를 불러오는 중입니다…<br><span style="font-weight:600;font-size:13px;color:#94a3b8;">잠시 후 검색 결과가 자동으로 표시됩니다.</span></div>';
+            return;
+        }
         var ql=raw.toLowerCase();
         var data=window._homeStatsData||{};
         var dorm=window._dormRosters||{};
@@ -14559,6 +14573,7 @@ window.addEventListener('resize', function(){
       var el=document.getElementById('dashRoomDetail');
       var on=!!(el && /온라인|zoom/i.test(String(el.innerText||'')));
       window._zoomRoomOnline = on;
+      document.body.classList.toggle('zoom-room-online', on);
       if(on){ // 온라인일 때는 초기 inline display:none을 해제해 실제로 보이게
         document.querySelectorAll('[onclick*="openZoomMonitor"]').forEach(function(t){ t.style.display=''; });
       }
