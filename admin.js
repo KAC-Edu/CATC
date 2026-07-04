@@ -3904,7 +3904,7 @@ openQrModal: function() {
             var fr = document.getElementById('zoomMonitorFrame');
             if (fr) {
                 var cur = fr.getAttribute('data-room') || '';
-                var want = 'zoom_monitor.html?room=' + encodeURIComponent(state.room) + '&embed=1';
+                var want = 'zoom_monitor.html?room=' + encodeURIComponent(state.room) + '&embed=1&v=260704M14';
                 if (!cur) { fr.src = want; fr.setAttribute('data-room', String(state.room)); }
                 else if (cur !== String(state.room)) {
                     if (confirm('다른 과정(' + cur + ')의 모니터링이 열려 있습니다.\n현재 과정으로 다시 불러올까요?\n(진행 중이던 봇 연결은 끊어집니다)')) {
@@ -8338,6 +8338,7 @@ init: function() {
             if (gi.evaluation) ci.evaluation = gi.evaluation; // 기본값: 없음(근태10%)
             slot.pagePos = set.guidePagePos || {};            // 삽입 페이지 수동 위치
             slot.pageEnable = set.guidePageEnable || {};      // 오픈톡방 QR·채널안내 표시 여부(체크박스)
+            slot.centerNoticeOnline = (set.centerNoticeOnline === true);   // [온라인 운영부공지] 온라인 과정은 기본 숨김, 이 토글이 켜지면 표시
             slot.venuePick = set.venuePick || {};             // 교육장소 페이지 강의실 선택 (셀 index → 강의실) — 수동/공유
             slot.roomDetailName = set.roomDetailName || '';   // 과정 강의실(연간계획/과정현황 설정값) — 자동 표시용 폴백
             slot.venuePage = Number(set.guideVenuePage) || 14; // 교육장소 오버레이가 뜰 PDF 페이지 (기본 14)
@@ -8545,7 +8546,9 @@ init: function() {
         const list = [];
         if (!n) return list;
         const en = guideMgr._pageEnable();
-        const want = { profile: guideMgr._hasProfile(), kakaoqr: guideMgr._hasKakaoQR() && en.kakaoqr, channelguide: guideMgr._hasKakaoQR() && en.channelguide, courseinfo: !guideMgr._isOnline(), centernotice: guideMgr._hasCenterNotice() && en.centernotice };   // [J12] 비대면은 PDF 4p 교육개요 오버레이가 대체
+        // [온라인 운영부공지] 온라인 과정은 운영부(입교안내) 공지 페이지를 기본 숨김. 과정별 토글(centerNoticeOnline)이 켜지면 표시.
+        const _showCN = guideMgr._hasCenterNotice() && en.centernotice && (!guideMgr._isOnline() || guideMgr._slot().centerNoticeOnline === true);
+        const want = { profile: guideMgr._hasProfile(), kakaoqr: guideMgr._hasKakaoQR() && en.kakaoqr, channelguide: guideMgr._hasKakaoQR() && en.channelguide, courseinfo: !guideMgr._isOnline(), centernotice: _showCN };   // [J12] 비대면은 PDF 4p 교육개요 오버레이가 대체
         const pos = guideMgr._pagePos();
         pos.centernotice = 23;   // 센터 공지는 PDF 23p(학생장 역할) 뒤 고정
         const clamp = v => Math.max(1, Math.min(n, Number(v) || 1));
@@ -11303,6 +11306,7 @@ const annualPlanMgr = {
             [`${rPath}/settings/guideCourseInfo`]: null,  // [교육과정 안내] 새 과정은 기본(직무일반·없음)으로 복귀
             [`${rPath}/settings/guidePagePos`]: null,     // [삽입 페이지 위치] 새 과정은 기본 위치로 복귀
             [`${rPath}/settings/guidePageEnable`]: null,  // [오픈톡방QR·채널안내 표시] 새 과정은 기본(표시)으로 복귀
+            [`${rPath}/settings/centerNoticeOnline`]: null,  // [온라인 운영부공지 토글] 새 과정은 기본(온라인 숨김)으로 복귀
             [`${rPath}/settings/venuePick`]: null,        // [교육 장소] 새 과정은 강의실 선택 초기화
             [`${rPath}/settings/guideVenuePage`]: null,   // [교육 장소] 페이지 번호 기본(14)로 복귀
             [`${rPath}/status/ownerSessionId`]: null,
@@ -13568,11 +13572,21 @@ ui.openGuidePageSettings = function(){
       +'<span style="flex:1;font-size:13.5px;font-weight:800;color:#475569;">'+label+' <span style="font-weight:600;color:#94a3b8;font-size:11px;">'+(sub||'· 프로필 바로 뒤')+'</span></span>'
       +'<label style="display:inline-flex;align-items:center;gap:6px;cursor:pointer;user-select:none;"><input type="checkbox" id="gpe-'+key+'" '+(checked?'checked':'')+' style="width:17px;height:17px;accent-color:#2563eb;cursor:pointer;"><span style="font-size:12.5px;font-weight:800;color:#334155;">표시</span></label></div>';
   };
+  // [온라인 운영부공지] 온라인 과정일 때만 노출되는 토글 (기본 숨김 → 켜면 표시)
+  var _isOnlineCourse = (typeof guideMgr!=='undefined' && guideMgr._isOnline && guideMgr._isOnline());
+  var _cnOnline = !!(guideMgr._slot && guideMgr._slot() && guideMgr._slot().centerNoticeOnline);
+  var onlineNoticeRow = _isOnlineCourse
+    ? ('<div style="display:flex;align-items:center;gap:10px;margin:2px 0 12px;padding:8px 12px 8px 16px;border-left:2px solid #fcd34d;margin-left:8px;background:#fffbeb;border-radius:0 8px 8px 0;">'
+        +'<i class="fa-solid fa-video" style="color:#0ea5e9;width:22px;text-align:center;"></i>'
+        +'<span style="flex:1;font-size:13px;font-weight:800;color:#92400e;">온라인 과정에도 운영부 공지 표시 <span style="font-weight:600;color:#b45309;font-size:11px;">(온라인은 기본 숨김)</span></span>'
+        +'<label style="display:inline-flex;align-items:center;gap:6px;cursor:pointer;user-select:none;"><input type="checkbox" id="gpe-cnonline" '+(_cnOnline?'checked':'')+' style="width:17px;height:17px;accent-color:#0ea5e9;cursor:pointer;"><span style="font-size:12.5px;font-weight:800;color:#334155;">표시</span></label></div>')
+    : '';
   var rowHtml=rowPage('profile','담임교수 프로필','fa-user-tie','#1e3a8a')
     +rowCheck('kakaoqr','오픈톡방 QR','fa-qrcode','#3a1d1d',en.kakaoqr)
     +rowCheck('channelguide','채널 입교등록 안내','fa-comment-dots','#f59e0b',en.channelguide)
     +rowPage('courseinfo','교육과정 안내','fa-clipboard-list','#1d4ed8')
-    +rowCheck('centernotice','입교안내 공지','fa-bullhorn','#e11d48',en.centernotice,'· PDF 23p 뒤 · 공지 있을 때만 표시');
+    +rowCheck('centernotice','입교안내 공지','fa-bullhorn','#e11d48',en.centernotice,'· PDF 23p 뒤 · 공지 있을 때만 표시')
+    +onlineNoticeRow;
   // 교육 장소 강의실 (4 교육동) 선택 행 — 슬라이드 위 pill 없이 여기서 지정
   var _esc=function(x){ return String(x||'').replace(/"/g,'&quot;').replace(/</g,'&lt;'); };
   var venuePick=((guideMgr._slot&&guideMgr._slot().venuePick)||{});
@@ -13626,10 +13640,13 @@ ui.saveGuidePageSettings = function(){
   var vsel=String((document.getElementById('gvv-single')||{}).value||'').trim();
   var vpick={};
   if(vsel){ var _vc=guideMgr._venueCells||[]; for(var _ci=0;_ci<_vc.length;_ci++){ if(vsel.indexOf(_vc[_ci].filter)>=0){ vpick[_ci]=vsel; break; } } }
+  // [온라인 운영부공지] 토글(온라인 과정에만 표시됨). 요소가 없으면 기존 값 유지.
+  var _cnOnlineEl=document.getElementById('gpe-cnonline');
   var upd={}; upd['courses/'+state.room+'/settings/guidePagePos']=obj; upd['courses/'+state.room+'/settings/guidePageEnable']=en; upd['courses/'+state.room+'/settings/guideVenuePage']=vp; upd['courses/'+state.room+'/settings/venuePick']=vpick;
+  if(_cnOnlineEl){ upd['courses/'+state.room+'/settings/centerNoticeOnline']=!!_cnOnlineEl.checked; }
   firebase.database().ref().update(upd)
     .then(function(){
-      try{ var sl=guideMgr._slot(); sl.pagePos=obj; sl.pageEnable=en; sl.venuePage=vp; sl.venuePick=vpick; }catch(e){}
+      try{ var sl=guideMgr._slot(); sl.pagePos=obj; sl.pageEnable=en; sl.venuePage=vp; sl.venuePick=vpick; if(_cnOnlineEl) sl.centerNoticeOnline=!!_cnOnlineEl.checked; }catch(e){}
       var m=document.getElementById('guidePageSettingsModal'); if(m) m.remove();
       if(typeof guideMgr.refresh==='function') guideMgr.refresh();
       ui.showAlert('✅ 삽입 페이지 위치가 저장되었습니다. (이 과정)');

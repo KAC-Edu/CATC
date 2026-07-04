@@ -422,6 +422,9 @@ function clearRoster(){
   render();toast('명단을 지웠습니다');
 }
 (function(){
+  // [리셋 잔류 방지] 과정 연동 모드(ROOM)에서는 항상 현재 과정의 입교등록 명단(loadRoomRoster)이 채운다.
+  // 로컬 캐시 복원은 과정 미연동(독립) 모드에서만 사용 → 과거 명단이 잠깐 뜨는 문제 방지.
+  if(ROOM) return;
   try{const saved=JSON.parse(localStorage.getItem(LS_ROSTER)||'[]');
     if(saved.length){roster=saved.map(p=>newP(p.id,p.name));
       const fo=document.getElementById('fileOk');fo.style.display='block';
@@ -796,6 +799,11 @@ function loadRoomRoster(manual){
       list.push({id,name:nm});
     });
     if(!list.length){
+      // [리셋 잔류 방지] 현재 과정에 입교등록 명단이 없으면 과거(로컬 캐시) 명단을 비운다
+      roster=[];
+      localStorage.removeItem(LS_ROSTER);
+      const fo=document.getElementById('fileOk'); if(fo) fo.style.display='none';
+      render();
       if(manual)toast('입교등록된 교육생이 아직 없습니다');
       return;
     }
