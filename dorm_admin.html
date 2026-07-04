@@ -1810,18 +1810,12 @@
         // ── [JDS260613] 주차 배정 잠금(락) ── 잠그면 그 주차의 자동배정·명단 업로드/수정/삭제·배정 이동/삭제 차단
         let _lockedWeeks = {};                                  // { canonicalWeekKey: {locked, at} }
         function isWeekLocked(wk, course) {
+            // [JDS260704-V3] 전면 잠금: 주차가 잠기면 그 주차의 모든 과정 명단·배정이 잠긴다.
+            //  (기존 '잠금 이후 새로 생성·배치된 과정은 열림' 예외 제거 — 강사플랫폼 재배치/추가개설 시
+            //   courseCreatedAt이 갱신되어 잠긴 주차 명단이 열려버리는 구멍이었음.
+            //   잠금 취지 = 배정 확정 후 그 주차 명단 불가침. 새 과정 작업이 필요하면 STEP4에서 잠금 해제 후 진행.)
             const canon = canonicalWeekKey(wk || '');
-            const lock = _lockedWeeks[canon];
-            if (!lock) return false;
-            const target = course || (
-                selectedCourse && canonicalWeekKey(selectedCourse.weekKey || '') === canon
-                    ? selectedCourse : null
-            );
-            const createdAt = Number(target && target.courseCreatedAt || 0);
-            const lockedAt = Number(lock.at || 0);
-            // 잠금 이후 새로 생성·배치된 과정은 기본 '열림'. 기존 확정 과정만 잠금을 유지한다.
-            if (createdAt && lockedAt && createdAt > lockedAt) return false;
-            return true;
+            return !!_lockedWeeks[canon];
         }
         function _lockGuard(wk, action) {
             if (isWeekLocked(wk)) {
@@ -3282,19 +3276,25 @@
                 // [JDS260613] 강사플랫폼에서 '차주 유지'(settings.autoAssignLocked) 체크된 방은 명단 보존 — 체크 풀릴 때까지 절대 삭제 안 함
                 let lockedRooms = new Set();
                 let cLockAll = {};
+                let lockedWeekSet = new Set();   // [JDS260704-V3] 지원부 '배정 잠금' 주차 — 자동삭제 절대 금지
                 try {
-                    const cLockSnap = await db.ref('courses').once('value');
+                    const [cLockSnap, wLockSnap] = await Promise.all([
+                        db.ref('courses').once('value'),
+                        db.ref('system/dorm/locks').once('value')
+                    ]);
                     cLockAll = cLockSnap.val() || {};
                     Object.entries(cLockAll).forEach(([room, c]) => {
                         if (c && c.settings && c.settings.autoAssignLocked === true) lockedRooms.add(String(room));
                     });
-                } catch (e) { console.warn('[생활관] 차주유지 확인 생략', e); }
+                    Object.keys(wLockSnap.val() || {}).forEach(k => lockedWeekSet.add(k));
+                } catch (e) { console.warn('[생활관] 차주유지/잠금 확인 생략', e); }
 
                 const _targetMonDt = new Date(targetMon + 'T00:00:00');
                 const pastKeys = Object.keys(all).filter(k => {
                     const wk = (all[k] && all[k].weekKey) || k.split('__')[0];
                     const rm = (all[k] && all[k].room != null && all[k].room !== '') ? String(all[k].room) : (k.split('__')[1] || '');
                     if (lockedRooms.has(rm)) return false;   // 차주 유지 과정 → 삭제 금지
+                    if (lockedWeekSet.has(canonicalWeekKey(wk))) return false;   // [JDS260704-V3] 잠긴 주차 → 명단·주차 보존 (자동배정/현황에 계속 표시)
                     if (wk > prevCutoff) return false;       // 지난 주차 아님 → 유지
                     // [JDS260613] 다주차(계획 외/장기) 과정: 과정 종료일이 대상 주 이후면(아직 운영 중) 삭제 금지
                     const per = _rosterPeriodParts(all[k], rm, cLockAll);
