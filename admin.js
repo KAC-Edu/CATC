@@ -6267,6 +6267,56 @@ resetShuttleRequests: function() {
             try{ var inp=document.getElementById('homeSearchInput'); if(inp){ inp.value=name; ui.renderHomeSearch(name); } }catch(e){}
         }catch(err){ try{ alert('배정 중 오류: '+(err&&err.message||err)); }catch(_){} }
     },
+    // [과정담당 교체] 담당자 목록 팝업 (교수 교체와 동일 UX · 프로필 버튼 없음)
+    _openCoordSwap: function(room, currentName, ev){
+        try{ if(ev){ ev.stopPropagation(); ev.preventDefault(); } }catch(_){}
+        room = String(room||'').trim(); if(!room) return;
+        var cur = String(currentName||'').replace(/^과정담당[:：]?\s*/,'').trim();
+        var e = ui._esc;
+        var list = (typeof coordMgr!=='undefined' && Array.isArray(coordMgr.list)) ? coordMgr.list.slice() : [];
+        var old = document.getElementById('coordSwapModal'); if(old) old.remove();
+        var modal = document.createElement('div'); modal.id='coordSwapModal'; modal.className='prof-swap-overlay';
+        var rows = '<div class="prof-swap-item'+((!cur||cur==='-'||cur==='미지정')?' is-current':'')+'">'
+                 + '<button class="prof-swap-pick" onclick="ui._assignCoordToRoom(\''+e(room)+'\',\'\')" title="담당자 미지정">'
+                 + ((!cur||cur==='-'||cur==='미지정')?'<i class="fa-solid fa-circle-check"></i>':'<i class="fa-regular fa-circle"></i>')
+                 + '<span class="prof-swap-name" style="color:#94a3b8;">(미지정)</span></button></div>';
+        if(!list.length){
+            rows += '<div class="prof-swap-empty">등록된 과정담당자가 없습니다. 교육운영부에서 담당자를 등록하면 여기에 표시됩니다.</div>';
+        } else {
+            list.forEach(function(c){
+                var nm = e(c.name||'');
+                var isCur = (String(c.name||'').trim()===cur);
+                rows += '<div class="prof-swap-item'+(isCur?' is-current':'')+'">'
+                      + '<button class="prof-swap-pick" onclick="ui._assignCoordToRoom(\''+e(room)+'\',\''+nm+'\')" title="이 담당자로 배정">'
+                      + (isCur?'<i class="fa-solid fa-circle-check"></i>':'<i class="fa-regular fa-circle"></i>')
+                      + '<span class="prof-swap-name">'+nm+'</span>'
+                      + (isCur?'<span class="prof-swap-badge">현재</span>':'')
+                      + '</button></div>';
+            });
+        }
+        modal.innerHTML =
+            '<div class="prof-swap-box" onclick="event.stopPropagation();">'
+          + '<div class="prof-swap-head"><h3><i class="fa-solid fa-user-gear"></i> 과정담당 교체</h3>'
+          + '<button class="prof-swap-close" onclick="document.getElementById(\'coordSwapModal\').remove();" aria-label="닫기"><i class="fa-solid fa-xmark"></i></button></div>'
+          + '<p class="prof-swap-desc">과정 운영 담당자(행정)를 선택하세요.</p>'
+          + '<div class="prof-swap-list">'+rows+'</div>'
+          + '</div>';
+        modal.addEventListener('click', function(ev2){ if(ev2.target===modal) modal.remove(); });
+        document.body.appendChild(modal);
+    },
+    _assignCoordToRoom: async function(room, name){
+        room=String(room||'').trim(); name=String(name||'').trim();
+        if(!room) return;
+        var updates={};
+        updates['courses/'+room+'/settings/coordinatorName']=name;
+        updates['courses/'+room+'/status/coordManual']=name?true:null;   // [J10] 수동 지정 보존
+        try{
+            await firebase.database().ref().update(updates);
+            var m=document.getElementById('coordSwapModal'); if(m) m.remove();
+            var el=document.getElementById('dashCoordName'); if(el) el.textContent=name||'-';
+            if(ui.showAlert) ui.showAlert('✅ 과정담당을 '+(name||'미지정')+'(으)로 변경했습니다.');
+        }catch(err){ try{ alert('배정 중 오류: '+(err&&err.message||err)); }catch(_){} }
+    },
     renderHomeSearch: function(q){
         var box=document.getElementById('homeSearchResults');
         var v=document.getElementById('view-home');
