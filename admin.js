@@ -2332,7 +2332,16 @@ init: function() {
         if (!row) return;
         const show = (row.style.display === 'none' || !row.style.display);
         row.style.display = show ? 'flex' : 'none';
-        if (show) { const i = document.getElementById('qaAddInput'); if (i) { i.value = ''; i.focus(); } }
+        if (show) { const i = document.getElementById('qaAddInput'); if (i) { i.value = ''; i.focus(); } this._qaAddResetIdle(); }
+        else { if (this._qaIdleT) { clearTimeout(this._qaIdleT); this._qaIdleT = null; } }
+    },
+    // [자동 닫힘] 마지막 입력 후 3초간 아무 입력이 없으면 입력란을 자동으로 닫는다
+    _qaAddResetIdle: function() {
+        if (this._qaIdleT) clearTimeout(this._qaIdleT);
+        this._qaIdleT = setTimeout(function() {
+            const row = document.getElementById('qaAddRow');
+            if (row) row.style.display = 'none';
+        }, 3000);
     },
     quickAddSubject: function() {
         if (!state.room) { alert('먼저 과정을 선택해 주세요.'); return; }
@@ -2343,6 +2352,7 @@ init: function() {
         firebase.database().ref(`courses/${state.room}/settings/subjects`).push(name).then(() => {
             input.value = "";
             input.focus();
+            subjectMgr._qaAddResetIdle();   // 추가 후 3초 무입력이면 자동으로 닫힘
         });
     }
 };
