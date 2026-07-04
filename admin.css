@@ -5097,6 +5097,19 @@ body:not([data-mode="home"]):not([data-mode="waiting"]) .floating-home-btn{botto
 #guideRouletteBtn.guidebtn-pressing,#guideScheduleBtn.guidebtn-pressing,#guideScheduleUploadBtn.guidebtn-pressing,#guideParsedScheduleBtn.guidebtn-pressing{ outline:3px dashed rgba(255,255,255,.95); outline-offset:4px; }
 #guideRouletteBtn.guidebtn-dragging,#guideScheduleBtn.guidebtn-dragging,#guideScheduleUploadBtn.guidebtn-dragging,#guideParsedScheduleBtn.guidebtn-dragging{ cursor:grabbing !important; opacity:.94; animation:none !important; filter:brightness(1.05); }
 
+/* ══ [J12.2] 홈 검색카드 — 온라인(Zoom) 장소 Zoom 블루 강조 블록 ══ */
+.hsr2-venue.hsr2-venue-zoom{
+    background:#0B5CFF !important; border-color:#0B5CFF !important; color:#fff !important;
+    box-shadow:0 3px 10px rgba(11,92,255,.35) !important;
+}
+.hsr2-venue.hsr2-venue-zoom i{ color:#fff !important; }
+.hsr2-venue.hsr2-venue-zoom span{ color:#fff !important; font-weight:900 !important; }
+.hsr2-venue.hsr2-venue-zoom .hsr2-venue-cv{ color:rgba(255,255,255,.85) !important; }
+.hsr2-venue.hsr2-venue-zoom:hover{ filter:brightness(1.08); }
+
+/* [J12.2] 교육개요 회의 ID/PW 항목 — 클릭 가능 힌트 */
+#guideOverviewOverlay .ovw-item[data-key="zoom"]:hover{ text-decoration:underline; text-underline-offset:4px; }
+
 /* ══ [J12] 비대면 교육개요(4p) 오버레이 — 항목별 값 + 3초 드래그 ══ */
 #guideOverviewOverlay{ position:absolute; inset:0; z-index:7; pointer-events:none; }
 #guideOverviewOverlay .ovw-item{
