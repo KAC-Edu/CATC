@@ -13734,6 +13734,61 @@ ui.saveGuidePageSettings = function(){
     })
     .catch(function(){ var msg=document.getElementById('gpp-msg'); if(msg) msg.textContent='저장 중 오류가 발생했습니다.'; });
 };
+// ── [통합 현황판 검색창] 3초 꾹 누르면 드래그로 위치 이동 (전체 공통 저장) ──
+ui._homeSearchPos = null; ui._homeSearchPosLoaded = false;
+ui._loadHomeSearchPos = function(cb){
+  try{
+    firebase.database().ref('system/sharedGuide/homeSearchPos').once('value').then(function(s){
+      var v=s.val()||{}; ui._homeSearchPos={ dx:Number(v.dx)||0, dy:Number(v.dy)||0 }; ui._homeSearchPosLoaded=true; if(cb)cb();
+    }).catch(function(){ ui._homeSearchPos={dx:0,dy:0}; ui._homeSearchPosLoaded=true; if(cb)cb(); });
+  }catch(e){ ui._homeSearchPos={dx:0,dy:0}; ui._homeSearchPosLoaded=true; if(cb)cb(); }
+};
+ui._applyHomeSearchPos = function(){
+  var el=document.getElementById('homeSearchWrap'); if(!el) return;
+  if(!ui._homeSearchPosLoaded){ ui._loadHomeSearchPos(function(){ ui._applyHomeSearchPos(); }); return; }
+  var p=ui._homeSearchPos||{dx:0,dy:0};
+  el.style.transform='translate('+p.dx+'vw,'+p.dy+'vh)';
+};
+ui._saveHomeSearchPos = function(){
+  if(!ui._homeSearchPos) return;
+  try{ firebase.database().ref('system/sharedGuide/homeSearchPos').set({dx:ui._homeSearchPos.dx, dy:ui._homeSearchPos.dy}).catch(function(){}); }catch(e){}
+};
+ui._bindHomeSearchDrag = function(){
+  var el=document.getElementById('homeSearchWrap'); if(!el || el._hsDragBound) return; el._hsDragBound=true;
+  var holdTimer=null, dragMode=false, moved=false, sx=0, sy=0, startDx=0, startDy=0, pid=null;
+  var clearHold=function(){ if(holdTimer){ clearTimeout(holdTimer); holdTimer=null; } el.classList.remove('hs-pressing'); };
+  el.addEventListener('pointerdown', function(e){
+    if(e.target.closest('#homeSearchResults')) return;   // 결과 리스트 조작 중엔 드래그 안 함
+    sx=e.clientX; sy=e.clientY; moved=false; dragMode=false; pid=e.pointerId;
+    var p=ui._homeSearchPos||{dx:0,dy:0}; startDx=p.dx; startDy=p.dy;
+    el.classList.add('hs-pressing');
+    holdTimer=setTimeout(function(){
+      dragMode=true; el.classList.remove('hs-pressing'); el.classList.add('hs-dragging');
+      try{ el.setPointerCapture(pid); }catch(_){}
+      try{ if(navigator.vibrate) navigator.vibrate(45); }catch(_){}
+    }, 3000);
+  });
+  el.addEventListener('pointermove', function(e){
+    if(dragMode){
+      e.preventDefault();
+      var ndx=startDx + (e.clientX-sx)/window.innerWidth*100;
+      var ndy=startDy + (e.clientY-sy)/window.innerHeight*100;
+      ui._homeSearchPos={dx:+ndx.toFixed(2), dy:+ndy.toFixed(2)};
+      el.style.transform='translate('+ui._homeSearchPos.dx+'vw,'+ui._homeSearchPos.dy+'vh)';
+    } else if(Math.hypot(e.clientX-sx,e.clientY-sy)>10){ moved=true; clearHold(); }
+  });
+  var end=function(e){
+    clearHold();
+    if(dragMode){ dragMode=false; el.classList.remove('hs-dragging'); try{ el.releasePointerCapture(pid); }catch(_){} ui._saveHomeSearchPos(); if(ui.showAlert) ui.showAlert('📍 검색창 위치를 저장했습니다. (모든 과정 공통)'); }
+  };
+  el.addEventListener('pointerup', end);
+  el.addEventListener('pointercancel', function(){ clearHold(); if(dragMode){ dragMode=false; el.classList.remove('hs-dragging'); ui._saveHomeSearchPos(); } });
+};
+document.addEventListener('DOMContentLoaded', function(){
+  try{ if(ui && ui._bindHomeSearchDrag) ui._bindHomeSearchDrag(); }catch(e){}
+  setTimeout(function(){ try{ if(ui && ui._applyHomeSearchPos) ui._applyHomeSearchPos(); }catch(e){} }, 900);
+});
+
 // ── [입교등록 카운트 블록] 영상(start.mp4) 페이지 좌측 큰 숫자 ──
 //    위치 = 전체 과정 공통(system/sharedGuide/videoCountPos), 윈도우/전체화면 좌표 개별 저장.
 //    3초 꾹 누르면 드래그로 이동.
