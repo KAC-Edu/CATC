@@ -942,7 +942,7 @@ body.in-course #moreToggleTab{ display:flex !important; }
             <div class="hero-right">
                 <!-- 교수님 프로필 카드 -->
                 <div class="prof-glass-card" style="position:relative; z-index:5;" onclick="ui.showProfPresentation(document.getElementById('dashProfNameOnly').innerText)" title="클릭하면 담임 교수 프로필을 봅니다">
-                    <div onclick="event.stopPropagation(); ui.openFieldEdit('prof')" title="담임 교수 선택 (교체)" style="position:absolute; top:50%; right:14px; transform:translateY(-50%); width:30px; height:30px; display:flex; align-items:center; justify-content:center; border-radius:50%; background:rgba(255,255,255,0.9); color:#1e40af; cursor:pointer; z-index:30; transition:background .15s;" onmouseover="this.style.background='#fff'" onmouseout="this.style.background='rgba(255,255,255,0.9)'"><i class="fa-solid fa-gear" style="font-size:15px;"></i></div>
+                    <div onclick="ui._openProfSwap(state.room, document.getElementById('dashProfNameOnly').innerText, event)" title="담임 교수 선택 (교체)" style="position:absolute; top:50%; right:14px; transform:translateY(-50%); width:30px; height:30px; display:flex; align-items:center; justify-content:center; border-radius:50%; background:rgba(255,255,255,0.9); color:#1e40af; cursor:pointer; z-index:30; transition:background .15s;" onmouseover="this.style.background='#fff'" onmouseout="this.style.background='rgba(255,255,255,0.9)'"><i class="fa-solid fa-gear" style="font-size:15px;"></i></div>
                     <div class="prof-avatar"><i class="fa-solid fa-user-tie"></i></div>
                     <div class="prof-details">
                         <span class="prof-label">과정 담임</span>
