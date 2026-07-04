@@ -4,7 +4,7 @@
      STATUS : 수정아닙니다
      FILE   : index.html (교육생)
      VERSION: J100 J100 J100 J100 J100
-     UPDATED: 2026-07-04  (vJ102.1: 기념사진 텍스트 칸 경계 맞춤 자동 축소(measureText) — 긴 과정명/기간도 칸 안에 정렬. | vJ102: 수료 기념사진 받기 — 카카오 출결 홈에 버튼 신설(강사가 업로드한 gradPhoto가 있고 수료일(endDate) 자정 이전일 때만 표시). 클릭 시 액자(grad_frame.png)에 단체사진 cover-fit 합성 + 하단 4칸(과정명/기간/장소/담임) 텍스트(공유 좌표 gradPhotoPos 적용) 후 PNG 다운로드. | vJ101: 퇴교차량 자동판정 연동 — 지원부가 한글 시간표 업로드 시 기록되는 courses/{room}/shuttle/autoDeparture를 실시간 구독. 자동판정이 있으면 1차/2차 구분 없이 '이 과정 출발시간 단일 표기'(HH:MM 출발 + 수업 종료시각 안내)로 표시하고 도착예정(ETA)도 그 시간 기준으로 갱신. 자동판정이 없으면 기존 1차/2차 공지 표기 유지. 출발시간 렌더를 window._renderStudentDeparture 명명 함수로 분리해 양쪽 리스너가 동일 경로로 재렌더. | vJ100: 학생장 외출외박 현황 화면 디자인 개선 적용(대시보드형: 통계 타일·외출/외박/석식 세그먼트 탭·칩·복사 버튼 등). ※적용 중 파일 끝 잘림 발생분을 완전본으로 복구. | vJ99: OTP 입력칸(ko-digit) 반응형 — box-sizing/padding0/line-height1 + 글자크기 clamp(18~24px), 간격·본문패딩 축소로 좁은 폰에서 숫자가 네모 밖으로 넘쳐 안 보이던 문제 해소. | vJ98: J97의 #keduOtp CSS 변경(flex/padding)이 OTP 입력화면을 깨뜨려 숫자 가려짐 → 원래 중앙정렬로 원복. keduEnroll 스크롤 수정과 학생 OTP 검증 개선은 유지. | vJ97: [버그] 입교카드(keduEnroll)·OTP(keduOtp) 화면 짧은 폰에서 하단 잘림→스크롤 되게(flex-start+overflow). 학생 OTP 검증을 '현재 서버코드 일치 시 시계오차 무관 인정'으로 바꿔 오판 만료 방지(5분 초과 방치 세션만 차단). ※OTP 근본원인(강사페이지 새로고침 시 OTP 재생성)은 admin.js 수정 필요. | vJ96: [정합성] 구(旧) 일반입교 동명확인(showKacConfirm 경로)을 카카오 입교 vJ93 정책과 통일 — '본인' 선택 시 기존 번호 강제채택을 제거하고 입력 번호 유지 + 저장 후 기존 다른-번호 중복 기록 제거(_kacDupRemoveTokenB). 모달 안내문도 동작과 일치하게 수정. [문구] ①OTP '과정 정보가 없어 OTP 전체 확인으로 진행' → '출결 확인 중입니다' ②명단 리셋 감지 '사용자 정보가 변경되어 초기화합니다' → '과정 명단이 새로 정리되어 입교 등록이 다시 필요합니다' ③비품 게이트 '비공식적으로 과정이 운영 중' → '정식 개설 확정 전' ④태블릿 대여 '접속 정보를 확인할 수 없습니다'(2곳) → '입교 등록 정보를 찾을 수 없습니다. 입교/홈에서 등록 후 다시 이용해 주세요' ⑤changeRoom prompt 'Room N' → '강의실 N'. | vJ95: 리셋 후 카카오 재입교 시 resetKey를 서버값으로 동기화해 메인앱 진입 시 오판 초기화 방지. 입교카드 버튼문구 신규='입교 등록'/편집='정보 수정하기'로 구분. | vJ94: 외출외박 STEP2 신원 편집을 인라인+‘수정 완료’ 버튼으로 개선. 이름·사번 수정이 profileOverlay/입교완료로 이탈하지 않고 STEP2에서 바로 수정 후 다음 단계 진행. | vJ93: 동명 중복확인에서 '본인' 선택 시 기존ID 강제채택 제거 → 입력한 사번 그대로 유지하고 이전 다른-번호 중복기록은 저장 후 제거. 모달 안내문 수정. | vJ92: 동명 중복 확인을 3버튼 커스텀 모달로(예 본인/아닙니다 다른사람/닫기). 본인 선택 시 기존 식별ID 병합(입력 번호 달라도 중복방지), 닫기는 입교 중단. | vJ91: 차량 결과 카드에서 신청 장소를 상단 제목이 아닌 '과정·신청자 아래 행'으로 이동하고 크게(18px 청색) 강조. 제목은 '나의 퇴교차량'으로 복원. | vJ90: 차량 신청 결과 카드를 입교완료 카드와 동일 규격(청색 그라데이션 헤더·큰 글씨)으로 통일, 목적지를 제목으로 크게 표시. | vJ89: 학생장 지정/해제를 .on 실시간 리스너로 변경 — 강사가 학생장 지정 시 새로고침 없이 즉시 금일현황 패널 노출, 해제 시 즉시 숨김. | vJ88: 카카오 입교 흐름(submitEnroll)에 동명 중복 확인 복원 — 같은 이름 다른 식별ID 발견 시 '본인 맞냐' 확인(본인→기존ID 병합, 아니면 신규). 편집모드 제외. | vJ87: 16시 이후 외출외박 제출 시 '석식 이용 간주' 안내 팝업 복원(J75에서 STEP5 건너뛰며 사라졌던 것) → 확인 후 신청현황으로. | vJ86: 강사가 과정명/기간을 수정(리네임)해도 교육생이 입교화면으로 초기화되지 않도록 courseKey 불일치 초기화 제거. 강의실 리셋(명단 삭제)·교육기간 종료 시에만 재입교. | vJ85: 질문하기 — 신규 질문 즉시 노출(내 질문 맨위 이동), 질문 몰릴 때 읽던 위치 고정+'새 질문 N개' 칩, 09시 운영일 윈도우 밖 오래된 질문은 학생화면에서 숨김(강사 플랫폼엔 유지). | vJ84: 외출외박 소속을 신청 미리보기·입력칸 자동채움·저장값까지 formatDept 적용해 '항공기술훈련원 OOO'로 일관 표기(대장에도 반영). | vJ83: 학생장 외출외박 카운팅을 admin과 동일한 09:00~익일09:00 KST 윈도우+오늘/어제 노드 병합으로 정렬(복귀자 포함 표시). | vJ82: 학생장 펼침 상세를 높이제한+내부스크롤 드롭다운으로(카드 가림 해소), 연락처 블록 줄바꿈 처리, 펼칠 때 부드럽게 노출. | vJ81: 학생장 패널 접이식 가로바로 변경(카드 가림 해소), 외출외박 항목에 비상연락처 표시+클릭 통화확인 팝업. | vJ80: 학생장 전용 패널(입교카드 아래) — 금일 외출외박·석식제외 실시간 현황 + 식당 전화하기(043-290-2325). | vJ79: 담임 글자크기 다른행과 완전통일(display:flex 제거), 신청취소 후 재초기화(이전정보 안내 복원), 패스트패스 연락처(STEP3)까지 항상 표시. | vJ78: 담임 글자크기 다른행과 통일(span 제거), 담당교수 실시간 반영(.on 리스너). | vJ77: 입교카드·출결완료 페이지에 과정담임 표시 + 전화아이콘→통화확인 팝업→통화 기능(professorProfiles 연락처 사용). | vJ76: 외출외박 현황화면 상단바 위 내용넘침 방지(flex-start), 복귀완료보고·신청취소 한 줄 배치. | vJ75: 입교문구 '항공기술훈련원 입교', 정보수정 시 개인정보동의 숨김, 외출외박 새로작성 빈양식, 소속 항공기술훈련원 표기, 외출외박 완료→수위실 현황화면 통일. | vJ74: 창닫기 기능(closeStudentWindow) 제거 — 카카오 채널 채팅창 닫기로 대체. 디버그 console.log 2종 정리. | vJ73: 미사용 함수 6종 제거 — exitApp·cleanUrlAndGo·checkDinnerTime·loadGroupCandidates·openRoomMove·wrapClose. 카카오 채널 바로가기 도입으로 불필요해진 진입/종료 관련 죽은 코드 정리. 맛집 기능 코드는 유지.)
+     UPDATED: 2026-07-04  (vJ103: 수료 기념사진 다운로드 고도화 — ①교육생(이름_사번)별 최대 2회 제한(트랜잭션, 카운트는 gradPhoto 하위라 수료 후 자동 삭제·잔류 0) ②버튼에 남은 횟수 표기, 소진 시 비활성 ③모바일은 공유시트(사진에 저장 1탭)→미지원 시 길게눌러 저장 오버레이→PC는 파일 다운로드 ④같은 세션 재다운로드 시 사진 재조회 생략(이그레스 절약), 표시 체크도 메타만 조회. | vJ102.1: 기념사진 텍스트 칸 경계 맞춤 자동 축소(measureText) — 긴 과정명/기간도 칸 안에 정렬. | vJ102: 수료 기념사진 받기 — 카카오 출결 홈에 버튼 신설(강사가 업로드한 gradPhoto가 있고 수료일(endDate) 자정 이전일 때만 표시). 클릭 시 액자(grad_frame.png)에 단체사진 cover-fit 합성 + 하단 4칸(과정명/기간/장소/담임) 텍스트(공유 좌표 gradPhotoPos 적용) 후 PNG 다운로드. | vJ101: 퇴교차량 자동판정 연동 — 지원부가 한글 시간표 업로드 시 기록되는 courses/{room}/shuttle/autoDeparture를 실시간 구독. 자동판정이 있으면 1차/2차 구분 없이 '이 과정 출발시간 단일 표기'(HH:MM 출발 + 수업 종료시각 안내)로 표시하고 도착예정(ETA)도 그 시간 기준으로 갱신. 자동판정이 없으면 기존 1차/2차 공지 표기 유지. 출발시간 렌더를 window._renderStudentDeparture 명명 함수로 분리해 양쪽 리스너가 동일 경로로 재렌더. | vJ100: 학생장 외출외박 현황 화면 디자인 개선 적용(대시보드형: 통계 타일·외출/외박/석식 세그먼트 탭·칩·복사 버튼 등). ※적용 중 파일 끝 잘림 발생분을 완전본으로 복구. | vJ99: OTP 입력칸(ko-digit) 반응형 — box-sizing/padding0/line-height1 + 글자크기 clamp(18~24px), 간격·본문패딩 축소로 좁은 폰에서 숫자가 네모 밖으로 넘쳐 안 보이던 문제 해소. | vJ98: J97의 #keduOtp CSS 변경(flex/padding)이 OTP 입력화면을 깨뜨려 숫자 가려짐 → 원래 중앙정렬로 원복. keduEnroll 스크롤 수정과 학생 OTP 검증 개선은 유지. | vJ97: [버그] 입교카드(keduEnroll)·OTP(keduOtp) 화면 짧은 폰에서 하단 잘림→스크롤 되게(flex-start+overflow). 학생 OTP 검증을 '현재 서버코드 일치 시 시계오차 무관 인정'으로 바꿔 오판 만료 방지(5분 초과 방치 세션만 차단). ※OTP 근본원인(강사페이지 새로고침 시 OTP 재생성)은 admin.js 수정 필요. | vJ96: [정합성] 구(旧) 일반입교 동명확인(showKacConfirm 경로)을 카카오 입교 vJ93 정책과 통일 — '본인' 선택 시 기존 번호 강제채택을 제거하고 입력 번호 유지 + 저장 후 기존 다른-번호 중복 기록 제거(_kacDupRemoveTokenB). 모달 안내문도 동작과 일치하게 수정. [문구] ①OTP '과정 정보가 없어 OTP 전체 확인으로 진행' → '출결 확인 중입니다' ②명단 리셋 감지 '사용자 정보가 변경되어 초기화합니다' → '과정 명단이 새로 정리되어 입교 등록이 다시 필요합니다' ③비품 게이트 '비공식적으로 과정이 운영 중' → '정식 개설 확정 전' ④태블릿 대여 '접속 정보를 확인할 수 없습니다'(2곳) → '입교 등록 정보를 찾을 수 없습니다. 입교/홈에서 등록 후 다시 이용해 주세요' ⑤changeRoom prompt 'Room N' → '강의실 N'. | vJ95: 리셋 후 카카오 재입교 시 resetKey를 서버값으로 동기화해 메인앱 진입 시 오판 초기화 방지. 입교카드 버튼문구 신규='입교 등록'/편집='정보 수정하기'로 구분. | vJ94: 외출외박 STEP2 신원 편집을 인라인+‘수정 완료’ 버튼으로 개선. 이름·사번 수정이 profileOverlay/입교완료로 이탈하지 않고 STEP2에서 바로 수정 후 다음 단계 진행. | vJ93: 동명 중복확인에서 '본인' 선택 시 기존ID 강제채택 제거 → 입력한 사번 그대로 유지하고 이전 다른-번호 중복기록은 저장 후 제거. 모달 안내문 수정. | vJ92: 동명 중복 확인을 3버튼 커스텀 모달로(예 본인/아닙니다 다른사람/닫기). 본인 선택 시 기존 식별ID 병합(입력 번호 달라도 중복방지), 닫기는 입교 중단. | vJ91: 차량 결과 카드에서 신청 장소를 상단 제목이 아닌 '과정·신청자 아래 행'으로 이동하고 크게(18px 청색) 강조. 제목은 '나의 퇴교차량'으로 복원. | vJ90: 차량 신청 결과 카드를 입교완료 카드와 동일 규격(청색 그라데이션 헤더·큰 글씨)으로 통일, 목적지를 제목으로 크게 표시. | vJ89: 학생장 지정/해제를 .on 실시간 리스너로 변경 — 강사가 학생장 지정 시 새로고침 없이 즉시 금일현황 패널 노출, 해제 시 즉시 숨김. | vJ88: 카카오 입교 흐름(submitEnroll)에 동명 중복 확인 복원 — 같은 이름 다른 식별ID 발견 시 '본인 맞냐' 확인(본인→기존ID 병합, 아니면 신규). 편집모드 제외. | vJ87: 16시 이후 외출외박 제출 시 '석식 이용 간주' 안내 팝업 복원(J75에서 STEP5 건너뛰며 사라졌던 것) → 확인 후 신청현황으로. | vJ86: 강사가 과정명/기간을 수정(리네임)해도 교육생이 입교화면으로 초기화되지 않도록 courseKey 불일치 초기화 제거. 강의실 리셋(명단 삭제)·교육기간 종료 시에만 재입교. | vJ85: 질문하기 — 신규 질문 즉시 노출(내 질문 맨위 이동), 질문 몰릴 때 읽던 위치 고정+'새 질문 N개' 칩, 09시 운영일 윈도우 밖 오래된 질문은 학생화면에서 숨김(강사 플랫폼엔 유지). | vJ84: 외출외박 소속을 신청 미리보기·입력칸 자동채움·저장값까지 formatDept 적용해 '항공기술훈련원 OOO'로 일관 표기(대장에도 반영). | vJ83: 학생장 외출외박 카운팅을 admin과 동일한 09:00~익일09:00 KST 윈도우+오늘/어제 노드 병합으로 정렬(복귀자 포함 표시). | vJ82: 학생장 펼침 상세를 높이제한+내부스크롤 드롭다운으로(카드 가림 해소), 연락처 블록 줄바꿈 처리, 펼칠 때 부드럽게 노출. | vJ81: 학생장 패널 접이식 가로바로 변경(카드 가림 해소), 외출외박 항목에 비상연락처 표시+클릭 통화확인 팝업. | vJ80: 학생장 전용 패널(입교카드 아래) — 금일 외출외박·석식제외 실시간 현황 + 식당 전화하기(043-290-2325). | vJ79: 담임 글자크기 다른행과 완전통일(display:flex 제거), 신청취소 후 재초기화(이전정보 안내 복원), 패스트패스 연락처(STEP3)까지 항상 표시. | vJ78: 담임 글자크기 다른행과 통일(span 제거), 담당교수 실시간 반영(.on 리스너). | vJ77: 입교카드·출결완료 페이지에 과정담임 표시 + 전화아이콘→통화확인 팝업→통화 기능(professorProfiles 연락처 사용). | vJ76: 외출외박 현황화면 상단바 위 내용넘침 방지(flex-start), 복귀완료보고·신청취소 한 줄 배치. | vJ75: 입교문구 '항공기술훈련원 입교', 정보수정 시 개인정보동의 숨김, 외출외박 새로작성 빈양식, 소속 항공기술훈련원 표기, 외출외박 완료→수위실 현황화면 통일. | vJ74: 창닫기 기능(closeStudentWindow) 제거 — 카카오 채널 채팅창 닫기로 대체. 디버그 console.log 2종 정리. | vJ73: 미사용 함수 6종 제거 — exitApp·cleanUrlAndGo·checkDinnerTime·loadGroupCandidates·openRoomMove·wrapClose. 카카오 채널 바로가기 도입으로 불필요해진 진입/종료 관련 죽은 코드 정리. 맛집 기능 코드는 유지.)
      ─ 규칙: 수정 시작 시 STATUS를 '수정중'으로, 완료 시 '수정아닙니다'로 변경하고 버전을 5회 반복 표기.
             '수정중'이면 다른 플랫폼은 연동 변경을 보류/협의 후 진행.
 ═══════════════════════════════════════════════════════════════ -->
@@ -8031,31 +8031,65 @@ body.kac-noanim #noticeModal > .menu-box, body.kac-noanim #surveyModal > .menu-b
     });
   }
   function _gradToday(){ var d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+  var GRAD_MAX_DL = 2;   // [vJ103] 교육생 1인당 다운로드 횟수 제한
+  function _gradStudentKey(){
+    var name=(localStorage.getItem('kac_user_name')||'').trim();
+    var phone=(localStorage.getItem('kac_user_phone')||'').trim();
+    if(!name) return '';
+    return (name+'_'+(phone||'0000')).replace(/[.#$/\[\]\s]/g,'_');
+  }
   window.checkKeduGradPhoto=async function(room){
     var btn=document.getElementById('keduGradBtn'); if(!btn) return;
     room=normalizeKakaoRoom(room||getKakaoAttendanceRoom());
     if(!room){ btn.style.display='none'; return; }
     try{
-      var s=await firebase.database().ref('courses/'+room+'/gradPhoto').once('value');
-      var v=s.val();
-      var ok = !!(v && v.dataUrl) && (!v.endDate || String(v.endDate) >= _gradToday());   // 수료일 자정까지
+      // 큰 dataUrl은 읽지 않고 메타(updatedAt/endDate)와 내 횟수만 확인 — 이그레스 절약
+      var key=_gradStudentKey();
+      var res=await Promise.all([
+        firebase.database().ref('courses/'+room+'/gradPhoto/updatedAt').once('value'),
+        firebase.database().ref('courses/'+room+'/gradPhoto/endDate').once('value'),
+        key ? firebase.database().ref('courses/'+room+'/gradPhoto/downloads/'+key).once('value') : Promise.resolve({ val:function(){return 0;} })
+      ]);
+      var ts=res[0].val(); var endDate=res[1].val(); var cnt=Number(res[2].val()||0);
+      var ok = !!ts && (!endDate || String(endDate) >= _gradToday());   // 수료일 자정까지
       btn.style.display = ok ? '' : 'none';
       window._keduGradRoom = ok ? room : null;
+      if(ok){
+        var left=Math.max(0, GRAD_MAX_DL-cnt);
+        if(left<=0){
+          btn.innerHTML='<i class="fa-solid fa-circle-check"></i> 기념사진 저장 완료 ('+GRAD_MAX_DL+'회 사용)';
+          btn.style.opacity='.55'; btn.style.pointerEvents='none';
+        }else{
+          btn.innerHTML='<i class="fa-solid fa-camera-retro"></i> 수료 기념사진 받기 <span style="font-size:12px;opacity:.85;">('+left+'회 남음)</span>';
+          btn.style.opacity=''; btn.style.pointerEvents='';
+        }
+      }
     }catch(e){ btn.style.display='none'; }
   };
   window.keduDownloadGradPhoto=async function(){
     var room=window._keduGradRoom; if(!room) return;
     var btn=document.getElementById('keduGradBtn');
+    // [vJ103] 교육생별 다운로드 횟수 제한(트랜잭션) — 카운트는 gradPhoto 하위라 수료 후 통째로 자동 삭제됨
+    var key=_gradStudentKey();
+    if(!key){ alert('입교 등록(이름·사번) 후 이용할 수 있습니다.'); return; }
+    try{
+      var tx=await firebase.database().ref('courses/'+room+'/gradPhoto/downloads/'+key)
+        .transaction(function(cur){ cur=Number(cur||0); if(cur>=GRAD_MAX_DL) return; return cur+1; });
+      if(!tx.committed){ alert('수료 기념사진 다운로드는 1인당 '+GRAD_MAX_DL+'회까지 가능합니다.'); checkKeduGradPhoto(room); return; }
+    }catch(e){}
     try{
       if(btn){ btn.disabled=true; btn.innerHTML='<i class="fa-solid fa-spinner fa-spin"></i> 만드는 중...'; }
+      // [vJ103] 같은 세션 재다운로드 시 사진 재조회 생략 (이그레스 절약)
+      var cached = (window._keduGradCache && window._keduGradCache.room===room) ? window._keduGradCache.dataUrl : null;
       var res=await Promise.all([
-        firebase.database().ref('courses/'+room+'/gradPhoto/dataUrl').once('value'),
+        cached ? Promise.resolve({ val:function(){return cached;} }) : firebase.database().ref('courses/'+room+'/gradPhoto/dataUrl').once('value'),
         firebase.database().ref('courses/'+room+'/settings').once('value'),
         firebase.database().ref('courses/'+room+'/status/professorName').once('value'),
         firebase.database().ref('system/sharedGuide/gradPhotoPos').once('value'),
         _gradLoadFrame()
       ]);
       var dataUrl=res[0].val(); if(!dataUrl) throw new Error('사진이 없습니다');
+      window._keduGradCache={ room:room, dataUrl:dataUrl };
       var set=res[1].val()||{}; var prof=res[2].val()||''; var pos=res[3].val()||{}; var frame=res[4];
       var W=frame.naturalWidth, H=frame.naturalHeight;
       var photo=await new Promise(function(r,j){ var im=new Image(); im.onload=function(){r(im);}; im.onerror=j; im.src=dataUrl; });
@@ -8081,13 +8115,48 @@ body.kac-noanim #noticeModal > .menu-box, body.kac-noanim #surveyModal > .menu-b
         while(fs>11 && ctx.measureText(t).width>maxW){ fs-=1; ctx.font='900 '+fs+"px 'Pretendard','Malgun Gothic','Apple SD Gothic Neo',sans-serif"; }
         ctx.fillText(t, p.l/100*W, p.t/100*H);
       });
-      var a=document.createElement('a');
-      a.download='수료기념사진_'+String(set.courseName||'').replace(/[\\/:*?"<>|]/g,'')+'.png';
-      a.href=cv.toDataURL('image/png');
-      a.click();
+      var fname='수료기념사진_'+String(set.courseName||'').replace(/[\\/:*?"<>|]/g,'')+'.png';
+      // [vJ103] 갤러리 저장: ①모바일 공유시트(사진에 저장 1탭) → ②길게눌러 저장 오버레이 → ③파일 다운로드
+      var blob=await new Promise(function(r){ cv.toBlob(r,'image/png'); });
+      var isMobile=/Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+      var shared=false;
+      if(isMobile && navigator.canShare && window.File){
+        try{
+          var file=new File([blob], fname, { type:'image/png' });
+          if(navigator.canShare({ files:[file] })){
+            await navigator.share({ files:[file], title:'수료 기념사진' });
+            shared=true;
+          }
+        }catch(shareErr){ shared=false; }   // 공유시트 취소/미지원 → 아래 fallback
+      }
+      if(!shared){
+        if(isMobile){ _gradShowSaveOverlay(cv.toDataURL('image/png'), fname); }
+        else{
+          var a=document.createElement('a');
+          a.download=fname; a.href=cv.toDataURL('image/png'); a.click();
+        }
+      }
     }catch(e){ alert('다운로드 실패: '+(e&&e.message||e)); }
-    finally{ if(btn){ btn.disabled=false; btn.innerHTML='<i class="fa-solid fa-camera-retro"></i> 수료 기념사진 받기'; } }
+    finally{ if(btn){ btn.disabled=false; } try{ checkKeduGradPhoto(room); }catch(e){} }
   };
+  // [vJ103] 모바일 fallback — 이미지를 크게 띄우고 '길게 눌러 사진 저장' 안내 (카카오 인앱 등 공유 미지원 브라우저)
+  function _gradShowSaveOverlay(dataUrl, fname){
+    var ov=document.getElementById('gradSaveOverlay');
+    if(!ov){
+      ov=document.createElement('div'); ov.id='gradSaveOverlay';
+      ov.style.cssText='position:fixed;inset:0;z-index:99999;background:rgba(2,8,30,.92);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:18px;gap:14px;';
+      ov.innerHTML='<div style="color:#fff;font-weight:900;font-size:15px;text-align:center;line-height:1.6;">이미지를 <span style="color:#4ade80;">길게 눌러</span> \'사진 저장\'을 선택하세요</div>'
+        +'<img id="gradSaveImg" style="max-width:96%;max-height:72vh;border-radius:12px;box-shadow:0 10px 40px rgba(0,0,0,.5);">'
+        +'<div style="display:flex;gap:10px;">'
+        +'<a id="gradSaveDl" style="padding:12px 20px;border-radius:12px;background:#16a34a;color:#fff;font-weight:900;font-size:14px;text-decoration:none;"><i class="fa-solid fa-download"></i> 파일로 저장</a>'
+        +'<button onclick="document.getElementById(\'gradSaveOverlay\').style.display=\'none\'" style="padding:12px 20px;border-radius:12px;border:none;background:#475569;color:#fff;font-weight:900;font-size:14px;">닫기</button>'
+        +'</div>';
+      document.body.appendChild(ov);
+    }
+    ov.style.display='flex';
+    var img=document.getElementById('gradSaveImg'); img.src=dataUrl;
+    var dl=document.getElementById('gradSaveDl'); dl.href=dataUrl; dl.setAttribute('download', fname);
+  }
   window.setKakaoAttendanceProof=setKakaoAttendanceProof;
   window.updateKakaoAttendanceButton=updateKakaoAttendanceButton;
   window.getKakaoAttendanceProof=getKakaoAttendanceProof;
