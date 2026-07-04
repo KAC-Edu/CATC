@@ -5097,6 +5097,22 @@ body:not([data-mode="home"]):not([data-mode="waiting"]) .floating-home-btn{botto
 #guideRouletteBtn.guidebtn-pressing,#guideScheduleBtn.guidebtn-pressing,#guideScheduleUploadBtn.guidebtn-pressing,#guideParsedScheduleBtn.guidebtn-pressing{ outline:3px dashed rgba(255,255,255,.95); outline-offset:4px; }
 #guideRouletteBtn.guidebtn-dragging,#guideScheduleBtn.guidebtn-dragging,#guideScheduleUploadBtn.guidebtn-dragging,#guideParsedScheduleBtn.guidebtn-dragging{ cursor:grabbing !important; opacity:.94; animation:none !important; filter:brightness(1.05); }
 
+/* ══ [J12] 비대면 교육개요(4p) 오버레이 — 항목별 값 + 3초 드래그 ══ */
+#guideOverviewOverlay{ position:absolute; inset:0; z-index:7; pointer-events:none; }
+#guideOverviewOverlay .ovw-item{
+    position:absolute; pointer-events:auto; cursor:default; user-select:none;
+    transform:translateY(-50%);
+    max-width:62%;
+    font-size:clamp(13px,1.75vw,28px); font-weight:900; color:#0f2057;
+    letter-spacing:-.3px; line-height:1.25; white-space:nowrap;
+    overflow:hidden; text-overflow:ellipsis;
+    text-shadow:0 1px 0 rgba(255,255,255,.75);
+}
+#guideOverviewOverlay .ovw-item[data-key="ev"],
+#guideOverviewOverlay .ovw-item[data-key="zoom"]{ font-size:clamp(12px,1.5vw,24px); }
+#guideOverviewOverlay .ovw-item.ovw-pressing{ outline:3px dashed rgba(37,99,235,.8); outline-offset:5px; border-radius:8px; }
+#guideOverviewOverlay .ovw-item.ovw-dragging{ cursor:grabbing !important; opacity:.92; outline:3px solid rgba(22,163,74,.85); outline-offset:5px; border-radius:8px; background:rgba(240,253,244,.85); }
+
 /* ══ [J11] 교육시간표 보기 (지원부 판독) — 녹색 버튼 + 슬라이드업 시트 ══ */
 #guideParsedScheduleBtn{
     position:absolute; top:13%; right:5%; z-index:8;

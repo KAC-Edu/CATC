@@ -1,7 +1,7 @@
 /* PLATFORM_EDIT_STATUS: 수정완료 | VERSION: L9 | 2026-07-03 */
 /* [복구 2026-07-03] 파일 말단 184줄이 저장 중 잘림 → J8(260702Z40) 보관본의 동일 블록(리모컨 위젯·더보기 패널·ZOOM 표시 IIFE)으로 접합 복구. J8 이후 해당 말단 블록을 수정한 이력이 있다면 편집기 원본(L9)으로 재저장 권장. */
 /* ============================================================
-   PLATFORM_EDIT_STATUS: 수정완료 | VERSION: J11 | 2026-07-04 (J11: 입교안내 13p '교육시간표 보기' 신설 — 지원부가 한글 명단 업로드 시 자동 판독·저장되는 표 그리드(courses/{room}/schedule/grid, 셀좌표·병합정보 포함)를 실시간 구독. grid 있으면 녹색 버튼 노출→클릭 시 아래→위 슬라이드 시트에 원본 표 그대로 렌더(연속 강의 rowspan 줄합침+과정명·강사명 센터정렬, X로 슬라이드 다운). grid 없으면 기존 사진 보기/QR 업로드 흐름 유지. 녹색 버튼도 3초 롱프레스 위치보정(별도 그룹 parsedSchedule, 윈도우/전체화면 좌표 개별 저장). (J10: ①OTP 재사용 가드 — 강사 화면 새로고침/출결탭 재진입 시 잔여 15초 이상 유효 OTP를 서버에서 재사용, 매번 새 코드로 교체되어 입력 중이던 교육생이 만료 판정받던 문제 해소 ②담임(coordinatorName) 수동수정 보호 — status/coordManual 플래그 도입(professorManual과 동일 패턴), 강사가 담임을 바꿔도 연간계획 자동동기화가 계획값으로 되돌리던 버그 수정. 방 비움/신규 배치 시 플래그 해제 ③퇴교차량 자동판정 표시 — 지원부가 한글 시간표 업로드 시 기록되는 courses/{room}/shuttle/autoDeparture를 실시간 구독, 1차/2차 구분 없이 '이 과정 출발시간' 단일 표시(대시보드 인라인·셔틀 파란박스·도착 ETA 모두), 자동판정 없으면 기존 1차/2차 표기 유지. (J9: 지원부 생활관 명단(system/dorm/rosters) 오삭제 방지 — 리셋·명단비우기·연간계획삭제·종료과정자동정리 4개 경로 전부 '명단의 과정명이 해당 방 과정명과 일치할 때만' 삭제하도록 가드. 다른 과정 명단은 보존하고 console에 보존 사유 기록. (J8: ZOOM 진입 요소를 CSS !important 규칙으로 원천 차단 — 오프라인이면 어떤 코드가 표시해도 절대 안 보임(body.zoom-room-online 클래스 게이트). (J7: ZOOM 진입 요소 표시를 [onclick*=openZoomMonitor] 전체 선택으로 통일 + 2초 하트비트 — 오프라인에서 pill 잔존 완전 차단. (J6: ①장소 수동지정 보호(roomDetailManual) — 연간계획 동기화가 온라인 설정 되돌리는 문제 차단 ②ZOOM 버튼 표시를 장소 배지 텍스트와 상시 동기(MutationObserver) — 오프라인인데 버튼 남는 문제 해소 ③저장알림 확인 후 회의정보 모달 순차 표시(동시 팝업 제거) ④회의번호 000 0000 0000 자동 포맷 전용 모달. (J5: ①ZOOM 버튼 과정현황 장소 옆으로+오프라인 완전숨김(방전환 기본숨김·온라인 가드) ②iframe 사이징 실측기반 재작성 ③온라인 장소 저장 시 회의번호/암호 과정별 저장(askZoomMeetingInfo) ④홈검색 카카오등록 교수 노란배지 ⑤퇴교차량 칩 인라인 펼침. (J4: ZOOM 모니터링 iframe 높이를 body zoom 배율 보정해 실제 화면에 맞춤 — 설정 패널 잘림 해소, 리사이즈 대응. (J3: ui.openZoomMonitor 추가 — ZOOM 모니터링을 내장 뷰(iframe)로 열고 과정 전환 시 확인 후 재로딩, 온라인 판별 토글에 더보기 메뉴 항목 포함) (J2: ①ZOOM 모니터링 버튼 표시로직 재적용(온라인 과정 판별) ②강의실 초기화 confirm에 삭제범위 안내 추가 ③QR 요소없음 개발자문구 교체 ④toggleNightMode/addSubject 널가드 — 구버전 잔재 안전화)
+   PLATFORM_EDIT_STATUS: 수정완료 | VERSION: J12 | 2026-07-04 (J12: 비대면(온라인 Zoom) 입교안내 지원 — 과정 장소가 온라인(Zoom)이면 '입교안내(비대면).pdf' 자동 로드(장소 변경 시 재로드). 가상페이지(1p 뒤 교수소개→카카오 오픈톡방→입교등록절차→목차) 흐름은 대면과 동일, 대면용 '교육과정 안내' 가상페이지는 비대면에서 숨김. 비대면 PDF 4p 교육개요에 과정명·교육인원(입교등록수)·교육기간·교육구분·교육평가(대면과 동일 직무일반/법정 표기)·ZOOM 회의 ID/PW 오버레이 — 항목별 3초 롱프레스 드래그 이동, 윈도우/전체화면 좌표 개별 저장(system/sharedGuide/overviewPos, 전 과정 공통·실시간 동기). 교육시간표 버튼 페이지를 변형별로(대면 13p·비대면 7p) — 비대면은 지원부 판독본이 없으므로 기존 QR 사진 업로드/보기 버튼 그대로 동작. (J11: 입교안내 13p '교육시간표 보기' 신설 — 지원부가 한글 명단 업로드 시 자동 판독·저장되는 표 그리드(courses/{room}/schedule/grid, 셀좌표·병합정보 포함)를 실시간 구독. grid 있으면 녹색 버튼 노출→클릭 시 아래→위 슬라이드 시트에 원본 표 그대로 렌더(연속 강의 rowspan 줄합침+과정명·강사명 센터정렬, X로 슬라이드 다운). grid 없으면 기존 사진 보기/QR 업로드 흐름 유지. 녹색 버튼도 3초 롱프레스 위치보정(별도 그룹 parsedSchedule, 윈도우/전체화면 좌표 개별 저장). (J10: ①OTP 재사용 가드 — 강사 화면 새로고침/출결탭 재진입 시 잔여 15초 이상 유효 OTP를 서버에서 재사용, 매번 새 코드로 교체되어 입력 중이던 교육생이 만료 판정받던 문제 해소 ②담임(coordinatorName) 수동수정 보호 — status/coordManual 플래그 도입(professorManual과 동일 패턴), 강사가 담임을 바꿔도 연간계획 자동동기화가 계획값으로 되돌리던 버그 수정. 방 비움/신규 배치 시 플래그 해제 ③퇴교차량 자동판정 표시 — 지원부가 한글 시간표 업로드 시 기록되는 courses/{room}/shuttle/autoDeparture를 실시간 구독, 1차/2차 구분 없이 '이 과정 출발시간' 단일 표시(대시보드 인라인·셔틀 파란박스·도착 ETA 모두), 자동판정 없으면 기존 1차/2차 표기 유지. (J9: 지원부 생활관 명단(system/dorm/rosters) 오삭제 방지 — 리셋·명단비우기·연간계획삭제·종료과정자동정리 4개 경로 전부 '명단의 과정명이 해당 방 과정명과 일치할 때만' 삭제하도록 가드. 다른 과정 명단은 보존하고 console에 보존 사유 기록. (J8: ZOOM 진입 요소를 CSS !important 규칙으로 원천 차단 — 오프라인이면 어떤 코드가 표시해도 절대 안 보임(body.zoom-room-online 클래스 게이트). (J7: ZOOM 진입 요소 표시를 [onclick*=openZoomMonitor] 전체 선택으로 통일 + 2초 하트비트 — 오프라인에서 pill 잔존 완전 차단. (J6: ①장소 수동지정 보호(roomDetailManual) — 연간계획 동기화가 온라인 설정 되돌리는 문제 차단 ②ZOOM 버튼 표시를 장소 배지 텍스트와 상시 동기(MutationObserver) — 오프라인인데 버튼 남는 문제 해소 ③저장알림 확인 후 회의정보 모달 순차 표시(동시 팝업 제거) ④회의번호 000 0000 0000 자동 포맷 전용 모달. (J5: ①ZOOM 버튼 과정현황 장소 옆으로+오프라인 완전숨김(방전환 기본숨김·온라인 가드) ②iframe 사이징 실측기반 재작성 ③온라인 장소 저장 시 회의번호/암호 과정별 저장(askZoomMeetingInfo) ④홈검색 카카오등록 교수 노란배지 ⑤퇴교차량 칩 인라인 펼침. (J4: ZOOM 모니터링 iframe 높이를 body zoom 배율 보정해 실제 화면에 맞춤 — 설정 패널 잘림 해소, 리사이즈 대응. (J3: ui.openZoomMonitor 추가 — ZOOM 모니터링을 내장 뷰(iframe)로 열고 과정 전환 시 확인 후 재로딩, 온라인 판별 토글에 더보기 메뉴 항목 포함) (J2: ①ZOOM 모니터링 버튼 표시로직 재적용(온라인 과정 판별) ②강의실 초기화 confirm에 삭제범위 안내 추가 ③QR 요소없음 개발자문구 교체 ④toggleNightMode/addSubject 널가드 — 구버전 잔재 안전화)
    CATC · 강사 플랫폼 로직  (admin.js)
    STATUS    수정완료
    @version  L9
@@ -8048,6 +8048,15 @@ const guideMgr = {
     // 배포 폴더의 PDF를 우선 사용한다. 외부 raw 주소는 구형 배포본을 위한 예비 경로다.
     GUIDE_PDF_URL: '입교안내.pdf',
     GUIDE_PDF_FALLBACK_URL: 'https://raw.githubusercontent.com/kac-edu/CATC/main/%EC%9E%85%EA%B5%90%EC%95%88%EB%82%B4.pdf',
+    // [J12] 온라인(Zoom) 과정 전용 비대면 입교안내
+    GUIDE_PDF_ONLINE_URL: '입교안내(비대면).pdf',
+    GUIDE_PDF_ONLINE_FALLBACK_URL: 'https://raw.githubusercontent.com/kac-edu/CATC/main/' + encodeURIComponent('입교안내(비대면).pdf'),
+    // [J12] 과정 장소가 온라인(Zoom)인지 — ZOOM 모니터링과 동일 기준 (settings.roomDetailName)
+    _isOnline: function() { const s = guideMgr._slot(); return /온라인|zoom/i.test(String((s && s.roomDetailName) || '')); },
+    // [J12] 교육시간표(사진/QR/판독) 페이지 — 대면 PDF 13p, 비대면 PDF 7p
+    _schedulePage: function() { return guideMgr._isOnline() ? 7 : 13; },
+    // [J12] 비대면 PDF 교육개요(빈칸 채움) 페이지
+    _overviewPage: function() { return 4; },
 
     // 1. 초기화 — Firebase DB 리스너 없음, 리사이즈 감시만 설정
     //    실제 PDF 로드는 사용자가 '입교안내' 탭을 클릭할 때 refresh()에서 수행
@@ -8186,7 +8195,7 @@ init: function() {
     // [J11] 13p 시간표 버튼 3종 토글 — 판독 grid 있으면 녹색 '교육시간표 보기'만, 없으면 기존 사진/QR 흐름
     _refreshScheduleBtns: function() {
         const slot = guideMgr._slot(); if (!slot) return;
-        const _on13 = (guideMgr._toPdfPage(slot.pageNum || 1) === 13);
+        const _on13 = (guideMgr._toPdfPage(slot.pageNum || 1) === guideMgr._schedulePage());   // [J12] 대면 13p · 비대면 7p
         const _grid = slot.parsedGrid;
         const _hasSched = !!slot.scheduleTs;
         const _pBtn = document.getElementById('guideParsedScheduleBtn');
@@ -8203,11 +8212,15 @@ init: function() {
         guideMgr._watchParsedGrid();   // [J11] 지원부 판독 시간표(grid) 실시간 구독
         await guideMgr._loadProfile();
         await guideMgr._loadCourseInfo();
-        if (slot.pdfDoc) {
+        // [J12] 과정 장소가 온라인(Zoom)이면 비대면 입교안내 PDF 사용 (변형이 바뀌었으면 재로드)
+        const wantUrl = guideMgr._isOnline() ? guideMgr.GUIDE_PDF_ONLINE_URL : guideMgr.GUIDE_PDF_URL;
+        if (slot.pdfDoc && slot.pdfUrl === wantUrl) {
             guideMgr.isRendering = false;
             guideMgr.renderPage(slot.pageNum || 1);
         } else {
-            guideMgr.loadPDF(guideMgr.GUIDE_PDF_URL);
+            slot.pdfDoc = null;
+            slot.pageNum = 1;
+            guideMgr.loadPDF(wantUrl);
         }
     },
 
@@ -8448,7 +8461,7 @@ init: function() {
         const list = [];
         if (!n) return list;
         const en = guideMgr._pageEnable();
-        const want = { profile: guideMgr._hasProfile(), kakaoqr: guideMgr._hasKakaoQR() && en.kakaoqr, channelguide: guideMgr._hasKakaoQR() && en.channelguide, courseinfo: true, centernotice: guideMgr._hasCenterNotice() && en.centernotice };
+        const want = { profile: guideMgr._hasProfile(), kakaoqr: guideMgr._hasKakaoQR() && en.kakaoqr, channelguide: guideMgr._hasKakaoQR() && en.channelguide, courseinfo: !guideMgr._isOnline(), centernotice: guideMgr._hasCenterNotice() && en.centernotice };   // [J12] 비대면은 PDF 4p 교육개요 오버레이가 대체
         const pos = guideMgr._pagePos();
         pos.centernotice = 23;   // 센터 공지는 PDF 23p(학생장 역할) 뒤 고정
         const clamp = v => Math.max(1, Math.min(n, Number(v) || 1));
@@ -8599,7 +8612,8 @@ init: function() {
         if (badge) { badge.innerText = "⏳ 불러오는 중..."; badge.style.color = "#f59e0b"; }
         guideMgr.isRendering = false;
         try {
-            const candidates = [url, guideMgr.GUIDE_PDF_FALLBACK_URL]
+            const _fb = /비대면/.test(String(url || '')) ? guideMgr.GUIDE_PDF_ONLINE_FALLBACK_URL : guideMgr.GUIDE_PDF_FALLBACK_URL;   // [J12]
+            const candidates = [url, _fb]
                 .filter((candidate, index, list) => candidate && list.indexOf(candidate) === index);
             let pdfDoc = null;
             let lastError = null;
@@ -8619,6 +8633,7 @@ init: function() {
                 guideMgr._roomCache[targetRoom] = { pdfDoc: null, pageNum: 1 };
             }
             guideMgr._roomCache[targetRoom].pdfDoc = pdfDoc;
+            guideMgr._roomCache[targetRoom].pdfUrl = url;   // [J12] 어떤 변형(대면/비대면)이 로드됐는지 기록
             guideMgr._roomCache[targetRoom].pageNum = 1;
             if (badge) { badge.innerText = "✅ 가이드 로드 완료"; badge.style.color = "#10b981"; }
             // 로드 완료 시점에도 같은 방이면 렌더링
@@ -8662,6 +8677,8 @@ init: function() {
             try { var _psh = document.getElementById('parsedScheduleSheet'); if (_psh && _psh.classList.contains('pss-open')) ui.closeParsedSchedule(); } catch (e) {}
             var _vOv = document.getElementById('guideVenueOverlay');   // 교육장소 오버레이는 해당 PDF p에서만
             if (_vOv) _vOv.style.display = 'none';
+            var _oOv = document.getElementById('guideOverviewOverlay'); // [J12] 교육개요 오버레이도 해당 p에서만
+            if (_oOv) _oOv.style.display = 'none';
         };
 
         // 이전 QR 실시간 명단 리스너 해제 (페이지 이동 시)
@@ -8853,6 +8870,12 @@ init: function() {
             if (_vOv) {
                 if (guideMgr._toPdfPage(num) === guideMgr._venuePage()) { _vOv.style.display = 'block'; if (ui.renderVenueOverlay) ui.renderVenueOverlay(); }
                 else _vOv.style.display = 'none';
+            }
+            // [J12 교육개요] 비대면 PDF 4p: 과정명·인원·기간·구분·평가·회의 ID/PW 오버레이 (항목별 3초 드래그 이동)
+            var _oOv = document.getElementById('guideOverviewOverlay');
+            if (_oOv) {
+                if (guideMgr._isOnline() && guideMgr._toPdfPage(num) === guideMgr._overviewPage()) { _oOv.style.display = 'block'; if (ui.renderOverviewOverlay) ui.renderOverviewOverlay(); }
+                else _oOv.style.display = 'none';
             }
         };
         if (guideMgr.isRendering) return;
@@ -12244,6 +12267,129 @@ window.kacClearDefaultPw = async function(){
     if (Object.keys(updates).length) { await firebase.database().ref().update(updates); console.log('[KAC] 기본비번 7777 잔재 제거:', Object.keys(updates).length); }
     try{ localStorage.setItem('kac_pwclear_v1','1'); }catch(e){}
   }catch(e){ console.warn('[KAC pwclear] 스킵:', e && e.message); }
+};
+
+/* ══ [J12] 비대면 입교안내 교육개요(4p) 오버레이 — 항목별 값 표기 + 3초 롱프레스 이동
+   좌표: system/sharedGuide/overviewPos/{항목}/{window|fullscreen} = {l,t} (%), 전 과정 공통·화면모드별 개별 저장 ══ */
+ui._ovwFB = 'system/sharedGuide/overviewPos';
+ui._ovwDefaults = {
+    name:   { l: 26,   t: 31.6 },
+    count:  { l: 26,   t: 42.0 },
+    period: { l: 26,   t: 52.3 },
+    cat:    { l: 26,   t: 62.6 },
+    ev:     { l: 26,   t: 72.9 },
+    zoom:   { l: 41.5, t: 83.1 }
+};
+ui._ovwPos = {};
+ui._ovwMode = function () { return (document.fullscreenElement || document.webkitFullscreenElement) ? 'fullscreen' : 'window'; };
+ui._ovwSubscribed = false;
+ui._ovwSubscribe = function () {
+    if (ui._ovwSubscribed) return;
+    if (!(window.firebase && firebase.database)) { setTimeout(ui._ovwSubscribe, 800); return; }
+    ui._ovwSubscribed = true;
+    try {
+        firebase.database().ref(ui._ovwFB).on('value', function (s) {
+            ui._ovwPos = s.val() || {};
+            ui._ovwApplyAll();
+        });
+    } catch (e) { ui._ovwSubscribed = false; }
+};
+ui._ovwApply = function (el) {
+    if (!el) return;
+    var key = el.dataset.key;
+    var saved = (ui._ovwPos[key] || {})[ui._ovwMode()];
+    var p = (saved && typeof saved.l === 'number') ? saved : ui._ovwDefaults[key];
+    if (!p) return;
+    el.style.left = p.l + '%';
+    el.style.top = p.t + '%';
+};
+ui._ovwApplyAll = function () {
+    var host = document.getElementById('guideOverviewOverlay');
+    if (!host) return;
+    Array.prototype.forEach.call(host.children, ui._ovwApply);
+};
+ui._ovwBind = function (el) {
+    if (el._ovwBound) return; el._ovwBound = true;
+    el.style.touchAction = 'none';
+    var holdTimer = null, dragging = false;
+    el.addEventListener('pointerdown', function (e) {
+        if (e.pointerType === 'mouse' && e.button !== 0) return;
+        e.stopPropagation();
+        dragging = false;
+        try { el.setPointerCapture(e.pointerId); } catch (_) {}
+        clearTimeout(holdTimer);
+        el.classList.add('ovw-pressing');
+        holdTimer = setTimeout(function () {
+            dragging = true;
+            el.classList.remove('ovw-pressing');
+            el.classList.add('ovw-dragging');
+            if (navigator.vibrate) navigator.vibrate(40);
+        }, 3000);
+    });
+    el.addEventListener('pointermove', function (e) {
+        if (!dragging) return;
+        e.stopPropagation(); e.preventDefault();
+        var wrap = document.getElementById('pdfWrapper'); if (!wrap) return;
+        var r = wrap.getBoundingClientRect();
+        var l = Math.max(0, Math.min(96, (e.clientX - r.left) / r.width * 100));
+        var t = Math.max(0, Math.min(96, (e.clientY - r.top) / r.height * 100));
+        el.style.left = l + '%'; el.style.top = t + '%';
+        el._ovwCur = { l: Math.round(l * 10) / 10, t: Math.round(t * 10) / 10 };
+    });
+    function finish(e) {
+        clearTimeout(holdTimer);
+        el.classList.remove('ovw-pressing');
+        if (!dragging) return;
+        dragging = false;
+        el.classList.remove('ovw-dragging');
+        e.stopPropagation();
+        var p = el._ovwCur; if (!p) return;
+        var key = el.dataset.key, m = ui._ovwMode();
+        if (!ui._ovwPos[key]) ui._ovwPos[key] = {};
+        ui._ovwPos[key][m] = p;
+        try { firebase.database().ref(ui._ovwFB + '/' + key + '/' + m).set({ l: p.l, t: p.t }); } catch (err) {}
+        if (ui.showAlert) ui.showAlert('📍 위치가 저장되었습니다 (' + (m === 'fullscreen' ? '전체화면' : '윈도우') + ' 기준 · 모든 과정 공통)');
+    }
+    el.addEventListener('pointerup', finish);
+    el.addEventListener('pointercancel', function () { clearTimeout(holdTimer); el.classList.remove('ovw-pressing'); el.classList.remove('ovw-dragging'); dragging = false; });
+};
+ui.renderOverviewOverlay = async function () {
+    var host = document.getElementById('guideOverviewOverlay');
+    if (!host) return;
+    ui._ovwSubscribe();
+    var slot = (window.guideMgr && guideMgr._slot) ? guideMgr._slot() : {};
+    var ci = (slot && slot.courseInfo) || {};
+    var room = state.room;
+    var zoomTxt = '미입력';
+    try {
+        var zs = await firebase.database().ref('courses/' + room + '/zoomMeeting').once('value');
+        var zv = zs.val() || {};
+        var no = String(zv.no || '').trim(), pw = String(zv.pw || '').trim();
+        if (no || pw) zoomTxt = (no || '-') + (pw ? '\u00A0\u00A0/\u00A0\u00A0' + pw : '');
+    } catch (e) {}
+    var catTxt = (ci.category === 'duty-legal') ? '직무 법정' : '직무 일반';
+    var evTxt = (ci.evaluation === 'written') ? '필기평가 (90%) + 근태 (10%)' : '없음 (근태평가 10%)';
+    var items = [
+        { k: 'name',   v: ci.courseName || '과정명 미설정' },
+        { k: 'count',  v: (ci.count != null ? ci.count : 0) + ' 명' },
+        { k: 'period', v: (guideMgr._fmtPeriod ? guideMgr._fmtPeriod(ci.period) : ci.period) || '기간 미설정' },
+        { k: 'cat',    v: catTxt },
+        { k: 'ev',     v: evTxt },
+        { k: 'zoom',   v: zoomTxt }
+    ];
+    host.innerHTML = '';
+    items.forEach(function (it) {
+        var el = document.createElement('div');
+        el.className = 'ovw-item';
+        el.dataset.key = it.k;
+        el.textContent = it.v;
+        el.title = '3초간 꾹 누르면 위치를 옮길 수 있습니다 (윈도우/전체화면 좌표 개별 저장 · 모든 과정 공통)';
+        el.addEventListener('click', function (e) { e.stopPropagation(); });
+        el.addEventListener('contextmenu', function (e) { e.stopPropagation(); e.preventDefault(); });
+        host.appendChild(el);
+        ui._ovwBind(el);
+    });
+    ui._ovwApplyAll();
 };
 
 /* ══ [J11] 지원부 판독 교육시간표 — 아래→위 슬라이드 시트 + 병합셀 그대로 렌더 ══ */
