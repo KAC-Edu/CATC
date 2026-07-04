@@ -5110,11 +5110,10 @@ body.in-course #courseSmartRemote.hex-remote-v2{display:block;}
 #appFooter .af-devbtn{position:absolute;right:16px;top:50%;transform:translateY(-50%);background:none;border:none;color:#7c8ba1;font-size:11px;font-weight:600;letter-spacing:.2px;cursor:pointer;pointer-events:auto;padding:4px 6px;white-space:nowrap;}
 #appFooter .af-devbtn:hover{color:#e2e8f0;text-decoration:underline;}
 /* 현황판(홈·실시간현황판) 및 모니터 전체화면에서는 숨김 */
-body[data-mode="home"] #appFooter,
 body[data-mode="waiting"] #appFooter{display:none !important;}
 :fullscreen #appFooter,:-webkit-full-screen #appFooter{display:none !important;}
 /* 유턴(홈) 버튼: 하단바가 보이는 화면에선 하단바 위로 올려 겹침 방지 (현황판·전체화면은 원위치) */
-body:not([data-mode="home"]):not([data-mode="waiting"]) .floating-home-btn{bottom:66px;}
+body:not([data-mode="waiting"]) .floating-home-btn{bottom:66px;}
 :fullscreen .floating-home-btn,:-webkit-full-screen .floating-home-btn{bottom:28px !important;}
 /* 위·아래 대칭 육각 꽃: 0=위중앙, 1·2=위 좌우, 3·4=아래 좌우, 5=아래중앙 (0↔5, 1·2↔3·4 대칭) */
 .hex-pos-0{left:90px;top:0}.hex-pos-1{left:0;top:46px}.hex-pos-2{right:0;top:46px}.hex-pos-3{left:0;bottom:46px}.hex-pos-4{right:0;bottom:46px}.hex-pos-5{left:90px;bottom:0}
@@ -5851,7 +5850,8 @@ body.night-mode .side-rail-lbl{ color:#cbd5e1; }
 .cg-count-box.cg-count-pressing{ outline:3px dashed rgba(255,255,255,.7); outline-offset:4px; opacity:.85; }
 .cg-count-box.cg-count-dragging{ cursor:grabbing; outline:3px solid #f59e0b; outline-offset:4px; box-shadow:0 12px 40px rgba(245,158,11,.5); }
 /* [채널 배경음 음량] 음량 아이콘 + 슬라이더 (start.mp3) */
-.cg-vol-wrap{ position:absolute; right:20px; bottom:20px; z-index:6; display:flex; align-items:center; gap:0; }
+.cg-vol-wrap{ position:absolute; left:82%; top:85%; z-index:6; display:flex; align-items:center; gap:0; touch-action:none; }
+.cg-vol-wrap.cg-vol-dragging{ outline:3px solid #f59e0b; outline-offset:5px; border-radius:16px; }
 .cg-vol-btn{ width:48px; height:48px; flex:0 0 48px; border:none; border-radius:999px; background:rgba(15,23,42,.55); color:#fff; font-size:19px; cursor:pointer; display:flex; align-items:center; justify-content:center; backdrop-filter:blur(4px); box-shadow:0 4px 14px rgba(0,0,0,.28); transition:background .15s; }
 .cg-vol-btn:hover{ background:rgba(37,99,235,.85); }
 .cg-vol-btn.cg-vol-pressing{ outline:3px dashed rgba(255,255,255,.8); outline-offset:3px; background:#f59e0b; }

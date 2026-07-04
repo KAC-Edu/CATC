@@ -13906,38 +13906,96 @@ ui._saveChannelVol = function(v){
   firebase.database().ref('system/sharedGuide/channelAudioVolume').set(v).catch(function(){});
 };
 // 채널 페이지 진입 시 호출: 저장된 음량을 슬라이더/오디오에 반영하고 버튼에 롱프레스 저장 바인딩
+// ── [채널 음량 위젯] 위치 = 전체 과정 공통(system/sharedGuide/videoVolPos) · 윈도우/전체화면 개별 · 3초 꾹 드래그 이동 ──
+ui._volPosDefault = { win:{ x:82, y:85 }, fs:{ x:82, y:85 } };
+ui._volPos = null; ui._volPosLoaded = false;
+ui._loadVolPos = function(cb){
+  firebase.database().ref('system/sharedGuide/videoVolPos').once('value').then(function(s){
+    var v=s.val()||{}; var d=ui._volPosDefault;
+    ui._volPos={
+      win:{ x:(v.win&&isFinite(v.win.x))?Number(v.win.x):d.win.x, y:(v.win&&isFinite(v.win.y))?Number(v.win.y):d.win.y },
+      fs: { x:(v.fs&&isFinite(v.fs.x))?Number(v.fs.x):d.fs.x,  y:(v.fs&&isFinite(v.fs.y))?Number(v.fs.y):d.fs.y }
+    };
+    ui._volPosLoaded=true; if(cb)cb();
+  }).catch(function(){ var d=ui._volPosDefault; ui._volPos={win:{x:d.win.x,y:d.win.y},fs:{x:d.fs.x,y:d.fs.y}}; ui._volPosLoaded=true; if(cb)cb(); });
+};
+ui._saveVolPos = function(){
+  if(!ui._volPos) return;
+  firebase.database().ref('system/sharedGuide/videoVolPos').set({ win:ui._volPos.win, fs:ui._volPos.fs }).catch(function(){});
+};
+ui._applyVolPos = function(){
+  var w=document.getElementById('cgVolWrap'); if(!w) return;
+  if(!ui._volPosLoaded){ ui._loadVolPos(function(){ ui._applyVolPos(); }); return; }
+  var P=ui._volPos||ui._volPosDefault; var c=ui._isGuideFs()?P.fs:P.win;
+  w.style.left=c.x+'%'; w.style.top=c.y+'%'; w.style.right='auto'; w.style.bottom='auto';
+};
 ui._initChannelVolUI = function(){
   var apply = function(){
     var v = (ui._cgVol!=null && isFinite(ui._cgVol)) ? ui._cgVol : ui._cgVolDefault;
     try { if (guideMgr && guideMgr._setChannelVolume) guideMgr._setChannelVolume(v); } catch(e){}
   };
   if(!ui._cgVolLoaded){ ui._loadChannelVol(apply); } else { apply(); }
+  ui._applyVolPos();
   var btn = document.getElementById('cgVolBtn');
   var wrap = document.getElementById('cgVolWrap');
+  var slider = document.getElementById('cgVolSlider');
+  // 슬라이더 조작이 PDF 페이지 넘김으로 이어지지 않도록 전파 차단
+  if(slider && !slider._cgStop){
+    slider._cgStop = true;
+    ['pointerdown','pointerup','click','mousedown','mouseup','touchstart','touchend'].forEach(function(ev){
+      slider.addEventListener(ev, function(e){ e.stopPropagation(); }, {passive:true});
+    });
+  }
+  if(wrap && !wrap._cgStop){
+    wrap._cgStop = true;
+    wrap.addEventListener('click', function(e){ e.stopPropagation(); });
+    wrap.addEventListener('contextmenu', function(e){ e.stopPropagation(); e.preventDefault(); });
+  }
   if(btn && !btn._cgVolBound){
     btn._cgVolBound = true;
-    var holdTimer=null, saved=false, sx=0, sy=0;
+    var holdTimer=null, dragMode=false, moved=false, sx=0, sy=0, gx=0, gy=0;
     var clearHold=function(){ if(holdTimer){ clearTimeout(holdTimer); holdTimer=null; } btn.classList.remove('cg-vol-pressing'); };
     btn.addEventListener('pointerdown', function(e){
-      e.stopPropagation(); saved=false; sx=e.clientX; sy=e.clientY;
+      e.stopPropagation(); e.preventDefault(); sx=e.clientX; sy=e.clientY; moved=false; dragMode=false;
       try{ btn.setPointerCapture(e.pointerId); }catch(_){}
       btn.classList.add('cg-vol-pressing');
       holdTimer=setTimeout(function(){
-        saved=true; btn.classList.remove('cg-vol-pressing');
-        var vol = (guideMgr._cgAudio ? guideMgr._cgAudio.volume : ((ui._cgVol!=null)?ui._cgVol:ui._cgVolDefault));
-        ui._saveChannelVol(vol);
+        dragMode=true; btn.classList.remove('cg-vol-pressing'); if(wrap) wrap.classList.add('cg-vol-dragging');
+        var cr=(wrap||btn).getBoundingClientRect(); gx=sx-cr.left; gy=sy-cr.top;
         try{ if(navigator.vibrate) navigator.vibrate(45); }catch(_){}
-        if(ui.showAlert) ui.showAlert('🔊 현재 음량('+Math.round(vol*100)+'%)을 모든 과정 초기 음량으로 저장했습니다.');
       }, 3000);
     });
-    btn.addEventListener('pointermove', function(e){ if(Math.hypot(e.clientX-sx,e.clientY-sy)>10) clearHold(); });
+    btn.addEventListener('pointermove', function(e){
+      if(dragMode){
+        e.preventDefault(); e.stopPropagation();
+        var slide=(wrap||btn).parentElement; if(!slide) return; var r=slide.getBoundingClientRect();
+        var ww=(wrap||btn).offsetWidth/r.width*100, wh=(wrap||btn).offsetHeight/r.height*100;
+        var nl=(e.clientX-gx-r.left)/r.width*100, nt=(e.clientY-gy-r.top)/r.height*100;
+        nl=Math.max(0,Math.min(100-ww,nl)); nt=Math.max(0,Math.min(100-wh,nt));
+        if(wrap){ wrap.style.left=nl.toFixed(2)+'%'; wrap.style.top=nt.toFixed(2)+'%'; wrap.style.right='auto'; wrap.style.bottom='auto'; }
+        if(!ui._volPos){ var d=ui._volPosDefault; ui._volPos={win:{x:d.win.x,y:d.win.y},fs:{x:d.fs.x,y:d.fs.y}}; }
+        if(!ui._volPos.fs) ui._volPos.fs={}; if(!ui._volPos.win) ui._volPos.win={};
+        var slot=ui._isGuideFs()?ui._volPos.fs:ui._volPos.win;
+        slot.x=+nl.toFixed(2); slot.y=+nt.toFixed(2);
+      } else if(Math.hypot(e.clientX-sx,e.clientY-sy)>10){ moved=true; clearHold(); }
+    });
     btn.addEventListener('pointerup', function(e){
       e.stopPropagation(); clearHold();
       try{ btn.releasePointerCapture(e.pointerId); }catch(_){}
-      if(!saved && wrap){ wrap.classList.toggle('open'); }   // 짧게 누르면 슬라이더 펼침/접기
+      if(dragMode){
+        dragMode=false; if(wrap) wrap.classList.remove('cg-vol-dragging');
+        ui._saveVolPos();
+        // 위치와 함께 현재 음량도 초기값으로 저장 (같이 저장)
+        var vol=(guideMgr._cgAudio?guideMgr._cgAudio.volume:((ui._cgVol!=null)?ui._cgVol:ui._cgVolDefault));
+        ui._saveChannelVol(vol);
+        if(ui.showAlert) ui.showAlert('📍 스피커 위치와 음량('+Math.round(vol*100)+'%)을 저장했습니다. ('+(ui._isGuideFs()?'전체화면':'창 모드')+' · 모든 과정 공통)');
+      } else if(!moved && wrap){
+        wrap.classList.toggle('open');   // 짧게 누르면 슬라이더 펼침/접기
+      }
     });
-    btn.addEventListener('pointercancel', function(){ clearHold(); });
+    btn.addEventListener('pointercancel', function(){ clearHold(); if(dragMode){ dragMode=false; if(wrap) wrap.classList.remove('cg-vol-dragging'); ui._saveVolPos(); } });
     btn.addEventListener('click', function(e){ e.stopPropagation(); e.preventDefault(); });
+    btn.addEventListener('contextmenu', function(e){ e.stopPropagation(); e.preventDefault(); });
   }
 };
 ui._saveVideoCountPos = function(){
@@ -14008,7 +14066,7 @@ ui._spawnEnrollFx = function(name){
 if(!ui._videoCountFsHook){
   ui._videoCountFsHook = true;
   ['fullscreenchange','webkitfullscreenchange','msfullscreenchange'].forEach(function(ev){
-    document.addEventListener(ev, function(){ try{ if(document.getElementById('cgCountBox') && ui._applyVideoCountPos) ui._applyVideoCountPos(); }catch(e){} });
+    document.addEventListener(ev, function(){ try{ if(document.getElementById('cgCountBox') && ui._applyVideoCountPos) ui._applyVideoCountPos(); }catch(e){} try{ if(document.getElementById('cgVolWrap') && ui._applyVolPos) ui._applyVolPos(); }catch(e){} });
   });
 }
 
