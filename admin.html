@@ -42,7 +42,7 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/ko.js"></script>
-    <link rel="stylesheet" href="admin.css?v=260704M24">
+    <link rel="stylesheet" href="admin.css?v=260704M25">
     <link rel="stylesheet" href="kac-tokens.css?v=20260622">
     <link rel="icon" type="image/svg+xml" href="favicon.svg?v=b260620c">
     <script>
@@ -1533,7 +1533,7 @@ body.in-course #moreToggleTab{ display:flex !important; }
 
 
 <!-- ══ 홈 화면 (#view-home) ══ -->
-<div id="view-home" class="full-dashboard" style="display:flex; flex-direction:column; align-items:center; justify-content:flex-start; padding-top:14px; min-height:auto;">
+<div id="view-home" class="full-dashboard" style="display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:70vh;">
     <!-- 타이틀 -->
     <div class="view-header">
         <h1 style="font-size:42px;"><i id="kioskPlaneBtn" class="fa-solid fa-plane-departure" title="3초간 꾹 누르면 키오스크 전체화면" style="cursor:pointer;"></i> 항공기술훈련원 통합 교육 현황판</h1>
@@ -1553,13 +1553,13 @@ body.in-course #moreToggleTab{ display:flex !important; }
     </div>
 
     <!-- catc.png: 원본 전체 비율 노출 -->
-    <div class="dashboard-campus-banner dashboard-campus-image" style="max-width:920px; width:100%; margin-bottom:16px;">
+    <div class="dashboard-campus-banner dashboard-campus-image" style="max-width:1100px; width:100%; margin-bottom:20px;">
         <img src="catc.png" alt="항공기술훈련원 전경"
-             style="max-width:100%; max-height:34vh; width:auto; height:auto; object-fit:contain; display:block; margin:0 auto; border-radius:18px;">
+             style="max-width:100%; max-height:46vh; width:auto; height:auto; object-fit:contain; display:block; margin:0 auto; border-radius:18px;">
     </div>
 
     <!-- 3개 통계 블록 (슬림) -->
-    <div class="home-stat-row" style="display:flex; gap:16px; width:100%; max-width:1100px; flex-wrap:wrap; margin-bottom:18px;">
+    <div class="home-stat-row" style="display:flex; gap:16px; width:100%; max-width:1100px; flex-wrap:wrap; margin-bottom:40px;">
 
         <div onclick="ui.openHomeStatModal('active')" class="home-stat-card">
             <div class="stat-card-inner">
@@ -1594,19 +1594,6 @@ body.in-course #moreToggleTab{ display:flex !important; }
             </div>
         </div>
 
-    </div>
-
-    <!-- [화면 도움말] 통합 현황판 사용 안내 -->
-    <div class="screen-hint home-help-note" style="max-width:1100px;">
-        <i class="fa-solid fa-circle-info"></i>
-        <div class="hint-body hint-2col">
-            <span class="hint-title">통합 현황판 사용 안내</span>
-            <span class="hint-line">• <b>담임교수 검색</b> — 이름 입력 시 그 교수의 이번 주 과정으로 바로 입장.</span>
-            <span class="hint-line">• <b>운영 과정</b> — 이번 주 강의 중인 과정 목록. 카드 클릭 시 입장.</span>
-            <span class="hint-line">• <b>교육 인원</b> — 과정별 입교/예정 인원 · 소속 지역 분포 지도.</span>
-            <span class="hint-line">• <b>외출·외박</b> — 금일 접수된 외출·외박 신청 현황.</span>
-            <span class="hint-line hint-full">• 과정 입장 후 <b>수강생·출결·공지·셔틀·Q&amp;A</b> 등 세부 운영을 관리합니다.</span>
-        </div>
     </div>
 </div> <!-- view-home 끝 -->
 
@@ -2839,7 +2826,7 @@ function setupAcc(btn){
 
 
 
-    <script src="admin.js?v=260704M24"></script>
+    <script src="admin.js?v=260704M25"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
 <!-- ── 화면 자동 맞춤(auto-fit): 가로+세로 모두 화면에 맞게 자동 축소 · JDS260613 ──
      원인: Windows 디스플레이 배율(125%/150%)·저해상도 화면에서 유효 뷰포트가 작아져
