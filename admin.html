@@ -42,7 +42,7 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/ko.js"></script>
-    <link rel="stylesheet" href="admin.css?v=260702Z77">
+    <link rel="stylesheet" href="admin.css?v=260704M9">
     <link rel="stylesheet" href="kac-tokens.css?v=20260622">
     <link rel="icon" type="image/svg+xml" href="favicon.svg?v=b260620c">
     <script>
@@ -935,7 +935,11 @@ body.in-course #moreToggleTab{ display:flex !important; }
                 <h2 id="dashCourseTitle" onclick="ui.openFieldEdit('courseName')" title="클릭하여 과정명 수정" style="cursor:pointer;">과정명을 설정해주세요.</h2>
                 <div class="hero-info-row">
                     <span class="info-pill" onclick="ui.openFieldEdit('period')" title="클릭하여 기간 수정" style="cursor:pointer;"><i class="fa-solid fa-calendar-check"></i> <b id="dashPeriod">-</b></span>
-                    <span class="info-pill" onclick="ui.openFieldEdit('roomDetail')" title="클릭하여 장소 수정" style="cursor:pointer;"><i class="fa-solid fa-map-location-dot"></i> <b id="dashRoomDetail">-</b></span><span class="info-pill" id="dashZoomBtn" onclick="ui.openZoomMonitor()" title="ZOOM 실시간 출석 모니터링" style="cursor:pointer; display:none; background:linear-gradient(135deg,#0ea5e9,#2f6fed); border-color:transparent;"><i class="fa-solid fa-video"></i> <b>ZOOM 모니터링</b></span><span class="info-pill" id="dashGradBtn" onclick="gradMgr.open()" title="수료 기념사진 — 촬영 QR·액자 합성·다운로드 (수료일 06시부터)" style="cursor:pointer; display:none;"><i class="fa-solid fa-camera-retro"></i> <b>수료 기념사진</b></span>
+                    <div class="hero-location-stack">
+                        <span class="info-pill" onclick="ui.openFieldEdit('roomDetail')" title="클릭하여 장소 수정" style="cursor:pointer;"><i class="fa-solid fa-map-location-dot"></i> <b id="dashRoomDetail">-</b></span>
+                        <span class="info-pill" id="dashZoomBtn" onclick="ui.openZoomMonitor()" title="ZOOM 실시간 출석 모니터링" style="cursor:pointer; display:none; background:linear-gradient(135deg,#0ea5e9,#2f6fed); border-color:transparent;"><i class="fa-solid fa-video"></i> <b>ZOOM 모니터링</b></span>
+                    </div>
+                    <span class="info-pill" id="dashGradBtn" onclick="gradMgr.open()" title="수료 기념사진 — 촬영 QR·액자 합성·다운로드 (수료일 06시부터)" style="cursor:pointer; display:none;"><i class="fa-solid fa-camera-retro"></i> <b>수료 기념사진</b></span>
                 </div>
             </div>
             
@@ -2811,7 +2815,7 @@ function setupAcc(btn){
 
 
 
-    <script src="admin.js?v=260704J14"></script>
+    <script src="admin.js?v=260704M9"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
 <!-- ── 화면 자동 맞춤(auto-fit): 가로+세로 모두 화면에 맞게 자동 축소 · JDS260613 ──
      원인: Windows 디스플레이 배율(125%/150%)·저해상도 화면에서 유효 뷰포트가 작아져

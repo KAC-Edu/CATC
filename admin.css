@@ -2484,13 +2484,36 @@ body.night-mode .header-room-badge { background-color: #003366 !important; borde
     text-shadow: 0 2px 10px rgba(0,0,0,0.2);
 }
 
-.hero-info-row { display: flex; gap: 20px; }
+.hero-info-row {
+    display:flex;
+    align-items:flex-start;
+    gap:14px;
+    flex-wrap:wrap;
+}
 .info-pill {
     background: rgba(255,255,255,0.1); padding: 8px 16px;
     border-radius: 50px; font-size: 14px; display: flex; align-items: center; gap: 8px;
     border: 1px solid rgba(255,255,255,0.1);
+    white-space:nowrap;
+    flex-shrink:0;
 }
 .info-pill i { color: #60a5fa; }
+.hero-location-stack{
+    display:flex;
+    flex-direction:column;
+    align-items:stretch;
+    gap:8px;
+    min-width:158px;
+}
+.hero-location-stack .info-pill{
+    width:100%;
+    box-sizing:border-box;
+    justify-content:center;
+}
+#dashPeriod,
+#dashRoomDetail,
+#dashZoomBtn b,
+#dashGradBtn b{ white-space:nowrap; }
 
 /* 3. 우측 교수님 글래스 카드 */
 .prof-glass-card {
@@ -5100,12 +5123,14 @@ body:not([data-mode="home"]):not([data-mode="waiting"]) .floating-home-btn{botto
 /* ══ [J13] 수료 기념사진 ══ */
 /* [J14] 대시보드 히어로 — 수료 기념사진 노란 pill (수료일 06시부터) */
 #dashGradBtn{
+    display:none !important;
     background:linear-gradient(135deg,#fbbf24,#f59e0b) !important;
     border-color:transparent !important;
     color:#78350f !important;
     font-weight:900 !important;
     animation:gradTodayPulse 1.8s ease-in-out infinite;
 }
+#dashGradBtn.is-visible{ display:inline-flex !important; }
 #dashGradBtn b{ color:#78350f !important; }
 #dashGradBtn i{ color:#92400e !important; }
 #dashGradBtn:hover{ filter:brightness(1.07); transform:translateY(-1px); }
