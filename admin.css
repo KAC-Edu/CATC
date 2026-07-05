@@ -6106,20 +6106,22 @@ body.night-mode .side-rail-lbl{ color:#cbd5e1; }
 }
 #pdfWrapper.guide-page-virtual:fullscreen .guide-profile-bio-list::before,
 #pdfWrapper.guide-page-virtual:-webkit-full-screen .guide-profile-bio-list::before {
-    left: clamp(52px, 3.2vw, 68px);
+    left: clamp(75px, 4.5vw, 95px);
     top: clamp(18px, 2vh, 28px);
     bottom: clamp(18px, 2vh, 28px);
 }
 #pdfWrapper.guide-page-virtual:fullscreen .guide-profile-bio-row,
 #pdfWrapper.guide-page-virtual:-webkit-full-screen .guide-profile-bio-row {
-    grid-template-columns: clamp(104px, 6.4vw, 136px) minmax(0,1fr);
+    grid-template-columns: clamp(150px, 9vw, 190px) minmax(0,1fr);
     gap: clamp(22px, 1.8vw, 36px);
 }
 #pdfWrapper.guide-page-virtual:fullscreen .guide-profile-year,
 #pdfWrapper.guide-page-virtual:-webkit-full-screen .guide-profile-year {
-    padding: 11px 16px;
-    font-size: clamp(22px, 1.4vw, 30px);
+    padding: 11px 12px;
+    font-size: clamp(18px, 1.15vw, 24px);
     line-height: 1.25;
+    letter-spacing: -0.035em;
+    overflow: hidden;
 }
 #pdfWrapper.guide-page-virtual:fullscreen .guide-profile-bio-text,
 #pdfWrapper.guide-page-virtual:-webkit-full-screen .guide-profile-bio-text {

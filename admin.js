@@ -8379,6 +8379,8 @@ init: function() {
         const _uBtn = document.getElementById('guideScheduleUploadBtn');
         if (_uBtn) _uBtn.style.display = (_on13 && !_grid && !_hasSched && !state.isObserver) ? 'inline-flex' : 'none';
         if (!_on13 || _grid) { const sh = document.getElementById('parsedScheduleSheet'); if (!_on13 && sh && sh.classList.contains('pss-open')) { try { ui.closeParsedSchedule(); } catch(e){} } }
+        // 대면/비대면 및 윈도우/전체화면별로 분리된 현재 시간표 버튼 좌표를 적용한다.
+        try { if (window.applyGuideButtonPositions) window.applyGuideButtonPositions(); } catch (e) {}
     },
 
     // [J12.3] 과정 전환 시 이전 과정 PDF 잔상 제거 — 공용 캔버스/가상페이지/오버레이를 즉시 비움
@@ -9117,7 +9119,8 @@ init: function() {
             // [교육 장소] 교육장소 페이지(기본 14p)에서 교육동별 강의실 ✓ 오버레이 노출
             var _vOv = document.getElementById('guideVenueOverlay');
             if (_vOv) {
-                if (guideMgr._toPdfPage(num) === guideMgr._venuePage()) { _vOv.style.display = 'block'; if (ui.renderVenueOverlay) ui.renderVenueOverlay(); }
+                // 비대면 입교안내에는 실제 교육동/강의실 장소 표시를 노출하지 않는다.
+                if (!guideMgr._isOnline() && guideMgr._toPdfPage(num) === guideMgr._venuePage()) { _vOv.style.display = 'block'; if (ui.renderVenueOverlay) ui.renderVenueOverlay(); }
                 else _vOv.style.display = 'none';
             }
             // [J12 교육개요] 비대면 PDF 4p: 과정명·인원·기간·구분·평가·회의 ID/PW 오버레이 (항목별 3초 드래그 이동)

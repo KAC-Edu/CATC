@@ -652,19 +652,34 @@ body.in-course #moreToggleTab{ display:flex !important; }
 
 <script>
 /* [입교안내 버튼 위치 조정] 룰렛/시간표 버튼을 각각 3초 길게 눌러 이동.
-   Firebase 전역(system/sharedGuide/guideBtnPos/{roulette|schedule}/{window|fullscreen})에
-   화면 모드별로 개별 저장한다. 시간표 보기/업로드 버튼은 schedule 좌표를 공유. */
+   시간표 버튼은 대면/비대면 × 윈도우/전체화면의 4개 좌표로 분리 저장한다.
+   Firebase: system/sharedGuide/guideBtnPos/schedule/{offline|online}/{window|fullscreen}
+   시간표 보기/업로드/판독 버튼은 현재 입교안내 유형의 동일 좌표를 공유한다. */
 (function(){
   var FBPATH='system/sharedGuide/guideBtnPos';
   var IDS=['guideRouletteBtn','guideScheduleBtn','guideScheduleUploadBtn','guideParsedScheduleBtn'];
-  var GROUP={ guideRouletteBtn:'roulette', guideScheduleBtn:'schedule', guideScheduleUploadBtn:'schedule', guideParsedScheduleBtn:'parsedSchedule' };   // [J11] 판독 시간표 버튼은 좌표를 개별 저장
-  var GROUPS=['roulette','schedule','parsedSchedule'], MODES=['window','fullscreen'];
-  var curSaved={roulette:{window:null,fullscreen:null},schedule:{window:null,fullscreen:null},parsedSchedule:{window:null,fullscreen:null}};
+  var GROUP={ guideRouletteBtn:'roulette', guideScheduleBtn:'schedule', guideScheduleUploadBtn:'schedule', guideParsedScheduleBtn:'schedule' };
+  var GROUPS=['roulette','schedule'], MODES=['window','fullscreen'], TYPES=['offline','online'];
+  var curSaved={
+    roulette:{window:null,fullscreen:null},
+    schedule:{
+      offline:{window:null,fullscreen:null},
+      online:{window:null,fullscreen:null}
+    }
+  };
   function mode(){ return (document.fullscreenElement||document.webkitFullscreenElement) ? 'fullscreen' : 'window'; }
+  function guideType(){
+    try{
+      if(window.guideMgr && typeof guideMgr._isOnline==='function') return guideMgr._isOnline() ? 'online' : 'offline';
+    }catch(e){}
+    return 'offline';
+  }
+  function storeFor(group){ return group==='schedule' ? curSaved.schedule[guideType()] : curSaved[group]; }
   function wrap(){ return document.getElementById('pdfWrapper'); }
   function idsFor(group){ return IDS.filter(function(id){ return GROUP[id]===group; }); }
   function applyGroup(group){
-    var p=curSaved[group] && curSaved[group][mode()];
+    var saved=storeFor(group);
+    var p=saved && saved[mode()];
     idsFor(group).forEach(function(id){
       var b=document.getElementById(id); if(!b) return;
       if(p){ b.style.left=p.l+'%'; b.style.top=p.t+'%'; b.style.right='auto'; }
@@ -672,13 +687,25 @@ body.in-course #moreToggleTab{ display:flex !important; }
     });
   }
   function applyAll(){ GROUPS.forEach(applyGroup); }
-  function lKey(g,m){ return 'kac_guideBtnPos_'+g+'_'+m; }
-  function lGet(g,m){ try{ return JSON.parse(localStorage.getItem(lKey(g,m))||'null'); }catch(e){ return null; } }
-  function lSet(g,m,p){ try{ p?localStorage.setItem(lKey(g,m),JSON.stringify(p)):localStorage.removeItem(lKey(g,m)); }catch(e){} }
+  function lKey(g,m,t){ return 'kac_guideBtnPos_'+g+(g==='schedule'?'_'+t:'')+'_'+m; }
+  function lGet(g,m,t){
+    try{
+      var p=JSON.parse(localStorage.getItem(lKey(g,m,t))||'null');
+      if(p) return p;
+      if(g==='schedule'){
+        p=JSON.parse(localStorage.getItem('kac_guideBtnPos_schedule_'+m)||'null');
+        if(!p) p=JSON.parse(localStorage.getItem('kac_guideBtnPos_parsedSchedule_'+m)||'null');
+      }
+      return p;
+    }catch(e){ return null; }
+  }
+  function lSet(g,m,p,t){ try{ p?localStorage.setItem(lKey(g,m,t),JSON.stringify(p)):localStorage.removeItem(lKey(g,m,t)); }catch(e){} }
   function savePos(group,p){
     var m=mode();
-    curSaved[group][m]=p; lSet(group,m,p);
-    try{ if(window.firebase && firebase.database) firebase.database().ref(FBPATH+'/'+group+'/'+m).set({l:p.l,t:p.t}); }catch(e){}
+    var t=guideType(), saved=storeFor(group);
+    saved[m]=p; lSet(group,m,p,t);
+    var path=FBPATH+'/'+group+(group==='schedule'?'/'+t:'')+'/'+m;
+    try{ if(window.firebase && firebase.database) firebase.database().ref(path).set({l:p.l,t:p.t}); }catch(e){}
   }
   (function subscribe(tries){
     if(window.firebase && firebase.database){
@@ -687,25 +714,29 @@ body.in-course #moreToggleTab{ display:flex !important; }
           var v=s.val() || {};
           // 아주 옛날 형식 {l,t} 통짜 → 그룹·모드 모두 동일 적용으로 1회 마이그레이션
           if(typeof v.l==='number'){
-            var legacy={l:Number(v.l),t:Number(v.t)}, mig={};
-            GROUPS.forEach(function(g){ mig[g]={window:legacy,fullscreen:legacy}; });
-            firebase.database().ref(FBPATH).set(mig).catch(function(){}); return;
+            var legacy={l:Number(v.l),t:Number(v.t)};
+            curSaved.roulette={window:legacy,fullscreen:legacy};
+            TYPES.forEach(function(t){ curSaved.schedule[t]={window:legacy,fullscreen:legacy}; });
+            applyAll(); return;
           }
-          GROUPS.forEach(function(group){
-            var gv=v[group];
-            if(gv && typeof gv.l==='number'){
-              // 이전 형식(group에 l/t 직접) → window/fullscreen 복제 마이그레이션(현재값=전체화면 기준)
-              var lg={l:Number(gv.l),t:Number(gv.t)};
-              firebase.database().ref(FBPATH+'/'+group).set({window:lg,fullscreen:lg}).catch(function(){});
-              curSaved[group]={window:lg,fullscreen:lg}; lSet(group,'window',lg); lSet(group,'fullscreen',lg);
-            } else {
-              gv=gv||{};
-              MODES.forEach(function(m){
-                var p=gv[m];
-                if(p && typeof p.l==='number' && typeof p.t==='number'){ curSaved[group][m]={l:Number(p.l),t:Number(p.t)}; lSet(group,m,curSaved[group][m]); }
-                else { curSaved[group][m]=null; lSet(group,m,null); }
-              });
-            }
+          var rv=v.roulette||{};
+          var rLegacy=(typeof rv.l==='number') ? {l:Number(rv.l),t:Number(rv.t)} : null;
+          MODES.forEach(function(m){
+            var p=rLegacy||rv[m];
+            curSaved.roulette[m]=(p&&typeof p.l==='number'&&typeof p.t==='number')?{l:Number(p.l),t:Number(p.t)}:null;
+            lSet('roulette',m,curSaved.roulette[m]);
+          });
+
+          var sv=v.schedule||{};
+          var parsedLegacy=v.parsedSchedule||{};
+          var directLegacy=(typeof sv.l==='number')?{l:Number(sv.l),t:Number(sv.t)}:null;
+          TYPES.forEach(function(t){
+            MODES.forEach(function(m){
+              var branch=sv[t]||{};
+              var p=branch[m]||directLegacy||sv[m]||parsedLegacy[m]||null;
+              curSaved.schedule[t][m]=(p&&typeof p.l==='number'&&typeof p.t==='number')?{l:Number(p.l),t:Number(p.t)}:null;
+              lSet('schedule',m,curSaved.schedule[t][m],t);
+            });
           });
           applyAll();
         });
@@ -761,14 +792,16 @@ body.in-course #moreToggleTab{ display:flex !important; }
     b.addEventListener('click', function(e){ if(b._suppressClick){ e.preventDefault(); e.stopPropagation(); } }, true);
     // 더블클릭 = 현재 화면모드의 이 그룹 위치만 초기화
     b.addEventListener('dblclick', function(e){ e.preventDefault(); e.stopPropagation();
-      var m=mode(); curSaved[group][m]=null; lSet(group,m,null);
-      try{ if(window.firebase && firebase.database) firebase.database().ref(FBPATH+'/'+group+'/'+m).remove(); }catch(_){}
+      var m=mode(), t=guideType(), saved=storeFor(group); saved[m]=null; lSet(group,m,null,t);
+      var path=FBPATH+'/'+group+(group==='schedule'?'/'+t:'')+'/'+m;
+      try{ if(window.firebase && firebase.database) firebase.database().ref(path).remove(); }catch(_){}
       applyGroup(group);
     });
   }
   function init(){
     IDS.forEach(bind);
-    GROUPS.forEach(function(g){ MODES.forEach(function(m){ var c=lGet(g,m); if(c) curSaved[g][m]=c; }); });
+    MODES.forEach(function(m){ var r=lGet('roulette',m); if(r) curSaved.roulette[m]=r; });
+    TYPES.forEach(function(t){ MODES.forEach(function(m){ var c=lGet('schedule',m,t); if(c) curSaved.schedule[t][m]=c; }); });
     applyAll();
   }
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', init);
@@ -777,6 +810,7 @@ body.in-course #moreToggleTab{ display:flex !important; }
   document.addEventListener('fullscreenchange', function(){ setTimeout(applyAll, 60); });
   document.addEventListener('webkitfullscreenchange', function(){ setTimeout(applyAll, 60); });
   window.addEventListener('resize', function(){ setTimeout(applyAll, 60); });
+  window.applyGuideButtonPositions=applyAll;
 })();
 </script>
 
