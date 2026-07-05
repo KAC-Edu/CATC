@@ -669,8 +669,10 @@ body.in-course #moreToggleTab{ display:flex !important; }
   };
   function mode(){ return (document.fullscreenElement||document.webkitFullscreenElement) ? 'fullscreen' : 'window'; }
   function guideType(){
+    var marked=document.body && document.body.getAttribute('data-guide-course-type');
+    if(marked==='online'||marked==='offline') return marked;
     try{
-      if(window.guideMgr && typeof guideMgr._isOnline==='function') return guideMgr._isOnline() ? 'online' : 'offline';
+      return guideMgr._isOnline() ? 'online' : 'offline';
     }catch(e){}
     return 'offline';
   }
@@ -809,6 +811,7 @@ body.in-course #moreToggleTab{ display:flex !important; }
   // 화면 모드(윈도우↔전체화면) 전환 시 해당 모드 좌표로 즉시 재적용
   document.addEventListener('fullscreenchange', function(){ setTimeout(applyAll, 60); });
   document.addEventListener('webkitfullscreenchange', function(){ setTimeout(applyAll, 60); });
+  document.addEventListener('guidecoursepositionchange', function(){ setTimeout(applyAll, 0); });
   window.addEventListener('resize', function(){ setTimeout(applyAll, 60); });
   window.applyGuideButtonPositions=applyAll;
 })();

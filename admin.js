@@ -8379,8 +8379,12 @@ init: function() {
         const _uBtn = document.getElementById('guideScheduleUploadBtn');
         if (_uBtn) _uBtn.style.display = (_on13 && !_grid && !_hasSched && !state.isObserver) ? 'inline-flex' : 'none';
         if (!_on13 || _grid) { const sh = document.getElementById('parsedScheduleSheet'); if (!_on13 && sh && sh.classList.contains('pss-open')) { try { ui.closeParsedSchedule(); } catch(e){} } }
-        // 대면/비대면 및 윈도우/전체화면별로 분리된 현재 시간표 버튼 좌표를 적용한다.
-        try { if (window.applyGuideButtonPositions) window.applyGuideButtonPositions(); } catch (e) {}
+        // guideMgr는 const 전역이라 window.guideMgr로 조회되지 않는다.
+        // 현재 과정 유형을 DOM에 명시하고 이벤트로 알려, 대면/비대면별 시간표 좌표를 확실히 다시 적용한다.
+        try {
+            document.body.setAttribute('data-guide-course-type', guideMgr._isOnline() ? 'online' : 'offline');
+            document.dispatchEvent(new Event('guidecoursepositionchange'));
+        } catch (e) {}
     },
 
     // [J12.3] 과정 전환 시 이전 과정 PDF 잔상 제거 — 공용 캔버스/가상페이지/오버레이를 즉시 비움
