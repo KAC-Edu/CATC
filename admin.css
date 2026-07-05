@@ -2564,22 +2564,21 @@ body.night-mode .header-room-badge { background-color: #003366 !important; borde
     min-width: 240px;
 }
 .prof-glass-card:hover { background: rgba(255,255,255,0.2); transform: translateY(-3px); }
-/* 교수 블록 옆 입교안내 전체화면 버튼 — 연한 노란색으로 자료 위치 강조 */
+/* 교수 블록 옆 입교안내 전체화면 버튼 (동일 글래스 톤) */
 .hero-right-row{ display:flex; align-items:stretch; justify-content:flex-end; gap:12px; }
 .guide-fs-glass{
-    background: linear-gradient(145deg, #fffbea 0%, #fef3c7 100%);
+    background: rgba(255,255,255,0.1);
     backdrop-filter: blur(10px);
-    border:2px solid #facc15;
+    border:1px solid rgba(255,255,255,0.2);
     border-radius:18px;
     padding:12px 18px;
     display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px;
-    cursor:pointer; transition:0.3s; color:#713f12; font-family:inherit; min-width:104px;
-    box-shadow:0 8px 22px rgba(250,204,21,.24);
+    cursor:pointer; transition:0.3s; color:#fff; font-family:inherit; min-width:104px;
 }
-.guide-fs-glass:hover{ background:linear-gradient(145deg,#fff7cc 0%,#fde68a 100%); border-color:#f59e0b; box-shadow:0 12px 28px rgba(245,158,11,.34); transform:translateY(-3px); }
-.guide-fs-glass .gfg-main{ font-size:22px; color:#b45309; margin-bottom:2px; }
-.guide-fs-glass .gfg-label{ font-size:15px; font-weight:900; letter-spacing:.3px; color:#713f12; }
-.guide-fs-glass .gfg-sub{ font-size:11px; font-weight:800; opacity:1; color:#92400e; display:inline-flex; align-items:center; gap:4px; }
+.guide-fs-glass:hover{ background: rgba(255,255,255,0.2); transform: translateY(-3px); }
+.guide-fs-glass .gfg-main{ font-size:22px; color:#fff; margin-bottom:2px; }
+.guide-fs-glass .gfg-label{ font-size:15px; font-weight:900; letter-spacing:.3px; }
+.guide-fs-glass .gfg-sub{ font-size:11px; font-weight:800; opacity:.9; display:inline-flex; align-items:center; gap:4px; }
 
 
 .prof-avatar {
@@ -2709,11 +2708,8 @@ body.night-mode .header-room-badge { background-color: #003366 !important; borde
 .notice-hub-content::-webkit-scrollbar { width: 4px; }
 .notice-hub-content::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
 
-/* 4. 하단 3개 블록 순서: 수강생 → 전자기기/Q&A/셔틀 → 주요 공지 */
-.dash-premium-grid { grid-template-columns: 1fr 1.2fr 1fr !important; }
-.dash-premium-grid > .card-blue { order:1; }
-.dash-premium-grid > .card-mint { order:2; }
-.dash-premium-grid > .card-notice-hub { order:3; }
+/* 4. 기타 스타일 유지 및 보정 */
+.dash-premium-grid { grid-template-columns: 1fr 1.2fr 1fr !important; } /* 가운데 공지창을 조금 더 넓게 */
 
 
 /* 1. 교수 프로필 시네마틱 모달 배경 (필수) */
