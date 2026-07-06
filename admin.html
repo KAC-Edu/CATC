@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- PLATFORM_EDIT_STATUS: 수정완료 | VERSION: I9 | 2026-07-07 (I9: ①대시보드 히어로 직무 일반/법정 토글 스위치 추가(입교안내 버튼 좌측, admin.js J17 연동) ②OTP 출결 화면을 2블록 가로 배치로 — 좌측에 OTP 입력 안내자료(otp_attendance_guide.png, GitHub 루트 업로드 필요·파일 없으면 자동 숨김), 우측에 기존 OTP 블록, 좁은 화면에서는 세로 배치) [I8: 과정현황 바로가기 및 입교안내 공지 명칭 통일] -->
+<!-- PLATFORM_EDIT_STATUS: 수정완료 | VERSION: I9 | 2026-07-07 (I9.1: 직무 토글을 오른쪽줄→왼쪽 정보 pill 줄(장소 다음)로 이동·소형화, 수료 기념사진과 한 줄 정렬로 공간 정리 [I9: 대시보드 직무 토글 추가(admin.js J17 연동) ②OTP 출결 화면을 2블록 가로 배치로 — 좌측에 OTP 입력 안내자료(otp_attendance_guide.png, GitHub 루트 업로드 필요·파일 없으면 자동 숨김), 우측에 기존 OTP 블록, 좁은 화면에서는 세로 배치) [I8: 과정현황 바로가기 및 입교안내 공지 명칭 통일] -->
 <html lang="ko">
 <head>
 <script>
@@ -976,18 +976,18 @@ body.in-course #moreToggleTab{ display:flex !important; }
                         <span class="isp-part isp-loc" onclick="ui.openFieldEdit('roomDetail')" title="클릭하여 장소 수정"><i class="fa-solid fa-map-location-dot"></i> <b id="dashRoomDetail">-</b></span>
                         <span class="isp-part isp-zoom" id="dashZoomBtn" onclick="ui.openZoomMonitor()" title="ZOOM 실시간 출석 모니터링" style="display:none;"><i class="fa-solid fa-video"></i> <b>모니터링</b></span>
                     </div>
+                    <!-- [J17] 직무 법정/일반 토글 — 과정 속성이므로 왼쪽 정보 pill 줄에 소형으로 배치. 교육현황판과 동일 상태(settings/guideCourseInfo.category) 실시간 연동 -->
+                    <button id="dashJobToggle" class="dash-job-toggle" type="button" data-cat="duty-general" onclick="ui.dashToggleJob()" title="교육구분 전환 — 직무일반(평가 없음) / 직무법정(필기 90%+근태 10%)">
+                        <span class="djt-opt djt-general">직무 일반</span>
+                        <span class="djt-opt djt-legal">직무 법정</span>
+                        <span class="djt-knob"></span>
+                    </button>
                     <span class="info-pill" id="dashGradBtn" onclick="gradMgr.open()" title="수료 기념사진 — 촬영 QR·액자 합성·다운로드 (수료일 06시부터)" style="cursor:pointer; display:none;"><i class="fa-solid fa-camera-retro"></i> <b>수료 기념사진</b></span>
                 </div>
             </div>
             
             <div class="hero-right">
                 <div class="hero-right-row">
-                <!-- [J17] 직무 법정/일반 토글 스위치 — 교육현황판 과정블록과 동일 상태(settings/guideCourseInfo.category) 실시간 연동 -->
-                <button id="dashJobToggle" class="dash-job-toggle" type="button" data-cat="duty-general" onclick="ui.dashToggleJob()" title="교육구분 전환 — 직무일반(평가 없음) / 직무법정(필기 90%+근태 10%)">
-                    <span class="djt-opt djt-general">직무 일반</span>
-                    <span class="djt-opt djt-legal">직무 법정</span>
-                    <span class="djt-knob"></span>
-                </button>
                 <!-- 입교안내 전체화면 버튼 (교수 블록과 동일 글래스 톤) -->
                 <button class="guide-fs-glass" type="button" onclick="ui.openGuideFullscreen()" title="입교안내를 전체화면으로 엽니다 (홈 현황판에서 입교안내 누른 것과 동일)"><i class="fa-solid fa-file-pdf gfg-main"></i><span class="gfg-label">입교안내</span><span class="gfg-sub"><i class="fa-solid fa-expand"></i> 전체화면</span></button>
                 <!-- 교수님 프로필 카드 -->

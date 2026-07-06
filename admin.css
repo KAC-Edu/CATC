@@ -1,4 +1,4 @@
-/* PLATFORM_EDIT_STATUS: 수정완료 | VERSION: T | 2026-07-07 (T: 대시보드 직무 일반/법정 토글(.dash-job-toggle) 스타일 신설 — 좌우 슬라이딩 노브, 히어로 글래스 톤) */
+/* PLATFORM_EDIT_STATUS: 수정완료 | VERSION: T | 2026-07-07 (T1: 직무 토글을 pill 줄 규격(높이 36px·radius 50px) 소형 인라인 스위치로 재설계, hero-info-row 세로 중앙정렬) [T: 직무 토글 스타일 신설] */
 /* ============================================================
    CATC · 강사 플랫폼 스타일  (admin.css)
    STATUS    수정완료
@@ -2507,7 +2507,7 @@ body.night-mode .header-room-badge { background-color: #003366 !important; borde
 
 .hero-info-row {
     display:flex;
-    align-items:flex-start;
+    align-items:center;
     gap:14px;
     flex-wrap:wrap;
 }
@@ -6390,23 +6390,25 @@ body.night-mode .side-rail-lbl{ color:#cbd5e1; }
 #hsrVenuePop button:hover{background:#eef2ff;color:#1d4ed8;}
 
 
-/* ═══ [J17] 대시보드 직무 법정/일반 토글 스위치 — 좌우 슬라이딩 노브 ═══ */
+/* ═══ [J17] 대시보드 직무 법정/일반 토글 — 히어로 왼쪽 pill 줄에 맞춘 소형 인라인 스위치 ═══ */
 .dash-job-toggle{
-    position:relative; display:inline-grid; grid-template-columns:1fr 1fr; align-items:center;
-    height:48px; min-width:196px; padding:4px; border:1.5px solid rgba(255,255,255,.4); border-radius:14px;
-    background:rgba(255,255,255,.14); backdrop-filter:blur(6px); cursor:pointer; overflow:hidden;
+    position:relative; display:inline-flex; align-items:stretch; flex-shrink:0;
+    padding:3px; border:1px solid rgba(255,255,255,.18); border-radius:50px;
+    background:rgba(255,255,255,.1); cursor:pointer; overflow:hidden; vertical-align:middle;
+    height:36px; box-sizing:border-box;
 }
 .dash-job-toggle .djt-opt{
-    position:relative; z-index:2; padding:0 14px; font-size:13.5px; font-weight:900; line-height:1;
-    color:rgba(255,255,255,.75); transition:color .18s; white-space:nowrap; text-align:center;
+    position:relative; z-index:2; display:flex; align-items:center; justify-content:center;
+    padding:0 13px; font-size:12.5px; font-weight:800; line-height:1; white-space:nowrap;
+    color:rgba(255,255,255,.7); transition:color .18s;
 }
 .dash-job-toggle .djt-knob{
-    position:absolute; z-index:1; top:4px; bottom:4px; left:4px; width:calc(50% - 4px);
-    border-radius:10px; background:#fff; box-shadow:0 3px 10px rgba(15,23,42,.28);
+    position:absolute; z-index:1; top:3px; bottom:3px; left:3px; width:calc(50% - 3px);
+    border-radius:50px; background:#fff; box-shadow:0 2px 7px rgba(15,23,42,.25);
     transition:transform .2s cubic-bezier(.2,.8,.3,1);
 }
 .dash-job-toggle .djt-general{ color:#1e3a8a; }                       /* 기본: 일반 활성 */
 .dash-job-toggle.is-legal .djt-knob{ transform:translateX(100%); }
-.dash-job-toggle.is-legal .djt-general{ color:rgba(255,255,255,.75); }
+.dash-job-toggle.is-legal .djt-general{ color:rgba(255,255,255,.7); }
 .dash-job-toggle.is-legal .djt-legal{ color:#b91c1c; }
-.dash-job-toggle:hover{ border-color:rgba(255,255,255,.7); }
+.dash-job-toggle:hover{ border-color:rgba(255,255,255,.45); }
