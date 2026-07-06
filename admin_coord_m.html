@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-  <!-- last-updated: 2026-07-07 / version: M12 (M12: [보안] 접속코드 게이트 평문 제거→SHA-256 해시 대조) (M11: 5-1: 과정 상세에 '자료 PDF 공유' 카드 신설 — 외출외박/출석부를 전체 교육기간 기준 PDF로 생성(html2canvas+jsPDF, A4 가로·자동 페이지 분할) 후 휴대폰 공유시트(navigator.share)로 카카오톡·이메일 전송, 미지원 기기는 다운로드 폴백) [M10 (M9 교수 오픈톡방 + [수정] 안드로이드 하단잘림: 시트 82vh→82dvh·body/ov-body safe-area 하단여백 · 교수톡방 시트도 아래로 밀어 닫기(_bindSheetDrag 공통화)) · 운영부 요청 admin_coord 담당 디에스장 편집 [M8: 교육생장·정렬표] -->
+  <!-- last-updated: 2026-07-07 / version: M13 (M13: 부트 로딩 오버레이 — 초기 데이터 도착 전 블러+로딩 문구 표시(멈춘 것처럼 보이는 오해 방지), 첫 courses 수신 시 해제·8초 안전장치) (M12: [보안] 접속코드 게이트 평문 제거→SHA-256 해시 대조) (M11: 5-1: 과정 상세에 '자료 PDF 공유' 카드 신설 — 외출외박/출석부를 전체 교육기간 기준 PDF로 생성(html2canvas+jsPDF, A4 가로·자동 페이지 분할) 후 휴대폰 공유시트(navigator.share)로 카카오톡·이메일 전송, 미지원 기기는 다운로드 폴백) [M10 (M9 교수 오픈톡방 + [수정] 안드로이드 하단잘림: 시트 82vh→82dvh·body/ov-body safe-area 하단여백 · 교수톡방 시트도 아래로 밀어 닫기(_bindSheetDrag 공통화)) · 운영부 요청 admin_coord 담당 디에스장 편집 [M8: 교육생장·정렬표] -->
   <!-- ※ 모바일 개발자 파일이나 운영부 요청으로 디에스장(admin_coord 담당)이 장소선택 모달만 개선. 기능로직(setEduSel/EDU 동기화)은 동일 유지 -->
   <meta charset="UTF-8" />
   <script>
@@ -237,6 +237,42 @@
   </style>
 </head>
 <body>
+<!-- ═══ [2026-07-07 부트 로딩] 초기 데이터 도착 전 블러 오버레이 — 멈춘 것처럼 보이는 오해 방지.
+     첫 Firebase 데이터 콜백에서 kacBootDone() 호출 시 부드럽게 사라짐 (안전장치: 8초 후 자동 해제) ═══ -->
+<div id="kacBootOv" aria-hidden="true">
+  <div class="kb-card">
+    <div class="kb-ic">🗂️</div>
+    <div class="kb-t">KAC 교육운영 플랫폼</div>
+    <div class="kb-spin"></div>
+    <div class="kb-m">실시간 데이터를 불러오는 중입니다…</div>
+    <div class="kb-s">잠시만 기다려 주세요</div>
+  </div>
+</div>
+<style>
+#kacBootOv{position:fixed;inset:0;z-index:2147482000;display:flex;align-items:center;justify-content:center;padding:24px;
+ background:rgba(241,245,249,.42);backdrop-filter:blur(11px) saturate(1.15);-webkit-backdrop-filter:blur(11px) saturate(1.15);
+ opacity:1;transition:opacity .45s ease;}
+#kacBootOv.out{opacity:0;pointer-events:none;}
+#kacBootOv .kb-card{display:flex;flex-direction:column;align-items:center;gap:9px;min-width:230px;padding:30px 34px 26px;
+ background:rgba(255,255,255,.94);border:1px solid rgba(226,232,240,.9);border-radius:24px;box-shadow:0 20px 55px rgba(15,23,42,.20);}
+#kacBootOv .kb-ic{font-size:38px;line-height:1;}
+#kacBootOv .kb-t{font-size:15.5px;font-weight:900;color:#0f2057;letter-spacing:-.2px;}
+#kacBootOv .kb-spin{width:34px;height:34px;margin:7px 0 3px;border:4px solid #dbeafe;border-top-color:#2563eb;border-radius:50%;animation:kbsp .8s linear infinite;}
+@keyframes kbsp{to{transform:rotate(360deg);}}
+#kacBootOv .kb-m{font-size:14px;font-weight:800;color:#334155;}
+#kacBootOv .kb-s{font-size:12px;font-weight:700;color:#94a3b8;}
+</style>
+<script>
+(function(){
+  var done=false;
+  window.kacBootDone=function(){ if(done) return; done=true;
+    var o=document.getElementById('kacBootOv'); if(!o) return;
+    o.classList.add('out'); setTimeout(function(){ try{o.remove();}catch(e){} },480);
+  };
+  setTimeout(function(){ window.kacBootDone(); }, 8000);
+})();
+</script>
+
 <div class="wrap">
   <div class="mhead">
     <div class="ttl"><div class="mk"><i class="fa-solid fa-graduation-cap"></i></div>교육운영 플랫폼</div>
@@ -803,6 +839,7 @@ function _pdfDownload(blob,fname){
 db.ref('courses').on('value', function(snap){
   DATA=snap.val()||{};
   renderList();
+  if(window.kacBootDone) kacBootDone();   /* [부트 로딩] 첫 데이터 도착 → 오버레이 해제 */
   if(curRID && document.getElementById('detailOv').classList.contains('open')){
     var ta=document.getElementById('dNotice');
     if(document.activeElement!==ta){ var room=DATA[curRID]; if(room) ta.value=room.coordNotice||''; }

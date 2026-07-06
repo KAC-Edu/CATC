@@ -132,6 +132,42 @@
   <link rel="stylesheet" href="kac-tokens.css?v=20260622">
 </head>
 <body>
+<!-- ═══ [2026-07-07 부트 로딩] 초기 데이터 도착 전 블러 오버레이 — 멈춘 것처럼 보이는 오해 방지.
+     첫 Firebase 데이터 콜백에서 kacBootDone() 호출 시 부드럽게 사라짐 (안전장치: 8초 후 자동 해제) ═══ -->
+<div id="kacBootOv" aria-hidden="true">
+  <div class="kb-card">
+    <div class="kb-ic">🍽️</div>
+    <div class="kb-t">KAC 영양사 플랫폼</div>
+    <div class="kb-spin"></div>
+    <div class="kb-m">실시간 데이터를 불러오는 중입니다…</div>
+    <div class="kb-s">잠시만 기다려 주세요</div>
+  </div>
+</div>
+<style>
+#kacBootOv{position:fixed;inset:0;z-index:2147482000;display:flex;align-items:center;justify-content:center;padding:24px;
+ background:rgba(241,245,249,.42);backdrop-filter:blur(11px) saturate(1.15);-webkit-backdrop-filter:blur(11px) saturate(1.15);
+ opacity:1;transition:opacity .45s ease;}
+#kacBootOv.out{opacity:0;pointer-events:none;}
+#kacBootOv .kb-card{display:flex;flex-direction:column;align-items:center;gap:9px;min-width:230px;padding:30px 34px 26px;
+ background:rgba(255,255,255,.94);border:1px solid rgba(226,232,240,.9);border-radius:24px;box-shadow:0 20px 55px rgba(15,23,42,.20);}
+#kacBootOv .kb-ic{font-size:38px;line-height:1;}
+#kacBootOv .kb-t{font-size:15.5px;font-weight:900;color:#0f2057;letter-spacing:-.2px;}
+#kacBootOv .kb-spin{width:34px;height:34px;margin:7px 0 3px;border:4px solid #dbeafe;border-top-color:#2563eb;border-radius:50%;animation:kbsp .8s linear infinite;}
+@keyframes kbsp{to{transform:rotate(360deg);}}
+#kacBootOv .kb-m{font-size:14px;font-weight:800;color:#334155;}
+#kacBootOv .kb-s{font-size:12px;font-weight:700;color:#94a3b8;}
+</style>
+<script>
+(function(){
+  var done=false;
+  window.kacBootDone=function(){ if(done) return; done=true;
+    var o=document.getElementById('kacBootOv'); if(!o) return;
+    o.classList.add('out'); setTimeout(function(){ try{o.remove();}catch(e){} },480);
+  };
+  setTimeout(function(){ window.kacBootDone(); }, 8000);
+})();
+</script>
+
 <div class="wrap">
   <div class="mhead">
     <div class="row1">
@@ -196,7 +232,7 @@ setInterval(tickClock,1000); tickClock();
 function countObj(o){ return o ? Object.keys(o).filter(function(k){ return !!o[k]; }).length : 0; }
 
 /* 식수: breakfast / checks(중식) / dinner / dinner_resv */
-db.ref('system/staffMeal/breakfast/'+today).on('value', function(s){ document.getElementById('cnt-b').textContent=countObj(s.val()); });
+db.ref('system/staffMeal/breakfast/'+today).on('value', function(s){ document.getElementById('cnt-b').textContent=countObj(s.val()); if(window.kacBootDone) kacBootDone(); });
 db.ref('system/staffMeal/dinner/'+today).on('value', function(s){ document.getElementById('cnt-d').textContent=countObj(s.val()); });
 db.ref('system/staffMeal/dinner_resv/'+today).on('value', function(s){ document.getElementById('cnt-r').textContent=countObj(s.val())+'명'; });
 db.ref('system/staffMeal/checks/'+today).on('value', function(s){
