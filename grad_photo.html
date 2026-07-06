@@ -3,7 +3,7 @@
 <head>
 <!-- ═══════════════════════════════════════════════════════════════
      KAC 항공기술훈련원 — 수료 기념사진 업로드 (모바일)
-     VERSION: JDS260704(V1)
+     VERSION: JDS260707(V2) — 저장 경로 courses/{room}/gradPhoto → media/{room}/gradPhoto 이전(레거시 자동 정리)
      · 강사플랫폼 출결 화면의 '수료 기념사진' QR이 이 페이지로 연결 (?room=A)
      · 스마트폰으로 단체사진 촬영/선택 → 긴 변 1600px · JPEG 0.8 압축 →
        courses/{room}/gradPhoto = { dataUrl, updatedAt, endDate } 저장
@@ -147,11 +147,13 @@
           cv.height = Math.round(im.height * sc);
           cv.getContext('2d').drawImage(im, 0, 0, cv.width, cv.height);
           var dataUrl = cv.toDataURL('image/jpeg', 0.8);
-          firebase.database().ref('courses/' + room + '/gradPhoto').set({
+          // [V2] 저장소를 media/{room}/gradPhoto 로 이전 (courses 트리 이그레스 격리, admin.js J16 연동)
+          firebase.database().ref('media/' + room + '/gradPhoto').set({
             dataUrl: dataUrl,
             updatedAt: Date.now(),
             endDate: endDate || todayStr()
           }).then(function () {
+            firebase.database().ref('courses/' + room + '/gradPhoto').remove().catch(function(){});
             showState('✅', '업로드 완료!', '기념사진이 등록되었습니다.<br>강사 화면에서 액자 합성본을 확인하고<br>글자 위치를 다듬을 수 있습니다.', false);
           }).catch(function (err) {
             showState('❌', '업로드 실패', (err && err.message ? err.message : '네트워크를 확인해 주세요.'), true);

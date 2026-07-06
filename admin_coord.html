@@ -2,7 +2,7 @@
 <!-- 이 플랫폼(admin_coord.html / 교육운영부) 수정상태 플래그. 값은 [수정중] 또는 [수정안하는중] 두 가지. -->
 <!-- 작업 시작 시 → 수정중 / 작업 완료 시 → 수정안하는중. 다른 플랫폼은 이 말머리를 보고 연동·수정 가능 여부 판단. -->
 <!-- [외부변경 · 카카오채널연동 2026-06-25] 포털(portal.html/7777) 경유 폐지 → 페이지 직접진입 시 접속코드(catc1234) 게이트 추가, 포털 리다이렉트/종료이동 제거. version C13→D13. 기능 로직은 미변경. -->
-<!-- last-updated: 2026-07-07 / version: D66 (폐강 동기화: 방에 배정된 과정이 연간계획에서 폐강이면 사용 중이어도 즉시 방 정리(잠금 방은 경고만) — 강사 폐강 과정이 운영부 동기화로 되살아나던 문제 해소) [D65 (장소선택 팝업 방버튼 층별 2열 그리드+컴팩트화 → 하늘관 등 긴 열이 한 화면에 다 보이게) [D64: 팝업 폭확대·표기안내] -->
+<!-- last-updated: 2026-07-07 / version: D66 (①미디어 격리: 출결 QR 업로드를 media/{room}/attendanceQR 로 이전(레거시 자동 제거), QR 미리보기 media 우선 폴백, 정리 도구·초기화 경로에 media/레거시 gradPhoto 포함 ②폐강 동기화: 방에 배정된 과정이 연간계획에서 폐강이면 사용 중이어도 즉시 방 정리(잠금 방은 경고만) — 강사 폐강 과정이 운영부 동기화로 되살아나던 문제 해소) [D65 (장소선택 팝업 방버튼 층별 2열 그리드+컴팩트화 → 하늘관 등 긴 열이 한 화면에 다 보이게) [D64: 팝업 폭확대·표기안내] -->
 <!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -4515,6 +4515,7 @@ async function resetIndividualCourse() {
         updates[`${rPath}/notice`] = null;
         updates[`${rPath}/expectedStudents`] = null;
         updates[`${rPath}/attendanceQR`] = null;
+        ['scheduleImage','gradPhoto','attendanceQR'].forEach(k => { updates[`media/${currentRID}/${k}`] = null; });   // [D66] 이전된 미디어 저장소도 함께 정리
         
         // 상태 변경 (비어있음으로 전환 및 강제 퇴출 키 발송)
         updates[`${rPath}/status/roomStatus`] = "idle";
@@ -5033,8 +5034,8 @@ function clearNoticeHistory() {
             .then(() => renderNoticeHistory());
     });
 }
-    async function handleQRUpload(input) { const reader = new FileReader(); reader.onload = async (e) => { await firebase.database().ref(`courses/${currentRID}/attendanceQR`).set(e.target.result); showKacAlert("QR 저장 완료"); updateQRPreview(); }; reader.readAsDataURL(input.files[0]); }
-    function updateQRPreview() { const room = globalAllData[currentRID]; const img = document.getElementById('qrPreview'); const empty = document.getElementById('qrEmpty'); if(room?.attendanceQR) { img.src = room.attendanceQR; img.style.display = "block"; empty.style.display = "none"; } else { img.style.display = "none"; empty.style.display = "block"; } }
+    async function handleQRUpload(input) { const reader = new FileReader(); reader.onload = async (e) => { /* [D66] 저장소를 media/{room}/attendanceQR 로 이전(courses 이그레스 격리) */ await firebase.database().ref(`media/${currentRID}/attendanceQR`).set(e.target.result); firebase.database().ref(`courses/${currentRID}/attendanceQR`).remove().catch(()=>{}); showKacAlert("QR 저장 완료"); updateQRPreview(); }; reader.readAsDataURL(input.files[0]); }
+    async function updateQRPreview() { const img = document.getElementById('qrPreview'); const empty = document.getElementById('qrEmpty'); let v=null; try{ const s1=await firebase.database().ref(`media/${currentRID}/attendanceQR`).once('value'); v=s1.val(); if(v==null){ const s2=await firebase.database().ref(`courses/${currentRID}/attendanceQR`).once('value'); v=s2.val(); } }catch(e){} if(v) { img.src = v; img.style.display = "block"; empty.style.display = "none"; } else { img.style.display = "none"; empty.style.display = "block"; } }
     function loadActionHistory(date) { selectedDate = date; renderTotalHistory(); }
     function showEntryMemberList() {
         const room = globalAllData[currentRID];
@@ -8804,7 +8805,9 @@ async function coordPurgeImages(){
       var c=all[rid]||{};
       if(c.scheduleImage){ schedPaths.push('courses/'+rid+'/scheduleImage'); bytes+=JSON.stringify(c.scheduleImage).length; nSched++; }
       if(c.attendanceQR){ qrPaths.push('courses/'+rid+'/attendanceQR'); bytes+=(typeof c.attendanceQR==='string'?c.attendanceQR.length:JSON.stringify(c.attendanceQR).length); nQr++; }
+      if(c.gradPhoto){ schedPaths.push('courses/'+rid+'/gradPhoto'); bytes+=JSON.stringify(c.gradPhoto).length; nSched++; }   // [D66] 레거시 기념사진도 정리 대상
     });
+    // [D66] media/ 이전 후에는 courses 잔여 레거시만 이 도구의 대상 — media 쪽은 각 기능이 스스로 관리
     var total=nSched+nQr;
     if(!total){ btnAlert('삭제할 대용량 이미지(시간표 사진·출석 QR)가 없습니다.'); return; }
     var mb=(bytes/1048576).toFixed(2);
@@ -9203,7 +9206,8 @@ window.kacExpireEndedCourses = async function(){
           archives.push(firebase.database().ref('system/course_archive/'+room+'_'+Date.now()).set({room:room,courseName:nm,period:pd,prof:stt.professorName||'',coord:st.coordinatorName||'',admin_actions:aa,internal_attendance:ia,students:stu,expectedStudents:(rd.expectedStudents||null),archivedAt:firebase.database.ServerValue.TIMESTAMP}).catch(function(){}));
         }
         var b='courses/'+room+'/';
-        ['students','internal_attendance','questions','admin_actions','shuttle','dinner_skips','tablet_loans','connections','quizAnswers','expectedStudents','coordRoster','activeQuiz','quizFinalResults','attendanceQR','scheduleImage','coordNoticeHistory'].forEach(function(k){ updates[b+k]=null; });
+        ['students','internal_attendance','questions','admin_actions','shuttle','dinner_skips','tablet_loans','connections','quizAnswers','expectedStudents','coordRoster','activeQuiz','quizFinalResults','attendanceQR','scheduleImage','coordNoticeHistory','gradPhoto'].forEach(function(k){ updates[b+k]=null; });
+        ['scheduleImage','gradPhoto','attendanceQR'].forEach(function(k){ updates['media/'+room+'/'+k]=null; });   // [D66] 이전된 미디어 저장소도 함께 정리
         updates[b+'boardNotice']=''; updates[b+'notice']=''; updates[b+'coordNotice']='';
         updates[b+'settings/courseName']=''; updates[b+'settings/period']=null; updates[b+'settings/coordinatorName']=null; updates[b+'settings/password']=null;
         updates[b+'status/professorName']=''; updates[b+'status/roomStatus']='idle'; updates[b+'status/ownerSessionId']=null; updates[b+'status/resetKey']='rk_'+Date.now()+'_'+Math.random().toString(36).slice(2,7);

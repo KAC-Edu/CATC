@@ -1,7 +1,7 @@
 /* PLATFORM_EDIT_STATUS: 수정완료 | VERSION: M9 | 2026-07-04 */
 /* [복구 2026-07-03] 파일 말단 184줄이 저장 중 잘림 → J8(260702Z40) 보관본의 동일 블록(리모컨 위젯·더보기 패널·ZOOM 표시 IIFE)으로 접합 복구. J8 이후 해당 말단 블록을 수정한 이력이 있다면 편집기 원본(L9)으로 재저장 권장. */
 /* ============================================================
-   PLATFORM_EDIT_STATUS: 수정완료 | VERSION: J15 | 2026-07-07 (J15: ①OTP 안정화 — 발급/카운트다운을 Firebase 서버시간(.info/serverTimeOffset) 기준으로 변경(강사 PC 시계 오차 무관), 회전 시 직전 코드(prevCode/prevValidUntil)를 함께 저장해 번호가 바뀌는 순간 입력한 교육생도 이전 코드로 출결 인정(TOTP ±1구간 방식, index.html vJ105와 연동) ②퀴즈 3단계 상태 도입 — 퀴즈 탭 진입 시 quizStep=none(선택 중), '현재 퀴즈 시작'(open) 시 live, 탭 이탈 시 mode=qa+quizStep=none 동시 종료. showQuiz의 quizStep none 리셋 제거(문항 전환 시 교육생 튕김 방지) — 강사가 시작 전 퀴즈 고르는 단계에 교육생 화면에 문항이 뜨던 문제와, 강사가 과정현황으로 나가도 교육생이 퀴즈에 갇히던 문제 해소 ③폐강 동기화 — 연간계획 파일 재업로드 시 기존 폐강 플래그 이월 보존(과정명+시작일 매칭), _applyCurrentWeek/_syncRoomsLockAware에서 폐강 과정이 배정된 방을 기간 중이어도 즉시 미개설 정리(잠금 방은 콘솔 경고만) — 폐강 과정이 월요일 자동배치로 되살아나던 문제 해소) (J14: 수료 기념사진 버튼 위치·노출 규칙 변경 — 출결 화면 버튼 제거, 대시보드 히어로의 강의장소 배지 옆에 노란색(앰버 그라데이션·펄스) pill로 이동. 노출 = 과정 수료일 '당일' KST 06:00부터(새벽에 열어둔 화면도 06시에 자동 노출, settings 실시간 리스너 연동, 방 전환 시 초기화). (J13.1: 기념사진 모달 한 화면 수납 — 캔버스 높이를 화면에 맞춰 제한(max-height calc)해 미리보기·안내·버튼 3종이 스크롤 없이 항상 보임(드래그 레이어는 캔버스 표시 박스에 정확히 일치하도록 fit-content). 텍스트는 각 칸 오른쪽 경계(액자 실측 %)를 넘지 않도록 measureText 기반 자동 축소 — 긴 과정명/기간도 칸 안에 정렬. (J13: 수료 기념사진 신설 — 출결 관리 화면 '📸 수료 기념사진' 버튼(수료일 당일 금색 펄스). 강사가 폰으로 촬영 후 QR(grad_photo.html)로 업로드(긴변 1600·JPEG 0.8 압축, courses/{room}/gradPhoto 저장) 또는 PC에서 직접 선택. 액자(grad_frame.png, 가운데 투명)에 사진 cover-fit 합성 + 하단 4칸(과정명/교육기간/교육장소/담임교수) 자동 기입 — 각 글자 3초 드래그 보정(system/sharedGuide/gradPhotoPos, 액자 % 기준 전 과정 공통). 미리보기·PNG 다운로드·사진 교체·삭제 지원, PDF 전체화면 중에도 모달 표시. 유효기간 = 수료일(endDate) 자정까지: 종료 다음날 kacExpire 자동정리 및 수동 리셋·연간계획 삭제에서 gradPhoto 제거, 교육생 다운로드 버튼도 함께 사라짐. (J12.3: 입교안내 과정 전환 잔상 제거 — 다른 과정(또는 같은 방의 대면↔비대면 변형 변경)으로 이동 시 공용 캔버스·가상페이지·오버레이·버튼을 즉시 비우고 로딩 배지를 표시, 이전 과정 PDF가 잠깐 보이던 문제 해소. (J12.2: ①교육개요 오버레이 글자를 PDF 라벨과 동급 크기로(메인 2.6%·서브 2.25%) ②'회의참가 ID/PW' 항목 클릭 → 회의정보 입력 모달(PDF 전체화면 중에도 표시, 저장 시 오버레이 즉시 갱신·courses/{room}/zoomMeeting 단일 저장소라 ZOOM 모니터링 등 연동 화면 전체 적용, 드래그 직후 오클릭 방지) ③홈 검색카드 장소가 온라인(Zoom)이면 Zoom 블루(#0B5CFF) 블록+비디오 아이콘으로 강조(드롭다운 변경 시 즉시 반영). (J12.1: 교육개요 오버레이 수정 — ①값을 slot 캐시가 아닌 Firebase(settings/students/zoomMeeting)에서 직접 조회(진입 경로·타이밍 무관하게 과정명/기간 정확 표기, 늦은 응답 무시 토큰) ②글자 크기를 vw가 아닌 PDF 래퍼 폭 비례(메인 2.15%·서브 1.85%)로 — PDF와 같은 비율로 확대/축소되어 전체화면에서도 또렷 ③기본 좌표를 실측 기준(콜론 라인 중심)으로 보정. (J12: 비대면(온라인 Zoom) 입교안내 지원 — 과정 장소가 온라인(Zoom)이면 '입교안내(비대면).pdf' 자동 로드(장소 변경 시 재로드). 가상페이지(1p 뒤 교수소개→카카오 오픈톡방→입교등록절차→목차) 흐름은 대면과 동일, 대면용 '교육과정 안내' 가상페이지는 비대면에서 숨김. 비대면 PDF 4p 교육개요에 과정명·교육인원(입교등록수)·교육기간·교육구분·교육평가(대면과 동일 직무일반/법정 표기)·ZOOM 회의 ID/PW 오버레이 — 항목별 3초 롱프레스 드래그 이동, 윈도우/전체화면 좌표 개별 저장(system/sharedGuide/overviewPos, 전 과정 공통·실시간 동기). 교육시간표 버튼 페이지를 변형별로(대면 13p·비대면 7p) — 비대면은 지원부 판독본이 없으므로 기존 QR 사진 업로드/보기 버튼 그대로 동작. (J11: 입교안내 13p '교육시간표 보기' 신설 — 지원부가 한글 명단 업로드 시 자동 판독·저장되는 표 그리드(courses/{room}/schedule/grid, 셀좌표·병합정보 포함)를 실시간 구독. grid 있으면 녹색 버튼 노출→클릭 시 아래→위 슬라이드 시트에 원본 표 그대로 렌더(연속 강의 rowspan 줄합침+과정명·강사명 센터정렬, X로 슬라이드 다운). grid 없으면 기존 사진 보기/QR 업로드 흐름 유지. 녹색 버튼도 3초 롱프레스 위치보정(별도 그룹 parsedSchedule, 윈도우/전체화면 좌표 개별 저장). (J10: ①OTP 재사용 가드 — 강사 화면 새로고침/출결탭 재진입 시 잔여 15초 이상 유효 OTP를 서버에서 재사용, 매번 새 코드로 교체되어 입력 중이던 교육생이 만료 판정받던 문제 해소 ②담임(coordinatorName) 수동수정 보호 — status/coordManual 플래그 도입(professorManual과 동일 패턴), 강사가 담임을 바꿔도 연간계획 자동동기화가 계획값으로 되돌리던 버그 수정. 방 비움/신규 배치 시 플래그 해제 ③퇴교차량 자동판정 표시 — 지원부가 한글 시간표 업로드 시 기록되는 courses/{room}/shuttle/autoDeparture를 실시간 구독, 1차/2차 구분 없이 '이 과정 출발시간' 단일 표시(대시보드 인라인·셔틀 파란박스·도착 ETA 모두), 자동판정 없으면 기존 1차/2차 표기 유지. (J9: 지원부 생활관 명단(system/dorm/rosters) 오삭제 방지 — 리셋·명단비우기·연간계획삭제·종료과정자동정리 4개 경로 전부 '명단의 과정명이 해당 방 과정명과 일치할 때만' 삭제하도록 가드. 다른 과정 명단은 보존하고 console에 보존 사유 기록. (J8: ZOOM 진입 요소를 CSS !important 규칙으로 원천 차단 — 오프라인이면 어떤 코드가 표시해도 절대 안 보임(body.zoom-room-online 클래스 게이트). (J7: ZOOM 진입 요소 표시를 [onclick*=openZoomMonitor] 전체 선택으로 통일 + 2초 하트비트 — 오프라인에서 pill 잔존 완전 차단. (J6: ①장소 수동지정 보호(roomDetailManual) — 연간계획 동기화가 온라인 설정 되돌리는 문제 차단 ②ZOOM 버튼 표시를 장소 배지 텍스트와 상시 동기(MutationObserver) — 오프라인인데 버튼 남는 문제 해소 ③저장알림 확인 후 회의정보 모달 순차 표시(동시 팝업 제거) ④회의번호 000 0000 0000 자동 포맷 전용 모달. (J5: ①ZOOM 버튼 과정현황 장소 옆으로+오프라인 완전숨김(방전환 기본숨김·온라인 가드) ②iframe 사이징 실측기반 재작성 ③온라인 장소 저장 시 회의번호/암호 과정별 저장(askZoomMeetingInfo) ④홈검색 카카오등록 교수 노란배지 ⑤퇴교차량 칩 인라인 펼침. (J4: ZOOM 모니터링 iframe 높이를 body zoom 배율 보정해 실제 화면에 맞춤 — 설정 패널 잘림 해소, 리사이즈 대응. (J3: ui.openZoomMonitor 추가 — ZOOM 모니터링을 내장 뷰(iframe)로 열고 과정 전환 시 확인 후 재로딩, 온라인 판별 토글에 더보기 메뉴 항목 포함) (J2: ①ZOOM 모니터링 버튼 표시로직 재적용(온라인 과정 판별) ②강의실 초기화 confirm에 삭제범위 안내 추가 ③QR 요소없음 개발자문구 교체 ④toggleNightMode/addSubject 널가드 — 구버전 잔재 안전화)
+   PLATFORM_EDIT_STATUS: 수정완료 | VERSION: J16 | 2026-07-07 (J16: Firebase 이그레스 격리 — 대용량 base64 미디어 3종(시간표 사진 scheduleImage·수료 기념사진 gradPhoto·출결 QR attendanceQR)을 courses/{room} 하위에서 media/{room} 신설 경로로 이전. courses 전체 읽기/상시 구독(전 플랫폼 약 45곳)이 코드 수정 없이 전부 경량화됨. kacMedia 헬퍼 도입: 읽기=media 우선→레거시 폴백(발견 시 자동 이전+레거시 삭제, migrate-on-read — 구버전 schedule_photo.html 업로더가 레거시에 써도 자동 정리), 쓰기=media 저장+레거시 제거, 정리=리셋/만료/연간계획삭제 전 경로에 media null 포함. ※배포 전 Firebase 보안 규칙에 media 노드 추가 필수(안내문 참조). (J15: ①OTP 안정화 — 발급/카운트다운을 Firebase 서버시간(.info/serverTimeOffset) 기준으로 변경(강사 PC 시계 오차 무관), 회전 시 직전 코드(prevCode/prevValidUntil)를 함께 저장해 번호가 바뀌는 순간 입력한 교육생도 이전 코드로 출결 인정(TOTP ±1구간 방식, index.html vJ105와 연동) ②퀴즈 3단계 상태 도입 — 퀴즈 탭 진입 시 quizStep=none(선택 중), '현재 퀴즈 시작'(open) 시 live, 탭 이탈 시 mode=qa+quizStep=none 동시 종료. showQuiz의 quizStep none 리셋 제거(문항 전환 시 교육생 튕김 방지) — 강사가 시작 전 퀴즈 고르는 단계에 교육생 화면에 문항이 뜨던 문제와, 강사가 과정현황으로 나가도 교육생이 퀴즈에 갇히던 문제 해소 ③폐강 동기화 — 연간계획 파일 재업로드 시 기존 폐강 플래그 이월 보존(과정명+시작일 매칭), _applyCurrentWeek/_syncRoomsLockAware에서 폐강 과정이 배정된 방을 기간 중이어도 즉시 미개설 정리(잠금 방은 콘솔 경고만) — 폐강 과정이 월요일 자동배치로 되살아나던 문제 해소) (J14: 수료 기념사진 버튼 위치·노출 규칙 변경 — 출결 화면 버튼 제거, 대시보드 히어로의 강의장소 배지 옆에 노란색(앰버 그라데이션·펄스) pill로 이동. 노출 = 과정 수료일 '당일' KST 06:00부터(새벽에 열어둔 화면도 06시에 자동 노출, settings 실시간 리스너 연동, 방 전환 시 초기화). (J13.1: 기념사진 모달 한 화면 수납 — 캔버스 높이를 화면에 맞춰 제한(max-height calc)해 미리보기·안내·버튼 3종이 스크롤 없이 항상 보임(드래그 레이어는 캔버스 표시 박스에 정확히 일치하도록 fit-content). 텍스트는 각 칸 오른쪽 경계(액자 실측 %)를 넘지 않도록 measureText 기반 자동 축소 — 긴 과정명/기간도 칸 안에 정렬. (J13: 수료 기념사진 신설 — 출결 관리 화면 '📸 수료 기념사진' 버튼(수료일 당일 금색 펄스). 강사가 폰으로 촬영 후 QR(grad_photo.html)로 업로드(긴변 1600·JPEG 0.8 압축, courses/{room}/gradPhoto 저장) 또는 PC에서 직접 선택. 액자(grad_frame.png, 가운데 투명)에 사진 cover-fit 합성 + 하단 4칸(과정명/교육기간/교육장소/담임교수) 자동 기입 — 각 글자 3초 드래그 보정(system/sharedGuide/gradPhotoPos, 액자 % 기준 전 과정 공통). 미리보기·PNG 다운로드·사진 교체·삭제 지원, PDF 전체화면 중에도 모달 표시. 유효기간 = 수료일(endDate) 자정까지: 종료 다음날 kacExpire 자동정리 및 수동 리셋·연간계획 삭제에서 gradPhoto 제거, 교육생 다운로드 버튼도 함께 사라짐. (J12.3: 입교안내 과정 전환 잔상 제거 — 다른 과정(또는 같은 방의 대면↔비대면 변형 변경)으로 이동 시 공용 캔버스·가상페이지·오버레이·버튼을 즉시 비우고 로딩 배지를 표시, 이전 과정 PDF가 잠깐 보이던 문제 해소. (J12.2: ①교육개요 오버레이 글자를 PDF 라벨과 동급 크기로(메인 2.6%·서브 2.25%) ②'회의참가 ID/PW' 항목 클릭 → 회의정보 입력 모달(PDF 전체화면 중에도 표시, 저장 시 오버레이 즉시 갱신·courses/{room}/zoomMeeting 단일 저장소라 ZOOM 모니터링 등 연동 화면 전체 적용, 드래그 직후 오클릭 방지) ③홈 검색카드 장소가 온라인(Zoom)이면 Zoom 블루(#0B5CFF) 블록+비디오 아이콘으로 강조(드롭다운 변경 시 즉시 반영). (J12.1: 교육개요 오버레이 수정 — ①값을 slot 캐시가 아닌 Firebase(settings/students/zoomMeeting)에서 직접 조회(진입 경로·타이밍 무관하게 과정명/기간 정확 표기, 늦은 응답 무시 토큰) ②글자 크기를 vw가 아닌 PDF 래퍼 폭 비례(메인 2.15%·서브 1.85%)로 — PDF와 같은 비율로 확대/축소되어 전체화면에서도 또렷 ③기본 좌표를 실측 기준(콜론 라인 중심)으로 보정. (J12: 비대면(온라인 Zoom) 입교안내 지원 — 과정 장소가 온라인(Zoom)이면 '입교안내(비대면).pdf' 자동 로드(장소 변경 시 재로드). 가상페이지(1p 뒤 교수소개→카카오 오픈톡방→입교등록절차→목차) 흐름은 대면과 동일, 대면용 '교육과정 안내' 가상페이지는 비대면에서 숨김. 비대면 PDF 4p 교육개요에 과정명·교육인원(입교등록수)·교육기간·교육구분·교육평가(대면과 동일 직무일반/법정 표기)·ZOOM 회의 ID/PW 오버레이 — 항목별 3초 롱프레스 드래그 이동, 윈도우/전체화면 좌표 개별 저장(system/sharedGuide/overviewPos, 전 과정 공통·실시간 동기). 교육시간표 버튼 페이지를 변형별로(대면 13p·비대면 7p) — 비대면은 지원부 판독본이 없으므로 기존 QR 사진 업로드/보기 버튼 그대로 동작. (J11: 입교안내 13p '교육시간표 보기' 신설 — 지원부가 한글 명단 업로드 시 자동 판독·저장되는 표 그리드(courses/{room}/schedule/grid, 셀좌표·병합정보 포함)를 실시간 구독. grid 있으면 녹색 버튼 노출→클릭 시 아래→위 슬라이드 시트에 원본 표 그대로 렌더(연속 강의 rowspan 줄합침+과정명·강사명 센터정렬, X로 슬라이드 다운). grid 없으면 기존 사진 보기/QR 업로드 흐름 유지. 녹색 버튼도 3초 롱프레스 위치보정(별도 그룹 parsedSchedule, 윈도우/전체화면 좌표 개별 저장). (J10: ①OTP 재사용 가드 — 강사 화면 새로고침/출결탭 재진입 시 잔여 15초 이상 유효 OTP를 서버에서 재사용, 매번 새 코드로 교체되어 입력 중이던 교육생이 만료 판정받던 문제 해소 ②담임(coordinatorName) 수동수정 보호 — status/coordManual 플래그 도입(professorManual과 동일 패턴), 강사가 담임을 바꿔도 연간계획 자동동기화가 계획값으로 되돌리던 버그 수정. 방 비움/신규 배치 시 플래그 해제 ③퇴교차량 자동판정 표시 — 지원부가 한글 시간표 업로드 시 기록되는 courses/{room}/shuttle/autoDeparture를 실시간 구독, 1차/2차 구분 없이 '이 과정 출발시간' 단일 표시(대시보드 인라인·셔틀 파란박스·도착 ETA 모두), 자동판정 없으면 기존 1차/2차 표기 유지. (J9: 지원부 생활관 명단(system/dorm/rosters) 오삭제 방지 — 리셋·명단비우기·연간계획삭제·종료과정자동정리 4개 경로 전부 '명단의 과정명이 해당 방 과정명과 일치할 때만' 삭제하도록 가드. 다른 과정 명단은 보존하고 console에 보존 사유 기록. (J8: ZOOM 진입 요소를 CSS !important 규칙으로 원천 차단 — 오프라인이면 어떤 코드가 표시해도 절대 안 보임(body.zoom-room-online 클래스 게이트). (J7: ZOOM 진입 요소 표시를 [onclick*=openZoomMonitor] 전체 선택으로 통일 + 2초 하트비트 — 오프라인에서 pill 잔존 완전 차단. (J6: ①장소 수동지정 보호(roomDetailManual) — 연간계획 동기화가 온라인 설정 되돌리는 문제 차단 ②ZOOM 버튼 표시를 장소 배지 텍스트와 상시 동기(MutationObserver) — 오프라인인데 버튼 남는 문제 해소 ③저장알림 확인 후 회의정보 모달 순차 표시(동시 팝업 제거) ④회의번호 000 0000 0000 자동 포맷 전용 모달. (J5: ①ZOOM 버튼 과정현황 장소 옆으로+오프라인 완전숨김(방전환 기본숨김·온라인 가드) ②iframe 사이징 실측기반 재작성 ③온라인 장소 저장 시 회의번호/암호 과정별 저장(askZoomMeetingInfo) ④홈검색 카카오등록 교수 노란배지 ⑤퇴교차량 칩 인라인 펼침. (J4: ZOOM 모니터링 iframe 높이를 body zoom 배율 보정해 실제 화면에 맞춤 — 설정 패널 잘림 해소, 리사이즈 대응. (J3: ui.openZoomMonitor 추가 — ZOOM 모니터링을 내장 뷰(iframe)로 열고 과정 전환 시 확인 후 재로딩, 온라인 판별 토글에 더보기 메뉴 항목 포함) (J2: ①ZOOM 모니터링 버튼 표시로직 재적용(온라인 과정 판별) ②강의실 초기화 confirm에 삭제범위 안내 추가 ③QR 요소없음 개발자문구 교체 ④toggleNightMode/addSubject 널가드 — 구버전 잔재 안전화)
    CATC · 강사 플랫폼 로직  (admin.js)
    STATUS    수정완료
    @version  M9
@@ -62,6 +62,64 @@ function getOutingWindowKST() {
     if (h < 9) start -= 24 * 60 * 60 * 1000;                  // 09:00 이전이면 어제 09:00부터
     return { start: start, end: start + 24 * 60 * 60 * 1000 };// [start, start+24h) = 익일 09:00
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   [J16] kacMedia — 대용량 base64 미디어(시간표 사진·수료 기념사진·출결 QR) 저장소 격리
+   · 문제: 이 3종이 courses/{room} 하위에 있어서, 전 플랫폼의 courses 전체 읽기/상시 구독
+     (약 45곳)마다 수 MB의 이미지가 함께 다운로드됨 → Firebase 이그레스 폭증의 주범
+   · 해결: media/{room}/{kind} 로 분리. courses 트리는 텍스트만 남아 모든 기존 읽기가 경량화됨
+   · 호환: 읽기는 신규 경로 우선 → 없으면 레거시(courses/{room}/{kind}) 폴백.
+     레거시 발견 시 media로 자동 이전 후 레거시 삭제(migrate-on-read) —
+     아직 구버전 업로더(schedule_photo.html 등)가 레거시에 써도 시스템이 스스로 정리
+   ※ Firebase 보안 규칙에 media 노드 추가 필요 (배포 안내문 참조)
+   ═══════════════════════════════════════════════════════════════ */
+const kacMedia = {
+    KINDS: ['scheduleImage', 'gradPhoto', 'attendanceQR'],
+    path:   (room, kind) => `media/${room}/${kind}`,
+    legacy: (room, kind) => `courses/${room}/${kind}`,
+    // 신규 우선 1회 읽기 (+레거시 폴백/자동이전). child: 하위 키만 읽을 때(예: 'dataUrl','updatedAt')
+    read: async function(room, kind, child) {
+        const sub = child ? '/' + child : '';
+        try {
+            const s = await firebase.database().ref(this.path(room, kind) + sub).once('value');
+            if (s.exists()) return s.val();
+        } catch (e) {}
+        try {
+            const ls = await firebase.database().ref(this.legacy(room, kind) + sub).once('value');
+            if (!ls.exists()) return null;
+            this.migrate(room, kind);   // 백그라운드 이전 (대기하지 않음)
+            return ls.val();
+        } catch (e) { return null; }
+    },
+    // 레거시 전체값을 media로 복사 후 레거시 삭제 (실패해도 무해 — 다음 기회에 재시도됨)
+    migrate: async function(room, kind) {
+        try {
+            const full = await firebase.database().ref(this.legacy(room, kind)).once('value');
+            if (!full.exists()) return;
+            await firebase.database().ref(this.path(room, kind)).set(full.val());
+            await firebase.database().ref(this.legacy(room, kind)).remove();
+            console.log(`[kacMedia] ${kind} 레거시→media 이전 완료 (${room})`);
+        } catch (e) { console.warn(`[kacMedia] ${kind} 이전 실패(${room}):`, e && e.message); }
+    },
+    // 쓰기: media에 저장 + 레거시 잔여분 제거
+    write: async function(room, kind, val) {
+        await firebase.database().ref(this.path(room, kind)).set(val);
+        firebase.database().ref(this.legacy(room, kind)).remove().catch(() => {});
+    },
+    // 삭제: 양쪽 모두 제거
+    remove: function(room, kind) {
+        firebase.database().ref(this.path(room, kind)).remove().catch(() => {});
+        firebase.database().ref(this.legacy(room, kind)).remove().catch(() => {});
+    },
+    // multi-path 업데이트 객체에 방 정리용 null 추가 (리셋/만료/연간계획삭제 경로용)
+    nullPaths: function(updates, room) {
+        this.KINDS.forEach(k => {
+            updates[this.path(room, k)] = null;
+            updates[this.legacy(room, k)] = null;
+        });
+        return updates;
+    }
+};
 
 const state = {
     sessionId: (function() {
@@ -1466,6 +1524,7 @@ _executeReset: function() {
         [`${rPath}/gradPhoto`]:           null,   // [J13 리셋] 수료 기념사진
         [`${rPath}/venuePick`]:           null    // [리셋] (settings 밖 잔여 대비) — 실제 venuePick은 settings 초기화로 함께 정리됨
     };
+    kacMedia.nullPaths(resetUpdates, state.room);   // [J16] 이전된 미디어 저장소(media/{room})도 함께 정리
 
     firebase.database().ref(rPath).once('value').then(function(_cs){ var _c=_cs.val()||{}; var _aa=_c.admin_actions||{}, _ia=_c.internal_attendance||{}, _stu=_c.students||{}; if(!Object.keys(_aa).length && !Object.keys(_ia).length && !Object.keys(_stu).length) return null; var _st=_c.settings||{}, _stt=_c.status||{}; return firebase.database().ref('system/course_archive/'+state.room+'_'+Date.now()).set({ room: state.room, courseName:_st.courseName||'', period:_st.period||'', prof:_stt.professorName||'', coord:_st.coordinatorName||'', admin_actions:_aa, internal_attendance:_ia, students:_stu, expectedStudents:(_c.expectedStudents||null), archivedAt: firebase.database.ServerValue.TIMESTAMP }); }).catch(function(){}).then(() => firebase.database().ref().update(resetUpdates)).then(() => {
         return _dismissPromise;
@@ -1480,7 +1539,8 @@ _executeReset: function() {
     // [추가] 출결 QR 보기
     openAttendanceQr: async function() {
         if(!state.room) return ui.showAlert("강의실을 선택하세요.");
-        const snap = await firebase.database().ref(`courses/${state.room}/attendanceQR`).once('value');
+        const qrVal = await kacMedia.read(state.room, 'attendanceQR');   // [J16] media 우선 + 레거시 폴백
+        const snap = { exists: () => qrVal != null, val: () => qrVal };
         const img = document.getElementById('attendanceQrImg');
         const msg = document.getElementById('noAttendanceQrMsg');
         if(snap.exists()) {
@@ -3031,7 +3091,9 @@ loadAttendanceView: function() {
     const room = state.room; // 현재 방 번호 고정
 
     // 1. 공식 QR 이미지 경로 리스너 정리 및 새로 연결
-    const qrRef = firebase.database().ref(`courses/${room}/attendanceQR`);
+    // [J16] 저장소가 media/{room}/attendanceQR 로 이전 — 레거시 잔여분은 진입 시 1회 자동 이전
+    kacMedia.migrate(room, 'attendanceQR');
+    const qrRef = firebase.database().ref(kacMedia.path(room, 'attendanceQR'));
     qrRef.off(); // 이전 방 안테나 제거
     
     qrRef.on('value', snap => {
@@ -7947,10 +8009,19 @@ const scheduleMgr = {
         if (!block) return;
         const room = state.room;
         if (this._photoRef) { try { this._photoRef.off(); } catch (e) {} this._photoRef = null; }
+        if (this._photoLegacyRef) { try { this._photoLegacyRef.off(); } catch (e) {} this._photoLegacyRef = null; }
         if (!room) { block.innerHTML = '<div style="height:160px; display:flex; align-items:center; justify-content:center; color:#94a3b8; font-weight:800;">먼저 강의실을 선택하세요.</div>'; return; }
         block.innerHTML = '<div style="height:160px; display:flex; align-items:center; justify-content:center; color:#94a3b8; font-weight:800;">불러오는 중…</div>';
         // 변경 감지는 아주 작은 updatedAt 값만 구독한다. 큰 이미지(dataUrl)는 로컬 캐시를 우선 사용.
-        this._photoRef = firebase.database().ref(`courses/${room}/scheduleImage/updatedAt`);
+        // [J16] media/{room}/scheduleImage 를 주 경로로 구독 + 레거시(courses/...) 감시 겸용:
+        //  구버전 업로더(schedule_photo.html)가 레거시에 올려도 감지 즉시 media로 이전한다.
+        this._photoRef = firebase.database().ref(kacMedia.path(room, 'scheduleImage') + '/updatedAt');
+        if (this._photoLegacyRef) { try { this._photoLegacyRef.off(); } catch (e) {} }
+        this._photoLegacyRef = firebase.database().ref(kacMedia.legacy(room, 'scheduleImage') + '/updatedAt');
+        this._photoLegacyRef.on('value', snap => {
+            if (state.room !== room) return;
+            if (snap.val()) kacMedia.migrate(room, 'scheduleImage');  // 이전되면 media 리스너가 이어받음
+        });
         this._photoRef.on('value', async snap => {
             if (state.room !== room) return;
             const ts = snap.val();
@@ -7958,7 +8029,7 @@ const scheduleMgr = {
             if (!ts) { await this._idbDelete(room); if (state.room === room) this._renderPhoto(null); return; }
             // [30분 자동 만료] 업로드 30분 경과 시 Firebase에서 자동 삭제 (저장 부담 경감)
             if (Date.now() - Number(ts) > 1800000) {
-                firebase.database().ref(`courses/${room}/scheduleImage`).remove().catch(function () {});
+                kacMedia.remove(room, 'scheduleImage');
                 await this._idbDelete(room);
                 if (state.room === room) this._renderPhoto(null);
                 return;
@@ -7966,7 +8037,7 @@ const scheduleMgr = {
             // 페이지가 열려 있는 동안 30분 시점에 삭제되도록 예약
             if (scheduleMgr._expireTimer) clearTimeout(scheduleMgr._expireTimer);
             scheduleMgr._expireTimer = setTimeout(function () {
-                firebase.database().ref(`courses/${room}/scheduleImage`).remove().catch(function () {});
+                kacMedia.remove(room, 'scheduleImage');
             }, (1800000 - (Date.now() - Number(ts))) + 2000);
             // 1) 이 PC 캐시가 최신이면 → Firebase에서 이미지 다시 받지 않고 캐시로 표시
             const cached = await this._idbGet(room);
@@ -7976,8 +8047,7 @@ const scheduleMgr = {
             }
             // 2) 캐시 없음/오래됨(새 사진) → 큰 이미지를 '1회만' 내려받아 이 PC에 저장
             try {
-                const dataSnap = await firebase.database().ref(`courses/${room}/scheduleImage/dataUrl`).once('value');
-                const dataUrl = dataSnap.val();
+                const dataUrl = await kacMedia.read(room, 'scheduleImage', 'dataUrl');
                 if (!dataUrl) { if (state.room === room) this._renderPhoto(null); return; }
                 await this._idbSet(room, { updatedAt: ts, dataUrl });
                 if (state.room === room) this._renderPhoto({ dataUrl, updatedAt: ts });
@@ -8035,8 +8105,9 @@ const scheduleMgr = {
         const room = state.room;
         if (!room) return;
         if (!confirm('등록된 시간표 사진을 삭제할까요?')) return;
-        firebase.database().ref(`courses/${room}/scheduleImage`).remove()
-            .then(() => { this._idbDelete(room); ui.showAlert('🗑️ 시간표 사진을 삭제했습니다.'); })
+        // [J16] media 주경로 + 레거시 양쪽 모두 삭제
+        firebase.database().ref(kacMedia.path(room, 'scheduleImage')).remove()
+            .then(() => { kacMedia.remove(room, 'scheduleImage'); this._idbDelete(room); ui.showAlert('🗑️ 시간표 사진을 삭제했습니다.'); })
             .catch(err => ui.showAlert('삭제 실패: ' + (err && err.message ? err.message : '')));
     },
     openPhotoFullscreen: function() {
@@ -8501,10 +8572,10 @@ init: function() {
         // 교육 시간표 사진 존재 여부 (+ 업로드 30분 경과 시 자동 삭제로 Firebase 부담 경감)
         slot.scheduleTs = 0;
         try {
-            const tsSnap = await firebase.database().ref(`courses/${room}/scheduleImage/updatedAt`).once('value');
-            const ts = Number(tsSnap.val() || 0);
+            // [J16] media 우선 + 레거시 폴백(발견 시 자동 이전)
+            const ts = Number(await kacMedia.read(room, 'scheduleImage', 'updatedAt') || 0);
             if (ts && (Date.now() - ts > 1800000)) {        // 30분 경과 → 삭제
-                firebase.database().ref(`courses/${room}/scheduleImage`).remove().catch(function () {});
+                kacMedia.remove(room, 'scheduleImage');
             } else {
                 slot.scheduleTs = ts;
             }
@@ -9871,6 +9942,7 @@ saveAll: function() {
                     }
                     // 데이터 노드 비움 (settings/status 는 새 값으로 이미 updates 에 들어있어 제외)
                     ['students','internal_attendance','admin_actions','dinner_skips','shuttle','tablet_loans','quizAnswers','questions','activeQuiz','quizFinalResults','attendanceQR','scheduleImage','coordNoticeHistory','connections','gradPhoto'].forEach(function(k){ updates[`courses/${_room}/${k}`] = null; });
+                    kacMedia.nullPaths(updates, _room);   // [J16] 이전된 미디어 저장소도 함께 정리
                     updates[`courses/${_room}/boardNotice`] = "";
                     updates[`courses/${_room}/coordNotice`] = "";
                     // [명단 보존] 신규 개설 시에도 지원부·운영부 미리 올린 명단은 보존 (삭제는 과정 종료 expire/수동 리셋만)
@@ -11505,7 +11577,7 @@ const annualPlanMgr = {
     _cleanStartUpdates: function(room) {
         const rPath = `courses/${room}`;
         const newResetKey = "reset_" + Date.now();
-        return {
+        const _u = {
             [`${rPath}/students`]:            null,
             [`${rPath}/internal_attendance`]: null,
             [`${rPath}/questions`]:           null,
@@ -11535,6 +11607,7 @@ const annualPlanMgr = {
             [`${rPath}/status/ownerSessionId`]: null,
             [`${rPath}/status/resetKey`]:     newResetKey  // 교육생 강제 퇴출 신호
         };
+        return kacMedia.nullPaths(_u, room);   // [J16] media/{room} 정리 포함
     },
 
     /* 페이지 로드 시 자동 체크 & 재배치 — 대상 주(토요일부터 차주)와 현재 배정이 다르면 갱신 */
@@ -11961,7 +12034,8 @@ annualPlanMgr._resetRoomFull = function (room, nm, pd) {
     const upd = {};
     upd[rp + '/settings'] = { courseName: '', roomDetailName: '', period: null, coordinatorName: null, subjects: null, password: null };
     upd[rp + '/status'] = { professorName: '', roomStatus: 'idle', ownerSessionId: null, resetKey: 'reset_' + Date.now(), mode: 'qa', quizStep: 'none', professorManual: null, roomDetailManual: null };
-    ['coordNoticeHistory', 'students', 'internal_attendance', 'questions', 'admin_actions', 'shuttle', 'dinner_skips', 'tablet_loans', 'connections', 'quizAnswers', 'expectedStudents', 'coordRoster', 'activeQuiz', 'quizFinalResults', 'quizBank', 'attendanceQR', 'activeSurvey', 'surveyAnswers', 'lastSurveyResult', 'scheduleImage', 'venuePick'].forEach(function (k) { upd[rp + '/' + k] = null; });
+    ['coordNoticeHistory', 'students', 'internal_attendance', 'questions', 'admin_actions', 'shuttle', 'dinner_skips', 'tablet_loans', 'connections', 'quizAnswers', 'expectedStudents', 'coordRoster', 'activeQuiz', 'quizFinalResults', 'quizBank', 'attendanceQR', 'activeSurvey', 'surveyAnswers', 'lastSurveyResult', 'scheduleImage', 'gradPhoto', 'venuePick'].forEach(function (k) { upd[rp + '/' + k] = null; });
+    if (typeof kacMedia !== 'undefined') kacMedia.nullPaths(upd, room || (rp.split('/')[1]));   // [J16] media/{room} 정리
     ['boardNotice', 'notice', 'coordNotice'].forEach(function (k) { upd[rp + '/' + k] = ''; });
     // 생활관 명단(rosters)·배정(assignments) + 재생성 방지(dismissedCourses)
     const weekKeys = [];
@@ -12742,14 +12816,16 @@ window.gradMgr = {
         // 사진 구독
         const room = this._room(), self = this;
         if (this._ref) { try { this._ref.off(); } catch (e) {} }
-        this._ref = firebase.database().ref('courses/' + room + '/gradPhoto/updatedAt');
+        // [J16] 저장소가 media/{room}/gradPhoto 로 이전 — 레거시 잔여분은 열 때 1회 자동 이전
+        kacMedia.migrate(room, 'gradPhoto');
+        this._ref = firebase.database().ref(kacMedia.path(room, 'gradPhoto') + '/updatedAt');
         this._ref.on('value', async function (s) {
             if (self._room() !== room) return;
             const ts = s.val();
             if (!ts) { self._cur = null; self._showState(false); return; }
             try {
-                const ds = await firebase.database().ref('courses/' + room + '/gradPhoto/dataUrl').once('value');
-                self._cur = ds.val() || null;
+                const dataUrl = await kacMedia.read(room, 'gradPhoto', 'dataUrl');
+                self._cur = dataUrl || null;
                 self._showState(!!self._cur);
                 if (self._cur) self._renderPreview();
             } catch (e) {}
@@ -12796,7 +12872,7 @@ window.gradMgr = {
                 const dataUrl = cv.toDataURL('image/jpeg', 0.8);
                 try {
                     const info = await self._loadInfo();
-                    await firebase.database().ref('courses/' + self._room() + '/gradPhoto').set({ dataUrl: dataUrl, updatedAt: Date.now(), endDate: info.endDate || '' });
+                    await kacMedia.write(self._room(), 'gradPhoto', { dataUrl: dataUrl, updatedAt: Date.now(), endDate: info.endDate || '' });   // [J16] media 저장 + 레거시 제거
                     ui.showAlert('✅ 기념사진이 업로드되었습니다.\n교육생은 출결 화면에서 수료일 자정까지 내려받을 수 있습니다.');
                 } catch (err) { ui.showAlert('❌ 업로드 실패: ' + (err && err.message || err)); }
             };
@@ -12891,7 +12967,8 @@ window.gradMgr = {
     remove: function () {
         const self = this;
         if (!confirm('기념사진을 삭제할까요?\n교육생 다운로드 버튼도 함께 사라집니다.')) return;
-        firebase.database().ref('courses/' + this._room() + '/gradPhoto').remove()
+        kacMedia.remove(this._room(), 'gradPhoto');   // [J16] 레거시 포함 양쪽 정리
+        firebase.database().ref(kacMedia.path(this._room(), 'gradPhoto')).remove()
             .then(function () { ui.showAlert('삭제되었습니다.'); })
             .catch(function (e) { ui.showAlert('❌ 삭제 실패: ' + (e && e.message || e)); });
     },
@@ -13156,6 +13233,7 @@ window.kacExpireEndedCourses = async function(){
         }
         var b='courses/'+room+'/';
         ['students','internal_attendance','questions','admin_actions','shuttle','dinner_skips','tablet_loans','connections','quizAnswers','expectedStudents','coordRoster','activeQuiz','quizFinalResults','attendanceQR','scheduleImage','coordNoticeHistory','gradPhoto'].forEach(function(k){ updates[b+k]=null; });
+        kacMedia.nullPaths(updates, room);   // [J16] 이전된 미디어 저장소도 함께 정리
         updates[b+'boardNotice']=''; updates[b+'notice']=''; updates[b+'coordNotice']='';
         updates[b+'settings/courseName']=''; updates[b+'settings/period']=null; updates[b+'settings/coordinatorName']=null; updates[b+'settings/password']=null;
         updates[b+'status/professorName']=''; updates[b+'status/roomStatus']='idle'; updates[b+'status/ownerSessionId']=null; updates[b+'status/resetKey']='rk_'+Date.now()+'_'+Math.random().toString(36).slice(2,7);
@@ -13745,7 +13823,7 @@ ui.closeScheduleGuide = function(){
 ui.openScheduleView = async function(){
   var room = state.room; if(!room) return;
   var dataUrl = '';
-  try { var ds = await firebase.database().ref('courses/'+room+'/scheduleImage/dataUrl').once('value'); dataUrl = ds.val() || ''; } catch(e){}
+  try { dataUrl = (await kacMedia.read(room, 'scheduleImage', 'dataUrl')) || ''; } catch(e){}   // [J16] media 우선
   if(!dataUrl){ if(ui.showAlert) ui.showAlert('등록된 교육 시간표 사진이 없습니다.'); return; }
   ui.closeScheduleGuide();
   var modal = document.createElement('div'); modal.id = 'guideScheduleModal';
@@ -13797,7 +13875,9 @@ ui.openScheduleQrUpload = function(){
   if(qrDiv && typeof QRCode !== 'undefined'){ try{ new QRCode(qrDiv, { text:url, width:210, height:210, correctLevel:QRCode.CorrectLevel.H }); }catch(e){ qrDiv.textContent = url; } }
   else if(qrDiv){ qrDiv.textContent = url; }
   // 업로드 라이브 감지: updatedAt이 생기면 = 사진 올라옴 → 슬롯 갱신 · 버튼 토글 · 모달 닫고 바로 보기
-  var ref = firebase.database().ref('courses/'+room+'/scheduleImage/updatedAt');
+  // [J16] media 주경로 감시 + 레거시 감시(구버전 업로더가 레거시에 쓰면 자동 이전 → media 감지로 이어짐)
+  var ref = firebase.database().ref(kacMedia.path(room, 'scheduleImage') + '/updatedAt');
+  var refLegacy = firebase.database().ref(kacMedia.legacy(room, 'scheduleImage') + '/updatedAt');
   function onTs(snap){
     if(state.room !== room) return;
     var ts = snap.val(); if(!ts) return;
@@ -13806,10 +13886,12 @@ ui.openScheduleQrUpload = function(){
     try{ guideMgr.renderPage(guideMgr._slot().pageNum); }catch(e){}   // 버튼을 '보기'로 전환
     if(ui.openScheduleView) ui.openScheduleView();                    // 올라온 시간표 바로 표시
   }
-  function cleanup(){ try{ ref.off('value', onTs); }catch(e){} }
+  function onLegacyTs(snap){ if(state.room !== room) return; if(snap.val()) kacMedia.migrate(room, 'scheduleImage'); }
+  function cleanup(){ try{ ref.off('value', onTs); }catch(e){} try{ refLegacy.off('value', onLegacyTs); }catch(e){} }
   function closeUp(){ cleanup(); var m=document.getElementById('guideScheduleUploadModal'); if(m) m.remove(); }
   modal._cleanup=cleanup;
   ref.on('value', onTs);
+  refLegacy.on('value', onLegacyTs);
   var cbtn = document.getElementById('guideSchedUploadClose'); if(cbtn) cbtn.addEventListener('click', closeUp);
 };
 // 입교안내 삽입 페이지(프로필·오픈톡방QR·채널안내·교육과정안내) 위치 수동 설정
