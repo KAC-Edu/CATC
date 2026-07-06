@@ -94,7 +94,9 @@
     try { db = firebase.database(); }
     catch (e) { setStatus('서버 연결에 실패했습니다. 잠시 후 다시 시도해 주세요.', 'err'); pickBtn.disabled = true; return; }
 
-    const imgRef = db.ref('courses/' + room + '/scheduleImage');
+    // [V2·JDS260707] 저장소를 media/{room}/scheduleImage 로 이전 (courses 트리 이그레스 격리, admin.js J16 연동)
+    const imgRef = db.ref('media/' + room + '/scheduleImage');
+    const legacyRef = db.ref('courses/' + room + '/scheduleImage');
 
     // 과정명 표시
     db.ref('courses/' + room + '/settings/courseName').once('value').then(s => {
@@ -123,7 +125,12 @@
         }
     }
 
-    imgRef.on('value', s => render(s.val()));
+    imgRef.on('value', s => {
+        const v = s.val();
+        if (v && v.dataUrl) { render(v); return; }
+        // media에 없으면 레거시 잔여분 1회 확인 (구버전이 올린 사진 표시용)
+        legacyRef.once('value').then(ls => render(ls.val())).catch(() => render(null));
+    });
 
     // 이미지 압축: 가로 최대 1280px, JPEG 품질을 낮춰가며 ~480KB 이하로
     function compress(file, cb) {
@@ -160,7 +167,8 @@
             if (!dataUrl) { setStatus('사진을 읽지 못했습니다. 다른 사진으로 시도해 주세요.', 'err'); pickBtn.disabled = false; fileInput.value = ''; return; }
             db.ref('courses/' + room + '/settings/period').once('value').then(ps => {
                 const cp = (ps.val() || '').trim();   // 업로드 시점의 현재 과정 기간을 함께 저장 → 차주 과정 전환 시 자동 리셋 판단용
-                return imgRef.set({ dataUrl: dataUrl, updatedAt: firebase.database.ServerValue.TIMESTAMP, w: w, h: h, coursePeriod: cp });
+                return imgRef.set({ dataUrl: dataUrl, updatedAt: firebase.database.ServerValue.TIMESTAMP, w: w, h: h, coursePeriod: cp })
+                    .then(() => legacyRef.remove().catch(() => {}));   // [V2] 레거시 잔여분 정리
             })
                 .then(() => { setStatus('✅ 업로드 완료! 강사 화면에 바로 표시됩니다.', 'ok'); })
                 .catch(err => { console.error(err); setStatus('업로드 실패: ' + (err && err.message ? err.message : '권한/용량을 확인해 주세요.'), 'err'); })
@@ -172,7 +180,7 @@
         if (!confirm('등록된 시간표 사진을 삭제할까요?')) return;
         delBtn.disabled = true;
         setStatus('<span class="spin"></span> 삭제 중…', 'muted');
-        imgRef.remove()
+        Promise.all([imgRef.remove(), legacyRef.remove().catch(() => {})])
             .then(() => setStatus('🗑️ 삭제되었습니다.', 'ok'))
             .catch(err => setStatus('삭제 실패: ' + (err && err.message ? err.message : ''), 'err'))
             .finally(() => { delBtn.disabled = false; });
@@ -180,7 +188,7 @@
 })();
 </script>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vA</div>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vB</div>
 </body>
 </html>
-<!-- @build 20260612-085718 교육시간표 사진 업로드 -->
+<!-- @build 20260707 교육시간표 사진 업로드 V2 — 저장 경로 courses/{room}/scheduleImage → media/{room}/scheduleImage 이전(레거시 자동 정리) -->
