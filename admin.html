@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- PLATFORM_EDIT_STATUS: 수정완료 | VERSION: I9 | 2026-07-07 (I9.1: 직무 토글을 오른쪽줄→왼쪽 정보 pill 줄(장소 다음)로 이동·소형화, 수료 기념사진과 한 줄 정렬로 공간 정리 [I9: 대시보드 직무 토글 추가(admin.js J17 연동) ②OTP 출결 화면을 2블록 가로 배치로 — 좌측에 OTP 입력 안내자료(otp_attendance_guide.png, GitHub 루트 업로드 필요·파일 없으면 자동 숨김), 우측에 기존 OTP 블록, 좁은 화면에서는 세로 배치) [I8: 과정현황 바로가기 및 입교안내 공지 명칭 통일] -->
+<!-- PLATFORM_EDIT_STATUS: 수정완료 | VERSION: I10 | 2026-07-07 (I10: OTP 안내 이미지 클릭→전체화면 연결(cursor:zoom-in), OTP 카드 라벨에 '전체화면' 재진입 버튼 추가 (I9.1: 직무 토글을 오른쪽줄→왼쪽 정보 pill 줄(장소 다음)로 이동·소형화, 수료 기념사진과 한 줄 정렬로 공간 정리 [I9: 대시보드 직무 토글 추가(admin.js J17 연동) ②OTP 출결 화면을 2블록 가로 배치로 — 좌측에 OTP 입력 안내자료(otp_attendance_guide.png, GitHub 루트 업로드 필요·파일 없으면 자동 숨김), 우측에 기존 OTP 블록, 좁은 화면에서는 세로 배치) [I8: 과정현황 바로가기 및 입교안내 공지 명칭 통일] -->
 <html lang="ko">
 <head>
 <script>
@@ -1476,13 +1476,18 @@ body.in-course #moreToggleTab{ display:flex !important; }
         <!-- [J17] OTP 입력 안내자료 (GitHub 루트의 otp_attendance_guide.png — 파일이 없으면 블록 자동 숨김) -->
         <div class="otp-guide-block" style="flex:1 1 420px; min-width:320px; max-width:600px; display:none; background:#f8fafc; border:1.5px solid #e2e8f0; border-radius:24px; padding:18px; align-items:center; justify-content:center;">
             <img id="otpGuideImg" src="otp_attendance_guide.png" alt="OTP 출결 안내"
-                 style="max-width:100%; max-height:560px; width:auto; border-radius:14px; display:block; margin:0 auto;"
+                 title="클릭하면 안내자료만 전체화면으로 크게 봅니다"
+                 style="max-width:100%; max-height:560px; width:auto; border-radius:14px; display:block; margin:0 auto; cursor:zoom-in;"
+                 onclick="ui.openOtpGuideFullscreen()"
                  onload="this.closest('.otp-guide-block').style.display='flex';"
                  onerror="this.closest('.otp-guide-block').style.display='none';">
         </div>
         <div style="flex:1 1 420px; min-width:320px; max-width:600px; display: flex; flex-direction: column; align-items: center; gap: 24px;">
             <div style="width:100%; background:linear-gradient(135deg,#eff6ff,#ffffff); padding:26px 22px; border-radius:24px; border:1.5px solid #bfdbfe;">
-                <div class="attendance-otp-label"><i class="fa-solid fa-keyboard"></i> 교육생 플랫폼 OTP 출결</div>
+                <div class="attendance-otp-label" style="display:flex; align-items:center; justify-content:center; gap:12px;"><i class="fa-solid fa-keyboard"></i> 교육생 플랫폼 OTP 출결
+                    <button type="button" onclick="ui.openOtpFullscreen()" title="OTP 번호를 모니터 전체화면으로 크게 표시합니다"
+                            style="border:1.5px solid #93c5fd; border-radius:10px; background:#eff6ff; color:#1d4ed8; font-size:13px; font-weight:900; padding:7px 14px; cursor:pointer; display:inline-flex; align-items:center; gap:6px;"><i class="fa-solid fa-expand"></i> 전체화면</button>
+                </div>
                 <div id="internalOtpCode" style="letter-spacing:10px; font-size:64px; line-height:1; font-weight:950; color:#0f172a; font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;">------</div>
                 <div style="margin-top:14px; display:inline-flex; align-items:center; justify-content:center; gap:12px;">
                     <div style="position:relative; width:60px; height:60px; flex-shrink:0;">

@@ -2,7 +2,7 @@
 <!-- 이 플랫폼(admin_coord.html / 교육운영부) 수정상태 플래그. 값은 [수정중] 또는 [수정안하는중] 두 가지. -->
 <!-- 작업 시작 시 → 수정중 / 작업 완료 시 → 수정안하는중. 다른 플랫폼은 이 말머리를 보고 연동·수정 가능 여부 판단. -->
 <!-- [외부변경 · 카카오채널연동 2026-06-25] 포털(portal.html/7777) 경유 폐지 → 페이지 직접진입 시 접속코드(catc1234) 게이트 추가, 포털 리다이렉트/종료이동 제거. version C13→D13. 기능 로직은 미변경. -->
-<!-- last-updated: 2026-07-07 / version: D67 (D67: ①국제동 2층 배치도 연결(classroom_inter2f.png, GitHub 루트 업로드 필요) — 블록 좌표는 롱프레스 편집으로 조정·저장 ②배치도 좌표 조정 방식 통일 — 과정안내 블록(카드) 자체를 5초 롱프레스해도 편집 시작(기존엔 배경만 인식), 편집 배너에 즉시 저장 버튼 추가, 모든 도면 동일 동작) (D66: ①미디어 격리: 출결 QR 업로드를 media/{room}/attendanceQR 로 이전(레거시 자동 제거), QR 미리보기 media 우선 폴백, 정리 도구·초기화 경로에 media/레거시 gradPhoto 포함 ②폐강 동기화: 방에 배정된 과정이 연간계획에서 폐강이면 사용 중이어도 즉시 방 정리(잠금 방은 경고만) — 강사 폐강 과정이 운영부 동기화로 되살아나던 문제 해소) [D65 (장소선택 팝업 방버튼 층별 2열 그리드+컴팩트화 → 하늘관 등 긴 열이 한 화면에 다 보이게) [D64: 팝업 폭확대·표기안내] -->
+<!-- last-updated: 2026-07-07 / version: D68 (D68: [보안] 접속코드 게이트 평문 제거→SHA-256 해시 대조(kacHash 전역), 강의실 초기화 비번 대조 해시 우선+btoa 레거시 호환, 자동 파기 목록 5종 보강) (D67: ①국제동 2층 배치도 연결(classroom_inter2f.png, GitHub 루트 업로드 필요) — 블록 좌표는 롱프레스 편집으로 조정·저장 ②배치도 좌표 조정 방식 통일 — 과정안내 블록(카드) 자체를 5초 롱프레스해도 편집 시작(기존엔 배경만 인식), 편집 배너에 즉시 저장 버튼 추가, 모든 도면 동일 동작) (D66: ①미디어 격리: 출결 QR 업로드를 media/{room}/attendanceQR 로 이전(레거시 자동 제거), QR 미리보기 media 우선 폴백, 정리 도구·초기화 경로에 media/레거시 gradPhoto 포함 ②폐강 동기화: 방에 배정된 과정이 연간계획에서 폐강이면 사용 중이어도 즉시 방 정리(잠금 방은 경고만) — 강사 폐강 과정이 운영부 동기화로 되살아나던 문제 해소) [D65 (장소선택 팝업 방버튼 층별 2열 그리드+컴팩트화 → 하늘관 등 긴 열이 한 화면에 다 보이게) [D64: 팝업 폭확대·표기안내] -->
 <!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -38,7 +38,11 @@
       +'<button id="catcBtn">입장</button><div id="catcMsg"></div></div>';
     (document.body||document.documentElement).appendChild(o);
     var inp=o.querySelector('#catcInp'),btn=o.querySelector('#catcBtn'),msg=o.querySelector('#catcMsg');
-    function go(){ if(inp.value==='catc1234'){ try{localStorage.setItem('catc_gate_ok',String(Date.now()));}catch(e){} location.reload(); } else { msg.textContent='접속 코드가 올바르지 않습니다.'; inp.value=''; inp.focus(); } }
+    /* [보안·2026-07-07] 접속코드 평문 제거 — SHA-256 해시 대조 (소스에 비밀번호가 노출되지 않음) */
+    function kacHash(s){var K=[1116352408,1899447441,3049323471,3921009573,961987163,1508970993,2453635748,2870763221,3624381080,310598401,607225278,1426881987,1925078388,2162078206,2614888103,3248222580,3835390401,4022224774,264347078,604807628,770255983,1249150122,1555081692,1996064986,2554220882,2821834349,2952996808,3210313671,3336571891,3584528711,113926993,338241895,666307205,773529912,1294757372,1396182291,1695183700,1986661051,2177026350,2456956037,2730485921,2820302411,3259730800,3345764771,3516065817,3600352804,4094571909,275423344,430227734,506948616,659060556,883997877,958139571,1322822218,1537002063,1747873779,1955562222,2024104815,2227730452,2361852424,2428436474,2756734187,3204031479,3329325298];function rr(v,n){return(v>>>n)|(v<<(32-n));}var b=unescape(encodeURIComponent(s)),l=b.length,w=[],i;for(i=0;i<l;i++)w[i>>2]=(w[i>>2]||0)|(b.charCodeAt(i)<<((3-i%4)*8));w[l>>2]=(w[l>>2]||0)|(128<<((3-l%4)*8));var N=((l+8>>6)+1)*16;w[N-1]=l*8;var H=[1779033703,3144134277,1013904242,2773480762,1359893119,2600822924,528734635,1541459225],W=[],a,c,d,e,f,g,h,t1,t2,j,x;for(i=0;i<N;i+=16){a=H[0];c=H[1];d=H[2];e=H[3];f=H[4];g=H[5];h=H[6];x=H[7];for(j=0;j<64;j++){if(j<16)W[j]=w[i+j]|0;else{var s0=rr(W[j-15],7)^rr(W[j-15],18)^(W[j-15]>>>3),s1=rr(W[j-2],17)^rr(W[j-2],19)^(W[j-2]>>>10);W[j]=(W[j-16]+s0+W[j-7]+s1)|0;}var S1=rr(f,6)^rr(f,11)^rr(f,25),ch=(f&g)^(~f&h),T1=(x+S1+ch+K[j]+W[j])|0,S0=rr(a,2)^rr(a,13)^rr(a,22),mj=(a&c)^(a&d)^(c&d),T2=(S0+mj)|0;x=h;h=g;g=f;f=(e+T1)|0;e=d;d=c;c=a;a=(T1+T2)|0;}H[0]=(H[0]+a)|0;H[1]=(H[1]+c)|0;H[2]=(H[2]+d)|0;H[3]=(H[3]+e)|0;H[4]=(H[4]+f)|0;H[5]=(H[5]+g)|0;H[6]=(H[6]+h)|0;H[7]=(H[7]+x)|0;}var out='';for(i=0;i<8;i++)out+=('00000000'+((H[i]>>>0).toString(16))).slice(-8);return out;}
+    window.kacHash = kacHash;   /* 다른 스크립트(초기화 비번 대조 등)에서도 사용 */
+    var GATE_H='2c2a36d9c576e849da596e7888abc2d8f4059ee9fd21d89f502b3495a1e12512';
+    function go(){ if(kacHash(inp.value)===GATE_H){ try{localStorage.setItem('catc_gate_ok',String(Date.now()));}catch(e){} location.reload(); } else { msg.textContent='접속 코드가 올바르지 않습니다.'; inp.value=''; inp.focus(); } }
     btn.addEventListener('click',go);
     inp.addEventListener('keyup',function(e){ if(e.key==='Enter') go(); });
     setTimeout(function(){ try{inp.focus();}catch(e){} },120);
@@ -4498,7 +4502,9 @@ async function resetIndividualCourse() {
     if (!userInput) return; // 입력 안 하거나 취소 누르면 중단
 
     // 3. 비밀번호 대조 (입력값을 Base64로 변환하여 비교)
-    if (!dbPw || btoa(userInput) === dbPw) {
+    /* [보안·2026-07-07] 해시 우선 + 레거시 btoa 호환 대조 */
+    var _pwOk = !dbPw || (function(v,st){ try{ if(kacHash(String(v))===String(st)) return true; }catch(e){} try{ if(btoa(String(v))===String(st)) return true; }catch(e){} return false; })(userInput, dbPw);
+    if (_pwOk) {
         // 비밀번호가 맞을 경우 최종 확인
         if (!(await showKacConfirm("정말 초기화하시겠습니까?\n이 작업은 절대로 되돌릴 수 없으며 모든 교육생이 퇴출됩니다."))) return;
 
@@ -9206,7 +9212,7 @@ window.kacExpireEndedCourses = async function(){
           archives.push(firebase.database().ref('system/course_archive/'+room+'_'+Date.now()).set({room:room,courseName:nm,period:pd,prof:stt.professorName||'',coord:st.coordinatorName||'',admin_actions:aa,internal_attendance:ia,students:stu,expectedStudents:(rd.expectedStudents||null),archivedAt:firebase.database.ServerValue.TIMESTAMP}).catch(function(){}));
         }
         var b='courses/'+room+'/';
-        ['students','internal_attendance','questions','admin_actions','shuttle','dinner_skips','tablet_loans','connections','quizAnswers','expectedStudents','coordRoster','activeQuiz','quizFinalResults','attendanceQR','scheduleImage','coordNoticeHistory','gradPhoto'].forEach(function(k){ updates[b+k]=null; });
+        ['students','internal_attendance','questions','admin_actions','shuttle','dinner_skips','tablet_loans','connections','quizAnswers','expectedStudents','coordRoster','activeQuiz','quizFinalResults','attendanceQR','scheduleImage','coordNoticeHistory','gradPhoto','surveyAnswers','activeSurvey','lastSurveyResult','returnCheckAck','zoomMeeting'].forEach(function(k){ updates[b+k]=null; });
         ['scheduleImage','gradPhoto','attendanceQR'].forEach(function(k){ updates['media/'+room+'/'+k]=null; });   // [D66] 이전된 미디어 저장소도 함께 정리
         updates[b+'boardNotice']=''; updates[b+'notice']=''; updates[b+'coordNotice']='';
         updates[b+'settings/courseName']=''; updates[b+'settings/period']=null; updates[b+'settings/coordinatorName']=null; updates[b+'settings/password']=null;
