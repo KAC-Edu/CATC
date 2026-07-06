@@ -1,3 +1,4 @@
+<!-- [2026-07-07 JDS260707(V1)] 폐강 이월: 업로드 시 기존 연간계획의 폐강(cancelled) 플래그를 과정명+시작일 매칭으로 보존, 폐강 과정은 방 배치에서 제외 -->
 <!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -371,6 +372,24 @@ async function uploadToFirebase() {
     btn.innerHTML = '<span class="spinner"></span> 업로드 중...';
     btn.disabled  = true;
     try {
+        // [J15] 폐강 플래그 이월 — 변환기로 연간계획을 다시 올려도 기존 폐강 과정은 폐강 유지
+        //  (과정명+시작일 일치 기준). 갱신 때마다 폐강이 풀려 과정이 되살아나던 문제 차단.
+        try {
+            const prevSnap = await firebase.database().ref('system/annualPlan').once('value');
+            const prevVal = prevSnap.val();
+            if (prevVal) {
+                const normKey = c => `${String(c.name || '').trim()}|${String(c.startDate || '').trim()}`;
+                const cancelledSet = new Set(
+                    (Array.isArray(prevVal) ? prevVal : Object.values(prevVal))
+                        .filter(c => c && c.cancelled && c.name)
+                        .map(normKey)
+                );
+                if (cancelledSet.size) {
+                    selectedData.forEach(c => { if (cancelledSet.has(normKey(c))) c.cancelled = true; });
+                }
+            }
+        } catch (e) { console.warn('폐강 이월 실패(무시):', e); }
+
         await firebase.database().ref('system/annualPlan').set(selectedData);
         const { assigned, skipped } = await assignRooms(selectedData);
         document.getElementById('step3-card').style.display = 'block';
@@ -400,8 +419,8 @@ async function assignRooms(courses) {
     const ROOMS       = ALL_ROOMS.filter(r => !lockedRooms.includes(r));
     const skipped     = lockedRooms.map(r => `Room ${r} 🔒`);
 
-    // 이번 주 진행 중인 과정
-    const active = courses.filter(c => c.startDate <= today && c.endDate >= today);
+    // 이번 주 진행 중인 과정 ([J15] 폐강 과정은 배치 대상에서 제외)
+    const active = courses.filter(c => !c.cancelled && c.startDate <= today && c.endDate >= today);
 
     const updates = {};
     // 배치 대상 방만 초기화

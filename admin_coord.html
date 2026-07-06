@@ -2,7 +2,7 @@
 <!-- 이 플랫폼(admin_coord.html / 교육운영부) 수정상태 플래그. 값은 [수정중] 또는 [수정안하는중] 두 가지. -->
 <!-- 작업 시작 시 → 수정중 / 작업 완료 시 → 수정안하는중. 다른 플랫폼은 이 말머리를 보고 연동·수정 가능 여부 판단. -->
 <!-- [외부변경 · 카카오채널연동 2026-06-25] 포털(portal.html/7777) 경유 폐지 → 페이지 직접진입 시 접속코드(catc1234) 게이트 추가, 포털 리다이렉트/종료이동 제거. version C13→D13. 기능 로직은 미변경. -->
-<!-- last-updated: 2026-07-04 / version: D65 (장소선택 팝업 방버튼 층별 2열 그리드+컴팩트화 → 하늘관 등 긴 열이 한 화면에 다 보이게) [D64: 팝업 폭확대·표기안내] -->
+<!-- last-updated: 2026-07-07 / version: D66 (폐강 동기화: 방에 배정된 과정이 연간계획에서 폐강이면 사용 중이어도 즉시 방 정리(잠금 방은 경고만) — 강사 폐강 과정이 운영부 동기화로 되살아나던 문제 해소) [D65 (장소선택 팝업 방버튼 층별 2열 그리드+컴팩트화 → 하늘관 등 긴 열이 한 화면에 다 보이게) [D64: 팝업 폭확대·표기안내] -->
 <!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -6666,7 +6666,26 @@ const annualPlanMgrCoord = {
             }
 
             // 1) 잠금 방: 무조건 보존
-            if (locked) { keptNames.add(nm); return; }
+            if (locked) {
+                // [J15] 잠금 방에 폐강 과정이 있으면 콘솔 경고만 (수동 잠금 존중)
+                const _cHitL = nm && courses.some(c =>
+                    c && c.cancelled && norm(c.name) === nm &&
+                    (!norm(s.period) || !c.period || norm(c.period) === norm(s.period)));
+                if (_cHitL) console.warn(`[annualPlanMgrCoord] ${r}(${nm})은 폐강 과정이지만 잠금 상태라 보존됨 — 잠금 해제 후 저장하면 정리됩니다.`);
+                keptNames.add(nm); return;
+            }
+
+            // [J15] 폐강 과정 방 즉시 정리 — 사용 중(touched)이어도 폐강이면 비운다.
+            //  강사 플랫폼에서 폐강한 과정이 운영부 동기화 때 '사용 중 보존' 분기로 되살아나던 문제 차단.
+            const _cancelledHit = nm && courses.some(c =>
+                c && c.cancelled && norm(c.name) === nm &&
+                (!norm(s.period) || !c.period || norm(c.period) === norm(s.period)));
+            if (_cancelledHit) {
+                wipeRoom(r);
+                freeRooms.push(r);
+                console.log(`[annualPlanMgrCoord] 폐강 방 정리: ${r}(${nm})`);
+                return;
+            }
 
             // 2) 계획에서 삭제된 과정 + 미사용 방 → 완전 리셋 (재배치도 안 함)
             if (nm && !inPlan && !touched) {

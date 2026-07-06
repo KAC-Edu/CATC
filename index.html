@@ -4,7 +4,7 @@
      STATUS : 수정아닙니다
      FILE   : index.html (교육생)
      VERSION: J100 J100 J100 J100 J100
-     UPDATED: 2026-07-04  (vJ104: 기념사진 받기 버튼 노출을 '수료일 당일 KST 06:00~자정'으로 제한(강사 대시보드 버튼 규칙과 통일). | vJ103: 수료 기념사진 다운로드 고도화 — ①교육생(이름_사번)별 최대 2회 제한(트랜잭션, 카운트는 gradPhoto 하위라 수료 후 자동 삭제·잔류 0) ②버튼에 남은 횟수 표기, 소진 시 비활성 ③모바일은 공유시트(사진에 저장 1탭)→미지원 시 길게눌러 저장 오버레이→PC는 파일 다운로드 ④같은 세션 재다운로드 시 사진 재조회 생략(이그레스 절약), 표시 체크도 메타만 조회. | vJ102.1: 기념사진 텍스트 칸 경계 맞춤 자동 축소(measureText) — 긴 과정명/기간도 칸 안에 정렬. | vJ102: 수료 기념사진 받기 — 카카오 출결 홈에 버튼 신설(강사가 업로드한 gradPhoto가 있고 수료일(endDate) 자정 이전일 때만 표시). 클릭 시 액자(grad_frame.png)에 단체사진 cover-fit 합성 + 하단 4칸(과정명/기간/장소/담임) 텍스트(공유 좌표 gradPhotoPos 적용) 후 PNG 다운로드. | vJ101: 퇴교차량 자동판정 연동 — 지원부가 한글 시간표 업로드 시 기록되는 courses/{room}/shuttle/autoDeparture를 실시간 구독. 자동판정이 있으면 1차/2차 구분 없이 '이 과정 출발시간 단일 표기'(HH:MM 출발 + 수업 종료시각 안내)로 표시하고 도착예정(ETA)도 그 시간 기준으로 갱신. 자동판정이 없으면 기존 1차/2차 공지 표기 유지. 출발시간 렌더를 window._renderStudentDeparture 명명 함수로 분리해 양쪽 리스너가 동일 경로로 재렌더. | vJ100: 학생장 외출외박 현황 화면 디자인 개선 적용(대시보드형: 통계 타일·외출/외박/석식 세그먼트 탭·칩·복사 버튼 등). ※적용 중 파일 끝 잘림 발생분을 완전본으로 복구. | vJ99: OTP 입력칸(ko-digit) 반응형 — box-sizing/padding0/line-height1 + 글자크기 clamp(18~24px), 간격·본문패딩 축소로 좁은 폰에서 숫자가 네모 밖으로 넘쳐 안 보이던 문제 해소. | vJ98: J97의 #keduOtp CSS 변경(flex/padding)이 OTP 입력화면을 깨뜨려 숫자 가려짐 → 원래 중앙정렬로 원복. keduEnroll 스크롤 수정과 학생 OTP 검증 개선은 유지. | vJ97: [버그] 입교카드(keduEnroll)·OTP(keduOtp) 화면 짧은 폰에서 하단 잘림→스크롤 되게(flex-start+overflow). 학생 OTP 검증을 '현재 서버코드 일치 시 시계오차 무관 인정'으로 바꿔 오판 만료 방지(5분 초과 방치 세션만 차단). ※OTP 근본원인(강사페이지 새로고침 시 OTP 재생성)은 admin.js 수정 필요. | vJ96: [정합성] 구(旧) 일반입교 동명확인(showKacConfirm 경로)을 카카오 입교 vJ93 정책과 통일 — '본인' 선택 시 기존 번호 강제채택을 제거하고 입력 번호 유지 + 저장 후 기존 다른-번호 중복 기록 제거(_kacDupRemoveTokenB). 모달 안내문도 동작과 일치하게 수정. [문구] ①OTP '과정 정보가 없어 OTP 전체 확인으로 진행' → '출결 확인 중입니다' ②명단 리셋 감지 '사용자 정보가 변경되어 초기화합니다' → '과정 명단이 새로 정리되어 입교 등록이 다시 필요합니다' ③비품 게이트 '비공식적으로 과정이 운영 중' → '정식 개설 확정 전' ④태블릿 대여 '접속 정보를 확인할 수 없습니다'(2곳) → '입교 등록 정보를 찾을 수 없습니다. 입교/홈에서 등록 후 다시 이용해 주세요' ⑤changeRoom prompt 'Room N' → '강의실 N'. | vJ95: 리셋 후 카카오 재입교 시 resetKey를 서버값으로 동기화해 메인앱 진입 시 오판 초기화 방지. 입교카드 버튼문구 신규='입교 등록'/편집='정보 수정하기'로 구분. | vJ94: 외출외박 STEP2 신원 편집을 인라인+‘수정 완료’ 버튼으로 개선. 이름·사번 수정이 profileOverlay/입교완료로 이탈하지 않고 STEP2에서 바로 수정 후 다음 단계 진행. | vJ93: 동명 중복확인에서 '본인' 선택 시 기존ID 강제채택 제거 → 입력한 사번 그대로 유지하고 이전 다른-번호 중복기록은 저장 후 제거. 모달 안내문 수정. | vJ92: 동명 중복 확인을 3버튼 커스텀 모달로(예 본인/아닙니다 다른사람/닫기). 본인 선택 시 기존 식별ID 병합(입력 번호 달라도 중복방지), 닫기는 입교 중단. | vJ91: 차량 결과 카드에서 신청 장소를 상단 제목이 아닌 '과정·신청자 아래 행'으로 이동하고 크게(18px 청색) 강조. 제목은 '나의 퇴교차량'으로 복원. | vJ90: 차량 신청 결과 카드를 입교완료 카드와 동일 규격(청색 그라데이션 헤더·큰 글씨)으로 통일, 목적지를 제목으로 크게 표시. | vJ89: 학생장 지정/해제를 .on 실시간 리스너로 변경 — 강사가 학생장 지정 시 새로고침 없이 즉시 금일현황 패널 노출, 해제 시 즉시 숨김. | vJ88: 카카오 입교 흐름(submitEnroll)에 동명 중복 확인 복원 — 같은 이름 다른 식별ID 발견 시 '본인 맞냐' 확인(본인→기존ID 병합, 아니면 신규). 편집모드 제외. | vJ87: 16시 이후 외출외박 제출 시 '석식 이용 간주' 안내 팝업 복원(J75에서 STEP5 건너뛰며 사라졌던 것) → 확인 후 신청현황으로. | vJ86: 강사가 과정명/기간을 수정(리네임)해도 교육생이 입교화면으로 초기화되지 않도록 courseKey 불일치 초기화 제거. 강의실 리셋(명단 삭제)·교육기간 종료 시에만 재입교. | vJ85: 질문하기 — 신규 질문 즉시 노출(내 질문 맨위 이동), 질문 몰릴 때 읽던 위치 고정+'새 질문 N개' 칩, 09시 운영일 윈도우 밖 오래된 질문은 학생화면에서 숨김(강사 플랫폼엔 유지). | vJ84: 외출외박 소속을 신청 미리보기·입력칸 자동채움·저장값까지 formatDept 적용해 '항공기술훈련원 OOO'로 일관 표기(대장에도 반영). | vJ83: 학생장 외출외박 카운팅을 admin과 동일한 09:00~익일09:00 KST 윈도우+오늘/어제 노드 병합으로 정렬(복귀자 포함 표시). | vJ82: 학생장 펼침 상세를 높이제한+내부스크롤 드롭다운으로(카드 가림 해소), 연락처 블록 줄바꿈 처리, 펼칠 때 부드럽게 노출. | vJ81: 학생장 패널 접이식 가로바로 변경(카드 가림 해소), 외출외박 항목에 비상연락처 표시+클릭 통화확인 팝업. | vJ80: 학생장 전용 패널(입교카드 아래) — 금일 외출외박·석식제외 실시간 현황 + 식당 전화하기(043-290-2325). | vJ79: 담임 글자크기 다른행과 완전통일(display:flex 제거), 신청취소 후 재초기화(이전정보 안내 복원), 패스트패스 연락처(STEP3)까지 항상 표시. | vJ78: 담임 글자크기 다른행과 통일(span 제거), 담당교수 실시간 반영(.on 리스너). | vJ77: 입교카드·출결완료 페이지에 과정담임 표시 + 전화아이콘→통화확인 팝업→통화 기능(professorProfiles 연락처 사용). | vJ76: 외출외박 현황화면 상단바 위 내용넘침 방지(flex-start), 복귀완료보고·신청취소 한 줄 배치. | vJ75: 입교문구 '항공기술훈련원 입교', 정보수정 시 개인정보동의 숨김, 외출외박 새로작성 빈양식, 소속 항공기술훈련원 표기, 외출외박 완료→수위실 현황화면 통일. | vJ74: 창닫기 기능(closeStudentWindow) 제거 — 카카오 채널 채팅창 닫기로 대체. 디버그 console.log 2종 정리. | vJ73: 미사용 함수 6종 제거 — exitApp·cleanUrlAndGo·checkDinnerTime·loadGroupCandidates·openRoomMove·wrapClose. 카카오 채널 바로가기 도입으로 불필요해진 진입/종료 관련 죽은 코드 정리. 맛집 기능 코드는 유지.)
+     UPDATED: 2026-07-07  (vJ105: ①OTP 검증 안정화 — 서버시간 오프셋 기준 판정 + 직전 코드(prevCode) 75초 유예 인정(회전 경계 만료 오판 해소, admin.js J15와 연동), 방 폴백 탐색을 courses 전체 읽기에서 A~Z 방별 attendanceOtp 소량 병렬 조회로 교체(이그레스 대폭 절감) ②퀴즈 게이트 — quizStep이 live/summary일 때만 퀴즈 화면 표시, 선택 중(none)에는 평소 화면 유지(구버전 강사 화면 호환: quizStep 미기록 시 기존처럼 표시) ③입교카드 출결하기 버튼을 최상단으로 이동 + keduHome/keduEnroll/keduOtp 세로 스크롤 강제 보장(touch-action/overflow/dvh) + 하단 safe-area 여백 확대 + 720px 이하 짧은 화면 카드 압축 — 일부 폰에서 출결하기 버튼이 안 보이고 스크롤도 안 되던 문제 해소 | vJ104: 기념사진 받기 버튼 노출을 '수료일 당일 KST 06:00~자정'으로 제한(강사 대시보드 버튼 규칙과 통일). | vJ103: 수료 기념사진 다운로드 고도화 — ①교육생(이름_사번)별 최대 2회 제한(트랜잭션, 카운트는 gradPhoto 하위라 수료 후 자동 삭제·잔류 0) ②버튼에 남은 횟수 표기, 소진 시 비활성 ③모바일은 공유시트(사진에 저장 1탭)→미지원 시 길게눌러 저장 오버레이→PC는 파일 다운로드 ④같은 세션 재다운로드 시 사진 재조회 생략(이그레스 절약), 표시 체크도 메타만 조회. | vJ102.1: 기념사진 텍스트 칸 경계 맞춤 자동 축소(measureText) — 긴 과정명/기간도 칸 안에 정렬. | vJ102: 수료 기념사진 받기 — 카카오 출결 홈에 버튼 신설(강사가 업로드한 gradPhoto가 있고 수료일(endDate) 자정 이전일 때만 표시). 클릭 시 액자(grad_frame.png)에 단체사진 cover-fit 합성 + 하단 4칸(과정명/기간/장소/담임) 텍스트(공유 좌표 gradPhotoPos 적용) 후 PNG 다운로드. | vJ101: 퇴교차량 자동판정 연동 — 지원부가 한글 시간표 업로드 시 기록되는 courses/{room}/shuttle/autoDeparture를 실시간 구독. 자동판정이 있으면 1차/2차 구분 없이 '이 과정 출발시간 단일 표기'(HH:MM 출발 + 수업 종료시각 안내)로 표시하고 도착예정(ETA)도 그 시간 기준으로 갱신. 자동판정이 없으면 기존 1차/2차 공지 표기 유지. 출발시간 렌더를 window._renderStudentDeparture 명명 함수로 분리해 양쪽 리스너가 동일 경로로 재렌더. | vJ100: 학생장 외출외박 현황 화면 디자인 개선 적용(대시보드형: 통계 타일·외출/외박/석식 세그먼트 탭·칩·복사 버튼 등). ※적용 중 파일 끝 잘림 발생분을 완전본으로 복구. | vJ99: OTP 입력칸(ko-digit) 반응형 — box-sizing/padding0/line-height1 + 글자크기 clamp(18~24px), 간격·본문패딩 축소로 좁은 폰에서 숫자가 네모 밖으로 넘쳐 안 보이던 문제 해소. | vJ98: J97의 #keduOtp CSS 변경(flex/padding)이 OTP 입력화면을 깨뜨려 숫자 가려짐 → 원래 중앙정렬로 원복. keduEnroll 스크롤 수정과 학생 OTP 검증 개선은 유지. | vJ97: [버그] 입교카드(keduEnroll)·OTP(keduOtp) 화면 짧은 폰에서 하단 잘림→스크롤 되게(flex-start+overflow). 학생 OTP 검증을 '현재 서버코드 일치 시 시계오차 무관 인정'으로 바꿔 오판 만료 방지(5분 초과 방치 세션만 차단). ※OTP 근본원인(강사페이지 새로고침 시 OTP 재생성)은 admin.js 수정 필요. | vJ96: [정합성] 구(旧) 일반입교 동명확인(showKacConfirm 경로)을 카카오 입교 vJ93 정책과 통일 — '본인' 선택 시 기존 번호 강제채택을 제거하고 입력 번호 유지 + 저장 후 기존 다른-번호 중복 기록 제거(_kacDupRemoveTokenB). 모달 안내문도 동작과 일치하게 수정. [문구] ①OTP '과정 정보가 없어 OTP 전체 확인으로 진행' → '출결 확인 중입니다' ②명단 리셋 감지 '사용자 정보가 변경되어 초기화합니다' → '과정 명단이 새로 정리되어 입교 등록이 다시 필요합니다' ③비품 게이트 '비공식적으로 과정이 운영 중' → '정식 개설 확정 전' ④태블릿 대여 '접속 정보를 확인할 수 없습니다'(2곳) → '입교 등록 정보를 찾을 수 없습니다. 입교/홈에서 등록 후 다시 이용해 주세요' ⑤changeRoom prompt 'Room N' → '강의실 N'. | vJ95: 리셋 후 카카오 재입교 시 resetKey를 서버값으로 동기화해 메인앱 진입 시 오판 초기화 방지. 입교카드 버튼문구 신규='입교 등록'/편집='정보 수정하기'로 구분. | vJ94: 외출외박 STEP2 신원 편집을 인라인+‘수정 완료’ 버튼으로 개선. 이름·사번 수정이 profileOverlay/입교완료로 이탈하지 않고 STEP2에서 바로 수정 후 다음 단계 진행. | vJ93: 동명 중복확인에서 '본인' 선택 시 기존ID 강제채택 제거 → 입력한 사번 그대로 유지하고 이전 다른-번호 중복기록은 저장 후 제거. 모달 안내문 수정. | vJ92: 동명 중복 확인을 3버튼 커스텀 모달로(예 본인/아닙니다 다른사람/닫기). 본인 선택 시 기존 식별ID 병합(입력 번호 달라도 중복방지), 닫기는 입교 중단. | vJ91: 차량 결과 카드에서 신청 장소를 상단 제목이 아닌 '과정·신청자 아래 행'으로 이동하고 크게(18px 청색) 강조. 제목은 '나의 퇴교차량'으로 복원. | vJ90: 차량 신청 결과 카드를 입교완료 카드와 동일 규격(청색 그라데이션 헤더·큰 글씨)으로 통일, 목적지를 제목으로 크게 표시. | vJ89: 학생장 지정/해제를 .on 실시간 리스너로 변경 — 강사가 학생장 지정 시 새로고침 없이 즉시 금일현황 패널 노출, 해제 시 즉시 숨김. | vJ88: 카카오 입교 흐름(submitEnroll)에 동명 중복 확인 복원 — 같은 이름 다른 식별ID 발견 시 '본인 맞냐' 확인(본인→기존ID 병합, 아니면 신규). 편집모드 제외. | vJ87: 16시 이후 외출외박 제출 시 '석식 이용 간주' 안내 팝업 복원(J75에서 STEP5 건너뛰며 사라졌던 것) → 확인 후 신청현황으로. | vJ86: 강사가 과정명/기간을 수정(리네임)해도 교육생이 입교화면으로 초기화되지 않도록 courseKey 불일치 초기화 제거. 강의실 리셋(명단 삭제)·교육기간 종료 시에만 재입교. | vJ85: 질문하기 — 신규 질문 즉시 노출(내 질문 맨위 이동), 질문 몰릴 때 읽던 위치 고정+'새 질문 N개' 칩, 09시 운영일 윈도우 밖 오래된 질문은 학생화면에서 숨김(강사 플랫폼엔 유지). | vJ84: 외출외박 소속을 신청 미리보기·입력칸 자동채움·저장값까지 formatDept 적용해 '항공기술훈련원 OOO'로 일관 표기(대장에도 반영). | vJ83: 학생장 외출외박 카운팅을 admin과 동일한 09:00~익일09:00 KST 윈도우+오늘/어제 노드 병합으로 정렬(복귀자 포함 표시). | vJ82: 학생장 펼침 상세를 높이제한+내부스크롤 드롭다운으로(카드 가림 해소), 연락처 블록 줄바꿈 처리, 펼칠 때 부드럽게 노출. | vJ81: 학생장 패널 접이식 가로바로 변경(카드 가림 해소), 외출외박 항목에 비상연락처 표시+클릭 통화확인 팝업. | vJ80: 학생장 전용 패널(입교카드 아래) — 금일 외출외박·석식제외 실시간 현황 + 식당 전화하기(043-290-2325). | vJ79: 담임 글자크기 다른행과 완전통일(display:flex 제거), 신청취소 후 재초기화(이전정보 안내 복원), 패스트패스 연락처(STEP3)까지 항상 표시. | vJ78: 담임 글자크기 다른행과 통일(span 제거), 담당교수 실시간 반영(.on 리스너). | vJ77: 입교카드·출결완료 페이지에 과정담임 표시 + 전화아이콘→통화확인 팝업→통화 기능(professorProfiles 연락처 사용). | vJ76: 외출외박 현황화면 상단바 위 내용넘침 방지(flex-start), 복귀완료보고·신청취소 한 줄 배치. | vJ75: 입교문구 '항공기술훈련원 입교', 정보수정 시 개인정보동의 숨김, 외출외박 새로작성 빈양식, 소속 항공기술훈련원 표기, 외출외박 완료→수위실 현황화면 통일. | vJ74: 창닫기 기능(closeStudentWindow) 제거 — 카카오 채널 채팅창 닫기로 대체. 디버그 console.log 2종 정리. | vJ73: 미사용 함수 6종 제거 — exitApp·cleanUrlAndGo·checkDinnerTime·loadGroupCandidates·openRoomMove·wrapClose. 카카오 채널 바로가기 도입으로 불필요해진 진입/종료 관련 죽은 코드 정리. 맛집 기능 코드는 유지.)
      ─ 규칙: 수정 시작 시 STATUS를 '수정중'으로, 완료 시 '수정아닙니다'로 변경하고 버전을 5회 반복 표기.
             '수정중'이면 다른 플랫폼은 연동 변경을 보류/협의 후 진행.
 ═══════════════════════════════════════════════════════════════ -->
@@ -2759,14 +2759,28 @@ function setupListeners() {
         }
 
         if (st.mode === 'quiz') {
-            if(typeof window.closeKacQuizWaiting === 'function') window.closeKacQuizWaiting();
-            if (st.quizStep !== 'summary') {
+            // [vJ105] 퀴즈 상태 3단계 게이트 — 선택 중(none) / 진행 중(live) / 종료 리포트(summary)
+            //  강사가 '현재 퀴즈 시작'을 누르기 전(선택 중)에는 교육생 화면에 문항을 표시하지 않는다.
+            var _qs = st.quizStep;
+            if (_qs === 'summary') {
+                if(typeof window.closeKacQuizWaiting === 'function') window.closeKacQuizWaiting();
+                if(!hasClosedSummary) showFinalRanking();
+            } else if (_qs === 'live' || _qs === undefined || _qs === null) {
+                // live = 강사가 퀴즈 시작을 누른 상태. (quizStep 미기록 구버전 강사 화면 호환: 기존처럼 표시)
+                if(typeof window.closeKacQuizWaiting === 'function') window.closeKacQuizWaiting();
                 document.body.classList.add('kac-quiz-active');
                 document.getElementById('quizOverlay').style.display = 'flex';
                 document.getElementById('quizActiveBox').style.display = 'block';
                 document.getElementById('quizResultBox').style.display = 'none';
             } else {
-                if(!hasClosedSummary) showFinalRanking(); 
+                // 'none' = 강사가 퀴즈를 고르는 중 → 교육생은 평소 화면 유지(문항 노출 금지)
+                forceCloseQuiz();
+                try{
+                    if(String(new URLSearchParams(location.search).get('menu')||'').toLowerCase()==='quiz' &&
+                       typeof window.openKacQuizWaiting==='function'){
+                        window.openKacQuizWaiting();
+                    }
+                }catch(e){}
             }
         } else {
             forceCloseQuiz();
@@ -8232,6 +8246,10 @@ body.kac-noanim #noticeModal > .menu-box, body.kac-noanim #surveyModal > .menu-b
     try{ add(localStorage.getItem('kac_home_room')); }catch(e){}
     return list;
   }
+  // [vJ105] 서버시간 오프셋 — 교육생 폰 시계가 틀려도 Firebase 서버시간 기준으로 만료 판정
+  var _kacSvOffset=0;
+  try{ firebase.database().ref('.info/serverTimeOffset').on('value',function(s){ _kacSvOffset=Number(s.val()||0); }); }catch(e){}
+  function kacSvNow(){ return Date.now()+(_kacSvOffset||0); }
   async function findKakaoOtpRoom(code){
     var candidates=getKakaoAttendanceRoomCandidates();
     for(var i=0;i<candidates.length;i++){
@@ -8243,18 +8261,27 @@ body.kac-noanim #noticeModal > .menu-box, body.kac-noanim #surveyModal > .menu-b
         return otp;
       }
     }
-    var all=await firebase.database().ref('courses').once('value');
-    var rooms=all.val()||{};
-    var now=Date.now();
+    // [vJ105] 폴백: 기존에는 courses 전체(사진·명단 포함)를 통째로 읽어 이그레스가 컸음
+    //  → A~Z 각 방의 attendanceOtp 소량 노드만 병렬 조회하도록 변경
+    var letters=[]; for(var ci=65;ci<=90;ci++){ letters.push(String.fromCharCode(ci)); }
+    var pool=letters.filter(function(r){ return candidates.indexOf(r)<0; });
+    var snaps=await Promise.all(pool.map(function(r){
+      return firebase.database().ref('courses/'+r+'/attendanceOtp').once('value')
+        .then(function(s){ return {r:r, v:s.val()}; })
+        .catch(function(){ return {r:r, v:null}; });
+    }));
+    var now=kacSvNow();
     var best=null;
-    Object.keys(rooms).forEach(function(rid){
-      var r=normalizeKakaoRoom(rid);
-      if(!r || candidates.indexOf(r)>=0) return;
-      var otp=(rooms[rid]&&rooms[rid].attendanceOtp)||{};
+    snaps.forEach(function(it){
+      var otp=it.v||{};
       var saved=String(otp.code||'');
+      var prev=String(otp.prevCode||'');
       var validUntil=Number(otp.validUntil||0);
-      if(saved && saved===code && (!validUntil || now<=validUntil+5000)){
-        best=Object.assign({}, otp, {__room:r});
+      var prevValidUntil=Number(otp.prevValidUntil||0);
+      var hitCur=saved && saved===code && (!validUntil || now<=validUntil+5000);
+      var hitPrev=prev && prev===code && (!prevValidUntil || now<=prevValidUntil+75000);
+      if(hitCur || hitPrev){
+        best=Object.assign({}, otp, {__room:it.r});
       }
     });
     return best || {__room:(candidates[0]||'')};
@@ -8289,18 +8316,26 @@ body.kac-noanim #noticeModal > .menu-box, body.kac-noanim #surveyModal > .menu-b
       room=normalizeKakaoRoom(otp.__room||room);
       var validUntil=Number(otp.validUntil||0);
       var saved=String(otp.code||'');
+      var prevSaved=String(otp.prevCode||'');
+      var prevValidUntil=Number(otp.prevValidUntil||0);
+      var svNow=kacSvNow();
       if(!saved){ keduOtpVibrate([80,40,80]); if(msg) msg.textContent='강사 화면에서 OTP 출결을 먼저 열어 주세요.'; return; }
-      if(code !== saved){
-        // 현재 서버 코드와 불일치: 만료된 옛 번호인지 단순 오타인지 구분
+      // [vJ105] 이전/현재 구간 허용 — 번호가 바뀌는 순간(회전 경계)에 입력한 교육생도
+      //  직전 코드로 인정(직전 코드 만료 후 75초 유예). 강사 admin.js가 회전 시 prevCode를 함께 저장.
+      var matchCur = (code === saved);
+      var matchPrev = (!matchCur && prevSaved && code === prevSaved &&
+                       (!prevValidUntil || svNow <= prevValidUntil + 75000));
+      if(!matchCur && !matchPrev){
+        // 현재/직전 서버 코드와 모두 불일치: 만료된 옛 번호인지 단순 오타인지 구분
         keduOtpVibrate([80,40,80]);
-        if(msg) msg.textContent = (validUntil && Date.now() > validUntil + 15000)
+        if(msg) msg.textContent = (validUntil && svNow > validUntil + 15000)
           ? '만료된 번호입니다. 강사 화면의 현재 번호를 입력해 주세요.'
           : 'OTP가 일치하지 않습니다. 숫자를 다시 확인해 주세요.';
         return;
       }
-      // [오판 만료 방지] 입력값이 현재 서버 코드와 일치하면 기기 시계 오차와 무관하게 출결 인정.
+      // [오판 만료 방지] 서버시간 기준 판정 — 기기 시계 오차와 무관하게 출결 인정.
       //  단, 강사가 출결을 닫아 오래 방치된(>5분) 세션의 옛 코드는 막는다.
-      if(validUntil && Date.now() > validUntil + 300000){
+      if(matchCur && validUntil && svNow > validUntil + 300000){
         keduOtpVibrate([80,40,80]);
         if(msg) msg.textContent='출결 세션이 오래되었습니다. 강사 화면에서 OTP를 다시 열어 달라고 요청해 주세요.';
         return;
@@ -8385,8 +8420,8 @@ body.kac-noanim #noticeModal > .menu-box, body.kac-noanim #surveyModal > .menu-b
           '<div><span>생활관</span><b id="khDorm">확인 중...</b></div>'+
           '<div><span>담임</span><b id="khProf">-</b></div>'+
         '</div>'+
-        '<button class="kh-edit" onclick="keduEditInfo()"><i class="fa-solid fa-pen-to-square"></i> 정보 수정하기</button>'+
         '<button class="kh-att" id="keduAttendBtn" onclick="startKakaoOtpAttendance()"><i class="fa-solid fa-keyboard"></i> 출결하기</button>'+
+        '<button class="kh-edit" onclick="keduEditInfo()"><i class="fa-solid fa-pen-to-square"></i> 정보 수정하기</button>'+
         '<button class="kh-att" id="keduGradBtn" style="display:none; background:linear-gradient(135deg,#0f2057,#1a3a8a);" onclick="keduDownloadGradPhoto()"><i class="fa-solid fa-camera-retro"></i> 수료 기념사진 받기</button>'+
         '<button class="kh-close" id="keduHomeClose">닫기</button></div></div>'+
         '<div id="khLeaderPanel" class="kh-leader" style="display:none;"></div>';
@@ -9693,6 +9728,40 @@ html.kac-core-screen #realUserCount::before{
   font-size:16px;font-weight:950;cursor:pointer;box-shadow:0 10px 22px rgba(5,150,105,.22);
 }
 .outing-return-now i{margin-right:7px}
+</style>
+<style id="student-kedu-scroll-vj105">
+/* vJ105: 입교카드(keduHome)·입교등록(keduEnroll)·OTP(keduOtp) 화면 하단 잘림/스크롤 불가 문제 해소
+   — 일부 스마트폰에서 '출결하기' 버튼이 보이지 않고 스크롤도 되지 않던 문제.
+   ① 세 오버레이 모두 어떤 기종에서도 세로 스크롤이 반드시 동작하도록 강제
+   ② 하단 여백을 브라우저 하단 UI(주소창·내비게이션)만큼 추가 확보
+   ③ 짧은 화면(높이 720px 이하)에서는 카드 구성 요소를 압축해 출결하기 버튼까지 한 화면에 노출 */
+#keduHome, #keduEnroll, #keduOtp{
+  height:100vh !important;
+  height:100dvh !important;
+  max-height:none !important;
+  overflow-y:auto !important;
+  -webkit-overflow-scrolling:touch !important;
+  touch-action:pan-y !important;
+  overscroll-behavior:contain !important;
+  align-items:center !important;
+  justify-content:flex-start !important;
+}
+#keduHome{ padding:18px 18px calc(46px + env(safe-area-inset-bottom)) !important; }
+#keduEnroll{ padding:22px 18px calc(46px + env(safe-area-inset-bottom)) !important; }
+#keduOtp{ padding:20px 18px calc(46px + env(safe-area-inset-bottom)) !important; }
+#keduHome .kh-card, #keduEnroll .ke-card, #keduOtp .ko-card{ flex:none !important; }
+@media (max-height:720px){
+  #keduHome{ padding-top:10px !important; }
+  #keduHome .kh-head{ padding:14px 18px 13px !important; }
+  #keduHome h3{ font-size:19px !important; }
+  #keduHome .kh-badge{ margin-bottom:7px !important; }
+  #keduHome .kh-course{ margin-top:5px !important; font-size:13px !important; }
+  #keduHome .kh-body{ padding:12px 16px 14px !important; }
+  #keduHome .kh-rows{ margin-bottom:10px !important; padding:2px 11px !important; }
+  #keduHome .kh-rows > div{ padding:8px 0 !important; }
+  #keduHome .kh-rows b{ font-size:14px !important; }
+  #keduHome button{ margin-top:7px !important; padding:12px !important; font-size:14.5px !important; }
+}
 </style>
 </body>
 </html>
