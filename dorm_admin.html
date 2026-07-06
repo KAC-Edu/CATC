@@ -1,6 +1,6 @@
 ﻿<!DOCTYPE html>
 <html lang="ko">
-<!-- PLATFORM_EDIT_STATUS: 수정완료 | VERSION: R1 | 2026-07-03 -->
+<!-- PLATFORM_EDIT_STATUS: 수정완료 | VERSION: R2 | 2026-07-07 (R2: ①배치도 PDF 출력 시 방식 선택 팝업 신설 — 기존 방식/크게 보기. 크게 보기는 사진·AED 안내 제외, 방 번호·이름 폰트 확대(노안 대응)로 배치도가 A4를 최대한 차지, 파일명에 _크게보기 표기 ②과정 정리 목록에 media/{room} 미디어 저장소 정리 추가) -->
 <!-- ===== EDIT-STATUS: 수정안하는중 ===== (값: 수정중 / 수정안하는중) · 플랫폼 간 협의용 플래그.
      다른 플랫폼/작업자는 이 파일을 열면 이 줄을 먼저 확인. 수정 시작 시 → 수정중 , 수정 완료 시 → 수정안하는중 -->
 <!-- [외부변경 · 카카오채널연동 2026-06-25] 포털(portal.html/7777) 경유 폐지 → catc1234 직접진입 게이트 추가, '포털' 버튼→'잠금'. @version J1→K1. 기능 로직 미변경. -->
@@ -5896,8 +5896,38 @@
         }
 
         // ── 2부: 건물 배치도 PDF ──
-        async function printLayout() {
+        // [2026-07-07] 배치도 PDF 출력 방식 선택 팝업 — ①기존 방식 ②크게 보기(노안 대응: 배치도만 확대)
+        function _askLayoutMode() {
+            const old = document.getElementById('layoutModeAsk'); if (old) old.remove();
+            const ov = document.createElement('div');
+            ov.id = 'layoutModeAsk';
+            ov.style.cssText = 'position:fixed;inset:0;z-index:99990;background:rgba(15,23,42,.55);display:flex;align-items:center;justify-content:center;padding:20px;';
+            ov.innerHTML = `
+              <div style="background:#fff;border-radius:20px;padding:26px 26px 22px;max-width:430px;width:100%;box-shadow:0 24px 60px rgba(15,23,42,.35);">
+                <h3 style="margin:0 0 6px;font-size:18px;font-weight:900;color:#0f172a;"><i class="fa-solid fa-file-pdf" style="color:#dc2626;margin-right:7px;"></i>배치도 PDF 출력 방식</h3>
+                <p style="margin:0 0 18px;font-size:13px;font-weight:700;color:#64748b;line-height:1.6;">용도에 맞는 출력 방식을 선택하세요.</p>
+                <button onclick="document.getElementById('layoutModeAsk').remove(); printLayout('normal');"
+                        style="width:100%;display:flex;align-items:center;gap:13px;padding:15px 17px;border:1.5px solid #dbe4f0;border-radius:14px;background:#f8fafc;cursor:pointer;text-align:left;margin-bottom:10px;">
+                  <i class="fa-solid fa-table-cells" style="font-size:22px;color:#2563eb;flex-shrink:0;"></i>
+                  <span><b style="display:block;font-size:15px;color:#0f172a;">기존 방식으로 출력</b>
+                  <small style="font-size:12px;color:#64748b;font-weight:700;">과정명 · 생활관 사진 · 범례 · AED 안내 포함 (현재 양식)</small></span>
+                </button>
+                <button onclick="document.getElementById('layoutModeAsk').remove(); printLayout('large');"
+                        style="width:100%;display:flex;align-items:center;gap:13px;padding:15px 17px;border:1.5px solid #fecaca;border-radius:14px;background:#fff7f7;cursor:pointer;text-align:left;">
+                  <i class="fa-solid fa-magnifying-glass-plus" style="font-size:22px;color:#dc2626;flex-shrink:0;"></i>
+                  <span><b style="display:block;font-size:15px;color:#0f172a;">크게 보기용으로 출력</b>
+                  <small style="font-size:12px;color:#64748b;font-weight:700;">배치도만 A4에 최대 크기로 — 방 번호·이름 확대 (노안 대응)</small></span>
+                </button>
+                <button onclick="document.getElementById('layoutModeAsk').remove();"
+                        style="width:100%;margin-top:12px;padding:12px;border:none;border-radius:12px;background:#f1f5f9;color:#475569;font-weight:800;font-size:14px;cursor:pointer;">취소</button>
+              </div>`;
+            ov.addEventListener('click', e => { if (e.target === ov) ov.remove(); });
+            document.body.appendChild(ov);
+        }
+        async function printLayout(mode) {
             if (!viewAssign) { showToast('먼저 주차를 선택하세요'); return; }
+            if (!mode) { _askLayoutMode(); return; }   // [2026-07-07] 출력 방식 선택 팝업 먼저
+            const LARGE = (mode === 'large');
             const P = await _prepPrint();
 
             // ── 한글 배정표 양식: 방번호+내선(☎)과 이름·성별을 표로 배치 ──
@@ -5960,6 +5990,14 @@
                 const aedHtml = aed
                     ? `<div style="display:flex;align-items:center;gap:9px;margin-top:8px;padding:7px 13px;background:#fffbeb;border:1.5px solid #fcd34d;border-radius:9px;font-size:12px;font-weight:700;color:#78350f;"><span style="font-size:16px;flex-shrink:0;">⑧</span><span>${aed}</span></div>`
                     : '';
+                // [2026-07-07] 크게 보기: 사진·AED 안내 제외, 범례는 소형 1줄만 유지 → 배치도가 A4를 최대한 차지
+                if (LARGE) {
+                    return `<div class="pf-block">
+                        <div class="legend legend-mini" style="margin:0 0 6px;">${_legendHtml(P)}</div>
+                        <div class="pf-bldg-header" style="background:${bar};"><span class="bicon">\ud83c\udfe2</span>${building}</div>
+                        <div class="pf-floor-wrap" style="border-color:${bar};">${fls}</div>
+                    </div>`;
+                }
                 return `<div class="pf-block">
                     <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:14px;margin-bottom:10px;">
                         <div class="legend" style="flex:1;margin:0;">${_legendHtml(P)}</div>
@@ -5999,6 +6037,24 @@
                 .fm-noassign { background:repeating-linear-gradient(45deg,#e9edf3,#e9edf3 4px,#f4f7fb 4px,#f4f7fb 11px); border-style:dashed; border-color:#b6c0cf; }
                 .fm-noassign .fm-head { background:#e2e8f0; color:#64748b; }
                 .fm-exbadge { font-size:10px; font-weight:900; color:#b91c1c; background:#fee2e2; border:1px solid #fca5a5; border-radius:6px; padding:1px 7px; letter-spacing:-0.3px; }
+                /* ═══ [2026-07-07] 크게 보기 모드: 방 번호·이름을 노안에도 잘 보이게 확대, 배치도가 A4 한 장을 최대한 차지 ═══ */
+                .pf-large .fm-grid { gap:6px; grid-auto-rows:minmax(90px,auto); }
+                .pf-large .fm-room { min-height:90px; border-width:2px; border-radius:8px; }
+                .pf-large .fm-room.fm-intl { min-height:104px; }
+                .pf-large .fm-head { font-size:16px; padding:4px 2px; border-bottom-width:2px; }
+                .pf-large .fm-ext { font-size:12px; }
+                .pf-large .fm-body { gap:5px 6px; padding:5px 4px; }
+                .pf-large .fm-pill { font-size:17px; padding:3px 13px; border-width:2px; border-radius:14px; }
+                .pf-large .fm-gk { font-size:13px; }
+                .pf-large .fm-intl .fm-pill { font-size:13.5px; }
+                .pf-large .fm-foreign .fm-fg { font-size:11.5px; }
+                .pf-large .fm-fac { font-size:15px; border-width:2px; }
+                .pf-large .fm-corridor { font-size:11px; }
+                .pf-large .fm-floor-label { font-size:15px; padding:4px 13px; border-left-width:5px; }
+                .pf-large .fm-exbadge { font-size:13px; padding:2px 9px; }
+                .pf-large .fm-flat { min-height:58px; }
+                .pf-large .legend-mini { transform:scale(.92); transform-origin:left top; }
+                .pf-large h1 { font-size:20px; margin-bottom:2px; }
 </style>`;
 
             // 건물 사이 page-break-before 방식으로 변경 (thead 반복 없앰)
@@ -6009,8 +6065,8 @@
             // ★ 전역 헤더에서 legend 제거 — 각 건물 섹션에 개별 포함
             const header = `<h1>생활관 배정 배치도</h1>
                 <div class="sub">${P.fmt(P.wd)} ~ ${P.fmt(P.wEnd)} 주간 · 총 ${totalCount}명 · 출력일 ${new Date().toLocaleDateString('ko-KR')}</div>`;
-            const bodyHtml = `<table class="pwrap"><thead><tr><td>${header}</td></tr></thead><tbody><tr><td>${layoutSection}</td></tr></tbody></table>`;
-            _printDoc(`(${_kacWeekTag(P.wd)}_배치도) 항공기술훈련원 방 배정 현황표`, bodyHtml, FORM_CSS);
+            const bodyHtml = `<table class="pwrap"><thead><tr><td>${header}</td></tr></thead><tbody><tr><td class="${LARGE ? 'pf-large' : ''}">${layoutSection}</td></tr></tbody></table>`;
+            _printDoc(`(${_kacWeekTag(P.wd)}_배치도${LARGE ? '_크게보기' : ''}) 항공기술훈련원 방 배정 현황표`, bodyHtml, FORM_CSS);
             _offerLockAfterPdf();
         }
 

@@ -2,7 +2,7 @@
 <!-- 이 플랫폼(admin_coord.html / 교육운영부) 수정상태 플래그. 값은 [수정중] 또는 [수정안하는중] 두 가지. -->
 <!-- 작업 시작 시 → 수정중 / 작업 완료 시 → 수정안하는중. 다른 플랫폼은 이 말머리를 보고 연동·수정 가능 여부 판단. -->
 <!-- [외부변경 · 카카오채널연동 2026-06-25] 포털(portal.html/7777) 경유 폐지 → 페이지 직접진입 시 접속코드(catc1234) 게이트 추가, 포털 리다이렉트/종료이동 제거. version C13→D13. 기능 로직은 미변경. -->
-<!-- last-updated: 2026-07-07 / version: D66 (①미디어 격리: 출결 QR 업로드를 media/{room}/attendanceQR 로 이전(레거시 자동 제거), QR 미리보기 media 우선 폴백, 정리 도구·초기화 경로에 media/레거시 gradPhoto 포함 ②폐강 동기화: 방에 배정된 과정이 연간계획에서 폐강이면 사용 중이어도 즉시 방 정리(잠금 방은 경고만) — 강사 폐강 과정이 운영부 동기화로 되살아나던 문제 해소) [D65 (장소선택 팝업 방버튼 층별 2열 그리드+컴팩트화 → 하늘관 등 긴 열이 한 화면에 다 보이게) [D64: 팝업 폭확대·표기안내] -->
+<!-- last-updated: 2026-07-07 / version: D67 (D67: ①국제동 2층 배치도 연결(classroom_inter2f.png, GitHub 루트 업로드 필요) — 블록 좌표는 롱프레스 편집으로 조정·저장 ②배치도 좌표 조정 방식 통일 — 과정안내 블록(카드) 자체를 5초 롱프레스해도 편집 시작(기존엔 배경만 인식), 편집 배너에 즉시 저장 버튼 추가, 모든 도면 동일 동작) (D66: ①미디어 격리: 출결 QR 업로드를 media/{room}/attendanceQR 로 이전(레거시 자동 제거), QR 미리보기 media 우선 폴백, 정리 도구·초기화 경로에 media/레거시 gradPhoto 포함 ②폐강 동기화: 방에 배정된 과정이 연간계획에서 폐강이면 사용 중이어도 즉시 방 정리(잠금 방은 경고만) — 강사 폐강 과정이 운영부 동기화로 되살아나던 문제 해소) [D65 (장소선택 팝업 방버튼 층별 2열 그리드+컴팩트화 → 하늘관 등 긴 열이 한 화면에 다 보이게) [D64: 팝업 폭확대·표기안내] -->
 <!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -9527,7 +9527,7 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
     '하늘관|2': { img:'classroom_sky2f.png', pos: COORD_CLASS_POS, crop:{t:-13,b:-3} },
     '하늘관|1': { img:'classroom_sky1f.png', pos:{ '대강당':{l:46,t:62} }, crop:{t:0,b:0} },
     '국제동|1': { img:'classroom_inter1f.png', pos:{ A:{l:31,t:30}, B:{l:74,t:29}, '세미나홀':{l:34,t:69} }, crop:{t:0,b:0} },
-    '국제동|2': { img:'', pos:{} },
+    '국제동|2': { img:'classroom_inter2f.png', pos:{ A:{l:35,t:40}, B:{l:70,t:40} }, crop:{t:0,b:0} },   // [D66·4-2] 국제동 2층 도면 추가 — 블록 좌표는 롱프레스 편집으로 조정·저장(system/coordFloorPos/국제동_2)
     '관제교육동|1': { img:'', pos:{} },
     '관제교육동|2': { img:'', pos:{} }
   };
@@ -9936,9 +9936,15 @@ document.addEventListener("click",function(e){ var b=e.target&&e.target.closest&
   }
   function banner(on){
     var b=document.getElementById('fpEditBanner');
-    if(on){ if(!b){ b=document.createElement('div'); b.id='fpEditBanner'; document.body.appendChild(b); } b.innerHTML='✋ 강의실 위치 편집 중 — 카드를 드래그해 옮기고, 배치도를 다시 5초 길게 눌러 저장하세요'; b.style.display='block'; }
+    if(on){
+      if(!b){ b=document.createElement('div'); b.id='fpEditBanner'; document.body.appendChild(b); }
+      // [D66·4-3] 편집 중 즉시 저장 버튼 제공 — 5초 롱프레스 없이도 저장 가능
+      b.innerHTML='✋ 강의실 위치 편집 중 — 카드를 드래그해 옮긴 뒤 <button onclick="window._fpSaveNow&&window._fpSaveNow()" style="margin:0 4px;padding:6px 16px;border:none;border-radius:9px;background:#16a34a;color:#fff;font-weight:900;font-size:13px;cursor:pointer;vertical-align:middle;">💾 저장</button> 을 누르세요 (배치도/카드 5초 길게 눌러도 저장됩니다)';
+      b.style.display='block';
+    }
     else if(b){ b.style.display='none'; }
   }
+  window._fpSaveNow=function(){ savePositions(); setEdit(false); };
   function setEdit(on){ EDIT=on; window._fpEditCards=on; banner(on); var fp=document.getElementById('coordFloorPlan'); if(fp) fp.classList.toggle('fp-editing',on); try{ if(typeof coordRenderActiveCourses==='function') coordRenderActiveCourses(); }catch(e){} }
   function savePositions(){
     var fp=document.getElementById('coordFloorPlan'); if(!fp) return;
@@ -9965,10 +9971,13 @@ document.addEventListener("click",function(e){ var b=e.target&&e.target.closest&
       });
     }catch(e){}
   }
-  // 배치도 배경 5초 롱프레스 → 편집 토글 / 저장
+  // [D66·4-3] 롱프레스 방식 통일 — 과정안내 블록(카드) 자체를 5초 길게 눌러도 편집 시작.
+  //  기존에는 배치도 '배경'만 인식되어 화면마다 동작이 달라 보이던 문제 해소.
+  //  편집 중에는 카드 누름 = 드래그 전용(롱프레스 시작 안 함), 배경 5초 = 저장.
   function lpBegin(e){
-    if(e.target.closest && e.target.closest('.cfp-slot')) return;      // 카드 위는 드래그용
-    if(!(e.target.closest && e.target.closest('.cfp-imgbox'))) return; // 도면 영역만
+    var onSlot = e.target.closest && e.target.closest('.cfp-slot');
+    if(EDIT && onSlot) return;                                          // 편집 중 카드는 드래그 전용
+    if(!(e.target.closest && e.target.closest('.cfp-imgbox'))) return; // 도면 영역(카드 포함)만
     clearTimeout(lpT); clearInterval(lpIv); lpStart=Date.now();
     lpT=setTimeout(function(){ clearInterval(lpIv); lpBar(0); if(!EDIT){ setEdit(true); } else { savePositions(); setEdit(false); } }, 5000);
     lpIv=setInterval(function(){ lpBar(Math.min((Date.now()-lpStart)/5000,1)*100); }, 40);   // 누르는 동안 진행바 차오름

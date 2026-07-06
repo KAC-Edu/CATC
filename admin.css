@@ -1,4 +1,4 @@
-/* PLATFORM_EDIT_STATUS: 수정완료 | VERSION: S | 2026-07-03 */
+/* PLATFORM_EDIT_STATUS: 수정완료 | VERSION: T | 2026-07-07 (T: 대시보드 직무 일반/법정 토글(.dash-job-toggle) 스타일 신설 — 좌우 슬라이딩 노브, 히어로 글래스 톤) */
 /* ============================================================
    CATC · 강사 플랫폼 스타일  (admin.css)
    STATUS    수정완료
@@ -2564,21 +2564,22 @@ body.night-mode .header-room-badge { background-color: #003366 !important; borde
     min-width: 240px;
 }
 .prof-glass-card:hover { background: rgba(255,255,255,0.2); transform: translateY(-3px); }
-/* 교수 블록 옆 입교안내 전체화면 버튼 (동일 글래스 톤) */
+/* 교수 블록 옆 입교안내 전체화면 버튼 — 연한 노란색으로 자료 위치 강조 */
 .hero-right-row{ display:flex; align-items:stretch; justify-content:flex-end; gap:12px; }
 .guide-fs-glass{
-    background: rgba(255,255,255,0.1);
+    background: linear-gradient(145deg, #fffbea 0%, #fef3c7 100%);
     backdrop-filter: blur(10px);
-    border:1px solid rgba(255,255,255,0.2);
+    border:2px solid #facc15;
     border-radius:18px;
     padding:12px 18px;
     display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px;
-    cursor:pointer; transition:0.3s; color:#fff; font-family:inherit; min-width:104px;
+    cursor:pointer; transition:0.3s; color:#713f12; font-family:inherit; min-width:104px;
+    box-shadow:0 8px 22px rgba(250,204,21,.24);
 }
-.guide-fs-glass:hover{ background: rgba(255,255,255,0.2); transform: translateY(-3px); }
-.guide-fs-glass .gfg-main{ font-size:22px; color:#fff; margin-bottom:2px; }
-.guide-fs-glass .gfg-label{ font-size:15px; font-weight:900; letter-spacing:.3px; }
-.guide-fs-glass .gfg-sub{ font-size:11px; font-weight:800; opacity:.9; display:inline-flex; align-items:center; gap:4px; }
+.guide-fs-glass:hover{ background:linear-gradient(145deg,#fff7cc 0%,#fde68a 100%); border-color:#f59e0b; box-shadow:0 12px 28px rgba(245,158,11,.34); transform:translateY(-3px); }
+.guide-fs-glass .gfg-main{ font-size:22px; color:#b45309; margin-bottom:2px; }
+.guide-fs-glass .gfg-label{ font-size:15px; font-weight:900; letter-spacing:.3px; color:#713f12; }
+.guide-fs-glass .gfg-sub{ font-size:11px; font-weight:800; opacity:1; color:#92400e; display:inline-flex; align-items:center; gap:4px; }
 
 
 .prof-avatar {
@@ -2708,8 +2709,11 @@ body.night-mode .header-room-badge { background-color: #003366 !important; borde
 .notice-hub-content::-webkit-scrollbar { width: 4px; }
 .notice-hub-content::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
 
-/* 4. 기타 스타일 유지 및 보정 */
-.dash-premium-grid { grid-template-columns: 1fr 1.2fr 1fr !important; } /* 가운데 공지창을 조금 더 넓게 */
+/* 4. 하단 3개 블록 순서: 수강생 → 전자기기/Q&A/셔틀 → 주요 공지 */
+.dash-premium-grid { grid-template-columns: 1fr 1.2fr 1fr !important; }
+.dash-premium-grid > .card-blue { order:1; }
+.dash-premium-grid > .card-mint { order:2; }
+.dash-premium-grid > .card-notice-hub { order:3; }
 
 
 /* 1. 교수 프로필 시네마틱 모달 배경 (필수) */
@@ -6384,3 +6388,25 @@ body.night-mode .side-rail-lbl{ color:#cbd5e1; }
 #hsrVenuePop{position:fixed;z-index:22000;background:#fff;border:1px solid #e2e8f0;border-radius:12px;box-shadow:0 12px 32px rgba(15,23,42,.16);padding:6px;display:flex;flex-direction:column;min-width:210px;max-height:320px;overflow-y:auto;}
 #hsrVenuePop button{display:flex;align-items:center;gap:8px;padding:9px 12px;border:none;border-radius:8px;background:transparent;color:#334155;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;text-align:left;white-space:nowrap;}
 #hsrVenuePop button:hover{background:#eef2ff;color:#1d4ed8;}
+
+
+/* ═══ [J17] 대시보드 직무 법정/일반 토글 스위치 — 좌우 슬라이딩 노브 ═══ */
+.dash-job-toggle{
+    position:relative; display:inline-grid; grid-template-columns:1fr 1fr; align-items:center;
+    height:48px; min-width:196px; padding:4px; border:1.5px solid rgba(255,255,255,.4); border-radius:14px;
+    background:rgba(255,255,255,.14); backdrop-filter:blur(6px); cursor:pointer; overflow:hidden;
+}
+.dash-job-toggle .djt-opt{
+    position:relative; z-index:2; padding:0 14px; font-size:13.5px; font-weight:900; line-height:1;
+    color:rgba(255,255,255,.75); transition:color .18s; white-space:nowrap; text-align:center;
+}
+.dash-job-toggle .djt-knob{
+    position:absolute; z-index:1; top:4px; bottom:4px; left:4px; width:calc(50% - 4px);
+    border-radius:10px; background:#fff; box-shadow:0 3px 10px rgba(15,23,42,.28);
+    transition:transform .2s cubic-bezier(.2,.8,.3,1);
+}
+.dash-job-toggle .djt-general{ color:#1e3a8a; }                       /* 기본: 일반 활성 */
+.dash-job-toggle.is-legal .djt-knob{ transform:translateX(100%); }
+.dash-job-toggle.is-legal .djt-general{ color:rgba(255,255,255,.75); }
+.dash-job-toggle.is-legal .djt-legal{ color:#b91c1c; }
+.dash-job-toggle:hover{ border-color:rgba(255,255,255,.7); }

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- PLATFORM_EDIT_STATUS: 수정완료 | VERSION: I8 | 2026-07-03 (I8: 과정현황 바로가기 및 입교안내 공지 명칭 통일) -->
+<!-- PLATFORM_EDIT_STATUS: 수정완료 | VERSION: I9 | 2026-07-07 (I9: ①대시보드 히어로 직무 일반/법정 토글 스위치 추가(입교안내 버튼 좌측, admin.js J17 연동) ②OTP 출결 화면을 2블록 가로 배치로 — 좌측에 OTP 입력 안내자료(otp_attendance_guide.png, GitHub 루트 업로드 필요·파일 없으면 자동 숨김), 우측에 기존 OTP 블록, 좁은 화면에서는 세로 배치) [I8: 과정현황 바로가기 및 입교안내 공지 명칭 통일] -->
 <html lang="ko">
 <head>
 <script>
@@ -982,6 +982,12 @@ body.in-course #moreToggleTab{ display:flex !important; }
             
             <div class="hero-right">
                 <div class="hero-right-row">
+                <!-- [J17] 직무 법정/일반 토글 스위치 — 교육현황판 과정블록과 동일 상태(settings/guideCourseInfo.category) 실시간 연동 -->
+                <button id="dashJobToggle" class="dash-job-toggle" type="button" data-cat="duty-general" onclick="ui.dashToggleJob()" title="교육구분 전환 — 직무일반(평가 없음) / 직무법정(필기 90%+근태 10%)">
+                    <span class="djt-opt djt-general">직무 일반</span>
+                    <span class="djt-opt djt-legal">직무 법정</span>
+                    <span class="djt-knob"></span>
+                </button>
                 <!-- 입교안내 전체화면 버튼 (교수 블록과 동일 글래스 톤) -->
                 <button class="guide-fs-glass" type="button" onclick="ui.openGuideFullscreen()" title="입교안내를 전체화면으로 엽니다 (홈 현황판에서 입교안내 누른 것과 동일)"><i class="fa-solid fa-file-pdf gfg-main"></i><span class="gfg-label">입교안내</span><span class="gfg-sub"><i class="fa-solid fa-expand"></i> 전체화면</span></button>
                 <!-- 교수님 프로필 카드 -->
@@ -1464,9 +1470,17 @@ body.in-course #moreToggleTab{ display:flex !important; }
 
 
 
-<!-- [2] 항기원 OTP 자체출결 영역 -->
-    <div id="area-internal-qr" class="modern-white-card attendance-otp-card" style="display:none; text-align: center; max-width: 600px; padding:30px 26px;">
-        <div style="display: flex; flex-direction: column; align-items: center; gap: 24px;">
+<!-- [2] 항기원 OTP 자체출결 영역 — [J17] OTP 블록 + 안내자료 이미지 나란히 배치 (반응형: 좁으면 세로) -->
+    <div id="area-internal-qr" class="modern-white-card attendance-otp-card" style="display:none; text-align: center; max-width: 1240px; padding:30px 26px;">
+      <div class="otp-duo-wrap" style="display:flex; align-items:stretch; justify-content:center; gap:24px; flex-wrap:wrap;">
+        <!-- [J17] OTP 입력 안내자료 (GitHub 루트의 otp_attendance_guide.png — 파일이 없으면 블록 자동 숨김) -->
+        <div class="otp-guide-block" style="flex:1 1 420px; min-width:320px; max-width:600px; display:none; background:#f8fafc; border:1.5px solid #e2e8f0; border-radius:24px; padding:18px; align-items:center; justify-content:center;">
+            <img id="otpGuideImg" src="otp_attendance_guide.png" alt="OTP 출결 안내"
+                 style="max-width:100%; max-height:560px; width:auto; border-radius:14px; display:block; margin:0 auto;"
+                 onload="this.closest('.otp-guide-block').style.display='flex';"
+                 onerror="this.closest('.otp-guide-block').style.display='none';">
+        </div>
+        <div style="flex:1 1 420px; min-width:320px; max-width:600px; display: flex; flex-direction: column; align-items: center; gap: 24px;">
             <div style="width:100%; background:linear-gradient(135deg,#eff6ff,#ffffff); padding:26px 22px; border-radius:24px; border:1.5px solid #bfdbfe;">
                 <div class="attendance-otp-label"><i class="fa-solid fa-keyboard"></i> 교육생 플랫폼 OTP 출결</div>
                 <div id="internalOtpCode" style="letter-spacing:10px; font-size:64px; line-height:1; font-weight:950; color:#0f172a; font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;">------</div>
@@ -1499,6 +1513,7 @@ body.in-course #moreToggleTab{ display:flex !important; }
                 <div style="font-size:54px; font-weight:900; color:#1e293b; line-height:1;"><span id="checkInCount" style="color:#10b981;">0</span> <span style="color:#cbd5e1;">/</span> <span id="totalMemberCount">0</span><span style="font-size:26px; color:#64748b; margin-left:4px;">명</span></div>
             </button>
         </div>
+      </div><!-- /otp-duo-wrap [J17] -->
     </div>
     <!-- 출석 관리 액션 팝업 -->
     <div id="attendanceActionsModal" style="display:none; position:fixed; inset:0; z-index:9300; background:transparent; align-items:center; justify-content:flex-end; padding:24px 17vw;" onclick="if(event.target==this)this.style.display='none'">

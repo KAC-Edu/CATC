@@ -28,7 +28,7 @@
             <p>강사 전용 접속 플랫폼입니다.</p>
             
             <!-- 입력창 (ID: pwInput) -->
-            <input type="password" id="pwInput" class="login-input" placeholder="Password" 
+            <input type="password" id="pwInput" class="login-input" placeholder="Password" autofocus
                    onkeyup="if(event.key==='Enter') tryLogin()">
             
             <!-- 로그인 버튼 -->
@@ -49,8 +49,17 @@
     
     <!-- 로그인 로직 파일 (여기에 tryLogin 함수가 들어있음) -->
     <script src="login.js"></script>
+    <!-- [2026-07-07] 화면이 열리면 비밀번호 입력창에 자동 포커스 — 마우스 클릭 없이 바로 타이핑 가능 -->
+    <script>
+      (function(){
+        function f(){ var el=document.getElementById('pwInput'); if(el){ try{ el.focus(); }catch(e){} } }
+        if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', f); else f();
+        window.addEventListener('load', f);
+        window.addEventListener('pageshow', f);   /* 뒤로가기 복귀 시에도 포커스 */
+      })();
+    </script>
 
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vA</div>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vB</div>
 </body>
 </html>

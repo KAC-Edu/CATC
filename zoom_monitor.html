@@ -242,7 +242,7 @@ details.adv summary{font-size:12px;color:var(--sub);cursor:pointer;font-weight:7
 </div>
 
 <!-- ===== 설정 패널 ===== -->
-<div class="set-ov" id="setOv" onclick="if(event.target===this)closeSettings()">
+<div class="set-ov" id="setOv">
   <div class="set-panel">
     <div class="set-top"><h2>⚙ 설정</h2><button class="x" onclick="closeSettings()">✕</button></div>
 
@@ -350,6 +350,18 @@ if(EMBED){
 /* ================= 설정 패널 ================= */
 function openSettings(){document.getElementById('setOv').classList.add('show');}
 function closeSettings(){document.getElementById('setOv').classList.remove('show');}
+/* [Z8] 사이드바 오닫힘 방지 — 입력창에서 드래그(텍스트 선택)하다 마우스가 패널 밖에서 떨어지면
+   click 타깃이 오버레이가 되어 닫히던 문제. '누르기 시작'과 '떼기'가 모두 오버레이(어두운 배경)일 때만 닫는다.
+   패널이 열려 있는 동안에는 X 버튼 또는 배경을 정확히 클릭할 때만 닫힘. */
+(function(){
+  var ov=document.getElementById('setOv'); if(!ov) return;
+  var downOnOv=false;
+  ov.addEventListener('pointerdown',function(e){ downOnOv=(e.target===ov); },true);
+  ov.addEventListener('click',function(e){
+    if(e.target===ov && downOnOv) closeSettings();
+    downOnOv=false;
+  });
+})();
 
 /* ================= 설정 저장/복원 ================= */
 ['sdkKey','sdkSecret','botName','mtgNo','camLimit'].forEach(id=>{
