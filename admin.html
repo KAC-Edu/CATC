@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- PLATFORM_EDIT_STATUS: 수정완료 | VERSION: I10 | 2026-07-07 (I14: '오늘의 운영' 메뉴 구성 기능 — ①제목 옆 톱니로 표시 메뉴 선택 팝업(6종: OTP/외출외박/석식/셔틀/질문사항/전자기기, 최소 1개) ②행 5초 롱프레스→흔들림 모드에서 드래그로 순서 변경, 상단 배너 저장/취소 ③설정은 system/coord/dashOpsConfig 공용 저장 — 모든 과정·모든 PC 과정현황에 동일 적용, 실시간 동기화(.on), 규칙 변경 불필요(coord 하위 재사용) ④질문사항/전자기기 행 값은 기존 카운트 미러링·0이면 흐림 (I13: 공지 카드의 '전체 현황 보기' 버튼을 '질문사항 보기'로 교체 — Q&A 화면(질문 및 답변)으로 이동, 질문 수 배지 표시, 질문 1건 이상이면 파란 채움+펄스 강조로 강사가 즉시 인지(dashQaCount 실시간 연동) (I12: 과정현황 하단을 시안 기반 2카드로 재구성 — ①'오늘의 운영' 리스트 카드: 헤더에 수강생/Q&A/전자기기 요약(클릭 이동), OTP 출결·외출외박·석식·셔틀 행(아이콘 타일+값+화살표, 행 전체 클릭 시 해당 메뉴 이동), 셔틀 행에 정류장별 소계 서브라인·기사공지 배너 유지 ②'공지 및 필수 확인' 카드: 운영/입교안내 공지(클릭 이동), 점선 구분, 청렴/노조교육 2타일, '전체 현황 보기' 버튼. JS 갱신 ID 전부 보존 (I11: 과정현황 하단 3카드 정렬 개선 — 공지 허브에도 상단 컬러바 추가(3카드 상단선 통일), 공지 태그(운영/입교안내)·교육 배지(청렴/노조) 폭 고정으로 좌측 정렬 맞춤, 세로 중앙정렬. '오늘 한눈에' 요약 칩 클릭 시 해당 메뉴 이동(수강생/Q&A/셔틀/외출외박) (I10: OTP 안내 이미지 클릭→전체화면 연결(cursor:zoom-in), OTP 카드 라벨에 '전체화면' 재진입 버튼 추가 (I9.1: 직무 토글을 오른쪽줄→왼쪽 정보 pill 줄(장소 다음)로 이동·소형화, 수료 기념사진과 한 줄 정렬로 공간 정리 [I9: 대시보드 직무 토글 추가(admin.js J17 연동) ②OTP 출결 화면을 2블록 가로 배치로 — 좌측에 OTP 입력 안내자료(otp_attendance_guide.png, GitHub 루트 업로드 필요·파일 없으면 자동 숨김), 우측에 기존 OTP 블록, 좁은 화면에서는 세로 배치) [I8: 과정현황 바로가기 및 입교안내 공지 명칭 통일] -->
+<!-- PLATFORM_EDIT_STATUS: 수정완료 | VERSION: I10 | 2026-07-07 (I15: ①'오늘 한눈에' 칩 떨림·클릭 씹힘 수정 — 요약줄을 값이 바뀔 때만 다시 그림(매 갱신 innerHTML 재생성이 원인) ②질문사항 보기 버튼 세로 확대(68px)+42px Q&A 아이콘 배지+부제("교육생이 올린 질문 확인·답변")+카드 flex화로 하단 여백 채움 (I14: '오늘의 운영' 메뉴 구성 기능 — ①제목 옆 톱니로 표시 메뉴 선택 팝업(6종: OTP/외출외박/석식/셔틀/질문사항/전자기기, 최소 1개) ②행 5초 롱프레스→흔들림 모드에서 드래그로 순서 변경, 상단 배너 저장/취소 ③설정은 system/coord/dashOpsConfig 공용 저장 — 모든 과정·모든 PC 과정현황에 동일 적용, 실시간 동기화(.on), 규칙 변경 불필요(coord 하위 재사용) ④질문사항/전자기기 행 값은 기존 카운트 미러링·0이면 흐림 (I13: 공지 카드의 '전체 현황 보기' 버튼을 '질문사항 보기'로 교체 — Q&A 화면(질문 및 답변)으로 이동, 질문 수 배지 표시, 질문 1건 이상이면 파란 채움+펄스 강조로 강사가 즉시 인지(dashQaCount 실시간 연동) (I12: 과정현황 하단을 시안 기반 2카드로 재구성 — ①'오늘의 운영' 리스트 카드: 헤더에 수강생/Q&A/전자기기 요약(클릭 이동), OTP 출결·외출외박·석식·셔틀 행(아이콘 타일+값+화살표, 행 전체 클릭 시 해당 메뉴 이동), 셔틀 행에 정류장별 소계 서브라인·기사공지 배너 유지 ②'공지 및 필수 확인' 카드: 운영/입교안내 공지(클릭 이동), 점선 구분, 청렴/노조교육 2타일, '전체 현황 보기' 버튼. JS 갱신 ID 전부 보존 (I11: 과정현황 하단 3카드 정렬 개선 — 공지 허브에도 상단 컬러바 추가(3카드 상단선 통일), 공지 태그(운영/입교안내)·교육 배지(청렴/노조) 폭 고정으로 좌측 정렬 맞춤, 세로 중앙정렬. '오늘 한눈에' 요약 칩 클릭 시 해당 메뉴 이동(수강생/Q&A/셔틀/외출외박) (I10: OTP 안내 이미지 클릭→전체화면 연결(cursor:zoom-in), OTP 카드 라벨에 '전체화면' 재진입 버튼 추가 (I9.1: 직무 토글을 오른쪽줄→왼쪽 정보 pill 줄(장소 다음)로 이동·소형화, 수료 기념사진과 한 줄 정렬로 공간 정리 [I9: 대시보드 직무 토글 추가(admin.js J17 연동) ②OTP 출결 화면을 2블록 가로 배치로 — 좌측에 OTP 입력 안내자료(otp_attendance_guide.png, GitHub 루트 업로드 필요·파일 없으면 자동 숨김), 우측에 기존 OTP 블록, 좁은 화면에서는 세로 배치) [I8: 과정현황 바로가기 및 입교안내 공지 명칭 통일] -->
 <html lang="ko">
 <head>
 <script>
@@ -1098,9 +1098,10 @@ body.in-course #moreToggleTab{ display:flex !important; }
                         <b id="feedEduUnion" style="color:#15803d;">미정</b>
                     </div>
                 </div>
-                <!-- [I13] 질문사항 보기 — 교육생 질문(Q&A) 화면으로 이동. 질문이 있으면 배지+강조로 즉시 인지 -->
+                <!-- [I13→I15] 질문사항 보기 — 세로 확대 + 큰 아이콘 배지로 Q&A 기능임을 한눈에 인지 -->
                 <button id="nhQaBtn" class="nh-all nh-qa" onclick="ui.setMode('qa')">
-                    <i class="fa-solid fa-comments"></i> 질문사항 보기
+                    <span class="nh-qa-ic"><i class="fa-solid fa-comments"></i></span>
+                    <span class="nh-qa-txt">질문사항 보기<small>교육생이 올린 질문 확인·답변</small></span>
                     <span id="nhQaBadge" class="nh-qa-badge" style="display:none;">0건</span>
                     <i class="fa-solid fa-chevron-right"></i>
                 </button>
@@ -2980,7 +2981,9 @@ function setupAcc(btn){
     html+=chip('fa-comment-dots','#3b82f6','Q&A',(qa==null?'-':qa)+'건',qa>0,'qa');
     html+=chip('fa-bus','#0ea5e9','셔틀',(shuttle==null?'-':shuttle)+'명',shuttle>0,'shuttle');
     if(action>0) html+=chip('fa-person-walking-arrow-right','#f43f5e','외출·외박',action+'명',true,'admin-action');
-    sum.innerHTML=html;
+    // [I15] 값이 실제로 바뀐 경우에만 다시 그림 — 매 갱신마다 칩이 재생성되어
+    //  hover가 리셋(떨림)되고 클릭이 씹히던 문제의 근본 원인 해결
+    if(sum._lastHtml!==html){ sum._lastHtml=html; sum.innerHTML=html; }
     // [I14] 선택형 행(질문사항/전자기기) 값 미러
     try{
       var tab=num(document.getElementById('dashTabletLoanCount'));
