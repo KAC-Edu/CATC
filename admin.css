@@ -1,4 +1,4 @@
-/* PLATFORM_EDIT_STATUS: 수정완료 | VERSION: T | 2026-07-07 (T3: I12 2카드 스타일 신설(.ops-card/.ops-row/.nh-item/.edu-tile/.nh-all), 그리드 1.35fr+1fr 2열 전환 (T2: 과정현황 3카드 정렬 — notice-item 중앙정렬, n-tag 폭 58px 고정, 오늘 한눈에 클릭 칩 hover 효과 (T1: 직무 토글을 pill 줄 규격(높이 36px·radius 50px) 소형 인라인 스위치로 재설계, hero-info-row 세로 중앙정렬) [T: 직무 토글 스타일 신설] */
+/* PLATFORM_EDIT_STATUS: 수정완료 | VERSION: T | 2026-07-07 (T5: 톱니 버튼(.ops-cfg 회전 hover)·재정렬 모드(점선 테두리+흔들림+드래그 그림자) (T4: 질문사항 보기 버튼 강조 스타일(.nh-qa/.has-q/배지/펄스) (T3: I12 2카드 스타일 신설(.ops-card/.ops-row/.nh-item/.edu-tile/.nh-all), 그리드 1.35fr+1fr 2열 전환 (T2: 과정현황 3카드 정렬 — notice-item 중앙정렬, n-tag 폭 58px 고정, 오늘 한눈에 클릭 칩 hover 효과 (T1: 직무 토글을 pill 줄 규격(높이 36px·radius 50px) 소형 인라인 스위치로 재설계, hero-info-row 세로 중앙정렬) [T: 직무 토글 스타일 신설] */
 /* ============================================================
    CATC · 강사 플랫폼 스타일  (admin.css)
    STATUS    수정완료
@@ -6453,3 +6453,21 @@ body.night-mode .side-rail-lbl{ color:#cbd5e1; }
 .edu-tile b { font-size:19px; font-weight:900; text-align:right; margin-top:auto; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .nh-all { width:100%; margin-top:12px; padding:12px; border:1.5px solid #1e3a8a; border-radius:12px; background:#fff; color:#1e3a8a; font-size:14px; font-weight:900; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; transition:background .13s, color .13s; }
 .nh-all:hover { background:#1e3a8a; color:#fff; }
+
+
+/* ═══ [I13] 질문사항 보기 버튼 — 질문 도착 시 강조 ═══ */
+.nh-qa-badge{ display:inline-flex; align-items:center; justify-content:center; min-width:34px; padding:3px 9px; border-radius:999px; background:#e2e8f0; color:#475569; font-size:12px; font-weight:900; line-height:1; }
+.nh-all.nh-qa.has-q{ border-color:#2563eb; background:#2563eb; color:#fff; animation:nhQaPulse 2s ease-in-out infinite; }
+.nh-all.nh-qa.has-q .nh-qa-badge{ background:#fff; color:#2563eb; }
+.nh-all.nh-qa.has-q:hover{ background:#1d4ed8; border-color:#1d4ed8; }
+@keyframes nhQaPulse{ 0%,100%{ box-shadow:0 0 0 0 rgba(37,99,235,.45);} 50%{ box-shadow:0 0 0 7px rgba(37,99,235,0);} }
+
+
+/* ═══ [I14] 오늘의 운영 — 메뉴 설정·순서 변경 ═══ */
+.ops-cfg{ margin-left:6px; width:28px; height:28px; border:1px solid #e2e8f0; border-radius:9px; background:#f8fafc; color:#64748b; font-size:13px; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; transition:transform .3s, color .12s, border-color .12s; vertical-align:middle; }
+.ops-cfg:hover{ color:#2563eb; border-color:#bfdbfe; transform:rotate(60deg); }
+.ops-list.ops-reorder .ops-row{ cursor:grab; animation:opsWiggle .35s ease-in-out infinite; border-style:dashed; border-color:#93c5fd; }
+.ops-list.ops-reorder .ops-row:active{ cursor:grabbing; }
+.ops-list.ops-reorder .ops-row .ops-go{ visibility:hidden; }
+.ops-row.ops-dragging{ opacity:.55; box-shadow:0 10px 24px rgba(37,99,235,.25); }
+@keyframes opsWiggle{ 0%,100%{ transform:rotate(-0.25deg);} 50%{ transform:rotate(0.25deg);} }

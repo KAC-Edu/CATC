@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- PLATFORM_EDIT_STATUS: 수정완료 | VERSION: I10 | 2026-07-07 (I12: 과정현황 하단을 시안 기반 2카드로 재구성 — ①'오늘의 운영' 리스트 카드: 헤더에 수강생/Q&A/전자기기 요약(클릭 이동), OTP 출결·외출외박·석식·셔틀 행(아이콘 타일+값+화살표, 행 전체 클릭 시 해당 메뉴 이동), 셔틀 행에 정류장별 소계 서브라인·기사공지 배너 유지 ②'공지 및 필수 확인' 카드: 운영/입교안내 공지(클릭 이동), 점선 구분, 청렴/노조교육 2타일, '전체 현황 보기' 버튼. JS 갱신 ID 전부 보존 (I11: 과정현황 하단 3카드 정렬 개선 — 공지 허브에도 상단 컬러바 추가(3카드 상단선 통일), 공지 태그(운영/입교안내)·교육 배지(청렴/노조) 폭 고정으로 좌측 정렬 맞춤, 세로 중앙정렬. '오늘 한눈에' 요약 칩 클릭 시 해당 메뉴 이동(수강생/Q&A/셔틀/외출외박) (I10: OTP 안내 이미지 클릭→전체화면 연결(cursor:zoom-in), OTP 카드 라벨에 '전체화면' 재진입 버튼 추가 (I9.1: 직무 토글을 오른쪽줄→왼쪽 정보 pill 줄(장소 다음)로 이동·소형화, 수료 기념사진과 한 줄 정렬로 공간 정리 [I9: 대시보드 직무 토글 추가(admin.js J17 연동) ②OTP 출결 화면을 2블록 가로 배치로 — 좌측에 OTP 입력 안내자료(otp_attendance_guide.png, GitHub 루트 업로드 필요·파일 없으면 자동 숨김), 우측에 기존 OTP 블록, 좁은 화면에서는 세로 배치) [I8: 과정현황 바로가기 및 입교안내 공지 명칭 통일] -->
+<!-- PLATFORM_EDIT_STATUS: 수정완료 | VERSION: I10 | 2026-07-07 (I14: '오늘의 운영' 메뉴 구성 기능 — ①제목 옆 톱니로 표시 메뉴 선택 팝업(6종: OTP/외출외박/석식/셔틀/질문사항/전자기기, 최소 1개) ②행 5초 롱프레스→흔들림 모드에서 드래그로 순서 변경, 상단 배너 저장/취소 ③설정은 system/coord/dashOpsConfig 공용 저장 — 모든 과정·모든 PC 과정현황에 동일 적용, 실시간 동기화(.on), 규칙 변경 불필요(coord 하위 재사용) ④질문사항/전자기기 행 값은 기존 카운트 미러링·0이면 흐림 (I13: 공지 카드의 '전체 현황 보기' 버튼을 '질문사항 보기'로 교체 — Q&A 화면(질문 및 답변)으로 이동, 질문 수 배지 표시, 질문 1건 이상이면 파란 채움+펄스 강조로 강사가 즉시 인지(dashQaCount 실시간 연동) (I12: 과정현황 하단을 시안 기반 2카드로 재구성 — ①'오늘의 운영' 리스트 카드: 헤더에 수강생/Q&A/전자기기 요약(클릭 이동), OTP 출결·외출외박·석식·셔틀 행(아이콘 타일+값+화살표, 행 전체 클릭 시 해당 메뉴 이동), 셔틀 행에 정류장별 소계 서브라인·기사공지 배너 유지 ②'공지 및 필수 확인' 카드: 운영/입교안내 공지(클릭 이동), 점선 구분, 청렴/노조교육 2타일, '전체 현황 보기' 버튼. JS 갱신 ID 전부 보존 (I11: 과정현황 하단 3카드 정렬 개선 — 공지 허브에도 상단 컬러바 추가(3카드 상단선 통일), 공지 태그(운영/입교안내)·교육 배지(청렴/노조) 폭 고정으로 좌측 정렬 맞춤, 세로 중앙정렬. '오늘 한눈에' 요약 칩 클릭 시 해당 메뉴 이동(수강생/Q&A/셔틀/외출외박) (I10: OTP 안내 이미지 클릭→전체화면 연결(cursor:zoom-in), OTP 카드 라벨에 '전체화면' 재진입 버튼 추가 (I9.1: 직무 토글을 오른쪽줄→왼쪽 정보 pill 줄(장소 다음)로 이동·소형화, 수료 기념사진과 한 줄 정렬로 공간 정리 [I9: 대시보드 직무 토글 추가(admin.js J17 연동) ②OTP 출결 화면을 2블록 가로 배치로 — 좌측에 OTP 입력 안내자료(otp_attendance_guide.png, GitHub 루트 업로드 필요·파일 없으면 자동 숨김), 우측에 기존 OTP 블록, 좁은 화면에서는 세로 배치) [I8: 과정현황 바로가기 및 입교안내 공지 명칭 통일] -->
 <html lang="ko">
 <head>
 <script>
@@ -1018,7 +1018,9 @@ body.in-course #moreToggleTab{ display:flex !important; }
             <!-- [I12] (1) 오늘의 운영 — 리스트형 (행 클릭 시 해당 메뉴 이동) -->
             <div class="stat-premium-card ops-card card-blue">
                 <div class="ops-head">
-                    <span class="ops-title"><i class="fa-solid fa-calendar-day"></i> 오늘의 운영</span>
+                    <span class="ops-title"><i class="fa-solid fa-calendar-day"></i> 오늘의 운영
+                        <button id="opsCfgBtn" class="ops-cfg" onclick="opsCfg.open()" title="표시할 메뉴 선택 · 행을 5초 길게 누르면 순서 변경"><i class="fa-solid fa-gear"></i></button>
+                    </span>
                     <span class="ops-sub">
                         <span class="ops-mini" onclick="ui.setMode('students')" title="수강생 명단 보기">수강생 <b id="dashTotalCount">0</b>명<span id="dashArrivedCount" style="display:none;">0</span></span>
                         <span class="ops-dot">·</span>
@@ -1028,30 +1030,42 @@ body.in-course #moreToggleTab{ display:flex !important; }
                     </span>
                 </div>
                 <div class="ops-list">
-                    <div class="ops-row" onclick="ui.setMode('attendance'); ui.toggleAttendanceMode('internal');">
+                    <div class="ops-row" data-key="otp" onclick="ui.setMode('attendance'); ui.toggleAttendanceMode('internal');">
                         <span class="ops-ic" style="color:#2563eb; background:#eff6ff;"><i class="fa-solid fa-keyboard"></i></span>
                         <span class="ops-name">OTP 출결<span id="dashAttendCount" style="display:none;">0</span><span id="dashAttendTotal" style="display:none;">0</span></span>
                         <span class="ops-val" style="color:#2563eb; font-weight:900;">출결 시작</span>
                         <i class="fa-solid fa-arrow-right ops-go"></i>
                     </div>
-                    <div class="ops-row stat-row" onclick="ui.setMode('admin-action')">
+                    <div class="ops-row stat-row" data-key="action" onclick="ui.setMode('admin-action')">
                         <span class="ops-ic" style="color:#f43f5e; background:#fff1f2;"><i class="fa-solid fa-person-walking-arrow-right"></i></span>
                         <span class="ops-name"><span class="i18n" data-en="Leave / Overnight">외출 · 외박</span></span>
                         <span class="ops-val"><b id="dashActionCount">0</b>명</span>
                         <i class="fa-solid fa-arrow-right ops-go"></i>
                     </div>
-                    <div class="ops-row stat-row" onclick="ui.setMode('dinner-skip')">
+                    <div class="ops-row stat-row" data-key="dinner" onclick="ui.setMode('dinner-skip')">
                         <span class="ops-ic" style="color:#10b981; background:#ecfdf5;"><i class="fa-solid fa-utensils"></i></span>
                         <span class="ops-name"><span class="i18n" data-en="Dinner Skip">석식 제외</span></span>
                         <span class="ops-val"><b id="dashDinnerSkipCount">0</b>명</span>
                         <i class="fa-solid fa-arrow-right ops-go"></i>
                     </div>
-                    <div class="ops-row" onclick="ui.setMode('shuttle')">
+                    <div class="ops-row" data-key="shuttle" onclick="ui.setMode('shuttle')">
                         <span class="ops-ic" style="color:#0ea5e9; background:#f0f9ff;"><i class="fa-solid fa-bus"></i></span>
                         <span class="ops-name"><span class="i18n" data-en="Shuttle">셔틀</span><span id="dashShuttleTimeInline" style="font-size:11.5px; color:#92400e; font-weight:700; margin-left:6px;"></span>
                             <small class="ops-namesub">오송 <b id="total-osong">0</b> · 터미널 <b id="total-term">0</b> · 공항 <b id="total-air">0</b> · 자차 <b id="total-car">0</b></small>
                         </span>
                         <span class="ops-val">전체 <span id="dashShuttleTotal" style="font-weight:900;">0명</span></span>
+                        <i class="fa-solid fa-arrow-right ops-go"></i>
+                    </div>
+                    <div class="ops-row" data-key="qa" style="display:none;" onclick="ui.setMode('qa')">
+                        <span class="ops-ic" style="color:#7c3aed; background:#f5f3ff;"><i class="fa-solid fa-comments"></i></span>
+                        <span class="ops-name">질문사항 (Q&A)</span>
+                        <span class="ops-val"><b class="opsQaMirror">0</b>건</span>
+                        <i class="fa-solid fa-arrow-right ops-go"></i>
+                    </div>
+                    <div class="ops-row" data-key="tablet" style="display:none;" onclick="ui.setMode('tablet-loan')">
+                        <span class="ops-ic" style="color:#6366f1; background:#eef2ff;"><i class="fa-solid fa-tablet-screen-button"></i></span>
+                        <span class="ops-name">전자기기 대여</span>
+                        <span class="ops-val"><b class="opsTabletMirror">0</b>명</span>
                         <i class="fa-solid fa-arrow-right ops-go"></i>
                     </div>
                     <!-- 기사님 실시간 공지 (있을 때만 표시 — JS가 제어) -->
@@ -1084,7 +1098,12 @@ body.in-course #moreToggleTab{ display:flex !important; }
                         <b id="feedEduUnion" style="color:#15803d;">미정</b>
                     </div>
                 </div>
-                <button class="nh-all" onclick="ui.setMode('notice')">전체 현황 보기 <i class="fa-solid fa-chevron-right"></i></button>
+                <!-- [I13] 질문사항 보기 — 교육생 질문(Q&A) 화면으로 이동. 질문이 있으면 배지+강조로 즉시 인지 -->
+                <button id="nhQaBtn" class="nh-all nh-qa" onclick="ui.setMode('qa')">
+                    <i class="fa-solid fa-comments"></i> 질문사항 보기
+                    <span id="nhQaBadge" class="nh-qa-badge" style="display:none;">0건</span>
+                    <i class="fa-solid fa-chevron-right"></i>
+                </button>
             </div>
 
         </div> <!-- dash-premium-grid 끝 -->
@@ -2962,6 +2981,24 @@ function setupAcc(btn){
     html+=chip('fa-bus','#0ea5e9','셔틀',(shuttle==null?'-':shuttle)+'명',shuttle>0,'shuttle');
     if(action>0) html+=chip('fa-person-walking-arrow-right','#f43f5e','외출·외박',action+'명',true,'admin-action');
     sum.innerHTML=html;
+    // [I14] 선택형 행(질문사항/전자기기) 값 미러
+    try{
+      var tab=num(document.getElementById('dashTabletLoanCount'));
+      document.querySelectorAll('.opsQaMirror').forEach(function(e){ e.textContent=(qa==null?0:qa); });
+      document.querySelectorAll('.opsTabletMirror').forEach(function(e){ e.textContent=(tab==null?0:tab); });
+      var qaRow=document.querySelector('.ops-row[data-key="qa"]'); if(qaRow) qaRow.classList.toggle('dash-zero', !(qa>0));
+      var tbRow=document.querySelector('.ops-row[data-key="tablet"]'); if(tbRow) tbRow.classList.toggle('dash-zero', !(tab>0));
+    }catch(e){}
+    // [I13] 질문사항 보기 버튼 — 질문 수 배지 + 강조 상태 갱신
+    try{
+      var qaBtn=document.getElementById('nhQaBtn'), qaBadge=document.getElementById('nhQaBadge');
+      if(qaBtn && qaBadge){
+        var q=(qa==null?0:qa);
+        qaBadge.textContent=q+'건';
+        qaBadge.style.display=q>0?'inline-flex':'none';
+        qaBtn.classList.toggle('has-q', q>0);
+      }
+    }catch(e){}
     // 대시보드(과정현황)가 화면에 보일 때만 노출
     var visible=grid.offsetParent!==null;
     sum.style.display=visible?'flex':'none';
@@ -2976,6 +3013,169 @@ function setupAcc(btn){
   });
 })();
 </script>
+<!-- [I14] '오늘의 운영' 메뉴 구성·순서 설정 — 톱니로 표시 항목 선택, 행 5초 롱프레스 후 드래그로 순서 변경.
+     설정은 system/coord/dashOpsConfig (공용)에 저장되어 모든 과정·모든 PC의 과정현황에 동일 적용 + 실시간 동기화 -->
+<script>
+var opsCfg = (function(){
+  var PATH='system/coord/dashOpsConfig';
+  var CATALOG=[
+    {k:'otp',    n:'OTP 출결'},
+    {k:'action', n:'외출·외박'},
+    {k:'dinner', n:'석식 제외'},
+    {k:'shuttle',n:'셔틀'},
+    {k:'qa',     n:'질문사항 (Q&A)'},
+    {k:'tablet', n:'전자기기 대여'}
+  ];
+  var DEFAULT=['otp','action','dinner','shuttle'];
+  var cur=DEFAULT.slice(), reorder=false, lpT=null;
+
+  function rows(){ return Array.prototype.slice.call(document.querySelectorAll('.ops-list .ops-row[data-key]')); }
+  function apply(items){
+    cur=(Array.isArray(items)&&items.length)?items.filter(function(k){return CATALOG.some(function(c){return c.k===k;});}):DEFAULT.slice();
+    rows().forEach(function(r){
+      var k=r.getAttribute('data-key'), idx=cur.indexOf(k);
+      r.style.display=(idx>=0)?'flex':'none';
+      r.style.order=(idx>=0)?idx:999;
+    });
+  }
+  function save(items){
+    try{ firebase.database().ref(PATH).set({ items:items, updatedAt:Date.now() }); }catch(e){}
+  }
+  function subscribe(){
+    try{
+      firebase.database().ref(PATH).on('value', function(s){
+        var v=s.val();
+        if(!reorder) apply(v && v.items);
+      });
+    }catch(e){ setTimeout(subscribe, 1500); }
+  }
+
+  /* ── 설정 팝업 ── */
+  function open(){
+    if(reorder) return;
+    var old=document.getElementById('opsCfgPop'); if(old) old.remove();
+    var ordered=cur.slice();
+    CATALOG.forEach(function(c){ if(ordered.indexOf(c.k)<0) ordered.push(c.k); });
+    var ov=document.createElement('div');
+    ov.id='opsCfgPop';
+    ov.style.cssText='position:fixed;inset:0;z-index:99980;background:rgba(15,23,42,.5);display:flex;align-items:center;justify-content:center;padding:20px;';
+    var items=ordered.map(function(k){
+      var c=CATALOG.filter(function(x){return x.k===k;})[0];
+      var on=cur.indexOf(k)>=0;
+      return '<label style="display:flex;align-items:center;gap:11px;padding:11px 13px;border:1.5px solid '+(on?'#bfdbfe':'#e2e8f0')+';border-radius:12px;background:'+(on?'#eff6ff':'#f8fafc')+';cursor:pointer;font-weight:800;font-size:14px;color:#0f172a;">'
+        +'<input type="checkbox" data-k="'+k+'" '+(on?'checked':'')+' style="width:17px;height:17px;accent-color:#2563eb;">'+c.n+'</label>';
+    }).join('');
+    ov.innerHTML='<div style="background:#fff;border-radius:20px;padding:24px;max-width:400px;width:100%;box-shadow:0 24px 60px rgba(15,23,42,.35);">'
+      +'<h3 style="margin:0 0 4px;font-size:17px;font-weight:900;color:#0f172a;"><i class="fa-solid fa-gear" style="color:#2563eb;margin-right:7px;"></i>오늘의 운영 — 표시 메뉴 선택</h3>'
+      +'<p style="margin:0 0 14px;font-size:12.5px;font-weight:700;color:#64748b;line-height:1.6;">체크한 메뉴만 카드에 표시됩니다. 순서는 카드에서 행을 <b>5초 길게 누른 뒤 드래그</b>로 바꿀 수 있습니다.<br>설정은 <b>모든 과정의 과정현황에 공통</b> 적용됩니다.</p>'
+      +'<div style="display:flex;flex-direction:column;gap:8px;">'+items+'</div>'
+      +'<div style="display:flex;gap:9px;margin-top:16px;">'
+      +'<button id="opsCfgSave" style="flex:1;padding:12px;border:none;border-radius:12px;background:#2563eb;color:#fff;font-weight:900;font-size:14px;cursor:pointer;">저장</button>'
+      +'<button onclick="document.getElementById(\'opsCfgPop\').remove()" style="flex:1;padding:12px;border:none;border-radius:12px;background:#f1f5f9;color:#475569;font-weight:900;font-size:14px;cursor:pointer;">취소</button>'
+      +'</div></div>';
+    ov.addEventListener('click',function(e){ if(e.target===ov) ov.remove(); });
+    document.body.appendChild(ov);
+    document.getElementById('opsCfgSave').onclick=function(){
+      var picked=[];
+      ordered.forEach(function(k){
+        var cb=ov.querySelector('input[data-k="'+k+'"]');
+        if(cb && cb.checked) picked.push(k);
+      });
+      if(!picked.length){ alert('최소 1개 이상 선택하세요.'); return; }
+      apply(picked); save(picked); ov.remove();
+    };
+  }
+
+  /* ── 5초 롱프레스 → 드래그 순서 변경 ── */
+  function banner(on){
+    var b=document.getElementById('opsReorderBanner');
+    if(on){
+      if(!b){
+        b=document.createElement('div'); b.id='opsReorderBanner';
+        b.style.cssText='position:fixed;top:14px;left:50%;transform:translateX(-50%);z-index:99970;background:#1e3a8a;color:#fff;padding:11px 18px;border-radius:14px;font-weight:900;font-size:14px;box-shadow:0 10px 30px rgba(15,23,42,.35);display:flex;align-items:center;gap:12px;';
+        document.body.appendChild(b);
+      }
+      b.innerHTML='↕ 순서 변경 중 — 행을 드래그해 옮기세요 '
+        +'<button onclick="opsCfg._done(true)" style="padding:7px 16px;border:none;border-radius:9px;background:#16a34a;color:#fff;font-weight:900;font-size:13px;cursor:pointer;">💾 저장</button>'
+        +'<button onclick="opsCfg._done(false)" style="padding:7px 16px;border:none;border-radius:9px;background:rgba(255,255,255,.18);color:#fff;font-weight:900;font-size:13px;cursor:pointer;">취소</button>';
+      b.style.display='flex';
+    } else if(b){ b.style.display='none'; }
+  }
+  function enterReorder(){
+    if(reorder) return; reorder=true;
+    var list=document.querySelector('.ops-list'); if(!list) return;
+    list.classList.add('ops-reorder');
+    rows().forEach(function(r){ if(r.style.display!=='none') r.setAttribute('draggable','true'); });
+    banner(true);
+  }
+  function _done(saveIt){
+    reorder=false;
+    var list=document.querySelector('.ops-list');
+    if(list) list.classList.remove('ops-reorder');
+    rows().forEach(function(r){ r.removeAttribute('draggable'); });
+    banner(false);
+    if(saveIt){
+      // 화면(order값) 기준 현재 표시 행 순서 수집
+      var vis=rows().filter(function(r){ return r.style.display!=='none'; });
+      vis.sort(function(a,b){ return (parseInt(a.style.order)||0)-(parseInt(b.style.order)||0); });
+      var items=vis.map(function(r){ return r.getAttribute('data-key'); });
+      apply(items); save(items);
+    } else {
+      apply(cur);
+    }
+  }
+  function bind(){
+    var list=document.querySelector('.ops-list'); if(!list||list._opsBound) return; list._opsBound=true;
+    // 롱프레스(5초) 감지
+    list.addEventListener('pointerdown', function(e){
+      var row=e.target.closest && e.target.closest('.ops-row'); if(!row||reorder) return;
+      var sx=e.clientX, sy=e.clientY;
+      clearTimeout(lpT);
+      lpT=setTimeout(function(){ enterReorder(); }, 5000);
+      var cancel=function(ev){
+        if(ev.type==='pointermove' && Math.hypot(ev.clientX-sx,ev.clientY-sy)<9) return;
+        clearTimeout(lpT);
+        list.removeEventListener('pointermove',cancel); list.removeEventListener('pointerup',cancel); list.removeEventListener('pointerleave',cancel);
+      };
+      list.addEventListener('pointermove',cancel); list.addEventListener('pointerup',cancel); list.addEventListener('pointerleave',cancel);
+    });
+    // 순서변경 중 행 클릭(메뉴 이동) 차단
+    list.addEventListener('click', function(e){ if(reorder){ e.stopPropagation(); e.preventDefault(); } }, true);
+    // 드래그로 order 스왑
+    var dragKey=null;
+    list.addEventListener('dragstart', function(e){
+      var row=e.target.closest && e.target.closest('.ops-row'); if(!row||!reorder){ e.preventDefault(); return; }
+      dragKey=row.getAttribute('data-key');
+      try{ e.dataTransfer.setData('text/plain', dragKey); e.dataTransfer.effectAllowed='move'; }catch(err){}
+      row.classList.add('ops-dragging');
+    });
+    list.addEventListener('dragend', function(e){
+      var row=e.target.closest && e.target.closest('.ops-row'); if(row) row.classList.remove('ops-dragging');
+      dragKey=null;
+    });
+    list.addEventListener('dragover', function(e){
+      if(!reorder||!dragKey) return;
+      e.preventDefault();
+      var over=e.target.closest && e.target.closest('.ops-row'); if(!over) return;
+      var ok=over.getAttribute('data-key'); if(ok===dragKey) return;
+      // order 값 스왑
+      var dragRow=list.querySelector('.ops-row[data-key="'+dragKey+'"]'); if(!dragRow) return;
+      var o1=dragRow.style.order, o2=over.style.order;
+      dragRow.style.order=o2; over.style.order=o1;
+    });
+  }
+  document.addEventListener('DOMContentLoaded', function(){
+    bind();
+    var tries=0;
+    (function trySub(){
+      if(typeof firebase!=='undefined' && firebase.apps && firebase.apps.length){ subscribe(); }
+      else if(++tries<20){ setTimeout(trySub, 700); }
+    })();
+  });
+  return { open:open, _done:_done };
+})();
+</script>
+
 <!-- [상단 메뉴바 숨김/펼침]은 리모컨 중앙 '과정현황' 버튼 3초 롱프레스로 처리 (admin.js hex remote) -->
 
 <!-- ── [강사 보조] 옵저버→강사 화면 동기화 (페이지 동기화 · 드래그 · 진단) ── -->
