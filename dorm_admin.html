@@ -1,6 +1,6 @@
 ﻿<!DOCTYPE html>
 <html lang="ko">
-<!-- PLATFORM_EDIT_STATUS: 수정완료 | VERSION: R3 | 2026-07-07 (R3: [보안] 접속코드 게이트 평문 제거→SHA-256 해시 대조, 자동 파기 목록 5종 보강) (R2: ①배치도 PDF 출력 시 방식 선택 팝업 신설 — 기존 방식/크게 보기. 크게 보기는 사진·AED 안내 제외, 방 번호·이름 폰트 확대(노안 대응)로 배치도가 A4를 최대한 차지, 파일명에 _크게보기 표기 ②과정 정리 목록에 media/{room} 미디어 저장소 정리 추가) -->
+<!-- PLATFORM_EDIT_STATUS: 수정완료 | VERSION: R4 | 2026-07-07 (R4: 배치도 '크게 보기' PDF가 한 건물이 A4를 넘겨 층 중간에서 잘리던 문제 수정 — 크게 보기 모드에서 각 층을 독립 페이지로 분할(페이지마다 건물명+층 표기+소형 범례), 건물 사이 강제 개행 제거로 빈 페이지 방지, 층 페이지 방 셀 최소높이 120px로 여유 확보) [R3 | 2026-07-07 (R3: [보안] 접속코드 게이트 평문 제거→SHA-256 해시 대조, 자동 파기 목록 5종 보강) (R2: ①배치도 PDF 출력 시 방식 선택 팝업 신설 — 기존 방식/크게 보기. 크게 보기는 사진·AED 안내 제외, 방 번호·이름 폰트 확대(노안 대응)로 배치도가 A4를 최대한 차지, 파일명에 _크게보기 표기 ②과정 정리 목록에 media/{room} 미디어 저장소 정리 추가) -->
 <!-- ===== EDIT-STATUS: 수정안하는중 ===== (값: 수정중 / 수정안하는중) · 플랫폼 간 협의용 플래그.
      다른 플랫폼/작업자는 이 파일을 열면 이 줄을 먼저 확인. 수정 시작 시 → 수정중 , 수정 완료 시 → 수정안하는중 -->
 <!-- [외부변경 · 카카오채널연동 2026-06-25] 포털(portal.html/7777) 경유 폐지 → catc1234 직접진입 게이트 추가, '포털' 버튼→'잠금'. @version J1→K1. 기능 로직 미변경. -->
@@ -5994,13 +5994,18 @@
                 const aedHtml = aed
                     ? `<div style="display:flex;align-items:center;gap:9px;margin-top:8px;padding:7px 13px;background:#fffbeb;border:1.5px solid #fcd34d;border-radius:9px;font-size:12px;font-weight:700;color:#78350f;"><span style="font-size:16px;flex-shrink:0;">⑧</span><span>${aed}</span></div>`
                     : '';
-                // [2026-07-07] 크게 보기: 사진·AED 안내 제외, 범례는 소형 1줄만 유지 → 배치도가 A4를 최대한 차지
+                // [2026-07-07] 크게 보기: 방을 키우면 한 건물이 A4 한 장을 넘겨 층 중간에서 잘림 →
+                //  각 '층'을 개별 페이지로 분할. 페이지마다 건물명 헤더 + 소형 범례 + 층 1개만 담아 여유있게 배치.
                 if (LARGE) {
-                    return `<div class="pf-block">
-                        <div class="legend legend-mini" style="margin:0 0 6px;">${_legendHtml(P)}</div>
-                        <div class="pf-bldg-header" style="background:${bar};"><span class="bicon">\ud83c\udfe2</span>${building}</div>
-                        <div class="pf-floor-wrap" style="border-color:${bar};">${fls}</div>
-                    </div>`;
+                    const floors = (FORM[building] || []);
+                    return floors.map((fl, idx) => {
+                        const fLabel = (typeof fl === 'object' && fl.floor != null) ? fl.floor : fl;
+                        return `<div class="pf-block pf-large-page"${idx>0 ? ' style="page-break-before:always;"' : ''}>
+                            <div class="legend legend-mini" style="margin:0 0 6px;">${_legendHtml(P)}</div>
+                            <div class="pf-bldg-header" style="background:${bar};"><span class="bicon">\ud83c\udfe2</span>${building} <span style="font-weight:800;opacity:.85;font-size:.82em;">· ${fLabel}</span></div>
+                            <div class="pf-floor-wrap" style="border-color:${bar};">${floorHtml(building, fl)}</div>
+                        </div>`;
+                    }).join('');
                 }
                 return `<div class="pf-block">
                     <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:14px;margin-bottom:10px;">
@@ -6059,11 +6064,17 @@
                 .pf-large .fm-flat { min-height:58px; }
                 .pf-large .legend-mini { transform:scale(.92); transform-origin:left top; }
                 .pf-large h1 { font-size:20px; margin-bottom:2px; }
+                /* [2026-07-07] 크게 보기: 각 층을 독립 페이지로 — 페이지 경계에서 잘리지 않도록 */
+                .pf-large-page { break-inside:avoid; page-break-inside:avoid; }
+                .pf-large-page .fm-grid { grid-auto-rows:minmax(120px,auto); gap:8px; }
+                .pf-large-page .fm-room { min-height:120px; }
+                .pf-large-page .fm-room.fm-intl { min-height:132px; }
+                .pf-large-page .fm-pill { font-size:19px; }
 </style>`;
 
             // 건물 사이 page-break-before 방식으로 변경 (thead 반복 없앰)
             const layoutSection = ['청렴관','상생관','국제교육동'].map((b, i) =>
-                (i > 0 ? `<div style="page-break-before:always;margin:0;height:0;"></div>` : '') + buildingHtml(b)
+                (i > 0 && !LARGE ? `<div style="page-break-before:always;margin:0;height:0;"></div>` : '') + buildingHtml(b)
             ).join('');
             const totalCount = Object.keys(P.students).length;
             // ★ 전역 헤더에서 legend 제거 — 각 건물 섹션에 개별 포함
