@@ -3,7 +3,7 @@
 <head>
 <!-- ═══════════════════════════════════════════════════════════════
      KAC 항공기술훈련원 — 수료 기념사진 업로드 (모바일)
-     VERSION: JDS260707(V2) — 저장 경로 courses/{room}/gradPhoto → media/{room}/gradPhoto 이전(레거시 자동 정리)
+     VERSION: JDS260707(V3) — 가로 촬영 강조 배너(주황) + 세로 사진 감지 시 잘림 경고 확인 팝업 — 저장 경로 courses/{room}/gradPhoto → media/{room}/gradPhoto 이전(레거시 자동 정리)
      · 강사플랫폼 출결 화면의 '수료 기념사진' QR이 이 페이지로 연결 (?room=A)
      · 스마트폰으로 단체사진 촬영/선택 → 긴 변 1600px · JPEG 0.8 압축 →
        courses/{room}/gradPhoto = { dataUrl, updatedAt, endDate } 저장
@@ -62,8 +62,15 @@
           <i>📷</i> 사진 촬영 / 선택하기
         </button>
         <input type="file" id="file" accept="image/*" capture="environment" style="display:none;">
+        <div style="display:flex; align-items:center; gap:11px; background:#fff7ed; border:2px solid #fb923c; border-radius:14px; padding:13px 15px; margin:14px 0 10px; text-align:left;">
+            <span style="font-size:28px; flex-shrink:0;">📱↻</span>
+            <div style="font-size:14px; font-weight:800; color:#9a3412; line-height:1.55;">
+                휴대폰을 <b style="color:#c2410c; font-size:15.5px;">반드시 가로로 눕혀서</b> 촬영하세요!<br>
+                <small style="font-size:12px; font-weight:700; color:#b45309;">액자 사진칸이 가로로 넓어, 세로 사진은 위아래가 크게 잘립니다.</small>
+            </div>
+        </div>
         <div class="tip">
-          교탁에서 교육생 전체가 나오도록 <b>가로</b>로 촬영해 주세요.<br>
+          교탁에서 교육생 전체가 나오도록 촬영해 주세요.<br>
           업로드하면 액자에 자동 합성되어<br>강사·교육생 플랫폼에서 <b>수료일 자정까지</b> 내려받을 수 있습니다.
         </div>
       </div>
@@ -140,6 +147,14 @@
       var im = new Image();
       im.onload = function () {
         try {
+          // [V3] 세로 사진 감지 — 액자 창이 가로형이라 세로 사진은 위아래가 크게 잘림
+          if (im.height > im.width) {
+            if (!confirm('⚠️ 세로로 찍힌 사진입니다.\n\n액자 사진칸이 가로로 넓어서, 세로 사진은 위아래가 크게 잘려 나옵니다.\n휴대폰을 가로로 눕혀 다시 촬영하시길 강력히 권장합니다.\n\n그래도 이 사진으로 진행할까요?')) {
+              document.getElementById('mainBox').style.display = '';
+              document.getElementById('bar').style.display = 'none';
+              return;
+            }
+          }
           var MAX = 1600;
           var sc = Math.min(1, MAX / Math.max(im.width, im.height));
           var cv = document.createElement('canvas');
