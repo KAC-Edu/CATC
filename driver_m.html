@@ -380,6 +380,59 @@ var _toastT;
 function toast(msg){ var el=document.getElementById('toast'); if(!el) return; el.textContent=msg; el.classList.add('show'); clearTimeout(_toastT); _toastT=setTimeout(function(){ el.classList.remove('show'); },2000); }
 document.getElementById('rejSheet').addEventListener('click', function(e){ if(e.target===this) closeRej(); });
 </script>
+
+<!-- ═══ [2026-07-07 전체 점검모드] system/maintenance 스위치 하나로 전 플랫폼 동시 점검중 전환.
+     on:true면 전체 화면 점검 안내(실시간), off면 즉시 복귀. 재배포 불필요.
+     관리자 우회: 주소 뒤 ?ok=우회코드 (SHA-256 대조, 탭 세션 동안 유지) ═══ -->
+<script>
+(function(){
+  var BH='2c978f750e54c66ebaf4cb8b70d6420b6d7cb6dde1209447a4b87b026ed398a9', tries=0;
+  function hide(){ var o=document.getElementById('kacMaintOv'); if(o) o.remove(); try{ document.documentElement.style.overflow=''; }catch(e){} }
+  function show(v){
+    if (sessionStorage.getItem('kac_maint_bypass')==='1') return;
+    var o=document.getElementById('kacMaintOv');
+    var msg=(v&&v.msg)||'더 나은 서비스를 위해 시스템을 점검하고 있습니다.';
+    var until=(v&&v.until)?String(v.until):'';
+    if(!o){
+      o=document.createElement('div'); o.id='kacMaintOv';
+      o.style.cssText='position:fixed;inset:0;z-index:2147483647;display:flex;align-items:center;justify-content:center;padding:24px;background:linear-gradient(160deg,#0f2057 0%,#1a3a8a 75%,#1e40af 140%);';
+      document.body.appendChild(o);
+      try{ document.documentElement.style.overflow='hidden'; }catch(e){}
+    }
+    o.innerHTML='<div style="max-width:460px;width:100%;text-align:center;color:#fff;">'
+      +'<div style="font-size:64px;line-height:1;margin-bottom:18px;">\uD83D\uDEE0\uFE0F</div>'
+      +'<h1 style="margin:0 0 10px;font-size:26px;font-weight:900;letter-spacing:-.3px;">시스템 점검 중입니다</h1>'
+      +'<p id="kacMaintMsg" style="margin:0 0 18px;font-size:15px;font-weight:700;color:rgba(255,255,255,.82);line-height:1.65;"></p>'
+      +(until?'<div style="display:inline-flex;align-items:center;gap:8px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25);border-radius:999px;padding:9px 18px;font-size:13.5px;font-weight:800;color:#fde68a;">\u23F0 예상 완료: <b id="kacMaintUntil" style="font-weight:900;"></b></div>':'')
+      +'<div style="margin-top:30px;font-size:12px;font-weight:700;color:rgba(255,255,255,.45);">KAC \ud56d\uacf5\uae30\uc220\ud6c8\ub828\uc6d0 \ud1b5\ud569 \uad50\uc721 \uc2dc\uc2a4\ud15c</div>'
+      +'</div>';
+    var m=document.getElementById('kacMaintMsg'); if(m) m.textContent=msg;   // textContent — 안내문구 HTML 주입 차단
+    var u=document.getElementById('kacMaintUntil'); if(u) u.textContent=until;
+  }
+  // 관리자 우회: ?ok=코드
+  try{
+    var q=new URLSearchParams(location.search).get('ok');
+    if(q && window.crypto && crypto.subtle){
+      crypto.subtle.digest('SHA-256', new TextEncoder().encode(q)).then(function(b){
+        var h=Array.prototype.map.call(new Uint8Array(b), function(x){ return ('0'+x.toString(16)).slice(-2); }).join('');
+        if(h===BH){ sessionStorage.setItem('kac_maint_bypass','1'); hide(); }
+      });
+    }
+  }catch(e){}
+  function boot(){
+    if (typeof firebase==='undefined' || !firebase.apps || !firebase.apps.length){ if(++tries<40) setTimeout(boot,700); return; }
+    try{
+      firebase.database().ref('system/maintenance').on('value', function(s){
+        var v=s.val();
+        if(v && v.on){ if(document.body) show(v); else document.addEventListener('DOMContentLoaded', function(){ show(v); }); }
+        else hide();
+      }, function(){ /* 규칙 미발행 시 조용히 무시(정상 서비스) */ });
+    }catch(e){}
+  }
+  boot();
+})();
+</script>
+
 </body>
 </html>
 <!-- 기사모바일 VB/VB/VB/VB/VB -->

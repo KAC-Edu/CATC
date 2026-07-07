@@ -346,6 +346,10 @@
           ".read": true,
           ".write": true
         }
+      },
+      "maintenance": {
+        ".read": true,
+        ".write": true
       }
     }
   }

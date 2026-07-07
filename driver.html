@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<!-- PLATFORM_EDIT_STATUS: 수정완료 | VERSION: B2 | 2026-06-30 | 차량 PC(디에스장): 입교/퇴교 고정버스 시간설정을 prompt(요일=1 키보드)→그래픽 모달(요일버튼 다중선택·시간 ±스테퍼/프리셋)로 교체. system/driver_fixed 데이터 shape 동일, 타 플랫폼 영향 없음. (디자이너 리라이트로 사라진 버전마커 재기입) -->
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
@@ -200,6 +201,47 @@
   #catcGate input:focus{ border-color:#2563eb; box-shadow:0 0 0 3px rgba(37,99,235,.15); }
   #catcGate button{ width:100%; margin-top:12px; padding:13px; font-size:15px; font-weight:800; color:#fff; background:#2563eb; border:0; border-radius:11px; cursor:pointer; }
   #catcGate #catcMsg{ margin-top:11px; min-height:16px; font-size:12.5px; font-weight:700; color:#dc2626; }
+  /* ===== 입교·퇴교 고정버스 그래픽 모달 ===== */
+  .fix-ov{position:fixed;inset:0;z-index:9999;display:none;align-items:center;justify-content:center;background:rgba(15,23,42,.55);padding:20px}
+  .fix-ov.on{display:flex}
+  .fix-modal{width:430px;max-width:94vw;max-height:92vh;overflow:auto;background:#fff;border-radius:20px;padding:20px 22px;box-shadow:0 24px 70px rgba(15,23,42,.4)}
+  .fix-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+  .fix-title{font-size:18px;font-weight:900;color:#0f172a;display:flex;align-items:center;gap:9px}
+  .fix-title i{color:#2563eb}
+  .fix-x{border:0;background:#f1f5f9;width:34px;height:34px;border-radius:10px;cursor:pointer;color:#64748b;font-size:15px}
+  .fix-x:hover{background:#e2e8f0}
+  .fix-label{font-size:12.5px;font-weight:800;color:#334155;margin:16px 0 8px}
+  .fix-label small{font-weight:600;color:#94a3b8;margin-left:5px}
+  .fix-seg{display:grid;grid-template-columns:1fr 1fr;gap:8px;background:#f1f5f9;border-radius:13px;padding:5px}
+  .fix-seg button{border:0;background:transparent;border-radius:10px;padding:12px;font-size:14px;font-weight:800;color:#64748b;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:7px}
+  .fix-seg button.on{background:#fff;box-shadow:0 2px 8px rgba(15,23,42,.12)}
+  .fix-seg button[data-kind="입교"].on{color:#6366f1}
+  .fix-seg button[data-kind="퇴교"].on{color:#0d9488}
+  .fix-days{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
+  .fix-days button{border:1.5px solid #e2e8f0;background:#fff;border-radius:13px;padding:15px 0;font-size:16px;font-weight:900;color:#475569;cursor:pointer;transition:all .12s}
+  .fix-days button:hover{border-color:#bfdbfe}
+  .fix-days button.on{background:#2563eb;border-color:#2563eb;color:#fff;box-shadow:0 6px 14px rgba(37,99,235,.28)}
+  .fix-time{display:flex;align-items:center;justify-content:center;gap:12px;background:#f8fafc;border:1px solid #eef0f4;border-radius:16px;padding:14px}
+  .ft-col{display:flex;flex-direction:column;align-items:center;gap:6px}
+  .ft-col>button{border:0;background:#eef2ff;color:#2563eb;width:66px;height:38px;border-radius:11px;font-size:16px;cursor:pointer}
+  .ft-col>button:hover{background:#dbe7ff}
+  .ft-col>button:active{transform:scale(.96)}
+  .ft-val{font-size:42px;font-weight:900;color:#0f172a;line-height:1;font-variant-numeric:tabular-nums;width:66px;text-align:center}
+  .ft-cap{font-size:11px;font-weight:700;color:#94a3b8}
+  .ft-colon{font-size:34px;font-weight:900;color:#cbd5e1;align-self:center;margin-top:-14px}
+  .fix-presets{display:flex;flex-wrap:wrap;gap:7px;margin-top:10px}
+  .fix-presets button{border:1px solid #e2e8f0;background:#fff;border-radius:999px;padding:8px 14px;font-size:13px;font-weight:800;color:#475569;cursor:pointer}
+  .fix-presets button:hover{border-color:#2563eb;color:#2563eb}
+  .fix-note{width:100%;border:1.5px solid #e2e8f0;border-radius:12px;padding:12px 14px;font-size:14px;font-weight:600;color:#0f172a;outline:none}
+  .fix-note:focus{border-color:#2563eb;box-shadow:0 0 0 3px rgba(37,99,235,.12)}
+  .fix-preview{margin:16px 0 4px;background:#f5f9ff;border:1px solid #dbe7ff;border-radius:12px;padding:11px 14px;font-size:13.5px;font-weight:700;color:#1e40af;display:flex;align-items:center;gap:8px}
+  .fix-preview i{color:#2563eb}
+  .fix-actions{display:grid;grid-template-columns:1fr 1.5fr;gap:10px;margin-top:16px}
+  .fix-cancel{border:1px solid #e2e8f0;background:#fff;border-radius:12px;padding:14px;font-size:14px;font-weight:800;color:#475569;cursor:pointer}
+  .fix-save{border:0;background:#2563eb;color:#fff;border-radius:12px;padding:14px;font-size:15px;font-weight:900;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px}
+  .fix-save:disabled{background:#cbd5e1;cursor:not-allowed}
+  .fix-ov[data-kind="입교"] .fix-save:not(:disabled){background:#6366f1}
+  .fix-ov[data-kind="퇴교"] .fix-save:not(:disabled){background:#0d9488}
 </style>
 </head>
 <body>
@@ -213,6 +255,63 @@
     <div class="clock"><div class="d" id="clockdate">2026. 06. 30 (월)</div><div class="t" id="clock">14:20</div></div>
   </aside>
   <main class="main" id="main"></main>
+</div>
+
+<!-- ===== 입교·퇴교 고정버스 그래픽 설정 모달 (prompt 대체) ===== -->
+<div id="fixOv" class="fix-ov" aria-hidden="true" onclick="if(event.target===this)closeFixModal()">
+  <div class="fix-modal" role="dialog" aria-modal="true">
+    <div class="fix-head">
+      <div class="fix-title"><i class="fa-solid fa-bus"></i> <span id="fixTitle">고정버스 추가</span></div>
+      <button class="fix-x" onclick="closeFixModal()"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+
+    <div class="fix-seg" id="fixSeg">
+      <button data-kind="입교" onclick="fixSetKind('입교')"><i class="fa-solid fa-right-to-bracket"></i> 입교버스</button>
+      <button data-kind="퇴교" onclick="fixSetKind('퇴교')"><i class="fa-solid fa-right-from-bracket"></i> 퇴교버스</button>
+    </div>
+
+    <div class="fix-label">운행 요일 <small>여러 개 선택 가능</small></div>
+    <div class="fix-days" id="fixDays">
+      <button data-d="1" onclick="fixToggleDay(1)">월</button>
+      <button data-d="2" onclick="fixToggleDay(2)">화</button>
+      <button data-d="3" onclick="fixToggleDay(3)">수</button>
+      <button data-d="4" onclick="fixToggleDay(4)">목</button>
+      <button data-d="5" onclick="fixToggleDay(5)">금</button>
+    </div>
+
+    <div class="fix-label">출발 시간</div>
+    <div class="fix-time">
+      <div class="ft-col">
+        <button onclick="fixBumpH(1)" aria-label="시 올림"><i class="fa-solid fa-chevron-up"></i></button>
+        <div class="ft-val" id="fixHour">09</div>
+        <button onclick="fixBumpH(-1)" aria-label="시 내림"><i class="fa-solid fa-chevron-down"></i></button>
+        <div class="ft-cap">시</div>
+      </div>
+      <div class="ft-colon">:</div>
+      <div class="ft-col">
+        <button onclick="fixBumpM(10)" aria-label="분 올림"><i class="fa-solid fa-chevron-up"></i></button>
+        <div class="ft-val" id="fixMin">00</div>
+        <button onclick="fixBumpM(-10)" aria-label="분 내림"><i class="fa-solid fa-chevron-down"></i></button>
+        <div class="ft-cap">분 (10분 단위)</div>
+      </div>
+    </div>
+    <div class="fix-presets" id="fixPresets">
+      <button onclick="fixSetTime(8,30)">08:30</button>
+      <button onclick="fixSetTime(9,0)">09:00</button>
+      <button onclick="fixSetTime(13,0)">13:00</button>
+      <button onclick="fixSetTime(17,0)">17:00</button>
+      <button onclick="fixSetTime(18,0)">18:00</button>
+    </div>
+
+    <div class="fix-label">메모 <small>과정명 등 · 선택</small></div>
+    <input id="fixNote" class="fix-note" type="text" placeholder="예: 전기 자동차 과정" autocomplete="off">
+
+    <div class="fix-preview" id="fixPreview"></div>
+    <div class="fix-actions">
+      <button class="fix-cancel" onclick="closeFixModal()">취소</button>
+      <button class="fix-save" id="fixSave" onclick="saveFixModal()"><i class="fa-solid fa-check"></i> 저장</button>
+    </div>
+  </div>
 </div>
 <script>
 /* =====================================================================
@@ -559,8 +658,8 @@ function viewFixed(){
       + '<button class="mdel" onclick="delOff(\''+o.id+'\')"><i class="fa-solid fa-xmark"></i></button></div>';
   }).join('');
   return '<div class="info-bar"><i class="fa-solid fa-circle-info"></i><span>입교/퇴교 버스는 과정 시작 주에 맞춰 고정 배치됩니다. 보통 시작 주 첫 월요일 오전이며, 수요일 시작 과정은 그 주에 맞춰 조정합니다.</span></div>'
-    + '<div class="addbar"><button class="add-in" onclick="addFixed(\'입교\')"><i class="fa-solid fa-plus"></i> 입교버스 추가</button>'
-    + '<button class="add-out" onclick="addFixed(\'퇴교\')"><i class="fa-solid fa-plus"></i> 퇴교버스 추가</button>'
+    + '<div class="addbar"><button class="add-in" onclick="openFixModal(\'입교\')"><i class="fa-solid fa-plus"></i> 입교버스 추가</button>'
+    + '<button class="add-out" onclick="openFixModal(\'퇴교\')"><i class="fa-solid fa-plus"></i> 퇴교버스 추가</button>'
     + '<button class="add-off" onclick="addOff()"><i class="fa-solid fa-calendar-xmark"></i> 휴가·운행불가</button></div>'
     + '<div class="grid2"><div class="panel"><div class="panel-h"><h3><i class="fa-solid fa-bus-simple" style="color:#6366f1;margin-right:7px"></i>입교 · 퇴교 고정 일정</h3></div><div class="mlist">'+(fitems||'<div class="empty" style="padding:6px 2px">등록된 고정 일정이 없습니다.</div>')+'</div></div>'
     + '<div class="panel"><div class="panel-h"><h3><i class="fa-solid fa-umbrella-beach" style="color:#ef4444;margin-right:7px"></i>휴가 / 운행불가</h3><span class="sub">등록 시 운영부 자동 고지</span></div><div class="mlist">'+(oitems||'<div class="empty" style="padding:6px 2px">등록된 휴가가 없습니다.</div>')+'</div></div></div>';
@@ -605,6 +704,97 @@ function fitManage(){
 }
 window.addEventListener('resize', function(){ if(state.view==='manage') fitManage(); });
 document.addEventListener('DOMContentLoaded', function(){ rebuild(); startClock(); initFirebase(); });
+
+/* ===== 입교·퇴교 고정버스 — 그래픽 설정 모달 (prompt 대체) ===== */
+var fixState = { kind:'입교', days:[], h:9, m:0 };
+function openFixModal(kind){
+  kind = (kind==='퇴교') ? '퇴교' : '입교';
+  fixState = { kind:kind, days:[], h:(kind==='퇴교'?17:9), m:0 };
+  var n=document.getElementById('fixNote'); if(n) n.value='';
+  document.getElementById('fixOv').classList.add('on');
+  renderFixModal();
+}
+function closeFixModal(){ document.getElementById('fixOv').classList.remove('on'); }
+function fixSetKind(k){ fixState.kind=(k==='퇴교'?'퇴교':'입교'); renderFixModal(); }
+function fixToggleDay(d){ d=Number(d); var i=fixState.days.indexOf(d); if(i>=0) fixState.days.splice(i,1); else fixState.days.push(d); fixState.days.sort(function(a,b){return a-b;}); renderFixModal(); }
+function fixBumpH(x){ fixState.h=(fixState.h+x+24)%24; renderFixModal(); }
+function fixBumpM(x){ var t=(fixState.h*60+fixState.m+x+1440)%1440; fixState.h=Math.floor(t/60); fixState.m=t%60; renderFixModal(); }
+function fixSetTime(h,m){ fixState.h=h; fixState.m=m; renderFixModal(); }
+function renderFixModal(){
+  var ov=document.getElementById('fixOv'); if(!ov) return;
+  ov.setAttribute('data-kind', fixState.kind);
+  document.getElementById('fixTitle').textContent = fixState.kind+'버스 추가';
+  var segs=document.querySelectorAll('#fixSeg button'); for(var i=0;i<segs.length;i++){ segs[i].classList.toggle('on', segs[i].getAttribute('data-kind')===fixState.kind); }
+  var dbtns=document.querySelectorAll('#fixDays button'); for(var j=0;j<dbtns.length;j++){ dbtns[j].classList.toggle('on', fixState.days.indexOf(Number(dbtns[j].getAttribute('data-d')))>=0); }
+  document.getElementById('fixHour').textContent=p2(fixState.h);
+  document.getElementById('fixMin').textContent=p2(fixState.m);
+  var dayTxt = fixState.days.length ? fixState.days.map(function(d){return DOWK[d];}).join('·')+'요일' : '요일을 선택하세요';
+  document.getElementById('fixPreview').innerHTML = '<i class="fa-solid fa-circle-info"></i> 매주 <b>'+esc(dayTxt)+'</b> · <b>'+p2(fixState.h)+':'+p2(fixState.m)+'</b> · '+esc(fixState.kind)+'버스';
+  document.getElementById('fixSave').disabled = (fixState.days.length===0);
+}
+function saveFixModal(){
+  if(!fixState.days.length) return;
+  var note=(document.getElementById('fixNote').value||'').trim();
+  var time=p2(fixState.h)+':'+p2(fixState.m);
+  var ref=firebase.database().ref('system/driver_fixed');
+  fixState.days.forEach(function(d){
+    ref.push({ kind:fixState.kind, dow:Number(d), time:time, endTime:'', note:note, weekly:true, createdAt:firebase.database.ServerValue.TIMESTAMP });
+  });
+  closeFixModal();
+}
 </script>
+
+<!-- ═══ [2026-07-07 전체 점검모드] system/maintenance 스위치 하나로 전 플랫폼 동시 점검중 전환.
+     on:true면 전체 화면 점검 안내(실시간), off면 즉시 복귀. 재배포 불필요.
+     관리자 우회: 주소 뒤 ?ok=우회코드 (SHA-256 대조, 탭 세션 동안 유지) ═══ -->
+<script>
+(function(){
+  var BH='2c978f750e54c66ebaf4cb8b70d6420b6d7cb6dde1209447a4b87b026ed398a9', tries=0;
+  function hide(){ var o=document.getElementById('kacMaintOv'); if(o) o.remove(); try{ document.documentElement.style.overflow=''; }catch(e){} }
+  function show(v){
+    if (sessionStorage.getItem('kac_maint_bypass')==='1') return;
+    var o=document.getElementById('kacMaintOv');
+    var msg=(v&&v.msg)||'더 나은 서비스를 위해 시스템을 점검하고 있습니다.';
+    var until=(v&&v.until)?String(v.until):'';
+    if(!o){
+      o=document.createElement('div'); o.id='kacMaintOv';
+      o.style.cssText='position:fixed;inset:0;z-index:2147483647;display:flex;align-items:center;justify-content:center;padding:24px;background:linear-gradient(160deg,#0f2057 0%,#1a3a8a 75%,#1e40af 140%);';
+      document.body.appendChild(o);
+      try{ document.documentElement.style.overflow='hidden'; }catch(e){}
+    }
+    o.innerHTML='<div style="max-width:460px;width:100%;text-align:center;color:#fff;">'
+      +'<div style="font-size:64px;line-height:1;margin-bottom:18px;">\uD83D\uDEE0\uFE0F</div>'
+      +'<h1 style="margin:0 0 10px;font-size:26px;font-weight:900;letter-spacing:-.3px;">시스템 점검 중입니다</h1>'
+      +'<p id="kacMaintMsg" style="margin:0 0 18px;font-size:15px;font-weight:700;color:rgba(255,255,255,.82);line-height:1.65;"></p>'
+      +(until?'<div style="display:inline-flex;align-items:center;gap:8px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25);border-radius:999px;padding:9px 18px;font-size:13.5px;font-weight:800;color:#fde68a;">\u23F0 예상 완료: <b id="kacMaintUntil" style="font-weight:900;"></b></div>':'')
+      +'<div style="margin-top:30px;font-size:12px;font-weight:700;color:rgba(255,255,255,.45);">KAC \ud56d\uacf5\uae30\uc220\ud6c8\ub828\uc6d0 \ud1b5\ud569 \uad50\uc721 \uc2dc\uc2a4\ud15c</div>'
+      +'</div>';
+    var m=document.getElementById('kacMaintMsg'); if(m) m.textContent=msg;   // textContent — 안내문구 HTML 주입 차단
+    var u=document.getElementById('kacMaintUntil'); if(u) u.textContent=until;
+  }
+  // 관리자 우회: ?ok=코드
+  try{
+    var q=new URLSearchParams(location.search).get('ok');
+    if(q && window.crypto && crypto.subtle){
+      crypto.subtle.digest('SHA-256', new TextEncoder().encode(q)).then(function(b){
+        var h=Array.prototype.map.call(new Uint8Array(b), function(x){ return ('0'+x.toString(16)).slice(-2); }).join('');
+        if(h===BH){ sessionStorage.setItem('kac_maint_bypass','1'); hide(); }
+      });
+    }
+  }catch(e){}
+  function boot(){
+    if (typeof firebase==='undefined' || !firebase.apps || !firebase.apps.length){ if(++tries<40) setTimeout(boot,700); return; }
+    try{
+      firebase.database().ref('system/maintenance').on('value', function(s){
+        var v=s.val();
+        if(v && v.on){ if(document.body) show(v); else document.addEventListener('DOMContentLoaded', function(){ show(v); }); }
+        else hide();
+      }, function(){ /* 규칙 미발행 시 조용히 무시(정상 서비스) */ });
+    }catch(e){}
+  }
+  boot();
+})();
+</script>
+
 </body>
 </html>
