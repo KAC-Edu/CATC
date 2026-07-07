@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="ko">
+<!-- ═══ KAC CATC 전체 점검모드 제어 · VERSION: JDS260707(V1) ═══
+     system/maintenance {on, msg, until} 스위치 제어 페이지 (관리자 전용).
+     접근: 우회코드 입력(SHA-256 대조). ON이면 전 플랫폼이 즉시 점검중 화면으로 전환됨. -->
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>점검모드 제어</title>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;font-family:'Pretendard','Segoe UI',sans-serif;}
+  body{min-height:100vh;background:linear-gradient(160deg,#0f2057,#1e3a8a);display:flex;align-items:center;justify-content:center;padding:20px;}
+  .card{width:100%;max-width:430px;background:#fff;border-radius:22px;padding:28px 26px;box-shadow:0 24px 60px rgba(0,0,0,.35);}
+  h1{font-size:19px;font-weight:900;color:#0f172a;display:flex;align-items:center;gap:9px;margin-bottom:6px;}
+  .sub{font-size:12.5px;font-weight:700;color:#64748b;margin-bottom:18px;line-height:1.5;}
+  input,textarea{width:100%;border:1.5px solid #e2e8f0;border-radius:12px;padding:12px 14px;font-size:14px;font-weight:700;color:#0f172a;outline:none;}
+  input:focus,textarea:focus{border-color:#2563eb;}
+  label{display:block;font-size:12px;font-weight:900;color:#475569;margin:14px 0 6px;}
+  .btn{width:100%;border:none;border-radius:13px;padding:14px;font-size:15px;font-weight:900;cursor:pointer;margin-top:16px;}
+  .status{display:flex;align-items:center;justify-content:center;gap:9px;border-radius:14px;padding:15px;font-size:15px;font-weight:900;margin-bottom:6px;}
+  .st-off{background:#f0fdf4;color:#15803d;border:1.5px solid #bbf7d0;}
+  .st-on{background:#fef2f2;color:#b91c1c;border:1.5px solid #fecaca;}
+  .hint{font-size:11.5px;font-weight:700;color:#94a3b8;margin-top:12px;line-height:1.55;}
+</style>
+</head>
+<body>
+<div class="card" id="gateCard">
+  <h1>🛠️ 점검모드 제어</h1>
+  <div class="sub">관리자 코드를 입력하세요.</div>
+  <input type="password" id="gatePw" placeholder="관리자 코드" onkeydown="if(event.key==='Enter')gateGo()">
+  <button class="btn" style="background:#1e3a8a;color:#fff;" onclick="gateGo()">확인</button>
+</div>
+<div class="card" id="ctrlCard" style="display:none;">
+  <h1>🛠️ 전체 점검모드 제어</h1>
+  <div class="sub">스위치 하나로 강사·교육생·모바일 등 전 플랫폼이 동시에 점검중 화면으로 전환됩니다. (실시간 반영·재배포 불필요)</div>
+  <div id="stBox" class="status st-off">현재 상태 확인 중…</div>
+  <label>안내 문구 (점검 화면에 표시)</label>
+  <textarea id="msgInput" rows="3">더 나은 서비스를 위해 시스템을 점검하고 있습니다.</textarea>
+  <label>예상 완료 시각 (선택 · 예: 7/8(수) 06:00)</label>
+  <input id="untilInput" placeholder="비워두면 표시 안 함">
+  <button class="btn" id="toggleBtn" style="background:#dc2626;color:#fff;" onclick="toggle()">점검모드 켜기</button>
+  <div class="hint">· 점검 중에도 관리자는 각 페이지 주소 뒤에 <b>?ok=관리자코드</b>를 붙이면 정상 접속됩니다 (해당 탭 유지).<br>· 끄면 모든 사용자 화면이 즉시 복귀합니다.</div>
+</div>
+<script>
+const firebaseConfig={apiKey:"AIzaSyDo3BPMV8qayQ3MdKBglYNtsvii0ZtCHHs",authDomain:"catcqna.firebaseapp.com",databaseURL:"https://catcqna-default-rtdb.firebaseio.com",projectId:"catcqna",storageBucket:"catcqna.firebasestorage.app",messagingSenderId:"327047828064",appId:"1:327047828064:web:a2e26fea9f276764412905"};
+if(!firebase.apps.length)firebase.initializeApp(firebaseConfig);
+const GATE_H='2c978f750e54c66ebaf4cb8b70d6420b6d7cb6dde1209447a4b87b026ed398a9';
+let CUR=null;
+async function sha(t){const b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(t));return Array.from(new Uint8Array(b)).map(x=>('0'+x.toString(16)).slice(-2)).join('');}
+async function gateGo(){
+  const v=document.getElementById('gatePw').value;
+  if(await sha(v)!==GATE_H){alert('코드가 올바르지 않습니다.');return;}
+  document.getElementById('gateCard').style.display='none';
+  document.getElementById('ctrlCard').style.display='block';
+  firebase.database().ref('system/maintenance').on('value',s=>{
+    CUR=s.val()||{};
+    const on=!!CUR.on, box=document.getElementById('stBox'), btn=document.getElementById('toggleBtn');
+    box.className='status '+(on?'st-on':'st-off');
+    box.textContent=on?'🔴 점검모드 켜짐 — 전 플랫폼 차단 중':'🟢 정상 서비스 중';
+    btn.textContent=on?'점검모드 끄기 (서비스 재개)':'점검모드 켜기';
+    btn.style.background=on?'#16a34a':'#dc2626';
+    if(CUR.msg)document.getElementById('msgInput').value=CUR.msg;
+    if(CUR.until!==undefined)document.getElementById('untilInput').value=CUR.until||'';
+  });
+}
+function toggle(){
+  const on=!(CUR&&CUR.on);
+  if(on&&!confirm('전체 플랫폼을 점검모드로 전환합니다.\n모든 사용자 화면이 즉시 점검중으로 바뀝니다.\n진행할까요?'))return;
+  firebase.database().ref('system/maintenance').set({
+    on:on,
+    msg:document.getElementById('msgInput').value.trim()||'더 나은 서비스를 위해 시스템을 점검하고 있습니다.',
+    until:document.getElementById('untilInput').value.trim(),
+    updatedAt:Date.now()
+  }).then(()=>{ if(!on)alert('✅ 서비스가 재개되었습니다.'); })
+    .catch(e=>alert('저장 실패: '+e+'\n(Firebase 규칙에 maintenance 노드가 발행되었는지 확인)'));
+}
+</script>
+</body>
+</html>
