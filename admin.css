@@ -1,4 +1,4 @@
-/* PLATFORM_EDIT_STATUS: 수정완료 | VERSION: T | 2026-07-07 (T1: 직무 토글을 pill 줄 규격(높이 36px·radius 50px) 소형 인라인 스위치로 재설계, hero-info-row 세로 중앙정렬) [T: 직무 토글 스타일 신설] */
+/* PLATFORM_EDIT_STATUS: 수정완료 | VERSION: T | 2026-07-07 (T3: I12 2카드 스타일 신설(.ops-card/.ops-row/.nh-item/.edu-tile/.nh-all), 그리드 1.35fr+1fr 2열 전환 (T2: 과정현황 3카드 정렬 — notice-item 중앙정렬, n-tag 폭 58px 고정, 오늘 한눈에 클릭 칩 hover 효과 (T1: 직무 토글을 pill 줄 규격(높이 36px·radius 50px) 소형 인라인 스위치로 재설계, hero-info-row 세로 중앙정렬) [T: 직무 토글 스타일 신설] */
 /* ============================================================
    CATC · 강사 플랫폼 스타일  (admin.css)
    STATUS    수정완료
@@ -2676,6 +2676,7 @@ body.night-mode .header-room-badge { background-color: #003366 !important; borde
 .card-notice-hub {
     background: #ffffff !important;
     border: 1px solid #e2e8f0 !important;
+    border-top: 5px solid #f59e0b !important;
     padding: 20px !important;
 }
 .notice-hub-header {
@@ -2690,8 +2691,8 @@ body.night-mode .header-room-badge { background-color: #003366 !important; borde
 }
 
 .notice-item {
-    display: flex; gap: 10px; align-items: flex-start;
-    padding: 8px; border-radius: 8px; background: #f8fafc;
+    display: flex; gap: 10px; align-items: center;
+    padding: 9px 10px; border-radius: 8px; background: #f8fafc;
 }
 .notice-item p {
     font-size: 12px; margin: 0; line-height: 1.4; color: #475569;
@@ -2699,21 +2700,25 @@ body.night-mode .header-room-badge { background-color: #003366 !important; borde
 }
 
 .n-tag {
-    flex-shrink: 0; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 800; color: white;
+    flex-shrink: 0; width: 58px; text-align: center; padding: 4px 0; border-radius: 6px; font-size: 10px; font-weight: 800; color: white;
 }
 .instructor .n-tag { background: #3b82f6; } /* 파랑 */
 .admin .n-tag { background: #f59e0b; }      /* 주황 */
 .global .n-tag { background: #64748b; }     /* 회색 */
+
+/* [J17f] 오늘 한눈에 칩 — 클릭 가능한 항목 */
+.dts-chip.dts-click { cursor: pointer; transition: transform .12s, box-shadow .12s; }
+.dts-chip.dts-click:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(15,23,42,.12); }
 
 /* 스크롤바 커스텀 */
 .notice-hub-content::-webkit-scrollbar { width: 4px; }
 .notice-hub-content::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
 
 /* 4. 하단 3개 블록 순서: 수강생 → 전자기기/Q&A/셔틀 → 주요 공지 */
-.dash-premium-grid { grid-template-columns: 1fr 1.2fr 1fr !important; }
+/* [I12] 2카드 구성: 오늘의 운영(리스트) + 공지 및 필수 확인 */
+.dash-premium-grid { grid-template-columns: 1.35fr 1fr !important; align-items: stretch; }
 .dash-premium-grid > .card-blue { order:1; }
-.dash-premium-grid > .card-mint { order:2; }
-.dash-premium-grid > .card-notice-hub { order:3; }
+.dash-premium-grid > .card-notice-hub { order:2; }
 
 
 /* 1. 교수 프로필 시네마틱 모달 배경 (필수) */
@@ -6412,3 +6417,39 @@ body.night-mode .side-rail-lbl{ color:#cbd5e1; }
 .dash-job-toggle.is-legal .djt-general{ color:rgba(255,255,255,.7); }
 .dash-job-toggle.is-legal .djt-legal{ color:#b91c1c; }
 .dash-job-toggle:hover{ border-color:rgba(255,255,255,.45); }
+
+
+/* ═══ [I12] 오늘의 운영 리스트 카드 ═══ */
+.ops-card { padding: 20px !important; }
+.ops-head { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:14px; padding-bottom:10px; border-bottom:2px solid #f1f5f9; flex-wrap:wrap; }
+.ops-title { display:inline-flex; align-items:center; gap:8px; font-size:15px; font-weight:900; color:#003366; }
+.ops-title i { color:#2563eb; }
+.ops-sub { display:inline-flex; align-items:center; gap:8px; font-size:12.5px; font-weight:700; color:#64748b; }
+.ops-sub b { color:#0f172a; font-weight:900; margin:0 1px; }
+.ops-mini { cursor:pointer; border-radius:8px; padding:3px 7px; transition:background .12s; }
+.ops-mini:hover { background:#eff6ff; }
+.ops-dot { color:#cbd5e1; }
+.ops-list { display:flex; flex-direction:column; gap:9px; }
+.ops-row { display:flex; align-items:center; gap:13px; background:#fff; border:1px solid #e8edf5; border-radius:14px; padding:12px 15px; cursor:pointer; transition:transform .13s, box-shadow .13s, border-color .13s; }
+.ops-row:hover { transform:translateY(-2px); border-color:#bfdbfe; box-shadow:0 6px 16px rgba(37,99,235,.10); }
+.ops-ic { flex-shrink:0; width:40px; height:40px; border-radius:11px; display:flex; align-items:center; justify-content:center; font-size:17px; }
+.ops-name { flex:1; min-width:0; font-size:14.5px; font-weight:800; color:#0f172a; display:flex; flex-direction:column; justify-content:center; line-height:1.3; }
+.ops-name .ops-namesub { font-size:11px; font-weight:700; color:#94a3b8; margin-top:2px; }
+.ops-name .ops-namesub b { color:#64748b; font-weight:800; }
+.ops-val { flex-shrink:0; font-size:15px; font-weight:800; color:#0f172a; white-space:nowrap; }
+.ops-val b { font-size:19px; font-weight:900; }
+.ops-go { flex-shrink:0; color:#2563eb; font-size:15px; }
+.ops-row.dash-zero .ops-val, .ops-row.dash-zero .ops-ic { opacity:.45; }
+
+/* ═══ [I12] 공지 및 필수 확인 카드 ═══ */
+.nh-item { display:flex; align-items:center; gap:10px; background:#f8fafc; border:1px solid #eef2f7; border-radius:12px; padding:11px 13px; margin-bottom:9px; cursor:pointer; transition:background .12s, border-color .12s; }
+.nh-item:hover { background:#f1f5f9; border-color:#dbe4f0; }
+.nh-item p { flex:1; min-width:0; font-size:12.5px; margin:0; line-height:1.45; color:#475569; overflow:hidden; text-overflow:ellipsis; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; }
+.nh-go { flex-shrink:0; color:#94a3b8; font-size:12px; }
+.nh-dash { border-top:2px dashed #e2e8f0; margin:13px 0; }
+.edu-tiles { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.edu-tile { border:1.5px solid; border-radius:14px; padding:12px 14px; display:flex; flex-direction:column; gap:8px; min-height:74px; box-sizing:border-box; }
+.edu-tile .et-badge { display:inline-flex; align-items:center; gap:6px; font-size:12.5px; font-weight:900; }
+.edu-tile b { font-size:19px; font-weight:900; text-align:right; margin-top:auto; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.nh-all { width:100%; margin-top:12px; padding:12px; border:1.5px solid #1e3a8a; border-radius:12px; background:#fff; color:#1e3a8a; font-size:14px; font-weight:900; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; transition:background .13s, color .13s; }
+.nh-all:hover { background:#1e3a8a; color:#fff; }
