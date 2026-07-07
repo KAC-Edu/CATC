@@ -2,7 +2,7 @@
 <!-- 이 플랫폼(admin_coord.html / 교육운영부) 수정상태 플래그. 값은 [수정중] 또는 [수정안하는중] 두 가지. -->
 <!-- 작업 시작 시 → 수정중 / 작업 완료 시 → 수정안하는중. 다른 플랫폼은 이 말머리를 보고 연동·수정 가능 여부 판단. -->
 <!-- [외부변경 · 카카오채널연동 2026-06-25] 포털(portal.html/7777) 경유 폐지 → 페이지 직접진입 시 접속코드(catc1234) 게이트 추가, 포털 리다이렉트/종료이동 제거. version C13→D13. 기능 로직은 미변경. -->
-<!-- last-updated: 2026-07-07 / version: D68 (D68: [보안] 접속코드 게이트 평문 제거→SHA-256 해시 대조(kacHash 전역), 강의실 초기화 비번 대조 해시 우선+btoa 레거시 호환, 자동 파기 목록 5종 보강) (D67: ①국제동 2층 배치도 연결(classroom_inter2f.png, GitHub 루트 업로드 필요) — 블록 좌표는 롱프레스 편집으로 조정·저장 ②배치도 좌표 조정 방식 통일 — 과정안내 블록(카드) 자체를 5초 롱프레스해도 편집 시작(기존엔 배경만 인식), 편집 배너에 즉시 저장 버튼 추가, 모든 도면 동일 동작) (D66: ①미디어 격리: 출결 QR 업로드를 media/{room}/attendanceQR 로 이전(레거시 자동 제거), QR 미리보기 media 우선 폴백, 정리 도구·초기화 경로에 media/레거시 gradPhoto 포함 ②폐강 동기화: 방에 배정된 과정이 연간계획에서 폐강이면 사용 중이어도 즉시 방 정리(잠금 방은 경고만) — 강사 폐강 과정이 운영부 동기화로 되살아나던 문제 해소) [D65 (장소선택 팝업 방버튼 층별 2열 그리드+컴팩트화 → 하늘관 등 긴 열이 한 화면에 다 보이게) [D64: 팝업 폭확대·표기안내] -->
+<!-- last-updated: 2026-07-07 / version: D69 (D69: 국제동 2층 실습실 3종(ILS·VCCS/RADIO/ATIS·VOR/DME/TACAN)이 도면에 A/B강의실로 잘못 표기되던 문제 수정 — 등록 옵션 value를 실습실별로 분리(기존 ILS·VCCS 동일값 버그 포함 해소), 강의실 라벨 파서가 실습실 3종을 인식하도록 보강, 도면 좌표 키·표시명을 실습실 풀네임으로 매핑) (D68: [보안] 접속코드 게이트 평문 제거→SHA-256 해시 대조(kacHash 전역), 강의실 초기화 비번 대조 해시 우선+btoa 레거시 호환, 자동 파기 목록 5종 보강) (D67: ①국제동 2층 배치도 연결(classroom_inter2f.png, GitHub 루트 업로드 필요) — 블록 좌표는 롱프레스 편집으로 조정·저장 ②배치도 좌표 조정 방식 통일 — 과정안내 블록(카드) 자체를 5초 롱프레스해도 편집 시작(기존엔 배경만 인식), 편집 배너에 즉시 저장 버튼 추가, 모든 도면 동일 동작) (D66: ①미디어 격리: 출결 QR 업로드를 media/{room}/attendanceQR 로 이전(레거시 자동 제거), QR 미리보기 media 우선 폴백, 정리 도구·초기화 경로에 media/레거시 gradPhoto 포함 ②폐강 동기화: 방에 배정된 과정이 연간계획에서 폐강이면 사용 중이어도 즉시 방 정리(잠금 방은 경고만) — 강사 폐강 과정이 운영부 동기화로 되살아나던 문제 해소) [D65 (장소선택 팝업 방버튼 층별 2열 그리드+컴팩트화 → 하늘관 등 긴 열이 한 화면에 다 보이게) [D64: 팝업 폭확대·표기안내] -->
 <!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -2631,9 +2631,9 @@ body.pc-mode .hdr-stat .hb-value small{ font-size:clamp(9px,.62vw,11px) !importa
                           <option value="국제동 1층 세미나홀">국제동 1층 세미나홀</option>
                           <option value="국제동 1층 A강의실">국제동 1층 A강의실</option>
                           <option value="국제동 1층 B강의실">국제동 1층 B강의실</option>
-                          <option value="국제동 2층 실습실">국제동 2층 ILS 실습실</option>
-                          <option value="국제동 2층 실습실">국제동 2층 VCCS/RADIO/ATIS 실습실</option>
-                          <option value="국제동 2층 VOR/DME/TACAN">국제동 2층 VOR/DME/TACAN 실습실</option>
+                          <option value="국제동 2층 ILS 실습실">국제동 2층 ILS 실습실</option>
+                          <option value="국제동 2층 VCCS/RADIO/ATIS 실습실">국제동 2층 VCCS/RADIO/ATIS 실습실</option>
+                          <option value="국제동 2층 VOR/DME/TACAN 실습실">국제동 2층 VOR/DME/TACAN 실습실</option>
                       </optgroup>
                       <optgroup label="관제교육동">
                           <option value="관제교육동 1층">관제교육동 1층</option>
@@ -9527,18 +9527,27 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
   // roomDetailName(예: '하늘관 2층 A강의실')에서 강의실 글자(A~G) 추출
   function _coordClassroomLetter(s){ var v=((s&&(s.roomDetailName||s.roomDetail))||'')+''; var m=v.match(/([A-Ga-g])\s*강의실/); return m?m[1].toUpperCase():''; }
   function _coordClassroomLabel(s){ var L=_coordClassroomLetter(s); return L?(L+'강의실'):''; }
-  function _cfpRoomName(L){ return /^[A-Z]$/.test(L)?(L+'강의실'):L; }
+  function _cfpRoomName(L){
+    // [D69] 국제동 2층 실습실 풀네임 표시
+    var LAB={ ILS:'ILS 실습실', VCCS:'VCCS/RADIO/ATIS 실습실', VOR:'VOR/DME/TACAN 실습실' };
+    if(LAB[L]) return LAB[L];
+    return /^[A-Z]$/.test(L)?(L+'강의실'):L;
+  }
   // 건물/층별 배치도 설정 (이미지 오면 img/pos만 채우면 됨)
   var COORD_FP_MAP = {
     '하늘관|2': { img:'classroom_sky2f.png', pos: COORD_CLASS_POS, crop:{t:-13,b:-3} },
     '하늘관|1': { img:'classroom_sky1f.png', pos:{ '대강당':{l:46,t:62} }, crop:{t:0,b:0} },
     '국제동|1': { img:'classroom_inter1f.png', pos:{ A:{l:31,t:30}, B:{l:74,t:29}, '세미나홀':{l:34,t:69} }, crop:{t:0,b:0} },
-    '국제동|2': { img:'classroom_inter2f.png', pos:{ A:{l:35,t:40}, B:{l:70,t:40} }, crop:{t:0,b:0} },   // [D66·4-2] 국제동 2층 도면 추가 — 블록 좌표는 롱프레스 편집으로 조정·저장(system/coordFloorPos/국제동_2)
+    '국제동|2': { img:'classroom_inter2f.png', pos:{ ILS:{l:28,t:45}, VCCS:{l:52,t:45}, VOR:{l:76,t:45} }, crop:{t:0,b:0} },   // [D69] 국제동 2층 실습실 3종(ILS/VCCS·RADIO·ATIS/VOR·DME·TACAN) — 좌표는 롱프레스 편집으로 조정·저장
     '관제교육동|1': { img:'', pos:{} },
     '관제교육동|2': { img:'', pos:{} }
   };
   var COORD_BUILDINGS = [ {name:'하늘관', floors:['2','1']}, {name:'국제동', label:'국제교육동', floors:['1','2']}, {name:'관제교육동', floors:['1','2']} ];
-  function _coordRoomParse(s){ var v=((s&&(s.roomDetailName||s.roomDetail))||'')+''; var b=''; if(v.indexOf('하늘')>=0)b='하늘관'; else if(v.indexOf('국제')>=0)b='국제동'; else if(v.indexOf('관제')>=0)b='관제교육동'; var fm=v.match(/([0-9])\s*층/); var f=fm?fm[1]:''; var lm=v.match(/([A-Za-z])\s*강의실/); var L=lm?lm[1].toUpperCase():''; if(!L){ if(v.indexOf('대강당')>=0) L='대강당'; else if(v.indexOf('세미나홀')>=0) L='세미나홀'; } return {b:b,f:f,L:L,raw:v}; }
+  function _coordRoomParse(s){ var v=((s&&(s.roomDetailName||s.roomDetail))||'')+''; var b=''; if(v.indexOf('하늘')>=0)b='하늘관'; else if(v.indexOf('국제')>=0)b='국제동'; else if(v.indexOf('관제')>=0)b='관제교육동'; var fm=v.match(/([0-9])\s*층/); var f=fm?fm[1]:''; var lm=v.match(/([A-Za-z])\s*강의실/); var L=lm?lm[1].toUpperCase():''; if(!L){
+      // [D69] 국제동 2층 실습실 3종 인식 (도면 좌표 키와 일치)
+      if(b==='국제동' && f==='2'){ if(v.indexOf('ILS')>=0) L='ILS'; else if(v.indexOf('VCCS')>=0||v.indexOf('RADIO')>=0||v.indexOf('ATIS')>=0) L='VCCS'; else if(v.indexOf('VOR')>=0||v.indexOf('DME')>=0||v.indexOf('TACAN')>=0) L='VOR'; }
+      if(!L){ if(v.indexOf('대강당')>=0) L='대강당'; else if(v.indexOf('세미나홀')>=0) L='세미나홀'; }
+    } return {b:b,f:f,L:L,raw:v}; }
   window.coordFPSelect=function(b,f){ window._coordFPSel={b:b,f:f}; try{ if(typeof coordRenderActiveCourses==='function') coordRenderActiveCourses(); }catch(e){} };
   function _coordFloorPlanHTML(rooms){
     var sel=window._coordFPSel||(window._coordFPSel={b:'하늘관',f:'2'});
