@@ -20,6 +20,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>교육운영계획 변환기 | KAC</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" rel="stylesheet">
 <style>
 :root{--navy:#003366;--navy2:#0055aa;--cyan:#00b4d8;--bg:#f0f4f8;--card:#fff;--text:#1e293b;--sub:#64748b;--border:#e2e8f0;--green:#10b981;--red:#ef4444;}
@@ -141,13 +142,13 @@ td.date{color:#3b82f6;font-size:12px;white-space:nowrap;}
 <div class="main">
   <div class="page-title">
     <h1>📋 연간 교육운영계획 → Firebase 업로드</h1>
-    <p>JSON 파일을 업로드하거나, 아래 안내에 따라 엑셀에서 JSON을 먼저 변환하세요.</p>
+    <p><b>회사 엑셀(총괄표)을 그대로 올리면 바로 파싱됩니다.</b> 변환(파이썬·JSON) 과정이 더 이상 필요 없습니다.</p>
   </div>
 
   <!-- 탭 -->
   <div class="tab-wrap">
     <button class="tab-btn active" onclick="switchTab('json')" id="tab-json">
-      <i class="fa-solid fa-file-code"></i> JSON 업로드 (권장)
+      <i class="fa-solid fa-file-excel"></i> 엑셀/JSON 업로드
     </button>
     <button class="tab-btn" onclick="switchTab('guide')" id="tab-guide">
       <i class="fa-solid fa-circle-info"></i> 변환 방법 안내
@@ -161,18 +162,18 @@ td.date{color:#3b82f6;font-size:12px;white-space:nowrap;}
     <div class="step-card">
       <div class="step-header">
         <div class="step-num">1</div>
-        <div><div class="step-title">JSON 파일 선택</div>
-        <div class="step-desc">변환된 kac_plan_YYYY.json 파일을 선택하세요</div></div>
+        <div><div class="step-title">파일 선택 — 엑셀 그대로 OK</div>
+        <div class="step-desc">회사 교육운영계획 엑셀(.xlsx, '총괄표' 시트)을 그대로 올리세요. 기존 JSON도 계속 지원됩니다.</div></div>
       </div>
       <div id="json-upload-wrap">
         <div class="upload-zone"
              ondragover="event.preventDefault();this.classList.add('drag')"
              ondragleave="this.classList.remove('drag')"
              ondrop="handleDrop(event)">
-          <i class="fa-solid fa-file-code" style="color:#3b82f6;"></i>
+          <i class="fa-solid fa-file-excel" style="color:#16a34a;"></i>
           <div class="uz-title">클릭하거나 파일을 여기에 드래그하세요</div>
-          <div class="uz-sub">.json 파일만 지원</div>
-          <input type="file" accept=".json" onchange="handleJsonFile(this.files[0])">
+          <div class="uz-sub">.xlsx (교육운영계획 원본) 또는 .json</div>
+          <input type="file" accept=".xlsx,.xls,.json" onchange="handleAnyFile(this.files[0])">
         </div>
       </div>
       <div id="json-file-info" style="display:none;"></div>
@@ -300,9 +301,123 @@ function switchTab(tab) {
 function handleDrop(e) {
     e.preventDefault();
     e.currentTarget.classList.remove('drag');
-    const f = e.dataTransfer.files[0];
-    if (f && f.name.endsWith('.json')) handleJsonFile(f);
-    else alert('json 파일만 지원합니다.');
+    handleAnyFile(e.dataTransfer.files[0]);
+}
+function handleAnyFile(f){
+    if (!f) return;
+    const n = f.name.toLowerCase();
+    if (n.endsWith('.json')) return handleJsonFile(f);
+    if (n.endsWith('.xlsx') || n.endsWith('.xls')) return handleExcelFile(f);
+    alert('엑셀(.xlsx) 또는 JSON 파일만 지원합니다.');
+}
+
+/* ═══ [V2] 회사 엑셀(총괄표) 직접 파싱 — 파이썬 변환 불필요 ═══
+   · 시트: '총괄표' 우선(없으면 첫 시트)
+   · 머리글 자동 탐지: '과정명' + ('교육시작일' 또는 '시작')이 있는 행을 찾아 그 아래부터 데이터
+   · 열 자동 매핑: 머리글 텍스트 기준(연번/과정명/담임교수/교육일정확인/교육시작일/교육종료일)
+     — 열 위치가 바뀌어도 동작, 탐지 실패 시 표준 열(B/E/F/H/N/O) 폴백
+   · 날짜: 엑셀 직렬값(45971 등)·Date·문자열 모두 YYYY-MM-DD로 변환
+   · 병합 셀: 좌상단 값을 병합 범위 전체에 복원 후 파싱                          */
+function _xlsDate(v){
+    if (v == null || v === '') return null;
+    if (typeof v === 'number' && isFinite(v)) {
+        const ms = Math.round((v - 25569) * 86400 * 1000);         // 1899-12-30 기준
+        const d = new Date(ms);
+        return d.getUTCFullYear() + '-' + String(d.getUTCMonth()+1).padStart(2,'0') + '-' + String(d.getUTCDate()).padStart(2,'0');
+    }
+    if (v instanceof Date && !isNaN(v)) {
+        return v.getFullYear() + '-' + String(v.getMonth()+1).padStart(2,'0') + '-' + String(v.getDate()).padStart(2,'0');
+    }
+    const t = String(v).trim().replace(/[.\/]/g,'-').replace(/-+$/,'');
+    const m = t.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+    if (m) return m[1] + '-' + m[2].padStart(2,'0') + '-' + m[3].padStart(2,'0');
+    return null;
+}
+function _monday(sd){
+    const d = new Date(sd + 'T00:00:00');
+    const w = d.getDay(), diff = (w === 0 ? -6 : 1 - w);
+    d.setDate(d.getDate() + diff);
+    return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+function handleExcelFile(file){
+    const reader = new FileReader();
+    reader.onload = e => {
+        try {
+            const wb = XLSX.read(new Uint8Array(e.target.result), { type:'array' });
+            const sheetName = wb.SheetNames.find(n => n.indexOf('총괄') >= 0) || wb.SheetNames[0];
+            const ws = wb.Sheets[sheetName];
+            // 병합 복원: 좌상단 값을 범위 전체에 채움
+            (ws['!merges'] || []).forEach(m => {
+                const tl = XLSX.utils.encode_cell(m.s), v = ws[tl];
+                if (!v) return;
+                for (let r = m.s.r; r <= m.e.r; r++) for (let c = m.s.c; c <= m.e.c; c++) {
+                    const ref = XLSX.utils.encode_cell({ r, c });
+                    if (!ws[ref]) ws[ref] = { t: v.t, v: v.v };
+                }
+            });
+            const grid = XLSX.utils.sheet_to_json(ws, { header:1, raw:true, defval:'' });
+            // 머리글 자동 탐지
+            let hRow = -1, col = { no:1, coord:4, prof:5, name:7, start:13, end:14 };   // 폴백=표준 열
+            for (let r = 0; r < Math.min(grid.length, 30); r++) {
+                const cells = grid[r].map(x => String(x || '').replace(/\s/g,''));
+                const iName = cells.findIndex(x => x.indexOf('과정명') >= 0);
+                const iStart = cells.findIndex(x => x.indexOf('교육시작일') >= 0 || x === '시작' || x.indexOf('시작일') >= 0);
+                if (iName >= 0 && iStart >= 0) {
+                    hRow = r;
+                    const iEnd  = cells.findIndex(x => x.indexOf('교육종료일') >= 0 || x === '종료' || x.indexOf('종료일') >= 0);
+                    const iProf = cells.findIndex(x => x.indexOf('담임') >= 0);
+                    const iCo   = cells.findIndex(x => x.indexOf('교육일정확인') >= 0 || x.indexOf('운영부') >= 0 || x === '담당자');
+                    const iNo   = cells.findIndex(x => x.indexOf('연번') >= 0);
+                    col = { no: iNo>=0?iNo:col.no, coord: iCo>=0?iCo:col.coord, prof: iProf>=0?iProf:col.prof,
+                            name: iName, start: iStart, end: iEnd>=0?iEnd:col.end };
+                    break;
+                }
+            }
+            const first = hRow >= 0 ? hRow + 1 : 13;
+            const courses = [], errs = [];
+            for (let r = first; r < grid.length; r++) {
+                const row = grid[r] || [];
+                const noRaw = row[col.no];
+                const no = parseInt(String(noRaw).replace(/[^0-9]/g,''), 10);
+                if (!isFinite(no)) continue;                                   // 연번 없는 행 = 메모/합계 → 건너뜀
+                const name = String(row[col.name] || '').trim();
+                const sd = _xlsDate(row[col.start]), ed = _xlsDate(row[col.end]);
+                if (!name) continue;
+                if (!sd || !ed) {
+                    const rawS = String(row[col.start] || '').trim();
+                    errs.push(`연번 ${no} "${name.slice(0,20)}" — ` + (rawS.indexOf('미정') >= 0 ? '시작일 미정(정상 제외)' : '날짜 인식 실패: "' + rawS.slice(0,10) + '"'));
+                    continue;
+                }
+                const profRaw = String(row[col.prof] || '');
+                const coordRaw = String(row[col.coord] || '');
+                courses.push({
+                    no, name,
+                    startDate: sd, endDate: ed, period: sd + ' ~ ' + ed,
+                    prof: profRaw ? profRaw.split(',')[0].trim() : '',
+                    coord: coordRaw.replace(/\n/g,'').trim(),
+                    weekKey: _monday(sd)
+                });
+            }
+            if (!courses.length) { alert('과정을 하나도 읽지 못했습니다.\n\n"총괄표" 시트가 있는 교육운영계획 원본 엑셀인지 확인해 주세요.'); return; }
+            selectedData = courses;
+            document.getElementById('json-upload-wrap').style.display = 'none';
+            document.getElementById('json-file-info').style.display  = 'block';
+            document.getElementById('json-file-info').innerHTML = `
+                <div class="file-selected">
+                    <i class="fa-solid fa-file-excel" style="font-size:28px;color:#16a34a;"></i>
+                    <div><div class="fname">${file.name}</div>
+                    <div class="fsize">[${sheetName}] 시트에서 ${courses.length}개 과정 인식${errs.length ? ' · <span style="color:#dc2626;">'+errs.length+'건 제외(미정 등)</span>' : ''}</div></div>
+                    <button class="clear-btn" onclick="clearJson()"><i class="fa-solid fa-xmark"></i></button>
+                </div>`
+                + (errs.length ? `<div style="margin-top:8px;padding:10px 12px;background:#fef2f2;border:1px solid #fecaca;border-radius:10px;font-size:12px;color:#b91c1c;font-weight:700;">ℹ 제외된 행 (시작일 미정 과정은 확정 후 재업로드하면 반영됩니다):<br>${errs.slice(0,8).join('<br>')}${errs.length>8?'<br>…외 '+(errs.length-8)+'건':''}</div>` : '');
+            document.getElementById('previewBtn').disabled = false;
+            showPreview(courses);   // 파싱 결과를 즉시 미리보기 — 눈으로 확인 후 적용
+        } catch(err) {
+            console.error(err);
+            alert('엑셀을 읽는 중 오류가 발생했습니다: ' + err.message);
+        }
+    };
+    reader.readAsArrayBuffer(file);
 }
 function handleJsonFile(file) {
     if (!file) return;
