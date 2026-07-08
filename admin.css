@@ -1,4 +1,4 @@
-/* PLATFORM_EDIT_STATUS: 수정완료 | VERSION: T | 2026-07-07 (T10: ①리모컨 드래그 중 transform:none 강제(translateY(-50%) 잔존이 JS left/top과 충돌해 커서와 어긋나던 랙 제거) ②리모컨 위치 미디어쿼리 제거(창 축소 시 right:12px 강제로 메인 블록 위에 튀던 원인 — JS 좌표 우선) [T8: 리모컨 is-dragging 페인트 경량화(backdrop-filter/그림자/필터 off, will-change) (T7: 퀴즈 O/X 마크 clamp(110px,22vh,220px) 확대·설명 34px, 보기 줄바꿈 허용(nowrap 제거)+keep-all (T6: dts-chip hover 이동 제거(떨림 원인), nh-qa 아이콘 배지·2줄 라벨·has-q 반전 (T5: 톱니 버튼(.ops-cfg 회전 hover)·재정렬 모드(점선 테두리+흔들림+드래그 그림자) (T4: 질문사항 보기 버튼 강조 스타일(.nh-qa/.has-q/배지/펄스) (T3: I12 2카드 스타일 신설(.ops-card/.ops-row/.nh-item/.edu-tile/.nh-all), 그리드 1.35fr+1fr 2열 전환 (T2: 과정현황 3카드 정렬 — notice-item 중앙정렬, n-tag 폭 58px 고정, 오늘 한눈에 클릭 칩 hover 효과 (T1: 직무 토글을 pill 줄 규격(높이 36px·radius 50px) 소형 인라인 스위치로 재설계, hero-info-row 세로 중앙정렬) [T: 직무 토글 스타일 신설] */
+/* PLATFORM_EDIT_STATUS: 수정완료 | VERSION: T | 2026-07-07 (T11: 교육시간표 사진 화면 꽉 채움 — guide-schedule-frame fixed inset:0 + 사진 100%/100% contain(기존 100vh/width:auto가 전체화면에서 작게 뜨던 원인) [T10: ①리모컨 드래그 중 transform:none 강제(translateY(-50%) 잔존이 JS left/top과 충돌해 커서와 어긋나던 랙 제거) ②리모컨 위치 미디어쿼리 제거(창 축소 시 right:12px 강제로 메인 블록 위에 튀던 원인 — JS 좌표 우선) [T8: 리모컨 is-dragging 페인트 경량화(backdrop-filter/그림자/필터 off, will-change) (T7: 퀴즈 O/X 마크 clamp(110px,22vh,220px) 확대·설명 34px, 보기 줄바꿈 허용(nowrap 제거)+keep-all (T6: dts-chip hover 이동 제거(떨림 원인), nh-qa 아이콘 배지·2줄 라벨·has-q 반전 (T5: 톱니 버튼(.ops-cfg 회전 hover)·재정렬 모드(점선 테두리+흔들림+드래그 그림자) (T4: 질문사항 보기 버튼 강조 스타일(.nh-qa/.has-q/배지/펄스) (T3: I12 2카드 스타일 신설(.ops-card/.ops-row/.nh-item/.edu-tile/.nh-all), 그리드 1.35fr+1fr 2열 전환 (T2: 과정현황 3카드 정렬 — notice-item 중앙정렬, n-tag 폭 58px 고정, 오늘 한눈에 클릭 칩 hover 효과 (T1: 직무 토글을 pill 줄 규격(높이 36px·radius 50px) 소형 인라인 스위치로 재설계, hero-info-row 세로 중앙정렬) [T: 직무 토글 스타일 신설] */
 /* ============================================================
    CATC · 강사 플랫폼 스타일  (admin.css)
    STATUS    수정완료
@@ -5188,22 +5188,26 @@ body:not([data-mode="waiting"]) .floating-home-btn{bottom:66px;}
 /* [시간표 사진 전체화면] 크롬 전체화면 종료 UI와 겹치지 않는 사진 내부 전용 닫기 버튼 */
 .guide-schedule-modal{
     position:fixed; inset:0; z-index:9700;
-    display:flex; align-items:center; justify-content:center;
+    display:block;
     background:rgba(15,23,42,.92); padding:0;
     box-sizing:border-box;
 }
 .guide-schedule-frame{
-    position:relative; display:inline-flex; align-items:center; justify-content:center;
-    width:100vw !important; height:100vh !important; height:100dvh !important;
-    max-width:100vw !important; max-height:100vh !important; max-height:100dvh !important;
+    position:fixed; inset:0;
+    width:100%; height:100%;
+    display:flex; align-items:center; justify-content:center;
+    margin:0; padding:0;
 }
-/* [시간표 사진] 화면 위에서 아래 끝까지 꽉 채워 표시 (세로 100%) */
+/* [J34] 시간표 사진 화면 꽉 채움 — 프레임(화면 전체) 기준 100%/100% + contain.
+   기존 vh/auto 조합이 전체화면 픽셀과 어긋나 사진이 작게 뜨던 원인. 프레임을 fixed inset:0으로
+   실제 뷰포트에 고정하고 사진은 그 안에서 최대로 확대(가로/세로 중 꽉 차는 쪽 기준, 비율 유지). */
 #guideScheduleModal .guide-schedule-frame > img,
 .guide-schedule-frame > img{
     display:block;
-    height:100vh !important; height:100dvh !important;
-    max-height:100vh !important; max-height:100dvh !important;
-    width:auto !important; max-width:100vw !important;
+    width:100% !important;
+    height:100% !important;
+    max-width:100% !important;
+    max-height:100% !important;
     object-fit:contain;
     border-radius:0; box-shadow:0 0 40px rgba(0,0,0,.6);
 }
