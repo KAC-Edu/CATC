@@ -1,11 +1,11 @@
-<!-- [2026-07-07 JDS260707(V1)] 폐강 이월: 업로드 시 기존 연간계획의 폐강(cancelled) 플래그를 과정명+시작일 매칭으로 보존, 폐강 과정은 방 배치에서 제외 -->
+<!-- [2026-07-09 JDS260709(V1)] 한셀 폴백 날짜 수정: 폴백 파서의 문자열 일련번호("45971")를 _xlsDate에서 날짜로 인식 못해 과정 0개로 실패하던 버그 해결 -->
 <!DOCTYPE html>
 <html lang="ko">
 <head>
 <!-- ============================================================
   CATC · 연간계획 변환기  (plan_converter.html)
-  @version  A
-  @build    20260610-220210
+  @version  B
+  @build    20260708-212719
   ────────────────────────────────────────────────────────
   [코드 수정 규칙 · AI/개발자 공통]
   이 파일을 한 글자라도 고치면:
@@ -321,6 +321,12 @@ function handleAnyFile(f){
    · 병합 셀: 좌상단 값을 병합 범위 전체에 복원 후 파싱                          */
 function _xlsDate(v){
     if (v == null || v === '') return null;
+    /* [V2.3] 폴백(한셀) 파서는 모든 값을 문자열로 주므로, "45971" 같은
+       순수 숫자 문자열도 엑셀 날짜 일련번호로 인식 (1954~2119년 범위만) */
+    if (typeof v === 'string' && /^\d{4,6}(\.\d+)?$/.test(v.trim())) {
+        const n = parseFloat(v.trim());
+        if (n >= 20000 && n <= 80000) v = n;
+    }
     if (typeof v === 'number' && isFinite(v)) {
         const ms = Math.round((v - 25569) * 86400 * 1000);         // 1899-12-30 기준
         const d = new Date(ms);
@@ -733,7 +739,7 @@ function resetAll() {
 </script>
 <style>@media print{#__catcVer{display:none!important}}</style>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vA</div>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vB</div>
 
 <!-- ═══ [2026-07-07 전체 점검모드] system/maintenance 스위치 하나로 전 플랫폼 동시 점검중 전환.
      on:true면 전체 화면 점검 안내(실시간), off면 즉시 복귀. 재배포 불필요.
