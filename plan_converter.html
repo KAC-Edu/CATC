@@ -21,6 +21,7 @@
 <title>교육운영계획 변환기 | KAC</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" rel="stylesheet">
 <style>
 :root{--navy:#003366;--navy2:#0055aa;--cyan:#00b4d8;--bg:#f0f4f8;--card:#fff;--text:#1e293b;--sub:#64748b;--border:#e2e8f0;--green:#10b981;--red:#ef4444;}
@@ -341,77 +342,34 @@ function _monday(sd){
 }
 function handleExcelFile(file){
     const reader = new FileReader();
-    reader.onload = e => {
+    reader.onload = async e => {
         try {
-            const wb = XLSX.read(new Uint8Array(e.target.result), { type:'array' });
-            const sheetName = wb.SheetNames.find(n => n.indexOf('총괄') >= 0) || wb.SheetNames[0];
-            const ws = wb.Sheets[sheetName];
-            // 병합 복원: 좌상단 값을 범위 전체에 채움
-            (ws['!merges'] || []).forEach(m => {
-                const tl = XLSX.utils.encode_cell(m.s), v = ws[tl];
-                if (!v) return;
-                for (let r = m.s.r; r <= m.e.r; r++) for (let c = m.s.c; c <= m.e.c; c++) {
-                    const ref = XLSX.utils.encode_cell({ r, c });
-                    if (!ws[ref]) ws[ref] = { t: v.t, v: v.v };
+            const buf = new Uint8Array(e.target.result);
+            let grid = null, sheetName = '';
+            // ── 1차: SheetJS (표준 엑셀) ──
+            try {
+                const wb = XLSX.read(buf, { type:'array' });
+                sheetName = wb.SheetNames.find(n => n.indexOf('총괄') >= 0) || wb.SheetNames[0] || '';
+                const ws = wb.Sheets[sheetName];
+                if (ws && ws['!ref']) {
+                    (ws['!merges'] || []).forEach(m => {
+                        const tl = XLSX.utils.encode_cell(m.s), v = ws[tl];
+                        if (!v) return;
+                        for (let r = m.s.r; r <= m.e.r; r++) for (let c = m.s.c; c <= m.e.c; c++) {
+                            const ref = XLSX.utils.encode_cell({ r, c });
+                            if (!ws[ref]) ws[ref] = { t: v.t, v: v.v };
+                        }
+                    });
+                    grid = XLSX.utils.sheet_to_json(ws, { header:1, raw:true, defval:'' });
                 }
-            });
-            const grid = XLSX.utils.sheet_to_json(ws, { header:1, raw:true, defval:'' });
-            // 머리글 자동 탐지
-            let hRow = -1, col = { no:1, coord:4, prof:5, name:7, start:13, end:14 };   // 폴백=표준 열
-            for (let r = 0; r < Math.min(grid.length, 30); r++) {
-                const cells = grid[r].map(x => String(x || '').replace(/\s/g,''));
-                const iName = cells.findIndex(x => x.indexOf('과정명') >= 0);
-                const iStart = cells.findIndex(x => x.indexOf('교육시작일') >= 0 || x === '시작' || x.indexOf('시작일') >= 0);
-                if (iName >= 0 && iStart >= 0) {
-                    hRow = r;
-                    const iEnd  = cells.findIndex(x => x.indexOf('교육종료일') >= 0 || x === '종료' || x.indexOf('종료일') >= 0);
-                    const iProf = cells.findIndex(x => x.indexOf('담임') >= 0);
-                    const iCo   = cells.findIndex(x => x.indexOf('교육일정확인') >= 0 || x.indexOf('운영부') >= 0 || x === '담당자');
-                    const iNo   = cells.findIndex(x => x.indexOf('연번') >= 0);
-                    col = { no: iNo>=0?iNo:col.no, coord: iCo>=0?iCo:col.coord, prof: iProf>=0?iProf:col.prof,
-                            name: iName, start: iStart, end: iEnd>=0?iEnd:col.end };
-                    break;
-                }
+            } catch(e1){ console.warn('[V2.1] SheetJS 경로 실패:', e1); }
+            // ── 2차 폴백: 자체 XML 파서 (한컴 한셀 HCell 등 x: 접두사 네임스페이스 파일) ──
+            if (!grid || !grid.length) {
+                const r2 = await parseXlsxRaw(buf);
+                grid = r2.grid; sheetName = r2.sheetName + ' (호환 모드)';
             }
-            const first = hRow >= 0 ? hRow + 1 : 13;
-            const courses = [], errs = [];
-            for (let r = first; r < grid.length; r++) {
-                const row = grid[r] || [];
-                const noRaw = row[col.no];
-                const no = parseInt(String(noRaw).replace(/[^0-9]/g,''), 10);
-                if (!isFinite(no)) continue;                                   // 연번 없는 행 = 메모/합계 → 건너뜀
-                const name = String(row[col.name] || '').trim();
-                const sd = _xlsDate(row[col.start]), ed = _xlsDate(row[col.end]);
-                if (!name) continue;
-                if (!sd || !ed) {
-                    const rawS = String(row[col.start] || '').trim();
-                    errs.push(`연번 ${no} "${name.slice(0,20)}" — ` + (rawS.indexOf('미정') >= 0 ? '시작일 미정(정상 제외)' : '날짜 인식 실패: "' + rawS.slice(0,10) + '"'));
-                    continue;
-                }
-                const profRaw = String(row[col.prof] || '');
-                const coordRaw = String(row[col.coord] || '');
-                courses.push({
-                    no, name,
-                    startDate: sd, endDate: ed, period: sd + ' ~ ' + ed,
-                    prof: profRaw ? profRaw.split(',')[0].trim() : '',
-                    coord: coordRaw.replace(/\n/g,'').trim(),
-                    weekKey: _monday(sd)
-                });
-            }
-            if (!courses.length) { alert('과정을 하나도 읽지 못했습니다.\n\n"총괄표" 시트가 있는 교육운영계획 원본 엑셀인지 확인해 주세요.'); return; }
-            selectedData = courses;
-            document.getElementById('json-upload-wrap').style.display = 'none';
-            document.getElementById('json-file-info').style.display  = 'block';
-            document.getElementById('json-file-info').innerHTML = `
-                <div class="file-selected">
-                    <i class="fa-solid fa-file-excel" style="font-size:28px;color:#16a34a;"></i>
-                    <div><div class="fname">${file.name}</div>
-                    <div class="fsize">[${sheetName}] 시트에서 ${courses.length}개 과정 인식${errs.length ? ' · <span style="color:#dc2626;">'+errs.length+'건 제외(미정 등)</span>' : ''}</div></div>
-                    <button class="clear-btn" onclick="clearJson()"><i class="fa-solid fa-xmark"></i></button>
-                </div>`
-                + (errs.length ? `<div style="margin-top:8px;padding:10px 12px;background:#fef2f2;border:1px solid #fecaca;border-radius:10px;font-size:12px;color:#b91c1c;font-weight:700;">ℹ 제외된 행 (시작일 미정 과정은 확정 후 재업로드하면 반영됩니다):<br>${errs.slice(0,8).join('<br>')}${errs.length>8?'<br>…외 '+(errs.length-8)+'건':''}</div>` : '');
-            document.getElementById('previewBtn').disabled = false;
-            showPreview(courses);   // 파싱 결과를 즉시 미리보기 — 눈으로 확인 후 적용
+            if (!grid || !grid.length) { alert('시트를 읽지 못했습니다. 교육운영계획 원본 엑셀인지 확인해 주세요.'); return; }
+            finishExcelParse(file, grid, sheetName);
         } catch(err) {
             console.error(err);
             alert('엑셀을 읽는 중 오류가 발생했습니다: ' + err.message);
@@ -419,6 +377,122 @@ function handleExcelFile(file){
     };
     reader.readAsArrayBuffer(file);
 }
+
+/* ═══ [V2.1] 자체 XLSX 파서 — 한컴 한셀(HCell) 등 비표준(x: 접두사) 파일 대응 ═══ */
+async function parseXlsxRaw(buf){
+    const zip = await JSZip.loadAsync(buf);
+    const readXml = async p => {
+        const f = zip.file(p); if (!f) return null;
+        return new DOMParser().parseFromString(await f.async('string'), 'application/xml');
+    };
+    const tags = (node, name) => Array.prototype.slice.call(node.getElementsByTagNameNS('*', name));
+    const wbx = await readXml('xl/workbook.xml');
+    const relx = await readXml('xl/_rels/workbook.xml.rels');
+    const rid2t = {}; tags(relx, 'Relationship').forEach(r => { rid2t[r.getAttribute('Id')] = (r.getAttribute('Target')||'').replace(/^\//,''); });
+    let sheetName = '', target = '';
+    tags(wbx, 'sheet').forEach(sh => {
+        const nm = sh.getAttribute('name') || '';
+        const rid = sh.getAttribute('r:id') || sh.getAttributeNS('http://schemas.openxmlformats.org/officeDocument/2006/relationships','id');
+        if (!target || (nm.indexOf('총괄') >= 0 && sheetName.indexOf('총괄') < 0)) { sheetName = nm; target = rid2t[rid] || ''; }
+    });
+    if (!target) throw new Error('시트를 찾을 수 없습니다');
+    if (target.indexOf('xl/') !== 0) target = 'xl/' + target;
+    const sst = [];
+    const sx = await readXml('xl/sharedStrings.xml');
+    if (sx) tags(sx, 'si').forEach(si => { sst.push(tags(si, 't').map(t => t.textContent).join('')); });
+    const shx = await readXml(target);
+    const colOf = ref => { const m = /^([A-Z]+)(\d+)$/.exec(ref); if (!m) return null;
+        let c = 0; for (const ch of m[1]) c = c * 26 + ch.charCodeAt(0) - 64; return { r: +m[2] - 1, c: c - 1 }; };
+    const cells = {}; let maxR = 0, maxC = 0;
+    tags(shx, 'row').forEach(row => {
+        const rAttr = parseInt(row.getAttribute('r') || '0', 10) - 1;
+        let ci = -1;
+        tags(row, 'c').forEach(c => {
+            const ref = c.getAttribute('r');
+            let r, cn;
+            if (ref) { const p = colOf(ref); if (!p) return; r = p.r; cn = p.c; ci = cn; }
+            else { ci += 1; r = rAttr; cn = ci; }
+            const t = c.getAttribute('t');
+            let val = null;
+            const v = tags(c, 'v')[0];
+            if (v) val = (t === 's') ? (sst[parseInt(v.textContent, 10)] || '') : v.textContent;
+            else { const is = tags(c, 'is')[0]; if (is) val = tags(is, 't').map(x => x.textContent).join(''); }
+            if (val == null || String(val) === '') return;
+            cells[r + '_' + cn] = val;
+            if (r > maxR) maxR = r; if (cn > maxC) maxC = cn;
+        });
+    });
+    tags(shx, 'mergeCell').forEach(mc => {
+        const ref = mc.getAttribute('ref') || ''; const p = ref.split(':');
+        if (p.length !== 2) return;
+        const a = colOf(p[0]), b = colOf(p[1]); if (!a || !b) return;
+        const v = cells[a.r + '_' + a.c]; if (v == null) return;
+        for (let r = a.r; r <= b.r; r++) for (let c = a.c; c <= b.c; c++)
+            if (cells[r + '_' + c] == null) cells[r + '_' + c] = v;
+    });
+    const grid = [];
+    for (let r = 0; r <= maxR; r++) { const row = []; for (let c = 0; c <= maxC; c++) row.push(cells[r + '_' + c] != null ? cells[r + '_' + c] : ''); grid.push(row); }
+    return { grid, sheetName };
+}
+
+/* ═══ 그리드 → 과정 목록 (머리글 자동 탐지·열 매핑·날짜 변환) — 공통 ═══ */
+function finishExcelParse(file, grid, sheetName){
+    let hRow = -1, col = { no:1, coord:4, prof:5, name:7, start:13, end:14 };
+    for (let r = 0; r < Math.min(grid.length, 30); r++) {
+        const cells = (grid[r] || []).map(x => String(x || '').replace(/\s/g,''));
+        const iName = cells.findIndex(x => x.indexOf('과정명') >= 0);
+        const iStart = cells.findIndex(x => x.indexOf('교육시작일') >= 0 || x === '시작' || x.indexOf('시작일') >= 0);
+        if (iName >= 0 && iStart >= 0) {
+            hRow = r;
+            const iEnd  = cells.findIndex(x => x.indexOf('교육종료일') >= 0 || x === '종료' || x.indexOf('종료일') >= 0);
+            const iProf = cells.findIndex(x => x.indexOf('담임') >= 0);
+            const iCo   = cells.findIndex(x => x.indexOf('교육일정확인') >= 0 || x.indexOf('운영부') >= 0 || x === '담당자');
+            const iNo   = cells.findIndex(x => x.indexOf('연번') >= 0);
+            col = { no: iNo>=0?iNo:col.no, coord: iCo>=0?iCo:col.coord, prof: iProf>=0?iProf:col.prof,
+                    name: iName, start: iStart, end: iEnd>=0?iEnd:col.end };
+            break;
+        }
+    }
+    const first = hRow >= 0 ? hRow + 1 : 13;
+    const courses = [], errs = [];
+    for (let r = first; r < grid.length; r++) {
+        const row = grid[r] || [];
+        const no = parseInt(String(row[col.no]).replace(/[^0-9]/g,''), 10);
+        if (!isFinite(no)) continue;
+        const name = String(row[col.name] || '').trim();
+        if (!name) continue;
+        const sd = _xlsDate(row[col.start]), ed = _xlsDate(row[col.end]);
+        if (!sd || !ed) {
+            const rawS = String(row[col.start] || '').trim();
+            errs.push(`연번 ${no} "${name.slice(0,20)}" — ` + (rawS.indexOf('미정') >= 0 ? '시작일 미정(정상 제외)' : '날짜 인식 실패: "' + rawS.slice(0,10) + '"'));
+            continue;
+        }
+        const profRaw = String(row[col.prof] || '');
+        const coordRaw = String(row[col.coord] || '');
+        courses.push({
+            no, name,
+            startDate: sd, endDate: ed, period: sd + ' ~ ' + ed,
+            prof: profRaw ? profRaw.split(',')[0].trim() : '',
+            coord: coordRaw.replace(/\n/g,'').trim(),
+            weekKey: _monday(sd)
+        });
+    }
+    if (!courses.length) { alert('과정을 하나도 읽지 못했습니다.\n\n"총괄표" 시트가 있는 교육운영계획 원본 엑셀인지 확인해 주세요.'); return; }
+    selectedData = courses;
+    document.getElementById('json-upload-wrap').style.display = 'none';
+    document.getElementById('json-file-info').style.display  = 'block';
+    document.getElementById('json-file-info').innerHTML = `
+        <div class="file-selected">
+            <i class="fa-solid fa-file-excel" style="font-size:28px;color:#16a34a;"></i>
+            <div><div class="fname">${file.name}</div>
+            <div class="fsize">[${sheetName}] 시트에서 ${courses.length}개 과정 인식${errs.length ? ' · <span style="color:#dc2626;">'+errs.length+'건 제외(미정 등)</span>' : ''}</div></div>
+            <button class="clear-btn" onclick="clearJson()"><i class="fa-solid fa-xmark"></i></button>
+        </div>`
+        + (errs.length ? `<div style="margin-top:8px;padding:10px 12px;background:#fef2f2;border:1px solid #fecaca;border-radius:10px;font-size:12px;color:#b91c1c;font-weight:700;">ℹ 제외된 행 (시작일 미정 과정은 확정 후 재업로드하면 반영됩니다):<br>${errs.slice(0,8).join('<br>')}${errs.length>8?'<br>…외 '+(errs.length-8)+'건':''}</div>` : '');
+    document.getElementById('previewBtn').disabled = false;
+    showPreview(courses);
+}
+
 function handleJsonFile(file) {
     if (!file) return;
     const reader = new FileReader();
