@@ -3235,14 +3235,19 @@ var opsCfg = (function(){
         if (st.coSyncOn && lastAttn) {
           try {
             var at = JSON.parse(lastAttn);
+            console.log('[copilot] 📥 coAttn 수신', at, '| coSyncOn=', st.coSyncOn, '| mode=', state.currentMode, '| qaData有=', !!(state.qaData && at && at.id && state.qaData[at.id]));
             if (at && at.a === 'qaOpen' && at.id) {
               if (state.currentMode !== 'qa') { try { ui.setMode('qa'); } catch(e){} }   // 질문 화면이 아니면 먼저 이동
-              // [I19] 갓 올라온 질문은 무대의 qaData에 아직 없을 수 있어, 로딩될 때까지 잠깐 재시도하며 연다(기존엔 조건 실패로 안 열림).
-              (function(id){ var n=0; (function openTry(){ if(state.qaData && state.qaData[id]){ try{ ui.openQaModal(id); }catch(e){} toast('보조자 동기화 → 질문 열기'); return; } if(n++ < 20) setTimeout(openTry, 200); })(); })(at.id);
+              // [I21] 로딩될 때까지 재시도, 늦으면 서버에서 질문을 직접 가져와 주입 후 연다(qaData 미반영 대비).
+              (function(id){ var n=0; (function openTry(){
+                  if(state.qaData && state.qaData[id]){ try{ ui.openQaModal(id); }catch(e){} toast('보조자 동기화 → 질문 열기'); return; }
+                  if(n===5){ db.ref('courses/'+curRoom+'/questions/'+id).once('value').then(function(qs){ var q=qs.val(); if(q){ state.qaData=state.qaData||{}; state.qaData[id]=q; console.log('[copilot] ↳ 질문 직접 주입 후 열기', id); try{ ui.openQaModal(id); }catch(e){} toast('보조자 동기화 → 질문 열기'); } }).catch(function(){}); }
+                  if(n++ < 20) setTimeout(openTry, 200);
+                })(); })(at.id);
             } else if (at && at.a === 'qaClose') {
               ui.closeQaModal(); toast('보조자 동기화 → 질문 닫기');
             }
-          } catch(e){}
+          } catch(e){ console.warn('[copilot] coAttn parse/act err', e); }
         }
       }
       if ((st.coViewTs||0) === lastTs) return;                                    // 변화 없음
@@ -3331,6 +3336,7 @@ var opsCfg = (function(){
   function sendAttn(payload){
     if (!state.room) return;
     db.ref('courses/'+state.room+'/status').update({ coSyncOn: !!window._coSync, coAttn: JSON.stringify(payload) })
+      .then(function(){ console.log('[copilot] ✅ coAttn 전송', payload, '| coSync=', window._coSync); })
       .catch(function(e){ console.error('[copilot] attn write fail', e); });
   }
   (function hookQa(){
