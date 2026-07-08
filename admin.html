@@ -3235,9 +3235,10 @@ var opsCfg = (function(){
         if (st.coSyncOn && lastAttn) {
           try {
             var at = JSON.parse(lastAttn);
-            if (at && at.a === 'qaOpen' && at.id && state.qaData && state.qaData[at.id]) {
+            if (at && at.a === 'qaOpen' && at.id) {
               if (state.currentMode !== 'qa') { try { ui.setMode('qa'); } catch(e){} }   // 질문 화면이 아니면 먼저 이동
-              ui.openQaModal(at.id); toast('보조자 동기화 → 질문 열기');
+              // [I19] 갓 올라온 질문은 무대의 qaData에 아직 없을 수 있어, 로딩될 때까지 잠깐 재시도하며 연다(기존엔 조건 실패로 안 열림).
+              (function(id){ var n=0; (function openTry(){ if(state.qaData && state.qaData[id]){ try{ ui.openQaModal(id); }catch(e){} toast('보조자 동기화 → 질문 열기'); return; } if(n++ < 20) setTimeout(openTry, 200); })(); })(at.id);
             } else if (at && at.a === 'qaClose') {
               ui.closeQaModal(); toast('보조자 동기화 → 질문 닫기');
             }
