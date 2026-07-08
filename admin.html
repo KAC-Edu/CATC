@@ -3259,6 +3259,29 @@ var opsCfg = (function(){
   setInterval(function(){ if (state.room !== curRoom) attach(state.room); }, 500);
   attach(state.room);
 
+  // [I20] 강사(무대)가 다른 탭/창 갔다가 돌아올 때 옵저버의 '최신 질문 열기' 신호를 다시 처리 —
+  //  백그라운드 동안 받은 신호를 놓쳐 '무시하는' 문제 보완(가시성 복귀 시 status를 다시 읽어 재적용).
+  document.addEventListener('visibilitychange', function(){
+    if (document.hidden || !state.room || (typeof state!=='undefined' && state.isObserver)) return;
+    db.ref('courses/'+state.room+'/status').once('value').then(function(snap){
+      var st = snap.val()||{};
+      if (!st.coSyncOn || !st.coAttn) return;
+      try {
+        var at = JSON.parse(st.coAttn);
+        if (at && at.a === 'qaOpen' && at.id) {
+          var m = document.getElementById('qaModal');
+          var alreadyOpen = m && m.style.display === 'flex' && state.activeQaKey === at.id;
+          if (!alreadyOpen) {
+            if (state.currentMode !== 'qa') { try { ui.setMode('qa'); } catch(e){} }
+            var n=0; (function openTry(){ if(state.qaData && state.qaData[at.id]){ try{ ui.openQaModal(at.id); }catch(e){} return; } if(n++ < 20) setTimeout(openTry, 200); })();
+          }
+        } else if (at && at.a === 'qaClose') {
+          try { ui.closeQaModal(); } catch(e){}
+        }
+      } catch(e){}
+    }).catch(function(){});
+  });
+
   // ── 보조자 패널 (방 안 + 옵저버 + 메인 아님), 우하단, 드래그 ──
   function showable(){ return state.isObserver && state.room && state.currentMode && state.currentMode!=='home' && state.currentMode!=='waiting'; }
   function ensurePanel(){
