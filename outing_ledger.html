@@ -159,15 +159,20 @@
             if (typeof html2pdf === 'undefined' || !el) { document.title = base; window.print(); return; }
             if (btn) { btn.disabled = true; btn.innerHTML = '⏳ PDF 생성 중…'; }
             const tmp = document.createElement('style');
-            tmp.innerHTML = '#ledgerPages{width:210mm !important;margin:0 auto !important;}.page{box-shadow:none !important;margin:0 auto !important;}.print-btn{display:none !important;}';
+            // [M16] 외출대장은 A4 가로(Landscape) 양식 — 캡처 폭을 297mm로 강제 고정(기존 210mm 세로폭 강제가
+            //  가로표를 세로로 구겨 넣어 줄바꿈 폭증 → 세로로 끝없이 늘어나던 버그). max/min 폭도 함께 고정.
+            tmp.innerHTML = '#ledgerPages{width:297mm !important;min-width:297mm !important;max-width:297mm !important;margin:0 auto !important;}.page{box-shadow:none !important;margin:0 auto !important;}.print-btn{display:none !important;}';
             document.head.appendChild(tmp);
             const done = () => { tmp.remove(); if (btn) { btn.disabled = false; btn.innerHTML = oldTxt; } };
             const opt = {
                 margin: 0,
                 filename: base + '.pdf',
                 image: { type: 'jpeg', quality: 0.95 },
-                html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff' },
-                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+                // [M16] windowWidth를 A4 가로 실측 px(297mm≈1123px)로 고정 → 모바일 뷰포트(360~412px) 기준
+                //  캡처로 표가 압축·세로 폭증하던 근본 원인 차단(기기 무관 PC와 동일 렌더).
+                html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff', windowWidth: 1123 },
+                // [M16] 가로 양식이므로 orientation을 landscape로 일치(기존 portrait 하드코딩이 규격 충돌 유발).
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' },
                 pagebreak: { mode: ['css', 'legacy'], before: '.page:not(:first-of-type)' }
             };
             try {

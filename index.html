@@ -9348,7 +9348,7 @@ body.menu-open #mainApp{
 <script>
 /* 모든 화면에서 수평 밀기 동작은 페이지 전환으로 사용하지 않는다. */
 (function(){
-  var sx=0, sy=0, tracking=false, edgeTracking=false;
+  var sx=0, sy=0, tracking=false, edgeTracking=false, ex=0, ey=0;   // [vJ110] ex/ey: 엣지 터치 시작점(방향 판정용)
   function resetHorizontalPosition(){
     try{
       document.documentElement.scrollLeft=0;
@@ -9357,34 +9357,48 @@ body.menu-open #mainApp{
       if(main) main.scrollLeft=0;
     }catch(e){}
   }
-  function stopEdgeGesture(e){
+  // [vJ110] 엣지 제스처: 세로 스크롤은 열어두고 '가로 스와이프(뒤로가기)'만 선별 차단.
+  //  (기존엔 왼쪽 32px에서 시작한 모든 터치를 touchstart에서 무조건 preventDefault →
+  //   그 영역에서 시작한 세로 스크롤까지 완전히 잠겨 하단 버튼 접근 불가였음)
+  function beginEdge(e){
+    if(!e.touches || !e.touches[0]) return;
     edgeTracking=true;
     tracking=false;
+    ex=e.touches[0].clientX;
+    ey=e.touches[0].clientY;
     resetHorizontalPosition();
-    if(e.cancelable) e.preventDefault();
-    e.stopImmediatePropagation();
+    // touchstart 시점에는 preventDefault하지 않음 → 세로 스크롤 경로 확보
+  }
+  function stopEdgeGesture(e){
+    // touchmove에서 호출: 이동 방향이 '가로 우세'일 때만 차단(세로면 스크롤 통과)
+    if(!e.touches || !e.touches[0]){ if(e.cancelable) e.preventDefault(); e.stopImmediatePropagation(); return; }
+    var dx=e.touches[0].clientX-ex;
+    var dy=e.touches[0].clientY-ey;
+    if(Math.abs(dx)>Math.abs(dy) && Math.abs(dx)>6){
+      resetHorizontalPosition();
+      if(e.cancelable) e.preventDefault();
+      e.stopImmediatePropagation();
+    }
   }
   function installEdgeGuard(){
     if(document.getElementById('kacEdgeSwipeGuard')) return;
     var guard=document.createElement('div');
     guard.id='kacEdgeSwipeGuard';
     guard.setAttribute('aria-hidden','true');
-    guard.addEventListener('touchstart',stopEdgeGesture,{capture:true,passive:false});
-    guard.addEventListener('touchmove',stopEdgeGesture,{capture:true,passive:false});
-    guard.addEventListener('touchend',function(e){
+    guard.addEventListener('touchstart',beginEdge,{capture:true,passive:true});   // 세로 스크롤 허용
+    guard.addEventListener('touchmove',stopEdgeGesture,{capture:true,passive:false}); // 가로만 선별 차단
+    guard.addEventListener('touchend',function(){
       edgeTracking=false;
       resetHorizontalPosition();
-      if(e.cancelable) e.preventDefault();
-      e.stopImmediatePropagation();
-    },{capture:true,passive:false});
-    guard.addEventListener('touchcancel',function(){ edgeTracking=false; resetHorizontalPosition(); },{capture:true,passive:false});
+    },{capture:true,passive:true});
+    guard.addEventListener('touchcancel',function(){ edgeTracking=false; resetHorizontalPosition(); },{capture:true,passive:true});
     document.body.appendChild(guard);
   }
   window.addEventListener('touchstart',function(e){
     resetHorizontalPosition();
     if(!e.touches || !e.touches[0]) return;
     if(e.touches[0].clientX<=32){
-      stopEdgeGesture(e);
+      beginEdge(e);
       return;
     }
     if(e.target && e.target.closest && e.target.closest('#mealImageContainer,input,textarea,select')){ tracking=false; return; }
@@ -9816,19 +9830,25 @@ html.kac-core-screen #realUserCount::before{
 #keduHome, #keduEnroll, #keduOtp, #keduDone{
   height:100vh !important;
   height:100dvh !important;
-  max-height:none !important;
+  max-height:100dvh !important;   /* [vJ110] 오버레이 높이를 화면으로 고정 → 내부 overflow 스크롤이 확실히 유발 */
   overflow-y:auto !important;
   -webkit-overflow-scrolling:touch !important;
   touch-action:pan-y !important;
   overscroll-behavior:contain !important;
+  /* [vJ110] justify-content:flex-start를 유지해 카드를 위에서부터 쌓아 아래로 스크롤 가능하게
+     (center면 상단이 잘려 위로 스크롤 불가). display(flex)는 표시/숨김(inline)과 충돌하므로 건드리지 않음 */
+  flex-direction:column !important;
   align-items:center !important;
   justify-content:flex-start !important;
 }
-#keduHome{ padding:18px 18px calc(46px + env(safe-area-inset-bottom)) !important; }
-#keduEnroll{ padding:22px 18px calc(46px + env(safe-area-inset-bottom)) !important; }
-#keduOtp{ padding:20px 18px calc(46px + env(safe-area-inset-bottom)) !important; }
-#keduDone{ padding:24px 18px calc(46px + env(safe-area-inset-bottom)) !important; }   /* [vJ108.1] 입교 직후 완료 화면도 스크롤 보장 */
+/* [vJ110] 하단 버튼([출결하기]·[정보 수정])이 주소창/내비게이션 바에 가리지 않도록 하단 여백 대폭 확대(46→110px) */
+#keduHome{ padding:18px 18px calc(110px + env(safe-area-inset-bottom)) !important; }
+#keduEnroll{ padding:22px 18px calc(110px + env(safe-area-inset-bottom)) !important; }
+#keduOtp{ padding:20px 18px calc(110px + env(safe-area-inset-bottom)) !important; }
+#keduDone{ padding:24px 18px calc(110px + env(safe-area-inset-bottom)) !important; }   /* [vJ108.1] 입교 직후 완료 화면도 스크롤 보장 */
 #keduHome .kh-card, #keduEnroll .ke-card, #keduOtp .ko-card{ flex:none !important; }
+/* [vJ110] 직계 자식이 flex로 눌려 압축·겹침되며 버튼이 사라지는 것 방지(높이 초과 시 스크롤로 노출) */
+#keduHome > *, #keduEnroll > *, #keduOtp > *, #keduDone > *{ flex-shrink:0 !important; }
 @media (max-height:720px){
   #keduHome{ padding-top:10px !important; }
   #keduHome .kh-head{ padding:14px 18px 13px !important; }

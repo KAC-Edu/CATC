@@ -1,6 +1,6 @@
 ﻿<!DOCTYPE html>
 <html lang="ko">
-<!-- PLATFORM_EDIT_STATUS: 수정완료 | VERSION: R9 | 2026-07-08 (R9: 크게보기 fit을 transform:scale→CSS zoom으로 교체 — scale은 인쇄 시 레이아웃 공간이 안 줄어 페이지가 밀리던 불안정성이 있어, Chrome 인쇄에 안정적인 zoom(레이아웃 공간까지 함께 축소)으로 변경. 측정 iframe 1050×720(가로 A4 인쇄영역 근사), 각 건물 페이지가 넘치면 그 비율로 zoom 축소해 '한 건물=한 장' 보장. 기존 방식은 이미 정상이라 유지) [R8: [크게보기 전면 재설계] 핵심 원인 발견 — @page가 A4 'landscape'(가로)인데 R7 scale 계산이 세로 기준값(880)이라 스케일이 전혀 안 먹었음. ①크게보기 전용 렌더 분리: 제목·부제·생활관 사진·범례 제거, 상단에 건물명+과정 주석(색점+과정명·인원)만 한 줄 ②건물 1개 = .pf-page(A4 가로 1장), page-break-after로 페이지 경계 명시 ③인쇄 직전 실측 scale-to-fit을 가로 A4 인쇄영역(1042×712px)에 맞게 정확히 재계산, 측정용 iframe도 1050×720으로 ④2인1실 칸: 이름 pill 세로 스택(2명이 위아래로)→칸 높이 자동 확대 ⑤국제동(1인1실) 배정제외/이름 한 줄 고정(nowrap) — 2줄 꺾임 방지. 기존 방식 출력은 그대로 유지) [R7: [크게보기 근본 재수정] R6의 '건물당 1페이지'가 실제로는 건물 높이가 A4를 넘어 브라우저가 층 단위로 강제 분할(층별 페이지+빈 페이지 재현) — 높이 가정 대신 인쇄 직전 '실측 자동 축소(scale-to-fit)' 도입: 각 건물 블록 scrollHeight를 재서 A4 가용(880px) 초과 시 그 비율로 축소(폭·잔여높이 보정), 인원 규모 무관 건물당 정확히 1페이지 보장. 측정을 위해 인쇄 iframe을 0×0→720×1100(투명)으로. [기존판] AED 안내를 마지막 층 블록 내부에 묶음 — AED 문구만 혼자 다음 페이지로 밀리던 고아 페이지 방지) [R6 | 2026-07-08 (R6: 배치도 PDF 3건 수정 — ①기존판: 건물이 A4를 넘칠 때 방 카드가 페이지 경계에서 반토막 나던 문제, 층 전체 잘림방지 래퍼(fm-floor-sec)로 층 통째 넘김 ②확대판: 층별 페이지 분할(R4) 철회 → 건물당 1페이지에 전 층 표기(청렴관 1·2층 한 장, 상생관 동일), 방 96px로 조정해 A4 수납, 건물 사이 페이지 넘김 ③확대판 이름 pill 세로 스택·상단 정렬(중앙 뭉침으로 배치가 이상해 보이던 문제), 국제동 '배정제외' 2줄 꺾임 → 한 줄 고정 12.5px) [R5 | 2026-07-07 (R5: [버그] 주차별 방마스터가 사실상 일괄 적용되던 문제 근본 수정 — 정원/우선배정/배정제외 '즉시 저장' 2곳(setRoomField·층 전체 설정)이 masterPath를 쓰지 않고 항상 기본(공통) 경로에 저장해 기본이 오염되고 다른 주차(기본 폴백)에 따라가던 원인. 즉시 저장을 편집 중인 주차 전용 경로에 전체 세트로 저장(최초 편집 시 자동 시드). 현황/출력(STEP4 보드·배치도·PDF)도 자동배정과 동일하게 보는 주차 전용 마스터 우선으로 통일(loadRoomsForWeekView)) [R4 | 2026-07-07 (R4: 배치도 '크게 보기' PDF가 한 건물이 A4를 넘겨 층 중간에서 잘리던 문제 수정 — 크게 보기 모드에서 각 층을 독립 페이지로 분할(페이지마다 건물명+층 표기+소형 범례), 건물 사이 강제 개행 제거로 빈 페이지 방지, 층 페이지 방 셀 최소높이 120px로 여유 확보) [R3 | 2026-07-07 (R3: [보안] 접속코드 게이트 평문 제거→SHA-256 해시 대조, 자동 파기 목록 5종 보강) (R2: ①배치도 PDF 출력 시 방식 선택 팝업 신설 — 기존 방식/크게 보기. 크게 보기는 사진·AED 안내 제외, 방 번호·이름 폰트 확대(노안 대응)로 배치도가 A4를 최대한 차지, 파일명에 _크게보기 표기 ②과정 정리 목록에 media/{room} 미디어 저장소 정리 추가) -->
+<!-- PLATFORM_EDIT_STATUS: 수정완료 | VERSION: R10 | 2026-07-08 (R10: [일반 배치도 PDF 한 장 최적화] ①일반 모드(.pf-block)도 인쇄 직전 실측 zoom 자동 축소 적용 — 기존엔 크게보기(.pf-page)에만 걸려 있어 청렴관처럼 큰 건물이 A4를 넘으면 층 단위로 2페이지로 쪼개지고 2페이지엔 제목·건물명·사진·범례가 누락되던 문제 해결. .pf-block-inner 래퍼로 감싸고, 반복되는 상단 제목 헤더 높이만큼 가용 높이를 차감해 '한 건물=한 장' 보장 ②배정 인원 0명인 생활관은 출력 대상에서 제외(빈 배치도 종이 낭비 방지), 전부 0명이면 폴백) [R9: 크게보기 fit을 transform:scale→CSS zoom으로 교체 — scale은 인쇄 시 레이아웃 공간이 안 줄어 페이지가 밀리던 불안정성이 있어, Chrome 인쇄에 안정적인 zoom(레이아웃 공간까지 함께 축소)으로 변경. 측정 iframe 1050×720(가로 A4 인쇄영역 근사), 각 건물 페이지가 넘치면 그 비율로 zoom 축소해 '한 건물=한 장' 보장. 기존 방식은 이미 정상이라 유지) [R8: [크게보기 전면 재설계] 핵심 원인 발견 — @page가 A4 'landscape'(가로)인데 R7 scale 계산이 세로 기준값(880)이라 스케일이 전혀 안 먹었음. ①크게보기 전용 렌더 분리: 제목·부제·생활관 사진·범례 제거, 상단에 건물명+과정 주석(색점+과정명·인원)만 한 줄 ②건물 1개 = .pf-page(A4 가로 1장), page-break-after로 페이지 경계 명시 ③인쇄 직전 실측 scale-to-fit을 가로 A4 인쇄영역(1042×712px)에 맞게 정확히 재계산, 측정용 iframe도 1050×720으로 ④2인1실 칸: 이름 pill 세로 스택(2명이 위아래로)→칸 높이 자동 확대 ⑤국제동(1인1실) 배정제외/이름 한 줄 고정(nowrap) — 2줄 꺾임 방지. 기존 방식 출력은 그대로 유지) [R7: [크게보기 근본 재수정] R6의 '건물당 1페이지'가 실제로는 건물 높이가 A4를 넘어 브라우저가 층 단위로 강제 분할(층별 페이지+빈 페이지 재현) — 높이 가정 대신 인쇄 직전 '실측 자동 축소(scale-to-fit)' 도입: 각 건물 블록 scrollHeight를 재서 A4 가용(880px) 초과 시 그 비율로 축소(폭·잔여높이 보정), 인원 규모 무관 건물당 정확히 1페이지 보장. 측정을 위해 인쇄 iframe을 0×0→720×1100(투명)으로. [기존판] AED 안내를 마지막 층 블록 내부에 묶음 — AED 문구만 혼자 다음 페이지로 밀리던 고아 페이지 방지) [R6 | 2026-07-08 (R6: 배치도 PDF 3건 수정 — ①기존판: 건물이 A4를 넘칠 때 방 카드가 페이지 경계에서 반토막 나던 문제, 층 전체 잘림방지 래퍼(fm-floor-sec)로 층 통째 넘김 ②확대판: 층별 페이지 분할(R4) 철회 → 건물당 1페이지에 전 층 표기(청렴관 1·2층 한 장, 상생관 동일), 방 96px로 조정해 A4 수납, 건물 사이 페이지 넘김 ③확대판 이름 pill 세로 스택·상단 정렬(중앙 뭉침으로 배치가 이상해 보이던 문제), 국제동 '배정제외' 2줄 꺾임 → 한 줄 고정 12.5px) [R5 | 2026-07-07 (R5: [버그] 주차별 방마스터가 사실상 일괄 적용되던 문제 근본 수정 — 정원/우선배정/배정제외 '즉시 저장' 2곳(setRoomField·층 전체 설정)이 masterPath를 쓰지 않고 항상 기본(공통) 경로에 저장해 기본이 오염되고 다른 주차(기본 폴백)에 따라가던 원인. 즉시 저장을 편집 중인 주차 전용 경로에 전체 세트로 저장(최초 편집 시 자동 시드). 현황/출력(STEP4 보드·배치도·PDF)도 자동배정과 동일하게 보는 주차 전용 마스터 우선으로 통일(loadRoomsForWeekView)) [R4 | 2026-07-07 (R4: 배치도 '크게 보기' PDF가 한 건물이 A4를 넘겨 층 중간에서 잘리던 문제 수정 — 크게 보기 모드에서 각 층을 독립 페이지로 분할(페이지마다 건물명+층 표기+소형 범례), 건물 사이 강제 개행 제거로 빈 페이지 방지, 층 페이지 방 셀 최소높이 120px로 여유 확보) [R3 | 2026-07-07 (R3: [보안] 접속코드 게이트 평문 제거→SHA-256 해시 대조, 자동 파기 목록 5종 보강) (R2: ①배치도 PDF 출력 시 방식 선택 팝업 신설 — 기존 방식/크게 보기. 크게 보기는 사진·AED 안내 제외, 방 번호·이름 폰트 확대(노안 대응)로 배치도가 A4를 최대한 차지, 파일명에 _크게보기 표기 ②과정 정리 목록에 media/{room} 미디어 저장소 정리 추가) -->
 <!-- ===== EDIT-STATUS: 수정안하는중 ===== (값: 수정중 / 수정안하는중) · 플랫폼 간 협의용 플래그.
      다른 플랫폼/작업자는 이 파일을 열면 이 줄을 먼저 확인. 수정 시작 시 → 수정중 , 수정 완료 시 → 수정안하는중 -->
 <!-- [외부변경 · 카카오채널연동 2026-06-25] 포털(portal.html/7777) 경유 폐지 → catc1234 직접진입 게이트 추가, '포털' 버튼→'잠금'. @version J1→K1. 기능 로직 미변경. -->
@@ -5685,6 +5685,24 @@
                             }
                         });
                     } catch (fitErr) { console.warn('[R9 fit]', fitErr); }
+                    // ═══ [R10] 일반 배치도(.pf-block)도 자동 축소 — 건물 하나가 A4 세로영역을 넘으면
+                    //  층 단위로 페이지가 쪼개지며 2페이지(제목·사진·범례 누락)로 밀리던 문제를,
+                    //  실측 zoom으로 '한 건물 = 한 장'에 맞춰 해결. 상단 반복 제목 높이만큼 가용 높이 차감.
+                    try {
+                        const fdoc = f.contentWindow.document;
+                        const thead = fdoc.querySelector('table.pwrap > thead');
+                        const titleH = thead ? Math.ceil(thead.getBoundingClientRect().height) : 0;
+                        const AVAIL_HN = 720 - titleH - 6;   // 반복 제목 헤더 차감
+                        const AVAIL_WN = 1050;
+                        fdoc.querySelectorAll('.pf-block').forEach(function (bl) {
+                            const inner = bl.querySelector('.pf-block-inner');
+                            if (!inner) return;
+                            inner.style.zoom = '';
+                            const h = inner.scrollHeight, w = inner.scrollWidth;
+                            const sc = Math.min(1, AVAIL_HN / h, AVAIL_WN / w);
+                            if (sc < 1) inner.style.zoom = sc;   // 레이아웃 공간까지 축소 → 페이지 밀림 없음
+                        });
+                    } catch (fitErr2) { console.warn('[R10 fit normal]', fitErr2); }
                     document.title = fileName;   // PDF 저장 시 기본 파일명으로 사용됨
                     f.contentWindow.focus();
                     window.addEventListener('afterprint', function _h() { window.removeEventListener('afterprint', _h); restore(); });
@@ -6059,14 +6077,15 @@
                         </div>
                     </div>`;
                 }
-                return `<div class="pf-block">
+                // [R10] .pf-block-inner\ub85c \uac10\uc2f8 \uc77c\ubc18 \ubaa8\ub4dc\ub3c4 \uc778\uc1c4 \uc9c1\uc804 \uc2e4\uce21 \uc790\ub3d9 \ucd95\uc18c(zoom) \ub300\uc0c1\uc5d0 \ud3ec\ud568.
+                return `<div class="pf-block"><div class="pf-block-inner">
                     <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:14px;margin-bottom:10px;">
                         <div class="legend" style="flex:1;margin:0;">${_legendHtml(P)}</div>
                         ${photo ? `<div style="flex-shrink:0;"><img src="${photo}" alt="${building}" style="width:190px;height:124px;object-fit:cover;border-radius:9px;border:1.5px solid #e2e8f0;" onerror="this.parentNode.style.display='none'"></div>` : ''}
                     </div>
                     <div class="pf-bldg-header" style="background:${bar};"><span class="bicon">\ud83c\udfe2</span>${building}</div>
                     <div class="pf-floor-wrap" style="border-color:${bar};">${fls}</div>
-                </div>`;
+                </div></div>`;
             }
 
             const FORM_CSS = `<style>
@@ -6098,6 +6117,8 @@
                 .fm-noassign .fm-head { background:#e2e8f0; color:#64748b; }
                 .fm-exbadge { font-size:10px; font-weight:900; color:#b91c1c; background:#fee2e2; border:1px solid #fca5a5; border-radius:6px; padding:1px 7px; letter-spacing:-0.3px; }
                 .fm-floor-sec { break-inside:avoid; page-break-inside:avoid; }
+                /* [R10] 일반 배치도 축소 래퍼 — 인쇄 직전 JS가 zoom을 얹어 건물 하나를 A4 한 장에 맞춤 */
+                .pf-block-inner { width:100%; }
 
                 /* ═══════════ [R8] 크게보기 전용 — 건물 하나 = A4 가로 1장, 제목/사진/범례 없음 ═══════════ */
                 .pf-large-root { }
@@ -6137,15 +6158,22 @@
 </style>`;
 
             const totalCount = Object.keys(P.students).length;
+            // [R10] 배정 인원이 0명인 건물은 출력 제외(빈 배치도 종이 낭비 방지).
+            //  전부 0명이면 폴백으로 전체를 그려 형식 유지.
+            const _bldgCount = {};
+            Object.values(P.students).forEach(s => { const b = s && s.building; if (b) _bldgCount[b] = (_bldgCount[b] || 0) + 1; });
+            const _allBldgs = ['청렴관','상생관','국제교육동'];
+            let _bldgs = _allBldgs.filter(b => (_bldgCount[b] || 0) > 0);
+            if (!_bldgs.length) _bldgs = _allBldgs;
             let bodyHtml;
             if (LARGE) {
                 // [R8] 크게보기: 제목/부제 thead 없이 .pf-page(건물=페이지)만 나열.
                 //  .pf-page 자체에 page-break로 페이지 경계 지정 → 건물당 정확히 1장.
-                const pages = ['청렴관','상생관','국제교육동'].map(buildingHtml).join('');
+                const pages = _bldgs.map(buildingHtml).join('');
                 bodyHtml = `<div class="pf-large-root">${pages}</div>`;
             } else {
                 // 기존 방식: 제목 + 건물 사이 page-break (thead 반복 없앰)
-                const layoutSection = ['청렴관','상생관','국제교육동'].map((b, i) =>
+                const layoutSection = _bldgs.map((b, i) =>
                     (i > 0 ? `<div style="page-break-before:always;margin:0;height:0;"></div>` : '') + buildingHtml(b)
                 ).join('');
                 const header = `<h1>생활관 배정 배치도</h1>

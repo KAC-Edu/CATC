@@ -118,15 +118,18 @@ function printSheet() {
     const oldTxt = btn ? btn.innerHTML : '';
     if (btn) { btn.disabled = true; btn.innerHTML = '⏳ PDF 생성 중…'; }
     const tmp = document.createElement('style');
-    // PDF 캡처 영역을 정확히 A4 폭(210mm)으로 고정 → 좌우 여백/축소 방지
-    tmp.innerHTML = '#sheets-root,#print-area{width:210mm !important;margin:0 auto !important;}.sheet-container{box-shadow:none !important;margin:0 auto !important;}.mk-hint{display:none !important;}.att-mark{cursor:default !important;}';
+    // [M16] PDF 캡처 영역을 정확히 A4 세로 폭(210mm)으로 고정 → 좌우 여백/축소 방지.
+    //  min/max 폭까지 고정해 모바일에서 컨테이너가 화면폭으로 줄며 세로로 늘어나던 문제 차단.
+    tmp.innerHTML = '#sheets-root,#print-area{width:210mm !important;min-width:210mm !important;max-width:210mm !important;margin:0 auto !important;}.sheet-container{width:210mm !important;box-shadow:none !important;margin:0 auto !important;}.mk-hint{display:none !important;}.att-mark{cursor:default !important;}';
     document.head.appendChild(tmp);
     const done = () => { tmp.remove(); if (btn) { btn.disabled = false; btn.innerHTML = oldTxt; } };
     const opt = {
         margin: 0,
         filename: base + '.pdf',
         image: { type: 'jpeg', quality: 0.95 },
-        html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff' },
+        // [M16] windowWidth를 A4 세로 실측 px(210mm≈794px)로 고정 → 모바일 뷰포트(360~412px) 기준
+        //  캡처로 표가 압축되며 세로로 끝없이 늘어나던 근본 원인 차단(기기 무관 PC와 동일 렌더).
+        html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff', windowWidth: 794 },
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
         pagebreak: { mode: ['css', 'legacy'], before: '.sheet-container:not(:first-of-type)' }
     };
