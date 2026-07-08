@@ -970,8 +970,11 @@ body.in-course #moreToggleTab{ display:flex !important; }
             <div class="hero-left">
                 <div class="hero-tag">NOW TRAINING</div>
                 <h2 id="dashCourseTitle" onclick="ui.openFieldEdit('courseName')" title="클릭하여 과정명 수정" style="cursor:pointer;">과정명을 설정해주세요.</h2>
-                <div class="hero-info-row">
+                <!-- [I19] 시안 정렬: 날짜는 과정명 아래 한 줄로 분리, 장소·모니터링·직무·수료사진은 아래 pill 줄로 -->
+                <div class="hero-date-row">
                     <span class="info-pill" onclick="ui.openFieldEdit('period')" title="클릭하여 기간 수정" style="cursor:pointer;"><i class="fa-solid fa-calendar-check"></i> <b id="dashPeriod">-</b></span>
+                </div>
+                <div class="hero-info-row">
                     <div class="info-splitpill" id="dashLocSplit">
                         <span class="isp-part isp-loc" onclick="ui.openFieldEdit('roomDetail')" title="클릭하여 장소 수정"><i class="fa-solid fa-map-location-dot"></i> <b id="dashRoomDetail">-</b></span>
                         <span class="isp-part isp-zoom" id="dashZoomBtn" onclick="ui.openZoomMonitor()" title="ZOOM 실시간 출석 모니터링" style="display:none;"><i class="fa-solid fa-video"></i> <b>모니터링</b></span>

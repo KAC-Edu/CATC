@@ -2511,6 +2511,8 @@ body.night-mode .header-room-badge { background-color: #003366 !important; borde
     gap:14px;
     flex-wrap:wrap;
 }
+/* [I19] 시안 정렬 — 날짜를 과정명 바로 아래 한 줄로 (장소·모니터링·직무·수료사진 pill 줄과 분리) */
+.hero-date-row { display:flex; align-items:center; gap:14px; flex-wrap:wrap; margin:2px 0 12px; }
 .info-pill {
     background: rgba(255,255,255,0.1); padding: 8px 16px;
     border-radius: 50px; font-size: 14px; display: flex; align-items: center; gap: 8px;
