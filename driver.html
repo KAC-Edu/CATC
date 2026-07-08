@@ -374,11 +374,9 @@ function rebuild(){
   if(!rids.length) rids = Object.keys(allCourses);
   rids.sort();
   SHUTTLE = rids.map(function(rid){
-    var room=allCourses[rid]||{}, reqs=(room.shuttle&&room.shuttle.requests)||{}, studs=(room.students)||{}, people=[];
-    // [B3] 자차 디폴트 — 입교완료 교육생 전원을 나열하고, 차량 미신청자는 자차로 간주(요청 키=학생 uToken 매칭).
-    Object.keys(studs).forEach(function(tk){ var st=studs[tk]||{}; if(!st.name||st.name==='undefined') return; var r=reqs[tk]; people.push({ name:st.name, dest:(r&&DTYPE[r.type])?DTYPE[r.type]:'자차' }); });
-    // 학생 명단에 없는 신청(강사 등)도 포함
-    Object.keys(reqs).forEach(function(k){ if(studs[k]) return; var r=reqs[k]; if(!r) return; people.push({ name:(r.name||r.student||r.studentName||r.prof||'교육생'), dest:(DTYPE[r.type]||'자차') }); });
+    var room=allCourses[rid]||{}, reqs=(room.shuttle&&room.shuttle.requests)||{}, people=[];
+    // [B4] 자차 디폴트(B3) 원복 — 화면 간 카운트 불일치로 실제 신청자만 표시(강사 플랫폼과 통일).
+    Object.keys(reqs).forEach(function(k){ var r=reqs[k]; if(!r) return; people.push({ name:(r.name||r.student||r.studentName||r.prof||'교육생'), dest:(DTYPE[r.type]||'자차') }); });
     var dep=room.shuttle&&room.shuttle.departure;
     return { id:rid, room:rid, name:(room.settings&&room.settings.courseName)||('Room '+rid), period:(room.settings&&room.settings.period)||'', depart:(dep&&dep.time)||'미정', people:people };
   });
