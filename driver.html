@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- PLATFORM_EDIT_STATUS: 수정완료 | VERSION: B2 | 2026-06-30 | 차량 PC(디에스장): 입교/퇴교 고정버스 시간설정을 prompt(요일=1 키보드)→그래픽 모달(요일버튼 다중선택·시간 ±스테퍼/프리셋)로 교체. system/driver_fixed 데이터 shape 동일, 타 플랫폼 영향 없음. (디자이너 리라이트로 사라진 버전마커 재기입) -->
+<!-- PLATFORM_EDIT_STATUS: 수정완료 | VERSION: B3 | 2026-07-08 (B3: 퇴교차량 자차 디폴트 — 입교완료 교육생 전원 나열, 차량 미신청자는 자차로 간주해 총합=입교완료 인원, 자차 카운트에 미신청자 포함. 기존 B2: | 차량 PC(디에스장): 입교/퇴교 고정버스 시간설정을 prompt(요일=1 키보드)→그래픽 모달(요일버튼 다중선택·시간 ±스테퍼/프리셋)로 교체. system/driver_fixed 데이터 shape 동일, 타 플랫폼 영향 없음. (디자이너 리라이트로 사라진 버전마커 재기입) -->
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
@@ -374,8 +374,11 @@ function rebuild(){
   if(!rids.length) rids = Object.keys(allCourses);
   rids.sort();
   SHUTTLE = rids.map(function(rid){
-    var room=allCourses[rid]||{}, reqs=(room.shuttle&&room.shuttle.requests)||{}, people=[];
-    Object.keys(reqs).forEach(function(k){ var r=reqs[k]; if(!r) return; people.push({ name:(r.name||r.student||r.studentName||r.prof||'교육생'), dest:(DTYPE[r.type]||'자차') }); });
+    var room=allCourses[rid]||{}, reqs=(room.shuttle&&room.shuttle.requests)||{}, studs=(room.students)||{}, people=[];
+    // [B3] 자차 디폴트 — 입교완료 교육생 전원을 나열하고, 차량 미신청자는 자차로 간주(요청 키=학생 uToken 매칭).
+    Object.keys(studs).forEach(function(tk){ var st=studs[tk]||{}; if(!st.name||st.name==='undefined') return; var r=reqs[tk]; people.push({ name:st.name, dest:(r&&DTYPE[r.type])?DTYPE[r.type]:'자차' }); });
+    // 학생 명단에 없는 신청(강사 등)도 포함
+    Object.keys(reqs).forEach(function(k){ if(studs[k]) return; var r=reqs[k]; if(!r) return; people.push({ name:(r.name||r.student||r.studentName||r.prof||'교육생'), dest:(DTYPE[r.type]||'자차') }); });
     var dep=room.shuttle&&room.shuttle.departure;
     return { id:rid, room:rid, name:(room.settings&&room.settings.courseName)||('Room '+rid), period:(room.settings&&room.settings.period)||'', depart:(dep&&dep.time)||'미정', people:people };
   });
