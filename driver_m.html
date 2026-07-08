@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- PLATFORM_EDIT_STATUS: 수정완료 | VERSION: DN2 | 2026-06-29 -->
+<!-- PLATFORM_EDIT_STATUS: 수정완료 | VERSION: DN3 | 2026-07-08 (DN3: 자차 디폴트 재도입(전 화면 동시) — 강사 admin.js J48 규칙과 동일: 미신청 입교완료 교육생을 자차 카운트에 포함(유효 이름·정규화 매칭·중복 1회). 버스 탑승 총원은 실신청 그대로 | 기존 DN2: 2026-06-29) -->
 <html lang="ko">
 <head>
   <script>
@@ -352,6 +352,19 @@ function renderLeave(){
     var arr=Object.keys(reqs).map(function(k){return reqs[k];}); if(!arr.length) continue;
     var counts={osong:0,terminal:0,airport:0,car:0};
     arr.forEach(function(r){ if(counts[r.type]!==undefined) counts[r.type]++; });
+    // [DN3] 자차 디폴트(전 화면 동시, 강사 admin.js J48 규칙) — 미신청 입교완료 교육생을 자차로 간주.
+    //  유효 이름 필터 + 공백제거·소문자 정규화 매칭 + 중복 이름 1회. 버스 탑승 총원(busTot)은 실신청 그대로.
+    (function(){
+      var _nm=function(n){ return String(n||'').replace(/\s+/g,'').toLowerCase(); };
+      var _seen={}; arr.forEach(function(r){ if(r&&r.name) _seen[_nm(r.name)]=1; });
+      var _dupe={};
+      Object.keys(room.students||{}).forEach(function(k){
+        var s=room.students[k]; if(!s||!s.name||s.name==='undefined') return;
+        var nm=String(s.name).trim(); if(!nm) return;
+        var key=_nm(nm); if(_dupe[key]) return; _dupe[key]=1;
+        if(!_seen[key]) counts.car++;
+      });
+    })();
     var busTot=counts.osong+counts.terminal+counts.airport;
     var cn=(room.settings&&room.settings.courseName)||rid;
     var dep=room.shuttle&&room.shuttle.departure;
