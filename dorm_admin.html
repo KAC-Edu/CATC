@@ -1,6 +1,6 @@
 ﻿<!DOCTYPE html>
 <html lang="ko">
-<!-- PLATFORM_EDIT_STATUS: 수정완료 | VERSION: R7 | 2026-07-08 (R7: [크게보기 근본 재수정] R6의 '건물당 1페이지'가 실제로는 건물 높이가 A4를 넘어 브라우저가 층 단위로 강제 분할(층별 페이지+빈 페이지 재현) — 높이 가정 대신 인쇄 직전 '실측 자동 축소(scale-to-fit)' 도입: 각 건물 블록 scrollHeight를 재서 A4 가용(880px) 초과 시 그 비율로 축소(폭·잔여높이 보정), 인원 규모 무관 건물당 정확히 1페이지 보장. 측정을 위해 인쇄 iframe을 0×0→720×1100(투명)으로. [기존판] AED 안내를 마지막 층 블록 내부에 묶음 — AED 문구만 혼자 다음 페이지로 밀리던 고아 페이지 방지) [R6 | 2026-07-08 (R6: 배치도 PDF 3건 수정 — ①기존판: 건물이 A4를 넘칠 때 방 카드가 페이지 경계에서 반토막 나던 문제, 층 전체 잘림방지 래퍼(fm-floor-sec)로 층 통째 넘김 ②확대판: 층별 페이지 분할(R4) 철회 → 건물당 1페이지에 전 층 표기(청렴관 1·2층 한 장, 상생관 동일), 방 96px로 조정해 A4 수납, 건물 사이 페이지 넘김 ③확대판 이름 pill 세로 스택·상단 정렬(중앙 뭉침으로 배치가 이상해 보이던 문제), 국제동 '배정제외' 2줄 꺾임 → 한 줄 고정 12.5px) [R5 | 2026-07-07 (R5: [버그] 주차별 방마스터가 사실상 일괄 적용되던 문제 근본 수정 — 정원/우선배정/배정제외 '즉시 저장' 2곳(setRoomField·층 전체 설정)이 masterPath를 쓰지 않고 항상 기본(공통) 경로에 저장해 기본이 오염되고 다른 주차(기본 폴백)에 따라가던 원인. 즉시 저장을 편집 중인 주차 전용 경로에 전체 세트로 저장(최초 편집 시 자동 시드). 현황/출력(STEP4 보드·배치도·PDF)도 자동배정과 동일하게 보는 주차 전용 마스터 우선으로 통일(loadRoomsForWeekView)) [R4 | 2026-07-07 (R4: 배치도 '크게 보기' PDF가 한 건물이 A4를 넘겨 층 중간에서 잘리던 문제 수정 — 크게 보기 모드에서 각 층을 독립 페이지로 분할(페이지마다 건물명+층 표기+소형 범례), 건물 사이 강제 개행 제거로 빈 페이지 방지, 층 페이지 방 셀 최소높이 120px로 여유 확보) [R3 | 2026-07-07 (R3: [보안] 접속코드 게이트 평문 제거→SHA-256 해시 대조, 자동 파기 목록 5종 보강) (R2: ①배치도 PDF 출력 시 방식 선택 팝업 신설 — 기존 방식/크게 보기. 크게 보기는 사진·AED 안내 제외, 방 번호·이름 폰트 확대(노안 대응)로 배치도가 A4를 최대한 차지, 파일명에 _크게보기 표기 ②과정 정리 목록에 media/{room} 미디어 저장소 정리 추가) -->
+<!-- PLATFORM_EDIT_STATUS: 수정완료 | VERSION: R9 | 2026-07-08 (R9: 크게보기 fit을 transform:scale→CSS zoom으로 교체 — scale은 인쇄 시 레이아웃 공간이 안 줄어 페이지가 밀리던 불안정성이 있어, Chrome 인쇄에 안정적인 zoom(레이아웃 공간까지 함께 축소)으로 변경. 측정 iframe 1050×720(가로 A4 인쇄영역 근사), 각 건물 페이지가 넘치면 그 비율로 zoom 축소해 '한 건물=한 장' 보장. 기존 방식은 이미 정상이라 유지) [R8: [크게보기 전면 재설계] 핵심 원인 발견 — @page가 A4 'landscape'(가로)인데 R7 scale 계산이 세로 기준값(880)이라 스케일이 전혀 안 먹었음. ①크게보기 전용 렌더 분리: 제목·부제·생활관 사진·범례 제거, 상단에 건물명+과정 주석(색점+과정명·인원)만 한 줄 ②건물 1개 = .pf-page(A4 가로 1장), page-break-after로 페이지 경계 명시 ③인쇄 직전 실측 scale-to-fit을 가로 A4 인쇄영역(1042×712px)에 맞게 정확히 재계산, 측정용 iframe도 1050×720으로 ④2인1실 칸: 이름 pill 세로 스택(2명이 위아래로)→칸 높이 자동 확대 ⑤국제동(1인1실) 배정제외/이름 한 줄 고정(nowrap) — 2줄 꺾임 방지. 기존 방식 출력은 그대로 유지) [R7: [크게보기 근본 재수정] R6의 '건물당 1페이지'가 실제로는 건물 높이가 A4를 넘어 브라우저가 층 단위로 강제 분할(층별 페이지+빈 페이지 재현) — 높이 가정 대신 인쇄 직전 '실측 자동 축소(scale-to-fit)' 도입: 각 건물 블록 scrollHeight를 재서 A4 가용(880px) 초과 시 그 비율로 축소(폭·잔여높이 보정), 인원 규모 무관 건물당 정확히 1페이지 보장. 측정을 위해 인쇄 iframe을 0×0→720×1100(투명)으로. [기존판] AED 안내를 마지막 층 블록 내부에 묶음 — AED 문구만 혼자 다음 페이지로 밀리던 고아 페이지 방지) [R6 | 2026-07-08 (R6: 배치도 PDF 3건 수정 — ①기존판: 건물이 A4를 넘칠 때 방 카드가 페이지 경계에서 반토막 나던 문제, 층 전체 잘림방지 래퍼(fm-floor-sec)로 층 통째 넘김 ②확대판: 층별 페이지 분할(R4) 철회 → 건물당 1페이지에 전 층 표기(청렴관 1·2층 한 장, 상생관 동일), 방 96px로 조정해 A4 수납, 건물 사이 페이지 넘김 ③확대판 이름 pill 세로 스택·상단 정렬(중앙 뭉침으로 배치가 이상해 보이던 문제), 국제동 '배정제외' 2줄 꺾임 → 한 줄 고정 12.5px) [R5 | 2026-07-07 (R5: [버그] 주차별 방마스터가 사실상 일괄 적용되던 문제 근본 수정 — 정원/우선배정/배정제외 '즉시 저장' 2곳(setRoomField·층 전체 설정)이 masterPath를 쓰지 않고 항상 기본(공통) 경로에 저장해 기본이 오염되고 다른 주차(기본 폴백)에 따라가던 원인. 즉시 저장을 편집 중인 주차 전용 경로에 전체 세트로 저장(최초 편집 시 자동 시드). 현황/출력(STEP4 보드·배치도·PDF)도 자동배정과 동일하게 보는 주차 전용 마스터 우선으로 통일(loadRoomsForWeekView)) [R4 | 2026-07-07 (R4: 배치도 '크게 보기' PDF가 한 건물이 A4를 넘겨 층 중간에서 잘리던 문제 수정 — 크게 보기 모드에서 각 층을 독립 페이지로 분할(페이지마다 건물명+층 표기+소형 범례), 건물 사이 강제 개행 제거로 빈 페이지 방지, 층 페이지 방 셀 최소높이 120px로 여유 확보) [R3 | 2026-07-07 (R3: [보안] 접속코드 게이트 평문 제거→SHA-256 해시 대조, 자동 파기 목록 5종 보강) (R2: ①배치도 PDF 출력 시 방식 선택 팝업 신설 — 기존 방식/크게 보기. 크게 보기는 사진·AED 안내 제외, 방 번호·이름 폰트 확대(노안 대응)로 배치도가 A4를 최대한 차지, 파일명에 _크게보기 표기 ②과정 정리 목록에 media/{room} 미디어 저장소 정리 추가) -->
 <!-- ===== EDIT-STATUS: 수정안하는중 ===== (값: 수정중 / 수정안하는중) · 플랫폼 간 협의용 플래그.
      다른 플랫폼/작업자는 이 파일을 열면 이 줄을 먼저 확인. 수정 시작 시 → 수정중 , 수정 완료 시 → 수정안하는중 -->
 <!-- [외부변경 · 카카오채널연동 2026-06-25] 포털(portal.html/7777) 경유 폐지 → catc1234 직접진입 게이트 추가, '포털' 버튼→'잠금'. @version J1→K1. 기능 로직 미변경. -->
@@ -5657,7 +5657,7 @@
             const f = document.createElement('iframe');
             f.id = '_kacPrintFrame';
             // [R7] 실측(scale-fit)을 위해 인쇄 폭 근사 크기로 생성 — opacity:0이라 화면엔 안 보임
-            f.style.cssText = 'position:fixed; right:0; bottom:0; width:720px; height:1100px; border:0; opacity:0; pointer-events:none;';
+            f.style.cssText = 'position:fixed; right:0; bottom:0; width:1050px; height:720px; border:0; opacity:0; pointer-events:none;';
             document.body.appendChild(f);
             const doc = f.contentWindow.document;
             doc.open();
@@ -5667,22 +5667,24 @@
             const restore = function () { document.title = BASE_TITLE; try { f.remove(); } catch (_) {} };
             setTimeout(function () {
                 try {
-                    // ═══ [R7] 크게보기 scale-to-fit — 각 건물 블록의 '실제 높이'를 재서 A4 한 장을
-                    //  넘으면 그 비율만큼 자동 축소(폭 보정 포함). 계산 가정이 아닌 실측이라
-                    //  인원 규모와 무관하게 건물당 정확히 1페이지 보장(층 분할·빈 페이지 원천 차단).
+                    // ═══ [R9] 크게보기 fit — transform:scale은 인쇄 시 레이아웃 공간이 안 줄어
+                    //  페이지가 밀리던 불안정성이 있어, Chrome 인쇄에 안정적인 CSS zoom으로 교체.
+                    //  각 .pf-page-inner 실측 높이/폭이 가로 A4 인쇄영역을 넘으면 그 비율로 zoom 축소.
                     try {
-                        const AVAIL = 880;   // A4 세로 인쇄영역(≈1027px) − 반복 헤더 − 안전여유
-                        f.contentWindow.document.querySelectorAll('.pf-large-page').forEach(function (b) {
-                            const h = b.scrollHeight;
-                            if (h > AVAIL) {
-                                const sc = Math.max(0.45, AVAIL / h);
-                                b.style.transformOrigin = 'top left';
-                                b.style.transform = 'scale(' + sc + ')';
-                                b.style.width = (100 / sc) + '%';
-                                b.style.height = Math.ceil(h * sc) + 'px';   // 축소 후 잔여 공백 제거
+                        const pages = f.contentWindow.document.querySelectorAll('.pf-page');
+                        pages.forEach(function (pg) {
+                            const inner = pg.querySelector('.pf-page-inner');
+                            if (!inner) return;
+                            const AVAIL_H = 720;   // 가로 A4 인쇄영역 높이(≈190mm→720px) − 여유
+                            const AVAIL_W = 1050;  // 가로 A4 인쇄영역 폭(≈277mm→1050px) − 여유
+                            inner.style.zoom = '';
+                            const h = inner.scrollHeight, w = inner.scrollWidth;
+                            const sc = Math.min(1, AVAIL_H / h, AVAIL_W / w);
+                            if (sc < 1) {
+                                inner.style.zoom = sc;   // zoom은 레이아웃 공간까지 함께 축소 → 페이지 밀림 없음
                             }
                         });
-                    } catch (fitErr) { console.warn('[R7 fit]', fitErr); }
+                    } catch (fitErr) { console.warn('[R9 fit]', fitErr); }
                     document.title = fileName;   // PDF 저장 시 기본 파일명으로 사용됨
                     f.contentWindow.focus();
                     window.addEventListener('afterprint', function _h() { window.removeEventListener('afterprint', _h); restore(); });
@@ -5761,6 +5763,14 @@
             return g === 'M' ? '(남)' : '(여)';
         }
 
+        function _courseNoteHtml(P) {
+            // [R8] 크게보기 상단 과정 주석 — 색 점 + 과정명·인원만 한 줄로 압축
+            return Object.keys(P.courseColors).map(cn => {
+                const col = P.courseColors[cn];
+                const cnt = P.courseCount[cn] || 0;
+                return `<span class="pf-cnote"><span class="pf-cdot" style="background:${col}"></span><span style="color:${col}">${cn} · ${cnt}명</span></span>`;
+            }).join('');
+        }
         function _legendHtml(P) {
             return Object.keys(P.courseColors).map(cn => {
                 const col = P.courseColors[cn];
@@ -6037,10 +6047,16 @@
                 //  (R4의 층별 분할은 청렴관 1·2층이 각각 다른 장에 나뉘어 불편 — 요구사항 변경).
                 //  방 크기는 R4보다 약간 줄여(96px) 4줄(2개 층)이 A4 한 장에 들어가도록 조정.
                 if (LARGE) {
-                    return `<div class="pf-block pf-large-page">
-                        <div class="legend legend-mini" style="margin:0 0 6px;">${_legendHtml(P)}</div>
-                        <div class="pf-bldg-header" style="background:${bar};"><span class="bicon">\ud83c\udfe2</span>${building}</div>
-                        <div class="pf-floor-wrap" style="border-color:${bar};">${fls}</div>
+                    // [R8] 크게보기: 제목·사진·범례 제거. 건물명 + 과정 주석(작게)만 상단에.
+                    //  .pf-page(A4 가로 1장) > .pf-page-inner(측정·축소 대상)로 감싸 인쇄 시 정확히 1장.
+                    return `<div class="pf-page">
+                        <div class="pf-page-inner">
+                            <div class="pf-large-note">
+                                <span class="pf-large-bldg" style="color:${bar};"><span class="bicon">\ud83c\udfe2</span>${building}</span>
+                                <span class="pf-large-courses">${_courseNoteHtml(P)}</span>
+                            </div>
+                            <div class="pf-floor-wrap" style="border-color:${bar};">${fls}</div>
+                        </div>
                     </div>`;
                 }
                 return `<div class="pf-block">
@@ -6081,46 +6097,61 @@
                 .fm-noassign { background:repeating-linear-gradient(45deg,#e9edf3,#e9edf3 4px,#f4f7fb 4px,#f4f7fb 11px); border-style:dashed; border-color:#b6c0cf; }
                 .fm-noassign .fm-head { background:#e2e8f0; color:#64748b; }
                 .fm-exbadge { font-size:10px; font-weight:900; color:#b91c1c; background:#fee2e2; border:1px solid #fca5a5; border-radius:6px; padding:1px 7px; letter-spacing:-0.3px; }
-                /* ═══ [2026-07-07] 크게 보기 모드: 방 번호·이름을 노안에도 잘 보이게 확대, 배치도가 A4 한 장을 최대한 차지 ═══ */
-                .pf-large .fm-grid { gap:6px; grid-auto-rows:minmax(90px,auto); }
-                .pf-large .fm-room { min-height:90px; border-width:2px; border-radius:8px; }
-                .pf-large .fm-room.fm-intl { min-height:104px; }
-                .pf-large .fm-head { font-size:16px; padding:4px 2px; border-bottom-width:2px; }
-                .pf-large .fm-ext { font-size:12px; }
-                .pf-large .fm-body { gap:5px 6px; padding:5px 4px; }
-                .pf-large .fm-pill { font-size:17px; padding:3px 13px; border-width:2px; border-radius:14px; }
-                .pf-large .fm-gk { font-size:13px; }
-                .pf-large .fm-intl .fm-pill { font-size:13.5px; }
-                .pf-large .fm-foreign .fm-fg { font-size:11.5px; }
-                .pf-large .fm-fac { font-size:15px; border-width:2px; }
-                .pf-large .fm-corridor { font-size:11px; }
-                .pf-large .fm-floor-label { font-size:15px; padding:4px 13px; border-left-width:5px; }
-                .pf-large .fm-exbadge { font-size:13px; padding:2px 9px; }
-                .pf-large .fm-flat { min-height:58px; }
-                .pf-large .legend-mini { transform:scale(.92); transform-origin:left top; }
-                .pf-large h1 { font-size:20px; margin-bottom:2px; }
-                /* [2026-07-07] 크게 보기: 각 층을 독립 페이지로 — 페이지 경계에서 잘리지 않도록 */
-                .pf-large-page { break-inside:avoid; page-break-inside:avoid; }
-                .pf-large-page .fm-grid { grid-auto-rows:minmax(96px,auto); gap:7px; }
-                .pf-large-page .fm-room { min-height:96px; }
-                .pf-large-page .fm-room.fm-intl { min-height:96px; }
-                /* [R6] 이름 pill — 세로 스택·위에서부터 채움 (기존 중앙 뭉침으로 배치가 이상해 보이던 문제) */
-                .pf-large-page .fm-body { flex-direction:column; flex-wrap:nowrap; align-items:stretch; justify-content:flex-start; gap:5px; padding:6px 6px; }
-                .pf-large-page .fm-pill { font-size:16.5px; justify-content:center; padding:3px 8px; }
-                /* [R6] 국제동 '배정제외'가 2줄로 꺾이던 문제 — 한 줄 고정·크기 별도 */
-                .pf-large-page .fm-intl .fm-pill { font-size:12.5px; white-space:nowrap; word-break:keep-all; overflow-wrap:normal; padding:3px 5px; }
                 .fm-floor-sec { break-inside:avoid; page-break-inside:avoid; }
+
+                /* ═══════════ [R8] 크게보기 전용 — 건물 하나 = A4 가로 1장, 제목/사진/범례 없음 ═══════════ */
+                .pf-large-root { }
+                .pf-page { page-break-after:always; break-after:page; width:100%; }
+                .pf-page:last-child { page-break-after:auto; break-after:auto; }
+                /* .pf-page-inner: 측정·축소 대상. 인쇄 시 JS가 zoom을 얹어 A4 가로 1장에 맞춤(R9) */
+                .pf-page-inner { width:100%; }
+                .pf-large-note { display:flex; align-items:center; flex-wrap:wrap; gap:6px 14px; margin:0 0 8px; }
+                .pf-large-bldg { font-size:17px; font-weight:900; letter-spacing:-0.3px; display:inline-flex; align-items:center; gap:7px; }
+                .pf-large-courses { display:inline-flex; align-items:center; flex-wrap:wrap; gap:4px 12px; }
+                .pf-cnote { display:inline-flex; align-items:center; gap:5px; font-size:12px; font-weight:800; white-space:nowrap; }
+                .pf-cdot { width:11px; height:11px; border-radius:3px; display:inline-block; flex-shrink:0; }
+                /* 크게보기 방 셀: 2인1실 칸 높이 확보 + 이름 크게. 축소는 JS scale이 담당하므로 여기선 '큰 기준' 사용 */
+                .pf-page .pf-floor-wrap { border-width:3px; padding:12px 12px 14px; }
+                .pf-page .fm-floor-label { font-size:15px; padding:4px 13px; border-left-width:5px; margin:9px 0 6px; }
+                .pf-page .fm-grid { gap:6px; grid-auto-rows:minmax(78px,auto); }
+                .pf-page .fm-room { min-height:78px; border-width:2px; border-radius:8px; }
+                .pf-page .fm-room.fm-intl { min-height:78px; }
+                .pf-page .fm-head { font-size:15px; padding:4px 2px; border-bottom-width:2px; }
+                .pf-page .fm-ext { font-size:11px; }
+                /* 이름 pill: 세로 스택(2인1실이면 2개가 위아래로) — 칸 높이가 자동으로 늘어남 */
+                .pf-page .fm-body { flex-direction:column; flex-wrap:nowrap; align-items:stretch; justify-content:center; gap:5px; padding:6px 7px; }
+                .pf-page .fm-pill { font-size:16px; justify-content:center; padding:3px 10px; border-width:2px; border-radius:13px; }
+                .pf-page .fm-gk { font-size:12px; }
+                /* 국제동(1인1실): '배정제외'/이름 한 줄 고정 — 2줄 꺾임 방지 */
+                .pf-page .fm-intl .fm-body { padding:6px 5px; }
+                .pf-page .fm-intl .fm-pill { font-size:13px; white-space:nowrap; word-break:keep-all; overflow-wrap:normal; padding:3px 6px; }
+                .pf-page .fm-exbadge { font-size:13px; padding:2px 9px; white-space:nowrap; }
+                .pf-page .fm-fac { font-size:14px; border-width:2px; }
+                .pf-page .fm-corridor { font-size:10px; }
+                .pf-page .fm-flat { flex-direction:row; min-height:52px; }
+                @media print {
+                    .pf-page { page-break-after:always; break-after:page; }
+                    .pf-page:last-child { page-break-after:auto; break-after:auto; }
+                    .pf-page-inner { break-inside:avoid; page-break-inside:avoid; }
+                }
 </style>`;
 
-            // 건물 사이 page-break-before 방식으로 변경 (thead 반복 없앰)
-            const layoutSection = ['청렴관','상생관','국제교육동'].map((b, i) =>
-                (i > 0 ? `<div style="page-break-before:always;margin:0;height:0;"></div>` : '') + buildingHtml(b)
-            ).join('');
             const totalCount = Object.keys(P.students).length;
-            // ★ 전역 헤더에서 legend 제거 — 각 건물 섹션에 개별 포함
-            const header = `<h1>생활관 배정 배치도</h1>
-                <div class="sub">${P.fmt(P.wd)} ~ ${P.fmt(P.wEnd)} 주간 · 총 ${totalCount}명 · 출력일 ${new Date().toLocaleDateString('ko-KR')}</div>`;
-            const bodyHtml = `<table class="pwrap"><thead><tr><td>${header}</td></tr></thead><tbody><tr><td class="${LARGE ? 'pf-large' : ''}">${layoutSection}</td></tr></tbody></table>`;
+            let bodyHtml;
+            if (LARGE) {
+                // [R8] 크게보기: 제목/부제 thead 없이 .pf-page(건물=페이지)만 나열.
+                //  .pf-page 자체에 page-break로 페이지 경계 지정 → 건물당 정확히 1장.
+                const pages = ['청렴관','상생관','국제교육동'].map(buildingHtml).join('');
+                bodyHtml = `<div class="pf-large-root">${pages}</div>`;
+            } else {
+                // 기존 방식: 제목 + 건물 사이 page-break (thead 반복 없앰)
+                const layoutSection = ['청렴관','상생관','국제교육동'].map((b, i) =>
+                    (i > 0 ? `<div style="page-break-before:always;margin:0;height:0;"></div>` : '') + buildingHtml(b)
+                ).join('');
+                const header = `<h1>생활관 배정 배치도</h1>
+                    <div class="sub">${P.fmt(P.wd)} ~ ${P.fmt(P.wEnd)} 주간 · 총 ${totalCount}명 · 출력일 ${new Date().toLocaleDateString('ko-KR')}</div>`;
+                bodyHtml = `<table class="pwrap"><thead><tr><td>${header}</td></tr></thead><tbody><tr><td>${layoutSection}</td></tr></tbody></table>`;
+            }
             _printDoc(`(${_kacWeekTag(P.wd)}_배치도${LARGE ? '_크게보기' : ''}) 항공기술훈련원 방 배정 현황표`, bodyHtml, FORM_CSS);
             _offerLockAfterPdf();
         }

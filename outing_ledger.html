@@ -144,12 +144,58 @@
         window._courseNameStr = '-';   // 페이지 제목블록·인쇄 파일명용
         window._periodDisplay = '-';
 
-        // 브라우저 인쇄 미리보기 → 'PDF로 저장' 선택 (미리보기 확인 후 저장, 빈 페이지 없음)
-        function printLedger() {
+        // [M15] PDF 저장 — html2pdf로 blob 생성. 모바일은 OS 공유시트(카톡/메일 위치 선택), 데스크톱은 다운로드.
+        //  (기존 window.print()는 모바일/카톡 인앱 브라우저에서 무반응이던 원인 → 완전 교체)
+        function _isMobileEnv() {
+            return /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent || '');
+        }
+        async function printLedger() {
             const cn = (window._courseNameStr || '').trim();
             const base = (cn && cn !== '-') ? `${cn} 외출외박대장` : '외출외박대장';
-            document.title = base;     // 저장 시 기본 파일명
-            window.print();
+            const el = document.getElementById('ledgerPages') || document.body;
+            const btn = document.querySelector('.print-btn');
+            const oldTxt = btn ? btn.innerHTML : '';
+            // html2pdf 미지원 시 최후 폴백(데스크톱 인쇄)
+            if (typeof html2pdf === 'undefined' || !el) { document.title = base; window.print(); return; }
+            if (btn) { btn.disabled = true; btn.innerHTML = '⏳ PDF 생성 중…'; }
+            const tmp = document.createElement('style');
+            tmp.innerHTML = '#ledgerPages{width:210mm !important;margin:0 auto !important;}.page{box-shadow:none !important;margin:0 auto !important;}.print-btn{display:none !important;}';
+            document.head.appendChild(tmp);
+            const done = () => { tmp.remove(); if (btn) { btn.disabled = false; btn.innerHTML = oldTxt; } };
+            const opt = {
+                margin: 0,
+                filename: base + '.pdf',
+                image: { type: 'jpeg', quality: 0.95 },
+                html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff' },
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+                pagebreak: { mode: ['css', 'legacy'], before: '.page:not(:first-of-type)' }
+            };
+            try {
+                const worker = html2pdf().set(opt).from(el);
+                // 모바일 + 파일 공유 지원 → 공유시트(카톡·메일 등 위치 선택)
+                if (_isMobileEnv() && navigator.canShare) {
+                    const blob = await worker.outputPdf('blob');
+                    const file = new File([blob], base + '.pdf', { type: 'application/pdf' });
+                    if (navigator.canShare({ files: [file] })) {
+                        try { await navigator.share({ files: [file], title: base }); done(); return; }
+                        catch (shareErr) {
+                            if (shareErr && shareErr.name === 'AbortError') { done(); return; }  // 사용자가 공유 취소
+                        }
+                    }
+                    // 공유 미지원 → blob 다운로드 폴백
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a'); a.href = url; a.download = base + '.pdf';
+                    document.body.appendChild(a); a.click(); a.remove();
+                    setTimeout(() => URL.revokeObjectURL(url), 4000);
+                    done(); return;
+                }
+                // 데스크톱 → 바로 저장(다운로드)
+                await worker.save();
+                done();
+            } catch (e) {
+                console.error('[외출외박 PDF]', e);
+                done(); document.title = base; window.print();   // 최후 폴백
+            }
         }
         window.addEventListener('afterprint', () => { document.title = '외출·외박 신청서(대장)'; });
 

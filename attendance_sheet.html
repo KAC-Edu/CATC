@@ -122,14 +122,36 @@ function printSheet() {
     tmp.innerHTML = '#sheets-root,#print-area{width:210mm !important;margin:0 auto !important;}.sheet-container{box-shadow:none !important;margin:0 auto !important;}.mk-hint{display:none !important;}.att-mark{cursor:default !important;}';
     document.head.appendChild(tmp);
     const done = () => { tmp.remove(); if (btn) { btn.disabled = false; btn.innerHTML = oldTxt; } };
-    html2pdf().set({
+    const opt = {
         margin: 0,
         filename: base + '.pdf',
         image: { type: 'jpeg', quality: 0.95 },
         html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff' },
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
         pagebreak: { mode: ['css', 'legacy'], before: '.sheet-container:not(:first-of-type)' }
-    }).from(el).save().then(done).catch(() => { done(); document.title = base; window.print(); });
+    };
+    // [M15] 모바일이면 OS 공유시트(카톡/메일 위치 선택), 데스크톱은 다운로드
+    const isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent || '');
+    (async () => {
+        try {
+            const worker = html2pdf().set(opt).from(el);
+            if (isMobile && navigator.canShare) {
+                const blob = await worker.outputPdf('blob');
+                const file = new File([blob], base + '.pdf', { type: 'application/pdf' });
+                if (navigator.canShare({ files: [file] })) {
+                    try { await navigator.share({ files: [file], title: base }); done(); return; }
+                    catch (se) { if (se && se.name === 'AbortError') { done(); return; } }
+                }
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a'); a.href = url; a.download = base + '.pdf';
+                document.body.appendChild(a); a.click(); a.remove();
+                setTimeout(() => URL.revokeObjectURL(url), 4000);
+                done(); return;
+            }
+            await worker.save();
+            done();
+        } catch (e) { done(); document.title = base; window.print(); }
+    })();
 }
 
 // [운영부 수동 출석] 아직 처리 안 된 칸 클릭 → 해당 날짜 출석 처리(OTP 미체크 보완). 라이브 방·보관(archive) 모두 지원.

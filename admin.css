@@ -1,4 +1,4 @@
-/* PLATFORM_EDIT_STATUS: 수정완료 | VERSION: T | 2026-07-07 (T8: 리모컨 is-dragging 페인트 경량화(backdrop-filter/그림자/필터 off, will-change) (T7: 퀴즈 O/X 마크 clamp(110px,22vh,220px) 확대·설명 34px, 보기 줄바꿈 허용(nowrap 제거)+keep-all (T6: dts-chip hover 이동 제거(떨림 원인), nh-qa 아이콘 배지·2줄 라벨·has-q 반전 (T5: 톱니 버튼(.ops-cfg 회전 hover)·재정렬 모드(점선 테두리+흔들림+드래그 그림자) (T4: 질문사항 보기 버튼 강조 스타일(.nh-qa/.has-q/배지/펄스) (T3: I12 2카드 스타일 신설(.ops-card/.ops-row/.nh-item/.edu-tile/.nh-all), 그리드 1.35fr+1fr 2열 전환 (T2: 과정현황 3카드 정렬 — notice-item 중앙정렬, n-tag 폭 58px 고정, 오늘 한눈에 클릭 칩 hover 효과 (T1: 직무 토글을 pill 줄 규격(높이 36px·radius 50px) 소형 인라인 스위치로 재설계, hero-info-row 세로 중앙정렬) [T: 직무 토글 스타일 신설] */
+/* PLATFORM_EDIT_STATUS: 수정완료 | VERSION: T | 2026-07-07 (T10: ①리모컨 드래그 중 transform:none 강제(translateY(-50%) 잔존이 JS left/top과 충돌해 커서와 어긋나던 랙 제거) ②리모컨 위치 미디어쿼리 제거(창 축소 시 right:12px 강제로 메인 블록 위에 튀던 원인 — JS 좌표 우선) [T8: 리모컨 is-dragging 페인트 경량화(backdrop-filter/그림자/필터 off, will-change) (T7: 퀴즈 O/X 마크 clamp(110px,22vh,220px) 확대·설명 34px, 보기 줄바꿈 허용(nowrap 제거)+keep-all (T6: dts-chip hover 이동 제거(떨림 원인), nh-qa 아이콘 배지·2줄 라벨·has-q 반전 (T5: 톱니 버튼(.ops-cfg 회전 hover)·재정렬 모드(점선 테두리+흔들림+드래그 그림자) (T4: 질문사항 보기 버튼 강조 스타일(.nh-qa/.has-q/배지/펄스) (T3: I12 2카드 스타일 신설(.ops-card/.ops-row/.nh-item/.edu-tile/.nh-all), 그리드 1.35fr+1fr 2열 전환 (T2: 과정현황 3카드 정렬 — notice-item 중앙정렬, n-tag 폭 58px 고정, 오늘 한눈에 클릭 칩 hover 효과 (T1: 직무 토글을 pill 줄 규격(높이 36px·radius 50px) 소형 인라인 스위치로 재설계, hero-info-row 세로 중앙정렬) [T: 직무 토글 스타일 신설] */
 /* ============================================================
    CATC · 강사 플랫폼 스타일  (admin.css)
    STATUS    수정완료
@@ -5362,8 +5362,10 @@ table.pss-table{ width:100%; border-collapse:collapse; table-layout:fixed; }
 .hex-settings-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;padding:22px}.hex-settings-list label{display:flex;align-items:center;gap:12px;padding:14px;border:1.5px solid #e2e8f0;border-radius:14px;font-weight:850;cursor:pointer}.hex-settings-list label:has(input:checked){background:#eff6ff;border-color:#60a5fa;color:#1d4ed8}.hex-settings-list input{width:19px;height:19px;accent-color:#2563eb}.hex-settings-list i{width:22px;text-align:center}
 .hex-settings-foot{display:flex;align-items:center;justify-content:space-between;padding:16px 22px 22px;border-top:1px solid #eef2f7;font-weight:900;color:#475569}.hex-settings-foot button{min-width:140px;padding:14px 20px;border:0;border-radius:13px;background:#2563eb;color:#fff;font-weight:900;cursor:pointer}.hex-settings-foot button:disabled{opacity:.35;cursor:not-allowed}
 .sidebar-settings-fold{width:100%;border:1px solid rgba(255,255,255,.14);border-radius:12px;overflow:hidden}.sidebar-settings-fold summary{list-style:none;display:flex;align-items:center;gap:9px;padding:13px 14px;background:#334155;color:#fff;font-weight:900;cursor:pointer}.sidebar-settings-fold summary::-webkit-details-marker{display:none}.sidebar-settings-fold summary .fa-chevron-down{margin-left:auto;transition:transform .2s}.sidebar-settings-fold[open] summary .fa-chevron-down{transform:rotate(180deg)}.sidebar-settings-actions{display:flex;flex-direction:column;gap:8px;padding:10px;background:#1e293b}
-@media(max-width:1100px){#courseSmartRemote.hex-remote-v2{right:12px;transform:translateY(-50%) scale(.86);transform-origin:right center}}
-@media(max-width:720px){#courseSmartRemote.hex-remote-v2{width:280px;height:300px;right:6px}.hex-ring{transform:scale(.9);transform-origin:center top}.hex-settings-list{grid-template-columns:1fr}}
+/* [T9] 창 축소 시 위치(right/transform)를 강제하지 않음 — JS 인라인 좌표(left/top)가 항상 우선.
+   기존 미디어쿼리가 right:12px로 덮어써서, 창을 반으로 줄이면 리모컨이 메인 블록 위로 튀던 원인.
+   축소 배율은 .hex-ring에만 적용해 위치와 분리. */
+@media(max-width:720px){.hex-ring{transform:scale(.9);transform-origin:center top}.hex-settings-list{grid-template-columns:1fr}}
 
 /* ── 강의실용 육각 리모컨 외관 개선 (색상·메뉴 구성 유지) ── */
 #courseSmartRemote.hex-remote-v2{
@@ -6489,6 +6491,7 @@ body.night-mode .side-rail-lbl{ color:#cbd5e1; }
 /* ═══ [J32] 리모컨 드래그 성능 — 드래그 중에는 비싼 페인트 효과를 꺼서 커서와 1:1 동속 ═══ */
 #courseSmartRemote.hex-remote-v2.is-dragging{
     transition:none !important; animation:none !important;
+    transform:none !important;   /* [T10] translateY(-50%) 잔존 제거 — JS left/top과 충돌해 커서와 세로로 어긋나던(랙처럼 보이던) 원인 */
     backdrop-filter:none !important; -webkit-backdrop-filter:none !important;
     box-shadow:0 14px 30px rgba(15,23,42,.3) !important;
     will-change:left,top;

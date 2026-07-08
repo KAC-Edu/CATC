@@ -2,7 +2,7 @@
 <!-- 이 플랫폼(admin_coord.html / 교육운영부) 수정상태 플래그. 값은 [수정중] 또는 [수정안하는중] 두 가지. -->
 <!-- 작업 시작 시 → 수정중 / 작업 완료 시 → 수정안하는중. 다른 플랫폼은 이 말머리를 보고 연동·수정 가능 여부 판단. -->
 <!-- [외부변경 · 카카오채널연동 2026-06-25] 포털(portal.html/7777) 경유 폐지 → 페이지 직접진입 시 접속코드(catc1234) 게이트 추가, 포털 리다이렉트/종료이동 제거. version C13→D13. 기능 로직은 미변경. -->
-<!-- last-updated: 2026-07-07 / version: D69 (D69: 국제동 2층 실습실 3종(ILS·VCCS/RADIO/ATIS·VOR/DME/TACAN)이 도면에 A/B강의실로 잘못 표기되던 문제 수정 — 등록 옵션 value를 실습실별로 분리(기존 ILS·VCCS 동일값 버그 포함 해소), 강의실 라벨 파서가 실습실 3종을 인식하도록 보강, 도면 좌표 키·표시명을 실습실 풀네임으로 매핑) (D68: [보안] 접속코드 게이트 평문 제거→SHA-256 해시 대조(kacHash 전역), 강의실 초기화 비번 대조 해시 우선+btoa 레거시 호환, 자동 파기 목록 5종 보강) (D67: ①국제동 2층 배치도 연결(classroom_inter2f.png, GitHub 루트 업로드 필요) — 블록 좌표는 롱프레스 편집으로 조정·저장 ②배치도 좌표 조정 방식 통일 — 과정안내 블록(카드) 자체를 5초 롱프레스해도 편집 시작(기존엔 배경만 인식), 편집 배너에 즉시 저장 버튼 추가, 모든 도면 동일 동작) (D66: ①미디어 격리: 출결 QR 업로드를 media/{room}/attendanceQR 로 이전(레거시 자동 제거), QR 미리보기 media 우선 폴백, 정리 도구·초기화 경로에 media/레거시 gradPhoto 포함 ②폐강 동기화: 방에 배정된 과정이 연간계획에서 폐강이면 사용 중이어도 즉시 방 정리(잠금 방은 경고만) — 강사 폐강 과정이 운영부 동기화로 되살아나던 문제 해소) [D65 (장소선택 팝업 방버튼 층별 2열 그리드+컴팩트화 → 하늘관 등 긴 열이 한 화면에 다 보이게) [D64: 팝업 폭확대·표기안내] -->
+<!-- last-updated: 2026-07-07 / version: D70 (D69: 국제동 2층 실습실 3종(ILS·VCCS/RADIO/ATIS·VOR/DME/TACAN)이 도면에 A/B강의실로 잘못 표기되던 문제 수정 — 등록 옵션 value를 실습실별로 분리(기존 ILS·VCCS 동일값 버그 포함 해소), 강의실 라벨 파서가 실습실 3종을 인식하도록 보강, 도면 좌표 키·표시명을 실습실 풀네임으로 매핑) (D68: [보안] 접속코드 게이트 평문 제거→SHA-256 해시 대조(kacHash 전역), 강의실 초기화 비번 대조 해시 우선+btoa 레거시 호환, 자동 파기 목록 5종 보강) (D67: ①국제동 2층 배치도 연결(classroom_inter2f.png, GitHub 루트 업로드 필요) — 블록 좌표는 롱프레스 편집으로 조정·저장 ②배치도 좌표 조정 방식 통일 — 과정안내 블록(카드) 자체를 5초 롱프레스해도 편집 시작(기존엔 배경만 인식), 편집 배너에 즉시 저장 버튼 추가, 모든 도면 동일 동작) (D66: ①미디어 격리: 출결 QR 업로드를 media/{room}/attendanceQR 로 이전(레거시 자동 제거), QR 미리보기 media 우선 폴백, 정리 도구·초기화 경로에 media/레거시 gradPhoto 포함 ②폐강 동기화: 방에 배정된 과정이 연간계획에서 폐강이면 사용 중이어도 즉시 방 정리(잠금 방은 경고만) — 강사 폐강 과정이 운영부 동기화로 되살아나던 문제 해소) [D65 (장소선택 팝업 방버튼 층별 2열 그리드+컴팩트화 → 하늘관 등 긴 열이 한 화면에 다 보이게) [D64: 팝업 폭확대·표기안내] -->
 <!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -8765,16 +8765,20 @@ function openShuttleSummary(){
     var _dtimes=['미정','13:00','13:30','14:00','14:30','15:00','15:30','16:00','16:30','17:00'];
     var _dopts='<option value="">시간 선택</option>'+_dtimes.map(function(tm){return '<option value="'+tm+'"'+(tm===_depCur?' selected':'')+'>'+(tm==='미정'?'미정(추후 공지)':tm)+'</option>';}).join('');
     return '<div class="csec-card">'
-      +'<div class="csec-card-head" onclick="coordToggleShuttle('+idx+')" style="cursor:pointer;display:flex;align-items:center;gap:18px;padding:12px 22px;">'
-        +'<div style="flex:1;min-width:0;display:flex;align-items:center;gap:12px;"><span class="crow-room" style="flex-shrink:0;">ROOM <span class="rid-big">#'+_esc(r.rid)+'</span></span><span style="font-size:20px;font-weight:900;color:#0f172a;word-break:keep-all;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+_esc(r.s.courseName||'-')+'</span></div>'
-        +'<div style="display:flex;align-items:center;gap:22px;flex-shrink:0;">'
-          +'<div style="text-align:center;min-width:44px;"><div style="font-size:12.5px;font-weight:800;color:#64748b;">자차</div><div style="font-size:24px;font-weight:900;color:#64748b;line-height:1.15;">'+c.car+'</div></div>'
-          +'<div style="text-align:center;min-width:44px;"><div style="font-size:12.5px;font-weight:800;color:#ef4444;">오송역</div><div style="font-size:24px;font-weight:900;color:#ef4444;line-height:1.15;">'+c.osong+'</div></div>'
-          +'<div style="text-align:center;min-width:44px;"><div style="font-size:12.5px;font-weight:800;color:#3b82f6;">터미널</div><div style="font-size:24px;font-weight:900;color:#3b82f6;line-height:1.15;">'+c.terminal+'</div></div>'
-          +'<div style="text-align:center;min-width:44px;"><div style="font-size:12.5px;font-weight:800;color:#10b981;">공항</div><div style="font-size:24px;font-weight:900;color:#10b981;line-height:1.15;">'+c.airport+'</div></div>'
-          +'<div style="width:1px;height:38px;background:#e2e8f0;"></div>'
-          +'<div style="text-align:center;min-width:58px;"><div style="font-size:12.5px;font-weight:800;color:#0f172a;">총 신청</div><div style="font-size:30px;font-weight:900;color:#1e3a8a;line-height:1.1;">'+tot+'</div></div>'
-          +'<i class="fa-solid fa-chevron-down crow-chev" id="coordShtChev'+idx+'" style="margin-left:6px;"></i>'
+      // [D70] 헤더 2줄 구조 — 좁은 카드 폭에서 room·과정명과 통계 블록(자차/오송역/…)이 겹치던 문제.
+      //  위줄: ROOM+과정명(+펼침 화살표), 아래줄: 목적지별 통계. 세로로 분리해 겹침 원천 차단.
+      +'<div class="csec-card-head" onclick="coordToggleShuttle('+idx+')" style="cursor:pointer;padding:12px 20px;">'
+        +'<div style="display:flex;align-items:center;gap:12px;min-width:0;margin-bottom:11px;">'
+          +'<span class="crow-room" style="flex-shrink:0;">ROOM <span class="rid-big">#'+_esc(r.rid)+'</span></span>'
+          +'<span style="flex:1;min-width:0;font-size:19px;font-weight:900;color:#0f172a;word-break:keep-all;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+_esc(r.s.courseName||'-')+'</span>'
+          +'<i class="fa-solid fa-chevron-down crow-chev" id="coordShtChev'+idx+'" style="flex-shrink:0;color:#94a3b8;"></i>'
+        +'</div>'
+        +'<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">'
+          +'<div style="flex:1;text-align:center;min-width:44px;background:#f8fafc;border-radius:8px;padding:6px 4px;"><div style="font-size:11.5px;font-weight:800;color:#64748b;">자차</div><div style="font-size:22px;font-weight:900;color:#64748b;line-height:1.15;">'+c.car+'</div></div>'
+          +'<div style="flex:1;text-align:center;min-width:44px;background:#fef2f2;border-radius:8px;padding:6px 4px;"><div style="font-size:11.5px;font-weight:800;color:#ef4444;">오송역</div><div style="font-size:22px;font-weight:900;color:#ef4444;line-height:1.15;">'+c.osong+'</div></div>'
+          +'<div style="flex:1;text-align:center;min-width:44px;background:#eff6ff;border-radius:8px;padding:6px 4px;"><div style="font-size:11.5px;font-weight:800;color:#3b82f6;">터미널</div><div style="font-size:22px;font-weight:900;color:#3b82f6;line-height:1.15;">'+c.terminal+'</div></div>'
+          +'<div style="flex:1;text-align:center;min-width:44px;background:#ecfdf5;border-radius:8px;padding:6px 4px;"><div style="font-size:11.5px;font-weight:800;color:#10b981;">공항</div><div style="font-size:22px;font-weight:900;color:#10b981;line-height:1.15;">'+c.airport+'</div></div>'
+          +'<div style="flex:1.2;text-align:center;min-width:52px;background:#eef2ff;border-radius:8px;padding:6px 4px;"><div style="font-size:11.5px;font-weight:800;color:#1e3a8a;">총 신청</div><div style="font-size:26px;font-weight:900;color:#1e3a8a;line-height:1.1;">'+tot+'</div></div>'
         +'</div>'
       +'</div>'
       +'<div id="coordShtBody'+idx+'" style="display:none;border-top:1px solid #eef2f7;overflow-x:auto;"><table class="cpop-table" style="width:100%;table-layout:fixed;"><colgroup><col style="width:12%"><col style="width:30%"><col style="width:33%"><col style="width:25%"></colgroup><thead><tr><th>연번</th><th>성명</th><th>목적지</th><th>신청시간</th></tr></thead><tbody>'+rows+'</tbody></table></div>'
