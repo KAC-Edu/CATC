@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-  <!-- last-updated: 2026-07-07 / version: M13 (M13: 부트 로딩 오버레이 — 초기 데이터 도착 전 블러+로딩 문구 표시(멈춘 것처럼 보이는 오해 방지), 첫 courses 수신 시 해제·8초 안전장치) (M12: [보안] 접속코드 게이트 평문 제거→SHA-256 해시 대조) (M11: 5-1: 과정 상세에 '자료 PDF 공유' 카드 신설 — 외출외박/출석부를 전체 교육기간 기준 PDF로 생성(html2canvas+jsPDF, A4 가로·자동 페이지 분할) 후 휴대폰 공유시트(navigator.share)로 카카오톡·이메일 전송, 미지원 기기는 다운로드 폴백) [M10 (M9 교수 오픈톡방 + [수정] 안드로이드 하단잘림: 시트 82vh→82dvh·body/ov-body safe-area 하단여백 · 교수톡방 시트도 아래로 밀어 닫기(_bindSheetDrag 공통화)) · 운영부 요청 admin_coord 담당 디에스장 편집 [M8: 교육생장·정렬표] -->
+  <!-- last-updated: 2026-07-07 / version: M14 (M14: 출석부·외출외박 대장 정식 양식 적용 — ①과정 상세의 'PDF 공유' 카드를 PC와 동일한 정식 대장(attendance_sheet=도장 출석부 / outing_ledger=복귀완료 포함 신청서) 링크로 교체(M11 자체 생성 양식 폐기) ②홈에 '대장 보관함' 신설 — 최근 90일 주차 칩 + 과정별 출석부/외출외박 카드(과거 이력·보관 과정 포함, PC 대장센터 로직 이식) — 열린 화면에서 PDF 저장) (M13: 부트 로딩 오버레이 — 초기 데이터 도착 전 블러+로딩 문구 표시(멈춘 것처럼 보이는 오해 방지), 첫 courses 수신 시 해제·8초 안전장치) (M12: [보안] 접속코드 게이트 평문 제거→SHA-256 해시 대조) (M11: 5-1: 과정 상세에 '자료 PDF 공유' 카드 신설 — 외출외박/출석부를 전체 교육기간 기준 PDF로 생성(html2canvas+jsPDF, A4 가로·자동 페이지 분할) 후 휴대폰 공유시트(navigator.share)로 카카오톡·이메일 전송, 미지원 기기는 다운로드 폴백) [M10 (M9 교수 오픈톡방 + [수정] 안드로이드 하단잘림: 시트 82vh→82dvh·body/ov-body safe-area 하단여백 · 교수톡방 시트도 아래로 밀어 닫기(_bindSheetDrag 공통화)) · 운영부 요청 admin_coord 담당 디에스장 편집 [M8: 교육생장·정렬표] -->
   <!-- ※ 모바일 개발자 파일이나 운영부 요청으로 디에스장(admin_coord 담당)이 장소선택 모달만 개선. 기능로직(setEduSel/EDU 동기화)은 동일 유지 -->
   <meta charset="UTF-8" />
   <script>
@@ -302,6 +302,10 @@
 
   <div class="sec">
     <div class="sec-ttl"><i class="fa-solid fa-list-ul"></i> 운영중인 과정</div>
+    <!-- [M14] 과거 주차 대장 보관함 진입 -->
+    <button onclick="openLedgerArchiveM()" style="width:100%; display:flex; align-items:center; justify-content:center; gap:9px; background:#fff; border:1.5px solid #bbf7d0; border-radius:14px; padding:14px; margin:0 0 12px; color:#047857; font-weight:900; font-size:14.5px; box-shadow:0 2px 8px rgba(4,120,87,.08);">
+      <i class="fa-solid fa-folder-open"></i> 출석부 · 외출외박 대장 보관함 <span style="font-weight:700; color:#94a3b8; font-size:11.5px;">· 최근 90일</span>
+    </button>
     <div id="courseList"><div class="empty">불러오는 중...</div></div>
   </div>
 </div>
@@ -336,14 +340,15 @@
       <h3><i class="fa-solid fa-user-clock"></i> 외출·외박 신청자 <span style="font-weight:700;color:#94a3b8;font-size:12px;">· 금일</span></h3>
       <div id="dOuting"></div>
     </div>
-    <!-- [M11·5-1] 과정 자료 PDF 생성·공유 (카카오톡/이메일은 휴대폰 공유시트에서 선택) -->
+    <!-- [M14] 출석부·외출외박 대장 — PC와 동일한 정식 양식 페이지(attendance_sheet/outing_ledger)를 열어 저장.
+         (기존 M11 자체 생성 PDF는 양식이 PC 대장과 달라 폐기 — 이제 복귀완료 포함 신청서·도장 출석부 그대로) -->
     <div class="card">
-      <h3><i class="fa-solid fa-share-nodes"></i> 자료 PDF 공유 <span style="font-weight:700;color:#94a3b8;font-size:12px;">· 카카오톡/이메일</span></h3>
+      <h3><i class="fa-solid fa-folder-open"></i> 출석부 · 외출외박 대장 <span style="font-weight:700;color:#94a3b8;font-size:12px;">· PC와 동일 양식</span></h3>
       <div style="display:flex; gap:10px; margin-top:12px;">
-        <button class="btn" style="flex:1; background:#ea580c; color:#fff; font-weight:900; padding:14px 10px; border:none; border-radius:12px; font-size:14px;" onclick="sharePdf('outing')"><i class="fa-solid fa-person-walking-arrow-right"></i> 외출·외박 PDF</button>
-        <button class="btn" style="flex:1; background:#2563eb; color:#fff; font-weight:900; padding:14px 10px; border:none; border-radius:12px; font-size:14px;" onclick="sharePdf('attendance')"><i class="fa-solid fa-clipboard-user"></i> 출석부 PDF</button>
+        <button class="btn" style="flex:1; background:#0d9488; color:#fff; font-weight:900; padding:14px 10px; border:none; border-radius:12px; font-size:14px;" onclick="openLedgerPageM('attendance')"><i class="fa-solid fa-clipboard-user"></i> 출석부 대장</button>
+        <button class="btn" style="flex:1; background:#2563eb; color:#fff; font-weight:900; padding:14px 10px; border:none; border-radius:12px; font-size:14px;" onclick="openLedgerPageM('outing')"><i class="fa-solid fa-file-signature"></i> 외출외박 대장</button>
       </div>
-      <div style="margin-top:9px; font-size:11.5px; font-weight:700; color:#94a3b8; line-height:1.55;">전체 교육기간 자료로 PDF를 만들어 휴대폰 공유(카카오톡·메일 등)로 바로 전송합니다.</div>
+      <div style="margin-top:9px; font-size:11.5px; font-weight:700; color:#94a3b8; line-height:1.55;">복귀완료가 포함된 외출(외박) 신청서와 출석 도장이 찍힌 출석부 — PC와 동일한 정식 대장이 열립니다. 열린 화면에서 <b>PDF 저장</b>을 누르세요.</div>
     </div>
     <div class="card" id="dNoticeCard">
       <h3 onclick="toggleNoticeCard()" style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:8px;margin:0;"><span><i class="fa-solid fa-paper-plane"></i> 강사플랫폼 공지 발송</span><i class="fa-solid fa-chevron-down" id="dNoticeChev" style="font-size:14px;color:#94a3b8;transition:transform .22s;"></i></h3>
@@ -920,5 +925,124 @@ buildEduSelects();
 })();
 </script>
 
+
+<!-- ═══ [M14] 출석부·외출외박 대장 — 정식 양식 링크 + 과거 주차 보관함 (PC 대장 센터 이식) ═══ -->
+<script>
+function openLedgerPageM(kind){
+  if(!curRID){ if(typeof toast==='function') toast('과정을 먼저 선택하세요.'); return; }
+  var page=(kind==='outing')?'outing_ledger.html':'attendance_sheet.html';
+  window.open(page+'?room='+encodeURIComponent(curRID),'_blank');
+}
+var _laData={}, _laWeeks=[], _laSel='';
+function _laEsc(x){ return String(x==null?'':x).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;'); }
+function _laToday(){ var d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function _laMonday(ds){
+  var m=/^(\d{4})[-.](\d{1,2})[-.](\d{1,2})/.exec(String(ds||'').trim()); if(!m) return '';
+  var d=new Date(+m[1], +m[2]-1, +m[3]); if(isNaN(d)) return '';
+  var w=d.getDay(); d.setDate(d.getDate()+(w===0?-6:1-w));
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+function _laWeekLabel(wk){
+  var d=new Date(wk+'T00:00:00'), e=new Date(d); e.setDate(e.getDate()+4);
+  var f=function(x){ return String(x.getMonth()+1).padStart(2,'0')+'.'+String(x.getDate()).padStart(2,'0'); };
+  return f(d)+' ~ '+f(e);
+}
+function _laCountActions(aa){ var n=0; if(!aa||typeof aa!=='object') return 0; Object.keys(aa).forEach(function(k){ var v=aa[k]; if(v&&typeof v==='object'){ if(v.type||v.kind||v.student||v.name) n++; else n+=Object.keys(v).length; } }); return n; }
+function _laAttCount(ia){ var n=0; if(!ia||typeof ia!=='object') return 0; Object.keys(ia).forEach(function(dt){ if(!/^\d{4}-\d{2}-\d{2}$/.test(dt)) return; var day=ia[dt]; if(day&&typeof day==='object') n+=Object.keys(day).length; }); return n; }
+async function openLedgerArchiveM(){
+  var ov=document.getElementById('laOv');
+  if(!ov){
+    ov=document.createElement('div'); ov.id='laOv';
+    ov.style.cssText='position:fixed;inset:0;z-index:99400;background:#f1f5f9;display:flex;flex-direction:column;';
+    ov.innerHTML='<div style="background:linear-gradient(135deg,#047857,#059669);color:#fff;padding:calc(14px + env(safe-area-inset-top)) 16px 14px;display:flex;align-items:center;gap:10px;flex-shrink:0;">'
+      +'<i class="fa-solid fa-folder-open" style="font-size:18px;"></i>'
+      +'<div style="flex:1;font-size:16.5px;font-weight:900;">출석부 · 외출외박 대장</div>'
+      +'<button onclick="document.getElementById(\'laOv\').style.display=\'none\'" style="background:rgba(255,255,255,.18);border:none;color:#fff;width:34px;height:34px;border-radius:10px;font-size:16px;font-weight:900;">✕</button></div>'
+      +'<div id="laBody" style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:14px 14px calc(24px + env(safe-area-inset-bottom));"><div style="text-align:center;padding:40px;color:#94a3b8;font-weight:800;">불러오는 중…</div></div>';
+    document.body.appendChild(ov);
+  }
+  ov.style.display='flex';
+  var todayWk=_laMonday(_laToday());
+  var cutD=new Date(todayWk+'T00:00:00'); cutD.setDate(cutD.getDate()-90);
+  var cutWk=_laMonday(cutD.getFullYear()+'-'+(cutD.getMonth()+1)+'-'+cutD.getDate());
+  var weeks={};
+  function weeksOf(start,end){
+    var out=[], s=_laMonday(start); if(!s) return out;
+    var e=(end?_laMonday(end):s)||s;
+    var from=(s<cutWk)?cutWk:s, to=(e>todayWk)?todayWk:e;
+    var cur=new Date(from+'T00:00:00'), g=0;
+    while(g++<80){ var k=_laMonday(cur.getFullYear()+'-'+(cur.getMonth()+1)+'-'+cur.getDate()); if(k>to) break; if(k>=cutWk&&k<=todayWk) out.push(k); cur.setDate(cur.getDate()+7); }
+    return out;
+  }
+  function pushCourse(start,end,obj){
+    var wks=weeksOf(start,end);
+    if(!wks.length){ var w0=_laMonday(start); if(w0&&w0>=cutWk&&w0<=todayWk) wks=[w0]; }
+    wks.forEach(function(wk){ var arr=(weeks[wk]=weeks[wk]||[]); if(arr.some(function(x){return x.key===obj.key;})) return; arr.push(obj); });
+  }
+  try{
+    var D=(typeof DATA!=='undefined'&&DATA)||{};
+    Object.keys(D).forEach(function(rid){
+      var room=D[rid]||{}, st=room.settings||{};
+      if(!st.courseName) return;
+      var period=(''+(st.period||'')).trim();
+      var start=period.includes('~')?period.split('~')[0].trim():'';
+      var end=period.includes('~')?(period.split('~')[1]||'').trim():'';
+      pushCourse(start,end,{ courseName:st.courseName||('Room '+rid), period:period, room:rid, archiveId:null,
+        outCount:_laCountActions(room.admin_actions), attCount:_laAttCount(room.internal_attendance), key:rid+'|'+(st.courseName||'') });
+    });
+  }catch(e){ console.warn('[보관함] active',e); }
+  try{
+    var arSnap=await firebase.database().ref('system/course_archive').once('value'); var ar=arSnap.val()||{};
+    Object.keys(ar).forEach(function(id){
+      var c=ar[id]||{}; var period=(''+(c.period||'')).trim();
+      var start=period.includes('~')?period.split('~')[0].trim():'';
+      var end=period.includes('~')?(period.split('~')[1]||'').trim():'';
+      pushCourse(start,end,{ courseName:c.courseName||('Room '+(c.room||'')), period:period, room:c.room||'', archiveId:id,
+        outCount:_laCountActions(c.admin_actions), attCount:_laAttCount(c.internal_attendance), key:(c.room||'')+'|'+(c.courseName||'') });
+    });
+  }catch(e){ console.warn('[보관함] archive',e); }
+  _laData=weeks;
+  _laWeeks=[]; var w=new Date(todayWk+'T00:00:00');
+  for(var i=0;i<14;i++){ var key=_laMonday(w.getFullYear()+'-'+(w.getMonth()+1)+'-'+w.getDate()); if(key<cutWk) break;
+    _laWeeks.push({key:key,label:_laWeekLabel(key),count:(weeks[key]||[]).length,isThis:key===todayWk}); w.setDate(w.getDate()-7); }
+  _laSel=(weeks[todayWk]&&weeks[todayWk].length)?todayWk:((_laWeeks.filter(function(x){return x.count>0;})[0]||_laWeeks[0]||{key:todayWk}).key);
+  _laRender();
+}
+function _laPick(wk){ _laSel=wk; _laRender(); }
+function _laRender(){
+  var body=document.getElementById('laBody'); if(!body) return;
+  var chips='<div style="display:flex;gap:8px;overflow-x:auto;-webkit-overflow-scrolling:touch;padding:2px 2px 10px;margin-bottom:8px;">'
+    +_laWeeks.map(function(o){
+      var on=o.key===_laSel;
+      return '<div onclick="_laPick(\''+o.key+'\')" style="flex-shrink:0;border:2px solid '+(on?'#047857':(o.count>0?'#a7f3d0':'#e6eaf2'))+';border-radius:12px;padding:9px 13px;background:'+(on?'#ecfdf5':'#fff')+';text-align:center;'+(o.count<=0&&!on?'opacity:.55;':'')+'">'
+        +'<div style="font-size:13px;font-weight:900;color:'+(on?'#047857':'#1e293b')+';white-space:nowrap;">'+o.label+'</div>'
+        +'<div style="font-size:10.5px;font-weight:800;margin-top:2px;color:'+(o.count>0?'#059669':'#94a3b8')+';">'+(o.isThis?'이번주 · ':'')+o.count+'개</div></div>';
+    }).join('')+'</div>';
+  var arr=(_laData[_laSel]||[]).slice().sort(function(a,b){ return String(a.courseName).localeCompare(b.courseName); });
+  var cards;
+  if(!arr.length){ cards='<div style="text-align:center;padding:44px 18px;color:#94a3b8;"><div style="font-size:38px;margin-bottom:8px;">🗂️</div><div style="font-size:15px;font-weight:800;">해당 주차에 과정이 없습니다.</div><div style="font-size:12px;margin-top:5px;color:#b0bccd;">90일이 지난 자료는 폐기되어 표시되지 않습니다.</div></div>'; }
+  else cards=arr.map(function(c){
+    var outUrl=c.archiveId?('outing_ledger.html?archive='+encodeURIComponent(c.archiveId)):('outing_ledger.html?room='+encodeURIComponent(c.room));
+    var attUrl=c.archiveId?('attendance_sheet.html?archive='+encodeURIComponent(c.archiveId)):('attendance_sheet.html?room='+encodeURIComponent(c.room));
+    function btn(label,icon,count,url,color,bg){
+      var zero=count<=0, cc=zero?'#94a3b8':color, bgc=zero?'#f8fafc':bg;
+      return '<button onclick="window.open(\''+url+'\',\'_blank\')" style="flex:1;display:flex;align-items:center;justify-content:center;gap:7px;background:'+bgc+';border:1.5px solid '+(zero?'#e6eaf2':(color+'44'))+';border-radius:11px;padding:13px 8px;color:'+cc+';font-weight:800;font-size:13.5px;">'
+        +'<i class="fa-solid '+icon+'"></i> '+label+' <span style="background:#fff;border:1px solid '+(zero?'#e2e8f0':(color+'55'))+';border-radius:999px;padding:1px 8px;font-size:11.5px;">'+count+'건</span></button>';
+    }
+    return '<div style="background:#fff;border:1.5px solid #e8edf5;border-radius:15px;padding:14px 15px;margin-bottom:11px;box-shadow:0 2px 8px rgba(15,23,42,.04);">'
+      +'<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;min-width:0;">'
+      +'<span style="width:40px;height:40px;flex-shrink:0;border-radius:11px;background:linear-gradient(135deg,#1e3a8a,#2563eb);color:#fff;display:flex;align-items:center;justify-content:center;font-size:17px;"><i class="fa-solid fa-graduation-cap"></i></span>'
+      +'<div style="min-width:0;"><div style="font-size:15.5px;font-weight:900;color:#1e293b;line-height:1.25;word-break:keep-all;">'+_laEsc(c.courseName)+'</div>'
+      +'<div style="font-size:11px;font-weight:700;color:#94a3b8;margin-top:2px;">'+_laEsc(c.period||'')+(c.archiveId?' · 보관':'')+'</div></div></div>'
+      +'<div style="display:flex;gap:8px;">'
+      +btn('출석부','fa-clipboard-user',c.attCount,attUrl,'#0d9488','#f0fdfa')
+      +btn('외출외박','fa-file-signature',c.outCount,outUrl,'#2563eb','#eff6ff')
+      +'</div></div>';
+  }).join('');
+  body.innerHTML=chips
+    +'<div style="font-size:12px;font-weight:800;color:#475569;margin:2px 2px 10px;"><i class="fa-solid fa-list" style="color:#047857;"></i> '+_laWeekLabel(_laSel)+' 과정별 대장 <span style="color:#94a3b8;font-weight:700;">· 버튼을 누르면 정식 대장이 열립니다(PDF 저장 가능)</span></div>'
+    +cards;
+}
+</script>
 </body>
 </html>
