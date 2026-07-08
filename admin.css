@@ -1,4 +1,4 @@
-/* PLATFORM_EDIT_STATUS: 수정완료 | VERSION: T | 2026-07-07 (T7: 퀴즈 O/X 마크 clamp(110px,22vh,220px) 확대·설명 34px, 보기 줄바꿈 허용(nowrap 제거)+keep-all (T6: dts-chip hover 이동 제거(떨림 원인), nh-qa 아이콘 배지·2줄 라벨·has-q 반전 (T5: 톱니 버튼(.ops-cfg 회전 hover)·재정렬 모드(점선 테두리+흔들림+드래그 그림자) (T4: 질문사항 보기 버튼 강조 스타일(.nh-qa/.has-q/배지/펄스) (T3: I12 2카드 스타일 신설(.ops-card/.ops-row/.nh-item/.edu-tile/.nh-all), 그리드 1.35fr+1fr 2열 전환 (T2: 과정현황 3카드 정렬 — notice-item 중앙정렬, n-tag 폭 58px 고정, 오늘 한눈에 클릭 칩 hover 효과 (T1: 직무 토글을 pill 줄 규격(높이 36px·radius 50px) 소형 인라인 스위치로 재설계, hero-info-row 세로 중앙정렬) [T: 직무 토글 스타일 신설] */
+/* PLATFORM_EDIT_STATUS: 수정완료 | VERSION: T | 2026-07-07 (T8: 리모컨 is-dragging 페인트 경량화(backdrop-filter/그림자/필터 off, will-change) (T7: 퀴즈 O/X 마크 clamp(110px,22vh,220px) 확대·설명 34px, 보기 줄바꿈 허용(nowrap 제거)+keep-all (T6: dts-chip hover 이동 제거(떨림 원인), nh-qa 아이콘 배지·2줄 라벨·has-q 반전 (T5: 톱니 버튼(.ops-cfg 회전 hover)·재정렬 모드(점선 테두리+흔들림+드래그 그림자) (T4: 질문사항 보기 버튼 강조 스타일(.nh-qa/.has-q/배지/펄스) (T3: I12 2카드 스타일 신설(.ops-card/.ops-row/.nh-item/.edu-tile/.nh-all), 그리드 1.35fr+1fr 2열 전환 (T2: 과정현황 3카드 정렬 — notice-item 중앙정렬, n-tag 폭 58px 고정, 오늘 한눈에 클릭 칩 hover 효과 (T1: 직무 토글을 pill 줄 규격(높이 36px·radius 50px) 소형 인라인 스위치로 재설계, hero-info-row 세로 중앙정렬) [T: 직무 토글 스타일 신설] */
 /* ============================================================
    CATC · 강사 플랫폼 스타일  (admin.css)
    STATUS    수정완료
@@ -6484,3 +6484,15 @@ body.night-mode .side-rail-lbl{ color:#cbd5e1; }
 .ops-list.ops-reorder .ops-row .ops-go{ visibility:hidden; }
 .ops-row.ops-dragging{ opacity:.55; box-shadow:0 10px 24px rgba(37,99,235,.25); }
 @keyframes opsWiggle{ 0%,100%{ transform:rotate(-0.25deg);} 50%{ transform:rotate(0.25deg);} }
+
+
+/* ═══ [J32] 리모컨 드래그 성능 — 드래그 중에는 비싼 페인트 효과를 꺼서 커서와 1:1 동속 ═══ */
+#courseSmartRemote.hex-remote-v2.is-dragging{
+    transition:none !important; animation:none !important;
+    backdrop-filter:none !important; -webkit-backdrop-filter:none !important;
+    box-shadow:0 14px 30px rgba(15,23,42,.3) !important;
+    will-change:left,top;
+    cursor:grabbing;
+}
+#courseSmartRemote.hex-remote-v2.is-dragging .hex-key{ filter:none !important; transition:none !important; }
+#courseSmartRemote.hex-remote-v2.is-dragging .hex-center{ transition:none !important; box-shadow:none !important; }
