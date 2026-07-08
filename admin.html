@@ -970,14 +970,15 @@ body.in-course #moreToggleTab{ display:flex !important; }
             <div class="hero-left">
                 <div class="hero-tag">NOW TRAINING</div>
                 <h2 id="dashCourseTitle" onclick="ui.openFieldEdit('courseName')" title="클릭하여 과정명 수정" style="cursor:pointer;">과정명을 설정해주세요.</h2>
-                <!-- [I19] 시안 정렬: 날짜는 과정명 아래 한 줄로 분리, 장소·모니터링·직무·수료사진은 아래 pill 줄로 -->
-                <div class="hero-date-row">
-                    <span class="info-pill" onclick="ui.openFieldEdit('period')" title="클릭하여 기간 수정" style="cursor:pointer;"><i class="fa-solid fa-calendar-check"></i> <b id="dashPeriod">-</b></span>
-                </div>
+                <!-- [I20] 교육기간 + 강의실을 하나의 테두리 바로 통합(시안) — 날짜 │ 장소(+온라인 모니터링). 우측 입교안내/교수/과정담당 미변경 -->
                 <div class="hero-info-row">
-                    <div class="info-splitpill" id="dashLocSplit">
-                        <span class="isp-part isp-loc" onclick="ui.openFieldEdit('roomDetail')" title="클릭하여 장소 수정"><i class="fa-solid fa-map-location-dot"></i> <b id="dashRoomDetail">-</b></span>
-                        <span class="isp-part isp-zoom" id="dashZoomBtn" onclick="ui.openZoomMonitor()" title="ZOOM 실시간 출석 모니터링" style="display:none;"><i class="fa-solid fa-video"></i> <b>모니터링</b></span>
+                    <div class="hero-meta-bar">
+                        <span class="hmb-seg" onclick="ui.openFieldEdit('period')" title="클릭하여 기간 수정" style="cursor:pointer;"><i class="fa-solid fa-calendar-check"></i> <b id="dashPeriod">-</b></span>
+                        <span class="hmb-div" aria-hidden="true"></span>
+                        <div class="info-splitpill hmb-loc" id="dashLocSplit">
+                            <span class="isp-part isp-loc" onclick="ui.openFieldEdit('roomDetail')" title="클릭하여 장소 수정"><i class="fa-solid fa-map-location-dot"></i> <b id="dashRoomDetail">-</b></span>
+                            <span class="isp-part isp-zoom" id="dashZoomBtn" onclick="ui.openZoomMonitor()" title="ZOOM 실시간 출석 모니터링" style="display:none;"><i class="fa-solid fa-video"></i> <b>모니터링</b></span>
+                        </div>
                     </div>
                     <!-- [J17] 직무 법정/일반 토글 — 과정 속성이므로 왼쪽 정보 pill 줄에 소형으로 배치. 교육현황판과 동일 상태(settings/guideCourseInfo.category) 실시간 연동 -->
                     <button id="dashJobToggle" class="dash-job-toggle" type="button" data-cat="duty-general" onclick="ui.dashToggleJob()" title="교육구분 전환 — 직무일반(평가 없음) / 직무법정(필기 90%+근태 10%)">
