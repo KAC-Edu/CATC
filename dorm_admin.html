@@ -1,6 +1,6 @@
 ﻿<!DOCTYPE html>
 <html lang="ko">
-<!-- PLATFORM_EDIT_STATUS: 수정완료 | VERSION: R6 | 2026-07-08 (R6: 배치도 PDF 3건 수정 — ①기존판: 건물이 A4를 넘칠 때 방 카드가 페이지 경계에서 반토막 나던 문제, 층 전체 잘림방지 래퍼(fm-floor-sec)로 층 통째 넘김 ②확대판: 층별 페이지 분할(R4) 철회 → 건물당 1페이지에 전 층 표기(청렴관 1·2층 한 장, 상생관 동일), 방 96px로 조정해 A4 수납, 건물 사이 페이지 넘김 ③확대판 이름 pill 세로 스택·상단 정렬(중앙 뭉침으로 배치가 이상해 보이던 문제), 국제동 '배정제외' 2줄 꺾임 → 한 줄 고정 12.5px) [R5 | 2026-07-07 (R5: [버그] 주차별 방마스터가 사실상 일괄 적용되던 문제 근본 수정 — 정원/우선배정/배정제외 '즉시 저장' 2곳(setRoomField·층 전체 설정)이 masterPath를 쓰지 않고 항상 기본(공통) 경로에 저장해 기본이 오염되고 다른 주차(기본 폴백)에 따라가던 원인. 즉시 저장을 편집 중인 주차 전용 경로에 전체 세트로 저장(최초 편집 시 자동 시드). 현황/출력(STEP4 보드·배치도·PDF)도 자동배정과 동일하게 보는 주차 전용 마스터 우선으로 통일(loadRoomsForWeekView)) [R4 | 2026-07-07 (R4: 배치도 '크게 보기' PDF가 한 건물이 A4를 넘겨 층 중간에서 잘리던 문제 수정 — 크게 보기 모드에서 각 층을 독립 페이지로 분할(페이지마다 건물명+층 표기+소형 범례), 건물 사이 강제 개행 제거로 빈 페이지 방지, 층 페이지 방 셀 최소높이 120px로 여유 확보) [R3 | 2026-07-07 (R3: [보안] 접속코드 게이트 평문 제거→SHA-256 해시 대조, 자동 파기 목록 5종 보강) (R2: ①배치도 PDF 출력 시 방식 선택 팝업 신설 — 기존 방식/크게 보기. 크게 보기는 사진·AED 안내 제외, 방 번호·이름 폰트 확대(노안 대응)로 배치도가 A4를 최대한 차지, 파일명에 _크게보기 표기 ②과정 정리 목록에 media/{room} 미디어 저장소 정리 추가) -->
+<!-- PLATFORM_EDIT_STATUS: 수정완료 | VERSION: R7 | 2026-07-08 (R7: [크게보기 근본 재수정] R6의 '건물당 1페이지'가 실제로는 건물 높이가 A4를 넘어 브라우저가 층 단위로 강제 분할(층별 페이지+빈 페이지 재현) — 높이 가정 대신 인쇄 직전 '실측 자동 축소(scale-to-fit)' 도입: 각 건물 블록 scrollHeight를 재서 A4 가용(880px) 초과 시 그 비율로 축소(폭·잔여높이 보정), 인원 규모 무관 건물당 정확히 1페이지 보장. 측정을 위해 인쇄 iframe을 0×0→720×1100(투명)으로. [기존판] AED 안내를 마지막 층 블록 내부에 묶음 — AED 문구만 혼자 다음 페이지로 밀리던 고아 페이지 방지) [R6 | 2026-07-08 (R6: 배치도 PDF 3건 수정 — ①기존판: 건물이 A4를 넘칠 때 방 카드가 페이지 경계에서 반토막 나던 문제, 층 전체 잘림방지 래퍼(fm-floor-sec)로 층 통째 넘김 ②확대판: 층별 페이지 분할(R4) 철회 → 건물당 1페이지에 전 층 표기(청렴관 1·2층 한 장, 상생관 동일), 방 96px로 조정해 A4 수납, 건물 사이 페이지 넘김 ③확대판 이름 pill 세로 스택·상단 정렬(중앙 뭉침으로 배치가 이상해 보이던 문제), 국제동 '배정제외' 2줄 꺾임 → 한 줄 고정 12.5px) [R5 | 2026-07-07 (R5: [버그] 주차별 방마스터가 사실상 일괄 적용되던 문제 근본 수정 — 정원/우선배정/배정제외 '즉시 저장' 2곳(setRoomField·층 전체 설정)이 masterPath를 쓰지 않고 항상 기본(공통) 경로에 저장해 기본이 오염되고 다른 주차(기본 폴백)에 따라가던 원인. 즉시 저장을 편집 중인 주차 전용 경로에 전체 세트로 저장(최초 편집 시 자동 시드). 현황/출력(STEP4 보드·배치도·PDF)도 자동배정과 동일하게 보는 주차 전용 마스터 우선으로 통일(loadRoomsForWeekView)) [R4 | 2026-07-07 (R4: 배치도 '크게 보기' PDF가 한 건물이 A4를 넘겨 층 중간에서 잘리던 문제 수정 — 크게 보기 모드에서 각 층을 독립 페이지로 분할(페이지마다 건물명+층 표기+소형 범례), 건물 사이 강제 개행 제거로 빈 페이지 방지, 층 페이지 방 셀 최소높이 120px로 여유 확보) [R3 | 2026-07-07 (R3: [보안] 접속코드 게이트 평문 제거→SHA-256 해시 대조, 자동 파기 목록 5종 보강) (R2: ①배치도 PDF 출력 시 방식 선택 팝업 신설 — 기존 방식/크게 보기. 크게 보기는 사진·AED 안내 제외, 방 번호·이름 폰트 확대(노안 대응)로 배치도가 A4를 최대한 차지, 파일명에 _크게보기 표기 ②과정 정리 목록에 media/{room} 미디어 저장소 정리 추가) -->
 <!-- ===== EDIT-STATUS: 수정안하는중 ===== (값: 수정중 / 수정안하는중) · 플랫폼 간 협의용 플래그.
      다른 플랫폼/작업자는 이 파일을 열면 이 줄을 먼저 확인. 수정 시작 시 → 수정중 , 수정 완료 시 → 수정안하는중 -->
 <!-- [외부변경 · 카카오채널연동 2026-06-25] 포털(portal.html/7777) 경유 폐지 → catc1234 직접진입 게이트 추가, '포털' 버튼→'잠금'. @version J1→K1. 기능 로직 미변경. -->
@@ -5656,7 +5656,8 @@
             const old = document.getElementById('_kacPrintFrame'); if (old) old.remove();
             const f = document.createElement('iframe');
             f.id = '_kacPrintFrame';
-            f.style.cssText = 'position:fixed; right:0; bottom:0; width:0; height:0; border:0; opacity:0;';
+            // [R7] 실측(scale-fit)을 위해 인쇄 폭 근사 크기로 생성 — opacity:0이라 화면엔 안 보임
+            f.style.cssText = 'position:fixed; right:0; bottom:0; width:720px; height:1100px; border:0; opacity:0; pointer-events:none;';
             document.body.appendChild(f);
             const doc = f.contentWindow.document;
             doc.open();
@@ -5666,6 +5667,22 @@
             const restore = function () { document.title = BASE_TITLE; try { f.remove(); } catch (_) {} };
             setTimeout(function () {
                 try {
+                    // ═══ [R7] 크게보기 scale-to-fit — 각 건물 블록의 '실제 높이'를 재서 A4 한 장을
+                    //  넘으면 그 비율만큼 자동 축소(폭 보정 포함). 계산 가정이 아닌 실측이라
+                    //  인원 규모와 무관하게 건물당 정확히 1페이지 보장(층 분할·빈 페이지 원천 차단).
+                    try {
+                        const AVAIL = 880;   // A4 세로 인쇄영역(≈1027px) − 반복 헤더 − 안전여유
+                        f.contentWindow.document.querySelectorAll('.pf-large-page').forEach(function (b) {
+                            const h = b.scrollHeight;
+                            if (h > AVAIL) {
+                                const sc = Math.max(0.45, AVAIL / h);
+                                b.style.transformOrigin = 'top left';
+                                b.style.transform = 'scale(' + sc + ')';
+                                b.style.width = (100 / sc) + '%';
+                                b.style.height = Math.ceil(h * sc) + 'px';   // 축소 후 잔여 공백 제거
+                            }
+                        });
+                    } catch (fitErr) { console.warn('[R7 fit]', fitErr); }
                     document.title = fileName;   // PDF 저장 시 기본 파일명으로 사용됨
                     f.contentWindow.focus();
                     window.addEventListener('afterprint', function _h() { window.removeEventListener('afterprint', _h); restore(); });
@@ -6003,12 +6020,19 @@
             function buildingHtml(building) {
                 const bar   = (typeof DORM_BLDG_BAR !== 'undefined' && DORM_BLDG_BAR[building]) || '#0f2057';
                 const div   = `<div class="fm-floor-div" style="border-top:2px solid ${bar};"></div>`;
-                const fls   = (FORM[building] || []).map(fl => floorHtml(building, fl)).join(div);
-                const photo = BLDG_PHOTO_LAYOUT[building] || '';
-                const aed   = AED_MSG[building] || '';
-                const aedHtml = aed
-                    ? `<div style="display:flex;align-items:center;gap:9px;margin-top:8px;padding:7px 13px;background:#fffbeb;border:1.5px solid #fcd34d;border-radius:9px;font-size:12px;font-weight:700;color:#78350f;"><span style="font-size:16px;flex-shrink:0;">⑧</span><span>${aed}</span></div>`
+                // [R7] AED 안내를 '마지막 층 블록 내부'에 묶음 — 공간이 없을 때 AED 문구만
+                //  혼자 다음 페이지로 밀려 고아 페이지가 생기던 문제 방지(잘림방지 래퍼와 한 몸으로 이동).
+                let _flsArr = (FORM[building] || []).map(fl => floorHtml(building, fl));
+                const _aedInline = (AED_MSG[building] || '')
+                    ? `<div style="display:flex;align-items:center;gap:9px;margin-top:8px;padding:7px 13px;background:#fffbeb;border:1.5px solid #fcd34d;border-radius:9px;font-size:12px;font-weight:700;color:#78350f;"><span style="font-size:16px;flex-shrink:0;">⑧</span><span>${AED_MSG[building]}</span></div>`
                     : '';
+                if (_aedInline && _flsArr.length) {
+                    const li = _flsArr.length - 1;
+                    _flsArr[li] = _flsArr[li].replace(/<\/div>\s*$/, _aedInline + '</div>');
+                }
+                const fls   = _flsArr.join(div);
+                const photo = BLDG_PHOTO_LAYOUT[building] || '';
+                /* [R7] aedHtml 별도 출력 제거 — 위 _aedInline로 마지막 층 내부에 포함 */
                 // [R6] 크게 보기: 건물당 1페이지 — 그 건물의 '모든 층'을 한 페이지 안에 담음
                 //  (R4의 층별 분할은 청렴관 1·2층이 각각 다른 장에 나뉘어 불편 — 요구사항 변경).
                 //  방 크기는 R4보다 약간 줄여(96px) 4줄(2개 층)이 A4 한 장에 들어가도록 조정.
@@ -6026,7 +6050,6 @@
                     </div>
                     <div class="pf-bldg-header" style="background:${bar};"><span class="bicon">\ud83c\udfe2</span>${building}</div>
                     <div class="pf-floor-wrap" style="border-color:${bar};">${fls}</div>
-                    ${aedHtml}
                 </div>`;
             }
 
