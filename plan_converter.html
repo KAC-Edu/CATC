@@ -1,11 +1,11 @@
-<!-- [2026-07-09 JDS260709(V1)] 한셀 폴백 날짜 수정: 폴백 파서의 문자열 일련번호("45971")를 _xlsDate에서 날짜로 인식 못해 과정 0개로 실패하던 버그 해결 -->
+<!-- [2026-07-09 JDS260709(V2)] ①미정 과정 제외→날짜 없이 맨 뒤 포함(undated 플래그) ②변환 방법 안내 탭 삭제→엑셀 양식 주의점 탭 신설(레거시 Python·사전빌드 기능 제거) -->
 <!DOCTYPE html>
 <html lang="ko">
 <head>
 <!-- ============================================================
   CATC · 연간계획 변환기  (plan_converter.html)
-  @version  B
-  @build    20260708-212719
+  @version  C
+  @build    20260708-214250
   ────────────────────────────────────────────────────────
   [코드 수정 규칙 · AI/개발자 공통]
   이 파일을 한 글자라도 고치면:
@@ -152,7 +152,7 @@ td.date{color:#3b82f6;font-size:12px;white-space:nowrap;}
       <i class="fa-solid fa-file-excel"></i> 엑셀/JSON 업로드
     </button>
     <button class="tab-btn" onclick="switchTab('guide')" id="tab-guide">
-      <i class="fa-solid fa-circle-info"></i> 변환 방법 안내
+      <i class="fa-solid fa-triangle-exclamation"></i> 엑셀 양식 주의점
     </button>
   </div>
 
@@ -218,48 +218,19 @@ td.date{color:#3b82f6;font-size:12px;white-space:nowrap;}
   <!-- ── 변환 안내 탭 ── -->
   <div id="panel-guide" style="display:none;">
     <div class="info-notice">
-      <h3><i class="fa-solid fa-terminal"></i> 엑셀 → JSON 변환 방법</h3>
+      <h3><i class="fa-solid fa-file-excel"></i> 교육운영계획 엑셀 양식 주의점 (담당자 자료 요청 시 확인)</h3>
       <ol>
-        <li>아래 <b>Python 스크립트 다운로드</b> 버튼을 누르세요.</li>
-        <li>엑셀 파일과 같은 폴더에 저장하세요.</li>
-        <li>터미널에서 실행하세요:
-          <span class="cmd">python kac_excel_to_json.py 2026년도_교육운영계획_260429.xlsx</span>
-        </li>
-        <li>같은 폴더에 <b>kac_plan_2026.json</b> 파일이 생성됩니다.</li>
-        <li><b>JSON 업로드</b> 탭으로 돌아가서 해당 파일을 업로드하세요.</li>
+        <li><b>"총괄표" 시트 이름 유지</b> — 변환기가 이 이름으로 시트를 찾습니다. 시트명에 '총괄'이 포함되기만 하면 됩니다.</li>
+        <li><b>머리글 문구 유지</b> — "과정명", "교육시작일", "교육종료일", "연번", "담임교수", "교육일정확인(운영부)" 열 제목이 있으면 <u>열 위치가 바뀌어도 자동으로 찾습니다</u>. 단, 문구 자체를 다른 말로 바꾸면(예: "교육시작일" → "개강일") 찾지 못합니다.</li>
+        <li><b>날짜는 셀에 실제 날짜값으로</b> — 지금처럼 날짜 서식이면 됩니다. 미확정 과정은 시작일 칸에 <b>"미정"</b>이라고 적으면 날짜 없이 목록 맨 뒤에 자동 포함되고, 일정 확정 후 재업로드하면 반영됩니다.</li>
+        <li><b>저장 프로그램</b> — MS 엑셀 저장이 가장 표준 경로로 처리되지만, <b>한컴 한셀(.xlsx)로 저장한 파일도 그대로 지원</b>됩니다(호환 모드 자동 전환).</li>
       </ol>
     </div>
-
     <div class="step-card">
       <div class="step-header">
-        <div class="step-num">📥</div>
-        <div><div class="step-title">Python 변환 스크립트 다운로드</div>
-        <div class="step-desc">Python 3.8 이상 · pip install openpyxl 필요</div></div>
-      </div>
-      <div class="btn-row">
-        <button class="btn btn-amber" onclick="downloadScript()">
-          <i class="fa-solid fa-download"></i> kac_excel_to_json.py 다운로드
-        </button>
-      </div>
-    </div>
-
-    <div class="step-card" style="border-color:#bfdbfe;">
-      <div class="step-header">
-        <div class="step-num" style="background:#3b82f6;">💡</div>
-        <div><div class="step-title" style="color:#1e40af;">2026년 데이터 바로 사용</div>
-        <div class="step-desc">2026년도_교육운영계획_260429.xlsx 기준 · 101개 과정</div></div>
-      </div>
-      <div class="status-box info">
-        <i class="fa-solid fa-circle-info"></i>
-        101개 과정 / 2025-11-10 ~ 2026-11-18 · 서버에서 미리 파싱된 데이터
-      </div>
-      <div class="btn-row">
-        <button class="btn btn-primary" onclick="usePrebuilt()">
-          <i class="fa-solid fa-bolt"></i> 이 데이터로 바로 업로드
-        </button>
-        <button class="btn btn-amber" onclick="downloadPrebuilt()">
-          <i class="fa-solid fa-download"></i> JSON 다운로드
-        </button>
+        <div class="step-num">💡</div>
+        <div><div class="step-title">요약: 담당자에게 한 줄로 부탁하기</div>
+        <div class="step-desc">"작년 양식 그대로, <b>총괄표 시트와 열 제목 문구만 유지</b>해 주세요" — 이거 하나면 충분합니다.</div></div>
       </div>
     </div>
   </div>
@@ -460,21 +431,33 @@ function finishExcelParse(file, grid, sheetName){
         }
     }
     const first = hRow >= 0 ? hRow + 1 : 13;
-    const courses = [], errs = [];
+    const courses = [], undated = [], errs = [];
     for (let r = first; r < grid.length; r++) {
         const row = grid[r] || [];
         const no = parseInt(String(row[col.no]).replace(/[^0-9]/g,''), 10);
         if (!isFinite(no)) continue;
         const name = String(row[col.name] || '').trim();
         if (!name) continue;
-        const sd = _xlsDate(row[col.start]), ed = _xlsDate(row[col.end]);
-        if (!sd || !ed) {
-            const rawS = String(row[col.start] || '').trim();
-            errs.push(`연번 ${no} "${name.slice(0,20)}" — ` + (rawS.indexOf('미정') >= 0 ? '시작일 미정(정상 제외)' : '날짜 인식 실패: "' + rawS.slice(0,10) + '"'));
-            continue;
-        }
         const profRaw = String(row[col.prof] || '');
         const coordRaw = String(row[col.coord] || '');
+        const sd = _xlsDate(row[col.start]), ed = _xlsDate(row[col.end]);
+        if (!sd || !ed) {
+            const rawS = String(row[col.start] || '').trim(), rawE = String(row[col.end] || '').trim();
+            /* [vC] 시작일 "미정" 과정은 제외하지 않고 날짜 없이 목록 맨 뒤에 포함
+               (강사플랫폼에는 과정명만 표시, 자동 방배치·주차 그룹에서는 자연 제외) */
+            if (rawS.indexOf('미정') >= 0 || rawE.indexOf('미정') >= 0) {
+                undated.push({
+                    no, name,
+                    startDate: '', endDate: '', period: '',
+                    prof: profRaw ? profRaw.split(',')[0].trim() : '',
+                    coord: coordRaw.replace(/\n/g,'').trim(),
+                    weekKey: '', undated: true
+                });
+            } else {
+                errs.push(`연번 ${no} "${name.slice(0,20)}" — 날짜 인식 실패: "` + rawS.slice(0,10) + '"');
+            }
+            continue;
+        }
         courses.push({
             no, name,
             startDate: sd, endDate: ed, period: sd + ' ~ ' + ed,
@@ -483,6 +466,7 @@ function finishExcelParse(file, grid, sheetName){
             weekKey: _monday(sd)
         });
     }
+    courses.push(...undated);   /* 미정 과정은 항상 맨 뒤 */
     if (!courses.length) { alert('과정을 하나도 읽지 못했습니다.\n\n"총괄표" 시트가 있는 교육운영계획 원본 엑셀인지 확인해 주세요.'); return; }
     selectedData = courses;
     document.getElementById('json-upload-wrap').style.display = 'none';
@@ -491,10 +475,11 @@ function finishExcelParse(file, grid, sheetName){
         <div class="file-selected">
             <i class="fa-solid fa-file-excel" style="font-size:28px;color:#16a34a;"></i>
             <div><div class="fname">${file.name}</div>
-            <div class="fsize">[${sheetName}] 시트에서 ${courses.length}개 과정 인식${errs.length ? ' · <span style="color:#dc2626;">'+errs.length+'건 제외(미정 등)</span>' : ''}</div></div>
+            <div class="fsize">[${sheetName}] 시트에서 ${courses.length}개 과정 인식${undated.length ? ' · <span style="color:#d97706;">미정 '+undated.length+'건 포함(날짜 없음)</span>' : ''}${errs.length ? ' · <span style="color:#dc2626;">'+errs.length+'건 제외</span>' : ''}</div></div>
             <button class="clear-btn" onclick="clearJson()"><i class="fa-solid fa-xmark"></i></button>
         </div>`
-        + (errs.length ? `<div style="margin-top:8px;padding:10px 12px;background:#fef2f2;border:1px solid #fecaca;border-radius:10px;font-size:12px;color:#b91c1c;font-weight:700;">ℹ 제외된 행 (시작일 미정 과정은 확정 후 재업로드하면 반영됩니다):<br>${errs.slice(0,8).join('<br>')}${errs.length>8?'<br>…외 '+(errs.length-8)+'건':''}</div>` : '');
+        + (errs.length ? `<div style="margin-top:8px;padding:10px 12px;background:#fef2f2;border:1px solid #fecaca;border-radius:10px;font-size:12px;color:#b91c1c;font-weight:700;">ℹ 제외된 행 (날짜를 인식하지 못한 행 — 원본 확인 필요):<br>${errs.slice(0,8).join('<br>')}${errs.length>8?'<br>…외 '+(errs.length-8)+'건':''}</div>` : '')
+        + (undated.length ? `<div style="margin-top:8px;padding:10px 12px;background:#fffbeb;border:1px solid #fde68a;border-radius:10px;font-size:12px;color:#92400e;font-weight:700;">ℹ 일정 미정 과정 ${undated.length}건은 날짜 없이 목록 맨 뒤에 포함됩니다. 일정 확정 후 엑셀을 재업로드하면 자동 반영됩니다.</div>` : '');
     document.getElementById('previewBtn').disabled = false;
     showPreview(courses);
 }
@@ -534,12 +519,14 @@ function previewJson() {
 
 /* ── 미리보기 ── */
 function showPreview(courses) {
-    const dates   = courses.map(c=>c.startDate).sort();
-    const maxDate = courses.map(c=>c.endDate).sort().pop();
+    const dated   = courses.filter(c=>c.startDate && c.endDate);   /* [vC] 미정 제외하고 기간 계산 */
+    const nUndated= courses.length - dated.length;
+    const dates   = dated.map(c=>c.startDate).sort();
+    const maxDate = dated.map(c=>c.endDate).sort().pop();
     document.getElementById('preview-area').innerHTML = `
         <div class="status-box ok">
             <i class="fa-solid fa-circle-check"></i>
-            총 <b>${courses.length}개</b> 과정 &nbsp;|&nbsp; 기간: <b>${dates[0]} ~ ${maxDate}</b>
+            총 <b>${courses.length}개</b> 과정 &nbsp;|&nbsp; 기간: <b>${dates[0]||'-'} ~ ${maxDate||'-'}</b>${nUndated?` &nbsp;|&nbsp; <span style="color:#d97706;">일정 미정 ${nUndated}개</span>`:''}
         </div>
         <div class="preview-wrap">
             <div class="preview-toolbar">
@@ -549,8 +536,8 @@ function showPreview(courses) {
                 <table>
                     <thead><tr><th>No.</th><th>과정명</th><th>시작일</th><th>종료일</th><th>담임교수</th><th>담당자</th></tr></thead>
                     <tbody>${courses.map(c=>`
-                        <tr><td class="no">${c.no}</td><td class="name">${c.name}</td>
-                        <td class="date">${c.startDate}</td><td class="date">${c.endDate}</td>
+                        <tr${c.undated?' style="background:#fffbeb;"':''}><td class="no">${c.no}</td><td class="name">${c.name}</td>
+                        <td class="date"${c.undated?' style="color:#d97706;font-weight:700;"':''}>${c.startDate||'미정'}</td><td class="date"${c.undated?' style="color:#d97706;font-weight:700;"':''}>${c.endDate||'미정'}</td>
                         <td>${c.prof||'-'}</td><td>${c.coord||'-'}</td></tr>`).join('')}
                     </tbody>
                 </table>
@@ -640,93 +627,6 @@ async function assignRooms(courses) {
     return { assigned, skipped };
 }
 
-/* ── 미리 빌드된 2026 데이터 ── */
-async function usePrebuilt() {
-    try {
-        const res  = await fetch('kac_plan_2026.json');
-        const data = await res.json();
-        selectedData = data;
-        switchTab('json');
-        document.getElementById('json-upload-wrap').style.display = 'none';
-        document.getElementById('json-file-info').style.display  = 'block';
-        document.getElementById('json-file-info').innerHTML = `
-            <div class="file-selected">
-                <i class="fa-solid fa-bolt" style="font-size:28px;color:#f59e0b;"></i>
-                <div><div class="fname">kac_plan_2026.json (사전 변환)</div><div class="fsize">${data.length}개 과정</div></div>
-            </div>`;
-        document.getElementById('previewBtn').disabled = false;
-        showPreview(data);
-    } catch(e) { alert('사전 변환 파일을 불러올 수 없습니다.\nJSON 파일을 직접 업로드해 주세요.'); }
-}
-async function downloadPrebuilt() {
-    try {
-        const res  = await fetch('kac_plan_2026.json');
-        const data = await res.json();
-        const a    = Object.assign(document.createElement('a'), {
-            href: URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json'})),
-            download: 'kac_plan_2026.json'
-        });
-        a.click();
-    } catch(e) { alert('파일을 불러올 수 없습니다.'); }
-}
-
-/* ── Python 스크립트 다운로드 ── */
-function downloadScript() {
-    const script = `#!/usr/bin/env python3
-"""KAC 교육운영계획 엑셀 -> JSON 변환기
-사용법: python kac_excel_to_json.py [엑셀파일명.xlsx]
-"""
-import sys, json
-from datetime import datetime, timedelta
-try:
-    import openpyxl
-except ImportError:
-    print("openpyxl 설치 필요: pip install openpyxl"); sys.exit(1)
-
-def to_date(v):
-    if isinstance(v, datetime): return v.strftime('%Y-%m-%d')
-    try:
-        n = float(v)
-        if n > 40000: return (datetime(1899,12,30)+timedelta(days=n)).strftime('%Y-%m-%d')
-    except: pass
-    return None
-
-def monday(ds):
-    d = datetime.strptime(ds,'%Y-%m-%d')
-    return (d - timedelta(days=d.weekday())).strftime('%Y-%m-%d')
-
-fname = sys.argv[1] if len(sys.argv)>1 else '2026년도_교육운영계획_260429.xlsx'
-print(f'읽는 중: {fname}')
-wb = openpyxl.load_workbook(fname, read_only=True)
-ws = wb.worksheets[0]
-
-courses = []
-for row in ws.iter_rows(min_row=14, max_row=300, values_only=True):
-    no = row[1]
-    if no is None: continue
-    try: no = int(float(str(no)))
-    except: continue
-    name,coord,prof,start,end = row[7],row[4],row[5],row[13],row[14]
-    if not name or not start or not end: continue
-    sd,ed = to_date(start),to_date(end)
-    if not sd or not ed: continue
-    courses.append({'no':no,'name':str(name).strip(),
-        'startDate':sd,'endDate':ed,'period':f'{sd} ~ {ed}',
-        'prof':str(prof).split(',')[0].strip() if prof else '',
-        'coord':str(coord).replace('\\n','').strip() if coord else '',
-        'weekKey':monday(sd)})
-
-out = 'kac_plan_2026.json'
-with open(out,'w',encoding='utf-8') as f: json.dump(courses,f,ensure_ascii=False,indent=2)
-print(f'완료: {len(courses)}개 -> {out}')
-`;
-    const a = Object.assign(document.createElement('a'), {
-        href: URL.createObjectURL(new Blob([script],{type:'text/plain'})),
-        download: 'kac_excel_to_json.py'
-    });
-    a.click();
-}
-
 function resetAll() {
     selectedData = null;
     document.getElementById('json-upload-wrap').style.display = 'block';
@@ -739,7 +639,7 @@ function resetAll() {
 </script>
 <style>@media print{#__catcVer{display:none!important}}</style>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vB</div>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">vC</div>
 
 <!-- ═══ [2026-07-07 전체 점검모드] system/maintenance 스위치 하나로 전 플랫폼 동시 점검중 전환.
      on:true면 전체 화면 점검 안내(실시간), off면 즉시 복귀. 재배포 불필요.
